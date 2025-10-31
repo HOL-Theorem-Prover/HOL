@@ -23,18 +23,12 @@ This is a combinatorial using Group action, via Orbit-Stabilizer Theorem.
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "FLTpetersen";
+Theory FLTpetersen
+Ancestors
+  arithmetic divides gcd logroot number pred_set combinatorics
+  group cycle
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory dividesTheory gcdTheory logrootTheory numberTheory;
-open pred_setTheory combinatoricsTheory;
-
-open groupTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Action Documentation                           *)
@@ -172,8 +166,4 @@ QED
 (* Part 4: End ------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

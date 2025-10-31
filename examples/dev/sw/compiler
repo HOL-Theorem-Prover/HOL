@@ -8,7 +8,7 @@ app load ["ANF", "wordsLib", "pairLib", "wordsTheory", "finite_mapTheory",
 
 quietdec := true;
 open Portable Assem wordsTheory ANF pairTheory pairLib listTheory
-     arithmeticTheory whileTheory wordsLib PairedLambda mechReasoning;
+     arithmeticTheory WhileTheory wordsLib PairedLambda mechReasoning;
 quietdec := false;
 
 (*---------------------------------------------------------------------------*)

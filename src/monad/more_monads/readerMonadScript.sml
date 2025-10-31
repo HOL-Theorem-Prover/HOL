@@ -5,17 +5,17 @@ Ancestors[qualified]
 (* the dependency on bossLib equates to an unnecessary dependency on
    listTheory *)
 
-val BIND_def = Define‘
+Definition BIND_def:
   BIND (M : 's -> 'a) (f: 'a -> 's -> 'b) s = f (M s) s
-’;
+End
 
-val UNIT_def = Define‘
+Definition UNIT_def:
   UNIT (x:'a) s = x
-’;
+End
 
-val MCOMPOSE_def = Define‘
+Definition MCOMPOSE_def:
   MCOMPOSE (f1 : 'a -> ('s -> 'b)) (f2 : 'b -> ('s -> 'c)) a = BIND (f1 a) f2
-’;
+End
 
 Theorem BIND_UNITR[simp]: BIND m UNIT = m
 Proof
@@ -42,9 +42,9 @@ Theorem MCOMPOSE_ASSOC:
 Proof simp[MCOMPOSE_def, FUN_EQ_THM, BIND_def]
 QED
 
-val FMAP_def = Define‘
+Definition FMAP_def:
   FMAP (f : 'a -> 'b) (M1 : 's -> 'a) = f o M1
-’;
+End
 
 Theorem FMAP_ID[simp]:
   (FMAP (\x. x) M = M) /\ (FMAP I M = M)
@@ -63,9 +63,9 @@ Proof simp[FMAP_def, UNIT_def, BIND_def, FUN_EQ_THM]
 QED
 
 (* aka the W combinator *)
-val JOIN_def = Define‘
+Definition JOIN_def:
   JOIN (MM : 's -> ('s -> 'a)) s = MM s s
-’;
+End
 
 Theorem BIND_JOIN:
   BIND M f = JOIN (FMAP f M)

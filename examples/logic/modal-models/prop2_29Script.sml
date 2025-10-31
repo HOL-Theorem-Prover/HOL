@@ -1,16 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open chap2_1Theory;
-open numpairTheory;
-open pred_setTheory;
-open relationTheory;
-open listTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-open equiv_on_partitionTheory
-
-val _ = new_theory "prop2_29";
+Theory prop2_29
+Ancestors
+  chap1 chap2_1 numpair pred_set relation list arithmetic
+  set_relation pair equiv_on_partition
 
 val _ = temp_delsimps ["satis_def"]
 
@@ -143,8 +134,9 @@ Theorem peval_satis:
 Proof Induct_on `f` >> rw[] >> metis_tac[satis_def]
 QED
 
-val equiv0_def = Define`
-     equiv0 (:β) f1 f2 <=> !M w:β. satis M w f1 <=> satis M w f2`;
+Definition equiv0_def:
+     equiv0 (:β) f1 f2 <=> !M w:β. satis M w f1 <=> satis M w f2
+End
 
 
 Theorem subst_equiv0:
@@ -342,12 +334,13 @@ QED
 
 
 
-val DEG_def =  Define
-    `DEG (VAR p) = 0 /\
+Definition DEG_def:
+     DEG (VAR p) = 0 /\
      DEG (FALSE) = 0 /\
      DEG (NOT form) = DEG form /\
      DEG (DISJ form1 form2) = MAX (DEG form1) (DEG form2) /\
-     DEG (DIAM form) = (DEG form) + 1`;
+     DEG (DIAM form) = (DEG form) + 1
+End
 
 
 
@@ -814,4 +807,3 @@ qexists_tac `AND e ff` >>
 rw[AND_def,satis_AND,DEG_def,prop_letters_def] >> metis_tac[]
 QED
 *)
-val _ = export_theory();

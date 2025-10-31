@@ -1,12 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-
-open realTheory realLib res_quanTools
-     hurdUtils subtypeTheory extra_numTheory transcTheory
-     pred_setTheory arithmeticTheory seqTheory combinTheory pairTheory
-     extra_pred_setTheory extra_boolTheory real_sigmaTheory
-     sumTheory limTheory listTheory rich_listTheory;
-
-val _ = new_theory "extra_real";
+Theory extra_real
+Ancestors
+  real subtype extra_num transc pred_set arithmetic seq combin
+  pair extra_pred_set extra_bool real_sigma sum lim list
+  rich_list
+Libs
+  realLib res_quanTools hurdUtils
 
 (* ------------------------------------------------------------------------- *)
 (* Tools.                                                                    *)
@@ -20,12 +18,18 @@ val Strip = S_TAC;
 (* Definitions.                                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val zreal_def = Define `zreal (x : real) = (x = 0)`;
-val nzreal_def = Define `nzreal (x : real) = ~(x = 0)`;
-val posreal_def = Define `posreal (x : real) = (0 < x)`;
-val nnegreal_def = Define `nnegreal (x : real) = (0 <= x)`;
-val negreal_def = Define `negreal (x : real) = (0 < ~x)`;
-val nposreal_def = Define `nposreal (x : real) = (0 <= ~x)`;
+Definition zreal_def:   zreal (x : real) = (x = 0)
+End
+Definition nzreal_def:   nzreal (x : real) = ~(x = 0)
+End
+Definition posreal_def:   posreal (x : real) = (0 < x)
+End
+Definition nnegreal_def:   nnegreal (x : real) = (0 <= x)
+End
+Definition negreal_def:   negreal (x : real) = (0 < ~x)
+End
+Definition nposreal_def:   nposreal (x : real) = (0 <= ~x)
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -902,4 +906,3 @@ val REAL_LE_MUL_EPSILON = store_thm
     >> Suff `1/2 * ~x <= 1 * ~x` >- RW_TAC real_ss []
     >> METIS_TAC [REAL_NEG_GT0, REAL_LT_TOTAL, REAL_LE_REFL, REAL_HALF_BETWEEN, REAL_LE_RMUL]);
 
-val _ = export_theory ();

@@ -20,21 +20,12 @@ open
 quietdec := false;                                   (* Restore output       *)
 *)
 
-(*****************************************************************************)
-(* Boilerplate needed for compilation                                        *)
-(*****************************************************************************)
+Theory LTL
+Ancestors
+  pred_set
+Libs
+  pred_setLib
 
-open HolKernel Parse boolLib bossLib pred_setTheory pred_setLib;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called LTL
-******************************************************************************)
-
-val _ = new_theory "LTL";
 
 (******************************************************************************
 * Syntax
@@ -57,9 +48,8 @@ val formula_def =
            | UNTIL      of formula => formula (* U *)
            | WEAK_UNTIL of formula => formula`; (* W *)
 
-val Atoms_def =
- Define
-  `(Atoms TRUE = {})
+Definition Atoms_def:
+   (Atoms TRUE = {})
    /\
    (Atoms FALSE = {})
    /\
@@ -79,7 +69,8 @@ val Atoms_def =
    /\
    (Atoms (UNTIL f1 f2) = Atoms f1 UNION Atoms f2)
    /\
-   (Atoms (WEAK_UNTIL f1 f2) = Atoms f1 UNION Atoms f2)`;
+   (Atoms (WEAK_UNTIL f1 f2) = Atoms f1 UNION Atoms f2)
+End
 
 (******************************************************************************
 * Semantics
@@ -124,10 +115,10 @@ val model_def =
 * Requirements for a model to be a well-formed Kripke structure
 * (Note: the transition relation is here not required to be total)
 ******************************************************************************)
-val MODEL_def =
- Define
-  `MODEL M =
-    M.S0 SUBSET M.S /\ (!s s'. s IN M.S /\ (s,s') IN M.R ==> s' IN M.S)`;
+Definition MODEL_def:
+   MODEL M =
+    M.S0 SUBSET M.S /\ (!s s'. s IN M.S /\ (s,s') IN M.R ==> s' IN M.S)
+End
 
 (* record: ACL2 finite function as a "normalized" alist, where *)
 (* an alist is ((key0 . val0) (key1 . val1) ... (keyn . valn)) *)
@@ -161,9 +152,9 @@ val MODEL_def =
 (******************************************************************************
 * PATH M s p is true iff p is a path of model M starting from s
 ******************************************************************************)
-val PATH_def =
- Define
-  `PATH M s p = (p 0 = s) /\ !i. M.R(p(i),p(i+1))`;
+Definition PATH_def:
+   PATH M s p = (p 0 = s) /\ !i. M.R(p(i),p(i+1))
+End
 
 val PATH_LEMMA =
  store_thm
@@ -176,16 +167,15 @@ val PATH_LEMMA =
 (******************************************************************************
 * SUFFIX p in is the ith suffix of p
 ******************************************************************************)
-val SUFFIX_def =
- Define
-  `SUFFIX p i = \j. p(i+j)`;
+Definition SUFFIX_def:
+   SUFFIX p i = \j. p(i+j)
+End
 
 (******************************************************************************
 * SEM M p f defines the truth of formula f in path p of model M
 ******************************************************************************)
-val SEM_def =
- Define
-  `(SEM M p TRUE = T)
+Definition SEM_def:
+   (SEM M p TRUE = T)
    /\
    (SEM M p FALSE = F)
    /\
@@ -209,17 +199,17 @@ val SEM_def =
    (SEM M p (WEAK_UNTIL f1 f2) =
      (?i. SEM M (SUFFIX p i) f2 /\ !j. j < i ==> SEM M (SUFFIX p j) f1)
      \/
-     !i. SEM M (SUFFIX p i) f1)`;
+     !i. SEM M (SUFFIX p i) f1)
+End
 
 (* M |= f *)
-val SAT_def =
- Define
-  `SAT M f = !p. (p 0) IN M.S0 /\ PATH M (p 0) p ==> SEM M p f`;
+Definition SAT_def:
+   SAT M f = !p. (p 0) IN M.S0 /\ PATH M (p 0) p ==> SEM M p f
+End
 
 (* Definition of a bisimulation *)
-val BISIM_def =
- Define
-  `BISIM M M' B Vars =
+Definition BISIM_def:
+   BISIM M M' B Vars =
     !s s'. s IN M.S /\ s' IN M'.S /\ B(s,s')
            ==>
            (!a. (a IN Vars ==> (M.L s a = M'.L s' a)))           (* 1 *)
@@ -230,7 +220,8 @@ val BISIM_def =
            /\
            (!s1'. s1' IN M'.S /\ M'.R(s',s1')
                  ==>
-                 ?s1. s1 IN M.S /\ M.R(s,s1) /\ B(s1,s1'))`;     (* 3 *)
+                 ?s1. s1 IN M.S /\ M.R(s,s1) /\ B(s1,s1'))
+End(* 3 *)
 
 (*
 Notes on correspondence to ACL2.
@@ -282,14 +273,14 @@ Here is what we called BISIM0: A particular bisimilarity relation:
 *)
 
 (* Definition of bisimulation equivalent *)
-val BISIM_EQ_def =
- Define
-  `BISIM_EQ M M' Vars =
+Definition BISIM_EQ_def:
+   BISIM_EQ M M' Vars =
     ?B. BISIM M M' B Vars                                          (* 1 *)
         /\
         (!s0. s0 IN M.S0 ==> ?s0'. s0' IN M'.S0 /\ B(s0,s0'))   (* 2 *)
         /\
-        (!s0'. s0' IN M'.S0 ==> ?s0. s0 IN M.S0 /\ B(s0,s0'))`; (* 3 *)
+        (!s0'. s0' IN M'.S0 ==> ?s0. s0 IN M.S0 /\ B(s0,s0'))
+End(* 3 *)
 (*
 Notes on correspondence to ACL2.
 
@@ -325,10 +316,10 @@ corresponds to (c-bisim-equiv M M' vars)
 * Auxiliary path-constructing function used in proof of Lemma1a
 * Makes a path in M B-bisimilar to p starting from s
 *)
-val MAKE_PATH_def =
- Define
-  `MAKE_PATH M B p s =
-    PRIM_REC s (\t n. @t'. M.R(t,t') /\ B(p(n+1),t'))`;
+Definition MAKE_PATH_def:
+   MAKE_PATH M B p s =
+    PRIM_REC s (\t n. @t'. M.R(t,t') /\ B(p(n+1),t'))
+End
 
 val MAKE_PATH_REC =
  prove
@@ -526,5 +517,3 @@ val Theorem1 =
        THEN RES_TAC
        THEN `SEM M' p' f` by METIS_TAC[PATH_def]
        THEN METIS_TAC[Lemma2,IN_DEF]]);
-
-val _ = export_theory();

@@ -1,19 +1,23 @@
-open HolKernel Parse boolLib bossLib listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory wordsTheory wordsLib
-     Serpent_Bitslice_UtilityTheory Serpent_Bitslice_SBoxTheory;
-
-val _ = new_theory "Serpent_Bitslice_KeySchedule";
+Theory Serpent_Bitslice_KeySchedule
+Ancestors
+  list rich_list bit marker pair arithmetic words
+  Serpent_Bitslice_Utility Serpent_Bitslice_SBox
+Libs
+  wordsLib
 
 (*number of rounds*)
-val R_def = Define `R = 32`;
+Definition R_def:   R = 32
+End
 
 (* PHI: Constant used in the key schedule *)
 
-val PHI_def = Define `PHI = 0x9e3779b9w : word32`;
+Definition PHI_def:   PHI = 0x9e3779b9w : word32
+End
 
-val short2longKey_def = Define
-`short2longKey k kl = let nw256 = n2w (k MOD  (2**kl)) in
-  nw256 || (1w<<kl) : word256`;
+Definition short2longKey_def:
+ short2longKey k kl = let nw256 = n2w (k MOD  (2**kl)) in
+  nw256 || (1w<<kl) : word256
+End
 
 (*used in making preKey*)
 val (makeSubKeyBitSlice_def,makeSubKeyBitSlice_termi) = Defn.tstore_defn(
@@ -30,13 +34,14 @@ Hol_defn "makeSubKeyBitSlice"
 
 
 (*reversed preKey*)
-val makeRevPreKey_def = Define
-`makeRevPreKey longKey = let keySlices = word256to32l longKey in
- myBUTLASTN 8 (makeSubKeyBitSlice keySlices 131)`;
+Definition makeRevPreKey_def:
+ makeRevPreKey longKey = let keySlices = word256to32l longKey in
+ myBUTLASTN 8 (makeSubKeyBitSlice keySlices 131)
+End
 
 
-val revPreKey2SubKey_def = Define
-`revPreKey2SubKey revPreKey
+Definition revPreKey2SubKey_def:
+ revPreKey2SubKey revPreKey
  = let w = REVERSE revPreKey
   in
   RND03 (EL 0 w, EL 1 w, EL 2 w, EL 3 w)::
@@ -71,16 +76,18 @@ val revPreKey2SubKey_def = Define
   RND06(EL 116 w, EL 117 w, EL 118 w, EL 119 w)::
   RND05(EL 120 w, EL 121 w, EL 122 w, EL 123 w)::
   RND04(EL 124 w, EL 125 w, EL 126 w, EL 127 w)::
-  RND03(EL 128 w, EL 129 w, EL 130 w, EL 131 w)::[]`;
+  RND03(EL 128 w, EL 129 w, EL 130 w, EL 131 w)::[]
+End
 
 
-val makeKey_def = Define
-`makeKey userKey kl
+Definition makeKey_def:
+ makeKey userKey kl
  = let longKey = short2longKey userKey kl
   in
   let revPreKey = makeRevPreKey longKey
   in
-  revPreKey2SubKey revPreKey`;
+  revPreKey2SubKey revPreKey
+End
 
 val makeSubKeyBitSliceLength = Q.store_thm(
 "makeSubKeyBitSliceLength",
@@ -125,4 +132,3 @@ val makeKeyLength = Q.store_thm(
     LENGTH (makeKey userKey kl) = 33`,
   RW_TAC list_ss [makeKey_def,revPreKey2SubKey_def,LET_THM]);
 
-val _ = export_theory();

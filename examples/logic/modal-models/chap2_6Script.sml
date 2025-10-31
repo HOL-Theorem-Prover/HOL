@@ -1,30 +1,10 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
+Theory chap2_6
+Ancestors
+  chap1 pred_set relation arithmetic set_relation chap2_1 chap2_2
+  chap2_4 chap2_5 equiv_on_partition prim_rec list rich_list
+  finite_map combin folModels folLang folCanon ultrafilter
+  ultraproduct lemma2_73 pair
 
-open chap2_1Theory;
-open chap2_2Theory;
-open chap2_4Theory;
-open chap2_5Theory;
-open equiv_on_partitionTheory;
-open prim_recTheory;
-open listTheory;
-open rich_listTheory;
-open finite_mapTheory;
-open combinTheory;
-open folModelsTheory;
-open folLangTheory;
-open folCanonTheory;
-open ultrafilterTheory;
-open ultraproductTheory;
-open lemma2_73Theory;
-open pairTheory;
-
-
-val _ = new_theory "chap2_6";
 val _ = temp_delsimps ["satis_def"]
 
 Definition L1tau_def:
@@ -39,11 +19,12 @@ Induct_on `phi` (* 5 *) >>
 fs[L1tau_def,fDISJ_def,fNOT_def,fAND_def]
 QED
 
-val folm2mm_def = Define`
+Definition folm2mm_def:
 folm2mm FM = <| frame := <| world := FM.Dom ;
                               rel := \w1 w2. (FM.Pred 0 [w1;w2] /\
                                               w1 IN FM.Dom /\ w2 IN FM.Dom) |>;
-                 valt := \v w. (FM.Pred v [w] /\ w IN FM.Dom) |>`;
+                 valt := \v w. (FM.Pred v [w] /\ w IN FM.Dom) |>
+End
 
 
 Theorem MAP_LIST_EQ :
@@ -1126,7 +1107,7 @@ fs[Abbr`MS`,Abbr`MS'`] >>
 fs[models2worlds_def,folm2mm_def,mm2folm_def]
 QED
 
-val invar4bisim_def = Define`
+Definition invar4bisim_def:
   invar4bisim x (t1: μ itself) (t2: ν itself) phi <=>
      (FV phi ⊆ {x} /\ L1tau phi /\
      !(M:μ modalBasics$model) (N:ν modalBasics$model) v w.
@@ -1134,7 +1115,8 @@ val invar4bisim_def = Define`
            (!(σm: num -> μ) (σn: num -> ν).
              (valuation (mm2folm M) σm /\ valuation (mm2folm N) σn) ==>
                     (fsatis (mm2folm M) σm(|x |-> w|) phi <=>
-                    fsatis (mm2folm N) σn(|x |-> v|) phi )))`
+                    fsatis (mm2folm N) σn(|x |-> v|) phi )))
+End
 
 Theorem invar4bisim_def':
  ∀x phi.
@@ -1785,4 +1767,3 @@ Proof
   rw[] >> drule thm_2_68_half1 >>  rw[feq_def] >> metis_tac[]
 QED
 
-val _ = export_theory();

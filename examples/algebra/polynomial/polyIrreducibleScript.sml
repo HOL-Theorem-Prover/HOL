@@ -4,33 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyIrreducible";
+Theory polyIrreducible
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  monoid group ring field fieldIdeal polynomial polyWeak polyRing
+  polyField polyMonic polyDivision polyFieldDivision polyRoot
+  polyDivides
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldIdealTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-
-open polyMonicTheory;
-open polyDivisionTheory;
-open polyFieldDivisionTheory;
-open polyRootTheory;
-open polyDividesTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -767,8 +752,4 @@ val poly_monic_reducible_factors = store_thm(
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

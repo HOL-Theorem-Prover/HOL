@@ -1,13 +1,13 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory relationTheory pred_setTheory prim_recTheory pairTheory bagTheory set_relationTheory rich_listTheory
-
-open alterATheory sptreeTheory ltlTheory generalHelpersTheory concrRepTheory ltl2waaTheory waaSimplTheory optionTheory
+Theory concrltl2waa
+Ancestors
+  gfg list option relation pred_set prim_rec pair bag
+  set_relation rich_list alterA sptree ltl generalHelpers
+  concrRep ltl2waa waaSimpl option
 
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 
-val _ = new_theory "concrltl2waa"
-
-val tempDNF_concr_def = Define`
+Definition tempDNF_concr_def:
     (tempDNF_concr (VAR a) = [[VAR a]])
   ∧ (tempDNF_concr (N_VAR a) = [[N_VAR a]])
   ∧ (tempDNF_concr (DISJ f1 f2) = (tempDNF_concr f1) ++ (tempDNF_concr f2))
@@ -17,7 +17,8 @@ val tempDNF_concr_def = Define`
                FOLDR (\l sofar. (MAP (($++) l) tDNF2) ++ sofar) [] tDNF1)
   ∧ (tempDNF_concr (X f)= [[X f]])
   ∧ (tempDNF_concr (U f1 f2) = [[U f1 f2]])
-  ∧ (tempDNF_concr (R f1 f2) = [[R f1 f2]])`;
+  ∧ (tempDNF_concr (R f1 f2) = [[R f1 f2]])
+End
 
 val FOLDR_LEMM1 = store_thm
   ("FOLDR_LEMM1",
@@ -117,14 +118,15 @@ val TEMPDNF_CONCR_LEMM = store_thm
        )
   );
 
-val props_concr_def = Define`
+Definition props_concr_def:
     (props_concr (VAR a) = [a])
   ∧ (props_concr (N_VAR a) = [a])
   ∧ (props_concr (DISJ f1 f2) = props_concr f1 ++ props_concr f2)
   ∧ (props_concr (CONJ f1 f2) = props_concr f1 ++ props_concr f2)
   ∧ (props_concr (X f) = props_concr f)
   ∧ (props_concr (U f1 f2) = props_concr f1 ++ props_concr f2)
-  ∧ (props_concr (R f1 f2) = props_concr f1 ++ props_concr f2)`;
+  ∧ (props_concr (R f1 f2) = props_concr f1 ++ props_concr f2)
+End
 
 val PROPS_CONCR_LEMM = store_thm
   ("PROPS_CONCR_LEMM",
@@ -134,16 +136,17 @@ val PROPS_CONCR_LEMM = store_thm
   >> metis_tac[]
   );
 
-val d_conj_concr_def = Define`
+Definition d_conj_concr_def:
   d_conj_concr d1 d2 =
       FOLDR
       (\e1 sofar. (MAP (λe2. <| pos := nub (e1.pos++e2.pos) ;
                                neg := nub (e1.neg++e2.neg) ;
                                sucs := nub (e1.sucs++e2.sucs) |> ) d2) ++ sofar)
       []
-      d1`;
+      d1
+End
 
-val trans_concr_def = Define`
+Definition trans_concr_def:
     (trans_concr (VAR a) = [<| pos := [a]; neg := []; sucs := [] |> ])
   ∧ (trans_concr (N_VAR a) = [<| pos := []; neg := [a]; sucs := [] |> ])
   ∧ (trans_concr (CONJ f1 f2) =
@@ -159,7 +162,8 @@ val trans_concr_def = Define`
   ∧ (trans_concr (R f1 f2) =
      d_conj_concr (trans_concr f2)
        (<| pos := [] ; neg := [] ; sucs := [R f1 f2] |> ::
-                                           (trans_concr f1)))`;
+                                           (trans_concr f1)))
+End
 
 (* val TRANS_CONCR_SUCS_AP = store_thm *)
 (*   ("TRANS_CONCR_SUCS_AP", *)
@@ -705,12 +709,14 @@ val ONE_STEP_TRANS_CONCR = store_thm
    >> simp[oneStep_def,ltl2vwaa_def,ltl2vwaa_free_alph_def]
   );
 
-val tempSubfCl_def = Define`
-  tempSubfCl l = BIGUNION { tempSubForms f | MEM f l }`;
+Definition tempSubfCl_def:
+  tempSubfCl l = BIGUNION { tempSubForms f | MEM f l }
+End
 
-val list_to_bag_def = Define`
+Definition list_to_bag_def:
   (list_to_bag [] = K 0)
-  ∧ (list_to_bag (x::xs) = (list_to_bag xs) ⊎ {|x|})`;
+  ∧ (list_to_bag (x::xs) = (list_to_bag xs) ⊎ {|x|})
+End
 
 val LST_TO_BAG_FINITE = store_thm
   ("LST_TO_BAG_FINITE",
@@ -1867,7 +1873,7 @@ val EXP_GRAPH_TRANS_LEMM = store_thm
    )
   );
 
-val expandAuto_init_def = Define`
+Definition expandAuto_init_def:
   expandAuto_init φ =
     let initForms = tempDNF_concr φ
     in let flat_initForms = nub (FLAT initForms)
@@ -1880,7 +1886,8 @@ val expandAuto_init_def = Define`
             initForms
     in do g2 <- expandGraph g1 flat_initForms;
           SOME (concrAA g2 init_concr (props_concr φ))
-          od`;
+          od
+End
 
 (* val EXPAUTO_INIT = store_thm *)
 (*   ("EXPAUTO_INIT", *)
@@ -2598,4 +2605,3 @@ val EXP_WAA_AP = store_thm
   );
 
 
-val _ = export_theory();

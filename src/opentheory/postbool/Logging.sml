@@ -8,7 +8,9 @@ val ERR = Feedback.mk_HOL_ERR "Logging"
 
 fun uptodate_const Thy Name =
   Theory.uptodate_term (Term.prim_mk_const {Thy=Thy,Name=Name})
-  handle Feedback.HOL_ERR {origin_function="prim_mk_const",...} => false
+  handle Feedback.HOL_ERR (Feedback.HOL_ERROR {
+    origins = {origin_function="prim_mk_const",...}::_,...
+  }) => false
 
 val verbosity = ref 0
 val _ = Feedback.register_trace("opentheory logging",verbosity,5)
@@ -189,7 +191,10 @@ val (log_term, log_thm, log_clear,
       val _ = log_tyop {Thy=Thy,Tyop=Tyop}
       val _ = log_list log_type Args
       val _ = log_command "opType"
-    in () end handle HOL_ERR {origin_function="dest_thy_type",...} => let
+    in () end
+    handle HOL_ERR (HOL_ERROR {
+      origins = {origin_function="dest_thy_type",...}::_,...
+    }) => let
       val _ = log_type_var ty
       val _ = log_command "varType"
     in () end
@@ -225,17 +230,23 @@ val (log_term, log_thm, log_clear,
       val _ = log_const {Thy=Thy,Name=Name}
       val _ = log_type Ty
       val _ = log_command "constTerm"
-    in () end handle HOL_ERR {origin_function="dest_thy_const",...} => let
+    in () end handle HOL_ERR (HOL_ERROR {
+      origins = {origin_function="dest_thy_const",...}::_,...
+    }) => let
       val (t1,t2) = dest_comb tm
       val _ = log_term t1
       val _ = log_term t2
       val _ = log_command "appTerm"
-    in () end handle HOL_ERR {origin_function="dest_comb",...} => let
+    in () end handle HOL_ERR (HOL_ERROR {
+      origins = {origin_function="dest_comb",...}::_,...
+    }) => let
       val (v,b) = dest_abs tm
       val _ = log_var v
       val _ = log_term b
       val _ = log_command "absTerm"
-    in () end handle HOL_ERR {origin_function="dest_abs",...} => let
+    in () end handle HOL_ERR (HOL_ERROR {
+      origins = {origin_function="dest_abs",...}::_,...
+    }) => let
       val _ = log_var tm
       val _ = log_command "varTerm"
     in () end

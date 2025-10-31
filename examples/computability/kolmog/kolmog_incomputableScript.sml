@@ -1,14 +1,11 @@
-open HolKernel Parse boolLib bossLib
-
-open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory
-open reductionEval;
-open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
-     kolmogorov_complexityTheory invarianceResultsTheory boolListsTheory
-open churchDBTheory
-open recursivefnsTheory primrecfnsTheory prtermTheory
-open unary_recfnsTheory
-
-val _ = new_theory "kolmog_incomputable"
+Theory kolmog_incomputable
+Ancestors
+  arithmetic While logroot pred_set list churchoption churchlist
+  recfuns numsAsCompStates kolmogorov_complexity
+  invarianceResults boolLists churchDB recursivefns primrecfns
+  prterm unary_recfns
+Libs
+  reductionEval
 
 (*  Proving kolmog is not computable  *)
 
@@ -525,4 +522,3 @@ Proof
   metis_tac[part_hutter_UKC]
 QED
 
-val _ = export_theory()

@@ -1,6 +1,8 @@
-open preamble while_langTheory std_logicTheory;
-
-val _ = new_theory "div_logic";
+Theory div_logic
+Ancestors
+  while_lang std_logic
+Libs
+  preamble
 
 (* Explanation of the "Pohjola" name that's used below. I called the
    judgments of standard Floyd-Hoare logic "Hoare", which is short for
@@ -74,4 +76,3 @@ Definition PohjolaSem_def:
     ∀s. P s ⇒ ∃l. diverges s p l ∧ D l
 End
 
-val _ = export_theory();

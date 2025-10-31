@@ -1,17 +1,10 @@
-(* standard prelude *)
-open HolKernel boolLib Parse
-
-
-(* extra theorem-proving oomph from libraries *)
-open bossLib metisLib ncLib BasicProvers boolSimps
-
-
-
-(* ancestor theories *)
-open fsubtypesTheory pred_setTheory
-     sortingTheory (* for theorems about permutations *)
-
-val _ = new_theory "full_subtyping"
+Theory full_subtyping
+Ancestors
+  fsubtypes pred_set
+  sorting  (* for theorems about permutations *)
+Libs
+  (* extra theorem-proving oomph from libraries *)
+  metisLib ncLib BasicProvers boolSimps
 
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
                   fixity = Infix(NONASSOC, 425),
@@ -455,9 +448,9 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2)),
                                  TM, HardSpace 1, TOK "<:", BreakSpace(1,0)],
                   term_name = "alg_subtyping"}
 
-val alg_subtyping_def = Define`
+Definition alg_subtyping_def:
   G |-> ty1 <: ty2 = ?n. algn_subtyping n G ty1 ty2
-`;
+End
 
 fun derive_rule th0 = let
   val (vs, base) = strip_forall (concl th0)
@@ -543,6 +536,3 @@ val alg_soundcomplete = store_thm(
     SRW_TAC [][fsubtyping_rules] THEN
     METIS_TAC [fsubtyping_rules, fsubtyping_wfctxt]
   ]);
-
-val _ = export_theory()
-

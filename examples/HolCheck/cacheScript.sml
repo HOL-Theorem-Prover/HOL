@@ -1,28 +1,10 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("cache")
-
-
-open bossLib
-open pairTheory
-open pairLib
-open pairTools
-open pairSyntax
-open pred_setTheory
-open pred_setLib
-open listTheory
-open stringTheory
-open sumTheory
-open simpLib
-open stringLib
-open numLib
-open metisLib
-open ksTheory
-open setLemmasTheory
-open reachTheory
-open muSyntaxTheory
-open envTheory
-open muTheory
+Theory cache
+Ancestors
+  pair pred_set list string sum ks setLemmas reach muSyntax env
+  mu
+Libs
+  pairLib pairTools pairSyntax pred_setLib simpLib stringLib
+  numLib metisLib
 
 infix &&; infix 8 by;
 
@@ -325,4 +307,3 @@ THEN METIS_TAC [GEN_STATES_GFP]))
 
 val STATES_DEF_SYM_NU = save_thm("STATES_DEF_SYM_NU",prove(``!f ks e Q n. STATES f ks e[[[Q<--FP f Q ks e[[[Q<--ks.S]]] n]]] = FP f Q ks e[[[Q<--ks.S]]] (SUC n)``,SIMP_TAC std_ss [STATES_def,ENV_UPDATE]))
 
-val _ = export_theory()

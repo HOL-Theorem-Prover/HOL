@@ -1,11 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open termTheory
-open cvTheory
-open transferTheory
-open transferLib
-open cvxferTheory
-
-val _ = new_theory "cvterm";
+Theory cvterm
+Ancestors
+  term cv transfer cvxfer
+Libs
+  transferLib
 
 Overload cp[local] = “cv$Pair”
 Overload cn[local] = “cv$Num”
@@ -96,4 +93,3 @@ Proof
   metis_tac[]
 QED
 
-val _ = export_theory();

@@ -34,18 +34,13 @@ which is Euler's generalization of Fermat's Little Theorem.
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "FLTeuler";
+Theory FLTeuler
+Ancestors
+  arithmetic pred_set divides gcd number combinatorics
+  group  (* for FiniteGroup_def *)
 
 (* ------------------------------------------------------------------------- *)
 
-open arithmeticTheory pred_setTheory dividesTheory gcdTheory numberTheory
-     combinatoricsTheory;
-
-open groupTheory; (* for FiniteGroup_def *)
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Number Group Documentation                     *)
@@ -162,8 +157,4 @@ QED
 (* Part 4: End ------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

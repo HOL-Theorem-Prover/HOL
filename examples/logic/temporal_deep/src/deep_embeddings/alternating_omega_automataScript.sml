@@ -1,76 +1,52 @@
-open HolKernel Parse boolLib bossLib;
-
-(*
-quietdec := true;
-
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
-
-map load
- ["xprop_logicTheory", "prop_logicTheory", "infinite_pathTheory", "pred_setTheory", "listTheory", "pairTheory", "set_lemmataTheory",
-   "containerTheory", "prim_recTheory", "tuerk_tacticsLib", "temporal_deep_mixedTheory", "arithmeticTheory", "numLib"];
-*)
-
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory numLib;
-open Sanity;
+Theory alternating_omega_automata
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed arithmetic
+Libs
+  tuerk_tacticsLib numLib Sanity
 
 val _ = hide "S";
 val _ = hide "I";
 
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
-
-
-val _ = new_theory "alternating_omega_automata";
-
-
 (*****************************************************************************)
 (* symbolic representation of alternating automata                 *)
 (*****************************************************************************)
-val alternating_acceptance_condition_def =
-Hol_datatype
-`alternating_acceptance_condition =
+Datatype:
+ alternating_acceptance_condition =
     TRUE |
     FALSE |
-    INITIAL of 'state set |
-    CO_INITIAL of 'state set |
-    BUECHI of 'state set |
-    CO_BUECHI of 'state set |
-    PARITY of 'state->num |
-    WEAK_PARITY of 'state->num |
-    WEAK_BUECHI of 'state set |
-    WEAK_CO_BUECHI of 'state set`;
+    INITIAL ('state set) |
+    CO_INITIAL ('state set) |
+    BUECHI ('state set) |
+    CO_BUECHI ('state set) |
+    PARITY ('state->num) |
+    WEAK_PARITY ('state->num) |
+    WEAK_BUECHI ('state set) |
+    WEAK_CO_BUECHI ('state set)
+End
 
-val alternating_semi_automaton_def =
-Hol_datatype
-`alternating_semi_automaton =
+Datatype:
+ alternating_semi_automaton =
     <| S:   'state set;                        (*set of all used statevariables *)
         I: 'input set;
         S0: 'state prop_logic;              (*initial condition*)
         R:   'state -> 'input -> 'state prop_logic (*transition function*)
-    |>`;
+    |>
+End
 
-val alternating_automaton_def =
-Hol_datatype
-`alternating_automaton =
+Datatype:
+ alternating_automaton =
     <| A: ('input, 'state) alternating_semi_automaton;
         AC: 'state alternating_acceptance_condition (*acceptance condition*)
-    |>`;
+    |>
+End
 
-val alternating_run_def =
-Hol_datatype
-`alternating_run =
+Datatype:
+ alternating_run =
     <| S0:   'state set;                          (*choosen initial states*)
          R:   'state -> num -> 'state set (*choosen transitions*)
-    |>`;
+    |>
+End
 
 Theorem alternating_automaton_REWRITES =
       LIST_CONJ (List.concat
@@ -86,32 +62,31 @@ val std_ss = std_ss ++
 = Semantic
 ============================================================*)
 
-val IS_REACHABLE_BY_RUN_def =
-Define
-`(IS_REACHABLE_BY_RUN (s, 0) r = (s IN r.S0)) /\
+Definition IS_REACHABLE_BY_RUN_def:
+ (IS_REACHABLE_BY_RUN (s, 0) r = (s IN r.S0)) /\
   (IS_REACHABLE_BY_RUN (s,  SUC n) r = (
-    ?s'. IS_REACHABLE_BY_RUN (s', n) r /\ (s IN r.R s' n)))`;
+    ?s'. IS_REACHABLE_BY_RUN (s', n) r /\ (s IN r.R s' n)))
+End
 
-val ALTERNATING_RUN_def =
-Define
-`ALTERNATING_RUN (A:('input, 'state) alternating_semi_automaton)
+Definition ALTERNATING_RUN_def:
+ ALTERNATING_RUN (A:('input, 'state) alternating_semi_automaton)
             (i:(num -> 'input))
             (r:'state alternating_run) = (
                 (r.S0 SUBSET A.S) /\ (P_SEM (r.S0) A.S0) /\
                 (!n s. (r.R s n SUBSET A.S)) /\
                 (!n s.
                 (IS_REACHABLE_BY_RUN (s, n) r) ==>
-                (P_SEM (r.R s n) (A.R s (i n)))))`;
+                (P_SEM (r.R s n) (A.R s (i n)))))
+End
 
-val IS_PATH_THROUGH_RUN_def =
-Define
-`IS_PATH_THROUGH_RUN w r = ((w 0 IN r.S0) /\ !n.
-         ((w (SUC n)) IN r.R (w n) n))`;
+Definition IS_PATH_THROUGH_RUN_def:
+ IS_PATH_THROUGH_RUN w r = ((w 0 IN r.S0) /\ !n.
+         ((w (SUC n)) IN r.R (w n) n))
+End
 
 
-val ALT_ACCEPT_COND_SEM_def =
-Define
-`(ALT_ACCEPT_COND_SEM TRUE i = T) /\
+Definition ALT_ACCEPT_COND_SEM_def:
+ (ALT_ACCEPT_COND_SEM TRUE i = T) /\
     (ALT_ACCEPT_COND_SEM FALSE i = F) /\
     (ALT_ACCEPT_COND_SEM (INITIAL S) i = (i 0 IN S)) /\
     (ALT_ACCEPT_COND_SEM (CO_INITIAL S) i = ~(i 0 IN S)) /\
@@ -128,19 +103,20 @@ Define
     (ALT_ACCEPT_COND_SEM (WEAK_BUECHI S) i =
         (~(((ELEMENTS_OF_PATH i) INTER S) = EMPTY))) /\
     (ALT_ACCEPT_COND_SEM (WEAK_CO_BUECHI S) i =
-        (((ELEMENTS_OF_PATH i) INTER S) = EMPTY))`;
+        (((ELEMENTS_OF_PATH i) INTER S) = EMPTY))
+End
 
 
-val ALT_SEM_def =
-Define
-`ALT_SEM A i = ((!n. i n IN A.A.I) /\
-        ?r. ALTERNATING_RUN A.A i r /\ (!w. IS_PATH_THROUGH_RUN w r ==> ALT_ACCEPT_COND_SEM A.AC w))`;
+Definition ALT_SEM_def:
+ ALT_SEM A i = ((!n. i n IN A.A.I) /\
+        ?r. ALTERNATING_RUN A.A i r /\ (!w. IS_PATH_THROUGH_RUN w r ==> ALT_ACCEPT_COND_SEM A.AC w))
+End
 
 
-val ALT_AUTOMATON_EQUIV_def =
-Define
-`ALT_AUTOMATON_EQUIV A A' =
-        (!i. ALT_SEM A i = ALT_SEM A' i)`;
+Definition ALT_AUTOMATON_EQUIV_def:
+ ALT_AUTOMATON_EQUIV A A' =
+        (!i. ALT_SEM A i = ALT_SEM A' i)
+End
 
 (*============================================================
 = Lemmata and Definitions about Acceptance Component
@@ -180,9 +156,8 @@ val ALT_ACCEPT_COND_SEM_THM = LIST_CONJ [
 val _ = save_thm("ALT_ACCEPT_COND_SEM_THM",ALT_ACCEPT_COND_SEM_THM);
 
 
-val ALT_ACCEPT_COND_NEG_def =
-Define
-`(ALT_ACCEPT_COND_NEG TRUE = FALSE) /\
+Definition ALT_ACCEPT_COND_NEG_def:
+ (ALT_ACCEPT_COND_NEG TRUE = FALSE) /\
   (ALT_ACCEPT_COND_NEG FALSE = TRUE) /\
   (ALT_ACCEPT_COND_NEG (INITIAL S) = (CO_INITIAL S)) /\
   (ALT_ACCEPT_COND_NEG (CO_INITIAL S) = (INITIAL S)) /\
@@ -191,7 +166,8 @@ Define
   (ALT_ACCEPT_COND_NEG (WEAK_BUECHI S) = (WEAK_CO_BUECHI S)) /\
   (ALT_ACCEPT_COND_NEG (WEAK_CO_BUECHI S) = (WEAK_BUECHI S)) /\
   (ALT_ACCEPT_COND_NEG (PARITY f) = (PARITY (\n. SUC(f n)))) /\
-  (ALT_ACCEPT_COND_NEG (WEAK_PARITY f) = (WEAK_PARITY (\n. SUC(f n))))`;
+  (ALT_ACCEPT_COND_NEG (WEAK_PARITY f) = (WEAK_PARITY (\n. SUC(f n))))
+End
 
 
 val ALT_ACCEPT_COND_NEG_SEM =
@@ -257,28 +233,28 @@ val ALT_ACCEPT_COND_NEG_SEM =
 = Min Semantic
 ============================================================*)
 
-val ALTERNATING_MIN_RUN_def =
-Define
-`ALTERNATING_MIN_RUN (A:('input, 'state) alternating_semi_automaton)
+Definition ALTERNATING_MIN_RUN_def:
+ ALTERNATING_MIN_RUN (A:('input, 'state) alternating_semi_automaton)
             (i:(num -> 'input))
             (r:'state alternating_run) = (
                 (r.S0 SUBSET A.S) /\ (P_SEM_MIN (r.S0) A.S0) /\
                 (!n s. (r.R s n SUBSET A.S)) /\
                 (!n s.
                 (IS_REACHABLE_BY_RUN (s, n) r) ==>
-                (P_SEM_MIN (r.R s n) (A.R s (i n)))))`;
+                (P_SEM_MIN (r.R s n) (A.R s (i n)))))
+End
 
 
-val ALT_SEM_MIN_def =
-Define
-`ALT_SEM_MIN A i = ((!n. i n IN A.A.I) /\
-        ?r. ALTERNATING_MIN_RUN A.A i r /\ (!w. IS_PATH_THROUGH_RUN w r ==> ALT_ACCEPT_COND_SEM A.AC w))`;
+Definition ALT_SEM_MIN_def:
+ ALT_SEM_MIN A i = ((!n. i n IN A.A.I) /\
+        ?r. ALTERNATING_MIN_RUN A.A i r /\ (!w. IS_PATH_THROUGH_RUN w r ==> ALT_ACCEPT_COND_SEM A.AC w))
+End
 
 
-val IS_ALTERNATING_SUBRUN_def =
-Define
-`IS_ALTERNATING_SUBRUN r r' =
-    (r.S0 SUBSET r'.S0 /\ !s n. (r.R s n SUBSET r'.R s n))`;
+Definition IS_ALTERNATING_SUBRUN_def:
+ IS_ALTERNATING_SUBRUN r r' =
+    (r.S0 SUBSET r'.S0 /\ !s n. (r.R s n SUBSET r'.R s n))
+End
 
 
 val IS_PATH_THROUGH_SUBRUN_THM =
@@ -374,15 +350,15 @@ val ALT_SEM___ALT_SEM_MIN___EQUIV =
 = Negation of alternating automata
 ============================================================*)
 
-val ALT_SEMI_AUTOMATON_NEG_def =
-Define
-    `ALT_SEMI_AUTOMATON_NEG A = alternating_semi_automaton A.S A.I (P_DUAL A.S0)
-     (\s i. P_DUAL (A.R s i))`;
+Definition ALT_SEMI_AUTOMATON_NEG_def:
+     ALT_SEMI_AUTOMATON_NEG A = alternating_semi_automaton A.S A.I (P_DUAL A.S0)
+     (\s i. P_DUAL (A.R s i))
+End
 
 
-val ALT_AUTOMATON_NEG_def =
-Define
-    `ALT_AUTOMATON_NEG A = (alternating_automaton (ALT_SEMI_AUTOMATON_NEG A.A) (ALT_ACCEPT_COND_NEG A.AC))`;
+Definition ALT_AUTOMATON_NEG_def:
+     ALT_AUTOMATON_NEG A = (alternating_automaton (ALT_SEMI_AUTOMATON_NEG A.A) (ALT_ACCEPT_COND_NEG A.AC))
+End
 
 
 
@@ -409,16 +385,16 @@ val ALT_AUTOMATON_NEG_NEG_SEM =
     PROVE_TAC[INF_ELEMENTS_OF_PATH_NOT_EMPTY, ALT_ACCEPT_COND_NEG_SEM]);
 
 
-val ALTERNATING_PRERUN_def =
-Define
-`ALTERNATING_PRERUN (A:('input, 'state) alternating_semi_automaton)
+Definition ALTERNATING_PRERUN_def:
+ ALTERNATING_PRERUN (A:('input, 'state) alternating_semi_automaton)
             (i:(num -> 'input))
             (r:'state alternating_run) = (
                 (r.S0 SUBSET A.S) /\ ((P_SEM (r.S0) A.S0) \/ ((r.S0 = EMPTY) /\ P_IS_CONTRADICTION A.S0)) /\
                 (!n s. (r.R s n SUBSET A.S)) /\
                 (!n s.
                 (IS_REACHABLE_BY_RUN (s, n) r) ==>
-                (P_SEM (r.R s n) (A.R s (i n)) \/ ((r.R s n = EMPTY) /\ P_IS_CONTRADICTION (A.R s (i n))))))`;
+                (P_SEM (r.R s n) (A.R s (i n)) \/ ((r.R s n = EMPTY) /\ P_IS_CONTRADICTION (A.R s (i n))))))
+End
 
 
 val ALTERNATING_RUN_IS_PRERUN =
@@ -433,47 +409,48 @@ val ALTERNATING_RUN_IS_PRERUN =
 (* Some Classes of alternating automata                                                                                   *)
 (*****************************************************************************)
 
-val IS_NONDETERMINISTIC_SEMI_AUTOMATON_def =
-Define
-`IS_NONDETERMINISTIC_SEMI_AUTOMATON A =
+Definition IS_NONDETERMINISTIC_SEMI_AUTOMATON_def:
+ IS_NONDETERMINISTIC_SEMI_AUTOMATON A =
         ((IS_PROP_DISJUNCTION A.S0) /\
-        (!s i. IS_PROP_DISJUNCTION (A.R s i)))`;
+        (!s i. IS_PROP_DISJUNCTION (A.R s i)))
+End
 
-val IS_UNIVERSAL_SEMI_AUTOMATON_def =
-Define
-`IS_UNIVERSAL_SEMI_AUTOMATON A =
+Definition IS_UNIVERSAL_SEMI_AUTOMATON_def:
+ IS_UNIVERSAL_SEMI_AUTOMATON A =
         ((IS_PROP_CONJUNCTION A.S0) /\
-        (!s i. IS_PROP_CONJUNCTION (A.R s i)))`;
+        (!s i. IS_PROP_CONJUNCTION (A.R s i)))
+End
 
-val IS_DETERMINISTIC_SEMI_AUTOMATON_def =
-Define
-`IS_DETERMINISTIC_SEMI_AUTOMATON A =
+Definition IS_DETERMINISTIC_SEMI_AUTOMATON_def:
+ IS_DETERMINISTIC_SEMI_AUTOMATON A =
         (IS_NONDETERMINISTIC_SEMI_AUTOMATON A /\
-        IS_UNIVERSAL_SEMI_AUTOMATON A)`;
+        IS_UNIVERSAL_SEMI_AUTOMATON A)
+End
 
 
-val IS_NONDETERMINISTIC_AUTOMATON_def =
-Define
-`IS_NONDETERMINISTIC_AUTOMATON A =
-    IS_NONDETERMINISTIC_SEMI_AUTOMATON A.A`;
+Definition IS_NONDETERMINISTIC_AUTOMATON_def:
+ IS_NONDETERMINISTIC_AUTOMATON A =
+    IS_NONDETERMINISTIC_SEMI_AUTOMATON A.A
+End
 
-val IS_UNIVERSAL_AUTOMATON_def =
-Define
-`IS_UNIVERSAL_AUTOMATON A = IS_UNIVERSAL_SEMI_AUTOMATON A.A`;
+Definition IS_UNIVERSAL_AUTOMATON_def:
+ IS_UNIVERSAL_AUTOMATON A = IS_UNIVERSAL_SEMI_AUTOMATON A.A
+End
 
-val IS_DETERMINISTIC_AUTOMATON_def =
-Define
-`IS_DETERMINISTIC_AUTOMATON A =  IS_DETERMINISTIC_SEMI_AUTOMATON A.A`;
+Definition IS_DETERMINISTIC_AUTOMATON_def:
+ IS_DETERMINISTIC_AUTOMATON A =  IS_DETERMINISTIC_SEMI_AUTOMATON A.A
+End
 
 
-val IS_VALID_ALTERNATING_SEMI_AUTOMATON_def = Define
-  `IS_VALID_ALTERNATING_SEMI_AUTOMATON A =
+Definition IS_VALID_ALTERNATING_SEMI_AUTOMATON_def:
+   IS_VALID_ALTERNATING_SEMI_AUTOMATON A =
     (FINITE A.S /\ FINITE A.I /\ (P_USED_VARS A.S0 SUBSET A.S) /\
      (!s i. (P_USED_VARS (A.R s i) SUBSET A.S)) /\
-     IS_POSITIVE_PROP_FORMULA A.S0 /\ (!s i. IS_POSITIVE_PROP_FORMULA (A.R s i)))`;
+     IS_POSITIVE_PROP_FORMULA A.S0 /\ (!s i. IS_POSITIVE_PROP_FORMULA (A.R s i)))
+End
 
-val IS_VALID_ACCEPTANCE_COMPONENT_def = Define
-  `(IS_VALID_ACCEPTANCE_COMPONENT TRUE A = T) /\
+Definition IS_VALID_ACCEPTANCE_COMPONENT_def:
+   (IS_VALID_ACCEPTANCE_COMPONENT TRUE A = T) /\
     (IS_VALID_ACCEPTANCE_COMPONENT FALSE A = T) /\
     (IS_VALID_ACCEPTANCE_COMPONENT (INITIAL s) A = (s SUBSET A.S)) /\
     (IS_VALID_ACCEPTANCE_COMPONENT (CO_INITIAL s) A = (s SUBSET A.S)) /\
@@ -482,28 +459,33 @@ val IS_VALID_ACCEPTANCE_COMPONENT_def = Define
     (IS_VALID_ACCEPTANCE_COMPONENT (PARITY f) A = T) /\
     (IS_VALID_ACCEPTANCE_COMPONENT (WEAK_PARITY f) A = T) /\
     (IS_VALID_ACCEPTANCE_COMPONENT (WEAK_BUECHI s) A = (s SUBSET A.S)) /\
-    (IS_VALID_ACCEPTANCE_COMPONENT (WEAK_CO_BUECHI s) A = (s SUBSET A.S))`;
+    (IS_VALID_ACCEPTANCE_COMPONENT (WEAK_CO_BUECHI s) A = (s SUBSET A.S))
+End
 
 
-val IS_VALID_ALTERNATING_AUTOMATON_def = Define
-  `IS_VALID_ALTERNATING_AUTOMATON A =
+Definition IS_VALID_ALTERNATING_AUTOMATON_def:
+   IS_VALID_ALTERNATING_AUTOMATON A =
         ((IS_VALID_ALTERNATING_SEMI_AUTOMATON A.A) /\
-        (IS_VALID_ACCEPTANCE_COMPONENT A.AC A.A))`;
+        (IS_VALID_ACCEPTANCE_COMPONENT A.AC A.A))
+End
 
-val IS_EXISTENTIALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON_def = Define
-  `IS_EXISTENTIALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A =
-        ((?p. P_SEM p A.S0)  /\ (!s i. ?p. P_SEM p (A.R s i)))`;
-
-
-val IS_UNIVERSALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON_def = Define
-  `IS_UNIVERSALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A =
-        ((?p. ~P_SEM p A.S0)  /\ (!s i. ?p. ~P_SEM p (A.R s i)))`;
+Definition IS_EXISTENTIALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON_def:
+   IS_EXISTENTIALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A =
+        ((?p. P_SEM p A.S0)  /\ (!s i. ?p. P_SEM p (A.R s i)))
+End
 
 
-val IS_TOTAL_ALTERNATING_SEMI_AUTOMATON_def = Define
-  `IS_TOTAL_ALTERNATING_SEMI_AUTOMATON A =
+Definition IS_UNIVERSALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON_def:
+   IS_UNIVERSALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A =
+        ((?p. ~P_SEM p A.S0)  /\ (!s i. ?p. ~P_SEM p (A.R s i)))
+End
+
+
+Definition IS_TOTAL_ALTERNATING_SEMI_AUTOMATON_def:
+   IS_TOTAL_ALTERNATING_SEMI_AUTOMATON A =
         (IS_EXISTENTIALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A /\
-         IS_UNIVERSALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A)`;
+         IS_UNIVERSALLY_TOTAL_ALTERNATING_SEMI_AUTOMATON A)
+End
 
 val UNIVERSAL_IS_EXISTENTIALLY_TOTAL =
  store_thm
@@ -558,16 +540,16 @@ val UNIVERSAL_EXISTENTIALLY_TOTAL_DUAL =
 
 
 
-val IS_WEAK_ALTERNATING_SEMI_AUTOMATON_def =
-Define
-`IS_WEAK_ALTERNATING_SEMI_AUTOMATON A f =
-    (!s n S s'. (P_SEM_MIN S (A.R s n) /\ (s' IN S)) ==> (f s' <= f s))`;
+Definition IS_WEAK_ALTERNATING_SEMI_AUTOMATON_def:
+ IS_WEAK_ALTERNATING_SEMI_AUTOMATON A f =
+    (!s n S s'. (P_SEM_MIN S (A.R s n) /\ (s' IN S)) ==> (f s' <= f s))
+End
 
 
-val NO_EMPTY_SET_IN_RUN_def =
-Define
-    `NO_EMPTY_SET_IN_RUN r = ((!s n. IS_REACHABLE_BY_RUN (s, n) r ==>
-        ~(r.R s n = EMPTY)) /\ ~(r.S0 = EMPTY))`;
+Definition NO_EMPTY_SET_IN_RUN_def:
+     NO_EMPTY_SET_IN_RUN r = ((!s n. IS_REACHABLE_BY_RUN (s, n) r ==>
+        ~(r.R s n = EMPTY)) /\ ~(r.S0 = EMPTY))
+End
 
 
 val UNIVERSALLY_TOTAL_NO_EMPTY_SET_IN_RUN =
@@ -634,10 +616,10 @@ val EXISTENTIALLY_TOTAL_RUN_EXISTS =
     PROVE_TAC[EXISTENTIALLY_TOTAL_PRERUN_IS_RUN, ALTERNATING_PRERUN_EXISTS]);
 
 
-val IS_PATH_TO_def =
-Define
-    `IS_PATH_TO w r s n = ((w 0 IN r.S0) /\ (w n = s) /\
-         (!m. m < n ==> (((w (SUC m)) IN r.R (w m) m))))`;
+Definition IS_PATH_TO_def:
+     IS_PATH_TO w r s n = ((w 0 IN r.S0) /\ (w n = s) /\
+         (!m. m < n ==> (((w (SUC m)) IN r.R (w m) m))))
+End
 
 
 val IS_PATH_THROUGH_RUN___PATH_TO =
@@ -1531,8 +1513,3 @@ val NDET_TRUE___NDET_WEAK_CO_BUECHI =
     Cases_on `s IN S` THEN ASM_REWRITE_TAC[] THEN
     REWRITE_TAC[IS_PROP_DISJUNCTION_def] THEN
     PROVE_TAC[P_PROP_DISJUNCTION_def]);
-
-
-
-
-val _ = export_theory();

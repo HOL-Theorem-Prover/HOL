@@ -1,18 +1,17 @@
-open HolKernel boolLib bossLib BasicProvers finite_mapSyntax
-open ASCIInumbersTheory simpleSexpTheory
-open pegTheory pegexecTheory;
-open simpleSexpPEGTheory
-
-open listTheory pairTheory stringTheory
-
-val _ = new_theory"simpleSexpParse"
+Theory simpleSexpParse
+Ancestors
+  ASCIInumbers simpleSexp peg pegexec simpleSexpPEG list pair
+  string
+Libs
+  BasicProvers finite_mapSyntax
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
-val option_sequence_def = Define`
+Definition option_sequence_def:
   option_sequence [] = SOME [] ∧
   option_sequence (h::t) =
-    OPTION_MAP2 CONS h (option_sequence t)`;
+    OPTION_MAP2 CONS h (option_sequence t)
+End
 val _ = export_rewrites["option_sequence_def"];
 
 val option_sequence_SOME = Q.store_thm("option_sequence_SOME",
@@ -1204,4 +1203,3 @@ val _ = clear_overloads_on"CONCAT";
 val _ = set_trace"Goalstack.print_goal_at_top"0;
 *)
 
-val _ = export_theory()

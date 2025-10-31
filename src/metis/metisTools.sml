@@ -209,8 +209,10 @@ fun const_scheme c =
 
 fun trap f g x =
   f x
-  handle e as HOL_ERR {message, ...} =>
-    (if not (contains "proof translation error" message) then raise e else
+  handle e as HOL_ERR herr =>
+    (if not (contains "proof translation error" (message_of herr)) then
+       raise e
+     else
        (chatting 1 andalso
         chat "metis: proof translation error: trying again with types.\n";
         g x));

@@ -1,13 +1,13 @@
 (*  This theory covers the main part of the manual proofs needed to show the user lemma *)
 (*  Author: Oliver Schwarz *)
+Theory user_lemma_basics
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper words
+Libs
+  proofManagerLib tacticsLib wordsLib
 
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory;
-open tacticsLib;
-open wordsTheory wordsLib;
 
-val _ =  new_theory("user_lemma_basics");
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = temp_overload_on ("return", ``constT``);
@@ -86,15 +86,18 @@ val preserve_relation_comb_16_27_thm = store_thm(
 
 
 
-val empty_unt_def = Define `empty_unt (g:word32) (s1:arm_state) (s2:arm_state) = T`;
-val empty_sim_def = Define `empty_sim (g:word32) (s1:arm_state) (s2:arm_state) = T`;
+Definition empty_unt_def:   empty_unt (g:word32) (s1:arm_state) (s2:arm_state) = T
+End
+Definition empty_sim_def:   empty_sim (g:word32) (s1:arm_state) (s2:arm_state) = T
+End
 
 
-val strict_unt_def = Define `strict_unt (g:word32) s t =    (s.psrs         = t.psrs)
+Definition strict_unt_def:   strict_unt (g:word32) s t =    (s.psrs         = t.psrs)
                                                          /\ (s.registers    = t.registers)
                                                          /\ (s.memory       = t.memory)
                                                          /\ (s.coprocessors = t.coprocessors)
-                                                         /\ (s.information  = t.information)`;
+                                                         /\ (s.information  = t.information)
+End
 
 
 val reflex_priv_mode_constraints_thm = store_thm("reflex_priv_mode_constraints_thm",
@@ -204,7 +207,8 @@ val empty_extras_lem = store_thm(
 
 
 
-val fixed_flags_def = Define `fixed_flags xI xF g s1 s2 = (((ARM_MODE s1 = 16w) ==> ((s1.psrs(0,CPSR)).I = xI)) /\ ((s1.psrs(0,CPSR)).F = xF) /\ ((ARM_MODE s2 = 16w) ==> ((s2.psrs(0,CPSR)).I = xI)) /\ ((s2.psrs(0,CPSR)).F = xF)) `;
+Definition fixed_flags_def:   fixed_flags xI xF g s1 s2 = (((ARM_MODE s1 = 16w) ==> ((s1.psrs(0,CPSR)).I = xI)) /\ ((s1.psrs(0,CPSR)).F = xF) /\ ((ARM_MODE s2 = 16w) ==> ((s2.psrs(0,CPSR)).I = xI)) /\ ((s2.psrs(0,CPSR)).F = xF))
+End
 
 
 val fixed_flags_empty_lem = store_thm(
@@ -237,7 +241,8 @@ val fixed_flags_empty_lem = store_thm(
                 THEN FULL_SIMP_TAC (srw_ss()) []]);
 
 
-val fix_flags_def = Define `fix_flags xI xF uy g s1 s2 =  ((uy g s1 s2) /\ (fixed_flags xI xF g s1 s2))`;
+Definition fix_flags_def:   fix_flags xI xF uy g s1 s2 =  ((uy g s1 s2) /\ (fixed_flags xI xF g s1 s2))
+End
 
 
 val fix_flags_lem = store_thm(
@@ -838,9 +843,11 @@ val trivial_true = store_thm("trivial_true", ``T``, FULL_SIMP_TAC (srw_ss()) [])
 (****** mode mixtures *****)
 
 
-val mode_mix_def = Define `mode_mix = (\s. (ARM_MODE s = 16w) \/ (ARM_MODE s = 17w) \/ (ARM_MODE s = 18w) \/ (ARM_MODE s = 27w) \/ (ARM_MODE s = 23w) \/ (ARM_MODE s = 19w))`;
+Definition mode_mix_def:   mode_mix = (\s. (ARM_MODE s = 16w) \/ (ARM_MODE s = 17w) \/ (ARM_MODE s = 18w) \/ (ARM_MODE s = 27w) \/ (ARM_MODE s = 23w) \/ (ARM_MODE s = 19w))
+End
 
-val little_mode_mix_def = Define `little_mode_mix = (\s. (ARM_MODE s = 16w) \/  (ARM_MODE s = 17w) \/ (ARM_MODE s = 18w) \/ (ARM_MODE s = 27w) \/ (ARM_MODE s = 23w))`;
+Definition little_mode_mix_def:   little_mode_mix = (\s. (ARM_MODE s = 16w) \/  (ARM_MODE s = 17w) \/ (ARM_MODE s = 18w) \/ (ARM_MODE s = 27w) \/ (ARM_MODE s = 23w))
+End
 
 
 val pmc_12_upgrade = store_thm(
@@ -933,4 +940,3 @@ val little_mode_mix_comb_16_thm = store_thm(
 
 
 
-val _ = export_theory();

@@ -1,8 +1,8 @@
-open HolKernel boolLib bossLib Parse
-
-open termTheory sttTheory contextlistsTheory NEWLib nomsetTheory
-
-val _ = new_theory "sttVariants"
+Theory sttVariants
+Ancestors
+  term stt contextlists nomset
+Libs
+  NEWLib
 
 (* prove a cofinite version of the induction principle *)
 val hastype_cofin_ind = store_thm(
@@ -207,4 +207,3 @@ val hastype_hastype2_eqn = store_thm(
   ``G |- m -: A <=> G ||- m -: A``,
   METIS_TAC [hastype2_hastype, hastype_hastype2]);
 
-val _ = export_theory ()

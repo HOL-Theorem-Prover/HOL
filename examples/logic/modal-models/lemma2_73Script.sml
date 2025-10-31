@@ -1,23 +1,9 @@
-open HolKernel Parse boolLib bossLib;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-open listTheory;
-open rich_listTheory;
-open combinTheory;
-open folLangTheory;
-open folModelsTheory;
-open chap2_4Theory;
-open prim_recTheory;
+Theory lemma2_73
+Ancestors
+  chap1 pred_set relation arithmetic set_relation pair list
+  rich_list combin folLang folModels chap2_4 prim_rec
+  equiv_on_partition ultraproduct ultrafilter
 
-open equiv_on_partitionTheory;
-open ultraproductTheory;
-open ultrafilterTheory;
-
-val _ = new_theory "lemma2_73";
 val _ = temp_delsimps ["satis_def"]
 
 Theorem countable_INFINITE_form_set:
@@ -46,27 +32,31 @@ Definition FC_def[simp]:
 End
 
 
-val ftype_def = Define`
-  ftype x G <=> G ⊆ {phi | FV phi SUBSET {x}}`;
+Definition ftype_def:
+  ftype x G <=> G ⊆ {phi | FV phi SUBSET {x}}
+End
 
-val frealizes_def = Define`
+Definition frealizes_def:
   frealizes M x G <=> ?w. ftype x G /\ w IN M.Dom /\
-                          !σ phi. (IMAGE σ univ(:num)) SUBSET M.Dom /\ phi IN G ==> fsatis M ((x=+w)σ) phi`;
+                          !σ phi. (IMAGE σ univ(:num)) SUBSET M.Dom /\ phi IN G ==> fsatis M ((x=+w)σ) phi
+End
 
 
 
-val expand_def = Define`
+Definition expand_def:
 expand M A f = <| Dom := M.Dom;
                   Fun := \n args. if n < CARD A /\ args = [] then f n
                                            else CHOICE M.Dom;
-                  Pred:= M.Pred |>`
+                  Pred:= M.Pred |>
+End
 
 
-val consistent_def = Define`
+Definition consistent_def:
   consistent M G <=>
-      !G0. FINITE G0 /\ G0 ⊆ G ==> ?σ. IMAGE σ univ(:num) SUBSET M.Dom /\ !phi. phi ∈ G0 ==> fsatis M σ phi `;
+      !G0. FINITE G0 /\ G0 ⊆ G ==> ?σ. IMAGE σ univ(:num) SUBSET M.Dom /\ !phi. phi ∈ G0 ==> fsatis M σ phi
+End
 
-val n_saturated_def = Define`
+Definition n_saturated_def:
   n_saturated M n ⇔
             ∀A G x f.
                 (IMAGE f 𝕌(:num) ⊆ M.Dom /\ FINITE A ∧ CARD A ≤ n ∧ A ⊆ M.Dom ∧
@@ -75,10 +65,12 @@ val n_saturated_def = Define`
                      phi ∈ G ⇒ form_functions phi ⊆ {(c, 0) | c < CARD A}) ∧
                  ftype x G ∧
                 consistent (expand M A f) G) ⇒
-                frealizes (expand M A f) x G`;
+                frealizes (expand M A f) x G
+End
 
-val countably_saturated_def = Define`
-  countably_saturated M <=> !n. n_saturated M n`;
+Definition countably_saturated_def:
+  countably_saturated M <=> !n. n_saturated M n
+End
 
 
 Theorem IMAGE_UPDATE:
@@ -502,8 +494,9 @@ QED
 
 (*conj enum*)
 
-val fCONJ_def = Define`
-fCONJ enum = PRIM_REC (True) (\conjn n. fAND conjn (enum n))`
+Definition fCONJ_def:
+fCONJ enum = PRIM_REC (True) (\conjn n. fAND conjn (enum n))
+End
 
 Theorem fAND_feval:
 !M σ. feval M σ (fAND p q) <=>
@@ -1112,4 +1105,3 @@ fs[fsatis_def] (* 3 *)
 >- fs[IMAGE_DEF,SUBSET_DEF,expand_def,mm2folm_def,ultraproduct_model_def]
 QED
 
-val _ = export_theory();

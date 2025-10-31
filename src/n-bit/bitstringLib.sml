@@ -148,7 +148,7 @@ in
       in
          Drule.MATCH_MP (Thm.INST_TYPE [Type.alpha |-> ty] v2w_n2w_thm) thm
       end
-      handle HOL_ERR {message = m, ...} => raise ERR "v2w_n2w_CONV" m
+      handle HOL_ERR herr => raise ERR "v2w_n2w_CONV" (message_of herr)
 end
 
 val v2w_n2w_ss =
@@ -168,7 +168,7 @@ fun n2w_v2w_CONV tm =
    in
       Thm.SYM (v2w_n2w_CONV (bitstringSyntax.mk_v2w (l, ty)))
    end
-   handle HOL_ERR {message = m, ...} => raise ERR "n2w_v2w_CONV" m
+   handle HOL_ERR herr => raise ERR "n2w_v2w_CONV" (message_of herr)
 
 (* ------------------------------------------------------------------------- *)
 
@@ -202,7 +202,7 @@ fun v2w_eq_CONV tm =
                    THENC FIX_CONV)
          THENC listLib.LIST_EQ_SIMP_CONV) tm
    end
-   handle HOL_ERR {message = m, ...} => raise ERR "v2w_eq_n2w_CONV" m
+   handle HOL_ERR herr => raise ERR "v2w_eq_n2w_CONV" (message_of herr)
 
 (* ------------------------------------------------------------------------- *)
 
@@ -236,7 +236,7 @@ in
             then (Conv.RHS_CONV v2w_n2w_CONV THENC wordsLib.word_EQ_CONV) tm
          else wordsLib.word_EQ_CONV tm
       end
-      handle HOL_ERR {message = m, ...} => raise ERR "word_eq_CONV" m
+      handle HOL_ERR herr => raise ERR "word_eq_CONV" (message_of herr)
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -292,7 +292,7 @@ in
           THENC Conv.RAND_CONV (Conv.RAND_CONV shiftr_CONV)
           THENC Conv.RAND_CONV FIX_CONV) tm
       end
-      handle HOL_ERR {message = m, ...} => raise ERR "extract_v2w_CONV" m
+      handle HOL_ERR herr => raise ERR "extract_v2w_CONV" (message_of herr)
 end
 
 (* ------------------------------------------------------------------------- *)
@@ -335,7 +335,7 @@ in
       in
          (c THENC Conv.REWR_CONV thm THENC cnv) tm
       end
-      handle HOL_ERR {message = m, ...} => raise ERR "word_bit_CONV" m
+      handle HOL_ERR herr => raise ERR "word_bit_CONV" (message_of herr)
 end
 
 (* ------------------------------------------------------------------------- *)

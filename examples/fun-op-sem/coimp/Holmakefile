@@ -1,2 +1,0 @@
-INCLUDES = $(HOLDIR)/examples/fun-op-sem/imp\
-           $(HOLDIR)/examples/fun-op-sem/listImp

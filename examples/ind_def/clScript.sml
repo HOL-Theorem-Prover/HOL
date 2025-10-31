@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib
-
-open bossLib simpLib
-
-val _ = new_theory "cl";
+Theory cl
+Libs
+  simpLib
 
 val _ = (hide "S"; hide "K")
 
@@ -203,4 +201,3 @@ Proof metis_tac [predn_diamond, confluent_diamond_RTC,
                  RTCpredn_EQ_RTCredn, diamond_RTC]
 QED
 
-val _ = export_theory();

@@ -39,7 +39,7 @@ fun HOL_commit () = let
 
 fun HOL_version () =
   Globals.release ^ " " ^ int_to_string Globals.version ^
-  " (" ^ Thm.kernelid ^ ") " ^ (HOL_commit () handle HOL_ERR e => #message e)
+  " (" ^ Thm.kernelid ^ ") " ^ (HOL_commit () handle HOL_ERR e => message_of e)
 
 fun add_missing_sig x = let
   val _ = print ("No signature info for section: " ^ x ^ "\n")

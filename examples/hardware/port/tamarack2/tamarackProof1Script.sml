@@ -8,19 +8,13 @@
 (* Jeff Joyce, University of Cambridge, 1 November 1988                  *)
 (*                                                                       *)
 (* Derive results of executing individual microinstructions.             *)
+Theory tamarackProof1
+Ancestors
+  arithmetic string pair prim_rec tamarack[qualified]
+Libs
+  proofManagerLib
 
 
-open HolKernel boolLib bossLib Parse
-open proofManagerLib
-
-val _ = new_theory "tamarackProof1";
-
-open arithmeticTheory stringTheory pairTheory prim_recTheory
-
-local
-  open tamarackTheory
-in
-end
 
 fun definition x y = SPEC_ALL (DB.fetch x y);
 
@@ -395,4 +389,3 @@ expandf tac4;
 val MPC_14_THM = save_thm ("MPC_14_THM",top_thm());
 val _ = drop();
 
-val _ = export_theory ();

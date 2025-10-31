@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory
-val _ = new_theory "oddfunpow";
+Theory oddfunpow
+Ancestors
+  arithmetic
 
 Theorem FUNPOW_ID:
   FUNPOW (λx.x) n y = y
@@ -25,4 +24,3 @@ Proof
 QED
 
 
-val _ = export_theory();

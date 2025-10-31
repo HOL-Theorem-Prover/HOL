@@ -114,13 +114,14 @@ QED
 (* Datatype of extended regular expressions                                  *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Datatype
- `regexp
+Datatype:
+  regexp
     = Chset charset
     | Cat regexp regexp
     | Star regexp
     | Or (regexp list)
-    | Neg regexp`
+    | Neg regexp
+End
 ;
 
 Theorem regexp_induction[allow_rebind] :

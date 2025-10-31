@@ -6,13 +6,14 @@ local
 
    val holmake_tag = "tactic_failed"
 
-   fun basic_prover (t, tac: Abbrev.tactic) =
-     Tactical.default_prover (t, tac)
+   fun basic_prover (g, tac: Abbrev.tactic) =
+     Tactical.TAC_PROOF (g, tac)
      handle (e as HOL_ERR _) =>
         (HOL_MESG
-           ("*** Proof of \n  " ^ Parse.term_to_string t ^ "\n*** failed (used CHEAT).\n")
+           ("*** Proof of \n  " ^ Parse.term_to_string (#2 g) ^
+            "\n*** failed (used CHEAT).\n")
          ; HOL_MESG (exn_to_string e)
-         ; Thm.mk_oracle_thm holmake_tag ([], t))
+         ; Thm.mk_oracle_thm holmake_tag g)
 in
    val () = Tactical.set_prover basic_prover
 end

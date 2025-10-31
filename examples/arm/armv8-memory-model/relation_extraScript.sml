@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib bossLib
-open set_relationTheory relationTheory
-
-val () = new_theory "relation_extra"
+Theory relation_extra
+Ancestors
+  set_relation relation
 
 (* -------------------------------------------------------------------------
    Definitions
@@ -1203,4 +1202,3 @@ QED
    End
    ------------------------------------------------------------------------- *)
 
-val () = export_theory()

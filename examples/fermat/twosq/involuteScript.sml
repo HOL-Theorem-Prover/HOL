@@ -4,18 +4,13 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "involute";
+Theory involute
+Ancestors
+  arithmetic pred_set gcdset number combinatorics
+  helperTwosq  (* for FUNPOW_closure *)
 
 (* ------------------------------------------------------------------------- *)
 
-open arithmeticTheory pred_setTheory gcdsetTheory numberTheory
-     combinatoricsTheory;
-
-open helperTwosqTheory; (* for FUNPOW_closure *)
 
 (* ------------------------------------------------------------------------- *)
 (* Involution: Basic Documentation                                           *)
@@ -224,8 +219,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

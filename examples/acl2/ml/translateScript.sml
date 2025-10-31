@@ -26,16 +26,17 @@ quietdec := false;
 (*****************************************************************************)
 (* Load base theories                                                        *)
 (*****************************************************************************)
+Theory translate
+Ancestors
+  sexp arithmetic frac rat integer complex_rational intExtension
+  combin hol_defaxioms rich_list list
+Libs
+  sexp intLib translateLib
 
-open sexp sexpTheory arithmeticTheory fracTheory ratTheory integerTheory intLib
-     complex_rationalTheory intExtensionTheory combinTheory
-     hol_defaxiomsTheory rich_listTheory listTheory translateLib;
 
 (*****************************************************************************)
 (* Start new theory "translate"                                              *)
 (*****************************************************************************)
-
-val _ = new_theory "translate";
 
 (*****************************************************************************)
 (* General theorems for translation schemes (see add_translation_scheme) :   *)
@@ -81,23 +82,29 @@ val sexp_list_ind = store_thm("sexp_list_ind",
 (* Extra encoding functions:                                                 *)
 (*****************************************************************************)
 
-val rat_def = Define `rat a = num (com a rat_0)`;
+Definition rat_def:   rat a = num (com a rat_0)
+End
 
-val bool_def = Define `(bool T = t) /\ (bool F = nil)`;
+Definition bool_def:   (bool T = t) /\ (bool F = nil)
+End
 
 (*****************************************************************************)
 (* Extra fix funtions:                                                       *)
 (*                                                                           *)
 (*****************************************************************************)
 
-val fix_bool_def = Define `fix_bool x = if |= booleanp x then x else bool T`;
+Definition fix_bool_def:   fix_bool x = if |= booleanp x then x else bool T
+End
 
-val fix_rat_def = Define `fix_rat x = if |= rationalp x then x else rat 0`;
+Definition fix_rat_def:   fix_rat x = if |= rationalp x then x else rat 0
+End
 
-val fix_char_def =
-    Define `fix_char x = if |= characterp x then x else chr #"a"`;
+Definition fix_char_def:
+     fix_char x = if |= characterp x then x else chr #"a"
+End
 
-val fix_string_def = Define `fix_string x = if |= stringp x then x else str ""`;
+Definition fix_string_def:   fix_string x = if |= stringp x then x else str ""
+End
 
 (*****************************************************************************)
 (* Decoding functions:                                                       *)
@@ -111,36 +118,39 @@ val fix_string_def = Define `fix_string x = if |= stringp x then x else str ""`;
 (* Inverse to ``str : string -> sexp``                                       *)
 (*****************************************************************************)
 
-val sexp_to_com_def =
- Define
-  `(sexp_to_com (num a) = a) /\ (sexp_to_com _ = com_0)`;
+Definition sexp_to_com_def:
+   (sexp_to_com (num a) = a) /\ (sexp_to_com _ = com_0)
+End
 
-val sexp_to_int_def =
- Define
-  `(sexp_to_int (num (com a b)) =
+Definition sexp_to_int_def:
+   (sexp_to_int (num (com a b)) =
      if |= integerp (num (com a b))
         then (rat_nmr a) / (rat_dnm a) else 0) /\
-   (sexp_to_int _ = 0)`;
+   (sexp_to_int _ = 0)
+End
 
-val sexp_to_nat_def =
- Define
-  `sexp_to_nat a = if |= natp a then Num (sexp_to_int a) else 0`;
+Definition sexp_to_nat_def:
+   sexp_to_nat a = if |= natp a then Num (sexp_to_int a) else 0
+End
 
-val sexp_to_rat_def =
- Define
-  `(sexp_to_rat (num (com a b)) =
+Definition sexp_to_rat_def:
+   (sexp_to_rat (num (com a b)) =
      if |= rationalp (num (com a b)) then a else 0) /\
-   (sexp_to_rat _ = 0)`;
+   (sexp_to_rat _ = 0)
+End
 
-val sexp_to_bool_def = Define `sexp_to_bool x = |= x`;
+Definition sexp_to_bool_def:   sexp_to_bool x = |= x
+End
 
-val sexp_to_char_def =
- Define `(sexp_to_char (chr x) = x) /\
-         (sexp_to_char _ = #"a")`;
+Definition sexp_to_char_def:
+  (sexp_to_char (chr x) = x) /\
+         (sexp_to_char _ = #"a")
+End
 
-val sexp_to_string_def =
- Define `(sexp_to_string (str x) = x) /\
-         (sexp_to_string _ = "")`;
+Definition sexp_to_string_def:
+  (sexp_to_string (str x) = x) /\
+         (sexp_to_string _ = "")
+End
 
 (*****************************************************************************)
 (* Encoding and decoding pairs                                               *)
@@ -155,24 +165,29 @@ val sexp_to_string_def =
 (*      and pairp (sexp_to_bool o natp) integerp (cons (nat 1) (int 2) = T   *)
 (*****************************************************************************)
 
-val pair_def = Define `pair f g p = cons (f (FST p)) (g (SND p))`;
+Definition pair_def:   pair f g p = cons (f (FST p)) (g (SND p))
+End
 
 val pair_thm = save_thm("pair_thm",
     GEN_ALL (REWRITE_RULE [pairTheory.FST,pairTheory.SND]
                 (Q.SPECL [`f`,`g`,`(a,b)`] pair_def)));
 
-val pairp_def =
- Define `!f g. pairp f g x =
-    if (|= consp x) then f (car x) /\ g (cdr x) else F`;
+Definition pairp_def:
+  !f g. pairp f g x =
+    if (|= consp x) then f (car x) /\ g (cdr x) else F
+End
 
-val sexp_to_pair_def =
- Define `!f g x. sexp_to_pair f g x =
-    if (|= consp x) then (f (car x),g (cdr x)) else (f nil,g nil)`;
+Definition sexp_to_pair_def:
+  !f g x. sexp_to_pair f g x =
+    if (|= consp x) then (f (car x),g (cdr x)) else (f nil,g nil)
+End
 
-val all_pair_def = Define `all_pair P1 P2 (a,b) = P1 a /\ P2 b`;
+Definition all_pair_def:   all_pair P1 P2 (a,b) = P1 a /\ P2 b
+End
 
-val fix_pair_def = Define `fix_pair f g x =
-    if |= consp x then (cons (f (car x)) (g (cdr x))) else pair f g (nil,nil)`;
+Definition fix_pair_def:   fix_pair f g x =
+    if |= consp x then (cons (f (car x)) (g (cdr x))) else pair f g (nil,nil)
+End
 
 (*****************************************************************************)
 (* Encoding and decoding lists                                               *)
@@ -186,8 +201,9 @@ val fix_pair_def = Define `fix_pair f g x =
 (*                    (cons (nat 1) (cons (nat 2) (cons (nat 3) nil))) = T   *)
 (*****************************************************************************)
 
-val list_def = Define
-    `(list f (x::xs) = cons (f x) (list f xs)) /\ (list f [] = nil)`;
+Definition list_def:
+     (list f (x::xs) = cons (f x) (list f xs)) /\ (list f [] = nil)
+End
 
 val sexp_to_list_def =
     tDefine "sexp_to_list"
@@ -1386,4 +1402,3 @@ val JUDGEMENT_THMS = save_thm("JUDGEMENT_THMS",
              ACL2_NUMBERP_UNARY_MINUS]);
 
 
-val _ = export_theory();

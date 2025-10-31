@@ -1,8 +1,8 @@
 
-open HolKernel boolLib bossLib Parse;
-open pred_setTheory arithmeticTheory set_sepTheory tailrecTheory;
+Theory prog
+Ancestors
+  pred_set arithmetic set_sep tailrec
 
-val _ = new_theory "prog";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -11,27 +11,32 @@ val _ = ParseExtras.temp_loose_equality()
 val _ = type_abbrev("processor",
   ``: ('a->'b set) # ('a->'a->bool) # ('c->'b set) # ('a->'a->bool) # ('a->bool)``);
 
-val rel_sequence_def = Define `
+Definition rel_sequence_def:
   rel_sequence R seq state =
     (seq 0 = state) /\
-    !n. if (?x. R (seq n) x) then R (seq n) (seq (SUC n)) else (seq (SUC n) = seq n)`;
+    !n. if (?x. R (seq n) x) then R (seq n) (seq (SUC n)) else (seq (SUC n) = seq n)
+End
 
-val SEP_REFINE_def = Define `
-  SEP_REFINE p less to_set state = ?s. less s state /\ p (to_set s)`;
+Definition SEP_REFINE_def:
+  SEP_REFINE p less to_set state = ?s. less s state /\ p (to_set s)
+End
 
-val RUN_def = Define `
+Definition RUN_def:
   RUN ((to_set,next,instr,less,allow):('a,'b,'c)processor) p q =
     !state r. SEP_REFINE (p * r) less to_set state \/ allow state ==>
               !seq. rel_sequence next seq state ==>
-                    ?i. SEP_REFINE (q * r) less to_set (seq i) \/ allow (seq i)`;
+                    ?i. SEP_REFINE (q * r) less to_set (seq i) \/ allow (seq i)
+End
 
-val CODE_POOL_def = Define `
-  CODE_POOL instr c = \s. s = BIGUNION (IMAGE instr c)`;
+Definition CODE_POOL_def:
+  CODE_POOL instr c = \s. s = BIGUNION (IMAGE instr c)
+End
 
-val SPEC_def = Define `
+Definition SPEC_def:
   SPEC ((to_set,next,instr,less,allow):('a,'b,'c)processor) p c q =
     RUN (to_set,next,instr,less,allow) (CODE_POOL instr c * p)
-                                       (CODE_POOL instr c * q)`;
+                                       (CODE_POOL instr c * q)
+End
 
 
 (* ---- theorems ---- *)
@@ -321,4 +326,3 @@ val SPEC_SHORT_TAILREC_NEW = store_thm("SPEC_SHORT_TAILREC_NEW",
   \\ MATCH_MP_TAC SPEC_TAILREC_NEW \\ ASM_SIMP_TAC std_ss []);
 
 
-val _ = export_theory();

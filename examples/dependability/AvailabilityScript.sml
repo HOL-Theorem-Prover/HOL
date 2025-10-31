@@ -8,19 +8,17 @@
 (*          School of Electrical Engineering and Computer Sciences (SEECS)   *)
 (*          National University of Sciences and Technology (NUST), PAKISTAN  *)
 (* ========================================================================= *)
+Theory Availability
+Ancestors
+  lim arithmetic real prim_rec real_probability pred_set res_quan
+  sorting list transc rich_list pair combin option extreal
+  real_measure real_lebesgue real_sigma sat num RBD FT_deep VDC
+  seq
+Libs
+  res_quanTools realLib dep_rewrite extra_pred_setTools
 
-open HolKernel Parse boolLib bossLib;
-
-open limTheory arithmeticTheory realTheory  prim_recTheory real_probabilityTheory
-     pred_setTheory res_quanTheory sortingTheory res_quanTools listTheory
-     transcTheory rich_listTheory pairTheory combinTheory realLib optionTheory
-     extrealTheory real_measureTheory real_lebesgueTheory real_sigmaTheory
-     satTheory numTheory dep_rewrite
-     RBDTheory FT_deepTheory VDCTheory seqTheory extra_pred_setTools;
 
 fun K_TAC _ = ALL_TAC;
-
-val _ = new_theory "Availability";
 
 val op by = BasicProvers.byA;
 val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
@@ -1683,4 +1681,3 @@ RW_TAC std_ss[]
   >> METIS_TAC[]
 QED
 
-val _ = export_theory();

@@ -53,29 +53,26 @@
  *             | <var>                                                       *
  *                                                                           *
  *---------------------------------------------------------------------------*)
+Theory ML
+Ancestors
+   string[qualified] pred_set[qualified]
 
-
-open bossLib Theory Parse ;
-
-local open stringTheory pred_setTheory   (* Make strings and sets be present *)
-in end;
-
-val _ = new_theory "ML";
 
 
 (*---------------------------------------------------------------------------
     Define the type of variables.
  ---------------------------------------------------------------------------*)
 
-val _ = Datatype `var = VAR string`;
+Datatype:  var = VAR string
+End
 
 
 (*---------------------------------------------------------------------------
     Define the datatype of ML syntax trees.
  ---------------------------------------------------------------------------*)
 
-val _ = Datatype
-        `atexp = var_exp var
+Datatype:
+         atexp = var_exp var
                | let_exp dec exp ;
 
            exp = aexp    atexp
@@ -96,7 +93,8 @@ val _ = Datatype
                | rec_bind valbind ;
 
            pat = wild_pat
-               | var_pat var`;
+               | var_pat var
+End
 
 
 (*---------------------------------------------------------------------------
@@ -131,4 +129,3 @@ Definition Vars_def:
     (valbindV (rec_bind vb)  = (valbindV vb))
 End
 
-val _ = export_theory();

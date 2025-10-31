@@ -1,9 +1,8 @@
-open HolKernel boolLib Parse bossLib
-
-open finite_mapTheory
-open boolSimps
-
-val _ = new_theory "hol_dpll"
+Theory hol_dpll
+Ancestors
+  finite_map
+Libs
+  boolSimps
 
 val _ = set_fixity "satisfies_clause" (Infixl 500)
 Definition satisfies_clause_def:
@@ -453,4 +452,3 @@ end
 (* 0.018s seconds [Poly/ML, 22 Jan 2024, Apple M1 Macbook Pro] *)
 Theorem example = time prove_cnf_unsat t
 
-val _ = export_theory();

@@ -20,24 +20,12 @@ load "nextTheory";
 load "stableTheory";
 load "tempabsTheory";
 *)
+Theory dff
+Ancestors
+  arithmetic prim_rec combin pair num next stable tempabs
+Libs
+  Globals proofManagerLib Psyntax hol88Lib numLib
 
-open Globals HolKernel Parse boolLib proofManagerLib;
-open Psyntax;
-open bossLib;
-open arithmeticTheory;
-open prim_recTheory;
-open combinTheory;
-open hol88Lib;
-open pairTheory;
-open numLib;
-open numTheory;
-open nextTheory;
-open stableTheory;
-open tempabsTheory;
-
-
-(* Open the new theory.                                                 *)
-val _ = new_theory "dff";
 
 (* Rise s t : signal s rises ``at`` time t.                             *)
 val Rise =
@@ -102,5 +90,3 @@ val Dtype_correct =
                    !d q. Dtype(ck,d,q) ==>
                          Del(d when (Rise ck), q when (Rise ck))``,
               PROVE_TAC[Del,tempabs]);
-
-val _ = export_theory();

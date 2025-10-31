@@ -126,7 +126,7 @@ fun BAG_IMAGE_CONV___FINITE t =
                               finite_thm12
          val bag_thm' = MP (ISPECL [b1,b2,f] bagTheory.BAG_IMAGE_FINITE_UNION) finite_thm12
          val bag_thm'' = CONV_RULE (RHS_CONV (
-              ((RATOR_CONV o RAND_CONV) (K bag_thm1)) THENC
+              ((LAND_CONV) (K bag_thm1)) THENC
               ((RAND_CONV) (K bag_thm2)))) bag_thm'
       in
          (finite_thm, bag_thm'')
@@ -184,7 +184,7 @@ local
                               finite_thm12
          val card_thm' = MP (ISPECL [b1,b2] bagTheory.BAG_CARD_UNION) finite_thm12
          val card_thm'' = CONV_RULE (RHS_CONV (
-              ((RATOR_CONV o RAND_CONV) (K card_thm1)) THENC
+              ((LAND_CONV) (K card_thm1)) THENC
               ((RAND_CONV) (K card_thm2)))) card_thm'
       in
          (finite_thm, eval_num_RULE card_thm'')
@@ -197,7 +197,7 @@ local
          val finite_thm2 = SPEC e (MP (ISPEC b' bagTheory.FINITE_BAG_INSERT) finite_thm);
          val card_thm' = MP (ISPECL [b',e] card_insert_thm) finite_thm
          val card_thm2 = CONV_RULE (RHS_CONV (
-              (RATOR_CONV o RAND_CONV) (K card_thm))) card_thm'
+              (LAND_CONV) (K card_thm))) card_thm'
       in
          (finite_thm2, eval_num_RULE card_thm2)
       end
@@ -355,7 +355,7 @@ fun SUB_BAG_INSERT_CANCEL_CONV tm =
       val (n1L,n2L) = get_resort_lists___pred_pair aconv b1 b2
       val _ = if null n1L then raise UNCHANGED else ();
 
-      val conv1 = ((RATOR_CONV o RAND_CONV)
+      val conv1 = ((LAND_CONV)
                       (BAG_RESORT_CONV n1L)) THENC
                   (RAND_CONV
                       (BAG_RESORT_CONV n2L))
@@ -399,7 +399,7 @@ fun BAG_DIFF_INSERT_CANCEL_CONV tm =
       val _ = if null n1L andalso not (bagSyntax.is_empty b1)
                  andalso not (bagSyntax.is_empty b2) then raise UNCHANGED else ();
 
-      val conv1 = ((RATOR_CONV o RAND_CONV)
+      val conv1 = ((LAND_CONV)
                       (BAG_RESORT_CONV n1L)) THENC
                   (RAND_CONV
                       (BAG_RESORT_CONV n2L))
@@ -428,9 +428,6 @@ local
   val empty_thm1 = el 2 empty_thmL
   val empty_thm2 = el 3 empty_thmL
 
-  fun BIN_OP_CONV c =
-     RAND_CONV c THENC (RATOR_CONV o RAND_CONV) c
-
   val bag_union_insert_thmL = CONJUNCTS (
       CONV_RULE (DEPTH_CONV FORALL_AND_CONV) bagTheory.BAG_UNION_INSERT)
   val bag_union_empty_thmL = CONJUNCTS bagTheory.BAG_UNION_EMPTY
@@ -454,10 +451,10 @@ local
 in
 fun SIMPLE_BAG_NORMALISE_CONV tm =
    if bagSyntax.is_union tm then
-      ((BIN_OP_CONV SIMPLE_BAG_NORMALISE_CONV) THENC
+      ((BINOP_CONV SIMPLE_BAG_NORMALISE_CONV) THENC
        bag_union_conv) tm
    else if (bagSyntax.is_diff tm) then
-      ((BIN_OP_CONV SIMPLE_BAG_NORMALISE_CONV) THENC
+      ((BINOP_CONV SIMPLE_BAG_NORMALISE_CONV) THENC
         BAG_DIFF_INSERT_CANCEL_CONV) tm
    else if (bagSyntax.is_insert tm) then
       RAND_CONV SIMPLE_BAG_NORMALISE_CONV tm
@@ -488,7 +485,7 @@ fun BAG_EQ_INSERT_CANCEL_CONV tm =
       val b2' = rhs (concl b2_thm)
 
       val thm_simp = ((RAND_CONV (K b2_thm)) THENC
-                     ((RATOR_CONV o RAND_CONV) (K b1_thm))) tm
+                     ((LAND_CONV) (K b1_thm))) tm
 
       val (b1L,b1_rest) = strip_insert b1'
       val (b2L,b2_rest) = strip_insert b2'
@@ -509,7 +506,7 @@ fun BAG_EQ_INSERT_CANCEL_CONV tm =
       end else let
          val (n1L,n2L) = get_resort_lists___pred_pair aconv b1' b2'
          val _ = if null n1L then raise UNCHANGED else ();
-         val conv1 = ((RATOR_CONV o RAND_CONV)
+         val conv1 = ((LAND_CONV)
                          (BAG_RESORT_CONV n1L)) THENC
                       (RAND_CONV (BAG_RESORT_CONV n2L))
          val conv2 = PART_MATCH lhs bagTheory.BAG_INSERT_ONE_ONE
@@ -543,7 +540,7 @@ in
       val _ = if bagSyntax.is_sub_bag tm then () else Feedback.fail();
 
       val thm0 = (RAND_CONV SIMPLE_BAG_NORMALISE_CONV THENC
-                  (RATOR_CONV o RAND_CONV) SIMPLE_BAG_NORMALISE_CONV) tm
+                  (LAND_CONV) SIMPLE_BAG_NORMALISE_CONV) tm
                  handle UNCHANGED => REFL tm
 
 

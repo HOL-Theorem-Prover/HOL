@@ -4,24 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "computeOrder";
+Theory computeOrder
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  logroot prime group ring fieldInstances computeBasic
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory logrootTheory primeTheory;
-
-open groupTheory ringTheory fieldInstancesTheory;
-
-open computeBasicTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -660,14 +652,14 @@ val ordz_seek_thm = store_thm(
   rw[ordz_seek_eq_order]);
 
 (* Compute ordz m n, the simplest way *)
-val ordz_compute_def = Define`
+Definition ordz_compute_def:
     ordz_compute m n =
          if m = 0 then ordz 0 n  (* MOD 0 is undefined *)
     else if m = 1 then 1         (* ordz 1 n = 1 by ZN_order_mod_1 *)
     else ordz_seek m n m 1
          (* just the least k from 1 such that n ** k MOD m = 1 when 1 < m *)
          (* if n = 0, ordz m 0 = 0 by ZN_order_0, and ordz_seek m 0 c j = 0 by ordz_seek_m_0 *)
-`;
+End
 
 (* Examples:
 > EVAL ``ordz_compute 2 10``; = 0     1/2 = 0.5 terminating.
@@ -750,14 +742,14 @@ val order_search_def = |- !n m k c. order_search m n c k =
 *)
 
 (* Compute ordz m n *)
-val order_compute_def = Define`
+Definition order_compute_def:
     order_compute m n =
          if n = 0 then ordz m 0   (* order is defined for nonzero only *)
     else if m = 0 then ordz m n  (* MOD 0 is undefined *)
     else if (gcd_compute m n = 1) (* For coprimes, search from 1 ... *)
          then order_search m (n MOD m) (phi_compute m) 1 (* ordz m n = ordz m (n MOD m), divisor of phi m *)
          else 0 (* not coprime: order is 0 *)
-`;
+End
 
 (* Examples:
 > EVAL ``order_compute 10 3``; --> 4
@@ -1122,14 +1114,14 @@ val ordz_search_def = |- !n m k c. ordz_search m n c k =
 *)
 
 (* Compute ordz m n *)
-val ordz_fast_def = Define`
+Definition ordz_fast_def:
     ordz_fast m n =
          if n = 0 then ordz m 0  (* order is defined for nonzero only *)
     else if m = 0 then ordz m n  (* MOD 0 is undefined *)
     else if (gcd_compute m n = 1) (* For coprimes, search from 1 ... *)
          then ordz_search m (n MOD m) (phi_compute m) 1 (* ordz m n = ordz m (n MOD m), divisor of phi m *)
          else 0 (* not coprime: order is 0 *)
-`;
+End
 
 (* Examples:
 > EVAL ``ordz_fast 10 3``; --> 4
@@ -1457,8 +1449,4 @@ val ordz_fast_eqn = store_thm(
   ]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

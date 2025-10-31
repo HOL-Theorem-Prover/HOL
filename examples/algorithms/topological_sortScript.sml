@@ -1,10 +1,9 @@
-open HolKernel boolLib bossLib BasicProvers;
-open sptreeTheory spt_closureTheory;
-open listTheory rich_listTheory alistTheory pairTheory
-     stringTheory pred_setTheory relationTheory;
-
-val _ = new_theory "topological_sort";
-
+Theory topological_sort
+Ancestors
+  sptree spt_closure list rich_list alist pair string pred_set
+  relation
+Libs
+  BasicProvers
 
 (******************** Definitions ********************)
 
@@ -1053,4 +1052,3 @@ Proof
   metis_tac[has_cycle_correct]
 QED
 
-val _ = export_theory();

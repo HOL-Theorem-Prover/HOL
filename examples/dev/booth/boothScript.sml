@@ -1,5 +1,9 @@
 (* app load ["bitsLib","bitsTheory","word32Theory"]; *)
-open bitsLib simpLib HolKernel boolLib bossLib Parse Q arithmeticTheory whileTheory bitsTheory word32Theory;
+Theory booth
+Ancestors
+  arithmetic While bits word32
+Libs
+  bitsLib simpLib Q
 
 val _ = type_abbrev("word", ``:word32``);
 
@@ -15,8 +19,6 @@ val WL_EVEN = prove(
 );
 
 (* -------------------------------------------------------- *)
-
-val _ = new_theory "booth";
 
 (* -------------------------------------------------------- *)
 
@@ -550,4 +552,3 @@ val DUR_EVAL = save_thm("DUR_EVAL",
 (* -------------------------------------------------------- *)
 
 
-val _ = export_theory();

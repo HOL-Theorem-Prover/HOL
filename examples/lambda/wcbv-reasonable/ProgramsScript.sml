@@ -8,15 +8,10 @@
     due to the difference between
       how substitutions are defined
         in HOL library and in Forster etc.'s Coq proof *)
+Theory Programs
+Ancestors
+  arithmetic list Prelims weak_CBV
 
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open listTheory;
-
-open PrelimsTheory;
-open weak_CBVTheory;
-
-val _ = new_theory "Programs";
 
 (* --------------------------------
       Encoding Terms as Programs
@@ -249,4 +244,3 @@ Proof
   gs[] >> fs[Once decompile] >> fs[Once decompile]
 QED
 
-val _ = export_theory ()

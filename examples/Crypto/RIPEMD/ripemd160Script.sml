@@ -1,14 +1,11 @@
-open HolKernel boolLib bossLib Parse
-     listTheory rich_listTheory
-     arithmeticTheory logrootTheory numposrepTheory
-     byteTheory wordsTheory wordsLib
-     cv_stdTheory cv_transLib
-     intLib
+Theory ripemd160
+Ancestors
+  list rich_list arithmetic logroot numposrep byte words cv_std
+Libs
+  wordsLib cv_transLib intLib
 
 (* The RIPEMD-160 Specification: https://homes.esat.kuleuven.be/~bosselae/ripemd160/pdf/AB-9601/AB-9601.pdf *)
 (* See Appendix A for Pseudo-code for RIPEMD-160 *)
-
-val _ = new_theory"ripemd160";
 
 (* auxiliary function used in chg_end_def *)
 Definition chg_end_acc_def:
@@ -588,4 +585,3 @@ Proof
   (fn g => (g |> #2 |> lhs |> cv_eval |> assume_tac>>simp[]) g)
 QED
 
-val _ = export_theory();

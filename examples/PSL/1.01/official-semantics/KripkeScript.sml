@@ -33,33 +33,16 @@ functions on lists (commented out for compilation)
 quietdec := true;
 map load ["PSLPathTheory", "rich_listTheory", "intLib"];
 open PSLPathTheory listTheory rich_listTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open PSLPathTheory listTheory rich_listTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory Kripke
+Ancestors
+  PSLPath list rich_list
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(******************************************************************************
-* Start a new theory called UnclockedSugarSemantics
-******************************************************************************)
-val _ = new_theory "Kripke";
 
 (******************************************************************************
 * Stop ``S`` parsing to the S-combinator
@@ -69,14 +52,14 @@ val _ = hide "S";
 (******************************************************************************
 * ``: ('state,'prop)kripke_structure``
 ******************************************************************************)
-val kripke_structure_def =
- Hol_datatype
-  `kripke_structure =
+Datatype:
+   kripke_structure =
     <| S: 'state -> bool;
        S0:'state -> bool;
        R: 'state # 'state -> bool;
        P: 'prop -> bool;
-       L: 'state -> ('prop -> bool) |>`;
+       L: 'state -> ('prop -> bool) |>
+End
 
 (******************************************************************************
 * A useful special case (possibly the only one we'll need) is to identify
@@ -85,14 +68,11 @@ val kripke_structure_def =
 * transition relation R:'state#'state->bool, then:
 * MAKE_SIMPLE_KRIPKE_STRUCTURE B R : :('a, 'a -> bool) kripke_structure
 *******************************************************************************)
-val MAKE_SIMPLE_KRIPKE_STRUCTURE_def =
- Define
-  `MAKE_SIMPLE_KRIPKE_STRUCTURE (B:'state -> bool) (R:'state#'state->bool) =
+Definition MAKE_SIMPLE_KRIPKE_STRUCTURE_def:
+   MAKE_SIMPLE_KRIPKE_STRUCTURE (B:'state -> bool) (R:'state#'state->bool) =
     <| S  := \s.T;
        S0 := B;
        R  := R;
        P  := \p.T;
-       L  := (\(s:'state) (f:'state -> bool). f s) |>`;
-
-val _ = export_theory();
-
+       L  := (\(s:'state) (f:'state -> bool). f s) |>
+End

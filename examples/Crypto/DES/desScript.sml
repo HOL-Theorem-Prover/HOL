@@ -3,11 +3,12 @@
 (*                                                                           *)
 (*  Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2023)                *)
 (*===========================================================================*)
+Theory des  (* the lower-case name is following aesTheory *)
+Ancestors
+  arithmetic pair fcp words list sorting pred_set combin
+Libs
+  numLib fcpLib wordsLib listLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
-     listTheory listLib sortingTheory pred_setTheory combinTheory hurdUtils;
 
 (*  Fig. 1: DES with round function components; the bit expansion E,
             the S-boxes S, and the bit permutation P [1, p.16]
@@ -89,7 +90,6 @@ open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
                                 +----+              |/
 
  *)
-val _ = new_theory "des"; (* the lower-case name is following aesTheory *)
 
 val _ = guessing_word_lengths := true;
 val _ = hide "S"; (* reused for S-box *)
@@ -728,7 +728,6 @@ Proof
     rw [DES_def, desCore_CORRECT, LENGTH_KS]
 QED
 
-val _ = export_theory();
 val _ = html_theory "des";
 
 (* References:

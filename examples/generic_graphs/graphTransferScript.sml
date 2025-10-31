@@ -1,11 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open gfgTheory genericGraphTheory
-open transferTheory sptreeTheory
-open pairTheory pred_setTheory listTheory
-open bagTheory
-
-val _ = new_theory "graphTransfer";
+Theory graphTransfer
+Ancestors
+  gfg genericGraph transfer sptree pair pred_set list bag
 
 Definition emap_edges_def:
   emap_edges emap =
@@ -425,4 +420,3 @@ Proof
       simp[] >> metis_tac[addEdge_preserves_wfg])
 QED
 
-val _ = export_theory();

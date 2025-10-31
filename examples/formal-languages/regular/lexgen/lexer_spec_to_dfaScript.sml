@@ -1,34 +1,34 @@
 (*---------------------------------------------------------------------------*)
 (* Mapping lexer specs to lexers. Treats an entire lex_spec as a "state"     *)
 (*---------------------------------------------------------------------------*)
+Theory lexer_spec_to_dfa
+Ancestors
+  pair list dfa charset regexp lexer_runtime
+Libs
+  BasicProvers
 
-open HolKernel Parse boolLib bossLib BasicProvers;
-open pairTheory listTheory;
-open dfaTheory charsetTheory regexpTheory lexer_runtimeTheory;
 
-val _ = new_theory "lexer_spec_to_dfa"
+Definition is_error_state_def:
+   is_error_state lex_spec =
+     EVERY (\(regexp,tokfn). regexp = Chset charset_empty) lex_spec
+End
 
-val is_error_state_def =
- Define
-  `is_error_state lex_spec =
-     EVERY (\(regexp,tokfn). regexp = Chset charset_empty) lex_spec`;
-
-val lex_spec_transition_def =
- Define
-  `lex_spec_transition (lspec,c) =
+Definition lex_spec_transition_def:
+   lex_spec_transition (lspec,c) =
      let lspec' = MAP (\(r,tokfn). (smart_deriv (ORD c) r, tokfn)) lspec
      in
        if is_error_state lspec' then
          NONE
        else
-         SOME lspec'`;
+         SOME lspec'
+End
 
-val lex_spec_finals_def =
- Define
-  `lex_spec_finals lspec =
+Definition lex_spec_finals_def:
+   lex_spec_finals lspec =
     case FILTER (\(r,tokfn). nullable r) lspec of
      | (regexp,tokfn)::_ => SOME tokfn
-     | _ => NONE`;
+     | _ => NONE
+End
 
 val lex_spec_action_lem = Q.prove
 (`n < LENGTH lspec /\ (lex_spec_transition (lspec,c) = SOME lspec')
@@ -210,4 +210,3 @@ rw [dfa_correct_def,EQ_IMP_THM]
 );
 
 
-val _ = export_theory ();

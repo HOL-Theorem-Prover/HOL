@@ -167,8 +167,8 @@ fun MATCH_SUBS th fvs asm mlist =
 (* --------------------------------------------------------------------- *)
 
 fun COND_REWR_TAC f th =
-  (fn (asm,gl) =>
-    (let val (vars,body) = strip_forall (concl th)
+  fn (asm,gl) =>
+    let val (vars,body) = strip_forall (concl th)
         val (antes,eqn) = strip_imp body
         val {lhs=tml, rhs=tmr} = dest_eq eqn
         val freevars = subtract vars (frees tml)
@@ -183,9 +183,10 @@ fun COND_REWR_TAC f th =
        ((SUBGOAL_THEN (hd sgl) STRIP_ASSUME_TAC THENL[
          REPEAT CONJ_TAC, SUBST_TAC thms]) (asm,gl))
     end
-    handle HOL_ERR {message = message,...} =>
-            (raise COND_REWR_ERR {function="COND_REWR_TAC",
-                                      message=message})));
+    handle HOL_ERR herr =>
+      raise COND_REWR_ERR
+             {function="COND_REWR_TAC",
+              message=message_of herr}
 
 (* ---------------------------------------------------------------------*)
 (* search_top_down carries out a top-down left-to-right search for      *)
@@ -250,12 +251,13 @@ val COND_REWRITE1_TAC:thm_tactic = fn  th =>
 (* instance(s) are used in a REWRITE_CONV to produce the final theorem.  *)
 (* --------------------------------------------------------------------- *)
 
-fun COND_REWR_CONV f th = (fn tm =>
+fun COND_REWR_CONV f th =
+ fn tm =>
     let val (vars,b) = strip_forall (concl th)
-    val tm1 = lhs(snd(strip_imp b))
-    val ilist = f tm1 tm
+        val tm1 = lhs(snd(strip_imp b))
+        val ilist = f tm1 tm
     in
-    if (null ilist)
+    if null ilist
     then raise COND_REWR_ERR{function="COND_REWR_CONV", message="no match"}
     else  let val thm1 = SPEC_ALL th
           val rlist = map (fn l => UNDISCH_ALL(INST_TY_TERM l thm1)) ilist
@@ -263,19 +265,20 @@ fun COND_REWR_CONV f th = (fn tm =>
             REWRITE_CONV rlist tm
           end
     end
-    handle HOL_ERR {message = message,...} =>
-            (raise COND_REWR_ERR {function="COND_REWR_CONV",
-                                      message=message})):conv;
+    handle HOL_ERR herr =>
+          raise COND_REWR_ERR {function="COND_REWR_CONV",
+                               message=message_of herr}
 
 
 (* ---------------------------------------------------------------------*)
 (* COND_REWRITE1_CONV : thm list -> thm -> conv                         *)
 (* COND_REWRITE1_CONV thms thm tm                                       *)
 (* ---------------------------------------------------------------------*)
-fun COND_REWRITE1_CONV thms th = (fn tm =>
+
+fun COND_REWRITE1_CONV thms th = fn tm =>
     let val thm1 = COND_REWR_CONV search_top_down (COND_REWR_CANON th) tm
     in
      itlist PROVE_HYP thms thm1
-    end):conv;
+    end
 
 end (* structure Cond_rewrite *)

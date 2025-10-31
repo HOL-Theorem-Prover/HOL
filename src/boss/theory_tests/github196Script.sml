@@ -1,8 +1,8 @@
 Theory github196
 
 val _ = (
-  Define ` (dummy2 c NONE = c) /\ (dummy2 d (SOME _) = c)` ;
+  Lib.with_flag(Globals.interactive,true)
+     Define `(dummy2 c NONE = c) /\ (dummy2 d (SOME _) = c)`;
   print "Malformed definition goes through - FAILURE\n";
   OS.Process.exit OS.Process.failure)
-handle HOL_ERR _ => print "Test-case OK\n"
-
+ handle HOL_ERR _ => print "Test-case OK\n"

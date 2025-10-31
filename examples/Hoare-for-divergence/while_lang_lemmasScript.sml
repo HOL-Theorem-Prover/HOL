@@ -1,6 +1,8 @@
-open preamble while_langTheory lprefix_lubTheory
-
-val _ = new_theory "while_lang_lemmas";
+Theory while_lang_lemmas
+Ancestors
+  while_lang lprefix_lub
+Libs
+  preamble
 
 Theorem step_exists: (* one can always take a step *)
   ∀s. ∃t. step s t
@@ -545,4 +547,3 @@ Proof
   \\ imp_res_tac terminates_deterministic \\ rw []
 QED
 
-val _ = export_theory();

@@ -1,13 +1,17 @@
-open HolKernel boolLib bossLib Parse finite_mapTheory arithmeticTheory prim_recTheory pred_setTheory relationTheory ntermTheory ramanaLib
-
-val _ = new_theory "nsubst"
+Theory nsubst
+Ancestors
+  finite_map arithmetic prim_rec pred_set relation nterm
+Libs
+  ramanaLib
 
 val _ = type_abbrev_pp ("nsubst", ``:(num |-> 'a nterm)``);
 
-val nvR_def = Define`
-  nvR s y x = case FLOOKUP s x of SOME t => y IN nvars t | _ => F`;
+Definition nvR_def:
+  nvR s y x = case FLOOKUP s x of SOME t => y IN nvars t | _ => F
+End
 
-val nwfs_def = Define`nwfs s = WF (nvR s)`;
+Definition nwfs_def:  nwfs s = WF (nvR s)
+End
 
 val nwfs_FEMPTY = RWstore_thm(
 "nwfs_FEMPTY",
@@ -56,4 +60,3 @@ Q_TAC SUFF_TAC `!y x.nvR s y x ==> nvR sx y x`
 SRW_TAC [][nvR_def,FLOOKUP_DEF] THEN
 METIS_TAC []);
 
-val _ = export_theory ()

@@ -1,7 +1,9 @@
 (* load "rich_listTheory"; *)
-open HolKernel boolLib bossLib Q listTheory rich_listTheory arithmeticTheory;
-
-val _ = new_theory "my_list";
+Theory my_list
+Ancestors
+  list rich_list arithmetic
+Libs
+  Q
 
 (* ------------------------------------------------------------------------- *)
 
@@ -156,4 +158,3 @@ val EVERY_GENLIST = store_thm("EVERY_GENLIST",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

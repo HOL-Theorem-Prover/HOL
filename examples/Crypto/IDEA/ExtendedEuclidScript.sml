@@ -4,23 +4,24 @@ quietdec := true;
 open pairTheory intLib integerTheory;
 quietdec := false;
 *)
+Theory ExtendedEuclid
+Ancestors
+  pair integer
+Libs
+  intLib
 
-open HolKernel Parse boolLib bossLib
-     pairTheory intLib integerTheory;
 
-val _ = new_theory "ExtendedEuclid";
-
-val dec_def =
- Define
-   `dec (r1:num, r2:num, u1:int, u2:int, v1:int, v2:int) =
+Definition dec_def:
+    dec (r1:num, r2:num, u1:int, u2:int, v1:int, v2:int) =
       if r1 < r2
         then (r1, r2 - r1, u1, u2 - u1, v1, v2 - v1)
-        else (r1 - r2, r2, u1 - u2, u2, v1 - v2, v2)`;
+        else (r1 - r2, r2, u1 - u2, u2, v1 - v2, v2)
+End
 
-val P_def =
- Define
-   `P ((r1:num, r2:num, u1:int, u2:int, v1:int, v2:int), x:int, y:int) <=>
-       (int_of_num r1 = u1*x + v1*y) /\ (int_of_num r2 = u2*x + v2*y)`;
+Definition P_def:
+    P ((r1:num, r2:num, u1:int, u2:int, v1:int, v2:int), x:int, y:int) <=>
+       (int_of_num r1 = u1*x + v1*y) /\ (int_of_num r2 = u2*x + v2*y)
+End
 
 val decP_Lemma1 = Q.store_thm
 ("decP_Lemma1",
@@ -141,9 +142,11 @@ val i16_Lemma5 = Q.store_thm
       (FST (SND (inv (r1,r2,u1,u2,v1,v2))) = 0)`,
 recInduct inv_ind THEN RW_TAC arith_ss [] THEN RW_TAC arith_ss [inv_def]);
 
-val ir1_def = Define `(ir1 x) = FST (inv (x, 65537, 1, 0, 0, 1))`;
+Definition ir1_def:   (ir1 x) = FST (inv (x, 65537, 1, 0, 0, 1))
+End
 
-val ir2_def = Define `(ir2 x) = FST (SND (inv (x, 65537, 1, 0, 0, 1)))`;
+Definition ir2_def:   (ir2 x) = FST (SND (inv (x, 65537, 1, 0, 0, 1)))
+End
 
 val i16_Lemma6 = Q.store_thm
 ("i16_Lemma6",
@@ -160,9 +163,11 @@ recInduct inv_ind THEN RW_TAC arith_ss [] THEN RW_TAC arith_ss [inv_def,i16_Lemm
 ASSUME_TAC decP_Theorem THEN RES_TAC THEN `~(r1 = 1) /\ ~(r2 = 1) /\ ~(r1 = 0) /\ ~(r2 = 0)` by DECIDE_TAC
 THEN RW_TAC arith_ss []);
 
-val iu1_def = Define `(iu1 x) = FST (SND (SND (inv (x, 65537, 1, 0, 0, 1))))`;
+Definition iu1_def:   (iu1 x) = FST (SND (SND (inv (x, 65537, 1, 0, 0, 1))))
+End
 
-val iu2_def = Define `(iu2 x) = FST (SND (SND (SND (inv (x, 65537, 1, 0, 0, 1)))))`;
+Definition iu2_def:   (iu2 x) = FST (SND (SND (SND (inv (x, 65537, 1, 0, 0, 1)))))
+End
 
 val i16_Lemma8 = Q.store_thm
 ("i16_Lemma8",
@@ -197,4 +202,3 @@ val i16_Lemma10 = Q.store_thm
  GEN_TAC THEN `& x * iu1 x = iu1 x * & x` by RW_TAC arith_ss [INT_MUL_COMM] THEN
  `& x * iu2 x = iu2 x * & x` by RW_TAC arith_ss [INT_MUL_COMM] THEN METIS_TAC [i16_Lemma9]);
 
-val () = export_theory();

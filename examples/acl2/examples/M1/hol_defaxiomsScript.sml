@@ -6,17 +6,6 @@
 (* Some functions are axiomatically defined using acl2AxiomDefine            *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
 map
@@ -29,21 +18,11 @@ Globals.checking_const_names := false;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation: open HOL4 systems modules.
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories (including ratTheory from Jens Brandt).
-******************************************************************************)
-open stringLib complex_rationalTheory gcdTheory sexp sexpTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-val _ = new_theory "hol_defaxioms";
+Theory hol_defaxioms
+Ancestors
+  complex_rational gcd sexp
+Libs
+  stringLib sexp
 
 (*
      [oracles: DEFUN ACL2::IFF, DISK_THM] [axioms: ] []
@@ -658,8 +637,9 @@ val fix =
      [oracles: DEFUN ACL2::FORCE] [axioms: ] [] |- force x = x,
 *)
 
-val force_def =
- Define `force(s:sexp) = s`;
+Definition force_def:
+  force(s:sexp) = s
+End
 
 (*
      [oracles: DEFUN ACL2::IMMEDIATE-FORCE-MODEP] [axioms: ] []

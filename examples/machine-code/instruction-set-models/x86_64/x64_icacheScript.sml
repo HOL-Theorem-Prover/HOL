@@ -1,31 +1,33 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory pred_setTheory pairTheory;
+Theory x64_icache
+Ancestors
+  words pred_set pair x64_coretypes x64_ast x64_seq_monad
 
-open x64_coretypesTheory x64_astTheory x64_seq_monadTheory;
-
-val _ = new_theory "x64_icache";
 val _ = ParseExtras.temp_loose_equality()
 
 
 (* instruction cache definitions *)
 
-val X64_ICACHE_def = Define `
+Definition X64_ICACHE_def:
   X64_ICACHE ((r,e,s,m,i):x64_state) ((r2,e2,s2,m2,i2):x64_state) =
     ?insert delete.
       (r = r2) /\ (e = e2) /\ (s = s2) /\ (m = m2) /\
       (i2 = \addr. if addr IN insert then m addr else
-                   if addr IN delete then NONE else i addr)`;
+                   if addr IN delete then NONE else i addr)
+End
 
-val X64_ACCURATE_def = Define `
-  X64_ACCURATE a ((r,e,s,m,i):x64_state) = (i a = NONE) \/ (i a = m a)`;
+Definition X64_ACCURATE_def:
+  X64_ACCURATE a ((r,e,s,m,i):x64_state) = (i a = NONE) \/ (i a = m a)
+End
 
-val icache_def = Define `
+Definition icache_def:
   icache (insert,delete) m i addr =
-    if addr IN insert then m addr else if addr IN delete then NONE else i addr`;
+    if addr IN insert then m addr else if addr IN delete then NONE else i addr
+End
 
-val X64_ICACHE_UPDATE_def = Define `
-  X64_ICACHE_UPDATE x ((r1,e1,s1,m1,i1):x64_state) = (r1,e1,s1,m1,icache x m1 i1)`;
+Definition X64_ICACHE_UPDATE_def:
+  X64_ICACHE_UPDATE x ((r1,e1,s1,m1,i1):x64_state) = (r1,e1,s1,m1,icache x m1 i1)
+End
 
 
 (* theorems *)
@@ -90,4 +92,3 @@ val ZREAD_CLAUSES = store_thm("ZREAD_CLAUSES",
   THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []);
 
 
-val _ = export_theory ();

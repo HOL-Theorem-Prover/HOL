@@ -278,7 +278,7 @@ fun lookup tm net =
           (follow tm net)  [];
 
 (* term match *)
-structure Map = Binarymap
+structure Map = HOLdict
 fun bvar_free (bvmap, tm) = let
   (* return true if none of the free variables occur as keys in bvmap *)
   fun recurse bs t =

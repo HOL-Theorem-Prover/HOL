@@ -11,7 +11,7 @@ end
 signature LV_TERM_NET =
 sig
 
-  (* signature names modelled on Binarymap's *)
+  (* signature names modelled on HOLdict's *)
   type lvtermnet
   type term = Term.term
   type key = Term.term list * Term.term
@@ -63,12 +63,12 @@ fun labcmp (p as (l1, l2)) =
     | (_, Lam _) => GREATER
     | (LV p1, LV p2) => pair_compare (String.compare, Int.compare) (p1, p2)
 
-datatype N = LF of (key,S.t) Binarymap.dict
-           | ND of (label,N) Binarymap.dict
+datatype N = LF of (key,S.t) HOLdict.dict
+           | ND of (label,N) HOLdict.dict
 
 type lvtermnet = N * int
 
-val empty_node = ND (Binarymap.mkDict labcmp)
+val empty_node = ND (HOLdict.mkDict labcmp)
 val empty = (empty_node, 0)
 
 fun ndest_term (fvs, tm) = let
@@ -85,14 +85,14 @@ in
 end
 
 fun cons_insert (bmap, k, i) =
-    case Binarymap.peek(bmap,k) of
-      NONE => Binarymap.insert(bmap,k,S.insert(S.empty,i))
-    | SOME items => Binarymap.insert(bmap,k,S.insert(items, i))
+    case HOLdict.peek(bmap,k) of
+      NONE => HOLdict.insert(bmap,k,S.insert(S.empty,i))
+    | SOME items => HOLdict.insert(bmap,k,S.insert(items, i))
 
 fun insert ((net,sz), k, item) = let
   fun newnode labs =
       case labs of
-        [] => LF (Binarymap.mkDict tlt_compare)
+        [] => LF (HOLdict.mkDict tlt_compare)
       | _ => empty_node
   fun trav (net, tms) =
       case (net, tms) of
@@ -101,11 +101,11 @@ fun insert ((net,sz), k, item) = let
           val (lab, rest) = ndest_term k
           val ks = rest @ ks0
           val n' =
-              case Binarymap.peek(d,lab) of
+              case HOLdict.peek(d,lab) of
                 NONE => trav(newnode ks, ks)
               | SOME n => trav(n, ks)
         in
-          ND (Binarymap.insert(d, lab, n'))
+          ND (HOLdict.insert(d, lab, n'))
         end
       | _ => raise Fail "LVTermNet.insert: catastrophic invariant failure"
 in
@@ -116,11 +116,11 @@ fun listItems (net, sz) = let
   fun cons'(k,vs,acc) = S.fold (fn (v,acc) => (k,v)::acc) acc vs
   fun trav (net, acc) =
       case net of
-        LF d => Binarymap.foldl cons' acc d
+        LF d => HOLdict.foldl cons' acc d
       | ND d => let
           fun foldthis (k,v,acc) = trav(v,acc)
         in
-          Binarymap.foldl foldthis acc d
+          HOLdict.foldl foldthis acc d
         end
 in
   trav(net, [])
@@ -131,11 +131,11 @@ fun numItems (net, sz) = sz
 fun peek ((net,sz), k) = let
   fun trav (net, tms) =
       case (net, tms) of
-        (LF d, []) => (valOf (Binarymap.peek(d, k)) handle Option => S.empty)
+        (LF d, []) => (valOf (HOLdict.peek(d, k)) handle Option => S.empty)
       | (ND d, k::ks) => let
           val (lab, rest) = ndest_term k
         in
-          case Binarymap.peek(d, lab) of
+          case HOLdict.peek(d, lab) of
             NONE => S.empty
           | SOME n => trav(n, rest @ ks)
         end
@@ -160,7 +160,7 @@ fun conslistItems (d, acc) = let
   fun listfold k (v,acc) = (k,v)::acc
   fun mapfold (k,vs,acc) = S.fold (listfold k) acc vs
 in
-  Binarymap.foldl mapfold acc d
+  HOLdict.foldl mapfold acc d
 end
 
 fun match ((net,sz), tm) = let
@@ -168,7 +168,7 @@ fun match ((net,sz), tm) = let
       case (net, ks) of
         (LF d, []) => conslistItems (d, acc)
       | (ND d, k::ks0) => let
-          val varresult = case Binarymap.peek(d, V 0) of
+          val varresult = case HOLdict.peek(d, V 0) of
                             NONE => acc
                           | SOME n => trav acc (n, ks0)
           val (lab, rest) = lookup_label k
@@ -177,7 +177,7 @@ fun match ((net,sz), tm) = let
             fun recurse acc n =
               if n = 0 then acc
               else
-                case Binarymap.peek (d, V n) of
+                case HOLdict.peek (d, V n) of
                     NONE => recurse acc (n - 1)
                   | SOME m => recurse
                                 (trav acc (m, List.drop(rest, restn - n) @ ks0))
@@ -186,7 +186,7 @@ fun match ((net,sz), tm) = let
             recurse varresult (length (#2 (strip_comb k)))
           end
         in
-          case Binarymap.peek (d, lab) of
+          case HOLdict.peek (d, lab) of
             NONE => varhead_results
           | SOME n => trav varhead_results (n, rest @ ks0)
         end
@@ -199,26 +199,26 @@ fun delete ((net,sz), k) = let
   fun trav (p as (net, ks)) =
       case p of
         (LF d, []) => let
-          val (d',removed) = Binarymap.remove(d, k)
+          val (d',removed) = HOLdict.remove(d, k)
         in
-          if Binarymap.numItems d' = 0 then (NONE, removed)
+          if HOLdict.numItems d' = 0 then (NONE, removed)
           else (SOME (LF d'), removed)
         end
       | (ND d, k::ks) => let
           val (lab, rest) = ndest_term k
         in
-          case Binarymap.peek(d, lab) of
-            NONE => raise Binarymap.NotFound
+          case HOLdict.peek(d, lab) of
+            NONE => raise HOLdict.NotFound
           | SOME n => let
             in
               case trav (n, rest @ ks) of
                 (NONE, removed) => let
-                  val (d',_) = Binarymap.remove(d, lab)
+                  val (d',_) = HOLdict.remove(d, lab)
                 in
-                  if Binarymap.numItems d' = 0 then (NONE, removed)
+                  if HOLdict.numItems d' = 0 then (NONE, removed)
                   else (SOME (ND d'), removed)
                 end
-              | (SOME n', removed) => (SOME (ND (Binarymap.insert(d,lab,n'))),
+              | (SOME n', removed) => (SOME (ND (HOLdict.insert(d,lab,n'))),
                                        removed)
             end
         end
@@ -232,8 +232,8 @@ end
 fun app f (net, sz) = let
   fun trav n =
       case n of
-        LF d => Binarymap.app f d
-      | ND d => Binarymap.app (fn (lab, n) => trav n) d
+        LF d => HOLdict.app f d
+      | ND d => HOLdict.app (fn (lab, n) => trav n) d
 in
   trav net
 end
@@ -242,14 +242,14 @@ fun consfoldl f acc d = let
   fun setfold k (d, acc) = f (k, d, acc)
   fun mapfold (k,vs,acc) = S.fold (setfold k) acc vs
 in
-  Binarymap.foldl mapfold acc d
+  HOLdict.foldl mapfold acc d
 end
 
 fun fold f acc (net, sz) = let
   fun trav acc n =
       case n of
         LF d => consfoldl f acc d
-      | ND d => Binarymap.foldl (fn (lab,n',acc) => trav acc n') acc d
+      | ND d => HOLdict.foldl (fn (lab,n',acc) => trav acc n') acc d
 in
   trav acc net
 end

@@ -1,18 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open combinTheory;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open finite_mapTheory;
-open chap1Theory chap2_1Theory chap2_2Theory;
+Theory chap2_4
+Ancestors
+  combin chap1 pred_set relation arithmetic set_relation
+  finite_map chap1 chap2_1 chap2_2 folModels folLang
 
-open folModelsTheory;
-open folLangTheory;
-
-
-val _ = new_theory "chap2_4";
 val _ = temp_delsimps ["satis_def"]
 
 Definition mm2folm_def:
@@ -109,8 +99,9 @@ QED
 
 
 
-val fFORALL_def = Define`
-  fFORALL n ff = fNOT (fEXISTS n (fNOT ff))`;
+Definition fFORALL_def:
+  fFORALL n ff = fNOT (fEXISTS n (fNOT ff))
+End
 
 
 Theorem prop_2_47_ii:
@@ -397,4 +388,3 @@ Proof
 rw[feq_def, Excl "HOLDS"] >> MATCH_ACCEPT_TAC non_ST_exists
 QED
 
-val _ = export_theory();

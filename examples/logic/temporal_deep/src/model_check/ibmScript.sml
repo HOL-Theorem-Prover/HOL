@@ -1,4 +1,14 @@
-open HolKernel Parse boolLib bossLib;
+Theory ibm
+Ancestors
+  full_ltl arithmetic automaton_formula xprop_logic prop_logic
+  infinite_path symbolic_semi_automaton list pred_set pred_set
+  rich_list set_lemmata temporal_deep_mixed pair
+  symbolic_kripke_structure semi_automaton omega_automaton
+  omega_automaton_translations ctl_star ltl_to_automaton_formula
+  container psl_to_rltl rltl_to_ltl kripke_structure
+Libs
+  tuerk_tacticsLib numLib temporal_deep_simplificationsLib
+  congLib Sanity
 
 (*
 quietdec := true;
@@ -22,16 +32,6 @@ map load
   "kripke_structureTheory"];
 *)
 
-open full_ltlTheory arithmeticTheory automaton_formulaTheory xprop_logicTheory
-     prop_logicTheory
-     infinite_pathTheory tuerk_tacticsLib symbolic_semi_automatonTheory listTheory pred_setTheory
-     pred_setTheory rich_listTheory set_lemmataTheory temporal_deep_mixedTheory pairTheory symbolic_kripke_structureTheory
-     numLib semi_automatonTheory omega_automatonTheory
-     omega_automaton_translationsTheory ctl_starTheory
-     ltl_to_automaton_formulaTheory containerTheory
-     psl_to_rltlTheory rltl_to_ltlTheory temporal_deep_simplificationsLib congLib kripke_structureTheory;
-open Sanity;
-
 val _ = hide "K";
 val _ = hide "S";
 val _ = hide "I";
@@ -44,9 +44,6 @@ show_types := true;
 show_types := false;
 quietdec := false;
 *)
-
-
-val _ = new_theory "ibm";
 
 
 val A_UNIV___LTL_KS_SEM___CONCRETE_THM =
@@ -1168,12 +1165,12 @@ val XP_COND___XP_CURRENT_EXISTS___REWRITE =
 
 
 
-val VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING_def =
-Define
-  `(VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING [] n n0 = P_PROP n) /\
+Definition VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING_def:
+   (VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING [] n n0 = P_PROP n) /\
    (VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING (e::l) n n0 =
       P_OR (P_AND (P_PROP e, VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING l ((2**(e-n0)) + n) n0),
-            P_AND (P_NOT (P_PROP e), VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING l n n0)))`;
+            P_AND (P_NOT (P_PROP e), VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING l n n0)))
+End
 
 val VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING___CLEAN_OFFSET =
   store_thm ("VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING___CLEAN_OFFSET",
@@ -1882,4 +1879,3 @@ VAR_RENAMING_HASHTABLE_LIST___BINARY_ENCODING___HASHTABLE_LIST]
 
 
 
-val _ = export_theory();

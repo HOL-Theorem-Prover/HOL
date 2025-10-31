@@ -8,7 +8,7 @@ val b2b = bool --> bool
 val b2b2b = bool --> b2b
 
 val tyg0 = type_grammar()
-val privthy = Binarymap.find(type_grammar.privileged_abbrevs tyg0, "foo")
+val privthy = HOLdict.find(type_grammar.privileged_abbrevs tyg0, "foo")
 val unprivthy = if privthy = "gh294a" then "gh294b" else "gh294a"
 
 val (privty, unprivty) = if privthy = "gh294a" then (b2b, b2b2b)

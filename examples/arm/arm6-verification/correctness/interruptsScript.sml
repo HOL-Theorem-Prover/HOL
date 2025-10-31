@@ -10,12 +10,13 @@
   app load ["pred_setSimps", "io_onestepTheory", "armLib", "wordsLib",
             "armTheory", "coreTheory", "lemmasTheory"];
 *)
+Theory interrupts
+Ancestors
+  arithmetic io_onestep words arm core lemmas
+Libs
+  Q wordsLib
 
-open HolKernel boolLib bossLib;
-open Q arithmeticTheory wordsLib;
-open io_onestepTheory wordsTheory armTheory coreTheory lemmasTheory;
 
-val _ = new_theory "interrupts";
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
@@ -55,7 +56,7 @@ val LEAST_NOT_RESET = save_thm("LEAST_NOT_RESET",
   GEN_ALL (MATCH_MP (PROVE [] ``((a ==> b) /\ (b ==> c)) ==> (a ==> c)``)
     (CONJ (SPEC_ALL EXISTS_LEAST_NOT_RESET) ((SIMP_RULE std_ss [] o
        SPEC `\t. IS_RESET i t /\ ~IS_RESET i (t + 1) /\ ~IS_RESET i (t + 2)`)
-         whileTheory.LEAST_EXISTS_IMP))));
+         WhileTheory.LEAST_EXISTS_IMP))));
 
 val IS_RESET_LEM = prove(
   `!i t. ~IS_RESET i t ==> FST (i t)`,
@@ -79,29 +80,35 @@ val arm6ctrl = ``CTRL pipea pipeaval pipeb pipebval ireg iregval ointstart
   onfq ooonfq oniq oooniq pipeaabt pipebabt iregabt2 dataabt2 aregn2 mrq2 nbw
   nrw sctrlreg psrfb oareg mask orp oorp mul mul2 borrow2 mshift``;
 
-val AFTER_RESET1_def = Define`
-  AFTER_RESET1 (ARM6 dp (^arm6ctrl)) = oorst /\ resetlatch`;
+Definition AFTER_RESET1_def:
+  AFTER_RESET1 (ARM6 dp (^arm6ctrl)) = oorst /\ resetlatch
+End
 
-val AFTER_RESET2_def = Define`
-  AFTER_RESET2 (ARM6 dp (^arm6ctrl)) = ~iregval /\ oorst /\ resetlatch`;
+Definition AFTER_RESET2_def:
+  AFTER_RESET2 (ARM6 dp (^arm6ctrl)) = ~iregval /\ oorst /\ resetlatch
+End
 
-val AFTER_RESET3_def = Define`
+Definition AFTER_RESET3_def:
   AFTER_RESET3 (ARM6 dp (^arm6ctrl)) =
-   ~iregval /\ opipebll /\ oorst /\ resetlatch`;
+   ~iregval /\ opipebll /\ oorst /\ resetlatch
+End
 
-val AFTER_RESET4_def = Define`
+Definition AFTER_RESET4_def:
   AFTER_RESET4 (ARM6 dp (^arm6ctrl)) =
-   pipeaval /\ pipebval /\ ~iregval /\ opipebll /\ oorst /\ resetlatch`;
+   pipeaval /\ pipebval /\ ~iregval /\ opipebll /\ oorst /\ resetlatch
+End
 
-val AFTER_NRESET1_def = Define`
+Definition AFTER_NRESET1_def:
   AFTER_NRESET1 (ARM6 dp (^arm6ctrl)) =
-  pipeaval /\ pipebval /\ ~iregval /\ opipebll /\ ~oorst /\ resetlatch`;
+  pipeaval /\ pipebval /\ ~iregval /\ opipebll /\ ~oorst /\ resetlatch
+End
 
-val AFTER_NRESET2_def = Define`
+Definition AFTER_NRESET2_def:
   AFTER_NRESET2 (ARM6 dp (^arm6ctrl)) =
    pipeaval /\ pipebval /\ iregval /\ ointstart /\ endinst /\ onewinst /\
    opipebll /\ (nxtic = swi_ex) /\ (nxtis = t3) /\ ~nopc1 /\
-   ~oorst /\ ~resetlatch /\ (aregn2 = 0w) /\ mrq2 /\ ~nrw /\ (mask = ARB)`;
+   ~oorst /\ ~resetlatch /\ (aregn2 = 0w) /\ mrq2 /\ ~nrw /\ (mask = ARB)
+End
 
 (* ------------------------------------------------------------------------- *)
 
@@ -439,4 +446,3 @@ val SIMP_interrupt2exception5 = save_thm("SIMP_interrupt2exception5",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

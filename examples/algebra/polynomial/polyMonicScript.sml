@@ -4,27 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyMonic";
+Theory polyMonic
+Ancestors
+  pred_set list arithmetic number combinatorics rich_list divides
+  gcd monoid group ring field polynomial polyWeak polyRing
+  polyDivision  (* for ulead, pmonic and poly_mod theorems. *)
+  polyField
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     rich_listTheory dividesTheory gcdTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory;
-open polyDivisionTheory; (* for ulead, pmonic and poly_mod theorems. *)
-
-open polyFieldTheory;
 
 val _ = intLib.deprecate_int ();
 
@@ -298,9 +289,9 @@ val _ = intLib.deprecate_int ();
 (* ------------------------------------------------------------------------- *)
 
 (* A monic polynomial a leading coefficient equal to #1. *)
-val poly_monic_def = Define`
+Definition poly_monic_def:
   poly_monic (r:'a ring) (p:'a poly) <=> poly p /\ (lead p = #1)
-`;
+End
 val _ = overload_on ("monic", ``poly_monic r``);
 
 (* Overloads for any type *)
@@ -3610,8 +3601,4 @@ val chop_turn_exp_eqn = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

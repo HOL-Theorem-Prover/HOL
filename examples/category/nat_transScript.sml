@@ -1,6 +1,7 @@
-open HolKernel Parse boolLib bossLib categoryTheory functorTheory;
+Theory nat_trans
+Ancestors
+  category category_functor
 
-val _ = new_theory "nat_trans";
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = type_abbrev_pp("nat_trans",
@@ -12,10 +13,11 @@ val _ = overload_on("ntcod", ``λn. n.cod.cod``);
 val _ = set_fixity "@+" (Infixl 2000);
 val _ = overload_on("@+", ``λ(n:(α,β,γ,δ) nat_trans) x. n.map x``);
 
-val extensional_nat_trans_def = Define`
-  extensional_nat_trans n = extensional n.map (ntdom n).obj`;
+Definition extensional_nat_trans_def:
+  extensional_nat_trans n = extensional n.map (ntdom n).obj
+End
 
-val nat_trans_axioms_def = Define`
+Definition nat_trans_axioms_def:
   nat_trans_axioms n =
     is_functor n.dom ∧
     is_functor n.cod ∧
@@ -24,13 +26,16 @@ val nat_trans_axioms_def = Define`
     (∀x. x ∈ (ntdom n).obj ⇒
            (n@+x) :- (n.dom@@x) → (n.cod@@x) -:(ntcod n)) ∧
     (∀f x y. f :- x → y -:(ntdom n) ⇒
-      (n@+y o (n.dom##f) -:(ntcod n) = (n.cod##f) o n@+x -:(ntcod n)))`;
+      (n@+y o (n.dom##f) -:(ntcod n) = (n.cod##f) o n@+x -:(ntcod n)))
+End
 
-val is_nat_trans_def = Define`
-  is_nat_trans n = extensional_nat_trans n ∧ nat_trans_axioms n`;
+Definition is_nat_trans_def:
+  is_nat_trans n = extensional_nat_trans n ∧ nat_trans_axioms n
+End
 
-val mk_nt_def = Define`
-  mk_nt n = <| dom := n.dom; cod := n.cod; map := restrict n.map (ntdom n).obj |>`;
+Definition mk_nt_def:
+  mk_nt n = <| dom := n.dom; cod := n.cod; map := restrict n.map (ntdom n).obj |>
+End
 
 val mk_nt_dom = Q.store_thm(
 "mk_nt_dom",
@@ -85,8 +90,9 @@ srw_tac [][morphism_component_equality,is_nat_trans_def,
      extensional_nat_trans_def,extensional_def,FUN_EQ_THM] >>
 metis_tac []);
 
-val id_nt_def = Define`
-  id_nt f = mk_nt <| dom := f; cod := f; map := λx. id (f@@x) -:f.cod |>`;
+Definition id_nt_def:
+  id_nt f = mk_nt <| dom := f; cod := f; map := λx. id (f@@x) -:f.cod |>
+End
 
 val id_nt_dom = Q.store_thm(
 "id_nt_dom",
@@ -135,15 +141,17 @@ fsrw_tac [][composable_in_def] >>
 metis_tac [id_comp1,id_comp2,id_dom_cod,maps_to_obj]);
 val _ = export_rewrites["is_nat_trans_id_nt"];
 
-val composable_nts_def = Define`
+Definition composable_nts_def:
   composable_nts f g = is_nat_trans f ∧ is_nat_trans g ∧
-    (ntdom f = ntdom g) ∧ (ntcod f = ntcod g) ∧ f ≈> g`;
+    (ntdom f = ntdom g) ∧ (ntcod f = ntcod g) ∧ f ≈> g
+End
 
 val _ = add_infix("\226\137\136\226\137\136>",450,NONASSOC);
 val _ = overload_on("≈≈>",``composable_nts``);
 
-val nt_comp_def = Define`
-  nt_comp n m = mk_nt (compose (λn m x. m@+x o n@+x -:(ntcod n)) m n)`;
+Definition nt_comp_def:
+  nt_comp n m = mk_nt (compose (λn m x. m@+x o n@+x -:(ntcod n)) m n)
+End
 
 val _ = overload_on("\226\151\142",``nt_comp``);
 
@@ -250,12 +258,13 @@ val nt_comp_dom_cod = Q.store_thm(
 srw_tac [][nt_comp_def]);
 val _ = export_rewrites["nt_comp_dom_cod"];
 
-val pre_functor_cat_def = Define`
+Definition pre_functor_cat_def:
   pre_functor_cat c1 c2 =
     <| obj := {f | is_functor f ∧ f :- c1 → c2};
        mor := {n | is_nat_trans n ∧ (ntdom n = c1) ∧ (ntcod n = c2)};
        id_map := λx. (id_nt x).map;
-       comp := (λn m. (nt_comp m n).map) |>`;
+       comp := (λn m. (nt_comp m n).map) |>
+End
 
 val pre_functor_cat_obj = Q.store_thm(
 "pre_functor_cat_obj",
@@ -307,8 +316,9 @@ val _ = add_rule {
   paren_style = OnlyIfNecessary,
   block_style = (AroundEachPhrase, (PP.INCONSISTENT,0))};
 
-val functor_cat_def = Define`
-  [c1→c2] = mk_cat (pre_functor_cat c1 c2)`;
+Definition functor_cat_def:
+  [c1→c2] = mk_cat (pre_functor_cat c1 c2)
+End
 
 val is_category_functor_cat = Q.store_thm(
 "is_category_functor_cat",
@@ -496,11 +506,12 @@ EQ_TAC >> strip_tac >- (
     metis_tac []
 *)
 
-val pre_functor_nt_def = Define`
+Definition pre_functor_nt_def:
   pre_functor_nt f n = <|
     dom := f ◎ n.dom;
     cod := f ◎ n.cod;
-    map := λx. f##(n@+x) |>`;
+    map := λx. f##(n@+x) |>
+End
 
 val pre_functor_nt_components = Q.store_thm(
 "pre_functor_nt_components",
@@ -510,8 +521,9 @@ val pre_functor_nt_components = Q.store_thm(
 srw_tac [][pre_functor_nt_def]);
 val _ = export_rewrites["pre_functor_nt_components"];
 
-val functor_nt_def = Define`
-  functor_nt f n = mk_nt (pre_functor_nt f n)`;
+Definition functor_nt_def:
+  functor_nt f n = mk_nt (pre_functor_nt f n)
+End
 
 val is_nat_trans_functor_nt = Q.store_thm(
 "is_nat_trans_functor_nt",
@@ -624,11 +636,12 @@ metis_tac [nt_at_maps_to,maps_to_in_def,maps_to_def]);
 
 (* would be a morphism in cat_cat if we had a proper cat_cat *)
 (* or could use the fact that [c→d] is an exponential object *)
-val pre_postcomp_functor_def = Define`
+Definition pre_postcomp_functor_def:
   pre_postcomp_functor b f = <|
     dom := [b→f.dom];
     cod := [b→f.cod];
-    map := functor_nt f |>`;
+    map := functor_nt f |>
+End
 
 val pre_postcomp_functor_components = Q.store_thm(
 "pre_postcomp_functor_components",
@@ -650,8 +663,9 @@ Q.ISPECL_THEN [`[x.dom→x.cod]`,`x`,`f◎g`] mp_tac id_inj >>
 fsrw_tac [][is_functor_is_category]);
 val _ = export_rewrites["pre_postcomp_functor_objf"];
 
-val postcomp_functor_def = Define`
-  postcomp_functor b f = mk_functor (pre_postcomp_functor b f)`;
+Definition postcomp_functor_def:
+  postcomp_functor b f = mk_functor (pre_postcomp_functor b f)
+End
 
 val is_functor_postcomp_functor = Q.store_thm(
 "is_functor_postcomp_functor",
@@ -847,10 +861,11 @@ conj_tac >- (
   metis_tac [mor_obj,maps_to_in_def,maps_to_def] ) >>
 metis_tac [composable_def,functor_comp_morf]);
 
-val pre_eval_functor_def = Define`
+Definition pre_eval_functor_def:
   pre_eval_functor c v p = <|
     dom := [c→v]; cod := v;
-    map := λn. n @+ p |>`;
+    map := λn. n @+ p |>
+End
 
 val pre_eval_functor_components = Q.store_thm(
 "pre_eval_functor_components",
@@ -868,8 +883,9 @@ srw_tac [][Once objf_def] >>
 SELECT_ELIM_TAC >>
 metis_tac [objf_in_obj,id_inj]);
 
-val eval_functor_def = Define`
-  eval_functor c v p = mk_functor (pre_eval_functor c v p)`;
+Definition eval_functor_def:
+  eval_functor c v p = mk_functor (pre_eval_functor c v p)
+End
 
 val is_functor_eval_functor = Q.store_thm(
 "is_functor_eval_functor",
@@ -909,8 +925,9 @@ imp_res_tac is_functor_is_category >>
 imp_res_tac is_category_functor_cat >>
 srw_tac [][] >> fsrw_tac [][id_nt_def,mk_nt_def]);
 
-val K_nt_def = Define`
-  K_nt j c f = mk_nt <| dom := K_functor j c f.dom; cod := K_functor j c f.cod; map := K f |>`;
+Definition K_nt_def:
+  K_nt j c f = mk_nt <| dom := K_functor j c f.dom; cod := K_functor j c f.cod; map := K f |>
+End
 
 val is_nat_trans_K_nt = Q.store_thm(
 "is_nat_trans_K_nt",
@@ -955,9 +972,10 @@ val _ = export_rewrites
 ["is_nat_trans_K_nt","K_nt_dom","K_nt_cod","K_nt_at",
  "K_nt_id","K_nt_maps_to"];
 
-val pre_diagonal_functor_def = Define`
+Definition pre_diagonal_functor_def:
   pre_diagonal_functor j c = <|
-    dom := c; cod := [j→c]; map := K_nt j c |>`;
+    dom := c; cod := [j→c]; map := K_nt j c |>
+End
 
 val pre_diagonal_functor_dom = Q.store_thm(
 "pre_diagonal_functor_dom",
@@ -985,8 +1003,9 @@ pop_assum mp_tac >> srw_tac [][] >>
 fsrw_tac [][morphism_component_equality]);
 val _ = export_rewrites["pre_diagonal_functor_objf"];
 
-val diagonal_functor_def = Define`
-  diagonal_functor j c = mk_functor (pre_diagonal_functor j c)`;
+Definition diagonal_functor_def:
+  diagonal_functor j c = mk_functor (pre_diagonal_functor j c)
+End
 val _ = overload_on("\226\150\179",``diagonal_functor``);
 
 val is_functor_diagonal_functor = Q.store_thm(
@@ -1029,9 +1048,10 @@ val diagonal_functor_objf = Q.store_thm(
 srw_tac [][diagonal_functor_def]);
 val _ = export_rewrites["diagonal_functor_objf"];
 
-val pre_itself_functor_def = Define`
+Definition pre_itself_functor_def:
   pre_itself_functor f =
-    <| dom := unit_cat; cod := [f.dom→f.cod]; map := K (id_nt f) |>`;
+    <| dom := unit_cat; cod := [f.dom→f.cod]; map := K (id_nt f) |>
+End
 
 val pre_itself_functor_components = Q.store_thm(
 "pre_itself_functor_components",
@@ -1063,8 +1083,9 @@ srw_tac [][is_functor_is_category]);
 
 val _ = export_rewrites["pre_itself_functor_morf","pre_itself_functor_objf"];
 
-val itself_functor_def = Define`
-  itself_functor f = mk_functor (pre_itself_functor f)`;
+Definition itself_functor_def:
+  itself_functor f = mk_functor (pre_itself_functor f)
+End
 
 val is_functor_itself_functor = Q.store_thm(
 "is_functor_itself_functor",
@@ -1097,13 +1118,15 @@ val itself_functor_objf = Q.store_thm(
 srw_tac [][itself_functor_def]);
 val _ = export_rewrites["itself_functor_morf","itself_functor_objf"];
 
-val equivalence_pair_def = Define`
+Definition equivalence_pair_def:
   equivalence_pair f g = (f ≈> g) ∧ (g ≈> f) ∧
     (f ◎ g ≅ id_functor g.dom -:[g.dom→g.dom]) ∧
-    (g ◎ f ≅ id_functor f.dom -:[f.dom→f.dom])`;
+    (g ◎ f ≅ id_functor f.dom -:[f.dom→f.dom])
+End
 
-val equivalence_def = Define`
-  equivalence f = ∃g. is_functor g ∧ equivalence_pair f g`;
+Definition equivalence_def:
+  equivalence f = ∃g. is_functor g ∧ equivalence_pair f g
+End
 
 (*
 val equivalence_full_faithful_ess_surj = Q.store_thm(
@@ -1278,5 +1301,3 @@ gen_tac >> strip_tac >> EQ_TAC >> strip_tac >- (
   fsrw_tac [][functor_cat_iso_pair] >>
   metis_tac [] ) >>
 *)
-
-val _ = export_theory ();

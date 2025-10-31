@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open monoidTheory liftingTheory transferTheory transferLib liftLib
-open pred_setTheory
-
-val _ = new_theory "aatmonoid";
+Theory aatmonoid
+Ancestors
+  monoid lifting transfer pred_set
+Libs
+  transferLib liftLib
 
 Definition mequiv_def:
   mequiv m1 m2 ⇔ m1 = m2 /\ Monoid m2
@@ -616,4 +615,3 @@ val th = time (fpow F 50) base
 
 
 
-val _ = export_theory();

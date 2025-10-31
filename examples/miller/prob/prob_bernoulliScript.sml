@@ -1,18 +1,11 @@
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory pred_setTheory
-     listTheory state_transformerTheory
-     hurdUtils extra_numTheory combinTheory
-     pairTheory realTheory realLib extra_boolTheory
-     extra_pred_setTheory sumTheory
-     extra_realTheory extra_pred_setTools numTheory
-     simpLib seqTheory res_quanTheory;
-
-open sequenceTheory sequenceTools subtypeTheory;
-open real_measureTheory real_probabilityTheory;
-open prob_algebraTheory probTheory;
-
-val _ = new_theory "prob_bernoulli";
+Theory prob_bernoulli
+Ancestors
+  arithmetic pred_set list state_transformer extra_num combin
+  pair real extra_bool extra_pred_set sum extra_real num seq
+  res_quan sequence subtype real_measure real_probability
+  prob_algebra prob
+Libs
+  hurdUtils realLib extra_pred_setTools simpLib sequenceTools
 
 val std_ss' = std_ss ++ boolSimps.ETA_ss;
 
@@ -20,20 +13,22 @@ val std_ss' = std_ss ++ boolSimps.ETA_ss;
 (* The definition of the Bernoulli(p) sampling algorithm.                    *)
 (* ------------------------------------------------------------------------- *)
 
-val prob_bernoulli_iter_def = Define
-  `prob_bernoulli_iter p =
+Definition prob_bernoulli_iter_def:
+   prob_bernoulli_iter p =
    BIND sdest
    (\b.
     UNIT
     (if b then (if p <= (1 :real) / 2 then INR F else INL (2 * p - 1))
-     else (if p <= 1 / 2 then INL (2 * p) else INR T)))`;
+     else (if p <= 1 / 2 then INL (2 * p) else INR T)))
+End
 
 val prob_bernoulli_loop_def = new_definition
   ("prob_bernoulli_loop_def",
    ``prob_bernoulli_loop = prob_while ISL (prob_bernoulli_iter o OUTL)``);
 
-val prob_bernoulli_def = Define
-  `prob_bernoulli p = BIND (prob_bernoulli_loop (INL p)) (\a. UNIT (OUTR a))`;
+Definition prob_bernoulli_def:
+   prob_bernoulli p = BIND (prob_bernoulli_loop (INL p)) (\a. UNIT (OUTR a))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -240,4 +235,3 @@ val PROB_BERNOULLI = store_thm
     >> Know `2 * p <= 2 * (1 / 2)` >- RW_TAC std_ss [HALF_CANCEL]
     >> RW_TAC arith_ss [REAL_LE_LMUL, REAL_LT]]);
 
-val _ = export_theory ();

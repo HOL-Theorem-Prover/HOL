@@ -29,36 +29,21 @@ open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
      UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
      arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
      ClockedSemanticsTheory LemmasTheory;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
-     ClockedSemanticsTheory LemmasTheory;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory RewritesProperties
+Ancestors
+  FinitePSLPath PSLPath Syntax SyntacticSugar UnclockedSemantics
+  ClockedSemantics Rewrites arithmetic list rich_list res_quan
+  ClockedSemantics Lemmas FinitePSLPath PSLPath
+Libs
+  res_quanLib
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called RewritesProperties
-******************************************************************************)
-val _ = new_theory "RewritesProperties";
 val _ = ParseExtras.temp_loose_equality()
 
 local
@@ -76,9 +61,7 @@ val resq_SS =
    rewrites
     [IN_DEF,LESS_def,LESSX_def,LENGTH_def]];
 
-(******************************************************************************
-* SEREs only need finite paths
-******************************************************************************)
+(* SEREs only need finite paths *)
 open FinitePSLPathTheory;
 
 val US_SEM_BOOL_REWRITE_LEMMA =
@@ -155,13 +138,11 @@ val S_CLOCK_COMP_CORRECT =
       RW_TAC (std_ss ++ resq_SS) [S_SEM_def, US_SEM_def, S_CLOCK_COMP_def]]);
 
 (******************************************************************************
-* Formulas need infinite paths
-******************************************************************************)
-open PSLPathTheory;
-
-(******************************************************************************
 * Structural induction rule for FL formulas
 ******************************************************************************)
+(* Formulas need infinite paths *)
+open PSLPathTheory;
+
 val fl_induct =
  save_thm
   ("fl_induct",
@@ -1272,8 +1253,6 @@ val F_CLOCK_COMP_CORRECT =
       AUX_TAC2
        THEN PROVE_TAC[S_CLOCK_COMP_CORRECT]
      ]);
-
-val _ = export_theory();
 
 (* Theoem saved when compiling:
 Saving theorem US_SEM_BOOL_REWRITE_LEMMA

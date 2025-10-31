@@ -8,13 +8,15 @@ app load ["numLib", "preARMTheory", "pred_setSimps", "pred_setTheory",
 
 quietdec := false;
 *)
+Theory rules
+Ancestors
+  relation arithmetic preARM pair pred_set list rich_list While
+  ARMComposition IL words
+Libs
+  numLib pred_setSimps
 
 
-open HolKernel Parse boolLib bossLib numLib relationTheory arithmeticTheory preARMTheory pairTheory
-     pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory ARMCompositionTheory ILTheory wordsTheory;
 
-
-val _ = new_theory "rules";
 val _ = hide "cond";
 
 (*---------------------------------------------------------------------------------*)
@@ -894,4 +896,3 @@ Cases_on `off < l` THEN ASM_SIMP_TAC std_ss [] THEN
 Cases_on `off = 0` THEN
 ASM_SIMP_TAC arith_ss [])
 
-val _ = export_theory();

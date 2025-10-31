@@ -1,13 +1,13 @@
 (*
   app load ["tautLib", "numLib", "pairLib", "schneiderUtils"];
 *)
+Theory Temporal_Logic
+Ancestors
+  num prim_rec arithmetic pair
+Libs
+  numLib pairLib Rsyntax schneiderUtils tautLib
 
-open HolKernel Parse boolLib numLib pairLib
-     numTheory prim_recTheory arithmeticTheory pairTheory
-     Rsyntax schneiderUtils;
-open tautLib
 
-val _ = new_theory "Temporal_Logic";
 val _ = ParseExtras.temp_loose_equality()
 
 fun TAC_PROOF(g,t) = Tactical.TAC_PROOF(g,t) handle e => Raise e;
@@ -3004,7 +3004,5 @@ val _ = save_thm("NOT_SWHEN",NOT_SWHEN);
 val _ = save_thm("NOT_SUNTIL",NOT_SUNTIL);
 val _ = save_thm("NOT_SBEFORE",NOT_SBEFORE);
 
-
-val _ = export_theory();
 
 (* html_theory "-"; *)

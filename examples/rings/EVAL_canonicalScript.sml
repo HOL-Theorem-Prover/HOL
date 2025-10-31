@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib;
-open BasicProvers Datatype;
-open abs_tools;
-
-val _ = new_theory "EVAL_canonical";
-
-open ternaryComparisonsTheory EVAL_quoteTheory
+Theory EVAL_canonical
+Ancestors
+  ternaryComparisons EVAL_semiring EVAL_quote
+Libs
+  BasicProvers Datatype abs_tools
 
 val _ = app (fn s => temp_overload_on (s, Parse.Term [QUOTE ("semi_ring_"^s)]))
         ["SR0","SR1","SRP","SRM"];
@@ -56,11 +54,12 @@ fun ARW_TAC l = BasicProvers.RW_TAC bool_ss
 
 
 
-val _ = Hol_datatype
- ` canonical_sum =
+Datatype:
+   canonical_sum =
      Nil_monom
-   | Cons_monom of 'a => index list => canonical_sum
-   | Cons_varlist of index list => canonical_sum `;
+   | Cons_monom 'a (index list) canonical_sum
+   | Cons_varlist (index list) canonical_sum
+End
 
 
 val canonical_sum_merge_def = Define `
@@ -323,12 +322,13 @@ ARW_TAC [ canonical_sum_simplify_def,
 
 (* semi-ring normalization *)
 
-val _ = Datatype
- ` spolynom =
+Datatype:
+   spolynom =
      SPvar index
    | SPconst 'a
    | SPplus spolynom spolynom
-   | SPmult spolynom spolynom `;
+   | SPmult spolynom spolynom
+End
 
 val spolynom_normalize_def = Define `
    (spolynom_normalize (SPvar i) = (Cons_varlist [i] Nil_monom))
@@ -384,5 +384,3 @@ val _ = record_terms (
       “canonical_sum_merge”
     ]
   )
-
-val _ = export_theory();

@@ -13,7 +13,7 @@ app load ["pred_setLib","finite_mapTheory","rich_listTheory", "wordsLib",
 quietdec := true;
 open numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax
      preARMTheory preARMSyntax Assem pred_setSimps pred_setTheory listTheory
-     rich_listTheory whileTheory finite_mapTheory declFuncs
+     rich_listTheory WhileTheory finite_mapTheory declFuncs
      annotatedIR ILTheory rulesTheory wordsLib wordsTheory IRSyntax;
 quietdec := false;
 *)
@@ -24,7 +24,7 @@ local open
    HolKernel Parse boolLib bossLib numLib pairLib relationTheory
    pairTheory arithmeticTheory listSyntax preARMTheory preARMSyntax
    Assem pred_setSimps pred_setTheory listTheory rich_listTheory
-   whileTheory finite_mapTheory declFuncs annotatedIR ILTheory
+   WhileTheory finite_mapTheory declFuncs annotatedIR ILTheory
    rulesTheory wordsLib wordsTheory IRSyntax
   infix ++ THENC THEN THENL |->
 in

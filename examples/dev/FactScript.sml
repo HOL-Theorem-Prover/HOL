@@ -6,17 +6,12 @@
 (* START BOILERPLATE                                                         *)
 (*****************************************************************************)
 
-(******************************************************************************
- * Boilerplate needed for compilation. Batch mode.
- ******************************************************************************)
+Theory Fact
+Ancestors
+  arithmetic pair combin compose compile
+Libs
+  pairLib PairRules compile vsynth
 
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
- * Open theories. Batch mode.
- ******************************************************************************)
-open arithmeticTheory pairLib pairTheory PairRules combinTheory
-     composeTheory compile vsynth;
 
 infixr 3 THENR;
 infixr 3 ORELSER;
@@ -30,12 +25,6 @@ val _ = numLib.temp_prefer_num();
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
-
-(*****************************************************************************)
-(* Start new theory "Fact"                                                   *)
-(*****************************************************************************)
-
-val _ = new_theory "Fact";
 
 (*****************************************************************************)
 (* Define arithmetic operators used and associate them with their Verilog    *)
@@ -221,5 +210,3 @@ val _ = PRINT_VERILOG FACT_cir;  (* N.B. FACT.vl overwritten by stuff below! *)
 (*****************************************************************************)
 
 val _ = temp_overload_on(" * ", numSyntax.mult_tm);
-
-val _ = export_theory();

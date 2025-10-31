@@ -1,8 +1,9 @@
-open HolKernel Parse bossLib boolLib gfgTheory listTheory optionTheory pred_setTheory relationTheory pairTheory prim_recTheory set_relationTheory arithmeticTheory rich_listTheory
-
-open sptreeTheory ltlTheory generalHelpersTheory concrGBArepTheory concrRepTheory waa2baTheory buechiATheory gbaSimplTheory alterATheory ltl2waaTheory waaSimplTheory concrltl2waaTheory
-
-val _ = new_theory "concrwaa2gba"
+Theory concrwaa2gba
+Ancestors
+  gfg list option pred_set relation pair prim_rec set_relation
+  arithmetic rich_list sptree ltl generalHelpers concrGBArep
+  concrRep waa2ba buechiA gbaSimpl alterA ltl2waa waaSimpl
+  concrltl2waa
 
 val _ = set_trace "BasicProvers.var_eq_old" 1
 val _ = temp_delsimps ["all_distinct_nub", "nub_NIL"]
@@ -13,14 +14,15 @@ val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 
 
-val get_acc_set_def = Define`
+Definition get_acc_set_def:
   get_acc_set acc ce =
     CAT_OPTIONS (MAP (λ(f,f_trans).
                    if acc_cond_concr ce f f_trans
                    then SOME f
                    else NONE
                  ) acc
-            )`;
+            )
+End
 
 val GET_ACC_SET_LEMM = store_thm
   ("GET_ACC_SET_LEMM",
@@ -40,7 +42,7 @@ val GET_ACC_SET_LEMM = store_thm
   );
 
 val _ = diminish_srw_ss ["ABBREV"]
-val valid_acc_def = Define`
+Definition valid_acc_def:
   valid_acc aP g_AA acc =
     ((!f f_trns. MEM (f,f_trns) acc ==>
         ?id nL. (findNode (λ(i,l). l.frml = f) g_AA = SOME (id,nL))
@@ -51,7 +53,8 @@ val valid_acc_def = Define`
         ∧ is_until f
     )
     ∧ (!f. (is_until f ∧ MEM f (graphStates g_AA))
-           ==> ?f_trns. MEM (f,f_trns) acc))`;
+           ==> ?f_trns. MEM (f,f_trns) acc))
+End
 
 val VALID_ACC_LEMM = store_thm
   ("VALID_ACC_LEMM",
@@ -463,18 +466,20 @@ val TLG_CONCR_LEMM = store_thm
       )
   );
 
-val possibleGBA_states_def = Define`
+Definition possibleGBA_states_def:
   possibleGBA_states g_AA =
-     {set qs | !q. MEM q qs ==> MEM q (graphStates g_AA) ∧ ALL_DISTINCT qs }`;
+     {set qs | !q. MEM q qs ==> MEM q (graphStates g_AA) ∧ ALL_DISTINCT qs }
+End
 
-val decr_expGBA_rel_def = Define `
+Definition decr_expGBA_rel_def:
   decr_expGBA_rel (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2) =
      let m =
       λg. {set x | inGBA g x } ∩ possibleGBA_states g_AA1
      in
       (g_AA1 = g_AA2)
     ∧ (NoNodeProcessedTwice
-          (possibleGBA_states g_AA1) m (G1,ids1) (G2,ids2))`;
+          (possibleGBA_states g_AA1) m (G1,ids1) (G2,ids2))
+End
 
 val DECR_EXPGBA_REL_WF = store_thm
   ("DECR_EXPGBA_REL_WF",
@@ -538,13 +543,14 @@ val DECR_EXPGBA_REL_WF = store_thm
    >> fs[] >> fs[decr_expGBA_rel_def]
   );
 
-val towards_suff_wfg_def = Define
-  `towards_suff_wfg (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2) =
+Definition towards_suff_wfg_def:
+   towards_suff_wfg (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2) =
       let max_elems = λd. maximal_elements d (rrestrict (rel_to_reln ($<)) d)
       in ((max_elems (domain G1.nodeInfo) =
            max_elems (domain G2.nodeInfo))
        ∧ ((G1.next > G2.next) \/
-          (G1.next = G2.next ∧ (LENGTH ids1 < LENGTH ids2))))`
+          (G1.next = G2.next ∧ (LENGTH ids1 < LENGTH ids2))))
+End
 
 val TWDRS_SUFFWFG_WF = store_thm
   ("TWDRS_SUFFWFG_WF",
@@ -658,10 +664,11 @@ val TWDRS_SUFFWFG_WF = store_thm
   )
   );
 
-val decr_expGBA_strong_def = Define `
+Definition decr_expGBA_strong_def:
   decr_expGBA_strong (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2) =
   ((decr_expGBA_rel (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2))
- ∧ (suff_wfg G2 ==> suff_wfg G1))`;
+ ∧ (suff_wfg G2 ==> suff_wfg G1))
+End
 
 val DECR_EXPGBA_STRONG_WF = store_thm
   ("DECR_EXPGBA_STRONG_WF",
@@ -674,14 +681,15 @@ val DECR_EXPGBA_STRONG_WF = store_thm
       )
   );
 
-val concr_min_rel_def = Define`
+Definition concr_min_rel_def:
   concr_min_rel (t1,acc1) (t2,acc2) =
            (tlg_concr (t1,acc1) (t2,acc2)
            ∧ ~((MEM_EQUAL t1.pos t2.pos)
                    ∧ (MEM_EQUAL t1.neg t2.neg)
                    ∧ (MEM_EQUAL t1.sucs t2.sucs))
            ∧ ~(trns_is_empty t1 ∧ trns_is_empty t2
-             ∧ MEM_EQUAL t1.sucs t2.sucs))`;
+             ∧ MEM_EQUAL t1.sucs t2.sucs))
+End
 
 
 Definition expandGBA_def:
@@ -969,7 +977,7 @@ Termination
       )
 End
 
-val expandGBA_init_def = Define`
+Definition expandGBA_init_def:
   expandGBA_init (concrAA g_AA initAA props) =
     let initNodes = MAP (λi_list.
                           let suc_nLabels = MAP (λi. lookup i g_AA.nodeInfo)
@@ -988,7 +996,8 @@ val expandGBA_init_def = Define`
     in let o_graph = expandGBA g_AA acc_sets initIds G0
     in case o_graph of
          | SOME graph => SOME (concrGBA graph initIds (MAP FST acc_sets) props)
-         | NONE => NONE `;
+         | NONE => NONE
+End
 
 
 val EXPGBA_SOME_WFG = store_thm
@@ -1133,7 +1142,7 @@ val EXPGBA_SOME_WFG = store_thm
       )
   );
 
-val trns_correct_def = Define `
+Definition trns_correct_def:
   trns_correct l abstrAA gba aP =
        (!id nL fls.
             (lookup id gba.nodeInfo = SOME nL)
@@ -1151,9 +1160,10 @@ val trns_correct_def = Define `
                              set s_nL.frmls)
                             od) fls)) =
              (gba_trans abstrAA (set nL.frmls)))
-       )`;
+       )
+End
 
-val final_correct_def = Define `
+Definition final_correct_def:
  final_correct (abstrAA:(α -> bool, α ltl_frml) ALTER_A) gba acc =
   (!id fls nL eL s_id s_nL.
        (lookup id gba.nodeInfo = SOME nL)
@@ -1166,9 +1176,10 @@ val final_correct_def = Define `
                            (concrEdge eL.pos_lab
                                       eL.neg_lab
                                       s_nL.frmls)))
-  )`;
+  )
+End
 
-val aP_correct_def = Define `
+Definition aP_correct_def:
   aP_correct (abstrAA:(α -> bool, α ltl_frml) ALTER_A) gba aP =
    (!id fls nL eL s_id.
        (lookup id gba.nodeInfo = SOME nL)
@@ -1177,7 +1188,8 @@ val aP_correct_def = Define `
        ∧ (set nL.frmls ∈ POW abstrAA.states)
        ==> ((MEM_SUBSET eL.pos_lab aP)
           ∧ (MEM_SUBSET eL.neg_lab aP))
-   )`;
+   )
+End
 
 val EXPGBA_GRAPH_REACHABLE = store_thm
   ("EXPGBA_GRAPH_REACHABLE",
@@ -1945,21 +1957,23 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
        )
   );
 
-val one_step_closed_apart_l_def = Define`
+Definition one_step_closed_apart_l_def:
   one_step_closed_apart_l abstrAA g l =
    !nL qs i.
         (lookup i g.nodeInfo = SOME nL)
         ∧ (set nL.frmls = qs)
         ∧ ~(MEM i l)
         ==> (!ys. stepGBA (vwaa2gba abstrAA) qs (set ys)
-                  ==> inGBA g ys)`;
+                  ==> inGBA g ys)
+End
 
-val one_step_closed_def = Define`
+Definition one_step_closed_def:
   one_step_closed abstrAA g =
         (!xs. inGBA g xs
                   ==> (!ys. stepGBA (vwaa2gba abstrAA) (set xs) (set ys)
                          ==> inGBA g ys)
-        )`;
+        )
+End
 
 val EXPGBA_ALL_REACHABLE = store_thm
   ("EXPGBA_ALL_REACHABLE",
@@ -5149,4 +5163,3 @@ val EXPGBA_CORRECT = store_thm
   >> Cases_on `expandGBA_init concr_AA` >> fs[]
   );
 
-val _ = export_theory()

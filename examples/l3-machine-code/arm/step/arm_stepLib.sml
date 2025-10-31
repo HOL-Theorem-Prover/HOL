@@ -2581,11 +2581,12 @@ in
                   "decode ARM (cond not in {14, 15})" x rwts_other)
          fun find_rw_other tm =
             Lib.singleton_of_list (utilsLib.find_rw net tm)
-            handle HOL_ERR {message = "not found", ...} => raise Conv.UNCHANGED
-                 | HOL_ERR {message = m,
-                            origin_function = "singleton_of_list", ...} =>
-                               raise ERR "arm_decode"
-                                         "more than one matching decode pattern"
+            handle (e as HOL_ERR herr) =>
+              if message_of herr = "not found" then
+                 raise Conv.UNCHANGED else
+              if top_function_of herr = "singleton_of_list" then
+                 raise ERR "arm_decode" "more than one matching decode pattern"
+              else raise e
          val FALL_CONV =
             REWRITE_CONV
                (DecodeVFP :: datatype_thms [v2w_ground4] @ undef @
@@ -4177,11 +4178,13 @@ in
               | l => (Parse.print_term tm
                       ; print "\n"
                       ; raise ERR "eval" "more than one valid step theorem"))
-            handle HOL_ERR {message = "not found",
-                            origin_function = "find_rw", ...} =>
-               raise (Parse.print_term tm
-                      ; print "\n"
-                      ; ERR "eval" "instruction instance not supported")
+            handle (e as HOL_ERR herr) =>
+               if message_of herr = "not found" andalso
+                  top_function_of herr  = "find_rw" then
+                 raise (Parse.print_term tm
+                        ; print "\n"
+                        ; ERR "eval" "instruction instance not supported")
+               else raise e
       end
 end
 
@@ -4241,8 +4244,10 @@ in
                val thm = Drule.LIST_CONJ [thm1, thm2, thm3, thm4, thm5, thm6]
             in
                MP_Next thm
-               handle HOL_ERR {message = "different constructors", ...} =>
-                 MP_Next0 thm
+               handle (e as HOL_ERR herr) =>
+                 if message_of herr = "different constructors" then
+                    MP_Next0 thm
+                 else raise e
             end
       end
 end

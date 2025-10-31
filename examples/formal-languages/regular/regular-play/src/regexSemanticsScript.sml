@@ -1,20 +1,16 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "regexSemantics";
-
-
+Theory regexSemantics
 
 (* 3.1 basic regular expression semantics *)
 (* -------------------------------------------------------------------------------------------------- *)
 val _ = Datatype regexDatatypes.Reg_datatype_quot;
 
-val language_of_def = Define `
+Definition language_of_def:
          (language_of (Eps)        = {[]}                                                       ) /\
          (language_of (Sym (c:'a)) = {[c]}                                                      ) /\
          (language_of (Alt r1 r2)  = { w      | w IN (language_of r1) \/ w IN (language_of r2) }) /\
          (language_of (Seq r1 r2)  = { u ++ v | u IN (language_of r1) /\ v IN (language_of r2) }) /\
          (language_of (Rep r)      = { FLAT l | EVERY (\w. w IN (language_of r)) l }            )
-`;
+End
 
 
 
@@ -94,4 +90,3 @@ val language_of_Rep_APPEND_rec = store_thm ("language_of_Rep_APPEND_rec", ``
 
 
 
-val _ = export_theory();

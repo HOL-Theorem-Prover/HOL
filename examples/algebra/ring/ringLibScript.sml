@@ -7,16 +7,14 @@
 (* ------------------------------------------------------------------------- *)
 (* Ported by Chun Tian. The Australian National University (ANU), 2024       *)
 (* ========================================================================= *)
+Theory ringLib
+Ancestors
+  combin pred_set arithmetic integer cardinal one normalizer
+  monoid group ring
+Libs
+  pred_setLib numLib intLib mesonLib hurdUtils newtypeTools
+  tautLib metisLib liteLib Ho_Rewrite
 
-open HolKernel boolLib bossLib Parse;
-
-open combinTheory pred_setTheory pred_setLib arithmeticTheory integerTheory
-     numLib intLib mesonLib hurdUtils cardinalTheory oneTheory newtypeTools
-     tautLib metisLib liteLib Ho_Rewrite normalizerTheory;
-
-open monoidTheory groupTheory ringTheory;
-
-val _ = new_theory "ringLib";
 
 val _ = deprecate_int ();
 val INT_ARITH = intLib.ARITH_PROVE;
@@ -1957,5 +1955,4 @@ Theorem RING_RING_HORN_pth1 = TAUT ‘~p \/ ~q <=> ~(p /\ q)’;
 Theorem RING_RING_HORN_pth2 = TAUT ‘p \/ ~q <=> q ==> p’;
 Theorem RING_RING_CORE_pth = TAUT ‘p ==> q <=> (p \/ q <=> q)’
 
-val _ = export_theory();
 val _ = html_theory "ringLib";

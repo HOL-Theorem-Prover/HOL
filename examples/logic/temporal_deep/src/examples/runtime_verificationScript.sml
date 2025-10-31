@@ -3,20 +3,19 @@
 (*                                                                            *)
 (* Copyright 2020  Chun Tian <binghe.lisp@gmail.com>                          *)
 (******************************************************************************)
+Theory runtime_verification
+Ancestors
+  option list rich_list arithmetic prop_logic full_ltl
+  ltl_to_automaton_formula
+Libs
+  hurdUtils translationsLib
 
-open HolKernel Parse boolLib bossLib;
 
 (* standard libraries & utilities *)
-open optionTheory listTheory rich_listTheory arithmeticTheory hurdUtils;
-
 (* local theories *)
-open prop_logicTheory full_ltlTheory translationsLib ltl_to_automaton_formulaTheory;
-
 (* Tuerk's translations between different LTL syntax (unused)
 open ltl_translationsTheory;
  *)
-
-val _ = new_theory "runtime_verification";
 
 (* NuSMV-compatible names for LTL past operators *)
 val _ = overload_on ("LTL_PREV",  ``LTL_PSNEXT``);
@@ -425,8 +424,6 @@ Proof
                   (Q.SPEC `(LASTN (LENGTH u - (j + 1)) u) ++ (\i. {})`)) \\
       rw [APPEND_BUTLASTN_LASTN] ]
 QED
-
-val _ = export_theory ();
 
 (* References:
 

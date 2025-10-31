@@ -4,21 +4,11 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "involuteAction";
+Theory involuteAction
+Ancestors
+  arithmetic pred_set number divides helperTwosq involute group
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory pred_setTheory numberTheory dividesTheory;
-
-open helperTwosqTheory;
-
-open involuteTheory;
-
-open groupTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Involution and Action Documentation                                       *)
@@ -589,8 +579,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

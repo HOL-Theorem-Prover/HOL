@@ -1,8 +1,8 @@
-open HolKernel boolLib bossLib BasicProvers;
-open sptreeTheory pred_setTheory arithmeticTheory relationTheory;
-
-val _ = new_theory "spt_closure";
-
+Theory spt_closure
+Ancestors
+  sptree pred_set arithmetic relation
+Libs
+  BasicProvers
 
 (******************** Definitions ********************)
 
@@ -314,4 +314,3 @@ Proof
 QED
 
 
-val _ = export_theory();

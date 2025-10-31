@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_opsemTheory arm_seq_monadTheory arm_coretypesTheory arm_stepTheory;
-open inference_rulesTheory tacticsLib ARM_prover_extLib;
+Theory switching_lemma_helper
+Ancestors
+  arm_opsem arm_seq_monad arm_coretypes arm_step inference_rules
+Libs
+  proofManagerLib tacticsLib ARM_prover_extLib
 
-val _ =  new_theory("switching_lemma_helper");
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -11,15 +12,16 @@ val _ = ParseExtras.temp_loose_equality()
 (*                        Narges                                *)
 (****************************************************************)
 
-val get_security_ext_def =
-    Define `get_security_ext s =
+Definition get_security_ext_def:
+     get_security_ext s =
                              (((ARMarch2num s.information.arch = 5) ∨
                            (ARMarch2num s.information.arch = 7)) ∧
-                          Extension_Security ∈ s.information.extensions)`;
+                          Extension_Security ∈ s.information.extensions)
+End
 
 
-val vector_table_address_def =
-    Define ` vector_table_address (ExcVectorBase:bool[32]) (mode:bool[5]) =
+Definition vector_table_address_def:
+      vector_table_address (ExcVectorBase:bool[32]) (mode:bool[5]) =
 if (mode = 17w:bool[5])
 then
     [ExcVectorBase + 28w]
@@ -33,10 +35,10 @@ else if (mode = 23w:bool[5])
 then [ExcVectorBase + 16w; ExcVectorBase + 12w]
 else (*if (mode = 27w)*)
     [ExcVectorBase + 4w]
-                        `;
+End
 
-val get_pc_value_def =
-Define `get_pc_value s1 =
+Definition get_pc_value_def:
+ get_pc_value s1 =
 let is = (if (s1.psrs (0,CPSR)).J then
           2 + if (s1.psrs (0,CPSR)).T then 1 else 0
       else if (s1.psrs (0,CPSR)).T then
@@ -65,7 +67,8 @@ let is = (if (s1.psrs (0,CPSR)).J then
  then
      s1.registers (0,RName_PC) + 8w
  else
-     (s1.registers (0,RName_PC) + 4w))`;
+     (s1.registers (0,RName_PC) + 4w))
+End
 
 (*
 val get_base_vector_table_def =
@@ -92,8 +95,8 @@ val get_base_vector_table_def =
         else
             0w:word32`;
 *)
-val get_base_vector_table_def =
-    Define `get_base_vector_table y =
+Definition get_base_vector_table_def:
+     get_base_vector_table y =
     if (y.coprocessors.state.cp15.SCTLR.V)
     then
         0xFFFF0000w
@@ -114,7 +117,8 @@ val get_base_vector_table_def =
              else
                  y.coprocessors.state.cp15.VBAR)
         else
-            0w:word32`;
+            0w:word32
+End
 
 
 fun define_pfc_goal a expr =
@@ -126,7 +130,8 @@ fun define_pfc_goal_abs a expr =
             (priv_flags_constraints_abs ^a ^expr) ``);
 
 
-val const_comp_def = Define `const_comp G = (!s s' x. ((G s = ValueState x s') ==> (s=s')))`;
+Definition const_comp_def:   const_comp G = (!s s' x. ((G s = ValueState x s') ==> (s=s')))
+End
 
 val read_reg_constlem =
     store_thm(
@@ -1154,8 +1159,8 @@ val untouched_states_implies_mmu_setup_thm =
 
 
 (* only for arm_next: no svc constraints *)
-val priv_mode_constraints_v1_def =
-    Define `priv_mode_constraints_v1 (g:bool[32]) (state0:arm_state) state1 =
+Definition priv_mode_constraints_v1_def:
+     priv_mode_constraints_v1 (g:bool[32]) (state0:arm_state) state1 =
 (state1.coprocessors.state.cp15 =
  state0.coprocessors.state.cp15)
 
@@ -1223,11 +1228,11 @@ val priv_mode_constraints_v1_def =
 ((state1.psrs(0,spsr)).I = (state0.psrs(0,CPSR)).I)
  /\
 ((state1.psrs(0,spsr)).F = (state0.psrs(0,CPSR)).F)))
-`;
+End
 
 (* only for arm_next : svc based on pc of previous state *)
-val priv_mode_constraints_v2_def =
-    Define `priv_mode_constraints_v2 (g:bool[32]) (state0:arm_state) state1 =
+Definition priv_mode_constraints_v2_def:
+     priv_mode_constraints_v2 (g:bool[32]) (state0:arm_state) state1 =
 priv_mode_constraints_v1 g state0 state1
 /\
 (* in svc mode, the link register is equal to old PC minus offset *)
@@ -1240,11 +1245,11 @@ priv_mode_constraints_v1 g state0 state1
                                get_pc_value(state0) -4w
                           ))
                          /\ ((state1.psrs(0,SPSR_svc)) = (state0.psrs(0,CPSR)))))
-`;
+End
 
 (* only for arm_next : svc based on pc of previous state *)
-val priv_mode_constraints_v2a_def =
-    Define `priv_mode_constraints_v2a (g:bool[32]) (state0:arm_state) state1 =
+Definition priv_mode_constraints_v2a_def:
+     priv_mode_constraints_v2a (g:bool[32]) (state0:arm_state) state1 =
 priv_mode_constraints_v1 g state0 state1
 /\
 (* in svc mode, the link register is equal to old PC minus offset *)
@@ -1264,12 +1269,12 @@ priv_mode_constraints_v1 g state0 state1
                                  (state0.psrs(0,CPSR) with IT := ITAdvance ((state0.psrs(0,CPSR)).IT))
                              else
                                  (state0.psrs(0,CPSR)))))
-`;
+End
 
 
 (* svc based on the borders *)
-val priv_mode_constraints_v3_def =
-Define `priv_mode_constraints_v3 (g:bool[32]) (state0:arm_state) state1 =
+Definition priv_mode_constraints_v3_def:
+ priv_mode_constraints_v3 (g:bool[32]) (state0:arm_state) state1 =
     priv_mode_constraints_v2a g state0 state1
 /\  ((ARM_MODE state1 = 19w) ==>
      (
@@ -1280,22 +1285,24 @@ Define `priv_mode_constraints_v3 (g:bool[32]) (state0:arm_state) state1 =
        ((g = guest2) ==>
             ((((state1.psrs (0,SPSR_svc)).T) ==> (((state1.registers (0, RName_LRsvc) -2w) >=+ guest2_min_adr) /\ ((state1.registers (0, RName_LRsvc) -2w) <=+ guest2_max_adr)))
        /\   ((((state1.psrs (0,SPSR_svc)).T = F) /\ ((state1.psrs (0,SPSR_svc)).J = F)) ==> (((state1.registers (0, RName_LRsvc) -4w) >=+ guest2_min_adr) /\ ((state1.registers (0, RName_LRsvc) -4w) <=+ guest2_max_adr)))))
-     ))`;
+     ))
+End
 
 
 (* svc based on accessible bytes *)
-val priv_mode_constraints_v4_def =
-    Define `priv_mode_constraints_v4 (g:bool[32]) (state0:arm_state) state1 =
+Definition priv_mode_constraints_v4_def:
+     priv_mode_constraints_v4 (g:bool[32]) (state0:arm_state) state1 =
     priv_mode_constraints_v2a g state0 state1
 /\  ((ARM_MODE state1 = 19w) ==>
      (
             (((state1.psrs (0,SPSR_svc)).T) ==> aligned_word_readable state1 T (state1.registers (0, RName_LRsvc) -2w))
        /\   ((((state1.psrs (0,SPSR_svc)).T = F) /\ ((state1.psrs (0,SPSR_svc)).J = F)) ==> aligned_word_readable state1 F (state1.registers (0, RName_LRsvc) -4w))
-     ))`;
+     ))
+End
 
 
-val satisfy_priv_constraints_v3_def =
-Define `satisfy_priv_constraints_v3 f m n =
+Definition satisfy_priv_constraints_v3_def:
+ satisfy_priv_constraints_v3 f m n =
  !g s1 s1' a .
      mmu_requirements s1 g ⇒
        (ARM_MODE s1 = m) ==>
@@ -1303,10 +1310,11 @@ Define `satisfy_priv_constraints_v3 f m n =
      (f s1 = ValueState a s1') ==>
      (¬access_violation s1) ==>
      (¬access_violation s1') ==>
-     priv_mode_constraints_v3 g s1 s1'`;
+     priv_mode_constraints_v3 g s1 s1'
+End
 
-val satisfy_priv_constraints_v2_def =
-Define `satisfy_priv_constraints_v2 f m n =
+Definition satisfy_priv_constraints_v2_def:
+ satisfy_priv_constraints_v2 f m n =
  !g s1 s1' a .
      mmu_requirements s1 g ⇒
      (ARM_MODE s1 = m) ==>
@@ -1314,10 +1322,11 @@ Define `satisfy_priv_constraints_v2 f m n =
      (f s1 = ValueState a s1') ==>
      (¬access_violation s1) ==>
      (¬access_violation s1') ==>
-     priv_mode_constraints_v2 g s1 s1'`;
+     priv_mode_constraints_v2 g s1 s1'
+End
 
-val satisfy_priv_constraints_v2a_def =
-Define `satisfy_priv_constraints_v2a f m n =
+Definition satisfy_priv_constraints_v2a_def:
+ satisfy_priv_constraints_v2a f m n =
  !g s1 s1' a .
      mmu_requirements s1 g ⇒
      (ARM_MODE s1 = m) ==>
@@ -1325,7 +1334,8 @@ Define `satisfy_priv_constraints_v2a f m n =
      (f s1 = ValueState a s1') ==>
      (¬access_violation s1) ==>
      (¬access_violation s1') ==>
-     priv_mode_constraints_v2a g s1 s1'`;
+     priv_mode_constraints_v2a g s1 s1'
+End
 
 
 val IT_advance_untouch_mmu_setup_thm =
@@ -1379,4 +1389,3 @@ val IT_advance_untouch_security_ex_thm =
 );
 
 
-val _ = export_theory();

@@ -4,27 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-open arithmeticTheory pred_setTheory dividesTheory gcdsetTheory numberTheory
-     combinatoricsTheory;
-
-(* declare new theory at start *)
-val _ = new_theory "iterateCompose";
+Theory iterateCompose
+Ancestors
+  arithmetic pred_set divides gcdset number combinatorics
+  helperTwosq
+  involute  (* for involute_bij *)
+  involuteFix iteration
+  iterateCompute  (* for iterate_while_thm *)
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "helperTwosqTheory"; *)
-open helperTwosqTheory;
-
 (* val _ = load "involuteFixTheory"; *)
-open involuteTheory; (* for involute_bij *)
-open involuteFixTheory;
 
 (* val _ = load "iterateComputeTheory"; *)
-open iterationTheory;
-open iterateComputeTheory; (* for iterate_while_thm *)
 
 val _ = temp_overload_on("SQ", ``\n. n * (n :num)``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
@@ -1538,8 +1531,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

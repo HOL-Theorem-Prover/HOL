@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib
-open x64_decompLib
-
-val _ = new_theory "x64_decomp_demo";
+Theory x64_decomp_demo
+Ancestors
+  x64_prog
+Libs
+  x64_decompLib
 
 val (decomp_cert,decomp_def) = x64_decompLib.x64_decompile "decomp" `
   (* 0: *)  55              (* push   %rbp *)
@@ -68,5 +69,3 @@ val (decomp1_cert,decomp1_def) =
   (* 43: *) c9              (* leaveq  *) ’
 
 val _ = save_thm("decomp1_cert",decomp1_cert);
-
-val _ = export_theory()

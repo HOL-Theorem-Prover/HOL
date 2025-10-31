@@ -1,10 +1,10 @@
-open HolKernel Parse boolLib bossLib finite_mapTheory;
+Theory simplifier
+Ancestors
+  finite_map
 
 (*---------------------------------------------------------------------------------*)
 (*      Simplifier on finite maps                                                  *)
 (*---------------------------------------------------------------------------------*)
-
-val _ = new_theory "simplifier";
 
 val FUPDATE_LT_COMMUTES = Q.store_thm (
   "FUPDATE_LT_COMMUTES",
@@ -12,4 +12,3 @@ val FUPDATE_LT_COMMUTES = Q.store_thm (
     RW_TAC arith_ss [FUPDATE_COMMUTES]
     );
 
-val _ = export_theory ();

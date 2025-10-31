@@ -4,33 +4,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyCyclic";
+Theory polyCyclic
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  monoid group ring field polynomial polyWeak polyRing
+  polyDivision polyMonic polyEval polyRoot polyDivides
+  polyIrreducible
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-(* Get dependet theories local *)
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-(* Get polynomial theory of Ring *)
-open polynomialTheory polyWeakTheory polyRingTheory;
-open polyDivisionTheory;
-open polyMonicTheory;
-open polyEvalTheory;
-open polyRootTheory;
-open polyDividesTheory;
-open polyIrreducibleTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -448,9 +433,9 @@ p =  7, k = 5, order_5(7) = order_5(7 MOD 5) = order_5(2) = 4, hence factors of 
 *)
 
 (* Define Cyclic polynomials *)
-val poly_cyclic_def = Define`
+Definition poly_cyclic_def:
    poly_cyclic (r:'a ring) n = GENLIST (\k. #1) n
-`;
+End
 (* Use overload for poly_cyclic *)
 val _ = overload_on("cyclic", ``poly_cyclic r``);
 (* cyclic n = [#1;#1;#1; ... ;#1] (n elements) = 1 + X + X^2 + ... + X^(n-1) in conventional form *)
@@ -851,8 +836,4 @@ val poly_unity_irreducible_factor_exists = store_thm(
   metis_tac[poly_cyclic_has_no_factor_unity_1]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

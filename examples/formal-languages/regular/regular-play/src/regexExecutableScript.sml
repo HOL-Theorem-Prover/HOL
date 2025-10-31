@@ -1,29 +1,24 @@
-open HolKernel Parse boolLib bossLib;
-open listTheory rich_listTheory combinTheory;
-open pred_setTheory;
-
-val _ = new_theory "regexExecutable";
-
-open regexSemanticsTheory;
-
+Theory regexExecutable
+Ancestors
+  list rich_list combin pred_set regexSemantics
 
 (* 3.2 executable semantics *)
 (* -------------------------------------------------------------------------------------------------- *)
 
 (* here, we use the datatype from regexDatatypes.Reg_datatype_quot *)
 
-val split_def = Define `
+Definition split_def:
          (split []      = [([],[])]                                            ) /\
          (split (c::cs) = ([],c::cs)::(MAP (\s. (c::(FST s),SND s)) (split cs)))
-`;
+End
 
-val parts_def = Define `
+Definition parts_def:
          (parts []      = [[]]                                                                      ) /\
          (parts [c]     = [[[c]]]                                                                   ) /\
          (parts (c::cs) = FLAT (MAP (\ps. [(c::(HD ps))::(TL ps);[c]::(HD ps)::(TL ps)]) (parts cs)))
-`;
+End
 
-val accept_def = Define `
+Definition accept_def:
   (accept (Eps) u     <=> (u = [])                                               ) /\
   (accept (Sym c) u   <=> (u = [c])                                      ) /\
   (accept (Alt p q) u <=> accept p u \/ accept q u                       ) /\
@@ -31,7 +26,7 @@ val accept_def = Define `
      EXISTS (\u_12. accept p (FST u_12) /\ accept q (SND u_12)) (split u)) /\
   (accept (Rep r) u   <=>
      EXISTS (\ps. EVERY (\u_i. accept r u_i) ps) (parts u)               )
-`;
+End
 
 (* rewrite theorems *)
 (* ----------------------------------------------------------------------------- *)
@@ -243,4 +238,3 @@ val accept_correctness_thm = store_thm("accept_correctness_thm", ``!r w. accept 
 
 
 
-val _ = export_theory();

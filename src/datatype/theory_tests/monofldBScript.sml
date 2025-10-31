@@ -28,6 +28,6 @@ val msg = read()
 val _ = if msg = "" then print "No message\n"
         else raise Fail ("Message was: "^msg)
 
-val _ = save_thm("MFB", TRUTH)
+Theorem MFB = TRUTH
 
 val _ = Globals.interactive := false

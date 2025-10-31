@@ -1,7 +1,9 @@
-open preamble while_langTheory while_lang_lemmasTheory div_logicTheory
-     std_logicTheory std_logic_completenessTheory;
-
-val _ = new_theory "div_logic_completeness";
+Theory div_logic_completeness
+Ancestors
+  while_lang while_lang_lemmas div_logic std_logic
+  std_logic_completeness
+Libs
+  preamble
 
 Theorem Pohjola_strengthen:
   ∀P P' p D. (∀s. P s ⇒ P' s) ∧ Pohjola P' p D ⇒ Pohjola P p D
@@ -280,4 +282,3 @@ Proof
   \\ fs [Pohjola_diverges]
 QED
 
-val _ = export_theory();

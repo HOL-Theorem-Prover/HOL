@@ -10,23 +10,26 @@ Libs
 
 (* key property: a partial function f can be represented by an assoc list
    al which is known to be sorted according to R *)
-val sorted_alist_repr_def = Define `
+Definition sorted_alist_repr_def:
   sorted_alist_repr R al f <=>
-    SORTED R (MAP FST al) /\ irreflexive R /\ transitive R /\ (f = ALOOKUP al)`;
+    SORTED R (MAP FST al) /\ irreflexive R /\ transitive R /\ (f = ALOOKUP al)
+End
 
 (* inserts on sorted alists *)
 
-val count_append_def = Define `
-  count_append (n : num) xs ys = APPEND xs ys`;
+Definition count_append_def:
+  count_append (n : num) xs ys = APPEND xs ys
+End
 
-val is_insert_def = Define `
+Definition is_insert_def:
   is_insert frame_l frame_r R k x al al' <=>
      irreflexive R /\ transitive R ==>
         SORTED R (MAP FST al) ==>
          (ALOOKUP al' = ALOOKUP ((k, x) :: al)) /\
          (frame_l ==> al <> [] /\ (FST (HD al') = FST (HD al))) /\
          (frame_r ==> al <> [] /\ (FST (LAST al') = FST (LAST al))) /\
-         SORTED R (MAP FST al')`;
+         SORTED R (MAP FST al')
+End
 
 Theorem HD_APPEND:
   HD (xs ++ ys) = (if xs = [] then HD ys else HD xs)
@@ -215,8 +218,9 @@ Proof
 QED
 
 (* reprs of various partial function constructions *)
-val option_choice_f_def = Define `
-  option_choice_f f g = (\x. OPTION_CHOICE (f x) (g x))`;
+Definition option_choice_f_def:
+  option_choice_f f g = (\x. OPTION_CHOICE (f x) (g x))
+End
 
 Theorem alookup_append_option_choice_f:
   ALOOKUP (xs ++ ys) = option_choice_f (ALOOKUP xs) (ALOOKUP ys)
@@ -274,11 +278,12 @@ Proof   fs [sorted_alist_repr_def]
 QED
 
 (* lookups on sorted alists *)
-val is_lookup_def = Define `
+Definition is_lookup_def:
   is_lookup fl fr R al x r = (!xs ys. (fl \/ (xs = [])) ==>
     (fr \/ (ys = [])) ==> irreflexive R /\ transitive R ==>
     SORTED R (MAP FST (xs ++ al ++ ys)) ==>
-    (ALOOKUP (xs ++ al ++ ys) x = r))`;
+    (ALOOKUP (xs ++ al ++ ys) x = r))
+End
 
 Theorem lookup_repr:
   sorted_alist_repr R al f /\ is_lookup fl fr R al x r ==> (f x = r)

@@ -4,14 +4,18 @@ quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
 app load ["pred_setSimps", "pred_setTheory", "arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory",
-"listTheory", "whileTheory", "finite_mapTheory", "preARMTheory", "ARMCompositionTheory"];
+"listTheory", "WhileTheory", "finite_mapTheory", "preARMTheory", "ARMCompositionTheory"];
 
 quietdec := false;
 *)
+Theory CFL
+Ancestors
+  pred_set arithmetic words pair list While finite_map preARM
+  ARMComposition
+Libs
+  numLib pred_setSimps wordsLib
 
 
-open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory arithmeticTheory wordsTheory wordsLib
-pairTheory listTheory whileTheory finite_mapTheory preARMTheory ARMCompositionTheory;
 
 (*---------------------------------------------------------------------------------*)
 (* Control Flow Level (CFL)                                                        *)
@@ -32,8 +36,6 @@ pairTheory listTheory whileTheory finite_mapTheory preARMTheory ARMCompositionTh
 (*  The translation from CFL to the object code simply performs the                *)
 (*  linearization of control-flow structures.                                      *)
 (*---------------------------------------------------------------------------------*)
-
-val _ = new_theory "CFL";
 
 val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 
@@ -558,4 +560,3 @@ val SEMANTICS_OF_CFL = Q.store_thm (
   );
 
 
-val _ = export_theory();

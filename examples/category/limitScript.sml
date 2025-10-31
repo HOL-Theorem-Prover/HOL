@@ -1,13 +1,18 @@
-open HolKernel Parse bossLib boolLib boolSimps categoryTheory functorTheory nat_transTheory pairTheory SatisfySimps;
+Theory limit
+Ancestors
+  category category_functor nat_trans pair
+Libs
+  boolSimps SatisfySimps
 
-val _ = new_theory "limit";
 val _ = ParseExtras.temp_loose_equality()
 
-val is_terminal_def = Define`
-  is_terminal c y = y ∈ c.obj ∧ ∀x. x ∈ c.obj ⇒ ∃!f. f :- x → y-:c`;
+Definition is_terminal_def:
+  is_terminal c y = y ∈ c.obj ∧ ∀x. x ∈ c.obj ⇒ ∃!f. f :- x → y-:c
+End
 
-val is_initial_def = Define`
-  is_initial c x = is_terminal (op_cat c) x`;
+Definition is_initial_def:
+  is_initial c x = is_terminal (op_cat c) x
+End
 
 val is_initial_thm = Q.store_thm(
 "is_initial_thm",
@@ -54,8 +59,9 @@ qx_gen_tac `h1` >> qx_gen_tac `h2` >> strip_tac >>
 fsrw_tac [][faithful_def,cat_iso_pair_def] >>
 metis_tac [morf_maps_to,functor_comp_objf,id_functor_objf,composable_def,maps_to_def]);
 
-val cone_cat_def = Define`
-  cone_cat f = comma_cat (diagonal_functor f.dom f.cod) (itself_functor f)`;
+Definition cone_cat_def:
+  cone_cat f = comma_cat (diagonal_functor f.dom f.cod) (itself_functor f)
+End
 
 val is_category_cone_cat = Q.store_thm(
 "is_category_cone_cat",
@@ -132,12 +138,13 @@ imp_res_tac maps_to_in_def >>
 fsrw_tac [][] >>
 metis_tac []);
 
-val mk_cone_def = Define`
+Definition mk_cone_def:
   (mk_cone d v ps : (α,β,γ,δ) cone) =
   <| dom := v; cod := ();
      map := mk_nt <| dom := K_functor d.dom d.cod v;
                      cod := d;
-                     map := ps |> |>`;
+                     map := ps |> |>
+End
 
 val mk_cone_dom_cod = Q.store_thm(
 "mk_cone_dom_cod",
@@ -211,9 +218,10 @@ fsrw_tac [][] >>
 match_mp_tac nt_eq_thm >>
 fsrw_tac [][]);
 
-val mk_cone_mor_def = Define`
+Definition mk_cone_mor_def:
   (mk_cone_mor c1 c2 m : (α,β,γ,δ) cone_mor) =
-    <| dom := c1; cod := c2; map := (m,ARB) |>`;
+    <| dom := c1; cod := c2; map := (m,ARB) |>
+End
 
 val mk_cone_mor_dom_cod = Q.store_thm(
 "mk_cone_mor_dom_cod",
@@ -238,8 +246,9 @@ val is_cone_mor_mk_cone_mor = Q.store_thm(
 srw_tac [][is_cone_mor_thm] >>
 srw_tac [][mk_cone_mor_def]);
 
-val is_limit_def = Define`
-  is_limit d l = is_functor d ∧ is_terminal (cone_cat d) l`;
+Definition is_limit_def:
+  is_limit d l = is_functor d ∧ is_terminal (cone_cat d) l
+End
 
 val is_limit_is_cone = Q.store_thm(
 "is_limit_is_cone",
@@ -300,8 +309,9 @@ the definitions with a "pre_", and add separate stronger predicates (without the
 that add the extra assumptions.
 *)
 
-val has_limits_def = Define`
-  has_limits s c = ∀d. is_functor d ∧ (d :- s → c) ⇒ ∃l. is_limit d l`;
+Definition has_limits_def:
+  has_limits s c = ∀d. is_functor d ∧ (d :- s → c) ⇒ ∃l. is_limit d l
+End
 
 (*
 val functor_cat_pointwise_limits = Q.store_thm(
@@ -470,8 +480,9 @@ Proof
   fsrw_tac [][mk_cone_proj_ext,restrict_def]
 QED
 
-val has_binary_products_def = Define`
-  has_binary_products c = has_limits (discrete_cat {1;2}) c`;
+Definition has_binary_products_def:
+  has_binary_products c = has_limits (discrete_cat {1;2}) c
+End
 
 val has_binary_products_thm = Q.store_thm(
 "has_binary_products_thm",
@@ -659,9 +670,10 @@ AP_TERM_TAC >|[
 ] >> qexists_tac `f.dom` >>
 fsrw_tac [SATISFY_ss][maps_to_in_def,maps_to_obj,composable_in_def]);
 
-val pre_product_functor_def = Define`
+Definition pre_product_functor_def:
   pre_product_functor c y = <|
-    dom := c; cod := c; map := λf. f × id y -:c -:c |>`;
+    dom := c; cod := c; map := λf. f × id y -:c -:c |>
+End
 
 val pre_product_functor_components = Q.store_thm(
 "pre_product_functor_components",
@@ -690,8 +702,9 @@ unabbrev_all_tac >>
 fsrw_tac [SATISFY_ss][] >>
 srw_tac [][maps_to_in_def]);
 
-val product_functor_def = Define`
-  product_functor c x = mk_functor (pre_product_functor c x)`;
+Definition product_functor_def:
+  product_functor c x = mk_functor (pre_product_functor c x)
+End
 
 val is_functor_product_functor = Q.store_thm(
 "is_functor_product_functor",
@@ -791,5 +804,3 @@ conj_tac >- metis_tac [maps_to_composable] >>
 srw_tac [][DECIDE ``(1 = n) = (n = 1)``] >>
 first_x_assum match_mp_tac >>
 fsrw_tac [][maps_to_in_def]);
-
-val _ = export_theory ();

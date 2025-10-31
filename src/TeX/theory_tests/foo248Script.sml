@@ -1,4 +1,6 @@
 Theory foo248
 
-val _ = Define`foo a b = (a < b)`;
-val _ = overload_on("<:",``\a b. foo b a``);
+Definition foo_def:
+  foo a b = (a < b)
+End
+Overload "<:" = ``\a b. foo b a``

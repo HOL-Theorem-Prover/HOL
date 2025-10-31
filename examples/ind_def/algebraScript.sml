@@ -15,11 +15,11 @@
 (* Open a new theory and load the inductive definitions library and      *)
 (* other libraries.                                                      *)
 (* --------------------------------------------------------------------- *)
-
-open HolKernel Parse boolLib bossLib
-     listTheory IndDefRules IndDefLib stringLib;
-
-val _ = new_theory "algebra";
+Theory algebra
+Ancestors
+  list string
+Libs
+  IndDefRules IndDefLib stringLib
 
 
 (* ===================================================================== *)
@@ -90,9 +90,9 @@ val tsind = derive_strong_induction (trules,tind);
 (* Definition of a terminal process: one with [] as a maximal trace.     *)
 (* --------------------------------------------------------------------- *)
 
-val TERMINAL_def =
- Define
-   `TERMINAL P = MTRACE P []`;
+Definition TERMINAL_def:
+    TERMINAL P = MTRACE P []
+End
 
 (* ===================================================================== *)
 (* Inductive definition of a labelled transition system.                 *)
@@ -270,9 +270,9 @@ val Theorem3 = Q.store_thm
 val _ = set_fixity "MEQUIV" (Infixl 701);
 val _ = set_fixity "BEQUIV" (Infixl 701);
 
-val MEQUIV_def =
- Define
-  `(P MEQUIV Q) = !A. MTRACE P A = MTRACE Q A`;
+Definition MEQUIV_def:
+   (P MEQUIV Q) = !A. MTRACE P A = MTRACE Q A
+End
 
 (* --------------------------------------------------------------------- *)
 (* Bisimulation equivalence.  A binary relation s:agent->agent->bool is  *)
@@ -282,19 +282,17 @@ val MEQUIV_def =
 (* the bisimulation (simulation whose inverse is also a simulation).     *)
 (* --------------------------------------------------------------------- *)
 
-val SIM_def =
- Define
-   `SIM s = !P Q. s P Q ==>
+Definition SIM_def:
+    SIM s = !P Q. s P Q ==>
                    !a P'. TRANS P a P' ==>
-                           ?Q'. TRANS Q a Q' /\ s P' Q'`;
+                           ?Q'. TRANS Q a Q' /\ s P' Q'
+End
 
-val BEQUIV_def =
- Define
-   `(P BEQUIV Q) = ?s. SIM s /\ s P Q /\ SIM(\x y. s y x)`;
+Definition BEQUIV_def:
+    (P BEQUIV Q) = ?s. SIM s /\ s P Q /\ SIM(\x y. s y x)
+End
 
 
 (* --------------------------------------------------------------------- *)
 (* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
-
-val _ = export_theory();

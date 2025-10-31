@@ -1,16 +1,17 @@
-open HolKernel Parse bossLib boolLib pairTheory relationTheory set_relationTheory pred_setTheory arithmeticTheory whileTheory
+Theory waaSimpl
+Ancestors
+  pair relation set_relation pred_set arithmetic While alterA ltl
+  ltl2waa
 
-open alterATheory ltlTheory ltl2waaTheory
-
-val _ = new_theory "waaSimpl"
 val _ = ParseExtras.temp_loose_equality()
 
 (*
   Reducing the amount of transitions
 *)
 
-val trans_implies_def = Define`
-  trans_implies (a1,q1) (a2,q2) = a2 ⊆ a1 ∧ q1 ⊆ q2`;
+Definition trans_implies_def:
+  trans_implies (a1,q1) (a2,q2) = a2 ⊆ a1 ∧ q1 ⊆ q2
+End
 
 val TRANS_IMPL_PO = store_thm
   ("TRANS_IMPL_PO",
@@ -71,13 +72,15 @@ val TRANS_IMPL_MIN_LEMM = store_thm
        )
   );
 
-val removeImplied_def = Define`
+Definition removeImplied_def:
   removeImplied trans x =
-    (trans x) DIFF {t | ?t'. ~(t = t') ∧ t' ∈ (trans x) ∧ trans_implies t' t}`;
+    (trans x) DIFF {t | ?t'. ~(t = t') ∧ t' ∈ (trans x) ∧ trans_implies t' t}
+End
 
-val reduceTransSimpl_def = Define`
+Definition reduceTransSimpl_def:
   reduceTransSimpl (ALTER_A s a trans i f) =
-     ALTER_A s a (removeImplied trans) i f`;
+     ALTER_A s a (removeImplied trans) i f
+End
 
 val REDUCE_IS_WEAK = store_thm
   ("REDUCE_IS_WEAK",
@@ -87,7 +90,7 @@ val REDUCE_IS_WEAK = store_thm
    >> fs[removeImplied_def] >> metis_tac[]
   );
 
-val reduced_E_def = Define`
+Definition reduced_E_def:
   reduced_E run trans word (i,q) =
     let a = $@ (\a. (a,run.E (i,q)) ∈ trans q ∧ at word i ∈ a)
     in if ?a' q'. (a',q') ∈ trans q ∧ trans_implies (a',q') (a,run.E (i,q))
@@ -96,11 +99,13 @@ val reduced_E_def = Define`
                     (trans q)
                     (rrestrict (rel_to_reln trans_implies) (trans q)))
            ∧ trans_implies t (a,run.E (i,q)))
-       else run.E(i,q)`;
+       else run.E(i,q)
+End
 
-val reduced_run_def = Define`
+Definition reduced_run_def:
   reduced_run run w trans =
-            run_restr (run.V 0) (ALTERA_RUN run.V (reduced_E run trans w))`;
+            run_restr (run.V 0) (ALTERA_RUN run.V (reduced_E run trans w))
+End
 
 val REDUCE_TRANS_CORRECT = store_thm
   ("REDUCE_TRANS_CORRECT",
@@ -303,7 +308,7 @@ val REDUCE_TRANS_CORRECT = store_thm
   Remove unreachable states
 *)
 
-val removeStatesSimpl_def = Define`
+Definition removeStatesSimpl_def:
    removeStatesSimpl (ALTER_A s a t i f) =
      (ALTER_A
       (s ∩ reachRelFromSet (ALTER_A s a t i f) (BIGUNION i))
@@ -313,7 +318,8 @@ val removeStatesSimpl_def = Define`
           else {})
       i
       (f ∩ reachRelFromSet (ALTER_A s a t i f) (BIGUNION i))
-      )`;
+      )
+End
 
 val REACHREL_LEMM = store_thm
   ("REACHREL_LEMM",
@@ -491,9 +497,10 @@ val REDUCE_STATE_CORRECT = store_thm
   Merge equivalent states
 *)
 
-val equivalentStates_def = Define`
+Definition equivalentStates_def:
   equivalentStates final trans s s' =
-            (trans s = trans s') ∧ (s ∈ final = s' ∈ final)`;
+            (trans s = trans s') ∧ (s ∈ final = s' ∈ final)
+End
 
 val EQUIV_STATES_SYMM = store_thm
   ("EQUIV_STATES_SYMM",
@@ -507,17 +514,19 @@ val EQUIV_STATES_REFL = store_thm
    metis_tac[equivalentStates_def]
   );
 
-val replaceSingleTrans_def = Define`
+Definition replaceSingleTrans_def:
   replaceSingleTrans s s' (a,e) =
             if s ∈ e
             then (a, (e DIFF {s}) ∪ {s'})
-            else (a,e)`;
+            else (a,e)
+End
 
-val replaceState_def = Define`
+Definition replaceState_def:
   replaceState s s' qs =
                  if s ∈ qs
                  then qs DIFF {s} ∪ {s'}
-                 else qs`;
+                 else qs
+End
 
 val REPL_STATE_LEMM = store_thm
   ("REPL_STATE_LEMM",
@@ -527,8 +536,9 @@ val REPL_STATE_LEMM = store_thm
    >> metis_tac[]
   );
 
-val replaceBy_def = Define`
-  replaceBy trans s s' q = IMAGE (replaceSingleTrans s s') (trans q)`;
+Definition replaceBy_def:
+  replaceBy trans s s' q = IMAGE (replaceSingleTrans s s') (trans q)
+End
 
 (* val REPLACE_TRANS_REACHABLE_LEMM = store_thm *)
 (*   ("REPLACE_TRANS_LEMM", *)
@@ -566,7 +576,7 @@ val replaceBy_def = Define`
 (* ) *)
 
 
-val mergeState_def = Define`
+Definition mergeState_def:
   mergeState x (ALTER_A states a trans i f) =
             if ?s. s ∈ states ∧ ~(s = x) ∧ equivalentStates f trans s x
             then
@@ -578,10 +588,12 @@ val mergeState_def = Define`
                        (replaceBy trans x s')
                        (IMAGE (replaceState x s') i)
                        (replaceState x s' f)
-            else (ALTER_A states a trans i f)`;
+            else (ALTER_A states a trans i f)
+End
 
-val mergeStatesSimpl = Define`
-  mergeStatesSimpl aut = ITSET mergeState aut.states aut`;
+Definition mergeStatesSimpl:
+  mergeStatesSimpl aut = ITSET mergeState aut.states aut
+End
 
 (* val MERGE_STATE_COMMUTES = store_thm *)
 (*  ("MERGE_STATE_COMMUTES", *)
@@ -646,13 +658,14 @@ val mergeStatesSimpl = Define`
 
 (* ) *)
 
-val replace_run_def = Define`
+Definition replace_run_def:
   replace_run old_run x_old x_new =
     ALTERA_RUN
         (replaceState x_old x_new o old_run.V)
         (λ(i,q). if (q = x_new) ∧ ~(x_new ∈ old_run.V i)
                  then replaceState x_old x_new (old_run.E (i,x_old))
-                 else replaceState x_old x_new (old_run.E (i,q)))`;
+                 else replaceState x_old x_new (old_run.E (i,q)))
+End
 
 
 
@@ -1828,4 +1841,3 @@ val replace_run_def = Define`
 (* ) *)
 
 
-val _ = export_theory();

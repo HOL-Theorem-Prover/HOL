@@ -3,11 +3,9 @@ load "ringLib";
 load "numeralTheory";
 load "bossLib";
 *)
-open HolKernel Parse boolLib bossLib
-     arithmeticTheory EVAL_semiringTheory;
-
-
-val _ = new_theory "EVAL_numRing";
+Theory EVAL_numRing
+Ancestors
+  arithmetic EVAL_semiring
 
 (* num is a semi-ring: *)
 val num_semi_ring = store_thm
@@ -30,4 +28,3 @@ val num_rewrites = save_thm("num_rewrites", LIST_CONJ
 end;
 
 
-val _ = export_theory();

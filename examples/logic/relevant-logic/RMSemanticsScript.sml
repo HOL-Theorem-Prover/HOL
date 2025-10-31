@@ -1,12 +1,7 @@
 
-open HolKernel Parse boolLib bossLib;
-
-open GoldblattRLTheory RLRulesTheory;
-open listTheory;
-open pred_setTheory;
-open numpairTheory string_numTheory;
-
-val _ = new_theory "RMSemantics";
+Theory RMSemantics
+Ancestors
+  GoldblattRL RLRules list pred_set numpair string_num
 
 Theorem NOT_MEM_FILTER_LEMMA:
   ∀ a γ. ¬ MEM a (FILTER (λx. x ≠ a) γ)
@@ -2209,4 +2204,3 @@ Proof
   gs[CONJl_def, g_identity]
 QED
 
-val _ = export_theory();

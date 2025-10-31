@@ -1,7 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "m1_factorial";
-
+Theory m1_factorial
 
 val (th,defs) = m1_progLib.decompile_m1 "fact" `
   List [sym "M1" "ICONST"; nat 1]
@@ -67,4 +64,3 @@ val _ = TextIO.flushOut outstr;
 val _ = TextIO.closeOut outstr;
 
 
-val _ = export_theory();

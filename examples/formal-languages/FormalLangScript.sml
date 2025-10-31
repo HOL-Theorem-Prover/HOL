@@ -323,7 +323,7 @@ Proof
 QED
 
 (* TODO: move to pred_setLib simpset *)
-Theorem IN_COND[simp]:
+Theorem IN_COND[simp,local]:
   x ∈ (if A then B else C) ⇔ if A then x ∈ B else x ∈ C
 Proof
   rw[]
@@ -422,8 +422,8 @@ Theorem IN_KSTAR_LIST_ALT:
 Proof
   rw [IN_KSTAR_LIST,EQ_IMP_THM]
   >- (irule_at Any EQ_REFL >>
-      pop_keep_tac >> qid_spec_tac ‘wlist’ >>
-      ho_match_mp_tac EVERY_MONOTONIC >> metis_tac[])
+      pop_keep_tac >>
+      ho_match_mp_tac EVERY_MONOTONIC >> simp[])
   >- (irule_at Any $ GSYM flat_filter_not_null >>
       simp[EVERY_FILTER,NULL_EQ] >> irule EVERY_MONOTONIC >>
       first_x_assum $ irule_at Any >> metis_tac[])
@@ -1061,12 +1061,12 @@ Proof
 QED
 
 (*---------------------------------------------------------------------------*)
-(* Closure properties for FINITE_STATE. Possibly subtle: the quotienting of  *)
-(* a language L by A* here is not the same as the usual quotienting of one   *)
-(* language by another (LANG_LEFT_QUOTIENT above). The latter is usually     *)
-(* written "K \ L" and results in a language. Here, we don't "BIGUNION" the  *)
-(* results of applying the quotient, so the result is a partition of L, and  *)
-(* the arguments are about the finiteness of the partition.                  *)
+(* Closure properties for FINITE_STATE. NB: the quotienting of a language L  *)
+(* by A* here is not the same as the usual quotienting of one language by    *)
+(* another (LANG_LEFT_QUOTIENT above). The latter is usually written "K \ L" *)
+(* and results in a language. Here, we don't "BIGUNION" the results of       *)
+(* applying the quotient, so the result is a partition of L, and the         *)
+(* arguments are about the finiteness of the partition.                      *)
 (*---------------------------------------------------------------------------*)
 
 Theorem FINITE_STATE_UNION:
@@ -1083,19 +1083,19 @@ Proof
   >- (rw[SUBSET_DEF] >>
       qexists_tac ‘(LEFT_QUOTIENT w L1, LEFT_QUOTIENT w L2)’ >>
       unabbrev_all_tac >> rw[] >> metis_tac[])
-QED
 
-Theorem FINITE_STATE_DOT:
-  FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 • L2, A)
-Proof
-  cheat
-QED
 
-Theorem FINITE_STATE_KSTAR:
-  FINITE_STATE(L,A) ⇒ FINITE_STATE(KSTAR L, A)
-Proof
-  cheat
-QED
+fun Conjecture name q s = Parse.Term q
+
+val _ =
+  Conjecture "FINITE_STATE_DOT"
+    ‘FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 • L2, A)’
+    "";
+
+val _ =
+  Conjecture "FINITE_STATE_KSTAR"
+    ‘FINITE_STATE(L,A) ⇒ FINITE_STATE(KSTAR L, A)’
+    "";
 
 (*---------------------------------------------------------------------------*)
 (* Inductive definition of regular sets                                      *)
@@ -1114,26 +1114,14 @@ Inductive REGSET:
   (∀L. REGSET (L,A) ⇒ REGSET (KSTAR L, A))
 End
 
-Theorem REGSET_IMP_FINITE_STATE:
-  REGSET ⊆ FINITE_STATE
-Proof
- simp [SUBSET_DEF,IN_DEF] >>
- ho_match_mp_tac REGSET_ind >> rw[]
- >- metis_tac [FINITE_STATE_EMPTYSET]
- >- (irule FINITE_STATE_FINITE_SET >>
-     rw[ALPHABET_OF_def,SUBSET_DEF])
- >- metis_tac [FINITE_STATE_UNION]
- >- metis_tac [FINITE_STATE_DOT]
- >- metis_tac [FINITE_STATE_KSTAR]
-QED
+val _ =
+  Conjecture "FINITE_STATE_SUBSET_REGSET"
+    ‘FINITE_STATE ⊆ REGSET’
+    "This might need an induction theorem for FINITE_STATE. There is a proof
+     from Eilenberg that might be adaptable to this, but it goes through the
+     automata representation. Morally there should be "
 
-(*  This might need an induction theorem for FINITE_STATE ... there is a proof
-   from Eilenberg that might be adaptable to this, but it goes through the
-   automata representation.
-
-Theorem REGSET_IMP_FINITE_STATE:
-  FINITE_STATE ⊆ REGSET
-Proof
-  cheat
-QED
-*)
+val _ =
+  Conjecture "REGSET_SUBSET_FINITE_STATE"
+    ‘REGSET ⊆ FINITE_STATE’
+    "";

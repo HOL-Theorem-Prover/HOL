@@ -5,31 +5,18 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyFieldDivision";
+Theory polyFieldDivision
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  monoid group ring field fieldIdeal polynomial polyWeak polyRing
+  polyField polyMonic polyDivision
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldIdealTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-
 (* val _ = load "polyMonicTheory"; *)
-open polyMonicTheory;
-open polyDivisionTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Polynomials Division in F[x] Documentation                                *)
 (* ------------------------------------------------------------------------- *)
@@ -624,8 +611,4 @@ val poly_field_eval_poly_mod_at_root = store_thm("poly_field_eval_poly_mod_at_ro
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

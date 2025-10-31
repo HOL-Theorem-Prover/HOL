@@ -2,17 +2,19 @@
 (* Challenge from Freek Wiedijk: the square root of two is not rational.     *)
 (* I've adapted a proof in HOL Light by John Harrison.                       *)
 (*---------------------------------------------------------------------------*)
+Theory root2
+Ancestors
+  arithmetic transc[qualified]
+Libs
+  BasicProvers
 
-open HolKernel boolLib Parse bossLib arithmeticTheory BasicProvers
-local open transcTheory in end
-
-val _ = new_theory "root2"
 
 (*---------------------------------------------------------------------------*)
 (* Need a predicate on reals that picks out the rational ones                *)
 (*---------------------------------------------------------------------------*)
 
-val Rational_def = Define `Rational r = ?p q. ~(q=0) /\ (abs(r) = &p / &q)`;
+Definition Rational_def:   Rational r = ?p q. ~(q=0) /\ (abs(r) = &p / &q)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Trivial lemmas                                                            *)
@@ -82,4 +84,3 @@ end;
 
 val _ = save_thm("SQRT_2_IRRATIONAL", SQRT_2_IRRATIONAL);
 
-val _ = export_theory()

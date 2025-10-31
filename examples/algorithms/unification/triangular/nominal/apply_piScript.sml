@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib Parse ntermTheory nomsetTheory listTheory
-     ramanaLib ntermLib
-
-val _ = new_theory "apply_pi"
+Theory apply_pi
+Ancestors
+  nterm nomset list
+Libs
+  ramanaLib ntermLib
 
 val raw_apply_pi_q = `
   (raw_apply_pi pi (Nom a) = Nom (lswapstr pi a)) ∧
@@ -11,10 +12,9 @@ val raw_apply_pi_q = `
      nPair (raw_apply_pi pi t1) (raw_apply_pi pi t2)) ∧
   (raw_apply_pi pi (nConst c) = nConst c)`
 
-val def_suffix = !Defn.def_suffix;
-val _ = Defn.def_suffix := "_def_with_choice";
-val raw_apply_pi_def_with_choice = Define raw_apply_pi_q;
-val _ = Defn.def_suffix := def_suffix;
+val raw_apply_pi_def_with_choice =
+  with_flag (Defn.def_suffix, "_def_with_choice") Define raw_apply_pi_q;
+
 val raw_apply_pi_def = Q.store_thm(
   "raw_apply_pi_def",
   raw_apply_pi_q,
@@ -63,5 +63,3 @@ val nvars_apply_pi = RWstore_thm(
 "nvars_apply_pi",
 `∀t. nvars (apply_pi pi t) = nvars t`,
 Induct THEN SRW_TAC [][])
-
-val _ = export_theory ()

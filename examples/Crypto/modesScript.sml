@@ -6,11 +6,9 @@
 (* Interactive:
    open combinTheory
 *)
-open HolKernel Parse boolLib bossLib combinTheory;
-
-val _ = Defn.def_suffix := "_DEF";
-
-val _ = new_theory "modes"
+Theory modes
+Ancestors
+  combin
 
 val MAP_MAP_COMPOSE = Q.prove
 (`!l (f:'a->'b) (g:'b->'c). MAP g (MAP f l) = MAP (g o f) l`,
@@ -24,7 +22,8 @@ val MAP_I_THM = Q.prove
 (* Electronic Code Book is just MAP.                                         *)
 (*---------------------------------------------------------------------------*)
 
-val ECB_DEF = Define `ECB = MAP`;
+Definition ECB_DEF:   ECB = MAP
+End
 
 val ECB_Correct = Q.prove
 (`!l cipher key encrypt decrypt.
@@ -40,17 +39,17 @@ val ECB_Correct = Q.prove
 (* Cipher Block Chaining.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val CBC_ENC_DEF =
- Define
-  `(CBC_ENC (f:'a->'a->'a) (enc:'a->'a) v [] = []) /\
+Definition CBC_ENC_DEF:
+   (CBC_ENC (f:'a->'a->'a) (enc:'a->'a) v [] = []) /\
    (CBC_ENC f enc v (h::t) =
        let x = enc (f h v)
-       in x::CBC_ENC f enc x t)`;
+       in x::CBC_ENC f enc x t)
+End
 
-val CBC_DEC_DEF =
- Define
-  `(CBC_DEC (f:'a->'a->'a) (dec:'a->'a) v [] = []) /\
-   (CBC_DEC f dec v (h::t) = f (dec h) v :: CBC_DEC f dec h t)`;
+Definition CBC_DEC_DEF:
+   (CBC_DEC (f:'a->'a->'a) (dec:'a->'a) v [] = []) /\
+   (CBC_DEC f dec v (h::t) = f (dec h) v :: CBC_DEC f dec h t)
+End
 
 (*
 val CBC_DEF =
@@ -93,8 +92,3 @@ val DATA_CBC_CORRECT = Q.store_thm
       (decode o unblock o CBC_DEC f (decrypt key) v) o
       (CBC_ENC f (encrypt key) v o block o encode) = I`,
  RW_TAC list_ss [CBC_CORRECT,o_DEF,FUN_EQ_THM]);
-
-
-val _ = export_theory();
-
-

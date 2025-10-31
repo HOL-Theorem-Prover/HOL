@@ -59,6 +59,7 @@ local
     ("bvsdiv", K_zero_two wordsSyntax.mk_word_quot),
     ("bvsdiv_i", K_zero_two wordsSyntax.mk_word_quot),
     ("bvsrem", K_zero_two wordsSyntax.mk_word_rem),
+    ("bvsrem_i", K_zero_two wordsSyntax.mk_word_rem),
     ("bvsmod", K_zero_two integer_wordSyntax.mk_word_smod),
     ("bvashr", K_zero_two wordsSyntax.mk_word_asr_bv),
     ("repeat", K_one_one

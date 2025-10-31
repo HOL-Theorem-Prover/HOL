@@ -5,15 +5,13 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory appFOLDL
+Ancestors
+  arithmetic list rich_list pred_set finite_map pair term
+  basic_swap
+Libs
+  hurdUtils listLib binderLib NEWLib
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory listTheory rich_listTheory pred_setTheory finite_mapTheory
-     hurdUtils listLib pairTheory;
-
-open termTheory binderLib basic_swapTheory NEWLib;
-
-val _ = new_theory "appFOLDL"
 
 val _ = set_fixity "@*" (Infixl 901)
 val _ = Unicode.unicode_version { u = "··", tmnm = "@*"}
@@ -480,5 +478,4 @@ Proof
   SRW_TAC [ARITH_ss][FUNPOW_SUC, LEFT_ADD_DISTRIB, MULT_CLAUSES]
 QED
 
-val _ = export_theory ()
 val _ = html_theory "appFOLDL";

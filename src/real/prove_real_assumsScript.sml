@@ -309,17 +309,23 @@ val th2 = store_thm
   \\ `z = y` by metis_tac[REAL_ADD_LID,REAL_ADD_LINV]
   \\ metis_tac[REAL_LE_ANTISYM]);
 
-val REAL_ADD_LID_UNIQ = prove(
-  ``!x y. (x + y = y) = (x = 0)``,
-  metis_tac[REAL_ADD_LID,REAL_ADD_SYM,REAL_ADD_LINV,REAL_ADD_ASSOC]);
+Theorem REAL_ADD_LID_UNIQ[local]:
+    !x y. (x + y = y) = (x = 0)
+Proof
+  metis_tac[REAL_ADD_LID,REAL_ADD_SYM,REAL_ADD_LINV,REAL_ADD_ASSOC]
+QED
 
-val REAL_MUL_LZERO = prove(
-  ``!x. 0 * x = 0``,
-  metis_tac[REAL_ADD_LID_UNIQ,REAL_ADD_LID,REAL_LDISTRIB,REAL_MUL_SYM]);
+Theorem REAL_MUL_LZERO[local]:
+    !x. 0 * x = 0
+Proof
+  metis_tac[REAL_ADD_LID_UNIQ,REAL_ADD_LID,REAL_LDISTRIB,REAL_MUL_SYM]
+QED
 
-val REAL_ENTIRE = prove(
-  ``!x y. (x * y = 0) = (x = 0) \/ (y = 0)``,
-  metis_tac[REAL_MUL_LINV,REAL_MUL_LID,REAL_MUL_ASSOC,REAL_MUL_LZERO,REAL_MUL_SYM]);
+Theorem REAL_ENTIRE[local]:
+    !x y. (x * y = 0) = (x = 0) \/ (y = 0)
+Proof
+  metis_tac[REAL_MUL_LINV,REAL_MUL_LID,REAL_MUL_ASSOC,REAL_MUL_LZERO,REAL_MUL_SYM]
+QED
 
 (* |- !x y. real_0 < x /\ real_0 < y ==> real_0 < x * y *)
 val th3 = store_thm
@@ -353,9 +359,11 @@ val otax = hd(amatch
   ``!p. (?(x:real). p x) /\ (?m. !x. p x ==> x <= m) ==>
         ?s. (!x. p x ==> x <= s) /\ !m. (!x. p x ==> x <= m) ==> s <= m``);
 
-val REAL_LE_LT = prove(
-  ``!x y. x <= y <=> x < y \/ (x = y)``,
-  metis_tac[real_lt,REAL_LE_TOTAL,REAL_LE_ANTISYM]);
+Theorem REAL_LE_LT[local]:
+    !x y. x <= y <=> x < y \/ (x = y)
+Proof
+  metis_tac[real_lt,REAL_LE_TOTAL,REAL_LE_ANTISYM]
+QED
 
 (* |- !P. (!x. P x ==> real_0 < x) /\ (?x. P x) /\ (?z. !x. P x ==> x < z) ==>
           ?s. !y. (?x. P x /\ y < x) <=> y < s

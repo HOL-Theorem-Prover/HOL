@@ -1,14 +1,14 @@
-open HolKernel boolLib bossLib
-open set_sepTheory progTheory temporalTheory stateTheory
-
-val _ = new_theory "temporal_state"
+Theory temporal_state
+Ancestors
+  set_sep prog temporal state
 
 (* ------------------------------------------------------------------------ *)
 
-val TEMPORAL_NEXT_def = Define`
+Definition TEMPORAL_NEXT_def:
    TEMPORAL_NEXT
       ((to_set,next,instr,less,avoid): ('a, 'b, 'c) processor) p c q =
-   TEMPORAL (to_set,next,instr,$=,K F) c (T_IMPLIES (NOW p) (NEXT (NOW q)))`
+   TEMPORAL (to_set,next,instr,$=,K F) c (T_IMPLIES (NOW p) (NEXT (NOW q)))
+End
 
 (* ------------------------------------------------------------------------ *)
 
@@ -170,4 +170,3 @@ val SEP_ARRAY_TEMPORAL_FRAME = Q.store_thm("SEP_ARRAY_TEMPORAL_FRAME",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory ()

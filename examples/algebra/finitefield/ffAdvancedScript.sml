@@ -4,39 +4,22 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffAdvanced";
+Theory ffAdvanced
+Ancestors
+  pred_set arithmetic divides gcd number combinatorics prime
+  ffBasic VectorSpace FiniteVSpace monoid group ring field
+  fieldInstances  (* for GF_finite_field, in finite_field_subfield_card *)
+  polynomial polyWeak polyRing polyMonic polyEval
+  polyDivides polyRoot polyField polyDivision polyFieldDivision
+  polyModuloRing polyFieldModulo polyIrreducible fieldMap
+  fieldOrder
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
 
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory dividesTheory gcdTheory numberTheory
-     combinatoricsTheory primeTheory;
-
-open ffBasicTheory;
-
-open VectorSpaceTheory FiniteVSpaceTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldInstancesTheory; (* for GF_finite_field, in finite_field_subfield_card *)
-
-open polynomialTheory polyWeakTheory polyRingTheory;
-open polyMonicTheory polyEvalTheory;
-open polyDividesTheory;
-open polyRootTheory;
-open polyFieldTheory polyDivisionTheory polyFieldDivisionTheory;
-open polyModuloRingTheory;
-open polyFieldModuloTheory;
-open polyIrreducibleTheory;
-
-open fieldMapTheory fieldOrderTheory;
 
 val _ = intLib.deprecate_int ();
 
@@ -1418,9 +1401,9 @@ val finite_field_eq_order_partition = store_thm(
 val _ = overload_on("FPrimitives", `` \(r:'a field). {z | z IN R+ /\ (forder z = CARD R+)}``);
 
 (* Define primitive generator of a FiniteField *)
-val field_primitive_def = Define`
+Definition field_primitive_def:
   field_primitive (r:'a field) = CHOICE (FPrimitives r)
-`;
+End
 val _ = overload_on ("primitive", ``field_primitive``);
 (*
 - field_primitive_def;
@@ -1877,9 +1860,9 @@ val poly_mod_const_subfield_dim = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define extension of a field to a different type *)
-val field_extend_def = Define `
+Definition field_extend_def:
   field_extend (r:'a field) (s:'b field) <=> ?(f:'a -> 'b). subfield (ring_homo_image f r s) s
-`;
+End
 (* use overloading *)
 val _ = overload_on (">=", ``field_extend``);
 (*
@@ -1912,8 +1895,4 @@ val field_extend_refl = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

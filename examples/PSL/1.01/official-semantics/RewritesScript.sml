@@ -17,25 +17,15 @@ map load
 open SyntaxTheory SyntacticSugarTheory FinitePSLPathTheory PSLPathTheory
      UnclockedSemanticsTheory
      listTheory rich_listTheory intLib res_quanTools;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open SyntaxTheory FinitePSLPathTheory PSLPathTheory UnclockedSemanticsTheory
-     SyntacticSugarTheory listTheory rich_listTheory intLib res_quanTools;
-
-(******************************************************************************
-* Set default parsing to natural numbers rather than integers
-******************************************************************************)
-val _ = intLib.deprecate_int();
+Theory Rewrites
+Ancestors
+  Syntax FinitePSLPath PSLPath UnclockedSemantics SyntacticSugar
+  list rich_list
+Libs
+  intLib res_quanTools
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -51,16 +41,10 @@ val resq_SS =
     [num_to_def,xnum_to_def,IN_DEF,num_to_def,xnum_to_def,LENGTH_def]];
 
 (******************************************************************************
-* Start a new theory called UnclockedSugarSemantics
-******************************************************************************)
-val _ = new_theory "Rewrites";
-
-(******************************************************************************
 * SEM_1 rules for compiling clocked SEREs to unclocked SEREs
 ******************************************************************************)
-val S_CLOCK_COMP_def =
- Define
-  `(S_CLOCK_COMP c (S_BOOL b) =
+Definition S_CLOCK_COMP_def:
+   (S_CLOCK_COMP c (S_BOOL b) =
      (S_CAT (S_REPEAT (S_BOOL (B_NOT c)),S_BOOL(B_AND(c, b)))))
    /\
    (S_CLOCK_COMP c (S_CAT(r1,r2)) =
@@ -80,7 +64,8 @@ val S_CLOCK_COMP_def =
    /\
    (S_CLOCK_COMP c (S_CLOCK(r, c1)) =
      (S_CAT (S_REPEAT (S_BOOL (B_NOT c1)),
-             S_FUSION(S_BOOL c1, S_CLOCK_COMP c1 r))))`;
+             S_FUSION(S_BOOL c1, S_CLOCK_COMP c1 r))))
+End
 
 (******************************************************************************
 * Some abbreviations needed for definition of F_CLOCK_COMP
@@ -90,24 +75,23 @@ val S_CLOCK_COMP_def =
 * Strongly on first posedge.
 * Exists a posedge and true on it: [!c U (c /\ f)]
 ******************************************************************************)
-val F_U_CLOCK_def =
- Define
-  `F_U_CLOCK c f = F_UNTIL(F_BOOL(B_NOT c),F_AND(F_BOOL c, f))`;
+Definition F_U_CLOCK_def:
+   F_U_CLOCK c f = F_UNTIL(F_BOOL(B_NOT c),F_AND(F_BOOL c, f))
+End
 
 (******************************************************************************
 * Weakly on first posedge.
 * On first posedge, if there is a posedge: [!c U (c /\ f)]
 ******************************************************************************)
-val F_W_CLOCK_def =
- Define
-  `F_W_CLOCK c f = F_W(F_BOOL(B_NOT c),F_AND(F_BOOL c, f))`;
+Definition F_W_CLOCK_def:
+   F_W_CLOCK c f = F_W(F_BOOL(B_NOT c),F_AND(F_BOOL c, f))
+End
 
 (******************************************************************************
 * Non-standard rewrite for abort that avoids need for assuming w_0 |= c
 ******************************************************************************)
-val F_INIT_CLOCK_COMP_def =
- Define
-  `(F_INIT_CLOCK_COMP c (F_BOOL b) =
+Definition F_INIT_CLOCK_COMP_def:
+   (F_INIT_CLOCK_COMP c (F_BOOL b) =
      F_BOOL b)
    /\
    (F_INIT_CLOCK_COMP c (F_NOT f) =
@@ -138,14 +122,14 @@ val F_INIT_CLOCK_COMP_def =
      F_OR(F_BOOL b, F_ABORT(F_INIT_CLOCK_COMP c f, B_AND(c,b))))
    /\
    (F_INIT_CLOCK_COMP c (F_STRONG_CLOCK(f,c1)) =
-     F_U_CLOCK c1 (F_INIT_CLOCK_COMP c1 f))`;
+     F_U_CLOCK c1 (F_INIT_CLOCK_COMP c1 f))
+End
 
 (******************************************************************************
 * SEM_1 rules for compiling clocked FL formulas to unclocked formulas
 ******************************************************************************)
-val F_CLOCK_COMP_def =
- Define
-  `(F_CLOCK_COMP c (F_BOOL b) =
+Definition F_CLOCK_COMP_def:
+   (F_CLOCK_COMP c (F_BOOL b) =
      F_BOOL b)
    /\
    (F_CLOCK_COMP c (F_NOT f) =
@@ -176,7 +160,5 @@ val F_CLOCK_COMP_def =
 (*     F_OR(F_BOOL b, F_ABORT(F_CLOCK_COMP c f, B_AND(c,b)))) *)
    /\
    (F_CLOCK_COMP c (F_STRONG_CLOCK(f,c1)) =
-     F_U_CLOCK c1 (F_CLOCK_COMP c1 f))`;
-
-val _ = export_theory();
-
+     F_U_CLOCK c1 (F_CLOCK_COMP c1 f))
+End

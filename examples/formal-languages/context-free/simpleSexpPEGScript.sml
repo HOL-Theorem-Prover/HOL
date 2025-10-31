@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open simpleSexpTheory pegTheory pegLib
-
-val _ = new_theory "simpleSexpPEG";
+Theory simpleSexpPEG
+Ancestors
+  simpleSexp peg
+Libs
+  pegLib
 
 Definition tokeq_def: tokeq t = tok ((=) t) (K (SX_SYM [t]))
 End
@@ -321,4 +321,3 @@ Proof
   simp(wfpeg_thm :: wfpeg_rwts @ npeg0_rwts)
 QED
 
-val _ = export_theory();

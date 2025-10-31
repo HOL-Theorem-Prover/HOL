@@ -1,10 +1,8 @@
-open HolKernel boolLib Parse bossLib;
-
-open BasicProvers boolSimps pred_setTheory listTheory;
-
-open binderLib basic_swapTheory nomsetTheory generic_termsTheory nomdatatype;
-
-val _ = new_theory "labelledTerms"
+Theory labelledTerms
+Ancestors
+  pred_set list basic_swap nomset generic_terms
+Libs
+  BasicProvers boolSimps binderLib nomdatatype
 
 val tyname = "lterm"
 
@@ -457,4 +455,3 @@ val nti = NTI {
 }
 val _ = binderLib.export_nomtype (“:lterm”, nti)
 
-val _ = export_theory()

@@ -10,13 +10,14 @@
   app load ["pred_setSimps", "wordsLib", "armLib", "iclass_compLib",
             "armTheory", "coreTheory", "lemmasTheory", "interruptsTheory"];
 *)
+Theory mult
+Ancestors
+  arithmetic While bit words io_onestep arm core lemmas
+  interrupts
+Libs
+  Q wordsLib iclass_compLib
 
-open HolKernel boolLib bossLib;
-open Q arithmeticTheory whileTheory bitTheory wordsTheory wordsLib;
-open iclass_compLib io_onestepTheory;
-open armTheory coreTheory lemmasTheory interruptsTheory;
 
-val _ = new_theory "mult";
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------- *)
 
@@ -325,13 +326,14 @@ val SPEC_LSL_LIMIT = (GEN_ALL o
   SIMP_RULE (std_ss++SIZES_ss) [] o SPECL [`a`,`32`] o
   Thm.INST_TYPE [alpha |-> ``:32``]) LSL_LIMIT;
 
-val RD_INVARIANT_def = Define`
+Definition RD_INVARIANT_def:
   RD_INVARIANT A (rm:word32) rs rn n =
     (if BORROW2 rs n then
        rm * n2w (w2n rs MOD 2 ** (2 * n)) - rm << (2 * n)
      else
        rm * n2w (w2n rs MOD 2 ** (2 * n))) +
-    (if A then rn else 0w)`;
+    (if A then rn else 0w)
+End
 
 val BORROW2_LEM1 = prove(
   `!rs:word32. rs %% 1 = ((1 >< 0) rs):word2 %% 1`,
@@ -432,14 +434,15 @@ val MULT_FOUR_LSL = prove(
   SIMP_TAC arith_ss [LSL_MULT_EXP,GSYM WORD_MULT_ASSOC,word_mul_n2w,
     LEFT_ADD_DISTRIB,EXP_ADD]);
 
-val ALU6_MUL_def = Define`
+Definition ALU6_MUL_def:
   ALU6_MUL borrow2 (mul:word2) (alua:word32) alub =
     if ~borrow2 /\ (mul = 0w) \/ borrow2 /\ (mul = 3w) then
       alua
     else if borrow2 /\ (mul = 0w) \/ (mul = 1w) then
       alua + alub
     else
-      alua - alub`;
+      alua - alub
+End
 
 val BORROW_LEM2 = prove(
   `!rs n. 2 * (n + 1) <= 32 ==>
@@ -820,4 +823,3 @@ val MLA_MUL_TN = save_thm("MLA_MUL_TN",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

@@ -145,7 +145,7 @@ while {
   import: relation
   import: arithmetic
   import: sum
-  article: "../num/theories/while.ot.art"
+  article: "../num/theories/While.ot.art"
 }
 numpair {
   import: bool

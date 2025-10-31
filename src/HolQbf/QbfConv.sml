@@ -33,7 +33,10 @@ structure QbfConv :> QbfConv = struct
     exception Innermost
     fun f t =
       QUANT_CONV f t handle
-        HOL_ERR {origin_function="RAND_CONV",...} => raise Innermost
+        e as HOL_ERR holerr =>
+         (if top_function_of holerr = "RAND_CONV" then
+             raise Innermost
+          else raise e)
       | Innermost => c t
   in f end
 
@@ -47,7 +50,10 @@ structure QbfConv :> QbfConv = struct
   fun last_quant_seq_conv cq cb = let
     fun f t =
       (QUANT_CONV f THENC cq) t handle
-        HOL_ERR {origin_function="RAND_CONV",...} => cb t
+        e as HOL_ERR holerr =>
+          if Feedback.top_function_of holerr = "RAND_CONV" then
+             cb t
+          else raise e
   in f end
 
   fun last_forall_seq_conv cq cb = let

@@ -57,20 +57,16 @@ load "HolBddLib";
 load "PrimitiveBddRules";
 load "ListPair";
 *)
+Theory HexSolitaire
+Libs
+  HolBddLib bdd pairSyntax
 
 
-open HolKernel Parse boolLib;
+
 infixr 3 -->;
 infix 9 by;
 infix ++;
 infix ## |-> THEN THENL THENC ORELSE ORELSEC THEN_TCL ORELSE_TCL;
-
-open HolBddLib;
-open bdd;
-open pairSyntax;
-open bossLib;
-
-val _ = new_theory "HexSolitaire";
 
 val vl = [01,02,03,04,05,06,07,08,09,10,11,12,13,14,15,16,17,18,19];
 
@@ -203,4 +199,3 @@ val _ =
   PrintState
   (List.map (fst o dest_pair o rand o concl) transthl @ [rand(concl finalth)]);
 
-val _ = export_theory();

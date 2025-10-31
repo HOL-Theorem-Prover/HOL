@@ -4,24 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyRing";
+Theory polyRing
+Ancestors
+  pred_set arithmetic list rich_list number divides combinatorics
+  monoid group ring polynomial polyWeak
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory rich_listTheory numberTheory
-     dividesTheory combinatoricsTheory;
-
-open monoidTheory groupTheory ringTheory;
-open polynomialTheory polyWeakTheory;
-
 val _ = temp_overload_on("SQ", ``\n. n * n``);
 val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
 val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
@@ -1836,7 +1828,8 @@ val poly_add_rcancel = lift_group_thm_with_goal "rcancel" "add_rcancel"
 (* ------------------------------------------------------------------------- *)
 
 (* Subtraction of polynomials *)
-val poly_sub_def = Define `poly_sub (r:'a ring) (p:'a poly) (q:'a poly) = p + (- q)`;
+Definition poly_sub_def:   poly_sub (r:'a ring) (p:'a poly) (q:'a poly) = p + (- q)
+End
 val _ = overload_on ("-", ``poly_sub r``);
 (* export an identity *)
 val _ = export_rewrites ["poly_sub_def"];
@@ -4980,8 +4973,4 @@ val poly_cmult_unit_eqn = store_thm(
 (* This is to prepare for polynomimal division by a constant polynomial. *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

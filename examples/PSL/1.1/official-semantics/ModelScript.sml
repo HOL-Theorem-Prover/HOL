@@ -20,36 +20,11 @@
 (* and 'prop, but may use 'a, 'b etc or whatever typechecking assigns.       *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Load theory of syntax, paths and models                                   *)
-(* (commented out for compilation)                                           *)
-(*****************************************************************************)
+Theory Model
+Ancestors
+  pred_set PSLPath
 
-(*
-quietdec := true;                         (* Switch off output               *)
-loadPath                                  (* Add path to loadPath            *)
- :=
- "../../path" :: !loadPath;
-map load ["pred_setLib","PSLPathTheory"];
-open ped_setTheory PSLPathTheory;
-quietdec := false;                        (* Restore output                  *)
-*)
 
-(*****************************************************************************)
-(* Boilerplate needed for compilation                                        *)
-(*****************************************************************************)
-
-open HolKernel Parse boolLib bossLib pred_setTheory PSLPathTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* Start a new theory called ModelTheory                                     *)
-(*****************************************************************************)
-
-val _ = new_theory "Model";
 val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
@@ -60,49 +35,47 @@ val _ = hide "S";
 (*****************************************************************************)
 (* ``: ('prop,'state)model``                                                 *)
 (*****************************************************************************)
-val model_def =
- Hol_datatype
-  `model =
+Datatype:
+   model =
     <| S: 'state -> bool;
        S0:'state -> bool;
        R: 'state # 'state -> bool;
        P: 'prop -> bool;
-       L: 'state -> ('prop -> bool) |>`;
+       L: 'state -> ('prop -> bool) |>
+End
 
-val MODEL_def =
- Define
-  `MODEL M =
+Definition MODEL_def:
+   MODEL M =
     M.S0 SUBSET M.S /\
     (!s s'. (s,s') IN M.R ==> s IN M.S /\ s' IN M.S) /\
-    (!s. s IN M.S ==> M.L s SUBSET M.P)`;
+    (!s. s IN M.S ==> M.L s SUBSET M.P)
+End
 
 (*****************************************************************************)
 (* A letter is either TOP, or BOTTOM                                         *)
 (* or a set of atomic propositions repersenting a state                      *)
 (*****************************************************************************)
-val letter_def =
- Hol_datatype
-  `letter = TOP | BOTTOM | STATE of ('prop -> bool)`;
+Datatype:
+   letter = TOP | BOTTOM | STATE ('prop -> bool)
+End
 
 (*****************************************************************************)
 (* PATH M s is true of path p iff p is a computation path of model M         *)
 (*****************************************************************************)
-val PATH_def =
- Define
-  `PATH M s w =
+Definition PATH_def:
+   PATH M s w =
     (LENGTH w > 0) /\ (s = ELEM w 0) /\ s IN M.S /\
     (!n :: (LESS(LENGTH w - 1)).
       ELEM w n IN M.S /\ ELEM w (SUC n) IN M.S /\
       (ELEM w n, ELEM w (SUC n)) IN M.R) /\
     (!l. (w = FINITE l)
-         ==> !s. s IN M.S ==> ~((ELEM w (LENGTH l - 1), s) IN M.R))`;
+         ==> !s. s IN M.S ==> ~((ELEM w (LENGTH l - 1), s) IN M.R))
+End
 
 
 (*****************************************************************************)
 (* A computation of M is a path of M starting from an initial state          *)
 (*****************************************************************************)
-val COMPUTATION_def =
- Define
-  `COMPUTATION M w = ?s. s IN M.S0 /\ PATH M s w`;
-
-val _ = export_theory();
+Definition COMPUTATION_def:
+   COMPUTATION M w = ?s. s IN M.S0 /\ PATH M s w
+End

@@ -1,21 +1,18 @@
-open HolKernel boolLib Parse bossLib
-
-
-open ltlTheory full_ltlTheory prop_logicTheory
-open Temporal_LogicTheory Past_Temporal_LogicTheory
-
-val _ = new_theory "ltl_translations"
+Theory ltl_translations
+Ancestors
+  ltl full_ltl prop_logic Temporal_Logic Past_Temporal_Logic
 
 (************************************************************)
 (* Translation examples/logic/ltl -> examples/temporal_deep *)
 (************************************************************)
 
-val LOGIC_TO_TEMPORAL_DEEP_def = Define `
+Definition LOGIC_TO_TEMPORAL_DEEP_def:
   (LOGIC_TO_TEMPORAL_DEEP (F_VAR v) = (LTL_PROP (P_PROP v))) /\
   (LOGIC_TO_TEMPORAL_DEEP (F_CONJ l1 l2) = (LTL_AND (LOGIC_TO_TEMPORAL_DEEP l1, LOGIC_TO_TEMPORAL_DEEP l2))) /\
   (LOGIC_TO_TEMPORAL_DEEP (F_NEG l) = (LTL_NOT (LOGIC_TO_TEMPORAL_DEEP l))) /\
   (LOGIC_TO_TEMPORAL_DEEP (F_X l) = (LTL_NEXT (LOGIC_TO_TEMPORAL_DEEP l))) /\
-  (LOGIC_TO_TEMPORAL_DEEP (F_U l1 l2) = (LTL_SUNTIL (LOGIC_TO_TEMPORAL_DEEP l1, LOGIC_TO_TEMPORAL_DEEP l2)))`;
+  (LOGIC_TO_TEMPORAL_DEEP (F_U l1 l2) = (LTL_SUNTIL (LOGIC_TO_TEMPORAL_DEEP l1, LOGIC_TO_TEMPORAL_DEEP l2)))
+End
 
 
 val IS_FUTURE_LTL___LOGIC_TO_TEMPORAL_DEEP = store_thm("IS_FUTURE_LTL___LOGIC_TO_TEMPORAL_DEEP",
@@ -61,22 +58,24 @@ SIMP_TAC std_ss [LTL_SEM_def, LOGIC_TO_TEMPORAL_DEEP___SEM_TIME, wordTheory.SUFF
 (* Translation examples/logic/ltl -> examples/temporal_deep *)
 (************************************************************)
 
-val TEMPORAL_DEEP_PROP_TO_LOGIC_def = Define `
+Definition TEMPORAL_DEEP_PROP_TO_LOGIC_def:
   (TEMPORAL_DEEP_PROP_TO_LOGIC (P_PROP v) = (F_VAR v)) /\
   (TEMPORAL_DEEP_PROP_TO_LOGIC P_TRUE = ltl$LTL_TRUE ARB) /\
   (TEMPORAL_DEEP_PROP_TO_LOGIC (P_NOT p) = (F_NEG (TEMPORAL_DEEP_PROP_TO_LOGIC p))) /\
   (TEMPORAL_DEEP_PROP_TO_LOGIC (P_AND (p1,p2)) =
-     (F_CONJ (TEMPORAL_DEEP_PROP_TO_LOGIC p1) (TEMPORAL_DEEP_PROP_TO_LOGIC p2)))`;
+     (F_CONJ (TEMPORAL_DEEP_PROP_TO_LOGIC p1) (TEMPORAL_DEEP_PROP_TO_LOGIC p2)))
+End
 
 
-val TEMPORAL_DEEP_TO_LOGIC_def = Define `
+Definition TEMPORAL_DEEP_TO_LOGIC_def:
   (TEMPORAL_DEEP_TO_LOGIC (LTL_PROP p) = TEMPORAL_DEEP_PROP_TO_LOGIC p) /\
 
   (TEMPORAL_DEEP_TO_LOGIC (LTL_AND (l1, l2)) = (F_CONJ (TEMPORAL_DEEP_TO_LOGIC l1) (TEMPORAL_DEEP_TO_LOGIC l2))) /\
 
   (TEMPORAL_DEEP_TO_LOGIC (LTL_NOT l) = (F_NEG (TEMPORAL_DEEP_TO_LOGIC l))) /\
   (TEMPORAL_DEEP_TO_LOGIC (LTL_NEXT l) = (F_X (TEMPORAL_DEEP_TO_LOGIC l))) /\
-  (TEMPORAL_DEEP_TO_LOGIC (LTL_SUNTIL (l1, l2)) = (F_U (TEMPORAL_DEEP_TO_LOGIC l1) (TEMPORAL_DEEP_TO_LOGIC l2)))`;
+  (TEMPORAL_DEEP_TO_LOGIC (LTL_SUNTIL (l1, l2)) = (F_U (TEMPORAL_DEEP_TO_LOGIC l1) (TEMPORAL_DEEP_TO_LOGIC l2)))
+End
 
 
 val TEMPROAL_DEEP_TO_LOGIC_LOGIC_TO_TEMPORAL_DEEP = store_thm (
@@ -208,8 +207,9 @@ INDUCT_THEN ltl_induct ASSUME_TAC >> (
 (* Translation examples/logic/ltl -> src/temporal           *)
 (************************************************************)
 
-val LOGIC_TO_TEMPORAL_def = Define `
-  LOGIC_TO_TEMPORAL l = (TEMPORAL_DEEP_TO_TEMPORAL (LOGIC_TO_TEMPORAL_DEEP l))`;
+Definition LOGIC_TO_TEMPORAL_def:
+  LOGIC_TO_TEMPORAL l = (TEMPORAL_DEEP_TO_TEMPORAL (LOGIC_TO_TEMPORAL_DEEP l))
+End
 
 
 val LOGIC_TO_TEMPORAL_THM = store_thm ("LOGIC_TO_TEMPORAL_THM",
@@ -230,4 +230,3 @@ val LOGIC_TO_TEMPORAL_ALT_DEF = store_thm ("LOGIC_TO_TEMPORAL_ALT_DEF",
 SIMP_TAC std_ss [LOGIC_TO_TEMPORAL_def, LOGIC_TO_TEMPORAL_DEEP_def,
   TEMPORAL_DEEP_TO_TEMPORAL_def, FUN_EQ_THM, P_SEM_def]);
 
-val _ = export_theory ();

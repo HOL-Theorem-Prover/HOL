@@ -1,7 +1,7 @@
 signature LVTermNet =
 sig
 
-  (* signature names modelled on Binarymap's *)
+  (* signature names modelled on HOLdict's *)
   type 'a lvtermnet
   type term = Term.term
   type key = Term.term list * Term.term

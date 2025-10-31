@@ -2,19 +2,23 @@ structure DB_dtype =
 struct
 
 open RawTheory_dtype
+
 (* two flavours of "location"; the first with exactly that name is the logical/signature
    location of a theorem: it's either local to the current session/segment and is not
    going to persist, or it's bound to a particular kernelname
 *)
 datatype location = Local of string | Stored of KernelSig.kernelname
+
 (* the second flavour is the location of the SML declaration and definition of the
    theorem value *)
 datatype thm_src_location =
          Located of {scriptpath: string, linenum : int, exact : bool}
        | Unknown
+
 fun inexactify_locn (Located{scriptpath,linenum,exact}) =
       Located{scriptpath=scriptpath,linenum=linenum,exact=false}
   | inexactify_locn Unknown = Unknown
+
 fun mkloc(s,i,b) =
     Located{
       scriptpath = holpathdb.reverse_lookup{path=s},
@@ -23,8 +27,10 @@ fun mkloc(s,i,b) =
     }
 
 type thminfo = {private: bool, loc:thm_src_location,class:class}
+
 fun updsrcloc f {private,loc,class} =
     {private = private,loc = f loc,class = class}
+
 fun thmsrcloc_toString tsl =
     case tsl of
         Located {scriptpath,linenum,exact} =>
@@ -32,6 +38,7 @@ fun thmsrcloc_toString tsl =
                  "\",linenum=" ^ Int.toString linenum ^
                  ",exact="^Bool.toString exact^"}"
       | Unknown => "Unknown"
+
 fun thminfo_toString {private,loc,class} =
     "{private=" ^ Bool.toString private ^
     ",loc=" ^ thmsrcloc_toString loc ^

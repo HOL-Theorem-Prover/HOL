@@ -19,9 +19,13 @@ map load
 
 
 *)
-open HolKernel boolLib bossLib;
-open Parse ILTheory listLib preARMTheory finite_mapTheory arm_evalLib arm_rulesTheory armLib wordsLib wordsTheory arithmeticTheory pairTheory listTheory pred_setTheory containerTheory rich_listTheory
-open arm_progTheory progTheory pred_setTheory set_sepLib set_sepTheory arm_instTheory ILTheory sortingTheory;
+Theory swsep
+Ancestors
+  IL preARM finite_map arm_rules words arithmetic pair list
+  pred_set container rich_list arm_prog prog pred_set set_sep
+  arm_inst IL sorting
+Libs
+  listLib arm_evalLib armLib wordsLib set_sepLib
 
 (*
 show_assums := false;
@@ -38,10 +42,6 @@ val _ = hide "regs";
 val _ = hide "mem";
 val _ = hide "M";
 val _ = hide "cond";
-
-
-
-val _ = new_theory "swsep";
 
 
 
@@ -109,33 +109,39 @@ fun PROVE_CONDITION_TAC thm (asl, t) =
 fun PROVE_CONDITION_NO_ASSUM i = POP_NO_ASSUM i PROVE_CONDITION_TAC
 
 
-val MREG2REG_def = Define
-  `(MREG2REG reg = (n2w (index_of_reg reg)):4 word)`
+Definition MREG2REG_def:
+   (MREG2REG reg = (n2w (index_of_reg reg)):4 word)
+End
 
-val MEXP2addr_model_def = Define
-  `(MEXP2addr_model (MR reg) = (Dp_shift_immediate (LSL (MREG2REG reg)) 0x0w)) /\
-   (MEXP2addr_model (MC s c) = (Dp_immediate s c))`;
+Definition MEXP2addr_model_def:
+   (MEXP2addr_model (MR reg) = (Dp_shift_immediate (LSL (MREG2REG reg)) 0x0w)) /\
+   (MEXP2addr_model (MC s c) = (Dp_immediate s c))
+End
 
-val IS_MEMORY_DOPER_def = Define `
+Definition IS_MEMORY_DOPER_def:
   (IS_MEMORY_DOPER (MLDR dst src) = T) /\
   (IS_MEMORY_DOPER (MSTR src dst) = T) /\
   (IS_MEMORY_DOPER (MPUSH dst' srcL) = T) /\
   (IS_MEMORY_DOPER (MPOP dst' srcL) = T) /\
-  (IS_MEMORY_DOPER y = F)`
+  (IS_MEMORY_DOPER y = F)
+End
 
-val IS_WELL_FORMED_DOPER_def = Define `
+Definition IS_WELL_FORMED_DOPER_def:
   (IS_WELL_FORMED_DOPER (MMUL dst src1 src2) = ~(dst = src1)) /\
-  (IS_WELL_FORMED_DOPER y = T)`
+  (IS_WELL_FORMED_DOPER y = T)
+End
 
-val OFFSET2addr2_def = Define `
+Definition OFFSET2addr2_def:
         (OFFSET2addr2 (POS n) = Dt_immediate ((n2w (n MOD 2**11)))) /\
-        (OFFSET2addr2 (NEG n) = Dt_immediate ($- (n2w (n MOD 2**11))))`;
+        (OFFSET2addr2 (NEG n) = Dt_immediate ($- (n2w (n MOD 2**11))))
+End
 
 
-val IS_SORTED_REG_LIST_def = Define`
+Definition IS_SORTED_REG_LIST_def:
     (IS_SORTED_REG_LIST [] = T) /\
          (IS_SORTED_REG_LIST [e] = (e <= 15)) /\
-         (IS_SORTED_REG_LIST (e1::e2::l) = (e1 < e2) /\ IS_SORTED_REG_LIST (e2::l))`;
+         (IS_SORTED_REG_LIST (e1::e2::l) = (e1 < e2) /\ IS_SORTED_REG_LIST (e2::l))
+End
 
 val IS_SORTED_REG_LIST___EL_SIZE = store_thm ("IS_SORTED_REG_LIST___EL_SIZE",
 ``!l. IS_SORTED_REG_LIST l ==> (EVERY (\n. n < 16) l)``,
@@ -189,8 +195,8 @@ MATCH_MP_TAC SORTED_LOWER_IMP_EQ THEN
 FULL_SIMP_TAC std_ss [MEM_REGISTER_LIST_reg_bitmap, SORTED_REGSITER_LIST, IS_SORTED_REG_LIST___SORTED_WORDS])
 
 
-val STACK_SIZE_DOPER_def = Define
-        `(STACK_SIZE_DOPER (MPUSH r l) = (LENGTH l, 0, (r = 13) /\ (IS_SORTED_REG_LIST l))) /\
+Definition STACK_SIZE_DOPER_def:
+         (STACK_SIZE_DOPER (MPUSH r l) = (LENGTH l, 0, (r = 13) /\ (IS_SORTED_REG_LIST l))) /\
          (STACK_SIZE_DOPER (MPOP r l) = (0, LENGTH l, (r = 13) /\ (IS_SORTED_REG_LIST l))) /\
          (STACK_SIZE_DOPER (MMOV dst e) = (0, 0, ~(dst = R13))) /\
          (STACK_SIZE_DOPER (MADD dst reg1 e) = (0, 0, ~(dst = R13))) /\
@@ -205,7 +211,8 @@ val STACK_SIZE_DOPER_def = Define
          (STACK_SIZE_DOPER (MLSR dst reg1 s) = (0, 0, ~(dst = R13))) /\
          (STACK_SIZE_DOPER (MASR dst reg1 s) = (0, 0, ~(dst = R13))) /\
          (STACK_SIZE_DOPER (MROR dst reg1 s) = (0, 0, ~(dst = R13))) /\
-         (STACK_SIZE_DOPER _ = (0, 0, F))`;
+         (STACK_SIZE_DOPER _ = (0, 0, F))
+End
 
 val VALID_STACK_SIZE_DOPER___IMPLIES___WELL_FORMED =
         store_thm ("VALID_STACK_SIZE_DOPER___IMPLIES___WELL_FORMED",
@@ -228,18 +235,19 @@ SIMP_TAC std_ss [IS_MEMORY_DOPER_def,
                                           STACK_SIZE_DOPER_def])
 
 
-val STACK_SIZE_BLK_def = Define
-        `(STACK_SIZE_BLK (max, current, valid) [] = (max, current, valid)) /\
+Definition STACK_SIZE_BLK_def:
+         (STACK_SIZE_BLK (max, current, valid) [] = (max, current, valid)) /\
          (STACK_SIZE_BLK (max, current, valid) (h::l) =
             let (p, n, v) = STACK_SIZE_DOPER h in
                  let current' = ((current + p) - n) in
                  let max' = MAX current' max in
                  let valid' = (valid /\ (v:bool) /\ ((current + p) >= n) /\ (max >= current)) in
-                 STACK_SIZE_BLK (max', current', valid') l)`;
+                 STACK_SIZE_BLK (max', current', valid') l)
+End
 
 
-val STACK_SIZE_CTL_STRUCTURE_def = Define
-        `(STACK_SIZE_CTL_STRUCTURE (max, current, valid) (BLK l) =
+Definition STACK_SIZE_CTL_STRUCTURE_def:
+         (STACK_SIZE_CTL_STRUCTURE (max, current, valid) (BLK l) =
                  STACK_SIZE_BLK (max, current, valid) l) /\
          (STACK_SIZE_CTL_STRUCTURE (max, current, valid) (SC ir1 ir2) =
                  let (max', current', valid') = STACK_SIZE_CTL_STRUCTURE (max, current, valid) ir1 in
@@ -250,7 +258,8 @@ val STACK_SIZE_CTL_STRUCTURE_def = Define
                         (MAX max1 max2, current1, valid1 /\ valid2 /\ (current1 = current2))) /\
          (STACK_SIZE_CTL_STRUCTURE (max, current, valid) (TR c ir) =
                  let (max', current', valid') = STACK_SIZE_CTL_STRUCTURE (max, current, valid) ir in
-                        (max', current', valid' /\ (current=current')))`
+                        (max', current', valid' /\ (current=current')))
+End
 
 
 val STACK_SIZE_BLK___VALID = store_thm ("STACK_SIZE_BLK___VALID",
@@ -532,9 +541,10 @@ match [] ``LDM``
 
 ARM_LDM*)
 
-val PRE_TRANS_OPT_def = Define `PRE_TRANS_OPT = transfer_options F F F`
+Definition PRE_TRANS_OPT_def:   PRE_TRANS_OPT = transfer_options F F F
+End
 
-val DOPER2INSTRUCTION_def = Define `
+Definition DOPER2INSTRUCTION_def:
   (DOPER2INSTRUCTION (MPOP base regL) =
       LDM AL T PRE_TRANS_OPT (n2w base) (reg_bitmap (MAP n2w regL))) /\
   (DOPER2INSTRUCTION (MPUSH base regL) =
@@ -575,18 +585,20 @@ val DOPER2INSTRUCTION_def = Define `
         MOV AL F (MREG2REG dst) (Dp_shift_immediate (LSL (MREG2REG src2_reg)) src2_num)
       else
         MOV AL F (MREG2REG dst) (Dp_shift_immediate (ROR (MREG2REG src2_reg)) src2_num))
-  `;
+End
 
 
 
-val MREG2register_def = Define
-  `MREG2register m r =
-                num2register (mode_reg2num m (MREG2REG r))`
+Definition MREG2register_def:
+   MREG2register m r =
+                num2register (mode_reg2num m (MREG2REG r))
+End
 
 
-val REGS_EQUIVALENT_def = Define
-  `REGS_EQUIVALENT m registers regs =
-    (!r. ((regs ' (MREG2REG r)) = (registers (num2register (mode_reg2num m (MREG2REG r))))))`
+Definition REGS_EQUIVALENT_def:
+   REGS_EQUIVALENT m registers regs =
+    (!r. ((regs ' (MREG2REG r)) = (registers (num2register (mode_reg2num m (MREG2REG r))))))
+End
 
 val mode_reg2num_11 = store_thm ("mode_reg2num_11",
 ``!m v w.
@@ -635,9 +647,10 @@ val MREG_NOT_PC = store_thm ("MREG_NOT_PC",
         ));
 
 
-val DECODE_MEXP_def = Define `
+Definition DECODE_MEXP_def:
   (DECODE_MEXP m (MR r) regs = regs (MREG2register m r)) /\
-  (DECODE_MEXP m (MC s c) regs = ((w2w c):word32 #>> (2 * w2n s)))`
+  (DECODE_MEXP m (MC s c) regs = ((w2w c):word32 #>> (2 * w2n s)))
+End
 
 val index_of_reg_lt = store_thm ("index_of_reg_lt",
   ``!r. index_of_reg r < 15``,
@@ -712,19 +725,21 @@ val FETCH_PC___PC_WRITE = store_thm ("FETCH_PC___PC_WRITE",
         REWRITE_TAC [armTheory.num2register_thm]);
 
 
-val DECODE_SHIFT_def = Define `
+Definition DECODE_SHIFT_def:
   (DECODE_SHIFT m (LSL:word4->shift r) (c:word5) (regs:register->word32) = ((regs (num2register (mode_reg2num m r))) << w2n c)) /\
   (DECODE_SHIFT m (LSR r) c regs = ((regs (num2register (mode_reg2num m r))) >>> w2n c)) /\
   (DECODE_SHIFT m (ASR r) c regs = ((regs (num2register (mode_reg2num m r))) >> w2n c)) /\
-  (DECODE_SHIFT m (ROR r) c regs = ((regs (num2register (mode_reg2num m r))) #>> w2n c))`;
+  (DECODE_SHIFT m (ROR r) c regs = ((regs (num2register (mode_reg2num m r))) #>> w2n c))
+End
 
 
 
-val WELL_FORMED_SHIFT_def = Define `
+Definition WELL_FORMED_SHIFT_def:
   (WELL_FORMED_SHIFT (ROR:word4->shift r) c = ~(c = 0w) /\ ~(r = 15w)) /\
   (WELL_FORMED_SHIFT (ASR r) c = ~(c = 0w) /\ ~(r = 15w)) /\
   (WELL_FORMED_SHIFT (LSR r) c = ~(c = 0w) /\ ~(r = 15w)) /\
-  (WELL_FORMED_SHIFT (LSL r) c = ~(r = 15w))`;
+  (WELL_FORMED_SHIFT (LSL r) c = ~(r = 15w))
+End
 
 
 val STATE_ARM_MEM_EVAL = save_thm ("STATE_ARM_MEM_EVAL",
@@ -1037,23 +1052,26 @@ REWRITE_TAC[IS_MEMORY_DOPER_def, IS_WELL_FORMED_DOPER_def, DOPER2INSTRUCTION_def
 
 val DOPER2INSTRUCTION_thm = save_thm ("DOPER2INSTRUCTION_thm", DOPER2INSTRUCTION_NO_MEM_thm);
 
-val MEMORY_SLICE_def = Define `
+Definition MEMORY_SLICE_def:
         MEMORY_SLICE (base, length) =
-                (MAP (\off. base - n2w off) (LIST_COUNT length))`
+                (MAP (\off. base - n2w off) (LIST_COUNT length))
+End
 
-val MEM_EQUIV_EXCEPT_SLICE_def = Define `
+Definition MEM_EQUIV_EXCEPT_SLICE_def:
         MEM_EQUIV_EXCEPT_SLICE (base, length) (mem, mem') =
                 !slice. (slice = (MEMORY_SLICE (base, length))) ==>
                 (((FDOM mem) UNION (LIST_TO_SET slice) =
         (FDOM mem') UNION (LIST_TO_SET slice)) /\
-                 (!l. ~(MEM l slice) ==> (mem ' l = mem' ' l)))`;
+                 (!l. ~(MEM l slice) ==> (mem ' l = mem' ' l)))
+End
 
 
-val REGS_EQUIVALENT_MEM_def = Define `
+Definition REGS_EQUIVALENT_MEM_def:
         REGS_EQUIVALENT_MEM m (offset, length) (registers, memory) (regs, mem) =
         REGS_EQUIVALENT m registers regs /\
         (!l. (MEM l (MEMORY_SLICE ((MEM_ADDR (regs ' 13w) + offset), length)) ==>
-                                  (mem ' l =  memory l)))`
+                                  (mem ' l =  memory l)))
+End
 
 
 val REGS_EQUIVALENT_MEM___NO_MEM =
@@ -1076,10 +1094,11 @@ val REGS_EQUIVALENT___SP =
         SIMP_TAC std_ss [MREG2REG_def, index_of_reg_def]);
 
 
-val pushL_mem_def = Define `pushL_mem (reg, mem) r off l =
+Definition pushL_mem_def:   pushL_mem (reg, mem) r off l =
 FST (FOLDL (\(mem',i) reg'. (mem' |+
                    (MEM_ADDR (reg ' (n2w r)) - n2w i,reg ' (n2w reg')),
-                   i + 1)) (mem,off) (REVERSE l))`
+                   i + 1)) (mem,off) (REVERSE l))
+End
 
 
 val pushL_thm = store_thm ("pushL_thm",
@@ -1258,12 +1277,13 @@ Cases_on `~IS_MEMORY_DOPER oper` THENL [
 
 
 
-val DOPER2INSTRUCTION_LIST_def = Define `
+Definition DOPER2INSTRUCTION_LIST_def:
   DOPER2INSTRUCTION_LIST doper =
-    [DOPER2INSTRUCTION doper]`
+    [DOPER2INSTRUCTION doper]
+End
 
 
-val TRANSLATE_COND_def = Define `
+Definition TRANSLATE_COND_def:
   (TRANSLATE_COND (EQ:COND) = (EQ:condition)) /\
   (TRANSLATE_COND (CS:COND) = (CS:condition)) /\
   (TRANSLATE_COND (MI:COND) = (MI:condition)) /\
@@ -1279,12 +1299,14 @@ val TRANSLATE_COND_def = Define `
   (TRANSLATE_COND (LS:COND) = (LS:condition)) /\
   (TRANSLATE_COND (LT:COND) = (LT:condition)) /\
   (TRANSLATE_COND (LE:COND) = (LE:condition)) /\
-  (TRANSLATE_COND (NV:COND) = (NV:condition))`
+  (TRANSLATE_COND (NV:COND) = (NV:condition))
+End
 
-val CJ2INSTRUCTION_LIST_def = Define `
+Definition CJ2INSTRUCTION_LIST_def:
     CJ2INSTRUCTION_LIST (r, c, e) j =
       [CMP AL (MREG2REG r) (MEXP2addr_model e);
-       B (TRANSLATE_COND c) j]`
+       B (TRANSLATE_COND c) j]
+End
 
 
 val CJ2INSTRUCTION_LIST_thm = store_thm ("CJ2INSTRUCTION_LIST_thm",
@@ -1399,20 +1421,22 @@ Cases_on `eval_il_cond (r, c, e) (reg, mem)` THENL [
 
 
 
-val CONTAINS_MEMORY_DOPER_def = Define `
+Definition CONTAINS_MEMORY_DOPER_def:
   (CONTAINS_MEMORY_DOPER (BLK l) = EXISTS IS_MEMORY_DOPER l) /\
   (CONTAINS_MEMORY_DOPER (SC prog1 prog2) = ((CONTAINS_MEMORY_DOPER prog1) \/ (CONTAINS_MEMORY_DOPER prog2))) /\
   (CONTAINS_MEMORY_DOPER (CJ cond prog1 prog2) = ((CONTAINS_MEMORY_DOPER prog1) \/ (CONTAINS_MEMORY_DOPER prog2))) /\
- (CONTAINS_MEMORY_DOPER (TR cond prog1) = (CONTAINS_MEMORY_DOPER prog1))`;
+ (CONTAINS_MEMORY_DOPER (TR cond prog1) = (CONTAINS_MEMORY_DOPER prog1))
+End
 
-val IS_WELL_FORMED_CTL_STRUCTURE_def = Define `
+Definition IS_WELL_FORMED_CTL_STRUCTURE_def:
   (IS_WELL_FORMED_CTL_STRUCTURE (BLK l) = EVERY IS_WELL_FORMED_DOPER l) /\
   (IS_WELL_FORMED_CTL_STRUCTURE (SC prog1 prog2) = (IS_WELL_FORMED_CTL_STRUCTURE prog1 /\ IS_WELL_FORMED_CTL_STRUCTURE prog2)) /\
   (IS_WELL_FORMED_CTL_STRUCTURE (CJ cond prog1 prog2) = (IS_WELL_FORMED_CTL_STRUCTURE prog1 /\ IS_WELL_FORMED_CTL_STRUCTURE prog2)) /\
-  (IS_WELL_FORMED_CTL_STRUCTURE (TR cond prog1) = (IS_WELL_FORMED_CTL_STRUCTURE prog1))`;
+  (IS_WELL_FORMED_CTL_STRUCTURE (TR cond prog1) = (IS_WELL_FORMED_CTL_STRUCTURE prog1))
+End
 
 
-val CTL_STRUCTURE2INSTRUCTION_LIST_def = Define `
+Definition CTL_STRUCTURE2INSTRUCTION_LIST_def:
   (CTL_STRUCTURE2INSTRUCTION_LIST (BLK l) = FLAT ((MAP DOPER2INSTRUCTION_LIST) l)) /\
   (CTL_STRUCTURE2INSTRUCTION_LIST (SC prog1 prog2) =
    (CTL_STRUCTURE2INSTRUCTION_LIST prog1) ++ (CTL_STRUCTURE2INSTRUCTION_LIST prog2)) /\
@@ -1430,7 +1454,8 @@ val CTL_STRUCTURE2INSTRUCTION_LIST_def = Define `
         (CJ2INSTRUCTION_LIST cond (n2w (LENGTH (CTL_STRUCTURE2INSTRUCTION_LIST prog1)))) ++
    (CTL_STRUCTURE2INSTRUCTION_LIST prog1) ++
    [B AL ($- (n2w (LENGTH (CTL_STRUCTURE2INSTRUCTION_LIST prog1) +
-                LENGTH (CJ2INSTRUCTION_LIST cond (n2w (LENGTH (CTL_STRUCTURE2INSTRUCTION_LIST prog1)))) + 2)))])`;
+                LENGTH (CJ2INSTRUCTION_LIST cond (n2w (LENGTH (CTL_STRUCTURE2INSTRUCTION_LIST prog1)))) + 2)))])
+End
 
 
 
@@ -2214,11 +2239,12 @@ prove (``!x y z. ((x, y) = z) = ((x = FST z) /\ (y = SND z))``,
                                 METIS_TAC[PAIR, FST, SND])
 
 
-val LIST_TO_FUN_def =
-        Define `((LIST_TO_FUN s [] e) = s) /\
+Definition LIST_TO_FUN_def:
+         ((LIST_TO_FUN s [] e) = s) /\
                           ((LIST_TO_FUN s ((h1, h2)::l) e) =
                                         if (h1 = e) then h2 else
-                                   (LIST_TO_FUN s l e))`;
+                                   (LIST_TO_FUN s l e))
+End
 
 val WORD_ADD_INV_0_EQ_SYM       = prove (``!v w. (v = v + w) = (w = 0w)``, PROVE_TAC[WORD_ADD_INV_0_EQ]);
 
@@ -2991,4 +3017,3 @@ REPEAT STRIP_TAC THENL [
 
 
 
-val _ = export_theory();

@@ -12,10 +12,12 @@ val () = app load
  ["bossLib", "metisLib", "arithmeticTheory", "realLib", "posetTheory"];
 val () = quietdec := true;
 *)
+Theory posreal
+Ancestors
+  combin option arithmetic real poset
+Libs
+  metisLib realLib
 
-open HolKernel Parse boolLib bossLib metisLib;
-open combinTheory optionTheory arithmeticTheory realTheory realLib;
-open posetTheory;
 
 (*
 val () = quietdec := false;
@@ -24,8 +26,6 @@ val () = quietdec := false;
 (* ------------------------------------------------------------------------- *)
 (* Start a new theory called "posreal"                                       *)
 (* ------------------------------------------------------------------------- *)
-
-val _ = new_theory "posreal";
 
 (* ------------------------------------------------------------------------- *)
 (* Helpful proof tools                                                       *)
@@ -40,14 +40,16 @@ val REVERSE = Tactical.REVERSE;
 (* An uninterpreted constant.                                                *)
 (* ------------------------------------------------------------------------- *)
 
-val unint_def = Define `unint x = x`;
+Definition unint_def:   unint x = x
+End
 
 (* ------------------------------------------------------------------------- *)
 (* A HOL type of positive reals                                              *)
 (* ------------------------------------------------------------------------- *)
 
-val posreal_pred_def = Define
-  `(posreal_pred NONE = T) /\ (posreal_pred (SOME x) <=> 0r <= x)`;
+Definition posreal_pred_def:
+   (posreal_pred NONE = T) /\ (posreal_pred (SOME x) <=> 0r <= x)
+End
 
 val posreal_inhabited =
   prove (``?x. posreal_pred x``, METIS_TAC [posreal_pred_def]);
@@ -75,61 +77,76 @@ val posreal_abs_inj = store_thm
 (* Defining the extended arithmetic operations                               *)
 (* ------------------------------------------------------------------------- *)
 
-val preal_addr_def = Define
-  `(preal_addr NONE NONE = NONE) /\
+Definition preal_addr_def:
+   (preal_addr NONE NONE = NONE) /\
    (preal_addr NONE (SOME y) = NONE) /\
    (preal_addr (SOME x) NONE = NONE) /\
-   (preal_addr (SOME (x:real)) (SOME y) = SOME (x + y))`;
+   (preal_addr (SOME (x:real)) (SOME y) = SOME (x + y))
+End
 
-val preal_subr_def = Define
-  `(preal_subr NONE (SOME y) = NONE) /\
+Definition preal_subr_def:
+   (preal_subr NONE (SOME y) = NONE) /\
    (preal_subr (SOME x) NONE = (SOME 0r)) /\
-   (preal_subr (SOME (x:real)) (SOME y) = SOME (if x <= y then 0 else x - y))`;
+   (preal_subr (SOME (x:real)) (SOME y) = SOME (if x <= y then 0 else x - y))
+End
 
-val preal_ler_def = Define
-  `(preal_ler NONE NONE = T) /\
+Definition preal_ler_def:
+   (preal_ler NONE NONE = T) /\
    (preal_ler NONE (SOME y) = F) /\
    (preal_ler (SOME x) NONE = T) /\
-   (preal_ler (SOME (x:real)) (SOME y) <=> x <= y)`;
+   (preal_ler (SOME (x:real)) (SOME y) <=> x <= y)
+End
 
-val preal_mulr_def = Define
-  `(preal_mulr NONE NONE = NONE) /\
+Definition preal_mulr_def:
+   (preal_mulr NONE NONE = NONE) /\
    (preal_mulr NONE (SOME y) = if y = 0r then SOME 0 else NONE) /\
    (preal_mulr (SOME x) NONE = if x = 0 then SOME 0 else NONE) /\
-   (preal_mulr (SOME x) (SOME y) = SOME (x * y))`;
+   (preal_mulr (SOME x) (SOME y) = SOME (x * y))
+End
 
-val preal_invr_def = Define
-  `(preal_invr NONE = SOME 0r) /\
-   (preal_invr (SOME x) = if x = 0 then NONE else SOME (inv x))`;
+Definition preal_invr_def:
+   (preal_invr NONE = SOME 0r) /\
+   (preal_invr (SOME x) = if x = 0 then NONE else SOME (inv x))
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Defining the arithmetic operations on the posreal type                    *)
 (* ------------------------------------------------------------------------- *)
 
-val preal_def = Define `preal x = posreal_abs (SOME (pos x))`;
+Definition preal_def:   preal x = posreal_abs (SOME (pos x))
+End
 
-val infty_def = Define `infty = posreal_abs NONE`;
+Definition infty_def:   infty = posreal_abs NONE
+End
 
-val posreal_of_num_def = Define `posreal_of_num n = preal (& n)`;
+Definition posreal_of_num_def:   posreal_of_num n = preal (& n)
+End
 
-val preal_add_def = Define
-  `preal_add x y = posreal_abs (preal_addr (posreal_rep x) (posreal_rep y))`;
+Definition preal_add_def:
+   preal_add x y = posreal_abs (preal_addr (posreal_rep x) (posreal_rep y))
+End
 
-val preal_sub_def = Define
-  `preal_sub x y = posreal_abs (preal_subr (posreal_rep x) (posreal_rep y))`;
+Definition preal_sub_def:
+   preal_sub x y = posreal_abs (preal_subr (posreal_rep x) (posreal_rep y))
+End
 
-val preal_le_def = Define
-  `preal_le x y = preal_ler (posreal_rep x) (posreal_rep y)`;
+Definition preal_le_def:
+   preal_le x y = preal_ler (posreal_rep x) (posreal_rep y)
+End
 
-val preal_lt_def = Define `preal_lt x y = ~preal_le y x`;
+Definition preal_lt_def:   preal_lt x y = ~preal_le y x
+End
 
-val preal_mul_def = Define
-  `preal_mul x y = posreal_abs (preal_mulr (posreal_rep x) (posreal_rep y))`;
+Definition preal_mul_def:
+   preal_mul x y = posreal_abs (preal_mulr (posreal_rep x) (posreal_rep y))
+End
 
-val preal_inv_def = Define
-  `preal_inv x = posreal_abs (preal_invr (posreal_rep x))`;
+Definition preal_inv_def:
+   preal_inv x = posreal_abs (preal_invr (posreal_rep x))
+End
 
-val preal_div_def = Define `preal_div x y = preal_mul x (preal_inv y)`;
+Definition preal_div_def:   preal_div x y = preal_mul x (preal_inv y)
+End
 
 val _ = add_numeral_form (#"p", SOME "posreal_of_num");
 val _ = overload_on ("+",   Term `preal_add`);
@@ -1234,11 +1251,13 @@ val div_eq_infty = store_thm
 (* Minimum and maximum                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val preal_min_def = Define
-  `preal_min (x : posreal) y = if x <= y then x else y`;
+Definition preal_min_def:
+   preal_min (x : posreal) y = if x <= y then x else y
+End
 
-val preal_max_def = Define
-  `preal_max (x : posreal) y = if x <= y then y else x`;
+Definition preal_max_def:
+   preal_max (x : posreal) y = if x <= y then y else x
+End
 
 val _ = overload_on ("min", Term `preal_min`);
 val _ = overload_on ("max", Term `preal_max`);
@@ -1414,7 +1433,8 @@ val max_rzero = store_thm
 (* 1-boundedness                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val bound1_def = Define `bound1 (x:posreal) = if x <= 1 then x else 1`;
+Definition bound1_def:   bound1 (x:posreal) = if x <= 1 then x else 1
+End
 
 val bound1 = store_thm
   ("bound1",
@@ -1454,15 +1474,17 @@ val bound1_infty = store_thm
 (* Supremums and infimums (these are always defined on posreals)             *)
 (* ------------------------------------------------------------------------- *)
 
-val preal_sup_def = Define
-  `preal_sup p =
+Definition preal_sup_def:
+   preal_sup p =
    if !x. (!y. p y ==> y <= x) ==> (x = infty) then infty
-   else preal (sup (\r. (r = 0) \/ (0 <= r /\ p (preal r))))`;
+   else preal (sup (\r. (r = 0) \/ (0 <= r /\ p (preal r))))
+End
 
-val preal_inf_def = Define
-  `preal_inf p =
+Definition preal_inf_def:
+   preal_inf p =
    if !x. p x ==> (x = infty) then infty
-   else preal (inf (\r. 0 <= r /\ p (preal r)))`;
+   else preal (inf (\r. 0 <= r /\ p (preal r)))
+End
 
 val _ = overload_on ("sup", Term `preal_sup`);
 val _ = overload_on ("inf", Term `preal_inf`);
@@ -1763,7 +1785,8 @@ val inf_le = store_thm
 (* (posreal,<=) is a complete lattice                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val posreal_def = Define `posreal = \x : posreal. T`;
+Definition posreal_def:   posreal = \x : posreal. T
+End
 
 val sup_lub = store_thm
   ("sup_lub",
@@ -2176,4 +2199,3 @@ val bound1_rat = store_thm
    RW_TAC std_ss [bound1_min, min_ratl]
    >> FULL_SIMP_TAC arith_ss []);
 
-val _ = export_theory();

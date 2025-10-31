@@ -97,7 +97,8 @@ QED
 (* Output of the compiler is in terms of vectors.                            *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `vector = Vector of 'a list`;
+Datatype: vector = Vector ('a list)
+End
 
 Definition fromList_def : fromList l = Vector l
 End
@@ -205,7 +206,7 @@ Definition Empty_arcs_def :
    (246,Empty); (247,Empty); (248,Empty); (249,Empty);
    (250,Empty); (251,Empty); (252,Empty); (253,Empty);
    (254,Empty); (255,Empty)]
-End;
+End
 
 Theorem Empty_arcs_thm :
   MAP (\c. (c,smart_deriv c Empty)) ALPHABET = Empty_arcs

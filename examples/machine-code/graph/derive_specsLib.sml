@@ -433,7 +433,7 @@ fun dest_call_tag tm = let
 exception NoInstructionSpec
 
 fun wrap_get_spec f asm = f asm
-  handle HOL_ERR e => if #origin_structure e = "arm_progLib"
+  handle HOL_ERR e => if top_structure_of e = "arm_progLib"
   then raise NoInstructionSpec
   else failwith ("Unable to derive spec for " ^ asm ^ ": " ^ format_ERR e)
 

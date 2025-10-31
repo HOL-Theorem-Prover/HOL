@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open boolListsTheory numsAsCompStatesTheory
-
-val _ = new_theory "busyBeaver";
+Theory busyBeaver
+Ancestors
+  boolLists numsAsCompStates
 
 (* longest it takes machines of size n to terminate *)
 Definition tmax_def:
@@ -27,4 +25,3 @@ End
 
 
 
-val _ = export_theory();

@@ -1,10 +1,13 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory tacticsLib ARM_prover_extLib;
+Theory priv_constraints_cpsr_pc
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper
+Libs
+  proofManagerLib tacticsLib ARM_prover_extLib
+
 (*open arm_parserLib arm_encoderLib arm_disassemblerLib;*)
 
 
-val _ =  new_theory("priv_constraints_cpsr_pc");
 val _ = diminish_srw_ss ["one"]
 val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
 
@@ -17,8 +20,8 @@ val _ = goalStack.chatting := !Globals.interactive
 (*         CONSTRAINTS ON CPSR FLAGS IN PRIVILEGED MODE         *)
 (*                        Narges                                *)
 (****************************************************************)
-val priv_cpsr_flags_constraints_def =
-    Define `priv_cpsr_flags_constraints f sctlr  =
+Definition priv_cpsr_flags_constraints_def:
+     priv_cpsr_flags_constraints f sctlr  =
                              ! s s' a . (f s = ValueState a s') ==>
                                (~access_violation s') ==>
                                (((s'.psrs (0, CPSR)).I = T)
@@ -27,10 +30,11 @@ val priv_cpsr_flags_constraints_def =
                                 /\
                                      ((s'.psrs (0, CPSR)).IT = 0w) /\
                                 ((s'.psrs (0,CPSR)).E = sctlr.EE)
-                               )`;
+                               )
+End
 
-val priv_cpsr_flags_constraints_abs_def =
-    Define `priv_cpsr_flags_constraints_abs f sctlr =
+Definition priv_cpsr_flags_constraints_abs_def:
+     priv_cpsr_flags_constraints_abs f sctlr =
                              ! s s' a c. (f c s = ValueState a s') ==>
                                (~access_violation s') ==>
                                (((s'.psrs (0, CPSR)).I = T)
@@ -40,7 +44,8 @@ val priv_cpsr_flags_constraints_abs_def =
                                      ((s'.psrs (0, CPSR)).IT = 0w)
                                 /\
                                      ((s'.psrs (0,CPSR)).E = sctlr.EE)
-                               )`;
+                               )
+End
 
 
 fun define_cfc_goal a expr =
@@ -726,21 +731,23 @@ val take_svc_exception_cfc_thm =
 (**************************************************************)
 (*         SET PROGRAM TO AN ADDRESS IN VECTOR TABLE          *)
 (**************************************************************)
-val set_pc_to_def =
-    Define `set_pc_to f (m:bool[5]) vt =
+Definition set_pc_to_def:
+     set_pc_to f (m:bool[5]) vt =
             !s1 s2 c .
                 (f s1 = ValueState c s2) ==>
                 (¬access_violation s2) ==>
                 ((s2.registers (0, RName_PC) =  HD(vector_table_address vt m)) \/
-                (s2.registers (0, RName_PC) =  HD (TL(vector_table_address vt m)))) `;
+                (s2.registers (0, RName_PC) =  HD (TL(vector_table_address vt m))))
+End
 
-val set_pc_to_abs_def =
-    Define `set_pc_to_abs f (m:bool[5]) vt =
+Definition set_pc_to_abs_def:
+     set_pc_to_abs f (m:bool[5]) vt =
             !s1 s2 c a .
                 (f a s1 = ValueState c s2) ==>
                 (¬access_violation s2) ==>
                 ((s2.registers (0, RName_PC) =  HD(vector_table_address vt m)) \/
-                (s2.registers (0, RName_PC) =  HD (TL(vector_table_address vt m)))) `;
+                (s2.registers (0, RName_PC) =  HD (TL(vector_table_address vt m))))
+End
 
 val branch_to_spc_thm =
     store_thm("branch_to_spc_thm",
@@ -1199,4 +1206,3 @@ val take_svc_exception_spc_thm =
               );
 
 
-val _ = export_theory();

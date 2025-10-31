@@ -1,4 +1,4 @@
-INCLUDES = $(HOLDIR)/examples/balanced_bst \
+INCLUDES = $(HOLDIR)/examples/data-structures/balanced_bst \
            $(HOLDIR)/examples/formal-languages \
            $(HOLDIR)/examples/formal-languages/context-free \
            $(HOLDIR)/examples/formal-languages/regular

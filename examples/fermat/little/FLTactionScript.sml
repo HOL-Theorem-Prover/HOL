@@ -27,20 +27,12 @@ Fermat's Little Theorem follows from Necklace Theorem.
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "FLTaction";
+Theory FLTaction
+Ancestors
+  arithmetic pred_set divides gcd gcdset logroot number
+  combinatorics cycle group
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory pred_setTheory dividesTheory gcdTheory gcdsetTheory
-     logrootTheory numberTheory combinatoricsTheory;
-
-open cycleTheory;
-
-open groupTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Action Documentation                           *)
@@ -780,8 +772,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

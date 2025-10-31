@@ -46,28 +46,40 @@ in
        | (l, _) => (unsolved_list := l; raise ERR "TAC_PROOF" "unsolved goals")
 end
 
-fun default_prover (t, tac) = TAC_PROOF (([], t), tac)
+fun default_prover (t, tac) = TAC_PROOF(([], t), tac)
 
 local
+  fun goal_to_string (asms, t) =
+      case asms of
+          [] => Parse.term_to_string t
+        | _ => "([" ^ CharVector.tabulate(length asms, fn _ => #".") ^ "], " ^
+               Parse.term_to_string t ^ ")"
    val mesg = Lib.with_flag (Feedback.MESG_to_string, Lib.I) Feedback.HOL_MESG
-   fun provide_feedback f (t, tac: tactic) =
-      f (t, tac)
-      handle (e as HOL_ERR {message = m, origin_function = f, ...}) =>
-           (mesg ("Proof of \n\n" ^ Parse.term_to_string t ^ "\n\nfailed.\n")
-            ; (case (m, f, unsolved ()) of
-                  ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
-                      if Term.term_eq u t
-                         then ()
-                      else mesg ("First unsolved sub-goal is\n\n" ^
-                                 Parse.term_to_string u ^ "\n\n")
-                | _ => ())
-            ; raise e)
+   fun provide_feedback f (g, tac: tactic) =
+      f (g, tac)
+      handle e as HOL_ERR herr =>
+        let val m = message_of herr
+            val f = top_function_of herr
+        in
+           mesg ("Proof of \n\n" ^ goal_to_string g ^ "\n\nfailed.\n")
+           ;
+           (case (m, f, unsolved ())
+             of ("unsolved goals", "TAC_PROOF", (_, u)::_) =>
+                 if Term.term_eq u (snd g) then
+                    ()
+                 else mesg ("First unsolved sub-goal is\n\n" ^
+                            Parse.term_to_string u ^ "\n\n")
+              | otherwise => ())
+           ;
+           raise e
+        end
    val internal_prover =
-      ref (provide_feedback default_prover: Term.term * tactic -> Thm.thm)
+      ref (provide_feedback TAC_PROOF: goal * tactic -> Thm.thm)
 in
    fun set_prover f = internal_prover := provide_feedback f
-   fun restore_prover () = set_prover default_prover
-   fun prove (t, tac) = !internal_prover (t, tac)
+   fun restore_prover () = set_prover TAC_PROOF
+   fun prove (t, tac) = !internal_prover (([], t), tac)
+   fun prove_goal (g, tac) = !internal_prover (g, tac)
 end
 
 fun store_thm (name, tm, tac) =
@@ -222,13 +234,17 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
       end
 
 val op >- = op THEN1
+
 fun op>>-(tac1, n) tac2 g =
   op>- (tac1, tac2) g
-  handle e as HOL_ERR (er as {message,...}) =>
-         if is_substring "THEN1" message then raise e
+  handle e as HOL_ERR holerr =>
+         if is_substring "THEN1" (message_of holerr) then raise e
          else
            raise HOL_ERR (set_message
-             (message ^ " (THEN1 on line "^Int.toString n^")") er)
+              (String.concat
+                 [message_of holerr,
+                  " (THEN1 on line ", Int.toString n, ")"]) holerr)
+
 fun (f ?? x) = f x
 
 
@@ -387,12 +403,23 @@ local
    val validity_tag = "ValidityCheck"
    fun masquerade goal = Thm.mk_oracle_thm validity_tag goal
    datatype validity_failure = Concl of term | Hyp of term
+   fun hd_is_suspend t =
+       let val (f, _) = strip_comb t
+           val {Thy,Name,...} = dest_thy_const f
+       in
+         Thy = "marker" andalso Name = "suspendlabel"
+       end handle HOL_ERR _ => false
    fun bad_prf th (asl, w) =
-       if concl th !~ w then SOME (Concl (concl th))
-       else
-         case List.find (fn h => List.all (not o aconv h) asl) (hyp th) of
-             NONE => NONE
-           | SOME h => SOME (Hyp h)
+       let
+         fun goodhyp h = List.exists (aconv h) asl orelse
+                         hd_is_suspend h
+       in
+         if concl th !~ w then SOME (Concl (concl th))
+         else
+           case List.find (not o goodhyp) (hyp th) of
+               NONE => NONE
+             | SOME h => SOME (Hyp h)
+       end
    fun error f t e =
        let
          val pfx = "Invalid " ^ t ^ ": theorem has "
@@ -556,6 +583,7 @@ fun CONJ_VALIDATE tac (g as (asl,_)) =
     end
 
 end (* local *)
+
 (* could avoid duplication of code in the above by the following
 fun GEN_VALIDATE flag tac =
   ALL_TAC THEN_LT GEN_VALIDATE_LT flag (TACS_TO_LT [tac]) ;
@@ -873,8 +901,8 @@ local
    in
       (gl, (if is_neg w then NEG_DISCH ant else DISCH ant) o prf)
    end
-   handle HOL_ERR {message,origin_function, ...} =>
-          raise ERR "DISCH_THEN" (origin_function ^ ":" ^ message)
+   handle HOL_ERR e =>
+          raise ERR "DISCH_THEN" (top_function_of e ^ ":" ^ message_of e)
   val NOT_NOT_E = boolTheory.NOT_CLAUSES |> CONJUNCT1
   val NOT_NOT_I = NOT_NOT_E |> GSYM
   val NOT_IMP_F = IMP_ANTISYM_RULE (SPEC_ALL boolTheory.F_IMP)

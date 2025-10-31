@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory tacticsLib ARM_prover_extLib;
-
-val _ =  new_theory("priv_constraints_spsr");
+Theory priv_constraints_spsr
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper
+Libs
+  proofManagerLib tacticsLib ARM_prover_extLib
 
 val _ = diminish_srw_ss ["one"]
 val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
@@ -66,8 +67,8 @@ val prove_abs_spsr_flags_const_action =
 
 
 
-val untouched_spsr_flags_abs_def =
-    Define `untouched_spsr_flags_abs f (mode:bool[5]) =
+Definition untouched_spsr_flags_abs_def:
+     untouched_spsr_flags_abs f (mode:bool[5]) =
            !s a c s'. (f a s = ValueState c s') ==>
                 let spsr =
                case mode of
@@ -85,10 +86,10 @@ val untouched_spsr_flags_abs_def =
                            ((s'.psrs(0,spsr)).F = (s.psrs(0,spsr)).F) /\
                            ((s'.psrs (0,spsr)).M=(s.psrs (0,spsr)).M) /\
                            ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)) ))
-                           `;
+End
 
-val untouched_spsr_flags_def =
-    Define `untouched_spsr_flags f (mode:bool[5]) =
+Definition untouched_spsr_flags_def:
+     untouched_spsr_flags f (mode:bool[5]) =
            !s c s'. (f s = ValueState c s') ==>
            let spsr =
                case mode of
@@ -105,11 +106,11 @@ val untouched_spsr_flags_def =
                            ((s'.psrs(0,spsr)).F = (s.psrs(0,spsr)).F) /\
                            ((s'.psrs (0,spsr)).M=(s.psrs (0,spsr)).M)/\
                            ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)) )
-                           `;
+End
 
 
-val priv_spsr_flags_constraints_def =
-    Define `priv_spsr_flags_constraints f cpsr mode =
+Definition priv_spsr_flags_constraints_def:
+     priv_spsr_flags_constraints f cpsr mode =
             ! s s' a . (f s = ValueState a s') ==>
                 (~access_violation s') ==>
                 ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -127,11 +128,12 @@ val priv_spsr_flags_constraints_def =
                            ((s'.psrs(0,spsr)).F = cpsr.F)/\
                            ((s'.psrs (0,spsr)).M=cpsr.M))
 
-              )`;
+              )
+End
 
 
-val priv_spsr_flags_constraints_abs_def =
-    Define `priv_spsr_flags_constraints_abs f cpsr mode =
+Definition priv_spsr_flags_constraints_abs_def:
+     priv_spsr_flags_constraints_abs f cpsr mode =
                              ! s s' a c. (f c s = ValueState a s') ==>
                                (~access_violation s') ==>
                               ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -151,7 +153,7 @@ val priv_spsr_flags_constraints_abs_def =
                                (((s'.psrs(0,spsr)).I = cpsr.I) /\
                            ((s'.psrs(0,spsr)).F = cpsr.F)/\
                            ((s'.psrs (0,spsr)).M=cpsr.M)))
-                               `;
+End
 
 
 (*********************   proof rules *******************************)
@@ -597,4 +599,3 @@ val take_undef_instr_exception_spsr_flags_thm =
     end);
 *)
 
-val _ = export_theory();

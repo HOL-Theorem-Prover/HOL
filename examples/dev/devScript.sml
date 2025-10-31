@@ -1,5 +1,8 @@
-open HolKernel Parse boolLib bossLib metisLib;
-
+Theory dev
+Ancestors
+  compose
+Libs
+  metisLib metisLib
 
 (*****************************************************************************)
 (* A handshaking device DEV is a SAFE_DEV which satisfies liveness.          *)
@@ -24,12 +27,6 @@ quietdec := false;
 (******************************************************************************
 * Boilerplate needed for compilation
 ******************************************************************************)
-open HolKernel Parse boolLib bossLib metisLib;
-
-(******************************************************************************
-* Open theories
-******************************************************************************)
-open composeTheory;
 val op by = BasicProvers.byA
 
 (*****************************************************************************)
@@ -41,20 +38,21 @@ val op by = BasicProvers.byA
 (*****************************************************************************)
 val kill = (fn theorem => K ALL_TAC theorem);
 
-val _ = new_theory "dev";
 val _ = ParseExtras.temp_loose_equality()
 
 (*****************************************************************************)
 (* LIV (livenes) - a busy device finishes its computation eventually         *)
 (*****************************************************************************)
-val LIV_def = Define `LIV (load,inp,done,out) =
-      (!t. ~(done t) ==> (?t'. (t' > t) /\ (done t')))`;
+Definition LIV_def:   LIV (load,inp,done,out) =
+      (!t. ~(done t) ==> (?t'. (t' > t) /\ (done t')))
+End
 
 
 (*****************************************************************************)
 (* DEV - a handshaking device satisfies safety and liveness                  *)
 (*****************************************************************************)
-val DEV_def = Define `DEV f p = SAFE_DEV f p /\ LIV p`;
+Definition DEV_def:   DEV f p = SAFE_DEV f p /\ LIV p
+End
 
 
 (*****************************************************************************)
@@ -1505,7 +1503,3 @@ val REC = Q.store_thm("REC",
     ] (* Cases_on `done_e t` *)
     ] (* RW_TAC arith_ss [DEV_def,REC_def,LIV_def] *)
 );
-
-
-
-val _ = export_theory();

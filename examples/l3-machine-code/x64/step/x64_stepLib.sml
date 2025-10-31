@@ -1145,8 +1145,10 @@ in
          val thm = Drule.LIST_CONJ [thm1, thm2, thm4, thm5, thm6]
       in
          MP_Next thm
-         handle HOL_ERR {message = "different constructors", ...} =>
-            MP_Next0 thm
+         handle (e as HOL_ERR herr) =>
+            if message_of herr = "different constructors" then
+               MP_Next0 thm
+            else raise e
       end
    fun x64_step_hex s =
       let

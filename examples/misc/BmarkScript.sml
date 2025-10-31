@@ -1,9 +1,10 @@
 (*---------------------------------------------------------------------------*
  *     The multiplier example from the LCF_LSM paper.                        *
  *---------------------------------------------------------------------------*)
+Theory Bmark
+Libs
+  Prim_rec numLib unwindLib Rsyntax
 
-open HolKernel Parse boolLib
-open Prim_rec numLib unwindLib bossLib Rsyntax
 
 val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 
@@ -19,8 +20,6 @@ val timer = Lib.start_time();
  * Theorem for projection of a sequence of microcycles into a single
  *  macrocycle.
  *---------------------------------------------------------------------------*)
-
-val _ = new_theory "Bmark";
 
 val INDUCTION        = numTheory.INDUCTION;
 val INDUCT_TAC       = INDUCT_THEN INDUCTION ASSUME_TAC;
@@ -634,9 +633,6 @@ val MULT_CORRECTNESS = store_thm("MULT_CORRECTNESS",
     THEN ASSUME_TAC (UNDISCH MULT_FUN_LEMMA2)
     THEN IMP_RES_TAC EQ_TRANS
     THEN IMP_RES_TAC(fst(EQ_IMP_RULE(SPEC_ALL PAIR_SPLIT))));
-
-
-val _ = export_theory ();
 
 
 (*---------------------------------------------------------------------------*

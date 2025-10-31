@@ -1,9 +1,9 @@
-open HolKernel boolLib bossLib Parse BasicProvers dep_rewrite
-open wordsTheory bitstringTheory integer_wordTheory listTheory rich_listTheory
-     integerTheory arithmeticTheory realTheory intrealTheory
-open wordsLib bitstringLib intLib
-
-val _ = new_theory "l3_equivalence_misc";
+Theory l3_equivalence_misc
+Ancestors
+  words bitstring integer_word list rich_list integer arithmetic
+  real intreal
+Libs
+  BasicProvers dep_rewrite wordsLib bitstringLib intLib
 
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
@@ -710,6 +710,4 @@ QED
 
 
 (****************************************)
-
-val _ = export_theory();
 

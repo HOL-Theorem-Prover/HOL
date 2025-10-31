@@ -4,6 +4,7 @@ sig
 
   val TAC_PROOF      : goal * tactic -> thm
   val prove          : term * tactic -> thm
+  val prove_goal     : goal * tactic -> thm
   val store_thm      : string * term * tactic -> thm
   val CONV_TAC       : conv -> tactic
   val THEN           : ('a,'b) gentactic * tactic -> ('a,'b) gentactic
@@ -111,7 +112,7 @@ sig
   val QTY_TAC        : hol_type -> (term -> tactic) -> term quotation -> tactic
 
   val default_prover : term * tactic -> thm
-  val set_prover     : (term * tactic -> thm) -> unit
+  val set_prover     : (goal * tactic -> thm) -> unit
   val restore_prover : unit -> unit
 
 end

@@ -1,6 +1,8 @@
-open HolKernel Parse boolLib bossLib stringLib pred_setLib pred_setTheory PairRules
-
-val _ = new_theory "ks";
+Theory ks
+Ancestors
+  pred_set
+Libs
+  stringLib pred_setLib PairRules
 
 (* make the first argument to the KS type operator be the state one by
    using 'State and 'prop as the type arguments: the standard ASCII ordering
@@ -17,13 +19,13 @@ val _ = Hol_datatype `KS = <|
 (* environment : relvars -> 2^(ks.states) ; can be thought of as an assignment to the free vars of a formula*)
 
 (* well formed ks. *)
-val wfKS_def = Define `
+Definition wfKS_def:
   wfKS ks = (ks.S0 SUBSET ks.S) /\  (ks.S = UNIV)
-`;
+End
 
-val KS_TRANSITION_def = Define`
+Definition KS_TRANSITION_def:
   KS_TRANSITION (p:'state) ks a (q:'state) = (ks.T a)(p,q)
-`;
+End
 
 val _ = add_rule {term_name = "KS_TRANSITION", fixity = Infixl 2502,
      pp_elements = [TOK ">--", TM, TOK "/",TM, TOK "-->"],
@@ -37,7 +39,8 @@ val wfKS_UNIV = store_thm(
 
 val DECIDE_AP_EQ_LEM = save_thm("DECIDE_AP_EQ_LEM",prove (``!x y. ~(x=y) = (((\s. x) = (\s. y))=F)``,metisLib.METIS_TAC []))
 
-val TOTAL_def = Define `TOTAL R = !s. ?s'. R(s,s')`;
+Definition TOTAL_def:   TOTAL R = !s. ?s'. R(s,s')
+End
 
 (* show that the totalisation in ctlTools works *)
 val TOTAL_THM = save_thm("TOTAL_THM",prove(``!R. TOTAL \(s,s').(R(s,s') \/ ((~?s'.R(s,s')) /\ (s'=s)))``,
@@ -51,9 +54,9 @@ DISJ2_TAC THEN ASM_REWRITE_TAC []
 THEN Q.EXISTS_TAC `s` THEN REFL_TAC]))
 
 (* KS analogue of bisimulation (used in muScript) *)
-val BISIM_def = Define `BISIM M1 M2 BS =
+Definition BISIM_def:   BISIM M1 M2 BS =
                 (!a s1 s2.
                      (!s1'. BS(s1,s2) /\ (M1.T a)(s1,s1') ==> (?s2'. (M2.T a)(s2,s2') /\ BS(s1',s2')))  /\
-                     (!s2'. BS(s1,s2) /\ (M2.T a)(s2,s2') ==> (?s1'. (M1.T a)(s1,s1') /\ BS(s1',s2')))) `
+                     (!s2'. BS(s1,s2) /\ (M2.T a)(s2,s2') ==> (?s1'. (M1.T a)(s1,s1') /\ BS(s1',s2'))))
+End
 
-val _ = export_theory();

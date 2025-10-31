@@ -10,12 +10,14 @@
   app load ["pred_setSimps", "rich_listTheory", "wordsLib", "armLib",
             "updateTheory", "instructionTheory", "systemTheory"];
 *)
+Theory arm_eval
+Ancestors
+  rich_list arithmetic words bit combin update arm system
+  instruction
+Libs
+  Q wordsLib
 
-open HolKernel boolLib Parse bossLib;
-open Q rich_listTheory arithmeticTheory wordsLib wordsTheory bitTheory;
-open combinTheory updateTheory armTheory systemTheory instructionTheory;
 
-val _ = new_theory "arm_eval";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -30,16 +32,18 @@ val _ = wordsLib.guess_lengths();
 
 (* ------------------------------------------------------------------------- *)
 
-val REG_READ6_def = Define`
+Definition REG_READ6_def:
   REG_READ6 reg mode n =
     if n = 15w then
       FETCH_PC reg
     else
-      REG_READ reg mode n`;
+      REG_READ reg mode n
+End
 
-val REG_WRITEL_def = Define`
+Definition REG_WRITEL_def:
   (REG_WRITEL r m [] = r) /\
-  (REG_WRITEL r m ((n,d)::l) = REG_WRITE (REG_WRITEL r m l) m n d)`;
+  (REG_WRITEL r m ((n,d)::l) = REG_WRITE (REG_WRITEL r m l) m n d)
+End
 
 (* ------------------------------------------------------------------------- *)
 
@@ -433,7 +437,7 @@ val SPSR_WRITE_n2w = save_thm("SPSR_WRITE_n2w", GEN_ALL
 
 (* ------------------------------------------------------------------------- *)
 
-val decode_opcode_def = Define`
+Definition decode_opcode_def:
   decode_opcode i =
     case i of
       AND cond s Rd Rn Op2 => 0w:word4
@@ -452,29 +456,35 @@ val decode_opcode_def = Define`
     | MOV cond s Rd Op2    => 13w
     | BIC cond s Rd Rn Op2 => 14w
     | MVN cond s Rd Op2    => 15w
-    | _ => ARB`;
+    | _ => ARB
+End
 
-val DECODE_PSRD_def = Define`
+Definition DECODE_PSRD_def:
   (DECODE_PSRD CPSR_c = (F,F,T)) /\ (DECODE_PSRD CPSR_f = (F,T,F)) /\
   (DECODE_PSRD CPSR_a = (F,T,T)) /\ (DECODE_PSRD SPSR_c = (T,F,T)) /\
-  (DECODE_PSRD SPSR_f = (T,T,F)) /\ (DECODE_PSRD SPSR_a = (T,T,T))`;
+  (DECODE_PSRD SPSR_f = (T,T,F)) /\ (DECODE_PSRD SPSR_a = (T,T,T))
+End
 
-val IS_DP_IMMEDIATE_def = Define`
+Definition IS_DP_IMMEDIATE_def:
   (IS_DP_IMMEDIATE (Dp_immediate rot i) = T) /\
   (IS_DP_IMMEDIATE (Dp_shift_immediate sh imm) = F) /\
-  (IS_DP_IMMEDIATE (Dp_shift_register sh reg) = F)`;
+  (IS_DP_IMMEDIATE (Dp_shift_register sh reg) = F)
+End
 
-val IS_DTH_IMMEDIATE_def = Define`
+Definition IS_DTH_IMMEDIATE_def:
   (IS_DTH_IMMEDIATE (Dth_immediate i) = T) /\
-  (IS_DTH_IMMEDIATE (Dth_register r) = F)`;
+  (IS_DTH_IMMEDIATE (Dth_register r) = F)
+End
 
-val IS_DT_SHIFT_IMMEDIATE_def = Define`
+Definition IS_DT_SHIFT_IMMEDIATE_def:
   (IS_DT_SHIFT_IMMEDIATE (Dt_immediate i) = F) /\
-  (IS_DT_SHIFT_IMMEDIATE (Dt_shift_immediate sh imm) = T)`;
+  (IS_DT_SHIFT_IMMEDIATE (Dt_shift_immediate sh imm) = T)
+End
 
-val IS_MSR_IMMEDIATE_def = Define`
+Definition IS_MSR_IMMEDIATE_def:
   (IS_MSR_IMMEDIATE (Msr_immediate rot i) = T) /\
-  (IS_MSR_IMMEDIATE (Msr_register r) = F)`;
+  (IS_MSR_IMMEDIATE (Msr_register r) = F)
+End
 
 fun Cases_on_nzcv tm = FULL_STRUCT_CASES_TAC (SPEC tm (armLib.tupleCases
   ``(n,z,c,v):bool#bool#bool#bool``));
@@ -1354,4 +1364,3 @@ val decode_enc_data_proc3 = save_thm("decode_enc_data_proc3",
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

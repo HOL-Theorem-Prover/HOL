@@ -231,8 +231,10 @@ in
          val tm = thm |> Thm.concl |> boolSyntax.strip_forall |> snd
                       |> boolSyntax.rhs |> pred_setSyntax.strip_set |> List.hd
          val tm_thm = (REWRITE_CONV thms THENC Conv.CHANGED_CONV EVAL) tm
-                      handle HOL_ERR {origin_function = "CHANGED_CONV", ...} =>
-                         combinTheory.I_THM
+                      handle (e as HOL_ERR herr) =>
+                        if top_function_of herr = "CHANGED_CONV" then
+                           combinTheory.I_THM
+                        else raise e
       in
          STAR_SELECT_STATE
          |> Drule.ISPECL ([tm, proj_tm] @ l)
@@ -503,7 +505,7 @@ fun define_map_component (s, f, def) =
    in
       (mdef, thm)
    end
-   handle HOL_ERR {message, ...} => raise ERR "define_map_component" message
+   handle HOL_ERR herr => raise ERR "define_map_component" (message_of herr)
 
 (* ------------------------------------------------------------------------
    mk_code_pool: make term ``CODE_POOL f {(v, opc)}``
@@ -518,7 +520,7 @@ in
       in
          boolSyntax.list_mk_icomb (code_pool_tm, [f, x])
       end
-      handle HOL_ERR {message, ...} => raise ERR "mk_code_pool" message
+      handle HOL_ERR herr => raise ERR "mk_code_pool" (message_of herr)
 end
 
 (* ------------------------------------------------------------------------
@@ -837,7 +839,10 @@ in
                          end
                     | NONE => default (f_upd, l, p, q))
               | (s, l) => default (s, l, p, q) : (term list * term list))
-            handle HOL_ERR {origin_function = "dest_thy_const", ...} => (p, q)
+            handle (e as HOL_ERR herr) =>
+              if top_function_of herr = "dest_thy_const" then
+                  (p, q)
+              else raise e
       in
          loop
       end
@@ -1448,7 +1453,8 @@ fun chunks_intro_pre_process m_def =
                  in
                     PURE_REWRITE_RULE rwts thm
                  end
-                 handle HOL_ERR {origin_function = "EQT_ELIM", ...} => thm
+                 handle (e as HOL_ERR herr) =>
+                   if top_function_of herr = "EQT_ELIM" then thm else raise e
          end
    end
 
@@ -1467,8 +1473,11 @@ fun chunks_intro be m_def =
                then thm
             else helperLib.PRE_POST_RULE cnv (Thm.INST (List.concat s) thm)
          end
-         handle HOL_ERR {origin_function = "group_into_n",
-                         message = "too few", ...} => thm
+         handle (e as HOL_ERR herr) =>
+           if top_function_of herr = "group_into_n" andalso
+              message_of herr = "too few"
+            then thm
+           else raise e
    end
 
 (* ------------------------------------------------------------------------
@@ -1568,8 +1577,11 @@ in
                                  THENC helperLib.POST_CONV (star rwt2)) thm'))
                     end
             end
-            handle HOL_ERR {origin_function = "group_into_n",
-                            message = "too few", ...} => thm
+            handle (e as HOL_ERR herr) =>
+              if top_function_of herr = "group_into_n" andalso
+                 message_of herr = "too few"
+              then thm
+              else raise e
       end
 end
 
@@ -1627,7 +1639,7 @@ in
                List.length l = reg_width orelse raise (err "assertion failed")
                ; l
             end
-            handle HOL_ERR {message = s, ...} => raise (err s)
+            handle HOL_ERR herr => raise (err (message_of herr))
          fun match_register (tm1, v1, _) (tm2, v2, v3) =
             let
                val _ = v3 ~~ v2 orelse raise ERR "match_register" "changed"
@@ -1668,10 +1680,10 @@ in
                                let
                                   val (h, t) =
                                      Lib.pluck no_free l
-                                     handle
-                                        HOL_ERR
-                                           {message = "predicate not satisfied",
-                                            ...} => (hd l, tl l)
+                                     handle (e as HOL_ERR herr) =>
+                                       if message_of herr = "predicate not satisfied"
+                                         then (hd l, tl l)
+                                       else raise e
                                   fun mtch x =
                                      let
                                         val s = match_register h x

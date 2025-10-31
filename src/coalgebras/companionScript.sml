@@ -883,7 +883,8 @@ Proof
         metis_tac[SUBSET_DEF])
     >- (rw[BIGUNION, Once SUBSET_DEF] >>
         pop_assum $ irule_at Any >>
-        qexists_tac ‘f'’ >> rw[] >>
+        rename [‘x f YY = _  ∧ monotone _ ∧ higher_compat _ _’] >>
+        qexists_tac ‘x’ >> rw[] >>
         rw[higher_compat_def, higher_monotone] >-
          (fs[compatible_def, function_def, endo_def, monotonic_def, lift_rel]) >>
         fs[GSYM set_B_def] >>

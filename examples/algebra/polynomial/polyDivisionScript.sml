@@ -4,25 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyDivision";
+Theory polyDivision
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  monoid group ring polynomial polyWeak polyRing
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-open monoidTheory groupTheory ringTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Polynomials Division over a Ring R[x] Documentation                       *)
 (* ------------------------------------------------------------------------- *)
@@ -1087,9 +1078,9 @@ val poly_mod_eq_zero = store_thm(
 To apply function equivalence, define the equivalence function f
 for the function identity with notation: (x == y) f <=> f x = f y.
 *)
-val pmod_def = Define`
+Definition pmod_def:
   pmod (r:'a ring) (z:'a poly) (p:'a poly) = p % z
-`;
+End
 
 val _ = overload_on ("pm", ``pmod (r:'a ring)``);
 (* This allows ``(p == q) (pm z)`` *)
@@ -1534,8 +1525,4 @@ val poly_eval_poly_mod_at_root = store_thm(
   rw[Abbr`t`]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

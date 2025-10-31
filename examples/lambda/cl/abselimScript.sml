@@ -1,6 +1,8 @@
-open HolKernel bossLib boolLib Parse termTheory chap2Theory chap3Theory reductionEval binderLib relationTheory
-
-val _ = new_theory "abselim"
+Theory abselim
+Ancestors
+  term chap2 chap3 relation
+Libs
+  reductionEval binderLib
 
 val _ = remove_ovl_mapping "LAM" {Name="LAM", Thy="labelledTerms"}
 val _ = clear_overloads_on "FV"
@@ -408,4 +410,3 @@ srw_tac [][]
 >- ( fsrw_tac [][K_def,LAM_eq_thm] )
 >- ( fsrw_tac [][] ) )
 
-val _ = export_theory ()

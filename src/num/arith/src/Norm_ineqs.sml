@@ -19,11 +19,10 @@ structure Norm_ineqs :> Norm_ineqs =
 struct
 
 
-open Arbint HolKernel Arith_cons RJBConv
-     Term_coeffs Thm_convs Norm_bool Norm_arith;
+open Arbint HolKernel Arith_cons
+     Term_coeffs Thm_convs Norm_bool Norm_arith Conv;
 
-infix THENC <<;
-
+infix <<;
 val op << = String.<
 
 fun failwith f = raise (mk_HOL_ERR "Norm_ineqs" f "")
@@ -131,7 +130,7 @@ val LESS_OR_EQ_GATHER_CONV =
       and tmr = build_arith (constr,bindr)
   in  SYM
        (((ADD_COEFFS_TO_LEQ_CONV (constc,bindc)) THENC
-         (ARGS_CONV (SORT_AND_GATHER_CONV THENC NORM_ZERO_AND_ONE_CONV)))
+         (BINOP_CONV (SORT_AND_GATHER_CONV THENC NORM_ZERO_AND_ONE_CONV)))
         (mk_leq (tml,tmr)))
   end
  ) handle (HOL_ERR _) => failwith "LESS_OR_EQ_GATHER_CONV"

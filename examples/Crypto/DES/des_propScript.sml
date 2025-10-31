@@ -3,21 +3,15 @@
 (*                                                                           *)
 (*  Author: Ruofan Yang                                                      *)
 (*===========================================================================*)
+Theory des_prop
+Ancestors
+  arithmetic pair fcp words list sorting pred_set combin des
+  measure probability extreal
+Libs
+  numLib fcpLib wordsLib listLib hurdUtils realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory numLib pairTheory fcpTheory fcpLib wordsTheory wordsLib
-     listTheory listLib sortingTheory pred_setTheory combinTheory hurdUtils;
-
-open desTheory;
-
-open measureTheory probabilityTheory;
-open extrealTheory;
-open realLib;
 
 val _ = guessing_word_lengths := true;
-val _ = new_theory "des_prop";
-
 val fcp_ss = std_ss ++ fcpLib.FCP_ss;
 
 Theorem compl_IIP:
@@ -1846,5 +1840,4 @@ Definition characterDES_def:
       XorR= GENLIST (λi. charapairDES X Yl i) (LENGTH Yl) in (X,XorR,Y)
 End
 
-val _ = export_theory();
 val _ = html_theory "des_prop";

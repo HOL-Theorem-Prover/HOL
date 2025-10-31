@@ -3,10 +3,10 @@
 (*
 quietdec := true;
 
-app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "whileTheory", "finite_mapTheory", 
+app load ["arithmeticTheory", "wordsTheory", "wordsLib", "pairTheory", "listTheory", "WhileTheory", "finite_mapTheory", 
           "pred_setSimps", "pred_setTheory", "preARMTheory", "CFLTheory"];
 
-open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory whileTheory 
+open HolKernel Parse boolLib bossLib numLib arithmeticTheory wordsTheory wordsLib pairTheory listTheory WhileTheory 
        pred_setSimps pred_setTheory finite_mapTheory preARMTheory CFLTheory;
 
 quietdec := false;

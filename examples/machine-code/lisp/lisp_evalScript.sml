@@ -1,7 +1,8 @@
-open HolKernel boolLib bossLib Parse; val _ = new_theory "lisp_eval";
-
-open compilerLib codegenLib decompilerLib;
-open lisp_opsTheory;
+Theory lisp_eval
+Ancestors
+  lisp_ops
+Libs
+  compilerLib codegenLib decompilerLib
 
 val _ = let
   val thms = DB.match [] ``SPEC ARM_MODEL``
@@ -443,6 +444,4 @@ val (thms,_,_) = compile_all ``
 
 val _ = map (fn (name,th) =>
   save_thm("SPEC_lisp_eval_" ^ name ^ "_thm",th)) thms
-
-val _ = export_theory();
 

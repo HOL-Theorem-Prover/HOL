@@ -68,16 +68,11 @@ Since a prime p cannot divide FACT (p-1), cancellation law applies, giving:
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "FLTnumber";
+Theory FLTnumber
+Ancestors
+  arithmetic pred_set divides gcd number combinatorics
 
 (* ------------------------------------------------------------------------- *)
-
-open arithmeticTheory pred_setTheory dividesTheory gcdTheory numberTheory
-     combinatoricsTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Number Theory Documentation                    *)
@@ -611,8 +606,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

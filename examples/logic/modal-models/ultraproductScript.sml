@@ -1,21 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open ultrafilterTheory;
-open chap1Theory;
-open pred_setTheory;
-open relationTheory;
-open arithmeticTheory;
-open set_relationTheory;
-open pairTheory;
-open listTheory;
-open rich_listTheory;
-open combinTheory;
-open folLangTheory;
-open folModelsTheory;
-open chap2_4Theory;
-open equiv_on_partitionTheory;
-
-val _ = new_theory "ultraproduct";
+Theory ultraproduct
+Ancestors
+  ultrafilter chap1 pred_set relation arithmetic set_relation
+  pair list rich_list combin folLang folModels chap2_4
+  equiv_on_partition
 
 val _ = temp_delsimps ["satis_def"]
 
@@ -1772,4 +1759,3 @@ Proof
 QED
 
 
-val _ = export_theory();

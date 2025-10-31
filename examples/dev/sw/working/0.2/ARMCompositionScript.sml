@@ -3,15 +3,16 @@
 quietdec := true;
 loadPath := (concat Globals.HOLDIR "/examples/dev/sw") :: !loadPath;
 
-app load ["pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory","prim_recTheory", "wordsTheory", "wordsLib", "preARMTheory"];
+app load ["pred_setSimps","pred_setTheory","WhileTheory","finite_mapTheory","rich_listTheory","prim_recTheory", "wordsTheory", "wordsLib", "preARMTheory"];
 
 quietdec := false;
 *)
+Theory ARMComposition
+Ancestors
+  pred_set arithmetic words pair list While finite_map preARM
+Libs
+  numLib pred_setSimps wordsLib
 
-open HolKernel Parse boolLib bossLib numLib pred_setSimps pred_setTheory wordsLib
-     arithmeticTheory wordsTheory pairTheory listTheory whileTheory finite_mapTheory preARMTheory;
-
-val _ = new_theory "ARMComposition";
 
 (*------------------------------------------------------------------------------------------------------*)
 (* Additional theorems for finite maps                                                                  *)
@@ -1793,4 +1794,3 @@ val WELL_FORMED_INSTB = Q.store_thm (
   );
 
 
-val _ = export_theory();

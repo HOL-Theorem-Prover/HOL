@@ -1,6 +1,8 @@
-open preamble while_langTheory while_lang_lemmasTheory std_logicTheory;
-
-val _ = new_theory "std_logic_completeness";
+Theory std_logic_completeness
+Ancestors
+  while_lang while_lang_lemmas std_logic
+Libs
+  preamble
 
 Theorem Hoare_strengthen:
   ∀P P' p Q. (∀s. P s ⇒ P' s) ∧ Hoare P' p Q ⇒ Hoare P p Q
@@ -109,4 +111,3 @@ Proof
   \\ fs [Hoare_terminates]
 QED
 
-val _ = export_theory();

@@ -101,11 +101,13 @@ QED
    |- !a. ~(0 < a) ==> ~(a = 0) ==> 0 < ~a
  *--------------------------------------------------------------------------*)
 
-val INT_NOTPOS0_NEG = store_thm("INT_NOTPOS0_NEG", ``!a. ~(0i<a) ==> ~(a=0i) ==> 0i<~a``,
+Theorem INT_NOTPOS0_NEG:   !a. ~(0i<a) ==> ~(a=0i) ==> 0i<~a
+Proof
         REPEAT STRIP_TAC THEN
         ONCE_REWRITE_TAC[GSYM INT_NEG_0] THEN
         REWRITE_TAC[INT_LT_NEG] THEN
-        PROVE_TAC[INT_LT_TOTAL] );
+        PROVE_TAC[INT_LT_TOTAL]
+QED
 
 (*--------------------------------------------------------------------------
    INT_NOT0_MUL : thm
@@ -162,61 +164,73 @@ QED
    |- !n. 0 < n ==> ~(n = 0)
  *--------------------------------------------------------------------------*)
 
-val LESS_IMP_NOT_0 = store_thm("LESS_IMP_NOT_0", ``!n:int. 0i<n ==> ~(n=0i)``,
+Theorem LESS_IMP_NOT_0:   !n:int. 0i<n ==> ~(n=0i)
+Proof
         GEN_TAC THEN
         ASM_CASES_TAC ``n=0i``
-        THEN RW_TAC int_ss[] );
+        THEN RW_TAC int_ss[]
+QED
 
 (*--------------------------------------------------------------------------
  *  INT_EQ_RMUL_EXP : thm
  *  |- !a b n. 0<n ==> ((a=b) = (a*n=b*n))
  *--------------------------------------------------------------------------*)
 
-val INT_EQ_RMUL_EXP = store_thm("INT_EQ_RMUL_EXP", ``!a:int b:int n:int. 0<n ==> ((a=b) = (a*n=b*n))``,
+Theorem INT_EQ_RMUL_EXP:   !a:int b:int n:int. 0<n ==> ((a=b) = (a*n=b*n))
+Proof
         REPEAT STRIP_TAC
         THEN EQ_TAC
         THEN ASSUME_TAC (prove(``0i<n ==> ~(n=0i)``, ASM_CASES_TAC ``n=0i`` THEN RW_TAC int_ss[]))
         THEN ASSUME_TAC (SPEC ``n:int`` (SPEC ``b:int`` (SPEC ``a:int`` INT_EQ_RMUL_IMP)))
-        THEN RW_TAC int_ss[] );
+        THEN RW_TAC int_ss[]
+QED
 
 (*--------------------------------------------------------------------------
    INT_LT_RMUL_EXP : thm
    |- !a b n. !a b n. 0 < n ==> ((a < b) = (a * n < b * n))
  *--------------------------------------------------------------------------*)
 
-val INT_LT_RMUL_EXP = store_thm("INT_LT_RMUL_EXP", ``!a:int b:int n:int. 0<n ==> ((a<b) = (a*n<b*n))``,
+Theorem INT_LT_RMUL_EXP:   !a:int b:int n:int. 0<n ==> ((a<b) = (a*n<b*n))
+Proof
         REPEAT STRIP_TAC THEN
         ASSUME_TAC (UNDISCH_ALL (GSYM (SPEC ``b:int`` (SPEC ``a:int`` (SPEC ``n:int`` INT_LT_MONO))))) THEN
-        RW_TAC int_ss[INT_MUL_SYM] );
+        RW_TAC int_ss[INT_MUL_SYM]
+QED
 
 (*--------------------------------------------------------------------------
    INT_GT_RMUL_EXP : thm
    |- !a b n. 0 < n ==> ((a > b) = (a * n > b * n))
  *--------------------------------------------------------------------------*)
 
-val INT_GT_RMUL_EXP = store_thm("INT_GT_RMUL_EXP", ``!a:int b:int n:int. 0<n ==> ((a>b) = (a*n>b*n))``,
+Theorem INT_GT_RMUL_EXP:   !a:int b:int n:int. 0<n ==> ((a>b) = (a*n>b*n))
+Proof
         REPEAT STRIP_TAC THEN
         REWRITE_TAC[int_gt] THEN
         ASSUME_TAC (UNDISCH_ALL (GSYM (SPEC ``a:int`` (SPEC ``b:int`` (SPEC ``n:int`` INT_LT_MONO))))) THEN
-        RW_TAC int_ss[INT_MUL_SYM] );
+        RW_TAC int_ss[INT_MUL_SYM]
+QED
 
 (*--------------------------------------------------------------------------
    INT_ABS_CALCULATE_NEG : thm
    |- !a. a<0 ==> (ABS(a) = ~a)
  *--------------------------------------------------------------------------*)
 
-val INT_ABS_CALCULATE_NEG = store_thm("INT_ABS_CALCULATE_NEG", ``!a. a<0 ==> (ABS(a) = ~a)``,
+Theorem INT_ABS_CALCULATE_NEG:   !a. a<0 ==> (ABS(a) = ~a)
+Proof
         GEN_TAC THEN
         STRIP_TAC THEN
-        RW_TAC int_ss[INT_ABS] );
+        RW_TAC int_ss[INT_ABS]
+QED
 
 (*--------------------------------------------------------------------------
    INT_ABS_CALCULATE_0 : thm
    |- ABS 0i = 0i
  *--------------------------------------------------------------------------*)
 
-val INT_ABS_CALCULATE_0 = store_thm("INT_ABS_CALCULATE_0", ``ABS 0i = 0i``,
-        RW_TAC int_ss[INT_ABS] );
+Theorem INT_ABS_CALCULATE_0:   ABS 0i = 0i
+Proof
+        RW_TAC int_ss[INT_ABS]
+QED
 
 Theorem INT_ABS_CALCULATE_POS: !a. 0<a ==> (ABS(a) = a)
 Proof

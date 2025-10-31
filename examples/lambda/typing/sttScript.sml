@@ -1,11 +1,8 @@
-open HolKernel boolLib Parse bossLib
-open binderLib nomsetTheory metisLib termTheory contextlistsTheory
-open chap3Theory
-open sortingTheory
-open appFOLDLTheory
-open pred_setTheory
-
-val _ = new_theory "stt";
+Theory stt
+Ancestors
+  nomset term contextlists chap3 sorting appFOLDL pred_set
+Libs
+  binderLib metisLib
 
 val _ = remove_ovl_mapping "B" {Name="B", Thy="chap2"}
 val _ = remove_ovl_mapping "C" {Name="C", Thy="chap2"}
@@ -547,4 +544,3 @@ valid_ctxt_def
 
 
 
-val _ = export_theory ()

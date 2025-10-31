@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib
-open blastLib stateLib
-open set_sepTheory progTheory temporal_stateTheory arm_stepTheory
+Theory arm_prog
+Ancestors
+  set_sep prog temporal_state arm_step
+Libs
+  blastLib stateLib
 
-val () = new_theory "arm_prog"
 val _ = ParseExtras.temp_loose_equality()
 (* ------------------------------------------------------------------------ *)
 
@@ -12,16 +13,18 @@ val _ =
       [["undefined"], ["CurrentCondition"], ["Encoding"]]
       arm_stepTheory.NextStateARM_def
 
-val arm_instr_def = Define`
+Definition arm_instr_def:
    arm_instr (a, i: word32) =
    { (arm_c_MEM a, arm_d_word8 ((7 >< 0) i));
      (arm_c_MEM (a + 1w), arm_d_word8 ((15 >< 8) i));
      (arm_c_MEM (a + 2w), arm_d_word8 ((23 >< 16) i));
-     (arm_c_MEM (a + 3w), arm_d_word8 ((31 >< 24) i)) }`
+     (arm_c_MEM (a + 3w), arm_d_word8 ((31 >< 24) i)) }
+End
 
-val ARM_MODEL_def = Define`
+Definition ARM_MODEL_def:
    ARM_MODEL = (STATE arm_proj, NEXT_REL (=) NextStateARM, arm_instr,
-                ($= :arm_state -> arm_state -> bool), (K F: arm_state -> bool))`
+                ($= :arm_state -> arm_state -> bool), (K F: arm_state -> bool))
+End
 
 val ARM_IMP_SPEC = Theory.save_thm ("ARM_IMP_SPEC",
    stateTheory.IMP_SPEC
@@ -53,42 +56,49 @@ val (arm_REGISTERS_def, arm_REGISTERS_INSERT) =
 val (arm_MEMORY_def, arm_MEMORY_INSERT) =
    stateLib.define_map_component ("arm_MEMORY", "mem", arm_MEM_def)
 
-val arm_WORD_def = Define`
+Definition arm_WORD_def:
    arm_WORD a (i: word32) =
    arm_MEM a ((7 >< 0) i) *
    arm_MEM (a + 1w) ((15 >< 8) i) *
    arm_MEM (a + 2w) ((23 >< 16) i) *
-   arm_MEM (a + 3w) ((31 >< 24) i)`;
+   arm_MEM (a + 3w) ((31 >< 24) i)
+End
 
-val arm_BE_WORD_def = Define`
+Definition arm_BE_WORD_def:
    arm_BE_WORD a (i: word32) =
    arm_MEM a ((31 >< 24) i) *
    arm_MEM (a + 1w) ((23 >< 16) i) *
    arm_MEM (a + 2w) ((15 >< 8) i) *
-   arm_MEM (a + 3w) ((7 >< 0) i)`;
+   arm_MEM (a + 3w) ((7 >< 0) i)
+End
 
-val arm_WORD_MEMORY_def = Define`
+Definition arm_WORD_MEMORY_def:
   arm_WORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}`
+  {BIGUNION { BIGUNION (arm_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}
+End
 
-val arm_BE_WORD_MEMORY_def = Define`
+Definition arm_BE_WORD_MEMORY_def:
   arm_BE_WORD_MEMORY dmem mem =
-  {BIGUNION { BIGUNION (arm_BE_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}`
+  {BIGUNION { BIGUNION (arm_BE_WORD a (mem a)) | a IN dmem /\ aligned 2 a}}
+End
 
-val arm_CONFIG_def = Define`
+Definition arm_CONFIG_def:
    arm_CONFIG (vfp, arch, bigend, thumb, mode) =
       arm_VFPExtension vfp *
       arm_Extensions Extension_Security F *
       arm_Architecture arch *
       arm_exception NoException * arm_CPSR_J F *
       arm_CPSR_E bigend * arm_CPSR_T thumb *
-      arm_CPSR_M mode * cond (GoodMode mode)`;
+      arm_CPSR_M mode * cond (GoodMode mode)
+End
 
-val arm_PC_def = Define`
-   arm_PC pc = arm_REG RName_PC pc * cond (aligned 2 pc)`;
+Definition arm_PC_def:
+   arm_PC pc = arm_REG RName_PC pc * cond (aligned 2 pc)
+End
 
-val aS_def = Define `
-   aS (n,z,c,v) = arm_CPSR_N n * arm_CPSR_Z z * arm_CPSR_C c * arm_CPSR_V v`;
+Definition aS_def:
+   aS (n,z,c,v) = arm_CPSR_N n * arm_CPSR_Z z * arm_CPSR_C c * arm_CPSR_V v
+End
 
 (* ------------------------------------------------------------------------ *)
 
@@ -402,4 +412,3 @@ val disjoint_arm_instr_thms = Theory.save_thm("disjoint_arm_instr_thms",
 
 (* ------------------------------------------------------------------------ *)
 
-val () = export_theory()

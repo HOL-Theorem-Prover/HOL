@@ -5,7 +5,7 @@ Libs
   HolKernel Parse boolLib
 
 val thy =
-    Binarymap.find(type_grammar.privileged_abbrevs (type_grammar()), "foo")
+    HOLdict.find(type_grammar.privileged_abbrevs (type_grammar()), "foo")
 
 val _ = disable_tyabbrev_printing (thy^"$foo")
 

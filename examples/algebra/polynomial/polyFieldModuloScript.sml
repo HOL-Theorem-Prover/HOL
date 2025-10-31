@@ -5,39 +5,19 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polyFieldModulo";
+Theory polyFieldModulo
+Ancestors
+  pred_set list arithmetic number combinatorics divides gcd
+  polynomial polyWeak polyRing polyField polyDivision
+  polyFieldDivision polyModuloRing polyRingModulo polyDivides
+  polyEval polyBinomial polyIrreducible polyRoot polyMonic
+  polyProduct monoid group ring field fieldMap fieldIdeal
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyFieldTheory;
-open polyDivisionTheory polyFieldDivisionTheory;
-open polyModuloRingTheory polyRingModuloTheory;
-open polyDividesTheory;
-open polyEvalTheory;
-open polyBinomialTheory;
-
-open polyIrreducibleTheory;
-open polyRootTheory;
-open polyMonicTheory;
-
-open polyProductTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
-open fieldMapTheory;
-open fieldIdealTheory;
-
 val _ = intLib.deprecate_int ();
 
 (* ------------------------------------------------------------------------- *)
@@ -2133,9 +2113,9 @@ val up_deg = store_thm(
 (* This is now |X| *)
 
 (* Lifting a polynomial *)
-val poly_lift_def = Define`
+Definition poly_lift_def:
   poly_lift (r:'a ring) (p:'a poly) = MAP up p
-`;
+End
 val _ = overload_on ("lift", ``poly_lift r``);
 
 (* poly_lift_def:
@@ -4948,13 +4928,13 @@ But (lift p) in (PolyRing (PolyModRing r z)) has a root X, where (lift p = MAP u
 *)
 
 (* Define the ring of constant polynomials *)
-val poly_mod_const_def = Define`
+Definition poly_mod_const_def:
     poly_mod_const (r:'a ring) (z:'a poly) =
     <| carrier := IMAGE up R;
            sum := <|carrier := IMAGE up R; op := $+z; id := #0z |>;
           prod := <|carrier := IMAGE up R; op := $*z; id := #1z |>
      |>
-`;
+End
 
 (* overload on constant polynomials of R[x]/z *)
 val _ = overload_on ("PolyModConst", ``\r z. poly_mod_const r z``);
@@ -5761,8 +5741,4 @@ val poly_mod_const_iso_field_alt = store_thm(
   rw_tac std_ss[poly_mod_const_iso_field, poly_irreducible_pmonic]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

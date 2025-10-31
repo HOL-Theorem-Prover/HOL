@@ -1,8 +1,8 @@
-open HolKernel boolLib bossLib
-open relation_extraTheory mmTheory
-open relation_extraLib
-
-val () = new_theory "mm_lemmas"
+Theory mm_lemmas
+Ancestors
+  relation_extra mm
+Libs
+  relation_extraLib
 
 (* -------------------------------------------------------------------------
    Helper tactics
@@ -2050,4 +2050,3 @@ QED
    End
    ------------------------------------------------------------------------- *)
 
-val () = export_theory()

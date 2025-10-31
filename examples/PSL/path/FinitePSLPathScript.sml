@@ -21,24 +21,15 @@
 quietdec := true;
 app load ["bossLib", "rich_listTheory", "intLib", "arithmeticTheory"];
 open listTheory rich_listTheory arithmeticTheory intLib;
-val _ = intLib.deprecate_int();
 quietdec := false;
 *)
 
-(******************************************************************************
- * Boilerplate needed for compilation
- ******************************************************************************)
-open HolKernel Parse boolLib bossLib;
+Theory FinitePSLPath
+Ancestors
+  list rich_list arithmetic
+Libs
+  intLib
 
-(******************************************************************************
- * Open theories
- ******************************************************************************)
-open listTheory rich_listTheory arithmeticTheory intLib;
-
-(******************************************************************************
- * Set default parsing to natural numbers rather than integers
- ******************************************************************************)
-val _ = intLib.deprecate_int();
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
@@ -55,15 +46,6 @@ val simp_list_ss  = simpLib.++ (list_ss,  numSimps.SUC_FILTER_ss);
  ******************************************************************************)
 val simp_arith_ss = simpLib.++ (arith_ss, numSimps.SUC_FILTER_ss);
 
-(******************************************************************************
- * Set default parsing to natural numbers rather than integers
- ******************************************************************************)
-val _ = intLib.deprecate_int();
-
-(******************************************************************************
- * Start a new theory called FinitePath
- ******************************************************************************)
-val _ = new_theory "FinitePSLPath";
 val _ = ParseExtras.temp_loose_equality()
 
 (******************************************************************************
@@ -75,29 +57,34 @@ val _ = overload_on ("<>", Term`APPEND`);
 (******************************************************************************
  * Concatenate a list of lists
  ******************************************************************************)
-val CONCAT_def =
-Define `(CONCAT [] = []) /\ (CONCAT(l::ll) = l <> CONCAT ll)`;
+Definition CONCAT_def:
+ (CONCAT [] = []) /\ (CONCAT(l::ll) = l <> CONCAT ll)
+End
 
 (******************************************************************************
  * HEAD (p0 p1 p2 p3 ...) = p0
  ******************************************************************************)
-val HEAD_def = Define `HEAD = list$HD`;
+Definition HEAD_def:   HEAD = list$HD
+End
 
 (******************************************************************************
  * REST (p0 p1 p2 p3 ...) = (p1 p2 p3 ...)
  ******************************************************************************)
-val REST_def = Define `REST = list$TL`;
+Definition REST_def:   REST = list$TL
+End
 
 (******************************************************************************
  * RESTN (p0 p1 p2 p3 ...) n = (pn p(n+1) p(n+2) ...)
  ******************************************************************************)
-val RESTN_def =
-Define `(RESTN p 0 = p) /\ (RESTN p (SUC n) = RESTN (REST p) n)`;
+Definition RESTN_def:
+ (RESTN p 0 = p) /\ (RESTN p (SUC n) = RESTN (REST p) n)
+End
 
 (******************************************************************************
  * ELEM (p0 p1 p2 p3 ...) n = pn
  ******************************************************************************)
-val ELEM_def = Define `ELEM p n = HEAD(RESTN p n)`;
+Definition ELEM_def:   ELEM p n = HEAD(RESTN p n)
+End
 
 val LENGTH_REST =
 store_thm
@@ -166,13 +153,13 @@ val _ = computeLib.add_funs[RESTN_AUX];
  * rich_listTheory.  SEG is only partially specified using
  * new_specification.
  ******************************************************************************)
-val SEL_REC_def =
-Define
-`(SEL_REC 0 n p = [])
+Definition SEL_REC_def:
+ (SEL_REC 0 n p = [])
 /\
 (SEL_REC (SUC m) 0 p = (HEAD p)::SEL_REC m 0 (REST p))
 /\
-(SEL_REC (SUC m) (SUC n) p = SEL_REC (SUC m) n (REST p))`;
+(SEL_REC (SUC m) (SUC n) p = SEL_REC (SUC m) n (REST p))
+End
 
 (******************************************************************************
  * SEL_REC m n p = [p(n); p(n+1); ... ; p(n+m-1)]
@@ -201,7 +188,8 @@ store_thm
 (******************************************************************************
  * SEL p (m,n) = [p m; ... ; p n]
  ******************************************************************************)
-val SEL_def = Define `SEL p (m,n) = SEL_REC (n-m+1) m p`;
+Definition SEL_def:   SEL p (m,n) = SEL_REC (n-m+1) m p
+End
 
 (******************************************************************************
  * RESTN (RESTN p m) n = RESTN p (m+n)
@@ -226,11 +214,11 @@ store_thm
 (******************************************************************************
  * CAT(w,p) creates a new path by concatenating w in front of p
  ******************************************************************************)
-val CAT_def =
-Define
-`(CAT([], p) = p)
+Definition CAT_def:
+ (CAT([], p) = p)
 /\
-(CAT((x::w), p) = x :: CAT(w,p))`;
+(CAT((x::w), p) = x :: CAT(w,p))
+End
 
 val ALL_EL_F =
 store_thm
@@ -766,5 +754,3 @@ val RESTN_LENGTH =
    ``!w. RESTN w (LENGTH w) = []``,
    Induct
     THEN RW_TAC list_ss [RESTN_def,REST_def]);
-
-val _ = export_theory();

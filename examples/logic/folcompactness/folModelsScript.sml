@@ -1,16 +1,13 @@
-open HolKernel Parse boolLib bossLib;
-
-open listTheory pred_setTheory
-open folLangTheory
-
-val _ = new_theory "folModels";
+Theory folModels
+Ancestors
+  list pred_set folLang
 
 val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
 
-val _ = Datatype‘
+Datatype:
   model = <| Dom : α set ; Fun : num -> α list -> α ;
              Pred : num -> α list -> bool |>
-’;
+End
 
 Definition valuation_def:
   valuation M v ⇔ ∀n. v n ∈ M.Dom
@@ -301,4 +298,3 @@ Proof
   fs[valuation_def] >> fs[Abbr‘Mt’] >> metis_tac[]
 QED
 
-val _ = export_theory();

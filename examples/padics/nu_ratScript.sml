@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open nu_natTheory ratTheory integerTheory fracTheory intExtensionTheory
-
-val _ = new_theory "nu_rat";
+Theory nu_rat
+Ancestors
+  nu_nat rat integer frac intExtension
 
 val _ = temp_set_fixity "divides" (Infix(NONASSOC, 450))
 
@@ -326,4 +324,3 @@ Proof
   >> gs[]
 QED
 
-val _ = export_theory();

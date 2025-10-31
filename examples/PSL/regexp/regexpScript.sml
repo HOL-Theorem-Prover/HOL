@@ -7,12 +7,13 @@
 (*
 app load ["bossLib", "rich_listTheory", "metisLib"];
 *)
+Theory regexp
+Ancestors
+  pair combin list rich_list arithmetic
+Libs
+  metisLib
 
-open HolKernel Parse boolLib;
-open bossLib metisLib pairTheory combinTheory listTheory rich_listTheory
-     arithmeticTheory;
 
-val () = new_theory "regexp";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -98,9 +99,10 @@ val EVERY_ELIM_THM = prove
 (* Concatenate a list of lists                                               *)
 (*---------------------------------------------------------------------------*)
 
-val CONCAT_def = Define
-  `(CONCAT []     = []) /\
-   (CONCAT(l::ll) = l <> CONCAT ll)`;
+Definition CONCAT_def:
+   (CONCAT []     = []) /\
+   (CONCAT(l::ll) = l <> CONCAT ll)
+End
 
 val CONCAT_EQ_NIL = prove
   (``!wlist. (CONCAT wlist = []) = EVERY NULL wlist``,
@@ -118,11 +120,13 @@ val CONCAT_APPEND_DISTRIB = prove
 (* All ways to split a list in 2 pieces                                      *)
 (*---------------------------------------------------------------------------*)
 
-val ALL_SPLITS_def = Define
-  `(ALL_SPLITS (l,[]) = [(l,[])]) /\
-   (ALL_SPLITS (l,h::t) = (l,h::t)::ALL_SPLITS(l<>[h],t))`;
+Definition ALL_SPLITS_def:
+   (ALL_SPLITS (l,[]) = [(l,[])]) /\
+   (ALL_SPLITS (l,h::t) = (l,h::t)::ALL_SPLITS(l<>[h],t))
+End
 
-val SPLITS_def = Define `SPLITS l = ALL_SPLITS ([],l)`;
+Definition SPLITS_def:   SPLITS l = ALL_SPLITS ([],l)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Testing
@@ -202,19 +206,23 @@ val MEM_ALL_SPLITS_LENGTH = prove
 (* Modified by MJCG from KXS version to match Accellera PSL                  *)
 (*---------------------------------------------------------------------------*)
 
-val () = Hol_datatype
-  `regexp =
-     Atom of ('s -> bool)                 (* Boolean expression       *)
-   | Cat of regexp => regexp              (* Concatenation            *)
-   | Fuse of regexp => regexp             (* Fusion                   *)
-   | Or of regexp => regexp               (* Disjunction              *)
-   | And of regexp => regexp              (* Conjunction              *)
-   | Repeat of regexp                     (* Iterated concat, >= 0    *)
-   | Prefix of regexp`;                   (* Prefix                   *)
+Datatype:
+   regexp =
+     Atom ('s -> bool)              (* Boolean expression       *)
+   | Cat regexp regexp              (* Concatenation            *)
+   | Fuse regexp regexp             (* Fusion                   *)
+   | Or regexp regexp               (* Disjunction              *)
+   | And regexp regexp              (* Conjunction              *)
+   | Repeat regexp                  (* Iterated concat, >= 0    *)
+   | Prefix regexp                  (* Prefix                   *)
+End
 
-val Dot_def  = Define `Dot  = Atom (\x : 'a. T)`;
-val Zero_def = Define `Zero = Atom (\x : 'a. F)`;
-val One_def  = Define `One = Repeat Zero`;
+Definition Dot_def:    Dot  = Atom (\x : 'a. T)
+End
+Definition Zero_def:   Zero = Atom (\x : 'a. F)
+End
+Definition One_def:    One = Repeat Zero
+End
 
 (*---------------------------------------------------------------------------*)
 (* Following mysterious invocations remove old-style syntax for conditionals *)
@@ -238,9 +246,8 @@ val _ = set_fixity "%" (Infixr 602);
 (* sem r w means regular expression r matches word w (represented as a list) *)
 (*---------------------------------------------------------------------------*)
 
-val sem_def =
- Define
-  `(sem (Atom b) w   =
+Definition sem_def:
+   (sem (Atom b) w   =
      (LENGTH w = 1) /\ b(HD w))                                           /\
    (sem (r1#r2) w    =
      ?w1 w2. (w = w1<>w2) /\ sem r1 w1 /\ sem r2 w2)                      /\
@@ -253,7 +260,8 @@ val sem_def =
    (sem (Repeat r) w =
      ?wlist. (w = CONCAT wlist) /\ EVERY (sem r) wlist)                   /\
    (sem (Prefix r) w =
-     ?w'. sem r (w <> w'))`;
+     ?w'. sem r (w <> w'))
+End
 
 val sem_Dot = store_thm
   ("sem_Dot",
@@ -419,5 +427,3 @@ val sem_match = store_thm
       Q.EXISTS_TAC `p_1::wlist` THEN RW_TAC list_ss [CONCAT_def] THEN
       PROVE_TAC [MEM_TL,SPLITS_NON_EMPTY,SPLITS_APPEND,IN_DEF]]],
     RW_TAC std_ss [sem_def, match_def]]);
-
-val () = export_theory ();

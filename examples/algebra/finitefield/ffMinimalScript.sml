@@ -4,46 +4,20 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "ffMinimal";
+Theory ffMinimal
+Ancestors
+  arithmetic pred_set list number combinatorics divides gcd
+  gcdset ffBasic ffAdvanced ffPoly ffUnity VectorSpace SpanSpace
+  LinearIndep FiniteVSpace monoid group ring field fieldOrder
+  fieldInstances polynomial polyWeak polyRing polyDivision
+  polyBinomial polyMonic polyEval polyDivides polyRoot fieldMap
+  polyField polyFieldDivision polyFieldModulo polyIrreducible
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open arithmeticTheory pred_setTheory listTheory numberTheory combinatoricsTheory
-     dividesTheory gcdTheory gcdsetTheory;
-
-(* Get dependent theories local *)
-open ffBasicTheory;
-open ffAdvancedTheory;
-open ffPolyTheory;
-open ffUnityTheory;
-
-open VectorSpaceTheory;
-open SpanSpaceTheory;
-open LinearIndepTheory;
-open FiniteVSpaceTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-open fieldOrderTheory;
-open fieldInstancesTheory;
-
-open polynomialTheory polyWeakTheory polyRingTheory polyDivisionTheory polyBinomialTheory;
-open polyMonicTheory polyEvalTheory;
-open polyDividesTheory;
-open polyRootTheory;
-
-open fieldMapTheory;
-open polyFieldTheory;
-open polyFieldDivisionTheory;
-open polyFieldModuloTheory;
-open polyIrreducibleTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Minimal Polynomial Documentation                             *)
 (* ------------------------------------------------------------------------- *)
@@ -200,9 +174,9 @@ This last result shows in particular that m(x) is the only irreducible polynomia
 *)
 
 (* Define a basis compose of element powers *)
-val element_powers_basis_def = Define`
+Definition element_powers_basis_def:
    element_powers_basis (r:'a ring) (x:'a) n = GENLIST (\j. x ** j) (SUC n)
-`;
+End
 (* overload on element powers basis *)
 val _ = overload_on("ebasis", ``element_powers_basis r``);
 
@@ -530,22 +504,22 @@ val subfield_monic_of_element = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of monic subfield polynomials having an element as a root *)
-val subfield_monics_of_element_def = Define `
+Definition subfield_monics_of_element_def:
     subfield_monics_of_element (r:'a ring) (s:'a ring) (x: 'a) =
       { p | poly_monic s p /\ 0 < deg p /\ root p x }
-`;
+End
 
 (* Define the set of minimial polynomials of an element in a subfield *)
-val poly_minimals_def = Define `
+Definition poly_minimals_def:
     poly_minimals (r:'a ring) (s:'a ring) (x: 'a) =
        preimage deg (subfield_monics_of_element r s x)
           (MIN_SET (IMAGE deg (subfield_monics_of_element r s x)))
-`;
+End
 
 (* Define minimial polynomial of an element in a subfield *)
-val poly_minimal_def = Define `
+Definition poly_minimal_def:
     poly_minimal (r:'a ring) (s:'a ring) (x: 'a) = CHOICE (poly_minimals r s x)
-`;
+End
 
 (* Define overloads *)
 val _ = overload_on("subfield_monics", ``subfield_monics_of_element r s``);
@@ -1500,13 +1474,13 @@ val poly_ring_ideal_monic_gen_unique = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Make an ideal from a set *)
-val set_to_ideal_def = Define `
+Definition set_to_ideal_def:
    set_to_ideal (r:'a ring) (s:'a -> bool) =
       <| carrier := s;
              sum := <| carrier := s; op := $+; id := #0 |>;
             prod := <| carrier := s; op := $*; id := #1 |>
        |>
-`;
+End
 (* overload set_to_ideal *)
 val _ = overload_on("sideal", ``set_to_ideal r``);
 
@@ -1578,8 +1552,4 @@ g `!r:'a ring. Ring r ==> !z. z IN R ==>
 *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

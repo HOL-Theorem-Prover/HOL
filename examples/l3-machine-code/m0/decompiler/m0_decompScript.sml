@@ -1,8 +1,7 @@
-open HolKernel Parse boolLib bossLib;
-open m0_progTheory
+Theory m0_decomp
+Ancestors
+  m0_prog
 
-val _ = new_theory "m0_decomp";
+Definition m0_COUNT_def:   m0_COUNT count = m0_count count * m0_CONFIG (F, F)
+End
 
-val m0_COUNT_def = Define `m0_COUNT count = m0_count count * m0_CONFIG (F, F)`
-
-val _ = export_theory()

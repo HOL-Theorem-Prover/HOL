@@ -23,21 +23,11 @@ This is a combinatorial using Group action, via Fixed Points Congruence of Zp.
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "FLTfixedpoint";
+Theory FLTfixedpoint
+Ancestors
+  arithmetic pred_set divides number combinatorics cycle group
 
 (* ------------------------------------------------------------------------- *)
-
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory dividesTheory numberTheory
-     combinatoricsTheory;
-
-open cycleTheory;
-
-open groupTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Action Documentation                           *)
@@ -347,8 +337,4 @@ QED
 (* Part 4: End ------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

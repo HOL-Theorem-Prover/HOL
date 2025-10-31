@@ -8,16 +8,10 @@
     due to the difference between
       how substitutions are defined
         in HOL library and in Forster etc.'s Coq proof *)
+Theory AbstractSubstMachine
+Ancestors
+  arithmetic list relation combin Prelims weak_CBV Programs
 
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open listTheory relationTheory combinTheory;
-
-open PrelimsTheory;
-open weak_CBVTheory;
-open ProgramsTheory;
-
-val _ = new_theory "AbstractSubstMachine";
 
 Theorem jumpTarget_correct_conc:
   ∀s c. jumpTarget 0 [] (compile s ++ [retT] ++ c) = SOME (compile s, c)
@@ -777,4 +771,3 @@ Proof
   fs[tc] >> metis_tac[]
 QED
 
-val _ = export_theory ()

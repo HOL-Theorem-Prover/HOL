@@ -7,15 +7,13 @@
 (* AUTHOR        : (c) Chun Tian, University of Bologna                       *)
 (* DATE          : 2017                                                       *)
 (* ========================================================================== *)
+Theory BisimulationUpto
+Ancestors
+  relation CCS StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr
+  ObsCongrLaws
+Libs
+  CCSLib StrongEQLib WeakEQLib ObsCongrLib
 
-open HolKernel Parse boolLib bossLib;
-
-open relationTheory CCSLib CCSTheory;
-open StrongEQTheory StrongEQLib StrongLawsTheory;
-open WeakEQTheory WeakEQLib WeakLawsTheory;
-open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory;
-
-val _ = new_theory "BisimulationUpto";
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1195,7 +1193,6 @@ val OBS_CONGR_BY_BISIM_UPTO = store_thm (
  >> irule (REWRITE_RULE [RSUBSET] OBS_BISIM_UPTO_THM)
  >> Q.EXISTS_TAC `Obsm` >> art []);
 
-val _ = export_theory ();
 val _ = html_theory "BisimulationUpto";
 
 (* Bibliography:

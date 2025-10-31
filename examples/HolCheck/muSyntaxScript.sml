@@ -1,25 +1,9 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("muSyntax")
-
-
-open bossLib
-open pairTheory
-open pairLib
-open pairTools
-open pairSyntax
-open pred_setTheory
-open pred_setLib
-open listTheory
-open stringTheory
-open sumTheory
-open simpLib
-open stringLib
-open numLib
-open metisLib
-open ksTheory
-open setLemmasTheory
-open reachTheory
+Theory muSyntax
+Ancestors
+  pair pred_set list string sum ks setLemmas reach
+Libs
+  pairLib pairTools pairSyntax pred_setLib simpLib stringLib
+  numLib metisLib
 
 infix && infix 8 by
 
@@ -49,7 +33,8 @@ val tsimps_mu = tsimps ``:'prop mu``;
 
 
 val mu_size_def = snd (TypeBase.size_of ``:'prop mu``)
-val mu_size2_def = Define `mu_size2 (f: 'prop mu) = mu_size (\(a:('prop)).0) f`
+Definition mu_size2_def:   mu_size2 (f: 'prop mu) = mu_size (\(a:('prop)).0) f
+End
 
 val _ = add_rule
     {term_name = "AP", fixity = Prefix 950, (* 950 is tighter than ~ *)
@@ -94,7 +79,7 @@ val _ = add_rule {term_name = "nu", fixity = Prefix 2,
 (* defns for checking well-formedness of a mu-formula (bound vars must occur +vely within its scope) *)
 
 (* RVNEG(f,Q) == in f, all free ocurrances of Q are negated *)
-val RVNEG_def = save_thm("RVNEG_def",Define`
+Definition RVNEG_def:
 (RVNEG rv (T:'prop mu) = (T:'prop mu)) /\
 (RVNEG rv F = F) /\
 (RVNEG rv (f /\ g) = (RVNEG rv f) /\ (RVNEG rv g)) /\
@@ -105,7 +90,8 @@ val RVNEG_def = save_thm("RVNEG_def",Define`
 (RVNEG rv ([[a]] f) = [[a]] (RVNEG rv f)) /\
 (RVNEG rv (mu Q .. f) = if (rv=Q) then (mu Q .. f) else (mu Q .. (RVNEG rv f))) /\
 (RVNEG rv (nu Q .. f) = if (rv=Q) then (nu Q .. f) else (nu Q .. (RVNEG rv f))) /\
-(RVNEG rv (~f) = ~(RVNEG rv f))`)
+(RVNEG rv (~f) = ~(RVNEG rv f))
+End
 
 val mu_pnf = Hol_defn "NNF"  `
 (NNF (T:'prop mu) = (T:'prop mu)) /\
@@ -130,7 +116,7 @@ val mu_pnf = Hol_defn "NNF"  `
 (NNF (~(mu Q.. f)) = nu Q.. (NNF(RVNEG Q (~f)))) /\
 (NNF (~(nu Q.. f)) = mu Q.. (NNF(RVNEG Q (~f))))`
 
-val mu_pstv_size_def = Define`
+Definition mu_pstv_size_def:
 (mu_pstv_size (T:'prop mu) = mu_size2 (T: 'prop mu)) /\
 (mu_pstv_size (F:'prop mu) = mu_size2 (F: 'prop mu)) /\
 (mu_pstv_size (f /\ g) = 1+ (mu_pstv_size f + mu_pstv_size g)) /\
@@ -141,7 +127,8 @@ val mu_pstv_size_def = Define`
 (mu_pstv_size ([[(a:string)]] f) = 1+ (mu_pstv_size f)) /\
 (mu_pstv_size (mu (Q:string) .. f) = 1+ (STRLEN Q + mu_pstv_size f)) /\
 (mu_pstv_size (nu (Q:string) .. f) = 1+ (STRLEN Q + mu_pstv_size f)) /\
-(mu_pstv_size (~f) = mu_pstv_size f)`
+(mu_pstv_size (~f) = mu_pstv_size f)
+End
 
 val mu_pstv_size_lemma1 = prove(``!f Q. mu_pstv_size (RVNEG Q f) = mu_pstv_size f``,
   Induct_on `f` THEN RW_TAC std_ss [mu_pstv_size_def,RVNEG_def] THEN RW_TAC arith_ss [mu_pstv_size_def,RVNEG_def])
@@ -214,7 +201,7 @@ val ALLV_def = save_thm("ALLV_def",Define `
 
 val CLOSED_def = save_thm("CLOSED_def",Define `CLOSED (f:'prop mu) = (FV f = {})`)
 
-val IS_PROP_def = Define `
+Definition IS_PROP_def:
 (IS_PROP (T:'prop mu) = T) /\
 (IS_PROP F = T) /\
 (IS_PROP (~f) = IS_PROP f) /\
@@ -225,9 +212,10 @@ val IS_PROP_def = Define `
 (IS_PROP (<<a>> f) = F) /\
 (IS_PROP ([[a]] f) = F) /\
 (IS_PROP (mu Q.. f) =  F)  /\
-(IS_PROP (nu Q.. f) =  F)`
+(IS_PROP (nu Q.. f) =  F)
+End
 
-val AP_SUBST_def = Define `
+Definition AP_SUBST_def:
 (AP_SUBST g ap (T:'prop mu) = (T:'prop mu)) /\
 (AP_SUBST g ap F = F) /\
 (AP_SUBST g ap (~f) = ~(AP_SUBST g ap f)) /\
@@ -238,7 +226,8 @@ val AP_SUBST_def = Define `
 (AP_SUBST g ap (<<a>> f) = <<a>> (AP_SUBST g ap f)) /\
 (AP_SUBST g ap ([[a]] f) = [[a]] (AP_SUBST g ap f)) /\
 (AP_SUBST g ap (mu Q.. f) = (mu Q.. (AP_SUBST g ap f)))  /\
-(AP_SUBST g ap (nu Q.. f) =  (nu Q.. (AP_SUBST g ap f)))`
+(AP_SUBST g ap (nu Q.. f) =  (nu Q.. (AP_SUBST g ap f)))
+End
 
 val RVNEG_SYM = store_thm("RVNEG_SYM",
   ``!Q Q' (f:'prop mu). RVNEG Q (RVNEG Q' f) = RVNEG Q' (RVNEG Q f)``,
@@ -649,5 +638,3 @@ THEN CONJ_TAC THENL [
  THEN IMP_RES_TAC SUBF_NEG2
  THEN METIS_TAC [ALLV_SUBF,ALLV_NNF]
 ]))
-
-val _ = export_theory()

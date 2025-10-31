@@ -259,7 +259,11 @@ in
    "val release ="  --> ("val release = "^quote release_string^"\n"),
    "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n"),
    "val MV =" -->       ("val MV = "^quote MV^"\n"),
-   "val CP =" -->       ("val CP = "^quote CP^"\n")
+   "val CP =" -->       ("val CP = "^quote CP^"\n"),
+   "val haveWord64 ="-->("val haveWord64 = "^
+                         Bool.toString
+                           (List.exists (fn (s, _) => s = "Word64")
+                                        (#allStruct PolyML.globalNameSpace ())))
   ];
   use destfile
 end;

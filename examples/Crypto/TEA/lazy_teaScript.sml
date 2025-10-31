@@ -6,26 +6,23 @@
 app load ["wordsLib","llistTheory","teaTheory"];
 quietdec := true;
 *)
-open HolKernel Parse boolLib bossLib wordsLib
-     wordsTheory pairTheory arithmeticTheory
-     llistTheory optionTheory teaTheory;
+Theory lazy_tea
+Ancestors
+  words pair arithmetic llist option tea
+Libs
+  wordsLib
+
 (*
 quietdec := false;
 *)
 
 (*---------------------------------------------------------------------------*)
-(* Create the theory.                                                        *)
-(*---------------------------------------------------------------------------*)
-
-val _ = new_theory "lazy_tea";
-
-(*---------------------------------------------------------------------------*)
 (* Support for defining a stream of Round computations.                      *)
 (*---------------------------------------------------------------------------*)
 
-val RoundFun_def =
- Define
-   `RoundFun (s: state) = SOME (Round s, FST (Round s))`;
+Definition RoundFun_def:
+    RoundFun (s: state) = SOME (Round s, FST (Round s))
+End
 
 val StreamG_def = new_specification
  ("StreamG",
@@ -49,9 +46,9 @@ val LNTH_FWD_UNROLL = Q.prove
 (* Decryption                                                                *)
 (*---------------------------------------------------------------------------*)
 
-val InvRoundFun_def =
- Define
-   `InvRoundFun (s: state) = SOME (InvRound s, FST (InvRound s))`;
+Definition InvRoundFun_def:
+    InvRoundFun (s: state) = SOME (InvRound s, FST (InvRound s))
+End
 
 val InvStreamG_def = new_specification
  ("InvStreamG",
@@ -71,13 +68,13 @@ val LNTH_BWD_UNROLL = Q.prove
 (* Encrypt and Decrypt                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val lazy_teaEncrypt_def =
- Define
-   `lazy_teaEncrypt keys txt = THE(LNTH 31 (StreamG(txt,keys,0w)))`;
+Definition lazy_teaEncrypt_def:
+    lazy_teaEncrypt keys txt = THE(LNTH 31 (StreamG(txt,keys,0w)))
+End
 
-val lazy_teaDecrypt_def =
- Define
-  `lazy_teaDecrypt keys txt = THE(LNTH 31 (InvStreamG(txt,keys,DELTA << 5)))`;
+Definition lazy_teaDecrypt_def:
+   lazy_teaDecrypt keys txt = THE(LNTH 31 (InvStreamG(txt,keys,DELTA << 5)))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Main lemmas                                                               *)
@@ -106,5 +103,3 @@ val lazy_tea_correct = Q.store_thm
      LNTH_FWD_UNROLL,LNTH_BWD_UNROLL,
      GSYM teaEncrypt_lemma,GSYM teaDecrypt_lemma] THEN
   METIS_TAC [tea_correct]);
-
-val _ = export_theory();

@@ -33,16 +33,12 @@ quietdec := false;
 (*-----------------------------------------------------------------------------
   Boilerplate needed for compilation
 -----------------------------------------------------------------------------*)
-open HolKernel Parse boolLib bossLib metisLib;
-
-
-(* ---------------------------------------------------------------
-   Open theories
---------------------------------------------------------------- *)
-open word32Theory boothTheory compile metisLib intLib
-     vsynth arithmeticTheory inlineCompile
-     fpgaCodeGenerator;
-
+Theory boothDev
+Ancestors
+  word32 booth arithmetic
+Libs
+  metisLib compile metisLib intLib vsynth inlineCompile
+  fpgaCodeGenerator
 
 (*-----------------------------------------------------------------------------
   Set default parsing to natural numbers rather than integers
@@ -53,10 +49,6 @@ val _ = intLib.deprecate_int();
 (* END BOILERPLATE                                                           *)
 (*---------------------------------------------------------------------------*)
 
-(*---------------------------------------------------------------------------*)
-(* Start new theory "boothDev"                                               *)
-(*---------------------------------------------------------------------------*)
-val _ = new_theory "boothDev";
 infixr 3 THENR;
 val _ = type_abbrev("word",``:word32``);
 
@@ -360,7 +352,8 @@ val ALU_EQ = store_thm("ALU_EQ",
 (* ---------------------------------------------------------------
    T2B converts a tuple into a state (type state_BOOTH)
 --------------------------------------------------------------- *)
-val T2B_def = Define `T2B(a,b,c,d,e,f) = BOOTH a b c d e f`;
+Definition T2B_def:   T2B(a,b,c,d,e,f) = BOOTH a b c d e f
+End
 
 
 (* ---------------------------------------------------------------
@@ -403,9 +396,10 @@ val NEXT_EQ = store_thm("NEXT_EQ",
 (* ---------------------------------------------
    (fEXP f n) applies f n times to some input
 --------------------------------------------- *)
-val fEXP_def = Define
-  `(fEXP f 0 = (\x.x)) /\
-   (fEXP f (SUC n) = ((fEXP f n) o f))`;
+Definition fEXP_def:
+   (fEXP f 0 = (\x.x)) /\
+   (fEXP f (SUC n) = ((fEXP f n) o f))
+End
 
 (* ---------------------------------------------
    fEXP_LEMMA
@@ -517,9 +511,9 @@ val BOOTHMULTIPLY_EQ = store_thm("BOOTHMULTIPLY_EQ",
     |- MULT32(w1,w2) = w1 * w2
    to avoid pretty printer problems
 --------------------------------------------------------------- *)
-val MULT32_def =
- Define
-  `MULT32(w1,w2) = w1 * w2`;
+Definition MULT32_def:
+   MULT32(w1,w2) = w1 * w2
+End
 
 (* ---------------------------------------------------------------
    MULTd = MULT32
@@ -589,5 +583,3 @@ printToFile "MULTd_SIM.vl" (MAKE_SIMULATION name thm period stimulus dump_all);
 (* Temporary hack to work around a system prettyprinter bug                  *)
 (*****************************************************************************)
 val _ = temp_overload_on(" * ", numSyntax.mult_tm);
-
-val _ = export_theory();

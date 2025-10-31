@@ -1,15 +1,15 @@
 (*  properties of the next function *)
 (*  Author: Oliver Schwarz          *)
+Theory user_lemma_arm_next
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper user_lemma_basics
+  user_lemma_primitive_operations user_lemma_instructions words
+Libs
+  proofManagerLib tacticsLib ARM_proverLib ARM_prover_toolsLib
+  wordsLib
 
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory;
-open tacticsLib ARM_proverLib ARM_prover_toolsLib;
-open user_lemma_basicsTheory user_lemma_primitive_operationsTheory;
-open user_lemma_instructionsTheory;
-open wordsTheory wordsLib;
 
-val _ =  new_theory("user_lemma_arm_next");
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = temp_overload_on ("return", ``constT``);
@@ -569,4 +569,3 @@ val mmu_arm_next_comb_thm = store_thm(
 
 
 
-val _ = export_theory();

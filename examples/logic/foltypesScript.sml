@@ -1,9 +1,8 @@
-open HolKernel boolLib Parse bossLib
-
-open binderLib nomdatatype nomsetTheory boolSimps
-     pred_setTheory listTheory quotientLib
-
-val _ = new_theory "foltypes"
+Theory foltypes
+Ancestors
+  nomset pred_set list
+Libs
+  binderLib nomdatatype boolSimps quotientLib
 
 Datatype:
   foterm = V string
@@ -134,10 +133,10 @@ Proof
        listpm_MAP]
 QED
 
-val _ = Datatype‘
+Datatype:
   raw_fof = imp0 raw_fof raw_fof | raw_falsity | rawP string (foterm list)
           | rawALL string raw_fof
-’;
+End
 
 Definition rawfpm_def[simp]:
   (rawfpm pi (imp0 rf1 rf2) = imp0 (rawfpm pi rf1) (rawfpm pi rf2)) ∧
@@ -449,4 +448,3 @@ val lifted_results = define_equivalence_type
                faeq_ALL_respects, faeq_rawfv]
   };
 
-val _ = export_theory();

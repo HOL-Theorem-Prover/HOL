@@ -5,59 +5,43 @@ app load
  "ksTheory", "numLib", "setLemmasTheory", "muSyntaxTheory", "muTheory", "res_quanLib",
  "envTheory", "ctlTheory", "metisLib", "res_quanLib"];
 *)
+Theory ctl2mu
+Ancestors
+  pair pred_set list rich_list string sum ks setLemmas muSyntax
+  mu env ctl
+Libs
+  pairLib pairTools pairSyntax pred_setLib stringLib simpLib
+  numLib res_quanLib metisLib res_quanLib
 
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "ctl2mu";
-
-open pairTheory;
-open pairLib;
-open pairTools;
-open pairSyntax;
-open pred_setTheory;
-open pred_setLib;
-open stringLib;
-open listTheory;
-open rich_listTheory;
-open simpLib;
-open stringTheory;
-open sumTheory;
-open ksTheory;
-open numLib;
-open setLemmasTheory;
-open muSyntaxTheory
-open muTheory;
-open res_quanLib
-open envTheory
-open ctlTheory
-open metisLib
-open res_quanLib
 
 val _ = numLib.temp_prefer_num();
 
 fun tsimps ty =
     let val {convs,rewrs} = TypeBase.simpls_of ty in rewrs end;
 
-val BEXP2MU_def = Define `
+Definition BEXP2MU_def:
 (BEXP2MU (B_TRUE: 'prop bexp) = (TR:'prop mu)) /\
 (BEXP2MU (B_PROP (b:'prop)) = (AP (b:'prop))) /\
 (BEXP2MU (B_NOT be) = ~(BEXP2MU be)) /\
-(BEXP2MU (B_AND(be1,be2)) = (BEXP2MU be1) /\ (BEXP2MU be2))`;
+(BEXP2MU (B_AND(be1,be2)) = (BEXP2MU be1) /\ (BEXP2MU be2))
+End
 
-val CTL2MU_def = Define `
+Definition CTL2MU_def:
         (CTL2MU (C_BOOL b) = BEXP2MU b) /\
         (CTL2MU (C_NOT f)  = ~(CTL2MU f)) /\
         (CTL2MU (C_AND(f,g))  = (CTL2MU f) /\ (CTL2MU g )) /\
         (CTL2MU (C_EX f)  = <<".">> (CTL2MU f)) /\
         (CTL2MU (C_EG f)  = nu "Q" .. ((CTL2MU f ) /\ <<".">> (RV "Q"))) /\
-        (CTL2MU (C_EU(f,g))  = mu "Q" .. ((CTL2MU g) \/ ((CTL2MU f) /\ <<".">> (RV "Q"))))`;
+        (CTL2MU (C_EU(f,g))  = mu "Q" .. ((CTL2MU g) \/ ((CTL2MU f) /\ <<".">> (RV "Q"))))
+End
 
-val ctl2muks_def = Define `ctl2muks (M : ('prop,'state) kripke_structure) =
+Definition ctl2muks_def:   ctl2muks (M : ('prop,'state) kripke_structure) =
     <| S  := M.S;
        S0 := M.S0;
        T  := (\q. M.R);
        ap := M.P;
-       L  := M.L |>`;
+       L  := M.L |>
+End
 
 val REST_RESTN = save_thm("REST_RESTN",prove(``!p. REST p = RESTN p (1:num)``,
 Induct_on `p` THEN REWRITE_TAC [REST_def,RESTN_def,DECIDE ``1 = SUC 0``]));
@@ -144,9 +128,11 @@ THEN REPEAT STRIP_TAC THENL [
    THEN Q.PAT_ASSUM `!j'. C_SEM M f (ELEM (INFINITE f') j')`
     (fn t => REWRITE_TAC [SIMP_RULE arith_ss [ELEM_def,RESTN_INFINITE,HEAD_def] (SPEC ``j:num`` t)])]]]);
 
-val Nf2 = Define `(Nf2 (R:'state # 'state -> bool) (s:'state) (0:num) = s) /\ (Nf2 R s (SUC n) = (@r. R(Nf2 R s n,r)))`;
+Definition Nf2:   (Nf2 (R:'state # 'state -> bool) (s:'state) (0:num) = s) /\ (Nf2 R s (SUC n) = (@r. R(Nf2 R s n,r)))
+End
 
-val unc = Define `unc R = \x y. R(x,y)`; (*FIXME: replace this with CURRY_DEF*)
+Definition unc:   unc R = \x y. R(x,y)
+End(*FIXME: replace this with CURRY_DEF*)
 val unc_thm = save_thm("unc_thm",prove(``!P x y. P(x,y) = (unc P) x y``,PROVE_TAC [unc]));
 
 val EU_LEMMA = prove(``!(M :('prop,'state) kripke_structure) (f:'prop ctl) (g:'prop ctl) (s:'state). TOTAL M.R ==>
@@ -328,7 +314,8 @@ recInduct (theorem "CTL2MU_ind") THEN REPEAT CONJ_TAC THENL [
  SIMP_TAC std_ss ([CTL2MU_def,IMF_def,NNF_def,MU_SUB_def,RVNEG_def,IMF_CTL_LEM]@(tsimps ``:'a mu``))  (* C_EU *)
 ]));
 
-val Nf = Define `(Nf (R:'state # 'state -> bool) (s:'state) (q:'state) (0:num) = s) /\ (Nf R s q (SUC n) = if (n=0) then q else (@r. R(Nf R s q n,r)))`;
+Definition Nf:   (Nf (R:'state # 'state -> bool) (s:'state) (q:'state) (0:num) = s) /\ (Nf R s q (SUC n) = if (n=0) then q else (@r. R(Nf R s q n,r)))
+End
 
 val STATES_FV_ENV_INV_SPEC = save_thm("STATES_FV_ENV_INV_SPEC",prove(``!(f: 'prop ctl) (M: ('prop,'state) kripke_structure) X.
                                       (STATES (CTL2MU f) (ctl2muks M)  EMPTY_ENV[[["Q"<--X]]]
@@ -348,8 +335,9 @@ THEN REPEAT STRIP_TAC
 THEN SIMP_TAC std_ss [EXTENSION,SET_SPEC]
 THEN SIMP_TAC std_ss [ENV_UPDATE]]));
 
-val Nf3 = Define `(Nf3 (R:'state # 'state -> bool) (x:'state) (q:'state) (0:num) = x)
-          /\ (Nf3 R x q (SUC n) = if (n=0) then q else (@r. R(Nf3 R x q n,r)))`;
+Definition Nf3:   (Nf3 (R:'state # 'state -> bool) (x:'state) (q:'state) (0:num) = x)
+          /\ (Nf3 R x q (SUC n) = if (n=0) then q else (@r. R(Nf3 R x q n,r)))
+End
 
 val CTL2MU_AND_LEM = prove(``!(M: ('prop,'state) kripke_structure) f1 f2 . C_SEM M (C_AND(f1,f2)) = C_SEM M f1 INTER C_SEM M f2``,
 REPEAT GEN_TAC
@@ -455,9 +443,10 @@ THEN EQ_TAC THENL [
    EXISTS_TAC ``p' : 'state path``
    THEN ASM_REWRITE_TAC []]]); (* <== *)
 
-val GFP_def = Define `
+Definition GFP_def:
 (GFP (M: ('prop,'state) kripke_structure) (f: 'prop ctl) (0:num) = (UNIV:'state -> bool)) /\
-(GFP M f (SUC n) = C_SEM M f INTER {s | ?s'. M.R(s,s') /\ s' IN GFP M f n})`;
+(GFP M f (SUC n) = C_SEM M f INTER {s | ?s'. M.R(s,s') /\ s' IN GFP M f n})
+End
 
 val CTL_GFP_EQ_CTL2MU_GFP = prove(``!(f: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
           ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV) /\ wfKS (ctl2muks M) )
@@ -501,13 +490,17 @@ THEN FULL_SIMP_TAC std_ss [ENV_EVAL,IN_UNIV]
 THEN SIMP_TAC std_ss [SET_SPEC]
 THEN SIMP_TAC std_ss [MU_SAT_def,IN_DEF]);
 
-val Nf4_def = Define `(Nf4 (R:'state # 'state -> bool) (P:'state -> bool) (0:num) = (ARB:'state))
-          /\ (Nf4 R P (SUC n) =  @r. R(Nf4 R P n,r) /\ P r)`;
+Definition Nf4_def:   (Nf4 (R:'state # 'state -> bool) (P:'state -> bool) (0:num) = (ARB:'state))
+          /\ (Nf4 R P (SUC n) =  @r. R(Nf4 R P n,r) /\ P r)
+End
 
 
-val P1_def = Define `P1 P R s = R(ARB,s) /\ P s`;
-val P2_def = Define `P2 P R n s = R(Nf4 R P n,s) /\ P s`;
-val P3_def = Define `P3 P R n s = R((@r. P2 P R n r),s) /\ P s`;
+Definition P1_def:   P1 P R s = R(ARB,s) /\ P s
+End
+Definition P2_def:   P2 P R n s = R(Nf4 R P n,s) /\ P s
+End
+Definition P3_def:   P3 P R n s = R((@r. P2 P R n r),s) /\ P s
+End
 
 val GFP_CLOSURE_IMP_EG_LEM2 = prove(``!(P:'state ->bool) Q (R:'state # 'state -> bool). (!s. P s = Q s /\ ?s'. R(s,s') /\ P s')
 ==> (?f. !n. P (f n) ==> Q(f n) /\ R(f n,f (SUC n)) /\ P (f (SUC n)))``,
@@ -534,12 +527,16 @@ THEN CONJ_TAC THENL [
   THEN REWRITE_TAC [P2_def,P3_def]
   THEN ASSUM_LIST PROVE_TAC]]); (* conj, SUC *)
 
-val Nf5_def = Define `(Nf5 (R:'state # 'state -> bool) (P:'state -> bool) (s:'state) (0:num) = s)
-          /\ (Nf5 R P s (SUC n) =  @r. R(Nf5 R P s n,r) /\ P r)`;
+Definition Nf5_def:   (Nf5 (R:'state # 'state -> bool) (P:'state -> bool) (s:'state) (0:num) = s)
+          /\ (Nf5 R P s (SUC n) =  @r. R(Nf5 R P s n,r) /\ P r)
+End
 
-val P4_def = Define `P4 R P s s' = R(s,s') /\ P s'`;
-val P5_def = Define `P5 R P s n s' = R(Nf5 R P s n,s') /\ P s'`;
-val P6_def = Define `P6 R P s n s' = R((@r. P5 R P s n r),s') /\ P s'`;
+Definition P4_def:   P4 R P s s' = R(s,s') /\ P s'
+End
+Definition P5_def:   P5 R P s n s' = R(Nf5 R P s n,s') /\ P s'
+End
+Definition P6_def:   P6 R P s n s' = R((@r. P5 R P s n r),s') /\ P s'
+End
 
 val GFP_CLOSURE_IMP_EG_LEM1a = prove(``!(P:'state ->bool) Q (R:'state # 'state -> bool) s. (!s. P s = Q s /\ ?s'. R(s,s') /\ P s') /\ P s
 ==> (!n. P (Nf5 R P s n) ==> Q(Nf5 R P s n) /\ R(Nf5 R P s n,Nf5 R P s (SUC n)) /\ P (Nf5 R P s (SUC n)))``,
@@ -633,9 +630,10 @@ THEN SIMP_TAC std_ss [IN_DEF,C_SEM_def]
 THEN IMP_RES_TAC GFP_CLOSURE_IMP_EG_LEM
 THEN FULL_SIMP_TAC std_ss [IN_DEF]);
 
-val CTL_LFP = Define `
+Definition CTL_LFP:
 (LFP (M: ('prop,'state) kripke_structure) (f: 'prop ctl) (g:'prop ctl) (0:num) = ({}:'state -> bool)) /\
-(LFP M f g (SUC n) = C_SEM M g UNION (C_SEM M f INTER {s | ?s'. M.R(s,s') /\ s' IN LFP M f g n}))`;
+(LFP M f g (SUC n) = C_SEM M g UNION (C_SEM M f INTER {s | ?s'. M.R(s,s') /\ s' IN LFP M f g n}))
+End
 
 val CTL_LFP_EQ_CTL2MU_LFP = prove(``!(f: 'prop ctl) (g: 'prop ctl) (s:'state) (M: ('prop,'state) kripke_structure).
           ((C_SEM M f = MU_SAT (CTL2MU f) (ctl2muks M) EMPTY_ENV)
@@ -659,17 +657,20 @@ THEN Induct_on `n` THENL [
  THEN SIMP_TAC std_ss [SET_SPEC]
  THEN SIMP_TAC std_ss [IN_DEF,MU_SAT_def]]);
 
-val FIN_PFX_def  = Define `
+Definition FIN_PFX_def:
 (FIN_PFX l 0 = []) /\
-(FIN_PFX l (SUC n) = (HD l)::(FIN_PFX (TL l) n))`;
+(FIN_PFX l (SUC n) = (HD l)::(FIN_PFX (TL l) n))
+End
 
-val INF_PFX_def = Define `
+Definition INF_PFX_def:
 (INF_PFX f 0 = []) /\
-(INF_PFX f (SUC n) = SNOC (f n) (INF_PFX f n))`;
+(INF_PFX f (SUC n) = SNOC (f n) (INF_PFX f n))
+End
 
-val PREFIX_def = Define `
+Definition PREFIX_def:
 (PREFIX (FINITE l) n = FIN_PFX l n) /\
-(PREFIX (INFINITE f) n = INF_PFX f n)`;
+(PREFIX (INFINITE f) n = INF_PFX f n)
+End
 
 val INF_PREFIX_LENGTH = save_thm("INF_PREFIX_LENGTH",prove(``!f k. LENGTH (PREFIX (INFINITE f) k) = k``,
 REWRITE_TAC [PREFIX_def]
@@ -940,4 +941,3 @@ THEN REWRITE_TAC [combinTheory.K_THM,KS_accfupds]
 THEN METIS_TAC [CTL2MU]))
 
 
-val _ = export_theory();

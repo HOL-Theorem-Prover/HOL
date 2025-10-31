@@ -4,22 +4,15 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "fieldIdeal";
-
 (* ------------------------------------------------------------------------- *)
+Theory fieldIdeal
+Ancestors
+  pred_set arithmetic gcdset number combinatorics monoid group
+  ring field
+Libs
+  jcLib
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-open pred_setTheory arithmeticTheory gcdsetTheory numberTheory
-     combinatoricsTheory;
-
-open monoidTheory groupTheory ringTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Ideals in Field Documentation                                             *)
 (* ------------------------------------------------------------------------- *)
@@ -238,8 +231,4 @@ val quotient_field_iff_maximal_ideal = store_thm(
   rw[quotient_field_by_maximal_ideal]);
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

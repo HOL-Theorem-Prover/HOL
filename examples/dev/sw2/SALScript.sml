@@ -1,10 +1,8 @@
 (*---------------------------------------------------------------------------*)
 (* SAL - Structured Assembly Language                                        *)
 (*---------------------------------------------------------------------------*)
+Theory SAL
 
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "SAL";
 
 (*---------------------------------------------------------------------------*)
 (* Labels                                                                    *)
@@ -12,7 +10,8 @@ val _ = new_theory "SAL";
 
 val _ = Hol_datatype `LABEL = L of num`;
 
-val inc_def = Define `inc (L i) = L (i + 1)`;
+Definition inc_def:   inc (L i) = L (i + 1)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Tail Recursion                                                            *)
@@ -231,8 +230,6 @@ val FUN_CALL_RULE = Q.store_thm (
    IMP_RES_TAC seq_rule THEN
    FULL_SIMP_TAC std_ss [LET_THM]
   );
-
-val _ = export_theory();
 
 (*---------------------------------------------------------------------------*)
 (* Examples                                                                  *)

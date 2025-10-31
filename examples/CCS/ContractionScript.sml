@@ -8,17 +8,14 @@
 (*                 (c) 2018 Chun Tian, Fondazione Bruno Kessler (FBK)         *)
 (* DATE          : 2017-2018                                                  *)
 (* ========================================================================== *)
+Theory Contraction
+Ancestors
+  relation combin list CCS StrongEQ StrongLaws WeakEQ WeakLaws
+  ObsCongr ObsCongrLaws Trace Congruence CoarsestCongr Expansion
+Libs
+  CCSLib WeakEQLib ObsCongrLib ObsCongrConv
 
-open HolKernel Parse boolLib bossLib;
 
-open relationTheory combinTheory listTheory;
-
-open CCSLib CCSTheory StrongEQTheory StrongLawsTheory
-     WeakEQTheory WeakEQLib WeakLawsTheory ObsCongrTheory ObsCongrLib
-     ObsCongrLawsTheory ObsCongrConv TraceTheory CongruenceTheory
-     CoarsestCongrTheory ExpansionTheory;
-
-val _ = new_theory "Contraction";
 val _ = temp_loose_equality ();
 
 (******************************************************************************)
@@ -2057,7 +2054,6 @@ val COARSEST_PRECONGR_FINITE' = store_thm (
  *     occasion of his 60th birthday, LNCS 3838, 26-39. Springer-Verlag, 2005.
  *)
 
-val _ = export_theory ();
 val _ = html_theory "Contraction";
 
 (* last updated: Oct 14, 2017 *)

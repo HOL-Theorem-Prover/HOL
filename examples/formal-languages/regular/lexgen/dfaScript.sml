@@ -1,19 +1,19 @@
 (*---------------------------------------------------------------------------*)
 (* A theory of paths through deterministic finite automata                   *)
 (*---------------------------------------------------------------------------*)
+Theory dfa
+Libs
+  BasicProvers
 
-open HolKernel boolLib bossLib BasicProvers;
 
-val _ = new_theory "dfa";
-
-val dfa_path_def =
-  Define
-    `(dfa_path trans start_state end_state [] = (start_state = end_state)) /\
+Definition dfa_path_def:
+     (dfa_path trans start_state end_state [] = (start_state = end_state)) /\
      (dfa_path trans start_state end_state ((c,state)::path) =
         case trans (start_state,c) of
          | NONE => F
          | SOME new_state =>
-              (new_state = state) /\ dfa_path trans state end_state path)`;
+              (new_state = state) /\ dfa_path trans state end_state path)
+End
 
 val dfa_path_ind = fetch "-" "dfa_path_ind";
 
@@ -73,4 +73,3 @@ val dfa_path_determ = Q.store_thm
   >> rw []
   >> metis_tac []);
 
-val _ = export_theory ();

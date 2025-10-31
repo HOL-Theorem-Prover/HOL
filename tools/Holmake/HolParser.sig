@@ -78,6 +78,7 @@ structure ToSML: sig
     filename: string ref,
     full: string -> substring,
     isTheory: bool ref,
+    noSigDocs: bool ref,
     line: (int * int) ref,
     magicBind: string -> unit,
     parseError: int * int -> string -> unit,

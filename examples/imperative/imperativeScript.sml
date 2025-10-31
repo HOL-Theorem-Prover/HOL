@@ -1,6 +1,8 @@
-open HolKernel Parse boolLib bossLib ptopTheory imperativeLib
-
-val _ = new_theory "imperative";
+Theory imperative
+Ancestors
+  ptop
+Libs
+  imperativeLib
 
 val _ = set_trace "Unicode" 0;
 
@@ -501,4 +503,3 @@ val thmForwardSubstitution =
 ;
 
 
-val _ = export_theory();

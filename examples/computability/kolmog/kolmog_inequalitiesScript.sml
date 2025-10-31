@@ -1,18 +1,13 @@
-open HolKernel Parse boolLib bossLib
+Theory kolmog_inequalities
+Ancestors
+  arithmetic While logroot pred_set list churchoption churchlist
+  recfuns numsAsCompStates kolmogorov_complexity
+  invarianceResults boolLists churchDB recursivefns primrecfns
+  prterm unary_recfns numsAsCompStates pfreefns
+Libs
+  reductionEval
 
-open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory
-open reductionEval;
-open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
-     kolmogorov_complexityTheory invarianceResultsTheory boolListsTheory
-open churchDBTheory
-open recursivefnsTheory primrecfnsTheory prtermTheory
-open unary_recfnsTheory
-open numsAsCompStatesTheory
-open pfreefnsTheory
-
-val _ = new_theory "kolmog_inequalities"
-val _ = intLib.deprecate_int()
-val _ = augment_srw_ss [rewrites [churchDBTheory.DISJ_IMP_EQ]]
+val _ = augment_srw_ss [rewrites [churchDBTheory.DISJ_IMP_EQ]];
 
 (* UCKC is conditional kolmogorov complexity, UKCB is kolmogorov complexity typed the right way *)
 (* rename pair to bl pair etc *)
@@ -926,4 +921,3 @@ Proof
 QED
 
 *)
-val _ = export_theory()

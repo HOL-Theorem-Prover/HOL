@@ -532,7 +532,7 @@ fun pp_term (G : grammar) TyG backend = let
     fun val_insert (tstamp,r) NONE = [(n,tstamp,r)]
       | val_insert (tstamp,r) (SOME l) = sortinsert (tstamp,r) l
     fun myinsert ((k, (tstamp, r)), acc) = let
-      val existing = Binarymap.peek(acc, k)
+      val existing = HOLdict.peek(acc, k)
       val newvalue =
         case existing of
           NONE => [(n,tstamp,r)]
@@ -541,15 +541,15 @@ fun pp_term (G : grammar) TyG backend = let
           if tstamp > t' then (n,tstamp,r)::old::rest
           else old::(n,tstamp,r)::rest
     in
-      Binarymap.insert(acc, k, newvalue)
+      HOLdict.insert(acc, k, newvalue)
     end
   in
     (List.foldl myinsert acc keys_n_rules)
   end
   val rule_table = List.foldl insert
-                              (Binarymap.mkDict String.compare)
+                              (HOLdict.mkDict String.compare)
                               (term_grammar.rules G)
-  fun lookup_term s = Binarymap.peek(rule_table, s)
+  fun lookup_term s = HOLdict.peek(rule_table, s)
   val comb_prec = #1 (hd (valOf (lookup_term fnapp_special)))
     handle Option =>
       raise PP_ERR "pp_term" "Grammar has no function application"

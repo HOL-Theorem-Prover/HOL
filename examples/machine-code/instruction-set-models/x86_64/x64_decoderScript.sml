@@ -1,11 +1,10 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory stringTheory stringLib listTheory stringSimps listLib simpLib;
-open decoderTheory bit_listTheory opmonTheory;
+Theory x64_decoder
+Ancestors
+  words string list decoder bit_list opmon x64_ast x64_coretypes
+Libs
+  stringLib stringSimps listLib simpLib
 
-open x64_astTheory x64_coretypesTheory;
-
-val _ = new_theory "x64_decoder";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -39,32 +38,36 @@ val _ = ParseExtras.temp_loose_equality()
 
 (* reading hex strings to bit lists *)
 
-val STR_SPACE_AUX_def = Define `
+Definition STR_SPACE_AUX_def:
   (STR_SPACE_AUX n "" = "") /\
   (STR_SPACE_AUX n (STRING c s) =
      if n = 0 then STRING #" " (STRING c (STR_SPACE_AUX 1 s))
-              else STRING c (STR_SPACE_AUX (n-1) s))`;
+              else STRING c (STR_SPACE_AUX (n-1) s))
+End
 
-val bytebits_def = Define `
-  bytebits = hex2bits o STR_SPACE_AUX 2`;
+Definition bytebits_def:
+  bytebits = hex2bits o STR_SPACE_AUX 2
+End
 
 (* interprete the IA-32 manuals' syntax *)
 
-val check_opcode_def = Define `
+Definition check_opcode_def:
   check_opcode s =
     let y = (n2bits 3 o char2num o HD o TL o EXPLODE) s in
-      assert (\g. g "Reg/Opcode" = y)`;
+      assert (\g. g "Reg/Opcode" = y)
+End
 
-val read_SIB_def = Define `
+Definition read_SIB_def:
   read_SIB =
     assign_drop "Base" 3 >> assign_drop "Index" 3 >> assign_drop "Scale" 2 >>
     option_try [
       assert (\g. (g "Mod" = [F;F]) /\  (g "Base" = [T;F;T])) >> assign_drop "disp32" 32;
       assert (\g. (g "Mod" = [F;F]) /\ ~(g "Base" = [T;F;T]));
       assert (\g. (g "Mod" = [T;F])) >> assign_drop "disp8" 8;
-      assert (\g. (g "Mod" = [F;T])) >> assign_drop "disp32" 32]`;
+      assert (\g. (g "Mod" = [F;T])) >> assign_drop "disp32" 32]
+End
 
-val read_ModRM_def = Define `
+Definition read_ModRM_def:
   read_ModRM =
     assign_drop "R/M" 3 >> assign_drop "Reg/Opcode" 3 >> assign_drop "Mod" 2 >>
     option_try [
@@ -73,12 +76,14 @@ val read_ModRM_def = Define `
       assert (\g.  (g "Mod" = [F;F]) /\  (g "R/M" = [T;F;T])) >> assign_drop "disp32" 32;
       assert (\g.  (g "Mod" = [T;F]) /\ ~(g "R/M" = [F;F;T])) >> assign_drop "disp8" 8;
       assert (\g.  (g "Mod" = [F;T]) /\ ~(g "R/M" = [F;F;T])) >> assign_drop "disp32" 32;
-      assert (\g. ~(g "Mod" = [T;T]) /\  (g "R/M" = [F;F;T])) >> read_SIB]`;
+      assert (\g. ~(g "Mod" = [T;T]) /\  (g "R/M" = [F;F;T])) >> read_SIB]
+End
 
-val is_hex_add_def = Define `
-  is_hex_add x = ((IMPLODE o DROP 2 o EXPLODE) x = "+rd")`;
+Definition is_hex_add_def:
+  is_hex_add x = ((IMPLODE o DROP 2 o EXPLODE) x = "+rd")
+End
 
-val process_hex_add_def = Define `
+Definition process_hex_add_def:
   process_hex_add name =
     let n = (hex2num o IMPLODE o TAKE 2 o EXPLODE) name in
       option_try [drop_eq (n2bits 8 (n+0)) >> assign "reg" (n2bits 3 0);
@@ -88,14 +93,16 @@ val process_hex_add_def = Define `
                   drop_eq (n2bits 8 (n+4)) >> assign "reg" (n2bits 3 4);
                   drop_eq (n2bits 8 (n+5)) >> assign "reg" (n2bits 3 5);
                   drop_eq (n2bits 8 (n+6)) >> assign "reg" (n2bits 3 6);
-                  drop_eq (n2bits 8 (n+7)) >> assign "reg" (n2bits 3 7)]`;
+                  drop_eq (n2bits 8 (n+7)) >> assign "reg" (n2bits 3 7)]
+End
 
-val assign_drop_cond_def = Define `
+Definition assign_drop_cond_def:
   assign_drop_cond name i1 i2 c (g,bits) =
     if c g then assign_drop name i1 (g,bits)
-           else assign_drop name i2 (g,bits)`;
+           else assign_drop name i2 (g,bits)
+End
 
-val x64_match_step_def = Define `
+Definition x64_match_step_def:
   x64_match_step name =
     if is_hex name /\ (STRLEN name = 2) then     (* opcode e.g. FE, 83 and 04 *)
       drop_eq (n2bits 8 (hex2num name))
@@ -122,33 +129,38 @@ val x64_match_step_def = Define `
     else if name = "+" then
       assert (\g. T)
     else
-      option_fail`;
+      option_fail
+End
 
 (* syntax classes *)
 
-val x64_binop_def = Define `x64_binop =
+Definition x64_binop_def:   x64_binop =
   [("ADC",Zadc); ("ADD",Zadd); ("AND",Zand); ("CMP",Zcmp);
    ("OR",Zor); ("SAR",Zsar); ("SHR",Zshr); ("SHL",Zshl);
-   ("SBB",Zsbb); ("SUB",Zsub); ("TEST",Ztest); ("XOR",Zxor)]`;
+   ("SBB",Zsbb); ("SUB",Zsub); ("TEST",Ztest); ("XOR",Zxor)]
+End
 
-val x64_monop_def = Define `x64_monop =
-  [("DEC",Zdec); ("INC",Zinc); ("NOT",Znot); ("NEG",Zneg)]`;
+Definition x64_monop_def:   x64_monop =
+  [("DEC",Zdec); ("INC",Zinc); ("NOT",Znot); ("NEG",Zneg)]
+End
 
 
 
 (* x86 - decoder *)
 
-val b2reg_def = Define `
+Definition b2reg_def:
   b2reg g rex_name name = (EL (bits2num (g name ++ g rex_name))
-    [RAX;RCX;RDX;RBX;RSP;RBP;RSI;RDI;zR8;zR9;zR10;zR11;zR12;zR13;zR14;zR15]):Zreg`;
+    [RAX;RCX;RDX;RBX;RSP;RBP;RSI;RDI;zR8;zR9;zR10;zR11;zR12;zR13;zR14;zR15]):Zreg
+End
 
-val decode_Zr32_def = Define `
+Definition decode_Zr32_def:
   decode_Zr32 g name =
     if name = "RAX" then RAX else
       if g "reg" = [] then b2reg g "REX.R" "Reg/Opcode"  (* "Reg/Opcode" comes from ModRM *)
-                      else b2reg g "REX.B" "reg"`;       (* "reg" comes from opcode byte, e.g. "rd" in B8+rd *)
+                      else b2reg g "REX.B" "reg"
+End(* "reg" comes from opcode byte, e.g. "rd" in B8+rd *)
 
-val decode_SIB_def = Define `
+Definition decode_SIB_def:
   decode_SIB g =
     let scaled_index = (if b2reg g "REX.X" "Index" = RSP then NONE else SOME (b2w g "Scale",b2reg g "REX.X" "Index")) in
       if b2reg g "REX.B" "Base" = RBP then (* the special case indicated by "[*]" *)
@@ -158,9 +170,10 @@ val decode_SIB_def = Define `
       else (* normal cases, just need to read off the correct displacement *)
         let disp = (if (g "Mod" = [T;F]) then sw2sw ((b2w g "disp8"):word8) else sw2sw ((b2w g "disp32"):word32)) in
         let disp = (if (g "Mod" = [F;F]) then 0w else disp) in
-          Zm scaled_index (SOME (b2reg g "REX.B" "Base")) disp`;
+          Zm scaled_index (SOME (b2reg g "REX.B" "Base")) disp
+End
 
-val decode_Zrm32_def = Define `  (* sw2sw = sign-extension *)
+Definition decode_Zrm32_def:     (* sw2sw = sign-extension *)
   decode_Zrm32 g name =
     if name = "RAX" then Zr RAX else
       if  (g "Mod" = [F;F]) /\ (g "R/M" = [T;F;T]) then Zm NONE NONE (sw2sw:word32->word64 (b2w g "disp32")) else
@@ -168,9 +181,10 @@ val decode_Zrm32_def = Define `  (* sw2sw = sign-extension *)
       if  (g "Mod" = [F;F]) then Zm NONE (SOME (b2reg g "REX.B" "R/M")) 0w else
       if  (g "Mod" = [T;F]) then Zm NONE (SOME (b2reg g "REX.B" "R/M")) (sw2sw:word8->word64 (b2w g "disp8")) else
       if  (g "Mod" = [F;T]) then Zm NONE (SOME (b2reg g "REX.B" "R/M")) (sw2sw:word32->word64 (b2w g "disp32")) else
-      if  (g "Mod" = [T;T]) then Zr (b2reg g "REX.B" "R/M") else Zr (b2reg g "REX.B" "reg") `;
+      if  (g "Mod" = [T;T]) then Zr (b2reg g "REX.B" "R/M") else Zr (b2reg g "REX.B" "reg")
+End
 
-val decode_Zconst_def = Define `
+Definition decode_Zconst_def:
   decode_Zconst name g =
    if name = "imm8"  then sw2sw:word8 ->word64 (b2w g "ib") else
    if name = "rel8"  then sw2sw:word8 ->word64 (b2w g "cb") else
@@ -178,9 +192,10 @@ val decode_Zconst_def = Define `
    if name = "imm32" then sw2sw:word32->word64 (b2w g "id") else
    if name = "rel32" then sw2sw:word32->word64 (b2w g "cd") else
    if name = "imm64" then b2w g "iq" else
-   if name = "1"     then 1w else 0w`;
+   if name = "1"     then 1w else 0w
+End
 
-val decode_Zdest_src_def = Define `
+Definition decode_Zdest_src_def:
   decode_Zdest_src g dest src =
     if MEM src ["r64";"r32";"r16";"r8"] then
       Zrm_r (decode_Zrm32 g dest) (decode_Zr32 g src)
@@ -189,28 +204,33 @@ val decode_Zdest_src_def = Define `
     else if src = "m" then
       Zr_rm (decode_Zr32 g dest)  (decode_Zrm32 g src)
     else
-      Zrm_i (decode_Zrm32 g dest) (decode_Zconst src g)`;
+      Zrm_i (decode_Zrm32 g dest) (decode_Zconst src g)
+End
 
-val decode_Zconst_or_zero_def = Define `
+Definition decode_Zconst_or_zero_def:
   decode_Zconst_or_zero ts g =
-    if LENGTH ts < 2 then 0w else decode_Zconst (EL 1 ts) g`;
+    if LENGTH ts < 2 then 0w else decode_Zconst (EL 1 ts) g
+End
 
-val decode_Zimm_rm_def = Define `
+Definition decode_Zimm_rm_def:
   decode_Zimm_rm ts g =
     if MEM (EL 1 ts) ["r/m32";"r32";"r/m8";"r8"]
     then Zi_rm (decode_Zrm32 g (EL 1 ts))
-    else Zi (decode_Zconst (EL 1 ts) g)`;
+    else Zi (decode_Zconst (EL 1 ts) g)
+End
 
-val x64_select_op_def = Define `
-  x64_select_op name list = SND (HD (FILTER (\x. FST x = name) list))`;
+Definition x64_select_op_def:
+  x64_select_op name list = SND (HD (FILTER (\x. FST x = name) list))
+End
 
-val x86_size_def = Define `
+Definition x86_size_def:
   x86_size g name =
     if MEM name ["r8";"m8";"r/m8";"AL"] then Z8 else
     if MEM name ["r16";"m16";"r/m16";"AX"] then Z16 else
     if MEM name ["r64";"m64";"r/m64";"RAX"] then Z64 else
     if g "REX.W" = [T] then Z64 else
-    if g "16BIT" = [T] then Z16 else Z32`;
+    if g "16BIT" = [T] then Z16 else Z32
+End
 
 val Zsize_tm = ``(x86_size g (EL 1 ts))``
 
@@ -220,9 +240,10 @@ val x64_syntax_binop = ``
 val x64_syntax_monop = ``
   Zmonop (x64_select_op (HD ts) x64_monop) ^Zsize_tm (decode_Zrm32 g (EL 1 ts))``;
 
-val Z_SOME_def = Define `Z_SOME f = SOME o (\(g,w). (f g,w))`;
+Definition Z_SOME_def:   Z_SOME f = SOME o (\(g,w). (f g,w))
+End
 
-val x64_syntax_def = Define `
+Definition x64_syntax_def:
   x64_syntax ts =
     if LENGTH ts = 0 then option_fail else
     if HD ts = "MOVZX" then Z_SOME (\g. Zmovzx ^Zsize_tm (decode_Zdest_src g (EL 1 ts) (EL 2 ts)) (if EL 2 ts = "r/m8" then Z8 else Z16)) else
@@ -260,7 +281,8 @@ val x64_syntax_def = Define `
     if HD ts = "DIV"     then Z_SOME (\g. Zdiv ^Zsize_tm (decode_Zrm32 g (EL 1 ts))) else
     if HD ts = "CALL"    then Z_SOME (\g. Zcall (decode_Zimm_rm ts g)) else
     if HD ts = "CPUID"   then Z_SOME (\g. Zcpuid) else
-    if HD ts = "RET"     then Z_SOME (\g. Zret (decode_Zconst_or_zero ts g)) else option_fail`;
+    if HD ts = "RET"     then Z_SOME (\g. Zret (decode_Zconst_or_zero ts g)) else option_fail
+End
 
 
 (* a list of x64 instructions, ordered by the combination of addressing modes they support *)
@@ -416,10 +438,11 @@ val x64_syntax_list = `` [
 
   ]``;
 
-val x64_decode_aux_def = zDefine `
+Definition x64_decode_aux_def[nocompute]:
   x64_decode_aux g =
     (match_list_raw g x64_match_step tokenise (x64_syntax o tokenise) o
-    MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x64_syntax_list`;
+    MAP (\s. let x = STR_SPLIT [#"|"] s in (EL 0 x, EL 1 x))) ^x64_syntax_list
+End
 
 val x64_decode_prefixes_def = tDefine "x64_decode_prefixes" `
   x64_decode_prefixes w =
@@ -435,7 +458,7 @@ val x64_decode_prefixes_def = tDefine "x64_decode_prefixes" `
  (WF_REL_TAC `measure LENGTH`
   THEN ASM_SIMP_TAC std_ss [LENGTH_DROP] THEN REPEAT STRIP_TAC THEN DECIDE_TAC);
 
-val x64_decode_REX_def = Define `
+Definition x64_decode_REX_def:
   x64_decode_REX w =
     let g = (\n. []) in
       if LENGTH w < 8 then (g,w) else
@@ -445,14 +468,16 @@ val x64_decode_REX_def = Define `
           let g = ("REX.R" =+ [EL 2 w]) g in
           let g = ("REX.W" =+ [EL 3 w]) g in
           let w = DROP 8 w in
-            (g,w)`;
+            (g,w)
+End
 
-val dest_accesses_memory_def = Define `
+Definition dest_accesses_memory_def:
   (dest_accesses_memory (Zrm_i rm i) = Zrm_is_memory_access rm) /\
   (dest_accesses_memory (Zrm_r rm r) = Zrm_is_memory_access rm) /\
-  (dest_accesses_memory (Zr_rm r rm) = F)`;
+  (dest_accesses_memory (Zr_rm r rm) = F)
+End
 
-val x64_lock_ok_def = Define `
+Definition x64_lock_ok_def:
   (x64_lock_ok (Zbinop binop_name dsize ds) =
     MEM binop_name [Zadd;Zand;Zor;Zsub;Zxor] /\
     dest_accesses_memory ds) /\
@@ -472,26 +497,31 @@ val x64_lock_ok_def = Define `
   (x64_lock_ok (Zjmp rm) = F) /\
   (x64_lock_ok (Zloop c imm) = F) /\
   (x64_lock_ok (Zpushad) = F) /\
-  (x64_lock_ok (Zpopad) = F)`;
+  (x64_lock_ok (Zpopad) = F)
+End
 
-val x64_is_jcc_def = Define `
+Definition x64_is_jcc_def:
   (x64_is_jcc (Zjcc c imm) = T) /\
-  (x64_is_jcc _ = F)`;
+  (x64_is_jcc _ = F)
+End
 
-val byte_regs_in_rm_def = Define `
+Definition byte_regs_in_rm_def:
   (byte_regs_in_rm (Zr r) = [r]) /\
-  (byte_regs_in_rm (Zm r1 r2 offset) = [])`;
+  (byte_regs_in_rm (Zm r1 r2 offset) = [])
+End
 
-val byte_regs_in_ds_def = Define `
+Definition byte_regs_in_ds_def:
   (byte_regs_in_ds (Zrm_i rm i) = byte_regs_in_rm rm) /\
   (byte_regs_in_ds (Zrm_r rm r) = r::byte_regs_in_rm rm) /\
-  (byte_regs_in_ds (Zr_rm r rm) = r::byte_regs_in_rm rm)`;
+  (byte_regs_in_ds (Zr_rm r rm) = r::byte_regs_in_rm rm)
+End
 
-val has_bad_byte_regs_def = Define `
+Definition has_bad_byte_regs_def:
   has_bad_byte_regs dsize xs =
-    (dsize = Z8) /\ ~(FILTER (\x. MEM x [RSP;RBP;RSI;RDI]) xs = [])`;
+    (dsize = Z8) /\ ~(FILTER (\x. MEM x [RSP;RBP;RSI;RDI]) xs = [])
+End
 
-val instr_accesses_bad_byte_reg_def = Define `
+Definition instr_accesses_bad_byte_reg_def:
   (instr_accesses_bad_byte_reg (Zbinop binop_name dsize ds) = has_bad_byte_regs dsize (byte_regs_in_ds ds)) /\
   (instr_accesses_bad_byte_reg (Zmonop monop_name dsize rm) = has_bad_byte_regs dsize (byte_regs_in_rm rm)) /\
   (instr_accesses_bad_byte_reg (Zxadd dsize rm r) = has_bad_byte_regs dsize (r::byte_regs_in_rm rm)) /\
@@ -507,15 +537,17 @@ val instr_accesses_bad_byte_reg_def = Define `
   (instr_accesses_bad_byte_reg (Zjmp rm) = F) /\
   (instr_accesses_bad_byte_reg (Zloop c imm) = F) /\
   (instr_accesses_bad_byte_reg (Zpushad) = F) /\
-  (instr_accesses_bad_byte_reg (Zpopad) = F)`;
+  (instr_accesses_bad_byte_reg (Zpopad) = F)
+End
 
-val Zprefixes_ok_def = Define `
+Definition Zprefixes_ok_def:
   Zprefixes_ok pres i = ALL_DISTINCT (MAP Zprefix_group pres) /\
                         (MEM Zlock pres ==> x64_lock_ok i) /\
                         (MEM Zbranch_taken pres ==> x64_is_jcc i) /\
-                        (MEM Zbranch_not_taken pres ==> x64_is_jcc i)`;
+                        (MEM Zbranch_not_taken pres ==> x64_is_jcc i)
+End
 
-val x64_decode_def = Define `
+Definition x64_decode_def:
   x64_decode w =
     let (pres,w) = x64_decode_prefixes w in
     let (g,w) = x64_decode_REX w in
@@ -525,9 +557,10 @@ val x64_decode_def = Define `
         let (i,w) = THE result in
           if (g "REX.W" = []) /\ instr_accesses_bad_byte_reg i then NONE else
           if (g "REX.W" = [T]) /\ (g "16BIT" = [T]) then NONE else
-          if Zprefixes_ok pres i then SOME (Zfull_inst pres i, w) else NONE`;
+          if Zprefixes_ok pres i then SOME (Zfull_inst pres i, w) else NONE
+End
 
-val padbyte_def = Define `
+Definition padbyte_def:
   (padbyte [] = [F;F;F;F;F;F;F;F]) /\
   (padbyte [x0] = [x0;F;F;F;F;F;F;F]) /\
   (padbyte [x0;x1] = [x0;x1;F;F;F;F;F;F]) /\
@@ -536,13 +569,16 @@ val padbyte_def = Define `
   (padbyte [x0;x1;x2;x3;x4] = [x0;x1;x2;x3;x4;F;F;F]) /\
   (padbyte [x0;x1;x2;x3;x4;x5] = [x0;x1;x2;x3;x4;x5;F;F]) /\
   (padbyte [x0;x1;x2;x3;x4;x5;x6] = [x0;x1;x2;x3;x4;x5;x6;F]) /\
-  (padbyte [x0;x1;x2;x3;x4;x5;x6;x7] = [x0;x1;x2;x3;x4;x5;x6;x7])`;
+  (padbyte [x0;x1;x2;x3;x4;x5;x6;x7] = [x0;x1;x2;x3;x4;x5;x6;x7])
+End
 
-val word2byte_def = Define `
-  word2byte (w:word8) = padbyte (MAP ($= 1) (word_to_bin_list w))`;
+Definition word2byte_def:
+  word2byte (w:word8) = padbyte (MAP ($= 1) (word_to_bin_list w))
+End
 
-val x64_decode_bytes_def = Define `
-  x64_decode_bytes b = x64_decode (FLAT (MAP word2byte b))`;
+Definition x64_decode_bytes_def:
+  x64_decode_bytes b = x64_decode (FLAT (MAP word2byte b))
+End
 
 
 (* -- partially pre-evaluate x64_decode_aux -- *)
@@ -664,4 +700,3 @@ val _ = permanently_add_to_compset "x64_decode_aux_thm" x64_decode_aux_thm;
 *)
 
 
-val _ = export_theory ();

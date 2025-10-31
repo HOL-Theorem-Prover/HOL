@@ -6,16 +6,13 @@
        PARITYTheory.{sig,sml,uo,ui}
 
  ---------------------------------------------------------------------------*)
+Theory PARITY
 
-open HolKernel boolLib Parse bossLib
 
-
-val _ = new_theory "PARITY"
-
-val PARITY_def =
- Define
-     `(PARITY 0 f  = T)
-   /\ (PARITY (SUC n) f = if f (SUC n) then ~PARITY n f else PARITY n f)`;
+Definition PARITY_def:
+      (PARITY 0 f  = T)
+   /\ (PARITY (SUC n) f = if f (SUC n) then ~PARITY n f else PARITY n f)
+End
 
 
 val UNIQUENESS_LEMMA = store_thm(
@@ -31,25 +28,30 @@ val UNIQUENESS_LEMMA = store_thm(
   ]);
 
 
-val ONE_def = Define `ONE(out:num->bool) = !t. out t = T`;
+Definition ONE_def:   ONE(out:num->bool) = !t. out t = T
+End
 
-val NOT_def = Define `NOT(inp, out:num->bool) = !t. out t = ~inp t`;
+Definition NOT_def:   NOT(inp, out:num->bool) = !t. out t = ~inp t
+End
 
-val MUX_def = Define `MUX(sw,in1,in2,out:num->bool)
-                       = !t. out t = if sw t then in1 t else in2 t`;
+Definition MUX_def:   MUX(sw,in1,in2,out:num->bool)
+                       = !t. out t = if sw t then in1 t else in2 t
+End
 
-val REG_def = Define `REG(inp,out:num->bool)
-                       = !t. out t = if (t=0) then F else inp(t-1)`;
+Definition REG_def:   REG(inp,out:num->bool)
+                       = !t. out t = if (t=0) then F else inp(t-1)
+End
 
-val PARITY_IMP_def = Define
-   `PARITY_IMP(inp,out) =
+Definition PARITY_IMP_def:
+    PARITY_IMP(inp,out) =
       ?l1 l2 l3 l4 l5.
         NOT(l2,l1)        /\
         MUX(inp,l1,l2,l3) /\
         REG(out,l2)       /\
         ONE l4            /\
         REG(l4,l5)        /\
-        MUX(l5,l3,l4,out)`;
+        MUX(l5,l3,l4,out)
+End
 
 
 val PARITY_LEMMA = prove(
@@ -76,4 +78,3 @@ val PARITY_CORRECT = store_thm(
       THEN MATCH_MP_TAC UNIQUENESS_LEMMA
       THEN PROVE_TAC [PARITY_LEMMA]);
 
-val _ = export_theory()

@@ -4,23 +4,16 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "FiniteVSpace";
+Theory FiniteVSpace
+Ancestors
+  pred_set arithmetic list number combinatorics VectorSpace
+  SpanSpace LinearIndep monoid field
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory arithmeticTheory listTheory numberTheory combinatoricsTheory;
-
-open VectorSpaceTheory SpanSpaceTheory LinearIndepTheory;
-open monoidTheory fieldTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Finite Vector Space Documentation                                         *)
 (* ------------------------------------------------------------------------- *)
@@ -83,9 +76,9 @@ val _ = temp_overload_on ("-", ``stick_sub r``);
 (* ------------------------------------------------------------------------- *)
 
 (* Define Finite Vector Space *)
-val FiniteVSpace_def = Define`
+Definition FiniteVSpace_def:
   FiniteVSpace (r:'a field) (g:'b group) op <=> VSpace r g op /\ FINITE R /\ FINITE V
-`;
+End
 
 (* Theorem: FiniteVSpace r g op ==> VSpace r g op *)
 (* Proof: by FiniteVSpace_def. *)
@@ -146,10 +139,10 @@ val finite_vspace_span_itself = store_thm(
 (* ------------------------------------------------------------------------- *)
 
 (* Dimension = LENGTH of shortest basis spanning the whole vector space) *)
-val dim_def = Define`
+Definition dim_def:
   dim (r:'a field) (g:'b group) op =
       MIN_SET (IMAGE LENGTH { b | basis g b /\ (SpanSpace r g op b = g) })
-`;
+End
 
 (* Theorem: Existence of Spanning basis with dimension.
             FiniteVSpace r g op ==> ?b. basis g b /\ (LENGTH b = dim r g op) *)
@@ -516,8 +509,4 @@ val finite_vspace_basis_dep = store_thm(
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

@@ -1,17 +1,16 @@
-open HolKernel Parse boolLib bossLib
+Theory ward
+Ancestors
+  divides list
 
-open dividesTheory
-
-val _ = new_theory "ward"
-
-val list_exp_def = Define`
+Definition list_exp_def:
   (list_exp l 0 = []) ∧
   (list_exp l (SUC n) = l ++ list_exp l n)
-`;
+End
 
 
 
-val _ = Hol_datatype `alphabet = a | b | I`
+Datatype: alphabet = a | b | I
+End
 
 val (thm_rules, thm_ind, thm_cases) = Hol_reln`
   thm [I] ∧
@@ -191,8 +190,6 @@ in
   recurse [] [] app_list
 end
 
-open listTheory
-
 fun solver (asl, t) = let
   val nonnil_asms = map ASSUME (filter is_neg asl)
   fun munge extras p s th =
@@ -294,4 +291,3 @@ val thmrwt_weak_confluent = store_thm(
        match_mp_tac (hd (CONJUNCTS thmrwt_rules)) >> srw_tac [][],
        pop_assum (MP_TAC o AP_TERM ``MEM I``) >> srw_tac [][],
 *)
-val _ = export_theory()

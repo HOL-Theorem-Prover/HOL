@@ -1,8 +1,6 @@
-open HolKernel Parse bossLib boolLib;
-
-open combinTheory;
-
-val _ = new_theory "extra_bool";
+Theory extra_bool
+Ancestors
+  combin
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems.                                                                 *)
@@ -30,7 +28,8 @@ val CONJ_EQ_IMP = store_thm
 
 (* ------------------------------------------------------------------------- *)
 
-val xor_def = Define `xor (x:bool) y = ~(x = y)`;
+Definition xor_def:   xor (x:bool) y = ~(x = y)
+End
 val _ = set_fixity "xor" (Infixr 750);
 
 val xor_comm = store_thm
@@ -76,4 +75,3 @@ val inv_xor = store_thm
    ``!x. ~x xor x``,
    RW_TAC bool_ss [xor_def] THEN DECIDE_TAC);
 
-val _ = export_theory ();
