@@ -24,8 +24,10 @@ in
   app (myuse hmakedir) ["HolLex.sml", "Holmake_tools_dtype.sml",
                         "terminal_primitives.sig",
                         "poly-terminal-prims.ML",
-                        "HOLAst.sml", "HOLParser.sml",
-                        "HOLToSML.sml", "HOLPrinter.sml"];
+                        "HOLAst.sig", "HOLAst.sml",
+                        "HOLParser.sig", "HOLParser.sml",
+                        "HOLToSML.sig", "HOLToSML.sml",
+                        "HOLPrinter.sig", "HOLPrinter.sml"];
   app appthis ["HolParser", "Holdep", "Holmake_tools", "internal_functions",
                "Holmake_types",
                "ReadHMF"]

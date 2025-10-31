@@ -1,6 +1,7 @@
-structure HOLToSML = struct
+structure HOLToSML :> HOLToSML = struct
 open HOLAst
 
+exception Unreachable
 fun mkHandleHolErr (p, e) = let
   val pat = App (mkIdent (p, "Feedback.HOL_ERR"), Wild p)
   val h = mkIdent (p, "boolTheory.TRUTH")

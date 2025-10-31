@@ -1,4 +1,4 @@
-structure HOLAst = struct
+structure HOLAst :> HOLAst = struct
 
 (* Defines an AST for Standard ML and the HOL-specific extensions such as
    Definition, Theorem, Inductive, and so on.
@@ -15,7 +15,7 @@ structure HOLAst = struct
 (* (start, content) *)
 type ident = int * string
 
-type fileline = string * (int * int * int)
+type fileline = {file: string, line: int, col: int}
 
 exception Unreachable
 

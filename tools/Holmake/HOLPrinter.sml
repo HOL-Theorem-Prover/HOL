@@ -1,21 +1,8 @@
-structure HOLPrinter = struct
+structure HOLPrinter :> HOLPrinter = struct
 open HOLAst
 
 fun K a _ = a
 fun C f x y = f y x
-
-datatype lazyseq =
-    Nil
-  | String of string * (unit -> lazyseq)
-
-fun str s = String (s, fn () => Nil)
-fun ch c = str (String.str c)
-
-fun append Nil y = y ()
-  | append (String (s, x)) y = String (s, fn () => append (x ()) y)
-
-fun flatmap _ [] = Nil
-  | flatmap f (x :: xs) = append (f x) (fn () => flatmap f xs)
 
 type printer = {token: string -> unit, startSpan: int * int -> unit, stopSpan: unit -> unit}
 

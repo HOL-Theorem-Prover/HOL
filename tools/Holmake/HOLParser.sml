@@ -1,4 +1,4 @@
-structure HOLParser = struct
+structure HOLParser :> HOLParser = struct
 open HOLAst
 
 fun mem x = List.exists (fn y => x = y)
