@@ -222,11 +222,11 @@ val EXP_EXP = store_thm
    ++ RW_TAC std_ss [MULT_EXP, EXP_ADD]
    ++ METIS_TAC [MULT_COMM]);
 ***)
-val EL_ETA = store_thm
-  ("EL_ETA",
-   ``!l1 l2.
+Theorem EL_ETA:
+     !l1 l2.
        (LENGTH l1 = LENGTH l2) /\ (!n. n < LENGTH l1 ==> (EL n l1 = EL n l2)) =
-       (l1 = l2)``,
+       (l1 = l2)
+Proof
    Induct
    >> (Cases ++ RW_TAC arith_ss [LENGTH])
    ++ STRIP_TAC
@@ -246,17 +246,19 @@ val EL_ETA = store_thm
    ++ RW_TAC std_ss []
    ++ Q.PAT_X_ASSUM `n < SUC X` MP_TAC
    ++ Cases_on `n`
-   ++ RW_TAC arith_ss [EL, HD, TL]);
+   ++ RW_TAC arith_ss [EL, HD, TL]
+QED
 
-val el_append = store_thm
-  ("el_append",
-   ``!n p q.
+Theorem el_append:
+     !n p q.
        n < LENGTH p + LENGTH q ==>
        (EL n (APPEND p q) =
-        if n < LENGTH p then EL n p else EL (n - LENGTH p) q)``,
+        if n < LENGTH p then EL n p else EL (n - LENGTH p) q)
+Proof
    Induct
    ++ Cases
-   ++ RW_TAC arith_ss [EL, HD, TL, APPEND, LENGTH]);
+   ++ RW_TAC arith_ss [EL, HD, TL, APPEND, LENGTH]
+QED
 
 (* ========================================================================= *)
 (* Vector spaces                                                             *)
@@ -292,21 +294,22 @@ Definition nonorigin_def:
    { v | v IN vector_space f (dimension v) /\ ~(v = origin f (dimension v)) }
 End
 
-val vector_space_origin = store_thm
-  ("vector_space_origin",
-   ``!f :: Field. !n. origin f n IN vector_space f n``,
+Theorem vector_space_origin:
+     !f :: Field. !n. origin f n IN vector_space f n
+Proof
    RW_TAC resq_ss
      [vector_space_def, dimension_def, coord_def, GSYM EVERY_EL,
       coords_def, GSPECIFICATION]
    >> (Induct_on `n` ++ RW_TAC std_ss [origin_def, LENGTH])
    ++ Induct_on `n`
-   ++ RW_TAC std_ss [origin_def, EVERY_DEF, field_zero_carrier]);
+   ++ RW_TAC std_ss [origin_def, EVERY_DEF, field_zero_carrier]
+QED
 
-val origin_eq = store_thm
-  ("origin_eq",
-   ``!f n p.
+Theorem origin_eq:
+     !f n p.
        (p = origin f n) =
-       (dimension p = n) /\ !i :: coords p. coord i p = field_zero f``,
+       (dimension p = n) /\ !i :: coords p. coord i p = field_zero f
+Proof
    RW_TAC resq_ss
      [dimension_def, coord_def, GSYM EVERY_EL, coords_def, GSPECIFICATION]
    ++ Q.SPEC_TAC (`p`,`p`)
@@ -316,24 +319,27 @@ val origin_eq = store_thm
    ++ EQ_TAC
    ++ RW_TAC std_ss []
    ++ FULL_SIMP_TAC std_ss [EVERY_DEF]
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
-val origin_eq' = store_thm
-  ("origin_eq'",
-   ``!f n p.
+Theorem origin_eq':
+     !f n p.
        (origin f n = p) =
-       (dimension p = n) /\ !i :: coords p. coord i p = field_zero f``,
-   METIS_TAC [origin_eq]);
+       (dimension p = n) /\ !i :: coords p. coord i p = field_zero f
+Proof
+   METIS_TAC [origin_eq]
+QED
 
-val nonorigin_alt = store_thm
-  ("nonorigin_alt",
-   ``!f p.
+Theorem nonorigin_alt:
+     !f p.
        p IN nonorigin f =
        EVERY (\x. x IN f.carrier) p /\
-       ~(EVERY (\x. x = field_zero f) p)``,
+       ~(EVERY (\x. x = field_zero f) p)
+Proof
    RW_TAC resq_ss
      [nonorigin_def, GSPECIFICATION, dimension_def, coords_def, coord_def,
-      vector_space_def, origin_eq, GSYM EVERY_EL]);
+      vector_space_def, origin_eq, GSYM EVERY_EL]
+QED
 
 (* ========================================================================= *)
 (* Projective geometry                                                       *)
@@ -362,19 +368,21 @@ End
 Definition affine_def:   affine f v = project f (v ++ [field_one f])
 End
 
-val project_refl = store_thm
-  ("project_refl",
-   ``!f p. project f p p``,
-   RW_TAC std_ss [project_def]);
+Theorem project_refl:
+     !f p. project f p p
+Proof
+   RW_TAC std_ss [project_def]
+QED
 
-val project_refl' = store_thm
-  ("project_refl'",
-   ``!f p q. (p = q) ==> project f p q``,
-   METIS_TAC [project_refl]);
+Theorem project_refl':
+     !f p q. (p = q) ==> project f p q
+Proof
+   METIS_TAC [project_refl]
+QED
 
-val project_sym = store_thm
-  ("project_sym",
-   ``!f :: Field. !p1 p2. project f p1 p2 ==> project f p2 p1``,
+Theorem project_sym:
+     !f :: Field. !p1 p2. project f p1 p2 ==> project f p2 p1
+Proof
    SIMP_TAC resq_ss [project_def, nonorigin_def, vector_space_def]
    ++ RW_TAC std_ss [GSPECIFICATION, coords_def, dimension_def, coord_def]
    ++ DISJ2_TAC
@@ -397,12 +405,13 @@ val project_sym = store_thm
    ++ Q.EXISTS_TAC `c`
    ++ RW_TAC alg_ss []
    ++ Q.PAT_X_ASSUM `!i. i < LENGTH p2 ==> X` (MP_TAC o Q.SPEC `i`)
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
-val project_trans = store_thm
-  ("project_trans",
-   ``!f :: Field. !p1 p2 p3.
-       project f p1 p2 /\ project f p2 p3 ==> project f p1 p3``,
+Theorem project_trans:
+     !f :: Field. !p1 p2 p3.
+       project f p1 p2 /\ project f p2 p3 ==> project f p1 p3
+Proof
    SIMP_TAC resq_ss [project_def, nonorigin_def, vector_space_def]
    ++ RW_TAC std_ss [GSPECIFICATION, coords_def, dimension_def, coord_def]
    << [METIS_TAC [],
@@ -411,12 +420,13 @@ val project_trans = store_thm
        ++ RW_TAC std_ss []
        ++ Q.EXISTS_TAC `field_mult f c' c`
        ++ RW_TAC std_ss [field_mult_carrier]
-       ++ RW_TAC std_ss [field_mult_assoc]]);
+       ++ RW_TAC std_ss [field_mult_assoc]]
+QED
 
-val project_eq = store_thm
-  ("project_eq",
-   ``!f :: Field. !v1 v2.
-       ((project f v1 = project f v2) = project f v1 v2)``,
+Theorem project_eq:
+     !f :: Field. !v1 v2.
+       ((project f v1 = project f v2) = project f v1 v2)
+Proof
    RW_TAC resq_ss []
    ++ MATCH_MP_TAC EQ_SYM
    ++ Q.SPEC_TAC (`v2`,`v2`)
@@ -428,11 +438,12 @@ val project_eq = store_thm
        RW_TAC std_ss [relationTheory.symmetric_def]
        ++ METIS_TAC [project_sym],
        RW_TAC std_ss [relationTheory.transitive_def]
-       ++ METIS_TAC [project_trans]]);
+       ++ METIS_TAC [project_trans]]
+QED
 
-val affine_eq = store_thm
-  ("affine_eq",
-   ``!f :: Field. !v1 v2. (affine f v1 = affine f v2) = (v1 = v2)``,
+Theorem affine_eq:
+     !f :: Field. !v1 v2. (affine f v1 = affine f v2) = (v1 = v2)
+Proof
    RW_TAC resq_ss [project_eq, affine_def, project_def, APPEND_11]
    ++ REVERSE EQ_TAC >> RW_TAC std_ss []
    ++ RW_TAC resq_ss
@@ -454,7 +465,8 @@ val affine_eq = store_thm
    ++ POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
    ++ MATCH_MP_TAC EQ_SYM
    ++ match_tac field_mult_rone
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
 (* ========================================================================= *)
 (* Elliptic curves                                                           *)
@@ -675,59 +687,65 @@ Definition curve_group_def:
       mult := curve_add e |>
 End
 
-val curve_field = store_thm
-  ("curve_field",
-   ``!e :: Curve. e.field IN Field``,
-   RW_TAC resq_ss [Curve_def, GSPECIFICATION]);
+Theorem curve_field:
+     !e :: Curve. e.field IN Field
+Proof
+   RW_TAC resq_ss [Curve_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_reduction2 curve_field context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_a1_carrier = store_thm
-  ("curve_a1_carrier",
-   ``!e :: Curve. e.a1 IN e.field.carrier``,
-   RW_TAC resq_ss [Curve_def, GSPECIFICATION]);
+Theorem curve_a1_carrier:
+     !e :: Curve. e.a1 IN e.field.carrier
+Proof
+   RW_TAC resq_ss [Curve_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_reduction2 curve_a1_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_a2_carrier = store_thm
-  ("curve_a2_carrier",
-   ``!e :: Curve. e.a2 IN e.field.carrier``,
-   RW_TAC resq_ss [Curve_def, GSPECIFICATION]);
+Theorem curve_a2_carrier:
+     !e :: Curve. e.a2 IN e.field.carrier
+Proof
+   RW_TAC resq_ss [Curve_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_reduction2 curve_a2_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_a3_carrier = store_thm
-  ("curve_a3_carrier",
-   ``!e :: Curve. e.a3 IN e.field.carrier``,
-   RW_TAC resq_ss [Curve_def, GSPECIFICATION]);
+Theorem curve_a3_carrier:
+     !e :: Curve. e.a3 IN e.field.carrier
+Proof
+   RW_TAC resq_ss [Curve_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_reduction2 curve_a3_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_a4_carrier = store_thm
-  ("curve_a4_carrier",
-   ``!e :: Curve. e.a4 IN e.field.carrier``,
-   RW_TAC resq_ss [Curve_def, GSPECIFICATION]);
+Theorem curve_a4_carrier:
+     !e :: Curve. e.a4 IN e.field.carrier
+Proof
+   RW_TAC resq_ss [Curve_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_reduction2 curve_a4_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_a6_carrier = store_thm
-  ("curve_a6_carrier",
-   ``!e :: Curve. e.a6 IN e.field.carrier``,
-   RW_TAC resq_ss [Curve_def, GSPECIFICATION]);
+Theorem curve_a6_carrier:
+     !e :: Curve. e.a6 IN e.field.carrier
+Proof
+   RW_TAC resq_ss [Curve_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_reduction2 curve_a6_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_cases = store_thm
-  ("curve_cases",
-   ``!e :: Curve. !p :: curve_points e.
+Theorem curve_cases:
+     !e :: Curve. !p :: curve_points e.
        (p = curve_zero e) \/
-       ?x y :: (e.field.carrier). p = affine e.field [x; y]``,
+       ?x y :: (e.field.carrier). p = affine e.field [x; y]
+Proof
    RW_TAC resq_ss
      [curve_points_def, curve_zero_def,
       GSPECIFICATION, LET_DEF, affine_def, APPEND]
@@ -783,7 +801,8 @@ val curve_cases = store_thm
        >> DECIDE_TAC
        ++ STRIP_TAC
        ++ RW_TAC bool_ss [EL, HD, TL, coord_def]
-       ++ RW_TAC alg_ss []]);
+       ++ RW_TAC alg_ss []]
+QED
 
 local
   val case_th =
@@ -807,10 +826,10 @@ in
       end (asl,g);
 end;
 
-val curve_distinct = store_thm
-  ("curve_distinct",
-   ``!e :: Curve. !x y.
-       ~(curve_zero e = affine e.field [x; y])``,
+Theorem curve_distinct:
+     !e :: Curve. !x y.
+       ~(curve_zero e = affine e.field [x; y])
+Proof
    RW_TAC resq_ss
      [affine_case_def, affine_def, Curve_def, GSPECIFICATION,
       curve_zero_def, APPEND, project_eq]
@@ -821,16 +840,18 @@ val curve_distinct = store_thm
    >> (POP_ASSUM MP_TAC
        ++ RW_TAC std_ss [field_zero_one])
    ++ Q.PAT_X_ASSUM `!i. P i` (MP_TAC o Q.SPEC `SUC (SUC 0)`)
-   ++ RW_TAC arith_ss [EL, HD, TL, field_mult_rzero, field_zero_one]);
+   ++ RW_TAC arith_ss [EL, HD, TL, field_mult_rzero, field_zero_one]
+QED
 
-val affine_case = store_thm
-  ("affine_case",
-   ``!e :: Curve. !z f.
+Theorem affine_case:
+     !e :: Curve. !z f.
        (affine_case e z f (curve_zero e) = z) /\
-       !x y. affine_case e z f (affine e.field [x; y]) = f x y``,
+       !x y. affine_case e z f (affine e.field [x; y]) = f x y
+Proof
    RW_TAC resq_ss
      [affine_case_def, affine_eq, Curve_def, GSPECIFICATION,
-      curve_distinct]);
+      curve_distinct]
+QED
 
 (*
 val curve_quadratic = store_thm
@@ -847,13 +868,13 @@ val curve_quadratic = store_thm
        (y2 = y1) \/ (y2 = ~(y1 + a1 * x1 + a3))``,
 *)
 
-val curve_zero_eq = store_thm
-  ("curve_zero_eq",
-   ``!e :: Curve. !x y z :: (e.field.carrier).
+Theorem curve_zero_eq:
+     !e :: Curve. !x y z :: (e.field.carrier).
        (project e.field [x; y; z] = curve_zero e) =
        (x = field_zero e.field) /\
        ~(y = field_zero e.field) /\
-       (z = field_zero e.field)``,
+       (z = field_zero e.field)
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss
         [GSPECIFICATION, curve_zero_def,
@@ -908,20 +929,21 @@ val curve_zero_eq = store_thm
    ++ RW_TAC alg_ss []
    ++ Know `(i = 0) \/ (i = SUC 0) \/ (i = SUC (SUC 0))` >> DECIDE_TAC
    ++ STRIP_TAC
-   ++ RW_TAC alg_ss [EL, HD, TL]);
+   ++ RW_TAC alg_ss [EL, HD, TL]
+QED
 
-val curve_zero_eq' = store_thm
-  ("curve_zero_eq'",
-   ``!e :: Curve. !x y z :: (e.field.carrier).
+Theorem curve_zero_eq':
+     !e :: Curve. !x y z :: (e.field.carrier).
        (curve_zero e = project e.field [x; y; z]) =
        (x = field_zero e.field) /\
        ~(y = field_zero e.field) /\
-       (z = field_zero e.field)``,
-   RW_TAC std_ss [curve_zero_eq]);
+       (z = field_zero e.field)
+Proof
+   RW_TAC std_ss [curve_zero_eq]
+QED
 
-val curve_neg_optimized = store_thm
-  ("curve_neg_optimized",
-   ``!e :: Curve. !x1 y1 z1 :: (e.field.carrier).
+Theorem curve_neg_optimized:
+     !e :: Curve. !x1 y1 z1 :: (e.field.carrier).
        project e.field [x1; y1; z1] IN curve_points e ==>
        (curve_neg e (project e.field [x1; y1; z1]) =
         let f = e.field in
@@ -933,7 +955,8 @@ val curve_neg_optimized = store_thm
         let x = x1 in
         let y = ~(y1 + a1 * x1 + a3 * z1) in
         let z = z1 in
-        project f [x; y; z])``,
+        project f [x; y; z])
+Proof
    RW_TAC resq_ss [LET_DEF, curve_neg_def]
    ++ Know `e IN Curve` >> RW_TAC std_ss []
    ++ REWRITE_TAC [Curve_def]
@@ -987,11 +1010,11 @@ val curve_neg_optimized = store_thm
    ++ Know `(i = 0) \/ (i = SUC 0) \/ (i = SUC (SUC 0))` >> DECIDE_TAC
    ++ STRIP_TAC
    ++ RW_TAC std_ss [EL, HD, TL, field_mult_rone]
-   ++ RW_TAC alg_ss' [field_distrib]);
+   ++ RW_TAC alg_ss' [field_distrib]
+QED
 
-val curve_affine = store_thm
-  ("curve_affine",
-   ``!e :: Curve. !x y :: (e.field.carrier).
+Theorem curve_affine:
+     !e :: Curve. !x y :: (e.field.carrier).
        affine e.field [x; y] IN curve_points e =
        let f = e.field in
        let $+ = field_add f in
@@ -1003,7 +1026,8 @@ val curve_affine = store_thm
        let a4 = e.a4 in
        let a6 = e.a6 in
        y ** 2 + a1 * x * y + a3 * y =
-       x ** 3 + a2 * x ** 2 + a4 * x + a6``,
+       x ** 3 + a2 * x ** 2 + a4 * x + a6
+Proof
    RW_TAC resq_ss
      [curve_points_def, LET_DEF, affine_def, GSPECIFICATION, APPEND]
    ++ REVERSE EQ_TAC
@@ -1054,11 +1078,11 @@ val curve_affine = store_thm
    ++ Q.EXISTS_TAC `e.field`
    ++ Q.EXISTS_TAC `field_exp e.field z1 3`
    ++ REPEAT (Q.PAT_X_ASSUM `X = Y` MP_TAC)
-   ++ RW_TAC alg_ss' [field_distrib]);
+   ++ RW_TAC alg_ss' [field_distrib]
+QED
 
-val curve_affine_reduce_3 = store_thm
-  ("curve_affine_reduce_3",
-   ``!e :: Curve. !x y :: (e.field.carrier).
+Theorem curve_affine_reduce_3:
+     !e :: Curve. !x y :: (e.field.carrier).
        affine e.field [x; y] IN curve_points e =
        (field_exp e.field x 3 =
         field_add e.field
@@ -1072,11 +1096,13 @@ val curve_affine_reduce_3 = store_thm
                 (field_add e.field
                   (field_mult e.field e.a1 (field_mult e.field x y))
                   (field_neg e.field
-                    (field_mult e.field e.a2 (field_exp e.field x 2))))))))``,
+                    (field_mult e.field e.a2 (field_exp e.field x 2))))))))
+Proof
    RW_TAC resq_ss []
    ++ CONV_TAC (RAND_CONV (REWR_CONV EQ_SYM_EQ))
    ++ RW_TAC alg_ss [curve_affine, LET_DEF]
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' []
+QED
 
 local
   val exp_tm = ``field_exp e.field (x : 'a)``;
@@ -1137,12 +1163,13 @@ val curve_affine_reduce = save_thm
    with_flag (subtypeTools.ORACLE,true)
    (Count.apply curve_affine_reduce_n) 12);
 
-val curve_zero_carrier = store_thm
-  ("curve_zero_carrier",
-   ``!e :: Curve. curve_zero e IN curve_points e``,
+Theorem curve_zero_carrier:
+     !e :: Curve. curve_zero e IN curve_points e
+Proof
    RW_TAC resq_ss [curve_zero_def, curve_points_def, LET_DEF, GSPECIFICATION]
    ++ Q.EXISTS_TAC `(field_zero e.field, field_one e.field, field_zero e.field)`
-   ++ RW_TAC alg_ss [nonorigin_alt, EVERY_DEF]);
+   ++ RW_TAC alg_ss [nonorigin_alt, EVERY_DEF]
+QED
 
 val context = subtypeTools.add_reduction2 curve_zero_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
@@ -1227,34 +1254,36 @@ val curve_add_carrier = Count.apply store_thm
 val context = subtypeTools.add_reduction2 curve_add_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_double_zero = store_thm
-  ("curve_double_zero",
-   ``!e :: Curve. curve_double e (curve_zero e) = curve_zero e``,
+Theorem curve_double_zero:
+     !e :: Curve. curve_double e (curve_zero e) = curve_zero e
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC resq_ss [curve_double_def]
    ++ normalForms.REMOVE_ABBR_TAC
    ++ RW_TAC std_ss []
-   ++ RW_TAC alg_ss [affine_case]);
+   ++ RW_TAC alg_ss [affine_case]
+QED
 
 val context = subtypeTools.add_rewrite2 curve_double_zero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_add_lzero = store_thm
-  ("curve_add_lzero",
-   ``!e :: Curve. !p :: curve_points e. curve_add e (curve_zero e) p = p``,
+Theorem curve_add_lzero:
+     !e :: Curve. !p :: curve_points e. curve_add e (curve_zero e) p = p
+Proof
    RW_TAC resq_ss []
    ++ ec_cases_on `e` `p`
    ++ RW_TAC resq_ss [curve_add_def]
    ++ UNABBREV_ALL_TAC
-   ++ RW_TAC alg_ss [affine_case]);
+   ++ RW_TAC alg_ss [affine_case]
+QED
 
 val context = subtypeTools.add_rewrite2 curve_add_lzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_add_lneg = store_thm
-  ("curve_add_lneg",
-   ``!e :: Curve. !p :: curve_points e.
-       curve_add e (curve_neg e p) p = curve_zero e``,
+Theorem curve_add_lneg:
+     !e :: Curve. !p :: curve_points e.
+       curve_add e (curve_neg e p) p = curve_zero e
+Proof
    RW_TAC resq_ss []
    ++ ec_cases_on `e` `p`
    ++ RW_TAC resq_ss [curve_add_def, curve_neg_def, LET_DEF]
@@ -1267,7 +1296,8 @@ val curve_add_lneg = store_thm
    ++ Q.PAT_X_ASSUM `X = Y` MP_TAC
    ++ PURE_ONCE_REWRITE_TAC [EQ_SYM_EQ]
    ++ Q.PAT_X_ASSUM `~(X = Y)` MP_TAC
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' []
+QED
 
 val context = subtypeTools.add_rewrite2 curve_add_lneg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
@@ -1312,19 +1342,21 @@ val curve_add_comm = Count.apply store_thm
       (with_flag (subtypeTools.ORACLE,true)
        (Count.apply (ASM_SIMP_TAC (field_poly_ss context []) []))));
 
-val curve_add_rzero = store_thm
-  ("curve_add_rzero",
-   ``!e :: Curve. !p :: curve_points e. curve_add e p (curve_zero e) = p``,
-   METIS_TAC [curve_add_lzero,curve_add_comm,curve_zero_carrier]);
+Theorem curve_add_rzero:
+     !e :: Curve. !p :: curve_points e. curve_add e p (curve_zero e) = p
+Proof
+   METIS_TAC [curve_add_lzero,curve_add_comm,curve_zero_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 curve_add_rzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val curve_add_rneg = store_thm
-  ("curve_add_rneg",
-   ``!e :: Curve. !p :: curve_points e.
-       curve_add e p (curve_neg e p) = curve_zero e``,
-   METIS_TAC [curve_add_lneg,curve_add_comm,curve_neg_carrier]);
+Theorem curve_add_rneg:
+     !e :: Curve. !p :: curve_points e.
+       curve_add e p (curve_neg e p) = curve_zero e
+Proof
+   METIS_TAC [curve_add_lneg,curve_add_comm,curve_neg_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 curve_add_rneg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;

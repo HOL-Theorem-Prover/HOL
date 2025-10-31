@@ -248,20 +248,22 @@ val _ = intLib.deprecate_int ();
     and list univ(:'a) =~ univ(:'a)               by INFINITE_A_list_BIJ_A (same cardinality)
     ==> ?f. BIJ f (list univ(:'a)) univ(:'a)      by cardeq_def
 *)
-val A_LIST_BIJ_A = store_thm(
-  "A_LIST_BIJ_A",
-  ``INFINITE univ(:'a) ==> ?f. BIJ f univ(:'a list) univ(:'a)``,
-  metis_tac[UNIV_list, INFINITE_A_list_BIJ_A, cardeq_def]);
+Theorem A_LIST_BIJ_A:
+    INFINITE univ(:'a) ==> ?f. BIJ f univ(:'a list) univ(:'a)
+Proof
+  metis_tac[UNIV_list, INFINITE_A_list_BIJ_A, cardeq_def]
+QED
 
 (* Theorem: INFINITE univ(:'a) ==> ?f. INJ f univ(:'a list) univ(:'a) *)
 (* Proof:
    Note ?f. BIJ f (list univ(:'a)) univ(:'a)      by A_LIST_BIJ_A
      or     INJ f (list univ(:'a)) univ(:'a)      by BIJ_DEF
 *)
-val A_LIST_INJ_A = store_thm(
-  "A_LIST_INJ_A",
-  ``INFINITE univ(:'a) ==> ?f. INJ f univ(:'a list) univ(:'a)``,
-  metis_tac[A_LIST_BIJ_A, BIJ_DEF]);
+Theorem A_LIST_INJ_A:
+    INFINITE univ(:'a) ==> ?f. INJ f univ(:'a list) univ(:'a)
+Proof
+  metis_tac[A_LIST_BIJ_A, BIJ_DEF]
+QED
 
 (* Theorem: INFINITE univ(:'a)  ==> ?f. INJ f univ(:num list) univ(:'a) *)
 (* Proof:
@@ -274,15 +276,16 @@ val A_LIST_INJ_A = store_thm(
     then INJ (g o f) (list univ(:num)) univ(:'a)  by INJ_COMPOSE
     Take g o f for the result.
 *)
-val NUM_LIST_INJ_A = store_thm(
-  "NUM_LIST_INJ_A",
-  ``INFINITE univ(:'a)  ==> ?f. INJ f univ(:num list) univ(:'a)``,
+Theorem NUM_LIST_INJ_A:
+    INFINITE univ(:'a)  ==> ?f. INJ f univ(:num list) univ(:'a)
+Proof
   strip_tac >>
   `list univ(:num) =~ univ(:num)` by metis_tac[INFINITE_A_list_BIJ_A, INFINITE_NUM_UNIV] >>
   rw[UNIV_list] >>
   `?f. INJ f univ(:num) univ(:'a)` by rw[GSYM infinite_num_inj] >>
   `?g. INJ g (list univ(:num)) univ(:num)` by metis_tac[cardeq_def, BIJ_DEF] >>
-  metis_tac[INJ_COMPOSE]);
+  metis_tac[INJ_COMPOSE]
+QED
 
 (* Theorem: INFINITE univ(:'a) ==> ?s:'a -> bool. FINITE s /\ (CARD s = n) *)
 (* Proof:
@@ -297,14 +300,15 @@ val NUM_LIST_INJ_A = store_thm(
        = CARD (count n)                   by INJ_CARD_IMAGE_EQN, INJ f (count n) univ(:'a)
        = n                                by CARD_COUNT
 *)
-val finite_set_exists = store_thm(
-  "finite_set_exists",
-  ``!n. INFINITE univ(:'a) ==> ?s:'a -> bool. FINITE s /\ (CARD s = n)``,
+Theorem finite_set_exists:
+    !n. INFINITE univ(:'a) ==> ?s:'a -> bool. FINITE s /\ (CARD s = n)
+Proof
   rpt strip_tac >>
   `?f. INJ f univ(:num) univ(:'a)` by rw[GSYM infinite_num_inj] >>
   qexists_tac `IMAGE f (count n)` >>
   `INJ f (count n) univ(:'a)` by rw[INJ_SUBSET_UNIV] >>
-  rw[INJ_CARD_IMAGE_EQN]);
+  rw[INJ_CARD_IMAGE_EQN]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Cardinality                                                  *)
@@ -316,10 +320,11 @@ val finite_set_exists = store_thm(
     and prime (char r)                         by finite_field_char
    Thus take p = char r, n = d, and the result follows.
 *)
-val finite_field_card_eq_prime_power = store_thm(
-  "finite_field_card_eq_prime_power",
-  ``!r:'a field. FiniteField r ==> ?p n. prime p /\ 0 < n /\ (CARD R = p ** n)``,
-  metis_tac[finite_field_card, finite_field_char]);
+Theorem finite_field_card_eq_prime_power:
+    !r:'a field. FiniteField r ==> ?p n. prime p /\ 0 < n /\ (CARD R = p ** n)
+Proof
+  metis_tac[finite_field_card, finite_field_char]
+QED
 
 (* This simple result raises two questions:
    1. Is there some finite fields for each prime p and 0 < n?      This is existence.
@@ -399,9 +404,9 @@ finite_field_existence  |- !p n. prime p /\ 0 < n /\ INFINITE univ(:'a) ==> ?r. 
       or ?x. monic x /\ ipoly x /\ (deg x = n)            by monic_irreducibles_degree_member
    Hence take this x as p.
 *)
-val poly_monic_irreducible_exists = store_thm(
-  "poly_monic_irreducible_exists",
-  ``!r:'a field. FiniteField r ==> !n. 0 < n ==> ?p. monic p /\ ipoly p /\ (deg p = n)``,
+Theorem poly_monic_irreducible_exists:
+    !r:'a field. FiniteField r ==> !n. 0 < n ==> ?p. monic p /\ ipoly p /\ (deg p = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = CARD R` >>
   qabbrev_tac `f = monic_irreducibles_count r` >>
@@ -414,7 +419,8 @@ val poly_monic_irreducible_exists = store_thm(
   `FINITE s` by rw[monic_irreducibles_degree_finite, Abbr`s`] >>
   `s <> {}` by metis_tac[CARD_EQ_0, MULT_EQ_0] >>
   `?x. x IN s` by rw[MEMBER_NOT_EMPTY] >>
-  metis_tac[monic_irreducibles_degree_member]);
+  metis_tac[monic_irreducibles_degree_member]
+QED
 
 (* poly_monic_irreducible_exists:
    This proof depends on counting the number of monic irreducibles.
@@ -432,12 +438,13 @@ val poly_monic_irreducible_exists = store_thm(
      and CARD (PolyModRing r p).carrier = CARD R ** deg p    by poly_mod_irreducible_field_card
     Just take s = (PolyModRing r p).
 *)
-val finite_field_exists_condition = store_thm(
-  "finite_field_exists_condition",
-  ``!r:'a field. FiniteField r ==>
-   !n. 0 < n ==> ?s:'a poly field. FiniteField s /\ (CARD s.carrier = CARD R ** n)``,
+Theorem finite_field_exists_condition:
+    !r:'a field. FiniteField r ==>
+   !n. 0 < n ==> ?s:'a poly field. FiniteField s /\ (CARD s.carrier = CARD R ** n)
+Proof
   metis_tac[poly_monic_irreducible_exists,
-             poly_mod_irreducible_finite_field, poly_mod_irreducible_field_card]);
+             poly_mod_irreducible_finite_field, poly_mod_irreducible_field_card]
+QED
 
 (* Theorem: prime p /\ 0 < n ==> ?r:num poly field. FiniteField r /\ (CARD r.carrier = p ** n) *)
 (* Proof:
@@ -447,13 +454,14 @@ val finite_field_exists_condition = store_thm(
    Hence ?s:num poly field. FiniteField s /\
          (CARD s.carrier = CARD r.carrier ** n)   by finite_field_exists_condition
 *)
-val finite_field_card_prime_power_exists = store_thm(
-  "finite_field_card_prime_power_exists",
-  ``!p n. prime p /\ 0 < n ==> ?r:num poly field. FiniteField r /\ (CARD r.carrier = p ** n)``,
+Theorem finite_field_card_prime_power_exists:
+    !p n. prime p /\ 0 < n ==> ?r:num poly field. FiniteField r /\ (CARD r.carrier = p ** n)
+Proof
   rpt strip_tac >>
   `FiniteField (GF p)` by rw[GF_finite_field] >>
   `CARD (GF p).carrier = p` by rw[GF_card] >>
-  metis_tac[finite_field_exists_condition]);
+  metis_tac[finite_field_exists_condition]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -472,15 +480,16 @@ val finite_field_card_prime_power_exists = store_thm(
        Since (ring_inj_image r f).carrier = IMAGE f R   by ring_inj_image_def
           so BIJ f R (IMAGE f R)                        by INJ_IMAGE_BIJ_ALT
 *)
-val finite_field_by_inj_map = store_thm(
-  "finite_field_by_inj_map",
-  ``!(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> ?r_:'b field. Field r_ /\ FieldIso f r r_``,
+Theorem finite_field_by_inj_map:
+    !(r:'a field) f. Field r /\ INJ f R univ(:'b) ==> ?r_:'b field. Field r_ /\ FieldIso f r r_
+Proof
   rpt strip_tac >>
   qexists_tac `ring_inj_image r f` >>
   rw[field_inj_image_field] >>
   rw[FieldIso_def] >-
   rw[FieldHomo_def, ring_inj_image_ring_homo] >>
-  rw[ring_inj_image_def, INJ_IMAGE_BIJ_ALT]);
+  rw[ring_inj_image_def, INJ_IMAGE_BIJ_ALT]
+QED
 
 (* Theorem: prime p /\ 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p ** n) *)
 (* Proof:
@@ -497,9 +506,9 @@ val finite_field_by_inj_map = store_thm(
     then FiniteField r due to Field r /\ FINITE R            by FiniteField_def
      and CARD R = CARD nr.carrier = p ** n                   by FINITE_BIJ_CARD_EQ
 *)
-val finite_field_existence = store_thm(
-  "finite_field_existence",
-  ``!p n. prime p /\ 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p ** n)``,
+Theorem finite_field_existence:
+    !p n. prime p /\ 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p ** n)
+Proof
   rpt strip_tac >>
   `?nr:num poly field. FiniteField nr /\ (CARD nr.carrier = p ** n)` by rw[finite_field_card_prime_power_exists] >>
   `Field nr /\ FINITE nr.carrier` by metis_tac[FiniteField_def] >>
@@ -508,7 +517,8 @@ val finite_field_existence = store_thm(
   `?r:'a field. Field r /\ FieldIso f nr r` by rw[finite_field_by_inj_map] >>
   `BIJ f nr.carrier R` by metis_tac[FieldIso_def] >>
   `FINITE R` by metis_tac[BIJ_FINITE] >>
-  metis_tac[FiniteField_def, FINITE_BIJ_CARD_EQ]);
+  metis_tac[FiniteField_def, FINITE_BIJ_CARD_EQ]
+QED
 
 (* Theorem: INFINITE univ(:'a) ==>
             !q. (?p n. prime p /\ 0 < n /\ (q = p ** n)) <=> (?r:'a field. FiniteField r /\ (CARD R = q)) *)
@@ -520,11 +530,12 @@ val finite_field_existence = store_thm(
        and prime (char r)                          by finite_field_char
       Take p = char r, n = d.
 *)
-val finite_field_existence_iff = store_thm(
-  "finite_field_existence_iff",
-  ``INFINITE univ(:'a) ==>
-   !q. (?p n. prime p /\ 0 < n /\ (q = p ** n)) <=> (?r:'a field. FiniteField r /\ (CARD R = q))``,
-  metis_tac[finite_field_existence, finite_field_card, finite_field_char]);
+Theorem finite_field_existence_iff:
+    INFINITE univ(:'a) ==>
+   !q. (?p n. prime p /\ 0 < n /\ (q = p ** n)) <=> (?r:'a field. FiniteField r /\ (CARD R = q))
+Proof
+  metis_tac[finite_field_existence, finite_field_card, finite_field_char]
+QED
 
 (* Theorem: 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. unity n = PPIMAGE cyclo (divisors n) *)
 (* Proof:
@@ -545,9 +556,9 @@ val finite_field_existence_iff = store_thm(
    Take this FiniteField r,
    Then unity n = PPIMAGE cyclo (divisors n)   by poly_unity_eq_poly_cyclo_product
 *)
-val poly_unity_eq_poly_prod_image_cyclo = store_thm(
-  "poly_unity_eq_poly_prod_image_cyclo",
-  ``!n. 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. unity n = PPIMAGE cyclo (divisors n)``,
+Theorem poly_unity_eq_poly_prod_image_cyclo:
+    !n. 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. unity n = PPIMAGE cyclo (divisors n)
+Proof
   rpt strip_tac >>
   `?p. prime p /\ n < p` by rw[prime_always_bigger] >>
   `coprime n p` by metis_tac[prime_coprime_all_less, LESS_EQ_REFL, coprime_sym] >>
@@ -560,24 +571,27 @@ val poly_unity_eq_poly_prod_image_cyclo = store_thm(
   qabbrev_tac `s = PF r` >>
   `s <<= r /\ (CARD B = p)` by rw[prime_field_subfield_property, Abbr`s`] >>
   `n divides CARD R+` by metis_tac[subfield_card_coprime_iff] >>
-  metis_tac[poly_unity_eq_poly_cyclo_product]);
+  metis_tac[poly_unity_eq_poly_cyclo_product]
+QED
 
 (* Theorem: 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. unity n = PPROD {cyclo k | k IN (divisors n)} *)
 (* Proof: by poly_unity_eq_poly_prod_image_cyclo, EXTENSION *)
-val poly_unity_eq_poly_prod_image_cyclo_alt = store_thm(
-  "poly_unity_eq_poly_prod_image_cyclo_alt",
-  ``!n. 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. unity n = PPROD {cyclo k | k IN (divisors n)}``,
+Theorem poly_unity_eq_poly_prod_image_cyclo_alt:
+    !n. 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. unity n = PPROD {cyclo k | k IN (divisors n)}
+Proof
   rpt strip_tac >>
   `?r:'a field. unity n = PPIMAGE cyclo (divisors n)` by metis_tac[poly_unity_eq_poly_prod_image_cyclo] >>
   `IMAGE cyclo (divisors n) = {cyclo k | k IN (divisors n)}` by rw[EXTENSION] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 0 < n ==> ?r:num field. Unity r n = poly_prod_set r {poly_cyclo r k | k IN (divisors n)} *)
 (* Proof: by INFINITE_NUM_UNIV, poly_unity_eq_poly_prod_image_cyclo_alt *)
-val poly_unity_eq_poly_prod_image_cyclo_num = store_thm(
-  "poly_unity_eq_poly_prod_image_cyclo_num",
-  ``!n. 0 < n ==> ?r:num field. Unity r n = poly_prod_set r {poly_cyclo r k | k IN (divisors n)}``,
-  metis_tac[INFINITE_NUM_UNIV, poly_unity_eq_poly_prod_image_cyclo_alt]);
+Theorem poly_unity_eq_poly_prod_image_cyclo_num:
+    !n. 0 < n ==> ?r:num field. Unity r n = poly_prod_set r {poly_cyclo r k | k IN (divisors n)}
+Proof
+  metis_tac[INFINITE_NUM_UNIV, poly_unity_eq_poly_prod_image_cyclo_alt]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Correspondence between Finite Fields                                      *)
@@ -672,14 +686,15 @@ val _ = export_rewrites ["iso_subfields_def"];
     ==> CARD B = CARD S_                     by field_iso_card_eq
   Hence (r <:> s) = (r_ <:> s_)              by EXP_BASE_INJECTIVE, 1 < CARD B
 *)
-val finite_field_card_eq_subfield_iso_dim_eq = store_thm(
-  "finite_field_card_eq_subfield_iso_dim_eq",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s, f, s_) |= r_ ==> ((r <:> s) = (r_ <:> s_))``,
+Theorem finite_field_card_eq_subfield_iso_dim_eq:
+    !(r s):'a field (r_ s_):'b field f. r =| (s, f, s_) |= r_ ==> ((r <:> s) = (r_ <:> s_))
+Proof
   rw[] >>
   `CARD R = (CARD B) ** (r <:> s)` by rw[finite_subfield_card_eqn] >>
   `CARD R_ = (CARD S_) ** (r_ <:> s_)` by rw[finite_subfield_card_eqn] >>
   `FINITE B` by metis_tac[subfield_finite_field, FiniteField_def] >>
-  metis_tac[field_iso_card_eq, finite_subfield_card_gt_1, EXP_BASE_INJECTIVE]);
+  metis_tac[field_iso_card_eq, finite_subfield_card_gt_1, EXP_BASE_INJECTIVE]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==>
             !x. x IN R ==> ?y. y IN R_ /\ (forder_ y = forder x) /\ (minimal_ y = MAP f (minimal x)) *)
@@ -748,10 +763,10 @@ val finite_field_card_eq_subfield_iso_dim_eq = store_thm(
      With oy divides ox /\ ox divides oy
       ==> oy = ox                        by DIVIDES_ANTISYM
 *)
-val finite_field_element_mirror_exists = store_thm(
-  "finite_field_element_mirror_exists",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x. x IN R ==> ?y. y IN R_ /\ (forder_ y = forder x) /\ (minimal_ y = MAP f (minimal x))``,
+Theorem finite_field_element_mirror_exists:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x. x IN R ==> ?y. y IN R_ /\ (forder_ y = forder x) /\ (minimal_ y = MAP f (minimal x))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   qabbrev_tac `p = minimal x` >>
   `s <= r /\ s_ <= r_` by rw[subfield_is_subring] >>
@@ -802,7 +817,8 @@ val finite_field_element_mirror_exists = store_thm(
     `x ** oy = #1` by rw[GSYM poly_unity_root_property] >>
     `ox divides oy` by rw[GSYM field_order_divides_exp, Abbr`ox`] >>
     rw[DIVIDES_ANTISYM]
-  ]);
+  ]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -836,26 +852,29 @@ val finite_field_element_mirror_def =
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R ==> (mirror f x) IN R_ *)
 (* Proof: by finite_field_element_mirror_def *)
-val finite_field_element_mirror_element = store_thm(
-  "finite_field_element_mirror_element",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> !x. x IN R ==> (mirror f x) IN R_``,
-  metis_tac[finite_field_element_mirror_def]);
+Theorem finite_field_element_mirror_element:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> !x. x IN R ==> (mirror f x) IN R_
+Proof
+  metis_tac[finite_field_element_mirror_def]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R ==> (forder_ (mirror f x) = forder x) *)
 (* Proof: by finite_field_element_mirror_def *)
-val finite_field_element_mirror_order = store_thm(
-  "finite_field_element_mirror_order",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x. x IN R ==> (forder_ (mirror f x) = forder x)``,
-  metis_tac[finite_field_element_mirror_def]);
+Theorem finite_field_element_mirror_order:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x. x IN R ==> (forder_ (mirror f x) = forder x)
+Proof
+  metis_tac[finite_field_element_mirror_def]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R ==> (minimal_ (mirror f x) = MAP f (minimal x)) *)
 (* Proof: by finite_field_element_mirror_def *)
-val finite_field_element_mirror_poly_minimal = store_thm(
-  "finite_field_element_mirror_poly_minimal",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x. x IN R ==> (minimal_ (mirror f x) = MAP f (minimal x))``,
-  metis_tac[finite_field_element_mirror_def]);
+Theorem finite_field_element_mirror_poly_minimal:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x. x IN R ==> (minimal_ (mirror f x) = MAP f (minimal x))
+Proof
+  metis_tac[finite_field_element_mirror_def]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> (mirror f #0 = #0_) *)
 (* Proof:
@@ -865,13 +884,14 @@ val finite_field_element_mirror_poly_minimal = store_thm(
        = 0                         by field_order_zero
     Thus mirror f #0 = #0_         by field_order_eq_0
 *)
-val finite_field_element_mirror_zero = store_thm(
-  "finite_field_element_mirror_zero",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> (mirror f #0 = #0_)``,
+Theorem finite_field_element_mirror_zero:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> (mirror f #0 = #0_)
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   `(mirror f #0) IN R_` by rw[finite_field_element_mirror_element] >>
   `forder_ (mirror f #0) = forder #0` by rw[finite_field_element_mirror_order] >>
-  metis_tac[field_order_eq_0, field_order_zero]);
+  metis_tac[field_order_eq_0, field_order_zero]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> (mirror f #1 = #1_) *)
 (* Proof:
@@ -881,13 +901,14 @@ val finite_field_element_mirror_zero = store_thm(
        = 1                         by field_order_one
     Thus mirror f #1 = #1_         by field_order_eq_1
 *)
-val finite_field_element_mirror_one = store_thm(
-  "finite_field_element_mirror_one",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> (mirror f #1 = #1_)``,
+Theorem finite_field_element_mirror_one:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> (mirror f #1 = #1_)
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   `(mirror f #1) IN R_` by rw[finite_field_element_mirror_element] >>
   `forder_ (mirror f #1) = forder #1` by rw[finite_field_element_mirror_order] >>
-  metis_tac[field_order_eq_1, field_order_one]);
+  metis_tac[field_order_eq_1, field_order_one]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R ==> ((mirror f x = #0_) <=> (x = #0)) *)
 (* Proof:
@@ -895,12 +916,13 @@ val finite_field_element_mirror_one = store_thm(
      and forder_ (mirror f x) = forder x     by finite_field_element_mirror_order
      The result follows                      by field_order_eq_0
 *)
-val finite_field_element_mirror_eq_zero = store_thm(
-  "finite_field_element_mirror_eq_zero",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x. x IN R ==> ((mirror f x = #0_) <=> (x = #0))``,
+Theorem finite_field_element_mirror_eq_zero:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x. x IN R ==> ((mirror f x = #0_) <=> (x = #0))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
-  metis_tac[field_order_eq_0, finite_field_element_mirror_element, finite_field_element_mirror_order]);
+  metis_tac[field_order_eq_0, finite_field_element_mirror_element, finite_field_element_mirror_order]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R ==> ((mirror f x = #1_) <=> (x = #1)) *)
 (* Proof:
@@ -908,12 +930,13 @@ val finite_field_element_mirror_eq_zero = store_thm(
      and forder_ (mirror f x) = forder x     by finite_field_element_mirror_order
      The result follows                      by field_order_eq_1
 *)
-val finite_field_element_mirror_eq_one = store_thm(
-  "finite_field_element_mirror_eq_one",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x. x IN R ==> ((mirror f x = #1_) <=> (x = #1))``,
+Theorem finite_field_element_mirror_eq_one:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x. x IN R ==> ((mirror f x = #1_) <=> (x = #1))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
-  metis_tac[field_order_eq_1, finite_field_element_mirror_element, finite_field_element_mirror_order]);
+  metis_tac[field_order_eq_1, finite_field_element_mirror_element, finite_field_element_mirror_order]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==>
             (mirror f (primitive r)) IN R+_ /\ (forder_ (mirror f (primitive r)) = CARD R+_) *)
@@ -934,10 +957,10 @@ val finite_field_element_mirror_eq_one = store_thm(
      ==>       CARD R+ = CARD R+_          by SUC_EQ
    Hence the result follows.
 *)
-val finite_field_primitive_mirror_property = store_thm(
-  "finite_field_primitive_mirror_property",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   (mirror f (primitive r)) IN R+_ /\ (forder_ (mirror f (primitive r)) = CARD R+_)``,
+Theorem finite_field_primitive_mirror_property:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   (mirror f (primitive r)) IN R+_ /\ (forder_ (mirror f (primitive r)) = CARD R+_)
+Proof
   ntac 6 (stripDup[iso_subfields_def]) >>
   qabbrev_tac `x = primitive r` >>
   qabbrev_tac `mx = mirror f x` >>
@@ -950,14 +973,16 @@ val finite_field_primitive_mirror_property = store_thm(
   `_ = CARD R+` by rw[field_primitive_order, Abbr`x`] >>
   `SUC (CARD R+) = SUC (CARD R+_)` by metis_tac[finite_field_carrier_card] >>
   `CARD R+ = CARD R+_` by decide_tac >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> mirror f (primitive r) IN (FPrimitives r_) *)
 (* Proof: by finite_field_primitive_mirror_property, field_primitives_element *)
-val finite_field_primitive_mirror = store_thm(
-  "finite_field_primitive_mirror",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> mirror f (primitive r) IN (FPrimitives r_)``,
-  rw[finite_field_primitive_mirror_property, field_primitives_element]);
+Theorem finite_field_primitive_mirror:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> mirror f (primitive r) IN (FPrimitives r_)
+Proof
+  rw[finite_field_primitive_mirror_property, field_primitives_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Trinity Polynomial: X ** a + X ** b - X ** c                              *)
@@ -974,10 +999,11 @@ val _ = overload_on("trinity_", ``Trinity (r_:'b ring)``);
      and !n. poly (X ** n)      by poly_exp_poly
       so poly (trinity a b c)   by poly_add_poly, poly_sub_poly
 *)
-val poly_trinity_poly = store_thm(
-  "poly_trinity_poly",
-  ``!r:'a ring. Ring r ==> !a b c. poly (trinity a b c)``,
-  rw[]);
+Theorem poly_trinity_poly:
+    !r:'a ring. Ring r ==> !a b c. poly (trinity a b c)
+Proof
+  rw[]
+QED
 
 (* Theorem: s <= r ==> !a b c. Poly s (trinity a b c) *)
 (* Proof:
@@ -985,10 +1011,11 @@ val poly_trinity_poly = store_thm(
      and !n. Poly s (X ** n)      by poly_exp_spoly
       so Poly s (trinity a b c)   by poly_add_spoly, poly_sub_spoly
 *)
-val poly_trinity_spoly = store_thm(
-  "poly_trinity_spoly",
-  ``!(r s):'a ring. s <= r ==> !a b c. Poly s (trinity a b c)``,
-  rw_tac std_ss[poly_X_spoly, poly_exp_spoly, poly_add_spoly, poly_sub_spoly]);
+Theorem poly_trinity_spoly:
+    !(r s):'a ring. s <= r ==> !a b c. Poly s (trinity a b c)
+Proof
+  rw_tac std_ss[poly_X_spoly, poly_exp_spoly, poly_add_spoly, poly_sub_spoly]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !a b c. eval (trinity a b c) x = x ** a + x ** b - x ** c *)
 (* Proof:
@@ -998,10 +1025,11 @@ val poly_trinity_spoly = store_thm(
    = (eval X x) ** a + (eval X x) ** b - (eval X x) ** c   by poly_eval_exp
    = x ** a + x ** b - x ** c                              by poly_eval_X
 *)
-val poly_trinity_eval = store_thm(
-  "poly_trinity_eval",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !a b c. eval (trinity a b c) x = x ** a + x ** b - x ** c``,
-  rw[]);
+Theorem poly_trinity_eval:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !a b c. eval (trinity a b c) x = x ** a + x ** b - x ** c
+Proof
+  rw[]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==>
             !a b c. root (trinity a b c) x <=> (x ** a + x ** b = x ** c) *)
@@ -1011,10 +1039,11 @@ val poly_trinity_eval = store_thm(
    <=> x ** a + x ** b - x ** c = #0   by poly_trinity_eval
    <=> x ** a + x ** b = x ** c        by ring_sub_eq_zero
 *)
-val poly_trinity_root = store_thm(
-  "poly_trinity_root",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !a b c. root (trinity a b c) x <=> (x ** a + x ** b = x ** c)``,
-  rw_tac std_ss[poly_root_def, poly_trinity_eval, ring_sub_eq_zero, ring_exp_element, ring_add_element]);
+Theorem poly_trinity_root:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !a b c. root (trinity a b c) x <=> (x ** a + x ** b = x ** c)
+Proof
+  rw_tac std_ss[poly_root_def, poly_trinity_eval, ring_sub_eq_zero, ring_exp_element, ring_add_element]
+QED
 
 (* Theorem: s <= r ==> !a b c. Trinity s a b c = trinity a b c *)
 (* Proof:
@@ -1033,13 +1062,14 @@ val poly_trinity_root = store_thm(
    = (X ** a) + (X ** b) - X ** c                           by subring_poly_sub
    = trinity a b c                                          by notation
 *)
-val subring_poly_trinity = store_thm(
-  "subring_poly_trinity",
-  ``!(r s):'a ring. s <= r ==> !a b c. Trinity s a b c = trinity a b c``,
+Theorem subring_poly_trinity:
+    !(r s):'a ring. s <= r ==> !a b c. Trinity s a b c = trinity a b c
+Proof
   rpt strip_tac >>
   `Poly s X /\ Poly s (X ** a) /\ Poly s (X ** b) /\ Poly s (X ** c)` by rw[poly_X_spoly, poly_exp_spoly] >>
   `Poly s (X ** a + X ** b)` by rw[poly_add_spoly] >>
-  metis_tac[subring_poly_X, subring_poly_exp, subring_poly_add, subring_poly_sub]);
+  metis_tac[subring_poly_X, subring_poly_exp, subring_poly_add, subring_poly_sub]
+QED
 
 (* Theorem: (r === r_) f ==> !a b c. MAP f (trinity a b c) = trinity_ a b c *)
 (* Proof:
@@ -1050,12 +1080,13 @@ val subring_poly_trinity = store_thm(
    = X_ **_ a +_ X_ **_ b -_ X_ **_ c                           by field_iso_poly_X
    = trinity_ a b c                                             by notation
 *)
-val field_iso_poly_trinity = store_thm(
-  "field_iso_poly_trinity",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !a b c. MAP f (trinity a b c) = trinity_ a b c``,
+Theorem field_iso_poly_trinity:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !a b c. MAP f (trinity a b c) = trinity_ a b c
+Proof
   rpt strip_tac >>
   `poly X /\ poly (X ** a) /\ poly (X ** b) /\ poly (X ** c) /\ poly (X ** a + X ** b)` by rw[] >>
-  metis_tac[field_iso_poly_add, field_iso_poly_sub, field_iso_poly_exp, field_iso_poly_X]);
+  metis_tac[field_iso_poly_add, field_iso_poly_sub, field_iso_poly_exp, field_iso_poly_X]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Uniqueness of Finite Field (Part 1)                                       *)
@@ -1199,13 +1230,14 @@ Thus two finite fields with same cardinality are isomorphic.
    (3) ?f. FieldIso f (GF (char r)) (PF r)
        Take f = $##, true              by finite_field_iso_GF_PF
 *)
-val finite_field_isomorphic_GF_PF = store_thm(
-  "finite_field_isomorphic_GF_PF",
-  ``!r:'a field. FiniteField r ==> (GF (char r)) =ff= (PF r)``,
+Theorem finite_field_isomorphic_GF_PF:
+    !r:'a field. FiniteField r ==> (GF (char r)) =ff= (PF r)
+Proof
   rpt strip_tac >-
   rw[GF_finite_field, finite_field_char] >-
   rw[prime_field_finite_field] >>
-  metis_tac[finite_field_iso_GF_PF]);
+  metis_tac[finite_field_iso_GF_PF]
+QED
 
 (* Theorem: FiniteField r ==> (ZN (char r)) =ff= (PF (char r)) *)
 (* Proof:
@@ -1217,27 +1249,30 @@ val finite_field_isomorphic_GF_PF = store_thm(
    (3) ?f. FieldIso f (ZN (char r)) (PF r)
        Take f = $##, true              by finite_field_iso_ZN_PF
 *)
-val finite_field_isomorphic_ZN_PF = store_thm(
-  "finite_field_isomorphic_ZN_PF",
-  ``!r:'a field. FiniteField r ==> (ZN (char r)) =ff= (PF r)``,
+Theorem finite_field_isomorphic_ZN_PF:
+    !r:'a field. FiniteField r ==> (ZN (char r)) =ff= (PF r)
+Proof
   rpt strip_tac >-
   rw[ZN_finite_field, finite_field_char] >-
   rw[prime_field_finite_field] >>
-  metis_tac[finite_field_iso_ZN_PF]);
+  metis_tac[finite_field_iso_ZN_PF]
+QED
 
 (* Theorem: FiniteField r ==> (PF r) =ff= (GF (char r)) *)
 (* Proof: by finite_field_isomorphic_GF_PF, field_iso_sym, finite_field_is_field *)
-val finite_field_isomorphic_GF_PF_alt = store_thm(
-  "finite_field_isomorphic_GF_PF_alt",
-  ``!r:'a field. FiniteField r ==> (PF r) =ff= (GF (char r))``,
-  metis_tac[finite_field_isomorphic_GF_PF, field_iso_sym, finite_field_is_field]);
+Theorem finite_field_isomorphic_GF_PF_alt:
+    !r:'a field. FiniteField r ==> (PF r) =ff= (GF (char r))
+Proof
+  metis_tac[finite_field_isomorphic_GF_PF, field_iso_sym, finite_field_is_field]
+QED
 
 (* Theorem: FiniteField r ==> (PF r) =ff= (ZN (char r)) *)
 (* Proof: by finite_field_isomorphic_ZN_PF, field_iso_sym, finite_field_is_field *)
-val finite_field_isomorphic_ZN_PF_alt = store_thm(
-  "finite_field_isomorphic_ZN_PF_alt",
-  ``!r:'a field. FiniteField r ==> (PF r) =ff= (ZN (char r))``,
-  metis_tac[finite_field_isomorphic_ZN_PF, field_iso_sym, finite_field_is_field]);
+Theorem finite_field_isomorphic_ZN_PF_alt:
+    !r:'a field. FiniteField r ==> (PF r) =ff= (ZN (char r))
+Proof
+  metis_tac[finite_field_isomorphic_ZN_PF, field_iso_sym, finite_field_is_field]
+QED
 
 (* Theorem: FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
             FieldIso ((##_ #1_) o (LINV $## (GF (char r)).carrier)) (PF r) (PF r_) *)
@@ -1251,10 +1286,10 @@ val finite_field_isomorphic_ZN_PF_alt = store_thm(
     and Field (PF r)                       by prime_field_field
    Hence the result follows                by field_iso_iso
 *)
-val finite_field_prime_field_iso = store_thm(
-  "finite_field_prime_field_iso",
-  ``!(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
-   FieldIso ((##_ #1_) o (LINV $## (GF (char r)).carrier)) (PF r) (PF r_)``,
+Theorem finite_field_prime_field_iso:
+    !(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
+   FieldIso ((##_ #1_) o (LINV $## (GF (char r)).carrier)) (PF r) (PF r_)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FieldIso $## (GF (char r)) (PF r)` by rw[finite_field_iso_GF_PF] >>
   `FieldIso (##_ #1_) (GF (char r_)) (PF r_)` by rw[finite_field_iso_GF_PF] >>
@@ -1262,7 +1297,8 @@ val finite_field_prime_field_iso = store_thm(
   `prime (char r)` by rw[finite_field_char] >>
   `Field (GF (char r))` by rw[GF_field] >>
   `Field (PF r)` by rw[prime_field_field] >>
-  rw[field_iso_iso]);
+  rw[field_iso_iso]
+QED
 
 (* Theorem: FiniteField r /\ FiniteField r_ /\ (char r = char r_) ==>
             FieldIso ((##_ #1_) o (LINV $## (ZN (char r)).carrier)) (PF r) (PF r_) *)
@@ -1275,10 +1311,10 @@ val finite_field_prime_field_iso = store_thm(
     and Field (PF r)                        by prime_field_field
    Hence the result follows                 by field_iso_iso
 *)
-val finite_field_char_eq_prime_field_iso = store_thm(
-  "finite_field_char_eq_prime_field_iso",
-  ``!(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (char r = char r_) ==>
-   FieldIso ((##_ #1_) o (LINV $## (ZN (char r)).carrier)) (PF r) (PF r_)``,
+Theorem finite_field_char_eq_prime_field_iso:
+    !(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (char r = char r_) ==>
+   FieldIso ((##_ #1_) o (LINV $## (ZN (char r)).carrier)) (PF r) (PF r_)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = char r` >>
   `FieldIso $## (ZN p) (PF r)` by rw[finite_field_iso_ZN_PF, Abbr`p`] >>
@@ -1286,7 +1322,8 @@ val finite_field_char_eq_prime_field_iso = store_thm(
   `prime p` by rw[finite_field_char] >>
   `Field (ZN p)` by rw[ZN_field] >>
   `Field (PF r)` by rw[prime_field_field] >>
-  rw[field_iso_iso]);
+  rw[field_iso_iso]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -1295,10 +1332,11 @@ val finite_field_char_eq_prime_field_iso = store_thm(
    Note FiniteField (PF r) and FiniteField (PF r)  by prime_field_finite_field
    Hence the result follows                        by finite_field_prime_field_iso
 *)
-val finite_field_prime_field_isomorphic = store_thm(
-  "finite_field_prime_field_isomorphic",
-  ``!(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> (PF r) =ff= (PF r_)``,
-  metis_tac[finite_field_prime_field_iso, prime_field_finite_field]);
+Theorem finite_field_prime_field_isomorphic:
+    !(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> (PF r) =ff= (PF r_)
+Proof
+  metis_tac[finite_field_prime_field_iso, prime_field_finite_field]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1400,20 +1438,22 @@ val it = |- !r s r_ s_ f x. im f x = if x = #0 then #0_ else mirror f (primitive
          and mirror f (primitive r) IN R_   by finite_field_element_mirror_element
        Hence im f x IN R                    by field_exp_element
 *)
-val field_iso_map_element = store_thm(
-  "field_iso_map_element",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> !x. x IN R ==> im f x IN R_``,
+Theorem field_iso_map_element:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> !x. x IN R ==> im f x IN R_
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   rw_tac std_ss[field_iso_map_def] >-
   rw[] >>
-  rw[finite_field_element_mirror_element]);
+  rw[finite_field_element_mirror_element]
+QED
 
 (* Theorem: im f #0 = #0_ *)
 (* Proof: by field_iso_map_def. *)
-val field_iso_map_zero = store_thm(
-  "field_iso_map_zero",
-  ``!(r s):'a field (r_ s_):'b field f. im f #0 = #0_``,
-  rw_tac std_ss[field_iso_map_def]);
+Theorem field_iso_map_zero:
+    !(r s):'a field (r_ s_):'b field f. im f #0 = #0_
+Proof
+  rw_tac std_ss[field_iso_map_def]
+QED
 
 (* Theorem: FiniteField r ==> (im f #1 = #1_) *)
 (* Proof:
@@ -1425,10 +1465,11 @@ val field_iso_map_zero = store_thm(
     = mirror f (primitive r) **_ 0         by field_index_one, FiniteField r
     = #1_                                  by field_exp_0
 *)
-val field_iso_map_one = store_thm(
-  "field_iso_map_one",
-  ``!(r s):'a field (r_ s_):'b field f. FiniteField r ==> (im f #1 = #1_)``,
-  rw_tac std_ss[FiniteField_def, field_iso_map_def, field_one_ne_zero, field_index_one, field_exp_0]);
+Theorem field_iso_map_one:
+    !(r s):'a field (r_ s_):'b field f. FiniteField r ==> (im f #1 = #1_)
+Proof
+  rw_tac std_ss[FiniteField_def, field_iso_map_def, field_one_ne_zero, field_index_one, field_exp_0]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R ==> ((im f x = #0_) <=> (x = #0)) *)
 (* Proof:
@@ -1446,10 +1487,10 @@ val field_iso_map_one = store_thm(
    Only-if part: x = #0 ==> im f x = #0_
       True by field_iso_map_zero
 *)
-val field_iso_map_eq_zero = store_thm(
-  "field_iso_map_eq_zero",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x. x IN R ==> ((im f x = #0_) <=> (x = #0))``,
+Theorem field_iso_map_eq_zero:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x. x IN R ==> ((im f x = #0_) <=> (x = #0))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   rw[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
@@ -1460,7 +1501,8 @@ val field_iso_map_eq_zero = store_thm(
     `(mirror f z) IN R_` by rw[finite_field_element_mirror_element] >>
     metis_tac[field_iso_map_def, field_exp_eq_zero],
     rw[field_iso_map_zero]
-  ]);
+  ]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R ==> ((im f x = #1_) <=> (x = #1)) *)
 (* Proof:
@@ -1481,10 +1523,10 @@ val field_iso_map_eq_zero = store_thm(
    Only-if part: x = #1 ==> im f x = #1_
       True by field_iso_map_one
 *)
-val field_iso_map_eq_one = store_thm(
-  "field_iso_map_eq_one",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x. x IN R ==> ((im f x = #1_) <=> (x = #1))``,
+Theorem field_iso_map_eq_one:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x. x IN R ==> ((im f x = #1_) <=> (x = #1))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   rw[EQ_IMP_THM] >| [
     `x <> #0 /\ x IN R+` by metis_tac[field_iso_map_eq_zero, field_one_ne_zero, field_nonzero_eq] >>
@@ -1501,7 +1543,8 @@ val field_iso_map_eq_one = store_thm(
     decide_tac) >>
     rw[GSYM field_index_eq_0],
     rw[field_iso_map_one]
-  ]);
+  ]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R+ ==> im f x IN R+_ *)
 (* Proof:
@@ -1510,10 +1553,11 @@ val field_iso_map_eq_one = store_thm(
    Note x IN R ==> im f x IN R_   by field_iso_map_element
     and x <> #0 ==> im f x <> #0_ by field_iso_map_eq_zero
 *)
-val field_iso_map_nonzero = store_thm(
-  "field_iso_map_nonzero",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> !x. x IN R+ ==> im f x IN R+_``,
-  rw_tac std_ss[field_nonzero_eq, field_iso_map_eq_zero, field_iso_map_element]);
+Theorem field_iso_map_nonzero:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> !x. x IN R+ ==> im f x IN R+_
+Proof
+  rw_tac std_ss[field_nonzero_eq, field_iso_map_eq_zero, field_iso_map_element]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> (im f (-#1) = $-_ (#1_)) *)
 (* Proof:
@@ -1540,9 +1584,9 @@ val field_iso_map_nonzero = store_thm(
       = (mirror f (primitive r)) **_ (CARD R+_ DIV 2)  by above
       = $-_ (#1_)                        by finite_field_neg_one_alt, char r_ <> 2.
 *)
-val field_iso_map_neg_one = store_thm(
-  "field_iso_map_neg_one",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> (im f (-#1) = $-_ (#1_))``,
+Theorem field_iso_map_neg_one:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> (im f (-#1) = $-_ (#1_))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   `char r = char r_` by rw[finite_field_card_eq_char_eq] >>
   `CARD R+ = CARD R+_` by metis_tac[finite_field_carrier_card, SUC_EQ] >>
@@ -1552,7 +1596,8 @@ val field_iso_map_neg_one = store_thm(
   `im f (-#1) = (mirror f (primitive r)) **_ (idx (-#1))` by metis_tac[field_iso_map_def] >>
   `_ = (mirror f (primitive r)) **_ (CARD (R+_) DIV 2)` by rw[field_index_neg_one] >>
   `(mirror f (primitive r)) IN (FPrimitives r_)` by rw[finite_field_primitive_mirror] >>
-  metis_tac[finite_field_neg_one_alt]);
+  metis_tac[finite_field_neg_one_alt]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x y. x IN R /\ y IN R ==> (im f (x * y) = (im f x) *_ (im f y)) *)
 (* Proof:
@@ -1581,10 +1626,10 @@ val field_iso_map_neg_one = store_thm(
          = z **_ (idx x) *_ z **_ (idx y)         by field_exp_add, z IN R_
          = (im f x) *_ (im f y)                   by field_iso_map_def
 *)
-val field_iso_map_mult = store_thm(
-  "field_iso_map_mult",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x y. x IN R /\ y IN R ==> (im f (x * y) = (im f x) *_ (im f y))``,
+Theorem field_iso_map_mult:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x y. x IN R /\ y IN R ==> (im f (x * y) = (im f x) *_ (im f y))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   Cases_on `(x = #0) \/ (y = #0)` >-
   metis_tac[field_iso_map_zero, field_mult_eq_zero, field_iso_map_element] >>
@@ -1597,7 +1642,8 @@ val field_iso_map_mult = store_thm(
   `_ = z **_ ((idx x + idx y) MOD (CARD R+))` by rw[field_index_mult] >>
   `_ = z **_ ((idx x + idx y) MOD (CARD R+_))` by metis_tac[finite_field_carrier_card, SUC_EQ] >>
   `_ = z **_ (idx x + idx y)` by metis_tac[finite_field_exp_mod_order] >>
-  rw[field_exp_add, field_iso_map_def]);
+  rw[field_exp_add, field_iso_map_def]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R ==> (im f (-x) = $-_ (im f x)) *)
 (* Proof:
@@ -1635,10 +1681,10 @@ val field_iso_map_mult = store_thm(
       = $-_ ((im f x) *_ (#1_))              by field_neg_mult
       = $-_ (im f x)                         by field_mult_rone
 *)
-val field_iso_map_neg = store_thm(
-  "field_iso_map_neg",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x. x IN R ==> (im f (-x) = $-_ (im f x))``,
+Theorem field_iso_map_neg:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x. x IN R ==> (im f (-x) = $-_ (im f x))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   Cases_on `x = #0` >-
   rw[field_iso_map_zero, field_neg_zero] >>
@@ -1666,7 +1712,8 @@ val field_iso_map_neg = store_thm(
     `_ = $-_ ((im f x) *_ (#1_))` by metis_tac[field_neg_mult, field_one_element] >>
     `_ = $-_ (im f x)` by rw[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Isomorphism preserves Addition                                            *)
@@ -1751,10 +1798,10 @@ val field_iso_map_neg = store_thm(
        ==> mz **_ (idx x) +_ mz **_ (idx y) = mz **_ (idx t)    by poly_trinity_root
         or (im f x) +_ (im f y) = im f t     by field_iso_map_def
 *)
-val field_iso_map_add = store_thm(
-  "field_iso_map_add",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x y. x IN R /\ y IN R ==> (im f (x + y) = (im f x) +_ (im f y))``,
+Theorem field_iso_map_add:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x y. x IN R /\ y IN R ==> (im f (x + y) = (im f x) +_ (im f y))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   Cases_on `x = #0` >-
   rw[field_iso_map_zero, field_iso_map_element] >>
@@ -1793,7 +1840,8 @@ val field_iso_map_add = store_thm(
     `root_ q mz` by metis_tac[poly_divides_share_root, poly_minimal_poly, poly_trinity_poly] >>
     `mz **_ (idx x) +_ mz **_ (idx y) = mz **_ (idx t)` by rw[GSYM poly_trinity_root, Abbr`q`] >>
     rw[field_iso_map_def]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -1806,11 +1854,12 @@ val field_iso_map_add = store_thm(
    = (im f x) +_ ($-_ (im f y))   by field_iso_map_neg
    = (im f x) -_ (im f y)         by field_sub_def
 *)
-val field_iso_map_sub = store_thm(
-  "field_iso_map_sub",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x y. x IN R /\ y IN R ==> (im f (x - y) = (im f x) -_ (im f y))``,
-  rw_tac std_ss[iso_subfields_def, field_neg_element, field_sub_def, field_iso_map_add, field_iso_map_neg]);
+Theorem field_iso_map_sub:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x y. x IN R /\ y IN R ==> (im f (x - y) = (im f x) -_ (im f y))
+Proof
+  rw_tac std_ss[iso_subfields_def, field_neg_element, field_sub_def, field_iso_map_add, field_iso_map_neg]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x. x IN R ==> !n. im f (x ** n) = (im f x) **_ n *)
 (* Proof:
@@ -1828,14 +1877,15 @@ val field_iso_map_sub = store_thm(
        = (im f x) *_ (im f x) **_ n    by induction hypothesis
        = (im f x) **_ (SUC n)          by field_exp_SUC
 *)
-val field_iso_map_exp = store_thm(
-  "field_iso_map_exp",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x. x IN R ==> !n. im f (x ** n) = (im f x) **_ n``,
+Theorem field_iso_map_exp:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x. x IN R ==> !n. im f (x ** n) = (im f x) **_ n
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   Induct_on `n` >-
   rw[field_iso_map_one] >>
-  rw[field_iso_map_mult]);
+  rw[field_iso_map_mult]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> !x y. x IN R /\ y IN R /\ (im f x = im f y) ==> (x = y) *)
 (* Proof:
@@ -1848,10 +1898,10 @@ val field_iso_map_exp = store_thm(
    <=>                x - y = #0       by field_iso_map_eq_zero
    <=>                    x = y        by field_sub_eq_zero
 *)
-val field_iso_map_eq = store_thm(
-  "field_iso_map_eq",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !x y. x IN R /\ y IN R /\ (im f x = im f y) ==> (x = y)``,
+Theorem field_iso_map_eq:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !x y. x IN R /\ y IN R /\ (im f x = im f y) ==> (x = y)
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   `x - y IN R` by rw[] >>
   `im f x IN R_ /\ im f y IN R_` by rw[field_iso_map_element] >>
@@ -1859,7 +1909,8 @@ val field_iso_map_eq = store_thm(
   `_ = (im f (x - y) = #0_)` by rw[field_iso_map_sub] >>
   `_ = (x - y = #0)` by rw[field_iso_map_eq_zero] >>
   `_ = (x = y)` by rw[field_sub_eq_zero] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> INJ (im f) R R_ *)
 (* Proof:
@@ -1867,13 +1918,14 @@ val field_iso_map_eq = store_thm(
    (1) x IN R ==> im f x IN R_, true                       by field_iso_map_element
    (2) x IN R /\ y IN R /\ im f x = im f y ==> x = y, true by field_iso_map_eq
 *)
-val field_iso_map_inj = store_thm(
-  "field_iso_map_inj",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> INJ (im f) R R_``,
+Theorem field_iso_map_inj:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> INJ (im f) R R_
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   rw_tac std_ss[INJ_DEF] >-
   rw[field_iso_map_element] >>
-  metis_tac[field_iso_map_eq]);
+  metis_tac[field_iso_map_eq]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> SURJ (im f) R R_ *)
 (* Proof:
@@ -1883,12 +1935,13 @@ val field_iso_map_inj = store_thm(
     and (CARD R = CARD R_)   by given
     ==> SURJ (im f) R R_     by FINITE_INJ_AS_SURJ
 *)
-val field_iso_map_surj = store_thm(
-  "field_iso_map_surj",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> SURJ (im f) R R_``,
+Theorem field_iso_map_surj:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> SURJ (im f) R R_
+Proof
   rpt (stripDup[iso_subfields_def, FiniteField_def]) >>
   (irule FINITE_INJ_AS_SURJ >> simp[]) >>
-  rw[field_iso_map_inj]);
+  rw[field_iso_map_inj]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> BIJ (im f) R R_ *)
 (* Proof:
@@ -1896,10 +1949,11 @@ val field_iso_map_surj = store_thm(
     and SURJ (im f) R R_     by field_iso_map_surj
     ==> BIJ (im f) R R_      by BIJ_DEF
 *)
-val field_iso_map_bij = store_thm(
-  "field_iso_map_bij",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> BIJ (im f) R R_``,
-  rw_tac std_ss[BIJ_DEF, field_iso_map_inj, field_iso_map_surj]);
+Theorem field_iso_map_bij:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> BIJ (im f) R R_
+Proof
+  rw_tac std_ss[BIJ_DEF, field_iso_map_inj, field_iso_map_surj]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> MonoidHomo (im f) r.prod r_.prod *)
 (* Proof:
@@ -1909,10 +1963,11 @@ val field_iso_map_bij = store_thm(
    (2) x IN R /\ y IN R ==> im f (x * y) = im f x *_ im f y, true by field_iso_map_mult
    (3) im f #1 = #1_, true                                        by field_iso_map_one
 *)
-val field_iso_map_monoid_homo = store_thm(
-  "field_iso_map_monoid_homo",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> MonoidHomo (im f) r.prod r_.prod``,
-  rw_tac std_ss[iso_subfields_def, MonoidHomo_def, field_carriers, field_iso_map_element, field_iso_map_mult, field_iso_map_one]);
+Theorem field_iso_map_monoid_homo:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> MonoidHomo (im f) r.prod r_.prod
+Proof
+  rw_tac std_ss[iso_subfields_def, MonoidHomo_def, field_carriers, field_iso_map_element, field_iso_map_mult, field_iso_map_one]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> GroupHomo (im f) r.sum r_.sum *)
 (* Proof:
@@ -1921,10 +1976,11 @@ val field_iso_map_monoid_homo = store_thm(
    (1) x IN R ==> im f x IN R_, true                              by field_iso_map_element
    (2) x IN R /\ y IN R ==> im f (x + y) = im f x +_ im f y, true by field_iso_map_add
 *)
-val field_iso_map_group_homo = store_thm(
-  "field_iso_map_group_homo",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> GroupHomo (im f) r.sum r_.sum``,
-  rw_tac std_ss[iso_subfields_def, GroupHomo_def, field_carriers, field_iso_map_element, field_iso_map_add]);
+Theorem field_iso_map_group_homo:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> GroupHomo (im f) r.sum r_.sum
+Proof
+  rw_tac std_ss[iso_subfields_def, GroupHomo_def, field_carriers, field_iso_map_element, field_iso_map_add]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> FieldHomo (im f) r r_ *)
 (* Proof:
@@ -1933,10 +1989,11 @@ val field_iso_map_group_homo = store_thm(
    (2) GroupHomo (im f) r.sum r_.sum, true    by field_iso_map_group_homo
    (3) MonoidHomo (im f) r.prod r_.prod, true by field_iso_map_monoid_homo
 *)
-val field_iso_map_field_homo = store_thm(
-  "field_iso_map_field_homo",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> FieldHomo (im f) r r_``,
-  rw_tac std_ss[iso_subfields_def, FieldHomo_def, RingHomo_def, field_iso_map_element, field_iso_map_group_homo, field_iso_map_monoid_homo]);
+Theorem field_iso_map_field_homo:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> FieldHomo (im f) r r_
+Proof
+  rw_tac std_ss[iso_subfields_def, FieldHomo_def, RingHomo_def, field_iso_map_element, field_iso_map_group_homo, field_iso_map_monoid_homo]
+QED
 
 (* Theorem: r =| (s,f,s_) |= r_ ==> FieldIso (im f) r r_ *)
 (* Proof:
@@ -1944,10 +2001,11 @@ val field_iso_map_field_homo = store_thm(
    (1) FieldHomo (im f) r r_, true by field_iso_map_field_homo
    (2) BIJ (im f) R R_, true       by field_iso_map_bij
 *)
-val field_iso_map_field_iso = store_thm(
-  "field_iso_map_field_iso",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> FieldIso (im f) r r_``,
-  rw_tac std_ss[iso_subfields_def, FieldIso_def, field_iso_map_field_homo, field_iso_map_bij]);
+Theorem field_iso_map_field_iso:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==> FieldIso (im f) r r_
+Proof
+  rw_tac std_ss[iso_subfields_def, FieldIso_def, field_iso_map_field_homo, field_iso_map_bij]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -1959,15 +2017,16 @@ val field_iso_map_field_iso = store_thm(
    Also FieldIso (im f) r r_                           by field_iso_map_field_iso
     ==> root p x <=> root_ (MAP (im f) p) ((im f) x)   by field_iso_poly_root_iff
 *)
-val field_iso_map_spoly_root = store_thm(
-  "field_iso_map_spoly_root",
-  ``!(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
-   !p x. Poly s p /\ x IN R ==> (root p x <=> root_ (MAP (im f) p) ((im f) x))``,
+Theorem field_iso_map_spoly_root:
+    !(r s):'a field (r_ s_):'b field f. r =| (s,f,s_) |= r_ ==>
+   !p x. Poly s p /\ x IN R ==> (root p x <=> root_ (MAP (im f) p) ((im f) x))
+Proof
   rpt (stripDup[iso_subfields_def]) >>
   `s <= r` by rw[subfield_is_subring] >>
   `poly p` by metis_tac[subring_poly_poly] >>
   `FieldIso (im f) r r_` by rw[field_iso_map_field_iso] >>
-  rw[field_iso_poly_root_iff]);
+  rw[field_iso_poly_root_iff]
+QED
 
 (* Note: p_ = MAP f p <> MAP (im f) p
 This is more useful if root p x <=> root_ p_ ((im f) x), but there is no hope.
@@ -1986,18 +2045,20 @@ Thus this result is regarded as rather ugly.
     Now FieldIso (##_ #1_ o LINV $## (GF (char r)).carrier) (PF r) (PF r_)  by finite_field_prime_field_iso
    Thus the result follows   by field_iso_map_field_iso
 *)
-val finite_field_eq_card_iso = store_thm(
-  "finite_field_eq_card_iso",
-  ``!(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
-     FieldIso (field_iso_map r (PF r) r_ (PF r_) (##_ #1_ o LINV $## (GF (char r)).carrier)) r r_``,
-  rw_tac std_ss[iso_subfields_def, prime_field_is_subfield, finite_field_prime_field_iso, field_iso_map_field_iso]);
+Theorem finite_field_eq_card_iso:
+    !(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
+     FieldIso (field_iso_map r (PF r) r_ (PF r_) (##_ #1_ o LINV $## (GF (char r)).carrier)) r r_
+Proof
+  rw_tac std_ss[iso_subfields_def, prime_field_is_subfield, finite_field_prime_field_iso, field_iso_map_field_iso]
+QED
 
 (* Theorem: FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> (r =ff= r_) *)
 (* Proof: by finite_field_eq_card_iso *)
-val finite_field_eq_card_isomorphic = store_thm(
-  "finite_field_eq_card_isomorphic",
-  ``!(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> (r =ff= r_)``,
-  metis_tac[finite_field_eq_card_iso]);
+Theorem finite_field_eq_card_isomorphic:
+    !(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> (r =ff= r_)
+Proof
+  metis_tac[finite_field_eq_card_iso]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Isomorphic Theorems                                                *)
@@ -2011,19 +2072,21 @@ val finite_field_eq_card_isomorphic = store_thm(
        Note pmonic z                  by poly_monic_irreducible_property
        Take f = up, true              by poly_mod_const_iso_field
 *)
-val poly_mod_const_isomorphic_field = store_thm(
-  "poly_mod_const_isomorphic_field",
-  ``!r:'a field. Field r ==> !z. monic z /\ ipoly z ==> r =f= (PolyModConst r z)``,
+Theorem poly_mod_const_isomorphic_field:
+    !r:'a field. Field r ==> !z. monic z /\ ipoly z ==> r =f= (PolyModConst r z)
+Proof
   rw_tac std_ss[] >-
   rw[poly_mod_const_field] >>
-  metis_tac[poly_mod_const_iso_field, poly_monic_irreducible_property]);
+  metis_tac[poly_mod_const_iso_field, poly_monic_irreducible_property]
+QED
 
 (* Theorem: FiniteField r ==> !z. monic z /\ ipoly z ==> r =ff= (PolyModConst r z) *)
 (* Proof: by poly_mod_const_finite_field,poly_mod_const_iso_field_alt  *)
-val poly_mod_const_isomorphic_finite_field = store_thm(
-  "poly_mod_const_isomorphic_finite_field",
-  ``!r:'a field. FiniteField r ==> !z. monic z /\ ipoly z ==> r =ff= (PolyModConst r z)``,
-  metis_tac[FiniteField_def, poly_mod_const_finite_field, poly_mod_const_iso_field_alt]);
+Theorem poly_mod_const_isomorphic_finite_field:
+    !r:'a field. FiniteField r ==> !z. monic z /\ ipoly z ==> r =ff= (PolyModConst r z)
+Proof
+  metis_tac[FiniteField_def, poly_mod_const_finite_field, poly_mod_const_iso_field_alt]
+QED
 
 (* Theorem: FiniteField r ==> !z h. monic z /\ ipoly z /\ monic h /\ ipoly h /\ (deg z = deg h) ==>
             ?f. FieldIso f (PolyModRing r z) (PolyModRing r h) *)
@@ -2037,16 +2100,17 @@ val poly_mod_const_isomorphic_finite_field = store_thm(
     ==> CARD (PolyModRing r h).carrier = CARD Rz
    Hence ?f. FieldIso f (PolyModRing r z) (PolyModRing r h)   by finite_field_eq_card_iso
 *)
-val poly_mod_irreducible_eq_degree_iso = store_thm(
-  "poly_mod_irreducible_eq_degree_iso",
-  ``!r:'a field. FiniteField r ==> !z h. monic z /\ ipoly z /\ monic h /\ ipoly h /\ (deg z = deg h) ==>
-      ?f. FieldIso f (PolyModRing r z) (PolyModRing r h)``,
+Theorem poly_mod_irreducible_eq_degree_iso:
+    !r:'a field. FiniteField r ==> !z h. monic z /\ ipoly z /\ monic h /\ ipoly h /\ (deg z = deg h) ==>
+      ?f. FieldIso f (PolyModRing r z) (PolyModRing r h)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField (PolyModRing r z)` by rw[poly_mod_irreducible_finite_field] >>
   `FiniteField (PolyModRing r h)` by rw[poly_mod_irreducible_finite_field] >>
   `0 < deg z /\ 0 < deg h` by rw[poly_irreducible_deg_nonzero] >>
   `CARD (PolyModRing r h).carrier = CARD Rz` by rw[poly_mod_ring_card, finite_field_is_finite_ring] >>
-  metis_tac[finite_field_eq_card_iso]);
+  metis_tac[finite_field_eq_card_iso]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Classification of subfields of Finite Field                               *)
@@ -2126,10 +2190,10 @@ Since for char = 3, -1 + -1 = -2 = 1, 1 + 1 = 2 = -1.
        and CARD B = c ** m = c ** m' ==> m = m'    by EXP_BASE_INJECTIVE, 1 < c
       Thus m divides n                             by above
 *)
-val finite_field_subfield_exists = store_thm(
-  "finite_field_subfield_exists",
-  ``!r:'a field. FiniteField r ==> !n. (CARD R = char r ** n) ==>
-   !m. m divides n <=> ?s. s <<= r /\ (CARD B = char r ** m)``,
+Theorem finite_field_subfield_exists:
+    !r:'a field. FiniteField r ==> !n. (CARD R = char r ** n) ==>
+   !m. m divides n <=> ?s. s <<= r /\ (CARD B = char r ** m)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `c = char r` >>
   `prime c` by rw[finite_field_char, Abbr`c`] >>
@@ -2152,7 +2216,8 @@ val finite_field_subfield_exists = store_thm(
     `CARD (G UNION {#0}) = (c ** m - 1) + 1` by rw[field_subgroup_card] >>
     decide_tac,
     metis_tac[finite_field_subfield_card_property, EXP_BASE_INJECTIVE]
-  ]);
+  ]
+QED
 
 (* Note: This finite_field_subfield_exists_alt just uses finite_field_subfield_exists,
          There should be a better proof. *)
@@ -2173,9 +2238,9 @@ val finite_field_subfield_exists = store_thm(
        and CARD B = (char s) ** (fdim s)           by finite_field_card_eqn
        ==> (fdim s) divides (fdim r)               by finite_field_subfield_exists
 *)
-val finite_field_subfield_exists_alt = store_thm(
-  "finite_field_subfield_exists_alt",
-  ``!r:'a field. FiniteField r ==> !n. n divides (fdim r) <=> ?s. s <<= r /\ (fdim s = n)``,
+Theorem finite_field_subfield_exists_alt:
+    !r:'a field. FiniteField r ==> !n. n divides (fdim r) <=> ?s. s <<= r /\ (fdim s = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >| [
     `CARD R = (char r) ** (fdim r)` by rw[finite_field_card_eqn] >>
@@ -2188,7 +2253,8 @@ val finite_field_subfield_exists_alt = store_thm(
     `CARD R = (char r) ** (fdim r)` by rw[finite_field_card_eqn] >>
     `CARD B = (char s) ** (fdim s)` by rw[finite_field_card_eqn] >>
     metis_tac[finite_field_subfield_exists]
-  ]);
+  ]
+QED
 
 (* See another proof of finite_field_subfield_exists_alt in ffSplit, as finite_field_subfield_exists_iff. *)
 
@@ -2220,10 +2286,10 @@ val finite_field_subfield_exists_alt = store_thm(
       Thus k * m divides k * n           by finite_field_subfield_card_property, EXP_BASE_INJECTIVE, 1 < c
         or m divides n                   by DIVIDES_MULTIPLE_IFF, k <> 0
 *)
-val finite_field_subfield_existence = store_thm(
-  "finite_field_subfield_existence",
-  ``!r:'a field. FiniteField r ==> !b n. (CARD R = b ** n) ==>
-   !m. m divides n <=> ?s. s <<= r /\ (CARD B = b ** m)``,
+Theorem finite_field_subfield_existence:
+    !r:'a field. FiniteField r ==> !b n. (CARD R = b ** n) ==>
+   !m. m divides n <=> ?s. s <<= r /\ (CARD B = b ** m)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `c = char r` >>
   `prime c` by rw[finite_field_char, Abbr`c`] >>
@@ -2239,27 +2305,30 @@ val finite_field_subfield_existence = store_thm(
     `(c ** k) ** m = c ** (k * m)` by rw[EXP_EXP_MULT] >>
     `k * m divides k * n` by metis_tac[finite_field_subfield_card_property, EXP_BASE_INJECTIVE] >>
     metis_tac[DIVIDES_MULTIPLE_IFF]
-  ]);
+  ]
+QED
 
 (* This is a major theorem for the structure of subfields of finite fields. *)
 
 (* Theorem: FiniteField r /\ (CARD R = (char r) ** n) ==>
             !m. ?s. s <<= r /\ (CARD B = (char r) ** m) <=> m divides n *)
 (* Proof: by finite_field_subfield_exists *)
-val finite_field_subfield_exists_reverse = store_thm(
-  "finite_field_subfield_exists_reverse",
-  ``!(r:'a field) n. FiniteField r /\ (CARD R = (char r) ** n) ==>
-   !m. ?s. s <<= r /\ (CARD B = (char r) ** m) <=> m divides n``,
-  metis_tac[finite_field_subfield_exists]);
+Theorem finite_field_subfield_exists_reverse:
+    !(r:'a field) n. FiniteField r /\ (CARD R = (char r) ** n) ==>
+   !m. ?s. s <<= r /\ (CARD B = (char r) ** m) <=> m divides n
+Proof
+  metis_tac[finite_field_subfield_exists]
+QED
 
 (* Theorem: FiniteField r /\ (CARD R = b ** n) ==>
             !m. ?s. s <<= r /\ (CARD B = b ** m) <=> m divides n *)
 (* Proof: by finite_field_subfield_existence *)
-val finite_field_subfield_existence_reverse = store_thm(
-  "finite_field_subfield_existence_reverse",
-  ``!(r:'a field) b n. FiniteField r /\ (CARD R = b ** n) ==>
-   !m. ?s. s <<= r /\ (CARD B = b ** m) <=> m divides n``,
-  metis_tac[finite_field_subfield_existence]);
+Theorem finite_field_subfield_existence_reverse:
+    !(r:'a field) b n. FiniteField r /\ (CARD R = b ** n) ==>
+   !m. ?s. s <<= r /\ (CARD B = b ** m) <=> m divides n
+Proof
+  metis_tac[finite_field_subfield_existence]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cloning Finite Field                                                      *)
@@ -2267,10 +2336,11 @@ val finite_field_subfield_existence_reverse = store_thm(
 
 (* Theorem: INFINITE univ(:'b) ==> ?t:'b -> bool. FINITE t /\ (CARD t = CARD s) *)
 (* Proof: by finite_set_exists, take n = CARD s. *)
-val finite_set_clone_exists = store_thm(
-  "finite_set_clone_exists",
-  ``!s:'a -> bool. INFINITE univ(:'b) ==> ?t:'b -> bool. FINITE t /\ (CARD t = CARD s)``,
-  rw[finite_set_exists]);
+Theorem finite_set_clone_exists:
+    !s:'a -> bool. INFINITE univ(:'b) ==> ?t:'b -> bool. FINITE t /\ (CARD t = CARD s)
+Proof
+  rw[finite_set_exists]
+QED
 
 (* Apply Skolemization *)
 val lemma = prove(
@@ -2298,10 +2368,11 @@ val clone_def = new_specification(
    Note s =~ t                             by CARDEQ_CARD_EQN
     ==> ?f. BIJ f s t                      by cardeq_def, s =~ t
 *)
-val eqcard_bij_exists = store_thm(
-  "eqcard_bij_exists",
-  ``!s t. FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> ?f. BIJ f s t``,
-  rw[CARDEQ_CARD_EQN, GSYM cardeq_def]);
+Theorem eqcard_bij_exists:
+    !s t. FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> ?f. BIJ f s t
+Proof
+  rw[CARDEQ_CARD_EQN, GSYM cardeq_def]
+QED
 
 (* Apply Skolemization *)
 val lemma = prove(
@@ -2349,11 +2420,11 @@ val eqcard_bij_def = new_specification(
      so IMAGE f R = clone R                by IMAGE_SURJ
    Thus BIJ f R (clone R) ==> BIJ f R fR   by above, fR = IMAGE f R
 *)
-val finite_field_clone = store_thm(
-  "finite_field_clone",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
+Theorem finite_field_clone:
+    !r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
    let (f:'a -> 'b) = eqcard_bij R (clone R) in
-   FiniteField (homo_field r f) /\ FieldIso f r (homo_field r f)``,
+   FiniteField (homo_field r f) /\ FieldIso f r (homo_field r f)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FINITE (clone R)` by rw[clone_def] >>
   `CARD (clone R) = CARD R` by rw[clone_def] >>
@@ -2372,15 +2443,17 @@ val finite_field_clone = store_thm(
     `SURJ f R (clone R)` by metis_tac[BIJ_DEF] >>
     `IMAGE f R = clone R` by metis_tac[IMAGE_SURJ |> ISPEC ``f:'a -> 'b`` |> ISPEC ``R`` |> ISPEC ``clone R``] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ INFINITE univ(:'b) ==> ?(r_:'b field) f. FiniteField r_ /\ FieldIso f r r_ *)
 (* Proof: by finite_field_clone, take (homo_field r f) where f = eqcard_bij R (clone R) *)
-val finite_field_clone_exists = store_thm(
-  "finite_field_clone_exists",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
-   ?(r_:'b field) f. FiniteField r_ /\ FieldIso f r r_``,
-  metis_tac[finite_field_clone]);
+Theorem finite_field_clone_exists:
+    !r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
+   ?(r_:'b field) f. FiniteField r_ /\ FieldIso f r r_
+Proof
+  metis_tac[finite_field_clone]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Bijective Images of Monoid and Ring.                                      *)
@@ -2449,10 +2522,10 @@ End
            = f a                     by monoid_id
            = x                       by x = f a
 *)
-val monoid_bij_image_monoid = store_thm(
-  "monoid_bij_image_monoid",
-  ``!(g:'a monoid) (f:'a -> 'b) (t:'b -> 'a). Monoid g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
-     Monoid (monoid_bij_image f t g)``,
+Theorem monoid_bij_image_monoid:
+    !(g:'a monoid) (f:'a -> 'b) (t:'b -> 'a). Monoid g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
+     Monoid (monoid_bij_image f t g)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[Monoid_def, monoid_bij_image_def] >| [
     `?a. (x = f a) /\ a IN G` by rw[GSYM IN_IMAGE] >>
@@ -2467,7 +2540,8 @@ val monoid_bij_image_monoid = store_thm(
     rw[],
     `?a. (x = f a) /\ a IN G` by rw[GSYM IN_IMAGE] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Given a Group g, and two functions f t that undo each other,
    Then (f g) is a Group, with op := (\x y. f (t x * t y))      *)
@@ -2494,17 +2568,18 @@ val monoid_bij_image_monoid = store_thm(
           = f ( |/ x' * x')                by !y. t (f y) = y
           = f #e                           by group_inv_thm
 *)
-val monoid_bij_image_group = store_thm(
-  "monoid_bij_image_group",
-  ``!(g:'a group) (f:'a -> 'b) (t:'b -> 'a). Group g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
-     Group (monoid_bij_image f t g)``,
+Theorem monoid_bij_image_group:
+    !(g:'a group) (f:'a -> 'b) (t:'b -> 'a). Group g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
+     Group (monoid_bij_image f t g)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[Group_def] >-
   rw[monoid_bij_image_monoid] >>
   rw[monoid_invertibles_def, monoid_bij_image_def, EXTENSION, EQ_IMP_THM] >>
   `g.inv x' IN G` by rw[] >>
   qexists_tac `f (g.inv x')` >>
-  metis_tac[group_inv_thm]);
+  metis_tac[group_inv_thm]
+QED
 
 (* Theorem: AbelianMonoid g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
             AbelianMonoid (monoid_bij_image f t g) *)
@@ -2519,16 +2594,17 @@ val monoid_bij_image_group = store_thm(
        = f (x'' * x')               by commutativity condition
        = f (t (f x'') * t (f x'))   by !y. t (f y) = y
 *)
-val monoid_bij_image_abelian_monoid = store_thm(
-  "monoid_bij_image_abelian_monoid",
-  ``!(g:'a monoid) (f:'a -> 'b) (t:'b -> 'a). AbelianMonoid g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
-     AbelianMonoid (monoid_bij_image f t g)``,
+Theorem monoid_bij_image_abelian_monoid:
+    !(g:'a monoid) (f:'a -> 'b) (t:'b -> 'a). AbelianMonoid g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
+     AbelianMonoid (monoid_bij_image f t g)
+Proof
   rw[AbelianMonoid_def] >-
   rw[monoid_bij_image_monoid] >>
   pop_assum mp_tac >>
   pop_assum mp_tac >>
   rw[monoid_bij_image_def] >>
-  rw[]);
+  rw[]
+QED
 
 
 (* Theorem: AbelianGroup g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
@@ -2544,16 +2620,17 @@ val monoid_bij_image_abelian_monoid = store_thm(
        = f (x'' * x')               by commutativity condition
        = f (t (f x'') * t (f x'))   by !y. t (f y) = y
 *)
-val monoid_bij_image_abelian_group = store_thm(
-  "monoid_bij_image_abelian_group",
-  ``!(g:'a group) (f:'a -> 'b) (t:'b -> 'a). AbelianGroup g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
-     AbelianGroup (monoid_bij_image f t g)``,
+Theorem monoid_bij_image_abelian_group:
+    !(g:'a group) (f:'a -> 'b) (t:'b -> 'a). AbelianGroup g /\ (!x. f (t x) = x) /\ (!y. t (f y) = y) ==>
+     AbelianGroup (monoid_bij_image f t g)
+Proof
   rw[AbelianGroup_def] >-
   rw[monoid_bij_image_group] >>
   pop_assum mp_tac >>
   pop_assum mp_tac >>
   rw[monoid_bij_image_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
    (monoid_bij_image f g f* = monoid_bij_image f g r.prod excluding (monoid_bij_image f g r.sum).id) *)
@@ -2571,12 +2648,13 @@ val monoid_bij_image_abelian_group = store_thm(
        Since x' = #0 ==>  f x' = f #0, the given means x' <> #0.
        Hence true by taking x'' = x'.
 *)
-val monoid_bij_image_with_excluding = store_thm(
-  "monoid_bij_image_with_excluding",
-  ``!(r:'a ring) (f:'a -> 'b) (g:'b -> 'a). Ring r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
-   (monoid_bij_image f g f* = monoid_bij_image f g r.prod excluding (monoid_bij_image f g r.sum).id)``,
+Theorem monoid_bij_image_with_excluding:
+    !(r:'a ring) (f:'a -> 'b) (g:'b -> 'a). Ring r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
+   (monoid_bij_image f g f* = monoid_bij_image f g r.prod excluding (monoid_bij_image f g r.sum).id)
+Proof
   rw[monoid_bij_image_def, excluding_def] >>
-  rw[IMAGE_DEF, DIFF_DEF, EXTENSION, EQ_IMP_THM] >> metis_tac[]);
+  rw[IMAGE_DEF, DIFF_DEF, EXTENSION, EQ_IMP_THM] >> metis_tac[]
+QED
 
 (* Given a Ring r, and two functions f g that undo each other,
    Then (f r) is a Ring, with op := (\x y. f (g x * g y))      *)
@@ -2615,10 +2693,10 @@ val monoid_bij_image_with_excluding = store_thm(
             = g x * g y + g x * g z                   by x = f a, y = f b, z = f c
        or f (g x * (g y + g z)) = f (g x * g y + g x * g z)
 *)
-val ring_bij_image_ring = store_thm(
-  "ring_bij_image_ring",
-  ``!(r:'a ring) (f:'a -> 'b) (g:'b -> 'a). Ring r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
-     Ring (ring_bij_image f g r)``,
+Theorem ring_bij_image_ring:
+    !(r:'a ring) (f:'a -> 'b) (g:'b -> 'a). Ring r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
+     Ring (ring_bij_image f g r)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[Ring_def, ring_bij_image_def] >-
   rw[ring_add_abelian_group, monoid_bij_image_abelian_group] >-
@@ -2629,7 +2707,8 @@ val ring_bij_image_ring = store_thm(
   `?a. (x = f a) /\ a IN R` by rw[GSYM IN_IMAGE] >>
   `?b. (y = f b) /\ b IN R` by rw[GSYM IN_IMAGE] >>
   `?c. (z = f c) /\ c IN R` by rw[GSYM IN_IMAGE] >>
-  rw[ring_mult_ladd]);
+  rw[ring_mult_ladd]
+QED
 
 (* Given a Field r, and two functions f g that undo each other,
    Then (f r) is a Field, with op := (\x y. f (g x * g y))      *)
@@ -2650,13 +2729,14 @@ val ring_bij_image_ring = store_thm(
        ==> Group ((ring_bij_image f g r).prod excluding (ring_bij_image f g r).sum.id)
                                               by monoid_bij_image_with_excluding, field_is_ring
 *)
-val ring_bij_image_field = store_thm(
-  "ring_bij_image_field",
-  ``!(r:'a field) (f:'a -> 'b) (g:'b -> 'a). Field r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
-     Field (ring_bij_image f g r)``,
+Theorem ring_bij_image_field:
+    !(r:'a field) (f:'a -> 'b) (g:'b -> 'a). Field r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
+     Field (ring_bij_image f g r)
+Proof
   rpt strip_tac >>
   rw[Field_def, ring_bij_image_def, ring_bij_image_ring] >>
-  metis_tac[Field_def, monoid_bij_image_group, monoid_bij_image_with_excluding]);
+  metis_tac[Field_def, monoid_bij_image_group, monoid_bij_image_with_excluding]
+QED
 
 (* Theorem: Field r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
             FieldIso f r (ring_bij_image f g r) *)
@@ -2681,10 +2761,10 @@ val ring_bij_image_field = store_thm(
            ?a. x = f a /\ a IN R               by IN_IMAGE
            Hence true by taking y = a.
 *)
-val ring_bij_image_field_iso = store_thm(
-  "ring_bij_image_field_iso",
-  ``!(r:'a field) (f:'a -> 'b) (g:'b -> 'a). Field r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
-     FieldIso f r (ring_bij_image f g r)``,
+Theorem ring_bij_image_field_iso:
+    !(r:'a field) (f:'a -> 'b) (g:'b -> 'a). Field r /\ (!x. f (g x) = x) /\ (!y. g (f y) = y) ==>
+     FieldIso f r (ring_bij_image f g r)
+Proof
   rw[FieldIso_def] >| [
     rw[FieldHomo_def, RingHomo_def] >-
     rw[ring_bij_image_def] >-
@@ -2696,7 +2776,8 @@ val ring_bij_image_field_iso = store_thm(
     rw[ring_bij_image_def] >>
     full_simp_tac (srw_ss())[ring_bij_image_def] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: univ(:'a) =~ univ(:'b) ==>
             !r:'a field. Field r ==> ?(s:'b field) f. Field s /\ FieldIso f r s *)
@@ -2708,13 +2789,14 @@ val ring_bij_image_field_iso = store_thm(
    Field (ring_bij_image f g r)          by ring_bij_image_field.
    FieldIso f r (ring_bij_image f g r)   by ring_bij_image_field_iso
 *)
-val field_exists_with_iso = store_thm(
-  "field_exists_with_iso",
-  ``univ(:'a) =~ univ(:'b) ==> !r:'a field. Field r ==> ?(s:'b field) f. Field s /\ FieldIso f r s``,
+Theorem field_exists_with_iso:
+    univ(:'a) =~ univ(:'b) ==> !r:'a field. Field r ==> ?(s:'b field) f. Field s /\ FieldIso f r s
+Proof
   rw[cardeq_def, BIJ_IFF_INV] >>
   qexists_tac `ring_bij_image f g r` >>
   qexists_tac `f` >>
-  rw[ring_bij_image_field, ring_bij_image_field_iso]);
+  rw[ring_bij_image_field, ring_bij_image_field_iso]
+QED
 
 (*
 use BIJ_IFF_INV
@@ -2856,11 +2938,11 @@ val it = |- !r s. FiniteField r /\ s <<= r /\ 1 < (r <:> s) ==>
      so y IN ring_nonzero u                       by field_nonzero_eq
     ==> y IN s                                    by field_orders_element_property
 *)
-val poly_unity_special_factor_exists_0 = store_thm(
-  "poly_unity_special_factor_exists_0",
-  ``!r:'a field. FiniteField r ==> !n. 0 < n /\ 1 < ordz n (CARD R) ==>
+Theorem poly_unity_special_factor_exists_0:
+    !r:'a field. FiniteField r ==> !n. 0 < n /\ 1 < ordz n (CARD R) ==>
    ?h. mifactor h (unity n) /\ (deg h = ordz n (CARD R)) /\
-    (poly_roots (PolyModRing r h) (lift h)) SUBSET (orders ((PolyModRing r h).prod excluding |0|) n)``,
+    (poly_roots (PolyModRing r h) (lift h)) SUBSET (orders ((PolyModRing r h).prod excluding |0|) n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `d = ordz n (CARD R)` >>
   `0 < d /\ d <> 1` by decide_tac >>
@@ -2936,7 +3018,8 @@ val poly_unity_special_factor_exists_0 = store_thm(
   `order (u.prod excluding u.sum.id) y = n` by metis_tac[finite_field_conjugates_member_order] >>
   `y <> u.sum.id` by metis_tac[finite_field_conjugates_has_zero] >>
   `y IN u.carrier` by metis_tac[poly_roots_member] >>
-  metis_tac[field_orders_element_property, field_nonzero_eq]);
+  metis_tac[field_orders_element_property, field_nonzero_eq]
+QED
 
 (* This is a milestone theorem, up to 75 assertion lines! *)
 
@@ -2962,10 +3045,10 @@ val poly_unity_special_factor_exists_0 = store_thm(
       so forderz X = n                           by field_orders_element_order
     Take this z, and the result follows.
 *)
-val poly_unity_special_factor_exists = store_thm(
-  "poly_unity_special_factor_exists",
-  ``!r:'a field. FiniteField r ==> !n. 0 < n /\ 1 < ordz n (CARD R) ==>
-   ?z. mifactor z (unity n) /\ (deg z = ordz n (CARD R)) /\ (forderz X = n)``,
+Theorem poly_unity_special_factor_exists:
+    !r:'a field. FiniteField r ==> !n. 0 < n /\ 1 < ordz n (CARD R) ==>
+   ?z. mifactor z (unity n) /\ (deg z = ordz n (CARD R)) /\ (forderz X = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `?z. mifactor z (unity n) /\ (deg z = ordz n (CARD R)) /\
     (poly_roots (PolyModRing r z) (lift z)) SUBSET (orders ((PolyModRing r z).prod excluding |0|) n)`
@@ -2980,7 +3063,8 @@ val poly_unity_special_factor_exists = store_thm(
   `X IN orders (u.prod excluding |0|) n` by metis_tac[SUBSET_DEF] >>
   `Field u` by rw[poly_mod_irreducible_field, Abbr`u`] >>
   `forderz X = n` by metis_tac[field_orders_element_order, poly_mod_ring_ids] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* The following is a direct proof of the result, incorporating poly_unity_special_factor_exists_0 *)
 
@@ -3177,11 +3261,12 @@ QED
 (* Theorem: FiniteField r /\ 0 < k /\ 1 < ordz k (CARD R) ==>
             ?z. mifactor z (unity k) /\ (deg z = ordz k (CARD R)) /\ (forderz X = k) *)
 (* Proof: by poly_unity_special_factor_exists *)
-val poly_unity_special_factor_exists_1 = store_thm(
-  "poly_unity_special_factor_exists_1",
-  ``!(r:'a field) k. FiniteField r /\ 0 < k /\ 1 < ordz k (CARD R) ==>
-                ?z. mifactor z (unity k) /\ (deg z = ordz k (CARD R)) /\ (forderz X = k)``,
-  metis_tac[poly_unity_special_factor_exists]);
+Theorem poly_unity_special_factor_exists_1:
+    !(r:'a field) k. FiniteField r /\ 0 < k /\ 1 < ordz k (CARD R) ==>
+                ?z. mifactor z (unity k) /\ (deg z = ordz k (CARD R)) /\ (forderz X = k)
+Proof
+  metis_tac[poly_unity_special_factor_exists]
+QED
 
 (* This is good for pretty-printing. *)
 
@@ -3195,16 +3280,17 @@ val poly_unity_special_factor_exists_1 = store_thm(
    Also z pdivides (unity k)     by poly_divides_alt, unity k % z = |0|
    Take this z, and the result follows.
 *)
-val poly_unity_special_factor_exists_alt = store_thm(
-  "poly_unity_special_factor_exists_alt",
-  ``!(r:'a field) k. FiniteField r /\ 0 < k /\ 1 < ordz k (CARD R) ==>
+Theorem poly_unity_special_factor_exists_alt:
+    !(r:'a field) k. FiniteField r /\ 0 < k /\ 1 < ordz k (CARD R) ==>
      ?z. monic z /\ ipoly z /\ z pdivides (unity k) /\
-         (deg z = ordz k (CARD R)) /\ (forderz X = k)``,
+         (deg z = ordz k (CARD R)) /\ (forderz X = k)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ poly (unity k)` by rw[] >>
   `?z. mifactor z (unity k) /\ (deg z = ordz k (CARD R)) /\ (forderz X = k)` by metis_tac[poly_unity_special_factor_exists] >>
   `ulead z` by rw_tac std_ss[poly_monic_ulead] >>
-  metis_tac[poly_divides_alt]);
+  metis_tac[poly_divides_alt]
+QED
 
 (* Note: The existence of this special factor of (unity k)
    is critical in the correctness proof of the AKS algorithm.

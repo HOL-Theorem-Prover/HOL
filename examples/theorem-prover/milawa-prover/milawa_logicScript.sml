@@ -614,8 +614,9 @@ val MAP_SND_ZIP = prove(
   ``!xs ys. (LENGTH xs = LENGTH ys) ==> (MAP SND (ZIP (xs,ys)) = ys)``,
   Induct \\ Cases_on `ys` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,ZIP,MAP]);
 
-val MilawaTrue_IMP_formula_ok = store_thm("MilawaTrue_IMP_formula_ok",
-  ``!ctxt x. MilawaTrue ctxt x ==> context_ok ctxt ==> formula_ok ctxt x``,
+Theorem MilawaTrue_IMP_formula_ok:
+    !ctxt x. MilawaTrue ctxt x ==> context_ok ctxt ==> formula_ok ctxt x
+Proof
   HO_MATCH_MP_TAC MilawaTrue_ind \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def,
        func_arity_def,LENGTH,EVERY_DEF,primitive_arity_def,
@@ -623,7 +624,8 @@ val MilawaTrue_IMP_formula_ok = store_thm("MilawaTrue_IMP_formula_ok",
   \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP]
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [term_ok_def]
   \\ TRY (Cases_on `qs_ss` \\ FULL_SIMP_TAC std_ss [formula_ok_def,or_list_def,MAP] \\ NO_TAC)
-  \\ FULL_SIMP_TAC std_ss [context_ok_def] \\ RES_TAC);
+  \\ FULL_SIMP_TAC std_ss [context_ok_def] \\ RES_TAC
+QED
 
 
 (* PART 4: Proof of soundness of the inference rules *)
@@ -1087,9 +1089,10 @@ val FunVarBind_MAP_EQ = prove(
   Induct \\ FULL_SIMP_TAC std_ss [FunVarBind_def,MEM,ALL_DISTINCT,MAP]
   \\ REPEAT STRIP_TAC \\ SRW_TAC [] [APPLY_UPDATE_THM]);
 
-val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
-  ``!ctxt x. MilawaTrue ctxt x ==> context_ok ctxt ==>
-             MilawaValid ctxt x``,
+Theorem Milawa_SOUNDESS:
+    !ctxt x. MilawaTrue ctxt x ==> context_ok ctxt ==>
+             MilawaValid ctxt x
+Proof
   HO_MATCH_MP_TAC MilawaTrue_ind \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_def]
   THEN1 (FULL_SIMP_TAC std_ss [MilawaValid_def,formula_ok_def,EvalFormula_def]
@@ -1215,19 +1218,22 @@ val Milawa_SOUNDESS = store_thm("Milawa_SOUNDESS",
     \\ POP_ASSUM (MP_TAC o Q.SPEC `a`) \\ ASM_SIMP_TAC std_ss []
     \\ FULL_SIMP_TAC std_ss [EvalTerm_sub,EvalFormula_sub]
     \\ STRIP_TAC \\ Q.PAT_X_ASSUM `!x.bbb` MATCH_MP_TAC
-    \\ FULL_SIMP_TAC std_ss [ORD_LESS_def]));
+    \\ FULL_SIMP_TAC std_ss [ORD_LESS_def])
+QED
 
 (* We now prove a corollary which provides an intuitive
    characterisation of soundness, namely that it is not possible to
    prove that NIL equals T. *)
 
-val Milawa_NOT_NIL_EQUAL_T = store_thm("Milawa_NOT_NIL_EQUAL_T",
-  ``!ctxt x.
+Theorem Milawa_NOT_NIL_EQUAL_T:
+    !ctxt x.
        context_ok ctxt ==>
        ~(MilawaTrue ctxt (Equal (mConst (Sym "NIL"))
-                                (mConst (Sym "T"))))``,
+                                (mConst (Sym "T"))))
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC Milawa_SOUNDESS
-  \\ POP_ASSUM MP_TAC \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss []);
+  \\ POP_ASSUM MP_TAC \\ EVAL_TAC \\ FULL_SIMP_TAC std_ss []
+QED
 
 
 (* PART 5: Soundness of context extension -- adding a new definition *)
@@ -1297,15 +1303,17 @@ val EvalFormula_FUPDATE = prove(
 
 (* adding a new definition does not break the derivations *)
 
-val term_ok_IGNORE_SEM = store_thm("term_ok_IGNORE_SEM",
-  ``!ctxt exp.
+Theorem term_ok_IGNORE_SEM:
+    !ctxt exp.
       term_ok (ctxt |+ (fname,params,body,sem)) exp =
-      term_ok (ctxt |+ (fname,params,body,ARB)) exp``,
+      term_ok (ctxt |+ (fname,params,body,ARB)) exp
+Proof
   HO_MATCH_MP_TAC (fetch "-" "term_ok_ind") \\ SIMP_TAC std_ss [term_ok_def]
   \\ FULL_SIMP_TAC std_ss [EVERY_MEM] \\ REPEAT STRIP_TAC
   \\ Cases_on `fc` \\ FULL_SIMP_TAC std_ss [func_arity_def,FDOM_FUPDATE]
   \\ FULL_SIMP_TAC std_ss [IN_INSERT,FAPPLY_FUPDATE_THM]
-  \\ Cases_on `s = fname` \\ FULL_SIMP_TAC std_ss []);
+  \\ Cases_on `s = fname` \\ FULL_SIMP_TAC std_ss []
+QED
 
 val formula_ok_IGNORE_SEM = prove(
   ``!exp ctxt.
@@ -1313,12 +1321,13 @@ val formula_ok_IGNORE_SEM = prove(
       formula_ok (ctxt |+ (fname,params,body,ARB)) exp``,
   Induct \\ FULL_SIMP_TAC std_ss [formula_ok_def,term_ok_IGNORE_SEM]);
 
-val EvalTerm_IGNORE_BODY = store_thm("EvalTerm_IGNORE_BODY",
-  ``!(ctxt:context_type) x a.
+Theorem EvalTerm_IGNORE_BODY:
+    !(ctxt:context_type) x a.
       (term_ok (ctxt |+ (name,params,body,sem)) x =
        term_ok (ctxt |+ (name,params,ARB,sem)) x) /\
       (EvalTerm (a,ctxt |+ (name,params,body,sem)) x =
-       EvalTerm (a,ctxt |+ (name,params,ARB,sem)) x)``,
+       EvalTerm (a,ctxt |+ (name,params,ARB,sem)) x)
+Proof
   HO_MATCH_MP_TAC (fetch "-" "term_ok_ind")
   \\ FULL_SIMP_TAC std_ss [EvalTerm_def,LET_DEF,term_ok_def]
   \\ REPEAT STRIP_TAC THEN1
@@ -1335,7 +1344,8 @@ val EvalTerm_IGNORE_BODY = store_thm("EvalTerm_IGNORE_BODY",
    (CONV_TAC (DEPTH_CONV ETA_CONV)
     \\ `MAP (EvalTerm (a,ctxt |+ (name,params,body,sem))) zs =
         MAP (EvalTerm (a,ctxt |+ (name,params,ARB,sem))) zs` by (MATCH_MP_TAC IMP_MAP_EQ_MAP \\ FULL_SIMP_TAC std_ss [])
-    \\ FULL_SIMP_TAC std_ss [EvalApp_def,LET_DEF,FAPPLY_FUPDATE_THM]));
+    \\ FULL_SIMP_TAC std_ss [EvalApp_def,LET_DEF,FAPPLY_FUPDATE_THM])
+QED
 
 val EvalFormula_IGNORE_BODY = prove(
   ``!(ctxt:context_type) x a.
@@ -1354,15 +1364,17 @@ fun TAC n =
                   formula_ok_IGNORE_SEM,term_ok_IGNORE_SEM,EvalFormula_IGNORE_BODY,
                   fetch "-" "func_body_distinct",pairTheory.PAIR_EQ])
 
-val MilawaTrue_new_definition = store_thm("MilawaTrue_new_definition",
-  ``!ctxt x. MilawaTrue ctxt x ==> ~(name IN FDOM ctxt) ==>
-             MilawaTrue (ctxt |+ (name,params,body,sem)) x``,
+Theorem MilawaTrue_new_definition:
+    !ctxt x. MilawaTrue ctxt x ==> ~(name IN FDOM ctxt) ==>
+             MilawaTrue (ctxt |+ (name,params,body,sem)) x
+Proof
   HO_MATCH_MP_TAC MilawaTrue_ind \\ REPEAT STRIP_TAC
   THEN1 TAC 0 THEN1 TAC 1 THEN1 TAC 2 THEN1 TAC 3 THEN1 TAC 4 THEN1 TAC 5
   THEN1 TAC 6 THEN1 TAC 7 THEN1 TAC 8 THEN1 TAC 9 THEN1 TAC 10 THEN1 TAC 11
   \\ SIMP_TAC std_ss [Once MilawaTrue_cases]
   \\ NTAC 12 DISJ2_TAC \\ Q.LIST_EXISTS_TAC [`qs_ss`,`m`]
-  \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC \\ RES_TAC);
+  \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC \\ RES_TAC
+QED
 
 val MilawaTrue_IGNORE_SEM_LEMMA = prove(
   ``!ctxt' x.
@@ -1377,30 +1389,36 @@ val MilawaTrue_IGNORE_SEM_LEMMA = prove(
   \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC \\ RES_TAC)
   |> SIMP_RULE std_ss [];
 
-val MilawaTrue_IGNORE_SEM = store_thm("MilawaTrue_IGNORE_SEM",
-  ``MilawaTrue (ctxt |+ (name,params,NO_FUN,sem)) =
-    MilawaTrue (ctxt |+ (name,params,NO_FUN,ARB))``,
-  FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ METIS_TAC [MilawaTrue_IGNORE_SEM_LEMMA]);
+Theorem MilawaTrue_IGNORE_SEM:
+    MilawaTrue (ctxt |+ (name,params,NO_FUN,sem)) =
+    MilawaTrue (ctxt |+ (name,params,NO_FUN,ARB))
+Proof
+  FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ METIS_TAC [MilawaTrue_IGNORE_SEM_LEMMA]
+QED
 
-val MilawaTrue_REPLACE_NO_FUN = store_thm("MilawaTrue_REPLACE_NO_FUN",
-  ``MilawaTrue (ctxt |+ (name,params,NO_FUN,sem)) x ==>
-    MilawaTrue (ctxt |+ (name,params,b,sem)) x``,
-  METIS_TAC [MilawaTrue_IGNORE_SEM_LEMMA]);
+Theorem MilawaTrue_REPLACE_NO_FUN:
+    MilawaTrue (ctxt |+ (name,params,NO_FUN,sem)) x ==>
+    MilawaTrue (ctxt |+ (name,params,b,sem)) x
+Proof
+  METIS_TAC [MilawaTrue_IGNORE_SEM_LEMMA]
+QED
 
 
 (* adding a new None definition does not break the context *)
 
-val context_ok_None = store_thm("context_ok_None",
-  ``!ctxt name params sem.
+Theorem context_ok_None:
+    !ctxt name params sem.
       context_ok ctxt /\ ~(name IN FDOM ctxt) ==>
-      context_ok (ctxt |+ (name,params,NO_FUN,sem))``,
+      context_ok (ctxt |+ (name,params,NO_FUN,sem))
+Proof
   FULL_SIMP_TAC (srw_ss()) [context_ok_def,FAPPLY_FUPDATE_THM,FDOM_FUPDATE]
   \\ NTAC 7 STRIP_TAC \\ FULL_SIMP_TAC std_ss [PULL_EXISTS_IMP]
   \\ Cases_on `fname = name` \\ FULL_SIMP_TAC (srw_ss()) []
   \\ REPEAT STRIP_TAC \\ RES_TAC
   \\ IMP_RES_TAC (EvalTerm_FUPDATE |> GSYM |> GEN_ALL) \\ FULL_SIMP_TAC std_ss []
   \\ METIS_TAC [fetch "-" "func_body_distinct",pairTheory.PAIR_EQ,
-                EvalTerm_FUPDATE,term_ok_FUPDATE]);
+                EvalTerm_FUPDATE,term_ok_FUPDATE]
+QED
 
 (* definition of Milawa's termination condition generator *)
 
@@ -2049,20 +2067,22 @@ Proof
     \\ FULL_SIMP_TAC std_ss [EvalTerm_SIMP])
 QED
 
-val M_ev_TERMINATES = store_thm("M_ev_TERMINATES",
-  ``f IN FDOM ctxt /\ (ctxt ' f = (params,BODY_FUN body,EvalFun f ctxt)) /\
+Theorem M_ev_TERMINATES:
+    f IN FDOM ctxt /\ (ctxt ' f = (params,BODY_FUN body,EvalFun f ctxt)) /\
     term_ok ctxt body /\ set (free_vars body) SUBSET set params /\
     ALL_DISTINCT params /\
     EVERY (\x. MilawaValid ctxt x)
           (termination_obligations f body params m) ==>
-    !a. M_ev f (body,a,ctxt) (EvalTerm (a,ctxt) body)``,
+    !a. M_ev f (body,a,ctxt) (EvalTerm (a,ctxt) body)
+Proof
   STRIP_TAC
   \\ MP_TAC (Q.INST [`name`|->`f`,`formals`|->`params`,
        `sem`|->`EvalFun f ctxt`] termination_obligations_INDUCT)
   \\ ASM_SIMP_TAC std_ss []
   \\ STRIP_TAC \\ POP_ASSUM HO_MATCH_MP_TAC \\ REPEAT STRIP_TAC
   \\ POP_ASSUM MP_TAC \\ POP_ASSUM (K ALL_TAC)
-  \\ METIS_TAC [M_ev_TERMINATES_STEP]);
+  \\ METIS_TAC [M_ev_TERMINATES_STEP]
+QED
 
 val M_ev_REMOVE_FunVarBind = prove(
   ``set (free_vars y) SUBSET set xs ==>
@@ -2086,11 +2106,13 @@ val BODY_FUN_EXISTS = prove(
   \\ ASM_SIMP_TAC std_ss [M_ev_REMOVE_FunVarBind]
   \\ METIS_TAC [M_ev_DETERMINISTIC]);
 
-val EvalFun_IGNORE_SEM = store_thm("EvalFun_IGNORE_SEM",
-  ``EvalFun fname (ctxt |+ (fname,params,BODY_FUN body,sem)) =
-    EvalFun fname (ctxt |+ (fname,params,BODY_FUN body,ARB))``,
+Theorem EvalFun_IGNORE_SEM:
+    EvalFun fname (ctxt |+ (fname,params,BODY_FUN body,sem)) =
+    EvalFun fname (ctxt |+ (fname,params,BODY_FUN body,ARB))
+Proof
   SIMP_TAC std_ss [EvalFun_def,FUN_EQ_THM,Eval_M_ap_def]
-  \\ FULL_SIMP_TAC std_ss [Q.INST [`sem2`|->`ARB`] M_ap_EQ_SEM])
+  \\ FULL_SIMP_TAC std_ss [Q.INST [`sem2`|->`ARB`] M_ap_EQ_SEM]
+QED
 
 val MAP_UPDATE_IGNORE = prove(
   ``!xs. ~MEM x xs ==> (MAP ((x =+ h) f) xs = MAP f xs)``,
@@ -2128,8 +2150,9 @@ val EvalTerm_REDUCE_CTXT = prove(
       \\ FULL_SIMP_TAC std_ss [term_ok_def,EVERY_MEM])
   \\ FULL_SIMP_TAC std_ss [term_ok_def] \\ METIS_TAC []) |> SIMP_RULE std_ss [];
 
-val term_ok_MEM_funs_IMP = store_thm("term_ok_MEM_funs_IMP",
-  ``!ctxt body m. term_ok ctxt body /\ MEM m (funs body) ==> m IN FDOM ctxt``,
+Theorem term_ok_MEM_funs_IMP:
+    !ctxt body m. term_ok ctxt body /\ MEM m (funs body) ==> m IN FDOM ctxt
+Proof
   HO_MATCH_MP_TAC (fetch "-" "term_ok_ind") \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [funs_def,MEM,MEM_APPEND,term_ok_def,EVERY_MEM,MEM_FLAT,MEM_MAP]
   \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
@@ -2137,14 +2160,16 @@ val term_ok_MEM_funs_IMP = store_thm("term_ok_MEM_funs_IMP",
   \\ FULL_SIMP_TAC std_ss [funs_def,MEM,MEM_APPEND,term_ok_def,EVERY_MEM,MEM_FLAT,MEM_MAP]
   \\ POP_ASSUM MP_TAC \\ FULL_SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss [func_arity_def]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
-val EvalFun_FUPDATE = store_thm("EvalFun_FUPDATE",
-  ``fname' IN FDOM ctxt /\ ~(fname IN FDOM ctxt) /\
+Theorem EvalFun_FUPDATE:
+    fname' IN FDOM ctxt /\ ~(fname IN FDOM ctxt) /\
     (ctxt ' fname' = (params',BODY_FUN body',EvalFun fname' ctxt)) /\
     term_ok ctxt body' ==>
     (EvalFun fname' (ctxt |+ (fname,params,body,sem)) =
-     EvalFun fname' ctxt)``,
+     EvalFun fname' ctxt)
+Proof
   SIMP_TAC std_ss [EvalFun_def,FUN_EQ_THM,Eval_M_ap_def]
   \\ REPEAT STRIP_TAC \\ CONV_TAC (DEPTH_CONV ETA_CONV)
   \\ AP_TERM_TAC \\ SIMP_TAC std_ss [FUN_EQ_THM]
@@ -2160,12 +2185,15 @@ val EvalFun_FUPDATE = store_thm("EvalFun_FUPDATE",
     \\ Q.EXISTS_TAC `ctxt` \\ FULL_SIMP_TAC (srw_ss()) [FAPPLY_FUPDATE_THM]
     \\ REPEAT STRIP_TAC \\ `~(fname = fname')` by METIS_TAC []
     \\ ASM_SIMP_TAC (srw_ss()) [] \\ REPEAT STRIP_TAC
-    \\ IMP_RES_TAC term_ok_MEM_funs_IMP \\ METIS_TAC []));
+    \\ IMP_RES_TAC term_ok_MEM_funs_IMP \\ METIS_TAC [])
+QED
 
-val MilawaValid_IGNORE_SYNTAX = store_thm("MilawaValid_IGNORE_SYNTAX",
-  ``MilawaValid (ctxt |+ (name,params,body,sem)) =
-    MilawaValid (ctxt |+ (name,params,ARB,sem))``,
-  FULL_SIMP_TAC std_ss [MilawaValid_def,FUN_EQ_THM,EvalFormula_IGNORE_BODY]);
+Theorem MilawaValid_IGNORE_SYNTAX:
+    MilawaValid (ctxt |+ (name,params,body,sem)) =
+    MilawaValid (ctxt |+ (name,params,ARB,sem))
+Proof
+  FULL_SIMP_TAC std_ss [MilawaValid_def,FUN_EQ_THM,EvalFormula_IGNORE_BODY]
+QED
 
 val definition_ok_lemma = prove(
   ``!name params body ctxt.
@@ -2240,26 +2268,32 @@ val definition_ok_lemma = prove(
     \\ `MilawaValid (ctxt |+ (name,params,NO_FUN,EvalFun name new_ctxt)) x` by METIS_TAC [Milawa_SOUNDESS]
     \\ METIS_TAC [MilawaValid_IGNORE_SYNTAX]));
 
-val definition_ok_thm = store_thm("definition_ok_thm",
-  ``!name params body ctxt.
+Theorem definition_ok_thm:
+    !name params body ctxt.
       context_ok ctxt /\ definition_ok (name,params,body,ctxt) ==>
-      ?f. context_ok (ctxt |+ (name,params,body,f))``,
-  METIS_TAC [definition_ok_lemma]);
+      ?f. context_ok (ctxt |+ (name,params,body,f))
+Proof
+  METIS_TAC [definition_ok_lemma]
+QED
 
-val definition_ok_WITNESS_FUN = store_thm("definition_ok_WITNESS_FUN",
-  ``!name params l s ctxt.
+Theorem definition_ok_WITNESS_FUN:
+    !name params l s ctxt.
       context_ok ctxt /\ definition_ok (name,params,WITNESS_FUN l s,ctxt) ==>
-      context_ok (ctxt |+ (name,params,WITNESS_FUN l s,\args. @v. isTrue (EvalTerm (FunVarBind (s::params) (v::args),ctxt) l)))``,
+      context_ok (ctxt |+ (name,params,WITNESS_FUN l s,\args. @v. isTrue (EvalTerm (FunVarBind (s::params) (v::args),ctxt) l)))
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC
   (definition_ok_lemma
     |> SPEC_ALL |> Q.INST [`body`|->`WITNESS_FUN l s`]
-    |> SIMP_RULE (srw_ss()) []) \\ FULL_SIMP_TAC std_ss []);
+    |> SIMP_RULE (srw_ss()) []) \\ FULL_SIMP_TAC std_ss []
+QED
 
-val definition_ok_BODY_FUN = store_thm("definition_ok_BODY_FUN",
-  ``!name params l ctxt.
+Theorem definition_ok_BODY_FUN:
+    !name params l ctxt.
       context_ok ctxt /\ definition_ok (name,params,BODY_FUN l,ctxt) ==>
-      context_ok (ctxt |+ (name,params,BODY_FUN l,EvalFun name (ctxt |+ (name,params,BODY_FUN l,ARB))))``,
+      context_ok (ctxt |+ (name,params,BODY_FUN l,EvalFun name (ctxt |+ (name,params,BODY_FUN l,ARB))))
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC
   (definition_ok_lemma
     |> SPEC_ALL |> Q.INST [`body`|->`BODY_FUN l`]
-    |> SIMP_RULE (srw_ss()) []) \\ FULL_SIMP_TAC std_ss []);
+    |> SIMP_RULE (srw_ss()) []) \\ FULL_SIMP_TAC std_ss []
+QED

@@ -49,13 +49,13 @@ Definition GBA_lang_def:
   GBA_lang aut = { w | ?r. isGBARunFor aut r w ∧ word_range w ⊆ aut.alphabet }
 End
 
-val GBA_ACC_LEMM = store_thm
-  ("GBA_ACC_LEMM",
-  ``!aut r x. isAcceptingGBARunFor aut (GBA_RUN r) x
+Theorem GBA_ACC_LEMM:
+    !aut r x. isAcceptingGBARunFor aut (GBA_RUN r) x
         = !T. T ∈ aut.accTrans
               ==> (!i. ?a j. i <= j ∧ (r j, a, r (j+1)) ∈ T
                                     ∧ (a, r (j+1)) ∈ aut.trans (r j)
-                                    ∧ at x j ∈ a)``,
+                                    ∧ at x j ∈ a)
+Proof
   rw[EQ_IMP_THM] >> fs[isAcceptingGBARunFor_def]
     >- (`INFINITE {j | ∃a. (r j,a,r (j + 1)) ∈ T'
                         ∧ (a, r (j+1)) ∈ aut.trans (r j) ∧ at x j ∈ a}` by fs[]
@@ -100,18 +100,18 @@ val GBA_ACC_LEMM = store_thm
              >> metis_tac[])
         >> metis_tac[PSUBSET_DEF, PSUBSET_FINITE]
        )
-  );
+QED
 
-val ACC_TRANS_LEMM = store_thm
-  ("ACC_TRANS_LEMM",
-   ``!aut r word. isAcceptingGBARunFor aut (GBA_RUN r) word
+Theorem ACC_TRANS_LEMM:
+     !aut r word. isAcceptingGBARunFor aut (GBA_RUN r) word
      ∧ isValidGBA aut
      ∧ FINITE aut.alphabet ∧ FINITE aut.states
         ==> !T. T ∈ aut.accTrans
               ==> (?q1 a q2. !i. ?j. i <= j ∧ (q1 = r j) ∧ (q2 = r (j+1))
                                    ∧ (a,q2) ∈ aut.trans q1
                                    ∧ at word j ∈ a
-                                   ∧ (q1,a,q2) ∈ T)``,
+                                   ∧ (q1,a,q2) ∈ T)
+Proof
    rpt strip_tac
    >> `FINITE T'` by (
        fs[isValidGBA_def]
@@ -180,7 +180,7 @@ val ACC_TRANS_LEMM = store_thm
    >> first_x_assum (qspec_then `f (r j) a (r (j + 1))` mp_tac)
    >> POP_ASSUM mp_tac >> simp[] >> rpt strip_tac
    >> metis_tac[]
-  );
+QED
 
 Definition alph_counter_def:
   (alph_counter N num_to_T acc_T 0 = (0,0))
@@ -193,11 +193,11 @@ Definition alph_counter_def:
     )
 End
 
-val ALPH_COUNTER_FST_LEMM = store_thm
-  ("ALPH_COUNTER_FST_LEMM",
-   ``!N f g i. (FST (alph_counter N f g i)
+Theorem ALPH_COUNTER_FST_LEMM:
+     !N f g i. (FST (alph_counter N f g i)
                 <= FST (alph_counter N f g (SUC i)))
-             ∧ (FST (alph_counter N f g i) <= i)``,
+             ∧ (FST (alph_counter N f g i) <= i)
+Proof
    strip_tac >> strip_tac >> strip_tac >> Induct_on `i`
    >- simp[alph_counter_def]
    >- (qabbrev_tac `M = SUC i` >> simp[alph_counter_def]
@@ -208,12 +208,12 @@ val ALPH_COUNTER_FST_LEMM = store_thm
                       (FST (alph_counter N f g i)) = i`
        >> fs[]
       )
-  );
+QED
 
-val ALPH_COUNTER_FST_LEMM2 = store_thm
-  ("ALPH_COUNTER_FST_LEMM2",
-   ``!N f g i. (alph_counter N f g i = alph_counter N f g (SUC i))
-            \/ (FST (alph_counter N f g (SUC i)) = (SUC i))``,
+Theorem ALPH_COUNTER_FST_LEMM2:
+     !N f g i. (alph_counter N f g i = alph_counter N f g (SUC i))
+            \/ (FST (alph_counter N f g (SUC i)) = (SUC i))
+Proof
    strip_tac >> strip_tac >> strip_tac >> Induct_on `i`
    >- (simp[alph_counter_def]
        >> Cases_on `g (f 0) 0 = 0` >> fs[]
@@ -223,7 +223,7 @@ val ALPH_COUNTER_FST_LEMM2 = store_thm
                             (FST (alph_counter N f g M)) = M`
        >> fs[]
       )
-  );
+QED
 
 (* val GBA_RUN_ALPH_FUN = store_thm *)
 (*   ("GBA_RUN_ALPH_FUN", *)
@@ -613,10 +613,10 @@ val ALPH_COUNTER_FST_LEMM2 = store_thm
 
 
 
-val GBA_FINITE_LEMM = store_thm
-  ("GBA_FINITE_LEMM",
-   ``!aut. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidGBA aut ==>
-       !q. q ∈ aut.states ==> FINITE (aut.trans q)``,
+Theorem GBA_FINITE_LEMM:
+     !aut. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidGBA aut ==>
+       !q. q ∈ aut.states ==> FINITE (aut.trans q)
+Proof
    rpt strip_tac
    >> `aut.trans q ⊆ ((POW aut.alphabet) × aut.states)` by (
        fs[isValidGBA_def] >> simp[SUBSET_DEF] >> rpt strip_tac
@@ -624,17 +624,17 @@ val GBA_FINITE_LEMM = store_thm
          >- (Cases_on `x` >> metis_tac[IN_POW,SND])
    )
    >> metis_tac[FINITE_CROSS,FINITE_POW,PSUBSET_DEF,PSUBSET_FINITE]
-  );
+QED
 
-val GBA_RUN_LEMM = store_thm
-  ("GBA_RUN_LEMM",
-   ``!aut f w. isValidGBA aut ∧ isValidGBARunFor aut (GBA_RUN f) w
-      ==> !i. f i ∈ aut.states``,
+Theorem GBA_RUN_LEMM:
+     !aut f w. isValidGBA aut ∧ isValidGBARunFor aut (GBA_RUN f) w
+      ==> !i. f i ∈ aut.states
+Proof
    rpt gen_tac >> strip_tac >> Induct_on `i`
    >> fs[isValidGBARunFor_def,isValidGBA_def]
     >- metis_tac[SUBSET_DEF]
     >- (rw[SUC_ONE_ADD] >> metis_tac[])
-  );
+QED
 
 (*
   reachable states
@@ -652,10 +652,10 @@ Definition reachableFromSetGBA_def:
   reachableFromSetGBA aut s = { y | ?x. reachableFromGBA aut x y ∧ x ∈ s }
 End
 
-val REACHABLE_GBA_LEMM = store_thm
-  ("REACHABLE_GBA_LEMM",
-  ``!aut q1 q2. isValidGBA aut ∧ reachableFromGBA aut q1 q2 ∧ q1 ∈ aut.states
-    ==> q2 ∈ aut.states``,
+Theorem REACHABLE_GBA_LEMM:
+    !aut q1 q2. isValidGBA aut ∧ reachableFromGBA aut q1 q2 ∧ q1 ∈ aut.states
+    ==> q2 ∈ aut.states
+Proof
   gen_tac
   >> `isValidGBA aut ==> !q1 q2. reachableFromGBA aut q1 q2
         ==> q1 ∈ aut.states ==> q2 ∈ aut.states`
@@ -663,5 +663,5 @@ val REACHABLE_GBA_LEMM = store_thm
   >> strip_tac >> simp[reachableFromGBA_def]
   >> HO_MATCH_MP_TAC RTC_INDUCT >> rpt strip_tac >> fs[]
   >> fs[stepGBA_def,isValidGBA_def] >> metis_tac[]
-  );
+QED
 

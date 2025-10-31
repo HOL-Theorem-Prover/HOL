@@ -87,9 +87,10 @@ val TEMPORAL_NEXT_IMP_EVENTUALLY = Q.store_thm("TEMPORAL_NEXT_IMP_EVENTUALLY",
          [TEMPORAL_def, LET_DEF, T_IMPLIES_def, NEXT_def, EVENTUALLY_def]
    \\ METIS_TAC [])
 
-val SPEC_1_IMP_SPEC = store_thm("SPEC_1_IMP_SPEC",
-  ``SPEC_1 model pre code post err ==>
-    SPEC model pre code (post \/ err)``,
+Theorem SPEC_1_IMP_SPEC:
+    SPEC_1 model pre code post err ==>
+    SPEC model pre code (post \/ err)
+Proof
   INIT
   \\ FULL_SIMP_TAC std_ss [SPEC_1_def,SPEC_EQ_TEMPORAL,TEMPORAL_def,LET_DEF]
   \\ REPEAT STRIP_TAC \\ RES_TAC
@@ -103,16 +104,18 @@ val SPEC_1_IMP_SPEC = store_thm("SPEC_1_IMP_SPEC",
   THEN1 (Q.EXISTS_TAC `k` \\ FULL_SIMP_TAC std_ss [ADD_ASSOC]
     \\ POP_ASSUM MP_TAC
     \\ SIMP_TAC std_ss [NOW_def,SEP_REFINE_def,SEP_CLAUSES]
-    \\ SIMP_TAC std_ss [SEP_DISJ_def] \\ METIS_TAC []));
+    \\ SIMP_TAC std_ss [SEP_DISJ_def] \\ METIS_TAC [])
+QED
 
-val SPEC_IMP_SPEC_1 = store_thm("SPEC_IMP_SPEC_1",
-  ``SPEC model pre code (post \/ err) ==>
+Theorem SPEC_IMP_SPEC_1:
+    SPEC model pre code (post \/ err) ==>
     let to_set = FST model in
     let instr = FST (SND (SND model)) in
     let less = FST (SND (SND (SND model))) in
       (!s r. SEP_REFINE (pre * CODE_POOL instr code * r) less to_set s ==>
              ~SEP_REFINE (post * CODE_POOL instr code * r) less to_set s) ==>
-    SPEC_1 model pre code post err``,
+    SPEC_1 model pre code post err
+Proof
   INIT \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [SPEC_EQ_TEMPORAL,SPEC_1_def]
   \\ FULL_SIMP_TAC std_ss [TEMPORAL_def,LET_DEF,T_IMPLIES_def]
@@ -123,7 +126,8 @@ val SPEC_IMP_SPEC_1 = store_thm("SPEC_IMP_SPEC_1",
   \\ FULL_SIMP_TAC std_ss [GSYM STAR_ASSOC]
   THEN1 METIS_TAC [] THEN1 METIS_TAC [] THEN1 METIS_TAC []
   \\ Cases_on `k` \\ FULL_SIMP_TAC std_ss [ADD1,SEP_DISJ_def]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
 val SEP_IMP_IMP_SEP_REFINE = prove(
   ``SEP_IMP q1 q3 ==>
@@ -134,56 +138,66 @@ val SEP_IMP_IMP_SEP_REFINE = prove(
   \\ REPEAT STRIP_TAC \\ IMP_RES_TAC SEP_IMP_FRAME
   \\ FULL_SIMP_TAC std_ss [SEP_IMP_def] \\ METIS_TAC []);
 
-val SPEC_1_STRENGTHEN = store_thm("SPEC_1_STRENGTHEN",
-  ``!model p c q err.
+Theorem SPEC_1_STRENGTHEN:
+    !model p c q err.
        SPEC_1 model p c q err ==> !r. SEP_IMP r p ==>
-       SPEC_1 model r c q err``,
+       SPEC_1 model r c q err
+Proof
   STRIP_TAC \\ INIT \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [TEMPORAL_def,LET_DEF,PULL_FORALL,
        AND_IMP_INTRO,T_IMPLIES_def,ALWAYS_def,EVENTUALLY_def,
        NOW_def,T_OR_F_def,SPEC_1_def]
-  \\ METIS_TAC [SEP_IMP_IMP_SEP_REFINE]);
+  \\ METIS_TAC [SEP_IMP_IMP_SEP_REFINE]
+QED
 
-val SPEC_1_WEAKEN = store_thm("SPEC_1_WEAKEN",
-  ``!model p c r err.
+Theorem SPEC_1_WEAKEN:
+    !model p c r err.
        SPEC_1 model p c r err ==> !q. SEP_IMP r q ==>
-       SPEC_1 model p c q err``,
+       SPEC_1 model p c q err
+Proof
   STRIP_TAC \\ INIT \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [TEMPORAL_def,LET_DEF,PULL_FORALL,
        AND_IMP_INTRO,T_IMPLIES_def,ALWAYS_def,EVENTUALLY_def,
        NOW_def,T_OR_F_def,SPEC_1_def,SEP_DISJ_def,SEP_CLAUSES,NEXT_def]
-  \\ METIS_TAC [SEP_IMP_IMP_SEP_REFINE]);
+  \\ METIS_TAC [SEP_IMP_IMP_SEP_REFINE]
+QED
 
-val SPEC_1_FRAME = store_thm("SPEC_1_FRAME",
-  ``!model p c q err. SPEC_1 model p c q err ==>
-                      !r. SPEC_1 model (p * r) c (q * r) (err * r)``,
+Theorem SPEC_1_FRAME:
+    !model p c q err. SPEC_1 model p c q err ==>
+                      !r. SPEC_1 model (p * r) c (q * r) (err * r)
+Proof
   STRIP_TAC \\ INIT \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [TEMPORAL_def,LET_DEF,PULL_FORALL,
        AND_IMP_INTRO,T_IMPLIES_def,ALWAYS_def,EVENTUALLY_def,
        NOW_def,T_OR_F_def,SPEC_1_def,SEP_DISJ_def,SEP_CLAUSES,NEXT_def]
   \\ NTAC 3 STRIP_TAC
   \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`state`,`seq`,`r * r'`])
-  \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
+  \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]
+QED
 
-val SPEC_MOVE_1_COND = store_thm("SPEC_MOVE_1_COND",
-  ``!model p c q g err.
-      SPEC_1 model (p * cond g) c q err <=> (g ==> SPEC_1 model p c q err)``,
+Theorem SPEC_MOVE_1_COND:
+    !model p c q g err.
+      SPEC_1 model (p * cond g) c q err <=> (g ==> SPEC_1 model p c q err)
+Proof
   STRIP_TAC \\ INIT \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [TEMPORAL_def,LET_DEF,PULL_FORALL,
        AND_IMP_INTRO,T_IMPLIES_def,ALWAYS_def,EVENTUALLY_def,
        NOW_def,T_OR_F_def,SPEC_1_def,SEP_DISJ_def,SEP_CLAUSES,NEXT_def]
   \\ FULL_SIMP_TAC std_ss [SEP_REFINE_def]
   \\ Cases_on `g` \\ FULL_SIMP_TAC std_ss [SEP_CLAUSES]
-  \\ FULL_SIMP_TAC std_ss [SEP_F_def] \\ METIS_TAC []);
+  \\ FULL_SIMP_TAC std_ss [SEP_F_def] \\ METIS_TAC []
+QED
 
-val SPEC_1_PRE_EXISTS = store_thm("SPEC_1_PRE_EXISTS",
-  ``!model p c q err. (!y. SPEC_1 model (p y) c q err) <=>
-                      SPEC_1 model (SEP_EXISTS y. p y) c q err``,
+Theorem SPEC_1_PRE_EXISTS:
+    !model p c q err. (!y. SPEC_1 model (p y) c q err) <=>
+                      SPEC_1 model (SEP_EXISTS y. p y) c q err
+Proof
   STRIP_TAC \\ INIT \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [TEMPORAL_def,LET_DEF,PULL_FORALL,
        AND_IMP_INTRO,T_IMPLIES_def,ALWAYS_def,EVENTUALLY_def,
        NOW_def,T_OR_F_def,SPEC_1_def,SEP_DISJ_def,SEP_CLAUSES,NEXT_def]
   \\ FULL_SIMP_TAC std_ss [SEP_REFINE_def,SEP_CLAUSES,SEP_EXISTS_THM]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
-  \\ FIRST_X_ASSUM MATCH_MP_TAC \\ METIS_TAC [])
+  \\ FIRST_X_ASSUM MATCH_MP_TAC \\ METIS_TAC []
+QED
 

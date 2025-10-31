@@ -377,20 +377,26 @@ val R_ev_T_11_lemma = prove(
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss [])
   |> SIMP_RULE std_ss [pairTheory.FORALL_PROD,PULL_FORALL_IMP];
 
-val R_ev_T_11 = store_thm("R_ev_T_11",
-  ``!x y. R_ev x (res,k,io,T) /\ R_ev x y ==> (y = (res,k,io,T))``,
+Theorem R_ev_T_11:
+    !x y. R_ev x (res,k,io,T) /\ R_ev x y ==> (y = (res,k,io,T))
+Proof
   FULL_SIMP_TAC std_ss [pairTheory.FORALL_PROD] \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []
+QED
 
-val R_ap_T_11 = store_thm("R_ap_T_11",
-  ``!x y. R_ap x (res,k,io,T) /\ R_ap x y ==> (y = (res,k,io,T))``,
+Theorem R_ap_T_11:
+    !x y. R_ap x (res,k,io,T) /\ R_ap x y ==> (y = (res,k,io,T))
+Proof
   FULL_SIMP_TAC std_ss [pairTheory.FORALL_PROD] \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []
+QED
 
-val R_ap_F_11 = store_thm("R_ap_F_11",
-  ``R_ap x (res,k,io,F) /\ R_ap x (res2,k2,io2,b) ==> ~b``,
+Theorem R_ap_F_11:
+    R_ap x (res,k,io,F) /\ R_ap x (res2,k2,io2,b) ==> ~b
+Proof
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC R_ap_T_11 \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC R_ap_T_11 \\ FULL_SIMP_TAC std_ss []
+QED
 
 Theorem R_ev_T_cases:
   (R_ev (x,env,k,io,ok) (r,k',io',T) ⇔

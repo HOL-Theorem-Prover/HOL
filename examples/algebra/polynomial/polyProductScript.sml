@@ -187,34 +187,38 @@ val _ = overload_on("pset", ``poly_set r``);
 
 (* Theorem: pset s /\ pset t ==> pset (s UNION t) *)
 (* Proof: by IN_UNION *)
-val poly_set_union_poly_set = store_thm(
-  "poly_set_union_poly_set",
-  ``!r:'a ring. !s t. pset s /\ pset t <=> pset (s UNION t)``,
-  metis_tac[IN_UNION]);
+Theorem poly_set_union_poly_set:
+    !r:'a ring. !s t. pset s /\ pset t <=> pset (s UNION t)
+Proof
+  metis_tac[IN_UNION]
+QED
 
 (* Theorem: pset s /\ pset t ==> pset (s INTER t) *)
 (* Proof: by IN_INTER *)
-val poly_set_inter_poly_set = store_thm(
-  "poly_set_inter_poly_set",
-  ``!r:'a ring. !s t. pset s /\ pset t ==> pset (s INTER t)``,
-  metis_tac[IN_INTER]);
+Theorem poly_set_inter_poly_set:
+    !r:'a ring. !s t. pset s /\ pset t ==> pset (s INTER t)
+Proof
+  metis_tac[IN_INTER]
+QED
 
 (* Overload for every pset *)
 val _ = overload_on("EVERY_PSET", ``\P. (!s. s IN P ==> pset s)``);
 
 (* Theorem: EVERY_PSET s <=> pset (BIGUNION s) *)
 (* Proof: by IN_BIGUNION *)
-val poly_set_bigunion_poly_set = store_thm(
-  "poly_set_bigunion_poly_set",
-  ``!r:'a ring. !s. EVERY_PSET s <=> pset (BIGUNION s)``,
-  metis_tac[IN_BIGUNION]);
+Theorem poly_set_bigunion_poly_set:
+    !r:'a ring. !s. EVERY_PSET s <=> pset (BIGUNION s)
+Proof
+  metis_tac[IN_BIGUNION]
+QED
 
 (* Theorem: EVERY_PSET s /\ s <> {} ==> pset (BIGINTER s) *)
 (* Proof: by IN_BIGINTER, MEMBER_NOT_EMPTY *)
-val poly_set_biginter_poly_set = store_thm(
-  "poly_set_biginter_poly_set",
-  ``!r:'a ring. !s. EVERY_PSET s /\ s <> {} ==> pset (BIGINTER s)``,
-  metis_tac[IN_BIGINTER, MEMBER_NOT_EMPTY]);
+Theorem poly_set_biginter_poly_set:
+    !r:'a ring. !s. EVERY_PSET s /\ s <> {} ==> pset (BIGINTER s)
+Proof
+  metis_tac[IN_BIGINTER, MEMBER_NOT_EMPTY]
+QED
 
 (* Overload a map with polynomial output *)
 val _ = overload_on("poly_map", ``\(r:'a ring) f. !x. x IN R ==> poly (f x)``);
@@ -231,10 +235,11 @@ val _ = overload_on("pmap", ``poly_map r``);
    and x IN R ==> poly (f x)                     by notation
    Hence true.
 *)
-val poly_map_image_poly_set = store_thm(
-  "poly_map_image_poly_set",
-  ``!r:'a ring. !s f. s SUBSET R /\ pmap f ==> pset (IMAGE f s)``,
-  (rw[SUBSET_DEF] >> rw[]));
+Theorem poly_map_image_poly_set:
+    !r:'a ring. !s f. s SUBSET R /\ pmap f ==> pset (IMAGE f s)
+Proof
+  (rw[SUBSET_DEF] >> rw[])
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> pmap factor *)
 (* Proof:
@@ -242,10 +247,11 @@ val poly_map_image_poly_set = store_thm(
    <=> x. x IN R ==> poly (factor x)    by notation
    <=> T                                by poly_factor_poly
 *)
-val poly_map_factor = store_thm(
-  "poly_map_factor",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> pmap factor``,
-  rw[poly_factor_poly]);
+Theorem poly_map_factor:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> pmap factor
+Proof
+  rw[poly_factor_poly]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Product of a set of Polynomials                                *)
@@ -307,10 +313,11 @@ val _ = overload_on ("PPROD", ``poly_prod_set r``);
    = GITSET (PolyRing r).prod {} |1|    by GPROD_SET_def
    = |1|                                by GITSET_EMPTY
 *)
-val poly_prod_set_empty = store_thm(
-  "poly_prod_set_empty",
-  ``!r:'a ring. PPROD {} = |1|``,
-  rw[poly_prod_set_def, GPROD_SET_def, GITSET_EMPTY]);
+Theorem poly_prod_set_empty:
+    !r:'a ring. PPROD {} = |1|
+Proof
+  rw[poly_prod_set_def, GPROD_SET_def, GITSET_EMPTY]
+QED
 
 (* Theorem: Ring r ==> FINITE s /\ s SUBSET (PolyRing r).carrier ==> poly (PPROD s) *)
 (* Proof:
@@ -321,22 +328,24 @@ val poly_prod_set_empty = store_thm(
    PPROD s = GPROD_SET (PolyRing r).prod s            by poly_prod_set_def
    Hence PPROD s IN (PolyRing r).carrier              by GPROD_SET_PROPERTY
 *)
-val poly_prod_set_property = store_thm(
-  "poly_prod_set_property",
-  ``!r:'a ring. Ring r ==>
-   !s. FINITE s /\ s SUBSET (PolyRing r).carrier ==> PPROD s IN (PolyRing r).carrier``,
+Theorem poly_prod_set_property:
+    !r:'a ring. Ring r ==>
+   !s. FINITE s /\ s SUBSET (PolyRing r).carrier ==> PPROD s IN (PolyRing r).carrier
+Proof
   rw[poly_prod_set_def] >>
   `Ring (PolyRing r)` by rw[poly_add_mult_ring] >>
   `(PolyRing r).carrier = (PolyRing r).prod.carrier` by rw[ring_carriers] >>
   `AbelianMonoid (PolyRing r).prod` by rw[poly_mult_abelian_monoid] >>
-  metis_tac[GPROD_SET_PROPERTY]);
+  metis_tac[GPROD_SET_PROPERTY]
+QED
 
 (* Theorem: pset t /\ s SUBSET t ==> pset s *)
 (* Proof: by SUBSET_DEF *)
-val poly_set_subset_poly_set = store_thm(
-  "poly_set_subset_poly_set",
-  ``!r:'a ring. !s t. pset t /\ s SUBSET t ==> pset s``,
-  rw_tac std_ss[SUBSET_DEF]);
+Theorem poly_set_subset_poly_set:
+    !r:'a ring. !s t. pset t /\ s SUBSET t ==> pset s
+Proof
+  rw_tac std_ss[SUBSET_DEF]
+QED
 
 (* Theorem: Ring r ==> FINITE s /\ pset s ==> poly (PPROD s) *)
 (* Proof:
@@ -345,10 +354,11 @@ val poly_set_subset_poly_set = store_thm(
          iff s SUBSET (PolyRing r).carrier      by SUBSET_DEF
    This is true                                 by poly_prod_set_property
 *)
-val poly_prod_set_poly = store_thm(
-  "poly_prod_set_poly",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> poly (PPROD s)``,
-  metis_tac[poly_prod_set_property, poly_ring_element, SUBSET_DEF]);
+Theorem poly_prod_set_poly:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> poly (PPROD s)
+Proof
+  metis_tac[poly_prod_set_property, poly_ring_element, SUBSET_DEF]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ pset s ==>
            !p. poly p ==> (PPROD (p INSERT s) = p * PPROD (s DELETE p)) *)
@@ -362,16 +372,17 @@ val poly_prod_set_poly = store_thm(
    p IN (PolyRing r).carrier                          by poly_ring_element
    Hence result follows                               by GPROD_SET_THM
 *)
-val poly_prod_set_thm = store_thm(
-  "poly_prod_set_thm",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==>
-   !p. poly p ==> (PPROD (p INSERT s) = p * PPROD (s DELETE p))``,
+Theorem poly_prod_set_thm:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==>
+   !p. poly p ==> (PPROD (p INSERT s) = p * PPROD (s DELETE p))
+Proof
   rw[poly_prod_set_def] >>
   `Ring (PolyRing r)` by rw[poly_add_mult_ring] >>
   `(PolyRing r).carrier = (PolyRing r).prod.carrier` by rw[ring_carriers] >>
   `AbelianMonoid (PolyRing r).prod` by rw[poly_mult_abelian_monoid] >>
   `s SUBSET (PolyRing r).carrier /\ p IN (PolyRing r).carrier` by rw[poly_ring_element, SUBSET_DEF] >>
-  metis_tac[GPROD_SET_THM]);
+  metis_tac[GPROD_SET_THM]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ pset s ==>
             !p. poly p /\ p NOTIN s ==> (PPROD (p INSERT s) = p * PPROD s) *)
@@ -380,11 +391,12 @@ val poly_prod_set_thm = store_thm(
     = p * PPROD (s DELETE p)     by poly_prod_set_thm
     = p * PPROD s                by DELETE_NON_ELEMENT
 *)
-val poly_prod_set_insert = store_thm(
-  "poly_prod_set_insert",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==>
-   !p. poly p /\ p NOTIN s ==> (PPROD (p INSERT s) = p * PPROD s)``,
-  metis_tac[poly_prod_set_thm, DELETE_NON_ELEMENT]);
+Theorem poly_prod_set_insert:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==>
+   !p. poly p /\ p NOTIN s ==> (PPROD (p INSERT s) = p * PPROD s)
+Proof
+  metis_tac[poly_prod_set_thm, DELETE_NON_ELEMENT]
+QED
 
 (* Theorem: Ring r ==> !s t. FINITE s /\ FINITE t /\ pset s /\ pset t ==>
             (PPROD (s UNION t) * PPROD (s INTER t) = PPROD s * PPROD t) *)
@@ -432,10 +444,10 @@ val poly_prod_set_insert = store_thm(
      = (e * PPROD s) * PPROD t                                by poly_mult_assoc
      = PPROD (e INSERT s) * PPROD t                           by poly_prod_set_insert
 *)
-val poly_prod_set_mult_eqn = store_thm(
-  "poly_prod_set_mult_eqn",
-  ``!r:'a ring. Ring r ==> !s t. FINITE s /\ FINITE t /\ pset s /\ pset t ==>
-    (PPROD (s UNION t) * PPROD (s INTER t) = PPROD s * PPROD t)``,
+Theorem poly_prod_set_mult_eqn:
+    !r:'a ring. Ring r ==> !s t. FINITE s /\ FINITE t /\ pset s /\ pset t ==>
+    (PPROD (s UNION t) * PPROD (s INTER t) = PPROD s * PPROD t)
+Proof
   ntac 2 strip_tac >>
   `!s. FINITE s ==> !t. FINITE t ==> pset s /\ pset t ==>
     (PPROD (s UNION t) * PPROD (s INTER t) = PPROD s * PPROD t)` suffices_by rw[] >>
@@ -465,7 +477,8 @@ val poly_prod_set_mult_eqn = store_thm(
       `_ = PPROD (e INSERT s) * PPROD t` by rw[poly_prod_set_insert] >>
       rw[]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !p. poly p ==> (PPROD {p} = p) *)
 (* Proof:
@@ -479,10 +492,11 @@ val poly_prod_set_mult_eqn = store_thm(
    = p * |1|                  by poly_prod_set_empty
    = p                        by poly_mult_rone
 *)
-val poly_prod_set_sing = store_thm(
-  "poly_prod_set_sing",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> (PPROD {p} = p)``,
-  rw[poly_prod_set_thm, poly_prod_set_empty]);
+Theorem poly_prod_set_sing:
+    !r:'a ring. Ring r ==> !p. poly p ==> (PPROD {p} = p)
+Proof
+  rw[poly_prod_set_thm, poly_prod_set_empty]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ pset s ==> !u v. s =|= u # v ==> (PPROD s = PPROD u * PPROD v) *)
 (* Proof:
@@ -496,16 +510,17 @@ val poly_prod_set_sing = store_thm(
       = PPROD s * |1|              by poly_mult_rone
       = PPROD u * PPROD v          by poly_prod_set_mult_eqn
 *)
-val poly_prod_set_by_partition = store_thm(
-  "poly_prod_set_by_partition",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==>
-   !u v. s =|= u # v ==> (PPROD s = PPROD u * PPROD v)``,
+Theorem poly_prod_set_by_partition:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==>
+   !u v. s =|= u # v ==> (PPROD s = PPROD u * PPROD v)
+Proof
   rpt strip_tac >>
   `pset u /\ pset v` by rw[poly_set_subset_poly_set] >>
   `FINITE u /\ FINITE v` by metis_tac[FINITE_UNION] >>
   `poly (PPROD s) /\ poly (PPROD u) /\ poly (PPROD v)` by rw[poly_prod_set_poly] >>
   `PPROD (u INTER v) = |1|` by metis_tac[DISJOINT_DEF, poly_prod_set_empty] >>
-  metis_tac[poly_prod_set_mult_eqn, poly_mult_rone]);
+  metis_tac[poly_prod_set_mult_eqn, poly_mult_rone]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ pset s ==> !p. p IN s ==> p pdivides (PPROD s) *)
 (* Proof:
@@ -521,9 +536,9 @@ val poly_prod_set_by_partition = store_thm(
    Now poly p /\ poly PPROD t       by poly_prod_set_poly
    Therefore p pdivides (PPROD s)   by poly_divides_def
 *)
-val poly_prod_set_element_divides = store_thm(
-  "poly_prod_set_element_divides",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> !p. p IN s ==> p pdivides (PPROD s)``,
+Theorem poly_prod_set_element_divides:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> !p. p IN s ==> p pdivides (PPROD s)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = s DELETE p` >>
   `s = p INSERT t` by rw[Abbr`t`] >>
@@ -533,7 +548,8 @@ val poly_prod_set_element_divides = store_thm(
   `!p. p IN t ==> poly p` by rw[Abbr`t`] >>
   `PPROD s = p * PPROD t` by rw[poly_prod_set_thm] >>
   `poly p /\ poly (PPROD t)` by rw[poly_prod_set_poly] >>
-  metis_tac[poly_divides_def, poly_mult_comm]);
+  metis_tac[poly_divides_def, poly_mult_comm]
+QED
 
 (* Theorem: Ring r ==> !s t. FINITE t /\ pset t /\ s SUBSET t ==> (PPROD s) pdivides (PPROD t) *)
 (* Proof:
@@ -552,9 +568,9 @@ val poly_prod_set_element_divides = store_thm(
       = PPROD d * PPROD s              by poly_mult_comm
    Thus (PPROD s) pdivides (PPROD t)   by poly_divides_def
 *)
-val poly_prod_set_divides_prod_set = store_thm(
-  "poly_prod_set_divides_prod_set",
-  ``!r:'a ring. Ring r ==> !s t. FINITE t /\ pset t /\ s SUBSET t ==> (PPROD s) pdivides (PPROD t)``,
+Theorem poly_prod_set_divides_prod_set:
+    !r:'a ring. Ring r ==> !s t. FINITE t /\ pset t /\ s SUBSET t ==> (PPROD s) pdivides (PPROD t)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = t DIFF s` >>
   `t =|= s # d` by metis_tac[partition_by_subset] >>
@@ -564,7 +580,8 @@ val poly_prod_set_divides_prod_set = store_thm(
   `FINITE d` by rw[Abbr`d`] >>
   `poly (PPROD s) /\ poly (PPROD t) /\ poly (PPROD d)` by rw[poly_prod_set_poly] >>
   `PPROD t = PPROD s * PPROD d` by metis_tac[poly_prod_set_by_partition] >>
-  metis_tac[poly_divides_def, poly_mult_comm]);
+  metis_tac[poly_divides_def, poly_mult_comm]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ pset s /\ |0| IN s ==> (PPROD s = |0|) *)
 (* Proof:
@@ -575,13 +592,14 @@ val poly_prod_set_divides_prod_set = store_thm(
       = |0| * PPROD t             by poly_prod_set_sing, pset s
       = |0|                       by poly_mult_lzero
 *)
-val poly_prod_set_eq_zero = store_thm(
-  "poly_prod_set_eq_zero",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s /\ |0| IN s ==> (PPROD s = |0|)``,
+Theorem poly_prod_set_eq_zero:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s /\ |0| IN s ==> (PPROD s = |0|)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = s DELETE |0|` >>
   `s =|= { |0| } # t` by rw[partition_by_element, Abbr`t`] >>
-  metis_tac[poly_prod_set_by_partition, poly_prod_set_sing, poly_mult_lzero]);
+  metis_tac[poly_prod_set_by_partition, poly_prod_set_sing, poly_mult_lzero]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ pset s ==> (PPROD ( |0| INSERT s) = |0|) *)
 (* Proof:
@@ -591,15 +609,16 @@ val poly_prod_set_eq_zero = store_thm(
     and pset t                by IN_INSERT, poly_zero_poly
    Thus PPROD t = |0|         by poly_prod_set_eq_zero
 *)
-val poly_prod_set_with_zero = store_thm(
-  "poly_prod_set_with_zero",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> (PPROD ( |0| INSERT s) = |0|)``,
+Theorem poly_prod_set_with_zero:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> (PPROD ( |0| INSERT s) = |0|)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = |0| INSERT s` >>
   `|0| IN t` by rw[Abbr`t`] >>
   `FINITE t` by rw[Abbr`t`] >>
   `pset t` by metis_tac[IN_INSERT, poly_zero_poly] >>
-  rw[poly_prod_set_eq_zero]);
+  rw[poly_prod_set_eq_zero]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ pset s ==> (PPROD ( |1| INSERT s) = PPROD s) *)
 (* Proof:
@@ -612,13 +631,14 @@ val poly_prod_set_with_zero = store_thm(
       = |1| * PPROD s           by poly_prod_set_insert, poly_one_poly
       = PPROD s                 by poly_mult_lone
 *)
-val poly_prod_set_with_one = store_thm(
-  "poly_prod_set_with_one",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> (PPROD ( |1| INSERT s) = PPROD s)``,
+Theorem poly_prod_set_with_one:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> (PPROD ( |1| INSERT s) = PPROD s)
+Proof
   rpt strip_tac >>
   Cases_on `|1| IN s` >-
   metis_tac[ABSORPTION] >>
-  rw[poly_prod_set_poly, poly_prod_set_insert]);
+  rw[poly_prod_set_poly, poly_prod_set_insert]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Product of Monic Polynomials                                   *)
@@ -632,17 +652,19 @@ val _ = overload_on("mset", ``monic_set r``);
 
 (* Theorem: mset s ==> pset s *)
 (* Proof: by poly_monic_poly *)
-val monic_set_poly_set = store_thm(
-  "monic_set_poly_set",
-  ``!s. mset s ==> pset s``,
-  rw_tac std_ss[poly_monic_poly]);
+Theorem monic_set_poly_set:
+    !s. mset s ==> pset s
+Proof
+  rw_tac std_ss[poly_monic_poly]
+QED
 
 (* Theorem: (!x. x IN s ==> mset x) ==> mset (BIGUNION s) *)
 (* Proof: by IN_BIGUNION *)
-val monic_set_bigunion_monic_set = store_thm(
-  "monic_set_bigunion_monic_set",
-  ``!(r:'a ring) s. (!x. x IN s ==> mset x) ==> mset (BIGUNION s)``,
-  metis_tac[IN_BIGUNION]);
+Theorem monic_set_bigunion_monic_set:
+    !(r:'a ring) s. (!x. x IN s ==> mset x) ==> mset (BIGUNION s)
+Proof
+  metis_tac[IN_BIGUNION]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ mset s ==> monic (PPROD s) *)
 (* Proof:
@@ -658,9 +680,9 @@ val monic_set_bigunion_monic_set = store_thm(
       But monic (PPROD s)         by induction hypothesis
       Hence product is monic      by poly_monic_mult_monic
 *)
-val poly_monic_prod_set_monic = store_thm(
-  "poly_monic_prod_set_monic",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ mset s ==> monic (PPROD s)``,
+Theorem poly_monic_prod_set_monic:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ mset s ==> monic (PPROD s)
+Proof
   ntac 2 strip_tac >>
   `!s. FINITE s ==> mset s ==> monic (PPROD s)` suffices_by rw[] >>
   ho_match_mp_tac FINITE_INDUCT >>
@@ -670,7 +692,8 @@ val poly_monic_prod_set_monic = store_thm(
   `pset s` by rw[] >>
   `PPROD (e INSERT s) = e * PPROD (s DELETE e)` by rw[poly_prod_set_thm] >>
   `_ = e * PPROD s` by metis_tac[DELETE_NON_ELEMENT] >>
-  rw[poly_monic_mult_monic]);
+  rw[poly_monic_mult_monic]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ mset s /\ (!p. p IN s ==> (deg p = 1)) ==> deg (PPROD s) = CARD s *)
 (* Proof:
@@ -698,10 +721,10 @@ val poly_monic_prod_set_monic = store_thm(
          = CARD s                                        by arithmetic
          = RHS
 *)
-val poly_monic_prod_set_monomials_deg = store_thm(
-  "poly_monic_prod_set_monomials_deg",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ mset s /\ (!p. p IN s ==> (deg p = 1)) ==>
-      (deg (PPROD s) = CARD s)``,
+Theorem poly_monic_prod_set_monomials_deg:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ mset s /\ (!p. p IN s ==> (deg p = 1)) ==>
+      (deg (PPROD s) = CARD s)
+Proof
   rpt strip_tac >>
   completeInduct_on `CARD s` >>
   rule_assum_tac(SIMP_RULE bool_ss[GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]) >>
@@ -720,17 +743,19 @@ val poly_monic_prod_set_monomials_deg = store_thm(
   `_ = 1 + CARD t` by rw[] >>
   `_ = 1 + (CARD s - 1)` by metis_tac[CARD_REST] >>
   `_ = CARD s` by rw_tac arith_ss[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FINITE s /\ mset s ==> ulead (PPROD s) *)
 (* Proof:
    Note monic (PPROD s)      by poly_monic_prod_set_monic
      so ulead (PPROD s)      by poly_monic_poly, poly_monic_lead, ring_unit_one
 *)
-val poly_monic_prod_set_ulead = store_thm(
-  "poly_monic_prod_set_ulead",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ mset s ==> ulead (PPROD s)``,
-  rw[poly_monic_prod_set_monic, ring_unit_one]);
+Theorem poly_monic_prod_set_ulead:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ mset s ==> ulead (PPROD s)
+Proof
+  rw[poly_monic_prod_set_monic, ring_unit_one]
+QED
 
 (* Theorem: FINITE s /\ (!z. z IN s ==> monic z /\ 0 < deg z) /\ s <> {} ==> pmonic (PPROD s) *)
 (* Proof:
@@ -764,10 +789,10 @@ val poly_monic_prod_set_ulead = store_thm(
              thus deg (e * PPROD s) = deg e + deg (PPROD s)   by poly_monic_deg_mult
             Hence 0 < deg (PPROD (e INSERT s))                by ADD_EQ_0
 *)
-val poly_monic_prod_set_pmonic = store_thm(
-  "poly_monic_prod_set_pmonic",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ mset s /\
-     (!p. p IN s ==> 0 < deg p) /\ s <> {} ==> pmonic (PPROD s)``,
+Theorem poly_monic_prod_set_pmonic:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ mset s /\
+     (!p. p IN s ==> 0 < deg p) /\ s <> {} ==> pmonic (PPROD s)
+Proof
   rpt strip_tac >-
   rw[poly_prod_set_poly] >-
  (`monic (PPROD s)` by rw[poly_monic_prod_set_monic] >>
@@ -789,7 +814,8 @@ val poly_monic_prod_set_pmonic = store_thm(
   `monic e /\ 0 < deg e` by rw[] >>
   `monic (PPROD s) /\ 0 < deg (PPROD s)` by rw[poly_monic_prod_set_monic] >>
   `deg (e * PPROD s) = deg e + deg (PPROD s)` by rw[poly_monic_deg_mult] >>
-  metis_tac[ADD_EQ_0, NOT_ZERO]);
+  metis_tac[ADD_EQ_0, NOT_ZERO]
+QED
 
 (* Theorem: Ring r ==> !s. FINITE s /\ mset s ==> (deg (PPROD s) = SIGMA deg s) *)
 (* Proof:
@@ -815,9 +841,9 @@ val poly_monic_prod_set_pmonic = store_thm(
      = deg e + SIGMA deg (s DELETE e) by DELETE_NON_ELEMENT
      = SIGMA deg (e INSERT s)         by SUM_IMAGE_THM
 *)
-val poly_monic_prod_set_deg = store_thm(
-  "poly_monic_prod_set_deg",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ mset s ==> (deg (PPROD s) = SIGMA deg s)``,
+Theorem poly_monic_prod_set_deg:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ mset s ==> (deg (PPROD s) = SIGMA deg s)
+Proof
   ntac 2 strip_tac >>
   `!s. FINITE s ==> mset s ==> (deg (PPROD s) = SIGMA deg s)` suffices_by rw[] >>
   ho_match_mp_tac FINITE_INDUCT >>
@@ -831,7 +857,8 @@ val poly_monic_prod_set_deg = store_thm(
   `_ = deg e + deg (PPROD s)` by rw[poly_monic_deg_mult] >>
   `_ = deg e + SIGMA deg s` by rw[] >>
   `_ = SIGMA deg (e INSERT s)` by rw[SUM_IMAGE_THM] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Sets for Field.                                                *)
@@ -844,11 +871,12 @@ val poly_monic_prod_set_deg = store_thm(
    Thus (PPROD s) pdivides |1|
     <=> (PPROD s = |1|)           by poly_monic_divides_one
 *)
-val poly_monic_prod_set_divides_one = store_thm(
-  "poly_monic_prod_set_divides_one",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ (!z. z IN s ==> monic z) ==>
-   ((PPROD s) pdivides |1| <=> ((PPROD s) = |1|))``,
-  rw[poly_monic_prod_set_monic, poly_monic_divides_one]);
+Theorem poly_monic_prod_set_divides_one:
+    !r:'a field. Field r ==> !s. FINITE s /\ (!z. z IN s ==> monic z) ==>
+   ((PPROD s) pdivides |1| <=> ((PPROD s) = |1|))
+Proof
+  rw[poly_monic_prod_set_monic, poly_monic_divides_one]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ pset s /\ (!p. p IN s ==> p <> |0|) ==> PPROD s <> |0| *)
 (* Proof:
@@ -868,9 +896,9 @@ val poly_monic_prod_set_divides_one = store_thm(
       Hence e * PPROD s <> |0|        by poly_mult_eq_zero
       This contradicts PPROD (e INSERT s) = |0|.
 *)
-val poly_prod_set_nonzero = store_thm(
-  "poly_prod_set_nonzero",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ pset s /\ (!p. p IN s ==> p <> |0|) ==> PPROD s <> |0|``,
+Theorem poly_prod_set_nonzero:
+    !r:'a field. Field r ==> !s. FINITE s /\ pset s /\ (!p. p IN s ==> p <> |0|) ==> PPROD s <> |0|
+Proof
   ntac 2 strip_tac >>
   `Ring r /\ #1 <> #0 /\ |1| <> |0|` by rw[] >>
   `!s. FINITE s ==> pset s /\ (!p. p IN s ==> p <> |0|) ==> PPROD s <> |0|` suffices_by rw[] >>
@@ -880,7 +908,8 @@ val poly_prod_set_nonzero = store_thm(
   `poly e /\ e <> |0| /\ pset s /\ !p. p IN s ==> p <> |0|` by rw[] >>
   `PPROD (e INSERT s) = e * PPROD s` by rw[GSYM poly_prod_set_insert] >>
   `poly (PPROD s)` by rw[poly_prod_set_poly] >>
-  metis_tac[poly_mult_eq_zero]);
+  metis_tac[poly_mult_eq_zero]
+QED
 
 (* Theorem: Field r ==>
    !s. FINITE s /\ pset s /\ (!p. p IN s ==> p <> |0|) ==> ulead (PPROD s) *)
@@ -890,15 +919,16 @@ val poly_prod_set_nonzero = store_thm(
     and z <> |0|        by poly_prod_set_nonzero
    Thus ulead z         by poly_field_poly_ulead
 *)
-val poly_prod_set_ulead = store_thm(
-  "poly_prod_set_ulead",
-  ``!r:'a field. Field r ==>
-   !s. FINITE s /\ pset s /\ (!p. p IN s ==> p <> |0|) ==> ulead (PPROD s)``,
+Theorem poly_prod_set_ulead:
+    !r:'a field. Field r ==>
+   !s. FINITE s /\ pset s /\ (!p. p IN s ==> p <> |0|) ==> ulead (PPROD s)
+Proof
   ntac 4 strip_tac >>
   qabbrev_tac `z = PPROD s` >>
   `poly z` by rw[poly_prod_set_poly, Abbr`z`] >>
   `z <> |0|` by fs[poly_prod_set_nonzero, Abbr`z`] >>
-  rw[poly_field_poly_ulead]);
+  rw[poly_field_poly_ulead]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ pset s /\ (!p. p IN s ==> p <> |0|) ==>
             !p. p IN s ==> deg p <= deg (PPROD s) *)
@@ -925,10 +955,10 @@ val poly_prod_set_ulead = store_thm(
         hence deg p <= deg (PPROD s)                      by induction hypothesis
            or deg p <= deg (PPROD (e INSERT s))           by LESS_EQ_TRANS, from [2]
 *)
-val poly_prod_set_deg_lower = store_thm(
-  "poly_prod_set_deg_lower",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ pset s /\ (!p. p IN s ==> p <> |0|) ==>
-   !p. p IN s ==> deg p <= deg (PPROD s)``,
+Theorem poly_prod_set_deg_lower:
+    !r:'a field. Field r ==> !s. FINITE s /\ pset s /\ (!p. p IN s ==> p <> |0|) ==>
+   !p. p IN s ==> deg p <= deg (PPROD s)
+Proof
   ntac 2 strip_tac >>
   `Ring r` by rw[] >>
   `!s. FINITE s ==> pset s /\ (!p. p IN s ==> p <> |0|) ==>
@@ -948,7 +978,8 @@ val poly_prod_set_deg_lower = store_thm(
     `p IN s` by metis_tac[IN_INSERT] >>
     `deg p <= deg (PPROD s)` by metis_tac[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ pset s ==> (roots (PPROD s) = BIGUNION (IMAGE roots s)) *)
 (* Proof:
@@ -974,9 +1005,9 @@ val poly_prod_set_deg_lower = store_thm(
           = BIGUNION ((roots e) INSERT (IMAGE roots s))   by BIGUNION_INSERT
           = BIGUNION (IMAGE roots (e INSERT s))           by IMAGE_INSERT
 *)
-val poly_prod_set_roots = store_thm(
-  "poly_prod_set_roots",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ pset s ==> (roots (PPROD s) = BIGUNION (IMAGE roots s))``,
+Theorem poly_prod_set_roots:
+    !r:'a field. Field r ==> !s. FINITE s /\ pset s ==> (roots (PPROD s) = BIGUNION (IMAGE roots s))
+Proof
   ntac 2 strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `!s. FINITE s ==> pset s ==> (roots (PPROD s) = BIGUNION (IMAGE roots s))` suffices_by rw[] >>
@@ -987,7 +1018,8 @@ val poly_prod_set_roots = store_thm(
     `poly e /\ pset s` by metis_tac[IN_INSERT] >>
     `poly (PPROD s)` by rw[poly_prod_set_poly] >>
     rw[poly_prod_set_insert, poly_roots_mult]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Product of Polynomial by function image.                                  *)
@@ -1006,10 +1038,11 @@ val _ = overload_on ("PPIMAGE", ``\f s. PPROD (IMAGE f s)``);
    = PPROD {}               by IMAGE_EMPTY
    = |1|                    by poly_prod_set_empty
 *)
-val poly_prod_image_empty = store_thm(
-  "poly_prod_image_empty",
-  ``!r:'a ring. !f. PPIMAGE f {} = |1|``,
-  rw[poly_prod_set_empty]);
+Theorem poly_prod_image_empty:
+    !r:'a ring. !f. PPIMAGE f {} = |1|
+Proof
+  rw[poly_prod_set_empty]
+QED
 
 (* Theorem: Ring r ==> !f. pmap f ==> !x. x IN R ==> (PPIMAGE f {x} = f x) *)
 (* Proof:
@@ -1019,10 +1052,11 @@ val poly_prod_image_empty = store_thm(
    = PPROD {f x}            by IMAGE_SING
    = f x                    by poly_prod_set_sing
 *)
-val poly_prod_image_sing = store_thm(
-  "poly_prod_image_sing",
-  ``!r:'a ring. Ring r ==> !f. pmap f ==> !x. x IN R ==> (PPIMAGE f {x} = f x)``,
-  rw[poly_prod_set_sing]);
+Theorem poly_prod_image_sing:
+    !r:'a ring. Ring r ==> !f. pmap f ==> !x. x IN R ==> (PPIMAGE f {x} = f x)
+Proof
+  rw[poly_prod_set_sing]
+QED
 
 (* Theorem: Ring r ==> !s f. FINITE s /\ s SUBSET R /\ pmap f ==> poly (PPIMAGE f s) *)
 (* Proof:
@@ -1035,13 +1069,14 @@ val poly_prod_image_sing = store_thm(
    Hence poly (PPROD (IMAGE f s))              by poly_prod_set_poly
       or poly (PPIMAGE f s)                    by notation
 *)
-val poly_prod_image_poly = store_thm(
-  "poly_prod_image_poly",
-  ``!r:'a ring. Ring r ==> !s f. FINITE s /\ s SUBSET R /\ pmap f ==> poly (PPIMAGE f s)``,
+Theorem poly_prod_image_poly:
+    !r:'a ring. Ring r ==> !s f. FINITE s /\ s SUBSET R /\ pmap f ==> poly (PPIMAGE f s)
+Proof
   rw[FiniteRing_def] >>
   `FINITE (IMAGE f s)` by rw[IMAGE_FINITE] >>
   `pset (IMAGE f s)` by metis_tac[IN_IMAGE, SUBSET_DEF] >>
-  rw[poly_prod_set_poly]);
+  rw[poly_prod_set_poly]
+QED
 
 (* The following is a generalisation of poly_mult_exp.
    Note:
@@ -1084,10 +1119,10 @@ val poly_prod_image_poly = store_thm(
         = PPROD (IMAGE (\p. p ** n) (e INSERT s))    by IMAGE_INSERT
         = PPIMAGE (\p. p ** n) (e INSERT s)          by notation
 *)
-val poly_prod_set_exp = store_thm(
-  "poly_prod_set_exp",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==>
-   !n. INJ (\p. p ** n) s univ(:'a poly) ==> ((PPROD s) ** n = PPIMAGE (\p. p ** n) s)``,
+Theorem poly_prod_set_exp:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==>
+   !n. INJ (\p. p ** n) s univ(:'a poly) ==> ((PPROD s) ** n = PPIMAGE (\p. p ** n) s)
+Proof
   ntac 2 strip_tac >>
   `!s. FINITE s ==> pset s ==> !n. INJ (\p. p ** n) s univ(:'a poly) ==> ((PPROD s) ** n = PPIMAGE (\p. p ** n) s)` suffices_by rw[] >>
   Induct_on `FINITE` >>
@@ -1103,7 +1138,8 @@ val poly_prod_set_exp = store_thm(
   `PPROD (e INSERT s) ** n = (e * PPROD s) ** n` by rw[poly_prod_set_insert] >>
   `_ = e ** n * (PPROD s) ** n` by rw[poly_mult_exp] >>
   `_ = e ** n * PPROD t` by rw[Abbr`t`] >>
-  rw[poly_prod_set_insert]);
+  rw[poly_prod_set_insert]
+QED
 
 (* The following is a generalisation of poly_peval_mult.
    The INJ requirement is due to (peval s) will eliminiate duplicates.
@@ -1144,10 +1180,10 @@ val poly_prod_set_exp = store_thm(
        = PPROD (IMAGE (\p. peval p q) (e INSERT s))   by IMAGE_INSERT
        = PPIMAGE (\p. peval p q) (e INSERT s)         by notation
 *)
-val poly_peval_poly_prod = store_thm(
-  "poly_peval_poly_prod",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> !q. poly q /\
-    INJ (\p. peval p q) s univ(:'a poly) ==> (peval (PPROD s) q = PPROD (IMAGE (\p. peval p q) s))``,
+Theorem poly_peval_poly_prod:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ pset s ==> !q. poly q /\
+    INJ (\p. peval p q) s univ(:'a poly) ==> (peval (PPROD s) q = PPROD (IMAGE (\p. peval p q) s))
+Proof
   ntac 2 strip_tac >>
   `!s. FINITE s ==> pset s ==> !q. poly q /\ INJ (\p. peval p q) s univ(:'a poly) ==> (peval (PPROD s) q = PPROD (IMAGE (\p. peval p q) s))` suffices_by rw[] >>
   Induct_on `FINITE` >>
@@ -1160,7 +1196,8 @@ val poly_peval_poly_prod = store_thm(
   (`pset t` by (rw[Abbr`t`] >> rw[])) >>
   fs[INJ_INSERT] >>
   (`peval e q NOTIN t` by (rw[Abbr`t`] >> metis_tac[])) >>
-  rw[poly_prod_set_insert, poly_peval_mult, poly_prod_set_insert]);
+  rw[poly_prod_set_insert, poly_peval_mult, poly_prod_set_insert]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Product of Factors.                                                       *)
@@ -1177,10 +1214,11 @@ val _ = overload_on("PIFACTOR", ``poly_prod_factors r``);
    = PPROD {}                    by IMAGE_EMPTY
    = |1|                         by poly_prod_set_empty
 *)
-val poly_prod_factors_empty = store_thm(
-  "poly_prod_factors_empty",
-  ``!r:'a ring. PIFACTOR {} = |1|``,
-  rw[poly_prod_set_empty]);
+Theorem poly_prod_factors_empty:
+    !r:'a ring. PIFACTOR {} = |1|
+Proof
+  rw[poly_prod_set_empty]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c. c IN R ==> (PIFACTOR {c} = factor c) *)
 (* Proof:
@@ -1190,10 +1228,11 @@ val poly_prod_factors_empty = store_thm(
    = PPROD {factor c}                by IMAGE_SING
    = factor c                        by poly_prod_set_sing
 *)
-val poly_prod_factors_sing = store_thm(
-  "poly_prod_factors_sing",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (PIFACTOR {c} = factor c)``,
-  rw[poly_factor_poly, poly_prod_set_sing]);
+Theorem poly_prod_factors_sing:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (PIFACTOR {c} = factor c)
+Proof
+  rw[poly_factor_poly, poly_prod_set_sing]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> poly (PIFACTOR s) *)
 (* Proof:
@@ -1201,12 +1240,13 @@ val poly_prod_factors_sing = store_thm(
     Thus pset (IMAGE factor s)   by IN_IMAGE, poly_factor_poly
    Hence poly (PIFACTOR s)       by poly_prod_set_poly
 *)
-val poly_prod_factors_poly = store_thm(
-  "poly_prod_factors_poly",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> poly (PIFACTOR s)``,
+Theorem poly_prod_factors_poly:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> poly (PIFACTOR s)
+Proof
   rpt strip_tac >>
   `pset (IMAGE factor s)` by metis_tac[SUBSET_DEF, IN_IMAGE, poly_factor_poly] >>
-  rw[poly_prod_set_poly]);
+  rw[poly_prod_set_poly]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> monic (PIFACTOR s) *)
 (* Proof:
@@ -1214,12 +1254,13 @@ val poly_prod_factors_poly = store_thm(
     Thus mset (IMAGE factor s)   by IN_IMAGE, poly_factor_monic
    Hence monic (PIFACTOR s)      by poly_monic_prod_set_monic
 *)
-val poly_prod_factors_monic = store_thm(
-  "poly_prod_factors_monic",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> monic (PIFACTOR s)``,
+Theorem poly_prod_factors_monic:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> monic (PIFACTOR s)
+Proof
   rpt strip_tac >>
   `mset (IMAGE factor s)` by metis_tac[SUBSET_DEF, IN_IMAGE, poly_factor_monic] >>
-  rw[poly_monic_prod_set_monic]);
+  rw[poly_monic_prod_set_monic]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> (deg (PIFACTOR s) = CARD s) *)
 (* Proof:
@@ -1234,9 +1275,9 @@ val poly_prod_factors_monic = store_thm(
     = 1 * CARD s                                by SIGMA_CONSTANT
     = CARD s                                    by MULT_LEFT_1
 *)
-val poly_prod_factors_deg = store_thm(
-  "poly_prod_factors_deg",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> (deg (PIFACTOR s) = CARD s)``,
+Theorem poly_prod_factors_deg:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> (deg (PIFACTOR s) = CARD s)
+Proof
   rpt strip_tac >>
   `!x. x IN s ==> x IN R` by metis_tac[SUBSET_DEF] >>
   `mset (IMAGE factor s)` by metis_tac[IN_IMAGE, poly_factor_monic] >>
@@ -1245,7 +1286,8 @@ val poly_prod_factors_deg = store_thm(
   `deg (PIFACTOR s) = SIGMA deg (IMAGE factor s)` by rw[poly_monic_prod_set_deg] >>
   `_ = SIGMA (deg o factor) s` by rw[sum_image_by_composition] >>
   `_ = 1 * CARD s` by rw[SIGMA_CONSTANT] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ s SUBSET R ==> (roots (PIFACTOR s) = s) *)
 (* Proof:
@@ -1260,9 +1302,9 @@ val poly_prod_factors_deg = store_thm(
     = BIGUNION (IMAGE (\x. {x}) s)               by poly_roots_factor_image
     = s                                          by BIGUNION_ELEMENTS_SING
 *)
-val poly_prod_factors_roots = store_thm(
-  "poly_prod_factors_roots",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==> (roots (PIFACTOR s) = s)``,
+Theorem poly_prod_factors_roots:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==> (roots (PIFACTOR s) = s)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `pset (IMAGE factor s)` by metis_tac[SUBSET_DEF, IN_IMAGE, poly_factor_poly] >>
@@ -1271,7 +1313,8 @@ val poly_prod_factors_roots = store_thm(
   `_ = BIGUNION (IMAGE (roots o factor) s)` by rw[IMAGE_COMPOSE] >>
   `_ = BIGUNION (IMAGE (\x. {x}) s)` by rw[poly_roots_factor_image] >>
   `_ = s` by rw[BIGUNION_ELEMENTS_SING] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ s SUBSET R ==> (deg (PIFACTOR s) = CARD (roots (PIFACTOR s))) *)
 (* Proof:
@@ -1279,11 +1322,12 @@ val poly_prod_factors_roots = store_thm(
    = CARD s                     by poly_prod_factors_deg
    = CARD (roots (PIFACTOR s))  by poly_prod_factors_roots
 *)
-val poly_prod_factors_deg_eq_card_roots = store_thm(
-  "poly_prod_factors_deg_eq_card_roots",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
-          (deg (PIFACTOR s) = CARD (roots (PIFACTOR s)))``,
-  rw[poly_prod_factors_deg, poly_prod_factors_roots]);
+Theorem poly_prod_factors_deg_eq_card_roots:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
+          (deg (PIFACTOR s) = CARD (roots (PIFACTOR s)))
+Proof
+  rw[poly_prod_factors_deg, poly_prod_factors_roots]
+QED
 
 (* Note: This is worse than poly_prod_factors_deg before:
 |- !r. Ring r /\ #1 <> #0 ==> !s. FINITE s /\ s SUBSET R ==> (deg (PIFACTOR s) = CARD s)
@@ -1298,14 +1342,15 @@ However, this result does show that (PIFACTOR s) is splitting, as deg p = CARD (
    <=> c IN (roots (PIFACTOR s))        by poly_root_factor
    <=> c IN s                           by poly_prod_factors_roots
 *)
-val poly_prod_factors_factor = store_thm(
-  "poly_prod_factors_factor",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
-   !c. c IN R ==> ((factor c) pdivides (PIFACTOR s) <=> c IN s)``,
+Theorem poly_prod_factors_factor:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
+   !c. c IN R ==> ((factor c) pdivides (PIFACTOR s) <=> c IN s)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `poly (PIFACTOR s)` by rw[poly_prod_factors_poly] >>
-  metis_tac[poly_root_factor, poly_prod_factors_roots]);
+  metis_tac[poly_root_factor, poly_prod_factors_roots]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ s SUBSET R ==> PIFACTOR s <> |0| *)
 (* Proof:
@@ -1315,16 +1360,17 @@ val poly_prod_factors_factor = store_thm(
    also FINITE (IMAGE factor s)    by IMAGE_FINITE
     ==> PIFACTOR s <> |0|          by poly_prod_set_nonzero
 *)
-val poly_prod_factors_nonzero = store_thm(
-  "poly_prod_factors_nonzero",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==> PIFACTOR s <> |0|``,
+Theorem poly_prod_factors_nonzero:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==> PIFACTOR s <> |0|
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `!x. x IN s ==> x IN R` by metis_tac[SUBSET_DEF] >>
   (`pset (IMAGE factor s)` by (rw[] >> rw[poly_factor_poly])) >>
   (`!p. p IN (IMAGE factor s) ==> p <> |0|` by (rw_tac std_ss[IN_IMAGE] >> rw[poly_factor_nonzero])) >>
   `FINITE (IMAGE factor s)` by rw[] >>
-  metis_tac[poly_prod_set_nonzero]);
+  metis_tac[poly_prod_set_nonzero]
+QED
 
 (* Theorem: Field r ==> !s t. FINITE s /\ s SUBSET R /\ FINITE t /\ t SUBSET R ==>
             ((PIFACTOR t) pdivides (PIFACTOR s) <=> t SUBSET s) *)
@@ -1364,10 +1410,10 @@ val poly_prod_factors_nonzero = store_thm(
           Overall, deg p <= deg v,
           and this contradicts deg v < deg p.
 *)
-val poly_prod_factors_divisibility = store_thm(
-  "poly_prod_factors_divisibility",
-  ``!r:'a field. Field r ==> !s t. FINITE s /\ s SUBSET R /\ FINITE t /\ t SUBSET R ==>
-   ((PIFACTOR t) pdivides (PIFACTOR s) <=> t SUBSET s)``,
+Theorem poly_prod_factors_divisibility:
+    !r:'a field. Field r ==> !s t. FINITE s /\ s SUBSET R /\ FINITE t /\ t SUBSET R ==>
+   ((PIFACTOR t) pdivides (PIFACTOR s) <=> t SUBSET s)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `p = PIFACTOR t` >>
@@ -1398,7 +1444,8 @@ val poly_prod_factors_divisibility = store_thm(
     `CARD (roots p) <= CARD (roots v)` by rw[CARD_SUBSET] >>
     decide_tac) >>
     metis_tac[poly_divides_def, poly_add_rzero, poly_mult_poly]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Product of Factor of Roots.                                               *)
@@ -1421,10 +1468,11 @@ val _ = overload_on ("PFROOTS", ``poly_prod_factor_roots r``);
   = PIFACTOR {}           by roots p = {}
   = |1|                   by poly_prod_image_empty
 *)
-val poly_prod_factor_roots_empty = store_thm(
-  "poly_prod_factor_roots_empty",
-  ``!r:'a ring. !p. (roots p = {}) ==> (PFROOTS p = |1|)``,
-  metis_tac[poly_prod_image_empty]);
+Theorem poly_prod_factor_roots_empty:
+    !r:'a ring. !p. (roots p = {}) ==> (PFROOTS p = |1|)
+Proof
+  metis_tac[poly_prod_image_empty]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_prod_factor_roots_empty"];
@@ -1438,14 +1486,15 @@ val _ = export_rewrites["poly_prod_factor_roots_empty"];
    and (roots p) SUBSET R          by poly_roots_member, SUBSET_DEF
     so poly (PIFACTOR (roots p))   by poly_prod_factors_poly
 *)
-val poly_prod_factor_roots_poly = store_thm(
-  "poly_prod_factor_roots_poly",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> poly (PFROOTS p)``,
+Theorem poly_prod_factor_roots_poly:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> poly (PFROOTS p)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FINITE (roots p)` by rw[poly_roots_finite] >>
   `(roots p) SUBSET R` by rw[poly_roots_member, SUBSET_DEF] >>
-  rw[poly_prod_factors_poly]);
+  rw[poly_prod_factors_poly]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_prod_factor_roots_poly"];
@@ -1458,14 +1507,15 @@ val _ = export_rewrites["poly_prod_factor_roots_poly"];
    and (roots p) SUBSET R          by poly_roots_member, SUBSET_DEF
     so monic (PIFACTOR (roots p))  by poly_prod_factors_monic
 *)
-val poly_prod_factor_roots_monic = store_thm(
-  "poly_prod_factor_roots_monic",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> monic (PFROOTS p)``,
+Theorem poly_prod_factor_roots_monic:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> monic (PFROOTS p)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FINITE (roots p)` by rw[poly_roots_finite] >>
   `(roots p) SUBSET R` by rw[poly_roots_member, SUBSET_DEF] >>
-  rw[poly_prod_factors_monic]);
+  rw[poly_prod_factors_monic]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_prod_factor_roots_monic"];
@@ -1478,14 +1528,15 @@ val _ = export_rewrites["poly_prod_factor_roots_monic"];
    and (roots p) SUBSET R          by poly_roots_member, SUBSET_DEF
     so deg (PIFACTOR (roots p)) = CARD (roots p)  by poly_prod_factors_deg
 *)
-val poly_prod_factor_roots_deg = store_thm(
-  "poly_prod_factor_roots_deg",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (deg (PFROOTS p) = CARD (roots p))``,
+Theorem poly_prod_factor_roots_deg:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (deg (PFROOTS p) = CARD (roots p))
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FINITE (roots p)` by rw[poly_roots_finite] >>
   `(roots p) SUBSET R` by rw[poly_roots_member, SUBSET_DEF] >>
-  rw[poly_prod_factors_deg]);
+  rw[poly_prod_factors_deg]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ p <> |0| ==> (roots (PFROOTS p) = roots p) *)
 (* Proof:
@@ -1495,14 +1546,15 @@ val poly_prod_factor_roots_deg = store_thm(
    and (roots p) SUBSET R          by poly_roots_member, SUBSET_DEF
     so roots (PIFACTOR (roots p)) = roots p  by poly_prod_factors_roots
 *)
-val poly_prod_factor_roots_roots = store_thm(
-  "poly_prod_factor_roots_roots",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (roots (PFROOTS p) = roots p)``,
+Theorem poly_prod_factor_roots_roots:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (roots (PFROOTS p) = roots p)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FINITE (roots p)` by rw[poly_roots_finite] >>
   `(roots p) SUBSET R` by rw[poly_roots_member, SUBSET_DEF] >>
-  rw[poly_prod_factors_roots]);
+  rw[poly_prod_factors_roots]
+QED
 
 (* Theorem: poly p /\ p <> |0| ==> (PFROOTS p) pdivides p *)
 (* Proof:
@@ -1537,9 +1589,9 @@ val poly_prod_factor_roots_roots = store_thm(
       But CARD (roots t) <= deg t                       by poly_roots_count
       so there is a contradiction.
 *)
-val poly_prod_factor_roots_divides = store_thm(
-  "poly_prod_factor_roots_divides",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (PFROOTS p) pdivides p``,
+Theorem poly_prod_factor_roots_divides:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (PFROOTS p) pdivides p
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   Cases_on `roots p = {}` >-
@@ -1563,7 +1615,8 @@ val poly_prod_factor_roots_divides = store_thm(
   `FINITE (roots t)` by rw[poly_roots_finite] >>
   `CARD (roots p) <= CARD (roots t)` by rw[CARD_SUBSET] >>
   `CARD (roots t) <= deg t` by rw[poly_roots_count] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Field r ==> !p. monic p /\ (deg p = CARD (roots p)) ==> (PFROOTS p = p) *)
 (* Proof:
@@ -1575,15 +1628,16 @@ val poly_prod_factor_roots_divides = store_thm(
     Also PFROOTS p pdivides p                by poly_prod_factor_roots_divides
    Hence PFROOTS p = p                       by poly_monic_divides_eq_deg_eq
 *)
-val poly_prod_factor_roots_eq_poly = store_thm(
-  "poly_prod_factor_roots_eq_poly",
-  ``!r:'a field. Field r ==> !p. monic p /\ (deg p = CARD (roots p)) ==> (PFROOTS p = p)``,
+Theorem poly_prod_factor_roots_eq_poly:
+    !r:'a field. Field r ==> !p. monic p /\ (deg p = CARD (roots p)) ==> (PFROOTS p = p)
+Proof
   rpt strip_tac >>
   `p <> |0|` by rw[poly_monic_nonzero] >>
   `monic (PFROOTS p)` by rw[poly_prod_factor_roots_monic] >>
   `deg p = deg (PFROOTS p)` by rw[poly_prod_factor_roots_deg] >>
   `PFROOTS p pdivides p` by rw[poly_prod_factor_roots_divides] >>
-  metis_tac[poly_monic_divides_eq_deg_eq]);
+  metis_tac[poly_monic_divides_eq_deg_eq]
+QED
 
 (* This is the better version of poly_prod_factor_roots_eq_poly
 |- !r. Field r ==> !p. monic p /\ (deg p = CARD (roots p)) ==> (PFROOTS p = p)
@@ -1601,9 +1655,9 @@ val poly_prod_factor_roots_eq_poly = store_thm(
    Only-if part: deg p = CARD (roots p) ==> p = PFROOTS p
       True by poly_monic_divides_eq_deg_eq
 *)
-val poly_prod_factor_roots_eq_poly_iff = store_thm(
-  "poly_prod_factor_roots_eq_poly_iff",
-  ``!r:'a field. Field r ==> !p. monic p ==> ((p = PFROOTS p) <=> (deg p = CARD (roots p)))``,
+Theorem poly_prod_factor_roots_eq_poly_iff:
+    !r:'a field. Field r ==> !p. monic p ==> ((p = PFROOTS p) <=> (deg p = CARD (roots p)))
+Proof
   rpt strip_tac >>
   `p <> |0|` by rw[poly_monic_nonzero] >>
   `monic (PFROOTS p)` by rw[poly_prod_factor_roots_monic] >>
@@ -1611,14 +1665,16 @@ val poly_prod_factor_roots_eq_poly_iff = store_thm(
   `PFROOTS p pdivides p` by rw[poly_prod_factor_roots_divides] >>
   rw[EQ_IMP_THM] >-
   metis_tac[] >>
-  metis_tac[poly_monic_divides_eq_deg_eq]);
+  metis_tac[poly_monic_divides_eq_deg_eq]
+QED
 
 (* Theorem: Field r ==> !p. monic p /\ (deg p = CARD (roots p)) ==> (p = PFROOTS p) *)
 (* Proof: by poly_prod_factor_roots_eq_poly *)
-val poly_eq_prod_factor_roots = store_thm(
-  "poly_eq_prod_factor_roots",
-  ``!r:'a field. Field r ==> !p. monic p /\ (deg p = CARD (roots p)) ==> (p = PFROOTS p)``,
-  rw_tac std_ss[poly_prod_factor_roots_eq_poly]);
+Theorem poly_eq_prod_factor_roots:
+    !r:'a field. Field r ==> !p. monic p /\ (deg p = CARD (roots p)) ==> (p = PFROOTS p)
+Proof
+  rw_tac std_ss[poly_prod_factor_roots_eq_poly]
+QED
 
 (* Theorem: Field r ==>
             !p. monic p /\ (deg p = CARD (roots p)) ==> (p = PPROD {X - c * |1| | c | c IN (roots p)}) *)
@@ -1628,14 +1684,15 @@ val poly_eq_prod_factor_roots = store_thm(
           = PPROD (IMAGE factor (roots p))            by notation
           = PPROD {X - c * |1| | c | c IN (roots p)   by poly_image_factor_subset
 *)
-val poly_eq_prod_factor_roots_alt = store_thm(
-  "poly_eq_prod_factor_roots_alt",
-  ``!r:'a field. Field r ==>
-   !p. monic p /\ (deg p = CARD (roots p)) ==> (p = PPROD {X - c * |1| | c | c IN (roots p)})``,
+Theorem poly_eq_prod_factor_roots_alt:
+    !r:'a field. Field r ==>
+   !p. monic p /\ (deg p = CARD (roots p)) ==> (p = PPROD {X - c * |1| | c | c IN (roots p)})
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `(roots p) SUBSET R` by rw[poly_roots_subset] >>
-  metis_tac[poly_eq_prod_factor_roots, poly_image_factor_subset]);
+  metis_tac[poly_eq_prod_factor_roots, poly_image_factor_subset]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ s SUBSET R ==>
             !p. monic p /\ p pdivides (PIFACTOR s) /\ ((roots p) INTER s = {}) ==> (p = |1|) *)
@@ -1678,10 +1735,10 @@ val poly_eq_prod_factor_roots_alt = store_thm(
    or for Step 3:
    this gives t = u * q,  so q = (u * q) * p, giving upoly p.
 *)
-val poly_monic_divides_poly_prod_factors_property = store_thm(
-  "poly_monic_divides_poly_prod_factors_property",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
-   !p. monic p /\ p pdivides (PIFACTOR s) /\ ((roots p) INTER s = {}) ==> (p = |1|)``,
+Theorem poly_monic_divides_poly_prod_factors_property:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
+   !p. monic p /\ p pdivides (PIFACTOR s) /\ ((roots p) INTER s = {}) ==> (p = |1|)
+Proof
   rpt strip_tac >>
   `!x. x IN s ==> x IN R` by metis_tac[SUBSET_DEF] >>
   fs[EXTENSION, IN_INTER] >>
@@ -1714,7 +1771,8 @@ val poly_monic_divides_poly_prod_factors_property = store_thm(
   `poly p` by rw[] >>
   `deg q = deg t + deg p` by rw[poly_deg_mult_nonzero] >>
   `deg p = 0` by decide_tac >>
-  rw[GSYM poly_monic_deg_0]);
+  rw[GSYM poly_monic_deg_0]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Multiplicative Function for Polynomial Set                                *)
@@ -1736,10 +1794,11 @@ End
    (3) FINITE s /\ FINITE t /\ pset s /\ pset t ==>
        PPROD (s UNION t) * PPROD (s INTER t) = PPROD s * PPROD t    by poly_prod_set_mult_eqn
 *)
-val poly_prod_set_mult_fun = store_thm(
-  "poly_prod_set_mult_fun",
-  ``!r:'a ring. Ring r ==> poly_set_multiplicative_fun r PPROD``,
-  rw[poly_set_multiplicative_fun_def, poly_prod_set_empty, poly_prod_set_poly, poly_prod_set_mult_eqn]);
+Theorem poly_prod_set_mult_fun:
+    !r:'a ring. Ring r ==> poly_set_multiplicative_fun r PPROD
+Proof
+  rw[poly_set_multiplicative_fun_def, poly_prod_set_empty, poly_prod_set_poly, poly_prod_set_mult_eqn]
+QED
 
 (* Theorem: Ring r ==> !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P /\ EVERY_PSET P ==>
             !f. poly_set_multiplicative_fun r f /\ INJ f P univ(:'a poly) ==>
@@ -1780,11 +1839,11 @@ val poly_prod_set_mult_fun = store_thm(
        = PPROD (f e INSERT IMAGE f P)           by poly_prod_set_insert, f e NOTIN (IMAGE f P)
        = PPIMAGE f (e INSERT P)                 by IMAGE_INSERT
 *)
-val poly_disjoint_bigunion_mult_fun = store_thm(
-  "poly_disjoint_bigunion_mult_fun",
-  ``!r:'a ring. Ring r ==> !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P /\ EVERY_PSET P ==>
+Theorem poly_disjoint_bigunion_mult_fun:
+    !r:'a ring. Ring r ==> !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P /\ EVERY_PSET P ==>
    !f. poly_set_multiplicative_fun r f /\ INJ f P univ(:'a poly) ==>
-   (f (BIGUNION P) = PPROD (IMAGE f P))``,
+   (f (BIGUNION P) = PPROD (IMAGE f P))
+Proof
   ntac 2 strip_tac >>
   `!P. FINITE P ==> EVERY_FINITE P /\ PAIR_DISJOINT P /\ EVERY_PSET P ==>
    !f. poly_set_multiplicative_fun r f /\ INJ f P univ(:'a poly) ==>
@@ -1809,7 +1868,8 @@ val poly_disjoint_bigunion_mult_fun = store_thm(
   `_ = f e * f (BIGUNION P)` by metis_tac[poly_set_multiplicative_fun_def] >>
   `_ = f e * PPROD (IMAGE f P)` by metis_tac[] >>
   `_ = PPROD (f e INSERT IMAGE f P)` by prove_tac[poly_prod_set_insert] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Apply poly_disjoint_bigunion_mult_fun:
 |- !r. Ring r ==> !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P /\ EVERY_PSET P ==>
@@ -1830,18 +1890,19 @@ val poly_disjoint_bigunion_mult_fun = store_thm(
    Hence f (BIGUNION P) = PPIMAGE f P      by poly_disjoint_bigunion_mult_fun
       or f s = PPIMAGE f P                 by above, BIGUNION_partition
 *)
-val poly_prod_set_mult_fun_by_partition = store_thm(
-  "poly_prod_set_mult_fun_by_partition",
-  ``!r:'a ring. Ring r ==> !RR s. FINITE s /\ pset s /\ RR equiv_on s ==>
+Theorem poly_prod_set_mult_fun_by_partition:
+    !r:'a ring. Ring r ==> !RR s. FINITE s /\ pset s /\ RR equiv_on s ==>
    !f. poly_set_multiplicative_fun r f /\ INJ f (partition RR s) univ(:'a poly) ==>
-     (f s = PPIMAGE f (partition RR s))``,
+     (f s = PPIMAGE f (partition RR s))
+Proof
   rpt strip_tac >>
   qabbrev_tac `P = partition RR s` >>
   `FINITE P /\ EVERY_FINITE P` by metis_tac[FINITE_partition] >>
   `BIGUNION P = s` by rw[BIGUNION_partition, Abbr`P`] >>
   `PAIR_DISJOINT P` by metis_tac[partition_elements_disjoint] >>
   (`EVERY_PSET P` by (rw[partition_elements, Abbr`P`] >> metis_tac[equiv_class_element])) >>
-  metis_tac[poly_disjoint_bigunion_mult_fun]);
+  metis_tac[poly_disjoint_bigunion_mult_fun]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1858,17 +1919,19 @@ End
 
 (* Theorem: s SUBSET R /\ t SUBSET R <=> (s UNION t) SUBSET R *)
 (* Proof: by IN_UNION, SUBSET_DEF *)
-val ring_set_union_ring_set = store_thm(
-  "ring_set_union_ring_set",
-  ``!r:'a ring. !s t. s SUBSET R /\ t SUBSET R <=> (s UNION t) SUBSET R``,
-  rw[]);
+Theorem ring_set_union_ring_set:
+    !r:'a ring. !s t. s SUBSET R /\ t SUBSET R <=> (s UNION t) SUBSET R
+Proof
+  rw[]
+QED
 
 (* Theorem: (!t. t IN s ==> t SUBSET R) <=> (BIGUNION s) SUBSET R *)
 (* Proof: by IN_BIGUNION, ring_set_union_ring_set, SUBSET_DEF *)
-val ring_set_bigunion_ring_set = store_thm(
-  "ring_set_bigunion_ring_set",
-  ``!r:'a ring. !s. (!t. t IN s ==> t SUBSET R) <=> (BIGUNION s) SUBSET R``,
-  prove_tac[IN_BIGUNION, ring_set_union_ring_set, SUBSET_DEF]);
+Theorem ring_set_bigunion_ring_set:
+    !r:'a ring. !s. (!t. t IN s ==> t SUBSET R) <=> (BIGUNION s) SUBSET R
+Proof
+  prove_tac[IN_BIGUNION, ring_set_union_ring_set, SUBSET_DEF]
+QED
 
 (* Theorem: Ring r ==> !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P /\ (!s. s IN P ==> s SUBSET R) ==>
             !f. ring_set_multiplicative_fun r f /\ INJ f P univ(:'a poly) ==>
@@ -1909,11 +1972,11 @@ val ring_set_bigunion_ring_set = store_thm(
        = PPROD (f e INSERT IMAGE f P)           by poly_prod_set_insert, f e NOTIN (IMAGE f P)
        = PPIMAGE f (e INSERT P)                 by IMAGE_INSERT
 *)
-val ring_disjoint_bigunion_mult_fun = store_thm(
-  "ring_disjoint_bigunion_mult_fun",
-  ``!r:'a ring. Ring r ==> !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P /\ (!s. s IN P ==> s SUBSET R) ==>
+Theorem ring_disjoint_bigunion_mult_fun:
+    !r:'a ring. Ring r ==> !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P /\ (!s. s IN P ==> s SUBSET R) ==>
    !f. ring_set_multiplicative_fun r f /\ INJ f P univ(:'a poly) ==>
-   (f (BIGUNION P) = PPROD (IMAGE f P))``,
+   (f (BIGUNION P) = PPROD (IMAGE f P))
+Proof
   ntac 2 strip_tac >>
   `!P. FINITE P ==> EVERY_FINITE P /\ PAIR_DISJOINT P /\ (!s. s IN P ==> s SUBSET R) ==>
    !f. ring_set_multiplicative_fun r f /\ INJ f P univ(:'a poly) ==>
@@ -1938,7 +2001,8 @@ val ring_disjoint_bigunion_mult_fun = store_thm(
   `_ = f e * f (BIGUNION P)` by metis_tac[ring_set_multiplicative_fun_def] >>
   `_ = f e * PPROD (IMAGE f P)` by metis_tac[] >>
   `_ = PPROD (f e INSERT IMAGE f P)` by prove_tac[poly_prod_set_insert] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Ring r ==> !RR s. FINITE s /\ s SUBSET R /\ RR equiv_on s ==>
             !f. field_set_multiplicative_fun r f /\ INJ f (partition RR s) univ(:'a poly) ==>
@@ -1954,18 +2018,19 @@ val ring_disjoint_bigunion_mult_fun = store_thm(
    Hence f (BIGUNION P) = PPIMAGE f P      by ring_disjoint_bigunion_mult_fun
       or f s = PPIMAGE f P                 by above, BIGUNION_partition
 *)
-val ring_prod_set_mult_fun_by_partition = store_thm(
-  "ring_prod_set_mult_fun_by_partition",
-  ``!r:'a ring. Ring r ==> !RR s. FINITE s /\ s SUBSET R /\ RR equiv_on s ==>
+Theorem ring_prod_set_mult_fun_by_partition:
+    !r:'a ring. Ring r ==> !RR s. FINITE s /\ s SUBSET R /\ RR equiv_on s ==>
    !f. ring_set_multiplicative_fun r f /\ INJ f (partition RR s) univ(:'a poly) ==>
-     (f s = PPIMAGE f (partition RR s))``,
+     (f s = PPIMAGE f (partition RR s))
+Proof
   rpt strip_tac >>
   qabbrev_tac `P = partition RR s` >>
   `FINITE P /\ EVERY_FINITE P` by metis_tac[FINITE_partition] >>
   `BIGUNION P = s` by rw[BIGUNION_partition, Abbr`P`] >>
   `PAIR_DISJOINT P` by metis_tac[partition_elements_disjoint] >>
   (`!s. s IN P ==> s SUBSET R` by (rw[partition_elements, Abbr`P`] >> metis_tac[equiv_class_element, SUBSET_DEF])) >>
-  rw[ring_disjoint_bigunion_mult_fun]);
+  rw[ring_disjoint_bigunion_mult_fun]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

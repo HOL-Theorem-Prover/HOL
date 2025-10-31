@@ -21,8 +21,8 @@ Libs
 (******************************************************************************)
 
 (* Prove STRONG_SUM_IDENT_R: |- !E. STRONG_EQUIV (sum E nil) E *)
-val STRONG_SUM_IDENT_R = store_thm (
-   "STRONG_SUM_IDENT_R",``!E. STRONG_EQUIV (sum E nil) E``,
+Theorem STRONG_SUM_IDENT_R:  !E. STRONG_EQUIV (sum E nil) E
+Proof
     GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -53,11 +53,12 @@ val STRONG_SUM_IDENT_R = store_thm (
                             (ASSUME ``TRANS E' u E2``)) \\
         Q.EXISTS_TAC `E2` >> art [] \\
         MATCH_MP_TAC SUM1 \\
-        PURE_ONCE_ASM_REWRITE_TAC [] ] ]);
+        PURE_ONCE_ASM_REWRITE_TAC [] ] ]
+QED
 
 (* Prove STRONG_SUM_IDEMP: |- !E. STRONG_EQUIV (sum E E) E *)
-val STRONG_SUM_IDEMP = store_thm (
-   "STRONG_SUM_IDEMP", ``!E. STRONG_EQUIV (sum E E) E``,
+Theorem STRONG_SUM_IDEMP:   !E. STRONG_EQUIV (sum E E) E
+Proof
     GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -87,11 +88,12 @@ val STRONG_SUM_IDEMP = store_thm (
         Q.EXISTS_TAC `E2` >> art [] \\
         MATCH_MP_TAC SUM1 \\
         PURE_ONCE_REWRITE_TAC [REWRITE_RULE [ASSUME ``E' :'a CCS = E''``]
-                                            (ASSUME ``TRANS E' u E2``)] ] ]);
+                                            (ASSUME ``TRANS E' u E2``)] ] ]
+QED
 
 (* Prove STRONG_SUM_COMM: |- !E E'. STRONG_EQUIV(sum E E') (sum E' E) *)
-val STRONG_SUM_COMM = store_thm (
-   "STRONG_SUM_COMM", ``!E E'. STRONG_EQUIV (sum E E') (sum E' E)``,
+Theorem STRONG_SUM_COMM:   !E E'. STRONG_EQUIV (sum E E') (sum E' E)
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -122,7 +124,8 @@ val STRONG_SUM_COMM = store_thm (
         EXISTS_TAC ``E2' :'a CCS`` \\
         art [REWRITE_RULE [ASSUME ``E' = sum E2 E1``]
                                       (ASSUME ``TRANS E' u E2'``),
-                         TRANS_COMM_EQ] ] ]);
+                         TRANS_COMM_EQ] ] ]
+QED
 
 (* Prove STRONG_SUM_IDENT_L: |- !E. STRONG_EQUIV (sum nil E) E *)
 val STRONG_SUM_IDENT_L = save_thm (
@@ -131,10 +134,10 @@ val STRONG_SUM_IDENT_L = save_thm (
        (S_TRANS (SPECL [``nil``, ``E :'a CCS``] STRONG_SUM_COMM)
                 (SPEC ``E :'a CCS`` STRONG_SUM_IDENT_R)));
 
-val STRONG_SUM_ASSOC_R = store_thm (
-   "STRONG_SUM_ASSOC_R",
-      ``!E E' E''.
-         STRONG_EQUIV (sum (sum E E') E'') (sum E (sum E' E''))``,
+Theorem STRONG_SUM_ASSOC_R:
+        !E E' E''.
+         STRONG_EQUIV (sum (sum E E') E'') (sum E (sum E' E''))
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -165,7 +168,8 @@ val STRONG_SUM_ASSOC_R = store_thm (
         EXISTS_TAC ``E2' :'a CCS`` \\
         art [REWRITE_RULE [ASSUME ``E' = sum E1 (sum E2 E3)``]
                                       (ASSUME ``TRANS E' u E2'``),
-                         TRANS_ASSOC_EQ] ] ]);
+                         TRANS_ASSOC_EQ] ] ]
+QED
 
 (* STRONG_SUM_ASSOC_L:
    |- !E E' E''. STRONG_EQUIV (sum E (sum E' E'')) (sum (sum E E') E'')
@@ -228,8 +232,8 @@ QED
 (******************************************************************************)
 
 (* Prove STRONG_PAR_IDENT_R: |- !E. STRONG_EQUIV (par E nil) E *)
-val STRONG_PAR_IDENT_R = store_thm (
-   "STRONG_PAR_IDENT_R", ``!E. STRONG_EQUIV (par E nil) E``,
+Theorem STRONG_PAR_IDENT_R:   !E. STRONG_EQUIV (par E nil) E
+Proof
     GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC ``\x y. (?E'. (x = par E' nil) /\ (y = E'))``
@@ -259,10 +263,11 @@ val STRONG_PAR_IDENT_R = store_thm (
           PURE_ONCE_ASM_REWRITE_TAC [],
           (* goal 2.2.2 (of 2) *)
           Q.EXISTS_TAC `E2` \\
-          REWRITE_TAC [] ] ] ]);
+          REWRITE_TAC [] ] ] ]
+QED
 
-val STRONG_PAR_COMM = store_thm (
-   "STRONG_PAR_COMM", ``!E E'. STRONG_EQUIV (par E E') (par E' E)``,
+Theorem STRONG_PAR_COMM:   !E E'. STRONG_EQUIV (par E E') (par E' E)
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC ``\x y. (?E1 E2. (x = par E1 E2) /\ (y = par E2 E1))``
@@ -331,7 +336,8 @@ val STRONG_PAR_COMM = store_thm (
              EXISTS_TAC ``COMPL (l :'a Label)`` \\
              art [COMPL_COMPL_LAB],
              (* goal 2.2.3.2 (of 2) *)
-             take [`E2''`, `E1'`] >> REWRITE_TAC [] ] ] ] ]);
+             take [`E2''`, `E1'`] >> REWRITE_TAC [] ] ] ] ]
+QED
 
 (* STRONG_PAR_IDENT_L: |- !E. STRONG_EQUIV (par nil E) E *)
 val STRONG_PAR_IDENT_L = save_thm (
@@ -340,9 +346,9 @@ val STRONG_PAR_IDENT_L = save_thm (
        (S_TRANS (SPECL [``nil``, ``E :'a CCS``] STRONG_PAR_COMM)
                 (SPEC ``E :'a CCS`` STRONG_PAR_IDENT_R)));
 
-val STRONG_PAR_ASSOC = store_thm (
-   "STRONG_PAR_ASSOC",
-      ``!E E' E''. STRONG_EQUIV (par (par E E') E'') (par E (par E' E''))``,
+Theorem STRONG_PAR_ASSOC:
+        !E E' E''. STRONG_EQUIV (par (par E E') E'') (par E (par E' E''))
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -505,14 +511,15 @@ val STRONG_PAR_ASSOC = store_thm (
                (* goal 2.2.3.2.2 (of 2) *)
                take [`E1'`, `E2`, `E1''`] >> art [] ],
              (* goal 2.2.3.3 (of 3) *)
-             IMP_RES_TAC Action_distinct_label] ] ] ]);
+             IMP_RES_TAC Action_distinct_label] ] ] ]
+QED
 
-val STRONG_PAR_PREF_TAU = store_thm (
-   "STRONG_PAR_PREF_TAU",
-      ``!(u :'a Action) E E'.
+Theorem STRONG_PAR_PREF_TAU:
+        !(u :'a Action) E E'.
          STRONG_EQUIV (par (prefix u E) (prefix tau E'))
                       (sum (prefix u (par E (prefix tau E')))
-                           (prefix tau (par (prefix u E) E')))``,
+                           (prefix tau (par (prefix u E) E')))
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -566,7 +573,8 @@ val STRONG_PAR_PREF_TAU = store_thm (
           IMP_RES_TAC TRANS_PREFIX \\
           PURE_ONCE_ASM_REWRITE_TAC [] \\
           MATCH_MP_TAC PAR2 \\
-          REWRITE_TAC [PREFIX] ] ] ]);
+          REWRITE_TAC [PREFIX] ] ] ]
+QED
 
 (* Prove STRONG_PAR_TAU_PREF:
    |- !E u E'.
@@ -608,15 +616,15 @@ val STRONG_PAR_TAU_TAU = save_thm (
        label l..E || label l'..E' ~
        label l..(E || label l'..E') + label l'..(label l..E || E')
  *)
-val STRONG_PAR_PREF_NO_SYNCR = store_thm (
-   "STRONG_PAR_PREF_NO_SYNCR",
-      ``!(l :'a Label) l'.
+Theorem STRONG_PAR_PREF_NO_SYNCR:
+        !(l :'a Label) l'.
          ~(l = COMPL l') ==>
          (!E E'.
            STRONG_EQUIV
            (par (prefix (label l) E) (prefix (label l') E'))
            (sum (prefix (label l) (par E (prefix (label l') E')))
-                (prefix (label l') (par (prefix (label l) E) E'))))``,
+                (prefix (label l') (par (prefix (label l) E) E'))))
+Proof
     rpt STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -667,7 +675,8 @@ val STRONG_PAR_PREF_NO_SYNCR = store_thm (
         IMP_RES_TAC TRANS_PREFIX \\
         PURE_ONCE_ASM_REWRITE_TAC [] >|
         [ MATCH_MP_TAC PAR1, MATCH_MP_TAC PAR2 ] \\
-        REWRITE_TAC [PREFIX] ] ]);
+        REWRITE_TAC [PREFIX] ] ]
+QED
 
 (* Prove STRONG_PAR_PREF_SYNCR:
    |- ∀l l'.
@@ -677,16 +686,16 @@ val STRONG_PAR_PREF_NO_SYNCR = store_thm (
        label l..(E || label l'..E') + label l'..(label l..E || E') +
        τ..(E || E')
  *)
-val STRONG_PAR_PREF_SYNCR = store_thm (
-   "STRONG_PAR_PREF_SYNCR",
-  ``!(l :'a Label) l'. (l = COMPL l') ==>
+Theorem STRONG_PAR_PREF_SYNCR:
+    !(l :'a Label) l'. (l = COMPL l') ==>
          !E E'.
            STRONG_EQUIV
            (par (prefix (label l) E) (prefix (label l') E'))
            (sum
             (sum (prefix (label l) (par E (prefix (label l') E')))
                  (prefix (label l') (par (prefix (label l) E) E')))
-            (prefix tau (par E E')))``,
+            (prefix tau (par E E')))
+Proof
     rpt STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -755,7 +764,8 @@ val STRONG_PAR_PREF_SYNCR = store_thm (
           IMP_RES_TAC TRANS_PREFIX >> art [] \\
           MATCH_MP_TAC PAR3 \\
           EXISTS_TAC ``COMPL (l2 :'a Label)`` \\
-          REWRITE_TAC [COMPL_COMPL_LAB, PREFIX] ] ] ]);
+          REWRITE_TAC [COMPL_COMPL_LAB, PREFIX] ] ] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -763,8 +773,8 @@ val STRONG_PAR_PREF_SYNCR = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val STRONG_RESTR_NIL = store_thm (
-   "STRONG_RESTR_NIL", ``!L :'a Label set. STRONG_EQUIV (restr L nil) nil``,
+Theorem STRONG_RESTR_NIL:   !L :'a Label set. STRONG_EQUIV (restr L nil) nil
+Proof
     GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC ``\(x :'a CCS) (y :'a CCS). (?L'. (x = restr L' nil) /\ (y = nil))``
@@ -781,15 +791,16 @@ val STRONG_RESTR_NIL = store_thm (
         (* goal 2.2 (of 2) *)
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E' = nil``]
                                  (ASSUME ``TRANS E' u E2``)) \\
-        IMP_RES_TAC NIL_NO_TRANS ] ]);
+        IMP_RES_TAC NIL_NO_TRANS ] ]
+QED
 
 (* Prove STRONG_RESTR_SUM:
    |- ∀E E' L. restr L (E + E') ~ restr L E + restr L E'
  *)
-val STRONG_RESTR_SUM = store_thm (
-   "STRONG_RESTR_SUM",
-      ``!E E' L.
-         STRONG_EQUIV (restr L (sum E E')) (sum (restr L E) (restr L E'))``,
+Theorem STRONG_RESTR_SUM:
+        !E E' L.
+         STRONG_EQUIV (restr L (sum E E')) (sum (restr L E) (restr L E'))
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [PROPERTY_STAR]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -854,15 +865,16 @@ val STRONG_RESTR_SUM = store_thm (
           Q.EXISTS_TAC `l` >> art [] \\
           MATCH_MP_TAC SUM2 \\
           REWRITE_TAC [REWRITE_RULE [ASSUME ``(u :'a Action) = label l``]
-                      (ASSUME ``TRANS E' u E''``)] ] ] ]);
+                      (ASSUME ``TRANS E' u E''``)] ] ] ]
+QED
 
 (* Prove STRONG_RESTR_PREFIX_TAU:
    |- ∀E L. restr L (τ..E) ~ τ..restr L E
  *)
-val STRONG_RESTR_PREFIX_TAU = store_thm (
-   "STRONG_RESTR_PREFIX_TAU",
-      ``!E L.
-         STRONG_EQUIV (restr L (prefix tau E)) (prefix tau (restr L E))``,
+Theorem STRONG_RESTR_PREFIX_TAU:
+        !E L.
+         STRONG_EQUIV (restr L (prefix tau E)) (prefix tau (restr L E))
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -899,16 +911,17 @@ val STRONG_RESTR_PREFIX_TAU = store_thm (
                                  (ASSUME ``TRANS E' u E2``)) \\
         IMP_RES_TAC TRANS_PREFIX \\
         Q.EXISTS_TAC `E2` >> art [] \\
-        MATCH_MP_TAC RESTR >> REWRITE_TAC [PREFIX] ] ]);
+        MATCH_MP_TAC RESTR >> REWRITE_TAC [PREFIX] ] ]
+QED
 
 (* Prove STRONG_RESTR_PR_LAB_NIL:
    |- ∀l L. l ∈ L ∨ COMPL l ∈ L ⇒ ∀E. restr L (label l..E) ~ nil:
  *)
-val STRONG_RESTR_PR_LAB_NIL = store_thm (
-   "STRONG_RESTR_PR_LAB_NIL",
-      ``!(l :'a Label) L.
+Theorem STRONG_RESTR_PR_LAB_NIL:
+        !(l :'a Label) L.
          (l IN L) \/ ((COMPL l) IN L) ==>
-         (!E. STRONG_EQUIV (restr L (prefix (label l) E)) nil)``,
+         (!E. STRONG_EQUIV (restr L (prefix (label l) E)) nil)
+Proof
     rpt GEN_TAC
  >> DISCH_TAC
  >> GEN_TAC
@@ -940,18 +953,19 @@ val STRONG_RESTR_PR_LAB_NIL = store_thm (
         (* goal 2.4 (of 4) *)
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E' = nil``]
                                  (ASSUME ``TRANS E' u E2``)) \\
-        IMP_RES_TAC NIL_NO_TRANS ] ]);
+        IMP_RES_TAC NIL_NO_TRANS ] ]
+QED
 
 (* Prove STRONG_RESTR_PREFIX_LABEL:
    |- ∀l L.
      l ∉ L ∧ COMPL l ∉ L ⇒ ∀E. restr L (label l..E) ~ label l..restr L E
  *)
-val STRONG_RESTR_PREFIX_LABEL = store_thm (
-   "STRONG_RESTR_PREFIX_LABEL",
-       ``!(l :'a Label) L.
+Theorem STRONG_RESTR_PREFIX_LABEL:
+         !(l :'a Label) L.
          (~(l IN L) /\ ~((COMPL l) IN L)) ==>
          (!E. STRONG_EQUIV (restr L (prefix (label l) E))
-                           (prefix (label l) (restr L E)))``,
+                           (prefix (label l) (restr L E)))
+Proof
     rpt STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -993,7 +1007,8 @@ val STRONG_RESTR_PREFIX_LABEL = store_thm (
         IMP_RES_TAC TRANS_PREFIX  >> art [] \\
         MATCH_MP_TAC RESTR \\
         EXISTS_TAC ``l' :'a Label`` \\
-        art [PREFIX] ] ]);
+        art [PREFIX] ] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1004,8 +1019,8 @@ val STRONG_RESTR_PREFIX_LABEL = store_thm (
 (* Prove STRONG_RELAB_NIL:
    |- ∀rf. relab nil rf ~ nil
  *)
-val STRONG_RELAB_NIL = store_thm (
-   "STRONG_RELAB_NIL", ``!(rf :'a Relabeling). STRONG_EQUIV (relab nil rf) nil``,
+Theorem STRONG_RELAB_NIL:   !(rf :'a Relabeling). STRONG_EQUIV (relab nil rf) nil
+Proof
     GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC ``\(x :'a CCS) (y :'a CCS). (?rf'. (x = relab nil rf') /\ (y = nil))``
@@ -1024,14 +1039,15 @@ val STRONG_RELAB_NIL = store_thm (
         (* goal 2.2 *)
         ASSUME_TAC (REWRITE_RULE [ASSUME ``E' = nil``]
                             (ASSUME ``TRANS E' u E2``)) \\
-        IMP_RES_TAC NIL_NO_TRANS ] ]);
+        IMP_RES_TAC NIL_NO_TRANS ] ]
+QED
 
 (* Prove STRONG_RELAB_SUM:
    |- ∀E E' rf. (E + E')[rf] ~ E[rf] + E'[rf]:
  *)
-val STRONG_RELAB_SUM = store_thm (
-   "STRONG_RELAB_SUM",
-  ``!E E' rf. STRONG_EQUIV (relab (sum E E') rf) (sum (relab E rf) (relab E' rf))``,
+Theorem STRONG_RELAB_SUM:
+    !E E' rf. STRONG_EQUIV (relab (sum E E') rf) (sum (relab E rf) (relab E' rf))
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [PROPERTY_STAR]
  >> rpt STRIP_TAC (* 2 sub-goals *)
@@ -1050,16 +1066,17 @@ val STRONG_RELAB_SUM = store_thm (
       IMP_RES_TAC TRANS_RELAB >> art [] \\
       MATCH_MP_TAC RELABELING >|
       [ (* goal 2.1 (of 2) *) MATCH_MP_TAC SUM1,
-        (* goal 2.2 (of 2) *) MATCH_MP_TAC SUM2 ] >> art [] ]);
+        (* goal 2.2 (of 2) *) MATCH_MP_TAC SUM2 ] >> art [] ]
+QED
 
 (* Prove STRONG_RELAB_PREFIX:
    |- ∀u E labl. u..E[RELAB labl] ~ relabel (RELAB labl) u..(E[RELAB labl]):
  *)
-val STRONG_RELAB_PREFIX = store_thm (
-   "STRONG_RELAB_PREFIX",
-       ``!(u :'a Action) E labl.
+Theorem STRONG_RELAB_PREFIX:
+         !(u :'a Action) E labl.
          STRONG_EQUIV (relab (prefix u E) (RELAB labl))
-                      (prefix (relabel (RELAB labl) u) (relab E (RELAB labl)))``,
+                      (prefix (relabel (RELAB labl) u) (relab E (RELAB labl)))
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -1093,7 +1110,8 @@ val STRONG_RELAB_PREFIX = store_thm (
                                               (relab E'' (RELAB labl))``]
                         (ASSUME ``TRANS E' u E2``)) \\
         IMP_RES_TAC TRANS_PREFIX >> art [] \\
-        MATCH_MP_TAC RELABELING >> REWRITE_TAC [PREFIX] ] ]);
+        MATCH_MP_TAC RELABELING >> REWRITE_TAC [PREFIX] ] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1324,13 +1342,14 @@ Definition Is_Prefix_def:
     Is_Prefix E = (?(u :'a Action) E'. (E = prefix u E'))
 End
 
-val PREF_IS_PREFIX = store_thm (
-   "PREF_IS_PREFIX", ``!(u :'a Action) E. Is_Prefix (prefix u E)``,
+Theorem PREF_IS_PREFIX:   !(u :'a Action) E. Is_Prefix (prefix u E)
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [Is_Prefix_def]
  >> EXISTS_TAC ``u :'a Action``
  >> EXISTS_TAC ``E :'a CCS``
- >> REWRITE_TAC []);
+ >> REWRITE_TAC []
+QED
 
 (* --------------------------------------------------------------------------- *)
 (* Define the notation used for indexed summations:                            *)
@@ -1679,16 +1698,16 @@ QED
 val SYNC_TRANS_THM = save_thm (
    "SYNC_TRANS_THM", EQ_IMP_LR SYNC_TRANS_THM_EQ);
 
-val ALL_SYNC_TRANS_THM_EQ = store_thm (
-   "ALL_SYNC_TRANS_THM_EQ",
-  ``!n m f f' u E.
+Theorem ALL_SYNC_TRANS_THM_EQ:
+    !n m f f' u E.
          TRANS (ALL_SYNC f n f' m) u E =
          (?k k' l.
            k <= n /\ k' <= m /\
            (PREF_ACT (f k) = label l) /\
            (PREF_ACT (f' k') = label (COMPL l)) /\
            (u = tau) /\
-           (E = par (PREF_PROC (f k)) (PREF_PROC (f' k'))))``,
+           (E = par (PREF_PROC (f k)) (PREF_PROC (f' k'))))
+Proof
     Induct_on `n` (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       rpt GEN_TAC \\
@@ -1748,7 +1767,8 @@ val ALL_SYNC_TRANS_THM_EQ = store_thm (
             (REWRITE_RULE [ASSUME ``k = SUC n``]
                 (ASSUME ``E = par (PREF_PROC ((f: num -> 'a CCS) k))
                                   (PREF_PROC ((f': num -> 'a CCS) k'))``)) \\
-          take [`k'`, `l`] >> art [] ] ] ]);
+          take [`k'`, `l`] >> art [] ] ] ]
+QED
 
 (* ALL_SYNC_TRANS_THM =
  |- ∀u n m f' f E.
@@ -1771,9 +1791,8 @@ val ALL_SYNC_TRANS_THM = save_thm (
      SIGMA (λj. PREF_ACT (f' j)..(SIGMA f n || PREF_PROC (f' j))) m +
      ALL_SYNC f n f' m:
  *)
-val STRONG_EXPANSION_LAW = store_thm (
-   "STRONG_EXPANSION_LAW",
-      ``!f n f' m.
+Theorem STRONG_EXPANSION_LAW:
+        !f n f' m.
          (!i. i <= n ==> Is_Prefix (f i)) /\ (!j. j <= m ==> Is_Prefix (f' j)) ==>
          STRONG_EQUIV
          (par (SIGMA f n) (SIGMA f' m))
@@ -1783,7 +1802,8 @@ val STRONG_EXPANSION_LAW = store_thm (
                               (par (PREF_PROC (f i)) (SIGMA f' m))) n)
            (SIGMA (\j. prefix (PREF_ACT (f' j))
                               (par (SIGMA f n) (PREF_PROC (f' j)))) m))
-          (ALL_SYNC f n f' m))``,
+          (ALL_SYNC f n f' m))
+Proof
     rpt STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -1948,7 +1968,8 @@ val STRONG_EXPANSION_LAW = store_thm (
              (REWRITE_RULE [ASSUME ``(f2: num -> 'a CCS) k' = prefix u' E''``,
                             PREF_ACT_def]
                 (ASSUME ``PREF_ACT ((f2: num -> 'a CCS) k') = label (COMPL l)``)) \\
-            ASM_REWRITE_TAC [PREF_PROC_def, PREFIX] ] ] ] ]);
+            ASM_REWRITE_TAC [PREF_PROC_def, PREFIX] ] ] ] ]
+QED
 
 val _ = html_theory "StrongLaws";
 

@@ -43,9 +43,9 @@ val recfn_rulesl = CONJUNCTS recfn_rules
 Theorem recfnCn = List.nth(recfn_rulesl, 3)
 Theorem recfnPr = List.nth(recfn_rulesl, 4)
 
-val primrec_recfn = store_thm(
-  "primrec_recfn",
-  ``∀f n. primrec f n ⇒ recfn (SOME o f) n``,
+Theorem primrec_recfn:
+    ∀f n. primrec f n ⇒ recfn (SOME o f) n
+Proof
   Induct_on ‘primrec’ >> SRW_TAC [][recfn_rules] THENL [
     `SOME o Cn f gs = recCn (SOME o f) (MAP (λg. SOME o g) gs)`
        by SRW_TAC [][FUN_EQ_THM, recCn_def, LET_THM, MAP_MAP_o,
@@ -62,7 +62,8 @@ val primrec_recfn = store_thm(
            Induct_on `m` THEN SRW_TAC [][Once recPr_def] THEN
            POP_ASSUM (SUBST1_TAC o SYM) THEN SRW_TAC [][]) THEN
     SRW_TAC [][] THEN MATCH_MP_TAC recfnPr THEN SRW_TAC [ARITH_ss][]
-  ]);
+  ]
+QED
 
 val minimise_thm = Q.store_thm(
   "minimise_thm",
@@ -89,10 +90,11 @@ Definition rec2_def[simp]:
   (rec2 f (x::y::t) = f x y)
 End
 
-val recfn_K = store_thm(
-  "recfn_K[simp]",
-  ``recfn (K (SOME i)) 1``,
-  `recfn (SOME o K i) 1` by simp[primrec_recfn] >> fs[]);
+Theorem recfn_K[simp]:
+    recfn (K (SOME i)) 1
+Proof
+  `recfn (SOME o K i) 1` by simp[primrec_recfn] >> fs[]
+QED
 
 val MAP_CONG' = REWRITE_RULE [GSYM AND_IMP_INTRO] MAP_CONG
 

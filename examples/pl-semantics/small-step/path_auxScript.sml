@@ -10,17 +10,18 @@ Libs
 val ect = BasicProvers.EVERY_CASE_TAC;
 
 (* Copied from pathScript in HOL and generalised to 2 relations *)
-val okpath_pmap2 = store_thm(
-  "okpath_pmap2",
-  ``!R1 R2 f g p. okpath R1 p /\ (!x r y. R1 x r y ==> R2 (f x) (g r) (f y)) ==>
-                  okpath R2 (pmap f g p)``,
+Theorem okpath_pmap2:
+    !R1 R2 f g p. okpath R1 p /\ (!x r y. R1 x r y ==> R2 (f x) (g r) (f y)) ==>
+                  okpath R2 (pmap f g p)
+Proof
   REPEAT STRIP_TAC THEN
   Q_TAC SUFF_TAC
         `!p. (?p0. okpath R1 p0 /\ (p = pmap f g p0)) ==> okpath R2 p` THEN1
         METIS_TAC[] THEN
   HO_MATCH_MP_TAC okpath_co_ind THEN SRW_TAC [][] THEN
   Q.SPEC_THEN `p0` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
+  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
+QED
 
 val PL_pgenerate = Q.store_thm ("PL_pgenerate",
 `!x f g. x ∈ PL (pgenerate f g)`,

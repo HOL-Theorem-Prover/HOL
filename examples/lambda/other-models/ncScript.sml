@@ -680,14 +680,15 @@ nc_INDUCT_TAC THEN RW_TAC std_ss [SUB_THM] THENL
 
 (* can now prove a simple version of induction, where you don't want that
    extra strength in the LAM case *)
-val simple_induction = store_thm(
-  "simple_induction",
-  ``!P. (!s. P (VAR s)) /\ (!k. P (CON k)) /\
+Theorem simple_induction:
+    !P. (!s. P (VAR s)) /\ (!k. P (CON k)) /\
         (!t u. P t /\ P u ==> P(t @@ u)) /\
         (!v t. P t ==> P (LAM v t)) ==>
-        (!t. P t)``,
+        (!t. P t)
+Proof
   GEN_TAC THEN STRIP_TAC THEN HO_MATCH_MP_TAC nc_INDUCTION THEN
-  PROVE_TAC [lemma14a]);
+  PROVE_TAC [lemma14a]
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -722,12 +723,13 @@ val INJECTIVITY_LEMMA1 = Q.store_thm("INJECTIVITY_LEMMA1",
    (LAM x u = LAM x1 u1) ==> (u = [VAR x/x1]u1)`,
 PROVE_TAC [nc_INJECTIVITY,lemma14a]);
 
-val LAM_VAR_INJECTIVE = store_thm(
-  "LAM_VAR_INJECTIVE",
-  ``!x b1 b2. (LAM x b1 = LAM x b2) = (b1 = b2)``,
+Theorem LAM_VAR_INJECTIVE:
+    !x b1 b2. (LAM x b1 = LAM x b2) = (b1 = b2)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN SIMP_TAC std_ss [] THEN STRIP_TAC THEN
   IMP_RES_THEN SUBST_ALL_TAC INJECTIVITY_LEMMA1 THEN
-  SIMP_TAC std_ss [lemma14a]);
+  SIMP_TAC std_ss [lemma14a]
+QED
 
 
 val lemma =
@@ -758,16 +760,17 @@ val INJECTIVITY_LEMMA3 = Q.store_thm("INJECTIVITY_LEMMA3",
    (LAM x u = LAM x' u1)`,
 PROVE_TAC [SIMPLE_ALPHA]);
 
-val LAM_INJ_ALPHA_FV = store_thm(
-  "LAM_INJ_ALPHA_FV",
-  ``!M N x y. (LAM x M = LAM y N) /\ ~(x = y) ==>
-              ~(x IN FV N) /\ ~(y IN FV M)``,
+Theorem LAM_INJ_ALPHA_FV:
+    !M N x y. (LAM x M = LAM y N) /\ ~(x = y) ==>
+              ~(x IN FV N) /\ ~(y IN FV M)
+Proof
   REPEAT STRIP_TAC THENL [
     `x IN FV (LAM y N)` by SRW_TAC [][FV_THM] THEN
     `x IN FV (LAM x M)` by PROVE_TAC [],
     `y IN FV (LAM x M)` by SRW_TAC [][FV_THM] THEN
     `y IN FV (LAM y N)` by PROVE_TAC []
-  ] THEN FULL_SIMP_TAC (srw_ss()) [FV_THM]);
+  ] THEN FULL_SIMP_TAC (srw_ss()) [FV_THM]
+QED
 
 (* ===================================================================== *)
 (* Andy's second induction theorem -- follows easily.                    *)
@@ -977,29 +980,31 @@ HO_MATCH_MP_TAC RENAMING_IND
     Simple properties of ISUB
    ---------------------------------------------------------------------- *)
 
-val SUB_ISUB_SINGLETON = store_thm(
-  "SUB_ISUB_SINGLETON",
-  ``!t x u. [t/x]u = u ISUB [(t,x)]``,
-  SRW_TAC [][ISUB_def]);
+Theorem SUB_ISUB_SINGLETON:
+    !t x u. [t/x]u = u ISUB [(t,x)]
+Proof
+  SRW_TAC [][ISUB_def]
+QED
 
-val ISUB_APPEND = store_thm(
-  "ISUB_APPEND",
-  ``!R1 R2 t. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)``,
+Theorem ISUB_APPEND:
+    !R1 R2 t. (t ISUB R1) ISUB R2 = t ISUB (APPEND R1 R2)
+Proof
   Induct THEN
-  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]);
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ISUB_def]
+QED
 
 (* ----------------------------------------------------------------------
     ... and of RENAMING
    ---------------------------------------------------------------------- *)
 
 val _ = temp_type_abbrev("renaming", ``:('a nc # string) list``)
-val RENAMING_THM = store_thm(
-  "RENAMING_THM",
-  ``RENAMING ([]:'a renaming) /\
+Theorem RENAMING_THM:
+    RENAMING ([]:'a renaming) /\
     (!(R:'a renaming) h.
        RENAMING (h::R) ⇔ RENAMING R /\ ?y x. h = (VAR y,x)) /\
     (!R1 R2:'a renaming.
-       RENAMING (APPEND R1 R2) ⇔ RENAMING R1 /\ RENAMING R2)``,
+       RENAMING (APPEND R1 R2) ⇔ RENAMING R1 /\ RENAMING R2)
+Proof
   Q.SUBGOAL_THEN
     `RENAMING ([]:'a renaming) /\
     (!R:'a renaming h.
@@ -1010,7 +1015,8 @@ val RENAMING_THM = store_thm(
     CONV_TAC (LAND_CONV (REWR_CONV RENAMING_CASES)) THEN SRW_TAC [][] THEN
     PROVE_TAC [],
     Induct THEN SRW_TAC [][] THEN PROVE_TAC []
-  ]);
+  ]
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -1051,11 +1057,12 @@ Induct THENL
 val _ = export_rewrites ["nc_DISTINCT","nc_INJECTIVITY", "LAM_VAR_INJECTIVE"];
 
 
-val FV_SUB = store_thm(
-  "FV_SUB",
-  ``!t u v. FV ([t/v] u) = if v IN FV u then FV t UNION (FV u DELETE v)
-                           else FV u``,
-  PROVE_TAC [lemma14b, lemma14c]);
+Theorem FV_SUB:
+    !t u v. FV ([t/v] u) = if v IN FV u then FV t UNION (FV u DELETE v)
+                           else FV u
+Proof
+  PROVE_TAC [lemma14b, lemma14c]
+QED
 
 val nc_RECURSION2 = save_thm(
   "nc_RECURSION2",
@@ -1077,9 +1084,9 @@ val size_def = new_specification (
    INST_TYPE [beta |-> numSyntax.num]) nc_RECURSION2)
 
 val _ = augment_srw_ss [rewrites [LET_THM]]
-val size_isub = store_thm(
-  "size_isub",
-  ``!t R. RENAMING R ==> (size (t ISUB R) = size t)``,
+Theorem size_isub:
+    !t R. RENAMING R ==> (size (t ISUB R) = size t)
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION THEN REPEAT CONJ_TAC THENL [
     SRW_TAC [][ISUB_CON, size_def],
     SRW_TAC [][ISUB_VAR_RENAME, size_def],
@@ -1102,20 +1109,23 @@ val size_isub = store_thm(
     ONCE_REWRITE_TAC [SUB_ISUB_SINGLETON] THEN
     ASM_SIMP_TAC bool_ss [ISUB_APPEND,RENAMING_DEF, RENAMING_LEMMA] THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val size_vsubst = store_thm(
-  "size_vsubst",
-  ``size ([VAR v/u] t) = size t``,
-  SRW_TAC [][size_isub, SUB_ISUB_SINGLETON, RENAMING_DEF]);
+Theorem size_vsubst:
+    size ([VAR v/u] t) = size t
+Proof
+  SRW_TAC [][size_isub, SUB_ISUB_SINGLETON, RENAMING_DEF]
+QED
 val _ = export_rewrites ["size_vsubst"]
 
 val size_thm = save_thm(
   "size_thm",
   SIMP_RULE (srw_ss()) [size_vsubst] size_def);
 
-val size_nonzero = store_thm(
-  "size_nonzero",
-  ``!t. 0 < size t``,
-  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [numSimps.ARITH_ss][size_thm]);
+Theorem size_nonzero:
+    !t. 0 < size t
+Proof
+  HO_MATCH_MP_TAC nc_INDUCTION THEN SRW_TAC [numSimps.ARITH_ss][size_thm]
+QED
 

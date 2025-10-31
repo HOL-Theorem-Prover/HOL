@@ -39,20 +39,23 @@ Definition CPS_def:
     CPS f = \k arg. k (f arg)
 End
 
-val CPS_ID = store_thm
-("CPS_ID",
- ``CPS (\x.x)  = \k x. k x``,
- SIMP_TAC std_ss [CPS_def]);
+Theorem CPS_ID:
+   CPS (\x.x)  = \k x. k x
+Proof
+ SIMP_TAC std_ss [CPS_def]
+QED
 
-val CPS_CONST = store_thm
-("CPS_CONST",
- ``CPS (\x.c)  = \k x. k c``,
- SIMP_TAC std_ss [CPS_def]);
+Theorem CPS_CONST:
+   CPS (\x.c)  = \k x. k c
+Proof
+ SIMP_TAC std_ss [CPS_def]
+QED
 
-val UNCPS = store_thm
-("UNCPS",
- ``CPS f k = \arg. let z = f arg in k z``,
- METIS_TAC [CPS_def]);
+Theorem UNCPS:
+   CPS f k = \arg. let z = f arg in k z
+Proof
+ METIS_TAC [CPS_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Passing the identity function to a CPS function is the inverse of         *)
@@ -300,19 +303,20 @@ val CPS_REC_INTRO = Q.store_thm
 (* Support for translation into combinator form.                             *)
 (*---------------------------------------------------------------------------*)
 
-val Rec_INTRO = store_thm
-("Rec_INTRO",
- ``!f f1 f2 f3.
+Theorem Rec_INTRO:
+   !f f1 f2 f3.
      (!x:'a. f x = if f1(x) then f2(x) else f(f3 x))
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f3 x) x))
-     ==> (f:'a->'b = Rec f1 f2 f3)``,
+     ==> (f:'a->'b = Rec f1 f2 f3)
+Proof
  REPEAT (GEN_TAC ORELSE STRIP_TAC)
   THEN ONCE_REWRITE_TAC [FUN_EQ_THM]
   THEN HO_MATCH_MP_TAC Rec_ind
   THEN GEN_TAC THEN STRIP_TAC
   THEN IMP_RES_TAC (DISCH_ALL Rec_def)
   THEN POP_ASSUM (fn th => ONCE_REWRITE_TAC[th])
-  THEN METIS_TAC[]);
+  THEN METIS_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Misc. lemmas                                                              *)

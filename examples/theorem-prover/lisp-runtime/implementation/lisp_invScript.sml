@@ -29,12 +29,14 @@ Definition one_byte_list_def:
   (one_byte_list a (x::xs) = one (a:word64,x:word8) * one_byte_list (a + 1w) xs)
 End
 
-val one_byte_list_APPEND = store_thm("one_byte_list_APPEND",
-  ``!a xs ys.
-      one_byte_list a (xs++ys) = one_byte_list a xs * one_byte_list (a + n2w (LENGTH xs)) ys``,
+Theorem one_byte_list_APPEND:
+    !a xs ys.
+      one_byte_list a (xs++ys) = one_byte_list a xs * one_byte_list (a + n2w (LENGTH xs)) ys
+Proof
   Induct_on `xs` \\ ASM_SIMP_TAC std_ss [one_byte_list_def,APPEND,SEP_CLAUSES,
     LENGTH,WORD_ADD_0,word_arith_lemma1,ADD1,AC ADD_COMM ADD_ASSOC]
-  \\ SIMP_TAC (std_ss++star_ss) []);
+  \\ SIMP_TAC (std_ss++star_ss) []
+QED
 
 Definition string_data_def:
   string_data str = n2w (LENGTH str + 1) :: MAP ((n2w:num->word8) o ORD) str
@@ -726,31 +728,37 @@ val lisp_inv_top = prove(
   \\ Q.PAT_X_ASSUM `sp && 3w = 0w` MP_TAC \\ blastLib.BBLAST_TAC)
   |> SIMP_RULE std_ss [LET_DEF];
 
-val SPLIT_LIST_LESS_EQ = store_thm("SPLIT_LIST_LESS_EQ",
-  ``!xs j. j <= LENGTH xs ==>
+Theorem SPLIT_LIST_LESS_EQ:
+    !xs j. j <= LENGTH xs ==>
            ?xs1 xs2. (xs = xs1 ++ xs2) /\
-                     (LENGTH xs1 = j)``,
+                     (LENGTH xs1 = j)
+Proof
   Induct \\ SIMP_TAC std_ss [LENGTH] \\ REPEAT STRIP_TAC
   THEN1 (Q.LIST_EXISTS_TAC [`[]`,`[]`] \\ ASM_SIMP_TAC std_ss [LENGTH,APPEND])
   \\ Cases_on `j` \\ FULL_SIMP_TAC std_ss [ADD1,LENGTH_NIL,APPEND,CONS_11]
   \\ RES_TAC \\ Q.EXISTS_TAC `h::xs1`
   \\ ASM_SIMP_TAC std_ss [LENGTH,APPEND_11,APPEND,CONS_11]
-  \\ ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,APPEND,CONS_11,ADD1]);
+  \\ ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,APPEND,CONS_11,ADD1]
+QED
 
-val ZIP_APPEND = store_thm("ZIP_APPEND",
-  ``!xs1 ys1 xs2 ys2.
+Theorem ZIP_APPEND:
+    !xs1 ys1 xs2 ys2.
       (LENGTH ys1 = LENGTH xs1) ==>
-      (ZIP (xs1 ++ xs2, ys1 ++ ys2) = ZIP (xs1,ys1) ++ ZIP (xs2,ys2))``,
+      (ZIP (xs1 ++ xs2, ys1 ++ ys2) = ZIP (xs1,ys1) ++ ZIP (xs2,ys2))
+Proof
   Induct \\ SIMP_TAC std_ss [LENGTH,LENGTH_NIL,ZIP,APPEND]
-  \\ Cases_on `ys1` \\ FULL_SIMP_TAC std_ss [ADD1,LENGTH,ZIP,APPEND]);
+  \\ Cases_on `ys1` \\ FULL_SIMP_TAC std_ss [ADD1,LENGTH,ZIP,APPEND]
+QED
 
-val ref_stack_APPEND = store_thm("ref_stack_APPEND",
-  ``!xs ys a.
+Theorem ref_stack_APPEND:
+    !xs ys a.
       ref_stack a (xs ++ ys) =
       SEP_ARRAY (\a x. one (a,ref_heap_addr x)) 4w a xs *
-      ref_stack (a + n2w (4 * LENGTH xs)) ys``,
+      ref_stack (a + n2w (4 * LENGTH xs)) ys
+Proof
   Induct \\ ASM_SIMP_TAC std_ss [APPEND,ref_stack_def,LENGTH,SEP_ARRAY_def,
-    SEP_CLAUSES,WORD_ADD_0,STAR_ASSOC,MULT_CLAUSES,GSYM word_add_n2w,WORD_ADD_ASSOC]);
+    SEP_CLAUSES,WORD_ADD_0,STAR_ASSOC,MULT_CLAUSES,GSYM word_add_n2w,WORD_ADD_ASSOC]
+QED
 
 val ref_stack_space_LEMMA = prove(
   ``!k n p.
@@ -882,15 +890,17 @@ val _ = save_thm("lisp_inv_pops_lemma",lisp_inv_pops_lemma);
 
 (* store and load from stack *)
 
-val SPLIT_LIST = store_thm("SPLIT_LIST",
-  ``!xs j. j < LENGTH xs ==>
+Theorem SPLIT_LIST:
+    !xs j. j < LENGTH xs ==>
            ?xs1 x xs2. (xs = xs1 ++ x::xs2) /\
-                       (LENGTH xs1 = j)``,
+                       (LENGTH xs1 = j)
+Proof
   Induct \\ SIMP_TAC std_ss [LENGTH] \\ REPEAT STRIP_TAC
   \\ Cases_on `j` \\ FULL_SIMP_TAC std_ss [ADD1,LENGTH_NIL,APPEND,CONS_11]
   \\ RES_TAC \\ Q.EXISTS_TAC `h::xs1`
   \\ ASM_SIMP_TAC std_ss [LENGTH,APPEND_11,APPEND,CONS_11]
-  \\ ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,APPEND,CONS_11,ADD1]);
+  \\ ASM_SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND_11,APPEND,CONS_11,ADD1]
+QED
 
 val lisp_inv_load_blast = prove(
   ``(w + 4w * x && 3w = 0w) = (w && 3w = 0w:word64)``,
@@ -932,9 +942,11 @@ val lisp_inv_load = prove(
   Cases_on `j` \\ FULL_SIMP_TAC std_ss [w2n_n2w,w2w_def,LET_DEF]
   \\ METIS_TAC [lisp_inv_load_lemma]) |> SIMP_RULE std_ss [LET_DEF];
 
-val LENGTH_UPDATE_NTH = store_thm("LENGTH_UPDATE_NTH",
-  ``!xs n x. (LENGTH (UPDATE_NTH n x xs) = LENGTH xs)``,
-  Induct \\ Cases_on `n` \\ ASM_SIMP_TAC std_ss [UPDATE_NTH_def,LENGTH]);
+Theorem LENGTH_UPDATE_NTH:
+    !xs n x. (LENGTH (UPDATE_NTH n x xs) = LENGTH xs)
+Proof
+  Induct \\ Cases_on `n` \\ ASM_SIMP_TAC std_ss [UPDATE_NTH_def,LENGTH]
+QED
 
 val UPDATE_NTH_APPEND = prove(
   ``!xs ys zs y x n.
@@ -1085,8 +1097,9 @@ val lisp_inv_eq = prove(
   ``~isDot x0 \/ ~isDot x1 ==> ^LISP ==> ((w0 = w1) = (x0 = x1))``,
   METIS_TAC [lisp_inv_eq_lemma,lisp_inv_swap1]);
 
-val lisp_inv_eq_zero = store_thm("lisp_inv_eq_zero",
-  ``^LISP ==> ((tw1 = w2w w0) = (x0 = Val 0))``,
+Theorem lisp_inv_eq_zero:
+    ^LISP ==> ((tw1 = w2w w0) = (x0 = Val 0))
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC lisp_inv_swap1
   \\ IMP_RES_TAC (Q.SPEC `0w` lisp_inv_Val)
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w]
@@ -1096,7 +1109,8 @@ val lisp_inv_eq_zero = store_thm("lisp_inv_eq_zero",
   \\ `tw1 = 1w` by FULL_SIMP_TAC std_ss [lisp_inv_def]
   \\ FULL_SIMP_TAC std_ss []
   \\ Q.PAT_X_ASSUM `xxx = (x0 = Val 0)` (fn th => FULL_SIMP_TAC std_ss [GSYM th])
-  \\ blastLib.BBLAST_TAC);
+  \\ blastLib.BBLAST_TAC
+QED
 
 val lisp_inv_eq_lucky = prove(
   ``!x0 x1 w0 w1. (w0 = w1) /\ ^LISP ==> (x0 = x1)``,
@@ -1618,18 +1632,20 @@ val gc_w2w_lemma = prove(
         (w2w ((w2w (bp >>> 32)):word32) << 32 !! w2w ((w2w bp):word32) = bp:word64)``,
   blastLib.BBLAST_TAC);
 
-val lisp_inv_error = store_thm("lisp_inv_error",
-  ``^LISP ==>
+Theorem lisp_inv_error:
+    ^LISP ==>
     (w2w (f (sp - 0xC4w)) << 32 !! w2w (f (sp - 0xC8w)) = ex) /\
     {sp - 0xC4w; sp - 0xC8w} SUBSET df /\
-    (sp - 0xC4w && 0x3w = 0x0w) /\ (sp - 0xC8w && 0x3w = 0x0w)``,
+    (sp - 0xC4w && 0x3w = 0x0w) /\ (sp - 0xC8w && 0x3w = 0x0w)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,ref_full_stack_def,APPEND]
   \\ NTAC 8 (ONCE_REWRITE_TAC [ref_static_def]) \\ STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [ref_full_stack_def,word64_3232_def,LET_DEF]
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma1,SEP_CLAUSES]
   \\ FULL_SIMP_TAC std_ss [STAR_ASSOC,word_arith_lemma3,INSERT_SUBSET,EMPTY_SUBSET]
   \\ SEP_R_TAC \\ ASM_SIMP_TAC std_ss [gc_w2w_lemma]
-  \\ Q.PAT_X_ASSUM `sp && 0x3w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC);
+  \\ Q.PAT_X_ASSUM `sp && 0x3w = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC
+QED
 
 
 (* I/O *)
@@ -1643,9 +1659,10 @@ val _ = save_thm("lisp_inv_ignore_io",lisp_inv_ignore_io);
 
 (* read cs and ds, writing ds *)
 
-val expand_list = store_thm("expand_list",
-  ``!cs. (LENGTH cs = 10) ==>
-         ?c0 c1 c2 c3 c4 c5 c6 c7 c8 c9. cs = [c0;c1;c2;c3;c4;c5;c6;c7;c8;c9]``,
+Theorem expand_list:
+    !cs. (LENGTH cs = 10) ==>
+         ?c0 c1 c2 c3 c4 c5 c6 c7 c8 c9. cs = [c0;c1;c2;c3;c4;c5;c6;c7;c8;c9]
+Proof
   Cases \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
   \\ Cases_on `t` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
   \\ Cases_on `t'` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
@@ -1657,11 +1674,14 @@ val expand_list = store_thm("expand_list",
   \\ Cases_on `t'` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
   \\ Cases_on `t` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11]
   \\ Cases_on `t'` \\ SIMP_TAC std_ss [LENGTH,ADD1,CONS_11,NOT_CONS_NIL]
-  \\ DECIDE_TAC);
+  \\ DECIDE_TAC
+QED
 
-val EL_CONS = store_thm("EL_CONS",
-  ``!n x xs. (EL n (x::xs)) = if n = 0 then x else EL (n-1) xs``,
-  Cases \\ SIMP_TAC std_ss [EL,HD,TL,ADD1]);
+Theorem EL_CONS:
+    !n x xs. (EL n (x::xs)) = if n = 0 then x else EL (n-1) xs
+Proof
+  Cases \\ SIMP_TAC std_ss [EL,HD,TL,ADD1]
+QED
 
 val lisp_inv_cs_read_blast = blastLib.BBLAST_PROVE
   ``(w2w (w1:word32) << 32 !! w2w (w2:word32) = w:word64) =
@@ -1714,16 +1734,20 @@ val lisp_inv_cs_read = prove(
     \\ IMP_RES_TAC one_fun2set_IMP \\ FULL_SIMP_TAC std_ss [DIFF_UNION]
     \\ FULL_SIMP_TAC std_ss [IN_DIFF]) |> SIMP_RULE std_ss [];
 
-val ref_static_APPEND = store_thm("ref_static_APPEND",
-  ``!xs ys a.
+Theorem ref_static_APPEND:
+    !xs ys a.
       ref_static a (xs ++ ys) =
-      ref_static a xs * ref_static (a + n2w (8 * LENGTH xs)) ys``,
+      ref_static a xs * ref_static (a + n2w (8 * LENGTH xs)) ys
+Proof
   Induct \\ ASM_SIMP_TAC std_ss [APPEND,ref_static_def,SEP_CLAUSES,LENGTH,
-    WORD_ADD_0,word64_3232_def,LET_DEF,word_arith_lemma1,MULT_CLAUSES,STAR_ASSOC]);
+    WORD_ADD_0,word64_3232_def,LET_DEF,word_arith_lemma1,MULT_CLAUSES,STAR_ASSOC]
+QED
 
-val UPDATE_NTH_CONS = store_thm("UPDATE_NTH_CONS",
-  ``UPDATE_NTH n x (y::ys) = if n = 0 then x::ys else y::UPDATE_NTH (n-1) x ys``,
-  Cases_on `n` \\ SIMP_TAC std_ss [UPDATE_NTH_def,ADD1]);
+Theorem UPDATE_NTH_CONS:
+    UPDATE_NTH n x (y::ys) = if n = 0 then x::ys else y::UPDATE_NTH (n-1) x ys
+Proof
+  Cases_on `n` \\ SIMP_TAC std_ss [UPDATE_NTH_def,ADD1]
+QED
 
 val lisp_inv_cs_write = prove(
   ``^LISP ==>
@@ -2363,9 +2387,11 @@ val bc_symbols_ok_IMP = prove(
   \\ ASM_SIMP_TAC std_ss [bc_symbols_ok_def,bs2bytes_def,bc_ref_def,
        MEM_LIST_FIND_LEMMA,MEM_APPEND]);
 
-val code_heap_add_symbol = store_thm("code_heap_add_symbol",
-  ``code_heap code (sym,base_ptr,curr_ptr,space_left,dh,h) ==>
-    code_heap code (sym ++ [s],base_ptr,curr_ptr,space_left,dh,h)``,
+Theorem code_heap_add_symbol:
+    code_heap code (sym,base_ptr,curr_ptr,space_left,dh,h) ==>
+    code_heap code (sym ++ [s],base_ptr,curr_ptr,space_left,dh,h)
+Proof
   Cases_on `code` \\ SIMP_TAC std_ss [code_heap_def] \\ REPEAT STRIP_TAC
   \\ Q.LIST_EXISTS_TAC [`bs`,`hs`] \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC bc_symbols_ok_IMP \\ ASM_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC bc_symbols_ok_IMP \\ ASM_SIMP_TAC std_ss []
+QED

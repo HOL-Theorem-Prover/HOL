@@ -91,17 +91,21 @@ STRIP_TAC THEN HO_MATCH_MP_TAC apply_ts_ind THEN
 SRW_TAC [][apply_ts_thm] THEN
 Cases_on `FLOOKUP s t` THEN SRW_TAC [][] );
 
-val collapse_noids = store_thm("collapse_noids",
-  ``wfs s ==> noids (collapse s)``,
+Theorem collapse_noids:
+    wfs s ==> noids (collapse s)
+Proof
   rw[noids_def,FLOOKUP_DEF] >>
   spose_not_then strip_assume_tac >>
   `v ∈ FDOM s` by fs[collapse_def] >>
   imp_res_tac collapse_FAPPLY_eq_walkstar >>
   rfs[] >>
   Cases_on`vwalk s v` >> rfs[] >> rw[] >>
-  metis_tac[vwalk_no_cycles])
+  metis_tac[vwalk_no_cycles]
+QED
 
-val wfs_collapse = store_thm("wfs_collapse",
-  ``wfs s ==> wfs (collapse s)``,
-  metis_tac[collapse_idempotent,collapse_noids,wfs_idempotent])
+Theorem wfs_collapse:
+    wfs s ==> wfs (collapse s)
+Proof
+  metis_tac[collapse_idempotent,collapse_noids,wfs_idempotent]
+QED
 

@@ -15,17 +15,18 @@ Definition PARITY_def:
 End
 
 
-val UNIQUENESS_LEMMA = store_thm(
-  "UNIQUENESS_LEMMA",
-  ``!inp out.
+Theorem UNIQUENESS_LEMMA:
+    !inp out.
       (out 0 = T) /\
       (!t. out (SUC t) = if inp (SUC t) then ~out t else out t)
          ==>
-      !t. out t = PARITY t inp``,
+      !t. out t = PARITY t inp
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN Induct THENL [
     ASM_REWRITE_TAC [PARITY_def],
     ASM_REWRITE_TAC [PARITY_def]
-  ]);
+  ]
+QED
 
 
 Definition ONE_def:   ONE(out:num->bool) = !t. out t = T
@@ -69,12 +70,13 @@ val PARITY_LEMMA = prove(
   ]);
 
 
-val PARITY_CORRECT = store_thm(
-  "PARITY_CORRECT",
-    ``!inp out. PARITY_IMP(inp,out)
+Theorem PARITY_CORRECT:
+      !inp out. PARITY_IMP(inp,out)
                    ==>
-                !t. out t = PARITY t inp``,
+                !t. out t = PARITY t inp
+Proof
     RW_TAC std_ss []
       THEN MATCH_MP_TAC UNIQUENESS_LEMMA
-      THEN PROVE_TAC [PARITY_LEMMA]);
+      THEN PROVE_TAC [PARITY_LEMMA]
+QED
 

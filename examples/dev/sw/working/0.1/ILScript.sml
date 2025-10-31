@@ -286,12 +286,14 @@ val WELL_FORMED_SUB_def = Define `
       (WELL_FORMED_SUB (CJ cond S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
       (WELL_FORMED_SUB (TR cond S1) = WELL_FORMED S1 /\ WF_TR (translate_condition cond, translate S1))`;
 
-val WELL_FORMED_SUB_thm = store_thm ("WELL_FORMED_SUB_thm",
-    ``!ir. WELL_FORMED ir = (WELL_FORMED_SUB ir /\ well_formed (translate ir))``,
+Theorem WELL_FORMED_SUB_thm:
+      !ir. WELL_FORMED ir = (WELL_FORMED_SUB ir /\ well_formed (translate ir))
+Proof
 
     Cases_on `ir` THEN
     REWRITE_TAC [WELL_FORMED_def, WELL_FORMED_SUB_def] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 
 val CHANGED_def = Define `CHANGED s ir =
@@ -305,14 +307,16 @@ val UNCHANGED_def = Define `UNCHANGED s ir =
         )`
 
 
-val UNCHANGED_THM = store_thm ("UNCHANGED_THM",
+Theorem UNCHANGED_THM:
 
-        ``!s ir.
+          !s ir.
                 UNCHANGED s ir =
-                EVERY (\r. !reg mem. (read (reg,mem) (toREG r) = read (run_ir ir (reg,mem)) (toREG r))) s``,
+                EVERY (\r. !reg mem. (read (reg,mem) (toREG r) = read (run_ir ir (reg,mem)) (toREG r))) s
+Proof
 
         SIMP_TAC std_ss [EVERY_MEM, UNCHANGED_def, ELIM_PFORALL] THEN
-        METIS_TAC[pairTheory.PAIR])
+        METIS_TAC[pairTheory.PAIR]
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Hoare Rules for IR                                                         *)
@@ -432,13 +436,15 @@ val IR_TR_IS_WELL_FORMED = Q.store_thm (
     PROVE_TAC [TR_IS_WELL_FORMED]
    );
 
-val WELL_FORMED_thm = store_thm ("WELL_FORMED_thm",
-    ``(WELL_FORMED (BLK stmL) = T) /\
+Theorem WELL_FORMED_thm:
+      (WELL_FORMED (BLK stmL) = T) /\
       (WELL_FORMED (SC S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
       (WELL_FORMED (CJ cond S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
-      (WELL_FORMED (TR cond S1) = WELL_FORMED S1 /\ WF_TR (translate_condition cond, translate S1))``,
+      (WELL_FORMED (TR cond S1) = WELL_FORMED S1 /\ WF_TR (translate_condition cond, translate S1))
+Proof
 
-      SIMP_TAC std_ss [BLOCK_IS_WELL_FORMED, IR_SC_IS_WELL_FORMED, IR_CJ_IS_WELL_FORMED, IR_TR_IS_WELL_FORMED]);
+      SIMP_TAC std_ss [BLOCK_IS_WELL_FORMED, IR_SC_IS_WELL_FORMED, IR_CJ_IS_WELL_FORMED, IR_TR_IS_WELL_FORMED]
+QED
 
 
 (*---------------------------------------------------------------------------------*)

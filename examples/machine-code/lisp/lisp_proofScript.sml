@@ -924,11 +924,12 @@ Definition LISP_EVAL_def:
     FST (lisp_eval (exp,Sym "nil",Sym "nil",Sym "nil",Sym "nil",alist,limit))
 End
 
-val LISP_EVAL_CORRECT = store_thm("LISP_EVAL_CORRECT",
-  ``!exp alist result l.
+Theorem LISP_EVAL_CORRECT:
+    !exp alist result l.
       R_ev (exp,alist) result ==>
       (LISP_EVAL (term2sexp exp, alist2sexp (fmap2list alist),l) =
-       sexpression2sexp result)``,
+       sexpression2sexp result)
+Proof
   REPEAT STRIP_TAC
   THEN IMP_RES_TAC R_lisp_eval_ok
   THEN FULL_SIMP_TAC std_ss [lisp_eval_ok_def,LISP_EVAL_def]
@@ -938,14 +939,16 @@ val LISP_EVAL_CORRECT = store_thm("LISP_EVAL_CORRECT",
   THEN ONCE_REWRITE_TAC [lisp_eval_def]
   THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_FUNC``]
   THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_EVAL``]
-  THEN REWRITE_TAC [TASK_EVAL_def,isDot_def]);
+  THEN REWRITE_TAC [TASK_EVAL_def,isDot_def]
+QED
 
-val LISP_EVAL_LIMIT_CORRECT = store_thm("LISP_EVAL_LIMIT_CORRECT",
-  ``!exp alist result l.
+Theorem LISP_EVAL_LIMIT_CORRECT:
+    !exp alist result l.
       R_ev (exp,alist) result ==>
       ((SND o SND o SND o SND o SND o SND)
          (lisp_eval (term2sexp exp, Sym "nil", Sym "nil", Sym "nil",
-                     Sym "nil", alist2sexp (fmap2list alist),l)) = l)``,
+                     Sym "nil", alist2sexp (fmap2list alist),l)) = l)
+Proof
   REPEAT STRIP_TAC
   THEN IMP_RES_TAC R_lisp_eval_ok
   THEN FULL_SIMP_TAC std_ss [lisp_eval_ok_def,LISP_EVAL_def]
@@ -955,5 +958,6 @@ val LISP_EVAL_LIMIT_CORRECT = store_thm("LISP_EVAL_LIMIT_CORRECT",
   THEN ONCE_REWRITE_TAC [lisp_eval_def]
   THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_FUNC``]
   THEN REWRITE_TAC [EVAL ``TASK_CONT = TASK_EVAL``]
-  THEN REWRITE_TAC [TASK_EVAL_def,isDot_def]);
+  THEN REWRITE_TAC [TASK_EVAL_def,isDot_def]
+QED
 

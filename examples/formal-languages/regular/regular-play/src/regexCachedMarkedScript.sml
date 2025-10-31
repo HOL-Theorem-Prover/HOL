@@ -96,81 +96,81 @@ End
 (* rewrite theorems *)
 (* ----------------------------------------------------------------------------- *)
 (* rewrites for cempty and cfinal *)
-val cempty_DEF = store_thm ("cempty_DEF", ``
+Theorem cempty_DEF:
          (          cempty (CMEps)         = T) /\
          (!b c.     cempty (CMSym b c)     = F) /\
          (!e f p q. cempty (CMAlt e f p q) = e) /\
          (!e f p q. cempty (CMSeq e f p q) = e) /\
          (!  f r.   cempty (CMRep   f r)   = T)
-``,
+Proof
 
   REWRITE_TAC [cempty_def]
-);
-val cfinal_DEF = store_thm ("cfinal_DEF", ``
+QED
+Theorem cfinal_DEF:
          (          cfinal (CMEps)         = F) /\
          (!b c.     cfinal (CMSym b c)     = b) /\
          (!e f p q. cfinal (CMAlt e f p q) = f) /\
          (!e f p q. cfinal (CMSeq e f p q) = f) /\
          (!  f r.   cfinal (CMRep   f r)   = f)
-``,
+Proof
 
   REWRITE_TAC [cfinal_def]
-);
+QED
 
 (* rewrites for cmEps, cmSym, cmAlt, cmSeq, and cmRep *)
-val cmX_DEF = store_thm ("cmX_DEF", ``
+Theorem cmX_DEF:
          (      cmEps     = CMEps                                                                          ) /\
          (!b c. cmSym b c = CMSym b c                                                                      ) /\
          (!p q. cmAlt p q = CMAlt ((cempty p) \/ (cempty q)) ((cfinal p) \/ (cfinal q)) p q                ) /\
          (!p q. cmSeq p q = CMSeq ((cempty p) /\ (cempty q)) (((cfinal p) /\ (cempty q)) \/ (cfinal q)) p q) /\
          (!r.   cmRep r   = CMRep (cfinal r) r                                                             )
-``,
+Proof
 
   REWRITE_TAC [cmEps_def, cmSym_def, cmAlt_def, cmSeq_def, cmRep_def]
-);
+QED
 
 (* rewrites for CACHE_REG and UNCACHE_REG *)
-val CACHE_REG_DEF = store_thm ("CACHE_REG_DEF", ``
+Theorem CACHE_REG_DEF:
          (      CACHE_REG (MEps)          = cmEps                            ) /\
          (!b c. CACHE_REG (MSym b (c:'a)) = cmSym b c                        ) /\
          (!p q. CACHE_REG (MAlt p q)      = cmAlt (CACHE_REG p) (CACHE_REG q)) /\
          (!p q. CACHE_REG (MSeq p q)      = cmSeq (CACHE_REG p) (CACHE_REG q)) /\
          (!r.   CACHE_REG (MRep r)        = cmRep (CACHE_REG r)              )
-``,
+Proof
 
   REWRITE_TAC [CACHE_REG_def]
-);
-val UNCACHE_REG_DEF = store_thm ("UNCACHE_REG_DEF", ``
+QED
+Theorem UNCACHE_REG_DEF:
          (        UNCACHE_REG (CMEps)              = MEps                                ) /\
          (!b c.   UNCACHE_REG (CMSym b (c:'a))     = MSym b c                            ) /\
          (!e f p q. UNCACHE_REG (CMAlt e f p q)    = MAlt (UNCACHE_REG p) (UNCACHE_REG q)) /\
          (!e f p q. UNCACHE_REG (CMSeq e f p q)    = MSeq (UNCACHE_REG p) (UNCACHE_REG q)) /\
          (!  f r.   UNCACHE_REG (CMRep   f r)      = MRep (UNCACHE_REG r)                )
-``,
+Proof
 
   REWRITE_TAC [UNCACHE_REG_def]
-);
+QED
 
 (* rewrites for cshift *)
-val cshift_DEF = store_thm ("cshift_DEF", ``
+Theorem cshift_DEF:
          (!m c.         cshift m (CMEps)            c = cmEps                                                            ) /\
          (!m b x c.     cshift m (CMSym b (x:'a))   c = cmSym (m /\ (x = c)) x                                           ) /\
          (!m e f p q c. cshift m (CMAlt e f p q)    c = cmAlt (cshift m p c) (cshift m q c)                              ) /\
          (!m e f p q c. cshift m (CMSeq e f p q)    c = cmSeq (cshift m p c) (cshift ((m /\ (cempty p)) \/ cfinal p) q c)) /\
          (!m   f r c.   cshift m (CMRep   f r)      c = cmRep (cshift (m \/ (cfinal r)) r c)                             )
-``,
+Proof
 
   REWRITE_TAC [cshift_def]
-);
+QED
 
 (* rewrites for acceptCM *)
-val acceptCM_DEF = store_thm ("acceptCM_DEF", ``
+Theorem acceptCM_DEF:
          (!r.      acceptCM r []           = cempty r                                   ) /\
          (!r c cs. acceptCM r ((c:'a)::cs) = cfinal (FOLDL (cshift F) (cshift T r c) cs))
-``,
+Proof
 
   REWRITE_TAC [acceptCM_def]
-);
+QED
 
 
 
@@ -209,15 +209,15 @@ Definition CMREG_WELLFORMED_def:
 End
 
 
-val CMREG_SUBEXP_WELLFORMED_thm = store_thm ("CMREG_SUBEXP_WELLFORMED_thm", ``
+Theorem CMREG_SUBEXP_WELLFORMED_thm:
          (!cmr s. (CMREG_WELLFORMED cmr) ==> (CMREG_SUBEXP s cmr) ==> (CMREG_WELLFORMED s))
-``,
+Proof
 
   Induct_on `cmr` >> (
     ASM_REWRITE_TAC [CMREG_WELLFORMED_def, CMREG_SUBEXP_def] >>
     METIS_TAC [CMREG_WELLFORMED_def, CMREG_SUBEXP_def]
   )
-);
+QED
 
 
 
@@ -238,90 +238,90 @@ val CMREG_SUBEXP_WELLFORMED_thm = store_thm ("CMREG_SUBEXP_WELLFORMED_thm", ``
 
 
 (* CACHE/UNCACHE inverses and wellformedness *)
-val CACHE_UNCACHE_thm = store_thm ("CACHE_UNCACHE_thm", ``
+Theorem CACHE_UNCACHE_thm:
          (!mr. (UNCACHE_REG (CACHE_REG mr)) = mr)
-``,
+Proof
 
   Induct_on `mr` >> (
     ASM_REWRITE_TAC [CACHE_REG_DEF, cmX_DEF, UNCACHE_REG_DEF]
   )
-);
+QED
 
-val WELLFORMED_cempty_thm = store_thm ("WELLFORMED_cempty_thm", ``
+Theorem WELLFORMED_cempty_thm:
          (!cmr. (CMREG_WELLFORMED cmr) ==> ((cempty cmr) = empty (UNCACHE_REG cmr)))
-``,
+Proof
 
   Induct_on `cmr` >> (
     METIS_TAC [CMREG_WELLFORMED_def, cempty_DEF, empty_DEFs, UNCACHE_REG_DEF]
   )
-);
+QED
 
-val WELLFORMED_cfinal_thm = store_thm ("WELLFORMED_cfinal_thm", ``
+Theorem WELLFORMED_cfinal_thm:
          (!cmr. (CMREG_WELLFORMED cmr) ==> ((cfinal cmr) = final (UNCACHE_REG cmr)))
-``,
+Proof
 
   Induct_on `cmr` >> (
     METIS_TAC [CMREG_WELLFORMED_def, cfinal_DEF, final_DEFs, UNCACHE_REG_DEF]
   )
-);
+QED
 
-val UNCACHE_CACHE_thm = store_thm ("UNCACHE_CACHE_thm", ``
+Theorem UNCACHE_CACHE_thm:
          (!cmr. (CMREG_WELLFORMED cmr) ==> ((CACHE_REG (UNCACHE_REG cmr)) = cmr))
-``,
+Proof
 
   Induct_on `cmr` >> (
     ASM_SIMP_TAC (std_ss++CMReg_ss) [UNCACHE_REG_DEF, CACHE_REG_DEF, cmX_DEF] >>
     METIS_TAC [CMREG_WELLFORMED_def, WELLFORMED_cempty_thm, WELLFORMED_cfinal_thm]
   )
-);
+QED
 
-val CACHE_REG_WELLFORMED_thm = store_thm ("CACHE_REG_WELLFORMED_thm", ``
+Theorem CACHE_REG_WELLFORMED_thm:
          (!mr. CMREG_WELLFORMED (CACHE_REG mr))
-``,
+Proof
 
   Induct_on `mr` >> (
     ASM_REWRITE_TAC [CACHE_REG_DEF, cmX_DEF, CMREG_WELLFORMED_def] >>
     METIS_TAC [CMREG_WELLFORMED_def, WELLFORMED_cempty_thm, WELLFORMED_cfinal_thm]
   )
-);
+QED
 
 
 (* cshift preserves wellformedness, and relation to shift *)
-val WELLFORMED_INV_and_cshift_shift_thm = store_thm ("WELLFORMED_INV_and_cshift_shift_thm", ``
+Theorem WELLFORMED_INV_and_cshift_shift_thm:
          (!cmr m c. (CMREG_WELLFORMED cmr) ==> (
                                     (CMREG_WELLFORMED (cshift m cmr c)) /\
                                     ((shift m (UNCACHE_REG cmr) c) = (UNCACHE_REG (cshift m cmr c)))
          ))
-``,
+Proof
 
   Induct_on `cmr` >> (
     ASM_REWRITE_TAC [UNCACHE_REG_DEF, shift_DEFs, cshift_DEF, cmX_DEF, CMREG_WELLFORMED_def] >>
     ASM_SIMP_TAC (std_ss) [CMREG_WELLFORMED_def, WELLFORMED_cempty_thm, WELLFORMED_cfinal_thm]
   )
-);
+QED
 
 (* acceptCM, relation to accept, if WELLFORMED&UNMARKED cmr *)
-val WELLFORMED_INV_and_FOLDL_cshift_shift_thm = store_thm ("WELLFORMED_INV_and_FOLDL_cshift_shift_thm", ``
+Theorem WELLFORMED_INV_and_FOLDL_cshift_shift_thm:
          (!cmr m cs. (CMREG_WELLFORMED cmr) ==> (
                                     (CMREG_WELLFORMED (FOLDL (cshift m) cmr cs)) /\
                                     ((FOLDL (shift m) (UNCACHE_REG cmr) cs) = (UNCACHE_REG (FOLDL (cshift m) cmr cs)))
          ))
-``,
+Proof
 
   Induct_on `cs` >> (
     ASM_SIMP_TAC list_ss [WELLFORMED_INV_and_cshift_shift_thm]
   )
-);
+QED
 
-val WELLFORMED_acceptCM_acceptM_thm = store_thm ("WELLFORMED_acceptCM_acceptM_thm", ``
+Theorem WELLFORMED_acceptCM_acceptM_thm:
          (!cmr w. (CMREG_WELLFORMED cmr) ==> ((acceptCM cmr w) <=> (acceptM (UNCACHE_REG cmr) w)))
-``,
+Proof
 
   Cases_on `w` >> (
     REWRITE_TAC [acceptM_DEFs, acceptCM_DEF, WELLFORMED_cempty_thm] >>
     METIS_TAC [WELLFORMED_INV_and_cshift_shift_thm, WELLFORMED_INV_and_FOLDL_cshift_shift_thm, WELLFORMED_cfinal_thm]
   )
-);
+QED
 
 
 
@@ -333,15 +333,17 @@ val WELLFORMED_acceptCM_acceptM_thm = store_thm ("WELLFORMED_acceptCM_acceptM_th
 
 (* correctness of definition *)
 (* ----------------------------------------------------------------------------- *)
-val acceptCM_acceptM_thm = store_thm("acceptCM_acceptM_thm", ``!mr w. acceptCM (CACHE_REG mr) w <=> acceptM mr w``,
+Theorem acceptCM_acceptM_thm:   !mr w. acceptCM (CACHE_REG mr) w <=> acceptM mr w
+Proof
 
   METIS_TAC [WELLFORMED_acceptCM_acceptM_thm, CACHE_UNCACHE_thm, CACHE_REG_WELLFORMED_thm]
-);
+QED
 
-val acceptM_correctness_thm = store_thm("acceptM_correctness_thm", ``!r w. acceptCM (CACHE_REG (MARK_REG r)) w <=> w IN (language_of r)``,
+Theorem acceptM_correctness_thm:   !r w. acceptCM (CACHE_REG (MARK_REG r)) w <=> w IN (language_of r)
+Proof
 
   REWRITE_TAC [acceptCM_acceptM_thm, acceptM_accept_thm, accept_correctness_thm]
-);
+QED
 
 
 

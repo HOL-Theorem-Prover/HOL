@@ -21,61 +21,68 @@ Definition Inductives_def:
   Inductives = SPEC0 (λA. {} ∈ A ∧ ∀x. x ∈ A ⇒ vSUC x ∈ A)
 End
 
-val inductive_Inductives = store_thm(
-  "inductive_Inductives",
-  ``inductive A ⇔ A ∈ Inductives``,
-  srw_tac [][inductive_def, Inductives_def, SPEC0]);
+Theorem inductive_Inductives:
+    inductive A ⇔ A ∈ Inductives
+Proof
+  srw_tac [][inductive_def, Inductives_def, SPEC0]
+QED
 
 Definition Nats_def:
   Nats = SPEC0 (λn. ∀s. inductive s ⇒ n ∈ s)
 End
 
-val EMPTY_IN_Nats = store_thm(
-  "EMPTY_IN_Nats",
-  ``{} ∈ Nats``,
-  rw [Nats_def, SPEC0, inductive_def]);
+Theorem EMPTY_IN_Nats:
+    {} ∈ Nats
+Proof
+  rw [Nats_def, SPEC0, inductive_def]
+QED
 
-val vSUC_IN_Nats_I = store_thm(
-  "vSUC_IN_Nats_I",
-  ``n ∈ Nats ⇒ vSUC n ∈ Nats``,
-  rw [Nats_def, SPEC0, inductive_def, vSUC_def]);
+Theorem vSUC_IN_Nats_I:
+    n ∈ Nats ⇒ vSUC n ∈ Nats
+Proof
+  rw [Nats_def, SPEC0, inductive_def, vSUC_def]
+QED
 
-val SET_fromNat = store_thm(
-  "SET_fromNat",
-  ``SET (fromNat n)``,
-  Induct_on `n` >> srw_tac [][fromNat_def, vSUC_def]);
+Theorem SET_fromNat:
+    SET (fromNat n)
+Proof
+  Induct_on `n` >> srw_tac [][fromNat_def, vSUC_def]
+QED
 val _ = export_rewrites ["SET_fromNat"]
 
-val fromNat_in_Nats = store_thm(
-  "fromNat_in_Nats",
-  ``∀n. fromNat n ∈ Nats``,
+Theorem fromNat_in_Nats:
+    ∀n. fromNat n ∈ Nats
+Proof
   Induct THEN SRW_TAC [][fromNat_def] THENL [
     SRW_TAC [][Nats_def, SPEC0] THEN
     fs [inductive_def],
     fs [Nats_def, SPEC0, vSUC_def] >>
     fs [inductive_def, vSUC_def]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["fromNat_in_Nats"]
 
-val NOT_IN_0 = store_thm(
-  "NOT_IN_0",
-  ``x ∉ 0``,
-  SRW_TAC [][fromNat_def]);
+Theorem NOT_IN_0:
+    x ∉ 0
+Proof
+  SRW_TAC [][fromNat_def]
+QED
 val _ = export_rewrites ["NOT_IN_0"]
 
-val vSUC_NOT_0 = store_thm(
-  "vSUC_NOT_0",
-  ``vSUC n ≠ 0``,
+Theorem vSUC_NOT_0:
+    vSUC n ≠ 0
+Proof
   SRW_TAC [][vSUC_def, EXTENSION] THEN
   Cases_on `n = 0` THEN SRW_TAC [][] THENL [
     Q.EXISTS_TAC `0` THEN SRW_TAC [][],
     METIS_TAC [fromNat_def, EMPTY_UNIQUE]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["vSUC_NOT_0"]
 
-val Nats_SET = store_thm(
-  "Nats_SET",
-  ``SET Nats``,
+Theorem Nats_SET:
+    SET Nats
+Proof
   match_mp_tac SUBSETS_ARE_SETS >>
   strip_assume_tac INFINITY >>
   qexists_tac `w` >> simp [SUBSET_def] >>
@@ -85,19 +92,22 @@ val Nats_SET = store_thm(
   qx_gen_tac `e` >> strip_tac >>
   `∃y. y ∈ w ∧ ∀u. u ∈ y ⇔ u ∈ e ∨ (u = e)` by metis_tac[] >>
   qsuff_tac `vSUC e = y` >- rw[] >>
-  rw [vSUC_def, Once EXTENSION] >> metis_tac [SET_def]);
+  rw [vSUC_def, Once EXTENSION] >> metis_tac [SET_def]
+QED
 
-val Nats_inductive = store_thm(
-  "Nats_inductive",
-  ``Nats ∈ Inductives``,
+Theorem Nats_inductive:
+    Nats ∈ Inductives
+Proof
   rw [SPEC0, SUBSET_def, Inductives_def, Nats_SET, EMPTY_IN_Nats,
-      vSUC_IN_Nats_I]);
+      vSUC_IN_Nats_I]
+QED
 
-val Nats_least_inductive = store_thm(
-  "Nats_least_inductive",
-  ``P ∈ Inductives ⇒ Nats ⊆ P``,
+Theorem Nats_least_inductive:
+    P ∈ Inductives ⇒ Nats ⊆ P
+Proof
   rw[Inductives_def, SUBSET_def] >>
-  fs [Nats_def, inductive_def])
+  fs [Nats_def, inductive_def]
+QED
 
 val Nats_SETs = prove(``n ∈ Nats ⇒ SET n``, metis_tac [SET_def])
 val _ = augment_srw_ss [rewrites [Nats_SETs]]
@@ -122,16 +132,18 @@ Definition transitive_def:
   transitive X ⇔ ∀x. x ∈ X ⇒ x ⊆ X
 End
 
-val transitive_ALT = store_thm(
-  "transitive_ALT",
-  ``transitive X ⇔ ∀x y. x ∈ y ∧ y ∈ X ⇒ x ∈ X``,
-  rw [transitive_def] >> metis_tac [SUBSET_def]);
+Theorem transitive_ALT:
+    transitive X ⇔ ∀x y. x ∈ y ∧ y ∈ X ⇒ x ∈ X
+Proof
+  rw [transitive_def] >> metis_tac [SUBSET_def]
+QED
 
-val Nats_transitive = store_thm(
-  "Nats_transitive",
-  ``∀n. n ∈ Nats ⇒ transitive n``,
+Theorem Nats_transitive:
+    ∀n. n ∈ Nats ⇒ transitive n
+Proof
   ho_match_mp_tac nat_induction >> conj_tac >> rw[transitive_def] >>
-  fs [vSUC_def, SUBSET_def] >> metis_tac []);
+  fs [vSUC_def, SUBSET_def] >> metis_tac []
+QED
 
 (* pointless given axiom of foundation - in its absence, this proof works
 val Nats_not_selfmembers = store_thm(
@@ -144,22 +156,24 @@ val Nats_not_selfmembers = store_thm(
   ]);
 *)
 
-val pre_IN_vSUC = store_thm(
-  "pre_IN_vSUC",
-  ``SET n ⇒ n ∈ vSUC n``,
-  rw[vSUC_def]);
+Theorem pre_IN_vSUC:
+    SET n ⇒ n ∈ vSUC n
+Proof
+  rw[vSUC_def]
+QED
 
-val SET_vSUC = store_thm(
-  "SET_vSUC",
-  ``SET (vSUC n) = SET n``,
-  rw[vSUC_def, EQ_IMP_THM]);
+Theorem SET_vSUC:
+    SET (vSUC n) = SET n
+Proof
+  rw[vSUC_def, EQ_IMP_THM]
+QED
 val _ = export_rewrites ["SET_vSUC"]
 
 (* doing this the longwinded way, with appeals to foundation all over the
    place gives a stronger rewrite rule without requiring n and m to be ∈ Nats *)
-val vSUC_11 = store_thm(
-  "vSUC_11",
-  ``∀n m. ((vSUC n = vSUC m) ⇔ (n = m))``,
+Theorem vSUC_11:
+    ∀n m. ((vSUC n = vSUC m) ⇔ (n = m))
+Proof
   rw[EQ_IMP_THM] >> Cases_on `SET n` >| [
     fs[vSUC_def] >> rw[EXTENSION] >>
     `SET m` by metis_tac [UNION_SET_CLOSED, SET_INSERT, EMPTY_SET] >>
@@ -182,21 +196,24 @@ val vSUC_11 = store_thm(
     `({n} = {}) ∧ ({m} = {})`
        by metis_tac [INSERT_def, PCLASS_SINGC_EMPTY, EMPTY_UNION] >>
     fs[]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["vSUC_11"]
 
-val Nats_CASES = store_thm(
-  "Nats_CASES",
-  ``∀n. n ∈ Nats ⇔ (n = 0) ∨ ∃m. m ∈ Nats ∧ (n = vSUC m)``,
+Theorem Nats_CASES:
+    ∀n. n ∈ Nats ⇔ (n = 0) ∨ ∃m. m ∈ Nats ∧ (n = vSUC m)
+Proof
   simp_tac (srw_ss() ++ DNF_ss)[EQ_IMP_THM, vSUC_IN_Nats_I] >>
-  Induct_on `n ∈ Nats` >> metis_tac []);
+  Induct_on `n ∈ Nats` >> metis_tac []
+QED
 
-val vSUC_IN_NATS = store_thm(
-  "vSUC_IN_NATS",
-  ``∀n. vSUC n ∈ Nats ⇔ n ∈ Nats``,
+Theorem vSUC_IN_NATS:
+    ∀n. vSUC n ∈ Nats ⇔ n ∈ Nats
+Proof
   simp[EQ_IMP_THM, vSUC_IN_Nats_I] >>
   qsuff_tac `∀m. m ∈ Nats ⇒ ∀n. (m = vSUC n) ⇒ n ∈ Nats` >- metis_tac [] >>
-  Induct_on `m ∈ Nats` >> simp[]);
+  Induct_on `m ∈ Nats` >> simp[]
+QED
 val _ = export_rewrites ["vSUC_IN_NATS"]
 
 (* less than or equal *)
@@ -210,67 +227,75 @@ End
 val _ = overload_on ("<=", ``λx y. 〈x·y〉 ∈ nle``)
 val _ = overload_on ("<", ``λx:vbgc y. ¬ (y ≤ x)``)
 
-val ZERO_LE = store_thm(
-  "ZERO_LE",
-  ``∀n. n ∈ Nats ⇒ 0 ≤ n``,
-  rw [nle_def]);
+Theorem ZERO_LE:
+    ∀n. n ∈ Nats ⇒ 0 ≤ n
+Proof
+  rw [nle_def]
+QED
 val _ = export_rewrites ["ZERO_LE"]
 
-val nle_Nats = store_thm(
-  "nle_Nats",
-  ``n ≤ m ⇒ n ∈ Nats ∧ m ∈ Nats``,
+Theorem nle_Nats:
+    n ≤ m ⇒ n ∈ Nats ∧ m ∈ Nats
+Proof
   rw[nle_def] >> pop_assum (qspec_then `Nats × Nats` mp_tac) >>
-  asm_simp_tac (srw_ss() ++ CONJ_ss)[CROSS_def]);
+  asm_simp_tac (srw_ss() ++ CONJ_ss)[CROSS_def]
+QED
 
-val nle_induct = store_thm(
-  "nle_induct",
-  ``(∀n. n ∈ Nats ⇒ P 0 n) ∧
+Theorem nle_induct:
+    (∀n. n ∈ Nats ⇒ P 0 n) ∧
     (∀n m. n ∈ Nats ∧ m ∈ Nats ∧ P n m ⇒ P (vSUC n) (vSUC m)) ⇒
-    ∀n m. n ≤ m ⇒ P n m``,
+    ∀n m. n ≤ m ⇒ P n m
+Proof
   rw[nle_def] >>
   qsuff_tac `〈n·m〉 ∈ SPEC0 (λp. ∃x y. (p = 〈x·y〉) ∧ P x y)` >-
     simp_tac (srw_ss()) [] >>
-  pop_assum match_mp_tac >> simp[]);
+  pop_assum match_mp_tac >> simp[]
+QED
 val _ = IndDefLib.export_rule_induction "nle_induct"
 
-val vSUC_LE_I = store_thm(
-  "vSUC_LE_I",
-  ``n ≤ m ⇒ vSUC n ≤ vSUC m``,
+Theorem vSUC_LE_I:
+    n ≤ m ⇒ vSUC n ≤ vSUC m
+Proof
   strip_tac >> imp_res_tac nle_Nats >>
-  fs[nle_def]);
+  fs[nle_def]
+QED
 
-val LE_CASES = store_thm(
-  "LE_CASES",
-  ``n ≤ m ⇔ (n = 0) ∧ m ∈ Nats ∨
+Theorem LE_CASES:
+    n ≤ m ⇔ (n = 0) ∧ m ∈ Nats ∨
             ∃n0 m0. n0 ∈ Nats ∧ m0 ∈ Nats ∧ (n = vSUC n0) ∧
-                    (m = vSUC m0) ∧ n0 ≤ m0``,
+                    (m = vSUC m0) ∧ n0 ≤ m0
+Proof
   Tactical.REVERSE EQ_TAC >- (rw[] >> rw[vSUC_LE_I]) >>
   map_every qid_spec_tac [`m`, `n`] >> ho_match_mp_tac nle_induct >>
-  srw_tac [CONJ_ss][vSUC_LE_I] >> rw[vSUC_LE_I]);
+  srw_tac [CONJ_ss][vSUC_LE_I] >> rw[vSUC_LE_I]
+QED
 
-val vSUC_LE1 = store_thm(
-  "vSUC_LE1",
-  ``vSUC n ≤ vSUC m ⇔ n ≤ m``,
+Theorem vSUC_LE1:
+    vSUC n ≤ vSUC m ⇔ n ≤ m
+Proof
   eq_tac >-
      (asm_simp_tac (srw_ss() ++ CONJ_ss)
                    [SimpL ``(==>)``, Once LE_CASES] >> rw[]) >>
-  rw[vSUC_LE_I]);
+  rw[vSUC_LE_I]
+QED
 val _ = export_rewrites ["vSUC_LE1"]
 
-val vSUC_ZERO_LE = store_thm(
-  "vSUC_ZERO_LE",
-  ``¬ (vSUC n ≤ 0)``,
-  rw[Once LE_CASES]);
+Theorem vSUC_ZERO_LE:
+    ¬ (vSUC n ≤ 0)
+Proof
+  rw[Once LE_CASES]
+QED
 val _ = export_rewrites ["vSUC_ZERO_LE"]
 
 val LE_REFL0 = prove(
   ``∀n. n ∈ Nats ⇒ n ≤ n``,
   ho_match_mp_tac nat_induction >> rw[vSUC_LE_I])
 
-val LE_REFL = store_thm(
-  "LE_REFL",
-  ``n ≤ n ⇔ n ∈ Nats``,
-  metis_tac [nle_Nats, LE_REFL0]);
+Theorem LE_REFL:
+    n ≤ n ⇔ n ∈ Nats
+Proof
+  metis_tac [nle_Nats, LE_REFL0]
+QED
 val _ = export_rewrites ["LE_REFL"]
 
 val LE_ANTISYM0 = prove(
@@ -278,34 +303,38 @@ val LE_ANTISYM0 = prove(
   ho_match_mp_tac nle_induct >> simp[vSUC_LE1] >>
   rw[Once LE_CASES]);
 
-val LE_ANTISYM = store_thm(
-  "LE_ANTISYM",
-  ``∀n m. n ≤ m ∧ m ≤ n ⇒ (m = n)``,
-  metis_tac [LE_ANTISYM0]);
+Theorem LE_ANTISYM:
+    ∀n m. n ≤ m ∧ m ≤ n ⇒ (m = n)
+Proof
+  metis_tac [LE_ANTISYM0]
+QED
 
-val LE_TRANS = store_thm(
-  "LE_TRANS",
-  ``∀x y z. x ≤ y ∧ y ≤ z ⇒ x ≤ z``,
+Theorem LE_TRANS:
+    ∀x y z. x ≤ y ∧ y ≤ z ⇒ x ≤ z
+Proof
   qsuff_tac `∀x y. x ≤ y ⇒ ∀z. y ≤ z ⇒ x ≤ z` >- metis_tac [] >>
   ho_match_mp_tac nle_induct >> rw[] >|[
     `z ∈ Nats` by metis_tac [nle_Nats] >> rw[],
     pop_assum mp_tac >>
     asm_simp_tac (srw_ss() ++ CONJ_ss) [SimpL ``(==>)``, Once LE_CASES] >>
     asm_simp_tac (srw_ss() ++ DNF_ss)[]
-  ]);
+  ]
+QED
 
-val LE_TOTAL = store_thm(
-  "LE_TOTAL",
-  ``∀n m. n ∈ Nats ∧ m ∈ Nats ⇒ n ≤ m ∨ m ≤ n``,
+Theorem LE_TOTAL:
+    ∀n m. n ∈ Nats ∧ m ∈ Nats ⇒ n ≤ m ∨ m ≤ n
+Proof
   qsuff_tac `∀n. n ∈ Nats ⇒ ∀m. m ∈ Nats ⇒ n ≤ m ∨ m ≤ n` >- metis_tac[] >>
   ho_match_mp_tac nat_induction >> rw[] >>
-  qspec_then `m` mp_tac Nats_CASES >> rw[] >> rw[]);
+  qspec_then `m` mp_tac Nats_CASES >> rw[] >> rw[]
+QED
 
 
-val LESS_ZERO = store_thm(
-  "LESS_ZERO",
-  ``m ≤ 0 ⇔ (m = 0)``,
-  rw[Once LE_CASES]);
+Theorem LESS_ZERO:
+    m ≤ 0 ⇔ (m = 0)
+Proof
+  rw[Once LE_CASES]
+QED
 val _ = export_rewrites ["LESS_ZERO"]
 
 val LE_LT_EQ0 = prove(
@@ -315,29 +344,32 @@ val LE_LT_EQ0 = prove(
 (* DON'T USE THIS AS A REWRITE!
 
    It loops because the m < n on the right is really just ~(n <= m) *)
-val LE_LT_EQ = store_thm(
-  "LE_LT_EQ",
-  ``∀m n. m ≤ n ⇔ m ∈ Nats ∧ n ∈ Nats ∧ (m < n ∨ (m = n))``,
-  metis_tac [LE_LT_EQ0, LE_REFL, LE_TOTAL, nle_Nats]);
+Theorem LE_LT_EQ:
+    ∀m n. m ≤ n ⇔ m ∈ Nats ∧ n ∈ Nats ∧ (m < n ∨ (m = n))
+Proof
+  metis_tac [LE_LT_EQ0, LE_REFL, LE_TOTAL, nle_Nats]
+QED
 
-val LE_DISCRETE = store_thm(
-  "LE_DISCRETE",
-  ``∀m n. m ∈ Nats ∧ n ∈ Nats ⇒ m ≤ n ∨ vSUC n ≤ m``,
+Theorem LE_DISCRETE:
+    ∀m n. m ∈ Nats ∧ n ∈ Nats ⇒ m ≤ n ∨ vSUC n ≤ m
+Proof
   qsuff_tac `∀m. m ∈ Nats ⇒ ∀n. n ∈ Nats ⇒ m ≤ n ∨ vSUC n ≤ m` >- metis_tac[]>>
   Induct_on `m ∈ Nats` >> rw[] >> qspec_then `n` mp_tac Nats_CASES >>
-  asm_simp_tac (srw_ss() ++ DNF_ss)[DISJ_IMP_THM]);
+  asm_simp_tac (srw_ss() ++ DNF_ss)[DISJ_IMP_THM]
+QED
 
-val complete_induction = store_thm(
-  "complete_induction",
-  ``∀P.
-      (∀n. (∀m. m ∈ Nats ∧ m < n ⇒ P m) ⇒ P n) ⇒ ∀n. n ∈ Nats ⇒ P n``,
+Theorem complete_induction:
+    ∀P.
+      (∀n. (∀m. m ∈ Nats ∧ m < n ⇒ P m) ⇒ P n) ⇒ ∀n. n ∈ Nats ⇒ P n
+Proof
   gen_tac >> strip_tac >>
   qsuff_tac `∀n. n ∈ Nats ⇒ ∀m. m ≤ n ⇒ P m`
     >- metis_tac [LE_REFL] >>
   Induct_on `n ∈ Nats` >> srw_tac [CONJ_ss][] >>
   Cases_on `m ≤ n` >- metis_tac [] >>
   `m = vSUC n` by metis_tac [LE_DISCRETE, LE_LT_EQ] >> rw[] >>
-  metis_tac [LE_DISCRETE]);
+  metis_tac [LE_DISCRETE]
+QED
 
 val rwt = SUBSET_def |> Q.SPECL [`B`, `Nats`] |> EQ_IMP_RULE |> #1 |> UNDISCH
 

@@ -286,12 +286,14 @@ val WELL_FORMED_SUB_def = Define `
       (WELL_FORMED_SUB (CJ cond S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
       (WELL_FORMED_SUB (TR cond S1) = WELL_FORMED S1 /\ WF_TR (translate_condition cond, translate S1))`;
 
-val WELL_FORMED_SUB_thm = store_thm ("WELL_FORMED_SUB_thm",
-    ``!ir. WELL_FORMED ir = (WELL_FORMED_SUB ir /\ well_formed (translate ir))``,
+Theorem WELL_FORMED_SUB_thm:
+      !ir. WELL_FORMED ir = (WELL_FORMED_SUB ir /\ well_formed (translate ir))
+Proof
 
     Cases_on `ir` THEN
     REWRITE_TAC [WELL_FORMED_def, WELL_FORMED_SUB_def] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 
 val CHANGED_def = Define `CHANGED s ir =
@@ -308,13 +310,15 @@ val LIST_COUNT_def = Define `
         (LIST_COUNT 0 = []) /\
         (LIST_COUNT (SUC n) = n::(LIST_COUNT n))`
 
-val MEM_LIST_COUNT = store_thm ("MEM_LIST_COUNT",
-        ``!n m. MEM n (LIST_COUNT m) = (n < m)``,
+Theorem MEM_LIST_COUNT:
+          !n m. MEM n (LIST_COUNT m) = (n < m)
+Proof
 
         Induct_on `m` THENL [
                 SIMP_TAC list_ss [LIST_COUNT_def],
                 ASM_SIMP_TAC list_ss [LIST_COUNT_def]
-        ])
+        ]
+QED
 
 
 val USED_STACK_def = Define `USED_STACK size ir =
@@ -324,40 +328,44 @@ val USED_STACK_def = Define `USED_STACK size ir =
                 (!l. (MEM l (MAP (\off. base - n2w off) (LIST_COUNT size))) \/ (m ' l = m' ' l))
         )`;
 
-val USED_STACK_THM =
-        store_thm ("USED_STACK_THM",
-        ``USED_STACK size ir =
+Theorem USED_STACK_THM:
+          USED_STACK size ir =
         !r m r' m'. ((r', m') = run_ir ir (r, m)) ==> (
                 (!l. ~(MEM l (MAP (\off. preARM$MEM_ADDR (r ' 13w) - n2w off) (LIST_COUNT size))) ==> (m ' l = m' ' l))
-        )``,
+        )
+Proof
 
-        SIMP_TAC std_ss [USED_STACK_def, read_thm, IMP_DISJ_THM])
+        SIMP_TAC std_ss [USED_STACK_def, read_thm, IMP_DISJ_THM]
+QED
 
 
-val USED_STACK_ENLARGE =
-        store_thm ("USED_STACK_ENLARGE",
-        ``!ir size1 size2.
+Theorem USED_STACK_ENLARGE:
+          !ir size1 size2.
         ((size1 <= size2) /\ USED_STACK size1 ir) ==>
-        USED_STACK size2 ir``,
+        USED_STACK size2 ir
+Proof
 
         SIMP_TAC std_ss [USED_STACK_def, MEM_MAP, MEM_LIST_COUNT] THEN
         REPEAT STRIP_TAC THEN
         `!off. (off < size1) ==> (off < size2)` by DECIDE_TAC THEN
-        METIS_TAC[])
+        METIS_TAC[]
+QED
 
 
 val UNCHANGED_STACK_def = Define `UNCHANGED_STACK reglist stack_size ir = UNCHANGED reglist ir /\ USED_STACK stack_size ir`;
 
 
-val UNCHANGED_THM = store_thm ("UNCHANGED_THM",
+Theorem UNCHANGED_THM:
 
-        ``!s ir.
+          !s ir.
                 UNCHANGED s ir =
                 EVERY (\r. !reg mem. (read (run_ir ir (reg,mem)) (toREG r) =
-                        read (reg,mem) (toREG r))) s``,
+                        read (reg,mem) (toREG r))) s
+Proof
 
         SIMP_TAC std_ss [EVERY_MEM, UNCHANGED_def, ELIM_PFORALL] THEN
-        METIS_TAC[pairTheory.PAIR])
+        METIS_TAC[pairTheory.PAIR]
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Hoare Rules for IR                                                         *)
@@ -477,13 +485,15 @@ val IR_TR_IS_WELL_FORMED = Q.store_thm (
     PROVE_TAC [TR_IS_WELL_FORMED]
    );
 
-val WELL_FORMED_thm = store_thm ("WELL_FORMED_thm",
-    ``(WELL_FORMED (BLK stmL) = T) /\
+Theorem WELL_FORMED_thm:
+      (WELL_FORMED (BLK stmL) = T) /\
       (WELL_FORMED (SC S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
       (WELL_FORMED (CJ cond S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
-      (WELL_FORMED (TR cond S1) = WELL_FORMED S1 /\ WF_TR (translate_condition cond, translate S1))``,
+      (WELL_FORMED (TR cond S1) = WELL_FORMED S1 /\ WF_TR (translate_condition cond, translate S1))
+Proof
 
-      SIMP_TAC std_ss [BLOCK_IS_WELL_FORMED, IR_SC_IS_WELL_FORMED, IR_CJ_IS_WELL_FORMED, IR_TR_IS_WELL_FORMED]);
+      SIMP_TAC std_ss [BLOCK_IS_WELL_FORMED, IR_SC_IS_WELL_FORMED, IR_CJ_IS_WELL_FORMED, IR_TR_IS_WELL_FORMED]
+QED
 
 
 (*---------------------------------------------------------------------------------*)

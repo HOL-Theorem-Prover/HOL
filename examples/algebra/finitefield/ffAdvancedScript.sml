@@ -210,10 +210,11 @@ QED
 
 (* Theorem: s <<= r ==> VSpace s r.sum $* *)
 (* Proof: by field_is_vspace_over_subfield *)
-val subfield_is_vspace_scalar = store_thm(
-  "subfield_is_vspace_scalar",
-  ``!(r s):'a field. s <<= r ==> VSpace s r.sum $*``,
-  rw[field_is_vspace_over_subfield]);
+Theorem subfield_is_vspace_scalar:
+    !(r s):'a field. s <<= r ==> VSpace s r.sum $*
+Proof
+  rw[field_is_vspace_over_subfield]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> FiniteVSpace s r.sum $* *)
 (* Proof:
@@ -222,10 +223,11 @@ val subfield_is_vspace_scalar = store_thm(
     also FiniteField r /\ subfield s r ==> FINITE B   by subfield_carrier_finite
    Hence FiniteVSpace s r.sum $*                      by FiniteVSpace_def, field_carriers
 *)
-val finite_subfield_is_finite_vspace_scalar = store_thm(
-  "finite_subfield_is_finite_vspace_scalar",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==> FiniteVSpace s r.sum $*``,
-  metis_tac[FiniteField_def, FiniteVSpace_def, subfield_is_vspace_scalar, subfield_carrier_finite, field_carriers]);
+Theorem finite_subfield_is_finite_vspace_scalar:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==> FiniteVSpace s r.sum $*
+Proof
+  metis_tac[FiniteField_def, FiniteVSpace_def, subfield_is_vspace_scalar, subfield_carrier_finite, field_carriers]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> (CARD R = CARD B ** (r <:> s)) *)
 (* Proof:
@@ -234,12 +236,13 @@ val finite_subfield_is_finite_vspace_scalar = store_thm(
         = CARD (r.sum.carrier)          by field_carriers
         = (CARD B) ** (r <:> s)         by finite_vspace_card
 *)
-val finite_subfield_card = store_thm(
-  "finite_subfield_card",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==> (CARD R = CARD B ** (r <:> s))``,
+Theorem finite_subfield_card:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==> (CARD R = CARD B ** (r <:> s))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteVSpace s r.sum $*` by rw[finite_subfield_is_finite_vspace_scalar] >>
-  rw[GSYM finite_vspace_card]);
+  rw[GSYM finite_vspace_card]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> 0 < (r <:> s) *)
 (* Proof:
@@ -247,40 +250,44 @@ val finite_subfield_card = store_thm(
     and 1 < CARD R                      by finite_field_card_gt_1
      ==> 0 < (r <:> s)                  by ONE_LT_EXP
 *)
-val finite_subfield_dim_pos = store_thm(
-  "finite_subfield_dim_pos",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==> 0 < (r <:> s)``,
+Theorem finite_subfield_dim_pos:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==> 0 < (r <:> s)
+Proof
   rpt strip_tac >>
   `CARD R = CARD B ** (r <:> s)` by rw[finite_subfield_card] >>
   `1 < CARD R` by rw[finite_field_card_gt_1] >>
-  metis_tac[ONE_LT_EXP]);
+  metis_tac[ONE_LT_EXP]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> (CARD R = CARD B ** (r <:> s)) /\ 0 < (r <:> s) *)
 (* Proof: by finite_subfield_card, finite_subfield_dim_pos *)
-val finite_subfield_card_eqn = store_thm(
-  "finite_subfield_card_eqn",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==> (CARD R = CARD B ** (r <:> s)) /\ 0 < (r <:> s)``,
-  rw_tac std_ss[finite_subfield_card, finite_subfield_dim_pos]);
+Theorem finite_subfield_card_eqn:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==> (CARD R = CARD B ** (r <:> s)) /\ 0 < (r <:> s)
+Proof
+  rw_tac std_ss[finite_subfield_card, finite_subfield_dim_pos]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> 0 < CARD B *)
 (* Proof:
    Since FiniteField s       by subfield_finite_field
       so 0 < CARD B          by finite_field_card_pos
 *)
-val finite_subfield_card_pos = store_thm(
-  "finite_subfield_card_pos",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==> 0 < CARD B``,
-  metis_tac[subfield_finite_field, finite_field_card_pos]);
+Theorem finite_subfield_card_pos:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==> 0 < CARD B
+Proof
+  metis_tac[subfield_finite_field, finite_field_card_pos]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> 1 < CARD B *)
 (* Proof:
    Since FiniteField s       by subfield_finite_field
       so 1 < CARD B          by finite_field_card_gt_1
 *)
-val finite_subfield_card_gt_1 = store_thm(
-  "finite_subfield_card_gt_1",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==> 1 < CARD B``,
-  metis_tac[subfield_finite_field, finite_field_card_gt_1]);
+Theorem finite_subfield_card_gt_1:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==> 1 < CARD B
+Proof
+  metis_tac[subfield_finite_field, finite_field_card_gt_1]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> 0 < (r <:> s) *)
 (* Proof:
@@ -291,16 +298,17 @@ val finite_subfield_card_gt_1 = store_thm(
       giving        #1 = #0              by field_is_ring, ring_one_eq_zero
    This contradicts #1 <> #0             by field_one_ne_zero
 *)
-val finite_field_over_subfield_dim_pos = store_thm(
-  "finite_field_over_subfield_dim_pos",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> 0 < (r <:> s)``,
+Theorem finite_field_over_subfield_dim_pos:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> 0 < (r <:> s)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   spose_not_then strip_assume_tac >>
   `(r <:> s) = 0` by decide_tac >>
   `FiniteVSpace s r.sum $*` by rw[finite_subfield_is_finite_vspace_scalar] >>
   `R = {#0}` by metis_tac[finite_vspace_dim_eq_0, field_carriers] >>
   `#1 = #0` by rw[ring_one_eq_zero] >>
-  metis_tac[field_one_ne_zero]);
+  metis_tac[field_one_ne_zero]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. (CARD R = CARD B ** n) <=> (n = (r <:> s)) *)
 (* Proof:
@@ -310,10 +318,11 @@ val finite_field_over_subfield_dim_pos = store_thm(
     Thus CARD B ** n = (CARD B) ** d
      <=>           n = d               by EXP_BASE_INJECTIVE, 1 < CARD B
 *)
-val finite_field_over_subfield_dim = store_thm(
-  "finite_field_over_subfield_dim",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. (CARD R = CARD B ** n) <=> (n = (r <:> s))``,
-  metis_tac[finite_subfield_card_gt_1, finite_subfield_card_eqn, EXP_BASE_INJECTIVE]);
+Theorem finite_field_over_subfield_dim:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. (CARD R = CARD B ** n) <=> (n = (r <:> s))
+Proof
+  metis_tac[finite_subfield_card_gt_1, finite_subfield_card_eqn, EXP_BASE_INJECTIVE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field is Vector Space over Prime Field.                            *)
@@ -347,14 +356,15 @@ QED
    (3) FiniteField r ==> FINITE r.sum.carrier
        True by field_carriers, FiniteField_def.
 *)
-val finite_field_is_finite_vspace = store_thm(
-  "finite_field_is_finite_vspace",
-  ``!r:'a field. FiniteField r ==> FiniteVSpace (PF r) r.sum r.prod.op``,
+Theorem finite_field_is_finite_vspace:
+    !r:'a field. FiniteField r ==> FiniteVSpace (PF r) r.sum r.prod.op
+Proof
   rw[FiniteVSpace_def] >| [
     rw[finite_field_is_vspace],
     metis_tac[prime_field_finite_field, FiniteField_def],
     metis_tac[field_carriers, FiniteField_def]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> 0 < fdim r *)
 (* Proof:
@@ -365,16 +375,17 @@ val finite_field_is_finite_vspace = store_thm(
       giving        #1 = #0              by field_is_ring, ring_one_eq_zero
    This contradicts #1 <> #0             by field_one_ne_zero
 *)
-val finite_field_dim_pos = store_thm(
-  "finite_field_dim_pos",
-  ``!r:'a field. FiniteField r ==> 0 < fdim r``,
+Theorem finite_field_dim_pos:
+    !r:'a field. FiniteField r ==> 0 < fdim r
+Proof
   rpt (stripDup[FiniteField_def]) >>
   spose_not_then strip_assume_tac >>
   `fdim r = 0` by decide_tac >>
   `FiniteVSpace (PF r) r.sum $*` by rw[finite_field_is_finite_vspace] >>
   `R = {#0}` by metis_tac[finite_vspace_dim_eq_0, field_carriers] >>
   `#1 = #0` by rw[ring_one_eq_zero] >>
-  metis_tac[field_one_ne_zero]);
+  metis_tac[field_one_ne_zero]
+QED
 
 (* Theorem: Finite Field has p ** d elements, of prime p and some nonzero d:
             FiniteField r ==> CARD R = (char r) ** (fdim r) /\ 0 < fdim r *)
@@ -387,20 +398,22 @@ val finite_field_dim_pos = store_thm(
    Since 1 < CARD R                    by finite_field_card_gt_1
      ==> 0 < fdim r                    by ONE_LT_EXP
 *)
-val finite_field_card_eqn = store_thm(
-  "finite_field_card_eqn",
-  ``!r:'a field. FiniteField r ==> (CARD R = (char r) ** (fdim r)) /\ 0 < fdim r``,
+Theorem finite_field_card_eqn:
+    !r:'a field. FiniteField r ==> (CARD R = (char r) ** (fdim r)) /\ 0 < fdim r
+Proof
   ntac 2 strip_tac >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   `FiniteVSpace (PF r) r.sum $*` by rw[finite_field_is_finite_vspace] >>
-  metis_tac[field_carriers, finite_vspace_card, prime_field_card, finite_field_card_gt_1, ONE_LT_EXP]);
+  metis_tac[field_carriers, finite_vspace_card, prime_field_card, finite_field_card_gt_1, ONE_LT_EXP]
+QED
 
 (* Theorem: FiniteField r ==> (CARD R = char r ** fdim r) *)
 (* Proof: by finite_field_card_eqn *)
-val finite_field_card_alt = store_thm(
-  "finite_field_card_alt",
-  ``!r:'a field. FiniteField r ==> (CARD R = char r ** fdim r)``,
-  rw_tac std_ss[finite_field_card_eqn]);
+Theorem finite_field_card_alt:
+    !r:'a field. FiniteField r ==> (CARD R = char r ** fdim r)
+Proof
+  rw_tac std_ss[finite_field_card_eqn]
+QED
 
 (* Theorem: FiniteField r ==> !n. (CARD R = (char r) ** n) <=> (n = fdim r) *)
 (* Proof:
@@ -410,18 +423,20 @@ val finite_field_card_alt = store_thm(
    Thus (char r) ** (fdim r) = (char r) ** n
     ==> n = fdim r                           by prime_powers_eq
 *)
-val finite_field_dim_eq = store_thm(
-  "finite_field_dim_eq",
-  ``!r:'a field. FiniteField r ==> !n. (CARD R = (char r) ** n) <=> (n = fdim r)``,
-  metis_tac[finite_field_card_eqn, finite_field_char, prime_powers_eq]);
+Theorem finite_field_dim_eq:
+    !r:'a field. FiniteField r ==> !n. (CARD R = (char r) ** n) <=> (n = fdim r)
+Proof
+  metis_tac[finite_field_card_eqn, finite_field_char, prime_powers_eq]
+QED
 
 (* Theorem: Finite Field has p ** d elements, of prime p and some nonzero d:
             FiniteField r ==> ?d. CARD R = (char r) ** d *)
 (* Proof: by finite_field_card_eqn *)
-val finite_field_card = store_thm(
-  "finite_field_card",
-  ``!r:'a field. FiniteField r ==> ?d. 0 < d /\ (CARD R = (char r) ** d)``,
-  metis_tac[finite_field_card_eqn]);
+Theorem finite_field_card:
+    !r:'a field. FiniteField r ==> ?d. 0 < d /\ (CARD R = (char r) ** d)
+Proof
+  metis_tac[finite_field_card_eqn]
+QED
 
 (* Theorem: FiniteField r ==> ?p. prime p /\ perfect_power (CARD R) p *)
 (* Proof:
@@ -430,10 +445,11 @@ val finite_field_card = store_thm(
                  ==> perfect_power (CARD R) (char r)  by perfect_power_def
    Hence take p = char r.
 *)
-val finite_field_card_prime_power = store_thm(
-  "finite_field_card_prime_power",
-  ``!r:'a field. FiniteField r ==> ?p. prime p /\ perfect_power (CARD R) p``,
-  metis_tac[perfect_power_def, finite_field_card, finite_field_char]);
+Theorem finite_field_card_prime_power:
+    !r:'a field. FiniteField r ==> ?p. prime p /\ perfect_power (CARD R) p
+Proof
+  metis_tac[perfect_power_def, finite_field_card, finite_field_char]
+QED
 
 (* Theorem: FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> (char r = char r_) *)
 (* Proof:
@@ -442,10 +458,11 @@ val finite_field_card_prime_power = store_thm(
     Also prime (char r) /\ prime (char r_)        by finite_field_char
    Hence char r = char r_                         by prime_powers_eq
 *)
-val finite_field_card_eq_char_eq = store_thm(
-  "finite_field_card_eq_char_eq",
-  ``!(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> (char r = char r_)``,
-  metis_tac[finite_field_card, finite_field_char, prime_powers_eq]);
+Theorem finite_field_card_eq_char_eq:
+    !(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> (char r = char r_)
+Proof
+  metis_tac[finite_field_card, finite_field_char, prime_powers_eq]
+QED
 
 (* Note: char r = char r_ cannot imply CARD R = CARD R_:
    Both GF_2 and GF_4 have characteristic 2.
@@ -459,25 +476,27 @@ val finite_field_card_eq_char_eq = store_thm(
     and prime (char r) /\ prime (char r_)                    by finite_field_char
     ==> (fdim r = fdim r_)                                   by prime_powers_eq
 *)
-val finite_field_card_eq_dim_eq = store_thm(
-  "finite_field_card_eq_dim_eq",
-  ``!(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
-     (fdim r = fdim r_)``,
+Theorem finite_field_card_eq_dim_eq:
+    !(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
+     (fdim r = fdim r_)
+Proof
   rpt strip_tac >>
   `(CARD R = (char r) ** (fdim r)) /\ 0 < (fdim r)` by rw[GSYM finite_field_card_eqn] >>
   `(CARD R_ = (char r_) ** (fdim r_)) /\ 0 < (fdim r_)` by rw[GSYM finite_field_card_eqn] >>
   `char r = char r_` by rw[finite_field_card_eq_char_eq] >>
   `prime (char r) /\ prime (char r_)` by rw[finite_field_char] >>
-  metis_tac[prime_powers_eq]);
+  metis_tac[prime_powers_eq]
+QED
 
 (* Theorem: FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
             (char r = char r_) /\ (fdim r = fdim r_) *)
 (* Proof: by finite_field_card_eq_char_eq, finite_field_card_eq_dim_eq *)
-val finite_field_card_eq_property = store_thm(
-  "finite_field_card_eq_property",
-  ``!(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
-     (char r = char r_) /\ (fdim r = fdim r_)``,
-  rw_tac std_ss[finite_field_card_eq_char_eq, finite_field_card_eq_dim_eq]);
+Theorem finite_field_card_eq_property:
+    !(r:'a field) (r_:'b field). FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==>
+     (char r = char r_) /\ (fdim r = fdim r_)
+Proof
+  rw_tac std_ss[finite_field_card_eq_char_eq, finite_field_card_eq_dim_eq]
+QED
 
 (* Theorem: FiniteField r ==> (CARD R+ = char r ** fdim r - 1) *)
 (* Proof:
@@ -486,10 +505,11 @@ val finite_field_card_eq_property = store_thm(
    = CARD R - 1              by finite_field_mult_carrier_card
    = char r ** fdim r - 1    by finite_field_card_alt
 *)
-val finite_field_mult_carrier_card_alt = store_thm(
-  "finite_field_mult_carrier_card_alt",
-  ``!r:'a field. FiniteField r ==> (CARD R+ = char r ** fdim r - 1)``,
-  metis_tac[finite_field_mult_carrier_card, finite_field_card_alt, field_mult_carrier, finite_field_is_field]);
+Theorem finite_field_mult_carrier_card_alt:
+    !r:'a field. FiniteField r ==> (CARD R+ = char r ** fdim r - 1)
+Proof
+  metis_tac[finite_field_mult_carrier_card, finite_field_card_alt, field_mult_carrier, finite_field_is_field]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> (fdim s) divides (fdim r) *)
 (* Proof:
@@ -505,9 +525,9 @@ val finite_field_mult_carrier_card_alt = store_thm(
     ==>       fdim r = d * (fdim s)              by prime_powers_eq
      or (fdim s) divides (fdim r)                by divides_def
 *)
-val finite_field_subfield_dim_divides = store_thm(
-  "finite_field_subfield_dim_divides",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> (fdim s) divides (fdim r)``,
+Theorem finite_field_subfield_dim_divides:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> (fdim s) divides (fdim r)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   qabbrev_tac `c = char r` >>
@@ -517,7 +537,8 @@ val finite_field_subfield_dim_divides = store_thm(
   `CARD B = c ** (fdim s)` by rw[finite_field_card_eqn] >>
   `?d. CARD R = CARD B ** d` by metis_tac[finite_subfield_card_eqn] >>
   `c ** (fdim r) = c ** (d * (fdim s))` by metis_tac[EXP_EXP_MULT, MULT_COMM] >>
-  metis_tac[prime_powers_eq, divides_def]);
+  metis_tac[prime_powers_eq, divides_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Properties by Cardinality                                    *)
@@ -536,9 +557,9 @@ val finite_field_subfield_dim_divides = store_thm(
       so coprime ox c                   by coprime_iff_coprime_exp
       or coprime ox c ** n              by coprime_iff_coprime_exp, 0 < n
 *)
-val finite_field_order_coprime_char_exp = store_thm(
-  "finite_field_order_coprime_char_exp",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> !n. coprime (forder x) ((char r) ** n)``,
+Theorem finite_field_order_coprime_char_exp:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> !n. coprime (forder x) ((char r) ** n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   Cases_on `n = 0` >-
   rw[EXP, GCD_1] >>
@@ -547,7 +568,8 @@ val finite_field_order_coprime_char_exp = store_thm(
   qabbrev_tac `c = char r` >>
   `coprime ox (CARD R)` by rw[field_order_coprime_card, Abbr`ox`] >>
   `?d. 0 < d /\ (CARD R = c ** d)` by rw[finite_field_card, Abbr`c`] >>
-  metis_tac[coprime_iff_coprime_exp]);
+  metis_tac[coprime_iff_coprime_exp]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R+ /\ x <> #1 ==> ((CARD R) MOD (forder x) = 1) *)
 (* Proof:
@@ -570,10 +592,10 @@ val finite_field_order_coprime_char_exp = store_thm(
     and 1 < ox                  by above
     so (CARD R) MOD ox = 1      by group_exp_equal
 *)
-val finite_field_card_mod_order = store_thm(
-  "finite_field_card_mod_order",
-  ``!r:'a field. FiniteField r ==>
-   !x. x IN R+ /\ x <> #1 ==> ((CARD R) MOD (forder x) = 1)``,
+Theorem finite_field_card_mod_order:
+    !r:'a field. FiniteField r ==>
+   !x. x IN R+ /\ x <> #1 ==> ((CARD R) MOD (forder x) = 1)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `ox = forder x` >>
   `x IN R` by rw[field_nonzero_element] >>
@@ -586,7 +608,8 @@ val finite_field_card_mod_order = store_thm(
   `_ = x ** 1` by rw[] >>
   `Group f*` by rw[field_mult_group] >>
   `F* = R+` by rw[field_mult_carrier] >>
-  metis_tac[group_exp_equal, field_nonzero_mult_property]);
+  metis_tac[group_exp_equal, field_nonzero_mult_property]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> !n. (x ** (char r) ** n = #1) <=> (x = #1) *)
 (* Proof:
@@ -610,9 +633,9 @@ val finite_field_card_mod_order = store_thm(
    Only-if part: x = #1 ==> x ** (char r) ** n = #1
       True by field_one_exp
 *)
-val finite_field_one_condition = store_thm(
-  "finite_field_one_condition",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> !n. (x ** (char r) ** n = #1) <=> (x = #1)``,
+Theorem finite_field_one_condition:
+    !r:'a field. FiniteField r ==> !x. x IN R ==> !n. (x ** (char r) ** n = #1) <=> (x = #1)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >>
   qabbrev_tac `c = char r` >>
@@ -628,7 +651,8 @@ val finite_field_one_condition = store_thm(
   `gcd (c ** n) (c ** d - 1) = 1` by rw[coprime_power_and_power_predecessor] >>
   `forder x divides 1` by metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR] >>
   `forder x = 1` by rw[GSYM DIVIDES_ONE] >>
-  rw[GSYM field_order_eq_1]);
+  rw[GSYM field_order_eq_1]
+QED
 
 (* Theorem: FiniteField r ==>
             !x y. x IN R /\ y IN R ==> !n. (x ** (char r) ** n = y ** (char r) ** n) <=> (x = y) *)
@@ -662,10 +686,10 @@ val finite_field_one_condition = store_thm(
    Only-if part: (x = y) ==> (x ** (char r) ** n = y ** (char r) ** n)
       This is trivial.
 *)
-val finite_field_element_eq_condition = store_thm(
-  "finite_field_element_eq_condition",
-  ``!r:'a field. FiniteField r ==>
-   !x y. x IN R /\ y IN R ==> !n. (x ** (char r) ** n = y ** (char r) ** n) <=> (x = y)``,
+Theorem finite_field_element_eq_condition:
+    !r:'a field. FiniteField r ==>
+   !x y. x IN R /\ y IN R ==> !n. (x ** (char r) ** n = y ** (char r) ** n) <=> (x = y)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >>
   qabbrev_tac `m = (char r) ** n` >>
@@ -678,7 +702,8 @@ val finite_field_element_eq_condition = store_thm(
   qabbrev_tac `z = x * |/ y` >>
   `z IN R` by rw[Abbr`z`] >>
   `z ** m = #1` by rw[Abbr`z`] >>
-  metis_tac[finite_field_one_condition, field_mult_rinv_eq_one]);
+  metis_tac[finite_field_one_condition, field_mult_rinv_eq_one]
+QED
 
 (* Theorem: FiniteField r /\ (char r = 2) ==> EVEN (CARD R) *)
 (* Proof:
@@ -687,10 +712,11 @@ val finite_field_element_eq_condition = store_thm(
      or     0 < d /\ (CARD R = 2 ** d)       by given, char r = 2
    Hence EVEN (CARD R)                       by EXP_2_EVEN
 *)
-val finite_field_char_2 = store_thm(
-  "finite_field_char_2",
-  ``!r:'a field. FiniteField r /\ (char r = 2) ==> EVEN (CARD R)``,
-  metis_tac[finite_field_card, EXP_2_EVEN]);
+Theorem finite_field_char_2:
+    !r:'a field. FiniteField r /\ (char r = 2) ==> EVEN (CARD R)
+Proof
+  metis_tac[finite_field_card, EXP_2_EVEN]
+QED
 
 (* Note: All finite fields with char r = 2 has -#1 = #1  by ring_char_2_neg_one,
    But R maybe just {#0, #1} for GF_2, or bigger: GF_4 = {#0, #1, alpha, alpha ** 2}
@@ -706,15 +732,16 @@ val finite_field_char_2 = store_thm(
     Now (forder x) divides (CARD R+)               by field_order_divides
    Hence ODD (forder x)                            by DIVIDES_ODD
 *)
-val finite_field_char_even_has_odd_order = store_thm(
-  "finite_field_char_even_has_odd_order",
-  ``!r:'a field. FiniteField r ==> EVEN (char r) ==> (!x. x IN R+ ==> ODD (forder x))``,
+Theorem finite_field_char_even_has_odd_order:
+    !r:'a field. FiniteField r ==> EVEN (char r) ==> (!x. x IN R+ ==> ODD (forder x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `?d. 0 < d /\ (CARD R = (char r) ** d)` by rw[finite_field_card] >>
   `CARD R = SUC (CARD R+)` by rw[GSYM finite_field_carrier_card] >>
   `ODD (CARD R+)` by metis_tac[EVEN_EXP, EVEN_ODD_SUC] >>
   `(forder x) divides (CARD R+)` by rw[field_order_divides] >>
-  metis_tac[DIVIDES_ODD]);
+  metis_tac[DIVIDES_ODD]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R /\ (forder x = 2) ==> (x = -#1) *)
 (* Proof:
@@ -756,9 +783,9 @@ val finite_field_char_even_has_odd_order = store_thm(
        ==> 3 <= CARD (roots p)               by CARD_SUBSET
       This contradicts (CARD (roots p) = 2).
 *)
-val finite_field_order_eq_2 = store_thm(
-  "finite_field_order_eq_2",
-  ``!r:'a field. FiniteField r ==> !x. x IN R /\ (forder x = 2) ==> (x = -#1)``,
+Theorem finite_field_order_eq_2:
+    !r:'a field. FiniteField r ==> !x. x IN R /\ (forder x = 2) ==> (x = -#1)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = unity 2` >>
   `poly p` by rw[Abbr`p`] >>
@@ -782,7 +809,8 @@ val finite_field_order_eq_2 = store_thm(
   `CARD (roots p) <= 2` by metis_tac[poly_roots_count] >>
   `FINITE (roots p)` by rw[poly_roots_finite] >>
   `3 <= CARD (roots p)` by metis_tac[CARD_SUBSET] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Note: the converse is not generally true, due to:
 field_order_neg_one  |- !r. Field r ==> (forder (-#1) = if char r = 2 then 1 else 2)
@@ -886,10 +914,10 @@ QED
    = char r                             by CARD_COUNT
    Hence  CARD B = (char r) ** d, with prime (char r) and d = (dim (PF r) s.sum $*
 *)
-val finite_field_subfield_card = store_thm(
-  "finite_field_subfield_card",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==>
-   ?d. 0 < d /\ (CARD B = (char r) ** d)``,
+Theorem finite_field_subfield_card:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==>
+   ?d. 0 < d /\ (CARD B = (char r) ** d)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `VSpace (PF r) s.sum $*` by rw[finite_field_subfield_is_vspace] >>
   `FINITE (PF r).carrier` by metis_tac[prime_field_finite_field, FiniteField_def] >>
@@ -903,7 +931,8 @@ val finite_field_subfield_card = store_thm(
   `BIJ $## (GF (char r)).carrier (PF r).carrier` by metis_tac[FieldIso_def] >>
   `prime (char r)` by rw[finite_field_char] >>
   `FINITE (GF (char r)).carrier` by metis_tac[GF_finite_field, FiniteField_def] >>
-  metis_tac[FINITE_BIJ_CARD_EQ, GF_property, CARD_COUNT]);
+  metis_tac[FINITE_BIJ_CARD_EQ, GF_property, CARD_COUNT]
+QED
 
 (* Theorem: Finite Field has q ** d elements, where q is the cardinality of a subfield, and some nonzero d:
             FiniteField r ==> !s. s <<= r ==> ?d. 0 < d /\ (CARD R = (CARD B) ** d) *)
@@ -919,10 +948,10 @@ val finite_field_subfield_card = store_thm(
     Note  1 < CARD R                 by finite_field_card_gt_1
     Thus  0 < d                      by ONE_LT_EXP
 *)
-val finite_field_card_subfield = store_thm(
-  "finite_field_card_subfield",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==>
-   ?d. 0 < d /\ (CARD R = (CARD B) ** d)``,
+Theorem finite_field_card_subfield:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==>
+   ?d. 0 < d /\ (CARD R = (CARD B) ** d)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `VSpace s r.sum $*` by rw[field_is_vspace_over_subfield] >>
   `B SUBSET R` by metis_tac[SUBSET_DEF, subfield_property_alt] >>
@@ -930,7 +959,8 @@ val finite_field_card_subfield = store_thm(
   `r.sum.carrier = R` by metis_tac[field_carriers] >>
   `FiniteVSpace s r.sum $*` by rw[FiniteVSpace_def] >>
   `CARD (r.sum.carrier) = CARD B ** (r <:> s)` by rw[finite_vspace_card] >>
-  metis_tac[finite_field_card_gt_1, ONE_LT_EXP]);
+  metis_tac[finite_field_card_gt_1, ONE_LT_EXP]
+QED
 
 (* Theorem: Given a finite field with p^n elements, where p = char r,
             Any subfield has p^m elements, where m divides n.
@@ -950,10 +980,10 @@ val finite_field_card_subfield = store_thm(
             = d * m                          by MULT_COMM
     or m divides n                           by divides_def
 *)
-val finite_field_subfield_card_property = store_thm(
-  "finite_field_subfield_card_property",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==>
-   ?n m. 0 < n /\ 0 < m /\ (CARD R = (char r) ** n) /\ (CARD (B) = (char r) ** m) /\ (m divides n)``,
+Theorem finite_field_subfield_card_property:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==>
+   ?n m. 0 < n /\ 0 < m /\ (CARD R = (char r) ** n) /\ (CARD (B) = (char r) ** m) /\ (m divides n)
+Proof
   rpt strip_tac >>
   `prime (char r)` by rw[finite_field_char] >>
   qabbrev_tac `p = char r` >>
@@ -961,7 +991,8 @@ val finite_field_subfield_card_property = store_thm(
   `?n. 0 < n /\ (CARD R = p ** n)` by rw[finite_field_card, Abbr`p`] >>
   `?m. 0 < m /\ (CARD B = p ** m)` by rw[finite_field_subfield_card, Abbr`p`] >>
   `?d. 0 < d /\ (CARD R = CARD B ** d)` by rw[finite_field_card_subfield] >>
-  metis_tac[EXP_EXP_MULT, EXP_BASE_INJECTIVE, MULT_COMM, divides_def]);
+  metis_tac[EXP_EXP_MULT, EXP_BASE_INJECTIVE, MULT_COMM, divides_def]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> (CARD B divides CARD R) *)
 (* Proof:
@@ -977,9 +1008,9 @@ val finite_field_subfield_card_property = store_thm(
 
    Can also use: finite_field_subfield_card_property
 *)
-val finite_field_subfield_card_divides = store_thm(
-  "finite_field_subfield_card_divides",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> (CARD B divides CARD R)``,
+Theorem finite_field_subfield_card_divides:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> (CARD B divides CARD R)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `(CARD R = (char r) ** (fdim r)) /\ 0 < fdim r` by rw[finite_field_card_eqn] >>
@@ -988,7 +1019,8 @@ val finite_field_subfield_card_divides = store_thm(
   `fdim s divides fdim r` by rw[finite_field_subfield_dim_divides] >>
   `fdim s <= fdim r` by rw[DIVIDES_LE] >>
   `1 < char r` by rw[finite_field_char_gt_1] >>
-  rw[power_divides_iff]);
+  rw[power_divides_iff]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> (CARD B* divides CARD F* ) *)
 (* Proof:
@@ -1002,9 +1034,9 @@ val finite_field_subfield_card_divides = store_thm(
    Now fdim s divides fdim r            by finite_field_subfield_dim_divides
    ==> CARD B* divides CARD F*          by power_predecessor_divisibility
 *)
-val finite_field_subfield_nonzero_card_divides = store_thm(
-  "finite_field_subfield_nonzero_card_divides",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> (CARD B* divides CARD F* )``,
+Theorem finite_field_subfield_nonzero_card_divides:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> (CARD B* divides CARD F* )
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `CARD F* = CARD R - 1` by rw[finite_field_mult_carrier_card] >>
@@ -1014,7 +1046,8 @@ val finite_field_subfield_nonzero_card_divides = store_thm(
   `char r = char s` by rw[subfield_char] >>
   `1 < char r` by rw[finite_field_char_gt_1] >>
   `fdim s divides fdim r` by rw[finite_field_subfield_dim_divides] >>
-  rw[power_predecessor_divisibility]);
+  rw[power_predecessor_divisibility]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R+ ==> !n. coprime (forder x) (CARD B ** n) *)
 (* Proof:
@@ -1027,16 +1060,17 @@ val finite_field_subfield_nonzero_card_divides = store_thm(
    thus coprime a (CARD B)            by coprime_iff_coprime_exp, 0 < d
     and coprime a (CARD B ** n)       by coprime_exp_comm
 *)
-val finite_field_order_coprime = store_thm(
-  "finite_field_order_coprime",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==> !n. coprime (forder x) (CARD B ** n)``,
+Theorem finite_field_order_coprime:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==> !n. coprime (forder x) (CARD B ** n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `a = forder x` >>
   `a divides (CARD R+)` by metis_tac[field_order_divides] >>
   `CARD R = SUC (CARD R+)` by rw[GSYM finite_field_carrier_card] >>
   `coprime a (CARD R)` by rw[divides_imp_coprime_with_successor] >>
   `?d. 0 < d /\ (CARD R = CARD B ** d)` by rw[finite_field_card_subfield] >>
-  metis_tac[coprime_iff_coprime_exp, coprime_exp_comm]);
+  metis_tac[coprime_iff_coprime_exp, coprime_exp_comm]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R+ ==> 0 < forder x /\ coprime (forder x) (CARD B) *)
 (* Proof:
@@ -1047,11 +1081,12 @@ val finite_field_order_coprime = store_thm(
      so coprime ox m                        by finite_field_order_coprime_char_exp, m = (char r) ** d
     Or, coprime ox m                        by finite_field_order_coprime, with n = 1
 *)
-val finite_field_order_property = store_thm(
-  "finite_field_order_property",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R+ ==> 0 < forder x /\ coprime (forder x) (CARD B)``,
-  metis_tac[FiniteField_def, field_nonzero_element, field_order_property, finite_field_order_coprime, EXP_1]);
+Theorem finite_field_order_property:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R+ ==> 0 < forder x /\ coprime (forder x) (CARD B)
+Proof
+  metis_tac[FiniteField_def, field_nonzero_element, field_order_property, finite_field_order_coprime, EXP_1]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !x. x IN R+ ==> ordz (forder x) (CARD B) divides (r <:> s) *)
@@ -1093,9 +1128,9 @@ val finite_field_order_property = store_thm(
      and g.id = 1                 by ZN_property, Invertibles_property
      ==> om divides d             by group_order_divides_exp
 *)
-val subfield_card_order_divides_dim = store_thm(
-  "subfield_card_order_divides_dim",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==> ordz (forder x) (CARD B) divides (r <:> s)``,
+Theorem subfield_card_order_divides_dim:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==> ordz (forder x) (CARD B) divides (r <:> s)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD B` >>
   qabbrev_tac `ox = forder x` >>
@@ -1124,7 +1159,8 @@ val subfield_card_order_divides_dim = store_thm(
     `_ = 1` by metis_tac[finite_field_card_mod_order] >>
     `g.id = 1` by rw[ZN_property, Invertibles_property, Abbr`g`] >>
     rw[GSYM group_order_divides_exp]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -1137,14 +1173,15 @@ val subfield_card_order_divides_dim = store_thm(
     and 0 < (r <:> s)                   by finite_subfield_card_eqn
     ==> coprime n (CARD B)              by coprime_iff_coprime_exp
 *)
-val subfield_card_coprime_condition = store_thm(
-  "subfield_card_coprime_condition",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides (CARD R+) ==> coprime n (CARD B)``,
+Theorem subfield_card_coprime_condition:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides (CARD R+) ==> coprime n (CARD B)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `coprime n (SUC (CARD R+))` by rw[divides_imp_coprime_with_successor] >>
   `CARD R = SUC (CARD R+)` by rw[finite_field_carrier_card] >>
   `(CARD R = CARD B ** (r <:> s)) /\ 0 < (r <:> s)` by rw[finite_subfield_card_eqn] >>
-  metis_tac[coprime_iff_coprime_exp]);
+  metis_tac[coprime_iff_coprime_exp]
+QED
 
 (* Note: In general, the converse not valid: coprime n (CARD B) ==> n divides CARD R+
 The best one can do is:
@@ -1183,14 +1220,15 @@ Thus n divides m ** d - 1, or n divides (CARD R+)   by ZN_order_divisibility, 1 
    Only-if part: n divides (CARD R+) ==> coprime n (CARD B)
       This is true                        by subfield_card_coprime_condition
 *)
-val subfield_card_coprime_iff = store_thm(
-  "subfield_card_coprime_iff",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. 0 < n /\ (ordz n (CARD B) = (r <:> s)) ==>
-           (coprime n (CARD B) <=> n divides (CARD R+))``,
+Theorem subfield_card_coprime_iff:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. 0 < n /\ (ordz n (CARD B) = (r <:> s)) ==>
+           (coprime n (CARD B) <=> n divides (CARD R+))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >-
   metis_tac[finite_subfield_card_eqn, finite_field_nonzero_carrier_card, ZN_order_divisibility] >>
-  metis_tac[subfield_card_coprime_condition]);
+  metis_tac[subfield_card_coprime_condition]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Multiplicative Group of Field is Cyclic.                                  *)
@@ -1215,9 +1253,9 @@ val subfield_card_coprime_iff = store_thm(
 
    And the element attaining the maximal order is the generator of F*.
 *)
-val finite_field_mult_group_has_gen = store_thm(
-  "finite_field_mult_group_has_gen",
-  ``!r:'a field. FiniteField r ==> ?z:'a. z IN R+ /\ (forder z = CARD R+)``,
+Theorem finite_field_mult_group_has_gen:
+    !r:'a field. FiniteField r ==> ?z:'a. z IN R+ /\ (forder z = CARD R+)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Group f* /\ (F* = R+) /\ !x y. x IN R+ /\ y IN R+ ==> (x * y = y * x)` by rw[field_mult_group] >>
   `FINITE F*` by metis_tac[field_nonzero_element, SUBSET_DEF, SUBSET_FINITE] >>
@@ -1284,7 +1322,8 @@ val finite_field_mult_group_has_gen = store_thm(
   `0 < n` by decide_tac >>
   `m <= n` by rw[DIVIDES_LE] >>
   `m = n` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: The multiplicative group of a Finite Field is cyclic. *)
 (* Proof:
@@ -1292,16 +1331,17 @@ val finite_field_mult_group_has_gen = store_thm(
    Since F* has a generator   by finite_field_mult_group_has_gen
    F* is cyclic               by cyclic_finite_alt
 *)
-val finite_field_mult_group_cyclic = store_thm(
-  "finite_field_mult_group_cyclic",
-  ``!r:'a field. FiniteField r ==> cyclic f*``,
+Theorem finite_field_mult_group_cyclic:
+    !r:'a field. FiniteField r ==> cyclic f*
+Proof
   rpt strip_tac >>
   `?z:'a. z IN R+ /\ (forder z = CARD R+)` by rw[finite_field_mult_group_has_gen] >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   `Group f* /\ (F* = R+)` by rw[field_mult_group] >>
   `FINITE F*` by metis_tac[field_nonzero_element, SUBSET_DEF, SUBSET_FINITE] >>
   `FiniteGroup f*` by rw[FiniteGroup_def] >>
-  metis_tac[cyclic_finite_alt]);
+  metis_tac[cyclic_finite_alt]
+QED
 
 (* This is a most significant milestone theorem! *)
 
@@ -1332,9 +1372,9 @@ val finite_field_mult_group_cyclic = store_thm(
         ==> (forder x) divides (CARD R+)   by field_order_divides, x IN R+
          or n divides (CARD R+)            by forder x = n
 *)
-val finite_field_orders_nonempty_iff = store_thm(
-  "finite_field_orders_nonempty_iff",
-  ``!r:'a field. FiniteField r ==> !n. n divides (CARD R+) <=> (orders f* n) <> {}``,
+Theorem finite_field_orders_nonempty_iff:
+    !r:'a field. FiniteField r ==> !n. n divides (CARD R+) <=> (orders f* n) <> {}
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >| [
     `?z. z IN R+ /\ (forder z = CARD R+)` by rw[finite_field_mult_group_has_gen] >>
@@ -1351,7 +1391,8 @@ val finite_field_orders_nonempty_iff = store_thm(
     `z ** m IN R+` by rw[field_exp_nonzero] >>
     metis_tac[field_orders_element_property, MEMBER_NOT_EMPTY],
     metis_tac[field_order_divides, field_orders_element_property, MEMBER_NOT_EMPTY]
-  ]);
+  ]
+QED
 
 (*
 > cyclic_eq_order_partition |> ISPEC ``f*``;
@@ -1378,10 +1419,10 @@ val it =
       = {orders f* n | n IN divisors (CARD F* )}   by cyclic_eq_order_partition_alt
       = {orders f* n | n IN divisors (CARD R+)}    by above
 *)
-val finite_field_eq_order_partition = store_thm(
-  "finite_field_eq_order_partition",
-  ``!r:'a field. FiniteField r ==>
-               (partition (\x y. forder x = forder y) R+ = {orders f* n | n IN divisors (CARD R+)})``,
+Theorem finite_field_eq_order_partition:
+    !r:'a field. FiniteField r ==>
+               (partition (\x y. forder x = forder y) R+ = {orders f* n | n IN divisors (CARD R+)})
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `F* = R+` by rw[field_mult_carrier] >>
   `FINITE R+` by rw[field_nonzero_finite] >>
@@ -1391,7 +1432,8 @@ val finite_field_eq_order_partition = store_thm(
   `_ = partition (eq_order f* ) F*` by metis_tac[] >>
   `_ = {orders f* n | n IN divisors (CARD F* )}` by rw[cyclic_eq_order_partition_alt] >>
   `_ = {orders f* n | n IN divisors (CARD R+)}` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Primitive                                                    *)
@@ -1412,10 +1454,11 @@ val _ = overload_on ("primitive", ``field_primitive``);
 
 (* Theorem: z IN FPrimitives r <=> z IN R+ /\ (forder z = CARD R+) *)
 (* Proof: by notation *)
-val field_primitives_element = store_thm(
-  "field_primitives_element",
-  ``!r:'a field. !z. z IN FPrimitives r <=> z IN R+ /\ (forder z = CARD R+)``,
-  rw[]);
+Theorem field_primitives_element:
+    !r:'a field. !z. z IN FPrimitives r <=> z IN R+ /\ (forder z = CARD R+)
+Proof
+  rw[]
+QED
 
 (* Theorem: FiniteField r ==> FPrimitives r <> {} *)
 (* Proof:
@@ -1424,10 +1467,11 @@ val field_primitives_element = store_thm(
      ==> z IN FPrimitives r                by field_primitives_element
    Hence FPrimitives r <> {}               by MEMBER_NOT_EMPTY
 *)
-val field_primitives_nonempty = store_thm(
-  "field_primitives_nonempty",
-  ``!r:'a field. FiniteField r ==> FPrimitives r <> {}``,
-  metis_tac[finite_field_mult_group_has_gen, field_primitives_element, MEMBER_NOT_EMPTY]);
+Theorem field_primitives_nonempty:
+    !r:'a field. FiniteField r ==> FPrimitives r <> {}
+Proof
+  metis_tac[finite_field_mult_group_has_gen, field_primitives_element, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: FiniteField r ==> (primitive r) IN (FPrimitives r) *)
 (* Proof:
@@ -1436,50 +1480,55 @@ val field_primitives_nonempty = store_thm(
     Thus CHOICE s IN s         by CHOICE_DEF
    i.e. (primitive r) IN s     by field_primitive_def
 *)
-val field_primitives_has_primitive = store_thm(
-  "field_primitives_has_primitive",
-  ``!r:'a field. FiniteField r ==> (primitive r) IN (FPrimitives r)``,
-  rw_tac std_ss[field_primitive_def, field_primitives_nonempty, CHOICE_DEF]);
+Theorem field_primitives_has_primitive:
+    !r:'a field. FiniteField r ==> (primitive r) IN (FPrimitives r)
+Proof
+  rw_tac std_ss[field_primitive_def, field_primitives_nonempty, CHOICE_DEF]
+QED
 
 (* Theorem: FiniteField r ==> (primitive r) IN R+ /\ (forder (primitive r) = CARD R+) *)
 (* Proof:
    Since (primitive r) IN (FPrimitives r)                        by field_primitives_has_primitive
       so (primitive r) IN R+ /\ forder (primitive r) = CARD R+   by field_primitives_element
 *)
-val field_primitive_property = store_thm(
-  "field_primitive_property",
-  ``!r:'a field. FiniteField r ==> (primitive r) IN R+ /\ (forder (primitive r) = CARD R+ )``,
-  metis_tac[field_primitives_has_primitive, field_primitives_element]);
+Theorem field_primitive_property:
+    !r:'a field. FiniteField r ==> (primitive r) IN R+ /\ (forder (primitive r) = CARD R+ )
+Proof
+  metis_tac[field_primitives_has_primitive, field_primitives_element]
+QED
 
 (* Theorem: FiniteField r ==> (primitive r) IN R *)
 (* Proof:
    Since (primitive r) IN R+      by field_primitive_property
    hence (primitive r) IN R       by field_nonzero_element
 *)
-val field_primitive_element = store_thm(
-  "field_primitive_element",
-  ``!r:'a field. FiniteField r ==> (primitive r) IN R``,
-  rw[field_primitive_property, field_nonzero_element]);
+Theorem field_primitive_element:
+    !r:'a field. FiniteField r ==> (primitive r) IN R
+Proof
+  rw[field_primitive_property, field_nonzero_element]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["field_primitive_element"];
 
 (* Theorem: FiniteField r ==> (primitive r) IN R *)
 (* Proof: by field_primitive_property *)
-val field_primitive_nonzero = store_thm(
-  "field_primitive_nonzero",
-  ``!r:'a field. FiniteField r ==> (primitive r) IN R+``,
-  rw[field_primitive_property]);
+Theorem field_primitive_nonzero:
+    !r:'a field. FiniteField r ==> (primitive r) IN R+
+Proof
+  rw[field_primitive_property]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["field_primitive_nonzero"];
 
 (* Theorem: FiniteField r ==> (forder (primitive r) = CARD R+) *)
 (* Proof: by field_primitive_property *)
-val field_primitive_order = store_thm(
-  "field_primitive_order",
-  ``!r:'a field. FiniteField r ==> (forder (primitive r) = CARD R+)``,
-  rw_tac std_ss[field_primitive_property]);
+Theorem field_primitive_order:
+    !r:'a field. FiniteField r ==> (forder (primitive r) = CARD R+)
+Proof
+  rw_tac std_ss[field_primitive_property]
+QED
 
 (* Theorem: FiniteField r /\ FiniteField s /\ (CARD R = CARD s.carrier) ==>
             (forder (primitive r) = order (s.prod excluding s.sum.id) (primitive s)) *)
@@ -1492,12 +1541,13 @@ val field_primitive_order = store_thm(
       = CARD (ring_nonzero s)                             by above
       = order (s.prod excluding s.sum.id) (primitive s)   by field_primitive_property
 *)
-val field_primitives_order_eq = store_thm(
-  "field_primitives_order_eq",
-  ``!(r:'a field) (s:'b field). FiniteField r /\ FiniteField s /\ (CARD R = CARD s.carrier) ==>
-    (forder (primitive r) = order (s.prod excluding s.sum.id) (primitive s))``,
+Theorem field_primitives_order_eq:
+    !(r:'a field) (s:'b field). FiniteField r /\ FiniteField s /\ (CARD R = CARD s.carrier) ==>
+    (forder (primitive r) = order (s.prod excluding s.sum.id) (primitive s))
+Proof
   rpt (stripDup[FiniteField_def]) >>
-  metis_tac[finite_field_carrier_card, SUC_EQ, field_primitive_property]);
+  metis_tac[finite_field_carrier_card, SUC_EQ, field_primitive_property]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R+ ==>
             !z. z IN FPrimitives r ==> ?n. n < CARD R+ /\ (x = z ** n) *)
@@ -1511,10 +1561,10 @@ val field_primitives_order_eq = store_thm(
     ==> ?n. n < CARD R+ /\ x = f*.exp z n    by finite_group_primitive_property
      or                    x = z ** n        by field_nonzero_mult_property
 *)
-val field_primitives_element_property = store_thm(
-  "field_primitives_element_property",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==>
-   !z. z IN FPrimitives r ==> ?n. n < CARD R+ /\ (x = z ** n)``,
+Theorem field_primitives_element_property:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==>
+   !z. z IN FPrimitives r ==> ?n. n < CARD R+ /\ (x = z ** n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `z IN R+ /\ (forder z = CARD R+)` by fs[field_primitives_element] >>
   `Group f*` by rw[field_nonzero_mult_is_group] >>
@@ -1522,7 +1572,8 @@ val field_primitives_element_property = store_thm(
   `R+ SUBSET R` by metis_tac[field_nonzero_element, SUBSET_DEF] >>
   `FINITE R+` by metis_tac[SUBSET_FINITE] >>
   `FiniteGroup f*` by metis_tac[FiniteGroup_def] >>
-  metis_tac[finite_group_primitive_property, field_nonzero_mult_property]);
+  metis_tac[finite_group_primitive_property, field_nonzero_mult_property]
+QED
 
 (* Theorem: FiniteField r ==> !z. z IN (FPrimitives r) ==>
             (-#1 = if char r = 2 then #1 else z ** ((CARD R+) DIV 2)) *)
@@ -1558,10 +1609,10 @@ val field_primitives_element_property = store_thm(
      Hence forder x = 2         by field_order_thm
         or x = -#1              by finite_field_order_eq_2
 *)
-val finite_field_neg_one_alt = store_thm(
-  "finite_field_neg_one_alt",
-  ``!r:'a field. FiniteField r ==> !z. z IN (FPrimitives r) ==>
-    (-#1 = if char r = 2 then #1 else z ** ((CARD R+) DIV 2))``,
+Theorem finite_field_neg_one_alt:
+    !r:'a field. FiniteField r ==> !z. z IN (FPrimitives r) ==>
+    (-#1 = if char r = 2 then #1 else z ** ((CARD R+) DIV 2))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw_tac std_ss[] >-
   rw[ring_char_2_neg_one] >>
@@ -1583,14 +1634,16 @@ val finite_field_neg_one_alt = store_thm(
   `m < CARD R+` by rw[DIV_LESS, field_nonzero_card_pos, Abbr`m`] >>
   `x ** 1 <> #1` by rw[field_order_minimal, Abbr`x`] >>
   `forder x = 2` by metis_tac[field_order_thm, DECIDE``0 < 2 /\ !m. 0 < m /\ m < 2 ==> (m = 1)``] >>
-  rw[finite_field_order_eq_2]);
+  rw[finite_field_order_eq_2]
+QED
 
 (* Theorem: FiniteField r ==> (-#1 = if char r = 2 then #1 else (primitive r) ** ((CARD R+) DIV 2)) *)
 (* Proof: by field_primitives_has_primitive, finite_field_neg_one_alt *)
-val finite_field_neg_one = store_thm(
-  "finite_field_neg_one",
-  ``!r:'a field. FiniteField r ==> (-#1 = if char r = 2 then #1 else (primitive r) ** ((CARD R+) DIV 2))``,
-  rw_tac std_ss[field_primitives_has_primitive, finite_field_neg_one_alt]);
+Theorem finite_field_neg_one:
+    !r:'a field. FiniteField r ==> (-#1 = if char r = 2 then #1 else (primitive r) ** ((CARD R+) DIV 2))
+Proof
+  rw_tac std_ss[field_primitives_has_primitive, finite_field_neg_one_alt]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Nonzero Element Index                                        *)
@@ -1600,10 +1653,11 @@ val finite_field_neg_one = store_thm(
 
 (* Theorem: FiniteField r ==> !x. x IN R+ ==> ?n. x = (primitive r) ** n *)
 (* Proof: by field_primitives_has_primitive, field_primitives_element_property *)
-val field_index_exists = store_thm(
-  "field_index_exists",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> ?n. n < CARD R+ /\ (x = (primitive r) ** n)``,
-  rw_tac std_ss[field_primitives_has_primitive, field_primitives_element_property]);
+Theorem field_index_exists:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> ?n. n < CARD R+ /\ (x = (primitive r) ** n)
+Proof
+  rw_tac std_ss[field_primitives_has_primitive, field_primitives_element_property]
+QED
 
 (* Apply Skolemization *)
 val lemma = prove(
@@ -1644,15 +1698,16 @@ val _ = overload_on ("idx", ``field_index r``);
         so n < forder (primitive r) /\ m < forder (primitive r)
       Hence m = n                                                   by field_nonzero_exp_eq
 *)
-val field_index_alt = store_thm(
-  "field_index_alt",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==>
-   !n. (idx x = n) <=> n < CARD R+ /\ (x = (primitive r) ** n)``,
+Theorem field_index_alt:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==>
+   !n. (idx x = n) <=> n < CARD R+ /\ (x = (primitive r) ** n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >-
   rw[field_index_def] >-
   rw[field_index_def] >>
-  metis_tac[field_index_def, field_primitive_property, field_nonzero_exp_eq]);
+  metis_tac[field_index_def, field_primitive_property, field_nonzero_exp_eq]
+QED
 
 (* Theorem: FiniteField r ==> (idx #1 = 0) *)
 (* Proof:
@@ -1662,10 +1717,11 @@ val field_index_alt = store_thm(
      and (primitive r) ** 0 = #1     by field_exp_0
       so idx #1 = 0                  by field_index_alt
 *)
-val field_index_one = store_thm(
-  "field_index_one",
-  ``!r:'a field. FiniteField r ==> (idx #1 = 0)``,
-  rw[FiniteField_def, field_nonzero_card_pos, field_index_alt]);
+Theorem field_index_one:
+    !r:'a field. FiniteField r ==> (idx #1 = 0)
+Proof
+  rw[FiniteField_def, field_nonzero_card_pos, field_index_alt]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R+ ==> ((idx x = 0) <=> (x = #1)) *)
 (* Proof:
@@ -1675,10 +1731,11 @@ val field_index_one = store_thm(
    Only-if part: x = #1 ==> idx x = 0
       True by field_index_one
 *)
-val field_index_eq_0 = store_thm(
-  "field_index_eq_0",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> ((idx x = 0) <=> (x = #1))``,
-  metis_tac[field_index_def, field_exp_0, field_index_one]);
+Theorem field_index_eq_0:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> ((idx x = 0) <=> (x = #1))
+Proof
+  metis_tac[field_index_def, field_exp_0, field_index_one]
+QED
 
 (* Theorem: FiniteField r ==> (idx (primitive r) = if CARD R+ = 1 then 0 else 1) *)
 (* Proof:
@@ -1694,9 +1751,9 @@ val field_index_eq_0 = store_thm(
        and z = z ** 1          by field_primitive_element, field_exp_1
         so idx z = 1           by field_index_alt
 *)
-val field_index_primitive = store_thm(
-  "field_index_primitive",
-  ``!r:'a field. FiniteField r ==> (idx (primitive r) = if CARD R+ = 1 then 0 else 1)``,
+Theorem field_index_primitive:
+    !r:'a field. FiniteField r ==> (idx (primitive r) = if CARD R+ = 1 then 0 else 1)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `z = primitive r` >>
   rw[] >| [
@@ -1706,7 +1763,8 @@ val field_index_primitive = store_thm(
     `1 < CARD R+` by decide_tac >>
     `z = z ** 1` by rw[Abbr`z`] >>
     rw[field_index_alt, Abbr`z`]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> (idx (-#1) = if char r = 2 then 0 else (CARD R+) DIV 2) *)
 (* Proof:
@@ -1723,16 +1781,17 @@ val field_index_primitive = store_thm(
       Then -#1 = (primitive r) ** m   by finite_field_neg_one
      Hence idx (-#1) = m              by field_index_alt
 *)
-val field_index_neg_one = store_thm(
-  "field_index_neg_one",
-  ``!r:'a field. FiniteField r ==> (idx (-#1) = if char r = 2 then 0 else (CARD R+) DIV 2)``,
+Theorem field_index_neg_one:
+    !r:'a field. FiniteField r ==> (idx (-#1) = if char r = 2 then 0 else (CARD R+) DIV 2)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `-#1 IN R+` by rw[] >>
   rw[] >-
   rw[finite_field_neg_one, field_index_one] >>
   qabbrev_tac `m = (CARD R+) DIV 2` >>
   `m < CARD R+` by rw[field_nonzero_card_pos, DIV_LESS, Abbr`m`] >>
-  metis_tac[finite_field_neg_one, field_index_alt]);
+  metis_tac[finite_field_neg_one, field_index_alt]
+QED
 
 (* Theorem: FiniteField r ==> !x y. x IN R+ /\ y IN R+ ==>
             (idx (x * y) = (idx x + idx y) MOD (CARD R+)) *)
@@ -1750,10 +1809,10 @@ val field_index_neg_one = store_thm(
     and (idx x + idx y) MOD (CARD R+) < (CARD R+)       by MOD_LESS, 0 < CARD R+
   Hence idx (x * y) = (idx x + idx y) MOD (CARD R+)     by field_index_alt
 *)
-val field_index_mult = store_thm(
-  "field_index_mult",
-  ``!r:'a field. FiniteField r ==> !x y. x IN R+ /\ y IN R+ ==>
-   (idx (x * y) = (idx x + idx y) MOD (CARD R+))``,
+Theorem field_index_mult:
+    !r:'a field. FiniteField r ==> !x y. x IN R+ /\ y IN R+ ==>
+   (idx (x * y) = (idx x + idx y) MOD (CARD R+))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `z = primitive r` >>
   `z IN R+ /\ (forder z = CARD R+)` by rw[field_primitive_property, Abbr`z`] >>
@@ -1765,7 +1824,8 @@ val field_index_mult = store_thm(
   `x * y <> #0` by metis_tac[field_mult_eq_zero, field_nonzero_eq] >>
   `0 < CARD R+` by rw[field_nonzero_card_pos] >>
   `(idx x + idx y) MOD (CARD R+) < (CARD R+)` by rw[MOD_LESS] >>
-  rw[field_index_alt]);
+  rw[field_index_alt]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R+ ==>
             (idx (-x) = if char r = 2 then (idx x) else (idx x + (CARD R+) DIV 2) MOD (CARD R+)) *)
@@ -1787,10 +1847,10 @@ val field_index_mult = store_thm(
       Then idx (-x)
          = (idx x + CARD R+ DIV 2) MOD (CARD R+)  by field_index_neg_one
 *)
-val field_index_neg = store_thm(
-  "field_index_neg",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==>
-     (idx (-x) = if char r = 2 then (idx x) else (idx x + (CARD R+) DIV 2) MOD (CARD R+))``,
+Theorem field_index_neg:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==>
+     (idx (-x) = if char r = 2 then (idx x) else (idx x + (CARD R+) DIV 2) MOD (CARD R+))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `idx x < CARD R+` by rw[field_index_def] >>
   `-#1 IN R+` by rw[] >>
@@ -1798,7 +1858,8 @@ val field_index_neg = store_thm(
   `-x = -(x * #1)` by rw[] >>
   `_ = x * (-#1)` by metis_tac[field_neg_mult] >>
   `idx (-x) = (idx x + idx (-#1)) MOD (CARD R+)` by rw_tac std_ss[field_index_mult] >>
-  rw_tac std_ss[field_index_neg_one]);
+  rw_tac std_ss[field_index_neg_one]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More properties about Constant Polynomial Field                           *)
@@ -1810,10 +1871,11 @@ val field_index_neg = store_thm(
     Now RingIso up r (PolyModConst r z)       by poly_mod_const_iso_ring
     ==> CARD R = CARD RCz                     by ring_iso_card_eq
 *)
-val poly_mod_const_subring_card = store_thm(
-  "poly_mod_const_subring_card",
-  ``!r:'a ring. FiniteRing r ==> !z. pmonic z ==> (CARD RCz = CARD R)``,
-  metis_tac[FiniteRing_def, poly_mod_const_iso_ring, ring_iso_card_eq]);
+Theorem poly_mod_const_subring_card:
+    !r:'a ring. FiniteRing r ==> !z. pmonic z ==> (CARD RCz = CARD R)
+Proof
+  metis_tac[FiniteRing_def, poly_mod_const_iso_ring, ring_iso_card_eq]
+QED
 
 (* Theorem: FiniteField r ==> !z. pmonic z ==> (CARD RCz = CARD R) *)
 (* Proof:
@@ -1821,10 +1883,11 @@ val poly_mod_const_subring_card = store_thm(
     Now FieldIso up r (PolyModConst r z)        by poly_mod_const_iso_field, field_is_ring
     ==> CARD R = CARD RCz                       by field_iso_card_eq
 *)
-val poly_mod_const_subfield_card = store_thm(
-  "poly_mod_const_subfield_card",
-  ``!r:'a field. FiniteField r ==> !z. pmonic z ==> (CARD RCz = CARD R)``,
-  metis_tac[FiniteField_def, poly_mod_const_iso_field, field_iso_card_eq]);
+Theorem poly_mod_const_subfield_card:
+    !r:'a field. FiniteField r ==> !z. pmonic z ==> (CARD RCz = CARD R)
+Proof
+  metis_tac[FiniteField_def, poly_mod_const_iso_field, field_iso_card_eq]
+QED
 
 (* Theorem: FiniteField r ==> !z. monic z /\ ipoly z ==>
               ((PolyModRing r z) <:> (PolyModConst r z) = deg z) *)
@@ -1839,10 +1902,10 @@ val poly_mod_const_subfield_card = store_thm(
     ==> CARD Rz = CARD R ** deg z                          by poly_mod_ring_card
    Thus (PolyModRing r z) <:> (PolyModConst r z) = deg z   by finite_field_over_subfield_dim
 *)
-val poly_mod_const_subfield_dim = store_thm(
-  "poly_mod_const_subfield_dim",
-  ``!r:'a field. FiniteField r ==> !z. monic z /\ ipoly z ==>
-                ((PolyModRing r z) <:> (PolyModConst r z)) = deg z``,
+Theorem poly_mod_const_subfield_dim:
+    !r:'a field. FiniteField r ==> !z. monic z /\ ipoly z ==>
+                ((PolyModRing r z) <:> (PolyModConst r z)) = deg z
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField (PolyModRing r z)` by rw[poly_mod_irreducible_finite_field] >>
   `Field (PolyModRing r z)` by rw[finite_field_is_field] >>
@@ -1851,7 +1914,8 @@ val poly_mod_const_subfield_dim = store_thm(
   `pmonic z` by rw[poly_monic_irreducible_property] >>
   `CARD RCz = CARD R` by rw[poly_mod_const_subfield_card] >>
   `CARD Rz = CARD R ** deg z` by rw[poly_mod_ring_card, finite_field_is_finite_ring] >>
-  metis_tac[finite_field_over_subfield_dim]);
+  metis_tac[finite_field_over_subfield_dim]
+QED
 
 (* This is a major theorem. *)
 
@@ -1876,10 +1940,11 @@ val _ = overload_on (">=", ``field_extend``);
    ==> subfield (ring_homo_image f r s) s         by field_homo_subfield
    ==> r >= s    using f                          by field_extend_def
 *)
-val field_homo_extend = store_thm(
-  "field_homo_extend",
-  ``!(r:'a field) (s:'b field) f. Field r /\ Field s /\ FieldHomo f r s ==> r >= s``,
-  metis_tac[field_extend_def, field_homo_subfield]);
+Theorem field_homo_extend:
+    !(r:'a field) (s:'b field) f. Field r /\ Field s /\ FieldHomo f r s ==> r >= s
+Proof
+  metis_tac[field_extend_def, field_homo_subfield]
+QED
 
 (* Theorem: Field r ==> r >= r  *)
 (* Proof:
@@ -1888,10 +1953,11 @@ val field_homo_extend = store_thm(
    |- !r s f. Field r /\ Field s /\ FieldHomo f r s ==> r >= s
    by taking f = I.
 *)
-val field_extend_refl = store_thm(
-  "field_extend_refl",
-  ``!r:'a field. Field r ==> r >= r``,
-  metis_tac[field_homo_I_refl, field_homo_extend]);
+Theorem field_extend_refl:
+    !r:'a field. Field r ==> r >= r
+Proof
+  metis_tac[field_homo_I_refl, field_homo_extend]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

@@ -66,49 +66,48 @@ Definition TOP_ITER_def:
          (TOP_ITER (SUC k) = [TOP] <> TOP_ITER k)
 End
 
-val LENGTH_TOP_ITER =
- store_thm
-  ("LENGTH_TOP_ITER",
-   ``LENGTH(TOP_ITER k) = k``,
+Theorem LENGTH_TOP_ITER:
+     LENGTH(TOP_ITER k) = k
+Proof
    Induct_on `k`
-    THEN RW_TAC list_ss [TOP_ITER_def]);
+    THEN RW_TAC list_ss [TOP_ITER_def]
+QED
 
-val TOP_B_NOT_B_TRUE =
- store_thm
-  ("TOP_B_NOT_B_TRUE",
-   ``B_SEM l (B_NOT B_TRUE) = (l = TOP)``,
+Theorem TOP_B_NOT_B_TRUE:
+     B_SEM l (B_NOT B_TRUE) = (l = TOP)
+Proof
    Cases_on `l`
-    THEN PROVE_TAC[B_SEM_def]);
+    THEN PROVE_TAC[B_SEM_def]
+QED
 
-val SNOC_LAST_BUTLAST =
- store_thm
-  ("SNOC_LAST_BUTLAST",
-   ``!l. ~(NULL l) ==> (l = SNOC(LAST l)(BUTLAST l))``,
+Theorem SNOC_LAST_BUTLAST:
+     !l. ~(NULL l) ==> (l = SNOC(LAST l)(BUTLAST l))
+Proof
    Induct
      THEN RW_TAC list_ss [LAST_DEF,FRONT_DEF]
      THEN FULL_SIMP_TAC list_ss [SNOC,NULL_EQ_NIL]
-     THEN PROVE_TAC[]);
+     THEN PROVE_TAC[]
+QED
 
-val NULL_SNOC =
- store_thm
-  ("NULL_SNOC",
-   ``~NULL(SNOC x l)``,
+Theorem NULL_SNOC:
+     ~NULL(SNOC x l)
+Proof
    Cases_on `l`
-    THEN RW_TAC list_ss [SNOC]);
+    THEN RW_TAC list_ss [SNOC]
+QED
 
-val BUTLAST_LAST_EQ =
- store_thm
-  ("BUTLAST_LAST_EQ",
-   ``(lx = l <> [x]) = ~(NULL lx) /\ (l = BUTLAST lx) /\ (x = LAST lx)``,
+Theorem BUTLAST_LAST_EQ:
+     (lx = l <> [x]) = ~(NULL lx) /\ (l = BUTLAST lx) /\ (x = LAST lx)
+Proof
    RW_TAC std_ss [GSYM SNOC_APPEND]
     THEN EQ_TAC
     THEN RW_TAC list_ss [BUTLAST,LAST,NULL_SNOC]
-    THEN PROVE_TAC[SNOC_LAST_BUTLAST]);
+    THEN PROVE_TAC[SNOC_LAST_BUTLAST]
+QED
 
-val ELEM_LENGTH =
- store_thm
-  ("ELEM_LENGTH",
-   ``!v. ~(NULL v) ==> (ELEM v (LENGTH v - 1) = LAST v)``,
+Theorem ELEM_LENGTH:
+     !v. ~(NULL v) ==> (ELEM v (LENGTH v - 1) = LAST v)
+Proof
    Induct
     THEN RW_TAC list_ss []
     THEN Cases_on `NULL v`
@@ -119,14 +118,14 @@ val ELEM_LENGTH =
     THEN `LENGTH v = SUC(LENGTH(TL v))` by PROVE_TAC[LENGTH]
     THEN RW_TAC list_ss [RESTN_def,REST_def]
     THEN `0 < LENGTH v` by DECIDE_TAC
-    THEN PROVE_TAC [LENGTH_TL,ELEM_def,HEAD_def]);
+    THEN PROVE_TAC [LENGTH_TL,ELEM_def,HEAD_def]
+QED
 
-val TOP_ITER_LENGTH =
- store_thm
-  ("TOP_ITER_LENGTH",
-   ``!v. ~(NULL v) /\ (!i. i < LENGTH v - 1 ==> (ELEM v i = TOP))
+Theorem TOP_ITER_LENGTH:
+     !v. ~(NULL v) /\ (!i. i < LENGTH v - 1 ==> (ELEM v i = TOP))
          ==>
-         (TOP_ITER (LENGTH v - 1) = BUTLAST v)``,
+         (TOP_ITER (LENGTH v - 1) = BUTLAST v)
+Proof
    Induct
     THEN RW_TAC list_ss []
     THEN Cases_on `NULL v`
@@ -142,19 +141,19 @@ val TOP_ITER_LENGTH =
      [PROVE_TAC [ELEM_def,HEAD_def,RESTN_def,HD],
       `!i. SUC i < LENGTH v ==> (ELEM (h::v) (SUC i) = TOP)` by PROVE_TAC[]
       THEN `SUC i < LENGTH v = i < LENGTH v - 1` by DECIDE_TAC
-      THEN FULL_SIMP_TAC list_ss [ELEM_def,HEAD_def,RESTN_def,REST_def,HD,TL]]);
+      THEN FULL_SIMP_TAC list_ss [ELEM_def,HEAD_def,RESTN_def,REST_def,HD,TL]]
+QED
 
-val EL_TOP_ITER =
- store_thm
-  ("EL_TOP_ITER",
-   ``!i k. i < k ==> (EL i (TOP_ITER k) = TOP)``,
+Theorem EL_TOP_ITER:
+     !i k. i < k ==> (EL i (TOP_ITER k) = TOP)
+Proof
    Induct THEN Induct
-     THEN RW_TAC list_ss [TOP_ITER_def,EL_APPEND1]);
+     THEN RW_TAC list_ss [TOP_ITER_def,EL_APPEND1]
+QED
 
-val Lemma1 =
- store_thm
-  ("Lemma1",
-   ``CLOCK_TICK v B_TRUE = ?k l. ~(l = BOTTOM) /\ (v = TOP_ITER k <> [l])``,
+Theorem Lemma1:
+     CLOCK_TICK v B_TRUE = ?k l. ~(l = BOTTOM) /\ (v = TOP_ITER k <> [l])
+Proof
    RW_TAC (arith_ss ++ resq_SS) [CLOCK_TICK_def,LENGTH]
     THEN EQ_TAC
     THEN RW_TAC list_ss [LENGTH_APPEND]
@@ -177,7 +176,8 @@ val Lemma1 =
        THEN RW_TAC std_ss [B_SEM_def],
       RW_TAC std_ss [ELEM_EL]
        THEN `i < LENGTH(TOP_ITER k)` by RW_TAC arith_ss [LENGTH_TOP_ITER]
-       THEN RW_TAC std_ss [EL_APPEND1,EL_TOP_ITER,B_SEM_def]]);
+       THEN RW_TAC std_ss [EL_APPEND1,EL_TOP_ITER,B_SEM_def]]
+QED
 
 (******************************************************************************
 * S_CLOCK_FREE r means r contains no clocking statements
@@ -220,33 +220,32 @@ val sere_induct = save_thm
          [`P`,`\ (r,b). P r`, `\ (r1,r2). P r1 /\ P r2`]
          (TypeBase.induction_of ``:'a sere``)))));
 
-val LAST_APPEND_CONS =
- store_thm
-  ("LAST_APPEND_CONS",
-   ``!l1 l2 x. LAST(l1 <> (x::l2)) = LAST(x::l2)``,
+Theorem LAST_APPEND_CONS:
+     !l1 l2 x. LAST(l1 <> (x::l2)) = LAST(x::l2)
+Proof
    Induct
-    THEN RW_TAC list_ss [LAST_CONS,LAST_DEF]);
+    THEN RW_TAC list_ss [LAST_CONS,LAST_DEF]
+QED
 
-val LAST_CONS_APPEND =
- store_thm
-  ("LAST_CONS_APPEND",
-   ``!l1 l2 x1 x2. LAST(x1 :: l1 <> (x2 :: l2)) = LAST(x2 :: l2)``,
-    RW_TAC list_ss [LAST_DEF,LAST_APPEND_CONS]);
+Theorem LAST_CONS_APPEND:
+     !l1 l2 x1 x2. LAST(x1 :: l1 <> (x2 :: l2)) = LAST(x2 :: l2)
+Proof
+    RW_TAC list_ss [LAST_DEF,LAST_APPEND_CONS]
+QED
 
-val LENGTH_APPEND_CONS_NULL =
- store_thm
-  ("LENGTH_APPEND_CONS_NULL",
-   ``~NULL(v1 <> (l::v2))``,
+Theorem LENGTH_APPEND_CONS_NULL:
+     ~NULL(v1 <> (l::v2))
+Proof
    Cases_on `v1`
-    THEN RW_TAC list_ss []);
+    THEN RW_TAC list_ss []
+QED
 
-val Lemma2 =
- store_thm
-  ("Lemma2",
-   ``!r v c.
+Theorem Lemma2:
+     !r v c.
       LENGTH v > 0 /\ S_CLOCK_FREE r /\ S_SEM v c r
       ==>
-      B_SEM (ELEM v (LENGTH v - 1)) c``,
+      B_SEM (ELEM v (LENGTH v - 1)) c
+Proof
    INDUCT_THEN sere_induct ASSUME_TAC
     THEN RW_TAC list_ss [S_SEM_def, US_SEM_def, S_CLOCK_FREE_def]
     THEN FULL_SIMP_TAC list_ss [CLOCK_TICK_def]
@@ -289,24 +288,24 @@ val Lemma2 =
        THEN Cases_on `h`
        THEN FULL_SIMP_TAC list_ss [CONCAT_def]
        THEN Cases_on `CONCAT vlist`
-       THEN FULL_SIMP_TAC list_ss [CONCAT_def,LAST_CONS_APPEND]]);
+       THEN FULL_SIMP_TAC list_ss [CONCAT_def,LAST_CONS_APPEND]]
+QED
 
-val Conjecture1_COUNTEREXAMPLE =
- store_thm
-  ("Conjecture1_COUNTEREXAMPLE",
-   ``(v = [STATE(\p.F);STATE(\p.T)]) /\ (r = S_BOOL B_TRUE) /\ (c = (B_PROP clk))
+Theorem Conjecture1_COUNTEREXAMPLE:
+     (v = [STATE(\p.F);STATE(\p.T)]) /\ (r = S_BOOL B_TRUE) /\ (c = (B_PROP clk))
      ==>
-     LENGTH v > 0 /\ S_CLOCK_FREE r /\ S_SEM v c r /\ ~B_SEM (ELEM v 0) c``,
+     LENGTH v > 0 /\ S_CLOCK_FREE r /\ S_SEM v c r /\ ~B_SEM (ELEM v 0) c
+Proof
    RW_TAC (list_ss ++ resq_SS)
     [S_SEM_def,B_SEM_def,CONJ_ASSOC,LENGTH1,B_SEM_def,CLOCK_TICK_def,LENGTH,
      S_CLOCK_FREE_def, DECIDE``i<1 = (i=0)``,ELEM_def, HEAD_def,RESTN_def]
     THEN REWRITE_TAC [ONE]
-    THEN RW_TAC list_ss [ELEM_def,RESTN_def,HEAD_def,B_SEM_def,REST_def,IN_DEF]);
+    THEN RW_TAC list_ss [ELEM_def,RESTN_def,HEAD_def,B_SEM_def,REST_def,IN_DEF]
+QED
 
-val Proposition1 =
- store_thm
-  ("Proposition1",
-   ``!r v. S_CLOCK_FREE r /\  US_SEM v r ==> S_SEM v B_TRUE r``,
+Theorem Proposition1:
+     !r v. S_CLOCK_FREE r /\  US_SEM v r ==> S_SEM v B_TRUE r
+Proof
    INDUCT_THEN sere_induct ASSUME_TAC
     THEN RW_TAC std_ss [S_SEM_def, US_SEM_def, S_CLOCK_FREE_def]
     THEN TRY (PROVE_TAC[])
@@ -322,7 +321,8 @@ val Proposition1 =
       Q.EXISTS_TAC `vlist`
        THEN RW_TAC list_ss []
        THEN Induct_on `vlist`
-       THEN RW_TAC list_ss [CONCAT_def]]);
+       THEN RW_TAC list_ss [CONCAT_def]]
+QED
 
 Definition IS_STATE_WORD_def:
    (IS_STATE_WORD[]             = T) /\
@@ -331,28 +331,27 @@ Definition IS_STATE_WORD_def:
    (IS_STATE_WORD((STATE s)::v) = IS_STATE_WORD v)
 End
 
-val IS_STATE_WORD_CLOCK_TICK_TRUE =
- store_thm
-  ("IS_STATE_WORD_CLOCK_TICK_TRUE",
-   ``!v. IS_STATE_WORD v /\ CLOCK_TICK v B_TRUE ==> ?s. v = [s]``,
+Theorem IS_STATE_WORD_CLOCK_TICK_TRUE:
+     !v. IS_STATE_WORD v /\ CLOCK_TICK v B_TRUE ==> ?s. v = [s]
+Proof
    Induct
     THEN RW_TAC list_ss [Lemma1,ELEM_def,HEAD_def,RESTN_def]
     THEN Cases_on `k`
-    THEN FULL_SIMP_TAC list_ss [TOP_ITER_def,IS_STATE_WORD_def]);
+    THEN FULL_SIMP_TAC list_ss [TOP_ITER_def,IS_STATE_WORD_def]
+QED
 
-val IS_STATE_WORD_APPEND =
- store_thm
-  ("IS_STATE_WORD_APPEND",
-   ``!v1 v2. IS_STATE_WORD (v1 <> v2) = IS_STATE_WORD v1 /\ IS_STATE_WORD v2``,
+Theorem IS_STATE_WORD_APPEND:
+     !v1 v2. IS_STATE_WORD (v1 <> v2) = IS_STATE_WORD v1 /\ IS_STATE_WORD v2
+Proof
    Induct
     THEN RW_TAC list_ss [IS_STATE_WORD_def]
     THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss [IS_STATE_WORD_def]);
+    THEN FULL_SIMP_TAC list_ss [IS_STATE_WORD_def]
+QED
 
-val Proposition1PartialConverse =
- store_thm
-  ("Proposition1PartialConverse",
-   ``!r v. S_CLOCK_FREE r /\  S_SEM v B_TRUE r /\ IS_STATE_WORD v ==> US_SEM v r``,
+Theorem Proposition1PartialConverse:
+     !r v. S_CLOCK_FREE r /\  S_SEM v B_TRUE r /\ IS_STATE_WORD v ==> US_SEM v r
+Proof
    INDUCT_THEN sere_induct ASSUME_TAC
     THEN RW_TAC std_ss [S_SEM_def, US_SEM_def, S_CLOCK_FREE_def]
     THEN TRY (PROVE_TAC[IS_STATE_WORD_APPEND])
@@ -366,17 +365,17 @@ val Proposition1PartialConverse =
        THEN RW_TAC list_ss []
        THEN Induct_on `vlist`
        THEN RW_TAC list_ss [CONCAT_def]
-       THEN FULL_SIMP_TAC list_ss [IS_STATE_WORD_APPEND]]);
+       THEN FULL_SIMP_TAC list_ss [IS_STATE_WORD_APPEND]]
+QED
 
-val Lemma3 =
- store_thm
-  ("Lemma3",
-   ``!r. S_CLOCK_FREE r
+Theorem Lemma3:
+     !r. S_CLOCK_FREE r
          ==>
          !v. US_SEM v (S_NON_ZERO_REPEAT r) =
              ?vlist. (v = CONCAT vlist) /\
                      LENGTH vlist > 0   /\
-                     EVERY (\v. US_SEM v r) vlist``,
+                     EVERY (\v. US_SEM v r) vlist
+Proof
    RW_TAC list_ss [US_SEM_def,S_CLOCK_FREE_def,S_NON_ZERO_REPEAT_def]
     THEN EQ_TAC
     THEN RW_TAC std_ss []
@@ -392,16 +391,16 @@ val Lemma3 =
           THEN FULL_SIMP_TAC list_ss [CONCAT_def,ALL_EL],
          Q.EXISTS_TAC`(TL vlist)`
           THEN Cases_on `vlist`
-          THEN FULL_SIMP_TAC list_ss [CONCAT_def,ALL_EL]]]);
+          THEN FULL_SIMP_TAC list_ss [CONCAT_def,ALL_EL]]]
+QED
 
-val Lemma4 =
- store_thm
-  ("Lemma4",
-   ``!r c v.
+Theorem Lemma4:
+     !r c v.
       S_SEM v c (S_NON_ZERO_REPEAT r) =
       ?vlist. (v = CONCAT vlist) /\
               LENGTH vlist > 0   /\
-              EVERY (\v. S_SEM v c r) vlist``,
+              EVERY (\v. S_SEM v c r) vlist
+Proof
    RW_TAC list_ss [S_SEM_def,S_NON_ZERO_REPEAT_def]
     THEN EQ_TAC
     THEN RW_TAC std_ss []
@@ -417,7 +416,8 @@ val Lemma4 =
           THEN FULL_SIMP_TAC list_ss [CONCAT_def,ALL_EL],
          Q.EXISTS_TAC`(TL vlist)`
           THEN Cases_on `vlist`
-          THEN FULL_SIMP_TAC list_ss [CONCAT_def,ALL_EL]]]);
+          THEN FULL_SIMP_TAC list_ss [CONCAT_def,ALL_EL]]]
+QED
 
 Definition BOTTOM_FREE_def:
    (BOTTOM_FREE[]             = T) /\
@@ -426,19 +426,18 @@ Definition BOTTOM_FREE_def:
    (BOTTOM_FREE((STATE s)::v) = BOTTOM_FREE v)
 End
 
-val BOTTOM_FREE_APPEND =
- store_thm
-  ("BOTTOM_FREE_APPEND",
-   ``!v1 v2. BOTTOM_FREE (v1 <> v2) = BOTTOM_FREE v1 /\ BOTTOM_FREE v2``,
+Theorem BOTTOM_FREE_APPEND:
+     !v1 v2. BOTTOM_FREE (v1 <> v2) = BOTTOM_FREE v1 /\ BOTTOM_FREE v2
+Proof
    Induct
     THEN RW_TAC list_ss [BOTTOM_FREE_def]
     THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_def]);
+    THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_def]
+QED
 
-val Lemma5 =
- store_thm
-  ("Lemma5",
-   ``!r. S_CLOCK_FREE r ==> !v. US_SEM v r ==> BOTTOM_FREE v``,
+Theorem Lemma5:
+     !r. S_CLOCK_FREE r ==> !v. US_SEM v r ==> BOTTOM_FREE v
+Proof
    INDUCT_THEN sere_induct ASSUME_TAC
     THEN RW_TAC std_ss [US_SEM_def,S_CLOCK_FREE_def,BOTTOM_FREE_def]
     THEN RW_TAC std_ss [BOTTOM_FREE_APPEND]
@@ -454,12 +453,12 @@ val Lemma5 =
       PROVE_TAC[BOTTOM_FREE_APPEND],
       Induct_on `vlist`
        THEN RW_TAC list_ss [CONCAT_def]
-       THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_APPEND,BOTTOM_FREE_def]]);
+       THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_APPEND,BOTTOM_FREE_def]]
+QED
 
-val CLOCK_TICK_BOTTOM_FREE =
- store_thm
-  ("CLOCK_TICK_BOTTOM_FREE",
-   ``!v c. CLOCK_TICK v c ==> BOTTOM_FREE v``,
+Theorem CLOCK_TICK_BOTTOM_FREE:
+     !v c. CLOCK_TICK v c ==> BOTTOM_FREE v
+Proof
    RW_TAC (list_ss ++ resq_SS) [CLOCK_TICK_def]
     THEN Induct_on `v`
     THEN RW_TAC list_ss []
@@ -485,12 +484,12 @@ val CLOCK_TICK_BOTTOM_FREE =
       `LENGTH v = 0` by DECIDE_TAC
         THEN FULL_SIMP_TAC list_ss [LENGTH_NIL,RESTN_def]
         THEN Cases_on `h`
-        THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_def,B_SEM_def]]);
+        THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_def,B_SEM_def]]
+QED
 
-val Lemma6 =
- store_thm
-  ("Lemma6",
-   ``!r c v. S_SEM v c r ==> BOTTOM_FREE v``,
+Theorem Lemma6:
+     !r c v. S_SEM v c r ==> BOTTOM_FREE v
+Proof
    INDUCT_THEN sere_induct ASSUME_TAC
     THEN RW_TAC std_ss [S_SEM_def,S_CLOCK_FREE_def,BOTTOM_FREE_def]
     THEN RW_TAC std_ss [BOTTOM_FREE_APPEND]
@@ -503,7 +502,8 @@ val Lemma6 =
       Induct_on `vlist`
        THEN RW_TAC list_ss [CONCAT_def]
        THEN FULL_SIMP_TAC list_ss [BOTTOM_FREE_APPEND,BOTTOM_FREE_def]
-       THEN PROVE_TAC[]]);
+       THEN PROVE_TAC[]]
+QED
 
 (* Duplicate definition commented out, then proved as TOP_ITER_CONS
 val TOP_ITER_def =
@@ -518,30 +518,29 @@ val LENGTH_TOP_ITER =
     THEN RW_TAC list_ss [TOP_ITER_def]);
 *)
 
-val TOP_ITER_CONS =
- store_thm
-  ("TOP_ITER_CONS",
-  ``(TOP_ITER 0 = []) /\ (TOP_ITER(SUC n) = TOP :: TOP_ITER n)``,
-  PROVE_TAC[TOP_ITER_def,APPEND]);
+Theorem TOP_ITER_CONS:
+    (TOP_ITER 0 = []) /\ (TOP_ITER(SUC n) = TOP :: TOP_ITER n)
+Proof
+  PROVE_TAC[TOP_ITER_def,APPEND]
+QED
 
-val TOP_ITER_APPEND =
- store_thm
-  ("TOP_ITER_APPEND",
-   ``!m n. TOP_ITER(m + n) = TOP_ITER m <> TOP_ITER n``,
+Theorem TOP_ITER_APPEND:
+     !m n. TOP_ITER(m + n) = TOP_ITER m <> TOP_ITER n
+Proof
    Induct
-    THEN RW_TAC list_ss [TOP_ITER_CONS,ADD_CLAUSES]);
+    THEN RW_TAC list_ss [TOP_ITER_CONS,ADD_CLAUSES]
+QED
 
-val TOP_ITER_APPEND_TOP =
- store_thm
-  ("TOP_ITER_APPEND_TOP",
-   ``!m. TOP_ITER m <> [TOP] = [TOP] <> TOP_ITER m``,
+Theorem TOP_ITER_APPEND_TOP:
+     !m. TOP_ITER m <> [TOP] = [TOP] <> TOP_ITER m
+Proof
    Induct
-    THEN RW_TAC list_ss [TOP_ITER_CONS,ADD_CLAUSES]);
+    THEN RW_TAC list_ss [TOP_ITER_CONS,ADD_CLAUSES]
+QED
 
-val US_SEM_TOP =
- store_thm
-  ("US_SEM_TOP",
-   ``!r v. S_CLOCK_FREE r /\ US_SEM v r ==> US_SEM (TOP_ITER(LENGTH v)) r``,
+Theorem US_SEM_TOP:
+     !r v. S_CLOCK_FREE r /\ US_SEM v r ==> US_SEM (TOP_ITER(LENGTH v)) r
+Proof
    INDUCT_THEN sere_induct ASSUME_TAC
     THEN RW_TAC (list_ss ++ resq_SS)
           [US_SEM_def,S_CLOCK_FREE_def,BOTTOM_FREE_def,TOP_ITER_CONS,
@@ -566,96 +565,97 @@ val US_SEM_TOP =
       PROVE_TAC[],
       Q.EXISTS_TAC `MAP (\v. TOP_ITER(LENGTH v)) vlist`
        THEN Induct_on `vlist`
-       THEN RW_TAC list_ss [CONCAT_def,TOP_ITER_CONS,TOP_ITER_APPEND]]);
+       THEN RW_TAC list_ss [CONCAT_def,TOP_ITER_CONS,TOP_ITER_APPEND]]
+QED
 
-val ALL_EL_US_SEM_TOP =
- store_thm
-  ("ALL_EL_US_SEM_TOP",
-   ``!vlist r. S_CLOCK_FREE r /\ ALL_EL (\v'. US_SEM v' r) vlist
+Theorem ALL_EL_US_SEM_TOP:
+     !vlist r. S_CLOCK_FREE r /\ ALL_EL (\v'. US_SEM v' r) vlist
                ==>
-               ALL_EL (\v. US_SEM (TOP_ITER (LENGTH v)) r) vlist``,
+               ALL_EL (\v. US_SEM (TOP_ITER (LENGTH v)) r) vlist
+Proof
    Induct
-    THEN RW_TAC list_ss [US_SEM_TOP]);
+    THEN RW_TAC list_ss [US_SEM_TOP]
+QED
 
-val SEL_REC_APPEND1 =
- store_thm
-  ("SEL_REC_APPEND1",
-   ``!n m (l1:'a list). ((n + m) <= LENGTH l1) ==>
-      (!l2. SEL_REC n m (APPEND l1 l2) = SEL_REC n m l1)``,
+Theorem SEL_REC_APPEND1:
+     !n m (l1:'a list). ((n + m) <= LENGTH l1) ==>
+      (!l2. SEL_REC n m (APPEND l1 l2) = SEL_REC n m l1)
+Proof
    REPEAT Induct
     THEN RW_TAC list_ss [LENGTH,SEL_REC_def,NOT_SUC_LESS_EQ_0,
-                         HEAD_def,REST_def,ADD,ADD_0]);
+                         HEAD_def,REST_def,ADD,ADD_0]
+QED
 
-val SEL_APPEND1 =
- store_thm
-  ("SEL_APPEND1",
-   ``!(w1:'a list) w2 k. k < LENGTH w1 ==> (SEL (w1 <> w2) (0,k) = SEL w1 (0,k))``,
-   RW_TAC list_ss [SEL_def,SEL_REC_APPEND1]);
+Theorem SEL_APPEND1:
+     !(w1:'a list) w2 k. k < LENGTH w1 ==> (SEL (w1 <> w2) (0,k) = SEL w1 (0,k))
+Proof
+   RW_TAC list_ss [SEL_def,SEL_REC_APPEND1]
+QED
 
-val SEL_REC_APPEND2 =
- store_thm
-  ("SEL_REC_APPEND2",
-   ``!n m l1:'a list l2.
+Theorem SEL_REC_APPEND2:
+     !n m l1:'a list l2.
        (LENGTH l1 <= m) ==>
-       (SEL_REC n m (APPEND l1 l2) = SEL_REC n (m - (LENGTH l1)) l2)``,
+       (SEL_REC n m (APPEND l1 l2) = SEL_REC n (m - (LENGTH l1)) l2)
+Proof
    REPEAT Induct
     THEN RW_TAC list_ss [LENGTH,SEL_REC_def,NOT_SUC_LESS_EQ_0,
-                         HEAD_def,REST_def,ADD,ADD_0]);
+                         HEAD_def,REST_def,ADD,ADD_0]
+QED
 
-val SEL_REC_LENGTH =
- store_thm
-  ("SEL_REC_LENGTH",
-   ``!l:'a list. SEL_REC (LENGTH l) 0 l = l``,
+Theorem SEL_REC_LENGTH:
+     !l:'a list. SEL_REC (LENGTH l) 0 l = l
+Proof
    REPEAT Induct
     THEN RW_TAC list_ss [LENGTH,SEL_REC_def,NOT_SUC_LESS_EQ_0,
-                         HEAD_def,REST_def,ADD,ADD_0]);
+                         HEAD_def,REST_def,ADD,ADD_0]
+QED
 
-val SEL_LENGTH =
- store_thm
-  ("SEL_LENGTH",
-   ``!l:'a list. 0 < LENGTH l ==> (SEL l (0,LENGTH l - 1) = l)``,
-   RW_TAC arith_ss [SEL_def,SEL_REC_LENGTH]);
+Theorem SEL_LENGTH:
+     !l:'a list. 0 < LENGTH l ==> (SEL l (0,LENGTH l - 1) = l)
+Proof
+   RW_TAC arith_ss [SEL_def,SEL_REC_LENGTH]
+QED
 
-val SEL_SING_LENGTH =
- store_thm
-  ("SEL_SING_LENGTH",
-   ``!x:'a. SEL [x] (0,0) = [x]``,
+Theorem SEL_SING_LENGTH:
+     !x:'a. SEL [x] (0,0) = [x]
+Proof
    GEN_TAC
     THEN `0 < LENGTH[x]` by RW_TAC list_ss []
     THEN `LENGTH[x] - 1 = 0` by RW_TAC list_ss []
-    THEN PROVE_TAC[SEL_LENGTH]);
+    THEN PROVE_TAC[SEL_LENGTH]
+QED
 
-val SEL_APPEND2 =
- store_thm
-  ("SEL_APPEND2",
-   ``!(w1:'a list) w2 m n.
+Theorem SEL_APPEND2:
+     !(w1:'a list) w2 m n.
       LENGTH w1 <= m /\ m <= n
       ==>
-      (SEL (w1 <> w2) (m,n) = SEL w2 (m - LENGTH w1, n - LENGTH w1))``,
-   RW_TAC arith_ss [SEL_def,SEL_REC_APPEND2]);
+      (SEL (w1 <> w2) (m,n) = SEL w2 (m - LENGTH w1, n - LENGTH w1))
+Proof
+   RW_TAC arith_ss [SEL_def,SEL_REC_APPEND2]
+QED
 
-val SEL_APPEND3 =
- store_thm
-  ("SEL_APPEND3",
-   ``!(w1:'a list) w2 m.
+Theorem SEL_APPEND3:
+     !(w1:'a list) w2 m.
       LENGTH w1 <= m
       ==>
-      (SEL (w1 <> w2) (0,m) = w1 <> SEL w2 (0,m - LENGTH w1))``,
+      (SEL (w1 <> w2) (0,m) = w1 <> SEL w2 (0,m - LENGTH w1))
+Proof
    REPEAT GEN_TAC
     THEN Cases_on `w1=[]`
     THEN RW_TAC list_ss []
     THEN `~(LENGTH w1 = 0)` by PROVE_TAC[LENGTH_NIL]
     THEN RW_TAC arith_ss
           [Q.SPECL [`w1<>w2`,`LENGTH w1 - 1`,`0`,`m`] SEL_SPLIT,
-           SEL_APPEND1,SEL_LENGTH,APPEND_LEFT_CANCEL,SEL_APPEND2]);
+           SEL_APPEND1,SEL_LENGTH,APPEND_LEFT_CANCEL,SEL_APPEND2]
+QED
 
-val MAP_TOP_ITER_LENGTH =
- store_thm
-  ("MAP_TOP_ITER_LENGTH",
-   ``!vl. CONCAT(MAP (\v. TOP_ITER (LENGTH v)) vl) =
-          TOP_ITER (LENGTH(CONCAT vl))``,
+Theorem MAP_TOP_ITER_LENGTH:
+     !vl. CONCAT(MAP (\v. TOP_ITER (LENGTH v)) vl) =
+          TOP_ITER (LENGTH(CONCAT vl))
+Proof
    Induct
-    THEN RW_TAC list_ss [CONCAT_def,TOP_ITER_CONS,TOP_ITER_APPEND]);
+    THEN RW_TAC list_ss [CONCAT_def,TOP_ITER_CONS,TOP_ITER_APPEND]
+QED
 
 (*
 Ad hoc definition and lemma for the r[*] case of Lemma 7 below.
@@ -680,12 +680,11 @@ Definition SEL_CONCAT_def:
       else x :: SEL_CONCAT xl (k - LENGTH x))
 End
 
-val SEL_CONCAT_LEMMA =
- store_thm
-  ("SEL_CONCAT_LEMMA",
-   ``!vlist k.
+Theorem SEL_CONCAT_LEMMA:
+     !vlist k.
        SEL (CONCAT vlist) (0,k) <> TOP_ITER (LENGTH (CONCAT vlist) - (k+1))
-        = CONCAT(SEL_CONCAT vlist k)``,
+        = CONCAT(SEL_CONCAT vlist k)
+Proof
    Induct
     THEN RW_TAC list_ss
           [SEL_CONCAT_def,CONCAT_def,SEL_APPEND1,SEL_APPEND3,
@@ -695,14 +694,15 @@ val SEL_CONCAT_LEMMA =
            DECIDE ``k < m ==> (m + n - (k+1) = (m - (k+1)) + n)``]
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `k - LENGTH h` (el 2 thl)))
     THEN RW_TAC std_ss
-           [DECIDE ``~(k:num < m) ==> (m + n - (k + 1) = n - (k - m + 1))``]);
+           [DECIDE ``~(k:num < m) ==> (m + n - (k + 1) = n - (k - m + 1))``]
+QED
 
-val LAMBDA_COMP =
- store_thm
-  ("LAMBDA_COMP",
-   ``(\x. f x) o (\y. g y) = \y. f(g y)``,
+Theorem LAMBDA_COMP:
+     (\x. f x) o (\y. g y) = \y. f(g y)
+Proof
    CONV_TAC FUN_EQ_CONV
-    THEN RW_TAC std_ss []);
+    THEN RW_TAC std_ss []
+QED
 
 Theorem Lemma7:
   !r v.

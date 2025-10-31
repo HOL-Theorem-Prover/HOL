@@ -162,8 +162,9 @@ Cases_on `x` THEN SRW_TAC [][] THENL [
   SRW_TAC [][Once (DISCH_ALL vwalk_def)]
 ]);
 
-val vwalk_no_cycles = store_thm("vwalk_no_cycles",
-  ``wfs s ⇒ ∀v u. (vwalk s v = Var u) ∧ v ∈ FDOM s ⇒ (v ≠ u)``,
+Theorem vwalk_no_cycles:
+    wfs s ⇒ ∀v u. (vwalk s v = Var u) ∧ v ∈ FDOM s ⇒ (v ≠ u)
+Proof
   strip_tac >>
   HO_MATCH_MP_TAC vwalk_ind >>
   rw[FLOOKUP_DEF] >>
@@ -180,7 +181,8 @@ val vwalk_no_cycles = store_thm("vwalk_no_cycles",
     qexists_tac`n` >> simp[] >>
     match_mp_tac TC_SUBSET >>
     simp[vR_def,FLOOKUP_DEF] ) >>
-  METIS_TAC[wfs_no_cycles])
+  METIS_TAC[wfs_no_cycles]
+QED
 
 (* vwalk with concrete alists *)
 

@@ -98,8 +98,8 @@ val bytes2word_lemma = prove(
   THEN ASM_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [word_bits_def,bytes2word_lem]);
 
 val _ = wordsLib.guess_lengths();
-val bytes2word_INTRO = store_thm("bytes2word_INTRO",
-  ``!x1 x2 x3 x4.
+Theorem bytes2word_INTRO:
+    !x1 x2 x3 x4.
       (($@@ :word8 -> word24 -> word32)
                   (x1 :word8)
                       (($@@ :word8 -> word16 -> word24)
@@ -107,21 +107,26 @@ val bytes2word_INTRO = store_thm("bytes2word_INTRO",
                          (($@@ :word8 -> word8 -> word16)
                             (x3 :word8) (x4 :word8) :
                             word16) :word24) :word32) =
-      bytes2word [x4;x3;x2;x1]``,
- SRW_TAC [wordsLib.WORD_EXTRACT_ss] [bytes2word_def]);
+      bytes2word [x4;x3;x2;x1]
+Proof
+ SRW_TAC [wordsLib.WORD_EXTRACT_ss] [bytes2word_def]
+QED
 
-val bytes2word_thm = store_thm("bytes2word_thm",
-  ``!w:word32 x.
+Theorem bytes2word_thm:
+    !w:word32 x.
       (bytes2word [(7 >< 0) w; (7 >< 0) (w >> 8); (7 >< 0) (w >> 16); (7 >< 0) (w >> 24)] = w) /\
       (bytes2word [(7 >< 0) w; (15 >< 8) w; (23 >< 16) w; (31 >< 24) w] = w) /\
-      (bytes2word [x] = (w2w x):'a word)``,
+      (bytes2word [x] = (w2w x):'a word)
+Proof
   REWRITE_TAC [bytes2word_def,wordsTheory.ZERO_SHIFT,wordsTheory.WORD_OR_CLAUSES]
   THEN REWRITE_TAC [bytes2word_lemma]
   THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss)
-         [WORD_OR_CLAUSES,bytes2word_lemma]);
+         [WORD_OR_CLAUSES,bytes2word_lemma]
+QED
 
-val bits2num_n2bits = store_thm("bits2num_n2bits",
-  ``!i n. bits2num (n2bits i n) = n MOD 2**i``,
+Theorem bits2num_n2bits:
+    !i n. bits2num (n2bits i n) = n MOD 2**i
+Proof
   Induct THEN ONCE_REWRITE_TAC [n2bits_def] THEN REPEAT STRIP_TAC
   THEN SIMP_TAC std_ss [bits2num_def,DECIDE ``~(SUC i = 0)``]
   THEN `0<2` by DECIDE_TAC
@@ -136,11 +141,14 @@ val bits2num_n2bits = store_thm("bits2num_n2bits",
     THEN `1 = n MOD 2 ** SUC i MOD 2` by ASM_SIMP_TAC std_ss [EXP,MOD_MULT_MOD]
     THEN ONCE_ASM_REWRITE_TAC []
     THEN ONCE_REWRITE_TAC [MULT_COMM]
-    THEN SIMP_TAC std_ss [MATCH_MP (GSYM DIVISION) (DECIDE ``0<2``)]]);
+    THEN SIMP_TAC std_ss [MATCH_MP (GSYM DIVISION) (DECIDE ``0<2``)]]
+QED
 
-val bits2num_w2bits = store_thm("bits2num_w2bits",
-  ``!w:'a word. bits2num (w2bits w) = w2n w``,
-  Cases THEN FULL_SIMP_TAC std_ss [w2bits_def,bits2num_n2bits,w2n_n2w,dimword_def]);
+Theorem bits2num_w2bits:
+    !w:'a word. bits2num (w2bits w) = w2n w
+Proof
+  Cases THEN FULL_SIMP_TAC std_ss [w2bits_def,bits2num_n2bits,w2n_n2w,dimword_def]
+QED
 
 val w2bits_word32 = save_thm("w2bits_word32",
   SIMP_RULE std_ss [DIV_DIV_DIV_MULT] (EVAL ``w2bits (w:word32)``));
@@ -148,29 +156,36 @@ val w2bits_word32 = save_thm("w2bits_word32",
 val w2bits_word8 = save_thm("w2bits_word8",
   SIMP_RULE std_ss [DIV_DIV_DIV_MULT] (EVAL ``w2bits (w:word8)``));
 
-val bits2num_LESS = store_thm("bits2num_LESS",
-  ``!xs. bits2num xs < 2 ** (LENGTH xs)``,
+Theorem bits2num_LESS:
+    !xs. bits2num xs < 2 ** (LENGTH xs)
+Proof
   Induct THEN SIMP_TAC std_ss [bits2num_def]
-  THEN Cases THEN SIMP_TAC std_ss [bits2num_def,LENGTH,EXP] THEN DECIDE_TAC);
+  THEN Cases THEN SIMP_TAC std_ss [bits2num_def,LENGTH,EXP] THEN DECIDE_TAC
+QED
 
-val n2bits_bits2num = store_thm("n2bits_bits2num",
-  ``!xs. n2bits (LENGTH xs) (bits2num xs) = xs``,
+Theorem n2bits_bits2num:
+    !xs. n2bits (LENGTH xs) (bits2num xs) = xs
+Proof
   Induct THEN ONCE_REWRITE_TAC [n2bits_def]
   THEN SIMP_TAC std_ss [LENGTH,DECIDE ``~(SUC n = 0)``]
   THEN Cases
   THEN ASM_SIMP_TAC std_ss [bits2num_def,
          ONCE_REWRITE_RULE [ADD_COMM] (ONCE_REWRITE_RULE [MULT_COMM]
-           (CONJ DIV_MULT (CONJ MOD_EQ_0 (CONJ MULT_DIV MOD_MULT))))]);
+           (CONJ DIV_MULT (CONJ MOD_EQ_0 (CONJ MULT_DIV MOD_MULT))))]
+QED
 
-val w2bits_b2w_word32 = store_thm("w2bits_b2w_word32",
-  ``w2bits ((b2w I [x1;x2;x3;x4;x5;x6;x7;x8]):word8) = [x1;x2;x3;x4;x5;x6;x7;x8]``,
+Theorem w2bits_b2w_word32:
+    w2bits ((b2w I [x1;x2;x3;x4;x5;x6;x7;x8]):word8) = [x1;x2;x3;x4;x5;x6;x7;x8]
+Proof
   SIMP_TAC std_ss [w2bits_def,b2w_def,w2n_n2w]
   THEN ASSUME_TAC (Q.SPEC `[x1;x2;x3;x4;x5;x6;x7;x8]` bits2num_LESS)
   THEN ASSUME_TAC (Q.SPEC `[x1;x2;x3;x4;x5;x6;x7;x8]` n2bits_bits2num)
-  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [LENGTH]);
+  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [LENGTH]
+QED
 
-val bits2num_MOD = store_thm("bits2num_MOD",
-  ``!i xs. bits2num xs MOD 2 ** i = bits2num (TAKE i xs)``,
+Theorem bits2num_MOD:
+    !i xs. bits2num xs MOD 2 ** i = bits2num (TAKE i xs)
+Proof
   Induct THEN Cases THEN ONCE_REWRITE_TAC [TAKE_def]
   THEN SIMP_TAC std_ss [bits2num_def,DECIDE ``~(SUC n = 0)``]
   THEN Tactical.REVERSE (Cases_on `h`) THEN SIMP_TAC std_ss [bits2num_def]
@@ -187,10 +202,11 @@ val bits2num_MOD = store_thm("bits2num_MOD",
   THEN `0 < 2 ** i` by SIMP_TAC std_ss [bitTheory.MOD_ADD_1,ZERO_LT_EXP]
   THEN IMP_RES_TAC DIVISION
   THEN `bits2num t MOD 2 ** i < 2 ** i` by METIS_TAC []
-  THEN DECIDE_TAC);
+  THEN DECIDE_TAC
+QED
 
-val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
-  ``!imm32:word32 imm8:word8.
+Theorem COLLECT_BYTES_n2w_bits2num:
+    !imm32:word32 imm8:word8.
       ((b2w I
             [w2n imm32 MOD 2 = 1; (w2n imm32 DIV 2) MOD 2 = 1;
              (w2n imm32 DIV 4) MOD 2 = 1; (w2n imm32 DIV 8) MOD 2 = 1;
@@ -218,7 +234,8 @@ val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
              (w2n imm32 DIV 536870912) MOD 2 = 1; (w2n imm32 DIV 1073741824) MOD 2 = 1;
              (w2n imm32 DIV 2147483648) MOD 2 = 1]) =
        (w2w (imm32 >>> 24)):word8) /\
-      (b2w I (w2bits imm8) = imm8)``,
+      (b2w I (w2bits imm8) = imm8)
+Proof
   REPEAT STRIP_TAC THEN SIMP_TAC std_ss [w2w_def,b2w_def]
   THEN CONV_TAC (RAND_CONV (REWRITE_CONV [GSYM bits2num_w2bits]))
   THEN SIMP_TAC std_ss [w2bits_word32,n2w_11,dimword_def]
@@ -226,6 +243,7 @@ val COLLECT_BYTES_n2w_bits2num = store_thm("COLLECT_BYTES_n2w_bits2num",
   THEN SIMP_TAC bool_ss [bits2num_MOD]
   THEN SIMP_TAC std_ss [TAKE_def,w2n_lsr,DIV_DIV_DIV_MULT]
   THEN Q.SPEC_TAC (`imm8`,`x`) THEN wordsLib.Cases_word
-  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2bits_def,w2n_n2w,bits2num_n2bits]);
+  THEN FULL_SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2bits_def,w2n_n2w,bits2num_n2bits]
+QED
 
 

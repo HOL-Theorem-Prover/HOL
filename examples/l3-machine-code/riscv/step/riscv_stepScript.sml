@@ -124,10 +124,12 @@ val () = List.app Parse.temp_overload_on
    Simplifying Rewrites
    ------------------------------------------------------------------------ *)
 
-val word_bit_1_0 = store_thm("word_bit_1_0[simp]",
-  ``(word_bit 1 ((v2w [x0; x1; x2; x3; x4; x5; x6; x7]):word8) = x6) /\
-    (word_bit 0 ((v2w [x0; x1; x2; x3; x4; x5; x6; x7]):word8) = x7)``,
-  blastLib.BBLAST_TAC);
+Theorem word_bit_1_0[simp]:
+    (word_bit 1 ((v2w [x0; x1; x2; x3; x4; x5; x6; x7]):word8) = x6) /\
+    (word_bit 0 ((v2w [x0; x1; x2; x3; x4; x5; x6; x7]):word8) = x7)
+Proof
+  blastLib.BBLAST_TAC
+QED
 
 val cond_lem1 = Q.prove(
   `(if b1 then (if b2 then x else y1) else (if b2 then x else y2)) =
@@ -530,21 +532,29 @@ val jalr = uprove
   \\ blastLib.FULL_BBLAST_TAC
   )
 
-val Decode_IMP_DecodeAny = store_thm("Decode_IMP_DecodeAny",
-  ``(Decode w = i) ==> (DecodeAny (Word w) = i)``,
-  fs [DecodeAny_def]);
+Theorem Decode_IMP_DecodeAny:
+    (Decode w = i) ==> (DecodeAny (Word w) = i)
+Proof
+  fs [DecodeAny_def]
+QED
 
-val DecodeRVC_IMP_DecodeAny = store_thm("DecodeRVC_IMP_DecodeAny",
-  ``(DecodeRVC h = i) ==> (DecodeAny (Half h) = i)``,
-  fs [DecodeAny_def]);
+Theorem DecodeRVC_IMP_DecodeAny:
+    (DecodeRVC h = i) ==> (DecodeAny (Half h) = i)
+Proof
+  fs [DecodeAny_def]
+QED
 
-val avoid_signalAddressException = store_thm("avoid_signalAddressException",
-  ``~b ==> ((if b then signalAddressException t u else s) = s)``,
-  fs []);
+Theorem avoid_signalAddressException:
+    ~b ==> ((if b then signalAddressException t u else s) = s)
+Proof
+  fs []
+QED
 
-val word_bit_add_lsl_simp = store_thm("word_bit_add_lsl_simp",
-  ``word_bit 0 (x + w << 1) = word_bit 0 (x:word64)``,
-  blastLib.BBLAST_TAC);
+Theorem word_bit_add_lsl_simp:
+    word_bit 0 (x + w << 1) = word_bit 0 (x:word64)
+Proof
+  blastLib.BBLAST_TAC
+QED
 
 (* ------------------------------------------------------------------------
    Evaluation setup
@@ -651,8 +661,8 @@ val Fetch =
       write'Skip_def] [[aligned]] []
     ``Fetch``
 
-val Fetch32 = store_thm("Fetch32",
-  ``!xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF
+Theorem Fetch32:
+    !xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF
         y0 y1 y2 y3 y4 y5 y6 y7 y8 y9 yA yB yC yD yE yF.
        (xs = [y0; y1; y2; y3; y4; y5; y6; y7; y8; y9; yA; yB; yC; yD; yE; yF;
               x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; xA; xB; xC; xD; xE; xF]) /\
@@ -663,19 +673,23 @@ val Fetch32 = store_thm("Fetch32",
        (s.MEM8 (s.c_PC s.procID) = v2w [x8; x9; xA; xB; xC; xD; xE; xF]) ∧
        xE ∧ xF ⇒
        (Fetch s =
-        (Word (v2w xs), s with c_Skip := (s.procID =+ 4w) s.c_Skip))``,
-  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC);
+        (Word (v2w xs), s with c_Skip := (s.procID =+ 4w) s.c_Skip))
+Proof
+  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC
+QED
 
-val Fetch16 = store_thm("Fetch16",
-  ``!xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF.
+Theorem Fetch16:
+    !xs x0 x1 x2 x3 x4 x5 x6 x7 x8 x9 xA xB xC xD xE xF.
        (xs = [x0; x1; x2; x3; x4; x5; x6; x7; x8; x9; xA; xB; xC; xD; xE; xF]) /\
        ((s.c_MCSR s.procID).mstatus.VM = 0w) ∧
        (s.MEM8 (s.c_PC s.procID + 1w) = v2w [x0; x1; x2; x3; x4; x5; x6; x7]) ∧
        (s.MEM8 (s.c_PC s.procID) = v2w [x8; x9; xA; xB; xC; xD; xE; xF]) ∧
        ~(xE ∧ xF) ⇒
        (Fetch s =
-        (Half (v2w xs), s with c_Skip := (s.procID =+ 2w) s.c_Skip))``,
-  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC);
+        (Half (v2w xs), s with c_Skip := (s.procID =+ 2w) s.c_Skip))
+Proof
+  simp [Fetch |> DISCH_ALL] \\ rw [] \\ blastLib.BBLAST_TAC
+QED
 
 (* ------------------------------------------------------------------------
    Memory Store Rewrites

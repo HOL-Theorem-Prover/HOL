@@ -97,26 +97,27 @@ End
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val IN_GROUP = store_thm
-  ("IN_GROUP",
-   ``!G.
+Theorem IN_GROUP:
+     !G.
        G IN group =
        gop G IN (gset G -> gset G -> gset G) /\
        (!x y z :: gset G. gop G (gop G x y) z = gop G x (gop G y z)) /\
        ?e :: gset G. !x :: gset G. ?ix :: gset G.
-         (gop G e x = x) /\ (gop G ix x = e)``,
+         (gop G e x = x) /\ (gop G ix x = e)
+Proof
    Cases
-   ++ R_TAC [group_def, SPECIFICATION, gop_def, gset_def]);
+   ++ R_TAC [group_def, SPECIFICATION, gop_def, gset_def]
+QED
 
-val GROUP = store_thm
-  ("GROUP",
-   ``!G.
+Theorem GROUP:
+     !G.
        G IN group =
        gop G IN (gset G -> gset G -> gset G) /\
        (!x y z :: gset G. gop G (gop G x y) z = gop G x (gop G y z)) /\
        gid G IN gset G /\
        ginv G IN (gset G -> gset G) /\
-       !x :: gset G. (gop G (gid G) x = x) /\ (gop G (ginv G x) x = gid G)``,
+       !x :: gset G. (gop G (gid G) x = x) /\ (gop G (ginv G x) x = gid G)
+Proof
    R_TAC [IN_GROUP]
    ++ ONCE_REWRITE_TAC [RES_EXISTS_ALT]
    ++ BETA_TAC
@@ -135,59 +136,68 @@ val GROUP = store_thm
       (ginv G x IN gset G /\ (gop G (gid G) x = x) /\
        (gop G (ginv G x) x = gid G))`
    >> (RESQ_TAC ++ PROVE_TAC [])
-   ++ R_TAC [RES_EXISTS_ALT, ginv_def]);
+   ++ R_TAC [RES_EXISTS_ALT, ginv_def]
+QED
 
-val GSET_SUBTYPE = store_thm
-  ("GSET_SUBTYPE",
-   ``gset IN (group -> nonempty)``,
+Theorem GSET_SUBTYPE:
+     gset IN (group -> nonempty)
+Proof
    R_TAC [IN_FUNSET, IN_NONEMPTY]
    ++ SET_EQ_TAC
    ++ R_TAC [GROUP]
-   ++ PROVE_TAC []);
+   ++ PROVE_TAC []
+QED
 
-val GOP_SUBTYPE = store_thm
-  ("GOP_SUBTYPE",
-   ``gop IN (group --> \G. gset G -> gset G -> gset G)``,
+Theorem GOP_SUBTYPE:
+     gop IN (group --> \G. gset G -> gset G -> gset G)
+Proof
    R_TAC [IN_DFUNSET]
-   ++ R_TAC [GROUP]);
+   ++ R_TAC [GROUP]
+QED
 
-val GROUP_ASSOC = store_thm
-  ("GROUP_ASSOC",
-   ``!G :: group. !x y z :: gset G. gop G (gop G x y) z = gop G x (gop G y z)``,
+Theorem GROUP_ASSOC:
+     !G :: group. !x y z :: gset G. gop G (gop G x y) z = gop G x (gop G y z)
+Proof
    S_TAC
-   ++ AR_TAC [GROUP]);
+   ++ AR_TAC [GROUP]
+QED
 
-val GROUP_LASSOC = store_thm
-  ("GROUP_LASSOC",
-   ``!G :: group. !x y z :: gset G. gop G x (gop G y z) = gop G (gop G x y) z``,
+Theorem GROUP_LASSOC:
+     !G :: group. !x y z :: gset G. gop G x (gop G y z) = gop G (gop G x y) z
+Proof
    S_TAC
-   ++ AR_TAC [GROUP]);
+   ++ AR_TAC [GROUP]
+QED
 
-val GID_SUBTYPE = store_thm
-  ("GID_SUBTYPE",
-   ``gid IN (group --> gset)``,
-   R_TAC [IN_DFUNSET, GROUP]);
+Theorem GID_SUBTYPE:
+     gid IN (group --> gset)
+Proof
+   R_TAC [IN_DFUNSET, GROUP]
+QED
 
-val GROUP_LID = store_thm
-  ("GROUP_LID",
-   ``!G :: group. !x :: gset G. gop G (gid G) x = x``,
+Theorem GROUP_LID:
+     !G :: group. !x :: gset G. gop G (gid G) x = x
+Proof
    S_TAC
-   ++ AR_TAC [GROUP]);
+   ++ AR_TAC [GROUP]
+QED
 
-val GINV_SUBTYPE = store_thm
-  ("GINV_SUBTYPE",
-   ``ginv IN (group --> \G. gset G -> gset G)``,
-   R_TAC [IN_DFUNSET, GROUP]);
+Theorem GINV_SUBTYPE:
+     ginv IN (group --> \G. gset G -> gset G)
+Proof
+   R_TAC [IN_DFUNSET, GROUP]
+QED
 
-val GROUP_LINV = store_thm
-  ("GROUP_LINV",
-   ``!G :: group. !x :: gset G. gop G (ginv G x) x = gid G``,
+Theorem GROUP_LINV:
+     !G :: group. !x :: gset G. gop G (ginv G x) x = gid G
+Proof
    S_TAC
-   ++ AR_TAC [GROUP]);
+   ++ AR_TAC [GROUP]
+QED
 
-val GROUP_RINV = store_thm
-  ("GROUP_RINV",
-   ``!G :: group. !x :: gset G. gop G x (ginv G x) = gid G``,
+Theorem GROUP_RINV:
+     !G :: group. !x :: gset G. gop G x (ginv G x) = gid G
+Proof
    S_TAC
    ++ Suff `gop G (gid G) (gop G x (ginv G x)) = gid G`
    >> R_TAC [GROUP_LID, GOP_SUBTYPE, GID_SUBTYPE, GINV_SUBTYPE]
@@ -207,21 +217,23 @@ val GROUP_RINV = store_thm
    >> R_TAC [GROUP_LINV, GOP_SUBTYPE, GID_SUBTYPE, GINV_SUBTYPE]
    ++ Suff `gop G (ginv G (ginv G x)) (ginv G x) = gid G`
    >> R_TAC [GROUP_LID, GOP_SUBTYPE, GID_SUBTYPE, GINV_SUBTYPE]
-   >> R_TAC [GROUP_LINV, GOP_SUBTYPE, GID_SUBTYPE, GINV_SUBTYPE]);
+   >> R_TAC [GROUP_LINV, GOP_SUBTYPE, GID_SUBTYPE, GINV_SUBTYPE]
+QED
 
-val GROUP_RID = store_thm
-  ("GROUP_RID",
-   ``!G :: group. !x :: gset G. gop G x (gid G) = x``,
+Theorem GROUP_RID:
+     !G :: group. !x :: gset G. gop G x (gid G) = x
+Proof
    S_TAC
    ++ Suff `gop G x (gop G (ginv G x) x) = x`
    >> R_TAC [GROUP_LINV]
    ++ Suff `gop G (gop G x (ginv G x)) x = x`
    >> R_TAC [GROUP_ASSOC, GINV_SUBTYPE]
-   ++ R_TAC [GROUP_RINV, GROUP_LID, GINV_SUBTYPE]);
+   ++ R_TAC [GROUP_RINV, GROUP_LID, GINV_SUBTYPE]
+QED
 
-val GROUP_LCANCEL = store_thm
-  ("GROUP_LCANCEL",
-   ``!G :: group. !g h h' :: gset G. (gop G g h = gop G g h') = (h = h')``,
+Theorem GROUP_LCANCEL:
+     !G :: group. !g h h' :: gset G. (gop G g h = gop G g h') = (h = h')
+Proof
    S_TAC
    ++ REVERSE EQ_TAC >> R_TAC []
    ++ S_TAC
@@ -229,11 +241,12 @@ val GROUP_LCANCEL = store_thm
    >> R_TAC [GROUP_LID]
    ++ Suff `gop G (gop G (ginv G g) g) h = gop G (gop G (ginv G g) g) h'`
    >> R_TAC [GROUP_LINV]
-   ++ R_TAC [GROUP_ASSOC, GINV_SUBTYPE]);
+   ++ R_TAC [GROUP_ASSOC, GINV_SUBTYPE]
+QED
 
-val GROUP_RCANCEL = store_thm
-  ("GROUP_RCANCEL",
-   ``!G :: group. !g g' h :: gset G. (gop G g h = gop G g' h) = (g = g')``,
+Theorem GROUP_RCANCEL:
+     !G :: group. !g g' h :: gset G. (gop G g h = gop G g' h) = (g = g')
+Proof
    S_TAC
    ++ REVERSE EQ_TAC >> R_TAC []
    ++ S_TAC
@@ -241,43 +254,49 @@ val GROUP_RCANCEL = store_thm
    >> R_TAC [GROUP_RID]
    ++ Suff `gop G g (gop G h (ginv G h)) = gop G g' (gop G h (ginv G h))`
    >> R_TAC [GROUP_RINV]
-   ++ R_TAC [GROUP_LASSOC, GINV_SUBTYPE]);
+   ++ R_TAC [GROUP_LASSOC, GINV_SUBTYPE]
+QED
 
-val GROUP_LCANCEL_ID = store_thm
-  ("GROUP_LCANCEL_ID",
-   ``!G :: group. !g h :: gset G. (gop G g h = g) = (h = gid G)``,
+Theorem GROUP_LCANCEL_ID:
+     !G :: group. !g h :: gset G. (gop G g h = g) = (h = gid G)
+Proof
    S_TAC
    ++ REVERSE EQ_TAC >> R_TAC [GROUP_RID]
    ++ S_TAC
    ++ Suff `gop G g h = gop G g (gid G)`
    >> R_TAC [GROUP_LCANCEL, GID_SUBTYPE]
-   ++ R_TAC [GROUP_RID]);
+   ++ R_TAC [GROUP_RID]
+QED
 
-val GROUP_RCANCEL_ID = store_thm
-  ("GROUP_RCANCEL_ID",
-   ``!G :: group. !g h :: gset G. (gop G g h = h) = (g = gid G)``,
+Theorem GROUP_RCANCEL_ID:
+     !G :: group. !g h :: gset G. (gop G g h = h) = (g = gid G)
+Proof
    S_TAC
    ++ REVERSE EQ_TAC >> R_TAC [GROUP_LID]
    ++ S_TAC
    ++ Suff `gop G g h = gop G (gid G) h`
    >> R_TAC [GROUP_RCANCEL, GID_SUBTYPE]
-   ++ R_TAC [GROUP_LID]);
+   ++ R_TAC [GROUP_LID]
+QED
 
-val PROD_GROUP_SET = store_thm
-  ("PROD_GROUP_SET",
-   ``!G H. gset (prod_group G H) = gset G CROSS gset H``,
-   R_TAC [prod_group_def, gset_def]);
+Theorem PROD_GROUP_SET:
+     !G H. gset (prod_group G H) = gset G CROSS gset H
+Proof
+   R_TAC [prod_group_def, gset_def]
+QED
 
-val PROD_GROUP_OP = store_thm
-  ("PROD_GROUP_OP",
-   ``!G H g1 g2 h1 h2.
-       gop (prod_group G H) (g1, h1) (g2, h2) = (gop G g1 g2, gop H h1 h2)``,
-   R_TAC [prod_group_def, gop_def]);
+Theorem PROD_GROUP_OP:
+     !G H g1 g2 h1 h2.
+       gop (prod_group G H) (g1, h1) (g2, h2) = (gop G g1 g2, gop H h1 h2)
+Proof
+   R_TAC [prod_group_def, gop_def]
+QED
 
-val IN_ABELIAN = store_thm
-  ("IN_ABELIAN",
-   ``!G. G IN abelian = abelian G``,
-   R_TAC [SPECIFICATION]);
+Theorem IN_ABELIAN:
+     !G. G IN abelian = abelian G
+Proof
+   R_TAC [SPECIFICATION]
+QED
 
 (* Consolidate theorems so far in a simplification context *)
 
@@ -314,38 +333,43 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS group1_c;
 
 (* back to proving theorems *)
 
-val GID_UNIQUE = store_thm
-  ("GID_UNIQUE",
-   ``!G :: group. !x :: gset G. (gop G x x = x) = (x = gid G)``,
+Theorem GID_UNIQUE:
+     !G :: group. !x :: gset G. (gop G x x = x) = (x = gid G)
+Proof
    S_TAC
-   ++ G_TAC []);
+   ++ G_TAC []
+QED
 
-val IN_SUBGROUP = store_thm
-  ("IN_SUBGROUP",
-   ``!G H.
+Theorem IN_SUBGROUP:
+     !G H.
        H IN subgroup G =
        H IN group /\ gset H SUBSET gset G /\
-       !g h :: gset H. gop H g h = gop G g h``,
-   R_TAC [SPECIFICATION, subgroup_def]);
+       !g h :: gset H. gop H g h = gop G g h
+Proof
+   R_TAC [SPECIFICATION, subgroup_def]
+QED
 
-val SUBGROUP_GROUP = store_thm
-  ("SUBGROUP_GROUP",
-   ``!G H. H IN subgroup G ==> H IN group``,
-   R_TAC [IN_SUBGROUP]);
+Theorem SUBGROUP_GROUP:
+     !G H. H IN subgroup G ==> H IN group
+Proof
+   R_TAC [IN_SUBGROUP]
+QED
 
-val SUBGROUP_SET = store_thm
-  ("SUBGROUP_SET",
-   ``!G H. H IN subgroup G ==> gset H SUBSET gset G``,
-   R_TAC [IN_SUBGROUP]);
+Theorem SUBGROUP_SET:
+     !G H. H IN subgroup G ==> gset H SUBSET gset G
+Proof
+   R_TAC [IN_SUBGROUP]
+QED
 
-val SUBGROUP_OP = store_thm
-  ("SUBGROUP_OP",
-   ``!G H. H IN subgroup G ==> !g h :: gset H. gop H g h = gop G g h``,
-   R_TAC [IN_SUBGROUP]);
+Theorem SUBGROUP_OP:
+     !G H. H IN subgroup G ==> !g h :: gset H. gop H g h = gop G g h
+Proof
+   R_TAC [IN_SUBGROUP]
+QED
 
-val SUBGROUP_ID = store_thm
-  ("SUBGROUP_ID",
-   ``!G H. G IN group /\ H IN subgroup G ==> (gid H = gid G)``,
+Theorem SUBGROUP_ID:
+     !G H. G IN group /\ H IN subgroup G ==> (gid H = gid G)
+Proof
    S_TAC
    ++ ASM_MATCH_MP_TAC [SUBGROUP_GROUP, SUBGROUP_SET, SUBGROUP_OP]
    ++ Know `gid H IN gset G` >> R_TAC [GID_SUBTYPE]
@@ -354,35 +378,40 @@ val SUBGROUP_ID = store_thm
    >> R_TAC [GID_UNIQUE]
    ++ Suff `gop H (gid H) (gid H) = gid H`
    >> R_TAC [GID_SUBTYPE]
-   ++ G_TAC []);
+   ++ G_TAC []
+QED
 
-val SUBGROUP_INV = store_thm
-  ("SUBGROUP_INV",
-   ``!G H.
-       G IN group /\ H IN subgroup G ==> !h :: gset H. ginv H h = ginv G h``,
+Theorem SUBGROUP_INV:
+     !G H.
+       G IN group /\ H IN subgroup G ==> !h :: gset H. ginv H h = ginv G h
+Proof
    S_TAC
    ++ ASM_MATCH_MP_TAC [SUBGROUP_GROUP, SUBGROUP_SET, SUBGROUP_OP, SUBGROUP_ID]
    ++ Suff `gop G h (ginv H h) = gop G h (ginv G h)`
    >> G_TAC []
    ++ R_TAC [GROUP_RINV]
    ++ Suff `gop H h (ginv H h) = gid H` >> G_TAC []
-   ++ R_TAC [GROUP_RINV]);
+   ++ R_TAC [GROUP_RINV]
+QED
 
-val IN_PSUBGROUP = store_thm
-  ("IN_PSUBGROUP",
-   ``!G H.
-       H IN psubgroup G = H IN subgroup G /\ gset H PSUBSET gset G``,
-   R_TAC [SPECIFICATION, psubgroup_def]);
+Theorem IN_PSUBGROUP:
+     !G H.
+       H IN psubgroup G = H IN subgroup G /\ gset H PSUBSET gset G
+Proof
+   R_TAC [SPECIFICATION, psubgroup_def]
+QED
 
-val PSUBGROUP_SUBGROUP = store_thm
-  ("PSUBGROUP_SUBGROUP",
-   ``!G H. H IN psubgroup G ==> H IN subgroup G``,
-   R_TAC [IN_PSUBGROUP]);
+Theorem PSUBGROUP_SUBGROUP:
+     !G H. H IN psubgroup G ==> H IN subgroup G
+Proof
+   R_TAC [IN_PSUBGROUP]
+QED
 
-val PSUBGROUP_PSUBSET = store_thm
-  ("PSUBGROUP_PSUBSET",
-   ``!G H. H IN psubgroup G ==> gset H PSUBSET gset G``,
-   R_TAC [IN_PSUBGROUP]);
+Theorem PSUBGROUP_PSUBSET:
+     !G H. H IN psubgroup G ==> gset H PSUBSET gset G
+Proof
+   R_TAC [IN_PSUBGROUP]
+QED
 
 (* Consolidate theorems so far in a simplification context *)
 
@@ -404,62 +433,69 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS group2_c;
 
 (* back to proving theorems *)
 
-val GPOW = store_thm
-  ("GPOW",
-   ``!G. !g :: gset G.
+Theorem GPOW:
+     !G. !g :: gset G.
        (gpow G g 0 = gid G) /\
-       (!n. gpow G g (SUC n) = gop G g (gpow G g n))``,
-   R_TAC [gpow_def]);
+       (!n. gpow G g (SUC n) = gop G g (gpow G g n))
+Proof
+   R_TAC [gpow_def]
+QED
 
-val GPOW_SUBTYPE = store_thm
-  ("GPOW_SUBTYPE",
-   ``gpow IN (group --> \G. gset G -> UNIV -> gset G)``,
+Theorem GPOW_SUBTYPE:
+     gpow IN (group --> \G. gset G -> UNIV -> gset G)
+Proof
    R_TAC [IN_DFUNSET, IN_FUNSET]
    ++ S_TAC
    ++ Induct_on `x`
-   ++ G_TAC [GPOW]);
+   ++ G_TAC [GPOW]
+QED
 
-val GPOW_ID = store_thm
-  ("GPOW_ID",
-   ``!G :: group. !n. gpow G (gid G) n = gid G``,
+Theorem GPOW_ID:
+     !G :: group. !n. gpow G (gid G) n = gid G
+Proof
    S_TAC
    ++ Induct_on `n`
-   ++ G_TAC [GPOW]);
+   ++ G_TAC [GPOW]
+QED
 
-val GPOW_ADD = store_thm
-  ("GPOW_ADD",
-   ``!(G :: group) (g :: gset G) m n.
-       gpow G g (m + n) = gop G (gpow G g m) (gpow G g n)``,
+Theorem GPOW_ADD:
+     !(G :: group) (g :: gset G) m n.
+       gpow G g (m + n) = gop G (gpow G g m) (gpow G g n)
+Proof
    S_TAC
    ++ Induct_on `m`
-   ++ G_TAC [GPOW, GPOW_SUBTYPE, ADD_CLAUSES, GROUP_ASSOC]);
+   ++ G_TAC [GPOW, GPOW_SUBTYPE, ADD_CLAUSES, GROUP_ASSOC]
+QED
 
-val GPOW_MULT = store_thm
-  ("GPOW_MULT",
-   ``!(G :: group) (g :: gset G) m n.
-       gpow G g (m * n) = gpow G (gpow G g m) n``,
+Theorem GPOW_MULT:
+     !(G :: group) (g :: gset G) m n.
+       gpow G g (m * n) = gpow G (gpow G g m) n
+Proof
    S_TAC
    ++ Induct_on `n` >> G_TAC [GPOW, GPOW_SUBTYPE]
-   ++ G_TAC [GPOW, MULT_CLAUSES, GPOW_ADD, GPOW_SUBTYPE]);
+   ++ G_TAC [GPOW, MULT_CLAUSES, GPOW_ADD, GPOW_SUBTYPE]
+QED
 
-val IN_GROUP_HOMO = store_thm
-  ("IN_GROUP_HOMO",
-   ``!G H f.
+Theorem IN_GROUP_HOMO:
+     !G H f.
        f IN group_homo G H =
        f IN (gset G -> gset H) /\
-       !x y :: gset G. gop H (f x) (f y) = f (gop G x y)``,
-   R_TAC [SPECIFICATION, group_homo_def]);
+       !x y :: gset G. gop H (f x) (f y) = f (gop G x y)
+Proof
+   R_TAC [SPECIFICATION, group_homo_def]
+QED
 
-val IN_GROUP_ISO = store_thm
-  ("IN_GROUP_ISO",
-   ``!G H f.
-       f IN group_iso G H = f IN group_homo G H /\ BIJ f (gset G) (gset H)``,
-   R_TAC [SPECIFICATION, group_iso_def]);
+Theorem IN_GROUP_ISO:
+     !G H f.
+       f IN group_iso G H = f IN group_homo G H /\ BIJ f (gset G) (gset H)
+Proof
+   R_TAC [SPECIFICATION, group_iso_def]
+QED
 
-val GROUP_SURJ_HOMO_GROUP = store_thm
-  ("GROUP_SURJ_HOMO_GROUP",
-   ``!(G :: group) H (f :: group_homo G H).
-       SURJ f (gset G) (gset H) ==> H IN group``,
+Theorem GROUP_SURJ_HOMO_GROUP:
+     !(G :: group) H (f :: group_homo G H).
+       SURJ f (gset G) (gset H) ==> H IN group
+Proof
    S_TAC
    ++ Cases_on `H`
    ++ R_TAC [IN_GROUP]
@@ -501,22 +537,24 @@ val GROUP_SURJ_HOMO_GROUP = store_thm
      ++ Q.SPEC_TAC (`@y. y IN gset G /\ (f x' = f y)`, `y`)
      ++ simpLib.SIMP_TAC std_ss []
      ++ S_TAC
-     ++ R_TAC []]]);
+     ++ R_TAC []]]
+QED
 
-val GROUP_ISO_GROUP = store_thm
-  ("GROUP_ISO_GROUP",
-   ``!(G :: group) H (f :: group_iso G H). H IN group``,
+Theorem GROUP_ISO_GROUP:
+     !(G :: group) H (f :: group_iso G H). H IN group
+Proof
    S_TAC
    ++ AR_TAC [IN_GROUP_ISO, BIJ_DEF]
    ++ MP_TAC GROUP_SURJ_HOMO_GROUP
    ++ RESQ_TAC
-   ++ ho_PROVE_TAC []);
+   ++ ho_PROVE_TAC []
+QED
 
-val LCOSETS_EQUAL_OR_DISJOINT = store_thm
-  ("LCOSETS_EQUAL_OR_DISJOINT",
-   ``!G :: group. !H :: subgroup G. !g1 g2 :: gset G.
+Theorem LCOSETS_EQUAL_OR_DISJOINT:
+     !G :: group. !H :: subgroup G. !g1 g2 :: gset G.
        (lcoset G g1 H = lcoset G g2 H)
-       \/ DISJOINT (lcoset G g1 H) (lcoset G g2 H)``,
+       \/ DISJOINT (lcoset G g1 H) (lcoset G g2 H)
+Proof
    S_TAC
    ++ REVERSE
       (Cases_on `?g. g IN lcoset G g1 H
@@ -551,7 +589,8 @@ val LCOSETS_EQUAL_OR_DISJOINT = store_thm
    ++ Suff `gop G g1 x'' = gop G (gop G (gop G g2 x') (ginv G x)) x''`
    >> G_TAC [GROUP_ASSOC]
    ++ G_TAC []
-   ++ G_TAC [GROUP_ASSOC]);
+   ++ G_TAC [GROUP_ASSOC]
+QED
 
 (* Consolidate all theorems in a theory simplification context *)
 
@@ -579,86 +618,94 @@ val (G_TAC, AG_TAC, G_TAC', AG_TAC') = SIMPLIFY_TACS group3_c;
 
 (* back to proving theorems *)
 
-val GROUP_SET_EMPTY = store_thm
-  ("GROUP_SET_EMPTY",
-   ``!G :: group. ~(gset G = {})``,
+Theorem GROUP_SET_EMPTY:
+     !G :: group. ~(gset G = {})
+Proof
    S_TAC
-   ++ AR_TAC [IN_GROUP]);
+   ++ AR_TAC [IN_GROUP]
+QED
 
-val GINV_UNIQUE = store_thm
-  ("GINV_UNIQUE",
-   ``!G :: group. !g h :: gset G.
-       (gop G g h = gid G) \/ (gop G h g = gid G) ==> (ginv G g = h)``,
+Theorem GINV_UNIQUE:
+     !G :: group. !g h :: gset G.
+       (gop G g h = gid G) \/ (gop G h g = gid G) ==> (ginv G g = h)
+Proof
    S_TAC <<
    [Suff `gop G g (ginv G g) = gop G g h` >> G_TAC []
     ++ ASM_REWRITE_TAC []
     ++ G_TAC [],
     Suff `gop G (ginv G g) g = gop G h g` >> G_TAC []
     ++ ASM_REWRITE_TAC []
-    ++ G_TAC []]);
+    ++ G_TAC []]
+QED
 
-val IS_GINV = store_thm
-  ("IS_GINV",
-   ``!G :: group. !g h :: gset G.
-       (ginv G g = h) = (gop G g h = gid G) \/ (gop G h g = gid G)``,
+Theorem IS_GINV:
+     !G :: group. !g h :: gset G.
+       (ginv G g = h) = (gop G g h = gid G) \/ (gop G h g = gid G)
+Proof
    S_TAC
    ++ EQ_TAC >> DISCH_THEN (fn th => G_TAC [SYM th])
    ++ S_TAC <<
    [MATCH_MP_TAC (Q_RESQ_SPECL [`G`, `g`, `h`] GINV_UNIQUE)
     ++ R_TAC [],
     MATCH_MP_TAC (Q_RESQ_SPECL [`G`, `g`, `h`] GINV_UNIQUE)
-    ++ R_TAC []]);
+    ++ R_TAC []]
+QED
 
-val GINV_GID = store_thm
-  ("GINV_GID",
-   ``!G :: group. ginv G (gid G) = gid G``,
+Theorem GINV_GID:
+     !G :: group. ginv G (gid G) = gid G
+Proof
    S_TAC
    ++ R_TAC [IS_GINV, GID_SUBTYPE]
-   ++ G_TAC []);
+   ++ G_TAC []
+QED
 
-val GPOW_1 = store_thm
-  ("GPOW_1",
-   ``!G :: group. !g :: gset G. gpow G g 1 = g``,
+Theorem GPOW_1:
+     !G :: group. !g :: gset G. gpow G g 1 = g
+Proof
    S_TAC
    ++ REWRITE_TAC [GSYM SUC_0, gpow_def]
-   ++ G_TAC []);
+   ++ G_TAC []
+QED
 
-val GINV_GOP = store_thm
-  ("GINV_GOP",
-   ``!G :: group. !g h :: gset G.
-       ginv G (gop G g h) = gop G (ginv G h) (ginv G g)``,
+Theorem GINV_GOP:
+     !G :: group. !g h :: gset G.
+       ginv G (gop G g h) = gop G (ginv G h) (ginv G g)
+Proof
    S_TAC
    ++ G_TAC [IS_GINV]
    ++ DISJ1_TAC
    ++ Suff `gop G g (gop G (gop G h (ginv G h)) (ginv G g)) = gid G`
    >> G_TAC [GROUP_ASSOC]
-   ++ G_TAC []);
+   ++ G_TAC []
+QED
 
-val GPOW_COMM = store_thm
-  ("GPOW_COMM",
-   ``!G :: group. !g :: gset G. !n.
-       gop G g (gpow G g n) = gop G (gpow G g n) g``,
+Theorem GPOW_COMM:
+     !G :: group. !g :: gset G. !n.
+       gop G g (gpow G g n) = gop G (gpow G g n) g
+Proof
    NTAC 2 RESQ_STRIP_TAC
    ++ Induct >> G_TAC []
    ++ G_TAC []
    ++ Suff `gop G (gop G g (gpow G g n)) g = gop G (gpow G g n) (gop G g g)`
    >> G_TAC [GROUP_ASSOC]
    ++ ASM_REWRITE_TAC []
-   ++ G_TAC [GROUP_ASSOC]);
+   ++ G_TAC [GROUP_ASSOC]
+QED
 
-val GINV_GPOW = store_thm
-  ("GINV_GPOW",
-   ``!G :: group. !g :: gset G. !n. ginv G (gpow G g n) = gpow G (ginv G g) n``,
+Theorem GINV_GPOW:
+     !G :: group. !g :: gset G. !n. ginv G (gpow G g n) = gpow G (ginv G g) n
+Proof
    NTAC 2 RESQ_STRIP_TAC
    ++ Induct >> G_TAC [GINV_GID]
    ++ G_TAC []
    ++ G_TAC [GINV_GOP]
    ++ ONCE_REWRITE_TAC [EQ_SYM_EQ]
-   ++ G_TAC [GPOW_COMM]);
+   ++ G_TAC [GPOW_COMM]
+QED
 
-val GINV_EQ_GID = store_thm
-  ("GINV_EQ_GID",
-   ``!G :: group. !g :: gset G. (ginv G g = gid G) = (g = gid G)``,
+Theorem GINV_EQ_GID:
+     !G :: group. !g :: gset G. (ginv G g = gid G) = (g = gid G)
+Proof
    S_TAC
    ++ REVERSE EQ_TAC >> G_TAC [GINV_GID]
    ++ S_TAC
@@ -668,14 +715,15 @@ val GINV_EQ_GID = store_thm
    (fn th =>
     R_TAC [GROUP_RID, GINV_SUBTYPE, GROUP_LINV]
     ++ ASSUME_TAC th)
-   ++ G_TAC []);
+   ++ G_TAC []
+QED
 
-val SET_SUBGROUP = store_thm
-  ("SET_SUBGROUP",
-   ``!s G.
+Theorem SET_SUBGROUP:
+     !s G.
        G IN group /\ s SUBSET gset G /\ ~(s = {}) /\
        ginv G IN (s -> s) /\ gop G IN (s -> s -> s) ==>
-       (s, gop G) IN subgroup G``,
+       (s, gop G) IN subgroup G
+Proof
    Strip
    ++ Simplify [IN_SUBGROUP, gset_def, gop_def, IN_GROUP]
    ++ Strip >> G_TAC [GROUP_ASSOC]
@@ -692,35 +740,38 @@ val SET_SUBGROUP = store_thm
        ++ G_TAC [])
    ++ Strip
    ++ Q_RESQ_EXISTS_TAC `ginv G x`
-   ++ G_TAC' []);
+   ++ G_TAC' []
+QED
 
-val GROUP_HOMO_GID = store_thm
-  ("GROUP_HOMO_GID",
-   ``!f G H.
+Theorem GROUP_HOMO_GID:
+     !f G H.
        f IN group_homo G H /\ G IN group /\ H IN group ==>
-       (f (gid G) = gid H)``,
+       (f (gid G) = gid H)
+Proof
    Simplify [IN_GROUP_HOMO]
    ++ Strip
    ++ Q.PAT_X_ASSUM `!x :: P. M x`
       (MP_TAC o Q_RESQ_HALF_SPECL [`gid G`, `gid G`])
-   ++ G_TAC' []);
+   ++ G_TAC' []
+QED
 
-val GROUP_HOMO_GPOW = store_thm
-  ("GROUP_HOMO_GPOW",
-   ``!f G H g n.
+Theorem GROUP_HOMO_GPOW:
+     !f G H g n.
        f IN group_homo G H /\ G IN group /\ H IN group /\ g IN gset G ==>
-       (f (gpow G g n) = gpow H (f g) n)``,
+       (f (gpow G g n) = gpow H (f g) n)
+Proof
    Strip
    ++ Q.PAT_X_ASSUM `f IN x`
       (fn th => MP_TAC th ++ Simplify [IN_GROUP_HOMO] ++ ASSUME_TAC th)
    ++ Strip
    ++ Induct_on `n` >> G_TAC [GROUP_HOMO_GID]
    ++ POP_ASSUM (ASSUME_TAC o SYM)
-   ++ G_TAC []);
+   ++ G_TAC []
+QED
 
-val PROD_GROUP_SUBTYPE = store_thm
-  ("PROD_GROUP_SUBTYPE",
-   ``prod_group IN (group -> group -> group)``,
+Theorem PROD_GROUP_SUBTYPE:
+     prod_group IN (group -> group -> group)
+Proof
    Simplify [IN_FUNSET]
    ++ Strip
    ++ Simplify [IN_GROUP, PROD_GROUP_OP, PROD_GROUP_SET, IN_FUNSET, IN_CROSS]
@@ -740,11 +791,12 @@ val PROD_GROUP_SUBTYPE = store_thm
     ++ Strip
     ++ Cases_on `x''`
     ++ Q_RESQ_EXISTS_TAC `(ginv x' q, ginv x r)`
-    ++ AG_TAC' [IN_CROSS]]);
+    ++ AG_TAC' [IN_CROSS]]
+QED
 
-val PROD_GROUP_GID = store_thm
-  ("PROD_GROUP_GID",
-   ``!G H :: group. gid (prod_group G H) = (gid G, gid H)``,
+Theorem PROD_GROUP_GID:
+     !G H :: group. gid (prod_group G H) = (gid G, gid H)
+Proof
    Strip
    ++ MATCH_MP_TAC EQ_SYM
    ++ Know `(gid G, gid H) IN gset (prod_group G H)` >> G_TAC' [IN_CROSS]
@@ -752,18 +804,20 @@ val PROD_GROUP_GID = store_thm
    ++ Strip
    ++ Simplify [GSYM GID_UNIQUE]
    ++ MATCH_MP_TAC EQ_SYM
-   ++ G_TAC []);
+   ++ G_TAC []
+QED
 
-val PROD_GROUP_GPOW = store_thm
-  ("PROD_GROUP_GPOW",
-   ``!G H :: group. !g :: gset G. !h :: gset H. !n.
-       gpow (prod_group G H) (g, h) n = (gpow G g n, gpow H h n)``,
+Theorem PROD_GROUP_GPOW:
+     !G H :: group. !g :: gset G. !h :: gset H. !n.
+       gpow (prod_group G H) (g, h) n = (gpow G g n, gpow H h n)
+Proof
    Strip
    ++ Know `(g,h) IN gset (prod_group G H)`
    >> G_TAC' [PROD_GROUP_SET, IN_CROSS]
    ++ Strip
    ++ Induct_on `n` >> G_TAC [PROD_GROUP_GID]
-   ++ G_TAC [PROD_GROUP_OP]);
+   ++ G_TAC [PROD_GROUP_OP]
+QED
 
 (* non-interactive mode
 *)

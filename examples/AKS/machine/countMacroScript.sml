@@ -297,14 +297,26 @@ Definition make_nilM_def:
 End
 
 (* Values of constructors *)
-val make_0M_value = store_thm("make_0M_value[simp]", ``valueOf (make_0M) = 0``, rw[make_0M_def]);
-val make_FM_value = store_thm("make_FM_value[simp]", ``valueOf (make_FM) = F``, rw[make_FM_def]);
-val make_nilM_value = store_thm("make_nilM_value[simp]", ``valueOf (make_nilM) = []``, rw[make_nilM_def]);
+Theorem make_0M_value[simp]:   valueOf (make_0M) = 0
+Proof rw[make_0M_def]
+QED
+Theorem make_FM_value[simp]:   valueOf (make_FM) = F
+Proof rw[make_FM_def]
+QED
+Theorem make_nilM_value[simp]:   valueOf (make_nilM) = []
+Proof rw[make_nilM_def]
+QED
 
 (* Steps of constructors *)
-val make_0M_steps = store_thm("make_0M_steps[simp]", ``stepsOf (make_0M) = 1``, rw[make_0M_def]);
-val make_FM_steps = store_thm("make_FM_steps[simp]", ``stepsOf (make_FM) = 1``, rw[make_FM_def]);
-val make_nilM_steps = store_thm("make_nilM_steps[simp]", ``stepsOf (make_nilM) = 1``, rw[make_nilM_def]);
+Theorem make_0M_steps[simp]:   stepsOf (make_0M) = 1
+Proof rw[make_0M_def]
+QED
+Theorem make_FM_steps[simp]:   stepsOf (make_FM) = 1
+Proof rw[make_FM_def]
+QED
+Theorem make_nilM_steps[simp]:   stepsOf (make_nilM) = 1
+Proof rw[make_nilM_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Identity                                                                  *)
@@ -316,8 +328,12 @@ Definition idM_def:
 End
 val _ = overload_on ("id_", ``app1 idM``);
 
-val idM_value = store_thm("idM_value[simp]", ``!x. valueOf (idM x) = x``, rw[idM_def]);
-val idM_steps = store_thm("idM_steps[simp]", ``!x. stepsOf (idM x) = 0``, rw[idM_def]);
+Theorem idM_value[simp]:   !x. valueOf (idM x) = x
+Proof rw[idM_def]
+QED
+Theorem idM_steps[simp]:   !x. stepsOf (idM x) = 0
+Proof rw[idM_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Basic Arithmetic                                                          *)
@@ -372,18 +388,38 @@ val _ = overload_on ("mod_", ``app2 modM``);
 *)
 
 (* Values of basic arithmetic *)
-val addM_value = store_thm("addM_value[simp]", ``!x y. valueOf (addM x y) = x + y``, rw[addM_def]);
-val subM_value = store_thm("subM_value[simp]", ``!x y. valueOf (subM x y) = x - y``, rw[subM_def]);
-val mulM_value = store_thm("mulM_value[simp]", ``!x y. valueOf (mulM x y) = x * y``, rw[mulM_def]);
-val divM_value = store_thm("divM_value[simp]", ``!x y. valueOf (divM x y) = x DIV y``, rw[divM_def]);
-val modM_value = store_thm("modM_value[simp]", ``!x y. valueOf (modM x y) = x MOD y``, rw[modM_def]);
+Theorem addM_value[simp]:   !x y. valueOf (addM x y) = x + y
+Proof rw[addM_def]
+QED
+Theorem subM_value[simp]:   !x y. valueOf (subM x y) = x - y
+Proof rw[subM_def]
+QED
+Theorem mulM_value[simp]:   !x y. valueOf (mulM x y) = x * y
+Proof rw[mulM_def]
+QED
+Theorem divM_value[simp]:   !x y. valueOf (divM x y) = x DIV y
+Proof rw[divM_def]
+QED
+Theorem modM_value[simp]:   !x y. valueOf (modM x y) = x MOD y
+Proof rw[modM_def]
+QED
 
 (* Steps of basic arithmetic *)
-val addM_steps = store_thm("addM_steps[simp]", ``!x y. stepsOf (addM x y) = MAX (size x) (size y)``, rw[addM_def]);
-val subM_steps = store_thm("subM_steps[simp]", ``!x y. stepsOf (subM x y) = MAX (size x) (size y)``, rw[subM_def]);
-val mulM_steps = store_thm("mulM_steps[simp]", ``!x y. stepsOf (mulM x y) = (size x) * (size y)``, rw[mulM_def]);
-val divM_steps = store_thm("divM_steps[simp]", ``!x y. stepsOf (divM x y) = (size x) * (size y)``, rw[divM_def]);
-val modM_steps = store_thm("modM_steps[simp]", ``!x y. stepsOf (modM x y) = (size x) * (size y)``, rw[modM_def]);
+Theorem addM_steps[simp]:   !x y. stepsOf (addM x y) = MAX (size x) (size y)
+Proof rw[addM_def]
+QED
+Theorem subM_steps[simp]:   !x y. stepsOf (subM x y) = MAX (size x) (size y)
+Proof rw[subM_def]
+QED
+Theorem mulM_steps[simp]:   !x y. stepsOf (mulM x y) = (size x) * (size y)
+Proof rw[mulM_def]
+QED
+Theorem divM_steps[simp]:   !x y. stepsOf (divM x y) = (size x) * (size y)
+Proof rw[divM_def]
+QED
+Theorem modM_steps[simp]:   !x y. stepsOf (modM x y) = (size x) * (size y)
+Proof rw[modM_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Basic List                                                                *)
@@ -414,16 +450,32 @@ End
 val _ = overload_on ("cons_", ``app2 consM``);
 
 (* Values of basic list *)
-val nullM_value = store_thm("nullM_value[simp]", ``!ls. valueOf (nullM ls) <=> (ls = []) ``, rw[nullM_def]);
-val headM_value = store_thm("headM_value[simp]", ``!ls. valueOf (headM ls) = HD ls``, rw[headM_def]);
-val tailM_value = store_thm("tailM_value[simp]", ``!ls. valueOf (tailM ls) = TL ls``, rw[tailM_def]);
-val consM_value = store_thm("consM_value[simp]", ``!x ls. valueOf (consM x ls) = x :: ls``, rw[consM_def]);
+Theorem nullM_value[simp]:   !ls. valueOf (nullM ls) <=> (ls = [])
+Proof rw[nullM_def]
+QED
+Theorem headM_value[simp]:   !ls. valueOf (headM ls) = HD ls
+Proof rw[headM_def]
+QED
+Theorem tailM_value[simp]:   !ls. valueOf (tailM ls) = TL ls
+Proof rw[tailM_def]
+QED
+Theorem consM_value[simp]:   !x ls. valueOf (consM x ls) = x :: ls
+Proof rw[consM_def]
+QED
 
 (* Steps of basic list *)
-val nullM_steps = store_thm("nullM_steps[simp]", ``!ls. stepsOf (nullM ls) = 1``, rw[nullM_def]);
-val headM_steps = store_thm("headM_steps[simp]", ``!ls. stepsOf (headM ls) = 1``, rw[headM_def]);
-val tailM_steps = store_thm("tailM_steps[simp]", ``!ls. stepsOf (tailM ls) = 1``, rw[tailM_def]);
-val consM_steps = store_thm("consM_steps[simp]", ``!x ls. stepsOf (consM x ls) = 1``, rw[consM_def]);
+Theorem nullM_steps[simp]:   !ls. stepsOf (nullM ls) = 1
+Proof rw[nullM_def]
+QED
+Theorem headM_steps[simp]:   !ls. stepsOf (headM ls) = 1
+Proof rw[headM_def]
+QED
+Theorem tailM_steps[simp]:   !ls. stepsOf (tailM ls) = 1
+Proof rw[tailM_def]
+QED
+Theorem consM_steps[simp]:   !x ls. stepsOf (consM x ls) = 1
+Proof rw[consM_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Basic Boolean                                                             *)
@@ -455,14 +507,26 @@ End
 val _ = overload_on ("bool_", ``app1 boolM``);
 
 (* Values of basic boolean *)
-val eqM_value = store_thm("eqM_value[simp]", ``!x y. valueOf (eqM x y) = (x = y)``, rw[eqM_def]);
-val notM_value = store_thm("notM_value[simp]", ``!b. valueOf (notM b) <=> (~b)``, rw[notM_def]);
-val boolM_value = store_thm("boolM_value[simp]", ``!b. valueOf (boolM b) = if b then 1 else 0``, rw[boolM_def]);
+Theorem eqM_value[simp]:   !x y. valueOf (eqM x y) = (x = y)
+Proof rw[eqM_def]
+QED
+Theorem notM_value[simp]:   !b. valueOf (notM b) <=> (~b)
+Proof rw[notM_def]
+QED
+Theorem boolM_value[simp]:   !b. valueOf (boolM b) = if b then 1 else 0
+Proof rw[boolM_def]
+QED
 
 (* Steps of basic boolean *)
-val eqM_steps = store_thm("eqM_steps[simp]", ``!x y. stepsOf (eqM x y) = MAX (size x) (size y)``, rw[eqM_def]);
-val notM_steps = store_thm("notM_steps[simp]", ``!b. stepsOf (notM b) = 1``, rw[notM_def]);
-val boolM_steps = store_thm("boolM_steps[simp]", ``!b. stepsOf (boolM b) = 1``, rw[boolM_def]);
+Theorem eqM_steps[simp]:   !x y. stepsOf (eqM x y) = MAX (size x) (size y)
+Proof rw[eqM_def]
+QED
+Theorem notM_steps[simp]:   !b. stepsOf (notM b) = 1
+Proof rw[notM_def]
+QED
+Theorem boolM_steps[simp]:   !b. stepsOf (boolM b) = 1
+Proof rw[boolM_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Macro Monads                                                              *)
@@ -474,10 +538,11 @@ End
 
 (* Theorem: valueOf (zeroM n) <=> (n = 0) *)
 (* Proof: by zeroM_def, eqM_value *)
-val zeroM_value = store_thm(
-  "zeroM_value[simp]",
-  ``!n. valueOf (zeroM n) <=> (n = 0)``,
-  rw[zeroM_def]);
+Theorem zeroM_value[simp]:
+    !n. valueOf (zeroM n) <=> (n = 0)
+Proof
+  rw[zeroM_def]
+QED
 
 (* Theorem: stepsOf (zeroM n) = size n *)
 (* Proof:
@@ -487,11 +552,12 @@ val zeroM_value = store_thm(
    = MAX (size n) 1         by size_0
    = size n                 by max_1_size_n, MAX_COMM
 *)
-val zeroM_steps = store_thm(
-  "zeroM_steps[simp]",
-  ``!n. stepsOf (zeroM n) = size n``,
+Theorem zeroM_steps[simp]:
+    !n. stepsOf (zeroM n) = size n
+Proof
   rw[zeroM_def] >>
-  metis_tac[max_1_size_n, MAX_COMM]);
+  metis_tac[max_1_size_n, MAX_COMM]
+QED
 
 (* Theorem: (\n. stepsOf (zeroM n)) IN big_O size *)
 (* Proof:
@@ -500,13 +566,14 @@ val zeroM_steps = store_thm(
    or ?k c. !n. k < n ==> size n = 0 \/ 1 <= c
    Take k = 0, c = 1.
 *)
-val zeroM_cc = store_thm(
-  "zeroM_cc",
-  ``(\n. stepsOf (zeroM n)) IN big_O size``,
+Theorem zeroM_cc:
+    (\n. stepsOf (zeroM n)) IN big_O size
+Proof
   rw[big_O_def] >>
   qexists_tac `0` >>
   qexists_tac `1` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (\n. stepsOf (zeroM n)) IN big_O ((POLY 1) o size) *)
 (* Proof:
@@ -515,13 +582,14 @@ val zeroM_cc = store_thm(
    or ?k c. !n. k < n ==> size n = 0 \/ 1 <= c
    Take k = 0, c = 1.
 *)
-val zeroM_poly_cc = store_thm(
-  "zeroM_poly_cc",
-  ``(\n. stepsOf (zeroM n)) IN big_O ((POLY 1) o size)``,
+Theorem zeroM_poly_cc:
+    (\n. stepsOf (zeroM n)) IN big_O ((POLY 1) o size)
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `0` >>
   qexists_tac `1` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (stepsOf o zeroM) IN big_O (\n. ulog n) *)
 (* Proof:
@@ -529,20 +597,22 @@ val zeroM_poly_cc = store_thm(
       ?k c. !n. k < n ==> size n <= c * ulog n
    Put k = 1, c = 2, then size n <= 2 * ulog n      by size_le_ulog
 *)
-val zeroM_steps_big_O = store_thm(
-  "zeroM_steps_big_O",
-  ``(stepsOf o zeroM) IN big_O (\n. ulog n)``,
+Theorem zeroM_steps_big_O:
+    (stepsOf o zeroM) IN big_O (\n. ulog n)
+Proof
   rw[big_O_def] >>
-  metis_tac[size_le_ulog]);
+  metis_tac[size_le_ulog]
+QED
 
 (* Theorem: (valueOf (zeroM n) <=> (n = 0)) /\
             (stepsOf o zeroM) IN big_O (\n. ulog n) *)
 (* Proof: by zeroM_value, zeroM_steps_big_O *)
-val zeroM_thm = store_thm(
-  "zeroM_thm",
-  ``!n. (valueOf (zeroM n) <=> (n = 0)) /\
-       (stepsOf o zeroM) IN big_O (\n. ulog n)``,
-  metis_tac[zeroM_value, zeroM_steps_big_O]);
+Theorem zeroM_thm:
+    !n. (valueOf (zeroM n) <=> (n = 0)) /\
+       (stepsOf o zeroM) IN big_O (\n. ulog n)
+Proof
+  metis_tac[zeroM_value, zeroM_steps_big_O]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -554,17 +624,19 @@ End
 
 (* Theorem: valueOf (oneM n) = (n = 1) *)
 (* Proof: by oneM_def *)
-val oneM_value = store_thm(
-  "oneM_value[simp]",
-  ``!n. valueOf (oneM n) = (n = 1)``,
-  rw[oneM_def]);
+Theorem oneM_value[simp]:
+    !n. valueOf (oneM n) = (n = 1)
+Proof
+  rw[oneM_def]
+QED
 
 (* Theorem: stepsOf (oneM n) = size n *)
 (* Proof: by oneM_def, size_1, max_1_size_n *)
-val oneM_steps = store_thm(
-  "oneM_steps[simp]",
-  ``!n. stepsOf (oneM n) = size n``,
-  rw[oneM_def, max_1_size_n]);
+Theorem oneM_steps[simp]:
+    !n. stepsOf (oneM n) = size n
+Proof
+  rw[oneM_def, max_1_size_n]
+QED
 
 (* Theorem: (\n. stepsOf (oneM n)) IN big_O size *)
 (* Proof:
@@ -573,13 +645,14 @@ val oneM_steps = store_thm(
    or ?k c. !n. k < n ==> size n = 0 \/ 1 <= c
    Take k = 0, c = 1.
 *)
-val oneM_cc = store_thm(
-  "oneM_cc",
-  ``(\n. stepsOf (oneM n)) IN big_O size``,
+Theorem oneM_cc:
+    (\n. stepsOf (oneM n)) IN big_O size
+Proof
   rw[big_O_def] >>
   qexists_tac `0` >>
   qexists_tac `1` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (\n. stepsOf (oneM n)) IN big_O ((POLY 1) o size) *)
 (* Proof:
@@ -588,13 +661,14 @@ val oneM_cc = store_thm(
    or ?k c. !n. k < n ==> size n = 0 \/ 1 <= c
    Take k = 0, c = 1.
 *)
-val oneM_poly_cc = store_thm(
-  "oneM_poly_cc",
-  ``(\n. stepsOf (oneM n)) IN big_O ((POLY 1) o size)``,
+Theorem oneM_poly_cc:
+    (\n. stepsOf (oneM n)) IN big_O ((POLY 1) o size)
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `0` >>
   qexists_tac `1` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (stepsOf o oneM) IN big_O (\n. ulog n) *)
 (* Proof:
@@ -602,20 +676,22 @@ val oneM_poly_cc = store_thm(
       ?k c. !n. k < n ==> size n <= c * ulog n
    Put k = 1, c = 2, then size n <= 2 * ulog n      by size_le_ulog
 *)
-val oneM_steps_big_O = store_thm(
-  "oneM_steps_big_O",
-  ``(stepsOf o oneM) IN big_O (\n. ulog n)``,
+Theorem oneM_steps_big_O:
+    (stepsOf o oneM) IN big_O (\n. ulog n)
+Proof
   rw[big_O_def] >>
-  metis_tac[size_le_ulog]);
+  metis_tac[size_le_ulog]
+QED
 
 (* Theorem: (valueOf (oneM n) <=> (n = 1)) /\
             (stepsOf o oneM) IN big_O (\n. ulog n) *)
 (* Proof: by oneM_value, oneM_steps_big_O *)
-val oneM_thm = store_thm(
-  "oneM_thm",
-  ``!n. (valueOf (oneM n) <=> (n = 1)) /\
-       (stepsOf o oneM) IN big_O (\n. ulog n)``,
-  metis_tac[oneM_value, oneM_steps_big_O]);
+Theorem oneM_thm:
+    !n. (valueOf (oneM n) <=> (n = 1)) /\
+       (stepsOf o oneM) IN big_O (\n. ulog n)
+Proof
+  metis_tac[oneM_value, oneM_steps_big_O]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -639,13 +715,14 @@ val _ = overload_on ("twice_", ``app1 twiceM``);
    Take k = 0, c = 2.
    The result follows.
 *)
-val twiceM_cc = store_thm(
-  "twiceM_cc",
-  ``(\n. stepsOf (twiceM n)) IN big_O size``,
+Theorem twiceM_cc:
+    (\n. stepsOf (twiceM n)) IN big_O size
+Proof
   rw[twiceM_def, big_O_def] >>
   qexists_tac `0` >>
   qexists_tac `2` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (\n. stepsOf (twiceM n)) IN O_poly 1 *)
 (* Proof:
@@ -656,13 +733,14 @@ val twiceM_cc = store_thm(
    Take h = 0, k = size 2.
    The result follows.
 *)
-val twiceM_poly_cc = store_thm(
-  "twiceM_poly_cc",
-  ``(\n. stepsOf (twiceM n)) IN O_poly 1``,
+Theorem twiceM_poly_cc:
+    (\n. stepsOf (twiceM n)) IN O_poly 1
+Proof
   rw[twiceM_def] >>
   rw[O_poly_thm] >>
   map_every qexists_tac [`0`, `size 2`] >>
-  simp[]);
+  simp[]
+QED
 
 (* Theorem: valueOf (twiceM n) = 2 * n *)
 (* Proof:
@@ -670,10 +748,11 @@ val twiceM_poly_cc = store_thm(
    = valueOf (mulM n 2)   by twiceM_def
    = n * 2 = 2 * n        by mulM_value
 *)
-val twiceM_value = store_thm(
-  "twiceM_value[simp]",
-  ``!n. valueOf (twiceM n) = 2 * n``,
-  rw[twiceM_def]);
+Theorem twiceM_value[simp]:
+    !n. valueOf (twiceM n) = 2 * n
+Proof
+  rw[twiceM_def]
+QED
 
 (* Theorem: stepsOf (twiceM n) = 2 * (size n) *)
 (* Proof:
@@ -683,10 +762,11 @@ val twiceM_value = store_thm(
    = (size n) * 2           by size_2
    = 2 * (size n)           by MULT_COMM
 *)
-val twiceM_steps = store_thm(
-  "twiceM_steps[simp]",
-  ``!n. stepsOf (twiceM n) = 2 * (size n)``,
-  rw[twiceM_def, size_2]);
+Theorem twiceM_steps[simp]:
+    !n. stepsOf (twiceM n) = 2 * (size n)
+Proof
+  rw[twiceM_def, size_2]
+QED
 (* verifies twiceM_cc: (\n. stepsOf (twiceM n)) IN O_poly 1 *)
 
 (* Theorem: (stepsOf o twiceM) IN big_O (\n. ulog n) *)
@@ -695,24 +775,26 @@ val twiceM_steps = store_thm(
       ?k c. !n. k < n ==> 2 * size n <= c * ulog n
    Put k = 1, c = 4, then 2 * size n <= 4 * ulog n      by size_le_ulog
 *)
-val twiceM_steps_big_O = store_thm(
-  "twiceM_steps_big_O",
-  ``(stepsOf o twiceM) IN big_O (\n. ulog n)``,
+Theorem twiceM_steps_big_O:
+    (stepsOf o twiceM) IN big_O (\n. ulog n)
+Proof
   rw[big_O_def] >>
   qexists_tac `1` >>
   qexists_tac `4` >>
   rpt strip_tac >>
   `size n <= 2 * ulog n` by metis_tac[size_le_ulog] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (valueOf (twiceM n) = (2 * n)) /\
             (stepsOf o twiceM) IN big_O (\n. ulog n) *)
 (* Proof: by twiceM_value, twiceM_steps_big_O *)
-val twiceM_thm = store_thm(
-  "twiceM_thm",
-  ``!n. (valueOf (twiceM n) = (2 * n)) /\
-       (stepsOf o twiceM) IN big_O (\n. ulog n)``,
-  metis_tac[twiceM_value, twiceM_steps_big_O]);
+Theorem twiceM_thm:
+    !n. (valueOf (twiceM n) = (2 * n)) /\
+       (stepsOf o twiceM) IN big_O (\n. ulog n)
+Proof
+  metis_tac[twiceM_value, twiceM_steps_big_O]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -733,13 +815,14 @@ val _ = overload_on ("half_", ``app1 halfM``);
       ?k c. !n. k < n ==> size n * size 2 <= c * size n
    Take k = 0, c = size 2.
 *)
-val halfM_cc = store_thm(
-  "halfM_cc",
-  ``(\n. stepsOf (halfM n)) IN big_O size``,
+Theorem halfM_cc:
+    (\n. stepsOf (halfM n)) IN big_O size
+Proof
   rw[big_O_def, halfM_def] >>
   qexists_tac `0` >>
   qexists_tac `size 2` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: valueOf (halfM n) = HALF n *)
 (* Proof:
@@ -748,10 +831,11 @@ val halfM_cc = store_thm(
    = n DIV 2               by divM_value
    = HALF n                by notation
 *)
-val halfM_value = store_thm(
-  "halfM_value[simp]",
-  ``!n. valueOf (halfM n) = HALF n``,
-  rw[halfM_def]);
+Theorem halfM_value[simp]:
+    !n. valueOf (halfM n) = HALF n
+Proof
+  rw[halfM_def]
+QED
 
 (* Theorem: stepsOf (halfM n) = 2 * size n *)
 (* Proof:
@@ -761,10 +845,11 @@ val halfM_value = store_thm(
    = size n * 2            by size_2
    = 2 * size x
 *)
-val halfM_steps = store_thm(
-  "halfM_steps[simp]",
-  ``!n. stepsOf (halfM n) = 2 * size n``,
-  rw[halfM_def, size_2]);
+Theorem halfM_steps[simp]:
+    !n. stepsOf (halfM n) = 2 * size n
+Proof
+  rw[halfM_def, size_2]
+QED
 (* verifies halfM_cc: (\n. stepsOf (halfM n)) IN big_O size *)
 
 (* Theorem: (stepsOf o halfM) IN big_O (\n. ulog n) *)
@@ -773,24 +858,26 @@ val halfM_steps = store_thm(
       ?k c. !n. k < n ==> 2 * size n <= c * ulog n
    Put k = 1, c = 4, then 2 * size n <= 4 * ulog n      by size_le_ulog
 *)
-val halfM_steps_big_O = store_thm(
-  "halfM_steps_big_O",
-  ``(stepsOf o halfM) IN big_O (\n. ulog n)``,
+Theorem halfM_steps_big_O:
+    (stepsOf o halfM) IN big_O (\n. ulog n)
+Proof
   rw[big_O_def] >>
   qexists_tac `1` >>
   qexists_tac `4` >>
   rpt strip_tac >>
   `size n <= 2 * ulog n` by metis_tac[size_le_ulog] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (valueOf (halfM n) = HALF n) /\
             (stepsOf o halfM) IN big_O (\n. ulog n) *)
 (* Proof: by halfM_value, halfM_steps_big_O *)
-val halfM_thm = store_thm(
-  "halfM_thm",
-  ``!n. (valueOf (halfM n) = HALF n) /\
-       (stepsOf o halfM) IN big_O (\n. ulog n)``,
-  metis_tac[halfM_value, halfM_steps_big_O]);
+Theorem halfM_thm:
+    !n. (valueOf (halfM n) = HALF n) /\
+       (stepsOf o halfM) IN big_O (\n. ulog n)
+Proof
+  metis_tac[halfM_value, halfM_steps_big_O]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -801,10 +888,11 @@ End
 
 (* Theorem: valueOf (parityM n) = n MOD 2 *)
 (* Proof: by parityM_def, modM_value *)
-val parityM_value = store_thm(
-  "parityM_value[simp]",
-  ``!n. valueOf (parityM n) = n MOD 2``,
-  rw[parityM_def]);
+Theorem parityM_value[simp]:
+    !n. valueOf (parityM n) = n MOD 2
+Proof
+  rw[parityM_def]
+QED
 
 (* Theorem: stepsOf (parityM n) = 2 * size n *)
 (* Proof:
@@ -814,10 +902,11 @@ val parityM_value = store_thm(
    = size n * 2             by size_2
    = 2 * size n             by arithmetic
 *)
-val parityM_steps = store_thm(
-  "parityM_steps[simp]",
-  ``!n. stepsOf (parityM n) = 2 * size n``,
-  rw[parityM_def, size_2]);
+Theorem parityM_steps[simp]:
+    !n. stepsOf (parityM n) = 2 * size n
+Proof
+  rw[parityM_def, size_2]
+QED
 
 (* Theorem: stepsOf (parityM n)) IN big_O size *)
 (* Proof:
@@ -826,13 +915,14 @@ val parityM_steps = store_thm(
    or ?k c. !n. k < n ==> 2 <= c
    Take k = 0, c = 2.
 *)
-val parityM_cc = store_thm(
-  "parityM_cc",
-  ``(\n. stepsOf (parityM n)) IN big_O size``,
+Theorem parityM_cc:
+    (\n. stepsOf (parityM n)) IN big_O size
+Proof
   rw[big_O_def] >>
   qexists_tac `0` >>
   qexists_tac `2` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (\n. stepsOf (parityM n)) IN big_O ((POLY 1) o size) *)
 (* Proof:
@@ -841,13 +931,14 @@ val parityM_cc = store_thm(
    or ?k c. !n. k < n ==> 2 <= c
    Take k = 0, c = 2.
 *)
-val parityM_poly_cc = store_thm(
-  "parityM_poly_cc",
-  ``(\n. stepsOf (parityM n)) IN big_O ((POLY 1) o size)``,
+Theorem parityM_poly_cc:
+    (\n. stepsOf (parityM n)) IN big_O ((POLY 1) o size)
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `0` >>
   qexists_tac `2` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (\n. n MOD 2) IN big_O (K 1) *)
 (* Proof:
@@ -856,15 +947,16 @@ val parityM_poly_cc = store_thm(
    Note n MOD 2 = 0 or 1    by MOD_LESS
    Take k = 0, c = 1.
 *)
-val parity_cc = store_thm(
-  "parity_cc",
-  ``(\n. n MOD 2) IN big_O (K 1)``,
+Theorem parity_cc:
+    (\n. n MOD 2) IN big_O (K 1)
+Proof
   rw[big_O_def] >>
   qexists_tac `0` >>
   qexists_tac `1` >>
   rw[] >>
   `n MOD 2 < 2` by rw[MOD_LESS] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o parityM) IN big_O (\n. ulog n) *)
 (* Proof:
@@ -872,24 +964,26 @@ val parity_cc = store_thm(
       ?k c. !n. k < n ==> 2 * size n <= c * ulog n
    Put k = 1, c = 4, then 2 * size n <= 4 * ulog n      by size_le_ulog
 *)
-val parityM_steps_big_O = store_thm(
-  "parityM_steps_big_O",
-  ``(stepsOf o parityM) IN big_O (\n. ulog n)``,
+Theorem parityM_steps_big_O:
+    (stepsOf o parityM) IN big_O (\n. ulog n)
+Proof
   rw[big_O_def] >>
   qexists_tac `1` >>
   qexists_tac `4` >>
   rpt strip_tac >>
   `size n <= 2 * ulog n` by metis_tac[size_le_ulog] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (valueOf (parityM n) = n MOD 2) /\
             (stepsOf o parityM) IN big_O (\n. ulog n) *)
 (* Proof: by parityM_value, parityM_steps_big_O *)
-val parityM_thm = store_thm(
-  "parityM_thm",
-  ``!n. (valueOf (parityM n) = n MOD 2) /\
-       (stepsOf o parityM) IN big_O (\n. ulog n)``,
-  metis_tac[parityM_value, parityM_steps_big_O]);
+Theorem parityM_thm:
+    !n. (valueOf (parityM n) = n MOD 2) /\
+       (stepsOf o parityM) IN big_O (\n. ulog n)
+Proof
+  metis_tac[parityM_value, parityM_steps_big_O]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -928,11 +1022,12 @@ val _ = overload_on ("even_", ``app1 evenM``);
    = (n MOD 2 = 0)                             by zeroM_value
    = EVEN n                                    by EVEN_MOD2
 *)
-val evenM_value = store_thm(
-  "evenM_value[simp]",
-  ``!n. valueOf (evenM n) = (EVEN n)``,
+Theorem evenM_value[simp]:
+    !n. valueOf (evenM n) = (EVEN n)
+Proof
   rw[evenM_def] >>
-  rw[EVEN_MOD2]);
+  rw[EVEN_MOD2]
+QED
 
 (* Theorem: stepsOf (evenM n) = 2 * size n + 1 *)
 (* Proof:
@@ -946,12 +1041,13 @@ val evenM_value = store_thm(
    = 2 * size n + size (0 or 1)                by MOD_LESS
    = 2 * size n + 1                            by size_0, size_1
 *)
-val evenM_steps = store_thm(
-  "evenM_steps[simp]",
-  ``!n. stepsOf (evenM n) = 2 * size n + 1``,
+Theorem evenM_steps[simp]:
+    !n. stepsOf (evenM n) = 2 * size n + 1
+Proof
   rw[evenM_def] >>
   `n MOD 2 < 2` by rw[] >>
-  metis_tac[size_0, size_1, DECIDE``1 <= 1 /\ (n < 2 <=> (n = 0) \/ (n = 1))``]);
+  metis_tac[size_0, size_1, DECIDE``1 <= 1 /\ (n < 2 <=> (n = 0) \/ (n = 1))``]
+QED
 (* consistent with later evenM_cc: (\n. stepsOf (evenM n)) IN big_O size *)
 
 (* Theorem: (\n. stepsOf (evenM n)) IN big_O size *)
@@ -966,9 +1062,9 @@ val evenM_steps = store_thm(
    Apply 1 <= size n        by one_le_size
    The result follows.
 *)
-val evenM_cc = store_thm(
-  "evenM_cc",
-  ``(\n. stepsOf (evenM n)) IN big_O size``,
+Theorem evenM_cc:
+    (\n. stepsOf (evenM n)) IN big_O size
+Proof
   rw[evenM_def] >>
   rw[big_O_def] >>
   map_every qexists_tac [`0`, `3`] >>
@@ -976,7 +1072,8 @@ val evenM_cc = store_thm(
   `n MOD 2 < 2` by rw[] >>
   `size (n MOD 2) = 1` by metis_tac[size_0, size_1, DECIDE``n < 2 ==> (n = 0) \/ (n = 1)``] >>
   `1 <= size n` by rw[one_le_size] >>
-  rw[]);
+  rw[]
+QED
 (* But this depends on n MOD 2 = 0 or 1 *)
 (* Also: can prove below *)
 
@@ -991,15 +1088,16 @@ val evenM_cc = store_thm(
     and size 1 = 1        by size_1
    Hence true.
 *)
-val zeroM_parity_cc = store_thm(
-  "zeroM_parity_cc",
-  ``(\n. stepsOf (zeroM (n MOD 2))) IN big_O (K 1)``,
+Theorem zeroM_parity_cc:
+    (\n. stepsOf (zeroM (n MOD 2))) IN big_O (K 1)
+Proof
   rw[big_O_def] >>
   qexists_tac `0` >>
   qexists_tac `1` >>
   rpt strip_tac >>
   `n MOD 2 < 2` by rw[] >>
-  metis_tac[size_0, size_1, DECIDE``1 <= 1 /\ (n < 2 <=> (n = 0) \/ (n = 1))``]);
+  metis_tac[size_0, size_1, DECIDE``1 <= 1 /\ (n < 2 <=> (n = 0) \/ (n = 1))``]
+QED
 
 (* This can be very bad! or reasonable? *)
 
@@ -1012,25 +1110,27 @@ val zeroM_parity_cc = store_thm(
       and           1 <= ulog n          by ulog_ge_1
    hence true.
 *)
-val evenM_steps_big_O = store_thm(
-  "evenM_steps_big_O",
-  ``(stepsOf o evenM) IN big_O (\n. ulog n)``,
+Theorem evenM_steps_big_O:
+    (stepsOf o evenM) IN big_O (\n. ulog n)
+Proof
   rw[big_O_def] >>
   qexists_tac `1` >>
   qexists_tac `5` >>
   rpt strip_tac >>
   `size n <= 2 * ulog n` by metis_tac[size_le_ulog] >>
   `1 <= ulog n` by rw[ulog_ge_1] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (valueOf (evenM n) <=> EVEN n) /\
             (stepsOf o evenM) IN big_O (\n. ulog n) *)
 (* Proof: by evenM_value, evenM_steps_big_O *)
-val evenM_thm = store_thm(
-  "evenM_thm",
-  ``!n. (valueOf (evenM n) <=> EVEN n) /\
-       (stepsOf o evenM) IN big_O (\n. ulog n)``,
-  metis_tac[evenM_value, evenM_steps_big_O]);
+Theorem evenM_thm:
+    !n. (valueOf (evenM n) <=> EVEN n) /\
+       (stepsOf o evenM) IN big_O (\n. ulog n)
+Proof
+  metis_tac[evenM_value, evenM_steps_big_O]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1051,10 +1151,11 @@ val _ = overload_on ("sq_", ``app1 sqM``);
    = n * n                 by mulM_value
    = SQ n                  by notation
 *)
-val sqM_value = store_thm(
-  "sqM_value[simp]",
-  ``!n. valueOf (sqM n) = SQ n``,
-  rw[sqM_def]);
+Theorem sqM_value[simp]:
+    !n. valueOf (sqM n) = SQ n
+Proof
+  rw[sqM_def]
+QED
 
 (* Theorem: stepsOf (sqM n) = (size n) ** 2 *)
 (* Proof:
@@ -1063,10 +1164,11 @@ val sqM_value = store_thm(
    = size n * size n       by mulM_steps
    = size n ** 2           by EXP_2
 *)
-val sqM_steps = store_thm(
-  "sqM_steps[simp]",
-  ``!n. stepsOf (sqM n) = (size n) ** 2``,
-  rw[sqM_def, Once EXP_2]);
+Theorem sqM_steps[simp]:
+    !n. stepsOf (sqM n) = (size n) ** 2
+Proof
+  rw[sqM_def, Once EXP_2]
+QED
 (* verifies sqM_poly_cc: (\n. stepsOf (sqM n)) IN big_O (POLY 2 o size) *)
 
 (* Theorem: (\n. stepsOf (sqM n)) IN big_O (POLY 2 o size) *)
@@ -1075,21 +1177,22 @@ val sqM_steps = store_thm(
       ?k c. !n. k < n ==> size n * size n <= c * size n * size n
    Take k = 0, c = 1.
 *)
-val sqM_poly_cc = store_thm(
-  "sqM_poly_cc",
-  ``(\n. stepsOf (sqM n)) IN big_O (POLY 2 o size)``,
+Theorem sqM_poly_cc:
+    (\n. stepsOf (sqM n)) IN big_O (POLY 2 o size)
+Proof
   rw[big_O_def, POLY_def, sqM_def] >>
   qexists_tac `0` >>
   qexists_tac `1` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (UNCURRY (\x y. stepsOf (mulM x y))) z <
             ((POLY 2) o (UNCURRY (\x y. 1 + MAX (size x) (size y)))) z *)
 (* Proof: by mulM_steps, POLY_def, and MAX_DEF *)
-val mulM_poly_cc = store_thm(
-  "mulM_poly_cc",
-  ``!z. (UNCURRY (\x y. stepsOf (mulM x y))) z <
-       ((POLY 2) o (UNCURRY (\x y. 1 + MAX (size x) (size y)))) z``,
+Theorem mulM_poly_cc:
+    !z. (UNCURRY (\x y. stepsOf (mulM x y))) z <
+       ((POLY 2) o (UNCURRY (\x y. 1 + MAX (size x) (size y)))) z
+Proof
   rw[] >>
   (Cases_on `z` >> simp[]) >>
   rw[mulM_steps, POLY_def] >>
@@ -1097,7 +1200,8 @@ val mulM_poly_cc = store_thm(
   `size q < z` by rw[MAX_DEF, Abbr`z`] >>
   `size r < z` by rw[MAX_DEF, Abbr`z`] >>
   `size q * size r < z * z` by rw[LT_MONO_MULT2] >>
-  metis_tac[EXP_2]);
+  metis_tac[EXP_2]
+QED
 
 (* Theorem: (stepsOf o sqM) IN big_O (\n. (ulog n) ** 2) *)
 (* Proof:
@@ -1107,9 +1211,9 @@ val mulM_poly_cc = store_thm(
       then size n <= 2 * ulog n               by size_le_ulog
        so  (size n) ** 2 <= 4 (ulog n) ** 2   by SQ_LE
 *)
-val sqM_steps_big_O = store_thm(
-  "sqM_steps_big_O",
-  ``(stepsOf o sqM) IN big_O (\n. (ulog n) ** 2)``,
+Theorem sqM_steps_big_O:
+    (stepsOf o sqM) IN big_O (\n. (ulog n) ** 2)
+Proof
   rw[big_O_def] >>
   qexists_tac `1` >>
   qexists_tac `4` >>
@@ -1117,16 +1221,18 @@ val sqM_steps_big_O = store_thm(
   `size n <= 2 * ulog n` by metis_tac[size_le_ulog] >>
   `SQ (size n) <= SQ (2 * ulog n)` by rw[SQ_LE] >>
   `SQ (2 * ulog n) = 4 * SQ (ulog n)` by decide_tac >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (valueOf (sqM n) = SQ n) /\
             (stepsOf o sqM) IN big_O (\n. (ulog n) ** 2) *)
 (* Proof: by sqM_value, sqM_steps_big_O *)
-val sqM_thm = store_thm(
-  "sqM_thm",
-  ``!n. (valueOf (sqM n) = SQ n) /\
-       (stepsOf o sqM) IN big_O (\n. (ulog n) ** 2)``,
-  metis_tac[sqM_value, sqM_steps_big_O]);
+Theorem sqM_thm:
+    !n. (valueOf (sqM n) = SQ n) /\
+       (stepsOf o sqM) IN big_O (\n. (ulog n) ** 2)
+Proof
+  metis_tac[sqM_value, sqM_steps_big_O]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1154,13 +1260,14 @@ val _ = overload_on ("inc_", ``app1 incM``);
                <= size n    by one_le_size
    The result follows.
 *)
-val incM_cc = store_thm(
-  "incM_cc",
-  ``(\n. stepsOf (incM n)) IN O_poly 1``,
+Theorem incM_cc:
+    (\n. stepsOf (incM n)) IN O_poly 1
+Proof
   rw[incM_def] >>
   rw[O_poly_thm] >>
   map_every qexists_tac [`0`, `1`] >>
-  simp[one_le_size]);
+  simp[one_le_size]
+QED
 
 (* Theorem: valueOf (incM n) = n + 1 *)
 (* Proof:
@@ -1168,10 +1275,11 @@ val incM_cc = store_thm(
    = valueOf (addM n 1)   by incM_def
    = n + 1                by addM_value
 *)
-val incM_value = store_thm(
-  "incM_value[simp]",
-  ``!n. valueOf (incM n) = n + 1``,
-  rw[incM_def]);
+Theorem incM_value[simp]:
+    !n. valueOf (incM n) = n + 1
+Proof
+  rw[incM_def]
+QED
 
 (* Theorem: stepsOf (incM n) = size n *)
 (* Proof:
@@ -1181,11 +1289,12 @@ val incM_value = store_thm(
    = MAX (size n) 1         by size_1
    = size n                 by max_1_size_n, MAX_COMM
 *)
-val incM_steps = store_thm(
-  "incM_steps[simp]",
-  ``!n. stepsOf (incM n) = size n``,
+Theorem incM_steps[simp]:
+    !n. stepsOf (incM n) = size n
+Proof
   rw[incM_def] >>
-  metis_tac[max_1_size_n, MAX_COMM]);
+  metis_tac[max_1_size_n, MAX_COMM]
+QED
 (* verifies incM_cc: (\n. stepsOf (incM n)) IN O_poly 1 *)
 
 (* Theorem: (stepsOf o incM) IN big_O (\n. ulog n) *)
@@ -1194,20 +1303,22 @@ val incM_steps = store_thm(
       ?k c. !n. k < n ==> size n <= c * ulog n
    Put k = 1, c = 2, then size n <= 2 * ulog n  by size_le_ulog
 *)
-val incM_steps_big_O = store_thm(
-  "incM_steps_big_O",
-  ``(stepsOf o incM) IN big_O (\n. ulog n)``,
+Theorem incM_steps_big_O:
+    (stepsOf o incM) IN big_O (\n. ulog n)
+Proof
   rw[big_O_def] >>
-  metis_tac[size_le_ulog]);
+  metis_tac[size_le_ulog]
+QED
 
 (* Theorem: (valueOf (incM n) = n + 1) /\
             (stepsOf o incM) IN big_O (\n. ulog n) *)
 (* Proof: by incM_value, incM_steps_big_O *)
-val incM_thm = store_thm(
-  "incM_thm",
-  ``!n. (valueOf (incM n) = n + 1) /\
-       (stepsOf o incM) IN big_O (\n. ulog n)``,
-  metis_tac[incM_value, incM_steps_big_O]);
+Theorem incM_thm:
+    !n. (valueOf (incM n) = n + 1) /\
+       (stepsOf o incM) IN big_O (\n. ulog n)
+Proof
+  metis_tac[incM_value, incM_steps_big_O]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1235,13 +1346,14 @@ val _ = overload_on ("dec_", ``app1 decM``);
                <= size n    by one_le_size
    The result follows.
 *)
-val decM_cc = store_thm(
-  "decM_cc",
-  ``(\n. stepsOf (decM n)) IN O_poly 1``,
+Theorem decM_cc:
+    (\n. stepsOf (decM n)) IN O_poly 1
+Proof
   rw[decM_def] >>
   rw[O_poly_thm] >>
   map_every qexists_tac [`0`, `1`] >>
-  simp[one_le_size]);
+  simp[one_le_size]
+QED
 
 (* Theorem: valueOf (decM n) = n - 1 *)
 (* Proof:
@@ -1249,10 +1361,11 @@ val decM_cc = store_thm(
    = valueOf (subM n 1)   by decM_def
    = n - 1                by subM_value
 *)
-val decM_value = store_thm(
-  "decM_value[simp]",
-  ``!n. valueOf (decM n) = n - 1``,
-  rw[decM_def]);
+Theorem decM_value[simp]:
+    !n. valueOf (decM n) = n - 1
+Proof
+  rw[decM_def]
+QED
 
 (* Theorem: stepsOf (decM n) = size n *)
 (* Proof:
@@ -1262,11 +1375,12 @@ val decM_value = store_thm(
    = MAX (size n) 1         by size_1
    = size n                 by max_1_size_n, MAX_COMM
 *)
-val decM_steps = store_thm(
-  "decM_steps[simp]",
-  ``!n. stepsOf (decM n) = size n``,
+Theorem decM_steps[simp]:
+    !n. stepsOf (decM n) = size n
+Proof
   rw[decM_def] >>
-  metis_tac[max_1_size_n, MAX_COMM]);
+  metis_tac[max_1_size_n, MAX_COMM]
+QED
 (* verifies decM_cc: (\n. stepsOf (decM n)) IN O_poly 1 *)
 
 (* Theorem: (stepsOf o decM) IN big_O (\n. ulog n) *)
@@ -1275,20 +1389,22 @@ val decM_steps = store_thm(
       ?k c. !n. k < n ==> size n <= c * ulog n
    Put k = 1, c = 2, then size n <= 2 * ulog n  by size_le_ulog
 *)
-val decM_steps_big_O = store_thm(
-  "decM_steps_big_O",
-  ``(stepsOf o decM) IN big_O (\n. ulog n)``,
+Theorem decM_steps_big_O:
+    (stepsOf o decM) IN big_O (\n. ulog n)
+Proof
   rw[big_O_def] >>
-  metis_tac[size_le_ulog]);
+  metis_tac[size_le_ulog]
+QED
 
 (* Theorem: (valueOf (decM n) = n - 1) /\
             (stepsOf o decM) IN big_O (\n. ulog n) *)
 (* Proof: by decM_value, decM_steps_big_O *)
-val decM_thm = store_thm(
-  "decM_thm",
-  ``!n. (valueOf (decM n) = n - 1) /\
-       (stepsOf o decM) IN big_O (\n. ulog n)``,
-  metis_tac[decM_value, decM_steps_big_O]);
+Theorem decM_thm:
+    !n. (valueOf (decM n) = n - 1) /\
+       (stepsOf o decM) IN big_O (\n. ulog n)
+Proof
+  metis_tac[decM_value, decM_steps_big_O]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1315,10 +1431,11 @@ val _ = overload_on ("leq_", ``app2 leqM``);
    = (n - m = 0)          by subM_value, zeroM_value
    = n <= m               by arithmetic
 *)
-val leqM_value = store_thm(
-  "leqM_value[simp]",
-  ``!n m. valueOf (leqM n m) = (n <= m)``,
-  rw[leqM_def]);
+Theorem leqM_value[simp]:
+    !n m. valueOf (leqM n m) = (n <= m)
+Proof
+  rw[leqM_def]
+QED
 
 (* Theorem: stepsOf (leqM n) = 2 * (size n) *)
 (* Proof:
@@ -1326,17 +1443,19 @@ val leqM_value = store_thm(
    = stepsOf (do z <- subM n m; zeroM z od)   by leqM_def
    = MAX (size n) (size m) + (size (n - m))   by subM_steps, subM_value, zeroM_steps
 *)
-val leqM_steps = store_thm(
-  "leqM_steps[simp]",
-  ``!n m. stepsOf (leqM n m) = MAX (size n) (size m) + (size (n - m))``,
-  rw[leqM_def]);
+Theorem leqM_steps[simp]:
+    !n m. stepsOf (leqM n m) = MAX (size n) (size m) + (size (n - m))
+Proof
+  rw[leqM_def]
+QED
 
 (* Theorem: stepsOf (leqM n m) = size (MAX n m) + size (n - m) *)
 (* Proof: leqM_steps, size_max *)
-val leqM_steps_alt = store_thm(
-  "leqM_steps_alt",
-  ``!n m. stepsOf (leqM n m) = size (MAX n m) + size (n - m)``,
-  rw[leqM_steps, size_max]);
+Theorem leqM_steps_alt:
+    !n m. stepsOf (leqM n m) = size (MAX n m) + size (n - m)
+Proof
+  rw[leqM_steps, size_max]
+QED
 
 (* Theorem: stepsOf (leqM n m) <= 2 * size (MAX n m) *)
 (* Proof:
@@ -1347,24 +1466,26 @@ val leqM_steps_alt = store_thm(
    <= size (MAX n m) + size (MAX n m)           by size_monotone_le
     = 2 * size (MAX n m)
 *)
-val leqM_steps_le = store_thm(
-  "leqM_steps_le",
-  ``!n m. stepsOf (leqM n m) <= 2 * size (MAX n m)``,
+Theorem leqM_steps_le:
+    !n m. stepsOf (leqM n m) <= 2 * size (MAX n m)
+Proof
   rpt strip_tac >>
   `stepsOf (leqM n m) = size (MAX n m) + size (n - m)` by rw[leqM_steps, size_max] >>
   `size (n - m) <= size n` by rw[size_monotone_le] >>
   `size n <= size (MAX n m)` by rw[size_monotone_le] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (\(n,m). stepsOf (leqM n m)) z ** 2 =
             (POLY 2 o (\(n,m). size (n - m) + MAX (size n) (size m))) z *)
 (* Proof: by leqM_def, POLY_def. *)
-val leqM_poly_cc = store_thm(
-  "leqM_poly_cc",
-  ``!z. (\(n,m). stepsOf (leqM n m)) z ** 2 =
-       (POLY 2 o (\(n,m). size (n - m) + MAX (size n) (size m))) z``,
+Theorem leqM_poly_cc:
+    !z. (\(n,m). stepsOf (leqM n m)) z ** 2 =
+       (POLY 2 o (\(n,m). size (n - m) + MAX (size n) (size m))) z
+Proof
   rw[leqM_def] >>
-  rw[POLY_def]);
+  rw[POLY_def]
+QED
 (* This is not proving anything, the exponent 2 comes from POLY 2 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -1392,10 +1513,11 @@ val _ = overload_on ("lt_", ``app2 ltM``);
    = if (n = m) then F else (n <= m)      by eqM_value, subM_value, zeroM_value
    = n < m                                by arithmetic
 *)
-val ltM_value = store_thm(
-  "ltM_value[simp]",
-  ``!n m. valueOf (ltM n m) = (n < m)``,
-  rw[ltM_def]);
+Theorem ltM_value[simp]:
+    !n m. valueOf (ltM n m) = (n < m)
+Proof
+  rw[ltM_def]
+QED
 
 (* Theorem: stepsOf (leqM n) = if (n = m) then size n else 2 * MAX (size n) (size m) + size (n - m) *)
 (* Proof:
@@ -1405,20 +1527,22 @@ val ltM_value = store_thm(
    = MAX (size n) (size m) = size n             if n = m
    = 2 * MAX (size n) (size m) + size (n - m)   if n <> m
 *)
-val ltM_steps = store_thm(
-  "ltM_steps[simp]",
-  ``!n m. stepsOf (ltM n m) = if (n = m) then size n else 2 * MAX (size n) (size m) + size (n - m)``,
-  rw[ltM_def]);
+Theorem ltM_steps[simp]:
+    !n m. stepsOf (ltM n m) = if (n = m) then size n else 2 * MAX (size n) (size m) + size (n - m)
+Proof
+  rw[ltM_def]
+QED
 
 (* Theorem: (\(n,m). stepsOf (ltM n m)) z ** 1 =
             (POLY 1 o (\(n,m). if (n = m) then size n else size (n - m) + 2 * MAX (size n) (size m))) z *)
 (* Proof: by ltM_def, POLY_def. *)
-val ltM_poly_cc = store_thm(
-  "ltM_poly_cc",
-  ``!z. (\(n,m). stepsOf (ltM n m)) z ** 1 =
-       (POLY 1 o (\(n,m). if (n = m) then size n else size (n - m) + 2 * MAX (size n) (size m))) z``,
+Theorem ltM_poly_cc:
+    !z. (\(n,m). stepsOf (ltM n m)) z ** 1 =
+       (POLY 1 o (\(n,m). if (n = m) then size n else size (n - m) + 2 * MAX (size n) (size m))) z
+Proof
   rw[ltM_def] >>
-  rw[POLY_def]);
+  rw[POLY_def]
+QED
 (* This is not proving anything, the exponent 2 comes from POLY 2 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -1441,10 +1565,11 @@ val _ = overload_on ("gt1_", ``app1 gt1M``);
    = valueOf (ltM 1 n)        by gt1M_def
    = 1 < n                    by ltM_value
 *)
-val gt1M_value = store_thm(
-  "gt1M_value[simp]",
-  ``!n. valueOf (gt1M n) = (1 < n)``,
-  rw[gt1M_def]);
+Theorem gt1M_value[simp]:
+    !n. valueOf (gt1M n) = (1 < n)
+Proof
+  rw[gt1M_def]
+QED
 
 (* Theorem: stepsOf (gt1M n) = if (n = 1) then 1 else 1 + 2 * size n *)
 (* Proof:
@@ -1455,9 +1580,9 @@ val gt1M_value = store_thm(
    = 2 * size n + size (1 - n)                 by size_1, max_1_size_n
    = 2 * size n + 1                            by size_0, size_1
 *)
-val gt1M_steps = store_thm(
-  "gt1M_steps[simp]",
-  ``!n. stepsOf (gt1M n) = if (n = 1) then 1 else 1 + 2 * size n``,
+Theorem gt1M_steps[simp]:
+    !n. stepsOf (gt1M n) = if (n = 1) then 1 else 1 + 2 * size n
+Proof
   rpt strip_tac >>
   `MAX 1 (size n) = size n` by metis_tac[max_1_size_n] >>
   simp[gt1M_def] >>
@@ -1466,7 +1591,8 @@ val gt1M_steps = store_thm(
   Cases_on `n = 0` >-
   fs[] >>
   `1 - n = 0` by decide_tac >>
-  simp[]);
+  simp[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1492,10 +1618,11 @@ val _ = overload_on ("le1_", ``app1 le1M``);
    = ~(1 < n)                   by notM_value
    = n <= 1                     by logic
 *)
-val le1M_value = store_thm(
-  "le1M_value[simp]",
-  ``!n. valueOf (le1M n) = (n <= 1)``,
-  simp[le1M_def]);
+Theorem le1M_value[simp]:
+    !n. valueOf (le1M n) = (n <= 1)
+Proof
+  simp[le1M_def]
+QED
 
 
 (* Theorem: stepsOf (le1M n) = if n = 1 then 2 else 2 + 2 * size n *)
@@ -1505,10 +1632,11 @@ val le1M_value = store_thm(
    = (if n = 1 then 1 else 1 + 2 * (size n)) + 1   by gt1M_steps
    = if n = 1 then 2 else 2 + 2 * size n           by arithmetic
 *)
-val le1M_steps = store_thm(
-  "le1M_steps[simp]",
-  ``!n. stepsOf (le1M n) = if n = 1 then 2 else 2 + 2 * size n``,
-  simp[le1M_def]);
+Theorem le1M_steps[simp]:
+    !n. stepsOf (le1M n) = if n = 1 then 2 else 2 + 2 * size n
+Proof
+  simp[le1M_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1532,12 +1660,13 @@ End
 
 (* Theorem: valueOf (appendM l1 l2) = l1 ++ l2 *)
 (* Proof: induction on l1, appendM_def, APPEND. *)
-val appendM_value = store_thm(
-  "appendM_value[simp]",
-  ``!l1 l2. valueOf (appendM l1 l2) = l1 ++ l2``,
+Theorem appendM_value[simp]:
+    !l1 l2. valueOf (appendM l1 l2) = l1 ++ l2
+Proof
   ho_match_mp_tac (theorem "appendM_ind") >>
   rw[] >>
-  (Cases_on `l1` >> rw[Once appendM_def]));
+  (Cases_on `l1` >> rw[Once appendM_def])
+QED
 
 (* ------------------------------------------------------------------------- *)
 

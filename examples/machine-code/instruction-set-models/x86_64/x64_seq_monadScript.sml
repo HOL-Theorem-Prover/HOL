@@ -74,8 +74,8 @@ Definition ZREAD_INSTR_BYTES_def:
     if n = 0 then [] else ZREAD_INSTR a s :: ZREAD_INSTR_BYTES (n-1) (a+1w) s
 End
 
-val w2bits_EL = store_thm("w2bits_EL",
-  ``(w2bits (w:word8) ++ ys = x1::x2::x3::x4::x5::x6::x7::x8::xs) =
+Theorem w2bits_EL:
+    (w2bits (w:word8) ++ ys = x1::x2::x3::x4::x5::x6::x7::x8::xs) =
     (EL 0 (w2bits (w:word8)) = x1) /\
     (EL 1 (w2bits (w:word8)) = x2) /\
     (EL 2 (w2bits (w:word8)) = x3) /\
@@ -83,10 +83,12 @@ val w2bits_EL = store_thm("w2bits_EL",
     (EL 4 (w2bits (w:word8)) = x5) /\
     (EL 5 (w2bits (w:word8)) = x6) /\
     (EL 6 (w2bits (w:word8)) = x7) /\
-    (EL 7 (w2bits (w:word8)) = x8) /\ (ys = xs)``,
+    (EL 7 (w2bits (w:word8)) = x8) /\ (ys = xs)
+Proof
   SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2bits_def]
   THEN NTAC 9 (ONCE_REWRITE_TAC [n2bits_def] THEN SIMP_TAC std_ss [CONS_11])
-  THEN SIMP_TAC std_ss [APPEND,CONS_11,EL,rich_listTheory.EL_CONS,HD]);
+  THEN SIMP_TAC std_ss [APPEND,CONS_11,EL,rich_listTheory.EL_CONS,HD]
+QED
 
 val expand_mem_read_bytes =
  (ONCE_REWRITE_CONV [ZREAD_MEM_BYTES_def,word2bytes_def] THENC
@@ -366,25 +368,29 @@ Definition ZWRITE_MEM2_WORD64_def:
    (ZWRITE_MEM2 (a + 0w) (EL 0 (word2bytes 8 w)) s)))))))
 End
 
-val ZREAD_MEM2_WORD64_THM = store_thm("ZREAD_MEM2_WORD64_THM",
-  ``ZREAD_MEM2_WORD64 a (s:x64_state) =
-      (w2w (ZREAD_MEM2_WORD32 (a + 4w) s) << 32) !! w2w (ZREAD_MEM2_WORD32 a s)``,
+Theorem ZREAD_MEM2_WORD64_THM:
+    ZREAD_MEM2_WORD64 a (s:x64_state) =
+      (w2w (ZREAD_MEM2_WORD32 (a + 4w) s) << 32) !! w2w (ZREAD_MEM2_WORD32 a s)
+Proof
   SIMP_TAC std_ss [ZREAD_MEM2_WORD32_def,ZREAD_MEM2_WORD64_def,bytes2word_def]
   THEN ASM_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
   THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) [GSYM LSL_BITWISE]
   THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) [WORD_OR_CLAUSES]
   THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) [GSYM LSL_BITWISE]
-  THEN SIMP_TAC std_ss [AC WORD_OR_ASSOC WORD_OR_COMM]);
+  THEN SIMP_TAC std_ss [AC WORD_OR_ASSOC WORD_OR_COMM]
+QED
 
-val ZWRITE_MEM2_WORD64_THM = store_thm("ZWRITE_MEM2_WORD64_THM",
-  ``ZWRITE_MEM2_WORD64 a (w:word64) (s:x64_state) =
+Theorem ZWRITE_MEM2_WORD64_THM:
+    ZWRITE_MEM2_WORD64 a (w:word64) (s:x64_state) =
       ZWRITE_MEM2_WORD32 (a + 4w) ((63 >< 32) w)
-     (ZWRITE_MEM2_WORD32 (a + 0w) ((31 ><  0) w) s)``,
+     (ZWRITE_MEM2_WORD32 (a + 0w) ((31 ><  0) w) s)
+Proof
   SIMP_TAC std_ss [ZWRITE_MEM2_WORD32_def,ZWRITE_MEM2_WORD64_def]
   THEN NTAC 8 (ONCE_REWRITE_TAC [word2bytes_def] THEN SIMP_TAC std_ss [EL_thm])
   THEN ASM_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
   THEN SIMP_TAC (std_ss++wordsLib.WORD_SHIFT_ss) []
-  THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) [WORD_OR_CLAUSES]);
+  THEN SIMP_TAC (std_ss++wordsLib.WORD_EXTRACT_ss++wordsLib.SIZES_ss) [WORD_OR_CLAUSES]
+QED
 
 Definition CAN_ZWRITE_MEM_def:
   CAN_ZWRITE_MEM a s = !w. ~(ZWRITE_MEM a w s = NONE)
@@ -434,22 +440,26 @@ val seq_monad_thm = save_thm("seq_monad_thm",let
            parT_unit_seq_lemma :: (CONJUNCTS monad_simp_lemma)
   in LIST_CONJ (map GEN_ALL xs) end);
 
-val CAN_ZWRITE_MEM = store_thm("CAN_ZWRITE_MEM",
-  ``CAN_ZWRITE_MEM a (r,e,s,m,i) =
-    ~(m a = NONE) /\ Zwrite IN SND (THE (m a))``,
+Theorem CAN_ZWRITE_MEM:
+    CAN_ZWRITE_MEM a (r,e,s,m,i) =
+    ~(m a = NONE) /\ Zwrite IN SND (THE (m a))
+Proof
   SIMP_TAC std_ss [ZWRITE_MEM_def,CAN_ZWRITE_MEM_def]
   THEN Cases_on `m a` THEN ASM_SIMP_TAC std_ss [] THEN SRW_TAC [] []
-  THEN Cases_on `x` THEN Cases_on `Zwrite IN r'` THEN SRW_TAC [] []);
+  THEN Cases_on `x` THEN Cases_on `Zwrite IN r'` THEN SRW_TAC [] []
+QED
 
-val CAN_ZREAD_MEM = store_thm("CAN_ZREAD_MEM",
-  ``CAN_ZREAD_MEM a (r,e,s,m,i) =
-    ~(m a = NONE) /\ Zread IN SND (THE (m a))``,
+Theorem CAN_ZREAD_MEM:
+    CAN_ZREAD_MEM a (r,e,s,m,i) =
+    ~(m a = NONE) /\ Zread IN SND (THE (m a))
+Proof
   SIMP_TAC std_ss [ZREAD_MEM_def,CAN_ZREAD_MEM_def]
   THEN Cases_on `m a` THEN ASM_SIMP_TAC std_ss [] THEN SRW_TAC [] []
-  THEN Cases_on `x` THEN SRW_TAC [] []);
+  THEN Cases_on `x` THEN SRW_TAC [] []
+QED
 
-val CAN_ZREAD_ZWRITE_THM = store_thm("CAN_ZREAD_ZWRITE_THM",
-  ``!s. (CAN_ZWRITE_MEM a s ==> CAN_ZWRITE_MEM a (ZWRITE_REG r2 w s)) /\
+Theorem CAN_ZREAD_ZWRITE_THM:
+    !s. (CAN_ZWRITE_MEM a s ==> CAN_ZWRITE_MEM a (ZWRITE_REG r2 w s)) /\
         (CAN_ZWRITE_MEM a s ==> CAN_ZWRITE_MEM a (ZWRITE_RIP e s)) /\
         (CAN_ZWRITE_MEM a s ==> CAN_ZWRITE_MEM a (ZWRITE_EFLAG f b s)) /\
         (CAN_ZWRITE_MEM a s ==> CAN_ZWRITE_MEM a (ZCLEAR_ICACHE s)) /\
@@ -458,46 +468,58 @@ val CAN_ZREAD_ZWRITE_THM = store_thm("CAN_ZREAD_ZWRITE_THM",
         (CAN_ZREAD_MEM a s ==> CAN_ZREAD_MEM a (ZWRITE_RIP e s)) /\
         (CAN_ZREAD_MEM a s ==> CAN_ZREAD_MEM a (ZWRITE_EFLAG f b s)) /\
         (CAN_ZREAD_MEM a s ==> CAN_ZREAD_MEM a (ZCLEAR_ICACHE s)) /\
-        (CAN_ZREAD_MEM a s /\ CAN_ZWRITE_MEM c s ==> CAN_ZREAD_MEM a (ZWRITE_MEM2 c x s))``,
+        (CAN_ZREAD_MEM a s /\ CAN_ZWRITE_MEM c s ==> CAN_ZREAD_MEM a (ZWRITE_MEM2 c x s))
+Proof
   STRIP_TAC THEN `?r2 e2 s2 m2 i2. s = (r2,e2,s2,m2,i2)` by METIS_TAC [pairTheory.PAIR]
   THEN ASM_SIMP_TAC std_ss [ZREAD_REG_def,ZREAD_RIP_def,
          ZREAD_EFLAG_def, ZWRITE_REG_def, ZWRITE_MEM2_def, ZREAD_MEM2_def,
          combinTheory.APPLY_UPDATE_THM, ZWRITE_RIP_def,CAN_ZREAD_MEM,
          ZWRITE_EFLAG_def,ZCLEAR_ICACHE_def,CAN_ZWRITE_MEM]
-  THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []);
+  THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []
+QED
 
-val x64_else_none_write_mem_lemma = store_thm("x64_else_none_write_mem_lemma",
-  ``!a x t f. CAN_ZWRITE_MEM a t ==>
-              (option_apply (ZWRITE_MEM a x t) f = f (ZWRITE_MEM2 a x t))``,
+Theorem x64_else_none_write_mem_lemma:
+    !a x t f. CAN_ZWRITE_MEM a t ==>
+              (option_apply (ZWRITE_MEM a x t) f = f (ZWRITE_MEM2 a x t))
+Proof
   REPEAT STRIP_TAC
   THEN `?r e s m i. t = (r,e,s,m,i)` by METIS_TAC [pairTheory.PAIR]
   THEN FULL_SIMP_TAC std_ss [CAN_ZWRITE_MEM,ZWRITE_MEM_def,ZWRITE_MEM2_def]
   THEN Cases_on `m a` THEN FULL_SIMP_TAC std_ss []
   THEN Cases_on `x'` THEN FULL_SIMP_TAC (srw_ss()) []
-  THEN SRW_TAC [] [option_apply_def]);
+  THEN SRW_TAC [] [option_apply_def]
+QED
 
-val x64_else_none_read_mem_lemma = store_thm("x64_else_none_read_mem_lemma",
-  ``!a x t f. CAN_ZREAD_MEM a t ==>
-              (option_apply (ZREAD_MEM a t) f = f (ZREAD_MEM2 a t))``,
+Theorem x64_else_none_read_mem_lemma:
+    !a x t f. CAN_ZREAD_MEM a t ==>
+              (option_apply (ZREAD_MEM a t) f = f (ZREAD_MEM2 a t))
+Proof
   REPEAT STRIP_TAC
   THEN `?r e s m i. t = (r,e,s,m,i)` by METIS_TAC [pairTheory.PAIR]
   THEN FULL_SIMP_TAC std_ss [CAN_ZREAD_MEM,ZREAD_MEM2_def,ZREAD_MEM_def]
   THEN Cases_on `m a` THEN FULL_SIMP_TAC std_ss []
   THEN Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) []
-  THEN SRW_TAC [] [option_apply_def]);
+  THEN SRW_TAC [] [option_apply_def]
+QED
 
-val x64_else_none_eflag_lemma = store_thm("x64_else_none_eflag_lemma",
-  ``!m a f. ~(m a = NONE) ==>
-            (option_apply ((m:x64_state->bool option) a) (f:bool->'a option) = f (THE (m a)))``,
-  SIMP_TAC std_ss [option_apply_def]);
+Theorem x64_else_none_eflag_lemma:
+    !m a f. ~(m a = NONE) ==>
+            (option_apply ((m:x64_state->bool option) a) (f:bool->'a option) = f (THE (m a)))
+Proof
+  SIMP_TAC std_ss [option_apply_def]
+QED
 
-val x64_state_EXPAND = store_thm("x64_state_EXPAND",
-  ``?r p f t m i. s:x64_state = (r,p,f,m,i)``,
-  Q.SPEC_TAC (`s`,`s`) THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD]);
+Theorem x64_state_EXPAND:
+    ?r p f t m i. s:x64_state = (r,p,f,m,i)
+Proof
+  Q.SPEC_TAC (`s`,`s`) THEN SIMP_TAC std_ss [pairTheory.FORALL_PROD]
+QED
 
-val ZREAD_RIP_ADD_0 = store_thm("ZREAD_RIP_ADD_0",
-  ``ZREAD_MEM (ZREAD_RIP s) s = ZREAD_MEM (ZREAD_RIP s + 0w) s``,
-  REWRITE_TAC [WORD_ADD_0]);
+Theorem ZREAD_RIP_ADD_0:
+    ZREAD_MEM (ZREAD_RIP s) s = ZREAD_MEM (ZREAD_RIP s + 0w) s
+Proof
+  REWRITE_TAC [WORD_ADD_0]
+QED
 
 val x64_address_lemma = save_thm("x64_address_lemma",
   SIMP_RULE std_ss [listTheory.ALL_DISTINCT,MEM,GSYM CONJ_ASSOC]

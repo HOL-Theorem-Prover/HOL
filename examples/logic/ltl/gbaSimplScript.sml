@@ -14,10 +14,10 @@ Definition trans_implies_def:
       ∧ !t. t ∈ accTrans ==> ((q,a2,q2) ∈ t ==> (q,a1,q1) ∈ t)
 End
 
-val TRANS_IMPLIES_PO = store_thm
-  ("TRANS_IMPLIES_PO",
-   ``!aT q d.
-       partial_order (rrestrict (rel_to_reln (trans_implies aT q)) d) d``,
+Theorem TRANS_IMPLIES_PO:
+     !aT q d.
+       partial_order (rrestrict (rel_to_reln (trans_implies aT q)) d) d
+Proof
    fs[partial_order_def, rrestrict_def, rel_to_reln_def] >> rpt strip_tac
     >- (fs[domain_def,SUBSET_DEF] >> rpt strip_tac)
     >- (fs[range_def, SUBSET_DEF] >> rpt strip_tac)
@@ -30,27 +30,27 @@ val TRANS_IMPLIES_PO = store_thm
         >> Cases_on `y` >> fs[trans_implies_def]
         >> metis_tac[SUBSET_ANTISYM]
        )
-  );
+QED
 
-val TRANS_IMPLIES_FINITE = store_thm
-  ("TRANS_IMPLIES_FINITE",
-  ``!aT q d. FINITE d ==>
-     finite_prefixes (rrestrict (rel_to_reln (trans_implies aT q)) d) d``,
+Theorem TRANS_IMPLIES_FINITE:
+    !aT q d. FINITE d ==>
+     finite_prefixes (rrestrict (rel_to_reln (trans_implies aT q)) d) d
+Proof
   fs[finite_prefixes_def, rrestrict_def, rel_to_reln_def] >> rpt strip_tac
   >> `FINITE {e' | e' ∈ (\x. trans_implies aT q x e) ∧ e' ∈ d }`
       suffices_by fs[IN_DEF]
   >> metis_tac[INTER_DEF,INTER_FINITE,INTER_COMM]
-  );
+QED
 
-val TRANS_IMPLIES_MIN = store_thm
-  ("TRANS_IMPLIES_MIN",
-  ``!aut q1 q2 w i a. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidGBA aut
+Theorem TRANS_IMPLIES_MIN:
+    !aut q1 q2 w i a. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidGBA aut
           ∧ q1 ∈ aut.states ∧ (a,q2) ∈ aut.trans q1
           ==> let rel = rrestrict
                             (rel_to_reln (trans_implies aut.accTrans q1))
                             (aut.trans q1)
               in ?t. t ∈ minimal_elements (aut.trans q1) rel
-                  ∧ (t,(a, q2)) ∈ rel``,
+                  ∧ (t,(a, q2)) ∈ rel
+Proof
   rpt strip_tac >> simp[]
   >> qabbrev_tac `rel = rrestrict
                             (rel_to_reln (trans_implies aut.accTrans q1))
@@ -65,7 +65,7 @@ val TRANS_IMPLIES_MIN = store_thm
          >- metis_tac[TRANS_IMPLIES_PO]
          >- metis_tac[TRANS_IMPLIES_FINITE]
       )
-  );
+QED
 
 Definition removeImplied_def:
   removeImplied accTrans trans q =
@@ -82,17 +82,17 @@ Definition reduceTransSimpl_def:
     a
 End
 
-val REDUCE_IS_VALID = store_thm
- ("REDUCE_IS_VALID",
-  ``!aut. isValidGBA aut ==> isValidGBA (reduceTransSimpl aut)``,
+Theorem REDUCE_IS_VALID:
+    !aut. isValidGBA aut ==> isValidGBA (reduceTransSimpl aut)
+Proof
   fs[isValidGBA_def] >> rpt strip_tac >> Cases_on `aut`
   >> fs[reduceTransSimpl_def] >> fs[removeImplied_def] >> metis_tac[]
- );
+QED
 
-val REDUCE_IS_CORRECT = store_thm
-  ("REDUCE_IS_CORRECT",
-   ``!aut. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidGBA aut
-             ==> (GBA_lang aut = GBA_lang (reduceTransSimpl aut))``,
+Theorem REDUCE_IS_CORRECT:
+     !aut. FINITE aut.states ∧ FINITE aut.alphabet ∧ isValidGBA aut
+             ==> (GBA_lang aut = GBA_lang (reduceTransSimpl aut))
+Proof
    fs[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
    >> fs[GBA_lang_def, reduceTransSimpl_def]
     >- (rename [‘isGBARunFor aut r x’] >> qexists_tac `r`
@@ -195,7 +195,7 @@ val REDUCE_IS_CORRECT = store_thm
              >> fs[removeImplied_def] >> metis_tac[]
             )
        )
-  );
+QED
 
 (*
   Remove unreachable states
@@ -217,9 +217,9 @@ Definition removeStatesSimpl_def:
       alph
 End
 
-val REDUCE_STATE_VALID = store_thm
-  ("REDUCE_STATE_VALID",
-   ``!aut. isValidGBA aut ==> isValidGBA (removeStatesSimpl aut)``,
+Theorem REDUCE_STATE_VALID:
+     !aut. isValidGBA aut ==> isValidGBA (removeStatesSimpl aut)
+Proof
    fs[isValidGBA_def] >> rpt strip_tac >> Cases_on `aut`
    >> fs[removeStatesSimpl_def,reachableFromSetGBA_def]
    >> fs[SUBSET_DEF] >> rpt strip_tac
@@ -233,7 +233,7 @@ val REDUCE_STATE_VALID = store_thm
     >- metis_tac[]
     >- metis_tac[]
     >- metis_tac[]
-  );
+QED
 
 (* val REACHABLE_LEMM = store_thm *)
 (*   ("REACHABLE_LEMM", *)
@@ -241,10 +241,10 @@ val REDUCE_STATE_VALID = store_thm
 (*       (!q. q ∈ gba.states ==>) *)
 (* ) *)
 
-val REDUCE_STATE_CORRECT = store_thm
-  ("REDUCE_STATE_CORRECT",
-   ``!aut. isValidGBA aut ==>
-              (GBA_lang aut = GBA_lang (removeStatesSimpl aut))``,
+Theorem REDUCE_STATE_CORRECT:
+     !aut. isValidGBA aut ==>
+              (GBA_lang aut = GBA_lang (removeStatesSimpl aut))
+Proof
    fs[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
    >> fs[GBA_lang_def, removeStatesSimpl_def]
    >- (qexists_tac `r` >> Cases_on `r` >> fs[isGBARunFor_def]
@@ -351,7 +351,7 @@ val REDUCE_STATE_CORRECT = store_thm
              >> qunabbrev_tac `realTrans` >> fs[]
             )
        )
-  );
+QED
 
 (*
   Merge equivalent states
@@ -375,28 +375,28 @@ Definition replaceAccTrans_def:
                 (q1,a,q2) ∈ s}) aT
 End
 
-val REPL_AT_LEMM = store_thm
-  ("REPL_AT_LEMM",
-   ``!aT t x y.
+Theorem REPL_AT_LEMM:
+     !aT t x y.
        t ∈ replaceAccTrans x y aT ==>
        ?t2. t2 ∈ aT ∧
             !q1 a q2. (q1,a,q2) ∈ t2
-                      ==> (replaceState x y q1, a, replaceState x y q2) ∈ t``,
+                      ==> (replaceState x y q1, a, replaceState x y q2) ∈ t
+Proof
    rpt strip_tac >> fs[replaceAccTrans_def] >> metis_tac[]
-  );
+QED
 
-val REPL_AT_LEMM2 = store_thm
-  ("REPL_AT_LEMM2",
-  ``!aT t x y. t ∈ aT
+Theorem REPL_AT_LEMM2:
+    !aT t x y. t ∈ aT
   ==> ?t2. t2 ∈ (replaceAccTrans x y aT)
   ∧ !q1 a q2. (q1,a,q2) ∈ t2
        ==> ?q3 q4. (q1 = replaceState x y q3) ∧ (q2 = replaceState x y q4)
-                 ∧ (q3,a,q4) ∈ t``,
+                 ∧ (q3,a,q4) ∈ t
+Proof
   rpt strip_tac >> fs[replaceAccTrans_def]
   >> qexists_tac
      `{(replaceState x y q1, a, replaceState x y q2) | (q1,a,q2) ∈ t}`
   >> rpt strip_tac >> fs[] >> metis_tac[]
-  );
+QED
 
 Definition equivalentStates_def:
   equivalentStates aT trans q1 q2 =

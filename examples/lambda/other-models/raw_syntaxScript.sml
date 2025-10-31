@@ -60,10 +60,11 @@ Definition fv_def:
   (fv (lam v t) = fv t DELETE v)
 End
 
-val FINITE_fv = store_thm(
-  "FINITE_fv",
-  ``!t. FINITE (fv t)``,
-  Induct THEN SRW_TAC [][fv_def]);
+Theorem FINITE_fv:
+    !t. FINITE (fv t)
+Proof
+  Induct THEN SRW_TAC [][fv_def]
+QED
 val _ = export_rewrites ["FINITE_fv"]
 
 Definition capt_def:
@@ -73,16 +74,18 @@ Definition capt_def:
                       else {})
 End
 
-val FINITE_capt = store_thm(
-  "FINITE_capt",
-  ``!t v. FINITE (capt v t)``,
-  Induct THEN SRW_TAC [][capt_def]);
+Theorem FINITE_capt:
+    !t v. FINITE (capt v t)
+Proof
+  Induct THEN SRW_TAC [][capt_def]
+QED
 val _ = export_rewrites ["FINITE_capt"]
 
-val capt_fv = store_thm(
-  "capt_fv",
-  ``!e x. ~(x IN fv e) ==> (capt x e = {})``,
-  Induct THEN SRW_TAC [][capt_def, fv_def]);
+Theorem capt_fv:
+    !e x. ~(x IN fv e) ==> (capt x e = {})
+Proof
+  Induct THEN SRW_TAC [][capt_def, fv_def]
+QED
 val _ = export_rewrites ["capt_fv"]
 
 Definition subst_def:
@@ -111,16 +114,18 @@ val (beta_rules, beta_ind, beta_cases) = Hol_reln`
 Definition alpha_def:  alpha e1 e2 = ?y. ialpha y e1 e2
 End
 
-val renaming_sanity1 = store_thm(
-  "renaming_sanity1",
-  ``!e x. subst (var x) x e = e``,
-  Induct THEN SRW_TAC [][subst_def]);
+Theorem renaming_sanity1:
+    !e x. subst (var x) x e = e
+Proof
+  Induct THEN SRW_TAC [][subst_def]
+QED
 val _ = export_rewrites ["renaming_sanity1"]
 
-val renaming_sanity2 = store_thm(
-  "renaming_sanity2",
-  ``!e x e'. ~(x IN fv e) ==> (subst e' x e = e)``,
-  Induct THEN SRW_TAC [][subst_def, fv_def]);
+Theorem renaming_sanity2:
+    !e x e'. ~(x IN fv e) ==> (subst e' x e = e)
+Proof
+  Induct THEN SRW_TAC [][subst_def, fv_def]
+QED
 val _ = export_rewrites ["renaming_sanity2"]
 
 val RIGHT_INTER_OVER_UNION = prove(
@@ -141,11 +146,12 @@ Proof
   fs[] >> rfs[]
 QED
 
-val renaming_sanity4 = store_thm(
-  "renaming_sanity4",
-  ``!e x y. ~(y IN fv e) ==> (subst (var x) y (subst (var y) x e) = e)``,
+Theorem renaming_sanity4:
+    !e x y. ~(y IN fv e) ==> (subst (var x) y (subst (var y) x e) = e)
+Proof
   Induct THEN SRW_TAC [][fv_def, subst_def] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 Definition collapse_def:
   (collapse (var s) = VAR s) /\
@@ -153,26 +159,28 @@ Definition collapse_def:
   (collapse (lam v t) = LAM v (collapse t))
 End
 
-val FV_collapse = store_thm(
-  "FV_collapse",
-  ``!e. FV (collapse e) = fv e``,
-  Induct THEN SRW_TAC [][collapse_def, fv_def]);
+Theorem FV_collapse:
+    !e. FV (collapse e) = fv e
+Proof
+  Induct THEN SRW_TAC [][collapse_def, fv_def]
+QED
 val _ = export_rewrites ["FV_collapse"]
 
-val fv_vsubst = store_thm(
-  "fv_vsubst",
-  ``!e x y. ~(y IN capt x e) ==>
+Theorem fv_vsubst:
+    !e x y. ~(y IN capt x e) ==>
             (fv (subst (var y) x e) =
                if x IN fv e then y INSERT (fv e DELETE x)
-               else fv e)``,
+               else fv e)
+Proof
   Induct THEN
   SRW_TAC [][fv_def, capt_def, subst_def, EXTENSION] THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN PROVE_TAC []);
+  FULL_SIMP_TAC (srw_ss()) [] THEN PROVE_TAC []
+QED
 
-val collapse_vsubst = store_thm(
-  "collapse_vsubst",
-  ``!e x y. ~(y IN capt x e)  ==>
-            (collapse (subst (var y) x e) = [VAR y/x] (collapse e))``,
+Theorem collapse_vsubst:
+    !e x y. ~(y IN capt x e)  ==>
+            (collapse (subst (var y) x e) = [VAR y/x] (collapse e))
+Proof
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [collapse_def, capt_def, fv_def, subst_def,
                            SUB_VAR, SUB_THM]
@@ -189,12 +197,13 @@ val collapse_vsubst = store_thm(
       SRW_TAC [][lemma14b],
       Cases_on `x IN fv e` THEN ASM_SIMP_TAC (srw_ss()) []
     ]
-  ]);
+  ]
+QED
 
-val collapse_subst = store_thm(
-  "collapse_subst",
-  ``!t u v. (capt v t INTER fv u = {}) ==>
-            (collapse (subst u v t) = [collapse u/v] (collapse t))``,
+Theorem collapse_subst:
+    !t u v. (capt v t INTER fv u = {}) ==>
+            (collapse (subst u v t) = [collapse u/v] (collapse t))
+Proof
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [collapse_def, capt_def, fv_def, subst_def,
                            SUB_VAR, SUB_THM, RIGHT_INTER_OVER_UNION]
@@ -203,13 +212,15 @@ val collapse_subst = store_thm(
     REPEAT GEN_TAC THEN SRW_TAC [][collapse_def, RIGHT_INTER_OVER_UNION,
                                    SUB_THM] THEN
     FULL_SIMP_TAC (srw_ss() ++ COND_elim_ss) [SING_INTER, SUB_THM, lemma14b]
-  ]);
+  ]
+QED
 
 
-val x_IN_capt_x = store_thm(
-  "x_IN_capt_x",
-  ``!t. ~(x IN capt x t)``,
-  Induct THEN SRW_TAC [][capt_def]);
+Theorem x_IN_capt_x:
+    !t. ~(x IN capt x t)
+Proof
+  Induct THEN SRW_TAC [][capt_def]
+QED
 
 val capt_subst2 = prove(
   ``!t.
@@ -218,9 +229,9 @@ val capt_subst2 = prove(
   Induct THEN SRW_TAC [][capt_def, subst_def, fv_def, fv_vsubst] THEN
   FULL_SIMP_TAC (srw_ss()) []);
 
-val ialpha_sym = store_thm(
-  "ialpha_sym",
-  ``!y t1 t2. ialpha y t1 t2 ==> ?z. ialpha z t2 t1``,
+Theorem ialpha_sym:
+    !y t1 t2. ialpha y t1 t2 ==> ?z. ialpha z t2 t1
+Proof
   HO_MATCH_MP_TAC ialpha_ind THEN SRW_TAC [][] THENL [
     Cases_on `x = y` THENL [
       SRW_TAC [][renaming_sanity1] THEN
@@ -238,38 +249,43 @@ val ialpha_sym = store_thm(
     METIS_TAC [ialpha_rules],
     METIS_TAC [ialpha_rules],
     METIS_TAC [ialpha_rules]
-  ]);
+  ]
+QED
 
-val alpha_sym = store_thm(
-  "alpha_sym",
-  ``alpha x y ==> alpha y x``,
-  METIS_TAC [alpha_def, ialpha_sym]);
+Theorem alpha_sym:
+    alpha x y ==> alpha y x
+Proof
+  METIS_TAC [alpha_def, ialpha_sym]
+QED
 
-val alpha_CONG = store_thm(
-  "alpha_CONG",
-  ``!t t'. alpha t t' ==>
+Theorem alpha_CONG:
+    !t t'. alpha t t' ==>
            (!u. alpha (app t u) (app t' u) /\
                 alpha (app u t) (app u t')) /\
-           (!v. alpha (lam v t) (lam v t'))``,
-  SRW_TAC [][alpha_def] THEN PROVE_TAC [ialpha_rules]);
+           (!v. alpha (lam v t) (lam v t'))
+Proof
+  SRW_TAC [][alpha_def] THEN PROVE_TAC [ialpha_rules]
+QED
 
-val EQC_alpha_CONG = store_thm(
-  "EQC_alpha_CONG",
-  ``!t t'. EQC alpha t t' ==>
+Theorem EQC_alpha_CONG:
+    !t t'. EQC alpha t t' ==>
            (!u. EQC alpha (app t u) (app t' u) /\
                 EQC alpha (app u t) (app u t')) /\
-           (!v. EQC alpha (lam v t) (lam v t'))``,
+           (!v. EQC alpha (lam v t) (lam v t'))
+Proof
   HO_MATCH_MP_TAC relationTheory.EQC_INDUCTION THEN
   SRW_TAC [][] THEN
-  PROVE_TAC [alpha_CONG, EQC_R, EQC_SYM, EQC_TRANS]);
+  PROVE_TAC [alpha_CONG, EQC_R, EQC_SYM, EQC_TRANS]
+QED
 
 
 
-val EQC_alpha_CONG2 = store_thm(
-  "EQC_alpha_CONG2",
-  ``!t t' u u'. EQC alpha t t' /\ EQC alpha u u' ==>
-                EQC alpha (app t u) (app t' u')``,
-  METIS_TAC [EQC_alpha_CONG, EQC_TRANS]);
+Theorem EQC_alpha_CONG2:
+    !t t' u u'. EQC alpha t t' /\ EQC alpha u u' ==>
+                EQC alpha (app t u) (app t' u')
+Proof
+  METIS_TAC [EQC_alpha_CONG, EQC_TRANS]
+QED
 
 val ialpha_lam_lemma = prove(
   ``!y t u. ialpha y t u ==>
@@ -284,12 +300,13 @@ val ialpha_lam_thm = save_thm(
   "ialpha_lam_thm",
   SIMP_RULE (srw_ss() ++ DNF_ss) [] ialpha_lam_lemma)
 
-val alpha_lam_thm = store_thm(
-  "alpha_lam_thm",
-  ``(!v t0 s. ~alpha (lam v t0) (var s) /\ ~alpha (var s) (lam v t0)) /\
+Theorem alpha_lam_thm:
+    (!v t0 s. ~alpha (lam v t0) (var s) /\ ~alpha (var s) (lam v t0)) /\
     (!v t0 t1 t2.
-        ~alpha (lam v t0) (app t1 t2) /\ ~alpha (app t1 t2) (lam v t0))``,
-  METIS_TAC [alpha_def, ialpha_lam_thm]);
+        ~alpha (lam v t0) (app t1 t2) /\ ~alpha (app t1 t2) (lam v t0))
+Proof
+  METIS_TAC [alpha_def, ialpha_lam_thm]
+QED
 val _ = export_rewrites ["alpha_lam_thm"]
 
 val EQC_alpha_lam_lemma = prove(
@@ -308,37 +325,40 @@ val EQC_alpha_lam_thm = save_thm(
   SIMP_RULE (srw_ss() ++ DNF_ss) [] EQC_alpha_lam_lemma)
 val _ = export_rewrites ["EQC_alpha_lam_thm"]
 
-val alpha_collapse = store_thm(
-  "alpha_collapse",
-  ``!t u. EQC alpha t u ==> (collapse t = collapse u)``,
+Theorem alpha_collapse:
+    !t u. EQC alpha t u ==> (collapse t = collapse u)
+Proof
   HO_MATCH_MP_TAC relationTheory.EQC_INDUCTION THEN
   SIMP_TAC (srw_ss()) [alpha_def] THEN
   Q_TAC SUFF_TAC `!y t u. ialpha y t u ==> (collapse t = collapse u)`
      THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC ialpha_ind THEN
   SIMP_TAC (srw_ss()) [collapse_def, collapse_vsubst] THEN REPEAT STRIP_TAC THEN
-  MATCH_MP_TAC SIMPLE_ALPHA THEN SRW_TAC [][]);
+  MATCH_MP_TAC SIMPLE_ALPHA THEN SRW_TAC [][]
+QED
 
-val alpha_fv_invariant = store_thm(
-  "alpha_fv_invariant",
-  ``!t u. EQC alpha t u ==> (fv t = fv u)``,
+Theorem alpha_fv_invariant:
+    !t u. EQC alpha t u ==> (fv t = fv u)
+Proof
   HO_MATCH_MP_TAC EQC_INDUCTION THEN SIMP_TAC (srw_ss()) [alpha_def] THEN
   Q_TAC SUFF_TAC `!y t u. ialpha y t u ==> (fv t = fv u)`
      THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC ialpha_ind THEN SRW_TAC [][fv_def, fv_vsubst] THEN
-  SRW_TAC [][EXTENSION] THEN PROVE_TAC []);
+  SRW_TAC [][EXTENSION] THEN PROVE_TAC []
+QED
 
-val capt_subst = store_thm(
-  "capt_subst",
-  ``!t x y z. ~(x = y) /\ ~(y IN capt z t) ==>
+Theorem capt_subst:
+    !t x y z. ~(x = y) /\ ~(y IN capt z t) ==>
               (capt x (subst (var y) z t) =
-                 if x = z then {} else capt x t)``,
+                 if x = z then {} else capt x t)
+Proof
   Induct THEN SRW_TAC [][subst_def, capt_def, fv_def, fv_vsubst] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val alpha_eq_safe_subst = store_thm(
-  "alpha_eq_safe_subst",
-  ``!t. ?t'. EQC alpha t t' /\ (capt x t' INTER fv u = {})``,
+Theorem alpha_eq_safe_subst:
+    !t. ?t'. EQC alpha t t' /\ (capt x t' INTER fv u = {})
+Proof
   Induct THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
     Q.X_GEN_TAC `s` THEN Q.EXISTS_TAC `var s` THEN SRW_TAC [][capt_def],
     Q.EXISTS_TAC `app t'' t'''` THEN
@@ -371,7 +391,8 @@ val alpha_eq_safe_subst = store_thm(
         SRW_TAC [][capt_def] THEN PROVE_TAC [alpha_fv_invariant]
       ]
     ]
-  ]);
+  ]
+QED
 
 val LAM_INJ_ALPHA_FV = prove(
   ``~(v1 = v2) /\ (LAM v1 t1 = LAM v2 t2) ==>
@@ -381,9 +402,9 @@ val INJECTIVITY_LEMMA1 = prove(
   ``(LAM v1 t1 = LAM v2 t2) ==> (t1 = [VAR v1/v2]t2)``,
   SRW_TAC [][LAM_eq_thm] THEN SRW_TAC [][fresh_tpm_subst]);
 
-val collapse_alpha = store_thm(
-  "collapse_alpha",
-  ``!t u. (collapse t = collapse u) ==> EQC alpha t u``,
+Theorem collapse_alpha:
+    !t u. (collapse t = collapse u) ==> EQC alpha t u
+Proof
   Induct THEN REPEAT GEN_TAC THEN Cases_on `u` THEN
   SRW_TAC [][collapse_def] THENL [
     PROVE_TAC [EQC_alpha_CONG2],
@@ -421,30 +442,34 @@ val collapse_alpha = store_thm(
              PROVE_TAC [alpha_fv_invariant]) THEN
       PROVE_TAC [EQC_TRANS, EQC_SYM, EQC_alpha_CONG]
     ]
-  ]);
+  ]
+QED
 
-val EQC_alpha_collapse_EQ = store_thm(
-  "EQC_alpha_collapse_EQ",
-  ``EQC alpha t u = (collapse t = collapse u)``,
-  PROVE_TAC [collapse_alpha, alpha_collapse]);
+Theorem EQC_alpha_collapse_EQ:
+    EQC alpha t u = (collapse t = collapse u)
+Proof
+  PROVE_TAC [collapse_alpha, alpha_collapse]
+QED
 
-val collapse_ONTO = store_thm(
-  "collapse_ONTO",
-  ``!M. ?t. collapse t = M``,
-  HO_MATCH_MP_TAC simple_induction THEN METIS_TAC [collapse_def]);
+Theorem collapse_ONTO:
+    !M. ?t. collapse t = M
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN METIS_TAC [collapse_def]
+QED
 
-val beta_ccbeta = store_thm(
-  "beta_ccbeta",
-  ``!t u. beta t u ==> compat_closure beta (collapse t) (collapse u)``,
+Theorem beta_ccbeta:
+    !t u. beta t u ==> compat_closure beta (collapse t) (collapse u)
+Proof
   HO_MATCH_MP_TAC beta_ind THEN
   SRW_TAC [][compat_closure_rules, collapse_def] THEN
   SRW_TAC [][collapse_subst, INTER_COMM] THEN
-  SRW_TAC [][cc_beta_thm] THEN PROVE_TAC []);
+  SRW_TAC [][cc_beta_thm] THEN PROVE_TAC []
+QED
 
-val gmbeta_beta = store_thm(
-  "gmbeta_beta",
-  ``!t u. beta (collapse t) (collapse u) ==>
-          (EQC alpha O beta O EQC alpha) t u``,
+Theorem gmbeta_beta:
+    !t u. beta (collapse t) (collapse u) ==>
+          (EQC alpha O beta O EQC alpha) t u
+Proof
   SIMP_TAC (srw_ss()) [beta_def, O_DEF] THEN REPEAT GEN_TAC THEN
   DISCH_THEN (Q.X_CHOOSE_THEN `v`
                (Q.X_CHOOSE_THEN `M`
@@ -469,13 +494,14 @@ val gmbeta_beta = store_thm(
   Cases_on `v = w` THEN1 FULL_SIMP_TAC (srw_ss()) [] THEN
   `M = [VAR v/w] (collapse t1)` by METIS_TAC [INJECTIVITY_LEMMA1] THEN
   `~(v IN FV (collapse t1))` by METIS_TAC [LAM_INJ_ALPHA_FV] THEN
-  SRW_TAC [][lemma15a]);
+  SRW_TAC [][lemma15a]
+QED
 
-val beta_some_reflected = store_thm(
-  "beta_some_reflected",
-  ``!M N. compat_closure beta M N ==>
+Theorem beta_some_reflected:
+    !M N. compat_closure beta M N ==>
           ?t u. (M = collapse t) /\ (N = collapse u) /\
-                beta t u``,
+                beta t u
+Proof
   HO_MATCH_MP_TAC ccbeta_ind THEN Q.EXISTS_TAC `{}` THEN SRW_TAC [][] THENL [
     `?m n. (collapse m = M) /\ (collapse n = N)`
        by METIS_TAC [collapse_ONTO] THEN
@@ -495,7 +521,8 @@ val beta_some_reflected = store_thm(
     SRW_TAC [][collapse_def, beta_rules],
     MAP_EVERY Q.EXISTS_TAC [`lam v t`, `lam v u`] THEN
     SRW_TAC [][collapse_def, beta_rules]
-  ]);
+  ]
+QED
 
 val ccbeta_beta_lemma = prove(
   ``!M N. compat_closure beta M N ==>
@@ -577,21 +604,23 @@ val ccbeta_beta_lemma = prove(
     PROVE_TAC [EQC_TRANS]
   ]);
 
-val ccbeta_beta = store_thm(
-  "ccbeta_beta",
-  ``compat_closure beta (collapse t) (collapse u) ==>
-    (EQC alpha O beta O EQC alpha) t u``,
-  PROVE_TAC [SIMP_RULE (bool_ss ++ DNF_ss) [] ccbeta_beta_lemma]);
+Theorem ccbeta_beta:
+    compat_closure beta (collapse t) (collapse u) ==>
+    (EQC alpha O beta O EQC alpha) t u
+Proof
+  PROVE_TAC [SIMP_RULE (bool_ss ++ DNF_ss) [] ccbeta_beta_lemma]
+QED
 
-val ccbeta_beta_EQ = store_thm(
-  "ccbeta_beta_EQ",
-  ``compat_closure beta (collapse t) (collapse u) =
-    (EQC alpha O beta O EQC alpha) t u``,
+Theorem ccbeta_beta_EQ:
+    compat_closure beta (collapse t) (collapse u) =
+    (EQC alpha O beta O EQC alpha) t u
+Proof
   EQ_TAC THENL [
     PROVE_TAC [ccbeta_beta],
     SRW_TAC [][O_DEF] THEN
     PROVE_TAC [alpha_collapse, beta_ccbeta]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     having established this much, confluence results about the
@@ -599,42 +628,47 @@ val ccbeta_beta_EQ = store_thm(
     machinery from diagsTheory
    ---------------------------------------------------------------------- *)
 
-val onto_collapse = store_thm(
-  "onto_collapse",
-  ``onto collapse``,
-  SRW_TAC [][onto_def, collapse_ONTO]);
+Theorem onto_collapse:
+    onto collapse
+Proof
+  SRW_TAC [][onto_def, collapse_ONTO]
+QED
 
-val kSound_collapse = store_thm(
-  "kSound_collapse",
-  ``kSound alpha collapse``,
+Theorem kSound_collapse:
+    kSound alpha collapse
+Proof
   SIMP_TAC (srw_ss()) [kSound_def] THEN
-  METIS_TAC [EQC_alpha_collapse_EQ, EQC_R]);
+  METIS_TAC [EQC_alpha_collapse_EQ, EQC_R]
+QED
 
-val kCompl_collapse = store_thm(
-  "kCompl_collapse",
-  ``kCompl alpha collapse``,
+Theorem kCompl_collapse:
+    kCompl alpha collapse
+Proof
   SRW_TAC [][kCompl_def] THEN
-  METIS_TAC [EQC_alpha_collapse_EQ, EQC_R]);
+  METIS_TAC [EQC_alpha_collapse_EQ, EQC_R]
+QED
 
-val Pres_collapse = store_thm(
-  "Pres_collapse",
-  ``Pres collapse beta (compat_closure beta)``,
+Theorem Pres_collapse:
+    Pres collapse beta (compat_closure beta)
+Proof
   SRW_TAC [][O_DEF, ccbeta_beta_EQ, Pres_def] THEN
-  METIS_TAC [EQC_REFL]);
+  METIS_TAC [EQC_REFL]
+QED
 
-val sRefl_collapse = store_thm(
-  "sRefl_collapse",
-  ``sRefl collapse beta (compat_closure beta)``,
+Theorem sRefl_collapse:
+    sRefl collapse beta (compat_closure beta)
+Proof
   SRW_TAC [][sRefl_def] THEN
   `(?a1. b1 = collapse a1) /\ (?a2. b2 = collapse a2)`
     by METIS_TAC [collapse_ONTO] THEN
   FULL_SIMP_TAC (srw_ss()) [ccbeta_beta_EQ, O_DEF] THEN
-  METIS_TAC [alpha_collapse]);
+  METIS_TAC [alpha_collapse]
+QED
 
 
-val ofree_alpha = store_thm(
-  "ofree_alpha",
-  ``ofree alpha``,
+Theorem ofree_alpha:
+    ofree alpha
+Proof
   REWRITE_TAC [ofree_def] THEN
   HO_MATCH_MP_TAC EQC_INDUCTION THEN REPEAT CONJ_TAC THENL [
     METIS_TAC [RTC_RULES],
@@ -642,7 +676,8 @@ val ofree_alpha = store_thm(
     METIS_TAC [TC_RC_EQNS, alpha_sym, symmetric_RC, symmetric_TC,
                symmetric_def],
     METIS_TAC [RTC_RTC]
-  ]);
+  ]
+QED
 
 val aRefl_eq_sRefl_lambda = prove(
   ``aRefl collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta)) =
@@ -655,22 +690,25 @@ val aRefl_collapse_RTC = prove(
   METIS_TAC [note_prop10_1, sRefl_collapse, onto_collapse, kCompl_collapse,
              ofree_alpha]);
 
-val Pres_collapse_RTC = store_thm(
-  "Pres_collapse_RTC",
-  ``Pres collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))``,
+Theorem Pres_collapse_RTC:
+    Pres collapse (RTC (beta RUNION alpha)) (RTC (compat_closure beta))
+Proof
   SRW_TAC [][onto_collapse, Pres_structure_RTC, Pres_collapse,
-             kSound_collapse]);
+             kSound_collapse]
+QED
 
-val collapse_preserves_diagrams = store_thm(
-  "collapse_preserves_diagrams",
-  ``!Fa G. eval Fa G (\i. RTC (beta RUNION alpha)) =
-           eval Fa G (\i. RTC (compat_closure beta))``,
+Theorem collapse_preserves_diagrams:
+    !Fa G. eval Fa G (\i. RTC (beta RUNION alpha)) =
+           eval Fa G (\i. RTC (compat_closure beta))
+Proof
   MATCH_MP_TAC diagram_preservation THEN Q.EXISTS_TAC `collapse` THEN
-  SRW_TAC [][aRefl_collapse_RTC, Pres_collapse_RTC, onto_collapse]);
+  SRW_TAC [][aRefl_collapse_RTC, Pres_collapse_RTC, onto_collapse]
+QED
 
-val raw_diamond = store_thm(
-  "raw_diamond",
-  ``diamond (RTC (beta RUNION alpha))``,
+Theorem raw_diamond:
+    diamond (RTC (beta RUNION alpha))
+Proof
   SRW_TAC [][GSYM diamond_eval, collapse_preserves_diagrams] THEN
   SRW_TAC [][diamond_eval] THEN
-  METIS_TAC [chap3Theory.beta_CR, chap3Theory.CR_def]);
+  METIS_TAC [chap3Theory.beta_CR, chap3Theory.CR_def]
+QED

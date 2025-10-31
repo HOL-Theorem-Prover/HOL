@@ -27,10 +27,11 @@ val TOKEN_SAVE  = ``(Val index, Val 2)``
 val TOKEN_LOAD  = ``(Val index, Val 3)``
 val NO_TOKEN  = ``(Sym "NIL", Sym "NIL")``
 
-val SExp_print_induct = store_thm("SExp_print_induct",
-  ``!P. (!x. (if isQuote x then P (CAR (CDR x)) else
+Theorem SExp_print_induct:
+    !P. (!x. (if isQuote x then P (CAR (CDR x)) else
               if isDot x then P (CAR x) /\ P (CDR x) else T) ==> P x) ==>
-        !x. P x``,
+        !x. P x
+Proof
   REPEAT STRIP_TAC \\ completeInduct_on `LSIZE x`
   \\ REPEAT STRIP_TAC
   \\ Cases_on `isQuote x`
@@ -40,7 +41,8 @@ val SExp_print_induct = store_thm("SExp_print_induct",
   \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [isDot_thm,CAR_def,CDR_def,LSIZE_def]
   \\ FULL_SIMP_TAC std_ss [isDot_thm,CAR_def,CDR_def,LSIZE_def]
-  \\ METIS_TAC [DECIDE ``n < SUC (m + n)``,ADD_COMM]);
+  \\ METIS_TAC [DECIDE ``n < SUC (m + n)``,ADD_COMM]
+QED
 
 
 (* Part 1 - section 1: print s-expressions *)
@@ -279,9 +281,10 @@ val dec2str_lemma = prove(
   ``?c. dec2str r = STRING c ""``,
   SRW_TAC [] [dec2str_def,str2num_def,LENGTH]);
 
-val str2num_num2str = store_thm("str2num_num2str",
-  ``!n. (str2num (num2str n) = n) /\ ~((num2str n) = "") /\
-        EVERY number_char (num2str n)``,
+Theorem str2num_num2str:
+    !n. (str2num (num2str n) = n) /\ ~((num2str n) = "") /\
+        EVERY number_char (num2str n)
+Proof
   completeInduct_on `n` \\ Cases_on `n < 10` THEN1
    (IMP_RES_TAC LESS_DIV_EQ_ZERO \\ ONCE_REWRITE_TAC [num2str_def]
     \\ ASM_SIMP_TAC std_ss [str2num_dec2str])
@@ -294,7 +297,8 @@ val str2num_num2str = store_thm("str2num_num2str",
   \\ `q < n` by DECIDE_TAC \\ RES_TAC
   \\ STRIP_ASSUME_TAC dec2str_lemma
   \\ ASM_SIMP_TAC std_ss [str2num_STRCAT]
-  \\ METIS_TAC [str2num_dec2str]);
+  \\ METIS_TAC [str2num_dec2str]
+QED
 
 Definition str2sym_aux_def:
   (str2sym_aux [] b = ("",[])) /\
@@ -1316,14 +1320,18 @@ val FMAP_11_sexp_abbrev_fmap = prove(
   THEN1 METIS_TAC [FMAP_11_def]
   \\ IMP_RES_TAC FDOM_sexp_abbrev_fmap_IMP \\ DECIDE_TAC);
 
-val string2sexp_sexp2abbrev = store_thm("string2sexp_sexp2abbrev",
-  ``!exp abbrevs. string2sexp (sexp2abbrev exp abbrevs) = exp``,
+Theorem string2sexp_sexp2abbrev:
+    !exp abbrevs. string2sexp (sexp2abbrev exp abbrevs) = exp
+Proof
   SIMP_TAC std_ss [string2sexp_def,sexp2abbrev_def,sexp_lex_sexp2abbrev_aux]
-  \\ METIS_TAC [sexp_parse_aux_sexp2abbrevt,FMAP_11_sexp_abbrev_fmap,APPEND_NIL]);
+  \\ METIS_TAC [sexp_parse_aux_sexp2abbrevt,FMAP_11_sexp_abbrev_fmap,APPEND_NIL]
+QED
 
-val string2sexp_sexp2string = store_thm("string2sexp_sexp2string",
-  ``!exp. string2sexp (sexp2string exp) = exp``,
-  ASM_SIMP_TAC std_ss [GSYM sexp2abbrev_NIL,string2sexp_sexp2abbrev]);
+Theorem string2sexp_sexp2string:
+    !exp. string2sexp (sexp2string exp) = exp
+Proof
+  ASM_SIMP_TAC std_ss [GSYM sexp2abbrev_NIL,string2sexp_sexp2abbrev]
+QED
 
 
 (* Part 2 - section 3: merge lexer and parser *)

@@ -1,9 +1,13 @@
 Theory ptop
 
-val tautAcceptInPlace = store_thm ("V_IMP_V_EQ_TRUE",``(v:bool) ==> (v <=> T)``,(REPEAT (CHANGED_TAC EVAL_TAC)));
+Theorem V_IMP_V_EQ_TRUE:  (v:bool) ==> (v <=> T)
+Proof(REPEAT (CHANGED_TAC EVAL_TAC))
+QED
 val _ = save_thm("PTOP_ACCEPT_IN_PLACE",UNDISCH (tautAcceptInPlace));
 
-val tautRejectInPlace = store_thm("NOTV_IMP_V_EQ_FALSE",``(~(v:bool)) ==> (v <=> F)``,(REPEAT (CHANGED_TAC EVAL_TAC)));
+Theorem NOTV_IMP_V_EQ_FALSE:  (~(v:bool)) ==> (v <=> F)
+Proof(REPEAT (CHANGED_TAC EVAL_TAC))
+QED
 val _ = save_thm("PTOP_REJECT_IN_PLACE",UNDISCH (tautRejectInPlace));
 
 val _ = set_fixity "[=." (Infixl 500);

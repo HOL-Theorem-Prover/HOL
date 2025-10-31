@@ -99,9 +99,9 @@ fun match_tac th =
 (* Helper theorems.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val DIV_THEN_MULT = store_thm
-  ("DIV_THEN_MULT",
-   ``!p q. SUC q * (p DIV SUC q) <= p``,
+Theorem DIV_THEN_MULT:
+     !p q. SUC q * (p DIV SUC q) <= p
+Proof
    NTAC 2 STRIP_TAC
    ++ Know `?r. p = (p DIV SUC q) * SUC q + r`
    >> (Know `0 < SUC q` >> DECIDE_TAC
@@ -109,37 +109,41 @@ val DIV_THEN_MULT = store_thm
    ++ STRIP_TAC
    ++ Suff `p = SUC q * (p DIV SUC q) + r`
    >> (POP_ASSUM_LIST (K ALL_TAC) ++ DECIDE_TAC)
-   ++ PROVE_TAC [MULT_COMM]);
+   ++ PROVE_TAC [MULT_COMM]
+QED
 
-val MOD_EXP = store_thm
-  ("MOD_EXP",
-   ``!a n m. 0 < m ==> (((a MOD m) ** n) MOD m = (a ** n) MOD m)``,
+Theorem MOD_EXP:
+     !a n m. 0 < m ==> (((a MOD m) ** n) MOD m = (a ** n) MOD m)
+Proof
    RW_TAC std_ss []
    ++ Induct_on `n`
    ++ RW_TAC std_ss [EXP]
    ++ MP_TAC (Q.SPEC `m` MOD_TIMES2)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ ASM_SIMP_TAC std_ss [MOD_MOD]);
+   ++ ASM_SIMP_TAC std_ss [MOD_MOD]
+QED
 
-val MULT_EXP = store_thm
-  ("MULT_EXP",
-   ``!a b n. (a * b) ** n = (a ** n) * (b ** n)``,
+Theorem MULT_EXP:
+     !a b n. (a * b) ** n = (a ** n) * (b ** n)
+Proof
    RW_TAC std_ss []
    ++ Induct_on `n`
    ++ RW_TAC std_ss [EXP, EQ_MULT_LCANCEL, GSYM MULT_ASSOC]
    ++ RW_TAC std_ss
         [EXP, ONCE_REWRITE_RULE [MULT_COMM] EQ_MULT_LCANCEL, MULT_ASSOC]
-   ++ METIS_TAC [MULT_COMM]);
+   ++ METIS_TAC [MULT_COMM]
+QED
 
-val EXP_EXP = store_thm
-  ("EXP_EXP",
-   ``!a b c. (a ** b) ** c = a ** (b * c)``,
+Theorem EXP_EXP:
+     !a b c. (a ** b) ** c = a ** (b * c)
+Proof
    RW_TAC std_ss []
    ++ Induct_on `b`
    ++ RW_TAC std_ss [EXP, MULT, EXP_1]
    ++ RW_TAC std_ss [MULT_EXP, EXP_ADD]
-   ++ METIS_TAC [MULT_COMM]);
+   ++ METIS_TAC [MULT_COMM]
+QED
 
 (* ========================================================================= *)
 (* Fields                                                                    *)
@@ -471,254 +475,282 @@ fun field_compare (x,y) =
 (* Theorems                                                                  *)
 (* ------------------------------------------------------------------------- *)
 
-val FiniteField_Field = store_thm
-  ("FiniteField_Field",
-   ``!f. f IN FiniteField ==> f IN Field``,
-   RW_TAC std_ss [FiniteField_def, GSPECIFICATION]);
+Theorem FiniteField_Field:
+     !f. f IN FiniteField ==> f IN Field
+Proof
+   RW_TAC std_ss [FiniteField_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_judgement2 FiniteField_Field context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_nonzero_carrier = store_thm
-  ("field_nonzero_carrier",
-   ``!f :: Field. !x :: field_nonzero f. x IN f.carrier``,
-   RW_TAC resq_ss [field_nonzero_def, IN_DIFF]);
+Theorem field_nonzero_carrier:
+     !f :: Field. !x :: field_nonzero f. x IN f.carrier
+Proof
+   RW_TAC resq_ss [field_nonzero_def, IN_DIFF]
+QED
 
 val context = subtypeTools.add_judgement2 field_nonzero_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_nonzero_alt = store_thm
-  ("field_nonzero_alt",
-   ``!f x. x IN f.carrier /\ ~(x = field_zero f) ==> x IN field_nonzero f``,
-   RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]);
+Theorem field_nonzero_alt:
+     !f x. x IN f.carrier /\ ~(x = field_zero f) ==> x IN field_nonzero f
+Proof
+   RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]
+QED
 
-val field_nonzero_eq = store_thm
-  ("field_nonzero_eq",
-   ``!f :: Field. !x :: (f.carrier).
-       ~(x = field_zero f) = x IN field_nonzero f``,
-   RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]);
+Theorem field_nonzero_eq:
+     !f :: Field. !x :: (f.carrier).
+       ~(x = field_zero f) = x IN field_nonzero f
+Proof
+   RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]
+QED
 
-val field_zero_carrier = store_thm
-  ("field_zero_carrier",
-   ``!f :: Field. field_zero f IN f.carrier``,
+Theorem field_zero_carrier:
+     !f :: Field. field_zero f IN f.carrier
+Proof
    RW_TAC resq_ss [Field_def, field_one_def, GSPECIFICATION, field_zero_def]
    ++ Q.UNDISCH_TAC `f.sum IN AbelianGroup`
-   ++ RW_TAC std_ss [AbelianGroup_def, GSPECIFICATION, Group_def]);
+   ++ RW_TAC std_ss [AbelianGroup_def, GSPECIFICATION, Group_def]
+QED
 
 val context = subtypeTools.add_reduction2 field_zero_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_one_carrier = store_thm
-  ("field_one_carrier",
-   ``!f :: Field. field_one f IN f.carrier``,
+Theorem field_one_carrier:
+     !f :: Field. field_one f IN f.carrier
+Proof
    RW_TAC resq_ss [Field_def, field_one_def, GSPECIFICATION, field_zero_def]
    ++ Q.UNDISCH_TAC `f.prod IN AbelianGroup`
    ++ RW_TAC std_ss
         [AbelianGroup_def, GSPECIFICATION, Group_def, IN_DIFF,
-         field_nonzero_def]);
+         field_nonzero_def]
+QED
 
-val field_one_zero = store_thm
-  ("field_one_zero",
-   ``!f :: Field. ~(field_one f = field_zero f)``,
+Theorem field_one_zero:
+     !f :: Field. ~(field_one f = field_zero f)
+Proof
    RW_TAC resq_ss
      [Field_def, field_one_def, field_zero_def, GSPECIFICATION,
       AbelianGroup_def, field_nonzero_def]
    ++ Know `f.prod.id IN f.prod.carrier`
    >> METIS_TAC [group_id_carrier]
-   ++ RW_TAC std_ss [IN_DIFF, IN_SING]);
+   ++ RW_TAC std_ss [IN_DIFF, IN_SING]
+QED
 
 val context = subtypeTools.add_rewrite2 field_one_zero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_zero_one = store_thm
-  ("field_zero_one",
-   ``!f :: Field. ~(field_zero f = field_one f)``,
-   RW_TAC alg_ss []);
+Theorem field_zero_one:
+     !f :: Field. ~(field_zero f = field_one f)
+Proof
+   RW_TAC alg_ss []
+QED
 
-val field_one_nonzero = store_thm
-  ("field_one_nonzero",
-   ``!f :: Field. field_one f IN field_nonzero f``,
+Theorem field_one_nonzero:
+     !f :: Field. field_one f IN field_nonzero f
+Proof
    RW_TAC resq_ss
-     [field_nonzero_def, IN_DIFF, IN_SING, field_one_carrier, field_one_zero]);
+     [field_nonzero_def, IN_DIFF, IN_SING, field_one_carrier, field_one_zero]
+QED
 
 val context = subtypeTools.add_reduction2 field_one_nonzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_carrier = store_thm
-  ("field_neg_carrier",
-   ``!f :: Field. !x :: (f.carrier). field_neg f x IN f.carrier``,
+Theorem field_neg_carrier:
+     !f :: Field. !x :: (f.carrier). field_neg f x IN f.carrier
+Proof
    RW_TAC resq_ss [Field_def, GSPECIFICATION, field_neg_def, AbelianGroup_def]
-   ++ METIS_TAC [group_inv_carrier]);
+   ++ METIS_TAC [group_inv_carrier]
+QED
 
 val context = subtypeTools.add_reduction2 field_neg_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_carrier = store_thm
-  ("field_add_carrier",
-   ``!f :: Field. !x y :: (f.carrier). field_add f x y IN f.carrier``,
+Theorem field_add_carrier:
+     !f :: Field. !x y :: (f.carrier). field_add f x y IN f.carrier
+Proof
    RW_TAC resq_ss [Field_def, GSPECIFICATION, field_add_def, AbelianGroup_def]
-   ++ METIS_TAC [group_mult_carrier]);
+   ++ METIS_TAC [group_mult_carrier]
+QED
 
 val context = subtypeTools.add_reduction2 field_add_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_assoc = store_thm
-  ("field_add_assoc",
-   ``!f :: Field. !x y z :: (f.carrier).
-       field_add f (field_add f x y) z = field_add f x (field_add f y z)``,
+Theorem field_add_assoc:
+     !f :: Field. !x y z :: (f.carrier).
+       field_add f (field_add f x y) z = field_add f x (field_add f y z)
+Proof
    RW_TAC resq_ss
      [Field_def, GSPECIFICATION, field_add_def, AbelianGroup_def,
-      Group_def]);
+      Group_def]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_add_assoc context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_comm = store_thm
-  ("field_add_comm",
-   ``!f :: Field. !x y :: (f.carrier). field_add f x y = field_add f y x``,
+Theorem field_add_comm:
+     !f :: Field. !x y :: (f.carrier). field_add f x y = field_add f y x
+Proof
    RW_TAC resq_ss
-     [Field_def, GSPECIFICATION, field_add_def, AbelianGroup_def]);
+     [Field_def, GSPECIFICATION, field_add_def, AbelianGroup_def]
+QED
 
-val field_add_comm' = store_thm
-  ("field_add_comm'",
-   ``!f :: Field. !x y z :: (f.carrier).
-        field_add f x (field_add f y z) = field_add f y (field_add f x z)``,
+Theorem field_add_comm':
+     !f :: Field. !x y z :: (f.carrier).
+        field_add f x (field_add f y z) = field_add f y (field_add f x z)
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss [GSYM field_add_assoc]
-   ++ METIS_TAC [field_add_comm]);
+   ++ METIS_TAC [field_add_comm]
+QED
 
-val field_num_zero = store_thm
-  ("field_num_zero",
-   ``!f. field_num f 0 = field_zero f``,
-   RW_TAC std_ss [field_num_def]);
+Theorem field_num_zero:
+     !f. field_num f 0 = field_zero f
+Proof
+   RW_TAC std_ss [field_num_def]
+QED
 
 val context = subtypeTools.add_rewrite2 field_num_zero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_lzero = store_thm
-  ("field_add_lzero",
-   ``!f :: Field. !x :: (f.carrier). field_add f (field_zero f) x = x``,
+Theorem field_add_lzero:
+     !f :: Field. !x :: (f.carrier). field_add f (field_zero f) x = x
+Proof
    RW_TAC resq_ss
      [Field_def, GSPECIFICATION, field_add_def, field_zero_def,
       AbelianGroup_def]
    ++ match_tac group_lid
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
 val context = subtypeTools.add_rewrite2 field_add_lzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_num_one = store_thm
-  ("field_num_one",
-   ``!f :: Field. field_num f 1 = field_one f``,
+Theorem field_num_one:
+     !f :: Field. field_num f 1 = field_one f
+Proof
    REWRITE_TAC [ONE, field_num_def]
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
 val context = subtypeTools.add_rewrite2'' (GSYM field_num_one) context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_lzero' = store_thm
-  ("field_add_lzero'",
-   ``!f :: Field. !x :: (f.carrier). field_add f (field_num f 0) x = x``,
-   RW_TAC alg_ss [field_num_zero]);
+Theorem field_add_lzero':
+     !f :: Field. !x :: (f.carrier). field_add f (field_num f 0) x = x
+Proof
+   RW_TAC alg_ss [field_num_zero]
+QED
 
 val context = subtypeTools.add_rewrite2 field_add_lzero' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_rzero = store_thm
-  ("field_add_rzero",
-   ``!f :: Field. !x :: (f.carrier). field_add f x (field_zero f) = x``,
-   METIS_TAC [field_add_lzero, field_add_comm, field_zero_carrier]);
+Theorem field_add_rzero:
+     !f :: Field. !x :: (f.carrier). field_add f x (field_zero f) = x
+Proof
+   METIS_TAC [field_add_lzero, field_add_comm, field_zero_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 field_add_rzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_rzero' = store_thm
-  ("field_add_rzero'",
-   ``!f :: Field. !x :: (f.carrier). field_add f x (field_num f 0) = x``,
-   RW_TAC alg_ss [field_num_zero]);
+Theorem field_add_rzero':
+     !f :: Field. !x :: (f.carrier). field_add f x (field_num f 0) = x
+Proof
+   RW_TAC alg_ss [field_num_zero]
+QED
 
 val context = subtypeTools.add_rewrite2 field_add_rzero' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_lneg = store_thm
-  ("field_lneg",
-   ``!f :: Field. !x :: (f.carrier).
-       (field_add f (field_neg f x) x = field_zero f)``,
+Theorem field_lneg:
+     !f :: Field. !x :: (f.carrier).
+       (field_add f (field_neg f x) x = field_zero f)
+Proof
    RW_TAC resq_ss
      [Field_def, GSPECIFICATION, field_add_def, field_zero_def,
       AbelianGroup_def, field_neg_def]
    ++ match_tac group_linv
-   ++ RW_TAC std_ss [IN_DIFF, IN_SING]);
+   ++ RW_TAC std_ss [IN_DIFF, IN_SING]
+QED
 
 val context = subtypeTools.add_rewrite2 field_lneg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_lneg' = store_thm
-  ("field_lneg'",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_add f (field_neg f x) (field_add f x y) = y)``,
+Theorem field_lneg':
+     !f :: Field. !x y :: (f.carrier).
+       (field_add f (field_neg f x) (field_add f x y) = y)
+Proof
    RW_TAC resq_ss []
-   ++ RW_TAC alg_ss [GSYM field_add_assoc]);
+   ++ RW_TAC alg_ss [GSYM field_add_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2 field_lneg' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_rneg = store_thm
-  ("field_rneg",
-   ``!f :: Field. !x :: (f.carrier).
-       (field_add f x (field_neg f x) = field_zero f)``,
-   METIS_TAC [field_lneg, field_add_comm, field_neg_carrier]);
+Theorem field_rneg:
+     !f :: Field. !x :: (f.carrier).
+       (field_add f x (field_neg f x) = field_zero f)
+Proof
+   METIS_TAC [field_lneg, field_add_comm, field_neg_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 field_rneg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_rneg' = store_thm
-  ("field_rneg'",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_add f x (field_add f (field_neg f x) y) = y)``,
+Theorem field_rneg':
+     !f :: Field. !x y :: (f.carrier).
+       (field_add f x (field_add f (field_neg f x) y) = y)
+Proof
    RW_TAC resq_ss []
-   ++ RW_TAC alg_ss [GSYM field_add_assoc]);
+   ++ RW_TAC alg_ss [GSYM field_add_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2 field_rneg' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_lcancel_imp = store_thm
-  ("field_add_lcancel_imp",
-   ``!f :: Field. !x y z :: (f.carrier).
-       (field_add f x y = field_add f x z) ==> (y = z)``,
+Theorem field_add_lcancel_imp:
+     !f :: Field. !x y z :: (f.carrier).
+       (field_add f x y = field_add f x z) ==> (y = z)
+Proof
    RW_TAC resq_ss [Field_def, GSPECIFICATION, AbelianGroup_def, field_add_def]
    ++ match_tac group_lcancel_imp
    ++ Q.EXISTS_TAC `f.sum`
    ++ Q.EXISTS_TAC `x`
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
-val field_add_lcancel = store_thm
-  ("field_add_lcancel",
-   ``!f :: Field. !x y z :: (f.carrier).
-       (field_add f x y = field_add f x z) = (y = z)``,
-   METIS_TAC [field_add_lcancel_imp]);
+Theorem field_add_lcancel:
+     !f :: Field. !x y z :: (f.carrier).
+       (field_add f x y = field_add f x z) = (y = z)
+Proof
+   METIS_TAC [field_add_lcancel_imp]
+QED
 
 val context = subtypeTools.add_rewrite2' field_add_lcancel context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_rcancel_imp = store_thm
-  ("field_add_rcancel_imp",
-   ``!f :: Field. !x y z :: (f.carrier).
-       (field_add f y x = field_add f z x) ==> (y = z)``,
-   METIS_TAC [field_add_lcancel_imp, field_add_comm]);
+Theorem field_add_rcancel_imp:
+     !f :: Field. !x y z :: (f.carrier).
+       (field_add f y x = field_add f z x) ==> (y = z)
+Proof
+   METIS_TAC [field_add_lcancel_imp, field_add_comm]
+QED
 
-val field_add_rcancel = store_thm
-  ("field_add_rcancel",
-   ``!f :: Field. !x y z :: (f.carrier).
-       (field_add f y x = field_add f z x) = (y = z)``,
-   METIS_TAC [field_add_rcancel_imp]);
+Theorem field_add_rcancel:
+     !f :: Field. !x y z :: (f.carrier).
+       (field_add f y x = field_add f z x) = (y = z)
+Proof
+   METIS_TAC [field_add_rcancel_imp]
+QED
 
 val context = subtypeTools.add_rewrite2' field_add_rcancel context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_inv_nonzero = store_thm
-  ("field_inv_nonzero",
-   ``!f :: Field. !x :: field_nonzero f. field_inv f x IN field_nonzero f``,
+Theorem field_inv_nonzero:
+     !f :: Field. !x :: field_nonzero f. field_inv f x IN field_nonzero f
+Proof
    RW_TAC resq_ss [Field_def, GSPECIFICATION, field_nonzero_def]
    ++ Suff `field_inv f x IN f.prod.carrier`
    >> RW_TAC std_ss []
@@ -727,45 +759,49 @@ val field_inv_nonzero = store_thm
    ++ Q.UNDISCH_TAC `f.prod IN AbelianGroup`
    ++ POP_ASSUM_LIST (K ALL_TAC)
    ++ RW_TAC std_ss
-        [AbelianGroup_def, GSPECIFICATION, Group_def, field_inv_def]);
+        [AbelianGroup_def, GSPECIFICATION, Group_def, field_inv_def]
+QED
 
 val context = subtypeTools.add_reduction2 field_inv_nonzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_lzero = store_thm
-  ("field_mult_lzero",
-   ``!f :: Field. !x :: (f.carrier).
-       field_mult f (field_zero f) x = field_zero f``,
-   RW_TAC resq_ss [Field_def, GSPECIFICATION]);
+Theorem field_mult_lzero:
+     !f :: Field. !x :: (f.carrier).
+       field_mult f (field_zero f) x = field_zero f
+Proof
+   RW_TAC resq_ss [Field_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_lzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_lzero' = store_thm
-  ("field_mult_lzero'",
-   ``!f :: Field. !x :: (f.carrier).
-       field_mult f (field_num f 0) x = field_zero f``,
-   RW_TAC alg_ss [field_num_zero]);
+Theorem field_mult_lzero':
+     !f :: Field. !x :: (f.carrier).
+       field_mult f (field_num f 0) x = field_zero f
+Proof
+   RW_TAC alg_ss [field_num_zero]
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_lzero' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_distrib_ladd = store_thm
-  ("field_distrib_ladd",
-   ``!f :: Field. !x y z :: (f.carrier).
+Theorem field_distrib_ladd:
+     !f :: Field. !x y z :: (f.carrier).
        field_mult f x (field_add f y z) =
-       field_add f (field_mult f x y) (field_mult f x z)``,
-   RW_TAC resq_ss [Field_def, GSPECIFICATION]);
+       field_add f (field_mult f x y) (field_mult f x z)
+Proof
+   RW_TAC resq_ss [Field_def, GSPECIFICATION]
+QED
 
 (***
 val context = subtypeTools.add_rewrite2'' field_distrib_ladd context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 ***)
 
-val field_mult_rzero = store_thm
-  ("field_mult_rzero",
-   ``!f :: Field. !x :: (f.carrier).
-       field_mult f x (field_zero f) = field_zero f``,
+Theorem field_mult_rzero:
+     !f :: Field. !x :: (f.carrier).
+       field_mult f x (field_zero f) = field_zero f
+Proof
    RW_TAC resq_ss []
    ++ Cases_on `x = field_zero f`
    >> METIS_TAC [field_mult_lzero]
@@ -823,38 +859,41 @@ val field_mult_rzero = store_thm
    >> RW_TAC alg_ss []
    ++ MATCH_MP_TAC EQ_SYM
    ++ match_tac field_distrib_ladd
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_rzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_rzero' = store_thm
-  ("field_mult_rzero'",
-   ``!f :: Field. !x :: (f.carrier).
-       field_mult f x (field_num f 0) = field_zero f``,
-   RW_TAC alg_ss [field_num_zero]);
+Theorem field_mult_rzero':
+     !f :: Field. !x :: (f.carrier).
+       field_mult f x (field_num f 0) = field_zero f
+Proof
+   RW_TAC alg_ss [field_num_zero]
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_rzero' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_nonzero = store_thm
-  ("field_mult_nonzero",
-   ``!f :: Field. !x y :: field_nonzero f.
-       field_mult f x y IN field_nonzero f``,
+Theorem field_mult_nonzero:
+     !f :: Field. !x y :: field_nonzero f.
+       field_mult f x y IN field_nonzero f
+Proof
    RW_TAC resq_ss
      [Field_def, GSPECIFICATION, field_mult_def, AbelianGroup_def,
       field_nonzero_def]
    ++ Suff `f.prod.mult x y IN f.prod.carrier`
    >> RW_TAC std_ss []
    ++ match_tac group_mult_carrier
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
 val context = subtypeTools.add_reduction2 field_mult_nonzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_carrier = store_thm
-  ("field_mult_carrier",
-   ``!f :: Field. !x y :: (f.carrier). field_mult f x y IN f.carrier``,
+Theorem field_mult_carrier:
+     !f :: Field. !x y :: (f.carrier). field_mult f x y IN f.carrier
+Proof
    RW_TAC resq_ss []
    ++ Cases_on `x = field_zero f`
    >> RW_TAC std_ss [field_mult_lzero]
@@ -863,15 +902,16 @@ val field_mult_carrier = store_thm
    ++ match_tac field_nonzero_carrier
    ++ RW_TAC std_ss []
    ++ match_tac field_mult_nonzero
-   ++ RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]);
+   ++ RW_TAC std_ss [field_nonzero_def, IN_DIFF, IN_SING]
+QED
 
 val context = subtypeTools.add_reduction2 field_mult_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_assoc = store_thm
-  ("field_mult_assoc",
-   ``!f :: Field. !x y z :: (f.carrier).
-       field_mult f (field_mult f x y) z = field_mult f x (field_mult f y z)``,
+Theorem field_mult_assoc:
+     !f :: Field. !x y z :: (f.carrier).
+       field_mult f (field_mult f x y) z = field_mult f x (field_mult f y z)
+Proof
    RW_TAC resq_ss []
    ++ Cases_on `x = field_zero f`
    >> RW_TAC std_ss [field_mult_lzero, field_mult_rzero, field_mult_carrier]
@@ -884,14 +924,15 @@ val field_mult_assoc = store_thm
         [Field_def, GSPECIFICATION, field_add_def, AbelianGroup_def,
          Group_def, field_mult_def, field_nonzero_def]
    ++ FIRST_ASSUM match_tac
-   ++ RW_TAC std_ss [IN_DIFF, IN_SING]);
+   ++ RW_TAC std_ss [IN_DIFF, IN_SING]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_mult_assoc context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_comm = store_thm
-  ("field_mult_comm",
-   ``!f :: Field. !x y :: (f.carrier). field_mult f x y = field_mult f y x``,
+Theorem field_mult_comm:
+     !f :: Field. !x y :: (f.carrier). field_mult f x y = field_mult f y x
+Proof
    RW_TAC resq_ss []
    ++ Cases_on `x = field_zero f`
    >> RW_TAC std_ss [field_mult_lzero, field_mult_rzero]
@@ -902,21 +943,23 @@ val field_mult_comm = store_thm
         [Field_def, GSPECIFICATION, field_mult_def, AbelianGroup_def,
          field_nonzero_def]
    ++ Q.PAT_X_ASSUM `!x y :: (f.prod.carrier). P x y` match_tac
-   ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]);
+   ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]
+QED
 
-val field_mult_comm' = store_thm
-  ("field_mult_comm'",
-   ``!f :: Field. !x y z :: (f.carrier).
-        field_mult f x (field_mult f y z) = field_mult f y (field_mult f x z)``,
+Theorem field_mult_comm':
+     !f :: Field. !x y z :: (f.carrier).
+        field_mult f x (field_mult f y z) = field_mult f y (field_mult f x z)
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss [GSYM field_mult_assoc]
-   ++ METIS_TAC [field_mult_comm]);
+   ++ METIS_TAC [field_mult_comm]
+QED
 
-val field_entire = store_thm
-  ("field_entire",
-   ``!f :: Field. !x y :: (f.carrier).
+Theorem field_entire:
+     !f :: Field. !x y :: (f.carrier).
        (field_mult f x y = field_zero f) =
-       (x = field_zero f) \/ (y = field_zero f)``,
+       (x = field_zero f) \/ (y = field_zero f)
+Proof
    RW_TAC resq_ss []
    ++ REVERSE EQ_TAC
    >> (STRIP_TAC ++ RW_TAC std_ss [field_mult_lzero, field_mult_rzero])
@@ -930,14 +973,15 @@ val field_entire = store_thm
    ++ Suff `f.prod.mult x y IN f.prod.carrier`
    >> RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY, field_mult_def]
    ++ match_tac group_mult_carrier
-   ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]);
+   ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]
+QED
 
 val context = subtypeTools.add_rewrite2' field_entire context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_lone = store_thm
-  ("field_mult_lone",
-   ``!f :: Field. !x :: (f.carrier). field_mult f (field_one f) x = x``,
+Theorem field_mult_lone:
+     !f :: Field. !x :: (f.carrier). field_mult f (field_one f) x = x
+Proof
    RW_TAC resq_ss []
    ++ Cases_on `x = field_zero f`
    >> RW_TAC std_ss [field_mult_rzero, field_one_carrier]
@@ -946,82 +990,90 @@ val field_mult_lone = store_thm
         [Field_def, GSPECIFICATION, field_mult_def, field_one_def,
          AbelianGroup_def, field_nonzero_def]
    ++ match_tac group_lid
-   ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]);
+   ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_lone context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_lone' = store_thm
-  ("field_mult_lone'",
-   ``!f :: Field. !x :: (f.carrier). field_mult f (field_num f 1) x = x``,
-   RW_TAC alg_ss [field_num_one]);
+Theorem field_mult_lone':
+     !f :: Field. !x :: (f.carrier). field_mult f (field_num f 1) x = x
+Proof
+   RW_TAC alg_ss [field_num_one]
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_lone' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_rone = store_thm
-  ("field_mult_rone",
-   ``!f :: Field. !x :: (f.carrier). field_mult f x (field_one f) = x``,
-   METIS_TAC [field_mult_lone, field_mult_comm, field_one_carrier]);
+Theorem field_mult_rone:
+     !f :: Field. !x :: (f.carrier). field_mult f x (field_one f) = x
+Proof
+   METIS_TAC [field_mult_lone, field_mult_comm, field_one_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_rone context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_rone' = store_thm
-  ("field_mult_rone'",
-   ``!f :: Field. !x :: (f.carrier). field_mult f x (field_num f 1) = x``,
-   RW_TAC alg_ss [field_num_one]);
+Theorem field_mult_rone':
+     !f :: Field. !x :: (f.carrier). field_mult f x (field_num f 1) = x
+Proof
+   RW_TAC alg_ss [field_num_one]
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_rone' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_linv = store_thm
-  ("field_linv",
-   ``!f :: Field. !x :: field_nonzero f.
-       field_mult f (field_inv f x) x = field_one f``,
+Theorem field_linv:
+     !f :: Field. !x :: field_nonzero f.
+       field_mult f (field_inv f x) x = field_one f
+Proof
    RW_TAC resq_ss
      [Field_def, GSPECIFICATION, field_mult_def, field_one_def,
       AbelianGroup_def, field_inv_def, field_nonzero_def]
    ++ match_tac group_linv
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
 val context = subtypeTools.add_rewrite2 field_linv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_linv' = store_thm
-  ("field_linv'",
-   ``!f :: Field. !x :: field_nonzero f. !y :: (f.carrier).
-       (field_mult f (field_inv f x) (field_mult f x y) = y)``,
+Theorem field_linv':
+     !f :: Field. !x :: field_nonzero f. !y :: (f.carrier).
+       (field_mult f (field_inv f x) (field_mult f x y) = y)
+Proof
    RW_TAC resq_ss []
-   ++ RW_TAC alg_ss [GSYM field_mult_assoc]);
+   ++ RW_TAC alg_ss [GSYM field_mult_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2 field_linv' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_rinv = store_thm
-  ("field_rinv",
-   ``!f :: Field. !x :: field_nonzero f.
-       (field_mult f x (field_inv f x) = field_one f)``,
+Theorem field_rinv:
+     !f :: Field. !x :: field_nonzero f.
+       (field_mult f x (field_inv f x) = field_one f)
+Proof
    METIS_TAC
-     [field_linv, field_mult_comm, field_inv_nonzero, field_nonzero_carrier]);
+     [field_linv, field_mult_comm, field_inv_nonzero, field_nonzero_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 field_rinv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_rinv' = store_thm
-  ("field_rinv'",
-   ``!f :: Field. !x :: field_nonzero f. !y :: (f.carrier).
-       (field_mult f x (field_mult f (field_inv f x) y) = y)``,
+Theorem field_rinv':
+     !f :: Field. !x :: field_nonzero f. !y :: (f.carrier).
+       (field_mult f x (field_mult f (field_inv f x) y) = y)
+Proof
    RW_TAC resq_ss []
-   ++ RW_TAC alg_ss [GSYM field_mult_assoc]);
+   ++ RW_TAC alg_ss [GSYM field_mult_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2 field_rinv' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_lcancel_imp = store_thm
-  ("field_mult_lcancel_imp",
-   ``!f :: Field. !x :: field_nonzero f. !y z :: (f.carrier).
-       (field_mult f x y = field_mult f x z) ==> (y = z)``,
+Theorem field_mult_lcancel_imp:
+     !f :: Field. !x :: field_nonzero f. !y z :: (f.carrier).
+       (field_mult f x y = field_mult f x z) ==> (y = z)
+Proof
    RW_TAC resq_ss [field_nonzero_def, IN_DIFF, IN_SING]
    ++ POP_ASSUM MP_TAC
    ++ Cases_on `y = field_zero f`
@@ -1035,121 +1087,137 @@ val field_mult_lcancel_imp = store_thm
    ++ match_tac group_lcancel_imp
    ++ Q.EXISTS_TAC `f.prod`
    ++ Q.EXISTS_TAC `x`
-   ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]);
+   ++ RW_TAC std_ss [IN_DIFF, IN_INSERT, NOT_IN_EMPTY]
+QED
 
-val field_mult_lcancel = store_thm
-  ("field_mult_lcancel",
-   ``!f :: Field. !x :: field_nonzero f. !y z :: (f.carrier).
-       (field_mult f x y = field_mult f x z) = (y = z)``,
-   METIS_TAC [field_mult_lcancel_imp]);
+Theorem field_mult_lcancel:
+     !f :: Field. !x :: field_nonzero f. !y z :: (f.carrier).
+       (field_mult f x y = field_mult f x z) = (y = z)
+Proof
+   METIS_TAC [field_mult_lcancel_imp]
+QED
 
 val context = subtypeTools.add_rewrite2' field_mult_lcancel context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_rcancel_imp = store_thm
-  ("field_mult_rcancel_imp",
-   ``!f :: Field. !x :: field_nonzero f. !y z :: (f.carrier).
-       (field_mult f y x = field_mult f z x) ==> (y = z)``,
-   METIS_TAC [field_mult_lcancel_imp, field_mult_comm, field_nonzero_carrier]);
+Theorem field_mult_rcancel_imp:
+     !f :: Field. !x :: field_nonzero f. !y z :: (f.carrier).
+       (field_mult f y x = field_mult f z x) ==> (y = z)
+Proof
+   METIS_TAC [field_mult_lcancel_imp, field_mult_comm, field_nonzero_carrier]
+QED
 
-val field_mult_rcancel = store_thm
-  ("field_mult_rcancel",
-   ``!f :: Field. !x :: field_nonzero f. !y z :: (f.carrier).
-       (field_mult f y x = field_mult f z x) = (y = z)``,
-   METIS_TAC [field_mult_rcancel_imp]);
+Theorem field_mult_rcancel:
+     !f :: Field. !x :: field_nonzero f. !y z :: (f.carrier).
+       (field_mult f y x = field_mult f z x) = (y = z)
+Proof
+   METIS_TAC [field_mult_rcancel_imp]
+QED
 
 val context = subtypeTools.add_rewrite2' field_mult_rcancel context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_neg = store_thm
-  ("field_neg_neg",
-   ``!f :: Field. !x :: (f.carrier). field_neg f (field_neg f x) = x``,
+Theorem field_neg_neg:
+     !f :: Field. !x :: (f.carrier). field_neg f (field_neg f x) = x
+Proof
    RW_TAC resq_ss [field_neg_def, Field_def, GSPECIFICATION, AbelianGroup_def]
-   ++ METIS_TAC [group_inv_inv]);
+   ++ METIS_TAC [group_inv_inv]
+QED
 
 val context = subtypeTools.add_rewrite2 field_neg_neg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_cancel = store_thm
-  ("field_neg_cancel",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_neg f x = field_neg f y) = (x = y)``,
+Theorem field_neg_cancel:
+     !f :: Field. !x y :: (f.carrier).
+       (field_neg f x = field_neg f y) = (x = y)
+Proof
    RW_TAC resq_ss [field_neg_def, Field_def, GSPECIFICATION, AbelianGroup_def]
-   ++ METIS_TAC [group_inv_cancel]);
+   ++ METIS_TAC [group_inv_cancel]
+QED
 
 val context = subtypeTools.add_rewrite2 field_neg_cancel context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_cancel_imp = store_thm
-  ("field_neg_cancel_imp",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_neg f x = field_neg f y) ==> (x = y)``,
-   METIS_TAC [field_neg_cancel]);
+Theorem field_neg_cancel_imp:
+     !f :: Field. !x y :: (f.carrier).
+       (field_neg f x = field_neg f y) ==> (x = y)
+Proof
+   METIS_TAC [field_neg_cancel]
+QED
 
-val field_neg_eq_swap_imp = store_thm
-  ("field_neg_eq_swap_imp",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_neg f x = y) ==> (x = field_neg f y)``,
-   METIS_TAC [field_neg_neg]);
+Theorem field_neg_eq_swap_imp:
+     !f :: Field. !x y :: (f.carrier).
+       (field_neg f x = y) ==> (x = field_neg f y)
+Proof
+   METIS_TAC [field_neg_neg]
+QED
 
-val field_neg_eq_swap = store_thm
-  ("field_neg_eq_swap",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_neg f x = y) = (x = field_neg f y)``,
-   METIS_TAC [field_neg_eq_swap_imp]);
+Theorem field_neg_eq_swap:
+     !f :: Field. !x y :: (f.carrier).
+       (field_neg f x = y) = (x = field_neg f y)
+Proof
+   METIS_TAC [field_neg_eq_swap_imp]
+QED
 
-val field_neg_eq_swap_imp' = store_thm
-  ("field_neg_eq_swap_imp'",
-   ``!f :: Field. !x y :: (f.carrier).
-       (x = field_neg f y) ==> (field_neg f x = y)``,
-   METIS_TAC [field_neg_eq_swap]);
+Theorem field_neg_eq_swap_imp':
+     !f :: Field. !x y :: (f.carrier).
+       (x = field_neg f y) ==> (field_neg f x = y)
+Proof
+   METIS_TAC [field_neg_eq_swap]
+QED
 
-val field_neg_eq_imp = store_thm
-  ("field_neg_eq_imp",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_neg f x = y) ==> (field_add f x y = field_zero f)``,
-   RW_TAC resq_ss [field_rneg]);
+Theorem field_neg_eq_imp:
+     !f :: Field. !x y :: (f.carrier).
+       (field_neg f x = y) ==> (field_add f x y = field_zero f)
+Proof
+   RW_TAC resq_ss [field_rneg]
+QED
 
-val field_neg_eq_imp' = store_thm
-  ("field_neg_eq_imp'",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_add f x y = field_zero f) ==> (field_neg f x = y)``,
+Theorem field_neg_eq_imp':
+     !f :: Field. !x y :: (f.carrier).
+       (field_add f x y = field_zero f) ==> (field_neg f x = y)
+Proof
    RW_TAC resq_ss []
    ++ match_tac field_add_lcancel_imp
    ++ Q.EXISTS_TAC `f`
    ++ Q.EXISTS_TAC `x`
-   ++ RW_TAC std_ss [field_neg_carrier, field_rneg]);
+   ++ RW_TAC std_ss [field_neg_carrier, field_rneg]
+QED
 
-val field_neg_eq = store_thm
-  ("field_neg_eq",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_neg f x = y) = (field_add f x y = field_zero f)``,
-   METIS_TAC [field_neg_eq_imp, field_neg_eq_imp']);
+Theorem field_neg_eq:
+     !f :: Field. !x y :: (f.carrier).
+       (field_neg f x = y) = (field_add f x y = field_zero f)
+Proof
+   METIS_TAC [field_neg_eq_imp, field_neg_eq_imp']
+QED
 
-val field_neg_zero = store_thm
-  ("field_neg_zero",
-   ``!f :: Field. field_neg f (field_zero f) = field_zero f``,
+Theorem field_neg_zero:
+     !f :: Field. field_neg f (field_zero f) = field_zero f
+Proof
    RW_TAC resq_ss
      [Field_def, GSPECIFICATION, AbelianGroup_def, field_zero_def,
       field_neg_def]
-   ++ METIS_TAC [group_inv_id]);
+   ++ METIS_TAC [group_inv_id]
+QED
 
 val context = subtypeTools.add_rewrite2 field_neg_zero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_add_eq = store_thm
-  ("field_add_eq",
-   ``!f x1 y1 x2 y2.
-       (x1 = x2) /\ (y1 = y2) ==> (field_add f x1 y1 = field_add f x2 y2)``,
-   RW_TAC std_ss []);
+Theorem field_add_eq:
+     !f x1 y1 x2 y2.
+       (x1 = x2) /\ (y1 = y2) ==> (field_add f x1 y1 = field_add f x2 y2)
+Proof
+   RW_TAC std_ss []
+QED
 
-val field_distrib_radd = store_thm
-  ("field_distrib_radd",
-   ``!f :: Field. !x y z :: (f.carrier).
+Theorem field_distrib_radd:
+     !f :: Field. !x y z :: (f.carrier).
        field_mult f (field_add f y z) x =
-       field_add f (field_mult f y x) (field_mult f z x)``,
+       field_add f (field_mult f y x) (field_mult f z x)
+Proof
    RW_TAC resq_ss []
-   ++ METIS_TAC [field_mult_comm, field_add_carrier, field_distrib_ladd]);
+   ++ METIS_TAC [field_mult_comm, field_add_carrier, field_distrib_ladd]
+QED
 
 (***
 val context = subtypeTools.add_rewrite2'' field_distrib_radd context;
@@ -1159,96 +1227,103 @@ val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 val field_distrib = save_thm
   ("field_distrib", CONJ field_distrib_ladd field_distrib_radd);
 
-val field_mult_lneg = store_thm
-  ("field_mult_lneg",
-   ``!f :: Field. !x y :: (f.carrier).
-       field_mult f (field_neg f x) y = field_neg f (field_mult f x y)``,
+Theorem field_mult_lneg:
+     !f :: Field. !x y :: (f.carrier).
+       field_mult f (field_neg f x) y = field_neg f (field_mult f x y)
+Proof
    RW_TAC resq_ss []
    ++ match_tac (GSYM field_neg_eq_imp')
    ++ RW_TAC std_ss [field_mult_carrier, field_neg_carrier]
    ++ RW_TAC std_ss
         [GSYM field_distrib_radd, field_neg_carrier, field_rneg,
-         field_mult_lzero]);
+         field_mult_lzero]
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_lneg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_rneg = store_thm
-  ("field_mult_rneg",
-   ``!f :: Field. !x y :: (f.carrier).
-       field_mult f x (field_neg f y) = field_neg f (field_mult f x y)``,
-   METIS_TAC [field_mult_lneg, field_mult_comm, field_neg_carrier]);
+Theorem field_mult_rneg:
+     !f :: Field. !x y :: (f.carrier).
+       field_mult f x (field_neg f y) = field_neg f (field_mult f x y)
+Proof
+   METIS_TAC [field_mult_lneg, field_mult_comm, field_neg_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 field_mult_rneg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_inv_mult' = store_thm
-  ("field_inv_mult'",
-   ``!f :: Field. !x y :: field_nonzero f.
+Theorem field_inv_mult':
+     !f :: Field. !x y :: field_nonzero f.
        field_inv f (field_mult f x y) =
-       field_mult f (field_inv f y) (field_inv f x)``,
+       field_mult f (field_inv f y) (field_inv f x)
+Proof
    RW_TAC resq_ss
      [field_mult_def, Field_def, GSPECIFICATION, field_inv_def,
       AbelianGroup_def, field_nonzero_def]
    ++ match_tac group_inv_mult
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
-val field_inv_mult = store_thm
-  ("field_inv_mult",
-   ``!f :: Field. !x y :: field_nonzero f.
+Theorem field_inv_mult:
+     !f :: Field. !x y :: field_nonzero f.
        field_inv f (field_mult f x y) =
-       field_mult f (field_inv f x) (field_inv f y)``,
+       field_mult f (field_inv f x) (field_inv f y)
+Proof
    METIS_TAC [field_inv_nonzero, field_nonzero_carrier, field_mult_comm,
-              field_inv_mult']);
+              field_inv_mult']
+QED
 
 val context = subtypeTools.add_rewrite2'' field_inv_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_carrier = store_thm
-  ("field_exp_carrier",
-   ``!f :: Field. !x :: (f.carrier). !n. field_exp f x n IN f.carrier``,
+Theorem field_exp_carrier:
+     !f :: Field. !x :: (f.carrier). !n. field_exp f x n IN f.carrier
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
-   ++ RW_TAC std_ss [field_exp_def, field_one_carrier, field_mult_carrier]);
+   ++ RW_TAC std_ss [field_exp_def, field_one_carrier, field_mult_carrier]
+QED
 
 val context = subtypeTools.add_reduction2 field_exp_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_nonzero = store_thm
-  ("field_exp_nonzero",
-   ``!f :: Field. !x :: field_nonzero f. !n.
-       field_exp f x n IN field_nonzero f``,
+Theorem field_exp_nonzero:
+     !f :: Field. !x :: field_nonzero f. !n.
+       field_exp f x n IN field_nonzero f
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
-   ++ RW_TAC std_ss [field_exp_def, field_one_nonzero, field_mult_nonzero]);
+   ++ RW_TAC std_ss [field_exp_def, field_one_nonzero, field_mult_nonzero]
+QED
 
 val context = subtypeTools.add_reduction2 field_exp_nonzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_num_carrier = store_thm
-  ("field_num_carrier",
-   ``!f :: Field. !n. field_num f n IN f.carrier``,
+Theorem field_num_carrier:
+     !f :: Field. !n. field_num f n IN f.carrier
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
-   ++ RW_TAC alg_ss [field_num_def]);
+   ++ RW_TAC alg_ss [field_num_def]
+QED
 
 val context = subtypeTools.add_reduction2 field_num_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_small = store_thm
-  ("field_mult_small",
-   ``!f :: Field. !x :: (f.carrier).
+Theorem field_mult_small:
+     !f :: Field. !x :: (f.carrier).
        (field_mult f (field_num f 0) x = field_zero f) /\
        (field_mult f (field_num f 1) x = x) /\
        (field_mult f (field_num f 2) x = field_add f x x) /\
        (field_mult f (field_num f 3) x =
-        field_add f x (field_mult f (field_num f 2) x))``,
+        field_add f x (field_mult f (field_num f 2) x))
+Proof
    RW_TAC (simpLib.++ (std_ss, numSimps.SUC_FILTER_ss)) [field_num_def]
-   ++ RW_TAC alg_ss [field_distrib_radd, field_add_assoc]);
+   ++ RW_TAC alg_ss [field_distrib_radd, field_add_assoc]
+QED
 
-val field_exp_small = store_thm
-  ("field_exp_small",
-   ``!f :: Field. !x :: (f.carrier).
+Theorem field_exp_small:
+     !f :: Field. !x :: (f.carrier).
        (field_exp f x 0 = field_one f) /\
        (field_exp f x 1 = x) /\
        (field_exp f x 2 = field_mult f x x) /\
@@ -1258,260 +1333,284 @@ val field_exp_small = store_thm
        (field_exp f x 6 = field_mult f x (field_exp f x 5)) /\
        (field_exp f x 7 = field_mult f x (field_exp f x 6)) /\
        (field_exp f x 8 = field_mult f x (field_exp f x 7)) /\
-       (field_exp f x 9 = field_mult f x (field_exp f x 8))``,
+       (field_exp f x 9 = field_mult f x (field_exp f x 8))
+Proof
    RW_TAC (simpLib.++ (std_ss, numSimps.SUC_FILTER_ss))
-     [field_exp_def, field_mult_rone]);
+     [field_exp_def, field_mult_rone]
+QED
 
-val field_inv_one = store_thm
-  ("field_inv_one",
-   ``!f :: Field. field_inv f (field_one f) = field_one f``,
+Theorem field_inv_one:
+     !f :: Field. field_inv f (field_one f) = field_one f
+Proof
    RW_TAC resq_ss [field_inv_def, field_one_def, Field_def, GSPECIFICATION]
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
 val context = subtypeTools.add_rewrite2 field_inv_one context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_zero = store_thm
-  ("field_exp_zero",
-   ``!f :: Field. !x :: (f.carrier). field_exp f x 0 = field_one f``,
-   RW_TAC alg_ss [field_exp_def]);
+Theorem field_exp_zero:
+     !f :: Field. !x :: (f.carrier). field_exp f x 0 = field_one f
+Proof
+   RW_TAC alg_ss [field_exp_def]
+QED
 
 val context = subtypeTools.add_rewrite2 field_exp_zero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_one = store_thm
-  ("field_exp_one",
-   ``!f :: Field. !x :: (f.carrier). field_exp f x 1 = x``,
+Theorem field_exp_one:
+     !f :: Field. !x :: (f.carrier). field_exp f x 1 = x
+Proof
    REWRITE_TAC [ONE, field_exp_def]
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
 val context = subtypeTools.add_rewrite2 field_exp_one context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_add' = store_thm
-  ("field_neg_add'",
-   ``!f :: Field. !x y :: (f.carrier).
+Theorem field_neg_add':
+     !f :: Field. !x y :: (f.carrier).
        field_neg f (field_add f x y) =
-       field_add f (field_neg f y) (field_neg f x)``,
+       field_add f (field_neg f y) (field_neg f x)
+Proof
    RW_TAC resq_ss
      [field_add_def, Field_def, GSPECIFICATION, field_neg_def,
       AbelianGroup_def]
    ++ match_tac group_inv_mult
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
-val field_neg_add = store_thm
-  ("field_neg_add",
-   ``!f :: Field. !x y :: (f.carrier).
+Theorem field_neg_add:
+     !f :: Field. !x y :: (f.carrier).
        field_neg f (field_add f x y) =
-       field_add f (field_neg f x) (field_neg f y)``,
-   METIS_TAC [field_neg_carrier, field_add_comm, field_neg_add']);
+       field_add f (field_neg f x) (field_neg f y)
+Proof
+   METIS_TAC [field_neg_carrier, field_add_comm, field_neg_add']
+QED
 
 val context = subtypeTools.add_rewrite2'' field_neg_add context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_suc = store_thm
-  ("field_exp_suc",
-   ``!f :: Field. !x :: (f.carrier). !n.
-       field_exp f x (SUC n) = field_mult f (field_exp f x n) x``,
+Theorem field_exp_suc:
+     !f :: Field. !x :: (f.carrier). !n.
+       field_exp f x (SUC n) = field_mult f (field_exp f x n) x
+Proof
    RW_TAC alg_ss [field_exp_def]
-   ++ METIS_TAC [field_mult_comm, field_exp_carrier]);
+   ++ METIS_TAC [field_mult_comm, field_exp_carrier]
+QED
 
-val field_num_suc = store_thm
-  ("field_num_suc",
-   ``!f :: Field. !n.
-       field_num f (SUC n) = field_add f (field_one f) (field_num f n)``,
+Theorem field_num_suc:
+     !f :: Field. !n.
+       field_num f (SUC n) = field_add f (field_one f) (field_num f n)
+Proof
    RW_TAC alg_ss [field_num_def]
-   ++ METIS_TAC [field_add_comm, field_one_carrier, field_num_carrier]);
+   ++ METIS_TAC [field_add_comm, field_one_carrier, field_num_carrier]
+QED
 
-val field_num_add = store_thm
-  ("field_num_add",
-   ``!f :: Field. !m n.
-       field_add f (field_num f m) (field_num f n) = field_num f (m + n)``,
+Theorem field_num_add:
+     !f :: Field. !m n.
+       field_add f (field_num f m) (field_num f n) = field_num f (m + n)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `m`
    ++ RW_TAC alg_ss []
-   ++ RW_TAC alg_ss [field_num_suc, ADD, field_add_assoc]);
+   ++ RW_TAC alg_ss [field_num_suc, ADD, field_add_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2 field_num_add context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_num_add' = store_thm
-  ("field_num_add'",
-   ``!f :: Field. !m n. !x :: (f.carrier).
+Theorem field_num_add':
+     !f :: Field. !m n. !x :: (f.carrier).
        field_add f (field_num f m) (field_add f (field_num f n) x) =
-       field_add f (field_num f (m + n)) x``,
-   RW_TAC alg_ss [GSYM field_add_assoc, field_num_add]);
+       field_add f (field_num f (m + n)) x
+Proof
+   RW_TAC alg_ss [GSYM field_add_assoc, field_num_add]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_num_add' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_num_mult = store_thm
-  ("field_num_mult",
-   ``!f :: Field. !m n.
-       field_mult f (field_num f m) (field_num f n) = field_num f (m * n)``,
+Theorem field_num_mult:
+     !f :: Field. !m n.
+       field_mult f (field_num f m) (field_num f n) = field_num f (m * n)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `m`
    ++ RW_TAC alg_ss []
-   ++ RW_TAC alg_ss [field_num_def, MULT, field_distrib_radd]);
+   ++ RW_TAC alg_ss [field_num_def, MULT, field_distrib_radd]
+QED
 
 val context = subtypeTools.add_rewrite2 field_num_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_num_mult' = store_thm
-  ("field_num_mult'",
-   ``!f :: Field. !m n. !x :: (f.carrier).
+Theorem field_num_mult':
+     !f :: Field. !m n. !x :: (f.carrier).
        field_mult f (field_num f m) (field_mult f (field_num f n) x) =
-       field_mult f (field_num f (m * n)) x``,
-   RW_TAC alg_ss [GSYM field_mult_assoc, field_num_mult]);
+       field_mult f (field_num f (m * n)) x
+Proof
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_num_mult]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_num_mult' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_num_exp = store_thm
-  ("field_num_exp",
-   ``!f :: Field. !m n.
-       field_exp f (field_num f m) n = field_num f (m ** n)``,
+Theorem field_num_exp:
+     !f :: Field. !m n.
+       field_exp f (field_num f m) n = field_num f (m ** n)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
-   ++ RW_TAC alg_ss [EXP, field_num_one, field_exp_def]);
+   ++ RW_TAC alg_ss [EXP, field_num_one, field_exp_def]
+QED
 
 val context = subtypeTools.add_rewrite2 field_num_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_add_single = store_thm
-  ("field_single_add_single",
-   ``!f :: Field. !x :: (f.carrier).
-       field_add f x x = field_mult f (field_num f 2) x``,
-   RW_TAC alg_ss [field_mult_small]);
+Theorem field_single_add_single:
+     !f :: Field. !x :: (f.carrier).
+       field_add f x x = field_mult f (field_num f 2) x
+Proof
+   RW_TAC alg_ss [field_mult_small]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_add_single context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_add_single' = store_thm
-  ("field_single_add_single'",
-   ``!f :: Field. !x y :: (f.carrier).
+Theorem field_single_add_single':
+     !f :: Field. !x y :: (f.carrier).
        field_add f x (field_add f x y) =
-       field_add f (field_mult f (field_num f 2) x) y``,
-   RW_TAC alg_ss [GSYM field_add_assoc, field_single_add_single]);
+       field_add f (field_mult f (field_num f 2) x) y
+Proof
+   RW_TAC alg_ss [GSYM field_add_assoc, field_single_add_single]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_add_single' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_add_mult = store_thm
-  ("field_single_add_mult",
-   ``!f :: Field. !x :: (f.carrier). !n.
+Theorem field_single_add_mult:
+     !f :: Field. !x :: (f.carrier). !n.
        field_add f x (field_mult f (field_num f n) x) =
-       field_mult f (field_num f (n + 1)) x``,
+       field_mult f (field_num f (n + 1)) x
+Proof
    RW_TAC bool_ss [field_num_suc, GSYM ADD1]
-   ++ RW_TAC alg_ss [field_distrib_radd]);
+   ++ RW_TAC alg_ss [field_distrib_radd]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_add_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_add_mult' = store_thm
-  ("field_single_add_mult'",
-   ``!f :: Field. !x y :: (f.carrier). !n.
+Theorem field_single_add_mult':
+     !f :: Field. !x y :: (f.carrier). !n.
        field_add f x (field_add f (field_mult f (field_num f n) x) y) =
-       field_add f (field_mult f (field_num f (n + 1)) x) y``,
-   RW_TAC alg_ss [GSYM field_add_assoc, field_single_add_mult]);
+       field_add f (field_mult f (field_num f (n + 1)) x) y
+Proof
+   RW_TAC alg_ss [GSYM field_add_assoc, field_single_add_mult]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_add_mult' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_add_neg_mult = store_thm
-  ("field_single_add_neg_mult",
-   ``!f :: Field. !x :: (f.carrier). !n.
+Theorem field_single_add_neg_mult:
+     !f :: Field. !x :: (f.carrier). !n.
        field_add f x (field_neg f (field_mult f (field_num f n) x)) =
        (if n = 0 then x
-        else field_neg f (field_mult f (field_num f (n - 1)) x))``,
+        else field_neg f (field_mult f (field_num f (n - 1)) x))
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss []
    ++ Cases_on `n`
    ++ RW_TAC alg_ss []
    ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd]
-   ++ RW_TAC alg_ss [field_neg_add, GSYM field_add_assoc]);
+   ++ RW_TAC alg_ss [field_neg_add, GSYM field_add_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_add_neg_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_add_neg_mult' = store_thm
-  ("field_single_add_neg_mult'",
-   ``!f :: Field. !x y :: (f.carrier). !n.
+Theorem field_single_add_neg_mult':
+     !f :: Field. !x y :: (f.carrier). !n.
        field_add f x
          (field_add f (field_neg f (field_mult f (field_num f n) x)) y) =
        (if n = 0 then field_add f x y
         else field_add f
-               (field_neg f (field_mult f (field_num f (n - 1)) x)) y)``,
+               (field_neg f (field_mult f (field_num f (n - 1)) x)) y)
+Proof
    RW_TAC alg_ss [GSYM field_add_assoc, field_single_add_neg_mult]
    ++ RW_TAC resq_ss []
-   ++ RW_TAC resq_ss []);
+   ++ RW_TAC resq_ss []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_add_neg_mult' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_add_mult = store_thm
-  ("field_mult_add_mult",
-   ``!f :: Field. !x :: (f.carrier). !m n.
+Theorem field_mult_add_mult:
+     !f :: Field. !x :: (f.carrier). !m n.
        field_add f (field_mult f (field_num f m) x)
          (field_mult f (field_num f n) x) =
-       field_mult f (field_num f (m + n)) x``,
+       field_mult f (field_num f (m + n)) x
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `m`
    ++ RW_TAC alg_ss []
    ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd, ADD]
    ++ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
-   ++ RW_TAC alg_ss [field_add_assoc]);
+   ++ RW_TAC alg_ss [field_add_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_mult_add_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_add_mult' = store_thm
-  ("field_mult_add_mult'",
-   ``!f :: Field. !x y :: (f.carrier). !m n.
+Theorem field_mult_add_mult':
+     !f :: Field. !x y :: (f.carrier). !m n.
        field_add f (field_mult f (field_num f m) x)
          (field_add f (field_mult f (field_num f n) x) y) =
-       field_add f (field_mult f (field_num f (m + n)) x) y``,
-   RW_TAC alg_ss [GSYM field_add_assoc, field_mult_add_mult]);
+       field_add f (field_mult f (field_num f (m + n)) x) y
+Proof
+   RW_TAC alg_ss [GSYM field_add_assoc, field_mult_add_mult]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_mult_add_mult' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_add_neg = store_thm
-  ("field_mult_add_neg",
-   ``!f :: Field. !x :: (f.carrier). !n.
+Theorem field_mult_add_neg:
+     !f :: Field. !x :: (f.carrier). !n.
        field_add f (field_mult f (field_num f n) x) (field_neg f x) =
        (if n = 0 then field_neg f x
-        else field_mult f (field_num f (n - 1)) x)``,
+        else field_mult f (field_num f (n - 1)) x)
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss []
    ++ Cases_on `n`
    ++ RW_TAC alg_ss []
-   ++ RW_TAC alg_ss [field_num_def, field_distrib_radd, field_add_assoc]);
+   ++ RW_TAC alg_ss [field_num_def, field_distrib_radd, field_add_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_mult_add_neg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_add_neg' = store_thm
-  ("field_mult_add_neg'",
-   ``!f :: Field. !x y :: (f.carrier). !n.
+Theorem field_mult_add_neg':
+     !f :: Field. !x y :: (f.carrier). !n.
        field_add f (field_mult f (field_num f n) x)
          (field_add f (field_neg f x) y) =
        (if n = 0 then field_add f (field_neg f x) y
-        else field_add f (field_mult f (field_num f (n - 1)) x) y)``,
+        else field_add f (field_mult f (field_num f (n - 1)) x) y)
+Proof
    RW_TAC alg_ss [GSYM field_add_assoc, field_mult_add_neg]
    ++ RW_TAC resq_ss []
-   ++ RW_TAC resq_ss []);
+   ++ RW_TAC resq_ss []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_mult_add_neg' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_add_neg_mult = store_thm
-  ("field_mult_add_neg_mult",
-   ``!f :: Field. !x :: (f.carrier). !m n.
+Theorem field_mult_add_neg_mult:
+     !f :: Field. !x :: (f.carrier). !m n.
        field_add f (field_mult f (field_num f m) x)
          (field_neg f (field_mult f (field_num f n) x)) =
        (if m < n then field_neg f (field_mult f (field_num f (n - m)) x)
-        else field_mult f (field_num f (m - n)) x)``,
+        else field_mult f (field_num f (m - n)) x)
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss []
    << [Know `m <= n` >> DECIDE_TAC
@@ -1537,217 +1636,235 @@ val field_mult_add_neg_mult = store_thm
        ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd, field_add_assoc]
        ++ Know `SUC m - n = SUC (m - n)` >> DECIDE_TAC
        ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd,
-                         GSYM field_add_assoc, field_neg_add]]);
+                         GSYM field_add_assoc, field_neg_add]]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_mult_add_neg_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_mult_add_neg_mult' = store_thm
-  ("field_mult_add_neg_mult'",
-   ``!f :: Field. !x y :: (f.carrier). !m n.
+Theorem field_mult_add_neg_mult':
+     !f :: Field. !x y :: (f.carrier). !m n.
        field_add f (field_mult f (field_num f m) x)
          (field_add f (field_neg f (field_mult f (field_num f n) x)) y) =
        (if m < n then
           field_add f (field_neg f (field_mult f (field_num f (n - m)) x)) y
-        else field_add f (field_mult f (field_num f (m - n)) x) y)``,
+        else field_add f (field_mult f (field_num f (m - n)) x) y)
+Proof
    RW_TAC alg_ss [GSYM field_add_assoc, field_mult_add_neg_mult]
    ++ RW_TAC resq_ss []
-   ++ RW_TAC resq_ss []);
+   ++ RW_TAC resq_ss []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_mult_add_neg_mult' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_add_neg = store_thm
-  ("field_neg_add_neg",
-   ``!f :: Field. !x :: (f.carrier).
+Theorem field_neg_add_neg:
+     !f :: Field. !x :: (f.carrier).
        field_add f (field_neg f x) (field_neg f x) =
-       field_neg f (field_mult f (field_num f 2) x)``,
-   RW_TAC alg_ss [field_mult_small, field_neg_add]);
+       field_neg f (field_mult f (field_num f 2) x)
+Proof
+   RW_TAC alg_ss [field_mult_small, field_neg_add]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_neg_add_neg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_add_neg' = store_thm
-  ("field_neg_add_neg'",
-   ``!f :: Field. !x y :: (f.carrier).
+Theorem field_neg_add_neg':
+     !f :: Field. !x y :: (f.carrier).
        field_add f (field_neg f x) (field_add f (field_neg f x) y) =
-       field_add f (field_neg f (field_mult f (field_num f 2) x)) y``,
-   RW_TAC alg_ss [GSYM field_add_assoc, field_neg_add_neg]);
+       field_add f (field_neg f (field_mult f (field_num f 2) x)) y
+Proof
+   RW_TAC alg_ss [GSYM field_add_assoc, field_neg_add_neg]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_neg_add_neg' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_add_neg_mult = store_thm
-  ("field_neg_add_neg_mult",
-   ``!f :: Field. !x :: (f.carrier). !n.
+Theorem field_neg_add_neg_mult:
+     !f :: Field. !x :: (f.carrier). !n.
        field_add f (field_neg f x)
          (field_neg f (field_mult f (field_num f n) x)) =
-       field_neg f (field_mult f (field_num f (n + 1)) x)``,
+       field_neg f (field_mult f (field_num f (n + 1)) x)
+Proof
    RW_TAC alg_ss [GSYM field_single_add_mult]
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_neg_add_neg_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_add_neg_mult' = store_thm
-  ("field_neg_add_neg_mult'",
-   ``!f :: Field. !x y :: (f.carrier). !n.
+Theorem field_neg_add_neg_mult':
+     !f :: Field. !x y :: (f.carrier). !n.
        field_add f (field_neg f x)
          (field_add f (field_neg f (field_mult f (field_num f n) x)) y) =
-       field_add f (field_neg f (field_mult f (field_num f (n + 1)) x)) y``,
-   RW_TAC alg_ss [GSYM field_add_assoc, field_neg_add_neg_mult]);
+       field_add f (field_neg f (field_mult f (field_num f (n + 1)) x)) y
+Proof
+   RW_TAC alg_ss [GSYM field_add_assoc, field_neg_add_neg_mult]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_neg_add_neg_mult' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_mult_add_neg_mult = store_thm
-  ("field_neg_mult_add_neg_mult",
-   ``!f :: Field. !x :: (f.carrier). !m n.
+Theorem field_neg_mult_add_neg_mult:
+     !f :: Field. !x :: (f.carrier). !m n.
        field_add f (field_neg f (field_mult f (field_num f m) x))
          (field_neg f (field_mult f (field_num f n) x)) =
-       field_neg f (field_mult f (field_num f (m + n)) x)``,
+       field_neg f (field_mult f (field_num f (m + n)) x)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `m`
    ++ RW_TAC alg_ss []
    ++ RW_TAC alg_ss [field_num_suc, field_distrib_radd, ADD, field_neg_add]
    ++ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
-   ++ RW_TAC alg_ss [field_add_assoc]);
+   ++ RW_TAC alg_ss [field_add_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_neg_mult_add_neg_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_mult_add_neg_mult' = store_thm
-  ("field_neg_mult_add_neg_mult'",
-   ``!f :: Field. !x y :: (f.carrier). !m n.
+Theorem field_neg_mult_add_neg_mult':
+     !f :: Field. !x y :: (f.carrier). !m n.
        field_add f (field_neg f (field_mult f (field_num f m) x))
          (field_add f (field_neg f (field_mult f (field_num f n) x)) y) =
-       field_add f (field_neg f (field_mult f (field_num f (m + n)) x)) y``,
-   RW_TAC alg_ss [GSYM field_add_assoc, field_neg_mult_add_neg_mult]);
+       field_add f (field_neg f (field_mult f (field_num f (m + n)) x)) y
+Proof
+   RW_TAC alg_ss [GSYM field_add_assoc, field_neg_mult_add_neg_mult]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_neg_mult_add_neg_mult' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_mult_single = store_thm
-  ("field_single_mult_single",
-   ``!f :: Field. !x :: (f.carrier). field_mult f x x = field_exp f x 2``,
-   RW_TAC alg_ss' [field_exp_small]);
+Theorem field_single_mult_single:
+     !f :: Field. !x :: (f.carrier). field_mult f x x = field_exp f x 2
+Proof
+   RW_TAC alg_ss' [field_exp_small]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_mult_single context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_mult_single' = store_thm
-  ("field_single_mult_single'",
-   ``!f :: Field. !x y :: (f.carrier).
-       field_mult f x (field_mult f x y) = field_mult f (field_exp f x 2) y``,
-   RW_TAC alg_ss [GSYM field_mult_assoc, field_single_mult_single]);
+Theorem field_single_mult_single':
+     !f :: Field. !x y :: (f.carrier).
+       field_mult f x (field_mult f x y) = field_mult f (field_exp f x 2) y
+Proof
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_single_mult_single]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_mult_single' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_mult_exp = store_thm
-  ("field_single_mult_exp",
-   ``!f :: Field. !x :: (f.carrier). !n.
-       field_mult f x (field_exp f x n) = field_exp f x (n + 1)``,
-   METIS_TAC [field_exp_def, ADD1]);
+Theorem field_single_mult_exp:
+     !f :: Field. !x :: (f.carrier). !n.
+       field_mult f x (field_exp f x n) = field_exp f x (n + 1)
+Proof
+   METIS_TAC [field_exp_def, ADD1]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_mult_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_mult_exp' = store_thm
-  ("field_single_mult_exp'",
-   ``!f :: Field. !x y :: (f.carrier). !n.
+Theorem field_single_mult_exp':
+     !f :: Field. !x y :: (f.carrier). !n.
        field_mult f x (field_mult f (field_exp f x n) y) =
-       field_mult f (field_exp f x (n + 1)) y``,
-   RW_TAC alg_ss [GSYM field_mult_assoc, field_single_mult_exp]);
+       field_mult f (field_exp f x (n + 1)) y
+Proof
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_single_mult_exp]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_mult_exp' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_mult_inv_exp = store_thm
-  ("field_single_mult_inv_exp",
-   ``!f :: Field. !x :: field_nonzero f. !n.
+Theorem field_single_mult_inv_exp:
+     !f :: Field. !x :: field_nonzero f. !n.
        field_mult f x (field_inv f (field_exp f x n)) =
-       (if n = 0 then x else field_inv f (field_exp f x (n - 1)))``,
+       (if n = 0 then x else field_inv f (field_exp f x (n - 1)))
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss []
    ++ Cases_on `n`
    ++ RW_TAC alg_ss []
-   ++ RW_TAC alg_ss [field_exp_def, GSYM field_mult_assoc, field_inv_mult]);
+   ++ RW_TAC alg_ss [field_exp_def, GSYM field_mult_assoc, field_inv_mult]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_mult_inv_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_single_mult_inv_exp' = store_thm
-  ("field_single_mult_inv_exp'",
-   ``!f :: Field. !x :: field_nonzero f. !n. !y :: (f.carrier).
+Theorem field_single_mult_inv_exp':
+     !f :: Field. !x :: field_nonzero f. !n. !y :: (f.carrier).
        field_mult f x (field_mult f (field_inv f (field_exp f x n)) y) =
        (if n = 0 then field_mult f x y
-        else field_mult f (field_inv f (field_exp f x (n - 1))) y)``,
+        else field_mult f (field_inv f (field_exp f x (n - 1))) y)
+Proof
    RW_TAC alg_ss [GSYM field_mult_assoc, field_single_mult_inv_exp]
    ++ RW_TAC resq_ss []
-   ++ RW_TAC resq_ss []);
+   ++ RW_TAC resq_ss []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_single_mult_inv_exp' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_mult_exp = store_thm
-  ("field_exp_mult_exp",
-   ``!f :: Field. !x :: (f.carrier). !m n.
+Theorem field_exp_mult_exp:
+     !f :: Field. !x :: (f.carrier). !m n.
        field_mult f (field_exp f x m) (field_exp f x n) =
-       field_exp f x (m + n)``,
+       field_exp f x (m + n)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `m`
    ++ RW_TAC alg_ss []
    ++ RW_TAC alg_ss [field_exp_def, ADD_CLAUSES]
    ++ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
-   ++ RW_TAC alg_ss [field_mult_assoc]);
+   ++ RW_TAC alg_ss [field_mult_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_mult_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_mult_exp' = store_thm
-  ("field_exp_mult_exp'",
-   ``!f :: Field. !x y :: (f.carrier). !m n.
+Theorem field_exp_mult_exp':
+     !f :: Field. !x y :: (f.carrier). !m n.
        field_mult f (field_exp f x m) (field_mult f (field_exp f x n) y) =
-       field_mult f (field_exp f x (m + n)) y``,
-   RW_TAC alg_ss [GSYM field_mult_assoc, field_exp_mult_exp]);
+       field_mult f (field_exp f x (m + n)) y
+Proof
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_exp_mult_exp]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_mult_exp' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_mult_inv = store_thm
-  ("field_exp_mult_inv",
-   ``!f :: Field. !x :: field_nonzero f. !n.
+Theorem field_exp_mult_inv:
+     !f :: Field. !x :: field_nonzero f. !n.
        field_mult f (field_exp f x n) (field_inv f x) =
-       (if n = 0 then field_inv f x else field_exp f x (n - 1))``,
+       (if n = 0 then field_inv f x else field_exp f x (n - 1))
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss []
    ++ Cases_on `n`
    ++ RW_TAC alg_ss []
-   ++ RW_TAC alg_ss [field_exp_suc, field_mult_assoc]);
+   ++ RW_TAC alg_ss [field_exp_suc, field_mult_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_mult_inv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_mult_inv' = store_thm
-  ("field_exp_mult_inv'",
-   ``!f :: Field. !x :: field_nonzero f. !n. !y :: (f.carrier).
+Theorem field_exp_mult_inv':
+     !f :: Field. !x :: field_nonzero f. !n. !y :: (f.carrier).
        field_mult f (field_exp f x n) (field_mult f (field_inv f x) y) =
        (if n = 0 then field_mult f (field_inv f x) y
-        else field_mult f (field_exp f x (n - 1)) y)``,
+        else field_mult f (field_exp f x (n - 1)) y)
+Proof
    RW_TAC alg_ss [GSYM field_mult_assoc, field_exp_mult_inv]
    ++ RW_TAC resq_ss []
-   ++ RW_TAC resq_ss []);
+   ++ RW_TAC resq_ss []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_mult_inv' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_mult_inv_exp = store_thm
-  ("field_exp_mult_inv_exp",
-   ``!f :: Field. !x :: field_nonzero f. !m n.
+Theorem field_exp_mult_inv_exp:
+     !f :: Field. !x :: field_nonzero f. !m n.
        field_mult f (field_exp f x m) (field_inv f (field_exp f x n)) =
        (if m < n then field_inv f (field_exp f x (n - m))
-        else field_exp f x (m - n))``,
+        else field_exp f x (m - n))
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss []
    << [Know `m <= n` >> DECIDE_TAC
@@ -1771,164 +1888,178 @@ val field_exp_mult_inv_exp = store_thm
        ++ CONJ_TAC >> DECIDE_TAC
        ++ RW_TAC alg_ss [field_exp_def, field_mult_assoc]
        ++ Know `SUC m - n = SUC (m - n)` >> DECIDE_TAC
-       ++ RW_TAC alg_ss [field_exp_def, GSYM field_mult_assoc]]);
+       ++ RW_TAC alg_ss [field_exp_def, GSYM field_mult_assoc]]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_mult_inv_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_mult_inv_exp' = store_thm
-  ("field_exp_mult_inv_exp'",
-   ``!f :: Field. !x :: field_nonzero f. !m n. !y :: (f.carrier).
+Theorem field_exp_mult_inv_exp':
+     !f :: Field. !x :: field_nonzero f. !m n. !y :: (f.carrier).
        field_mult f (field_exp f x m)
          (field_mult f (field_inv f (field_exp f x n)) y) =
        (if m < n then field_mult f (field_inv f (field_exp f x (n - m))) y
-        else field_mult f (field_exp f x (m - n)) y)``,
+        else field_mult f (field_exp f x (m - n)) y)
+Proof
    RW_TAC alg_ss [GSYM field_mult_assoc, field_exp_mult_inv_exp]
    ++ RW_TAC resq_ss []
-   ++ RW_TAC resq_ss []);
+   ++ RW_TAC resq_ss []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_mult_inv_exp' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_inv_mult_inv = store_thm
-  ("field_inv_mult_inv",
-   ``!f :: Field. !x :: field_nonzero f.
+Theorem field_inv_mult_inv:
+     !f :: Field. !x :: field_nonzero f.
        field_mult f (field_inv f x) (field_inv f x) =
-       field_inv f (field_exp f x 2)``,
-   RW_TAC alg_ss [field_exp_small, field_inv_mult]);
+       field_inv f (field_exp f x 2)
+Proof
+   RW_TAC alg_ss [field_exp_small, field_inv_mult]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_inv_mult_inv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_inv_mult_inv' = store_thm
-  ("field_inv_mult_inv'",
-   ``!f :: Field. !x :: field_nonzero f. !y :: (f.carrier).
+Theorem field_inv_mult_inv':
+     !f :: Field. !x :: field_nonzero f. !y :: (f.carrier).
        field_mult f (field_inv f x) (field_mult f (field_inv f x) y) =
-       field_mult f (field_inv f (field_exp f x 2)) y``,
-   RW_TAC alg_ss [GSYM field_mult_assoc, field_inv_mult_inv]);
+       field_mult f (field_inv f (field_exp f x 2)) y
+Proof
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_inv_mult_inv]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_inv_mult_inv' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_inv_mult_inv_exp = store_thm
-  ("field_inv_mult_inv_exp",
-   ``!f :: Field. !x :: field_nonzero f. !n.
+Theorem field_inv_mult_inv_exp:
+     !f :: Field. !x :: field_nonzero f. !n.
        field_mult f (field_inv f x) (field_inv f (field_exp f x n)) =
-       field_inv f (field_exp f x (n + 1))``,
+       field_inv f (field_exp f x (n + 1))
+Proof
    RW_TAC alg_ss [GSYM field_single_mult_exp]
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_inv_mult_inv_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_inv_mult_inv_exp' = store_thm
-  ("field_inv_mult_inv_exp'",
-   ``!f :: Field. !x :: field_nonzero f. !n. !y :: (f.carrier).
+Theorem field_inv_mult_inv_exp':
+     !f :: Field. !x :: field_nonzero f. !n. !y :: (f.carrier).
        field_mult f (field_inv f x)
          (field_mult f (field_inv f (field_exp f x n)) y) =
-       field_mult f (field_inv f (field_exp f x (n + 1))) y``,
-   RW_TAC alg_ss [GSYM field_mult_assoc, field_inv_mult_inv_exp]);
+       field_mult f (field_inv f (field_exp f x (n + 1))) y
+Proof
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_inv_mult_inv_exp]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_inv_mult_inv_exp' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_inv_exp_mult_inv_exp = store_thm
-  ("field_inv_exp_mult_inv_exp",
-   ``!f :: Field. !x :: field_nonzero f. !m n.
+Theorem field_inv_exp_mult_inv_exp:
+     !f :: Field. !x :: field_nonzero f. !m n.
        field_mult f (field_inv f (field_exp f x m))
          (field_inv f (field_exp f x n)) =
-       field_inv f (field_exp f x (m + n))``,
+       field_inv f (field_exp f x (m + n))
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `m`
    ++ RW_TAC alg_ss []
    ++ RW_TAC alg_ss [field_exp_def, ADD_CLAUSES, field_inv_mult]
    ++ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
-   ++ RW_TAC alg_ss [field_mult_assoc]);
+   ++ RW_TAC alg_ss [field_mult_assoc]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_inv_exp_mult_inv_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_inv_exp_mult_inv_exp' = store_thm
-  ("field_inv_exp_mult_inv_exp'",
-   ``!f :: Field. !x :: field_nonzero f. !m n. !y :: (f.carrier).
+Theorem field_inv_exp_mult_inv_exp':
+     !f :: Field. !x :: field_nonzero f. !m n. !y :: (f.carrier).
        field_mult f (field_inv f (field_exp f x m))
          (field_mult f (field_inv f (field_exp f x n)) y) =
-       field_mult f (field_inv f (field_exp f x (m + n))) y``,
-   RW_TAC alg_ss [GSYM field_mult_assoc, field_inv_exp_mult_inv_exp]);
+       field_mult f (field_inv f (field_exp f x (m + n))) y
+Proof
+   RW_TAC alg_ss [GSYM field_mult_assoc, field_inv_exp_mult_inv_exp]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_inv_exp_mult_inv_exp' context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_one_exp = store_thm
-  ("field_one_exp",
-   ``!f :: Field. !n. field_exp f (field_one f) n = field_one f``,
+Theorem field_one_exp:
+     !f :: Field. !n. field_exp f (field_one f) n = field_one f
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
-   ++ RW_TAC std_ss [field_exp_def, field_mult_rone, field_one_carrier]);
+   ++ RW_TAC std_ss [field_exp_def, field_mult_rone, field_one_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 field_one_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_zero_exp = store_thm
-  ("field_zero_exp",
-   ``!f :: Field. !n.
+Theorem field_zero_exp:
+     !f :: Field. !n.
        field_exp f (field_zero f) n =
-       (if n = 0 then field_one f else field_zero f)``,
+       (if n = 0 then field_one f else field_zero f)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
    ++ RW_TAC std_ss
         [field_exp_def, field_mult_rone, field_one_carrier]
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
 val context = subtypeTools.add_rewrite2 field_zero_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_eq_zero = store_thm
-  ("field_exp_eq_zero",
-   ``!f :: Field. !x :: (f.carrier). !n.
-       (field_exp f x n = field_zero f) = ~(n = 0) /\ (x = field_zero f)``,
+Theorem field_exp_eq_zero:
+     !f :: Field. !x :: (f.carrier). !n.
+       (field_exp f x n = field_zero f) = ~(n = 0) /\ (x = field_zero f)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
    ++ RW_TAC std_ss
         [field_exp_def, field_one_zero, field_entire, field_exp_carrier]
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
 val context = subtypeTools.add_rewrite2 field_exp_eq_zero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_neg = store_thm
-  ("field_exp_neg",
-   ``!f :: Field. !x :: (f.carrier). !n.
+Theorem field_exp_neg:
+     !f :: Field. !x :: (f.carrier). !n.
        field_exp f (field_neg f x) n =
-       if EVEN n then field_exp f x n else field_neg f (field_exp f x n)``,
+       if EVEN n then field_exp f x n else field_neg f (field_exp f x n)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
-   ++ RW_TAC alg_ss [EVEN, field_exp_def]);
+   ++ RW_TAC alg_ss [EVEN, field_exp_def]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_neg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_exp = store_thm
-  ("field_exp_exp",
-   ``!f :: Field. !x :: (f.carrier). !m n.
-       field_exp f (field_exp f x m) n = field_exp f x (m * n)``,
+Theorem field_exp_exp:
+     !f :: Field. !x :: (f.carrier). !m n.
+       field_exp f (field_exp f x m) n = field_exp f x (m * n)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
    >> RW_TAC alg_ss [field_exp_def]
    ++ RW_TAC alg_ss [field_exp_def, ONCE_REWRITE_RULE [MULT_COMM] MULT]
    ++ ONCE_REWRITE_TAC [ADD_COMM]
-   ++ RW_TAC alg_ss [GSYM field_exp_mult_exp]);
+   ++ RW_TAC alg_ss [GSYM field_exp_mult_exp]
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_sub_eq_zero = store_thm
-  ("field_sub_eq_zero",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_sub f x y = field_zero f) = (x = y)``,
+Theorem field_sub_eq_zero:
+     !f :: Field. !x y :: (f.carrier).
+       (field_sub f x y = field_zero f) = (x = y)
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss' []
-   ++ RW_TAC alg_ss [GSYM field_neg_eq]);
+   ++ RW_TAC alg_ss [GSYM field_neg_eq]
+QED
 
 local
   val field_sub_eq_zero_conv =
@@ -1973,35 +2104,38 @@ val context = subtypeTools.add_conversion2'' field_sub_eq_zero_r_conv context;
 val context = subtypeTools.add_conversion2'' field_sub_eq_zero_l_conv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_sub_eq_zero_imp = store_thm
-  ("field_sub_eq_zero_imp",
-   ``!f :: Field. !x y :: (f.carrier).
-       (field_sub f x y = field_zero f) ==> (x = y)``,
-   RW_TAC std_ss [field_sub_eq_zero]);
+Theorem field_sub_eq_zero_imp:
+     !f :: Field. !x y :: (f.carrier).
+       (field_sub f x y = field_zero f) ==> (x = y)
+Proof
+   RW_TAC std_ss [field_sub_eq_zero]
+QED
 
-val field_inv_inv = store_thm
-  ("field_inv_inv",
-   ``!f :: Field. !x :: field_nonzero f. field_inv f (field_inv f x) = x``,
+Theorem field_inv_inv:
+     !f :: Field. !x :: field_nonzero f. field_inv f (field_inv f x) = x
+Proof
    RW_TAC resq_ss
      [field_inv_def, Field_def, GSPECIFICATION, AbelianGroup_def,
       field_nonzero_def]
-   ++ METIS_TAC [group_inv_inv]);
+   ++ METIS_TAC [group_inv_inv]
+QED
 
 val context = subtypeTools.add_rewrite2 field_inv_inv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_sub_carrier = store_thm
-  ("field_sub_carrier",
-   ``!f :: Field. !x y :: (f.carrier). field_sub f x y IN f.carrier``,
+Theorem field_sub_carrier:
+     !f :: Field. !x y :: (f.carrier). field_sub f x y IN f.carrier
+Proof
    RW_TAC resq_ss []
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' []
+QED
 
 val context = subtypeTools.add_reduction2 field_sub_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_neg_nonzero = store_thm
-  ("field_neg_nonzero",
-   ``!f :: Field. !x :: field_nonzero f. field_neg f x IN field_nonzero f``,
+Theorem field_neg_nonzero:
+     !f :: Field. !x :: field_nonzero f. field_neg f x IN field_nonzero f
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss [GSYM field_nonzero_eq]
    ++ POP_ASSUM MP_TAC
@@ -2013,15 +2147,16 @@ val field_neg_nonzero = store_thm
    ++ Q.EXISTS_TAC `f`
    ++ Q.EXISTS_TAC `field_neg f x`
    ++ RW_TAC std_ss [field_lneg]
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
 val context = subtypeTools.add_reduction2 field_neg_nonzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_inv_neg = store_thm
-  ("field_inv_neg",
-   ``!f :: Field. !x :: field_nonzero f.
-       field_inv f (field_neg f x) = field_neg f (field_inv f x)``,
+Theorem field_inv_neg:
+     !f :: Field. !x :: field_nonzero f.
+       field_inv f (field_neg f x) = field_neg f (field_inv f x)
+Proof
    RW_TAC resq_ss []
    ++ match_tac field_mult_lcancel_imp
    ++ Q.EXISTS_TAC `f`
@@ -2032,16 +2167,17 @@ val field_inv_neg = store_thm
       `field_mult f (field_neg f x) (field_inv f (field_neg f x)) = field_one f`
    >> (match_tac field_rinv ++ RW_TAC alg_ss [])
    ++ RW_TAC std_ss []
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_inv_neg context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_mult = store_thm
-  ("field_exp_mult",
-   ``!f :: Field. !x y :: (f.carrier). !n.
+Theorem field_exp_mult:
+     !f :: Field. !x y :: (f.carrier). !n.
        field_exp f (field_mult f x y) n =
-       field_mult f (field_exp f x n) (field_exp f y n)``,
+       field_mult f (field_exp f x n) (field_exp f y n)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
    ++ RW_TAC alg_ss [field_exp_def]
@@ -2051,20 +2187,22 @@ val field_exp_mult = store_thm
    ++ AP_THM_TAC
    ++ AP_TERM_TAC
    ++ match_tac field_mult_comm
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_exp_inv = store_thm
-  ("field_exp_inv",
-   ``!f :: Field. !x :: field_nonzero f. !n.
-       field_exp f (field_inv f x) n = field_inv f (field_exp f x n)``,
+Theorem field_exp_inv:
+     !f :: Field. !x :: field_nonzero f. !n.
+       field_exp f (field_inv f x) n = field_inv f (field_exp f x n)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
    ++ RW_TAC alg_ss []
    ++ RW_TAC alg_ss [field_exp_def]
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' []
+QED
 
 val context = subtypeTools.add_rewrite2'' field_exp_inv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
@@ -2177,19 +2315,19 @@ val field_mult_ac_conv =
 val context = subtypeTools.add_conversion2'' field_mult_ac_conv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_binomial_2 = store_thm
-  ("field_binomial_2",
-   ``!f :: Field. !x y :: (f.carrier).
+Theorem field_binomial_2:
+     !f :: Field. !x y :: (f.carrier).
        field_exp f (field_add f x y) 2 =
        field_add f (field_exp f x 2)
          (field_add f (field_mult f (field_num f 2) (field_mult f x y))
-            (field_exp f y 2))``,
+            (field_exp f y 2))
+Proof
    RW_TAC alg_ss [field_exp_small]
-   ++ RW_TAC alg_ss' [field_distrib]);
+   ++ RW_TAC alg_ss' [field_distrib]
+QED
 
-val field_binomial_3 = store_thm
-  ("field_binomial_3",
-   ``!f :: Field. !x y :: (f.carrier).
+Theorem field_binomial_3:
+     !f :: Field. !x y :: (f.carrier).
        field_exp f (field_add f x y) 3 =
        field_add f
          (field_exp f x 3)
@@ -2197,13 +2335,14 @@ val field_binomial_3 = store_thm
            (field_mult f (field_num f 3) (field_mult f (field_exp f x 2) y))
            (field_add f
              (field_mult f (field_num f 3) (field_mult f x (field_exp f y 2)))
-             (field_exp f y 3)))``,
+             (field_exp f y 3)))
+Proof
    RW_TAC alg_ss [field_exp_small]
-   ++ RW_TAC alg_ss' [field_distrib, field_binomial_2]);
+   ++ RW_TAC alg_ss' [field_distrib, field_binomial_2]
+QED
 
-val field_binomial_4 = store_thm
-  ("field_binomial_4",
-   ``!f :: Field. !x y :: (f.carrier).
+Theorem field_binomial_4:
+     !f :: Field. !x y :: (f.carrier).
        field_exp f (field_add f x y) 4 =
        field_add f
          (field_exp f x 4)
@@ -2215,191 +2354,215 @@ val field_binomial_4 = store_thm
                (field_mult f (field_exp f x 2) (field_exp f y 2)))
              (field_add f
                (field_mult f (field_num f 4) (field_mult f x (field_exp f y 3)))
-               (field_exp f y 4))))``,
+               (field_exp f y 4))))
+Proof
    RW_TAC alg_ss [field_exp_small]
-   ++ RW_TAC alg_ss' [field_distrib, field_binomial_2, field_binomial_3]);
+   ++ RW_TAC alg_ss' [field_distrib, field_binomial_2, field_binomial_3]
+QED
 
-val field_div_carrier = store_thm
-  ("field_div_carrier",
-   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
-       field_div f x y IN f.carrier``,
+Theorem field_div_carrier:
+     !f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
+       field_div f x y IN f.carrier
+Proof
    RW_TAC resq_ss []
-   ++ RW_TAC alg_ss' [field_div_def]);
+   ++ RW_TAC alg_ss' [field_div_def]
+QED
 
 val context = subtypeTools.add_reduction2 field_div_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_div_nonzero = store_thm
-  ("field_div_nonzero",
-   ``!f :: Field. !x y :: field_nonzero f. field_div f x y IN field_nonzero f``,
+Theorem field_div_nonzero:
+     !f :: Field. !x y :: field_nonzero f. field_div f x y IN field_nonzero f
+Proof
    RW_TAC resq_ss []
-   ++ RW_TAC alg_ss' [field_div_def]);
+   ++ RW_TAC alg_ss' [field_div_def]
+QED
 
 val context = subtypeTools.add_reduction2 field_div_nonzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_div_lneg = store_thm
-  ("field_div_lneg",
-   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
-       field_div f (field_neg f x) y = field_neg f (field_div f x y)``,
-   RW_TAC alg_ss' [field_div_def]);
+Theorem field_div_lneg:
+     !f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
+       field_div f (field_neg f x) y = field_neg f (field_div f x y)
+Proof
+   RW_TAC alg_ss' [field_div_def]
+QED
 
-val field_div_rneg = store_thm
-  ("field_div_rneg",
-   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
-       field_div f x (field_neg f y) = field_neg f (field_div f x y)``,
-   RW_TAC alg_ss' [field_inv_neg, field_div_def]);
+Theorem field_div_rneg:
+     !f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
+       field_div f x (field_neg f y) = field_neg f (field_div f x y)
+Proof
+   RW_TAC alg_ss' [field_inv_neg, field_div_def]
+QED
 
-val field_div_addl = store_thm
-  ("field_div_addl",
-   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+Theorem field_div_addl:
+     !f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
        field_add f x (field_div f y z) =
-       field_div f (field_add f (field_mult f x z) y) z``,
-   RW_TAC alg_ss' [field_div_def, field_distrib]);
+       field_div f (field_add f (field_mult f x z) y) z
+Proof
+   RW_TAC alg_ss' [field_div_def, field_distrib]
+QED
 
-val field_div_addr = store_thm
-  ("field_div_addr",
-   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+Theorem field_div_addr:
+     !f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
        field_add f (field_div f y z) x =
-       field_div f (field_add f y (field_mult f x z)) z``,
-   RW_TAC alg_ss' [field_div_def, field_distrib]);
+       field_div f (field_add f y (field_mult f x z)) z
+Proof
+   RW_TAC alg_ss' [field_div_def, field_distrib]
+QED
 
-val field_div_subl = store_thm
-  ("field_div_subl",
-   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+Theorem field_div_subl:
+     !f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
        field_sub f x (field_div f y z) =
-       field_div f (field_sub f (field_mult f x z) y) z``,
-   RW_TAC alg_ss' [field_div_def, field_distrib]);
+       field_div f (field_sub f (field_mult f x z) y) z
+Proof
+   RW_TAC alg_ss' [field_div_def, field_distrib]
+QED
 
-val field_div_subr = store_thm
-  ("field_div_subr",
-   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+Theorem field_div_subr:
+     !f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
        field_sub f (field_div f y z) x =
-       field_div f (field_sub f y (field_mult f x z)) z``,
-   RW_TAC alg_ss' [field_div_def, field_distrib]);
+       field_div f (field_sub f y (field_mult f x z)) z
+Proof
+   RW_TAC alg_ss' [field_div_def, field_distrib]
+QED
 
-val field_div_multl = store_thm
-  ("field_div_multl",
-   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+Theorem field_div_multl:
+     !f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
        field_mult f x (field_div f y z) =
-       field_div f (field_mult f x y) z``,
-   RW_TAC alg_ss' [field_div_def]);
+       field_div f (field_mult f x y) z
+Proof
+   RW_TAC alg_ss' [field_div_def]
+QED
 
-val field_div_multr = store_thm
-  ("field_div_multr",
-   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+Theorem field_div_multr:
+     !f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
        field_mult f (field_div f y z) x =
-       field_div f (field_mult f y x) z``,
-   RW_TAC alg_ss' [field_div_def]);
+       field_div f (field_mult f y x) z
+Proof
+   RW_TAC alg_ss' [field_div_def]
+QED
 
-val field_div_exp = store_thm
-  ("field_div_exp",
-   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f. !n.
+Theorem field_div_exp:
+     !f :: Field. !x :: (f.carrier). !y :: field_nonzero f. !n.
        field_exp f (field_div f x y) n =
-       field_div f (field_exp f x n) (field_exp f y n)``,
-   RW_TAC alg_ss' [field_div_def, field_exp_mult, field_exp_inv]);
+       field_div f (field_exp f x n) (field_exp f y n)
+Proof
+   RW_TAC alg_ss' [field_div_def, field_exp_mult, field_exp_inv]
+QED
 
-val field_div_divl = store_thm
-  ("field_div_divl",
-   ``!f :: Field. !x :: (f.carrier). !y z :: field_nonzero f.
+Theorem field_div_divl:
+     !f :: Field. !x :: (f.carrier). !y z :: field_nonzero f.
        field_div f (field_div f x y) z =
-       field_div f x (field_mult f y z)``,
-   RW_TAC alg_ss' [field_div_def]);
+       field_div f x (field_mult f y z)
+Proof
+   RW_TAC alg_ss' [field_div_def]
+QED
 
-val field_div_divr = store_thm
-  ("field_div_divr",
-   ``!f :: Field. !x :: (f.carrier). !y z :: field_nonzero f.
+Theorem field_div_divr:
+     !f :: Field. !x :: (f.carrier). !y z :: field_nonzero f.
        field_div f x (field_div f y z) =
-       field_div f (field_mult f x z) y``,
-   RW_TAC alg_ss' [field_div_def]);
+       field_div f (field_mult f x z) y
+Proof
+   RW_TAC alg_ss' [field_div_def]
+QED
 
-val field_add_divl = store_thm
-  ("field_add_divl",
-   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+Theorem field_add_divl:
+     !f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
        field_add f (field_div f y z) x =
-       field_div f (field_add f y (field_mult f z x)) z``,
+       field_div f (field_add f y (field_mult f z x)) z
+Proof
    RW_TAC alg_ss [field_div_def]
-   ++ RW_TAC alg_ss' [field_distrib]);
+   ++ RW_TAC alg_ss' [field_distrib]
+QED
 
-val field_add_divl' = store_thm
-  ("field_add_divl'",
-   ``!f :: Field. !x y t :: (f.carrier). !z :: field_nonzero f.
+Theorem field_add_divl':
+     !f :: Field. !x y t :: (f.carrier). !z :: field_nonzero f.
        field_add f (field_div f y z) (field_add f x t) =
-       field_add f (field_div f (field_add f y (field_mult f z x)) z) t``,
+       field_add f (field_div f (field_add f y (field_mult f z x)) z) t
+Proof
    RW_TAC alg_ss [GSYM field_add_assoc]
    ++ RW_TAC resq_ss []
    ++ match_tac field_add_divl
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
-val field_add_divr = store_thm
-  ("field_add_divr",
-   ``!f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
+Theorem field_add_divr:
+     !f :: Field. !x y :: (f.carrier). !z :: field_nonzero f.
        field_add f x (field_div f y z) =
-       field_div f (field_add f (field_mult f z x) y) z``,
+       field_div f (field_add f (field_mult f z x) y) z
+Proof
    RW_TAC alg_ss [field_div_def]
-   ++ RW_TAC alg_ss' [field_distrib]);
+   ++ RW_TAC alg_ss' [field_distrib]
+QED
 
-val field_add_divr' = store_thm
-  ("field_add_divr'",
-   ``!f :: Field. !x y t :: (f.carrier). !z :: field_nonzero f.
+Theorem field_add_divr':
+     !f :: Field. !x y t :: (f.carrier). !z :: field_nonzero f.
        field_add f x (field_add f (field_div f y z) t) =
-       field_add f (field_div f (field_add f (field_mult f z x) y) z) t``,
+       field_add f (field_div f (field_add f (field_mult f z x) y) z) t
+Proof
    RW_TAC alg_ss [GSYM field_add_assoc]
    ++ RW_TAC resq_ss []
    ++ match_tac field_add_divr
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
-val field_add_div = store_thm
-  ("field_add_div",
-   ``!f :: Field. !v w :: (f.carrier). !x y z :: field_nonzero f.
+Theorem field_add_div:
+     !f :: Field. !v w :: (f.carrier). !x y z :: field_nonzero f.
        field_add f
          (field_div f v (field_mult f x y))
          (field_div f w (field_mult f x z)) =
        field_div f
          (field_add f (field_mult f z v) (field_mult f y w))
-         (field_mult f x (field_mult f y z))``,
+         (field_mult f x (field_mult f y z))
+Proof
    RW_TAC alg_ss [field_div_def]
-   ++ RW_TAC alg_ss' [field_distrib]);
+   ++ RW_TAC alg_ss' [field_distrib]
+QED
 
-val field_add_div' = store_thm
-  ("field_add_div'",
-   ``!f :: Field. !v w t :: (f.carrier). !x y z :: field_nonzero f.
+Theorem field_add_div':
+     !f :: Field. !v w t :: (f.carrier). !x y z :: field_nonzero f.
        field_add f
          (field_div f v (field_mult f x y))
          (field_add f (field_div f w (field_mult f x z)) t) =
        field_add f
          (field_div f
            (field_add f (field_mult f z v) (field_mult f y w))
-           (field_mult f x (field_mult f y z))) t``,
+           (field_mult f x (field_mult f y z))) t
+Proof
    RW_TAC alg_ss [GSYM field_add_assoc]
    ++ RW_TAC resq_ss []
    ++ match_tac field_add_div
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
-val field_div_cancel = store_thm
-  ("field_div_cancel",
-   ``!f :: Field. !x z :: field_nonzero f. !y :: (f.carrier).
-       (field_div f (field_mult f x y) (field_mult f x z) = field_div f y z)``,
+Theorem field_div_cancel:
+     !f :: Field. !x z :: field_nonzero f. !y :: (f.carrier).
+       (field_div f (field_mult f x y) (field_mult f x z) = field_div f y z)
+Proof
    RW_TAC resq_ss [field_div_def]
-   ++ RW_TAC alg_ss' []);
+   ++ RW_TAC alg_ss' []
+QED
 
-val field_inv_eq_zero = store_thm
-  ("field_inv_eq_zero",
-   ``!f :: Field. !x :: field_nonzero f. ~(field_inv f x = field_zero f)``,
+Theorem field_inv_eq_zero:
+     !f :: Field. !x :: field_nonzero f. ~(field_inv f x = field_zero f)
+Proof
    RW_TAC resq_ss []
    ++ STRIP_TAC
    ++ Know `field_inv f x IN field_nonzero f` >> METIS_TAC [field_inv_nonzero]
-   ++ RW_TAC alg_ss [field_nonzero_def, IN_DIFF, IN_SING]);
+   ++ RW_TAC alg_ss [field_nonzero_def, IN_DIFF, IN_SING]
+QED
 
 val context = subtypeTools.add_rewrite2 field_inv_eq_zero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val field_div_eq_zero = store_thm
-  ("field_div_eq_zero",
-   ``!f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
-       (field_div f x y = field_zero f) = (x = field_zero f)``,
+Theorem field_div_eq_zero:
+     !f :: Field. !x :: (f.carrier). !y :: field_nonzero f.
+       (field_div f x y = field_zero f) = (x = field_zero f)
+Proof
    RW_TAC resq_ss [field_div_def]
-   ++ RW_TAC alg_ss [field_entire]);
+   ++ RW_TAC alg_ss [field_entire]
+QED
 
 val context = subtypeTools.add_rewrite2 field_div_eq_zero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
@@ -2488,18 +2651,19 @@ Definition trivial_field_def:
                                 else one_elt) |> |>
 End
 
-val trivial_field = store_thm
-  ("trivial_field",
-   ``!zero_elt one_elt.
+Theorem trivial_field:
+     !zero_elt one_elt.
        ~(zero_elt = one_elt) ==>
-       trivial_field zero_elt one_elt IN FiniteField``,
+       trivial_field zero_elt one_elt IN FiniteField
+Proof
    RW_TAC resq_ss
      [trivial_field_def, FiniteField_def, Field_def, GSPECIFICATION,
       combinTheory.K_THM, field_add_def, field_mult_def, field_zero_def,
       AbelianGroup_def, Group_def, IN_INSERT, NOT_IN_EMPTY, EXTENSION,
       FINITE_INSERT, FINITE_EMPTY, IN_DIFF, field_nonzero_def]
    ++ RW_TAC std_ss []
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* GF(p).                                                                    *)
@@ -2521,9 +2685,9 @@ Definition GF_def:
       prod := mult_mod p |>
 End
 
-val modexp = store_thm
-  ("modexp",
-   ``!a n m. 1 < m ==> (modexp a n m = (a ** n) MOD m)``,
+Theorem modexp:
+     !a n m. 1 < m ==> (modexp a n m = (a ** n) MOD m)
+Proof
    recInduct modexp_ind
    ++ RW_TAC std_ss []
    ++ ONCE_REWRITE_TAC [modexp_def]
@@ -2559,49 +2723,57 @@ val modexp = store_thm
    ++ ASM_SIMP_TAC bool_ss [ADD1]
    ++ Suff `n = 2 * (n DIV 2) + n MOD 2`
    >> METIS_TAC [ADD_CLAUSES]
-   ++ METIS_TAC [DIVISION, DECIDE ``0 < 2``, MULT_COMM]);
+   ++ METIS_TAC [DIVISION, DECIDE ``0 < 2``, MULT_COMM]
+QED
 
-val GF_carrier = store_thm
-  ("GF_carrier",
-   ``!p. (GF p).carrier = { n | n < p}``,
-   RW_TAC std_ss [GF_def, field_accessors]);
+Theorem GF_carrier:
+     !p. (GF p).carrier = { n | n < p}
+Proof
+   RW_TAC std_ss [GF_def, field_accessors]
+QED
 
-val GF_in_carrier = store_thm
-  ("GF_in_carrier",
-   ``!p x. x IN (GF p).carrier = x < p``,
-   RW_TAC std_ss [GF_carrier, GSPECIFICATION]);
+Theorem GF_in_carrier:
+     !p x. x IN (GF p).carrier = x < p
+Proof
+   RW_TAC std_ss [GF_carrier, GSPECIFICATION]
+QED
 
-val GF_in_carrier_imp = store_thm
-  ("GF_in_carrier_imp",
-   ``!p x. x < p ==> x IN (GF p).carrier``,
-   METIS_TAC [GF_in_carrier]);
+Theorem GF_in_carrier_imp:
+     !p x. x < p ==> x IN (GF p).carrier
+Proof
+   METIS_TAC [GF_in_carrier]
+QED
 
 val context = subtypeTools.add_judgement2 GF_in_carrier_imp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val GF_zero = store_thm
-  ("GF_zero",
-   ``!p. field_zero (GF p) = 0``,
-   RW_TAC std_ss [GF_def, field_accessors, field_zero_def, add_mod_def]);
+Theorem GF_zero:
+     !p. field_zero (GF p) = 0
+Proof
+   RW_TAC std_ss [GF_def, field_accessors, field_zero_def, add_mod_def]
+QED
 
-val GF_one = store_thm
-  ("GF_one",
-   ``!p. field_one (GF p) = 1``,
-   RW_TAC std_ss [GF_def, field_accessors, field_one_def, mult_mod_def]);
+Theorem GF_one:
+     !p. field_one (GF p) = 1
+Proof
+   RW_TAC std_ss [GF_def, field_accessors, field_one_def, mult_mod_def]
+QED
 
-val GF_neg = store_thm
-  ("GF_neg",
-   ``!p x. field_neg (GF p) x = (p - x) MOD p``,
-   RW_TAC std_ss [GF_def, field_accessors, field_neg_def, add_mod_def]);
+Theorem GF_neg:
+     !p x. field_neg (GF p) x = (p - x) MOD p
+Proof
+   RW_TAC std_ss [GF_def, field_accessors, field_neg_def, add_mod_def]
+QED
 
-val GF_add = store_thm
-  ("GF_add",
-   ``!p x y. field_add (GF p) x y = (x + y) MOD p``,
-   RW_TAC std_ss [GF_def, field_accessors, field_add_def, add_mod_def]);
+Theorem GF_add:
+     !p x y. field_add (GF p) x y = (x + y) MOD p
+Proof
+   RW_TAC std_ss [GF_def, field_accessors, field_add_def, add_mod_def]
+QED
 
-val GF_sub = store_thm
-  ("GF_sub",
-   ``!p :: Prime. !x y. field_sub (GF p) x y = (x + (p - y)) MOD p``,
+Theorem GF_sub:
+     !p :: Prime. !x y. field_sub (GF p) x y = (x + (p - y)) MOD p
+Proof
    RW_TAC resq_ss [GF_add, GF_neg, field_sub_def, Prime_def, GSPECIFICATION]
    ++ Know `~(p = 0)` >> METIS_TAC [NOT_PRIME_0]
    ++ STRIP_TAC
@@ -2609,31 +2781,35 @@ val GF_sub = store_thm
    ++ MATCH_MP_TAC (PROVE [] ``a /\ (b ==> c) ==> ((a ==> b) ==> c)``)
    ++ CONJ_TAC >> DECIDE_TAC
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ RW_TAC arith_ss [MOD_MOD]);
+   ++ RW_TAC arith_ss [MOD_MOD]
+QED
 
-val GF_inv = store_thm
-  ("GF_inv",
-   ``!p :: Prime. !x y. field_inv (GF p) x = modexp x (p - 2) p``,
+Theorem GF_inv:
+     !p :: Prime. !x y. field_inv (GF p) x = modexp x (p - 2) p
+Proof
   RW_TAC resq_ss
     [GF_def, field_accessors, field_inv_def, mult_mod_def,
      combinTheory.K_THM, Prime_def, GSPECIFICATION]
   ++ match_tac (GSYM modexp)
   ++ Suff `~(p = 0) /\ ~(p = 1)` >> DECIDE_TAC
-  ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]);
+  ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]
+QED
 
-val GF_mult = store_thm
-  ("GF_mult",
-   ``!p x y. field_mult (GF p) x y = (x * y) MOD p``,
-  RW_TAC std_ss [GF_def, field_accessors, field_mult_def, mult_mod_def]);
+Theorem GF_mult:
+     !p x y. field_mult (GF p) x y = (x * y) MOD p
+Proof
+  RW_TAC std_ss [GF_def, field_accessors, field_mult_def, mult_mod_def]
+QED
 
-val GF_div = store_thm
-  ("GF_div",
-   ``!p x y. field_div (GF p) x y = field_mult (GF p) x (field_inv (GF p) y)``,
-  RW_TAC std_ss [field_div_def]);
+Theorem GF_div:
+     !p x y. field_div (GF p) x y = field_mult (GF p) x (field_inv (GF p) y)
+Proof
+  RW_TAC std_ss [field_div_def]
+QED
 
-val GF_exp = store_thm
-  ("GF_exp",
-   ``!p :: Prime. !x n. field_exp (GF p) x n = modexp x n p``,
+Theorem GF_exp:
+     !p :: Prime. !x n. field_exp (GF p) x n = modexp x n p
+Proof
    RW_TAC resq_ss [Prime_def, GSPECIFICATION]
    ++ Know `1 < p`
    >> (Suff `~(p = 0) /\ ~(p = 1)` >> DECIDE_TAC
@@ -2645,11 +2821,12 @@ val GF_exp = store_thm
    ++ (Induct_on `n`
        ++ RW_TAC bool_ss [field_exp_def, GF_one, GF_mult, EXP])
    >> METIS_TAC [LESS_MOD]
-   ++ METIS_TAC [MOD_MOD, MOD_TIMES2]);
+   ++ METIS_TAC [MOD_MOD, MOD_TIMES2]
+QED
 
-val GF_num = store_thm
-  ("GF_num",
-   ``!p :: Prime. !n. field_num (GF p) n = n MOD p``,
+Theorem GF_num:
+     !p :: Prime. !n. field_num (GF p) n = n MOD p
+Proof
    RW_TAC resq_ss []
    ++ Know `p IN Nonzero` >> RW_TAC alg_ss []
    ++ RW_TAC std_ss [Nonzero_def, GSPECIFICATION]
@@ -2662,11 +2839,11 @@ val GF_num = store_thm
    ++ MP_TAC (Q.SPEC `p` MOD_PLUS)
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ RW_TAC arith_ss [MOD_MOD]);
+   ++ RW_TAC arith_ss [MOD_MOD]
+QED
 
-val GF_alt = store_thm
-  ("GF_alt",
-   ``!p :: Prime. !x y n.
+Theorem GF_alt:
+     !p :: Prime. !x y n.
        (field_zero (GF p) = 0) /\
        (field_one (GF p) = 1) /\
        (field_neg (GF p) x = (p - x) MOD p) /\
@@ -2676,14 +2853,16 @@ val GF_alt = store_thm
        (field_mult (GF p) x y = (x * y) MOD p) /\
        (field_div (GF p) x y = field_mult (GF p) x (field_inv (GF p) y)) /\
        (field_exp (GF p) x n = modexp x n p) /\
-       (field_num (GF p) x = x MOD p)``,
+       (field_num (GF p) x = x MOD p)
+Proof
    RW_TAC std_ss
      [GF_zero, GF_one, GF_neg, GF_add, GF_sub, GF_inv, GF_mult, GF_div,
-      GF_exp, GF_num]);
+      GF_exp, GF_num]
+QED
 
-val GF = store_thm
-  ("GF",
-   ``!p :: Prime. GF p IN FiniteField``,
+Theorem GF:
+     !p :: Prime. GF p IN FiniteField
+Proof
    RW_TAC resq_ss [FiniteField_def, GSPECIFICATION, Field_def]
    << [RW_TAC alg_ss [GF_def, combinTheory.K_THM],
        RW_TAC alg_ss [GF_def, combinTheory.K_THM],
@@ -2706,7 +2885,8 @@ val GF = store_thm
        ++ RW_TAC std_ss [Once (GSYM MOD_TIMES2), MOD_MOD]
        ++ RW_TAC std_ss [MOD_TIMES2, LEFT_ADD_DISTRIB, MOD_PLUS],
        RW_TAC std_ss [GF_def, finite_num, GSPECIFICATION]
-       ++ METIS_TAC []]);
+       ++ METIS_TAC []]
+QED
 
 val context = subtypeTools.add_reduction2 GF context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;

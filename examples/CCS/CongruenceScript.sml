@@ -86,8 +86,8 @@ val [OH_CONTEXT1, OH_CONTEXT2, OH_CONTEXT3, OH_CONTEXT4, OH_CONTEXT5, OH_CONTEXT
                    "OH_CONTEXT5", "OH_CONTEXT6", "OH_CONTEXT7", "OH_CONTEXT8"],
                   CONJUNCTS OH_CONTEXT_rules));
 
-val OH_CONTEXT_combin = store_thm (
-   "OH_CONTEXT_combin", ``!c1 c2. OH_CONTEXT c1 /\ OH_CONTEXT c2 ==> OH_CONTEXT (c1 o c2)``,
+Theorem OH_CONTEXT_combin:   !c1 c2. OH_CONTEXT c1 /\ OH_CONTEXT c2 ==> OH_CONTEXT (c1 o c2)
+Proof
     REPEAT STRIP_TAC
  >> NTAC 2 (POP_ASSUM MP_TAC)
  >> Q.SPEC_TAC (`c1`, `c`)
@@ -102,7 +102,8 @@ val OH_CONTEXT_combin = store_thm (
       FULL_SIMP_TAC std_ss [OH_CONTEXT5],
       FULL_SIMP_TAC std_ss [OH_CONTEXT6],
       FULL_SIMP_TAC std_ss [OH_CONTEXT7],
-      FULL_SIMP_TAC std_ss [OH_CONTEXT8] ]);
+      FULL_SIMP_TAC std_ss [OH_CONTEXT8] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -583,8 +584,8 @@ Definition GCC_def:
     GCC R = (\g h. !c. GCONTEXT c ==> R (c g) (c h))
 End
 
-val CC_precongruence = store_thm (
-   "CC_precongruence", ``!R. PreOrder R ==> precongruence (CC R)``,
+Theorem CC_precongruence:   !R. PreOrder R ==> precongruence (CC R)
+Proof
     REWRITE_TAC [precongruence, CC_def]
  >> RW_TAC std_ss []
  >| [ (* goal 1 (of 2) *)
@@ -600,11 +601,12 @@ val CC_precongruence = store_thm (
         PROVE_TAC [PreOrder, transitive_def] ],
       (* goal 2 (of 2) *)
       `CONTEXT (c o ctx)` by PROVE_TAC [CONTEXT_combin] \\
-      RES_TAC >> FULL_SIMP_TAC std_ss [o_THM] ]);
+      RES_TAC >> FULL_SIMP_TAC std_ss [o_THM] ]
+QED
 
 (* The relation built by CC is indeed a congruence *)
-val CC_congruence = store_thm (
-   "CC_congruence", ``!R. equivalence R ==> congruence (CC R)``,
+Theorem CC_congruence:   !R. equivalence R ==> congruence (CC R)
+Proof
     REWRITE_TAC [congruence, CC_def]
  >> RW_TAC std_ss [] (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -624,11 +626,12 @@ val CC_congruence = store_thm (
         PROVE_TAC [equivalence_def, transitive_def] ],
       (* goal 2 (of 2) *)
       `CONTEXT (c o ctx)` by PROVE_TAC [CONTEXT_combin] \\
-      RES_TAC >> FULL_SIMP_TAC std_ss [o_THM] ]);
+      RES_TAC >> FULL_SIMP_TAC std_ss [o_THM] ]
+QED
 
 (* The congruence is finer than original relation *)
-val CC_is_finer = store_thm (
-   "CC_is_finer", ``!R. (CC R) RSUBSET R``,
+Theorem CC_is_finer:   !R. (CC R) RSUBSET R
+Proof
     REWRITE_TAC [RSUBSET]
  >> REPEAT GEN_TAC
  >> REWRITE_TAC [CC_def]
@@ -636,14 +639,16 @@ val CC_is_finer = store_thm (
  >> REPEAT STRIP_TAC
  >> `CONTEXT (\x. x)` by PROVE_TAC [CONTEXT_rules]
  >> RES_TAC
- >> POP_ASSUM (ACCEPT_TAC o BETA_RULE));
+ >> POP_ASSUM (ACCEPT_TAC o BETA_RULE)
+QED
 
 (* The congruence built by above method is the coarsest congruence contained in R *)
-val CC_is_coarsest = store_thm (
-   "CC_is_coarsest",
-  ``!R R'. congruence R' /\ R' RSUBSET R ==> R' RSUBSET (CC R)``,
+Theorem CC_is_coarsest:
+    !R R'. congruence R' /\ R' RSUBSET R ==> R' RSUBSET (CC R)
+Proof
     REWRITE_TAC [congruence, RSUBSET, CC_def]
- >> RW_TAC std_ss []);
+ >> RW_TAC std_ss []
+QED
 
 Theorem PCC_is_coarsest :
     !R R'. precongruence R' /\ R' RSUBSET R ==> R' RSUBSET (CC R)
@@ -893,8 +898,8 @@ Proof
 QED
 
 (* Strongly guarded expressions are expressions *)
-val SG_IMP_CONTEXT = store_thm (
-   "SG_IMP_CONTEXT", ``!e. SG e ==> CONTEXT e``,
+Theorem SG_IMP_CONTEXT:   !e. SG e ==> CONTEXT e
+Proof
     Induct_on `SG`
  >> rpt STRIP_TAC (* 7 sub-goals here *)
  >| [ rw [CONTEXT2],
@@ -903,11 +908,12 @@ val SG_IMP_CONTEXT = store_thm (
       MATCH_MP_TAC CONTEXT4 >> art [],
       MATCH_MP_TAC CONTEXT5 >> art [],
       MATCH_MP_TAC CONTEXT6 >> art [],
-      MATCH_MP_TAC CONTEXT7 >> art [] ]);
+      MATCH_MP_TAC CONTEXT7 >> art [] ]
+QED
 
 (* Strong guardness implies weak guardness *)
-val SG_IMP_WG = store_thm (
-   "SG_IMP_WG", ``!e. SG e ==> WG e``,
+Theorem SG_IMP_WG:   !e. SG e ==> WG e
+Proof
     Induct_on `SG`
  >> rpt STRIP_TAC (* 7 sub-goals here *)
  >| [ rw [WG2],
@@ -916,7 +922,8 @@ val SG_IMP_WG = store_thm (
       MATCH_MP_TAC WG4 >> art [],
       MATCH_MP_TAC WG5 >> art [],
       MATCH_MP_TAC WG6 >> art [],
-      MATCH_MP_TAC WG7 >> art [] ]);
+      MATCH_MP_TAC WG7 >> art [] ]
+QED
 
 (* an important backward property of SG *)
 Theorem SG3_backward :
@@ -1203,12 +1210,14 @@ End
 val [SEQ1, SEQ2, SEQ3, SEQ4] =
     map save_thm (combine (["SEQ1", "SEQ2", "SEQ3", "SEQ4"], CONJUNCTS SEQ_rules));
 
-val SEQ3a = store_thm ("SEQ3a",
-  ``!a :'a Action. SEQ (\t. prefix a t)``,
+Theorem SEQ3a:
+    !a :'a Action. SEQ (\t. prefix a t)
+Proof
     ASSUME_TAC SEQ1
  >> IMP_RES_TAC SEQ3
  >> POP_ASSUM MP_TAC
- >> BETA_TAC >> REWRITE_TAC []);
+ >> BETA_TAC >> REWRITE_TAC []
+QED
 
 Theorem SEQ_IMP_CONTEXT :
     !e. SEQ e ==> CONTEXT e
@@ -1221,8 +1230,8 @@ Proof
       MATCH_MP_TAC CONTEXT4 >> art [] ]
 QED
 
-val SEQ_combin = store_thm (
-   "SEQ_combin", ``!E. SEQ E ==> !E'. SEQ E' ==> SEQ (E o E')``,
+Theorem SEQ_combin:   !E. SEQ E ==> !E'. SEQ E' ==> SEQ (E o E')
+Proof
     Induct_on `SEQ`
  >> REWRITE_TAC [o_DEF] >> BETA_TAC
  >> REWRITE_TAC [ETA_THM]
@@ -1237,11 +1246,12 @@ val SEQ_combin = store_thm (
       BETA_TAC >> DISCH_TAC >> METIS_TAC [],
       (* goal 3 (of 3) *)
       `SEQ (\x. E (E'' x)) /\ SEQ (\x. E' (E'' x))` by METIS_TAC [] \\
-      METIS_TAC [SEQ4] ]);
+      METIS_TAC [SEQ4] ]
+QED
 
-val OBS_CONGR_SUBST_SEQ = store_thm (
-   "OBS_CONGR_SUBST_SEQ",
-  ``!P Q. OBS_CONGR P Q ==> !E. SEQ E ==> OBS_CONGR (E P) (E Q)``,
+Theorem OBS_CONGR_SUBST_SEQ:
+    !P Q. OBS_CONGR P Q ==> !E. SEQ E ==> OBS_CONGR (E P) (E Q)
+Proof
     rpt GEN_TAC >> DISCH_TAC
  >> Induct_on `SEQ` >> BETA_TAC >> rpt STRIP_TAC (* 4 sub-goals here *)
  >- ASM_REWRITE_TAC []
@@ -1250,7 +1260,8 @@ val OBS_CONGR_SUBST_SEQ = store_thm (
       MATCH_MP_TAC OBS_CONGR_SUBST_PREFIX \\
       ASM_REWRITE_TAC [],
       (* goal 2 (of 2) *)
-      IMP_RES_TAC OBS_CONGR_PRESD_BY_SUM ]);
+      IMP_RES_TAC OBS_CONGR_PRESD_BY_SUM ]
+QED
 
 (* Sequential expression with guarded sums *)
 Inductive GSEQ :
@@ -1266,12 +1277,14 @@ val [GSEQ1, GSEQ2, GSEQ3, GSEQ4] =
     map save_thm (combine (["GSEQ1", "GSEQ2", "GSEQ3", "GSEQ4"],
                            CONJUNCTS GSEQ_rules));
 
-val GSEQ3a = store_thm ("GSEQ3a",
-  ``!a :'a Action. GSEQ (\t. prefix a t)``,
+Theorem GSEQ3a:
+    !a :'a Action. GSEQ (\t. prefix a t)
+Proof
     ASSUME_TAC GSEQ1
  >> IMP_RES_TAC GSEQ3
  >> POP_ASSUM MP_TAC
- >> BETA_TAC >> REWRITE_TAC []);
+ >> BETA_TAC >> REWRITE_TAC []
+QED
 
 Theorem GSEQ_CONST :
     !e. IS_CONST e ==> GSEQ e
@@ -1295,8 +1308,8 @@ Proof
       BETA_TAC >> RW_TAC std_ss [] ]
 QED
 
-val GSEQ_combin = store_thm (
-   "GSEQ_combin", ``!E. GSEQ E ==> !E'. GSEQ E' ==> GSEQ (E o E')``,
+Theorem GSEQ_combin:   !E. GSEQ E ==> !E'. GSEQ E' ==> GSEQ (E o E')
+Proof
     Induct_on `GSEQ`
  >> REWRITE_TAC [o_DEF] >> BETA_TAC
  >> REWRITE_TAC [ETA_THM]
@@ -1311,11 +1324,12 @@ val GSEQ_combin = store_thm (
       BETA_TAC >> DISCH_TAC >> METIS_TAC [],
       (* goal 3 (of 3) *)
       `GSEQ (\x. E (E'' x)) /\ GSEQ (\x. E' (E'' x))` by METIS_TAC [] \\
-      METIS_TAC [GSEQ4] ]);
+      METIS_TAC [GSEQ4] ]
+QED
 
-val WEAK_EQUIV_SUBST_GSEQ = store_thm (
-   "WEAK_EQUIV_SUBST_GSEQ",
-  ``!P Q. WEAK_EQUIV P Q ==> !E. GSEQ E ==> WEAK_EQUIV (E P) (E Q)``,
+Theorem WEAK_EQUIV_SUBST_GSEQ:
+    !P Q. WEAK_EQUIV P Q ==> !E. GSEQ E ==> WEAK_EQUIV (E P) (E Q)
+Proof
     rpt GEN_TAC >> DISCH_TAC
  >> Induct_on `GSEQ` >> BETA_TAC >> rpt STRIP_TAC (* 4 sub-goals here *)
  >- ASM_REWRITE_TAC []
@@ -1324,7 +1338,8 @@ val WEAK_EQUIV_SUBST_GSEQ = store_thm (
       MATCH_MP_TAC WEAK_EQUIV_SUBST_PREFIX >> ASM_REWRITE_TAC [],
       (* goal 2 (of 2) *)
       MATCH_MP_TAC WEAK_EQUIV_PRESD_BY_GUARDED_SUM \\
-      ASM_REWRITE_TAC [] ]);
+      ASM_REWRITE_TAC [] ]
+QED
 
 (* A combined (strong) induction theorem for SG + SEQ expression, it's easier to prove
    this induction theorem than defining another combined inductive relation SG_SEQ and
@@ -1808,16 +1823,18 @@ Proof
 QED
 
 (** WGS1 is derivable from WGS3 *)
-val WGS1 = store_thm ("WGS1",
-  ``!a :'a Action. WGS (\t. prefix a t)``,
+Theorem WGS1:
+    !a :'a Action. WGS (\t. prefix a t)
+Proof
     ASSUME_TAC GCONTEXT1
  >> IMP_RES_TAC WGS3
  >> POP_ASSUM MP_TAC
  >> BETA_TAC
- >> REWRITE_TAC []);
+ >> REWRITE_TAC []
+QED
 
-val WGS_IMP_GCONTEXT = store_thm (
-   "WGS_IMP_GCONTEXT", ``!e. WGS e ==> GCONTEXT e``,
+Theorem WGS_IMP_GCONTEXT:   !e. WGS e ==> GCONTEXT e
+Proof
     Induct_on `WGS`
  >> rpt STRIP_TAC (* 6 sub-goals here *)
  >| [ rw [GCONTEXT2],
@@ -1825,13 +1842,15 @@ val WGS_IMP_GCONTEXT = store_thm (
       MATCH_MP_TAC GCONTEXT4 >> ASM_REWRITE_TAC [],
       MATCH_MP_TAC GCONTEXT5 >> ASM_REWRITE_TAC [],
       MATCH_MP_TAC GCONTEXT6 >> ASM_REWRITE_TAC [],
-      MATCH_MP_TAC GCONTEXT7 >> ASM_REWRITE_TAC [] ]);
+      MATCH_MP_TAC GCONTEXT7 >> ASM_REWRITE_TAC [] ]
+QED
 
-val WGS_IMP_CONTEXT = store_thm (
-   "WGS_IMP_CONTEXT", ``!e. WGS e ==> CONTEXT e``,
+Theorem WGS_IMP_CONTEXT:   !e. WGS e ==> CONTEXT e
+Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC GCONTEXT_IMP_CONTEXT
- >> IMP_RES_TAC WGS_IMP_GCONTEXT);
+ >> IMP_RES_TAC WGS_IMP_GCONTEXT
+QED
 
 Theorem GCONTEXT_WGS_combin :
     !c e. GCONTEXT c /\ WGS e ==> WGS (c o e)

@@ -73,9 +73,11 @@ End
 
 (* ------------------------------------------------------------------------ *)
 
-val aligned_1_intro = store_thm("aligned_1_intro",
-  ``~word_bit 0 pc <=> aligned 1 (pc:word64)``,
-  fs [alignmentTheory.aligned_bitwise_and] \\ blastLib.BBLAST_TAC);
+Theorem aligned_1_intro:
+    ~word_bit 0 pc <=> aligned 1 (pc:word64)
+Proof
+  fs [alignmentTheory.aligned_bitwise_and] \\ blastLib.BBLAST_TAC
+QED
 
 val RISCV_PC_INTRO = Q.store_thm("RISCV_PC_INTRO",
    `SPEC m (p1 * riscv_ID_PC c pc) code
