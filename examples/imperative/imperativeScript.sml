@@ -285,7 +285,7 @@ QED
 val thmAbstractSpecification =
                 INST_TYPE [
                         alpha |-> ``:'a -> 'b``, beta |-> ``:'a -> 'b``, gamma |-> ``:bool``
-                ] IMPERATIVE_SPEQ_EQ_THM
+                ] IMPERATIVE_SPEC_EQ_THM
                         (*
                                 [] |- (!s s'. f s s' <=> g s s') <=> (f = g)   : thm
                         *)
@@ -293,6 +293,7 @@ val thmAbstractSpecification =
 
 val _ = save_thm("PREDICATIVE_SPEC_EQ_THM",thmAbstractSpecification);
 
+(* thmOnePointLemma *)
 Theorem ONE_POINT_LEMMA:
                    (x = x) /\ (f x t ) <=> f x t
 Proof
@@ -376,7 +377,7 @@ val thmForwardSubstitution =
                                                                                                                 else s y``
                                                                 (INST_TYPE [
                                                                         alpha |-> ``:('a->'b)`` , beta |-> ``:'c``
-                                                                ] thmOnePointLemma)
+                                                                ] ONE_POINT_LEMMA)
                                                 )
         in
                 store_thm
@@ -495,5 +496,3 @@ val thmForwardSubstitution =
                 )
         end
 ;
-
-

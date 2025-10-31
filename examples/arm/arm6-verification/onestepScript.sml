@@ -535,7 +535,7 @@ Theorem ONE_STEP_SUP_THM:
          !a. spec (imm1 a 1) (abs a) = abs (impl (imm2 a 1) a))
 Proof
   REPEAT STRIP_TAC
-    \\ IMP_RES_TAC ADJUNCT_IMP_UNIFORM
+    \\ IMP_RES_TAC ADJUNCT_IMP__UNIFORM
     \\ EQ_TAC
     \\ RW_TAC bool_ss [CORRECT_SUP_def]
     THENL [
@@ -609,4 +609,3 @@ Proof
 QED
 
 (* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *)
-
