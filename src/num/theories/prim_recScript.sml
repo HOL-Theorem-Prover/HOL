@@ -57,6 +57,7 @@
 Theory prim_rec[bare]
 Libs
   HolKernel boolLib Prim_rec Parse simpLib boolSimps
+  BasicProvers[qualified] (* enable [simp] tag *)
 
 
 type thm = Thm.thm
@@ -653,12 +654,11 @@ QED
  * closure of predecessor.
  *---------------------------------------------------------------------------*)
 
-Theorem WF_LESS:  WF $<
+Theorem WF_LESS[simp]:  WF $<
 Proof
   REWRITE_TAC[LESS_ALT, relationTheory.WF_TC_EQN, WF_PRED]
 QED
 
-val _ = BasicProvers.export_rewrites ["WF_LESS"]
 
 
 (*---------------------------------------------------------------------------
@@ -669,13 +669,12 @@ val _ = BasicProvers.export_rewrites ["WF_LESS"]
 val measure_def = Q.new_definition ("measure_def", `measure = inv_image $<`);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="measure"},name=(["Relation"],"measure")}
 
-Theorem WF_measure:  !m. WF (measure m)
+Theorem WF_measure[simp]:  !m. WF (measure m)
 Proof
 REWRITE_TAC[measure_def]
  THEN MATCH_MP_TAC relationTheory.WF_inv_image
  THEN ACCEPT_TAC WF_LESS
 QED
-val _ = BasicProvers.export_rewrites ["WF_measure"]
 
 Theorem measure_thm[simp]:
    !f x y. measure f x y <=> f x < f y
