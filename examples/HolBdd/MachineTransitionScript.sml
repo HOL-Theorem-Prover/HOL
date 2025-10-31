@@ -824,13 +824,12 @@ val FinPathChoosePath =
                 `\m. if m <= n then (f:num->'a) m else ChoosePath R (f n) m`,
                 `n:num`] FinPathLemma));
 
-val FinPathPathExists =
- Q.store_thm
-  ("FinPathPathExists",
-   `!R B f s n.
+Theorem FinPathPathExists:
+    !R B f s n.
       Total R /\ FinPath(R,s) f n
       ==>
-      ?g. (!m. m <= n ==> (f m = g m)) /\ Path(R,s)g`,
+      ?g. (!m. m <= n ==> (f m = g m)) /\ Path(R,s)g
+Proof
    REPEAT STRIP_TAC
     THEN `Path (R, f n) (ChoosePath R (f n))` by PROVE_TAC [TotalPathExists]
     THEN Q.EXISTS_TAC `\m. if m <= n then f m else ChoosePath R (f n) (m-n)`
@@ -846,7 +845,8 @@ val FinPathPathExists =
          PROVE_TAC [DECIDE (Term`x+1 <=y /\ ~(x <= y) ==> F`)],
          `n < m` by DECIDE_TAC
            THEN `m + 1 - n = (m - n) + 1` by DECIDE_TAC
-           THEN PROVE_TAC [Path_def, ADD_CLAUSES]]]);
+           THEN PROVE_TAC [Path_def, ADD_CLAUSES]]]
+QED
 
 val ReachInPath =
  store_thm
@@ -1008,14 +1008,13 @@ val ReachableMooreTrans =
 
 (* Problem with Q.SPECL? Too many type annotations needed. *)
 
-val MooreReachable1 =
- Q.store_thm
-  ("MooreReachable1",
-   `(!inputs states.
+Theorem MooreReachable1:
+    (!inputs states.
        B(inputs 0, states 0) /\ Moore nextfn (inputs,states)
        ==> !t. P(inputs t, states t))
      ==>
-     (!s. Reachable (MooreTrans nextfn) B s ==> P s)`,
+     (!s. Reachable (MooreTrans nextfn) B s ==> P s)
+Proof
    RW_TAC std_ss [ReachableMooreTrans,MoorePath]
     THEN Q.PAT_X_ASSUM `$! M`
          (MP_TAC o REWRITE_RULE [PAIR] o BETA_RULE o Q.SPECL
@@ -1025,7 +1024,8 @@ val MooreReachable1 =
    THEN `f:num->'a#'b = \t. if t=0 then s0 else f t`
         by (RW_TAC std_ss [FUN_EQ_THM] THEN PROVE_TAC [Path_def])
    THEN Q.PAT_X_ASSUM `Path x y` MP_TAC THEN ONCE_ASM_REWRITE_TAC[]
-   THEN BETA_TAC THEN PROVE_TAC []);
+   THEN BETA_TAC THEN PROVE_TAC []
+QED
 
 val MooreReachable2 =
  store_thm

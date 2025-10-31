@@ -49,14 +49,15 @@ val (FactIter,FactIter_ind,FactIter_dev) =
 (* Lemma showing how FactIter computes factorial                             *)
 (*****************************************************************************)
 
-val FactIterRecThm =  (* proof from KXS *)
- Q.store_thm
-  ("FactIterRecThm",
-   `!n acc. SND(FactIter (n,acc)) = acc * FACT n`,
+(* proof from KXS *)
+Theorem FactIterRecThm:
+    !n acc. SND(FactIter (n,acc)) = acc * FACT n
+Proof
     recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter,FACT]
       THEN Cases_on `n`
-      THEN RW_TAC std_ss [FACT, AC MULT_ASSOC MULT_SYM]);
+      THEN RW_TAC std_ss [FACT, AC MULT_ASSOC MULT_SYM]
+QED
 
 (*****************************************************************************)
 (* Implement a function Fact to compute SND(FactIter (n,1))                  *)
@@ -68,11 +69,11 @@ val (Fact,_,Fact_dev) = hwDefine `Fact n = SND(FactIter (n,1))`;
 (* Verify Fact is indeed the factorial function                              *)
 (*****************************************************************************)
 
-val FactThm =
- Q.store_thm
-  ("FactThm",
-   `Fact = FACT`,
-   RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterRecThm]);
+Theorem FactThm:
+    Fact = FACT
+Proof
+   RW_TAC arith_ss [FUN_EQ_THM,Fact,FactIterRecThm]
+QED
 
 (*****************************************************************************)
 (* To implement ``$*`` we build a naive iterative multiplier function        *)
@@ -96,24 +97,25 @@ val (Mult,_,Mult_dev) =
 (* Verify that MultIter does compute accumulator-style multiplication        *)
 (*****************************************************************************)
 
-val MultIterRecThm =  (* proof adapted from similar one from KXS *)
- Q.store_thm
-  ("MultIterRecThm",
-   `!m n acc. SND(SND(MultIter (m,n,acc))) = (m * n) + acc`,
+(* proof adapted from similar one from KXS *)
+Theorem MultIterRecThm:
+    !m n acc. SND(SND(MultIter (m,n,acc))) = (m * n) + acc
+Proof
     recInduct MultIter_ind THEN RW_TAC std_ss []
       THEN RW_TAC arith_ss [Once MultIter]
       THEN Cases_on `m`
-      THEN FULL_SIMP_TAC arith_ss [MULT]);
+      THEN FULL_SIMP_TAC arith_ss [MULT]
+QED
 
 (*****************************************************************************)
 (* Verify Mult is actually multiplication                                    *)
 (*****************************************************************************)
 
-val MultThm =
- Q.store_thm
-  ("MultThm",
-   `Mult = UNCURRY $*`,
-   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm]);
+Theorem MultThm:
+    Mult = UNCURRY $*
+Proof
+   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult,MultIterRecThm]
+QED
 
 (*****************************************************************************)
 (* Theorem used in an example in the README file                             *)

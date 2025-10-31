@@ -215,8 +215,8 @@ val equiv_lprefix_chain_sym = Q.prove (
  rw [equiv_lprefix_chain_def] >>
  metis_tac []);
 
-val osmall_fbs_equiv = Q.store_thm ("osmall_fbs_equiv",
-`!sem_f sem_s.
+Theorem osmall_fbs_equiv:
+ !sem_f sem_s.
   (∀s1 s2. sem_s.step s1 = SOME s2 ⇒ sem_s.unload s1 ≼ sem_s.unload s2) ∧
   (!oracle k1 k2 p. k1 ≤ k2 ⇒
     sem_f.get_oracle_events (FST (eval_with_clock sem_f k1 (sem_f.init_st oracle) p)) ≼
@@ -234,7 +234,8 @@ val osmall_fbs_equiv = Q.store_thm ("osmall_fbs_equiv",
          (r ≠ Error ⇒ sem_f.get_oracle_events st = sem_s.unload r'))
   ⇒
   !p r.
-    ofbs_sem sem_f p r ⇔ osmall_sem sem_s p r`,
+    ofbs_sem sem_f p r ⇔ osmall_sem sem_s p r
+Proof
  rw [] >>
  Cases_on `r` >>
  rw [osmall_sem_def, ofbs_sem_def] >>
@@ -329,7 +330,8 @@ val osmall_fbs_equiv = Q.store_thm ("osmall_fbs_equiv",
      `r = Timeout` by metis_tac [] >>
      rw [] >>
      `LENGTH tr < LENGTH tr'` by decide_tac >>
-     metis_tac [trace_extends])));
+     metis_tac [trace_extends]))
+QED
 
 Definition same_result_def:
  (same_result sem_f sem_s (st, Val a) s ⇔
@@ -344,8 +346,8 @@ Definition same_result_def:
   ?s'. sem_s.step s = SOME s')
 End
 
-val osmall_fbs_equiv2 = Q.store_thm ("osmall_fbs_equiv2",
-`!sem_f sem_s.
+Theorem osmall_fbs_equiv2:
+ !sem_f sem_s.
   (∀s1 s2. sem_s.step s1 = SOME s2 ⇒ sem_s.unload s1 ≼ sem_s.unload s2) ∧
   (!oracle k1 k2 p. k1 ≤ k2 ⇒
     sem_f.get_oracle_events (FST (eval_with_clock sem_f k1 (sem_f.init_st oracle) p)) ≼
@@ -361,7 +363,8 @@ val osmall_fbs_equiv2 = Q.store_thm ("osmall_fbs_equiv2",
             same_result sem_f sem_s (st, r) (LAST tr))
   ⇒
   !p r.
-    ofbs_sem sem_f p r ⇔ osmall_sem sem_s p r`,
+    ofbs_sem sem_f p r ⇔ osmall_sem sem_s p r
+Proof
  rpt gen_tac >>
  DISCH_TAC >>
  match_mp_tac osmall_fbs_equiv >>
@@ -381,5 +384,6 @@ val osmall_fbs_equiv2 = Q.store_thm ("osmall_fbs_equiv2",
    rw [step_rel_def, check_trace_thm] >>
    reverse (Cases_on `r`) >>
    fs [same_result_def] >>
-   metis_tac []));
+   metis_tac [])
+QED
 

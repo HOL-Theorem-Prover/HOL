@@ -755,14 +755,16 @@ val n2mw_NIL = store_thm("n2mw_NIL",
   REPEAT STRIP_TAC \\ Cases_on `n = 0` \\ ONCE_REWRITE_TAC [n2mw_def]
   \\ ASM_SIMP_TAC std_ss [NOT_CONS_NIL]);
 
-val n2mw_1 = Q.store_thm("n2mw_1",
-  `n2mw 1 = [1w]`,
+Theorem n2mw_1:
+   n2mw 1 = [1w]
+Proof
   rw[Once n2mw_def]
   \\ `1 DIV dimword(:'a) = 0`
   by (
     MATCH_MP_TAC LESS_DIV_EQ_ZERO
     \\ rw[dimword_def] )
-  \\ rw[n2mw_NIL]);
+  \\ rw[n2mw_NIL]
+QED
 
 val mwi_add_thm = store_thm("mwi_add_thm",
   ``!i j. mwi_add (i2mw i) (i2mw j) = i2mw (i + j)``,

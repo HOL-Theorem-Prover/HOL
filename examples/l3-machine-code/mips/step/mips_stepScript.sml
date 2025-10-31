@@ -103,38 +103,43 @@ val NextStateMIPS_exception = utilsLib.ustore_thm("NextStateMIPS_exception",
 
 (* ------------------------------------------------------------------------ *)
 
-val not31 = Q.store_thm("not31",
-   `x0 /\ x1 /\ x2 /\ x3 /\ x4 = (v2w [x0; x1; x2; x3; x4] = (31w: word5))`,
+Theorem not31:
+    x0 /\ x1 /\ x2 /\ x3 /\ x4 = (v2w [x0; x1; x2; x3; x4] = (31w: word5))
+Proof
    blastLib.BBLAST_TAC
-   )
+QED
 
-val v2w_0_rwts = Q.store_thm("v2w_0_rwts",
-   `((v2w [F; F; F; F; F] = 0w: word5)) /\
+Theorem v2w_0_rwts:
+    ((v2w [F; F; F; F; F] = 0w: word5)) /\
     ((v2w [T; b3; b2; b1; b0] = 0w: word5) = F) /\
     ((v2w [b3; T; b2; b1; b0] = 0w: word5) = F) /\
     ((v2w [b3; b2; T; b1; b0] = 0w: word5) = F) /\
     ((v2w [b3; b2; b1; T; b0] = 0w: word5) = F) /\
-    ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)`,
+    ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)
+Proof
     blastLib.BBLAST_TAC
-    )
+QED
 
-val NotWordValue0 = Q.store_thm("NotWordValue0",
-   `!b x. ~NotWordValue 0w`,
+Theorem NotWordValue0:
+    !b x. ~NotWordValue 0w
+Proof
    lrw [NotWordValue_def]
-   )
+QED
 
-val NotWordValueCond = Q.store_thm("NotWordValueCond",
-   `!b x. NotWordValue (if b then 0w else x) = ~b /\ NotWordValue x`,
+Theorem NotWordValueCond:
+    !b x. NotWordValue (if b then 0w else x) = ~b /\ NotWordValue x
+Proof
    lrw [NotWordValue0]
-   )
+QED
 
-val sw16_to_sw64 = Q.store_thm("sw16_to_sw64",
-   `!a:word16. sw2sw (sw2sw a : word32) = sw2sw a : word64`,
+Theorem sw16_to_sw64:
+    !a:word16. sw2sw (sw2sw a : word32) = sw2sw a : word64
+Proof
    rw [wordsTheory.sw2sw_sw2sw]
-   )
+QED
 
-val get_bytes = Q.store_thm("get_bytes",
-   `((31 >< 24)
+Theorem get_bytes:
+    ((31 >< 24)
        (v2w [b31; b30; b29; b28; b27; b26; b25; b24;
              b23; b22; b21; b20; b19; b18; b17; b16;
              b15; b14; b13; b12; b11; b10; b9;  b8;
@@ -157,14 +162,16 @@ val get_bytes = Q.store_thm("get_bytes",
              b23; b22; b21; b20; b19; b18; b17; b16;
              b15; b14; b13; b12; b11; b10; b9;  b8;
              b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word32) =
-     v2w [b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word8)`,
+     v2w [b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word8)
+Proof
    blastLib.BBLAST_TAC
-   )
+QED
 
-val cast_thms = Q.store_thm("cast_thms",
-   `!w: word32. sw2sw ((31 >< 0) (w2w w : word64) : word32) = sw2sw w : word64`,
+Theorem cast_thms:
+    !w: word32. sw2sw ((31 >< 0) (w2w w : word64) : word32) = sw2sw w : word64
+Proof
    blastLib.BBLAST_TAC
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -174,8 +181,8 @@ val tac =
    \\ ntac 2 strip_tac
    \\ blastLib.BBLAST_TAC
 
-val select_byte_le = Q.store_thm("select_byte_le",
-   `!b:word3 a:word64 f:word64->word8.
+Theorem select_byte_le:
+    !b:word3 a:word64 f:word64->word8.
       (7 + 8 * w2n b >< 8 * w2n b)
       (f (a + 7w) @@
        f (a + 6w) @@
@@ -184,12 +191,13 @@ val select_byte_le = Q.store_thm("select_byte_le",
        f (a + 3w) @@
        f (a + 2w) @@
        f (a + 1w) @@
-       f a) = f (a + w2w b)`,
+       f a) = f (a + w2w b)
+Proof
    tac
-   )
+QED
 
-val select_byte_be = Q.store_thm("select_byte_be",
-   `!b:word3 a:word64 f:word64->word8.
+Theorem select_byte_be:
+    !b:word3 a:word64 f:word64->word8.
       (7 + 8 * w2n b >< 8 * w2n b)
       (f a @@
        f (a + 1w) @@
@@ -198,9 +206,10 @@ val select_byte_be = Q.store_thm("select_byte_be",
        f (a + 4w) @@
        f (a + 5w) @@
        f (a + 6w) @@
-       f (a + 7w)) = f (a + w2w (b ?? 7w))`,
+       f (a + 7w)) = f (a + w2w (b ?? 7w))
+Proof
    tac
-   )
+QED
 
 val select_half_le = Q.prove(
    `!b:word3 f:word64->word8 a:word64.
@@ -267,8 +276,8 @@ val select_word_be = Q.prove(
    tac
    )
 
-val select_parts = Q.store_thm("select_parts",
-   `!a0: word8 a1: word8 a2: word8 a3: word8 a4: word8 a5: word8 a6: word8
+Theorem select_parts:
+    !a0: word8 a1: word8 a2: word8 a3: word8 a4: word8 a5: word8 a6: word8
      a7: word8.
      let w = a7 @@ a6 @@ a5 @@ a4 @@ a3 @@ a2 @@ a1 @@ a0
      in
@@ -293,9 +302,10 @@ val select_parts = Q.store_thm("select_parts",
      ((63 >< 32) w = (a7 @@ a6 @@ a5 @@ a4) : word32) /\
      ((63 >< 40) w = (a7 @@ a6 @@ a5) : word24) /\
      ((63 >< 48) w = (a7 @@ a6) : word16) /\
-     ((63 >< 56) w = a7 : word8)`,
+     ((63 >< 56) w = a7 : word8)
+Proof
    SIMP_TAC (srw_ss()++boolSimps.LET_ss++wordsLib.WORD_EXTRACT_ss) []
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -342,22 +352,30 @@ in
    val select_word_be = select "select_word_be" ``^tm_le ?? 4w`` select_word_be
 end
 
-val address_align = Q.store_thm("address_align",
-  `!a:word64 b:word3.
-      ((((63 >< 3) a) : 61 word) @@ (b : word3)) && ~7w = a && ~7w`,
-  blastLib.BBLAST_TAC)
+Theorem address_align:
+   !a:word64 b:word3.
+      ((((63 >< 3) a) : 61 word) @@ (b : word3)) && ~7w = a && ~7w
+Proof
+  blastLib.BBLAST_TAC
+QED
 
-val address_align2 = Q.store_thm("address_align2",
-  `!a:word64. (((63 >< 3) a) : 61 word) @@ ((2 >< 0) a : word3) = a`,
-  blastLib.BBLAST_TAC)
+Theorem address_align2:
+   !a:word64. (((63 >< 3) a) : 61 word) @@ ((2 >< 0) a : word3) = a
+Proof
+  blastLib.BBLAST_TAC
+QED
 
-val cond_sign_extend = Q.store_thm("cond_sign_extend",
-   `!a b. (if b then w2w a else sw2sw a) = (if b then w2w else sw2sw) a`,
-   rw [])
+Theorem cond_sign_extend:
+    !a b. (if b then w2w a else sw2sw a) = (if b then w2w else sw2sw) a
+Proof
+   rw []
+QED
 
-val byte_address = Q.store_thm("byte_address",
-   `!a:word64. (a && ~7w) + w2w (((2 >< 0) a) : word3) = a`,
-   blastLib.BBLAST_TAC)
+Theorem byte_address:
+    !a:word64. (a && ~7w) + w2w (((2 >< 0) a) : word3) = a
+Proof
+   blastLib.BBLAST_TAC
+QED
 
 val double_aligned = Theory.save_thm("double_aligned",
    blastLib.BBLAST_PROVE
@@ -366,17 +384,17 @@ val double_aligned = Theory.save_thm("double_aligned",
    |> Drule.UNDISCH
    )
 
-val Aligned_thms = Q.store_thm("Aligned_thms",
-  `(!w. Aligned (w, 1w) = aligned 1 w) /\
+Theorem Aligned_thms:
+   (!w. Aligned (w, 1w) = aligned 1 w) /\
    (!w: word64. ~word_bit 0 w = aligned 1 w) /\
    (!w. Aligned (w, 3w) = aligned 2 w) /\
    (!w: word64. ((1 >< 0) w = 0w: word2) = aligned 2 w) /\
    (!w. Aligned (w, 7w) = aligned 3 w) /\
    (!w: word64. ((2 >< 0) w = 0w: word3) = aligned 3 w)
-   `,
+Proof
   rw [Aligned_def, alignmentTheory.aligned_bitwise_and]
   \\ blastLib.BBLAST_TAC
-  )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -463,8 +481,8 @@ val ls_lem4 =
      ``0xFFFFFFFFFFFFFFF8w && (a ?? w2w (b : word3)) =
        0xFFFFFFFFFFFFFFF8w && a : word64``
 
-val StoreMemory_byte = Q.store_thm("StoreMemory_byte",
-   `!s MemElem vAddr.
+Theorem StoreMemory_byte:
+    !s MemElem vAddr.
        ~s.exceptionSignalled ==>
        (StoreMemory (0w,0w,F,MemElem,vAddr,F) s =
         (T, s with
@@ -473,22 +491,23 @@ val StoreMemory_byte = Q.store_thm("StoreMemory_byte",
                 let a = (2 >< 0) vAddr: word3 in
                 let b = if BigEndianMem s then a ?? 7w else a in
                 let c = 8 * w2n b in
-                  (vAddr =+ (7 + c >< c) MemElem) s.MEM|>))`,
+                  (vAddr =+ (7 + c >< c) MemElem) s.MEM|>))
+Proof
    rpt strip_tac
    \\ asm_simp_tac (srw_ss())
         [StoreMemory, AddressTranslation_def, AdjustEndian_def, WriteData_def,
          ls_lem, ls_thm, ls_lem4, wordsTheory.w2w_0, wordsTheory.WORD_ADD_0]
    \\ wordsLib.Cases_on_word_value `(2 >< 0) vAddr: word3`
    \\ lrw [ls_lem, ls_lem0, ls_lem4]
-   )
+QED
 
 val ls_thm2 =
    blastLib.BBLAST_PROVE
       ``~word_bit 0 (a:word3) ==>
         (a <=+ b /\ b <=+ a + 1w = (a = b) \/ (a + 1w = b))``
 
-val StoreMemory_half = Q.store_thm("StoreMemory_half",
-   `Aligned (vAddr,1w) ==> ~s.exceptionSignalled ==>
+Theorem StoreMemory_half:
+    Aligned (vAddr,1w) ==> ~s.exceptionSignalled ==>
     (StoreMemory (1w,1w,T,MemElem,vAddr,F) s =
      (T,
       s with
@@ -502,7 +521,8 @@ val StoreMemory_half = Q.store_thm("StoreMemory_half",
               else
                  let b = 8 * w2n a in
                    (vAddr + 1w =+ (15 + b >< 8 + b) MemElem)
-                     ((vAddr =+ (7 + b >< b) MemElem) s.MEM)|>))`,
+                     ((vAddr =+ (7 + b >< b) MemElem) s.MEM)|>))
+Proof
    rpt strip_tac
    \\ asm_simp_tac (srw_ss())
         [StoreMemory, AddressTranslation_def, AdjustEndian_def, WriteData_def,
@@ -513,7 +533,7 @@ val StoreMemory_half = Q.store_thm("StoreMemory_half",
    \\ fs [ls_lem, ls_lem0, ls_lem1, ls_lem4]
    \\ asm_simp_tac (srw_ss()) []
    \\ lrw []
-   )
+QED
 
 val ls_thm3 =
    blastLib.BBLAST_PROVE
@@ -521,8 +541,8 @@ val ls_thm3 =
         (a <=+ b /\ b <=+ a + 3w =
         (a = b) \/ (a + 1w = b) \/ (a + 2w = b) \/ (a + 3w = b))``
 
-val StoreMemory_word = Q.store_thm("StoreMemory_word",
-   `Aligned (vAddr,3w) ==> ~s.exceptionSignalled ==>
+Theorem StoreMemory_word:
+    Aligned (vAddr,3w) ==> ~s.exceptionSignalled ==>
     (StoreMemory (3w,3w,T,MemElem,vAddr,F) s =
      (T,
       s with
@@ -540,7 +560,8 @@ val StoreMemory_word = Q.store_thm("StoreMemory_word",
                    (vAddr + 3w =+ (31 + b >< 24 + b) MemElem)
                      ((vAddr + 2w =+ (23 + b >< 16 + b) MemElem)
                         ((vAddr + 1w =+ (15 + b >< 8 + b) MemElem)
-                           ((vAddr =+ (7 + b >< b) MemElem) s.MEM)))|>))`,
+                           ((vAddr =+ (7 + b >< b) MemElem) s.MEM)))|>))
+Proof
    rpt strip_tac
    \\ `(1 >< 0) (((2 >< 0) vAddr) : word3) = 0w: word2`
    by (fs [Aligned_def] \\ blastLib.FULL_BBLAST_TAC)
@@ -551,14 +572,14 @@ val StoreMemory_word = Q.store_thm("StoreMemory_word",
    \\ fs [ls_lem, ls_lem0, ls_lem1, ls_lem2, ls_lem3, ls_lem4]
    \\ asm_simp_tac (srw_ss()) []
    \\ lrw []
-   )
+QED
 
 val ls_thm4 =
    blastLib.BBLAST_PROVE
       ``((a:word3) = 0w:word3) ==> (a <=+ b /\ b <=+ a + 7w)``
 
-val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
-   `Aligned (vAddr,7w) ==> ~s.exceptionSignalled ==>
+Theorem StoreMemory_doubleword:
+    Aligned (vAddr,7w) ==> ~s.exceptionSignalled ==>
     (StoreMemory (7w,7w,T,MemElem,vAddr,F) s =
      (T,
       s with
@@ -581,7 +602,8 @@ val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
                         ((vAddr + 3w =+ (31 >< 24) MemElem)
                            ((vAddr + 2w =+ (23 >< 16) MemElem)
                               ((vAddr + 1w =+ (15 >< 8) MemElem)
-                                 ((vAddr =+ (7 >< 0) MemElem) s.MEM)))))))|>))`,
+                                 ((vAddr =+ (7 >< 0) MemElem) s.MEM)))))))|>))
+Proof
    rpt strip_tac
    \\ `(2 >< 0) vAddr = 0w: word3`
    by (fs [Aligned_def] \\ blastLib.FULL_BBLAST_TAC)
@@ -589,12 +611,12 @@ val StoreMemory_doubleword = Q.store_thm("StoreMemory_doubleword",
         [StoreMemory, AddressTranslation_def, AdjustEndian_def, WriteData_def,
          ls_thm4]
    \\ lrw [ls_lem, ls_lem0, ls_lem1, ls_lem2, ls_lem3, ls_lem4]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val cond_update_memory = Q.store_thm("cond_update_memory",
-   `(!a: word64 b x0 x1 x2 x3 m.
+Theorem cond_update_memory:
+    (!a: word64 b x0 x1 x2 x3 m.
        (if b then
           (a + 3w =+ x0) ((a + 2w =+ x1) ((a + 1w =+ x2) ((a =+ x3) m)))
         else m) =
@@ -614,14 +636,15 @@ val cond_update_memory = Q.store_thm("cond_update_memory",
                ((a + 3w =+ (if b then x4 else m (a + 3w)))
                  ((a + 2w =+ (if b then x5 else m (a + 2w)))
                    ((a + 1w =+ (if b then x6 else m (a + 1w)))
-                     ((a =+ (if b then x7 else m a)) m))))))))`,
+                     ((a =+ (if b then x7 else m a)) m))))))))
+Proof
    rw [combinTheory.UPDATE_def, FUN_EQ_THM]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val branch_delay = Q.store_thm("branch_delay",
-   `(!b x y.
+Theorem branch_delay:
+    (!b x y.
        (case (if b then (F, x) else (T, y)) of
            (T, a) => SOME NONE
          | (F, a) => SOME (SOME a)) =
@@ -648,29 +671,35 @@ val branch_delay = Q.store_thm("branch_delay",
     (!b. (if b then T else F) = b) /\
     (!b x y.
         (if b then x else y) + 4w = (if b then x + 4w else y + 4w)) /\
-    (!x. x + 4w + 4w = x + 8w)`,
-   rw [] \\ fs [])
+    (!x. x + 4w + 4w = x + 8w)
+Proof
+   rw [] \\ fs []
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val cond_word1 = Q.store_thm("cond_word1",
-  `(if w = 0w : word1 then a else if w = 1w then b else c) =
-    (if w = 0w then a else b)`,
-   wordsLib.Cases_on_word_value `w` \\ simp [])
+Theorem cond_word1:
+   (if w = 0w : word1 then a else if w = 1w then b else c) =
+    (if w = 0w then a else b)
+Proof
+   wordsLib.Cases_on_word_value `w` \\ simp []
+QED
 
-val cond_word2 = Q.store_thm("cond_word2",
-  `(if w = 0w : word2 then a
+Theorem cond_word2:
+   (if w = 0w : word2 then a
     else if w = 1w then b
     else if w = 2w then c
     else if w = 3w then d else e) =
    (if w = 0w then a
     else if w = 1w then b
     else if w = 2w then c
-    else d)`,
-  wordsLib.Cases_on_word_value `w` \\ simp [])
+    else d)
+Proof
+  wordsLib.Cases_on_word_value `w` \\ simp []
+QED
 
-val cond_word3 = Q.store_thm("cond_word3",
-  `(if w = 0w : word3 then a
+Theorem cond_word3:
+   (if w = 0w : word3 then a
     else if w = 1w then b
     else if w = 2w then c
     else if w = 3w then d
@@ -685,6 +714,8 @@ val cond_word3 = Q.store_thm("cond_word3",
     else if w = 4w then e
     else if w = 5w then f
     else if w = 6w then g
-    else h)`,
-  wordsLib.Cases_on_word_value `w` \\ simp [])
+    else h)
+Proof
+  wordsLib.Cases_on_word_value `w` \\ simp []
+QED
 

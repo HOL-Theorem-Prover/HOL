@@ -21,25 +21,30 @@ val EVEN_BIT0 = bitTheory.BIT0_ODD |> REWRITE_RULE [ODD_EVEN,FUN_EQ_THM]
 
 (* TODO: move? *)
 
-val EVEN_BIT_SUC = Q.store_thm("EVEN_BIT_SUC",
-  `EVEN n ==> !i. (BIT i (SUC n) = if i = 0 then T else BIT i n)`,
+Theorem EVEN_BIT_SUC:
+   EVEN n ==> !i. (BIT i (SUC n) = if i = 0 then T else BIT i n)
+Proof
   completeInduct_on`n` \\ rw[]
   \\ Cases_on`i=0` \\ fs[]
   >- (
     CCONTR_TAC \\ fs[EVEN_BIT0,EVEN] )
   \\ Cases_on`i` \\ fs[]
   \\ fs[GSYM bitTheory.BIT_DIV2]
-  \\ fs[ADD1,ADD_DIV_RWT,EVEN_MOD2]);
+  \\ fs[ADD1,ADD_DIV_RWT,EVEN_MOD2]
+QED
 
-val EVEN_MOD = Q.store_thm("EVEN_MOD",
-  `0 < m /\ EVEN m ==> (EVEN (n MOD m) <=> EVEN n)`,
+Theorem EVEN_MOD:
+   0 < m /\ EVEN m ==> (EVEN (n MOD m) <=> EVEN n)
+Proof
   strip_tac
   \\ first_x_assum(CHANGED_TAC o strip_assume_tac o REWRITE_RULE[EVEN_EXISTS])
   \\ rw[EVEN_MOD2]
-  \\ rw[MOD_MULT_MOD]);
+  \\ rw[MOD_MULT_MOD]
+QED
 
-val word_msb_double_lsr_1 = Q.store_thm("word_msb_double_lsr_1",
-  `word_msb w <=> (w <> (word_lsr (word_add w w) 1))`,
+Theorem word_msb_double_lsr_1:
+   word_msb w <=> (w <> (word_lsr (word_add w w) 1))
+Proof
   rw[d_word_msb,DIV_LE_X]
   \\ qspecl_then[`w`,`1`](mp_tac o SYM)WORD_MUL_LSL \\ rw[]
   \\ reverse(rw[EQ_IMP_THM])
@@ -51,21 +56,26 @@ val word_msb_double_lsr_1 = Q.store_thm("word_msb_double_lsr_1",
   \\ fsrw_tac[wordsLib.WORD_BIT_EQ_ss][]
   \\ qexists_tac`dimindex(:'a)-1`
   \\ assume_tac DIMINDEX_GT_0
-  \\ simp[GSYM word_msb_def,d_word_msb,DIV_LE_X]);
+  \\ simp[GSYM word_msb_def,d_word_msb,DIV_LE_X]
+QED
 
-val xor_one_add_one = Q.store_thm("xor_one_add_one",
-  `~w ' 0 ==> (w ?? 1w = w + 1w)`,
+Theorem xor_one_add_one:
+   ~w ' 0 ==> (w ?? 1w = w + 1w)
+Proof
   srw_tac[wordsLib.WORD_BIT_EQ_ss][word_index]
   \\ Cases_on`i=0` \\ fs[WORD_ADD_BIT0,word_index]
   \\ Cases_on`w` \\ fs[word_add_n2w,word_index,EVEN_BIT0]
-  \\ simp[GSYM ADD1,EVEN_BIT_SUC]);
+  \\ simp[GSYM ADD1,EVEN_BIT_SUC]
+QED
 
-val add_one_xor_one = Q.store_thm("add_one_xor_one",
-  `~w ' 0 ==> (w + 1w ?? 1w = w)`,
+Theorem add_one_xor_one:
+   ~w ' 0 ==> (w + 1w ?? 1w = w)
+Proof
   srw_tac[wordsLib.WORD_BIT_EQ_ss][word_index]
   \\ Cases_on`i=0` \\ fs[WORD_ADD_BIT0,word_index]
   \\ Cases_on`w` \\ fs[word_add_n2w,word_index,EVEN_BIT0]
-  \\ simp[GSYM ADD1,EVEN_BIT_SUC]);
+  \\ simp[GSYM ADD1,EVEN_BIT_SUC]
+QED
 
 val one_neq_zero_word = SIMP_CONV(srw_ss())[]``1w = 0w``
 

@@ -199,28 +199,30 @@ val write'mem128_rwt = ustore_thm("write'mem128_rwt",
             write'mem8_def]
    )
 
-val read_mem16 = Q.store_thm("read_mem16",
-   `!m a v. (read_mem16 m a = v) =
-            (m a = (7 >< 0) v) /\ (m (a + 1w) = (15 ><  8) v)`,
+Theorem read_mem16:
+    !m a v. (read_mem16 m a = v) =
+            (m a = (7 >< 0) v) /\ (m (a + 1w) = (15 ><  8) v)
+Proof
    REPEAT strip_tac
    \\ simp [read_mem16_def]
    \\ blastLib.BBLAST_TAC
-   )
+QED
 
-val read_mem32 = Q.store_thm("read_mem32",
-   `!m a v.
+Theorem read_mem32:
+    !m a v.
       (read_mem32 m a = v) =
       (m a = (7 >< 0) v) /\
       (m (a + 1w) = (15 ><  8) v) /\
       (m (a + 2w) = (23 >< 16) v) /\
-      (m (a + 3w) = (31 >< 24) v)`,
+      (m (a + 3w) = (31 >< 24) v)
+Proof
    REPEAT strip_tac
    \\ simp [read_mem32_def]
    \\ blastLib.BBLAST_TAC
-   )
+QED
 
-val read_mem64 = Q.store_thm("read_mem64",
-   `!m a v.
+Theorem read_mem64:
+    !m a v.
       (read_mem64 m a = v) =
       (m a = (7 >< 0) v) /\
       (m (a + 1w) = (15 ><  8) v) /\
@@ -229,14 +231,15 @@ val read_mem64 = Q.store_thm("read_mem64",
       (m (a + 4w) = (39 >< 32) v) /\
       (m (a + 5w) = (47 >< 40) v) /\
       (m (a + 6w) = (55 >< 48) v) /\
-      (m (a + 7w) = (63 >< 56) v)`,
+      (m (a + 7w) = (63 >< 56) v)
+Proof
    REPEAT strip_tac
    \\ simp [read_mem64_def]
    \\ blastLib.BBLAST_TAC
-   )
+QED
 
-val read_mem128 = Q.store_thm("read_mem128",
-   `!m a v.
+Theorem read_mem128:
+    !m a v.
       (read_mem128 m a = v) =
       (m a = (7 >< 0) v) /\
       (m (a + 1w) = (15 ><  8) v) /\
@@ -253,20 +256,23 @@ val read_mem128 = Q.store_thm("read_mem128",
       (m (a + 12w) = (103 >< 96) v) /\
       (m (a + 13w) = (111 >< 104) v) /\
       (m (a + 14w) = (119 >< 112) v) /\
-      (m (a + 15w) = (127 >< 120) v)`,
+      (m (a + 15w) = (127 >< 120) v)
+Proof
    REPEAT strip_tac
    \\ simp [read_mem128_def]
    \\ blastLib.BBLAST_TAC
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val OpSize_rwt = Q.store_thm("OpSize_rwt",
-   `(!have_rex w override. OpSize (have_rex, w, 0w, override) = Z8 have_rex) /\
+Theorem OpSize_rwt:
+    (!have_rex w override. OpSize (have_rex, w, 0w, override) = Z8 have_rex) /\
     (!have_rex override. OpSize (have_rex, T, 1w, override) = Z64) /\
     (!have_rex. OpSize (have_rex, F, 1w, T) = Z16) /\
-    (!have_rex. OpSize (have_rex, F, 1w, F) = Z32)`,
-   rw [OpSize_def])
+    (!have_rex. OpSize (have_rex, F, 1w, F) = Z32)
+Proof
+   rw [OpSize_def]
+QED
 
 val MOD256 =
    bitTheory.MOD_2EXP_def
@@ -294,10 +300,11 @@ val immediate8_rwt = to_n2w [`n2w n`] (Q.prove(
    \\ blastLib.FULL_BBLAST_TAC
    )) |> utilsLib.save_as "immediate8_rwt";
 
-val immediate8 = Q.store_thm("immediate8",
-   `!imm:word8 l. immediate8 (I imm :: l) = (sw2sw imm, SOME l)`,
+Theorem immediate8:
+    !imm:word8 l. immediate8 (I imm :: l) = (sw2sw imm, SOME l)
+Proof
    srw_tac [] [immediate8_def, oimmediate8_def]
-   )
+QED
 
 val immediate16_rwt = to_n2w [`n2w n2`, `n2w n1`] (Q.prove(
    `!b2 b1 l.
@@ -312,11 +319,12 @@ val immediate16_rwt = to_n2w [`n2w n2`, `n2w n1`] (Q.prove(
    \\ blastLib.FULL_BBLAST_TAC
    )) |> utilsLib.save_as "immediate16_rwt";
 
-val immediate16 = Q.store_thm("immediate16",
-   `!imm:word16 l.
-       immediate16 ((7 >< 0) imm :: (15 >< 8) imm :: l) = (sw2sw imm, SOME l)`,
+Theorem immediate16:
+    !imm:word16 l.
+       immediate16 ((7 >< 0) imm :: (15 >< 8) imm :: l) = (sw2sw imm, SOME l)
+Proof
    srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate16_def]
-   )
+QED
 
 val immediate32_rwt = to_n2w [`n2w n4`, `n2w n3`, `n2w n2`, `n2w n1`] (Q.prove(
    `!b4 b3 b2 b1 l.
@@ -334,13 +342,14 @@ val immediate32_rwt = to_n2w [`n2w n4`, `n2w n3`, `n2w n2`, `n2w n1`] (Q.prove(
    \\ blastLib.FULL_BBLAST_TAC
    )) |> utilsLib.save_as "immediate32_rwt";
 
-val immediate32 = Q.store_thm("immediate32",
-   `!imm:word32 l.
+Theorem immediate32:
+    !imm:word32 l.
        immediate32
           ((7 >< 0) imm :: (15 >< 8) imm ::
-           (23 >< 16) imm :: (31 >< 24) imm :: l) = (sw2sw imm, SOME l)`,
+           (23 >< 16) imm :: (31 >< 24) imm :: l) = (sw2sw imm, SOME l)
+Proof
    srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate32_def]
-   )
+QED
 
 val immediate64_rwt =
    to_n2w [`n2w n8`, `n2w n7`, `n2w n6`, `n2w n5`,
@@ -356,15 +365,16 @@ val immediate64_rwt =
    \\ blastLib.FULL_BBLAST_TAC
    )) |> utilsLib.save_as "immediate64_rwt";
 
-val immediate64 = Q.store_thm("immediate64",
-   `!imm:word64 l.
+Theorem immediate64:
+    !imm:word64 l.
        immediate64
           ((7 >< 0) imm :: (15 >< 8) imm ::
            (23 >< 16) imm :: (31 >< 24) imm ::
            (39 >< 32) imm :: (47 >< 40) imm ::
-           (55 >< 48) imm :: (63 >< 56) imm :: l) = (imm, SOME l)`,
+           (55 >< 48) imm :: (63 >< 56) imm :: l) = (imm, SOME l)
+Proof
    srw_tac [wordsLib.WORD_EXTRACT_ss] [immediate64_def]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -377,15 +387,17 @@ Definition rounding_mode_def:
   | _ => roundTowardZero
 End
 
-val rounding_mode = Q.store_thm ("rounding_mode",
-  `!rc.
+Theorem rounding_mode:
+   !rc.
     (if rc = 0w then roundTiesToEven
      else if rc = 1w then roundTowardNegative
      else if rc = 2w then roundTowardPositive
      else if rc = 3w then roundTowardZero
-     else ARB) = rounding_mode rc`,
+     else ARB) = rounding_mode rc
+Proof
   rw [rounding_mode_def]
-  \\ blastLib.FULL_BBLAST_TAC)
+  \\ blastLib.FULL_BBLAST_TAC
+QED
 
 val flush_to_zero32 = utilsLib.ustore_thm("flush_to_zero32",
    `~s.MXCSR.FZ ==> (flush_to_zero32 a s = a)`,
@@ -397,8 +409,8 @@ val flush_to_zero64 = utilsLib.ustore_thm("flush_to_zero64",
    Cases_on `a`
    \\ rw [flush_to_zero64_def])
 
-val snd_with_flags = Q.store_thm("snd_with_flags",
-  `(!a b c. SND (fp32_add_with_flags a b c) = fp32_add a b c) /\
+Theorem snd_with_flags:
+   (!a b c. SND (fp32_add_with_flags a b c) = fp32_add a b c) /\
    (!a b c. SND (fp64_add_with_flags a b c) = fp64_add a b c) /\
    (!a b c. SND (fp32_sub_with_flags a b c) = fp32_sub a b c) /\
    (!a b c. SND (fp64_sub_with_flags a b c) = fp64_sub a b c) /\
@@ -407,7 +419,8 @@ val snd_with_flags = Q.store_thm("snd_with_flags",
    (!a b c. SND (fp32_mul_with_flags a b c) = fp32_mul a b c) /\
    (!a b c. SND (fp64_mul_with_flags a b c) = fp64_mul a b c) /\
    (!a b. SND (fp32_sqrt_with_flags a b) = fp32_sqrt a b) /\
-   (!a b. SND (fp64_sqrt_with_flags a b) = fp64_sqrt a b)`,
+   (!a b. SND (fp64_sqrt_with_flags a b) = fp64_sqrt a b)
+Proof
   rw [machine_ieeeTheory.fp32_add_with_flags_def,
       machine_ieeeTheory.fp32_add_def,
       machine_ieeeTheory.fp64_add_with_flags_def,
@@ -428,38 +441,43 @@ val snd_with_flags = Q.store_thm("snd_with_flags",
       machine_ieeeTheory.fp32_sqrt_def,
       machine_ieeeTheory.fp64_sqrt_with_flags_def,
       machine_ieeeTheory.fp64_sqrt_def]
-  )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val eflags_none = Q.store_thm("eflags_none",
-   `!f. K NONE =
+Theorem eflags_none:
+    !f. K NONE =
         (Z_CF =+ NONE)
           ((Z_PF =+ NONE)
              ((Z_AF =+ NONE)
                 ((Z_ZF =+ NONE)
                    ((Z_SF =+ NONE)
-                      ((Z_OF =+ NONE) f)))))`,
+                      ((Z_OF =+ NONE) f)))))
+Proof
    STRIP_TAC
    \\ CONV_TAC (Conv.FUN_EQ_CONV)
    \\ Cases
    \\ srw_tac [] [combinTheory.APPLY_UPDATE_THM]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val id_state_cond = Q.store_thm("id_state_cond",
-   `!b x y s.
-      (if b then (x, s: x64_state) else (y, s)) = (if b then x else y, s)`,
-   rw [])
+Theorem id_state_cond:
+    !b x y s.
+      (if b then (x, s: x64_state) else (y, s)) = (if b then x else y, s)
+Proof
+   rw []
+QED
 
-val cond_thms = Q.store_thm("cond_thms",
-   `(!b x. (if b then F else x) = ~b /\ x) /\
-    (!b x. (if b then T else x) = b \/ x)`,
-   rw [])
+Theorem cond_thms:
+    (!b x. (if b then F else x) = ~b /\ x) /\
+    (!b x. (if b then T else x) = b \/ x)
+Proof
+   rw []
+QED
 
-val bitfield_inserts = Q.store_thm("bitfield_inserts",
-   `(!r: word64 d: word64.
+Theorem bitfield_inserts:
+    (!r: word64 d: word64.
        bit_field_insert 15 0 ((15 >< 0) d : word16) r =
        (r && 0xFFFFFFFFFFFF0000w) || (d && 0xFFFFw)) /\
     (!r: word64 d: word64.
@@ -467,14 +485,16 @@ val bitfield_inserts = Q.store_thm("bitfield_inserts",
        (r && 0xFFFFFFFFFFFFFF00w) || (d && 0xFFw)) /\
     (!r: word64 d: word64.
        bit_field_insert 15 8 ((7 >< 0) d : word8) r =
-       (r && 0xFFFFFFFFFFFF00FFw) || ((d && 0xFFw) << 8))`,
+       (r && 0xFFFFFFFFFFFF00FFw) || ((d && 0xFFw) << 8))
+Proof
    rw [wordsTheory.bit_field_insert_def]
-   \\ blastLib.BBLAST_TAC)
+   \\ blastLib.BBLAST_TAC
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val extension_thms = Q.store_thm("extension_thms",
-   `(!w: word8. (7 >< 0) (w2w w : word64) = w) /\
+Theorem extension_thms:
+    (!w: word8. (7 >< 0) (w2w w : word64) = w) /\
     (!w: word16. (15 >< 0) (w2w w : word64) = w) /\
     (!w: word32. (31 >< 0) (w2w w : word64) = w) /\
     (!w: word8.
@@ -489,12 +509,13 @@ val extension_thms = Q.store_thm("extension_thms",
     (!w: word64.
       (31 >< 0) (bit_field_insert 31 0 (sw2sw (w2w w: word16) : word32)
                 (w && 0xFFFFw)) =
-      w2w (sw2sw (w2w w : word16) : word32) : word64)`,
+      w2w (sw2sw (w2w w : word16) : word32) : word64)
+Proof
    blastLib.BBLAST_TAC
-)
+QED
 
-val word_thms = Q.store_thm("word_thms",
-   `(!a: word64.
+Theorem word_thms:
+    (!a: word64.
        (31 >< 0) (a && 0xFFFFFFFFw) = w2w a : word32) /\
     (!a: word64.
        (15 >< 0) (a && 0xFFFFw) = w2w a : word16) /\
@@ -566,9 +587,9 @@ val word_thms = Q.store_thm("word_thms",
     (!a: word128. (31 >< 0) (w2w ((31 >< 0) a : word32) : word64) =
                   (31 >< 0) a : word64) /\
     (!a: word32. (31 >< 0) (w2w a : word64) = w2w a : word64)
-   `,
+Proof
    rw [] \\ blastLib.BBLAST_TAC
-   );
+QED
 
 val lem32 = blastLib.BBLAST_PROVE ``!a: word64. a && 0xFFFFFFFFw = (31 >< 0) a``
 val lem16 = blastLib.BBLAST_PROVE ``!a: word64. a && 0xFFFFw = (15 >< 0) a``
@@ -579,8 +600,8 @@ fun mk_lem (x, y) =
    |> Q.SPECL [x, `b`, y]
    |> SIMP_RULE (srw_ss()++wordsLib.WORD_EXTRACT_ss) []
 
-val word_mul_thms = Q.store_thm("word_mul_thms",
-   `(!a: word64 b: word32.
+Theorem word_mul_thms:
+    (!a: word64 b: word32.
        (31 >< 0) ((a && 0xFFFFFFFFw) * w2w b) = (a * w2w b) && 0xFFFFFFFFw) /\
     (!a: word64 b: word16.
        (15 >< 0) ((a && 0xFFFFw) * w2w b) = (a * w2w b) && 0xFFFFw) /\
@@ -592,13 +613,15 @@ val word_mul_thms = Q.store_thm("word_mul_thms",
     (!a b: word64.
        (15 >< 0) ((a && 0xFFFFw) * (b && 0xFFFFw)) = (a * b) && 0xFFFFw) /\
     (!a b: word64.
-       (7 >< 0) ((a && 0xFFw) * (b && 0xFFw)) = (a * b) && 0xFFw)`,
+       (7 >< 0) ((a && 0xFFw) * (b && 0xFFw)) = (a * b) && 0xFFw)
+Proof
    srw_tac [wordsLib.WORD_EXTRACT_ss]
       [lem8, lem16, lem32,
        mk_lem (`w2w (a: word8)`, `7`),
        mk_lem (`w2w (a: word16)`, `15`),
        mk_lem (`w2w (a: word32)`, `31`),
-       wordsTheory.WORD_EXTRACT_OVER_MUL2])
+       wordsTheory.WORD_EXTRACT_OVER_MUL2]
+QED
 
 local
    val bitwise_and_lt = Q.prove(
@@ -668,8 +691,8 @@ local
             ``(!a: word64. a <+ 0x100000000w ==>
                            ((a >>> 16) && 0xFFFFw = a >>> 16))``]
 in
-   val word_mul_top = Q.store_thm("word_mul_top",
-      `(!a: word64 b: word16.
+Theorem word_mul_top:
+       (!a: word64 b: word16.
           0xFFFFw &&
              (n2w
                 (w2n (a && 0xFFFFw) * w2n (w2w b: word64) DIV 0x10000n)
@@ -692,15 +715,16 @@ in
              (n2w (w2n (a && 0xFFFFFFFFw) *
                    w2n (b && 0xFFFFFFFFw) DIV 0x100000000n)
                 : word64) =
-          ((a && 0xFFFFFFFFw) * (b && 0xFFFFFFFFw)) >>> 32)`,
+          ((a && 0xFFFFFFFFw) * (b && 0xFFFFFFFFw)) >>> 32)
+Proof
       simp_tac std_ss (div_thm 1 @ div_thm 2 @ [shift_thm])
-      )
+QED
 end
 
 (* ------------------------------------------------------------------------ *)
 
-val prefixGroup = Q.store_thm("prefixGroup",
-   `prefixGroup w =
+Theorem prefixGroup:
+    prefixGroup w =
        if w ' 7 then
           if w ' 6 /\ w ' 5 /\ w ' 4 /\ ~w ' 3 /\ ~w ' 2 then
              if ~w ' 1 /\ w ' 0 then 0 else 1
@@ -719,10 +743,12 @@ val prefixGroup = Q.store_thm("prefixGroup",
        else if w ' 5  /\ w ' 2 /\ w ' 1 /\ ~w ' 0 then
           2
        else
-          0`,
+          0
+Proof
    rewrite_tac [prefixGroup_def]
    \\ wordsLib.Cases_on_word_value `w`
-   \\ EVAL_TAC)
+   \\ EVAL_TAC
+QED
 
 val RexReg = Q.prove(
    `!r: word4. RexReg (r ' 3,v2w [r ' 2; r ' 1; r ' 0]) = num2Zreg (w2n r)`,
@@ -826,13 +852,14 @@ val readModRM_not_4_or_5 = Theory.save_thm("readModRM_not_4_or_5",
    rule `RegNot4or5 r2` readModRM_not_4_or_5
    )
 
-val rbp = Q.store_thm("rbp",
-   `!r b. (RexReg (b, r) = RBP) = ~b /\ (r = 5w)`,
+Theorem rbp:
+    !r b. (RexReg (b, r) = RBP) = ~b /\ (r = 5w)
+Proof
    simp [x64Theory.RexReg_def]
    \\ wordsLib.Cases_word_value
    \\ Cases
    \\ CONV_TAC (Conv.DEPTH_CONV bitstringLib.v2w_n2w_CONV)
    \\ simp [x64Theory.num2Zreg_thm]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)

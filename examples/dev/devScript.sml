@@ -1413,10 +1413,11 @@ val REC_NOTg = store_thm("REC_NOTg",
 (*****************************************************************************)
 (* REC - recursive circuits satisfy DEV                                      *)
 (*****************************************************************************)
-val REC = Q.store_thm("REC",
-    `TOTAL (f1,f2,f3) /\
+Theorem REC:
+     TOTAL (f1,f2,f3) /\
      REC (DEV f1) (DEV f2) (DEV f3) (load,inp,done,out) ==>
-     DEV  (TAILREC f1 f2 f3) (load,inp,done,out)`,
+     DEV  (TAILREC f1 f2 f3) (load,inp,done,out)
+Proof
     RW_TAC arith_ss [DEV_def,REC_def,LIV_def]
     THENL [
     REPEAT (Q.PAT_X_ASSUM `!(t:num). X` kill)
@@ -1502,4 +1503,4 @@ val REC = Q.store_thm("REC",
     ] (* Cases_on `done_g te` *)
     ] (* Cases_on `done_e t` *)
     ] (* RW_TAC arith_ss [DEV_def,REC_def,LIV_def] *)
-);
+QED

@@ -54,10 +54,10 @@ val same_content_def = Define `
       (!i. i < m ==> (sk ' i = reade st (conv_exp (inE i))))
     `;
 
-val same_content_thm = Q.store_thm (
-    "same_content_thm",
-    `!s st m. same_content s st m =
-         !x. valid_TEXP x m ==> (tread s x = reade st (conv_exp x))`,
+Theorem same_content_thm:
+     !s st m. same_content s st m =
+         !x. valid_TEXP x m ==> (tread s x = reade st (conv_exp x))
+Proof
 
     SIMP_TAC std_ss [FORALL_TSTATE, FORALL_DSTATE] THEN
     RW_TAC std_ss [same_content_def] THEN
@@ -70,13 +70,13 @@ val same_content_thm = Q.store_thm (
       Q.PAT_ASSUM `!x.k` (ASSUME_TAC o Q.SPEC `inE i`) THEN
         FULL_SIMP_TAC std_ss [tread_def, conv_exp_def, reade_def, read_thm, valid_TEXP_def, within_bound_def]
     ]
-  );
+QED
 
 
-val same_content_read = Q.store_thm (
-    "same_content_read",
-    `!s st m. same_content s st m /\ EVERY (\x.valid_TEXP x m) lst ==>
-         (MAP (tread s) lst = MAP (reade st o conv_exp) lst)`,
+Theorem same_content_read:
+     !s st m. same_content s st m /\ EVERY (\x.valid_TEXP x m) lst ==>
+         (MAP (tread s) lst = MAP (reade st o conv_exp) lst)
+Proof
 
     SIMP_TAC std_ss [FORALL_TSTATE, FORALL_DSTATE] THEN
     RW_TAC std_ss [same_content_def] THEN
@@ -84,15 +84,14 @@ val same_content_read = Q.store_thm (
     RW_TAC list_ss [] THEN
     Cases_on `h` THEN
     FULL_SIMP_TAC std_ss [tread_def, conv_exp_def, reade_def, read_thm, valid_TEXP_def, within_bound_def]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*         Sufficient conditions to implement function calls correctly             *)
 (*---------------------------------------------------------------------------------*)
 
-val FC_OUTPUT_LEM = Q.store_thm (
-    "FC_OUTPUT_LEM",
-   `!s st m1 m2. valid_arg_list (caller_i, caller_o, callee_i, callee_o) /\
+Theorem FC_OUTPUT_LEM:
+    !s st m1 m2. valid_arg_list (caller_i, caller_o, callee_i, callee_o) /\
      WELL_FORMED (SC (SC pre body) post) /\ EVERY (\x.valid_TEXP x m2) callee_o ==>
      let s1 = transfer (empty_s,s) (callee_i,caller_i) in
      let st1 = run_cfl pre st in
@@ -102,7 +101,8 @@ val FC_OUTPUT_LEM = Q.store_thm (
      (MAP (reade st2 o conv_exp) callee_o = MAP (reade (run_cfl post st2) o conv_exp) caller_o)
        ==>
        (MAP (tread (run_hsl (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) s)) caller_o =
-        MAP (reade (run_cfl (SC (SC pre body) post) st) o conv_exp) caller_o)`,
+        MAP (reade (run_cfl (SC (SC pre body) post) st) o conv_exp) caller_o)
+Proof
 
    RW_TAC std_ss [valid_arg_list_def, run_hsl_def, WELL_FORMED_thm, SEMANTICS_OF_CFL] THEN
    `(MAP (tread (transfer (s,s2) (caller_o,callee_o))) caller_o = MAP (tread s2) callee_o) /\
@@ -111,20 +111,19 @@ val FC_OUTPUT_LEM = Q.store_thm (
    `MAP (tread (run_hsl S_hsl (transfer (empty_s,s) (callee_i,caller_i)))) callee_o =
     MAP (reade (run_cfl body (run_cfl pre st)) o conv_exp) callee_o` by METIS_TAC [same_content_read] THEN
    FULL_SIMP_TAC std_ss []
-  );
+QED
 
 
-val MAP_LEM_1 = Q.store_thm (
-    "MAP_LEM_1",
-    `!x l f g. MEM x l /\ (MAP f l = MAP g l) ==> (f x = g x)`,
+Theorem MAP_LEM_1:
+     !x l f g. MEM x l /\ (MAP f l = MAP g l) ==> (f x = g x)
+Proof
     Induct_on `l` THEN RW_TAC list_ss [] THEN
     METIS_TAC []
-  );
+QED
 
-val FC_SUFFICIENT_COND_LEM = Q.store_thm (
-    "FC_SUFFICIENT_COND_LEM",
+Theorem FC_SUFFICIENT_COND_LEM:
 
-   `!s st m1 m2. valid_arg_list (caller_i, caller_o, callee_i, callee_o) /\
+    !s st m1 m2. valid_arg_list (caller_i, caller_o, callee_i, callee_o) /\
      WELL_FORMED (SC (SC pre body) post) /\ EVERY (\x.valid_TEXP x m2) callee_o /\
      same_content s st m1
       ==>
@@ -139,7 +138,8 @@ val FC_SUFFICIENT_COND_LEM = Q.store_thm (
           (reade (run_cfl (SC (SC pre body) post) st) (conv_exp x) = reade st (conv_exp x)))
        ==>
        same_content (run_hsl (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) s)
-                    (run_cfl (SC (SC pre body) post) st) m1`,
+                    (run_cfl (SC (SC pre body) post) st) m1
+Proof
 
     RW_TAC std_ss [] THEN
     Q.UNABBREV_TAC `s1` THEN Q.UNABBREV_TAC `st1` THEN Q.UNABBREV_TAC `st2` THEN
@@ -155,7 +155,7 @@ val FC_SUFFICIENT_COND_LEM = Q.store_thm (
        FULL_SIMP_TAC std_ss [valid_arg_list_def, run_hsl_def, LET_THM] THEN
          METIS_TAC [TRANSFER_INTACT]
     ]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Pre-call processing                                                        *)
@@ -189,9 +189,9 @@ val pre_call_def = Define `
 (*      Theorems about pre-call processing                                         *)
 (*---------------------------------------------------------------------------------*)
 
-val MAP_LEM_2 = Q.store_thm (
-    "MAP_LEM_2",
-    `!l f g. (MAP f l = MAP g l) = (!i. i < LENGTH l ==> (f (EL i l) = g (EL i l)))`,
+Theorem MAP_LEM_2:
+     !l f g. (MAP f l = MAP g l) = (!i. i < LENGTH l ==> (f (EL i l) = g (EL i l)))
+Proof
     Induct_on `l` THEN RW_TAC list_ss [] THEN
     EQ_TAC THEN REPEAT STRIP_TAC THENL [
       Induct_on `i` THEN RW_TAC list_ss [],
@@ -200,12 +200,12 @@ val MAP_LEM_2 = Q.store_thm (
       Q.PAT_ASSUM `!i.k` (ASSUME_TAC o Q.SPEC `SUC i`) THEN
         FULL_SIMP_TAC list_ss []
     ]
-  );
+QED
 
-val MAP_LEM_3 = Q.store_thm (
-    "MAP_LEM_3",
-    `!l1 l2 f g. (!i. i < LENGTH l1 ==> (f (EL i l1) = g (EL i l2))) /\
-       (LENGTH l1 = LENGTH l2) ==> (MAP f l1 = MAP g l2)`,
+Theorem MAP_LEM_3:
+     !l1 l2 f g. (!i. i < LENGTH l1 ==> (f (EL i l1) = g (EL i l2))) /\
+       (LENGTH l1 = LENGTH l2) ==> (MAP f l1 = MAP g l2)
+Proof
     Induct_on `l1` THEN Induct_on `l2` THEN
     RW_TAC list_ss [] THENL [
       Q.PAT_ASSUM `!i.k` (ASSUME_TAC o Q.SPEC `0`) THEN
@@ -216,7 +216,7 @@ val MAP_LEM_3 = Q.store_thm (
          FULL_SIMP_TAC list_ss []) THEN
         METIS_TAC []
     ]
-  );
+QED
 
 (*  A valid parameter (which is trasferred from the caller to the callee) can be a stack variable, a constant and a register variable *)
 (*  A valid argument (which accepts the parameter), on the other hand, can only be either a stack variable or register variable *)
@@ -233,53 +233,53 @@ val valid_MEXP_1_def = Define `
     (valid_MEXP_1 (isC c) bound = T) /\
     (valid_MEXP_1 (isM m) bound = F)`;
 
-val VALID_MEXP_MEXP_1 = Q.store_thm (
-   "VALID_MEXP_MEXP_1",
-   `!m l. EVERY (\x.valid_MEXP x m) l ==>
-           EVERY (\x.valid_MEXP_1 x m) l`,
+Theorem VALID_MEXP_MEXP_1:
+    !m l. EVERY (\x.valid_MEXP x m) l ==>
+           EVERY (\x.valid_MEXP_1 x m) l
+Proof
     GEN_TAC THEN MATCH_MP_TAC listTheory.EVERY_MONOTONIC THEN
     Cases_on `x` THEN RW_TAC std_ss [valid_MEXP_1_def, valid_MEXP_def] THEN
     FULL_SIMP_TAC std_ss [valid_regs_def, valid_exp_1_def]
-  );
+QED
 
-val VALID_MEXP_1_exp_3 = Q.store_thm (
-   "VALID_MEXP_1_exp_3",
-   `!m l. EVERY (\x.valid_MEXP_1 x m) l ==>
-      EVERY valid_exp_3 l`,
+Theorem VALID_MEXP_1_exp_3:
+    !m l. EVERY (\x.valid_MEXP_1 x m) l ==>
+      EVERY valid_exp_3 l
+Proof
     GEN_TAC THEN MATCH_MP_TAC listTheory.EVERY_MONOTONIC THEN
     Cases_on `x` THEN RW_TAC std_ss [valid_MEXP_1_def, valid_exp_3_def, valid_exp_1_def]
-  );
+QED
 
-val VALID_TEXP_MEXP_1 = Q.store_thm (
-   "VALID_TEXP_MEXP_1",
-   `!l m. EVERY (\x.valid_TEXP x m) l ==>
-      EVERY (\x. valid_MEXP_1 x m) (MAP conv_exp l)`,
+Theorem VALID_TEXP_MEXP_1:
+    !l m. EVERY (\x.valid_TEXP x m) l ==>
+      EVERY (\x. valid_MEXP_1 x m) (MAP conv_exp l)
+Proof
    Induct_on `l` THEN
    SIMP_TAC list_ss [] THEN
    Cases_on `h` THEN RW_TAC arith_ss [conv_exp_def,valid_exp_def,valid_MEXP_1_def,valid_TEXP_def, within_bound_def] THEN
    Cases_on `T'` THEN RW_TAC std_ss [valid_exp_1_def, data_reg_index_def, valid_regs_def,
        from_reg_index_thm, index_of_reg_def]
-  );
+QED
 
-val VALID_TEXP_MEXP = Q.store_thm (
-   "VALID_TEXP_MEXP",
-   `!l m. EVERY (\x.valid_TEXP x m) l ==>
-      EVERY (\x. valid_MEXP x m) (MAP conv_exp l)`,
+Theorem VALID_TEXP_MEXP:
+    !l m. EVERY (\x.valid_TEXP x m) l ==>
+      EVERY (\x. valid_MEXP x m) (MAP conv_exp l)
+Proof
    Induct_on `l` THEN
    SIMP_TAC list_ss [] THEN
    Cases_on `h` THEN RW_TAC arith_ss [conv_exp_def,valid_exp_def,valid_MEXP_def,valid_TEXP_def, within_bound_def] THEN
    Cases_on `T'` THEN RW_TAC std_ss [valid_exp_1_def, data_reg_index_def, valid_regs_def,
        from_reg_index_thm, index_of_reg_def]
-  );
+QED
 
-val VALID_MEXP_exp = Q.store_thm (
-   "VALID_MEXP_exp",
-   `!l m. EVERY (\x.valid_MEXP x m) l ==> EVERY valid_exp l`,
+Theorem VALID_MEXP_exp:
+    !l m. EVERY (\x.valid_MEXP x m) l ==> EVERY valid_exp l
+Proof
    Induct_on `l` THEN
    SIMP_TAC list_ss [] THEN
    Cases_on `h` THEN RW_TAC arith_ss [conv_exp_def,valid_exp_def,valid_MEXP_def, within_bound_def] THEN
    METIS_TAC []
-  );
+QED
 
 
 (*  standard frame structure
@@ -304,11 +304,11 @@ val standard_frame_def = Define `
 (*    The caller pushes parameters into the stack                                  *)
 (*---------------------------------------------------------------------------------*)
 
-val LEGAL_PUSH_EXP_LEM = Q.store_thm (
-  "LEGAL_PUSH_EXP_LEM",
-  `!st l m. standard_frame st m /\ EVERY (\x.valid_MEXP_1 x m) l
+Theorem LEGAL_PUSH_EXP_LEM:
+   !st l m. standard_frame st m /\ EVERY (\x.valid_MEXP_1 x m) l
        ==>
-     (!i. i < LENGTH l ==> legal_push_exp st (EL i l) (PRE (LENGTH l) - i))`,
+     (!i. i < LENGTH l ==> legal_push_exp st (EL i l) (PRE (LENGTH l) - i))
+Proof
 
   RW_TAC std_ss [standard_frame_def, legal_push_exp_def] THEN
   FULL_SIMP_TAC std_ss [EVERY_EL] THEN RES_TAC THEN
@@ -321,7 +321,7 @@ val LEGAL_PUSH_EXP_LEM = Q.store_thm (
   Q.ABBREV_TAC `x = read st SP` THEN
   Cases_on `w2n (read st FP) <= n + w2n (x:word32)` THEN
   RW_TAC std_ss [] THEN RW_TAC arith_ss []
-  );
+QED
 
 val tac1 = (fn g =>
             ((CONV_TAC (DEPTH_CONV (
@@ -331,14 +331,14 @@ val tac1 = (fn g =>
              g);
 
 
-val PRE_CALL_PUSH_ARGUMENTS = Q.store_thm (
-    "PRE_CALL_PUSH_ARGUMENTS",
-    `!st l m k. locate_ge (read st SP) (k + LENGTH l) /\
+Theorem PRE_CALL_PUSH_ARGUMENTS:
+     !st l m k. locate_ge (read st SP) (k + LENGTH l) /\
           standard_frame st m /\ EVERY (\x.valid_MEXP_1 x m) l
        ==>
     !i. i < LENGTH l ==>
      ((run_cfl (BLK ((MSUB R13 R13 (MC (n2w k))) :: push_list l)) st) ''
-        (isM (w2n (read st SP) - k - PRE (LENGTH l) + i)) = st '' (EL i l))`,
+        (isM (w2n (read st SP) - k - PRE (LENGTH l) + i)) = st '' (EL i l))
+Proof
 
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     RW_TAC std_ss [CFL_SEMANTICS_BLK] THEN
@@ -364,22 +364,22 @@ val PRE_CALL_PUSH_ARGUMENTS = Q.store_thm (
     Cases_on `EL i l` THEN
     FULL_SIMP_TAC finmap_ss [reade_def, read_thm, fp_def, valid_exp_3_def, valid_MEXP_1_def, valid_exp_1_def]
    ]
-  );
+QED
 
-val above_lem_1 = Q.store_thm (
-  "above_lem_1",
-  `!st n. i > w2n (read st SP)
-       ==> ~addr_in_range st (isM i) (w2n (read st SP),w2n (read st SP) - n)`,
+Theorem above_lem_1:
+   !st n. i > w2n (read st SP)
+       ==> ~addr_in_range st (isM i) (w2n (read st SP),w2n (read st SP) - n)
+Proof
   RW_TAC arith_ss [addr_in_range_def, in_range_def, addr_of_def]
-  );
+QED
 
-val PRE_CALL_SANITY_1 = Q.store_thm (
-    "PRE_CALL_SANITY_1",
-    `!st l k m. locate_ge (read st SP) (k + LENGTH l) /\ EVERY (\x.valid_MEXP_1 x m) l
+Theorem PRE_CALL_SANITY_1:
+     !st l k m. locate_ge (read st SP) (k + LENGTH l) /\ EVERY (\x.valid_MEXP_1 x m) l
        ==>
       let st' = run_cfl (BLK ((MSUB R13 R13 (MC (n2w k))) :: push_list l)) st in
         (!i. i > w2n (read st SP) ==> (st '' (isM i) = st' '' (isM i))) /\
-        (w2n (read st' SP) = w2n (read st SP) - (k + LENGTH l))`,
+        (w2n (read st' SP) = w2n (read st SP) - (k + LENGTH l))
+Proof
 
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -412,18 +412,18 @@ val PRE_CALL_SANITY_1 = Q.store_thm (
         FULL_SIMP_TAC arith_ss [SP_def, locate_ge_def]
       ]
     ]
-  );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
 (*      The callee pops the parameters out of the stack                            *)
 (*---------------------------------------------------------------------------------*)
 
-val LEGAL_POP_EXP_LEM = Q.store_thm (
-  "LEGAL_POP_EXP_LEM",
-  `!st l m. w2n (read st FP) <= w2n (read st SP) /\ EVERY (\x.valid_TEXP x m) l
+Theorem LEGAL_POP_EXP_LEM:
+   !st l m. w2n (read st FP) <= w2n (read st SP) /\ EVERY (\x.valid_TEXP x m) l
        ==>
-     EVERY (\x.~addr_in_range st x (w2n (read st SP) + LENGTH (MAP conv_exp l), w2n (read st SP))) (MAP conv_exp l)`,
+     EVERY (\x.~addr_in_range st x (w2n (read st SP) + LENGTH (MAP conv_exp l), w2n (read st SP))) (MAP conv_exp l)
+Proof
 
   REPEAT STRIP_TAC THEN
   IMP_RES_TAC VALID_EXP_LEM THEN
@@ -433,12 +433,12 @@ val LEGAL_POP_EXP_LEM = Q.store_thm (
   FULL_SIMP_TAC std_ss [conv_exp_def, addr_in_range_def, in_range_def, addr_of_def, valid_exp_def,
                valid_regs_lem, within_bound_def] THEN
   RW_TAC arith_ss []
-  );
+QED
 
-val UNIQUE_LIST_11 = Q.store_thm (
-  "UNIQUE_LIST_11",
-  `!l st. locate_ge (read st FP) (12 + m) /\ EVERY (\x. valid_TEXP x m) l /\ unique_list l ==>
-          unique_exp_list st (MAP conv_exp l)`,
+Theorem UNIQUE_LIST_11:
+   !l st. locate_ge (read st FP) (12 + m) /\ EVERY (\x. valid_TEXP x m) l /\ unique_list l ==>
+          unique_exp_list st (MAP conv_exp l)
+Proof
 
   Induct_on `l` THEN RW_TAC list_ss [unique_exp_list_def, unique_list_def] THEN
     FULL_SIMP_TAC list_ss [EVERY_EL, rich_listTheory.EL_MAP] THEN
@@ -453,33 +453,33 @@ val UNIQUE_LIST_11 = Q.store_thm (
       FULL_SIMP_TAC std_ss [within_bound_def] THEN RW_TAC arith_ss [] THEN STRIP_TAC THEN
         FULL_SIMP_TAC arith_ss []
     ]
-  );
+QED
 
-val grow_lt_lem_2 = Q.store_thm (
-    "grow_lt_lem_2",
-    `grow_lt (x:word32) (k:num) ==>
-      !i. i <= k ==> (w2n (x + n2w i) = w2n x + i)`,
+Theorem grow_lt_lem_2:
+     grow_lt (x:word32) (k:num) ==>
+      !i. i <= k ==> (w2n (x + n2w i) = w2n x + i)
+Proof
     RW_TAC arith_ss [grow_lt_def, word_add_def, w2n_n2w]
-   );
+QED
 
-val notC_LEM = Q.store_thm (
-   "notC_LEM",
-   `!l. EVERY notC l ==>
-      EVERY ($~ o is_C) (MAP conv_exp l)`,
+Theorem notC_LEM:
+    !l. EVERY notC l ==>
+      EVERY ($~ o is_C) (MAP conv_exp l)
+Proof
    Induct_on `l` THEN
    RW_TAC list_ss [] THEN
    Cases_on `h` THEN
    FULL_SIMP_TAC std_ss [conv_exp_def, notC_def, is_C_def]
-  );
+QED
 
-val PRE_CALL_POP_ARGUMENTS = Q.store_thm (
-    "PRE_CALL_POP_ARGUMENTS",
-    `!st l m. grow_lt (read st SP) (12 + LENGTH l) /\ locate_ge (read st SP) (m + 1) /\ EVERY notC l /\
+Theorem PRE_CALL_POP_ARGUMENTS:
+     !st l m. grow_lt (read st SP) (12 + LENGTH l) /\ locate_ge (read st SP) (m + 1) /\ EVERY notC l /\
           unique_list l /\ EVERY (\x.valid_TEXP x m) l /\ (MAP conv_exp l = l')
        ==>
     !i. i < LENGTH l' ==>
      ((run_cfl (BLK ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list l')) st) '' (EL i l') =
-           st '' (isM (12 + w2n (read st SP) + SUC i)))`,
+           st '' (isM (12 + w2n (read st SP) + SUC i)))
+Proof
 
     SIMP_TAC std_ss [FORALL_DSTATE, mov_pointers_def] THEN
     RW_TAC std_ss [APPEND, CFL_SEMANTICS_BLK] THEN
@@ -508,30 +508,30 @@ val PRE_CALL_POP_ARGUMENTS = Q.store_thm (
       Q.UNABBREV_TAC `st1` THEN
       RW_TAC finmap_ss [reade_def, read_thm]
     ]
-  );
+QED
 
 
-val above_lem_2 = Q.store_thm (
-    "above_lem_2",
-    `!i l st. EVERY (\x. valid_MEXP x m) l /\ i > w2n (read st FP)
-       ==> EVERY (\x. ~eq_exp st (isM i) x) l`,
+Theorem above_lem_2:
+     !i l st. EVERY (\x. valid_MEXP x m) l /\ i > w2n (read st FP)
+       ==> EVERY (\x. ~eq_exp st (isM i) x) l
+Proof
 
    RW_TAC std_ss [] THEN
    Q.PAT_ASSUM `EVERY k l` MP_TAC THEN
    MATCH_MP_TAC listTheory.EVERY_MONOTONIC THEN
    Cases_on `x` THEN RW_TAC arith_ss [eq_exp_def, valid_MEXP_def, eq_addr_def, addr_of_def]
-  );
+QED
 
 
-val PRE_CALL_SANITY_2 = Q.store_thm (
-    "PRE_CALL_SANITY_2",
-    `!st. grow_lt (read st SP) (12 + LENGTH l) /\ EVERY (\x.valid_MEXP x m) l
+Theorem PRE_CALL_SANITY_2:
+     !st. grow_lt (read st SP) (12 + LENGTH l) /\ EVERY (\x.valid_MEXP x m) l
        ==>
       let st' = run_cfl (BLK ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list l)) st in
         (!i. i > 12 + w2n (read st SP) ==> (st '' (isM i) = st' '' (isM i))) /\
         (w2n (read st' SP) = w2n (read st SP) + 12 + (LENGTH l)) /\
         (w2n (read st' FP) = w2n (read st SP) + 11) /\
-        (w2n (read st' IP) = w2n (read st' FP) + 1)`,
+        (w2n (read st' IP) = w2n (read st' FP) + 1)
+Proof
 
     SIMP_TAC std_ss [FORALL_DSTATE, mov_pointers_def] THEN
     SIMP_TAC std_ss [APPEND, CFL_SEMANTICS_BLK] THEN
@@ -559,24 +559,24 @@ val PRE_CALL_SANITY_2 = Q.store_thm (
       IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] POP_LIST_SP_FP) THEN
         FULL_SIMP_TAC arith_ss [SP_def, FP_def, IP_def]
     ]
-  );
+QED
 
-val above_lem_3 = Q.store_thm (
-    "above_lem_3",
-    `!i l st. EVERY (\x. valid_TEXP x m) l /\ i > w2n (read st FP) - 12
-       ==> EVERY (\x. ~eq_exp st (isM i) x) (MAP conv_exp l)`,
+Theorem above_lem_3:
+     !i l st. EVERY (\x. valid_TEXP x m) l /\ i > w2n (read st FP) - 12
+       ==> EVERY (\x. ~eq_exp st (isM i) x) (MAP conv_exp l)
+Proof
 
    Induct_on `l` THEN RW_TAC list_ss [] THEN
    Cases_on `h` THEN RW_TAC arith_ss [eq_exp_def, valid_MEXP_def, eq_addr_def, addr_of_def,
          conv_exp_def, within_bound_def]
-  );
+QED
 
-val PRE_CALL_SANITY_2' = Q.store_thm (
-    "PRE_CALL_SANITY_2'",
-    `!st. grow_lt (read st SP) (12 + LENGTH l) /\ EVERY (\x.valid_TEXP x m) l
+Theorem PRE_CALL_SANITY_2':
+     !st. grow_lt (read st SP) (12 + LENGTH l) /\ EVERY (\x.valid_TEXP x m) l
        ==>
       let st' = run_cfl (BLK ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list (MAP conv_exp l))) st in
-        (!i. i > w2n (read st SP) - 1 ==> (st '' (isM i) = st' '' (isM i)))`,
+        (!i. i > w2n (read st SP) - 1 ==> (st '' (isM i) = st' '' (isM i)))
+Proof
 
     SIMP_TAC std_ss [FORALL_DSTATE, mov_pointers_def] THEN
     SIMP_TAC std_ss [APPEND, CFL_SEMANTICS_BLK] THEN
@@ -596,47 +596,47 @@ val PRE_CALL_SANITY_2' = Q.store_thm (
         RW_TAC std_ss [POP_LIST_SANITY] THEN
         Q.UNABBREV_TAC `st1` THEN
         FULL_SIMP_TAC finmap_ss [reade_def]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Lemmas bout pre-call processing                                            *)
 (*---------------------------------------------------------------------------------*)
 
-val valid_MEXP_1_saved_regs = Q.store_thm (
-    "valid_MEXP_1_saved_regs",
-    `!m. EVERY (\x. valid_MEXP_1 x m) saved_regs_list`,
+Theorem valid_MEXP_1_saved_regs:
+     !m. EVERY (\x. valid_MEXP_1 x m) saved_regs_list
+Proof
     RW_TAC list_ss [saved_regs_list_def, valid_MEXP_1_def] THEN
     RW_TAC std_ss [valid_exp_1_def, from_reg_index_thm, index_of_reg_def, fp_def, lr_def, ip_def]
-  );
+QED
 
-val PRE_CALL_PASS_ARGUMENTS_LEM_1 = Q.store_thm (
-    "PRE_CALL_PASS_ARGUMENTS_LEM_1",
-    `!st st' k l.
+Theorem PRE_CALL_PASS_ARGUMENTS_LEM_1:
+     !st st' k l.
        locate_ge (read st SP) (k + 13 + LENGTH l + m) /\
         (w2n (read st' SP) = w2n (read st SP) - (k + LENGTH (saved_regs_list ++ l))) ==>
-       grow_lt (read st' SP) (12 + LENGTH l) /\ locate_ge (read st' SP) (m + 1)`,
+       grow_lt (read st' SP) (12 + LENGTH l) /\ locate_ge (read st' SP) (m + 1)
+Proof
 
     RW_TAC list_ss [grow_lt_def, locate_ge_def, saved_regs_list_def] THENL [
       `w2n (read st SP) < dimword (:32)` by METIS_TAC [w2n_lt] THEN
         RW_TAC arith_ss [],
       WORDS_TAC
     ]
-  );
+QED
 
-val PRE_CALL_PASS_ARGUMENTS_LEM_2 = Q.store_thm (
-    "PRE_CALL_PASS_ARGUMENTS_LEM_2",
-    `!x k m i j. locate_ge x (k + m) /\ 0 < m ==>
-         (j + (w2n x - (k + m)) + SUC i = w2n x - k - PRE m + (j + i))`,
+Theorem PRE_CALL_PASS_ARGUMENTS_LEM_2:
+     !x k m i j. locate_ge x (k + m) /\ 0 < m ==>
+         (j + (w2n x - (k + m)) + SUC i = w2n x - k - PRE m + (j + i))
+Proof
     RW_TAC std_ss [locate_ge_def, PRE_SUB1, SUC_ONE_ADD] THEN
     Cases_on `m` THEN
     RW_TAC arith_ss []
-  );
+QED
 
-val EL_APPEND_3 = Q.store_thm (
-    "EL_APPEND_3",
-    `!l1 l2 n. EL (LENGTH l1 + n) (l1 ++ l2) = EL n l2`,
+Theorem EL_APPEND_3:
+     !l1 l2 n. EL (LENGTH l1 + n) (l1 ++ l2) = EL n l2
+Proof
     RW_TAC arith_ss [rich_listTheory.EL_APPEND2]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*   The pre-call processing passes the parameters.                                *)
@@ -661,9 +661,8 @@ val tac3 =
     ;
 
 
-val PRE_CALL_SANITY_3 = Q.store_thm (
-    "PRE_CALL_SANITY_3",
-    ` locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_SANITY_3:
+      locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
@@ -671,7 +670,8 @@ val PRE_CALL_SANITY_3 = Q.store_thm (
               ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list (MAP conv_exp callee_i)))) st in
           (!i. i > w2n (read st SP) ==> (st '' (isM i) = st' '' (isM i))) /\
           (w2n (read st' FP) = w2n (read st SP) - (k + LENGTH callee_i) - 1) /\
-          (w2n (read st' IP) = w2n (read st' FP) + 1)`,
+          (w2n (read st' IP) = w2n (read st' FP) + 1)
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [LET_THM] THEN
@@ -697,18 +697,18 @@ val PRE_CALL_SANITY_3 = Q.store_thm (
            `LENGTH saved_regs_list = 12` by RW_TAC list_ss [saved_regs_list_def] THEN
            FULL_SIMP_TAC list_ss [locate_ge_def]
       ]
-  );
+QED
 
 
-val PRE_CALL_SAVED_REGS_LEM = Q.store_thm (
-    "PRE_CALL_SAVED_REGS_LEM",
-    `!st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_SAVED_REGS_LEM:
+     !st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
          let st' = run_cfl (BLK (MSUB R13 R13 (MC (n2w k))::push_list (saved_regs_list ++ MAP conv_exp caller_i) ++
               ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list (MAP conv_exp callee_i)))) st in
-       !i. i < 12 ==> (st' '' (isM (w2n (read st' FP) - 10 + i)) = st '' (EL i saved_regs_list))`,
+       !i. i < 12 ==> (st' '' (isM (w2n (read st' FP) - 10 + i)) = st '' (EL i saved_regs_list))
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [LET_THM] THEN
@@ -740,22 +740,22 @@ val PRE_CALL_SAVED_REGS_LEM = Q.store_thm (
       IMP_RES_TAC PRE_CALL_PUSH_ARGUMENTS THEN
       Q.UNABBREV_TAC `st'` THEN
       RW_TAC list_ss [rich_listTheory.EL_APPEND1]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Pre-call processing accomplished the argument passing task                 *)
 (*---------------------------------------------------------------------------------*)
 
-val PRE_CALL_PASS_ARGUMENTS_LEM = Q.store_thm (
-    "PRE_CALL_PASS_ARGUMENTS_LEM",
-    `!st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_PASS_ARGUMENTS_LEM:
+     !st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
       !i. i < LENGTH caller_i ==>
           ((run_cfl (BLK (MSUB R13 R13 (MC (n2w k))::push_list (saved_regs_list ++ MAP conv_exp caller_i) ++
               ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list (MAP conv_exp callee_i)))) st) ''
-           (EL i (MAP conv_exp callee_i)) = st '' (EL i (MAP conv_exp caller_i)))`,
+           (EL i (MAP conv_exp callee_i)) = st '' (EL i (MAP conv_exp caller_i)))
+Proof
 
       RW_TAC bool_ss [] THEN
       tac3 THEN
@@ -776,24 +776,24 @@ val PRE_CALL_PASS_ARGUMENTS_LEM = Q.store_thm (
       IMP_RES_TAC PRE_CALL_PUSH_ARGUMENTS THEN
       RW_TAC list_ss [] THEN
       METIS_TAC [EL_APPEND_3, ADD_SYM]
-  );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
 (*      Some Lemmas                                                                *)
 (*---------------------------------------------------------------------------------*)
 
-val MOD_LE = Q.store_thm (
-    "MOD_LE",
-    `!i n. 0 < n ==> i MOD n <= i`,
+Theorem MOD_LE:
+     !i n. 0 < n ==> i MOD n <= i
+Proof
     REPEAT STRIP_TAC THEN
     IMP_RES_TAC (Q.SPECL [`\j. j <= i`,`i`,`n`] MOD_ELIM) THEN
     FULL_SIMP_TAC arith_ss []
-  );
+QED
 
-val locate_ge_lem_3 = Q.store_thm (
-    "locate_ge_lem_3",
-    `!x k.locate_ge x k ==> !i. i <= k ==> (w2n (x - n2w i) = w2n x - i)`,
+Theorem locate_ge_lem_3:
+     !x k.locate_ge x k ==> !i. i <= k ==> (w2n (x - n2w i) = w2n x - i)
+Proof
     REPEAT STRIP_TAC THEN
     IMP_RES_TAC locate_ge_lem_1 THEN
     POP_ASSUM (ASSUME_TAC o Q.SPEC `n2w i:word32`) THEN
@@ -801,18 +801,18 @@ val locate_ge_lem_3 = Q.store_thm (
     `w2n x < dimword (:32)` by RW_TAC arith_ss [w2n_lt] THEN
     `w2n (n2w i:word32) = i` by RW_TAC arith_ss [w2n_n2w] THEN
     METIS_TAC [MOD_LE, LESS_EQ_TRANS]
-  );
+QED
 
-val sub_sp_lem_1 = Q.store_thm (
-    "sub_sp_lem_1",
-    `!st m. locate_ge (read st FP) (12 + m) ==>
+Theorem sub_sp_lem_1:
+     !st m. locate_ge (read st FP) (12 + m) ==>
          let st1 = run_cfl (BLK [MSUB R13 R11 (MC (n2w (12 + m)))]) st in
        (!i. st1 '' isM i = st '' isM i) /\
       (w2n (read st1 FP) = w2n (read st FP)) /\
       (w2n (read st1 IP) = w2n (read st IP)) /\
       (w2n (read st1 SP) = w2n (read st FP) - (12 + m)) /\
       (!l. EVERY (\x.valid_TEXP x m) l ==> !i. i < LENGTH l ==>
-          (st1 '' (EL i (MAP conv_exp l)) = st '' (EL i (MAP conv_exp l))))`,
+          (st1 '' (EL i (MAP conv_exp l)) = st '' (EL i (MAP conv_exp l))))
+Proof
 
    SIMP_TAC std_ss [FORALL_DSTATE, APPEND, CFL_SEMANTICS_BLK] THEN
    tac1 THEN
@@ -827,7 +827,7 @@ val sub_sp_lem_1 = Q.store_thm (
      FULL_SIMP_TAC finmap_ss [tread_def, conv_exp_def, reade_def, read_thm,
          valid_exp_def, valid_regs_lem, fp_def, within_bound_def]
   ]
- );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      An optimization on the implementation of register saving                   *)
@@ -851,11 +851,11 @@ val tac4 = (fn g =>
               SIMP_CONV finmap_ss [write_thm, read_thm, toEXP_def, toMEM_def, toREG_def, index_of_reg_def]))))
              g);
 
-val saved_regs_list_thm_1 = Q.store_thm (
-    "saved_regs_list_thm_1",
-    `!st. locate_ge (read st SP) 12 ==>
+Theorem saved_regs_list_thm_1:
+     !st. locate_ge (read st SP) 12 ==>
       (run_cfl (BLK (push_list (saved_regs_list))) st =
-        run_cfl (BLK [MPUSH 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]]) st)`,
+        run_cfl (BLK [MPUSH 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]]) st)
+Proof
 
   SIMP_TAC std_ss [FORALL_DSTATE, saved_regs_list_def, push_list_def, push_one_def] THEN
   RW_TAC std_ss [APPEND, CFL_SEMANTICS_BLK, from_reg_index_thm, fp_def, ip_def, lr_def] THEN
@@ -866,19 +866,19 @@ val saved_regs_list_thm_1 = Q.store_thm (
   RW_TAC std_ss [GSYM WORD_SUB_PLUS, WORD_ADD_ASSOC] THEN
   IMP_RES_TAC locate_ge_lem_3 THEN
   FULL_SIMP_TAC arith_ss [SP_def, read_thm]
-  );
+QED
 
-val push_list_append = Q.store_thm (
-    "push_list_append",
-    `!l1 l2. push_list (l1 ++ l2) = push_list l2 ++ push_list l1`,
+Theorem push_list_append:
+     !l1 l2. push_list (l1 ++ l2) = push_list l2 ++ push_list l1
+Proof
     Induct_on `l1` THEN RW_TAC list_ss [push_list_def]
-   );
+QED
 
-val saved_regs_list_thm_2 = Q.store_thm (
-    "saved_regs_list_thm_2",
-   `!st l m. locate_ge (read st SP) (k + 12 + LENGTH l) /\ EVERY (\x.valid_MEXP_1 x m) l ==>
+Theorem saved_regs_list_thm_2:
+    !st l m. locate_ge (read st SP) (k + 12 + LENGTH l) /\ EVERY (\x.valid_MEXP_1 x m) l ==>
      (run_cfl (BLK ((MSUB R13 R13 (MC (n2w k))) :: push_list (saved_regs_list ++ l))) st =
-      run_cfl (BLK ((MSUB R13 R13 (MC (n2w k))) :: (APPEND (push_list l) [MPUSH 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]]))) st)`,
+      run_cfl (BLK ((MSUB R13 R13 (MC (n2w k))) :: (APPEND (push_list l) [MPUSH 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]]))) st)
+Proof
 
    RW_TAC std_ss [GSYM APPEND, push_list_append, RUN_CFL_BLK_APPEND] THEN
    `locate_ge (read st SP) (k + LENGTH l)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
@@ -887,7 +887,7 @@ val saved_regs_list_thm_2 = Q.store_thm (
        METIS_TAC [SIMP_RULE std_ss [LET_THM] PRE_CALL_SANITY_1]) THEN
    `locate_ge (read st1 SP) 12`  by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
    RW_TAC std_ss [saved_regs_list_thm_1]
-  );
+QED
 
 val pre_call_2_def = Define `
     pre_call_2 (caller_i, callee_i) k n =
@@ -901,11 +901,11 @@ val pre_call_2_def = Define `
     `;
 
 
-val saved_regs_list_thm_3 = Q.store_thm (
-    "saved_regs_list_thm_3",
-   `!st l k m1 m2. locate_ge (read st SP) (k + 12 + LENGTH caller_i) /\ EVERY (\x.valid_TEXP x m1) caller_i ==>
+Theorem saved_regs_list_thm_3:
+    !st l k m1 m2. locate_ge (read st SP) (k + 12 + LENGTH caller_i) /\ EVERY (\x.valid_TEXP x m1) caller_i ==>
      (run_cfl (BLK (pre_call (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st =
-      run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st)`,
+      run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st)
+Proof
 
    RW_TAC std_ss [pre_call_def, pre_call_2_def] THEN
    IMP_RES_TAC VALID_TEXP_MEXP_1 THEN
@@ -921,15 +921,14 @@ val saved_regs_list_thm_3 = Q.store_thm (
    RW_TAC bool_ss [] THEN NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN
    `locate_ge (read st SP) (k + 12 + LENGTH (MAP conv_exp caller_i))` by METIS_TAC [LENGTH_MAP] THEN
    METIS_TAC [RUN_CFL_BLK_APPEND, saved_regs_list_thm_2]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Main theorems about pre-call processing                                    *)
 (*---------------------------------------------------------------------------------*)
 
-val PRE_CALL_SANITY_THM = Q.store_thm (
-    "PRE_CALL_SANITY_THM",
-    ` locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_SANITY_THM:
+      locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
@@ -937,7 +936,8 @@ val PRE_CALL_SANITY_THM = Q.store_thm (
           (!i. i > w2n (read st SP) ==> (st '' (isM i) = st' '' (isM i))) /\
           (w2n (read st' FP) = w2n (read st SP) - (k + LENGTH callee_i) - 1) /\
           (w2n (read st' IP) = w2n (read st' FP) + 1) /\
-          (w2n (read st' SP) = w2n (read st' FP) - (12 + m2))`,
+          (w2n (read st' SP) = w2n (read st' FP) - (12 + m2))
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [pre_call_def, Once RUN_CFL_BLK_APPEND] THEN
@@ -949,16 +949,16 @@ val PRE_CALL_SANITY_THM = Q.store_thm (
          Q.UNABBREV_TAC `st'` THEN METIS_TAC [SIMP_RULE std_ss [LET_THM] PRE_CALL_SANITY_3, APPEND_ASSOC]) THEN
       `locate_ge (read st' FP) (12 + m2)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       RW_TAC std_ss [LET_THM, SIMP_RULE std_ss [LET_THM] sub_sp_lem_1]
-  );
+QED
 
-val PRE_CALL_SAVED_REGS_THM = Q.store_thm (
-    "PRE_CALL_SAVED_REGS_THM",
-    `!st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_SAVED_REGS_THM:
+     !st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
          let st' =  run_cfl (BLK (pre_call (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st in
-       !i. i < 12 ==> (st' '' (isM (w2n (read st' FP) - 10 + i)) = st '' (EL i saved_regs_list))`,
+       !i. i < 12 ==> (st' '' (isM (w2n (read st' FP) - 10 + i)) = st '' (EL i saved_regs_list))
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [pre_call_def, Once RUN_CFL_BLK_APPEND] THEN
@@ -970,18 +970,18 @@ val PRE_CALL_SAVED_REGS_THM = Q.store_thm (
          Q.UNABBREV_TAC `st'` THEN METIS_TAC [SIMP_RULE std_ss [LET_THM] PRE_CALL_SANITY_3, APPEND_ASSOC]) THEN
       `locate_ge (read st' FP) (12 + m2)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       RW_TAC std_ss [LET_THM, SIMP_RULE std_ss [LET_THM] sub_sp_lem_1]
-  );
+QED
 
 
-val PRE_CALL_PASS_ARGUMENTS_THM = Q.store_thm (
-    "PRE_CALL_PASS_ARGUMENTS_THM",
-    `!st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_PASS_ARGUMENTS_THM:
+     !st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
       !i. i < LENGTH caller_i ==>
           ((run_cfl (BLK (pre_call (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st) ''
-           (EL i (MAP conv_exp callee_i)) = st '' (EL i (MAP conv_exp caller_i)))`,
+           (EL i (MAP conv_exp callee_i)) = st '' (EL i (MAP conv_exp caller_i)))
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [pre_call_def, Once RUN_CFL_BLK_APPEND] THEN
@@ -993,16 +993,15 @@ val PRE_CALL_PASS_ARGUMENTS_THM = Q.store_thm (
          Q.UNABBREV_TAC `st'` THEN METIS_TAC [SIMP_RULE std_ss [LET_THM] PRE_CALL_SANITY_3, APPEND_ASSOC]) THEN
       `locate_ge (read st' FP) (12 + m2)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       RW_TAC std_ss [LET_THM, SIMP_RULE std_ss [LET_THM] sub_sp_lem_1]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Main theorems about pre-call processing                                    *)
 (*      After the optimization on register saving                                  *)
 (*---------------------------------------------------------------------------------*)
 
-val PRE_CALL_SANITY_THM_2 = Q.store_thm (
-    "PRE_CALL_SANITY_THM_2",
-    ` locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_SANITY_THM_2:
+      locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
@@ -1010,41 +1009,42 @@ val PRE_CALL_SANITY_THM_2 = Q.store_thm (
           (!i. i > w2n (read st SP) ==> (st '' (isM i) = st' '' (isM i))) /\
           (w2n (read st' FP) = w2n (read st SP) - (k + LENGTH callee_i) - 1) /\
           (w2n (read st' IP) = w2n (read st' FP) + 1) /\
-          (w2n (read st' SP) = w2n (read st' FP) - (12 + m2))`,
+          (w2n (read st' SP) = w2n (read st' FP) - (12 + m2))
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       `locate_ge (read st SP) (k + 12 + LENGTH caller_i)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       METIS_TAC [saved_regs_list_thm_3, PRE_CALL_SANITY_THM]
-  );
+QED
 
-val PRE_CALL_SAVED_REGS_THM_2 = Q.store_thm (
-    "PRE_CALL_SAVED_REGS_THM_2",
-    `!st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_SAVED_REGS_THM_2:
+     !st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
          let st' =  run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st in
-       !i. i < 12 ==> (st' '' (isM (w2n (read st' FP) - 10 + i)) = st '' (EL i saved_regs_list))`,
+       !i. i < 12 ==> (st' '' (isM (w2n (read st' FP) - 10 + i)) = st '' (EL i saved_regs_list))
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       `locate_ge (read st SP) (k + 12 + LENGTH caller_i)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       METIS_TAC [saved_regs_list_thm_3, PRE_CALL_SAVED_REGS_THM]
-  );
+QED
 
-val PRE_CALL_PASS_ARGUMENTS_THM_2 = Q.store_thm (
-    "PRE_CALL_PASS_ARGUMENTS_THM_2",
-    `!st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_PASS_ARGUMENTS_THM_2:
+     !st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
       !i. i < LENGTH caller_i ==>
           ((run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st) ''
-           (EL i (MAP conv_exp callee_i)) = st '' (EL i (MAP conv_exp caller_i)))`,
+           (EL i (MAP conv_exp callee_i)) = st '' (EL i (MAP conv_exp caller_i)))
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       `locate_ge (read st SP) (k + 12 + LENGTH caller_i)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       METIS_TAC [saved_regs_list_thm_3, PRE_CALL_PASS_ARGUMENTS_THM]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 
@@ -1066,11 +1066,11 @@ val post_call_def = Define `
 (*      The callee pushed results into the stack                                   *)
 (*---------------------------------------------------------------------------------*)
 
-val LEGAL_PUSH_EXP_LEM_2 = Q.store_thm (
-  "LEGAL_PUSH_EXP_LEM_2",
-  `!st l m. w2n (read st FP) + LENGTH l < w2n (read st SP) /\ EVERY (\x.valid_MEXP x m) l
+Theorem LEGAL_PUSH_EXP_LEM_2:
+   !st l m. w2n (read st FP) + LENGTH l < w2n (read st SP) /\ EVERY (\x.valid_MEXP x m) l
        ==>
-     (!i. i < LENGTH l ==> legal_push_exp st (EL i l) (PRE (LENGTH l) - i))`,
+     (!i. i < LENGTH l ==> legal_push_exp st (EL i l) (PRE (LENGTH l) - i))
+Proof
 
   RW_TAC std_ss [legal_push_exp_def] THENL [
     FULL_SIMP_TAC std_ss [EVERY_EL] THEN RES_TAC THEN
@@ -1086,16 +1086,16 @@ val LEGAL_PUSH_EXP_LEM_2 = Q.store_thm (
    IMP_RES_TAC VALID_MEXP_exp THEN
       METIS_TAC [EVERY_EL, valid_exp_thm]
    ]
-  );
+QED
 
 
-val POST_CALL_PUSH_RESULTS = Q.store_thm (
-    "POST_CALL_PUSH_RESULTS",
-    `!st l m k. grow_lt (read st IP) (LENGTH l) /\ EVERY (\x.valid_MEXP x m) l /\
+Theorem POST_CALL_PUSH_RESULTS:
+     !st l m k. grow_lt (read st IP) (LENGTH l) /\ EVERY (\x.valid_MEXP x m) l /\
        (w2n (read st IP) = w2n (read st FP) + 1) ==>
       !i. i < LENGTH l ==>
          ((run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH l))) :: push_list l)) st) ''
-           (isM (w2n (read st FP) + 1 + SUC i)) = st '' (EL i l))`,
+           (isM (w2n (read st FP) + 1 + SUC i)) = st '' (EL i l))
+Proof
 
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     RW_TAC std_ss [CFL_SEMANTICS_BLK] THEN
@@ -1117,24 +1117,24 @@ val POST_CALL_PUSH_RESULTS = Q.store_thm (
     Q.UNABBREV_TAC `st1` THEN
     Cases_on `EL i l` THEN
     FULL_SIMP_TAC finmap_ss [reade_def, read_thm, fp_def, valid_exp_3_def, valid_MEXP_1_def, valid_exp_1_def]
-  );
+QED
 
-val below_lem_1 = Q.store_thm (
-  "below_lem_1",
-  `!st n. i <= w2n (read st SP) - n
-       ==> ~addr_in_range st (isM i) (w2n (read st SP),w2n (read st SP) - n)`,
+Theorem below_lem_1:
+   !st n. i <= w2n (read st SP) - n
+       ==> ~addr_in_range st (isM i) (w2n (read st SP),w2n (read st SP) - n)
+Proof
   RW_TAC arith_ss [addr_in_range_def, in_range_def, addr_of_def]
-  );
+QED
 
-val POST_CALL_SANITY_1 = Q.store_thm (
-    "POST_CALL_SANITY_1",
-    `!st l m k. grow_lt (read st IP) (LENGTH l) /\ EVERY (\x.valid_MEXP x m) l /\
+Theorem POST_CALL_SANITY_1:
+     !st l m k. grow_lt (read st IP) (LENGTH l) /\ EVERY (\x.valid_MEXP x m) l /\
        (w2n (read st IP) = w2n (read st FP) + 1)
        ==>
       let st' = run_cfl (BLK ((MADD R13 R12 (MC (n2w (LENGTH l)))) :: push_list l)) st in
         (!i. (i > w2n (read st IP) + LENGTH l \/ i <= w2n (read st IP)) ==> (st '' (isM i) = st' '' (isM i))) /\
         (w2n (read st' IP) = w2n (read st IP)) /\ (w2n (read st' FP) = w2n (read st FP)) /\
-        (w2n (read st' SP) = w2n (read st IP))`,
+        (w2n (read st' SP) = w2n (read st IP))
+Proof
 
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     SIMP_TAC std_ss [CFL_SEMANTICS_BLK] THEN
@@ -1180,7 +1180,7 @@ val POST_CALL_SANITY_1 = Q.store_thm (
         Q.UNABBREV_TAC `st1` THEN
         FULL_SIMP_TAC finmap_ss [SP_def, FP_def, read_thm]
     ]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Registers saved in the stack are restored                                  *)
@@ -1197,10 +1197,9 @@ val POP_TAC =
     SIMP_TAC finmap_ss [write_thm];
 
 
-val EVAL_POP_SAVED_REGS_LIST = Q.store_thm (
-    "EVAL_POP_SAVED_REGS_LIST",
+Theorem EVAL_POP_SAVED_REGS_LIST:
 
-   `!regs mem. locate_ge (read (regs,mem) FP) 11 ==>
+    !regs mem. locate_ge (read (regs,mem) FP) 11 ==>
       (run_cfl (BLK ([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) (regs,mem) =
      (regs |+ (0,mem ' (w2n (regs ' 11) - 10)) |+
      (1,mem ' (w2n (regs ' 11) - 9)) |+ (2,mem ' (w2n (regs ' 11) - 8)) |+
@@ -1208,7 +1207,8 @@ val EVAL_POP_SAVED_REGS_LIST = Q.store_thm (
      (5,mem ' (w2n (regs ' 11) - 5)) |+ (6,mem ' (w2n (regs ' 11) - 4)) |+
      (7,mem ' (w2n (regs ' 11) - 3)) |+ (8,mem ' (w2n (regs ' 11) - 2)) |+
      (11,mem ' (w2n (regs ' 11) - 1)) |+ (12,mem ' (w2n (regs ' 11))) |+
-     (13,regs ' 11 + 1w) |+ (14,mem ' (w2n (regs ' 11) + 1)),mem))`,
+     (13,regs ' 11 + 1w) |+ (14,mem ' (w2n (regs ' 11) + 1)),mem))
+Proof
 
   RW_TAC std_ss [APPEND, CFL_SEMANTICS_BLK, from_reg_index_thm, fp_def, ip_def, lr_def] THEN
   NTAC 2 tac4 THEN POP_TAC THEN
@@ -1224,12 +1224,11 @@ val EVAL_POP_SAVED_REGS_LIST = Q.store_thm (
   `w2n (11w:word32) <= 11` by WORDS_TAC THEN
   RW_TAC std_ss [] THEN WORDS_TAC THEN
   FULL_SIMP_TAC arith_ss [locate_ge_def]
- );
+QED
 
-val EVAL_POP_SAVED_REGS_LIST_2 = Q.store_thm (
-    "EVAL_POP_SAVED_REGS_LIST_2",
+Theorem EVAL_POP_SAVED_REGS_LIST_2:
 
-   `!regs mem. locate_ge (read (regs,mem) FP) 11 ==>
+    !regs mem. locate_ge (read (regs,mem) FP) 11 ==>
       (run_cfl (BLK ([MSUB R13 R11 (MC 11w)] ++ pop_list saved_regs_list)) (regs,mem) =
      (regs |+ (0,mem ' (w2n (regs ' 11) - 10)) |+
      (1,mem ' (w2n (regs ' 11) - 9)) |+ (2,mem ' (w2n (regs ' 11) - 8)) |+
@@ -1237,7 +1236,8 @@ val EVAL_POP_SAVED_REGS_LIST_2 = Q.store_thm (
      (5,mem ' (w2n (regs ' 11) - 5)) |+ (6,mem ' (w2n (regs ' 11) - 4)) |+
      (7,mem ' (w2n (regs ' 11) - 3)) |+ (8,mem ' (w2n (regs ' 11) - 2)) |+
      (11,mem ' (w2n (regs ' 11) - 1)) |+ (12,mem ' (w2n (regs ' 11))) |+
-     (13,regs ' 11 + 1w) |+ (14,mem ' (w2n (regs ' 11) + 1)),mem))`,
+     (13,regs ' 11 + 1w) |+ (14,mem ' (w2n (regs ' 11) + 1)),mem))
+Proof
 
   SIMP_TAC std_ss [FORALL_DSTATE, saved_regs_list_def, pop_list_def, pop_one_def] THEN
   RW_TAC std_ss [APPEND, CFL_SEMANTICS_BLK, from_reg_index_thm, fp_def, ip_def, lr_def] THEN
@@ -1256,17 +1256,17 @@ val EVAL_POP_SAVED_REGS_LIST_2 = Q.store_thm (
   `w2n (11w:word32) <= 11` by WORDS_TAC THEN
   RW_TAC std_ss [] THEN WORDS_TAC THEN
   FULL_SIMP_TAC arith_ss [locate_ge_def]
- );
+QED
 
-val POP_SAVED_REGS_LIST_SANITY_1 = Q.store_thm (
-    "POP_SAVED_REGS_LIST_SANITY_1",
-   `!st. locate_ge (read st FP) 11 /\ grow_lt (read st FP) 1 ==>
+Theorem POP_SAVED_REGS_LIST_SANITY_1:
+    !st. locate_ge (read st FP) 11 /\ grow_lt (read st FP) 1 ==>
       let st' = run_cfl (BLK ([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) st in
         (!i. st' '' (isM i) = st '' (isM i)) /\
         (w2n (read st' IP) = w2n (st '' (isM (w2n (read st FP))))) /\
         (w2n (read st' FP) = w2n (st '' (isM (w2n (read st FP) - 1)))) /\
         (w2n (read st' SP) = w2n (read st FP) + 1) /\
-        (w2n (read st' SP) = w2n (read st FP + 1w))`,
+        (w2n (read st' SP) = w2n (read st FP + 1w))
+Proof
 
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -1274,17 +1274,17 @@ val POP_SAVED_REGS_LIST_SANITY_1 = Q.store_thm (
     IMP_RES_TAC grow_lt_lem_2 THEN
     FULL_SIMP_TAC std_ss [FP_def, read_thm] THEN
     RW_TAC finmap_ss [LET_THM, reade_def, read_thm, FP_def, IP_def, SP_def]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      The caller pops the results out of the stack                               *)
 (*---------------------------------------------------------------------------------*)
 
-val LEGAL_POP_EXP_LEM_2 = Q.store_thm (
-  "LEGAL_POP_EXP_LEM_2",
-  `!st l m. w2n (read st SP) + LENGTH (MAP conv_exp l) + (12 + m) <= w2n (read st FP) /\ EVERY (\x.valid_TEXP x m) l
+Theorem LEGAL_POP_EXP_LEM_2:
+   !st l m. w2n (read st SP) + LENGTH (MAP conv_exp l) + (12 + m) <= w2n (read st FP) /\ EVERY (\x.valid_TEXP x m) l
        ==>
-     EVERY (\x.~addr_in_range st x (w2n (read st SP) + LENGTH (MAP conv_exp l), w2n (read st SP))) (MAP conv_exp l)`,
+     EVERY (\x.~addr_in_range st x (w2n (read st SP) + LENGTH (MAP conv_exp l), w2n (read st SP))) (MAP conv_exp l)
+Proof
 
   REPEAT STRIP_TAC THEN
   IMP_RES_TAC VALID_EXP_LEM THEN
@@ -1294,17 +1294,17 @@ val LEGAL_POP_EXP_LEM_2 = Q.store_thm (
   FULL_SIMP_TAC std_ss [conv_exp_def, addr_in_range_def, in_range_def, addr_of_def, valid_exp_def, valid_TEXP_def,
                valid_regs_lem, within_bound_def] THEN
   RW_TAC arith_ss []
-  );
+QED
 
-val POST_CALL_POP_RESULTS = Q.store_thm (
-    "POST_CALL_POP_RESULTS",
-    `!st l m. locate_ge (read st FP + 1w) 12 /\
+Theorem POST_CALL_POP_RESULTS:
+     !st l m. locate_ge (read st FP + 1w) 12 /\
             w2n (read st FP) + 1 + LENGTH l + (12 + m) <= w2n (st '' (isM (w2n (read st FP) - 1))) /\
             EVERY notC l /\ unique_list l /\ EVERY (\x.valid_TEXP x m) l /\ (MAP conv_exp l = l')
        ==>
     !i. i < LENGTH l' ==>
      ((run_cfl (BLK ([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]] ++ pop_list l')) st) ''
-          (EL i l') = st '' (isM ((w2n (read st FP) + 1) + SUC i)))`,
+          (EL i l') = st '' (isM ((w2n (read st FP) + 1) + SUC i)))
+Proof
 
     RW_TAC std_ss [APPEND, Once RUN_CFL_BLK_APPEND] THEN
     Q.ABBREV_TAC `st1 = run_cfl (BLK (MSUB R13 R11 (MC 11w)::[MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) st` THEN
@@ -1332,18 +1332,17 @@ val POST_CALL_POP_RESULTS = Q.store_thm (
     IMP_RES_TAC notC_LEM THEN
     IMP_RES_TAC POP_LIST_FUNCTIONALITY THEN NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN
     FULL_SIMP_TAC std_ss [EVERY_EL]
-  );
+QED
 
-val word_add_lem_1 = Q.store_thm (
-    "word_add_lem_1",
-    `!x y k. (w2n x = w2n y + k) ==> (x:word32 = y + n2w k)`,
+Theorem word_add_lem_1:
+     !x y k. (w2n x = w2n y + k) ==> (x:word32 = y + n2w k)
+Proof
        METIS_TAC [word_add_n2w, n2w_w2n]
-    );
+QED
 
-val POST_CALL_PASS_RESULTS_LEM = Q.store_thm (
-    "POST_CALL_PASS_RESULTS_LEM",
+Theorem POST_CALL_PASS_RESULTS_LEM:
 
-    `!st l m1 m2 k. (w2n (read st IP) = w2n (read st FP) + 1) /\ locate_ge (read st IP) 12 /\
+     !st l m1 m2 k. (w2n (read st IP) = w2n (read st FP) + 1) /\ locate_ge (read st IP) 12 /\
           w2n (read st IP) + LENGTH caller_o + (12 + m1) <= w2n (st '' isM (w2n (read st FP) - 1)) /\
           EVERY (\x. valid_TEXP x m2) callee_o /\
           EVERY notC caller_o /\ unique_list caller_o /\ EVERY (\x.valid_TEXP x m1) caller_o /\
@@ -1353,7 +1352,8 @@ val POST_CALL_PASS_RESULTS_LEM = Q.store_thm (
          ((run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH (MAP conv_exp callee_o)))) :: push_list (MAP conv_exp callee_o)
              ++ ([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]] ++
             pop_list (MAP conv_exp caller_o)))) st) '' (EL i (MAP conv_exp caller_o)) =
-          st '' (EL i (MAP conv_exp callee_o)))`,
+          st '' (EL i (MAP conv_exp callee_o)))
+Proof
 
       RW_TAC bool_ss [] THEN
       REWRITE_TAC [Once RUN_CFL_BLK_APPEND] THEN
@@ -1377,16 +1377,16 @@ val POST_CALL_PASS_RESULTS_LEM = Q.store_thm (
       FULL_SIMP_TAC std_ss [] THEN NTAC 5 (POP_ASSUM (K ALL_TAC)) THEN
       Q.UNABBREV_TAC `st1` THEN
       METIS_TAC [POST_CALL_PUSH_RESULTS, LENGTH_MAP]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Status after the caller restores pops results out                          *)
 (*---------------------------------------------------------------------------------*)
 
-val eq_exp_lem_1 = Q.store_thm (
-    "eq_exp_lem_1",
-   `!e l st m. ~(MEM e l) /\ valid_TEXP e m /\ locate_ge (read st FP) (12 + m) /\ EVERY (\x.valid_TEXP x m) l ==>
-         EVERY (\x. ~eq_exp st (conv_exp e) x) (MAP conv_exp l)`,
+Theorem eq_exp_lem_1:
+    !e l st m. ~(MEM e l) /\ valid_TEXP e m /\ locate_ge (read st FP) (12 + m) /\ EVERY (\x.valid_TEXP x m) l ==>
+         EVERY (\x. ~eq_exp st (conv_exp e) x) (MAP conv_exp l)
+Proof
 
     RW_TAC std_ss [EVERY_EL, LENGTH_MAP, rich_listTheory.EL_MAP, MEM_EL] THEN
     REPEAT (Q.PAT_ASSUM `!n.k` (ASSUME_TAC o Q.SPEC `n`)) THEN RW_TAC std_ss [] THEN
@@ -1399,7 +1399,7 @@ val eq_exp_lem_1 = Q.store_thm (
       `n'' + 12 <= w2n (read st FP) /\ n' + 12 <= w2n (read st FP)` by RW_TAC arith_ss [] THEN
       FULL_SIMP_TAC arith_ss [SUB_CANCEL]
     ]
-  );
+QED
 
 val tac5 =
     Q.ABBREV_TAC `st1 = run_cfl (BLK (MSUB R13 R11 (MC 11w)::[MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) st` THEN
@@ -1417,29 +1417,29 @@ val tac5 =
     `w2n (read st1 SP) + LENGTH (MAP conv_exp l) + (12 + m) <= w2n (read st1 FP)` by METIS_TAC [LENGTH_MAP]
     ;
 
-val VALID_TEXP_MEXP_SINGLE = Q.store_thm (
-   "VALID_TEXP_MEXP_SINGLE",
-   `!e m. valid_TEXP e m ==> valid_MEXP (conv_exp e) m`,
+Theorem VALID_TEXP_MEXP_SINGLE:
+    !e m. valid_TEXP e m ==> valid_MEXP (conv_exp e) m
+Proof
    Cases_on `e` THEN RW_TAC arith_ss [conv_exp_def,valid_exp_def,valid_MEXP_def,valid_TEXP_def, within_bound_def] THEN
    Cases_on `T'` THEN RW_TAC std_ss [valid_exp_1_def, data_reg_index_def, valid_regs_def,
        from_reg_index_thm, index_of_reg_def]
-  );
+QED
 
-val VALID_MEXP_exp_SINGLE = Q.store_thm (
-   "VALID_MEXP_exp_SINGLE",
-   `!e m. valid_MEXP e m ==> valid_exp e`,
+Theorem VALID_MEXP_exp_SINGLE:
+    !e m. valid_MEXP e m ==> valid_exp e
+Proof
    Cases_on `e` THEN RW_TAC arith_ss [conv_exp_def,valid_exp_def, valid_MEXP_def]
-  );
+QED
 
-val eval_saved_regs_list_lem = Q.store_thm (
-   "eval_saved_regs_list_lem",
-   `!x. locate_ge x 11 /\ (!i. i < 12 ==> (st '' isM (w2n (x:word32) - 10 + i) = st0 '' EL i saved_regs_list)) ==>
+Theorem eval_saved_regs_list_lem:
+    !x. locate_ge x 11 /\ (!i. i < 12 ==> (st '' isM (w2n (x:word32) - 10 + i) = st0 '' EL i saved_regs_list)) ==>
      (st '' isM (w2n x + 1) = st0 '' isR lr) /\ (st '' isM (w2n x) = st0 '' isR ip) /\
      (st '' isM (w2n x - 1) = st0 '' isR fp) /\ (st '' isM (w2n x - 2) = st0 '' isR 8) /\
      (st '' isM (w2n x - 3) = st0 '' isR 7) /\ (st '' isM (w2n x - 4) = st0 '' isR 6) /\
      (st '' isM (w2n x - 5) = st0 '' isR 5) /\ (st '' isM (w2n x - 6) = st0 '' isR 4) /\
      (st '' isM (w2n x - 7) = st0 '' isR 3) /\ (st '' isM (w2n x - 8) = st0 '' isR 2) /\
-     (st '' isM (w2n x - 9) = st0 '' isR 1) /\ (st '' isM (w2n x - 10) = st0 '' isR 0)`,
+     (st '' isM (w2n x - 9) = st0 '' isR 1) /\ (st '' isM (w2n x - 10) = st0 '' isR 0)
+Proof
 
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    `0 < 12 /\ 1 < 12 /\ 2 < 12 /\ 3 < 12 /\ 4 < 12 /\ 5 < 12 /\ 6 < 12 /\ 7 < 12 /\ 8 < 12 /\ 9 < 12 /\ 10 < 12 /\
@@ -1448,12 +1448,11 @@ val eval_saved_regs_list_lem = Q.store_thm (
    FULL_SIMP_TAC list_ss [saved_regs_list_def, locate_ge_def] THEN
    `~(w2n (x:word32) <= 10)` by RW_TAC arith_ss [] THEN
    FULL_SIMP_TAC arith_ss [SUB_RIGHT_ADD]
-  );
+QED
 
-val POST_CALL_SANITY_2 = Q.store_thm (
-    "POST_CALL_SANITY_2",
+Theorem POST_CALL_SANITY_2:
 
-    `!st0 st e l m.
+     !st0 st e l m.
       locate_ge (read st FP + 1w) 12 /\
       w2n (read st FP) + 1 + LENGTH l + (12 + m) <= w2n (st '' (isM (w2n (read st FP) - 1))) /\
       (!i. i < 12 ==> (st '' (isM (w2n (read st FP) - 10 + i)) = st0 '' (EL i saved_regs_list)))
@@ -1461,7 +1460,8 @@ val POST_CALL_SANITY_2 = Q.store_thm (
        let st' = run_cfl (BLK (([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]]))) st in
         (!i. st' '' isM i = st '' isM i) /\
         (w2n (read st' FP) = w2n (read st0 FP)) /\ (w2n (read st' IP) = w2n (read st0 IP)) /\
-        (w2n (read st' SP) = w2n (read st FP) + 1)`,
+        (w2n (read st' SP) = w2n (read st FP) + 1)
+Proof
 
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     SIMP_TAC std_ss [APPEND] THEN
@@ -1474,12 +1474,11 @@ val POST_CALL_SANITY_2 = Q.store_thm (
     `(st '' isM (w2n x) = st0 '' isR ip) /\ (st '' isM (w2n x - 1) = st0 '' isR fp)` by
         METIS_TAC [eval_saved_regs_list_lem] THEN
     FULL_SIMP_TAC std_ss [reade_def, read_thm, FP_def, IP_def, fp_def, ip_def]
-  );
+QED
 
-val POST_CALL_SANITY_3 = Q.store_thm (
-    "POST_CALL_SANITY_3",
+Theorem POST_CALL_SANITY_3:
 
-    `!st0 st e l m.
+     !st0 st e l m.
       locate_ge (read st FP + 1w) 12 /\
       w2n (read st FP) + 1 + LENGTH l + (12 + m) <= w2n (st '' (isM (w2n (read st FP) - 1))) /\
       EVERY notC l /\ unique_list l /\ EVERY (\x.valid_TEXP x m) l /\ (MAP conv_exp l = l') /\
@@ -1488,7 +1487,8 @@ val POST_CALL_SANITY_3 = Q.store_thm (
        let st' = run_cfl (BLK (([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]] ++ pop_list l'))) st in
         (!i. i > w2n (read st0 FP) - 12 ==> (st '' isM i = st' '' isM i)) /\
         (w2n (read st' FP) = w2n (read st0 FP)) /\ (w2n (read st' IP) = w2n (read st0 IP)) /\
-        (w2n (read st' SP) = w2n (read st FP) + 1 + LENGTH l)`,
+        (w2n (read st' SP) = w2n (read st FP) + 1 + LENGTH l)
+Proof
 
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     SIMP_TAC std_ss [APPEND, Once RUN_CFL_BLK_APPEND] THEN
@@ -1509,12 +1509,11 @@ val POST_CALL_SANITY_3 = Q.store_thm (
         Q.UNABBREV_TAC `st1` THEN
         METIS_TAC [rich_listTheory.CONS_APPEND]
     ]
-  );
+QED
 
-val POST_CALL_SANITY_4 = Q.store_thm (
-    "POST_CALL_SANITY_4",
+Theorem POST_CALL_SANITY_4:
 
-    `!st0 st e l m.
+     !st0 st e l m.
       locate_ge (read st FP + 1w) 12 /\
       w2n (read st FP) + 1 + LENGTH l + (12 + m) <= w2n (st '' (isM (w2n (read st FP) - 1))) /\
       valid_TEXP e m /\ ~(MEM e l) /\
@@ -1523,7 +1522,8 @@ val POST_CALL_SANITY_4 = Q.store_thm (
       (!n. n < m ==> (st '' (isM (w2n (read st0 FP) - (12 + n)))  = st0 '' (isM (w2n (read st0 FP) - (12 + n)))))
        ==>
       ((run_cfl (BLK (([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]] ++ pop_list l'))) st) ''
-          (conv_exp e) =  st0 '' (conv_exp e))`,
+          (conv_exp e) =  st0 '' (conv_exp e))
+Proof
 
     RW_TAC std_ss [APPEND, Once RUN_CFL_BLK_APPEND] THEN
     `w2n (read (run_cfl (BLK (MSUB R13 R11 (MC 11w)::[MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) st) FP) = w2n(read st0 FP)`
@@ -1555,12 +1555,11 @@ val POST_CALL_SANITY_4 = Q.store_thm (
           (SIMP_TAC std_ss [FORALL_DSTATE, read_thm, reade_def, fp_def, FP_def, ADD_SYM]) THEN
         FULL_SIMP_TAC std_ss [] THEN METIS_TAC [ADD_SYM]
    ]
- );
+QED
 
-val POST_CALL_RESTORED_REGS_LEM = Q.store_thm (
-    "POST_CALL_RESTORED_REGS_LEM",
+Theorem POST_CALL_RESTORED_REGS_LEM:
 
-    `!st l m1 m2 e. (w2n (read st IP) = w2n (read st FP) + 1) /\ locate_ge (read st IP) 12 /\
+     !st l m1 m2 e. (w2n (read st IP) = w2n (read st FP) + 1) /\ locate_ge (read st IP) 12 /\
           w2n (read st IP) + LENGTH caller_o + (12 + m1) <= w2n (st '' isM (w2n (read st FP) - 1)) /\
          (!i. i < 12 ==> (st '' (isM (w2n (read st FP) - 10 + i)) = st0 '' (EL i saved_regs_list))) /\
          (!n. n < m1 ==> (st '' (isM (w2n (read st0 FP) - (12 + n))) = st0 '' (isM (w2n (read st0 FP) - (12 + n))))) /\
@@ -1571,7 +1570,8 @@ val POST_CALL_RESTORED_REGS_LEM = Q.store_thm (
        ==>
          ((run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH (MAP conv_exp callee_o)))) :: push_list (MAP conv_exp callee_o)
            ++ ([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]] ++ pop_list (MAP conv_exp caller_o))))
-           st) '' (conv_exp e) = st0 '' (conv_exp e))`,
+           st) '' (conv_exp e) = st0 '' (conv_exp e))
+Proof
 
       RW_TAC bool_ss [] THEN
       REWRITE_TAC [Once RUN_CFL_BLK_APPEND] THEN
@@ -1601,12 +1601,11 @@ val POST_CALL_RESTORED_REGS_LEM = Q.store_thm (
       NTAC 6 (POP_ASSUM MP_TAC) THEN NTAC 7 (POP_ASSUM (K ALL_TAC)) THEN
       NTAC 8 (POP_ASSUM MP_TAC) THEN NTAC 2 (POP_ASSUM (K ALL_TAC)) THEN REPEAT STRIP_TAC THEN
       METIS_TAC [POST_CALL_SANITY_4]
-  );
+QED
 
-val POST_CALL_SANITY_LEM = Q.store_thm (
-    "POST_CALL_SANITY_LEM",
+Theorem POST_CALL_SANITY_LEM:
 
-    `!st l m1 m2 e. (w2n (read st IP) = w2n (read st FP) + 1) /\ locate_ge (read st IP) 12 /\
+     !st l m1 m2 e. (w2n (read st IP) = w2n (read st FP) + 1) /\ locate_ge (read st IP) 12 /\
           w2n (read st IP) + LENGTH caller_o + (12 + m1) <= w2n (st '' isM (w2n (read st FP) - 1)) /\
           w2n (read st0 FP) - 12 >= w2n (read st IP) + LENGTH caller_o /\
           (!i. i < 12 ==> (st '' (isM (w2n (read st FP) - 10 + i)) = st0 '' (EL i saved_regs_list))) /\
@@ -1618,7 +1617,8 @@ val POST_CALL_SANITY_LEM = Q.store_thm (
       in
         (!i. i > w2n (read st0 FP) - 12 ==> (st '' isM i = st' '' isM i)) /\
         (w2n (read st' FP) = w2n (read st0 FP)) /\ (w2n (read st' IP) = w2n (read st0 IP)) /\
-        (w2n (read st' SP) = w2n (read st FP) + 1 + LENGTH caller_o)`,
+        (w2n (read st' SP) = w2n (read st FP) + 1 + LENGTH caller_o)
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       REWRITE_TAC [Once RUN_CFL_BLK_APPEND] THEN
@@ -1647,7 +1647,7 @@ val POST_CALL_SANITY_LEM = Q.store_thm (
       NTAC 5 (POP_ASSUM MP_TAC) THEN REPEAT (POP_ASSUM (K ALL_TAC)) THEN REPEAT STRIP_TAC THEN
       IMP_RES_TAC POST_CALL_SANITY_3 THEN NTAC 60 (POP_ASSUM (K ALL_TAC)) THEN
       FULL_SIMP_TAC std_ss [LET_THM]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Main theorems about post-call processing                                   *)
@@ -1663,15 +1663,15 @@ val valid_post_call_def = Define `
      EVERY (\x. valid_TEXP x m1) caller_o /\ (LENGTH callee_o = LENGTH caller_o)`;
 
 
-val POST_CALL_SANITY_THM = Q.store_thm (
-    "POST_CALL_SANITY_THM",
-    `!st st0 m1 m2 caller_o callee_o.
+Theorem POST_CALL_SANITY_THM:
+     !st st0 m1 m2 caller_o callee_o.
      valid_post_call (st0,st) (m1,m2) (callee_o,caller_o)
        ==>
         let st' = run_cfl (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1)) st in
      (!i. i > w2n (read st0 FP) - 12 ==> (st '' isM i = st' '' isM i)) /\
      (w2n (read st' FP) = w2n (read st0 FP)) /\ (w2n (read st' IP) = w2n (read st0 IP)) /\
-     (w2n (read st' SP) = w2n (read st0 FP) - (12 + m1))`,
+     (w2n (read st' SP) = w2n (read st0 FP) - (12 + m1))
+Proof
 
       REPEAT GEN_TAC THEN REWRITE_TAC [valid_post_call_def] THEN STRIP_TAC THEN
       `w2n (read st0 FP) - 12 >= w2n (read st IP) + LENGTH caller_o` by RW_TAC arith_ss [] THEN
@@ -1687,17 +1687,17 @@ val POST_CALL_SANITY_THM = Q.store_thm (
 
       `locate_ge (read st1 FP) (12 + m1)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       RW_TAC std_ss [LET_THM, SIMP_RULE std_ss [LET_THM] sub_sp_lem_1]
-  );
+QED
 
-val POST_CALL_PASS_RESULTS_THM = Q.store_thm (
-    "POST_CALL_PASS_RESULTS_THM",
+Theorem POST_CALL_PASS_RESULTS_THM:
 
-    `!st m1 m2 caller_o callee_o.
+     !st m1 m2 caller_o callee_o.
        valid_post_call (st0,st) (m1,m2) (callee_o,caller_o)
        ==>
         !i. i < LENGTH caller_o ==>
         (run_cfl (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1)) st ''
-        EL i (MAP conv_exp caller_o) = st '' EL i (MAP conv_exp callee_o))`,
+        EL i (MAP conv_exp caller_o) = st '' EL i (MAP conv_exp callee_o))
+Proof
 
       REPEAT GEN_TAC THEN REWRITE_TAC [valid_post_call_def] THEN STRIP_TAC THEN
       `w2n (read st0 FP) - 12 >= w2n (read st IP) + LENGTH caller_o` by RW_TAC arith_ss [] THEN
@@ -1715,18 +1715,18 @@ val POST_CALL_PASS_RESULTS_THM = Q.store_thm (
 
       `locate_ge (read st1 FP) (12 + m1)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       RW_TAC std_ss [LET_THM, SIMP_RULE std_ss [LET_THM] sub_sp_lem_1]
-  );
+QED
 
-val POST_CALL_RESTORED_REGS_THM = Q.store_thm (
-    "POST_CALL_RESTORED_REGS_THM",
+Theorem POST_CALL_RESTORED_REGS_THM:
 
-    `!st m1 m2 caller_o callee_o.
+     !st m1 m2 caller_o callee_o.
      valid_post_call (st0,st) (m1,m2) (callee_o,caller_o) /\
      (!n. n < m1 ==> (st '' isM (w2n (read st0 FP) - (12 + n)) = st0 '' isM (w2n (read st0 FP) - (12 + n)))) /\
      ~MEM e caller_o /\ valid_TEXP e m1
        ==>
         (run_cfl (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1)) st ''
-        (conv_exp e) = st0 '' (conv_exp e))`,
+        (conv_exp e) = st0 '' (conv_exp e))
+Proof
 
       REPEAT GEN_TAC THEN REWRITE_TAC [valid_post_call_def] THEN STRIP_TAC THEN
       SIMP_TAC std_ss [post_call_def, Once RUN_CFL_BLK_APPEND] THEN
@@ -1744,7 +1744,7 @@ val POST_CALL_RESTORED_REGS_THM = Q.store_thm (
       Cases_on `e` THEN
       FULL_SIMP_TAC finmap_ss [valid_TEXP_def, conv_exp_def, reade_def, read_thm, fp_def] THEN
       Cases_on `T'` THEN FULL_SIMP_TAC std_ss [data_reg_index_def]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Lemmas for proving main theorems about function calls                      *)
@@ -1761,43 +1761,42 @@ val status_intact_def = Define `
         same_fp_ip_sp st1 st0 /\
         (!i. i > w2n (read st0 FP) - 12 ==> (st1 '' isM i = st0 '' isM i))`;
 
-val PRE_CALL_FP_IP_IN_MEM = Q.store_thm (
-    "PRE_CALL_FP_IP_IN_MEM",
-    `!st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_FP_IP_IN_MEM:
+     !st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
          let st' =  run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st in
           (st' '' (isM (w2n (read st' FP) - 10 + 10)) = read st IP) /\
-          (st' '' (isM (w2n (read st' FP) - 10 + 9)) = read st FP)`,
+          (st' '' (isM (w2n (read st' FP) - 10 + 9)) = read st FP)
+Proof
 
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       IMP_RES_TAC PRE_CALL_SAVED_REGS_THM_2 THEN NTAC 13 (POP_ASSUM (K ALL_TAC)) THEN
       FULL_SIMP_TAC std_ss [LET_THM] THEN
       RW_TAC list_ss [saved_regs_list_def, reade_def, IP_def, FP_def, ip_def, fp_def]
-  );
+QED
 
-val fun_call_lem_1 = Q.store_thm (
-    "fun_call_lem_1",
-    `!k j st st' st2. locate_ge (read st SP) (k + 13 + j + m2) /\ standard_frame st m1 /\
+Theorem fun_call_lem_1:
+     !k j st st' st2. locate_ge (read st SP) (k + 13 + j + m2) /\ standard_frame st m1 /\
      (w2n (read st2 FP) = w2n (read st' FP)) /\
      (w2n (read st SP) - (k + j) - 1 = w2n (read st' FP)) ==>
      (!i. i < 12 ==> w2n (read st' FP) - 10 + i > w2n (read st2 FP) - 12) /\
-     (w2n (read st' FP) - 10 + 9 = w2n (read st' FP) - 1)`,
+     (w2n (read st' FP) - 10 + 9 = w2n (read st' FP) - 1)
+Proof
     RW_TAC arith_ss [locate_ge_def, standard_frame_def]
-  );
+QED
 
-val fun_call_lem_2 = Q.store_thm (
-    "fun_call_lem_2",
-   `!x y. locate_ge x (MAX n1 n2 + 13 + m2) /\
+Theorem fun_call_lem_2:
+    !x y. locate_ge x (MAX n1 n2 + 13 + m2) /\
      (MAX n1 n2 - n1 = k) /\ (w2n x - (k + n1) - 1 = y) ==>
-         12 + m2 <= y /\ y + n2 < w2n x`,
+         12 + m2 <= y /\ y + n2 < w2n x
+Proof
    RW_TAC arith_ss [locate_ge_def, MAX_DEF]
-  );
+QED
 
-val fun_call_lem_3 = Q.store_thm (
-    "fun_call_lem_3",
-    `!k n1 n2 st st' st2.
+Theorem fun_call_lem_3:
+     !k n1 n2 st st' st2.
      standard_frame st m1 /\
      (w2n (read st2 FP) = w2n (read st' FP)) /\ (w2n (read st2 IP) = w2n (read st' FP) + 1) /\
      locate_ge (read st SP) (MAX n1 n2 + 13 + m2) /\
@@ -1807,17 +1806,17 @@ val fun_call_lem_3 = Q.store_thm (
     (w2n (read st2 IP) = w2n (read st2 FP) + 1) /\ locate_ge (read st2 IP) 12 /\
      w2n (read st2 IP) + n2 + (12 + m1) <= w2n (read st FP) /\
      w2n (read st FP) - (12 + m1) >= w2n (read st2 IP) + n2 /\
-     (!i. i > w2n (read st FP) - 12 ==> i > w2n (read st SP) /\ i > w2n (read st' FP) - 12)`,
+     (!i. i > w2n (read st FP) - 12 ==> i > w2n (read st SP) /\ i > w2n (read st' FP) - 12)
+Proof
 
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     IMP_RES_TAC fun_call_lem_2 THEN
     NTAC 2 (POP_ASSUM MP_TAC) THEN NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN NTAC 2 STRIP_TAC THEN
     FULL_SIMP_TAC arith_ss [locate_ge_def, standard_frame_def]
-  );
+QED
 
-val VALID_BEFORE_POST_CALL = Q.store_thm (
-    "VALID_BEFORE_POST_CALL",
-   `!st m1 m2 caller_i callee_i caller_o callee_o.
+Theorem VALID_BEFORE_POST_CALL:
+    !st m1 m2 caller_i callee_i caller_o callee_o.
          locate_ge (read st SP) (MAX (LENGTH caller_i) (LENGTH caller_o) + 13 + m2) /\
          (w2n (read st SP) = w2n (read st FP) - (12 + m1)) /\
          (MAX (LENGTH caller_i) (LENGTH caller_o) - (LENGTH caller_i) = k) /\
@@ -1825,7 +1824,8 @@ val VALID_BEFORE_POST_CALL = Q.store_thm (
          status_intact (run_cfl S_body st') st' /\
          VALID_FC_1 (caller_i,callee_i,callee_o,caller_o) (m1,m2) /\ WELL_FORMED S_body
      ==>
-         valid_post_call (st, run_cfl S_body st') (m1,m2) (callee_o,caller_o)`,
+         valid_post_call (st, run_cfl S_body st') (m1,m2) (callee_o,caller_o)
+Proof
 
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    `standard_frame st m1` by FULL_SIMP_TAC arith_ss [standard_frame_def, locate_ge_def] THEN
@@ -1859,7 +1859,7 @@ val VALID_BEFORE_POST_CALL = Q.store_thm (
     NTAC 78 (POP_ASSUM (K ALL_TAC)) THEN
     FULL_SIMP_TAC bool_ss [valid_post_call_def, VALID_FC_1_def] THEN
     METIS_TAC []
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Main theorems about pre-call processing and post-call processing           *)
@@ -1867,35 +1867,35 @@ val VALID_BEFORE_POST_CALL = Q.store_thm (
 (*  passing and result passing repsectively                                        *)
 (*---------------------------------------------------------------------------------*)
 
-val PRE_CALL_PRE_CALL_THM = Q.store_thm (
-    "PRE_CALL_PRE_CALL_THM",
-    `!st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
+Theorem PRE_CALL_PRE_CALL_THM:
+     !st l m1 m2 k. locate_ge (read st SP) (k + 13 + LENGTH caller_i + m2) /\ standard_frame st m1 /\
           EVERY notC callee_i /\ unique_list callee_i /\ EVERY (\x.valid_TEXP x m2) callee_i /\
           EVERY (\x. valid_TEXP x m1) caller_i /\ (LENGTH callee_i = LENGTH caller_i)
        ==>
            (MAP (reade st o conv_exp) caller_i =
             MAP (reade (run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st)
-              o conv_exp) callee_i)`,
+              o conv_exp) callee_i)
+Proof
 
         RW_TAC std_ss [] THEN
         MATCH_MP_TAC MAP_LEM_3 THEN RW_TAC std_ss [] THEN
         METIS_TAC [SIMP_RULE std_ss [rich_listTheory.EL_MAP] PRE_CALL_PASS_ARGUMENTS_THM_2]
-   );
+QED
 
 
-val POST_CALL_PRE_CALL_THM = Q.store_thm (
-    "POST_CALL_PRE_CALL_THM",
-    `!st m1 m2 caller_o callee_o.
+Theorem POST_CALL_PRE_CALL_THM:
+     !st m1 m2 caller_o callee_o.
          valid_post_call (st0,st) (m1,m2) (callee_o,caller_o) ==>
            (MAP (reade st o conv_exp) callee_o =
             MAP (reade (run_cfl (BLK (post_call (MAP conv_exp caller_o,MAP conv_exp callee_o) m1)) st)
-              o conv_exp) caller_o)`,
+              o conv_exp) caller_o)
+Proof
 
         RW_TAC std_ss [] THEN
         `LENGTH caller_o = LENGTH callee_o` by FULL_SIMP_TAC std_ss [valid_post_call_def] THEN
         MATCH_MP_TAC MAP_LEM_3 THEN RW_TAC std_ss [] THEN
         METIS_TAC [rich_listTheory.EL_MAP, POST_CALL_PASS_RESULTS_THM]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Main theorems about function calls                                         *)
@@ -1905,9 +1905,8 @@ val POST_CALL_PRE_CALL_THM = Q.store_thm (
 (*  separation of the caller's frame (activation record) and the callee's frame    *)
 (*---------------------------------------------------------------------------------*)
 
-val FUN_CALL_SANITY_THM = Q.store_thm (
-    "FUN_CALL_SANITY_THM",
-   `!st m1 m2 caller_i callee_i caller_o callee_o.
+Theorem FUN_CALL_SANITY_THM:
+    !st m1 m2 caller_i callee_i caller_o callee_o.
          locate_ge (read st SP) (MAX (LENGTH caller_i) (LENGTH caller_o) + 13 + m2) /\
          standard_frame st m1 /\ (w2n (read st SP) = w2n (read st FP) - (12 + m1)) /\
          (MAX (LENGTH caller_i) (LENGTH caller_o) - (LENGTH caller_i) = k) /\
@@ -1917,7 +1916,8 @@ val FUN_CALL_SANITY_THM = Q.store_thm (
      ==>
       let st1 = run_cfl (SC (SC (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) S_body)
              (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1))) st in
-           status_intact st1 st`,
+           status_intact st1 st
+Proof
 
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [LET_THM, CFL_SEMANTICS_SC, WELL_FORMED_thm] THEN
@@ -1952,12 +1952,11 @@ val FUN_CALL_SANITY_THM = Q.store_thm (
         FULL_SIMP_TAC bool_ss [valid_post_call_def, VALID_FC_1_def] THEN METIS_TAC []) THEN
     Q.UNABBREV_TAC `st3` THEN
     METIS_TAC [SIMP_RULE std_ss [LET_THM] POST_CALL_SANITY_THM]
-  );
+QED
 
-val FUN_CALL_VALUE_RESTORING = Q.store_thm (
-    "FUN_CALL_VALUE_RESTORING",
+Theorem FUN_CALL_VALUE_RESTORING:
 
-   `!st m1 m2 caller_i callee_i caller_o callee_o.
+    !st m1 m2 caller_i callee_i caller_o callee_o.
          locate_ge (read st SP) (MAX (LENGTH caller_i) (LENGTH caller_o) + 13 + m2) /\
          standard_frame st m1 /\ (w2n (read st SP) = w2n (read st FP) - (12 + m1)) /\
          (MAX (LENGTH caller_i) (LENGTH caller_o) - (LENGTH caller_i) = k) /\
@@ -1968,7 +1967,8 @@ val FUN_CALL_VALUE_RESTORING = Q.store_thm (
      ==>
       let st1 = run_cfl (SC (SC (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) S_body)
              (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1))) st in
-           st1 '' (conv_exp e) = st '' (conv_exp e)`,
+           st1 '' (conv_exp e) = st '' (conv_exp e)
+Proof
 
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [LET_THM, CFL_SEMANTICS_SC, WELL_FORMED_thm] THEN
@@ -2010,24 +2010,23 @@ val FUN_CALL_VALUE_RESTORING = Q.store_thm (
         FULL_SIMP_TAC bool_ss [valid_post_call_def, VALID_FC_1_def] THEN METIS_TAC []) THEN
     Q.UNABBREV_TAC `st3` THEN STRIP_TAC THEN
     METIS_TAC [POST_CALL_RESTORED_REGS_THM]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Theorems showing that this implementation of function calls is correct     *)
 (*---------------------------------------------------------------------------------*)
 
-val sp_locate_lem_1 = Q.store_thm (
-    "sp_locate_lem_1",
-    `!x i1 i2 m2. locate_ge x (MAX i1 i2 + 13 + m2) ==>
-       locate_ge x (MAX i1 i2 - i1 + 13 + i1 + m2)`,
+Theorem sp_locate_lem_1:
+     !x i1 i2 m2. locate_ge x (MAX i1 i2 + 13 + m2) ==>
+       locate_ge x (MAX i1 i2 - i1 + 13 + i1 + m2)
+Proof
     RW_TAC std_ss [locate_ge_def, MAX_DEF] THEN
     RW_TAC arith_ss []
-  );
+QED
 
-val FC_IMPLEMENTATION_LEM = Q.store_thm (
-    "FC_IMPLEMENTATION_LEM",
+Theorem FC_IMPLEMENTATION_LEM:
 
-   `!st m1 m2 caller_i callee_i caller_o callee_o.
+    !st m1 m2 caller_i callee_i caller_o callee_o.
      VALID_FC_1 (caller_i,callee_i,callee_o,caller_o) (m1,m2) /\ WELL_FORMED S_body /\
      locate_ge (read st SP) (MAX (LENGTH caller_i) (LENGTH caller_o) + 13 + m2) /\
      (w2n (read st SP) = w2n (read st FP) - (12 + m1)) /\
@@ -2039,7 +2038,8 @@ val FC_IMPLEMENTATION_LEM = Q.store_thm (
        ==>
        same_content (run_hsl (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) s)
                     (run_cfl (SC (SC (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) S_body)
-                      (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1))) st) m1`,
+                      (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1))) st) m1
+Proof
 
     RW_TAC std_ss [] THEN
     MATCH_MP_TAC (SIMP_RULE std_ss [LET_THM, AND_IMP_INTRO] FC_SUFFICIENT_COND_LEM) THEN
@@ -2058,7 +2058,7 @@ val FC_IMPLEMENTATION_LEM = Q.store_thm (
       `standard_frame st m1` by FULL_SIMP_TAC arith_ss [standard_frame_def, locate_ge_def] THEN
         METIS_TAC [SIMP_RULE std_ss [LET_THM] FUN_CALL_VALUE_RESTORING]
     ]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 

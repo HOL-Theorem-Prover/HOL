@@ -49,18 +49,21 @@ End
 val INIT = `?to_set next instr less allow. model = (to_set,next,instr,less,allow)`
            by METIS_TAC [PAIR]
 
-val SPEC_EQ_TEMPORAL = Q.store_thm("SPEC_EQ_TEMPORAL",
-   `SPEC model pre code post <=>
-    TEMPORAL model code (T_IMPLIES (NOW pre) (EVENTUALLY (NOW post)))`,
+Theorem SPEC_EQ_TEMPORAL:
+    SPEC model pre code post <=>
+    TEMPORAL model code (T_IMPLIES (NOW pre) (EVENTUALLY (NOW post)))
+Proof
    INIT
    \\ ASM_SIMP_TAC std_ss
         [SPEC_def, TEMPORAL_def, RUN_def, LET_DEF, PULL_FORALL, T_IMPLIES_def,
          NOW_def, EVENTUALLY_def, rel_sequence_def]
    \\ SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM, GSYM rel_sequence_def]
-   \\ METIS_TAC []);
+   \\ METIS_TAC []
+QED
 
-val TEMPORAL_ALWAYS = Q.store_thm("TEMPORAL_ALWAYS",
-   `TEMPORAL model code (ALWAYS p) <=> TEMPORAL model code p`,
+Theorem TEMPORAL_ALWAYS:
+    TEMPORAL model code (ALWAYS p) <=> TEMPORAL model code p
+Proof
    INIT
    \\ ASM_SIMP_TAC std_ss
           [SPEC_def, TEMPORAL_def, RUN_def, LET_DEF,  PULL_FORALL,
@@ -77,15 +80,18 @@ val TEMPORAL_ALWAYS = Q.store_thm("TEMPORAL_ALWAYS",
    \\ FULL_SIMP_TAC std_ss [rel_sequence_def]
    \\ REPEAT STRIP_TAC
    \\ FIRST_X_ASSUM (ASSUME_TAC o Q.SPEC `n + k`)
-   \\ FULL_SIMP_TAC std_ss [ADD_CLAUSES])
+   \\ FULL_SIMP_TAC std_ss [ADD_CLAUSES]
+QED
 
-val TEMPORAL_NEXT_IMP_EVENTUALLY = Q.store_thm("TEMPORAL_NEXT_IMP_EVENTUALLY",
-   `TEMPORAL model code (T_IMPLIES p1 (NEXT p2)) ==>
-    TEMPORAL model code (T_IMPLIES p1 (EVENTUALLY p2))`,
+Theorem TEMPORAL_NEXT_IMP_EVENTUALLY:
+    TEMPORAL model code (T_IMPLIES p1 (NEXT p2)) ==>
+    TEMPORAL model code (T_IMPLIES p1 (EVENTUALLY p2))
+Proof
    INIT
    \\ ASM_SIMP_TAC std_ss
          [TEMPORAL_def, LET_DEF, T_IMPLIES_def, NEXT_def, EVENTUALLY_def]
-   \\ METIS_TAC [])
+   \\ METIS_TAC []
+QED
 
 val SPEC_1_IMP_SPEC = store_thm("SPEC_1_IMP_SPEC",
   ``SPEC_1 model pre code post err ==>

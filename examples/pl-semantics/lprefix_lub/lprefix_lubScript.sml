@@ -7,22 +7,27 @@ Libs
 val _ = set_trace "Goalstack.print_goal_at_top" 0;
 val _ = ParseExtras.temp_tight_equality();
 
-val IS_PREFIX_FILTER = Q.store_thm("IS_PREFIX_FILTER",
-  `∀l1 l2. IS_PREFIX l1 l2 ⇒ IS_PREFIX (FILTER P l1) (FILTER P l2)`,
+Theorem IS_PREFIX_FILTER:
+   ∀l1 l2. IS_PREFIX l1 l2 ⇒ IS_PREFIX (FILTER P l1) (FILTER P l2)
+Proof
   Induct >> simp[IS_PREFIX_NIL] >>
-  gen_tac >> Cases >> simp[] >> srw_tac[][]);
+  gen_tac >> Cases >> simp[] >> srw_tac[][]
+QED
 
 Definition less_opt_def:
   (less_opt n NONE ⇔ T) ∧
   (less_opt n (SOME m) ⇔ n < m)
 End
 
-val less_opt_SUC_elim = Q.store_thm("less_opt_SUC_elim",
-  `less_opt (SUC n) z ⇒ less_opt n z`,
-  Cases_on`z`>>srw_tac[][less_opt_def]>>simp[])
+Theorem less_opt_SUC_elim:
+   less_opt (SUC n) z ⇒ less_opt n z
+Proof
+  Cases_on`z`>>srw_tac[][less_opt_def]>>simp[]
+QED
 
-val less_opt_LLENGTH_LNTH_SOME = Q.store_thm("less_opt_LLENGTH_LNTH_SOME",
-  `less_opt n (LLENGTH l) ⇔ IS_SOME (LNTH n l)`,
+Theorem less_opt_LLENGTH_LNTH_SOME:
+   less_opt n (LLENGTH l) ⇔ IS_SOME (LNTH n l)
+Proof
   EQ_TAC >- (
     Cases_on`LFINITE l` >- (
       imp_res_tac LFINITE_HAS_LENGTH >>
@@ -45,19 +50,23 @@ val less_opt_LLENGTH_LNTH_SOME = Q.store_thm("less_opt_LLENGTH_LNTH_SOME",
       arithmeticTheory.LESS_EQ_REFL,
       arithmeticTheory.NOT_NUM_EQ])>>
   imp_res_tac NOT_LFINITE_NO_LENGTH >>
-  srw_tac[][less_opt_def]);
+  srw_tac[][less_opt_def]
+QED
 
-val IS_SOME_LTAKE_less_opt_LLENGTH = Q.store_thm("IS_SOME_LTAKE_less_opt_LLENGTH",
-  `IS_SOME (LTAKE n ll) ⇒ LLENGTH ll = SOME n ∨ less_opt n (LLENGTH ll)`,
+Theorem IS_SOME_LTAKE_less_opt_LLENGTH:
+   IS_SOME (LTAKE n ll) ⇒ LLENGTH ll = SOME n ∨ less_opt n (LLENGTH ll)
+Proof
   srw_tac[][IS_SOME_EXISTS] >>
   imp_res_tac LTAKE_LENGTH >> srw_tac[][] >>
   imp_res_tac LTAKE_IMP_LDROP >> srw_tac[][] >>
   srw_tac[][LLENGTH_APPEND] >> full_simp_tac(srw_ss())[LFINITE_fromList] >>
-  simp[less_opt_def,LLENGTH_fromList])
+  simp[less_opt_def,LLENGTH_fromList]
+QED
 
-val LPREFIX_NTH = Q.store_thm ("LPREFIX_NTH",
-  `!ll1 ll2.
-    LPREFIX ll1 ll2 ⇔ !n. less_opt n (LLENGTH ll1) ⇒ LNTH n ll1 = LNTH n ll2`,
+Theorem LPREFIX_NTH:
+   !ll1 ll2.
+    LPREFIX ll1 ll2 ⇔ !n. less_opt n (LLENGTH ll1) ⇒ LNTH n ll1 = LNTH n ll2
+Proof
   srw_tac[][LPREFIX_APPEND,EQ_IMP_THM]
   >- (
     imp_res_tac (#1(EQ_IMP_RULE less_opt_LLENGTH_LNTH_SOME)) >>
@@ -90,10 +99,12 @@ val LPREFIX_NTH = Q.store_thm ("LPREFIX_NTH",
       full_simp_tac(srw_ss())[toList] >> rev_full_simp_tac(srw_ss())[] >>
       imp_res_tac LTAKE_LENGTH >> srw_tac[][] >>
       imp_res_tac LTAKE_TAKE_LESS >>
-      metis_tac[arithmeticTheory.NOT_LESS,optionTheory.NOT_NONE_SOME])));
+      metis_tac[arithmeticTheory.NOT_LESS,optionTheory.NOT_NONE_SOME]))
+QED
 
-val lnth_some_length = Q.store_thm ("lnth_some_length",
-  `!ll n x. LNTH n ll = SOME x ⇒ less_opt n (LLENGTH ll)`,
+Theorem lnth_some_length:
+   !ll n x. LNTH n ll = SOME x ⇒ less_opt n (LLENGTH ll)
+Proof
   Induct_on `n` >>
   srw_tac[][] >>
   `ll = [||] ∨ ?h t. ll = h:::t` by metis_tac [llist_CASES] >>
@@ -105,7 +116,8 @@ val lnth_some_length = Q.store_thm ("lnth_some_length",
     first_x_assum (qspec_then `t` mp_tac) >>
     simp [] >>
     Cases_on `LLENGTH t` >>
-    full_simp_tac(srw_ss())[less_opt_def]));
+    full_simp_tac(srw_ss())[less_opt_def])
+QED
 
 Definition llist_shorter_def:
   llist_shorter ll1 ll2 ⇔
@@ -148,27 +160,32 @@ val llist_shorter_lnth = Q.prove (
      rev_full_simp_tac(srw_ss())[less_opt_def] >>
      simp [])));
 
-val llist_shorter_fromList = Q.store_thm ("llist_shorter_fromList",
-`!l1 l2. llist_shorter (fromList l1) (fromList l2) ⇔ LENGTH l1 ≤ LENGTH l2`,
+Theorem llist_shorter_fromList:
+ !l1 l2. llist_shorter (fromList l1) (fromList l2) ⇔ LENGTH l1 ≤ LENGTH l2
+Proof
  srw_tac[][llist_shorter_def] >>
  every_case_tac >>
- full_simp_tac(srw_ss())[LLENGTH_fromList]);
+ full_simp_tac(srw_ss())[LLENGTH_fromList]
+QED
 
 Definition lprefix_chain_def:
   lprefix_chain ls ⇔
     !ll1 ll2. ll1 ∈ ls ∧ ll2 ∈ ls ⇒ LPREFIX ll1 ll2 ∨ LPREFIX ll2 ll1
 End
 
-val lprefix_chain_subset = Q.store_thm("lprefix_chain_subset",
-  `lprefix_chain ls ∧ y ⊆ ls ⇒ lprefix_chain y`,
-  srw_tac[][lprefix_chain_def,SUBSET_DEF]);
+Theorem lprefix_chain_subset:
+   lprefix_chain ls ∧ y ⊆ ls ⇒ lprefix_chain y
+Proof
+  srw_tac[][lprefix_chain_def,SUBSET_DEF]
+QED
 
-val lprefix_chain_LNTHs_agree = Q.store_thm ("lprefix_chain_LNTHs_agree",
-  `lprefix_chain ls ∧
+Theorem lprefix_chain_LNTHs_agree:
+   lprefix_chain ls ∧
    l1 ∈ ls ∧ l2 ∈ ls ∧
    LNTH n l1 = SOME x1 ∧
    LNTH n l2 = SOME x2 ⇒
-   x1 = x2`,
+   x1 = x2
+Proof
   srw_tac[][] >>
   full_simp_tac(srw_ss())[lprefix_chain_def] >>
   first_x_assum(qspecl_then[`l1`,`l2`]mp_tac) >>
@@ -177,73 +194,83 @@ val lprefix_chain_LNTHs_agree = Q.store_thm ("lprefix_chain_LNTHs_agree",
   every_case_tac >>
   full_simp_tac(srw_ss())[arithmeticTheory.NOT_LESS,arithmeticTheory.LESS_EQ_EXISTS] >>
   srw_tac[][] >> fsrw_tac[ARITH_ss][] >>
-  metis_tac[LNTH_LLENGTH_NONE,arithmeticTheory.ADD_SYM,arithmeticTheory.LESS_EQ_ADD,optionTheory.NOT_NONE_SOME]);
+  metis_tac[LNTH_LLENGTH_NONE,arithmeticTheory.ADD_SYM,arithmeticTheory.LESS_EQ_ADD,optionTheory.NOT_NONE_SOME]
+QED
 
 Definition lprefix_chain_nth_def:
   lprefix_chain_nth n ls =
     some x. ?l. l ∈ ls ∧ LNTH n l = SOME x
 End
 
-val exists_lprefix_chain_nth = Q.store_thm ("exists_lprefix_chain_nth",
-  `!ls n x.
+Theorem exists_lprefix_chain_nth:
+   !ls n x.
     lprefix_chain ls ∧
     (?l. l ∈ ls ∧ LNTH n l = SOME x) ⇒
-    lprefix_chain_nth n ls = SOME x`,
+    lprefix_chain_nth n ls = SOME x
+Proof
   srw_tac[][some_def, lprefix_chain_nth_def] >>
-  metis_tac [lprefix_chain_LNTHs_agree, SELECT_THM]);
+  metis_tac [lprefix_chain_LNTHs_agree, SELECT_THM]
+QED
 
-val not_exists_lprefix_chain_nth = Q.store_thm ("not_exists_lprefix_chain_nth",
-  `!ls n.
+Theorem not_exists_lprefix_chain_nth:
+   !ls n.
     lprefix_chain ls ∧
     (!l. l ∈ ls ⇒ LNTH n l = NONE) ⇒
-    lprefix_chain_nth n ls = NONE`,
+    lprefix_chain_nth n ls = NONE
+Proof
   srw_tac[][some_def, lprefix_chain_nth_def] >>
-  metis_tac [NOT_SOME_NONE]);
+  metis_tac [NOT_SOME_NONE]
+QED
 
-val lprefix_chain_nth_none_mono = Q.store_thm ("lprefix_chain_nth_none_mono",
-  `!m n ls.
+Theorem lprefix_chain_nth_none_mono:
+   !m n ls.
     lprefix_chain ls ∧
     m ≤ n ∧
     lprefix_chain_nth m ls = NONE
     ⇒
-    lprefix_chain_nth n ls = NONE`,
+    lprefix_chain_nth n ls = NONE
+Proof
  srw_tac[][] >>
  match_mp_tac not_exists_lprefix_chain_nth >>
  srw_tac[][] >>
  CCONTR_TAC >>
  full_simp_tac(srw_ss())[] >>
  `LNTH m l ≠ NONE` by metis_tac [LNTH_NONE_MONO] >>
- metis_tac [exists_lprefix_chain_nth, NOT_SOME_NONE, option_nchotomy]);
+ metis_tac [exists_lprefix_chain_nth, NOT_SOME_NONE, option_nchotomy]
+QED
 
 Definition equiv_lprefix_chain_def:
   equiv_lprefix_chain ls1 ls2 ⇔
     !n. lprefix_chain_nth n ls1 = lprefix_chain_nth n ls2
 End
 
-val equiv_lprefix_chain_thm = Q.store_thm ("equiv_lprefix_chain_thm",
-  `!ls1 ls2.
+Theorem equiv_lprefix_chain_thm:
+   !ls1 ls2.
     lprefix_chain ls1 ∧ lprefix_chain ls2
     ⇒
     (equiv_lprefix_chain ls1 ls2 ⇔
       (!ll1 n x. ll1 ∈ ls1 ∧ LNTH n ll1 = SOME x ⇒ ?ll2. ll2 ∈ ls2 ∧ LNTH n ll2 = SOME x) ∧
-      (!ll2 n x. ll2 ∈ ls2 ∧ LNTH n ll2 = SOME x ⇒ ?ll1. ll1 ∈ ls1 ∧ LNTH n ll1 = SOME x))`,
+      (!ll2 n x. ll2 ∈ ls2 ∧ LNTH n ll2 = SOME x ⇒ ?ll1. ll1 ∈ ls1 ∧ LNTH n ll1 = SOME x))
+Proof
   srw_tac[][equiv_lprefix_chain_def] >>
   eq_tac
   >- metis_tac [not_exists_lprefix_chain_nth, NOT_SOME_NONE, exists_lprefix_chain_nth, option_nchotomy] >>
   srw_tac[][] >>
   Cases_on `?s l. l ∈ ls1 ∧ LNTH n l = SOME x` >>
   full_simp_tac(srw_ss())[] >>
-  metis_tac [not_exists_lprefix_chain_nth, NOT_SOME_NONE, exists_lprefix_chain_nth, option_nchotomy]);
+  metis_tac [not_exists_lprefix_chain_nth, NOT_SOME_NONE, exists_lprefix_chain_nth, option_nchotomy]
+QED
 
-val equiv_lprefix_chain_thm2 = Q.store_thm ("equiv_lprefix_chain_thm2",
-`!ls1 ls2.
+Theorem equiv_lprefix_chain_thm2:
+ !ls1 ls2.
   lprefix_chain ls1 ∧ lprefix_chain ls2 ∧ (!ll2. ll2 ∈ ls2 ⇒ LFINITE ll2) ⇒
   (equiv_lprefix_chain ls1 ls2 ⇔
    (∀ll1 n x.
       ll1 ∈ ls1 ∧ LNTH n ll1 = SOME x ⇒
       ∃ll2. ll2 ∈ ls2 ∧ LNTH n ll2 = SOME x) ∧
    (!ll2 n x.
-     ll2 ∈ ls2 ∧ ll2 ≠ [||] ⇒ ?ll1. ll1 ∈ ls1 ∧ llist_shorter ll2 ll1))`,
+     ll2 ∈ ls2 ∧ ll2 ≠ [||] ⇒ ?ll1. ll1 ∈ ls1 ∧ llist_shorter ll2 ll1))
+Proof
  srw_tac[][equiv_lprefix_chain_thm] >>
  eq_tac >>
  srw_tac[][llist_shorter_lnth]
@@ -273,7 +300,8 @@ val equiv_lprefix_chain_thm2 = Q.store_thm ("equiv_lprefix_chain_thm2",
    `ll2 ≠ [||]` by (
      CCONTR_TAC >>
      full_simp_tac(srw_ss())[]) >>
-   metis_tac [lprefix_chain_LNTHs_agree]));
+   metis_tac [lprefix_chain_LNTHs_agree])
+QED
 
 Definition lprefix_lub_def:
   lprefix_lub ls lub ⇔
@@ -281,14 +309,17 @@ Definition lprefix_lub_def:
     (∀ub. (!ll. ll ∈ ls ⇒ LPREFIX ll ub) ⇒ LPREFIX lub ub)
 End
 
-val lprefix_lub_is_chain = Q.store_thm ("lprefix_lub_is_chain",
-  `!ls ll. lprefix_lub ls ll ⇒ lprefix_chain ls`,
+Theorem lprefix_lub_is_chain:
+   !ls ll. lprefix_lub ls ll ⇒ lprefix_chain ls
+Proof
   srw_tac[][lprefix_lub_def,lprefix_chain_def] >>
-  metis_tac[prefixes_lprefix_total]);
+  metis_tac[prefixes_lprefix_total]
+QED
 
-val lprefix_lub_nth = Q.store_thm ("lprefix_lub_nth",
-  `!ls lub. lprefix_chain ls ⇒
-    (lprefix_lub ls lub ⇔ !n. LNTH n lub = lprefix_chain_nth n ls)`,
+Theorem lprefix_lub_nth:
+   !ls lub. lprefix_chain ls ⇒
+    (lprefix_lub ls lub ⇔ !n. LNTH n lub = lprefix_chain_nth n ls)
+Proof
   srw_tac[][lprefix_lub_def,EQ_IMP_THM] >- (
     Cases_on `LNTH n lub` >> srw_tac[][]
     >- (
@@ -382,16 +413,19 @@ val lprefix_lub_nth = Q.store_thm ("lprefix_lub_nth",
       metis_tac[LNTH_LLENGTH_NONE,optionTheory.NOT_SOME_NONE,arithmeticTheory.NOT_LESS] ) >>
     `lprefix_chain_nth n ls = NONE` by
        metis_tac[not_exists_lprefix_chain_nth,optionTheory.IS_SOME_EXISTS,optionTheory.IF_NONE_EQUALS_OPTION] >>
-    metis_tac[optionTheory.IS_SOME_DEF,less_opt_LLENGTH_LNTH_SOME]));
+    metis_tac[optionTheory.IS_SOME_DEF,less_opt_LLENGTH_LNTH_SOME])
+QED
 
-val unique_lprefix_lub = Q.store_thm ("unique_lprefix_lub",
-  `!f ll1 ll2.
+Theorem unique_lprefix_lub:
+   !f ll1 ll2.
     lprefix_lub f ll1 ∧
     lprefix_lub f ll2
     ⇒
-    ll1 = ll2`,
+    ll1 = ll2
+Proof
   srw_tac[][lprefix_lub_def] >>
-  metis_tac[LPREFIX_ANTISYM,LPREFIX_REFL]);
+  metis_tac[LPREFIX_ANTISYM,LPREFIX_REFL]
+QED
 
 Definition build_lprefix_lub_f_def:
   build_lprefix_lub_f ls n =
@@ -414,62 +448,76 @@ val build_lprefix_lub_lem = Q.prove (
   >- metis_tac [lprefix_chain_nth_none_mono, DECIDE ``m ≤ m + SUC n``]
   >- simp [arithmeticTheory.ADD1]);
 
-val build_lprefix_lub_thm = Q.store_thm ("build_lprefix_lub_thm",
-  `!ls. lprefix_chain ls ⇒ lprefix_lub ls (build_lprefix_lub ls)`,
+Theorem build_lprefix_lub_thm:
+   !ls. lprefix_chain ls ⇒ lprefix_lub ls (build_lprefix_lub ls)
+Proof
   srw_tac[][lprefix_lub_nth, build_lprefix_lub_def] >>
-  metis_tac [build_lprefix_lub_lem, DECIDE ``0 + x = x:num``])
+  metis_tac [build_lprefix_lub_lem, DECIDE ``0 + x = x:num``]
+QED
 
-val lprefix_lub_equiv_chain = Q.store_thm ("lprefix_lub_equiv_chain",
-  `!ls1 ls2 ll.
+Theorem lprefix_lub_equiv_chain:
+   !ls1 ls2 ll.
     lprefix_chain ls1 ∧
     lprefix_chain ls2 ∧
     equiv_lprefix_chain ls1 ls2
     ⇒
-    (lprefix_lub ls1 ll ⇔ lprefix_lub ls2 ll)`,
+    (lprefix_lub ls1 ll ⇔ lprefix_lub ls2 ll)
+Proof
   srw_tac[][] >>
   imp_res_tac lprefix_lub_is_chain >>
-  full_simp_tac(srw_ss())[lprefix_lub_nth, equiv_lprefix_chain_def]);
+  full_simp_tac(srw_ss())[lprefix_lub_nth, equiv_lprefix_chain_def]
+QED
 
-val lprefix_lub_equiv_chain2 = Q.store_thm ("lprefix_lub_equiv_chain2",
-  `!ls1 ls2 ll1 ll2.
+Theorem lprefix_lub_equiv_chain2:
+   !ls1 ls2 ll1 ll2.
     lprefix_lub ls1 ll1 ∧
     lprefix_lub ls2 ll2
     ⇒
-    (ll1 = ll2 ⇔ equiv_lprefix_chain ls1 ls2)`,
+    (ll1 = ll2 ⇔ equiv_lprefix_chain ls1 ls2)
+Proof
   srw_tac[][] >>
   imp_res_tac lprefix_lub_is_chain >>
   eq_tac >>
   srw_tac[][] >>
   full_simp_tac(srw_ss())[lprefix_lub_nth, equiv_lprefix_chain_def] >>
-  simp [LNTH_EQ]);
+  simp [LNTH_EQ]
+QED
 
-val lprefix_lub_new_chain = Q.store_thm ("lprefix_lub_new_chain",
-  `!ls1 ls2 ll.
+Theorem lprefix_lub_new_chain:
+   !ls1 ls2 ll.
     lprefix_chain ls2 ∧
     equiv_lprefix_chain ls1 ls2 ∧
     lprefix_lub ls1 ll
     ⇒
-    lprefix_lub ls2 ll`,
-  metis_tac [lprefix_lub_equiv_chain, lprefix_lub_is_chain]);
+    lprefix_lub ls2 ll
+Proof
+  metis_tac [lprefix_lub_equiv_chain, lprefix_lub_is_chain]
+QED
 
 Definition prefix_chain_def:
   prefix_chain ls ⇔
     ∀l1 l2. l1 ∈ ls ∧ l2 ∈ ls ⇒ l1 ≼ l2 ∨ l2 ≼ l1
 End
 
-val prefix_chain_lprefix_chain = Q.store_thm("prefix_chain_lprefix_chain",
-  `prefix_chain ls ⇒ lprefix_chain (IMAGE fromList ls)`,
+Theorem prefix_chain_lprefix_chain:
+   prefix_chain ls ⇒ lprefix_chain (IMAGE fromList ls)
+Proof
   srw_tac[][prefix_chain_def,lprefix_chain_def] >>
-  srw_tac[][llistTheory.LPREFIX_fromList,llistTheory.from_toList])
+  srw_tac[][llistTheory.LPREFIX_fromList,llistTheory.from_toList]
+QED
 
-val prefix_chain_FILTER = Q.store_thm("prefix_chain_FILTER",
-  `prefix_chain ls ⇒ prefix_chain (IMAGE (FILTER P) ls)`,
-  srw_tac[][prefix_chain_def] >> metis_tac[IS_PREFIX_FILTER])
+Theorem prefix_chain_FILTER:
+   prefix_chain ls ⇒ prefix_chain (IMAGE (FILTER P) ls)
+Proof
+  srw_tac[][prefix_chain_def] >> metis_tac[IS_PREFIX_FILTER]
+QED
 
-val build_prefix_lub_intro = Q.store_thm("build_prefix_lub_intro",
-  `lprefix_chain ls ⇒
-   (lprefix_lub ls lub ⇔ (lub = build_lprefix_lub ls))`,
-  metis_tac[build_lprefix_lub_thm,unique_lprefix_lub])
+Theorem build_prefix_lub_intro:
+   lprefix_chain ls ⇒
+   (lprefix_lub ls lub ⇔ (lub = build_lprefix_lub ls))
+Proof
+  metis_tac[build_lprefix_lub_thm,unique_lprefix_lub]
+QED
 
 Definition lprefix_rel_def:
   lprefix_rel s1 s2 ⇔ ∀l1. l1 IN s1 ⇒ ∃l2. l2 IN s2 ∧ LPREFIX l1 l2

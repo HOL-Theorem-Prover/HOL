@@ -1118,13 +1118,15 @@ val UNWIND_THM =
 
 (*---------------------------------------------------------------------------*)
 
-val K_INTRO_THM = Q.store_thm
-  ("K_INTRO_THM",
-   `!u. (\v.u) = K u`,RW_TAC std_ss [FUN_EQ_THM]);
+Theorem K_INTRO_THM:
+    !u. (\v.u) = K u
+ProofRW_TAC std_ss [FUN_EQ_THM]
+QED
 
-val I_INTRO_THM = Q.store_thm
-  ("I_INTRO_THM",
-   `(\v.v) = I`,RW_TAC std_ss [FUN_EQ_THM]);
+Theorem I_INTRO_THM:
+    (\v.v) = I
+ProofRW_TAC std_ss [FUN_EQ_THM]
+QED
 
 val _ = Parse.reveal "C";
 
@@ -1139,11 +1141,12 @@ val thlist =
 val BUS_CONCAT_LIFTERS = save_thm
   ("BUS_CONCAT_LIFTERS",LIST_CONJ thlist);
 
-val BUS_CONCAT_LIFTERS1 = Q.store_thm
-   ("BUS_CONCAT_LIFTERS1",
-    `(!f a. f <> K a = C ($, o f) a) /\
-     (!f a. K a <> f = ($, a) o f)`,
-   RW_TAC std_ss [FUN_EQ_THM,BUS_CONCAT_def]);
+Theorem BUS_CONCAT_LIFTERS1:
+     (!f a. f <> K a = C ($, o f) a) /\
+     (!f a. K a <> f = ($, a) o f)
+Proof
+   RW_TAC std_ss [FUN_EQ_THM,BUS_CONCAT_def]
+QED
 
 
 Definition Let_def:   Let f1 f2 = \x:'a. let v:'c = f1(x) in f2(x,v):'b

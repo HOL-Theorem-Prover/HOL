@@ -630,8 +630,8 @@ val sem_t_for_no_break = Q.prove(
    DECIDE_TAC>>
  fs[dec_clock_def])
 
-val big_small_lem = Q.store_thm ("big_small_lem",
-`!s t r.
+Theorem big_small_lem:
+ !s t r.
   sem_t s t = r
   ⇒
   ?tr.
@@ -639,7 +639,8 @@ val big_small_lem = Q.store_thm ("big_small_lem",
     s.clock - (SND r).clock ≤ LENGTH tr ∧
     check_trace (\st. some st'. step_t st st') tr ∧
     HD tr = (s.store, (t_to_small_t t)) ∧
-    res_rel_t r (LAST tr)`,
+    res_rel_t r (LAST tr)
+Proof
 
   ho_match_mp_tac sem_t_ind >>
   rw [sem_t_def_with_stop, t_to_small_t_def]
@@ -929,7 +930,7 @@ val big_small_lem = Q.store_thm ("big_small_lem",
       fs[] >> DECIDE_TAC
       )
     )
-  )
+QED
 
 val big_timeout_0 = Q.prove (
 `!st p r.
@@ -959,8 +960,9 @@ val big_timeout_0 = Q.prove (
    rw [] >>
    fs []));
 
-val sem_equiv_lem = Q.store_thm ("sem_equiv_lem",
-`∀prog. fbs_sem for_big_sem prog = small_sem for_small_sem prog`,
+Theorem sem_equiv_lem:
+ ∀prog. fbs_sem for_big_sem prog = small_sem for_small_sem prog
+Proof
  match_mp_tac small_fbs_equiv2 >>
  conj_tac >- (
    rw [for_big_sem_def, eval_with_clock_def, for_eval_def] >>
@@ -989,7 +991,8 @@ val sem_equiv_lem = Q.store_thm ("sem_equiv_lem",
  >- rw [Once step_t_cases]
  >- (rw [some_def] >>
      metis_tac [])
- >- metis_tac [PAIR]);
+ >- metis_tac [PAIR]
+QED
 
 (* check traces are unique up to prefixing *)
 val check_trace_determ = Q.prove(
@@ -1122,10 +1125,12 @@ val small_equiv = Q.prove (
  ect>>fs[to_obs_def,for_unload_def,is_val_t_def]>>
  Cases_on`e`>>fs[to_obs_def,is_val_e_def])
 
-val sem_equiv_thm = Q.store_thm ("sem_equiv_thm",
-`∀prog. for$semantics prog = semantics_small prog`,
+Theorem sem_equiv_thm:
+ ∀prog. for$semantics prog = semantics_small prog
+Proof
  rw [small_equiv, fbs_equiv] >>
- metis_tac [sem_equiv_lem]);
+ metis_tac [sem_equiv_lem]
+QED
 
 (*Pretty printing*)
 Definition hideseq_def:

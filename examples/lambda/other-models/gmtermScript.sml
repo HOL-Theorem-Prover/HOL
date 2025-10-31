@@ -392,17 +392,21 @@ Definition FVS_DEF:
 End
 
 
-val FINITE_DOM = Q.store_thm("FINITE_DOM",
- `!ss. FINITE (DOM ss)`,
+Theorem FINITE_DOM:
+  !ss. FINITE (DOM ss)
+Proof
 Induct THENL [ALL_TAC, Cases]
-   THEN RW_TAC std_ss [DOM_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_SING]);
+   THEN RW_TAC std_ss [DOM_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_SING]
+QED
 val _ = export_rewrites ["FINITE_DOM"]
 
 
-val FINITE_FVS = Q.store_thm("FINITE_FVS",
-`!ss. FINITE (FVS ss)`,
+Theorem FINITE_FVS:
+ !ss. FINITE (FVS ss)
+Proof
 Induct THENL [ALL_TAC, Cases]
-   THEN RW_TAC std_ss [FVS_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_FV]);
+   THEN RW_TAC std_ss [FVS_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_FV]
+QED
 val _ = export_rewrites ["FINITE_FVS"]
 
 val ISUB_LAM = store_thm(

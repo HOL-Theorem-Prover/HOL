@@ -65,9 +65,11 @@ End
 
 val state_component_equality = theorem "state_component_equality";
 
-val state_clock_idem = Q.store_thm ("state_clock_idem[simp]",
-`!s. (s with clock := s.clock) = s`,
- rw [state_component_equality]);
+Theorem state_clock_idem[simp]:
+ !s. (s with clock := s.clock) = s
+Proof
+ rw [state_component_equality]
+QED
 
 (* machinery for the functional big-step definition *)
 
@@ -245,46 +247,53 @@ val sem_clock_add_fail_lem = Q.prove (
      `c2 + s1.clock − 1 =  c2 + (s1.clock − 1)` by decide_tac >>
      metis_tac []));
 
-val sem_clock_add = Q.store_thm ("sem_clock_add",
-`!env s1 e v s2 c1 c2.
+Theorem sem_clock_add:
+ !env s1 e v s2 c1 c2.
   sem env (s1 with clock := c1) e = (Rval v, s2)
   ⇒
-  sem env (s1 with clock := c1 + c2) e = (Rval v, s2 with clock := s2.clock + c2)`,
+  sem env (s1 with clock := c1 + c2) e = (Rval v, s2 with clock := s2.clock + c2)
+Proof
  srw_tac[] [] >>
  qabbrev_tac `s1' = s1 with clock := c1` >>
  `(s1 with clock := c1 + c2) = s1' with clock := s1'.clock + c2`
             by fs [state_component_equality, Abbr`s1'`] >>
  srw_tac[] [] >>
  match_mp_tac sem_clock_add_lem >>
- rw []);
+ rw []
+QED
 
-val sem_clock_add_fail = Q.store_thm ("sem_clock_add_fail",
-`!env s1 e v s2 c1 c2.
+Theorem sem_clock_add_fail:
+ !env s1 e v s2 c1 c2.
   sem env (s1 with clock := c1) e = (Rfail, s2)
   ⇒
-  sem env (s1 with clock := c1 + c2) e = (Rfail, s2 with clock := s2.clock + c2)`,
+  sem env (s1 with clock := c1 + c2) e = (Rfail, s2 with clock := s2.clock + c2)
+Proof
  srw_tac[] [] >>
  qabbrev_tac `s1' = s1 with clock := c1` >>
  `(s1 with clock := c1 + c2) = s1' with clock := s1'.clock + c2`
             by fs [state_component_equality, Abbr`s1'`] >>
  srw_tac[] [] >>
  match_mp_tac sem_clock_add_fail_lem >>
- rw []);
+ rw []
+QED
 
-val sem_clock_timeout0 = Q.store_thm ("sem_clock_timeout0",
-`!env s e s'. sem env s e = (Rtimeout, s') ⇒ s'.clock = 0`,
+Theorem sem_clock_timeout0:
+ !env s e s'. sem env s e = (Rtimeout, s') ⇒ s'.clock = 0
+Proof
  ho_match_mp_tac sem_ind >>
  rw [sem_def] >>
  BasicProvers.EVERY_CASE_TAC >>
  fs [] >>
- rw []);
+ rw []
+QED
 
  (* This is proved, but we turn out to not need it *)
-val sem_clock_sub = Q.store_thm ("sem_clock_sub",
-`!env s1 e v s2.
+Theorem sem_clock_sub:
+ !env s1 e v s2.
   sem env s1 e = (Rval v,s2)
   ⇒
-  sem env (s1 with clock := s1.clock - s2.clock) e = (Rval v, s2 with clock := 0)`,
+  sem env (s1 with clock := s1.clock - s2.clock) e = (Rval v, s2 with clock := 0)
+Proof
  ho_match_mp_tac sem_ind >>
  rw [sem_def]
  >- (Cases_on `sem env s1 e` >>
@@ -320,7 +329,8 @@ val sem_clock_sub = Q.store_thm ("sem_clock_sub",
      fs [dec_clock_def] >>
      imp_res_tac sem_clock >>
      fs [] >>
-     intLib.ARITH_TAC));
+     intLib.ARITH_TAC)
+QED
 
 (* The value doesn't depend on which clock you use to compute it *)
 val sem_clock_val_determ_lem = Q.prove (
@@ -400,20 +410,22 @@ val sem_clock_val_determ_lem = Q.prove (
      fs [dec_clock_def] >>
      metis_tac []));
 
-val sem_clock_val_determ = Q.store_thm ("sem_clock_val_determ",
-`!env s e v' s' v'' s'' c1 c2.
+Theorem sem_clock_val_determ:
+ !env s e v' s' v'' s'' c1 c2.
   sem env (s with clock := c1) e = (Rval v', s') ∧
   sem env (s with clock := c2) e = (Rval v'', s'')
   ⇒
   v' = v'' ∧
-  s' = (s'' with clock := s'.clock)`,
+  s' = (s'' with clock := s'.clock)
+Proof
  rpt gen_tac >>
  DISCH_TAC >>
  match_mp_tac sem_clock_val_determ_lem >>
  qexists_tac `env` >>
  qexists_tac `s with clock := c1` >>
  rw [] >>
- metis_tac [sem_clock_val_determ_lem]);
+ metis_tac [sem_clock_val_determ_lem]
+QED
 
 (* The top-level semantics *)
 

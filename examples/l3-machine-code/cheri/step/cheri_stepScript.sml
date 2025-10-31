@@ -104,41 +104,46 @@ val NextStateCHERI_delay = utilsLib.ustore_thm("NextStateCHERI_delay",
 
 (* Lemmas and tools *)
 
-val not31 = Q.store_thm("not31",
-   `x0 /\ x1 /\ x2 /\ x3 /\ x4 = (v2w [x0; x1; x2; x3; x4] = (31w: word5))`,
+Theorem not31:
+    x0 /\ x1 /\ x2 /\ x3 /\ x4 = (v2w [x0; x1; x2; x3; x4] = (31w: word5))
+Proof
    blastLib.BBLAST_TAC
-   )
+QED
 
-val v2w_0_rwts = Q.store_thm("v2w_0_rwts",
-   `((v2w [F; F; F; F; F] = 0w: word5)) /\
+Theorem v2w_0_rwts:
+    ((v2w [F; F; F; F; F] = 0w: word5)) /\
     ((v2w [T; b3; b2; b1; b0] = 0w: word5) = F) /\
     ((v2w [b3; T; b2; b1; b0] = 0w: word5) = F) /\
     ((v2w [b3; b2; T; b1; b0] = 0w: word5) = F) /\
     ((v2w [b3; b2; b1; T; b0] = 0w: word5) = F) /\
-    ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)`,
+    ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)
+Proof
     blastLib.BBLAST_TAC
-    )
+QED
 
-val NotWordValue0 = Q.store_thm("NotWordValue0",
-   `!b x. ~NotWordValue 0w`,
+Theorem NotWordValue0:
+    !b x. ~NotWordValue 0w
+Proof
    lrw [NotWordValue_def]
-   )
+QED
 
-val NotWordValueCond = Q.store_thm("NotWordValueCond",
-   `!b x. NotWordValue (if b then 0w else x) = ~b /\ NotWordValue x`,
+Theorem NotWordValueCond:
+    !b x. NotWordValue (if b then 0w else x) = ~b /\ NotWordValue x
+Proof
    lrw [NotWordValue0]
-   )
+QED
 
 val () = show_assums := true
 
-val isAligned = Q.store_thm("isAligned",
-  `(!a. isAligned (a, 0w)) /\
+Theorem isAligned:
+   (!a. isAligned (a, 0w)) /\
    (!a. isAligned (a, 1w) = aligned 1 a) /\
    (!a. isAligned (a, 3w) = aligned 2 a) /\
-   (!a. isAligned (a, 7w) = aligned 3 a)`,
+   (!a. isAligned (a, 7w) = aligned 3 a)
+Proof
   simp [isAligned_def, alignmentTheory.aligned_extract]
   \\ blastLib.BBLAST_TAC
-  )
+QED
 
 Theorem aligned_pc[local]:
   !pc : word64.  ((1 >< 0) pc = 0w : word2) = aligned 2 pc

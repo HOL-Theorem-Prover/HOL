@@ -73,9 +73,8 @@ val from_reg_index_def = Define `
       else if i = 13 then R13
       else R14`;
 
-val from_reg_index_thm = Q.store_thm
-  ("from_reg_index_thm",
-   `(from_reg_index 0 = R0) /\
+Theorem from_reg_index_thm:
+    (from_reg_index 0 = R0) /\
     (from_reg_index 1 = R1) /\
     (from_reg_index 2 = R2) /\
     (from_reg_index 3 = R3) /\
@@ -89,9 +88,10 @@ val from_reg_index_thm = Q.store_thm
     (from_reg_index 11 = R11) /\
     (from_reg_index 12 = R12) /\
     (from_reg_index 13 = R13) /\
-    (from_reg_index 14 = R14)`,
+    (from_reg_index 14 = R14)
+Proof
    RW_TAC std_ss [from_reg_index_def]
-  );
+QED
 
 val toREG_def = Define `
     toREG r =
@@ -223,23 +223,23 @@ val eval_il_cond_def = Define `
   eval_il_cond cond = eval_cond (translate_condition cond)`;
 
 
-val TRANSLATE_ASSIGMENT_CORRECT = Q.store_thm
-  ("TRANSLATE_ASSIGMENT_CORRECT",
-   `!(stm:DOPER) pc cpsr st.
-       (SUC pc,cpsr,mdecode st stm) = decode_cond (pc,cpsr,st) (translate_assignment stm)`,
+Theorem TRANSLATE_ASSIGMENT_CORRECT:
+    !(stm:DOPER) pc cpsr st.
+       (SUC pc,cpsr,mdecode st stm) = decode_cond (pc,cpsr,st) (translate_assignment stm)
+Proof
      SIMP_TAC std_ss [FORALL_DSTATE] THEN
      Cases_on `stm` THEN
      RW_TAC list_ss [translate_assignment_def, decode_cond_thm, decode_op_thm, write_thm,  mdecode_def] THEN
      RW_TAC list_ss [pushL_def, popL_def, read_thm, w2n_w2w, dimindex_5, dimindex_32]
-  );
+QED
 
-val TRANSLATE_ASSIGMENT_CORRECT_2 = Q.store_thm
-  ("TRANSLATE_ASSIGMENT_CORRECT_2",
-   `!(stm:DOPER) s.
-       decode_cond s (translate_assignment stm) = (SUC (FST s),FST (SND s),mdecode (SND (SND s)) stm)`,
+Theorem TRANSLATE_ASSIGMENT_CORRECT_2:
+    !(stm:DOPER) s.
+       decode_cond s (translate_assignment stm) = (SUC (FST s),FST (SND s),mdecode (SND (SND s)) stm)
+Proof
      RW_TAC std_ss [] THEN
      METIS_TAC [ABS_PAIR_THM,FST,SND,TRANSLATE_ASSIGMENT_CORRECT]
-  );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
@@ -318,58 +318,58 @@ val UNCHANGED_THM = store_thm ("UNCHANGED_THM",
 (*      Hoare Rules for IR                                                         *)
 (*---------------------------------------------------------------------------------*)
 
-val HOARE_SC_IR = Q.store_thm (
-   "HOARE_SC_IR",
-   `!ir1 ir2 P Q R T.
+Theorem HOARE_SC_IR:
+    !ir1 ir2 P Q R T.
         WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
            (!st. P st ==> Q (run_ir ir1 st)) /\
            (!st. R st ==> T (run_ir ir2 st)) /\ (!st. Q st ==> R st) ==>
              !st. P st ==>
-                  T (run_ir (SC ir1 ir2) st)`,
+                  T (run_ir (SC ir1 ir2) st)
+Proof
    RW_TAC std_ss [WELL_FORMED_SUB_thm, run_ir_def, translate_def, run_arm_def, eval_fl_def] THEN
    IMP_RES_TAC (SIMP_RULE std_ss [eval_fl_def, uploadCode_def]  HOARE_SC_FLAT)
-  );
+QED
 
-val HOARE_CJ_IR = Q.store_thm (
-   "HOARE_CJ_IR",
-   `!cond ir_t ir_f P Q R.
+Theorem HOARE_CJ_IR:
+    !cond ir_t ir_f P Q R.
        WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
            (!st. P st ==> Q (run_ir ir_t st)) /\
            (!st. P st ==> R (run_ir ir_f st)) ==>
              !st. P st ==>
                 if eval_il_cond cond st then Q (run_ir (CJ cond ir_t ir_f) st)
-                    else R (run_ir (CJ cond ir_t ir_f) st)`,
+                    else R (run_ir (CJ cond ir_t ir_f) st)
+Proof
    RW_TAC std_ss [WELL_FORMED_SUB_thm, run_ir_def, translate_def, run_arm_def, eval_fl_def, eval_il_cond_def] THEN
    IMP_RES_TAC (SIMP_RULE std_ss [eval_fl_def, uploadCode_def] HOARE_CJ_FLAT) THEN
    METIS_TAC []
-  );
+QED
 
-val HOARE_TR_IR = Q.store_thm (
-   "HOARE_TR_IR",
-   `!cond ir P.
+Theorem HOARE_TR_IR:
+    !cond ir P.
        WELL_FORMED ir /\  WF_TR (translate_condition cond, translate ir) /\
          (!st. P st ==> P (run_ir ir st)) ==>
             !st. P st ==> P (run_ir (TR cond ir) st) /\
-                 eval_il_cond cond (run_ir (TR cond ir) st)`,
+                 eval_il_cond cond (run_ir (TR cond ir) st)
+Proof
    RW_TAC std_ss [WELL_FORMED_SUB_thm, run_ir_def, translate_def, run_arm_def, eval_fl_def, eval_il_cond_def] THEN
    METIS_TAC [SIMP_RULE std_ss [eval_fl_def, uploadCode_def] HOARE_TR_FLAT]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Well-formedness of IR                                                      *)
 (*---------------------------------------------------------------------------------*)
 
-val UPLOAD_LEM_2 = Q.store_thm (
-   "UPLOAD_LEM_2",
-   `!s stm iB. (upload [stm] iB (FST s)) (FST s) = stm`,
+Theorem UPLOAD_LEM_2:
+    !s stm iB. (upload [stm] iB (FST s)) (FST s) = stm
+Proof
    RW_TAC std_ss [] THEN
    `0 < LENGTH [stm]` by RW_TAC list_ss [] THEN
    METIS_TAC [UPLOAD_LEM, FST, DECIDE (Term`!x.x + 0 = x`), EL, HD]
-   );
+QED
 
-val STATEMENT_IS_WELL_FORMED = Q.store_thm (
-   "STATEMENT_IS_WELL_FORMED",
-   `!stm. well_formed [translate_assignment stm]`,
+Theorem STATEMENT_IS_WELL_FORMED:
+    !stm. well_formed [translate_assignment stm]
+Proof
     RW_TAC list_ss [FORALL_DSTATE, well_formed_def, terminated_def, stopAt_def, status_independent_def] THENL [
         Cases_on `stm` THEN
             (fn g =>
@@ -392,12 +392,12 @@ val STATEMENT_IS_WELL_FORMED = Q.store_thm (
                 RW_TAC std_ss [Once RUNTO_ADVANCE]) g
             )
     ]
-  );
+QED
 
 
-val BLOCK_IS_WELL_FORMED = Q.store_thm (
-   "BLOCK_IS_WELL_FORMED",
-   `!stmL. WELL_FORMED (BLK stmL)`,
+Theorem BLOCK_IS_WELL_FORMED:
+    !stmL. WELL_FORMED (BLK stmL)
+Proof
     Induct_on `stmL` THENL [
         RW_TAC list_ss [WELL_FORMED_def, well_formed_def, translate_def, closed_def, terminated_def, status_independent_def, stopAt_def] THENL [
             RW_TAC set_ss [Once RUNTO_ADVANCE],
@@ -407,30 +407,30 @@ val BLOCK_IS_WELL_FORMED = Q.store_thm (
         GEN_TAC THEN `!h tl. h :: tl = [h:INST] ++ tl` by RW_TAC list_ss [] THEN
         METIS_TAC [WELL_FORMED_def, translate_def, mk_SC_def, SC_IS_WELL_FORMED, STATEMENT_IS_WELL_FORMED]
     ]
-);
+QED
 
-val IR_SC_IS_WELL_FORMED = Q.store_thm (
-   "IR_SC_IS_WELL_FORMED",
-   `!ir1 ir2. WELL_FORMED ir1 /\ WELL_FORMED ir2 = WELL_FORMED (SC ir1 ir2)`,
+Theorem IR_SC_IS_WELL_FORMED:
+    !ir1 ir2. WELL_FORMED ir1 /\ WELL_FORMED ir2 = WELL_FORMED (SC ir1 ir2)
+Proof
     RW_TAC std_ss [WELL_FORMED_SUB_thm, WELL_FORMED_SUB_def, translate_def] THEN
     PROVE_TAC [SC_IS_WELL_FORMED]
-   );
+QED
 
-val IR_CJ_IS_WELL_FORMED = Q.store_thm (
-   "IR_CJ_IS_WELL_FORMED",
-   `!cond ir_t ir_f. WELL_FORMED ir_t /\ WELL_FORMED ir_f =
-        WELL_FORMED (CJ cond ir_t ir_f)`,
+Theorem IR_CJ_IS_WELL_FORMED:
+    !cond ir_t ir_f. WELL_FORMED ir_t /\ WELL_FORMED ir_f =
+        WELL_FORMED (CJ cond ir_t ir_f)
+Proof
     RW_TAC std_ss [WELL_FORMED_SUB_thm, WELL_FORMED_SUB_def, translate_def] THEN
     PROVE_TAC [CJ_IS_WELL_FORMED]
-   );
+QED
 
-val IR_TR_IS_WELL_FORMED = Q.store_thm (
-   "IR_TR_IS_WELL_FORMED",
-   `!ir cond. WELL_FORMED ir /\ WF_TR (translate_condition cond, translate ir) =
-        WELL_FORMED (TR cond ir)`,
+Theorem IR_TR_IS_WELL_FORMED:
+    !ir cond. WELL_FORMED ir /\ WF_TR (translate_condition cond, translate ir) =
+        WELL_FORMED (TR cond ir)
+Proof
     RW_TAC std_ss [WELL_FORMED_SUB_thm, WELL_FORMED_SUB_def, translate_def] THEN
     PROVE_TAC [TR_IS_WELL_FORMED]
-   );
+QED
 
 val WELL_FORMED_thm = store_thm ("WELL_FORMED_thm",
     ``(WELL_FORMED (BLK stmL) = T) /\
@@ -445,21 +445,21 @@ val WELL_FORMED_thm = store_thm ("WELL_FORMED_thm",
 (*      Semantics of IR                                                            *)
 (*---------------------------------------------------------------------------------*)
 
-val IR_SEMANTICS_SC = Q.store_thm (
-   "IR_SEMANTICS_SC",
-   `WELL_FORMED ir1 /\ WELL_FORMED ir2 ==>
+Theorem IR_SEMANTICS_SC:
+    WELL_FORMED ir1 /\ WELL_FORMED ir2 ==>
      (run_ir (SC ir1 ir2) st =
-       run_ir ir2 (run_ir ir1 st))`,
+       run_ir ir2 (run_ir ir1 st))
+Proof
     METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`ir1`,`ir2`, `\st'. st' = st`, `\st'. st' = run_ir ir1 st`, `\st'. st' = run_ir ir1 st`,
                          `\st'. st' =  run_ir ir2 (run_ir ir1 st)`] HOARE_SC_IR)]
-   );
+QED
 
 
-val IR_SEMANTICS_BLK = Q.store_thm (
-   "IR_SEMANTICS_BLK",
-    `(run_ir (BLK (stm::stmL)) st =
+Theorem IR_SEMANTICS_BLK:
+     (run_ir (BLK (stm::stmL)) st =
           run_ir (BLK stmL) (mdecode st stm)) /\
-     (run_ir (BLK []) st = st)`,
+     (run_ir (BLK []) st = st)
+Proof
 
     REPEAT STRIP_TAC THENL [
        RW_TAC list_ss [run_ir_def, translate_def] THEN
@@ -475,25 +475,25 @@ val IR_SEMANTICS_BLK = Q.store_thm (
            FULL_SIMP_TAC list_ss [WELL_FORMED_def, IR_SEMANTICS_SC, translate_def],
        RW_TAC list_ss [run_ir_def, run_arm_def, translate_def, Once RUNTO_ADVANCE, get_st_def]
    ]
-  );
+QED
 
-val IR_SEMANTICS_CJ = Q.store_thm (
-   "IR_SEMANTICS_CJ",
-   ` WELL_FORMED ir_t /\ WELL_FORMED ir_f ==>
+Theorem IR_SEMANTICS_CJ:
+     WELL_FORMED ir_t /\ WELL_FORMED ir_f ==>
      (run_ir (CJ cond ir_t ir_f) st =
           if eval_il_cond cond st then run_ir ir_t st
-          else run_ir ir_f st)`,
+          else run_ir ir_f st)
+Proof
    RW_TAC std_ss [] THEN
    METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`cond`, `ir_t`, `ir_f`, `\st'. st' = st`, `\st'. st' = run_ir ir_t st`,
                  `\st'. st' = run_ir ir_f st`] HOARE_CJ_IR)]
-  );
+QED
 
 
-val IR_SEMANTICS_TR = Q.store_thm (
-   "IR_SEMANTICS_TR",
-     `WELL_FORMED ir /\ WF_TR (translate_condition cond,translate ir) ==>
+Theorem IR_SEMANTICS_TR:
+      WELL_FORMED ir /\ WF_TR (translate_condition cond,translate ir) ==>
       (run_ir (TR cond ir) st =
-         WHILE (\st'.~eval_il_cond cond st') (run_ir ir) st)`,
+         WHILE (\st'.~eval_il_cond cond st') (run_ir ir) st)
+Proof
 
     RW_TAC std_ss [WELL_FORMED_SUB_thm, run_ir_def, run_arm_def, translate_def, eval_il_cond_def] THEN
     Q.ABBREV_TAC `arm = translate ir` THEN
@@ -520,14 +520,14 @@ val IR_SEMANTICS_TR = Q.store_thm (
                    get_st_def, run_ir_def, run_arm_def] THEN
             METIS_TAC [SND,FST,get_st_def,FUNPOW_DSTATE, ABS_PAIR_THM]
       ]
-  );
+QED
 
 
-val IR_SEMANTICS_EMBEDDED_THM = Q.store_thm (
-   "IR_SEMANTICS_EMBEDDED_THM",
-                `!ir s. well_formed (translate ir) ==>
+Theorem IR_SEMANTICS_EMBEDDED_THM:
+                 !ir s. well_formed (translate ir) ==>
                                 (?pc cpsr pcS.
-                                (run_arm (translate ir) s = ((pc, cpsr, run_ir ir (SND(SND(FST s)))), pcS)))`,
+                                (run_arm (translate ir) s = ((pc, cpsr, run_ir ir (SND(SND(FST s)))), pcS)))
+Proof
 
                 SIMP_TAC std_ss [run_ir_def, well_formed_def] THEN
                 REPEAT STRIP_TAC THEN
@@ -538,7 +538,8 @@ val IR_SEMANTICS_EMBEDDED_THM = Q.store_thm (
                  get_st (runTo (upload arm (\i. ARB) pc) (pc + LENGTH arm) ((pc,cpsr,st),pcS))`
                          by METIS_TAC[status_independent_def, DSTATE_IRRELEVANT_PCS, FST] THEN
                 ASM_SIMP_TAC std_ss [get_st_def] THEN
-                METIS_TAC[PAIR, FST, SND]);
+                METIS_TAC[PAIR, FST, SND]
+QED
 
 
 
@@ -549,10 +550,10 @@ val WF_ir_TR_def =  Define `
               (run_ir ir))`;
 
 
-val WF_ir_TR_thm = Q.store_thm (
-   "WF_ir_TR_thm",
-          `!cond ir. WELL_FORMED ir ==>
-                (WF_ir_TR (cond, ir) = WF_TR (translate_condition cond, translate ir))`,
+Theorem WF_ir_TR_thm:
+           !cond ir. WELL_FORMED ir ==>
+                (WF_ir_TR (cond, ir) = WF_TR (translate_condition cond, translate ir))
+Proof
 
 SIMP_TAC std_ss [WF_ir_TR_def, WF_TR_def, WF_Loop_def, eval_il_cond_def, WELL_FORMED_SUB_thm] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -619,15 +620,16 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
                 `(LENGTH (translate ir)) = 0 + (LENGTH (translate ir))` by DECIDE_TAC THEN
                 METIS_TAC[status_independent_def, DSTATE_IRRELEVANT_PCS, FST]
         ]
-]);
+]
+QED
 
 
 
-val IR_SEMANTICS_TR___FUNPOW = Q.store_thm (
-   "IR_SEMANTICS_TR___FUNPOW",
-     `WELL_FORMED ir /\ WF_TR (translate_condition cond,translate ir) ==>
+Theorem IR_SEMANTICS_TR___FUNPOW:
+      WELL_FORMED ir /\ WF_TR (translate_condition cond,translate ir) ==>
       (run_ir (TR cond ir) st =
-        FUNPOW (run_ir ir) (shortest (eval_il_cond cond) (run_ir ir) st) st)`,
+        FUNPOW (run_ir ir) (shortest (eval_il_cond cond) (run_ir ir) st) st)
+Proof
 
 
         SIMP_TAC std_ss [IR_SEMANTICS_TR] THEN
@@ -635,14 +637,14 @@ val IR_SEMANTICS_TR___FUNPOW = Q.store_thm (
         `(\st'. ~eval_il_cond cond st') = $~ o (eval_il_cond cond)` by SIMP_TAC std_ss [combinTheory.o_DEF] THEN
         ASM_SIMP_TAC std_ss [] THEN
         MATCH_MP_TAC ARMCompositionTheory.UNROLL_LOOP THEN
-        METIS_TAC[WF_ir_TR_thm, WF_ir_TR_def]);
+        METIS_TAC[WF_ir_TR_thm, WF_ir_TR_def]
+QED
 
 
 
 
-val SEMANTICS_OF_IR = Q.store_thm (
-   "SEMANTICS_OF_IR",
-   `(run_ir (BLK []) st = st) /\
+Theorem SEMANTICS_OF_IR:
+    (run_ir (BLK []) st = st) /\
     (run_ir (BLK (stm::stmL)) st =
           run_ir (BLK stmL) (mdecode st stm)) /\
     ((WELL_FORMED ir1 /\ WELL_FORMED ir2) ==>
@@ -652,7 +654,8 @@ val SEMANTICS_OF_IR = Q.store_thm (
            (if eval_il_cond cond st then run_ir ir1 st else run_ir ir2 st))) /\
      (( WELL_FORMED ir1 /\ WF_TR (translate_condition cond,translate ir1)) ==>
        (run_ir (TR cond ir1) st =
-           WHILE (\st'. ~eval_il_cond cond st') (run_ir ir1) st))`,
+           WHILE (\st'. ~eval_il_cond cond st') (run_ir ir1) st))
+Proof
    RW_TAC std_ss [IR_SEMANTICS_BLK, IR_SEMANTICS_CJ, IR_SEMANTICS_SC, IR_SEMANTICS_TR]
-  );
+QED
 

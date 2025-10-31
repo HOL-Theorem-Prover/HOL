@@ -33,34 +33,39 @@ Theorem Ctermeq_refl[simp]: ∀t. Ctermeq t t
 Proof Induct THEN SRW_TAC [][permeq_refl]
 QED
 
-val Ctermeq_sym = Q.store_thm(
-"Ctermeq_sym",
-`∀t1 t2. Ctermeq t1 t2 = Ctermeq t2 t1`,
+Theorem Ctermeq_sym:
+ ∀t1 t2. Ctermeq t1 t2 = Ctermeq t2 t1
+Proof
 Induct THEN
 Cases_on `t2` THEN SRW_TAC [][] THEN
-METIS_TAC [permeq_sym]);
+METIS_TAC [permeq_sym]
+QED
 
-val Ctermeq_trans = Q.store_thm(
-"Ctermeq_trans",
-`∀t1 t2 t3. Ctermeq t1 t2 ∧ Ctermeq t2 t3 ⇒ Ctermeq t1 t3`,
+Theorem Ctermeq_trans:
+ ∀t1 t2 t3. Ctermeq t1 t2 ∧ Ctermeq t2 t3 ⇒ Ctermeq t1 t3
+Proof
 Induct THEN Cases_on `t2` THEN Cases_on `t3` THEN SRW_TAC [][] THEN
-METIS_TAC [permeq_trans]);
+METIS_TAC [permeq_trans]
+QED
 
-val Ctermeq_equiv = Q.store_thm(
-"Ctermeq_equiv",
-`∀t1 t2. Ctermeq t1 t2 ⇔ (Ctermeq t1 = Ctermeq t2)`,
+Theorem Ctermeq_equiv:
+ ∀t1 t2. Ctermeq t1 t2 ⇔ (Ctermeq t1 = Ctermeq t2)
+Proof
 METIS_TAC [equivalence_def,symmetric_def,reflexive_def,transitive_def,
-           ALT_equivalence,Ctermeq_refl,Ctermeq_sym,Ctermeq_trans]);
+           ALT_equivalence,Ctermeq_refl,Ctermeq_sym,Ctermeq_trans]
+QED
 
-val CTie_rsp = Q.store_thm(
-"CTie_rsp",
-`∀t1 t2 a1 a2. (a1 = a2) ∧ Ctermeq t1 t2 ⇒ Ctermeq (CTie a1 t1) (CTie a2 t2)`,
-Induct THEN SRW_TAC [][]);
+Theorem CTie_rsp:
+ ∀t1 t2 a1 a2. (a1 = a2) ∧ Ctermeq t1 t2 ⇒ Ctermeq (CTie a1 t1) (CTie a2 t2)
+Proof
+Induct THEN SRW_TAC [][]
+QED
 
-val CnPair_rsp = Q.store_thm(
-"CnPair_rsp",
-`∀t1a t1d t2a t2d. Ctermeq t1a t2a ∧ Ctermeq t1d t2d ⇒ Ctermeq (CnPair t1a t1d) (CnPair t2a t2d)`,
-Induct THEN SRW_TAC [][]);
+Theorem CnPair_rsp:
+ ∀t1a t1d t2a t2d. Ctermeq t1a t2a ∧ Ctermeq t1d t2d ⇒ Ctermeq (CnPair t1a t1d) (CnPair t2a t2d)
+Proof
+Induct THEN SRW_TAC [][]
+QED
 
 fun mk_def(t) =
 let val s = (String.extract(term_to_string t,1,NONE)) in
@@ -90,17 +95,18 @@ val (nterm_rec_rules,nterm_rec_ind,nterm_rec_cases) = Hol_reln `
     nterm_rec Nf Sf Tf Pf Cf (nPair t1 t2) (Pf t1 t2 r1 r2)) ∧
   nterm_rec Nf Sf Tf Pf Cf (nConst c) (Cf c)`;
 
-val nterm_rec_total = Q.store_thm(
-"nterm_rec_total",
-`∀t. ∃r. nterm_rec Nf Sf Tf Pf Cf t r`,
+Theorem nterm_rec_total:
+ ∀t. ∃r. nterm_rec Nf Sf Tf Pf Cf t r
+Proof
 HO_MATCH_MP_TAC nterm_induction THEN
-METIS_TAC [nterm_rec_rules]);
+METIS_TAC [nterm_rec_rules]
+QED
 
-val nterm_rec_unique = Q.store_thm(
-"nterm_rec_unique",
-`(∀p1 p2 v. p1 == p2 ⇒ (Sf p1 v = Sf p2 v)) ⇒
+Theorem nterm_rec_unique:
+ (∀p1 p2 v. p1 == p2 ⇒ (Sf p1 v = Sf p2 v)) ⇒
   ∀t r. nterm_rec Nf Sf Tf Pf Cf t r ⇒
-  ∀r'. nterm_rec Nf Sf Tf Pf Cf t r' ⇒  (r' = r)`,
+  ∀r'. nterm_rec Nf Sf Tf Pf Cf t r' ⇒  (r' = r)
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC nterm_rec_ind THEN
 SRW_TAC [][] THENL [
   FULL_SIMP_TAC (srw_ss()) [Once nterm_rec_cases],
@@ -112,17 +118,18 @@ SRW_TAC [][] THENL [
   SRW_TAC [][Once nterm_rec_cases] THEN
   METIS_TAC [],
   FULL_SIMP_TAC (srw_ss()) [Once nterm_rec_cases]
-]);
+]
+QED
 
-val nterm_rec_exists = Q.store_thm(
-"nterm_rec_exists",
-`∀Nf Sf Tf Pf Cf.
+Theorem nterm_rec_exists:
+ ∀Nf Sf Tf Pf Cf.
  (∀p1 p2 v. p1 == p2 ⇒ (Sf p1 v = Sf p2 v)) ⇒
  ∃f. (∀a. f (Nom a) = Nf a) ∧
      (∀p v. f (Sus p v) = Sf p v) ∧
      (∀a t. f (Tie a t) = Tf a t (f t)) ∧
      (∀t1 t2. f (nPair t1 t2) = Pf t1 t2 (f t1) (f t2)) ∧
-     (∀c. f (nConst c) = (Cf c))`,
+     (∀c. f (nConst c) = (Cf c))
+Proof
 REPEAT STRIP_TAC THEN Q.EXISTS_TAC `λt. @r. nterm_rec Nf Sf Tf Pf Cf t r` THEN
 SRW_TAC [][] THENL [
   SELECT_ELIM_TAC THEN
@@ -148,7 +155,8 @@ SRW_TAC [][] THENL [
   ],
   SELECT_ELIM_TAC THEN
   METIS_TAC [nterm_rec_unique,nterm_rec_rules]
-]);
+]
+QED
 
 Definition is_Nom_def:  is_Nom t = ?a. (t = Nom a)
 End
@@ -199,16 +207,16 @@ Definition nterm_case_def:
   if is_nPair t then UNCURRY Pf (dest_nPair t) else Cf (dest_nConst t)
 End
 
-val nterm_case_cong = Q.store_thm(
-"nterm_case_cong",
-`∀t t' Nf Sf  Tf Pf Cf.
+Theorem nterm_case_cong:
+ ∀t t' Nf Sf  Tf Pf Cf.
    (t = t') ∧
    (∀a. (t' = Nom a) ⇒ (Nf a = Nf' a)) ∧
    (∀p v.  (t' = Sus p v) ⇒  (Sf p v = Sf' p v)) ∧
    (∀a t.  (t' = Tie a t) ⇒  (Tf a t = Tf' a t)) ∧
    (∀t1 t2.  (t' = nPair t1 t2) ⇒ (Pf t1 t2 = Pf' t1 t2)) ∧
    (∀c.  (t' = nConst c) ⇒ (Cf c = Cf' c)) ⇒
-   (nterm_CASE t Nf Sf Tf Pf Cf = nterm_CASE t' Nf' Sf' Tf' Pf' Cf')`,
+   (nterm_CASE t Nf Sf Tf Pf Cf = nterm_CASE t' Nf' Sf' Tf' Pf' Cf')
+Proof
 REPEAT GEN_TAC THEN
 Q.SPEC_THEN `t'` STRUCT_CASES_TAC nterm_nchotomy THEN
 SIMP_TAC (srw_ss())
@@ -216,7 +224,8 @@ SIMP_TAC (srw_ss())
 SRW_TAC [][] THEN1
 (FIRST_X_ASSUM MATCH_MP_TAC THEN SELECT_ELIM_TAC THEN
  SRW_TAC [][permeq_sym] THEN METIS_TAC [permeq_refl]) THEN
-METIS_TAC [permeq_refl]);
+METIS_TAC [permeq_refl]
+QED
 
 val nterm_case_rewrites = RWstore_thm(
 "nterm_case_rewrites",
@@ -226,20 +235,22 @@ val nterm_case_rewrites = RWstore_thm(
  (nterm_CASE (nConst c) Nf Sf Tf Pf Cf = Cf c)`,
 SIMP_TAC (srw_ss()) [nterm_case_def]);
 
-val Sus_case1 = Q.store_thm(
-"Sus_case1",
-`nterm_CASE (Sus p v) Nf Sf Tf Pf Cf = Sf (@p'. p' == p) v`,
-SRW_TAC [] [nterm_case_def]);
+Theorem Sus_case1:
+ nterm_CASE (Sus p v) Nf Sf Tf Pf Cf = Sf (@p'. p' == p) v
+Proof
+SRW_TAC [] [nterm_case_def]
+QED
 
 (* Unfortunately this theorem is wasted when using Define, since only
    Sus_case1 goes into the case theorem given to the TypeBase *)
-val Sus_case2 = Q.store_thm(
-"Sus_case2",
-`(∀p1 p2. (p1 == p2) ⇒ (Sf p1 v = Sf p2 v)) ⇒
- (nterm_CASE (Sus p v) Nf Sf Tf Pf Cf = Sf p v)`,
+Theorem Sus_case2:
+ (∀p1 p2. (p1 == p2) ⇒ (Sf p1 v = Sf p2 v)) ⇒
+ (nterm_CASE (Sus p v) Nf Sf Tf Pf Cf = Sf p v)
+Proof
 SRW_TAC [] [nterm_case_def] THEN
 FIRST_X_ASSUM MATCH_MP_TAC THEN
-SELECT_ELIM_TAC THEN SRW_TAC [][]);
+SELECT_ELIM_TAC THEN SRW_TAC [][]
+QED
 
 val nterm_size_def = RWnew_specification ("nterm_size_def",
   ["nterm_size"],
@@ -256,29 +267,30 @@ val nterm_size_def = RWnew_specification ("nterm_size_def",
   CONV_RULE SKOLEM_CONV |>
   SIMP_RULE (srw_ss()) [FORALL_AND_THM]);
 
-val nterm_case_eq = Q.store_thm(
-  "nterm_case_eq",
-  ‘(nterm_CASE n nmf sf tf pf cf = v) ⇔
+Theorem nterm_case_eq:
+   (nterm_CASE n nmf sf tf pf cf = v) ⇔
      (∃a. (n = Nom a) ∧ (nmf a = v)) ∨
      (∃p w. (n = Sus p w) ∧ (sf (@p'. p' == p) w = v)) ∨
      (∃a t. (n = Tie a t) ∧ (tf a t = v)) ∨
      (∃t1 t2. (n = nPair t1 t2) ∧ (pf t1 t2 = v)) ∨
-     (∃c. (n = nConst c) ∧ (cf c = v))’,
+     (∃c. (n = nConst c) ∧ (cf c = v))
+Proof
   Q.ISPEC_THEN ‘n’ STRUCT_CASES_TAC nterm_nchotomy >>
   simp[nterm_case_rewrites, Sus_case1] >> eq_tac >> rw[]
   >- (rename [‘(c == _) /\ (_ = _)’] >> qexists_tac ‘c’ >> simp[permeq_refl]) >>
   rename [‘_ (@p'. p' == c1) _ = _ (@p'. p' == c2) _’] >>
   ‘∀p. p == c2 <=> p == c1’ suffices_by simp[] >>
-  metis_tac[permeq_def]);
+  metis_tac[permeq_def]
+QED
 
-val nterm_case_elim = Q.store_thm(
-  "nterm_case_elim",
-  ‘∀f. (f(nterm_CASE n nmf sf tf pf cf) ⇔
+Theorem nterm_case_elim:
+   ∀f. (f(nterm_CASE n nmf sf tf pf cf) ⇔
      (∃a. (n = Nom a) ∧ f(nmf a)) ∨
      (∃p w. (n = Sus p w) ∧ f(sf (@p'. p' == p) w)) ∨
      (∃a t. (n = Tie a t) ∧ f(tf a t)) ∨
      (∃t1 t2. (n = nPair t1 t2) ∧ f(pf t1 t2)) ∨
-     (∃c. (n = nConst c) ∧ f(cf c)))’,
+     (∃c. (n = nConst c) ∧ f(cf c)))
+Proof
   strip_tac >>
   Q.ISPEC_THEN ‘n’ STRUCT_CASES_TAC nterm_nchotomy >>
   simp[nterm_case_rewrites, Sus_case1] >> eq_tac >> rw[]
@@ -286,7 +298,8 @@ val nterm_case_elim = Q.store_thm(
   pop_assum mp_tac >>
   rename [‘_ (_ (@p'. p' == c1) _) ⇒ _(_ (@p'. p' == c2) _)’] >>
   ‘∀p. p == c2 <=> p == c1’ suffices_by simp[] >>
-  metis_tac[permeq_def]);
+  metis_tac[permeq_def]
+QED
 
 local open TypeBase TypeBasePure Drule
 in
@@ -318,10 +331,11 @@ val SELECT_permeq_REFL = RWstore_thm(
 `(@p.p==l)==l`,
 SELECT_ELIM_TAC THEN SRW_TAC [][])
 
-val Sus_eq_perms = Q.store_thm(
-"Sus_eq_perms",
-`p1 == p2 ⇒ (Sus p1 v = Sus p2 v)`,
-SRW_TAC [][])
+Theorem Sus_eq_perms:
+ p1 == p2 ⇒ (Sus p1 v = Sus p2 v)
+Proof
+SRW_TAC [][]
+QED
 
 Definition nvars_def[simp]:
   (nvars (Sus p v) = {v}) ∧
