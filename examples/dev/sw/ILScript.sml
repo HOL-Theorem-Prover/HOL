@@ -505,7 +505,6 @@ Theorem IR_SEMANTICS_BLK:
           run_ir (BLK stmL) (mdecode st stm)) /\
      (run_ir (BLK []) st = st)
 Proof
-
     REPEAT STRIP_TAC THENL [
        RW_TAC list_ss [run_ir_def, translate_def] THEN
            `translate_assignment stm::translate (BLK stmL) = translate (SC (BLK [stm]) (BLK stmL))` by RW_TAC list_ss [translate_def,mk_SC_def] THEN
@@ -539,7 +538,6 @@ Theorem IR_SEMANTICS_TR:
       (run_ir (TR cond ir) st =
          WHILE (\st'.~eval_il_cond cond st') (run_ir ir) st)
 Proof
-
     RW_TAC std_ss [WELL_FORMED_SUB_thm, run_ir_def, run_arm_def, translate_def, eval_il_cond_def] THEN
     Q.ABBREV_TAC `arm = translate ir` THEN
     IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`translate_condition cond`,`arm`,`(\i. ARB)`,`(0,0w,st):STATE`,`{}`] UNROLL_TR_LEM)) THEN
@@ -573,7 +571,6 @@ Theorem IR_SEMANTICS_EMBEDDED_THM:
                                 (?pc cpsr pcS.
                                 (run_arm (translate ir) s = ((pc, cpsr, run_ir ir (SND(SND(FST s)))), pcS)))
 Proof
-
                 SIMP_TAC std_ss [run_ir_def, well_formed_def] THEN
                 REPEAT STRIP_TAC THEN
                 `?pc cpsr st pcS. (s = ((pc,cpsr,st),pcS))` by METIS_TAC[PAIR, FST, SND] THEN
@@ -599,7 +596,6 @@ Theorem WF_ir_TR_thm:
            !cond ir. WELL_FORMED ir ==>
                 (WF_ir_TR (cond, ir) = WF_TR (translate_condition cond, translate ir))
 Proof
-
 SIMP_TAC std_ss [WF_ir_TR_def, WF_TR_def, WF_Loop_def, eval_il_cond_def, WELL_FORMED_SUB_thm] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
         Q_TAC EXISTS_TAC `inv_image R get_st` THEN
@@ -675,8 +671,6 @@ Theorem IR_SEMANTICS_TR___FUNPOW:
       (run_ir (TR cond ir) st =
         FUNPOW (run_ir ir) (shortest (eval_il_cond cond) (run_ir ir) st) st)
 Proof
-
-
         SIMP_TAC std_ss [IR_SEMANTICS_TR] THEN
         REPEAT STRIP_TAC THEN
         `(\st'. ~eval_il_cond cond st') = $~ o (eval_il_cond cond)` by SIMP_TAC std_ss [combinTheory.o_DEF] THEN

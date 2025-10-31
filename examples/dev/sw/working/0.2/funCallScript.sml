@@ -58,7 +58,6 @@ Theorem same_content_thm:
      !s st m. same_content s st m =
          !x. valid_TEXP x m ==> (tread s x = reade st (conv_exp x))
 Proof
-
     SIMP_TAC std_ss [FORALL_TSTATE, FORALL_DSTATE] THEN
     RW_TAC std_ss [same_content_def] THEN
     EQ_TAC THEN
@@ -77,7 +76,6 @@ Theorem same_content_read:
      !s st m. same_content s st m /\ EVERY (\x.valid_TEXP x m) lst ==>
          (MAP (tread s) lst = MAP (reade st o conv_exp) lst)
 Proof
-
     SIMP_TAC std_ss [FORALL_TSTATE, FORALL_DSTATE] THEN
     RW_TAC std_ss [same_content_def] THEN
     Induct_on `lst` THEN
@@ -103,7 +101,6 @@ Theorem FC_OUTPUT_LEM:
        (MAP (tread (run_hsl (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) s)) caller_o =
         MAP (reade (run_cfl (SC (SC pre body) post) st) o conv_exp) caller_o)
 Proof
-
    RW_TAC std_ss [valid_arg_list_def, run_hsl_def, WELL_FORMED_thm, SEMANTICS_OF_CFL] THEN
    `(MAP (tread (transfer (s,s2) (caller_o,callee_o))) caller_o = MAP (tread s2) callee_o) /\
     (MAP (tread s) caller_i = MAP (tread s1) callee_i)` by (Q.UNABBREV_TAC `s1` THEN METIS_TAC [TRANSFER_THM]) THEN
@@ -122,7 +119,6 @@ Proof
 QED
 
 Theorem FC_SUFFICIENT_COND_LEM:
-
     !s st m1 m2. valid_arg_list (caller_i, caller_o, callee_i, callee_o) /\
      WELL_FORMED (SC (SC pre body) post) /\ EVERY (\x.valid_TEXP x m2) callee_o /\
      same_content s st m1
@@ -140,7 +136,6 @@ Theorem FC_SUFFICIENT_COND_LEM:
        same_content (run_hsl (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) s)
                     (run_cfl (SC (SC pre body) post) st) m1
 Proof
-
     RW_TAC std_ss [] THEN
     Q.UNABBREV_TAC `s1` THEN Q.UNABBREV_TAC `st1` THEN Q.UNABBREV_TAC `st2` THEN
     IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] FC_OUTPUT_LEM) THEN
@@ -309,7 +304,6 @@ Theorem LEGAL_PUSH_EXP_LEM:
        ==>
      (!i. i < LENGTH l ==> legal_push_exp st (EL i l) (PRE (LENGTH l) - i))
 Proof
-
   RW_TAC std_ss [standard_frame_def, legal_push_exp_def] THEN
   FULL_SIMP_TAC std_ss [EVERY_EL] THEN RES_TAC THEN
   Cases_on `EL i l` THEN
@@ -339,7 +333,6 @@ Theorem PRE_CALL_PUSH_ARGUMENTS:
      ((run_cfl (BLK ((MSUB R13 R13 (MC (n2w k))) :: push_list l)) st) ''
         (isM (w2n (read st SP) - k - PRE (LENGTH l) + i)) = st '' (EL i l))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     RW_TAC std_ss [CFL_SEMANTICS_BLK] THEN
     tac1 THEN
@@ -380,7 +373,6 @@ Theorem PRE_CALL_SANITY_1:
         (!i. i > w2n (read st SP) ==> (st '' (isM i) = st' '' (isM i))) /\
         (w2n (read st' SP) = w2n (read st SP) - (k + LENGTH l))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     SIMP_TAC std_ss [CFL_SEMANTICS_BLK] THEN
@@ -424,7 +416,6 @@ Theorem LEGAL_POP_EXP_LEM:
        ==>
      EVERY (\x.~addr_in_range st x (w2n (read st SP) + LENGTH (MAP conv_exp l), w2n (read st SP))) (MAP conv_exp l)
 Proof
-
   REPEAT STRIP_TAC THEN
   IMP_RES_TAC VALID_EXP_LEM THEN
   FULL_SIMP_TAC list_ss [EVERY_EL, rich_listTheory.EL_MAP] THEN
@@ -439,7 +430,6 @@ Theorem UNIQUE_LIST_11:
    !l st. locate_ge (read st FP) (12 + m) /\ EVERY (\x. valid_TEXP x m) l /\ unique_list l ==>
           unique_exp_list st (MAP conv_exp l)
 Proof
-
   Induct_on `l` THEN RW_TAC list_ss [unique_exp_list_def, unique_list_def] THEN
     FULL_SIMP_TAC list_ss [EVERY_EL, rich_listTheory.EL_MAP] THEN
     RW_TAC std_ss [] THEN
@@ -480,7 +470,6 @@ Theorem PRE_CALL_POP_ARGUMENTS:
      ((run_cfl (BLK ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list l')) st) '' (EL i l') =
            st '' (isM (12 + w2n (read st SP) + SUC i)))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE, mov_pointers_def] THEN
     RW_TAC std_ss [APPEND, CFL_SEMANTICS_BLK] THEN
     NTAC 3 tac1 THEN
@@ -515,7 +504,6 @@ Theorem above_lem_2:
      !i l st. EVERY (\x. valid_MEXP x m) l /\ i > w2n (read st FP)
        ==> EVERY (\x. ~eq_exp st (isM i) x) l
 Proof
-
    RW_TAC std_ss [] THEN
    Q.PAT_ASSUM `EVERY k l` MP_TAC THEN
    MATCH_MP_TAC listTheory.EVERY_MONOTONIC THEN
@@ -532,7 +520,6 @@ Theorem PRE_CALL_SANITY_2:
         (w2n (read st' FP) = w2n (read st SP) + 11) /\
         (w2n (read st' IP) = w2n (read st' FP) + 1)
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE, mov_pointers_def] THEN
     SIMP_TAC std_ss [APPEND, CFL_SEMANTICS_BLK] THEN
     NTAC 3 tac1 THEN
@@ -565,7 +552,6 @@ Theorem above_lem_3:
      !i l st. EVERY (\x. valid_TEXP x m) l /\ i > w2n (read st FP) - 12
        ==> EVERY (\x. ~eq_exp st (isM i) x) (MAP conv_exp l)
 Proof
-
    Induct_on `l` THEN RW_TAC list_ss [] THEN
    Cases_on `h` THEN RW_TAC arith_ss [eq_exp_def, valid_MEXP_def, eq_addr_def, addr_of_def,
          conv_exp_def, within_bound_def]
@@ -577,7 +563,6 @@ Theorem PRE_CALL_SANITY_2':
       let st' = run_cfl (BLK ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list (MAP conv_exp l))) st in
         (!i. i > w2n (read st SP) - 1 ==> (st '' (isM i) = st' '' (isM i)))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE, mov_pointers_def] THEN
     SIMP_TAC std_ss [APPEND, CFL_SEMANTICS_BLK] THEN
     NTAC 3 tac1 THEN
@@ -615,7 +600,6 @@ Theorem PRE_CALL_PASS_ARGUMENTS_LEM_1:
         (w2n (read st' SP) = w2n (read st SP) - (k + LENGTH (saved_regs_list ++ l))) ==>
        grow_lt (read st' SP) (12 + LENGTH l) /\ locate_ge (read st' SP) (m + 1)
 Proof
-
     RW_TAC list_ss [grow_lt_def, locate_ge_def, saved_regs_list_def] THENL [
       `w2n (read st SP) < dimword (:32)` by METIS_TAC [w2n_lt] THEN
         RW_TAC arith_ss [],
@@ -672,7 +656,6 @@ Theorem PRE_CALL_SANITY_3:
           (w2n (read st' FP) = w2n (read st SP) - (k + LENGTH callee_i) - 1) /\
           (w2n (read st' IP) = w2n (read st' FP) + 1)
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [LET_THM] THEN
       tac3 THEN
@@ -709,7 +692,6 @@ Theorem PRE_CALL_SAVED_REGS_LEM:
               ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list (MAP conv_exp callee_i)))) st in
        !i. i < 12 ==> (st' '' (isM (w2n (read st' FP) - 10 + i)) = st '' (EL i saved_regs_list))
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [LET_THM] THEN
       IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] PRE_CALL_SANITY_3) THEN NTAC 40 (POP_ASSUM (K ALL_TAC)) THEN
@@ -756,7 +738,6 @@ Theorem PRE_CALL_PASS_ARGUMENTS_LEM:
               ([MADD R13 R13 (MC 12w)] ++ mov_pointers ++ pop_list (MAP conv_exp callee_i)))) st) ''
            (EL i (MAP conv_exp callee_i)) = st '' (EL i (MAP conv_exp caller_i)))
 Proof
-
       RW_TAC bool_ss [] THEN
       tac3 THEN
       IMP_RES_TAC PRE_CALL_POP_ARGUMENTS THEN NTAC 31 (POP_ASSUM (K ALL_TAC)) THEN
@@ -813,7 +794,6 @@ Theorem sub_sp_lem_1:
       (!l. EVERY (\x.valid_TEXP x m) l ==> !i. i < LENGTH l ==>
           (st1 '' (EL i (MAP conv_exp l)) = st '' (EL i (MAP conv_exp l))))
 Proof
-
    SIMP_TAC std_ss [FORALL_DSTATE, APPEND, CFL_SEMANTICS_BLK] THEN
    tac1 THEN
    RW_TAC finmap_ss [LET_THM, FP_def, IP_def, SP_def, read_thm, reade_def] THENL [
@@ -856,7 +836,6 @@ Theorem saved_regs_list_thm_1:
       (run_cfl (BLK (push_list (saved_regs_list))) st =
         run_cfl (BLK [MPUSH 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]]) st)
 Proof
-
   SIMP_TAC std_ss [FORALL_DSTATE, saved_regs_list_def, push_list_def, push_one_def] THEN
   RW_TAC std_ss [APPEND, CFL_SEMANTICS_BLK, from_reg_index_thm, fp_def, ip_def, lr_def] THEN
   NTAC 25 tac4 THEN PUSH_TAC THEN
@@ -879,7 +858,6 @@ Theorem saved_regs_list_thm_2:
      (run_cfl (BLK ((MSUB R13 R13 (MC (n2w k))) :: push_list (saved_regs_list ++ l))) st =
       run_cfl (BLK ((MSUB R13 R13 (MC (n2w k))) :: (APPEND (push_list l) [MPUSH 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]]))) st)
 Proof
-
    RW_TAC std_ss [GSYM APPEND, push_list_append, RUN_CFL_BLK_APPEND] THEN
    `locate_ge (read st SP) (k + LENGTH l)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
    Q.ABBREV_TAC `st1 = run_cfl (BLK (MSUB R13 R13 (MC (n2w k))::push_list l)) st` THEN
@@ -906,7 +884,6 @@ Theorem saved_regs_list_thm_3:
      (run_cfl (BLK (pre_call (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st =
       run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st)
 Proof
-
    RW_TAC std_ss [pre_call_def, pre_call_2_def] THEN
    IMP_RES_TAC VALID_TEXP_MEXP_1 THEN
    `MSUB R13 R13 (MC (n2w k)):: push_list (saved_regs_list ++ MAP conv_exp caller_i) ++ [MADD R13 R13 (MC 12w)] ++
@@ -938,7 +915,6 @@ Theorem PRE_CALL_SANITY_THM:
           (w2n (read st' IP) = w2n (read st' FP) + 1) /\
           (w2n (read st' SP) = w2n (read st' FP) - (12 + m2))
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [pre_call_def, Once RUN_CFL_BLK_APPEND] THEN
       Q.ABBREV_TAC `st' = run_cfl (BLK (MSUB R13 R13 (MC (n2w k)):: push_list (saved_regs_list ++ MAP conv_exp caller_i)
@@ -959,7 +935,6 @@ Theorem PRE_CALL_SAVED_REGS_THM:
          let st' =  run_cfl (BLK (pre_call (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st in
        !i. i < 12 ==> (st' '' (isM (w2n (read st' FP) - 10 + i)) = st '' (EL i saved_regs_list))
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [pre_call_def, Once RUN_CFL_BLK_APPEND] THEN
       Q.ABBREV_TAC `st' = run_cfl (BLK (MSUB R13 R13 (MC (n2w k)):: push_list (saved_regs_list ++ MAP conv_exp caller_i)
@@ -982,7 +957,6 @@ Theorem PRE_CALL_PASS_ARGUMENTS_THM:
           ((run_cfl (BLK (pre_call (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st) ''
            (EL i (MAP conv_exp callee_i)) = st '' (EL i (MAP conv_exp caller_i)))
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       SIMP_TAC std_ss [pre_call_def, Once RUN_CFL_BLK_APPEND] THEN
       Q.ABBREV_TAC `st' = run_cfl (BLK (MSUB R13 R13 (MC (n2w k)):: push_list (saved_regs_list ++ MAP conv_exp caller_i)
@@ -1011,7 +985,6 @@ Theorem PRE_CALL_SANITY_THM_2:
           (w2n (read st' IP) = w2n (read st' FP) + 1) /\
           (w2n (read st' SP) = w2n (read st' FP) - (12 + m2))
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       `locate_ge (read st SP) (k + 12 + LENGTH caller_i)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       METIS_TAC [saved_regs_list_thm_3, PRE_CALL_SANITY_THM]
@@ -1025,7 +998,6 @@ Theorem PRE_CALL_SAVED_REGS_THM_2:
          let st' =  run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st in
        !i. i < 12 ==> (st' '' (isM (w2n (read st' FP) - 10 + i)) = st '' (EL i saved_regs_list))
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       `locate_ge (read st SP) (k + 12 + LENGTH caller_i)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       METIS_TAC [saved_regs_list_thm_3, PRE_CALL_SAVED_REGS_THM]
@@ -1040,7 +1012,6 @@ Theorem PRE_CALL_PASS_ARGUMENTS_THM_2:
           ((run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st) ''
            (EL i (MAP conv_exp callee_i)) = st '' (EL i (MAP conv_exp caller_i)))
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       `locate_ge (read st SP) (k + 12 + LENGTH caller_i)` by FULL_SIMP_TAC arith_ss [locate_ge_def] THEN
       METIS_TAC [saved_regs_list_thm_3, PRE_CALL_PASS_ARGUMENTS_THM]
@@ -1071,7 +1042,6 @@ Theorem LEGAL_PUSH_EXP_LEM_2:
        ==>
      (!i. i < LENGTH l ==> legal_push_exp st (EL i l) (PRE (LENGTH l) - i))
 Proof
-
   RW_TAC std_ss [legal_push_exp_def] THENL [
     FULL_SIMP_TAC std_ss [EVERY_EL] THEN RES_TAC THEN
       Cases_on `EL i l` THEN
@@ -1096,7 +1066,6 @@ Theorem POST_CALL_PUSH_RESULTS:
          ((run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH l))) :: push_list l)) st) ''
            (isM (w2n (read st FP) + 1 + SUC i)) = st '' (EL i l))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     RW_TAC std_ss [CFL_SEMANTICS_BLK] THEN
     tac1 THEN
@@ -1135,7 +1104,6 @@ Theorem POST_CALL_SANITY_1:
         (w2n (read st' IP) = w2n (read st IP)) /\ (w2n (read st' FP) = w2n (read st FP)) /\
         (w2n (read st' SP) = w2n (read st IP))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     SIMP_TAC std_ss [CFL_SEMANTICS_BLK] THEN
     tac1 THEN
@@ -1198,7 +1166,6 @@ val POP_TAC =
 
 
 Theorem EVAL_POP_SAVED_REGS_LIST:
-
     !regs mem. locate_ge (read (regs,mem) FP) 11 ==>
       (run_cfl (BLK ([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) (regs,mem) =
      (regs |+ (0,mem ' (w2n (regs ' 11) - 10)) |+
@@ -1209,7 +1176,6 @@ Theorem EVAL_POP_SAVED_REGS_LIST:
      (11,mem ' (w2n (regs ' 11) - 1)) |+ (12,mem ' (w2n (regs ' 11))) |+
      (13,regs ' 11 + 1w) |+ (14,mem ' (w2n (regs ' 11) + 1)),mem))
 Proof
-
   RW_TAC std_ss [APPEND, CFL_SEMANTICS_BLK, from_reg_index_thm, fp_def, ip_def, lr_def] THEN
   NTAC 2 tac4 THEN POP_TAC THEN
   IMP_RES_TAC locate_ge_lem_1 THEN
@@ -1227,7 +1193,6 @@ Proof
 QED
 
 Theorem EVAL_POP_SAVED_REGS_LIST_2:
-
     !regs mem. locate_ge (read (regs,mem) FP) 11 ==>
       (run_cfl (BLK ([MSUB R13 R11 (MC 11w)] ++ pop_list saved_regs_list)) (regs,mem) =
      (regs |+ (0,mem ' (w2n (regs ' 11) - 10)) |+
@@ -1238,7 +1203,6 @@ Theorem EVAL_POP_SAVED_REGS_LIST_2:
      (11,mem ' (w2n (regs ' 11) - 1)) |+ (12,mem ' (w2n (regs ' 11))) |+
      (13,regs ' 11 + 1w) |+ (14,mem ' (w2n (regs ' 11) + 1)),mem))
 Proof
-
   SIMP_TAC std_ss [FORALL_DSTATE, saved_regs_list_def, pop_list_def, pop_one_def] THEN
   RW_TAC std_ss [APPEND, CFL_SEMANTICS_BLK, from_reg_index_thm, fp_def, ip_def, lr_def] THEN
   NTAC 25 tac4 THEN
@@ -1267,7 +1231,6 @@ Theorem POP_SAVED_REGS_LIST_SANITY_1:
         (w2n (read st' SP) = w2n (read st FP) + 1) /\
         (w2n (read st' SP) = w2n (read st FP + 1w))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     IMP_RES_TAC EVAL_POP_SAVED_REGS_LIST THEN
@@ -1285,7 +1248,6 @@ Theorem LEGAL_POP_EXP_LEM_2:
        ==>
      EVERY (\x.~addr_in_range st x (w2n (read st SP) + LENGTH (MAP conv_exp l), w2n (read st SP))) (MAP conv_exp l)
 Proof
-
   REPEAT STRIP_TAC THEN
   IMP_RES_TAC VALID_EXP_LEM THEN
   FULL_SIMP_TAC list_ss [EVERY_EL, rich_listTheory.EL_MAP] THEN
@@ -1305,7 +1267,6 @@ Theorem POST_CALL_POP_RESULTS:
      ((run_cfl (BLK ([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]] ++ pop_list l')) st) ''
           (EL i l') = st '' (isM ((w2n (read st FP) + 1) + SUC i)))
 Proof
-
     RW_TAC std_ss [APPEND, Once RUN_CFL_BLK_APPEND] THEN
     Q.ABBREV_TAC `st1 = run_cfl (BLK (MSUB R13 R11 (MC 11w)::[MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) st` THEN
     `locate_ge (read st FP) 11 /\ grow_lt (read st FP) 1` by (
@@ -1341,7 +1302,6 @@ Proof
 QED
 
 Theorem POST_CALL_PASS_RESULTS_LEM:
-
      !st l m1 m2 k. (w2n (read st IP) = w2n (read st FP) + 1) /\ locate_ge (read st IP) 12 /\
           w2n (read st IP) + LENGTH caller_o + (12 + m1) <= w2n (st '' isM (w2n (read st FP) - 1)) /\
           EVERY (\x. valid_TEXP x m2) callee_o /\
@@ -1354,7 +1314,6 @@ Theorem POST_CALL_PASS_RESULTS_LEM:
             pop_list (MAP conv_exp caller_o)))) st) '' (EL i (MAP conv_exp caller_o)) =
           st '' (EL i (MAP conv_exp callee_o)))
 Proof
-
       RW_TAC bool_ss [] THEN
       REWRITE_TAC [Once RUN_CFL_BLK_APPEND] THEN
       Q.ABBREV_TAC `st1 = run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH (MAP conv_exp callee_o))))::
@@ -1387,7 +1346,6 @@ Theorem eq_exp_lem_1:
     !e l st m. ~(MEM e l) /\ valid_TEXP e m /\ locate_ge (read st FP) (12 + m) /\ EVERY (\x.valid_TEXP x m) l ==>
          EVERY (\x. ~eq_exp st (conv_exp e) x) (MAP conv_exp l)
 Proof
-
     RW_TAC std_ss [EVERY_EL, LENGTH_MAP, rich_listTheory.EL_MAP, MEM_EL] THEN
     REPEAT (Q.PAT_ASSUM `!n.k` (ASSUME_TAC o Q.SPEC `n`)) THEN RW_TAC std_ss [] THEN
     Cases_on `EL n l` THEN  Cases_on `e` THEN
@@ -1440,7 +1398,6 @@ Theorem eval_saved_regs_list_lem:
      (st '' isM (w2n x - 7) = st0 '' isR 3) /\ (st '' isM (w2n x - 8) = st0 '' isR 2) /\
      (st '' isM (w2n x - 9) = st0 '' isR 1) /\ (st '' isM (w2n x - 10) = st0 '' isR 0)
 Proof
-
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    `0 < 12 /\ 1 < 12 /\ 2 < 12 /\ 3 < 12 /\ 4 < 12 /\ 5 < 12 /\ 6 < 12 /\ 7 < 12 /\ 8 < 12 /\ 9 < 12 /\ 10 < 12 /\
       11 < 12` by RW_TAC arith_ss [] THEN
@@ -1451,7 +1408,6 @@ Proof
 QED
 
 Theorem POST_CALL_SANITY_2:
-
      !st0 st e l m.
       locate_ge (read st FP + 1w) 12 /\
       w2n (read st FP) + 1 + LENGTH l + (12 + m) <= w2n (st '' (isM (w2n (read st FP) - 1))) /\
@@ -1462,7 +1418,6 @@ Theorem POST_CALL_SANITY_2:
         (w2n (read st' FP) = w2n (read st0 FP)) /\ (w2n (read st' IP) = w2n (read st0 IP)) /\
         (w2n (read st' SP) = w2n (read st FP) + 1)
 Proof
-
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     SIMP_TAC std_ss [APPEND] THEN
     `locate_ge (read st FP) 11 /\ grow_lt (read st FP) 1` by (
@@ -1477,7 +1432,6 @@ Proof
 QED
 
 Theorem POST_CALL_SANITY_3:
-
      !st0 st e l m.
       locate_ge (read st FP + 1w) 12 /\
       w2n (read st FP) + 1 + LENGTH l + (12 + m) <= w2n (st '' (isM (w2n (read st FP) - 1))) /\
@@ -1489,7 +1443,6 @@ Theorem POST_CALL_SANITY_3:
         (w2n (read st' FP) = w2n (read st0 FP)) /\ (w2n (read st' IP) = w2n (read st0 IP)) /\
         (w2n (read st' SP) = w2n (read st FP) + 1 + LENGTH l)
 Proof
-
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     SIMP_TAC std_ss [APPEND, Once RUN_CFL_BLK_APPEND] THEN
     IMP_RES_TAC POST_CALL_SANITY_2 THEN
@@ -1512,7 +1465,6 @@ Proof
 QED
 
 Theorem POST_CALL_SANITY_4:
-
      !st0 st e l m.
       locate_ge (read st FP + 1w) 12 /\
       w2n (read st FP) + 1 + LENGTH l + (12 + m) <= w2n (st '' (isM (w2n (read st FP) - 1))) /\
@@ -1524,7 +1476,6 @@ Theorem POST_CALL_SANITY_4:
       ((run_cfl (BLK (([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]] ++ pop_list l'))) st) ''
           (conv_exp e) =  st0 '' (conv_exp e))
 Proof
-
     RW_TAC std_ss [APPEND, Once RUN_CFL_BLK_APPEND] THEN
     `w2n (read (run_cfl (BLK (MSUB R13 R11 (MC 11w)::[MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]])) st) FP) = w2n(read st0 FP)`
        by METIS_TAC [SIMP_RULE std_ss [LET_THM] POST_CALL_SANITY_2, rich_listTheory.CONS_APPEND] THEN
@@ -1558,7 +1509,6 @@ Proof
 QED
 
 Theorem POST_CALL_RESTORED_REGS_LEM:
-
      !st l m1 m2 e. (w2n (read st IP) = w2n (read st FP) + 1) /\ locate_ge (read st IP) 12 /\
           w2n (read st IP) + LENGTH caller_o + (12 + m1) <= w2n (st '' isM (w2n (read st FP) - 1)) /\
          (!i. i < 12 ==> (st '' (isM (w2n (read st FP) - 10 + i)) = st0 '' (EL i saved_regs_list))) /\
@@ -1572,7 +1522,6 @@ Theorem POST_CALL_RESTORED_REGS_LEM:
            ++ ([MSUB R13 R11 (MC 11w)] ++ [MPOP 13 [0;1;2;3;4;5;6;7;8;fp;ip;lr]] ++ pop_list (MAP conv_exp caller_o))))
            st) '' (conv_exp e) = st0 '' (conv_exp e))
 Proof
-
       RW_TAC bool_ss [] THEN
       REWRITE_TAC [Once RUN_CFL_BLK_APPEND] THEN
       Q.ABBREV_TAC `st1 = run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH (MAP conv_exp callee_o))))::
@@ -1604,7 +1553,6 @@ Proof
 QED
 
 Theorem POST_CALL_SANITY_LEM:
-
      !st l m1 m2 e. (w2n (read st IP) = w2n (read st FP) + 1) /\ locate_ge (read st IP) 12 /\
           w2n (read st IP) + LENGTH caller_o + (12 + m1) <= w2n (st '' isM (w2n (read st FP) - 1)) /\
           w2n (read st0 FP) - 12 >= w2n (read st IP) + LENGTH caller_o /\
@@ -1619,7 +1567,6 @@ Theorem POST_CALL_SANITY_LEM:
         (w2n (read st' FP) = w2n (read st0 FP)) /\ (w2n (read st' IP) = w2n (read st0 IP)) /\
         (w2n (read st' SP) = w2n (read st FP) + 1 + LENGTH caller_o)
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       REWRITE_TAC [Once RUN_CFL_BLK_APPEND] THEN
       Q.ABBREV_TAC `st1 = run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH (MAP conv_exp callee_o))))::
@@ -1672,7 +1619,6 @@ Theorem POST_CALL_SANITY_THM:
      (w2n (read st' FP) = w2n (read st0 FP)) /\ (w2n (read st' IP) = w2n (read st0 IP)) /\
      (w2n (read st' SP) = w2n (read st0 FP) - (12 + m1))
 Proof
-
       REPEAT GEN_TAC THEN REWRITE_TAC [valid_post_call_def] THEN STRIP_TAC THEN
       `w2n (read st0 FP) - 12 >= w2n (read st IP) + LENGTH caller_o` by RW_TAC arith_ss [] THEN
       SIMP_TAC std_ss [post_call_def, Once RUN_CFL_BLK_APPEND] THEN
@@ -1690,7 +1636,6 @@ Proof
 QED
 
 Theorem POST_CALL_PASS_RESULTS_THM:
-
      !st m1 m2 caller_o callee_o.
        valid_post_call (st0,st) (m1,m2) (callee_o,caller_o)
        ==>
@@ -1698,7 +1643,6 @@ Theorem POST_CALL_PASS_RESULTS_THM:
         (run_cfl (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1)) st ''
         EL i (MAP conv_exp caller_o) = st '' EL i (MAP conv_exp callee_o))
 Proof
-
       REPEAT GEN_TAC THEN REWRITE_TAC [valid_post_call_def] THEN STRIP_TAC THEN
       `w2n (read st0 FP) - 12 >= w2n (read st IP) + LENGTH caller_o` by RW_TAC arith_ss [] THEN
       SIMP_TAC std_ss [post_call_def, Once RUN_CFL_BLK_APPEND] THEN
@@ -1718,7 +1662,6 @@ Proof
 QED
 
 Theorem POST_CALL_RESTORED_REGS_THM:
-
      !st m1 m2 caller_o callee_o.
      valid_post_call (st0,st) (m1,m2) (callee_o,caller_o) /\
      (!n. n < m1 ==> (st '' isM (w2n (read st0 FP) - (12 + n)) = st0 '' isM (w2n (read st0 FP) - (12 + n)))) /\
@@ -1727,7 +1670,6 @@ Theorem POST_CALL_RESTORED_REGS_THM:
         (run_cfl (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1)) st ''
         (conv_exp e) = st0 '' (conv_exp e))
 Proof
-
       REPEAT GEN_TAC THEN REWRITE_TAC [valid_post_call_def] THEN STRIP_TAC THEN
       SIMP_TAC std_ss [post_call_def, Once RUN_CFL_BLK_APPEND] THEN
       Q.ABBREV_TAC `st1 = run_cfl (BLK (MADD R13 R12 (MC (n2w (LENGTH (MAP conv_exp callee_o))))::
@@ -1770,7 +1712,6 @@ Theorem PRE_CALL_FP_IP_IN_MEM:
           (st' '' (isM (w2n (read st' FP) - 10 + 10)) = read st IP) /\
           (st' '' (isM (w2n (read st' FP) - 10 + 9)) = read st FP)
 Proof
-
       REPEAT GEN_TAC THEN STRIP_TAC THEN
       IMP_RES_TAC PRE_CALL_SAVED_REGS_THM_2 THEN NTAC 13 (POP_ASSUM (K ALL_TAC)) THEN
       FULL_SIMP_TAC std_ss [LET_THM] THEN
@@ -1808,7 +1749,6 @@ Theorem fun_call_lem_3:
      w2n (read st FP) - (12 + m1) >= w2n (read st2 IP) + n2 /\
      (!i. i > w2n (read st FP) - 12 ==> i > w2n (read st SP) /\ i > w2n (read st' FP) - 12)
 Proof
-
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     IMP_RES_TAC fun_call_lem_2 THEN
     NTAC 2 (POP_ASSUM MP_TAC) THEN NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN NTAC 2 STRIP_TAC THEN
@@ -1826,7 +1766,6 @@ Theorem VALID_BEFORE_POST_CALL:
      ==>
          valid_post_call (st, run_cfl S_body st') (m1,m2) (callee_o,caller_o)
 Proof
-
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    `standard_frame st m1` by FULL_SIMP_TAC arith_ss [standard_frame_def, locate_ge_def] THEN
    FULL_SIMP_TAC std_ss [LET_THM, CFL_SEMANTICS_SC, WELL_FORMED_thm] THEN
@@ -1876,7 +1815,6 @@ Theorem PRE_CALL_PRE_CALL_THM:
             MAP (reade (run_cfl (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) st)
               o conv_exp) callee_i)
 Proof
-
         RW_TAC std_ss [] THEN
         MATCH_MP_TAC MAP_LEM_3 THEN RW_TAC std_ss [] THEN
         METIS_TAC [SIMP_RULE std_ss [rich_listTheory.EL_MAP] PRE_CALL_PASS_ARGUMENTS_THM_2]
@@ -1890,7 +1828,6 @@ Theorem POST_CALL_PRE_CALL_THM:
             MAP (reade (run_cfl (BLK (post_call (MAP conv_exp caller_o,MAP conv_exp callee_o) m1)) st)
               o conv_exp) caller_o)
 Proof
-
         RW_TAC std_ss [] THEN
         `LENGTH caller_o = LENGTH callee_o` by FULL_SIMP_TAC std_ss [valid_post_call_def] THEN
         MATCH_MP_TAC MAP_LEM_3 THEN RW_TAC std_ss [] THEN
@@ -1918,7 +1855,6 @@ Theorem FUN_CALL_SANITY_THM:
              (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1))) st in
            status_intact st1 st
 Proof
-
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [LET_THM, CFL_SEMANTICS_SC, WELL_FORMED_thm] THEN
    Q.PAT_ASSUM `st' = kk` (ASSUME_TAC o GSYM) THEN ASM_REWRITE_TAC [] THEN
@@ -1955,7 +1891,6 @@ Proof
 QED
 
 Theorem FUN_CALL_VALUE_RESTORING:
-
     !st m1 m2 caller_i callee_i caller_o callee_o.
          locate_ge (read st SP) (MAX (LENGTH caller_i) (LENGTH caller_o) + 13 + m2) /\
          standard_frame st m1 /\ (w2n (read st SP) = w2n (read st FP) - (12 + m1)) /\
@@ -1969,7 +1904,6 @@ Theorem FUN_CALL_VALUE_RESTORING:
              (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1))) st in
            st1 '' (conv_exp e) = st '' (conv_exp e)
 Proof
-
    REPEAT GEN_TAC THEN STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [LET_THM, CFL_SEMANTICS_SC, WELL_FORMED_thm] THEN
    Q.PAT_ASSUM `st' = kk` (ASSUME_TAC o GSYM) THEN ASM_REWRITE_TAC [] THEN
@@ -2025,7 +1959,6 @@ Proof
 QED
 
 Theorem FC_IMPLEMENTATION_LEM:
-
     !st m1 m2 caller_i callee_i caller_o callee_o.
      VALID_FC_1 (caller_i,callee_i,callee_o,caller_o) (m1,m2) /\ WELL_FORMED S_body /\
      locate_ge (read st SP) (MAX (LENGTH caller_i) (LENGTH caller_o) + 13 + m2) /\
@@ -2040,7 +1973,6 @@ Theorem FC_IMPLEMENTATION_LEM:
                     (run_cfl (SC (SC (BLK (pre_call_2 (MAP conv_exp caller_i, MAP conv_exp callee_i) k m2)) S_body)
                       (BLK (post_call (MAP conv_exp caller_o, MAP conv_exp callee_o) m1))) st) m1
 Proof
-
     RW_TAC std_ss [] THEN
     MATCH_MP_TAC (SIMP_RULE std_ss [LET_THM, AND_IMP_INTRO] FC_SUFFICIENT_COND_LEM) THEN
     RW_TAC std_ss [] THENL [

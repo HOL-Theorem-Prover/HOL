@@ -97,7 +97,6 @@ Theorem BLK_EQ_SC:
     !stm stmL st. (run_ir (BLK (stm::stmL)) st = run_ir (SC (BLK [stm]) (BLK stmL)) st) /\
                   (run_ir (BLK (SNOC stm stmL)) st = run_ir (SC (BLK stmL) (BLK [stm])) st)
 Proof
-
    REPEAT GEN_TAC THEN
    `WELL_FORMED (BLK [stm]) /\ WELL_FORMED (BLK stmL)` by
                METIS_TAC [BLOCK_IS_WELL_FORMED] THEN
@@ -190,7 +189,6 @@ Theorem WF_TR_LEM_1:
            WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0)) ==>
            WF_TR (translate_condition cond,translate ir)
 Proof
-
    RW_TAC std_ss [WELL_FORMED_SUB_thm, WF_TR_def, WF_Loop_def, run_ir_def, run_arm_def] THEN
    POP_ASSUM MP_TAC THEN Q.ABBREV_TAC `arm = translate ir` THEN STRIP_TAC THEN
    Q.EXISTS_TAC `\s1 s0. if eval_il_cond cond (get_st s0) then F else (get_st s1 = get_st (runTo (upload arm (\i. ARB) (FST (FST s0)))
@@ -221,7 +219,6 @@ Theorem WF_TR_LEM_2:
         WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0)) ==>
            WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0))
 Proof
-
    RW_TAC std_ss [WF_DEF_2] THEN
    Q.PAT_ASSUM `!P.p` (ASSUME_TAC o Q.SPEC `\t:'a. ?y:DSTATE. (prj_f y = t) /\ P y`) THEN
    FULL_SIMP_TAC std_ss [GSYM RIGHT_EXISTS_IMP_THM] THEN
@@ -251,7 +248,6 @@ Theorem WF_TR_THM_1:
         WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0)) ==>
            WF (\st1 st0. (pre_p st0) /\ ~(eval_il_cond cond st0) /\ (st1 = run_ir ir st0))
 Proof
-
    RW_TAC std_ss [WF_DEF_2] THEN
    Q.PAT_ASSUM `!P.p` (ASSUME_TAC o Q.SPEC `\t:'a. ?y:DSTATE. (prj_f y = t) /\ P y`) THEN
    FULL_SIMP_TAC std_ss [GSYM RIGHT_EXISTS_IMP_THM] THEN
@@ -322,7 +318,6 @@ Theorem PRJ_SC_RULE:
        ==>
        PSPEC (SC ir1 ir2) (pre_p1,post_p2) stk_f (in_f1,f2 o f1,out_f2)
 Proof
-
      RW_TAC std_ss [PSPEC_def] THEN
      METIS_TAC [SC_RULE]
 QED
@@ -335,7 +330,6 @@ Theorem PRJ_CJ_RULE:
         ==>
        PSPEC (CJ cond ir_t ir_f) (pre_p,post_p) stk_f (in_f, (\v.if cond_f v then f1 v else f2 v), out_f)
 Proof
-
      RW_TAC std_ss [PSPEC_def, HSPEC_def] THEN
      METIS_TAC [IR_SEMANTICS_CJ]
 QED
@@ -347,7 +341,6 @@ Theorem PRJ_TR_RULE:
         (!st. cond_f (prj_f st) = eval_il_cond cond st) /\ PSPEC ir (pre_p,pre_p) stk_f (prj_f,f,prj_f) ==>
           PSPEC (TR cond ir) (pre_p,pre_p) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)
 Proof
-
     RW_TAC std_ss [PSPEC_def] THEN
     RW_TAC std_ss [HSPEC_def] THENL [
         FULL_SIMP_TAC std_ss [HSPEC_def] THEN
@@ -403,7 +396,6 @@ Theorem PRJ_TR_RULE_2:
            PSPEC ir ((\st.T),(\st.T)) stk_f (prj_f,f,prj_f) ==>
                     PSPEC (TR cond ir) ((\st.T),(\st.T)) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)
 Proof
-
     SIMP_TAC std_ss [PSPEC_def, HSPEC_def] THEN
     REPEAT GEN_TAC THEN NTAC 2 STRIP_TAC THEN
     `WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0))` by METIS_TAC [WF_TR_LEM_2, WF_TR_LEM_3] THEN
@@ -543,7 +535,6 @@ Theorem V_TR_RULE:
         (!st. cond_f (readv st iv) = eval_il_cond cond st) /\ VSPEC ir (pre_p,pre_p) stk (iv,f,iv) ==>
           VSPEC (TR cond ir) (pre_p,pre_p) stk (iv, WHILE ($~ o cond_f) f, iv)
 Proof
-
     RW_TAC std_ss [VSPEC_def] THEN
     FULL_SIMP_TAC std_ss [PRJ_TR_RULE]
 QED
@@ -610,7 +601,6 @@ Theorem WELL_FORMED_TR_RULE:
         WELL_FORMED ir /\  WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0)) ==>
            WELL_FORMED (TR cond ir)
 Proof
-
     RW_TAC std_ss [] THEN
     METIS_TAC [IR_TR_IS_WELL_FORMED, WF_TR_LEM_1]
 QED

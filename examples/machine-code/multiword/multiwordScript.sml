@@ -1821,7 +1821,6 @@ Theorem mw_div_by_single_thm_bis:
      mw2n (REVERSE xs) DIV w2n y) /\
     (w2n (LAST (mw_div_by_single xs y)) = mw2n (REVERSE xs) MOD w2n y)
 Proof
-
   qsuff_tac `! (xs:'a word list) (y:'a word). 0 < w2n y ==>
                w2n (LAST (mw_div_by_single xs y)) < w2n y`
   THEN1( REPEAT strip_tac >>
@@ -2535,7 +2534,6 @@ Theorem mw_div_loop_thm_bis:
        (mw2n (REVERSE (LASTN (LENGTH ys) rslt)) =
         mw2n (REVERSE zs) MOD mw2n (REVERSE ys)))
 Proof
-
   qsuff_tac
   ‘!(zs:'a word list) (ys:'a word list).
      dimword(:'a) DIV 2 <= w2n (HD ys) /\

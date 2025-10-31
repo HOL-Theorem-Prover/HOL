@@ -152,7 +152,6 @@ Theorem LDR_CORRESPOND_LEM:
        valid_assgn (TLDR T' T0) m /\ correspond (rg,sk) st m ==>
        correspond (tdecode (rg,sk) (TLDR T' T0)) (mdecode st (translate_assgn (TLDR T' T0))) m
 Proof
-
       SIMP_TAC std_ss [FORALL_DSTATE] THEN
       FULL_SIMP_TAC std_ss [translate_assgn_def, toLocn_def, valid_assgn_def, within_bound_def] THEN
       RW_TAC finmap_ss [correspond_def, fp_def, tdecode_def, twrite_def, tread_def, mdecode_def, toREG_def,
@@ -166,7 +165,6 @@ Theorem STR_CORRESPOND_LEM:
        correspond (rg,sk) st m ==>
        correspond (tdecode (rg,sk) (TSTR T' T0)) (mdecode st (translate_assgn (TSTR T' T0))) m
 Proof
-
       SIMP_TAC std_ss [FORALL_DSTATE] THEN
       RW_TAC std_ss [translate_assgn_def, toLocn_def, valid_assgn_def, within_bound_def] THEN
       FULL_SIMP_TAC finmap_ss [correspond_def, FP_def, fp_def, tdecode_def, twrite_def, tread_def, mdecode_def,
@@ -181,7 +179,6 @@ Theorem ASSGN_CORRESPOND:
        correspond (rg,sk) st m ==>
        correspond (tdecode (rg,sk) stm) (mdecode st (translate_assgn stm)) m
 Proof
-
    let val tac1 =
          FULL_SIMP_TAC finmap_ss [correspond_def, translate_assgn_def, tdecode_def, twrite_def, tread_def, mdecode_def,
             toREG_def, toMEM_def, write_thm, toEXP_def, conv_roc_def, toEXP_def, read_thm, roc_2_exp_def,
@@ -222,7 +219,6 @@ Theorem ASSGN_STATUS_INTACT:
    !stm st. let st' = mdecode st (translate_assgn stm) in
         status_intact st' st
 Proof
-
    let val tac1 = SIMP_TAC std_ss [FORALL_DSTATE, translate_assgn_def, mdecode_def, LET_THM] THEN
                   RW_TAC finmap_ss [valid_assgn_def, valid_TEXP_def, toREG_def, index_of_reg_def, read_thm, write_thm,
                     reade_def, toLocn_def, toMEM_def, IP_def, FP_def, SP_def, LR_def, data_reg_lem_1, data_reg_lem_3]
@@ -258,7 +254,6 @@ Theorem BLK_CORRESPONDENCE:
        correspond (rg,sk) st m ==>
        correspond (run_hsl (Blk stmL) (rg,sk)) (run_cfl (translate_hsl (Blk stmL)) st) m
 Proof
-
    Induct_on `stmL` THENL [
      RW_TAC list_ss [correspond_def, run_hsl_def, translate_hsl_def, CFL_SEMANTICS_BLK],
      RW_TAC list_ss [valid_struct_def, run_hsl_def, translate_hsl_def, CFL_SEMANTICS_BLK] THEN
@@ -281,7 +276,6 @@ Theorem BLK_STATUS_INTACT:
    !stmL st. let st' = run_cfl (translate_hsl (Blk stmL)) st in
         status_intact st' st
 Proof
-
   Induct_on `stmL` THENL [
     RW_TAC list_ss [status_intact_def, same_fp_ip_sp_def, valid_struct_def, translate_hsl_def, CFL_SEMANTICS_BLK],
     FULL_SIMP_TAC list_ss [LET_THM, valid_struct_def, translate_hsl_def, CFL_SEMANTICS_BLK] THEN
@@ -330,7 +324,6 @@ Theorem SC_SEM_SPEC:
        sem_spec P S1 Q /\ sem_spec Q S2 R ==>
          sem_spec P (Sc S1 S2) R
 Proof
-
     RW_TAC std_ss [Well_Formed_def, WELL_FORMED_def, sem_spec_def, translate_hsl_def, LET_THM,
           run_hsl_def, SEMANTICS_OF_CFL] THEN
     METIS_TAC []
@@ -367,7 +360,6 @@ Theorem EVAL_TCND_THM:
    !cond s st m. correspond s st m ==>
       (eval_TCND cond s = eval_il_cond (translate_TCND cond) st)
 Proof
-
   SIMP_TAC std_ss [FORALL_TSTATE, FORALL_DSTATE] THEN
   RW_TAC std_ss [correspond_def] THEN
   Cases_on `cond` THEN Cases_on `r` THEN
@@ -382,7 +374,6 @@ Theorem CJ_SEM_SPEC:
        sem_spec P S1 Q /\ sem_spec P S2 Q ==>
          sem_spec P (Cj cond S1 S2) Q
 Proof
-
     RW_TAC std_ss [Well_Formed_def, WELL_FORMED_def, sem_spec_def, translate_hsl_def, LET_THM,
           run_hsl_def, SEMANTICS_OF_CFL] THEN
     METIS_TAC [EVAL_TCND_THM]
@@ -432,7 +423,6 @@ Theorem TR_SEM_SPEC:
      sem_spec P S_hsl P ==>
        sem_spec P (Tr cond S_hsl) P
 Proof
-
     SIMP_TAC std_ss [Well_Formed_def, sem_spec_def, translate_hsl_def, LET_THM, run_hsl_def] THEN
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     Q.ABBREV_TAC `cnd1 = translate_TCND cond` THEN

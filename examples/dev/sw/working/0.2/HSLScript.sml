@@ -379,7 +379,6 @@ Theorem Sc_RULE:
        ==>
        CSPEC (Sc S1 S2) (in_f1, sc f1 f2,out_f2)
 Proof
-
      RW_TAC std_ss [CSPEC_def, run_hsl_def, sc_def]
 QED
 
@@ -390,7 +389,6 @@ Theorem Cj_RULE:
         ==>
        CSPEC (Cj cond St Sf) (in_f, cj cond_f f1 f2, out_f)
 Proof
-
      RW_TAC std_ss [CSPEC_def, run_hsl_def, cj_def] THEN
      METIS_TAC []
 QED
@@ -407,7 +405,6 @@ Theorem WF_HSL_TR_LEM_2:
         WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0)) ==>
            WF (\s1 s0. ~eval_TCND cond s0 /\ (s1 = run_hsl S_hsl s0))
 Proof
-
    RW_TAC std_ss [WF_DEF_2] THEN
    Q.PAT_ASSUM `!P.p` (ASSUME_TAC o Q.SPEC `\t:'a. ?y:TSTATE. (prj_f y = t) /\ P y`) THEN
    FULL_SIMP_TAC std_ss [GSYM RIGHT_EXISTS_IMP_THM] THEN
@@ -436,7 +433,6 @@ Theorem WF_HSL_TR_THM:
         (?R. WF R /\ !t0. ~cond_f t0 ==> R (f t0) t0) ==>
            WF (\s1 s0. ~eval_TCND cond s0 /\ (s1 = run_hsl S_hsl s0))
 Proof
-
     RW_TAC std_ss [] THEN
     METIS_TAC [WF_HSL_TR_LEM_2, WF_HSL_TR_LEM_3]
 QED
@@ -449,7 +445,6 @@ Theorem Tr_RULE:
         CSPEC S_hsl (prj_f,f,prj_f) ==>
           CSPEC (Tr cond S_hsl) (prj_f, tr cond_f f, prj_f)
 Proof
-
     RW_TAC std_ss [CSPEC_def, run_hsl_def] THEN
     IMP_RES_TAC WF_HSL_TR_THM THEN
     IMP_RES_TAC  relationTheory.WF_INDUCTION_THM THEN
@@ -475,7 +470,6 @@ Theorem TRANSFER_LEM_1:
      !h dstL srcL s1 s0. unique_list (h::dstL) /\ (LENGTH dstL = LENGTH srcL) ==>
        (tread (transfer (s1,s0) (dstL,srcL)) h = tread s1 h)
 Proof
-
      Induct_on `srcL` THEN Induct_on `dstL` THEN
      RW_TAC list_ss [unique_list_def, transfer_def] THEN
      `?rg sk. s1 = (rg,sk)` by METIS_TAC [ABS_PAIR_THM] THEN
@@ -489,7 +483,6 @@ Theorem TRANSFER_THM:
        ==>
         (MAP (tread (transfer (s1,s0) (dstL,srcL))) dstL = MAP (tread s0) srcL)
 Proof
-
    Induct_on `srcL` THEN Induct_on `dstL` THEN
    RW_TAC list_ss [unique_list_def, transfer_def] THEN
    RW_TAC list_ss [SIMP_RULE list_ss [unique_list_def] TRANSFER_LEM_1] THEN
@@ -504,7 +497,6 @@ Theorem TRANSFER_INTACT:
        ==>
         (tread (transfer (s1,s0) (dstL,srcL)) x = tread s1 x)
 Proof
-
    Induct_on `srcL` THEN Induct_on `dstL` THEN
    RW_TAC list_ss [transfer_def] THEN
    `?rg sk. s1 = (rg,sk)` by METIS_TAC [ABS_PAIR_THM] THEN
@@ -536,7 +528,6 @@ Theorem Fc_RULE:
         CSPEC S_hsl (callee_i_f,f,callee_o_f) ==>
           CSPEC (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) (caller_i_f, f, caller_o_f)
 Proof
-
    RW_TAC std_ss [valid_arg_list_def, match_def, CSPEC_def, run_hsl_def] THEN
    `(MAP (tread (transfer (s,s2) (caller_o,callee_o))) caller_o = MAP (tread s2) callee_o) /\
     (MAP (tread s) caller_i = MAP (tread s1) callee_i)` by (Q.UNABBREV_TAC `s1` THEN METIS_TAC [TRANSFER_THM]) THEN

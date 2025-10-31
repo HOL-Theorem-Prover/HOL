@@ -49,7 +49,6 @@ End
 (*preevaluated to speed things up
 *)
 Theorem SBoxVal:
-
   (S 0  0= 3w) /\ (S 0  1= 8w) /\ (S 0  2=15w) /\ (S 0  3= 1w) /\
   (S 0  4=10w) /\ (S 0  5= 6w) /\ (S 0  6= 5w) /\ (S 0  7=11w) /\
   (S 0  8=14w) /\ (S 0  9=13w) /\ (S 0 10= 4w) /\ (S 0 11= 2w) /\
@@ -83,7 +82,6 @@ Theorem SBoxVal:
   (S 7  8= 7w) /\ (S 7  9= 4w) /\ (S 7 10=12w) /\ (S 7 11=10w) /\
   (S 7 12= 9w) /\ (S 7 13= 3w) /\ (S 7 14= 5w) /\ (S 7 15= 6w)
 Proof
-
 EVAL_TAC
 QED
 
@@ -91,7 +89,6 @@ QED
 (*inverse sbox table used in decrytion
 *)
 Theorem invSBoxVal:
-
   (invS 0  0=13w) /\ (invS 0  1= 3w) /\ (invS 0  2=11w) /\ (invS 0  3= 0w) /\
   (invS 0  4=10w) /\ (invS 0  5= 6w) /\ (invS 0  6= 5w) /\ (invS 0  7=12w) /\
   (invS 0  8= 1w) /\ (invS 0  9=14w) /\ (invS 0 10= 4w) /\ (invS 0 11= 7w) /\
@@ -125,7 +122,6 @@ Theorem invSBoxVal:
   (invS 7  8= 5w) /\ (invS 7  9=12w) /\ (invS 7 10=11w) /\ (invS 7 11= 7w) /\
   (invS 7 12=10w) /\ (invS 7 13= 1w) /\ (invS 7 14= 4w) /\ (invS 7 15= 2w)
 Proof
-
 EVAL_TAC
 QED
 
@@ -147,7 +143,6 @@ Theorem invS_S_cancel:
         ==>
         (!n. n<16==> (invS  round (w2n (S round n))=n2w n))
 Proof
-
 SIMP_TAC arith_ss [BOUNDED_FORALL_THM] THEN
   SRW_TAC [] [SBoxVal, invSBoxVal]
 QED
@@ -158,7 +153,6 @@ Theorem invSNibble_sNibble_cancel:
         ==>
         (invSNibble round (sNibble round w)=w)
 Proof
-
 SRW_TAC [] [invSNibble_def,sNibble_def,invS_S_cancel,
             WORD_DECIDE ``w2n (w:word4) < 16``]
 QED
@@ -169,7 +163,6 @@ Theorem w4l_fact:
         ==>
         ALL_EL (\x. (invSNibble round o sNibble round) x =x) wl
 Proof
-
 Induct_on `wl` THENL [
          RW_TAC list_ss [],
          RW_TAC list_ss [invSNibble_sNibble_cancel]]
@@ -194,7 +187,6 @@ Theorem invSBlock_sBlock_cancel:
         ==>
         (invSBlock round (sBlock round w128)=w128)
 Proof
-
 RW_TAC std_ss [invSBlock_def,sBlock_def] THEN
 `LENGTH  (MAP (sNibble round) (word128tow4l w128))=32` by METIS_TAC [LENGTH_MAP,LENGTH_word128tow4l] THEN
 RW_TAC std_ss [word128tow4l_conversion,MAP_MAP_o,w4l_fact,

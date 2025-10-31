@@ -159,7 +159,6 @@ Theorem CLOSED_MIDDLE_LEM:
                (runTo (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s' =
                     runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s')
 Proof
-
    RW_TAC std_ss [] THEN
    Q.ABBREV_TAC `instB = upload arm iB (FST (FST s))` THEN
    Cases_on `m = shortest (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s` THENL [
@@ -265,7 +264,6 @@ Theorem TERMINATED_MIDDLE_LEM:
          ==>
          terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s'
 Proof
-
    RW_TAC std_ss [terd_def] THEN
    Q.ABBREV_TAC `instB = upload arm iB (FST (FST s))` THEN
    Cases_on `m = shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step instB) s` THENL [
@@ -323,7 +321,6 @@ Theorem TERMINATED_MIDDLE:
            closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
                terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s
 Proof
-
     REPEAT STRIP_TAC THEN
     `(?m. (FUNPOW (step (upload arm iB (FST (FST s)))) 0 s = FUNPOW (step (upload arm iB (FST (FST s)))) m s) /\
           m <= shortest (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s) ==>
@@ -350,7 +347,6 @@ Theorem CLOSED_SEQUENTIAL_COMPOSITION:
           runTo (upload arm2 iB (FST (FST s) + LENGTH arm1)) (FST (FST s) + LENGTH arm1 + LENGTH arm2)
                        (runTo (upload arm1 iB (FST (FST s))) (FST (FST s) + LENGTH arm1) s))
 Proof
-
     NTAC 8 STRIP_TAC THEN
     Cases_on `LENGTH arm2 = 0` THENL [
         IMP_RES_TAC LENGTH_NIL THEN
@@ -463,7 +459,6 @@ Theorem DSTATE_COMPOSITION:
                 get_st (runTo (upload arm' iB pos2) (pos2 + LENGTH arm')
                      ((pos2,cpsr2, get_st (runTo (upload arm iB pos1) (pos1 + LENGTH arm) ((pos1,cpsr1,st),({})))), ({}))))
 Proof
-
    RW_TAC std_ss [get_st] THEN
    RW_TAC std_ss [(SIMP_RULE set_ss [ADD_ASSOC] o SIMP_RULE list_ss [] o
                Q.SPECL [`arm`,`arm'`,`[]`,`[]`,`pos0`,`iB`,`((pos0,cpsr0,st),{}):STATEPCS`]) CLOSED_SEQUENTIAL_COMPOSITION] THEN
@@ -543,7 +538,6 @@ Theorem SC_IS_WELL_FORMED:
     !arm1 arm2. well_formed arm1 /\ well_formed arm2
            ==> well_formed (mk_SC arm1 arm2)
 Proof
-
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [well_formed, mk_SC] THEN
    ASSUME_TAC ((GEN (Term `s:STATE`) o GEN (Term `iB:num->INST`) o SIMP_RULE set_ss [] o SIMP_RULE list_ss [] o
@@ -597,7 +591,6 @@ Theorem UNCOND_JUMP_OVER_THM:
           !iB pos cpsr st pcS. get_st (runTo (upload ([((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))] ++ arm) iB pos)
                                         (pos + LENGTH arm + 1) ((pos,cpsr,st),pcS)) = st
 Proof
-
    STRIP_TAC THEN
    `!s pcS iB. step (upload (((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))::arm) iB (FST s)) (s,pcS) =
                                          ((FST s + LENGTH arm + 1, SND s), FST s INSERT pcS)` by ALL_TAC THENL [
@@ -711,7 +704,6 @@ Theorem ENUMERATE_CJ:
                                  ((B,SOME (FST (SND cond)),F),NONE,[],SOME offset) =
                      (pc+2,cpsr',st))
 Proof
-
          REPEAT GEN_TAC THEN
          `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
          ASM_SIMP_TAC list_ss [decode_op_def, OPERATOR_case_def, decode_cond_def, LET_THM] THEN
@@ -774,7 +766,6 @@ Theorem CJ_COMPOSITION_LEM_1:
               SND (runTo (upload arm_t iB (FST s+ LENGTH arm_f + 3)) (FST s + LENGTH arm_f + 3 + LENGTH arm_t)
                    ((FST s + LENGTH arm_f + 3,cpsr'', SND (SND s)),{FST s + 1;FST s}))))
 Proof
-
     RW_TAC std_ss [well_formed] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, SUC_ONE_ADD] THEN REWRITE_TAC [ADD_ASSOC, uploadCode_def] THEN
@@ -822,7 +813,6 @@ Theorem CJ_TERMINATED_LEM_1:
           well_formed arm_t /\ well_formed arm_f /\ eval_cond cond (SND (SND s)) /\ (arm' = mk_CJ cond arm_t arm_f)
           ==> terd (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,pcS)
 Proof
-
     RW_TAC std_ss [well_formed, terd_def, stopAt_def] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, SUC_ONE_ADD] THEN REWRITE_TAC [ADD_ASSOC] THEN
@@ -876,7 +866,6 @@ Theorem CJ_COMPOSITION_LEM_2:
                FST s + 2 + LENGTH arm_f INSERT SND (runTo (upload arm_f iB (FST s + 2)) (FST s + 2 + LENGTH arm_f)
                                                     ((FST s + 2,cpsr'',SND (SND s)),{FST s + 1;FST s}))))
 Proof
-
     RW_TAC std_ss [well_formed] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, SUC_ONE_ADD] THEN REWRITE_TAC [ADD_ASSOC, uploadCode_def] THEN
@@ -967,7 +956,6 @@ Theorem CJ_TERMINATED_LEM_2:
         well_formed arm_t /\ well_formed arm_f /\ ~(eval_cond cond (SND (SND s))) /\ (arm' = mk_CJ cond arm_t arm_f)
           ==> terd (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,pcS)
 Proof
-
     RW_TAC std_ss [well_formed, terd_def, stopAt_def] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, SUC_ONE_ADD] THEN REWRITE_TAC [ADD_ASSOC] THEN
@@ -1040,7 +1028,6 @@ Theorem CJ_IS_WELL_FORMED:
     !cond arm_t arm_f. well_formed arm_t /\ well_formed arm_f
            ==> well_formed (mk_CJ cond arm_t arm_f)
 Proof
-
    REPEAT STRIP_TAC THEN
    RW_TAC std_ss [well_formed, terminated, status_independent] THENL [
 
@@ -1102,7 +1089,6 @@ Theorem HOARE_CJ_FLAT_LEM_1:
           ==>
           !st. (P st /\ eval_cond cond st ==> Q (eval_fl (mk_CJ cond arm_t arm_f) st))
 Proof
-
     RW_TAC std_ss [well_formed] THEN
     `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, eval_fl, SUC_ONE_ADD] THEN
@@ -1138,7 +1124,6 @@ Theorem HOARE_CJ_FLAT_LEM_2:
           ==>
           !st. (P st /\ ~(eval_cond cond st) ==> R (eval_fl (mk_CJ cond arm_t arm_f) st))
 Proof
-
     RW_TAC std_ss [well_formed] THEN
     `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, eval_fl, SUC_ONE_ADD] THEN
@@ -1536,7 +1521,6 @@ Theorem UNROLL_TR_LEM:
                 (FST (FST s')+LENGTH arm) s') (loopNum cond arm iB (s,pcS)) (s,pcS))), pcS')) /\
             !x. x IN pcS' DIFF pcS ==> FST s <= x /\ x < FST s + LENGTH (mk_TR cond arm)
 Proof
-
     REPEAT GEN_TAC THEN
     Induct_on `loopNum cond arm iB (s,pcS)` THENL [
         REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [LENGTH_TR, FUNPOW] THEN
@@ -1719,7 +1703,6 @@ Theorem WELL_FORMED_INSTB_LEM:
                (runTo (upload arm iB0 (FST (FST s))) (FST (FST s) + LENGTH arm) s' =
                 runTo (upload arm iB1 (FST (FST s))) (FST (FST s) + LENGTH arm) s')
 Proof
-
    RW_TAC std_ss [] THEN
    Q.ABBREV_TAC `instB = upload arm iB0 (FST (FST s))` THEN
    Cases_on `m = shortest (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s` THENL [

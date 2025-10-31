@@ -29,7 +29,6 @@ Theorem tr_INTRO:
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f2 x) x))
      ==> (f:'a->'a = tr f1 f2)
 Proof
-
   REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
   HO_MATCH_MP_TAC tr_ind THEN
@@ -45,7 +44,6 @@ Theorem rec_INTRO:
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f3 x) x))
      ==> (f:'a->'b x = let y = (tr f1 f3) x in f2 y)
 Proof
-
   REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
   IMP_RES_TAC  relationTheory.WF_INDUCTION_THM THEN
   POP_ASSUM (MATCH_MP_TAC o SIMP_RULE std_ss [] o
@@ -154,7 +152,6 @@ Theorem TR_LEM1:
     Reduce (l3, S1, l4) w /\ c v ==>
     Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2) (v,v)
 Proof
-
   REPEAT STRIP_TAC THEN
   METIS_TAC [ift_rule, skip_rule, goto_rule]
 QED
@@ -167,7 +164,6 @@ Theorem TR_LEM2:
     Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2)
         (tr c f v, v)
 Proof
-
   RW_TAC std_ss [] THEN
   METIS_TAC[TR_LEM1, DISCH_ALL tr_def]
 QED
@@ -179,7 +175,6 @@ Theorem TR_LEM3:
     ~c v /\ Reduce (l3, S1, l4) (f v, v)  ==>
     Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l1) (f v, v)
 Proof
-
   RW_TAC std_ss [] THEN
   `Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1, l4) (f v, v)` by METIS_TAC [iff_rule, nop_rule] THEN
   METIS_TAC [goto_rule, TRANSFER_RULE]
@@ -191,7 +186,6 @@ Theorem TR_RULE:
          (~c v ==> Reduce (l3, S1, l4) (f v, v))) ==>
         !v. Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2) (tr c f v, v)
 Proof
-
   STRIP_TAC THEN STRIP_TAC THEN
   IMP_RES_TAC (DISCH_ALL tr_ind) THEN
   POP_ASSUM HO_MATCH_MP_TAC THEN
@@ -211,7 +205,6 @@ Theorem FUN_CALL_LEM:
     Reduce (l2, S1, l3) (f w1, v1) ==>
     Reduce (l1, (ASG l1 w1 w2 l2) |++| S1, l3) ((let w1 = w2 in f w1), v1)
 Proof
-
    RW_TAC std_ss [] THEN
    METIS_TAC [inst_rule, seq_rule]
 QED
@@ -220,7 +213,6 @@ Theorem FUN_CALL_RULE:
     Reduce (l2, S1, l3) (f w1, v1) ==>
     Reduce (l1, (ASG l1 w1 w2 l2) |++| S1 |++| (ASG l3 v2 v1 l4), l4) (f w2, v2)
 Proof
-
    RW_TAC std_ss [] THEN
    IMP_RES_TAC FUN_CALL_LEM THEN
    FULL_SIMP_TAC std_ss [LET_THM] THEN

@@ -175,7 +175,6 @@ QED
 Theorem READE_WRITEE:
      !st e v. ~(is_C e) ==> (st |# (e,v) '' e = v)
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     Cases_on `e` THEN
     RW_TAC finmap_ss [is_C_def, reade_def, writee_def, read_thm, write_thm] THEN
@@ -186,7 +185,6 @@ QED
 Theorem READE_WRITEE_THM:
      !st e v. ~(is_C e1) /\ valid_exp e1 ==> ((st |# (e1,v) '' e2 = if eq_exp st e1 e2 then v else st '' e2))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     Cases_on `e1` THEN Cases_on `e2` THEN
     RW_TAC std_ss [is_C_def, reade_def, writee_def, read_thm, write_thm, eq_exp_def, eq_addr_def] THEN
@@ -196,7 +194,6 @@ QED
 Theorem READE_WRITEE_THM_2:
      !st e v. ~(eq_exp st e1 e2) /\ ~(e1 = isR fp) ==> ((st |# (e1,v) '' e2 = st '' e2))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     Cases_on `e1` THEN Cases_on `e2` THEN
     RW_TAC std_ss [reade_def, writee_def, read_thm, write_thm, eq_exp_def, eq_addr_def] THEN
@@ -206,7 +203,6 @@ QED
 Theorem WRITEE_EQ:
      !st e v1 v2. st |# (e,v1) |# (e,v2) = st |# (e,v2)
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     Cases_on `e` THEN
     RW_TAC finmap_ss [reade_def, writee_def, read_thm, write_thm]
@@ -216,7 +212,6 @@ Theorem WRITEE_COMMUTES:
      !st e1 e2 v1 v2. ~(eq_exp st e1 e2) /\ valid_exp e1 /\ valid_exp e2
           ==> (st |# (e1,v1) |# (e2,v2) = st |# (e2,v2) |# (e1,v1))
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE] THEN
     Cases_on `e1` THEN  Cases_on `e2` THEN
     RW_TAC finmap_ss [valid_exp_def, valid_regs_lem, eq_exp_def, eq_addr_def, addr_of_def, reade_def, writee_def,
@@ -427,7 +422,6 @@ Theorem PUSH_ONE_SANITY:
               let st1 = run_cfl (BLK (push_one h)) st in
               locate_ge (read st1 SP) (LENGTH l)
 Proof
-
      SIMP_TAC std_ss [FORALL_DSTATE] THEN
      REPEAT STRIP_TAC THEN
      IMP_RES_TAC locate_ge_thm THEN
@@ -448,7 +442,6 @@ Theorem PUSH_LIST_SP_FP:
               (w2n (read st' FP) = w2n (read st FP)) /\
               (w2n (read st' IP) = w2n (read st IP))
 Proof
-
     Induct_on `l` THENL [
         RW_TAC list_ss [CFL_SEMANTICS_BLK, push_list_def],
 
@@ -492,7 +485,6 @@ Theorem PUSH_LIST_SANITY:
              ==> !e. ~addr_in_range st e (w2n (read st SP),w2n (read st SP) - LENGTH l) /\ valid_exp_1 e ==>
                     ((run_cfl (BLK (push_list l)) st) '' e = st '' e)
 Proof
-
     Induct_on `l` THENL [
         RW_TAC std_ss [CFL_SEMANTICS_BLK, push_list_def],
         RW_TAC list_ss [RUN_CFL_BLK_APPEND, push_list_def] THEN
@@ -523,7 +515,6 @@ Theorem PUSH_LIST_FUNCTIONALITY:
         !i. i < LENGTH l /\ legal_push_exp st (EL i l) (PRE (LENGTH l) - i) ==>
              ((run_cfl (BLK (push_list l)) st) '' (isM (w2n (read st SP) - PRE (LENGTH l) + i))  = st '' (EL i l))
 Proof
-
     Induct_on `l` THENL [
         RW_TAC list_ss [],
 
@@ -695,7 +686,6 @@ Theorem POP_ONE_ADDR_IN_RANGE:
            let st' = run_cfl (BLK (pop_one h)) st in
               EVERY (\x. ~addr_in_range st' x (w2n (read st' SP) + LENGTH l, w2n (read st' SP))) l
 Proof
-
     SIMP_TAC std_ss [FORALL_DSTATE, LET_THM] THEN
     REPEAT STRIP_TAC THEN
     POP_ASSUM MP_TAC THEN
@@ -726,7 +716,6 @@ Theorem POP_LIST_SP_FP:
               (w2n (read st' FP) = w2n (read st FP)) /\
               (w2n (read st' IP) = w2n (read st IP))
 Proof
-
     let val tac2 = FULL_SIMP_TAC finmap_ss [LET_THM,read_thm, SP_def, FP_def, IP_def, valid_regs_lem, grow_lt_lem_1]
                              THEN FULL_SIMP_TAC arith_ss [grow_lt_def, valid_regs_def]
     in
@@ -758,7 +747,6 @@ Theorem POP_ONE_EXP_LEM_1:
        let st' = run_cfl (BLK (pop_one h)) st in
           (st '' (isM (SUC i + w2n (read st SP))) = st' '' (isM (i + w2n (read st' SP))))
 Proof
-
     let val tac2 = FULL_SIMP_TAC finmap_ss [LET_THM,read_thm, SP_def, FP_def, valid_regs_lem, fp_def] THEN
                    RW_TAC arith_ss [SUC_ONE_ADD]
     in
@@ -832,7 +820,6 @@ Theorem POP_LIST_SANITY:
              ==> !e. EVERY (\x. ~eq_exp st e x) l /\ valid_exp_2 e ==>
                     ((run_cfl (BLK (pop_list l)) st) '' e = st '' e)
 Proof
-
     Induct_on `l` THENL [
         RW_TAC std_ss [CFL_SEMANTICS_BLK, pop_list_def],
 
@@ -852,7 +839,6 @@ Theorem POP_LIST_FUNCTIONALITY:
              ==> !i. i < LENGTH l /\ ~(is_C (EL i l)) /\ valid_exp (EL i l) ==>
              ((run_cfl (BLK (pop_list l)) st) '' (EL i l)  = st '' (isM (w2n (read st SP) + SUC i)))
 Proof
-
     Induct_on `l` THENL [
         RW_TAC list_ss [],
 
@@ -928,7 +914,6 @@ Theorem PUSH_LIST_ADDR_IN_RANGE:
        let st' = run_cfl (BLK (push_list l1)) st in
           EVERY (\x. ~addr_in_range st' x (w2n (read st' SP) + LENGTH l1, w2n (read st' SP))) l2
 Proof
-
     RW_TAC std_ss [LET_THM] THEN
     IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] PUSH_LIST_SP_FP) THEN
     RW_TAC std_ss [] THEN
@@ -961,7 +946,6 @@ Theorem ADDR_IN_RANGE_LEGAL_EXP:
          EVERY (\x. ~addr_in_range st x (w2n (read st SP), w2n (read st SP) - LENGTH l)) l
        ==> !i. i < LENGTH l ==> legal_push_exp st (EL i l) (PRE (LENGTH l) - i)
 Proof
-
     RW_TAC std_ss [legal_push_exp_def, EVERY_EL] THEN
     RES_TAC THEN REPEAT (Q.PAT_ASSUM `!n.x` (K ALL_TAC)) THEN
     Cases_on `EL i l` THEN
@@ -984,7 +968,6 @@ Theorem COPY_LIST_SANITY:
              ==> !e. legal_push_exp st e (LENGTH dstL) /\ legal_pop_exp st e dstL ==>
                     ((run_cfl (BLK (copy_list dstL srcL)) st) '' e = st '' e)
 Proof
-
     RW_TAC std_ss [copy_list_def, RUN_CFL_BLK_APPEND] THEN
     IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] PUSH_LIST_SP_FP) THEN
     `grow_lt (read (run_cfl (BLK (push_list srcL)) st) SP) (LENGTH dstL)` by METIS_TAC [LOCATE_GE_GROW_LT] THEN
@@ -1005,7 +988,6 @@ Theorem COPY_LIST_FUNCTIONALITY:
            ==> !i. i < LENGTH dstL ==>
            (run_cfl (BLK (copy_list dstL srcL)) st '' (EL i dstL) = st '' (EL i srcL))
 Proof
-
     RW_TAC std_ss [copy_list_def, RUN_CFL_BLK_APPEND] THEN
     `let st' = run_cfl (BLK (push_list srcL)) st in EVERY (\x. ~addr_in_range st' x
            (w2n (read st' SP) + LENGTH dstL, w2n (read st' SP))) dstL` by METIS_TAC [PUSH_LIST_ADDR_IN_RANGE] THEN

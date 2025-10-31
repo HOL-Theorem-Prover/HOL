@@ -481,7 +481,6 @@ Theorem CFL_SEMANTICS_BLK:
           run_cfl (BLK stmL) (mdecode st stm)) /\
      (run_cfl (BLK []) st = st)
 Proof
-
     REPEAT STRIP_TAC THENL [
        RW_TAC list_ss [run_cfl_def, translate_def] THEN
            `translate_assignment stm::translate (BLK stmL) = translate (SC (BLK [stm]) (BLK stmL))` by RW_TAC list_ss [translate_def,mk_SC_def] THEN
@@ -515,7 +514,6 @@ Theorem CFL_SEMANTICS_TR:
       (run_cfl (TR cond S_body) st =
          WHILE (\st'.~eval_il_cond cond st') (run_cfl S_body) st)
 Proof
-
     RW_TAC std_ss [WELL_FORMED_SUB_thm, run_cfl_def, run_arm_def, translate_def, eval_il_cond_def] THEN
     Q.ABBREV_TAC `arm = translate S_body` THEN
     IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`translate_condition cond`,`arm`,`(\i. ARB)`,`(0,0w,st):STATE`,`{}`] UNROLL_TR_LEM)) THEN

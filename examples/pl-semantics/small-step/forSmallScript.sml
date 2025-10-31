@@ -641,7 +641,6 @@ Theorem big_small_lem:
     HD tr = (s.store, (t_to_small_t t)) ∧
     res_rel_t r (LAST tr)
 Proof
-
   ho_match_mp_tac sem_t_ind >>
   rw [sem_t_def_with_stop, t_to_small_t_def]
   >- (

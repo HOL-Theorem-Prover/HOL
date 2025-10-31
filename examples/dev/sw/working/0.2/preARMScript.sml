@@ -82,7 +82,6 @@ Theorem setNZCV_thm:
     (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SC = C) /\
     (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SV = V)
 Proof
-
    RW_TAC (std_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss) [getS_def, setNZCV_def, word_modify_def]
 QED
 
@@ -406,7 +405,6 @@ Theorem decode_op_thm:
   (decode_op (pc,cpsr,s) (B,NONE,src,jump) = (cpsr,s)) /\
   (decode_op (pc,cpsr,s) (BL,NONE,src,jump) = (cpsr,write s (REG 14) (n2w (SUC pc))))
 Proof
-
    RW_TAC std_ss [decode_op_def]
 QED
 
@@ -446,7 +444,6 @@ Theorem decode_cond_thm:
      (decode_cond (pc,cpsr,s) ((op,SOME AL,sflag),dst,src,jump) = (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
           (decode_cond (pc,cpsr,s) ((op,SOME NV,sflag),dst,src,jump) = (pc+1, cpsr, s))
 Proof
-
   RW_TAC std_ss [decode_cond_def, decode_cond_cpsr_def]
 QED
 
@@ -942,7 +939,6 @@ Theorem UNROLL_RUNTO:
        stopAt (\s:STATEPCS. (FST (FST s) = j)) (step instB) s ==>
           (runTo instB j s = FUNPOW (step instB) (shortest (\s.(FST (FST s) = j)) (step instB) s) s)
 Proof
-
     RW_TAC std_ss [runTo_FORM1] THEN
     ASSUME_TAC (INST_TYPE [alpha |-> Type `:STATEPCS`] TERD_WHILE_EQ_UNROLL) THEN
     RES_TAC THEN
