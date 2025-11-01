@@ -17,7 +17,7 @@ open extrealTheory sigma_algebraTheory measureTheory
 open distributionTheory realaxTheory stochastic_processTheory listTheory
                         rich_listTheory limTheory;
 
-open complexityTheory;
+open complexityTheory lebesgue_measureTheory;
 
 val _ = new_theory "central_limit";
 
@@ -677,21 +677,6 @@ Proof
                 METIS_TAC [lte_trans])
  >> STRIP_TAC
  >> Cases_on ‘x ≤ y’ >> rw [extreal_min_def]
-QED
-
-Theorem sup_in:
-    ∀a s. a ∈ s ⇒ a ≤ sup s
-Proof
-  rw [le_sup']
-QED
-
-Theorem sup_not_in:
-    ∀a s. sup s < a ⇒ a ∉ s
-Proof
-  rw []
-  >> CCONTR_TAC
-  >> ‘a ≤ sup s’ by METIS_TAC [sup_in]
-  >> METIS_TAC [let_antisym]
 QED
 
 Theorem sup_not_in_imp_le:
@@ -1822,13 +1807,170 @@ Proof
   cheat
 QED
 
+Theorem lebesgue_eq_gauge_integral :
+    ∀f. integrable lborel (Normal ∘ f) ⇒
+        f absolutely_integrable_on 𝕌(:real) ∧
+        ∫ lborel (Normal ∘ f) = Normal (integral 𝕌(:real) f)
+Proof
+  cheat
+QED
+
+Theorem standard_normal_abs_third_moment :
+    ∫ lborel (λx. Normal ((abs x) pow 3 * std_normal_density x)) =
+    sqrt (8 / Normal pi)
+Proof
+  cheat
+QED
+
+Theorem in_measurable_borel_boral_abs :
+    abs ∈ borel_measurable borel
+Proof
+    MATCH_MP_TAC in_borel_measurable_continuous_on
+ >> rw [continuous_on_def, CONTINUOUS_AT_ABS, netsTheory.WITHIN_UNIV]
+QED
+
+Theorem distribution_eq :
+  ∀p X.
+    prob_space p ∧
+    real_random_variable X p ⇒
+    (∀s. s IN subsets Borel ⇒ distribution p X s = distribution p (real o X) (real_set s))
+Proof
+  rw [distribution_def, real_random_variable]
+  >> AP_TERM_TAC
+  >> rw [PREIMAGE_def, INTER_DEF, real_set_def, Once EXTENSION]
+  >> EQ_TAC >> rw [] >- (qexists ‘X x’ >> gs [])
+  >> FIRST_X_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs []
+  >> METIS_TAC [real_11]
+QED
+
+Theorem integral_normal_pmeasure_density :
+    ∀f mu sig.
+      f ∈ Borel_measurable (measurable_space lborel) ∧
+      integrable lborel (λx. Normal_density mu sig x * f x) ⇒
+      (∫ (space borel, subsets borel, normal_pmeasure mu sig) f =
+       ∫ lborel (λx. Normal_density mu sig x * f x))
+Proof
+  rpt STRIP_TAC
+  >> Know ‘(space borel,subsets borel,normal_pmeasure mu sig) = density lborel (Normal_density mu sig)’
+  >> rw [density_def, m_space_lborel, sets_lborel, normal_pmeasure]
+  >> cheat
+QED
+
+
 Theorem ext_normal_rv_abs_third_moment :
     ∀p X sig. prob_space p ∧ 0 < sig ∧
               ext_normal_rv X p 0 sig ⇒
               expectation p (λx. abs (X x) pow 3) =
               sqrt (8 / Normal pi) * Normal (sig pow 3)
 Proof
-  cheat
+
+  rpt STRIP_TAC
+  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘λx. abs x pow 3’] (cj 1 expectation_distribution))
+  >> impl_tac
+  >> fs [ext_normal_rv_def, normal_rv_def]
+  >- (METIS_TAC [random_variable_borel_imp_Borel, IN_MEASURABLE_BOREL_BOREL_ABS,
+                 IN_MEASURABLE_BOREL_POW])
+  >> rw [o_DEF] >> POP_ASSUM K_TAC
+  >> ‘random_variable X p Borel’ by METIS_TAC [random_variable_borel_imp_Borel]
+  >>  ‘𝟙 𝕌(:real) = λx. 1’ by rw [indicator_fn, indicator, normal_1, o_DEF]
+  >> gs [] >> POP_ASSUM K_TAC
+  >> Know ‘∫ (space Borel,subsets Borel,distribution p X) (λx. (abs x) pow 3) =
+           ∫ (space borel,subsets borel,distribution p (real o X)) ((λx. Normal (abs x) pow 3))’
+  >- (MP_TAC (Q.SPECL [‘p’, ‘Borel’, ‘X’, ‘λx. (abs x) pow 3’]
+                (INST_TYPE [“:'b” |-> “:extreal”] (cj 1 integral_distr))) \\
+      impl_tac >- (fs [prob_space_def, SIGMA_ALGEBRA_BOREL, random_variable_def, p_space_def, events_def] \\
+                   METIS_TAC [IN_MEASURABLE_BOREL_BOREL_ABS, IN_MEASURABLE_BOREL_POW]) \\
+      rw [distribution_distr] \\
+      MP_TAC (Q.SPECL [‘p’, ‘borel’, ‘real o X’, ‘λx. Normal ((abs x) pow 3)’]
+               (INST_TYPE [“:'b” |-> “:real”] (cj 1 integral_distr))) \\
+      impl_tac >- (fs [prob_space_def, sigma_algebra_borel, random_variable_def, p_space_def, events_def] \\
+                   fs [GSYM o_DEF] \\
+                   MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> fs [sigma_algebra_borel] \\
+                   MATCH_MP_TAC in_borel_measurable_pow \\
+                   qexistsl [‘3’, ‘λx. abs x’] \\
+                   fs [sigma_algebra_borel] \\
+                   METIS_TAC [in_measurable_borel_boral_abs]) \\
+      rw [extreal_pow_def, o_DEF] \\
+      rw [GSYM extreal_pow_def] \\
+      MATCH_MP_TAC integral_cong \\
+      fs [prob_space_def, p_space_def] \\
+      rw [abs_real, normal_real, abs_not_infty])
+  >> Rewr
+  >> ‘∫ (space borel,subsets borel,normal_pmeasure 0 sig) (λx. (Normal (abs x))³) =
+      ∫ (space borel,subsets borel,distribution p (real ∘ X)) (λx. (Normal (abs x))³)’
+    by (MATCH_MP_TAC integral_cong_measure' >> fs [measure_space_eq_def, normal_measure_space])
+  >> POP_ASSUM (rw o wrap o SYM)
+  >> rw [normal_pmeasure_def]
+  >> cheat
+(*
+  >> Know ‘∫ (space borel,subsets borel,normal_pmeasure 0 sig) (λx. (Normal (abs x))³) =
+             ’
+
+
+
+  >> MP_TAC (Q.SPECL [‘real o X’, ‘p’, ‘borel’] (INST_TYPE [“:'b” |-> “:real”] distribution_lebesgue_thm2))
+  >> rw [sigma_algebra_borel]
+
+
+
+
+
+
+  >> MP_TAC (Q.SPECL [‘real o X’, ‘p’, ‘0’, ‘sig’, ‘λx. (Normal (abs x))³’] integral_normal_pdf_eq_density')
+  >> impl_tac
+  >- (fs [normal_rv_def, GSYM extreal_pow_def, pow_pos_le] \\
+      HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_POW \\
+      rw [GSYM o_DEF]  \\
+
+      MP_TAC (Q.SPECL [‘measurable_space lborel’, ‘borel’, ‘Normal’, ‘abs’,
+                       ‘λx. Normal (abs x)’]
+               (INST_TYPE [“:'a” |-> “:real”, “:'b” |-> “:real”] IN_MEASURABLE_BOREL_COMP)) \\
+      fs [IN_MEASURABLE_BOREL_IMP_BOREL', cj 2 lborel_def, in_measurable_borel_boral_abs])
+  >> rw [PDF_def]
+
+
+  >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘UNIV’)
+  >> gs [space_in_borel, sets_lborel]
+
+
+
+
+
+
+  >> MP_TAC (Q.SPECL [‘λ(x :real). Normal ((abs x) pow 3)’, ‘sig’, ‘0’] lebesgue_pos_integral_real_affine')
+  >> impl_tac
+  >- (fs [REAL_LT_IMP_NE, GSYM o_DEF] \\
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> fs [sigma_algebra_borel] \\
+      MATCH_MP_TAC in_borel_measurable_pow \\
+      qexistsl [‘3’, ‘λx. abs x’] \\
+      fs [sigma_algebra_borel] \\
+      METIS_TAC [in_measurable_borel_boral_abs])
+  >> rw [GSYM extreal_abs_def]
+  >> MP_TAC (Q.SPECL [‘p’, ‘X’] distribution_eq)
+  >> rw [real_random_variable_def]
+  >> MP_TAC (Q.SPECL [‘p’, ‘Borel’, ‘X’, ‘λx. (abs x)³’]
+              (INST_TYPE [“:'b” |-> “:extreal”] (cj 1 integral_distr)))
+  >> impl_tac
+  >- (fs [prob_space_def, SIGMA_ALGEBRA_BOREL, random_variable_def, p_space_def, events_def] \\
+      METIS_TAC [IN_MEASURABLE_BOREL_BOREL_ABS, IN_MEASURABLE_BOREL_POW])
+  >> rw [distribution_distr]
+  >> POP_ASSUM K_TAC
+
+
+
+
+  >> MP_TAC (Q.SPECL [‘real o X’, ‘p’, ‘borel’, ‘UNIV’]
+              (INST_TYPE [“:'b” |-> “:real”] distribution_lebesgue_thm2))
+  >> rw [space_in_borel, sigma_algebra_borel]
+
+
+
+  >> MP_TAC (standard_normal_abs_third_moment)
+  >> rw [std_normal_density_def]
+
+*)
+
+
 QED
 
 Theorem ext_normal_rv_moment_integrable :
@@ -3054,18 +3196,6 @@ Proof
  >> MP_TAC (Q.SPECL [‘λm. (&FACT m)⁻¹ * diffn' m (0:real) * h pow m’, ‘n’]
              (INST_TYPE [“:'a” |-> “:num”] REAL_SUM_IMAGE_COUNT))
  >> fs []
-QED
-
-Theorem TAYLOR_ALL_LT :
-    ∀f a x n.
-      0 < n ∧ a ≠ x ∧
-      (∀t. min a x ≤ t ∧ t ≤ max a x ⇒ higher_differentiable n f t) ⇒
-      ∃t. min a x < t ∧ t < max a x ∧
-          f x =
-          ∑ (λm. diffn m f a / &FACT m * (x − a) pow m) (count n) +
-          diffn n f t / &FACT n * (x − a) pow n
-Proof
-  cheat
 QED
 
 Theorem TAYLOR_THIRD_ORDER_BOUND :
