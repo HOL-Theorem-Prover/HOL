@@ -183,14 +183,8 @@ fun FIRSTCQC_CONV [] t = failwith "no conversion worked"
   | FIRSTCQC_CONV (c::cs) t = let
     in
       c t
-      handle e as HOL_ERR herr =>
-               if top_structure_of herr = "Opening" andalso
-                  top_function_of herr = "CONGPROC" andalso
-                  message_of herr = "Congruence gives no change"
-                then raise e
-                else FIRSTCQC_CONV cs t
-           | Interrupt => raise Interrupt
-           | otherwise => FIRSTCQC_CONV cs t
+      handle UNCHANGED => failwith "unchanged" (* Need to raise a HOL_ERR *)
+           | HOL_ERR _ => FIRSTCQC_CONV cs t
     end
 
 (* And another thing.  The current simplifer doesn't allow users to
