@@ -1845,8 +1845,7 @@ QED
 
 Theorem integral_normal_pmeasure_density :
     ∀f mu sig.
-      f ∈ Borel_measurable (measurable_space lborel) ∧
-      integrable lborel (λx. Normal_density mu sig x * f x) ⇒
+      f ∈ Borel_measurable (measurable_space lborel) ⇒
       (∫ (space borel, subsets borel, normal_pmeasure mu sig) f =
        ∫ lborel (λx. Normal_density mu sig x * f x))
 Proof
@@ -1921,6 +1920,10 @@ Proof
     by (MATCH_MP_TAC integral_cong_measure' >> fs [measure_space_eq_def, normal_measure_space])
   >> POP_ASSUM (rw o wrap o SYM)
   >> rw [normal_pmeasure_def]
+  >> MP_TAC (Q.SPECL [‘λx. (Normal (abs x))³’, ‘0’, ‘sig’] integral_normal_pmeasure_density)
+  >> impl_tac
+  >- (cheat)
+  >> Rewr
   >> cheat
 (*
   >> Know ‘∫ (space borel,subsets borel,normal_pmeasure 0 sig) (λx. (Normal (abs x))³) =
