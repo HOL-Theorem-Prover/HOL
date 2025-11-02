@@ -1850,10 +1850,30 @@ Theorem integral_normal_pmeasure_density :
       (∫ (space borel, subsets borel, normal_pmeasure mu sig) f =
        ∫ lborel (λx. Normal_density mu sig x * f x))
 Proof
-  rpt STRIP_TAC
-  >> Know ‘(space borel,subsets borel,normal_pmeasure mu sig) = density lborel (Normal_density mu sig)’
-  >> rw [density_def, m_space_lborel, sets_lborel, normal_pmeasure]
-  >> cheat
+    rpt STRIP_TAC
+ >> Know ‘∫ (space borel,subsets borel,normal_pmeasure mu sig) f =
+          ∫ (density lborel (Normal_density mu sig)) f’
+ >- (rw [density_def, m_space_lborel, sets_lborel] \\
+     MATCH_MP_TAC integral_cong_measure' \\
+     rw [normal_measure_space, measure_space_eq_def] \\
+     fs [GSYM sets_lborel, normal_pmeasure_alt_density_measure, o_DEF])
+ >> Rewr
+ >> rw [integral_def]
+ >> MP_TAC (Q.SPECL [‘lborel’, ‘Normal_density mu sig’, ‘fn_plus f’]
+             (INST_TYPE [“:'a” |-> “:real”] pos_fn_integral_density))
+ >> impl_tac
+ >- (rw [measure_space_lborel, IN_MEASURABLE_BOREL_normal_density, FN_PLUS_POS]
+     >- (METIS_TAC [IN_MEASURABLE_BOREL_FN_PLUS, cj 2 lborel_def, sigma_algebra_borel]) \\
+     rw [normal_density_nonneg, AE_T, measure_space_lborel])
+ >> MP_TAC (Q.SPECL [‘lborel’, ‘Normal_density mu sig’, ‘fn_minus f’]
+             (INST_TYPE [“:'a” |-> “:real”] pos_fn_integral_density))
+ >> impl_tac
+ >- (rw [measure_space_lborel, IN_MEASURABLE_BOREL_normal_density, FN_MINUS_POS]
+     >- (METIS_TAC [IN_MEASURABLE_BOREL_FN_MINUS, cj 2 lborel_def, sigma_algebra_borel]) \\
+     rw [normal_density_nonneg, AE_T, measure_space_lborel])
+ >> Q.ABBREV_TAC ‘h = λx. Normal_density mu sig x’ >> gs []
+ >> ‘∀x. 0 ≤ h x’ by rw [normal_density_nonneg, o_DEF, Abbr ‘h’]
+ >> rw [FN_MINUS_FMUL, FN_PLUS_FMUL, FN_PLUS_POS_ID]
 QED
 
 
