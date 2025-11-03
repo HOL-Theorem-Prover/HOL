@@ -131,9 +131,8 @@ Theorem NOT_ZERO_ADD1 =
     Q.SPECL [`m`, `0`]) LESS_ADD_1
 
 (* |- !n. 0 < 2 ** n *)
-Theorem ZERO_LT_TWOEXP =
+Theorem ZERO_LT_TWOEXP[simp] =
    GEN_ALL (numLib.REDUCE_RULE (Q.SPECL [`n`, `1`] ZERO_LESS_EXP))
-val _ = export_rewrites ["ZERO_LT_TWOEXP"]
 
 Theorem ONE_LE_TWOEXP[simp]:
    !n. 1n <= 2 ** n

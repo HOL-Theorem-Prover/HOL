@@ -50,11 +50,10 @@ Theorem FINITE_LIST_TO_SET =
     in bagTheory.
  ---------------------------------------------------------------------------*)
 
-Definition LIST_TO_BAG_def:
+Definition LIST_TO_BAG_def[simp]:
      (LIST_TO_BAG [] = {||})
  /\  (LIST_TO_BAG (h::t) = BAG_INSERT h (LIST_TO_BAG t))
 End
-val _ = export_rewrites ["LIST_TO_BAG_def"]
 
 Theorem LIST_TO_BAG_alt:
     !l x. LIST_TO_BAG l x = LENGTH (FILTER ($= x) l)
@@ -109,20 +108,18 @@ Proof
 QED
 
 (* version with the equation the "rewrite" way round *)
-Theorem MEM_BAG_TO_LIST:
+Theorem MEM_BAG_TO_LIST[simp]:
   !b. FINITE_BAG b ==> !x. MEM x (BAG_TO_LIST b) = BAG_IN x b
 Proof
   PROVE_TAC [BAG_IN_MEM]
 QED
 
-val _ = export_rewrites ["MEM_BAG_TO_LIST"];
 
-Theorem FINITE_LIST_TO_BAG:
+Theorem FINITE_LIST_TO_BAG[simp]:
  FINITE_BAG (LIST_TO_BAG ls)
 Proof
 Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]
 QED
-val _ = export_rewrites["FINITE_LIST_TO_BAG"];
 
 
 Theorem EVERY_LIST_TO_BAG:

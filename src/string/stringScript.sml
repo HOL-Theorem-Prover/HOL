@@ -35,9 +35,8 @@ val CHAR_TYPE_FACTS =
        {ABS="CHR", REP="ORD",name="char_BIJ", tyax=CHAR_TYPE});
 
 Theorem ORD_11 = prove_rep_fn_one_one CHAR_TYPE_FACTS
-Theorem CHR_11 =
+Theorem CHR_11[simp] =
                          BETA_RULE (prove_abs_fn_one_one CHAR_TYPE_FACTS);
-val _ = export_rewrites ["CHR_11"]
 Theorem ORD_ONTO =
                          BETA_RULE (prove_rep_fn_onto CHAR_TYPE_FACTS);
 Theorem CHR_ONTO =
@@ -46,12 +45,11 @@ Theorem CHR_ONTO =
 Theorem CHR_ORD[simp] = CONJUNCT1 CHAR_TYPE_FACTS
 Theorem ORD_CHR = BETA_RULE (CONJUNCT2 CHAR_TYPE_FACTS);
 
-Theorem ORD_CHR_RWT:
+Theorem ORD_CHR_RWT[simp]:
   !r. r < 256 ==> (ORD (CHR r) = r)
 Proof
  PROVE_TAC [ORD_CHR]
 QED
-val _ = export_rewrites ["ORD_CHR_RWT"]
 
 Theorem ORD_CHR_COMPUTE[compute]:
   !n. ORD (CHR n) =
@@ -316,11 +314,10 @@ Definition IMPLODE_def[simp]:
   (IMPLODE (c::cs) = STRING c (IMPLODE cs))
 End
 
-Definition EXPLODE_def:
+Definition EXPLODE_def[simp]:
   (EXPLODE "" = []) /\
   (EXPLODE (STRING c s) = c :: EXPLODE s)
 End
-val _ = export_rewrites ["EXPLODE_def"]
 
 Theorem IMPLODE_EXPLODE_I[compute]:
   (EXPLODE s = s) /\ (IMPLODE s = s)
@@ -328,13 +325,13 @@ Proof
   Induct_on `s` THEN SRW_TAC [][]
 QED
 
-Theorem IMPLODE_EXPLODE:
+Theorem IMPLODE_EXPLODE[simp]:
     IMPLODE (EXPLODE s) = s
 Proof
   Induct_on `s` THEN SRW_TAC [][]
 QED
 
-Theorem EXPLODE_IMPLODE:
+Theorem EXPLODE_IMPLODE[simp]:
     EXPLODE (IMPLODE cs) = cs
 Proof
   Induct_on `cs` THEN SRW_TAC [][]
@@ -346,15 +343,13 @@ QED
 Theorem IMPLODE_ONTO: !s. ?cs. s = IMPLODE cs
 Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
 QED
-Theorem EXPLODE_11: (EXPLODE s1 = EXPLODE s2) = (s1 = s2)
+Theorem EXPLODE_11[simp]: (EXPLODE s1 = EXPLODE s2) = (s1 = s2)
 Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
 QED
-Theorem IMPLODE_11: (IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)
+Theorem IMPLODE_11[simp]: (IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)
 Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
 QED
 
-val _ = export_rewrites ["EXPLODE_11", "IMPLODE_11", "IMPLODE_EXPLODE",
-                         "EXPLODE_IMPLODE"]
 
 Theorem TOKENS_APPEND:
   !P l1 x l2.
@@ -464,11 +459,10 @@ QED
 (* with an ML definition of DEST_STRING in terms of the Basis String struct. *)
 (*---------------------------------------------------------------------------*)
 
-Definition DEST_STRING_def:
+Definition DEST_STRING_def[simp]:
    (DEST_STRING "" = NONE) /\
    (DEST_STRING (STRING c rst) = SOME(c,rst))
 End
-val _ = export_rewrites ["DEST_STRING_def"]
 
 Theorem DEST_STRING_LEMS:
   !s. ((DEST_STRING s = NONE) = (s = "")) /\
@@ -484,21 +478,19 @@ Theorem IMPLODE_EQNS = IMPLODE_def
     More rewrites for IMPLODE and EXPLODE
    ---------------------------------------------------------------------- *)
 
-Theorem IMPLODE_EQ_EMPTYSTRING:
+Theorem IMPLODE_EQ_EMPTYSTRING[simp]:
    ((IMPLODE l = "") = (l = [])) /\
    (("" = IMPLODE l) = (l = []))
 Proof
   Cases_on `l` THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["IMPLODE_EQ_EMPTYSTRING"]
 
-Theorem EXPLODE_EQ_NIL:
+Theorem EXPLODE_EQ_NIL[simp]:
    ((EXPLODE s = []) = (s = "")) /\
    (([] = EXPLODE s) = (s = ""))
 Proof
   Cases_on `s` THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["EXPLODE_EQ_NIL"]
 
 Theorem EXPLODE_EQ_THM:
   !s h t. ((h::t = EXPLODE s) = (s = STRING h (IMPLODE t))) /\

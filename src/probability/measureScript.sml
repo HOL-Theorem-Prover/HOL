@@ -44,20 +44,18 @@ Type measure[pp] = “:'a set -> extreal”
 Type m_space[pp] = “:'a set # 'a set set # 'a measure”
 
 (* These're accessors of the triple of measure space *)
-Definition m_space_def:
+Definition m_space_def[simp]:
     m_space         (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = sp
 End
 
-Definition measurable_sets_def:
+Definition measurable_sets_def[simp]:
     measurable_sets (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = sts
 End
 
 val _ = hide "measure"; (* prim_recTheory *)
-Definition measure_def:
+Definition measure_def[simp]:
     measure         (sp :'a set, sts :('a set) set, mu :('a set) -> extreal) = mu
 End
-
-val _ = export_rewrites ["m_space_def", "measurable_sets_def", "measure_def"];
 
 (* NOTE: `{} IN measurable_sets m` is not assumed, instead it must be provided by
    definition of the system of sets. *)

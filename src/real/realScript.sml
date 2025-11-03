@@ -29,25 +29,22 @@ Theorem REAL_10 = REAL_10';
 Theorem REAL_ADD_SYM = REAL_ADD_SYM;
 Theorem REAL_ADD_COMM = REAL_ADD_SYM;
 Theorem REAL_ADD_ASSOC = REAL_ADD_ASSOC;
-Theorem REAL_ADD_LID = REAL_ADD_LID';
-Theorem REAL_ADD_LINV = REAL_ADD_LINV';
+Theorem REAL_ADD_LID[simp] = REAL_ADD_LID';
+Theorem REAL_ADD_LINV[simp] = REAL_ADD_LINV';
 Theorem REAL_LDISTRIB = REAL_LDISTRIB;
 Theorem REAL_LT_TOTAL = REAL_LT_TOTAL;
-Theorem REAL_LT_REFL = REAL_LT_REFL;
+Theorem REAL_LT_REFL[simp] = REAL_LT_REFL;
 Theorem REAL_LT_TRANS = REAL_LT_TRANS;
 Theorem REAL_LT_IADD = REAL_LT_IADD;
 Theorem REAL_SUP_ALLPOS = REAL_SUP_ALLPOS';
 Theorem REAL_MUL_SYM = REAL_MUL_SYM;
 Theorem REAL_MUL_COMM = REAL_MUL_SYM;
 Theorem REAL_MUL_ASSOC = REAL_MUL_ASSOC;
-Theorem REAL_MUL_LID = REAL_MUL_LID';
+Theorem REAL_MUL_LID[simp] = REAL_MUL_LID';
 Theorem REAL_MUL_LINV = REAL_MUL_LINV';
 Theorem REAL_LT_MUL = REAL_LT_MUL';
-Theorem REAL_INV_0 = REAL_INV_0';
+Theorem REAL_INV_0[simp] = REAL_INV_0';
 
-val _ = export_rewrites
-        ["REAL_ADD_LID", "REAL_ADD_LINV", "REAL_LT_REFL", "REAL_MUL_LID",
-         "REAL_INV_0"]
 
 (*---------------------------------------------------------------------------*)
 (* Define subtraction, division and the other orderings (moved to realax)    *)
@@ -64,15 +61,12 @@ Theorem real_div = real_div;
 (*---------------------------------------------------------------------------*)
 
 (* |- !x. x + 0 = x *)
-Theorem REAL_ADD_RID = REAL_ADD_RID;
-val _ = export_rewrites ["REAL_ADD_RID"]
+Theorem REAL_ADD_RID[simp] = REAL_ADD_RID;
 
-Theorem REAL_ADD_RINV = REAL_ADD_RINV;
-val _ = export_rewrites ["REAL_ADD_RINV"]
+Theorem REAL_ADD_RINV[simp] = REAL_ADD_RINV;
 
 (* |- !x. x * 1 = x *)
-Theorem REAL_MUL_RID = REAL_MUL_RID;
-val _ = export_rewrites ["REAL_MUL_RID"]
+Theorem REAL_MUL_RID[simp] = REAL_MUL_RID;
 
 Theorem REAL_MUL_RINV:
    !x. ~(x = 0) ==> (x * inv x = 1)
@@ -84,11 +78,9 @@ QED
 (* |- !x y z. (x + y) * z = x * z + y * z *)
 Theorem REAL_RDISTRIB = REAL_RDISTRIB;
 
-Theorem REAL_EQ_LADD = REAL_EQ_ADD_LCANCEL;
-val _ = export_rewrites ["REAL_EQ_LADD"]
+Theorem REAL_EQ_LADD[simp] = REAL_EQ_ADD_LCANCEL;
 
-Theorem REAL_EQ_RADD = REAL_EQ_ADD_RCANCEL;
-val _ = export_rewrites ["REAL_EQ_RADD"]
+Theorem REAL_EQ_RADD[simp] = REAL_EQ_ADD_RCANCEL;
 
 (* also known as REAL_EQ_ADD_LCANCEL_0 *)
 Theorem REAL_ADD_LID_UNIQ:
@@ -114,12 +106,10 @@ Theorem REAL_RNEG_UNIQ = REAL_RNEG_UNIQ;
 Theorem REAL_NEG_ADD = REAL_NEG_ADD;
 
 (* |- !x. 0 * x = 0 *)
-Theorem REAL_MUL_LZERO = REAL_MUL_LZERO;
-val _ = export_rewrites ["REAL_MUL_LZERO"]
+Theorem REAL_MUL_LZERO[simp] = REAL_MUL_LZERO;
 
 (* |- !x. x * 0 = 0 *)
-Theorem REAL_MUL_RZERO = REAL_MUL_RZERO;
-val _ = export_rewrites ["REAL_MUL_RZERO"]
+Theorem REAL_MUL_RZERO[simp] = REAL_MUL_RZERO;
 
 (* |- !x y. -(x * y) = -x * y *)
 Theorem REAL_NEG_LMUL = REAL_NEG_LMUL;
@@ -128,8 +118,7 @@ Theorem REAL_NEG_LMUL = REAL_NEG_LMUL;
 Theorem REAL_NEG_RMUL = REAL_NEG_RMUL;
 
 (* |- !x. --x = x *)
-Theorem REAL_NEGNEG = REAL_NEG_NEG;
-val _ = export_rewrites ["REAL_NEGNEG"]
+Theorem REAL_NEGNEG[simp] = REAL_NEG_NEG;
 
 Theorem REAL_NEG_MUL2:
    !x y. ~x * ~y = x * y
@@ -138,16 +127,13 @@ Proof
 QED
 
 (* |- !x y. (x * y = 0) <=> (x = 0) \/ (y = 0) *)
-Theorem REAL_ENTIRE = REAL_ENTIRE;
-val _ = export_rewrites ["REAL_ENTIRE"]
+Theorem REAL_ENTIRE[simp] = REAL_ENTIRE;
 
 (* |- !x y z. x + y < x + z <=> y < z *)
-Theorem REAL_LT_LADD = REAL_LT_LADD;
-val _ = export_rewrites ["REAL_LT_LADD"]
+Theorem REAL_LT_LADD[simp] = REAL_LT_LADD;
 
 (* |- !x y z. x + z < y + z <=> x < y *)
-Theorem REAL_LT_RADD = REAL_LT_RADD;
-val _ = export_rewrites ["REAL_LT_RADD"]
+Theorem REAL_LT_RADD[simp] = REAL_LT_RADD;
 
 (* |- !x y. ~(x < y) <=> y <= x *)
 Theorem REAL_NOT_LT = REAL_NOT_LT;
@@ -171,8 +157,7 @@ Theorem REAL_LET_TOTAL = REAL_LET_TOTAL;
 Theorem REAL_LTE_TOTAL = REAL_LTE_TOTAL;
 
 (* |- !x. x <= x *)
-Theorem REAL_LE_REFL = REAL_LE_REFL;
-val _ = export_rewrites ["REAL_LE_REFL"]
+Theorem REAL_LE_REFL[simp] = REAL_LE_REFL;
 
 (* |- !x y. x <= y <=> x < y \/ (x = y) *)
 Theorem REAL_LE_LT = REAL_LE_LT;
@@ -210,26 +195,23 @@ Theorem REAL_LTE_ANTSYM = REAL_LTE_ANTISYM;
 (* |- !x. -x < 0 <=> 0 < x *)
 Theorem REAL_NEG_LT0[simp] = REAL_NEG_LT0
 
-Theorem REAL_NEG_GT0:
+Theorem REAL_NEG_GT0[simp]:
    !x. 0 < ~x <=> x < 0
 Proof
   REAL_ARITH_TAC
 QED
-val _ = export_rewrites ["REAL_NEG_GT0"]
 
-Theorem REAL_NEG_LE0:
+Theorem REAL_NEG_LE0[simp]:
    !x. ~x <= 0 <=> 0 <= x
 Proof
   REAL_ARITH_TAC
 QED
-val _ = export_rewrites ["REAL_NEG_LE0"]
 
-Theorem REAL_NEG_GE0:
+Theorem REAL_NEG_GE0[simp]:
    !x. 0 <= ~x <=> x <= 0
 Proof
   REAL_ARITH_TAC
 QED
-val _ = export_rewrites ["REAL_NEG_GE0"]
 
 (* |- !x. (x = 0) \/ 0 < x \/ 0 < -x *)
 Theorem REAL_LT_NEGTOTAL = REAL_LT_NEGTOTAL
@@ -250,12 +232,10 @@ Theorem REAL_LE_01 = REAL_LE_01;
 Theorem REAL_LT_01 = REAL_LT_01;
 
 (* |- !x y z. x + y <= x + z <=> y <= z *)
-Theorem REAL_LE_LADD = REAL_LE_LADD;
-val _ = export_rewrites ["REAL_LE_LADD"]
+Theorem REAL_LE_LADD[simp] = REAL_LE_LADD;
 
 (* |- !x y z. x + z <= y + z <=> x <= y *)
-Theorem REAL_LE_RADD = REAL_LE_RADD;
-val _ = export_rewrites ["REAL_LE_RADD"]
+Theorem REAL_LE_RADD[simp] = REAL_LE_RADD;
 
 Theorem REAL_LT_ADD2:
    !w x y z. w < x /\ y < z ==> (w + y) < (x + z)
@@ -305,16 +285,14 @@ Proof
   REAL_ARITH_TAC
 QED
 
-Theorem REAL_SUB_REFL:
+Theorem REAL_SUB_REFL[simp]:
    !x. x - x = 0
 Proof
   REAL_ARITH_TAC
 QED
-val _ = export_rewrites ["REAL_SUB_REFL"]
 
 (* |- !x y. (x - y = 0) <=> (x = y) *)
-Theorem REAL_SUB_0 = REAL_SUB_0;
-val _ = export_rewrites ["REAL_SUB_0"]
+Theorem REAL_SUB_0[simp] = REAL_SUB_0;
 
 Theorem REAL_LE_DOUBLE:
    !x. 0 <= x + x <=> 0 <= x
@@ -341,8 +319,7 @@ Proof
 QED
 
 (* |- -0 = 0 *)
-Theorem REAL_NEG_0 = REAL_NEG_0;
-val _ = export_rewrites ["REAL_NEG_0"]
+Theorem REAL_NEG_0[simp] = REAL_NEG_0;
 
 (* |- !x y. -(x - y) = y - x *)
 Theorem REAL_NEG_SUB = REAL_NEG_SUB;
@@ -377,37 +354,33 @@ Proof
   REAL_ARITH_TAC
 QED
 
-Theorem REAL_SUB_LZERO:
+Theorem REAL_SUB_LZERO[simp]:
    !x. 0 - x = ~x
 Proof REAL_ARITH_TAC
 QED
-val _ = export_rewrites ["REAL_SUB_LZERO"]
 
-Theorem REAL_SUB_RZERO:
+Theorem REAL_SUB_RZERO[simp]:
    !x. x - 0 = x
 Proof REAL_ARITH_TAC
 QED
-val _ = export_rewrites ["REAL_SUB_RZERO"]
 
 (* also known as REAL_EQ_MUL_LCANCEL *)
-Theorem REAL_EQ_LMUL:
+Theorem REAL_EQ_LMUL[simp]:
    !x y z. (x * y = x * z) <=> (x = 0) \/ (y = z)
 Proof
   REPEAT GEN_TAC THEN
   ONCE_REWRITE_TAC[REAL_ARITH “(x = y) <=> (x - y = &0)”] THEN
   REWRITE_TAC[GSYM REAL_SUB_LDISTRIB, REAL_ENTIRE, REAL_SUB_RZERO]
 QED
-val _ = export_rewrites ["REAL_EQ_LMUL"]
 
 (* also known as REAL_EQ_MUL_RCANCEL *)
-Theorem REAL_EQ_RMUL:
+Theorem REAL_EQ_RMUL[simp]:
    !x y z. (x * z = y * z) <=> (z = 0) \/ (x = y)
 Proof
   ONCE_REWRITE_TAC[REAL_MUL_SYM] THEN
   REWRITE_TAC[REAL_EQ_LMUL] THEN
   MESON_TAC[]
 QED
-val _ = export_rewrites ["REAL_EQ_RMUL"]
 
 Theorem REAL_NEG_EQ:
    !x y:real. (~x = y) <=> (x = ~y)
@@ -664,35 +637,29 @@ QED
 Theorem REAL = REAL;
 
 (* !n. 0 <= &n *)
-Theorem REAL_POS = REAL_POS;
-val _ = export_rewrites ["REAL_POS"]
+Theorem REAL_POS[simp] = REAL_POS;
 
 (* !n. 0 < &SUC n *)
 Theorem REAL_POS_LT = REAL_POS_LT;
 
 (* |- !m n. &m <= &n <=> m <= n *)
-Theorem REAL_LE = REAL_LE;
-val _ = export_rewrites ["REAL_LE"]
+Theorem REAL_LE[simp] = REAL_LE;
 
-Theorem REAL_LT:
+Theorem REAL_LT[simp]:
    !m n. &m < &n <=> m < n
 Proof
   REPEAT GEN_TAC THEN MATCH_ACCEPT_TAC
     ((REWRITE_RULE[] o AP_TERM “$~:bool->bool” o
     REWRITE_RULE[GSYM NOT_LESS, GSYM REAL_NOT_LT]) (SPEC_ALL REAL_LE))
 QED
-val _ = export_rewrites ["REAL_LT"]
 
-Theorem REAL_INJ = REAL_INJ;
-val _ = export_rewrites ["REAL_INJ"]
+Theorem REAL_INJ[simp] = REAL_INJ;
 
 (* |- !m n. &m + &n = &(m + n) *)
-Theorem REAL_ADD = REAL_ADD;
-val _ = export_rewrites ["REAL_ADD"]
+Theorem REAL_ADD[simp] = REAL_ADD;
 
 (* |- !m n. &m * &n = &(m * n) *)
-Theorem REAL_MUL = REAL_MUL;
-val _ = export_rewrites ["REAL_MUL"]
+Theorem REAL_MUL[simp] = REAL_MUL;
 
 (*---------------------------------------------------------------------------*)
 (* Now more theorems                                                         *)
@@ -708,12 +675,11 @@ QED
 (* HOL-Light compatible name *)
 Theorem REAL_INV_1 = REAL_INV1
 
-Theorem REAL_OVER1:
+Theorem REAL_OVER1[simp]:
    !x. x / &1 = x
 Proof
   GEN_TAC THEN REWRITE_TAC[real_div, REAL_INV1, REAL_MUL_RID]
 QED
-val _ = export_rewrites ["REAL_OVER1"]
 
 Theorem REAL_DIV_REFL:
    !x. ~(x = 0) ==> (x / x = &1)
@@ -905,8 +871,7 @@ Proof
 QED
 
 (* |- !x y. -x <= -y <=> y <= x *)
-Theorem REAL_LE_NEG = REAL_LE_NEG2;
-val _ = export_rewrites ["REAL_LE_NEG"]
+Theorem REAL_LE_NEG[simp] = REAL_LE_NEG2;
 
 Theorem REAL_ADD2_SUB2:
    !a b c d. (a + b) - (c + d) = (a - c) + (b - d)
@@ -3033,8 +2998,7 @@ Proof
   REWRITE_TAC [REAL_EQ_LMUL]
 QED
 
-Theorem REAL_ABS_0 = ABS_0;
-val _ = export_rewrites ["REAL_ABS_0"]
+Theorem REAL_ABS_0[simp] = ABS_0;
 
 Theorem REAL_ABS_TRIANGLE = ABS_TRIANGLE;
 

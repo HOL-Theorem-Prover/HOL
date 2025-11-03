@@ -289,21 +289,19 @@ Proof
   DECIDE_TAC
 QED
 
-Theorem LHD_EQ_NONE:
+Theorem LHD_EQ_NONE[simp]:
     !ll. ((LHD ll = NONE) = (ll = LNIL)) /\ ((NONE = LHD ll) = (ll = LNIL))
 Proof
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
   SRW_TAC [][]
 QED
-val _ = export_rewrites ["LHD_EQ_NONE"]
 
-Theorem LTL_EQ_NONE:
+Theorem LTL_EQ_NONE[simp]:
     !ll. ((LTL ll = NONE) = (ll = LNIL)) /\ ((NONE = LTL ll) = (ll = LNIL))
 Proof
   GEN_TAC THEN STRUCT_CASES_TAC (Q.SPEC `ll` llist_CASES) THEN
   SRW_TAC [][LTL_THM]
 QED
-val _ = export_rewrites ["LTL_EQ_NONE"]
 
 Theorem LHDTL_EQ_SOME:
     !h t ll. (ll = LCONS h t) <=> (LHD ll = SOME h) /\ (LTL ll = SOME t)
@@ -324,7 +322,7 @@ Definition LNTH[nocompute]:
   (LNTH (SUC n) ll = OPTION_JOIN (OPTION_MAP (LNTH n) (LTL ll)))
 End
 
-Theorem LNTH_THM:
+Theorem LNTH_THM[simp]:
     (!n. LNTH n LNIL = NONE) /\
     (!h t. LNTH 0 (LCONS h t) = SOME h) /\
     (!n h t. LNTH (SUC n) (LCONS h t) = LNTH n t)
@@ -332,7 +330,6 @@ Proof
   SRW_TAC [][LNTH] THEN Induct_on `n` THEN
   SRW_TAC [][LNTH]
 QED
-val _ = export_rewrites ["LNTH_THM"]
 
 (* ----------------------------------------------------------------------
     LNTH is just llist_rep with arguments swapped
@@ -646,7 +643,7 @@ Proof
     o_DEF, OPTION_MAP_CASE]
 QED
 
-Theorem LTAKE_THM:
+Theorem LTAKE_THM[simp]:
     (!l. LTAKE 0 l = SOME []) /\
     (!n. LTAKE (SUC n) LNIL = NONE) /\
     (!n h t. LTAKE (SUC n) (LCONS h t) = OPTION_MAP (CONS h) (LTAKE n t))
@@ -654,7 +651,6 @@ Proof
   SRW_TAC [][LTAKE, LHD_THM, LTL_THM] THEN REPEAT GEN_TAC THEN
   Cases_on `LTAKE n t` THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["LTAKE_THM"]
 
 (* can also prove llist equality by proving all prefixes are the same *)
 Theorem LTAKE_SNOC_LNTH:
@@ -697,12 +693,11 @@ Proof
   PROVE_TAC []
 QED
 
-Theorem LTAKE_NIL_EQ_NONE:
+Theorem LTAKE_NIL_EQ_NONE[simp]:
     !m. (LTAKE m LNIL = NONE) = (0 < m)
 Proof
   GEN_TAC THEN Cases_on `m` THEN SIMP_TAC (srw_ss()) [LTAKE, LHD_THM]
 QED
-val _ = export_rewrites ["LTAKE_NIL_EQ_NONE"]
 
 Theorem SNOC_11[local]:
     !l1 l2 x y. (l1 ++ [x] = l2 ++ [y]) <=> (l1 = l2) /\ (x = y)
@@ -926,7 +921,7 @@ val (LFINITE_rules,LFINITE_ind,LFINITE_cases) = Hol_reln`
   (!h t. LFINITE t ==> LFINITE (h:::t))
 `;
 
-Theorem LFINITE_THM:
+Theorem LFINITE_THM[simp]:
     (LFINITE LNIL = T) /\
     (!h t. LFINITE (LCONS h t) = LFINITE t)
 Proof
@@ -934,7 +929,6 @@ Proof
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [LFINITE_cases])) THEN
   SRW_TAC [][]
 QED
-val _ = export_rewrites ["LFINITE_THM"]
 
 Theorem LFINITE:
     LFINITE ll = ?n. LTAKE n ll = NONE
@@ -988,7 +982,7 @@ Definition LLENGTH[nocompute]:
   LLENGTH ll = if LFINITE ll then SOME (@n. llength_rel ll n) else NONE
 End
 
-Theorem LLENGTH_THM:
+Theorem LLENGTH_THM[simp]:
     (LLENGTH LNIL = SOME 0) /\
     (!h t. LLENGTH (LCONS h t) = OPTION_MAP SUC (LLENGTH t))
 Proof
@@ -998,7 +992,6 @@ Proof
   SRW_TAC [][] THEN
   ONCE_REWRITE_TAC [llength_rel_cases] THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["LLENGTH_THM"]
 
 Theorem LLENGTH_0[simp]:
    (LLENGTH x = SOME 0) <=> (x = [||])
@@ -1158,10 +1151,9 @@ Proof
   ASM_SIMP_TAC (srw_ss()) [LTAKE_THM, LHD_THM, LTL_THM]
 QED
 
-Definition fromList_def:
+Definition fromList_def[simp]:
   (fromList [] = LNIL) /\ (fromList (h::t) = LCONS h (fromList t))
 End
-val _ = export_rewrites ["fromList_def"]
 
 Theorem fromList_EQ_LNIL[simp]:
    (fromList l = LNIL) <=> (l = [])
@@ -1300,14 +1292,13 @@ Proof
   ASM_SIMP_TAC std_ss [FUNPOW_BIND_NONE]
 QED
 
-Theorem LDROP_THM:
+Theorem LDROP_THM[simp]:
     (!ll. LDROP 0 ll = SOME ll) /\
     (!n. LDROP (SUC n) LNIL = NONE) /\
     (!n h t. LDROP (SUC n) (LCONS h t) = LDROP n t)
 Proof
   SIMP_TAC (srw_ss()) [LDROP, LTL_THM]
 QED
-val _ = export_rewrites ["LDROP_THM"]
 
 Theorem LDROP1_THM:
     LDROP 1 = LTL
@@ -1767,7 +1758,7 @@ val LFILTER = new_specification
       SRW_TAC [][]
     ]));
 
-Theorem LFILTER_THM:
+Theorem LFILTER_THM[simp]:
     (!P. LFILTER P LNIL = LNIL) /\
     (!P h t. LFILTER P (LCONS h t) = if P h then LCONS h (LFILTER P t)
                                      else LFILTER P t)
@@ -1778,7 +1769,6 @@ Proof
   Cases_on `exists P t` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
   ONCE_REWRITE_TAC [LFILTER] THEN ASM_SIMP_TAC (srw_ss()) []
 QED
-val _ = export_rewrites ["LFILTER_THM"]
 
 Theorem LFILTER_NIL:
     !P ll. LL_ALL ($~ o P) ll ==> (LFILTER P ll = LNIL)
@@ -1974,7 +1964,7 @@ val LFLATTEN = new_specification
       ] THEN SRW_TAC [][LET_THM]
     ]));
 
-Theorem LFLATTEN_THM:
+Theorem LFLATTEN_THM[simp]:
     (LFLATTEN LNIL = LNIL) /\
     (!tl. LFLATTEN (LCONS LNIL t) = LFLATTEN t) /\
     (!h t tl. LFLATTEN (LCONS (LCONS h t) tl) =
@@ -1985,9 +1975,8 @@ Proof
   COND_CASES_TAC THEN SIMP_TAC (srw_ss()) [] THEN
   ONCE_REWRITE_TAC [LFLATTEN] THEN ASM_SIMP_TAC (srw_ss()) []
 QED
-val _ = export_rewrites ["LFLATTEN_THM"]
 
-Theorem LFLATTEN_APPEND:
+Theorem LFLATTEN_APPEND[simp]:
     !h t. LFLATTEN (LCONS h t) = LAPPEND h (LFLATTEN t)
 Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [LLIST_STRONG_BISIMULATION] THEN
@@ -2005,7 +1994,6 @@ Proof
     ]
   ]
 QED
-val _ = export_rewrites ["LFLATTEN_APPEND"]
 
 
 Theorem LFLATTEN_EQ_NIL:
@@ -2128,7 +2116,7 @@ QED
 val LUNZIP_THM = new_specification ("LUNZIP_THM", ["LUNZIP"], LUNZIP_exists);
 val _ = export_rewrites ["LUNZIP_THM"]
 
-Theorem LZIP_LUNZIP:
+Theorem LZIP_LUNZIP[simp]:
   !ll: ('a # 'b) llist. LZIP(LUNZIP ll) = ll
 Proof
  REWRITE_TAC [Once LLIST_STRONG_BISIMULATION] THEN
@@ -2139,7 +2127,6 @@ Proof
  SRW_TAC [][] THEN
  Cases_on `h` THEN SRW_TAC [][] THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["LZIP_LUNZIP"]
 
 Theorem LUNFOLD_THM:
    !f x v1 v2.

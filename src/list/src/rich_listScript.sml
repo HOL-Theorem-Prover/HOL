@@ -887,12 +887,11 @@ Proof
    THEN metisLib.METIS_TAC [APPEND, APPEND_ASSOC]
 QED
 
-Theorem IS_SUFFIX_REFL:
+Theorem IS_SUFFIX_REFL[simp]:
     !l. IS_SUFFIX l l
 Proof
    SRW_TAC [][IS_SUFFIX_APPEND] THEN metisLib.METIS_TAC [APPEND]
 QED
-val () = export_rewrites ["IS_SUFFIX_REFL"]
 
 Theorem IS_SUBLIST_REVERSE:
     !l1 l2. IS_SUBLIST (REVERSE l1) (REVERSE l2) = IS_SUBLIST l1 l2
@@ -3109,11 +3108,10 @@ Proof
 QED
 
 (* |- !a c. a <<= a ++ c *)
-Theorem IS_PREFIX_APPEND3 =
+Theorem IS_PREFIX_APPEND3[simp] =
   IS_PREFIX_APPENDS |> SPEC_ALL |> Q.INST [`b` |-> `[]`]
                     |> REWRITE_RULE [IS_PREFIX, APPEND_NIL]
                     |> Q.GENL [`c`, `a`]
-val _ = export_rewrites ["IS_PREFIX_APPEND3"]
 
 Theorem prefixes_is_prefix_total:
    !l l1 l2.
@@ -6555,16 +6553,13 @@ End
 
 (* Theorem: MAX_LIST [] = 0 *)
 (* Proof: by MAX_LIST_def *)
-Theorem MAX_LIST_NIL = MAX_LIST_def |> CONJUNCT1;
+Theorem MAX_LIST_NIL[simp] = MAX_LIST_def |> CONJUNCT1;
 (* val MAX_LIST_NIL = |- MAX_LIST [] = 0: thm *)
 
 (* Theorem: MAX_LIST (h::t) = MAX h (MAX_LIST t) *)
 (* Proof: by MAX_LIST_def *)
-Theorem MAX_LIST_CONS = MAX_LIST_def |> CONJUNCT2;
+Theorem MAX_LIST_CONS[simp] = MAX_LIST_def |> CONJUNCT2;
 (* val MAX_LIST_CONS = |- !h t. MAX_LIST (h::t) = MAX h (MAX_LIST t): thm *)
-
-(* export simple results *)
-val _ = export_rewrites["MAX_LIST_NIL", "MAX_LIST_CONS"];
 
 (* Theorem: MAX_LIST [x] = x *)
 (* Proof:
@@ -6714,7 +6709,7 @@ End
 
 (* Theorem: MIN_LIST [x] = x *)
 (* Proof: by MIN_LIST_def *)
-Theorem MIN_LIST_SING:
+Theorem MIN_LIST_SING[simp]:
     !x. MIN_LIST [x] = x
 Proof
   rw[MIN_LIST_def]
@@ -6722,14 +6717,11 @@ QED
 
 (* Theorem: t <> [] ==> (MIN_LIST (h::t) = MIN h (MIN_LIST t)) *)
 (* Proof: by MIN_LIST_def *)
-Theorem MIN_LIST_CONS:
+Theorem MIN_LIST_CONS[simp]:
     !h t. t <> [] ==> (MIN_LIST (h::t) = MIN h (MIN_LIST t))
 Proof
   rw[MIN_LIST_def]
 QED
-
-(* export simple results *)
-val _ = export_rewrites["MIN_LIST_SING", "MIN_LIST_CONS"];
 
 (* Theorem: l <> [] ==> MEM (MIN_LIST l) l *)
 (* Proof:

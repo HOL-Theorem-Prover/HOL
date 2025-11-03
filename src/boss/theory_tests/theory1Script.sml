@@ -6,13 +6,11 @@ val _ = register_hook("magnus_bug",
                       (fn TheoryDelta.ExportTheory _ => delete_const "h"
                         | _ => ()))
 
-Definition f_def:  f x = x + 1
+Definition f_def[simp]:  f x = x + 1
 End
-val _ = export_rewrites ["f_def"]
 
-Definition g_def:  g n m = f (n * m)
+Definition g_def[simp]:  g n m = f (n * m)
 End
-val _ = export_rewrites ["g_def"]
 
 val i = EVAL ``g 3 4``
              |> concl |> rhs |> numSyntax.dest_numeral
@@ -25,9 +23,8 @@ Definition h_def:
   h n = n + 1
 End
 
-Definition f2_def:  f2 n = n + 1
+Definition f2_def[simp]:  f2 n = n + 1
 End
-val _ = export_rewrites ["f2_def"]
 
 Theorem f2_SUC:
     f2 = SUC

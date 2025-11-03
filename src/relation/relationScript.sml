@@ -256,20 +256,18 @@ Proof
   ASM_REWRITE_TAC []
 QED
 
-Theorem symmetric_RC:
+Theorem symmetric_RC[simp]:
     !R. symmetric (RC R) = symmetric R
 Proof
   REWRITE_TAC [symmetric_def, RC_DEF] THEN
   REPEAT (STRIP_TAC ORELSE EQ_TAC) THEN ASM_MESON_TAC []
 QED
-val _ = export_rewrites ["symmetric_RC"]
 
-Theorem antisymmetric_RC:
+Theorem antisymmetric_RC[simp]:
     !R. antisymmetric (RC R) = antisymmetric R
 Proof
   SRW_TAC [][antisymmetric_def, RC_DEF] THEN PROVE_TAC []
 QED
-val _ = export_rewrites ["antisymmetric_RC"]
 
 Theorem transitive_RC:
     !R. transitive R ==> transitive (RC R)
@@ -693,26 +691,23 @@ Proof
   HO_MATCH_MP_TAC TC_INDUCT THEN ASM_MESON_TAC []
 QED
 
-Theorem RC_IDEM:
+Theorem RC_IDEM[simp]:
     !R:'a->'a->bool.  RC (RC R) = RC R
 Proof
   SIMP_TAC bool_ss [RC_REFLEXIVE, reflexive_RC_identity]
 QED
-val _ = export_rewrites ["RC_IDEM"]
 
-Theorem SC_IDEM:
+Theorem SC_IDEM[simp]:
     !R:'a->'a->bool. SC (SC R) = SC R
 Proof
   SIMP_TAC bool_ss [SC_SYMMETRIC, symmetric_SC_identity]
 QED
-val _ = export_rewrites ["SC_IDEM"]
 
-Theorem TC_IDEM:
+Theorem TC_IDEM[simp]:
     !R:'a->'a->bool.  TC (TC R) = TC R
 Proof
   SIMP_TAC bool_ss [TC_TRANSITIVE, transitive_TC_identity]
 QED
-val _ = export_rewrites ["TC_IDEM"]
 
 Theorem RC_MOVES_OUT:
     !R. (SC (RC R) = RC (SC R)) /\ (RC (RC R) = RC R) /\
@@ -738,29 +733,26 @@ Proof
   PROVE_TAC [reflexive_def,TC_SUBSET]
 QED
 
-Theorem EQC_EQUIVALENCE:
+Theorem EQC_EQUIVALENCE[simp]:
     !R. equivalence (EQC R)
 Proof
   REWRITE_TAC [equivalence_def, EQC_DEF, RC_REFLEXIVE, symmetric_RC] THEN
   MESON_TAC [symmetric_TC, TC_RC_EQNS, TC_TRANSITIVE, SC_SYMMETRIC]
 QED
-val _ = export_rewrites ["EQC_EQUIVALENCE"]
 
-Theorem EQC_IDEM:
+Theorem EQC_IDEM[simp]:
     !R:'a->'a->bool. EQC(EQC R) = EQC R
 Proof
   SIMP_TAC bool_ss [EQC_DEF, RC_MOVES_OUT, symmetric_SC_identity,
                     symmetric_TC, SC_SYMMETRIC, TC_IDEM]
 QED
-val _ = export_rewrites ["EQC_IDEM"]
 
 
-Theorem RTC_IDEM:
+Theorem RTC_IDEM[simp]:
     !R:'a->'a->bool.  RTC (RTC R) = RTC R
 Proof
   SIMP_TAC bool_ss [GSYM TC_RC_EQNS, RC_MOVES_OUT, TC_IDEM]
 QED
-val _ = export_rewrites ["RTC_IDEM"]
 
 Theorem RTC_CASES1:
     !R (x:'a) y.  RTC R x y <=> (x = y) \/ ?u. R x u /\ RTC R u y
@@ -852,12 +844,11 @@ Proof
   ASM_MESON_TAC []
 QED
 
-Theorem EQC_REFL:
+Theorem EQC_REFL[simp]:
     !R x. EQC R x x
 Proof
   SRW_TAC [][EQC_DEF, RC_DEF]
 QED
-val _ = export_rewrites ["EQC_REFL"]
 
 Theorem EQC_R:
     !R x y. R x y ==> EQC R x y
@@ -1135,8 +1126,7 @@ QED
 
 val EMPTY_REL_DEF =
 Q.new_definition
-        ("EMPTY_REL_DEF", `EMPTY_REL (x:'a) (y:'a) = F`);
-val _ = export_rewrites ["EMPTY_REL_DEF"]
+        ("EMPTY_REL_DEF[simp]", `EMPTY_REL (x:'a) (y:'a) = F`);
 Overload REMPTY = ``EMPTY_REL``
 val _ = Unicode.unicode_version {u = UnicodeChars.emptyset ^ UnicodeChars.sub_r,
                                  tmnm = "EMPTY_REL"}
@@ -1269,9 +1259,8 @@ Q.new_definition
 ("inv_image_def",
    `inv_image R (f:'a->'b) = \x y. R (f x) (f y):bool`);
 
-Theorem inv_image_thm =
+Theorem inv_image_thm[simp] =
   SIMP_RULE bool_ss [FUN_EQ_THM] inv_image_def
-val _ = export_rewrites ["inv_image_thm"]
 
 Theorem WF_inv_image:
  !R (f:'a->'b). WF R ==> WF (inv_image R f)
@@ -1294,33 +1283,29 @@ REPEAT GEN_TAC
      THEN REWRITE_TAC[]]
 QED
 
-Theorem total_inv_image:
+Theorem total_inv_image[simp]:
     !R f. total R ==> total (inv_image R f)
 Proof
   SRW_TAC[][total_def, inv_image_def]
 QED
-val _ = export_rewrites ["total_inv_image"]
 
-Theorem reflexive_inv_image:
+Theorem reflexive_inv_image[simp]:
     !R f. reflexive R ==> reflexive (inv_image R f)
 Proof
   SRW_TAC[][reflexive_def, inv_image_def]
 QED
-val _ = export_rewrites ["reflexive_inv_image"]
 
-Theorem symmetric_inv_image:
+Theorem symmetric_inv_image[simp]:
     !R f. symmetric R ==> symmetric (inv_image R f)
 Proof
   SRW_TAC[][symmetric_def, inv_image_def]
 QED
-val _ = export_rewrites ["symmetric_inv_image"]
 
-Theorem transitive_inv_image:
+Theorem transitive_inv_image[simp]:
     !R f. transitive R ==> transitive (inv_image R f)
 Proof
   SRW_TAC[][transitive_def, inv_image_def] THEN METIS_TAC[]
 QED
-val _ = export_rewrites ["transitive_inv_image"]
 
 (*---------------------------------------------------------------------------
  * Now the WF recursion theorem. Based on Tobias Nipkow's Isabelle development
@@ -1813,9 +1798,8 @@ end;
    ---------------------------------------------------------------------- *)
 
 val inv_DEF = new_definition(
-  "inv_DEF",
+  "inv_DEF[simp]",
   ``inv (R:'a->'b->bool) x y = R y x``);
-val _ = export_rewrites ["inv_DEF"]
 (* superscript suffix T, for "transpose" *)
 val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                    fixity = Suffix 2100,
@@ -2086,20 +2070,18 @@ Proof
   SRW_TAC [][RINTER, FUN_EQ_THM] THEN PROVE_TAC []
 QED
 
-Theorem antisymmetric_RINTER:
+Theorem antisymmetric_RINTER[simp]:
    (antisymmetric R1 ==> antisymmetric (R1 RINTER R2)) /\
    (antisymmetric R2 ==> antisymmetric (R1 RINTER R2))
 Proof
   SRW_TAC [][antisymmetric_def,RINTER]
 QED
-val _ = export_rewrites ["antisymmetric_RINTER"]
 
-Theorem transitive_RINTER:
+Theorem transitive_RINTER[simp]:
    transitive R1 /\ transitive R2 ==> transitive (R1 RINTER R2)
 Proof
   SRW_TAC [SatisfySimps.SATISFY_ss][transitive_def,RINTER]
 QED
-val _ = export_rewrites ["transitive_RINTER"]
 
 Theorem RTC_RINTER:
   !R1 R2 x y. RTC (R1 RINTER R2) x y ==> ((RTC R1) RINTER (RTC R2)) x y
@@ -2297,19 +2279,17 @@ Proof
   SRW_TAC [][IDEM, RTC_IDEM]
 QED
 
-Theorem trichotomous_STRORD:
+Theorem trichotomous_STRORD[simp]:
     trichotomous (STRORD R) <=> trichotomous R
 Proof
   SRW_TAC [][STRORD, trichotomous] THEN METIS_TAC[]
 QED
-val _ = export_rewrites ["trichotomous_STRORD"]
 
-Theorem trichotomous_RC:
+Theorem trichotomous_RC[simp]:
     trichotomous (RC R) <=> trichotomous R
 Proof
   SRW_TAC [][RC_DEF, trichotomous] THEN METIS_TAC[]
 QED
-val _ = export_rewrites ["trichotomous_RC"]
 
 (* ----------------------------------------------------------------------
     We may define notions of linear (i.e., total) order, but in the
@@ -2352,19 +2332,17 @@ Proof
   SRW_TAC [][O_DEF, FUN_EQ_THM] THEN PROVE_TAC []
 QED
 
-Theorem Id_O:
+Theorem Id_O[simp]:
     Id O R = R
 Proof
   SRW_TAC [][O_DEF, FUN_EQ_THM]
 QED
-val _ = export_rewrites ["Id_O"]
 
-Theorem O_Id:
+Theorem O_Id[simp]:
     R O Id = R
 Proof
   SRW_TAC [][O_DEF, FUN_EQ_THM]
 QED
-val _ = export_rewrites ["O_Id"]
 
 Theorem O_MONO:
     R1 RSUBSET R2 /\ S1 RSUBSET S2 ==> (R1 O S1) RSUBSET (R2 O S2)
@@ -2419,9 +2397,8 @@ QED
 
 (* top and bottom elements of RSUBSET lattice *)
 val RUNIV = new_definition(
-  "RUNIV",
+  "RUNIV[simp]",
   ``RUNIV x y = T``);
-val _ = export_rewrites ["RUNIV"]
 val _ = OpenTheoryMap.OpenTheory_const_name
           {const={Thy="relation",Name="RUNIV"},name=(["Relation"],"universe")}
 val _ = Unicode.unicode_version {
@@ -2429,21 +2406,19 @@ val _ = Unicode.unicode_version {
   tmnm = "RUNIV"}
 
 
-Theorem RUNIV_SUBSET:
+Theorem RUNIV_SUBSET[simp]:
     (RUNIV RSUBSET R <=> (R = RUNIV)) /\
     (R RSUBSET RUNIV)
 Proof
   SRW_TAC [][RSUBSET, FUN_EQ_THM]
 QED
-val _ = export_rewrites ["RUNIV_SUBSET"]
 
-Theorem REMPTY_SUBSET:
+Theorem REMPTY_SUBSET[simp]:
     REMPTY RSUBSET R /\
     (R RSUBSET REMPTY <=> (R = REMPTY))
 Proof
   SRW_TAC [][RSUBSET, FUN_EQ_THM]
 QED
-val _ = export_rewrites ["REMPTY_SUBSET"]
 
 (* ----------------------------------------------------------------------
     Restrictions on relations
@@ -2463,34 +2438,30 @@ val _ = export_rewrites ["REMPTY_SUBSET"]
    ---------------------------------------------------------------------- *)
 
 val RRESTRICT_DEF = new_definition(
-  "RRESTRICT_DEF",
+  "RRESTRICT_DEF[simp]",
   ``RRESTRICT R s (x:'a) (y:'b) <=> R x y /\ x IN s``);
-val _ = export_rewrites ["RRESTRICT_DEF"]
 
-Theorem IN_RDOM_RRESTRICT:
+Theorem IN_RDOM_RRESTRICT[simp]:
     x IN RDOM (RRESTRICT (R:'a -> 'b -> bool) s) <=> x IN RDOM R /\ x IN s
 Proof
   SIMP_TAC bool_ss [boolTheory.IN_DEF, RDOM_DEF, RRESTRICT_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["IN_RDOM_RRESTRICT"]
 
 val RDOM_DELETE_DEF = new_definition(
-  "RDOM_DELETE_DEF",
+  "RDOM_DELETE_DEF[simp]",
   ``RDOM_DELETE R x u v <=> R u v /\ u <> x``);
-val _ = export_rewrites ["RDOM_DELETE_DEF"]
 
 (* this syntax is compatible (easily confused) with that for finite maps *)
 val _ = set_fixity "\\\\" (Infixl 600)
 Overload "\\\\" = “RDOM_DELETE”
 
-Theorem IN_RDOM_DELETE:
+Theorem IN_RDOM_DELETE[simp]:
     x IN RDOM (R \\ k) <=> x IN RDOM R /\ x <> k
 Proof
   SIMP_TAC bool_ss [boolTheory.IN_DEF, RDOM_DEF, RDOM_DELETE_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["IN_RDOM_DELETE"]
 
 
 

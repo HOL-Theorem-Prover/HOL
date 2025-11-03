@@ -8,11 +8,10 @@ val _ = export_rewrites ["ordinalNotation.finp_def", "ordinalNotation.tail_def",
                          "ordinalNotation.oless_equations",
                          "ordinalNotation.expt_def"]
 
-Definition ordModel_def:
+Definition ordModel_def[simp]:
   (ordModel (End n) = &n) /\
   (ordModel (Plus e c t) = omega ** ordModel e * &c + ordModel t)
 End
-val _ = export_rewrites ["ordModel_def"]
 
 val _ = add_rule {fixity = Closefix, term_name = "ordModel",
                   block_style = (AroundEachPhrase, (PP.CONSISTENT,2)),
@@ -30,19 +29,17 @@ Proof
   `k <> 0` by DECIDE_TAC THEN SRW_TAC [][ordEXP_EQ_0]
 QED
 
-Theorem oless_0:
+Theorem oless_0[simp]:
     !n. oless n (End 0) = F
 Proof
   Cases_on `n` >> simp[]
 QED
-val _ = export_rewrites ["oless_0"]
 
-Theorem oless_0a:
+Theorem oless_0a[simp]:
     oless (End 0) n <=> n <> End 0
 Proof
   Cases_on `n` >> simp[]
 QED
-val _ = export_rewrites ["oless_0a"]
 
 Theorem oless_x_End:
     oless x (End n) <=> ?m. (x = End m) /\ m < n
