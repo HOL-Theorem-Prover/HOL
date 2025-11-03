@@ -154,10 +154,11 @@ End
 
 (* Theorem: f IN big_O g <=> ?k c. !n. k < n ==> f n <= c * (g n) *)
 (* Proof: by big_O_def *)
-val big_O_element = store_thm(
-  "big_O_element",
-  ``!f g. f IN big_O g <=> ?k c. !n. k < n ==> f n <= c * (g n)``,
-  rw[big_O_def]);
+Theorem big_O_element:
+    !f g. f IN big_O g <=> ?k c. !n. k < n ==> f n <= c * (g n)
+Proof
+  rw[big_O_def]
+QED
 
 (* Theorem: g IN big_O g *)
 (* Proof:
@@ -167,47 +168,52 @@ val big_O_element = store_thm(
    Then g n = 1 * g n     by MULT_LEFT_1
    The result follows.
 *)
-val big_O_self = store_thm(
-  "big_O_self",
-  ``!g. g IN big_O g``,
+Theorem big_O_self:
+    !g. g IN big_O g
+Proof
   rw[big_O_def] >>
   qexists_tac `0` >>
   qexists_tac `1` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: f1 IN big_O g /\ (!n. f1 n = f2 n) ==> f2 IN big_O g *)
 (* Proof: by big_O_def, take same k and c. *)
-val big_O_cong = store_thm(
-  "big_O_cong",
-  ``!f1 f2 g. f1 IN big_O g /\ (!n. f1 n = f2 n) ==> f2 IN big_O g``,
+Theorem big_O_cong:
+    !f1 f2 g. f1 IN big_O g /\ (!n. f1 n = f2 n) ==> f2 IN big_O g
+Proof
   rw[big_O_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: (K 0) IN big_O g *)
 (* Proof: by big_O_def *)
-val big_O_has_zero = store_thm(
-  "big_O_has_zero",
-  ``!g. (K 0) IN big_O g``,
-  rw[big_O_def]);
+Theorem big_O_has_zero:
+    !g. (K 0) IN big_O g
+Proof
+  rw[big_O_def]
+QED
 
 (* Theorem: (K m) IN big_O (K 1) *)
 (* Proof: by big_O_def, take k = 0 and c = m. *)
-val big_O_1 = store_thm(
-  "big_O_1",
-  ``!m. (K m) IN big_O (K 1)``,
+Theorem big_O_1:
+    !m. (K m) IN big_O (K 1)
+Proof
   rw[big_O_def] >>
   map_every qexists_tac [`0`, `m`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: big_O g <> {} *)
 (* Proof:
    Note (K 0) IN big_O g     by big_O_has_zero
    Thus big_O g <> {}        by MEMBER_NOT_EMPTY
 *)
-val big_O_nonempty = store_thm(
-  "big_O_nonempty",
-  ``!g. big_O g <> {}``,
-  metis_tac[big_O_has_zero, MEMBER_NOT_EMPTY]);
+Theorem big_O_nonempty:
+    !g. big_O g <> {}
+Proof
+  metis_tac[big_O_has_zero, MEMBER_NOT_EMPTY]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Sum and Product of Functions and Sets                                     *)
@@ -250,19 +256,21 @@ val it = |- !s1 s2. (s1 |+| s2) = {f1 .+. f2 | f1 IN s1 /\ f2 IN s2}: thm
 
 (* Theorem: f1 IN s1 /\ f2 IN s2 ==> (f1 .+. f2) IN (s1 |+| s2) *)
 (* Proof: by set_sum_def *)
-val set_sum_element = store_thm(
-  "set_sum_element",
-  ``!f1 f2 s1 s2. f1 IN s1 /\ f2 IN s2 ==> (f1 .+. f2) IN (s1 |+| s2)``,
+Theorem set_sum_element:
+    !f1 f2 s1 s2. f1 IN s1 /\ f2 IN s2 ==> (f1 .+. f2) IN (s1 |+| s2)
+Proof
   rw[set_sum_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: x IN s1 |+| s2 <=> ?f1 f2. f1 IN s1 /\ f2 IN s2 /\ (x = f1 .+. f2) *)
 (* Proof: by set_sum_def *)
-val set_sum_eqn = store_thm(
-  "set_sum_eqn",
-  ``!f1 f2 s1 s2 x. x IN s1 |+| s2 <=> ?f1 f2. f1 IN s1 /\ f2 IN s2 /\ (x = f1 .+. f2)``,
+Theorem set_sum_eqn:
+    !f1 f2 s1 s2 x. x IN s1 |+| s2 <=> ?f1 f2. f1 IN s1 /\ f2 IN s2 /\ (x = f1 .+. f2)
+Proof
   rw[set_sum_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Define product of two numeric function sets *)
 Definition set_prod_def:
@@ -280,61 +288,69 @@ val it = |- !s1 s2. (s1 |*| s2) = {f1 .*. f2 | f1 IN s1 /\ f2 IN s2}: thm
 
 (* Theorem: f1 IN s1 /\ f2 IN s2 ==> (f1 .*. f2) IN (s1 |*| s2) *)
 (* Proof: by set_prod_def *)
-val set_prod_element = store_thm(
-  "set_prod_element",
-  ``!f1 f2 s1 s2. f1 IN s1 /\ f2 IN s2 ==> (f1 .*. f2) IN (s1 |*| s2)``,
+Theorem set_prod_element:
+    !f1 f2 s1 s2. f1 IN s1 /\ f2 IN s2 ==> (f1 .*. f2) IN (s1 |*| s2)
+Proof
   rw[set_prod_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: x IN s1 |*| s2 <=> ?f1 f2. f1 IN s1 /\ f2 IN s2 /\ (x = f1 .*. f2) *)
 (* Proof: by set_prod_def *)
-val set_prod_eqn = store_thm(
-  "set_prod_eqn",
-  ``!f1 f2 s1 s2 x. x IN s1 |*| s2 <=> ?f1 f2. f1 IN s1 /\ f2 IN s2 /\ (x = f1 .*. f2)``,
+Theorem set_prod_eqn:
+    !f1 f2 s1 s2 x. x IN s1 |*| s2 <=> ?f1 f2. f1 IN s1 /\ f2 IN s2 /\ (x = f1 .*. f2)
+Proof
   rw[set_prod_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: f1 .+. f2 = f2 .+. f1 *)
 (* Proof: by fun_sum_def, FUN_EQ_THM, ADD_COMM *)
-val fun_sum_comm = store_thm(
-  "fun_sum_comm",
-  ``!f1 f2. f1 .+. f2 = f2 .+. f1``,
-  rw[fun_sum_def]);
+Theorem fun_sum_comm:
+    !f1 f2. f1 .+. f2 = f2 .+. f1
+Proof
+  rw[fun_sum_def]
+QED
 
 (* Theorem: (f1 .+. f2) .+. f3 = f1 .+. (f2 .+. f3) *)
 (* Proof: by fun_sum_def, FUN_EQ_THM, ADD_ASSOC *)
-val fun_sum_assoc = store_thm(
-  "fun_sum_assoc",
-  ``!f1 f2 f3. (f1 .+. f2) .+. f3 = f1 .+. (f2 .+. f3)``,
-  rw[fun_sum_def]);
+Theorem fun_sum_assoc:
+    !f1 f2 f3. (f1 .+. f2) .+. f3 = f1 .+. (f2 .+. f3)
+Proof
+  rw[fun_sum_def]
+QED
 
 (* Theorem: f1 .*. f2 = f2 .*. f1 *)
 (* Proof: by fun_prod_def, FUN_EQ_THM, MULT_COMM *)
-val fun_prod_comm = store_thm(
-  "fun_prod_comm",
-  ``!f1 f2. f1 .*. f2 = f2 .*. f1``,
-  rw[fun_prod_def]);
+Theorem fun_prod_comm:
+    !f1 f2. f1 .*. f2 = f2 .*. f1
+Proof
+  rw[fun_prod_def]
+QED
 
 (* Theorem: (f1 .*. f2) .*. f3 = f1 .*. (f2 .*. f3) *)
 (* Proof: by fun_prod_def, FUN_EQ_THM, MULT_ASSOC *)
-val fun_prod_assoc = store_thm(
-  "fun_prod_assoc",
-  ``!f1 f2 f3. (f1 .*. f2) .*. f3 = f1 .*. (f2 .*. f3)``,
-  rw[fun_prod_def]);
+Theorem fun_prod_assoc:
+    !f1 f2 f3. (f1 .*. f2) .*. f3 = f1 .*. (f2 .*. f3)
+Proof
+  rw[fun_prod_def]
+QED
 
 (* Theorem: f .+. (K 0) = f /\ (K 0) .+. f = f *)
 (* Proof: by fun_sum_def *)
-val fun_sum_zero = store_thm(
-  "fun_sum_zero",
-  ``!f. f .+. (K 0) = f /\ (K 0) .+. f = f``,
-  rw[fun_sum_def, FUN_EQ_THM]);
+Theorem fun_sum_zero:
+    !f. f .+. (K 0) = f /\ (K 0) .+. f = f
+Proof
+  rw[fun_sum_def, FUN_EQ_THM]
+QED
 
 (* Theorem: f .*. (K 1) = f /\ (K 1) .*. f = f *)
 (* Proof: by fun_prod_def *)
-val fun_prod_one = store_thm(
-  "fun_prod_one",
-  ``!f. f .*. (K 1) = f /\ (K 1) .*. f = f``,
-  rw[fun_prod_def, FUN_EQ_THM]);
+Theorem fun_prod_one:
+    !f. f .*. (K 1) = f /\ (K 1) .*. f = f
+Proof
+  rw[fun_prod_def, FUN_EQ_THM]
+QED
 
 (* Theorem: MONO f1 /\ MONO f2 ==> MONO (f1 .+. f2) *)
 (* Proof:
@@ -345,10 +361,11 @@ val fun_prod_one = store_thm(
      or (f1 .+. f2) x <= (f1 .+. f2) y   by fun_sum_def
     ==> MONO (f1 .+. f2)
 *)
-val fun_sum_mono = store_thm(
-  "fun_sum_mono",
-  ``!f1 f2. MONO f1 /\ MONO f2 ==> MONO (f1 .+. f2)``,
-  rw[fun_sum_def, LE_MONO_ADD2]);
+Theorem fun_sum_mono:
+    !f1 f2. MONO f1 /\ MONO f2 ==> MONO (f1 .+. f2)
+Proof
+  rw[fun_sum_def, LE_MONO_ADD2]
+QED
 
 (* Theorem: MONO f1 /\ MONO f2 ==> MONO (f1 .*. f2) *)
 (* Proof:
@@ -359,10 +376,11 @@ val fun_sum_mono = store_thm(
      or (f1 .*. f2) x <= (f1 .*. f2) y   by fun_prod_def
     ==> MONO (f1 .*. f2)
 *)
-val fun_prod_mono = store_thm(
-  "fun_prod_mono",
-  ``!f1 f2. MONO f1 /\ MONO f2 ==> MONO (f1 .*. f2)``,
-  rw[fun_prod_def, LESS_MONO_MULT2]);
+Theorem fun_prod_mono:
+    !f1 f2. MONO f1 /\ MONO f2 ==> MONO (f1 .*. f2)
+Proof
+  rw[fun_prod_def, LESS_MONO_MULT2]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems for Complexity Class                                             *)
@@ -381,9 +399,9 @@ val fun_prod_mono = store_thm(
     and f2 n <= c * g2 n                   by LESS_MONO_MULT, LESS_EQ_TRANS, k2 < n
     ==> f1 n + f2 n <= c * (g1 n + g2 n)   by LEFT_ADD_DISTRIB
 *)
-val big_O_sum = store_thm(
-  "big_O_sum",
-  ``!f1 f2 g1 g2. f1 IN big_O g1 /\ f2 IN big_O g2 ==> (f1 .+. f2) IN big_O (g1 .+. g2)``,
+Theorem big_O_sum:
+    !f1 f2 g1 g2. f1 IN big_O g1 /\ f2 IN big_O g2 ==> (f1 .+. f2) IN big_O (g1 .+. g2)
+Proof
   rw[big_O_def, fun_sum_def] >>
   qexists_tac `MAX k k'` >>
   qexists_tac `MAX c c'` >>
@@ -393,7 +411,8 @@ val big_O_sum = store_thm(
   `c * g1 n <= d * g1 n /\ c' * g2 n <= d * g2 n` by rw[Abbr`d`] >>
   `f1 n + f2 n <= d * g1 n + d * g2 n` by rw[] >>
   `d * g1 n + d * g2 n = d * (g1 n + g2 n)` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (big_O g1) |+| (big_O g2) SUBSET big_O (g1 .+. g2) *)
 (* Proof:
@@ -401,11 +420,12 @@ val big_O_sum = store_thm(
       f1 IN big_O g1 /\ f2 IN big_O g2 ==> f1 .+. f2 IN big_O (g1 .+. g2)
    This is true             by big_O_sum
 *)
-val big_O_sum_subset = store_thm(
-  "big_O_sum_subset",
-  ``!g1 g2. (big_O g1) |+| (big_O g2) SUBSET big_O (g1 .+. g2)``,
+Theorem big_O_sum_subset:
+    !g1 g2. (big_O g1) |+| (big_O g2) SUBSET big_O (g1 .+. g2)
+Proof
   rw[set_sum_def, SUBSET_DEF] >>
-  rw[big_O_sum]);
+  rw[big_O_sum]
+QED
 
 (* Theorem: f1 IN big_O g1 /\ f2 IN big_O g2 ==> (f1 .*. f2) IN big_O (g1 .*. g2) *)
 (* Proof:
@@ -420,9 +440,9 @@ val big_O_sum_subset = store_thm(
     and f2 n <= (MAX c1 c2) * g2 n         by LESS_MONO_MULT, LESS_EQ_TRANS, k2 < n
     ==> f1 n * f2 n <= (SQ c) * (g1 n * g2 n)   by LESS_MONO_MULT2
 *)
-val big_O_prod = store_thm(
-  "big_O_prod",
-  ``!f1 f2 g1 g2. f1 IN big_O g1 /\ f2 IN big_O g2 ==> (f1 .*. f2) IN big_O (g1 .*. g2)``,
+Theorem big_O_prod:
+    !f1 f2 g1 g2. f1 IN big_O g1 /\ f2 IN big_O g2 ==> (f1 .*. f2) IN big_O (g1 .*. g2)
+Proof
   rw[big_O_def, fun_prod_def] >>
   qexists_tac `MAX k k'` >>
   qexists_tac `(MAX c c') * (MAX c c')` >>
@@ -432,7 +452,8 @@ val big_O_prod = store_thm(
   `c * g1 n <= d * g1 n /\ c' * g2 n <= d * g2 n` by rw[Abbr`d`] >>
   `f1 n <= d * g1 n /\ f2 n <= d * g2 n` by decide_tac >>
   `(d * g1 n) * (d * g2 n) = (SQ d) * g1 n * g2 n` by rw[] >>
-  metis_tac[LESS_MONO_MULT2]);
+  metis_tac[LESS_MONO_MULT2]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Big O Classes                                                             *)
@@ -452,9 +473,9 @@ val big_O_prod = store_thm(
       = (a * c1 + b * c2) * g n                    by RIGHT_ADD_DISTRIB
       = c * g n                                    by above
 *)
-val big_O_linear = store_thm(
-  "big_O_linear",
-  ``!f1 f2 g. f1 IN big_O g /\ f2 IN big_O g ==> !a b. (\n. a * f1 n + b * f2 n) IN big_O g``,
+Theorem big_O_linear:
+    !f1 f2 g. f1 IN big_O g /\ f2 IN big_O g ==> !a b. (\n. a * f1 n + b * f2 n) IN big_O g
+Proof
   rw[big_O_def] >>
   qabbrev_tac `m = MAX k k'` >>
   `k <= m /\ k' <= m` by rw[Abbr`m`] >>
@@ -466,17 +487,19 @@ val big_O_linear = store_thm(
   `b * f2 n <= b * (c' * g n)` by rw[] >>
   `a * f1 n + b * f2 n <= a * (c * g n) + b * (c' * g n)` by decide_tac >>
   `a * (c * g n) + b * (c' * g n) = (a * c + b * c') * g n` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: f1 IN big_O g /\ f2 IN big_O g ==> (\n. f1 n + f2 n) IN big_O g *)
 (* Proof: by fun_sum_def, big_O_linear *)
-val big_O_add = store_thm(
-  "big_O_add",
-  ``!f1 f2 g. f1 IN big_O g /\ f2 IN big_O g ==> (f1 .+. f2) IN big_O g``,
+Theorem big_O_add:
+    !f1 f2 g. f1 IN big_O g /\ f2 IN big_O g ==> (f1 .+. f2) IN big_O g
+Proof
   rpt strip_tac >>
   `(f1 .+. f2) = (\n. 1 * f1 n + 1 * f2 n)` by rw[fun_sum_def, FUN_EQ_THM] >>
   `(\n. 1 * f1 n + 1 * f2 n) IN big_O g` by rw[big_O_linear] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (big_O g) |+| (big_O g) = (big_O g) *)
 (* Proof:
@@ -496,15 +519,16 @@ val big_O_add = store_thm(
         and f1 .+. f2 = x .+. (K 0)
                       = x              by fun_sum_zero
 *)
-val big_O_sum_self = store_thm(
-  "big_O_sum_self",
-  ``!g. (big_O g) |+| (big_O g) = (big_O g)``,
+Theorem big_O_sum_self:
+    !g. (big_O g) |+| (big_O g) = (big_O g)
+Proof
   rw[set_sum_def, EXTENSION] >>
   rw[EQ_IMP_THM] >-
   rw[big_O_add] >>
   qexists_tac `x` >>
   qexists_tac `K 0` >>
-  rw[fun_sum_zero, big_O_has_zero]);
+  rw[fun_sum_zero, big_O_has_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Poly O Classes                                                            *)
@@ -526,10 +550,11 @@ val _ = overload_on("poly_O", ``\m. big_O (POLY m)``);
    = (\n. 1)          by EXP_0
    = K 1              by FUN_EQ_THM
 *)
-val POLY_0 = store_thm(
-  "POLY_0",
-  ``POLY 0 = K 1``,
-  rw[POLY_def, FUN_EQ_THM]);
+Theorem POLY_0:
+    POLY 0 = K 1
+Proof
+  rw[POLY_def, FUN_EQ_THM]
+QED
 
 (* Theorem: POLY 1 = I *)
 (* Proof:
@@ -538,10 +563,11 @@ val POLY_0 = store_thm(
    = (\n. n)          by EXP_1
    = I                by I_THM
 *)
-val POLY_1 = store_thm(
-  "POLY_1",
-  ``POLY 1 = I``,
-  rw[POLY_def, FUN_EQ_THM]);
+Theorem POLY_1:
+    POLY 1 = I
+Proof
+  rw[POLY_def, FUN_EQ_THM]
+QED
 
 (* Theorem: MONO (POLY m) *)
 (* Proof:
@@ -550,10 +576,11 @@ val POLY_1 = store_thm(
    or x <= y ==> x ** m <= y ** m       by POLY_def
    which is true                        by EXP_EXP_LE_MONO
 *)
-val POLY_ascending = store_thm(
-  "POLY_ascending",
-  ``!m. MONO (POLY m)``,
-  rw[POLY_def]);
+Theorem POLY_ascending:
+    !m. MONO (POLY m)
+Proof
+  rw[POLY_def]
+QED
 
 (* Theorem: POLY m IN poly_O m *)
 (* Proof:
@@ -561,11 +588,12 @@ val POLY_ascending = store_thm(
       ?k c. !n. k < n ==> 0 < c
    Take any k, put c = 1.
 *)
-val poly_O_has_poly = store_thm(
-  "poly_O_has_poly",
-  ``!m. POLY m IN poly_O m``,
+Theorem poly_O_has_poly:
+    !m. POLY m IN poly_O m
+Proof
   rw[big_O_def, POLY_def] >>
-  metis_tac[DECIDE``0 < 1``]);
+  metis_tac[DECIDE``0 < 1``]
+QED
 
 (* Theorem: f IN poly_O m ==> !c. (\n. f n + c) IN poly_O m *)
 (* Proof:
@@ -579,15 +607,16 @@ val poly_O_has_poly = store_thm(
       >= c' * n ** m + f n           by given
       >= c' + f n                    by ZERO_LT_EXP, or ONE_LE_EXP, 0 < n
 *)
-val poly_O_add_constant = store_thm(
-  "poly_O_add_constant",
-  ``!f m. f IN poly_O m ==> !c. (\n. f n + c) IN poly_O m``,
+Theorem poly_O_add_constant:
+    !f m. f IN poly_O m ==> !c. (\n. f n + c) IN poly_O m
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `k` >>
   qexists_tac `c' + c` >>
   rw[RIGHT_ADD_DISTRIB] >>
   `c' <= c' * n ** m` by rw[] >>
-  metis_tac[LE_MONO_ADD2, ADD_COMM]);
+  metis_tac[LE_MONO_ADD2, ADD_COMM]
+QED
 
 (* Theorem: f IN poly_O m ==> !c. (\n. c * f n) IN poly_O m *)
 (* Proof:
@@ -600,30 +629,33 @@ val poly_O_add_constant = store_thm(
       = c' * (c * n ** m)     by MULT_ASSOC
       >= c' * f n             by LE_MULT_LCANCEL, given
 *)
-val poly_O_mult_constant = store_thm(
-  "poly_O_mult_constant",
-  ``!f m. f IN poly_O m ==> !c. (\n. c * f n) IN poly_O m``,
+Theorem poly_O_mult_constant:
+    !f m. f IN poly_O m ==> !c. (\n. c * f n) IN poly_O m
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `k` >>
   qexists_tac `c' * c` >>
-  metis_tac[LE_MULT_LCANCEL, MULT_ASSOC]);
+  metis_tac[LE_MULT_LCANCEL, MULT_ASSOC]
+QED
 
 (* Theorem: poly_O n <> {} *)
 (* Proof: by big_O_nonempty *)
-val poly_O_nonempty = store_thm(
-  "poly_O_nonempty",
-  ``!n. poly_O n <> {}``,
-  rw[big_O_nonempty]);
+Theorem poly_O_nonempty:
+    !n. poly_O n <> {}
+Proof
+  rw[big_O_nonempty]
+QED
 
 (* Theorem: (K c0) IN poly_O 0 *)
 (* Proof: by big_O_def, POLY_def, arithmetic. *)
-val poly_O_constant = store_thm(
-  "poly_O_constant",
-  ``!c0. (K c0) IN poly_O 0``,
+Theorem poly_O_constant:
+    !c0. (K c0) IN poly_O 0
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `0` >>
   qexists_tac `c0` >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: big_O (POLY a .+. POLY b) SUBSET poly_O (MAX a b) *)
 (* Proof:
@@ -640,9 +672,9 @@ val poly_O_constant = store_thm(
      <= c * (n ** m + n ** m)    by above
       = 2 * c * n ** m           by arithmetic
 *)
-val big_O_poly_sum = store_thm(
-  "big_O_poly_sum",
-  ``!a b. big_O (POLY a .+. POLY b) SUBSET poly_O (MAX a b)``,
+Theorem big_O_poly_sum:
+    !a b. big_O (POLY a .+. POLY b) SUBSET poly_O (MAX a b)
+Proof
   rw[big_O_def, fun_sum_def, POLY_def, SUBSET_DEF] >>
   qexists_tac `k` >>
   qexists_tac `2 * c` >>
@@ -653,7 +685,8 @@ val big_O_poly_sum = store_thm(
   `x n <= c * (n ** a + n ** b)` by rw[] >>
   `c * (n ** a + n ** b) <= c * (n ** m + n ** m)` by rw[] >>
   `c * (n ** m + n ** m) = 2 * c * n ** m` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: big_O (POLY a .+. POLY b .+. POLY c) SUBSET poly_O (MAX (MAX a b) c) *)
 (* Proof:
@@ -672,9 +705,9 @@ val big_O_poly_sum = store_thm(
      <= c' * (n ** m + (n ** m + n ** m))    by above
       = 3 * c' * n ** m                      by arithmetic
 *)
-val big_O_poly_sum_3 = store_thm(
-  "big_O_poly_sum_3",
-  ``!a b c. big_O (POLY a .+. POLY b .+. POLY c) SUBSET poly_O (MAX (MAX a b) c)``,
+Theorem big_O_poly_sum_3:
+    !a b c. big_O (POLY a .+. POLY b .+. POLY c) SUBSET poly_O (MAX (MAX a b) c)
+Proof
   rw[big_O_def, fun_sum_def, POLY_def, SUBSET_DEF] >>
   qexists_tac `k` >>
   qexists_tac `3 * c'` >>
@@ -686,7 +719,8 @@ val big_O_poly_sum_3 = store_thm(
   `x n <= c' * (n ** a + (n ** b + n ** c))` by rw[] >>
   `c' * (n ** a + (n ** b + n ** c)) <= c' * (n ** m + (n ** m + n ** m))` by rw[] >>
   `c' * (n ** m + (n ** m + n ** m)) = 3 * c' * n ** m` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: f IN poly_O a /\ g IN poly_O b ==> f .+. g IN poly_O (MAX a b) *)
 (* Proof:
@@ -694,10 +728,11 @@ val big_O_poly_sum_3 = store_thm(
    ==> (f .+. g) IN big_O (POLY a .+. POLY b))   by big_O_sum
    ==> (f .+. g) IN poly_O (MAX a b)             by big_O_poly_sum, SUBSET_DEF
 *)
-val big_O_sum_poly = store_thm(
-  "big_O_sum_poly",
-  ``!f g a b. f IN poly_O a /\ g IN poly_O b ==> f .+. g IN poly_O (MAX a b)``,
-  metis_tac[big_O_sum, big_O_poly_sum, SUBSET_DEF]);
+Theorem big_O_sum_poly:
+    !f g a b. f IN poly_O a /\ g IN poly_O b ==> f .+. g IN poly_O (MAX a b)
+Proof
+  metis_tac[big_O_sum, big_O_poly_sum, SUBSET_DEF]
+QED
 
 (* Theorem: big_O (POLY a .*. POLY b) SUBSET poly_O (a + b) *)
 (* Proof:
@@ -709,16 +744,17 @@ val big_O_sum_poly = store_thm(
      <= c * (n ** a * n ** b)    by given
      <= c * n ** (a + b)         by EXP_ADD
 *)
-val big_O_poly_prod = store_thm(
-  "big_O_poly_prod",
-  ``!a b. big_O (POLY a .*. POLY b) SUBSET poly_O (a + b)``,
+Theorem big_O_poly_prod:
+    !a b. big_O (POLY a .*. POLY b) SUBSET poly_O (a + b)
+Proof
   rw[big_O_def, fun_prod_def, POLY_def, SUBSET_DEF] >>
   qexists_tac `k` >>
   qexists_tac `c` >>
   rpt strip_tac >>
   `x n <= c * (n ** a * n ** b)` by rw[] >>
   `c * (n ** a * n ** b) = c * n ** (a + b)` by rw[EXP_ADD] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: big_O (POLY a .*. POLY b .*. POLY c) SUBSET poly_O (a + b + c) *)
 (* Proof:
@@ -730,16 +766,17 @@ val big_O_poly_prod = store_thm(
      <= c' * (n ** a * n ** b * n ** c)    by given
      <= c' * n ** (a + b + c)              by EXP_ADD
 *)
-val big_O_poly_prod_3 = store_thm(
-  "big_O_poly_prod_3",
-  ``!a b c. big_O (POLY a .*. POLY b .*. POLY c) SUBSET poly_O (a + b + c)``,
+Theorem big_O_poly_prod_3:
+    !a b c. big_O (POLY a .*. POLY b .*. POLY c) SUBSET poly_O (a + b + c)
+Proof
   rw[big_O_def, fun_prod_def, POLY_def, SUBSET_DEF] >>
   qexists_tac `k` >>
   qexists_tac `c'` >>
   rpt strip_tac >>
   `x n <= c' * (n ** a * n ** b * n ** c)` by rw[] >>
   `c' * (n ** a * n ** b * n ** c) = c' * n ** (a + (b + c))` by rw[EXP_ADD] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: f IN poly_O a /\ g IN poly_O b ==> f .*. g IN poly_O (a + b) *)
 (* Proof:
@@ -747,19 +784,21 @@ val big_O_poly_prod_3 = store_thm(
    ==> (f .*. g) IN big_O (POLY a .*. POLY b)   by big_O_prod
    ==> (f .*. g) IN poly_O (a + b)              by big_O_poly_prod, SUBSET_DEF
 *)
-val big_O_prod_poly = store_thm(
-  "big_O_prod_poly",
-  ``!f g a b. f IN poly_O a /\ g IN poly_O b ==> f .*. g IN poly_O (a + b)``,
-  metis_tac[big_O_prod, big_O_poly_prod, SUBSET_DEF]);
+Theorem big_O_prod_poly:
+    !f g a b. f IN poly_O a /\ g IN poly_O b ==> f .*. g IN poly_O (a + b)
+Proof
+  metis_tac[big_O_prod, big_O_poly_prod, SUBSET_DEF]
+QED
 
 (* Theorem: (\n. a * n ** b) IN poly_O b *)
 (* Proof: by big_O_def, POLY_def, take k = 0 and c = a. *)
-val big_O_poly = store_thm(
-  "big_O_poly",
-  ``!a b. (\n. a * n ** b) IN poly_O b``,
+Theorem big_O_poly:
+    !a b. (\n. a * n ** b) IN poly_O b
+Proof
   rw[big_O_def, POLY_def] >>
   map_every qexists_tac [`0`, `a`] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (\n. n ** 3 + TWICE n + 10) IN poly_O 3 *)
 (* Proof:
@@ -777,9 +816,9 @@ val big_O_poly = store_thm(
     and f IN poly_O (MAX 3 0)          by big_O_sum_poly
      or f IN poly_O 3                  by MAX_DEF
 *)
-val big_O_example = store_thm(
-  "big_O_example",
-  ``!n. (\n. n ** 3 + TWICE n + 10) IN poly_O 3``,
+Theorem big_O_example:
+    !n. (\n. n ** 3 + TWICE n + 10) IN poly_O 3
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = \n. n ** 3 + 2 * n + 10` >>
   qabbrev_tac `f1 = \n. 1 * n ** 3` >>
@@ -794,26 +833,28 @@ val big_O_example = store_thm(
   qabbrev_tac `f4 = (f1 .+. f2)` >>
   `f = (f4 .+. f3)` by rw[fun_sum_def, FUN_EQ_THM, Abbr`f`, Abbr`f1`, Abbr`f2`, Abbr`f3`, Abbr`f4`] >>
   `f IN poly_O (MAX 3 0)` by rw[big_O_sum_poly] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: (\n. c1 * n + c0) IN poly_O 1 *)
 (* Proof: by big_O_def, POLY_def, arithmetic. *)
-val poly_O_linear = store_thm(
-  "poly_O_linear",
-  ``!c0 c1. (\n. c1 * n + c0) IN poly_O 1``,
+Theorem poly_O_linear:
+    !c0 c1. (\n. c1 * n + c0) IN poly_O 1
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `c0` >>
   qexists_tac `1 + c1` >>
   rpt strip_tac >>
   `c0 + c1 * n <= n + c1 * n` by rw[] >>
   `n + c1 * n = (1 + c1) * n` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (\n. c2 * n ** 2 + c1 * n + c0) IN poly_O 2 *)
 (* Proof: by big_O_def, POLY_def, arithmetic. *)
-val poly_O_quadratic = store_thm(
-  "poly_O_quadratic",
-  ``!c0 c1 c2. (\n. c2 * n ** 2 + c1 * n + c0) IN poly_O 2``,
+Theorem poly_O_quadratic:
+    !c0 c1 c2. (\n. c2 * n ** 2 + c1 * n + c0) IN poly_O 2
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `c0 + c1` >>
   qexists_tac `1 + c2` >>
@@ -827,7 +868,8 @@ val poly_O_quadratic = store_thm(
   `c1 * (n - 1) + n + c2 * n ** 2 <= n * (n - 1) + n + c2 * n ** 2` by rw[] >>
   `n * (n - 1) + n + c2 * n ** 2 = n * n + c2 * n ** 2` by metis_tac[LEFT_ADD_DISTRIB, MULT_RIGHT_1] >>
   `_ = (1 + c2) * n ** 2` by rw[GSYM EXP_2] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: ?g. g IN poly_O 0 /\ t + c <= g s + t *)
 (* Proof:
@@ -836,13 +878,14 @@ val poly_O_quadratic = store_thm(
     and c = g s                      by function application
      or t + c <= g s + t             by arithmetic
 *)
-val poly_O_constant_exists = store_thm(
-  "poly_O_constant_exists",
-  ``!s t c. ?g. g IN poly_O 0 /\ t + c <= g s + t``,
+Theorem poly_O_constant_exists:
+    !s t c. ?g. g IN poly_O 0 /\ t + c <= g s + t
+Proof
   rpt strip_tac >>
   qexists_tac `K c` >>
   fs[] >>
-  metis_tac[poly_O_constant]);
+  metis_tac[poly_O_constant]
+QED
 
 (* Theorem: n <= s ==> ?g. g IN poly_O 1 /\ t + (b * n + c) <= g s + t *)
 (* Proof:
@@ -853,14 +896,15 @@ val poly_O_constant_exists = store_thm(
       = g s                          by function application
      or t + (b * n + c) <= g s + t   by arithmetic
 *)
-val poly_O_linear_exists = store_thm(
-  "poly_O_linear_exists",
-  ``!n s t b c. n <= s ==> ?g. g IN poly_O 1 /\ t + (b * n + c) <= g s + t``,
+Theorem poly_O_linear_exists:
+    !n s t b c. n <= s ==> ?g. g IN poly_O 1 /\ t + (b * n + c) <= g s + t
+Proof
   rpt strip_tac >>
   qexists_tac `\n. b * n + c` >>
   fs[] >>
   `(\n. b * n + c) IN poly_O 1` by metis_tac[poly_O_linear] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: n <= s ==> ?g. g IN poly_O 2 /\ t + (a * n ** 2 + b * n + c) <= g s + t *)
 (* Proof:
@@ -872,9 +916,9 @@ val poly_O_linear_exists = store_thm(
      or t + (a * n ** 2 + b * n + c)
      <= g s + t                      by arithmetic
 *)
-val poly_O_quadratic_exists = store_thm(
-  "poly_O_quadratic_exists",
-  ``!n s t a b c. n <= s ==> ?g. g IN poly_O 2 /\ t + (a * n ** 2 + b * n + c) <= g s + t``,
+Theorem poly_O_quadratic_exists:
+    !n s t a b c. n <= s ==> ?g. g IN poly_O 2 /\ t + (a * n ** 2 + b * n + c) <= g s + t
+Proof
   rpt strip_tac >>
   qexists_tac `\n. a * n ** 2 + b * n + c` >>
   fs[] >>
@@ -882,7 +926,8 @@ val poly_O_quadratic_exists = store_thm(
   fs[] >>
   `a * n ** 2 <= a * s ** 2` by rw[] >>
   `b * n <= b * s` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: big_O (K 1) SUBSET poly_O m *)
 (* Proof:
@@ -895,16 +940,17 @@ val poly_O_quadratic_exists = store_thm(
      so   c <= c * n ** m    by arithmetic
    Thus x n <= c * n ** m
 *)
-val poly_O_has_constant = store_thm(
-  "poly_O_has_constant",
-  ``!m. big_O (K 1) SUBSET poly_O m``,
+Theorem poly_O_has_constant:
+    !m. big_O (K 1) SUBSET poly_O m
+Proof
   rw[big_O_def, POLY_def, SUBSET_DEF] >>
   qexists_tac `k` >>
   qexists_tac `c` >>
   rpt strip_tac >>
   `x n <= c` by rw[] >>
   `c <= c * n ** m` by rw[EXP_POS] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: f IN poly_O m ==> !a. (\n. f (a * n)) IN poly_O m *)
 (* Proof:
@@ -926,9 +972,9 @@ val poly_O_has_constant = store_thm(
         <= c * (a * n) ** m          by implication
          = c * a ** m * n ** m       by EXP_BASE_MULT
 *)
-val poly_O_multiple = store_thm(
-  "poly_O_multiple",
-  ``!f m. f IN poly_O m ==> !a. (\n. f (a * n)) IN poly_O m``,
+Theorem poly_O_multiple:
+    !f m. f IN poly_O m ==> !a. (\n. f (a * n)) IN poly_O m
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `k` >>
   Cases_on `a = 0` >| [
@@ -941,7 +987,8 @@ val poly_O_multiple = store_thm(
     `f (a * n) <= c * (a * n) ** m` by rw[] >>
     `c * (a * n) ** m = c * a ** m * n ** m` by rw[EXP_BASE_MULT] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: f1 IN poly_O m /\ f2 IN poly_O m ==> !a b. (\n. f1 (a * n) + f2 (b * n)) IN poly_O m *)
 (* Proof:
@@ -952,9 +999,9 @@ val poly_O_multiple = store_thm(
       = (\n. f1 (a * n) + f2 (b * n))    by fun_sum_def, FUN_EQ_THM
     and (g1 .+. g2) IN poly_O m          by big_O_add
 *)
-val poly_O_add_linear = store_thm(
-  "poly_O_add_linear",
-  ``!f1 f2 m. f1 IN poly_O m /\ f2 IN poly_O m ==> !a b. (\n. f1 (a * n) + f2 (b * n)) IN poly_O m``,
+Theorem poly_O_add_linear:
+    !f1 f2 m. f1 IN poly_O m /\ f2 IN poly_O m ==> !a b. (\n. f1 (a * n) + f2 (b * n)) IN poly_O m
+Proof
   rpt strip_tac >>
   qabbrev_tac `g1 = \n. f1 (a * n)` >>
   qabbrev_tac `g2 = \n. f2 (b * n)` >>
@@ -962,7 +1009,8 @@ val poly_O_add_linear = store_thm(
   `g2 IN poly_O m` by rw[poly_O_multiple, Abbr`g2`] >>
   `(g1 .+. g2) = (\n. f1 (a * n) + f2 (b * n))` by rw[fun_sum_def, FUN_EQ_THM, Abbr`g1`, Abbr`g2`] >>
   `(g1 .+. g2) IN poly_O m` by rw[big_O_add] >>
-  rfs[]);
+  rfs[]
+QED
 
 (* Theorem: m <= n ==> poly_O m SUBSET poly_O n *)
 (* Proof:
@@ -975,23 +1023,25 @@ val poly_O_add_linear = store_thm(
     ==> c * n' ** m <= c * n' ** n   by LE_MULT_LCANCEL
    Thus x n' <= c * n' ** n          by arithmetic
 *)
-val poly_O_subset = store_thm(
-  "poly_O_subset",
-  ``!m n. m <= n ==> poly_O m SUBSET poly_O n``,
+Theorem poly_O_subset:
+    !m n. m <= n ==> poly_O m SUBSET poly_O n
+Proof
   rw[big_O_def, POLY_def, SUBSET_DEF] >>
   qexists_tac `k` >>
   qexists_tac `c` >>
   rpt strip_tac >>
   `x n' <= c * n' ** m` by rw[] >>
   `c * n' ** m <= c * n' ** n` by rw[EXP_BASE_LEQ_MONO_IMP] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (poly_O n) |+| (poly_O n) = poly_O n *)
 (* Proof: by big_O_sum_self, with g = POLY n. *)
-val poly_O_sum = store_thm(
-  "poly_O_sum",
-  ``!n. (poly_O n) |+| (poly_O n) = poly_O n``,
-  rw[big_O_sum_self]);
+Theorem poly_O_sum:
+    !n. (poly_O n) |+| (poly_O n) = poly_O n
+Proof
+  rw[big_O_sum_self]
+QED
 
 (* Theorem: poly_O n |+| poly_O m SUBSET poly_O (MAX n m) *)
 (* Proof:
@@ -999,10 +1049,11 @@ val poly_O_sum = store_thm(
     and big_O (POLY n .+. POLY m) SUBSET poly_O (MAX n m)         by big_O_poly_sum
     The result follows                                            by SUBSET_TRANS
 *)
-val poly_O_sum_subset = store_thm(
-  "poly_O_sum_subset",
-  ``!m n. poly_O n |+| poly_O m SUBSET poly_O (MAX n m)``,
-  metis_tac[big_O_sum_subset, big_O_poly_sum, SUBSET_TRANS]);
+Theorem poly_O_sum_subset:
+    !m n. poly_O n |+| poly_O m SUBSET poly_O (MAX n m)
+Proof
+  metis_tac[big_O_sum_subset, big_O_poly_sum, SUBSET_TRANS]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1020,9 +1071,9 @@ val _ = overload_on ("FUN_POS", ``\f. (!x. 0 < f x)``);
    Take the same k, take (c * c') as c.
    Since 0 < f n, so 1 <= f n, hence true.
 *)
-val big_O_K_subset = store_thm(
-  "big_O_K_subset",
-  ``!f. FUN_POS f ==> !c. big_O (K c) SUBSET big_O f``,
+Theorem big_O_K_subset:
+    !f. FUN_POS f ==> !c. big_O (K c) SUBSET big_O f
+Proof
   rw[big_O_def, SUBSET_DEF] >>
   qexists_tac `k` >>
   qexists_tac `c * c'` >>
@@ -1030,7 +1081,8 @@ val big_O_K_subset = store_thm(
   `0 < f n /\ x n <= c * c'` by fs[] >>
   `1 <= f n` by decide_tac >>
   `c * c' <= c * c' * f n` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (*
 size_pos |- FUN_POS size
@@ -1042,14 +1094,15 @@ size_pos |- FUN_POS size
    Take same k,
    Then for all n > k, f1 (f2 n) <= f1 (c2 * c) by MONO f1
 *)
-val big_O_compose_K = store_thm(
-  "big_O_compose_K",
-  ``!f1 f2 c. MONO f1 /\ f2 IN big_O (K c) ==> ?d. f1 o f2 IN big_O (K d)``,
+Theorem big_O_compose_K:
+    !f1 f2 c. MONO f1 /\ f2 IN big_O (K c) ==> ?d. f1 o f2 IN big_O (K d)
+Proof
   rw[big_O_def] >>
   qexists_tac `f1 (c * c')` >>
   qexists_tac `k` >>
   qexists_tac `1` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FUN_POS g ==> (K c) IN big_O g *)
 (* Proof:
@@ -1060,15 +1113,16 @@ val big_O_compose_K = store_thm(
      or c <= c * g n
    Take k = 0, same c.
 *)
-val big_O_constant = store_thm(
-  "big_O_constant",
-  ``!g c. FUN_POS g ==> (K c) IN big_O g``,
+Theorem big_O_constant:
+    !g c. FUN_POS g ==> (K c) IN big_O g
+Proof
   rw[big_O_def] >>
   map_every qexists_tac [`0`, `c`] >>
   rpt strip_tac >>
   `0 < g n` by rw[] >>
   `1 <= g n` by decide_tac >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FUN_POS (POLY k o size) *)
 (* Proof:
@@ -1077,11 +1131,12 @@ val big_O_constant = store_thm(
    = (size n) ** k
    > 0                  by size_pos, EXP_POS
 *)
-val POLY_size_pos = store_thm(
-  "POLY_size_pos",
-  ``!k. FUN_POS (POLY k o size)``,
+Theorem POLY_size_pos:
+    !k. FUN_POS (POLY k o size)
+Proof
   rw[POLY_def] >>
-  rw[size_pos]);
+  rw[size_pos]
+QED
 
 (* Theorem: (\n. a * size n + b) IN big_O size *)
 (* Proof:
@@ -1094,26 +1149,28 @@ val POLY_size_pos = store_thm(
          = (b + a) * size n          by RIGHT_ADD_DISTRIB
    Take k = 0, c = a + b, the result follows.
 *)
-val big_O_size_linear = store_thm(
-  "big_O_size_linear",
-  ``!a b. (\n. a * size n + b) IN big_O size``,
+Theorem big_O_size_linear:
+    !a b. (\n. a * size n + b) IN big_O size
+Proof
   rw[big_O_def] >>
   map_every qexists_tac [`0`, `a + b`] >>
   rpt strip_tac >>
   simp[RIGHT_ADD_DISTRIB] >>
   `1 <= size n` by rw[one_le_size] >>
   `b <= b * size n` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (\n. a * size n) IN big_O size *)
 (* Proof: by big_O_size_linear *)
-val big_O_size_linear_0 = store_thm(
-  "big_O_size_linear_0",
-  ``!a. (\n. a * size n) IN big_O size``,
+Theorem big_O_size_linear_0:
+    !a. (\n. a * size n) IN big_O size
+Proof
   rpt strip_tac >>
   `(\n. a * size n) = (\n. a * size n + 0)` by rw[FUN_EQ_THM] >>
   `(\n. a * size n + 0) IN big_O size` by rw[big_O_size_linear] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (\n. a * size n ** 2 + b * size n + c) IN big_O (POLY 2 o size) *)
 (* Proof:
@@ -1128,9 +1185,9 @@ val big_O_size_linear_0 = store_thm(
          = (c + b + a) * (size n) **           by RIGHT_ADD_DISTRIB
    Take k = 0, c' = a + b + c, the result follows.
 *)
-val big_O_size_quadratic = store_thm(
-  "big_O_size_quadratic",
-  ``!a b c. (\n. a * size n ** 2 + b * size n + c) IN big_O (POLY 2 o size)``,
+Theorem big_O_size_quadratic:
+    !a b c. (\n. a * size n ** 2 + b * size n + c) IN big_O (POLY 2 o size)
+Proof
   rw[big_O_def, POLY_def] >>
   map_every qexists_tac [`0`, `a + b + c`] >>
   rpt strip_tac >>
@@ -1140,37 +1197,41 @@ val big_O_size_quadratic = store_thm(
   `b * size n <= b * (size n) ** 2` by metis_tac[EXP_2] >>
   `c <= c * (size n * size n)` by rw[] >>
   `c <= c * (size n) ** 2` by metis_tac[EXP_2] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (\n. a * size n ** 2 ) IN big_O (POLY 2 o size) *)
 (* Proof: by big_O_size_quadratic *)
-val big_O_size_quadratic_0 = store_thm(
-  "big_O_size_quadratic_0",
-  ``!a. (\n. a * size n ** 2) IN big_O (POLY 2 o size)``,
+Theorem big_O_size_quadratic_0:
+    !a. (\n. a * size n ** 2) IN big_O (POLY 2 o size)
+Proof
   rpt strip_tac >>
   `(\n. a * (size n) ** 2) = (\n. a * (size n) ** 2 + 0 * size n + 0)` by rw[FUN_EQ_THM] >>
   `(\n. a * (size n) ** 2 + 0 * size n + 0) IN big_O (POLY 2 o size)` by rw[big_O_size_quadratic] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (\n. a * size n ** 2 + b * size n) IN big_O (POLY 2 o size) *)
 (* Proof: by big_O_size_quadratic *)
-val big_O_size_quadratic_1 = store_thm(
-  "big_O_size_quadratic_1",
-  ``!a b. (\n. a * size n ** 2 + b * size n) IN big_O (POLY 2 o size)``,
+Theorem big_O_size_quadratic_1:
+    !a b. (\n. a * size n ** 2 + b * size n) IN big_O (POLY 2 o size)
+Proof
   rpt strip_tac >>
   `(\n. a * (size n) ** 2 + b * size n) = (\n. a * (size n) ** 2 + b * size n + 0)` by rw[FUN_EQ_THM] >>
   `(\n. a * (size n) ** 2 + b * size n + 0) IN big_O (POLY 2 o size)` by rw[big_O_size_quadratic] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (\n. a * size n ** 2 + b) IN big_O (POLY 2 o size) *)
 (* Proof: by big_O_size_quadratic *)
-val big_O_size_quadratic_2 = store_thm(
-  "big_O_size_quadratic_2",
-  ``!a b. (\n. a * size n ** 2 + b) IN big_O (POLY 2 o size)``,
+Theorem big_O_size_quadratic_2:
+    !a b. (\n. a * size n ** 2 + b) IN big_O (POLY 2 o size)
+Proof
   rpt strip_tac >>
   `(\n. a * (size n) ** 2 + b) = (\n. a * (size n) ** 2 + 0 * size n + b)` by rw[FUN_EQ_THM] >>
   `(\n. a * (size n) ** 2 + 0 * size n + b) IN big_O (POLY 2 o size)` by rw[big_O_size_quadratic] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (!n. k < n ==> f1 n <= f2 n) /\ f2 IN big_O g ==> f1 IN big_O g *)
 (* Proof:
@@ -1183,16 +1244,17 @@ val big_O_size_quadratic_2 = store_thm(
     ==> f1 n <= f2 n /\ f2 n <= c * g n
     ==> f1 n <= c * g n                        by LESS_EQ_TRANS
 *)
-val big_O_dominance = store_thm(
-  "big_O_dominance",
-  ``!f1 f2 g k. (!n. k < n ==> f1 n <= f2 n) /\ f2 IN big_O g ==> f1 IN big_O g``,
+Theorem big_O_dominance:
+    !f1 f2 g k. (!n. k < n ==> f1 n <= f2 n) /\ f2 IN big_O g ==> f1 IN big_O g
+Proof
   rw[big_O_def] >>
   qexists_tac `MAX k k'` >>
   qexists_tac `c` >>
   rpt strip_tac >>
   `k <= MAX k k' /\ k' <= MAX k k'` by rw[] >>
   `k < n /\ k' < n` by decide_tac >>
-  metis_tac[LESS_EQ_TRANS]);
+  metis_tac[LESS_EQ_TRANS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Complexity Class                                               *)
@@ -1204,10 +1266,11 @@ val _ = overload_on("O_poly", ``\n. big_O ((POLY n) o size)``);
 
 (* Theorem: f IN O_poly m <=> ?h k. (!n. h < n ==> f n <= k * (size n) ** m) *)
 (* Proof: by big_O_def, POLY_def *)
-val O_poly_thm = store_thm(
-  "O_poly_thm",
-  ``!f m. f IN O_poly m <=> ?h k. (!n. h < n ==> f n <= k * (size n) ** m)``,
-  rw[big_O_def, POLY_def]);
+Theorem O_poly_thm:
+    !f m. f IN O_poly m <=> ?h k. (!n. h < n ==> f n <= k * (size n) ** m)
+Proof
+  rw[big_O_def, POLY_def]
+QED
 
 (* Theorem: f IN O_poly m <=> ?h k. 0 < k /\ (!n. h < n ==> f n <= k * (size n) ** m) *)
 (* Proof:
@@ -1219,9 +1282,9 @@ val O_poly_thm = store_thm(
    Only-if part: 0 < k /\ !n. h < n ==> f n <= k * size n ** m ==> f IN O_poly m
       True by O_poly_thm.
 *)
-val O_poly_good = store_thm(
-  "O_poly_good",
-  ``!f m. f IN O_poly m <=> ?h k. 0 < k /\ (!n. h < n ==> f n <= k * (size n) ** m)``,
+Theorem O_poly_good:
+    !f m. f IN O_poly m <=> ?h k. 0 < k /\ (!n. h < n ==> f n <= k * (size n) ** m)
+Proof
   rw[EQ_IMP_THM] >| [
     `?h k. (!n. h < n ==> f n <= k * (size n) ** m)` by rw[GSYM O_poly_thm] >>
     qexists_tac `h` >>
@@ -1231,7 +1294,8 @@ val O_poly_good = store_thm(
     `k * size n ** m <= SUC k * size n ** m` by fs[] >>
     decide_tac,
     metis_tac[O_poly_thm]
-  ]);
+  ]
+QED
 
 (* O_poly n is the same as big_O ((POLY n) o ulog) *)
 
@@ -1250,9 +1314,9 @@ val O_poly_good = store_thm(
         x n' <= c * ulog n' ** n
              <= c * size n' ** n               by size_ulog
 *)
-val O_poly_eq_O_poly_ulog = store_thm(
-  "O_poly_eq_O_poly_ulog",
-  ``!n. O_poly n = big_O ((POLY n) o ulog)``,
+Theorem O_poly_eq_O_poly_ulog:
+    !n. O_poly n = big_O ((POLY n) o ulog)
+Proof
   rw[EXTENSION, O_poly_thm, big_O_def, POLY_def] >>
   rw[EQ_IMP_THM] >| [
     qexists_tac `MAX 1 h` >>
@@ -1272,13 +1336,14 @@ val O_poly_eq_O_poly_ulog = store_thm(
     `x n' <= c * ulog n' ** n` by fs[] >>
     `c * ulog n' ** n <= c * size n' ** n` by rw[size_ulog] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < c ==> (big_O (POLY 1 o (\x. c * (size x) ** n)) = O_poly n) *)
 (* Proof: by big_O_def, POLY_def, O_poly_thm *)
-val big_O_poly_eq_O_poly = store_thm(
-  "big_O_poly_eq_O_poly",
-  ``!c n. 0 < c ==> (big_O (POLY 1 o (\x. c * (size x) ** n)) = O_poly n)``,
+Theorem big_O_poly_eq_O_poly:
+    !c n. 0 < c ==> (big_O (POLY 1 o (\x. c * (size x) ** n)) = O_poly n)
+Proof
   rw[big_O_def, POLY_def, O_poly_thm, EXTENSION] >>
   rw[EQ_IMP_THM] >-
   metis_tac[] >>
@@ -1288,7 +1353,8 @@ val big_O_poly_eq_O_poly = store_thm(
   `1 <= c` by decide_tac >>
   `x n' <= k * size n' ** n` by rw[] >>
   `k * size n' ** n <= c * (k * size n' ** n)` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: big_O (\n. (size n) ** k) SUBSET big_O (\n. (ulog n) ** k) *)
 (* Proof:
@@ -1318,9 +1384,9 @@ val big_O_poly_eq_O_poly = store_thm(
           f n <= c * size n ** k            by k' < n
               <= c * 2 ** k * size n ** k   by EXP_POS, 0 < 2 ** k
 *)
-val big_O_size_subset_big_O_ulog = store_thm(
-  "big_O_size_subset_big_O_ulog",
-  ``!k. big_O (\n. (size n) ** k) SUBSET big_O (\n. (ulog n) ** k)``,
+Theorem big_O_size_subset_big_O_ulog:
+    !k. big_O (\n. (size n) ** k) SUBSET big_O (\n. (ulog n) ** k)
+Proof
   rw[big_O_def, ulog_by_size, SUBSET_DEF] >>
   qexists_tac `MAX 1 k'` >>
   qexists_tac `c * 2 ** k` >>
@@ -1336,7 +1402,8 @@ val big_O_size_subset_big_O_ulog = store_thm(
     `x n <= c * size n ** k` by metis_tac[] >>
     `c * size n ** k <= c * 2 ** k * size n ** k` by rw[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: big_O (\n. ulog n ** k) SUBSET big_O (\n. size n ** k) *)
 (* Proof:
@@ -1353,16 +1420,17 @@ val big_O_size_subset_big_O_ulog = store_thm(
       By implication,
          f n <= c * ulog n ** k         by k' < n
 *)
-val big_O_ulog_subset_big_O_size = store_thm(
-  "big_O_ulog_subset_big_O_size",
-  ``!k. big_O (\n. ulog n ** k) SUBSET big_O (\n. size n ** k)``,
+Theorem big_O_ulog_subset_big_O_size:
+    !k. big_O (\n. ulog n ** k) SUBSET big_O (\n. size n ** k)
+Proof
   rw[big_O_def, size_by_ulog, SUBSET_DEF] >>
   qexists_tac `k'` >>
   qexists_tac `c` >>
   rw[] >>
   `x n <= c * ulog n ** k` by metis_tac[] >>
   `c * (ulog n) ** k <= c * (ulog n + 1) ** k` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: big_O (\n. size n ** k) = big_O (\n. ulog n ** k) *)
 (* Proof:
@@ -1372,10 +1440,11 @@ val big_O_ulog_subset_big_O_size = store_thm(
    (2) big_O (\n. ulog n ** k) SUBSET big_O (\n. size n ** k)
        This is true by big_O_ulog_subset_big_O_size.
 *)
-val big_O_size_eq_big_O_ulog = store_thm(
-  "big_O_size_eq_big_O_ulog",
-  ``!k. big_O (\n. size n ** k) = big_O (\n. ulog n ** k)``,
-  rw[big_O_size_subset_big_O_ulog, big_O_ulog_subset_big_O_size, SUBSET_ANTISYM]);
+Theorem big_O_size_eq_big_O_ulog:
+    !k. big_O (\n. size n ** k) = big_O (\n. ulog n ** k)
+Proof
+  rw[big_O_size_subset_big_O_ulog, big_O_ulog_subset_big_O_size, SUBSET_ANTISYM]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

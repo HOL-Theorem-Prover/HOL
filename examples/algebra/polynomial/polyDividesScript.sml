@@ -247,19 +247,21 @@ val _ = overload_on ("upoly", ``\x. x IN (Invertibles (PolyRing r).prod).carrier
 
 (* Theorem: Ring r ==> !p. upoly p ==> poly p *)
 (* Proof: by poly_ring_ring, ring_unit_element, poly_ring_element *)
-val poly_unit_poly = store_thm(
-  "poly_unit_poly",
-  ``!r:'a ring. Ring r ==> !p. upoly p ==> poly p``,
-  metis_tac[poly_ring_ring, ring_unit_element, poly_ring_element]);
+Theorem poly_unit_poly:
+    !r:'a ring. Ring r ==> !p. upoly p ==> poly p
+Proof
+  metis_tac[poly_ring_ring, ring_unit_element, poly_ring_element]
+QED
 
 (* DO NOT export this, otherwise every poly p will lead to resolving upoly p *)
 
 (* Theorem: Ring r ==> (upoly |0| <=> ( |1| = |0|) *)
 (* Proof: by poly_ring_ring, ring_unit_zero *)
-val poly_unit_zero = store_thm(
-  "poly_unit_zero",
-  ``!r:'a ring. Ring r ==> (upoly |0| <=> ( |1| = |0|))``,
-  rw[poly_ring_ring, ring_unit_zero]);
+Theorem poly_unit_zero:
+    !r:'a ring. Ring r ==> (upoly |0| <=> ( |1| = |0|))
+Proof
+  rw[poly_ring_ring, ring_unit_zero]
+QED
 
 (* Theorem: Ring r ==> !p. upoly p <=> poly p /\ ?q. upoly q /\ (p * q = |1|) *)
 (* Proof:
@@ -277,10 +279,11 @@ val poly_unit_zero = store_thm(
         and |1| = p * q = q * p             by poly_mult_comm
       Hence upoly p                         by ring_unit_property
 *)
-val poly_unit_property = store_thm(
-  "poly_unit_property",
-  ``!r:'a ring. Ring r ==> !p. upoly p <=> poly p /\ ?q. upoly q /\ (p * q = |1|)``,
-  metis_tac[poly_ring_ring, ring_unit_property, poly_ring_element, poly_unit_poly, poly_mult_comm]);
+Theorem poly_unit_property:
+    !r:'a ring. Ring r ==> !p. upoly p <=> poly p /\ ?q. upoly q /\ (p * q = |1|)
+Proof
+  metis_tac[poly_ring_ring, ring_unit_property, poly_ring_element, poly_unit_poly, poly_mult_comm]
+QED
 
 (* Theorem: Ring r ==> !u. upoly u <=> poly u /\ ?v. poly v /\ (u * v = |1|) *)
 (* Proof:
@@ -290,10 +293,11 @@ val poly_unit_property = store_thm(
      u IN (PolyRing r).carrier /\ ?v. v IN (PolyRing r).carrier /\ (u * v = |1|): thm
    Apply poly_ring_element.
 *)
-val poly_unit_partner = store_thm(
-  "poly_unit_partner",
-  ``!r:'a ring. Ring r ==> !u. upoly u <=> poly u /\ ?v. poly v /\ (u * v = |1|)``,
-  rw[poly_ring_ring, ring_unit_property, poly_ring_element]);
+Theorem poly_unit_partner:
+    !r:'a ring. Ring r ==> !u. upoly u <=> poly u /\ ?v. poly v /\ (u * v = |1|)
+Proof
+  rw[poly_ring_ring, ring_unit_property, poly_ring_element]
+QED
 (* not same as polyDivideTheory.poly_unit_property (which specifies upoly u instead of just poly u):
 |- !r. Ring r ==> !p. upoly p <=> poly p /\ ?q. upoly q /\ (p * q = |1|)
 *)
@@ -306,10 +310,11 @@ val poly_unit_partner = store_thm(
     then ?q. poly q /\ (p * q = |1|)   by above
    Hence upoly p             by poly_ring_ring, ring_unit_property, poly_ring_element
 *)
-val poly_unit_one = store_thm(
-  "poly_unit_one",
-  ``!r:'a ring. Ring r ==> upoly |1|``,
-  metis_tac[poly_ring_ring, ring_unit_property, poly_ring_element, poly_mult_one_one, poly_one_poly]);
+Theorem poly_unit_one:
+    !r:'a ring. Ring r ==> upoly |1|
+Proof
+  metis_tac[poly_ring_ring, ring_unit_property, poly_ring_element, poly_mult_one_one, poly_one_poly]
+QED
 
 (* Theorem: Ring r ==> !p. upoly p /\ monic p <=> (p = |1|) *)
 (* Proof:
@@ -323,9 +328,9 @@ val poly_unit_one = store_thm(
    Only-if part: (p = |1|) ==> upoly p /\ monic p
       True by poly_unit_one.
 *)
-val poly_unit_monic = store_thm(
-  "poly_unit_monic",
-  ``!r:'a ring. Ring r ==> !p. upoly p /\ monic p <=> (p = |1|)``,
+Theorem poly_unit_monic:
+    !r:'a ring. Ring r ==> !p. upoly p /\ monic p <=> (p = |1|)
+Proof
   rw[EQ_IMP_THM] >| [
     `?q. upoly q /\ (p * q = |1|)` by metis_tac[poly_unit_property] >>
     `monic |1|` by rw[] >>
@@ -334,14 +339,16 @@ val poly_unit_monic = store_thm(
     `deg p = 0` by decide_tac >>
     rw[GSYM poly_monic_deg_0],
     rw[poly_unit_one]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !u. upoly u ==> upoly (-u) *)
 (* Proof: by poly_unit_partner, poly_mult_neg_neg, poly_neg_poly *)
-val poly_unit_neg = store_thm(
-  "poly_unit_neg",
-  ``!r:'a ring. Ring r ==> !u. upoly u ==> upoly (-u)``,
-  metis_tac[poly_unit_partner, poly_mult_neg_neg, poly_neg_poly]);
+Theorem poly_unit_neg:
+    !r:'a ring. Ring r ==> !u. upoly u ==> upoly (-u)
+Proof
+  metis_tac[poly_unit_partner, poly_mult_neg_neg, poly_neg_poly]
+QED
 
 (* Theorem: Ring r ==> !u p. unit u /\ upoly p ==> upoly (u * p) *)
 (* Proof:
@@ -355,16 +362,17 @@ val poly_unit_neg = store_thm(
    Since poly (v * s)          by poly_cmult_poly
    Hence upoly (u * p)         by poly_unit_partner
 *)
-val poly_unit_cmult = store_thm(
-  "poly_unit_cmult",
-  ``!r:'a ring. Ring r ==> !u p. unit u /\ upoly p ==> upoly (u * p)``,
+Theorem poly_unit_cmult:
+    !r:'a ring. Ring r ==> !u p. unit u /\ upoly p ==> upoly (u * p)
+Proof
   rpt strip_tac >>
   `u IN R /\ ?v. v IN R /\ (u * v = #1)` by metis_tac[ring_unit_property] >>
   `poly p /\ ?s. poly s /\ (p * s = |1|)` by metis_tac[poly_unit_partner] >>
   `(u * p) * (v * s) = v * (u * p) * s` by rw[GSYM poly_mult_cmult] >>
   `_ = (v * u) * p * s` by rw[GSYM poly_cmult_cmult] >>
   `_ = |1|` by rw[poly_cmult_lone, ring_mult_comm] >>
-  metis_tac[poly_unit_partner, poly_cmult_poly]);
+  metis_tac[poly_unit_partner, poly_cmult_poly]
+QED
 
 (* Theorem: Ring r ==> !u v. upoly u /\ upoly v ==> upoly (u * v) *)
 (* Proof:
@@ -379,9 +387,9 @@ val poly_unit_cmult = store_thm(
             = (u * v) * (s * t)        by poly_mult_assoc
    Thus upoly (u * v)                  by poly_unit_partner
 *)
-val poly_unit_mult = store_thm(
-  "poly_unit_mult",
-  ``!r:'a ring. Ring r ==> !u v. upoly u /\ upoly v ==> upoly (u * v)``,
+Theorem poly_unit_mult:
+    !r:'a ring. Ring r ==> !u v. upoly u /\ upoly v ==> upoly (u * v)
+Proof
   rpt strip_tac >>
   `poly u /\ ?s. poly s /\ (u * s = |1|)` by metis_tac[poly_unit_partner] >>
   `poly v /\ ?t. poly t /\ (v * t = |1|)` by metis_tac[poly_unit_partner] >>
@@ -390,7 +398,8 @@ val poly_unit_mult = store_thm(
   `_ = (u * (s * v)) * t` by rw[poly_mult_comm] >>
   `_ = (u * s) * (v * t)` by rw[poly_mult_assoc] >>
   `_ = |1|` by rw[] >>
-  metis_tac[poly_unit_partner]);
+  metis_tac[poly_unit_partner]
+QED
 
 (* Theorem: poly p /\ poly q /\ (p * q = |1|) ==> upoly p /\ upoly q *)
 (* Proof:
@@ -400,12 +409,13 @@ val poly_unit_mult = store_thm(
                       ?y. poly y /\ (q * y = |1|) /\ (y * q = |1|)
    This is true by poly_mult_comm.
 *)
-val poly_mult_eq_one = store_thm(
-  "poly_mult_eq_one",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ (p * q = |1|) ==> upoly p /\ upoly q``,
+Theorem poly_mult_eq_one:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ (p * q = |1|) ==> upoly p /\ upoly q
+Proof
   ntac 5 strip_tac >>
   rw[Invertibles_def, monoid_invertibles_def, poly_ring_element] >>
-  metis_tac[poly_mult_comm]);
+  metis_tac[poly_mult_comm]
+QED
 
 (* Theorem: Ring r ==> !u p q. upoly u /\ poly p /\ poly q /\ (u * p = q) ==> ?v. poly v /\ (p = v * q) *)
 (* Proof:
@@ -416,11 +426,12 @@ val poly_mult_eq_one = store_thm(
                = |1| * p                           by above
                = p                                 by poly_mult_lone
 *)
-val poly_mult_lunit = store_thm(
-  "poly_mult_lunit",
-  ``!r:'a ring. Ring r ==> !u p q. upoly u /\ poly p /\ poly q /\ (u * p = q) ==> ?v. poly v /\ (p = v * q)``,
+Theorem poly_mult_lunit:
+    !r:'a ring. Ring r ==> !u p q. upoly u /\ poly p /\ poly q /\ (u * p = q) ==> ?v. poly v /\ (p = v * q)
+Proof
   rw[poly_unit_partner] >>
-  metis_tac[poly_mult_assoc, poly_mult_comm, poly_mult_lone]);
+  metis_tac[poly_mult_assoc, poly_mult_comm, poly_mult_lone]
+QED
 
 (* Theorem: Ring r ==> !u p q. upoly u /\ poly p /\ poly q /\ (p * u = q) ==> ?v. poly v /\ (p = q * v) *)
 (* Proof:
@@ -429,10 +440,11 @@ val poly_mult_lunit = store_thm(
     thus ?v. poly v /\ (p = v * q)   by poly_mult_lunit
       or p = q * v                   by poly_mult_comm
 *)
-val poly_mult_runit = store_thm(
-  "poly_mult_runit",
-  ``!r:'a ring. Ring r ==> !u p q. upoly u /\ poly p /\ poly q /\ (p * u = q) ==> ?v. poly v /\ (p = q * v)``,
-  metis_tac[poly_mult_lunit, poly_mult_comm, poly_unit_poly]);
+Theorem poly_mult_runit:
+    !r:'a ring. Ring r ==> !u p q. upoly u /\ poly p /\ poly q /\ (p * u = q) ==> ?v. poly v /\ (p = q * v)
+Proof
+  metis_tac[poly_mult_lunit, poly_mult_comm, poly_unit_poly]
+QED
 
 (* Theorem: monic p /\ poly q /\ poly t ==> ((q * p = t * p) <=> (q = t)) *)
 (* Proof:
@@ -450,9 +462,9 @@ val poly_mult_runit = store_thm(
    Only-if part: q = t ==> q * p = t * p
      This is trivial.
 *)
-val poly_monic_mult_rcancel = store_thm(
-  "poly_monic_mult_rcancel",
-  ``!r:'a ring. Ring r ==> !p q t. monic p /\ poly q /\ poly t ==> ((q * p = t * p) <=> (q = t))``,
+Theorem poly_monic_mult_rcancel:
+    !r:'a ring. Ring r ==> !p q t. monic p /\ poly q /\ poly t ==> ((q * p = t * p) <=> (q = t))
+Proof
   rw[EQ_IMP_THM] >>
   Cases_on `deg p = 0` >-
   metis_tac[poly_monic_deg_0, poly_mult_rone] >>
@@ -461,7 +473,8 @@ val poly_monic_mult_rcancel = store_thm(
   `poly z /\ (z = q * p + |0|) /\ (z = t * p + |0|)` by rw[] >>
   `poly p /\ unit (lead p)` by rw[] >>
   `poly |0| /\ (deg |0| = 0)` by rw[] >>
-  metis_tac[poly_div_mod_unique]);
+  metis_tac[poly_div_mod_unique]
+QED
 (* cannot move to polyMonic, since this requires polyDivision.poly_div_mod_unique. *)
 
 (*
@@ -482,10 +495,11 @@ Hence this is not true:
 
 (* Theorem: monic p /\ poly q /\ poly t ==> ((p * q = p * t) <=> (q = t)) *)
 (* Proof: by poly_monic_mult_rcancel and poly_mult_comm *)
-val poly_monic_mult_lcancel = store_thm(
-  "poly_monic_mult_lcancel",
-  ``!r:'a ring. Ring r ==> !p q t. monic p /\ poly q /\ poly t ==> ((p * q = p * t) <=> (q = t))``,
-  metis_tac[poly_monic_mult_rcancel, poly_mult_comm, poly_monic_poly]);
+Theorem poly_monic_mult_lcancel:
+    !r:'a ring. Ring r ==> !p q t. monic p /\ poly q /\ poly t ==> ((p * q = p * t) <=> (q = t))
+Proof
+  metis_tac[poly_monic_mult_rcancel, poly_mult_comm, poly_monic_poly]
+QED
 (* cannot move to polyMonic, since this requires polyDivides.poly_monic_mult_rcancel. *)
 
 (* ------------------------------------------------------------------------- *)
@@ -513,10 +527,11 @@ poly_divides_def;
    then poly |0|         by poly_zero_poly
     and |0| = |0| * p    by poly_mult_lzero
 *)
-val poly_divides_zero = store_thm(
-  "poly_divides_zero",
-  ``!r:'a ring. !p. p pdivides |0|``,
-  metis_tac[poly_divides_def, poly_zero_poly, poly_mult_lzero]);
+Theorem poly_divides_zero:
+    !r:'a ring. !p. p pdivides |0|
+Proof
+  metis_tac[poly_divides_def, poly_zero_poly, poly_mult_lzero]
+QED
 
 (* Theorem: |0| pdivides p <=> p = |0| *)
 (* Proof:
@@ -527,20 +542,22 @@ val poly_divides_zero = store_thm(
       i.e. show: |0| pdivides |0|
       True by poly_divides_zero      by poly_zero_poly
 *)
-val poly_zero_divides = store_thm(
-  "poly_zero_divides",
-  ``!r:'a ring. !p. |0| pdivides p <=> (p = |0|)``,
-  metis_tac[poly_divides_def, poly_zero_poly, poly_mult_zero]);
+Theorem poly_zero_divides:
+    !r:'a ring. !p. |0| pdivides p <=> (p = |0|)
+Proof
+  metis_tac[poly_divides_def, poly_zero_poly, poly_mult_zero]
+QED
 
 (* Theorem: poly p ==> |1| pdivides p *)
 (* Proof:
    Since p = p * |1|       by poly_mult_rone
     Thus |1| pdivides p    by poly_divides_def
 *)
-val poly_one_divides_all = store_thm(
-  "poly_one_divides_all",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> |1| pdivides p``,
-  metis_tac[poly_divides_def, poly_mult_rone, poly_one_poly]);
+Theorem poly_one_divides_all:
+    !r:'a ring. Ring r ==> !p. poly p ==> |1| pdivides p
+Proof
+  metis_tac[poly_divides_def, poly_mult_rone, poly_one_poly]
+QED
 
 (* Theorem: Ring r ==> !p. poly p ==> !u. upoly u ==> u pdivides p *)
 (* Proof:
@@ -552,13 +569,14 @@ val poly_one_divides_all = store_thm(
            = (p * v) * u                         by poly_mult_assoc
    Hence u pdivides p                            by poly_divides_def
 *)
-val poly_unit_divides_all = store_thm(
-  "poly_unit_divides_all",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> !u. upoly u ==> u pdivides p``,
+Theorem poly_unit_divides_all:
+    !r:'a ring. Ring r ==> !p. poly p ==> !u. upoly u ==> u pdivides p
+Proof
   rpt strip_tac >>
   `poly u /\ ?v. poly v /\ (u * v = |1|)` by metis_tac[poly_unit_partner] >>
   `p = p * v * u` by rw[poly_mult_assoc, poly_mult_comm] >>
-  metis_tac[poly_divides_def, poly_mult_poly]);
+  metis_tac[poly_divides_def, poly_mult_poly]
+QED
 
 (* Theorem: Ring r ==> !p. poly p /\ p pdivides |1| <=> upoly p *)
 (* Proof:
@@ -567,10 +585,11 @@ val poly_unit_divides_all = store_thm(
    <=> poly u /\ ?v. poly v /\ (u * v = |1|)  by poly_mult_comm
    <=> upoly p                                by poly_unit_partner
 *)
-val poly_divides_one = store_thm(
-  "poly_divides_one",
-  ``!r:'a ring. Ring r ==> !p. poly p /\ p pdivides |1| <=> upoly p``,
-  metis_tac[poly_divides_def, poly_unit_partner, poly_mult_comm]);
+Theorem poly_divides_one:
+    !r:'a ring. Ring r ==> !p. poly p /\ p pdivides |1| <=> upoly p
+Proof
+  metis_tac[poly_divides_def, poly_unit_partner, poly_mult_comm]
+QED
 
 (* Theorem: !p q. monic p /\ monic q /\ p pdivides q ==> deg p <= deg q *)
 (* Proof:
@@ -580,14 +599,15 @@ val poly_divides_one = store_thm(
       so deg q = deg s + deg p       by poly_monic_deg_mult
       or deg p <= deg q
 *)
-val poly_monic_divides_deg_le = store_thm(
-  "poly_monic_divides_deg_le",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p q. monic p /\ monic q /\ p pdivides q ==> deg p <= deg q``,
+Theorem poly_monic_divides_deg_le:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p q. monic p /\ monic q /\ p pdivides q ==> deg p <= deg q
+Proof
   rw[poly_divides_def] >>
   `poly p /\ poly (s * p)` by rw[] >>
   `monic s` by metis_tac[poly_monic_monic_mult_comm] >>
   `deg (s * p) = deg s + deg p` by rw[poly_monic_deg_mult] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: ulead p /\ poly q ==> (p pdivides q <=> q % p = |0|) *)
 (* Proof:
@@ -595,10 +615,11 @@ val poly_monic_divides_deg_le = store_thm(
    <=> ?s. poly s /\ (q = s * p)   by poly_divides_def
    <=> q % p = |0|                 by poly_mod_eq_zero
 *)
-val poly_divides_alt = store_thm(
-  "poly_divides_alt",
-  ``!r:'a ring. Ring r ==> !p q. ulead p /\ poly q ==> (p pdivides q <=> (q % p = |0|))``,
-  rw[poly_divides_def, poly_mod_eq_zero]);
+Theorem poly_divides_alt:
+    !r:'a ring. Ring r ==> !p q. ulead p /\ poly q ==> (p pdivides q <=> (q % p = |0|))
+Proof
+  rw[poly_divides_def, poly_mod_eq_zero]
+QED
 
 (* Theorem: Ring r ==> !p q. ulead p /\ poly q ==> (p pdivides q <=> (q == |0|) (pm p)) *)
 (* Proof:
@@ -606,10 +627,11 @@ val poly_divides_alt = store_thm(
    <=> q % p = |0|         by poly_divides_alt
    <=> (q == |0|) (pm p)   by pmod_def_alt, poly_zero_mod
 *)
-val poly_divides_pmod_eq_zero = store_thm(
-  "poly_divides_pmod_eq_zero",
-  ``!r:'a ring. Ring r ==> !p q. ulead p /\ poly q ==> (p pdivides q <=> (q == |0|) (pm p))``,
-  rw[poly_divides_alt, pmod_def_alt]);
+Theorem poly_divides_pmod_eq_zero:
+    !r:'a ring. Ring r ==> !p q. ulead p /\ poly q ==> (p pdivides q <=> (q == |0|) (pm p))
+Proof
+  rw[poly_divides_alt, pmod_def_alt]
+QED
 
 (* Theorem: Ring r ==> !p q. ulead p /\ poly q ==> (p pdivides q <=> (q = (q / p) * p)) *)
 (* Proof:
@@ -619,15 +641,16 @@ val poly_divides_pmod_eq_zero = store_thm(
    <=> (q = q / p * p + |0|)                     by poly_div_mod_all_def
    <=> (q = q / p * p)                           by poly_add_rzero
 *)
-val poly_divides_eqn = store_thm(
-  "poly_divides_eqn",
-  ``!r:'a ring. Ring r ==> !p q. ulead p /\ poly q ==> (p pdivides q <=> (q = (q / p) * p))``,
+Theorem poly_divides_eqn:
+    !r:'a ring. Ring r ==> !p q. ulead p /\ poly q ==> (p pdivides q <=> (q = (q / p) * p))
+Proof
   rpt strip_tac >>
   `poly (q / p) /\ (q = q / p * p + (q % p))` by rw[poly_div_mod_all_def] >>
   `p pdivides q <=> (q % p = |0|)` by rw[poly_divides_alt] >>
   `_ = (q / p * p + (q % p) = q / p * p + |0|)` by rw[poly_add_lcancel] >>
   `_ = (q = q / p * p)` by metis_tac[poly_mult_poly, poly_add_rzero] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: poly x /\ ulead p /\ ulead q /\ q pdivides p ==> ((x % p) % q = x % q) *)
 (* Proof:
@@ -640,10 +663,10 @@ val poly_divides_eqn = store_thm(
       = |0| + ((x % p) % q) % q                            by poly_zero_mod
       = x % p % q                                          by poly_mod_mod
 *)
-val poly_divides_mod_mod = store_thm(
-  "poly_divides_mod_mod",
-  ``!r:'a ring. Ring r ==> !x p q. poly x /\
-         ulead p /\ ulead q /\ q pdivides p ==> ((x % p) % q = x % q)``,
+Theorem poly_divides_mod_mod:
+    !r:'a ring. Ring r ==> !x p q. poly x /\
+         ulead p /\ ulead q /\ q pdivides p ==> ((x % p) % q = x % q)
+Proof
   rpt strip_tac >>
   `x = x / p * p + x % p` by rw[poly_division_all] >>
   `((x / p) * p) % q = (((x / p) % q) * (p % q)) % q` by rw[Once poly_mod_mult] >>
@@ -654,7 +677,8 @@ val poly_divides_mod_mod = store_thm(
   `x % q = (m % q + y % q) % q` by metis_tac[poly_mod_add] >>
   `_ = (y % q) % q` by fs[] >>
   `_ = y % q` by rw[poly_mod_mod] >>
-  simp[]);
+  simp[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Remainder Equivalence                                          *)
@@ -684,11 +708,12 @@ val poly_divides_mod_mod = store_thm(
    <=> p % z = q % z      by pmod_def_alt
    <=> (p - q) % z = |0|  by poly_mod_eq
 *)
-val pmod_eq = store_thm(
-  "pmod_eq",
-  ``!(r:'a ring) z. Ring r /\ ulead z ==>
-     !p q. poly p /\ poly q ==> ((p == q) (pm z) <=> ((p - q) % z = |0|))``,
-  rw[pmod_def_alt, poly_mod_eq]);
+Theorem pmod_eq:
+    !(r:'a ring) z. Ring r /\ ulead z ==>
+     !p q. poly p /\ poly q ==> ((p == q) (pm z) <=> ((p - q) % z = |0|))
+Proof
+  rw[pmod_def_alt, poly_mod_eq]
+QED
 
 (* Theorem: ulead z ==> !p. (p == |0|) (pm z) <=> p % z == |0| *)
 (* Proof:
@@ -696,10 +721,11 @@ val pmod_eq = store_thm(
    <=> p % z = |0| % z      by pmod_def_alt
    <=> p % z = |0|          by poly_zero_mod
 *)
-val pmod_zero = store_thm(
-  "pmod_zero",
-  ``!(r:'a ring) z. Ring r /\ ulead z ==> !p. (p == |0|) (pm z) <=> (p % z = |0|)``,
-  rw[pmod_def_alt, poly_zero_mod]);
+Theorem pmod_zero:
+    !(r:'a ring) z. Ring r /\ ulead z ==> !p. (p == |0|) (pm z) <=> (p % z = |0|)
+Proof
+  rw[pmod_def_alt, poly_zero_mod]
+QED
 
 (* Theorem: ulead z ==> !p. (p == |0|) (pm z) <=> ?q. poly q /\ (p = q * z) *)
 (* Proof:
@@ -708,11 +734,12 @@ val pmod_zero = store_thm(
    <=>  p % z = |0|                  by poly_zero_mod
    <=>  ?q. poly q /\ (p = q * z)    by poly_mod_eq_zero
 *)
-val pmod_eq_zero = store_thm(
-  "pmod_eq_zero",
-  ``!(r:'a ring) z. Ring r /\ ulead z ==>
-   !p. poly p ==> ((p == |0|) (pm z) <=> ?q. poly q /\ (p = q * z))``,
-  metis_tac[pmod_def_alt, poly_zero_mod, poly_mod_eq_zero]);
+Theorem pmod_eq_zero:
+    !(r:'a ring) z. Ring r /\ ulead z ==>
+   !p. poly p ==> ((p == |0|) (pm z) <=> ?q. poly q /\ (p = q * z))
+Proof
+  metis_tac[pmod_def_alt, poly_zero_mod, poly_mod_eq_zero]
+QED
 
 (* Theorem: ulead z ==> !p q. (p == q) (pm z) <=> (p - q == |0|) (pm z) *)
 (* Proof:
@@ -720,11 +747,12 @@ val pmod_eq_zero = store_thm(
    <=> (p - q) % z = |0|      by pmod_eq
    <=> (p - q == |0|) (pm z)  by pmod_zero, poly_sub_poly
 *)
-val poly_pmod_sub_eq_zero = store_thm(
-  "poly_pmod_sub_eq_zero",
-  ``!(r:'a ring) z. Ring r /\ ulead z ==>
-     !p q. poly p /\ poly q ==> ((p == q) (pm z) <=> (p - q == |0|) (pm z))``,
-  rw[pmod_eq]);
+Theorem poly_pmod_sub_eq_zero:
+    !(r:'a ring) z. Ring r /\ ulead z ==>
+     !p q. poly p /\ poly q ==> ((p == q) (pm z) <=> (p - q == |0|) (pm z))
+Proof
+  rw[pmod_eq]
+QED
 
 (* Theorem: ulead z ==> !p q. poly p /\ poly q ==> (z pdivides (p - q) <=> (p == q) (pm z)) *)
 (* Proof:
@@ -732,28 +760,31 @@ val poly_pmod_sub_eq_zero = store_thm(
    <=> (p - q == |0|) (pm z)   by poly_divides_pmod_eq_zero, poly_sub_poly
    <=> (p == q) (pm z)         by poly_pmod_sub_eq_zero
 *)
-val poly_divides_sub = store_thm(
-  "poly_divides_sub",
-  ``!(r:'a ring) z. Ring r /\ ulead z ==> !p q. poly p /\ poly q ==>
-    (z pdivides (p - q) <=> (p == q) (pm z))``,
-  rw[poly_divides_pmod_eq_zero, GSYM poly_pmod_sub_eq_zero]);
+Theorem poly_divides_sub:
+    !(r:'a ring) z. Ring r /\ ulead z ==> !p q. poly p /\ poly q ==>
+    (z pdivides (p - q) <=> (p == q) (pm z))
+Proof
+  rw[poly_divides_pmod_eq_zero, GSYM poly_pmod_sub_eq_zero]
+QED
 
 (* Theorem: ulead z ==> !p n. poly p ==> (p ** n == (p % z) ** n) (pm z) *)
 (* Proof: by pmod_def_alt and poly_mod_exp. *)
-val pmod_exp = store_thm(
-  "pmod_exp",
-  ``!(r:'a ring) z. Ring r /\ ulead z ==> !p n. poly p ==> (p ** n == (p % z) ** n) (pm z)``,
-  metis_tac[pmod_def_alt, poly_mod_exp]);
+Theorem pmod_exp:
+    !(r:'a ring) z. Ring r /\ ulead z ==> !p n. poly p ==> (p ** n == (p % z) ** n) (pm z)
+Proof
+  metis_tac[pmod_def_alt, poly_mod_exp]
+QED
 
 (* Theorem: pmonic z ==> !c. |c| % z = |c| *)
 (* Proof:
    Since deg |c| = 0     by poly_deg_sum_num
    Hence |c| % z = |c|   by poly_mod_less, pmonic z
 *)
-val poly_mod_ring_sum = store_thm(
-  "poly_mod_ring_sum",
-  ``!(r:'a ring) z. Ring r /\ pmonic z ==> !c:num. |c| % z = |c|``,
-  rw_tac std_ss[poly_mod_less, poly_deg_sum_num, poly_sum_num_poly]);
+Theorem poly_mod_ring_sum:
+    !(r:'a ring) z. Ring r /\ pmonic z ==> !c:num. |c| % z = |c|
+Proof
+  rw_tac std_ss[poly_mod_less, poly_deg_sum_num, poly_sum_num_poly]
+QED
 
 (* Theorem: pmonic z ==> !c. ( |c| == |0|) (pm z) <=> ( |c| = |0|) *)
 (* Proof:
@@ -761,10 +792,11 @@ val poly_mod_ring_sum = store_thm(
    <=> |c| % z = |0| % z    by pmod_def_alt
    <=>     |c| = |0|        by poly_mod_ring_sum, poly_zero_mod
 *)
-val poly_pmod_ring_sum_eq_zero = store_thm(
-  "poly_pmod_ring_sum_eq_zero",
-  ``!(r:'a ring) z. Ring r /\ pmonic z ==> !c:num. ( |c| == |0|) (pm z) <=> ( |c| = |0|)``,
-  rw[pmod_def_alt, poly_mod_ring_sum]);
+Theorem poly_pmod_ring_sum_eq_zero:
+    !(r:'a ring) z. Ring r /\ pmonic z ==> !c:num. ( |c| == |0|) (pm z) <=> ( |c| = |0|)
+Proof
+  rw[pmod_def_alt, poly_mod_ring_sum]
+QED
 
 (* Theorem: ulead z ==> !p q. (p == q) (pm z) ==> !n. (p ** n == q ** n) (pm z) *)
 (* Proof:
@@ -775,11 +807,12 @@ val poly_pmod_ring_sum_eq_zero = store_thm(
    <=>  (p ** n) % z = (q ** n) % z    by poly_mod_exp
    <=>  (p ** n == q ** n) (pm z)      by pmod_def_alt
 *)
-val pmod_exp_eq = store_thm(
-  "pmod_exp_eq",
-  ``!(r:'a ring) z. Ring r /\ ulead z ==>
-   !p q. poly p /\ poly q /\ (p == q) (pm z) ==> !n. (p ** n == q ** n) (pm z)``,
-  rw_tac std_ss[pmod_def_alt, poly_mod_exp]);
+Theorem pmod_exp_eq:
+    !(r:'a ring) z. Ring r /\ ulead z ==>
+   !p q. poly p /\ poly q /\ (p == q) (pm z) ==> !n. (p ** n == q ** n) (pm z)
+Proof
+  rw_tac std_ss[pmod_def_alt, poly_mod_exp]
+QED
 
 (* Theorem: ulead z ==> !p q. (z = p - q) ==> (p == q) (pm z) *)
 (* Proof:
@@ -787,11 +820,12 @@ val pmod_exp_eq = store_thm(
       so (p - q) % z = z % z = |0|  by poly_div_mod_id
    Hence (p == q) (pm z)            by pmod_eq
 *)
-val poly_pmod_id = store_thm(
-  "poly_pmod_id",
-  ``!(r:'a ring) z. Ring r /\ ulead z ==>
-   !p q. poly p /\ poly q /\ (z = p - q) ==> (p == q) (pm z)``,
-  metis_tac[poly_div_mod_id, pmod_eq]);
+Theorem poly_pmod_id:
+    !(r:'a ring) z. Ring r /\ ulead z ==>
+   !p q. poly p /\ poly q /\ (z = p - q) ==> (p == q) (pm z)
+Proof
+  metis_tac[poly_div_mod_id, pmod_eq]
+QED
 
 (* Theorem: ulead z /\ ulead p /\ z pdivides p ==>
       !x y. poly x /\ poly y /\ (x == y) (pm p) ==> (x == y) (pm z) *)
@@ -803,11 +837,12 @@ val poly_pmod_id = store_thm(
    <=> (x - y) % z = |0|           by poly_divides_mod_mod, z pdivides p
    <=> (x == y) (pm z)             by pmod_eq
 *)
-val poly_divides_pmod_eq = store_thm(
-  "poly_divides_pmod_eq",
-  ``!(r:'a ring) z p. Ring r /\ ulead z /\ ulead p /\ z pdivides p ==>
-   !x y. poly x /\ poly y /\ (x == y) (pm p) ==> (x == y) (pm z)``,
-  metis_tac[pmod_eq, poly_divides_mod_mod, poly_zero_mod, poly_sub_poly]);
+Theorem poly_divides_pmod_eq:
+    !(r:'a ring) z p. Ring r /\ ulead z /\ ulead p /\ z pdivides p ==>
+   !x y. poly x /\ poly y /\ (x == y) (pm p) ==> (x == y) (pm z)
+Proof
+  metis_tac[pmod_eq, poly_divides_mod_mod, poly_zero_mod, poly_sub_poly]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Properties of Polynomial Divisors.                                        *)
@@ -815,10 +850,11 @@ val poly_divides_pmod_eq = store_thm(
 
 (* Theorem: !p q. p pdivides q <=> ring_divides (PolyRing r) p q *)
 (* Proof: by poly_divides_def, ring_divides_def *)
-val poly_divides_is_ring_divides = store_thm(
-  "poly_divides_is_ring_divides",
-  ``!r:'a ring. !p q. p pdivides q <=> ring_divides (PolyRing r) p q``,
-  metis_tac[poly_divides_def, ring_divides_def, poly_ring_element]);
+Theorem poly_divides_is_ring_divides:
+    !r:'a ring. !p q. p pdivides q <=> ring_divides (PolyRing r) p q
+Proof
+  metis_tac[poly_divides_def, ring_divides_def, poly_ring_element]
+QED
 
 (* Note:
 Ring does not have mult_rcancel:   x * z = y * z  cannot give x = y, only field does.
@@ -838,10 +874,11 @@ and poly_monic_divides_antisymmetric:
      p pdivides p <=> ?s. poly s /\ (p = s * p)    by poly_divides_def
      So take s = |1|, and poly |1| /\ p = |1| * p  by poly_one_poly, poly_mult_lone
 *)
-val poly_divides_reflexive = store_thm(
-  "poly_divides_reflexive",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> p pdivides p``,
-  metis_tac[poly_divides_def, poly_one_poly, poly_mult_lone]);
+Theorem poly_divides_reflexive:
+    !r:'a ring. Ring r ==> !p. poly p ==> p pdivides p
+Proof
+  metis_tac[poly_divides_def, poly_one_poly, poly_mult_lone]
+QED
 
 (* Theorem: monic p /\ p pdivides q /\ q pdivides p ==> ?u. upoly u /\ p = u * q *)
 (* Proof:
@@ -855,17 +892,18 @@ val poly_divides_reflexive = store_thm(
      or s and t are units                          by poly_mult_eq_one
      Therefore take u = t.
 *)
-val poly_divides_antisymmetric = store_thm(
-  "poly_divides_antisymmetric",
-  ``!r:'a ring. Ring r ==>
-    !p q. monic p /\ p pdivides q /\ q pdivides p ==> ?u. upoly u /\ (p = u * q)``,
+Theorem poly_divides_antisymmetric:
+    !r:'a ring. Ring r ==>
+    !p q. monic p /\ p pdivides q /\ q pdivides p ==> ?u. upoly u /\ (p = u * q)
+Proof
   rpt strip_tac >>
   `?s. poly s /\ (q = s * p)` by rw[GSYM poly_divides_def] >>
   `?t. poly t /\ (p = t * q)` by rw[GSYM poly_divides_def] >>
   `p = t * (s * p)` by metis_tac[] >>
   `t * s * p = |1| * p` by rw[poly_mult_assoc] >>
   `poly (t * s) /\ poly |1|` by rw[] >>
-  metis_tac[poly_monic_mult_rcancel, poly_mult_eq_one]);
+  metis_tac[poly_monic_mult_rcancel, poly_mult_eq_one]
+QED
 
 (* Theorem: p pdivides q /\ q pdivides t ==> p pdivides t *)
 (* Proof:
@@ -877,13 +915,14 @@ val poly_divides_antisymmetric = store_thm(
      Since poly (v * u)                            by poly_mult_poly
      Hence p pdivides t                            by poly_divides_def
 *)
-val poly_divides_transitive = store_thm(
-  "poly_divides_transitive",
-  ``!r:'a ring. Ring r ==>
-    !p q t. poly p /\ poly q /\ poly t /\ p pdivides q /\ q pdivides t ==> p pdivides t``,
+Theorem poly_divides_transitive:
+    !r:'a ring. Ring r ==>
+    !p q t. poly p /\ poly q /\ poly t /\ p pdivides q /\ q pdivides t ==> p pdivides t
+Proof
   rw[poly_divides_def] >>
   `s' * (s * p) = s' * s * p` by rw[poly_mult_assoc] >>
-  metis_tac[poly_mult_poly]);
+  metis_tac[poly_mult_poly]
+QED
 
 (* Theorem: Ring r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
             p pdivides q /\ s pdivides t ==> (p * s) pdivides (q * t) *)
@@ -900,10 +939,10 @@ val poly_divides_transitive = store_thm(
    Note poly (u * v)                by poly_mult_poly
    Thus (p * s) pdivides (q * t)    by poly_divides_def
 *)
-val poly_divides_pair = store_thm(
-  "poly_divides_pair",
-  ``!r:'a ring. Ring r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
-      p pdivides q /\ s pdivides t ==> (p * s) pdivides (q * t)``,
+Theorem poly_divides_pair:
+    !r:'a ring. Ring r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
+      p pdivides q /\ s pdivides t ==> (p * s) pdivides (q * t)
+Proof
   rpt strip_tac >>
   `?u. poly u /\ (q = u * p)` by rw[GSYM poly_divides_def] >>
   `?v. poly v /\ (t = v * s)` by rw[GSYM poly_divides_def] >>
@@ -911,7 +950,8 @@ val poly_divides_pair = store_thm(
   `_ = (u * (p * v)) * s` by rw[GSYM poly_mult_assoc] >>
   `_ = (u * (v * p)) * s` by rw[poly_mult_comm] >>
   `_ = (u * v) * (p * s)` by rw[poly_mult_assoc] >>
-  metis_tac[poly_divides_def, poly_mult_poly]);
+  metis_tac[poly_divides_def, poly_mult_poly]
+QED
 
 (* Theorem: Ring r ==> !p q. ulead p /\ poly q /\ q <> |0| /\ p pdivides q ==> deg p <= deg q *)
 (* Proof:
@@ -923,16 +963,17 @@ val poly_divides_pair = store_thm(
     ==> deg q = deg t + deg p           by poly_deg_mult_unit_comm
    Hence deg p <= deg q                 by deg p is bounded by deg q
 *)
-val poly_divides_deg_le = store_thm(
-  "poly_divides_deg_le",
-  ``!r:'a ring. Ring r ==>
-   !p q. ulead p /\ poly q /\ q <> |0| /\ p pdivides q ==> deg p <= deg q``,
+Theorem poly_divides_deg_le:
+    !r:'a ring. Ring r ==>
+   !p q. ulead p /\ poly q /\ q <> |0| /\ p pdivides q ==> deg p <= deg q
+Proof
   rpt strip_tac >>
   `?t. poly t /\ (q = t * p)` by rw[GSYM poly_divides_def] >>
   `t <> |0|` by metis_tac[poly_mult_lzero] >>
   `lead t <> #0` by metis_tac[poly_nonzero_lead_nonzero] >>
   `deg q = deg t + deg p` by rw[poly_deg_mult_unit_comm] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Field r ==> poly p /\ poly q /\ q <> |0| /\ p pdivides q ==> deg p <= deg q *)
 (* Proof:
@@ -940,13 +981,14 @@ val poly_divides_deg_le = store_thm(
    Thus ulead p          by poly_field_poly_ulead
    The result follows    by poly_divides_deg_le
 *)
-val poly_field_divides_deg_le = store_thm(
-  "poly_field_divides_deg_le",
-  ``!r:'a field. Field r ==>
-   !p q. poly p /\ poly q /\ q <> |0| /\ p pdivides q ==> deg p <= deg q``,
+Theorem poly_field_divides_deg_le:
+    !r:'a field. Field r ==>
+   !p q. poly p /\ poly q /\ q <> |0| /\ p pdivides q ==> deg p <= deg q
+Proof
   rpt strip_tac >>
   `p <> |0|` by metis_tac[poly_zero_divides] >>
-  rw[poly_divides_deg_le, poly_field_poly_ulead]);
+  rw[poly_divides_deg_le, poly_field_poly_ulead]
+QED
 
 (* Theorem: p pdivides q ==> !x. x IN R /\ root p x ==> root q x *)
 (* Proof:
@@ -958,12 +1000,13 @@ val poly_field_divides_deg_le = store_thm(
                    = #0                         by poly_eval_element, ring_mult_lzero
    Hence  root q x                              by poly_root_def
 *)
-val poly_divides_share_root = store_thm(
-  "poly_divides_share_root",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
-   !x. x IN R /\ root p x ==> root q x``,
+Theorem poly_divides_share_root:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
+   !x. x IN R /\ root p x ==> root q x
+Proof
   rw[poly_root_def, poly_divides_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: p pdivides q ==> (roots p) SUBSET (roots q) *)
 (* Proof:
@@ -972,11 +1015,12 @@ val poly_divides_share_root = store_thm(
      ==> root q x                          by poly_divides_share_root
    Therefore (roots p) SUBSET (roots q)    by SUBSET_DEF
 *)
-val poly_divides_share_roots = store_thm(
-  "poly_divides_share_roots",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==> (roots p) SUBSET (roots q)``,
+Theorem poly_divides_share_roots:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==> (roots p) SUBSET (roots q)
+Proof
   rw[poly_roots_member, SUBSET_DEF] >>
-  metis_tac[poly_divides_share_root]);
+  metis_tac[poly_divides_share_root]
+QED
 
 (* Theorem: monic p /\ monic q /\ p pdivides q /\ q pdivides p ==> (p = q) *)
 (* Proof:
@@ -998,10 +1042,10 @@ val poly_divides_share_roots = store_thm(
      ==> s = |1|                        by poly_monic_deg_0
    Hence q = |1| * p = p                by poly_mult_lone
 *)
-val poly_monic_divides_antisymmetric = store_thm(
-  "poly_monic_divides_antisymmetric",
-  ``!r:'a ring. Ring r ==>
-   !p q. monic p /\ monic q /\ p pdivides q /\ q pdivides p ==> (p = q)``,
+Theorem poly_monic_divides_antisymmetric:
+    !r:'a ring. Ring r ==>
+   !p q. monic p /\ monic q /\ p pdivides q /\ q pdivides p ==> (p = q)
+Proof
   rpt strip_tac >>
   `poly p /\ poly q` by rw[] >>
   Cases_on `#1 = #0` >-
@@ -1014,7 +1058,8 @@ val poly_monic_divides_antisymmetric = store_thm(
   `deg q = deg s + deg p` by rw[GSYM poly_monic_deg_mult] >>
   `deg s = 0` by decide_tac >>
   `s = |1|` by rw[GSYM poly_monic_deg_0] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
             !c. c IN R ==> p pdivides (c * q) *)
@@ -1026,11 +1071,12 @@ val poly_monic_divides_antisymmetric = store_thm(
    Since poly (c * s)                 by poly_cmult_poly
    Hence p pdivides (c * q)           by poly_divides_def
 *)
-val poly_divides_cmult = store_thm(
-  "poly_divides_cmult",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
-   !c. c IN R ==> p pdivides (c * q)``,
-  metis_tac[poly_divides_def, poly_cmult_mult, poly_cmult_poly]);
+Theorem poly_divides_cmult:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
+   !c. c IN R ==> p pdivides (c * q)
+Proof
+  metis_tac[poly_divides_def, poly_cmult_mult, poly_cmult_poly]
+QED
 
 (* Theorem: Ring r ==> !c p. c IN R /\ poly p ==> p pdivides (c * p) *)
 (* Proof:
@@ -1045,10 +1091,11 @@ val poly_divides_cmult = store_thm(
      Since p pdivides p         by poly_divides_reflexive
      Hence p pdivides (c * p)   by poly_divides_cmult
 *)
-val poly_divides_cmult_alt = store_thm(
-  "poly_divides_cmult_alt",
-  ``!r:'a ring. Ring r ==> !c p. c IN R /\ poly p ==> p pdivides (c * p)``,
-  rw[poly_divides_reflexive, poly_divides_cmult]);
+Theorem poly_divides_cmult_alt:
+    !r:'a ring. Ring r ==> !c p. c IN R /\ poly p ==> p pdivides (c * p)
+Proof
+  rw[poly_divides_reflexive, poly_divides_cmult]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q ==>
             !c. unit c ==> (p pdivides c * q <=> p pdivides q) *)
@@ -1065,10 +1112,10 @@ val poly_divides_cmult_alt = store_thm(
    Only-if part: p pdivides q ==> p pdivides c * q
       This is true                        by poly_divides_cmult
 *)
-val poly_divides_cmult_iff = store_thm(
-  "poly_divides_cmult_iff",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==>
-   !c. unit c ==> (p pdivides c * q <=> p pdivides q)``,
+Theorem poly_divides_cmult_iff:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q ==>
+   !c. unit c ==> (p pdivides c * q <=> p pdivides q)
+Proof
   rpt strip_tac >>
   rw[EQ_IMP_THM] >| [
     `?t. poly t /\ (c * q = t * p)` by rw[GSYM poly_divides_def] >>
@@ -1079,7 +1126,8 @@ val poly_divides_cmult_iff = store_thm(
     `_ = ( |/ c * t) * p` by rw[poly_cmult_mult] >>
     metis_tac[poly_divides_def, poly_cmult_poly],
     rw[poly_divides_cmult]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==>
             !c. c IN R /\ c <> #0 ==> (p pdivides c * q <=> p pdivides q) *)
@@ -1088,11 +1136,12 @@ val poly_divides_cmult_iff = store_thm(
      so unit c            by field_nonzero_unit
    The result follows     by poly_divides_cmult_iff
 *)
-val poly_field_divides_cmult_iff = store_thm(
-  "poly_field_divides_cmult_iff",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   !c. c IN R /\ c <> #0 ==> (p pdivides c * q <=> p pdivides q)``,
-  rw[poly_divides_cmult_iff, field_nonzero_unit, GSYM field_nonzero_eq]);
+Theorem poly_field_divides_cmult_iff:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   !c. c IN R /\ c <> #0 ==> (p pdivides c * q <=> p pdivides q)
+Proof
+  rw[poly_divides_cmult_iff, field_nonzero_unit, GSYM field_nonzero_eq]
+QED
 
 (* Theorem: poly p ==> !n. 0 < n ==> p pdivides (p ** n) *)
 (* Proof:
@@ -1100,10 +1149,11 @@ val poly_field_divides_cmult_iff = store_thm(
       so p ** n = p ** m * p          by poly_exp_suc
       or p pdivides (p ** n)          by poly_divides_def, poly_exp_poly
 *)
-val poly_divides_exp = store_thm(
-  "poly_divides_exp",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> !n. 0 < n ==> p pdivides (p ** n)``,
-  metis_tac[poly_exp_suc, poly_divides_def, poly_exp_poly, num_CASES, NOT_ZERO_LT_ZERO]);
+Theorem poly_divides_exp:
+    !r:'a ring. Ring r ==> !p. poly p ==> !n. 0 < n ==> p pdivides (p ** n)
+Proof
+  metis_tac[poly_exp_suc, poly_divides_def, poly_exp_poly, num_CASES, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: Ring r ==> !p. poly p ==> !m n. m <= n ==> p ** m pdivides p ** n *)
 (* Proof:
@@ -1111,22 +1161,24 @@ val poly_divides_exp = store_thm(
      so p ** n = p ** (n - m) * p ** m  by poly_exp_add
    Thus p ** m pdivides p ** n          by poly_divides_def
 *)
-val poly_divides_exp_le = store_thm(
-  "poly_divides_exp_le",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> !m n. m <= n ==> p ** m pdivides p ** n``,
+Theorem poly_divides_exp_le:
+    !r:'a ring. Ring r ==> !p. poly p ==> !m n. m <= n ==> p ** m pdivides p ** n
+Proof
   rpt strip_tac >>
   `p ** n = p ** (n - m) * p ** m` by rw[GSYM poly_exp_add] >>
-  metis_tac[poly_divides_def, poly_exp_poly]);
+  metis_tac[poly_divides_def, poly_exp_poly]
+QED
 
 (* Theorem: Ring r ==> !p n. poly p /\ 0 < n ==> (roots p) SUBSET (roots (p ** n)) *)
 (* Proof:
    Note p pdivides p ** n                   by poly_divides_exp
    Thus (roots p) SUBSET (roots (p ** n))   by poly_divides_share_roots
 *)
-val poly_roots_exp_subset = store_thm(
-  "poly_roots_exp_subset",
-  ``!r:'a ring. Ring r ==> !p n. poly p /\ 0 < n ==> (roots p) SUBSET (roots (p ** n))``,
-  rw[poly_divides_exp, poly_divides_share_roots]);
+Theorem poly_roots_exp_subset:
+    !r:'a ring. Ring r ==> !p n. poly p /\ 0 < n ==> (roots p) SUBSET (roots (p ** n))
+Proof
+  rw[poly_divides_exp, poly_divides_share_roots]
+QED
 
 (* Theorem: Ring r ==> !c. unit c ==> !p. poly p ==> [c] pdivides p *)
 (* Proof:
@@ -1143,14 +1195,15 @@ val poly_roots_exp_subset = store_thm(
       = #1 * p                  by ring_unit_rinv
       = p                       by poly_cmult_lone
 *)
-val poly_const_divides = store_thm(
-  "poly_const_divides",
-  ``!r:'a ring. Ring r ==> !c. unit c ==> !p. poly p ==> [c] pdivides p``,
+Theorem poly_const_divides:
+    !r:'a ring. Ring r ==> !c. unit c ==> !p. poly p ==> [c] pdivides p
+Proof
   rw[poly_divides_def] >>
   `c IN R /\ |/ c IN R` by rw[ring_unit_element, ring_unit_inv_element] >>
   qexists_tac `|/ c * p` >>
   rw[poly_mult_rconst] >>
-  rw[poly_cmult_cmult, ring_unit_rinv]);
+  rw[poly_cmult_cmult, ring_unit_rinv]
+QED
 
 (* Theorem: Field r ==> !c. c IN R /\ c <> #0 ==> !p. poly p ==> [c] pdivides p *)
 (* Proof:
@@ -1158,10 +1211,11 @@ val poly_const_divides = store_thm(
      so unit c            by field_nonzero_unit
    The result follows     by poly_const_divides
 *)
-val poly_field_const_divides = store_thm(
-  "poly_field_const_divides",
-  ``!r:'a field. Field r ==> !c. c IN R /\ c <> #0 ==> !p. poly p ==> [c] pdivides p``,
-  rw[poly_const_divides, field_nonzero_unit, GSYM field_nonzero_eq]);
+Theorem poly_field_const_divides:
+    !r:'a field. Field r ==> !c. c IN R /\ c <> #0 ==> !p. poly p ==> [c] pdivides p
+Proof
+  rw[poly_const_divides, field_nonzero_unit, GSYM field_nonzero_eq]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
             !c. unit c ==> (c * p) pdivides q *)
@@ -1180,10 +1234,10 @@ val poly_field_const_divides = store_thm(
    Since poly ( |/ c * s)              by poly_cmult_poly
    Hence (c * p) pdivides q            by poly_divides_def
 *)
-val poly_cmult_divides = store_thm(
-  "poly_cmult_divides",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
-   !c. unit c ==> (c * p) pdivides q``,
+Theorem poly_cmult_divides:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
+   !c. unit c ==> (c * p) pdivides q
+Proof
   rpt strip_tac >>
   `?s. poly s /\ (q = s * p)` by rw[GSYM poly_divides_def] >>
   `c IN R /\ |/c IN R` by rw[ring_unit_element, ring_unit_inv_element] >>
@@ -1193,7 +1247,8 @@ val poly_cmult_divides = store_thm(
   `_ = |/ c * (c * s * p)` by rw[poly_cmult_mult] >>
   `_ = |/ c * (s * (c * p))` by rfs[poly_mult_cmult] >>
   `_ = ( |/ c * s) * (c * p)` by rw[poly_cmult_mult] >>
-  metis_tac[poly_divides_def, poly_cmult_poly]);
+  metis_tac[poly_divides_def, poly_cmult_poly]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
             !c. c IN R /\ c <> #0 ==> (c * p) pdivides q *)
@@ -1202,11 +1257,12 @@ val poly_cmult_divides = store_thm(
      so unit c            by field_nonzero_unit
    The result follows     by poly_cmult_divides
 *)
-val poly_field_cmult_divides = store_thm(
-  "poly_field_cmult_divides",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
-   !c. c IN R /\ c <> #0 ==> (c * p) pdivides q``,
-  rw[poly_cmult_divides, field_nonzero_unit, GSYM field_nonzero_eq]);
+Theorem poly_field_cmult_divides:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
+   !c. c IN R /\ c <> #0 ==> (c * p) pdivides q
+Proof
+  rw[poly_cmult_divides, field_nonzero_unit, GSYM field_nonzero_eq]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ (p * q) pdivides q ==> (q = |0|) \/ (upoly p) *)
 (* Proof:
@@ -1220,10 +1276,10 @@ val poly_field_cmult_divides = store_thm(
    Thus upoly p                            by poly_unit_partner
    which contradicts ~(upoly p)
 *)
-val poly_mult_divides_factor = store_thm(
-  "poly_mult_divides_factor",
-  ``!r:'a field. Field r ==>
-    !p q. poly p /\ poly q /\ (p * q) pdivides q ==> (q = |0|) \/ (upoly p)``,
+Theorem poly_mult_divides_factor:
+    !r:'a field. Field r ==>
+    !p q. poly p /\ poly q /\ (p * q) pdivides q ==> (q = |0|) \/ (upoly p)
+Proof
   rpt strip_tac >>
   `?s. poly s /\ (q = s * (p * q))` by rw[GSYM poly_divides_def] >>
   `_ = s * p * q` by rw[poly_mult_assoc] >>
@@ -1232,18 +1288,20 @@ val poly_mult_divides_factor = store_thm(
   `poly |1| /\ poly (p * s)` by rw[] >>
   `|1| * q = p * s * q` by rw[] >>
   `p * s = |1|` by metis_tac[poly_mult_rcancel] >>
-  metis_tac[poly_unit_partner, field_is_ring]);
+  metis_tac[poly_unit_partner, field_is_ring]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p <> |0| ==> (p pdivides q <=> (q % p = |0|)) *)
 (* Proof:
    Note unit (lead p)  by poly_field_poly_ulead
    The result follows  by poly_divides_alt
 *)
-val poly_field_divides_alt = store_thm(
-  "poly_field_divides_alt",
-  ``!r:'a field. Field r ==>
-   !p q. poly p /\ poly q /\ p <> |0| ==> (p pdivides q <=> (q % p = |0|))``,
-  rw[poly_divides_alt]);
+Theorem poly_field_divides_alt:
+    !r:'a field. Field r ==>
+   !p q. poly p /\ poly q /\ p <> |0| ==> (p pdivides q <=> (q % p = |0|))
+Proof
+  rw[poly_divides_alt]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q ==>
             !t. poly t /\ (p * q) pdivides t ==> (p pdivides t) /\ (q pdivides t) *)
@@ -1256,16 +1314,17 @@ val poly_field_divides_alt = store_thm(
            = (s * q) * p                by poly_mult_assoc
    Hence p pdivides t                   by poly_divides_def
 *)
-val poly_mult_divides = store_thm(
-  "poly_mult_divides",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==>
-   !t. poly t /\ (p * q) pdivides t ==> (p pdivides t) /\ (q pdivides t)``,
+Theorem poly_mult_divides:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q ==>
+   !t. poly t /\ (p * q) pdivides t ==> (p pdivides t) /\ (q pdivides t)
+Proof
   rw[poly_divides_def] >| [
     qexists_tac `s * q` >>
     rw[poly_mult_comm, poly_mult_assoc],
     qexists_tac `s * p` >>
     rw[poly_mult_assoc]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !p q. p pdivides q ==> !t. poly t ==> p pdivides (t * q) *)
 (* Proof:
@@ -1273,17 +1332,19 @@ val poly_mult_divides = store_thm(
      and poly (t * q)            by poly_mult_poly
    Hence p pdivides (t * q)      by poly_divides_transitive
 *)
-val poly_divides_mult = store_thm(
-  "poly_divides_mult",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==> !t. poly t ==> p pdivides (t * q)``,
-  metis_tac[poly_divides_def, poly_divides_transitive, poly_mult_poly]);
+Theorem poly_divides_mult:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==> !t. poly t ==> p pdivides (t * q)
+Proof
+  metis_tac[poly_divides_def, poly_divides_transitive, poly_mult_poly]
+QED
 
 (* Theorem: Ring r ==> !p q. p pdivides q ==> !t. poly t ==> p pdivides (q * t) *)
 (* Proof: by poly_divides_mult, poly_mult_comm. *)
-val poly_divides_mult_comm = store_thm(
-  "poly_divides_mult_comm",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==> !t. poly t ==> p pdivides (q * t)``,
-  metis_tac[poly_divides_mult, poly_mult_comm]);
+Theorem poly_divides_mult_comm:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==> !t. poly t ==> p pdivides (q * t)
+Proof
+  metis_tac[poly_divides_mult, poly_mult_comm]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==> !t. poly t ==> p pdivides (t * q) *)
 (* Proof:
@@ -1293,13 +1354,14 @@ val poly_divides_mult_comm = store_thm(
                = (t * s) * p            by poly_mult_assoc
       or p pdivides (t * q)             by poly_divides_def
 *)
-val poly_divides_multiple = store_thm(
-  "poly_divides_multiple",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
-   !t. poly t ==> p pdivides (t * q)``,
+Theorem poly_divides_multiple:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p pdivides q ==>
+   !t. poly t ==> p pdivides (t * q)
+Proof
   rw_tac std_ss[poly_divides_def] >>
   qexists_tac `t * s` >>
-  rw[poly_mult_assoc]);
+  rw[poly_mult_assoc]
+QED
 
 (* This is the same as poly_divides_mult, different proof. *)
 
@@ -1317,15 +1379,16 @@ val poly_divides_multiple = store_thm(
    Also z pdivides (p * t)     by poly_mult_comm
     ==> (p * t) % z = |0|      by poly_divides_alt
 *)
-val poly_divides_multiple_mod = store_thm(
-  "poly_divides_multiple_mod",
-  ``!r:'a ring. Ring r ==> !p z. poly p /\ ulead z /\ (p % z = |0|) ==>
-   !t. poly t  ==> ((t * p) % z = |0|) /\ ((p * t) % z = |0|)``,
+Theorem poly_divides_multiple_mod:
+    !r:'a ring. Ring r ==> !p z. poly p /\ ulead z /\ (p % z = |0|) ==>
+   !t. poly t  ==> ((t * p) % z = |0|) /\ ((p * t) % z = |0|)
+Proof
   ntac 7 strip_tac >>
   `z pdivides p` by rw[poly_divides_alt] >>
   `z pdivides (t * p)` by rw[poly_divides_multiple] >>
   `z pdivides (p * t)` by metis_tac[poly_mult_comm] >>
-  rw[GSYM poly_divides_alt]);
+  rw[GSYM poly_divides_alt]
+QED
 
 (* Theorem: Ring r ==> !p z. poly p /\ ulead z /\ (p % z = |0|) ==>
             !q. poly q ==> ((p * q) / z = (p / z) * q) /\ ((p * q) / z = q * (p / z)) *)
@@ -1345,10 +1408,10 @@ val poly_divides_multiple_mod = store_thm(
        = (q * (p / z)) * z          by poly_mult_comm
    Hence (p * q) / z = q * (p / z)  by poly_ulead_mult_rcancel
 *)
-val poly_mult_div_alt = store_thm(
-  "poly_mult_div_alt",
-  ``!r:'a ring. Ring r ==> !p z. poly p /\ ulead z /\ (p % z = |0|) ==>
-   !q. poly q ==> ((p * q) / z = (p / z) * q) /\ ((p * q) / z = q * (p / z))``,
+Theorem poly_mult_div_alt:
+    !r:'a ring. Ring r ==> !p z. poly p /\ ulead z /\ (p % z = |0|) ==>
+   !q. poly q ==> ((p * q) / z = (p / z) * q) /\ ((p * q) / z = q * (p / z))
+Proof
   ntac 7 strip_tac >>
   `(p / z) * z = p` by rw[poly_div_multiple_alt] >>
   `(p * q) % z = |0|` by rw[poly_divides_multiple_mod] >>
@@ -1359,7 +1422,8 @@ val poly_mult_div_alt = store_thm(
   `_ = (p / z) * q * z` by rw[poly_mult_assoc] >>
   `(p * q) / z * z = (q * (p / z)) * z` by rw[poly_mult_comm] >>
   `poly ((p * q) / z) /\ poly ((p / z) * q) /\ poly (q * (p / z))` by rw[] >>
-  metis_tac[poly_ulead_mult_rcancel]);
+  metis_tac[poly_ulead_mult_rcancel]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ q <> |0| /\
             (deg p = deg q) /\ p pdivides q ==> q pdivides p *)
@@ -1377,10 +1441,10 @@ val poly_mult_div_alt = store_thm(
     thus poly [ |/ c]                  by poly_nonzero_element_poly
    Hence q pdivides p                  by poly_divides_def
 *)
-val poly_divides_eq_deg = store_thm(
-  "poly_divides_eq_deg",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ q <> |0| /\
-         (deg p = deg q) /\ p pdivides q ==> q pdivides p``,
+Theorem poly_divides_eq_deg:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ q <> |0| /\
+         (deg p = deg q) /\ p pdivides q ==> q pdivides p
+Proof
   rpt strip_tac >>
   `?t. poly t /\ (q = t * p)` by rw[GSYM poly_divides_def] >>
   `t <> |0|` by metis_tac[poly_mult_lzero] >>
@@ -1391,7 +1455,8 @@ val poly_divides_eq_deg = store_thm(
   `p = [ |/ c] * q` by rw[GSYM poly_mult_lconst_swap] >>
   `|/ c IN R /\ |/ c <> #0` by metis_tac[field_inv_nonzero, field_nonzero_eq] >>
   `poly [ |/ c]` by rw[poly_nonzero_element_poly] >>
-  metis_tac[poly_divides_def]);
+  metis_tac[poly_divides_def]
+QED
 
 (* However, p pdivides q /\ q pdivides p gives only p = u * q where u = upoly, not p = q *)
 
@@ -1413,9 +1478,9 @@ val poly_divides_eq_deg = store_thm(
    Hence q = [#1] * p = #1 * p          by poly_mult_lconst
       or q = p                          by poly_mult_lone
 *)
-val poly_monic_divides_eq_deg_eq = store_thm(
-  "poly_monic_divides_eq_deg_eq",
-  ``!r:'a field. Field r ==> !p q. monic p /\ monic q /\ (deg p = deg q) /\ p pdivides q ==> (p = q)``,
+Theorem poly_monic_divides_eq_deg_eq:
+    !r:'a field. Field r ==> !p q. monic p /\ monic q /\ (deg p = deg q) /\ p pdivides q ==> (p = q)
+Proof
   rpt strip_tac >>
   `p <> |0| /\ q <> |0|` by rw[poly_monic_nonzero] >>
   `poly p /\ poly q` by rw[] >>
@@ -1428,7 +1493,8 @@ val poly_monic_divides_eq_deg_eq = store_thm(
   `lead t IN R` by rw[] >>
   `lead t = #1` by metis_tac[poly_lead_mult, field_mult_rone] >>
   `c = #1` by metis_tac[poly_lead_const] >>
-  rw[poly_mult_lconst]);
+  rw[poly_mult_lconst]
+QED
 
 (* Theorem: Field r ==> !p q t. poly p /\ poly q /\ poly t /\ p pdivides q ==> t * p pdivides t * q *)
 (* Proof:
@@ -1442,9 +1508,9 @@ val poly_monic_divides_eq_deg_eq = store_thm(
                = s * (t * p)            by poly_mult_assoc_comm
    Hence (t * p) pdivides (t * q)       by poly_divides_def
 *)
-val poly_divides_common_multiple = store_thm(
-  "poly_divides_common_multiple",
-  ``!r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t /\ p pdivides q ==> t * p pdivides t * q``,
+Theorem poly_divides_common_multiple:
+    !r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t /\ p pdivides q ==> t * p pdivides t * q
+Proof
   rpt strip_tac >>
   Cases_on `t = |0|` >| [
     `(t * p = |0|) /\ (t * q = |0|)` by rw[] >>
@@ -1453,7 +1519,8 @@ val poly_divides_common_multiple = store_thm(
     `t * q = t * (s * p)` by rw[poly_mult_lcancel] >>
     `_ = s * (t * p)` by rw[poly_mult_assoc_comm] >>
     metis_tac[poly_divides_def]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !p q t. poly p /\ poly q /\ monic t /\ p pdivides q ==> t * p pdivides t * q *)
 (* Proof:
@@ -1463,14 +1530,15 @@ val poly_divides_common_multiple = store_thm(
                = s * (t * p)            by poly_mult_assoc_comm
    Hence (t * p) pdivides (t * q)       by poly_divides_def
 *)
-val poly_monic_divides_common_multiple = store_thm(
-  "poly_monic_divides_common_multiple",
-  ``!r:'a ring. Ring r ==> !p q t. poly p /\ poly q /\ monic t /\ p pdivides q ==> t * p pdivides t * q``,
+Theorem poly_monic_divides_common_multiple:
+    !r:'a ring. Ring r ==> !p q t. poly p /\ poly q /\ monic t /\ p pdivides q ==> t * p pdivides t * q
+Proof
   rpt strip_tac >>
   `?s. poly s /\ (q = s * p)` by rw[GSYM poly_divides_def] >>
   `t * q = t * (s * p)` by rw[poly_monic_mult_lcancel] >>
   `_ = s * (t * p)` by rw[poly_mult_assoc_comm] >>
-  metis_tac[poly_divides_def]);
+  metis_tac[poly_divides_def]
+QED
 
 (* Theorem: poly z /\z pdivides p /\ z pdivides q ==>
             !s t. poly s /\ poly t ==> z pdivides (p * s + q * t) *)
@@ -1485,26 +1553,28 @@ val poly_monic_divides_common_multiple = store_thm(
    Since poly (s * h + t * k)                        by poly_mult_poly, poly_add_poly
    Hence z pdivides (p * s + q * t)                  by poly_divides_def
 *)
-val poly_divides_linear = store_thm(
-  "poly_divides_linear",
-  ``!r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ poly z /\
-    z pdivides p /\ z pdivides q ==> !s t. poly s /\ poly t ==> z pdivides (p * s + q * t)``,
+Theorem poly_divides_linear:
+    !r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ poly z /\
+    z pdivides p /\ z pdivides q ==> !s t. poly s /\ poly t ==> z pdivides (p * s + q * t)
+Proof
   rpt strip_tac >>
   `?h. poly h /\ (p = h * z)` by rw[GSYM poly_divides_def] >>
   `?k. poly k /\ (q = k * z)` by rw[GSYM poly_divides_def] >>
   `p * s + q * t = s * (h * z) + t * (k * z)` by rw[poly_mult_comm] >>
   `_ = (s * h) * z + (t * k) * z` by rw[poly_mult_assoc] >>
   `_ = (s * h + t * k) * z` by rw[poly_mult_ladd] >>
-  metis_tac[poly_divides_def, poly_mult_poly, poly_add_poly]);
+  metis_tac[poly_divides_def, poly_mult_poly, poly_add_poly]
+QED
 
 (* Theorem: poly z /\ z pdivides p /\ z pdivides q ==>
             !s t. poly s /\ poly t ==> z pdivides s * p + t * q *)
 (* Proof: by poly_divides_linear, poly_mult_comm. *)
-val poly_divides_linear_comm = store_thm(
-  "poly_divides_linear_comm",
-  ``!r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ poly z /\
-       z pdivides p /\ z pdivides q ==> !s t. poly s /\ poly t ==> z pdivides s * p + t * q``,
-  rw_tac std_ss[poly_divides_linear, poly_mult_comm]);
+Theorem poly_divides_linear_comm:
+    !r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ poly z /\
+       z pdivides p /\ z pdivides q ==> !s t. poly s /\ poly t ==> z pdivides s * p + t * q
+Proof
+  rw_tac std_ss[poly_divides_linear, poly_mult_comm]
+QED
 
 (* Theorem: poly z /\ pdivides p /\ z pdivides q ==>
             !s t. poly s /\ poly t ==> z pdivides p * s - q * t *)
@@ -1515,22 +1585,24 @@ val poly_divides_linear_comm = store_thm(
      and poly (-t)           by poly_neg_poly
    Hence result follows      by poly_divides_linear
 *)
-val poly_divides_linear_sub = store_thm(
-  "poly_divides_linear_sub",
-  ``!r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ poly z /\
-       z pdivides p /\ z pdivides q ==> !s t. poly s /\ poly t ==> z pdivides p * s - q * t``,
+Theorem poly_divides_linear_sub:
+    !r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ poly z /\
+       z pdivides p /\ z pdivides q ==> !s t. poly s /\ poly t ==> z pdivides p * s - q * t
+Proof
   rpt strip_tac >>
   `p * s - q * t = p * s + q * (-t)` by metis_tac[poly_sub_def, poly_neg_mult] >>
-  metis_tac[poly_divides_linear, poly_neg_poly]);
+  metis_tac[poly_divides_linear, poly_neg_poly]
+QED
 
 (* Theorem: poly z /\ z pdivides p /\ z pdivides q ==>
             !s t. poly s /\ poly t ==> z pdivides s * p - t * q *)
 (* Proof: by poly_divides_linear_sub, poly_mult_comm. *)
-val poly_divides_linear_sub_comm = store_thm(
-  "poly_divides_linear_sub_comm",
-  ``!r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ poly z /\
-       z pdivides p /\ z pdivides q ==> !s t. poly s /\ poly t ==> z pdivides s * p - t * q``,
-  rw_tac std_ss[poly_divides_linear_sub, poly_mult_comm]);
+Theorem poly_divides_linear_sub_comm:
+    !r:'a ring. Ring r ==> !p q z. poly p /\ poly q /\ poly z /\
+       z pdivides p /\ z pdivides q ==> !s t. poly s /\ poly t ==> z pdivides s * p - t * q
+Proof
+  rw_tac std_ss[poly_divides_linear_sub, poly_mult_comm]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q ==> !n. (p - q) pdivides (p ** n - q ** n) *)
 (* Proof:
@@ -1555,9 +1627,9 @@ val poly_divides_linear_sub_comm = store_thm(
 
      Hence (p - q) pdivides (p ** SUC n - q ** SUC n)         by poly_divides_def
 *)
-val poly_sub_divides_exp_sub = store_thm(
-  "poly_sub_divides_exp_sub",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> !n. (p - q) pdivides (p ** n - q ** n)``,
+Theorem poly_sub_divides_exp_sub:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> !n. (p - q) pdivides (p ** n - q ** n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw_tac std_ss[poly_exp_0, poly_one_poly, poly_sub_eq, poly_sub_poly, poly_divides_zero] >>
@@ -1571,7 +1643,8 @@ val poly_sub_divides_exp_sub = store_thm(
   `_ = (p - q) * p ** n + q * t * (p - q)` by rw_tac std_ss[poly_mult_assoc] >>
   `_ = p ** n * (p - q) + q * t * (p - q)` by rw_tac std_ss[poly_mult_comm] >>
   `_ = (p ** n + q * t) * (p - q)` by rw_tac std_ss[poly_mult_ladd, poly_mult_poly] >>
-  metis_tac[poly_divides_def, poly_mult_poly, poly_add_poly]);
+  metis_tac[poly_divides_def, poly_mult_poly, poly_add_poly]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Root Factor Theorem.                                           *)
@@ -1614,10 +1687,10 @@ val poly_sub_divides_exp_sub = store_thm(
       = #0                                                      by ring_mult_rzero
   or c IN (roots p)                                             by poly_roots_member, poly_root_def
 *)
-val poly_root_factor = store_thm(
-  "poly_root_factor",
-  ``!r:'a ring. Ring r ==> !p. poly p ==>
-   !c. c IN (roots p) <=> c IN R /\ (factor c) pdivides p``,
+Theorem poly_root_factor:
+    !r:'a ring. Ring r ==> !p. poly p ==>
+   !c. c IN (roots p) <=> c IN R /\ (factor c) pdivides p
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >| [
     `p = |0|` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
@@ -1644,22 +1717,25 @@ val poly_root_factor = store_thm(
       `_ = #0 ` by rw[poly_eval_factor] >>
       metis_tac[]
     ]
-  ]);
+  ]
+QED
 (* This cannot move to polyRoot, as it does not have pdivides. *)
 
 (* Theorem: poly p /\ c IN R ==> (root p c <=> (factor c) pdivides p) *)
 (* Proof: by poly_root_factor, poly_roots_member *)
-val poly_root_factor_alt = store_thm(
-  "poly_root_factor_alt",
-  ``!r:'a ring. Ring r ==> !p c. poly p /\ c IN R ==> (root p c <=> (factor c) pdivides p)``,
-  metis_tac[poly_root_factor, poly_roots_member]);
+Theorem poly_root_factor_alt:
+    !r:'a ring. Ring r ==> !p c. poly p /\ c IN R ==> (root p c <=> (factor c) pdivides p)
+Proof
+  metis_tac[poly_root_factor, poly_roots_member]
+QED
 
 (* Theorem: poly p /\ c IN R ==> ((eval p c = #0) <=> (factor c) pdivides p) *)
 (* Proof: by poly_root_factor_alt, poly_root_def *)
-val poly_root_factor_thm = store_thm(
-  "poly_root_factor_thm",
-  ``!r:'a ring. Ring r ==> !p c. poly p /\ c IN R ==> ((eval p c = #0) <=> (factor c) pdivides p)``,
-  rw[poly_root_factor_alt, GSYM poly_root_def]);
+Theorem poly_root_factor_thm:
+    !r:'a ring. Ring r ==> !p c. poly p /\ c IN R ==> ((eval p c = #0) <=> (factor c) pdivides p)
+Proof
+  rw[poly_root_factor_alt, GSYM poly_root_def]
+QED
 
 (* Theorem: Ring r ==> !p c. poly p /\ p <> |0| /\ c IN R /\ root p c ==>
             ?q. poly q /\ (deg q = PRE (deg p)) /\ (p = q * (factor c)) *)
@@ -1681,11 +1757,11 @@ val poly_root_factor_thm = store_thm(
          = SUC q                          by ADD1
    Hence PRE (deg p) = PRE (SUC q) = q    by PRE
 *)
-val poly_root_factor_eqn = store_thm(
-  "poly_root_factor_eqn",
-  ``!r:'a ring. Ring r ==>
+Theorem poly_root_factor_eqn:
+    !r:'a ring. Ring r ==>
    !p c. poly p /\ p <> |0| /\ c IN R /\ root p c ==>
-    ?q. poly q /\ (deg q = PRE (deg p)) /\ (p = q * (factor c))``,
+    ?q. poly q /\ (deg q = PRE (deg p)) /\ (p = q * (factor c))
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   `p % factor c = |0|` by rw[GSYM poly_root_thm] >>
@@ -1700,41 +1776,46 @@ val poly_root_factor_eqn = store_thm(
   `lead q * lead (factor c) <> #0` by metis_tac[poly_lead_element, ring_mult_rone, poly_is_weak] >>
   `deg p = deg q + 1` by rw[weak_deg_mult_nonzero] >>
   `_ = SUC (deg q)` by rw[ADD1] >>
-  rw[]);
+  rw[]
+QED
 (* This cannot move to polyRoot, as it does not have pdivides. *)
 
 (* Theorem: Field r ==> !p. poly p ==> !c. c IN roots p <=> c IN R /\ factor c pdivides p *)
 (* Proof: by poly_root_factor *)
-val poly_field_root_factor = store_thm(
-  "poly_field_root_factor",
-  ``!r:'a field. Field r ==> !p. poly p ==> !c. c IN roots p <=> c IN R /\ factor c pdivides p``,
-  rw[poly_root_factor]);
+Theorem poly_field_root_factor:
+    !r:'a field. Field r ==> !p. poly p ==> !c. c IN roots p <=> c IN R /\ factor c pdivides p
+Proof
+  rw[poly_root_factor]
+QED
 
 (* Theorem: Field r ==> !p c. poly p /\ c IN R ==> (root p c <=> factor c pdivides p) *)
 (* Proof: by poly_root_factor_alt *)
-val poly_field_root_factor_alt = store_thm(
-  "poly_field_root_factor_alt",
-  ``!r:'a field. Field r ==> !p c. poly p /\ c IN R ==> (root p c <=> factor c pdivides p)``,
-  rw[poly_root_factor_alt]);
+Theorem poly_field_root_factor_alt:
+    !r:'a field. Field r ==> !p c. poly p /\ c IN R ==> (root p c <=> factor c pdivides p)
+Proof
+  rw[poly_root_factor_alt]
+QED
 
 (* Theorem: Field r ==> !p c. poly p /\ p <> |0| /\ c IN R /\ root p c ==>
             ?q. poly q /\ (deg q = PRE (deg p)) /\ (p = q * factor c) *)
 (* Proof: by poly_root_factor_thm *)
-val poly_field_root_factor_thm = store_thm(
-  "poly_field_root_factor_thm",
-  ``!r:'a field. Field r ==>
-   !p c. poly p /\ c IN R ==> (eval p c = #0 <=> factor c pdivides p)``,
-  rw[poly_root_factor_thm]);
+Theorem poly_field_root_factor_thm:
+    !r:'a field. Field r ==>
+   !p c. poly p /\ c IN R ==> (eval p c = #0 <=> factor c pdivides p)
+Proof
+  rw[poly_root_factor_thm]
+QED
 
 (* Theorem: Field r ==> !p c. poly p /\ p <> |0| /\ c IN R /\ root p c ==>
             ?q. poly q /\ (deg q = PRE (deg p)) /\ (p = q * factor c) *)
 (* Proof: by poly_root_factor_eqn *)
-val poly_field_root_factor_eqn = store_thm(
-  "poly_field_root_factor_eqn",
-  ``!r:'a field. Field r ==> !p c.
+Theorem poly_field_root_factor_eqn:
+    !r:'a field. Field r ==> !p c.
          poly p /\ p <> |0| /\ c IN R /\ root p c ==>
-         ?q. poly q /\ (deg q = PRE (deg p)) /\ (p = q * factor c)``,
-  rw[poly_root_factor_eqn]);
+         ?q. poly q /\ (deg q = PRE (deg p)) /\ (p = q * factor c)
+Proof
+  rw[poly_root_factor_eqn]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Ring Unit Equivalence                                          *)
@@ -1756,10 +1837,11 @@ val poly_unit_eq_property = save_thm("poly_unit_eq_property", unit_eq_def |> ISP
    <=> ?u'. upoly u' /\ (u = u')          by poly_unit_poly, poly_mult_rone
    <=> upoly u
 *)
-val poly_unit_eq_one = store_thm(
-  "poly_unit_eq_one",
-  ``!r:'a ring. Ring r ==> !u. upoly u <=> u ~~ |1|``,
-  metis_tac[poly_unit_eq_property, poly_unit_poly, poly_mult_rone]);
+Theorem poly_unit_eq_one:
+    !r:'a ring. Ring r ==> !u. upoly u <=> u ~~ |1|
+Proof
+  metis_tac[poly_unit_eq_property, poly_unit_poly, poly_mult_rone]
+QED
 
 (*
 related to: polyDividesTheory.poly_divides_one
@@ -1780,34 +1862,38 @@ related to: polyDividesTheory.poly_divides_one
       Then upoly |1|                       by poly_unit_one
        and |0| = |1| * |0|                 by poly_mult_rzero
 *)
-val poly_unit_eq_zero = store_thm(
-  "poly_unit_eq_zero",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> (p ~~ |0| <=> (p = |0|))``,
+Theorem poly_unit_eq_zero:
+    !r:'a ring. Ring r ==> !p. poly p ==> (p ~~ |0| <=> (p = |0|))
+Proof
   rw_tac std_ss[poly_unit_eq_property, EQ_IMP_THM] >-
   rw[poly_unit_poly] >>
   qexists_tac `|1|` >>
-  rw[poly_unit_one]);
+  rw[poly_unit_one]
+QED
 
 (* Theorem: Ring r ==> !p. poly p ==> (p ~~ p) *)
 (* Proof: by poly_ring_ring, unit_eq_refl, poly_ring_element *)
-val poly_unit_eq_refl = store_thm(
-  "poly_unit_eq_refl",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> (p ~~ p)``,
-  rw[poly_ring_ring, unit_eq_refl, poly_ring_element]);
+Theorem poly_unit_eq_refl:
+    !r:'a ring. Ring r ==> !p. poly p ==> (p ~~ p)
+Proof
+  rw[poly_ring_ring, unit_eq_refl, poly_ring_element]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> q ~~ p *)
 (* Proof: by poly_ring_ring, unit_eq_sym, poly_ring_element *)
-val poly_unit_eq_sym = store_thm(
-  "poly_unit_eq_sym",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> q ~~ p``,
-  rw[poly_ring_ring, unit_eq_sym, poly_ring_element]);
+Theorem poly_unit_eq_sym:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> q ~~ p
+Proof
+  rw[poly_ring_ring, unit_eq_sym, poly_ring_element]
+QED
 
 (* Theorem: Ring r ==> !p q t. poly p /\ poly q /\ poly t /\ p ~~ q /\ q ~~ t ==> p ~~ t *)
 (* Proof: by poly_ring_ring, unit_eq_trans, poly_ring_element *)
-val poly_unit_eq_trans = store_thm(
-  "poly_unit_eq_trans",
-  ``!r:'a ring. Ring r ==> !p q t. poly p /\ poly q /\ poly t /\ p ~~ q /\ q ~~ t ==> p ~~ t``,
-  metis_tac[poly_ring_ring, unit_eq_trans, poly_ring_element]);
+Theorem poly_unit_eq_trans:
+    !r:'a ring. Ring r ==> !p q t. poly p /\ poly q /\ poly t /\ p ~~ q /\ q ~~ t ==> p ~~ t
+Proof
+  metis_tac[poly_ring_ring, unit_eq_trans, poly_ring_element]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !t. p pdivides t ==> q pdivides t *)
 (* Proof:
@@ -1820,15 +1906,16 @@ val poly_unit_eq_trans = store_thm(
            = (s * u) * q              by poly_mult_assoc
    Hence q pdivides t                 by poly_divides_def
 *)
-val poly_unit_eq_divides = store_thm(
-  "poly_unit_eq_divides",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !t. p pdivides t ==> q pdivides t``,
+Theorem poly_unit_eq_divides:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !t. p pdivides t ==> q pdivides t
+Proof
   rpt strip_tac >>
   `?u. upoly u /\ (p = u * q)` by rw[GSYM poly_unit_eq_property] >>
   `poly u` by rw[poly_unit_poly] >>
   `?s. poly s /\ (t = s * p)` by rw[GSYM poly_divides_def] >>
   `_ = (s * u) * q` by rw[poly_mult_assoc] >>
-  metis_tac[poly_divides_def, poly_mult_poly]);
+  metis_tac[poly_divides_def, poly_mult_poly]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !c. c IN R ==> c * p ~~ c * q *)
 (* Proof:
@@ -1836,11 +1923,12 @@ val poly_unit_eq_divides = store_thm(
    Hence c * p = c * (u * q) = u * (c * q)       by poly_mult_cmult, poly_cmult_mult
    Thus  c * p ~~ c * q                          by poly_unit_eq_property
 *)
-val poly_unit_eq_cmult = store_thm(
-  "poly_unit_eq_cmult",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !c. c IN R ==> c * p ~~ c * q``,
+Theorem poly_unit_eq_cmult:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !c. c IN R ==> c * p ~~ c * q
+Proof
   rw[poly_unit_eq_property] >>
-  metis_tac[poly_mult_cmult, poly_cmult_mult, poly_unit_poly]);
+  metis_tac[poly_mult_cmult, poly_cmult_mult, poly_unit_poly]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !t. poly t ==> p * t ~~ q * t *)
 (* Proof:
@@ -1848,11 +1936,12 @@ val poly_unit_eq_cmult = store_thm(
    Hence p * t = (u * q) * t = u * (q * t)       by poly_mult_assoc
    Thus  p * t ~~ q * t                          by poly_unit_eq_property
 *)
-val poly_unit_eq_mult = store_thm(
-  "poly_unit_eq_mult",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !t. poly t ==> p * t ~~ q * t``,
+Theorem poly_unit_eq_mult:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !t. poly t ==> p * t ~~ q * t
+Proof
   rw[poly_unit_eq_property] >>
-  metis_tac[poly_mult_assoc, poly_unit_poly]);
+  metis_tac[poly_mult_assoc, poly_unit_poly]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !t. poly t ==> t * p ~~ t * q *)
 (* Proof:
@@ -1860,11 +1949,12 @@ val poly_unit_eq_mult = store_thm(
    Hence t * p = t * (u * q) = u * (t * q)       by poly_mult_assoc_comm
    Thus  t * p ~~ t * q                          by poly_unit_eq_property
 *)
-val poly_unit_eq_mult_comm = store_thm(
-  "poly_unit_eq_mult_comm",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !t. poly t ==> t * p ~~ t * q``,
+Theorem poly_unit_eq_mult_comm:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p ~~ q ==> !t. poly t ==> t * p ~~ t * q
+Proof
   rw[poly_unit_eq_property] >>
-  metis_tac[poly_mult_assoc_comm, poly_unit_poly]);
+  metis_tac[poly_mult_assoc_comm, poly_unit_poly]
+QED
 
 (* Theorem: Ring r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
                                  p ~~ q /\ s ~~ t ==> p * s ~~ q * t *)
@@ -1882,10 +1972,10 @@ val poly_unit_eq_mult_comm = store_thm(
       = (u * v) * (q * t)          by poly_mult_assoc
    Thus p * s ~~ q * t             by poly_unit_eq_property
 *)
-val poly_unit_eq_mult_pair = store_thm(
-  "poly_unit_eq_mult_pair",
-  ``!r:'a ring. Ring r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
-               p ~~ q /\ s ~~ t ==> p * s ~~ q * t``,
+Theorem poly_unit_eq_mult_pair:
+    !r:'a ring. Ring r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
+               p ~~ q /\ s ~~ t ==> p * s ~~ q * t
+Proof
   rpt strip_tac >>
   `?u. upoly u /\ (p = u * q)` by rw[GSYM poly_unit_eq_property] >>
   `?v. upoly v /\ (s = v * t)` by rw[GSYM poly_unit_eq_property] >>
@@ -1894,7 +1984,8 @@ val poly_unit_eq_mult_pair = store_thm(
   `p * s = (u * (q * v)) * t` by rw[poly_mult_assoc] >>
   `_ = (u * (v * q)) * t` by rw[poly_mult_comm] >>
   `_ = (u * v) * (q * t)` by rw[poly_mult_assoc] >>
-  metis_tac[poly_unit_eq_property]);
+  metis_tac[poly_unit_eq_property]
+QED
 
 (* Theorem: Ring r ==> !p q. monic p /\ monic q ==> (p ~~ q <=> (p = q)) *)
 (* Proof:
@@ -1908,9 +1999,9 @@ val poly_unit_eq_mult_pair = store_thm(
    Only-if part: (p = q) ==> p ~~ q
      That is, p ~~ p, true            by poly_unit_eq_refl, poly_monic_poly
 *)
-val poly_unit_eq_monic_eq = store_thm(
-  "poly_unit_eq_monic_eq",
-  ``!r:'a ring. Ring r ==> !p q. monic p /\ monic q ==> (p ~~ q <=> (p = q))``,
+Theorem poly_unit_eq_monic_eq:
+    !r:'a ring. Ring r ==> !p q. monic p /\ monic q ==> (p ~~ q <=> (p = q))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     `?u. upoly u /\ (p = u * q)` by rw[GSYM poly_unit_eq_property] >>
     `_ = q * u` by rw[poly_mult_comm, poly_unit_poly] >>
@@ -1918,7 +2009,8 @@ val poly_unit_eq_monic_eq = store_thm(
     `u = |1|` by rw[GSYM poly_unit_monic] >>
     rw[],
     rw[poly_unit_eq_refl]
-  ]);
+  ]
+QED
 
 (* Not very useful for poly GCD, which is defined only up to a unit multiple.
    Given two monic p and q, there is a monic (pgcd p g), but also other non-monic GCDs.
@@ -1928,10 +2020,11 @@ val poly_unit_eq_monic_eq = store_thm(
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ (p = q) ==> (p ~~ q) *)
 (* Proof: by poly_ring_ring, ring_eq_unit_eq, poly_ring_element *)
-val poly_eq_unit_eq = store_thm(
-  "poly_eq_unit_eq",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ (p = q) ==> (p ~~ q)``,
-  rw[poly_ring_ring, ring_eq_unit_eq, poly_ring_element]);
+Theorem poly_eq_unit_eq:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ (p = q) ==> (p ~~ q)
+Proof
+  rw[poly_ring_ring, ring_eq_unit_eq, poly_ring_element]
+QED
 
 (* Theorem: Ring r ==> !p. poly p ==> (upoly p <=> ?q. poly q /\ (p * q = |1|)) *)
 (* Proof:
@@ -1942,10 +2035,11 @@ val poly_eq_unit_eq = store_thm(
    val it = |- Ring (PolyRing r) ==> !u. upoly u <=>
      u IN (PolyRing r).carrier /\ ?v. v IN (PolyRing r).carrier /\ (u * v = |1|): thm
 *)
-val poly_ring_units = store_thm(
-  "poly_ring_units",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> (upoly p <=> ?q. poly q /\ (p * q = |1|))``,
-  rw_tac std_ss[poly_ring_ring, ring_unit_property, poly_ring_element]);
+Theorem poly_ring_units:
+    !r:'a ring. Ring r ==> !p. poly p ==> (upoly p <=> ?q. poly q /\ (p * q = |1|))
+Proof
+  rw_tac std_ss[poly_ring_ring, ring_unit_property, poly_ring_element]
+QED
 
 (* Theorem: In the polynomial ring F[x], only constants are units. *)
 
@@ -1977,9 +2071,9 @@ val poly_ring_units = store_thm(
                  = |1|                      by poly_one, and #1 <> #0 in Field r.
        p * y = y * p = |1|                  by poly_mult_comm
 *)
-val poly_field_units = store_thm(
-  "poly_field_units",
-  ``!r:'a field. Field r ==> !p. poly p ==> (upoly p <=> p <> |0| /\ (deg p = 0))``,
+Theorem poly_field_units:
+    !r:'a field. Field r ==> !p. poly p ==> (upoly p <=> p <> |0| /\ (deg p = 0))
+Proof
   rw[Invertibles_def, monoid_invertibles_def, GSYM poly_ring_property] >>
   `#1 <> #0 /\ |1| <> |0|` by rw[GSYM poly_one_ne_poly_zero] >>
   rw[EQ_IMP_THM] >-
@@ -1998,7 +2092,8 @@ val poly_field_units = store_thm(
   `[|/ h] * [h] = |/ h * [h]` by rw[poly_mult_lconst] >>
   `_ = [|/ h * h]` by rw_tac std_ss[poly_cmult_const_nonzero, field_one_ne_zero] >>
   `_ = |1|` by rw[poly_one, field_one_ne_zero] >>
-  metis_tac[poly_mult_comm, field_is_ring]);
+  metis_tac[poly_mult_comm, field_is_ring]
+QED
 
 (* Theorem: Field r ==> upoly |1| *)
 (* Proof:
@@ -2008,10 +2103,11 @@ val poly_field_units = store_thm(
      and deg |1| = 0        by poly_deg_one
    Hence upoly |1|          by poly_field_units
 *)
-val poly_field_unit_one = store_thm(
-  "poly_field_unit_one",
-  ``!r:'a field. Field r ==> upoly |1|``,
-  rw[poly_field_units]);
+Theorem poly_field_unit_one:
+    !r:'a field. Field r ==> upoly |1|
+Proof
+  rw[poly_field_units]
+QED
 
 (* Theorem: Field r ==> !h. h IN R /\ h <> #0 ==> upoly [h] *)
 (* Proof:
@@ -2021,10 +2117,11 @@ val poly_field_unit_one = store_thm(
      and  deg [h] = 0        by poly_deg_const
     thus  upoly [h]          by poly_field_units
 *)
-val poly_field_const_unit = store_thm(
-  "poly_field_const_unit",
-  ``!r:'a field. Field r ==> !h. h IN R /\ h <> #0 ==> upoly [h]``,
-  rw[poly_field_units]);
+Theorem poly_field_const_unit:
+    !r:'a field. Field r ==> !h. h IN R /\ h <> #0 ==> upoly [h]
+Proof
+  rw[poly_field_units]
+QED
 
 (* Theorem: Field r ==> !p. upoly p <=> ?c. c IN R /\ c <> #0 /\ (p = [c]) *)
 (* Proof:
@@ -2051,9 +2148,9 @@ val poly_field_const_unit = store_thm(
                   = |1|              by poly_ring_ids
 
 *)
-val poly_field_unit_alt = store_thm(
-  "poly_field_unit_alt",
-  ``!r:'a field. Field r ==> !p. upoly p <=> ?c. c IN R /\ c <> #0 /\ (p = [c])``,
+Theorem poly_field_unit_alt:
+    !r:'a field. Field r ==> !p. upoly p <=> ?c. c IN R /\ c <> #0 /\ (p = [c])
+Proof
   rw_tac std_ss[Invertibles_def, monoid_invertibles_def, poly_ring_element, GSPECIFICATION] >>
   `Ring r` by rw[] >>
   rw[EQ_IMP_THM] >-
@@ -2067,7 +2164,8 @@ val poly_field_unit_alt = store_thm(
   `[c] * [|/ c] = chop [c * |/ c]` by rw[poly_mult_lconst, poly_cmult_const] >>
   `_ = chop [#1]` by metis_tac[field_mult_rinv, field_nonzero_unit, field_nonzero_eq] >>
   `_ = |1|` by rw[poly_ring_ids] >>
-  rw[poly_mult_comm]);
+  rw[poly_mult_comm]
+QED
 
 (* Slightly better than: polyFieldDivisionTheory.poly_field_units
    |- !r. Field r ==> !p. poly p ==> (upoly p <=> p <> |0| /\ (deg p = 0))
@@ -2083,23 +2181,25 @@ val poly_field_unit_alt = store_thm(
       Since ?c. c IN R /\ c <> #0 /\ (p = [c])   by poly_deg_eq_0
          so upoly p                  by poly_field_unit_alt
 *)
-val poly_field_unit = store_thm(
-  "poly_field_unit",
-  ``!r:'a field. Field r ==> !p. upoly p <=> poly p /\ p <> |0| /\ (deg p = 0)``,
+Theorem poly_field_unit:
+    !r:'a field. Field r ==> !p. upoly p <=> poly p /\ p <> |0| /\ (deg p = 0)
+Proof
   rpt strip_tac >>
   `Ring r /\ |1| <> |0|` by rw[] >>
   rw_tac std_ss[EQ_IMP_THM] >-
   rw[poly_unit_poly] >-
   metis_tac[poly_unit_zero] >-
   metis_tac[poly_field_unit_alt, poly_deg_const] >>
-  metis_tac[poly_field_unit_alt, poly_deg_eq_0]);
+  metis_tac[poly_field_unit_alt, poly_deg_eq_0]
+QED
 
 (* Theorem: Field r ==> !p. upoly p ==> (deg p = 0) *)
 (* Proof: by poly_field_unit *)
-val poly_field_unit_deg = store_thm(
-  "poly_field_unit_deg",
-  ``!r:'a field. Field r ==> !p. upoly p ==> (deg p = 0)``,
-  rw[poly_field_unit]);
+Theorem poly_field_unit_deg:
+    !r:'a field. Field r ==> !p. upoly p ==> (deg p = 0)
+Proof
+  rw[poly_field_unit]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p ~~ q ==> ?c. c IN R /\ c <> #0 /\ (p = c * q) *)
 (* Proof:
@@ -2109,10 +2209,11 @@ val poly_field_unit_deg = store_thm(
      ==> ?c. c IN R /\ c <> #0 /\ (u = [c])   by poly_field_unit_alt
    Hence p = [c] * q = c * q                  by poly_mult_lconst
 *)
-val poly_field_unit_eq_alt = store_thm(
-  "poly_field_unit_eq_alt",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p ~~ q ==> ?c. c IN R /\ c <> #0 /\ (p = c * q)``,
-  metis_tac[poly_unit_eq_property, poly_field_unit_alt, poly_mult_lconst, field_is_ring]);
+Theorem poly_field_unit_eq_alt:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p ~~ q ==> ?c. c IN R /\ c <> #0 /\ (p = c * q)
+Proof
+  metis_tac[poly_unit_eq_property, poly_field_unit_alt, poly_mult_lconst, field_is_ring]
+QED
 
 (* Theorem: Field r ==> !p q. upoly p /\ poly q ==> p pdivides q *)
 (* Proof:
@@ -2127,9 +2228,9 @@ val poly_field_unit_eq_alt = store_thm(
            = ( |/ c * q) * p   by poly_mult_cmult
    Hence p pdivides q          by poly_divides_def
 *)
-val poly_field_unit_divides = store_thm(
-  "poly_field_unit_divides",
-  ``!r:'a field. Field r ==> !p q. upoly p /\ poly q ==> p pdivides q``,
+Theorem poly_field_unit_divides:
+    !r:'a field. Field r ==> !p q. upoly p /\ poly q ==> p pdivides q
+Proof
   rw[poly_field_unit_alt] >>
   `c IN R+` by metis_tac[field_nonzero_eq] >>
   `( |/ c * c = #1) /\ #1 <> #0` by rw[] >>
@@ -2138,7 +2239,8 @@ val poly_field_unit_divides = store_thm(
   `_ = q * ( |/ c * [c])` by rw[] >>
   `_ = |/ c * q * [c]` by rw[poly_mult_cmult] >>
   `poly ( |/ c * q)` by rw[] >>
-  metis_tac[poly_divides_def]);
+  metis_tac[poly_divides_def]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ upoly q /\ p pdivides q ==> upoly p *)
 (* Proof:
@@ -2151,16 +2253,17 @@ val poly_field_unit_divides = store_thm(
       so deg p = 0                   by arithmetic
    Hence upoly p                     by poly_field_unit
 *)
-val poly_field_divides_unit = store_thm(
-  "poly_field_divides_unit",
-  ``!r:'a field. Field r ==> !p q. poly p /\ upoly q /\ p pdivides q ==> upoly p``,
+Theorem poly_field_divides_unit:
+    !r:'a field. Field r ==> !p q. poly p /\ upoly q /\ p pdivides q ==> upoly p
+Proof
   rpt strip_tac >>
   `Ring r /\ |1| <> |0|` by rw[] >>
   `?t. poly t /\ (q = t * p)` by rw[GSYM poly_divides_def] >>
   `q <> |0|` by metis_tac[poly_unit_zero] >>
   `p <> |0| /\ t <> |0|` by metis_tac[poly_mult_zero] >>
   `deg q = deg t + deg p` by rw[poly_deg_mult_nonzero] >>
-  metis_tac[poly_field_unit, DECIDE``!x y. (x + y = 0) <=> (x = 0) /\ (y = 0)``]);
+  metis_tac[poly_field_unit, DECIDE``!x y. (x + y = 0) <=> (x = 0) /\ (y = 0)``]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p pdivides q /\ q pdivides p ==> p ~~ q *)
 (* Proof:
@@ -2176,9 +2279,9 @@ val poly_field_divides_unit = store_thm(
      Thus upoly t /\ upoly s    by poly_mult_eq_one
        or p ~~ q                by poly_unit_eq_property
 *)
-val poly_field_divides_antisym = store_thm(
-  "poly_field_divides_antisym",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p pdivides q /\ q pdivides p ==> p ~~ q``,
+Theorem poly_field_divides_antisym:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p pdivides q /\ q pdivides p ==> p ~~ q
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   Cases_on `p = |0|` >-
@@ -2188,7 +2291,8 @@ val poly_field_divides_antisym = store_thm(
   `poly |1| /\ poly (t * s) /\ ( |1| * p = p)` by rw[] >>
   `_ = t * (s * p)` by metis_tac[] >>
   `_ = (t * s) * p` by rw[poly_mult_assoc] >>
-  metis_tac[poly_mult_rcancel, poly_mult_eq_one, poly_unit_eq_property]);
+  metis_tac[poly_mult_rcancel, poly_mult_eq_one, poly_unit_eq_property]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ p <> |0| ==>
             ?u q. upoly u /\ monic q /\ (deg q = deg p) /\ (p = u * q) *)
@@ -2202,15 +2306,16 @@ val poly_field_divides_antisym = store_thm(
            = [c] * q   by poly_mult_lconst
            = u * q     by u = [c]
 *)
-val poly_monic_mult_factor = store_thm(
-  "poly_monic_mult_factor",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==>
-   ?u q. upoly u /\ monic q /\ (deg q = deg p) /\ (p = u * q)``,
+Theorem poly_monic_mult_factor:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==>
+   ?u q. upoly u /\ monic q /\ (deg q = deg p) /\ (p = u * q)
+Proof
   rpt strip_tac >>
   `?c q. c IN R /\ c <> #0 /\ monic q /\ (deg q = deg p) /\ (p = c * q)` by rw_tac std_ss[poly_monic_cmult_factor] >>
   qexists_tac `[c]` >>
   qexists_tac `q` >>
-  rw[poly_field_unit_alt, poly_mult_lconst]);
+  rw[poly_field_unit_alt, poly_mult_lconst]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ p <> |0| ==>
             ?u q. upoly u /\ monic q /\ (deg q = deg p) /\ (q = u * p) *)
@@ -2224,15 +2329,16 @@ val poly_monic_mult_factor = store_thm(
            = [c] * p   by poly_mult_lconst
            = u * p     by u = [c]
 *)
-val poly_monic_mult_by_factor = store_thm(
-  "poly_monic_mult_by_factor",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==>
-   ?u q. upoly u /\ monic q /\ (deg q = deg p) /\ (q = u * p)``,
+Theorem poly_monic_mult_by_factor:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==>
+   ?u q. upoly u /\ monic q /\ (deg q = deg p) /\ (q = u * p)
+Proof
   rpt strip_tac >>
   `?c q. c IN R /\ c <> #0 /\ monic q /\ (deg q = deg p) /\ (q = c * p)` by rw[poly_monic_cmult_by_factor] >>
   qexists_tac `[c]` >>
   qexists_tac `q` >>
-  rw[poly_field_unit_alt, poly_mult_lconst]);
+  rw[poly_field_unit_alt, poly_mult_lconst]
+QED
 
 (* Theorem: Ring r ==> !p q t. poly p /\ poly q /\ poly t /\ p pdivides q /\ q ~~ t ==> p pdivides t *)
 (* Proof:
@@ -2244,13 +2350,14 @@ val poly_monic_mult_by_factor = store_thm(
     since poly (v * s)                     by poly_mult_poly
     hence p divides t                      by poly_divides_def
 *)
-val poly_unit_eq_divisor = store_thm(
-  "poly_unit_eq_divisor",
-  ``!r:'a ring. Ring r ==> !p q t. poly p /\ poly q /\ poly t /\ p pdivides q /\ q ~~ t ==> p pdivides t``,
+Theorem poly_unit_eq_divisor:
+    !r:'a ring. Ring r ==> !p q t. poly p /\ poly q /\ poly t /\ p pdivides q /\ q ~~ t ==> p pdivides t
+Proof
   rw[poly_divides_def, poly_unit_eq_property] >>
   `?v. poly v /\ (t = v * (s * p))` by metis_tac[poly_mult_lunit] >>
   `_ = v * s * p` by rw[poly_mult_assoc] >>
-  metis_tac[poly_mult_poly]);
+  metis_tac[poly_mult_poly]
+QED
 
 (* Theorem: Ring r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
             p ~~ q /\ s ~~ t ==> (p pdivides s <=> q pdivides t) *)
@@ -2266,10 +2373,10 @@ val poly_unit_eq_divisor = store_thm(
    Only-if part: q pdivides t ==> p pdivides s
       True by symmetry argument.
 *)
-val poly_unit_eq_divides_iff = store_thm(
-  "poly_unit_eq_divides_iff",
-  ``!r:'a ring. Ring r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
-      p ~~ q /\ s ~~ t ==> (p pdivides s <=> q pdivides t)``,
+Theorem poly_unit_eq_divides_iff:
+    !r:'a ring. Ring r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
+      p ~~ q /\ s ~~ t ==> (p pdivides s <=> q pdivides t)
+Proof
   rw[poly_divides_def, EQ_IMP_THM] >| [
     `?u. upoly u /\ (p = u * q)` by rw[GSYM poly_unit_eq_property] >>
     `?v. upoly v /\ (s' * p = v * t)` by rw[GSYM poly_unit_eq_property] >>
@@ -2284,7 +2391,8 @@ val poly_unit_eq_divides_iff = store_thm(
     `?z. poly z /\ (s = z * (s' * (u * p)))` by metis_tac[poly_mult_lunit, poly_mult_poly] >>
     `_ = z * s' * u * p` by rw[poly_mult_assoc] >>
     prove_tac[poly_mult_poly]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Theorems                                                           *)
@@ -2314,9 +2422,9 @@ val poly_unit_eq_divides_iff = store_thm(
       Since poly (u * q)                    by poly_mult_poly
       Hence p pdivides u                    by poly_divides_def
 *)
-val poly_divides_unit = store_thm(
-  "poly_divides_unit",
-  ``!r:'a ring. Ring r ==> !p u. poly p /\ upoly u ==> (p pdivides u <=> upoly p)``,
+Theorem poly_divides_unit:
+    !r:'a ring. Ring r ==> !p u. poly p /\ upoly u ==> (p pdivides u <=> upoly p)
+Proof
   rw[EQ_IMP_THM] >| [
     `?q. poly q /\ (u = q * p)` by rw[GSYM poly_divides_def] >>
     `?v. poly v /\ ( |1| = q * p * v)` by metis_tac[poly_unit_partner] >>
@@ -2329,7 +2437,8 @@ val poly_divides_unit = store_thm(
     `u = u * (p * q)` by metis_tac[poly_mult_rone] >>
     `_ = u * q * p` by rw[poly_mult_comm, poly_mult_assoc] >>
     metis_tac[poly_mult_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p. upoly p ==> (roots p = {}) *)
 (* Proof:
@@ -2341,16 +2450,17 @@ val poly_divides_unit = store_thm(
     But roots [c] = {}                       by poly_roots_const
      or roots p = {}                         by above
 *)
-val poly_roots_field_unit = store_thm(
-  "poly_roots_field_unit",
-  ``!r:'a field. Field r ==> !p. upoly p ==> (roots p = {})``,
+Theorem poly_roots_field_unit:
+    !r:'a field. Field r ==> !p. upoly p ==> (roots p = {})
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `poly p` by rw[poly_unit_poly] >>
   `p <> |0|` by metis_tac[poly_unit_zero, poly_one_eq_poly_zero] >>
   `deg p = 0` by rw[poly_field_unit_deg] >>
   `?c. c IN R /\ c <> #0 /\ (p = [c])` by rw[GSYM poly_deg_eq_0] >>
-  rw[poly_roots_const]);
+  rw[poly_roots_const]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ (deg p = 1) ==> ?c. c IN R /\ (roots p = {c}) *)
 (* Proof:
@@ -2366,9 +2476,9 @@ val poly_roots_field_unit = store_thm(
                 = {c}                     by UNION_EMPTY
    Take this c, and the result follows.
 *)
-val poly_roots_field_deg1 = store_thm(
-  "poly_roots_field_deg1",
-  ``!r:'a field. Field r ==> !p. poly p /\ (deg p = 1) ==> ?c. c IN R /\ (roots p = {c})``,
+Theorem poly_roots_field_deg1:
+    !r:'a field. Field r ==> !p. poly p /\ (deg p = 1) ==> ?c. c IN R /\ (roots p = {c})
+Proof
   rpt strip_tac >>
   `p <> |0|` by metis_tac[poly_deg_zero, DECIDE``1 <> 0``] >>
   `?u q. upoly u /\ monic q /\ (deg q = 1) /\ (p = u * q)` by metis_tac[poly_monic_mult_factor] >>
@@ -2377,7 +2487,8 @@ val poly_roots_field_deg1 = store_thm(
   `roots q = {c}` by rw[poly_factor_roots] >>
   `roots u = {}` by rw[poly_roots_field_unit] >>
   `roots p = {c}` by rw[poly_roots_mult] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Ring r ==> !n. (X - |1|) pdivides (unity n) *)
 (* Proof:
@@ -2393,9 +2504,9 @@ val poly_roots_field_deg1 = store_thm(
     Thus (factor #1) pdivides (X ** n - |1|)   by poly_root_factor, poly_roots_member
       or (X - |1|) pdivides (X ** n - |1|)     by poly_factor_one
 *)
-val poly_unity_1_divides = store_thm(
-  "poly_unity_1_divides",
-  ``!r:'a ring. Ring r ==> !n. (X - |1|) pdivides (unity n)``,
+Theorem poly_unity_1_divides:
+    !r:'a ring. Ring r ==> !n. (X - |1|) pdivides (unity n)
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >-
   metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero, poly_unity_poly, poly_divides_zero] >>
@@ -2403,7 +2514,8 @@ val poly_unity_1_divides = store_thm(
   `poly (X ** n - |1|)` by rw[] >>
   `eval (X ** n - |1|) #1 = #0` by rw[poly_eval_X_exp_n_sub_c] >>
   `root (X ** n - |1|) #1` by rw[poly_root_def] >>
-  metis_tac[poly_root_factor, poly_roots_member, ring_one_element, poly_factor_one]);
+  metis_tac[poly_root_factor, poly_roots_member, ring_one_element, poly_factor_one]
+QED
 
 (* Theorem: Ring r ==> !n m. (unity n) pdivides (unity (n * m)) *)
 (* Proof:
@@ -2430,9 +2542,9 @@ val poly_unity_1_divides = store_thm(
     Since poly (peval t (X ** n))               by poly_peval_poly
      Thus (unity n) pdivides (unity (n * m))    by poly_divides_def
 *)
-val poly_unity_divides = store_thm(
-  "poly_unity_divides",
-  ``!r:'a ring. Ring r ==> !n m. (unity n) pdivides (unity (n * m))``,
+Theorem poly_unity_divides:
+    !r:'a ring. Ring r ==> !n m. (unity n) pdivides (unity (n * m))
+Proof
   rpt strip_tac >>
   rpt strip_tac >>
   Cases_on `#1 = #0` >-
@@ -2449,7 +2561,8 @@ val poly_unity_divides = store_thm(
   `_ = peval t (X ** n) * peval p (X ** n)` by rw[poly_peval_mult] >>
   `_ = peval t (X ** n) * (X ** n - |1|)` by metis_tac[poly_peval_X_exp_n_sub_c, poly_exp_1] >>
   `poly (X ** n - |1|) /\ poly (peval t (X ** n))` by rw[] >>
-  metis_tac[poly_divides_def]);
+  metis_tac[poly_divides_def]
+QED
 
 (* Theorem: Ring r ==> !n. 0 < n ==> X pdivides (master n) *)
 (* Proof:
@@ -2458,10 +2571,11 @@ val poly_unity_divides = store_thm(
     = unity (n - 1) * X            by poly_mult_comm
     Hence X pdivides (master n)    by poly_divides_def
 *)
-val poly_X_divides_master = store_thm(
-  "poly_X_divides_master",
-  ``!r:'a ring. Ring r ==> !n. 0 < n ==> X pdivides (master n)``,
-  metis_tac[poly_master_factors, poly_divides_def, poly_mult_comm, poly_X, poly_unity_poly]);
+Theorem poly_X_divides_master:
+    !r:'a ring. Ring r ==> !n. 0 < n ==> X pdivides (master n)
+Proof
+  metis_tac[poly_master_factors, poly_divides_def, poly_mult_comm, poly_X, poly_unity_poly]
+QED
 
 (* Theorem: Field r ==> !p. monic p ==> (p pdivides |1| <=> (p = |1|)) *)
 (* Proof:
@@ -2472,9 +2586,9 @@ val poly_X_divides_master = store_thm(
    Only-if part: p = |1| ==> p pdivides |1|
       This is true             by poly_divides_reflexive
 *)
-val poly_monic_divides_one = store_thm(
-  "poly_monic_divides_one",
-  ``!r:'a field. Field r ==> !p. monic p ==> (p pdivides |1| <=> (p = |1|))``,
+Theorem poly_monic_divides_one:
+    !r:'a field. Field r ==> !p. monic p ==> (p pdivides |1| <=> (p = |1|))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   rw[EQ_IMP_THM] >| [
@@ -2482,7 +2596,8 @@ val poly_monic_divides_one = store_thm(
     `deg p = 0` by metis_tac[poly_field_unit] >>
     metis_tac[poly_monic_deg_0],
     rw[poly_divides_reflexive]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

@@ -37,10 +37,8 @@ Definition B_SEM_def:
    (B_SEM l (B_AND(b1,b2))    = B_SEM l b1 /\ B_SEM l b2)
 End
 
-val B_SEM =
- store_thm
-  ("B_SEM",
-   ``(B_SEM l (B_PROP p)     = p IN l)
+Theorem B_SEM:
+     (B_SEM l (B_PROP p)     = p IN l)
      /\
      (B_SEM l B_TRUE         = T)
      /\
@@ -50,9 +48,11 @@ val B_SEM =
      /\
      (B_SEM l (B_AND(b1,b2)) = B_SEM l b1 /\ B_SEM l b2)
      /\
-     (B_SEM l (B_OR(b1,b2)) = B_SEM l b1 \/ B_SEM l b2)``,
+     (B_SEM l (B_OR(b1,b2)) = B_SEM l b1 \/ B_SEM l b2)
+Proof
    RW_TAC std_ss [B_SEM_def,B_OR_def,B_TRUE_def,B_FALSE_def]
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
 (******************************************************************************
 * Unclocked "SEM 1" semantics of SEREs.

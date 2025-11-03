@@ -238,17 +238,19 @@ val lemma =
   METIS_PROVE [SPLIT_arm2set]
   ``p (arm2set' y s) ==> (?u v. SPLIT (arm2set s) (u,v) /\ p u /\ (\v. v = arm2set'' y s) v)``;
 
-val ARM_SPEC_SEMANTICS = store_thm("ARM_SPEC_SEMANTICS",
-  ``SPEC ARM_MODEL p {} q =
+Theorem ARM_SPEC_SEMANTICS:
+    SPEC ARM_MODEL p {} q =
     !y s seq. p (arm2set' y s) /\ rel_sequence ARM_NEXT_REL seq s ==>
-              ?k. q (arm2set' y (seq k)) /\ (arm2set'' y s = arm2set'' y (seq k))``,
+              ?k. q (arm2set' y (seq k)) /\ (arm2set'' y s = arm2set'' y (seq k))
+Proof
   SIMP_TAC std_ss [GSYM RUN_EQ_SPEC,RUN_def,ARM_MODEL_def,STAR_def,SEP_REFINE_def]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC bool_ss [SPLIT_arm2set_EXISTS] \\ METIS_TAC [])
   \\ Q.PAT_X_ASSUM `!s r. b` (STRIP_ASSUME_TAC o UNDISCH o SPEC_ALL o
      (fn th => MATCH_MP th (UNDISCH lemma))  o Q.SPECL [`s`,`(\v. v = arm2set'' y s)`])
   \\ FULL_SIMP_TAC bool_ss [SPLIT_arm2set_EXISTS]
-  \\ IMP_RES_TAC arm2set''_11 \\ Q.EXISTS_TAC `i` \\ METIS_TAC []);
+  \\ IMP_RES_TAC arm2set''_11 \\ Q.EXISTS_TAC `i` \\ METIS_TAC []
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -332,13 +334,15 @@ Definition ARM_WRITE_STS_def:
   ARM_WRITE_STS a x s = if a IN {psrN;psrZ;psrC;psrV;psrQ} then ARM_WRITE_STATUS a x s else s
 End
 
-val ARM_WRITE_STS_INTRO = store_thm("ARM_WRITE_STS_INTRO",
-  ``(ARM_WRITE_STATUS psrN x s = ARM_WRITE_STS psrN x s) /\
+Theorem ARM_WRITE_STS_INTRO:
+    (ARM_WRITE_STATUS psrN x s = ARM_WRITE_STS psrN x s) /\
     (ARM_WRITE_STATUS psrZ x s = ARM_WRITE_STS psrZ x s) /\
     (ARM_WRITE_STATUS psrC x s = ARM_WRITE_STS psrC x s) /\
     (ARM_WRITE_STATUS psrV x s = ARM_WRITE_STS psrV x s) /\
-    (ARM_WRITE_STATUS psrQ x s = ARM_WRITE_STS psrQ x s)``,
-  SIMP_TAC std_ss [ARM_WRITE_STS_def,IN_INSERT]);
+    (ARM_WRITE_STATUS psrQ x s = ARM_WRITE_STS psrQ x s)
+Proof
+  SIMP_TAC std_ss [ARM_WRITE_STS_def,IN_INSERT]
+QED
 
 val UNDEF_OF_UPDATES = prove(
   ``(!a x. ARM_READ_UNDEF (ARM_WRITE_REG a x s) = ARM_READ_UNDEF s) /\
@@ -381,14 +385,15 @@ val UPDATE_arm2set''_GE = prove(
     MEM_OF_UPDATES,ARM_READ_WRITE,ARM_READ_UNDEF_def,ARM_OK_WRITE_GE]
 *)
 
-val UPDATE_arm2set'' = store_thm("UPDATE_arm2set''",
-  ``(!a x. a IN rs ==> (arm2set'' (rs,ms,st,cp,ud) (ARM_WRITE_REG a x s) = arm2set'' (rs,ms,st,cp,ud) s)) /\
+Theorem UPDATE_arm2set'':
+    (!a x. a IN rs ==> (arm2set'' (rs,ms,st,cp,ud) (ARM_WRITE_REG a x s) = arm2set'' (rs,ms,st,cp,ud) s)) /\
     (!a x. a IN ms ==> (arm2set'' (rs,ms,st,cp,ud) (ARM_WRITE_MEM a x s) = arm2set'' (rs,ms,st,cp,ud) s)) /\
     (!b x. b IN st ==> (arm2set'' (rs,ms,st,cp,ud) (ARM_WRITE_STS b x s) = arm2set'' (rs,ms,st,cp,ud) s)) /\
     (!a x. arm2set'' (rs,ms,st,cp,ud) (ARM_WRITE_MEM_WRITE a x s) = arm2set'' (rs,ms,st,cp,ud) s) /\
     (!a. arm2set'' (rs,ms,st,cp,ud) (ARM_WRITE_MEM_READ a s) = arm2set'' (rs,ms,st,cp,ud) s) /\
     (!x y. arm2set'' (rs,ms,st,cp,ud) (CLEAR_EXCLUSIVE_BY_ADDRESS (x,y) s) =
-           arm2set'' (rs,ms,st,cp,ud) s)``,
+           arm2set'' (rs,ms,st,cp,ud) s)
+Proof
   SIMP_TAC std_ss [arm2set_def,arm2set''_def,arm2set'_def,EXTENSION,IN_UNION,
     IN_IMAGE,IN_DIFF,IN_UNIV,NOT_IN_EMPTY,IN_INSERT,ARM_READ_WRITE,PUSH_IN_INTO_IF]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
@@ -398,7 +403,8 @@ val UPDATE_arm2set'' = store_thm("UPDATE_arm2set''",
   \\ ASM_SIMP_TAC std_ss [ARM_READ_WRITE,UNDEF_OF_UPDATES]
   \\ SIMP_TAC std_ss [ARM_WRITE_STS_def] \\ TRY (Cases_on `b IN {psrN; psrZ; psrC; psrV; psrQ}`)
   \\ FULL_SIMP_TAC std_ss [ARM_READ_WRITE,UNDEF_OF_UPDATES]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
 val ARM_SPEC_CODE =
   SPEC_CODE |> ISPEC ``ARM_MODEL``
@@ -423,15 +429,19 @@ val IMP_ARM_SPEC = save_thm("IMP_ARM_SPEC",
    SPECL [``CODE_POOL ARM_INSTR c * p'``,
           ``CODE_POOL ARM_INSTR c * q'``]) IMP_ARM_SPEC_LEMMA);
 
-val aS_HIDE = store_thm("aS_HIDE",
-  ``~aS = ~aS1 psrN * ~aS1 psrZ * ~aS1 psrC * ~aS1 psrV``,
+Theorem aS_HIDE:
+    ~aS = ~aS1 psrN * ~aS1 psrZ * ~aS1 psrC * ~aS1 psrV
+Proof
   SIMP_TAC std_ss [SEP_HIDE_def,aS_def,SEP_CLAUSES,FUN_EQ_THM]
-  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [aS_def,PAIR]);
+  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [aS_def,PAIR]
+QED
 
 val _ = wordsLib.guess_lengths();
-val BYTES_TO_WORD_LEMMA = store_thm("BYTES_TO_WORD_LEMMA",
-  ``!w. (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w``,
-  SRW_TAC [wordsLib.WORD_EXTRACT_ss] []);
+Theorem BYTES_TO_WORD_LEMMA:
+    !w. (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w
+Proof
+  SRW_TAC [wordsLib.WORD_EXTRACT_ss] []
+QED
 
 val aM_INTRO_LEMMA1 = prove(
   ``!a x0 x1 x2 x3 p.
@@ -474,9 +484,10 @@ val DELETE_aBYTE_MEMORY_SET = prove(
   SIMP_TAC std_ss [EXTENSION,IN_INSERT,aBYTE_MEMORY_SET_def,GSPECIFICATION]
   \\ REWRITE_TAC [IN_DELETE,APPLY_UPDATE_THM] \\ METIS_TAC []);
 
-val aBYTE_MEMORY_INSERT = store_thm("aBYTE_MEMORY_INSERT",
-  ``a IN df ==>
-    (aBYTE_MEMORY df ((a =+ w) g) = aM1 a w * aBYTE_MEMORY (df DELETE a) g)``,
+Theorem aBYTE_MEMORY_INSERT:
+    a IN df ==>
+    (aBYTE_MEMORY df ((a =+ w) g) = aM1 a w * aBYTE_MEMORY (df DELETE a) g)
+Proof
   SIMP_TAC std_ss [aBYTE_MEMORY_def,aM1_def,FUN_EQ_THM,EQ_STAR]
   \\ SIMP_TAC std_ss [SEP_EQ_def] \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC (GEN_ALL IN_aBYTE_MEMORY_SET)
@@ -484,15 +495,18 @@ val aBYTE_MEMORY_INSERT = store_thm("aBYTE_MEMORY_INSERT",
   \\ REWRITE_TAC [DELETE_aBYTE_MEMORY_SET,APPLY_UPDATE_THM]
   \\ REWRITE_TAC [EXTENSION,IN_INSERT,IN_DELETE]
   \\ `~(aMem a w IN aBYTE_MEMORY_SET (df DELETE a) g)` suffices_by METIS_TAC []
-  \\ SIMP_TAC std_ss [aBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,arm_el_11]);
+  \\ SIMP_TAC std_ss [aBYTE_MEMORY_SET_def,GSPECIFICATION,IN_DELETE,arm_el_11]
+QED
 
-val aBYTE_MEMORY_INTRO = store_thm("aBYTE_MEMORY_INTRO",
-  ``SPEC m (aM1 a v * P) c (aM1 a w * Q) ==>
+Theorem aBYTE_MEMORY_INTRO:
+    SPEC m (aM1 a v * P) c (aM1 a w * Q) ==>
     a IN df ==>
-    SPEC m (aBYTE_MEMORY df ((a =+ v) f) * P) c (aBYTE_MEMORY df ((a =+ w) f) * Q)``,
+    SPEC m (aBYTE_MEMORY df ((a =+ v) f) * P) c (aBYTE_MEMORY df ((a =+ w) f) * Q)
+Proof
   ONCE_REWRITE_TAC [STAR_COMM]
   \\ SIMP_TAC std_ss [aBYTE_MEMORY_INSERT,STAR_ASSOC]
-  \\ METIS_TAC [SPEC_FRAME]);
+  \\ METIS_TAC [SPEC_FRAME]
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -533,9 +547,11 @@ val WRITE32_THM = store_thm("WRITE32_THM",
        RW [WORD_ADD_0] (Q.SPECL [`w`,`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11]);
 *)
 
-val aMEM_WRITE_BYTE = store_thm("aMEM_WRITE_BYTE",
-  ``!a:word32 w:word8. ((a =+ w) (\x. m ' x) = (\x. (m |+ (a,w)) ' x))``,
-  SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,APPLY_UPDATE_THM,FUN_EQ_THM] \\ SRW_TAC [] []);
+Theorem aMEM_WRITE_BYTE:
+    !a:word32 w:word8. ((a =+ w) (\x. m ' x) = (\x. (m |+ (a,w)) ' x))
+Proof
+  SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,APPLY_UPDATE_THM,FUN_EQ_THM] \\ SRW_TAC [] []
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -568,8 +584,9 @@ val aMEMORY_ARITH_LEMMA = prove(
   SIMP_TAC (std_ss++wordsLib.SIZES_ss) [WORD_EQ_ADD_LCANCEL,n2w_11,
     RW [WORD_ADD_0] (Q.SPECL [`x`,`0w`] WORD_EQ_ADD_LCANCEL)]);
 
-val aM_THM = store_thm("aM_THM",
-  ``!a f w. ALIGNED a ==> (aMEMORY {a} ((a =+ w) f) = aM a w)``,
+Theorem aM_THM:
+    !a f w. ALIGNED a ==> (aMEMORY {a} ((a =+ w) f) = aM a w)
+Proof
   SIMP_TAC std_ss [aMEMORY_def,aMEMORY_SET_SING,aM_def] \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [FUN_EQ_THM]
   \\ SIMP_TAC std_ss [aM1_def,EQ_STAR,GSYM STAR_ASSOC,APPLY_UPDATE_THM]
@@ -582,7 +599,8 @@ val aM_THM = store_thm("aM_THM",
   \\ Cases_on `aMem (a + 3w) (((7 >< 0) (w >> 24))) IN x` THEN1 METIS_TAC []
   \\ Cases_on `aMem (a + 2w) (((7 >< 0) (w >> 16))) IN x` THEN1 METIS_TAC []
   \\ Cases_on `aMem (a + 1w) (((7 >< 0) (w >> 8))) IN x` THEN1 METIS_TAC []
-  \\ ASM_SIMP_TAC std_ss []);
+  \\ ASM_SIMP_TAC std_ss []
+QED
 
 val aMEMORY_INSERT_LEMMA = prove(
   ``!s. ALIGNED a /\ ~(a IN s) ==>
@@ -619,10 +637,11 @@ val aMEMORY_INSERT_LEMMA = prove(
 val aMEMORY_INSERT = save_thm("aMEMORY_INSERT",
   SIMP_RULE std_ss [aM_THM] aMEMORY_INSERT_LEMMA);
 
-val aMEMORY_INTRO = store_thm("aMEMORY_INTRO",
-  ``SPEC ARM_MODEL (aM a v * P) c (aM a w * Q) ==>
+Theorem aMEMORY_INTRO:
+    SPEC ARM_MODEL (aM a v * P) c (aM a w * Q) ==>
     ALIGNED a /\ a IN df ==>
-    SPEC ARM_MODEL (aMEMORY df ((a =+ v) f) * P) c (aMEMORY df ((a =+ w) f) * Q)``,
+    SPEC ARM_MODEL (aMEMORY df ((a =+ v) f) * P) c (aMEMORY df ((a =+ w) f) * Q)
+Proof
   REPEAT STRIP_TAC
   \\ (IMP_RES_TAC o GEN_ALL o REWRITE_RULE [AND_IMP_INTRO] o
      SIMP_RULE std_ss [INSERT_DELETE,IN_DELETE] o
@@ -630,15 +649,17 @@ val aMEMORY_INTRO = store_thm("aMEMORY_INTRO",
   \\ ASM_REWRITE_TAC [] \\ ASM_SIMP_TAC bool_ss [aM_THM]
   \\ ONCE_REWRITE_TAC [STAR_COMM] \\ REWRITE_TAC [STAR_ASSOC]
   \\ MATCH_MP_TAC SPEC_FRAME
-  \\ FULL_SIMP_TAC bool_ss [AC STAR_COMM STAR_ASSOC]);
+  \\ FULL_SIMP_TAC bool_ss [AC STAR_COMM STAR_ASSOC]
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
 (* Extra                                                                         *)
 (* ----------------------------------------------------------------------------- *)
 
-val aligned4_thm = store_thm("aligned4_thm",
-  ``!a. aligned (a,4) = ALIGNED a``,
+Theorem aligned4_thm:
+    !a. aligned (a,4) = ALIGNED a
+Proof
   Cases \\ ASM_SIMP_TAC std_ss [arm_coretypesTheory.aligned_def,
       arm_coretypesTheory.align_def,w2n_n2w,ALIGNED_n2w,n2w_11]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []
@@ -646,10 +667,12 @@ val aligned4_thm = store_thm("aligned4_thm",
       RW1 [arithmeticTheory.MULT_COMM] o MATCH_MP arithmeticTheory.DIVISION) (DECIDE ``0 < 4:num``)
   \\ Cases_on `n MOD 4 = 0` \\ FULL_SIMP_TAC std_ss []
   \\ `(4 * (n DIV 4)) < 4294967296` by DECIDE_TAC
-  \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC);
+  \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC
+QED
 
-val aligned2_thm = store_thm("aligned2_thm",
-  ``!a:word32. aligned (a,2) = (a && 1w = 0w)``,
+Theorem aligned2_thm:
+    !a:word32. aligned (a,2) = (a && 1w = 0w)
+Proof
   Cases \\ ASM_SIMP_TAC std_ss [arm_coretypesTheory.aligned_def,
       arm_coretypesTheory.align_def,w2n_n2w,n2w_and_1,n2w_11]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) []
@@ -661,7 +684,8 @@ val aligned2_thm = store_thm("aligned2_thm",
   \\ `n MOD 2 < 2` by METIS_TAC [arithmeticTheory.MOD_LESS]
   \\ `n MOD 2 < 4294967296` by DECIDE_TAC
   \\ ASM_SIMP_TAC std_ss []
-  \\ DECIDE_TAC);
+  \\ DECIDE_TAC
+QED
 
 val ADD_WITH_CARRY_SUB_n2w = save_thm("ADD_WITH_CARRY_SUB_n2w",
   ((RAND_CONV o RAND_CONV o RATOR_CONV o RAND_CONV)
@@ -677,13 +701,14 @@ val UPDATE_FCP = prove(
   \\ ONCE_REWRITE_TAC [fcpTheory.FCP_APPLY_UPDATE_THM]
   \\ SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA] \\ METIS_TAC []);
 
-val ARM_READ_MASKED_CPSR_INTRO = store_thm("ARM_READ_MASKED_CPSR_INTRO",
-  ``encode_psr (ARM_READ_CPSR s) =
+Theorem ARM_READ_MASKED_CPSR_INTRO:
+    encode_psr (ARM_READ_CPSR s) =
      (31 :+ ARM_READ_STATUS psrN s)
     ((30 :+ ARM_READ_STATUS psrZ s)
     ((29 :+ ARM_READ_STATUS psrC s)
     ((28 :+ ARM_READ_STATUS psrV s)
-    ((27 :+ ARM_READ_STATUS psrQ s) (ARM_READ_MASKED_CPSR s)))))``,
+    ((27 :+ ARM_READ_STATUS psrQ s) (ARM_READ_MASKED_CPSR s)))))
+Proof
   SIMP_TAC std_ss [ARM_READ_CPSR_def,ARM_READ_MASKED_CPSR_THM,UPDATE_FCP,encode_psr_def]
   \\ SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA]
   \\ SIMP_TAC std_ss [ARM_READ_STATUS_def,ARM_READ_CPSR_def]
@@ -694,15 +719,18 @@ val ARM_READ_MASKED_CPSR_INTRO = store_thm("ARM_READ_MASKED_CPSR_INTRO",
   \\ Cases_on `i = 28` \\ ASM_SIMP_TAC std_ss []
   \\ Cases_on `i = 27` \\ ASM_SIMP_TAC std_ss []
   \\ Cases_on `i < 27` \\ ASM_SIMP_TAC std_ss []
-  \\ `F` by DECIDE_TAC);
+  \\ `F` by DECIDE_TAC
+QED
 
-val FCP_UPDATE_WORD_AND = store_thm("FCP_UPDATE_WORD_AND",
-  ``((j :+ b) w) && v = (j :+ v ' j /\ b) (w && ((j :+ F) v))``,
+Theorem FCP_UPDATE_WORD_AND:
+    ((j :+ b) w) && v = (j :+ v ' j /\ b) (w && ((j :+ F) v))
+Proof
   SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_and_def]
   \\ ONCE_REWRITE_TAC [fcpTheory.FCP_APPLY_UPDATE_THM]
   \\ SIMP_TAC std_ss [fcpTheory.FCP_BETA]
   \\ ONCE_REWRITE_TAC [fcpTheory.FCP_APPLY_UPDATE_THM]
-  \\ SIMP_TAC std_ss [fcpTheory.FCP_BETA] \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [fcpTheory.FCP_BETA] \\ METIS_TAC []
+QED
 
 
 (* Stack --- sp points at top of stack, stack grows towards smaller addresses *)
@@ -729,14 +757,16 @@ val SEP_HIDE_ARRAY_SUC = prove(
   \\ Q.EXISTS_TAC `x'::xs`
   \\ FULL_SIMP_TAC std_ss [LENGTH,SEP_ARRAY_def,cond_STAR,STAR_ASSOC]);
 
-val SEP_EXISTS_aSTACK = store_thm("SEP_EXISTS_aSTACK",
-  ``((SEP_EXISTS x. p x * q) = (SEP_EXISTS x. p x) * q) /\
+Theorem SEP_EXISTS_aSTACK:
+    ((SEP_EXISTS x. p x * q) = (SEP_EXISTS x. p x) * q) /\
     ((SEP_EXISTS x. q * p x) = q * (SEP_EXISTS x. p x)) /\
-    ((SEP_EXISTS x. aSTACK a n (x::xs)) = aSTACK (a + 4w) (n + 1) xs)``,
+    ((SEP_EXISTS x. aSTACK a n (x::xs)) = aSTACK (a + 4w) (n + 1) xs)
+Proof
   SIMP_TAC std_ss [SEP_CLAUSES,aSTACK_def,GSYM ADD1,ALIGNED,
       SEP_HIDE_ARRAY_SUC,SEP_ARRAY_def,WORD_ADD_SUB]
   THEN SIMP_TAC std_ss [SEP_CLAUSES,SEP_HIDE_def,STAR_ASSOC,GSYM word_sub_def]
-  THEN SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
+  THEN SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -771,8 +801,8 @@ val WRITE32_blast_lemma = blastLib.BBLAST_PROVE
     (((23 >< 16) (w:word32)) = (w2w (w >>> 16)):word8) /\
     (((31 >< 24) (w:word32)) = (w2w (w >>> 24)):word8)``
 
-val WRITE32_THM = store_thm("WRITE32_THM",
-  ``!a w.
+Theorem WRITE32_THM:
+    !a w.
      (((a      =+ (( 7 ><  0) w):word8)
       ((a + 1w =+ ((15 ><  8) w):word8)
       ((a + 2w =+ ((23 >< 16) w):word8)
@@ -780,8 +810,10 @@ val WRITE32_THM = store_thm("WRITE32_THM",
      (((a + 3w =+ ((31 >< 24) w):word8)
       ((a + 2w =+ ((23 >< 16) w):word8)
       ((a + 1w =+ ((15 ><  8) w):word8)
-      ((a      =+ (( 7 ><  0) w):word8) m)))) = WRITE32 a w m)``,
+      ((a      =+ (( 7 ><  0) w):word8) m)))) = WRITE32 a w m)
+Proof
   SIMP_TAC std_ss [GSYM WRITE32_blast_lemma,WRITE32_def,APPLY_UPDATE_THM,FUN_EQ_THM]
   \\ SRW_TAC [] [] \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_LCANCEL,
        RW [WORD_ADD_0] (Q.SPECL [`w`,`0w`] WORD_EQ_ADD_LCANCEL),
-       RW [WORD_ADD_0] (Q.SPECL [`w`,`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11]);
+       RW [WORD_ADD_0] (Q.SPECL [`w`,`v`,`0w`] WORD_EQ_ADD_LCANCEL),n2w_11]
+QED

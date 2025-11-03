@@ -34,10 +34,11 @@ val primrec_ndrop = Store_thm(
   SRW_TAC [][primrec_rules] THEN
   Induct_on `m` THEN SRW_TAC [][]);
 
-val ndrop_FUNPOW_ntl = store_thm(
-  "ndrop_FUNPOW_ntl",
-  ``∀n ms. ndrop n ms = FUNPOW ntl n ms``,
-  Induct THEN SRW_TAC [][FUNPOW_SUC]);
+Theorem ndrop_FUNPOW_ntl:
+    ∀n ms. ndrop n ms = FUNPOW ntl n ms
+Proof
+  Induct THEN SRW_TAC [][FUNPOW_SUC]
+QED
 
 val primrec_nel = Store_thm(
   "primrec_nel",

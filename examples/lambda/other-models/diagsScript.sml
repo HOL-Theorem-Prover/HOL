@@ -35,12 +35,12 @@ End
 
 (* Some example diagrams *)
 
-val diamond_eval = store_thm(
-  "diamond_eval",
-  ``eval {(0,0,1,T,Atomic); (0,0,2,T,Atomic)}
+Theorem diamond_eval:
+    eval {(0,0,1,T,Atomic); (0,0,2,T,Atomic)}
          {(0,INL 1,INR 0,T,Atomic); (0,INL 2,INR 0,T,Atomic)}
          R
-     = diamond (R 0)``,
+     = diamond (R 0)
+Proof
   SRW_TAC [DNF_ss] [diamond_def, eval_def, EQ_IMP_THM, liftrel_def] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x
                                     else if n = 1 then y
@@ -49,21 +49,23 @@ val diamond_eval = store_thm(
     SRW_TAC [DNF_ss][] THEN METIS_TAC [],
     `?u. R 0 (f 1) u /\ R 0 (f 2) u` by METIS_TAC [] THEN
     Q.EXISTS_TAC `K u` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val totality_eval = store_thm(
-  "totality_eval",
-  ``eval {} {(0, INL 0, INL 1, T, Atomic)} R = !x y. R 0 x y``,
+Theorem totality_eval:
+    eval {} {(0, INL 0, INL 1, T, Atomic)} R = !x y. R 0 x y
+Proof
   SRW_TAC [DNF_ss][eval_def, EQ_IMP_THM, liftrel_def] THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `\i. if i = 0 then x else y` MP_TAC) THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val lopsided_TC_diamond = store_thm(
-  "lopsided_TC_diamond",
-  ``eval {(0,0,1,T,Atomic); (0,0,2,T,TC)}
+Theorem lopsided_TC_diamond:
+    eval {(0,0,1,T,Atomic); (0,0,2,T,TC)}
          {(0,INL 1,INR 0,T,TC); (0,INL 2,INR 0,T,TC)} R =
     !x y z. R 0 x y /\ TC (R 0) x z ==>
-            ?u. TC (R 0) y u /\ TC (R 0) z u``,
+            ?u. TC (R 0) y u /\ TC (R 0) z u
+Proof
   SRW_TAC [DNF_ss][eval_def, EQ_IMP_THM, liftrel_def] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x
                                     else if n = 1 then y
@@ -72,61 +74,66 @@ val lopsided_TC_diamond = store_thm(
     SRW_TAC [DNF_ss][] THEN METIS_TAC [],
     `?u. TC (R 0) (f 1) u /\ TC (R 0) (f 2) u` by METIS_TAC [] THEN
     Q.EXISTS_TAC `K u` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val sequentialisation_eval = store_thm(
-  "sequentialisation_eval",
-  ``eval {(0,0,1,T,Atomic)}
+Theorem sequentialisation_eval:
+    eval {(0,0,1,T,Atomic)}
          {(1,INL 0,INR 0,T,Atomic); (2,INR 0,INL 1,T,Atomic)}
          R =
-    (!x y. R 0 x y ==> ?z. R 1 x z /\ R 2 z y)``,
+    (!x y. R 0 x y ==> ?z. R 1 x z /\ R 2 z y)
+Proof
   SRW_TAC [DNF_ss][eval_def, EQ_IMP_THM,liftrel_def] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x else y` MP_TAC) THEN
     SRW_TAC [DNF_ss][] THEN METIS_TAC [],
     `?z. R 1 (f 0) z /\ R 2 z (f 1)` by METIS_TAC [] THEN
     Q.EXISTS_TAC `K z` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
 val only_black_eq_T = prove(
   ``eval Fa {} R' = T``,
   SRW_TAC [DNF_ss][eval_def]);
 
-val relationally_reflected = store_thm(
-  "relationally_reflected",
-  ``eval {(0,0,1,T,Atomic)}
+Theorem relationally_reflected:
+    eval {(0,0,1,T,Atomic)}
          {(1,INR 0,INL 0,T,Atomic); (1,INR 1,INL 1,T,Atomic);
           (2,INR 0,INR 1,T,Atomic)}
          R =
-    (!x y. R 0 x y ==> ?u v. R 1 u x /\ R 1 v y /\ R 2 u v)``,
+    (!x y. R 0 x y ==> ?u v. R 1 u x /\ R 1 v y /\ R 2 u v)
+Proof
   SRW_TAC [DNF_ss][eval_def, EQ_IMP_THM, liftrel_def] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x else y` MP_TAC) THEN
     SRW_TAC [DNF_ss][] THEN METIS_TAC [],
     `?u v. R 1 u (f 0) /\ R 1 v (f 1) /\ R 2 u v` by METIS_TAC [] THEN
     Q.EXISTS_TAC `\n. if n = 0 then u else v` THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val no_1step_join = store_thm(
-  "no_1step_join",
-  ``eval {(0,0,1,T,Atomic); (0,0,2,T,Atomic)}
+Theorem no_1step_join:
+    eval {(0,0,1,T,Atomic); (0,0,2,T,Atomic)}
          {(0,INL 1,INL 2,F,Atomic)} R =
-    (!x y z. R 0 x y /\ R 0 x z ==> ~R 0 y z)``,
+    (!x y z. R 0 x y /\ R 0 x z ==> ~R 0 y z)
+Proof
   SRW_TAC [DNF_ss][eval_def, EQ_IMP_THM, liftrel_def] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x
                                     else if n = 1 then y else z` MP_TAC) THEN
     SRW_TAC [DNF_ss][],
     METIS_TAC []
-  ]);
+  ]
+QED
 
-val no_terminal_object = store_thm(
-  "no_terminal_object",
-  ``eval {} {(0,INR 0,INL 0,F,Atomic)} R  = !y. ?x. ~R 0 x y``,
+Theorem no_terminal_object:
+    eval {} {(0,INR 0,INL 0,F,Atomic)} R  = !y. ?x. ~R 0 x y
+Proof
   SRW_TAC [DNF_ss][eval_def, EQ_IMP_THM, liftrel_def] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `\n. y` MP_TAC) THEN SRW_TAC [][] THEN
     METIS_TAC [],
     `?u. ~R 0 u (f 0)` by METIS_TAC [] THEN
     Q.EXISTS_TAC `\n. u` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -150,29 +157,31 @@ Definition R0_refl_def:
   R0_refl = Lf {} {(0,INL 0,INL 0,T,Atomic)}
 End
 
-val R0_refl_thm = store_thm(
-  "R0_refl_thm",
-  ``evalform R0_refl R = !x. R 0 x x``,
-  SRW_TAC [][evalform_def, eval_def, R0_refl_def, liftrel_def, EQ_IMP_THM])
+Theorem R0_refl_thm:
+    evalform R0_refl R = !x. R 0 x x
+Proof
+  SRW_TAC [][evalform_def, eval_def, R0_refl_def, liftrel_def, EQ_IMP_THM]
+QED
 
 Definition R0_sym_def:
   R0_sym = Lf {(0,0,1,T,Atomic)} {(0,INL 1, INL 0,T,Atomic)}
 End
 
-val R0_sym_thm = store_thm(
-  "R0_sym_thm",
-  ``evalform R0_sym R = !x y. R 0 x y ==> R 0 y x``,
+Theorem R0_sym_thm:
+    evalform R0_sym R = !x y. R 0 x y ==> R 0 y x
+Proof
   SRW_TAC [][evalform_def, eval_def, R0_sym_def, liftrel_def, EQ_IMP_THM] THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `\n. if n = 0 then x else y` MP_TAC) THEN
-  SRW_TAC [][])
+  SRW_TAC [][]
+QED
 
 Definition R0_trans_def:
   R0_trans = Lf {(0,0,1,T,Atomic); (0,1,2,T,Atomic)}
                 {(0,INL 0, INL 2,T,Atomic)}
 End
-val R0_trans_thm = store_thm(
- "R0_trans_thm",
-  ``evalform R0_trans R = !x y z. R 0 x y /\ R 0 y z ==> R 0 x z``,
+Theorem R0_trans_thm:
+    evalform R0_trans R = !x y z. R 0 x y /\ R 0 y z ==> R 0 x z
+Proof
   SRW_TAC [][evalform_def, eval_def, R0_trans_def, liftrel_def,
              EQ_IMP_THM, DISJ_IMP_THM, FORALL_AND_THM]
   THENL [
@@ -181,7 +190,8 @@ val R0_trans_thm = store_thm(
                                     else z` MP_TAC) THEN
     SRW_TAC [][],
     METIS_TAC []
-  ]);
+  ]
+QED
 
 
 Definition R0_cong_def:
@@ -190,10 +200,10 @@ Definition R0_cong_def:
                 Lf {(0,1,2,T,Atomic); (n,0,1,T,Atomic)}
                    {(n,INL 0, INL 2,T,Atomic)}
 End
-val R0_cong_thm = store_thm(
-  "R0_cong_thm",
-  ``evalform (R0_cong n) R <=> (!x y z. R 0 x y /\ R n x z ==> R n y z) /\
-                               (!x y z. R n x y /\ R 0 y z ==> R n x z)``,
+Theorem R0_cong_thm:
+    evalform (R0_cong n) R <=> (!x y z. R 0 x y /\ R n x z ==> R n y z) /\
+                               (!x y z. R n x y /\ R 0 y z ==> R n x z)
+Proof
   SRW_TAC [][evalform_def, eval_def, R0_cong_def, liftrel_def,
              EQ_IMP_THM, DISJ_IMP_THM, FORALL_AND_THM]
   THENL [
@@ -207,27 +217,31 @@ val R0_cong_thm = store_thm(
        SRW_TAC [][] THEN NO_TAC),
     METIS_TAC [],
     METIS_TAC []
-  ]);
+  ]
+QED
 
 Definition imp_def:
   (f1:('a,'b,'c)diaform) ==> f2 <=> ~(f1 /\ ~f2)
 End
-val imp_thm = store_thm(
-  "imp_thm",
-  ``evalform (f ==> g) R <=> evalform f R ==> evalform g R``,
-  SRW_TAC [][imp_def, evalform_def] THEN METIS_TAC []);
+Theorem imp_thm:
+    evalform (f ==> g) R <=> evalform f R ==> evalform g R
+Proof
+  SRW_TAC [][imp_def, evalform_def] THEN METIS_TAC []
+QED
 
 
-val R0_refl_cong_sym = store_thm(
-  "R0_refl_cong_sym",
-  ``evalform (R0_cong 0 /\ R0_refl ==> R0_sym) R``,
+Theorem R0_refl_cong_sym:
+    evalform (R0_cong 0 /\ R0_refl ==> R0_sym) R
+Proof
   SRW_TAC [][imp_thm, R0_cong_thm, evalform_def, R0_refl_thm, R0_sym_thm] THEN
-  METIS_TAC [])
+  METIS_TAC []
+QED
 
-val R0_cong_trans = store_thm(
-  "R0_cong_trans",
-  ``evalform (R0_cong 0 ==> R0_trans) R``,
-  METIS_TAC [imp_thm, R0_cong_thm, R0_trans_thm])
+Theorem R0_cong_trans:
+    evalform (R0_cong 0 ==> R0_trans) R
+Proof
+  METIS_TAC [imp_thm, R0_cong_thm, R0_trans_thm]
+QED
 
 (* ----------------------------------------------------------------------
     Theory of diagram equivalence
@@ -264,15 +278,16 @@ Definition ofree_def:
   ofree s = !x y. EQC s x y ==> RTC s x y
 End
 
-val presrefl_atomic = store_thm(
-  "presrefl_atomic",
-  ``Pres f R1 R2 /\ aRefl f R1 R2 ==> !x y. R1 x y = R2 (f x) (f y)``,
-  SRW_TAC [][Pres_def, aRefl_def] THEN METIS_TAC []);
+Theorem presrefl_atomic:
+    Pres f R1 R2 /\ aRefl f R1 R2 ==> !x y. R1 x y = R2 (f x) (f y)
+Proof
+  SRW_TAC [][Pres_def, aRefl_def] THEN METIS_TAC []
+QED
 
-val presrefl_TC = store_thm(
-  "presrefl_TC",
-  ``onto f /\ Pres f R1 R2 /\ aRefl f R1 R2 ==>
-    (!x y. TC R1 x y = TC R2 (f x) (f y))``,
+Theorem presrefl_TC:
+    onto f /\ Pres f R1 R2 /\ aRefl f R1 R2 ==>
+    (!x y. TC R1 x y = TC R2 (f x) (f y))
+Proof
   SIMP_TAC (srw_ss()) [onto_def] THEN STRIP_TAC THEN
   `!x y. R1 x y = R2 (f x) (f y)` by METIS_TAC [presrefl_atomic] THEN
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM] THEN CONJ_TAC THENL [
@@ -286,32 +301,35 @@ val presrefl_TC = store_thm(
       `?a0. f a0 = a'` by METIS_TAC [] THEN
       METIS_TAC [TC_RULES]
     ]
-  ]);
+  ]
+QED
 
-val presrefl_liftrel = store_thm(
-  "presrefl_liftrel",
-  ``onto f /\ Pres f R1 R2 /\ aRefl f R1 R2 ==>
-    !x y b ty. liftrel b ty R1 x y = liftrel b ty R2 (f x) (f y)``,
+Theorem presrefl_liftrel:
+    onto f /\ Pres f R1 R2 /\ aRefl f R1 R2 ==>
+    !x y b ty. liftrel b ty R1 x y = liftrel b ty R2 (f x) (f y)
+Proof
   SRW_TAC [][liftrel_def] THEN
-  Cases_on `ty` THEN SRW_TAC [][presrefl_TC, presrefl_atomic]);
+  Cases_on `ty` THEN SRW_TAC [][presrefl_TC, presrefl_atomic]
+QED
 
-val aRefl_TC = store_thm(
-  "aRefl_TC",
-  ``aRefl f R1 R2 /\ onto f ==> aRefl f (TC R1) (TC R2)``,
+Theorem aRefl_TC:
+    aRefl f R1 R2 /\ onto f ==> aRefl f (TC R1) (TC R2)
+Proof
   SIMP_TAC (srw_ss()) [aRefl_def, onto_def] THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!a b. TC R2 a b ==> !x y. (a = f x) /\ (b = f y) ==>
                                             TC R1 x y`
         THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC TC_INDUCT THEN SRW_TAC [][] THEN
-  METIS_TAC [TC_RULES]);
+  METIS_TAC [TC_RULES]
+QED
 
 
 (* important theorem *)
-val diagram_preservation = store_thm(
-  "diagram_preservation",
-  ``!R1 R2 h.
+Theorem diagram_preservation:
+    !R1 R2 h.
        onto h /\ (!n. Pres h (R1 n) (R2 n) /\ aRefl h (R1 n) (R2 n)) ==>
-       !Fa G. eval Fa G R1 = eval Fa G R2``,
+       !Fa G. eval Fa G R1 = eval Fa G R2
+Proof
   REPEAT STRIP_TAC THEN
   `!n a1 a2 b ty. liftrel b ty (R1 n) a1 a2 =
                   liftrel b ty (R2 n) (h a1) (h a2)`
@@ -325,27 +343,29 @@ val diagram_preservation = store_thm(
     FIRST_X_ASSUM (MP_TAC o SPEC ``(h : 'b -> 'c) o (f : 'd -> 'b)``) THEN
     SRW_TAC [][] THEN
     Q.EXISTS_TAC `invh o g` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
 (* can prove that diagram formulas are also preserved *)
-val diaform_preservation = store_thm(
-  "diaform_preservation",
-  ``!R1 R2 h.
+Theorem diaform_preservation:
+    !R1 R2 h.
        onto h /\ (!n. Pres h (R1 n) (R2 n) /\ aRefl h (R1 n) (R2 n)) ==>
-       !f. evalform f R1 = evalform f R2``,
+       !f. evalform f R1 = evalform f R2
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Induct THEN SRW_TAC [][evalform_def] THEN
-  METIS_TAC [diagram_preservation])
+  METIS_TAC [diagram_preservation]
+QED
 
 (* but aRefl is a strong requirement to make of a homomorphism...
      (some might argue that onto is as well)
    so let's try to weaken aRefl to sRefl.  We can do so by adding
    structure *)
 
-val Refl_is_someany_with_structure = store_thm(
-  "Refl_is_someany_with_structure",
-  ``kSound s f /\ kCompl s f /\ onto f ==>
-    (sRefl f R1 R2 = aRefl f (EQC s O R1 O EQC s) R2)``,
+Theorem Refl_is_someany_with_structure:
+    kSound s f /\ kCompl s f /\ onto f ==>
+    (sRefl f R1 R2 = aRefl f (EQC s O R1 O EQC s) R2)
+Proof
   SRW_TAC [][EQ_IMP_THM, kSound_def, kCompl_def, onto_def, sRefl_def,
              aRefl_def]
   THENL [
@@ -356,15 +376,17 @@ val Refl_is_someany_with_structure = store_thm(
     Q_TAC SUFF_TAC `!x y. EQC s x y ==> (f x = f y)`
           THEN1 METIS_TAC [] THEN
     HO_MATCH_MP_TAC EQC_INDUCTION THEN METIS_TAC []
-  ]);
+  ]
+QED
 
-val Pres_ok_with_structure = store_thm(
-  "Pres_ok_with_structure",
-  ``kSound s f /\ Pres f R1 R2 ==> Pres f (EQC s O R1 O EQC s) R2``,
+Theorem Pres_ok_with_structure:
+    kSound s f /\ Pres f R1 R2 ==> Pres f (EQC s O R1 O EQC s) R2
+Proof
   SRW_TAC [][Pres_def, kSound_def, O_DEF] THEN
   Q_TAC SUFF_TAC `!x y. EQC s x y ==> (f x = f y)` THEN1
         METIS_TAC [] THEN
-  HO_MATCH_MP_TAC EQC_INDUCTION THEN METIS_TAC []);
+  HO_MATCH_MP_TAC EQC_INDUCTION THEN METIS_TAC []
+QED
 
 
 (* pre-order reduction *)
@@ -372,11 +394,11 @@ val Pres_ok_with_structure = store_thm(
 (* paper's name for this theorem is
      "Pre-ordered structural reflection is some/any"
 *)
-val note_lemma9 = store_thm(
-  "note_lemma9",
-  ``onto f  /\ kCompl s f /\ ofree s ==>
+Theorem note_lemma9:
+    onto f  /\ kCompl s f /\ ofree s ==>
     (sRefl f (RTC (x RUNION s)) (RTC y) =
-     aRefl f (RTC (x RUNION s)) (RTC y))``,
+     aRefl f (RTC (x RUNION s)) (RTC y))
+Proof
   SIMP_TAC (srw_ss()) [onto_def, kCompl_def, ofree_def, sRefl_def,
                        aRefl_def] THEN STRIP_TAC THEN EQ_TAC
   THENL [
@@ -388,15 +410,16 @@ val note_lemma9 = store_thm(
        by METIS_TAC [RUNION_RTC_MONOTONE, RUNION_COMM] THEN
     METIS_TAC [RTC_RTC],
     METIS_TAC []
-  ]);
+  ]
+QED
 
 (* paper's name for this theorem is
      "Some-Reflection is Structurally Pre-ordered"
 *)
-val note_prop10_1 = store_thm(
-  "note_prop10_1",
-  ``onto f /\ kCompl s f /\ ofree s /\ sRefl f x y ==>
-    sRefl f (RTC (x RUNION s)) (RTC y)``,
+Theorem note_prop10_1:
+    onto f /\ kCompl s f /\ ofree s /\ sRefl f x y ==>
+    sRefl f (RTC (x RUNION s)) (RTC y)
+Proof
   SIMP_TAC (srw_ss()) [sRefl_def, onto_def, ofree_def, kCompl_def] THEN
   STRIP_TAC THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN CONJ_TAC THENL [
@@ -409,13 +432,15 @@ val note_prop10_1 = store_thm(
     `RTC (x RUNION s) a0 a1'` by METIS_TAC [RUNION_RTC_MONOTONE,
                                             RTC_RULES] THEN
     METIS_TAC [RTC_RTC]
-  ]);
+  ]
+QED
 
 (* "structural pre-ordered preservation" *)
-val Pres_structure_RTC = store_thm(
-  "Pres_structure_RTC",
-  ``Pres f R1 R2 /\ kSound s f ==>
-    Pres f (RTC (R1 RUNION s)) (RTC R2)``,
+Theorem Pres_structure_RTC:
+    Pres f R1 R2 /\ kSound s f ==>
+    Pres f (RTC (R1 RUNION s)) (RTC R2)
+Proof
   SIMP_TAC (srw_ss()) [Pres_def, kSound_def] THEN STRIP_TAC THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][RTC_RULES, RUNION] THEN
-  METIS_TAC [RTC_RULES]);
+  METIS_TAC [RTC_RULES]
+QED

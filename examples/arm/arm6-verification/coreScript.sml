@@ -1254,16 +1254,22 @@ End
 (* Basic Theorems ---------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val STATE_ARM6_THM = store_thm("STATE_ARM6_THM",
-  `IMAP ARM6_SPEC INIT_ARM6 NEXT_ARM6 OUT_ARM6`,
-  RW_TAC (std_ss++boolSimps.LET_ss) [ARM6_SPEC_def,STATE_ARM6_def,IMAP_def]);
+Theorem STATE_ARM6_THM:
+   IMAP ARM6_SPEC INIT_ARM6 NEXT_ARM6 OUT_ARM6
+Proof
+  RW_TAC (std_ss++boolSimps.LET_ss) [ARM6_SPEC_def,STATE_ARM6_def,IMAP_def]
+QED
 
-val STATE_ARM6_IMAP_INIT = store_thm("STATE_ARM6_IMAP_INIT",
-  `IS_IMAP_INIT ARM6_SPEC INIT_ARM6`,
-  PROVE_TAC [STATE_ARM6_THM,IS_IMAP_INIT_def]);
+Theorem STATE_ARM6_IMAP_INIT:
+   IS_IMAP_INIT ARM6_SPEC INIT_ARM6
+Proof
+  PROVE_TAC [STATE_ARM6_THM,IS_IMAP_INIT_def]
+QED
 
-val STATE_ARM6_IMAP = store_thm("STATE_ARM6_IMAP",
-  `IS_IMAP ARM6_SPEC`, PROVE_TAC [STATE_ARM6_THM,IS_IMAP_def]);
+Theorem STATE_ARM6_IMAP:
+   IS_IMAP ARM6_SPEC
+Proof PROVE_TAC [STATE_ARM6_THM,IS_IMAP_def]
+QED
 
 val ARM6_SPEC_STATE = save_thm("ARM6_SPEC_STATE",
   (SIMP_CONV (srw_ss()++boolSimps.LET_ss) [ARM6_SPEC_def])

@@ -94,10 +94,11 @@ val {tpm_thm, term_REP_tpm, t_pmact_t, tpm_t} =
                          cons_info = cons_info, newty = newty,
                          genind_term_REP = genind_term_REP}
 
-val ltpm_eqr = store_thm(
-  "ltpm_eqr",
-  “(t = ltpm pi u) = (ltpm (REVERSE pi) t = u)”,
-  METIS_TAC [pmact_inverse]);
+Theorem ltpm_eqr:
+   (t = ltpm pi u) = (ltpm (REVERSE pi) t = u)
+Proof
+  METIS_TAC [pmact_inverse]
+QED
 
 (* support *)
 (* support *)
@@ -295,17 +296,18 @@ val simple_induction = save_thm(
            |> SIMP_RULE bool_ss [FINITE_EMPTY, NOT_IN_EMPTY]
            |> GEN “P:lterm -> bool”)
 
-val lterm_bvc_induction = store_thm(
-  "lterm_bvc_induction",
-  “!P X. FINITE X /\
+Theorem lterm_bvc_induction:
+   !P X. FINITE X /\
           (!s. P (VAR s)) /\
           (!M N. P M /\ P N ==> P (APP M N)) /\
           (!v M. ~(v IN X) /\ P M ==> P (LAM v M)) /\
           (!n v M N. ~(v IN X) /\ ~(v IN FV N) /\ P M /\ P N ==>
                      P (LAMi n v M N)) ==>
-          !t. P t”,
+          !t. P t
+Proof
   rpt gen_tac >> strip_tac >> ho_match_mp_tac (mkX_ind term_ind) >>
-  qexists_tac ‘X’ >> srw_tac [][]);
+  qexists_tac ‘X’ >> srw_tac [][]
+QED
 
 Theorem FV_tpm[simp] =
   “x ∈ FV (ltpm p lt)”
@@ -341,19 +343,22 @@ val term_CASES = save_thm(
   hd (Prim_rec.prove_cases_thm simple_induction))
 
 (* alpha-convertibility *)
-val ltpm_ALPHA = store_thm(
-  "ltpm_ALPHA",
-  “~(v IN FV t) ==> (LAM u t = LAM v (ltpm [(v,u)] t))”,
-  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, pmact_flip_args]);
-val ltpm_ALPHAi = store_thm(
-  "ltpm_ALPHAi",
-  “~(v IN FV t) ==> (LAMi n u t M = LAMi n v (ltpm [(v,u)] t) M)”,
-  SRW_TAC [boolSimps.CONJ_ss][LAMi_eq_thm, pmact_flip_args]);
+Theorem ltpm_ALPHA:
+   ~(v IN FV t) ==> (LAM u t = LAM v (ltpm [(v,u)] t))
+Proof
+  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, pmact_flip_args]
+QED
+Theorem ltpm_ALPHAi:
+   ~(v IN FV t) ==> (LAMi n u t M = LAMi n v (ltpm [(v,u)] t) M)
+Proof
+  SRW_TAC [boolSimps.CONJ_ss][LAMi_eq_thm, pmact_flip_args]
+QED
 
-val ltpm_apart = store_thm(
-  "ltpm_apart",
-  “!t. x IN FV t /\ y NOTIN FV t ==> ~(ltpm [(x,y)] t = t)”,
-  srw_tac [][supp_apart])
+Theorem ltpm_apart:
+   !t. x IN FV t /\ y NOTIN FV t ==> ~(ltpm [(x,y)] t = t)
+Proof
+  srw_tac [][supp_apart]
+QED
 
 val tpm_COND = prove(
   “ltpm pi (if P then x else y) = if P then ltpm pi x else ltpm pi y”,
@@ -396,11 +401,12 @@ val _ = add_rule {term_name = "SUB", fixity = Closefix,
                   paren_style = OnlyIfNecessary,
                   block_style = (AroundEachPhrase, (PP.INCONSISTENT, 2))};
 
-val fresh_ltpm_subst = store_thm(
-  "fresh_ltpm_subst",
-  “!t. ~(u IN FV t) ==> (ltpm [(u,v)] t = [VAR u/v] t)”,
+Theorem fresh_ltpm_subst:
+   !t. ~(u IN FV t) ==> (ltpm [(u,v)] t = [VAR u/v] t)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC ‘{u;v}’ THEN
-  SRW_TAC [][SUB_DEF]);
+  SRW_TAC [][SUB_DEF]
+QED
 
 Theorem l14a[simp]:
   !t : lterm. [VAR v/v] t = t
@@ -409,17 +415,19 @@ Proof
   SRW_TAC [][SUB_DEF]
 QED
 
-val l14b = store_thm(
-  "l14b",
-  “!t:lterm. ~(v IN FV t) ==> ([u/v]t = t)”,
+Theorem l14b:
+   !t:lterm. ~(v IN FV t) ==> ([u/v]t = t)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC ‘v INSERT FV u’ THEN
-  SRW_TAC [][SUB_DEF]);
+  SRW_TAC [][SUB_DEF]
+QED
 
-val NOT_IN_FV_SUB_I = store_thm(
-  "NOT_IN_FV_SUB_I",
-  “∀N u v M:lterm. v ∉ FV N ∧ v ≠ u ∧ v ∉ FV M ==> v ∉ FV ([N/u]M)”,
+Theorem NOT_IN_FV_SUB_I:
+   ∀N u v M:lterm. v ∉ FV N ∧ v ≠ u ∧ v ∉ FV M ==> v ∉ FV ([N/u]M)
+Proof
   NTAC 3 gen_tac >> ho_match_mp_tac lterm_bvc_induction >>
-  qexists_tac ‘FV N ∪ {u;v}’ >> srw_tac [][SUB_DEF]);
+  qexists_tac ‘FV N ∪ {u;v}’ >> srw_tac [][SUB_DEF]
+QED
 
 Theorem lSUB_THM[simp]:
   ([N/x] (VAR x) = N) /\ (~(x = y) ==> ([N/x] (VAR y) = VAR y)) /\
@@ -429,16 +437,18 @@ Theorem lSUB_THM[simp]:
       ([N/x] (LAMi n v M P) = LAMi n v ([N/x]M) ([N/x]P)))
 Proof SRW_TAC [][SUB_DEF]
 QED
-val lSUB_VAR = store_thm(
-  "lSUB_VAR",
-  “[N/x] (VAR s : lterm) = if s = x then N else VAR s”,
-  SRW_TAC [][SUB_DEF]);
+Theorem lSUB_VAR:
+   [N/x] (VAR s : lterm) = if s = x then N else VAR s
+Proof
+  SRW_TAC [][SUB_DEF]
+QED
 
-val l15a = store_thm(
-  "l15a",
-  “!t:lterm. ~(v IN FV t) ==> ([u/v] ([VAR v/x] t) = [u/x] t)”,
+Theorem l15a:
+   !t:lterm. ~(v IN FV t) ==> ([u/v] ([VAR v/x] t) = [u/x] t)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC ‘{x;v} UNION FV u’ THEN
-  SRW_TAC [][lSUB_VAR]);
+  SRW_TAC [][lSUB_VAR]
+QED
 
 Theorem ltm_recursion_nosideset =
   tm_recursion |> Q.INST [‘A’ |-> ‘{}’]

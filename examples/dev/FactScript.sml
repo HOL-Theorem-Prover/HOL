@@ -121,16 +121,16 @@ QED
 (* Theorem used in an example in the README file                             *)
 (*****************************************************************************)
 
-val FactIter_TOTAL =
- store_thm
-  ("FactIter_TOTAL",
-   ``TOTAL((\(n:num,acc:num). n = 0),
+Theorem FactIter_TOTAL:
+     TOTAL((\(n:num,acc:num). n = 0),
            (\(n:num,acc:num). (n,acc)),
-           (\(n:num,acc:num). (n - 1,n * acc)))``,
+           (\(n:num,acc:num). (n - 1,n * acc)))
+Proof
    RW_TAC list_ss [TOTAL_def]
     THEN Q.EXISTS_TAC `\(x,y).x`
     THEN GEN_BETA_TAC
-    THEN DECIDE_TAC);
+    THEN DECIDE_TAC
+QED
 
 (*****************************************************************************)
 (* Use Mult_dev to refine ``DEV (UNCURRY $* )`` in FactIter_dev              *)

@@ -68,13 +68,14 @@ val (coList_rules, coList_coind, coList_cases) = Hol_coreln
    `(!l. (l = []) ==> coList l) /\
     (!l h t. (l = h::t) /\ coList t ==> coList l)`;
 
-val List_imp_coList = store_thm (
-   "List_imp_coList", ``!l. List l ==> coList l``,
+Theorem List_imp_coList:   !l. List l ==> coList l
+Proof
     HO_MATCH_MP_TAC List_ind
- >> RW_TAC bool_ss [coList_rules]);
+ >> RW_TAC bool_ss [coList_rules]
+QED
 
-val coList_imp_List = store_thm (
-   "coList_imp_List", ``!l. coList l ==> List l``,
+Theorem coList_imp_List:   !l. coList l ==> List l
+Proof
     Induct_on `l`
  >| [ RW_TAC bool_ss [List_rules, coList_rules],
       STRIP_TAC
@@ -84,11 +85,13 @@ val coList_imp_List = store_thm (
    >| [ ASM_REWRITE_TAC [],
         SIMP_TAC list_ss []
      >> `t = l` by PROVE_TAC [CONS_11]
-     >> PROVE_TAC [] ] ]);
+     >> PROVE_TAC [] ] ]
+QED
 
-val List_eq_coList = store_thm (
-   "List_eq_coList", ``!l. coList l = List l``,
-    PROVE_TAC [List_imp_coList, coList_imp_List]);
+Theorem List_eq_coList:   !l. coList l = List l
+Proof
+    PROVE_TAC [List_imp_coList, coList_imp_List]
+QED
 
 (******************************************************************************)
 (*                                                                            *)

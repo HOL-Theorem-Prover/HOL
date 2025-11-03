@@ -327,12 +327,14 @@ val WELL_FORMED_SUB_def = Define `
       (WELL_FORMED_SUB (CJ cond S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
       (WELL_FORMED_SUB (TR cond S1) = WELL_FORMED S1 /\ WF_TR (translate_condition cond, translate S1))`;
 
-val WELL_FORMED_SUB_thm = store_thm ("WELL_FORMED_SUB_thm",
-    ``!S_cfl. WELL_FORMED S_cfl = (WELL_FORMED_SUB S_cfl /\ well_formed (translate S_cfl))``,
+Theorem WELL_FORMED_SUB_thm:
+      !S_cfl. WELL_FORMED S_cfl = (WELL_FORMED_SUB S_cfl /\ well_formed (translate S_cfl))
+Proof
 
     Cases_on `S_cfl` THEN
     REWRITE_TAC [WELL_FORMED_def, WELL_FORMED_SUB_def] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Hoare Rules for CFL                                                        *)
@@ -452,13 +454,15 @@ Proof
     PROVE_TAC [TR_IS_WELL_FORMED]
 QED
 
-val WELL_FORMED_thm = store_thm ("WELL_FORMED_thm",
-    ``(WELL_FORMED (BLK stmL) = T) /\
+Theorem WELL_FORMED_thm:
+      (WELL_FORMED (BLK stmL) = T) /\
       (WELL_FORMED (SC S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
       (WELL_FORMED (CJ cond S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
-      (WELL_FORMED (TR cond S_body) = WELL_FORMED S_body /\ WF_TR (translate_condition cond, translate S_body))``,
+      (WELL_FORMED (TR cond S_body) = WELL_FORMED S_body /\ WF_TR (translate_condition cond, translate S_body))
+Proof
 
-      SIMP_TAC std_ss [BLOCK_IS_WELL_FORMED, CFL_SC_IS_WELL_FORMED, CFL_CJ_IS_WELL_FORMED, CFL_TR_IS_WELL_FORMED]);
+      SIMP_TAC std_ss [BLOCK_IS_WELL_FORMED, CFL_SC_IS_WELL_FORMED, CFL_CJ_IS_WELL_FORMED, CFL_TR_IS_WELL_FORMED]
+QED
 
 
 (*---------------------------------------------------------------------------------*)

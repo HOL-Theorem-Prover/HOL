@@ -55,11 +55,12 @@ Definition assign_def:
    assign v (e : 'a state -> 'a) (s:'a state) w = if v = w then e s else s w
 End
 
-val assign_eta = store_thm
-  ("assign_eta",
-   ``!v e s. assign v e s = \w. if w = v then e s else s w``,
+Theorem assign_eta:
+     !v e s. assign v e s = \w. if w = v then e s else s w
+Proof
    CONV_TAC (DEPTH_CONV FUN_EQ_CONV)
-   ++ RW_TAC std_ss [assign_def]);
+   ++ RW_TAC std_ss [assign_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Probabilisitic programs: syntax                                           *)

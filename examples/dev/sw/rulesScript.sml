@@ -609,35 +609,40 @@ QED
 
 
 
-val IR_CJ_UNCHANGED = store_thm ("IR_CJ_UNCHANGED",
-``!cond ir_t ir_f s.
+Theorem IR_CJ_UNCHANGED:
+  !cond ir_t ir_f s.
         (WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
         UNCHANGED s ir_t /\ UNCHANGED s ir_f)  ==>
-        UNCHANGED s (CJ cond ir_t ir_f)``,
+        UNCHANGED s (CJ cond ir_t ir_f)
+Proof
 
 
 REWRITE_TAC[UNCHANGED_def] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [SEMANTICS_OF_IR]  THEN
-PROVE_TAC[]);
+PROVE_TAC[]
+QED
 
 
-val IR_SC_UNCHANGED = store_thm ("IR_SC_UNCHANGED",
-``!ir1 ir2 s.
+Theorem IR_SC_UNCHANGED:
+  !ir1 ir2 s.
         (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
         UNCHANGED s ir1 /\ UNCHANGED s ir2)  ==>
-        UNCHANGED s (SC ir1 ir2)``,
+        UNCHANGED s (SC ir1 ir2)
+Proof
 
 
 REWRITE_TAC[UNCHANGED_def] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [SEMANTICS_OF_IR]  THEN
-PROVE_TAC[])
+PROVE_TAC[]
+QED
 
-val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
-``!c ir s.
+Theorem UNCHANGED_TR_RULE:
+  !c ir s.
         (WELL_FORMED (TR c ir) /\ UNCHANGED s ir) ==>
-        UNCHANGED s (TR c ir)``,
+        UNCHANGED s (TR c ir)
+Proof
 
   REWRITE_TAC [UNCHANGED_def, WELL_FORMED_def] THEN
   REPEAT STRIP_TAC THEN
@@ -647,16 +652,18 @@ val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
   Induct_on `n` THENL [
          REWRITE_TAC[FUNPOW],
          REWRITE_TAC[FUNPOW_SUC] THEN PROVE_TAC[]
-  ]);
+  ]
+QED
 
 
 
 
-val IR_CJ_USED_STACK = store_thm ("IR_CJ_USED_STACK",
-``!cond ir_t ir_f s s'.
+Theorem IR_CJ_USED_STACK:
+  !cond ir_t ir_f s s'.
         (WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
         USED_STACK s' ir_f /\ USED_STACK s ir_t)  ==>
-        USED_STACK (MAX s s') (CJ cond ir_t ir_f)``,
+        USED_STACK (MAX s s') (CJ cond ir_t ir_f)
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -665,27 +672,31 @@ REPEAT STRIP_TAC THEN
  (USED_STACK (MAX s s') ir_t)` by PROVE_TAC [USED_STACK_ENLARGE] THEN
 
 FULL_SIMP_TAC std_ss [USED_STACK_THM, SEMANTICS_OF_IR] THEN
-METIS_TAC[])
+METIS_TAC[]
+QED
 
 
-val IR_CJ_UNCHANGED_STACK = store_thm ("IR_CJ_UNCHANGED_STACK",
-``!cond ir_t ir_f l s s'.
+Theorem IR_CJ_UNCHANGED_STACK:
+  !cond ir_t ir_f l s s'.
         (WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
         UNCHANGED_STACK l s' ir_f /\ UNCHANGED_STACK l s ir_t)  ==>
-        UNCHANGED_STACK l (MAX s s') (CJ cond ir_t ir_f)``,
+        UNCHANGED_STACK l (MAX s s') (CJ cond ir_t ir_f)
+Proof
 
-SIMP_TAC std_ss [UNCHANGED_STACK_def, IR_CJ_USED_STACK, IR_CJ_UNCHANGED])
+SIMP_TAC std_ss [UNCHANGED_STACK_def, IR_CJ_USED_STACK, IR_CJ_UNCHANGED]
+QED
 
 
 
-val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
-``!x ir1 ir2 s s'.
+Theorem IR_SC_USED_STACK:
+  !x ir1 ir2 s s'.
         (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
          USED_STACK s ir1 /\ USED_STACK s' ir2 /\
          (s' + x < 2**30) /\ (s < 2**30) /\
          (!r m. read (run_ir ir1 (r,m)) (REG 13) =
                          read (r,m) (REG 13) - n2w (4*x)))  ==>
-         USED_STACK (MAX s (s'+x)) (SC ir1 ir2)``,
+         USED_STACK (MAX s (s'+x)) (SC ir1 ir2)
+Proof
 
 
         REPEAT STRIP_TAC THEN
@@ -711,20 +722,22 @@ val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
         SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
         `((2147483648 - (off + x)) =
          (1073741824 + (1073741824 - (off + x))))` by DECIDE_TAC THEN
-        ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT])
+        ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT]
+QED
 
 
 
 
 
-val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
-``!x y ir1 ir2 s s'.
+Theorem IR_SC_USED_STACK:
+  !x y ir1 ir2 s s'.
         (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
          USED_STACK s ir1 /\ USED_STACK s' ir2 /\
          (s' + x < 2**30) /\ (s < 2**30) /\  (y <= x) /\
          (!r m. read (run_ir ir1 (r,m)) (REG 13) =
                          read (r,m) (REG 13) - n2w (4*y)))  ==>
-         USED_STACK (MAX s (s'+x)) (SC ir1 ir2)``,
+         USED_STACK (MAX s (s'+x)) (SC ir1 ir2)
+Proof
 
         REPEAT STRIP_TAC THEN
         FULL_SIMP_TAC std_ss [USED_STACK_THM, SEMANTICS_OF_IR] THEN
@@ -749,18 +762,20 @@ val IR_SC_USED_STACK = store_thm ("IR_SC_USED_STACK",
         SIMP_TAC arith_ss [dimword_30, dimword_4] THEN
         `((2147483648 - (off + y)) =
          (1073741824 + (1073741824 - (off + y))))` by DECIDE_TAC THEN
-        ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT])
+        ASM_SIMP_TAC std_ss [ADD_MODULUS_RIGHT]
+QED
 
 
 
-val IR_SC_USED_STACK___FC_CASE1 = store_thm ("IR_SC_USED_STACK___FC_CASE1",
-``!ir1 ir2 s s' s''.
+Theorem IR_SC_USED_STACK___FC_CASE1:
+  !ir1 ir2 s s' s''.
         (USED_STACK (s+s') ir1 /\ (USED_STACK s'' ir2 /\
          WELL_FORMED ir1 /\ WELL_FORMED ir2  /\
          (s + s' + s'' < 2**30) /\
          (!r m. read (run_ir ir1 (r,m)) (REG 13) =
                          read (r,m) (REG 13) - n2w (4*s))))  ==>
-         USED_STACK (s+s'+s'') (SC ir1 ir2)``,
+         USED_STACK (s+s'+s'') (SC ir1 ir2)
+Proof
 
         REPEAT STRIP_TAC THEN
         `(s:num) + s' + s'' = MAX (s+s') (s'' + (s+s'))` by ALL_TAC THEN1 (
@@ -769,17 +784,19 @@ val IR_SC_USED_STACK___FC_CASE1 = store_thm ("IR_SC_USED_STACK___FC_CASE1",
         ASM_REWRITE_TAC[] THEN
         MATCH_MP_TAC IR_SC_USED_STACK THEN
         Q_TAC EXISTS_TAC `s` THEN
-        FULL_SIMP_TAC std_ss [])
+        FULL_SIMP_TAC std_ss []
+QED
 
 
-val IR_SC_USED_STACK___FC_CASE2 = store_thm ("IR_SC_USED_STACK___FC_CASE2",
-``!ir1 ir2 s s'.
+Theorem IR_SC_USED_STACK___FC_CASE2:
+  !ir1 ir2 s s'.
         (USED_STACK s ir1 /\ (USED_STACK s' ir2 /\
          WELL_FORMED ir1 /\ WELL_FORMED ir2  /\
          (s + s' < 2**30) /\
          (!r m. read (run_ir ir1 (r,m)) (REG 13) =
                          read (r,m) (REG 13) - n2w (4*s))))  ==>
-         USED_STACK (s+s') (SC ir1 ir2)``,
+         USED_STACK (s+s') (SC ir1 ir2)
+Proof
 
         REPEAT STRIP_TAC THEN
         `(s:num) + s' = MAX s (s' + s)` by ALL_TAC THEN1 (
@@ -789,15 +806,17 @@ val IR_SC_USED_STACK___FC_CASE2 = store_thm ("IR_SC_USED_STACK___FC_CASE2",
         ASM_REWRITE_TAC[] THEN
         MATCH_MP_TAC IR_SC_USED_STACK THEN
         Q_TAC EXISTS_TAC `s` THEN
-        FULL_SIMP_TAC std_ss [])
+        FULL_SIMP_TAC std_ss []
+QED
 
 
-val IR_SC_UNCHANGED_STACK = store_thm ("IR_SC_UNCHANGED_STACK",
-``!ir1 ir2 l s s'.
+Theorem IR_SC_UNCHANGED_STACK:
+  !ir1 ir2 l s s'.
         (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
          UNCHANGED_STACK l s ir1 /\ UNCHANGED_STACK l s' ir2 /\
          MEM R13 l)  ==>
-         UNCHANGED_STACK l (MAX s s') (SC ir1 ir2)``,
+         UNCHANGED_STACK l (MAX s s') (SC ir1 ir2)
+Proof
 
 
         SIMP_TAC std_ss [UNCHANGED_STACK_def, IR_SC_UNCHANGED] THEN
@@ -814,12 +833,14 @@ val IR_SC_UNCHANGED_STACK = store_thm ("IR_SC_UNCHANGED_STACK",
     read (run_ir ir1 (r,m)) (toREG R13))` by METIS_TAC[] THEN
         `?r'' m''. run_ir ir1 (r,m) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
         FULL_SIMP_TAC std_ss [toREG_def, read_thm, index_of_reg_def] THEN
-        METIS_TAC[])
+        METIS_TAC[]
+QED
 
-val UNCHANGED_STACK_TR_RULE = store_thm ("UNCHANGED_STACK_TR_RULE",
-``!c ir l s.
+Theorem UNCHANGED_STACK_TR_RULE:
+  !c ir l s.
         (WELL_FORMED (TR c ir) /\ UNCHANGED_STACK l s ir /\ MEM R13 l) ==>
-        UNCHANGED_STACK l s (TR c ir)``,
+        UNCHANGED_STACK l s (TR c ir)
+Proof
 
 
   SIMP_TAC std_ss [UNCHANGED_STACK_def] THEN
@@ -850,14 +871,15 @@ val UNCHANGED_STACK_TR_RULE = store_thm ("UNCHANGED_STACK_TR_RULE",
          `?r'' m''. (FUNPOW (run_ir ir) n (r,m)) = (r'',m'')` by METIS_TAC[pairTheory.PAIR] THEN
          FULL_SIMP_TAC std_ss [read_thm] THEN
          METIS_TAC[]
-  ]);
+  ]
+QED
 
 
-val UNCHANGED_STACK___READ_STACK_IMP =
-        store_thm ("UNCHANGED_STACK___READ_STACK_IMP",
-``!s st l ir n. ((0 < n) /\ (n + l < 2**30) /\ MEM R13 s) ==>
+Theorem UNCHANGED_STACK___READ_STACK_IMP:
+  !s st l ir n. ((0 < n) /\ (n + l < 2**30) /\ MEM R13 s) ==>
 (UNCHANGED_STACK s l ir ==>
-(read (run_ir ir st) (toMEM (R13, POS n)) = read st (toMEM (R13, POS n))))``,
+(read (run_ir ir st) (toMEM (R13, POS n)) = read st (toMEM (R13, POS n))))
+Proof
 
 REPEAT STRIP_TAC THEN
 `read (run_ir ir st) (REG 13) = read st (REG 13)` by ALL_TAC THEN1 (
@@ -884,5 +906,6 @@ SIMP_TAC std_ss [WORD_EQ_ADD_LCANCEL, word_sub_def, word_2comp_n2w,
         n2w_11, dimword_30] THEN
 Cases_on `off < l` THEN ASM_SIMP_TAC std_ss [] THEN
 Cases_on `off = 0` THEN
-ASM_SIMP_TAC arith_ss [])
+ASM_SIMP_TAC arith_ss []
+QED
 

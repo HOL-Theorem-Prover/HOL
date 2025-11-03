@@ -607,35 +607,40 @@ QED
 
 
 
-val IR_CJ_UNCHANGED = store_thm ("IR_CJ_UNCHANGED",
-``!cond ir_t ir_f s.
+Theorem IR_CJ_UNCHANGED:
+  !cond ir_t ir_f s.
         (WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
         UNCHANGED s ir_t /\ UNCHANGED s ir_f)  ==>
-        UNCHANGED s (CJ cond ir_t ir_f)``,
+        UNCHANGED s (CJ cond ir_t ir_f)
+Proof
 
 
 REWRITE_TAC[UNCHANGED_def] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [SEMANTICS_OF_IR]  THEN
-PROVE_TAC[]);
+PROVE_TAC[]
+QED
 
 
-val IR_SC_UNCHANGED = store_thm ("IR_SC_UNCHANGED",
-``!ir1 ir2 s.
+Theorem IR_SC_UNCHANGED:
+  !ir1 ir2 s.
         (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
         UNCHANGED s ir1 /\ UNCHANGED s ir2)  ==>
-        UNCHANGED s (SC ir1 ir2)``,
+        UNCHANGED s (SC ir1 ir2)
+Proof
 
 
 REWRITE_TAC[UNCHANGED_def] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [SEMANTICS_OF_IR]  THEN
-PROVE_TAC[])
+PROVE_TAC[]
+QED
 
-val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
-``!c ir s.
+Theorem UNCHANGED_TR_RULE:
+  !c ir s.
         (WELL_FORMED (TR c ir) /\ UNCHANGED s ir) ==>
-        UNCHANGED s (TR c ir)``,
+        UNCHANGED s (TR c ir)
+Proof
 
   REWRITE_TAC [UNCHANGED_def, WELL_FORMED_def] THEN
   REPEAT STRIP_TAC THEN
@@ -645,6 +650,7 @@ val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
   Induct_on `n` THENL [
          REWRITE_TAC[FUNPOW],
          REWRITE_TAC[FUNPOW_SUC] THEN PROVE_TAC[]
-  ]);
+  ]
+QED
 
 

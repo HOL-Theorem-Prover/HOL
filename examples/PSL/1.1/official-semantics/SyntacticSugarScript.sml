@@ -100,13 +100,13 @@ End
 (******************************************************************************
 * Prove if-then-else form needed by computeLib
 ******************************************************************************)
-val RANGE_ITER_AUX =
- store_thm
-  ("RANGE_ITER_AUX",
-   ``RANGE_ITER_AUX op f i n =
+Theorem RANGE_ITER_AUX:
+     RANGE_ITER_AUX op f i n =
       if n=0 then f i
-             else op(f i, RANGE_ITER_AUX op f (i+1) (n-1))``,
-   Cases_on `n` THEN RW_TAC arith_ss [RANGE_ITER_AUX_def]);
+             else op(f i, RANGE_ITER_AUX op f (i+1) (n-1))
+Proof
+   Cases_on `n` THEN RW_TAC arith_ss [RANGE_ITER_AUX_def]
+QED
 
 val _ = computeLib.add_funs[RANGE_ITER_AUX];
 

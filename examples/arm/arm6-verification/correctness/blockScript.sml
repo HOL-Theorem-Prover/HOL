@@ -101,9 +101,11 @@ val BIT_w2n = prove(
          [w2n_n2w,dimword_def,BIT_def,MIN_DEF,BITS_COMP_THM2,GSYM BITS_ZERO3]
     \\ ASM_SIMP_TAC fcp_ss [BIT_def,n2w_def]);
 
-val MASKN_ZERO = store_thm("MASKN_ZERO",
-  `!ireg. MASKN 0 list = UINT_MAXw`,
-  REWRITE_TAC [MASKN_def,FUNPOW]);
+Theorem MASKN_ZERO:
+   !ireg. MASKN 0 list = UINT_MAXw
+Proof
+  REWRITE_TAC [MASKN_def,FUNPOW]
+QED
 
 val MASKN_SUC = prove(
   `!n list. MASKN (SUC n) list = MASK_BIT list (MASKN n list)`,
@@ -407,21 +409,25 @@ val RP_NOT_EQUAL_ZERO = save_thm("RP_NOT_EQUAL_ZERO",
 
 (* ------------------------------------------------------------------------- *)
 
-val REGISTER_LIST_THM = store_thm("REGISTER_LIST_THM",
-  `!ic x list. ic IN {ldm; stm} /\ x < LENGTH (REGISTER_LIST list) ==>
-         (EL x (REGISTER_LIST list) = RP ic list (MASKN x list))`,
+Theorem REGISTER_LIST_THM:
+   !ic x list. ic IN {ldm; stm} /\ x < LENGTH (REGISTER_LIST list) ==>
+         (EL x (REGISTER_LIST list) = RP ic list (MASKN x list))
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC ((SIMP_RULE std_ss
          [LENGTH_MAP,REGISTER_LIST_GEN_REG_LIST] o GSYM) REGISTER_LIST_LEM)
     \\ IMP_RES_TAC (Thm.INST_TYPE
          [alpha |-> ``:word4``, beta |-> ``:num``] EL_MAP)
     \\ POP_ASSUM (SPEC_THEN `w2n` ASSUME_TAC)
-    \\ ASM_SIMP_TAC std_ss [n2w_w2n]);
+    \\ ASM_SIMP_TAC std_ss [n2w_w2n]
+QED
 
-val RP_LT_16 = store_thm("RP_LT_16",
-  `!x ic list mask. w2n (RP ic list mask) < 16`,
+Theorem RP_LT_16:
+   !x ic list mask. w2n (RP ic list mask) < 16
+Proof
   PROVE_TAC [(SIMP_RULE (std_ss++SIZES_ss) [] o
-    Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt]);
+    Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt]
+QED
 
 val LENGTH_TL_GENLIST = prove(
   `!n f. LENGTH (TL (GENLIST f (n + 1))) = n`,
@@ -433,19 +439,22 @@ val SPEC_FOLDL_SNOC = (GEN_ALL o GSYM o SIMP_RULE std_ss [] o
           `reg:reg`,`(r:word4,a:word32)`])
   FOLDL_SNOC;
 
-val PROJ_DATA_EL = store_thm("PROJ_DATA_EL",
-  `!x n i. SUC x <= n ==>
+Theorem PROJ_DATA_EL:
+   !x n i. SUC x <= n ==>
      (PROJ_DATA (ADVANCE 1 i x) =
-        EL x (TL (GENLIST (\s. PROJ_DATA (i s)) (n + 1))))`,
-  RW_TAC arith_ss [GSYM EL,EL_GENLIST,ADVANCE_def,ADD1]);
+        EL x (TL (GENLIST (\s. PROJ_DATA (i s)) (n + 1))))
+Proof
+  RW_TAC arith_ss [GSYM EL,EL_GENLIST,ADVANCE_def,ADD1]
+QED
 
-val REGISTER_LIST_LDM_THM = store_thm("REGISTER_LIST_LDM_THM",
-  `!n x list reg mode inp.
+Theorem REGISTER_LIST_LDM_THM:
+   !n x list reg mode inp.
      x <= LENGTH (REGISTER_LIST list) /\
      LENGTH (REGISTER_LIST list) <= n ==>
      (LDM_LIST reg mode (FIRSTN x (FST (ADDR_MODE4 P U base list)))
                (FIRSTN x (TL (GENLIST (\s. PROJ_DATA (inp s)) (n + 1)))) =
-      REG_WRITEN x reg mode list (ADVANCE 1 inp))`,
+      REG_WRITEN x reg mode list (ADVANCE 1 inp))
+Proof
   Induct_on `x` \\ REPEAT STRIP_TAC
     >> SIMP_TAC list_ss [FIRSTN,LDM_LIST_def,REG_WRITEN_def]
     \\ `x <= LENGTH (REGISTER_LIST list)` by DECIDE_TAC
@@ -464,7 +473,8 @@ val REGISTER_LIST_LDM_THM = store_thm("REGISTER_LIST_LDM_THM",
     by ASM_SIMP_TAC arith_ss [GSYM EL_FIRSTN]
     \\ ASM_SIMP_TAC list_ss [LENGTH_TL_GENLIST,PROJ_DATA_EL,
          GSYM listTheory.EL_ZIP,SPEC_FOLDL_SNOC,LENGTH_FIRSTN,SNOC_EL_FIRSTN,
-         LENGTH_ZIP,LDM_LIST_def,ZIP_FIRSTN_LEQ]);
+         LENGTH_ZIP,LDM_LIST_def,ZIP_FIRSTN_LEQ]
+QED
 
 val FST_ADDR_MODE4 = save_thm("FST_ADDR_MODE4",
   (GEN_ALL o SIMP_CONV std_ss [ADDR_MODE4_def])
@@ -485,11 +495,13 @@ val LENGTH_ADDRESS_LIST =
   (GEN_ALL o REWRITE_CONV [LENGTH_GENLIST,ADDRESS_LIST_def])
   ``LENGTH (ADDRESS_LIST base n)``;
 
-val FST_HD_FST_ADDR_MODE4 = store_thm("FST_HD_FST_ADDR_MODE4",
-  `!P U base n. 0 < LENGTH (REGISTER_LIST n) ==>
-     (HD (FST (ADDR_MODE4 P U base n)) = RP stm n UINT_MAXw)`,
+Theorem FST_HD_FST_ADDR_MODE4:
+   !P U base n. 0 < LENGTH (REGISTER_LIST n) ==>
+     (HD (FST (ADDR_MODE4 P U base n)) = RP stm n UINT_MAXw)
+Proof
   METIS_TAC [FST_ADDR_MODE4,(GSYM o CONJUNCT1) EL,MASKN_ZERO,
-    LENGTH_ADDRESS_LIST,REGISTER_LIST_THM,IN_LDM_STM]);
+    LENGTH_ADDRESS_LIST,REGISTER_LIST_THM,IN_LDM_STM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -511,12 +523,14 @@ val GEN_REG_LIST_NOT_LAST = prove(
 
 val REGISTER_LIST_NOT_LAST = lift_gen_reg_list GEN_REG_LIST_NOT_LAST;
 
-val RP_NOT_15 = store_thm("RP_NOT_15",
-  `!ic y n. ic IN {ldm; stm} /\ y < LENGTH (REGISTER_LIST n) - 1 ==>
-            ~(RP ic n (MASKN y n) = 15w)`,
+Theorem RP_NOT_15:
+   !ic y n. ic IN {ldm; stm} /\ y < LENGTH (REGISTER_LIST n) - 1 ==>
+            ~(RP ic n (MASKN y n) = 15w)
+Proof
   SIMP_TAC arith_ss [REGISTER_LIST_NOT_LAST,EL_MAP,n2w_w2n,
       (GSYM o SIMP_RULE std_ss [LENGTH_MAP,REGISTER_LIST_GEN_REG_LIST])
-       REGISTER_LIST_LEM]);
+       REGISTER_LIST_LEM]
+QED
 
 val lem = DECIDE ``!x. 0 < x ==> (x - 1 < x) /\ (x = SUC (x - 1))``;
 
@@ -532,20 +546,24 @@ val lift_gen_reg_list =
 
 val REGISTER_LIST_LAST = lift_gen_reg_list GEN_RP_LAST;
 
-val RP_LAST_15 = store_thm("RP_LAST_15",
-  `!list. 0 < LENGTH (REGISTER_LIST list) ==>
+Theorem RP_LAST_15:
+   !list. 0 < LENGTH (REGISTER_LIST list) ==>
      ((RP ldm list (MASKN (LENGTH (REGISTER_LIST list) - 1) list) = 15w) =
-      list %% 15)`,
-  SIMP_TAC arith_ss [IN_LDM_STM,GSYM REGISTER_LIST_THM,REGISTER_LIST_LAST]);
+      list %% 15)
+Proof
+  SIMP_TAC arith_ss [IN_LDM_STM,GSYM REGISTER_LIST_THM,REGISTER_LIST_LAST]
+QED
 
-val REG_WRITEN_COMMUTES = store_thm("REG_WRITEN_COMMUTES",
-  `!n ireg reg m1 m2 i.
+Theorem REG_WRITEN_COMMUTES:
+   !n ireg reg m1 m2 i.
         n < LENGTH (REGISTER_LIST ireg) ==>
           (REG_WRITEN n (REG_WRITE reg m1 15w d) m2 ireg i =
-           REG_WRITE (REG_WRITEN n reg m2 ireg i) m1 15w d)`,
+           REG_WRITE (REG_WRITEN n reg m2 ireg i) m1 15w d)
+Proof
   Induct \\ RW_TAC bool_ss [REG_WRITEN_def,TO_WRITE_READ6,REG_WRITE_RP_def]
     \\ ASM_SIMP_TAC arith_ss [REG_WRITE_RP_def,RP_LT_16,RP_NOT_15,IN_LDM_STM,
-         REG_WRITE_WRITE_PC]);
+         REG_WRITE_WRITE_PC]
+QED
 
 val LENGTH_GEN_REG_LIST_NOT_ZERO = prove(
   `!wl ireg. BIT wl ireg ==> 0 < LENGTH (GEN_REG_LIST (SUC wl) ireg)`,
@@ -563,53 +581,65 @@ val writen_pc_tac = REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC arith_ss [REG_WRITEN_def,REG_WRITE_RP_def,
        REG_WRITEN_COMMUTES,TO_WRITE_READ6,REG_WRITE_WRITE,REG_READ_WRITE];
 
-val REG_WRITE_WRITEN_PC = store_thm("REG_WRITE_WRITEN_PC",
-  `!list reg mode i. list %% 15 ==>
+Theorem REG_WRITE_WRITEN_PC:
+   !list reg mode i. list %% 15 ==>
       (REG_WRITEN (LENGTH (REGISTER_LIST list))
          (REG_WRITE reg usr 15w d) mode list i =
-       REG_WRITEN (LENGTH (REGISTER_LIST list)) reg mode list i)`,
-  writen_pc_tac);
+       REG_WRITEN (LENGTH (REGISTER_LIST list)) reg mode list i)
+Proof
+  writen_pc_tac
+QED
 
-val REG_WRITEN_WRITE_PC = store_thm("REG_WRITEN_WRITE_PC",
-  `!list reg mode i. list %% 15 ==>
+Theorem REG_WRITEN_WRITE_PC:
+   !list reg mode i. list %% 15 ==>
       (REG_WRITE (REG_WRITEN
          (LENGTH (REGISTER_LIST list)) reg mode list i) usr 15w
             (PROJ_DATA (i (LENGTH (REGISTER_LIST list) - 1))) =
-       REG_WRITEN (LENGTH (REGISTER_LIST list)) reg mode list i)`,
-  writen_pc_tac);
+       REG_WRITEN (LENGTH (REGISTER_LIST list)) reg mode list i)
+Proof
+  writen_pc_tac
+QED
 
-val REG_WRITEN_WRITE_PC2 = store_thm("REG_WRITEN_WRITE_PC2",
-  `!list reg mode i. list %% 15 ==>
+Theorem REG_WRITEN_WRITE_PC2:
+   !list reg mode i. list %% 15 ==>
       (REG_WRITE (REG_WRITEN
          (LENGTH (REGISTER_LIST list) - 1) reg mode list i) usr 15w
             (PROJ_DATA (i (LENGTH (REGISTER_LIST list) - 1))) =
-       REG_WRITEN (LENGTH (REGISTER_LIST list)) reg mode list i)`,
-  writen_pc_tac);
+       REG_WRITEN (LENGTH (REGISTER_LIST list)) reg mode list i)
+Proof
+  writen_pc_tac
+QED
 
-val REG_READ_WRITEN_PC = store_thm("REG_READ_WRITEN_PC",
-  `!list reg mode i. list %% 15 ==>
+Theorem REG_READ_WRITEN_PC:
+   !list reg mode i. list %% 15 ==>
       (REG_READ6 (REG_WRITEN
          (LENGTH (REGISTER_LIST list)) reg mode list i) usr 15w =
-      (PROJ_DATA (i (LENGTH (REGISTER_LIST list) - 1))))`,
-  writen_pc_tac);
+      (PROJ_DATA (i (LENGTH (REGISTER_LIST list) - 1))))
+Proof
+  writen_pc_tac
+QED
 
-val REG_WRITEN_COMMUTE_PC = store_thm("REG_WRITEN_COMMUTE_PC",
-  `!list reg mode i.  ~(list %% 15) /\ 0 < LENGTH (REGISTER_LIST list) ==>
+Theorem REG_WRITEN_COMMUTE_PC:
+   !list reg mode i.  ~(list %% 15) /\ 0 < LENGTH (REGISTER_LIST list) ==>
       (REG_WRITEN (LENGTH (REGISTER_LIST list))
          (REG_WRITE reg usr 15w d) mode list i =
        REG_WRITE (REG_WRITEN
-         (LENGTH (REGISTER_LIST list)) reg mode list i) usr 15w d)`,
-  writen_pc_tac \\ ASM_SIMP_TAC arith_ss [REG_WRITE_WRITE_PC]);
+         (LENGTH (REGISTER_LIST list)) reg mode list i) usr 15w d)
+Proof
+  writen_pc_tac \\ ASM_SIMP_TAC arith_ss [REG_WRITE_WRITE_PC]
+QED
 
-val REG_READ_WRITEN_PC2 = store_thm("REG_READ_WRITEN_PC2",
-  `!list reg mode i. x < LENGTH (REGISTER_LIST list) ==>
+Theorem REG_READ_WRITEN_PC2:
+   !list reg mode i. x < LENGTH (REGISTER_LIST list) ==>
       (REG_READ6 (REG_WRITEN x reg mode list i) usr 15w =
-       REG_READ6 reg usr 15w)`,
+       REG_READ6 reg usr 15w)
+Proof
   REPEAT STRIP_TAC \\ Induct_on `x`
     \\ REWRITE_TAC [REG_WRITEN_def]
     \\ STRIP_TAC \\ IMP_RES_TAC prim_recTheory.SUC_LESS
     \\ ASM_SIMP_TAC arith_ss [IN_LDM_STM,REG_WRITE_RP_def,RP_NOT_15,
-         REG_READ_WRITE_PC]);
+         REG_READ_WRITE_PC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -637,23 +667,29 @@ val PENCZ2 = prove(
   SIMP_TAC (arith_ss++SIZES_ss) [GSYM WORD_EQ,word_bit_def,word_0,
     LENGTH_REGISTER_LIST,MASKN_THM]);
 
-val PENCZ_THM = store_thm("PENCZ_THM",
-  `!ic. ic IN {ldm; stm} ==>
+Theorem PENCZ_THM:
+   !ic. ic IN {ldm; stm} ==>
          (!list x. x < LENGTH (REGISTER_LIST list) ==>
             ~PENCZ ic list (MASKN x list)) /\
-         !list. PENCZ ic list (MASKN (LENGTH (REGISTER_LIST list)) list)`,
-  RW_TAC bool_ss [IN_LDM_STM,PENCZ_def,PENCZ2,PENCZ1]);
+         !list. PENCZ ic list (MASKN (LENGTH (REGISTER_LIST list)) list)
+Proof
+  RW_TAC bool_ss [IN_LDM_STM,PENCZ_def,PENCZ2,PENCZ1]
+QED
 
-val PENCZ_THM2 = store_thm("PENCZ_THM2",
-  `!list. (list = 0w) = (LENGTH (REGISTER_LIST list) = 0)`,
+Theorem PENCZ_THM2:
+   !list. (list = 0w) = (LENGTH (REGISTER_LIST list) = 0)
+Proof
   Cases \\ SIMP_TAC bool_ss
          [LENGTH_REGISTER_LIST,BITV_def,GSYM SUM_ZERO,BITS_COMP_THM2,w2n_n2w,
           MOD_DIMINDEX,GSYM WORD_EQ,word_bit_n2w,BIT_def,BITS_ZERO2,dimindex_16]
-    \\ SIMP_TAC arith_ss [MIN_DEF,NOT_BITS2]);
+    \\ SIMP_TAC arith_ss [MIN_DEF,NOT_BITS2]
+QED
 
-val PENCZ_THM3 = store_thm("PENCZ_THM3",
-  `!list mask. (list = 0w) /\ ic IN {ldm; stm} ==> PENCZ ic list mask`,
-  SIMP_TAC std_ss [PENCZ_def,WORD_AND_CLAUSES,IN_LDM_STM]);
+Theorem PENCZ_THM3:
+   !list mask. (list = 0w) /\ ic IN {ldm; stm} ==> PENCZ ic list mask
+Proof
+  SIMP_TAC std_ss [PENCZ_def,WORD_AND_CLAUSES,IN_LDM_STM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -670,32 +706,36 @@ val NOT_ADD_1 = prove(
   `!a b. ~a + b + 1w = b - a`,
   REWRITE_TAC [WORD_NOT,GSYM WORD_ADD_SUB_SYM,WORD_ADD_SUB,WORD_SUB]);
 
-val FIRST_ADDRESS = store_thm("FIRST_ADDRESS",
-  `!ireg ic base c borrow2 mul.
+Theorem FIRST_ADDRESS:
+   !ireg ic base c borrow2 mul.
     1 <= LENGTH (REGISTER_LIST ((15 >< 0) ireg)) /\ ic IN {ldm; stm} ==>
     (FIRST_ADDRESS (ireg %% 24) (ireg %% 23) base
       (WB_ADDRESS (ireg %% 23) base (LENGTH (REGISTER_LIST ((15 >< 0) ireg)))) =
      SND (ALU6 ic t3 ireg borrow2 mul F
-      (OFFSET ic t3 ireg ((15 >< 0) ireg)) base c))`,
+      (OFFSET ic t3 ireg ((15 >< 0) ireg)) base c))
+Proof
   RW_TAC std_ss [FIRST_ADDRESS_def,WB_ADDRESS_def,ALU6_def,OFFSET_def,
         ALUOUT_ADD_CARRY,ALUOUT_ADD,ALUOUT_ALU_logic,UP_DOWN_def,
         REGISTER_LIST_LENGTH,IN_LDM_STM,ADD_THREE_ONE,NOT_ADD,NOT_ADD_1,
         word_mul_n2w,WORD_EQ_ADD_LCANCEL,WORD_ADD_SUB_SYM,WORD_SUB_SUB]
     \\ SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,WORD_SUB_ADD,
-        EVAL ``3w + 1w:word32``]);
+        EVAL ``3w + 1w:word32``]
+QED
 
-val WB_ADDRESS = store_thm("WB_ADDRESS",
-  `!ireg ic base c borrow2 mul. ic IN {ldm; stm} ==>
+Theorem WB_ADDRESS:
+   !ireg ic base c borrow2 mul. ic IN {ldm; stm} ==>
     (WB_ADDRESS (ireg %% 23) base (LENGTH (REGISTER_LIST ((15 >< 0) ireg))) =
      SND (ALU6 ic t4 ireg borrow2 mul F
-       (OFFSET ic t4 ireg ((15 >< 0) ireg)) base c))`,
+       (OFFSET ic t4 ireg ((15 >< 0) ireg)) base c))
+Proof
   RW_TAC std_ss [FIRST_ADDRESS_def,WB_ADDRESS_def,ALU6_def,OFFSET_def,
         ALUOUT_ADD_CARRY,ALUOUT_ADD,ALUOUT_ALU_logic,UP_DOWN_def,
         REGISTER_LIST_LENGTH,IN_LDM_STM,ADD_THREE_ONE,NOT_ADD,NOT_ADD_1,
         word_mul_n2w,WORD_EQ_ADD_LCANCEL,WORD_ADD_SUB_SYM,WORD_SUB_SUB,
         PENCZ_THM2,WORD_ADD_0,WORD_SUB_RZERO]
     \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,WORD_EQ_ADD_LCANCEL]
-    \\ SIMP_TAC std_ss [WORD_ADD_ASSOC,EVAL ``1w + 3w:word32``,WORD_SUB_ADD2]);
+    \\ SIMP_TAC std_ss [WORD_ADD_ASSOC,EVAL ``1w + 3w:word32``,WORD_SUB_ADD2]
+QED
 
 val WB_ADDRESS_ZERO = save_thm("WB_ADDRESS_ZERO",
   (GEN_ALL o
@@ -705,22 +745,28 @@ val WB_ADDRESS_ZERO = save_thm("WB_ADDRESS_ZERO",
 
 (* ------------------------------------------------------------------------- *)
 
-val MASKN_SUC = store_thm("MASKN_SUC",
-  `!n ic list. ((ic = ldm) \/ (ic = stm)) ==>
+Theorem MASKN_SUC:
+   !n ic list. ((ic = ldm) \/ (ic = stm)) ==>
        (CLEARBIT (w2n (RP ic list (MASKN n list))) (MASKN n list) =
-        MASKN (SUC n) list)`,
-  SIMP_TAC (arith_ss++SIZES_ss) [MASKN_SUC,MASK_BIT_def,RP_def,w2n_n2w]);
+        MASKN (SUC n) list)
+Proof
+  SIMP_TAC (arith_ss++SIZES_ss) [MASKN_SUC,MASK_BIT_def,RP_def,w2n_n2w]
+QED
 
-val LDM_LIST_EMPTY = store_thm("LDM_LIST_EMPTY",
-  `!reg mode. LDM_LIST reg mode [] [] = reg`,
-  SIMP_TAC list_ss [LDM_LIST_def]);
+Theorem LDM_LIST_EMPTY:
+   !reg mode. LDM_LIST reg mode [] [] = reg
+Proof
+  SIMP_TAC list_ss [LDM_LIST_def]
+QED
 
-val WORD_BITS_150_ZERO = store_thm("WORD_BITS_150_ZERO",
-  `(!i:word32. (((15 >< 0) i = 0w:word16) ==> ~(i %% 15))) /\
-    !i:word32. (i %% 15 = ((15 >< 0) i):word16 %% 15)`,
+Theorem WORD_BITS_150_ZERO:
+   (!i:word32. (((15 >< 0) i = 0w:word16) ==> ~(i %% 15))) /\
+    !i:word32. (i %% 15 = ((15 >< 0) i):word16 %% 15)
+Proof
   STRIP_TAC \\ REWRITE_TAC [GSYM WORD_EQ]
     \\ RW_TAC (fcp_ss++ARITH_ss++SIZES_ss) [word_bit_def,word_0,
-         word_extract_def,word_bits_def,w2w]);
+         word_extract_def,word_bits_def,w2w]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -735,9 +781,11 @@ val LEAST_ABORT_ZERO = prove(
       ((LEAST s. s < w /\ IS_ABORT i (s + 1)) = 0)`,
   RW_TAC arith_ss [LEAST_DEF,Once WHILE]);
 
-val LEAST_ABORT_ZERO_ISA = store_thm("LEAST_ABORT_ZERO_ISA",
-  `!i. IS_ABORT i 1 ==> ((LEAST s. IS_ABORT i (s + 1)) = 0)`,
-  RW_TAC arith_ss [LEAST_DEF,Ntimes WHILE 2]);
+Theorem LEAST_ABORT_ZERO_ISA:
+   !i. IS_ABORT i 1 ==> ((LEAST s. IS_ABORT i (s + 1)) = 0)
+Proof
+  RW_TAC arith_ss [LEAST_DEF,Ntimes WHILE 2]
+QED
 
 val lem = prove(
   `(!m. m < n ==> ~(m < w /\ IS_ABORT i (m + 1))) /\
@@ -748,22 +796,26 @@ val lem = prove(
     \\ FULL_SIMP_TAC std_ss [(BETA_RULE o
          INST [`P` |-> `\s. IS_ABORT i (s + 1)`]) LEAST_THM]);
 
-val LEAST_ABORT_ISA = store_thm("LEAST_ABORT_ISA",
-  `(?s. s < w /\ IS_ABORT i (s + 1)) ==>
-    ((LEAST s. s < w /\ IS_ABORT i (s + 1)) = (LEAST s. IS_ABORT i (s + 1)))`,
+Theorem LEAST_ABORT_ISA:
+   (?s. s < w /\ IS_ABORT i (s + 1)) ==>
+    ((LEAST s. s < w /\ IS_ABORT i (s + 1)) = (LEAST s. IS_ABORT i (s + 1)))
+Proof
   RW_TAC std_ss []
     \\ IMP_RES_TAC ((GEN_ALL o BETA_RULE o
          SPECL [`\l. l = LEAST s. IS_ABORT i (s + 1)`,
                 `\s. s < w /\ IS_ABORT i (s + 1)`]) LEAST_ELIM)
-    \\ METIS_TAC [lem]);
+    \\ METIS_TAC [lem]
+QED
 
-val LEAST_ABORT_LT2 = store_thm("LEAST_ABORT_LT2",
-  `(?s. s < w /\ IS_ABORT i (s + 1)) ==> (LEAST s. IS_ABORT i (s + 1)) < w`,
+Theorem LEAST_ABORT_LT2:
+   (?s. s < w /\ IS_ABORT i (s + 1)) ==> (LEAST s. IS_ABORT i (s + 1)) < w
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC (GSYM LEAST_ABORT_ISA)
     \\ POP_ASSUM SUBST1_TAC
     \\ METIS_TAC [lem,(GEN_ALL o SIMP_RULE bool_ss [] o
          BETA_RULE o SPECL [`\l. l < w`,
-           `\s. s < w /\ IS_ABORT i (s + 1)`]) LEAST_ELIM]);
+           `\s. s < w /\ IS_ABORT i (s + 1)`]) LEAST_ELIM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -894,8 +946,8 @@ val LDM_PENCZ_LEM = prove(
           ASM_SIMP_TAC arith_ss [LDM_PENCZ_THM])
     \\ ASM_SIMP_TAC arith_ss [PENCZ_THM,IN_LDM_STM]);
 
-val NEXT_CORE_LDM_TN_X = store_thm("NEXT_CORE_LDM_TN_X",
-   `!x w reg ireg alub alua din dout i.
+Theorem NEXT_CORE_LDM_TN_X:
+    !x w reg ireg alub alua din dout i.
       (w = LENGTH (REGISTER_LIST ((15 >< 0) ireg))) ==>
       0 < w ==>
       x <= w - 1 ==>
@@ -940,7 +992,8 @@ val NEXT_CORE_LDM_TN_X = store_thm("NEXT_CORE_LDM_TN_X",
               (MASKN (SUC (SUC x)) ((15 >< 0) ireg))
               (RP ldm ((15 >< 0) ireg) (MASKN (SUC x) ((15 >< 0) ireg)))
               (RP ldm ((15 >< 0) ireg) (MASKN x ((15 >< 0) ireg)))
-              mul' mul2' borrow2' mshift'); inp := ADVANCE x (ADVANCE 2 i)|>))`,
+              mul' mul2' borrow2' mshift'); inp := ADVANCE x (ADVANCE 2 i)|>))
+Proof
   Induct
     >> (RW_TAC arith_ss [FUNPOW,REG_WRITEN_def,MASKN_ZERO,ADVANCE_ZERO,
             IS_ABORT_ZERO,LEAST_ABORT_ZERO] \\
@@ -980,7 +1033,8 @@ val NEXT_CORE_LDM_TN_X = store_thm("NEXT_CORE_LDM_TN_X",
            CONJ_TAC
              >> RW_TAC arith_ss [NEW_LEAST_ABORT_LT,NEW_LEAST_ABORT_LT2,
                   NEW_LEAST_ABORT_LT3,REG_READ_WRITEN_PC2]
-             \\ RW_TAC arith_ss [RP_NOT_15,IN_LDM_STM] \\ METIS_TAC []]]);
+             \\ RW_TAC arith_ss [RP_NOT_15,IN_LDM_STM] \\ METIS_TAC []]]
+QED
 
 val NEXT_CORE_LDM_TN_W1 = save_thm("NEXT_CORE_LDM_TN_W1",
   (GEN_ALL o SIMP_RULE std_ss [] o
@@ -1007,8 +1061,8 @@ val NEXT_CORE_STM_TN1 = (GEN_ALL o SIMP_RULE (stdi_ss++ARITH_ss) [COND_PAIR] o
           (RP stm ((15 >< 0) ireg) (MASKN x ((15 >< 0) ireg)))
           mul mul2 borrow2 mshift)) (NRESET,ABORT,NFQ,NIQ,DATA,CPA,CPB)``;
 
-val NEXT_CORE_STM_TN_X = store_thm("NEXT_CORE_STM_TN_X",
-   `!x w y reg ireg alub alua dout i.
+Theorem NEXT_CORE_STM_TN_X:
+    !x w y reg ireg alub alua dout i.
       (w = LENGTH (REGISTER_LIST ((15 >< 0) ireg))) ==>
       1 < w ==>
       x <= w - 2 ==>
@@ -1042,7 +1096,8 @@ val NEXT_CORE_STM_TN_X = store_thm("NEXT_CORE_STM_TN_X",
            (MASKN (SUC (SUC x)) ((15 >< 0) ireg))
            (RP stm ((15 >< 0) ireg) (MASKN (SUC x) ((15 >< 0) ireg)))
            (RP stm ((15 >< 0) ireg) (MASKN x ((15 >< 0) ireg)))
-           mul' mul2' borrow2' mshift'); inp := ADVANCE x (ADVANCE 2 i)|>))`,
+           mul' mul2' borrow2' mshift'); inp := ADVANCE x (ADVANCE 2 i)|>))
+Proof
   Induct
     >> (RW_TAC arith_ss [FUNPOW,MASKN_ZERO,GSYM ADVANCE_COMP] \\
           METIS_TAC [interrupt_exists])
@@ -1064,7 +1119,8 @@ val NEXT_CORE_STM_TN_X = store_thm("NEXT_CORE_STM_TN_X",
     \\ RW_TAC (arith_ss++SIZES_ss) [MASK_def,MASKN_SUC,ADVANCE_def,AREGN1_def,
          pred_setTheory.IN_INSERT,pred_setTheory.NOT_IN_EMPTY,n2w_11]
     \\ FULL_SIMP_TAC (arith_ss++SIZES_ss) [ADD1,n2w_11]
-    \\ EXISTS_TAC `3w` \\ SIMP_TAC (arith_ss++SIZES_ss) [n2w_11]);
+    \\ EXISTS_TAC `3w` \\ SIMP_TAC (arith_ss++SIZES_ss) [n2w_11]
+QED
 
 val NEXT_CORE_STM_TN_W2 =
   (GEN_ALL o SIMP_RULE arith_ss [] o

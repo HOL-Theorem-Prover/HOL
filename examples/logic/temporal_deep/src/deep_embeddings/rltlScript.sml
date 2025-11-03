@@ -246,60 +246,60 @@ Definition RLTL_IS_TAUTOLOGY_def:
 End
 
 
-val RLTL_TAUTOLOGY_CONTRADICTION_DUAL =
- store_thm
-  ("RLTL_TAUTOLOGY_CONTRADICTION_DUAL",
+Theorem RLTL_TAUTOLOGY_CONTRADICTION_DUAL:
 
-  ``(!l. RLTL_IS_CONTRADICTION (RLTL_NOT l) = RLTL_IS_TAUTOLOGY l) /\
-    (!l. RLTL_IS_TAUTOLOGY (RLTL_NOT l) = RLTL_IS_CONTRADICTION l)``,
+    (!l. RLTL_IS_CONTRADICTION (RLTL_NOT l) = RLTL_IS_TAUTOLOGY l) /\
+    (!l. RLTL_IS_TAUTOLOGY (RLTL_NOT l) = RLTL_IS_CONTRADICTION l)
+Proof
 
-    REWRITE_TAC[RLTL_IS_TAUTOLOGY_def, RLTL_IS_CONTRADICTION_def, RLTL_SEM_def, RLTL_SEM_TIME_def]);
+    REWRITE_TAC[RLTL_IS_TAUTOLOGY_def, RLTL_IS_CONTRADICTION_def, RLTL_SEM_def, RLTL_SEM_TIME_def]
+QED
 
 
-val RLTL_TAUTOLOGY_CONTRADICTION___TO___EQUIVALENT_INITIAL =
- store_thm
-  ("RLTL_TAUTOLOGY_CONTRADICTION___TO___EQUIVALENT_INITIAL",
+Theorem RLTL_TAUTOLOGY_CONTRADICTION___TO___EQUIVALENT_INITIAL:
 
-  ``(!l. RLTL_IS_CONTRADICTION l = RLTL_EQUIVALENT_INITIAL l RLTL_FALSE) /\
-    (!l. RLTL_IS_TAUTOLOGY l = RLTL_EQUIVALENT_INITIAL l RLTL_TRUE)``,
+    (!l. RLTL_IS_CONTRADICTION l = RLTL_EQUIVALENT_INITIAL l RLTL_FALSE) /\
+    (!l. RLTL_IS_TAUTOLOGY l = RLTL_EQUIVALENT_INITIAL l RLTL_TRUE)
+Proof
 
     REWRITE_TAC[RLTL_IS_TAUTOLOGY_def, RLTL_IS_CONTRADICTION_def,
       RLTL_SEM_TIME_def, RLTL_EQUIVALENT_INITIAL_def, RLTL_FALSE_def, P_SEM_THM,
       RLTL_TRUE_def, RLTL_SEM_def] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 
-val RLTL_EQUIVALENT_INITIAL___TO___TAUTOLOGY =
- store_thm
-  ("RLTL_EQUIVALENT_INITIAL___TO___TAUTOLOGY",
+Theorem RLTL_EQUIVALENT_INITIAL___TO___TAUTOLOGY:
 
-  ``!l1 l2. RLTL_EQUIVALENT_INITIAL l1 l2 = RLTL_IS_TAUTOLOGY (RLTL_EQUIV(l1, l2))``,
+    !l1 l2. RLTL_EQUIVALENT_INITIAL l1 l2 = RLTL_IS_TAUTOLOGY (RLTL_EQUIV(l1, l2))
+Proof
 
     REWRITE_TAC[RLTL_IS_TAUTOLOGY_def, RLTL_SEM_TIME_def, RLTL_EQUIV_def,
       RLTL_IMPL_def, RLTL_OR_def,
       RLTL_EQUIVALENT_INITIAL_def, RLTL_SEM_def] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 
 (******************************************************************************
 * Some simple Lemmata
 ******************************************************************************)
 
-val RLTL_SEM_PROP_RLTL_OPERATOR_EQUIV =
- store_thm
-  ("RLTL_SEM_PROP_RLTL_OPERATOR_EQUIV",
+Theorem RLTL_SEM_PROP_RLTL_OPERATOR_EQUIV:
 
-   ``(!t v a r f. (~(P_SEM (v t) a) \/ ~(P_SEM (v t) r)) ==>
+     (!t v a r f. (~(P_SEM (v t) a) \/ ~(P_SEM (v t) r)) ==>
    (RLTL_SEM_TIME t v a r (RLTL_PROP (P_NOT f)) =
    RLTL_SEM_TIME t v a r (RLTL_NOT (RLTL_PROP f)))) /\
 
    (!t v a r f1 f2.
    (RLTL_SEM_TIME t v a r (RLTL_PROP (P_AND(f1, f2))) =
-   RLTL_SEM_TIME t v a r (RLTL_AND (RLTL_PROP f1, RLTL_PROP f2))))``,
+   RLTL_SEM_TIME t v a r (RLTL_AND (RLTL_PROP f1, RLTL_PROP f2))))
+Proof
 
    REPEAT STRIP_TAC THEN
    ASM_REWRITE_TAC[RLTL_SEM_TIME_def, P_SEM_def] THEN
-   PROVE_TAC[])
+   PROVE_TAC[]
+QED
 
 
 Definition RLTL_USED_VARS_def:
@@ -312,10 +312,9 @@ Definition RLTL_USED_VARS_def:
 End
 
 
-val RLTL_USED_VARS_INTER_SUBSET_THM =
- store_thm
-  ("RLTL_USED_VARS_INTER_SUBSET_THM",
-   ``!f t a r v S. ((RLTL_USED_VARS f) SUBSET S /\ (P_USED_VARS a) SUBSET S /\ (P_USED_VARS r) SUBSET S) ==> (RLTL_SEM_TIME t v a r f = RLTL_SEM_TIME t (PATH_RESTRICT v S) a r f)``,
+Theorem RLTL_USED_VARS_INTER_SUBSET_THM:
+     !f t a r v S. ((RLTL_USED_VARS f) SUBSET S /\ (P_USED_VARS a) SUBSET S /\ (P_USED_VARS r) SUBSET S) ==> (RLTL_SEM_TIME t v a r f = RLTL_SEM_TIME t (PATH_RESTRICT v S) a r f)
+Proof
 
    INDUCT_THEN rltl_induct ASSUME_TAC THENL [
       SIMP_TAC std_ss [RLTL_SEM_TIME_def, RLTL_USED_VARS_def, PATH_RESTRICT_def, PATH_MAP_def] THEN
@@ -356,23 +355,23 @@ val RLTL_USED_VARS_INTER_SUBSET_THM =
       REPEAT STRIP_TAC THEN
       `(P_USED_VARS (P_OR (a,P_AND (p_2,P_NOT r)))) SUBSET S` by ASM_REWRITE_TAC[P_USED_VARS_def, P_OR_def, UNION_SUBSET] THEN
       METIS_TAC[]
-   ]);
+   ]
+QED
 
 
-val RLTL_USED_VARS_INTER_THM =
- store_thm
-  ("RLTL_USED_VARS_INTER_THM",
-   ``!f t a r v. (RLTL_SEM_TIME t v a r f = RLTL_SEM_TIME t (PATH_RESTRICT v (RLTL_USED_VARS f UNION P_USED_VARS a UNION P_USED_VARS r)) a r f)``,
+Theorem RLTL_USED_VARS_INTER_THM:
+     !f t a r v. (RLTL_SEM_TIME t v a r f = RLTL_SEM_TIME t (PATH_RESTRICT v (RLTL_USED_VARS f UNION P_USED_VARS a UNION P_USED_VARS r)) a r f)
+Proof
 
    REPEAT STRIP_TAC THEN
    MATCH_MP_TAC RLTL_USED_VARS_INTER_SUBSET_THM THEN
-   SIMP_TAC std_ss [SUBSET_DEF, IN_UNION]);
+   SIMP_TAC std_ss [SUBSET_DEF, IN_UNION]
+QED
 
 
-val RLTL_RESTN_SEM =
- store_thm
-  ("RLTL_RESTN_SEM",
-   ``!f v a r t1 t2. ((RLTL_SEM_TIME (t1+t2) v a r f) = (RLTL_SEM_TIME t1 (PATH_RESTN v t2) a r f))``,
+Theorem RLTL_RESTN_SEM:
+     !f v a r t1 t2. ((RLTL_SEM_TIME (t1+t2) v a r f) = (RLTL_SEM_TIME t1 (PATH_RESTN v t2) a r f))
+Proof
 
    INDUCT_THEN rltl_induct ASSUME_TAC THENL [
       REWRITE_TAC[RLTL_SEM_TIME_def, PATH_RESTN_def] THEN METIS_TAC[],
@@ -411,34 +410,34 @@ val RLTL_RESTN_SEM =
       ],
 
       REWRITE_TAC[RLTL_SEM_TIME_def] THEN METIS_TAC[]
-   ]);
+   ]
+QED
 
 
-val RLTL_SEM_TIME___TIME_ELIM =
- store_thm
-  ("RLTL_SEM_TIME___TIME_ELIM",
-   ``!f v a r t. ((RLTL_SEM_TIME t v a r f) = (RLTL_SEM_TIME 0 (PATH_RESTN v t) a r f))``,
+Theorem RLTL_SEM_TIME___TIME_ELIM:
+     !f v a r t. ((RLTL_SEM_TIME t v a r f) = (RLTL_SEM_TIME 0 (PATH_RESTN v t) a r f))
+Proof
 
    `!t. t = 0+t` by DECIDE_TAC THEN
-   METIS_TAC[RLTL_RESTN_SEM]);
+   METIS_TAC[RLTL_RESTN_SEM]
+QED
 
 
-val RLTL_SEM_TIME___EQUIV_PATH =
- store_thm
-  ("RLTL_SEM_TIME___EQUIV_PATH",
-   ``!f v1 v2 a r t. (EQUIV_PATH_RESTN t v1 v2) ==>
-      ((RLTL_SEM_TIME t v1 a r f) = (RLTL_SEM_TIME t v2 a r f))``,
+Theorem RLTL_SEM_TIME___EQUIV_PATH:
+     !f v1 v2 a r t. (EQUIV_PATH_RESTN t v1 v2) ==>
+      ((RLTL_SEM_TIME t v1 a r f) = (RLTL_SEM_TIME t v2 a r f))
+Proof
 
    ONCE_REWRITE_TAC[RLTL_SEM_TIME___TIME_ELIM] THEN
-   PROVE_TAC[EQUIV_PATH_RESTN___PATH_RESTN]);
+   PROVE_TAC[EQUIV_PATH_RESTN___PATH_RESTN]
+QED
 
 
-val RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV",
-   ``!f v a1 a2 r t. (PROP_LOGIC_EQUIVALENT a1 a2) ==>
+Theorem RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV:
+     !f v a1 a2 r t. (PROP_LOGIC_EQUIVALENT a1 a2) ==>
       (((RLTL_SEM_TIME t v a1 r f) = (RLTL_SEM_TIME t v a2 r f)) /\
-       ((RLTL_SEM_TIME t v r a1 f) = (RLTL_SEM_TIME t v r a2 f)))``,
+       ((RLTL_SEM_TIME t v r a1 f) = (RLTL_SEM_TIME t v r a2 f)))
+Proof
 
    REWRITE_TAC[PROP_LOGIC_EQUIVALENT_def] THEN
    INDUCT_THEN rltl_induct ASSUME_TAC THEN
@@ -447,60 +446,61 @@ val RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV =
    `(!s. P_SEM s (P_OR (a1,P_AND (p_2,P_NOT r))) = P_SEM s (P_OR (a2,P_AND (p_2,P_NOT r)))) /\
     (!s. P_SEM s (P_OR (r,P_AND (p_2,P_NOT a1))) = P_SEM s (P_OR (r,P_AND (p_2,P_NOT a2))))`
       by ASM_REWRITE_TAC[P_SEM_THM] THEN
-   RES_TAC THEN ASM_REWRITE_TAC[]);
+   RES_TAC THEN ASM_REWRITE_TAC[]
+QED
 
 
 
-val RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV___BOTH =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV___BOTH",
-   ``!f v a1 a2 r1 r2 t. (PROP_LOGIC_EQUIVALENT a1 a2) ==>
+Theorem RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV___BOTH:
+     !f v a1 a2 r1 r2 t. (PROP_LOGIC_EQUIVALENT a1 a2) ==>
                          (PROP_LOGIC_EQUIVALENT r1 r2) ==>
-      ((RLTL_SEM_TIME t v a1 r1 f) = (RLTL_SEM_TIME t v a2 r2 f))``,
+      ((RLTL_SEM_TIME t v a1 r1 f) = (RLTL_SEM_TIME t v a2 r2 f))
+Proof
 
-   PROVE_TAC[RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV]);
-
-
-val RLTL_REJECT_SEM =
- store_thm
-  ("RLTL_REJECT_SEM",
-   ``!v a r f b t.((RLTL_SEM_TIME t v a r (RLTL_REJECT(f,b))) =
-   RLTL_SEM_TIME t v a (P_OR(r, P_AND(b, P_NOT(a)))) f)``,
-   REWRITE_TAC[RLTL_REJECT_def, RLTL_SEM_TIME_def]);
+   PROVE_TAC[RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV]
+QED
 
 
-val RLTL_OR_SEM =
- store_thm
-  ("RLTL_OR_SEM",
-   ``!v a r f1 f2 t.((RLTL_SEM_TIME t v a r (RLTL_OR(f1,f2))) = ((RLTL_SEM_TIME t v a r f1) \/ (RLTL_SEM_TIME t v a r f2)))``,
-   REWRITE_TAC[RLTL_OR_def, RLTL_SEM_TIME_def] THEN SIMP_TAC std_ss []);
+Theorem RLTL_REJECT_SEM:
+     !v a r f b t.((RLTL_SEM_TIME t v a r (RLTL_REJECT(f,b))) =
+   RLTL_SEM_TIME t v a (P_OR(r, P_AND(b, P_NOT(a)))) f)
+Proof
+   REWRITE_TAC[RLTL_REJECT_def, RLTL_SEM_TIME_def]
+QED
 
 
-val RLTL_IMPL_SEM =
- store_thm
-  ("RLTL_IMPL_SEM",
-   ``!v a r f1 f2 t.((RLTL_SEM_TIME t v a r (RLTL_IMPL(f1,f2))) = ((RLTL_SEM_TIME t v r a f1) ==> (RLTL_SEM_TIME t v a r f2)))``,
-   REWRITE_TAC[RLTL_IMPL_def, RLTL_OR_SEM,RLTL_SEM_TIME_def] THEN METIS_TAC[]);
+Theorem RLTL_OR_SEM:
+     !v a r f1 f2 t.((RLTL_SEM_TIME t v a r (RLTL_OR(f1,f2))) = ((RLTL_SEM_TIME t v a r f1) \/ (RLTL_SEM_TIME t v a r f2)))
+Proof
+   REWRITE_TAC[RLTL_OR_def, RLTL_SEM_TIME_def] THEN SIMP_TAC std_ss []
+QED
 
 
-val RLTL_EVENTUAL_SEM =
- store_thm
-  ("RLTL_EVENTUAL_SEM",
-   ``!v a r f t. ((RLTL_SEM_TIME t v a r (RLTL_EVENTUAL f)) =
+Theorem RLTL_IMPL_SEM:
+     !v a r f1 f2 t.((RLTL_SEM_TIME t v a r (RLTL_IMPL(f1,f2))) = ((RLTL_SEM_TIME t v r a f1) ==> (RLTL_SEM_TIME t v a r f2)))
+Proof
+   REWRITE_TAC[RLTL_IMPL_def, RLTL_OR_SEM,RLTL_SEM_TIME_def] THEN METIS_TAC[]
+QED
+
+
+Theorem RLTL_EVENTUAL_SEM:
+     !v a r f t. ((RLTL_SEM_TIME t v a r (RLTL_EVENTUAL f)) =
       (?k. (k >= t) /\ (RLTL_SEM_TIME k v a r f) /\ (!j. t <= j /\ j < k ==>
-        P_SEM (v j) a \/ ~P_SEM (v j) r)))``,
+        P_SEM (v j) a \/ ~P_SEM (v j) r)))
+Proof
 
-   REWRITE_TAC[RLTL_EVENTUAL_def,RLTL_SEM_TIME_def, P_SEM_def]);
+   REWRITE_TAC[RLTL_EVENTUAL_def,RLTL_SEM_TIME_def, P_SEM_def]
+QED
 
 
-val RLTL_ALWAYS_SEM =
- store_thm
-  ("RLTL_ALWAYS_SEM",
-   ``!v a r f t. (RLTL_SEM_TIME t v a r (RLTL_ALWAYS f)) =
-      (!k. ((k >= t) /\ (!j. (t <= j /\ j < k) ==> (P_SEM (v j) r \/ ~P_SEM (v j) a))) ==> (RLTL_SEM_TIME k v a r f))``,
+Theorem RLTL_ALWAYS_SEM:
+     !v a r f t. (RLTL_SEM_TIME t v a r (RLTL_ALWAYS f)) =
+      (!k. ((k >= t) /\ (!j. (t <= j /\ j < k) ==> (P_SEM (v j) r \/ ~P_SEM (v j) a))) ==> (RLTL_SEM_TIME k v a r f))
+Proof
 
    SIMP_TAC std_ss [RLTL_ALWAYS_def, RLTL_EVENTUAL_def,RLTL_SEM_TIME_def, P_SEM_def] THEN
-   PROVE_TAC[]);
+   PROVE_TAC[]
+QED
 
 
 val RLTL_SEM_THM = LIST_CONJ [RLTL_SEM_def,
@@ -512,60 +512,59 @@ val RLTL_SEM_THM = LIST_CONJ [RLTL_SEM_def,
 val _ = save_thm("RLTL_SEM_THM",RLTL_SEM_THM);
 
 
-val RLTL_EQUIV_PATH_STRONG___SYM_PATH =
- store_thm
-  ("RLTL_EQUIV_PATH_STRONG___SYM_PATH",
-   ``!v1 v2 a r t. RLTL_EQUIV_PATH_STRONG t v1 v2 a r = RLTL_EQUIV_PATH_STRONG t v2 v1 a r``,
+Theorem RLTL_EQUIV_PATH_STRONG___SYM_PATH:
+     !v1 v2 a r t. RLTL_EQUIV_PATH_STRONG t v1 v2 a r = RLTL_EQUIV_PATH_STRONG t v2 v1 a r
+Proof
 
    REWRITE_TAC[RLTL_EQUIV_PATH_STRONG_def] THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
 
-val RLTL_EQUIV_PATH_STRONG___SYM_ACCEPT_REJECT =
- store_thm
-  ("RLTL_EQUIV_PATH_STRONG___SYM_ACCEPT_REJECT",
-   ``!v1 v2 a r t. RLTL_EQUIV_PATH_STRONG t v1 v2 a r = RLTL_EQUIV_PATH_STRONG t v1 v2 r a``,
+Theorem RLTL_EQUIV_PATH_STRONG___SYM_ACCEPT_REJECT:
+     !v1 v2 a r t. RLTL_EQUIV_PATH_STRONG t v1 v2 a r = RLTL_EQUIV_PATH_STRONG t v1 v2 r a
+Proof
 
    REWRITE_TAC[RLTL_EQUIV_PATH_STRONG_def] THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
 
-val RLTL_EQUIV_PATH___SYM_PATH =
- store_thm
-  ("RLTL_EQUIV_PATH___SYM_PATH",
-   ``!v1 v2 a r t. RLTL_EQUIV_PATH t v1 v2 a r = RLTL_EQUIV_PATH t v2 v1 a r``,
+Theorem RLTL_EQUIV_PATH___SYM_PATH:
+     !v1 v2 a r t. RLTL_EQUIV_PATH t v1 v2 a r = RLTL_EQUIV_PATH t v2 v1 a r
+Proof
 
    REWRITE_TAC[RLTL_EQUIV_PATH_def] THEN
-   PROVE_TAC[EQUIV_PATH_RESTN_SYM, RLTL_EQUIV_PATH_STRONG___SYM_PATH]);
+   PROVE_TAC[EQUIV_PATH_RESTN_SYM, RLTL_EQUIV_PATH_STRONG___SYM_PATH]
+QED
 
 
-val RLTL_EQUIV_PATH___SYM_ACCEPT_REJECT =
- store_thm
-  ("RLTL_EQUIV_PATH___SYM_ACCEPT_REJECT",
-   ``!v1 v2 a r t. RLTL_EQUIV_PATH t v1 v2 a r = RLTL_EQUIV_PATH t v1 v2 r a``,
+Theorem RLTL_EQUIV_PATH___SYM_ACCEPT_REJECT:
+     !v1 v2 a r t. RLTL_EQUIV_PATH t v1 v2 a r = RLTL_EQUIV_PATH t v1 v2 r a
+Proof
    REWRITE_TAC[RLTL_EQUIV_PATH_def] THEN
-   PROVE_TAC[RLTL_EQUIV_PATH_STRONG___SYM_ACCEPT_REJECT]);
+   PROVE_TAC[RLTL_EQUIV_PATH_STRONG___SYM_ACCEPT_REJECT]
+QED
 
 
-val RLTL_EQUIV_PATH_STRONG___GREATER_IMPL =
- store_thm
-  ("RLTL_EQUIV_PATH_STRONG___GREATER_IMPL",
-   ``!v1 v2 t t2 a r. (t2 >= t /\ (RLTL_EQUIV_PATH_STRONG t v1 v2 a r) /\ (!j. (t <= j /\ j < t2) ==> ((~(P_SEM (v1 j) a) \/ ~(P_SEM (v2 j) a)) /\
-   (~(P_SEM (v1 j) r) \/ ~(P_SEM (v2 j) r))))) ==> (RLTL_EQUIV_PATH_STRONG t2 v1 v2 a r)``,
+Theorem RLTL_EQUIV_PATH_STRONG___GREATER_IMPL:
+     !v1 v2 t t2 a r. (t2 >= t /\ (RLTL_EQUIV_PATH_STRONG t v1 v2 a r) /\ (!j. (t <= j /\ j < t2) ==> ((~(P_SEM (v1 j) a) \/ ~(P_SEM (v2 j) a)) /\
+   (~(P_SEM (v1 j) r) \/ ~(P_SEM (v2 j) r))))) ==> (RLTL_EQUIV_PATH_STRONG t2 v1 v2 a r)
+Proof
 
    REWRITE_TAC [RLTL_EQUIV_PATH_STRONG_def] THEN
    REPEAT STRIP_TAC THEN (
       `~(k < t2)` by PROVE_TAC[GREATER_EQ] THEN
       EXISTS_TAC ``k:num`` THEN
       ASM_SIMP_TAC arith_ss []
-   ));
+   )
+QED
 
 
-val RLTL_EQUIV_PATH___GREATER_IMPL =
- store_thm
-  ("RLTL_EQUIV_PATH___GREATER_IMPL",
-   ``!v1 v2 t t2 a r. (t2 >= t /\ (RLTL_EQUIV_PATH t v1 v2 a r) /\ (!j. (t <= j /\ j < t2) ==> ((~(P_SEM (v1 j) a) \/ ~(P_SEM (v2 j) a)) /\
-   (~(P_SEM (v1 j) r) \/ ~(P_SEM (v2 j) r))))) ==> (RLTL_EQUIV_PATH t2 v1 v2 a r)``,
+Theorem RLTL_EQUIV_PATH___GREATER_IMPL:
+     !v1 v2 t t2 a r. (t2 >= t /\ (RLTL_EQUIV_PATH t v1 v2 a r) /\ (!j. (t <= j /\ j < t2) ==> ((~(P_SEM (v1 j) a) \/ ~(P_SEM (v2 j) a)) /\
+   (~(P_SEM (v1 j) r) \/ ~(P_SEM (v2 j) r))))) ==> (RLTL_EQUIV_PATH t2 v1 v2 a r)
+Proof
 
    REWRITE_TAC[RLTL_EQUIV_PATH_def] THEN
    REPEAT STRIP_TAC THENL [
@@ -573,36 +572,36 @@ val RLTL_EQUIV_PATH___GREATER_IMPL =
 
       ASSUME_TAC RLTL_EQUIV_PATH_STRONG___GREATER_IMPL THEN
       RES_TAC THEN ASM_REWRITE_TAC[]
-   ]);
+   ]
+QED
 
 
-val RLTL_EQUIV_PATH_STRONG___SUC =
- store_thm
-  ("RLTL_EQUIV_PATH_STRONG___SUC",
-   ``!v1 v2 t a r. ((RLTL_EQUIV_PATH_STRONG t v1 v2 a r) /\ (~(P_SEM (v1 t) a) \/ ~(P_SEM (v2 t) a)) /\
-   (~(P_SEM (v1 t) r) \/ ~(P_SEM (v2 t) r))) ==> (RLTL_EQUIV_PATH_STRONG (SUC t) v1 v2 a r)``,
-
-   `!t. SUC t >= t /\ (!j. (t <= j /\ j < SUC t) ==> (j = t))` by DECIDE_TAC THEN
-   METIS_TAC[RLTL_EQUIV_PATH_STRONG___GREATER_IMPL]);
-
-
-val RLTL_EQUIV_PATH___SUC =
- store_thm
-  ("RLTL_EQUIV_PATH___SUC",
-   ``!v1 v2 t a r. ((RLTL_EQUIV_PATH t v1 v2 a r) /\ (~(P_SEM (v1 t) a) \/ ~(P_SEM (v2 t) a)) /\
-   (~(P_SEM (v1 t) r) \/ ~(P_SEM (v2 t) r))) ==> (RLTL_EQUIV_PATH (SUC t) v1 v2 a r)``,
+Theorem RLTL_EQUIV_PATH_STRONG___SUC:
+     !v1 v2 t a r. ((RLTL_EQUIV_PATH_STRONG t v1 v2 a r) /\ (~(P_SEM (v1 t) a) \/ ~(P_SEM (v2 t) a)) /\
+   (~(P_SEM (v1 t) r) \/ ~(P_SEM (v2 t) r))) ==> (RLTL_EQUIV_PATH_STRONG (SUC t) v1 v2 a r)
+Proof
 
    `!t. SUC t >= t /\ (!j. (t <= j /\ j < SUC t) ==> (j = t))` by DECIDE_TAC THEN
-   METIS_TAC[RLTL_EQUIV_PATH___GREATER_IMPL]);
+   METIS_TAC[RLTL_EQUIV_PATH_STRONG___GREATER_IMPL]
+QED
+
+
+Theorem RLTL_EQUIV_PATH___SUC:
+     !v1 v2 t a r. ((RLTL_EQUIV_PATH t v1 v2 a r) /\ (~(P_SEM (v1 t) a) \/ ~(P_SEM (v2 t) a)) /\
+   (~(P_SEM (v1 t) r) \/ ~(P_SEM (v2 t) r))) ==> (RLTL_EQUIV_PATH (SUC t) v1 v2 a r)
+Proof
+
+   `!t. SUC t >= t /\ (!j. (t <= j /\ j < SUC t) ==> (j = t))` by DECIDE_TAC THEN
+   METIS_TAC[RLTL_EQUIV_PATH___GREATER_IMPL]
+QED
 
 
 
-val RLTL_EQUIV_PATH_STRONG___INITIAL =
- store_thm
-  ("RLTL_EQUIV_PATH_STRONG___INITIAL",
-   ``!v1 v2 t a r. (RLTL_EQUIV_PATH_STRONG t v1 v2 a r) ==>
+Theorem RLTL_EQUIV_PATH_STRONG___INITIAL:
+     !v1 v2 t a r. (RLTL_EQUIV_PATH_STRONG t v1 v2 a r) ==>
       (((P_SEM (v1 t) a) = (P_SEM (v2 t) a)) /\
-       ((P_SEM (v1 t) r) = (P_SEM (v2 t) r)))``,
+       ((P_SEM (v1 t) r) = (P_SEM (v2 t) r)))
+Proof
 
    REWRITE_TAC [RLTL_EQUIV_PATH_STRONG_def] THEN
    REPEAT GEN_TAC THEN STRIP_TAC THEN (
@@ -612,30 +611,29 @@ val RLTL_EQUIV_PATH_STRONG___INITIAL =
        `t < k` by DECIDE_TAC THEN
        PROVE_TAC[LESS_EQ_REFL]
      ]
-   ));
+   )
+QED
 
 
-val RLTL_EQUIV_PATH___INITIAL =
- store_thm
-  ("RLTL_EQUIV_PATH___INITIAL",
-   ``!v1 v2 t a r. (RLTL_EQUIV_PATH t v1 v2 a r) ==>
+Theorem RLTL_EQUIV_PATH___INITIAL:
+     !v1 v2 t a r. (RLTL_EQUIV_PATH t v1 v2 a r) ==>
       (((P_SEM (v1 t) a) = (P_SEM (v2 t) a)) /\
-       ((P_SEM (v1 t) r) = (P_SEM (v2 t) r)))``,
+       ((P_SEM (v1 t) r) = (P_SEM (v2 t) r)))
+Proof
 
    REWRITE_TAC [RLTL_EQUIV_PATH_def] THEN
    REPEAT GEN_TAC THEN STRIP_TAC THENL [
      FULL_SIMP_TAC std_ss [EQUIV_PATH_RESTN_def],
      PROVE_TAC[RLTL_EQUIV_PATH_STRONG___INITIAL]
    ]
-  );
+QED
 
 
 
-val RLTL_ACCEPT_REJECT_THM =
- store_thm
-  ("RLTL_ACCEPT_REJECT_THM",
-   ``!f v a r t. (((P_SEM (v t) a) /\ ~(P_SEM (v t) r)) ==> RLTL_SEM_TIME t v a r f) /\
-                 ((~(P_SEM (v t) a) /\ (P_SEM (v t) r)) ==> ~(RLTL_SEM_TIME t v a r f))``,
+Theorem RLTL_ACCEPT_REJECT_THM:
+     !f v a r t. (((P_SEM (v t) a) /\ ~(P_SEM (v t) r)) ==> RLTL_SEM_TIME t v a r f) /\
+                 ((~(P_SEM (v t) a) /\ (P_SEM (v t) r)) ==> ~(RLTL_SEM_TIME t v a r f))
+Proof
 
 
 INDUCT_THEN rltl_induct ASSUME_TAC THENL [
@@ -654,18 +652,18 @@ INDUCT_THEN rltl_induct ASSUME_TAC THENL [
    ],
 
    REWRITE_TAC[RLTL_SEM_TIME_def] THEN METIS_TAC[P_SEM_THM]
-]);
+]
+QED
 
 
-val RLTL_SEM_TIME___STRANGE_NEGATION_EXAMPLE =
- store_thm
-  ("RLTL_SEM_TIME___STRANGE_NEGATION_EXAMPLE",
+Theorem RLTL_SEM_TIME___STRANGE_NEGATION_EXAMPLE:
 
-   ``!v a r p1 p2 t. (P_SEM (v t) a /\ P_SEM (v t) r /\ (!j:num. j > t ==> (
+     !v a r p1 p2 t. (P_SEM (v t) a /\ P_SEM (v t) r /\ (!j:num. j > t ==> (
    ~(P_SEM (v j) p1) /\ ~(P_SEM (v j) p2) /\ ~(P_SEM (v j) r))) /\ (!j:num. (P_SEM (v j) a = (j <= SUC t)))) ==>
 
    ((RLTL_SEM_TIME t v a r (RLTL_SUNTIL(RLTL_PROP p1, RLTL_NOT(RLTL_PROP p2)))) /\
-   (RLTL_SEM_TIME t v a r (RLTL_NOT(RLTL_SUNTIL(RLTL_PROP p1, RLTL_NOT(RLTL_PROP p2))))))``,
+   (RLTL_SEM_TIME t v a r (RLTL_NOT(RLTL_SUNTIL(RLTL_PROP p1, RLTL_NOT(RLTL_PROP p2))))))
+Proof
 
    REPEAT STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [RLTL_SEM_THM] THENL [
@@ -679,16 +677,16 @@ val RLTL_SEM_TIME___STRANGE_NEGATION_EXAMPLE =
       DISJ2_TAC THEN
       EXISTS_TAC ``SUC t`` THEN
       ASM_SIMP_TAC arith_ss []
-   ]);
+   ]
+QED
 
 
 
-val RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH",
-   ``!f t v a1 a2 r. (IMP_ON_PATH_RESTN t v a1 a2) ==>
+Theorem RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH:
+     !f t v a1 a2 r. (IMP_ON_PATH_RESTN t v a1 a2) ==>
      ((RLTL_SEM_TIME t v a1 r f ==> RLTL_SEM_TIME t v a2 r f) /\
-      (RLTL_SEM_TIME t v r a2 f ==> RLTL_SEM_TIME t v r a1 f))``,
+      (RLTL_SEM_TIME t v r a2 f ==> RLTL_SEM_TIME t v r a1 f))
+Proof
 
    INDUCT_THEN rltl_induct ASSUME_TAC THENL [
       REWRITE_TAC[RLTL_SEM_TIME_def, IMP_ON_PATH_RESTN_def] THEN METIS_TAC[LESS_EQ_REFL, GREATER_EQ],
@@ -731,46 +729,46 @@ val RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH =
          (FULL_SIMP_TAC std_ss [P_SEM_def, P_SEM_THM, IMP_ON_PATH_RESTN_def] THEN METIS_TAC[]) THEN
          METIS_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
-val RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV_ON_PATH =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV_ON_PATH",
-   ``!f t v a1 a2 r. (EQUIV_ON_PATH_RESTN t v a1 a2) ==>
+Theorem RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV_ON_PATH:
+     !f t v a1 a2 r. (EQUIV_ON_PATH_RESTN t v a1 a2) ==>
      ((RLTL_SEM_TIME t v a1 r f = RLTL_SEM_TIME t v a2 r f) /\
-      (RLTL_SEM_TIME t v r a1 f = RLTL_SEM_TIME t v r a2 f))``,
+      (RLTL_SEM_TIME t v r a1 f = RLTL_SEM_TIME t v r a2 f))
+Proof
 
-   METIS_TAC[EQUIV_ON_PATH_RESTN___IMP_ON_PATH_RESTN, RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH]);
+   METIS_TAC[EQUIV_ON_PATH_RESTN___IMP_ON_PATH_RESTN, RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH]
+QED
 
 
-val RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV_ON_PATH___BOTH =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV_ON_PATH___BOTH",
-   ``!f t v a1 a2 r1 r2. (EQUIV_ON_PATH_RESTN t v a1 a2) ==>
+Theorem RLTL_SEM_TIME___ACCEPT_REJECT_EQUIV_ON_PATH___BOTH:
+     !f t v a1 a2 r1 r2. (EQUIV_ON_PATH_RESTN t v a1 a2) ==>
                      (EQUIV_ON_PATH_RESTN t v r1 r2) ==>
-     (RLTL_SEM_TIME t v a1 r1 f = RLTL_SEM_TIME t v a2 r2 f)``,
+     (RLTL_SEM_TIME t v a1 r1 f = RLTL_SEM_TIME t v a2 r2 f)
+Proof
 
-   METIS_TAC[EQUIV_ON_PATH_RESTN___IMP_ON_PATH_RESTN, RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH]);
+   METIS_TAC[EQUIV_ON_PATH_RESTN___IMP_ON_PATH_RESTN, RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH]
+QED
 
 
-val RLTL_SEM_TIME___ACCEPT_REJECT_IMPL_EQUIV =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_REJECT_IMPL_EQUIV",
+Theorem RLTL_SEM_TIME___ACCEPT_REJECT_IMPL_EQUIV:
 
-   ``!t v r a1 a2.
+     !t v r a1 a2.
    (!f. (RLTL_SEM_TIME t v r a2 f ==> RLTL_SEM_TIME t v r a1 f)) =
-   (!f. (RLTL_SEM_TIME t v a1 r f ==> RLTL_SEM_TIME t v a2 r f))``,
+   (!f. (RLTL_SEM_TIME t v a1 r f ==> RLTL_SEM_TIME t v a2 r f))
+Proof
 
-   METIS_TAC[RLTL_SEM_TIME_def]);
+   METIS_TAC[RLTL_SEM_TIME_def]
+QED
 
 
 
-val RLTL_EQUIV_PATH_STRONG_THM =
- store_thm
-  ("RLTL_EQUIV_PATH_STRONG_THM",
-     ``!f t a r v1 v2. (RLTL_EQUIV_PATH_STRONG t v1 v2 a r) ==> (RLTL_SEM_TIME t v1 a r f = RLTL_SEM_TIME
-      t v2 a r f)``,
+Theorem RLTL_EQUIV_PATH_STRONG_THM:
+       !f t a r v1 v2. (RLTL_EQUIV_PATH_STRONG t v1 v2 a r) ==> (RLTL_SEM_TIME t v1 a r f = RLTL_SEM_TIME
+      t v2 a r f)
+Proof
 
    INDUCT_THEN rltl_induct ASSUME_TAC THEN REPEAT STRIP_TAC THENL [
 
@@ -839,27 +837,27 @@ val RLTL_EQUIV_PATH_STRONG_THM =
          ASM_REWRITE_TAC[]
       ) THEN
       METIS_TAC[]
-   ]);
+   ]
+QED
 
 
 
 
-val RLTL_EQUIV_PATH_THM =
- store_thm
-  ("RLTL_EQUIV_PATH_THM",
-     ``!f t a r v1 v2. (RLTL_EQUIV_PATH t v1 v2 a r) ==> (RLTL_SEM_TIME t v1 a r f = RLTL_SEM_TIME
-      t v2 a r f)``,
+Theorem RLTL_EQUIV_PATH_THM:
+       !f t a r v1 v2. (RLTL_EQUIV_PATH t v1 v2 a r) ==> (RLTL_SEM_TIME t v1 a r f = RLTL_SEM_TIME
+      t v2 a r f)
+Proof
 
-      METIS_TAC[RLTL_EQUIV_PATH_def, RLTL_SEM_TIME___EQUIV_PATH, RLTL_EQUIV_PATH_STRONG_THM]);
+      METIS_TAC[RLTL_EQUIV_PATH_def, RLTL_SEM_TIME___EQUIV_PATH, RLTL_EQUIV_PATH_STRONG_THM]
+QED
 
 
 
-val RLTL_SEM_TIME___ACCEPT_BEFORE_ON_PATH =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_BEFORE_ON_PATH",
+Theorem RLTL_SEM_TIME___ACCEPT_BEFORE_ON_PATH:
 
-  ``!t v a1 a2 r f. (NAND_ON_PATH_RESTN t v a1 r /\ BEFORE_ON_PATH_RESTN t v a1 a2) ==>
-    ((RLTL_SEM_TIME t v a2 r f ==> RLTL_SEM_TIME t v a1 r f))``,
+    !t v a1 a2 r f. (NAND_ON_PATH_RESTN t v a1 r /\ BEFORE_ON_PATH_RESTN t v a1 a2) ==>
+    ((RLTL_SEM_TIME t v a2 r f ==> RLTL_SEM_TIME t v a1 r f))
+Proof
 
    REPEAT GEN_TAC THEN
    REPEAT DISCH_TAC THEN
@@ -939,27 +937,27 @@ val RLTL_SEM_TIME___ACCEPT_BEFORE_ON_PATH =
          ]) THEN
 
       PROVE_TAC[RLTL_EQUIV_PATH_STRONG_THM, RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH]
-   ]);
+   ]
+QED
 
 
-val RLTL_SEM_TIME___REJECT_BEFORE_ON_PATH =
- store_thm
-  ("RLTL_SEM_TIME___REJECT_BEFORE_ON_PATH",
+Theorem RLTL_SEM_TIME___REJECT_BEFORE_ON_PATH:
 
-  ``!t v a1 a2 r f. (NAND_ON_PATH_RESTN t v a1 r /\ BEFORE_ON_PATH_RESTN t v a1 a2) ==>
-    ((RLTL_SEM_TIME t v r a1 f ==> RLTL_SEM_TIME t v r a2 f))``,
+    !t v a1 a2 r f. (NAND_ON_PATH_RESTN t v a1 r /\ BEFORE_ON_PATH_RESTN t v a1 a2) ==>
+    ((RLTL_SEM_TIME t v r a1 f ==> RLTL_SEM_TIME t v r a2 f))
+Proof
 
    REPEAT GEN_TAC THEN DISCH_TAC THEN
    `!f. RLTL_SEM_TIME t v a2 r f ==> RLTL_SEM_TIME t v a1 r f` by PROVE_TAC[RLTL_SEM_TIME___ACCEPT_BEFORE_ON_PATH] THEN
-   PROVE_TAC[RLTL_SEM_TIME___ACCEPT_REJECT_IMPL_EQUIV]);
+   PROVE_TAC[RLTL_SEM_TIME___ACCEPT_REJECT_IMPL_EQUIV]
+QED
 
 
 
-val RLTL_SEM_TIME___ACCEPT_OR_THM =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_OR_THM",
-   ``!t v a1 a2 r f. (NAND_ON_PATH_RESTN t v a1 r /\ NAND_ON_PATH_RESTN t v a2 r) ==>
-    ((RLTL_SEM_TIME t v (P_OR (a1, a2)) r f = (RLTL_SEM_TIME t v a1 r f \/ RLTL_SEM_TIME t v a2 r f)))``,
+Theorem RLTL_SEM_TIME___ACCEPT_OR_THM:
+     !t v a1 a2 r f. (NAND_ON_PATH_RESTN t v a1 r /\ NAND_ON_PATH_RESTN t v a2 r) ==>
+    ((RLTL_SEM_TIME t v (P_OR (a1, a2)) r f = (RLTL_SEM_TIME t v a1 r f \/ RLTL_SEM_TIME t v a2 r f)))
+Proof
 
    REPEAT STRIP_TAC THEN
    EQ_TAC THENL [
@@ -982,15 +980,15 @@ val RLTL_SEM_TIME___ACCEPT_OR_THM =
          `IMP_ON_PATH_RESTN t v a2 (P_OR(a1, a2))` by PROVE_TAC[IMP_ON_PATH_RESTN_def, P_SEM_THM, LESS_EQ_REFL]
       ] THEN
       PROVE_TAC[RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH]
-   ]);
+   ]
+QED
 
 
 
-val RLTL_SEM_TIME___REJECT_OR_THM =
- store_thm
-  ("RLTL_SEM_TIME___REJECT_OR_THM",
-   ``!t v a r1 r2 f. (NAND_ON_PATH_RESTN t v r1 a /\ NAND_ON_PATH_RESTN t v r2 a) ==>
-    ((RLTL_SEM_TIME t v a (P_OR (r1, r2)) f = (RLTL_SEM_TIME t v a r1 f /\ RLTL_SEM_TIME t v a r2 f)))``,
+Theorem RLTL_SEM_TIME___REJECT_OR_THM:
+     !t v a r1 r2 f. (NAND_ON_PATH_RESTN t v r1 a /\ NAND_ON_PATH_RESTN t v r2 a) ==>
+    ((RLTL_SEM_TIME t v a (P_OR (r1, r2)) f = (RLTL_SEM_TIME t v a r1 f /\ RLTL_SEM_TIME t v a r2 f)))
+Proof
 
    REPEAT STRIP_TAC THEN
    `RLTL_SEM_TIME t v a (P_OR (r1,r2)) f = ~(RLTL_SEM_TIME t v (P_OR (r1,r2)) a (RLTL_NOT f))` by
@@ -1000,50 +998,50 @@ val RLTL_SEM_TIME___REJECT_OR_THM =
    (RLTL_SEM_TIME t v r1 a (RLTL_NOT f) \/ RLTL_SEM_TIME t v r2 a (RLTL_NOT f))` by
       METIS_TAC[RLTL_SEM_TIME___ACCEPT_OR_THM] THEN
    ASM_REWRITE_TAC[RLTL_SEM_TIME_def] THEN
-   PROVE_TAC[]);
+   PROVE_TAC[]
+QED
 
 
 
 
-val RLTL_SEM_TIME___ACCEPT_REJECT_IS_ON_PATH =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_REJECT_IS_ON_PATH",
-   ``!v t a b r f. ((RLTL_SEM_TIME t v a r f /\ ~RLTL_SEM_TIME t v b r f) \/
+Theorem RLTL_SEM_TIME___ACCEPT_REJECT_IS_ON_PATH:
+     !v t a b r f. ((RLTL_SEM_TIME t v a r f /\ ~RLTL_SEM_TIME t v b r f) \/
                     (RLTL_SEM_TIME t v r b f /\ ~RLTL_SEM_TIME t v r a f)) ==>
-                    IS_ON_PATH_RESTN t v a``,
+                    IS_ON_PATH_RESTN t v a
+Proof
 
    REPEAT STRIP_TAC THEN
    CCONTR_TAC THEN
    `IMP_ON_PATH_RESTN t v a b` by PROVE_TAC[IS_ON_PATH_RESTN_def, NOT_ON_PATH___IMP_ON_PATH] THEN
-   PROVE_TAC [RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH]);
+   PROVE_TAC [RLTL_SEM_TIME___ACCEPT_REJECT_IMP_ON_PATH]
+QED
 
 
 
 
 
 
-val RLTL_SEM_TIME___ACCEPT_REJECT_BEFORE_ON_PATH_STRONG =
- store_thm
-  ("RLTL_SEM_TIME___ACCEPT_REJECT_BEFORE_ON_PATH_STRONG",
-   ``!v t a1 a2 r f. (NAND_ON_PATH_RESTN t v a2 r /\
+Theorem RLTL_SEM_TIME___ACCEPT_REJECT_BEFORE_ON_PATH_STRONG:
+     !v t a1 a2 r f. (NAND_ON_PATH_RESTN t v a2 r /\
    ((RLTL_SEM_TIME t v a1 r f /\ ~RLTL_SEM_TIME t v a2 r f) \/
-    (~RLTL_SEM_TIME t v r a1 f /\ RLTL_SEM_TIME t v r a2 f))) ==> BEFORE_ON_PATH_RESTN_STRONG t v a1 a2``,
+    (~RLTL_SEM_TIME t v r a1 f /\ RLTL_SEM_TIME t v r a2 f))) ==> BEFORE_ON_PATH_RESTN_STRONG t v a1 a2
+Proof
 
    REPEAT STRIP_TAC THEN
    CCONTR_TAC THEN
    `BEFORE_ON_PATH_RESTN t v a2 a1` by METIS_TAC[BEFORE_ON_PATH_RESTN___NEGATION_IMPL] THENL [
       METIS_TAC[RLTL_SEM_TIME___ACCEPT_BEFORE_ON_PATH],
       METIS_TAC[RLTL_SEM_TIME___REJECT_BEFORE_ON_PATH]
-   ]);
+   ]
+QED
 
 
 
-val RLTL_WEAK_UNTIL___ALTERNATIVE_DEF =
- store_thm
-  ("RLTL_WEAK_UNTIL___ALTERNATIVE_DEF",
-   ``!v a r t f1 f2.
+Theorem RLTL_WEAK_UNTIL___ALTERNATIVE_DEF:
+     !v a r t f1 f2.
                      (RLTL_SEM_TIME t v a r (RLTL_UNTIL(f1,f2)) =
-                      RLTL_SEM_TIME t v a r (RLTL_NOT (RLTL_SUNTIL(RLTL_NOT f2, RLTL_AND(RLTL_NOT f1, RLTL_NOT f2)))))``,
+                      RLTL_SEM_TIME t v a r (RLTL_NOT (RLTL_SUNTIL(RLTL_NOT f2, RLTL_AND(RLTL_NOT f1, RLTL_NOT f2)))))
+Proof
 
    SIMP_TAC std_ss [RLTL_UNTIL_def, RLTL_SEM_THM] THEN
    REPEAT STRIP_TAC THEN
@@ -1091,43 +1089,43 @@ val RLTL_WEAK_UNTIL___ALTERNATIVE_DEF =
          `j < k' /\ j >= t` by DECIDE_TAC THEN
          PROVE_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
 
 
 
-val RLTL_NEGATION_NORMAL_FORM =
- store_thm
-  ("RLTL_NEGATION_NORMAL_FORM",
+Theorem RLTL_NEGATION_NORMAL_FORM:
 
-   ``!v t a r f f1 f2 b p. (~(P_SEM (v t) a /\ P_SEM (v t) r) ==>
+     !v t a r f f1 f2 b p. (~(P_SEM (v t) a /\ P_SEM (v t) r) ==>
          ((RLTL_SEM_TIME t v a r (RLTL_NOT(RLTL_PROP p)) = RLTL_SEM_TIME t v a r (RLTL_PROP (P_NOT p))) /\
           (RLTL_SEM_TIME t v a r (RLTL_NOT(RLTL_NEXT f)) = RLTL_SEM_TIME t v a r (RLTL_NEXT(RLTL_NOT f))))) /\
 
          (RLTL_SEM_TIME t v a r (RLTL_NOT(RLTL_NOT f)) = RLTL_SEM_TIME t v a r f) /\
          (RLTL_SEM_TIME t v a r (RLTL_NOT(RLTL_AND(f1, f2))) = RLTL_SEM_TIME t v a r (RLTL_OR (RLTL_NOT f1, RLTL_NOT f2))) /\
          (RLTL_SEM_TIME t v a r (RLTL_NOT(RLTL_SUNTIL(f1,f2))) = RLTL_SEM_TIME t v a r (RLTL_BEFORE(RLTL_NOT f1, f2))) /\
-         (RLTL_SEM_TIME t v a r (RLTL_NOT(RLTL_ACCEPT(f,b))) = RLTL_SEM_TIME t v a r (RLTL_REJECT (RLTL_NOT f, b)))``,
+         (RLTL_SEM_TIME t v a r (RLTL_NOT(RLTL_ACCEPT(f,b))) = RLTL_SEM_TIME t v a r (RLTL_REJECT (RLTL_NOT f, b)))
+Proof
 
    SIMP_TAC std_ss [RLTL_BEFORE_def, RLTL_SEM_TIME_def, P_SEM_def, RLTL_OR_def, RLTL_REJECT_def] THEN
-   PROVE_TAC[]);
+   PROVE_TAC[]
+QED
 
 
 
-val IS_RLTL_RELATIONS =
- store_thm
-  ("IS_RLTL_RELATIONS",
-   ``!f. ((IS_RLTL_F f = IS_RLTL_G (RLTL_NOT f)) /\ (IS_RLTL_G f = IS_RLTL_F (RLTL_NOT f)) /\
+Theorem IS_RLTL_RELATIONS:
+     !f. ((IS_RLTL_F f = IS_RLTL_G (RLTL_NOT f)) /\ (IS_RLTL_G f = IS_RLTL_F (RLTL_NOT f)) /\
           (IS_RLTL_FG f = IS_RLTL_GF (RLTL_NOT f)) /\ (IS_RLTL_GF f = IS_RLTL_FG (RLTL_NOT f)) /\
           (IS_RLTL_F f ==> IS_RLTL_FG f) /\ (IS_RLTL_G f ==> IS_RLTL_GF f) /\
           (IS_RLTL_G f ==> IS_RLTL_FG f) /\ (IS_RLTL_F f ==> IS_RLTL_GF f) /\
-          (IS_RLTL_PREFIX f ==> (IS_RLTL_FG f /\ IS_RLTL_GF f)))``,
+          (IS_RLTL_PREFIX f ==> (IS_RLTL_FG f /\ IS_RLTL_GF f)))
+Proof
 
       INDUCT_THEN rltl_induct ASSUME_TAC THEN
       REWRITE_TAC[IS_RLTL_G_def, IS_RLTL_PREFIX_def, IS_RLTL_GF_def] THEN
       METIS_TAC[]
-  );
+QED
 
 
 
@@ -1142,13 +1140,12 @@ End
 
 
 
-val RLTL_SEM_TIME___VAR_RENAMING =
- store_thm
-  ("RLTL_SEM_TIME___VAR_RENAMING",
-   ``!f' t v a r f.
+Theorem RLTL_SEM_TIME___VAR_RENAMING:
+     !f' t v a r f.
        (INJ f (PATH_USED_VARS v UNION RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r) UNIV) ==>
        ((RLTL_SEM_TIME t v a r f') =
-        (RLTL_SEM_TIME t (PATH_VAR_RENAMING f v) (P_VAR_RENAMING f a) (P_VAR_RENAMING f r) (RLTL_VAR_RENAMING f f')))``,
+        (RLTL_SEM_TIME t (PATH_VAR_RENAMING f v) (P_VAR_RENAMING f a) (P_VAR_RENAMING f r) (RLTL_VAR_RENAMING f f')))
+Proof
 
 
    INDUCT_THEN rltl_induct ASSUME_TAC THENL [
@@ -1243,16 +1240,16 @@ val RLTL_SEM_TIME___VAR_RENAMING =
       MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
       SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, P_USED_VARS_def] THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
 
 
-val RLTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT =
- store_thm
-  ("RLTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT",
-   ``!f' t v a r f. (INJ f (RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r) UNIV) ==> ((RLTL_SEM_TIME t v a r f') = (RLTL_SEM_TIME t
-    (PATH_VAR_RENAMING f (PATH_RESTRICT v (RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r))) (P_VAR_RENAMING f a) (P_VAR_RENAMING f r) (RLTL_VAR_RENAMING f f')))``,
+Theorem RLTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT:
+     !f' t v a r f. (INJ f (RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r) UNIV) ==> ((RLTL_SEM_TIME t v a r f') = (RLTL_SEM_TIME t
+    (PATH_VAR_RENAMING f (PATH_RESTRICT v (RLTL_USED_VARS f' UNION P_USED_VARS a UNION P_USED_VARS r))) (P_VAR_RENAMING f a) (P_VAR_RENAMING f r) (RLTL_VAR_RENAMING f f')))
+Proof
 
    REPEAT STRIP_TAC THEN
    CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [RLTL_USED_VARS_INTER_THM])) THEN
@@ -1261,14 +1258,14 @@ val RLTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT =
    MATCH_MP_TAC INJ_SUBSET_DOMAIN THEN
    SIMP_TAC std_ss [SUBSET_DEF, IN_UNION, GSYM PATH_USED_VARS_THM,
     PATH_RESTRICT_def, PATH_MAP_def, IN_INTER] THEN
-   PROVE_TAC[]);
+   PROVE_TAC[]
+QED
 
 
-val RLTL_SEM___VAR_RENAMING___PATH_RESTRICT =
- store_thm
-  ("RLTL_SEM___VAR_RENAMING___PATH_RESTRICT",
-   ``!f' v f. (INJ f (RLTL_USED_VARS f') UNIV) ==> ((RLTL_SEM v f') = (RLTL_SEM
-    (PATH_VAR_RENAMING f (PATH_RESTRICT v (RLTL_USED_VARS f'))) (RLTL_VAR_RENAMING f f')))``,
+Theorem RLTL_SEM___VAR_RENAMING___PATH_RESTRICT:
+     !f' v f. (INJ f (RLTL_USED_VARS f') UNIV) ==> ((RLTL_SEM v f') = (RLTL_SEM
+    (PATH_VAR_RENAMING f (PATH_RESTRICT v (RLTL_USED_VARS f'))) (RLTL_VAR_RENAMING f f')))
+Proof
 
    REPEAT STRIP_TAC THEN
    REWRITE_TAC[RLTL_SEM_def] THEN
@@ -1279,4 +1276,5 @@ val RLTL_SEM___VAR_RENAMING___PATH_RESTRICT =
    ASSUME_TAC RLTL_SEM_TIME___VAR_RENAMING___PATH_RESTRICT THEN
    Q_SPECL_NO_ASSUM 0 [`f'`, `0:num`, `v`, `P_FALSE`, `P_FALSE`, `f`] THEN
    UNDISCH_HD_TAC THEN
-   ASM_SIMP_TAC std_ss [P_USED_VARS_EVAL, UNION_EMPTY]);
+   ASM_SIMP_TAC std_ss [P_USED_VARS_EVAL, UNION_EMPTY]
+QED

@@ -992,10 +992,11 @@ val simple_sem_t_reln_not_timeout = prove(``
   ho_match_mp_tac simple_sem_t_reln_ind>>rw[]>>
   TRY(metis_tac[sem_e_reln_not_timeout,FST]))
 
-val simple_sem_t_reln_iff_sem_t = store_thm("simple_sem_t_reln_iff_sem_t",``
+Theorem simple_sem_t_reln_iff_sem_t:
    ∀s t r s'.
    simple_sem_t_reln s t (r,s' with clock:=s.clock) ⇔
-   ∃c'. sem_t (s with clock:=c') t = (r,s') ∧ r ≠ Rtimeout``,
+   ∃c'. sem_t (s with clock:=c') t = (r,s') ∧ r ≠ Rtimeout
+Proof
    rw[]>>EQ_TAC>>strip_tac>>fs[]
    >-
      (imp_res_tac simple_sem_t_reln_imp_sem_t>>fs[]>>
@@ -1005,7 +1006,8 @@ val simple_sem_t_reln_iff_sem_t = store_thm("simple_sem_t_reln_iff_sem_t",``
      imp_res_tac sem_t_imp_simple_sem_t_reln>>
      fs[]>>
      imp_res_tac simple_sem_t_reln_ignores_clock>>
-     first_assum(qspec_then`s.clock` assume_tac)>>fs[clock_rm])
+     first_assum(qspec_then`s.clock` assume_tac)>>fs[clock_rm]
+QED
 
 (* Next, we prove that simple_sem_t_div covers all diverging cases of sem_t *)
 
@@ -1462,9 +1464,11 @@ val pb_sem_t_size_reln_equiv_lemma2 = prove(``
   \\ once_rewrite_tac [pb_sem_t_size_reln_cases] \\ fs []
   \\ metis_tac []);
 
-val pb_sem_t_size_reln_equiv = store_thm("pb_sem_t_size_reln_equiv",
-  ``∀s t r. pb_sem_t_reln s t r ⇔ ∃n. pb_sem_t_size_reln n s t r``,
-  metis_tac [pb_sem_t_size_reln_equiv_lemma2,pb_sem_t_size_reln_equiv_lemma1]);
+Theorem pb_sem_t_size_reln_equiv:
+    ∀s t r. pb_sem_t_reln s t r ⇔ ∃n. pb_sem_t_size_reln n s t r
+Proof
+  metis_tac [pb_sem_t_size_reln_equiv_lemma2,pb_sem_t_size_reln_equiv_lemma1]
+QED
 
 (* Pretty printing for paper *)
 Definition OMIT_def:   OMIT x = x

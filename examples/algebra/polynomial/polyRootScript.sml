@@ -182,10 +182,11 @@ val _ = overload_on ("factor", ``poly_factor r``);
 
 (* Theorem: factor c <> |0| *)
 (* Proof: by poly_factor_def, poly_zero, NOT_CONS_NIL *)
-val poly_factor_nonzero = store_thm(
-  "poly_factor_nonzero",
-  ``!r:'a ring. !c. factor c <> |0|``,
-  rw[poly_factor_def]);
+Theorem poly_factor_nonzero:
+    !r:'a ring. !c. factor c <> |0|
+Proof
+  rw[poly_factor_def]
+QED
 
 (* Theorem: Ring r ==> !x y. x IN R /\ y IN R ==> ((factor x = factor y) <=> (x = y)) *)
 (* Proof:
@@ -198,10 +199,11 @@ val poly_factor_nonzero = store_thm(
    Only-if part: x = y ==> factor x = factor y
       This is trivial.
 *)
-val poly_factor_eq = store_thm(
-  "poly_factor_eq",
-  ``!r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> ((factor x = factor y) <=> (x = y))``,
-  metis_tac[poly_factor_def, CONS_11, ring_neg_eq]);
+Theorem poly_factor_eq:
+    !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> ((factor x = factor y) <=> (x = y))
+Proof
+  metis_tac[poly_factor_def, CONS_11, ring_neg_eq]
+QED
 
 (* Theorem: Ring r ==> INJ factor R univ(:'a poly) *)
 (* Proof:
@@ -209,10 +211,11 @@ val poly_factor_eq = store_thm(
    (1) x IN R ==> factor x IN univ(:'a poly), true             by IN_UNIV
    (2) x IN R /\ y IN R /\ factor x = factor y ==> x = y, true by poly_factor_eq
 *)
-val poly_factor_injective = store_thm(
-  "poly_factor_injective",
-  ``!r:'a ring. Ring r ==> INJ factor R univ(:'a poly)``,
-  prove_tac[INJ_DEF, IN_UNIV, poly_factor_eq]);
+Theorem poly_factor_injective:
+    !r:'a ring. Ring r ==> INJ factor R univ(:'a poly)
+Proof
+  prove_tac[INJ_DEF, IN_UNIV, poly_factor_eq]
+QED
 
 (* This is better than poly_factor_inj later. *)
 
@@ -221,11 +224,12 @@ val poly_factor_injective = store_thm(
    Since INJ factor R univ(:'a poly)   by poly_factor_injective
    Hence the result follows            by INJ_IMAGE_EQ
 *)
-val poly_factor_image_eq = store_thm(
-  "poly_factor_image_eq",
-  ``!r:'a ring. Ring r ==> !s t. s SUBSET R /\ t SUBSET R ==>
-     ((IMAGE factor s = IMAGE factor t) <=> (s = t))``,
-  metis_tac[poly_factor_injective, INJ_IMAGE_EQ]);
+Theorem poly_factor_image_eq:
+    !r:'a ring. Ring r ==> !s t. s SUBSET R /\ t SUBSET R ==>
+     ((IMAGE factor s = IMAGE factor t) <=> (s = t))
+Proof
+  metis_tac[poly_factor_injective, INJ_IMAGE_EQ]
+QED
 
 (* Note:
 All factor theorems have pre-condition: Ring r /\ #1 <> #0.
@@ -242,10 +246,11 @@ Only deg (factor c) = 1   requires #1 <> #0.
    Since ~zerop |1|        by poly_one
    This is true by poly_cons_poly, zero_poly_cons
 *)
-val poly_factor_poly = store_thm(
-  "poly_factor_poly",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> poly (factor c)``,
-  rw[poly_factor_def, poly_one]);
+Theorem poly_factor_poly:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> poly (factor c)
+Proof
+  rw[poly_factor_def, poly_one]
+QED
 
 (* Theorem: deg (factor c) = 1 *)
 (* Proof:
@@ -253,10 +258,11 @@ val poly_factor_poly = store_thm(
    Since LENGTH |1|        by poly_one
    This is true by poly_deg_cons
 *)
-val poly_deg_factor = store_thm(
-  "poly_deg_factor",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (deg (factor c) = 1)``,
-  rw[poly_factor_def, poly_one]);
+Theorem poly_deg_factor:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (deg (factor c) = 1)
+Proof
+  rw[poly_factor_def, poly_one]
+QED
 
 (* Provide another form *)
 val poly_factor_deg = save_thm("poly_factor_deg", poly_deg_factor);
@@ -264,11 +270,12 @@ val poly_factor_deg = save_thm("poly_factor_deg", poly_deg_factor);
 
 (* Theorem: lead (factor c) = #1 *)
 (* Proof: by poly_factor_def, poly_one. *)
-val poly_lead_factor = store_thm(
-  "poly_lead_factor",
-  ``!r:'a ring. Ring r ==> !c. c IN R ==> (lead (factor c) = #1)``,
+Theorem poly_lead_factor:
+    !r:'a ring. Ring r ==> !c. c IN R ==> (lead (factor c) = #1)
+Proof
   rw[poly_factor_def, poly_one] >>
-  metis_tac[ring_one_eq_zero, IN_SING]);
+  metis_tac[ring_one_eq_zero, IN_SING]
+QED
 
 (* Provide another form *)
 val poly_factor_lead = save_thm("poly_factor_lead", poly_lead_factor);
@@ -282,10 +289,11 @@ val poly_factor_lead = save_thm("poly_factor_lead", poly_lead_factor);
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c. c IN R ==> monic (factor c) *)
 (* Proof: by poly_monic_def, poly_factor_poly, poly_lead_factor *)
-val poly_factor_monic = store_thm(
-  "poly_factor_monic",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> monic (factor c)``,
-  metis_tac[poly_monic_def, poly_factor_poly, poly_lead_factor]);
+Theorem poly_factor_monic:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> monic (factor c)
+Proof
+  metis_tac[poly_monic_def, poly_factor_poly, poly_lead_factor]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c. c IN R pmonic (factor c) *)
 (* Proof:
@@ -296,10 +304,11 @@ val poly_factor_monic = store_thm(
      and  unit (lead (factor c))   by ring_unit_one
      and  pmonic (factor c)        by notation
 *)
-val poly_factor_pmonic = store_thm(
-  "poly_factor_pmonic",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> pmonic (factor c)``,
-  rw[poly_factor_monic, poly_deg_factor]);
+Theorem poly_factor_pmonic:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> pmonic (factor c)
+Proof
+  rw[poly_factor_monic, poly_deg_factor]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c n. c IN R ==> (deg (factor c ** n) = n) *)
 (* Proof:
@@ -309,10 +318,11 @@ val poly_factor_pmonic = store_thm(
       = n * 1                   by poly_factor_deg
       = n                       by MULT_RIGHT_1
 *)
-val poly_factor_exp_deg = store_thm(
-  "poly_factor_exp_deg",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c n. c IN R ==> (deg (factor c ** n) = n)``,
-  rw_tac std_ss[poly_factor_monic, poly_monic_deg_exp, poly_factor_deg]);
+Theorem poly_factor_exp_deg:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c n. c IN R ==> (deg (factor c ** n) = n)
+Proof
+  rw_tac std_ss[poly_factor_monic, poly_monic_deg_exp, poly_factor_deg]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !s. s SUBSET R ==> INJ factor s (PolyRing r).carrier *)
 (* Proof:
@@ -328,15 +338,16 @@ val poly_factor_exp_deg = store_thm(
        <=>    - x' = - y            by list equality
        <=>      x' = y              by ring_neg_eq
 *)
-val poly_factor_inj = store_thm(
-  "poly_factor_inj",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !s. s SUBSET R ==> INJ factor s (PolyRing r).carrier``,
+Theorem poly_factor_inj:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !s. s SUBSET R ==> INJ factor s (PolyRing r).carrier
+Proof
   rw[poly_ring_element, INJ_DEF] >-
   metis_tac[poly_factor_poly, SUBSET_DEF] >>
   `x IN R /\ y IN R` by metis_tac[SUBSET_DEF] >>
   full_simp_tac std_ss[poly_factor_def] >>
   rw[] >>
-  metis_tac[ring_neg_eq]);
+  metis_tac[ring_neg_eq]
+QED
 
 (* Theorem: factor c = X - c * |1| *)
 (* Proof:
@@ -350,9 +361,9 @@ val poly_factor_inj = store_thm(
     = X + -(c * |1|)         by poly_neg_cmult
     = X - c * |1|            by poly_sub_def
 *)
-val poly_factor_alt = store_thm(
-  "poly_factor_alt",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (factor c = X - c * |1|)``,
+Theorem poly_factor_alt:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (factor c = X - c * |1|)
+Proof
   rpt strip_tac >>
   `poly (-c:: |1|)` by rw[] >>
   `-c IN R` by rw[] >>
@@ -363,7 +374,8 @@ val poly_factor_alt = store_thm(
   `_ = -c * |1| + X` by rw[poly_X_alt] >>
   `_ = X + -c * |1|` by rw[poly_add_comm] >>
   `_ = X + -(c * |1|)` by rw[poly_neg_cmult] >>
-  rw[poly_sub_def]);
+  rw[poly_sub_def]
+QED
 
 (* Theorem: X % (factor c) = c * |1| *)
 (* Proof:
@@ -374,9 +386,9 @@ val poly_factor_alt = store_thm(
      and  lead (factor c) = #1                by poly_lead_factor
    Hence  X % (factor c) = c * |1|            by poly_div_mod_eqn
 *)
-val poly_factor_divides_X = store_thm(
-  "poly_factor_divides_X",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (X % (factor c) = c * |1|)``,
+Theorem poly_factor_divides_X:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (X % (factor c) = c * |1|)
+Proof
   rpt strip_tac >>
   `poly X /\ poly (c * |1|) /\ poly |1| /\ poly (X - c * |1|)` by rw[] >>
   `X = (X - c * |1|) + c * |1|` by rw[poly_sub_add] >>
@@ -384,14 +396,16 @@ val poly_factor_divides_X = store_thm(
   `deg (c * |1|) = 0` by rw[] >>
   `deg (X - c * |1|) = 1` by rw[poly_deg_sub_less] >>
   `factor c = X - c * |1|` by rw[poly_factor_alt] >>
-  metis_tac[poly_div_mod_eqn, poly_lead_factor, ring_unit_one, DECIDE``0 < 1``]);
+  metis_tac[poly_div_mod_eqn, poly_lead_factor, ring_unit_one, DECIDE``0 < 1``]
+QED
 
 (* Theorem: factor #1 = X - |1| *)
 (* Proof: by poly_factor_alt *)
-val poly_factor_one = store_thm(
-  "poly_factor_one",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> (factor #1 = X - |1|)``,
-  rw[poly_factor_alt]);
+Theorem poly_factor_one:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> (factor #1 = X - |1|)
+Proof
+  rw[poly_factor_alt]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> (factor #0 = X) *)
 (* Proof:
@@ -400,10 +414,11 @@ val poly_factor_one = store_thm(
    = X - |0|              by poly_cmult_lzero
    = X                    by poly_sub_rzero
 *)
-val poly_factor_zero = store_thm(
-  "poly_factor_zero",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> (factor #0 = X)``,
-  rw[poly_factor_alt]);
+Theorem poly_factor_zero:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> (factor #0 = X)
+Proof
+  rw[poly_factor_alt]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c. c IN R ==> ((factor c = X) <=> (c = #0)) *)
 (* Proof:
@@ -418,9 +433,9 @@ val poly_factor_zero = store_thm(
    Only-if part: c = #0 ==> factor c = X
       True by poly_factor_zero
 *)
-val poly_factor_eq_X = store_thm(
-  "poly_factor_eq_X",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> ((factor c = X) <=> (c = #0))``,
+Theorem poly_factor_eq_X:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> ((factor c = X) <=> (c = #0))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     `|1| <> |0|` by rw[GSYM poly_one_ne_poly_zero] >>
     `poly X /\ poly |0| /\ poly |1| /\ poly (c * |1|)` by rw[] >>
@@ -429,7 +444,8 @@ val poly_factor_eq_X = store_thm(
     `c * lead |1| = #0` by metis_tac[poly_cmult_eq_zero] >>
     metis_tac[poly_lead_one, ring_mult_rone],
     rw[poly_factor_zero]
-  ]);
+  ]
+QED
 
 (* Theorem: eval (factor c) x = x - c *)
 (* Proof:
@@ -441,10 +457,11 @@ val poly_factor_eq_X = store_thm(
    = x + -c                 by ring_add_comm, ring_neg_element
    = x - c                  by ring_sub_def
 *)
-val poly_eval_factor = store_thm(
-  "poly_eval_factor",
-  ``!r:'a ring. Ring r ==> !c x. c IN R /\ x IN R ==> (eval (factor c) x = x - c)``,
-  rw[poly_factor_def, ring_add_comm]);
+Theorem poly_eval_factor:
+    !r:'a ring. Ring r ==> !c x. c IN R /\ x IN R ==> (eval (factor c) x = x - c)
+Proof
+  rw[poly_factor_def, ring_add_comm]
+QED
 
 (* Provide another form *)
 val poly_factor_eval = save_thm("poly_factor_eval", poly_eval_factor);
@@ -457,22 +474,24 @@ val poly_factor_eval = save_thm("poly_factor_eval", poly_eval_factor);
    (3) lead (factor c) = #1, true                    by poly_factor_lead
    (4) x IN R ==> (eval (factor c) x = x - c), true  by poly_factor_eval
 *)
-val poly_factor_property = store_thm(
-  "poly_factor_property",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==>
+Theorem poly_factor_property:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==>
    poly (factor c) /\ (deg (factor c) = 1) /\ (lead (factor c) = #1) /\
-   (!x. x IN R ==> (eval (factor c) x = x - c))``,
-  rw_tac std_ss[poly_factor_poly, poly_factor_deg, poly_factor_lead, poly_factor_eval]);
+   (!x. x IN R ==> (eval (factor c) x = x - c))
+Proof
+  rw_tac std_ss[poly_factor_poly, poly_factor_deg, poly_factor_lead, poly_factor_eval]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==>
             !s. s SUBSET R ==> (IMAGE factor s = {X - c * |1| | c | c IN s}) *)
 (* Proof: by poly_factor_alt, SUBSET_DEF *)
-val poly_image_factor_subset = store_thm(
-  "poly_image_factor_subset",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
-   !s. s SUBSET R ==> (IMAGE factor s = {X - c * |1| | c | c IN s})``,
+Theorem poly_image_factor_subset:
+    !r:'a ring. Ring r /\ #1 <> #0 ==>
+   !s. s SUBSET R ==> (IMAGE factor s = {X - c * |1| | c | c IN s})
+Proof
   rw_tac std_ss[EXTENSION, GSPECIFICATION, IN_IMAGE] >>
-  metis_tac[poly_factor_alt, SUBSET_DEF]);
+  metis_tac[poly_factor_alt, SUBSET_DEF]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==>
             !s. FINITE s /\ MAX_SET s < char r ==>
@@ -490,16 +509,17 @@ val poly_image_factor_subset = store_thm(
        Since ##x = ##c ==> x = c    by ring_num_eq
        This is trivially true.
 *)
-val poly_factor_in_image_X_add_c = store_thm(
-  "poly_factor_in_image_X_add_c",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
+Theorem poly_factor_in_image_X_add_c:
+    !r:'a ring. Ring r /\ #1 <> #0 ==>
    !s. FINITE s /\ MAX_SET s < char r ==>
-   !x. x IN s <=> (x < char r /\ factor (- ##x) IN (IMAGE (\c:num. X + |c|) s))``,
+   !x. x IN s <=> (x < char r /\ factor (- ##x) IN (IMAGE (\c:num. X + |c|) s))
+Proof
   rpt strip_tac >>
   `!c. c IN s ==> c < char r` by metis_tac[MEMBER_NOT_EMPTY, MAX_SET_DEF, LESS_EQ_LESS_TRANS] >>
   rw[poly_factor_def, poly_X_add_c_list, EQ_IMP_THM] >-
   metis_tac[poly_one] >>
-  metis_tac[ring_num_eq]);
+  metis_tac[ring_num_eq]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==>
             !s. FINITE s /\ MAX_SET s < char r ==>
@@ -517,16 +537,17 @@ val poly_factor_in_image_X_add_c = store_thm(
        Since ##x = ##c ==> x = c    by ring_num_eq
        This is trivially true.
 *)
-val poly_factor_in_image_X_sub_c = store_thm(
-  "poly_factor_in_image_X_sub_c",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
+Theorem poly_factor_in_image_X_sub_c:
+    !r:'a ring. Ring r /\ #1 <> #0 ==>
    !s. FINITE s /\ MAX_SET s < char r ==>
-   !x. x IN s <=> (x < char r /\ factor (##x) IN (IMAGE (\c:num. X - |c|) s))``,
+   !x. x IN s <=> (x < char r /\ factor (##x) IN (IMAGE (\c:num. X - |c|) s))
+Proof
   rpt strip_tac >>
   `!c. c IN s ==> c < char r` by metis_tac[MEMBER_NOT_EMPTY, MAX_SET_DEF, LESS_EQ_LESS_TRANS] >>
   rw[poly_factor_def, poly_X_sub_c_list, EQ_IMP_THM] >-
   metis_tac[poly_one] >>
-  metis_tac[ring_num_eq]);
+  metis_tac[ring_num_eq]
+QED
 
 (* Theorem: Field r ==> !p n. p IN (IMAGE factor (orders f* n)) ==>
             poly p /\ (deg p = 1) /\ (lead p = #1) /\ monic p *)
@@ -539,14 +560,15 @@ val poly_factor_in_image_X_sub_c = store_thm(
      and lead p = #1                 by poly_lead_factor
      and monic p                     by poly_factor_monic, #1 <> #0
 *)
-val field_orders_factor_image_member = store_thm(
-  "field_orders_factor_image_member",
-  ``!r:'a field. Field r ==> !p n. p IN (IMAGE factor (orders f* n)) ==>
-         poly p /\ (deg p = 1) /\ (lead p = #1) /\ monic p``,
+Theorem field_orders_factor_image_member:
+    !r:'a field. Field r ==> !p n. p IN (IMAGE factor (orders f* n)) ==>
+         poly p /\ (deg p = 1) /\ (lead p = #1) /\ monic p
+Proof
   ntac 5 strip_tac >>
   `?n x. (p = factor x) /\ x IN F* /\ (order f* x = n)` by metis_tac[orders_element, IN_IMAGE] >>
   `x IN R` by rw[field_nonzero_element_alt] >>
-  rw[poly_factor_poly, poly_deg_factor, poly_lead_factor, poly_factor_monic]);
+  rw[poly_factor_poly, poly_deg_factor, poly_lead_factor, poly_factor_monic]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Factor Theorem.                                                *)
@@ -559,9 +581,9 @@ val field_orders_factor_image_member = store_thm(
    Hence p(x) = [s * (factor x) + t](x) = s(x) * (factor x)(x) + t(x) = #0 + t(x) = t(x)
    Since deg t = 0, t(x) = t = p % (factor x), hence [p(x)] = p % (factor x).
 *)
-val poly_factor_thm = store_thm(
-  "poly_factor_thm",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p x. poly p /\ x IN R ==> (p % (factor x) = chop [eval p x])``,
+Theorem poly_factor_thm:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p x. poly p /\ x IN R ==> (p % (factor x) = chop [eval p x])
+Proof
   rpt strip_tac >>
   `poly (factor x) /\ (deg (factor x) = 1) /\ (lead (factor x) = #1) /\ (eval (factor x) x = #0)` by rw[poly_factor_property] >>
   `0 < 1` by decide_tac >>
@@ -574,7 +596,8 @@ val poly_factor_thm = store_thm(
   `eval p x = eval (p % factor x) x` by metis_tac[poly_eval_add, ring_add_lzero, poly_eval_element] >>
   Cases_on `p % factor x = |0|` >-
   rw[] >>
-  metis_tac[poly_deg_eq_zero, poly_eval_const, poly_chop_const_nonzero]);
+  metis_tac[poly_deg_eq_zero, poly_eval_const, poly_chop_const_nonzero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Root Theorem.                                                  *)
@@ -588,11 +611,12 @@ val poly_factor_thm = store_thm(
    <=> p % (factor x) = chop [#0]   by poly_factor_thm
    <=> p % (factor x) = |0|         by poly_chop_const_zero, poly_chop_const_nonzero
 *)
-val poly_root_thm = store_thm(
-  "poly_root_thm",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p x. poly p /\ x IN R ==> (root p x <=> (p % (factor x) = |0|))``,
+Theorem poly_root_thm:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p x. poly p /\ x IN R ==> (root p x <=> (p % (factor x) = |0|))
+Proof
   metis_tac[poly_root_def, poly_factor_thm, poly_chop_const_zero,
-            poly_chop_const_nonzero, poly_eval_element, NOT_CONS_NIL, poly_zero]);
+            poly_chop_const_nonzero, poly_eval_element, NOT_CONS_NIL, poly_zero]
+QED
 
 (* Theorem: Ring r ==> monic p /\ deg p = 1 ==> ?c. c IN R /\ (p = factor c) *)
 (* Proof:
@@ -605,9 +629,9 @@ val poly_root_thm = store_thm(
    By monic p, a = #1              by poly_lead_cons, poly_lead_const
    Let c = -h, then p = factor c   by poly_factor_def
 *)
-val poly_monic_deg1_factor = store_thm(
-  "poly_monic_deg1_factor",
-  ``!r:'a ring. Ring r ==> !p. monic p /\ (deg p = 1) ==> ?c. c IN R /\ (p = factor c)``,
+Theorem poly_monic_deg1_factor:
+    !r:'a ring. Ring r ==> !p. monic p /\ (deg p = 1) ==> ?c. c IN R /\ (p = factor c)
+Proof
   rpt strip_tac >>
   `poly p /\ (lead p = #1)` by rw[poly_monic_def] >>
   `p <> []` by metis_tac[poly_deg_of_zero, DECIDE ``0 <> 1``] >>
@@ -626,7 +650,8 @@ val poly_monic_deg1_factor = store_thm(
   `a = #1` by metis_tac[poly_lead_const] >>
   `-h IN R` by rw[] >>
   `p = factor (-h)` by rw[poly_factor_def, poly_one] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !p. monic p /\ deg p = 2 ==> !x. root p x ==>
             ?y. root p y /\ (p = (factor x) * (factor y) *)
@@ -661,10 +686,10 @@ val poly_monic_deg1_factor = store_thm(
      or root p c                  by poly_root_thm
    Therefore, take y = c, and the result follows.
 *)
-val poly_monic_deg2_factors = store_thm(
-  "poly_monic_deg2_factors",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p. monic p /\ (deg p = 2) ==>
-     !x. x IN R /\ root p x ==> ?y. root p y /\ (p = (factor x) * (factor y))``,
+Theorem poly_monic_deg2_factors:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p. monic p /\ (deg p = 2) ==>
+     !x. x IN R /\ root p x ==> ?y. root p y /\ (p = (factor x) * (factor y))
+Proof
   rpt strip_tac >>
   qabbrev_tac `q = factor x` >>
   `poly p` by rw[] >>
@@ -686,7 +711,8 @@ val poly_monic_deg2_factors = store_thm(
   `?c. c IN R /\ (t = factor c)` by metis_tac[poly_monic_deg1_factor] >>
   `p = q * t` by rw[poly_mult_comm] >>
   `pmonic t` by rw[] >>
-  metis_tac[poly_mod_eq_zero, poly_root_thm]);
+  metis_tac[poly_mod_eq_zero, poly_root_thm]
+QED
 
 (* Theorem: Field r ==> poly p /\ k <> #0 /\ p = k * (factor c) ==> root p c *)
 (* Proof:
@@ -699,15 +725,16 @@ val poly_monic_deg2_factors = store_thm(
    p % (factor c) = |0|       by poly_mod_eq_zero, ulead (factor c)
    or root p c                by poly_root_thm
 *)
-val poly_factor_root = store_thm(
-  "poly_factor_root",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !k c p. k IN R /\ c IN R /\ poly p /\ k <> #0 /\
-       (p = k * (factor c)) ==> root p c``,
+Theorem poly_factor_root:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !k c p. k IN R /\ c IN R /\ poly p /\ k <> #0 /\
+       (p = k * (factor c)) ==> root p c
+Proof
   rpt strip_tac >>
   `poly [k]` by rw[poly_nonzero_element_poly] >>
   `poly (factor c) /\ (deg (factor c) = 1)` by rw[poly_factor_property] >>
   `pmonic (factor c)` by rw[poly_factor_pmonic] >>
-  metis_tac[poly_mult_lconst, poly_mod_eq_zero, poly_root_thm, DECIDE ``0 < 1``]);
+  metis_tac[poly_mult_lconst, poly_mod_eq_zero, poly_root_thm, DECIDE ``0 < 1``]
+QED
 
 (* Theorem: Ring r ==> !c. c IN R ==> (roots (factor c) = {c}) *)
 (* Proof:
@@ -718,11 +745,12 @@ val poly_factor_root = store_thm(
    <=>                           x = c      by ring_sub_eq_zero
    Hence roots (factor c) = {c}             by EXTENSION
 *)
-val poly_factor_roots = store_thm(
-  "poly_factor_roots",
-  ``!r:'a ring. Ring r ==> !c. c IN R ==> (roots (factor c) = {c})``,
+Theorem poly_factor_roots:
+    !r:'a ring. Ring r ==> !c. c IN R ==> (roots (factor c) = {c})
+Proof
   rw[EXTENSION] >>
-  metis_tac[poly_roots_member, poly_root_def, poly_eval_factor, ring_sub_eq_zero]);
+  metis_tac[poly_roots_member, poly_root_def, poly_eval_factor, ring_sub_eq_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Root.                                                          *)
@@ -735,41 +763,45 @@ val poly_factor_roots = store_thm(
    But eval [c] x = c                      by poly_eval_const
    which means root p x is impossible      by poly_root_def
 *)
-val poly_nonzero_root_property = store_thm(
-  "poly_nonzero_root_property",
-  ``!r:'a ring. Ring r ==> !p. poly p /\ p <> |0| ==>
-   !x. x IN R /\ root p x ==> 0 < deg p``,
+Theorem poly_nonzero_root_property:
+    !r:'a ring. Ring r ==> !p. poly p /\ p <> |0| ==>
+   !x. x IN R /\ root p x ==> 0 < deg p
+Proof
   rpt strip_tac >>
   spose_not_then strip_assume_tac >>
   `deg p = 0` by decide_tac >>
   `?c. c IN R /\ c <> #0 /\ (p = [c])` by metis_tac[poly_deg_eq_zero] >>
   `eval [c] x = c` by rw[poly_eval_const] >>
-  metis_tac[poly_root_def]);
+  metis_tac[poly_root_def]
+QED
 
 (* Theorem: Ring r ==> !p q x. x IN R /\ poly p /\ poly q /\ root p x /\ root q x ==> root (p - q) x *)
 (* Proof: poly_root_add, poly_root_neg *)
-val poly_root_sub = store_thm(
-  "poly_root_sub",
-  ``!r:'a ring. Ring r ==> !p q x. x IN R /\ poly p /\ poly q /\ root p x /\ root q x ==> root (p - q) x``,
-  rw[poly_root_add, poly_root_neg]);
+Theorem poly_root_sub:
+    !r:'a ring. Ring r ==> !p q x. x IN R /\ poly p /\ poly q /\ root p x /\ root q x ==> root (p - q) x
+Proof
+  rw[poly_root_add, poly_root_neg]
+QED
 
 (* Theorem: Ring r ==> !p q x. x IN R /\ poly p /\ poly q /\ root p x /\ root q x ==>
             !s t. poly s /\ poly t ==> root (s * p + t * q) x *)
 (* Proof: poly_root_mult_comm, poly_root_add *)
-val poly_root_add_linear = store_thm(
-  "poly_root_add_linear",
-  ``!r:'a ring. Ring r ==> !p q x. x IN R /\ poly p /\ poly q /\ root p x /\ root q x ==>
-   !s t. poly s /\ poly t ==> root (s * p + t * q) x``,
-  rw[poly_root_mult_comm, poly_root_add]);
+Theorem poly_root_add_linear:
+    !r:'a ring. Ring r ==> !p q x. x IN R /\ poly p /\ poly q /\ root p x /\ root q x ==>
+   !s t. poly s /\ poly t ==> root (s * p + t * q) x
+Proof
+  rw[poly_root_mult_comm, poly_root_add]
+QED
 
 (* Theorem: Ring r ==> !p q x. x IN R /\ poly p /\ poly q /\ root p x /\ root q x ==>
             !s t. poly s /\ poly t ==> root (s * p - t * q) x *)
 (* Proof: poly_root_mult_comm, poly_root_sub *)
-val poly_root_sub_linear = store_thm(
-  "poly_root_sub_linear",
-  ``!r:'a ring. Ring r ==> !p q x. x IN R /\ poly p /\ poly q /\ root p x /\ root q x ==>
-   !s t. poly s /\ poly t ==> root (s * p - t * q) x``,
-  rw[poly_root_mult_comm, poly_root_sub]);
+Theorem poly_root_sub_linear:
+    !r:'a ring. Ring r ==> !p q x. x IN R /\ poly p /\ poly q /\ root p x /\ root q x ==>
+   !s t. poly s /\ poly t ==> root (s * p - t * q) x
+Proof
+  rw[poly_root_mult_comm, poly_root_sub]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==>
             !x. x IN R ==> (root (p * q) x <=> root p x \/ root q x) *)
@@ -784,10 +816,10 @@ val poly_root_sub_linear = store_thm(
       root p x ==> root (p * q) x    true by poly_root_mult
       root q x ==> root (p * q) x    true by poly_root_mult_comm
 *)
-val poly_root_field_mult = store_thm(
-  "poly_root_field_mult",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   !x. x IN R ==> (root (p * q) x <=> root p x \/ root q x)``,
+Theorem poly_root_field_mult:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   !x. x IN R ==> (root (p * q) x <=> root p x \/ root q x)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   rw_tac std_ss[EQ_IMP_THM] >| [
@@ -796,16 +828,18 @@ val poly_root_field_mult = store_thm(
     metis_tac[poly_eval_mult, field_mult_eq_zero],
     rw[poly_root_mult],
     rw[poly_root_mult_comm]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==>
             !x. x IN roots (p * q) <=> (x IN roots p) \/ (x IN roots q) *)
 (* Proof: by poly_root_field_mult, poly_roots_member *)
-val poly_root_field_mult_alt = store_thm(
-  "poly_root_field_mult_alt",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   !x. x IN roots (p * q) <=> (x IN roots p) \/ (x IN roots q)``,
-  metis_tac[poly_root_field_mult, poly_roots_member]);
+Theorem poly_root_field_mult_alt:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   !x. x IN roots (p * q) <=> (x IN roots p) \/ (x IN roots q)
+Proof
+  metis_tac[poly_root_field_mult, poly_roots_member]
+QED
 
 (* Theorem: Field r ==> !c p. c IN R /\ c <> #0 /\ poly p ==>
             !x. x IN R ==> (root (c * p) x <=> root p x) *)
@@ -816,14 +850,15 @@ val poly_root_field_mult_alt = store_thm(
    Note eval p x IN R                             by poly_eval_element
    Hence true                                     by field_mult_eq_zero
 *)
-val poly_root_cmult = store_thm(
-  "poly_root_cmult",
-  ``!r:'a field. Field r ==> !c p. c IN R /\ c <> #0 /\ poly p ==>
-   !x. x IN R ==> (root (c * p) x <=> root p x)``,
+Theorem poly_root_cmult:
+    !r:'a field. Field r ==> !c p. c IN R /\ c <> #0 /\ poly p ==>
+   !x. x IN R ==> (root (c * p) x <=> root p x)
+Proof
   rpt strip_tac >>
   rw[poly_root_def] >>
   `eval p x IN R` by rw[] >>
-  metis_tac[field_mult_eq_zero]);
+  metis_tac[field_mult_eq_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Roots.                                                         *)
@@ -831,17 +866,19 @@ val poly_root_cmult = store_thm(
 
 (* Theorem: (roots p) SUBSET R *)
 (* Proof: by poly_roots_def, SUBSET_DEF *)
-val poly_roots_subset = store_thm(
-  "poly_roots_subset",
-  ``!r:'a ring. !p. (roots p) SUBSET R``,
-  rw[poly_roots_def, SUBSET_DEF]);
+Theorem poly_roots_subset:
+    !r:'a ring. !p. (roots p) SUBSET R
+Proof
+  rw[poly_roots_def, SUBSET_DEF]
+QED
 
 (* Theorem: x IN roots p ==> x IN R *)
 (* Proof: by poly_roots_member *)
-val poly_roots_element = store_thm(
-  "poly_roots_element",
-  ``!r:'a ring. !p x. x IN roots p ==> x IN R``,
-  rw[poly_roots_member]);
+Theorem poly_roots_element:
+    !r:'a ring. !p x. x IN roots p ==> x IN R
+Proof
+  rw[poly_roots_member]
+QED
 
 (* Theorem: poly p /\ s SUBSET R /\ (!x. x IN s ==> root p x) ==> s SUBSET roots p *)
 (* Proof:
@@ -850,10 +887,11 @@ val poly_roots_element = store_thm(
    Therefore            x IN roots p          by poly_roots_def
    or             s SUBSET roots p            by SUBSET_DEF
 *)
-val poly_roots_has_subset = store_thm(
-  "poly_roots_has_subset",
-  ``!r:'a ring. !p s. poly p /\ s SUBSET R /\ (!x. x IN s ==> root p x) ==> s SUBSET roots p``,
-  rw[poly_roots_def, SUBSET_DEF]);
+Theorem poly_roots_has_subset:
+    !r:'a ring. !p s. poly p /\ s SUBSET R /\ (!x. x IN s ==> root p x) ==> s SUBSET roots p
+Proof
+  rw[poly_roots_def, SUBSET_DEF]
+QED
 
 (* Either theorem alias, or just another similar proof. *)
 val poly_roots_factor = save_thm("poly_roots_factor", poly_factor_roots);
@@ -879,13 +917,14 @@ Hence the rest is true only for F[x], not R[x] in general.
     and !c. c IN s ==> ((roots o factor) c = (\x. {x}) c)   by poly_roots_factor, c IN R
    Hence the result follows                                 by IMAGE_CONG
 *)
-val poly_roots_factor_image = store_thm(
-  "poly_roots_factor_image",
-  ``!r:'a ring. Ring r ==> !s. s SUBSET R ==> (IMAGE (roots o factor) s = IMAGE (\x. {x}) s)``,
+Theorem poly_roots_factor_image:
+    !r:'a ring. Ring r ==> !s. s SUBSET R ==> (IMAGE (roots o factor) s = IMAGE (\x. {x}) s)
+Proof
   rpt strip_tac >>
   `!x. x IN s ==> x IN R` by metis_tac[SUBSET_DEF] >>
   `!c. c IN s ==> ((roots o factor) c = (\x. {x}) c)` by rw[poly_roots_factor] >>
-  rw[IMAGE_CONG]);
+  rw[IMAGE_CONG]
+QED
 
 (* Theorem: roots |0| = R *)
 (* Proof:
@@ -894,11 +933,12 @@ val poly_roots_factor_image = store_thm(
    = {x | x IN R /\ T}             by poly_root_zero
    = R                             by EXTENSION
 *)
-val poly_roots_zero = store_thm(
-  "poly_roots_zero",
-  ``!r:'a ring. roots |0| = R``,
+Theorem poly_roots_zero:
+    !r:'a ring. roots |0| = R
+Proof
   rw_tac std_ss[poly_roots_def, EXTENSION, GSPECIFICATION] >>
-  metis_tac[poly_root_zero]);
+  metis_tac[poly_root_zero]
+QED
 
 (* Theorem: Ring r ==> (roots X = {#0}) *)
 (* Proof:
@@ -906,11 +946,12 @@ val poly_roots_zero = store_thm(
       x IN R /\ (eval X x = #0) <=> (x = #0)
    This is true by poly_eval_X, ring_zero_element.
 *)
-val poly_roots_X = store_thm(
-  "poly_roots_X",
-  ``!r:'a ring. Ring r ==> (roots X = {#0})``,
+Theorem poly_roots_X:
+    !r:'a ring. Ring r ==> (roots X = {#0})
+Proof
   rw[poly_roots_def, poly_root_def, EXTENSION] >>
-  metis_tac[poly_eval_X, ring_zero_element]);
+  metis_tac[poly_eval_X, ring_zero_element]
+QED
 
 (* Theorem: roots (p * q) = roots p UNION roots q *)
 (* Proof: by p * q = |0| iff p = |0| or q = |0|.
@@ -923,13 +964,14 @@ val poly_roots_X = store_thm(
    <=> x IN roots p or x IN roots q    by poly_roots_member
    <=> x IN (roots p UNION roots q)    by IN_UNION
 *)
-val poly_roots_mult = store_thm(
-  "poly_roots_mult",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (roots (p * q) = roots p UNION roots q)``,
+Theorem poly_roots_mult:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> (roots (p * q) = roots p UNION roots q)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   rw[poly_roots_member, poly_root_def, EXTENSION, EQ_IMP_THM] >-
-  rw[GSYM field_zero_product, GSYM poly_eval_mult] >> rw[]);
+  rw[GSYM field_zero_product, GSYM poly_eval_mult] >> rw[]
+QED
 
 (* Theorem: Field r ==> !p n. poly p /\ 0 < n ==> (roots (p ** n) = roots p) *)
 (* Proof:
@@ -946,16 +988,17 @@ val poly_roots_mult = store_thm(
           = roots p UNION roots p         by induction hypothesis
           = roots p                       by UNION_IDEMPOT
 *)
-val poly_roots_exp = store_thm(
-  "poly_roots_exp",
-  ``!r:'a field. Field r ==> !p n. poly p /\ 0 < n ==> (roots (p ** n) = roots p)``,
+Theorem poly_roots_exp:
+    !r:'a field. Field r ==> !p n. poly p /\ 0 < n ==> (roots (p ** n) = roots p)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[] >>
-  rw[poly_roots_mult]);
+  rw[poly_roots_mult]
+QED
 
 (* Theorem: A nonzero polynomial has only a finite number of roots, i.e. FINITE (roots p) *)
 (* Proof:
@@ -981,9 +1024,9 @@ val poly_roots_exp = store_thm(
           = z INSERT roots (p / factor z)                by INSERT_SING_UNION
       Hence FINITE (roots p)                             by FINITE_INSERT
 *)
-val poly_roots_finite = store_thm(
-  "poly_roots_finite",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> FINITE (roots p)``,
+Theorem poly_roots_finite:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> FINITE (roots p)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   Induct_on `deg p` >| [
@@ -1007,7 +1050,8 @@ val poly_roots_finite = store_thm(
     `deg p = deg (p / factor z) + 1` by metis_tac[weak_deg_mult_nonzero, poly_is_weak] >>
     `deg (p / factor z) = v` by decide_tac >>
     metis_tac[poly_roots_mult, poly_roots_factor, UNION_COMM, GSYM INSERT_SING_UNION, FINITE_INSERT]
-  ]);
+  ]
+QED
 
 (* Theorem: A nonzero polynomial cannot have more roots than its degree, i.e. CARD (roots p) <= deg p *)
 (* Proof:
@@ -1031,9 +1075,9 @@ val poly_roots_finite = store_thm(
       If z is not a root of (p / factor z), p has one more root.
       In either case, p has at most (SUC v) roots.
 *)
-val poly_roots_count = store_thm(
-  "poly_roots_count",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> CARD (roots p) <= deg p``,
+Theorem poly_roots_count:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> CARD (roots p) <= deg p
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   Induct_on `deg p` >| [
@@ -1070,7 +1114,8 @@ val poly_roots_count = store_thm(
       `CARD (roots p) = SUC (CARD (roots (p / factor z)))` by rw[] >>
       metis_tac[LESS_EQ_MONO]
     ]
-  ]);
+  ]
+QED
 
 (* Interesting note.
    By Fermat's Little Theorem, for prime p,
@@ -1090,10 +1135,11 @@ val poly_roots_count = store_thm(
                     <=>          c = #0     by poly_eval_const
    This contradicts c <> #0.
 *)
-val poly_roots_const = store_thm(
-  "poly_roots_const",
-  ``!r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==> (roots [c] = {})``,
-  metis_tac[poly_roots_member, MEMBER_NOT_EMPTY, poly_root_def, poly_eval_const]);
+Theorem poly_roots_const:
+    !r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==> (roots [c] = {})
+Proof
+  metis_tac[poly_roots_member, MEMBER_NOT_EMPTY, poly_root_def, poly_eval_const]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> (roots |1| = {}) *)
 (* Proof:
@@ -1101,10 +1147,11 @@ val poly_roots_const = store_thm(
    = roots [#1]      by poly_one, #1 <> #0
    = {}              by poly_roots_const, #1 IN R
 *)
-val poly_roots_one = store_thm(
-  "poly_roots_one",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> (roots |1| = {})``,
-  rw[poly_roots_const, poly_one]);
+Theorem poly_roots_one:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> (roots |1| = {})
+Proof
+  rw[poly_roots_const, poly_one]
+QED
 
 (* Theorem: (roots p) SUBSET (roots q) ==>
             !s t. poly s /\ poly t ==> (roots p) SUBSET (roots (s * p + t * q)) *)
@@ -1117,11 +1164,12 @@ val poly_roots_one = store_thm(
    = #0 + #0                                             by ring_mult_rzero
    = #0                                                  by ring_add_zero_zero
 *)
-val poly_roots_linear = store_thm(
-  "poly_roots_linear",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ (roots p) SUBSET (roots q) ==>
-   !s t. poly s /\ poly t ==> (roots p) SUBSET (roots (s * p + t * q))``,
-  rw[SUBSET_DEF, poly_roots_member, poly_root_def, poly_eval_add, poly_eval_mult]);
+Theorem poly_roots_linear:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ (roots p) SUBSET (roots q) ==>
+   !s t. poly s /\ poly t ==> (roots p) SUBSET (roots (s * p + t * q))
+Proof
+  rw[SUBSET_DEF, poly_roots_member, poly_root_def, poly_eval_add, poly_eval_mult]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q /\ roots p SUBSET roots q ==>
             !s t. poly s /\ poly t ==> roots p SUBSET roots (s * p - t * q) *)
@@ -1132,11 +1180,12 @@ val poly_roots_linear = store_thm(
    And poly (-t)            by poly_neg_poly
    The result follows       by poly_roots_linear
 *)
-val poly_roots_linear_sub = store_thm(
-  "poly_roots_linear_sub",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ roots p SUBSET roots q ==>
-   !s t. poly s /\ poly t ==> roots p SUBSET roots (s * p - t * q)``,
-  rw_tac std_ss[poly_sub_def, poly_neg_mult, poly_neg_poly, poly_roots_linear]);
+Theorem poly_roots_linear_sub:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ roots p SUBSET roots q ==>
+   !s t. poly s /\ poly t ==> roots p SUBSET roots (s * p - t * q)
+Proof
+  rw_tac std_ss[poly_sub_def, poly_neg_mult, poly_neg_poly, poly_roots_linear]
+QED
 
 (* Theorem: Ring r ==> !p. poly p ==> (roots (-p) = roots p) *)
 (* Proof:
@@ -1145,11 +1194,12 @@ val poly_roots_linear_sub = store_thm(
    <=> {x | x IN R /\ root p x}       by poly_neg_poly, poly_root_neg, poly_neg_neg
    <=> roots p
 *)
-val poly_roots_neg = store_thm(
-  "poly_roots_neg",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> (roots (-p) = roots p)``,
+Theorem poly_roots_neg:
+    !r:'a ring. Ring r ==> !p. poly p ==> (roots (-p) = roots p)
+Proof
   rw[poly_roots_def, EXTENSION] >>
-  metis_tac[poly_neg_poly, poly_root_neg, poly_neg_neg]);
+  metis_tac[poly_neg_poly, poly_root_neg, poly_neg_neg]
+QED
 
 (* Theorem: Ring r ==> !p q. ulead p /\ poly q /\ (roots p) SUBSET (roots q) ==> (roots p) SUBSET (roots (q % p)) *)
 (* Proof:
@@ -1162,15 +1212,16 @@ val poly_roots_neg = store_thm(
    Thus (roots p) SUBSET (roots (-(q % p)))   by poly_roots_linear_sub
      or (roots p) SUBSET (roots (q % p))      by poly_roots_neg
 *)
-val poly_roots_remainder = store_thm(
-  "poly_roots_remainder",
-  ``!r:'a ring. Ring r ==> !p q. ulead p /\ poly q /\ (roots p) SUBSET (roots q) ==> (roots p) SUBSET (roots (q % p))``,
+Theorem poly_roots_remainder:
+    !r:'a ring. Ring r ==> !p q. ulead p /\ poly q /\ (roots p) SUBSET (roots q) ==> (roots p) SUBSET (roots (q % p))
+Proof
   rpt strip_tac >>
   `poly (q / p) /\ poly (q % p)` by rw[] >>
   `q = (q / p) * p + q % p` by rw[poly_division_all] >>
   `-(q % p) = (q / p) * p - q` by metis_tac[poly_sub_eq_add, poly_neg_sub, poly_mult_poly] >>
   `_ = (q / p) * p - |1| * q` by rw[] >>
-  metis_tac[poly_roots_linear_sub, poly_roots_neg, poly_one_poly]);
+  metis_tac[poly_roots_linear_sub, poly_roots_neg, poly_one_poly]
+QED
 
 (* Theorem: Field r ==> !c p. c IN R /\ c <> #0 /\ poly p ==> (roots (c * p) = roots p) *)
 (* Proof:
@@ -1178,12 +1229,13 @@ val poly_roots_remainder = store_thm(
       !x. x IN R /\ root (c * p) x <=> x IN R /\ root p x
    This is true by poly_root_cmult.
 *)
-val poly_roots_cmult = store_thm(
-  "poly_roots_cmult",
-  ``!r:'a field. Field r ==> !c p. c IN R /\ c <> #0 /\ poly p ==> (roots (c * p) = roots p)``,
+Theorem poly_roots_cmult:
+    !r:'a field. Field r ==> !c p. c IN R /\ c <> #0 /\ poly p ==> (roots (c * p) = roots p)
+Proof
   rpt strip_tac >>
   rw[poly_roots_def, EXTENSION] >>
-  metis_tac[poly_root_cmult]);
+  metis_tac[poly_root_cmult]
+QED
 
 (* Theorem: roots (p * q) = roots p UNION roots q *)
 (* Proof: by p * q = |0| iff p = |0| or q = |0|.
@@ -1196,13 +1248,14 @@ val poly_roots_cmult = store_thm(
    <=> x IN roots p or x IN roots q    by poly_roots_member
    <=> x IN (roots p UNION roots q)    by IN_UNION
 *)
-val poly_roots_mult_id = store_thm(
-  "poly_roots_mult_id",
-  ``!r:'a ring. IntegralDomain r ==>
-   !p q. poly p /\ poly q ==> (roots (p * q) = roots p UNION roots q)``,
+Theorem poly_roots_mult_id:
+    !r:'a ring. IntegralDomain r ==>
+   !p q. poly p /\ poly q ==> (roots (p * q) = roots p UNION roots q)
+Proof
   rw[IntegralDomain_def] >>
   (rw[poly_roots_member, poly_root_def, EXTENSION, EQ_IMP_THM] >> simp[]) >>
-  rfs[poly_eval_mult]);
+  rfs[poly_eval_mult]
+QED
 
 (* Theorem: A nonzero polynomial has only a finite number of roots, i.e. FINITE (roots p) *)
 (* Proof:
@@ -1228,9 +1281,9 @@ val poly_roots_mult_id = store_thm(
           = z INSERT roots (p / factor z)                by INSERT_SING_UNION
       Hence FINITE (roots p)                             by FINITE_INSERT
 *)
-val poly_roots_finite_id = store_thm(
-  "poly_roots_finite_id",
-  ``!r:'a ring. IntegralDomain r ==> !p. poly p /\ p <> |0| ==> FINITE (roots p)``,
+Theorem poly_roots_finite_id:
+    !r:'a ring. IntegralDomain r ==> !p. poly p /\ p <> |0| ==> FINITE (roots p)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by metis_tac[IntegralDomain_def] >>
   (Induct_on `deg p` >> rpt strip_tac) >| [
@@ -1252,7 +1305,8 @@ val poly_roots_finite_id = store_thm(
     `deg p = deg (p / factor z) + 1` by metis_tac[weak_deg_mult_nonzero, poly_is_weak] >>
     `deg (p / factor z) = v` by decide_tac >>
     metis_tac[poly_roots_mult_id, poly_roots_factor, UNION_COMM, GSYM INSERT_SING_UNION, FINITE_INSERT]
-  ]);
+  ]
+QED
 
 (* Theorem: A nonzero polynomial cannot have more roots than its degree, i.e. CARD (roots p) <= deg p *)
 (* Proof:
@@ -1276,9 +1330,9 @@ val poly_roots_finite_id = store_thm(
       If z is not a root of (p / factor z), p has one more root.
       In either case, p has at most (SUC v) roots.
 *)
-val poly_roots_count_id = store_thm(
-  "poly_roots_count_id",
-  ``!r:'a ring. IntegralDomain r ==> !p. poly p /\ p <> |0| ==> CARD (roots p) <= deg p``,
+Theorem poly_roots_count_id:
+    !r:'a ring. IntegralDomain r ==> !p. poly p /\ p <> |0| ==> CARD (roots p) <= deg p
+Proof
   rpt (stripDup[IntegralDomain_def]) >>
   (Induct_on `deg p` >> rpt strip_tac) >| [
     Cases_on `roots p = EMPTY` >-
@@ -1312,7 +1366,8 @@ val poly_roots_count_id = store_thm(
       `CARD (roots p) = SUC (CARD (roots (p / factor z)))` by rw[] >>
       decide_tac
     ]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Roots of Unity                                                            *)
@@ -1361,13 +1416,14 @@ The master polynomial is for a specific n = char r, not any n.
    = {x | x IN G /\ root (unity n) x}          by poly_root_def
    = roots (unity n)                           by poly_roots_def
 *)
-val ring_uroots_are_roots = store_thm(
-  "ring_uroots_are_roots",
-  ``!r:'a ring. Ring r ==> !n. (roots_of_unity r.prod n).carrier = roots (unity n)``,
+Theorem ring_uroots_are_roots:
+    !r:'a ring. Ring r ==> !n. (roots_of_unity r.prod n).carrier = roots (unity n)
+Proof
   rw_tac std_ss[roots_of_unity_def, poly_roots_def, poly_root_def, GSPECIFICATION, EXTENSION] >>
   rw_tac std_ss[ring_carriers] >>
   `(### 1 = |1|) /\ (## 1 = #1) /\ #1 IN R` by rw[poly_ring_sum_1] >>
-  metis_tac[poly_eval_X_exp_n_sub_c, ring_sub_eq_zero, ring_exp_element]);
+  metis_tac[poly_eval_X_exp_n_sub_c, ring_sub_eq_zero, ring_exp_element]
+QED
 
 (* Theorem: Field r ==> (roots_of_unity f* n).carrier = roots (unity n) *)
 (* Proof:
@@ -1379,9 +1435,9 @@ val ring_uroots_are_roots = store_thm(
    = {x | x IN R+ /\ root (unity n) x}          by poly_root_def
    = roots (unity n)                            by poly_roots_def
 *)
-val field_uroots_are_roots = store_thm(
-  "field_uroots_are_roots",
-  ``!r:'a field. Field r ==> !n. 0 < n ==> ((roots_of_unity f* n).carrier = roots (unity n))``,
+Theorem field_uroots_are_roots:
+    !r:'a field. Field r ==> !n. 0 < n ==> ((roots_of_unity f* n).carrier = roots (unity n))
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `!x. x IN R ==> !n. eval (unity n) x = x ** n - #1` by rw[] >>
@@ -1395,7 +1451,8 @@ val field_uroots_are_roots = store_thm(
     `x <> #0` by metis_tac[ring_zero_exp, NOT_ZERO_LT_ZERO] >>
     rw[ring_nonzero_eq],
     metis_tac[ring_sub_eq_zero, ring_one_element, ring_exp_element]
-  ]);
+  ]
+QED
 
 (* Theorem: Field ==> 0 < n ==> CARD (roots_of_unity r.prod n).carrier <= n *)
 (* Proof:
@@ -1409,9 +1466,9 @@ val field_uroots_are_roots = store_thm(
     With  deg (unity n) = n   by poly_deg_X_exp_n_sub_c
     The result follows by poly_roots_count.
 *)
-val field_uroots_card_upper = store_thm(
-  "field_uroots_card_upper",
-  ``!r:'a field. Field r ==> !n. 0 < n ==> CARD (roots_of_unity r.prod n).carrier <= n``,
+Theorem field_uroots_card_upper:
+    !r:'a field. Field r ==> !n. 0 < n ==> CARD (roots_of_unity r.prod n).carrier <= n
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `(roots_of_unity r.prod n).carrier = roots (unity n)` by rw[ring_uroots_are_roots] >>
@@ -1420,7 +1477,8 @@ val field_uroots_card_upper = store_thm(
   `monic (unity n)` by metis_tac[poly_monic_X_exp_n_sub_c, poly_ring_sum_1] >>
   `n <> 0` by decide_tac >>
   `(unity n) <> |0|` by rw[poly_sub_eq_zero, poly_monic_exp_eq_one, poly_one] >>
-  metis_tac[poly_roots_count]);
+  metis_tac[poly_roots_count]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Roots of Unity Polynomial                                                 *)
@@ -1434,10 +1492,11 @@ val field_uroots_card_upper = store_thm(
    = x ** n - eval |1| x             by poly_eval_X
    = x ** n - #1                     by poly_eval_one
 *)
-val poly_unity_eval = store_thm(
-  "poly_unity_eval",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. eval (unity n) x = x ** n - #1``,
-  rw[poly_eval_exp]);
+Theorem poly_unity_eval:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. eval (unity n) x = x ** n - #1
+Proof
+  rw[poly_eval_exp]
+QED
 
 (* Theorem: x IN R ==> !n. root (unity n) x <=> (x ** n = #1) *)
 (* Proof:
@@ -1446,12 +1505,13 @@ val poly_unity_eval = store_thm(
    <=> x ** n - #1 = #0           by poly_unity_eval
    <=> x ** n = #1                by ring_sub_eq_add, ring_add_rzero.
 *)
-val poly_unity_root_property = store_thm(
-  "poly_unity_root_property",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. root (unity n) x <=> (x ** n = #1)``,
+Theorem poly_unity_root_property:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. root (unity n) x <=> (x ** n = #1)
+Proof
   rw_tac std_ss[poly_root_def, poly_unity_eval] >>
   `x ** n IN R /\ #1 IN R /\ #0 IN R` by rw[] >>
-  metis_tac[ring_sub_eq_add, ring_add_rzero]);
+  metis_tac[ring_sub_eq_add, ring_add_rzero]
+QED
 
 (* Theorem: Ring r ==> !n. root (unity n) #1 *)
 (* Proof:
@@ -1459,10 +1519,11 @@ val poly_unity_root_property = store_thm(
      and #1 ** n = #1         by ring_one_exp
    Hence root (unity n) #1    by poly_unity_root_property
 *)
-val poly_unity_root_has_one = store_thm(
-  "poly_unity_root_has_one",
-  ``!r:'a ring. Ring r ==> !n. root (unity n) #1``,
-  rw[poly_unity_root_property]);
+Theorem poly_unity_root_has_one:
+    !r:'a ring. Ring r ==> !n. root (unity n) #1
+Proof
+  rw[poly_unity_root_property]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !n. 0 < n ==> ~(root (unity n) #0) *)
 (* Proof:
@@ -1473,38 +1534,43 @@ val poly_unity_root_has_one = store_thm(
    <=>           #0 = #1            by ring_sub_eq_zero
    <=>              F               by given #1 <> #0
 *)
-val poly_unity_root_nonzero = store_thm(
-  "poly_unity_root_nonzero",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n. 0 < n ==> ~(root (unity n) #0)``,
-  rw[poly_root_def, ring_zero_exp]);
+Theorem poly_unity_root_nonzero:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n. 0 < n ==> ~(root (unity n) #0)
+Proof
+  rw[poly_root_def, ring_zero_exp]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !n. 0 < n ==> #0 NOTIN (roots (unity n)) *)
 (* Proof: by poly_unity_root_nonzero, poly_roots_member *)
-val poly_unity_roots_no_zero = store_thm(
-  "poly_unity_roots_no_zero",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n. 0 < n ==> #0 NOTIN (roots (unity n))``,
-  rw_tac std_ss[poly_unity_root_nonzero, poly_roots_member]);
+Theorem poly_unity_roots_no_zero:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n. 0 < n ==> #0 NOTIN (roots (unity n))
+Proof
+  rw_tac std_ss[poly_unity_root_nonzero, poly_roots_member]
+QED
 
 (* Theorem: Ring r ==> !n. #1 IN roots (unity n) *)
 (* Proof: by poly_unity_root_has_one, poly_roots_member *)
-val poly_unity_roots_has_one = store_thm(
-  "poly_unity_roots_has_one",
-  ``!r:'a ring. Ring r ==> !n. #1 IN roots (unity n)``,
-  rw[poly_unity_root_has_one, poly_roots_member]);
+Theorem poly_unity_roots_has_one:
+    !r:'a ring. Ring r ==> !n. #1 IN roots (unity n)
+Proof
+  rw[poly_unity_root_has_one, poly_roots_member]
+QED
 
 (* Theorem: Ring r ==> !n. roots (unity n) <> {} *)
 (* Proof: by poly_unity_roots_has_one, MEMBER_NOT_EMPTY *)
-val poly_unity_roots_nonempty = store_thm(
-  "poly_unity_roots_nonempty",
-  ``!r:'a ring. Ring r ==> !n. roots (unity n) <> {}``,
-  metis_tac[poly_unity_roots_has_one, MEMBER_NOT_EMPTY]);
+Theorem poly_unity_roots_nonempty:
+    !r:'a ring. Ring r ==> !n. roots (unity n) <> {}
+Proof
+  metis_tac[poly_unity_roots_has_one, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !n. x IN roots (unity n) <=> (x ** n = #1) *)
 (* Proof: by poly_unity_root_property,poly_roots_member  *)
-val poly_unity_roots_property = store_thm(
-  "poly_unity_roots_property",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. x IN roots (unity n) <=> (x ** n = #1)``,
-  rw[poly_unity_root_property, poly_roots_member]);
+Theorem poly_unity_roots_property:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. x IN roots (unity n) <=> (x ** n = #1)
+Proof
+  rw[poly_unity_root_property, poly_roots_member]
+QED
 
 (* Theorem: Field r ==> !n. 0 < n ==> FINITE (roots (unity n)) *)
 (* Proof:
@@ -1512,13 +1578,14 @@ val poly_unity_roots_property = store_thm(
     and unity n <> |0|              by poly_unity_eq_zero, 0 < n
     ==> FINITE (roots (unity n))    by poly_roots_finite
 *)
-val poly_unity_roots_finite = store_thm(
-  "poly_unity_roots_finite",
-  ``!r:'a field. Field r ==> !n. 0 < n ==> FINITE (roots (unity n))``,
+Theorem poly_unity_roots_finite:
+    !r:'a field. Field r ==> !n. 0 < n ==> FINITE (roots (unity n))
+Proof
   rpt strip_tac >>
   `poly (unity n)` by rw[] >>
   `unity n <> |0|` by rw[poly_unity_eq_zero] >>
-  rw[poly_roots_finite]);
+  rw[poly_roots_finite]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Roots of Master Polynomial                                                *)
@@ -1532,10 +1599,11 @@ val poly_unity_roots_finite = store_thm(
    = (eval X x) ** n - eval X x    by poly_eval_exp
    = x ** n - x                    by poly_eval_X
 *)
-val poly_master_eval = store_thm(
-  "poly_master_eval",
-  ``!r:'a ring. Ring r ==> !x n. x IN R ==> (eval (master n) x = x ** n - x)``,
-  rw[]);
+Theorem poly_master_eval:
+    !r:'a ring. Ring r ==> !x n. x IN R ==> (eval (master n) x = x ** n - x)
+Proof
+  rw[]
+QED
 
 (* Theorem: Ring r ==> !x n. x IN R ==> (root (master n) x <=> (x ** n = x)) *)
 (* Proof:
@@ -1544,10 +1612,11 @@ val poly_master_eval = store_thm(
   <=> x ** n - x = #0            by poly_master_eval
   <=> x ** n = x                 by ring_sub_eq_zero
 *)
-val poly_master_root = store_thm(
-  "poly_master_root",
-  ``!r:'a ring. Ring r ==> !x n. x IN R ==> (root (master n) x <=> (x ** n = x))``,
-  rw_tac std_ss[poly_root_def, poly_master_eval, ring_sub_eq_zero, ring_exp_element]);
+Theorem poly_master_root:
+    !r:'a ring. Ring r ==> !x n. x IN R ==> (root (master n) x <=> (x ** n = x))
+Proof
+  rw_tac std_ss[poly_root_def, poly_master_eval, ring_sub_eq_zero, ring_exp_element]
+QED
 
 (* Theorem: Ring r ==> !n. 0 < n ==> root (master n) #0 *)
 (* Proof:
@@ -1555,13 +1624,14 @@ val poly_master_root = store_thm(
      and #0 IN R              by ring_zero_element
      ==> root (master n) #0   by poly_master_root
 *)
-val poly_master_root_zero = store_thm(
-  "poly_master_root_zero",
-  ``!r:'a ring. Ring r ==> !n. 0 < n ==> root (master n) #0``,
+Theorem poly_master_root_zero:
+    !r:'a ring. Ring r ==> !n. 0 < n ==> root (master n) #0
+Proof
   rpt strip_tac >>
   `n <> 0` by decide_tac >>
   `#0 ** n = #0` by rw[ring_zero_exp] >>
-  rw[poly_master_root]);
+  rw[poly_master_root]
+QED
 
 (* Theorem: !n. root (master n) #1 *)
 (* Proof:
@@ -1577,31 +1647,35 @@ val poly_master_root_zero = store_thm(
      and #1 ** n = #1                 by ring_one_exp
    Hence root (master n) #1           by poly_master_root
 *)
-val poly_master_root_one = store_thm(
-  "poly_master_root_one",
-  ``!r:'a ring. Ring r ==> !n. root (master n) #1``,
-  rw[poly_master_root]);
+Theorem poly_master_root_one:
+    !r:'a ring. Ring r ==> !n. root (master n) #1
+Proof
+  rw[poly_master_root]
+QED
 
 (* Theorem: Ring r ==> !n x. x IN roots (master n) <=> (x IN R /\ (x ** n = x)) *)
 (* Proof: by poly_master_root, poly_roots_member *)
-val poly_master_roots = store_thm(
-  "poly_master_roots",
-  ``!r:'a ring. Ring r ==> !n x. x IN roots (master n) <=> (x IN R /\ (x ** n = x))``,
-  metis_tac[poly_master_root, poly_roots_member]);
+Theorem poly_master_roots:
+    !r:'a ring. Ring r ==> !n x. x IN roots (master n) <=> (x IN R /\ (x ** n = x))
+Proof
+  metis_tac[poly_master_root, poly_roots_member]
+QED
 
 (* Theorem: Ring r ==> !n. 0 < n ==> #0 IN roots (master n) *)
 (* Proof: by poly_master_root_zero, poly_roots_member *)
-val poly_master_roots_zero = store_thm(
-  "poly_master_roots_zero",
-  ``!r:'a ring. Ring r ==> !n. 0 < n ==> #0 IN roots (master n)``,
-  rw[poly_master_root_zero, poly_roots_member]);
+Theorem poly_master_roots_zero:
+    !r:'a ring. Ring r ==> !n. 0 < n ==> #0 IN roots (master n)
+Proof
+  rw[poly_master_root_zero, poly_roots_member]
+QED
 
 (* Theorem: Ring r ==> !n. #1 IN roots (master n) *)
 (* Proof: by poly_master_root_one, poly_roots_member *)
-val poly_master_roots_one = store_thm(
-  "poly_master_roots_one",
-  ``!r:'a ring. Ring r ==> !n. #1 IN roots (master n)``,
-  rw[poly_master_root_one, poly_roots_member]);
+Theorem poly_master_roots_one:
+    !r:'a ring. Ring r ==> !n. #1 IN roots (master n)
+Proof
+  rw[poly_master_root_one, poly_roots_member]
+QED
 
 (* Theorem: Field r ==> !n. n <> 1 ==> FINITE (roots (master n)) *)
 (* Proof:
@@ -1609,10 +1683,11 @@ val poly_master_roots_one = store_thm(
     and master n <> |0|             by poly_master_eq_zero, n <> 1
     ==> FINITE (roots (unity n))    by poly_roots_finite
 *)
-val poly_master_roots_finite = store_thm(
-  "poly_master_roots_finite",
-  ``!r:'a field. Field r ==> !n. n <> 1 ==> FINITE (roots (master n))``,
-  rw[poly_roots_finite, poly_master_eq_zero]);
+Theorem poly_master_roots_finite:
+    !r:'a field. Field r ==> !n. n <> 1 ==> FINITE (roots (master n))
+Proof
+  rw[poly_roots_finite, poly_master_eq_zero]
+QED
 
 (* Theorem: FiniteField r ==> !n. FINITE (roots (master n)) *)
 (* Proof:
@@ -1622,15 +1697,16 @@ val poly_master_roots_finite = store_thm(
        and FINITE R           by FiniteField_def
    If n <> 1, true            by poly_master_roots_finite
 *)
-val poly_master_roots_finite_alt = store_thm(
-  "poly_master_roots_finite_alt",
-  ``!r:'a field. FiniteField r ==> !n. FINITE (roots (master n))``,
+Theorem poly_master_roots_finite_alt:
+    !r:'a field. FiniteField r ==> !n. FINITE (roots (master n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   Cases_on `n = 1` >| [
     `master n = |0|` by rw[poly_master_eq_zero] >>
     metis_tac[poly_roots_zero],
     rw[poly_master_roots_finite]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !n. 1 < n ==> CARD (roots (master n)) <= n *)
 (* Proof:
@@ -1639,14 +1715,15 @@ val poly_master_roots_finite_alt = store_thm(
     and deg (master n) = n            by poly_master_deg, 1 < n
    ==> CARD (roots (master n)) <= n   by poly_roots_count
 *)
-val poly_master_roots_count = store_thm(
-  "poly_master_roots_count",
-  ``!r:'a field. Field r ==> !n. 1 < n ==> CARD (roots (master n)) <= n``,
+Theorem poly_master_roots_count:
+    !r:'a field. Field r ==> !n. 1 < n ==> CARD (roots (master n)) <= n
+Proof
   rpt strip_tac >>
   `poly (master n)` by rw[] >>
   `master n <> |0|` by rw[poly_master_eq_zero] >>
   `deg (master n) = n` by rw[] >>
-  metis_tac[poly_roots_count]);
+  metis_tac[poly_roots_count]
+QED
 
 (* Theorem: Ring r ==> !n. 0 < n ==> (master n = X * unity (n - 1)) *)
 (* Proof:
@@ -1660,14 +1737,15 @@ val poly_master_roots_count = store_thm(
    = X ** n - X                     by SUB_ADD, 1 <= n
    = master n                       by notation
 *)
-val poly_master_factors = store_thm(
-  "poly_master_factors",
-  ``!r:'a ring. Ring r ==> !n. 0 < n ==> (master n = X * unity (n - 1))``,
+Theorem poly_master_factors:
+    !r:'a ring. Ring r ==> !n. 0 < n ==> (master n = X * unity (n - 1))
+Proof
   rpt strip_tac >>
   `SUC (n - 1) = n` by decide_tac >>
   `X * (X ** (n - 1) - |1|) = X * X ** (n - 1) - X` by rw[poly_mult_rsub] >>
   `_ = X ** SUC (n - 1) - X` by rw[poly_exp_SUC] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Ring r ==> !n. master (SUC n) = X * unity n *)
 (* Proof:
@@ -1678,15 +1756,16 @@ val poly_master_factors = store_thm(
     = X ** (SUC n) - X        by poly_mult_rone
     = master (SUC n)          by notation
 *)
-val poly_master_factors_alt = store_thm(
-  "poly_master_factors_alt",
-  ``!r:'a ring. Ring r ==> !n. master (SUC n) = X * unity n``,
+Theorem poly_master_factors_alt:
+    !r:'a ring. Ring r ==> !n. master (SUC n) = X * unity n
+Proof
   rpt strip_tac >>
   `poly X /\ poly (X ** n) /\ poly |1|` by rw[] >>
   `X * unity n = X * X ** n - X * |1|` by rw_tac std_ss[poly_mult_sub] >>
   `_ = X ** SUC n - X * |1|` by rw_tac std_ss[poly_exp_SUC] >>
   `_ = master (SUC n)` by rw_tac std_ss[poly_mult_rone] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Field r ==> !n. 0 < n ==> (roots (master n) = {#0} UNION roots (unity (n - 1))) *)
 (* Proof:
@@ -1695,21 +1774,23 @@ val poly_master_factors_alt = store_thm(
    = (roots X) UNION (roots (unity (n - 1)))   by poly_roots_mult
    = {#0} UNION roots (unity (n - 1)))         by poly_roots_X
 *)
-val poly_master_roots_by_unity_roots = store_thm(
-  "poly_master_roots_by_unity_roots",
-  ``!r:'a field. Field r ==> !n. 0 < n ==> (roots (master n) = {#0} UNION roots (unity (n - 1)))``,
+Theorem poly_master_roots_by_unity_roots:
+    !r:'a field. Field r ==> !n. 0 < n ==> (roots (master n) = {#0} UNION roots (unity (n - 1)))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   `poly X /\ poly (unity (n - 1))` by rw[] >>
   `master n = X * unity (n - 1)` by rw[GSYM poly_master_factors] >>
-  metis_tac[poly_roots_mult, poly_roots_X]);
+  metis_tac[poly_roots_mult, poly_roots_X]
+QED
 
 (* Theorem: Field r ==> !n. roots (master (n + 1)) = {#0} UNION roots (unity n) *)
 (* Proof: by poly_master_roots_by_unity_roots *)
-val poly_master_roots_by_unity_roots_alt = store_thm(
-  "poly_master_roots_by_unity_roots_alt",
-  ``!r:'a field. Field r ==> !n. roots (master (n + 1)) = {#0} UNION roots (unity n)``,
-  metis_tac[poly_master_roots_by_unity_roots, DECIDE``0 < n + 1 /\ (n + 1 - 1 = n)``]);
+Theorem poly_master_roots_by_unity_roots_alt:
+    !r:'a field. Field r ==> !n. roots (master (n + 1)) = {#0} UNION roots (unity n)
+Proof
+  metis_tac[poly_master_roots_by_unity_roots, DECIDE``0 < n + 1 /\ (n + 1 - 1 = n)``]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

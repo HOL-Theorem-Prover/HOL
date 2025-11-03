@@ -98,24 +98,24 @@ Definition NEUTRAL_LIST_def:
    (NEUTRAL_LIST(STATE f::p) = NEUTRAL_LIST p)
 End
 
-val MAP_COMPLEMENT_LETTER_NEUTRAL_LIST =
- store_thm
-  ("MAP_COMPLEMENT_LETTER_NEUTRAL_LIST",
-   ``!p. NEUTRAL_LIST p ==> (MAP COMPLEMENT_LETTER p = p)``,
+Theorem MAP_COMPLEMENT_LETTER_NEUTRAL_LIST:
+     !p. NEUTRAL_LIST p ==> (MAP COMPLEMENT_LETTER p = p)
+Proof
    Induct
     THEN RW_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]
     THEN Cases_on `h`
-    THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]);
+    THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]
+QED
 
-val COMPLEMENT_FINITE_NEUTRAL_LIST =
- store_thm
-  ("COMPLEMENT_FINITE_NEUTRAL_LIST",
-   ``!p. NEUTRAL_LIST p ==> (COMPLEMENT(FINITE p) = FINITE p)``,
+Theorem COMPLEMENT_FINITE_NEUTRAL_LIST:
+     !p. NEUTRAL_LIST p ==> (COMPLEMENT(FINITE p) = FINITE p)
+Proof
    Induct
     THEN RW_TAC list_ss [COMPLEMENT_def,NEUTRAL_LIST_def]
     THEN Cases_on `h`
     THEN FULL_SIMP_TAC list_ss [COMPLEMENT_LETTER_def,NEUTRAL_LIST_def]
-    THEN RW_TAC std_ss [MAP_COMPLEMENT_LETTER_NEUTRAL_LIST]);
+    THEN RW_TAC std_ss [MAP_COMPLEMENT_LETTER_NEUTRAL_LIST]
+QED
 
 (* A path is neutral iff it contains no occurrences of TOP or BOTTOM *)
 
@@ -124,16 +124,16 @@ Definition NEUTRAL_PATH_def:
    (NEUTRAL_PATH(INFINITE f) = !n. ?s. f n = STATE s)
 End
 
-val COMPLEMENT_NEUTRAL_PATH =
- store_thm
-  ("COMPLEMENT_NEUTRAL_PATH",
-   ``NEUTRAL_PATH w ==> (COMPLEMENT w = w)``,
+Theorem COMPLEMENT_NEUTRAL_PATH:
+     NEUTRAL_PATH w ==> (COMPLEMENT w = w)
+Proof
    Cases_on `w`
     THEN RW_TAC list_ss [NEUTRAL_PATH_def,COMPLEMENT_FINITE_NEUTRAL_LIST,COMPLEMENT_def]
     THEN CONV_TAC FUN_EQ_CONV
     THEN Induct
     THEN RW_TAC std_ss []
-    THEN PROVE_TAC[COMPLEMENT_LETTER_def]);
+    THEN PROVE_TAC[COMPLEMENT_LETTER_def]
+QED
 
 (* Top-free and bottom-free *)
 Definition TOP_FREE_LIST_def:   TOP_FREE_LIST = EVERY (\x. ~(x = TOP))
@@ -158,26 +158,28 @@ val NEUTRAL_LIST = prove
 Definition B_SEMS_def[nocompute]:   B_SEMS s b = B_SEM (STATE s) b
 End
 
-val EVAL_B_SEMS = store_thm
-  ("EVAL_B_SEMS",
-   ``(B_SEMS l (B_PROP p) = p IN l) /\
+Theorem EVAL_B_SEMS:
+     (B_SEMS l (B_PROP p) = p IN l) /\
      (B_SEMS l B_TRUE = T) /\
      (B_SEMS l B_FALSE = F) /\
      (B_SEMS l (B_NOT b) = ~(B_SEMS l b)) /\
      (B_SEMS l (B_AND (b1,b2)) = B_SEMS l b1 /\ B_SEMS l b2) /\
      (B_SEMS l (B_OR (b1,b2)) = B_SEMS l b1 \/ B_SEMS l b2) /\
      (B_SEMS l (B_IMP (b1,b2)) = (B_SEMS l b1 ==> B_SEMS l b2)) /\
-     (B_SEMS l (B_IFF (b1,b2)) = (B_SEMS l b1 = B_SEMS l b2))``,
+     (B_SEMS l (B_IFF (b1,b2)) = (B_SEMS l b1 = B_SEMS l b2))
+Proof
    RW_TAC std_ss [B_SEMS_def,B_OR_def,B_IMP_def,B_IFF_def,B_SEM_def]
-   THEN PROVE_TAC []);
+   THEN PROVE_TAC []
+QED
 
-val EVAL_B_SEM = store_thm
-  ("EVAL_B_SEM",
-   ``!l b.
+Theorem EVAL_B_SEM:
+     !l b.
        B_SEM l b =
-       case l of TOP => T | BOTTOM => F | STATE s => B_SEMS s b``,
+       case l of TOP => T | BOTTOM => F | STATE s => B_SEMS s b
+Proof
    Cases
-   ++ RW_TAC std_ss [B_SEM_def, B_SEMS_def]);
+   ++ RW_TAC std_ss [B_SEM_def, B_SEMS_def]
+QED
 
 (******************************************************************************
 * Derived SEREs
@@ -185,15 +187,17 @@ val EVAL_B_SEM = store_thm
 
 (* Empty only matches the empty string *)
 
-val S_EMPTY = store_thm
-  ("S_EMPTY",
-   ``!p. US_SEM p S_EMPTY = (p = [])``,
-   RW_TAC std_ss [US_SEM_def]);
+Theorem S_EMPTY:
+     !p. US_SEM p S_EMPTY = (p = [])
+Proof
+   RW_TAC std_ss [US_SEM_def]
+QED
 
-val S_EMPTY_CAT = store_thm
-  ("S_EMPTY_CAT",
-   ``!p a. US_SEM p (S_CAT (S_EMPTY, a)) = US_SEM p a``,
-   RW_TAC std_ss [US_SEM_def, S_EMPTY, APPEND]);
+Theorem S_EMPTY_CAT:
+     !p a. US_SEM p (S_CAT (S_EMPTY, a)) = US_SEM p a
+Proof
+   RW_TAC std_ss [US_SEM_def, S_EMPTY, APPEND]
+QED
 
 (* Any matches any bottom-free string *)
 (*
@@ -256,15 +260,14 @@ val US_SEM_REPEAT_TRUE = store_thm
 *   <==>
 *   |w| > 0 And (w |= f2  Or  (w |= f1  And  w^1 |= [f1 U f2]))
 ******************************************************************************)
-val UF_SEM_F_UNTIL_REC =
- store_thm
-  ("UF_SEM_F_UNTIL_REC",
-   ``UF_SEM w (F_UNTIL(f1,f2)) =
+Theorem UF_SEM_F_UNTIL_REC:
+     UF_SEM w (F_UNTIL(f1,f2)) =
       LENGTH w > 0
       /\
       (UF_SEM w f2
        \/
-       (UF_SEM w f1 /\ UF_SEM (RESTN w 1) (F_UNTIL(f1,f2))))``,
+       (UF_SEM w f1 /\ UF_SEM (RESTN w 1) (F_UNTIL(f1,f2))))
+Proof
    RW_TAC arith_resq_ss [UF_SEM_def]
     THEN Cases_on `w`
     THEN ONCE_REWRITE_TAC[arithmeticTheory.ONE]
@@ -332,7 +335,8 @@ val UF_SEM_F_UNTIL_REC =
        THEN RES_TAC
        THEN `j = SUC(j-1)` by DECIDE_TAC
        THEN POP_ASSUM(fn th => SUBST_TAC[th])
-       THEN RW_TAC std_ss [RESTN_def]]);
+       THEN RW_TAC std_ss [RESTN_def]]
+QED
 
 (******************************************************************************
 * Executable semantics of {r}(f) on finite paths.
@@ -361,16 +365,16 @@ End
 (******************************************************************************
 * Form needed for computeLib.EVAL
 ******************************************************************************)
-val UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX =
- store_thm
-  ("UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX",
-  ``UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n =
+Theorem UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX:
+    UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n =
      (n = 0) \/
      (UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) (n-1)
       /\
-     (US_SEM (SEL w (0, (n-1))) r ==> UF_SEM (RESTN w (n-1)) f))``,
+     (US_SEM (SEL w (0, (n-1))) r ==> UF_SEM (RESTN w (n-1)) f))
+Proof
   Cases_on `n`
-   THEN RW_TAC arith_ss [UF_SEM_F_SUFFIX_IMP_FINITE_REC_def]);
+   THEN RW_TAC arith_ss [UF_SEM_F_SUFFIX_IMP_FINITE_REC_def]
+QED
 
 (******************************************************************************
 * UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL
@@ -398,28 +402,28 @@ val UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL2 =
     THEN `j < n` by DECIDE_TAC
     THEN PROVE_TAC[]);
 in
-val UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL =
- store_thm
-  ("UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL",
-   ``(!j. j < n ==> US_SEM (SEL w (0,j)) r ==> UF_SEM (RESTN w j) f)
+Theorem UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL:
+     (!j. j < n ==> US_SEM (SEL w (0,j)) r ==> UF_SEM (RESTN w j) f)
      =
-     UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n``,
-   PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL1,UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL2]);
+     UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n
+Proof
+   PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL1,UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL2]
+QED
 end;
 
 (******************************************************************************
 * w |= {r}(f)  <==>  w |=_|w| {r}(f)
 ******************************************************************************)
-val UF_SEM_F_SUFFIX_IMP_FINITE_REC =
- store_thm
-  ("UF_SEM_F_SUFFIX_IMP_FINITE_REC",
-   ``NEUTRAL_LIST w
+Theorem UF_SEM_F_SUFFIX_IMP_FINITE_REC:
+     NEUTRAL_LIST w
      ==>
      (UF_SEM (FINITE w) (F_SUFFIX_IMP(r,f)) =
-       UF_SEM_F_SUFFIX_IMP_FINITE_REC (FINITE w) (r,f) (LENGTH w))``,
+       UF_SEM_F_SUFFIX_IMP_FINITE_REC (FINITE w) (r,f) (LENGTH w))
+Proof
    RW_TAC list_resq_ss [UF_SEM_def]
     THEN PROVE_TAC
-          [UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL,COMPLEMENT_FINITE_NEUTRAL_LIST]);
+          [UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL,COMPLEMENT_FINITE_NEUTRAL_LIST]
+QED
 
 (******************************************************************************
 * Define w |=_x {r}(f) where x is an extended number (xnum)

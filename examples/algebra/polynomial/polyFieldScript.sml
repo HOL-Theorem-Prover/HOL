@@ -123,10 +123,11 @@ Division of polynomials with remainder is defined by the Division Algorithm.
    Field r ==> #1 <> #0   by field_one_ne_zero
    hence true             by poly_one_ne_poly_zero
 *)
-val poly_field_one_ne_zero = store_thm(
-  "poly_field_one_ne_zero",
-  ``!r:'a field. Field r ==> |1| <> |0|``,
-  rw[GSYM poly_one_ne_poly_zero]);
+Theorem poly_field_one_ne_zero:
+    !r:'a field. Field r ==> |1| <> |0|
+Proof
+  rw[GSYM poly_one_ne_poly_zero]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["poly_field_one_ne_zero"];
@@ -136,20 +137,22 @@ val _ = export_rewrites ["poly_field_one_ne_zero"];
    Field r ==> Ring r     by field_is_ring
    hence true by          poly_one_poly
 *)
-val poly_field_one_poly = store_thm(
-  "poly_field_one_poly",
-  ``!r:'a field. Field r ==> poly |1|``,
-  rw[]);
+Theorem poly_field_one_poly:
+    !r:'a field. Field r ==> poly |1|
+Proof
+  rw[]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["poly_field_one_poly"];
 
 (* Theorem: Field r ==> ~zerop |1| *)
 (* Proof: by poly_nonzero_nonzero, poly_field_one_ne_zero. *)
-val poly_field_one_nonzero = store_thm(
-  "poly_field_one_nonzero",
-  ``!r:'a field. Field r ==> ~zerop |1|``,
-  metis_tac[poly_field_one_poly, poly_field_one_ne_zero, poly_nonzero_nonzero, poly_zero]);
+Theorem poly_field_one_nonzero:
+    !r:'a field. Field r ==> ~zerop |1|
+Proof
+  metis_tac[poly_field_one_poly, poly_field_one_ne_zero, poly_nonzero_nonzero, poly_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Scalar Multiplication (special role of c = #0  for F[x])       *)
@@ -164,14 +167,15 @@ val poly_field_one_nonzero = store_thm(
    c o p = |0|  <=> p = |0|       by weak_cmult_eq_of_zero
    hence poly (c o p)             by poly_def_alt
 *)
-val poly_field_weak_cmult_poly = store_thm(
-  "poly_field_weak_cmult_poly",
-  ``!r:'a field. Field r ==> !p c. poly p /\ c IN R /\ c <> #0 ==> poly (c o p)``,
+Theorem poly_field_weak_cmult_poly:
+    !r:'a field. Field r ==> !p c. poly p /\ c IN R /\ c <> #0 ==> poly (c o p)
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
   metis_tac[poly_def_alt, field_zero_product, weak_last_element,
-     poly_is_weak, weak_cmult_weak, field_is_ring, weak_cmult_map, LAST_MAP, poly_zero]);
+     poly_is_weak, weak_cmult_weak, field_is_ring, weak_cmult_map, LAST_MAP, poly_zero]
+QED
 
 (* Theorem: In F[x], c <> #0, poly p ==> c * p = c o p *)
 (* Proof:
@@ -179,10 +183,11 @@ val poly_field_weak_cmult_poly = store_thm(
    = chop (c o p)    by poly_cmult_def
    = c o p           by poly_field_weak_cmult_poly, poly_chop_poly
 *)
-val poly_field_weak_cmult = store_thm(
-  "poly_field_weak_cmult",
-  ``!r:'a field. Field r ==> !p c. poly p /\ c IN R /\ c <> #0 ==> (c * p = c o p)``,
-  rw_tac std_ss[poly_cmult_def, poly_field_weak_cmult_poly, poly_chop_poly]);
+Theorem poly_field_weak_cmult:
+    !r:'a field. Field r ==> !p c. poly p /\ c IN R /\ c <> #0 ==> (c * p = c o p)
+Proof
+  rw_tac std_ss[poly_cmult_def, poly_field_weak_cmult_poly, poly_chop_poly]
+QED
 
 (* Theorem: c * p = |0| <=> p = |0| or c = #0 *)
 (* Proof:
@@ -206,14 +211,15 @@ val poly_field_weak_cmult = store_thm(
    <=> c o p = |0|     by poly_field_weak_cmult, c <> #0
    <=>     p = |0|     by weak_cmult_eq_zero
 *)
-val poly_field_cmult_eq_zero = store_thm(
-  "poly_field_cmult_eq_zero",
-  ``!r:'a field. Field r ==> !p c. poly p /\ c IN R ==>
-           ((c * p = |0|) <=> (p = |0|) \/ (c = #0))``,
+Theorem poly_field_cmult_eq_zero:
+    !r:'a field. Field r ==> !p c. poly p /\ c IN R ==>
+           ((c * p = |0|) <=> (p = |0|) \/ (c = #0))
+Proof
   rpt strip_tac >>
   Cases_on `c = #0` >-
   rw[] >>
-  rw_tac std_ss[poly_field_weak_cmult, weak_cmult_eq_zero]);
+  rw_tac std_ss[poly_field_weak_cmult, weak_cmult_eq_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Multiplication with zero product.                              *)
@@ -263,9 +269,9 @@ or                     [c1] + (#0::p) + (#0::q) + (#0::(#0::r))) = |0| means eac
    <> |0|                                                             by poly_add_nonzero_const_shift_not_zero
    leads to contradiction with (h::p) * (h'::q) = |0|.
 *)
-val poly_mult_eq_zero = store_thm(
-  "poly_mult_eq_zero",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> ((p * q = |0|) <=> (p = |0|) \/ (q = |0|))``,
+Theorem poly_mult_eq_zero:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> ((p * q = |0|) <=> (p = |0|) \/ (q = |0|))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -293,7 +299,8 @@ val poly_mult_eq_zero = store_thm(
       `_ = [h * h'] + (h * q + h' * p + (p * q) >> 1) >> 1` by rw_tac std_ss[poly_add_shift_1, poly_add_poly] >>
       metis_tac[poly_add_nonzero_const_shift_not_zero, poly_zero]
     ]
-  ]);
+  ]
+QED
 
 (* The same proof basically works for an integral domain *)
 Theorem poly_mult_eq_zero_domain:
@@ -334,10 +341,11 @@ QED
 
 (* Theorem: Field r ==> Ring (PolyRing r) *)
 (* Proof: by field_is_ring, poly_ring_ring. *)
-val poly_field_ring = store_thm(
-  "poly_field_ring",
-  ``!r:'a field. Field r ==> Ring (PolyRing r)``,
-  rw[poly_ring_ring]);
+Theorem poly_field_ring:
+    !r:'a field. Field r ==> Ring (PolyRing r)
+Proof
+  rw[poly_ring_ring]
+QED
 
 (* Theorem: ((PolyRing r).sum.carrier = (PolyRing r).carrier) /\
             ((PolyRing r).prod.carrier = (PolyRing r).carrier) *)
@@ -353,14 +361,15 @@ val poly_field_carriers = save_thm("poly_field_carriers", poly_ring_carriers);
    (2) |1| <> |0| by poly_field_one_ne_zero.
    (3) No zero divisor by poly_mult_eq_zero.
 *)
-val poly_field_integral_domain = store_thm(
-  "poly_field_integral_domain",
-  ``!r:'a field. Field r ==> IntegralDomain (PolyRing r)``,
+Theorem poly_field_integral_domain:
+    !r:'a field. Field r ==> IntegralDomain (PolyRing r)
+Proof
   rw_tac std_ss[IntegralDomain_def, field_is_ring, poly_ring_element] >| [
     rw_tac std_ss[poly_add_mult_ring, field_is_ring],
     rw[],
     rw_tac std_ss[poly_mult_eq_zero]
-  ]);
+  ]
+QED
 
 Theorem poly_integral_domain:
   IntegralDomain r ==> IntegralDomain (PolyRing r)
@@ -385,14 +394,15 @@ QED
    <=>         p - q = |0|   by poly_field_cmult_eq_zero, c <> #0
    <=>             p = q     by poly_sub_eq_zero
 *)
-val poly_cmult_eq = store_thm(
-  "poly_cmult_eq",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-     !c. c IN R /\ c <> #0 ==> ((c * p = c * q) <=> (p = q))``,
+Theorem poly_cmult_eq:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+     !c. c IN R /\ c <> #0 ==> ((c * p = c * q) <=> (p = q))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >>
   `Ring r` by rw_tac std_ss[field_is_ring] >>
   `c * (p - q) = |0|` by rw[poly_sub_eq_zero] >>
-  metis_tac[poly_sub_eq_zero, poly_field_cmult_eq_zero, poly_sub_poly]);
+  metis_tac[poly_sub_eq_zero, poly_field_cmult_eq_zero, poly_sub_poly]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> !c. c IN R+ ==> ((p = c * q) <=> (q = |/c * p)) *)
 (* Proof:
@@ -407,14 +417,15 @@ val poly_cmult_eq = store_thm(
       = (c * |/ c) * p     by poly_cmult_cmult
       = #1 * p = p         by field_mult_rinv, poly_mult_rone
 *)
-val poly_cmult_inv_eq = store_thm(
-  "poly_cmult_inv_eq",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> !c. c IN R+ ==> ((p = c * q) <=> (q = |/c * p))``,
+Theorem poly_cmult_inv_eq:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> !c. c IN R+ ==> ((p = c * q) <=> (q = |/c * p))
+Proof
   rpt strip_tac >>
   `c IN R` by rw[field_nonzero_element] >>
   rw[EQ_IMP_THM] >-
   rw[poly_cmult_cmult, field_mult_linv] >>
-  rw[poly_cmult_cmult, field_mult_rinv]);
+  rw[poly_cmult_cmult, field_mult_rinv]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Consequences of p * q = |0| <=> p = |0| or q = |0|.                       *)
@@ -428,15 +439,16 @@ val poly_cmult_inv_eq = store_thm(
    <=>          p - q = |0|     by poly_mult_eq_zero, t <> |0|
    <=>              p = q       by poly_sub_eq_zero
 *)
-val poly_mult_lcancel = store_thm(
-  "poly_mult_lcancel",
-  ``!r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t /\
-         t <> |0| ==> ((t * p = t * q) <=> (p = q))``,
+Theorem poly_mult_lcancel:
+    !r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t /\
+         t <> |0| ==> ((t * p = t * q) <=> (p = q))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >>
   `Ring r` by rw_tac std_ss[field_is_ring] >>
   `poly (t * p) /\ poly (t * q) /\ poly (p - q)` by rw[] >>
   `t * p - t * q = t * (p - q)` by rw_tac std_ss[poly_mult_rsub] >>
-  metis_tac[poly_sub_eq_zero, poly_mult_eq_zero]);
+  metis_tac[poly_sub_eq_zero, poly_mult_eq_zero]
+QED
 
 (* Theorem: If t <> |0|,  p * t = q * t ==> p = q *)
 (* Proof:
@@ -447,11 +459,12 @@ val poly_mult_lcancel = store_thm(
    <=>              p = q       by poly_sub_eq_zero
    Or, by poly_mult_lcancel, poly_mult_comm
 *)
-val poly_mult_rcancel = store_thm(
-  "poly_mult_rcancel",
-  ``!r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t /\
-         t <> |0| ==> ((p * t = q * t) <=> (p = q))``,
-  metis_tac[poly_mult_lcancel, poly_mult_comm, field_is_ring]);
+Theorem poly_mult_rcancel:
+    !r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t /\
+         t <> |0| ==> ((p * t = q * t) <=> (p = q))
+Proof
+  metis_tac[poly_mult_lcancel, poly_mult_comm, field_is_ring]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Consequences of c o p = c * p for c <> #0.                                *)
@@ -485,9 +498,9 @@ val poly_mult_rcancel = store_thm(
    = chop (h * q || (t * q) >> 1)         by poly_field_weak_cmult, if h <> #0
    = h * q + (t * q) >> 1                 by poly_add_def
 *)
-val poly_field_mult_cons = store_thm(
-  "poly_field_mult_cons",
-  ``!r:'a field. Field r ==> !h t q. poly (h::t) /\ poly q ==> ((h::t) * q = h * q + (t * q) >> 1)``,
+Theorem poly_field_mult_cons:
+    !r:'a field. Field r ==> !h t q. poly (h::t) /\ poly q ==> ((h::t) * q = h * q + (t * q) >> 1)
+Proof
   rw_tac std_ss[poly_cons_poly] >>
   `poly (h::t)` by rw_tac std_ss[poly_cons_poly] >>
   `Ring r` by rw_tac std_ss[field_is_ring] >>
@@ -497,7 +510,8 @@ val poly_field_mult_cons = store_thm(
     metis_tac[poly_mult_shift_1_comm, poly_cmult_lzero, poly_add_lzero, poly_mult_poly, poly_shift_poly, poly_zero],
     `weak (h o q) /\ weak ((t o q) >> 1)` by rw[] >>
     rw_tac std_ss[poly_mult_def, poly_add_def, weak_mult_cons, poly_chop_add_comm, poly_field_weak_cmult, poly_chop_shift]
-  ]);
+  ]
+QED
 
 (* Theorem: if  p <> |0|, q <> |0| then p * q = k * q  iff  p = [k]. *)
 (* Proof:
@@ -513,11 +527,12 @@ val poly_field_mult_cons = store_thm(
 
    Only-if part: by poly_mult_lconst.
 *)
-val poly_mult_eq_cmult = store_thm(
-  "poly_mult_eq_cmult",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==> !k. k IN R ==> ((p * q = k * q) <=> (p = [k]))``,
+Theorem poly_mult_eq_cmult:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==> !k. k IN R ==> ((p * q = k * q) <=> (p = [k]))
+Proof
   metis_tac[poly_nonzero_element_poly, poly_mult_lconst, poly_mult_rcancel,
-     poly_cmult_lzero, field_is_ring, poly_mult_eq_zero, poly_mult_lconst]);
+     poly_cmult_lzero, field_is_ring, poly_mult_eq_zero, poly_mult_lconst]
+QED
 
 (* Theorem: Field r ==> !c. c IN R /\ c <> #0 ==>
             !p q. poly p /\ poly q ==> ((p = [c] * q) <=> (q = [|/ c] * p)) *)
@@ -537,16 +552,17 @@ val poly_mult_eq_cmult = store_thm(
       = #1 * p                           by field_mult_rinv
       = p                                by poly_cmult_lone
 *)
-val poly_mult_lconst_swap = store_thm(
-  "poly_mult_lconst_swap",
-  ``!r:'a field. Field r ==> !c. c IN R /\ c <> #0 ==>
-   !p q. poly p /\ poly q ==> ((p = [c] * q) <=> (q = [|/ c] * p))``,
+Theorem poly_mult_lconst_swap:
+    !r:'a field. Field r ==> !c. c IN R /\ c <> #0 ==>
+   !p q. poly p /\ poly q ==> ((p = [c] * q) <=> (q = [|/ c] * p))
+Proof
   rpt strip_tac >>
   `c IN R+` by rw[field_nonzero_eq] >>
   `|/ c IN R` by rw[field_inv_element] >>
   rw[EQ_IMP_THM] >-
   rw[poly_mult_lconst, poly_cmult_cmult, field_mult_linv] >>
-  rw[poly_mult_lconst, poly_cmult_cmult, field_mult_rinv]);
+  rw[poly_mult_lconst, poly_cmult_cmult, field_mult_rinv]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Degree                                                         *)
@@ -558,10 +574,11 @@ val poly_mult_lconst_swap = store_thm(
    = deg (c o p)    by poly_field_weak_cmult
    = deg p          by poly_deg_weak_cmult
 *)
-val poly_field_deg_cmult = store_thm(
-  "poly_field_deg_cmult",
-  ``!r:'a field. Field r ==> !p. poly p ==> !c. c IN R /\ c <> #0 ==> (deg (c * p) = deg p)``,
-  rw_tac std_ss[poly_field_weak_cmult, poly_deg_weak_cmult, poly_is_weak]);
+Theorem poly_field_deg_cmult:
+    !r:'a field. Field r ==> !p. poly p ==> !c. c IN R /\ c <> #0 ==> (deg (c * p) = deg p)
+Proof
+  rw_tac std_ss[poly_field_weak_cmult, poly_deg_weak_cmult, poly_is_weak]
+QED
 
 (* The aim here is simple: to show: for p <> |0| and q <> |0|, deg (p * q) = deg p + deg q. *)
 
@@ -601,9 +618,9 @@ val poly_field_deg_cmult = store_thm(
           = SUC (deg p) + deg q          by ADD
           = deg (h::p) + deg q = RHS     by poly_deg_cons, p <> |0|
 *)
-val poly_deg_mult_nonzero = store_thm(
-  "poly_deg_mult_nonzero",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==> (deg (p * q) = deg p + deg q)``,
+Theorem poly_deg_mult_nonzero:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==> (deg (p * q) = deg p + deg q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -623,7 +640,8 @@ val poly_deg_mult_nonzero = store_thm(
       rw_tac std_ss[poly_field_deg_cmult, poly_deg_cons, poly_field_mult_cons,
         poly_deg_add_less, poly_deg_shift_1, poly_cmult_poly, poly_mult_poly, poly_shift_poly, ADD]
     ]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -667,9 +685,9 @@ val poly_field_deg_mult = |- !r. Field r ==>
    = h o q || (p o q) >> 1    by weak_mult_cons
    hence true                 by poly_weak_add_poly, degrees unequal.
 *)
-val poly_weak_mult_poly = store_thm(
-  "poly_weak_mult_poly",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> poly (p o q)``,
+Theorem poly_weak_mult_poly:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> poly (p o q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -694,7 +712,8 @@ val poly_weak_mult_poly = store_thm(
   `deg ((p o q) >> 1) = SUC (deg p + deg q)` by rw_tac std_ss[poly_deg_shift_1] >>
   `deg (h o q) <> deg ((p o q) >> 1)` by decide_tac >>
   `(h::p) o q = h o q || (p o q) >> 1` by rw_tac std_ss[weak_mult_cons] >>
-  metis_tac[poly_weak_add_poly, poly_shift_poly]);
+  metis_tac[poly_weak_add_poly, poly_shift_poly]
+QED
 
 (* Theorem: poly p /\ poly q ==> p * q = p o q *)
 (* Proof:
@@ -702,10 +721,11 @@ val poly_weak_mult_poly = store_thm(
    = chop (p o q)   by poly_mult_def
    = p o q          by poly_weak_mult_poly, poly_chop_poly
 *)
-val poly_weak_mult = store_thm(
-  "poly_weak_mult",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (p * q = p o q)``,
-  rw_tac std_ss[poly_mult_def, poly_weak_mult_poly, poly_chop_poly]);
+Theorem poly_weak_mult:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> (p * q = p o q)
+Proof
+  rw_tac std_ss[poly_mult_def, poly_weak_mult_poly, poly_chop_poly]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial leading coefficient.                                           *)
@@ -718,13 +738,14 @@ val poly_weak_mult = store_thm(
      so lead p IN R+     by field_nonzero_eq
      or unit (lead p)    by field_nonzero_unit
 *)
-val poly_field_unit_lead = store_thm(
-  "poly_field_unit_lead",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> unit (lead p)``,
+Theorem poly_field_unit_lead:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> unit (lead p)
+Proof
   rpt strip_tac >>
   `lead p <> #0` by rw[poly_lead_nonzero] >>
   `lead p IN R+` by rw[field_nonzero_eq] >>
-  rw[GSYM field_nonzero_unit]);
+  rw[GSYM field_nonzero_unit]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["poly_field_unit_lead"];
@@ -748,9 +769,9 @@ val _ = export_rewrites ["poly_field_unit_lead"];
    = c * LAST p        by weak_cmult_map, LAST_MAP, poly_zero
    = c * lead p        by poly_lead_alt, p <> |0|
 *)
-val poly_lead_cmult = store_thm(
-  "poly_lead_cmult",
-  ``!r:'a field. Field r ==> !p. poly p ==> !c::(R). lead (c * p) = c * lead p``,
+Theorem poly_lead_cmult:
+    !r:'a field. Field r ==> !p. poly p ==> !c::(R). lead (c * p) = c * lead p
+Proof
   rw_tac std_ss[RES_FORALL_THM] >>
   `Ring r` by rw_tac std_ss[field_is_ring] >>
   Cases_on `c = #0` >-
@@ -758,7 +779,8 @@ val poly_lead_cmult = store_thm(
   Cases_on `p = |0|` >-
   rw[] >>
   metis_tac[poly_lead_alt, poly_field_cmult_eq_zero, poly_field_weak_cmult,
-            poly_is_weak, weak_cmult_map, LAST_MAP, poly_zero]);
+            poly_is_weak, weak_cmult_map, LAST_MAP, poly_zero]
+QED
 
 val _ = export_rewrites ["poly_lead_cmult"];
 
@@ -809,9 +831,9 @@ val _ = export_rewrites ["poly_lead_cmult"];
           = lead p * lead q              by induction hypothesis
           = lead (h::p) * lead q = RHS   by poly_lead_cons, p <> |0|
 *)
-val poly_lead_mult = store_thm(
-  "poly_lead_mult",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (lead (p * q) = lead p * lead q)``,
+Theorem poly_lead_mult:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> (lead (p * q) = lead p * lead q)
+Proof
   strip_tac >>
   strip_tac >>
   `Ring r` by rw_tac std_ss[field_is_ring] >>
@@ -832,7 +854,8 @@ val poly_lead_mult = store_thm(
     `deg ((p * q) >> 1) = SUC (deg p + deg q)` by rw_tac std_ss[poly_deg_mult_nonzero, poly_deg_shift_1, poly_mult_eq_zero] >>
     `deg (h * q) < deg ((p * q) >> 1)` by decide_tac >>
     rw_tac std_ss[poly_field_mult_cons, poly_lead_add_less, poly_lead_shift, poly_lead_cons]
-  ]);
+  ]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["poly_lead_mult"];
@@ -853,24 +876,26 @@ val _ = export_rewrites ["poly_lead_mult"];
           = lead p * (lead p) ** n   by induction hypothesis
           = (lead p) ** SUC n        by ring_exp_SUC
 *)
-val poly_lead_exp = store_thm(
-  "poly_lead_exp",
-  ``!r:'a field. Field r ==> !p. poly p ==> !n. lead (p ** n) = (lead p) ** n``,
+Theorem poly_lead_exp:
+    !r:'a field. Field r ==> !p. poly p ==> !n. lead (p ** n) = (lead p) ** n
+Proof
   rpt strip_tac >>
   Induct_on `n`>>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: poly p /\ poly q /\ q <> |0| ==> lead p = lead ((lead p) * |/ (lead q) * q) *)
 (* Proof:
    Since lead q <> #0, |/ (lead q) exists.
    The result follows from poly_lead_cmult: lead (c * q) = c * lead q
 *)
-val poly_lead_cmult_equal = store_thm(
-  "poly_lead_cmult_equal",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ q <> |0| ==> (lead p = lead ((lead p) * |/ (lead q) * q))``,
+Theorem poly_lead_cmult_equal:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ q <> |0| ==> (lead p = lead ((lead p) * |/ (lead q) * q))
+Proof
   rpt strip_tac >>
   `lead p IN R /\ lead q IN R /\ lead q <> #0` by rw[] >>
-  rw[field_nonzero_eq, field_mult_assoc]);
+  rw[field_nonzero_eq, field_mult_assoc]
+QED
 
 (* This is not true: in Z_9, lead ((3x+1)^2) = 6 see above, not 9. *)
 (* Theorem: deg (p * p) = deg p + deg p. *)
@@ -916,13 +941,14 @@ val poly_lead_cmult_equal = store_thm(
    giving lead p = #0         by field_exp_eq_zero, n <> 0.
    This contradicts lead p <> #0.
 *)
-val poly_exp_eq_zero = store_thm(
-  "poly_exp_eq_zero",
-  ``!r:'a field. Field r ==> !p n. poly p /\ (p ** n = |0|) ==> (p = |0|)``,
+Theorem poly_exp_eq_zero:
+    !r:'a field. Field r ==> !p n. poly p /\ (p ** n = |0|) ==> (p = |0|)
+Proof
   spose_not_then strip_assume_tac >>
   `(p ** 0 = |1|) /\ |1| <> |0|` by rw[] >>
   `lead p IN R /\ lead p <> #0 /\ (lead |0| = #0)` by rw[] >>
-  metis_tac[field_exp_eq_zero, poly_lead_exp]);
+  metis_tac[field_exp_eq_zero, poly_lead_exp]
+QED
 
 (* Note: For the converse, p = |0| /\ n <> 0 ==> p ** n = |0|  by poly_zero_exp *)
 
@@ -931,12 +957,13 @@ val poly_exp_eq_zero = store_thm(
    If part: 0 < n /\ (p ** n = |0|) ==> (p = |0|), true by poly_exp_eq_zero
    Only-if part: 0 < n ==> ( |0| ** n = |0|), true       by poly_zero_exp
 *)
-val poly_exp_eq_zero_iff = store_thm(
-  "poly_exp_eq_zero_iff",
-  ``!r:'a field. Field r ==> !p. poly p ==> !n. 0 < n ==> ((p ** n = |0|) <=> (p = |0|))``,
+Theorem poly_exp_eq_zero_iff:
+    !r:'a field. Field r ==> !p. poly p ==> !n. 0 < n ==> ((p ** n = |0|) <=> (p = |0|))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >-
   metis_tac[poly_exp_eq_zero] >>
-  rw[poly_zero_exp]);
+  rw[poly_zero_exp]
+QED
 
 (* Note: This is not true for Ring r, e.g. (3x) ** 2 = |0| in Z_9 *)
 
@@ -964,9 +991,9 @@ val poly_exp_eq_zero_iff = store_thm(
         = deg p * SUC n          by MULT_SUC
         = SUC n * deg p          by MULT_COMM
 *)
-val poly_field_deg_exp = store_thm(
-  "poly_field_deg_exp",
-  ``!r:'a field. Field r ==> !p. poly p ==> !n. deg (p ** n) = n * deg p``,
+Theorem poly_field_deg_exp:
+    !r:'a field. Field r ==> !p. poly p ==> !n. deg (p ** n) = n * deg p
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[poly_zero_exp] >>
@@ -976,7 +1003,8 @@ val poly_field_deg_exp = store_thm(
   `poly (p ** n)` by rw[] >>
   `deg (p ** SUC n) = deg (p * p ** n)` by rw[] >>
   `_ = deg p + deg (p ** n)` by rw[poly_deg_mult_nonzero] >>
-  metis_tac[MULT_SUC, MULT_COMM]);
+  metis_tac[MULT_SUC, MULT_COMM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

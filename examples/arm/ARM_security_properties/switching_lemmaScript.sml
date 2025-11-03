@@ -71,36 +71,38 @@ Definition take_svc_exception1_def:
                  (λ(u1,u2,u3,u4). constT ())))
 End
 
-val trans_tautology_fun_thm =
-    store_thm("trans_tautology_fun_thm",
-              ``trans_fun tautology_fun``,
+Theorem trans_tautology_fun_thm:
+                trans_fun tautology_fun
+Proof
               RW_TAC let_ss [ trans_fun_def,tautology_fun_def]
-                     THEN RW_TAC (srw_ss()) [] );
+                     THEN RW_TAC (srw_ss()) []
+QED
 
-val refl_rel_tautology_fun_thm =
-    store_thm("refl_rel_tautology_fun_thm",
-              ``refl_rel tautology_fun``,
+Theorem refl_rel_tautology_fun_thm:
+                refl_rel tautology_fun
+Proof
               RW_TAC (srw_ss()) [refl_rel_def, tautology_fun_def]
-             );
+QED
 
-val reflex_tautology_fun_thm =
-    store_thm("reflex_tautology_fun_thm",
-              ``!u. (reflexive_comp  tautology_fun (assert_mode u))``
-            ,
-            RW_TAC (srw_ss()) [reflexive_comp_def,tautology_fun_def,assert_mode_def]);
+Theorem reflex_tautology_fun_thm:
+                !u. (reflexive_comp  tautology_fun (assert_mode u))
+Proof
+            RW_TAC (srw_ss()) [reflexive_comp_def,tautology_fun_def,assert_mode_def]
+QED
 
 
-val trans_have_same_mem_accesses_thm =
-    store_thm("trans_have_same_mem_accesses_thm",
-              ``trans_fun have_same_mem_accesses``,
+Theorem trans_have_same_mem_accesses_thm:
+                trans_fun have_same_mem_accesses
+Proof
               RW_TAC let_ss [ trans_fun_def,have_same_mem_accesses_def]
-                     THEN RW_TAC (srw_ss()) [] );
+                     THEN RW_TAC (srw_ss()) []
+QED
 
-val reflex_have_same_mem_accesses_thm =
-    store_thm("reflex_have_same_mem_accesses_thm",
-              ``!u. (reflexive_comp  have_same_mem_accesses (assert_mode u))``
-            ,
-            RW_TAC (srw_ss()) [reflexive_comp_def,have_same_mem_accesses_def,assert_mode_def]);
+Theorem reflex_have_same_mem_accesses_thm:
+                !u. (reflexive_comp  have_same_mem_accesses (assert_mode u))
+Proof
+            RW_TAC (srw_ss()) [reflexive_comp_def,have_same_mem_accesses_def,assert_mode_def]
+QED
 
 val preserve_relation_in_priv_mode_thm_tac =
     let
@@ -158,9 +160,8 @@ val preserve_relation_in_priv_mode_thm_tac =
                           THEN METIS_TAC []]
     end
 
-val preserve_relation_in_priv_mode_v3_thm =
-    store_thm ("preserve_relation_in_priv_mode_v3_thm",
-               ``! f m n.
+Theorem preserve_relation_in_priv_mode_v3_thm:
+                 ! f m n.
               preserve_priv_bisimilarity f n ==>
               (satisfy_priv_constraints_v3 f m n )==>
               (preserve_relation_mmu
@@ -170,13 +171,13 @@ val preserve_relation_in_priv_mode_v3_thm =
               preserve_relation_mmu
               f
               (assert_mode_no_access_violation m )
-              (assert_mode n) priv_mode_constraints_v3 priv_mode_similar``,
+              (assert_mode n) priv_mode_constraints_v3 priv_mode_similar
+Proof
   preserve_relation_in_priv_mode_thm_tac
-              );
+QED
 
-val preserve_relation_in_priv_mode_v2a_thm =
-    store_thm ("preserve_relation_in_priv_mode_v2a_thm",
-               ``! f m n.
+Theorem preserve_relation_in_priv_mode_v2a_thm:
+                 ! f m n.
               preserve_priv_bisimilarity f n ==>
               (satisfy_priv_constraints_v2a f m n )==>
               (preserve_relation_mmu
@@ -186,13 +187,13 @@ val preserve_relation_in_priv_mode_v2a_thm =
               preserve_relation_mmu
               f
               (assert_mode_no_access_violation m )
-              (assert_mode n) priv_mode_constraints_v2a priv_mode_similar``,
+              (assert_mode n) priv_mode_constraints_v2a priv_mode_similar
+Proof
   preserve_relation_in_priv_mode_thm_tac
-              );
+QED
 
-val preserve_relation_in_priv_mode_v2_thm =
-    store_thm ("preserve_relation_in_priv_mode_v2_thm",
-               ``! f m n.
+Theorem preserve_relation_in_priv_mode_v2_thm:
+                 ! f m n.
               preserve_priv_bisimilarity f n ==>
               (satisfy_priv_constraints_v2 f m n )==>
               (preserve_relation_mmu
@@ -202,13 +203,13 @@ val preserve_relation_in_priv_mode_v2_thm =
               preserve_relation_mmu
               f
               (assert_mode_no_access_violation m )
-              (assert_mode n) priv_mode_constraints_v2 priv_mode_similar``,
+              (assert_mode n) priv_mode_constraints_v2 priv_mode_similar
+Proof
   preserve_relation_in_priv_mode_thm_tac
-              );
+QED
 
-val access_violation_implies_no_mode_changing_thm =
-    store_thm ("access_violation_implies_no_mode_changing_thm",
-               ``!f g . const_comp f ==>
+Theorem access_violation_implies_no_mode_changing_thm:
+                 !f g . const_comp f ==>
               (preserve_relation_mmu f (assert_mode 16w)
               (assert_mode 16w) priv_mode_constraints_v3 priv_mode_similar
               ==>
@@ -223,7 +224,7 @@ val access_violation_implies_no_mode_changing_thm =
               (preserve_relation_mmu (f>>=g)  (assert_mode_access_violation 16w )
               (assert_mode_access_violation 16w )
               priv_mode_constraints_v2a priv_mode_similar))
-``,
+Proof
                RW_TAC (srw_ss()) [preserve_relation_mmu_def,
                                   seqT_def,
                                   const_comp_def,
@@ -245,12 +246,12 @@ val access_violation_implies_no_mode_changing_thm =
                                                                   ``s2':arm_state``,
                                                                   ``a:'a``] thm)
                       THEN RES_TAC
-                      THEN FULL_SIMP_TAC (srw_ss()) []);
+                      THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 
-val access_violation_implies_no_mode_changing_v1_thm =
-    store_thm ("access_violation_implies_no_mode_changing_v1_thm",
-               ``!f g . const_comp f ==>
+Theorem access_violation_implies_no_mode_changing_v1_thm:
+                 !f g . const_comp f ==>
               (preserve_relation_mmu f (assert_mode 16w)
               (assert_mode 16w) priv_mode_constraints_v3 priv_mode_similar
               ==>
@@ -265,7 +266,7 @@ val access_violation_implies_no_mode_changing_v1_thm =
               (preserve_relation_mmu (f>>=g)  (assert_mode_access_violation 16w )
               (assert_mode_access_violation 16w )
               priv_mode_constraints_v2 priv_mode_similar))
-``,
+Proof
                RW_TAC (srw_ss()) [preserve_relation_mmu_def,
                                   seqT_def,
                                   const_comp_def,
@@ -287,12 +288,12 @@ val access_violation_implies_no_mode_changing_v1_thm =
                                                                   ``s2':arm_state``,
                                                                   ``a:'a``] thm)
                       THEN RES_TAC
-                      THEN FULL_SIMP_TAC (srw_ss()) []);
+                      THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 
-val user_pr_taut_imp_priv_pr_thm =
-    store_thm ("user_pr_taut_imp_priv_pr_thm",
-``!f. preserve_relation_mmu
+Theorem user_pr_taut_imp_priv_pr_thm:
+  !f. preserve_relation_mmu
               (f)
               (assert_mode 16w )
               (assert_mode 16w )  tautology_fun tautology_fun
@@ -313,8 +314,8 @@ val user_pr_taut_imp_priv_pr_thm =
               (f)
               (assert_mode 16w )
               (assert_mode 16w )
-              priv_mode_constraints_v2 priv_mode_similar))``
-,
+              priv_mode_constraints_v2 priv_mode_similar))
+Proof
  RW_TAC (srw_ss()) [preserve_relation_mmu_def,
                     assert_mode_def,
                     tautology_fun_def]
@@ -334,13 +335,12 @@ val user_pr_taut_imp_priv_pr_thm =
         THEN FULL_SIMP_TAC (let_ss) [untouched_def,ARM_MODE_def,
                                      ARM_READ_CPSR_def]
         THEN RW_TAC (srw_ss()) []
-);
+QED
 
 
 
-val deduce_pr_from_pr_av_and_pr_no_av_thm =
-    store_thm ("deduce_pr_from_pr_av_and_pr_no_av_thm",
-``! m f uf uy is .
+Theorem deduce_pr_from_pr_av_and_pr_no_av_thm:
+  ! m f uf uy is .
               preserve_relation_mmu
               f
               (assert_mode_access_violation 16w )
@@ -358,7 +358,7 @@ val deduce_pr_from_pr_av_and_pr_no_av_thm =
               (assert_mode 16w)
               (comb_mode 16w m )
               uf uy
-           ``,
+Proof
                RW_TAC (srw_ss()) [preserve_relation_mmu_def]
                       THEN NTAC 2(PAT_X_ASSUM ``! g s1 s2.X``
                                             (fn thm =>
@@ -380,7 +380,7 @@ val deduce_pr_from_pr_av_and_pr_no_av_thm =
                       THEN IMP_RES_TAC (similar_states_have_same_av_thm1)
                       THEN IMP_RES_TAC (similar_states_have_same_av_thm2)
                       THEN FULL_SIMP_TAC (srw_ss()) []
-              );
+QED
 
 
 (*val uy1 = ``priv_mode_similar``;*)
@@ -433,9 +433,8 @@ fun prove_write_read_bisimilarity trm1 trm2 =
                                    THEN METIS_TAC [] ]);
 
 
-val read_write_cpsr_abt_irq_thm =
-    store_thm("read_write_cpsr_abt_irq_thm",
-              ``!u. (u<>16w) ==>
+Theorem read_write_cpsr_abt_irq_thm:
+                !u. (u<>16w) ==>
            preserve_relation_mmu
              (read_cpsr <|proc:=0|> >>=
                   (λcpsr.
@@ -446,7 +445,8 @@ val read_write_cpsr_abt_irq_thm =
                             ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>)))
-             (assert_mode u) (assert_mode u) ^uf1 ^uy1``,
+             (assert_mode u) (assert_mode u) ^uf1 ^uy1
+Proof
               let val trm1 = ``   (s1 with
                  psrs updated_by
                       ((0,CPSR) =+
@@ -466,17 +466,17 @@ val read_write_cpsr_abt_irq_thm =
               in
                   prove_write_read_bisimilarity trm1 trm2
               end
-             );
+QED
 
-val read_write_cpsr_undef_svc_thm =
-    store_thm("read_write_cpsr_undef_svc_thm",
-              ``!u. (u<>16w) ==> preserve_relation_mmu
+Theorem read_write_cpsr_undef_svc_thm:
+                !u. (u<>16w) ==> preserve_relation_mmu
              (read_cpsr <|proc:=0|> >>=
                                  (λcpsr. write_cpsr <|proc:=0|>
                                 (cpsr with
                                  <|IT := 0w; J := F; E := sctlr.EE;
                                     I := T; T := sctlr.TE|>)))
-             (assert_mode u) (assert_mode u) ^uf1 ^uy1``,
+             (assert_mode u) (assert_mode u) ^uf1 ^uy1
+Proof
               let val trm1 = ``   (s1 with
                               psrs updated_by
                                  ((0,CPSR) =+
@@ -492,12 +492,11 @@ val read_write_cpsr_undef_svc_thm =
               in
                   prove_write_read_bisimilarity trm1 trm2
               end
-             );
+QED
 
 
-val write_scr_cpsr_thm =
-    store_thm("write_scr_cpsr_thm",
-              `` ∀g s1 s2 comp scr u.
+Theorem write_scr_cpsr_thm:
+                 ∀g s1 s2 comp scr u.
              ((comp = (condT (F) (write_scr <|proc := 0|> (scr with NS := F))
                             ||| write_cpsr <|proc := 0|> ((s1.psrs (0,CPSR) with M := u)))) \/
              (comp = (condT (F) (write_scr <|proc := 0|> (scr with NS := F))
@@ -519,7 +518,8 @@ val write_scr_cpsr_thm =
                 similar g s1' s2' /\
              (~access_violation s1')/\
              (~access_violation s2')) ∨
-             ∃e. (comp s1 = Error e) ∧ (comp s2 = Error e)``,
+             ∃e. (comp s1 = Error e) ∧ (comp s2 = Error e)
+Proof
               let val trm1 = ``(s1 with
                       psrs updated_by ((0,CPSR) =+ s2.psrs (0,CPSR) with M := u))``
                   val trm2 = ``(s2 with
@@ -565,7 +565,7 @@ val write_scr_cpsr_thm =
                           THEN EVAL_TAC
                           THEN RW_TAC (srw_ss()) []]
               end
-             );
+QED
 
 
 (* ================================================+++++========================== *)
@@ -620,40 +620,45 @@ fn mode => fn spsr =>
     end;
 
 
-val write__psr_und_thm =
-    store_thm("write__psr_und_thm",
-              `` preserve_relation_mmu (write__psr <|proc := 0|>
+Theorem write__psr_und_thm:
+                 preserve_relation_mmu (write__psr <|proc := 0|>
                        (SPSR_und) (cpsr with M := 16w))
-             (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1 ``,
-              prove_write__psr_thm ``27w:bool[5]`` ``SPSR_und``);
+             (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1
+Proof
+              prove_write__psr_thm ``27w:bool[5]`` ``SPSR_und``
+QED
 
-val write__psr_svc_thm =
-    store_thm("write__psr_svc_thm",
-              `` preserve_relation_mmu (write__psr <|proc := 0|>
+Theorem write__psr_svc_thm:
+                 preserve_relation_mmu (write__psr <|proc := 0|>
                        (SPSR_svc) (cpsr with M := 16w))
-             (assert_mode 19w) (assert_mode 19w) ^uf1 ^uy1 ``,
-              prove_write__psr_thm ``19w:bool[5]`` ``SPSR_svc``);
+             (assert_mode 19w) (assert_mode 19w) ^uf1 ^uy1
+Proof
+              prove_write__psr_thm ``19w:bool[5]`` ``SPSR_svc``
+QED
 
-val write__psr_irq_thm =
-    store_thm("write__psr_irq_thm",
-              `` preserve_relation_mmu (write__psr <|proc := 0|>
+Theorem write__psr_irq_thm:
+                 preserve_relation_mmu (write__psr <|proc := 0|>
                        (SPSR_irq) (cpsr with M := 16w))
-             (assert_mode 18w) (assert_mode 18w) ^uf1 ^uy1 ``,
-              prove_write__psr_thm ``18w:bool[5]`` ``SPSR_irq``);
+             (assert_mode 18w) (assert_mode 18w) ^uf1 ^uy1
+Proof
+              prove_write__psr_thm ``18w:bool[5]`` ``SPSR_irq``
+QED
 
-val write__psr_fiq_thm =
-    store_thm("write__psr_fiq_thm",
-              `` preserve_relation_mmu (write__psr <|proc := 0|>
+Theorem write__psr_fiq_thm:
+                 preserve_relation_mmu (write__psr <|proc := 0|>
                        (SPSR_fiq) (cpsr with M := 16w))
-             (assert_mode 17w) (assert_mode 17w) ^uf1 ^uy1 ``,
-              prove_write__psr_thm ``17w:bool[5]`` ``SPSR_fiq``);
+             (assert_mode 17w) (assert_mode 17w) ^uf1 ^uy1
+Proof
+              prove_write__psr_thm ``17w:bool[5]`` ``SPSR_fiq``
+QED
 
-val write__psr_abt_thm =
-    store_thm("write__psr_abt_thm",
-              `` preserve_relation_mmu (write__psr <|proc := 0|>
+Theorem write__psr_abt_thm:
+                 preserve_relation_mmu (write__psr <|proc := 0|>
                        (SPSR_abt) (cpsr with M := 16w))
-             (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1 ``,
-              prove_write__psr_thm ``23w:bool[5]`` ``SPSR_abt``);
+             (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1
+Proof
+              prove_write__psr_thm ``23w:bool[5]`` ``SPSR_abt``
+QED
 
 
 
@@ -695,35 +700,40 @@ fn mode => fn spsr =>
                end)
    end
 
-val write_spsr_und_thm =
-    store_thm("write_spsr_und_thm",
-              ``preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
-             (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1 ``,
-        prove_write_spsr_thm ``27w:bool[5]`` ``SPSR_und ``);
+Theorem write_spsr_und_thm:
+                preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
+             (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1
+Proof
+        prove_write_spsr_thm ``27w:bool[5]`` ``SPSR_und ``
+QED
 
-val write_spsr_svc_thm =
-    store_thm("write_spsr_svc_thm",
-              ``preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
-             (assert_mode 19w) (assert_mode 19w) ^uf1 ^uy1 ``,
-        prove_write_spsr_thm ``19w:bool[5]`` ``SPSR_svc ``);
+Theorem write_spsr_svc_thm:
+                preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
+             (assert_mode 19w) (assert_mode 19w) ^uf1 ^uy1
+Proof
+        prove_write_spsr_thm ``19w:bool[5]`` ``SPSR_svc ``
+QED
 
-val write_spsr_abt_thm =
-    store_thm("write_spsr_abt_thm",
-              ``preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
-             (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1 ``,
-        prove_write_spsr_thm ``23w:bool[5]`` ``SPSR_abt ``);
+Theorem write_spsr_abt_thm:
+                preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
+             (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1
+Proof
+        prove_write_spsr_thm ``23w:bool[5]`` ``SPSR_abt ``
+QED
 
-val write_spsr_irq_thm =
-    store_thm("write_spsr_irq_thm",
-              ``preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
-             (assert_mode 18w) (assert_mode 18w) ^uf1 ^uy1 ``,
-        prove_write_spsr_thm ``18w:bool[5]`` ``SPSR_irq ``);
+Theorem write_spsr_irq_thm:
+                preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
+             (assert_mode 18w) (assert_mode 18w) ^uf1 ^uy1
+Proof
+        prove_write_spsr_thm ``18w:bool[5]`` ``SPSR_irq ``
+QED
 
-val write_spsr_fiq_thm =
-    store_thm("write_spsr_fiq_thm",
-              ``preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
-             (assert_mode 17w) (assert_mode 17w) ^uf1 ^uy1 ``,
-        prove_write_spsr_thm ``17w:bool[5]`` ``SPSR_fiq ``);
+Theorem write_spsr_fiq_thm:
+                preserve_relation_mmu (write_spsr <|proc := 0|> (cpsr with M := 16w))
+             (assert_mode 17w) (assert_mode 17w) ^uf1 ^uy1
+Proof
+        prove_write_spsr_thm ``17w:bool[5]`` ``SPSR_fiq ``
+QED
 
 val prove_write__reg_thm =
 fn mode => fn reg =>  fn reg_set =>
@@ -768,81 +778,81 @@ fn mode => fn reg =>  fn reg_set =>
     end;
 
 
-val write__reg_und_thm =
-    store_thm("write__reg_und_thm",
-              ``(preserve_relation_mmu
+Theorem write__reg_und_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_LRund value)
-                     (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1)``,
+                     (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``27w:bool[5]`` ``RName_LRund`` "und_regs"
-             );
+QED
 
-val write__reg_abt_thm =
-    store_thm("write__reg_abt_thm",
-              ``(preserve_relation_mmu
+Theorem write__reg_abt_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_LRabt value)
-                     (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1)``,
+                     (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``23w:bool[5]`` ``RName_LRabt`` "abort_regs"
-             );
+QED
 
-val write__reg_irq_thm =
-    store_thm("write__reg_irq_thm",
-              ``(preserve_relation_mmu
+Theorem write__reg_irq_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_LRirq value)
-                     (assert_mode  18w) (assert_mode 18w) ^uf1 ^uy1)``,
+                     (assert_mode  18w) (assert_mode 18w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``18w:bool[5]`` ``RName_LRirq`` "irq_regs"
-             );
+QED
 
-val write__reg_fiq_thm =
-    store_thm("write__reg_fiq_thm",
-              ``(preserve_relation_mmu
+Theorem write__reg_fiq_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_LRfiq value)
-                     (assert_mode  17w) (assert_mode 17w) ^uf1 ^uy1)``,
+                     (assert_mode  17w) (assert_mode 17w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``17w:bool[5]`` ``RName_LRfiq`` "fiq_regs"
-             );
+QED
 
-val write__reg_svc_thm =
-    store_thm("write__reg_svc_thm",
-              ``(preserve_relation_mmu
+Theorem write__reg_svc_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_LRsvc value)
-                     (assert_mode  19w) (assert_mode 19w) ^uf1 ^uy1)``,
+                     (assert_mode  19w) (assert_mode 19w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``19w:bool[5]`` ``RName_LRsvc`` "svc_regs"
-             );
+QED
 
-val write__pc_und_thm =
-    store_thm("write__pc_und_thm",
-              ``(preserve_relation_mmu
+Theorem write__pc_und_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_PC value)
-                     (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1)``,
+                     (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``27w:bool[5]`` ``RName_PC:RName`` "user_regs"
-           );
-val write__pc_abt_thm =
-    store_thm("write__pc_abt_thm",
-              ``(preserve_relation_mmu
+QED
+Theorem write__pc_abt_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_PC value)
-                     (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1)``,
+                     (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``23w:bool[5]`` ``RName_PC:RName`` "user_regs"
-           );
-val write__pc_irq_thm =
-    store_thm("write__pc_irq_thm",
-              ``(preserve_relation_mmu
+QED
+Theorem write__pc_irq_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_PC value)
-                     (assert_mode 18w) (assert_mode 18w) ^uf1 ^uy1)``,
+                     (assert_mode 18w) (assert_mode 18w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``18w:bool[5]`` ``RName_PC:RName`` "user_regs"
-           );
-val write__pc_svc_thm =
-    store_thm("write__pc_svc_thm",
-              ``(preserve_relation_mmu
+QED
+Theorem write__pc_svc_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_PC value)
-                     (assert_mode 19w) (assert_mode 19w) ^uf1 ^uy1)``,
+                     (assert_mode 19w) (assert_mode 19w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``19w:bool[5]`` ``RName_PC:RName`` "user_regs"
-           );
-val write__pc_fiq_thm =
-    store_thm("write__pc_fiq_thm",
-              ``(preserve_relation_mmu
+QED
+Theorem write__pc_fiq_thm:
+                (preserve_relation_mmu
                      (write__reg <|proc := 0|> RName_PC value)
-                     (assert_mode 17w) (assert_mode 17w) ^uf1 ^uy1)``,
+                     (assert_mode 17w) (assert_mode 17w) ^uf1 ^uy1)
+Proof
               prove_write__reg_thm ``17w:bool[5]`` ``RName_PC:RName`` "user_regs"
-           );
+QED
 
 val prove_write_link_reg_thm =
  fn mode => fn lr =>
@@ -901,37 +911,37 @@ val prove_write_link_reg_thm =
                       end)
       end;
 
-val write_reg_und_thm =
-    store_thm("write_reg_und_thm",
-             ``preserve_relation_mmu
+Theorem write_reg_und_thm:
+               preserve_relation_mmu
               (write_reg <|proc := 0|> 14w value)
-              (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1``,
+              (assert_mode 27w) (assert_mode 27w) ^uf1 ^uy1
+Proof
               prove_write_link_reg_thm ``27w:bool[5]`` ``RName_LRund``
-             );
+QED
 
-val write_reg_svc_thm =
-    store_thm("write_reg_svc_thm",
-             ``preserve_relation_mmu
+Theorem write_reg_svc_thm:
+               preserve_relation_mmu
               (write_reg <|proc := 0|> 14w value)
-              (assert_mode 19w) (assert_mode 19w) ^uf1 ^uy1``,
+              (assert_mode 19w) (assert_mode 19w) ^uf1 ^uy1
+Proof
               prove_write_link_reg_thm ``19w:bool[5]`` ``RName_LRsvc``
-             );
+QED
 
-val write_reg_abt_thm =
-    store_thm("write_reg_abt_thm",
-             ``preserve_relation_mmu
+Theorem write_reg_abt_thm:
+               preserve_relation_mmu
               (write_reg <|proc := 0|> 14w value)
-              (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1``,
+              (assert_mode 23w) (assert_mode 23w) ^uf1 ^uy1
+Proof
               prove_write_link_reg_thm ``23w:bool[5]`` ``RName_LRabt``
-             );
+QED
 
-val write_reg_irq_thm =
-    store_thm("write_reg_irq_thm",
-             ``preserve_relation_mmu
+Theorem write_reg_irq_thm:
+               preserve_relation_mmu
               (write_reg <|proc := 0|> 14w value)
-              (assert_mode 18w) (assert_mode 18w) ^uf1 ^uy1``,
+              (assert_mode 18w) (assert_mode 18w) ^uf1 ^uy1
+Proof
               prove_write_link_reg_thm ``18w:bool[5]`` ``RName_LRirq``
-             );
+QED
 
 (* the body of write is different from the rest *)
 
@@ -1027,9 +1037,8 @@ val TAKE_EXCEPTION_MODE_CHANGING_VALUESTATE_TAC =
                    THEN RW_TAC (srw_ss()) []
     end;
 
-val take_exp_mode_changing_ut_thm =
-    store_thm ("take_exp_mode_changing_ut_thm",
-               ``! H2 s1 s2 g u.
+Theorem take_exp_mode_changing_ut_thm:
+                 ! H2 s1 s2 g u.
     let f2 = (((if (s2.psrs (0,CPSR)).M = 22w then
                  write_scr <|proc := 0|>  (s2.coprocessors.state.cp15.SCR with NS := F)
                 else
@@ -1045,7 +1054,7 @@ val take_exp_mode_changing_ut_thm =
                   tautology_fun g b b'))
              \/
              (?e. (f2 s1 =Error e) /\ (f2 s2 = Error e)))
-            ``,
+Proof
               FULL_SIMP_TAC (let_ss) [preserve_relation_mmu_abs_def,
                           condT_def,tautology_fun_def,
                           assert_mode_def,ARM_MODE_def,
@@ -1067,12 +1076,11 @@ val take_exp_mode_changing_ut_thm =
                           ``s1:arm_state`` ,``s1':arm_state``,
                           ``a:unit`` , ``b:arm_state``,``u:bool[5]``)]
                 ]
-              );
+QED
 
 
-val take_exp_mode_changing_same_access_thm =
-    store_thm ("take_exp_mode_changing_same_access_thm",
-               ``! H2 s1 s2 g u .
+Theorem take_exp_mode_changing_same_access_thm:
+                 ! H2 s1 s2 g u .
     let f2 = (((if (s2.psrs (0,CPSR)).M = 22w then
                     write_scr <|proc := 0|>
                  (s2.coprocessors.state.cp15.SCR with NS := F)
@@ -1088,7 +1096,7 @@ val take_exp_mode_changing_same_access_thm =
               /\  (have_same_mem_accesses g s1 b ∧ have_same_mem_accesses g s2 b'))
         \/
         (?e. (f2  s1 = Error e) /\  (f2  s2 = Error e) ))
-          ``,
+Proof
                FULL_SIMP_TAC (let_ss) [preserve_relation_mmu_abs_def,
                                        condT_def,tautology_fun_def,
                                        assert_mode_def,ARM_MODE_def,
@@ -1112,12 +1120,11 @@ val take_exp_mode_changing_same_access_thm =
                                                                        trans_have_same_mem_accesses_thm)
                                            THEN FULL_SIMP_TAC (srw_ss()) []
                              ]]
-              );
+QED
 
 
-val take_exp_mode_changing_misc_thm =
-    store_thm ("take_exp_mode_changing_misc_thm",
-               ``! H2  s1 s2 g u.
+Theorem take_exp_mode_changing_misc_thm:
+                 ! H2  s1 s2 g u.
     let f2 = (((if (s2.psrs (0,CPSR)).M = 22w then
                     write_scr <|proc := 0|>
                 (s2.coprocessors.state.cp15.SCR with NS := F)
@@ -1134,7 +1141,8 @@ val take_exp_mode_changing_misc_thm =
               /\ ((a' = a) ∧ ((b.psrs (0,CPSR)).M = u) ∧
                            ((b'.psrs (0,CPSR)).M = u) ∧ similar g b b'))
                 \/
-                (?e. (f2  s1 = Error e)  /\ (f2  s2 = Error e) ))``,
+                (?e. (f2  s1 = Error e)  /\ (f2  s2 = Error e) ))
+Proof
                FULL_SIMP_TAC (let_ss) [preserve_relation_mmu_abs_def,
                                        condT_def,tautology_fun_def,
                                        assert_mode_def,ARM_MODE_def,
@@ -1153,11 +1161,11 @@ val take_exp_mode_changing_misc_thm =
                                            (
                                             ``s1:arm_state`` ,``s1':arm_state``,
                                             ``a:unit`` , ``b:arm_state``,``u:bool[5]``)
-                                           THEN FULL_SIMP_TAC (srw_ss()) [] ]] );
+                                           THEN FULL_SIMP_TAC (srw_ss()) [] ]]
+QED
 
-val take_exp_mode_changing_thm =
-    store_thm ("take_exp_mode_changing_thm",
-               ``!  H s1 s2 (* a a'  b b' *) g u .
+Theorem take_exp_mode_changing_thm:
+                 !  H s1 s2 (* a a'  b b' *) g u .
     let f = (((if (s2.psrs (0,CPSR)).M = 22w then
                    write_scr <|proc := 0|>
                         (s2.coprocessors.state.cp15.SCR with NS := F)
@@ -1176,7 +1184,7 @@ val take_exp_mode_changing_thm =
                 (untouched g s1 b ∧ untouched g s2 b' /\ tautology_fun g b b')))
         \/
         (? e. (f s1=Error e) /\ (f s2 = Error e)))
-            ``,
+Proof
                let
                    val vars = [``H:unit#unit->unit M``, ``s1:arm_state``,
                                ``s2:arm_state``,``g:bool[32]``,``u:bool[5]``];
@@ -1195,7 +1203,7 @@ val take_exp_mode_changing_thm =
                                  THEN FULL_SIMP_TAC (srw_ss())  []
                                  THEN RW_TAC (srw_ss())  []
                end
-              );
+QED
 
 (****SHOULD BE REPLACED *************)
 
@@ -1368,12 +1376,12 @@ val get_take_undef_svc_simp_pars =
       (λ(u1,u2,u3,u4). constT ()))``);
 
 
-val take_data_abort_exception_nav_thm =
-    store_thm ("take_data_abort_exception_nav_thm",
-               ``preserve_relation_mmu
+Theorem take_data_abort_exception_nav_thm:
+                 preserve_relation_mmu
               (take_data_abort_exception <|proc := 0|> )
               (assert_mode_no_access_violation 16w )
-              (assert_mode 23w) ^uf1 ^uy1``,
+              (assert_mode 23w) ^uf1 ^uy1
+Proof
                let
                    val (_,te_body) =
                        (dest_eq o concl) (REWRITE_CONV [take_data_abort_exception_def]
@@ -1415,15 +1423,16 @@ val take_data_abort_exception_nav_thm =
                            te_body take_data_abort_exception_def ``23w:bool[5]``
                            fixed_rp_thm  const_comp_rp_thm
                            read_part_thm write_part_thm wp_specl simpr
-               end);
+               end
+QED
 
 
-val take_prefetch_abort_exception_nav_thm =
-    store_thm ("take_prefetch_abort_exception_nav_thm",
-               ``preserve_relation_mmu
+Theorem take_prefetch_abort_exception_nav_thm:
+                 preserve_relation_mmu
               (take_prefetch_abort_exception <|proc := 0|> )
               (assert_mode_no_access_violation 16w )
-              (assert_mode 23w) ^uf1 ^uy1``,
+              (assert_mode 23w) ^uf1 ^uy1
+Proof
                let
                    val (_,te_body) =
                        (dest_eq o concl) (REWRITE_CONV [take_prefetch_abort_exception_def]
@@ -1466,15 +1475,16 @@ val take_prefetch_abort_exception_nav_thm =
                            te_body take_prefetch_abort_exception_def ``23w:bool[5]``
                            fixed_rp_thm  const_comp_rp_thm
                            read_part_thm write_part_thm wp_specl simpr
-               end);
+               end
+QED
 
 
-val take_irq_exception_nav_thm =
-    store_thm ("take_irq_exception_nav_thm",
-               ``preserve_relation_mmu
+Theorem take_irq_exception_nav_thm:
+                 preserve_relation_mmu
               (take_irq_exception <|proc := 0|> )
               (assert_mode_no_access_violation 16w )
-              (assert_mode 18w) ^uf1 ^uy1``,
+              (assert_mode 18w) ^uf1 ^uy1
+Proof
                let
                    val (_,te_body) =
                        (dest_eq o concl) (REWRITE_CONV [take_irq_exception_def]
@@ -1517,15 +1527,16 @@ val take_irq_exception_nav_thm =
                            te_body take_irq_exception_def ``18w:bool[5]``
                            fixed_rp_thm  const_comp_rp_thm
                            read_part_thm write_part_thm wp_specl simpr
-               end);
+               end
+QED
 
 
-val take_undef_instr_exception_nav_thm =
-    store_thm ("take_undef_instr_exception_nav_thm",
-               ``preserve_relation_mmu
+Theorem take_undef_instr_exception_nav_thm:
+                 preserve_relation_mmu
               (take_undef_instr_exception <|proc := 0|> )
               (assert_mode_no_access_violation 16w )
-              (assert_mode 27w) ^uf1 ^uy1``,
+              (assert_mode 27w) ^uf1 ^uy1
+Proof
                let
                    val (_,te_body) =
                        (dest_eq o concl) (REWRITE_CONV [take_undef_instr_exception_def]
@@ -1566,7 +1577,8 @@ val take_undef_instr_exception_nav_thm =
                            te_body take_undef_instr_exception_def ``27w:bool[5]``
                            fixed_rp_thm  const_comp_rp_thm
                            read_part_thm write_part_thm wp_specl simpr
-               end);
+               end
+QED
 
 
 val take_svc_exception_nav_thm =
@@ -1652,9 +1664,8 @@ fun prove_take_exception_ut_EE_F_flags_thm mode thm te =
        THEN RES_TAC
        THEN FULL_SIMP_TAC (srw_ss()) [untouched_def];
 
-val take_undef_instr_exception_ut_EE_F_flags_thm =
-store_thm ("take_undef_instr_exception_ut_EE_F_flags_thm",
-``! s1 a s1' g  .
+Theorem take_undef_instr_exception_ut_EE_F_flags_thm:
+  ! s1 a s1' g  .
     mmu_requirements s1 g ⇒
     assert_mode_no_access_violation 16w  s1 ⇒
     (take_undef_instr_exception <|proc := 0|> s1 = ValueState a s1') ==>
@@ -1662,12 +1673,12 @@ store_thm ("take_undef_instr_exception_ut_EE_F_flags_thm",
      (s1'.coprocessors.state.cp15=
       s1.coprocessors.state.cp15)
      /\ (s1.information  = s1'.information )
-     /\ ((s1.psrs (0,CPSR)).F = (s1'.psrs (0,CPSR)).F))``
-,
+     /\ ((s1.psrs (0,CPSR)).F = (s1'.psrs (0,CPSR)).F))
+Proof
 prove_take_exception_ut_EE_F_flags_thm ``27w:bool[5]``
                                        take_undef_instr_exception_nav_thm
                                        ``take_undef_instr_exception <|proc:=0|>``
-);
+QED
 
 
 val take_svc_exception_ut_EE_F_flags_thm =
@@ -1702,9 +1713,8 @@ end
 
 
 
-val take_data_abort_exception_ut_EE_F_flags_thm =
-store_thm ("take_data_abort_exception_ut_EE_F_flags_thm",
-``! s1 a s1' g  .
+Theorem take_data_abort_exception_ut_EE_F_flags_thm:
+  ! s1 a s1' g  .
     mmu_requirements s1 g ⇒
     assert_mode_no_access_violation 16w  s1 ⇒
     (take_data_abort_exception <|proc := 0|> s1 = ValueState a s1') ==>
@@ -1712,16 +1722,15 @@ store_thm ("take_data_abort_exception_ut_EE_F_flags_thm",
      (s1'.coprocessors.state.cp15=
       s1.coprocessors.state.cp15)
      /\ (s1.information  = s1'.information )
-     /\ ((s1.psrs (0,CPSR)).F = (s1'.psrs (0,CPSR)).F))``
-,
+     /\ ((s1.psrs (0,CPSR)).F = (s1'.psrs (0,CPSR)).F))
+Proof
 prove_take_exception_ut_EE_F_flags_thm ``23w:bool[5]``
                                        take_data_abort_exception_nav_thm
                                        ``take_data_abort_exception <|proc:=0|>``
-);
+QED
 
-val take_prefetch_abort_exception_ut_EE_F_flags_thm =
-store_thm ("take_prefetch_abort_exception_ut_EE_F_flags_thm",
-``! s1 a s1' g  .
+Theorem take_prefetch_abort_exception_ut_EE_F_flags_thm:
+  ! s1 a s1' g  .
     mmu_requirements s1 g ⇒
     assert_mode_no_access_violation 16w  s1 ⇒
     (take_prefetch_abort_exception <|proc := 0|> s1 = ValueState a s1') ==>
@@ -1729,16 +1738,15 @@ store_thm ("take_prefetch_abort_exception_ut_EE_F_flags_thm",
      (s1'.coprocessors.state.cp15=
       s1.coprocessors.state.cp15)
      /\ (s1.information  = s1'.information )
-     /\ ((s1.psrs (0,CPSR)).F = (s1'.psrs (0,CPSR)).F))``
-,
+     /\ ((s1.psrs (0,CPSR)).F = (s1'.psrs (0,CPSR)).F))
+Proof
 prove_take_exception_ut_EE_F_flags_thm ``23w:bool[5]``
                                        take_prefetch_abort_exception_nav_thm
                                        ``take_prefetch_abort_exception <|proc:=0|>``
-);
+QED
 
-val take_irq_exception_ut_EE_F_flags_thm =
-store_thm ("take_irq_exception_ut_EE_F_flags_thm",
-``! s1 a s1' g  .
+Theorem take_irq_exception_ut_EE_F_flags_thm:
+  ! s1 a s1' g  .
     mmu_requirements s1 g ⇒
     assert_mode_no_access_violation 16w  s1 ⇒
     (take_irq_exception <|proc := 0|> s1 = ValueState a s1') ==>
@@ -1746,12 +1754,12 @@ store_thm ("take_irq_exception_ut_EE_F_flags_thm",
      (s1'.coprocessors.state.cp15=
       s1.coprocessors.state.cp15)
      /\ (s1.information  = s1'.information )
-     /\ ((s1.psrs (0,CPSR)).F = (s1'.psrs (0,CPSR)).F))``
-,
+     /\ ((s1.psrs (0,CPSR)).F = (s1'.psrs (0,CPSR)).F))
+Proof
 prove_take_exception_ut_EE_F_flags_thm ``18w:bool[5]``
                                        take_irq_exception_nav_thm
                                        ``take_irq_exception <|proc:=0|>``
-);
+QED
 
 fun prove_take_exception_priv_constraints_thm
         cfc_thm
@@ -1799,54 +1807,54 @@ fun prove_take_exception_priv_constraints_thm
              ]
   end;
 
-val take_undef_instr_exception_priv_constraints_thm =
-store_thm ("take_undef_instr_exception_priv_constraints_thm",
-`` satisfy_priv_constraints_v3 (take_undef_instr_exception <|proc := 0|>)
-          16w 27w ``,
+Theorem take_undef_instr_exception_priv_constraints_thm:
+   satisfy_priv_constraints_v3 (take_undef_instr_exception <|proc := 0|>)
+          16w 27w
+Proof
            prove_take_exception_priv_constraints_thm
                take_undef_instr_exception_cfc_thm
                take_undef_instr_exception_spc_thm
                take_undef_instr_exception_ut_EE_F_flags_thm
                take_undef_instr_exception_spsr_thm
                take_undef_instr_exception_LR_thm
-          );
+QED
 
 
-val take_data_abort_exception_priv_constraints_thm =
-store_thm ("take_data_abort_exception_priv_constraints_thm",
-`` satisfy_priv_constraints_v3 (take_data_abort_exception <|proc := 0|>)
-          16w 23w ``,
+Theorem take_data_abort_exception_priv_constraints_thm:
+   satisfy_priv_constraints_v3 (take_data_abort_exception <|proc := 0|>)
+          16w 23w
+Proof
            prove_take_exception_priv_constraints_thm
                take_data_abort_exception_cfc_thm
                take_data_abort_exception_spc_thm
                take_data_abort_exception_ut_EE_F_flags_thm
                take_data_abort_exception_spsr_thm
                take_data_abort_exception_LR_thm
-          );
+QED
 
-val take_prefetch_abort_exception_priv_constraints_thm =
-store_thm ("take_prefetch_abort_exception_priv_constraints_thm",
-`` satisfy_priv_constraints_v3 (take_prefetch_abort_exception <|proc := 0|>)
-          16w 23w ``,
+Theorem take_prefetch_abort_exception_priv_constraints_thm:
+   satisfy_priv_constraints_v3 (take_prefetch_abort_exception <|proc := 0|>)
+          16w 23w
+Proof
            prove_take_exception_priv_constraints_thm
                take_prefetch_abort_exception_cfc_thm
                take_prefetch_abort_exception_spc_thm
                take_prefetch_abort_exception_ut_EE_F_flags_thm
                take_prefetch_abort_exception_spsr_thm
                take_prefetch_abort_exception_LR_thm
-          );
+QED
 
-val take_irq_exception_priv_constraints_thm =
-store_thm ("take_irq_exception_priv_constraints_thm",
-`` satisfy_priv_constraints_v3 (take_irq_exception <|proc := 0|>)
-          16w 18w ``,
+Theorem take_irq_exception_priv_constraints_thm:
+   satisfy_priv_constraints_v3 (take_irq_exception <|proc := 0|>)
+          16w 18w
+Proof
            prove_take_exception_priv_constraints_thm
                take_irq_exception_cfc_thm
                take_irq_exception_spc_thm
                take_irq_exception_ut_EE_F_flags_thm
                take_irq_exception_spsr_thm
                take_irq_exception_LR_thm
-          );
+QED
 
 val take_svc_exception_priv_constraints_thm =
 store_thm ("take_svc_exception_priv_constraints_thm",
@@ -1870,54 +1878,51 @@ store_thm ("take_svc_exception_priv_constraints_thm",
 
 (*******************************************************)
 
-val take_undef_instr_exception_priv_nav_thm =
-    store_thm ("take_undef_instr_exception_priv_nav_thm",
- `` preserve_relation_mmu
+Theorem take_undef_instr_exception_priv_nav_thm:
+    preserve_relation_mmu
               (take_undef_instr_exception <|proc := 0|> )
               (assert_mode_no_access_violation 16w )
-              (assert_mode 27w) priv_mode_constraints_v3 priv_mode_similar``
-,
+              (assert_mode 27w) priv_mode_constraints_v3 priv_mode_similar
+Proof
 MP_TAC take_undef_instr_exception_priv_mode_similar_thm
 THEN MP_TAC take_undef_instr_exception_priv_constraints_thm
 THEN MP_TAC ( take_undef_instr_exception_nav_thm)
-THEN METIS_TAC [preserve_relation_in_priv_mode_v3_thm]);
+THEN METIS_TAC [preserve_relation_in_priv_mode_v3_thm]
+QED
 
 
-val take_data_abort_exception_priv_nav_thm =
-    store_thm ("take_data_abort_exception_priv_nav_thm"
-, `` preserve_relation_mmu
+Theorem take_data_abort_exception_priv_nav_thm:    preserve_relation_mmu
               (take_data_abort_exception <|proc := 0|> )
               (assert_mode_no_access_violation 16w )
-              (assert_mode 23w) priv_mode_constraints_v3 priv_mode_similar``
-,
+              (assert_mode 23w) priv_mode_constraints_v3 priv_mode_similar
+Proof
      MP_TAC take_data_abort_exception_priv_mode_similar_thm
 THEN MP_TAC take_data_abort_exception_priv_constraints_thm
 THEN MP_TAC ( take_data_abort_exception_nav_thm)
-THEN METIS_TAC [preserve_relation_in_priv_mode_v3_thm]);
+THEN METIS_TAC [preserve_relation_in_priv_mode_v3_thm]
+QED
 
-val take_prefetch_abort_exception_priv_nav_thm =
-    store_thm ("take_prefetch_abort_exception_priv_nav_thm"
-, `` preserve_relation_mmu
+Theorem take_prefetch_abort_exception_priv_nav_thm:    preserve_relation_mmu
               (take_prefetch_abort_exception <|proc := 0|> )
               (assert_mode_no_access_violation 16w )
-              (assert_mode 23w) priv_mode_constraints_v3 priv_mode_similar``
-,
+              (assert_mode 23w) priv_mode_constraints_v3 priv_mode_similar
+Proof
      MP_TAC take_prefetch_abort_exception_priv_mode_similar_thm
 THEN MP_TAC take_prefetch_abort_exception_priv_constraints_thm
 THEN MP_TAC take_prefetch_abort_exception_nav_thm
-THEN METIS_TAC [preserve_relation_in_priv_mode_v3_thm]);
+THEN METIS_TAC [preserve_relation_in_priv_mode_v3_thm]
+QED
 
-val take_irq_exception_priv_nav_thm =
-    store_thm ("take_irq_exception_priv_nav_thm"
-, `` preserve_relation_mmu
+Theorem take_irq_exception_priv_nav_thm:    preserve_relation_mmu
               (take_irq_exception <|proc := 0|> )
               (assert_mode_no_access_violation 16w )
-              (assert_mode 18w) priv_mode_constraints_v3 priv_mode_similar``
-,
+              (assert_mode 18w) priv_mode_constraints_v3 priv_mode_similar
+Proof
      MP_TAC take_irq_exception_priv_mode_similar_thm
 THEN MP_TAC take_irq_exception_priv_constraints_thm
 THEN MP_TAC ( take_irq_exception_nav_thm)
-THEN METIS_TAC [preserve_relation_in_priv_mode_v3_thm]);
+THEN METIS_TAC [preserve_relation_in_priv_mode_v3_thm]
+QED
 
 
 val take_svc_exception_priv_nav_thm =
@@ -1941,14 +1946,13 @@ val take_svc_exception_priv_nav_thm =
             THEN METIS_TAC [preserve_relation_in_priv_mode_v2_thm]);
 
 
-val take_undef_instr_exception_av_thm =
-    store_thm ("take_undef_instr_exception_av_thm",
-``preserve_relation_mmu
+Theorem take_undef_instr_exception_av_thm:
+  preserve_relation_mmu
               (take_undef_instr_exception <|proc := 0|>)
               (assert_mode_access_violation 16w)
               (assert_mode_access_violation 16w)
-              priv_mode_constraints_v3 priv_mode_similar``
-             ,
+              priv_mode_constraints_v3 priv_mode_similar
+Proof
              let val (_,take_undef_exception_body) =
                      (dest_eq o concl) (REWRITE_CONV [take_undef_instr_exception_def]
                                                      ``take_undef_instr_exception <|proc:=0|> ``);
@@ -1973,7 +1977,8 @@ val take_undef_instr_exception_av_thm =
                                                       user_pr_taut_imp_priv_pr_thm))
                                         read_part_thm )
                         THEN METIS_TAC [access_violation_implies_no_mode_changing_thm]
-             end);
+             end
+QED
 
 val take_svc_exception_av_thm =
     store_thm ("take_svc_exception_av_thm",
@@ -2020,14 +2025,13 @@ val take_svc_exception_av_thm =
              end);
 
 
-val take_data_abort_exception_av_thm =
-    store_thm ("take_data_abort_exception_av_thm",
-``preserve_relation_mmu
+Theorem take_data_abort_exception_av_thm:
+  preserve_relation_mmu
               (take_data_abort_exception <|proc := 0|>)
               (assert_mode_access_violation 16w)
               (assert_mode_access_violation 16w)
-              priv_mode_constraints_v3 priv_mode_similar``
-             ,
+              priv_mode_constraints_v3 priv_mode_similar
+Proof
              let val (_,te_body) =
                      (dest_eq o concl) (REWRITE_CONV [take_data_abort_exception_def]
                                                      ``take_data_abort_exception <|proc:=0|> ``);
@@ -2052,16 +2056,16 @@ val take_data_abort_exception_av_thm =
                                                       user_pr_taut_imp_priv_pr_thm))
                                         read_part_thm )
                         THEN METIS_TAC [access_violation_implies_no_mode_changing_thm]
-             end);
+             end
+QED
 
-val take_prefetch_abort_exception_av_thm =
-    store_thm ("take_prefetch_abort_exception_av_thm",
-``preserve_relation_mmu
+Theorem take_prefetch_abort_exception_av_thm:
+  preserve_relation_mmu
               (take_prefetch_abort_exception <|proc := 0|>)
               (assert_mode_access_violation 16w)
               (assert_mode_access_violation 16w)
-              priv_mode_constraints_v3 priv_mode_similar``
-             ,
+              priv_mode_constraints_v3 priv_mode_similar
+Proof
              let val (_,te_body) =
                      (dest_eq o concl) (REWRITE_CONV [take_prefetch_abort_exception_def]
                                                      ``take_prefetch_abort_exception <|proc:=0|> ``);
@@ -2086,17 +2090,17 @@ val take_prefetch_abort_exception_av_thm =
                                                       user_pr_taut_imp_priv_pr_thm))
                                         read_part_thm )
                         THEN METIS_TAC [access_violation_implies_no_mode_changing_thm]
-             end);
+             end
+QED
 
 
-val take_irq_exception_av_thm =
-    store_thm ("take_irq_exception_av_thm",
-``preserve_relation_mmu
+Theorem take_irq_exception_av_thm:
+  preserve_relation_mmu
               (take_irq_exception <|proc := 0|>)
               (assert_mode_access_violation 16w)
               (assert_mode_access_violation 16w)
-              priv_mode_constraints_v3 priv_mode_similar``
-             ,
+              priv_mode_constraints_v3 priv_mode_similar
+Proof
              let val (_,te_body) =
                      (dest_eq o concl) (REWRITE_CONV [take_irq_exception_def]
                                                      ``take_irq_exception <|proc:=0|> ``);
@@ -2121,59 +2125,60 @@ val take_irq_exception_av_thm =
                                                       user_pr_taut_imp_priv_pr_thm))
                                         read_part_thm )
                         THEN METIS_TAC [access_violation_implies_no_mode_changing_thm]
-             end);
+             end
+QED
 
 
-val take_undef_instr_exception_thm =
-store_thm ("take_undef_instr_exception_thm",
-``preserve_relation_mmu
+Theorem take_undef_instr_exception_thm:
+  preserve_relation_mmu
               (take_undef_instr_exception <|proc := 0|> )
               (assert_mode 16w )
               (comb_mode 16w 27w )
-              priv_mode_constraints_v3 priv_mode_similar``
-,
+              priv_mode_constraints_v3 priv_mode_similar
+Proof
 ASSUME_TAC  take_undef_instr_exception_av_thm
 THEN ASSUME_TAC  take_undef_instr_exception_priv_nav_thm
-THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]);
+THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]
+QED
 
 
 
-val take_data_abort_exception_thm =
-store_thm ("take_data_abort_exception_thm",
-``preserve_relation_mmu
+Theorem take_data_abort_exception_thm:
+  preserve_relation_mmu
               (take_data_abort_exception <|proc := 0|> )
               (assert_mode 16w )
               (comb_mode 16w 23w )
-              priv_mode_constraints_v3 priv_mode_similar``
-,
+              priv_mode_constraints_v3 priv_mode_similar
+Proof
 ASSUME_TAC  take_data_abort_exception_av_thm
 THEN ASSUME_TAC  take_data_abort_exception_priv_nav_thm
-THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]);
+THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]
+QED
 
 
-val take_prefetch_abort_exception_thm =
-store_thm ("take_prefetch_abort_exception_thm",
-``preserve_relation_mmu
+Theorem take_prefetch_abort_exception_thm:
+  preserve_relation_mmu
               (take_prefetch_abort_exception <|proc := 0|> )
               (assert_mode 16w )
               (comb_mode 16w 23w )
-              priv_mode_constraints_v3 priv_mode_similar``
-,
+              priv_mode_constraints_v3 priv_mode_similar
+Proof
 ASSUME_TAC  take_prefetch_abort_exception_av_thm
 THEN ASSUME_TAC  take_prefetch_abort_exception_priv_nav_thm
-THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]);
+THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]
+QED
 
-val take_irq_exception_thm =
-store_thm ("take_irq_exception_thm",
-``preserve_relation_mmu
+Theorem take_irq_exception_thm:
+  preserve_relation_mmu
               (take_irq_exception <|proc := 0|> )
               (assert_mode 16w )
               (comb_mode 16w 18w )
-              priv_mode_constraints_v3 priv_mode_similar``
-,
+              priv_mode_constraints_v3 priv_mode_similar
+Proof
 ASSUME_TAC  take_irq_exception_av_thm
 THEN ASSUME_TAC  take_irq_exception_priv_nav_thm
-THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]);
+THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]
+QED
 
 Definition take_svc_exception_part2_def:
  take_svc_exception_part2 ii =
@@ -2196,17 +2201,16 @@ Definition take_svc_exception_part2_def:
               (λ(u1,u2,u3,u4). constT ())))
 End
 
-val take_svc_exception_part2_thm =
-store_thm ("take_svc_exception_part2_thm",
-``preserve_relation_mmu  (take_svc_exception_part2 <|proc:=0|>)  (assert_mode 16w )
+Theorem take_svc_exception_part2_thm:
+  preserve_relation_mmu  (take_svc_exception_part2 <|proc:=0|>)  (assert_mode 16w )
               (comb_mode 16w 19w )
-              priv_mode_constraints_v2 priv_mode_similar``
-         ,
+              priv_mode_constraints_v2 priv_mode_similar
+Proof
          FULL_SIMP_TAC (bool_ss) [take_svc_exception_part2_def]
                        THEN ASSUME_TAC  take_svc_exception_av_thm
                        THEN ASSUME_TAC   take_svc_exception_priv_nav_thm
                        THEN RW_TAC (srw_ss()) [deduce_pr_from_pr_av_and_pr_no_av_thm]
-          )
+QED
 
 (** this axiom is proven in user_lemma_primitive_operationsTheory under the name IT_advance_thm*)
 val IT_advance_thm1 =
@@ -2216,8 +2220,8 @@ val IT_advance_thm1 =
 
 val priv_mode_constraints_def = priv_mode_constraints_v1_def;
 
-val take_svc_exception_helper_thm = store_thm("take_svc_exception_helper_thm",
-``! Z A .
+Theorem take_svc_exception_helper_thm:
+  ! Z A .
 preserve_relation_mmu (A)
      (assert_mode 16w )
               (comb_mode 16w 19w )
@@ -2239,8 +2243,8 @@ preserve_relation_mmu (Z)
 preserve_relation_mmu (Z >>= (\x.A))
      (assert_mode 16w )
               (comb_mode 16w 19w )
-              priv_mode_constraints_v2a priv_mode_similar``
-,
+              priv_mode_constraints_v2a priv_mode_similar
+Proof
               RW_TAC (bool_ss) [preserve_relation_mmu_def,seqT_def]
               THEN Cases_on ` Z s1`
               THEN Cases_on ` Z s2`
@@ -2308,12 +2312,11 @@ preserve_relation_mmu (Z >>= (\x.A))
                                     ]
                        ]
               ]
-)
+QED
 
 
-val IT_advance_svc_spsr_thm =
-store_thm ("IT_advance_svc_spsr_thm",
-``(! state0 state1 a. (IT_advance <|proc := 0|> state0 = ValueState a state1) ==>
+Theorem IT_advance_svc_spsr_thm:
+  (! state0 state1 a. (IT_advance <|proc := 0|> state0 = ValueState a state1) ==>
                                 (~access_violation state1) ==>
 (((get_pc_value state1) = (get_pc_value state0)) /\
  ((state1.psrs(0,CPSR)) =
@@ -2323,8 +2326,8 @@ store_thm ("IT_advance_svc_spsr_thm",
                              then
                                  (state0.psrs(0,CPSR) with IT := ITAdvance ((state0.psrs(0,CPSR)).IT))
                              else
-                                 (state0.psrs(0,CPSR)))))``
-         ,
+                                 (state0.psrs(0,CPSR)))))
+Proof
          RW_TAC (srw_ss()) []
                 THEN PAT_X_ASSUM ``IT_advance <|proc := 0|> state0 = ValueState a state1`` (fn thm => ASSUME_TAC (EVAL_RULE thm))
                 THEN Cases_on `access_violation state0`
@@ -2342,14 +2345,14 @@ store_thm ("IT_advance_svc_spsr_thm",
                                        THEN EVAL_TAC
                                        THEN FULL_SIMP_TAC (srw_ss()) [])
                 ]
-          );
+QED
 
-val take_svc_exception_thm =
-    store_thm ("take_svc_exception_thm",
-               ``preserve_relation_mmu (take_svc_exception <|proc := 0|>)
+Theorem take_svc_exception_thm:
+                 preserve_relation_mmu (take_svc_exception <|proc := 0|>)
               (assert_mode 16w )
               (comb_mode 16w 19w )
-              priv_mode_constraints_v2a priv_mode_similar ``,
+              priv_mode_constraints_v2a priv_mode_similar
+Proof
 
                FULL_SIMP_TAC (srw_ss()) [take_svc_exception_def]
                              THEN ASSUME_TAC take_svc_exception_part2_thm
@@ -2357,5 +2360,5 @@ val take_svc_exception_thm =
                              THEN ASSUME_TAC  IT_advance_svc_spsr_thm
                              THEN IMP_RES_TAC (INST_TYPE [beta |-> ``:unit`` ] take_svc_exception_helper_thm)
                              THEN FULL_SIMP_TAC (srw_ss()) [take_svc_exception_part2_def]
-              );
+QED
 

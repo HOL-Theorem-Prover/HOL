@@ -175,10 +175,11 @@ QED
 
 
 
-val equiv0_equiv_on = store_thm(
-  "equiv0_equiv_on",
-  ``!s. (equiv0 (:β)) equiv_on s``,
-  rw[equiv_on_def] >> metis_tac[equiv0_def]);
+Theorem equiv0_equiv_on:
+    !s. (equiv0 (:β)) equiv_on s
+Proof
+  rw[equiv_on_def] >> metis_tac[equiv0_def]
+QED
 
 Theorem equiv_on_same_partition:
   R equiv_on s ==>
@@ -344,13 +345,13 @@ End
 
 
 
-val DEG_IBC_prop_letters = store_thm(
-  "DEG_IBC_prop_letters",
-  ``∀phi n s.
+Theorem DEG_IBC_prop_letters:
+    ∀phi n s.
      DEG phi ≤ n + 1 ∧ (prop_letters phi ⊆ s) ⇔
      IBC phi
      ({VAR v | v ∈ s} ∪
-      {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s})``,
+      {◇ psi | DEG psi ≤ n ∧ prop_letters psi ⊆ s})
+Proof
 Induct_on `phi` >> rw[DEG_def]
 >- rw[Once IBC_cases,prop_letters_def,SUBSET_DEF]
 >- (`IBC (DISJ phi phi')
@@ -383,13 +384,15 @@ Induct_on `phi` >> rw[DEG_def]
    >- metis_tac[IBC_cases]
    >- metis_tac[IBC_cases]
    >- (fs[prop_letters_def] >> metis_tac[prop_letters_def]))
->- fs[Once IBC_cases,prop_letters_def]);
+>- fs[Once IBC_cases,prop_letters_def]
+QED
 
 
-val DEG_0_propform = store_thm(
-"DEG_0_propform",
-``!f. DEG f = 0 <=> propform f``,
-Induct_on `f` >> fs[DEG_def,propform_def]);
+Theorem DEG_0_propform:
+  !f. DEG f = 0 <=> propform f
+Proof
+Induct_on `f` >> fs[DEG_def,propform_def]
+QED
 
 Theorem FINITE_propform_equiv0:
 !s. FINITE s ==>
@@ -465,40 +468,44 @@ val partition_eq_EMPTY = store_thm(
 
 *)
 
-val equiv0_REFL = store_thm(
-  "equiv0_REFL[simp]",
-  ``!phi. equiv0 (:β) phi phi``,
-  metis_tac[equiv0_def]);
+Theorem equiv0_REFL[simp]:
+    !phi. equiv0 (:β) phi phi
+Proof
+  metis_tac[equiv0_def]
+QED
 
-val IBC_SUBSET = store_thm(
-    "IBC_SUBSET",
-    ``!f fs. IBC f fs ==> !gs. fs SUBSET gs ==> IBC f gs``,
+Theorem IBC_SUBSET:
+      !f fs. IBC f fs ==> !gs. fs SUBSET gs ==> IBC f gs
+Proof
     Induct_on `IBC` >> rw[]
-    >> metis_tac[SUBSET_DEF,IBC_cases]);
+    >> metis_tac[SUBSET_DEF,IBC_cases]
+QED
 
 
 
-val IBC_EMPTY = store_thm(
-  "IBC_EMPTY",
-  ``∀f s. IBC f s ==> s = {} ==> equiv0 (:β) f TRUE \/ equiv0 (:β) f FALSE``,
-  Induct_on `IBC` >> rw[] >> fs[equiv0_def,satis_def,TRUE_def]);
+Theorem IBC_EMPTY:
+    ∀f s. IBC f s ==> s = {} ==> equiv0 (:β) f TRUE \/ equiv0 (:β) f FALSE
+Proof
+  Induct_on `IBC` >> rw[] >> fs[equiv0_def,satis_def,TRUE_def]
+QED
 
 Theorem equiv0_TRANS:
   !f1 f2 f3. equiv0 (:β) f1 f2 /\ (equiv0 (:β)) f2 f3 ==> equiv0 (:β) f1 f3
 Proof metis_tac[equiv0_def]
 QED
 
-val equiv0_SYM = store_thm(
-  "equiv0_SYM",
-  ``!f1 f2. equiv0 (:β) f1 f2 <=> equiv0 (:β) f2 f1``,
-  metis_tac[equiv0_def]);
+Theorem equiv0_SYM:
+    !f1 f2. equiv0 (:β) f1 f2 <=> equiv0 (:β) f2 f1
+Proof
+  metis_tac[equiv0_def]
+QED
 
 
-val IBC_CHOICE_equiv0 = store_thm(
-  "IBC_CHOICE_equiv0",
-  ``!f fs. IBC f fs ==>
+Theorem IBC_CHOICE_equiv0:
+    !f fs. IBC f fs ==>
          ?p. IBC p (IMAGE CHOICE (partition (equiv0 (:β)) fs)) /\
-                   equiv0 (:β) f p``,
+                   equiv0 (:β) f p
+Proof
 Induct_on `IBC` >> rw[]
 >- (`∃p. IBC p (IMAGE CHOICE (partition (equiv0 (:β)) fs)) ∧
          equiv0 (:β) f p /\
@@ -523,7 +530,8 @@ Induct_on `IBC` >> rw[]
        (`f IN {y | y ∈ fs ∧ equiv0 (:β) f y}` by fs[] >>
         metis_tac[MEMBER_NOT_EMPTY]) >>
    `(CHOICE {y | y ∈ fs ∧ equiv0 (:β) f y}) IN {y | y ∈ fs ∧ equiv0 (:β) f y}`
-     by metis_tac[CHOICE_DEF] >> fs[]));
+     by metis_tac[CHOICE_DEF] >> fs[])
+QED
 
 
 Theorem FINITE_FINITE_IBC:
@@ -597,9 +605,9 @@ QED
 
 
 
-val NOT_equiv0_VAR_DIAM = store_thm(
-    "NOT_equiv0_VAR_DIAM",
-    ``!a f. ¬(equiv0 (:β) (VAR a) (DIAM f))``,
+Theorem NOT_equiv0_VAR_DIAM:
+      !a f. ¬(equiv0 (:β) (VAR a) (DIAM f))
+Proof
     rw[equiv0_def] >>
     `?M w:β. satis M w (VAR a) /\ ¬(satis M w (◇ f))` suffices_by metis_tac[] >>
     `univ(:'b) <> {}` by metis_tac[UNIV_NOT_EMPTY] >>
@@ -607,7 +615,8 @@ val NOT_equiv0_VAR_DIAM = store_thm(
     qexists_tac `<| frame := <| world := {b};
                            rel := λn1 n2. F |>;
                    valt := λe w. T|>` >> qexists_tac `b` >> rw[]
-    >> rw[satis_def]);
+    >> rw[satis_def]
+QED
 
 
 Theorem EQ_equiv0_def:

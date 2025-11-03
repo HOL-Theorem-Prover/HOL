@@ -56,9 +56,11 @@ val apply_pi_id = save_thm("apply_pi_id",nterm_spec pmact_id)
 val apply_pi_injective =
     save_thm("apply_pi_injective",nterm_inst `pm` pmact_injective);
 val apply_pi_eql = save_thm("apply_pi_eql",nterm_inst `pm` pmact_eql);
-val apply_pi_eqr = store_thm("apply_pi_eqr",
-``(t1 = apply_pi pi t2) ⇔ (apply_pi (REVERSE pi) t1 = t2)``,
-METIS_TAC [apply_pi_inverse]);
+Theorem apply_pi_eqr:
+  (t1 = apply_pi pi t2) ⇔ (apply_pi (REVERSE pi) t1 = t2)
+Proof
+METIS_TAC [apply_pi_inverse]
+QED
 
 val nvars_apply_pi = RWstore_thm(
 "nvars_apply_pi",

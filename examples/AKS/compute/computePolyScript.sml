@@ -509,10 +509,10 @@ End
                         = LENGTH (h::t) = LENGTH q   by LENGTH
          The result follows by induction hypothesis to q1, q2, t.
 *)
-val poly_slide_length = store_thm(
-  "poly_slide_length",
-  ``!r:'a ring. !p1 p2 q. LENGTH p1 <= LENGTH p2 ==>
-               (LENGTH (poly_slide r p1 p2 q) = if q = [] then LENGTH p1 else LENGTH p2)``,
+Theorem poly_slide_length:
+    !r:'a ring. !p1 p2 q. LENGTH p1 <= LENGTH p2 ==>
+               (LENGTH (poly_slide r p1 p2 q) = if q = [] then LENGTH p1 else LENGTH p2)
+Proof
   strip_tac >>
   completeInduct_on `LENGTH q` >>
   rpt strip_tac >>
@@ -525,7 +525,8 @@ val poly_slide_length = store_thm(
   `LENGTH q1 = LENGTH p2` by rw[weak_cmult_length, weak_add_length, MAX_DEF, Abbr`q1`] >>
   Cases_on `t = []` >-
   rw[poly_slide_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: LENGTH (unity_mod_mult r p q) = if q = [] then 0 else LENGTH p *)
 (* Proof:
@@ -535,10 +536,11 @@ val poly_slide_length = store_thm(
    = LENGTH (poly_slide r |0| p q)      by unity_mod_mult_def
    = if q = [] then 0 else LENGTH p     by poly_slide_length, 0 <= LENGTH p
 *)
-val unity_mod_mult_length = store_thm(
-  "unity_mod_mult_length",
-  ``!r:'a ring. !p q. LENGTH (unity_mod_mult r p q) = if q = [] then 0 else LENGTH p``,
-  rw[unity_mod_mult_def, poly_slide_length]);
+Theorem unity_mod_mult_length:
+    !r:'a ring. !p q. LENGTH (unity_mod_mult r p q) = if q = [] then 0 else LENGTH p
+Proof
+  rw[unity_mod_mult_def, poly_slide_length]
+QED
 
 (* Theorem: LENGTH (unity_mod_sq r p) = LENGTH p *)
 (* Proof:
@@ -547,10 +549,11 @@ val unity_mod_mult_length = store_thm(
    = if p = [] then 0 else LENGTH p      by unity_mod_mult_length
    = LENGTH p                            by LENGTH
 *)
-val unity_mod_sq_length = store_thm(
-  "unity_mod_sq_length",
-  ``!r:'a ring. !p. LENGTH (unity_mod_sq r p) = LENGTH p``,
-  rw[unity_mod_sq_def, unity_mod_mult_length]);
+Theorem unity_mod_sq_length:
+    !r:'a ring. !p. LENGTH (unity_mod_sq r p) = LENGTH p
+Proof
+  rw[unity_mod_sq_def, unity_mod_mult_length]
+QED
 
 
 (* Theorem: unity_mod_mult r p |0| = |0| *)
@@ -560,10 +563,11 @@ val unity_mod_sq_length = store_thm(
    = poly_slide r |0| p []       by poly_zero
    = |0|                         by poly_slide_def
 *)
-val unity_mod_mult_zero = store_thm(
-  "unity_mod_mult_zero",
-  ``!r:'a ring. !p. unity_mod_mult r p |0| = |0|``,
-  rw[unity_mod_mult_def, poly_slide_def]);
+Theorem unity_mod_mult_zero:
+    !r:'a ring. !p. unity_mod_mult r p |0| = |0|
+Proof
+  rw[unity_mod_mult_def, poly_slide_def]
+QED
 
 (* Theorem: unity_mod_mult r p |1| = #1 o p *)
 (* Proof:
@@ -575,10 +579,11 @@ val unity_mod_mult_zero = store_thm(
    = #1 o p                       by weak_add_rzero
    This can be simplified to p    by weak_cmult_lone, need Ring r, weak p
 *)
-val unity_mod_mult_one = store_thm(
-  "unity_mod_mult_one",
-  ``!r:'a ring. #1 <> #0 ==> !p. unity_mod_mult r p |1| = #1 o p``,
-  rw[unity_mod_mult_def, poly_slide_def, poly_one]);
+Theorem unity_mod_mult_one:
+    !r:'a ring. #1 <> #0 ==> !p. unity_mod_mult r p |1| = #1 o p
+Proof
+  rw[unity_mod_mult_def, poly_slide_def, poly_one]
+QED
 
 (* Theorem: (#1 = #0) ==> (unity_mod_exp r p n = |0|) *)
 (* Proof:
@@ -599,21 +604,23 @@ val unity_mod_mult_one = store_thm(
       = unity_mod_mult r p |0|   by induction hypothesis
       = |0|                      by unity_mod_mult_zero
 *)
-val unity_mod_exp_trivial = store_thm(
-  "unity_mod_exp_trivial",
-  ``!r:'a ring p n. (#1 = #0) ==> (unity_mod_exp r p n = |0|)``,
+Theorem unity_mod_exp_trivial:
+    !r:'a ring p n. (#1 = #0) ==> (unity_mod_exp r p n = |0|)
+Proof
   ho_match_mp_tac (theorem "unity_mod_exp_ind") >>
   rw_tac std_ss[] >>
   rw_tac std_ss[Once unity_mod_exp_def] >-
   metis_tac[poly_one, poly_zero] >>
-  metis_tac[unity_mod_mult_zero]);
+  metis_tac[unity_mod_mult_zero]
+QED
 
 (* Theorem: !p. unity_mod_exp r p 0 = |1| *)
 (* Proof: by unity_mod_exp_def *)
-val unity_mod_exp_0 = store_thm(
-  "unity_mod_exp_0",
-  ``!r:'a ring. !p. unity_mod_exp r p 0 = |1|``,
-  rw[Once unity_mod_exp_def]);
+Theorem unity_mod_exp_0:
+    !r:'a ring. !p. unity_mod_exp r p 0 = |1|
+Proof
+  rw[Once unity_mod_exp_def]
+QED
 
 (* Theorem: !p. unity_mod_exp r p 1 = if #1 = #0 then |0| else #1 o p *)
 (* Proof:
@@ -628,16 +635,17 @@ val unity_mod_exp_0 = store_thm(
       = unity_mod_mult r p |1|     by unity_mod_exp_def
       = #1 o p                     by unity_mod_mult_one, #1 <> #0
 *)
-val unity_mod_exp_1 = store_thm(
-  "unity_mod_exp_1",
-  ``!r:'a ring. !p. unity_mod_exp r p 1 = if #1 = #0 then |0| else #1 o p``,
+Theorem unity_mod_exp_1:
+    !r:'a ring. !p. unity_mod_exp r p 1 = if #1 = #0 then |0| else #1 o p
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >-
   rw[unity_mod_exp_trivial] >>
   `~(EVEN 1)` by rw[] >>
   qabbrev_tac `q = unity_mod_exp r (unity_mod_sq r p) (HALF 1)` >>
   `q = |1|` by rw[Once unity_mod_exp_def, Abbr`q`] >>
-  rw[unity_mod_exp_def, unity_mod_mult_one, Abbr`q`]);
+  rw[unity_mod_exp_def, unity_mod_mult_one, Abbr`q`]
+QED
 
 (* Theorem: LENGTH (unity_mod_exp r p n) =
             if #1 = #0 then 0 else if n = 0 then 1 else LENGTH p *)
@@ -677,10 +685,10 @@ val unity_mod_exp_1 = store_thm(
             LENGTH (unity_mod_mult r p q)
           = LENGTH p                        by unity_mod_mult_length
 *)
-val unity_mod_exp_length = store_thm(
-  "unity_mod_exp_length",
-  ``!r:'a ring p n. LENGTH (unity_mod_exp r p n) =
-                   if #1 = #0 then 0 else if n = 0 then 1 else LENGTH p``,
+Theorem unity_mod_exp_length:
+    !r:'a ring p n. LENGTH (unity_mod_exp r p n) =
+                   if #1 = #0 then 0 else if n = 0 then 1 else LENGTH p
+Proof
   ho_match_mp_tac (theorem "unity_mod_exp_ind") >>
   rpt strip_tac >>
   (Cases_on `#1 = #0` >> simp[]) >-
@@ -698,7 +706,8 @@ val unity_mod_exp_length = store_thm(
     Cases_on `q = []` >-
     metis_tac[unity_mod_mult_zero, poly_zero, LENGTH_NIL] >>
     rw[unity_mod_mult_length]
-  ]);
+  ]
+QED
 
 (* Theorem: LENGTH (unity_mod_special r k n c) = k *)
 (* Proof:
@@ -737,15 +746,16 @@ val unity_mod_exp_length = store_thm(
       = MAX k (SUC (n MOD k))            by MAX_DEF
       = k                                by MAX_DEF, SUC (n MOD k) <= k
 *)
-val unity_mod_special_length = store_thm(
-  "unity_mod_special_length",
-  ``!r:'a ring. !k n c. LENGTH (unity_mod_special r k n c) = k``,
+Theorem unity_mod_special_length:
+    !r:'a ring. !k n c. LENGTH (unity_mod_special r k n c) = k
+Proof
   rw[unity_mod_special_def, PAD_RIGHT_LENGTH, PAD_LEFT_LENGTH] >-
   rw[MAX_DEF] >>
   Cases_on `n MOD k < 1` >-
   rw[MAX_DEF] >>
   `n MOD k < k` by rw[MOD_LESS] >>
-  rw[MAX_DEF]);
+  rw[MAX_DEF]
+QED
 
 (* Theorem: LENGTH (unity_mod_monomial r k c) = k *)
 (* Proof:
@@ -763,10 +773,11 @@ val unity_mod_special_length = store_thm(
    = MAX k 2                              by LENGTH, ONE, TWO
    = k                                    by MAX_DEF, 1 < k ==> 2 <= k
 *)
-val unity_mod_monomial_length = store_thm(
-  "unity_mod_monomial_length",
-  ``!r:'a ring. !k c. LENGTH (unity_mod_monomial r k c) = k``,
-  rw[unity_mod_monomial_def, PAD_RIGHT_LENGTH, MAX_DEF]);
+Theorem unity_mod_monomial_length:
+    !r:'a ring. !k c. LENGTH (unity_mod_monomial r k c) = k
+Proof
+  rw[unity_mod_monomial_def, PAD_RIGHT_LENGTH, MAX_DEF]
+QED
 
 (* Theorem: Ring r ==> !q p1 p2. weak p1 /\ weak p2 /\ weak q ==> weak (poly_slide r p1 p2 q) *)
 (* Proof:
@@ -783,13 +794,14 @@ val unity_mod_monomial_length = store_thm(
        and weak (turn p2)           by weak_turn
       Thus weak (poly_slide r p1 p2 (h::q))          by induction hypothesis
 *)
-val poly_slide_weak = store_thm(
-  "poly_slide_weak",
-  ``!r:'a ring. Ring r ==> !q p1 p2. weak p1 /\ weak p2 /\ weak q ==> weak (poly_slide r p1 p2 q)``,
+Theorem poly_slide_weak:
+    !r:'a ring. Ring r ==> !q p1 p2. weak p1 /\ weak p2 /\ weak q ==> weak (poly_slide r p1 p2 q)
+Proof
   ntac 2 strip_tac >>
   Induct >-
   rw[poly_slide_def] >>
-  rw[poly_slide_def, weak_turn]);
+  rw[poly_slide_def, weak_turn]
+QED
 
 (* Theorem: (poly_slide r p q |0| = p) /\ (poly_slide r p |0| q = p) *)
 (* Proof:
@@ -805,13 +817,14 @@ val poly_slide_weak = store_thm(
        = poly_slide r p |0| q                       by weak_add_zero
        = p                                          by induction hypothesis
 *)
-val poly_slide_zero = store_thm(
-  "poly_slide_zero",
-  ``!r:'a ring p q. (poly_slide r p q |0| = p) /\ (poly_slide r p |0| q = p)``,
+Theorem poly_slide_zero:
+    !r:'a ring p q. (poly_slide r p q |0| = p) /\ (poly_slide r p |0| q = p)
+Proof
   rw[poly_slide_def] >>
   Induct_on `q` >-
   rw[poly_slide_def] >>
-  fs[poly_slide_def, turn_nil]);
+  fs[poly_slide_def, turn_nil]
+QED
 
 (* Theorem: Ring r ==> !p q t1 t2. weak p /\ weak q /\ weak t1 /\ weak t2 ==>
             (poly_slide r (t1 || t2) p q = t1 || poly_slide r t2 p q) *)
@@ -834,10 +847,10 @@ val poly_slide_zero = store_thm(
        = t1 || poly_slide r ((h o p) || t2) (turn p) q     by induction hypothesis
        = t1 || poly_slide r t2 p (h::q)                    by poly_slide_def
 *)
-val poly_slide_add = store_thm(
-  "poly_slide_add",
-  ``!r:'a ring. Ring r ==> !p q t1 t2. weak p /\ weak q /\ weak t1 /\ weak t2 ==>
-       (poly_slide r (t1 || t2) p q = t1 || poly_slide r t2 p q)``,
+Theorem poly_slide_add:
+    !r:'a ring. Ring r ==> !p q t1 t2. weak p /\ weak q /\ weak t1 /\ weak t2 ==>
+       (poly_slide r (t1 || t2) p q = t1 || poly_slide r t2 p q)
+Proof
   ntac 2 strip_tac >>
   Induct_on `q` >-
   rw[poly_slide_def] >>
@@ -845,7 +858,8 @@ val poly_slide_add = store_thm(
   qabbrev_tac `t = poly_slide r t2 (turn p) q` >>
   `weak (h o p)` by rw[] >>
   `weak t` by rw[poly_slide_weak, weak_turn, Abbr`t`] >>
-  rw[weak_add_assoc, weak_add_comm]);
+  rw[weak_add_assoc, weak_add_comm]
+QED
 
 (*
 EVAL ``poly_slide (ZN 10) (weak_cmult (ZN 10) 3 [1;2;3]) (turn [1;2;3]) [4;5]``; = [5; 5; 2]: thm
@@ -910,10 +924,10 @@ EVAL ``weak_add (ZN 10) [6] (turn (poly_slide (ZN 10) [] [1;2] [4;5]))``; = [9; 
        = t || turn (poly_slide r (h o p || |0|) (turn p) q)            by poly_slide_add
        = t || turn (poly_slide r |0| p (h::q))                         by poly_slide_def
 *)
-val poly_slide_turn = store_thm(
-  "poly_slide_turn",
-  ``!r:'a ring. Ring r ==> !p q t. weak p /\ weak q /\ weak t ==>
-         (poly_slide r t (turn p) q = t || turn (poly_slide r |0| p q))``,
+Theorem poly_slide_turn:
+    !r:'a ring. Ring r ==> !p q t. weak p /\ weak q /\ weak t ==>
+         (poly_slide r t (turn p) q = t || turn (poly_slide r |0| p q))
+Proof
   ntac 2 strip_tac >>
   Induct_on `q` >-
   rw[poly_slide_def, turn_nil] >>
@@ -934,7 +948,8 @@ val poly_slide_turn = store_thm(
   `_ = t || (turn (h o p) || turn q')` by rw[weak_add_assoc, weak_turn] >>
   `_ = t || turn (h o p || q')` by rw[weak_add_turn] >>
   `_ = t || turn (poly_slide r (h o p) p' q)` by rw[GSYM poly_slide_add, Abbr`q'`] >>
-  rw[poly_slide_def, Abbr`p'`]);
+  rw[poly_slide_def, Abbr`p'`]
+QED
 
 (* Theorem: Ring r ==> !p q. weak p /\ weak q /\ q <> |0| ==>
             !t. zerop t /\ (LENGTH t <= LENGTH p) ==> (poly_slide r t p q = poly_slide r |0| p q) *)
@@ -953,14 +968,15 @@ val poly_slide_turn = store_thm(
     = poly_slide r |0| p (h::s)              by poly_slide_def
     = poly_slide r |0| p q                   by q = h::s
 *)
-val poly_slide_init_zero_poly = store_thm(
-  "poly_slide_init_zero_poly",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ weak q /\ q <> |0| ==>
-   !t. zerop t /\ (LENGTH t <= LENGTH p) ==> (poly_slide r t p q = poly_slide r |0| p q)``,
+Theorem poly_slide_init_zero_poly:
+    !r:'a ring. Ring r ==> !p q. weak p /\ weak q /\ q <> |0| ==>
+   !t. zerop t /\ (LENGTH t <= LENGTH p) ==> (poly_slide r t p q = poly_slide r |0| p q)
+Proof
   rpt strip_tac >>
   `?h s. q = h::s` by metis_tac[poly_zero, list_CASES] >>
   `weak (h o p)` by metis_tac[weak_cons, weak_cmult_weak] >>
-  rw[poly_slide_def, weak_add_rzero_poly, weak_cmult_length]);
+  rw[poly_slide_def, weak_add_rzero_poly, weak_cmult_length]
+QED
 
 (* Theorem: 0 < LENGTH q /\ weak q ==>
             (poly_slide r a p q = poly_slide r (((TAKE 1 q) o p) || a) (turn p) (DROP 1 q)) *)
@@ -976,16 +992,17 @@ val poly_slide_init_zero_poly = store_thm(
       = poly_slide r ([h] o p || a) (turn p) t  by weak_mult_const
       = poly_slide r ((TAKE 1 q) o p || a) (turn p) (DROP 1 q)   by above
 *)
-val poly_slide_eqn_1 = store_thm(
-  "poly_slide_eqn_1",
-  ``!r:'a ring. !(a p):'a poly. !q. 0 < LENGTH q /\ weak q ==>
-   (poly_slide r a p q = poly_slide r (((TAKE 1 q) o p) || a) (turn p) (DROP 1 q))``,
+Theorem poly_slide_eqn_1:
+    !r:'a ring. !(a p):'a poly. !q. 0 < LENGTH q /\ weak q ==>
+   (poly_slide r a p q = poly_slide r (((TAKE 1 q) o p) || a) (turn p) (DROP 1 q))
+Proof
   rpt strip_tac >>
   `LENGTH q <> 0` by decide_tac >>
   `q <> [] /\ ?h t. q = h::t` by metis_tac[LENGTH_NIL, list_CASES] >>
   `poly_slide r a p (h::t) = poly_slide r (h o p || a) (turn p) t` by rw[poly_slide_def] >>
   `_ = poly_slide r ([h] o p || a) (turn p) t` by rw[weak_mult_const] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r ==> !a p. weak a /\ weak p ==> !q. 1 < LENGTH q /\ weak q ==>
             (poly_slide r a p q =
@@ -1011,11 +1028,11 @@ val poly_slide_eqn_1 = store_thm(
     and turn_exp p 2 = turn (turn p) by turn_exp_2
    Thus the result follows.
 *)
-val poly_slide_eqn_2 = store_thm(
-  "poly_slide_eqn_2",
-  ``!r:'a ring. Ring r ==> !a p. weak a /\ weak p ==> !q. 1 < LENGTH q /\ weak q ==>
+Theorem poly_slide_eqn_2:
+    !r:'a ring. Ring r ==> !a p. weak a /\ weak p ==> !q. 1 < LENGTH q /\ weak q ==>
    (poly_slide r a p q =
-    poly_slide r ((EL 1 q) o (turn p) || (EL 0 q) o p || a) (turn_exp p 2) (DROP 2 q))``,
+    poly_slide r ((EL 1 q) o (turn p) || (EL 0 q) o p || a) (turn_exp p 2) (DROP 2 q))
+Proof
   rpt strip_tac >>
   `LENGTH q <> 0` by decide_tac >>
   `q <> [] /\ ?h s. q = h::s` by metis_tac[LENGTH_NIL, list_CASES] >>
@@ -1031,7 +1048,8 @@ val poly_slide_eqn_2 = store_thm(
   `_ = k` by rw[] >>
   `DROP 2 q = DROP 1 s` by metis_tac[DROP, TWO] >>
   `_ = t` by rw[] >>
-  rw[turn_exp_2]);
+  rw[turn_exp_2]
+QED
 
 (*
 
@@ -1116,11 +1134,11 @@ This is because:
 
       Hence the result follows.
 *)
-val poly_slide_eqn = store_thm(
-  "poly_slide_eqn",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !(a p):'a poly. weak a /\ weak p /\ LENGTH a <= LENGTH p ==>
+Theorem poly_slide_eqn:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !(a p):'a poly. weak a /\ weak p /\ LENGTH a <= LENGTH p ==>
    !n q. weak q /\ n <= LENGTH q ==> (poly_slide r a p q =
-    poly_slide r (psum (GENLIST (\k. (q ' k) o (turn_exp p k)) n) || a) (turn_exp p n) (DROP n q))``,
+    poly_slide r (psum (GENLIST (\k. (q ' k) o (turn_exp p k)) n) || a) (turn_exp p n) (DROP n q))
+Proof
   ntac 5 strip_tac >>
   Induct >-
   rw[] >>
@@ -1143,7 +1161,8 @@ val poly_slide_eqn = store_thm(
   `_ = poly_slide r (c o (turn_exp p n) || b || a) (turn_exp p (SUC n)) (DROP (SUC n) q)` by rw[weak_add_assoc] >>
   `c o turn_exp p n || b = (f n) || psum (GENLIST f n)` by rw[Abbr`b`, Abbr`c`, Abbr`f`] >>
   `_ = psum (GENLIST f (SUC n))` by rw[poly_weak_sum_genlist_suc] >>
-  rw[]);
+  rw[]
+QED
 
 (* This is a major milestone result! *)
 
@@ -1176,10 +1195,10 @@ val poly_slide_eqn = store_thm(
    = b                                 by poly_slide_def
    = psum (GENLIST (\k. (q ' k) o (turn_exp p k)) (SUC (deg q))  by notation, above
 *)
-val unity_mod_mult_alt = store_thm(
-  "unity_mod_mult_alt",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p q. weak p /\ weak q /\ q <> |0| ==>
-         (unity_mod_mult r p q = psum (GENLIST (\k. (q ' k) o (turn_exp p k)) (SUC (deg q))))``,
+Theorem unity_mod_mult_alt:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p q. weak p /\ weak q /\ q <> |0| ==>
+         (unity_mod_mult r p q = psum (GENLIST (\k. (q ' k) o (turn_exp p k)) (SUC (deg q))))
+Proof
   rpt strip_tac >>
   `LENGTH |0| = 0` by rw[] >>
   `LENGTH |0| <= LENGTH p` by decide_tac >>
@@ -1195,14 +1214,16 @@ val unity_mod_mult_alt = store_thm(
   `deg q = PRE n` by rw[poly_deg_def, Abbr`n`] >>
   `n = SUC (deg q)` by decide_tac >>
   `DROP n q = []` by rw[DROP_LENGTH_NIL, Abbr`n`] >>
-  rw[poly_slide_def, unity_mod_mult_def]);
+  rw[poly_slide_def, unity_mod_mult_def]
+QED
 
 (* Theorem: (unity_mod_mult r p |0| = |0|) /\ (unity_mod_mult r |0| p = |0|) *)
 (* Proof: by unity_mod_mult_def, poly_slide_zero. *)
-val unity_mod_mult_zero_alt = store_thm(
-  "unity_mod_mult_zero_alt",
-  ``!r:'a ring p. (unity_mod_mult r p |0| = |0|) /\ (unity_mod_mult r |0| p = |0|)``,
-  rw[unity_mod_mult_def, poly_slide_zero]);
+Theorem unity_mod_mult_zero_alt:
+    !r:'a ring p. (unity_mod_mult r p |0| = |0|) /\ (unity_mod_mult r |0| p = |0|)
+Proof
+  rw[unity_mod_mult_def, poly_slide_zero]
+QED
 
 
 (* Theorem: Ring r ==> !p h t. weak p /\ weak (h::t) ==>
@@ -1217,16 +1238,17 @@ val unity_mod_mult_zero_alt = store_thm(
    = h o p || poly_slide r |0| (turn p) t     by poly_slide_add
    = h o p || unity_mod_mult r (turn p) t     by unity_mod_mult_def
 *)
-val unity_mod_mult_cons = store_thm(
-  "unity_mod_mult_cons",
-  ``!r:'a ring. Ring r ==> !p h t. weak p /\ weak (h::t) ==>
-         (unity_mod_mult r p (h::t) = (h o p || unity_mod_mult r (turn p) t))``,
+Theorem unity_mod_mult_cons:
+    !r:'a ring. Ring r ==> !p h t. weak p /\ weak (h::t) ==>
+         (unity_mod_mult r p (h::t) = (h o p || unity_mod_mult r (turn p) t))
+Proof
   rw[weak_cons] >>
   `unity_mod_mult r p (h::t) = poly_slide r |0| p (h::t)` by rw[unity_mod_mult_def] >>
   `_ = poly_slide r (h o p || |0|) (turn p) t` by rw[poly_slide_def] >>
   `_ = h o p || poly_slide r |0| (turn p) t` by rw[GSYM poly_slide_add, weak_turn] >>
   `_ = h o p || unity_mod_mult r (turn p) t` by rw[unity_mod_mult_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r ==> !p q. weak p /\ weak q ==> weak (unity_mod_mult r p q) *)
 (* Proof:
@@ -1235,10 +1257,11 @@ val unity_mod_mult_cons = store_thm(
     and weak |0|                     by weak_zero
     ==> weak (poly_slide r |0| p q)  by poly_slide_weak
 *)
-val unity_mod_mult_weak = store_thm(
-  "unity_mod_mult_weak",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> weak (unity_mod_mult r p q)``,
-  rw[unity_mod_mult_def, poly_slide_weak]);
+Theorem unity_mod_mult_weak:
+    !r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> weak (unity_mod_mult r p q)
+Proof
+  rw[unity_mod_mult_def, poly_slide_weak]
+QED
 
 (* Theorem: Ring r ==> !p. weak p ==> weak (unity_mod_sq r p) *)
 (* Proof:
@@ -1246,10 +1269,11 @@ val unity_mod_mult_weak = store_thm(
       = unity_mod_mult r p p      by unity_mod_sq_def
    Thus weak (unity_mod_sq r p)   by unity_mod_mult_weak
 *)
-val unity_mod_sq_weak = store_thm(
-  "unity_mod_sq_weak",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> weak (unity_mod_sq r p)``,
-  rw[unity_mod_sq_def, unity_mod_mult_weak]);
+Theorem unity_mod_sq_weak:
+    !r:'a ring. Ring r ==> !p. weak p ==> weak (unity_mod_sq r p)
+Proof
+  rw[unity_mod_sq_def, unity_mod_mult_weak]
+QED
 
 (* Theorem: Ring r ==> !n p. weak p ==> weak (unity_mod_exp r p n) *)
 (* Proof:
@@ -1269,9 +1293,9 @@ val unity_mod_sq_weak = store_thm(
             = unity_mod_mult r p q         by unity_mod_exp_def
           and weak (unity_mod_mult r p q)  by unity_mod_mult_weak
 *)
-val unity_mod_exp_weak = store_thm(
-  "unity_mod_exp_weak",
-  ``!r:'a ring. Ring r ==> !n p. weak p ==> weak (unity_mod_exp r p n)``,
+Theorem unity_mod_exp_weak:
+    !r:'a ring. Ring r ==> !n p. weak p ==> weak (unity_mod_exp r p n)
+Proof
   ntac 2 strip_tac >>
   completeInduct_on `n` >>
   rpt strip_tac >>
@@ -1283,7 +1307,8 @@ val unity_mod_exp_weak = store_thm(
     `weak (unity_mod_exp r (unity_mod_sq r p) (HALF n))` by rw[] >>
     rw_tac std_ss[Once unity_mod_exp_def] >>
     rw[unity_mod_mult_weak]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !p q. weak p /\ weak q /\ 1 < LENGTH p /\ q <> |0| ==>
             (chop (unity_mod_mult r p q) = (p * q) % (unity (LENGTH p))) *)
@@ -1398,10 +1423,10 @@ val unity_mod_exp_weak = store_thm(
 
    This completes Stage 3, and the whole proof.
 *)
-val unity_mod_mult_eqn = store_thm(
-  "unity_mod_mult_eqn",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p q. weak p /\ weak q /\ 1 < LENGTH p /\ q <> |0| ==>
-               (chop (unity_mod_mult r p q) = (p * q) % (unity (LENGTH p)))``,
+Theorem unity_mod_mult_eqn:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p q. weak p /\ weak q /\ 1 < LENGTH p /\ q <> |0| ==>
+               (chop (unity_mod_mult r p q) = (p * q) % (unity (LENGTH p)))
+Proof
   rpt strip_tac >>
   qabbrev_tac `k = LENGTH p` >>
   qabbrev_tac `z = unity k` >>
@@ -1476,7 +1501,8 @@ val unity_mod_mult_eqn = store_thm(
   `_ = (poly_sum (MAP (\x. x % z) (GENLIST h1 (SUC (deg q))))) % z` by rw[poly_mod_poly_sum] >>
   `_ = (poly_sum (GENLIST h2 (SUC (deg q)))) % z` by metis_tac[MAP_GENLIST, Abbr`h1`, Abbr`h2`] >>
   rw[]) >>
-  rw[]);
+  rw[]
+QED
 
 (* This is the next major milestone theorem, using the magic trick! *)
 
@@ -1487,14 +1513,15 @@ val unity_mod_mult_eqn = store_thm(
      so p <> |0|           by LENGTH_NIL, poly_zero
    Thus the result follows by unity_mod_sq_def, unity_mod_mult_eqn
 *)
-val unity_mod_sq_eqn = store_thm(
-  "unity_mod_sq_eqn",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p. weak p /\ 1 < LENGTH p ==>
-               (chop (unity_mod_sq r p) = (p * p) % (unity (LENGTH p)))``,
+Theorem unity_mod_sq_eqn:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p. weak p /\ 1 < LENGTH p ==>
+               (chop (unity_mod_sq r p) = (p * p) % (unity (LENGTH p)))
+Proof
   rpt strip_tac >>
   `LENGTH p <> 0` by decide_tac >>
   `p <> |0|` by metis_tac[LENGTH_NIL, poly_zero] >>
-  rw[unity_mod_sq_def, unity_mod_mult_eqn]);
+  rw[unity_mod_sq_def, unity_mod_mult_eqn]
+QED
 
 (* Theorem: EVEN n ==> (unity_mod_exp r p n = unity_mod_exp r (unity_mod_sq r p) (HALF n)) *)
 (* Proof:
@@ -1504,13 +1531,14 @@ val unity_mod_sq_eqn = store_thm(
    If n <> 0,
       Then true           by unity_mod_exp_def
 *)
-val unity_mod_exp_even = store_thm(
-  "unity_mod_exp_even",
-  ``!r:'a ring. !p n. EVEN n ==> (unity_mod_exp r p n = unity_mod_exp r (unity_mod_sq r p) (HALF n))``,
+Theorem unity_mod_exp_even:
+    !r:'a ring. !p n. EVEN n ==> (unity_mod_exp r p n = unity_mod_exp r (unity_mod_sq r p) (HALF n))
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[unity_mod_exp_0] >>
-  rw[Once unity_mod_exp_def]);
+  rw[Once unity_mod_exp_def]
+QED
 
 (* Theorem: ODD n ==>
             (unity_mod_exp r p n = unity_mod_mult r p (unity_mod_exp r (unity_mod_sq r p) (HALF n))) *)
@@ -1519,13 +1547,14 @@ val unity_mod_exp_even = store_thm(
     and n <> 0       by EVEN
    Thus the result follows by unity_mod_exp_def
 *)
-val unity_mod_exp_odd = store_thm(
-  "unity_mod_exp_odd",
-  ``!r:'a ring. !p n. ODD n ==>
-        (unity_mod_exp r p n = unity_mod_mult r p (unity_mod_exp r (unity_mod_sq r p) (HALF n)))``,
+Theorem unity_mod_exp_odd:
+    !r:'a ring. !p n. ODD n ==>
+        (unity_mod_exp r p n = unity_mod_mult r p (unity_mod_exp r (unity_mod_sq r p) (HALF n)))
+Proof
   rpt strip_tac >>
   `~(EVEN n) /\ n <> 0` by metis_tac[EVEN_ODD, EVEN] >>
-  rw[Once unity_mod_exp_def]);
+  rw[Once unity_mod_exp_def]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !n p. weak p /\ 1 < LENGTH p ==>
             (chop (unity_mod_exp r p n) = (p ** n) % (unity (LENGTH p))) *)
@@ -1595,10 +1624,10 @@ val unity_mod_exp_odd = store_thm(
          = (pc ** n) % z                               by poly_exp_odd
          = (p ** n) % z                                by poly_exp_weak
 *)
-val unity_mod_exp_eqn = store_thm(
-  "unity_mod_exp_eqn",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n p. weak p /\ 1 < LENGTH p ==>
-               (chop (unity_mod_exp r p n) = (p ** n) % (unity (LENGTH p)))``,
+Theorem unity_mod_exp_eqn:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n p. weak p /\ 1 < LENGTH p ==>
+               (chop (unity_mod_exp r p n) = (p ** n) % (unity (LENGTH p)))
+Proof
   ntac 2 strip_tac >>
   completeInduct_on `n` >>
   rpt strip_tac >>
@@ -1649,7 +1678,8 @@ val unity_mod_exp_eqn = store_thm(
       `_ = (p ** n) % z` by rw_tac std_ss[poly_exp_weak] >>
       rw[]
     ]
-  ]);
+  ]
+QED
 
 (* This is another major milestone theorem, using the magic trick! *)
 
@@ -1659,10 +1689,11 @@ val unity_mod_exp_eqn = store_thm(
 
 (* Theorem: unity_mod_special r 0 n c = |0| *)
 (* Proof: by unity_mod_special_def *)
-val unity_mod_special_0 = store_thm(
-  "unity_mod_special_0",
-  ``!r:'a ring n c. unity_mod_special r 0 n c = |0|``,
-  rw[unity_mod_special_def]);
+Theorem unity_mod_special_0:
+    !r:'a ring n c. unity_mod_special r 0 n c = |0|
+Proof
+  rw[unity_mod_special_def]
+QED
 
 (* Theorem: Ring r /\ k <> 0 ==>
             (unity_mod_special r k n c = unity_mod_special r k n 0 || PAD_RIGHT #0 k [##c]) *)
@@ -1685,10 +1716,10 @@ val unity_mod_special_0 = store_thm(
           = k - 1                       by n MOD k <> 0, SUC (m MOD k) <= k
       Thus t || t = z                   by weak_add_rzero_poly
 *)
-val unity_mod_special_not_0 = store_thm(
-  "unity_mod_special_not_0",
-  ``!r:'a ring k n c. Ring r /\ k <> 0 ==>
-     (unity_mod_special r k n c = unity_mod_special r k n 0 || PAD_RIGHT #0 k [##c])``,
+Theorem unity_mod_special_not_0:
+    !r:'a ring k n c. Ring r /\ k <> 0 ==>
+     (unity_mod_special r k n c = unity_mod_special r k n 0 || PAD_RIGHT #0 k [##c])
+Proof
   rw[unity_mod_special_def, PAD_RIGHT, PAD_LEFT] >| [
     qabbrev_tac `z = GENLIST (K #0) (k - 1)` >>
     `zerop z` by rw[zero_poly_every_zero, EVERY_GENLIST, Abbr`z`] >>
@@ -1703,7 +1734,8 @@ val unity_mod_special_not_0 = store_thm(
     `LENGTH t = (n MOD k - 1) + 1 + (k - SUC (n MOD k))` by rw[Abbr`t`] >>
     `_ = k - 1` by decide_tac >>
     rw[weak_add_rzero_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !k n c. weak (unity_mod_special r k n c) *)
 (* Proof:
@@ -1725,13 +1757,14 @@ val unity_mod_special_not_0 = store_thm(
       i.e. !n. weak (GENLIST (K #0) n)         by weak_every_mem, MEM_GENLIST
       Thus weak (unity_mod_special r k n c)    by weak_append_weak
 *)
-val unity_mod_special_weak = store_thm(
-  "unity_mod_special_weak",
-  ``!r:'a ring. Ring r ==> !k n c. weak (unity_mod_special r k n c)``,
+Theorem unity_mod_special_weak:
+    !r:'a ring. Ring r ==> !k n c. weak (unity_mod_special r k n c)
+Proof
   rw_tac std_ss[unity_mod_special_def] >>
   (`!n. weak (GENLIST (K #0) n)` by (rw[weak_every_mem, MEM_GENLIST] >> rw[])) >>
   rw[PAD_LEFT, PAD_RIGHT, Abbr`q`] >>
-  rw[weak_append_weak]);
+  rw[weak_append_weak]
+QED
 
 (* Theorem: unity_mod_monomial r k c = unity_mod_special r k 1 c *)
 (* Proof:
@@ -1753,17 +1786,19 @@ val unity_mod_special_weak = store_thm(
    = PAD_RIGHT #0 k [##c; #1]                           by CONS
    = unity_mod_monomial r k c                           by unity_mod_monomial_def
 *)
-val unity_mod_monomial_alt = store_thm(
-  "unity_mod_monomial_alt",
-  ``!r:'a ring. !k c. unity_mod_monomial r k c = unity_mod_special r k 1 c``,
-  rw[unity_mod_monomial_def, unity_mod_special_def, PAD_LEFT, PAD_RIGHT]);
+Theorem unity_mod_monomial_alt:
+    !r:'a ring. !k c. unity_mod_monomial r k c = unity_mod_special r k 1 c
+Proof
+  rw[unity_mod_monomial_def, unity_mod_special_def, PAD_LEFT, PAD_RIGHT]
+QED
 
 (* Theorem: Ring r ==> !k c. weak (unity_mod_monomial r k c) *)
 (* Proof: by unity_mod_monomial_alt, unity_mod_special_weak *)
-val unity_mod_monomial_weak = store_thm(
-  "unity_mod_monomial_weak",
-  ``!r:'a ring. Ring r ==> !k c. weak (unity_mod_monomial r k c)``,
-  rw[unity_mod_monomial_alt, unity_mod_special_weak]);
+Theorem unity_mod_monomial_weak:
+    !r:'a ring. Ring r ==> !k c. weak (unity_mod_monomial r k c)
+Proof
+  rw[unity_mod_monomial_alt, unity_mod_special_weak]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !k. 0 < k ==>
             !n c. chop (unity_mod_special r k n c) = (X ** n + |c|) % (unity k) *)
@@ -1806,10 +1841,10 @@ val unity_mod_monomial_weak = store_thm(
          = X ** (n MOD k) + |c|                 by poly_X_exp_n_add_c_alt
          = (X ** n + |c|) % (unity k)           by poly_unity_mod_X_exp_n_add_c
 *)
-val unity_mod_special_chop = store_thm(
-  "unity_mod_special_chop",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !k. 0 < k ==>
-   !n c. chop (unity_mod_special r k n c) = (X ** n + |c|) % (unity k)``,
+Theorem unity_mod_special_chop:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !k. 0 < k ==>
+   !n c. chop (unity_mod_special r k n c) = (X ** n + |c|) % (unity k)
+Proof
   rw_tac std_ss[poly_unity_mod_X_exp_n_add_c] >>
   rw_tac std_ss[unity_mod_special_def] >-
   metis_tac[DECIDE``~(0 < 0)``] >-
@@ -1826,7 +1861,8 @@ val unity_mod_special_chop = store_thm(
   `chop (PAD_RIGHT #0 k q) = chop q` by rw[poly_chop_pad_right] >>
   `_ = q` by rw[] >>
   `_ = X ** (n MOD k) + |c|` by rw[poly_X_exp_n_add_c_alt, Abbr`q`] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !k. 0 < k ==>
             !c. chop (unity_mod_monomial r k c) = (X + |c|) % (unity k) *)
@@ -1836,11 +1872,12 @@ val unity_mod_special_chop = store_thm(
    = (X ** 1 + |c|) % (unity k)           by unity_mod_special_chop
    = (X + |c|) % (unity k)                by poly_exp_1
 *)
-val unity_mod_monomial_chop = store_thm(
-  "unity_mod_monomial_chop",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !k. 0 < k ==>
-   !c. chop (unity_mod_monomial r k c) = (X + |c|) % (unity k)``,
-  rw[unity_mod_monomial_alt, unity_mod_special_chop]);
+Theorem unity_mod_monomial_chop:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !k. 0 < k ==>
+   !c. chop (unity_mod_monomial r k c) = (X + |c|) % (unity k)
+Proof
+  rw[unity_mod_monomial_alt, unity_mod_special_chop]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Constant polynomials under modulus unity: |c| MOD (unity k)               *)
@@ -1876,10 +1913,11 @@ End
       = MAX k 1                            by LENGTH_SING
       = k                                  by MAX_DEF, k <> 0
 *)
-val unity_mod_const_length = store_thm(
-  "unity_mod_const_length",
-  ``!r:'a ring k c. LENGTH (unity_mod_const r k c) = k``,
-  rw[unity_mod_const_def, PAD_RIGHT_LENGTH, MAX_DEF]);
+Theorem unity_mod_const_length:
+    !r:'a ring k c. LENGTH (unity_mod_const r k c) = k
+Proof
+  rw[unity_mod_const_def, PAD_RIGHT_LENGTH, MAX_DEF]
+QED
 
 (* Theorem: Ring r ==> !k c. weak (unity_mod_const r k c) *)
 (* Proof:
@@ -1890,26 +1928,29 @@ val unity_mod_const_length = store_thm(
    <=> if k = 0 then weak |0| else weak ([##c] ++ GENLIST (K #0) (k - 1)))
    <=> T                                                              by weak_zero, weak_const
 *)
-val unity_mod_const_weak = store_thm(
-  "unity_mod_const_weak",
-  ``!r:'a ring. Ring r ==> !k c. weak (unity_mod_const r k c)``,
+Theorem unity_mod_const_weak:
+    !r:'a ring. Ring r ==> !k c. weak (unity_mod_const r k c)
+Proof
   rw[unity_mod_const_def, PAD_RIGHT] >>
   (`!n. weak (GENLIST (K #0) n)` by (rw[weak_every_mem, MEM_GENLIST] >> rw[])) >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: unity_mod_const r k 0 = unity_mod_zero r k *)
 (* Proof: by unity_mod_zero_def *)
-val unity_mod_const_0 = store_thm(
-  "unity_mod_const_0",
-  ``!r:'a ring k. unity_mod_const r k 0 = unity_mod_zero r k``,
-  rw[unity_mod_zero_def]);
+Theorem unity_mod_const_0:
+    !r:'a ring k. unity_mod_const r k 0 = unity_mod_zero r k
+Proof
+  rw[unity_mod_zero_def]
+QED
 
 (* Theorem: unity_mod_const r k 1 = unity_mod_one r k *)
 (* Proof: by unity_mod_one_def *)
-val unity_mod_const_1 = store_thm(
-  "unity_mod_const_1",
-  ``!r:'a ring k. unity_mod_const r k 1 = unity_mod_one r k``,
-  rw[unity_mod_one_def]);
+Theorem unity_mod_const_1:
+    !r:'a ring k. unity_mod_const r k 1 = unity_mod_one r k
+Proof
+  rw[unity_mod_one_def]
+QED
 
 (* Theorem: unity_mod_const r k c = if k = 0 then [] else ##c :: GENLIST (K #0) (k - 1) *)
 (* Proof:
@@ -1922,11 +1963,12 @@ val unity_mod_const_1 = store_thm(
      = [##c] ++ GENLIST (K #0) (k - 1)  by PAD_RIGHT
      = ##c :: GENLIST (K #0) (k - 1)    by CONS_APPEND
 *)
-val unity_mod_const_eqn = store_thm(
-  "unity_mod_const_eqn",
-  ``!r:'a ring k. unity_mod_const r k c =
-      if k = 0 then [] else ##c :: GENLIST (K #0) (k - 1)``,
-  rw[unity_mod_const_def, PAD_RIGHT]);
+Theorem unity_mod_const_eqn:
+    !r:'a ring k. unity_mod_const r k c =
+      if k = 0 then [] else ##c :: GENLIST (K #0) (k - 1)
+Proof
+  rw[unity_mod_const_def, PAD_RIGHT]
+QED
 
 (* Theorem: LENGTH (unity_mod_zero r k) = k *)
 (* Proof:
@@ -1934,17 +1976,19 @@ val unity_mod_const_eqn = store_thm(
    = LENGTH (unity_mod_const r k 0)    by unity_mod_zero_def
    = k                                 by unity_mod_const_length
 *)
-val unity_mod_zero_length = store_thm(
-  "unity_mod_zero_length",
-  ``!r:'a ring k. LENGTH (unity_mod_zero r k) = k``,
-  rw[unity_mod_zero_def, unity_mod_const_length]);
+Theorem unity_mod_zero_length:
+    !r:'a ring k. LENGTH (unity_mod_zero r k) = k
+Proof
+  rw[unity_mod_zero_def, unity_mod_const_length]
+QED
 
 (* Theorem: Ring r ==> weak (unity_mod_zero r k) *)
 (* Proof: by unity_mod_zero_def, unity_mod_const_weak *)
-val unity_mod_zero_weak = store_thm(
-  "unity_mod_zero_weak",
-  ``!r:'a ring k. Ring r ==> weak (unity_mod_zero r k)``,
-  rw[unity_mod_zero_def, unity_mod_const_weak]);
+Theorem unity_mod_zero_weak:
+    !r:'a ring k. Ring r ==> weak (unity_mod_zero r k)
+Proof
+  rw[unity_mod_zero_def, unity_mod_const_weak]
+QED
 
 (* Theorem: unity_mod_zero r k = PAD_RIGHT #0 k [] *)
 (* Proof:
@@ -1961,12 +2005,13 @@ val unity_mod_zero_weak = store_thm(
       = PAD_RIGHT #0 k [#0]       by ring_num_0
       = PAD_RIGHT #0 k []         by PAD_RIGHT_NIL_EQ, 0 < k
 *)
-val unity_mod_zero_alt = store_thm(
-  "unity_mod_zero_alt",
-  ``!r:'a ring k. unity_mod_zero r k = PAD_RIGHT #0 k []``,
+Theorem unity_mod_zero_alt:
+    !r:'a ring k. unity_mod_zero r k = PAD_RIGHT #0 k []
+Proof
   rw[unity_mod_zero_def, unity_mod_const_def] >-
   rw[PAD_RIGHT_0] >>
-  rw[PAD_RIGHT_NIL_EQ]);
+  rw[PAD_RIGHT_NIL_EQ]
+QED
 
 (* Theorem: unity_mod_zero r k = GENLIST (K #0) k *)
 (* Proof:
@@ -1975,10 +2020,11 @@ val unity_mod_zero_alt = store_thm(
    = [] ++ GENLIST (K #0) (k - 0)  by PAD_RIGHT
    = GENLIST (K #0) k              by APPEND
 *)
-val unity_mod_zero_eqn = store_thm(
-  "unity_mod_zero_eqn",
-  ``!r:'a ring k. unity_mod_zero r k = GENLIST (K #0) k``,
-  rw[unity_mod_zero_alt, PAD_RIGHT]);
+Theorem unity_mod_zero_eqn:
+    !r:'a ring k. unity_mod_zero r k = GENLIST (K #0) k
+Proof
+  rw[unity_mod_zero_alt, PAD_RIGHT]
+QED
 
 (* Theorem: chop (unity_mod_zero r k) = |0| *)
 (* Proof:
@@ -1988,15 +2034,16 @@ val unity_mod_zero_eqn = store_thm(
     ==> zerop z                   by zero_poly_every_zero
    Thus chop z = |0|              by poly_chop_zero_poly
 *)
-val unity_mod_zero_chop = store_thm(
-  "unity_mod_zero_chop",
-  ``!r:'a ring k. chop (unity_mod_zero r k) = |0|``,
+Theorem unity_mod_zero_chop:
+    !r:'a ring k. chop (unity_mod_zero r k) = |0|
+Proof
   rpt strip_tac >>
   qabbrev_tac `z = GENLIST (K #0) k` >>
   `unity_mod_zero r k = z` by rw[unity_mod_zero_eqn, Abbr`z`] >>
   `EVERY (\x. x = #0) z` by rw[EVERY_GENLIST, Abbr`z`] >>
   `zerop z` by rw[zero_poly_every_zero, Abbr`z`] >>
-  rw[poly_chop_zero_poly]);
+  rw[poly_chop_zero_poly]
+QED
 
 (* Theorem: LENGTH (unity_mod_one r k) = k *)
 (* Proof:
@@ -2004,17 +2051,19 @@ val unity_mod_zero_chop = store_thm(
    = LENGTH (unity_mod_const r k 1)    by unity_mod_one_def
    = k                                 by unity_mod_const_length
 *)
-val unity_mod_one_length = store_thm(
-  "unity_mod_one_length",
-  ``!r:'a ring k. LENGTH (unity_mod_one r k) = k``,
-  rw[unity_mod_one_def, unity_mod_const_length]);
+Theorem unity_mod_one_length:
+    !r:'a ring k. LENGTH (unity_mod_one r k) = k
+Proof
+  rw[unity_mod_one_def, unity_mod_const_length]
+QED
 
 (* Theorem: Ring r ==> weak (unity_mod_one r k) *)
 (* Proof: by unity_mod_one_def, unity_mod_const_weak *)
-val unity_mod_one_weak = store_thm(
-  "unity_mod_one_weak",
-  ``!r:'a ring k. Ring r ==> weak (unity_mod_one r k)``,
-  rw[unity_mod_one_def, unity_mod_const_weak]);
+Theorem unity_mod_one_weak:
+    !r:'a ring k. Ring r ==> weak (unity_mod_one r k)
+Proof
+  rw[unity_mod_one_def, unity_mod_const_weak]
+QED
 
 (* Theorem: Ring r ==> !k. 0 < k ==> (unity_mod_one r k = #1 :: unity_mod_zero r (k - 1)) *)
 (* Proof:
@@ -2036,9 +2085,9 @@ val unity_mod_one_weak = store_thm(
           = #1::PAD_RIGHT #0 (k - 1) [#0]          by PAD_RIGHT_NIL_EQ
           = #1::unity_mod_zero r (k - 1)  by unity_mod_zero_def, unity_mod_const_def, ZN_property
 *)
-val unity_mod_one_cons = store_thm(
-  "unity_mod_one_cons",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==> (unity_mod_one r k = #1 :: unity_mod_zero r (k - 1))``,
+Theorem unity_mod_one_cons:
+    !r:'a ring. Ring r ==> !k. 0 < k ==> (unity_mod_one r k = #1 :: unity_mod_zero r (k - 1))
+Proof
   rpt strip_tac >>
   Cases_on `k = 1` >| [
     `unity_mod_one r 1 = PAD_RIGHT #0 1 [#1]` by rw[unity_mod_one_def, unity_mod_const_def, ZN_property, ring_num_1] >>
@@ -2051,7 +2100,8 @@ val unity_mod_one_cons = store_thm(
     `_ = #1::PAD_RIGHT #0 (k - 1) [#0]` by rw[PAD_RIGHT_NIL_EQ] >>
     `_ = #1::unity_mod_zero r (k - 1)` by rw[unity_mod_zero_def, unity_mod_const_def, ZN_property] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: unity_mod_one r k = if k = 0 then [] else ##1::GENLIST (K #0) (k - 1) *)
 (* Proof:
@@ -2063,10 +2113,11 @@ val unity_mod_one_cons = store_thm(
 
      ring_num_1 |- !r. Ring r ==> (##1 = #1)
 *)
-val unity_mod_one_eqn = store_thm(
-  "unity_mod_one_eqn",
-  ``!r:'a ring k. unity_mod_one r k = if k = 0 then [] else ##1::GENLIST (K #0) (k - 1)``,
-  rw[unity_mod_one_def, unity_mod_const_def, PAD_RIGHT]);
+Theorem unity_mod_one_eqn:
+    !r:'a ring k. unity_mod_one r k = if k = 0 then [] else ##1::GENLIST (K #0) (k - 1)
+Proof
+  rw[unity_mod_one_def, unity_mod_const_def, PAD_RIGHT]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> (chop (unity_mod_one r k) = if k = 0 then |0| else |1|) *)
 (* Proof:
@@ -2088,15 +2139,16 @@ val unity_mod_one_eqn = store_thm(
       = [#1]                         by ring_num_1
       = |1|                          by poly_one, #1 <> #0
 *)
-val unity_mod_one_chop = store_thm(
-  "unity_mod_one_chop",
-  ``!r:'a ring k. Ring r /\ #1 <> #0 ==> (chop (unity_mod_one r k) = if k = 0 then |0| else |1|)``,
+Theorem unity_mod_one_chop:
+    !r:'a ring k. Ring r /\ #1 <> #0 ==> (chop (unity_mod_one r k) = if k = 0 then |0| else |1|)
+Proof
   rw[unity_mod_one_eqn] >>
   qabbrev_tac `z = GENLIST (K #0) (k - 1)` >>
   `EVERY (\x. x = #0) z` by rw[EVERY_GENLIST, Abbr`z`] >>
   `zerop z` by rw[zero_poly_every_zero, Abbr`z`] >>
   `chop z = |0|` by rw[poly_chop_zero_poly] >>
-  rw[poly_one]);
+  rw[poly_one]
+QED
 
 (* Theorem: Ring r ==> !k c. chop (unity_mod_const r k c) =
             if (k = 0) \/ ((char r) divides c) then |0| else |c| *)
@@ -2131,11 +2183,11 @@ val unity_mod_one_chop = store_thm(
       = chop [##c]                     by poly_chop_const_nonzero
       = |c|                            by poly_ring_sum_c
 *)
-val unity_mod_const_chop = store_thm(
-  "unity_mod_const_chop",
-  ``!r:'a ring. Ring r ==>
+Theorem unity_mod_const_chop:
+    !r:'a ring. Ring r ==>
    !k c. chop (unity_mod_const r k c) =
-     if (k = 0) \/ ((char r) divides c) then |0| else |c|``,
+     if (k = 0) \/ ((char r) divides c) then |0| else |c|
+Proof
   rpt strip_tac >>
   (Cases_on `k = 0` >> simp[]) >-
   rw[unity_mod_const_def] >>
@@ -2154,7 +2206,8 @@ val unity_mod_const_chop = store_thm(
     `zerop z` by rw[zero_poly_every_zero, Abbr`z`] >>
     rw[poly_chop_zero_poly]) >>
     rw[poly_chop_cons, poly_ring_sum_c]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Powers of X under modulus unity: X ** n| MOD (unity k)                    *)
@@ -2191,27 +2244,30 @@ End
      = unity_mod_const r k 1        by unity_mod_const_def
      = unity_mod_one r k            by unity_mod_one_def
 *)
-val unity_mod_X_exp_0 = store_thm(
-  "unity_mod_X_exp_0",
-  ``!r:'a ring k. unity_mod_X_exp r k 0 = unity_mod_one r k``,
+Theorem unity_mod_X_exp_0:
+    !r:'a ring k. unity_mod_X_exp r k 0 = unity_mod_one r k
+Proof
   rpt strip_tac >>
   `##1 = #1 + #0` by rw[ring_num_one] >>
   rw[unity_mod_X_exp_def, unity_mod_special_def, unity_mod_one_def, unity_mod_const_def] >>
-  rw[PAD_RIGHT]);
+  rw[PAD_RIGHT]
+QED
 
 (* Theorem: unity_mod_X_exp r 0 n = |0| *)
 (* Proof: by unity_mod_X_exp_def, unity_mod_special_def *)
-val unity_mod_X_exp_0_n = store_thm(
-  "unity_mod_X_exp_0_n",
-  ``!r:'a ring n. unity_mod_X_exp r 0 n = |0|``,
-  rw[unity_mod_X_exp_def, unity_mod_special_def]);
+Theorem unity_mod_X_exp_0_n:
+    !r:'a ring n. unity_mod_X_exp r 0 n = |0|
+Proof
+  rw[unity_mod_X_exp_def, unity_mod_special_def]
+QED
 
 (* Theorem: unity_mod_X_exp r 1 n = [##1] *)
 (* Proof: by unity_mod_X_exp_def, unity_mod_special_def, ring_num_one *)
-val unity_mod_X_exp_1_n = store_thm(
-  "unity_mod_X_exp_1_n",
-  ``!r:'a ring n. unity_mod_X_exp r 1 n = [##1]``,
-  rw[unity_mod_X_exp_def, unity_mod_special_def, ring_num_one]);
+Theorem unity_mod_X_exp_1_n:
+    !r:'a ring n. unity_mod_X_exp r 1 n = [##1]
+Proof
+  rw[unity_mod_X_exp_def, unity_mod_special_def, ring_num_one]
+QED
 
 (* Theorem: LENGTH (unity_mod_X_exp r k n) = k *)
 (* Proof:
@@ -2219,10 +2275,11 @@ val unity_mod_X_exp_1_n = store_thm(
    = LENGTH (unity_mod_special r k n 0)      by unity_mod_X_exp_def
    = k                                       by unity_mod_special_length
 *)
-val unity_mod_X_exp_length = store_thm(
-  "unity_mod_X_exp_length",
-  ``!r:'a ring k n. LENGTH (unity_mod_X_exp r k n) = k``,
-  rw[unity_mod_X_exp_def, unity_mod_special_length]);
+Theorem unity_mod_X_exp_length:
+    !r:'a ring k n. LENGTH (unity_mod_X_exp r k n) = k
+Proof
+  rw[unity_mod_X_exp_def, unity_mod_special_length]
+QED
 
 (* Theorem: Ring r ==> weak (unity_mod_X_exp r k n) *)
 (* Proof:
@@ -2230,10 +2287,11 @@ val unity_mod_X_exp_length = store_thm(
    = weak (unity_mod_special r k n 0)       by unity_mod_X_exp_def
    = T                                      by unity_mod_special_weak
 *)
-val unity_mod_X_exp_weak = store_thm(
-  "unity_mod_X_exp_weak",
-  ``!r:'a ring. Ring r ==> !k n. weak (unity_mod_X_exp r k n)``,
-  rw[unity_mod_X_exp_def, unity_mod_special_weak]);
+Theorem unity_mod_X_exp_weak:
+    !r:'a ring. Ring r ==> !k n. weak (unity_mod_X_exp r k n)
+Proof
+  rw[unity_mod_X_exp_def, unity_mod_special_weak]
+QED
 
 (* Theorem: Ring r ==> !k n c. unity_mod_special r k n c =
              (unity_mod_X_exp r k n) || (unity_mod_const r k c) *)
@@ -2244,14 +2302,15 @@ val unity_mod_X_exp_weak = store_thm(
    (2) k <> 0 ==> unity_mod_special r k n c = unity_mod_special r k n 0 || PAD_RIGHT #0 k [##c]
        This is true                by unity_mod_special_not_0
 *)
-val unity_mod_special_alt = store_thm(
-  "unity_mod_special_alt",
-  ``!r:'a ring k n c. Ring r ==>
-   !k n c. unity_mod_special r k n c = (unity_mod_X_exp r k n) || (unity_mod_const r k c)``,
+Theorem unity_mod_special_alt:
+    !r:'a ring k n c. Ring r ==>
+   !k n c. unity_mod_special r k n c = (unity_mod_X_exp r k n) || (unity_mod_const r k c)
+Proof
   rw[unity_mod_X_exp_def, unity_mod_const_def] >>
   (Cases_on `k = 0` >> simp[]) >-
   rw[unity_mod_special_0] >>
-  rw[GSYM unity_mod_special_not_0]);
+  rw[GSYM unity_mod_special_not_0]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomials in (ZN n)                                                     *)
@@ -2269,10 +2328,11 @@ val ZN_weak = save_thm("ZN_weak",
    Note Ring (ZN n)               by ZN_ring, 0 < n
     ==> Weak (ZN n) p             by unity_mod_special_weak
 *)
-val ZN_unity_mod_special_weak = store_thm(
-  "ZN_unity_mod_special_weak",
-  ``!n k m c. 0 < n ==> Weak (ZN n) (unity_mod_special (ZN n) k m c)``,
-  rw[ZN_ring, unity_mod_special_weak]);
+Theorem ZN_unity_mod_special_weak:
+    !n k m c. 0 < n ==> Weak (ZN n) (unity_mod_special (ZN n) k m c)
+Proof
+  rw[ZN_ring, unity_mod_special_weak]
+QED
 
 (* Theorem: 0 < n ==> Weak (ZN n) (unity_mod_monomial (ZN n) k c) *)
 (* Proof:
@@ -2280,10 +2340,11 @@ val ZN_unity_mod_special_weak = store_thm(
    Note Ring (ZN n)               by ZN_ring, 0 < n
     ==> Weak (ZN n) p             by unity_mod_monomial_weak
 *)
-val ZN_unity_mod_monomial_weak = store_thm(
-  "ZN_unity_mod_monomial_weak",
-  ``!n k c. 0 < n ==> Weak (ZN n) (unity_mod_monomial (ZN n) k c)``,
-  rw[ZN_ring, unity_mod_monomial_weak]);
+Theorem ZN_unity_mod_monomial_weak:
+    !n k c. 0 < n ==> Weak (ZN n) (unity_mod_monomial (ZN n) k c)
+Proof
+  rw[ZN_ring, unity_mod_monomial_weak]
+QED
 
 (* Theorem: 0 < n ==> Weak (ZN n) (unity_mod_const (ZN n) k c) *)
 (* Proof:
@@ -2291,10 +2352,11 @@ val ZN_unity_mod_monomial_weak = store_thm(
    Note Ring (ZN n)               by ZN_ring, 0 < n
     ==> Weak (ZN n) p             by unity_mod_const_weak
 *)
-val ZN_unity_mod_const_weak = store_thm(
-  "ZN_unity_mod_const_weak",
-  ``!n k c. 0 < n ==> Weak (ZN n) (unity_mod_const (ZN n) k c)``,
-  rw[ZN_ring, unity_mod_const_weak]);
+Theorem ZN_unity_mod_const_weak:
+    !n k c. 0 < n ==> Weak (ZN n) (unity_mod_const (ZN n) k c)
+Proof
+  rw[ZN_ring, unity_mod_const_weak]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Extra Work (not used)                                                     *)
@@ -2339,10 +2401,11 @@ val _ = overload_on("shuffle", ``poly_shuffle (r:'a ring)``);
 
 (* Theorem: shuffle n |0| = |0| *)
 (* Proof: by poly_shuffle_def *)
-val poly_shuffle_zero = store_thm(
-  "poly_shuffle_zero",
-  ``!r:'a ring. !n. shuffle n |0| = |0|``,
-  rw_tac std_ss[poly_shuffle_def]);
+Theorem poly_shuffle_zero:
+    !r:'a ring. !n. shuffle n |0| = |0|
+Proof
+  rw_tac std_ss[poly_shuffle_def]
+QED
 
 (* Theorem: SUC n < LENGTH p ==> (LENGTH (shuffle n p) = LENGTH p - 1) *)
 (* Proof:
@@ -2366,9 +2429,9 @@ val poly_shuffle_zero = store_thm(
       = PRE (LENGTH p)                          by n < PRE (LENGTH p)
       = LENGTH - 1                              by PRE_SUB1
 *)
-val poly_shuffle_length = store_thm(
-  "poly_shuffle_length",
-  ``!r:'a ring. !p n. SUC n < LENGTH p ==> (LENGTH (shuffle n p) = LENGTH p - 1)``,
+Theorem poly_shuffle_length:
+    !r:'a ring. !p n. SUC n < LENGTH p ==> (LENGTH (shuffle n p) = LENGTH p - 1)
+Proof
   rpt strip_tac >>
   `LENGTH p <> 0` by decide_tac >>
   `p <> []` by metis_tac[LENGTH_NIL] >>
@@ -2380,7 +2443,8 @@ val poly_shuffle_length = store_thm(
   `LENGTH (DROP n (FRONT p)) = PRE (LENGTH p) - n` by rw[LENGTH_DROP] >>
   `0 < PRE (LENGTH p) - n` by decide_tac >>
   `LENGTH (TL (DROP n (FRONT p))) = PRE (LENGTH p) - n - 1` by rw[LENGTH_TL] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: shuffle 0 p = if p = |0| then |0| else [HD (FRONT p) + LAST p] ++ TL (FRONT p) *)
 (* Proof:
@@ -2394,10 +2458,11 @@ val poly_shuffle_length = store_thm(
     = [HD (FRONT p) + LAST p] ++ TL (FRONT p)     by simplication
     = (HD (FRONT p) + LAST p) :: TL (FRONT p)     by CONS_APPEND
 *)
-val poly_shuffle_0 = store_thm(
-  "poly_shuffle_0",
-  ``!r:'a ring. !p. shuffle 0 p = if p = |0| then |0| else (HD (FRONT p) + LAST p) :: TL (FRONT p)``,
-  rw[poly_shuffle_def]);
+Theorem poly_shuffle_0:
+    !r:'a ring. !p. shuffle 0 p = if p = |0| then |0| else (HD (FRONT p) + LAST p) :: TL (FRONT p)
+Proof
+  rw[poly_shuffle_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Remainder of unity k = X ** k - 1                              *)
@@ -2457,10 +2522,11 @@ val unity_mod_def =
    = PAD_RIGHT #0 k []         by unity_mod_def
    = GENLIST (K #0) k          by PAD_RIGHT_NIL
 *)
-val old_unity_mod_zero_eqn = store_thm(
-  "old_unity_mod_zero_eqn",
-  ``!r:'a ring. !k. 0 < k ==> (unity_mod r k |0| = GENLIST (K #0) k)``,
-  rw[Once unity_mod_def, PAD_RIGHT_NIL]);
+Theorem old_unity_mod_zero_eqn:
+    !r:'a ring. !k. 0 < k ==> (unity_mod r k |0| = GENLIST (K #0) k)
+Proof
+  rw[Once unity_mod_def, PAD_RIGHT_NIL]
+QED
 
 (* Theorem: 0 < k ==> (chop (unity_mod r k |0|) = |0|) *)
 (* Proof:
@@ -2471,15 +2537,16 @@ val old_unity_mod_zero_eqn = store_thm(
     ==> zerop z                by zero_poly_every_zero
    Thus chop z = |0|           by poly_chop_zero_poly
 *)
-val old_unity_mod_zero_chop = store_thm(
-  "old_unity_mod_zero_chop",
-  ``!r:'a ring. !k. 0 < k ==> (chop (unity_mod r k |0|) = |0|)``,
+Theorem old_unity_mod_zero_chop:
+    !r:'a ring. !k. 0 < k ==> (chop (unity_mod r k |0|) = |0|)
+Proof
   rpt strip_tac >>
   `unity_mod r k |0| = GENLIST (K #0) k` by rw[old_unity_mod_zero_eqn] >>
   qabbrev_tac `z = GENLIST (K #0) k` >>
   `EVERY (\x. x = #0) z` by rw[EVERY_GENLIST, Abbr`z`] >>
   `zerop z` by rw[zero_poly_every_zero, Abbr`z`] >>
-  rw[poly_chop_zero_poly]);
+  rw[poly_chop_zero_poly]
+QED
 
 (* Theorem: 0 < k ==> (LENGTH (unity_mod r k |0|) = k) *)
 (* Proof:
@@ -2487,10 +2554,11 @@ val old_unity_mod_zero_chop = store_thm(
    = LENGTH (GENLIST (K #0) k)     by old_unity_mod_zero_eqn
    = k                             by LENGTH_GENLIST
 *)
-val old_unity_mod_zero_length = store_thm(
-  "old_unity_mod_zero_length",
-  ``!r:'a ring. !k. 0 < k ==> (LENGTH (unity_mod r k |0|) = k)``,
-  rw_tac std_ss[old_unity_mod_zero_eqn, LENGTH_GENLIST]);
+Theorem old_unity_mod_zero_length:
+    !r:'a ring. !k. 0 < k ==> (LENGTH (unity_mod r k |0|) = k)
+Proof
+  rw_tac std_ss[old_unity_mod_zero_eqn, LENGTH_GENLIST]
+QED
 
 (* Theorem: 0 < k ==> !p. LENGTH (unity_mod r k p) = k *)
 (* Proof:
@@ -2507,15 +2575,16 @@ val old_unity_mod_zero_length = store_thm(
         so MAX k (LENGTH p) = k            by MAX_DEF
       Thus LENGTH (PAD_RIGHT #0 k p) = k   by PAD_RIGHT_LENGTH
 *)
-val old_unity_mod_length = store_thm(
-  "old_unity_mod_length",
-  ``!r:'a ring. !k. 0 < k ==> !p. LENGTH (unity_mod r k p) = k``,
+Theorem old_unity_mod_length:
+    !r:'a ring. !k. 0 < k ==> !p. LENGTH (unity_mod r k p) = k
+Proof
   rpt strip_tac >>
   completeInduct_on `LENGTH p` >>
   rpt strip_tac >>
   rw[Once unity_mod_def] >-
   rw[poly_shuffle_length] >>
-  rw[PAD_RIGHT_LENGTH, MAX_DEF]);
+  rw[PAD_RIGHT_LENGTH, MAX_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

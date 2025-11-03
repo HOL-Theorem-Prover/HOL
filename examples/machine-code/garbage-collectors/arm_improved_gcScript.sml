@@ -208,15 +208,16 @@ val ref_mem_LESS = prove(
                         ref_mem m (j + MAX 1 (getLENGTH (m j))) e``,
   METIS_TAC [DECIDE ``j<e = ~(e<=j:num)``,ref_mem_def]);
 
-val arm_move_loop_thm = store_thm("arm_move_loop_thm",
-  ``!xs ys r2 r3 r5:word32 f p.
+Theorem arm_move_loop_thm:
+    !xs ys r2 r3 r5:word32 f p.
       (one_list r2 xs * one_list r3 ys * p) (fun2set (f,df)) /\
       (LENGTH ys = LENGTH xs) /\ LENGTH xs < 2 ** 23 /\ ALIGNED r2 /\ ALIGNED r3 ==>
       ?r2i r3i fi.
         arm_move_loop_pre (r2,r3,n2w (LENGTH xs),df,f) /\
         (arm_move_loop (r2,r3,n2w (LENGTH xs),df,f) =
                               (r2i,r3 + n2w (4 * LENGTH xs),0w,df,fi)) /\
-        (one_list r2 xs * one_list r3 xs * p) (fun2set (fi,df))``,
+        (one_list r2 xs * one_list r3 xs * p) (fun2set (fi,df))
+Proof
   Induct \\ REPEAT STRIP_TAC
   \\ PURE_ONCE_REWRITE_TAC [arm_move_loop_def,arm_move_loop_pre_def]
   \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
@@ -233,7 +234,8 @@ val arm_move_loop_thm = store_thm("arm_move_loop_thm",
       SIMP_TAC (std_ss++star_ss) [])]
   \\ Q.PAT_X_ASSUM `!ys.bbb` MATCH_MP_TAC \\ Q.EXISTS_TAC `zs`
   \\ FULL_SIMP_TAC std_ss [ALIGNED] \\ REPEAT STRIP_TAC
-  THEN1 SEP_WRITE_TAC \\ DECIDE_TAC);
+  THEN1 SEP_WRITE_TAC \\ DECIDE_TAC
+QED
 
 val ref_mem_one_list = prove(
   ``!k a. k <= e - a /\ (!i. i < k ==> (m (a + i) = H_EMP)) ==>
@@ -757,9 +759,10 @@ val ref_mem_LESS_EQ = prove(
   \\ `e - (b+y)<v /\ (e - (b+y) = e - (b+y))` by DECIDE_TAC
   \\ REPEAT STRIP_TAC \\ `b+y <= e` by METIS_TAC [] \\ DECIDE_TAC);
 
-val ref_mem_H_EMP = store_thm("ref_mem_H_EMP",
-  ``ref_mem (\a.H_EMP) b e =
-    SEP_EXISTS xs. one_list (ref_addr b) xs * cond (LENGTH xs = (e-b)) * cond (b <= e)``,
+Theorem ref_mem_H_EMP:
+    ref_mem (\a.H_EMP) b e =
+    SEP_EXISTS xs. one_list (ref_addr b) xs * cond (LENGTH xs = (e-b)) * cond (b <= e)
+Proof
   Induct_on `e-b` THEN1
    (ONCE_REWRITE_TAC [ref_mem_def] \\ ASM_SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
     \\ REVERSE (Cases_on `b <= e`)
@@ -778,7 +781,8 @@ val ref_mem_H_EMP = store_thm("ref_mem_H_EMP",
   \\ FULL_SIMP_TAC std_ss [cond_STAR]
   \\ Cases_on `xs` THEN1 (FULL_SIMP_TAC std_ss [LENGTH] \\ `F` by DECIDE_TAC)
   \\ FULL_SIMP_TAC std_ss [one_list_def,word_arith_lemma1,GSYM ref_addr_ADD1,LENGTH]
-  \\ Q.LIST_EXISTS_TAC [`h`,`t`] \\ FULL_SIMP_TAC std_ss [STAR_ASSOC] \\ DECIDE_TAC);
+  \\ Q.LIST_EXISTS_TAC [`h`,`t`] \\ FULL_SIMP_TAC std_ss [STAR_ASSOC] \\ DECIDE_TAC
+QED
 
 val ref_aux_IMP = prove(
   ``!p x. (ref_aux (ref_addr b) (m b) * p) x /\ ok_memory m ==>
@@ -832,13 +836,14 @@ Definition arm_heap_ok_def:
      one_scratch r6 (b,e,b2,e2) * p) (fun2set (f,df))
 End
 
-val arm_gc_lemma = store_thm("arm_gc_lemma",
-  ``arm_heap_ok (h,xs) (b,i,j11,e,b2,e2,m) (r1,r6,df,f,p,i2) ==>
+Theorem arm_gc_lemma:
+    arm_heap_ok (h,xs) (b,i,j11,e,b2,e2,m) (r1,r6,df,f,p,i2) ==>
     (gc(b,e,b2,e2,xs,m) = (b2,i2,e2,b,e,xs2,m2)) ==>
     ?f2. arm_gc_pre (r1,r6,df,f) /\
          (arm_gc (r1,r6,df,f) = (ref_addr i2,r6,df,f2)) /\
          (ref_mem m2 b e * ref_mem m2 b2 i2 * one_list_roots r1 xs2 *
-          one_scratch r6 (b2,e2,b,e) * p) (fun2set (f2,df)) /\ ok_memory m2``,
+          one_scratch r6 (b2,e2,b,e) * p) (fun2set (f2,df)) /\ ok_memory m2
+Proof
   STRIP_TAC \\ SIMP_TAC std_ss [LET_DEF,gc_def,arm_gc_def,arm_gc_pre_def]
   \\ FULL_SIMP_TAC std_ss [arm_heap_ok_def]
   \\ IMP_RES_TAC ok_full_heap_IMP
@@ -886,4 +891,5 @@ val arm_gc_lemma = store_thm("arm_gc_lemma",
      \\ IMP_RES_TAC full_heap_LESS_EQ \\ RANGE_TAC)
   \\ IMP_RES_TAC EQ_RANGE_ref_mem \\ ASM_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [GSYM STAR_ASSOC] \\ MATCH_MP_TAC ref_mem_IMP_H_EMP
-  \\ Q.EXISTS_TAC `m4` \\ FULL_SIMP_TAC (std_ss++star_ss) []);
+  \\ Q.EXISTS_TAC `m4` \\ FULL_SIMP_TAC (std_ss++star_ss) []
+QED

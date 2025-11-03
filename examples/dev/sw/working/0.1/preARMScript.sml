@@ -1307,8 +1307,9 @@ MATCH_MP_TAC sum_numTheory.GSUM_FUN_EQUAL THEN
 SIMP_TAC std_ss [])
 
 
-val w2n_lsr = store_thm ("w2n_lsr",
-``(w2n (w >>> m)) = (w2n w DIV 2**m)``,
+Theorem w2n_lsr:
+  (w2n (w >>> m)) = (w2n w DIV 2**m)
+Proof
 
 Induct_on `m` THENL [
         SIMP_TAC std_ss [SHIFT_ZERO, EXP],
@@ -1356,13 +1357,15 @@ Induct_on `m` THENL [
                         SIMP_TAC arith_ss [bitTheory.SBIT_def, SUC_ONE_ADD]
                 ]
         ]
-]);
+]
+QED
 
 
 
 
-val ADDR30_ADD_CONST = store_thm ("ADDR30_ADD_CONST",
-``ADDR30(x + n2w y) = ADDR30 (x + (n2w (y MOD 4))) + (ADDR30 (n2w y))``,
+Theorem ADDR30_ADD_CONST:
+  ADDR30(x + n2w y) = ADDR30 (x + (n2w (y MOD 4))) + (ADDR30 (n2w y))
+Proof
         ONCE_REWRITE_TAC[GSYM w2n_11] THEN
         REWRITE_TAC [ADDR30_def] THEN
         WORDS_TAC THEN
@@ -1390,11 +1393,13 @@ val ADDR30_ADD_CONST = store_thm ("ADDR30_ADD_CONST",
         SIMP_TAC std_ss [GSYM DIV_MOD_MOD_DIV] THEN
         SIMP_TAC std_ss [MOD_PLUS] THEN
         `0 < 4` by DECIDE_TAC THEN
-        METIS_TAC[ADD_DIV]);
+        METIS_TAC[ADD_DIV]
+QED
 
 
-val ADDR30_CONST_EVAL = store_thm ("ADDR30_CONST_EVAL",
-``ADDR30(n2w y) = n2w (y DIV 4)``,
+Theorem ADDR30_CONST_EVAL:
+  ADDR30(n2w y) = n2w (y DIV 4)
+Proof
         REWRITE_TAC [ADDR30_def] THEN
         WORDS_TAC THEN
         SIMP_TAC std_ss [bitTheory.BITS_def, DIV_2EXP_def, MOD_2EXP_def] THEN
@@ -1404,20 +1409,25 @@ val ADDR30_CONST_EVAL = store_thm ("ADDR30_CONST_EVAL",
                 `x MOD n < n` by ASM_SIMP_TAC arith_ss [DIVISION] THEN
                 ASM_SIMP_TAC arith_ss []
         ) THEN
-        ASM_SIMP_TAC std_ss [])
+        ASM_SIMP_TAC std_ss []
+QED
 
 
-val ADDR30_ADD_CONST_MOD = store_thm ("ADDR30_ADD_CONST_MOD",
-``!x y. (y MOD 4 = 0) ==> (ADDR30(x + n2w y) = ADDR30 x + (n2w (y DIV 4)))``,
+Theorem ADDR30_ADD_CONST_MOD:
+  !x y. (y MOD 4 = 0) ==> (ADDR30(x + n2w y) = ADDR30 x + (n2w (y DIV 4)))
+Proof
         REPEAT STRIP_TAC THEN
         ONCE_ASM_REWRITE_TAC[ADDR30_ADD_CONST] THEN
-        ASM_REWRITE_TAC[WORD_ADD_0, ADDR30_CONST_EVAL]);
+        ASM_REWRITE_TAC[WORD_ADD_0, ADDR30_CONST_EVAL]
+QED
 
 
-val ADDR30_ADD_CONST_MULT = store_thm ("ADDR30_ADD_CONST_MULT",
-``!x y. (ADDR30(x + n2w (y*4)) = ADDR30 x + (n2w y))``,
+Theorem ADDR30_ADD_CONST_MULT:
+  !x y. (ADDR30(x + n2w (y*4)) = ADDR30 x + (n2w y))
+Proof
         REPEAT STRIP_TAC THEN
         ONCE_ASM_REWRITE_TAC[ADDR30_ADD_CONST] THEN
         ASM_REWRITE_TAC[ADDR30_CONST_EVAL] THEN
-        SIMP_TAC arith_ss [MOD_EQ_0, MULT_DIV, WORD_ADD_0]);
+        SIMP_TAC arith_ss [MOD_EQ_0, MULT_DIV, WORD_ADD_0]
+QED
 

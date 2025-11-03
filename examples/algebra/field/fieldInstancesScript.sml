@@ -157,9 +157,9 @@ End
    |1|  |1| |0|         |1| |0| |1|
 
 *)
-val trivial_field = store_thm(
-  "trivial_field",
-  ``!zero one. zero <> one ==> FiniteField (trivial_field zero one)``,
+Theorem trivial_field:
+    !zero one. zero <> one ==> FiniteField (trivial_field zero one)
+Proof
   rw_tac std_ss[FiniteField_def] >| [
     `!x a b. x IN {a; b} <=> ((x = a) \/ (x = b))` by rw[] >>
     rw_tac std_ss[trivial_field_def, field_def_alt] >| [
@@ -174,7 +174,8 @@ val trivial_field = store_thm(
       rw_tac std_ss[]
     ],
     rw[trivial_field_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* GF(p), Galois Field of order prime p.                                     *)
@@ -197,14 +198,15 @@ End
 
 (* Theorem: Evaluation of GF fields. *)
 (* Proof: by GF_def. *)
-val GF_eval = store_thm(
-  "GF_eval",
-  ``!p. (!x. x IN (GF p).carrier <=> x < p) /\
+Theorem GF_eval:
+    !p. (!x. x IN (GF p).carrier <=> x < p) /\
        (!x y. (GF p).sum.op x y = (x + y) MOD p) /\
        (!x y. (GF p).prod.op x y = (x * y) MOD p) /\
        ((GF p).sum.id = 0) /\
-       ((GF p).prod.id = 1)``,
-  rw[GF_def, add_mod_def, mult_mod_def, group_including_property]);
+       ((GF p).prod.id = 1)
+Proof
+  rw[GF_def, add_mod_def, mult_mod_def, group_including_property]
+QED
 
 val _ = computeLib.add_persistent_funs ["GF_eval"];
 (* Later, also GF_mult_inv in computeLib. *)
@@ -212,50 +214,56 @@ val _ = computeLib.add_persistent_funs ["GF_eval"];
 (* Theorem: properties of (GF p), including inverse:
             (((GF p).prod excluding 0).inv = ((mult_mod p) including 0 excluding 0).inv) *)
 (* Proof: by definition. *)
-val GF_property = store_thm(
-  "GF_property",
-  ``!p. ((GF p).carrier = count p) /\
+Theorem GF_property:
+    !p. ((GF p).carrier = count p) /\
        ((GF p).sum = add_mod p) /\
        ((GF p).prod = mult_mod p including 0) /\
        ((GF p).sum.inv = (add_mod p).inv) /\
        (((GF p).prod excluding 0).inv = ((mult_mod p) including 0 excluding 0).inv) /\
-       FINITE (GF p).carrier /\ (CARD (GF p).carrier = p)``,
-  rw_tac std_ss[GF_def, GSYM count_def, FINITE_COUNT, CARD_COUNT]);
+       FINITE (GF p).carrier /\ (CARD (GF p).carrier = p)
+Proof
+  rw_tac std_ss[GF_def, GSYM count_def, FINITE_COUNT, CARD_COUNT]
+QED
 
 (* Theorem: x IN (GF p).carrier iff x < p *)
 (* Proof: by GF_def, i.e. (GF p).carrier = count p. *)
-val GF_element = store_thm(
-  "GF_element",
-  ``!p x. x IN (GF p).carrier <=> x < p``,
-  rw[GF_def]);
+Theorem GF_element:
+    !p x. x IN (GF p).carrier <=> x < p
+Proof
+  rw[GF_def]
+QED
 
 (* Theorem: (GF p) zero is 0. *)
 (* Proof: by definitions. *)
-val GF_zero = store_thm(
-  "GF_zero",
-  ``!p. (GF p).sum.id = 0``,
-  rw_tac std_ss[GF_def, add_mod_def]);
+Theorem GF_zero:
+    !p. (GF p).sum.id = 0
+Proof
+  rw_tac std_ss[GF_def, add_mod_def]
+QED
 
 (* Theorem: (GF p) one is 1. *)
 (* Proof: by definitions. *)
-val GF_one = store_thm(
-  "GF_one",
-  ``!p. (GF p).prod.id = 1``,
-  rw_tac std_ss[GF_def, mult_mod_def, including_def]);
+Theorem GF_one:
+    !p. (GF p).prod.id = 1
+Proof
+  rw_tac std_ss[GF_def, mult_mod_def, including_def]
+QED
 
 (* Theorem: field_add (GF p) x y = (x + y) MOD p *)
 (* Proof: by definitions. *)
-val GF_add = store_thm(
-  "GF_add",
-  ``!p x y. (GF p).sum.op x y = (x + y) MOD p``,
-  rw_tac std_ss[GF_def, add_mod_def]);
+Theorem GF_add:
+    !p x y. (GF p).sum.op x y = (x + y) MOD p
+Proof
+  rw_tac std_ss[GF_def, add_mod_def]
+QED
 
 (* Theorem: field_mult (GF p) x y = (x * y) MOD p *)
 (* Proof: by definitions. *)
-val GF_mult = store_thm(
-  "GF_mult",
-  ``!p x y. (GF p).prod.op x y = (x * y) MOD p``,
-  rw_tac std_ss[GF_def, mult_mod_def, including_def]);
+Theorem GF_mult:
+    !p x y. (GF p).prod.op x y = (x * y) MOD p
+Proof
+  rw_tac std_ss[GF_def, mult_mod_def, including_def]
+QED
 
 (* Theorem: !n. 0 < n ==> AbelianGroup (GF n).sum *)
 (* Proof:
@@ -277,9 +285,9 @@ val GF_mult = store_thm(
    (3) (x + y) MOD n = (y + x) MOD n
        True by ADD_COMM.
 *)
-val GF_sum_abelian_group = store_thm(
-  "GF_sum_abelian_group",
-  ``!n. 0 < n ==> AbelianGroup (GF n).sum``,
+Theorem GF_sum_abelian_group:
+    !n. 0 < n ==> AbelianGroup (GF n).sum
+Proof
   rw_tac std_ss[AbelianGroup_def, Group_def, Monoid_def, GF_def, add_mod_def, monoid_invertibles_def, GSPECIFICATION] >-
   rw[MOD_ADD_ASSOC] >-
  (rw[EXTENSION, EQ_IMP_THM] >>
@@ -293,14 +301,16 @@ val GF_sum_abelian_group = store_thm(
     `_ = 0 ` by rw_tac arith_ss[DIVMOD_ID] >>
     metis_tac[LESS_MOD, ADD_COMM]
   ]) >>
-  rw[ADD_COMM]);
+  rw[ADD_COMM]
+QED
 
 (* Theorem: !n. 0 < n ==> Group (GF n).sum *)
 (* Proof: by GF_sum_abelian_group. *)
-val GF_sum_group = store_thm(
-  "GF_sum_group",
-  ``!n. 0 < n ==> Group (GF n).sum``,
-  metis_tac[GF_sum_abelian_group, AbelianGroup_def]);
+Theorem GF_sum_group:
+    !n. 0 < n ==> Group (GF n).sum
+Proof
+  metis_tac[GF_sum_abelian_group, AbelianGroup_def]
+QED
 
 (* Theorem: !n. 1 < n ==> AbelianMonoid (GF n).prod *)
 (* Proof:
@@ -325,9 +335,9 @@ val GF_sum_group = store_thm(
    (7) (z * (0 * 0) MOD n) MOD n = (0 * (0 * z) MOD n) MOD n
        True by MULT_CLAUSES.
 *)
-val GF_prod_abelian_monoid = store_thm(
-  "GF_prod_abelian_monoid",
-  ``!n. 1 < n ==> AbelianMonoid (GF n).prod``,
+Theorem GF_prod_abelian_monoid:
+    !n. 1 < n ==> AbelianMonoid (GF n).prod
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `0 MOD n = 0` by rw[] >>
@@ -344,14 +354,16 @@ val GF_prod_abelian_monoid = store_thm(
     rw[],
     rw[],
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: !n. 1 < n ==> Monoid (GF n).prod *)
 (* Proof: by GF_prod_abelian_monoid, AbelianMonoid_def. *)
-val GF_prod_monoid = store_thm(
-  "GF_prod_monoid",
-  ``!n. 1 < n ==> Monoid (GF n).prod``,
-  metis_tac[GF_prod_abelian_monoid, AbelianMonoid_def]);
+Theorem GF_prod_monoid:
+    !n. 1 < n ==> Monoid (GF n).prod
+Proof
+  metis_tac[GF_prod_abelian_monoid, AbelianMonoid_def]
+QED
 
 (* Theorem: 1 < n ==> Ring (GF n) *)
 (* Proof:
@@ -370,9 +382,9 @@ val GF_prod_monoid = store_thm(
 
    Note: GF_field: |- !p. prime p ==> Field (GF p)  works for prime only.
 *)
-val GF_ring = store_thm(
-  "GF_ring",
-  ``!n. 1 < n ==> Ring (GF n)``,
+Theorem GF_ring:
+    !n. 1 < n ==> Ring (GF n)
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   rw_tac std_ss[Ring_def] >-
@@ -381,28 +393,32 @@ val GF_ring = store_thm(
   rw[GF_def, add_mod_def] >-
   (rw[GF_def, mult_mod_def, including_def, EXTENSION] >> metis_tac[]) >>
   full_simp_tac (srw_ss())[GF_def, mult_mod_def, including_def] >>
-  rw_tac std_ss[LEFT_ADD_DISTRIB]);
+  rw_tac std_ss[LEFT_ADD_DISTRIB]
+QED
 
 (* Theorem: FINITE (GF n).carrier *)
 (* Proof: by GF_property *)
-val GF_finite = store_thm(
-  "GF_finite",
-  ``!n. FINITE (GF n).carrier``,
-  rw[GF_property]);
+Theorem GF_finite:
+    !n. FINITE (GF n).carrier
+Proof
+  rw[GF_property]
+QED
 
 (* Theorem: CARD (GF n).carrier = n *)
 (* Proof: by GF_property *)
-val GF_card = store_thm(
-  "GF_card",
-  ``!n. CARD (GF n).carrier = n``,
-  rw[GF_property]);
+Theorem GF_card:
+    !n. CARD (GF n).carrier = n
+Proof
+  rw[GF_property]
+QED
 
 (* Theorem: 1 < n ==> FiniteRing (GF n) *)
 (* Proof: by GF_ring, GF_finite, FiniteRing_def. *)
-val GF_finite_ring = store_thm(
-  "GF_finite_ring",
-  ``!n. 1 < n ==> FiniteRing (GF n)``,
-  rw[GF_ring, GF_finite, FiniteRing_def]);
+Theorem GF_finite_ring:
+    !n. 1 < n ==> FiniteRing (GF n)
+Proof
+  rw[GF_ring, GF_finite, FiniteRing_def]
+QED
 
 (* Theorem: GF p is a field *)
 (* Proof: check definitions.
@@ -414,9 +430,9 @@ val GF_finite_ring = store_thm(
        = ((x * y) MOD n + (x + y) MOD n) MOD n   by MOD_PLUS
        = RHS
 *)
-val GF_field = store_thm(
-  "GF_field",
-  ``!p. prime p ==> Field (GF p)``,
+Theorem GF_field:
+    !p. prime p ==> Field (GF p)
+Proof
   rpt strip_tac >>
   `0 < p` by rw_tac std_ss[PRIME_POS] >>
   `(add_mod p).id = 0` by rw_tac std_ss[add_mod_def] >>
@@ -430,14 +446,16 @@ val GF_field = store_thm(
     rw_tac std_ss[mult_mod_def, including_def],
     rw_tac std_ss[add_mod_def, mult_mod_def, including_def] >>
     metis_tac[LEFT_ADD_DISTRIB, MOD_PLUS, MOD_TIMES2, LESS_MOD]
-  ]);
+  ]
+QED
 
 (* Theorem: GF p is a FINITE field *)
 (* Proof: by GF_field and GF_finite. *)
-val GF_finite_field = store_thm(
-  "GF_finite_field",
-  ``!p. prime p ==> FiniteField (GF p)``,
-  rw_tac std_ss[FiniteField_def, GF_field, GF_property]);
+Theorem GF_finite_field:
+    !p. prime p ==> FiniteField (GF p)
+Proof
+  rw_tac std_ss[FiniteField_def, GF_field, GF_property]
+QED
 
 
 (* TODO:
@@ -459,14 +477,15 @@ i.e. use times_mod p instead of (mult_mod p including 0)
         so char (GF p) <> 1                               by ring_char_eq_1
      Hence char (GF p) = p                                by prime_def
 *)
-val GF_prime_char = store_thm(
-  "GF_prime_char",
-  ``!p. prime p ==> (char (GF p) = p)``,
+Theorem GF_prime_char:
+    !p. prime p ==> (char (GF p) = p)
+Proof
   rpt strip_tac >>
   `1 < p` by rw[ONE_LT_PRIME] >>
   `FiniteRing (GF p)` by rw[GF_finite_ring] >>
   `(char (GF p)) divides (CARD (GF p).carrier)` by rw[finite_ring_char_divides] >>
-  metis_tac[GF_card, GF_one, GF_zero, prime_def, ring_char_eq_1, FiniteRing_def, DECIDE``1 <> 0``]);
+  metis_tac[GF_card, GF_one, GF_zero, prime_def, ring_char_eq_1, FiniteRing_def, DECIDE``1 <> 0``]
+QED
 
 (* Theorem: 1 < n ==> (char (GF n) = n) *)
 (* Proof:
@@ -501,9 +520,9 @@ val GF_prime_char = store_thm(
     (1) FUNPOW (\j. (1 + j) MOD n) n 0 = 0 MOD n = 0              by ZERO_MOD, 0 < n.
     (2) FUNPOW (\j. (1 + j) MOD n) m 0 = m MOD n = m <> 0         by LESS_MOD, m < n.
 *)
-val GF_char = store_thm(
-  "GF_char",
-  ``!n. 1 < n ==> (char (GF n) = n)``,
+Theorem GF_char:
+    !n. 1 < n ==> (char (GF n) = n)
+Proof
   rpt strip_tac >>
   `FiniteRing (GF n)` by rw[GF_finite_ring] >>
   `0 < n` by decide_tac >>
@@ -517,7 +536,8 @@ val GF_char = store_thm(
   metis_tac[SUC_ONE_ADD, ONE_MOD, MOD_PLUS]
   ) >>
   rw_tac std_ss[GF_def, add_mod_def, monoid_exp_def] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Modulo Multiplication Field.                                              *)
@@ -540,9 +560,9 @@ val GF_char = store_thm(
        (4) x <> 0 /\ x < p ==> ?y. (y < p /\ y <> 0) /\ ((y * x) MOD p = 1)
            True by MOD_MULT_INV_EXISTS, MULT_COMM.
 *)
-val ZN_field = store_thm(
-  "ZN_field",
-  ``!p. prime p ==> Field (ZN p)``,
+Theorem ZN_field:
+    !p. prime p ==> Field (ZN p)
+Proof
   rpt strip_tac >>
   `1 < p` by rw[ONE_LT_PRIME] >>
   `0 < p` by decide_tac >>
@@ -553,7 +573,8 @@ val ZN_field = store_thm(
   decide_tac >-
   rw[EUCLID_LEMMA] >-
   rw[MOD_MULT_ASSOC] >>
-  metis_tac[MOD_MULT_INV_EXISTS, MULT_COMM, NOT_ZERO_LT_ZERO]);
+  metis_tac[MOD_MULT_INV_EXISTS, MULT_COMM, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: prime n <=> Field (ZN n) *)
 (* Proof:
@@ -567,16 +588,17 @@ val ZN_field = store_thm(
        ==> prime (char (ZN n))          by finite_field_char
         or prime n                      by ZN_char, 0 < n
 *)
-val ZN_field_iff = store_thm(
-  "ZN_field_iff",
-  ``!n. prime n <=> Field (ZN n)``,
+Theorem ZN_field_iff:
+    !n. prime n <=> Field (ZN n)
+Proof
   rw[EQ_IMP_THM] >-
   rw[ZN_field] >>
   `(ZN n).carrier = count n` by rw[ZN_eval] >>
   `n <> 0` by metis_tac[field_carrier_nonempty, COUNT_0] >>
   `FiniteField (ZN n)` by rw[FiniteField_def] >>
   `char (ZN n) = n` by rw[ZN_char] >>
-  metis_tac[finite_field_char]);
+  metis_tac[finite_field_char]
+QED
 
 (* Theorem: prime p ==> FiniteField (ZN p) *)
 (* Proof:
@@ -584,10 +606,11 @@ val ZN_field_iff = store_thm(
    With FINITE (ZN p).carrier  by ZN_finite
    This is true                by FiniteField_def
 *)
-val ZN_finite_field = store_thm(
-  "ZN_finite_field",
-  ``!p. prime p ==> FiniteField (ZN p)``,
-  rw[FiniteField_def, ZN_field, ZN_finite]);
+Theorem ZN_finite_field:
+    !p. prime p ==> FiniteField (ZN p)
+Proof
+  rw[FiniteField_def, ZN_field, ZN_finite]
+QED
 
 (* Another proof, not based on inverse. *)
 
@@ -633,10 +656,11 @@ QED
       ==> Field (ZN p)         by FiniteField_def
       ==> prime p              by ZN_field_iff
 *)
-val ZN_finite_field_iff = store_thm(
-  "ZN_finite_field_iff",
-  ``!p. prime p <=> FiniteField (ZN p)``,
-  metis_tac[FiniteField_def, ZN_finite_field, ZN_field_iff]);
+Theorem ZN_finite_field_iff:
+    !p. prime p <=> FiniteField (ZN p)
+Proof
+  metis_tac[FiniteField_def, ZN_finite_field, ZN_field_iff]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ZN and GF Theorems                                                        *)
@@ -647,10 +671,11 @@ val ZN_finite_field_iff = store_thm(
    Expand by definitions, this is to show:
    x < n ==> x MOD m < m, true by MOD_LESS.
 *)
-val ZN_to_GF_element = store_thm(
-  "ZN_to_GF_element",
-  ``!n m x. 0 < m /\ x IN (ZN n).carrier ==> x MOD m IN (GF m).carrier``,
-  rw[ZN_def, GF_def]);
+Theorem ZN_to_GF_element:
+    !n m x. 0 < m /\ x IN (ZN n).carrier ==> x MOD m IN (GF m).carrier
+Proof
+  rw[ZN_def, GF_def]
+QED
 
 (* Theorem: 0 < n /\ m divides n ==> GroupHomo (\x. x MOD m) (ZN n).sum (GF m).sum *)
 (* Proof:
@@ -661,12 +686,13 @@ val ZN_to_GF_element = store_thm(
    = (x + x') MOD m                by DIVIDES_MOD_MOD, 0 < n
    = (x MOD m + x' MOD m) MOD m    by MOD_PLUS, 0 < m
 *)
-val ZN_to_GF_sum_group_homo = store_thm(
-  "ZN_to_GF_sum_group_homo",
-  ``!n m. 0 < n /\ m divides n ==> GroupHomo (\x. x MOD m) (ZN n).sum (GF m).sum``,
+Theorem ZN_to_GF_sum_group_homo:
+    !n m. 0 < n /\ m divides n ==> GroupHomo (\x. x MOD m) (ZN n).sum (GF m).sum
+Proof
   rpt strip_tac >>
   `0 < m` by metis_tac[ZERO_DIVIDES, NOT_ZERO] >>
-  rw[ZN_def, GF_def, GroupHomo_def, DIVIDES_MOD_MOD, MOD_PLUS]);
+  rw[ZN_def, GF_def, GroupHomo_def, DIVIDES_MOD_MOD, MOD_PLUS]
+QED
 
 (* Theorem: 0 < n /\ 1 < m /\ m divides n ==> MonoidHomo (\x. x MOD m) (ZN n).prod (GF m).prod *)
 (* Proof:
@@ -683,10 +709,11 @@ val ZN_to_GF_sum_group_homo = store_thm(
        Since (x * x') MOD n MOD m = (x * x') MOD m  by DIVIDES_MOD_MOD, 0 < n
        True by MOD_TIMES2.
 *)
-val ZN_to_GF_prod_monoid_homo = store_thm(
-  "ZN_to_GF_prod_monoid_homo",
-  ``!n m. 0 < n /\ 1 < m /\ m divides n ==> MonoidHomo (\x. x MOD m) (ZN n).prod (GF m).prod``,
-  rw[ZN_def, GF_def, MonoidHomo_def, mult_mod_def, times_mod_def, DIVIDES_MOD_MOD, including_def]);
+Theorem ZN_to_GF_prod_monoid_homo:
+    !n m. 0 < n /\ 1 < m /\ m divides n ==> MonoidHomo (\x. x MOD m) (ZN n).prod (GF m).prod
+Proof
+  rw[ZN_def, GF_def, MonoidHomo_def, mult_mod_def, times_mod_def, DIVIDES_MOD_MOD, including_def]
+QED
 
 (* Theorem: 0 < n /\ 1 < m /\ m divides n ==> RingHomo (\x. x MOD m) (ZN n) (GF m) *)
 (* Proof:
@@ -695,15 +722,16 @@ val ZN_to_GF_prod_monoid_homo = store_thm(
    (2) GroupHomo (\x. x MOD m) (ZN n).sum (GF m).sum, true by ZN_to_GF_sum_group_homo.
    (3) MonoidHomo (\x. x MOD m) (ZN n).prod (GF m).prod, true by ZN_to_GF_prod_monoid_homo.
 *)
-val ZN_to_GF_ring_homo = store_thm(
-  "ZN_to_GF_ring_homo",
-  ``!n m. 0 < n /\ 1 < m /\ m divides n ==> RingHomo (\x. x MOD m) (ZN n) (GF m)``,
+Theorem ZN_to_GF_ring_homo:
+    !n m. 0 < n /\ 1 < m /\ m divides n ==> RingHomo (\x. x MOD m) (ZN n) (GF m)
+Proof
   rw[RingHomo_def] >| [
     `0 < m` by decide_tac >>
     metis_tac[ZN_to_GF_element],
     rw[ZN_to_GF_sum_group_homo],
     rw[ZN_to_GF_prod_monoid_homo]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n ==> RingIso (\x. x MOD n) (ZN n) (GF n) *)
 (* Proof:
@@ -719,9 +747,9 @@ val ZN_to_GF_ring_homo = store_thm(
        it comes down to show: x < n ==> ?x'. x' < n /\ (x' MOD n = x)
        Taking x' = x, this is true         by LESS_MOD
 *)
-val ZN_to_GF_ring_iso = store_thm(
-  "ZN_to_GF_ring_iso",
-  ``!n. 1 < n ==> RingIso (\x. x MOD n) (ZN n) (GF n)``,
+Theorem ZN_to_GF_ring_iso:
+    !n. 1 < n ==> RingIso (\x. x MOD n) (ZN n) (GF n)
+Proof
   rw[RingIso_def] >| [
     `0 < n` by decide_tac >>
     `n divides n` by rw[DIVIDES_REFL] >>
@@ -729,7 +757,8 @@ val ZN_to_GF_ring_iso = store_thm(
     rw[ZN_def, GF_def] >>
     rw[BIJ_DEF, INJ_DEF, SURJ_DEF] >>
     metis_tac[LESS_MOD]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n ==> char (GF n) = n *)
 (* Proof:
@@ -740,14 +769,15 @@ val ZN_to_GF_ring_iso = store_thm(
        = char (ZN n)     by ring_iso_char_eq
        = n               by ZN_char
 *)
-val GF_char_eq_ZN_char = store_thm(
-  "GF_char_eq_ZN_char",
-  ``!n. 1 < n ==> (char (GF n) = n)``,
+Theorem GF_char_eq_ZN_char:
+    !n. 1 < n ==> (char (GF n) = n)
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `Ring (GF n)` by rw[GF_ring] >>
-  metis_tac[ZN_to_GF_ring_iso, ring_iso_char_eq, ZN_char]);
+  metis_tac[ZN_to_GF_ring_iso, ring_iso_char_eq, ZN_char]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Multiplicative Inverse in Galois Field.                                   *)
@@ -755,9 +785,9 @@ val GF_char_eq_ZN_char = store_thm(
 
 (* Theorem: prime p ==> !x. 0 < x /\ x < p ==> (((GF p).prod excluding 0).inv x = (mult_mod p).inv x) *)
 (* Proof: by group homomorphism. *)
-val GF_mult_inv = store_thm(
-  "GF_mult_inv",
-  ``!p. prime p ==> !x. 0 < x /\ x < p ==> (((GF p).prod excluding 0).inv x = (mult_mod p).inv x)``,
+Theorem GF_mult_inv:
+    !p. prime p ==> !x. 0 < x /\ x < p ==> (((GF p).prod excluding 0).inv x = (mult_mod p).inv x)
+Proof
   rw_tac std_ss[GF_def] >>
   `0 NOTIN (mult_mod p).carrier` by rw_tac std_ss[mult_mod_property] >>
   `x IN (mult_mod p).carrier` by rw_tac std_ss[mult_mod_property, NOT_ZERO_LT_ZERO] >>
@@ -768,15 +798,17 @@ val GF_mult_inv = store_thm(
   `GroupHomo I (mult_mod p including 0 excluding 0) (mult_mod p)`
     by rw_tac std_ss[GroupHomo_def, group_including_excluding_property] >>
   `I ((mult_mod p including 0 excluding 0).inv x) = (mult_mod p).inv (I x)` by rw_tac std_ss[group_homo_inv] >>
-  full_simp_tac std_ss[]);
+  full_simp_tac std_ss[]
+QED
 
 (* Theorem: As a function, prime p ==> !x. 0 < x /\ x < p ==> (((GF p).prod excluding 0).inv x = (mult_mod p).inv x) *)
 (* Proof: by GF_mult_inv *)
-val GF_mult_inv_compute = store_thm(
-  "GF_mult_inv_compute",
-  ``!p x. ((GF p).prod excluding 0).inv x =
-         if (prime p /\ 0 < x /\ x < p) then (mult_mod p).inv x else ((GF p).prod excluding 0).inv x``,
-  rw_tac std_ss[GF_mult_inv]);
+Theorem GF_mult_inv_compute:
+    !p x. ((GF p).prod excluding 0).inv x =
+         if (prime p /\ 0 < x /\ x < p) then (mult_mod p).inv x else ((GF p).prod excluding 0).inv x
+Proof
+  rw_tac std_ss[GF_mult_inv]
+QED
 
 val _ = computeLib.add_persistent_funs ["GF_mult_inv_compute"];
 
@@ -802,19 +834,21 @@ How to know prime 7?
 
 (* Theorem: (GF p).sum.inv = (add_mod p).inv *)
 (* Proof: by GF_def. *)
-val GF_sum_inv = store_thm(
-  "GF_sum_inv",
-  ``!p. (GF p).sum.inv = (add_mod p).inv``,
-  rw_tac std_ss[GF_def]);
+Theorem GF_sum_inv:
+    !p. (GF p).sum.inv = (add_mod p).inv
+Proof
+  rw_tac std_ss[GF_def]
+QED
 
 val _ = computeLib.add_persistent_funs ["GF_sum_inv"];
 
 (* Theorem: (GF p excluding 0).prod.inv = (mult_mod p).inv *)
 (* Proof: by GF_def and group_including_excluding_property. *)
-val GF_prod_nonzero_inv = store_thm(
-  "GF_prod_nonzero_inv",
-  ``!p. ((GF p).prod excluding 0).inv = (mult_mod p).inv``,
-  rw[GF_def, group_including_excluding_eqn]);
+Theorem GF_prod_nonzero_inv:
+    !p. ((GF p).prod excluding 0).inv = (mult_mod p).inv
+Proof
+  rw[GF_def, group_including_excluding_eqn]
+QED
 
 val _ = computeLib.add_persistent_funs["GF_prod_nonzero_inv"];
 

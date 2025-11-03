@@ -25,14 +25,15 @@ val _ = temp_loose_equality ();
 (* Theorem TAU_STRAT:
    |- !E E'. OBS_CONGR (sum E (prefix tau (sum E' E))) (prefix tau (sum E' E))
  *)
-val TAU_STRAT = store_thm (
-   "TAU_STRAT",
-  ``!E E'. OBS_CONGR (sum E (prefix tau (sum E' E))) (prefix tau (sum E' E))``,
+Theorem TAU_STRAT:
+    !E E'. OBS_CONGR (sum E (prefix tau (sum E' E))) (prefix tau (sum E' E))
+Proof
     rpt GEN_TAC
  >> OC_LHS_SUBST1_TAC
        (SPEC ``sum E' E`` (GEN_ALL (OC_SYM (SPEC_ALL TAU2))))
  >> OC_SUM_IDEMP_TAC
- >> OC_LHS_SUBST1_TAC (SPEC ``sum E' E`` TAU2));
+ >> OC_LHS_SUBST1_TAC (SPEC ``sum E' E`` TAU2)
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -41,11 +42,11 @@ val TAU_STRAT = store_thm (
 (******************************************************************************)
 
 (* Lemma 4.2. (Deng Lemma) [Den07], the weak bisimularity version *)
-val DENG_LEMMA = store_thm ((* NEW *)
-   "DENG_LEMMA",
-  ``!p q. WEAK_EQUIV p q ==> (?p'. TRANS p tau p' /\ WEAK_EQUIV p' q) \/
+Theorem DENG_LEMMA:
+    !p q. WEAK_EQUIV p q ==> (?p'. TRANS p tau p' /\ WEAK_EQUIV p' q) \/
                              (?q'. TRANS q tau q' /\ WEAK_EQUIV p q') \/
-                             OBS_CONGR p q``,
+                             OBS_CONGR p q
+Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC (DECIDE ``(~P /\ ~Q ==> R) ==> P \/ Q \/ R``)
  >> rpt STRIP_TAC
@@ -80,13 +81,14 @@ val DENG_LEMMA = store_thm ((* NEW *)
         PAT_X_ASSUM ``WEAK_EQUIV p q``
                   (STRIP_ASSUME_TAC o (ONCE_REWRITE_RULE [WEAK_PROPERTY_STAR])) \\
         RES_TAC \\
-        Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] ] ]);
+        Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] ] ]
+QED
 
 (* Hennessy Lemma, the easy part *)
-val HENNESSY_LEMMA_RL = store_thm ((* NEW *)
-   "HENNESSY_LEMMA_RL",
-  ``!p q. (OBS_CONGR p q \/ OBS_CONGR p (prefix tau q) \/
-                            OBS_CONGR (prefix tau p) q) ==> WEAK_EQUIV p q``,
+Theorem HENNESSY_LEMMA_RL:
+    !p q. (OBS_CONGR p q \/ OBS_CONGR p (prefix tau q) \/
+                            OBS_CONGR (prefix tau p) q) ==> WEAK_EQUIV p q
+Proof
     rpt STRIP_TAC (* 3 sub-goals here *)
  >| [ (* goal 2.1 (of 3) *)
       IMP_RES_TAC OBS_CONGR_IMP_WEAK_EQUIV,
@@ -98,13 +100,14 @@ val HENNESSY_LEMMA_RL = store_thm ((* NEW *)
       IMP_RES_TAC OBS_CONGR_IMP_WEAK_EQUIV \\
       ASSUME_TAC (Q.SPEC `p` TAU_WEAK) \\
       POP_ASSUM (ASSUME_TAC o (MATCH_MP WEAK_EQUIV_SYM)) \\
-      IMP_RES_TAC WEAK_EQUIV_TRANS ]);
+      IMP_RES_TAC WEAK_EQUIV_TRANS ]
+QED
 
 (* Hennessy Lemma, the hard part *)
-val HENNESSY_LEMMA_LR = store_thm ((* NEW *)
-   "HENNESSY_LEMMA_LR",
-  ``!p q. WEAK_EQUIV p q ==> (OBS_CONGR p q \/ OBS_CONGR p (prefix tau q)
-                                            \/ OBS_CONGR (prefix tau p) q)``,
+Theorem HENNESSY_LEMMA_LR:
+    !p q. WEAK_EQUIV p q ==> (OBS_CONGR p q \/ OBS_CONGR p (prefix tau q)
+                                            \/ OBS_CONGR (prefix tau p) q)
+Proof
     rpt STRIP_TAC
  >> Cases_on `?E. TRANS p tau E /\ WEAK_EQUIV E q` (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -153,16 +156,18 @@ val HENNESSY_LEMMA_LR = store_thm ((* NEW *)
         (* goal 2.2 (of 2) *)
         DISJ1_TAC \\ (* CHOOSE ``OBS_CONGR p q``, then use Deng Lemma *)
         IMP_RES_TAC DENG_LEMMA \\ (* 2 sub-goals here, same tactical *)
-        RES_TAC ] ]);
+        RES_TAC ] ]
+QED
 
 (* Lemma 4.1. (Hennessy Lemma) [Mil89] *)
-val HENNESSY_LEMMA = store_thm ((* NEW *)
-   "HENNESSY_LEMMA",
-  ``!p q. WEAK_EQUIV p q = (OBS_CONGR p q \/ OBS_CONGR p (prefix tau q)
-                                          \/ OBS_CONGR (prefix tau p) q)``,
+Theorem HENNESSY_LEMMA:
+    !p q. WEAK_EQUIV p q = (OBS_CONGR p q \/ OBS_CONGR p (prefix tau q)
+                                          \/ OBS_CONGR (prefix tau p) q)
+Proof
     rpt GEN_TAC >> EQ_TAC
  >- REWRITE_TAC [HENNESSY_LEMMA_LR]
- >> REWRITE_TAC [HENNESSY_LEMMA_RL]);
+ >> REWRITE_TAC [HENNESSY_LEMMA_RL]
+QED
 
 (* Definition 12: the coarsest congruence that is finer than WEAK_EQUIV is called
                   WEAK_CONGR (weak bisimulation congruence) *)
@@ -172,20 +177,22 @@ val WEAK_CONGR = new_definition ((* NEW *)
 val WEAK_CONGR_THM = save_thm (
    "WEAK_CONGR_THM", REWRITE_RULE [CC_def] WEAK_CONGR);
 
-val WEAK_CONGR_congruence = store_thm ((* NEW *)
-   "WEAK_CONGR_congruence", ``congruence WEAK_CONGR``,
+Theorem WEAK_CONGR_congruence:   congruence WEAK_CONGR
+Proof
     REWRITE_TAC [WEAK_CONGR]
  >> MATCH_MP_TAC CC_congruence
- >> REWRITE_TAC [WEAK_EQUIV_equivalence]);
+ >> REWRITE_TAC [WEAK_EQUIV_equivalence]
+QED
 
-val OBS_CONGR_IMP_WEAK_CONGR = store_thm ((* NEW *)
-   "OBS_CONGR_IMP_WEAK_CONGR", ``!p q. OBS_CONGR p q ==> WEAK_CONGR p q``,
+Theorem OBS_CONGR_IMP_WEAK_CONGR:   !p q. OBS_CONGR p q ==> WEAK_CONGR p q
+Proof
     REWRITE_TAC [WEAK_CONGR, GSYM RSUBSET]
  >> ASSUME_TAC OBS_CONGR_congruence
  >> `OBS_CONGR RSUBSET WEAK_EQUIV`
         by PROVE_TAC [OBS_CONGR_IMP_WEAK_EQUIV, RSUBSET]
  >> IMP_RES_TAC CC_is_coarsest
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
 Definition SUM_EQUIV :
     SUM_EQUIV = (\p q. !r. WEAK_EQUIV (sum p r) (sum q r))
@@ -353,14 +360,15 @@ QED
 (* Theorem 4.5. (Coarsest congruence contained in WEAK_EQUIV) in Gorrieri's book.
    OBS_CONGR congruences theorems shouldn't depend on this result.
  *)
-val COARSEST_CONGR_THM = store_thm ((* NEW *)
-   "COARSEST_CONGR_THM",
-  ``!p q. free_action p /\ free_action q ==>
-          (OBS_CONGR p q = !r. WEAK_EQUIV (sum p r) (sum q r))``,
+Theorem COARSEST_CONGR_THM:
+    !p q. free_action p /\ free_action q ==>
+          (OBS_CONGR p q = !r. WEAK_EQUIV (sum p r) (sum q r))
+Proof
     rpt STRIP_TAC
  >> EQ_TAC >- REWRITE_TAC [COARSEST_CONGR_LR]
  >> MATCH_MP_TAC COARSEST_CONGR_RL
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -539,15 +547,16 @@ Proof
  >> Induct_on ‘n’ >> rw [KLOP_def]
 QED
 
-val K0_NO_TRANS = store_thm (
-   "K0_NO_TRANS", ``!(a :'a Label) u E. ~(TRANS (KLOP a 0) u E)``,
+Theorem K0_NO_TRANS:   !(a :'a Label) u E. ~(TRANS (KLOP a 0) u E)
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [KLOP_def]
- >> REWRITE_TAC [NIL_NO_TRANS]);
+ >> REWRITE_TAC [NIL_NO_TRANS]
+QED
 
 (* Klop processes are STABLE. *)
-val KLOP_PROP0 = store_thm ((* NEW *)
-   "KLOP_PROP0", ``!(a :'a Label) n. STABLE (KLOP a n)``,
+Theorem KLOP_PROP0:   !(a :'a Label) n. STABLE (KLOP a n)
+Proof
     GEN_TAC
  >> Induct_on `n` (* 2 sub-goals here *)
  >- REWRITE_TAC [STABLE, KLOP_def, NIL_NO_TRANS]
@@ -557,13 +566,14 @@ val KLOP_PROP0 = store_thm ((* NEW *)
  >> IMP_RES_TAC TRANS_SUM (* 2 sub-goals here *)
  >- PROVE_TAC []
  >> IMP_RES_TAC TRANS_PREFIX
- >> PROVE_TAC [Action_distinct]);
+ >> PROVE_TAC [Action_distinct]
+QED
 
 (* Any transition of Klop processes is still a Klop process. Together with Prop 0,
    this also implies that Klop processes are tau-free. *)
-val KLOP_PROP1_LR = store_thm ((* NEW *)
-   "KLOP_PROP1_LR",
-  ``!(a :'a Label) n E. TRANS (KLOP a n) (label a) E ==> ?m. m < n /\ (E = KLOP a m)``,
+Theorem KLOP_PROP1_LR:
+    !(a :'a Label) n E. TRANS (KLOP a n) (label a) E ==> ?m. m < n /\ (E = KLOP a m)
+Proof
     GEN_TAC
  >> Induct_on `n` (* 2 sub-goals here, first one is easy *)
  >- PROVE_TAC [K0_NO_TRANS]
@@ -579,11 +589,12 @@ val KLOP_PROP1_LR = store_thm ((* NEW *)
       IMP_RES_TAC TRANS_PREFIX \\
       Q.EXISTS_TAC `n` >> ASM_REWRITE_TAC [] \\
       ASSUME_TAC (Q.SPEC `n` LESS_EQ_REFL) \\
-      IMP_RES_TAC LESS_EQ_IFF_LESS_SUC ]);
+      IMP_RES_TAC LESS_EQ_IFF_LESS_SUC ]
+QED
 
-val KLOP_PROP1_RL = store_thm ((* NEW *)
-   "KLOP_PROP1_RL",
-  ``!(a :'a Label) n E. (?m. m < n /\ (E = KLOP a m)) ==> TRANS (KLOP a n) (label a) E``,
+Theorem KLOP_PROP1_RL:
+    !(a :'a Label) n E. (?m. m < n /\ (E = KLOP a m)) ==> TRANS (KLOP a n) (label a) E
+Proof
     GEN_TAC
  >> Induct_on `n` (* 2 sub-goals here *)
  >> rpt STRIP_TAC
@@ -595,23 +606,25 @@ val KLOP_PROP1_RL = store_thm ((* NEW *)
       REWRITE_TAC [PREFIX],
       (* goal 2 (of 2) *)
       RES_TAC \\
-      MATCH_MP_TAC SUM1 >> ASM_REWRITE_TAC [] ]);
+      MATCH_MP_TAC SUM1 >> ASM_REWRITE_TAC [] ]
+QED
 
 (* Klop processes are closed under transition *)
-val KLOP_PROP1 = store_thm ((* NEW *)
-   "KLOP_PROP1",
-  ``!(a :'a Label) n E. TRANS (KLOP a n) (label a) E = (?m. m < n /\ (E = KLOP a m))``,
+Theorem KLOP_PROP1:
+    !(a :'a Label) n E. TRANS (KLOP a n) (label a) E = (?m. m < n /\ (E = KLOP a m))
+Proof
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       REWRITE_TAC [KLOP_PROP1_LR],
       (* goal 2 (of 2) *)
-      REWRITE_TAC [KLOP_PROP1_RL] ]);
+      REWRITE_TAC [KLOP_PROP1_RL] ]
+QED
 
 (* Klop processes are closed under weak transition *)
-val KLOP_PROP1' = store_thm ((* NEW *)
-   "KLOP_PROP1'",
-  ``!(a :'a Label) n E. WEAK_TRANS (KLOP a n) (label a) E = (?m. m < n /\ (E = KLOP a m))``,
+Theorem KLOP_PROP1':
+    !(a :'a Label) n E. WEAK_TRANS (KLOP a n) (label a) E = (?m. m < n /\ (E = KLOP a m))
+Proof
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -631,12 +644,13 @@ val KLOP_PROP1' = store_thm ((* NEW *)
       (* goal 2 (of 2) *)
       DISCH_TAC \\
       MATCH_MP_TAC TRANS_IMP_WEAK_TRANS \\
-      RW_TAC std_ss [Q.SPECL [`a`, `n`, `E`] KLOP_PROP1_RL] ]);
+      RW_TAC std_ss [Q.SPECL [`a`, `n`, `E`] KLOP_PROP1_RL] ]
+QED
 
 (* Klop processes are strongly distinct with each other *)
-val KLOP_PROP2 = store_thm ((* NEW *)
-   "KLOP_PROP2",
-  ``!(a :'a Label) n m. m < n ==> ~(STRONG_EQUIV (KLOP a m) (KLOP a n))``,
+Theorem KLOP_PROP2:
+    !(a :'a Label) n m. m < n ==> ~(STRONG_EQUIV (KLOP a m) (KLOP a n))
+Proof
     GEN_TAC
  >> completeInduct_on `n`
  >> rpt STRIP_TAC
@@ -647,12 +661,13 @@ val KLOP_PROP2 = store_thm ((* NEW *)
  >> RES_TAC
  >> PAT_X_ASSUM ``TRANS (KLOP (a :'a Label) m) (label a) E1``
         (STRIP_ASSUME_TAC o (REWRITE_RULE [KLOP_PROP1]))
- >> PROVE_TAC []);
+ >> PROVE_TAC []
+QED
 
 (* Klop processes are weakly distinct with each other *)
-val KLOP_PROP2' = store_thm ((* NEW *)
-   "KLOP_PROP2'",
-  ``!(a :'a Label) n m. m < n ==> ~(WEAK_EQUIV (KLOP a m) (KLOP a n))``,
+Theorem KLOP_PROP2':
+    !(a :'a Label) n m. m < n ==> ~(WEAK_EQUIV (KLOP a m) (KLOP a n))
+Proof
     GEN_TAC
  >> completeInduct_on `n`
  >> rpt STRIP_TAC
@@ -663,10 +678,11 @@ val KLOP_PROP2' = store_thm ((* NEW *)
  >> RES_TAC
  >> PAT_X_ASSUM ``WEAK TRANS (KLOP (a :'a Label) m) (label a) E1``
         (STRIP_ASSUME_TAC o (REWRITE_RULE [KLOP_PROP1']))
- >> PROVE_TAC []);
+ >> PROVE_TAC []
+QED
 
-val KLOP_ONE_ONE = store_thm ((* NEW *)
-   "KLOP_ONE_ONE", ``!(a :'a Label). ONE_ONE (KLOP a)``,
+Theorem KLOP_ONE_ONE:   !(a :'a Label). ONE_ONE (KLOP a)
+Proof
     REWRITE_TAC [ONE_ONE_DEF]
  >> BETA_TAC
  >> rpt STRIP_TAC
@@ -677,7 +693,8 @@ val KLOP_ONE_ONE = store_thm ((* NEW *)
       IMP_RES_TAC KLOP_PROP2,
       (* goal 2 (of 2) *)
       IMP_RES_TAC KLOP_PROP2 \\
-      PROVE_TAC [STRONG_EQUIV_SYM] ]);
+      PROVE_TAC [STRONG_EQUIV_SYM] ]
+QED
 
 (* The finite version of Klop's Lemma:
 
@@ -711,12 +728,12 @@ val KLOP_ONE_ONE = store_thm ((* NEW *)
  *)
 
 (* The pure Math part in the proof of KLOP_LEMMA_FINITE *)
-val INFINITE_EXISTS_LEMMA = store_thm ((* NEW *)
-   "INFINITE_EXISTS_LEMMA",
-  ``!R A B. equivalence (R :'a -> 'a -> bool) ==>
+Theorem INFINITE_EXISTS_LEMMA:
+    !R A B. equivalence (R :'a -> 'a -> bool) ==>
          FINITE (A :'a -> bool) /\ INFINITE (B :'a -> bool) /\
          (!x y. x IN B /\ y IN B /\ x <> y ==> ~(R x y)) ==>
-       ?k. k IN B /\ (!n. n IN A ==> ~(R n k))``,
+       ?k. k IN B /\ (!n. n IN A ==> ~(R n k))
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [equivalence_def]
  >> rpt STRIP_TAC
@@ -771,7 +788,8 @@ val INFINITE_EXISTS_LEMMA = store_thm ((* NEW *)
         (* goal 2 (of 2) *)
         `B k /\ R n k` by PROVE_TAC [IN_DEF] \\
         RES_TAC ] ) >> DISCH_TAC
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
 Theorem KLOP_LEMMA_FINITE :
     !p q. finite_state p /\ finite_state q ==>
@@ -855,14 +873,15 @@ Proof
 QED
 
 (* The finite version of COARSEST_CONGR_THM (PROP3) *)
-val COARSEST_CONGR_FINITE = store_thm ((* NEW *)
-   "COARSEST_CONGR_FINITE",
-  ``!p q. finite_state p /\ finite_state q ==>
-          (OBS_CONGR p q <=> !r. WEAK_EQUIV (sum p r) (sum q r))``,
+Theorem COARSEST_CONGR_FINITE:
+    !p q. finite_state p /\ finite_state q ==>
+          (OBS_CONGR p q <=> !r. WEAK_EQUIV (sum p r) (sum q r))
+Proof
     rpt STRIP_TAC
  >> EQ_TAC >- REWRITE_TAC [COARSEST_CONGR_LR]
  >> MP_TAC (Q.SPECL [`p`, `q`] KLOP_LEMMA_FINITE)
- >> RW_TAC std_ss [PROP3_COMMON]);
+ >> RW_TAC std_ss [PROP3_COMMON]
+QED
 
 (* unused *)
 Definition KLOP_INF_def:

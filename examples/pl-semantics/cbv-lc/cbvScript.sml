@@ -131,8 +131,9 @@ Termination
  rw[] >> fsrw_tac[ARITH_ss][]
 End
 
-val sem_clock = store_thm("sem_clock",
-  ``∀env s e r s'. sem env s e = (r, s') ⇒ s'.clock ≤ s.clock``,
+Theorem sem_clock:
+    ∀env s e r s'. sem env s e = (r, s') ⇒ s'.clock ≤ s.clock
+Proof
   ho_match_mp_tac sem_ind >>
   rpt conj_tac >>
   simp[sem_def] >>
@@ -140,7 +141,8 @@ val sem_clock = store_thm("sem_clock",
   BasicProvers.EVERY_CASE_TAC >>
   simp[check_clock_def,dec_clock_def] >>
   rpt(IF_CASES_TAC >> simp[]) >>
-  rpt strip_tac >> res_tac >> simp[] >> fs[])
+  rpt strip_tac >> res_tac >> simp[] >> fs[]
+QED
 
 (* Remove the extra check_clock calls that were used above to guide the HOL
  * termination prover *)

@@ -37,20 +37,21 @@ val _ = overload_on ("-n->", ``normorder``)
 val _ = set_fixity "-n->*" (Infix(NONASSOC,450))
 val _ = overload_on ("-n->*", ``RTC normorder``)
 
-val tpm_normorder_I = store_thm(
-  "tpm_normorder_I",
-  ``∀M N. M -n-> N ⇒ ∀pi. tpm pi M -n-> tpm pi N``,
-  HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][normorder_rules, tpm_subst]);
+Theorem tpm_normorder_I:
+    ∀M N. M -n-> N ⇒ ∀pi. tpm pi M -n-> tpm pi N
+Proof
+  HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][normorder_rules, tpm_subst]
+QED
 
-val tpm_normorder_eqn = store_thm(
-  "tpm_normorder_eqn",
-  ``tpm pi M -n-> tpm pi N ⇔ M -n-> N``,
-  METIS_TAC [pmact_inverse, tpm_normorder_I]);
+Theorem tpm_normorder_eqn:
+    tpm pi M -n-> tpm pi N ⇔ M -n-> N
+Proof
+  METIS_TAC [pmact_inverse, tpm_normorder_I]
+QED
 val _ = export_rewrites ["tpm_normorder_eqn"]
 
-val normorder_bvc_gen_ind = store_thm(
-  "normorder_bvc_gen_ind",
-  ``∀P f.
+Theorem normorder_bvc_gen_ind:
+    ∀P f.
       (∀x. FINITE (f x)) ∧
       (∀v M N x. v ∉ FV N ∧ v ∉ f x ⇒ P (LAM v M @@ N) ([N/v]M) x) ∧
       (∀v M N x. v ∉ f x ∧ (∀y. P M N y) ⇒ P (LAM v M) (LAM v N) x) ∧
@@ -58,7 +59,8 @@ val normorder_bvc_gen_ind = store_thm(
       (∀M N1 N2 x.
          (∀y. P N1 N2 y) ∧ bnf M ∧ ¬is_abs M ⇒ P (M @@ N1) (M @@ N2) x)
      ⇒
-      ∀M N. M -n-> N ⇒ ∀x. P M N x``,
+      ∀M N. M -n-> N ⇒ ∀x. P M N x
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC
         `∀M N. M -n-> N ⇒ ∀π x. P (tpm π M) (tpm π N) x`
@@ -84,7 +86,8 @@ val normorder_bvc_gen_ind = store_thm(
         by SRW_TAC [][tpm_ALPHA] THEN
     NTAC 2 (POP_ASSUM SUBST_ALL_TAC) THEN
     SRW_TAC [][GSYM pmact_decompose]
-  ]);
+  ]
+QED
 
 infix |> fun x |> f = f x
 val normorder_bvc_ind = save_thm(
@@ -95,30 +98,33 @@ val normorder_bvc_ind = save_thm(
                         |> Q.INST [`P1` |-> `P`]
                         |> Q.GEN `X` |> Q.GEN `P`);
 
-val normorder_ccbeta = store_thm(
-  "normorder_ccbeta",
-  ``∀M N. M -n-> N ⇒ M -β-> N``,
+Theorem normorder_ccbeta:
+    ∀M N. M -n-> N ⇒ M -β-> N
+Proof
   HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][compat_closure_rules] THEN
-  METIS_TAC [compat_closure_rules, beta_def]);
+  METIS_TAC [compat_closure_rules, beta_def]
+QED
 
-val normorder_lameq = store_thm(
-  "normorder_lameq",
-  ``∀M N. M -n-> N ⇒ M == N``,
-  SRW_TAC [][normorder_ccbeta, ccbeta_lameq]);
+Theorem normorder_lameq:
+    ∀M N. M -n-> N ⇒ M == N
+Proof
+  SRW_TAC [][normorder_ccbeta, ccbeta_lameq]
+QED
 
-val normorder_FV = store_thm(
-  "normorder_FV",
-  ``M -n-> N ∧ v ∈ FV N ⇒ v ∈ FV M``,
-  METIS_TAC [normorder_ccbeta, cc_beta_FV_SUBSET, SUBSET_DEF]);
+Theorem normorder_FV:
+    M -n-> N ∧ v ∈ FV N ⇒ v ∈ FV M
+Proof
+  METIS_TAC [normorder_ccbeta, cc_beta_FV_SUBSET, SUBSET_DEF]
+QED
 
-val normorder_rwts = store_thm(
-  "normorder_rwts",
-  ``(VAR s -n-> N ⇔ F) ∧
+Theorem normorder_rwts:
+    (VAR s -n-> N ⇔ F) ∧
     (LAM v M -n-> N ⇔ ∃M'. (N = LAM v M') ∧ M -n-> M') ∧
     (LAM v M @@ N -n-> P ⇔ (P = [N/v]M)) ∧
     (¬is_abs M ⇒ (M @@ N -n-> P ⇔
                    (bnf M ∧ ∃N'. (P = M @@ N') ∧ N -n-> N') ∨
-                   ∃M'. (P = M' @@ N) ∧ M -n-> M'))``,
+                   ∃M'. (P = M' @@ N) ∧ M -n-> M'))
+Proof
   SRW_TAC [][] THENL [
     SRW_TAC [][Once normorder_cases],
 
@@ -139,12 +145,13 @@ val normorder_rwts = store_thm(
     CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [normorder_cases])) THEN
     SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
 
-val normorder_bnf = store_thm(
-  "normorder_bnf",
-  ``bnf M ⇔ ∀N. ¬(M -n-> N)``,
+Theorem normorder_bnf:
+    bnf M ⇔ ∀N. ¬(M -n-> N)
+Proof
   Q.ID_SPEC_TAC `M` THEN HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][normorder_rwts] THEN
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, normorder_rwts] THEN
@@ -159,17 +166,19 @@ val normorder_bnf = store_thm(
     METIS_TAC [simpLib.SIMP_PROVE (srw_ss()) []
               ``∀M1 M2 N1 N2. (M1 @@ N1:term = M2 @@ N2) ⇔
                                (M1 = M2) ∧ (N1 = N2)``]
-  ]);
+  ]
+QED
 
 val strong_normorder_ind =
     IndDefLib.derive_strong_induction (normorder_rules, normorder_ind)
 
-val normorder_det = store_thm(
-  "normorder_det",
-  ``∀M N. M -n-> N ⇒ ∀N'. M -n-> N' ⇒ (N' = N)``,
+Theorem normorder_det:
+    ∀M N. M -n-> N ⇒ ∀N'. M -n-> N' ⇒ (N' = N)
+Proof
   HO_MATCH_MP_TAC strong_normorder_ind THEN
   SRW_TAC [][normorder_rwts] THEN
-  METIS_TAC [normorder_bnf]);
+  METIS_TAC [normorder_bnf]
+QED
 
 val noposn_def = define_recursive_term_function`
   (noposn (VAR s) = NONE) ∧
@@ -181,16 +190,17 @@ val noposn_def = define_recursive_term_function`
 `;
 val _ = export_rewrites ["noposn_def"]
 
-val bnf_noposn = store_thm(
-  "bnf_noposn",
-  ``∀M. bnf M ⇔ (noposn M = NONE)``,
+Theorem bnf_noposn:
+    ∀M. bnf M ⇔ (noposn M = NONE)
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][] THEN Cases_on `noposn M` THEN
-  SRW_TAC [][EQ_IMP_THM])
+  SRW_TAC [][EQ_IMP_THM]
+QED
 
-val normorder_noposn = store_thm(
-  "normorder_noposn",
-  ``M -n-> N ⇔ ∃p. (noposn M = SOME p) ∧ labelled_redn beta M p N``,
+Theorem normorder_noposn:
+    M -n-> N ⇔ ∃p. (noposn M = SOME p) ∧ labelled_redn beta M p N
+Proof
   EQ_TAC THENL [
     Q_TAC SUFF_TAC
      `∀M N. M -n-> N ⇒ ∃p. (noposn M = SOME p) ∧ labelled_redn beta M p N`
@@ -209,14 +219,15 @@ val normorder_noposn = store_thm(
       Cases_on `noposn z` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
       METIS_TAC [bnf_noposn, normorder_rules]
     ]
-  ]);
+  ]
+QED
 
-val noposn_least = store_thm(
-  "noposn_least",
-  ``∀M p.
+Theorem noposn_least:
+    ∀M p.
       (noposn M = SOME p) ⇒ p ∈ redex_posns M ∧
                             ∀p'. p' ∈ redex_posns M ⇒
-                                 (p' = p) ∨ p < p'``,
+                                 (p' = p) ∨ p < p'
+Proof
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][redex_posns_def] THENL [
     Cases_on `noposn M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     SRW_TAC [][],
@@ -230,46 +241,51 @@ val noposn_least = store_thm(
 
     Cases_on `noposn M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
 Definition normorder_reduction_def:
   normorder_reduction p =
     okpath (λM r N. (noposn M = SOME r) ∧ labelled_redn beta M r N) p
 End
-val normorder_is_standard = store_thm(
-  "normorder_is_standard",
-  ``∀p. normorder_reduction p ⇒ standard_reduction p``,
+Theorem normorder_is_standard:
+    ∀p. normorder_reduction p ⇒ standard_reduction p
+Proof
   HO_MATCH_MP_TAC standard_coind THEN
   SRW_TAC [][normorder_reduction_def] THEN
-  METIS_TAC [posn_lt_antisym, posn_lt_irrefl, noposn_least]);
+  METIS_TAC [posn_lt_antisym, posn_lt_irrefl, noposn_least]
+QED
 
-val ihr_noposn = store_thm(
-  "ihr_noposn",
-  ``∀r M. r is_head_redex M ⇒ (noposn M = SOME r)``,
-  HO_MATCH_MP_TAC is_head_redex_ind THEN SRW_TAC [][]);
+Theorem ihr_noposn:
+    ∀r M. r is_head_redex M ⇒ (noposn M = SOME r)
+Proof
+  HO_MATCH_MP_TAC is_head_redex_ind THEN SRW_TAC [][]
+QED
 
-val head_is_normorder = store_thm(
-  "head_is_normorder",
-  ``∀p. is_head_reduction p ⇒ normorder_reduction p``,
+Theorem head_is_normorder:
+    ∀p. is_head_reduction p ⇒ normorder_reduction p
+Proof
   SIMP_TAC (srw_ss()) [normorder_reduction_def] THEN
   HO_MATCH_MP_TAC okpath_co_ind THEN
-  SRW_TAC [][is_head_reduction_thm, ihr_noposn]);
+  SRW_TAC [][is_head_reduction_thm, ihr_noposn]
+QED
 
 val ADD1 = arithmeticTheory.ADD1
 
-val last_el = store_thm(
-  "last_el",
-  ``∀p. finite p ⇒
-        (last p = el (THE (length p) - 1) p)``,
+Theorem last_el:
+    ∀p. finite p ⇒
+        (last p = el (THE (length p) - 1) p)
+Proof
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][length_thm] THEN
   Q_TAC SUFF_TAC `∃n. length p = SOME (SUC n)`
         THEN1 SIMP_TAC (srw_ss() ++ DNF_ss ++ ARITH_ss) [] THEN
-  METIS_TAC [finite_length, length_never_zero, arithmeticTheory.num_CASES]);
+  METIS_TAC [finite_length, length_never_zero, arithmeticTheory.num_CASES]
+QED
 
-val standard_to_bnf_is_normal = store_thm(
-  "standard_to_bnf_is_normal",
-  ``∀p. standard_reduction p ∧ finite p ∧ bnf (last p) ⇒
-        normorder_reduction p``,
+Theorem standard_to_bnf_is_normal:
+    ∀p. standard_reduction p ∧ finite p ∧ bnf (last p) ⇒
+        normorder_reduction p
+Proof
   SIMP_TAC (srw_ss()) [normorder_reduction_def] THEN
   HO_MATCH_MP_TAC okpath_co_ind THEN
   SRW_TAC [][standard_reduction_thm] THEN
@@ -301,45 +317,51 @@ val standard_to_bnf_is_normal = store_thm(
   `r₀ ∈ redex_posns (last p)` by METIS_TAC [] THEN
   `∃N. labelled_redn beta (last p) r₀ N`
      by METIS_TAC [is_redex_occurrence_def, IN_term_IN_redex_posns] THEN
-  METIS_TAC [labelled_redn_cc, beta_normal_form_bnf, corollary3_2_1]);
+  METIS_TAC [labelled_redn_cc, beta_normal_form_bnf, corollary3_2_1]
+QED
 
-val finite_normorder_RTC = store_thm(
-  "finite_normorder_RTC",
-  ``∀p. normorder_reduction p ∧ finite p ⇒ first p -n->* last p``,
+Theorem finite_normorder_RTC:
+    ∀p. normorder_reduction p ∧ finite p ⇒ first p -n->* last p
+Proof
   REWRITE_TAC [normorder_reduction_def] THEN
   HO_MATCH_MP_TAC finite_okpath_ind THEN SRW_TAC [][] THEN
-  METIS_TAC [normorder_noposn, relationTheory.RTC_RULES]);
+  METIS_TAC [normorder_noposn, relationTheory.RTC_RULES]
+QED
 
 
-val normal_finds_bnf = store_thm(
-  "normal_finds_bnf",
-  ``M -β->* N /\ bnf N ⇒ M -n->* N``,
+Theorem normal_finds_bnf:
+    M -β->* N /\ bnf N ⇒ M -n->* N
+Proof
   SRW_TAC [][] THEN
   `∃p. (first p = M) ∧ finite p ∧ (last p = N) ∧ standard_reduction p`
     by METIS_TAC [standardisation_theorem] THEN
-  METIS_TAC [standard_to_bnf_is_normal, finite_normorder_RTC]);
+  METIS_TAC [standard_to_bnf_is_normal, finite_normorder_RTC]
+QED
 
-val nstar_betastar = store_thm(
-  "nstar_betastar",
-  ``∀M N. M -n->* N ⇒ M -β->* N``,
+Theorem nstar_betastar:
+    ∀M N. M -n->* N ⇒ M -β->* N
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  METIS_TAC [relationTheory.RTC_RULES, normorder_ccbeta]);
+  METIS_TAC [relationTheory.RTC_RULES, normorder_ccbeta]
+QED
 
-val nstar_lameq = store_thm(
-  "nstar_lameq",
-  ``∀M N. M -n->* N ⇒ M == N``,
-  SRW_TAC [][nstar_betastar, betastar_lameq]);
+Theorem nstar_lameq:
+    ∀M N. M -n->* N ⇒ M == N
+Proof
+  SRW_TAC [][nstar_betastar, betastar_lameq]
+QED
 
-val nstar_betastar_bnf = store_thm(
-  "nstar_betastar_bnf",
-  ``bnf N ⇒ (M -n->* N ⇔ M -β->* N)``,
-  METIS_TAC [normal_finds_bnf, nstar_betastar]);
+Theorem nstar_betastar_bnf:
+    bnf N ⇒ (M -n->* N ⇔ M -β->* N)
+Proof
+  METIS_TAC [normal_finds_bnf, nstar_betastar]
+QED
 
 
-val nstar_bnf_triangle = store_thm(
-  "nstar_bnf_triangle",
-  ``∀M N. M -n->* N ⇒
-          bnf N ⇒ ∀M'. M -n->* M' ⇒ M' -n->* N``,
+Theorem nstar_bnf_triangle:
+    ∀M N. M -n->* N ⇒
+          bnf N ⇒ ∀M'. M -n->* M' ⇒ M' -n->* N
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT THEN SRW_TAC [][] THENL [
     METIS_TAC [relationTheory.RTC_RULES, bnf_reduction_to_self,
                nstar_betastar],
@@ -348,13 +370,14 @@ val nstar_bnf_triangle = store_thm(
       METIS_TAC [relationTheory.RTC_RULES],
       METIS_TAC [normorder_det]
     ]
-  ]);
+  ]
+QED
 
 
 
-val normstar_LAM = store_thm(
-  "normstar_LAM",
-  ``∀M N. LAM x M -n->* LAM x N ⇔ M -n->* N``,
+Theorem normstar_LAM:
+    ∀M N. LAM x M -n->* LAM x N ⇔ M -n->* N
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
     Q_TAC SUFF_TAC `∀M N. M -n->* N ⇒
                           ∀v M0 N0. (M = LAM v M0) ∧ (N = LAM v N0) ⇒
@@ -366,13 +389,14 @@ val normstar_LAM = store_thm(
     HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
     SRW_TAC [][] THEN
     METIS_TAC [normorder_rules, relationTheory.RTC_RULES]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["normstar_LAM"]
 
-val normstar_APPr = store_thm(
-  "normstar_APPr",
-  ``bnf M ∧ ¬is_abs M ⇒
-        (M @@ N -n->* P ⇔ ∃N'. (P = M @@ N') ∧ N -n->* N')``,
+Theorem normstar_APPr:
+    bnf M ∧ ¬is_abs M ⇒
+        (M @@ N -n->* P ⇔ ∃N'. (P = M @@ N') ∧ N -n->* N')
+Proof
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM] THEN CONJ_TAC THENL [
     Q_TAC SUFF_TAC `∀M₀ P. M₀ -n->* P ⇒
                             ∀M N. (M₀ = M @@ N) ∧ bnf M ∧ ¬is_abs M ⇒
@@ -390,21 +414,24 @@ val normstar_APPr = store_thm(
           THEN1 METIS_TAC [] THEN
     HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
     METIS_TAC [normorder_rules, relationTheory.RTC_RULES]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     -n->* congruences
    ---------------------------------------------------------------------- *)
 
-val nstar_LAM_I = store_thm(
-  "nstar_LAM_I",
-  ``M -n->* N ⇒ LAM v M -n->* LAM v N``,
-  SRW_TAC [][]);
+Theorem nstar_LAM_I:
+    M -n->* N ⇒ LAM v M -n->* LAM v N
+Proof
+  SRW_TAC [][]
+QED
 
-val normstar_APPr_I = store_thm(
-  "normstar_APPr_I",
-  ``bnf M ⇒ ¬is_abs M ⇒ N -n->* N' ⇒ M @@ N -n->* M @@ N'``,
-  SRW_TAC [][normstar_APPr]);
+Theorem normstar_APPr_I:
+    bnf M ⇒ ¬is_abs M ⇒ N -n->* N' ⇒ M @@ N -n->* M @@ N'
+Proof
+  SRW_TAC [][normstar_APPr]
+QED
 
 (* ----------------------------------------------------------------------
     Calculating normal order reducts
@@ -414,14 +441,14 @@ Definition noreduct_def:
   noreduct t = if bnf t then NONE else SOME (@t'. t -n-> t')
 End
 
-val noreduct_thm = store_thm(
-  "noreduct_thm",
-  ``(noreduct (LAM v M) = OPTION_MAP (LAM v) (noreduct M)) ∧
+Theorem noreduct_thm:
+    (noreduct (LAM v M) = OPTION_MAP (LAM v) (noreduct M)) ∧
     (noreduct (LAM v M @@ N) = SOME ([N/v]M)) ∧
     (¬is_abs M ⇒ (noreduct (M @@ N) =
                   if bnf M then OPTION_MAP (APP M) (noreduct N)
                   else OPTION_MAP (λM'. M' @@ N) (noreduct M))) ∧
-    (noreduct (VAR s) = NONE)``,
+    (noreduct (VAR s) = NONE)
+Proof
   SRW_TAC [][noreduct_def] THENL [
     SRW_TAC [][normorder_rwts] THEN
     `∃N. M -n-> N` by METIS_TAC [normorder_bnf] THEN
@@ -441,7 +468,8 @@ val noreduct_thm = store_thm(
     `∃M'. M -n-> M'` by METIS_TAC [normorder_bnf] THEN
     `∀M₂. M -n-> M₂ ⇔ (M₂ = M')` by METIS_TAC [normorder_det] THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
 Theorem noreduct_Yf[simp] :
     (noreduct (Yf f) = SOME (f @@ Yf f)) ∧
@@ -453,25 +481,27 @@ Proof
   SRW_TAC [][noreduct_thm, termTheory.lemma14b]
 QED
 
-val noreduct_characterisation = store_thm(
-  "noreduct_characterisation",
-  ``M -n-> N ⇔ (noreduct M = SOME N)``,
+Theorem noreduct_characterisation:
+    M -n-> N ⇔ (noreduct M = SOME N)
+Proof
   SRW_TAC [][noreduct_def] THEN Cases_on `bnf M` THEN SRW_TAC [][] THENL [
     METIS_TAC [normorder_bnf],
     `∃N₁. M -n-> N₁` by METIS_TAC [normorder_bnf] THEN
     `∀N₂. M -n-> N₂ ⇔ (N₂ = N₁)` by METIS_TAC [normorder_det] THEN
     SRW_TAC [][] THEN METIS_TAC []
-  ]);
+  ]
+QED
 
-val noreduct_bnf = store_thm(
-  "noreduct_bnf",
-  ``(noreduct M = NONE) = bnf M``,
-  SRW_TAC [][noreduct_def]);
+Theorem noreduct_bnf:
+    (noreduct M = NONE) = bnf M
+Proof
+  SRW_TAC [][noreduct_def]
+QED
 
 
-val noreduct_vsubst = store_thm(
-  "noreduct_vsubst",
-  ``∀t. noreduct ([VAR v/u] t) = OPTION_MAP (SUB (VAR v) u) (noreduct t)``,
+Theorem noreduct_vsubst:
+    ∀t. noreduct ([VAR v/u] t) = OPTION_MAP (SUB (VAR v) u) (noreduct t)
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][noreduct_thm, SUB_VAR] THENL [
     Cases_on `is_abs t` THENL [
@@ -491,11 +521,12 @@ val noreduct_vsubst = store_thm(
     ],
 
     Cases_on `noreduct t` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val noreduct_tpm = store_thm(
-  "noreduct_tpm",
-  ``∀t. noreduct (tpm π t) = OPTION_MAP (tpm π) (noreduct t)``,
+Theorem noreduct_tpm:
+    ∀t. noreduct (tpm π t) = OPTION_MAP (tpm π) (noreduct t)
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][noreduct_thm] THENL [
     Cases_on `is_abs t` THENL [
@@ -511,17 +542,19 @@ val noreduct_tpm = store_thm(
     ],
 
     Cases_on `noreduct t` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
 
-val noredAPP' = store_thm(
-  "noredAPP'",
-  ``~is_abs M ==> (noreduct (M @@ N) =
+Theorem noredAPP':
+    ~is_abs M ==> (noreduct (M @@ N) =
                      case noreduct M of
                        NONE => OPTION_MAP (APP M) (noreduct N)
-                     | SOME M' => SOME (M' @@ N))``,
+                     | SOME M' => SOME (M' @@ N))
+Proof
   SRW_TAC [][noreduct_thm, GSYM noreduct_bnf] THEN
-  Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) []);
+  Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 val _ = overload_on ("upcons", ``λx y. pcons x () y``)
 
@@ -564,25 +597,27 @@ Proof
   Cases_on `v` THEN SRW_TAC [][]
 QED
 
-val nopath_okpath = store_thm(
-  "nopath_okpath",
-  ``okpath (λM u N. M -n-> N) (nopath M)``,
+Theorem nopath_okpath:
+    okpath (λM u N. M -n-> N) (nopath M)
+Proof
   Q_TAC SUFF_TAC `∀p. (∃M. p = nopath M) ⇒ okpath (λM u N. M -n-> N) p`
         THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC okpath_co_ind THEN REPEAT GEN_TAC THEN
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [nopath_def])) THEN
   CONV_TAC LEFT_IMP_EXISTS_CONV THEN GEN_TAC THEN
   Cases_on `noreduct M'` THEN SRW_TAC [][] THEN
-  METIS_TAC [noreduct_characterisation]);
+  METIS_TAC [noreduct_characterisation]
+QED
 
-val option_case_CONG = store_thm(
-  "option_case_CONG",
-  ``(x = x') ⇒ (option_CASE x n f = option_CASE x' n f)``,
-  SRW_TAC [][]);
+Theorem option_case_CONG:
+    (x = x') ⇒ (option_CASE x n f = option_CASE x' n f)
+Proof
+  SRW_TAC [][]
+QED
 
-val normstar_nopath = store_thm(
-  "normstar_nopath",
-  ``M -n->* N ⇔ mem N (nopath M)``,
+Theorem normstar_nopath:
+    M -n->* N ⇔ mem N (nopath M)
+Proof
   EQ_TAC THENL [
     Q_TAC SUFF_TAC `∀M N. M -n->* N ⇒ mem N (nopath M)` THEN1 METIS_TAC []THEN
     HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
@@ -597,12 +632,13 @@ val normstar_nopath = store_thm(
     Cases_on `noreduct M` THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
     METIS_TAC [relationTheory.RTC_RULES, noreduct_characterisation]
-  ]);
+  ]
+QED
 
-val bnf_posn_is_length = store_thm(
-  "bnf_posn_is_length",
-  ``∀i M. i ∈ PL (nopath M) ∧ bnf (el i (nopath M)) ⇒
-          (length (nopath M) = SOME (i + 1))``,
+Theorem bnf_posn_is_length:
+    ∀i M. i ∈ PL (nopath M) ∧ bnf (el i (nopath M)) ⇒
+          (length (nopath M) = SOME (i + 1))
+Proof
   Induct THEN SRW_TAC [][] THENL [
     ONCE_REWRITE_TAC [nopath_def] THEN
     `noreduct M = NONE` by METIS_TAC [noreduct_bnf] THEN
@@ -613,11 +649,12 @@ val bnf_posn_is_length = store_thm(
     `length (nopath x) = SOME (i + 1)` by METIS_TAC [] THEN
     `finite (nopath x)` by METIS_TAC [finite_length] THEN
     SRW_TAC [][length_thm, arithmeticTheory.ADD1]
-  ]);
+  ]
+QED
 
-val has_bnf_finite_nopath = store_thm(
-  "has_bnf_finite_nopath",
-  ``has_bnf M ⇔ finite (nopath M)``,
+Theorem has_bnf_finite_nopath:
+    has_bnf M ⇔ finite (nopath M)
+Proof
   SRW_TAC [][has_bnf_thm, EQ_IMP_THM] THENL [
     `M -n->* N` by METIS_TAC [nstar_betastar_bnf] THEN
     `mem N (nopath M)` by METIS_TAC [normstar_nopath] THEN
@@ -642,23 +679,25 @@ val has_bnf_finite_nopath = store_thm(
       METIS_TAC [normorder_ccbeta, noreduct_characterisation,
                  relationTheory.RTC_RULES]
     ]
-  ]);
+  ]
+QED
 
-val nopath_el = store_thm(
-  "nopath_el",
-  ``∀i M. i ∈ PL (nopath M) ⇒
-          (nopath (el i (nopath M)) = drop i (nopath M))``,
+Theorem nopath_el:
+    ∀i M. i ∈ PL (nopath M) ⇒
+          (nopath (el i (nopath M)) = drop i (nopath M))
+Proof
   Induct THEN SRW_TAC [][] THEN
   POP_ASSUM MP_TAC THEN
   Q.SPEC_THEN `M` ASSUME_TAC nopath_def THEN
   POP_ASSUM (fn th => REWRITE_TAC [th]) THEN
-  Cases_on `noreduct M` THEN SRW_TAC [][]);
+  Cases_on `noreduct M` THEN SRW_TAC [][]
+QED
 
-val nopath_smaller = store_thm(
-  "nopath_smaller",
-  ``∀M N. M -n->* N ⇒
+Theorem nopath_smaller:
+    ∀M N. M -n->* N ⇒
           M ≠ N ∧ finite (nopath M) ⇒
-          THE (length (nopath N)) < THE (length (nopath M))``,
+          THE (length (nopath N)) < THE (length (nopath M))
+Proof
   REPEAT STRIP_TAC THEN
   `mem N (nopath M)` by METIS_TAC [normstar_nopath] THEN
   `∃i. i ∈ PL (nopath M) ∧ (N = el i (nopath M))`
@@ -673,7 +712,8 @@ val nopath_smaller = store_thm(
          by METIS_TAC [finite_length,
                        length_never_zero] THEN
       SRW_TAC [ARITH_ss][length_drop]) THEN
-  SRW_TAC [][nopath_el]);
+  SRW_TAC [][nopath_el]
+QED
 
 
 val Omega_def = chap2Theory.Omega_def
@@ -684,18 +724,20 @@ Proof
   SRW_TAC [][noreduct_thm, Omega_def]
 QED
 
-val Omega_loops = store_thm(
-  "Omega_loops",
-  ``Ω -n-> Ω``,
+Theorem Omega_loops:
+    Ω -n-> Ω
+Proof
   SRW_TAC [][noreduct_characterisation] THEN
-  SRW_TAC [][noreduct_thm, Omega_def]);
+  SRW_TAC [][noreduct_thm, Omega_def]
+QED
 
-val Omega_path_infinite = store_thm(
-  "Omega_path_infinite",
-  ``¬finite (nopath Ω)``,
+Theorem Omega_path_infinite:
+    ¬finite (nopath Ω)
+Proof
   Q_TAC SUFF_TAC `∀p. finite p ⇒ p ≠ nopath Ω` THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC finite_path_ind THEN SRW_TAC [][] THEN
-  ONCE_REWRITE_TAC [nopath_def] THEN SRW_TAC [][]);
+  ONCE_REWRITE_TAC [nopath_def] THEN SRW_TAC [][]
+QED
 
 Theorem Omega_has_no_bnf[simp] :
     ¬has_bnf Ω
@@ -703,9 +745,9 @@ Proof
   SRW_TAC [][has_bnf_finite_nopath, Omega_path_infinite]
 QED
 
-val last_of_finite_nopath = store_thm(
-  "last_of_finite_nopath",
-  ``finite (nopath M) ⇒ bnf (last (nopath M))``,
+Theorem last_of_finite_nopath:
+    finite (nopath M) ⇒ bnf (last (nopath M))
+Proof
   Q_TAC SUFF_TAC
         `∀p. finite p ⇒ ∀M. (nopath M = p) ⇒ bnf (last (nopath M))`
         THEN1 METIS_TAC [] THEN
@@ -717,7 +759,8 @@ val last_of_finite_nopath = store_thm(
     Q.SPEC_THEN `M` ASSUME_TAC nopath_def THEN
     Cases_on `noreduct M` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     SRW_TAC [][] THEN METIS_TAC []
-  ]);
+  ]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -754,78 +797,88 @@ val lemma2 = prove(
                optionTheory.THE_DEF]
   ]);
 
-val bnf_of_SOME = store_thm(
-  "bnf_of_SOME",
-  ``(bnf_of M = SOME N) ⇒ M -n->* N ∧ bnf N``,
+Theorem bnf_of_SOME:
+    (bnf_of M = SOME N) ⇒ M -n->* N ∧ bnf N
+Proof
   SRW_TAC [][bnf_of_def] THEN
   IMP_RES_TAC WhileTheory.OWHILE_ENDCOND THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
-  METIS_TAC [lemma2]);
+  METIS_TAC [lemma2]
+QED
 
-val has_bnf_of = store_thm(
-  "has_bnf_of",
-  ``has_bnf M ⇔ ∃N. bnf_of M = SOME N``,
+Theorem has_bnf_of:
+    has_bnf M ⇔ ∃N. bnf_of M = SOME N
+Proof
   EQ_TAC THENL [
     SRW_TAC [][has_bnf_finite_nopath] THEN
     ASSUME_TAC nopath_okpath THEN
     METIS_TAC [lemma1, last_of_finite_nopath, first_nopath],
 
     METIS_TAC [chap2Theory.has_bnf_def, bnf_of_SOME, nstar_lameq]
-  ]);
+  ]
+QED
 
-val bnf_of_NONE = store_thm(
-  "bnf_of_NONE",
-  ``(bnf_of M = NONE) ⇔ ¬has_bnf M``,
+Theorem bnf_of_NONE:
+    (bnf_of M = NONE) ⇔ ¬has_bnf M
+Proof
   REWRITE_TAC [has_bnf_of] THEN
-  Cases_on `bnf_of M` THEN SRW_TAC [][]);
+  Cases_on `bnf_of M` THEN SRW_TAC [][]
+QED
 
-val bnf_of_thm = store_thm(
-  "bnf_of_thm",
-  ``bnf_of M = if bnf M then SOME M else bnf_of (THE (noreduct M))``,
+Theorem bnf_of_thm:
+    bnf_of M = if bnf M then SOME M else bnf_of (THE (noreduct M))
+Proof
   SRW_TAC [][bnf_of_def] THEN1
     SRW_TAC [][Once WhileTheory.OWHILE_THM] THEN
-  SRW_TAC [][SimpLHS, Once WhileTheory.OWHILE_THM]);
+  SRW_TAC [][SimpLHS, Once WhileTheory.OWHILE_THM]
+QED
 
-val nstar_bnf_of_SOME_I = store_thm(
-  "nstar_bnf_of_SOME_I",
-  ``M -n->* N ∧ bnf N ⇒ (bnf_of M = SOME N)``,
+Theorem nstar_bnf_of_SOME_I:
+    M -n->* N ∧ bnf N ⇒ (bnf_of M = SOME N)
+Proof
   Q_TAC SUFF_TAC `∀M N. M -n->* N ⇒ bnf N ⇒ (bnf_of M = SOME N)`
         THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
   SRW_TAC [][Once bnf_of_thm] THEN1 METIS_TAC [normorder_bnf] THEN
-  FULL_SIMP_TAC (srw_ss()) [noreduct_characterisation]);
+  FULL_SIMP_TAC (srw_ss()) [noreduct_characterisation]
+QED
 
-val betastar_bnf_of_SOME_I = store_thm(
-  "betastar_bnf_of_SOME_I",
-  ``M -β->* N ∧ bnf N ⇒ (bnf_of M = SOME N)``,
-  METIS_TAC [nstar_bnf_of_SOME_I, normal_finds_bnf]);
+Theorem betastar_bnf_of_SOME_I:
+    M -β->* N ∧ bnf N ⇒ (bnf_of M = SOME N)
+Proof
+  METIS_TAC [nstar_bnf_of_SOME_I, normal_finds_bnf]
+QED
 
-val lameq_bnf_of_SOME_I = store_thm(
-  "lameq_bnf_of_SOME_I",
-  ``M == N ∧ bnf N ⇒ (bnf_of M = SOME N)``,
-  METIS_TAC [betastar_bnf_of_SOME_I, betastar_lameq_bnf]);
+Theorem lameq_bnf_of_SOME_I:
+    M == N ∧ bnf N ⇒ (bnf_of M = SOME N)
+Proof
+  METIS_TAC [betastar_bnf_of_SOME_I, betastar_lameq_bnf]
+QED
 
-val lameq_bnf_of_cong = store_thm(
-  "lameq_bnf_of_cong",
-  ``M == N ⇒ (bnf_of M = bnf_of N)``,
+Theorem lameq_bnf_of_cong:
+    M == N ⇒ (bnf_of M = bnf_of N)
+Proof
   Cases_on `bnf_of N` THENL [
     FULL_SIMP_TAC (srw_ss()) [bnf_of_NONE, chap2Theory.has_bnf_def] THEN
     METIS_TAC [chap2Theory.lameq_rules],
     IMP_RES_TAC bnf_of_SOME THEN STRIP_TAC THEN
     `M == x` by METIS_TAC [chap2Theory.lameq_rules, nstar_lameq] THEN
     METIS_TAC [lameq_bnf_of_SOME_I]
-  ]);
+  ]
+QED
 
-val lameq_has_bnf_cong = store_thm(
-  "lameq_has_bnf_cong",
-  ``M == N ⇒ (has_bnf M = has_bnf N)``,
+Theorem lameq_has_bnf_cong:
+    M == N ⇒ (has_bnf M = has_bnf N)
+Proof
   SRW_TAC [][has_bnf_of] THEN
-  METIS_TAC [lameq_bnf_of_cong, chap2Theory.lameq_rules]);
+  METIS_TAC [lameq_bnf_of_cong, chap2Theory.lameq_rules]
+QED
 
-val bnf_bnf_of = store_thm(
-  "bnf_bnf_of",
-  ``bnf M ⇒ (bnf_of M = SOME M)``,
-  SRW_TAC [][Once bnf_of_thm]);
+Theorem bnf_bnf_of:
+    bnf M ⇒ (bnf_of M = SOME M)
+Proof
+  SRW_TAC [][Once bnf_of_thm]
+QED
 
 Theorem bnf_of_Omega[simp] :
     bnf_of Ω = NONE
@@ -837,37 +890,42 @@ QED
     weak head reduction gives a congruence rule for -n->* of sorts
    ---------------------------------------------------------------------- *)
 
-val head_normorder = store_thm(
-  "head_normorder",
-  ``∀M N. M -h-> N ⇒ M -n-> N``,
+Theorem head_normorder:
+    ∀M N. M -h-> N ⇒ M -n-> N
+Proof
   HO_MATCH_MP_TAC hreduce1_ind THEN
-  SRW_TAC [][normorder_rules]);
+  SRW_TAC [][normorder_rules]
+QED
 
-val whstar_nstar = store_thm(
-  "whstar_nstar",
-  ``∀M N. M -w->* N ⇒ M -n->* N``,
+Theorem whstar_nstar:
+    ∀M N. M -w->* N ⇒ M -n->* N
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  METIS_TAC [relationTheory.RTC_RULES, wh_head, head_normorder]);
+  METIS_TAC [relationTheory.RTC_RULES, wh_head, head_normorder]
+QED
 
-val whead_normorder = store_thm(
-  "whead_normorder",
-  ``∀M N. M -w-> N ⇒ M -n-> N``,
-  METIS_TAC [wh_head, head_normorder]);
+Theorem whead_normorder:
+    ∀M N. M -w-> N ⇒ M -n-> N
+Proof
+  METIS_TAC [wh_head, head_normorder]
+QED
 
-val whead_norm_congL = store_thm(
-  "whead_norm_congL",
-  ``∀M₁ M₂. M₁ -w->* M₂ ⇒ ∀N. M₁ @@ N -n->* M₂ @@ N``,
+Theorem whead_norm_congL:
+    ∀M₁ M₂. M₁ -w->* M₂ ⇒ ∀N. M₁ @@ N -n->* M₂ @@ N
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT_RIGHT1 THEN SRW_TAC [][] THEN
   MATCH_MP_TAC (CONJUNCT2 (SPEC_ALL relationTheory.RTC_RULES_RIGHT1)) THEN
   Q.EXISTS_TAC `M₂ @@ N` THEN SRW_TAC [][] THEN
   IMP_RES_TAC whead_normorder THEN
   IMP_RES_TAC wh_is_abs THEN
-  SRW_TAC [][normorder_rules]);
+  SRW_TAC [][normorder_rules]
+QED
 
-val normwhnf_is_abs_rpreserved = store_thm(
-  "normwhnf_is_abs_rpreserved",
-  ``∀M N. M -n-> N ⇒ whnf M ∧ is_abs N ⇒ is_abs M``,
-  HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][]);
+Theorem normwhnf_is_abs_rpreserved:
+    ∀M N. M -n-> N ⇒ whnf M ∧ is_abs N ⇒ is_abs M
+Proof
+  HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][]
+QED
 
 
 Theorem whnf_is_abs_appstr:
@@ -968,21 +1026,24 @@ val normstar_to_abs_wstar = save_thm(
   "normstar_to_abs_wstar",
   SIMP_RULE (srw_ss() ++ DNF_ss) [AND_IMP_INTRO] normstar_to_abs_wstar0);
 
-val varappstar_not_is_abs = store_thm(
-  "varappstar_not_is_abs",
-  ``¬is_abs (VAR v ·· a)``,
+Theorem varappstar_not_is_abs:
+    ¬is_abs (VAR v ·· a)
+Proof
   Q.SPEC_THEN `VAR v ·· a` STRIP_ASSUME_TAC term_CASES THEN SRW_TAC [][] THEN
-  FULL_SIMP_TAC (srw_ss()) [lam_eq_appstar]);
+  FULL_SIMP_TAC (srw_ss()) [lam_eq_appstar]
+QED
 
-val normorder_preserves_is_abs = store_thm(
-  "normorder_preserves_is_abs",
-  ``∀M N. M -n-> N ⇒ is_abs M ⇒ is_abs N``,
-  HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][]);
-val nstar_preserves_is_abs = store_thm(
-  "nstar_preserves_is_abs",
-  ``∀M N. M -n->* N ⇒ is_abs M ⇒ is_abs N``,
+Theorem normorder_preserves_is_abs:
+    ∀M N. M -n-> N ⇒ is_abs M ⇒ is_abs N
+Proof
+  HO_MATCH_MP_TAC normorder_ind THEN SRW_TAC [][]
+QED
+Theorem nstar_preserves_is_abs:
+    ∀M N. M -n->* N ⇒ is_abs M ⇒ is_abs N
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_STRONG_INDUCT THEN
-  METIS_TAC [relationTheory.RTC_RULES, normorder_preserves_is_abs]);
+  METIS_TAC [relationTheory.RTC_RULES, normorder_preserves_is_abs]
+QED
 
 
 val normstar_to_vhead_wstar0 = prove(

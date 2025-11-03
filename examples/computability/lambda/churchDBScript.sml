@@ -464,13 +464,14 @@ Proof
   SIMP_TAC (bsrw_ss()) [cDB_thm]
 QED
 
-val wh_cis_abs = store_thm(
-  "wh_cis_abs",
-  ``cis_abs @@ cDB t -w->* cB (is_dABS t)``,
+Theorem wh_cis_abs:
+    cis_abs @@ cDB t -w->* cB (is_dABS t)
+Proof
   SIMP_TAC (whfy (srw_ss())) [cis_abs_def, bnf_whnf] THEN
   Cases_on `t` THEN
   SIMP_TAC (whfy (srw_ss())) [cDB_def, bnf_whnf, ciDB_def] THEN
-  SIMP_TAC (whfy (srw_ss())) [chap2Theory.K_def, bnf_whnf]);
+  SIMP_TAC (whfy (srw_ss())) [chap2Theory.K_def, bnf_whnf]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -487,58 +488,65 @@ Definition cbnf_def:
           @@ (LAM "t" (LAM "r" (VAR "r")))
 End
 
-val FV_cbnf = store_thm(
-  "FV_cbnf[simp]",
-  ``FV cbnf = {}``,
-  SRW_TAC [][cbnf_def, EXTENSION, DISJ_IMP_EQ]);
+Theorem FV_cbnf[simp]:
+    FV cbnf = {}
+Proof
+  SRW_TAC [][cbnf_def, EXTENSION, DISJ_IMP_EQ]
+QED
 
 
 val cbnf_equiv = brackabs_equiv [] cbnf_def
-val cbnf_behaviour = store_thm(
-  "cbnf_behaviour",
-  ``cbnf @@ cDB t -n->* cB (dbnf t)``,
+Theorem cbnf_behaviour:
+    cbnf @@ cDB t -n->* cB (dbnf t)
+Proof
   SIMP_TAC (bsrw_ss()) [cbnf_equiv] THEN
   Induct_on `t` THEN
   ASM_SIMP_TAC (bsrw_ss()) [termrec_behaviour, cand_behaviour,
-                            cis_abs_behaviour, cnot_behaviour]);
+                            cis_abs_behaviour, cnot_behaviour]
+QED
 
-val wh_cdV = store_thm(
-  "wh_cdV",
-  ``cdV @@ x @@ v @@ c @@ a -w->* v @@ x``,
+Theorem wh_cdV:
+    cdV @@ x @@ v @@ c @@ a -w->* v @@ x
+Proof
   unvarify_tac whstar_substitutive THEN REWRITE_TAC [cdV_def] THEN
-  FRESH_TAC THEN ASM_SIMP_TAC (whfy(srw_ss())) []);
+  FRESH_TAC THEN ASM_SIMP_TAC (whfy(srw_ss())) []
+QED
 
-val wh_cdAPP = store_thm(
-  "wh_cdAPP",
-  ``cdAPP @@ t1 @@ t2 @@ v @@ c @@ a -w->*
-    c @@ (t1 @@ v @@ c @@ a) @@ (t2 @@ v @@ c @@ a)``,
+Theorem wh_cdAPP:
+    cdAPP @@ t1 @@ t2 @@ v @@ c @@ a -w->*
+    c @@ (t1 @@ v @@ c @@ a) @@ (t2 @@ v @@ c @@ a)
+Proof
   REWRITE_TAC [cdAPP_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) []);
+  ASM_SIMP_TAC (whfy(srw_ss())) []
+QED
 
-val wh_cdABS = store_thm(
-  "wh_cdABS",
-  ``cdABS @@ t @@ v @@ c @@ a -w->* a @@ (t @@ v @@ c @@ a)``,
+Theorem wh_cdABS:
+    cdABS @@ t @@ v @@ c @@ a -w->* a @@ (t @@ v @@ c @@ a)
+Proof
   REWRITE_TAC [cdABS_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) []);
+  ASM_SIMP_TAC (whfy(srw_ss())) []
+QED
 
 
 
-val wh_termrec_comb = store_thm(
-  "wh_termrec_comb",
-  ``termrec_comb @@ t @@ r1 @@ r2 @@ f -w->*
+Theorem wh_termrec_comb:
+    termrec_comb @@ t @@ r1 @@ r2 @@ f -w->*
     f @@ (cdAPP @@ (cfst @@ r1) @@ (cfst @@ r2))
       @@ (t @@ (cfst @@ r1) @@ (cfst @@ r2)
-            @@ (csnd @@ r1) @@ (csnd @@ r2))``,
+            @@ (csnd @@ r1) @@ (csnd @@ r2))
+Proof
   unvarify_tac whstar_substitutive THEN
   REWRITE_TAC [termrec_comb_def] THEN FRESH_TAC THEN
-  ASM_SIMP_TAC (whfy (srw_ss())) [tpm_fresh, wh_cpair]);
+  ASM_SIMP_TAC (whfy (srw_ss())) [tpm_fresh, wh_cpair]
+QED
 
-val wh_termrec_abs = store_thm(
-  "wh_termrec_abs",
-  ``termrec_abs @@ t @@ r @@ f -w->*
-    f @@ (cdABS @@ (cfst @@ r)) @@ (t @@ (cfst @@ r) @@ (csnd @@ r))``,
+Theorem wh_termrec_abs:
+    termrec_abs @@ t @@ r @@ f -w->*
+    f @@ (cdABS @@ (cfst @@ r)) @@ (t @@ (cfst @@ r) @@ (csnd @@ r))
+Proof
   REWRITE_TAC [termrec_abs_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) [wh_cpair]);
+  ASM_SIMP_TAC (whfy(srw_ss())) [wh_cpair]
+QED
 
 Theorem wh_cbnf:
   FV M = ∅ ∧ M -n->* cDB t ⇒ cbnf @@ M -w->* cB (dbnf t)
@@ -651,14 +659,16 @@ Definition cnsub_def:
         @@ VAR "s" @@ VAR "k")))
 End
 
-val FV_cnsub = store_thm(
-  "FV_cnsub[simp]",
-  ``FV cnsub = {}``,
-  SRW_TAC [][cnsub_def, EXTENSION, DISJ_IMP_EQ]);
-val is_abs_cnsub = store_thm(
-  "is_abs_cnsub[simp]",
-  ``is_abs cnsub``,
-  SRW_TAC [][cnsub_def]);
+Theorem FV_cnsub[simp]:
+    FV cnsub = {}
+Proof
+  SRW_TAC [][cnsub_def, EXTENSION, DISJ_IMP_EQ]
+QED
+Theorem is_abs_cnsub[simp]:
+    is_abs cnsub
+Proof
+  SRW_TAC [][cnsub_def]
+QED
 
 val Ccless_eta = prove(
   ``LAM x (C @@ cless @@ VAR x) == C @@ cless``,
@@ -672,16 +682,17 @@ val Ccless_eta = prove(
 
 val cnsub_equiv = brackabs_equiv [Ccless_eta] cnsub_def
 
-val cnsub_behaviour = store_thm(
-  "cnsub_behaviour",
-  ``∀u i t. cnsub @@ cDB t @@ church i @@ cDB u -n->* cDB (nsub t i u)``,
+Theorem cnsub_behaviour:
+    ∀u i t. cnsub @@ cDB t @@ church i @@ cDB u -n->* cDB (nsub t i u)
+Proof
   SIMP_TAC (bsrw_ss()) [cnsub_equiv] THEN
   Induct THEN
   ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, cminus_behaviour, cdV_behaviour,
                             cless_behaviour, ceqnat_behaviour,
                             cdAPP_behaviour, clift_behaviour,
                             cplus_behaviour, cdABS_behaviour] THEN
-  SRW_TAC [][] THEN ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour]);
+  SRW_TAC [][] THEN ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour]
+QED
 
 (* ----------------------------------------------------------------------
     norm_reduct - get the normal order reduct, if there is one.
@@ -712,17 +723,18 @@ Definition cnoreduct_def:
     @@ (LAM "t0" (LAM "r" (cdABS @@ VAR "r")))
 End
 
-val FV_cnoreduct = store_thm(
-  "FV_cnoreduct[simp]",
-  ``FV cnoreduct = {}``,
-  SRW_TAC [][cnoreduct_def, EXTENSION, DISJ_IMP_EQ]);
+Theorem FV_cnoreduct[simp]:
+    FV cnoreduct = {}
+Proof
+  SRW_TAC [][cnoreduct_def, EXTENSION, DISJ_IMP_EQ]
+QED
 
 val cnoreduct_equiv = brackabs_equiv [] cnoreduct_def
 
-val cnoreduct_correct = store_thm(
-  "cnoreduct_correct",
-  ``∀d. cnoreduct @@ cDB d -n->* if dbnf d then cDB d
-                                 else cDB (THE (dnoreduct d))``,
+Theorem cnoreduct_correct:
+    ∀d. cnoreduct @@ cDB d -n->* if dbnf d then cDB d
+                                 else cDB (THE (dnoreduct d))
+Proof
   Q_TAC SUFF_TAC `
     ∀d. (dbnf d ⇒ cnoreduct @@ cDB d -n->* cDB d) ∧
         (¬dbnf d ⇒ cnoreduct @@ cDB d -n->* cDB (THE (dnoreduct d)))
@@ -754,17 +766,19 @@ val cnoreduct_correct = store_thm(
     ASM_SIMP_TAC (bsrw_ss()) [Abbr`ABS`, cdABS_behaviour] THEN
     STRIP_TAC THEN IMP_RES_TAC notbnf_dnoreduct THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
 
-val cnoreduct_behaviour = store_thm(
-  "cnoreduct_behaviour",
-  ``∀t. ¬bnf t ⇒
+Theorem cnoreduct_behaviour:
+    ∀t. ¬bnf t ⇒
            cnoreduct @@ cDB (fromTerm t) -n->*
-           cDB (fromTerm (THE (noreduct t)))``,
+           cDB (fromTerm (THE (noreduct t)))
+Proof
   SIMP_TAC (bsrw_ss()) [cnoreduct_correct] THEN
   REPEAT STRIP_TAC THEN
-  Cases_on `noreduct t` THEN FULL_SIMP_TAC (srw_ss()) [noreduct_bnf]);
+  Cases_on `noreduct t` THEN FULL_SIMP_TAC (srw_ss()) [noreduct_bnf]
+QED
 
 val cnoreduct_behaviour' =
     SIMP_RULE (srw_ss()) [] (SPEC ``toTerm d`` cnoreduct_behaviour)
@@ -784,21 +798,23 @@ Definition cichurch_def:
        @@ (LAM "r" (cdAPP @@ (cdV @@ church 0) @@ VAR "r")))
 End
 
-val FV_cichurch = store_thm(
-  "FV_cichurch[simp]",
-  ``FV cichurch = {}``,
-  SRW_TAC [][FV_EMPTY, cichurch_def]);
+Theorem FV_cichurch[simp]:
+    FV cichurch = {}
+Proof
+  SRW_TAC [][FV_EMPTY, cichurch_def]
+QED
 
 val FUNPOW_SUC = arithmeticTheory.FUNPOW_SUC
 
-val cichurch_behaviour = store_thm(
-  "cichurch_behaviour",
-  ``cichurch @@ church n -n->* cDB (fromTerm (FUNPOW (APP (VAR (n2s 0))) n
-                                                     (VAR (n2s 1))))``,
+Theorem cichurch_behaviour:
+    cichurch @@ church n -n->* cDB (fromTerm (FUNPOW (APP (VAR (n2s 0))) n
+                                                     (VAR (n2s 1))))
+Proof
   SIMP_TAC (bsrw_ss()) [cichurch_def, cdV_behaviour] THEN
   Induct_on `n` THEN
   ASM_SIMP_TAC (bsrw_ss()) [church_thm, cdV_behaviour, cdAPP_behaviour,
-                            FUNPOW_SUC]);
+                            FUNPOW_SUC]
+QED
 
 (* ----------------------------------------------------------------------
     cchurch
@@ -811,26 +827,30 @@ Definition cchurch_def:
   cchurch = LAM "n" (cdABS @@ (cdABS @@ (cichurch @@ VAR "n")))
 End
 
-val FV_cchurch = store_thm(
-  "FV_cchurch[simp]",
-  ``FV cchurch = {}``,
-  SRW_TAC [][FV_EMPTY, cchurch_def]);
+Theorem FV_cchurch[simp]:
+    FV cchurch = {}
+Proof
+  SRW_TAC [][FV_EMPTY, cchurch_def]
+QED
 
-val fromTerm_funpow_app = store_thm(
-  "fromTerm_funpow_app",
-  ``fromTerm (FUNPOW (APP f) n x) =
-      FUNPOW (dAPP (fromTerm f)) n (fromTerm x)``,
-  Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
+Theorem fromTerm_funpow_app:
+    fromTerm (FUNPOW (APP f) n x) =
+      FUNPOW (dAPP (fromTerm f)) n (fromTerm x)
+Proof
+  Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]
+QED
 
-val lift_funpow_dAPP = store_thm(
-  "lift_funpow_dAPP",
-  ``lift (FUNPOW (dAPP f) n x) i = FUNPOW (dAPP (lift f i)) n (lift x i)``,
-  Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
+Theorem lift_funpow_dAPP:
+    lift (FUNPOW (dAPP f) n x) i = FUNPOW (dAPP (lift f i)) n (lift x i)
+Proof
+  Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]
+QED
 
-val sub_funpow_dAPP = store_thm(
-  "sub_funpow_dAPP",
-  ``sub M v (FUNPOW (dAPP f) n x) = FUNPOW (dAPP (sub M v f)) n (sub M v x)``,
-  Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]);
+Theorem sub_funpow_dAPP:
+    sub M v (FUNPOW (dAPP f) n x) = FUNPOW (dAPP (sub M v f)) n (sub M v x)
+Proof
+  Induct_on `n` THEN SRW_TAC [][FUNPOW_SUC]
+QED
 
 val cchurch_behaviour = bstore_thm(
   "cchurch_behaviour",
@@ -855,18 +875,20 @@ Definition cdbsize_def:
               (cplus @@ (cplus @@ VAR "r1" @@ VAR "r2") @@ church 1)))
        @@ (cplus @@ church 1))
 End
-val FV_cdbsize = store_thm(
-  "FV_cdbsize[simp]",
-  ``FV cdbsize = {}``,
-  SRW_TAC [][EXTENSION, cdbsize_def, DISJ_IMP_EQ]);
+Theorem FV_cdbsize[simp]:
+    FV cdbsize = {}
+Proof
+  SRW_TAC [][EXTENSION, cdbsize_def, DISJ_IMP_EQ]
+QED
 
 val cdbsize_equiv = brackabs_equiv [] cdbsize_def
 
-val cdbsize_behaviour = store_thm(
-  "cdbsize_behaviour",
-  ``cdbsize @@ cDB t -n->* church (dbsize t)``,
+Theorem cdbsize_behaviour:
+    cdbsize @@ cDB t -n->* church (dbsize t)
+Proof
   SIMP_TAC (bsrw_ss()) [cdbsize_equiv] THEN Induct_on `t` THEN
-  ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [cDB_thm, cplus_behaviour]);
+  ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss) [cDB_thm, cplus_behaviour]
+QED
 
 (* ----------------------------------------------------------------------
     cis_church
@@ -882,19 +904,21 @@ Definition cis_varn_def:
                                    @@ (K @@ cB F)))
 End
 
-val FV_cis_varn = store_thm(
-  "FV_cis_varn[simp]",
-  ``FV cis_varn = {}``,
-  SRW_TAC [][cis_varn_def, EXTENSION, DISJ_IMP_EQ]);
+Theorem FV_cis_varn[simp]:
+    FV cis_varn = {}
+Proof
+  SRW_TAC [][cis_varn_def, EXTENSION, DISJ_IMP_EQ]
+QED
 
 val cis_varn_equiv = brackabs_equiv [] cis_varn_def
 
-val cis_varn_behaviour = store_thm(
-  "cis_varn_behaviour",
-  ``cis_varn @@ church n @@ cDB t -n->* cB (t = dV n)``,
+Theorem cis_varn_behaviour:
+    cis_varn @@ church n @@ cDB t -n->* cB (t = dV n)
+Proof
   SIMP_TAC (bsrw_ss()) [cis_varn_equiv] THEN
   Cases_on `t` THEN
-  SIMP_TAC (bsrw_ss()) [cDB_thm, ceqnat_behaviour, EQ_IMP_THM]);
+  SIMP_TAC (bsrw_ss()) [cDB_thm, ceqnat_behaviour, EQ_IMP_THM]
+QED
 
 (* cis_ichurch determines if a term is the application of some number of
    dV 0 terms to a dV 1 *)
@@ -907,16 +931,17 @@ Definition cis_ichurch_def:
           @@ (K @@ (K @@ cB F))
 End
 
-val FV_cis_ichurch = store_thm(
-  "FV_cis_ichurch[simp]",
-  ``FV cis_ichurch = {}``,
-  SRW_TAC [][EXTENSION, cis_ichurch_def, DISJ_IMP_EQ]);
+Theorem FV_cis_ichurch[simp]:
+    FV cis_ichurch = {}
+Proof
+  SRW_TAC [][EXTENSION, cis_ichurch_def, DISJ_IMP_EQ]
+QED
 
 val cis_ichurch_equiv = brackabs_equiv [] cis_ichurch_def
 
-val cis_ichurch_behaviour = store_thm(
-  "cis_ichurch_behaviour",
-  ``cis_ichurch @@ cDB t -n->* cB (∃n. t = FUNPOW (dAPP (dV 0)) n (dV 1))``,
+Theorem cis_ichurch_behaviour:
+    cis_ichurch @@ cDB t -n->* cB (∃n. t = FUNPOW (dAPP (dV 0)) n (dV 1))
+Proof
   SIMP_TAC (bsrw_ss()) [cis_ichurch_equiv] THEN Induct_on `t` THEN
   ASM_SIMP_TAC (bsrw_ss()) [termrec_behaviour, ceqnat_behaviour,
                             cand_behaviour, cis_varn_behaviour]
@@ -934,7 +959,8 @@ val cis_ichurch_behaviour = store_thm(
     ],
 
     Cases_on `n` THEN SRW_TAC [][FUNPOW_SUC]
-  ]);
+  ]
+QED
 
 Definition cis_church_def:
   cis_church =
@@ -947,16 +973,17 @@ Definition cis_church_def:
                          @@ VAR "t")))
 End
 
-val FV_cis_church = store_thm(
-  "FV_cis_church[simp]",
-  ``FV cis_church = {}``,
-  SRW_TAC [][cis_church_def, EXTENSION, DISJ_IMP_EQ]);
+Theorem FV_cis_church[simp]:
+    FV cis_church = {}
+Proof
+  SRW_TAC [][cis_church_def, EXTENSION, DISJ_IMP_EQ]
+QED
 
 val cis_church_equiv = brackabs_equiv [] cis_church_def
 
-val cis_church_behaviour = store_thm(
-  "cis_church_behaviour",
-  ``cis_church @@ cDB t -n->* cB (is_church (toTerm t))``,
+Theorem cis_church_behaviour:
+    cis_church @@ cDB t -n->* cB (is_church (toTerm t))
+Proof
   SIMP_TAC (bsrw_ss()) [cis_church_equiv] THEN
   Cases_on `t` THEN SIMP_TAC (bsrw_ss()) [termrec_behaviour] THENL [
     SRW_TAC [][is_church_def],
@@ -994,7 +1021,8 @@ val cis_church_behaviour = store_thm(
       SRW_TAC [][] THEN Q.EXISTS_TAC `n` THEN SRW_TAC [ARITH_ss][] THEN
       Induct_on `n` THEN SRW_TAC [ARITH_ss][FUNPOW_SUC]
     ]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     cforceNum
@@ -1008,30 +1036,33 @@ Definition cforce_num_def:
                       @@ church 0)
 End
 
-val FV_cforce_num = store_thm(
-  "FV_cforce_num[simp]",
-  ``FV cforce_num = {}``,
-  SRW_TAC [][EXTENSION, cforce_num_def]);
+Theorem FV_cforce_num[simp]:
+    FV cforce_num = {}
+Proof
+  SRW_TAC [][EXTENSION, cforce_num_def]
+QED
 
 val cforce_num_equiv = brackabs_equiv [] cforce_num_def
 
-val dbsize_fromTerm = store_thm(
-  "dbsize_fromTerm[simp]",
-  ``∀t. dbsize (fromTerm t) = size t``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+Theorem dbsize_fromTerm[simp]:
+    ∀t. dbsize (fromTerm t) = size t
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
 Theorem size_toTerm[simp] =
   dbsize_fromTerm |> Q.SPEC `toTerm d` |> REWRITE_RULE [fromtoTerm] |> SYM
 
-val cforce_num_behaviour = store_thm(
-  "cforce_num_behaviour[betasimp]",
-  ``cforce_num @@ cDB t -n->* church (force_num (toTerm t))``,
+Theorem cforce_num_behaviour[betasimp]:
+    cforce_num @@ cDB t -n->* church (force_num (toTerm t))
+Proof
   SIMP_TAC (bsrw_ss()) [cforce_num_equiv, cdbsize_behaviour, cdiv_behaviour,
                         cminus_behaviour, cis_church_behaviour] THEN
   Cases_on `is_church (toTerm t)` THENL [
     ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour, force_num_size],
     ASM_SIMP_TAC (bsrw_ss()) [force_num_def, cB_behaviour]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     cciDB : the encoded/computing version of ciDB
@@ -1050,19 +1081,21 @@ Definition cciDB_def:
                     (cdAPP @@ (cdV @@ church (s2n "a")) @@ VAR "r")))
 End
 
-val FV_cciDB = store_thm(
-  "FV_cciDB[simp]",
-  ``FV cciDB = {}``,
-  SRW_TAC [][cciDB_def, FV_EMPTY, DISJ_IMP_EQ]);
+Theorem FV_cciDB[simp]:
+    FV cciDB = {}
+Proof
+  SRW_TAC [][cciDB_def, FV_EMPTY, DISJ_IMP_EQ]
+QED
 
-val cciDB_behaviour = store_thm(
-  "cciDB_behaviour",
-  ``cciDB @@ cDB dBt -n->* cDB (fromTerm (ciDB dBt))``,
+Theorem cciDB_behaviour:
+    cciDB @@ cDB dBt -n->* cDB (fromTerm (ciDB dBt))
+Proof
   SIMP_TAC (bsrw_ss()) [cciDB_def, cdV_behaviour] THEN
   Induct_on `dBt` THEN
   ASM_SIMP_TAC (bsrw_ss()) [cDB_thm, cdV_behaviour, cchurch_behaviour,
                             cdAPP_behaviour] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [ciDB_def]);
+  ASM_SIMP_TAC (bsrw_ss()) [ciDB_def]
+QED
 
 (* ----------------------------------------------------------------------
     ccDB : the encoded version of cDB
@@ -1073,17 +1106,19 @@ Definition ccDB_def:
                     (cdLAM @@ church (s2n "c") @@
                        (cdLAM @@ church (s2n "a") @@ (cciDB @@ VAR "t"))))
 End
-val FV_ccDB = store_thm(
-  "FV_ccDB[simp]",
-  ``FV ccDB = {}``,
-  SRW_TAC [][FV_EMPTY, ccDB_def]);
+Theorem FV_ccDB[simp]:
+    FV ccDB = {}
+Proof
+  SRW_TAC [][FV_EMPTY, ccDB_def]
+QED
 
-val ccDB_behaviour = store_thm(
-  "ccDB_behaviour",
-  ``ccDB @@ (cDB dbt) -n->* cDB (fromTerm (cDB dbt))``,
+Theorem ccDB_behaviour:
+    ccDB @@ (cDB dbt) -n->* cDB (fromTerm (cDB dbt))
+Proof
   SIMP_TAC (bsrw_ss()) [ccDB_def, cciDB_behaviour, cdLAM_behaviour] THEN
   Q.SPEC_THEN `dbt` ASSUME_TAC cDB_def THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 (* ----------------------------------------------------------------------
     enumerations are computable
@@ -1106,14 +1141,15 @@ Theorem FV_cdBnum[simp]:
 Proof SRW_TAC [][cdBnum_def]
 QED
 
-val cdBnum_behaviour = store_thm(
-  "cdBnum_behaviour",
-  ``cdBnum @@ cDB t -n->* church (dBnum t)``,
+Theorem cdBnum_behaviour:
+    cdBnum @@ cDB t -n->* church (dBnum t)
+Proof
   SIMP_TAC (bsrw_ss()) [cdBnum_def] THEN Induct_on `t` THEN
   ASM_SIMP_TAC (bsrw_ss() ++ ARITH_ss)
                [cDB_thm, dBnum_def, cmult_behaviour,
                 cnpair_behaviour, csuc_behaviour,
-                arithmeticTheory.ADD1, cplus_behaviour]);
+                arithmeticTheory.ADD1, cplus_behaviour]
+QED
 
 Definition cndbsuc_def:
   cndbsuc =
@@ -1127,44 +1163,49 @@ Definition cndbsuc_def:
             @@ (cmod @@ VAR "n" @@ church 3)
             @@ (cdiv @@ VAR "n" @@ church 3)))
 End
-val FV_cndbsuc = store_thm(
-  "FV_cndbsuc[simp]",
-  ``FV cndbsuc = {}``,
-  SRW_TAC [][cndbsuc_def, EXTENSION, DISJ_IMP_EQ]);
+Theorem FV_cndbsuc[simp]:
+    FV cndbsuc = {}
+Proof
+  SRW_TAC [][cndbsuc_def, EXTENSION, DISJ_IMP_EQ]
+QED
 
-val cndbsuc_dV_behaviour = store_thm(
-  "cndbsuc_dV_behaviour",
-  ``(n MOD 3 = 0) ⇒
-    cndbsuc @@ r @@ church n -n->* cDB (dV (n DIV 3))``,
+Theorem cndbsuc_dV_behaviour:
+    (n MOD 3 = 0) ⇒
+    cndbsuc @@ r @@ church n -n->* cDB (dV (n DIV 3))
+Proof
   SIMP_TAC (bsrw_ss()) [cndbsuc_def] THEN FRESH_TAC THEN
   ASM_SIMP_TAC (bsrw_ss()) [tpm_fresh, cmod_behaviour, cis_zero_behaviour,
-                            cB_behaviour, cdiv_behaviour, cdV_behaviour]);
+                            cB_behaviour, cdiv_behaviour, cdV_behaviour]
+QED
 
 
-val is_abs_cmoddiv = store_thm(
-  "is_abs_cmoddiv[simp]",
-  ``is_abs cmod ∧ is_abs cdiv``,
-  SRW_TAC [][cmod_def, cdiv_def]);
+Theorem is_abs_cmoddiv[simp]:
+    is_abs cmod ∧ is_abs cdiv
+Proof
+  SRW_TAC [][cmod_def, cdiv_def]
+QED
 
 val cndbsuc_eqn = brackabs_equiv [] cndbsuc_def
 
-val cndbsuc_dAPP_behaviour = store_thm(
-  "cndbsuc_dAPP_behaviour",
-  ``(n MOD 3 ≠ 0) ∧ (n MOD 3 = 1) ⇒
+Theorem cndbsuc_dAPP_behaviour:
+    (n MOD 3 ≠ 0) ∧ (n MOD 3 = 1) ⇒
     cndbsuc @@ r @@ church n ==
     cdAPP @@ (r @@ (cnfst @@ church (n DIV 3)))
-          @@ (r @@ (cnsnd @@ church (n DIV 3)))``,
+          @@ (r @@ (cnsnd @@ church (n DIV 3)))
+Proof
   STRIP_TAC THEN
   ASM_SIMP_TAC (bsrw_ss()) [cndbsuc_eqn, cmod_behaviour, cis_zero_behaviour,
-                            ceqnat_behaviour, cB_behaviour, cdiv_behaviour]);
+                            ceqnat_behaviour, cB_behaviour, cdiv_behaviour]
+QED
 
-val cndbsuc_dABS_behaviour = store_thm(
-  "cndbsuc_dABS_behaviour",
-  ``(n MOD 3 ≠ 0) ∧ (n MOD 3 ≠ 1) ⇒
-    cndbsuc @@ r @@ church n == cdABS @@ (r @@ church (n DIV 3))``,
+Theorem cndbsuc_dABS_behaviour:
+    (n MOD 3 ≠ 0) ∧ (n MOD 3 ≠ 1) ⇒
+    cndbsuc @@ r @@ church n == cdABS @@ (r @@ church (n DIV 3))
+Proof
   STRIP_TAC THEN
   ASM_SIMP_TAC (bsrw_ss()) [cndbsuc_eqn, cmod_behaviour, cis_zero_behaviour,
-                            ceqnat_behaviour, cB_behaviour, cdiv_behaviour]);
+                            ceqnat_behaviour, cB_behaviour, cdiv_behaviour]
+QED
 
 Definition cnumdB0_def:
   cnumdB0 =
@@ -1176,14 +1217,15 @@ Definition cnumdB0_def:
         @@ (VAR "r" @@ VAR "n")))))
 End
 
-val FV_cnumdB0 = store_thm(
-  "FV_cnumdB0[simp]",
-  ``FV cnumdB0 = {}``,
-  SRW_TAC [][cnumdB0_def, EXTENSION, DISJ_IMP_EQ])
+Theorem FV_cnumdB0[simp]:
+    FV cnumdB0 = {}
+Proof
+  SRW_TAC [][cnumdB0_def, EXTENSION, DISJ_IMP_EQ]
+QED
 
-val cnumdB0_behaviour = store_thm(
-  "cnumdB0_behaviour",
-  ``n ≤ c ⇒ cnumdB0 @@ church c @@ church n -n->* cDB (numdB n)``,
+Theorem cnumdB0_behaviour:
+    n ≤ c ⇒ cnumdB0 @@ church c @@ church n -n->* cDB (numdB n)
+Proof
   Q.ID_SPEC_TAC `n` THEN SIMP_TAC (bsrw_ss()) [cnumdB0_def] THEN
   Induct_on `c` THEN
   SIMP_TAC (bsrw_ss()) [natrec_behaviour, cdV_behaviour,
@@ -1221,16 +1263,18 @@ val cnumdB0_behaviour = store_thm(
     ASM_SIMP_TAC (bsrw_ss()) [cB_behaviour] THEN
     `n ≤ c` by SRW_TAC [ARITH_ss][Abbr`N`] THEN
     ASM_SIMP_TAC (bsrw_ss()) []
-  ]);
+  ]
+QED
 
 Definition cnumdB_def:
   cnumdB = LAM "n" (cnumdB0 @@ VAR "n" @@ VAR "n")
 End
 
-val FV_cnumdB = store_thm(
-  "FV_cnumdB[simp]",
-  ``FV cnumdB = {}``,
-  SRW_TAC [][cnumdB_def]);
+Theorem FV_cnumdB[simp]:
+    FV cnumdB = {}
+Proof
+  SRW_TAC [][cnumdB_def]
+QED
 
 val cnumdB_behaviour = bstore_thm(
   "cnumdB_behaviour",
@@ -1252,10 +1296,11 @@ Definition csteps_def:
              @@ VAR "t"))
 End
 
-val FV_csteps = store_thm(
-  "FV_csteps[simp]",
-  ``FV csteps = {}``,
-  SRW_TAC [][csteps_def, pred_setTheory.EXTENSION, DISJ_IMP_EQ]);
+Theorem FV_csteps[simp]:
+    FV csteps = {}
+Proof
+  SRW_TAC [][csteps_def, pred_setTheory.EXTENSION, DISJ_IMP_EQ]
+QED
 
 val csteps_eqn = brackabs_equiv [] csteps_def
 
@@ -1263,16 +1308,17 @@ val cnoreduct_behaviour' =
     cnoreduct_behaviour |> Q.SPEC `toTerm t`
                         |> SIMP_RULE (srw_ss()) []
 
-val csteps_behaviour = store_thm(
-  "csteps_behaviour",
-  ``∀n t.
-      csteps @@ church n @@ cDB t -n->* cDB (fromTerm (steps n (toTerm t)))``,
+Theorem csteps_behaviour:
+    ∀n t.
+      csteps @@ church n @@ cDB t -n->* cDB (fromTerm (steps n (toTerm t)))
+Proof
   SIMP_TAC (bsrw_ss()) [csteps_eqn] THEN
   Induct THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchnumTheory.church_thm, cbnf_behaviour] THEN
   Q.X_GEN_TAC `t` THEN Cases_on `dbnf t` THEN
   ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour,
-                            cnoreduct_behaviour']);
+                            cnoreduct_behaviour']
+QED
 
 (* ----------------------------------------------------------------------
     Computable version of bnf_of, bringing us pretty well all the way to
@@ -1288,15 +1334,16 @@ End
 
 val cbnf_ofk_eqn = brackabs_equiv [] cbnf_ofk_def
 
-val FV_cbnf_ofk = store_thm(
-  "FV_cbnf_ofk[simp]",
-  ``FV cbnf_ofk = {}``,
-  SRW_TAC [][EXTENSION, cbnf_ofk_def, DISJ_IMP_EQ]);
+Theorem FV_cbnf_ofk[simp]:
+    FV cbnf_ofk = {}
+Proof
+  SRW_TAC [][EXTENSION, cbnf_ofk_def, DISJ_IMP_EQ]
+QED
 
-val cbnf_of_works1 = store_thm(
-  "cbnf_of_works1",
-  ``(bnf_of M = SOME N) ⇒
-    cbnf_ofk @@ c @@ cDB (fromTerm M) == c @@ cDB (fromTerm N)``,
+Theorem cbnf_of_works1:
+    (bnf_of M = SOME N) ⇒
+    cbnf_ofk @@ c @@ cDB (fromTerm M) == c @@ cDB (fromTerm N)
+Proof
   STRIP_TAC THEN
   SIMP_TAC (bsrw_ss()) [cbnf_ofk_eqn] THEN
   Q.MATCH_ABBREV_TAC `cfindleast @@ P @@ k == c @@ cDB (fromTerm N)` THEN
@@ -1313,12 +1360,13 @@ val cbnf_of_works1 = store_thm(
         SRW_TAC [][] THEN
   numLib.LEAST_ELIM_TAC THEN SRW_TAC [][] THEN
   METIS_TAC [stepsTheory.bnf_steps_upwards_closed,
-            DECIDE ``(n:num) < m ∨ (n = m) ∨ m < n``]);
+            DECIDE ``(n:num) < m ∨ (n = m) ∨ m < n``]
+QED
 
-val cbnf_ofk_works2 = store_thm(
-  "cbnf_ofk_works2",
-  ``cbnf_ofk @@ k @@ cDB M -n->* t' ∧ bnf t' ⇒
-    ∃M'. (bnf_of (toTerm M) = SOME (toTerm M')) ∧ k @@ cDB M' -n->* t'``,
+Theorem cbnf_ofk_works2:
+    cbnf_ofk @@ k @@ cDB M -n->* t' ∧ bnf t' ⇒
+    ∃M'. (bnf_of (toTerm M) = SOME (toTerm M')) ∧ k @@ cDB M' -n->* t'
+Proof
   SIMP_TAC (bsrw_ss() ++ boolSimps.CONJ_ss) [cbnf_ofk_eqn] THEN
   Q.MATCH_ABBREV_TAC
     `cfindleast @@ P @@ kk == t' ∧ bnf t' ⇒ CONCL` THEN
@@ -1334,47 +1382,52 @@ val cbnf_ofk_works2 = store_thm(
                             stepsTheory.bnf_steps] THEN
   REPEAT STRIP_TAC THEN
   Q.EXISTS_TAC `fromTerm (steps m (toTerm M))` THEN
-  SRW_TAC [][] THEN METIS_TAC []);
+  SRW_TAC [][] THEN METIS_TAC []
+QED
 
-val bnfNONE_cbnf_ofk_fails = store_thm(
-  "bnfNONE_cbnf_ofk_fails",
-  ``(bnf_of M = NONE) ⇒ ¬has_bnf (cbnf_ofk @@ k @@ cDB (fromTerm M))``,
+Theorem bnfNONE_cbnf_ofk_fails:
+    (bnf_of M = NONE) ⇒ ¬has_bnf (cbnf_ofk @@ k @@ cDB (fromTerm M))
+Proof
   REPEAT STRIP_TAC THEN
   `∃t'. cbnf_ofk @@ k @@ cDB (fromTerm M) -n->* t' ∧ bnf t'`
      by METIS_TAC [has_bnf_thm, nstar_betastar_bnf] THEN
   IMP_RES_TAC (REWRITE_RULE [GSYM AND_IMP_INTRO] cbnf_ofk_works2) THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
 Overload cbnf_of = “cbnf_ofk @@ I”
 
-val cbnf_of_fails = store_thm(
-  "cbnf_of_fails",
-  ``(bnf_of M = NONE) ⇔ ¬has_bnf (cbnf_of @@ cDB (fromTerm M))``,
+Theorem cbnf_of_fails:
+    (bnf_of M = NONE) ⇔ ¬has_bnf (cbnf_of @@ cDB (fromTerm M))
+Proof
   SRW_TAC [][EQ_IMP_THM, bnfNONE_cbnf_ofk_fails] THEN
   Cases_on `bnf_of M` THEN SRW_TAC [][] THEN
   IMP_RES_TAC cbnf_of_works1 THEN
   `cbnf_ofk @@ I @@ cDB (fromTerm M) == cDB (fromTerm x)`
     by METIS_TAC [chap2Theory.lameq_rules, chap2Theory.lameq_I] THEN
-  METIS_TAC [bnf_cDB, betastar_lameq_bnf, has_bnf_thm]);
+  METIS_TAC [bnf_cDB, betastar_lameq_bnf, has_bnf_thm]
+QED
 
-val cbnf_force_num_fails = store_thm(
-  "cbnf_force_num_fails",
-  ``¬has_bnf (cbnf_ofk @@ cforce_num @@ cDB (fromTerm M)) ⇒
-    (bnf_of M = NONE)``,
+Theorem cbnf_force_num_fails:
+    ¬has_bnf (cbnf_ofk @@ cforce_num @@ cDB (fromTerm M)) ⇒
+    (bnf_of M = NONE)
+Proof
   REPEAT STRIP_TAC THEN Cases_on `bnf_of M` THEN SRW_TAC [][] THEN
   IMP_RES_TAC cbnf_of_works1 THEN
   POP_ASSUM (Q.SPEC_THEN `cforce_num` MP_TAC) THEN
   SIMP_TAC (bsrw_ss()) [cforce_num_behaviour] THEN
-  METIS_TAC [bnf_church, betastar_lameq_bnf, has_bnf_thm]);
+  METIS_TAC [bnf_church, betastar_lameq_bnf, has_bnf_thm]
+QED
 
-val bnf_of_cbnf = store_thm(
-  "bnf_of_cbnf",
-  ``bnf_of (cbnf_of @@ cDB t) =
-    OPTION_MAP (cDB o fromTerm) (bnf_of (toTerm t))``,
+Theorem bnf_of_cbnf:
+    bnf_of (cbnf_of @@ cDB t) =
+    OPTION_MAP (cDB o fromTerm) (bnf_of (toTerm t))
+Proof
   Cases_on `bnf_of (toTerm t)` THENL [
     IMP_RES_TAC bnfNONE_cbnf_ofk_fails THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [bnf_of_NONE],
     IMP_RES_TAC cbnf_of_works1 THEN
     FULL_SIMP_TAC (bsrw_ss()) [bnf_bnf_of]
-  ]);
+  ]
+QED
 

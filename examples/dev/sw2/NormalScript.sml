@@ -295,17 +295,17 @@ Definition fun_def:
   fun = \x.x
 End
 
-val fun_ID = store_thm (
-  "fun_ID",
-  ``fun f = f``,
+Theorem fun_ID:
+    fun f = f
+Proof
    SIMP_TAC std_ss [fun_def]
-  );
+QED
 
-val INLINE_EXPAND = store_thm (
-  "INLINE_EXPAND",
-  ``(let f = fun e1 in e2 f) = e2 e1``,
+Theorem INLINE_EXPAND:
+    (let f = fun e1 in e2 f) = e2 e1
+Proof
    SIMP_TAC std_ss [LET_THM, fun_def]
-  );
+QED
 
 
 (* Definitions and theorems used in closure.sml *)
@@ -314,56 +314,56 @@ val INLINE_EXPAND = store_thm (
 (* Eliminate nested function definitions                                     *)
 (*---------------------------------------------------------------------------*)
 
-val CLOSE_ONE = store_thm (
-  "CLOSE_ONE",
-  ``(let v = atom v in let f = fun (e1 v) in e2 f) =
-    let f = fun (\v. e1 v) in e2 (f v)``,
+Theorem CLOSE_ONE:
+    (let v = atom v in let f = fun (e1 v) in e2 f) =
+    let f = fun (\v. e1 v) in e2 (f v)
+Proof
    SIMP_TAC std_ss [LET_THM, fun_def, atom_def]
-  );
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Eliminate administrative terms                                            *)
 (*---------------------------------------------------------------------------*)
 
-val LET_ATOM = store_thm (
-  "LET_ATOM",
-  ``(let x = atom y in f x) = f y``,
+Theorem LET_ATOM:
+    (let x = atom y in f x) = f y
+Proof
    SIMP_TAC std_ss [LET_THM, atom_def]
-  );
+QED
 
-val LET_FUN = store_thm (
-  "LET_FUN",
-  ``(let f = fun e1 in e2 f) = e2 e1``,
+Theorem LET_FUN:
+    (let f = fun e1 in e2 f) = e2 e1
+Proof
    SIMP_TAC std_ss [LET_THM, fun_def]
-  );
+QED
 
 
-val TOP_LEVEL_ABS = store_thm (
-  "TOP_LEVEL_ABS",
-  ``(\x. let f = fun e1 in e2 f) = (let f = fun e1 in (\x. e2 f))``,
+Theorem TOP_LEVEL_ABS:
+    (\x. let f = fun e1 in e2 f) = (let f = fun e1 in (\x. e2 f))
+Proof
    SIMP_TAC std_ss [LET_THM]
-  );
+QED
 
-val TOP_LEVEL_LET = store_thm (
-  "TOP_LEVEL_LET",
-  ``(let v = e1 in let f = fun e2 in e3 v f) =
-    (let f = fun e2 in let v = e1 in e3 v f)``,
+Theorem TOP_LEVEL_LET:
+    (let v = e1 in let f = fun e2 in e3 v f) =
+    (let f = fun e2 in let v = e1 in e3 v f)
+Proof
    SIMP_TAC std_ss [LET_THM]
-  );
+QED
 
-val TOP_LEVEL_COND_1 = store_thm (
-  "TOP_LEVEL_COND_1",
-  ``(if e1 then let f = fun k1 in e2 f else e3) =
-        (let f = fun k1 in if e1 then e2 f else e3)``,
+Theorem TOP_LEVEL_COND_1:
+    (if e1 then let f = fun k1 in e2 f else e3) =
+        (let f = fun k1 in if e1 then e2 f else e3)
+Proof
    SIMP_TAC std_ss [LET_THM]
-  );
+QED
 
-val TOP_LEVEL_COND_2 = store_thm (
-  "TOP_LEVEL_COND_2",
-  ``(if e1 then e2 else let f = fun k1 in e3 f) =
-        (let f = fun k1 in if e1 then e2 else e3 f)``,
+Theorem TOP_LEVEL_COND_2:
+    (if e1 then e2 else let f = fun k1 in e3 f) =
+        (let f = fun k1 in if e1 then e2 else e3 f)
+Proof
    SIMP_TAC std_ss [LET_THM]
-  );
+QED
 
 
 (* --------------------------------------------------------------------*)
@@ -375,20 +375,20 @@ Definition save_def:
   save = \x.x
 End
 
-val LET_SAVE = store_thm (
-  "LET_SAVE",
-  ``(let x = save y in f x) = f y``,
+Theorem LET_SAVE:
+    (let x = save y in f x) = f y
+Proof
    SIMP_TAC std_ss [LET_THM, save_def]
-  );
+QED
 
 Definition loc_def:
   loc = \x.x
 End
 
-val LET_LOC = store_thm (
-  "LET_LOC",
-  ``(let x = loc y in f x) = f y``,
+Theorem LET_LOC:
+    (let x = loc y in f x) = f y
+Proof
    SIMP_TAC std_ss [LET_THM, loc_def]
-  );
+QED
 
 (* --------------------------------------------------------------------*)
