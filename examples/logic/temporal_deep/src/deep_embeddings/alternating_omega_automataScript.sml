@@ -937,7 +937,6 @@ Theorem ALT_SEM_S0_AND_SPLIT___INITIAL:
       ALT_SEM (alternating_automaton (alternating_semi_automaton A.A.S A.A.I
                                       p2 A.A.R) A.AC) i))
 Proof
-
   SIMP_TAC std_ss [ALT_SEM_def, ALTERNATING_RUN_def, P_SEM_THM,
                    alternating_automaton_REWRITES] THEN
   REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [ (* 6 *)

@@ -38,14 +38,15 @@ TermWithCase`
        | SOME t => t
        | NONE => Var v)`)
 
-val NOT_FDOM_vwalk = Q.store_thm(
-  "NOT_FDOM_vwalk",
-  `wfs s /\ v NOTIN FDOM s ==> (vwalk s v = Var v)`,
-  SRW_TAC [] [Once vwalk_def, FLOOKUP_DEF]);
+Theorem NOT_FDOM_vwalk:
+   wfs s /\ v NOTIN FDOM s ==> (vwalk s v = Var v)
+Proof
+  SRW_TAC [] [Once vwalk_def, FLOOKUP_DEF]
+QED
 
-val vwalk_to_var = Q.store_thm(
-  "vwalk_to_var",
-  `wfs s ==> !v u. (vwalk s v = Var u) ==> u NOTIN FDOM s`,
+Theorem vwalk_to_var:
+   wfs s ==> !v u. (vwalk s v = Var u) ==> u NOTIN FDOM s
+Proof
   DISCH_TAC THEN HO_MATCH_MP_TAC vwalk_ind THEN
   SRW_TAC [][] THEN
   Cases_on `FLOOKUP s v` THEN1
@@ -57,7 +58,8 @@ val vwalk_to_var = Q.store_thm(
   `vwalk s w = Var u` by (REPEAT (POP_ASSUM MP_TAC) THEN
                           SRW_TAC [] [Once vwalk_def] THEN
                           FULL_SIMP_TAC (srw_ss()) []) THEN
-  FIRST_X_ASSUM (Q.SPEC_THEN `u` MP_TAC) THEN SRW_TAC [][]);
+  FIRST_X_ASSUM (Q.SPEC_THEN `u` MP_TAC) THEN SRW_TAC [][]
+QED
 
 Definition walk_def:
   walk s t = case t of Var v => vwalk s v | t => t
@@ -76,24 +78,26 @@ val walk_FEMPTY = RWstore_thm(
  (vwalk FEMPTY v = Var v)`,
 Cases_on `t` THEN NTAC 2 (SRW_TAC [][Once(DISCH_ALL vwalk_def)]));
 
-val walk_var_vwalk = Q.store_thm(
-"walk_var_vwalk",
-`wfs s ==> (walk s t = Var v)
-  ==> ?u.(t = Var u) /\ (vwalk s u = Var v)`,
+Theorem walk_var_vwalk:
+ wfs s ==> (walk s t = Var v)
+  ==> ?u.(t = Var u) /\ (vwalk s u = Var v)
+Proof
 SRW_TAC [][walk_def] THEN
-Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) []);
+Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val walk_to_var = Q.store_thm(
-"walk_to_var",
-`wfs s /\ (walk s t = Var v) ==>
-   v NOTIN FDOM s /\ ?u.(t = Var u)`,
+Theorem walk_to_var:
+ wfs s /\ (walk s t = Var v) ==>
+   v NOTIN FDOM s /\ ?u.(t = Var u)
+Proof
 Cases_on `t` THEN SRW_TAC [][] THEN
-METIS_TAC [vwalk_to_var]);
+METIS_TAC [vwalk_to_var]
+QED
 
-val vwalk_vR = Q.store_thm(
-"vwalk_vR",
-`wfs s ==> !v u. u IN vars (vwalk s v) /\ vwalk s v <> Var v ==>
-           (vR s)^+ u v`,
+Theorem vwalk_vR:
+ wfs s ==> !v u. u IN vars (vwalk s v) /\ vwalk s v <> Var v ==>
+           (vR s)^+ u v
+Proof
 DISCH_TAC THEN HO_MATCH_MP_TAC vwalk_ind THEN SRW_TAC [][] THEN
 `(FLOOKUP s v = NONE) \/ ?t. FLOOKUP s v = SOME t`
    by (Cases_on `FLOOKUP s v` THEN SRW_TAC [][]) THEN1
@@ -116,11 +120,12 @@ Cases_on `t` THENL [
   Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (Const c)` THEN
   `vwalk s v = Const c` by (SRW_TAC [] [Once vwalk_def]) THEN
   FULL_SIMP_TAC (srw_ss()) []
-]);
+]
+QED
 
-val vwalk_IN_FRANGE = Q.store_thm(
-"vwalk_IN_FRANGE",
-`wfs s ∧ v ∈ FDOM s ⇒ vwalk s v ∈ FRANGE s`,
+Theorem vwalk_IN_FRANGE:
+ wfs s ∧ v ∈ FDOM s ⇒ vwalk s v ∈ FRANGE s
+Proof
 SIMP_TAC (srw_ss()) [GSYM AND_IMP_INTRO] THEN
 STRIP_TAC THEN Q.ID_SPEC_TAC `v` THEN
 HO_MATCH_MP_TAC vwalk_ind THEN SRW_TAC [][] THEN
@@ -129,20 +134,22 @@ FULL_SIMP_TAC (srw_ss()) [FLOOKUP_DEF] THEN
 Cases_on `s ' v` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
   Cases_on `n ∈ FDOM s` THEN SRW_TAC [][NOT_FDOM_vwalk],
   ALL_TAC, ALL_TAC ] THEN
-SRW_TAC [][FRANGE_DEF] THEN METIS_TAC []);
+SRW_TAC [][FRANGE_DEF] THEN METIS_TAC []
+QED
 
-val walk_IN_FRANGE = Q.store_thm(
-"walk_IN_FRANGE",
-`wfs s ∧ walk s t ≠ t ⇒ walk s t ∈ FRANGE s`,
+Theorem walk_IN_FRANGE:
+ wfs s ∧ walk s t ≠ t ⇒ walk s t ∈ FRANGE s
+Proof
 Cases_on `t` THEN SRW_TAC [][] THEN
 `n ∈ FDOM s` by METIS_TAC [NOT_FDOM_vwalk] THEN
-SRW_TAC [][vwalk_IN_FRANGE]);
+SRW_TAC [][vwalk_IN_FRANGE]
+QED
 
-val vwalk_SUBMAP = Q.store_thm(
-"vwalk_SUBMAP",
-`wfs sx ==> !v s.s SUBMAP sx ==>
+Theorem vwalk_SUBMAP:
+ wfs sx ==> !v s.s SUBMAP sx ==>
    (case vwalk s v of Var u => (vwalk sx v = vwalk sx u)
-                    | t => (vwalk sx v = t))`,
+                    | t => (vwalk sx v = t))
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC (Q.INST[`s`|->`sx`]vwalk_ind) THEN
 SRW_TAC [][] THEN
 `wfs s` by METIS_TAC [wfs_SUBMAP] THEN
@@ -160,7 +167,8 @@ Cases_on `x` THEN SRW_TAC [][] THENL [
   Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (Const c)` THEN
   `FLOOKUP sx v = SOME (Const c)` by METIS_TAC [FLOOKUP_SUBMAP] THEN
   SRW_TAC [][Once (DISCH_ALL vwalk_def)]
-]);
+]
+QED
 
 val vwalk_no_cycles = store_thm("vwalk_no_cycles",
   ``wfs s ⇒ ∀v u. (vwalk s v = Var u) ∧ v ∈ FDOM s ⇒ (v ≠ u)``,
@@ -187,20 +195,22 @@ val vwalk_no_cycles = store_thm("vwalk_no_cycles",
 val _ = overload_on("vwalk_al", ``λal. vwalk (alist_to_fmap al)``);
 val _ = overload_on("vwalk_al", ``vwalk_al``);
 
-val vwalk_al_thm = Q.store_thm(
-"vwalk_al_thm",
-`wfs (alist_to_fmap al) ==>
+Theorem vwalk_al_thm:
+ wfs (alist_to_fmap al) ==>
   (vwalk_al al v =
    case ALOOKUP al v of
      NONE => Var v |
      SOME (Var u) => vwalk_al al u |
-     SOME t => t)`,
-METIS_TAC [fmap_to_alist_to_fmap,vwalk_def,ALOOKUP_EQ_FLOOKUP]);
+     SOME t => t)
+Proof
+METIS_TAC [fmap_to_alist_to_fmap,vwalk_def,ALOOKUP_EQ_FLOOKUP]
+QED
 
-val vwalk_al_eq_vwalk = Q.store_thm(
-"vwalk_al_eq_vwalk",
-`vwalk s = vwalk_al (fmap_to_alist s)`,
-METIS_TAC [fmap_to_alist_to_fmap]);
+Theorem vwalk_al_eq_vwalk:
+ vwalk s = vwalk_al (fmap_to_alist s)
+Proof
+METIS_TAC [fmap_to_alist_to_fmap]
+QED
 
 (* vwalk with rhs check *)
 
@@ -268,10 +278,11 @@ Theorem example2[local]:
 Proof srw_tac [][Once vwalk_rhs_def]
 QED
 
-val vwalk_rhs_ALOOKUP_NONE = Q.store_thm(
-"vwalk_rhs_ALOOKUP_NONE",
-`∀a0 al v. (ALOOKUP al v = NONE) ⇒ (vwalk_rhs a0 al v = Var v)`,
-ho_match_mp_tac vwalk_rhs_ind >> srw_tac [][vwalk_rhs_def])
+Theorem vwalk_rhs_ALOOKUP_NONE:
+ ∀a0 al v. (ALOOKUP al v = NONE) ⇒ (vwalk_rhs a0 al v = Var v)
+Proof
+ho_match_mp_tac vwalk_rhs_ind >> srw_tac [][vwalk_rhs_def]
+QED
 
 (*
 val vwalk_rhs_ALOOKUP_SOME_nonvar = Q.store_thm(

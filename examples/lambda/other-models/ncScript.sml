@@ -82,13 +82,15 @@ Definition FV:
      FV u = dFV (REP_nc u)
 End
 
-val FV_THM = Q.store_thm("FV_THM",
- `(!k.   FV (CON k:'a nc)   = {})  /\
+Theorem FV_THM:
+  (!k.   FV (CON k:'a nc)   = {})  /\
   (!x.   FV (VAR x:'a nc)   = {x}) /\
   (!t u. FV (t @@ u:'a nc)  = (FV t) UNION (FV u)) /\
-  (!x n. FV (LAM x n:'a nc) = (FV n) DELETE x)`,
+  (!x n. FV (LAM x n:'a nc) = (FV n) DELETE x)
+Proof
 RW_TAC OK_ss
-  [FV, CON, VARR, APP, LAM, dFV_def, dFV_dLAMBDA]);
+  [FV, CON, VARR, APP, LAM, dFV_def, dFV_dLAMBDA]
+QED
 val _ = export_rewrites ["FV_THM"]
 
 
@@ -125,24 +127,27 @@ PROVE_TAC [ABS_nc_11]);
 
 val u = Term`u:'a nc`;
 
-val SUB_THM =
- Q.store_thm ("SUB_THM",
-  `(!^u x k.             [u/x](CON k)   = CON k)   /\
+Theorem SUB_THM:
+   (!^u x k.             [u/x](CON k)   = CON k)   /\
    (!^u x.               [u/x](VAR x)   = u)       /\
    (!^u x y. ~(x=y) ==> ([u/x](VAR y)   = VAR y))  /\
    (!^u s t x.           [u/x](s @@ t)  = [u/x]s @@ [u/x]t) /\
    (!^u t x.             [u/x](LAM x t) = LAM x t)          /\
    (!^u x y. ~(x=y) /\ ~(y IN FV u)
-                 ==> !t. [u/x](LAM y t) = LAM y ([u/x]t))`,
+                 ==> !t. [u/x](LAM y t) = LAM y ([u/x]t))
+Proof
 RW_TAC OK_ss
   [LAM, APP, VARR, CON, FV, SUB_DEF,lem, NEQ_dVAR_dSUB,
-   EQ_dVAR_dSUB,dCON_dSUB, dAPP_dSUB,dLAMBDA_dSUB_EQ,dLAMBDA_dSUB]);
+   EQ_dVAR_dSUB,dCON_dSUB, dAPP_dSUB,dLAMBDA_dSUB_EQ,dLAMBDA_dSUB]
+QED
 
 (* ADG: following should be the axiomatisation *)
 
-val SUB_VAR = Q.store_thm("SUB_VAR",
-`!x y t. [t/y](VAR x) = if x=y then t else VAR x`,
-RW_TAC std_ss [SUB_THM]);
+Theorem SUB_VAR:
+ !x y t. [t/y](VAR x) = if x=y then t else VAR x
+Proof
+RW_TAC std_ss [SUB_THM]
+QED
 
 
 
@@ -151,15 +156,16 @@ RW_TAC std_ss [SUB_THM]);
 (* carrying terms. Open question: prove the independence of ALPHA.       *)
 (* --------------------------------------------------------------------- *)
 
-val ALPHA =
- Q.store_thm ("ALPHA",
-  `!x y ^u.
-       ~(y IN (FV (LAM x u))) ==> (LAM x u = LAM y ([VAR y/x]u))`,
+Theorem ALPHA:
+   !x y ^u.
+       ~(y IN (FV (LAM x u))) ==> (LAM x u = LAM y ([VAR y/x]u))
+Proof
 RW_TAC std_ss [FV_THM,DE_MORGAN_THM,IN_DELETE,FV, LAM, SUB_DEF, VARR]
  THEN MATCH_MP_TAC lem
  THEN RW_TAC OK_ss []
  THEN Cases_on `y:string = x`
- THEN ZAP_TAC (OK_ss && [dSUB_ID]) [dALPHA,OK_REP]);
+ THEN ZAP_TAC (OK_ss && [dSUB_ID]) [dALPHA,OK_REP]
+QED
 
 
 val ALPHA_LEMMA = Q.prove(
@@ -171,11 +177,12 @@ PROVE_TAC [ALPHA,FV_THM,IN_DELETE]);
 (* Weaker version of Alpha Conversion.                                   *)
 (* --------------------------------------------------------------------- *)
 
-val SIMPLE_ALPHA =
- Q.store_thm ("SIMPLE_ALPHA",
-   `!y u.
-      ~(y IN FV u) ==> !x. LAM x u = LAM y ([VAR y/x]u)`,
-PROVE_TAC [ALPHA,FV_THM,IN_DELETE]);
+Theorem SIMPLE_ALPHA:
+    !y u.
+      ~(y IN FV u) ==> !x. LAM x u = LAM y ([VAR y/x]u)
+Proof
+PROVE_TAC [ALPHA,FV_THM,IN_DELETE]
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -197,9 +204,8 @@ RW_TAC std_ss []
   THEN RW_TAC OK_ss [CON,VARR,APP,LAM, HOM_THM,SUB_DEF]);
 
 
-val nc_ITERATOR =
- Q.store_thm ("nc_ITERATOR",
-   `!con : 'a->'b.
+Theorem nc_ITERATOR:
+    !con : 'a->'b.
     !var : string->'b.
     !app : 'b->'b->'b.
     !lam : (string->'b)->'b.
@@ -207,7 +213,8 @@ val nc_ITERATOR =
           (!k. hom(CON k)     = con k) /\
           (!x. hom(VAR x)     = var x) /\
           (!t u. hom(t @@ u)  = app (hom t) (hom u)) /\
-          (!x u. hom(LAM x u) = lam(\y. hom([VAR y/x]u)))`,
+          (!x u. hom(LAM x u) = lam(\y. hom([VAR y/x]u)))
+Proof
 CONV_TAC (ONCE_DEPTH_CONV EXISTS_UNIQUE_CONV)
  THEN RW_TAC std_ss [EXISTENCE,CON,VARR,APP,LAM,SUB_DEF] THEN FUN_EQ_TAC
  THEN PURE_ONCE_REWRITE_TAC [GSYM ABS_REP] THEN
@@ -218,7 +225,8 @@ CONV_TAC (ONCE_DEPTH_CONV EXISTS_UNIQUE_CONV)
                            `(g:'a nc->'b) o ABS_nc`] th3
    in MATCH_MP_TAC (REWRITE_RULE [combinTheory.o_THM] th4) end
  THEN RW_TAC std_ss [] THEN IMP_RES_THEN (SUBST1_TAC o GSYM) OK_REP_ABS
- THEN RW_TAC OK_ss []);
+ THEN RW_TAC OK_ss []
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Abstraction function.                                                 *)
@@ -273,17 +281,18 @@ val ethm =
     CONJUNCT1 (CONV_RULE EXISTS_UNIQUE_CONV (BETA_RULE sth))
   end;
 
-val nc_DISTINCT =
- Q.store_thm ("nc_DISTINCT",
-   `(!(k:'a) x. ~(CON k = VAR x)) /\
+Theorem nc_DISTINCT:
+    (!(k:'a) x. ~(CON k = VAR x)) /\
     (!k x u. ~(CON k = LAM x ^u)) /\
     (!k t u. ~(CON k = t @@ ^u))  /\
     (!x t u. ~(VAR x = t @@ ^u))  /\
     (!x y u. ~(VAR x = LAM y ^u)) /\
-    (!x u t p. ~(LAM x ^u = t @@ p))`,
+    (!x u t p. ~(LAM x ^u = t @@ p))
+Proof
 STRIP_ASSUME_TAC ethm THEN RW_TAC std_ss []
   THEN DISCH_THEN (MP_TAC o Q.AP_TERM `hom:'a nc -> bool#bool`)
-  THEN RW_TAC std_ss []);
+  THEN RW_TAC std_ss []
+QED
 
 (* ===================================================================== *)
 (* Case analysis.  This follows trivially from iterators.                *)
@@ -303,13 +312,14 @@ val ithm =
     DISCH_ALL (REWRITE_RULE [] (BETA_RULE thm3))
   end;
 
-val nc_CASES =
- Q.store_thm ("nc_CASES",
-   `!v:'a nc. (?k. v = CON k)
+Theorem nc_CASES:
+    !v:'a nc. (?k. v = CON k)
           \/  (?x. v = VAR x)
           \/  (?t u. v = t @@ u)
-          \/  (?x u. v = LAM x u)`,
-PROVE_TAC [ithm]);
+          \/  (?x u. v = LAM x u)
+Proof
+PROVE_TAC [ithm]
+QED
 
 
 (* ===================================================================== *)
@@ -460,8 +470,8 @@ val COPY_THEOREM =
     REWRITE_RULE pairLib.pair_rws (BETA_RULE th4)
   end;
 
-val nc_RECURSION = Q.store_thm ("nc_RECURSION",
-  `!con:'a -> 'b.
+Theorem nc_RECURSION:
+   !con:'a -> 'b.
    !var:string -> 'b.
    !app:'b -> 'b -> 'a nc -> 'a nc -> 'b.
    !lam:(string -> 'b) -> (string -> 'a nc) -> 'b.
@@ -470,24 +480,27 @@ val nc_RECURSION = Q.store_thm ("nc_RECURSION",
          (!x. hom(VAR x)     = var x) /\
          (!t u. hom(t @@ u)  = app (hom t) (hom u) t u) /\
          (!x u. hom(LAM x u) = lam (\y. hom([VAR y/x]u))
-                                   (\y. [VAR y/x] u))`,
-     REWRITE_TAC [COPY_THEOREM]);
+                                   (\y. [VAR y/x] u))
+Proof
+     REWRITE_TAC [COPY_THEOREM]
+QED
 
-val nc_RECURSION_WEAK = Q.store_thm(
- "nc_RECURSION_WEAK",
-  `!con var app lam.
+Theorem nc_RECURSION_WEAK:
+   !con var app lam.
      ?hom : 'a nc -> 'b.
        (!k. hom (CON k) = con k) /\
        (!x. hom (VAR x) = var x) /\
        (!t u. hom (t @@ u) = app t u (hom t) (hom u)) /\
-       (!x u. hom (LAM x u) = lam (\y. [VAR y /x] u) (\y. hom([VAR y /x] u)))`,
+       (!x u. hom (LAM x u) = lam (\y. [VAR y /x] u) (\y. hom([VAR y /x] u)))
+Proof
   REPEAT GEN_TAC THEN
   STRIP_ASSUME_TAC ((CONJUNCT1 o CONV_RULE EXISTS_UNIQUE_CONV o
                      Q.SPECL [`con`, `var`, `\ht hu t u. app t u ht hu`,
                               `\hu u. lam u hu`])
                     nc_RECURSION) THEN
   RULE_ASSUM_TAC BETA_RULE THEN
-  Q.EXISTS_TAC `hom` THEN ASM_REWRITE_TAC []);
+  Q.EXISTS_TAC `hom` THEN ASM_REWRITE_TAC []
+QED
 
 (* ===================================================================== *)
 (* Definition of destructors. These are derivable from recursion.        *)
@@ -519,13 +532,17 @@ val BODY_DEF =
 (* Note the following relations between ABS and Body.                    *)
 (* --------------------------------------------------------------------- *)
 
-val ABS_BODY = Q.store_thm("ABS_BODY",
- `!x u. ABS(BODY(LAM x u)) = LAM x u`,
-REWRITE_TAC [ABS_DEF,BODY_DEF]);
+Theorem ABS_BODY:
+  !x u. ABS(BODY(LAM x u)) = LAM x u
+Proof
+REWRITE_TAC [ABS_DEF,BODY_DEF]
+QED
 
-val BODY_ABS = Q.store_thm("BODY_ABS",
- `!x u. BODY(ABS(\y. [VAR y/x]u)) = \y. [VAR y/x]u`,
-REWRITE_TAC [ABS_DEF,BODY_DEF]);
+Theorem BODY_ABS:
+  !x u. BODY(ABS(\y. [VAR y/x]u)) = \y. [VAR y/x]u
+Proof
+REWRITE_TAC [ABS_DEF,BODY_DEF]
+QED
 
 
 (* ===================================================================== *)
@@ -533,16 +550,18 @@ REWRITE_TAC [ABS_DEF,BODY_DEF]);
 (* Question: how to strengthen the LAM case to equality?                 *)
 (* ===================================================================== *)
 
-val nc_INJECTIVITY = Q.store_thm ("nc_INJECTIVITY",
-`(!k:'a . !k'. (CON k = CON k') = (k = k')) /\
+Theorem nc_INJECTIVITY:
+ (!k:'a . !k'. (CON k = CON k') = (k = k')) /\
  (!x x'. (VAR x:'a nc = VAR x') = (x = x')) /\
  (!t u t' u'. (t @@ ^u = t' @@ u') = ((t = t') /\ (u = u'))) /\
  (!x u x' u'. (LAM x ^u = LAM x' u')
                  ==>
-              !y. [VAR y/x]u = [VAR y/x']u')`,
+              !y. [VAR y/x]u = [VAR y/x']u')
+Proof
 REPEAT (STRIP_TAC ORELSE EQ_TAC)
  THEN ZAP_TAC std_ss
-      [CNAME_DEF,VNAME_DEF,RATOR_DEF,RAND_DEF,BODY_DEF]);
+      [CNAME_DEF,VNAME_DEF,RATOR_DEF,RAND_DEF,BODY_DEF]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Note that, from injectivity, we could derive destructors.             *)
@@ -664,8 +683,9 @@ fun VAR_SUB_TAC (A,g) =
 (* use of this stronger form?                                            *)
 (* ===================================================================== *)
 
-val lemma14a = Q.store_thm ("lemma14a",
-`!u x. [VAR x/x]u = u`,
+Theorem lemma14a:
+ !u x. [VAR x/x]u = u
+Proof
 nc_INDUCT_TAC THEN RW_TAC std_ss [SUB_THM] THENL
   [VAR_SUB_TAC THEN REFL_TAC,
    Cases_on `x':string = x` THENL
@@ -676,7 +696,8 @@ nc_INDUCT_TAC THEN RW_TAC std_ss [SUB_THM] THENL
               (MP_TAC o Q.AP_TERM `LAM x` o Q.SPECL [`x:string`, `x':string`])
         THEN IMP_RES_TAC (el 6 (CONJUNCTS SUB_THM))
         THEN Q.PAT_X_ASSUM `$! M` (ASSUME_TAC o GSYM)
-        THEN RW_TAC std_ss [ALPHA_LEMMA]]]);
+        THEN RW_TAC std_ss [ALPHA_LEMMA]]]
+QED
 
 (* can now prove a simple version of induction, where you don't want that
    extra strength in the LAM case *)
@@ -705,22 +726,26 @@ ZAP_TAC (std_ss && [FV_THM,IN_DELETE,IN_SING,DE_MORGAN_THM])
 (* alpha axiom (via lemma14a).                                           *)
 (* ===================================================================== *)
 
-val FINITE_FV = Q.store_thm ("FINITE_FV",
-`!u. FINITE(FV u)`,
+Theorem FINITE_FV:
+ !u. FINITE(FV u)
+Proof
 nc_INDUCT_TAC
    THEN RW_TAC std_ss
          [FV_THM,FINITE_EMPTY,FINITE_SING,FINITE_UNION,FINITE_DELETE]
-   THEN PROVE_TAC [lemma14a]);
+   THEN PROVE_TAC [lemma14a]
+QED
 val _ = export_rewrites ["FINITE_FV"]
 
 (* ===================================================================== *)
 (* Injectivity theorems                                                  *)
 (* ===================================================================== *)
 
-val INJECTIVITY_LEMMA1 = Q.store_thm("INJECTIVITY_LEMMA1",
-`!x u x1 u1.
-   (LAM x u = LAM x1 u1) ==> (u = [VAR x/x1]u1)`,
-PROVE_TAC [nc_INJECTIVITY,lemma14a]);
+Theorem INJECTIVITY_LEMMA1:
+ !x u x1 u1.
+   (LAM x u = LAM x1 u1) ==> (u = [VAR x/x1]u1)
+Proof
+PROVE_TAC [nc_INJECTIVITY,lemma14a]
+QED
 
 val LAM_VAR_INJECTIVE = store_thm(
   "LAM_VAR_INJECTIVE",
@@ -738,25 +763,29 @@ val lemma =
         THEN REWRITE_TAC [FINITE_UNION,FINITE_FV,FINITE_SING,
                           IN_INSERT,FINITE_INSERT,FINITE_EMPTY]));
 
-val INJECTIVITY_LEMMA2 = Q.store_thm("INJECTIVITY_LEMMA2",
-`!x u x' u1.
+Theorem INJECTIVITY_LEMMA2:
+ !x u x' u1.
   (LAM x u = LAM x' u1)
      ==>
-  ?z. ~(z IN FV u) /\ ~(z IN FV u1) /\ ([VAR z/x] u = [VAR z/x'] u1)`,
+  ?z. ~(z IN FV u) /\ ~(z IN FV u1) /\ ([VAR z/x] u = [VAR z/x'] u1)
+Proof
 RW_TAC std_ss []
   THEN X_CHOOSE_THEN (Term`gv:string`) STRIP_ASSUME_TAC (GSYM lemma)
   THEN let val ac1 = UNDISCH(Q.SPECL [`gv`, `u`] SIMPLE_ALPHA)
            val ac2 = UNDISCH(Q.SPECL [`gv`,`u1`] SIMPLE_ALPHA)
        in PURE_ONCE_REWRITE_TAC [ac1,ac2]
        end
-  THEN RW_TAC std_ss  [nc_INJECTIVITY] THEN PROVE_TAC []);
+  THEN RW_TAC std_ss  [nc_INJECTIVITY] THEN PROVE_TAC []
+QED
 
-val INJECTIVITY_LEMMA3 = Q.store_thm("INJECTIVITY_LEMMA3",
-`!x u x' u1.
+Theorem INJECTIVITY_LEMMA3:
+ !x u x' u1.
    (?z. ~(z IN FV ^u) /\ ~(z IN FV u1) /\ ([VAR z/x]u = [VAR z/x']u1))
    ==>
-   (LAM x u = LAM x' u1)`,
-PROVE_TAC [SIMPLE_ALPHA]);
+   (LAM x u = LAM x' u1)
+Proof
+PROVE_TAC [SIMPLE_ALPHA]
+QED
 
 val LAM_INJ_ALPHA_FV = store_thm(
   "LAM_INJ_ALPHA_FV",
@@ -773,19 +802,20 @@ val LAM_INJ_ALPHA_FV = store_thm(
 (* Andy's second induction theorem -- follows easily.                    *)
 (* ===================================================================== *)
 
-val nc_INDUCTION2 = Q.store_thm (
-  "nc_INDUCTION2",
-  `!P X. (!k. P(CON k)) /\
+Theorem nc_INDUCTION2:
+   !P X. (!k. P(CON k)) /\
          (!x. P(VAR x)) /\
          (!t u. P t /\ P u ==> P(t @@ u)) /\
          (!y u. ~(y IN X) /\ P u ==> P(LAM y u)) /\
          FINITE X
      ==>
-         !u. P u`,
+         !u. P u
+Proof
  REPEAT GEN_TAC THEN STRIP_TAC THEN nc_INDUCT_TAC THEN RW_TAC std_ss []
  THEN MP_TAC (Q.SPEC `FV ^u UNION X` new_exists)
  THEN SRW_TAC [][]
- THEN PROVE_TAC [SIMPLE_ALPHA]);
+ THEN PROVE_TAC [SIMPLE_ALPHA]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Induction tactic for this kind of induction.                          *)
@@ -822,11 +852,12 @@ fun nc_INDUCT_TAC2 q (A,g) =
 (* Compare the original proof of Andy's -- witness FV(u) + FV(t) + {x}   *)
 (* --------------------------------------------------------------------- *)
 
-val lemma14b = Q.store_thm(
-  "lemma14b",
-  `!t x u. ~(x IN FV u) ==> ([t/x]u = u)`,
+Theorem lemma14b:
+   !t x u. ~(x IN FV u) ==> ([t/x]u = u)
+Proof
   NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2 `x INSERT FV t` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR]);
+  SRW_TAC [][SUB_THM, SUB_VAR]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -846,9 +877,9 @@ QED
 (* The remaining Hindley and Seldin theorems.                            *)
 (* --------------------------------------------------------------------- *)
 
-val lemma14c = Q.store_thm(
-  "lemma14c",
-  `!t x u. x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))`,
+Theorem lemma14c:
+   !t x u. x IN FV u ==> (FV ([t/x]u) = FV t UNION (FV u DELETE x))
+Proof
   NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2 `x INSERT FV t` THEN
   ASM_SIMP_TAC (srw_ss()) [SUB_THM, SUB_VAR, EXTENSION] THENL [
     STRIP_TAC THENL [
@@ -856,19 +887,24 @@ val lemma14c = Q.store_thm(
       Cases_on `x IN FV t'` THEN SRW_TAC [][lemma14b] THEN METIS_TAC []
     ],
     METIS_TAC []
-  ]);
+  ]
+QED
 
-val lemma15a = Q.store_thm("lemma15a",
-  `!t y u.
-     ~(y IN FV u) ==> ([t/y]([VAR y/x]u) = [t/x]u)`,
+Theorem lemma15a:
+   !t y u.
+     ~(y IN FV u) ==> ([t/y]([VAR y/x]u) = [t/x]u)
+Proof
   NTAC 2 GEN_TAC THEN nc_INDUCT_TAC2 `{x;y} UNION FV t` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR] THEN SRW_TAC [][SUB_VAR]);
+  SRW_TAC [][SUB_THM, SUB_VAR] THEN SRW_TAC [][SUB_VAR]
+QED
 
 
-val lemma15b = Q.store_thm("lemma15b",
-`!y u.
-   ~(y IN FV u) ==> !x. [VAR x/y] ([VAR y/x]u) = u`,
-RW_TAC std_ss [lemma15a,lemma14a]);
+Theorem lemma15b:
+ !y u.
+   ~(y IN FV u) ==> !x. [VAR x/y] ([VAR y/x]u) = u
+Proof
+RW_TAC std_ss [lemma15a,lemma14a]
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -930,17 +966,21 @@ Definition FVS_DEF:
 End
 
 
-val FINITE_DOM = Q.store_thm("FINITE_DOM",
- `!ss. FINITE (DOM ss)`,
+Theorem FINITE_DOM:
+  !ss. FINITE (DOM ss)
+Proof
 Induct THENL [ALL_TAC, Cases]
-   THEN RW_TAC std_ss [DOM_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_SING]);
+   THEN RW_TAC std_ss [DOM_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_SING]
+QED
 val _ = export_rewrites ["FINITE_DOM"]
 
 
-val FINITE_FVS = Q.store_thm("FINITE_FVS",
-`!ss. FINITE (FVS ss)`,
+Theorem FINITE_FVS:
+ !ss. FINITE (FVS ss)
+Proof
 Induct THENL [ALL_TAC, Cases]
-   THEN RW_TAC std_ss [FVS_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_FV]);
+   THEN RW_TAC std_ss [FVS_DEF, FINITE_EMPTY, FINITE_UNION, FINITE_FV]
+QED
 val _ = export_rewrites ["FINITE_FVS"]
 
 
@@ -965,13 +1005,15 @@ Definition RENAME_DEF:
 End
 
 
-val RENAMING_LEMMA = Q.store_thm("RENAMING_LEMMA",
-`!ss. RENAMING ss
+Theorem RENAMING_LEMMA:
+ !ss. RENAMING ss
        ==>
-      !tt. RENAMING tt ==> RENAMING (APPEND ss tt)`,
+      !tt. RENAMING tt ==> RENAMING (APPEND ss tt)
+Proof
 HO_MATCH_MP_TAC RENAMING_IND
    THEN RW_TAC list_ss []
-   THEN PROVE_TAC [RENAMING_CASES]);
+   THEN PROVE_TAC [RENAMING_CASES]
+QED
 
 (* ----------------------------------------------------------------------
     Simple properties of ISUB
@@ -1020,33 +1062,41 @@ val RENAMING_THM = store_thm(
 val R = Term `R : ('a nc # string) list`;
 
 
-val ISUB_VAR_RENAME = Q.store_thm("ISUB_VAR_RENAME",
-`!ss. RENAMING ss
+Theorem ISUB_VAR_RENAME:
+ !ss. RENAMING ss
         ==>
-      !x. (VAR x) ISUB ss = VAR (RENAME ss x)`,
+      !x. (VAR x) ISUB ss = VAR (RENAME ss x)
+Proof
 HO_MATCH_MP_TAC RENAMING_IND
   THEN RW_TAC std_ss [ISUB_def, RENAME_DEF, VNAME_DEF, SUB_VAR]
-  THEN RW_TAC std_ss []);
+  THEN RW_TAC std_ss []
+QED
 
-val ISUB_CON = Q.store_thm("ISUB_CON",
-`!^R k. (CON k) ISUB ^R = CON k`,
+Theorem ISUB_CON:
+ !^R k. (CON k) ISUB ^R = CON k
+Proof
 Induct THEN Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
- THEN RW_TAC std_ss [ISUB_def, SUB_THM]);
+ THEN RW_TAC std_ss [ISUB_def, SUB_THM]
+QED
 
-val ISUB_APP = Q.store_thm("ISUB_APP",
-`!^R t u. (t @@ u) ISUB ^R = (t ISUB ^R) @@ (u ISUB ^R)`,
+Theorem ISUB_APP:
+ !^R t u. (t @@ u) ISUB ^R = (t ISUB ^R) @@ (u ISUB ^R)
+Proof
 Induct THEN Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
-  THEN RW_TAC std_ss [ISUB_def, SUB_THM]);
+  THEN RW_TAC std_ss [ISUB_def, SUB_THM]
+QED
 
-val ISUB_LAM = Q.store_thm("ISUB_LAM",
-`!^R x. ~(x IN (DOM ^R UNION FVS ^R))
+Theorem ISUB_LAM:
+ !^R x. ~(x IN (DOM ^R UNION FVS ^R))
            ==>
-        !t. (LAM x t) ISUB ^R = LAM x (t ISUB ^R)`,
+        !t. (LAM x t) ISUB ^R = LAM x (t ISUB ^R)
+Proof
 Induct THENL
  [ALL_TAC, Ho_Rewrite.REWRITE_TAC[pairTheory.FORALL_PROD]
            THEN Cases_on `x` THEN POP_ASSUM MP_TAC]
  THEN RW_TAC list_ss
- [ISUB_def,DOM_DEF,FVS_DEF,FV_THM,IN_UNION,IN_SING,DE_MORGAN_THM,SUB_THM]);
+ [ISUB_def,DOM_DEF,FVS_DEF,FV_THM,IN_UNION,IN_SING,DE_MORGAN_THM,SUB_THM]
+QED
 
 val _ = export_rewrites ["nc_DISTINCT","nc_INJECTIVITY", "LAM_VAR_INJECTIVE"];
 

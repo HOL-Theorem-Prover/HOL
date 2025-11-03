@@ -39,7 +39,8 @@ val inst_walkstar =  Q.INST [`R` |-> `walkstarR s`]
 
 val [h2,h1,h3] = hyp (inst_walkstar pre_walkstar_def)
 
-val walkstar_th1 = Q.store_thm("walkstar_th1",`wfs s ⇒ ^h1`,
+Theorem walkstar_th1: wfs s ⇒ ^h1
+Proof
 SRW_TAC [][inv_image_def,LEX_DEF,walkstarR_def] >>
 Q.PAT_X_ASSUM `wfs s` ASSUME_TAC >>
 Cases_on `t` >> FULL_SIMP_TAC (srw_ss()) [] >| [
@@ -52,9 +53,11 @@ Cases_on `t` >> FULL_SIMP_TAC (srw_ss()) [] >| [
     SRW_TAC [ARITH_ss][measure_thm] >>
   DISJ1_TAC >> MATCH_MP_TAC TC_mlt1_UNION2_I >>
   SRW_TAC [][]
-]);
+]
+QED
 
-val walkstar_th2 = Q.store_thm("walkstar_th2",`wfs s ⇒ ^h2`,
+Theorem walkstar_th2: wfs s ⇒ ^h2
+Proof
 SRW_TAC [][inv_image_def,LEX_DEF,walkstarR_def] >>
 Q.PAT_X_ASSUM `wfs s` ASSUME_TAC >>
 Cases_on `t` >> FULL_SIMP_TAC (srw_ss()) [] >| [
@@ -72,12 +75,15 @@ Cases_on `t` >> FULL_SIMP_TAC (srw_ss()) [] >| [
   MATCH_MP_TAC TC_mlt1_UNION2_I >>
   UNABBREV_ALL_TAC >>
   SRW_TAC [][]
-]);
+]
+QED
 
-val walkstar_thWF = Q.store_thm("walkstar_thWF",`wfs s ⇒ ^h3`,
+Theorem walkstar_thWF: wfs s ⇒ ^h3
+Proof
 SRW_TAC [][wfs_def,walkstarR_def] >>
 MATCH_MP_TAC WF_inv_image >>
-SRW_TAC [][WF_TC, WF_LEX, WF_mlt1]);
+SRW_TAC [][WF_TC, WF_LEX, WF_mlt1]
+QED
 
 fun walkstar_wfs_hyp th =
   th |>
@@ -104,14 +110,15 @@ ASSUME_TAC wfs_FEMPTY >>
 HO_MATCH_MP_TAC (Q.INST[`s`|->`FEMPTY`]walkstar_ind) >>
 Cases_on `t` >> SRW_TAC [][]);
 
-val NOT_FDOM_walkstar = Q.store_thm(
-"NOT_FDOM_walkstar",
-`wfs s ==> !t. v NOTIN FDOM s ==> v IN vars t ==> v IN vars (walk* s t)`,
+Theorem NOT_FDOM_walkstar:
+ wfs s ==> !t. v NOTIN FDOM s ==> v IN vars t ==> v IN vars (walk* s t)
+Proof
 DISCH_TAC >> HO_MATCH_MP_TAC walkstar_ind >> SRW_TAC [][] >> Cases_on `t` >| [
   Q.PAT_X_ASSUM `wfs s` ASSUME_TAC >>
   FULL_SIMP_TAC (srw_ss()) [Once vwalk_def, vars_def, FLOOKUP_DEF],
   Q.PAT_X_ASSUM `wfs s` ASSUME_TAC >> FULL_SIMP_TAC (srw_ss()) [],
-  FULL_SIMP_TAC (srw_ss()) [vars_def]]);
+  FULL_SIMP_TAC (srw_ss()) [vars_def]]
+QED
 
 Theorem vwalk_EQ_var_vR[local]:
   wfs s ==> !u v1 v2. (vwalk s u = Var v1) /\ (vR s)^+ v2 u /\
@@ -193,9 +200,9 @@ Proof
   ]
 QED
 
-val walkstar_SUBMAP = Q.store_thm(
-"walkstar_SUBMAP",
-`s SUBMAP sx ∧ wfs sx ⇒ (walk* sx t = walk* sx (walk* s t))`,
+Theorem walkstar_SUBMAP:
+ s SUBMAP sx ∧ wfs sx ⇒ (walk* sx t = walk* sx (walk* s t))
+Proof
 STRIP_TAC >> IMP_RES_TAC wfs_SUBMAP >>
 Q.ID_SPEC_TAC `t` >>
 HO_MATCH_MP_TAC walkstar_ind >>
@@ -204,58 +211,64 @@ Q.PAT_X_ASSUM `wfs s` ASSUME_TAC >>
 FULL_SIMP_TAC (srw_ss()) [] >>
 Cases_on `t` >> SRW_TAC [][] >>
 Q.SPECL_THEN [`n`,`s`] MP_TAC (UNDISCH vwalk_SUBMAP) >>
-Cases_on `vwalk s n` >> SRW_TAC [][])
+Cases_on `vwalk s n` >> SRW_TAC [][]
+QED
 
-val walkstar_idempotent = Q.store_thm(
-"walkstar_idempotent",
-`wfs s ==> !t.(walk* s t = walk* s (walk* s t))`,
-METIS_TAC [walkstar_SUBMAP,SUBMAP_REFL])
+Theorem walkstar_idempotent:
+ wfs s ==> !t.(walk* s t = walk* s (walk* s t))
+Proof
+METIS_TAC [walkstar_SUBMAP,SUBMAP_REFL]
+QED
 
-val walkstar_subterm_idem = Q.store_thm(
-"walkstar_subterm_idem",
-`(walk* s t1 = Pair t1a t1d) ∧ wfs s ⇒
+Theorem walkstar_subterm_idem:
+ (walk* s t1 = Pair t1a t1d) ∧ wfs s ⇒
  (walk* s t1a = t1a) ∧
- (walk* s t1d = t1d)`,
+ (walk* s t1d = t1d)
+Proof
 SRW_TAC [][] >>
 IMP_RES_TAC walkstar_idempotent >>
 POP_ASSUM (Q.SPEC_THEN `t1` MP_TAC) >>
-FULL_SIMP_TAC (srw_ss()) [])
+FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val walkstar_walk = Q.store_thm(
-"walkstar_walk",
-`wfs s ==> (walk* s (walk s t) = walk* s t)`,
+Theorem walkstar_walk:
+ wfs s ==> (walk* s (walk s t) = walk* s t)
+Proof
 Cases_on `t` >> SRW_TAC [][] >> SRW_TAC [][] >>
 Cases_on `vwalk s n` >> SRW_TAC [][] >>
 `vwalk s n' = Var n'` by METIS_TAC [vwalk_to_var,NOT_FDOM_vwalk] >>
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val walkstar_to_var = Q.store_thm(
-"walkstar_to_var",
-`(walk* s t = (Var v)) ∧ wfs s ⇒ v NOTIN (FDOM s) ∧ ∃u.t = Var u`,
+Theorem walkstar_to_var:
+ (walk* s t = (Var v)) ∧ wfs s ⇒ v NOTIN (FDOM s) ∧ ∃u.t = Var u
+Proof
 REVERSE (SRW_TAC [][]) THEN1
 (Cases_on `t` >> FULL_SIMP_TAC (srw_ss()) []) >>
 IMP_RES_TAC walkstar_idempotent >>
 POP_ASSUM (Q.SPEC_THEN `t` MP_TAC) >>
 ASM_SIMP_TAC (srw_ss()) [] >>
 Cases_on `vwalk s v` >> SRW_TAC [][] >>
-METIS_TAC [vwalk_to_var])
+METIS_TAC [vwalk_to_var]
+QED
 
 (* direct version of walkstar that does the walk itself *)
 
-val apply_ts_thm = Q.store_thm(
-"apply_ts_thm",
-`wfs s ⇒
+Theorem apply_ts_thm:
+ wfs s ⇒
   (walk* s (Var v) =
      case FLOOKUP s v of NONE => (Var v)
                        | SOME t => walk* s t) ∧
   (walk* s (Pair t1 t2) = Pair (walk* s t1) (walk* s t2)) ∧
-  (walk* s (Const c) = Const c)`,
+  (walk* s (Const c) = Const c)
+Proof
 SIMP_TAC (srw_ss()) [] >> STRIP_TAC >>
 Q.ID_SPEC_TAC `v` >>
 HO_MATCH_MP_TAC vwalk_ind >>
 SRW_TAC [][] >>
 Cases_on `FLOOKUP s v` >> SRW_TAC [][Once vwalk_def] >>
-Cases_on `x` >> SRW_TAC [][]);
+Cases_on `x` >> SRW_TAC [][]
+QED
 
 val apply_ts_ind = save_thm(
 "apply_ts_ind",
@@ -423,10 +436,11 @@ Cases_on `t` >| [
   FULL_SIMP_TAC (srw_ss()) [] >>
   METIS_TAC [IN_DEF,NOT_IN_EMPTY]]);
 
-val oc_NOTIN_FDOM = Q.store_thm(
-  "oc_NOTIN_FDOM",
-  `wfs s ==> !t v. oc s t v ==> v NOTIN FDOM s`,
-  STRIP_TAC >> HO_MATCH_MP_TAC oc_ind >> SRW_TAC [] []);
+Theorem oc_NOTIN_FDOM:
+   wfs s ==> !t v. oc s t v ==> v NOTIN FDOM s
+Proof
+  STRIP_TAC >> HO_MATCH_MP_TAC oc_ind >> SRW_TAC [] []
+QED
 
 val vars_walkstar_if_oc = Q.prove(
 `wfs s ==> !t v. oc s t v ==> v IN vars (walkstar s t)`,
@@ -442,9 +456,10 @@ Induct_on `t` >> SRW_TAC [][] >| [
     METIS_TAC []
 ]);
 
-val oc_eq_vars_walkstar = Q.store_thm(
-  "oc_eq_vars_walkstar",
-  `wfs s ==> (oc s t v ⇔ v ∈ vars (walkstar s t))`,
+Theorem oc_eq_vars_walkstar:
+   wfs s ==> (oc s t v ⇔ v ∈ vars (walkstar s t))
+Proof
   SRW_TAC [][FUN_EQ_THM] >>
-  METIS_TAC [vars_walkstar_if_oc,oc_if_vars_walkstar,IN_DEF]);
+  METIS_TAC [vars_walkstar_if_oc,oc_if_vars_walkstar,IN_DEF]
+QED
 

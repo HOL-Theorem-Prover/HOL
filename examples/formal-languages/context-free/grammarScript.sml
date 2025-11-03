@@ -81,17 +81,19 @@ Theorem MAP_TKI_11[simp]:
 Proof simp[listTheory.INJ_MAP_EQ_IFF, pred_setTheory.INJ_DEF, pairTheory.FORALL_PROD]
 QED
 
-val ptree_fringe_real_fringe = Q.store_thm(
-  "ptree_fringe_real_fringe",
-  ‘∀pt. ptree_fringe pt = MAP FST (real_fringe pt)’,
+Theorem ptree_fringe_real_fringe:
+   ∀pt. ptree_fringe pt = MAP FST (real_fringe pt)
+Proof
   ho_match_mp_tac real_fringe_ind >>
   simp[pairTheory.FORALL_PROD, MAP_FLAT, MAP_MAP_o, combinTheory.o_ABS_R] >>
-  rpt strip_tac >> AP_TERM_TAC >> simp[MAP_EQ_f]);
+  rpt strip_tac >> AP_TERM_TAC >> simp[MAP_EQ_f]
+QED
 
-val LENGTH_real_fringe = Q.store_thm(
-  "LENGTH_real_fringe",
-  ‘∀pt. LENGTH (real_fringe pt) = LENGTH (ptree_fringe pt)’,
-  simp[ptree_fringe_real_fringe]);
+Theorem LENGTH_real_fringe:
+   ∀pt. LENGTH (real_fringe pt) = LENGTH (ptree_fringe pt)
+Proof
+  simp[ptree_fringe_real_fringe]
+QED
 
 val real_fringe_NIL_ptree_fringe = Q.prove(
   `∀pt. real_fringe pt = [] ⇔ ptree_fringe pt = []`,

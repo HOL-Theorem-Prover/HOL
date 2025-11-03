@@ -214,10 +214,11 @@ val option_cases_eq = Q.prove(
      opt = NONE ∧ n = v ∨ ∃sv. opt = SOME sv ∧ s sv = v’,
   Cases_on ‘opt’ >> simp[]);
 
-val store_var_clock = Q.store_thm(
-  "store_var_clock[simp]",
-  ‘(store_var v n s).clock = s.clock’,
-  simp[store_var_def]);
+Theorem store_var_clock[simp]:
+   (store_var v n s).clock = s.clock
+Proof
+  simp[store_var_def]
+QED
 
 local val fs = fsrw_tac[] in
 val comp_exp_correct = prove(
@@ -1022,10 +1023,11 @@ local
     val bp_step_tac = simp [Once pb_sem_t_reln_cases] \\ fs [];
     val bp_size_step_tac = simp [Once pb_sem_t_size_reln_cases] \\ fs [];
 in
-val pb_sem_t_reln_IMP_phase1 = Q.store_thm("pb_sem_t_reln_IMP_phase1",
-  `!s t r.
+Theorem pb_sem_t_reln_IMP_phase1:
+   !s t r.
      pb_sem_t_reln s (Trm t) (Ter r) ⇒
-     pb_sem_t_reln s (Trm (phase1 t)) (Ter r)`,
+     pb_sem_t_reln s (Trm (phase1 t)) (Ter r)
+Proof
   simp [Once pb_sem_t_size_reln_equiv,PULL_EXISTS]
   \\ completeInduct_on `n` \\ fs [PULL_FORALL]
   \\ Cases_on `t` \\ fs [phase1_def]
@@ -1089,7 +1091,8 @@ val pb_sem_t_reln_IMP_phase1 = Q.store_thm("pb_sem_t_reln_IMP_phase1",
     rename [‘sem_e_reln s0 e0 (r,s)’] >>
     qexists_tac `Ter (r,s)` \\ fs []
     \\ fs [pb_sem_t_reln_Forn2,abort_def]
-    \\ imp_res_tac sem_e_reln_not\\ fs []));
+    \\ imp_res_tac sem_e_reln_not\\ fs [])
+QED
 end
 
 (* End verification in Pretty-Big-Step -- 81 lines

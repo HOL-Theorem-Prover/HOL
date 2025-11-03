@@ -1515,7 +1515,6 @@ Theorem SF_SEM___sf_tree_len_PERM_THM:
     !s h es e.
       SF_SEM___sf_tree_len s h fL  n es e = SF_SEM___sf_tree_len s h fL' n es e
 Proof
-
    SIMP_TAC std_ss [EQ_IMP_THM, FORALL_AND_THM, IMP_CONJ_THM] THEN
    reverse conj_asm1_tac THEN1 METIS_TAC[PERM_SYM] THEN
 
@@ -7737,7 +7736,6 @@ Theorem LEMMA_5:
     DS_POINTER_DANGLES s h e2 ==>
     PF_SEM s pf' /\ SF_SEM___EXTEND s h (sf_tree fL e3 e2) sf'
 Proof
-
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 Cases_on ‘DS_EXPRESSION_EVAL s e2’ THEN1 (
    FULL_SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def, DS_EXPRESSION_EQUAL_def, dse_nil_def]

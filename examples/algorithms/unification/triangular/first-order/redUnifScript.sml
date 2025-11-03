@@ -39,34 +39,37 @@ Definition tstep_def:
     (sr = sl |+ (v,t)))
 End
 
-val wfs_tstep = Q.store_thm(
-"wfs_tstep",
-`wfs sl ∧ tstep (sl,bl) (sr,br) ⇒ wfs sr`,
+Theorem wfs_tstep:
+ wfs sl ∧ tstep (sl,bl) (sr,br) ⇒ wfs sr
+Proof
 SRW_TAC [][tstep_def] THEN SRW_TAC [][] THEN
 IMP_RES_TAC walk_to_var THEN
 Q.PAT_ASSUM `wfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [oc_eq_vars_walkstar,walkstar_walk] THEN
 MATCH_MP_TAC wfs_extend THEN
-METIS_TAC [IN_DEF,walkstar_walk])
+METIS_TAC [IN_DEF,walkstar_walk]
+QED
 
-val walks_equal = Q.store_thm(
-"walks_equal",
-`wfs s ∧ (walk s t1 = walk s t2) ⇒ (t1 = t2) ∨ ∃v. (t1 = Var v) ∨ (t2 = Var v)`,
+Theorem walks_equal:
+ wfs s ∧ (walk s t1 = walk s t2) ⇒ (t1 = t2) ∨ ∃v. (t1 = Var v) ∨ (t2 = Var v)
+Proof
 Cases_on `t1 = t2` THEN ASM_SIMP_TAC (srw_ss()) [] THEN
 SIMP_TAC (srw_ss()) [GSYM AND_IMP_INTRO] THEN STRIP_TAC THEN
 MAP_EVERY Cases_on [`t1`,`t2`] THEN SRW_TAC [][] THEN
-METIS_TAC []);
+METIS_TAC []
+QED
 
-val NOTIN_vars_walk = Q.store_thm(
-"NOTIN_vars_walk",
-`wfs s ∧ (vwalk s v = walk s t) ∧ (t ≠ Var v) ⇒ v ∉ vars t`,
+Theorem NOTIN_vars_walk:
+ wfs s ∧ (vwalk s v = walk s t) ∧ (t ≠ Var v) ⇒ v ∉ vars t
+Proof
 Cases_on `t` THEN SRW_TAC [][] THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 `v ∈ vars (vwalk s v)` by SRW_TAC [][] THEN
 IMP_RES_TAC vwalk_vR THEN
 Q.PAT_ASSUM `vwalk s v = X` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [wfs_no_cycles] THEN
-RES_TAC);
+RES_TAC
+QED
 
 (*
 val istep_if_tstep = Q.store_thm(

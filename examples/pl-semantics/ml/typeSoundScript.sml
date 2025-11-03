@@ -461,9 +461,10 @@ val v_nchotomy = theorem"v_nchotomy";
 val v_11 = theorem"v_11";
 val r_distinct = theorem"r_distinct";
 
-val sem_imp_eval = Q.store_thm("sem_imp_eval",
-  `∀env s e. FST (sem env s e) ≠ Rtimeout ⇒
-      eval env s e (sem env s e)`,
+Theorem sem_imp_eval:
+   ∀env s e. FST (sem env s e) ≠ Rtimeout ⇒
+      eval env s e (sem env s e)
+Proof
   ho_match_mp_tac sem_ind >> rw[sem_def]
   >- rw[Once eval_cases]
   >- (
@@ -515,17 +516,18 @@ val sem_imp_eval = Q.store_thm("sem_imp_eval",
     every_case_tac >> fs[] >>
     metis_tac[is_closure_def,dest_closure_def,v_distinct,v_nchotomy]
     )
-  );
+QED
 
 val dest_closure_SOME_is_closure = Q.prove(
   `dest_closure x y = SOME z ⇒ is_closure y`,
   Cases_on`y`>>rw[])
 
-val eval_imp_sem = Q.store_thm("eval_imp_sem",
-  `∀env s e res.
+Theorem eval_imp_sem:
+   ∀env s e res.
     eval env s e res ⇒
       FST (sem env s e) = Rtimeout ∨
-      sem env s e = res`,
+      sem env s e = res
+Proof
   ho_match_mp_tac eval_ind >> rw[sem_def] >>
   BasicProvers.CASE_TAC >> fs[] >> rw[] >>
   TRY(BasicProvers.CASE_TAC >> fs[] >> rw[]) >>
@@ -533,7 +535,8 @@ val eval_imp_sem = Q.store_thm("eval_imp_sem",
   TRY(BasicProvers.CASE_TAC >> fs[] >> rw[]) >>
   TRY(BasicProvers.CASE_TAC >> fs[] >> rw[]) >>
   imp_res_tac dest_closure_SOME_is_closure >> fs[] >>
-  every_case_tac >> fs[]);
+  every_case_tac >> fs[]
+QED
 
 (* Typing *)
 
@@ -1911,8 +1914,8 @@ QED
 
 val eval_strongind = theorem"eval_strongind";
 
-val eval_type_soundness = Q.store_thm("eval_type_soundness",
-  `∀env s e res. eval env s e res ⇒
+Theorem eval_type_soundness:
+   ∀env s e res. eval env s e res ⇒
      ∀tenv t rt et r s'.
        type_e tenv e t ∧
        LIST_REL (type_v rt et) s.refs rt ∧
@@ -1929,7 +1932,8 @@ val eval_type_soundness = Q.store_thm("eval_type_soundness",
          | Rraise n v' =>
              n < LENGTH (et++et') ∧
              type_v (rt++rt') (et++et') v' (EL n (et++et'))
-         | _ => F`,
+         | _ => F
+Proof
   ho_match_mp_tac eval_strongind >>
   (* Lit *)
   conj_tac >- ( simp[sem_def,type_v_clauses,type_e_clauses,LENGTH_NIL] >> metis_tac[APPEND_NIL]) >>
@@ -2265,5 +2269,6 @@ val eval_type_soundness = Q.store_thm("eval_type_soundness",
   disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >> rw[] >>
   full_simp_tac std_ss [GSYM APPEND_ASSOC] >>
   first_assum(match_exists_tac o concl) >> simp[] >>
-  BasicProvers.CASE_TAC >> fs[] >> simp[])
+  BasicProvers.CASE_TAC >> fs[] >> simp[]
+QED
 

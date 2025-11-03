@@ -56,44 +56,47 @@ End
    Evaluation theorem
    ------------------------------------------------------------------------ *)
 
-val NextRISCV = Q.store_thm("NextRISCV",
-  `(Fetch s = (w, s')) /\
+Theorem NextRISCV:
+   (Fetch s = (w, s')) /\
    (DecodeAny w = i) /\
    (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = NONE) ==>
-   (NextRISCV s = update_pc (nxt.c_PC nxt.procID + Skip nxt) nxt)`,
+   (NextRISCV s = update_pc (nxt.c_PC nxt.procID + Skip nxt) nxt)
+Proof
   lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def]
-  )
+QED
 
-val NextRISCV_branch = Q.store_thm("NextRISCV_branch",
-  `(Fetch s = (w, s')) /\
+Theorem NextRISCV_branch:
+   (Fetch s = (w, s')) /\
    (DecodeAny w = i) /\
    (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = SOME (BranchTo a)) ==>
    (NextRISCV s =
       update_pc a
-        (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))`,
+        (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))
+Proof
   lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def]
   \\ Cases_on `Run (Decode w) s'`
   \\ fs []
-  )
+QED
 
-val NextRISCV_cond_branch = Q.store_thm("NextRISCV_cond_branch",
-  `(Fetch s = (w, s')) /\
+Theorem NextRISCV_cond_branch:
+   (Fetch s = (w, s')) /\
    (DecodeAny w = i) /\
    (Run i s' = nxt) /\
    (nxt.exception = NoException) /\
    (nxt.c_NextFetch nxt.procID = if b then SOME (BranchTo a) else NONE) ==>
    (NextRISCV s =
       update_pc (if b then a else nxt.c_PC nxt.procID + Skip nxt)
-        (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))`,
+        (nxt with c_NextFetch := (nxt.procID =+ NONE) nxt.c_NextFetch))
+Proof
   lrw [NextRISCV_def, PC_def, NextFetch_def, write'NextFetch_def]
   \\ Cases_on `Run (DecodeAny w) s'`
   \\ fs [update_pc_def, write'PC_def, riscv_state_component_equality,
          combinTheory.UPDATE_APPLY_IMP_ID]
-  )
+QED
 
 (* ------------------------------------------------------------------------
    Sub-word select operation (temporary)
@@ -141,10 +144,12 @@ val cond_rand_shift = Q.prove(
   rw []
   )
 
-val word_bit_0_lemmas = Q.store_thm("word_bit_0_lemmas",
-  `!w. ¬word_bit 0 (0xFFFFFFFFFFFFFFFEw && w:word64) /\
-       word_bit 0 ((0xFFFFFFFFFFFFFFFEw && w:word64) + v) = word_bit 0 v`,
-  blastLib.BBLAST_TAC)
+Theorem word_bit_0_lemmas:
+   !w. ¬word_bit 0 (0xFFFFFFFFFFFFFFFEw && w:word64) /\
+       word_bit 0 ((0xFFFFFFFFFFFFFFFEw && w:word64) + v) = word_bit 0 v
+Proof
+  blastLib.BBLAST_TAC
+QED
 
 val cond_rand_thms =
   utilsLib.mk_cond_rand_thms
@@ -163,16 +168,17 @@ val cond_rand_thms =
 
 val ifTF = Q.prove(`(if b then T else F) = b`, rw [])
 
-val v2w_0_rwts = Q.store_thm("v2w_0_rwts",
-  `((v2w [F; F; F; F; T] = 1w: word5)) /\
+Theorem v2w_0_rwts:
+   ((v2w [F; F; F; F; T] = 1w: word5)) /\
    ((v2w [F; F; F; F; F] = 0w: word5)) /\
    ((v2w [T; b3; b2; b1; b0] = 0w: word5) = F) /\
    ((v2w [b3; T; b2; b1; b0] = 0w: word5) = F) /\
    ((v2w [b3; b2; T; b1; b0] = 0w: word5) = F) /\
    ((v2w [b3; b2; b1; T; b0] = 0w: word5) = F) /\
-   ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)`,
+   ((v2w [b3; b2; b1; b0; T] = 0w: word5) = F)
+Proof
    blastLib.BBLAST_TAC
-   )
+QED
 
 val aligned2 = Q.prove(
   `(!w: word64. ((1 >< 0) w = 0w: word2) = aligned 2 w)`,

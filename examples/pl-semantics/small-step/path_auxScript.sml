@@ -22,13 +22,16 @@ val okpath_pmap2 = store_thm(
   Q.SPEC_THEN `p0` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC) path_cases THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
 
-val PL_pgenerate = Q.store_thm ("PL_pgenerate",
-`!x f g. x ∈ PL (pgenerate f g)`,
+Theorem PL_pgenerate:
+ !x f g. x ∈ PL (pgenerate f g)
+Proof
  rw [] >>
- metis_tac [infinite_PL, pgenerate_infinite]);
+ metis_tac [infinite_PL, pgenerate_infinite]
+QED
 
-val PL_take_eq = Q.store_thm ("PL_take_eq",
-`n ∈ PL p ⇒ (x ∈ PL (take n p) ⇔ x ≤ n ∧ x ∈ PL p)`,
+Theorem PL_take_eq:
+ n ∈ PL p ⇒ (x ∈ PL (take n p) ⇔ x ≤ n ∧ x ∈ PL p)
+Proof
  rw [] >>
  imp_res_tac PL_take >>
  fs [EXTENSION] >>
@@ -37,29 +40,35 @@ val PL_take_eq = Q.store_thm ("PL_take_eq",
  Cases_on `x = n` >>
  fs [] >>
  `x < n` by decide_tac >>
- metis_tac [PL_downward_closed]);
+ metis_tac [PL_downward_closed]
+QED
 
-val tail_take = Q.store_thm ("tail_take",
-`!n p. n ≠ 0 ⇒ tail (take n p) = take (n - 1) (tail p)`,
+Theorem tail_take:
+ !n p. n ≠ 0 ⇒ tail (take n p) = take (n - 1) (tail p)
+Proof
  Induct_on `n` >>
- rw []);
+ rw []
+QED
 
-val el_take = Q.store_thm ("el_take",
-`!m n p. m ≤ n ⇒ el m (take n p) = el m p`,
+Theorem el_take:
+ !m n p. m ≤ n ⇒ el m (take n p) = el m p
+Proof
  Induct_on `m` >>
  rw [] >>
  Cases_on `n = 0` >>
  fs [] >>
  `m ≤ n - 1` by decide_tac >>
  res_tac >>
- rw [tail_take]);
+ rw [tail_take]
+QED
 
-val path_eq = Q.store_thm ("path_eq",
-`!p1 p2.
+Theorem path_eq:
+ !p1 p2.
   p1 = p2
   ⇔
   PL p1 = PL p2 ∧
-  !n. (n ∈ PL p1 ⇒ el n p1 = el n p2) ∧ (SUC n ∈ PL p1 ⇒ nth_label n p1 = nth_label n p2)`,
+  !n. (n ∈ PL p1 ⇒ el n p1 = el n p2) ∧ (SUC n ∈ PL p1 ⇒ nth_label n p1 = nth_label n p2)
+Proof
  rw [] >>
  eq_tac >>
  rw [] >>
@@ -86,16 +95,18 @@ val path_eq = Q.store_thm ("path_eq",
      metis_tac [PL_0, arithmeticTheory.SUC_NOT, prim_recTheory.INV_SUC_EQ, arithmeticTheory.num_CASES])
  >- (first_x_assum (qspec_then `SUC n` mp_tac) >>
      rw [] >>
-     metis_tac [PL_0, arithmeticTheory.SUC_NOT, prim_recTheory.INV_SUC_EQ, arithmeticTheory.num_CASES]));
+     metis_tac [PL_0, arithmeticTheory.SUC_NOT, prim_recTheory.INV_SUC_EQ, arithmeticTheory.num_CASES])
+QED
 
-val take_eq = Q.store_thm ("take_eq",
-`!n p1 p2.
+Theorem take_eq:
+ !n p1 p2.
   (n ∈ PL p1 ∧ n ∈ PL p2)
   ⇒
   (take n p1 = take n p2
    ⇔
    (!m. m ≤ n ⇒ el m p1 = el m p2) ∧
-   (!m. m < n ⇒ nth_label m p1 = nth_label m p2))`,
+   (!m. m < n ⇒ nth_label m p1 = nth_label m p2))
+Proof
  rw [] >>
  eq_tac >>
  rw [path_eq]
@@ -109,67 +120,85 @@ val take_eq = Q.store_thm ("take_eq",
      decide_tac)
  >- rw [el_take] >>
  `n' < n` by decide_tac >>
-  rw [nth_label_take]);
+  rw [nth_label_take]
+QED
 
-val first_pconcat = Q.store_thm ("first_pconcat[simp]",
-`!p1 l p2. first (pconcat p1 l p2) = first p1`,
+Theorem first_pconcat[simp]:
+ !p1 l p2. first (pconcat p1 l p2) = first p1
+Proof
  rw [] >>
  `(?x. p1 = stopped_at x) ∨ ?x l p1'. p1 = pcons x l p1'` by metis_tac [path_cases] >>
- rw [pconcat_thm]);
+ rw [pconcat_thm]
+QED
 
-val last_pconcat = Q.store_thm ("last_pconcat[simp]",
-`!p1. finite p1 ⇒ !l p2. last (pconcat p1 l p2) = last p2`,
+Theorem last_pconcat[simp]:
+ !p1. finite p1 ⇒ !l p2. last (pconcat p1 l p2) = last p2
+Proof
  ho_match_mp_tac finite_path_ind >>
- rw [pconcat_thm]);
+ rw [pconcat_thm]
+QED
 
-val okpath_pconcat = Q.store_thm ("okpath_pconcat[simp]",
-`!p1.
+Theorem okpath_pconcat[simp]:
+ !p1.
   finite p1
   ⇒
   !R l p2.
-    (okpath R (pconcat p1 l p2) ⇔ okpath R p1 ∧ okpath R p2 ∧ R (last p1) l (first p2))`,
+    (okpath R (pconcat p1 l p2) ⇔ okpath R p1 ∧ okpath R p2 ∧ R (last p1) l (first p2))
+Proof
  ho_match_mp_tac finite_path_ind >>
  rw [pconcat_thm]
  >- metis_tac [] >>
  eq_tac >>
  rw [] >>
- fs [first_pconcat]);
+ fs [first_pconcat]
+QED
 
-val pmap_pmap = Q.store_thm ("pmap_pmap",
-`!f g f' g' p. pmap f g (pmap f' g' p) = pmap (f o f') (g o g') p`,
- rw [path_eq]);
+Theorem pmap_pmap:
+ !f g f' g' p. pmap f g (pmap f' g' p) = pmap (f o f') (g o g') p
+Proof
+ rw [path_eq]
+QED
 
-val labels_pmap = Q.store_thm ("labels_pmap[simp]",
-`!f g p. labels (pmap f g p) = LMAP g (labels p)`,
+Theorem labels_pmap[simp]:
+ !f g p. labels (pmap f g p) = LMAP g (labels p)
+Proof
  rw [labels_LMAP, LMAP_MAP, pmap_def, path_rep_bijections_thm] >>
  rpt (AP_TERM_TAC ORELSE AP_THM_TAC) >>
- rw [FUN_EQ_THM]);
+ rw [FUN_EQ_THM]
+QED
 
-val labels_pconcat = Q.store_thm ("labels_pconcat[simp]",
-`!p1 l p2. labels (pconcat p1 l p2) = (LAPPEND (labels p1) (l:::labels p2))`,
- rw [labels_LMAP, pconcat_def, path_rep_bijections_thm,LMAP_APPEND]);
+Theorem labels_pconcat[simp]:
+ !p1 l p2. labels (pconcat p1 l p2) = (LAPPEND (labels p1) (l:::labels p2))
+Proof
+ rw [labels_LMAP, pconcat_def, path_rep_bijections_thm,LMAP_APPEND]
+QED
 
-val lmap_I = Q.store_thm ("lmap_I[simp]",
-`!l. LMAP I l = l`,
+Theorem lmap_I[simp]:
+ !l. LMAP I l = l
+Proof
  rw [Once LLIST_BISIMULATION] >>
  qexists_tac `(\x y. LMAP I y = x)` >>
  rw [] >>
  `ll4 = [||] ∨ ?x y. ll4=x:::y` by metis_tac [llist_CASES] >>
- rw []);
+ rw []
+QED
 
-val LTAKE_length = Q.store_thm ("LTAKE_length",
-`!n l. LLENGTH l = SOME n ⇒ LTAKE n l = toList l`,
+Theorem LTAKE_length:
+ !n l. LLENGTH l = SOME n ⇒ LTAKE n l = toList l
+Proof
  Induct_on `n` >>
  rw [] >>
  `l = [||] ∨ ?x y. l=x:::y` by metis_tac [llist_CASES] >>
  rw [toList] >>
- fs [LLENGTH]);
+ fs [LLENGTH]
+QED
 
-val toList_lappend = Q.store_thm ("toList_lappend",
-`!l1.
+Theorem toList_lappend:
+ !l1.
   LFINITE l1 ⇒ !l2. LFINITE l2
   ⇒
-  THE (toList (LAPPEND l1 l2)) = THE (toList l1) ++ THE (toList l2)`,
+  THE (toList (LAPPEND l1 l2)) = THE (toList l1) ++ THE (toList l2)
+Proof
  ho_match_mp_tac LFINITE_ind >>
  rw [toList] >>
  fs [LFINITE_APPEND, LLENGTH_APPEND] >>
@@ -182,7 +211,8 @@ val toList_lappend = Q.store_thm ("toList_lappend",
  fs [] >>
  `LFINITE (LAPPEND l1 l2)` by rw [LFINITE_APPEND] >>
  imp_res_tac LFINITE_toList >>
- fs []);
+ fs []
+QED
 
 val okpath_steps_lem1 = Q.prove (
 `!p.
@@ -218,15 +248,17 @@ val okpath_steps_lem2 = Q.prove (
  rw [] >>
  fs []);
 
-val okpath_steps = Q.store_thm ("okpath_steps",
-`!p rel.
+Theorem okpath_steps:
+ !p rel.
   okpath rel p
   ⇔
-  (!n. n + 1 ∈ PL p ⇒ rel (el n p) (nth_label n p) (el (n+1) p))`,
- metis_tac [okpath_steps_lem2, okpath_steps_lem1]);
+  (!n. n + 1 ∈ PL p ⇒ rel (el n p) (nth_label n p) (el (n+1) p))
+Proof
+ metis_tac [okpath_steps_lem2, okpath_steps_lem1]
+QED
 
-val path_limit = Q.store_thm ("path_limit",
-`!P rel.
+Theorem path_limit:
+ !P rel.
   (!p. p ∈ P ⇒ finite p ∧ okpath rel p) ∧
   (!n. ?p. p ∈ P ∧ n ∈ PL p) ∧
   (!p1 p2 n. p1 ∈ P ∧ p2 ∈ P ∧ n ∈ PL p1 ∧ n ∈ PL p2 ⇒ take n p1 = take n p2)
@@ -236,7 +268,8 @@ val path_limit = Q.store_thm ("path_limit",
     okpath rel p ∧
     !n p'.
       p' ∈ P ⇒
-      (n ∈ PL p' ⇒ take n p' = take n p)`,
+      (n ∈ PL p' ⇒ take n p' = take n p)
+Proof
  rw [SKOLEM_THM, PULL_EXISTS] >>
  qexists_tac `pgenerate (\n. el n (f (SUC n))) (λn. nth_label n (f (SUC n)))` >>
  rw []
@@ -280,16 +313,19 @@ val path_limit = Q.store_thm ("path_limit",
          rw [nth_label_take, nth_label_pgenerate] >>
          `SUC n' ∈ PL p'` by metis_tac [arithmeticTheory.LESS_OR_EQ, PL_downward_closed] >>
          `SUC n' ∈ PL (f (SUC n'))` by metis_tac [PL_downward_closed] >>
-         fs [take_eq])));
+         fs [take_eq]))
+QED
 
 Definition lfilter_map_def:
 lfilter_map f l = LMAP THE (LFILTER (\x. x ≠ NONE) (LMAP f l))
 End
 
-val lfinite_lfilter = Q.store_thm ("lfinite_lfilter",
-`!l. LFINITE l ⇒ LFINITE (LFILTER P l)`,
+Theorem lfinite_lfilter:
+ !l. LFINITE l ⇒ LFINITE (LFILTER P l)
+Proof
  ho_match_mp_tac LFINITE_ind >>
- rw []);
+ rw []
+QED
 
 Definition inf_const_def:
 inf_const c = LUNFOLD (\x:unit. SOME (x,c)) ARB
@@ -311,22 +347,27 @@ compose_paths p1 p2 =
         (p1,p2)
 End
 
-val compose_paths_stopped = Q.store_thm ("compose_paths_stopped[simp]",
-`(!x y. compose_paths (stopped_at x) (stopped_at y) = stopped_at (x,y))`,
+Theorem compose_paths_stopped[simp]:
+ (!x y. compose_paths (stopped_at x) (stopped_at y) = stopped_at (x,y))
+Proof
  rw [compose_paths_def] >>
- rw [Once unfold_thm]);
+ rw [Once unfold_thm]
+QED
 
-val compose_paths_pcons = Q.store_thm ("compose_paths_pcons[simp]",
-`(!x y l p1 p2. compose_paths (pcons x l p1) (pcons y l p2) = pcons (x,y) l (compose_paths p1 p2))`,
+Theorem compose_paths_pcons[simp]:
+ (!x y l p1 p2. compose_paths (pcons x l p1) (pcons y l p2) = pcons (x,y) l (compose_paths p1 p2))
+Proof
  rw [compose_paths_def] >>
- rw [Once unfold_thm]);
+ rw [Once unfold_thm]
+QED
 
-val okpath_compose_paths = Q.store_thm ("okpath_compose_paths",
-`!r1 r2 p1 p2.
+Theorem okpath_compose_paths:
+ !r1 r2 p1 p2.
   okpath r1 p1 ∧
   okpath r2 p2
   ⇒
-  okpath (parallel_comp r1 r2) (compose_paths p1 p2)`,
+  okpath (parallel_comp r1 r2) (compose_paths p1 p2)
+Proof
  rw [compose_paths_def, okpath_parallel_comp] >>
  match_mp_tac okpath_pmap2
  >- (qexists_tac `\s1 l s2. r1 (FST s1) l (FST s2)` >>
@@ -350,18 +391,22 @@ val okpath_compose_paths = Q.store_thm ("okpath_compose_paths",
      rw [] >>
      `(?s. s1 = stopped_at s) ∨ (?s2 l s'. s1 = pcons s2 l s')` by metis_tac [path_cases] >>
      rw [] >>
-     fs []));
+     fs [])
+QED
 
-val first_compose_paths = Q.store_thm ("first_compose_paths",
-`!p1 p2. first (compose_paths p1 p2) = (first p1, first p2)`,
+Theorem first_compose_paths:
+ !p1 p2. first (compose_paths p1 p2) = (first p1, first p2)
+Proof
  rw [compose_paths_def] >>
- rw [Once unfold_thm]);
+ rw [Once unfold_thm]
+QED
 
-val labels_compose_paths = Q.store_thm ("labels_compose_paths",
-`!p1 p2.
+Theorem labels_compose_paths:
+ !p1 p2.
   labels p1 = labels p2
   ⇒
-  labels (compose_paths p1 p2) = labels p1`,
+  labels (compose_paths p1 p2) = labels p1
+Proof
  rw [] >>
  rw [Once LLIST_BISIMULATION] >>
  qexists_tac `\l1 l2. ?p1 p2. labels p1 = labels p2 ∧ l1 = labels (compose_paths p1 p2) ∧ l2 = labels p2` >>
@@ -371,16 +416,18 @@ val labels_compose_paths = Q.store_thm ("labels_compose_paths",
  `(?x. p2' = stopped_at x) ∨ (?s l p4. p2' = pcons s l p4)` by metis_tac [path_cases] >>
  rw [] >>
  fs [] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val last_compose_paths = Q.store_thm ("last_compose_paths",
-`!p1.
+Theorem last_compose_paths:
+ !p1.
   finite p1
   ⇒
   !p2.
   labels p2 = labels p1
   ⇒
-  last (compose_paths p1 p2) = (last p1, last p2)`,
+  last (compose_paths p1 p2) = (last p1, last p2)
+Proof
  ho_match_mp_tac finite_path_ind >>
  rw [] >>
  `(?s. p2 = stopped_at s) ∨ (?s1 l p'. p2 = pcons s1 l p')` by metis_tac [path_cases] >>
@@ -389,7 +436,8 @@ val last_compose_paths = Q.store_thm ("last_compose_paths",
  rw [compose_paths_def] >>
  rw [Once unfold_thm] >>
  res_tac >>
- fs [compose_paths_def]);
+ fs [compose_paths_def]
+QED
 
 val llength_labels_lem = Q.prove (
 `!p n. LLENGTH (labels p) = SOME n ⇔ length p = SOME (SUC n)`,
@@ -399,8 +447,9 @@ val llength_labels_lem = Q.prove (
  fs [DECIDE ``!x. x + 1 = SUC x``] >>
  rw [alt_length_thm, length_never_zero]);
 
-val llength_labels = Q.store_thm ("llength_labels",
-`!p. OPTION_MAP SUC (LLENGTH (labels p)) = length p`,
+Theorem llength_labels:
+ !p. OPTION_MAP SUC (LLENGTH (labels p)) = length p
+Proof
  rw [] >>
  Cases_on `finite p` >>
  fs [finite_length] >>
@@ -409,11 +458,14 @@ val llength_labels = Q.store_thm ("llength_labels",
  >- (Cases_on `n` >>
      fs [length_never_zero] >>
      metis_tac [llength_labels_lem, NOT_SOME_NONE, option_CASES]) >>
- metis_tac [llength_labels_lem, NOT_SOME_NONE, option_CASES])
+ metis_tac [llength_labels_lem, NOT_SOME_NONE, option_CASES]
+QED
 
-val labels_eq_length = Q.store_thm ("labels_eq_length",
-`!p1 p2. labels p1 = labels p2 ⇒ length p1 = length p2`,
- metis_tac [llength_labels]);
+Theorem labels_eq_length:
+ !p1 p2. labels p1 = labels p2 ⇒ length p1 = length p2
+Proof
+ metis_tac [llength_labels]
+QED
 
 val length_compose_paths_lem = Q.prove (
 `!p1 p2 n.
@@ -426,11 +478,12 @@ val length_compose_paths_lem = Q.prove (
  fs [] >>
  rw [alt_length_thm, length_never_zero]);
 
-val length_compose_paths = Q.store_thm ("length_compose_paths",
-`!p1 p2.
+Theorem length_compose_paths:
+ !p1 p2.
   labels p1 = labels p2
   ⇒
-  length (compose_paths p1 p2) = length p1`,
+  length (compose_paths p1 p2) = length p1
+Proof
  rw [] >>
  Cases_on `finite p` >>
  fs [finite_length] >>
@@ -439,12 +492,14 @@ val length_compose_paths = Q.store_thm ("length_compose_paths",
  >- (Cases_on `n` >>
      fs [length_never_zero] >>
      metis_tac [length_compose_paths_lem, NOT_SOME_NONE, option_CASES]) >>
- metis_tac [length_compose_paths_lem, NOT_SOME_NONE, option_CASES])
+ metis_tac [length_compose_paths_lem, NOT_SOME_NONE, option_CASES]
+QED
 
-val length_pconcat = Q.store_thm ("length_pconcat",
-`!p1 l p2.
+Theorem length_pconcat:
+ !p1 l p2.
   length (pconcat p1 l p2) =
-    OPTION_JOIN (OPTION_MAP (\l1. OPTION_MAP ((+) l1) (length p2)) (length p1))`,
+    OPTION_JOIN (OPTION_MAP (\l1. OPTION_MAP ((+) l1) (length p2)) (length p1))
+Proof
  rw [] >>
  Cases_on `finite p1` >>
  Cases_on `finite p2` >>
@@ -454,11 +509,13 @@ val length_pconcat = Q.store_thm ("length_pconcat",
  simp [] >>
  imp_res_tac LFINITE_toList >>
  rw [] >>
- simp [LFINITE_APPEND]);
+ simp [LFINITE_APPEND]
+QED
 
 local val rw = srw_tac[] val fs = fsrw_tac[] in
-val PL_pconcat = Q.store_thm ("PL_pconcat",
-`!p1 l p2. PL (pconcat p1 l p2) = 0 INSERT { x + y + 1 | x ∈ PL p1 ∧ y ∈ PL p2 }`,
+Theorem PL_pconcat:
+ !p1 l p2. PL (pconcat p1 l p2) = 0 INSERT { x + y + 1 | x ∈ PL p1 ∧ y ∈ PL p2 }
+Proof
  rw [PL_def, EXTENSION] >>
  eq_tac >>
  rw [] >>
@@ -483,14 +540,16 @@ val PL_pconcat = Q.store_thm ("PL_pconcat",
  >- (`x ≠ 0 ∧ x' ≠ 0` by metis_tac [length_never_zero] >>
      intLib.ARITH_TAC)
  >- (`x ≠ 0 ∧ x'' ≠ 0` by metis_tac [length_never_zero] >>
-     intLib.ARITH_TAC));
+     intLib.ARITH_TAC)
+QED
 end
 
-val complete_path = Q.store_thm ("complete_path",
-`!r p1.
+Theorem complete_path:
+ !r p1.
   okpath r p1 ∧ ~complete r p1
   ⇒
-  ?l p2. okpath r (pconcat p1 l p2) ∧ complete r (pconcat p1 l p2)`,
+  ?l p2. okpath r (pconcat p1 l p2) ∧ complete r (pconcat p1 l p2)
+Proof
  rw [complete_def] >>
  qexists_tac `l` >>
  qexists_tac `unfold (\s. s) (\s. some (s',l). r s l s') s` >>
@@ -529,14 +588,16 @@ val complete_path = Q.store_thm ("complete_path",
          rw [] >>
          first_x_assum match_mp_tac >>
          fs [length_thm, arithmeticTheory.ADD1, finite_length] >>
-         rfs [])));
+         rfs []))
+QED
 
-val determ_path_unique = Q.store_thm ("determ_path_unique",
-`!r p1 p2.
+Theorem determ_path_unique:
+ !r p1 p2.
   (!s l1 s1 l2 s2. r s l1 s1 ∧ r s l2 s2 ⇒ l1 = l2 ∧ s1 = s2) ∧
   first p1 = first p2 ∧ complete r p1 ∧ complete r p2 ∧ okpath r p1 ∧ okpath r p2
   ⇒
-  p1 = p2`,
+  p1 = p2
+Proof
  rw [] >>
  rw [Once path_bisimulation] >>
  qexists_tac `\p1 p2. first p1 = first p2 ∧ complete r p1 ∧ complete r p2 ∧ okpath r p1 ∧ okpath r p2` >>
@@ -546,29 +607,34 @@ val determ_path_unique = Q.store_thm ("determ_path_unique",
  rw [] >>
  fs [complete_def] >>
  rw [] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val el_pconcat = Q.store_thm ("el_pconcat",
-`!n p1 l p2.
+Theorem el_pconcat:
+ !n p1 l p2.
   n ∈ PL p1
   ⇒
-  el n (pconcat p1 l p2) = el n p1`,
+  el n (pconcat p1 l p2) = el n p1
+Proof
  Induct_on `n` >>
  rw [] >>
  `(?x. p1 = stopped_at x) ∨ ?x l p1'. p1 = pcons x l p1'` by metis_tac [path_cases] >>
  rw [pconcat_thm] >>
- fs []);
+ fs []
+QED
 
-val nth_label_pconcat = Q.store_thm ("nth_label_pconcat",
-`!n p1 l p2.
+Theorem nth_label_pconcat:
+ !n p1 l p2.
   SUC n ∈ PL p1
   ⇒
-  nth_label n (pconcat p1 l p2) = nth_label n p1`,
+  nth_label n (pconcat p1 l p2) = nth_label n p1
+Proof
  Induct_on `n` >>
  rw [] >>
  `(?x. p1 = stopped_at x) ∨ ?x l p1'. p1 = pcons x l p1'` by metis_tac [path_cases] >>
  rw [pconcat_thm] >>
- fs []);
+ fs []
+QED
  (*
 
 val lrep_ok_thm = Q.store_thm ("lrep_ok_thm",

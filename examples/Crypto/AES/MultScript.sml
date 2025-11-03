@@ -29,10 +29,11 @@ val MSB_lem = Q.prove (
   `!a b. word_msb (a ?? b) = ~(word_msb a = word_msb b)`,
   SRW_TAC [WORD_BIT_EQ_ss] []);
 
-val xtime_distrib = Q.store_thm
-("xtime_distrib",
- `!a b. xtime (a ?? b) = xtime a ?? xtime b`,
-  SRW_TAC [] [xtime_def, MSB_lem] THEN FULL_SIMP_TAC std_ss []);
+Theorem xtime_distrib:
+  !a b. xtime (a ?? b) = xtime a ?? xtime b
+Proof
+  SRW_TAC [] [xtime_def, MSB_lem] THEN FULL_SIMP_TAC std_ss []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Multiplication by a constant                                              *)
@@ -48,13 +49,14 @@ Definition ConstMult_def:
          else       ((b1 >>> 1) ** xtime b2)
 End
 
-val ConstMultDistrib = Q.store_thm
-("ConstMultDistrib",
- `!x y z. x ** (y ?? z) = (x ** y) ?? (x ** z)`,
+Theorem ConstMultDistrib:
+  !x y z. x ** (y ?? z) = (x ** y) ?? (x ** z)
+Proof
  recInduct (theorem "ConstMult_ind")
    THEN REPEAT STRIP_TAC
    THEN ONCE_REWRITE_TAC [ConstMult_def]
-   THEN SRW_TAC [] [xtime_distrib]);
+   THEN SRW_TAC [] [xtime_distrib]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Iterative version                                                         *)
@@ -73,12 +75,13 @@ val _ = computeLib.add_persistent_funs ["IterConstMult_def"];
 (* Equivalence between recursive and iterative forms.                        *)
 (*---------------------------------------------------------------------------*)
 
-val ConstMultEq = Q.store_thm
-("ConstMultEq",
- `!b1 b2 acc. (b1 ** b2) ?? acc = SND(SND(IterConstMult (b1,b2,acc)))`,
+Theorem ConstMultEq:
+  !b1 b2 acc. (b1 ** b2) ?? acc = SND(SND(IterConstMult (b1,b2,acc)))
+Proof
  recInduct (theorem "IterConstMult_ind") THEN RW_TAC std_ss []
    THEN ONCE_REWRITE_TAC [ConstMult_def,IterConstMult_def]
-   THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [] []);
+   THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [] []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Tabled versions                                                           *)

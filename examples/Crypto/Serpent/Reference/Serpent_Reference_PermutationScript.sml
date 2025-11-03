@@ -71,9 +71,8 @@ Definition permu_def:
 End
 
 (*for evaluation*)
-val permuEval = Q.store_thm(
-"permuEval",
-`!m (block:word128).
+Theorem permuEval:
+ !m (block:word128).
     permu m permFun (block:word128)
     = if m = 0
          then let sourceBit = block ' (permFun 0)
@@ -87,38 +86,41 @@ val permuEval = Q.store_thm(
                            then (1w:word128) << m
                            else (0w:word128)
            in
-          maskedWord || (permu (m-1) permFun  block) `,
+          maskedWord || (permu (m-1) permFun  block)
+Proof
  RW_TAC  list_ss [permu_def,LET_THM] THENL [
     Cases_on `m` THEN
     RW_TAC list_ss [permu_def,LET_THM],
     Cases_on `m` THEN
-    RW_TAC list_ss [permu_def,LET_THM]]);
+    RW_TAC list_ss [permu_def,LET_THM]]
+QED
 
 (*desired properties of permu *)
-val perm_recur_inv1_w128 = Q.store_thm(
-"perm_recur_inv1_w128",
-`!permFun block from to d.
+Theorem perm_recur_inv1_w128:
+ !permFun block from to d.
     (!x. x < 128 ==> permFun x < 128) /\
     (d < 128) /\
     (to < 128) /\
     (permFun to = from) /\
     to > d
     ==>
-    ~((permu d permFun block) ' to)`,
+    ~((permu d permFun block) ' to)
+Proof
  Induct_on `d` THEN
  SRW_TAC [ARITH_ss] [permu_def,LET_THM] THEN
- SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def]);
+ SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def]
+QED
 
-val perm_recur_inv2_w128 = Q.store_thm(
-"perm_recur_inv2_w128",
-`!permFun block from to d.
+Theorem perm_recur_inv2_w128:
+ !permFun block from to d.
     (!x. x < 128 ==> permFun x < 128) /\
     (d < 128) /\
     (to < 128) /\
     (permFun to = from) /\
     to <= d
     ==>
-    ((permu d permFun block) ' to = block ' from)`,
+    ((permu d permFun block) ' to = block ' from)
+Proof
  Induct_on `d` THEN
  SRW_TAC [ARITH_ss] [permu_def,LET_THM] THEN
  SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def] THEN
@@ -126,18 +128,19 @@ val perm_recur_inv2_w128 = Q.store_thm(
  SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def] THEN
  FULL_SIMP_TAC arith_ss [] THEN
  `to > d /\ (to = SUC d)` by DECIDE_TAC THEN
- ASM_SIMP_TAC arith_ss [perm_recur_inv1_w128]);
+ ASM_SIMP_TAC arith_ss [perm_recur_inv1_w128]
+QED
 
 (*composite of 2 permutations*)
-val permu_compose_w128 = Q.store_thm(
-"permu_compose_w128",
-`!permFun1 permFun2 block i.
+Theorem permu_compose_w128:
+ !permFun1 permFun2 block i.
     i < 128  /\
     (!x. x < 128 ==> permFun1 x < 128) /\
     (!x. x < 128 ==> permFun2 x < 128)
      ==>
     ((permu 127 permFun2 (permu 127 permFun1 block)) ' i =
-     (permu 127 (permFun1 o permFun2)  block) ' i)`,
+     (permu 127 (permFun1 o permFun2)  block) ' i)
+Proof
   SRW_TAC [] [] THEN
   `(permu 127 permFun2 (permu 127 permFun1 block)) ' i =
    (permu 127 permFun1 block) ' (permFun2 i)`
@@ -149,18 +152,20 @@ val permu_compose_w128 = Q.store_thm(
   `(permu 127 permFun1 block)' (permFun2 i) =
     block ' (permFun1 ( permFun2 i))`
     by FULL_SIMP_TAC arith_ss [perm_recur_inv2_w128] THEN
-  RW_TAC std_ss []);
+  RW_TAC std_ss []
+QED
 
 (*two permutations cancel each other*)
-val permu_comp_reverse_w128 = Q.store_thm(
-"permu_comp_reverse_w128",
-`!permFun1 permFun2 block.
+Theorem permu_comp_reverse_w128:
+ !permFun1 permFun2 block.
     (!x. x < 128 ==> permFun1 x < 128) /\
     (!x. x < 128 ==> permFun2 x < 128) /\
     (!x. x < 128 ==> ((permFun1 o permFun2) x = x)) ==>
-    (permu 127 permFun2 (permu 127 permFun1 block) = block)`,
+    (permu 127 permFun2 (permu 127 permFun1 block) = block)
+Proof
   SRW_TAC [] [] THEN
-    SRW_TAC [WORD_BIT_EQ_ss] [permu_compose_w128, perm_recur_inv2_w128]);
+    SRW_TAC [WORD_BIT_EQ_ss] [permu_compose_w128, perm_recur_inv2_w128]
+QED
 
 Definition IP_def:   IP w128 = permu 127 IPFun w128
 End
@@ -172,25 +177,28 @@ End
 Definition invFP_def:   invFP w128 = IP w128
 End
 
-val IP_FP_fact = Q.store_thm(
-"IP_FP_fact",
-`!x.
+Theorem IP_FP_fact:
+ !x.
     x < 128 ==> ((IPFun x < 128) /\
     (FPFun x < 128) /\
     ((FPFun o IPFun) x = x) /\
-    ((IPFun o FPFun) x = x))`,
- FULL_SIMP_TAC arith_ss [BOUNDED_FORALL_THM,IPFunVal,FPFunVal]);
+    ((IPFun o FPFun) x = x))
+Proof
+ FULL_SIMP_TAC arith_ss [BOUNDED_FORALL_THM,IPFunVal,FPFunVal]
+QED
 
 (*permutations using given IP and FP tables cancel*)
-val invFP_FP_cancel = Q.store_thm(
-"invFP_FP_cancel",
-`!block.
-    invFP (FP block) = block`,
- SIMP_TAC std_ss [invFP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]);
+Theorem invFP_FP_cancel:
+ !block.
+    invFP (FP block) = block
+Proof
+ SIMP_TAC std_ss [invFP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]
+QED
 
-val invIP_IP_cancel = Q.store_thm(
-"invIP_IP_cancel",
-`!block.
-    invIP (IP block)= block`,
- SIMP_TAC std_ss [invIP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]);
+Theorem invIP_IP_cancel:
+ !block.
+    invIP (IP block)= block
+Proof
+ SIMP_TAC std_ss [invIP_def,IP_def,FP_def,permu_comp_reverse_w128,IP_FP_fact]
+QED
 

@@ -25,15 +25,16 @@ val RESTR_EVAL_TAC = computeLib.RESTR_EVAL_TAC;
 val _ =
   type_abbrev ("keysched", ``:key#key#key#key#key#key#key#key#key#key#key``);
 
-val FORALL_KEYSCHED = Q.store_thm
-("FORALL_KEYSCHED",
- `(!x:keysched. P x) = !k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11.
-                        P(k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11)`,
+Theorem FORALL_KEYSCHED:
+  (!x:keysched. P x) = !k1 k2 k3 k4 k5 k6 k7 k8 k9 k10 k11.
+                        P(k1,k2,k3,k4,k5,k6,k7,k8,k9,k10,k11)
+Proof
  EQ_TAC THEN RW_TAC std_ss [] THEN
  `?a1 a2 a3 a4 a5 a6 a7 a8 a9 a10 a11.
      x = (a1,a2,a3,a4,a5,a6,a7,a8,a9,a10,a11)`
    by METIS_TAC [ABS_PAIR_THM]
- THEN ASM_REWRITE_TAC[]);
+ THEN ASM_REWRITE_TAC[]
+QED
 
 
 Definition ROTKEYS_def:
@@ -123,16 +124,17 @@ val [MultCol] = decls "MultCol";
 val [InvMultCol] = decls "InvMultCol";
 val [genMixColumns] = decls "genMixColumns";
 
-val AES_LEMMA = Q.store_thm
-("AES_LEMMA",
- `!(plaintext:state) (keys:keysched).
-     AES_BWD (REVKEYS keys) (AES_FWD keys plaintext) = plaintext`,
+Theorem AES_LEMMA:
+  !(plaintext:state) (keys:keysched).
+     AES_BWD (REVKEYS keys) (AES_FWD keys plaintext) = plaintext
+Proof
  SIMP_TAC std_ss [FORALL_BLOCK] THEN
  SIMP_TAC std_ss [FORALL_KEYSCHED]
    THEN RESTR_EVAL_TAC [MultCol,InvMultCol,genMixColumns]
    THEN RW_TAC std_ss [ShiftRows_Inversion,SubBytes_Inversion,
                        XOR_BLOCK_IDEM,MixColumns_Inversion,
-                       from_state_Inversion,from_state_def]);
+                       from_state_Inversion,from_state_def]
+QED
 
 (*---------------------------------------------------------------------------
      Generate the key schedule from key. We work using 4-tuples of
@@ -240,12 +242,13 @@ End
 (* Basic theorem about encryption/decryption                                 *)
 (*---------------------------------------------------------------------------*)
 
-val AES_CORRECT = Q.store_thm
-  ("AES_CORRECT",
-   `!key plaintext.
+Theorem AES_CORRECT:
+    !key plaintext.
       ((encrypt,decrypt) = AES key)
       ==>
-       (decrypt (encrypt plaintext) = plaintext)`,
- RW_TAC std_ss [AES_def,LET_THM,AES_LEMMA]);
+       (decrypt (encrypt plaintext) = plaintext)
+Proof
+ RW_TAC std_ss [AES_def,LET_THM,AES_LEMMA]
+QED
 
 

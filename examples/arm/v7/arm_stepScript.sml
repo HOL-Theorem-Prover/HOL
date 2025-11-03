@@ -382,55 +382,67 @@ End
 (* Facilitate evaluation of set_q to when the saturation condition unknown   *)
 (* ------------------------------------------------------------------------- *)
 
-val condT_set_q = Q.store_thm("condT_set_q",
-  `!b ii. (if b then set_q ii else constT ()) =
+Theorem condT_set_q:
+   !b ii. (if b then set_q ii else constT ()) =
           seqT (read_cpsr ii)
-          (\cpsr. write_cpsr ii (if b then cpsr with Q := T else cpsr))`,
+          (\cpsr. write_cpsr ii (if b then cpsr with Q := T else cpsr))
+Proof
   SRW_TAC [] [FUN_EQ_THM, APPLY_UPDATE_ID, arm_state_component_equality,
     set_q_def, constT_def, condT_def, seqT_def,
     write_cpsr_def, write__psr_def, writeT_def,
-    read_cpsr_def, read_cpsr_def, read__psr_def, readT_def]);
+    read_cpsr_def, read_cpsr_def, read__psr_def, readT_def]
+QED
 
-val ARM_WRITE_STATUS_Q = Q.store_thm("ARM_WRITE_STATUS_Q",
-  `!b s.
+Theorem ARM_WRITE_STATUS_Q:
+   !b s.
      (if b then ARM_WRITE_STATUS psrQ T s else s) =
-     ARM_WRITE_STATUS psrQ (b \/ ARM_READ_STATUS psrQ s) s`,
+     ARM_WRITE_STATUS psrQ (b \/ ARM_READ_STATUS psrQ s) s
+Proof
   SRW_TAC [] [ARM_WRITE_STATUS_def, ARM_READ_STATUS_def,
     ARM_WRITE_CPSR_def, ARM_READ_CPSR_def, arm_state_component_equality]
     \\ MATCH_MP_TAC (GSYM UPDATE_APPLY_IMP_ID)
-    \\ SRW_TAC [] [ARMpsr_component_equality]);
+    \\ SRW_TAC [] [ARMpsr_component_equality]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Evaluation for alignment and other miscellany                             *)
 (* ------------------------------------------------------------------------- *)
 
-val UPDATE_ID = Q.store_thm("UPDATE_ID",
-  `!a b c. (a =+ b) o (a =+ c) = a =+ b`,
-  SRW_TAC [] [UPDATE_def,FUN_EQ_THM]);
+Theorem UPDATE_ID:
+   !a b c. (a =+ b) o (a =+ c) = a =+ b
+Proof
+  SRW_TAC [] [UPDATE_def,FUN_EQ_THM]
+QED
 
-val UPDATE_ID_o = Q.store_thm("UPDATE_ID_o",
-  `(!a b. (a =+ b) o (a =+ b) = (a =+ b)) /\
-   (!a b g. (a =+ b) o ((a =+ b) o g) = (a =+ b) o g)`,
-  SRW_TAC [] [FUN_EQ_THM, UPDATE_def]);
+Theorem UPDATE_ID_o:
+   (!a b. (a =+ b) o (a =+ b) = (a =+ b)) /\
+   (!a b g. (a =+ b) o ((a =+ b) o g) = (a =+ b) o g)
+Proof
+  SRW_TAC [] [FUN_EQ_THM, UPDATE_def]
+QED
 
-val UPDATE_ID_o2 = Q.store_thm("UPDATE_ID_o2",
-  `(!a b c. (a =+ b) o (a =+ c) = (a =+ b)) /\
-   (!a b c g. (a =+ b) o ((a =+ c) o g) = (a =+ b) o g)`,
-  SRW_TAC [] [FUN_EQ_THM, UPDATE_def]);
+Theorem UPDATE_ID_o2:
+   (!a b c. (a =+ b) o (a =+ c) = (a =+ b)) /\
+   (!a b c g. (a =+ b) o ((a =+ c) o g) = (a =+ b) o g)
+Proof
+  SRW_TAC [] [FUN_EQ_THM, UPDATE_def]
+QED
 
-val FST_SHIFT_C = Q.store_thm("FST_SHIFT_C",
-  `(!w s. s <> 0 ==> (FST (LSL_C (w, s)) = w << s)) /\
+Theorem FST_SHIFT_C:
+   (!w s. s <> 0 ==> (FST (LSL_C (w, s)) = w << s)) /\
    (!w s. s <> 0 ==> (FST (LSR_C (w, s)) = w >>> s)) /\
    (!w s. s <> 0 ==> (FST (ASR_C (w, s)) = w >> s)) /\
    (!w s. s <> 0 ==> (FST (ROR_C (w, s)) = w #>> s)) /\
    (!w s. (if s = 0 then w else w << s) = w << s) /\
    (!w s. (if s = 0 then w else w >>> s) = w >>> s) /\
    (!w s. (if s = 0 then w else w >> s) = w >> s) /\
-   (!w s. (if s = 0 then w else w #>> s) = w #>> s)`,
-  SRW_TAC [] [LSL_C_def, LSR_C_def, ASR_C_def, ROR_C_def] \\ SRW_TAC [] []);
+   (!w s. (if s = 0 then w else w #>> s) = w #>> s)
+Proof
+  SRW_TAC [] [LSL_C_def, LSR_C_def, ASR_C_def, ROR_C_def] \\ SRW_TAC [] []
+QED
 
-val EXTRACT_ROR = Q.store_thm("EXTRACT_ROR",
-  `(!a:word32. (( 7 >< 0 ) (a #>> 8 ) = (15 >< 8 ) a : word8)) /\
+Theorem EXTRACT_ROR:
+   (!a:word32. (( 7 >< 0 ) (a #>> 8 ) = (15 >< 8 ) a : word8)) /\
    (!a:word32. (( 7 >< 0 ) (a #>> 16) = (23 >< 16) a : word8)) /\
    (!a:word32. (( 7 >< 0 ) (a #>> 24) = (31 >< 24) a : word8)) /\
    (!a:word32. ((23 >< 16) (a #>> 8)  = (31 >< 24) a : word8)) /\
@@ -438,11 +450,15 @@ val EXTRACT_ROR = Q.store_thm("EXTRACT_ROR",
    (!a:word32. ((23 >< 16) (a #>> 24) = (15 >< 8 ) a : word8)) /\
    (!a:word32. ((15 >< 0 ) (a #>> 8 ) = (23 >< 8 ) a : word16)) /\
    (!a:word32. ((15 >< 0 ) (a #>> 16) = (31 >< 16) a : word16)) /\
-   (!a:word32. ((31 >< 16) (a #>> 16) = (15 >< 0 ) a : word16))`,
-  SRW_TAC [wordsLib.WORD_EXTRACT_ss] []);
+   (!a:word32. ((31 >< 16) (a #>> 16) = (15 >< 0 ) a : word16))
+Proof
+  SRW_TAC [wordsLib.WORD_EXTRACT_ss] []
+QED
 
-val SInt_0 = Q.store_thm("SInt_0",
-  `SInt 0w = 0`, SRW_TAC [] [integer_wordTheory.w2i_def]);
+Theorem SInt_0:
+   SInt 0w = 0
+Proof SRW_TAC [] [integer_wordTheory.w2i_def]
+QED
 
 val align_1 = save_thm("align_1",
   simpLib.SIMP_PROVE (srw_ss()++wordsLib.WORD_BIT_EQ_ss) [align_def]
@@ -452,11 +468,13 @@ val align_248 = save_thm("align_248",
   numLib.REDUCE_RULE
     (Drule.LIST_CONJ (List.map (fn t => Q.SPEC t align_slice) [`1`,`2`,`3`])));
 
-val aligned_248 = Q.store_thm("aligned_248",
-  `(!a:word32. aligned(a,2) = ~word_lsb a) /\
+Theorem aligned_248:
+   (!a:word32. aligned(a,2) = ~word_lsb a) /\
    (!a:word32. aligned(a,4) = ((1 >< 0) a = 0w:word2)) /\
-   (!a:word32. aligned(a,8) = ((2 >< 0) a = 0w:word3))`,
-  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_def, align_248]);
+   (!a:word32. aligned(a,8) = ((2 >< 0) a = 0w:word3))
+Proof
+  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_def, align_248]
+QED
 
 val align_lem = Q.prove(
   `(!b:word32. align(b,2) + (0 -- 0) b = b) /\
@@ -474,9 +492,11 @@ val align_lem2b =
   METIS_PROVE [align_lem, WORD_ADD_ASSOC]
   ``(!a:word32 b. align(a,4) + b = align(a,4) + align(b,2) + (0 -- 0) b)``;
 
-val align_2_align_4 = Q.store_thm("align_2_align_4",
-  `!a:word32. align(align(a,4),2) = align(a,4)`,
-  SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]);
+Theorem align_2_align_4:
+   !a:word32. align(align(a,4),2) = align(a,4)
+Proof
+  SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]
+QED
 
 val align_aligned = Q.prove(
   `(!a:word32 b. align(align(a,2) + b,2) = align(a,2) + align(b,2)) /\
@@ -497,8 +517,9 @@ val align_aligned = Q.prove(
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] []
     \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []);
 
-val align_aligned2 = Q.store_thm("align_aligned2",
-  `(!a:word32 b. align(align(a,4) + b,2) = align(a,4) + align(b,2))`,
+Theorem align_aligned2:
+   (!a:word32 b. align(align(a,4) + b,2) = align(a,4) + align(b,2))
+Proof
   REPEAT STRIP_TAC
     \\ CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [align_lem2b]))
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]
@@ -509,7 +530,8 @@ val align_aligned2 = Q.store_thm("align_aligned2",
         by (MATCH_MP_TAC WORD_ADD_OR \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [])
     \\ POP_ASSUM SUBST1_TAC
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] []
-    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []);
+    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []
+QED
 
 val align_aligned = save_thm("align_aligned",
   CONJ align_aligned2 align_aligned);
@@ -531,39 +553,49 @@ val aligned_thm = save_thm("aligned_thm",
   Drule.LIST_CONJ [aligned_thm2, aligned_thm1,
     aligned_def |> Drule.SPEC_ALL |> EQ_IMP_RULE |> fst |> GSYM |> GEN_ALL]);
 
-val align_aligned3 = Q.store_thm("align_aligned3",
-  `!pc x: word32.
+Theorem align_aligned3:
+   !pc x: word32.
       aligned (pc + 8w + x, 4) /\ aligned (pc, 4) ==>
-      aligned (x + align (pc, 4) + 8w, 4)`,
-  METIS_TAC [aligned_thm, WORD_ADD_COMM, WORD_ADD_ASSOC]);
+      aligned (x + align (pc, 4) + 8w, 4)
+Proof
+  METIS_TAC [aligned_thm, WORD_ADD_COMM, WORD_ADD_ASSOC]
+QED
 
-val aligned_align = Q.store_thm("aligned_align",
-  `(!a:word32. aligned(a,1)) /\
+Theorem aligned_align:
+   (!a:word32. aligned(a,1)) /\
    (!a:word32. aligned(align(a,2),2)) /\
    (!a:word32. aligned(align(a,4),2)) /\
    (!a:word32. aligned(align(a,4),4)) /\
-   (!a:word32. aligned(align(a,8),8))`,
-  METIS_TAC [aligned_def,aligned_thm,align_1,align_id_248]);
+   (!a:word32. aligned(align(a,8),8))
+Proof
+  METIS_TAC [aligned_def,aligned_thm,align_1,align_id_248]
+QED
 
-val aligned_sum = Q.store_thm("aligned_sum",
-  `(!a:word32 b. aligned(align(a,2) + b,2) = aligned(b,2)) /\
+Theorem aligned_sum:
+   (!a:word32 b. aligned(align(a,2) + b,2) = aligned(b,2)) /\
    (!a:word32 b. aligned(align(a,4) + b,2) = aligned(b,2)) /\
-   (!a:word32 b. aligned(align(a,4) + b,4) = aligned(b,4))`,
+   (!a:word32 b. aligned(align(a,4) + b,4) = aligned(b,4))
+Proof
    SIMP_TAC (srw_ss()++wordsLib.WORD_ARITH_EQ_ss)
-        [align_aligned, align_aligned2, aligned_def]);
+        [align_aligned, align_aligned2, aligned_def]
+QED
 
-val align_bits = Q.store_thm("align_bits",
-  `(!a:word32. (0 -- 0) (align(a,2)) = 0w) /\
+Theorem align_bits:
+   (!a:word32. (0 -- 0) (align(a,2)) = 0w) /\
    (!a:word32. (1 -- 0) (align(a,4)) = 0w) /\
-   (!a:word32. (2 -- 0) (align(a,8)) = 0w)`,
-  SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]);
+   (!a:word32. (2 -- 0) (align(a,8)) = 0w)
+Proof
+  SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]
+QED
 
-val align_bits_sum = Q.store_thm("align_bits_sum",
-  `!a:word32 n. (1 >< 0) (align (a,4) + n) = (1 >< 0) n : word2`,
+Theorem align_bits_sum:
+   !a:word32 n. (1 >< 0) (align (a,4) + n) = (1 >< 0) n : word2
+Proof
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []
     \\ SIMP_TAC (srw_ss()) [Once WORD_ADD_BIT]
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]
-    \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_BIT_EQ_ss) []);
+    \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_BIT_EQ_ss) []
+QED
 
 val align_or = Q.prove(
   `(!a:word32. align (a,2) + 1w = align (a,2) || 1w) /\
@@ -599,19 +631,23 @@ val align_neq = Q.prove(
 
 val align_neq = save_thm("align_neq", SIMP_RULE (srw_ss()) [] align_neq);
 
-val align2_add_times2 = Q.store_thm("align2_add_times2",
-  `!a:word32 b.
-     align (align (a,2) + 4w + 2w * b,2) = align (a,2) + 4w + 2w * b`,
+Theorem align2_add_times2:
+   !a:word32 b.
+     align (align (a,2) + 4w + 2w * b,2) = align (a,2) + 4w + 2w * b
+Proof
   REPEAT STRIP_TAC
     \\ REWRITE_TAC
          [wordsLib.WORD_DECIDE ``a + 4w + 2w * b = a + 2w * (b + 2w)``]
     \\ Q.ABBREV_TAC `c = b + 2w:word32`
     \\ SRW_TAC [wordsLib.WORD_MUL_LSL_ss] [align_aligned]
-    \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss,wordsLib.WORD_BIT_EQ_ss] [align_248]);
+    \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss,wordsLib.WORD_BIT_EQ_ss] [align_248]
+QED
 
-val align_1comp = Q.store_thm("align_1comp",
-  `!a:word32. ~align(a,4) = align(~a,4) + 3w`,
-  REWRITE_TAC [align_or] \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [align_248]);
+Theorem align_1comp:
+   !a:word32. ~align(a,4) = align(~a,4) + 3w
+Proof
+  REWRITE_TAC [align_or] \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [align_248]
+QED
 
 val align_relative_thm1 = Q.prove(
   `(!a:word32 b c.
@@ -752,12 +788,14 @@ val aligned_con_thms = save_thm("aligned_con_thms",
                   |> Q.SPEC t
                   |> SIMP_RULE std_ss []) [`2`,`4`]));
 
-val aligned_con_plus4_thm = Q.store_thm("aligned_con_plus4_thm",
-   `!a:word32.
+Theorem aligned_con_plus4_thm:
+    !a:word32.
       (aligned((if aligned(a + a,4) then a else 0w) +
-               (if aligned(a + a,4) then a else 0w) + 4w,4))`,
+               (if aligned(a + a,4) then a else 0w) + 4w,4))
+Proof
   SRW_TAC [] [] \\ EVAL_TAC \\ SRW_TAC [] [arithmeticTheory.ZERO_DIV]
-    \\ METIS_TAC [aligned_def, align_aligned, EVAL ``align(4w:word32,4)``]);
+    \\ METIS_TAC [aligned_def, align_aligned, EVAL ``align(4w:word32,4)``]
+QED
 
 val aligned_con_shift_thm = Q.prove(
   `!n f:bool[32] # num -> bool[32] # bool x a:word32.
@@ -841,37 +879,51 @@ val aligned_bx_0w = EVAL ``aligned_bx (0w:word32)``;
 val aligned_bx_1w = EVAL ``aligned_bx (1w:word32)``;
 val aligned_bx_m1w = EVAL ``aligned_bx (-1w:word32)``;
 
-val align_bx_bit = Q.store_thm("align_bx_bit",
-  `(!a:word32. (~a) ' 0 = ~a ' 0) /\
+Theorem align_bx_bit:
+   (!a:word32. (~a) ' 0 = ~a ' 0) /\
    (!a:word32 n. (a && n2w n) ' 0 = a ' 0 /\ ODD n) /\
    (!a:word32 n. (a || n2w n) ' 0 = a ' 0 \/ ODD n) /\
    (!a:word32 n. (a ?? n2w n) ' 0 = a ' 0 <> ODD n) /\
-   (!a:word32 n. (a + n2w n) ' 0  = a ' 0 <> ODD n)`,
-  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [WORD_ADD_BIT0, n2w_def, BIT0_ODD]);
+   (!a:word32 n. (a + n2w n) ' 0  = a ' 0 <> ODD n)
+Proof
+  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [WORD_ADD_BIT0, n2w_def, BIT0_ODD]
+QED
 
-val aligned_bx_thm = Q.store_thm("aligned_bx_thm",
-  `!a:word32. aligned_bx a = (~a ' 0 ==> ~a ' 1)`,
-  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_bx_def] \\ METIS_TAC []);
+Theorem aligned_bx_thm:
+   !a:word32. aligned_bx a = (~a ' 0 ==> ~a ' 1)
+Proof
+  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_bx_def] \\ METIS_TAC []
+QED
 
-val aligned_bx_branch = Q.store_thm("aligned_bx_branch",
-  `!a:word32. aligned_bx ((if aligned_bx a then a else 0w))`,
-  SRW_TAC [] [aligned_bx_def, aligned_bx_0w]);
+Theorem aligned_bx_branch:
+   !a:word32. aligned_bx ((if aligned_bx a then a else 0w))
+Proof
+  SRW_TAC [] [aligned_bx_def, aligned_bx_0w]
+QED
 
-val aligned_bx_1comp = Q.store_thm("aligned_bx_1comp",
-  `!a:word32. aligned_bx (~(if aligned_bx (~a) then a else 0w))`,
-  SRW_TAC [] [aligned_bx_def]);
+Theorem aligned_bx_1comp:
+   !a:word32. aligned_bx (~(if aligned_bx (~a) then a else 0w))
+Proof
+  SRW_TAC [] [aligned_bx_def]
+QED
 
-val aligned_bx_2comp = Q.store_thm("aligned_bx_2comp",
-  `!a:word32. aligned_bx (-(if aligned_bx (-a) then a else 0w))`,
-  SRW_TAC [] [aligned_bx_def]);
+Theorem aligned_bx_2comp:
+   !a:word32. aligned_bx (-(if aligned_bx (-a) then a else 0w))
+Proof
+  SRW_TAC [] [aligned_bx_def]
+QED
 
-val aligned_bx_and = Q.store_thm("aligned_bx_and",
-  `!a:word32 b. aligned_bx ((if aligned_bx (a && b) then a else 0w) && b)`,
-  SRW_TAC [] [aligned_bx_def]);
+Theorem aligned_bx_and:
+   !a:word32 b. aligned_bx ((if aligned_bx (a && b) then a else 0w) && b)
+Proof
+  SRW_TAC [] [aligned_bx_def]
+QED
 
-val aligned_bx_eor = Q.store_thm("aligned_bx_eor",
-  `!a:word32 b. aligned_bx ((if aligned_bx (a ?? b) then a else b) ?? b)`,
-  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_bx_def] \\ METIS_TAC []);
+Theorem aligned_bx_eor:
+   !a:word32 b. aligned_bx ((if aligned_bx (a ?? b) then a else b) ?? b)
+Proof
+  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_bx_def] \\ METIS_TAC []
+QED
 
 val aligned_bx_orr = Q.prove(
   `!a:word32 b. aligned_bx ((if aligned_bx (a || b) then a else 1w) || b)`,
@@ -885,32 +937,40 @@ val word_plus8 = Q.prove(
   `!pc:word32. align (pc,4) + 8w = (align (pc,4) >>> 2 + 2w) << 2`,
   SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_248]);
 
-val aligned_bx_and_pc = Q.store_thm("aligned_bx_and_pc",
-  `(!pc:word32 b. aligned_bx ((align (pc,4) + 8w) && b)) /\
-   !pc:word32 b. ~(((align (pc,4) + 8w) && b) ' 0)`,
+Theorem aligned_bx_and_pc:
+   (!pc:word32 b. aligned_bx ((align (pc,4) + 8w) && b)) /\
+   !pc:word32 b. ~(((align (pc,4) + 8w) && b) ' 0)
+Proof
   NTAC 2 STRIP_TAC \\ REWRITE_TAC [word_plus8]
     \\ Q.ABBREV_TAC `x = align (pc,4) >>> 2 + 2w : word32`
-    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]);
+    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]
+QED
 
-val aligned_bx_bic_pc = Q.store_thm("aligned_bx_bic_pc",
-  `!pc:word32 b. (b && ~(align (pc,4) + 8w)) ' 0 = b ' 0`,
+Theorem aligned_bx_bic_pc:
+   !pc:word32 b. (b && ~(align (pc,4) + 8w)) ' 0 = b ' 0
+Proof
   STRIP_TAC \\ REWRITE_TAC [word_plus8]
     \\ Q.ABBREV_TAC `x = align (pc,4) >>> 2 + 2w : word32`
-    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]);
+    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]
+QED
 
-val aligned_bx_eor_pc = Q.store_thm("aligned_bx_eor_pc",
-  `(!pc:word32 b. aligned_bx ((align (pc,4) + 8w) ?? b) = aligned_bx b) /\
-   !pc:word32 b. ((align (pc,4) + 8w) ?? b) ' 0 = b ' 0`,
+Theorem aligned_bx_eor_pc:
+   (!pc:word32 b. aligned_bx ((align (pc,4) + 8w) ?? b) = aligned_bx b) /\
+   !pc:word32 b. ((align (pc,4) + 8w) ?? b) ' 0 = b ' 0
+Proof
   NTAC 2 STRIP_TAC \\ REWRITE_TAC [word_plus8]
     \\ Q.ABBREV_TAC `x = align (pc,4) >>> 2 + 2w : word32`
-    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]);
+    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]
+QED
 
-val aligned_bx_orr_pc = Q.store_thm("aligned_bx_orr_pc",
-  `(!pc:word32 b. aligned_bx ((align (pc,4) + 8w) || b) = aligned_bx b) /\
-   !pc:word32 b. ((align (pc,4) + 8w) || b) ' 0 = b ' 0`,
+Theorem aligned_bx_orr_pc:
+   (!pc:word32 b. aligned_bx ((align (pc,4) + 8w) || b) = aligned_bx b) /\
+   !pc:word32 b. ((align (pc,4) + 8w) || b) ' 0 = b ' 0
+Proof
   NTAC 2 STRIP_TAC \\ REWRITE_TAC [word_plus8]
     \\ Q.ABBREV_TAC `x = align (pc,4) >>> 2 + 2w : word32`
-    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]);
+    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]
+QED
 
 val eor_bit0 = Q.prove(
   `(!a b:word32. (b + (a ?? 1w)) ' 0 = ~(a + b) ' 0) /\
@@ -925,8 +985,8 @@ val eor_bit0_cor =
            |> List.map (SIMP_RULE (srw_ss()) [] o Q.SPECL [`a`,`b + 1w`])
            |> Drule.LIST_CONJ;
 
-val aligned_bx_add_with_carry = Q.store_thm("aligned_bx_add_with_carry",
-  `(!a:word32 b c.
+Theorem aligned_bx_add_with_carry:
+   (!a:word32 b c.
       aligned_bx (FST (add_with_carry
          (if aligned_bx (FST (add_with_carry(a,b,c))) then
             a
@@ -937,13 +997,15 @@ val aligned_bx_add_with_carry = Q.store_thm("aligned_bx_add_with_carry",
          (~if aligned_bx (FST (add_with_carry(~a,b,c))) then
              a
            else
-             a ?? 1w,b,c))))`,
+             a ?? 1w,b,c))))
+Proof
   SRW_TAC [] [aligned_bx_def] \\ Cases_on `c`
     \\ FULL_SIMP_TAC (srw_ss()++boolSimps.LET_ss)
          [add_with_carry_def, GSYM word_add_def, word_add_plus1,
           GSYM aligned_bx_def, aligned_bx_thm]
     \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_BIT_EQ_ss)
-         [eor_bit0, eor_bit0_cor]);
+         [eor_bit0, eor_bit0_cor]
+QED
 
 val aligned_bx_add_sub = Q.prove(
   `!a:word32 b. aligned_bx ((if aligned_bx (a + b) then a else a ?? 1w) + b)`,
@@ -1021,9 +1083,8 @@ val aligned_bx_add_sub_pc = save_thm("aligned_bx_add_sub_pc",
        |> SIMP_RULE (srw_ss()) [word_0, aligned_bx_0w],
      aligned_bx_add_sub_pc, aligned_bx_add_sub_pc2, aligned_bx_add_sub_pc3]);
 
-val aligned_bx_add_with_carry_pair = Q.store_thm(
-  "aligned_bx_add_with_carry_pair",
-  `(!a:word32 c.
+Theorem aligned_bx_add_with_carry_pair:
+   (!a:word32 c.
      aligned_bx
        (FST (add_with_carry
           (if aligned_bx (FST (add_with_carry (a,a,c))) then a else 0w,
@@ -1040,16 +1101,20 @@ val aligned_bx_add_with_carry_pair = Q.store_thm(
        (FST (add_with_carry
           (if aligned_bx (FST (add_with_carry (a,~a,c))) then a else 0w,
            ~if aligned_bx (FST (add_with_carry (a,~a,c))) then a else 0w,
-           c))))`,
+           c))))
+Proof
   SRW_TAC [] [aligned_bx_def]
-    \\ SRW_TAC [boolSimps.LET_ss] [add_with_carry_def]);
+    \\ SRW_TAC [boolSimps.LET_ss] [add_with_carry_def]
+QED
 
-val aligned_bx_add_pair = Q.store_thm("aligned_bx_add_pair",
-  `!a:word32.
+Theorem aligned_bx_add_pair:
+   !a:word32.
       aligned_bx
         ((if aligned_bx (a + a) then a else 0w) +
-         (if aligned_bx (a + a) then a else 0w))`,
-  SRW_TAC [] [aligned_bx_def]);
+         (if aligned_bx (a + a) then a else 0w))
+Proof
+  SRW_TAC [] [aligned_bx_def]
+QED
 
 val aligned_bx_shift_pair = Q.prove(
   `(!f:bool[32] # num -> bool[32] # bool x a:word32.
@@ -1101,8 +1166,8 @@ val aligned_bx_shift_pair = Q.prove(
          -if aligned_bx (FST (f (a,x)) + -a) then a else 0w))`,
   SRW_TAC [] [aligned_bx_def]);
 
-val aligned_bx_rrx_pair = Q.store_thm("aligned_bx_rrx_pair",
-  `(!x a:word32.
+Theorem aligned_bx_rrx_pair:
+   (!x a:word32.
       aligned_bx
         ((if aligned_bx (a && SND (word_rrx (x,a))) then a else 0w) &&
          SND (word_rrx (x,if aligned_bx (a && SND (word_rrx (x,a)))
@@ -1148,8 +1213,10 @@ val aligned_bx_rrx_pair = Q.store_thm("aligned_bx_rrx_pair",
       aligned_bx
         (SND (word_rrx (x,if aligned_bx (SND (word_rrx (x,a)) + -a)
                           then a else 0w)) +
-         -if aligned_bx (SND (word_rrx (x,a)) + -a) then a else 0w))`,
-  SRW_TAC [] [aligned_bx_def] \\ Cases_on `x` \\ SRW_TAC [] [word_rrx_0]);
+         -if aligned_bx (SND (word_rrx (x,a)) + -a) then a else 0w))
+Proof
+  SRW_TAC [] [aligned_bx_def] \\ Cases_on `x` \\ SRW_TAC [] [word_rrx_0]
+QED
 
 val aligned_bx_add_with_carry_shift_pair = Q.prove(
   `(!f:bool[32] # num -> bool[32] # bool x a:word32.
@@ -1182,9 +1249,8 @@ val aligned_bx_add_with_carry_shift_pair = Q.prove(
   SRW_TAC [] [aligned_bx_def]
     \\ SRW_TAC [boolSimps.LET_ss] [add_with_carry_def]);
 
-val aligned_bx_add_with_carry_rrx_pair = Q.store_thm(
-  "aligned_bx_add_with_carry_rrx_pair",
-  `(!x a:word32.
+Theorem aligned_bx_add_with_carry_rrx_pair:
+   (!x a:word32.
      aligned_bx
        (FST (add_with_carry
           (if aligned_bx (FST (add_with_carry (a,SND (word_rrx (x,a)),c)))
@@ -1210,9 +1276,11 @@ val aligned_bx_add_with_carry_rrx_pair = Q.store_thm(
            ~SND (word_rrx (x,
              if aligned_bx (FST (add_with_carry (a,~SND (word_rrx (x,a)),c)))
              then a else 0w)),
-           c))))`,
+           c))))
+Proof
   SRW_TAC [] [aligned_bx_def] \\ Cases_on `x`
-    \\ SRW_TAC [boolSimps.LET_ss] [add_with_carry_def, word_rrx_0]);
+    \\ SRW_TAC [boolSimps.LET_ss] [add_with_carry_def, word_rrx_0]
+QED
 
 val lem = Q.prove(
   `(!x:word32. n2w (w2n x + 4294967296) = x) /\
@@ -1305,8 +1373,8 @@ val aligned_bx_add_sub_shift_pc = Q.prove(
     \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_EXTRACT_ss)
          [lem, lem2, lem3, GSYM word_add_def, word_add_plus1]);
 
-val aligned_bx_add_sub_rrx_pc = Q.store_thm("aligned_bx_add_sub_rrx_pc",
-  `(!x a:word32 pc.
+Theorem aligned_bx_add_sub_rrx_pc:
+   (!x a:word32 pc.
       aligned_bx
         (SND (word_rrx
            (x,if aligned_bx (SND (word_rrx (x,a)) + -(align (pc,4) + 8w))
@@ -1331,13 +1399,15 @@ val aligned_bx_add_sub_rrx_pc = Q.store_thm("aligned_bx_add_sub_rrx_pc",
            SND (word_rrx
              (x,if aligned_bx (FST (add_with_carry
                      (align (pc, 4) + 8w, SND (word_rrx (x,a)), c)))
-                then a else 0w)),c))))`,
+                then a else 0w)),c))))
+Proof
   REPEAT STRIP_TAC \\ REWRITE_TAC [word_plus8] \\ Cases_on `x`
     \\ Q.ABBREV_TAC `z = align (pc,4) >>> 2 + 2w : word32`
     \\ SRW_TAC [boolSimps.LET_ss] [aligned_bx_def, add_with_carry_def,
          GSYM word_add_def, word_add_plus1, word_rrx_0]
     \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_EXTRACT_ss)
-         [lem, lem2, lem3, GSYM word_add_def, word_add_plus1]);
+         [lem, lem2, lem3, GSYM word_add_def, word_add_plus1]
+QED
 
 val aligned_bx_pair_shift_thms = save_thm("aligned_bx_pair_shift_thms",
   Drule.LIST_CONJ (List.concat
@@ -1350,9 +1420,8 @@ val aligned_bx_pair_shift_thms = save_thm("aligned_bx_pair_shift_thms",
      Drule.CONJUNCTS aligned_bx_add_sub_shift_pc @
      Drule.CONJUNCTS aligned_bx_add_with_carry_shift_pair))));
 
-val aligned_bx_add_with_carry_literal_pc =
-  Q.store_thm("aligned_bx_add_with_carry_literal_pc",
-  `(!pc:word32 n c.
+Theorem aligned_bx_add_with_carry_literal_pc:
+   (!pc:word32 n c.
      aligned_bx
        (FST (add_with_carry (align (pc,4) + 8w, n2w n, c))) =
      if c then aligned_bx (n2w n + 9w:word32)
@@ -1361,7 +1430,8 @@ val aligned_bx_add_with_carry_literal_pc =
      aligned_bx
        (FST (add_with_carry (~(align (pc,4) + 8w), n2w n, c))) =
      if c then (1 >< 0) (n2w n + 1w:word32) <> 3w:word2
-          else (1 >< 0) (n2w n : word32) <> 3w:word2)`,
+          else (1 >< 0) (n2w n : word32) <> 3w:word2)
+Proof
   REPEAT STRIP_TAC \\ Cases_on `c`
     \\ SRW_TAC [] [FST_ADD_WITH_CARRY]
     \\ Q.ABBREV_TAC `x:word32 = n2w n`
@@ -1370,16 +1440,18 @@ val aligned_bx_add_with_carry_literal_pc =
          ``x + -1w * (a + 0x8w) = ~(a + 8w) + (x + 0x1w)``
             |> wordsLib.WORD_ARITH_CONV |> EQT_ELIM]
     \\ SRW_TAC [] [WORD_NOT, WORD_LEFT_ADD_DISTRIB]
-    );
+QED
 
-val aligned_bx_1comp_pc = Q.store_thm("aligned_bx_1comp_pc",
-  `!a:word32. aligned_bx (~(align (a,4) + 8w))`,
+Theorem aligned_bx_1comp_pc:
+   !a:word32. aligned_bx (~(align (a,4) + 8w))
+Proof
   STRIP_TAC \\ REWRITE_TAC [word_plus8]
     \\ Q.ABBREV_TAC `x = align (a,4) >>> 2 + 2w : word32`
-    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]);
+    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss, ARITH_ss] [aligned_bx_def]
+QED
 
-val aligned_bx_add_with_carry_pc = Q.store_thm("aligned_bx_add_with_carry_pc",
-  `(!pc a:word32.
+Theorem aligned_bx_add_with_carry_pc:
+   (!pc a:word32.
      aligned_bx
        (FST (add_with_carry
           (align (pc,4) + 8w,
@@ -1396,18 +1468,19 @@ val aligned_bx_add_with_carry_pc = Q.store_thm("aligned_bx_add_with_carry_pc",
        (FST (add_with_carry
           (align (pc,4) + 8w,
            ~if aligned_bx (FST (add_with_carry (align (pc,4) + 8w,~a,c)))
-            then a else 0w,c))))`,
+            then a else 0w,c))))
+Proof
   REPEAT STRIP_TAC \\ REWRITE_TAC [word_plus8]
     \\ Q.ABBREV_TAC `x = align (pc,4) >>> 2 + 2w : word32`
     \\ SRW_TAC [] [aligned_bx_def]
     \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss,boolSimps.LET_ss,ARITH_ss]
          [GSYM word_add_def, word_add_plus1, add_with_carry_def,
           lem, lem2, lem3]
-    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []);
+    \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []
+QED
 
-val aligned_bx_add_with_carry_pair_pc = Q.store_thm(
-  "aligned_bx_add_with_carry_pair_pc",
-  `(!a:word32 c.
+Theorem aligned_bx_add_with_carry_pair_pc:
+   (!a:word32 c.
      aligned_bx
        (FST (add_with_carry (align (a,4) + 8w, align (a,4) + 8w, c)))) /\
    (!a:word32 c.
@@ -1415,13 +1488,15 @@ val aligned_bx_add_with_carry_pair_pc = Q.store_thm(
        (FST (add_with_carry (~(align (a,4) + 8w), align (a,4) + 8w, c)))) /\
    (!a:word32 c.
      aligned_bx
-       (FST (add_with_carry (align (a,4) + 8w, ~(align (a,4) + 8w), c))))`,
+       (FST (add_with_carry (align (a,4) + 8w, ~(align (a,4) + 8w), c))))
+Proof
   SRW_TAC [boolSimps.LET_ss]
          [WORD_NOT, WORD_LEFT_ADD_DISTRIB, GSYM word_add_def, word_add_plus1,
           add_with_carry_def]
     \\ SIMP_TAC std_ss [aligned_bx_add_sub_pc, GSYM WORD_ADD_ASSOC,
          wordsLib.WORD_DECIDE ``2w * a = a + a:word32``]
-    \\ EVAL_TAC);
+    \\ EVAL_TAC
+QED
 
 val aligned_and_aligned_bx = Q.prove(
   `(!f:bool[32] # num -> bool[32] # bool a:word32 x.
@@ -1734,8 +1809,8 @@ val aligned_bx_and_aligned_rrx = Q.prove(
 val aligned_bx_and_aligned_rrx = save_thm("aligned_bx_and_aligned_rrx",
   REWRITE_RULE [minus8] aligned_bx_and_aligned_rrx);
 
-val align_ldr_lsl = Q.store_thm("align_ldr_lsl",
-  `!pc rm: word32.
+Theorem align_ldr_lsl:
+   !pc rm: word32.
      align (pc,4) <>
      align (pc,4) + 8w +
      FST
@@ -1746,13 +1821,15 @@ val align_ldr_lsl = Q.store_thm("align_ldr_lsl",
            then
              (if rm << 2 <> 0xFFFFFFF8w then rm else 0w)
            else
-             0w,2))`,
-  SRW_TAC [boolSimps.LET_ss, wordsLib.WORD_CANCEL_ss] [LSL_C_def]);
+             0w,2))
+Proof
+  SRW_TAC [boolSimps.LET_ss, wordsLib.WORD_CANCEL_ss] [LSL_C_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val aligned_aligned = Q.store_thm("aligned_aligned",
-  `(!a:word32 b. aligned(if b then align(a,4) else 0xFFFFFFF8w,4)) /\
+Theorem aligned_aligned:
+   (!a:word32 b. aligned(if b then align(a,4) else 0xFFFFFFF8w,4)) /\
    (!a:word32 b. aligned (if aligned (a,4) /\ b then a else 0xFFFFFFF8w, 4)) /\
    (!a:word8. aligned (if aligned (a,4) then a else 0w, 4)) /\
    (!a:word32 b c.
@@ -1770,19 +1847,23 @@ val aligned_aligned = Q.store_thm("aligned_aligned",
         (if aligned(align(a,4) + 8w + b,4) then b else 0w),4)) /\
    (!a:word32 b.
       aligned(align(a,4) + 8w +
-        -(if aligned(align(a,4) + 8w + -b,4) then b else 0w),4))`,
-  SRW_TAC [] [aligned_align, aligned_sum] \\ EVAL_TAC);
+        -(if aligned(align(a,4) + 8w + -b,4) then b else 0w),4))
+Proof
+  SRW_TAC [] [aligned_align, aligned_sum] \\ EVAL_TAC
+QED
 
-val aligned_over_bitwise = Q.store_thm("aligned_over_bitwise",
-  `(!a b:word32. aligned(align(a,4) + 8w && b, 4)) /\
+Theorem aligned_over_bitwise:
+   (!a b:word32. aligned(align(a,4) + 8w && b, 4)) /\
    (!a:word32. ~aligned(~(align(a,4) + 8w), 4)) /\
    (!a b:word32. aligned(align(a,4) + 8w ?? b, 4) = aligned(b,4)) /\
-   (!a b:word32. aligned(a || b, 4) = aligned(a,4) /\ aligned(b,4))`,
+   (!a b:word32. aligned(a || b, 4) = aligned(a,4) /\ aligned(b,4))
+Proof
   SRW_TAC [wordsLib.WORD_EXTRACT_ss] [align_bits_sum, aligned_248, align_248,
          wordsLib.WORD_DECIDE ``((1 >< 0) (~a) = 0w:word2) =
                                 ((1 >< 0) (a:word32) = 3w:word2)``]
     \\ SRW_TAC [wordsLib.WORD_BIT_EQ_ss] []
-    \\ METIS_TAC []);
+    \\ METIS_TAC []
+QED
 
 val word2_cases = wordsLib.WORD_DECIDE
   ``!a:word2. (a = 0w) \/ (a = 1w) \/ (a = 2w) \/ (a = 3w)``;
@@ -1794,16 +1875,20 @@ val align_over_and =
             [wordsLib.WORD_DECIDE ``w2w (w:word32) = ((1 >< 0) w):word2``]
        |> Once;
 
-val aligned_neg = Q.store_thm("aligned_neg",
-  `!a:word32. aligned(-a,4) = aligned(a,4)`,
+Theorem aligned_neg:
+   !a:word32. aligned(-a,4) = aligned(a,4)
+Proof
   SRW_TAC [] [WORD_NEG, aligned_248, align_over_and,
     wordsLib.WORD_DECIDE ``(1 >< 0) (~(a:word32)) = ~((1 >< 0) a) : word2``]
     \\ Q.SPEC_THEN `(1 >< 0) a` STRIP_ASSUME_TAC word2_cases
-    \\ ASM_SIMP_TAC (srw_ss()) []);
+    \\ ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val aligned_neg_pc = Q.store_thm("aligned_neg_pc",
-  `!a:word32. aligned(-(align(a,4) + 8w),4)`,
-  SRW_TAC [] [aligned_sum, aligned_neg] \\ EVAL_TAC);
+Theorem aligned_neg_pc:
+   !a:word32. aligned(-(align(a,4) + 8w),4)
+Proof
+  SRW_TAC [] [aligned_sum, aligned_neg] \\ EVAL_TAC
+QED
 
 val aligned_neg_pc =
   CONJ (SIMP_RULE (srw_ss()) [] aligned_neg_pc)
@@ -1812,9 +1897,8 @@ val aligned_neg_pc =
 val lem = Q.prove(
   `(!x:word32. n2w (w2n x + 1) = x + 1w)`, SRW_TAC [] [word_add_def]);
 
-val aligned_aligned_add_with_carry = Q.store_thm(
-  "aligned_aligned_add_with_carry",
-  `(!a:word32 b c.
+Theorem aligned_aligned_add_with_carry:
+   (!a:word32 b c.
       aligned (FST (add_with_carry
          (align(a,4) + 8w,
           if aligned (FST (add_with_carry (align(a,4) + 8w,b,c)),4) then b else
@@ -1828,13 +1912,15 @@ val aligned_aligned_add_with_carry = Q.store_thm(
       aligned (FST (add_with_carry
          (~(align(a,4) + 8w),
           if aligned (FST (add_with_carry (~(align(a,4) + 8w),b,c)),4) then b
-            else if c then 0w else 1w,c)),4))`,
+            else if c then 0w else 1w,c)),4))
+Proof
   REPEAT STRIP_TAC \\ Cases_on `c`
     \\ SIMP_TAC (std_ss++boolSimps.LET_ss)
          [add_with_carry_def, GSYM word_add_def, word_add_plus1, lem]
     \\ SRW_TAC [] [aligned_sum]
     \\ FULL_SIMP_TAC (srw_ss()) [WORD_NOT, aligned_neg_pc]
-    \\ EVAL_TAC);
+    \\ EVAL_TAC
+QED
 
 val aligned_aligned_shift = Q.prove(
   `(!f:bool[32] # num -> bool[32] # bool x a:word32 b.
@@ -2010,8 +2096,8 @@ val aligned_aligned_rrx = save_thm("aligned_aligned_rrx",
        |> GEN_ALL)
     aligned_aligned_rrx);
 
-val aligned_aligned_rrx_pc = Q.store_thm("aligned_aligned_rrx_pc",
-  `(!x a:word32 b c.
+Theorem aligned_aligned_rrx_pc:
+   (!x a:word32 b c.
       aligned
         (SND (word_rrx (x,(if b /\ c /\ aligned (SND (word_rrx (x,a + 8w)),4)
                            then a else 0xFFFFFFF8w) + 8w)), 4)) /\
@@ -2042,25 +2128,31 @@ val aligned_aligned_rrx_pc = Q.store_thm("aligned_aligned_rrx_pc",
           (if b /\ aligned (SND (word_rrx (x,a + 8w)) + -(a + 8w), 4)
            then a else 0xFFFFFFF8w) + 8w)) +
          -((if b /\ aligned (SND (word_rrx (x,a + 8w)) + -(a + 8w), 4)
-            then a else 0xFFFFFFF8w) + 8w), 4))`,
+            then a else 0xFFFFFFF8w) + 8w), 4))
+Proof
   REPEAT STRIP_TAC \\ Cases_on `x`
     \\ SRW_TAC [] [aligned_sum, aligned_neg_pc, word_rrx_0]
-    \\ EVAL_TAC);
+    \\ EVAL_TAC
+QED
 
-val aligned_pc_pc = Q.store_thm("aligned_pc_pc",
-  `!a:word32. aligned(align(a,4) + 8w + (align(a,4) + 8w),4)`,
+Theorem aligned_pc_pc:
+   !a:word32. aligned(align(a,4) + 8w + (align(a,4) + 8w),4)
+Proof
   SIMP_TAC std_ss [aligned_sum,
          wordsLib.WORD_DECIDE ``a + b + (a + b) = a + (a + (b + b)) : 'a word``]
-    \\ EVAL_TAC);
+    \\ EVAL_TAC
+QED
 
-val aligned_aligned_rsb = Q.store_thm("aligned_aligned_rsb",
-  `(!a:word32 b.
+Theorem aligned_aligned_rsb:
+   (!a:word32 b.
       aligned((if aligned(b + -(align(a,4) + 8w),4) then b else 0w) +
-              -(align(a,4) + 8w),4))`,
-  SRW_TAC [] [aligned_neg_pc]);
+              -(align(a,4) + 8w),4))
+Proof
+  SRW_TAC [] [aligned_neg_pc]
+QED
 
-val add_with_carry = Q.store_thm("add_with_carry",
-  `(!a:word32 b c d.
+Theorem add_with_carry:
+   (!a:word32 b c d.
      FST (add_with_carry (a + d + -(if c then 1w else 0w),b,c)) =
      a + (d + b)) /\
    (!a:word32 b c d.
@@ -2068,10 +2160,12 @@ val add_with_carry = Q.store_thm("add_with_carry",
      a + (d + b + 1w)) /\
    (!a:word32 b c d.
      FST (add_with_carry (~(d + (if c then 0w else 0xFFFFFFFFw) + a),b,c)) =
-     -a + (b - d))`,
+     -a + (b - d))
+Proof
   SRW_TAC [boolSimps.LET_ss]
           [WORD_NOT, WORD_LEFT_ADD_DISTRIB, GSYM word_add_def,
-           add_with_carry_def, word_add_plus1]);
+           add_with_carry_def, word_add_plus1]
+QED
 
 val add_with_carry0 = save_thm("add_with_carry0",
   Drule.LIST_CONJ
@@ -2091,17 +2185,21 @@ val add_with_carry0 = save_thm("add_with_carry0",
       |> REWRITE_RULE [WORD_ADD_0, WORD_SUB_RZERO]
       |> GEN_ALL]);
 
-val aligned_pc_thm = Q.store_thm("aligned_pc_thm",
-  `!a:word32. aligned (a,4) ==> aligned (a + 8w, 4)`,
-  METIS_TAC [aligned_thm, aligned_def, EVAL ``aligned (8w:word32,4)``]);
+Theorem aligned_pc_thm:
+   !a:word32. aligned (a,4) ==> aligned (a + 8w, 4)
+Proof
+  METIS_TAC [aligned_thm, aligned_def, EVAL ``aligned (8w:word32,4)``]
+QED
 
-val aligned_bitwise_thm = Q.store_thm("aligned_bitwise_thm",
-  `(!a:word32 b.
+Theorem aligned_bitwise_thm:
+   (!a:word32 b.
       aligned (a,4) /\ aligned (b,4) ==> (align (a || b, 4) = a || b)) /\
    (!a:word32 b.
       aligned (a,4) /\ aligned (b,4) ==> (align (a ?? b, 4) = a ?? b)) /\
-   (!a:word32 b. aligned (a,4) ==> (align (a && b,4) = a && b))`,
-  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_248, align_248]);
+   (!a:word32 b. aligned (a,4) ==> (align (a && b,4) = a && b))
+Proof
+  SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_248, align_248]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -2167,8 +2265,8 @@ val align_sum_numeric = Q.prove(
          METIS_PROVE [ALT_ZERO, ADD_CLAUSES]
            ``(ZERO + 1 = 1) /\ (n2w ZERO = 0w)``]);
 
-val align_neq2 = Q.store_thm("align_neq2",
-  `!a:word32 b n.
+Theorem align_neq2:
+   !a:word32 b n.
      aligned (a, 4) ==>
      align (b, 4) <> a + 1w /\
      align (b, 4) <> a + 2w /\
@@ -2196,14 +2294,16 @@ val align_neq2 = Q.store_thm("align_neq2",
      align (b, 4) + 3w <> a + 2w /\
      align (b, 4) + 3w <> a + n2w (NUMERAL (BIT2 (BIT1 n))) /\ (* 0 *)
      align (b, 4) + 3w <> a + n2w (NUMERAL (BIT1 (BIT2 n))) /\ (* 1 *)
-     align (b, 4) + 3w <> a + n2w (NUMERAL (BIT2 (BIT2 n)))`, (* 2 *)
+     align (b, 4) + 3w <> a + n2w (NUMERAL (BIT2 (BIT2 n))) (* 2 *)
+Proof
   NTAC 4 STRIP_TAC
     \\ POP_ASSUM (fn th =>
          REPEAT CONJ_TAC \\
          ONCE_REWRITE_TAC [th |> REWRITE_RULE [aligned_def]])
     \\ REWRITE_TAC [align_neq]
     \\ ONCE_REWRITE_TAC [align_sum_numeric]
-    \\ REWRITE_TAC [align_neq, GSYM align_aligned, WORD_ADD_ASSOC]);
+    \\ REWRITE_TAC [align_neq, GSYM align_aligned, WORD_ADD_ASSOC]
+QED
 
 val align2 = EVAL ``align (2w:word32,2)``;
 
@@ -2237,22 +2337,24 @@ val align_sum_numeric2 = Q.prove(
          METIS_PROVE [ALT_ZERO, ADD_CLAUSES]
            ``(ZERO + 1 = 1) /\ (n2w ZERO = 0w)``]);
 
-val align_neq3 = Q.store_thm("align_neq3",
-  `!a:word32 b m n.
+Theorem align_neq3:
+   !a:word32 b m n.
      aligned (a, 2) ==>
      align (b, 2) <> a + n2w (NUMERAL (BIT1 n)) /\ (* 0,1 *)
      align (b, 2) + n2w (NUMERAL (BIT2 m)) <>
        a + n2w (NUMERAL (BIT1 n)) /\ (* 0,1 *)
      align (b, 2) + n2w (NUMERAL (BIT1 n)) <> a /\ (* 1,0 *)
      align (b, 2) + n2w (NUMERAL (BIT1 m)) <>
-       a + n2w (NUMERAL (BIT2 n))`, (* 1,0 *)
+       a + n2w (NUMERAL (BIT2 n))  (* 1,0 *)
+Proof
   NTAC 5 STRIP_TAC
     \\ POP_ASSUM (fn th =>
          REPEAT CONJ_TAC \\
          ONCE_REWRITE_TAC [th |> REWRITE_RULE [aligned_def]])
     \\ REWRITE_TAC [align_neq]
     \\ ONCE_REWRITE_TAC [align_sum_numeric2]
-    \\ REWRITE_TAC [align_neq, GSYM align_aligned, WORD_ADD_ASSOC]);
+    \\ REWRITE_TAC [align_neq, GSYM align_aligned, WORD_ADD_ASSOC]
+QED
 
 val neq_pc_plus4a = Q.prove(
   `(!b:word32 pc a.
@@ -2353,8 +2455,8 @@ val neq_pc_plus4_t2 = save_thm("neq_pc_plus4_t2",
                       (aligned_numeric |> Thm.CONJUNCT2 |> Drule.SPEC_ALL))
     (Drule.CONJUNCTS neq_pc_plus4_t2)));
 
-val aligned_over_memread = Q.store_thm("aligned_over_memread",
-  `(!b x:word8 y.
+Theorem aligned_over_memread:
+   (!b x:word8 y.
       aligned (if b then x else y,4) =
       if b then aligned (x,4) else aligned (y,4)) /\
    (!b x:word8 y.
@@ -2362,8 +2464,10 @@ val aligned_over_memread = Q.store_thm("aligned_over_memread",
       if b then aligned_bx x else aligned_bx y) /\
    (!b c x:word8 y z.
       aligned_bx (if b then x else if c then y else z) =
-      if b then aligned_bx x else if c then aligned_bx y else aligned_bx z)`,
-  SRW_TAC [] []);
+      if b then aligned_bx x else if c then aligned_bx y else aligned_bx z)
+Proof
+  SRW_TAC [] []
+QED
 
 val aligned_concat = with_flag (wordsLib.guessing_word_lengths,true)
   Q.store_thm("aligned_concat",
@@ -2377,9 +2481,11 @@ val aligned_bx_concat = with_flag (wordsLib.guessing_word_lengths,true)
      aligned_bx ((a @@ b @@ c @@ d) : word32) = aligned_bx d`,
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [aligned_bx_def]);
 
-val aligned_bx_aligned_bx = Q.store_thm("aligned_bx_aligned_bx",
-  `!a:word8. aligned_bx (if aligned_bx a then a else 0w)`,
-  SRW_TAC [] [] \\ EVAL_TAC);
+Theorem aligned_bx_aligned_bx:
+   !a:word8. aligned_bx (if aligned_bx a then a else 0w)
+Proof
+  SRW_TAC [] [] \\ EVAL_TAC
+QED
 
 val it_mode_concat = with_flag (wordsLib.guessing_word_lengths,true)
   Q.store_thm("it_mode_concat",
@@ -2443,8 +2549,8 @@ val aligned_shift_pair_thms =
        [`LSL_C`,`LSR_C`,`ASR_C`,`ROR_C`])
     (Drule.CONJUNCTS aligned_shift_pair)));
 
-val aligned_rm_thms = Q.store_thm("aligned_rm_thms",
-  `(!pc:word32 b.
+Theorem aligned_rm_thms:
+   (!pc:word32 b.
      aligned (align (pc,4) + 8w +
               if aligned (align (pc,4) + 8w + b,4) then b else 0w,4)) /\
    (!pc:word32 b.
@@ -2461,13 +2567,15 @@ val aligned_rm_thms = Q.store_thm("aligned_rm_thms",
               if aligned (align (pc,4) + 8w + b,2) then b else 0w,2)) /\
    (!pc:word32 b.
      aligned (align (pc,4) + 8w +
-              -(if aligned (align (pc,4) + 8w + -b,2) then b else 0w),2))`,
+              -(if aligned (align (pc,4) + 8w + -b,2) then b else 0w),2))
+Proof
   SRW_TAC [] [aligned_sum] \\ EVAL_TAC
     \\ FULL_SIMP_TAC std_ss [aligned_def, align_aligned, aligned_align,
           align_plus4, WORD_EQ_ADD_LCANCEL, EVAL ``-1w:word32``,
           wordsLib.WORD_DECIDE ``b + a + 8w = a + (b + 8w) : word32``,
           wordsLib.WORD_DECIDE ``b + a + 12w = a + (b + 8w + 4w) : word32``]
-    \\ POP_ASSUM (SUBST1_TAC o SYM) \\ DECIDE_TAC);
+    \\ POP_ASSUM (SUBST1_TAC o SYM) \\ DECIDE_TAC
+QED
 
 val aligned_shift_rm = Q.prove(
   `(!f:bool[32] # num -> bool[32] # bool x.
@@ -2482,8 +2590,8 @@ val aligned_shift_rm = Q.prove(
                        then b else 0w,x)),4))`,
   SRW_TAC [] [aligned_sum] \\ EVAL_TAC);
 
-val aligned_rrx_rm_thms = Q.store_thm("aligned_rrx_rm_thms",
-  `(!pc:word32 b x.
+Theorem aligned_rrx_rm_thms:
+   (!pc:word32 b x.
      aligned
        (align (pc,4) + 8w +
         SND (word_rrx (x,if aligned (align (pc,4) + 8w + SND (word_rrx (x,b)),4)
@@ -2493,9 +2601,11 @@ val aligned_rrx_rm_thms = Q.store_thm("aligned_rrx_rm_thms",
        (align (pc,4) + 8w +
         -SND (word_rrx (x,
            if aligned (align (pc,4) + 8w + -SND (word_rrx (x,b)),4)
-           then b else 0w)),4))`,
+           then b else 0w)),4))
+Proof
   REPEAT STRIP_TAC \\ Cases_on `x`
-    \\ SRW_TAC [] [aligned_sum, word_rrx_0] \\ EVAL_TAC);
+    \\ SRW_TAC [] [aligned_sum, word_rrx_0] \\ EVAL_TAC
+QED
 
 val aligned_shift_rm_thms = save_thm("aligned_shift_rm_thms",
   Drule.LIST_CONJ (List.concat
@@ -2544,8 +2654,8 @@ val aligned_align_thms2 = save_thm("aligned_align_thms2",
 val _ = Parse.overload_on
   ("GOOD_MODE", ``\m:word5. m IN {16w; 17w; 18w; 19w; 23w; 27w; 31w}``);
 
-val good_mode = Q.store_thm("good_mode",
-  `(!n:word32.
+Theorem good_mode:
+   (!n:word32.
      (4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n || 31w) <> 22w:word5) /\
    (!n:word32.
      GOOD_MODE ((4 >< 0) (if GOOD_MODE ((4 >< 0) n) then n else n || 31w))) /\
@@ -2558,12 +2668,16 @@ val good_mode = Q.store_thm("good_mode",
       else psr with <| IT := 0w; M := 16w |>).M <> 22w) /\
    (!psr.
      GOOD_MODE ((if GOOD_MODE (psr.M) /\ (psr.IT = 0w) then psr
-                 else psr with <| IT := 0w; M := 16w |>).M))`,
-  SRW_TAC [] [] \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_EXTRACT_ss) []);
+                 else psr with <| IT := 0w; M := 16w |>).M))
+Proof
+  SRW_TAC [] [] \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_EXTRACT_ss) []
+QED
 
-val good_it = Q.store_thm("good_it",
-  `!b it:word8. (if b /\ (it = 0w) then it else 0w) = 0w`,
-  SRW_TAC [] []);
+Theorem good_it:
+   !b it:word8. (if b /\ (it = 0w) then it else 0w) = 0w
+Proof
+  SRW_TAC [] []
+QED
 
 val IT_concat = with_flag (wordsLib.guessing_word_lengths,true)
   Q.store_thm("IT_concat",
@@ -2576,9 +2690,11 @@ val IT_concat0 = with_flag (wordsLib.guessing_word_lengths,true)
                      ((7 >< 2) a = 0w) /\ ((2 >< 1) b = 0w)`,
   SRW_TAC [wordsLib.WORD_BIT_EQ_ss] [] \\ DECIDE_TAC);
 
-val divisor_neq_zero = Q.store_thm("divisor_neq_zero",
-  `!m:word32. (if m <> 0w then m else 1w) <> 0w`,
-  SRW_TAC [] []);
+Theorem divisor_neq_zero:
+   !m:word32. (if m <> 0w then m else 1w) <> 0w
+Proof
+  SRW_TAC [] []
+QED
 
 val it_con_thm = with_flag (wordsLib.guessing_word_lengths,true)
   Q.store_thm("it_con_thm",
@@ -2646,8 +2762,8 @@ val align32 =
 val bx_write_pc = save_thm("bx_write_pc",
   SIMP_RULE std_ss [align32, bx_write_pc_thm, branch_to_def] bx_write_pc_def);
 
-val branch_write_pc = Q.store_thm("branch_write_pc",
-  `!address ii.
+Theorem branch_write_pc:
+   !address ii.
      branch_write_pc ii address =
      seqT (parT (arch_version ii) (read_cpsr ii))
      (\(version,cpsr).
@@ -2659,7 +2775,8 @@ val branch_write_pc = Q.store_thm("branch_write_pc",
            (if ~cpsr.J /\ ~cpsr.T then
               align (address,4)
             else
-              align (address,2)))`,
+              align (address,2)))
+Proof
   SRW_TAC [] [branch_write_pc_def, arch_version_def, read_cpsr_def,
         read__psr_def, current_instr_set_def,
         read_isetstate_def, branch_to_def, errorT_def,
@@ -2669,7 +2786,8 @@ val branch_write_pc = Q.store_thm("branch_write_pc",
         FUN_EQ_THM]
     \\ Cases_on `(x.psrs (ii.proc,CPSR)).J`
     \\ Cases_on `(x.psrs (ii.proc,CPSR)).T`
-    \\ ASM_SIMP_TAC (srw_ss()) [GSYM aligned_248, align32, FCP_ISET]);
+    \\ ASM_SIMP_TAC (srw_ss()) [GSYM aligned_248, align32, FCP_ISET]
+QED
 
 val compare_branch_instr_thm = Q.prove(
   `!ii imm6:word6.
@@ -2708,19 +2826,21 @@ val compare_branch_instr = save_thm("compare_branch_instr",
   REWRITE_RULE [compare_branch_instr_thm, align32]
   arm_opsemTheory.compare_branch_instr);
 
-val error_option_case_COND_RAND = Q.store_thm("error_option_case_COND_RAND",
-  `!c f f1 a0 a1 a2 a3.
+Theorem error_option_case_COND_RAND:
+   !c f f1 a0 a1 a2 a3.
      error_option_CASE (if c then ValueState a0 a1 else ValueState a2 a3) f f1 =
      if c then
        f a0 a1
      else
-       f a2 a3`,
-  SRW_TAC [] []);
+       f a2 a3
+Proof
+  SRW_TAC [] []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val ARM_READ_REG_FROM_MODE = Q.store_thm("ARM_READ_REG_FROM_MODE",
-  `(!s m. ARM_READ_REG_MODE (0w, m) s = ARM_READ_REG 0w s) /\
+Theorem ARM_READ_REG_FROM_MODE:
+   (!s m. ARM_READ_REG_MODE (0w, m) s = ARM_READ_REG 0w s) /\
    (!s m. ARM_READ_REG_MODE (1w, m) s = ARM_READ_REG 1w s) /\
    (!s m. ARM_READ_REG_MODE (2w, m) s = ARM_READ_REG 2w s) /\
    (!s m. ARM_READ_REG_MODE (3w, m) s = ARM_READ_REG 3w s) /\
@@ -2752,11 +2872,13 @@ val ARM_READ_REG_FROM_MODE = Q.store_thm("ARM_READ_REG_FROM_MODE",
       (ARM_READ_REG_MODE (13w, m) s = ARM_READ_REG 13w s)) /\
    (!s m. (ARM_MODE s = m) ==>
       (ARM_READ_REG_MODE (14w, m) s = ARM_READ_REG 14w s)) /\
-   (!s m. ARM_READ_REG_MODE (15w,m) s = ARM_READ_REG 15w s)`,
-  SRW_TAC [] [ARM_READ_REG_MODE_def,ARM_READ_REG_def,RevLookUpRName_def]);
+   (!s m. ARM_READ_REG_MODE (15w,m) s = ARM_READ_REG 15w s)
+Proof
+  SRW_TAC [] [ARM_READ_REG_MODE_def,ARM_READ_REG_def,RevLookUpRName_def]
+QED
 
-val ARM_WRITE_REG_FROM_MODE = Q.store_thm("ARM_WRITE_REG_FROM_MODE",
-  `(!s m d. ARM_WRITE_REG_MODE (0w, m) d s = ARM_WRITE_REG 0w d s) /\
+Theorem ARM_WRITE_REG_FROM_MODE:
+   (!s m d. ARM_WRITE_REG_MODE (0w, m) d s = ARM_WRITE_REG 0w d s) /\
    (!s m d. ARM_WRITE_REG_MODE (1w, m) d s = ARM_WRITE_REG 1w d s) /\
    (!s m d. ARM_WRITE_REG_MODE (2w, m) d s = ARM_WRITE_REG 2w d s) /\
    (!s m d. ARM_WRITE_REG_MODE (3w, m) d s = ARM_WRITE_REG 3w d s) /\
@@ -2788,11 +2910,13 @@ val ARM_WRITE_REG_FROM_MODE = Q.store_thm("ARM_WRITE_REG_FROM_MODE",
       (ARM_WRITE_REG_MODE (13w, m) d s = ARM_WRITE_REG 13w d s)) /\
    (!s m d. (ARM_MODE s = m) ==>
       (ARM_WRITE_REG_MODE (14w, m) d s = ARM_WRITE_REG 14w d s)) /\
-   (!s m d. ARM_WRITE_REG_MODE (15w,m) d s = ARM_WRITE_REG 15w d s)`,
-  SRW_TAC [] [ARM_WRITE_REG_MODE_def,ARM_WRITE_REG_def,RevLookUpRName_def]);
+   (!s m d. ARM_WRITE_REG_MODE (15w,m) d s = ARM_WRITE_REG 15w d s)
+Proof
+  SRW_TAC [] [ARM_WRITE_REG_MODE_def,ARM_WRITE_REG_def,RevLookUpRName_def]
+QED
 
-val ARM_READ_SPSR_FROM_MODE = Q.store_thm("ARM_READ_SPSR_FROM_MODE",
-  `(!s. (ARM_MODE s = 0b10001w) ==>
+Theorem ARM_READ_SPSR_FROM_MODE:
+   (!s. (ARM_MODE s = 0b10001w) ==>
      (ARM_READ_SPSR_MODE 0b10001w s = ARM_READ_SPSR s)) /\
    (!s. (ARM_MODE s = 0b10010w) ==>
      (ARM_READ_SPSR_MODE 0b10010w s = ARM_READ_SPSR s)) /\
@@ -2803,11 +2927,13 @@ val ARM_READ_SPSR_FROM_MODE = Q.store_thm("ARM_READ_SPSR_FROM_MODE",
    (!s. (ARM_MODE s = 0b10111w) ==>
      (ARM_READ_SPSR_MODE 0b10111w s = ARM_READ_SPSR s)) /\
    (!s. (ARM_MODE s = 0b11011w) ==>
-     (ARM_READ_SPSR_MODE 0b11011w s = ARM_READ_SPSR s))`,
-  SRW_TAC [] [ARM_READ_SPSR_def]);
+     (ARM_READ_SPSR_MODE 0b11011w s = ARM_READ_SPSR s))
+Proof
+  SRW_TAC [] [ARM_READ_SPSR_def]
+QED
 
-val ARM_WRITE_SPSR_FROM_MODE = Q.store_thm("ARM_WRITE_SPSR_FROM_MODE",
-  `(!d s. (ARM_MODE s = 0b10001w) ==>
+Theorem ARM_WRITE_SPSR_FROM_MODE:
+   (!d s. (ARM_MODE s = 0b10001w) ==>
      (ARM_WRITE_SPSR_MODE 0b10001w d s = ARM_WRITE_SPSR d s)) /\
    (!d s. (ARM_MODE s = 0b10010w) ==>
      (ARM_WRITE_SPSR_MODE 0b10010w d s = ARM_WRITE_SPSR d s)) /\
@@ -2818,11 +2944,13 @@ val ARM_WRITE_SPSR_FROM_MODE = Q.store_thm("ARM_WRITE_SPSR_FROM_MODE",
    (!d s. (ARM_MODE s = 0b10111w) ==>
      (ARM_WRITE_SPSR_MODE 0b10111w d s = ARM_WRITE_SPSR d s)) /\
    (!d s. (ARM_MODE s = 0b11011w) ==>
-     (ARM_WRITE_SPSR_MODE 0b11011w d s = ARM_WRITE_SPSR d s))`,
-  SRW_TAC [] [ARM_WRITE_SPSR_def]);
+     (ARM_WRITE_SPSR_MODE 0b11011w d s = ARM_WRITE_SPSR d s))
+Proof
+  SRW_TAC [] [ARM_WRITE_SPSR_def]
+QED
 
-val ARM_WRITE_CPSR = Q.store_thm("ARM_WRITE_CPSR",
-  `(!b state cpsr.
+Theorem ARM_WRITE_CPSR:
+   (!b state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with N := b) state =
          ARM_WRITE_STATUS psrN b state)) /\
@@ -2877,13 +3005,15 @@ val ARM_WRITE_CPSR = Q.store_thm("ARM_WRITE_CPSR",
    (!m state cpsr.
       (ARM_READ_CPSR state = cpsr) ==>
         (ARM_WRITE_CPSR (cpsr with M := m) state =
-         ARM_WRITE_MODE m state))`,
+         ARM_WRITE_MODE m state))
+Proof
   SRW_TAC [] [ARM_WRITE_STATUS_def, ARM_WRITE_GE_def, ARM_WRITE_IT_def,
     ARM_WRITE_MODE_def, ARM_READ_CPSR_def, ARM_WRITE_CPSR_def,
-    APPLY_UPDATE_THM, FUN_EQ_THM, arm_state_component_equality]);
+    APPLY_UPDATE_THM, FUN_EQ_THM, arm_state_component_equality]
+QED
 
-val ARM_WRITE_SPSR = Q.store_thm("ARM_WRITE_SPSR",
-  `(!b state cpsr.
+Theorem ARM_WRITE_SPSR:
+   (!b state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with N := b) state =
          ARM_WRITE_STATUS_SPSR psrN b state)) /\
@@ -2938,16 +3068,18 @@ val ARM_WRITE_SPSR = Q.store_thm("ARM_WRITE_SPSR",
    (!m state cpsr.
       (ARM_READ_SPSR state = cpsr) ==>
         (ARM_WRITE_SPSR (cpsr with M := m) state =
-         ARM_WRITE_MODE_SPSR m state))`,
+         ARM_WRITE_MODE_SPSR m state))
+Proof
   SRW_TAC [] [ARM_WRITE_STATUS_SPSR_def, ARM_WRITE_GE_SPSR_def,
     ARM_WRITE_IT_SPSR_def, ARM_WRITE_MODE_SPSR_def, ARM_READ_SPSR_def,
     ARM_WRITE_SPSR_def, ARM_READ_SPSR_MODE_def, ARM_WRITE_SPSR_MODE_def,
-    APPLY_UPDATE_THM, FUN_EQ_THM, arm_state_component_equality]);
+    APPLY_UPDATE_THM, FUN_EQ_THM, arm_state_component_equality]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val MARK_AND_CLEAR_EXCLUSIVE = Q.store_thm("MARK_AND_CLEAR_EXCLUSIVE",
-  `(!mon mstate a n s.
+Theorem MARK_AND_CLEAR_EXCLUSIVE:
+   (!mon mstate a n s.
      (mon = s.monitors) ==>
      (s with monitors := mon with state :=
        SND (mon.ClearExclusiveByAddress (a,<| proc := 0 |>,n)
@@ -2977,13 +3109,15 @@ val MARK_AND_CLEAR_EXCLUSIVE = Q.store_thm("MARK_AND_CLEAR_EXCLUSIVE",
        SND (mon.ClearExclusiveLocal 0 mstate) =
       CLEAR_EXCLUSIVE_LOCAL
         (s with monitors := mon with state := mstate)) /\
-     (s with monitors := mon with state := mon.state = s))`,
+     (s with monitors := mon with state := mon.state = s))
+Proof
   SRW_TAC [] [CLEAR_EXCLUSIVE_BY_ADDRESS_def, MARK_EXCLUSIVE_GLOBAL_def,
     MARK_EXCLUSIVE_LOCAL_def, CLEAR_EXCLUSIVE_LOCAL_def,
-    arm_state_component_equality, ExclusiveMonitors_component_equality]);
+    arm_state_component_equality, ExclusiveMonitors_component_equality]
+QED
 
-val ARM_WRITE_MEM_o = Q.store_thm("ARM_WRITE_MEM_o",
-  `(!a w g s.
+Theorem ARM_WRITE_MEM_o:
+   (!a w g s.
      (ARM_WRITE_MEM a w (s with memory updated_by g) =
        (s with memory updated_by (a =+ w) o g))) /\
    (!a w g s.
@@ -2991,18 +3125,22 @@ val ARM_WRITE_MEM_o = Q.store_thm("ARM_WRITE_MEM_o",
        (s with accesses updated_by (CONS (MEM_WRITE a w)) o g))) /\
    (!a g s.
      (ARM_WRITE_MEM_READ a (s with accesses updated_by g) =
-       (s with accesses updated_by (CONS (MEM_READ a)) o g)))`,
+       (s with accesses updated_by (CONS (MEM_READ a)) o g)))
+Proof
   SRW_TAC []
-    [ARM_WRITE_MEM_def, ARM_WRITE_MEM_WRITE_def, ARM_WRITE_MEM_READ_def]);
+    [ARM_WRITE_MEM_def, ARM_WRITE_MEM_WRITE_def, ARM_WRITE_MEM_READ_def]
+QED
 
-val ARM_WRITE_REG_o = Q.store_thm("ARM_WRITE_REG_o",
-  `!x w g s.
+Theorem ARM_WRITE_REG_o:
+   !x w g s.
      (ARM_WRITE_REG_MODE x w (s with registers updated_by g) =
-       (s with registers updated_by ((0,RevLookUpRName x) =+ w) o g))`,
-  SRW_TAC [] [ARM_WRITE_REG_MODE_def]);
+       (s with registers updated_by ((0,RevLookUpRName x) =+ w) o g))
+Proof
+  SRW_TAC [] [ARM_WRITE_REG_MODE_def]
+QED
 
-val ARM_WRITE_PSR_o = Q.store_thm("ARM_WRITE_PSR_o",
-  `(!w g s.
+Theorem ARM_WRITE_PSR_o:
+   (!w g s.
      (ARM_WRITE_CPSR w (s with psrs updated_by g) =
        (s with psrs updated_by ((0,CPSR) =+ w) o g))) /\
    (!w g s.
@@ -3022,11 +3160,13 @@ val ARM_WRITE_PSR_o = Q.store_thm("ARM_WRITE_PSR_o",
        (s with psrs updated_by ((0,SPSR_abt) =+ w) o g))) /\
    (!w g s.
      (ARM_WRITE_SPSR_MODE 0b11011w w (s with psrs updated_by g) =
-       (s with psrs updated_by ((0,SPSR_und) =+ w) o g)))`,
-  SRW_TAC [] [ARM_WRITE_CPSR_def, ARM_WRITE_SPSR_MODE_def, SPSR_MODE_def]);
+       (s with psrs updated_by ((0,SPSR_und) =+ w) o g)))
+Proof
+  SRW_TAC [] [ARM_WRITE_CPSR_def, ARM_WRITE_SPSR_MODE_def, SPSR_MODE_def]
+QED
 
-val ARM_WRITE_CPSR_o = Q.store_thm("ARM_WRITE_CPSR_o",
-  `(!b state cpsr.
+Theorem ARM_WRITE_CPSR_o:
+   (!b state cpsr.
        ARM_WRITE_CPSR (ARMpsr_N_fupd (K b) cpsr) state =
        ARM_WRITE_STATUS psrN b (ARM_WRITE_CPSR cpsr state)) /\
    (!b state cpsr.
@@ -3064,18 +3204,20 @@ val ARM_WRITE_CPSR_o = Q.store_thm("ARM_WRITE_CPSR_o",
        ARM_WRITE_GE ge (ARM_WRITE_CPSR cpsr state)) /\
    (!it state cpsr.
        ARM_WRITE_CPSR (ARMpsr_IT_fupd (K it) cpsr) state =
-       ARM_WRITE_IT it (ARM_WRITE_CPSR cpsr state))`,
+       ARM_WRITE_IT it (ARM_WRITE_CPSR cpsr state))
+Proof
   SRW_TAC [] [ARM_WRITE_STATUS_def, ARM_WRITE_GE_def, ARM_WRITE_IT_def,
     ARM_WRITE_MODE_def, ARM_READ_CPSR_def, ARM_WRITE_CPSR_def,
-    APPLY_UPDATE_THM, FUN_EQ_THM, arm_state_component_equality]);
+    APPLY_UPDATE_THM, FUN_EQ_THM, arm_state_component_equality]
+QED
 
 val SPSR_MODE_NOT_CPSR = Q.prove(
   `!m. SPSR_MODE m <> CPSR`,
   STRIP_TAC \\ Cases_on `m IN {17w; 18w; 19w; 22w; 23w}`
     \\ FULL_SIMP_TAC (srw_ss()) [SPSR_MODE_def]);
 
-val ARM_WRITE_SPSR_o = Q.store_thm("ARM_WRITE_SPSR_o",
-  `(!b state cpsr.
+Theorem ARM_WRITE_SPSR_o:
+   (!b state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_N_fupd (K b) cpsr) state =
        ARM_WRITE_STATUS_SPSR psrN b (ARM_WRITE_SPSR cpsr state))) /\
    (!b state cpsr.
@@ -3113,12 +3255,14 @@ val ARM_WRITE_SPSR_o = Q.store_thm("ARM_WRITE_SPSR_o",
        ARM_WRITE_GE_SPSR ge (ARM_WRITE_SPSR cpsr state))) /\
    (!it state cpsr.
       (ARM_WRITE_SPSR (ARMpsr_IT_fupd (K it) cpsr) state =
-       ARM_WRITE_IT_SPSR it (ARM_WRITE_SPSR cpsr state)))`,
+       ARM_WRITE_IT_SPSR it (ARM_WRITE_SPSR cpsr state)))
+Proof
    SRW_TAC [] [ARM_WRITE_STATUS_SPSR_def, ARM_WRITE_GE_SPSR_def,
      ARM_WRITE_IT_SPSR_def, ARM_WRITE_MODE_SPSR_def, ARM_READ_SPSR_def,
      ARM_WRITE_SPSR_def, ARM_READ_SPSR_MODE_def, ARM_WRITE_SPSR_MODE_def,
      ARM_MODE_def, ARM_READ_CPSR_def, APPLY_UPDATE_THM, FUN_EQ_THM,
-     SPSR_MODE_NOT_CPSR, arm_state_component_equality]);
+     SPSR_MODE_NOT_CPSR, arm_state_component_equality]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3163,8 +3307,8 @@ Theorem ARM_WRITE_REG_o[allow_rebind] =
 
 (* ------------------------------------------------------------------------- *)
 
-val PSR_OF_UPDATES = Q.store_thm("PSR_OF_UPDATES",
-  `(!n m d s. ARM_READ_CPSR (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_CPSR s) /\
+Theorem PSR_OF_UPDATES:
+   (!n m d s. ARM_READ_CPSR (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_CPSR s) /\
    (!n d s. ARM_READ_CPSR (ARM_WRITE_REG n d s) = ARM_READ_CPSR s) /\
    (!a d s. ARM_READ_CPSR (ARM_WRITE_MEM a d s) = ARM_READ_CPSR s) /\
    (!a d s. ARM_READ_CPSR (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_CPSR s) /\
@@ -3184,7 +3328,8 @@ val PSR_OF_UPDATES = Q.store_thm("PSR_OF_UPDATES",
    (!a d s. ARM_READ_SPSR (ARM_WRITE_MEM_WRITE a d s) = ARM_READ_SPSR s) /\
    (!a s. ARM_READ_SPSR (ARM_WRITE_MEM_READ a s) = ARM_READ_SPSR s) /\
    (!d s. ARM_READ_SPSR (ARM_WRITE_CPSR d s) = ARM_READ_SPSR_MODE d.M s) /\
-   (!d s. ARM_READ_SPSR (ARM_WRITE_SPSR d s) = d)`,
+   (!d s. ARM_READ_SPSR (ARM_WRITE_SPSR d s) = d)
+Proof
   REPEAT STRIP_TAC \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
                    ARM_WRITE_MEM_READ_def, ARM_WRITE_MEM_WRITE_def,
@@ -3195,10 +3340,11 @@ val PSR_OF_UPDATES = Q.store_thm("PSR_OF_UPDATES",
                    CLEAR_EXCLUSIVE_BY_ADDRESS_def]
     \\ SRW_TAC [] [ARM_WRITE_SPSR_MODE_def, SPSR_MODE_NOT_CPSR, UPDATE_def]
     \\ FULL_SIMP_TAC (srw_ss()) [ARM_MODE_def, SPSR_MODE_NOT_CPSR,
-         ARM_READ_SPSR_MODE_def, ARM_READ_CPSR_def]);
+         ARM_READ_SPSR_MODE_def, ARM_READ_CPSR_def]
+QED
 
-val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
-  `(!f n m d s.
+Theorem CPSR_COMPONENTS_OF_UPDATES:
+   (!f n m d s.
       ARM_READ_STATUS f (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_STATUS f s) /\
    (!f n d s. ARM_READ_STATUS f (ARM_WRITE_REG n d s) = ARM_READ_STATUS f s) /\
    (!f a d s. ARM_READ_STATUS f (ARM_WRITE_MEM a d s) = ARM_READ_STATUS f s) /\
@@ -3263,7 +3409,8 @@ val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
    (!it s. ARM_MODE (ARM_WRITE_IT_SPSR it s) = ARM_MODE s) /\
    (!ge s. ARM_MODE (ARM_WRITE_GE_SPSR ge s) = ARM_MODE s) /\
    (!m s. ARM_MODE (ARM_WRITE_MODE_SPSR m s) = ARM_MODE s) /\
-   (!f b s. ARM_MODE (ARM_WRITE_STATUS_SPSR f b s) = ARM_MODE s)`,
+   (!f b s. ARM_MODE (ARM_WRITE_STATUS_SPSR f b s) = ARM_MODE s)
+Proof
   REPEAT STRIP_TAC \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [ARM_MODE_def, ARM_READ_STATUS_def, ARM_READ_IT_def,
          ARM_READ_GE_def, PSR_OF_UPDATES]
@@ -3275,10 +3422,11 @@ val CPSR_COMPONENTS_OF_UPDATES = Q.store_thm("CPSR_COMPONENTS_OF_UPDATES",
          ARM_WRITE_STATUS_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
          ARM_WRITE_MODE_def, SPSR_MODE_NOT_CPSR, UPDATE_def]
     \\ FULL_SIMP_TAC (srw_ss()) [SPSR_MODE_NOT_CPSR, UPDATE_def,
-         ARM_READ_SPSR_MODE_def, ARM_WRITE_SPSR_MODE_def]);
+         ARM_READ_SPSR_MODE_def, ARM_WRITE_SPSR_MODE_def]
+QED
 
-val SPSR_COMPONENTS_OF_UPDATES = Q.store_thm("SPSR_COMPONENTS_OF_UPDATES",
-  `(!f n m d s. ARM_READ_STATUS_SPSR f (ARM_WRITE_REG_MODE (n,m) d s) =
+Theorem SPSR_COMPONENTS_OF_UPDATES:
+   (!f n m d s. ARM_READ_STATUS_SPSR f (ARM_WRITE_REG_MODE (n,m) d s) =
                 ARM_READ_STATUS_SPSR f s) /\
    (!f n d s. ARM_READ_STATUS_SPSR f (ARM_WRITE_REG n d s) =
               ARM_READ_STATUS_SPSR f s) /\
@@ -3351,7 +3499,8 @@ val SPSR_COMPONENTS_OF_UPDATES = Q.store_thm("SPSR_COMPONENTS_OF_UPDATES",
            ARM_READ_MODE_SPSR s) /\
    (!it s. ARM_READ_MODE_SPSR (ARM_WRITE_IT_SPSR it s) =
            ARM_READ_MODE_SPSR s) /\
-   (!m s. ARM_READ_MODE_SPSR (ARM_WRITE_MODE_SPSR m s) = m)`,
+   (!m s. ARM_READ_MODE_SPSR (ARM_WRITE_MODE_SPSR m s) = m)
+Proof
   REPEAT STRIP_TAC \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [ARM_READ_SPSR_def, ARM_READ_STATUS_SPSR_def,
          ARM_READ_IT_SPSR_def, ARM_READ_GE_SPSR_def, ARM_READ_MODE_SPSR_def,
@@ -3364,13 +3513,14 @@ val SPSR_COMPONENTS_OF_UPDATES = Q.store_thm("SPSR_COMPONENTS_OF_UPDATES",
          ARM_WRITE_STATUS_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
          ARM_WRITE_MODE_def, SPSR_MODE_NOT_CPSR, UPDATE_def]
     \\ FULL_SIMP_TAC (srw_ss()) [SPSR_MODE_NOT_CPSR, UPDATE_def,
-         ARM_READ_SPSR_MODE_def, ARM_WRITE_SPSR_MODE_def]);
+         ARM_READ_SPSR_MODE_def, ARM_WRITE_SPSR_MODE_def]
+QED
 
 val LESS_THM =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
-val RevLookUpRName = Q.store_thm("RevLookUpRName",
-  `((RevLookUpRName (n,m) = RName_0usr) = (n = 0w)) /\
+Theorem RevLookUpRName:
+   ((RevLookUpRName (n,m) = RName_0usr) = (n = 0w)) /\
    ((RevLookUpRName (n,m) = RName_1usr) = (n = 1w)) /\
    ((RevLookUpRName (n,m) = RName_2usr) = (n = 2w)) /\
    ((RevLookUpRName (n,m) = RName_3usr) = (n = 3w)) /\
@@ -3404,25 +3554,29 @@ val RevLookUpRName = Q.store_thm("RevLookUpRName",
    ((RevLookUpRName (n,m) = RName_LRmon) = (n = 14w) /\ (m = 22w)) /\
    ((RevLookUpRName (n,m) = RName_LRabt) = (n = 14w) /\ (m = 23w)) /\
    ((RevLookUpRName (n,m) = RName_LRund) = (n = 14w) /\ (m = 27w)) /\
-   ((RevLookUpRName (n,m) = RName_PC) = (n = 15w))`,
+   ((RevLookUpRName (n,m) = RName_PC) = (n = 15w))
+Proof
   wordsLib.Cases_on_word `n`
     \\ RULE_ASSUM_TAC (SIMP_RULE (srw_ss()) [LESS_THM])
     \\ FULL_SIMP_TAC bool_ss [] \\ EVAL_TAC
     \\ Cases_on `m = 17w`
     \\ ASM_SIMP_TAC bool_ss [] \\ EVAL_TAC
     \\ Cases_on `(m = 18w) \/ (m = 19w) \/ (m = 22w) \/ (m = 23w) \/ (m = 27w)`
-    \\ FULL_SIMP_TAC (srw_ss()) [] \\ EVAL_TAC);
+    \\ FULL_SIMP_TAC (srw_ss()) [] \\ EVAL_TAC
+QED
 
-val RevLookUpRName_neq = Q.store_thm("RevLookUpRName_neq",
-  `!n1 n2 m1 m2.
-      n1 <> n2 ==> RevLookUpRName (n1, m1) <> RevLookUpRName (n2, m2)`,
+Theorem RevLookUpRName_neq:
+   !n1 n2 m1 m2.
+      n1 <> n2 ==> RevLookUpRName (n1, m1) <> RevLookUpRName (n2, m2)
+Proof
   REPEAT STRIP_TAC
     \\ Cases_on `RevLookUpRName (n1, m1)`
     \\ Cases_on `RevLookUpRName (n2, m2)`
-    \\ FULL_SIMP_TAC (srw_ss()) [RevLookUpRName]);
+    \\ FULL_SIMP_TAC (srw_ss()) [RevLookUpRName]
+QED
 
-val REG_MODE_OF_UPDATES = Q.store_thm("REG_MODE_OF_UPDATES",
-  `(!n1 n2 m1 m2 d s. n1 <> n2 ==>
+Theorem REG_MODE_OF_UPDATES:
+   (!n1 n2 m1 m2 d s. n1 <> n2 ==>
       (ARM_READ_REG_MODE (n1,m1) (ARM_WRITE_REG_MODE (n2,m2) d s) =
        ARM_READ_REG_MODE (n1,m1) s)) /\
    (!n1 n2 m d s. n1 <> n2 ==>
@@ -3446,7 +3600,8 @@ val REG_MODE_OF_UPDATES = Q.store_thm("REG_MODE_OF_UPDATES",
    (!n m f b s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_STATUS f b s) =
                 ARM_READ_REG_MODE (n,m) s) /\
    (!n m d s. ARM_READ_REG_MODE (n,m) (ARM_WRITE_SPSR d s) =
-              ARM_READ_REG_MODE (n,m) s)`,
+              ARM_READ_REG_MODE (n,m) s)
+Proof
   SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
               ARM_WRITE_MEM_WRITE_def, ARM_WRITE_MEM_READ_def,
               ARM_WRITE_SPSR_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
@@ -3455,7 +3610,8 @@ val REG_MODE_OF_UPDATES = Q.store_thm("REG_MODE_OF_UPDATES",
     \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [ARM_WRITE_SPSR_MODE_def, ARM_WRITE_STATUS_def,
                    ARM_WRITE_CPSR_def,  UPDATE_def]
-    \\ METIS_TAC [RevLookUpRName_neq]);
+    \\ METIS_TAC [RevLookUpRName_neq]
+QED
 
 val REG_OF_UPDATES = Q.prove(
   `(!n1 n2 m d s. n1 <> n2 ==>
@@ -3480,8 +3636,8 @@ val REG_OF_UPDATES = Q.prove(
 val REG_OF_UPDATES = save_thm("REG_OF_UPDATES",
   CONJ REG_MODE_OF_UPDATES REG_OF_UPDATES);
 
-val MEM_OF_UPDATES = Q.store_thm("MEM_OF_UPDATES",
-  `(!a n m d s.
+Theorem MEM_OF_UPDATES:
+   (!a n m d s.
       ARM_READ_MEM a (ARM_WRITE_REG_MODE (n,m) d s) = ARM_READ_MEM a s) /\
    (!a n d s. ARM_READ_MEM a (ARM_WRITE_REG n d s) = ARM_READ_MEM a s) /\
    (!a d s. ARM_READ_MEM a (ARM_WRITE_MEM a d s) = d) /\
@@ -3495,7 +3651,8 @@ val MEM_OF_UPDATES = Q.store_thm("MEM_OF_UPDATES",
    (!a ge s. ARM_READ_MEM a (ARM_WRITE_GE ge s) = ARM_READ_MEM a s) /\
    (!a m s. ARM_READ_MEM a (ARM_WRITE_MODE m s) = ARM_READ_MEM a s) /\
    (!a f b s. ARM_READ_MEM a (ARM_WRITE_STATUS f b s) = ARM_READ_MEM a s) /\
-   (!a d s. ARM_READ_MEM a (ARM_WRITE_SPSR d s) = ARM_READ_MEM a s)`,
+   (!a d s. ARM_READ_MEM a (ARM_WRITE_SPSR d s) = ARM_READ_MEM a s)
+Proof
   SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
               ARM_WRITE_MEM_READ_def, ARM_WRITE_MEM_WRITE_def,
               ARM_WRITE_SPSR_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
@@ -3503,10 +3660,11 @@ val MEM_OF_UPDATES = Q.store_thm("MEM_OF_UPDATES",
               CLEAR_EXCLUSIVE_BY_ADDRESS_def]
     \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [ARM_WRITE_SPSR_MODE_def, ARM_WRITE_STATUS_def,
-                   ARM_WRITE_CPSR_def, UPDATE_def]);
+                   ARM_WRITE_CPSR_def, UPDATE_def]
+QED
 
-val MONITORS_OF_UPDATES = Q.store_thm("MONITORS_OF_UPDATES",
-  `(!n m d s.  (ARM_WRITE_REG_MODE (n,m) d s).monitors = s.monitors) /\
+Theorem MONITORS_OF_UPDATES:
+   (!n m d s.  (ARM_WRITE_REG_MODE (n,m) d s).monitors = s.monitors) /\
    (!n d s. (ARM_WRITE_REG n d s).monitors = s.monitors) /\
    (!a d s. (ARM_WRITE_MEM a d s).monitors = s.monitors) /\
    (!a d s. (ARM_WRITE_MEM_WRITE a d s).monitors = s.monitors) /\
@@ -3515,18 +3673,19 @@ val MONITORS_OF_UPDATES = Q.store_thm("MONITORS_OF_UPDATES",
    (!ge s. (ARM_WRITE_GE ge s).monitors = s.monitors) /\
    (!m s. (ARM_WRITE_MODE m s).monitors = s.monitors) /\
    (!f b s. (ARM_WRITE_STATUS f b s).monitors = s.monitors) /\
-   (!d s. (ARM_WRITE_SPSR d s).monitors = s.monitors)`,
+   (!d s. (ARM_WRITE_SPSR d s).monitors = s.monitors)
+Proof
   SRW_TAC [] [ARM_WRITE_REG_MODE_def, ARM_WRITE_REG_def, ARM_WRITE_MEM_def,
               ARM_WRITE_MEM_READ_def, ARM_WRITE_MEM_WRITE_def,
               ARM_WRITE_SPSR_def, ARM_WRITE_IT_def, ARM_WRITE_GE_def,
               ARM_WRITE_MODE_def, ARM_WRITE_CPSR_def]
     \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [ARM_WRITE_SPSR_MODE_def, ARM_WRITE_STATUS_def,
-                   ARM_WRITE_CPSR_def, UPDATE_def]);
+                   ARM_WRITE_CPSR_def, UPDATE_def]
+QED
 
-val ARM_READ_CPSR_COMPONENT_UNCHANGED =
-  Q.store_thm("ARM_READ_CPSR_COMPONENT_UNCHANGED",
-  `(!b s. (ARM_READ_STATUS psrN s = b) ==>
+Theorem ARM_READ_CPSR_COMPONENT_UNCHANGED:
+   (!b s. (ARM_READ_STATUS psrN s = b) ==>
           ((ARM_READ_CPSR s with N := b) = ARM_READ_CPSR s)) /\
    (!b s. (ARM_READ_STATUS psrZ s = b) ==>
           ((ARM_READ_CPSR s with Z := b) = ARM_READ_CPSR s)) /\
@@ -3553,7 +3712,8 @@ val ARM_READ_CPSR_COMPONENT_UNCHANGED =
    (!ge s. (ARM_READ_GE s = ge) ==>
           ((ARM_READ_CPSR s with GE := ge) = ARM_READ_CPSR s)) /\
    (!m s. (ARM_MODE s = m) ==>
-          ((ARM_READ_CPSR s with M := m) = ARM_READ_CPSR s))`,
+          ((ARM_READ_CPSR s with M := m) = ARM_READ_CPSR s))
+Proof
   SRW_TAC [] [arm_state_component_equality, ARMpsr_component_equality,
     UPDATE_APPLY_IMP_ID,
     ARM_MODE_def, ARM_WRITE_MODE_def,
@@ -3563,10 +3723,11 @@ val ARM_READ_CPSR_COMPONENT_UNCHANGED =
     ARM_READ_CPSR_def, ARM_WRITE_CPSR_def,
     ARM_READ_REG_MODE_def, ARM_WRITE_REG_MODE_def,
     ARM_READ_REG_def, ARM_WRITE_REG_def,
-    ARM_READ_MEM_def, ARM_WRITE_MEM_def]);
+    ARM_READ_MEM_def, ARM_WRITE_MEM_def]
+QED
 
-val ARM_READ_UNCHANGED = Q.store_thm("ARM_READ_UNCHANGED",
-  `(!f b s. (ARM_READ_STATUS f s = b) ==> (ARM_WRITE_STATUS f b s = s)) /\
+Theorem ARM_READ_UNCHANGED:
+   (!f b s. (ARM_READ_STATUS f s = b) ==> (ARM_WRITE_STATUS f b s = s)) /\
    (!it s. (ARM_READ_IT s = it) ==> (ARM_WRITE_IT it s = s)) /\
    (!ge s. (ARM_READ_GE s = ge) ==> (ARM_WRITE_GE ge s = s)) /\
    (!m s. (ARM_MODE s = m) ==> (ARM_WRITE_MODE m s = s)) /\
@@ -3579,8 +3740,10 @@ val ARM_READ_UNCHANGED = Q.store_thm("ARM_READ_UNCHANGED",
    (!w s. (ARM_READ_SPSR s = w) ==> (ARM_WRITE_SPSR w s = s)) /\
    (!n w s. (ARM_READ_REG n s = w) ==> (ARM_WRITE_REG n w s = s)) /\
    (!n m w s. (ARM_READ_REG_MODE (n,m) s = w) ==>
-              (ARM_WRITE_REG_MODE (n,m) w s = s))`, (* /\
-   (!a w s. (ARM_READ_MEM a s = w) ==> (ARM_WRITE_MEM a w s = s))`, *)
+              (ARM_WRITE_REG_MODE (n,m) w s = s))
+              (* /\
+   (!a w s. (ARM_READ_MEM a s = w) ==> (ARM_WRITE_MEM a w s = s)) *)
+Proof
   REPEAT STRIP_TAC \\ TRY (Cases_on `f`)
     \\ SRW_TAC [] [arm_state_component_equality, ARMpsr_component_equality,
          UPDATE_APPLY_IMP_ID,
@@ -3597,10 +3760,11 @@ val ARM_READ_UNCHANGED = Q.store_thm("ARM_READ_UNCHANGED",
          ARM_READ_SPSR_MODE_def, ARM_WRITE_SPSR_MODE_def,
          ARM_READ_REG_MODE_def, ARM_WRITE_REG_MODE_def,
          ARM_READ_REG_def, ARM_WRITE_REG_def,
-         ARM_READ_MEM_def, ARM_WRITE_MEM_def]);
+         ARM_READ_MEM_def, ARM_WRITE_MEM_def]
+QED
 
-val ARM_READ_STATUS_UPDATES = Q.store_thm("ARM_READ_STATUS_UPDATES",
-  `(!state state'.
+Theorem ARM_READ_STATUS_UPDATES:
+   (!state state'.
        (ARM_READ_STATUS psrN state <=/=> ARM_READ_STATUS psrV state) /\
        (ARM_READ_STATUS psrV state' = ARM_READ_STATUS psrV state) ==>
        (ARM_WRITE_STATUS psrV (~ARM_READ_STATUS psrN state) state' = state')) /\
@@ -3609,10 +3773,12 @@ val ARM_READ_STATUS_UPDATES = Q.store_thm("ARM_READ_STATUS_UPDATES",
        (ARM_READ_STATUS psrC state' = ARM_READ_STATUS psrC state) ==>
        (ARM_WRITE_STATUS psrC
           (ARM_READ_STATUS psrZ state /\
-           ARM_READ_STATUS psrC state) state' = state'))`,
+           ARM_READ_STATUS psrC state) state' = state'))
+Proof
   REPEAT STRIP_TAC
     \\ MATCH_MP_TAC (Thm.CONJUNCT1 ARM_READ_UNCHANGED)
-    \\ METIS_TAC []);
+    \\ METIS_TAC []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -4156,29 +4322,32 @@ End
 
 (* ------------------------------------------------------------------------- *)
 
-val arm_next_thm = Q.store_thm("arm_next_thm",
-  `!s x P h g inp.
+Theorem arm_next_thm:
+   !s x P h g inp.
      (!s. P s ==> (g s = s)) /\
      (P s ==> (h (g s) = x)) /\
      (arm_next <| proc := 0 |> inp (g s) = ValueState () x) ==>
-     (P s ==> (ARM_NEXT inp s = SOME (h s)))`,
+     (P s ==> (ARM_NEXT inp s = SOME (h s)))
+Proof
   SRW_TAC [] [STATE_OPTION_def,ARM_NEXT_def]
     \\ `g s = s` by RES_TAC \\ POP_ASSUM SUBST_ALL_TAC
     \\ Cases_on `arm_next <|proc := 0|> inp s`
-    \\ FULL_SIMP_TAC (srw_ss()) []);
+    \\ FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val arm_next_thm2 = Q.store_thm("arm_next_thm2",
-  `!s c x1 x2 P h1 h2 g inp.
+Theorem arm_next_thm2:
+   !s c x1 x2 P h1 h2 g inp.
      (!s. P s ==> (g s = s)) /\
      (P s ==> (h1 (g s) = x1)) /\
      (P s ==> (h2 (g s) = x2)) /\
      (arm_next <| proc := 0 |> inp (g s) =
        if c then ValueState () x1 else ValueState () x2) ==>
-     (P s ==> (ARM_NEXT inp s = SOME (if c then h1 s else h2 s)))`,
+     (P s ==> (ARM_NEXT inp s = SOME (if c then h1 s else h2 s)))
+Proof
   SRW_TAC [] [STATE_OPTION_def,ARM_NEXT_def]
     \\ `g s = s` by RES_TAC \\ POP_ASSUM SUBST_ALL_TAC
     \\ Cases_on `arm_next <|proc := 0|> inp s`
-    \\ FULL_SIMP_TAC (srw_ss()) []);
+    \\ FULL_SIMP_TAC (srw_ss()) []
+QED
 
 (* ------------------------------------------------------------------------- *)
-

@@ -233,26 +233,28 @@ SRW_TAC [][ADD_CLAUSES] THEN
 SRW_TAC [ARITH_ss][]
 QED
 
-val nwalkstar_subpair = Q.store_thm(
-"nwalkstar_subpair",
-`nwfs s /\ (nwalk s t1 = nPair t1a t1d) ==>
+Theorem nwalkstar_subpair:
+ nwfs s /\ (nwalk s t1 = nPair t1a t1d) ==>
   npair_count (nwalkstar s t1a) < npair_count (nwalkstar s t1) /\
-  npair_count (nwalkstar s t1d) < npair_count (nwalkstar s t1)`,
+  npair_count (nwalkstar s t1d) < npair_count (nwalkstar s t1)
+Proof
 SRW_TAC [][nwalk_def] THEN
 Cases_on `t1` THEN
 Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
-FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [])
+FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+QED
 
-val nwalkstar_subtie = Q.store_thm(
-"nwalkstar_subtie",
-`nwfs s /\ (nwalk s t1 = Tie a1 t1a) ==>
-  npair_count (nwalkstar s t1a) < npair_count (nwalkstar s t1)`,
+Theorem nwalkstar_subtie:
+ nwfs s /\ (nwalk s t1 = Tie a1 t1a) ==>
+  npair_count (nwalkstar s t1a) < npair_count (nwalkstar s t1)
+Proof
 SRW_TAC [][nwalk_def] THEN
 Cases_on `t1` THEN
 Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
-FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [])
+FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+QED
 
 val lemp = Q.prove(
 `(nwfs s ∧ (nvwalk s p v = nPair ta td) ⇒ v IN FDOM s) ∧
@@ -260,57 +262,61 @@ val lemp = Q.prove(
          nvars td SUBSET nvars (nPair ta td)`,
 SRW_TAC [][] THEN METIS_TAC [NOT_FDOM_nvwalk,ntermeq_thm])
 
-val sysvars_SUBSET_pairs = Q.store_thm(
-"sysvars_SUBSET_pairs",
-`nwfs s /\
+Theorem sysvars_SUBSET_pairs:
+ nwfs s /\
  (nwalk s t1 = nPair t1a t1d) /\
  (nwalk s t2 = nPair t2a t2d) ==>
  sysvars s t1a t2a SUBSET sysvars s t1 t2 /\
- sysvars s t1d t2d SUBSET sysvars s t1 t2`,
+ sysvars s t1d t2d SUBSET sysvars s t1 t2
+Proof
 SRW_TAC [][nwalk_def,sysvars_def] THEN
 Cases_on `t1` THEN Cases_on `t2` THEN
 Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
-METIS_TAC [nvars_nvwalk_SUBSET_FRANGE, lemp, SUBSET_TRANS,SUBSET_UNION])
+METIS_TAC [nvars_nvwalk_SUBSET_FRANGE, lemp, SUBSET_TRANS,SUBSET_UNION]
+QED
 
 val lemt = Q.prove(
 `(nwfs s ∧ (nvwalk s p v = Tie ta td) ⇒ v IN FDOM s) ∧
  ∀ta td. nvars td SUBSET nvars (Tie ta td)`,
 SRW_TAC [][] THEN METIS_TAC [NOT_FDOM_nvwalk,ntermeq_thm])
 
-val sysvars_SUBSET_ties = Q.store_thm(
-"sysvars_SUBSET_ties",
-`nwfs s ∧
+Theorem sysvars_SUBSET_ties:
+ nwfs s ∧
  (nwalk s t1 = Tie a1 t1a) ∧
  (nwalk s t2 = Tie a2 t2a) ⇒
- sysvars s t1a t2a SUBSET sysvars s t1 t2`,
+ sysvars s t1a t2a SUBSET sysvars s t1 t2
+Proof
 SRW_TAC [][nwalk_def,sysvars_def] THEN
 Cases_on `t1` THEN Cases_on `t2` THEN
 Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
-METIS_TAC [nvars_nvwalk_SUBSET_FRANGE,lemt,SUBSET_TRANS,SUBSET_UNION]);
+METIS_TAC [nvars_nvwalk_SUBSET_FRANGE,lemt,SUBSET_TRANS,SUBSET_UNION]
+QED
 
-val tca_thm = Q.store_thm(
-"tca_thm",
-`nwfs (FST p) /\
+Theorem tca_thm:
+ nwfs (FST p) /\
  (nwalk (FST p) t1 = nPair t1a t1d) /\
  (nwalk (FST p) t2 = nPair t2a t2d) ==>
- uR (p,t1a,t2a) (p,t1,t2)`,
+ uR (p,t1a,t2a) (p,t1,t2)
+Proof
 Cases_on `p` THEN
 SRW_TAC [][uR_def,SUBMAP_REFL] THEN1
 METIS_TAC [sysvars_SUBSET_pairs] THEN
-METIS_TAC [nwalkstar_subpair]);
+METIS_TAC [nwalkstar_subpair]
+QED
 
-val tctie_thm = Q.store_thm(
-"tctie_thm",
-`nwfs (FST p) ∧
+Theorem tctie_thm:
+ nwfs (FST p) ∧
  (nwalk (FST p) t1 = Tie a1 t1a) ∧
  (nwalk (FST p) t2 = Tie a2 t2a) ⇒
-  uR ((FST p,fex),t1a,apply_pi pi t2a) (p,t1,t2)`,
+  uR ((FST p,fex),t1a,apply_pi pi t2a) (p,t1,t2)
+Proof
 Cases_on `p` THEN
 SRW_TAC [][uR_def,SUBMAP_REFL] THEN1
 METIS_TAC [sysvars_SUBSET_ties,sysvars_apply_pi,sysvars_comm] THEN
-METIS_TAC [nwalkstar_subtie]);
+METIS_TAC [nwalkstar_subtie]
+QED
 
 val aux_def =
 SIMP_RULE std_ss []
@@ -323,11 +329,12 @@ val uR_ind = WF_INDUCTION_THM |> Q.ISPEC `nunifDef$uR` |> SIMP_RULE (srw_ss()) [
 |> Q.SPEC `\(a,b,c).P (FST a) (SND a) b c`
 |> SIMP_RULE std_ss [FORALL_PROD] |> Q.GEN`P`;
 
-val FRANGE_DOMSUB_SUBSET = Q.store_thm(
-"FRANGE_DOMSUB_SUBSET",
-`BIGUNION (FRANGE (f \\ x)) SUBSET BIGUNION (FRANGE f)`,
+Theorem FRANGE_DOMSUB_SUBSET:
+ BIGUNION (FRANGE (f \\ x)) SUBSET BIGUNION (FRANGE f)
+Proof
 SRW_TAC [][BIGUNION,SUBSET_DEF,FRANGE_DEF] THEN
-METIS_TAC [DOMSUB_FAPPLY_THM]);
+METIS_TAC [DOMSUB_FAPPLY_THM]
+QED
 
 val met1 =
 [nvars_nvwalk_SUBSET_FRANGE,lemp,lemt,
@@ -478,14 +485,14 @@ SRW_TAC [][sysvars_def] THENL [
   METIS_TAC met1
 ];
 
-val sysvars_SUBSET_FUPDATE_pairs = Q.store_thm(
-"sysvars_SUBSET_FUPDATE_pairs",
-`nwfs (s |+ (v,apply_pi pi t)) /\ v NOTIN FDOM s /\
+Theorem sysvars_SUBSET_FUPDATE_pairs:
+ nwfs (s |+ (v,apply_pi pi t)) /\ v NOTIN FDOM s /\
  (nwalk s t1 = nPair t1a t1d) /\
  (nwalk s t2 = nPair t2a t2d) /\
  (((∃p.nwalk s t1a = Sus p v) /\ (nwalk s t2a = t)) \/
   ((∃p.nwalk s t2a = Sus p v) /\ (nwalk s t1a = t))) ==>
- sysvars (s |+ (v,apply_pi pi t)) t1d t2d SUBSET sysvars s t1 t2`,
+ sysvars (s |+ (v,apply_pi pi t)) t1d t2d SUBSET sysvars s t1 t2
+Proof
 SIMP_TAC (srw_ss()) [nwalk_def,GSYM AND_IMP_INTRO] THEN
 NTAC 2 STRIP_TAC THEN
 `nwfs s` by METIS_TAC [nwfs_SUBMAP,SUBMAP_FUPDATE_EQN] THEN
@@ -504,14 +511,15 @@ Q.UNABBREV_TAC `Y` THENL [
   Q.MATCH_ABBREV_TAC `X ⇒ Y SUBSET sysvars s (nPair C1 D1) (nPair C2 D2)` THEN
   MAP_EVERY Q.RM_ABBREV_TAC [`C1`,`C2`] THEN UNABBREV_ALL_TAC THEN
   STRIP_TAC THENL [ tac5 `C1` `C2`, tac5 `C2` `C1`]
-]);
+]
+QED
 
-val nwalkstar_subpair_FUPDATE = Q.store_thm(
-"nwalkstar_subpair_FUPDATE",
-`nwfs s /\ v NOTIN FDOM s /\ v NOTIN nvars (nwalkstar s t) /\
+Theorem nwalkstar_subpair_FUPDATE:
+ nwfs s /\ v NOTIN FDOM s /\ v NOTIN nvars (nwalkstar s t) /\
  (nwalk s t1 = nPair t1a t1d) ==>
  npair_count (nwalkstar (s |+ (v,apply_pi pi t)) t1d) <
- npair_count (nwalkstar (s |+ (v,apply_pi pi t)) t1)`,
+ npair_count (nwalkstar (s |+ (v,apply_pi pi t)) t1)
+Proof
 SRW_TAC [][] THEN
 `nwfs (s |+ (v,apply_pi pi t))` by METIS_TAC [nwfs_extend,nvars_nwalkstar_ignores_pi] THEN
 `s SUBMAP (s |+ (v,apply_pi pi t))` by METIS_TAC [SUBMAP_FUPDATE_EQN] THEN
@@ -525,7 +533,7 @@ Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 Q.PAT_X_ASSUM `nwfs (s|+x)` ASSUME_TAC THEN
 Cases_on `t1` THEN FULL_SIMP_TAC (srw_ss()) [nwalk_def,nvwalk_case_thms] THEN
 SRW_TAC [ARITH_ss][nwalkstar_thm]
-)
+QED
 
 val uR_subpair_FUPDATE = Q.prove(
 `nwfs s /\ v NOTIN FDOM s /\ v NOTIN nvars (nwalkstar s t) /\
@@ -593,15 +601,16 @@ FULL_SIMP_TAC (srw_ss()) [nwalk_def,nvwalk_case_thms] THEN
 ASM_SIMP_TAC (srw_ss()) [uP_def,sysvars_def] THEN
 METIS_TAC (lem5::met1))
 
-val uR_ignores_fe = Q.store_thm(
-"uR_ignores_fe",
-`uR ((s1,fe1),x1,y1) ((s2,fe2),x2,y2) ⇒
- uR ((s1,fe3),x1,y1) ((s2,fe4),x2,y2)`,
-SRW_TAC [][uR_def])
+Theorem uR_ignores_fe:
+ uR ((s1,fe1),x1,y1) ((s2,fe2),x2,y2) ⇒
+ uR ((s1,fe3),x1,y1) ((s2,fe4),x2,y2)
+Proof
+SRW_TAC [][uR_def]
+QED
 
-val npair_count_nwalkstar_ignores_pi = Q.store_thm(
-"npair_count_nwalkstar_ignores_pi",
-`nwfs s ⇒ !t pi. npair_count (nwalk* s t) = npair_count (nwalk* s (apply_pi pi t))`,
+Theorem npair_count_nwalkstar_ignores_pi:
+ nwfs s ⇒ !t pi. npair_count (nwalk* s t) = npair_count (nwalk* s (apply_pi pi t))
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN
 STRIP_TAC THEN REVERSE (Cases_on `t`) THEN FULL_SIMP_TAC (psrw_ss()) [] THEN1
 (SRW_TAC [][] THEN REPEAT (FIRST_X_ASSUM (Q.SPEC_THEN `pi` MP_TAC)) THEN
@@ -612,43 +621,48 @@ REPEAT STRIP_TAC THEN
 (nvwalk_modulo_pi |> Q.SPECL_THEN [`s`,`pi++l`,`n`] MP_TAC) THEN SRW_TAC [][] THEN
 Cases_on `nvwalk s [] n` THEN FULL_SIMP_TAC (srw_ss()) [Sus_case1] THEN
 REPEAT( FIRST_X_ASSUM (Q.SPEC_THEN `pi` MP_TAC)) THEN
-SRW_TAC [][apply_pi_decompose])
+SRW_TAC [][apply_pi_decompose]
+QED
 
-val uR_ignores_pi = Q.store_thm(
-"uR_ignores_pi",
-`uR ((s1,fe1),x1,y1) ((s2,fe2),x2,y2) ⇒
- uR ((s1,fe1),apply_pi px1 x1,apply_pi py1 y1) ((s2,fe2),apply_pi px2 x2,apply_pi py2 y2)`,
+Theorem uR_ignores_pi:
+ uR ((s1,fe1),x1,y1) ((s2,fe2),x2,y2) ⇒
+ uR ((s1,fe1),apply_pi px1 x1,apply_pi py1 y1) ((s2,fe2),apply_pi px2 x2,apply_pi py2 y2)
+Proof
 SRW_TAC [][uR_def] THENL [
   METIS_TAC [sysvars_apply_pi,sysvars_comm],
   FULL_SIMP_TAC (srw_ss()) [] THEN
   METIS_TAC [npair_count_nwalkstar_ignores_pi]
-])
+]
+QED
 
-val uP_ignores_pi = Q.store_thm(
-"uP_ignores_pi",
-`uP s1 s2 x y ⇒
- uP s1 s2 (apply_pi px1 x) (apply_pi py2 y)`,
+Theorem uP_ignores_pi:
+ uP s1 s2 x y ⇒
+ uP s1 s2 (apply_pi px1 x) (apply_pi py2 y)
+Proof
 SRW_TAC [][uP_def] THEN
-METIS_TAC [sysvars_apply_pi,sysvars_comm])
+METIS_TAC [sysvars_apply_pi,sysvars_comm]
+QED
 
-val uR_IMP_uP = Q.store_thm(
-"uR_IMP_uP",
-`uR ((sx,fex),c1,c2) ((s,fe),t1,t2) ==> uP sx s t1 t2`,
-SRW_TAC [][uR_def,uP_def,sysvars_def])
+Theorem uR_IMP_uP:
+ uR ((sx,fex),c1,c2) ((s,fe),t1,t2) ==> uP sx s t1 t2
+Proof
+SRW_TAC [][uR_def,uP_def,sysvars_def]
+QED
 
-val nwalkstar_nwalk_SUBMAP = Q.store_thm(
-"nwalkstar_nwalk_SUBMAP",
-`s SUBMAP sx /\ nwfs sx ==>
-  (nwalk* sx t = nwalk* sx (nwalk s t))`,
-METIS_TAC [nwalkstar_SUBMAP,nwalkstar_nwalk,nwfs_SUBMAP])
+Theorem nwalkstar_nwalk_SUBMAP:
+ s SUBMAP sx /\ nwfs sx ==>
+  (nwalk* sx t = nwalk* sx (nwalk s t))
+Proof
+METIS_TAC [nwalkstar_SUBMAP,nwalkstar_nwalk,nwfs_SUBMAP]
+QED
 
-val uP_IMP_subtie_uR = Q.store_thm(
-"uP_IMP_subtie_uR",
-`nwfs s ∧
+Theorem uP_IMP_subtie_uR:
+ nwfs s ∧
  (nwalk s t1 = Tie a1 t1a) ∧
  (nwalk s t2 = Tie a2 t2a) ∧
  uP sx s t1a t2a ⇒
- uR ((sx,fex),t1a,t2a) ((s,fe),t1,t2)`,
+ uR ((sx,fex),t1a,t2a) ((s,fe),t1,t2)
+Proof
 SRW_TAC [][] THEN
 `sysvars s t1a t2a SUBSET sysvars s t1 t2`
 by METIS_TAC [sysvars_SUBSET_ties] THEN
@@ -661,15 +675,16 @@ FULL_SIMP_TAC (srw_ss()) [sysvars_def] THEN
 SRW_TAC [][measure_thm] THEN
 IMP_RES_TAC nwalkstar_nwalk_SUBMAP THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `t1` MP_TAC) THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val uP_IMP_subpair_uR = Q.store_thm(
-"uP_IMP_subpair_uR",
-`nwfs s /\
+Theorem uP_IMP_subpair_uR:
+ nwfs s /\
  (nwalk s t1 = nPair t1a t1d) /\
  (nwalk s t2 = nPair t2a t2d) /\
  (uP sx s t1a t2a \/ uP sx s t1d t2d) ==>
- uR ((sx,fex),t1d,t2d) ((s,fe),t1,t2)`,
+ uR ((sx,fex),t1d,t2d) ((s,fe),t1,t2)
+Proof
 SRW_TAC [][] THEN (
 `sysvars s t1a t2a SUBSET sysvars s t1 t2 /\
  sysvars s t1d t2d SUBSET sysvars s t1 t2`
@@ -683,12 +698,14 @@ FULL_SIMP_TAC (srw_ss()) [sysvars_def] THEN
 SRW_TAC [][] THEN
 IMP_RES_TAC nwalkstar_nwalk_SUBMAP THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `t1` MP_TAC) THEN
-SRW_TAC [ARITH_ss][]))
+SRW_TAC [ARITH_ss][])
+QED
 
-val unify_eq_vars_preserves_s = Q.store_thm(
-"unify_eq_vars_preserves_s",
-`(unify_eq_vars x y (s,fe) = SOME (s',fe')) ⇒ (s = s')`,
-SRW_TAC [][unify_eq_vars_def])
+Theorem unify_eq_vars_preserves_s:
+ (unify_eq_vars x y (s,fe) = SOME (s',fe')) ⇒ (s = s')
+Proof
+SRW_TAC [][unify_eq_vars_def]
+QED
 
 val aux_uP = Q.prove(
 `!s fe t1 t2 sx fex.
@@ -777,28 +794,29 @@ THEN ASM_SIMP_TAC (srw_ss()) [] THENL [
   METIS_TAC [SUBSET_TRANS,SUBSET_UNION]
 ])
 
-val nvars_nwalk = Q.store_thm(
-"nvars_nwalk",
-`nwfs s ∧ (nwalk s t1 = t2) ⇒
+Theorem nvars_nwalk:
+ nwfs s ∧ (nwalk s t1 = t2) ⇒
  (nvars t2 SUBSET nvars t1) ∨
- (nvars t2 SUBSET BIGUNION (FRANGE (nvars o_f s)))`,
+ (nvars t2 SUBSET BIGUNION (FRANGE (nvars o_f s)))
+Proof
 SRW_TAC [][] THEN
 Cases_on `t1` THEN SRW_TAC [][] THEN
-METIS_TAC [lem4])
+METIS_TAC [lem4]
+QED
 
 val lem = Q.prove(
 `∀s t1 t2 t3. s SUBSET t1 UNION t2 UNION t3 ∧ t1 SUBSET t4 ∧ t2 SUBSET t4 ∧ t3 SUBSET t4 ⇒ s SUBSET t4`,
 SRW_TAC [][] THEN METIS_TAC [UNION_SUBSET,SUBSET_TRANS])
 
-val sysvars_pairtie = Q.store_thm(
-"sysvars_pairtie",
-`nwfs sx ∧ s SUBMAP sx ∧
+Theorem sysvars_pairtie:
+ nwfs sx ∧ s SUBMAP sx ∧
  (nwalk s t1 = nPair t1a t1d) ∧
  (nwalk s t2 = nPair t2a t2d) ∧
  (nwalk s t1a = Tie a1 c1) ∧
  (nwalk s t2a = Tie a2 c2) ∧
  sysvars sx c1 c2 SUBSET sysvars s t1a t2a ⇒
- sysvars sx t1d t2d SUBSET sysvars s t1 t2`,
+ sysvars sx t1d t2d SUBSET sysvars s t1 t2
+Proof
 STRIP_TAC THEN IMP_RES_TAC nwfs_SUBMAP THEN
 SRW_TAC [][sysvars_def] THENL [
   Cases_on `t1` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -817,17 +835,19 @@ SRW_TAC [][sysvars_def] THENL [
   MATCH_MP_TAC lem THEN
   MAP_EVERY Q.EXISTS_TAC [`nvars t1a`,`nvars t2a`,`FDOM s UNION BIGUNION (FRANGE (nvars o_f s))`] THEN
   SRW_TAC [][] THEN METIS_TAC [UNION_ASSOC]
-])
+]
+QED
 
-val tcd_thm = Q.store_thm(
-"tcd_thm",
-`nwfs (FST p) /\
+Theorem tcd_thm:
+ nwfs (FST p) /\
  (nwalk (FST p) t1 = nPair t1a t1d) /\
  (nwalk (FST p) t2 = nPair t2a t2d) /\
  (ntunify_tupled_aux uR (p,t1a,t2a) = SOME px) ==>
- uR (px,t1d,t2d) (p,t1,t2)`,
+ uR (px,t1d,t2d) (p,t1,t2)
+Proof
 MAP_EVERY Cases_on [`p`,`px`] THEN SRW_TAC [][] THEN
-METIS_TAC [aux_uP, uP_IMP_subpair_uR])
+METIS_TAC [aux_uP, uP_IMP_subpair_uR]
+QED
 
 val [tctie_thm,tcd_thm,tca_thm] = map ((SIMP_RULE (srw_ss()) [FORALL_PROD]) o GEN_ALL) [tctie_thm,tcd_thm,tca_thm]
 
@@ -897,9 +917,9 @@ SRW_TAC [][]);
 
 val nunify_def = new_specification("nunify_def",["nunify"],nunify_exists);
 
-val nunify_eq_ntunify = Q.store_thm(
-"nunify_eq_ntunify",
-`!s fe t1 t2. nwfs (FST (s,fe)) ==> (nunify (s,fe) t1 t2 = ntunify (s,fe) t1 t2)`,
+Theorem nunify_eq_ntunify:
+ !s fe t1 t2. nwfs (FST (s,fe)) ==> (nunify (s,fe) t1 t2 = ntunify (s,fe) t1 t2)
+Proof
 HO_MATCH_MP_TAC ntunify_ind THEN
 REPEAT STRIP_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -914,7 +934,8 @@ SRW_TAC [][] THENL [
   Cases_on `ntunify (s,fe) t1a t2a` THEN SRW_TAC [][] THEN
   `nwfs (FST x)` by METIS_TAC [aux_eq_ntunify,uP_def,aux_uP,PAIR] THEN
   SRW_TAC [][UNCURRY]
-]);
+]
+QED
 
 val _ = Q.store_thm(
 "nunify_uP",

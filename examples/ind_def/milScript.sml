@@ -86,10 +86,11 @@ val ISO_THM2 = Q.prove
 (* The final result.                                                     *)
 (* --------------------------------------------------------------------- *)
 
-val CURRY_HOWARD = Q.store_thm
-("CURRY_HOWARD",
- `!P:'a ty. THM P = ?M:cl. M IN P`,
- METIS_TAC [ISO_THM1,ISO_THM2]);
+Theorem CURRY_HOWARD:
+  !P:'a ty. THM P = ?M:cl. M IN P
+Proof
+ METIS_TAC [ISO_THM1,ISO_THM2]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* End of example.                                                       *)

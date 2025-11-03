@@ -469,9 +469,11 @@ Proof
   (TBL2N_ub |> Q.INST [‘l’|->‘x’] |> assume_tac) >> simp[TBL2N_ub]
 QED
 
-val rpow_len_lb = Q.store_thm("rpow_len_lb",
-‘0<  2 rpow -&LENGTH x’,
-fs[RPOW_POS_LT]);
+Theorem rpow_len_lb:
+ 0<  2 rpow -&LENGTH x
+Proof
+fs[RPOW_POS_LT]
+QED
 
 Theorem TBL2N_lb:
   0 <= &TBL2N x * 2 rpow -&LENGTH x

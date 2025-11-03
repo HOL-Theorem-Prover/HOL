@@ -35,14 +35,15 @@ val MultIter_ind = fetch "-" "MultIter_ind";
 (* Verify that MultIter does compute multiplication                          *)
 (*****************************************************************************)
 
-val MultIterThm =                 (* proof adapted from similar one from KXS *)
- Q.store_thm
-  ("MultIterThm",
-   `!m n acc. MultIter (m,n,acc) = (0, n, (m * n) + acc)`,
+(* proof adapted from similar one from KXS *)
+Theorem MultIterThm:
+    !m n acc. MultIter (m,n,acc) = (0, n, (m * n) + acc)
+Proof
    recInduct MultIter_ind THEN RW_TAC std_ss []
       THEN RW_TAC arith_ss [Once MultIter_def]
       THEN Cases_on `m`
-      THEN FULL_SIMP_TAC arith_ss [MULT]);
+      THEN FULL_SIMP_TAC arith_ss [MULT]
+QED
 
 (*****************************************************************************)
 (* Create an implementation of a multiplier from MultIter                    *)
@@ -56,11 +57,11 @@ End
 (* Verify Mult is actually multiplication                                    *)
 (*****************************************************************************)
 
-val MultThm =
- Q.store_thm
-  ("MultThm",
-   `Mult = UNCURRY $*`,
-   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult_def,MultIterThm]);
+Theorem MultThm:
+    Mult = UNCURRY $*
+Proof
+   RW_TAC arith_ss [FUN_EQ_THM,FORALL_PROD,Mult_def,MultIterThm]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -85,15 +86,14 @@ End
 (* Equivalence of MultIter and Mult32Iter                                    *)
 (*---------------------------------------------------------------------------*)
 
-val MultIterAbs =
- Q.store_thm
-  ("MultIterAbs",
-   `!m n acc.
+Theorem MultIterAbs:
+    !m n acc.
       n < dimword(:32) /\ (m * n) + acc < dimword(:32)
       ==>
       (MultIter(m,n,acc) =
        ((w2n ## w2n ## w2n) o Mult32Iter o (n2w ## n2w ## n2w))
-        (m,n,acc))`,
+        (m,n,acc))
+Proof
    recInduct MultIter_ind THEN RW_TAC std_ss []
      THEN RW_TAC arith_ss [Once MultIter_def,Once Mult32Iter_def]
      THENL
@@ -116,26 +116,26 @@ val MultIterAbs =
         THEN FULL_SIMP_TAC std_ss [RIGHT_ADD_DISTRIB,MULT_CLAUSES]
         THEN `p * n + n - n + (acc + n) < 4294967296` by DECIDE_TAC
         THEN RW_TAC arith_ss [GSYM word_add_n2w,WORD_ADD_SUB]
-        THEN PROVE_TAC [WORD_ADD_COMM]]);
+        THEN PROVE_TAC [WORD_ADD_COMM]]
+QED
 
-val FUN_PAIR_REDUCE =
- Q.store_thm
-  ("FUN_PAIR_REDUCE",
-   `((n2w ## f) ((w2n ## g) p) = (FST p, f(g(SND p))))`,
-   Cases_on `p` THEN RW_TAC std_ss [n2w_w2n]);
+Theorem FUN_PAIR_REDUCE:
+    ((n2w ## f) ((w2n ## g) p) = (FST p, f(g(SND p))))
+Proof
+   Cases_on `p` THEN RW_TAC std_ss [n2w_w2n]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Equivalence of Mult32Iter and palin old multiplication.                   *)
 (*---------------------------------------------------------------------------*)
 
-val MultIterAbsCor =
- Q.store_thm
-  ("MultIterAbsCor",
-   `!m n acc.
+Theorem MultIterAbsCor:
+    !m n acc.
       (m * n) + acc < dimword(:32)
       ==>
       (Mult32Iter (n2w m,n2w n,n2w acc) =
-         (0w,n2w n,(n2w m) * (n2w n) + (n2w acc)))`,
+         (0w,n2w n,(n2w m) * (n2w n) + (n2w acc)))
+Proof
    RW_TAC std_ss []
     THEN IMP_RES_TAC MultIterAbs
     THEN FULL_SIMP_TAC std_ss [MultIterThm]
@@ -151,36 +151,37 @@ val MultIterAbsCor =
                num # num # num -> bool[32] # bool[32] # bool[32]``)
        THEN FULL_SIMP_TAC std_ss [FUN_PAIR_REDUCE, n2w_w2n]
        THEN RW_TAC arith_ss [GSYM word_mul_n2w, GSYM word_add_n2w, n2w_w2n,
-              WORD_RIGHT_ADD_DISTRIB,WORD_MULT_CLAUSES]]);
+              WORD_RIGHT_ADD_DISTRIB,WORD_MULT_CLAUSES]]
+QED
 
-val MultAbs =
- Q.store_thm
-  ("MultAbs",
-   `!m n.
+Theorem MultAbs:
+    !m n.
       m * n < dimword(:32)
       ==>
-      (Mult(m,n) = w2n(Mult32(n2w m, n2w n)))`,
+      (Mult(m,n) = w2n(Mult32(n2w m, n2w n)))
+Proof
    RW_TAC arith_ss [Mult_def, Mult32_def,Once MultIterThm]
     THEN RW_TAC arith_ss
-           [MultIterAbsCor,WORD_ADD_0,word_mul_n2w,n2w_w2n,w2n_n2w]);
+           [MultIterAbsCor,WORD_ADD_0,word_mul_n2w,n2w_w2n,w2n_n2w]
+QED
 
-val MultAbsCor1 =
- Q.store_thm
-  ("MultAbsCor1",
-   `!m n.
+Theorem MultAbsCor1:
+    !m n.
       m * n < dimword(:32)
       ==>
-      (m * n = w2n(Mult32(n2w m, n2w n)))`,
-   RW_TAC arith_ss [SIMP_RULE std_ss [MultThm] MultAbs]);
+      (m * n = w2n(Mult32(n2w m, n2w n)))
+Proof
+   RW_TAC arith_ss [SIMP_RULE std_ss [MultThm] MultAbs]
+QED
 
-val MultAbsCor2 =
- Q.store_thm
-  ("MultAbsCor2",
-   `!m n.
+Theorem MultAbsCor2:
+    !m n.
       m * n < dimword(:32)
       ==>
-      (Mult32(n2w m, n2w n) = n2w m * n2w n)`,
-   PROVE_TAC[n2w_w2n,word_mul_n2w,MultAbsCor1]);
+      (Mult32(n2w m, n2w n) = n2w m * n2w n)
+Proof
+   PROVE_TAC[n2w_w2n,word_mul_n2w,MultAbsCor1]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Iterative factorial on nums                                               *)
@@ -197,14 +198,15 @@ val FactIter_ind = fetch "-" "FactIter_ind";
 (* Lemma showing how FactIter computes factorial                             *)
 (*****************************************************************************)
 
-val FactIterThm =                                       (* proof from KXS *)
- Q.store_thm
-  ("FactIterThm",
-   `!n acc. FactIter (n,acc) = (0, acc * FACT n)`,
+(* proof from KXS *)
+Theorem FactIterThm:
+    !n acc. FactIter (n,acc) = (0, acc * FACT n)
+Proof
    recInduct FactIter_ind THEN RW_TAC arith_ss []
      THEN RW_TAC arith_ss [Once FactIter_def,FACT]
      THEN Cases_on `n`
-     THEN FULL_SIMP_TAC arith_ss [FACT]);
+     THEN FULL_SIMP_TAC arith_ss [FACT]
+QED
 
 (*****************************************************************************)
 (* Iterative factorial on word32                                             *)
@@ -215,53 +217,52 @@ Definition Fact32Iter_def:
        if n = 0w then (n,acc) else Fact32Iter(n-1w, Mult32(n,acc))
 End
 
-val FACT_0 =
- Q.store_thm
-  ("FACT_0",
-   `!n. 0 < FACT n`,
+Theorem FACT_0:
+    !n. 0 < FACT n
+Proof
    Induct
-    THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]);
+    THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]
+QED
 
-val FACT_LESS_EQ =
- Q.store_thm
-  ("FACT_LESS_EQ",
-   `!n. n <= FACT n`,
+Theorem FACT_LESS_EQ:
+    !n. n <= FACT n
+Proof
    Induct
     THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]
     THEN `0 < FACT n` by PROVE_TAC[FACT_0]
     THEN `?p. FACT n = SUC p` by Cooper.COOPER_TAC
-    THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]);
+    THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]
+QED
 
-val FACT_LESS =
- Q.store_thm
-  ("FACT_LESS",
-   `!n. (n = 0) \/ (n = 1) \/ (n = 2) \/ n < FACT n`,
+Theorem FACT_LESS:
+    !n. (n = 0) \/ (n = 1) \/ (n = 2) \/ n < FACT n
+Proof
    Induct
     THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]
     THEN CONV_TAC EVAL
     THEN `0 < FACT n` by PROVE_TAC[FACT_0]
     THEN `?p. FACT n = SUC p` by Cooper.COOPER_TAC
-    THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]);
+    THEN RW_TAC arith_ss [FACT,ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]
+QED
 
-val MULT_LESS_LEMMA =
- Q.store_thm
-  ("MULT_LESS_LEMMA",
-   `!n. 0 < n ==>  m <= m * n`,
+Theorem MULT_LESS_LEMMA:
+    !n. 0 < n ==>  m <= m * n
+Proof
    Induct
-    THEN RW_TAC arith_ss [MULT_CLAUSES]);
+    THEN RW_TAC arith_ss [MULT_CLAUSES]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Equivalence of FactIter and Fact32Iter                                    *)
 (*---------------------------------------------------------------------------*)
 
-val FactIterAbs =
- Q.store_thm
-  ("FactIterAbs",
-   `!n acc.
+Theorem FactIterAbs:
+    !n acc.
       acc * FACT n < dimword(:32)
       ==>
       (FactIter(n,acc) =
-       (w2n ## w2n)(Fact32Iter((n2w ## n2w)(n,acc))))`,
+       (w2n ## w2n)(Fact32Iter((n2w ## n2w)(n,acc))))
+Proof
     recInduct FactIter_ind THEN RW_TAC std_ss []
      THEN RW_TAC arith_ss [Once FactIter_def,Once Fact32Iter_def]
      THEN FULL_SIMP_TAC arith_ss [FACT]
@@ -295,34 +296,36 @@ val FactIterAbs =
                   [FACT_0,MULT_LESS_LEMMA,MULT_SYM,
                    DECIDE``m:num <= n /\ n < p ==> m < p``]
         THEN ONCE_REWRITE_TAC [MULT_SYM]
-        THEN RW_TAC arith_ss [MultAbsCor1,n2w_w2n]]);
+        THEN RW_TAC arith_ss [MultAbsCor1,n2w_w2n]]
+QED
 
 (*****************************************************************************)
 (* Lemma showing how FactIter computes factorial                             *)
 (*****************************************************************************)
 
-val FactIterThm =                                       (* proof from KXS *)
- Q.store_thm
-  ("FactIterThm",
-   `!n acc. FactIter (n,acc) = (0, acc * FACT n)`,
+(* proof from KXS *)
+Theorem FactIterThm:
+    !n acc. FactIter (n,acc) = (0, acc * FACT n)
+Proof
      recInduct FactIter_ind THEN RW_TAC arith_ss []
       THEN RW_TAC arith_ss [Once FactIter_def,FACT]
       THEN Cases_on `n`
-      THEN FULL_SIMP_TAC arith_ss [FACT]);
+      THEN FULL_SIMP_TAC arith_ss [FACT]
+QED
 
-val FactIterAbsCor =
- Q.store_thm
-  ("FactIterAbsCor",
-   `!m n acc.
+Theorem FactIterAbsCor:
+    !m n acc.
       acc * FACT n < dimword(:32)
       ==>
-      (Fact32Iter (n2w n, n2w acc) = (0w, n2w acc * n2w(FACT n)))`,
+      (Fact32Iter (n2w n, n2w acc) = (0w, n2w acc * n2w(FACT n)))
+Proof
    RW_TAC std_ss []
     THEN IMP_RES_TAC FactIterAbs
     THEN POP_ASSUM(ASSUME_TAC o GSYM o AP_TERM ``(n2w ## n2w) :
            num # num -> bool[32] # bool[32]``)
     THEN FULL_SIMP_TAC std_ss
-           [FUN_PAIR_REDUCE,n2w_w2n,FactIterThm,word_mul_n2w]);
+           [FUN_PAIR_REDUCE,n2w_w2n,FactIterThm,word_mul_n2w]
+QED
 
 (*****************************************************************************)
 (* Implement a function Fact32 to compute SND(Fact32Iter (n,1))              *)
@@ -332,10 +335,9 @@ Definition Fact32_def:
    Fact32 n = SND(Fact32Iter (n,1w))
 End
 
-val FactAbs =
- Q.store_thm
-  ("FactAbs",
-   `!n. FACT n < dimword(:32) ==> (FACT n = w2n(Fact32(n2w n)))`,
+Theorem FactAbs:
+    !n. FACT n < dimword(:32) ==> (FACT n = w2n(Fact32(n2w n)))
+Proof
    RW_TAC arith_ss [Fact32_def,Once Fact32Iter_def]
     THENL
      [FULL_SIMP_TAC (srw_ss()) []
@@ -355,7 +357,8 @@ val FactAbs =
        THEN `n * FACT(n-1) < dimword(:32)` by PROVE_TAC[FACT]
        THEN RW_TAC arith_ss [FactIterAbsCor,word_mul_n2w]
        THEN `n * FACT(n-1) = FACT n` by PROVE_TAC[FACT]
-       THEN RW_TAC arith_ss [w2n_n2w]]);
+       THEN RW_TAC arith_ss [w2n_n2w]]
+QED
 
 (*
   |- FACT 12 < dimword(:32) = T : thm

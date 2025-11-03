@@ -459,23 +459,25 @@ val PairIn =
    RW_TAC std_ss [Prod_def,Spec_def,Pow_def,U_def,PairEq]
     THEN RW_TAC std_ss [PairEq,Fst,Snd]);
 
-val EmptyProd = Q.store_thm(
-"EmptyProd",
-`∀x. ({} # x = {}) ∧ (x # {} = {})`,
-srw_tac [][Extension_ax,Empty_def,InProdEq]);
+Theorem EmptyProd:
+ ∀x. ({} # x = {}) ∧ (x # {} = {})
+Proof
+srw_tac [][Extension_ax,Empty_def,InProdEq]
+QED
 val _ = export_rewrites["EmptyProd"];
 
-val ProdEmpty = Q.store_thm(
-"ProdEmpty",
-`∀x y. (x # y = {}) = ((x = {}) \/ (y = {}))`,
+Theorem ProdEmpty:
+ ∀x y. (x # y = {}) = ((x = {}) \/ (y = {}))
+Proof
 srw_tac [][EQ_IMP_THM] >> srw_tac [][] >>
 spose_not_then strip_assume_tac >>
 fsrw_tac [][GSYM NotEmpty] >>
-metis_tac [InProd,Empty_def]);
+metis_tac [InProd,Empty_def]
+QED
 
-val ProdEq = Q.store_thm(
-"ProdEq",
-`!x1 x2 y1 y2. (x1 # y1 = x2 # y2) = ((x1 # y1 = {}) /\ (x2 # y2 = {})) \/ ((x1 = x2) /\ (y1 = y2))`,
+Theorem ProdEq:
+ !x1 x2 y1 y2. (x1 # y1 = x2 # y2) = ((x1 # y1 = {}) /\ (x2 # y2 = {})) \/ ((x1 = x2) /\ (y1 = y2))
+Proof
 rpt gen_tac >>
 reverse EQ_TAC >- (
   srw_tac [][] >> srw_tac [][] ) >>
@@ -493,7 +495,8 @@ srw_tac [][] >>
 fsrw_tac [][GSYM NotEmpty] >>
 fsrw_tac [][Extension_ax] >>
 fsrw_tac [][InProdEq] >>
-PROVE_TAC [PairEq]);
+PROVE_TAC [PairEq]
+QED
 
 val ABS_THM =
  store_thm
@@ -682,11 +685,12 @@ val ExtFn =
     THEN FULL_SIMP_TAC std_ss [Extension_ax,Pow_def,InProdEq,Fn_def,Pfn_def,Spec_def]
     THEN METIS_TAC[Extension_ax]);
 
-val FnEqThm = Q.store_thm(
-"FnEqThm",
-`!f g X Y. f In (X -> Y) /\ g In (X -> Y) /\ (!x. x In X ==> (f ' x = g ' x))
-  ==> (f = g)`,
-metis_tac [ExtFn])
+Theorem FnEqThm:
+ !f g X Y. f In (X -> Y) /\ g In (X -> Y) /\ (!x. x In X ==> (f ' x = g ' x))
+  ==> (f = g)
+Proof
+metis_tac [ExtFn]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* RepSet(f:'a->zfset) =  the image of f as a set in zfset                   *)
@@ -1125,9 +1129,9 @@ val IdFnAp =
    ``!X x. x In X ==> (IdFn X ' x = x)``,
    METIS_TAC[IdFnApLemma,IdFnPfnType,ApPfn]);
 
-val ComposeFnId1 = Q.store_thm(
-"ComposeFnId1",
-`!f X Y Z. (Y = X) /\ f In (Y -> Z) ==> (ComposeFn (X,Y,Z) f (IdFn Y) = f)`,
+Theorem ComposeFnId1:
+ !f X Y Z. (Y = X) /\ f In (Y -> Z) ==> (ComposeFn (X,Y,Z) f (IdFn Y) = f)
+Proof
 srw_tac [][] >>
 match_mp_tac FnEqThm >>
 map_every qexists_tac [`X`,`Z`] >>
@@ -1135,11 +1139,12 @@ qspec_then `X` assume_tac IdFnType >>
 conj_tac >- srw_tac [][ComposeFnType] >>
 qspecl_then [`X`,`X`,`Z`,`f`,`IdFn X`] mp_tac ApComposeFn >>
 srw_tac [][] >>
-metis_tac [IdFnAp,InFn])
+metis_tac [IdFnAp,InFn]
+QED
 
-val ComposeFnId2 = Q.store_thm(
-"ComposeFnId2",
-`!f X Y Z. (Y = Z) /\ f In (X -> Y) ==> (ComposeFn (X,Y,Z) (IdFn Y) f = f)`,
+Theorem ComposeFnId2:
+ !f X Y Z. (Y = Z) /\ f In (X -> Y) ==> (ComposeFn (X,Y,Z) (IdFn Y) f = f)
+Proof
 srw_tac [][] >>
 match_mp_tac FnEqThm >>
 map_every qexists_tac [`X`,`Y`] >>
@@ -1149,7 +1154,8 @@ qspecl_then [`X`,`Y`,`Y`,`IdFn Y`,`f`] mp_tac ApComposeFn >>
 srw_tac [][] >>
 match_mp_tac IdFnAp >>
 match_mp_tac InFn >>
-qexists_tac `X` >> srw_tac [][])
+qexists_tac `X` >> srw_tac [][]
+QED
 
 Definition GraphFn_def:
    GraphFn X f = Spec (X # Image f X) (\s. ?x. s = Pair x (f x))
@@ -1212,31 +1218,33 @@ val GraphFnAp =
    ``!X f x. x In X ==> (GraphFn X f ' x = f x)``,
    METIS_TAC[GraphGraphFn,HasFnTypeImage,GraphAp]);
 
-val IdFn_eq_GraphFnI = Q.store_thm(
-"IdFn_eq_GraphFnI",
-`∀x. IdFn x = GraphFn x I`,
+Theorem IdFn_eq_GraphFnI:
+ ∀x. IdFn x = GraphFn x I
+Proof
 srw_tac [][] >> match_mp_tac FnEqThm >>
 map_every qexists_tac [`x`,`x`] >>
 srw_tac [][IdFnType] >- (
   match_mp_tac GraphFnType >>
   srw_tac [][HasFnType_def] ) >>
-srw_tac [][IdFnAp,GraphFnAp]);
+srw_tac [][IdFnAp,GraphFnAp]
+QED
 
-val GraphFnExt = Q.store_thm(
-"GraphFnExt",
-`∀X f Y g. (X = Y) ∧ (∀x. x In X ⇒ (f x = g x)) ⇒ (GraphFn X f = GraphFn Y g)`,
+Theorem GraphFnExt:
+ ∀X f Y g. (X = Y) ∧ (∀x. x In X ⇒ (f x = g x)) ⇒ (GraphFn X f = GraphFn Y g)
+Proof
 srw_tac [][] >>
 match_mp_tac FnEqThm >>
 map_every qexists_tac [`X`,`Image g X`] >>
 srw_tac [][GraphFnAp] >>
 match_mp_tac GraphFnType >>
 srw_tac [][HasFnType_def] >>
-metis_tac [Image_def]);
+metis_tac [Image_def]
+QED
 
-val ComposeGraphFns = Q.store_thm(
-"ComposeGraphFns",
-`∀X Y Z f g. HasFnType f X Y ∧ HasFnType g Y Z ⇒
-  (ComposeFn (X,Y,Z) (GraphFn Y g) (GraphFn X f) = GraphFn X (g o f))`,
+Theorem ComposeGraphFns:
+ ∀X Y Z f g. HasFnType f X Y ∧ HasFnType g Y Z ⇒
+  (ComposeFn (X,Y,Z) (GraphFn Y g) (GraphFn X f) = GraphFn X (g o f))
+Proof
 srw_tac [][] >>
 match_mp_tac FnEqThm >>
 map_every qexists_tac [`X`,`Z`] >>
@@ -1244,7 +1252,8 @@ srw_tac [][GraphFnType,ComposeFnType,ApComposeFn,GraphFnAp] >- (
   match_mp_tac GraphFnType >>
   fsrw_tac [][HasFnType_def] ) >>
 match_mp_tac GraphFnAp >>
-fsrw_tac [][HasFnType_def]);
+fsrw_tac [][HasFnType_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Restrictions of functions and binary operators to subtypes.               *)

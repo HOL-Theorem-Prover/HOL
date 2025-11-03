@@ -59,11 +59,12 @@ val UNCPS = store_thm
 (* CPSing the function                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val CPS_INV = Q.store_thm
-("CPS_INV",
- `(!f g. (f = CPS g) ==> (f = (CPS (\arg. f (\x.x) arg)))) /\
-  (!f. f arg = (CPS f) (\x.x) arg)`,
- RW_TAC std_ss [CPS_def] THEN METIS_TAC []);
+Theorem CPS_INV:
+  (!f g. (f = CPS g) ==> (f = (CPS (\arg. f (\x.x) arg)))) /\
+  (!f. f arg = (CPS f) (\x.x) arg)
+Proof
+ RW_TAC std_ss [CPS_def] THEN METIS_TAC []
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -75,11 +76,12 @@ Definition CPS2_def:
     CPS2 f = \k1 k2 arg. if f arg then k1 T else k2 F
 End
 
-val CPS2_INV = Q.store_thm
-("CPS2_INV",
- `(!f. (?f'. f = CPS2 f') ==> (f = (CPS2 (\arg. f (\x.x) (\x.x) arg)))) /\
-  (!f. f arg = (CPS2 f) (\x.x) (\x.x) arg)`,
- RW_TAC std_ss [CPS2_def] THEN METIS_TAC []);
+Theorem CPS2_INV:
+  (!f. (?f'. f = CPS2 f') ==> (f = (CPS2 (\arg. f (\x.x) (\x.x) arg)))) /\
+  (!f. f arg = (CPS2 f) (\x.x) (\x.x) arg)
+Proof
+ RW_TAC std_ss [CPS2_def] THEN METIS_TAC []
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -90,10 +92,11 @@ Definition CPS_SEQ_def:
     CPS_SEQ f g = \k arg. f (\ret. g k ret) arg
 End
 
-val CPS_SEQ_INTRO = Q.store_thm
-("CPS_SEQ_INTRO",
- `!f g. CPS (Seq f g) = CPS_SEQ (CPS f) (CPS g)`,
- RW_TAC std_ss [CPS_def, Seq_def, CPS_SEQ_def, FUN_EQ_THM]);
+Theorem CPS_SEQ_INTRO:
+  !f g. CPS (Seq f g) = CPS_SEQ (CPS f) (CPS g)
+Proof
+ RW_TAC std_ss [CPS_def, Seq_def, CPS_SEQ_def, FUN_EQ_THM]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -104,10 +107,11 @@ Definition CPS_PAR_def:
     CPS_PAR f g = \k arg. f (\ret2. g (\ret. k (ret2, ret)) arg) arg
 End
 
-val CPS_PAR_INTRO = Q.store_thm
-("CPS_PAR_INTRO",
- `!f g. CPS (Par f g) = CPS_PAR (CPS f) (CPS g)`,
- RW_TAC std_ss [CPS_def, Par_def, CPS_PAR_def, FUN_EQ_THM])
+Theorem CPS_PAR_INTRO:
+  !f g. CPS (Par f g) = CPS_PAR (CPS f) (CPS g)
+Proof
+ RW_TAC std_ss [CPS_def, Par_def, CPS_PAR_def, FUN_EQ_THM]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -138,10 +142,11 @@ Definition CPS_ITE_def:
     CPS_ITE e f g = \k arg. e (\ret. let k2 = k in if ret then f k2 arg else g k2 arg) arg
 End
 
-val CPS_ITE_INTRO = Q.store_thm
-("CPS_ITE_INTRO",
- `!e f g.  CPS (Ite e f g) = CPS_ITE (CPS e) (CPS f) (CPS g)`,
- RW_TAC std_ss [CPS_def, Ite_def, CPS_ITE_def, FUN_EQ_THM, COND_RAND, LET_THM])
+Theorem CPS_ITE_INTRO:
+  !e f g.  CPS (Ite e f g) = CPS_ITE (CPS e) (CPS f) (CPS g)
+Proof
+ RW_TAC std_ss [CPS_def, Ite_def, CPS_ITE_def, FUN_EQ_THM, COND_RAND, LET_THM]
+QED
 
 
 (*
@@ -290,11 +295,12 @@ Definition CPS_REC_def:
  CPS_REC e f g = \k arg. k (Rec (e (\x.x)) (f (\x.x)) (g (\x.x)) arg)
 End
 
-val CPS_REC_INTRO = Q.store_thm
-("CPS_REC_INTRO",
- `!e f g. CPS (Rec e f g) = CPS_REC (CPS e) (CPS f) (CPS g)`,
+Theorem CPS_REC_INTRO:
+  !e f g. CPS (Rec e f g) = CPS_REC (CPS e) (CPS f) (CPS g)
+Proof
  RW_TAC std_ss [CPS_def, CPS_REC_def] THEN
- METIS_TAC [])
+ METIS_TAC []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Support for translation into combinator form.                             *)

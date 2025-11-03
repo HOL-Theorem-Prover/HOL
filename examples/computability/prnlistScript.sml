@@ -141,24 +141,26 @@ End
 Definition restr_def:  restr n r i = if i ≤ n then nel i r else 0
 End
 
-val primrec_WFM = Q.store_thm(
-  "primrec_WFM",
-  ‘primrec (pr2 (λn r. M (restr n r) (n + 1))) 2 ⇒ primrec (WFM M) 1’,
+Theorem primrec_WFM:
+   primrec (pr2 (λn r. M (restr n r) (n + 1))) 2 ⇒ primrec (WFM M) 1
+Proof
   strip_tac >> simp[WFM_def] >> irule primrec_Cn >> simp[primrec_rules] >>
   irule primrec_Pr1 >> irule primrec_Cn >> simp[primrec_rules] >>
   irule primrec_Cn >> simp[primrec_rules, GSYM restr_def] >>
-  asm_simp_tac (bool_ss ++ boolSimps.ETA_ss) []);
+  asm_simp_tac (bool_ss ++ boolSimps.ETA_ss) []
+QED
 
-val primrec_FACT = Q.store_thm(
-  "primrec_FACT",
-  ‘primrec (WFM (λf n. if n = 0 then 1 else n * f(n - 1))) 1’,
+Theorem primrec_FACT:
+   primrec (WFM (λf n. if n = 0 then 1 else n * f(n - 1))) 1
+Proof
   irule primrec_WFM >> simp[restr_def] >> irule primrec_pr2 >> simp[] >>
   qexists_tac ‘Cn (pr2 $*) [Cn succ [proj 0]; pr2 nel]’ >> simp[] >>
-  irule primrec_Cn >> simp[primrec_rules]);
+  irule primrec_Cn >> simp[primrec_rules]
+QED
 
-val WFM_correct = Q.store_thm(
-  "WFM_correct",
-  ‘WFM M [n] = M (λi. if i < n then WFM M [i] else 0) n’,
+Theorem WFM_correct:
+   WFM M [n] = M (λi. if i < n then WFM M [i] else 0) n
+Proof
   simp[SimpLHS, WFM_def] >>
   qho_match_abbrev_tac ‘nel n (prt n) = M (ff n) n’ >>
   ‘prt 0 = nlist_of [M (K 0) 0]’ by simp[Abbr`prt`] >>
@@ -204,4 +206,5 @@ val WFM_correct = Q.store_thm(
     (fn th => CONV_TAC (RAND_CONV (REWRITE_CONV [th]))) >>
   simp_tac (srw_ss()) [FUN_EQ_THM] >> gen_tac >> COND_CASES_TAC >>
   first_assum (fn th => simp_tac (srw_ss() ++ ARITH_ss) [th]) >>
-  simp[WFM_def, nel_correct]);
+  simp[WFM_def, nel_correct]
+QED

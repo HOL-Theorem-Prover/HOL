@@ -77,50 +77,55 @@ val aligned_1_intro = store_thm("aligned_1_intro",
   ``~word_bit 0 pc <=> aligned 1 (pc:word64)``,
   fs [alignmentTheory.aligned_bitwise_and] \\ blastLib.BBLAST_TAC);
 
-val RISCV_PC_INTRO = Q.store_thm("RISCV_PC_INTRO",
-   `SPEC m (p1 * riscv_ID_PC c pc) code
+Theorem RISCV_PC_INTRO:
+    SPEC m (p1 * riscv_ID_PC c pc) code
            (p2 * riscv_c_PC c pc' * ~ riscv_c_Skip c) ==>
     (aligned 1 pc ==> aligned 1 pc') ==>
-    SPEC m (p1 * riscv_ID_PC c pc) code (p2 * riscv_ID_PC c pc')`,
+    SPEC m (p1 * riscv_ID_PC c pc) code (p2 * riscv_ID_PC c pc')
+Proof
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss)
         [riscv_ID_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
-   )
+QED
 
-val RISCV_TEMPORAL_PC_INTRO = Q.store_thm("RISCV_TEMPORAL_PC_INTRO",
-   `TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code
+Theorem RISCV_TEMPORAL_PC_INTRO:
+    TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code
                     (p2 * riscv_c_PC c pc' * ~ riscv_c_Skip c) ==>
     (aligned 1 pc ==> aligned 1 pc') ==>
-    TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code (p2 * riscv_ID_PC c pc')`,
+    TEMPORAL_NEXT m (p1 * riscv_ID_PC c pc) code (p2 * riscv_ID_PC c pc')
+Proof
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC (std_ss++helperLib.sep_cond_ss)
         [riscv_ID_PC_def, temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND,
          STAR_ASSOC, SEP_CLAUSES]
-   )
+QED
 
-val cond_branch_aligned = Q.store_thm("cond_branch_aligned",
-  `((aligned 1 (pc: word64) ==>
+Theorem cond_branch_aligned:
+   ((aligned 1 (pc: word64) ==>
      aligned 1 (if b then pc + w << 1 else pc + 4w)) = T) /\
    ((aligned 1 (pc: word64) ==>
-     aligned 1 (if b then pc + w << 1 else pc + 2w)) = T)`,
+     aligned 1 (if b then pc + w << 1 else pc + 2w)) = T)
+Proof
   rw [alignmentTheory.aligned_extract]
   \\ blastLib.FULL_BBLAST_TAC
-  )
+QED
 
-val jal_aligned = Q.store_thm("jal_aligned",
-  `(aligned 1 (pc: word64) ==> aligned 1 (pc + w << 1)) = T`,
+Theorem jal_aligned:
+   (aligned 1 (pc: word64) ==> aligned 1 (pc + w << 1)) = T
+Proof
   rw [alignmentTheory.aligned_extract] \\ pop_assum mp_tac
   \\ blastLib.BBLAST_TAC
-  )
+QED
 
-val jalr_aligned = Q.store_thm("jalr_aligned",
-  `~(a: word12) ' 1 /\ (b \/ aligned 1 (v: word64)) /\
+Theorem jalr_aligned:
+   ~(a: word12) ' 1 /\ (b \/ aligned 1 (v: word64)) /\
    (c ==> aligned 1 (if b then sw2sw a && 0xFFFFFFFFFFFFFFFEw
                      else v + sw2sw a && 0xFFFFFFFFFFFFFFFEw)) =
-   ~(a: word12) ' 1 /\ (b \/ aligned 1 (v: word64))`,
+   ~(a: word12) ' 1 /\ (b \/ aligned 1 (v: word64))
+Proof
   rw [alignmentTheory.aligned_extract]
   \\ blastLib.FULL_BBLAST_TAC
-  )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -131,12 +136,13 @@ val (riscv_MEMORY_def, riscv_MEMORY_INSERT) =
 
 (* ------------------------------------------------------------------------ *)
 
-val c_gpr_frame = Q.store_thm("c_gpr_frame",
-  `!c_gpr a b w s x.
+Theorem c_gpr_frame:
+   !c_gpr a b w s x.
      riscv_c_c_gpr a b IN x ==>
      (FRAME_STATE riscv_proj x
          (s with c_gpr := (a =+ (b =+ w) (c_gpr a)) c_gpr) =
-      FRAME_STATE riscv_proj x (s with c_gpr := c_gpr))`,
+      FRAME_STATE riscv_proj x (s with c_gpr := c_gpr))
+Proof
   rw [stateTheory.FRAME_STATE_def, stateTheory.SELECT_STATE_def,
       set_sepTheory.fun2set_def, pred_setTheory.EXTENSION]
   \\ eq_tac
@@ -145,7 +151,7 @@ val c_gpr_frame = Q.store_thm("c_gpr_frame",
   \\ rw [combinTheory.APPLY_UPDATE_THM, riscv_proj_def]
   \\ Cases_on `b = c0`
   \\ fs []
-  )
+QED
 
 (* ------------------------------------------------------------------------ *)
 

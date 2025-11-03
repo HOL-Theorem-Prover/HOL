@@ -189,31 +189,32 @@ Proof
    gs[ABSORPTION_RWT, wf_insert] >> metis_tac[]
 QED
 
-val updateNode_preserves_edges = Q.store_thm(
-    "updateNode_preserves_edges",
-    `updateNode id n g = SOME g2
+Theorem updateNode_preserves_edges:
+     updateNode id n g = SOME g2
        ==> (g.followers = g2.followers)
-         ∧ (g.preds = g2.preds)`,
+         ∧ (g.preds = g2.preds)
+Proof
     simp[updateNode_def] >> rpt strip_tac
     >> fs[theorem "gfg_component_equality"]
-    );
+QED
 
-val updateNode_preserves_domain = Q.store_thm(
-  "updateNode_preserves_domain",
-  `updateNode id n g = SOME g2 ==> (domain g.nodeInfo = domain g2.nodeInfo)`,
+Theorem updateNode_preserves_domain:
+   updateNode id n g = SOME g2 ==> (domain g.nodeInfo = domain g2.nodeInfo)
+Proof
    simp[updateNode_def] >> rpt strip_tac >> fs[theorem "gfg_component_equality"]
    >> `domain g2.nodeInfo = id INSERT (domain g.nodeInfo)`
       by metis_tac[domain_insert]
    >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> metis_tac[IN_INSERT]
-    );
+QED
 
 Definition graph_size_def:  graph_size g = sptree$size g.nodeInfo
 End
 
-val graph_size_addNode = Q.store_thm(
-  "graph_size_addNode[simp]",
-  ‘wfg g ⇒ graph_size (addNode i g) = graph_size g + 1’,
-  simp[graph_size_def, addNode_def, size_insert, wfg_def]);
+Theorem graph_size_addNode[simp]:
+   wfg g ⇒ graph_size (addNode i g) = graph_size g + 1
+Proof
+  simp[graph_size_def, addNode_def, size_insert, wfg_def]
+QED
 
 Definition removeEdges_on_def:
   removeEdges_on n g =
