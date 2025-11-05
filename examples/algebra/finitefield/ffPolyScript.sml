@@ -269,44 +269,49 @@ val _ = overload_on("slead", ``poly_lead s``);
        = chop [#1]                  by poly_chop_def
        = |1|                        by poly_ring_ids
 *)
-val subring_poly_property = store_thm(
-  "subring_poly_property",
-  ``!(r s):'a ring. s <= r ==>
+Theorem subring_poly_property:
+    !(r s):'a ring. s <= r ==>
         (!p. Poly s p <=> p IN (PolyRing s).carrier) /\
-        (poly_zero s = |0|) /\ (poly_one s = |1|)``,
+        (poly_zero s = |0|) /\ (poly_one s = |1|)
+Proof
   rw[subring_def] >-
   metis_tac[poly_ring_property] >>
   `s.sum.id = #0` by metis_tac[ring_homo_zero, combinTheory.I_THM] >>
   `s.prod.id = #1` by metis_tac[ring_homo_one, combinTheory.I_THM] >>
-  rw[poly_ring_ids]);
+  rw[poly_ring_ids]
+QED
 
 (* Theorem: Poly s p <=> p IN (PolyRing s).carrier *)
 (* Proof: by poly_ring_property *)
-val subring_poly_element = store_thm(
-  "subring_poly_element",
-  ``!s p. Poly s p <=> p IN (PolyRing s).carrier``,
-  rw[poly_ring_property]);
+Theorem subring_poly_element:
+    !s p. Poly s p <=> p IN (PolyRing s).carrier
+Proof
+  rw[poly_ring_property]
+QED
 
 (* Theorem: s <= r ==> (poly_zero s = |0|) /\ (poly_one s = |1|) *)
 (* Proof: by subring_poly_property *)
-val subring_poly_ids = store_thm(
-  "subring_poly_ids",
-  ``!(r s):'a ring. s <= r ==> (poly_zero s = |0|) /\ (poly_one s = |1|)``,
-  rw[subring_poly_property]);
+Theorem subring_poly_ids:
+    !(r s):'a ring. s <= r ==> (poly_zero s = |0|) /\ (poly_one s = |1|)
+Proof
+  rw[subring_poly_property]
+QED
 
 (* Theorem: s <= r ==> (poly_zero s = |0|) *)
 (* Proof: by subring_poly_ids *)
-val subring_poly_zero = store_thm(
-  "subring_poly_zero",
-  ``!(r s):'a ring. s <= r ==> (poly_zero s = |0|)``,
-  rw[subring_poly_ids]);
+Theorem subring_poly_zero:
+    !(r s):'a ring. s <= r ==> (poly_zero s = |0|)
+Proof
+  rw[subring_poly_ids]
+QED
 
 (* Theorem: s <= r ==> (poly_one s = |1|) *)
 (* Proof: by subring_poly_ids *)
-val subring_poly_one = store_thm(
-  "subring_poly_one",
-  ``!(r s):'a ring. s <= r ==> (poly_one s = |1|)``,
-  rw[subring_poly_ids]);
+Theorem subring_poly_one:
+    !(r s):'a ring. s <= r ==> (poly_one s = |1|)
+Proof
+  rw[subring_poly_ids]
+QED
 
 (* Theorem: s <= r ==> !p. zero_poly s p <=> zerop p *)
 (* Proof:
@@ -317,14 +322,15 @@ val subring_poly_one = store_thm(
               !h. zero_poly s (h::p) <=> zerop (h::p)
       True by zero_poly_cons, subring_ids.
 *)
-val subring_poly_zero_poly = store_thm(
-  "subring_poly_zero_poly",
-  ``!(r s):'a ring. s <= r ==> !p. zero_poly s p <=> zerop p``,
+Theorem subring_poly_zero_poly:
+    !(r s):'a ring. s <= r ==> !p. zero_poly s p <=> zerop p
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   rw_tac std_ss[zero_poly_cons] >>
-  metis_tac[subring_ids]);
+  metis_tac[subring_ids]
+QED
 
 (* Theorem: s <= r ==> !p. Poly s p ==> poly p *)
 (* Proof:
@@ -353,33 +359,37 @@ QED
      and Poly s p ==> poly p                      by subring_poly_poly
    Hence true                                     by SUBSET_DEF
 *)
-val subring_poly_carrier_subset = store_thm(
-  "subring_poly_carrier_subset",
-  ``!(r s):'a ring. s <= r ==> (PolyRing s).carrier SUBSET (PolyRing r).carrier``,
-  metis_tac[poly_ring_property, SUBSET_DEF, subring_poly_poly]);
+Theorem subring_poly_carrier_subset:
+    !(r s):'a ring. s <= r ==> (PolyRing s).carrier SUBSET (PolyRing r).carrier
+Proof
+  metis_tac[poly_ring_property, SUBSET_DEF, subring_poly_poly]
+QED
 
 (* Theorem: poly_deg s p = deg p *)
 (* Proof: by poly_deg_def *)
-val subring_poly_deg = store_thm(
-  "subring_poly_deg",
-  ``!(r s):'a ring. !p. poly_deg s p = deg p``,
-  rw[poly_deg_def]);
+Theorem subring_poly_deg:
+    !(r s):'a ring. !p. poly_deg s p = deg p
+Proof
+  rw[poly_deg_def]
+QED
 
 (* Theorem: s <= r ==> !p. poly_lead s p = lead p *)
 (* Proof: by poly_lead_def, subring_ids *)
-val subring_poly_lead = store_thm(
-  "subring_poly_lead",
-  ``!(r s):'a ring. s <= r ==> !p. poly_lead s p = lead p``,
-  metis_tac[poly_lead_def, list_CASES, subring_ids]);
+Theorem subring_poly_lead:
+    !(r s):'a ring. s <= r ==> !p. poly_lead s p = lead p
+Proof
+  metis_tac[poly_lead_def, list_CASES, subring_ids]
+QED
 
 (* Theorem: s <= r ==> !p k. poly_coeff s p k = p ' k *)
 (* Proof: by poly_coeff_def, subring_ids *)
-val subring_poly_coeff = store_thm(
-  "subring_poly_coeff",
-  ``!(r s):'a ring. s <= r ==> !p k. poly_coeff s p k = p ' k``,
+Theorem subring_poly_coeff:
+    !(r s):'a ring. s <= r ==> !p k. poly_coeff s p k = p ' k
+Proof
   rpt strip_tac >>
   Cases_on `p` >>
-  rw[poly_coeff_def, subring_ids]);
+  rw[poly_coeff_def, subring_ids]
+QED
 
 (* Theorem: s <= r ==> !p. poly_chop s p = chop p *)
 (* Proof:
@@ -389,13 +399,14 @@ val subring_poly_coeff = store_thm(
    Step case: poly_chop s p = chop p ==> !h. poly_chop s (h::p) = chop (h::p)
       True by poly_chop_cons, subring_poly_zero_poly
 *)
-val subring_poly_chop = store_thm(
-  "subring_poly_chop",
-  ``!(r s):'a ring. s <= r ==> !p. poly_chop s p = chop p``,
+Theorem subring_poly_chop:
+    !(r s):'a ring. s <= r ==> !p. poly_chop s p = chop p
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
-  metis_tac[poly_chop_cons, subring_poly_zero_poly]);
+  metis_tac[poly_chop_cons, subring_poly_zero_poly]
+QED
 
 (* Theorem: s <= r ==> !p q. weak_add s p q = p || q *)
 (* Proof:
@@ -421,16 +432,17 @@ val subring_poly_chop = store_thm(
          = h + h' :: p || q                   by induction hypothesis
          = (h::p) || (h'::q)                  by by weak_add_def
 *)
-val subring_poly_weak_add = store_thm(
-  "subring_poly_weak_add",
-  ``!(r s):'a ring. s <= r ==> !p q. Weak s p /\ Weak s q ==> (weak_add s p q = p || q)``,
+Theorem subring_poly_weak_add:
+    !(r s):'a ring. s <= r ==> !p q. Weak s p /\ Weak s q ==> (weak_add s p q = p || q)
+Proof
   ntac 3 strip_tac >>
   Induct_on `p` >-
   rw[] >>
   Induct_on `q` >-
   rw[] >>
   rw[] >>
-  rw[subring_property]);
+  rw[subring_property]
+QED
 
 (* Theorem: s <= r ==> !p. Weak s p ==> !c. c IN B ==> (weak_cmult s c p = c o p) *)
 (* Proof:
@@ -448,14 +460,15 @@ val subring_poly_weak_add = store_thm(
       = c * h :: c o p                            by induction hypothesis
       = c o (h::p)                                by weak_cmult_cons
 *)
-val subring_poly_weak_cmult = store_thm(
-  "subring_poly_weak_cmult",
-  ``!(r s):'a ring. s <= r ==> !p. Weak s p ==> !c. c IN B ==> (weak_cmult s c p = c o p)``,
+Theorem subring_poly_weak_cmult:
+    !(r s):'a ring. s <= r ==> !p. Weak s p ==> !c. c IN B ==> (weak_cmult s c p = c o p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   rw[] >>
-  rw[subring_property]);
+  rw[subring_property]
+QED
 
 (* Theorem: s <= r ==> !p. poly_shift s p 1 = p >> 1 *)
 (* Proof:
@@ -470,13 +483,14 @@ val subring_poly_weak_cmult = store_thm(
      = #0::(h::t)                    by poly_shift_def
      = (h::t) >> 1                   by poly_shift_def, ONE
 *)
-val subring_poly_shift_1 = store_thm(
-  "subring_poly_shift_1",
-  ``!(r s):'a ring. s <= r ==> !p. poly_shift s p 1 = p >> 1``,
+Theorem subring_poly_shift_1:
+    !(r s):'a ring. s <= r ==> !p. poly_shift s p 1 = p >> 1
+Proof
   rpt strip_tac >>
   Cases_on `p` >-
   rw[] >>
-  metis_tac[poly_shift_def, subring_ids, ONE]);
+  metis_tac[poly_shift_def, subring_ids, ONE]
+QED
 
 (* Theorem: s <= r ==> !p n. poly_shift s p n = p >> n *)
 (* Proof:
@@ -497,15 +511,16 @@ val subring_poly_shift_1 = store_thm(
        = #0 :: (h::t) >> n                  by induction hypothesis
        = (h::t) >> SUC n                    by poly_shift_def
 *)
-val subring_poly_shift = store_thm(
-  "subring_poly_shift",
-  ``!(r s):'a ring. s <= r ==> !p n. poly_shift s p n = p >> n``,
+Theorem subring_poly_shift:
+    !(r s):'a ring. s <= r ==> !p n. poly_shift s p n = p >> n
+Proof
   rpt strip_tac >>
   Cases_on `p` >-
   rw[] >>
   Induct_on `n` >-
   rw[] >>
-  rw[poly_shift_def, subring_ids]);
+  rw[poly_shift_def, subring_ids]
+QED
 
 (* Theorem: s <= r ==> (poly_shift s (poly_one s) 1 = X) *)
 (* Proof:
@@ -514,10 +529,11 @@ val subring_poly_shift = store_thm(
   = |1| >> 1                      by subring_poly_shift_1
   = X                             by notation
 *)
-val subring_poly_X = store_thm(
-  "subring_poly_X",
-  ``!(r s):'a ring. s <= r ==> (poly_shift s (poly_one s) 1 = X)``,
-  metis_tac[subring_poly_one, subring_poly_shift_1]);
+Theorem subring_poly_X:
+    !(r s):'a ring. s <= r ==> (poly_shift s (poly_one s) 1 = X)
+Proof
+  metis_tac[subring_poly_one, subring_poly_shift_1]
+QED
 
 (* Theorem: s <= r ==> !p q. Weak s p /\ Weak s q ==> (weak_mult s p q = p o q) *)
 (* Proof:
@@ -537,9 +553,9 @@ val subring_poly_X = store_thm(
       = weak_add s (h o q) ((p o q) >> 1)                        by subring_poly_weak_cmult
       = (h o q) || ((p o q) >> 1)                                by subring_poly_weak_add
 *)
-val subring_poly_weak_mult = store_thm(
-  "subring_poly_weak_mult",
-  ``!(r s):'a ring. s <= r ==> !p q. Weak s p /\ Weak s q ==> (weak_mult s p q = p o q)``,
+Theorem subring_poly_weak_mult:
+    !(r s):'a ring. s <= r ==> !p q. Weak s p /\ Weak s q ==> (weak_mult s p q = p o q)
+Proof
   ntac 3 strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -550,7 +566,8 @@ val subring_poly_weak_mult = store_thm(
   `Ring r /\ Ring s` by rw[] >>
   `Weak s (h o q)` by metis_tac[weak_cmult_weak, subring_poly_weak_cmult] >>
   `Weak s ((p o q) >> 1)` by metis_tac[weak_mult_weak, poly_shift_weak, subring_poly_shift] >>
-  rw[subring_poly_weak_add]);
+  rw[subring_poly_weak_add]
+QED
 
 (* Theorem: s <= r ==> !p. Poly s p ==> !c. c IN B ==> (poly_cmult s c p = c * p) *)
 (* Proof:
@@ -560,10 +577,11 @@ val subring_poly_weak_mult = store_thm(
     = chop (c o p)                     by subring_poly_chop
     = c * p                            by poly_cmult_def
 *)
-val subring_poly_cmult = store_thm(
-  "subring_poly_cmult",
-  ``!(r s):'a ring. s <= r ==> !p. Poly s p ==> !c. c IN B ==> (poly_cmult s c p = c * p)``,
-  metis_tac[poly_cmult_def, subring_poly_weak_cmult, subring_poly_chop, poly_is_weak]);
+Theorem subring_poly_cmult:
+    !(r s):'a ring. s <= r ==> !p. Poly s p ==> !c. c IN B ==> (poly_cmult s c p = c * p)
+Proof
+  metis_tac[poly_cmult_def, subring_poly_weak_cmult, subring_poly_chop, poly_is_weak]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Poly s q ==> (poly_add s p q = p + q) *)
 (* Proof:
@@ -573,10 +591,11 @@ val subring_poly_cmult = store_thm(
     = chop (p || q)                    by subring_poly_chop
     = p + q                            by poly_add_def
 *)
-val subring_poly_add = store_thm(
-  "subring_poly_add",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> (poly_add s p q = p + q)``,
-  metis_tac[poly_add_def, subring_poly_weak_add, subring_poly_chop, poly_is_weak]);
+Theorem subring_poly_add:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> (poly_add s p q = p + q)
+Proof
+  metis_tac[poly_add_def, subring_poly_weak_add, subring_poly_chop, poly_is_weak]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Poly s q ==> (poly_mult s p q = p * q) *)
 (* Proof:
@@ -586,10 +605,11 @@ val subring_poly_add = store_thm(
     = chop (p o q)                    by subring_poly_chop
     = p * q                           by poly_mult_def
 *)
-val subring_poly_mult = store_thm(
-  "subring_poly_mult",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> (poly_mult s p q = p * q)``,
-  metis_tac[poly_mult_def, subring_poly_weak_mult, subring_poly_chop, poly_is_weak]);
+Theorem subring_poly_mult:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> (poly_mult s p q = p * q)
+Proof
+  metis_tac[poly_mult_def, subring_poly_weak_mult, subring_poly_chop, poly_is_weak]
+QED
 
 (*
 > poly_ring_property |> ISPEC ``s:'a ring``;
@@ -630,9 +650,9 @@ val it = |- (!p. Poly s p <=> p IN (PolyRing s).carrier) /\
        ==> x IN (PolyRing r).prod.carrier  by poly_ring_property
        (2) poly_mult s x y = x * y         by subring_poly_mult
 *)
-val subring_poly_subring = store_thm(
-  "subring_poly_subring",
-  ``!(r s):'a ring. s <= r ==> (PolyRing s) <= (PolyRing r)``,
+Theorem subring_poly_subring:
+    !(r s):'a ring. s <= r ==> (PolyRing s) <= (PolyRing r)
+Proof
   rpt strip_tac >-
   rw[poly_ring_ring] >-
   rw[poly_ring_ring] >>
@@ -643,7 +663,8 @@ val subring_poly_subring = store_thm(
   metis_tac[subring_poly_add, poly_ring_property]) >>
   rw[MonoidHomo_def, subring_poly_ids] >-
   metis_tac[subring_poly_poly, poly_ring_property] >>
-  metis_tac[subring_poly_mult, poly_ring_property]);
+  metis_tac[subring_poly_mult, poly_ring_property]
+QED
 
 (* Theorem: s <= r ==> !p. Poly s p ==> (poly_neg s p = -p) *)
 (* Proof:
@@ -663,14 +684,15 @@ val subring_poly_subring = store_thm(
      = -h :: -p                     by induction hypothesis
      = -(h::p)                      by poly_neg_cons, Ring r, poly p
 *)
-val subring_poly_neg = store_thm(
-  "subring_poly_neg",
-  ``!(r s):'a ring. s <= r ==> !p. Poly s p ==> (poly_neg s p = -p)``,
+Theorem subring_poly_neg:
+    !(r s):'a ring. s <= r ==> !p. Poly s p ==> (poly_neg s p = -p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   rpt (stripDup[poly_cons_poly]) >>
-  metis_tac[subring_neg, poly_neg_cons, subring_poly_poly]);
+  metis_tac[subring_neg, poly_neg_cons, subring_poly_poly]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Poly s q ==> (poly_sub s p q = p - q) *)
 (* Proof:
@@ -681,10 +703,11 @@ val subring_poly_neg = store_thm(
     = p + -q                          by subring_poly_add
     = p + q                           by poly_sub_def
 *)
-val subring_poly_sub = store_thm(
-  "subring_poly_sub",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> (poly_sub s p q = p - q)``,
-  metis_tac[poly_sub_def, subring_poly_neg, subring_poly_add, poly_neg_poly]);
+Theorem subring_poly_sub:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> (poly_sub s p q = p - q)
+Proof
+  metis_tac[poly_sub_def, subring_poly_neg, subring_poly_add, poly_neg_poly]
+QED
 
 (* Theorem: s <= r ==> !p. Poly s p ==> !n. poly_exp s p n = p ** n *)
 (* Proof:
@@ -701,13 +724,14 @@ val subring_poly_sub = store_thm(
       = p * (p ** n)                     by subring_poly_mult
       = p ** SUC n                       by poly_exp_SUC, Ring r
 *)
-val subring_poly_exp = store_thm(
-  "subring_poly_exp",
-  ``!(r s):'a ring. s <= r ==> !p. Poly s p ==> !n. poly_exp s p n = p ** n``,
+Theorem subring_poly_exp:
+    !(r s):'a ring. s <= r ==> !p. Poly s p ==> !n. poly_exp s p n = p ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[subring_poly_ids] >>
-  metis_tac[subring_poly_mult, poly_exp_SUC, subring_poly_poly, poly_exp_poly]);
+  metis_tac[subring_poly_mult, poly_exp_SUC, subring_poly_poly, poly_exp_poly]
+QED
 
 (* Theorem: s <= r ==> !c:num. poly_num s c = |c| *)
 (* Proof:
@@ -725,14 +749,15 @@ val subring_poly_exp = store_thm(
        = |1| + |c|                                by subring_poly_add
        = ### (SUC c)                              by poly_sum_num_SUC
 *)
-val subring_poly_sum_num = store_thm(
-  "subring_poly_sum_num",
-  ``!(r s):'a ring. s <= r ==> !c:num. poly_num s c = |c|``,
+Theorem subring_poly_sum_num:
+    !(r s):'a ring. s <= r ==> !c:num. poly_num s c = |c|
+Proof
   rpt strip_tac >>
   Induct_on `c` >-
   metis_tac[poly_ring_sum_0, subring_poly_zero] >>
   rw[poly_sum_num_SUC] >>
-  metis_tac[subring_poly_one, subring_poly_add, poly_one_poly, poly_sum_num_poly]);
+  metis_tac[subring_poly_one, subring_poly_add, poly_one_poly, poly_sum_num_poly]
+QED
 
 (* Proof:
      Master s n
@@ -743,10 +768,11 @@ val subring_poly_sum_num = store_thm(
    = X ** n - X                          by subring_poly_sub
    = master n                            by notation
 *)
-val subring_poly_master = store_thm(
-  "subring_poly_master",
-  ``!(r s):'a ring. s <= r ==> !n. Master s n = master n``,
-  metis_tac[subring_poly_X, subring_poly_exp, subring_poly_sub, poly_one_poly, poly_shift_poly, poly_exp_poly]);
+Theorem subring_poly_master:
+    !(r s):'a ring. s <= r ==> !n. Master s n = master n
+Proof
+  metis_tac[subring_poly_X, subring_poly_exp, subring_poly_sub, poly_one_poly, poly_shift_poly, poly_exp_poly]
+QED
 
 (* Theorem: s <= r ==> !n. Unity s n = unity n *)
 (* Proof:
@@ -759,10 +785,11 @@ val subring_poly_master = store_thm(
    = X ** n - |1|                               by subring_poly_sub
    = unity n                                    by notation
 *)
-val subring_poly_unity = store_thm(
-  "subring_poly_unity",
-  ``!(r s):'a ring. s <= r ==> !n. Unity s n = unity n``,
-  metis_tac[subring_poly_X, subring_poly_exp, subring_poly_one, subring_poly_sub, poly_one_poly, poly_shift_poly, poly_exp_poly]);
+Theorem subring_poly_unity:
+    !(r s):'a ring. s <= r ==> !n. Unity s n = unity n
+Proof
+  metis_tac[subring_poly_X, subring_poly_exp, subring_poly_one, subring_poly_sub, poly_one_poly, poly_shift_poly, poly_exp_poly]
+QED
 
 (* Theorem: s <= r ==> !p. Monic s p ==> monic p *)
 (* Proof:
@@ -772,10 +799,11 @@ val subring_poly_unity = store_thm(
    <=> poly p /\ (lead p = #1)                   by subring_poly_lead, subring_ids
    <=> monic p                                   by poly_monic_def
 *)
-val subring_poly_monic = store_thm(
-  "subring_poly_monic",
-  ``!(r s):'a ring. s <= r ==> !p. Monic s p ==> monic p``,
-  metis_tac[poly_monic_def, subring_poly_poly, subring_poly_lead, subring_ids]);
+Theorem subring_poly_monic:
+    !(r s):'a ring. s <= r ==> !p. Monic s p ==> monic p
+Proof
+  metis_tac[poly_monic_def, subring_poly_poly, subring_poly_lead, subring_ids]
+QED
 
 (* Theorem: s <= r ==> !p. Poly s p ==> (Monic s p <=> monic p) *)
 (* Proof:
@@ -792,10 +820,11 @@ val subring_poly_monic = store_thm(
      and Poly s p ==> poly p         by subring_poly_poly
    Hence the result follows          by poly_monic_def
 *)
-val subring_poly_monic_iff = store_thm(
-  "subring_poly_monic_iff",
-  ``!(r s):'a ring. s <= r ==> !p. Poly s p ==> (Monic s p <=> monic p)``,
-  metis_tac[poly_monic_def, subring_poly_poly, subring_poly_lead, subring_ids]);
+Theorem subring_poly_monic_iff:
+    !(r s):'a ring. s <= r ==> !p. Poly s p ==> (Monic s p <=> monic p)
+Proof
+  metis_tac[poly_monic_def, subring_poly_poly, subring_poly_lead, subring_ids]
+QED
 
 (* Theorem: s <= r ==> !p. Ulead s p ==> ulead p *)
 (* Proof:
@@ -805,12 +834,13 @@ val subring_poly_monic_iff = store_thm(
    Thus Unit s (Lead s p) = unit (lead p)   by subring_unit
      or pmonic p                            by notation
 *)
-val subring_poly_ulead = store_thm(
-  "subring_poly_ulead",
-  ``!(r:'a ring) s. s <= r ==> !p. Ulead s p ==> ulead p``,
+Theorem subring_poly_ulead:
+    !(r:'a ring) s. s <= r ==> !p. Ulead s p ==> ulead p
+Proof
   rpt strip_tac >-
   metis_tac[subring_poly_poly] >>
-  metis_tac[subring_poly_lead, subring_unit]);
+  metis_tac[subring_poly_lead, subring_unit]
+QED
 
 (* Theorem: s <= r ==> !p. Pmonic s p ==> pmonic p *)
 (* Proof:
@@ -820,13 +850,14 @@ val subring_poly_ulead = store_thm(
    Thus Unit s (Lead s p) = unit (lead p)   by subring_unit
      or pmonic p                            by notation
 *)
-val subring_poly_pmonic = store_thm(
-  "subring_poly_pmonic",
-  ``!(r:'a ring) s. s <= r ==> !p. Pmonic s p ==> pmonic p``,
+Theorem subring_poly_pmonic:
+    !(r:'a ring) s. s <= r ==> !p. Pmonic s p ==> pmonic p
+Proof
   rpt strip_tac >-
   metis_tac[subring_poly_poly] >-
   metis_tac[subring_poly_lead, subring_unit] >>
-  metis_tac[subring_poly_deg]);
+  metis_tac[subring_poly_deg]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Ulead s q ==>
             ?u v. Poly s u /\ Poly s v /\ (p = u * q + v) /\ deg v < deg q *)
@@ -840,18 +871,19 @@ val subring_poly_pmonic = store_thm(
      and p = u * q + v                    by subring_poly_add, subring_poly_mult
    Take u, v as indicated, the result follows.
 *)
-val subring_poly_division_all_eqn = store_thm(
-  "subring_poly_division_all_eqn",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Ulead s q ==>
+Theorem subring_poly_division_all_eqn:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Ulead s q ==>
     ?u v. Poly s u /\ Poly s v /\ (p = u * q + v) /\
-    if 0 < deg q then deg v < deg q else v = |0|``,
+    if 0 < deg q then deg v < deg q else v = |0|
+Proof
   rpt strip_tac >>
   `ulead q` by metis_tac[subring_poly_ulead] >>
   `?u v. Poly s u /\ Poly s v /\ (p = poly_add s (poly_mult s u q) v) /\
     if 0 < poly_deg s q then poly_deg s v < poly_deg s q else v = poly_zero s` by rw[poly_division_all_eqn] >>
   `if 0 < deg q then deg v < deg q else v = |0|` by metis_tac[subring_poly_deg, subring_poly_zero] >>
   `poly_add s (poly_mult s u q) v = u * q + v` by metis_tac[subring_poly_add, subring_poly_mult, poly_mult_poly] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Pmonic s q ==>
             ?u v. Poly s u /\ Poly s v /\ (p = u * q + v) /\ deg v < deg q *)
@@ -864,14 +896,15 @@ val subring_poly_division_all_eqn = store_thm(
      and p = u * q + v                    by subring_poly_add, subring_poly_mult
    Take u, v as indicated, the result follows.
 *)
-val subring_poly_division_eqn = store_thm(
-  "subring_poly_division_eqn",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Pmonic s q ==>
-    ?u v. Poly s u /\ Poly s v /\ (p = u * q + v) /\ deg v < deg q``,
+Theorem subring_poly_division_eqn:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Pmonic s q ==>
+    ?u v. Poly s u /\ Poly s v /\ (p = u * q + v) /\ deg v < deg q
+Proof
   rpt strip_tac >>
   `pmonic q` by metis_tac[subring_poly_pmonic] >>
   `?u v. Poly s u /\ Poly s v /\ (p = poly_add s (poly_mult s u q) v) /\ poly_deg s v < poly_deg s q ` by rw[poly_division_eqn] >>
-  metis_tac[subring_poly_add, subring_poly_mult, poly_mult_poly, subring_poly_deg]);
+  metis_tac[subring_poly_add, subring_poly_mult, poly_mult_poly, subring_poly_deg]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Ulead s q ==>
             (poly_div s p q = p / q) /\ (poly_mod s p q = p % q) *)
@@ -887,29 +920,32 @@ val it = |- (s ~r~ r) I /\ INJ I B R ==>
      (MAP I (poly_div s p q) = MAP I p / MAP I q) /\
      (MAP I (poly_mod s p q) = MAP I p % MAP I q): thm
 *)
-val subring_poly_div_mod = store_thm(
-  "subring_poly_div_mod",
-  ``!(r:'a ring) s. s <= r ==> !p q. Poly s p /\ Ulead s q ==>
-     (poly_div s p q = p / q) /\ (poly_mod s p q = p % q)``,
+Theorem subring_poly_div_mod:
+    !(r:'a ring) s. s <= r ==> !p q. Poly s p /\ Ulead s q ==>
+     (poly_div s p q = p / q) /\ (poly_mod s p q = p % q)
+Proof
   ntac 6 strip_tac >>
   `RingHomo I s r` by rw[GSYM subring_def] >>
   `B SUBSET R` by rw[subring_carrier_subset] >>
   `INJ I B R` by metis_tac[INJ_DEF, SUBSET_DEF, combinTheory.I_THM] >>
-  metis_tac[ring_homo_poly_div_mod, MAP_ID]);
+  metis_tac[ring_homo_poly_div_mod, MAP_ID]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Ulead s q ==> (poly_div s p q = p / q) *)
 (* Proof: by subring_poly_div_mod *)
-val subring_poly_div = store_thm(
-  "subring_poly_div",
-  ``!(r:'a ring) s. s <= r ==> !p q. Poly s p /\ Ulead s q ==> (poly_div s p q = p / q)``,
-  rw_tac std_ss[subring_poly_div_mod]);
+Theorem subring_poly_div:
+    !(r:'a ring) s. s <= r ==> !p q. Poly s p /\ Ulead s q ==> (poly_div s p q = p / q)
+Proof
+  rw_tac std_ss[subring_poly_div_mod]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Ulead s q ==> (poly_mod s p q = p % q) *)
 (* Proof: by subring_poly_div_mod *)
-val subring_poly_mod = store_thm(
-  "subring_poly_mod",
-  ``!(r:'a ring) s. s <= r ==> !p q. Poly s p /\ Ulead s q ==> (poly_mod s p q = p % q)``,
-  rw_tac std_ss[subring_poly_div_mod]);
+Theorem subring_poly_mod:
+    !(r:'a ring) s. s <= r ==> !p q. Poly s p /\ Ulead s q ==> (poly_mod s p q = p % q)
+Proof
+  rw_tac std_ss[subring_poly_div_mod]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Poly s q /\ poly_divides s p q ==> p pdivides q *)
 (* Proof:
@@ -919,10 +955,11 @@ val subring_poly_mod = store_thm(
    ==> ?t. poly t /\ (q = t * p)               by subring_poly_poly
    ==> p pdivides q                            by poly_divides_def
 *)
-val subring_poly_divides = store_thm(
-  "subring_poly_divides",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q /\ poly_divides s p q ==> p pdivides q``,
-  prove_tac[poly_divides_def, subring_poly_poly, subring_poly_mult]);
+Theorem subring_poly_divides:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q /\ poly_divides s p q ==> p pdivides q
+Proof
+  prove_tac[poly_divides_def, subring_poly_poly, subring_poly_mult]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Ulead s q ==> (poly_divides s q p <=> q pdivides p) *)
 (* Proof:
@@ -935,14 +972,15 @@ val subring_poly_divides = store_thm(
     <=> (p % q) = |0|                    by subring_poly_div_mod
     <=> q pdivides p                     by poly_divides_alt
 *)
-val subring_poly_divides_iff = store_thm(
-  "subring_poly_divides_iff",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Ulead s q ==>
-    (poly_divides s q p <=> q pdivides p)``,
+Theorem subring_poly_divides_iff:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Ulead s q ==>
+    (poly_divides s q p <=> q pdivides p)
+Proof
   rpt strip_tac >>
   `poly p /\ ulead q` by metis_tac[subring_poly_poly, subring_poly_ulead] >>
   `poly_zero s = |0|` by rw[subring_poly_zero] >>
-  metis_tac[poly_divides_alt, subring_poly_div_mod]);
+  metis_tac[poly_divides_alt, subring_poly_div_mod]
+QED
 
 (* This is a generalisation of subring_poly_mult *)
 
@@ -968,9 +1006,9 @@ val subring_poly_divides_iff = store_thm(
        = e * PPROD t                          by subring_poly_mult
        = PPROD (e INSERT t)                   by poly_prod_set_insert
 *)
-val subring_poly_prod_set = store_thm(
-  "subring_poly_prod_set",
-  ``!(r s):'a ring. s <= r ==> !t. FINITE t /\ (!p. p IN t ==> Poly s p) ==> (poly_prod_set s t = PPROD t)``,
+Theorem subring_poly_prod_set:
+    !(r s):'a ring. s <= r ==> !t. FINITE t /\ (!p. p IN t ==> Poly s p) ==> (poly_prod_set s t = PPROD t)
+Proof
   ntac 3 strip_tac >>
   `!t. FINITE t ==> (!p. p IN t ==> Poly s p) ==> (poly_prod_set s t = PPROD t)` suffices_by rw[] >>
   Induct_on `FINITE` >>
@@ -983,7 +1021,8 @@ val subring_poly_prod_set = store_thm(
   `poly_prod_set s (e INSERT t) = poly_mult s e (PPROD t)` by rw[poly_prod_set_insert] >>
   `_ = e * PPROD t` by metis_tac[subring_poly_mult] >>
   `_ = PPROD (e INSERT t)` by rw[poly_prod_set_insert] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: s <= r ==> !t f. FINITE t /\ t SUBSET R /\ (!x. x IN t ==> Poly s (f x)) ==> Poly s (PPIMAGE f t) *)
 (* Proof:
@@ -993,14 +1032,15 @@ val subring_poly_prod_set = store_thm(
      or Poly s (PPROD (IMAGE f t))            by subring_poly_prod_set
      or Poly s (PPIMAGE f t)                  by notation
 *)
-val subring_poly_prod_set_spoly = store_thm(
-  "subring_poly_prod_set_spoly",
-  ``!(r s):'a ring. s <= r ==>
-   !t f. FINITE t /\ t SUBSET R /\ (!x. x IN t ==> Poly s (f x)) ==> Poly s (PPIMAGE f t)``,
+Theorem subring_poly_prod_set_spoly:
+    !(r s):'a ring. s <= r ==>
+   !t f. FINITE t /\ t SUBSET R /\ (!x. x IN t ==> Poly s (f x)) ==> Poly s (PPIMAGE f t)
+Proof
   rpt strip_tac >>
   `FINITE (IMAGE f t)` by rw[] >>
   `poly_set s (IMAGE f t)` by metis_tac[IN_IMAGE] >>
-  metis_tac[poly_prod_set_poly, subring_poly_prod_set]);
+  metis_tac[poly_prod_set_poly, subring_poly_prod_set]
+QED
 
 (* Theorem: s <= r ==> !c. c IN B ==> (poly_factor s c = factor c) *)
 (* Proof:
@@ -1008,10 +1048,11 @@ val subring_poly_prod_set_spoly = store_thm(
    (1) c IN B ==> s.sum.inv c = -c, true    by subring_neg
    (2) poly_one s = |1|                     by subring_poly_one
 *)
-val subring_poly_factor = store_thm(
-  "subring_poly_factor",
-  ``!(r:'a ring) s. s <= r ==> !c. c IN B ==> (poly_factor s c = factor c)``,
-  rw_tac std_ss[poly_factor_def, subring_neg, subring_poly_one]);
+Theorem subring_poly_factor:
+    !(r:'a ring) s. s <= r ==> !c. c IN B ==> (poly_factor s c = factor c)
+Proof
+  rw_tac std_ss[poly_factor_def, subring_neg, subring_poly_one]
+QED
 
 (* Theorem: s <= r ==> !p x. Poly s p /\ x IN B /\ poly_root s p x ==> root p x *)
 (* Proof:
@@ -1020,12 +1061,13 @@ val subring_poly_factor = store_thm(
         ==> root (MAP I p) (I x)                 by ring_homo_poly_root
           = root p x                             by MAP_ID, I_THM
 *)
-val subring_poly_root = store_thm(
-  "subring_poly_root",
-  ``!(r:'a ring) s. s <= r ==> !p x. Poly s p /\ x IN B /\ poly_root s p x ==> root p x``,
+Theorem subring_poly_root:
+    !(r:'a ring) s. s <= r ==> !p x. Poly s p /\ x IN B /\ poly_root s p x ==> root p x
+Proof
   rpt strip_tac >>
   `RingHomo I s r` by rw[GSYM subring_def] >>
-  metis_tac[ring_homo_poly_root, MAP_ID, combinTheory.I_THM]);
+  metis_tac[ring_homo_poly_root, MAP_ID, combinTheory.I_THM]
+QED
 
 (* Theorem: s <= r ==> !p. Poly s p ==> (poly_roots s p) SUBSET (roots p) *)
 (* Proof:
@@ -1037,14 +1079,15 @@ val subring_poly_root = store_thm(
    Thus !x. x poly_roots s p ==> x IN (roots p)  by poly_roots_member
      or (poly_roots s p) SUBSET (roots p)        by SUBSET_DEF
 *)
-val subring_poly_roots = store_thm(
-  "subring_poly_roots",
-  ``!(r:'a ring) s. s <= r ==> !p. Poly s p ==> (poly_roots s p) SUBSET (roots p)``,
+Theorem subring_poly_roots:
+    !(r:'a ring) s. s <= r ==> !p. Poly s p ==> (poly_roots s p) SUBSET (roots p)
+Proof
   rpt strip_tac >>
   `RingHomo I s r` by rw[GSYM subring_def] >>
   rw[poly_roots_member, SUBSET_DEF] >-
   metis_tac[subring_element] >>
-  metis_tac[ring_homo_poly_root, MAP_ID, combinTheory.I_THM]);
+  metis_tac[ring_homo_poly_root, MAP_ID, combinTheory.I_THM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subring Polynomial (another view)                                         *)
@@ -1056,10 +1099,11 @@ val subring_poly_roots = store_thm(
    <=> Poly s (poly_zero s)     by subring_poly_zero
    <=> T                        by poly_zero_poly
 *)
-val poly_zero_spoly = store_thm(
-  "poly_zero_spoly",
-  ``!(r s):'a ring. s <= r ==> Poly s |0|``,
-  rw[]);
+Theorem poly_zero_spoly:
+    !(r s):'a ring. s <= r ==> Poly s |0|
+Proof
+  rw[]
+QED
 
 (* Theorem: s <= r ==> Poly s |1| *)
 (* Proof:
@@ -1067,10 +1111,11 @@ val poly_zero_spoly = store_thm(
    <=> Poly s (poly_one s)     by subring_poly_one
    <=> T                       by poly_one_poly
 *)
-val poly_one_spoly = store_thm(
-  "poly_one_spoly",
-  ``!(r s):'a ring. s <= r ==> Poly s |1|``,
-  metis_tac[subring_poly_one, poly_one_poly]);
+Theorem poly_one_spoly:
+    !(r s):'a ring. s <= r ==> Poly s |1|
+Proof
+  metis_tac[subring_poly_one, poly_one_poly]
+QED
 
 (* Theorem: s <= r ==> Poly s X *)
 (* Proof:
@@ -1078,10 +1123,11 @@ val poly_one_spoly = store_thm(
    <=> Poly s (poly_shift s (poly_one s) 1)  by subring_poly_X
    <=> T                                     by poly_one_poly, poly_shift_poly
 *)
-val poly_X_spoly = store_thm(
-  "poly_X_spoly",
-  ``!(r s):'a ring. s <= r ==> Poly s X``,
-  metis_tac[subring_poly_X, poly_one_poly, poly_shift_poly]);
+Theorem poly_X_spoly:
+    !(r s):'a ring. s <= r ==> Poly s X
+Proof
+  metis_tac[subring_poly_X, poly_one_poly, poly_shift_poly]
+QED
 
 (* Theorem: s <= r ==> !p. Poly s p ==> Poly s (-p) *)
 (* Proof:
@@ -1089,10 +1135,11 @@ val poly_X_spoly = store_thm(
    <=> Poly s (poly_neg s p)    by subring_poly_neg
    <=> T                        by poly_neg_poly
 *)
-val poly_neg_spoly = store_thm(
-  "poly_neg_spoly",
-  ``!(r s):'a ring. s <= r ==> !p. Poly s p ==> Poly s (-p)``,
-  metis_tac[subring_poly_neg, poly_neg_poly]);
+Theorem poly_neg_spoly:
+    !(r s):'a ring. s <= r ==> !p. Poly s p ==> Poly s (-p)
+Proof
+  metis_tac[subring_poly_neg, poly_neg_poly]
+QED
 
 (* Theorem: s <= r ==> !p c. Poly s p /\ c IN B ==> Poly s (c * p) *)
 (* Proof:
@@ -1100,10 +1147,11 @@ val poly_neg_spoly = store_thm(
   <=> Poly s (poly_cmult s c p)      by subring_poly_cmult
   <=> T                              by poly_cmult_poly
 *)
-val poly_cmult_spoly = store_thm(
-  "poly_cmult_spoly",
-  ``!(r s):'a ring. s <= r ==> !p c. Poly s p /\ c IN B ==> Poly s (c * p)``,
-  metis_tac[subring_poly_cmult, poly_cmult_poly]);
+Theorem poly_cmult_spoly:
+    !(r s):'a ring. s <= r ==> !p c. Poly s p /\ c IN B ==> Poly s (c * p)
+Proof
+  metis_tac[subring_poly_cmult, poly_cmult_poly]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Poly s q ==> Poly s (p + q) *)
 (* Proof:
@@ -1111,10 +1159,11 @@ val poly_cmult_spoly = store_thm(
    <=> Poly s (poly_add s p q)   by subring_poly_add
    <=> T                         by poly_add_poly
 *)
-val poly_add_spoly = store_thm(
-  "poly_add_spoly",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> Poly s (p + q)``,
-  metis_tac[subring_poly_add, poly_add_poly]);
+Theorem poly_add_spoly:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> Poly s (p + q)
+Proof
+  metis_tac[subring_poly_add, poly_add_poly]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Poly s q ==> Poly s (p - q) *)
 (* Proof:
@@ -1122,10 +1171,11 @@ val poly_add_spoly = store_thm(
    <=> Poly s (poly_sub s p q)   by subring_poly_sub
    <=> T                         by poly_sub_poly
 *)
-val poly_sub_spoly = store_thm(
-  "poly_sub_spoly",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> Poly s (p - q)``,
-  metis_tac[subring_poly_sub, poly_sub_poly]);
+Theorem poly_sub_spoly:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> Poly s (p - q)
+Proof
+  metis_tac[subring_poly_sub, poly_sub_poly]
+QED
 
 (* Theorem: s <= r ==> !p q. Poly s p /\ Poly s q ==> Poly s (p * q) *)
 (* Proof:
@@ -1133,10 +1183,11 @@ val poly_sub_spoly = store_thm(
    <=> Poly s (poly_mult s p q)   by subring_poly_mult
    <=> T                          by poly_mult_poly
 *)
-val poly_mult_spoly = store_thm(
-  "poly_mult_spoly",
-  ``!(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> Poly s (p * q)``,
-  metis_tac[subring_poly_mult, poly_mult_poly]);
+Theorem poly_mult_spoly:
+    !(r s):'a ring. s <= r ==> !p q. Poly s p /\ Poly s q ==> Poly s (p * q)
+Proof
+  metis_tac[subring_poly_mult, poly_mult_poly]
+QED
 
 (* Theorem: s <= r ==> !p n. Poly s p ==> Poly s (p >> n) *)
 (* Proof:
@@ -1144,10 +1195,11 @@ val poly_mult_spoly = store_thm(
    <=> Poly s (poly_shift s p n)   by subring_poly_shift
    <=> T                           by poly_shift_poly
 *)
-val poly_shift_spoly = store_thm(
-  "poly_shift_spoly",
-  ``!(r s):'a ring. s <= r ==> !p n. Poly s p ==> Poly s (p >> n)``,
-  metis_tac[subring_poly_shift, poly_shift_poly]);
+Theorem poly_shift_spoly:
+    !(r s):'a ring. s <= r ==> !p n. Poly s p ==> Poly s (p >> n)
+Proof
+  metis_tac[subring_poly_shift, poly_shift_poly]
+QED
 
 (* Theorem: s <= r ==> !p n. Poly s p ==> Poly s (p ** n) *)
 (* Proof:
@@ -1155,17 +1207,19 @@ val poly_shift_spoly = store_thm(
    <=> Poly s (poly_exp s p n)   by subring_poly_exp
    <=> T                         by poly_exp_poly
 *)
-val poly_exp_spoly = store_thm(
-  "poly_exp_spoly",
-  ``!(r s):'a ring. s <= r ==> !p n. Poly s p ==> Poly s (p ** n)``,
-  metis_tac[subring_poly_exp, poly_exp_poly]);
+Theorem poly_exp_spoly:
+    !(r s):'a ring. s <= r ==> !p n. Poly s p ==> Poly s (p ** n)
+Proof
+  metis_tac[subring_poly_exp, poly_exp_poly]
+QED
 
 (* Theorem: s <= r ==> !n. Poly s (X ** n) *)
 (* Proof: by poly_X_spoly, poly_exp_spoly *)
-val poly_X_exp_n_spoly = store_thm(
-  "poly_X_exp_n_spoly",
-  ``!(r:'a ring) s. s <= r ==> !n. Poly s (X ** n)``,
-  rw[poly_X_spoly, poly_exp_spoly]);
+Theorem poly_X_exp_n_spoly:
+    !(r:'a ring) s. s <= r ==> !n. Poly s (X ** n)
+Proof
+  rw[poly_X_spoly, poly_exp_spoly]
+QED
 
 (* Theorem: s <= r ==> !n. Poly s (master n) *)
 (* Proof:
@@ -1174,10 +1228,11 @@ val poly_X_exp_n_spoly = store_thm(
      so Poly s (X ** n - X)    by poly_sub_spoly
      or Poly s (master n)      by notation
 *)
-val poly_master_spoly = store_thm(
-  "poly_master_spoly",
-  ``!(r s):'a ring. s <= r ==> !n. Poly s (master n)``,
-  metis_tac[poly_X_spoly, poly_exp_spoly, poly_sub_spoly]);
+Theorem poly_master_spoly:
+    !(r s):'a ring. s <= r ==> !n. Poly s (master n)
+Proof
+  metis_tac[poly_X_spoly, poly_exp_spoly, poly_sub_spoly]
+QED
 
 (* Theorem: s <= r ==> !n. Poly s (unity n) *)
 (* Proof:
@@ -1187,10 +1242,11 @@ val poly_master_spoly = store_thm(
      so Poly s (X ** n - |1|)  by poly_sub_spoly
      or Poly s (unity n)       by notation
 *)
-val poly_unity_spoly = store_thm(
-  "poly_unity_spoly",
-  ``!(r s):'a ring. s <= r ==> !n. Poly s (unity n)``,
-  metis_tac[poly_one_spoly, poly_X_spoly, poly_exp_spoly, poly_sub_spoly]);
+Theorem poly_unity_spoly:
+    !(r s):'a ring. s <= r ==> !n. Poly s (unity n)
+Proof
+  metis_tac[poly_one_spoly, poly_X_spoly, poly_exp_spoly, poly_sub_spoly]
+QED
 
 (* Theorem: s <= r /\ #1 <> #0 ==> !c. c IN B ==> Poly s (factor c) *)
 (* Proof:
@@ -1200,13 +1256,14 @@ val poly_unity_spoly = store_thm(
    Thus Poly s (X - c * |1|)     by poly_sub_spoly
      or Poly s (factor c)        by above
 *)
-val poly_factor_spoly = store_thm(
-  "poly_factor_spoly",
-  ``!(r:'a ring) s. s <= r /\ #1 <> #0 ==> !c. c IN B ==> Poly s (factor c)``,
+Theorem poly_factor_spoly:
+    !(r:'a ring) s. s <= r /\ #1 <> #0 ==> !c. c IN B ==> Poly s (factor c)
+Proof
   rpt strip_tac >>
   `factor c = X - c * |1|` by metis_tac[poly_factor_alt, subring_element] >>
   `Poly s X /\ Poly s (c * |1|)` by rw[poly_X_spoly, poly_one_spoly, poly_cmult_spoly] >>
-  metis_tac[poly_sub_spoly]);
+  metis_tac[poly_sub_spoly]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More Subring Theorems                                                     *)
@@ -1240,10 +1297,10 @@ val poly_factor_spoly = store_thm(
         so Pmonic q                  by poly_monic_pmonic
       Thus true                      by subring_poly_divides_iff
 *)
-val subring_poly_root_multiplicity = store_thm(
-  "subring_poly_root_multiplicity",
-  ``!(r:'a ring) s. s <= r /\ #1 <> #0 ==>
-     !p x. Poly s p /\ x IN B ==> (poly_root_multiplicity s p x = multiplicity p x)``,
+Theorem subring_poly_root_multiplicity:
+    !(r:'a ring) s. s <= r /\ #1 <> #0 ==>
+     !p x. Poly s p /\ x IN B ==> (poly_root_multiplicity s p x = multiplicity p x)
+Proof
   rpt strip_tac >>
   `x IN R` by metis_tac[subring_element] >>
   `Poly s (factor x)` by rw[poly_factor_spoly] >>
@@ -1265,7 +1322,8 @@ val subring_poly_root_multiplicity = store_thm(
     `0 < deg q` by decide_tac >>
     `Pmonic s q` by metis_tac[poly_monic_pmonic, subring_poly_deg] >>
     prove_tac[subring_poly_divides_iff]
-  ]);
+  ]
+QED
 
 (* Theorem: s <= r /\ #1 <> #0 ==> !p. Poly s p /\ separable p ==> poly_separable s p *)
 (* Proof:
@@ -1282,16 +1340,17 @@ val subring_poly_root_multiplicity = store_thm(
          = multiplicity p c            by subring_poly_root_multiplicity
          = 1                           by poly_separable_def, separable p
 *)
-val subring_poly_separable_reverse = store_thm(
-  "subring_poly_separable_reverse",
-  ``!(r:'a ring) (s:'a ring). s <= r /\ #1 <> #0 ==> !p. Poly s p /\ separable p ==> poly_separable s p``,
+Theorem subring_poly_separable_reverse:
+    !(r:'a ring) (s:'a ring). s <= r /\ #1 <> #0 ==> !p. Poly s p /\ separable p ==> poly_separable s p
+Proof
   rw_tac std_ss[poly_separable_def] >-
   fs[subring_poly_zero] >>
   `c IN B` by metis_tac[poly_roots_element] >>
   `c IN R` by metis_tac[subring_element] >>
   `poly p` by metis_tac[subring_poly_poly] >>
   `c IN roots p` by metis_tac[subring_poly_roots, SUBSET_DEF] >>
-  metis_tac[subring_poly_root_multiplicity]);
+  metis_tac[subring_poly_root_multiplicity]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Common Polynomial = a polynomial in (PolyRing r) or (PolyRing s)          *)
@@ -1316,10 +1375,11 @@ val it = |- !r s p. cpoly r s p <=> poly p /\ EVERY (\e. e IN B) p thm
 
 (* Theorem: cpoly r s p ==> poly p *)
 (* Proof: by common_poly_def *)
-val common_poly_poly = store_thm(
-  "common_poly_poly",
-  ``!p. cpoly r s p ==> poly p``,
-  rw[common_poly_def]);
+Theorem common_poly_poly:
+    !p. cpoly r s p ==> poly p
+Proof
+  rw[common_poly_def]
+QED
 
 (* Theorem: s <= r ==> !p. poly p ==> (cpoly r s p <=> !k. p ' k IN B) *)
 (* Proof:
@@ -1352,9 +1412,9 @@ val common_poly_poly = store_thm(
             EL n p = p ' n      by poly_coeff_nonzero_alt
             and p ' n IN B      by implication
 *)
-val common_poly_alt = store_thm(
-  "common_poly_alt",
-  ``!(r s):'a ring. s <= r ==> !p. poly p ==> (cpoly r s p <=> !k. p ' k IN B)``,
+Theorem common_poly_alt:
+    !(r s):'a ring. s <= r ==> !p. poly p ==> (cpoly r s p <=> !k. p ' k IN B)
+Proof
   rw_tac std_ss[common_poly_def] >>
   Cases_on `p = |0|` >| [
     rw_tac std_ss[poly_coeff_zero, EQ_IMP_THM] >-
@@ -1366,7 +1426,8 @@ val common_poly_alt = store_thm(
       metis_tac[ring_zero_element, subring_ids],
       metis_tac[poly_coeff_nonzero_alt]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: s <= r ==> !p. cpoly r s p ==> Poly s p *)
 (* Proof:
@@ -1387,9 +1448,9 @@ val common_poly_alt = store_thm(
        so h IN B /\ Poly s p /\ ~zero_poly s (h::p)
        ==> Poly s (h::p)                            by Poly_def
 *)
-val common_poly_subring_poly = store_thm(
-  "common_poly_subring_poly",
-  ``!(r s):'a ring. s <= r ==> !p. cpoly r s p ==> Poly s p``,
+Theorem common_poly_subring_poly:
+    !(r s):'a ring. s <= r ==> !p. cpoly r s p ==> Poly s p
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -1399,7 +1460,8 @@ val common_poly_subring_poly = store_thm(
     `!h t. EVERY (\e. e IN B) (h::t) <=> h IN B /\ EVERY (\e. e IN B) t` by rw[EVERY_DEF] >>
     metis_tac[common_poly_def],
     metis_tac[subring_poly_zero_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: s <= r ==> !p. Poly s p <=> cpoly r s p *)
 (* Proof:
@@ -1410,15 +1472,16 @@ val common_poly_subring_poly = store_thm(
    Only-if part: cpoly r s p ==> Poly s p
       This is true by common_poly_subring_poly.
 *)
-val subring_poly_alt = store_thm(
-  "subring_poly_alt",
-  ``!(r s):'a ring. s <= r ==> !p. Poly s p <=> cpoly r s p``,
+Theorem subring_poly_alt:
+    !(r s):'a ring. s <= r ==> !p. Poly s p <=> cpoly r s p
+Proof
   rw[EQ_IMP_THM] >| [
     rw[common_poly_def] >-
     metis_tac[subring_poly_poly] >>
     rw[poly_every_element],
     metis_tac[common_poly_subring_poly]
-  ]);
+  ]
+QED
 
 (*
 Some prime_field theorem can be proved by subfield/subring.
@@ -1486,10 +1549,11 @@ val it = |-
    FiniteField r ==> Field (PF r)              by prime_field_field
                  ==> Ring (PolyRing (PF r))    by poly_ring_ring
 *)
-val poly_prime_field_ring = store_thm(
-  "poly_prime_field_ring",
-  ``!r:'a field. FiniteField r ==> Ring (PolyRing (PF r))``,
-  rw[prime_field_field, poly_ring_ring]);
+Theorem poly_prime_field_ring:
+    !r:'a field. FiniteField r ==> Ring (PolyRing (PF r))
+Proof
+  rw[prime_field_field, poly_ring_ring]
+QED
 
 (* Theorem: FiniteField r ==> (PolyRing (PF r)) <= (PolyRing r) *)
 (* Proof:
@@ -1497,33 +1561,37 @@ val poly_prime_field_ring = store_thm(
                  ==> (PF r) <= r          by subfield_is_subring
                  ==> (PolyRing (PF r)) <= (PolyRing r)   by subring_poly_subring
 *)
-val poly_prime_field_is_subring = store_thm(
-  "poly_prime_field_is_subring",
-  ``!r:'a field. FiniteField r ==> (PolyRing (PF r)) <= (PolyRing r)``,
-  metis_tac[prime_field_is_subfield, subfield_is_subring, subring_poly_subring]);
+Theorem poly_prime_field_is_subring:
+    !r:'a field. FiniteField r ==> (PolyRing (PF r)) <= (PolyRing r)
+Proof
+  metis_tac[prime_field_is_subfield, subfield_is_subring, subring_poly_subring]
+QED
 
 (* Theorem: pfpoly p <=> p IN (PolyRing (PF r)).carrier *)
 (* Proof: by poly_ring_property *)
-val poly_prime_field_element = store_thm(
-  "poly_prime_field_element",
-  ``!p. pfpoly p <=> p IN (PolyRing (PF r)).carrier``,
-  rw[poly_ring_property]);
+Theorem poly_prime_field_element:
+    !p. pfpoly p <=> p IN (PolyRing (PF r)).carrier
+Proof
+  rw[poly_ring_property]
+QED
 
 (* Theorem: ((PolyRing (PF r)).sum.id = |0|) /\ ((PolyRing (PF r)).prod.id = |1|) *)
 (* Proof: by poly_ring_property, PF_property *)
-val poly_prime_field_ids = store_thm(
-  "poly_prime_field_ids",
-  ``!r:'a field. ((PolyRing (PF r)).sum.id = |0|) /\ ((PolyRing (PF r)).prod.id = |1|)``,
-  rw[poly_ring_property, PF_property]);
+Theorem poly_prime_field_ids:
+    !r:'a field. ((PolyRing (PF r)).sum.id = |0|) /\ ((PolyRing (PF r)).prod.id = |1|)
+Proof
+  rw[poly_ring_property, PF_property]
+QED
 
 (* Theorem: Properties of polynomials in Prime Field. *)
 (* Proof: by poly_ring_property, PF_property *)
-val poly_prime_field_property = store_thm(
-  "poly_prime_field_property",
-  ``!r:'a field. (!p. pfpoly p <=> p IN (PolyRing (PF r)).carrier) /\
+Theorem poly_prime_field_property:
+    !r:'a field. (!p. pfpoly p <=> p IN (PolyRing (PF r)).carrier) /\
                 ((PolyRing (PF r)).sum.id = |0|) /\
-                ((PolyRing (PF r)).prod.id = |1|)``,
-  rw[poly_ring_property, PF_property]);
+                ((PolyRing (PF r)).prod.id = |1|)
+Proof
+  rw[poly_ring_property, PF_property]
+QED
 
 (* Theorem: pfzerop p <=> zerop p *)
 (* Proof:
@@ -1534,12 +1602,13 @@ val poly_prime_field_property = store_thm(
               !h. pfzerop (h::p) <=> zerop (h::p)
       True by zero_poly_cons, PF_property.
 *)
-val poly_prime_field_zero_poly = store_thm(
-  "poly_prime_field_zero_poly",
-  ``!p. pfzerop p <=> zerop p``,
+Theorem poly_prime_field_zero_poly:
+    !p. pfzerop p <=> zerop p
+Proof
   Induct_on `p` >-
   rw[] >>
-  rw[PF_property]);
+  rw[PF_property]
+QED
 
 (* Theorem: Ring r ==> !p. pfpoly p ==> poly p *)
 (* Proof:
@@ -1568,44 +1637,49 @@ QED
      and pfpoly p ==> poly p                           by poly_prime_field_element_poly
    Hence true                                         by SUBSET_DEF
 *)
-val poly_prime_field_carrier_subset = store_thm(
-  "poly_prime_field_carrier_subset",
-  ``!r:'a ring. Ring r ==> (PolyRing (PF r)).carrier SUBSET (PolyRing r).carrier``,
-  metis_tac[poly_ring_property, SUBSET_DEF, poly_prime_field_element_poly]);
+Theorem poly_prime_field_carrier_subset:
+    !r:'a ring. Ring r ==> (PolyRing (PF r)).carrier SUBSET (PolyRing r).carrier
+Proof
+  metis_tac[poly_ring_property, SUBSET_DEF, poly_prime_field_element_poly]
+QED
 
 (* Theorem: FiniteField r ==>
          ((PolyRing (PF r)).sum.carrier = (PolyRing (PF r)).carrier) /\
          ((PolyRing (PF r)).prod.carrier = (PolyRing (PF r)).carrier) *)
 (* Proof: by poly_prime_field_ring, ring_carriers *)
-val poly_prime_field_carriers = store_thm(
-  "poly_prime_field_carriers",
-  ``!r:'a field. FiniteField r ==>
+Theorem poly_prime_field_carriers:
+    !r:'a field. FiniteField r ==>
          ((PolyRing (PF r)).sum.carrier = (PolyRing (PF r)).carrier) /\
-         ((PolyRing (PF r)).prod.carrier = (PolyRing (PF r)).carrier)``,
-  rw[poly_prime_field_ring, ring_carriers]);
+         ((PolyRing (PF r)).prod.carrier = (PolyRing (PF r)).carrier)
+Proof
+  rw[poly_prime_field_ring, ring_carriers]
+QED
 
 (* Theorem: pfdeg p = deg p *)
 (* Proof: by poly_deg_def *)
-val poly_prime_field_deg = store_thm(
-  "poly_prime_field_deg",
-  ``!p. pfdeg p = deg p``,
-  rw[poly_deg_def]);
+Theorem poly_prime_field_deg:
+    !p. pfdeg p = deg p
+Proof
+  rw[poly_deg_def]
+QED
 
 (* Theorem: pflead p = lead p *)
 (* Proof: by poly_lead_def, PF_property *)
-val poly_prime_field_lead = store_thm(
-  "poly_prime_field_lead",
-  ``!p. pflead p = lead p``,
-  metis_tac[poly_lead_def, list_CASES, PF_property]);
+Theorem poly_prime_field_lead:
+    !p. pflead p = lead p
+Proof
+  metis_tac[poly_lead_def, list_CASES, PF_property]
+QED
 
 (* Theorem: !k. pfcoeff p k = p ' k *)
 (* Proof: by poly_coeff_def, PF_property *)
-val poly_prime_field_coeff = store_thm(
-  "poly_prime_field_coeff",
-  ``!p k. pfcoeff p k = p ' k``,
+Theorem poly_prime_field_coeff:
+    !p k. pfcoeff p k = p ' k
+Proof
   rpt strip_tac >>
   Cases_on `p` >>
-  rw[poly_coeff_def, PF_property]);
+  rw[poly_coeff_def, PF_property]
+QED
 
 (* Theorem: pfchop p = chop p *)
 (* Proof:
@@ -1616,11 +1690,12 @@ val poly_prime_field_coeff = store_thm(
               !h. pfchop (h::p) = chop (h::p)
       True by poly_chop_cons, poly_prime_field_zero_poly
 *)
-val poly_prime_field_chop = store_thm(
-  "poly_prime_field_chop",
-  ``!p. pfchop p = chop p``,
+Theorem poly_prime_field_chop:
+    !p. pfchop p = chop p
+Proof
   Induct_on `p` >>
-  rw[poly_prime_field_zero_poly]);
+  rw[poly_prime_field_zero_poly]
+QED
 
 (* Theorem: weak_add (PF r) p q = p || q *)
 (* Proof:
@@ -1644,14 +1719,15 @@ val poly_prime_field_chop = store_thm(
          = h + h' :: p || q                             by induction hypothesis
          = (h::p) || (h'::q)                            by by weak_add_def
 *)
-val poly_prime_field_weak_add = store_thm(
-  "poly_prime_field_weak_add",
-  ``!p q. weak_add (PF r) p q = p || q``,
+Theorem poly_prime_field_weak_add:
+    !p q. weak_add (PF r) p q = p || q
+Proof
   Induct_on `p` >-
   rw[] >>
   Induct_on `q` >-
   rw[] >>
-  rw[weak_add_def, PF_property]);
+  rw[weak_add_def, PF_property]
+QED
 
 (* Theorem: weak_cmult (PF r) c p = c o p *)
 (* Proof:
@@ -1667,11 +1743,12 @@ val poly_prime_field_weak_add = store_thm(
       = c * h :: c o p                                 by induction hypothesis
       = c o (h::p)                                     by weak_cmult_cons
 *)
-val poly_prime_field_weak_cmult = store_thm(
-  "poly_prime_field_weak_cmult",
-  ``!c p. weak_cmult (PF r) c p = c o p``,
+Theorem poly_prime_field_weak_cmult:
+    !c p. weak_cmult (PF r) c p = c o p
+Proof
   Induct_on `p` >>
-  rw[PF_property]);
+  rw[PF_property]
+QED
 
 (* Theorem: pfshift p 1 = p >> 1 *)
 (* Proof:
@@ -1686,11 +1763,12 @@ val poly_prime_field_weak_cmult = store_thm(
      = #0::(h::t)                    by poly_shift_def
      = (h::t) >> 1                   by poly_shift_def, ONE
 *)
-val poly_prime_field_shift_1 = store_thm(
-  "poly_prime_field_shift_1",
-  ``!p. pfshift p 1 = p >> 1``,
+Theorem poly_prime_field_shift_1:
+    !p. pfshift p 1 = p >> 1
+Proof
   Cases_on `p` >>
-  metis_tac[poly_shift_def, PF_property, ONE]);
+  metis_tac[poly_shift_def, PF_property, ONE]
+QED
 
 (* Theorem: pfshift p n = p >> n *)
 (* Proof:
@@ -1711,13 +1789,14 @@ val poly_prime_field_shift_1 = store_thm(
        = #0 :: (h::t) >> n                  by induction hypothesis
        = (h::t) >> SUC n                    by poly_shift_def
 *)
-val poly_prime_field_shift = store_thm(
-  "poly_prime_field_shift",
-  ``!p n. pfshift p n = p >> n``,
+Theorem poly_prime_field_shift:
+    !p n. pfshift p n = p >> n
+Proof
   Cases_on `p` >-
   rw[] >>
   Induct_on `n` >>
-  rw[poly_shift_def, PF_property]);
+  rw[poly_shift_def, PF_property]
+QED
 
 (* Theorem: weak_mult (PF r) p q = p o q *)
 (* Proof:
@@ -1736,12 +1815,13 @@ val poly_prime_field_shift = store_thm(
       = weak_add (PF r) (h o q) ((p o q) >> 1)                       by poly_prime_field_weak_cmult
       = (h o q) || ((p o q) >> 1)                                    by poly_prime_field_weak_add
 *)
-val poly_prime_field_weak_mult = store_thm(
-  "poly_prime_field_weak_mult",
-  ``!p q. weak_mult (PF r) p q = p o q``,
+Theorem poly_prime_field_weak_mult:
+    !p q. weak_mult (PF r) p q = p o q
+Proof
   Induct_on `p` >-
   rw[] >>
-  rw[poly_prime_field_shift, poly_prime_field_weak_cmult, poly_prime_field_weak_add]);
+  rw[poly_prime_field_shift, poly_prime_field_weak_cmult, poly_prime_field_weak_add]
+QED
 
 (* Theorem: pfcmult c p = c * p *)
 (* Proof:
@@ -1751,10 +1831,11 @@ val poly_prime_field_weak_mult = store_thm(
     = chop (c o p)                      by poly_prime_field_chop
     = c * p                             by poly_cmult_def
 *)
-val poly_prime_field_cmult = store_thm(
-  "poly_prime_field_cmult",
-  ``!c p. pfcmult c p = c * p``,
-  rw[poly_cmult_def, poly_prime_field_weak_cmult, poly_prime_field_chop]);
+Theorem poly_prime_field_cmult:
+    !c p. pfcmult c p = c * p
+Proof
+  rw[poly_cmult_def, poly_prime_field_weak_cmult, poly_prime_field_chop]
+QED
 
 (* Theorem: pfadd p q = p + q *)
 (* Proof:
@@ -1764,10 +1845,11 @@ val poly_prime_field_cmult = store_thm(
     = chop (p || q)                     by poly_prime_field_chop
     = p + q                             by poly_add_def
 *)
-val poly_prime_field_add = store_thm(
-  "poly_prime_field_add",
-  ``!p q. (PolyRing (PF r)).sum.op p q = p + q``,
-  rw[poly_add_def, poly_prime_field_weak_add, poly_prime_field_chop]);
+Theorem poly_prime_field_add:
+    !p q. (PolyRing (PF r)).sum.op p q = p + q
+Proof
+  rw[poly_add_def, poly_prime_field_weak_add, poly_prime_field_chop]
+QED
 
 (* Theorem: pfmult p q = p * q *)
 (* Proof:
@@ -1777,10 +1859,11 @@ val poly_prime_field_add = store_thm(
     = chop (p o q)                     by poly_prime_field_chop
     = p * q                            by poly_mult_def
 *)
-val poly_prime_field_mult = store_thm(
-  "poly_prime_field_mult",
-  ``!p q. pfmult p q = p * q``,
-  rw[poly_mult_def, poly_prime_field_weak_mult, poly_prime_field_chop]);
+Theorem poly_prime_field_mult:
+    !p q. pfmult p q = p * q
+Proof
+  rw[poly_mult_def, poly_prime_field_weak_mult, poly_prime_field_chop]
+QED
 
 (*
 > poly_ring_property |> SPEC ``(PF r)``;
@@ -1821,9 +1904,9 @@ val it =
            ==> x IN (PolyRing r).prod.carrier   by poly_ring_carriers
        (2) pfmult x y = x * y, true             by poly_prime_field_mult
 *)
-val poly_prime_field_subring = store_thm(
-  "poly_prime_field_subring",
-  ``!r:'a ring. Ring r ==> subring (PolyRing (PF r)) (PolyRing r)``,
+Theorem poly_prime_field_subring:
+    !r:'a ring. Ring r ==> subring (PolyRing (PF r)) (PolyRing r)
+Proof
   rw_tac std_ss[subring_def, RingHomo_def] >-
   metis_tac[poly_prime_field_carrier_subset, SUBSET_DEF] >-
  (rw[GroupHomo_def] >-
@@ -1831,7 +1914,8 @@ val poly_prime_field_subring = store_thm(
   rw[poly_prime_field_add]) >>
   rw[MonoidHomo_def, poly_prime_field_ids] >-
   metis_tac[poly_prime_field_carrier_subset, SUBSET_DEF, poly_prime_field_carriers, poly_ring_carriers] >>
-  rw[poly_prime_field_mult]);
+  rw[poly_prime_field_mult]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Prime Field Common Polynomial = a polynomial in (PolyRing r)              *)
@@ -1857,10 +1941,11 @@ val it = |- !r p. pfcpoly p <=> poly p /\ EVERY (\e. e IN Fp) p: thm
 
 (* Theorem: pfcpoly p ==> poly p *)
 (* Proof: by pf_common_poly_def *)
-val pf_common_poly_poly = store_thm(
-  "pf_common_poly_poly",
-  ``!p. pfcpoly p ==> poly p``,
-  rw[pf_common_poly_def]);
+Theorem pf_common_poly_poly:
+    !p. pfcpoly p ==> poly p
+Proof
+  rw[pf_common_poly_def]
+QED
 
 (* Theorem: pfcpoly p ==> pfpoly p *)
 (* Proof:
@@ -1881,9 +1966,9 @@ val pf_common_poly_poly = store_thm(
        so h IN Fp /\ pfpoly p /\ ~pfzerop(h::p)
        ==> pfpoly (h::p)                            by Poly_def
 *)
-val pf_common_poly_pfpoly = store_thm(
-  "pf_common_poly_pfpoly",
-  ``!p. pfcpoly p ==> pfpoly p``,
+Theorem pf_common_poly_pfpoly:
+    !p. pfcpoly p ==> pfpoly p
+Proof
   Induct_on `p` >-
   rw[] >>
   rw_tac std_ss[pf_common_poly_def, poly_cons_poly] >| [
@@ -1892,7 +1977,8 @@ val pf_common_poly_pfpoly = store_thm(
     `!h t. EVERY (\e. e IN Fp) (h::t) <=> h IN Fp /\ EVERY (\e. e IN Fp) t` by rw[EVERY_DEF] >>
     metis_tac[pf_common_poly_def],
     metis_tac[poly_prime_field_zero_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !p. pfpoly p <=> pfcpoly p *)
 (* Proof:
@@ -1903,15 +1989,16 @@ val pf_common_poly_pfpoly = store_thm(
    Only-if part: pfcpoly p ==> pfpoly p
       This is true by pf_common_poly_pfpoly
 *)
-val poly_prime_field_poly_alt = store_thm(
-  "poly_prime_field_poly_alt",
-  ``!r:'a ring. Ring r ==> !p. pfpoly p <=> pfcpoly p``,
+Theorem poly_prime_field_poly_alt:
+    !r:'a ring. Ring r ==> !p. pfpoly p <=> pfcpoly p
+Proof
   rw[EQ_IMP_THM] >| [
     rw[pf_common_poly_def] >-
     rw[poly_prime_field_element_poly] >>
     rw[poly_every_element],
     rw[pf_common_poly_pfpoly]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> !p. pfpoly p ==> (pfneg p = -p) *)
 (* Proof:
@@ -1934,15 +2021,16 @@ val poly_prime_field_poly_alt = store_thm(
      = -h :: -p                     by induction hypothesis
      = -(h::p)                      by poly_neg_cons, Ring r, poly p
 *)
-val poly_prime_field_neg = store_thm(
-  "poly_prime_field_neg",
-  ``!r:'a field. FiniteField r ==> !p. pfpoly p ==> (pfneg p = -p)``,
+Theorem poly_prime_field_neg:
+    !r:'a field. FiniteField r ==> !p. pfpoly p ==> (pfneg p = -p)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring (PF r) /\ Ring r` by rw[prime_field_field] >>
   Induct_on `p` >-
   rw[] >>
   rpt (stripDup[poly_cons_poly]) >>
-  rw_tac std_ss[prime_field_neg, poly_neg_cons, poly_prime_field_element_poly]);
+  rw_tac std_ss[prime_field_neg, poly_neg_cons, poly_prime_field_element_poly]
+QED
 
 (* Theorem: pfexp p n = p ** n *)
 (* Proof:
@@ -1960,12 +2048,13 @@ val poly_prime_field_neg = store_thm(
       = p * (p ** n)                by poly_prime_field_mult
       = p ** SUC n                  by poly_exp_SUC
 *)
-val poly_prime_field_exp = store_thm(
-  "poly_prime_field_exp",
-  ``!p n. pfexp p n = p ** n``,
+Theorem poly_prime_field_exp:
+    !p n. pfexp p n = p ** n
+Proof
   Induct_on `n` >-
   rw[poly_prime_field_ids] >>
-  rw[poly_prime_field_mult]);
+  rw[poly_prime_field_mult]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Freshman Theorems for Finite Field                                        *)
@@ -1979,14 +2068,15 @@ val poly_prime_field_exp = store_thm(
      and prime (char r)             by finite_field_char
    The result is true               by poly_freshman_thm
 *)
-val poly_field_freshman_thm = store_thm(
-  "poly_field_freshman_thm",
-  ``!r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
-       ((x + y) ** (char r) = x ** (char r) + y ** (char r))``,
+Theorem poly_field_freshman_thm:
+    !r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
+       ((x + y) ** (char r) = x ** (char r) + y ** (char r))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `prime (char r)` by rw[finite_field_char] >>
-  rw[poly_freshman_thm]);
+  rw[poly_freshman_thm]
+QED
 
 (* Theorem: FiniteField r ==> !x y. poly x /\ poly y ==>
             ((x - y) ** (char r) = x ** (char r) - y ** (char r)) *)
@@ -1996,14 +2086,15 @@ val poly_field_freshman_thm = store_thm(
      and prime (char r)             by finite_field_char
    The result is true               by poly_freshman_thm_sub
 *)
-val poly_field_freshman_thm_sub = store_thm(
-  "poly_field_freshman_thm_sub",
-  ``!r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
-       ((x - y) ** (char r) = x ** (char r) - y ** (char r))``,
+Theorem poly_field_freshman_thm_sub:
+    !r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
+       ((x - y) ** (char r) = x ** (char r) - y ** (char r))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `prime (char r)` by rw[finite_field_char] >>
-  rw[poly_freshman_thm_sub]);
+  rw[poly_freshman_thm_sub]
+QED
 
 (* Theorem: FiniteField r ==> !x y. poly x /\ poly y ==>
             !n. (x + y) ** (char r ** n) = x ** (char r ** n) + y ** (char r ** n) *)
@@ -2013,14 +2104,15 @@ val poly_field_freshman_thm_sub = store_thm(
      and prime (char r)             by finite_field_char
    The result is true               by poly_freshman_all
 *)
-val poly_field_freshman_all = store_thm(
-  "poly_field_freshman_all",
-  ``!r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
-    !n. (x + y) ** (char r ** n) = x ** (char r ** n) + y ** (char r ** n)``,
+Theorem poly_field_freshman_all:
+    !r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
+    !n. (x + y) ** (char r ** n) = x ** (char r ** n) + y ** (char r ** n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `prime (char r)` by rw[finite_field_char] >>
-  rw[poly_freshman_all]);
+  rw[poly_freshman_all]
+QED
 
 (* Theorem: FiniteField r ==> !x y. poly x /\ poly y ==>
             ((x + y) ** (CARD R) = x ** (CARD R) + y ** (CARD R)) *)
@@ -2032,15 +2124,16 @@ val poly_field_freshman_all = store_thm(
    The result follows               by poly_freshman_all
    also result follows              by poly_field_freshman_all
 *)
-val poly_freshman_card = store_thm(
-  "poly_freshman_card",
-  ``!r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
-       ((x + y) ** (CARD R) = x ** (CARD R) + y ** (CARD R))``,
+Theorem poly_freshman_card:
+    !r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
+       ((x + y) ** (CARD R) = x ** (CARD R) + y ** (CARD R))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `prime (char r)` by rw[finite_field_char] >>
   `?n. 0 < n /\ (CARD R = char r ** n)` by rw[finite_field_card] >>
-  rw[poly_freshman_all]);
+  rw[poly_freshman_all]
+QED
 
 (* Theorem: FiniteField r ==> !x y. poly x /\ poly y ==>
             !n. (x + y) ** (CARD R ** n) = x ** (CARD R ** n) + y ** (CARD R ** n) *)
@@ -2054,16 +2147,17 @@ val poly_freshman_card = store_thm(
        = char r ** (d * n)          by EXP_EXP_MULT
    The result follows               by poly_freshman_all
 *)
-val poly_freshman_card_all = store_thm(
-  "poly_freshman_card_all",
-  ``!r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
-   !n. (x + y) ** (CARD R ** n) = x ** (CARD R ** n) + y ** (CARD R ** n)``,
+Theorem poly_freshman_card_all:
+    !r:'a field. FiniteField r ==> !x y. poly x /\ poly y ==>
+   !n. (x + y) ** (CARD R ** n) = x ** (CARD R ** n) + y ** (CARD R ** n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `prime (char r)` by rw[finite_field_char] >>
   `?d. 0 < d /\ (CARD R = char r ** d)` by rw[finite_field_card] >>
   `CARD R ** n = char r ** (d * n)` by rw[EXP_EXP_MULT] >>
-  rw[poly_freshman_all]);
+  rw[poly_freshman_all]
+QED
 
 (* Theorem: FiniteField r ==> !f. rfun f ==> !p. poly p ==>
             !n. (poly_sum (GENLIST (\j. f j * p ** j) n)) ** (CARD R)
@@ -2073,16 +2167,17 @@ val poly_freshman_card_all = store_thm(
      and ?d. 0 < d /\ (CARD R = char r ** d)   by finite_field_card
    The result follows                          by poly_sum_freshman_all
 *)
-val poly_sum_freshman_card = store_thm(
-  "poly_sum_freshman_card",
-  ``!r:'a field. FiniteField r ==> !f. rfun f ==> !p. poly p ==>
+Theorem poly_sum_freshman_card:
+    !r:'a field. FiniteField r ==> !f. rfun f ==> !p. poly p ==>
    !n. (poly_sum (GENLIST (\j. f j * p ** j) n)) ** (CARD R)
-      = poly_sum (GENLIST (\j. (f j * p ** j) ** (CARD R)) n)``,
+      = poly_sum (GENLIST (\j. (f j * p ** j) ** (CARD R)) n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `prime (char r)` by rw[finite_field_char] >>
   `?d. 0 < d /\ (CARD R = char r ** d)` by rw[finite_field_card] >>
-  rw[poly_sum_freshman_all]);
+  rw[poly_sum_freshman_all]
+QED
 
 (* Theorem: FiniteField r ==> !f. rfun f ==> !p. poly p ==>
             !n. (poly_sum (GENLIST (\j. f j * p ** j) n)) ** (CARD R)
@@ -2095,17 +2190,18 @@ val poly_sum_freshman_card = store_thm(
        = char r ** (d * n)          by EXP_EXP_MULT
    The result follows               by poly_sum_freshman_all
 *)
-val poly_sum_freshman_card_all = store_thm(
-  "poly_sum_freshman_card_all",
-  ``!r:'a field. FiniteField r ==> !f. rfun f ==> !p. poly p ==>
+Theorem poly_sum_freshman_card_all:
+    !r:'a field. FiniteField r ==> !f. rfun f ==> !p. poly p ==>
    !n k. (poly_sum (GENLIST (\j. f j * p ** j) n)) ** (CARD R ** k)
-        = poly_sum (GENLIST (\j. (f j * p ** j) ** (CARD R ** k)) n)``,
+        = poly_sum (GENLIST (\j. (f j * p ** j) ** (CARD R ** k)) n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `prime (char r)` by rw[finite_field_char] >>
   `?d. 0 < d /\ (CARD R = char r ** d)` by rw[finite_field_card] >>
   `CARD R ** k = char r ** (d * k)` by rw[EXP_EXP_MULT] >>
-  rw[poly_sum_freshman_all]);
+  rw[poly_sum_freshman_all]
+QED
 
 (* Note: the following theorem needs two things:
    poly_sum_freshman_thm, a ring-theoretic theorem, true when (char r) is prime.
@@ -2128,10 +2224,10 @@ val poly_sum_freshman_card_all = store_thm(
    = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))        by poly_exp_mult, MULT_COMM
    = peval p (q ** m)                                                      by poly_peval_by_poly_sum
 *)
-val poly_peval_freshman_card = store_thm(
-  "poly_peval_freshman_card",
-  ``!r:'a field. FiniteField r ==>
-   !p q. poly p /\ poly q ==> ((peval p q) ** CARD R = peval p (q ** CARD R))``,
+Theorem poly_peval_freshman_card:
+    !r:'a field. FiniteField r ==>
+   !p q. poly p /\ poly q ==> ((peval p q) ** CARD R = peval p (q ** CARD R))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD R` >>
@@ -2142,7 +2238,8 @@ val poly_peval_freshman_card = store_thm(
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** k) ** m) (SUC (deg p)))` by rw[finite_field_fermat_thm, Abbr`m`] >>
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))` by rw[GSYM poly_exp_mult, MULT_COMM] >>
   `_ = peval p (q ** m)` by rw[poly_peval_by_poly_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r ==> !p q. poly p /\ poly q ==>
             !n. peval p q ** (CARD R ** n) = peval p (q ** (CARD R ** n)) *)
@@ -2158,10 +2255,10 @@ val poly_peval_freshman_card = store_thm(
    = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))        by poly_exp_mult, MULT_COMM
    = peval p (q ** m)                                                      by poly_peval_by_poly_sum
 *)
-val poly_peval_freshman_card_all = store_thm(
-  "poly_peval_freshman_card_all",
-  ``!r:'a field. FiniteField r ==>
-   !p q. poly p /\ poly q ==> !n. (peval p q) ** (CARD R ** n) = peval p (q ** (CARD R ** n))``,
+Theorem poly_peval_freshman_card_all:
+    !r:'a field. FiniteField r ==>
+   !p q. poly p /\ poly q ==> !n. (peval p q) ** (CARD R ** n) = peval p (q ** (CARD R ** n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD R ** n` >>
@@ -2172,7 +2269,8 @@ val poly_peval_freshman_card_all = store_thm(
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** k) ** m) (SUC (deg p)))` by rw[finite_field_fermat_all, Abbr`m`] >>
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))` by rw[GSYM poly_exp_mult, MULT_COMM] >>
   `_ = peval p (q ** m)` by rw[poly_peval_by_poly_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r ==> !p. poly p ==> (p ** (CARD R) = peval p (X ** (CARD R))) *)
 (* Proof:
@@ -2182,11 +2280,12 @@ val poly_peval_freshman_card_all = store_thm(
      and p = peval p X                by poly_peval_by_X
    The result follows by ptting q = X in poly_peval_freshman_card
 *)
-val poly_peval_fermat_thm = store_thm(
-  "poly_peval_fermat_thm",
-  ``!r:'a field. FiniteField r ==> !p. poly p ==> (p ** (CARD R) = peval p (X ** (CARD R)))``,
+Theorem poly_peval_fermat_thm:
+    !r:'a field. FiniteField r ==> !p. poly p ==> (p ** (CARD R) = peval p (X ** (CARD R)))
+Proof
   metis_tac[poly_peval_freshman_card, poly_X, poly_peval_by_X,
-   FiniteField_def, field_is_ring, field_one_ne_zero]);
+   FiniteField_def, field_is_ring, field_one_ne_zero]
+QED
 
 (* Theorem: FiniteField r ==> !p. poly p ==> !n. p ** (CARD R ** n) = peval p (X ** (CARD R ** n)) *)
 (* Proof:
@@ -2196,12 +2295,13 @@ val poly_peval_fermat_thm = store_thm(
      and p = peval p X                by poly_peval_by_X
    The result follows by ptting q = X in poly_peval_freshman_card_all
 *)
-val poly_peval_fermat_all = store_thm(
-  "poly_peval_fermat_all",
-  ``!r:'a field. FiniteField r ==> !p. poly p ==>
-   !n. p ** (CARD R ** n) = peval p (X ** (CARD R ** n))``,
+Theorem poly_peval_fermat_all:
+    !r:'a field. FiniteField r ==> !p. poly p ==>
+   !n. p ** (CARD R ** n) = peval p (X ** (CARD R ** n))
+Proof
   metis_tac[poly_peval_freshman_card_all, poly_X, poly_peval_by_X,
-            FiniteField_def, field_is_ring, field_one_ne_zero]);
+            FiniteField_def, field_is_ring, field_one_ne_zero]
+QED
 
 (* Theorem: FiniteField r ==> !f. rfun f ==> !x. x IN R ==>
             !n. rsum (GENLIST (\j. f j * x ** j) n) ** CARD R =
@@ -2211,16 +2311,17 @@ val poly_peval_fermat_all = store_thm(
      and ?d. 0 < d /\ (CARD R = char r ** d)   by finite_field_card
    The result follows                          by ring_sum_freshman_all
 *)
-val ring_sum_freshman_card = store_thm(
-  "ring_sum_freshman_card",
-  ``!r:'a field. FiniteField r ==> !f. rfun f ==> !x. x IN R ==>
+Theorem ring_sum_freshman_card:
+    !r:'a field. FiniteField r ==> !f. rfun f ==> !x. x IN R ==>
    !n. rsum (GENLIST (\j. f j * x ** j) n) ** CARD R =
-       rsum (GENLIST (\j. (f j * x ** j) ** CARD R) n)``,
+       rsum (GENLIST (\j. (f j * x ** j) ** CARD R) n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `prime (char r)` by rw[finite_field_char] >>
   `?d. 0 < d /\ (CARD R = char r ** d)` by rw[finite_field_card] >>
-  rw_tac std_ss[ring_sum_freshman_all]);
+  rw_tac std_ss[ring_sum_freshman_all]
+QED
 
 (* Theorem: FiniteField r ==> !f. rfun f ==> !x. x IN R ==>
             !n k. (rsum (GENLIST (\j. f j * x ** j) n)) ** (CARD R ** k)
@@ -2233,17 +2334,18 @@ val ring_sum_freshman_card = store_thm(
        = char r ** (d * n)          by EXP_EXP_MULT
    The result follows               by ring_sum_freshman_all
 *)
-val ring_sum_freshman_card_all = store_thm(
-  "ring_sum_freshman_card_all",
-  ``!r:'a field. FiniteField r ==> !f. rfun f ==> !x. x IN R ==>
+Theorem ring_sum_freshman_card_all:
+    !r:'a field. FiniteField r ==> !f. rfun f ==> !x. x IN R ==>
    !n k. (rsum (GENLIST (\j. f j * x ** j) n)) ** (CARD R ** k)
-        = rsum (GENLIST (\j. (f j * x ** j) ** (CARD R ** k)) n)``,
+        = rsum (GENLIST (\j. (f j * x ** j) ** (CARD R ** k)) n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `prime (char r)` by rw[finite_field_char] >>
   `?d. 0 < d /\ (CARD R = char r ** d)` by rw[finite_field_card] >>
   `CARD R ** k = char r ** (d * k)` by rw[EXP_EXP_MULT] >>
-  rw_tac std_ss[ring_sum_freshman_all]);
+  rw_tac std_ss[ring_sum_freshman_all]
+QED
 
 (* Theorem: FiniteField r ==> !p x. poly p /\ x IN R ==> (eval p x ** CARD R = eval p (x ** CARD R)) *)
 (* Proof:
@@ -2258,10 +2360,10 @@ val ring_sum_freshman_card_all = store_thm(
    = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))        by ring_exp_mult, MULT_COMM
    = eval p (x ** m)                                                   by poly_eval_by_ring_sum
 *)
-val poly_eval_freshman_card = store_thm(
-  "poly_eval_freshman_card",
-  ``!r:'a field. FiniteField r ==> !p x. poly p /\ x IN R ==>
-         ((eval p x) ** (CARD R) = eval p (x ** (CARD R)))``,
+Theorem poly_eval_freshman_card:
+    !r:'a field. FiniteField r ==> !p x. poly p /\ x IN R ==>
+         ((eval p x) ** (CARD R) = eval p (x ** (CARD R)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD R` >>
@@ -2272,7 +2374,8 @@ val poly_eval_freshman_card = store_thm(
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** k) ** m) (SUC (deg p)))` by rw[finite_field_fermat_thm, Abbr`m`] >>
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM ring_exp_mult, MULT_COMM] >>
   `_ = eval p (x ** m)` by rw[poly_eval_by_ring_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r ==> !p x. poly p /\ x IN R ==>
             !n. (eval p x) ** (CARD R ** n) = eval p (x ** (CARD R ** n)) *)
@@ -2288,10 +2391,10 @@ val poly_eval_freshman_card = store_thm(
    = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))        by ring_exp_mult, MULT_COMM
    = eval p (x ** m)                                                   by poly_eval_by_ring_sum
 *)
-val poly_eval_freshman_card_all = store_thm(
-  "poly_eval_freshman_card_all",
-  ``!r:'a field. FiniteField r ==> !p x. poly p /\ x IN R ==>
-   !n. (eval p x) ** (CARD R ** n) = eval p (x ** (CARD R ** n))``,
+Theorem poly_eval_freshman_card_all:
+    !r:'a field. FiniteField r ==> !p x. poly p /\ x IN R ==>
+   !n. (eval p x) ** (CARD R ** n) = eval p (x ** (CARD R ** n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD R ** n` >>
@@ -2302,7 +2405,8 @@ val poly_eval_freshman_card_all = store_thm(
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** k) ** m) (SUC (deg p)))` by rw[finite_field_fermat_all, Abbr`m`] >>
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM ring_exp_mult, MULT_COMM] >>
   `_ = eval p (x ** m)` by rw[poly_eval_by_ring_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Polynomial Theorems                                          *)
@@ -2318,15 +2422,16 @@ val poly_eval_freshman_card_all = store_thm(
    hence (p - q) = |0|              by poly_exp_eq_zero
       or p = q                      by poly_sub_eq_zero
 *)
-val poly_char_exp_eq = store_thm(
-  "poly_char_exp_eq",
-  ``!r:'a field. FiniteField r ==>
-    !p q. poly p /\ poly q /\ (p ** (char r) = q ** (char r)) ==> (p = q)``,
+Theorem poly_char_exp_eq:
+    !r:'a field. FiniteField r ==>
+    !p q. poly p /\ poly q /\ (p ** (char r) = q ** (char r)) ==> (p = q)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = char r` >>
   `Ring r /\ prime m` by rw[finite_field_char, Abbr`m`] >>
   `|0| = (p - q) ** m` by metis_tac[poly_sub_eq_zero, poly_exp_poly, poly_freshman_thm_sub] >>
-  metis_tac[poly_exp_eq_zero, poly_sub_poly, poly_sub_eq_zero]);
+  metis_tac[poly_exp_eq_zero, poly_sub_poly, poly_sub_eq_zero]
+QED
 
 (* Theorem: FiniteField r ==> !p. poly p ==> (p ** CARD R =
             poly_sum (GENLIST (\k. (p ' k) ** (CARD R) * (X ** (CARD R)) ** k) (SUC (deg p)))) *)
@@ -2348,10 +2453,10 @@ val poly_char_exp_eq = store_thm(
         = poly_sum (GENLIST (\k. (p ' k * X ** k) ** m) n)          by poly_sum_freshman_all
         = poly_sum (GENLIST (\k. (p ' k) ** m * (X ** m) ** k) n)   by [1]
 *)
-val poly_sum_fermat_thm = store_thm(
-  "poly_sum_fermat_thm",
-  ``!r:'a field. FiniteField r ==> !p. poly p ==>
-   (p ** CARD R = poly_sum (GENLIST (\k. (p ' k) ** (CARD R) * (X ** (CARD R)) ** k) (SUC (deg p))))``,
+Theorem poly_sum_fermat_thm:
+    !r:'a field. FiniteField r ==> !p. poly p ==>
+   (p ** CARD R = poly_sum (GENLIST (\k. (p ' k) ** (CARD R) * (X ** (CARD R)) ** k) (SUC (deg p))))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD R` >>
@@ -2368,7 +2473,8 @@ val poly_sum_fermat_thm = store_thm(
   `(\j. f j * X ** j) = (\k. p ' k * X ** k)` by rw[Abbr`f`] >>
   `p = poly_sum (GENLIST (\k. p ' k * X ** k) n)` by rw[poly_eq_poly_sum, Abbr`n`] >>
   `p ** m = poly_sum (GENLIST (\k. (p ' k * X ** k) ** m) n)` by metis_tac[poly_sum_freshman_all] >>
-  rw[]);
+  rw[]
+QED
 
 
 (* Theorem: FiniteField r ==> !p z. poly p /\ z IN R /\ root p z ==> !n. root p (z ** CARD R ** n) *)
@@ -2376,10 +2482,11 @@ val poly_sum_fermat_thm = store_thm(
    Simply by finite_field_fermat_all,
    !r. FiniteField r ==> !x. x IN R ==> !n. x ** CARD R ** n = x
 *)
-val poly_root_exp = store_thm(
-  "poly_root_exp",
-  ``!r:'a field. FiniteField r ==> !p z. poly p /\ z IN R /\ root p z ==> !n. root p (z ** CARD R ** n)``,
-  rw[finite_field_fermat_all]);
+Theorem poly_root_exp:
+    !r:'a field. FiniteField r ==> !p z. poly p /\ z IN R /\ root p z ==> !n. root p (z ** CARD R ** n)
+Proof
+  rw[finite_field_fermat_all]
+QED
 
 (* Note:
    This result is trivial: since by finite_field_fermat_all,
@@ -2410,10 +2517,11 @@ val poly_root_exp = store_thm(
     and (PF r).prod.exp = $**     by PF_property
    Hence x ** char r = x          by finite_field_fermat_thm
 *)
-val prime_field_fermat_thm = store_thm(
-  "prime_field_fermat_thm",
-  ``!r:'a field. FiniteField r ==> !x. x IN Fp ==> (x ** char r = x)``,
-  metis_tac[prime_field_finite_field, prime_field_card, finite_field_fermat_thm, PF_property]);
+Theorem prime_field_fermat_thm:
+    !r:'a field. FiniteField r ==> !x. x IN Fp ==> (x ** char r = x)
+Proof
+  metis_tac[prime_field_finite_field, prime_field_card, finite_field_fermat_thm, PF_property]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN Fp ==> !n. x ** char r ** n = x *)
 (* Proof:
@@ -2422,10 +2530,11 @@ val prime_field_fermat_thm = store_thm(
     and (PF r).prod.exp = $**     by PF_property
    Hence x ** char r ** n = x     by finite_field_fermat_all
 *)
-val prime_field_fermat_all = store_thm(
-  "prime_field_fermat_all",
-  ``!r:'a field. FiniteField r ==> !x. x IN Fp ==> !n. x ** char r ** n = x``,
-  metis_tac[prime_field_finite_field, prime_field_card, finite_field_fermat_all, PF_property]);
+Theorem prime_field_fermat_all:
+    !r:'a field. FiniteField r ==> !x. x IN Fp ==> !n. x ** char r ** n = x
+Proof
+  metis_tac[prime_field_finite_field, prime_field_card, finite_field_fermat_all, PF_property]
+QED
 
 (* Theorem: FiniteField r ==> !p x. pfpoly p /\ x IN R ==> (eval p x ** char r = eval p (x ** char r)) *)
 (* Proof:
@@ -2445,10 +2554,10 @@ val prime_field_fermat_all = store_thm(
    = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))        by ring_exp_mult, MULT_COMM
    = eval p (x ** m)                                                   by poly_eval_by_ring_sum
 *)
-val poly_eval_freshman_thm = store_thm(
-  "poly_eval_freshman_thm",
-  ``!r:'a field. FiniteField r ==> !p x. pfpoly p /\ x IN R ==>
-         ((eval p x) ** (char r) = eval p (x ** (char r)))``,
+Theorem poly_eval_freshman_thm:
+    !r:'a field. FiniteField r ==> !p x. pfpoly p /\ x IN R ==>
+         ((eval p x) ** (char r) = eval p (x ** (char r)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = char r` >>
@@ -2464,7 +2573,8 @@ val poly_eval_freshman_thm = store_thm(
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** k) ** m) (SUC (deg p)))` by rw[] >>
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM ring_exp_mult, MULT_COMM] >>
   `_ = eval p (x ** m)` by rw[poly_eval_by_ring_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r ==> !p x. pfpoly p /\ x IN R ==>
             !n. (eval p x) ** (char r ** n) = eval p (x ** (char r ** n)) *)
@@ -2485,10 +2595,10 @@ val poly_eval_freshman_thm = store_thm(
    = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))        by ring_exp_mult, MULT_COMM
    = eval p (x ** m)                                                   by poly_eval_by_ring_sum
 *)
-val poly_eval_freshman_all = store_thm(
-  "poly_eval_freshman_all",
-  ``!r:'a field. FiniteField r ==> !p x. pfpoly p /\ x IN R ==>
-   !n. (eval p x) ** (char r ** n) = eval p (x ** (char r ** n))``,
+Theorem poly_eval_freshman_all:
+    !r:'a field. FiniteField r ==> !p x. pfpoly p /\ x IN R ==>
+   !n. (eval p x) ** (char r ** n) = eval p (x ** (char r ** n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = char r ** n` >>
@@ -2504,7 +2614,8 @@ val poly_eval_freshman_all = store_thm(
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** k) ** m) (SUC (deg p)))` by rw[] >>
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM ring_exp_mult, MULT_COMM] >>
   `_ = eval p (x ** m)` by rw[poly_eval_by_ring_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r ==> !p q. pfpoly p /\ poly q ==>
             ((peval p q) ** (char r) = peval p (q ** (char r))) *)
@@ -2525,10 +2636,10 @@ val poly_eval_freshman_all = store_thm(
    = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))        by poly_exp_mult, MULT_COMM
    = peval p (q ** m)                                                      by poly_peval_by_poly_sum
 *)
-val poly_peval_freshman_thm = store_thm(
-  "poly_peval_freshman_thm",
-  ``!r:'a field. FiniteField r ==> !p q. pfpoly p /\ poly q ==>
-         ((peval p q) ** (char r) = peval p (q ** (char r)))``,
+Theorem poly_peval_freshman_thm:
+    !r:'a field. FiniteField r ==> !p q. pfpoly p /\ poly q ==>
+         ((peval p q) ** (char r) = peval p (q ** (char r)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = char r` >>
@@ -2544,7 +2655,8 @@ val poly_peval_freshman_thm = store_thm(
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** k) ** m) (SUC (deg p)))` by rw[] >>
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM poly_exp_mult, MULT_COMM] >>
   `_ = peval p (q ** m)` by rw[poly_peval_by_poly_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r ==> !p q. pfpoly p /\ poly q ==>
             !n. (peval p q) ** (char r ** n) = peval p (q ** (char r ** n)) *)
@@ -2565,10 +2677,10 @@ val poly_peval_freshman_thm = store_thm(
    = poly_sum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))        by poly_exp_mult, MULT_COMM
    = peval p (q ** m)                                                      by poly_peval_by_poly_sum
 *)
-val poly_peval_freshman_all = store_thm(
-  "poly_peval_freshman_all",
-  ``!r:'a field. FiniteField r ==> !p q. pfpoly p /\ poly q ==>
-   !n. (peval p q) ** (char r ** n) = peval p (q ** (char r ** n))``,
+Theorem poly_peval_freshman_all:
+    !r:'a field. FiniteField r ==> !p q. pfpoly p /\ poly q ==>
+   !n. (peval p q) ** (char r ** n) = peval p (q ** (char r ** n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = char r ** n` >>
@@ -2584,7 +2696,8 @@ val poly_peval_freshman_all = store_thm(
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** k) ** m) (SUC (deg p)))` by rw[] >>
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM poly_exp_mult, MULT_COMM] >>
   `_ = peval p (q ** m)` by rw[poly_peval_by_poly_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Roots of Prime Field Polynomials                                          *)
@@ -2605,17 +2718,18 @@ val poly_peval_freshman_all = store_thm(
        = #0                             by field_zero_exp, char r ** n <> 0
    Hence root p (z ** char r ** n)      by poly_root_def
 *)
-val poly_prime_field_roots = store_thm(
-  "poly_prime_field_roots",
-  ``!r:'a field. FiniteField r ==> !p z. pfpoly p /\ z IN R /\ root p z ==>
-   !n. root p (z ** char r ** n)``,
+Theorem poly_prime_field_roots:
+    !r:'a field. FiniteField r ==> !p z. pfpoly p /\ z IN R /\ root p z ==>
+   !n. root p (z ** char r ** n)
+Proof
   rw[poly_root_def, GSYM poly_eval_freshman_all] >>
   `prime (char r)` by rw[finite_field_char] >>
   `0 < char r` by rw[PRIME_POS] >>
   `char r <> 0` by decide_tac >>
   `char r ** n <> 0` by rw[EXP_NONZERO] >>
   `Field r` by metis_tac[FiniteField_def] >>
-  rw[field_zero_exp]);
+  rw[field_zero_exp]
+QED
 
 (*
 > poly_irreducible_poly;
@@ -2635,10 +2749,11 @@ val it = |- !p. pfipoly p ==> pfpoly p: thm
    Hence s.exp x (CARD B) = x      by finite_field_fermat_thm
       or x ** (CARD B) = x         by subfield_exp
 *)
-val subfield_fermat_thm = store_thm(
-  "subfield_fermat_thm",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN B ==> (x ** (CARD B) = x)``,
-  metis_tac[subfield_finite_field, finite_field_fermat_thm, subfield_exp]);
+Theorem subfield_fermat_thm:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN B ==> (x ** (CARD B) = x)
+Proof
+  metis_tac[subfield_finite_field, finite_field_fermat_thm, subfield_exp]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN B ==> !n. x ** (CARD B) ** n = x *)
 (* Proof:
@@ -2646,10 +2761,11 @@ val subfield_fermat_thm = store_thm(
    Hence s.exp x (CARD B ** n) = x   by finite_field_fermat_all
       or x ** (CARD B) ** n = x      by subfield_exp
 *)
-val subfield_fermat_all = store_thm(
-  "subfield_fermat_all",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN B ==> !n. x ** (CARD B) ** n = x``,
-  metis_tac[subfield_finite_field, finite_field_fermat_all, subfield_exp]);
+Theorem subfield_fermat_all:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN B ==> !n. x ** (CARD B) ** n = x
+Proof
+  metis_tac[subfield_finite_field, finite_field_fermat_all, subfield_exp]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !p. Poly s p ==>
             !x. x IN R ==> ((eval p x) ** (CARD B) = eval p (x ** (CARD B))) *)
@@ -2672,10 +2788,10 @@ val subfield_fermat_all = store_thm(
    = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))        by ring_exp_mult, MULT_COMM
    = eval p (x ** m)                                                   by poly_eval_by_ring_sum
 *)
-val subfield_poly_eval_freshman_thm = store_thm(
-  "subfield_poly_eval_freshman_thm",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !p. Poly s p ==>
-   !x. x IN R ==> ((eval p x) ** (CARD B) = eval p (x ** (CARD B)))``,
+Theorem subfield_poly_eval_freshman_thm:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !p. Poly s p ==>
+   !x. x IN R ==> ((eval p x) ** (CARD B) = eval p (x ** (CARD B)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD B` >>
@@ -2692,7 +2808,8 @@ val subfield_poly_eval_freshman_thm = store_thm(
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** k) ** m) (SUC (deg p)))` by rw[] >>
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM ring_exp_mult, MULT_COMM] >>
   `_ = eval p (x ** m)` by rw[poly_eval_by_ring_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !p. Poly s p ==>
             !x. x IN R ==> !n. (eval p x) ** ((CARD B) ** n) = eval p (x ** ((CARD B) ** n)) *)
@@ -2716,10 +2833,10 @@ val subfield_poly_eval_freshman_thm = store_thm(
    = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))        by ring_exp_mult, MULT_COMM
    = eval p (x ** m)                                                   by poly_eval_by_ring_sum
 *)
-val subfield_poly_eval_freshman_all = store_thm(
-  "subfield_poly_eval_freshman_all",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !p. Poly s p ==>
-   !x. x IN R ==> !n. (eval p x) ** ((CARD B) ** n) = eval p (x ** ((CARD B) ** n))``,
+Theorem subfield_poly_eval_freshman_all:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !p. Poly s p ==>
+   !x. x IN R ==> !n. (eval p x) ** ((CARD B) ** n) = eval p (x ** ((CARD B) ** n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD B ** n` >>
@@ -2737,7 +2854,8 @@ val subfield_poly_eval_freshman_all = store_thm(
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** k) ** m) (SUC (deg p)))` by rw[] >>
   `_ = rsum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM ring_exp_mult, MULT_COMM] >>
   `_ = eval p (x ** m)` by rw[poly_eval_by_ring_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !p q. Poly s p /\ poly q ==>
             ((peval p q) ** (CARD B) = peval p (q ** (CARD B))) *)
@@ -2760,10 +2878,10 @@ val subfield_poly_eval_freshman_all = store_thm(
    = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))        by poly_exp_mult, MULT_COMM
    = peval p (q ** m)                                                      by poly_peval_by_poly_sum
 *)
-val subfield_poly_peval_freshman_thm = store_thm(
-  "subfield_poly_peval_freshman_thm",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !p q. Poly s p /\ poly q ==>
-         ((peval p q) ** (CARD B) = peval p (q ** (CARD B)))``,
+Theorem subfield_poly_peval_freshman_thm:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !p q. Poly s p /\ poly q ==>
+         ((peval p q) ** (CARD B) = peval p (q ** (CARD B)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD B` >>
@@ -2780,7 +2898,8 @@ val subfield_poly_peval_freshman_thm = store_thm(
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** k) ** m) (SUC (deg p)))` by rw[] >>
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM poly_exp_mult, MULT_COMM] >>
   `_ = peval p (q ** m)` by rw[poly_peval_by_poly_sum] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !p q. Poly s p /\ poly q ==>
             !n. (peval p q) ** (CARD B ** n) = peval p (q ** (CARD B ** n)) *)
@@ -2804,10 +2923,10 @@ val subfield_poly_peval_freshman_thm = store_thm(
    = poly_sum (GENLIST (\k. (p ' k) * (x ** m) ** k) (SUC (deg p)))        by poly_exp_mult, MULT_COMM
    = peval p (q ** m)                                                      by poly_peval_by_poly_sum
 *)
-val subfield_poly_peval_freshman_all = store_thm(
-  "subfield_poly_peval_freshman_all",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !p q. Poly s p /\ poly q ==>
-   !n. (peval p q) ** (CARD B ** n) = peval p (q ** (CARD B ** n))``,
+Theorem subfield_poly_peval_freshman_all:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !p q. Poly s p /\ poly q ==>
+   !n. (peval p q) ** (CARD B ** n) = peval p (q ** (CARD B ** n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD B ** n` >>
@@ -2825,7 +2944,8 @@ val subfield_poly_peval_freshman_all = store_thm(
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** k) ** m) (SUC (deg p)))` by rw[] >>
   `_ = poly_sum (GENLIST (\k. (p ' k) * (q ** m) ** k) (SUC (deg p)))` by rw_tac std_ss[GSYM poly_exp_mult, MULT_COMM] >>
   `_ = peval p (q ** m)` by rw[poly_peval_by_poly_sum] >>
-  rw[]);
+  rw[]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

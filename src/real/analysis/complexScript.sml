@@ -29,7 +29,7 @@ val _ = ParseExtras.temp_loose_equality()
 (* Definition of complex number type.                                 *)
 (* ------------------------------------------------------------------ *)
 
-val _ = type_abbrev ("complex", ``: real # real``);
+Type complex = ``: real # real``
 
 (*--------------------------------------------------------------------*)
 (* Now prove 2 lemmas.                                                *)
@@ -161,11 +161,11 @@ Definition complex_inv[nocompute]:
                               -IM z / ((RE z) pow 2 + (IM z) pow 2))
 End
 
-val _ = overload_on ("+",  Term`$complex_add`);
-val _ = overload_on ("~",  Term`$complex_neg`);
-val _ = overload_on ("*",  Term`$complex_mul`);
-val _ = overload_on ("inv",  Term`$complex_inv`);
-val _ = overload_on ("numeric_negate", ``$~ : complex->complex``);
+Overload "+" = Term`$complex_add`
+Overload "~" = Term`$complex_neg`
+Overload "*" = Term`$complex_mul`
+Overload inv = Term`$complex_inv`
+Overload numeric_negate = ``$~ : complex->complex``
 Overload "~" = “$~ : bool -> bool”
 Overload "¬" = “$~ : bool -> bool”
 
@@ -177,9 +177,9 @@ Definition complex_div[nocompute]:
  complex_div (z:complex) (w:complex) = z * inv w
 End
 
-val _ = overload_on ("-",  Term`$complex_sub`);
+Overload "-" = Term`$complex_sub`
 val _ = overload_on (GrammarSpecials.decimal_fraction_special, ``complex_div``)
-val _ = overload_on ("/",  Term`complex_div`);
+Overload "/" = Term`complex_div`
 
 val _ = add_ML_dependency "complexPP"
 val _ =
@@ -450,21 +450,27 @@ Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [complex_sub, COMPLEX_NEGNEG]
 QED
 
-val COMPLEX_SUB_ADD = store_thm ("COMPLEX_SUB_ADD",
-  (``!z:complex w:complex. (z - w) + w = z``),
+Theorem COMPLEX_SUB_ADD:
+    !z:complex w:complex. (z - w) + w = z
+Proof
   REWRITE_TAC [complex_sub, GSYM COMPLEX_ADD_ASSOC, COMPLEX_ADD_LINV,
-               COMPLEX_ADD_RID]);
+               COMPLEX_ADD_RID]
+QED
 
-val COMPLEX_SUB_ADD2 = store_thm("COMPLEX_SUB_ADD2",
-  (``!z:complex w:complex. w + (z - w) = z``),
+Theorem COMPLEX_SUB_ADD2:
+    !z:complex w:complex. w + (z - w) = z
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[COMPLEX_ADD_COMM] THEN
-  MATCH_ACCEPT_TAC COMPLEX_SUB_ADD);
+  MATCH_ACCEPT_TAC COMPLEX_SUB_ADD
+QED
 
-val COMPLEX_ADD_SUB = store_thm ("COMPLEX_ADD_SUB",
-  (``!z:complex w:complex. (z + w) - z = w``),
+Theorem COMPLEX_ADD_SUB:
+    !z:complex w:complex. (z + w) - z = w
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[COMPLEX_ADD_COMM] THEN
   REWRITE_TAC[complex_sub, GSYM COMPLEX_ADD_ASSOC, COMPLEX_ADD_RINV,
-              COMPLEX_ADD_RID]);
+              COMPLEX_ADD_RID]
+QED
 
 Theorem COMPLEX_SUB_SUB:
     !z:complex w:complex. (z - w) - z = -w
@@ -991,8 +997,8 @@ Definition complex_scalar_rmul[nocompute]:
 complex_scalar_rmul (z:complex) (k:real) = (RE z * k,IM z * k)
 End
 
-val _ = overload_on ("*",  Term`$complex_scalar_lmul`);
-val _ = overload_on ("*",  Term`$complex_scalar_rmul`);
+Overload "*" = Term`$complex_scalar_lmul`
+Overload "*" = Term`$complex_scalar_rmul`
 
 (*--------------------------------------------------------------------*)
 (* The properities of R-module                                        *)
@@ -1707,7 +1713,7 @@ Definition complex_pow:
       (complex_pow (z:complex) (SUC n) = z * (complex_pow z n))
 End
 
-val _ = overload_on ("pow",  Term`$complex_pow`);
+Overload pow = Term`$complex_pow`
 
 Theorem COMPLEX_POW_0:
     !n:num. 0 pow (SUC n) = 0
@@ -1856,7 +1862,7 @@ Definition complex_exp[nocompute]:
   complex_exp (z:complex) = exp(RE z) * (cos (IM z),sin (IM z))
 End
 
-val _ = overload_on ("exp",  Term`$complex_exp`);
+Overload exp = Term`$complex_exp`
 
 Theorem EXP_IMAGINARY:
     !x:real. exp (i * x) = (cos x,sin x)

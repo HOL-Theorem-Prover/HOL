@@ -324,10 +324,7 @@ val COMMUTE =
 val _ = add_infix("<=>",250,LEFT);
 
 (* Now overload the operator <=> to refer to COMMUTE:  *)
-
-val _ = overload_on("<=>",
-        “$COMMUTE:('a->'a->bool)->('a->'a->bool)->bool”)
-handle e => (Raise e);
+Overload "<=>" = “$COMMUTE:('a->'a->bool)->('a->'a->bool)->bool”
 
 
 (* Now R |= <> iff R <=> R. *)

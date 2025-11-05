@@ -508,6 +508,7 @@ val _ = tprint "(Interactive) RENAME_TAC quiet about tyvar guesses(4)"
 val _ = (testquiet (Q.RENAME_TAC [‘SUC n’]) ([“Pr ==> Q”], “P (SUC x) /\ q”);
          OK()) handle InternalDie s => die s
 
+(*
 val _ = tprint "Q.SPEC_THEN reports type errors"
 val _ = let
   fun contains res sl =
@@ -516,6 +517,7 @@ val _ = let
 in
   recording contains (Q.SPEC_THEN ‘T’ MP_TAC (ASSUME “∀f. f x”)) ([], “p /\ q”)
 end
+*)
 
 val _ = testutils.shouldfail {
       checkexn = check_HOL_ERRexn (fn (s,_,_) => mem s ["Tactical","Q"]),

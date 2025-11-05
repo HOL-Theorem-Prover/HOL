@@ -2533,11 +2533,13 @@ Definition finite_second_moments_def:
     finite_second_moments p X = ?a. second_moment p X a < PosInf
 End
 
-val finite_variance_imp_finite_second_moments = Q.prove (
-   `!p X. variance p X < PosInf ==> finite_second_moments p X`,
+Theorem finite_variance_imp_finite_second_moments[local]:
+    !p X. variance p X < PosInf ==> finite_second_moments p X
+Proof
     RW_TAC std_ss [finite_second_moments_def, variance_def, central_moment_def,
                    second_moment_def]
- >> Q.EXISTS_TAC `expectation p X` >> art []);
+ >> Q.EXISTS_TAC `expectation p X` >> art []
+QED
 
 (* TODO: extend `Normal c` to all extreals (not possible for integral_cmul) *)
 Theorem expectation_cmul :
@@ -3777,6 +3779,7 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
+(* This is the simplest "0-1 law" *)
 Theorem INDEP_REFL:
     !p a. prob_space p /\ a IN events p ==>
          (indep p a a = (prob p a = 0) \/ (prob p a = 1))
@@ -5836,10 +5839,11 @@ QED
 (* ========================================================================= *)
 
 (* convergence modes *)
-val _ = Datatype `convergence_mode = almost_everywhere   ('a p_space)
+Datatype:  convergence_mode = almost_everywhere   ('a p_space)
                                    | in_probability      ('a p_space)
                                    | in_lebesgue extreal ('a p_space)
-                                   | in_distribution     ('a p_space)`;
+                                   | in_distribution     ('a p_space)
+End
 
 (* convergence of extreal-valued random series [1, p.68,70], only works
    for real-valued random variables (cf. real_random_variable_def)
@@ -9964,6 +9968,22 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> Q.PAT_X_ASSUM ‘_ = m_space p1’ (REWRITE_TAC o wrap o SYM)
  >> MATCH_MP_TAC MEASURE_SPACE_SPACE >> art []
+QED
+
+Theorem prob_space_cong :
+    !sp sts u v. (!s. s IN sts ==> u s = v s) ==>
+                 (prob_space (sp,sts,u) <=> prob_space (sp,sts,v))
+Proof
+    rw [prob_space_def, p_space_def, events_def, prob_def]
+ >> Know ‘measure_space (sp,sts,u) <=> measure_space (sp,sts,v)’
+ >- (MATCH_MP_TAC measure_space_cong >> art [])
+ >> Rewr'
+ >> Cases_on ‘measure_space (sp,sts,v)’ >> simp []
+ >> Suff ‘u sp = v sp’ >- rw []
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> qabbrev_tac ‘m = (sp,sts,v)’
+ >> ‘sp = m_space m /\ sts = measurable_sets m’ by simp [Abbr ‘m’]
+ >> simp [MEASURE_SPACE_SPACE]
 QED
 
 (* tidy up theory exports, learnt from Magnus Myreen *)

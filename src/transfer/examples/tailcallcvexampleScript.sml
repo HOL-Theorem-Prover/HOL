@@ -140,7 +140,10 @@ val th8 = REWRITE_RULE[th3'] th7
 
 Definition A[nocompute]: A = CURRY aux'
 End
-val aux'_elim = prove(“aux' = UNCURRY A”, simp[A])
+Theorem aux'_elim[local]:
+  aux' = UNCURRY A
+Proof simp[A]
+QED
 
 val A_def = REWRITE_RULE[aux'_elim,pairTheory.CURRY_UNCURRY_THM,
                          pairTheory.UNCURRY_DEF] th8

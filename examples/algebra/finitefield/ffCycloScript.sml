@@ -73,9 +73,9 @@ val it = |- !r n. cyclo n = PIFACTOR (orders f* n): thm
 
 (* Theorem: Field r ==> (cyclo n = PPROD {(X - c * |1|) | c | c IN R+ /\ (forder c = n)}) *)
 (* Proof: by poly_cyclo_def *)
-val poly_cyclo_alt = store_thm(
-  "poly_cyclo_alt",
-  ``!(r:'a field) n. Field r ==> (cyclo n = PPROD {(X - c * |1|) | c | c IN R+ /\ (forder c = n)})``,
+Theorem poly_cyclo_alt:
+    !(r:'a field) n. Field r ==> (cyclo n = PPROD {(X - c * |1|) | c | c IN R+ /\ (forder c = n)})
+Proof
   rpt strip_tac >>
   `{(X - c * |1|) | c | c IN R+ /\ (forder c = n)} = IMAGE factor (orders f* n)` by
   (rw_tac std_ss[EXTENSION, GSPECIFICATION, IN_IMAGE] >>
@@ -87,7 +87,8 @@ val poly_cyclo_alt = store_thm(
     `x' IN R+ /\ (forder x' = n)` by metis_tac[fieldOrderTheory.field_orders_element_property] >>
     rw[poly_factor_alt, field_nonzero_element]
   ]) >>
-  rw[poly_cyclo_def]);
+  rw[poly_cyclo_def]
+QED
 
 (* Theorem: FiniteField r ==> (cyclo 0 = |1|) *)
 (* Proof:
@@ -96,10 +97,11 @@ val poly_cyclo_alt = store_thm(
    = PIFACTOR {}                 by field_orders_0
    = |1|                         by poly_prod_factors_empty
 *)
-val poly_cyclo_0 = store_thm(
-  "poly_cyclo_0",
-  ``!r:'a field. FiniteField r ==> (cyclo 0 = |1|)``,
-  metis_tac[poly_cyclo_def, field_orders_0, poly_prod_factors_empty]);
+Theorem poly_cyclo_0:
+    !r:'a field. FiniteField r ==> (cyclo 0 = |1|)
+Proof
+  metis_tac[poly_cyclo_def, field_orders_0, poly_prod_factors_empty]
+QED
 
 (* Theorem: Field r ==> (cyclo 1 = X - |1|) *)
 (* Proof:
@@ -109,12 +111,13 @@ val poly_cyclo_0 = store_thm(
    = factor #1                   by poly_prod_factors_sing
    = X - |1|                     by poly_factor_one
 *)
-val poly_cyclo_1 = store_thm(
-  "poly_cyclo_1",
-  ``!r:'a field. Field r ==> (cyclo 1 = X - |1|)``,
+Theorem poly_cyclo_1:
+    !r:'a field. Field r ==> (cyclo 1 = X - |1|)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0 /\ #1 IN R` by rw[] >>
-  metis_tac[poly_cyclo_def, field_orders_1, poly_prod_factors_sing, poly_factor_one]);
+  metis_tac[poly_cyclo_def, field_orders_1, poly_prod_factors_sing, poly_factor_one]
+QED
 
 (* Theorem: FiniteField r ==> !n. monic (cyclo n) *)
 (* Proof:
@@ -126,30 +129,33 @@ val poly_cyclo_1 = store_thm(
     and !p. p IN IMAGE factor (orders f* n) ==> monic p  by field_orders_factor_image_member
    Hence monic (PIFACTOR (orders f* n))       by poly_monic_prod_set_monic
 *)
-val poly_cyclo_monic = store_thm(
-  "poly_cyclo_monic",
-  ``!r:'a field. FiniteField r ==> !n. monic (cyclo n)``,
+Theorem poly_cyclo_monic:
+    !r:'a field. FiniteField r ==> !n. monic (cyclo n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[poly_cyclo_def] >>
   `Ring r` by rw[] >>
   `FINITE F*` by metis_tac[finite_field_mult_finite_group, FiniteGroup_def] >>
   `FINITE (orders f* n)` by rw[orders_finite] >>
   `FINITE (IMAGE factor (orders f* n))` by rw[IMAGE_FINITE] >>
-  metis_tac[poly_monic_prod_set_monic, field_orders_factor_image_member]);
+  metis_tac[poly_monic_prod_set_monic, field_orders_factor_image_member]
+QED
 
 (* Theorem: FiniteField r ==> !n. poly (cyclo n) *)
 (* Proof: by poly_cyclo_monic, poly_monic_poly *)
-val poly_cyclo_poly = store_thm(
-  "poly_cyclo_poly",
-  ``!r:'a field. FiniteField r ==> !n. poly (cyclo n)``,
-  rw[poly_cyclo_monic]);
+Theorem poly_cyclo_poly:
+    !r:'a field. FiniteField r ==> !n. poly (cyclo n)
+Proof
+  rw[poly_cyclo_monic]
+QED
 
 (* Theorem: FiniteField r ==> !n. lead (cyclo n) = #1 *)
 (* Proof: by poly_cyclo_monic, poly_monic_lead *)
-val poly_cyclo_lead = store_thm(
-  "poly_cyclo_lead",
-  ``!r:'a field. FiniteField r ==> !n. lead (cyclo n) = #1``,
-  rw[poly_cyclo_monic]);
+Theorem poly_cyclo_lead:
+    !r:'a field. FiniteField r ==> !n. lead (cyclo n) = #1
+Proof
+  rw[poly_cyclo_monic]
+QED
 
 (*
 > cyclic_orders_card |> ISPEC ``f*``;
@@ -176,9 +182,9 @@ val it = |- cyclic f* /\ FINITE F* ==>
        = CARD (IMAGE factor (orders f* n))    by poly_monic_prod_set_monomials_deg
        = CARD (orders f* n)                   by INJ_CARD_IMAGE_EQ
 *)
-val poly_cyclo_deg = store_thm(
-  "poly_cyclo_deg",
-  ``!r:'a field. FiniteField r ==> !n. deg (cyclo n) = CARD (orders f* n)``,
+Theorem poly_cyclo_deg:
+    !r:'a field. FiniteField r ==> !n. deg (cyclo n) = CARD (orders f* n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[poly_cyclo_def] >>
   `Ring r /\ #1 <> #0` by rw[] >>
@@ -190,7 +196,8 @@ val poly_cyclo_deg = store_thm(
   `(orders f* n) SUBSET F* ` by rw[orders_subset] >>
   `F* SUBSET R` by rw[field_nonzero_element_alt, SUBSET_DEF] >>
   `(orders f* n) SUBSET R` by metis_tac[SUBSET_TRANS] >>
-  metis_tac[poly_factor_inj, poly_monic_prod_set_monomials_deg, INJ_CARD_IMAGE_EQ]);
+  metis_tac[poly_factor_inj, poly_monic_prod_set_monomials_deg, INJ_CARD_IMAGE_EQ]
+QED
 
 (* Theorem: FiniteField r ==> !n. roots (cyclo n) = (orders f* n) *)
 (* Proof:
@@ -200,13 +207,14 @@ val poly_cyclo_deg = store_thm(
       = roots (PIFACTOR (orders f* n))   by poly_cyclo_def
       = (orders f* n)                    by poly_prod_factors_roots
 *)
-val poly_cyclo_roots = store_thm(
-  "poly_cyclo_roots",
-  ``!r:'a field. FiniteField r ==> !n. roots (cyclo n) = (orders f* n)``,
+Theorem poly_cyclo_roots:
+    !r:'a field. FiniteField r ==> !n. roots (cyclo n) = (orders f* n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `(orders f* n) SUBSET R` by rw[field_orders_subset_carrier] >>
   `FINITE (orders f* n)` by metis_tac[SUBSET_FINITE] >>
-  rw[poly_cyclo_def, poly_prod_factors_roots]);
+  rw[poly_cyclo_def, poly_prod_factors_roots]
+QED
 
 (* Theorem: FiniteField r ==> !x n. x IN root (cyclo n) x ==> (forder x = n) *)
 (* Proof:
@@ -214,10 +222,11 @@ val poly_cyclo_roots = store_thm(
    ==> x IN (orders f* n)        by poly_cyclo_roots
    ==> forder x = n              by field_orders_element_order
 *)
-val poly_cyclo_root_order = store_thm(
-  "poly_cyclo_root_order",
-  ``!r:'a field. FiniteField r ==> !x n. x IN roots (cyclo n) ==> (forder x = n)``,
-  rw[FiniteField_def, poly_cyclo_roots, field_orders_element_order]);
+Theorem poly_cyclo_root_order:
+    !r:'a field. FiniteField r ==> !x n. x IN roots (cyclo n) ==> (forder x = n)
+Proof
+  rw[FiniteField_def, poly_cyclo_roots, field_orders_element_order]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R+ ==> !n. x IN roots (cyclo n) <=> (forder x = n) *)
 (* Proof:
@@ -228,13 +237,14 @@ val poly_cyclo_root_order = store_thm(
        ==> x IN orders f* n                 by field_orders_element_property
         or x IN roots (cyclo n)             by poly_cyclo_roots
 *)
-val poly_cyclo_root_order_iff = store_thm(
-  "poly_cyclo_root_order_iff",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> !n. x IN roots (cyclo n) <=> (forder x = n)``,
+Theorem poly_cyclo_root_order_iff:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> !n. x IN roots (cyclo n) <=> (forder x = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >-
   rw[poly_cyclo_root_order] >>
-  rw[field_orders_element_property, poly_cyclo_roots]);
+  rw[field_orders_element_property, poly_cyclo_roots]
+QED
 
 (* Theorem: FiniteField r ==> !x n. x IN R /\ 0 < n ==> (x IN roots (cyclo n) <=> (forder x = n)) *)
 (* Proof:
@@ -247,16 +257,17 @@ val poly_cyclo_root_order_iff = store_thm(
        ==> x IN orders f* n             by field_orders_element_property
         or x IN roots (cyclo n)         by poly_cyclo_roots
 *)
-val poly_cyclo_root_condition = store_thm(
-  "poly_cyclo_root_condition",
-  ``!r:'a field. FiniteField r ==> !x n. x IN R /\ 0 < n ==> (x IN roots (cyclo n) <=> (forder x = n))``,
+Theorem poly_cyclo_root_condition:
+    !r:'a field. FiniteField r ==> !x n. x IN R /\ 0 < n ==> (x IN roots (cyclo n) <=> (forder x = n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >-
   rw[poly_cyclo_root_order] >>
   `forder x <> 0` by decide_tac >>
   `x <> #0` by metis_tac[field_order_eq_0] >>
   `x IN R+` by rw[field_nonzero_eq] >>
-  rw[field_orders_element_property, poly_cyclo_roots]);
+  rw[field_orders_element_property, poly_cyclo_roots]
+QED
 
 (* Theorem: FiniteField r ==> !x n. x IN R /\ 0 < n ==> ((factor x) pdivides (cyclo n) <=> (forder x = n)) *)
 (* Proof:
@@ -272,10 +283,10 @@ val poly_cyclo_root_condition = store_thm(
       Note x IN roots (cyclo n)            by poly_cyclo_root_condition, 0 < n
        ==> (factor x) pdivides (cyclo n)   by poly_root_factor
 *)
-val poly_cyclo_factor_condition = store_thm(
-  "poly_cyclo_factor_condition",
-  ``!r:'a field. FiniteField r ==> !x n. x IN R /\ 0 < n ==>
-         ((factor x) pdivides (cyclo n) <=> (forder x = n))``,
+Theorem poly_cyclo_factor_condition:
+    !r:'a field. FiniteField r ==> !x n. x IN R /\ 0 < n ==>
+         ((factor x) pdivides (cyclo n) <=> (forder x = n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `poly (cyclo n)` by rw[poly_cyclo_poly] >>
@@ -285,7 +296,8 @@ val poly_cyclo_factor_condition = store_thm(
     `roots (factor x) SUBSET roots (cyclo n)` by rw[poly_divides_share_roots] >>
     metis_tac[poly_cyclo_root_order, SUBSET_DEF],
     metis_tac[poly_cyclo_root_condition, poly_root_factor]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> !n. (cyclo 1) pdivides (cyclo n) <=> (n = 1) *)
 (* Proof:
@@ -310,9 +322,9 @@ val poly_cyclo_factor_condition = store_thm(
       Note poly (cyclo 1)                   by poly_cyclo_poly
       Thus (cyclo 1) pdivides (cyclo 1)     by poly_divides_reflexive
 *)
-val poly_cyclo_has_factor_cyclo_1 = store_thm(
-  "poly_cyclo_has_factor_cyclo_1",
-  ``!r:'a field. FiniteField r ==> !n. (cyclo 1) pdivides (cyclo n) <=> (n = 1)``,
+Theorem poly_cyclo_has_factor_cyclo_1:
+    !r:'a field. FiniteField r ==> !n. (cyclo 1) pdivides (cyclo n) <=> (n = 1)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   rw[EQ_IMP_THM] >| [
@@ -330,7 +342,8 @@ val poly_cyclo_has_factor_cyclo_1 = store_thm(
     `forder #1 = 1` by rw[field_order_one] >>
     metis_tac[poly_cyclo_factor_condition, field_one_element],
     rw[poly_divides_reflexive, poly_cyclo_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> !n. deg (cyclo n) = CARD (roots (cyclo n)) *)
 (* Proof:
@@ -338,10 +351,11 @@ val poly_cyclo_has_factor_cyclo_1 = store_thm(
    = CARD (orders f* n)        by poly_cyclo_deg
    = CARD (roots (cyclo n))    by poly_cyclo_roots
 *)
-val poly_cyclo_deg_eq_card_roots = store_thm(
-  "poly_cyclo_deg_eq_card_roots",
-  ``!r:'a field. FiniteField r ==> !n. deg (cyclo n) = CARD (roots (cyclo n))``,
-  rw[poly_cyclo_deg, poly_cyclo_roots]);
+Theorem poly_cyclo_deg_eq_card_roots:
+    !r:'a field. FiniteField r ==> !n. deg (cyclo n) = CARD (roots (cyclo n))
+Proof
+  rw[poly_cyclo_deg, poly_cyclo_roots]
+QED
 
 (* Note: This is worse than poly_cyclo_deg
 |- !r. FiniteField r ==> !n. deg (cyclo n) = CARD (orders f* n)
@@ -363,9 +377,9 @@ from product of factors, i.e. poly_prod_factors_deg_eq_card_roots.
    = PIFACTOR {}                                 by DISJOINT_DEF
    = |1|                                         by poly_prod_factors_empty
 *)
-val poly_cyclo_coprime = store_thm(
-  "poly_cyclo_coprime",
-  ``!r:'a field. FiniteField r ==> !m n. m <> n ==> pcoprime (cyclo m) (cyclo n)``,
+Theorem poly_cyclo_coprime:
+    !r:'a field. FiniteField r ==> !m n. m <> n ==> pcoprime (cyclo m) (cyclo n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `s = (orders f* m)` >>
   qabbrev_tac `t = (orders f* n)` >>
@@ -375,7 +389,8 @@ val poly_cyclo_coprime = store_thm(
   `_ = PIFACTOR (s INTER t)` by rw[poly_prod_factors_monic_gcd] >>
   `_ = PIFACTOR {}` by metis_tac[field_orders_disjoint, DISJOINT_DEF] >>
   `_ = |1|` by rw[poly_prod_factors_empty] >>
-  rw[poly_monic_gcd_one_coprime, poly_cyclo_poly]);
+  rw[poly_monic_gcd_one_coprime, poly_cyclo_poly]
+QED
 
 (* Theorem: FiniteField r ==> !s. pcoprime_set (IMAGE cyclo s) *)
 (* Proof:
@@ -386,13 +401,14 @@ val poly_cyclo_coprime = store_thm(
      ==> pcoprime p q                   by poly_cyclo_coprime
    Hence pcoprime_set (IMAGE cyclo s)   by poly_coprime_set_def
 *)
-val poly_cyclo_image_coprime_set = store_thm(
-  "poly_cyclo_image_coprime_set",
-  ``!r:'a field. FiniteField r ==> !s. pcoprime_set (IMAGE cyclo s)``,
+Theorem poly_cyclo_image_coprime_set:
+    !r:'a field. FiniteField r ==> !s. pcoprime_set (IMAGE cyclo s)
+Proof
   rpt strip_tac >>
   `pset (IMAGE cyclo s)` by metis_tac[poly_cyclo_poly, IN_IMAGE] >>
   `!p q. p IN (IMAGE cyclo s) /\ q IN (IMAGE cyclo s) /\ p <> q ==> pcoprime p q` by metis_tac[poly_cyclo_coprime, IN_IMAGE] >>
-  rw[poly_coprime_set_def]);
+  rw[poly_coprime_set_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclotomic Polynomial Properties.                                         *)

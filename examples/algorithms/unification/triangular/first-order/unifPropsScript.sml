@@ -7,10 +7,10 @@ Libs
 
 val _ = metisTools.limit :=  { time = NONE, infs = SOME 5000 }
 
-val vwalk_irrelevant_FUPDATE = Q.store_thm(
-"vwalk_irrelevant_FUPDATE",
-`wfs (s|+(vx,tx)) /\ vx NOTIN FDOM s ==>
-  !v.~(vR s)^* vx v ==> (vwalk (s|+(vx,tx)) v = vwalk s v)`,
+Theorem vwalk_irrelevant_FUPDATE:
+ wfs (s|+(vx,tx)) /\ vx NOTIN FDOM s ==>
+  !v.~(vR s)^* vx v ==> (vwalk (s|+(vx,tx)) v = vwalk s v)
+Proof
 STRIP_TAC THEN
 `wfs s` by METIS_TAC [wfs_SUBMAP,SUBMAP_FUPDATE_EQN] THEN
 HO_MATCH_MP_TAC vwalk_ind THEN
@@ -32,7 +32,8 @@ Cases_on `FLOOKUP s v` THENL [
     SRW_TAC [][Once vwalk_def,SimpLHS,FLOOKUP_UPDATE] THEN
     SRW_TAC [][Once vwalk_def,SimpRHS]
   ]
-]);
+]
+QED
 
 val vR_SUBMAP = Q.prove(
 `s SUBMAP sx ==> vR s u v ==> vR sx u v`,
@@ -41,17 +42,18 @@ SRW_TAC [][vR_def] THEN
 `FLOOKUP sx v = SOME x` by METIS_TAC [FLOOKUP_SUBMAP] THEN
 SRW_TAC [][]);
 
-val TC_vR_SUBMAP = Q.store_thm(
-"TC_vR_SUBMAP",
-`s SUBMAP sx ==> !u v.(vR s)^+ u v ==> (vR sx)^+ u v`,
+Theorem TC_vR_SUBMAP:
+ s SUBMAP sx ==> !u v.(vR s)^+ u v ==> (vR sx)^+ u v
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN
 SRW_TAC [][] THEN1 METIS_TAC [TC_SUBSET,vR_SUBMAP] THEN
-METIS_TAC [TC_RULES]);
+METIS_TAC [TC_RULES]
+QED
 
-val vwalk_FUPDATE_var = Q.store_thm(
-"vwalk_FUPDATE_var",
-`wfs (s|+(v1,Var v2)) /\ v1 NOTIN FDOM s ==>
-   (vwalk (s|+(v1,Var v2)) v2 = vwalk s v2)`,
+Theorem vwalk_FUPDATE_var:
+ wfs (s|+(v1,Var v2)) /\ v1 NOTIN FDOM s ==>
+   (vwalk (s|+(v1,Var v2)) v2 = vwalk s v2)
+Proof
 SRW_TAC [][] THEN
 Q_TAC SUFF_TAC `~(vR s)^* v1 v2`
   THEN1 METIS_TAC [vwalk_irrelevant_FUPDATE] THEN
@@ -67,7 +69,8 @@ SRW_TAC [][RTC_CASES_TC] THENL [
   `(vR (s|+(v1,Var v2)))^+ v1 v2` by METIS_TAC [TC_vR_SUBMAP] THEN
   `vR (s|+(v1,Var v2)) v2 v1` by SRW_TAC [][vR_def,FLOOKUP_UPDATE] THEN
   METIS_TAC [TC_RULES]
-]);
+]
+QED
 
 Theorem walkstar_extend:
   wfs s1 /\ wfs (s|+(vx,tx)) /\ vx NOTIN FDOM s /\
@@ -156,11 +159,11 @@ FULL_SIMP_TAC (srw_ss()) [NOT_FDOM_vwalk] THEN
 METIS_TAC [walkstar_extend]
 QED
 
-val unify_mgu = Q.store_thm(
-"unify_mgu",
-`!s t1 t2 sx s2. wfs s ∧ (unify s t1 t2 = SOME sx) ∧
+Theorem unify_mgu:
+ !s t1 t2 sx s2. wfs s ∧ (unify s t1 t2 = SOME sx) ∧
   wfs s2 /\ (walk* s2 (walk* s t1) = walk* s2 (walk* s t2)) ==>
- !t.(walk* s2 (walk* sx t) = walk* s2 (walk* s t))`,
+ !t.(walk* s2 (walk* sx t) = walk* s2 (walk* s t))
+Proof
 HO_MATCH_MP_TAC unify_ind THEN SRW_TAC [][] THEN
 `wfs sx` by METIS_TAC [unify_uP,uP_def] THEN
 Cases_on `walk s t1` THEN Cases_on `walk s t2` THEN
@@ -178,25 +181,28 @@ SRW_TAC [][Once unify_def] THENL [
     [`wfs s`,`unify x Y Z = SOME sx`,`wfs s2`,`walk s t1 = X`,`walk s t2 = X`]>>
   FULL_SIMP_TAC (srw_ss()) [],
   METIS_TAC [walkstar_walk,wex,walk_to_var]
-])
+]
+QED
 
-val unify_mgu_FEMPTY = Q.store_thm(
-"unify_mgu_FEMPTY",
-`(unify FEMPTY t1 t2 = SOME sx) ==>
+Theorem unify_mgu_FEMPTY:
+ (unify FEMPTY t1 t2 = SOME sx) ==>
  !s.wfs s /\ (walkstar s t1 = walkstar s t2) ==>
-   ?s'.!t.(walkstar s' (walkstar sx t) = walkstar s t)`,
-METIS_TAC [unify_mgu,wfs_FEMPTY,walkstar_FEMPTY])
+   ?s'.!t.(walkstar s' (walkstar sx t) = walkstar s t)
+Proof
+METIS_TAC [unify_mgu,wfs_FEMPTY,walkstar_FEMPTY]
+QED
 
-val walkstar_walk_SUBMAP = Q.store_thm(
-"walkstar_walk_SUBMAP",
-`s SUBMAP sx /\ wfs sx ==>
-  (walkstar sx t = walkstar sx (walk s t))`,
-METIS_TAC [walkstar_SUBMAP,walkstar_walk,wfs_SUBMAP])
+Theorem walkstar_walk_SUBMAP:
+ s SUBMAP sx /\ wfs sx ==>
+  (walkstar sx t = walkstar sx (walk s t))
+Proof
+METIS_TAC [walkstar_SUBMAP,walkstar_walk,wfs_SUBMAP]
+QED
 
-val unify_unifier = Q.store_thm(
-"unify_unifier",
-`wfs s ∧ (unify s t1 t2 = SOME sx) ⇒
- wfs sx ∧ s SUBMAP sx ∧ (walk* sx t1 = walk* sx t2)`,
+Theorem unify_unifier:
+ wfs s ∧ (unify s t1 t2 = SOME sx) ⇒
+ wfs sx ∧ s SUBMAP sx ∧ (walk* sx t1 = walk* sx t2)
+Proof
 Q_TAC SUFF_TAC
 `!s t1 t2 sx.wfs s /\ (unify s t1 t2 = SOME sx) ==>
    wfs sx ∧ s SUBMAP sx ∧ (walk* sx t1 = (walk* sx t2))`
@@ -258,37 +264,40 @@ SRW_TAC [][Once unify_def] THENL [
   REPEAT(SRW_TAC [][Once(DISCH_ALL vwalk_def),FLOOKUP_UPDATE]),
   Cases_on `t1` THEN Cases_on `t2` THEN
   FULL_SIMP_TAC (srw_ss()) [walk_def]
-])
+]
+QED
 
 val walk_to_var_NOT_FDOM = Q.prove(
 `wfs s ∧ (walk s t = Var v) ⇒ v ∉ FDOM s`,
 METIS_TAC [walk_to_var])
 
-val vars_measure = Q.store_thm(
-"vars_measure",
-`v ∈ vars t ∧ (∀w. t ≠ Var w) ∧ wfs s ⇒
- measure (pair_count o (walk* s)) (Var v) t`,
+Theorem vars_measure:
+ v ∈ vars t ∧ (∀w. t ≠ Var w) ∧ wfs s ⇒
+ measure (pair_count o (walk* s)) (Var v) t
+Proof
 Induct_on `t` THEN SRW_TAC [][] THEN
 Q.MATCH_ASSUM_RENAME_TAC `v ∈ vars tt` THEN
 Q.PAT_X_ASSUM `wfs s` ASSUME_TAC THEN
 Cases_on `tt` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-FULL_SIMP_TAC (srw_ss()++ARITH_ss) [measure_thm])
+FULL_SIMP_TAC (srw_ss()++ARITH_ss) [measure_thm]
+QED
 
-val oc_subterm_neq = Q.store_thm(
-"oc_subterm_neq",
-`oc s t v ∧ (∀w. t ≠ Var w) ∧ wfs s ∧ wfs s2 ⇒
- walk* s2 (Var v) ≠ walk* s2 (walk* s t)`,
+Theorem oc_subterm_neq:
+ oc s t v ∧ (∀w. t ≠ Var w) ∧ wfs s ∧ wfs s2 ⇒
+ walk* s2 (Var v) ≠ walk* s2 (walk* s t)
+Proof
 STRIP_TAC THEN
 `v ∈ vars (walk* s t)` by METIS_TAC [oc_eq_vars_walkstar,IN_DEF] THEN
 `∀w. (walk* s t) ≠ Var w` by (Cases_on `t` >> fs[]) THEN
 IMP_RES_TAC vars_measure THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
-FULL_SIMP_TAC (srw_ss()) [measure_thm])
+FULL_SIMP_TAC (srw_ss()) [measure_thm]
+QED
 
-val eqs_unify = Q.store_thm(
-"eqs_unify",
-`wfs s ∧ wfs s2 ∧ (walk* s2 (walk* s t1) = walk* s2 (walk* s t2)) ⇒
- ∃sx. unify s t1 t2 = SOME sx`,
+Theorem eqs_unify:
+ wfs s ∧ wfs s2 ∧ (walk* s2 (walk* s t1) = walk* s2 (walk* s t2)) ⇒
+ ∃sx. unify s t1 t2 = SOME sx
+Proof
 Q_TAC SUFF_TAC
 `∀s t1 t2. wfs s ∧ wfs s2 ∧ (walk* s2 (walk* s t1) = walk* s2 (walk* s t2)) ⇒
  ∃sx. unify s t1 t2 = SOME sx` THEN1 METIS_TAC [] THEN
@@ -321,7 +330,8 @@ THEN1 (
   (unify_mgu |> Q.SPECL [`s`,`t1a`,`t2a`,`sx`,`s2`] |> MP_TAC) THEN
   SRW_TAC [][] )
 THEN1 (
-  Cases_on `vwalk s2 n` THEN FULL_SIMP_TAC (srw_ss()) [] ))
+  Cases_on `vwalk s2 n` THEN FULL_SIMP_TAC (srw_ss()) [] )
+QED
 
 val _ = set_fixity "COMPAT" (Infix(NONASSOC,450))
 Definition COMPAT_def:
@@ -330,38 +340,42 @@ Definition COMPAT_def:
 End
 val _ = TeX_notation {hol = "COMPAT", TeX = ("\\ensuremath{\\Supset}",1)}
 
-val SUBMAP_COMPAT = Q.store_thm(
-"SUBMAP_COMPAT",
-`wfs sx /\ s SUBMAP sx ==> sx COMPAT s`,
+Theorem SUBMAP_COMPAT:
+ wfs sx /\ s SUBMAP sx ==> sx COMPAT s
+Proof
 STRIP_TAC THEN
 `wfs s` by METIS_TAC [wfs_SUBMAP] THEN
-SRW_TAC [][COMPAT_def,walkstar_SUBMAP])
+SRW_TAC [][COMPAT_def,walkstar_SUBMAP]
+QED
 
-val COMPAT_REFL = Q.store_thm(
-"COMPAT_REFL",
-`wfs s ==> s COMPAT s`,
+Theorem COMPAT_REFL:
+ wfs s ==> s COMPAT s
+Proof
 SRW_TAC [][COMPAT_def] THEN
-METIS_TAC [walkstar_idempotent])
+METIS_TAC [walkstar_idempotent]
+QED
 
-val COMPAT_TRANS = Q.store_thm(
-"COMPAT_TRANS",
-`s2 COMPAT s1 /\ s1 COMPAT s0 ==> s2 COMPAT s0`,
+Theorem COMPAT_TRANS:
+ s2 COMPAT s1 /\ s1 COMPAT s0 ==> s2 COMPAT s0
+Proof
 SRW_TAC [][COMPAT_def] THEN
-METIS_TAC [])
+METIS_TAC []
+QED
 
-val COMPAT_extend = Q.store_thm(
-"COMPAT_extend",
-`sx COMPAT s /\ wfs (s|+(vx,tx)) /\ vx NOTIN FDOM s /\
+Theorem COMPAT_extend:
+ sx COMPAT s /\ wfs (s|+(vx,tx)) /\ vx NOTIN FDOM s /\
  (walkstar sx (Var vx) = walkstar sx tx) ==>
- sx COMPAT (s|+(vx,tx))`,
+ sx COMPAT (s|+(vx,tx))
+Proof
 SRW_TAC [][COMPAT_def] THEN
-METIS_TAC [walkstar_extend])
+METIS_TAC [walkstar_extend]
+QED
 
-val COMPAT_eqs_unify = Q.store_thm(
-"COMPAT_eqs_unify",
-`!s t1 t2 sx.sx COMPAT s /\
+Theorem COMPAT_eqs_unify:
+ !s t1 t2 sx.sx COMPAT s /\
   (walkstar sx t1 = walkstar sx t2) ==>
-  ?si.(unify s t1 t2 = SOME si) /\ sx COMPAT si`,
+  ?si.(unify s t1 t2 = SOME si) /\ sx COMPAT si
+Proof
 SRW_TAC [][COMPAT_def] THEN
 (eqs_unify |> Q.INST [`s2`|->`sx`] |> MP_TAC) THEN
 SRW_TAC [][] THEN
@@ -369,17 +383,19 @@ Q.EXISTS_TAC `sx'` THEN
 SRW_TAC [][] THEN1
 METIS_TAC [unify_unifier] THEN
 (unify_mgu |> Q.SPECL [`s`,`t1`,`t2`,`sx'`,`sx`] |> MP_TAC) THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val COMPAT_more_specific = Q.store_thm(
-"COMPAT_more_specific",
-`(s COMPAT s0) ⇔
+Theorem COMPAT_more_specific:
+ (s COMPAT s0) ⇔
     wfs s ∧ wfs s0 ∧
-    (∀t1 t2. (walk* s0 t1 = walk* s0 t2) ⇒ (walk* s t1 = walk* s t2))`,
+    (∀t1 t2. (walk* s0 t1 = walk* s0 t2) ⇒ (walk* s t1 = walk* s t2))
+Proof
 SRW_TAC [][COMPAT_def,EQ_IMP_THM] THEN1 (
   FIRST_ASSUM (Q.SPEC_THEN `t1` MP_TAC) THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `t2` MP_TAC) THEN
   SRW_TAC [][] ) THEN
 FIRST_X_ASSUM (Q.SPECL_THEN [`walk* s0 t`,`t`] MP_TAC) THEN
-SRW_TAC [][walkstar_idempotent]);
+SRW_TAC [][walkstar_idempotent]
+QED
 

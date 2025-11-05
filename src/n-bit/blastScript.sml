@@ -45,9 +45,11 @@ End
 
 (* ------------------------------------------------------------------------- *)
 
-val BIT_CASES = Q.prove(
-  `!b n. (BITS b b n = 0) \/ (BITS b b n = 1)`,
-  SIMP_TAC std_ss [GSYM NOT_BITS2])
+Theorem BIT_CASES[local]:
+   !b n. (BITS b b n = 0) \/ (BITS b b n = 1)
+Proof
+  SIMP_TAC std_ss [GSYM NOT_BITS2]
+QED
 
 val BITS_SUC_cor =
   BITS_SUC |> Q.SPECL [`n`,`0`,`x`]
@@ -67,9 +69,11 @@ val lem =
   |> SIMP_RULE bool_ss [ZERO_LESS_EQ, EXP]
   |> GEN_ALL
 
-val lem1 = Q.prove (
-  `!n. 0 < n ==> 2 ** n + 1 < 2 ** SUC n`,
-  SRW_TAC [] [EXP, TIMES2, lem])
+Theorem lem1[local]:
+   !n. 0 < n ==> 2 ** n + 1 < 2 ** SUC n
+Proof
+  SRW_TAC [] [EXP, TIMES2, lem]
+QED
 
 val lem2 =
   NOT_BIT_GT_TWOEXP
@@ -194,23 +198,27 @@ QED
 val word_1comp =
   word_1comp_def |> SIMP_RULE (std_ss++fcpLib.FCP_ss) [] |> GSYM
 
-val BCARRY_BIT_EQ = Q.prove(
-  `!n x y c.
+Theorem BCARRY_BIT_EQ[local]:
+   !n x y c.
      n <= dimindex (:'a) /\ y < dimword (:'a) ==>
      (BCARRY n ($' (n2w x :'a word)) ($~ o $' (n2w y :'a word)) c =
-      BCARRY n (\i. BIT i x) (\i. BIT i (dimword (:'a) - 1 - y)) c)`,
+      BCARRY n (\i. BIT i x) (\i. BIT i (dimword (:'a) - 1 - y)) c)
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC BCARRY_EQ
   \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC arith_ss [word_1comp, word_1comp_n2w]
-  \\ SRW_TAC [fcpLib.FCP_ss, numSimps.ARITH_ss] [word_index])
+  \\ SRW_TAC [fcpLib.FCP_ss, numSimps.ARITH_ss] [word_index]
+QED
 
-val BSUM_BIT_EQ = Q.prove(
-  `!n x y c.
+Theorem BSUM_BIT_EQ[local]:
+   !n x y c.
      n < dimindex (:'a) ==>
      (BSUM n ($' (n2w x :'a word)) ($' (n2w y :'a word)) c =
-      BSUM n (\i. BIT i x) (\i. BIT i y) c)`,
+      BSUM n (\i. BIT i x) (\i. BIT i y) c)
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC BSUM_EQ
-  \\ SRW_TAC [fcpLib.FCP_ss, numSimps.ARITH_ss] [word_index])
+  \\ SRW_TAC [fcpLib.FCP_ss, numSimps.ARITH_ss] [word_index]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -220,11 +228,12 @@ val BITS_DIVISION =
             |> GEN_ALL
 
 val _ = diminish_srw_ss ["MOD"]
-val ADD_BITS_SUC_CIN = Q.prove(
-  `!n a b.
+Theorem ADD_BITS_SUC_CIN[local]:
+   !n a b.
      BITS (SUC n) (SUC n) (a + b + 1) =
      (BITS (SUC n) (SUC n) a + BITS (SUC n) (SUC n) b +
-      BITS (SUC n) (SUC n) (BITS n 0 a + BITS n 0 b + 1)) MOD 2`,
+      BITS (SUC n) (SUC n) (BITS n 0 a + BITS n 0 b + 1)) MOD 2
+Proof
   REPEAT STRIP_TAC
     \\ Q.SPECL_THEN [`n`,`a`] ASSUME_TAC BITS_DIVISION
     \\ POP_ASSUM (fn th => CONV_TAC (LHS_CONV (ONCE_REWRITE_CONV [th])))
@@ -241,20 +250,22 @@ val ADD_BITS_SUC_CIN = Q.prove(
     \\ CONV_TAC (LHS_CONV (RATOR_CONV
          (SIMP_CONV std_ss [Once (GSYM MOD_PLUS), ZERO_LT_TWOEXP])))
     \\ ASM_SIMP_TAC arith_ss []
-    )
+QED
 
-val ADD_BIT_SUC_CIN = Q.prove(
-  `!n a b.
+Theorem ADD_BIT_SUC_CIN[local]:
+   !n a b.
      BIT (SUC n) (a + b + 1) =
      if BIT (SUC n) (BITS n 0 a + BITS n 0 b + 1) then
        BIT (SUC n) a = BIT (SUC n) b
      else
-       BIT (SUC n) a <> BIT (SUC n) b`,
+       BIT (SUC n) a <> BIT (SUC n) b
+Proof
   SRW_TAC [] [BIT_def]
     \\ CONV_TAC (LHS_CONV (SIMP_CONV std_ss [Once ADD_BITS_SUC_CIN]))
     \\ Cases_on `BITS (SUC n) (SUC n) a = 1`
     \\ Cases_on `BITS (SUC n) (SUC n) b = 1`
-    \\ FULL_SIMP_TAC std_ss [NOT_BITS2])
+    \\ FULL_SIMP_TAC std_ss [NOT_BITS2]
+QED
 
 Theorem BSUM_LEM:
    !i x y c.
@@ -315,11 +326,12 @@ QED
 
 val COUNT_LIST_compute = numLib.SUC_RULE rich_listTheory.COUNT_LIST_def
 
-val BITWISE_MUL_lem = Q.prove(
-  `!n w m : 'a word.
+Theorem BITWISE_MUL_lem[local]:
+   !n w m : 'a word.
      0 < n /\ n <= dimindex(:'a) ==>
      (FOLDL (\a j. a + FCP i. w ' j /\ (m << j) ' i) 0w (COUNT_LIST n) =
-      (n - 1 -- 0) w * m)`,
+      (n - 1 -- 0) w * m)
+Proof
   Induct_on `n`
   \\ SRW_TAC [] [rich_listTheory.COUNT_LIST_SNOC, listTheory.FOLDL_SNOC]
   \\ Cases_on `n = 0`
@@ -355,15 +367,18 @@ val BITWISE_MUL_lem = Q.prove(
     \\ FULL_SIMP_TAC (srw_ss())
          [bitTheory.SLICE_ZERO2, bitTheory.BIT_SLICE_THM2,
           bitTheory.BIT_SLICE_THM3]
-  ])
+  ]
+QED
 
-val BITWISE_MUL_lem2 = Q.prove(
-  `!w m : 'a word.
+Theorem BITWISE_MUL_lem2[local]:
+   !w m : 'a word.
      w * m =
      FOLDL (\a j. a + FCP i. w ' j /\ (m << j) ' i) 0w
-           (COUNT_LIST (dimindex(:'a)))`,
+           (COUNT_LIST (dimindex(:'a)))
+Proof
   SRW_TAC [wordsLib.WORD_EXTRACT_ss] [BITWISE_MUL_lem]
-  \\ SRW_TAC [] [GSYM wordsTheory.WORD_w2w_EXTRACT, w2w_id])
+  \\ SRW_TAC [] [GSYM wordsTheory.WORD_w2w_EXTRACT, w2w_id]
+QED
 
 Theorem BITWISE_MUL:
    !w m : 'a word.
@@ -379,23 +394,25 @@ QED
 
 (* ------------------------------------------------------------------------ *)
 
-val word_bv_fold_zero = Q.prove(
-  `!P n f.
+Theorem word_bv_fold_zero[local]:
+   !P n f.
      (!j. j < n ==> ~P j) ==>
-     (FOLDL (\a j. a \/ P j /\ f j) F (COUNT_LIST n) = F)`,
+     (FOLDL (\a j. a \/ P j /\ f j) F (COUNT_LIST n) = F)
+Proof
   Induct_on `n`
   \\ SRW_TAC [] [rich_listTheory.COUNT_LIST_SNOC, listTheory.FOLDL_SNOC]
   \\ `!j. j < n ==> ~P j` by SRW_TAC [ARITH_ss] []
   \\ METIS_TAC []
-)
+QED
 
 fun DROPN_TAC n = NTAC n (POP_ASSUM (K ALL_TAC))
 
-val word_bv_lem = Q.prove(
-  `!f P i n.
+Theorem word_bv_lem[local]:
+   !f P i n.
      i < n /\ P i /\
      (!i j. P i /\ P j /\ i < n /\ j < n ==> (i = j)) ==>
-     (FOLDL (\a j. a \/ P j /\ (f j)) F (COUNT_LIST n) = f i)`,
+     (FOLDL (\a j. a \/ P j /\ (f j)) F (COUNT_LIST n) = f i)
+Proof
   Induct_on `n`
   \\ SRW_TAC [] [rich_listTheory.COUNT_LIST_SNOC, listTheory.FOLDL_SNOC]
   \\ `!i j. P i /\ P j /\ i < n /\ j < n ==> (i = j)` by SRW_TAC [ARITH_ss] []
@@ -416,14 +433,16 @@ val word_bv_lem = Q.prove(
         \\ `j <> n` by DECIDE_TAC
         \\ METIS_TAC [])
     \\ ASM_SIMP_TAC std_ss [word_bv_fold_zero]
-  ])
+  ]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val lem = Q.prove(
-  `!h w P a:'a word.
+Theorem lem[local]:
+   !h w P a:'a word.
      (((dimindex(:'a) - 1) -- h + 1) w = 0w) ==>
-     (((h -- 0) a = w) /\ (((dimindex(:'a) - 1) -- h + 1) a = 0w) <=> (a = w))`,
+     (((h -- 0) a = w) /\ (((dimindex(:'a) - 1) -- h + 1) a = 0w) <=> (a = w))
+Proof
   STRIP_TAC
   \\ Cases_on `dimindex(:'a) - 1 < h + 1`
   \\ SRW_TAC [wordsLib.WORD_EXTRACT_ss, ARITH_ss] []
@@ -442,22 +461,26 @@ val lem = Q.prove(
   \\ FULL_SIMP_TAC (srw_ss()++wordsLib.WORD_BIT_EQ_ss) []
   \\ Q.EXISTS_TAC `h + (i + 1)`
   \\ SRW_TAC [ARITH_ss] []
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
-val lem2 = Q.prove(
-  `!l i p b.
+Theorem lem2[local]:
+   !l i p b.
       (FOLDL (\a j. a \/ p j) i l /\ b <=>
-       FOLDL (\a j. a \/ b /\ p j) (i /\ b) l)`,
+       FOLDL (\a j. a \/ b /\ p j) (i /\ b) l)
+Proof
   Induct \\ SRW_TAC [] [listTheory.FOLDL,
-    DECIDE ``((i \/ p h) /\ b <=> i /\ b \/ b /\ p h)``])
+    DECIDE ``((i \/ p h) /\ b <=> i /\ b \/ b /\ p h)``]
+QED
 
-val FOLDL_LOG2_INTRO = Q.prove(
-  `!P n m:'a word.
+Theorem FOLDL_LOG2_INTRO[local]:
+   !P n m:'a word.
      1 < n /\ n <= dimindex (:'a) ==>
        (FOLDL (\a j. a \/ (m = n2w j) /\ P j) F (COUNT_LIST n) <=>
         FOLDL (\a j. a \/ ((LOG2 (n - 1) -- 0) m = n2w j) /\ P j) F
               (COUNT_LIST n) /\
-        ((dimindex(:'a) - 1 -- LOG2 (n - 1) + 1) m = 0w))`,
+        ((dimindex(:'a) - 1 -- LOG2 (n - 1) + 1) m = 0w))
+Proof
   SRW_TAC [] [lem2]
   \\ MATCH_MP_TAC listTheory.FOLDL_CONG
   \\ SRW_TAC [] [FUN_EQ_THM, rich_listTheory.MEM_COUNT_LIST]
@@ -469,15 +492,17 @@ val FOLDL_LOG2_INTRO = Q.prove(
   by METIS_TAC [LOG2_def, ADD1, arithmeticTheory.LESS_EQ_LESS_TRANS]
   \\ `((dimindex(:'a) - 1) -- LOG2 (n - 1) + 1) (n2w x) = 0w : 'a word`
   by SRW_TAC [] [word_bits_n2w, bitTheory.BITS_LT_LOW]
-  \\ METIS_TAC [lem])
+  \\ METIS_TAC [lem]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val word_lsl_bv_expand = Q.prove(
-  `!w m. word_lsl_bv (w:'a word) m =
+Theorem word_lsl_bv_expand[local]:
+   !w m. word_lsl_bv (w:'a word) m =
          FCP k.
            FOLDL (\a j. a \/ (m = n2w j) /\ ((j <= k) /\ w ' (k - j))) F
-                 (COUNT_LIST (dimindex(:'a)))`,
+                 (COUNT_LIST (dimindex(:'a)))
+Proof
   Cases_on `m`
   \\ SRW_TAC [fcpLib.FCP_ss] [word_lsl_bv_def, word_lsl_def]
   \\ Q.ABBREV_TAC `P = (\j. n = j MOD dimword(:'a))`
@@ -492,7 +517,8 @@ val word_lsl_bv_expand = Q.prove(
     \\ FULL_SIMP_TAC std_ss [Abbr `P`],
     `!j. j < n ==> ~P j` by SRW_TAC [ARITH_ss] [Abbr `P`]
     \\ ASM_SIMP_TAC arith_ss [word_0, word_bv_fold_zero]
-  ])
+  ]
+QED
 
 Theorem word_lsl_bv_expand:
    !w m.
@@ -514,12 +540,13 @@ Proof
   \\ METIS_TAC [arithmeticTheory.LESS_EQ_REFL, FOLDL_LOG2_INTRO]
 QED
 
-val word_lsr_bv_expand = Q.prove(
-  `!w m. word_lsr_bv (w:'a word) m =
+Theorem word_lsr_bv_expand[local]:
+   !w m. word_lsr_bv (w:'a word) m =
          FCP k.
            FOLDL (\a j. a \/ (m = n2w j) /\ k + j < dimindex(:'a) /\
                         w ' (k + j)) F
-                 (COUNT_LIST (dimindex(:'a)))`,
+                 (COUNT_LIST (dimindex(:'a)))
+Proof
   Cases_on `m`
   \\ SRW_TAC [fcpLib.FCP_ss] [word_lsr_bv_def, word_lsr_def]
   \\ Q.ABBREV_TAC `P = (\j. n = j MOD dimword(:'a))`
@@ -534,7 +561,8 @@ val word_lsr_bv_expand = Q.prove(
     \\ FULL_SIMP_TAC std_ss [Abbr `P`],
     `!j. j < n ==> ~P j` by SRW_TAC [ARITH_ss] [Abbr `P`]
     \\ ASM_SIMP_TAC arith_ss [word_bv_fold_zero]
-  ])
+  ]
+QED
 
 Theorem word_lsr_bv_expand:
    !w m.
@@ -556,12 +584,13 @@ Proof
   \\ METIS_TAC [arithmeticTheory.LESS_EQ_REFL, FOLDL_LOG2_INTRO]
 QED
 
-val word_asr_bv_expand = Q.prove(
-  `!w m. word_asr_bv (w:'a word) m =
+Theorem word_asr_bv_expand[local]:
+   !w m. word_asr_bv (w:'a word) m =
          (FCP k.
            FOLDL (\a j. a \/ (m = n2w j) /\ (w >> j) ' k) F
                  (COUNT_LIST (dimindex(:'a)))) ||
-         ($FCP (K (n2w (dimindex(:'a) - 1) <+ m /\ word_msb w)))`,
+         ($FCP (K (n2w (dimindex(:'a) - 1) <+ m /\ word_msb w)))
+Proof
   `dimindex(:'a) - 1 < dimword(:'a)` by SRW_TAC [ARITH_ss] [dimindex_lt_dimword]
   \\ Cases_on `m`
   \\ SRW_TAC [fcpLib.FCP_ss, ARITH_ss]
@@ -579,14 +608,17 @@ val word_asr_bv_expand = Q.prove(
     `!j. j < n ==> ~P j` by SRW_TAC [ARITH_ss] [Abbr `P`]
     \\ ASM_SIMP_TAC arith_ss [ASR_LIMIT, word_bv_fold_zero]
     \\ SRW_TAC [] [SIMP_RULE (srw_ss()) [] word_T, word_0]
-  ])
+  ]
+QED
 
-val fcp_or = Q.prove(
-  `!b g. $FCP f || $FCP g = $FCP (\i. f i \/ g i)`,
-  SRW_TAC [fcpLib.FCP_ss] [word_or_def])
+Theorem fcp_or[local]:
+   !b g. $FCP f || $FCP g = $FCP (\i. f i \/ g i)
+Proof
+  SRW_TAC [fcpLib.FCP_ss] [word_or_def]
+QED
 
-val word_asr_bv_expand = Q.prove(
-  `!w m.
+Theorem word_asr_bv_expand[local]:
+   !w m.
       word_asr_bv (w:'a word) m =
         if dimindex(:'a) = 1 then
           $FCP (K (w ' 0))
@@ -595,7 +627,8 @@ val word_asr_bv_expand = Q.prove(
              FOLDL (\a j. a \/ ((LOG2 (dimindex(:'a) - 1) -- 0) m = n2w j) /\
                           (w >> j) ' k) F (COUNT_LIST (dimindex(:'a))) /\
              ((dimindex(:'a) - 1 -- LOG2 (dimindex(:'a) - 1) + 1) m = 0w)) ||
-           ($FCP (K (n2w (dimindex(:'a) - 1) <+ m /\ word_msb w)))`,
+           ($FCP (K (n2w (dimindex(:'a) - 1) <+ m /\ word_msb w)))
+Proof
   SRW_TAC [] [word_asr_bv_expand, fcp_or]
   >| [
     Cases_on `m`
@@ -607,7 +640,8 @@ val word_asr_bv_expand = Q.prove(
     \\ ONCE_REWRITE_TAC [fcpTheory.CART_EQ]
     \\ SRW_TAC [] [fcpTheory.FCP_BETA]
     \\ METIS_TAC [arithmeticTheory.LESS_EQ_REFL, FOLDL_LOG2_INTRO]
-  ])
+  ]
+QED
 
 Theorem word_asr_bv_expand =
   SIMP_RULE std_ss [fcp_or, word_msb_def] word_asr_bv_expand

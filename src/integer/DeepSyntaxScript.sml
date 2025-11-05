@@ -6,13 +6,16 @@ Libs
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = Hol_datatype `deep_form = Conjn of deep_form => deep_form
-                                | Disjn of deep_form => deep_form
-                                | Negn of deep_form
-                                | UnrelatedBool of bool
-                                | xLT of int | LTx of int
-                                | xEQ of int
-                                | xDivided of int => int`;
+Datatype:
+  deep_form =
+    Conjn deep_form deep_form
+  | Disjn deep_form deep_form
+  | Negn deep_form
+  | UnrelatedBool bool
+  | xLT int | LTx int
+  | xEQ int
+  | xDivided int int
+End
 
 Definition eval_form_def:
    (eval_form (Conjn f1 f2) x = eval_form f1 x /\ eval_form f2 x) /\
@@ -157,17 +160,20 @@ Definition Bset_def:
    (Bset pos (xDivided i1 i2) = {})
 End
 
-val predset_lemma = prove(
-  ``!P Q R. P UNION Q SUBSET R = P SUBSET R /\ Q SUBSET R``,
-  SRW_TAC [][SUBSET_DEF, IN_UNION] THEN PROVE_TAC []);
+Theorem predset_lemma[local]:
+    !P Q R. P UNION Q SUBSET R = P SUBSET R /\ Q SUBSET R
+Proof
+  SRW_TAC [][SUBSET_DEF, IN_UNION] THEN PROVE_TAC []
+QED
 
-val neginf_inductive_case = prove(
-  ``!g x d f pos.
+Theorem neginf_inductive_case[local]:
+    !g x d f pos.
         alldivide f d /\ 0 < d /\ eval_form g x /\
         (!j b. 0 < j /\ j <= d /\ b IN Bset pos f ==> ~eval_form g (b + j)) /\
         Bset pos f SUBSET Bset T g ==>
         if pos then eval_form f x ==> eval_form f (x - d)
-        else eval_form f (x - d) ==> eval_form f x``,
+        else eval_form f (x - d) ==> eval_form f x
+Proof
   NTAC 3 GEN_TAC THEN Induct THENL [
     GEN_TAC THEN RULE_ASSUM_TAC (Q.SPEC `pos`) THEN
     REPEAT STRIP_TAC THEN
@@ -221,20 +227,22 @@ val neginf_inductive_case = prove(
     POP_ASSUM SUBST_ALL_TAC THEN
     `i int_divides ~d` by PROVE_TAC [INT_DIVIDES_NEG] THEN
     PROVE_TAC [INT_DIVIDES_LADD, INT_DIVIDES_RADD]
-  ]);
+  ]
+QED
 
 val neginf_lemma =
   GEN_ALL (SIMP_RULE std_ss [SUBSET_REFL]
            (Q.INST [`g` |-> `f`, `pos` |-> `T`]
                    (SPEC_ALL neginf_inductive_case)))
 
-val posinf_inductive_case = prove(
-  ``!g x d f pos.
+Theorem posinf_inductive_case[local]:
+    !g x d f pos.
        alldivide f d /\ 0 < d /\ eval_form g x /\
        (!j b. 0 < j /\ j <= d /\ b IN Aset pos f ==> ~eval_form g (b + ~j)) /\
        Aset pos f SUBSET Aset T g ==>
        if pos then eval_form f x ==> eval_form f (x + d)
-       else eval_form f (x + d) ==> eval_form f x``,
+       else eval_form f (x + d) ==> eval_form f x
+Proof
   NTAC 3 GEN_TAC THEN Induct THENL [
     GEN_TAC THEN RULE_ASSUM_TAC (Q.SPEC `pos`) THEN
     ASM_SIMP_TAC std_ss [alldivide_def, eval_form_def, Aset_def,
@@ -281,7 +289,8 @@ val posinf_inductive_case = prove(
     `x + d + i0 = x + i0 + d` by
        CONV_TAC (AC_CONV(INT_ADD_ASSOC, INT_ADD_COMM)) THEN
     PROVE_TAC [INT_DIVIDES_LADD, INT_DIVIDES_RADD]
-  ]);
+  ]
+QED
 
 val posinf_lemma =
   GEN_ALL (SIMP_RULE std_ss [SUBSET_REFL]
@@ -430,6 +439,3 @@ Proof
   SIMP_TAC std_ss [IN_UNION, NOT_IN_EMPTY, IN_SING, Aset_def] THEN
   PROVE_TAC []
 QED
-
-
-

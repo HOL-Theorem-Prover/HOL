@@ -164,8 +164,8 @@ val seq_monad_thm = save_thm("seq_monad_thm",let
            parT_unit_seq_lemma :: (CONJUNCTS monad_simp_lemma)
   in LIST_CONJ (map GEN_ALL xs) end);
 
-val PREAD_CLAUSES = store_thm("PREAD_CLAUSES",
-  ``!s. (PREAD_R r (PWRITE_M a x s) = PREAD_R r s) /\
+Theorem PREAD_CLAUSES:
+    !s. (PREAD_R r (PWRITE_M a x s) = PREAD_R r s) /\
         (PREAD_R r (PWRITE_S f b s) = PREAD_R r s) /\
         (PREAD_M a (PWRITE_R r w s) = PREAD_M a s) /\
         (PREAD_M a (PWRITE_S f b s) = PREAD_M a s) /\
@@ -173,17 +173,23 @@ val PREAD_CLAUSES = store_thm("PREAD_CLAUSES",
         (PREAD_S f (PWRITE_M a x s) = PREAD_S f s) /\
         (PREAD_R r (PWRITE_R r2 w s) = if r = r2 then w else PREAD_R r s) /\
         (PREAD_M a (PWRITE_M a2 x s) = if a = a2 then x else PREAD_M a s) /\
-        (PREAD_S f (PWRITE_S f2 b s) = if f = f2 then b else PREAD_S f s)``,
+        (PREAD_S f (PWRITE_S f2 b s) = if f = f2 then b else PREAD_S f s)
+Proof
   Cases THEN Cases_on `r'` THEN SRW_TAC [] [PREAD_R_def,PREAD_M_def,PREAD_S_def,
-    PWRITE_M_def,PWRITE_R_def,PWRITE_S_def, combinTheory.APPLY_UPDATE_THM]);
+    PWRITE_M_def,PWRITE_R_def,PWRITE_S_def, combinTheory.APPLY_UPDATE_THM]
+QED
 
-val ppc_else_none_mem_lemma = store_thm("ppc_else_none_mem_lemma",
-  ``!m a f. ~(m a = NONE) ==>
-            (option_apply ((m:ppc_state->word8 option) a) (f:word8->'a option) = f (THE (m a)))``,
-  SIMP_TAC std_ss [option_apply_def]);
+Theorem ppc_else_none_mem_lemma:
+    !m a f. ~(m a = NONE) ==>
+            (option_apply ((m:ppc_state->word8 option) a) (f:word8->'a option) = f (THE (m a)))
+Proof
+  SIMP_TAC std_ss [option_apply_def]
+QED
 
-val ppc_else_none_status_lemma = store_thm("ppc_else_none_status_lemma",
-  ``!m a f. ~(m a = NONE) ==>
-            (option_apply ((m:ppc_state->bool option) a) (f:bool->'a option) = f (THE (m a)))``,
-  SIMP_TAC std_ss [option_apply_def]);
+Theorem ppc_else_none_status_lemma:
+    !m a f. ~(m a = NONE) ==>
+            (option_apply ((m:ppc_state->bool option) a) (f:bool->'a option) = f (THE (m a)))
+Proof
+  SIMP_TAC std_ss [option_apply_def]
+QED
 

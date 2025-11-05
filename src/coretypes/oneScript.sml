@@ -41,9 +41,11 @@ end
 (* prove the (trivial) theorem: ?b.(\b.b)b.                             *)
 (*----------------------------------------------------------------------*)
 
-val EXISTS_ONE_REP = prove
-(“?b:bool. (\b.b) b”,
- EXISTS_TAC “T” THEN CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
+Theorem EXISTS_ONE_REP[local]:
+  ?b:bool. (\b.b) b
+Proof
+ EXISTS_TAC “T” THEN CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Use the type definition mechanism to introduce the new type.              *)
@@ -75,7 +77,7 @@ QED
     Define the constant `one` of type one.
  ---------------------------------------------------------------------------*)
 
-val one_DEF = new_definition ("one_DEF", Term`one = @x:one.T`);
+val one_DEF = new_definition ("one_DEF", “one = @x:one.T”);
 
 (*---------------------------------------------------------------------------
   The following theorem shows that there is only one value of type :one
@@ -138,8 +140,8 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
      wouldn't matter if it did.
  ---------------------------------------------------------------------------*)
 
-val _ = overload_on ("()", ``one``);
-val _ = type_abbrev_pp("unit",``:one``);
+Overload "()" = “one”
+Type unit[pp] = ``:one``
 
 Theorem one_induction:
   !P:one->bool. P one ==> !x. P x
@@ -180,7 +182,7 @@ QED
 
 val one_case_def = new_definition (
   "one_case_def",
-  Term`one_CASE (u:unit) (x:'a) = x`);
+  “one_CASE (u:unit) (x:'a) = x”);
 
 Theorem one_case_thm:
    !x:'a. one_CASE () x = x

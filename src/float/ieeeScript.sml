@@ -196,11 +196,12 @@ End
 (* Enumerated type for rounding modes.                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val roundmode = Hol_datatype
-  `roundmode = To_nearest
+Datatype:
+   roundmode = To_nearest
   | float_To_zero
   | To_pinfinity
-  | To_ninfinity`;
+  | To_ninfinity
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Characterization of best approximation from a set of abstract values.     *)
@@ -517,7 +518,7 @@ val float_add = new_infixl_definition (
   "float_add",
   Term`$float_add a b = float (fadd(float_format) To_nearest (defloat a) (defloat b))`, 500);
 
-val _ = overload_on ("+", Term`$float_add`);
+Overload "+" = Term`$float_add`
 
 val float_sub =
     new_infixl_definition
@@ -525,19 +526,19 @@ val float_sub =
      Term`$float_sub a b = float (fsub(float_format) To_nearest (defloat a) (defloat b))`,
      500);
 
-val _ = overload_on ("-", Term`$float_sub`);
+Overload "-" = Term`$float_sub`
 
 val float_mul = new_infixl_definition (
   "float_mul",
   Term`$float_mul a b = float (fmul(float_format) To_nearest (defloat a) (defloat b))`, 500);
 
-val _ = overload_on ("*", Term`$float_mul`);
+Overload "*" = Term`$float_mul`
 
 val float_div = new_infixl_definition (
   "float_div",
   Term`$float_div a b = float (fdiv(float_format) To_nearest (defloat a) (defloat b))`, 500);
 
-val _ = overload_on ("/", Term`$float_div`);
+Overload "/" = Term`$float_div`
 
 val float_rem = new_infixl_definition (
   "float_rem",
@@ -551,39 +552,39 @@ Definition ROUNDFLOAT[nocompute]:
   ROUNDFLOAT(a) = float (fintrnd(float_format) To_nearest (defloat a))
 End
 
-val float_lt = new_definition (
-  "float_lt",
-  Term `float_lt a b = flt(float_format) (defloat a) (defloat b)`);
-val _ = overload_on ("<", Term`float_lt`);
+Definition float_lt[nocompute]:
+  float_lt a b = flt(float_format) (defloat a) (defloat b)
+End
+Overload "<" = “$float_lt”
 
-val float_le = new_definition (
-  "float_le",
-  Term `float_le a b = fle(float_format) (defloat a) (defloat b)`);
-val _ = overload_on ("<=", Term`$float_le`);
+Definition float_le[nocompute]:
+  float_le a b = fle(float_format) (defloat a) (defloat b)
+End
+Overload "<=" = “$float_le”
 
-val float_gt = new_definition (
-  "float_gt",
-  Term `float_gt a b = fgt(float_format) (defloat a) (defloat b)`);
+Definition float_gt[nocompute]:
+  float_gt a b = fgt(float_format) (defloat a) (defloat b)
+End
 
-val _ = overload_on (">", Term`$float_gt`);
+Overload ">" = “$float_gt”
 
-val float_ge = new_definition (
-  "float_ge",
-  Term `float_ge a b = fge(float_format) (defloat a) (defloat b)`);
-val _ = overload_on (">=", Term`$float_ge`);
+Definition float_ge[nocompute]:
+  float_ge a b = fge(float_format) (defloat a) (defloat b)
+End
+Overload ">=" = “$float_ge”
 
 
 Definition float_eq[nocompute]:
   float_eq (a:float) (b:float) = feq(float_format) (defloat a) (defloat b)
 End
-val _ = overload_on ("==", Term`$float_eq`)
+Overload "==" = Term`$float_eq`
 val _ = set_fixity "==" (Infix(NONASSOC,450))
 
 Definition float_neg[nocompute]:
   float_neg (a:float) = float (fneg (float_format) To_nearest (defloat (a:float)))
 End
 
-val _ = overload_on ("~", Term`$float_neg`);
+Overload "~" = Term`$float_neg`
 
 Definition float_abs[nocompute]:
   float_abs a = (if a >= Plus_zero then a else (float_neg a))

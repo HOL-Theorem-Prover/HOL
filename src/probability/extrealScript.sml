@@ -980,7 +980,7 @@ val tactics =
       ASM_SIMP_TAC std_ss [delete_non_element] \\
       METIS_TAC [add_assoc, add_comm, add_not_infty] ] ];
 
-Triviality lem:
+Theorem lem[local]:
   !li.
      li = PosInf ==>
      !f s. FINITE s ==>
@@ -1051,10 +1051,11 @@ in
 end;
 
 (** lemma3 depends on both lemma1 and lemma2 *)
-val lemma3 = Q.prove (
-   `!b f x s. (!y. y IN (x INSERT s) ==> f y <> PosInf) /\ b <> PosInf /\ FINITE s ==>
+Theorem lemma3[local]:
+    !b f x s. (!y. y IN (x INSERT s) ==> f y <> PosInf) /\ b <> PosInf /\ FINITE s ==>
               (ITSET (\e acc. f e + acc) (x INSERT s) b =
-               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))`,
+               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))
+Proof
   (* proof *)
     Suff `!f s. FINITE s ==>
                 !x b. (!y. y IN (x INSERT s) ==> f y <> PosInf) /\ b <> PosInf ==>
@@ -1092,13 +1093,15 @@ val lemma3 = Q.prove (
  >> `ITSET (\e acc. f e + acc) s b <> PosInf` by METIS_TAC [lemma2]
  >> Q.ABBREV_TAC `t = ITSET (\e acc. f e + acc) s b`
  >> Q.PAT_X_ASSUM `!x b. b <> PosInf => X` K_TAC
- >> METIS_TAC [add_assoc, add_comm, IN_INSERT]);
+ >> METIS_TAC [add_assoc, add_comm, IN_INSERT]
+QED
 
 (** lemma3' depends on lemma1' and lemma2' (proof is the same as lemma3) *)
-val lemma3' = Q.prove (
-   `!b f x s. (!y. y IN (x INSERT s) ==> f y <> NegInf) /\ b <> NegInf /\ FINITE s ==>
+Theorem lemma3'[local]:
+    !b f x s. (!y. y IN (x INSERT s) ==> f y <> NegInf) /\ b <> NegInf /\ FINITE s ==>
               (ITSET (\e acc. f e + acc) (x INSERT s) b =
-               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))`,
+               (\e acc. f e + acc) x (ITSET (\e acc. f e + acc) (s DELETE x) b))
+Proof
  (* proof *)
     Suff `!f s. FINITE s ==>
                 !x b. (!y. y IN (x INSERT s) ==> f y <> NegInf) /\ b <> NegInf ==>
@@ -1136,7 +1139,8 @@ val lemma3' = Q.prove (
  >> `ITSET (\e acc. f e + acc) s b <> NegInf` by METIS_TAC [lemma2']
  >> Q.ABBREV_TAC `t = ITSET (\e acc. f e + acc) s b`
  >> Q.PAT_X_ASSUM `!x b. b <> NegInf => X` K_TAC
- >> METIS_TAC [add_assoc, add_comm, IN_INSERT]);
+ >> METIS_TAC [add_assoc, add_comm, IN_INSERT]
+QED
 
 (* NOTE: EXTREAL_SUM_IMAGE is not defined if there're mixing of PosInfs and NegInfs
    in the summation, since ``PosInf + NegInf`` is not defined. *)
@@ -1190,44 +1194,54 @@ Proof
     PROVE_TAC [EXTREAL_SUM_IMAGE_THM]
 QED
 
+(* |- (!x. x IN s ==> f x <> NegInf) /\ FINITE s ==>
+      ITSET (\e acc. f e + acc) s 0 <> NegInf
+ *)
+Theorem EXTREAL_SUM_IMAGE_NOT_NEGINF_lemma[local] = lemma2'
+     |> SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]
+     |> Q.SPECL [`f`, `s`, `0`]
+     |> SIMP_RULE std_ss [num_not_infty]
+
 Theorem EXTREAL_SUM_IMAGE_NOT_NEGINF:
-    !f s. FINITE s /\ (!x. x IN s ==> f x <> NegInf) ==> EXTREAL_SUM_IMAGE f s <> NegInf
+    !f s. FINITE s /\ (!x. x IN s ==> f x <> NegInf) ==>
+          EXTREAL_SUM_IMAGE f s <> NegInf
 Proof
-  let val thm = ((SIMP_RULE std_ss [num_not_infty])
-                 o (Q.SPECL [`f`, `s`, `0`])
-                 o (SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO])) lemma2';
-  in
-    rpt GEN_TAC >> STRIP_TAC \\
-    REWRITE_TAC [EXTREAL_SUM_IMAGE_DEF] \\
-    MATCH_MP_TAC thm >> ASM_REWRITE_TAC []
-  end
+    rpt GEN_TAC >> STRIP_TAC
+ >> REWRITE_TAC [EXTREAL_SUM_IMAGE_DEF]
+ >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_NEGINF_lemma >> art []
 QED
 
+(* |- (!x. x IN s ==> f x <> PosInf) /\ FINITE s ==>
+      ITSET (\e acc. f e + acc) s 0 <> PosInf
+ *)
+Theorem EXTREAL_SUM_IMAGE_NOT_POSINF_lemma[local] = lemma2
+     |> SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]
+     |> Q.SPECL [`f`, `s`, `0`]
+     |> SIMP_RULE std_ss [num_not_infty]
+
 Theorem EXTREAL_SUM_IMAGE_NOT_POSINF:
-    !f s. FINITE s /\ (!x. x IN s ==> f x <> PosInf) ==> EXTREAL_SUM_IMAGE f s <> PosInf
+    !f s. FINITE s /\ (!x. x IN s ==> f x <> PosInf) ==>
+          EXTREAL_SUM_IMAGE f s <> PosInf
 Proof
-  let val thm = ((SIMP_RULE std_ss [num_not_infty])
-                 o (Q.SPECL [`f`, `s`, `0`])
-                 o (SIMP_RULE bool_ss [GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO])) lemma2;
-  in
-    rpt GEN_TAC >> STRIP_TAC \\
-    REWRITE_TAC [EXTREAL_SUM_IMAGE_DEF] \\
-    MATCH_MP_TAC thm >> ASM_REWRITE_TAC []
-  end
+    rpt GEN_TAC >> STRIP_TAC
+ >> REWRITE_TAC [EXTREAL_SUM_IMAGE_DEF]
+ >> MATCH_MP_TAC EXTREAL_SUM_IMAGE_NOT_POSINF_lemma >> art []
 QED
 
 Theorem EXTREAL_SUM_IMAGE_NOT_INFTY:
-    !f s. (FINITE s /\ (!x. x IN s ==> f x <> NegInf) ==> EXTREAL_SUM_IMAGE f s <> NegInf) /\
-          (FINITE s /\ (!x. x IN s ==> f x <> PosInf) ==> EXTREAL_SUM_IMAGE f s <> PosInf)
+    !f s. (FINITE s /\ (!x. x IN s ==> f x <> NegInf) ==>
+           EXTREAL_SUM_IMAGE f s <> NegInf) /\
+          (FINITE s /\ (!x. x IN s ==> f x <> PosInf) ==>
+           EXTREAL_SUM_IMAGE f s <> PosInf)
 Proof
-  RW_TAC std_ss [EXTREAL_SUM_IMAGE_NOT_NEGINF,
-                 EXTREAL_SUM_IMAGE_NOT_POSINF]
+    RW_TAC std_ss [EXTREAL_SUM_IMAGE_NOT_NEGINF, EXTREAL_SUM_IMAGE_NOT_POSINF]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_PROPERTY_NEG:
     !f s. FINITE s ==>
           !e. (!x. x IN e INSERT s ==> f x <> NegInf) ==>
-              (EXTREAL_SUM_IMAGE f (e INSERT s) = f e + EXTREAL_SUM_IMAGE f (s DELETE e))
+              (EXTREAL_SUM_IMAGE f (e INSERT s) =
+               f e + EXTREAL_SUM_IMAGE f (s DELETE e))
 Proof
   RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM]
 QED
@@ -1235,7 +1249,8 @@ QED
 Theorem EXTREAL_SUM_IMAGE_PROPERTY_POS:
     !f s. FINITE s ==>
           !e. (!x. x IN e INSERT s ==> f x <> PosInf) ==>
-              (EXTREAL_SUM_IMAGE f (e INSERT s) = f e + EXTREAL_SUM_IMAGE f (s DELETE e))
+              (EXTREAL_SUM_IMAGE f (e INSERT s) =
+               f e + EXTREAL_SUM_IMAGE f (s DELETE e))
 Proof
   RW_TAC std_ss [EXTREAL_SUM_IMAGE_THM]
 QED
@@ -1244,10 +1259,10 @@ Theorem EXTREAL_SUM_IMAGE_PROPERTY:
     !f s. FINITE s  ==>
           !e. (!x. x IN e INSERT s ==> f x <> NegInf) \/
               (!x. x IN e INSERT s ==> f x <> PosInf) ==>
-              (EXTREAL_SUM_IMAGE f (e INSERT s) = f e + EXTREAL_SUM_IMAGE f (s DELETE e))
+              (EXTREAL_SUM_IMAGE f (e INSERT s) =
+               f e + EXTREAL_SUM_IMAGE f (s DELETE e))
 Proof
-  PROVE_TAC [EXTREAL_SUM_IMAGE_PROPERTY_NEG,
-             EXTREAL_SUM_IMAGE_PROPERTY_POS]
+    PROVE_TAC [EXTREAL_SUM_IMAGE_PROPERTY_NEG, EXTREAL_SUM_IMAGE_PROPERTY_POS]
 QED
 
 Theorem EXTREAL_SUM_IMAGE_POS:
@@ -1314,7 +1329,6 @@ Proof
  >> METIS_TAC [lt_add_neg, IN_INSERT]
 QED
 
-(* more antecedents added *)
 Theorem EXTREAL_SUM_IMAGE_IF_ELIM:
     !s P f. FINITE s /\ (!x. x IN s ==> P x) /\
             ((!x. x IN s ==> f x <> NegInf) \/ !x. x IN s ==> f x <> PosInf)
@@ -1322,7 +1336,8 @@ Theorem EXTREAL_SUM_IMAGE_IF_ELIM:
 Proof
     Suff `!s. FINITE s ==>
              (\s. !P f. (!x. x IN s ==> P x) /\
-                        ((!x. x IN s ==> f x <> NegInf) \/ !x. x IN s ==> f x <> PosInf) ==>
+                        ((!x. x IN s ==> f x <> NegInf) \/
+                          !x. x IN s ==> f x <> PosInf) ==>
                         (EXTREAL_SUM_IMAGE (\x. if P x then f x else 0) s =
                          EXTREAL_SUM_IMAGE f s)) s`
  >- METIS_TAC []
@@ -1349,7 +1364,8 @@ Proof
  >- METIS_TAC []
  >> MATCH_MP_TAC FINITE_INDUCT
  >> RW_TAC real_ss [EXTREAL_SUM_IMAGE_EMPTY, CARD_EMPTY, mul_lzero, DELETE_NON_ELEMENT]
- >> Know ‘(!x. x IN e INSERT s ==> f x <> NegInf) \/ (!x. x IN e INSERT s ==> f x <> PosInf)’
+ >> Know ‘(!x. x IN e INSERT s ==> f x <> NegInf) \/
+          (!x. x IN e INSERT s ==> f x <> PosInf)’
  >- (Cases_on ‘f p = NegInf’
      >- (DISJ2_TAC >> GEN_TAC >> STRIP_TAC \\
         ‘f x = NegInf’ by METIS_TAC [IN_INSERT] >> POP_ORW \\
@@ -1363,7 +1379,8 @@ Proof
  >> FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT]
  >> RW_TAC std_ss [CARD_INSERT, ADD1, extreal_of_num_def, GSYM REAL_ADD, GSYM extreal_add_def]
  >> RW_TAC std_ss [Once add_comm_normal, GSYM extreal_of_num_def]
- >> `(&CARD s) <> NegInf /\ 1 <> NegInf /\ (&CARD s) <> PosInf /\ 1 <> PosInf /\ 0 <= (&CARD s) /\ 0 <= 1`
+ >> `(&CARD s) <> NegInf /\ 1 <> NegInf /\ (&CARD s) <> PosInf /\
+     1 <> PosInf /\ 0 <= (&CARD s) /\ 0 <= 1`
        by METIS_TAC [extreal_not_infty, extreal_of_num_def, le_num, le_01]
  >> RW_TAC std_ss [add_rdistrib, mul_lone]
  >> Suff `EXTREAL_SUM_IMAGE f s = &(CARD s) * f e` >- Rewr
@@ -1910,8 +1927,8 @@ Proof
 QED
 
 Theorem EXTREAL_SUM_IMAGE_POS_MEM_LE:
-     !f s. FINITE s  /\ (!x. x IN s ==> 0 <= f x) ==>
-            (!x. x IN s ==> f x <= EXTREAL_SUM_IMAGE f s)
+    !f s. FINITE s /\ (!x. x IN s ==> 0 <= f x) ==>
+         (!x. x IN s ==> f x <= EXTREAL_SUM_IMAGE f s)
 Proof
   Suff `!s. FINITE s ==>
         (\s. !f. (!x. x IN s ==> 0 <= f x) ==>
@@ -1925,6 +1942,15 @@ Proof
   >- METIS_TAC [EXTREAL_SUM_IMAGE_POS,le_add2,add_rzero,extreal_of_num_def,extreal_not_infty,le_refl]
   >> `f x <= EXTREAL_SUM_IMAGE f s` by FULL_SIMP_TAC std_ss [IN_INSERT]
   >> METIS_TAC [le_add2,add_lzero,extreal_of_num_def,extreal_not_infty]
+QED
+
+Theorem EXTREAL_SUM_IMAGE_EQ_POSINF :
+    !f s. FINITE s  /\ (!x. x IN s ==> 0 <= f x) /\
+         (?i. i IN s /\ f i = PosInf) ==> EXTREAL_SUM_IMAGE f s = PosInf
+Proof
+    rpt STRIP_TAC
+ >> ‘f i <= EXTREAL_SUM_IMAGE f s’ by PROVE_TAC [EXTREAL_SUM_IMAGE_POS_MEM_LE]
+ >> gs [le_infty]
 QED
 
 (* more antecedents added *)
@@ -2221,7 +2247,7 @@ Proof
                            add_assoc, add_not_infty]
 QED
 
-val _ = overload_on ("SIGMA", ``EXTREAL_SUM_IMAGE``);
+Overload SIGMA = ``EXTREAL_SUM_IMAGE``
 
 (* N-ARY SUMMATION *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x2211, tmnm = "SIGMA"};
@@ -2342,8 +2368,8 @@ Definition extreal_inf_def:
     extreal_inf p = -extreal_sup (IMAGE numeric_negate p)
 End
 
-val _ = overload_on ("sup", Term `extreal_sup`);
-val _ = overload_on ("inf", Term `extreal_inf`);
+Overload sup = ``extreal_sup``
+Overload inf = ``extreal_inf``
 
 Theorem le_sup_imp :
     !p x. p x ==> x <= sup p
@@ -2837,7 +2863,6 @@ Theorem sup_sum_mono:
           (sup (IMAGE (\n. SIGMA (\i:num. f i n) s) UNIV) =
            SIGMA (\i:num. sup (IMAGE (f i) UNIV)) s)
 Proof
- (* new proof *)
   Suff `!s. FINITE s ==> (\s. !f. (!i:num. i IN s ==> (!n. 0 <= f i n)) /\
                          (!i:num. i IN s ==> (!n. f i n <= f i (SUC n))) ==>
                       (sup (IMAGE (\n. SIGMA (\i:num. f i n) s) UNIV) =
@@ -3680,8 +3705,8 @@ Definition ext_liminf_def:
     ext_liminf (a :num -> extreal) = sup (IMAGE (\m. inf {a n | m <= n}) UNIV)
 End
 
-val _ = overload_on ("limsup", ``ext_limsup``);
-val _ = overload_on ("liminf", ``ext_liminf``);
+Overload limsup = ``ext_limsup``
+Overload liminf = ``ext_liminf``
 
 Theorem ext_liminf_le_limsup :
     !a. liminf a <= limsup a
@@ -3860,6 +3885,16 @@ Proof
  >> Q.EXISTS_TAC ‘ARB’ >> rw []
 QED
 
+Theorem sup_bounded_alt :
+    !s. s <> {} /\ (!x. x IN s ==> abs x <= Normal k) ==>
+        abs (sup s) <= Normal k
+Proof
+    reverse (rw [abs_bounds]) >- rw [sup_le']
+ >> rw [le_sup']
+ >> fs [GSYM MEMBER_NOT_EMPTY]
+ >> Q_TAC (TRANS_TAC le_trans) ‘x’ >> rw []
+QED
+
 Theorem inf_bounded :
     !a k. (!n. abs (a n) <= k) ==> !m. abs (inf {a n | m <= (n :num)}) <= k
 Proof
@@ -3880,6 +3915,16 @@ Proof
  >> Q_TAC (TRANS_TAC le_trans) ‘a ARB’ >> rw []
  >> POP_ASSUM MATCH_MP_TAC
  >> Q.EXISTS_TAC ‘ARB’ >> rw []
+QED
+
+Theorem inf_bounded_alt :
+    !s. s <> {} /\ (!x. x IN s ==> abs x <= Normal k) ==>
+        abs (inf s) <= Normal k
+Proof
+    rw [abs_bounds] >- rw [le_inf']
+ >> rw [inf_le']
+ >> fs [GSYM MEMBER_NOT_EMPTY]
+ >> Q_TAC (TRANS_TAC le_trans) ‘x’ >> rw []
 QED
 
 Theorem sup_normal :
@@ -4127,15 +4172,15 @@ Proof
  >> METIS_TAC [EXTREAL_SUM_IMAGE_POS_MEM_LE]
 QED
 
-local val th =
+Theorem lemma[local] =
       SIMP_RULE std_ss [GSYM lt_infty]
                        (ONCE_REWRITE_RULE [MONO_NOT_EQ] (Q.SPEC `f` ext_suminf_lt_infty))
-in
-val ext_suminf_posinf = store_thm
-  ("ext_suminf_posinf",
-  ``!f. (!n. 0 <= f n) /\ (?n. f n = PosInf) ==> (ext_suminf f = PosInf)``,
-    METIS_TAC [th])
-end;
+
+Theorem ext_suminf_posinf:
+    !f. (!n. 0 <= f n) /\ (?n. f n = PosInf) ==> (ext_suminf f = PosInf)
+Proof
+    METIS_TAC [lemma]
+QED
 
 Theorem ext_suminf_suminf :
     !r. (!n. 0 <= r n) /\ ext_suminf (\n. Normal (r n)) <> PosInf ==>
@@ -4442,7 +4487,7 @@ Proof
  >> Q.EXISTS_TAC `n` >> REWRITE_TAC []
 QED
 
-val _ = overload_on ("suminf", ``ext_suminf``);
+Overload suminf = ``ext_suminf``
 
 Theorem ext_suminf_zero:   !f. (!n. f n = 0) ==> (ext_suminf f = 0)
 Proof
@@ -4532,11 +4577,12 @@ QED
           suminf (\x. SIGMA (\i. f i x) (count n))) *)
 Theorem ext_suminf_sigma' = REWRITE_RULE [o_DEF] ext_suminf_sigma;
 
-val lemma = prove (
-  ``!f n'. (!i. (!m n. m <= n ==> (\x. f x i) m <= (\x. f x i) n)) /\
+Theorem lemma[local]:
+    !f n'. (!i. (!m n. m <= n ==> (\x. f x i) m <= (\x. f x i) n)) /\
         (!n i. 0 <= f n i) ==>
         (SIGMA (\i. sup {f k i | k IN univ(:num)}) (count n') =
-         sup {SIGMA (\i. f k i) (count n') | k IN UNIV})``,
+         sup {SIGMA (\i. f k i) (count n') | k IN UNIV})
+Proof
   RW_TAC std_ss [] THEN Q.ABBREV_TAC `s = count n'` THEN
   `FINITE s` by METIS_TAC [FINITE_COUNT] THEN POP_ASSUM MP_TAC THEN
   Q.SPEC_TAC (`s`,`s`) THEN SET_INDUCT_TAC THENL
@@ -4589,7 +4635,8 @@ val lemma = prove (
    SIMP_TAC std_ss [GSYM extreal_lt_def] THEN
    METIS_TAC [lte_trans, num_not_infty, lt_infty]]
  >> Rewr'
- >> ASM_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING]);
+ >> ASM_SIMP_TAC std_ss [EXTREAL_SUM_IMAGE_SING]
+QED
 
 Theorem ext_suminf_sup_eq : (* was: suminf_SUP_eq *)
    !(f:num->num->extreal).
@@ -4798,11 +4845,12 @@ Proof
  >> REWRITE_TAC [ETA_AX]
 QED
 
-val SUMINF_2D_suminf = prove (
-  ``!(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
+Theorem SUMINF_2D_suminf[local]:
+    !(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
        (!m n. 0 <= f m n) /\ (!n. summable (f n) /\ (suminf (f n) = g n)) /\ summable g /\
        BIJ h UNIV (UNIV CROSS UNIV) ==>
-       (suminf (UNCURRY f o h) = suminf g)``,
+       (suminf (UNCURRY f o h) = suminf g)
+Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC EQ_SYM
  >> MATCH_MP_TAC SUM_UNIQ
@@ -4810,13 +4858,15 @@ val SUMINF_2D_suminf = prove (
  >> ASM_REWRITE_TAC []
  >> GEN_TAC
  >> `summable (f n)` by METIS_TAC []
- >> METIS_TAC [SUMMABLE_SUM]);
+ >> METIS_TAC [SUMMABLE_SUM]
+QED
 
-val SUMINF_2D_summable = prove (
-  ``!(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
+Theorem SUMINF_2D_summable[local]:
+    !(f :num -> num -> real) (g :num -> real) (h :num -> num # num).
        (!m n. 0 <= f m n) /\ (!n. summable (f n) /\ (suminf (f n) = g n)) /\ summable g /\
        BIJ h UNIV (UNIV CROSS UNIV) ==>
-       summable (UNCURRY f o h)``,
+       summable (UNCURRY f o h)
+Proof
     rpt STRIP_TAC
  >> REWRITE_TAC [summable]
  >> Q.EXISTS_TAC `suminf g`
@@ -4825,7 +4875,8 @@ val SUMINF_2D_summable = prove (
  >> GEN_TAC
  >> Suff `f n sums suminf (f n)` >- METIS_TAC []
  >> MATCH_MP_TAC SUMMABLE_SUM
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
 (* extreal version of SUMINF_2D, based on SUMINF_2D_suminf and SUMINF_2D_summable,
    c.f. ext_suminf_2d_infinite (more general, proved from scratch)
@@ -5287,8 +5338,9 @@ Proof
       Cases_on `e <= inf p` >> fs [] ]
 QED
 
-(* `open interval` of extreal sets. c.f. `OPEN_interval` / `CLOSE_interval`
-    in real_toplogyTheory, `half_open_interval` in borelTheory *)
+(* `open interval` of extreal sets. c.f. `OPEN_interval` / `CLOSED_interval`
+   in real_toplogyTheory, `right_open_interval` in real_borelTheory.
+ *)
 Definition open_interval_def :
     open_interval (a :extreal) b = {x | a < x /\ x < b}
 End
@@ -5362,8 +5414,8 @@ QED
 
 Theorem EXTREAL_PROD_IMAGE_THM :
     !f. (EXTREAL_PROD_IMAGE f {} = 1) /\
-        !e s. FINITE s ==>
-             (EXTREAL_PROD_IMAGE f (e INSERT s) = f e * EXTREAL_PROD_IMAGE f (s DELETE e))
+        !e s. FINITE s ==> (EXTREAL_PROD_IMAGE f (e INSERT s) =
+                            f e * EXTREAL_PROD_IMAGE f (s DELETE e))
 Proof
     Q.X_GEN_TAC ‘f’
  >> ASSUME_TAC monoidal_mul
@@ -5560,7 +5612,7 @@ Definition fn_plus_def:   (* f^+ *)
     fn_plus (f :'a -> extreal) = (\x. if 0 < f x then f x else 0)
 End
 
-val _ = overload_on ("TC", ``fn_plus``); (* relationTheory *)
+Overload TC = ``fn_plus``(* relationTheory *)
 
 Definition fn_minus_def:   (* f^- *)
     fn_minus (f :'a -> extreal) = (\x. if f x < 0 then ~(f x) else 0)
@@ -7006,6 +7058,32 @@ Proof
  >> ‘?k. a = Normal k /\ 0 <= k’
        by METIS_TAC [extreal_cases, extreal_of_num_def, extreal_le_eq]
  >> Q.EXISTS_TAC ‘k’ >> rw []
+QED
+
+Theorem sup_normal' :
+    !s. ext_bounded s /\ s <> {} ==> Normal (sup (s o Normal)) = sup s
+Proof
+    rw [ext_bounded_alt]
+ >> MATCH_MP_TAC sup_normal
+ >> Q.EXISTS_TAC ‘k’
+ >> MATCH_MP_TAC sup_bounded_alt >> art []
+QED
+
+(* NOTE: “sup (s :real set)” doesn't exist (i.e. unspecified) when “s = {}” *)
+Theorem sup_image_normal :
+    !s. s <> {} /\ bounded s ==> sup (IMAGE Normal s) = Normal (sup s)
+Proof
+    Q.X_GEN_TAC ‘t’ >> rw [bounded_alt]
+ >> qabbrev_tac ‘s = IMAGE Normal t’
+ >> MP_TAC (Q.SPEC ‘s’ sup_normal')
+ >> impl_tac
+ >- (reverse CONJ_TAC >- rw [Once EXTENSION, NOT_IN_EMPTY, Abbr ‘s’] \\
+     rw [ext_bounded_def, Abbr ‘s’] \\
+     Q.EXISTS_TAC ‘Normal a’ >> rw [] \\
+     simp [extreal_abs_def, extreal_le_eq])
+ >> DISCH_THEN (REWRITE_TAC o wrap o SYM)
+ >> AP_TERM_TAC
+ >> simp [Abbr ‘s’, o_DEF, IN_APP, ETA_AX]
 QED
 
 (* NOTE: This is the general definition actually used in converge_in_dist_def *)

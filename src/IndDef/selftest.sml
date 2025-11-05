@@ -85,8 +85,7 @@ val _ = tprint "Can still look at rule_induction data"
 val _ = if can ThmSetData.current_data{settype = "rule_induction"} then OK()
         else die ""
 
-
-val _ = shouldfail {testfn = quietly (xHol_reln "tr"),
+val _ = shouldfail {testfn = quietly (in_repl_mode (xHol_reln "tr")),
                     printresult = (fn (th,_,_) => thm_to_string th),
                     printarg = K "With Unicode should fail",
                     checkexn = is_struct_HOL_ERR "IndDefLib"}
@@ -94,23 +93,23 @@ val _ = shouldfail {testfn = quietly (xHol_reln "tr"),
                     (!x y. ▷ (SUC x) (SUC y) ==> ▷ x y)’
 
 val _ = tprint "Vacuous clause failure"
-val _ = if (Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
-               handle HOL_ERR {message,...} =>
+val _ = if (in_repl_mode Hol_reln `(!x. rel x Z) /\ (!x y. rel x y)` ; false)
+               handle HOL_ERR herr =>
                       String.isSuffix
                           "Vacuous clause trivialises whole definition"
-                          message
+                          (message_of herr)
         then OK()
         else die "FAILED"
 
-val _ = shouldfail { testfn = quietly (xHol_reln "tr"),
+val _ = shouldfail { testfn = quietly (in_repl_mode (xHol_reln "tr")),
                      printresult = (fn (th,_,_) => thm_to_string th),
                      printarg = K "Double implication should fail",
-                     checkexn = (fn(HOL_ERR{message,...}) =>
+                     checkexn = (fn(HOL_ERR herr) =>
                                    String.isSubstring "double implication"
-                                                      message
+                                                      (message_of herr)
                                 | _ => false) }
-                   ‘fib Z ONE /\ fib ONE ONE /\ !m r s. fib m r ==> fib (SUC m) s ==> fib (SUC (SUC m)) (r + s)’ 
-                 
+                   ‘fib Z ONE /\ fib ONE ONE /\ !m r s. fib m r ==> fib (SUC m) s ==> fib (SUC (SUC m)) (r + s)’
+
 (* isolate_to_front test cases *)
 val failcount = ref 0
 val _ = diemode := Remember failcount

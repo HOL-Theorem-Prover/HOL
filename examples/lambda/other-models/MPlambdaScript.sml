@@ -6,10 +6,13 @@ Libs
 
 fun Store_thm (n,t,tac) = store_thm(n,t,tac) before export_rewrites [n]
 
-val _ = Hol_datatype `MPterm = Var of string
-                             | Parameter of string
-                             | App of MPterm => MPterm
-                             | Abs of string => MPterm`;
+Datatype:
+  MPterm =
+  Var string
+  | Parameter string
+  | App MPterm MPterm
+  | Abs string MPterm
+End
 
 Definition psub_def:
   (psub a p (Var s) = Var s) /\
@@ -55,21 +58,22 @@ Proof
   Induct_on `t` THEN SRW_TAC [][]
 QED
 
-val pvsub_vsub_collapse = store_thm(
-  "pvsub_vsub_collapse",
-  ``!M p v1 v2. ~(v2 IN allvars M) ==>
+Theorem pvsub_vsub_collapse:
+    !M p v1 v2. ~(v2 IN allvars M) ==>
                 (vsub (Parameter p) v2 (vsub (Var v2) v1 M) =
-                 vsub (Parameter p) v1 M)``,
-  Induct THEN SRW_TAC [][]);
+                 vsub (Parameter p) v1 M)
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
 val params_vvsub = Store_thm(
   "params_vvsub",
   ``params (vsub (Var v1) v2 M) = params M``,
   Induct_on `M` THEN SRW_TAC [][]);
 
-val shape_lemma = store_thm(
-  "shape_lemma",
-  ``!M p. ?v M'. (M = vsub (Parameter p) v M') /\ ~(p IN params M')``,
+Theorem shape_lemma:
+    !M p. ?v M'. (M = vsub (Parameter p) v M') /\ ~(p IN params M')
+Proof
   Induct THEN ASM_SIMP_TAC (srw_ss()) []THENL [
     Q.X_GEN_TAC `s` THEN SRW_TAC [][] THEN
     Q_TAC (NEW_TAC "z") `{s}` THEN
@@ -102,7 +106,8 @@ val shape_lemma = store_thm(
     Q_TAC (NEW_TAC "z") `s INSERT allvars M'` THEN
     MAP_EVERY Q.EXISTS_TAC [`z`, `Abs s (vsub (Var z) s M')`] THEN
     SRW_TAC [][pvsub_vsub_collapse]
-  ]);
+  ]
+QED
 
 val (vclosed_rules, vclosed_ind, vclosed_cases) = Hol_reln`
   (!p. vclosed (Parameter p)) /\
@@ -122,11 +127,12 @@ val psub_14a = Store_thm(
   Induct THEN SRW_TAC [][]);
 
 
-val vsub_is_psub_alpha = store_thm(
-  "vsub_is_psub_alpha",
-  ``!M p N v. ~(p IN params M) ==>
-              (psub N p (vsub (Parameter p) v M) = vsub N v M)``,
-  Induct THEN SRW_TAC [][]);
+Theorem vsub_is_psub_alpha:
+    !M p N v. ~(p IN params M) ==>
+              (psub N p (vsub (Parameter p) v M) = vsub N v M)
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
 Definition vars_def:
   (vars (Var u) = {u}) /\
@@ -153,16 +159,17 @@ val _ = export_rewrites ["raw_MPpm_def"]
 val _ = overload_on("MP_pmact",``mk_pmact raw_MPpm``);
 val _ = overload_on("MPpm", ``pmact MP_pmact``);
 
-val MPpm_raw = store_thm(
-  "MPpm_raw",
-  ``MPpm = raw_MPpm``,
+Theorem MPpm_raw:
+    MPpm = raw_MPpm
+Proof
   SRW_TAC [][GSYM pmact_bijections] THEN
   SRW_TAC [][is_pmact_def] THENL [
     Induct_on `x` THEN SRW_TAC [][],
     Induct_on `x` THEN SRW_TAC [][pmact_decompose],
     FULL_SIMP_TAC (srw_ss()) [permeq_thm, FUN_EQ_THM] THEN
     Induct THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
 val MPpm_thm = save_thm(
 "MPpm_thm",
@@ -187,29 +194,33 @@ val supp_MPpm = Store_thm(
   MATCH_MP_TAC supp_unique_apart THEN SRW_TAC [][support_def] THEN
   Induct_on `x` THEN SRW_TAC [][] THEN METIS_TAC []);
 
-val MPpm_vsub = store_thm(
-  "MPpm_vsub",
-  ``!M v pi N. MPpm pi (vsub M v N) = vsub (MPpm pi M) v (MPpm pi N)``,
-  Induct_on `N` THEN SRW_TAC [][]);
+Theorem MPpm_vsub:
+    !M v pi N. MPpm pi (vsub M v N) = vsub (MPpm pi M) v (MPpm pi N)
+Proof
+  Induct_on `N` THEN SRW_TAC [][]
+QED
 
-val vclosed_MPpm = store_thm(
-  "vclosed_MPpm",
-  ``!M. vclosed M ==> !pi. vclosed (MPpm pi M)``,
+Theorem vclosed_MPpm:
+    !M. vclosed M ==> !pi. vclosed (MPpm pi M)
+Proof
   HO_MATCH_MP_TAC vclosed_ind THEN SRW_TAC [][vclosed_rules, MPpm_vsub] THEN
-  METIS_TAC [vclosed_rules]);
+  METIS_TAC [vclosed_rules]
+QED
 
-val vars_pvsub = store_thm(
-  "vars_pvsub",
-  ``!p v M. vars (vsub (Parameter p) v M) = vars M DELETE v``,
+Theorem vars_pvsub:
+    !p v M. vars (vsub (Parameter p) v M) = vars M DELETE v
+Proof
   Induct_on `M` THEN SRW_TAC [][] THEN
-  SRW_TAC [][pred_setTheory.EXTENSION] THEN METIS_TAC []);
+  SRW_TAC [][pred_setTheory.EXTENSION] THEN METIS_TAC []
+QED
 
 
-val vclosed_empty_vars = store_thm(
-  "vclosed_empty_vars",
-  ``!t. vclosed t ==> (vars t = {})``,
+Theorem vclosed_empty_vars:
+    !t. vclosed t ==> (vars t = {})
+Proof
   HO_MATCH_MP_TAC vclosed_ind THEN SRW_TAC [][vars_pvsub] THEN
-  FULL_SIMP_TAC (srw_ss()) [pred_setTheory.EXTENSION]);
+  FULL_SIMP_TAC (srw_ss()) [pred_setTheory.EXTENSION]
+QED
 
 
 val vclosed_var = Store_thm(
@@ -230,11 +241,12 @@ val vclosed_app = Store_thm(
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [vclosed_cases])) THEN
   SRW_TAC [][]);
 
-val vclosed_abs = store_thm(
-  "vclosed_abs",
-  ``vclosed (Abs v t) = ?p. vclosed (vsub (Parameter p) v t)``,
+Theorem vclosed_abs:
+    vclosed (Abs v t) = ?p. vclosed (vsub (Parameter p) v t)
+Proof
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [vclosed_cases])) THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 val pvsub_eq_app = prove(
   ``(vsub (Parameter p) v M = App t1 t2) =
@@ -260,10 +272,11 @@ val independent_pvsub = prove(
                       vsub (Parameter p2) v2 (vsub (Parameter p1) v1 M))``,
   Induct_on `M` THEN SRW_TAC [][])
 
-val IN_params_MPpm = store_thm(
-  "IN_params_MPpm",
-  ``x IN params (MPpm pi M) = lswapstr (REVERSE pi) x IN params M``,
-  Induct_on `M` THEN SRW_TAC [][pmact_eql]);
+Theorem IN_params_MPpm:
+    x IN params (MPpm pi M) = lswapstr (REVERSE pi) x IN params M
+Proof
+  Induct_on `M` THEN SRW_TAC [][pmact_eql]
+QED
 
 val independent_psub_vsub = prove(
   ``!M v p1 p2 p3.
@@ -360,10 +373,11 @@ val vclosed_cvclosed = prove(
   Q_TAC (NEW_TAC "z") `params t` THEN
   METIS_TAC [cvclosed_pickany]);
 
-val cv_eq_vclosed = store_thm(
-  "cv_eq_vclosed",
-  ``cvclosed = vclosed``,
-  SRW_TAC [] [FUN_EQ_THM, vclosed_cvclosed, cvclosed_vclosed, EQ_IMP_THM]);
+Theorem cv_eq_vclosed:
+    cvclosed = vclosed
+Proof
+  SRW_TAC [] [FUN_EQ_THM, vclosed_cvclosed, cvclosed_vclosed, EQ_IMP_THM]
+QED
 
 val vclosed_strong_ind = save_thm(
   "vclosed_strong_ind",
@@ -375,20 +389,21 @@ val double_pvsub = Store_thm(
     vsub (Parameter p2) v t``,
   Induct_on `t` THEN SRW_TAC [][]);
 
-val vclosed_pvsub = store_thm(
-  "vclosed_pvsub",
-  ``!t. vclosed t ==> !p v. vclosed (vsub (Parameter p) v t)``,
+Theorem vclosed_pvsub:
+    !t. vclosed t ==> !p v. vclosed (vsub (Parameter p) v t)
+Proof
   HO_MATCH_MP_TAC vclosed_ind THEN SRW_TAC [][vclosed_rules] THEN
-  METIS_TAC [vclosed_rules, double_pvsub, independent_pvsub]);
+  METIS_TAC [vclosed_rules, double_pvsub, independent_pvsub]
+QED
 
-val cofin_vclosed_ind = store_thm(
-  "cofin_vclosed_ind",
-  ``!P. (!p. P (Parameter p)) /\
+Theorem cofin_vclosed_ind:
+    !P. (!p. P (Parameter p)) /\
         (!v t X. FINITE X /\
                  (!p. ~(p IN X) ==> P (vsub (Parameter p) v t)) ==>
                  P (Abs v t)) /\
         (!t1 t2. P t1 /\ P t2 ==> P (App t1 t2)) ==>
-        !t. vclosed t ==> P t``,
+        !t. vclosed t ==> P t
+Proof
   GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!t. vclosed t ==> !pi. P (MPpm pi t)`
         THEN1 METIS_TAC [MPpm_NIL] THEN
@@ -404,7 +419,8 @@ val cofin_vclosed_ind = store_thm(
         THEN1 SRW_TAC [][] THEN
   `MPpm [(p1,stringpm pi p)] (MPpm pi t) = MPpm pi t`
      by SRW_TAC [][MPpm_fresh, IN_params_MPpm, stringpm_raw] THEN
-  FULL_SIMP_TAC (srw_ss()) [GSYM pmact_decompose]);
+  FULL_SIMP_TAC (srw_ss()) [GSYM pmact_decompose]
+QED
 
 val (avclosed_rules, avclosed_ind, avclosed_cases) = Hol_reln`
   (!p. avclosed (Parameter p)) /\
@@ -428,20 +444,22 @@ val avclosed_pickany = prove(
   ]);
 
 (* page 12 *)
-val avclosed_alpha = store_thm(
-  "avclosed_alpha",
-  ``avclosed (vsub (Parameter p) v t) ==>
-    !q. avclosed (vsub (Parameter q) v t)``,
-  METIS_TAC [avclosed_pickany]);
+Theorem avclosed_alpha:
+    avclosed (vsub (Parameter p) v t) ==>
+    !q. avclosed (vsub (Parameter q) v t)
+Proof
+  METIS_TAC [avclosed_pickany]
+QED
 
-val vclosed_avclosed = store_thm(
-  "vclosed_avclosed",
-  ``!t. vclosed t ==> avclosed t``,
+Theorem vclosed_avclosed:
+    !t. vclosed t ==> avclosed t
+Proof
   HO_MATCH_MP_TAC vclosed_strong_ind THEN
   SRW_TAC [][avclosed_rules] THEN
   Q.EXISTS_TAC `{}` THEN SRW_TAC [][] THEN
   MATCH_MP_TAC (last (CONJUNCTS avclosed_rules)) THEN SRW_TAC [][] THEN
-  METIS_TAC [avclosed_pickany]);
+  METIS_TAC [avclosed_pickany]
+QED
 
 val avclosed_vclosed = prove(
   ``!t. avclosed t ==> vclosed t``,
@@ -494,9 +512,9 @@ val vars_FOLDL = prove(
   Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, vars_pvsub] THEN
   SRW_TAC [][pred_setTheory.EXTENSION] THEN METIS_TAC []);
 
-val empty_vars_vclosed = store_thm(
-  "empty_vars_vclosed",
-  ``!t. (vars t = {}) ==> vclosed t``,
+Theorem empty_vars_vclosed:
+    !t. (vars t = {}) ==> vclosed t
+Proof
   Q_TAC SUFF_TAC
     `!t l. (vars (FOLDL (\t (p,v). vsub (Parameter p) v t) t l) = {}) ==>
            vclosed (FOLDL (\t (p,v). vsub (Parameter p) v t) t l)`
@@ -512,7 +530,8 @@ val empty_vars_vclosed = store_thm(
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     FULL_SIMP_TAC (srw_ss()) [vars_FOLDL, pred_setTheory.EXTENSION] THEN
     METIS_TAC []
-  ]);
+  ]
+QED
 
 val (mpbeta_rules, mpbeta_ind, mpbeta_cases) = Hol_reln`
   (!M N M'. mpbeta M M' ==> mpbeta (App M N) (App M' N)) /\
@@ -537,12 +556,13 @@ val convert_param = Store_thm(
   ``convert (Parameter p) t = (t = VAR p)``,
   ONCE_REWRITE_TAC [convert_cases] THEN SRW_TAC [][]);
 
-val convert_app = store_thm(
-  "convert_app",
-  ``convert (App M N) t = ?t0 t1. convert M t0 /\ convert N t1 /\
-                                  (t = t0 @@ t1)``,
+Theorem convert_app:
+    convert (App M N) t = ?t0 t1. convert M t0 /\ convert N t1 /\
+                                  (t = t0 @@ t1)
+Proof
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [convert_cases])) THEN
-  SRW_TAC [][] THEN METIS_TAC []);
+  SRW_TAC [][] THEN METIS_TAC []
+QED
 
 val convert_abs = save_thm(
   "convert_abs",
@@ -552,12 +572,13 @@ val UNION_DELETE = prove(
   ``(s UNION t) DELETE e = (s DELETE e) UNION (t DELETE e)``,
   SRW_TAC [][pred_setTheory.EXTENSION] THEN METIS_TAC []);
 
-val params_vsub = store_thm(
-  "params_vsub",
-  ``!t p v. ~(p IN params t) ==>
-            (params (vsub (Parameter p) v t) DELETE p = params t)``,
+Theorem params_vsub:
+    !t p v. ~(p IN params t) ==>
+            (params (vsub (Parameter p) v t) DELETE p = params t)
+Proof
   Induct THEN SRW_TAC [][UNION_DELETE] THEN
-  SRW_TAC [][pred_setTheory.EXTENSION] THEN METIS_TAC []);
+  SRW_TAC [][pred_setTheory.EXTENSION] THEN METIS_TAC []
+QED
 
 val convert_MPpm = prove(
   ``!t M. convert t M ==> !pi. convert (MPpm pi t) (tpm pi M)``,
@@ -571,9 +592,8 @@ val convert_MPpm_E = Store_thm(
   ``convert (MPpm pi t) (tpm pi M) = convert t M``,
   METIS_TAC [convert_MPpm, pmact_inverse]);
 
-val convert_strong_ind = store_thm(
-  "convert_strong_ind",
-  ``!P f. (!x. FINITE (f x)) /\
+Theorem convert_strong_ind:
+    !P f. (!x. FINITE (f x)) /\
           (!p c. P (Parameter p) (VAR p) c) /\
           (!t1 t2 M N c.
                (!d1. P t1 M d1) /\ convert t1 M /\
@@ -584,7 +604,8 @@ val convert_strong_ind = store_thm(
                        (!d. P (vsub (Parameter u) v t) M d) ==>
                        P (Abs v t) (LAM u M) c)
         ==>
-          !t M. convert t M ==> !c. P t M c``,
+          !t M. convert t M ==> !c. P t M c
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!t M. convert t M ==>
                         convert t M /\
@@ -608,25 +629,29 @@ val convert_strong_ind = store_thm(
            ASM_SIMP_TAC bool_ss [MPpm_vsub] THEN
            SRW_TAC [][GSYM pmact_decompose]) THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`d`, `((z,lswapstr pi u)::pi)`] MP_TAC) THEN
-  SRW_TAC [][GSYM pmact_decompose]);
+  SRW_TAC [][GSYM pmact_decompose]
+QED
 
-val convert_params = store_thm(
-  "convert_params",
-  ``!t M. convert t M ==> (params t = FV M)``,
+Theorem convert_params:
+    !t M. convert t M ==> (params t = FV M)
+Proof
   HO_MATCH_MP_TAC convert_ind THEN
-  SRW_TAC [][] THEN METIS_TAC [params_vsub]);
+  SRW_TAC [][] THEN METIS_TAC [params_vsub]
+QED
 
-val vclosed_convert = store_thm(
-  "vclosed_convert",
-  ``!t. vclosed t ==> ?M. convert t M``,
+Theorem vclosed_convert:
+    !t. vclosed t ==> ?M. convert t M
+Proof
   HO_MATCH_MP_TAC vclosed_strong_ind THEN Q.EXISTS_TAC `{}` THEN
-  SRW_TAC [][] THEN METIS_TAC [convert_rules]);
+  SRW_TAC [][] THEN METIS_TAC [convert_rules]
+QED
 
-val convert_vclosed = store_thm(
-  "convert_vclosed",
-  ``!t M. convert t M ==> vclosed t``,
+Theorem convert_vclosed:
+    !t M. convert t M ==> vclosed t
+Proof
   HO_MATCH_MP_TAC convert_ind THEN SRW_TAC [][vclosed_abs] THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 val convert_vsub = prove(
   ``!t M. convert t M ==>
@@ -673,9 +698,9 @@ val convert_vsub_thm = save_thm(
   "convert_vsub_thm",
   SIMP_RULE (srw_ss() ++ boolSimps.DNF_ss) [] convert_vsub)
 
-val convert_unique = store_thm(
-  "convert_unique",
-  ``!t M. convert t M ==> !N. convert t N ==> (M = N)``,
+Theorem convert_unique:
+    !t M. convert t M ==> !N. convert t N ==> (M = N)
+Proof
   HO_MATCH_MP_TAC convert_ind THEN REPEAT CONJ_TAC THENL [
     ONCE_REWRITE_TAC [convert_cases] THEN SRW_TAC [][],
     REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -690,11 +715,12 @@ val convert_unique = store_thm(
       by METIS_TAC [convert_params] THEN
     SRW_TAC [][notin_pvsub_I] THEN
     METIS_TAC [convert_vsub_thm, pmact_flip_args]
-  ]);
+  ]
+QED
 
-val convert_onto = store_thm(
-  "convert_onto",
-  ``!M. ?t. convert t M``,
+Theorem convert_onto:
+    !M. ?t. convert t M
+Proof
   HO_MATCH_MP_TAC termTheory.simple_induction THEN REPEAT STRIP_TAC THENL [
     Q.EXISTS_TAC `Parameter s` THEN SRW_TAC [][convert_rules],
     Q.EXISTS_TAC `App t t'` THEN SRW_TAC [][convert_rules],
@@ -703,7 +729,8 @@ val convert_onto = store_thm(
                  shape_lemma THEN
     SRW_TAC [][] THEN
     Q.EXISTS_TAC `Abs u t0` THEN METIS_TAC [convert_rules]
-  ])
+  ]
+QED
 
 val params_vsub_upperbound = prove(
   ``p IN params (vsub N v M) ==> p IN params N \/ p IN params M``,
@@ -713,9 +740,9 @@ val params_vsub_lowerbound = prove(
   ``p IN params M ==> p IN params (vsub N v M)``,
   Induct_on `M` THEN SRW_TAC [][] THEN METIS_TAC []);
 
-val mpbeta_params = store_thm(
-  "mpbeta_params",
-  ``!t u. mpbeta t u ==> !p. p IN params u ==> p IN params t``,
+Theorem mpbeta_params:
+    !t u. mpbeta t u ==> !p. p IN params u ==> p IN params t
+Proof
   HO_MATCH_MP_TAC mpbeta_ind THEN SRW_TAC [][] THENL [
     METIS_TAC [],
     METIS_TAC [],
@@ -725,26 +752,29 @@ val mpbeta_params = store_thm(
        by METIS_TAC [params_vsub_lowerbound, params_vsub_upperbound] THEN
     FULL_SIMP_TAC (srw_ss()) [],
     METIS_TAC [params_vsub_upperbound]
-  ]);
+  ]
+QED
 
-val vsub_vclosed = store_thm(
-  "vsub_vclosed",
-  ``!t. vclosed t ==> (vsub t' v t = t)``,
+Theorem vsub_vclosed:
+    !t. vclosed t ==> (vsub t' v t = t)
+Proof
   REPEAT STRIP_TAC THEN IMP_RES_TAC vclosed_empty_vars THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val general_vsub_commute = store_thm(
-  "general_vsub_commute",
-  ``vclosed t1 /\ vclosed t2 /\ ~(v1 = v2) ==>
-    (vsub t1 v1 (vsub t2 v2 t) = vsub t2 v2 (vsub t1 v1 t))``,
-  Induct_on `t` THEN SRW_TAC [][vsub_vclosed] THEN METIS_TAC []);
+Theorem general_vsub_commute:
+    vclosed t1 /\ vclosed t2 /\ ~(v1 = v2) ==>
+    (vsub t1 v1 (vsub t2 v2 t) = vsub t2 v2 (vsub t1 v1 t))
+Proof
+  Induct_on `t` THEN SRW_TAC [][vsub_vclosed] THEN METIS_TAC []
+QED
 
-val convert_sub = store_thm(
-  "convert_sub",
-  ``~(p IN params t1) /\
+Theorem convert_sub:
+    ~(p IN params t1) /\
     convert (vsub (Parameter p) v t1) M /\
     convert t2 N ==>
-    convert (vsub t2 v t1) ([N/p] M)``,
+    convert (vsub t2 v t1) ([N/p] M)
+Proof
   Q_TAC SUFF_TAC
         `!t M. convert t M ==>
                !t1pt2 t1 t2 p v N.
@@ -779,7 +809,8 @@ val convert_sub = store_thm(
     `FV M = params (vsub (Parameter u) v t)`
        by SRW_TAC [][convert_params] THEN
     SRW_TAC [][notin_pvsub_I]
-  ]);
+  ]
+QED
 
 
 val mpbeta_MPpm = prove(
@@ -796,10 +827,10 @@ val mpbeta_MPpm = prove(
 val mpbeta_strong_ind =
     IndDefLib.derive_strong_induction(mpbeta_rules, mpbeta_ind)
 
-val mpbeta_ccbeta = store_thm(
-  "mpbeta_ccbeta",
-  ``!t u. mpbeta t u ==>
-          !M N. convert t M /\ convert u N ==> compat_closure beta M N``,
+Theorem mpbeta_ccbeta:
+    !t u. mpbeta t u ==>
+          !M N. convert t M /\ convert u N ==> compat_closure beta M N
+Proof
   HO_MATCH_MP_TAC mpbeta_strong_ind THEN
   SRW_TAC [][compat_closure_rules, convert_abs, convert_app] THENL [
     METIS_TAC [compat_closure_rules, convert_unique],
@@ -846,26 +877,30 @@ val mpbeta_ccbeta = store_thm(
 
     `N' = [t1/u]M''` by METIS_TAC [convert_sub, convert_unique] THEN
     SRW_TAC [][cc_beta_thm] THEN METIS_TAC []
-  ]);
+  ]
+QED
 
 
 Definition alpha_def:  alpha t1 t2 = ?M. convert t1 M /\ convert t2 M
 End
 
-val alpha_trans = store_thm(
-  "alpha_trans",
-  ``alpha t1 t2 /\ alpha t2 t3 ==> alpha t1 t3``,
-  SRW_TAC [][alpha_def] THEN METIS_TAC [convert_unique]);
+Theorem alpha_trans:
+    alpha t1 t2 /\ alpha t2 t3 ==> alpha t1 t3
+Proof
+  SRW_TAC [][alpha_def] THEN METIS_TAC [convert_unique]
+QED
 
-val alpha_sym = store_thm(
-  "alpha_sym",
-  ``alpha t1 t2 ==> alpha t2 t1``,
-  SRW_TAC [][alpha_def] THEN METIS_TAC []);
+Theorem alpha_sym:
+    alpha t1 t2 ==> alpha t2 t1
+Proof
+  SRW_TAC [][alpha_def] THEN METIS_TAC []
+QED
 
-val alpha_prefl = store_thm(
-  "alpha_prefl",
-  ``alpha t t = vclosed t``,
-  SRW_TAC [][alpha_def] THEN METIS_TAC [convert_vclosed, vclosed_convert]);
+Theorem alpha_prefl:
+    alpha t t = vclosed t
+Proof
+  SRW_TAC [][alpha_def] THEN METIS_TAC [convert_vclosed, vclosed_convert]
+QED
 
 val convert_to_app = prove(
   ``convert t (M1 @@ M2) = ?t1 t2. (t = App t1 t2) /\ convert t1 M1 /\
@@ -895,11 +930,11 @@ val alpha_app = prove(
 
 (* Curiously, only need to alpha-convert after a reduction, and not
    before. *)
-val ccbeta_beta = store_thm(
-  "ccbeta_beta",
-  ``!M N. compat_closure beta M N ==>
+Theorem ccbeta_beta:
+    !M N. compat_closure beta M N ==>
           !t u. convert t M /\ convert u N ==>
-                (alpha O mpbeta) t u``,
+                (alpha O mpbeta) t u
+Proof
   HO_MATCH_MP_TAC ccbeta_ind THEN Q.EXISTS_TAC `{}` THEN
   SRW_TAC [][relationTheory.O_DEF, convert_to_app, convert_to_lam] THENL [
     IMP_RES_TAC convert_vclosed THEN
@@ -936,6 +971,5 @@ val ccbeta_beta = store_thm(
     SRW_TAC [boolSimps.DNF_ss][alpha_def, convert_abs] THEN
     MAP_EVERY Q.EXISTS_TAC [`v`, `N`, `v`, `N`] THEN
     FULL_SIMP_TAC (srw_ss()) [alpha_def] THEN METIS_TAC [convert_unique]
-  ]);
-
-
+  ]
+QED

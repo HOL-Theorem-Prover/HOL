@@ -706,9 +706,10 @@ val logic_disjoin_formulas_thm = add_prove(
   \\ Cases_on `xs` \\ FS [MAP,or_list_def]
   \\ ONCE_REWRITE_TAC [logic_disjoin_formulas_def] \\ FS [f2sexp_def]);
 
-val _ = Hol_datatype `
+Datatype:
   logic_appeal =
-    Appeal of string => formula => (logic_appeal list # (SExp option)) option`
+    Appeal string formula ((logic_appeal list # (SExp option)) option)
+End
 
 val logic_appeal_size_def = fetch "-" "logic_appeal_size_def"
 
@@ -722,7 +723,7 @@ Definition HYPS_def:
   (HYPS (Appeal name concl (SOME(x,y))) = x)
 End
 
-Triviality logic_appeal3_size_lemma:
+Theorem logic_appeal3_size_lemma[local]:
   !q a. MEM a q ==> logic_appeal_size a < list_size logic_appeal_size q
 Proof
   bossLib.rw[MEM_SPLIT] >> bossLib.rw [list_size_append]
@@ -5496,15 +5497,16 @@ val milawa_main_thm = prove(
 
 (* overall soundness theorem *)
 
-val milawa_main_soundness = store_thm("milawa_main_soundness",
-  ``(read_sexps rest =
+Theorem milawa_main_soundness:
+    (read_sexps rest =
       [Dot (Sym "MILAWA-MAIN")
          (Dot (Dot (Sym "QUOTE") (Dot cmds (Sym "NIL"))) (Sym "NIL"))]) ==>
     ?io ok.
       R_exec (STRCAT MILAWA_CORE_TEXT rest,FEMPTY,"") (io,ok) /\
       (ok ==> let output = compute_output cmds in
                 EVERY line_ok output /\
-                (io = output_to_string output ++ "SUCCESS\n"))``,
+                (io = output_to_string output ++ "SUCCESS\n"))
+Proof
   REPEAT STRIP_TAC \\ STRIP_ASSUME_TAC milawa_main_thm
   \\ IMP_RES_TAC (SIMP_RULE std_ss [milawa_initTheory.init_assum_thm]
        (Q.INST [`k`|->`init_fns`] R_ev_milawa_main))
@@ -5515,6 +5517,5 @@ val milawa_main_soundness = store_thm("milawa_main_soundness",
   \\ Q.LIST_EXISTS_TAC [`STRCAT (STRCAT io (sexp2string ans)) "\n"`,`ok`]
   \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC \\ FULL_SIMP_TAC std_ss [LET_DEF]
   \\ SIMP_TAC std_ss [EVAL ``sexp2string (Sym "SUCCESS")``]
-  \\ SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]);
-
-
+  \\ SIMP_TAC std_ss [GSYM APPEND_ASSOC,APPEND]
+QED

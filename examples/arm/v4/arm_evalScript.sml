@@ -47,20 +47,26 @@ End
 
 (* ------------------------------------------------------------------------- *)
 
-val STATE_ARM_MMU_NEXT = store_thm("STATE_ARM_MMU_NEXT",
-  `!t a b c. (STATE_ARM_MMU ops t a = b) /\ (NEXT_ARM_MMU ops b = c) ==>
-             (STATE_ARM_MMU ops (t + 1) a = c)`,
-  RW_TAC bool_ss [STATE_ARM_MMU_def,GSYM arithmeticTheory.ADD1]);
+Theorem STATE_ARM_MMU_NEXT:
+   !t a b c. (STATE_ARM_MMU ops t a = b) /\ (NEXT_ARM_MMU ops b = c) ==>
+             (STATE_ARM_MMU ops (t + 1) a = c)
+Proof
+  RW_TAC bool_ss [STATE_ARM_MMU_def,GSYM arithmeticTheory.ADD1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val register2num_lt_neq = store_thm("register2num_lt_neq",
-  `!x y. register2num x < register2num y ==> ~(x = y)`,
-  METIS_TAC [prim_recTheory.LESS_NOT_EQ, register2num_11]);
+Theorem register2num_lt_neq:
+   !x y. register2num x < register2num y ==> ~(x = y)
+Proof
+  METIS_TAC [prim_recTheory.LESS_NOT_EQ, register2num_11]
+QED
 
-val psr2num_lt_neq = store_thm("psr2num_lt_neq",
-  `!x y. psr2num x < psr2num y ==> ~(x = y)`,
-  METIS_TAC [prim_recTheory.LESS_NOT_EQ, psr2num_11]);
+Theorem psr2num_lt_neq:
+   !x y. psr2num x < psr2num y ==> ~(x = y)
+Proof
+  METIS_TAC [prim_recTheory.LESS_NOT_EQ, psr2num_11]
+QED
 
 val REGISTER_RANGES =
   (SIMP_RULE (std_ss++SIZES_ss) [] o Thm.INST_TYPE [alpha |-> ``:4``]) w2n_lt;
@@ -69,69 +75,83 @@ val mode_reg2num_15 = (GEN_ALL o
   SIMP_RULE (arith_ss++SIZES_ss) [w2n_n2w] o
   SPECL [`m`,`15w`]) mode_reg2num_def;
 
-val mode_reg2num_lt = store_thm("mode_reg2num_lt",
-  `!w m w. mode_reg2num m w < 31`,
+Theorem mode_reg2num_lt:
+   !w m w. mode_reg2num m w < 31
+Proof
   ASSUME_TAC REGISTER_RANGES
     \\ RW_TAC std_ss [mode_reg2num_def,USER_def,DECIDE ``n < 16 ==> n < 31``]
     \\ Cases_on `m`
     \\ FULL_SIMP_TAC arith_ss [mode_distinct,mode_case_def,
          DECIDE ``a < 16 /\ b < 16 ==> (a + b < 31)``,
-         DECIDE ``a < 16 /\ ~(a = 15) ==> (a + 16 < 31)``]);
+         DECIDE ``a < 16 /\ ~(a = 15) ==> (a + 16 < 31)``]
+QED
 
 val not_reg_eq_lem = prove(`!v w. ~(v = w) ==> ~(w2n v = w2n w)`,
   REPEAT Cases \\ SIMP_TAC std_ss [w2n_n2w,n2w_11]);
 
-val not_reg_eq = store_thm("not_reg_eq",
-  `!v w m1 m2. ~(v = w) ==> ~(mode_reg2num m1 v = mode_reg2num m2 w)`,
+Theorem not_reg_eq:
+   !v w m1 m2. ~(v = w) ==> ~(mode_reg2num m1 v = mode_reg2num m2 w)
+Proof
   NTAC 4 STRIP_TAC
     \\ `w2n v < 16 /\ w2n w < 16` by REWRITE_TAC [REGISTER_RANGES]
     \\ Cases_on `m1` \\ Cases_on `m2`
     \\ ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss)
          [USER_def,mode_reg2num_def,not_reg_eq_lem]
     \\ COND_CASES_TAC \\ ASM_SIMP_TAC arith_ss [not_reg_eq_lem]
-    \\ COND_CASES_TAC \\ ASM_SIMP_TAC arith_ss [not_reg_eq_lem]);
+    \\ COND_CASES_TAC \\ ASM_SIMP_TAC arith_ss [not_reg_eq_lem]
+QED
 
 val not_pc = (GEN_ALL o REWRITE_RULE [mode_reg2num_15] o
   SPECL [`v`,`15w`]) not_reg_eq;
 
 val r15 = SYM (List.nth (CONJUNCTS num2register_thm, 15))
-val READ_TO_READ6 = store_thm("READ_TO_READ6",
-  `!r m n d. (REG_READ (REG_WRITE r usr 15w (d - 8w)) m n =
-              REG_READ6 (REG_WRITE r usr 15w d) m n)`,
+Theorem READ_TO_READ6:
+   !r m n d. (REG_READ (REG_WRITE r usr 15w (d - 8w)) m n =
+              REG_READ6 (REG_WRITE r usr 15w d) m n)
+Proof
   RW_TAC (std_ss++SIZES_ss) [REG_READ_def,REG_READ6_def,FETCH_PC_def,
          REG_WRITE_def,UPDATE_def,WORD_SUB_ADD,mode_reg2num_15]
-  \\ PROVE_TAC [r15,num2register_11,mode_reg2num_lt,not_pc,DECIDE ``15 < 31``]);
+  \\ PROVE_TAC [r15,num2register_11,mode_reg2num_lt,not_pc,DECIDE ``15 < 31``]
+QED
 
-val TO_WRITE_READ6 = store_thm("TO_WRITE_READ6",
-  `(!r. FETCH_PC r = REG_READ6 r usr 15w) /\
+Theorem TO_WRITE_READ6:
+   (!r. FETCH_PC r = REG_READ6 r usr 15w) /\
    (!r. INC_PC r = REG_WRITE r usr 15w (REG_READ6 r usr 15w + 4w)) /\
    (!r m d. REG_WRITE r m 15w d = REG_WRITE r usr 15w d) /\
-   (!r m. REG_READ6 r m 15w = REG_READ6 r usr 15w)`,
+   (!r m. REG_READ6 r m 15w = REG_READ6 r usr 15w)
+Proof
   RW_TAC std_ss [INC_PC_def,REG_READ6_def,REG_WRITE_def,REG_READ_def,
-    FETCH_PC_def,mode_reg2num_15]);
+    FETCH_PC_def,mode_reg2num_15]
+QED
 
-val REG_WRITE_WRITE = store_thm("REG_WRITE_WRITE",
-  `!r m n d1 d2. REG_WRITE (REG_WRITE r m n d1) m n d2 = REG_WRITE r m n d2`,
-  RW_TAC bool_ss [REG_WRITE_def,UPDATE_EQ]);
+Theorem REG_WRITE_WRITE:
+   !r m n d1 d2. REG_WRITE (REG_WRITE r m n d1) m n d2 = REG_WRITE r m n d2
+Proof
+  RW_TAC bool_ss [REG_WRITE_def,UPDATE_EQ]
+QED
 
-val REG_WRITE_WRITE_COMM = store_thm("REG_WRITE_WRITE_COMM",
-  `!r m n1 n2 d1 d2.
+Theorem REG_WRITE_WRITE_COMM:
+   !r m n1 n2 d1 d2.
      ~(n1 = n2) ==>
       (REG_WRITE (REG_WRITE r m n1 d1) m n2 d2 =
-       REG_WRITE (REG_WRITE r m n2 d2) m n1 d1)`,
+       REG_WRITE (REG_WRITE r m n2 d2) m n1 d1)
+Proof
   RW_TAC std_ss [REG_WRITE_def,UPDATE_COMMUTES,not_reg_eq,
-    mode_reg2num_lt,num2register_11]);
+    mode_reg2num_lt,num2register_11]
+QED
 
-val REG_WRITE_WRITE_PC = store_thm("REG_WRITE_WRITE_PC",
-  `!r m1 m2 n d p.
+Theorem REG_WRITE_WRITE_PC:
+   !r m1 m2 n d p.
      REG_WRITE (REG_WRITE r m1 15w p) m2 n d =
        if n = 15w then
          REG_WRITE r usr 15w d
        else
-         REG_WRITE (REG_WRITE r m2 n d) usr 15w p`,
+         REG_WRITE (REG_WRITE r m2 n d) usr 15w p
+Proof
   RW_TAC std_ss [TO_WRITE_READ6,REG_WRITE_WRITE]
     \\ ASM_SIMP_TAC std_ss [REG_WRITE_def,UPDATE_COMMUTES,not_pc,
-         mode_reg2num_15,mode_reg2num_lt,num2register_11]);
+         mode_reg2num_15,mode_reg2num_lt,num2register_11]
+QED
 
 val REG_READ_WRITE_THM = prove(
   `(!r m n1 n2 d. REG_READ6 (REG_WRITE r m n1 d) m n2 =
@@ -149,30 +169,38 @@ val REG_READ_WRITE_PC_THM =
       ((SIMP_RULE arith_ss [TO_WRITE_READ6] o INST [`n1` |-> `15w`]) thm)
   end;
 
-val REG_READ_WRITE_NEQ = store_thm("REG_READ_WRITE_NEQ",
-  `!r m1 m2 n1 n2 d. ~(n1 = n2) ==>
-      (REG_READ6 (REG_WRITE r m1 n1 d) m2 n2 = REG_READ6 r m2 n2)`,
+Theorem REG_READ_WRITE_NEQ:
+   !r m1 m2 n1 n2 d. ~(n1 = n2) ==>
+      (REG_READ6 (REG_WRITE r m1 n1 d) m2 n2 = REG_READ6 r m2 n2)
+Proof
   RW_TAC std_ss [REG_READ6_def,REG_READ_def,REG_WRITE_def,FETCH_PC_def,
     UPDATE_APPLY_IMP_ID,mode_reg2num_15] \\ SIMP_TAC std_ss [UPDATE_def]
     \\ PROVE_TAC [r15,not_pc,not_reg_eq,mode_reg2num_lt,num2register_11,
-         DECIDE ``15 < 31``]);
+         DECIDE ``15 < 31``]
+QED
 
-val REG_READ_READ6 = store_thm("REG_READ_READ6",
-  `!r m n. ~(n = 15w) ==> (REG_READ6 r m n = REG_READ r m n)`,
-  SIMP_TAC bool_ss [REG_READ6_def]);
+Theorem REG_READ_READ6:
+   !r m n. ~(n = 15w) ==> (REG_READ6 r m n = REG_READ r m n)
+Proof
+  SIMP_TAC bool_ss [REG_READ6_def]
+QED
 
 val REG_READ_WRITE_PC =
   (GEN_ALL o SIMP_RULE std_ss [REG_READ_READ6] o INST [`n2` |-> `n`] o
    DISCH `~(n2 = 15w)` o CONJUNCT2) REG_READ_WRITE_PC_THM;
 
-val REG_READ_INC_PC = store_thm("REG_READ_INC_PC",
-  `!r m n. ~(n = 15w) ==> (REG_READ (INC_PC r) m n = REG_READ r m n)`,
-  SIMP_TAC bool_ss [TO_WRITE_READ6,REG_READ_WRITE_PC]);
+Theorem REG_READ_INC_PC:
+   !r m n. ~(n = 15w) ==> (REG_READ (INC_PC r) m n = REG_READ r m n)
+Proof
+  SIMP_TAC bool_ss [TO_WRITE_READ6,REG_READ_WRITE_PC]
+QED
 
-val REG_WRITE_INC_PC = store_thm("REG_WRITE_INC_PC",
-  `!r m n. ~(n = 15w) ==>
-      (REG_WRITE (INC_PC r) m n d = INC_PC (REG_WRITE r m n d))`,
-  SIMP_TAC bool_ss [TO_WRITE_READ6,REG_READ_WRITE_NEQ,REG_WRITE_WRITE_PC]);
+Theorem REG_WRITE_INC_PC:
+   !r m n. ~(n = 15w) ==>
+      (REG_WRITE (INC_PC r) m n d = INC_PC (REG_WRITE r m n d))
+Proof
+  SIMP_TAC bool_ss [TO_WRITE_READ6,REG_READ_WRITE_NEQ,REG_WRITE_WRITE_PC]
+QED
 
 val REG_READ_WRITE = save_thm("REG_READ_WRITE",
   (GEN_ALL o SIMP_RULE std_ss [REG_READ_READ6] o
@@ -186,35 +214,45 @@ val INC_PC = save_thm("INC_PC",
   (SIMP_RULE std_ss [REG_READ6_def,FETCH_PC_def] o
    hd o tl o CONJUNCTS) TO_WRITE_READ6);
 
-val REG_WRITEL = store_thm("REG_WRITEL",
-  `!r m l. REG_WRITEL r m l = FOLDR (\h r. REG_WRITE r m (FST h) (SND h)) r l`,
-  Induct_on `l` \\ TRY (Cases_on `h`) \\ ASM_SIMP_TAC list_ss [REG_WRITEL_def]);
+Theorem REG_WRITEL:
+   !r m l. REG_WRITEL r m l = FOLDR (\h r. REG_WRITE r m (FST h) (SND h)) r l
+Proof
+  Induct_on `l` \\ TRY (Cases_on `h`) \\ ASM_SIMP_TAC list_ss [REG_WRITEL_def]
+QED
 
-val REG_WRITE_WRITEL = store_thm("REG_WRITE_WRITEL",
-  `!r m n d. REG_WRITE r m n d = REG_WRITEL r m [(n,d)]`,
-  SIMP_TAC std_ss [REG_WRITEL_def]);
+Theorem REG_WRITE_WRITEL:
+   !r m n d. REG_WRITE r m n d = REG_WRITEL r m [(n,d)]
+Proof
+  SIMP_TAC std_ss [REG_WRITEL_def]
+QED
 
-val REG_WRITEL_WRITEL = store_thm("REG_WRITEL_WRITEL",
-  `!r m l1 l2. REG_WRITEL (REG_WRITEL r m l1) m l2 = REG_WRITEL r m (l2 ++ l1)`,
-  SIMP_TAC std_ss [REG_WRITEL,rich_listTheory.FOLDR_APPEND]);
+Theorem REG_WRITEL_WRITEL:
+   !r m l1 l2. REG_WRITEL (REG_WRITEL r m l1) m l2 = REG_WRITEL r m (l2 ++ l1)
+Proof
+  SIMP_TAC std_ss [REG_WRITEL,rich_listTheory.FOLDR_APPEND]
+QED
 
-val REG_WRITE_WRITE_THM = store_thm("REG_WRITE_WRITE_THM",
-  `!m n r m e d. x <=+ y ==>
+Theorem REG_WRITE_WRITE_THM:
+   !m n r m e d. x <=+ y ==>
       (REG_WRITE (REG_WRITE r m x e) m y d =
          if x = y then
            REG_WRITE r m y d
          else
-           REG_WRITE (REG_WRITE r m y d) m x e)`,
+           REG_WRITE (REG_WRITE r m y d) m x e)
+Proof
   RW_TAC std_ss [WORD_LOWER_OR_EQ,WORD_LO,REG_WRITE_WRITE]
     \\ METIS_TAC [REG_WRITE_def,not_reg_eq,UPDATE_COMMUTES,
-         mode_reg2num_lt,num2register_11]);
+         mode_reg2num_lt,num2register_11]
+QED
 
-val REG_READ_WRITEL = store_thm("REG_READ_WRITEL",
-  `(!r m n. REG_READ (REG_WRITEL r m []) m n = REG_READ r m n) /\
+Theorem REG_READ_WRITEL:
+   (!r m n. REG_READ (REG_WRITEL r m []) m n = REG_READ r m n) /\
    (!r m n a b l. ~(n = 15w) ==>
       (REG_READ (REG_WRITEL r m ((a,b)::l)) m n =
-       if a = n then b else REG_READ (REG_WRITEL r m l) m n))`,
-  RW_TAC std_ss [REG_WRITEL_def,REG_WRITE_READ]);
+       if a = n then b else REG_READ (REG_WRITEL r m l) m n))
+Proof
+  RW_TAC std_ss [REG_WRITEL_def,REG_WRITE_READ]
+QED
 
 val mode_reg2num_15 = (GEN_ALL o SIMP_RULE (arith_ss++SIZES_ss) [w2n_n2w] o
   SPECL [`m`,`15w`]) mode_reg2num_def;
@@ -230,18 +268,22 @@ val lem2 = prove(
     \\ PROVE_TAC [r15,mode_reg2num_lt,armTheory.num2register_11,
                   mode_reg2num_15,not_reg_eq]);
 
-val REG_READ_WRITEL_PC = store_thm("REG_READ_WRITEL_PC",
-  `!r m m2 a b l. REG_READ (REG_WRITEL r m ((a,b)::l)) m2 15w =
-       if a = 15w then b + 8w else REG_READ (REG_WRITEL r m l) m2 15w`,
-  RW_TAC std_ss [REG_WRITEL_def,TO_WRITE_READ6,lem,lem2]);
+Theorem REG_READ_WRITEL_PC:
+   !r m m2 a b l. REG_READ (REG_WRITEL r m ((a,b)::l)) m2 15w =
+       if a = 15w then b + 8w else REG_READ (REG_WRITEL r m l) m2 15w
+Proof
+  RW_TAC std_ss [REG_WRITEL_def,TO_WRITE_READ6,lem,lem2]
+QED
 
-val REG_READ_WRITEL_PC2 = store_thm("REG_READ_WRITEL_PC2",
-  `!r m a b l. (REG_WRITEL r m ((a,b)::l)) r15 =
-       if a = 15w then b else (REG_WRITEL r m l) r15`,
+Theorem REG_READ_WRITEL_PC2:
+   !r m a b l. (REG_WRITEL r m ((a,b)::l)) r15 =
+       if a = 15w then b else (REG_WRITEL r m l) r15
+Proof
   RW_TAC std_ss [REG_WRITEL_def,REG_WRITE_def,UPDATE_def,
          mode_reg2num_lt,num2register_11]
     \\ PROVE_TAC [r15,mode_reg2num_lt,armTheory.num2register_11,
-                  mode_reg2num_15,not_reg_eq]);
+                  mode_reg2num_15,not_reg_eq]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -252,125 +294,161 @@ fun Cases_on_nzcv tm =
   FULL_STRUCT_CASES_TAC (SPEC tm (armLib.tupleCases
   ``(n,z,c,v):bool#bool#bool#bool``));
 
-val SET_NZCV_IDEM = store_thm("SET_NZCV_IDEM",
-  `!a b c. SET_NZCV a (SET_NZCV b c) = SET_NZCV a c`,
+Theorem SET_NZCV_IDEM:
+   !a b c. SET_NZCV a (SET_NZCV b c) = SET_NZCV a c
+Proof
   REPEAT STRIP_TAC \\ Cases_on_nzcv `a` \\ Cases_on_nzcv `b`
     \\ RW_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-         [SET_NZCV_def,word_modify_def]);
+         [SET_NZCV_def,word_modify_def]
+QED
 
-val DECODE_NZCV_SET_NZCV = store_thm("DECODE_NZCV_SET_NZCV",
-   `(!a b c d n. (SET_NZCV (a,b,c,d) n) ' 31 = a) /\
+Theorem DECODE_NZCV_SET_NZCV:
+    (!a b c d n. (SET_NZCV (a,b,c,d) n) ' 31 = a) /\
     (!a b c d n. (SET_NZCV (a,b,c,d) n) ' 30 = b) /\
     (!a b c d n. (SET_NZCV (a,b,c,d) n) ' 29 = c) /\
-    (!a b c d n. (SET_NZCV (a,b,c,d) n) ' 28 = d)`,
-  RW_TAC (fcp_ss++SIZES_ss) [SET_NZCV_def,word_modify_def]);
+    (!a b c d n. (SET_NZCV (a,b,c,d) n) ' 28 = d)
+Proof
+  RW_TAC (fcp_ss++SIZES_ss) [SET_NZCV_def,word_modify_def]
+QED
 
-val DECODE_IFMODE_SET_NZCV = store_thm("DECODE_IFMODE_SET_NZCV",
-   `(!a n. (27 -- 8) (SET_NZCV a n) = (27 -- 8) n) /\
+Theorem DECODE_IFMODE_SET_NZCV:
+    (!a n. (27 -- 8) (SET_NZCV a n) = (27 -- 8) n) /\
     (!a n. (SET_NZCV a n) ' 7 = n ' 7) /\
     (!a n. (SET_NZCV a n) ' 6 = n ' 6) /\
     (!a n. (SET_NZCV a n) ' 5 = n ' 5) /\
-    (!a n. (4 >< 0) (SET_NZCV a n) = (4 >< 0) n)`,
+    (!a n. (4 >< 0) (SET_NZCV a n) = (4 >< 0) n)
+Proof
   RW_TAC bool_ss [] \\ Cases_on_nzcv `a`
     \\ SIMP_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-         [SET_NZCV_def,word_modify_def,word_extract_def,word_bits_def]);
+         [SET_NZCV_def,word_modify_def,word_extract_def,word_bits_def]
+QED
 
-val DECODE_IFMODE_SET_IFMODE = store_thm("DECODE_IFMODE_SET_IFMODE",
-   `(!i f m n. (SET_IFMODE i f m n) ' 7 = i) /\
+Theorem DECODE_IFMODE_SET_IFMODE:
+    (!i f m n. (SET_IFMODE i f m n) ' 7 = i) /\
     (!i f m n. (SET_IFMODE i f m n) ' 6 = f) /\
-    (!i f m n. (4 >< 0) (SET_IFMODE i f m n) = mode_num m)`,
+    (!i f m n. (4 >< 0) (SET_IFMODE i f m n) = mode_num m)
+Proof
    RW_TAC (fcp_ss++ARITH_ss++SIZES_ss) [SET_IFMODE_def,word_modify_def,
-     word_extract_def,word_bits_def,w2w]);
+     word_extract_def,word_bits_def,w2w]
+QED
 
-val SET_IFMODE_IDEM = store_thm("SET_IFMODE_IDEM",
-  `!a b c d e f g. SET_IFMODE a b c (SET_IFMODE d e f g) = SET_IFMODE a b c g`,
+Theorem SET_IFMODE_IDEM:
+   !a b c d e f g. SET_IFMODE a b c (SET_IFMODE d e f g) = SET_IFMODE a b c g
+Proof
   SIMP_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-    [SET_IFMODE_def,word_modify_def]);
+    [SET_IFMODE_def,word_modify_def]
+QED
 
-val SET_IFMODE_NZCV_SWP = store_thm("SET_IFMODE_NZCV_SWP",
-  `!a b c d e. SET_IFMODE a b c (SET_NZCV d e) =
-               SET_NZCV d (SET_IFMODE a b c e)`,
+Theorem SET_IFMODE_NZCV_SWP:
+   !a b c d e. SET_IFMODE a b c (SET_NZCV d e) =
+               SET_NZCV d (SET_IFMODE a b c e)
+Proof
   REPEAT STRIP_TAC \\ Cases_on_nzcv `d`
     \\ RW_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
          [SET_NZCV_def,SET_IFMODE_def,word_modify_def]
     \\ Cases_on `i < 5` \\ ASM_SIMP_TAC arith_ss []
-    \\ Cases_on `i < 28` \\ ASM_SIMP_TAC arith_ss []);
+    \\ Cases_on `i < 28` \\ ASM_SIMP_TAC arith_ss []
+QED
 
-val DECODE_NZCV_SET_IFMODE = store_thm("DECODE_NZCV_SET_IFMODE",
-  `(!i f m n. (SET_IFMODE i f m n) ' 31 = n ' 31) /\
+Theorem DECODE_NZCV_SET_IFMODE:
+   (!i f m n. (SET_IFMODE i f m n) ' 31 = n ' 31) /\
    (!i f m n. (SET_IFMODE i f m n) ' 30 = n ' 30) /\
    (!i f m n. (SET_IFMODE i f m n) ' 29 = n ' 29) /\
    (!i f m n. (SET_IFMODE i f m n) ' 28 = n ' 28) /\
    (!i f m n. (27 -- 8) (SET_IFMODE i f m n) = (27 -- 8) n) /\
-   (!i f m n. (SET_IFMODE i f m n) ' 5 = n ' 5)`,
+   (!i f m n. (SET_IFMODE i f m n) ' 5 = n ' 5)
+Proof
   RW_TAC (fcp_ss++boolSimps.CONJ_ss++ARITH_ss++SIZES_ss)
-    [SET_IFMODE_def,word_modify_def,word_bits_def]);
+    [SET_IFMODE_def,word_modify_def,word_bits_def]
+QED
 
-val SET_NZCV_ID = store_thm("SET_NZCV_ID",
-  `!a. SET_NZCV (a ' 31,a ' 30,a ' 29,a ' 28) a = a`,
+Theorem SET_NZCV_ID:
+   !a. SET_NZCV (a ' 31,a ' 30,a ' 29,a ' 28) a = a
+Proof
   SRW_TAC [fcpLib.FCP_ss,SIZES_ss] [SET_NZCV_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM]);
+    \\ FULL_SIMP_TAC std_ss [LESS_THM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val SPSR_READ_THM = store_thm("SPSR_READ_THM",
-  `!psr mode cpsr.
+Theorem SPSR_READ_THM:
+   !psr mode cpsr.
      (CPSR_READ psr = cpsr) ==>
-     ((if USER mode then cpsr else SPSR_READ psr mode) = SPSR_READ psr mode)`,
+     ((if USER mode then cpsr else SPSR_READ psr mode) = SPSR_READ psr mode)
+Proof
   RW_TAC bool_ss [CPSR_READ_def,SPSR_READ_def,mode2psr_def,USER_def]
-    \\ REWRITE_TAC [mode_case_def]);
+    \\ REWRITE_TAC [mode_case_def]
+QED
 
-val SPSR_READ_THM2 = store_thm("SPSR_READ_THM2",
-  `!psr mode cpsr.  USER mode ==> (SPSR_READ psr mode = CPSR_READ psr)`,
-  METIS_TAC [SPSR_READ_THM]);
+Theorem SPSR_READ_THM2:
+   !psr mode cpsr.  USER mode ==> (SPSR_READ psr mode = CPSR_READ psr)
+Proof
+  METIS_TAC [SPSR_READ_THM]
+QED
 
-val CPSR_WRITE_READ = store_thm("CPSR_WRITE_READ",
-  `(!psr m x. CPSR_READ (SPSR_WRITE psr m x) = CPSR_READ psr) /\
-   (!psr x. CPSR_READ (CPSR_WRITE psr x) = x)`,
+Theorem CPSR_WRITE_READ:
+   (!psr m x. CPSR_READ (SPSR_WRITE psr m x) = CPSR_READ psr) /\
+   (!psr x. CPSR_READ (CPSR_WRITE psr x) = x)
+Proof
   RW_TAC bool_ss [CPSR_READ_def,CPSR_WRITE_def,SPSR_WRITE_def,UPDATE_def,
          USER_def,mode2psr_def]
-    \\ Cases_on `m` \\ FULL_SIMP_TAC bool_ss [mode_case_def,psr_distinct]);
+    \\ Cases_on `m` \\ FULL_SIMP_TAC bool_ss [mode_case_def,psr_distinct]
+QED
 
-val CPSR_READ_WRITE = store_thm("CPSR_READ_WRITE",
-  `(!psr. CPSR_WRITE psr (CPSR_READ psr) = psr) /\
-   (!psr mode. USER mode ==> (CPSR_WRITE psr (SPSR_READ psr mode) = psr))`,
+Theorem CPSR_READ_WRITE:
+   (!psr. CPSR_WRITE psr (CPSR_READ psr) = psr) /\
+   (!psr mode. USER mode ==> (CPSR_WRITE psr (SPSR_READ psr mode) = psr))
+Proof
   RW_TAC bool_ss [CPSR_READ_def,CPSR_WRITE_def,SPSR_READ_def,
          UPDATE_APPLY_IMP_ID,USER_def,mode2psr_def]
-    \\ REWRITE_TAC [mode_case_def,APPLY_UPDATE_ID]);
+    \\ REWRITE_TAC [mode_case_def,APPLY_UPDATE_ID]
+QED
 
-val CPSR_WRITE_WRITE = store_thm("CPSR_WRITE_WRITE",
-  `!psr a b. CPSR_WRITE (CPSR_WRITE psr a) b = CPSR_WRITE psr b`,
-  SIMP_TAC bool_ss [CPSR_WRITE_def,UPDATE_EQ]);
+Theorem CPSR_WRITE_WRITE:
+   !psr a b. CPSR_WRITE (CPSR_WRITE psr a) b = CPSR_WRITE psr b
+Proof
+  SIMP_TAC bool_ss [CPSR_WRITE_def,UPDATE_EQ]
+QED
 
 val USER_usr = save_thm("USER_usr",
   simpLib.SIMP_PROVE bool_ss [USER_def] ``USER usr``);
 
-val PSR_WRITE_COMM = store_thm("PSR_WRITE_COMM",
-  `!psr m x y. SPSR_WRITE (CPSR_WRITE psr x) m y =
-               CPSR_WRITE (SPSR_WRITE psr m y) x`,
+Theorem PSR_WRITE_COMM:
+   !psr m x y. SPSR_WRITE (CPSR_WRITE psr x) m y =
+               CPSR_WRITE (SPSR_WRITE psr m y) x
+Proof
   RW_TAC bool_ss [SPSR_WRITE_def,CPSR_WRITE_def,USER_def,mode2psr_def]
     \\ Cases_on `m`
     \\ FULL_SIMP_TAC bool_ss [mode_distinct,mode_case_def,psr_distinct,
-         UPDATE_COMMUTES]);
+         UPDATE_COMMUTES]
+QED
 
-val SPSR_READ_WRITE = store_thm("SPSR_READ_WRITE",
-  `!psr m. SPSR_WRITE psr m (SPSR_READ psr m) = psr`,
+Theorem SPSR_READ_WRITE:
+   !psr m. SPSR_WRITE psr m (SPSR_READ psr m) = psr
+Proof
   RW_TAC std_ss [SPSR_READ_def,SPSR_WRITE_def,mode2psr_def]
-    \\ Cases_on `m` \\ SIMP_TAC (srw_ss()) [UPDATE_APPLY_IMP_ID]);
+    \\ Cases_on `m` \\ SIMP_TAC (srw_ss()) [UPDATE_APPLY_IMP_ID]
+QED
 
-val SPSR_WRITE_THM = store_thm("SPSR_WRITE_THM",
-  `!psr m x. USER m ==> (SPSR_WRITE psr m x = psr)`,
-  SIMP_TAC std_ss [SPSR_WRITE_def]);
+Theorem SPSR_WRITE_THM:
+   !psr m x. USER m ==> (SPSR_WRITE psr m x = psr)
+Proof
+  SIMP_TAC std_ss [SPSR_WRITE_def]
+QED
 
-val SPSR_WRITE_WRITE = store_thm("SPSR_WRITE_WRITE",
-  `!psr m x y. SPSR_WRITE (SPSR_WRITE psr m x) m y = SPSR_WRITE psr m y`,
-  RW_TAC std_ss [SPSR_WRITE_def,UPDATE_EQ]);
+Theorem SPSR_WRITE_WRITE:
+   !psr m x y. SPSR_WRITE (SPSR_WRITE psr m x) m y = SPSR_WRITE psr m y
+Proof
+  RW_TAC std_ss [SPSR_WRITE_def,UPDATE_EQ]
+QED
 
-val SPSR_WRITE_READ = store_thm("SPSR_WRITE_READ",
-  `!psr m x. ~USER m ==> (SPSR_READ (SPSR_WRITE psr m x) m = x) /\
-                         (SPSR_READ (CPSR_WRITE psr x) m = SPSR_READ psr m)`,
+Theorem SPSR_WRITE_READ:
+   !psr m x. ~USER m ==> (SPSR_READ (SPSR_WRITE psr m x) m = x) /\
+                         (SPSR_READ (CPSR_WRITE psr x) m = SPSR_READ psr m)
+Proof
   RW_TAC std_ss [SPSR_WRITE_def,CPSR_WRITE_def,SPSR_READ_def,UPDATE_def]
-    \\ Cases_on `m` \\ FULL_SIMP_TAC (srw_ss()) [USER_def,mode2psr_def]);
+    \\ Cases_on `m` \\ FULL_SIMP_TAC (srw_ss()) [USER_def,mode2psr_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -384,14 +462,15 @@ val w2n_mod = prove(
   `!a:'a word b. (a = n2w b) = (w2n a = b MOD dimword (:'a))`,
   Cases \\ REWRITE_TAC [n2w_11,w2n_n2w]);
 
-val PSR_CONS = store_thm("PSR_CONS",
-   `!w:word32. w =
+Theorem PSR_CONS:
+    !w:word32. w =
        let m = DECODE_MODE ((4 >< 0) w) in
          if m = safe then
            SET_NZCV (w ' 31, w ' 30, w ' 29, w ' 28) ((27 -- 0) w)
          else
            SET_NZCV (w ' 31, w ' 30, w ' 29, w ' 28)
-             (SET_IFMODE (w ' 7) (w ' 6) m (0xFFFFF20w && w))`,
+             (SET_IFMODE (w ' 7) (w ' 6) m (0xFFFFF20w && w))
+Proof
   RW_TAC word_ss [SET_IFMODE_def,SET_NZCV_def,word_modify_def,n2w_def]
     \\ RW_TAC word_ss [word_bits_def]
     THENL [
@@ -417,7 +496,8 @@ val PSR_CONS = store_thm("PSR_CONS",
                  [fcpLib.FCP_ss,wordsLib.SIZES_ss,ARITH_ss,boolSimps.LET_ss]
                  [DECODE_MODE_def,mode_num_def]
             \\ POP_ASSUM MP_TAC
-            \\ FULL_SIMP_TAC (srw_ss()++wordsLib.SIZES_ss) [w2n_mod]]]);
+            \\ FULL_SIMP_TAC (srw_ss()++wordsLib.SIZES_ss) [w2n_mod]]]
+QED
 
 val word_modify_PSR = save_thm("word_modify_PSR",
   SIMP_CONV std_ss [SET_NZCV_def,SET_IFMODE_def]
@@ -537,14 +617,18 @@ val word_frags = [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss,
 
 (* ......................................................................... *)
 
-val decode_enc_br = store_thm("decode_enc_br",
-  `(!cond offset. DECODE_ARM (enc (instruction$B cond offset)) = br) /\
-   (!cond offset. DECODE_ARM (enc (instruction$BL cond offset)) = br)`,
-  SRW_TAC word_frags []);
+Theorem decode_enc_br:
+   (!cond offset. DECODE_ARM (enc (instruction$B cond offset)) = br) /\
+   (!cond offset. DECODE_ARM (enc (instruction$BL cond offset)) = br)
+Proof
+  SRW_TAC word_frags []
+QED
 
-val decode_enc_swi = store_thm("decode_enc_swi",
-  `!cond. DECODE_ARM (enc (instruction$SWI cond)) = swi_ex`,
-  SRW_TAC word_frags []);
+Theorem decode_enc_swi:
+   !cond. DECODE_ARM (enc (instruction$SWI cond)) = swi_ex
+Proof
+  SRW_TAC word_frags []
+QED
 
 val decode_enc_data_proc_ = prove(
   `!cond op s rd rn Op2. ~(op ' 3) \/ (op ' 2) ==>
@@ -582,8 +666,8 @@ val decode_enc_data_proc3 = prove(
     \\ SRW_TAC [fcpLib.FCP_ss,wordsLib.SIZES_ss,BITS_NUMERAL_ss]
                [BIT_def,word_index,decode_enc_data_proc_]);
 
-val decode_enc_mla_mul = store_thm("decode_enc_mla_mul",
-  `(!cond s rd rm rs.
+Theorem decode_enc_mla_mul:
+   (!cond s rd rm rs.
       DECODE_ARM (enc (instruction$MUL cond s rd rm rs)) = mla_mul) /\
    (!cond s rd rm rs rn.
       DECODE_ARM (enc (instruction$MLA cond s rd rm rs rn)) = mla_mul) /\
@@ -594,51 +678,65 @@ val decode_enc_mla_mul = store_thm("decode_enc_mla_mul",
    (!cond s rdhi rdlo rm rs.
       DECODE_ARM (enc (instruction$SMULL cond s rdlo rdhi rm rs)) = mla_mul) /\
    (!cond s rdhi rdlo rm rs.
-      DECODE_ARM (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) = mla_mul)`,
-  SRW_TAC word_frags []);
+      DECODE_ARM (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) = mla_mul)
+Proof
+  SRW_TAC word_frags []
+QED
 
-val decode_enc_ldr_str = store_thm("decode_enc_ldr_str",
-  `(!cond b opt rd rn offset.
+Theorem decode_enc_ldr_str:
+   (!cond b opt rd rn offset.
       DECODE_ARM (enc (instruction$LDR cond b opt rd rn offset)) = ldr_str) /\
    (!cond b opt rd rn offset.
-      DECODE_ARM (enc (instruction$STR cond b opt rd rn offset)) = ldr_str)`,
+      DECODE_ARM (enc (instruction$STR cond b opt rd rn offset)) = ldr_str)
+Proof
   REPEAT STRIP_TAC \\ Cases_on `offset` \\ TRY (Cases_on `s`)
     \\ SRW_TAC word_frags [addr_mode2_encode_def,options_encode_def,
-         shift_encode_def,word_modify_def]);
+         shift_encode_def,word_modify_def]
+QED
 
-val decode_enc_ldrh_strh = store_thm("decode_enc_ldrh_strh",
-  `(!cond s h opt rd rn offset.
+Theorem decode_enc_ldrh_strh:
+   (!cond s h opt rd rn offset.
       DECODE_ARM (enc (instruction$LDRH cond s h opt rd rn offset)) =
       ldrh_strh) /\
    (!cond opt rd rn offset.
-      DECODE_ARM (enc (instruction$STRH cond opt rd rn offset)) = ldrh_strh)`,
+      DECODE_ARM (enc (instruction$STRH cond opt rd rn offset)) = ldrh_strh)
+Proof
   REPEAT STRIP_TAC \\ Cases_on `offset`
     \\ SRW_TAC word_frags [addr_mode3_encode_def,options_encode2_def,
          word_modify_def,extract_out_of_range]
-    \\ METIS_TAC []);
+    \\ METIS_TAC []
+QED
 
-val decode_enc_ldm_stm = store_thm("decode_enc_ldm_stm",
-  `(!cond s opt rn list.
+Theorem decode_enc_ldm_stm:
+   (!cond s opt rn list.
       DECODE_ARM (enc (instruction$LDM cond s opt rn list)) = ldm_stm) /\
    (!cond s opt rn list.
-      DECODE_ARM (enc (instruction$STM cond s opt rn list)) = ldm_stm)`,
-  SRW_TAC word_frags [options_encode_def,word_modify_def]);
+      DECODE_ARM (enc (instruction$STM cond s opt rn list)) = ldm_stm)
+Proof
+  SRW_TAC word_frags [options_encode_def,word_modify_def]
+QED
 
-val decode_enc_swp = store_thm("decode_enc_swp",
-  `!cond b rd rm rn. DECODE_ARM (enc (instruction$SWP cond b rd rm rn)) = swp`,
-  SRW_TAC word_frags []);
+Theorem decode_enc_swp:
+   !cond b rd rm rn. DECODE_ARM (enc (instruction$SWP cond b rd rm rn)) = swp
+Proof
+  SRW_TAC word_frags []
+QED
 
-val decode_enc_mrs = store_thm("decode_enc_mrs",
-  `!cond r rd. DECODE_ARM (enc (instruction$MRS cond r rd)) = mrs`,
-  SRW_TAC word_frags []);
+Theorem decode_enc_mrs:
+   !cond r rd. DECODE_ARM (enc (instruction$MRS cond r rd)) = mrs
+Proof
+  SRW_TAC word_frags []
+QED
 
-val decode_enc_msr = store_thm("decode_enc_msr",
-  `!cond psrd op.  DECODE_ARM (enc (instruction$MSR cond psrd op)) = msr`,
+Theorem decode_enc_msr:
+   !cond psrd op.  DECODE_ARM (enc (instruction$MSR cond psrd op)) = msr
+Proof
   REPEAT STRIP_TAC \\ Cases_on `psrd` \\ Cases_on `op`
-    \\ SRW_TAC word_frags [msr_psr_encode_def,msr_mode_encode_def]);
+    \\ SRW_TAC word_frags [msr_psr_encode_def,msr_mode_encode_def]
+QED
 
-val decode_enc_coproc = store_thm("decode_enc_coproc",
-  `(!cond cpn cop1 crd crn crm cop2.
+Theorem decode_enc_coproc:
+   (!cond cpn cop1 crd crn crm cop2.
       DECODE_ARM (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) =
       cdp_und) /\
    (!cond. DECODE_ARM (enc (instruction$UND cond)) = cdp_und) /\
@@ -652,11 +750,13 @@ val decode_enc_coproc = store_thm("decode_enc_coproc",
       ldc_stc) /\
    (!cond n opt cpn crd rn offset.
       DECODE_ARM (enc (instruction$LDC cond n opt cpn crd rn offset)) =
-      ldc_stc)`,
-  SRW_TAC word_frags [options_encode_def,word_modify_def]);
+      ldc_stc)
+Proof
+  SRW_TAC word_frags [options_encode_def,word_modify_def]
+QED
 
-val decode_cp_enc_coproc = store_thm("decode_cp_enc_coproc",
-  `(!cond cpn cop1 crd crn crm cop2.
+Theorem decode_cp_enc_coproc:
+   (!cond cpn cop1 crd crn crm cop2.
       DECODE_CP (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) =
       cdp_und) /\
    (!cond. DECODE_CP (enc (instruction$UND cond)) = cdp_und) /\
@@ -669,11 +769,13 @@ val decode_cp_enc_coproc = store_thm("decode_cp_enc_coproc",
       ldc_stc) /\
    (!cond n opt cpn crd rn offset.
       DECODE_CP (enc (instruction$LDC cond n opt cpn crd rn offset)) =
-      ldc_stc)`,
-  SRW_TAC word_frags [DECODE_CP_def,options_encode_def,word_modify_def]);
+      ldc_stc)
+Proof
+  SRW_TAC word_frags [DECODE_CP_def,options_encode_def,word_modify_def]
+QED
 
-val decode_27_enc_coproc = store_thm("decode_27_enc_coproc",
-  `(!cond cpn cop1 crd crn crm cop2.
+Theorem decode_27_enc_coproc:
+   (!cond cpn cop1 crd crn crm cop2.
       enc (instruction$CDP cond cpn cop1 crd crn crm cop2) ' 27) /\
    (!cond. enc (instruction$UND cond) ' 27 = F) /\
    (!cond cpn cop1 rd crn crm cop2.
@@ -683,8 +785,10 @@ val decode_27_enc_coproc = store_thm("decode_27_enc_coproc",
    (!cond n opt cpn crd rn offset.
       enc (instruction$STC cond n opt cpn crd rn offset) ' 27) /\
    (!cond n opt cpn crd rn offset.
-      enc (instruction$LDC cond n opt cpn crd rn offset) ' 27)`,
-  SRW_TAC word_frags [options_encode_def,word_modify_def]);
+      enc (instruction$LDC cond n opt cpn crd rn offset) ' 27)
+Proof
+  SRW_TAC word_frags [options_encode_def,word_modify_def]
+QED
 
 (* ......................................................................... *)
 
@@ -694,14 +798,16 @@ val word_frags =
      word_bits_def,word_extract_def,condition_encode_lem,
      instruction_encode_def,shift_encode_lem,BIT_NUMERAL,BIT_ZERO]];
 
-val decode_br_enc = store_thm("decode_br_enc",
-  `(!cond offset.
+Theorem decode_br_enc:
+   (!cond offset.
       DECODE_BRANCH (enc (instruction$B cond offset)) = (F, offset)) /\
    (!cond offset.
-      DECODE_BRANCH (enc (instruction$BL cond offset)) = (T, offset))`,
+      DECODE_BRANCH (enc (instruction$BL cond offset)) = (T, offset))
+Proof
   SRW_TAC word_frags [DECODE_BRANCH_def]
     \\ ASM_SIMP_TAC bool_ss [BIT_SHIFT_THM3,
-         (SYM o EVAL) ``11 * 2 ** 24``,(SYM o EVAL) ``10 * 2 ** 24``]);
+         (SYM o EVAL) ``11 * 2 ** 24``,(SYM o EVAL) ``10 * 2 ** 24``]
+QED
 
 val shift_immediate_enc_lem = prove(
   `(!i r. (w2w:word32->word8)
@@ -779,11 +885,12 @@ val shift_register_enc_lem = prove(
   SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
     \\ SRW_TAC word_frags []);
 
-val immediate_enc = store_thm("immediate_enc",
-  `(!c r i. IMMEDIATE c ((11 >< 0) (addr_mode1_encode (Dp_immediate r i))) =
+Theorem immediate_enc:
+   (!c r i. IMMEDIATE c ((11 >< 0) (addr_mode1_encode (Dp_immediate r i))) =
       arm$ROR (w2w i) (2w * w2w r) c) /\
     !c r i. IMMEDIATE c ((11 >< 0) (msr_mode_encode (Msr_immediate r i))) =
-      arm$ROR (w2w i) (2w * w2w r) c`,
+      arm$ROR (w2w i) (2w * w2w r) c
+Proof
   SRW_TAC (boolSimps.LET_ss::word_frags)
          [IMMEDIATE_def,addr_mode1_encode_def,msr_mode_encode_def]
     \\ (MATCH_MP_TAC (METIS_PROVE [] ``!a b c d x. (a = b) /\ (c = d) ==>
@@ -796,22 +903,29 @@ val immediate_enc = store_thm("immediate_enc",
       Cases_on `i' < 4` \\ SRW_TAC word_frags []]
     \\ POP_ASSUM_LIST (ASSUME_TAC o hd)
     \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []));
+    \\ SRW_TAC word_frags [])
+QED
 
-val immediate_enc2 = store_thm("immediate_enc2",
-  `!i. (11 >< 0) (addr_mode2_encode (Dt_immediate i)) = i`,
+Theorem immediate_enc2:
+   !i. (11 >< 0) (addr_mode2_encode (Dt_immediate i)) = i
+Proof
   SRW_TAC word_frags [addr_mode2_encode_def,w2w]
-    \\ Cases_on `i' < 12` \\ SRW_TAC word_frags []);
+    \\ Cases_on `i' < 12` \\ SRW_TAC word_frags []
+QED
 
-val immediate_enc3 = store_thm("immediate_enc3",
-  `(!i. (11 >< 8) (addr_mode3_encode (Dth_immediate i)) = (7 >< 4) i) /\
-     !i. (3 >< 0) (addr_mode3_encode (Dth_immediate i)) = (3 >< 0) i`,
+Theorem immediate_enc3:
+   (!i. (11 >< 8) (addr_mode3_encode (Dth_immediate i)) = (7 >< 4) i) /\
+     !i. (3 >< 0) (addr_mode3_encode (Dth_immediate i)) = (3 >< 0) i
+Proof
   SRW_TAC word_frags [addr_mode3_encode_def,w2w]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []
+QED
 
-val register_enc3 = store_thm("register_enc3",
-  `!i. (3 >< 0) (addr_mode3_encode (Dth_register r)) = r`,
-  SRW_TAC word_frags [addr_mode3_encode_def,w2w]);
+Theorem register_enc3:
+   !i. (3 >< 0) (addr_mode3_encode (Dth_register r)) = r
+Proof
+  SRW_TAC word_frags [addr_mode3_encode_def,w2w]
+QED
 
 val lem = simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) []
   ``~(i = 0w:word5) ==> ~((4 >< 0) i = 0w:word8)``;
@@ -819,8 +933,8 @@ val lem = simpLib.SIMP_PROVE (std_ss++WORD_BIT_EQ_ss) []
 val lem2 = simpLib.SIMP_PROVE (std_ss++WORD_ARITH_ss++WORD_ARITH_EQ_ss) []
   ``-1w = 3w:word2``;
 
-val shift_immediate_enc = store_thm("shift_immediate_enc",
-  `!reg m c sh i. SHIFT_IMMEDIATE reg m c
+Theorem shift_immediate_enc:
+   !reg m c sh i. SHIFT_IMMEDIATE reg m c
       ((11 >< 0) (addr_mode1_encode (Dp_shift_immediate sh i))) =
       if i = 0w then
         case sh of
@@ -833,14 +947,16 @@ val shift_immediate_enc = store_thm("shift_immediate_enc",
           LSL Rm => arm$LSL (REG_READ reg m Rm) (w2w i) c
         | LSR Rm => arm$LSR (REG_READ reg m Rm) (w2w i) c
         | ASR Rm => arm$ASR (REG_READ reg m Rm) (w2w i) c
-        | ROR Rm => arm$ROR (REG_READ reg m Rm) (w2w i) c`,
+        | ROR Rm => arm$ROR (REG_READ reg m Rm) (w2w i) c
+Proof
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
     \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
          [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode1_encode_def,
-          shift_encode_def,shift_immediate_enc_lem,lem2]);
+          shift_encode_def,shift_immediate_enc_lem,lem2]
+QED
 
-val shift_immediate_enc2 = store_thm("shift_immediate_enc2",
-  `!reg m c sh i. SHIFT_IMMEDIATE reg m c
+Theorem shift_immediate_enc2:
+   !reg m c sh i. SHIFT_IMMEDIATE reg m c
       ((11 >< 0) (addr_mode2_encode (Dt_shift_immediate sh i))) =
       if i = 0w then
         case sh of
@@ -853,37 +969,45 @@ val shift_immediate_enc2 = store_thm("shift_immediate_enc2",
           LSL Rm => arm$LSL (REG_READ reg m Rm) (w2w i) c
         | LSR Rm => arm$LSR (REG_READ reg m Rm) (w2w i) c
         | ASR Rm => arm$ASR (REG_READ reg m Rm) (w2w i) c
-        | ROR Rm => arm$ROR (REG_READ reg m Rm) (w2w i) c`,
+        | ROR Rm => arm$ROR (REG_READ reg m Rm) (w2w i) c
+Proof
   REPEAT STRIP_TAC \\ Cases_on `sh` \\ Cases_on `i = 0w` \\ IMP_RES_TAC lem
     \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_IMMEDIATE_def,SHIFT_IMMEDIATE2_def,addr_mode2_encode_def,
-         shift_encode_def,shift_immediate_enc_lem2,lem2]);
+         shift_encode_def,shift_immediate_enc_lem2,lem2]
+QED
 
-val shift_register_enc = store_thm("shift_register_enc",
-  `!reg m c sh r. SHIFT_REGISTER reg m c
+Theorem shift_register_enc:
+   !reg m c sh r. SHIFT_REGISTER reg m c
       ((11 >< 0) (addr_mode1_encode (Dp_shift_register sh r))) =
       let rs = (7 >< 0) (REG_READ reg m r) in
         case sh of
           LSL Rm => arm$LSL (REG_READ (INC_PC reg) m Rm) rs c
         | LSR Rm => arm$LSR (REG_READ (INC_PC reg) m Rm) rs c
         | ASR Rm => arm$ASR (REG_READ (INC_PC reg) m Rm) rs c
-        | ROR Rm => arm$ROR (REG_READ (INC_PC reg) m Rm) rs c`,
+        | ROR Rm => arm$ROR (REG_READ (INC_PC reg) m Rm) rs c
+Proof
   REPEAT STRIP_TAC \\ Cases_on `sh`
     \\ SRW_TAC [boolSimps.LET_ss, WORD_EXTRACT_ss]
         [SHIFT_REGISTER_def,SHIFT_REGISTER2_def,addr_mode1_encode_def,
-         shift_encode_def,shift_register_enc_lem,lem2]);
+         shift_encode_def,shift_register_enc_lem,lem2]
+QED
 
-val shift_register_enc2 = store_thm("shift_register_enc2",
-  `!r. (3 >< 0) ((11 >< 0) (msr_mode_encode (Msr_register r))) = r`,
-  SRW_TAC (boolSimps.LET_ss::word_frags) [msr_mode_encode_def]);
+Theorem shift_register_enc2:
+   !r. (3 >< 0) ((11 >< 0) (msr_mode_encode (Msr_register r))) = r
+Proof
+  SRW_TAC (boolSimps.LET_ss::word_frags) [msr_mode_encode_def]
+QED
 
-val shift_immediate_shift_register = store_thm("shift_immediate_shift_register",
-  `(!reg m c sh r.
+Theorem shift_immediate_shift_register:
+   (!reg m c sh r.
      (11 >< 0) (addr_mode1_encode (Dp_shift_register sh r)) ' 4) /\
    (!reg m c sh i.
-     ~((11 >< 0) (addr_mode1_encode (Dp_shift_immediate sh i)) ' 4))`,
+     ~((11 >< 0) (addr_mode1_encode (Dp_shift_immediate sh i)) ' 4))
+Proof
   NTAC 6 STRIP_TAC \\ Cases_on `sh`
-    \\ SRW_TAC word_frags [addr_mode1_encode_def]);
+    \\ SRW_TAC word_frags [addr_mode1_encode_def]
+QED
 
 val decode_data_proc_enc_ = prove(
   `!cond op s rd rn Op2.
@@ -927,8 +1051,8 @@ val decode_data_proc_enc3 = prove(
   SRW_TAC [] [instruction_encode_def,decode_opcode_def]
     \\ SRW_TAC [] [decode_data_proc_enc_]);
 
-val decode_mla_mul_enc = store_thm("decode_mla_mul_enc",
-  `(!cond s rd rm rs.
+Theorem decode_mla_mul_enc:
+   (!cond s rd rm rs.
       DECODE_MLA_MUL (enc (instruction$MUL cond s rd rm rs)) =
       (F,F,F,s,rd,0w,rs,rm)) /\
    (!cond s rd rm rs rn.
@@ -945,9 +1069,11 @@ val decode_mla_mul_enc = store_thm("decode_mla_mul_enc",
       (T,T,F,s,rdhi,rdlo,rs,rm)) /\
    (!cond s rdhi rdlo rm rs.
       DECODE_MLA_MUL (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) =
-      (T,T,T,s,rdhi,rdlo,rs,rm))`,
+      (T,T,T,s,rdhi,rdlo,rs,rm))
+Proof
   REPEAT STRIP_TAC \\ SRW_TAC word_frags [DECODE_MLA_MUL_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []
+QED
 
 val decode_ldr_str_enc = Count.apply store_thm("decode_ldr_str_enc",
   `(!cond b opt rd rn offset.
@@ -979,34 +1105,41 @@ val decode_ldrh_strh_enc = Count.apply store_thm("decode_ldrh_strh_enc",
          addr_mode3_encode_def,options_encode2_def,word_modify_def]
     \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
 
-val decode_ldm_stm_enc = store_thm("decode_ldm_stm_enc",
-  `(!cond s opt rn l.
+Theorem decode_ldm_stm_enc:
+   (!cond s opt rn l.
       DECODE_LDM_STM (enc (instruction$LDM cond s opt rn l)) =
       (opt.Pre, opt.Up, s, opt.Wb, T, rn, l)) /\
    (!cond s opt rn l.
       DECODE_LDM_STM (enc (instruction$STM cond s opt rn l)) =
-      (opt.Pre, opt.Up, s, opt.Wb, F, rn, l))`,
+      (opt.Pre, opt.Up, s, opt.Wb, F, rn, l))
+Proof
   SRW_TAC word_frags [DECODE_LDM_STM_def,options_encode_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []
+QED
 
-val decode_swp_enc = store_thm("decode_swp_enc",
-  `!cond b rd rm rn.
-      DECODE_SWP (enc (instruction$SWP cond b rd rm rn)) = (b,rn,rd,rm)`,
+Theorem decode_swp_enc:
+   !cond b rd rm rn.
+      DECODE_SWP (enc (instruction$SWP cond b rd rm rn)) = (b,rn,rd,rm)
+Proof
   SRW_TAC word_frags [DECODE_SWP_def] \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []);
+    \\ SRW_TAC word_frags []
+QED
 
-val decode_mrs_enc = store_thm("decode_mrs_enc",
-  `!cond r rd. DECODE_MRS (enc (instruction$MRS cond r rd)) = (r, rd)`,
+Theorem decode_mrs_enc:
+   !cond r rd. DECODE_MRS (enc (instruction$MRS cond r rd)) = (r, rd)
+Proof
   SRW_TAC word_frags [DECODE_MRS_def]
     \\ ASM_SIMP_TAC (bool_ss++ARITH_ss) [BIT_SHIFT_THM3,
-         (SYM o EVAL) ``271 * 2 ** 16``,(SYM o EVAL) ``335 * 2 ** 16``]);
+         (SYM o EVAL) ``271 * 2 ** 16``,(SYM o EVAL) ``335 * 2 ** 16``]
+QED
 
-val decode_msr_enc = store_thm("decode_msr_enc",
-  `!cond psrd Op2.
+Theorem decode_msr_enc:
+   !cond psrd Op2.
       DECODE_MSR (enc (instruction$MSR cond psrd Op2)) =
         let (r,bit19,bit16) = DECODE_PSRD psrd
         and opnd = (11 >< 0) (msr_mode_encode Op2) in
-          (IS_MSR_IMMEDIATE Op2,r,bit19,bit16,(3 >< 0) opnd,opnd)`,
+          (IS_MSR_IMMEDIATE Op2,r,bit19,bit16,(3 >< 0) opnd,opnd)
+Proof
   REPEAT STRIP_TAC \\ Cases_on `Op2` \\ Cases_on `psrd`
     \\ SRW_TAC (boolSimps.LET_ss::word_frags) [DECODE_MSR_def,DECODE_PSRD_def,
          IS_MSR_IMMEDIATE_def,msr_psr_encode_def,msr_mode_encode_def]
@@ -1014,45 +1147,54 @@ val decode_msr_enc = store_thm("decode_msr_enc",
          (SYM o EVAL) ``4623 * 2 ** 12``, (SYM o EVAL) ``1168 * 2 ** 12``,
          (SYM o EVAL) ``1152 * 2 ** 12``, (SYM o EVAL) ``1040 * 2 ** 12``,
          (SYM o EVAL) ``144 * 2 ** 12``, (SYM o EVAL) ``128 * 2 ** 12``,
-         (SYM o EVAL) ``16 * 2 ** 12``]);
+         (SYM o EVAL) ``16 * 2 ** 12``]
+QED
 
-val decode_mrc_mcr_rd_enc = store_thm("decode_mrc_mcr_rd_enc",
-  `(!cond cpn cop1 rd crn crm cop2.
+Theorem decode_mrc_mcr_rd_enc:
+   (!cond cpn cop1 rd crn crm cop2.
       (15 >< 12) (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) = rd) /\
    !cond cpn cop1 rd crn crm cop2.
-      (15 >< 12) (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = rd`,
+      (15 >< 12) (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = rd
+Proof
   SRW_TAC word_frags [] \\ FULL_SIMP_TAC std_ss [LESS_THM]
-    \\ SRW_TAC word_frags []);
+    \\ SRW_TAC word_frags []
+QED
 
-val decode_ldc_stc_enc = store_thm("decode_ldc_stc_enc",
-  `(!cond n opt cpn crd rn offset.
+Theorem decode_ldc_stc_enc:
+   (!cond n opt cpn crd rn offset.
       DECODE_LDC_STC (enc (instruction$LDC cond n opt cpn crd rn offset)) =
       (opt.Pre, opt.Up, n, opt.Wb, T, rn, crd, cpn, offset)) /\
    (!cond n opt cpn crd rn offset.
       DECODE_LDC_STC (enc (instruction$STC cond n opt cpn crd rn offset)) =
-      (opt.Pre, opt.Up, n, opt.Wb, F, rn, crd, cpn, offset))`,
+      (opt.Pre, opt.Up, n, opt.Wb, F, rn, crd, cpn, offset))
+Proof
   SRW_TAC word_frags [DECODE_LDC_STC_def,options_encode_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []
+QED
 
-val decode_ldc_stc_20_enc = store_thm("decode_ldc_stc_20_enc",
-  `(!cond n opt cpn crd rn offset.
+Theorem decode_ldc_stc_20_enc:
+   (!cond n opt cpn crd rn offset.
       enc (instruction$LDC cond n opt cpn crd rn offset) ' 20) /\
     !cond n opt cpn crd rn offset.
-      ~(enc (instruction$STC cond n opt cpn crd rn offset) ' 20)`,
+      ~(enc (instruction$STC cond n opt cpn crd rn offset) ' 20)
+Proof
   SRW_TAC word_frags [DECODE_LDC_STC_def,options_encode_def,word_modify_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []
+QED
 
-val decode_cdp_enc = store_thm("decode_cdp_enc",
-  `(!cond cpn cop1 crd crn crm cop2.
+Theorem decode_cdp_enc:
+   (!cond cpn cop1 crd crn crm cop2.
       DECODE_CDP (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) =
         (cop1,crn,crd,cpn,cop2,crm)) /\
     !cond cpn cop1 crd crn crm cop2.
-      DECODE_CPN (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) = cpn`,
+      DECODE_CPN (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) = cpn
+Proof
   SRW_TAC word_frags [DECODE_CDP_def,DECODE_CPN_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []
+QED
 
-val decode_mrc_mcr_enc = store_thm("decode_mrc_mcr_enc",
-  `(!cond cpn cop1 rd crn crm cop2.
+Theorem decode_mrc_mcr_enc:
+   (!cond cpn cop1 rd crn crm cop2.
       DECODE_MRC_MCR (enc (instruction$MRC cond cpn cop1 rd crn crm cop2)) =
         (cop1,crn,rd,cpn,cop2,crm)) /\
    (!cond cpn cop1 rd crn crm cop2.
@@ -1061,9 +1203,11 @@ val decode_mrc_mcr_enc = store_thm("decode_mrc_mcr_enc",
       DECODE_MRC_MCR (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) =
         (cop1,crn,rd,cpn,cop2,crm)) /\
    (!cond cpn cop1 rd crn crm cop2.
-      DECODE_CPN (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = cpn)`,
+      DECODE_CPN (enc (instruction$MCR cond cpn cop1 rd crn crm cop2)) = cpn)
+Proof
   SRW_TAC word_frags [DECODE_MRC_MCR_def,DECODE_CPN_def]
-    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []);
+    \\ FULL_SIMP_TAC std_ss [LESS_THM] \\ SRW_TAC word_frags []
+QED
 
 (* ......................................................................... *)
 
@@ -1176,19 +1320,23 @@ val PASS_TAC = REPEAT STRIP_TAC \\ Cases_on_nzcv `flgs`
 
 (* ......................................................................... *)
 
-val cond_pass_enc_br = store_thm("cond_pass_enc_br",
-  `(!cond flgs offset.
+Theorem cond_pass_enc_br:
+   (!cond flgs offset.
       CONDITION_PASSED flgs (enc (instruction$B cond offset)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond flgs offset.
       CONDITION_PASSED flgs (enc (instruction$BL cond offset)) =
-      CONDITION_PASSED2 flgs cond)`,
-  PASS_TAC);
+      CONDITION_PASSED2 flgs cond)
+Proof
+  PASS_TAC
+QED
 
-val cond_pass_enc_swi = store_thm("cond_pass_enc_swi",
-  `!cond flgs. CONDITION_PASSED flgs (enc (instruction$SWI cond)) =
-               CONDITION_PASSED2 flgs cond`,
-  PASS_TAC);
+Theorem cond_pass_enc_swi:
+   !cond flgs. CONDITION_PASSED flgs (enc (instruction$SWI cond)) =
+               CONDITION_PASSED2 flgs cond
+Proof
+  PASS_TAC
+QED
 
 val cond_pass_enc_data_proc_ = prove(
   `!cond op s rd rn op2.
@@ -1222,8 +1370,8 @@ val cond_pass_enc_data_proc3 = prove(
       CONDITION_PASSED2 flgs cond)`,
   SRW_TAC [] [instruction_encode_def] \\ SRW_TAC [] [cond_pass_enc_data_proc_]);
 
-val cond_pass_enc_mla_mul = store_thm("cond_pass_enc_mla_mul",
-  `(!cond s rd rm rs.
+Theorem cond_pass_enc_mla_mul:
+   (!cond s rd rm rs.
       CONDITION_PASSED flgs (enc (instruction$MUL cond s rd rm rs)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rd rm rs rn.
@@ -1240,56 +1388,70 @@ val cond_pass_enc_mla_mul = store_thm("cond_pass_enc_mla_mul",
       CONDITION_PASSED2 flgs cond) /\
    (!cond s rdhi rdlo rm rs.
       CONDITION_PASSED flgs (enc (instruction$SMLAL cond s rdlo rdhi rm rs)) =
-      CONDITION_PASSED2 flgs cond)`,
-  PASS_TAC);
+      CONDITION_PASSED2 flgs cond)
+Proof
+  PASS_TAC
+QED
 
-val cond_pass_enc_ldr_str = store_thm("cond_pass_enc_ldr_str",
-  `(!cond b opt rd rn offset.
+Theorem cond_pass_enc_ldr_str:
+   (!cond b opt rd rn offset.
       CONDITION_PASSED flgs (enc (instruction$LDR cond b opt rd rn offset)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond b opt rd rn offset.
       CONDITION_PASSED flgs (enc (instruction$STR cond b opt rd rn offset)) =
-      CONDITION_PASSED2 flgs cond)`,
-  PASS_TAC);
+      CONDITION_PASSED2 flgs cond)
+Proof
+  PASS_TAC
+QED
 
-val cond_pass_enc_ldrh_strh = store_thm("cond_pass_enc_ldrh_strh",
-  `(!cond s h opt rd rn offset.
+Theorem cond_pass_enc_ldrh_strh:
+   (!cond s h opt rd rn offset.
       CONDITION_PASSED flgs (enc (instruction$LDRH cond s h opt rd rn offset)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond opt rd rn offset.
       CONDITION_PASSED flgs (enc (instruction$STRH cond opt rd rn offset)) =
-      CONDITION_PASSED2 flgs cond)`,
-  PASS_TAC);
+      CONDITION_PASSED2 flgs cond)
+Proof
+  PASS_TAC
+QED
 
-val cond_pass_enc_ldm_stm = store_thm("cond_pass_enc_ldm_stm",
-  `(!cond s opt rn list.
+Theorem cond_pass_enc_ldm_stm:
+   (!cond s opt rn list.
       CONDITION_PASSED flgs (enc (instruction$LDM cond s opt rn list)) =
       CONDITION_PASSED2 flgs cond) /\
    (!cond s opt rn list.
       CONDITION_PASSED flgs (enc (instruction$STM cond s opt rn list)) =
-      CONDITION_PASSED2 flgs cond)`,
-  PASS_TAC);
+      CONDITION_PASSED2 flgs cond)
+Proof
+  PASS_TAC
+QED
 
-val cond_pass_enc_swp = store_thm("cond_pass_enc_swp",
-  `!cond b rd rm rn.
+Theorem cond_pass_enc_swp:
+   !cond b rd rm rn.
       CONDITION_PASSED flgs (enc (instruction$SWP cond b rd rm rn)) =
-      CONDITION_PASSED2 flgs cond`,
-  PASS_TAC);
+      CONDITION_PASSED2 flgs cond
+Proof
+  PASS_TAC
+QED
 
-val cond_pass_enc_mrs = store_thm("cond_pass_enc_mrs",
-  `!cond r rd.
+Theorem cond_pass_enc_mrs:
+   !cond r rd.
       CONDITION_PASSED flgs (enc (instruction$MRS cond r rd)) =
-      CONDITION_PASSED2 flgs cond`,
-  PASS_TAC);
+      CONDITION_PASSED2 flgs cond
+Proof
+  PASS_TAC
+QED
 
-val cond_pass_enc_msr = store_thm("cond_pass_enc_msr",
-  `!cond psrd op.
+Theorem cond_pass_enc_msr:
+   !cond psrd op.
       CONDITION_PASSED flgs (enc (instruction$MSR cond psrd op)) =
-      CONDITION_PASSED2 flgs cond`,
-  PASS_TAC);
+      CONDITION_PASSED2 flgs cond
+Proof
+  PASS_TAC
+QED
 
-val cond_pass_enc_coproc = store_thm("cond_pass_enc_coproc",
-  `(!cond cpn cop1 crd crn crm cop2.
+Theorem cond_pass_enc_coproc:
+   (!cond cpn cop1 crd crn crm cop2.
       CONDITION_PASSED flgs
         (enc (instruction$CDP cond cpn cop1 crd crn crm cop2)) =
       CONDITION_PASSED2 flgs cond) /\
@@ -1310,8 +1472,10 @@ val cond_pass_enc_coproc = store_thm("cond_pass_enc_coproc",
    (!cond n opt cpn crd rn offset.
       CONDITION_PASSED flgs
         (enc (instruction$LDC cond n opt cpn crd rn offset)) =
-      CONDITION_PASSED2 flgs cond)`,
-  PASS_TAC);
+      CONDITION_PASSED2 flgs cond)
+Proof
+  PASS_TAC
+QED
 
 (* ......................................................................... *)
 

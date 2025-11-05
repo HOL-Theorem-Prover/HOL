@@ -85,9 +85,10 @@ Definition mapM_def:
    mapM f = sequence o MAP f
 End
 
-val mwhile_exists = prove(
-  ``!g b. ?f.
-      f = BIND g (\gv. if gv then IGNORE_BIND b f else UNIT ())``,
+Theorem mwhile_exists[local]:
+    !g b. ?f.
+      f = BIND g (\gv. if gv then IGNORE_BIND b f else UNIT ())
+Proof
   MAP_EVERY Q.X_GEN_TAC [`g`, `b`] THEN
   Q.EXISTS_TAC
     `\s0. if ?n. ~FST (g (FUNPOW (SND o b o SND o g) n s0)) then
@@ -153,7 +154,8 @@ val mwhile_exists = prove(
     SRW_TAC [][] THEN
     FIRST_X_ASSUM (Q.SPEC_THEN `SUC m` (MP_TAC o Q.GEN `m`)) THEN
     SRW_TAC [][arithmeticTheory.FUNPOW]
-  ])
+  ]
+QED
 
 val MWHILE_DEF = new_specification(
   "MWHILE_DEF", ["MWHILE"],
@@ -366,19 +368,17 @@ Proof
    >> REWRITE_TAC [FST]
 QED
 
-Theorem sequence_nil:
+Theorem sequence_nil[simp]:
     sequence [] = UNIT []
 Proof
   BasicProvers.SRW_TAC[][sequence_def]
 QED
-val _ = BasicProvers.export_rewrites["sequence_nil"]
 
-Theorem mapM_nil:
+Theorem mapM_nil[simp]:
     mapM f [] = UNIT []
 Proof
   BasicProvers.SRW_TAC[][mapM_def]
 QED
-val _ = BasicProvers.export_rewrites["mapM_nil"]
 
 Theorem mapM_cons:
     mapM f (x::xs) = BIND (f x) (\y. BIND (mapM f xs) (\ys. UNIT (y::ys)))

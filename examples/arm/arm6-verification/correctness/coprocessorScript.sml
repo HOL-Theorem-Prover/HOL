@@ -74,8 +74,8 @@ val arm6state_inp = ``<|state := ARM6 (DP reg psr areg din alua alub dout)
       sctrlreg psrfb oareg mask orp oorp mul mul2 borrow2 mshift);
     inp := (inp : num -> bool # bool # bool # bool # word32 # bool # bool)|>``;
 
-val COPROC_BUSY_WAIT = store_thm("COPROC_BUSY_WAIT",
-  `!t x. Abbrev (x = (^arm6state_inp)) /\
+Theorem COPROC_BUSY_WAIT:
+   !t x. Abbrev (x = (^arm6state_inp)) /\
    DECODE_INST ireg IN {cdp_und; mrc; mcr; stc; ldc} /\
    (aregn2 = 2w) /\
    CONDITION_PASSED (NZCV (CPSR_READ psr)) ireg /\
@@ -102,7 +102,8 @@ val COPROC_BUSY_WAIT = store_thm("COPROC_BUSY_WAIT",
          (( t = 0) /\ iregabt2) ((t = 0) /\ dataabt2)
          2w ((t = 0) /\ mrq2) nbw' nrw' sctrlreg psrfb' oareg'
          mask' orp' oorp' mul' mul2' borrow2' mshift');
-       inp := ADVANCE t inp |>))`,
+       inp := ADVANCE t inp |>))
+Proof
   NTAC 3 STRIP_TAC \\ UNABBREV_TAC `b`
     \\ ASM_SIMP_TAC (std_ss++STATE_INP_ss) [Abbr`x`,Abbr`x0`,Abbr`w`,
          IS_BUSY_def,SINIT_def,INIT_ARM6_def,num2exception_exception2num,
@@ -128,7 +129,8 @@ val COPROC_BUSY_WAIT = store_thm("COPROC_BUSY_WAIT",
          [PROJ_NFIQ_def,PROJ_NIRQ_def,PROJ_CPB_def]
     \\ Cases_on `t = 0` >> RW_TAC arith_ss [AREGN1_def,PROJ_ABORT_def]
     \\ Cases_on `t = 1` \\ FULL_SIMP_TAC arith_ss
-         [AREGN1_def,PROJ_ABORT_def,state_arm6_11,dp_11,ctrl_11]);
+         [AREGN1_def,PROJ_ABORT_def,state_arm6_11,dp_11,ctrl_11]
+QED
 
 local
   val nc = armLib.tupleCases
@@ -300,12 +302,14 @@ val lem2 = prove(
           ~(ic = cdp_und) /\ ~(ic = mrc) /\ ~(ic = mcr))`,
   RW_TAC (std_ss++pred_setSimps.PRED_SET_ss) []);
 
-val BUSY_EXISTS = store_thm("BUSY_EXISTS",
-  `!inp b. inp IN STRM_ARM6 /\
+Theorem BUSY_EXISTS:
+   !inp b. inp IN STRM_ARM6 /\
        Abbrev (b = BUSY_WAIT (onfq,ooonfq,oniq,oooniq,f,i,pipebabt) inp) /\
-       ~IS_BUSY inp b ==> ?n. IS_BUSY (ADVANCE b inp) n`,
+       ~IS_BUSY inp b ==> ?n. IS_BUSY (ADVANCE b inp) n
+Proof
   RW_TAC arith_ss [IN_DEF,STRM_ARM6_def,ADVANCE_def,IS_BUSY_def]
-    \\ METIS_TAC [ADD_COMM,LESS_ADD]);
+    \\ METIS_TAC [ADD_COMM,LESS_ADD]
+QED
 
 val BUSY_EXISTS_COR =
   let val x = (SIMP_RULE std_ss [] o
@@ -369,8 +373,8 @@ val FINISH_OFF3 = let val
      POP_ASSUM_LIST (K ALL_TAC) \\ METIS_TAC []]
  end;
 
-val LDC_STC_THM = store_thm("LDC_STC_THM",
-  `!t x. Abbrev (x = (^arm6state_inp)) /\ inp IN STRM_ARM6 /\
+Theorem LDC_STC_THM:
+   !t x. Abbrev (x = (^arm6state_inp)) /\ inp IN STRM_ARM6 /\
    DECODE_INST ireg IN {stc; ldc} /\
    (aregn2 = 2w) /\
    CONDITION_PASSED (NZCV (CPSR_READ psr)) ireg /\
@@ -413,7 +417,8 @@ val LDC_STC_THM = store_thm("LDC_STC_THM",
             (if ointstart' then aregn' else 2w)
             mrq' nbw' (~(t = w) /\ (DECODE_INST ireg = stc)) sctrlreg psrfb'
             oareg' (if t = w then MASK nxtic1 t3 mask' ARB else mask')
-            orp' oorp' mul' mul2' borrow2' mshift'); inp := ADVANCE t inp |>))`,
+            orp' oorp' mul' mul2' borrow2' mshift'); inp := ADVANCE t inp |>))
+Proof
   REWRITE_TAC [DECODE_PSR_def] \\ REPEAT STRIP_TAC
     \\ BasicProvers.LET_ELIM_TAC \\ SIMP_TAC std_ss [markerTheory.Abbrev_def]
     \\ IMP_RES_TAC LESS_ADD
@@ -471,7 +476,8 @@ val LDC_STC_THM = store_thm("LDC_STC_THM",
         \\ FULL_SIMP_TAC arith_ss [state_arm6_11,dp_11,ctrl_11,ADD1,
              LEFT_ADD_DISTRIB,GSYM word_add_n2w]
         \\ CONV_TAC (DEPTH_CONV EXISTS_AND_REORDER_CONV)
-        \\ FINISH_OFF3]);
+        \\ FINISH_OFF3]
+QED
 
 val NOT_INTERRUPT = GEN_ALL (prove(
  `!w b inp.

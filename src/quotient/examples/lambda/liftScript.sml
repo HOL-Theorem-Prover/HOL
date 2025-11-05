@@ -1178,8 +1178,7 @@ val term = ty_antiq (==`:'a term`==);
 val subs = ty_antiq (==`:(var # 'a term) list`==);
 
 
-val _ = map (fn t => overload_on("<[", t))
-            [“$SUBt:'a term -> ^subs -> 'a term”];
+Overload "<[" = “$SUBt:'a term -> ^subs -> 'a term”
 
 
 

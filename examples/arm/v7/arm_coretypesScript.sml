@@ -15,7 +15,7 @@ val _ = wordsLib.prefer_word();
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = Hol_datatype `RName =
+Datatype: RName =
     RName_0usr  | RName_1usr  | RName_2usr  | RName_3usr
   | RName_4usr  | RName_5usr  | RName_6usr  | RName_7usr
   | RName_8usr  | RName_8fiq  | RName_9usr  | RName_9fiq
@@ -25,104 +25,126 @@ val _ = Hol_datatype `RName =
   | RName_SPabt | RName_SPund | RName_SPmon
   | RName_LRusr | RName_LRfiq | RName_LRirq | RName_LRsvc
   | RName_LRabt | RName_LRund | RName_LRmon
-  | RName_PC`;
+  | RName_PC
+End
 
-val _ = Hol_datatype `PSRName =
-  CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_mon | SPSR_abt | SPSR_und`;
+Datatype: PSRName =
+  CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_mon | SPSR_abt | SPSR_und
+End
 
-val _ = Hol_datatype `HWInterrupt =
-  NoInterrupt | HW_Reset | HW_Irq | HW_Fiq`;
+Datatype: HWInterrupt =
+  NoInterrupt | HW_Reset | HW_Irq | HW_Fiq
+End
 
-val _ = Hol_datatype `ARMpsr =
+Datatype: ARMpsr =
   <| N  : bool;  Z : bool; C : bool; V : bool; Q : bool;
      IT : word8; J : bool; Reserved : word4; GE : word4;
-     E  : bool;  A : bool; I : bool; F : bool; T : bool; M : word5 |>`;
+     E  : bool;  A : bool; I : bool; F : bool; T : bool; M : word5 |>
+End
 
-val _ = Hol_datatype `CP15sctlr =
+Datatype: CP15sctlr =
   <| IE : bool; TE : bool; AFE : bool; TRE : bool; NMFI : bool;
      EE : bool; VE : bool; U   : bool; FI  : bool; DZ   : bool;
      HA : bool; RR : bool; V   : bool; I   : bool; Z    : bool;
-     SW : bool; B  : bool; C   : bool; A   : bool; M    : bool |>`;
+     SW : bool; B  : bool; C   : bool; A   : bool; M    : bool |>
+End
 
-val _ = Hol_datatype `CP15scr =
+Datatype: CP15scr =
   <| nET : bool; AW  : bool; FW : bool; EA  : bool;
-     FIQ : bool; IRQ : bool; NS : bool |>`;
+     FIQ : bool; IRQ : bool; NS : bool |>
+End
 
-val _ = Hol_datatype `CP15nsacr =
-  <| RFR : bool; NSASEDIS : bool; NSD32DIS : bool; cp : 14 word |>`;
+Datatype: CP15nsacr =
+  <| RFR : bool; NSASEDIS : bool; NSD32DIS : bool; cp : 14 word |>
+End
 
-val _ = Hol_datatype `CP15reg =
+Datatype: CP15reg =
    <| SCTLR : CP15sctlr;
       SCR   : CP15scr;
       NSACR : CP15nsacr;
       VBAR  : word32;
-      MVBAR : word32 |>`;
+      MVBAR : word32 |>
+End
 
-val _ = Hol_datatype `CP14reg =
-   <| TEEHBR : word32 |>`;
+Datatype: CP14reg =
+   <| TEEHBR : word32 |>
+End
 
-val _ = Hol_datatype `ARMarch =
+Datatype: ARMarch =
     ARMv4   | ARMv4T
   | ARMv5T  | ARMv5TE
   | ARMv6   | ARMv6K  | ARMv6T2
-  | ARMv7_A | ARMv7_R`;
+  | ARMv7_A | ARMv7_R
+End
 
-val _ = Hol_datatype `ARMextensions =
+Datatype: ARMextensions =
     Extension_ThumbEE  | Extension_VFP     | Extension_AdvanvedSIMD
-  | Extension_Security | Extension_Jazelle | Extension_Multiprocessing`;
+  | Extension_Security | Extension_Jazelle | Extension_Multiprocessing
+End
 
-val _ = Hol_datatype `ARMinfo =
+Datatype: ARMinfo =
   <| arch              : ARMarch;
      extensions        : ARMextensions set;
-     unaligned_support : bool |>`;
+     unaligned_support : bool |>
+End
 
-val _ = Hol_datatype `SRType =
+Datatype: SRType =
     SRType_LSL
   | SRType_LSR
   | SRType_ASR
   | SRType_ROR
-  | SRType_RRX`;
+  | SRType_RRX
+End
 
-val _ = Hol_datatype `InstrSet =
-  InstrSet_ARM | InstrSet_Thumb | InstrSet_Jazelle | InstrSet_ThumbEE`;
+Datatype: InstrSet =
+  InstrSet_ARM | InstrSet_Thumb | InstrSet_Jazelle | InstrSet_ThumbEE
+End
 
-val _ = Hol_datatype `Encoding =
-  Encoding_ARM | Encoding_Thumb | Encoding_Thumb2 | Encoding_ThumbEE`;
+Datatype: Encoding =
+  Encoding_ARM | Encoding_Thumb | Encoding_Thumb2 | Encoding_ThumbEE
+End
 
-val _ = Hol_datatype `MemType =
-  MemType_Normal | MemType_Device | MemType_StronglyOrdered`;
+Datatype: MemType =
+  MemType_Normal | MemType_Device | MemType_StronglyOrdered
+End
 
-val _ = Hol_datatype `MemoryAttributes =
+Datatype: MemoryAttributes =
   <| type           : MemType;
      innerattrs     : word2;
      outerattrs     : word2;
      shareable      : bool;
-     outershareable : bool |>`;
+     outershareable : bool |>
+End
 
 (*
-val _ = Hol_datatype `FullAddress =
+Datatype: FullAddress =
   <| physicaladdress    : word32;
      physicaladdressext : word8;
-     NS                 : bool  (* F = Secure; T = Non-secure *) |>`;
+     NS                 : bool  (* F = Secure; T = Non-secure *) |>
+End
 *)
 
 (* For now, assume that a full address is word32 *)
 val _ = type_abbrev("FullAddress", ``:word32``);
 
-val _ = Hol_datatype `AddressDescriptor =
+Datatype: AddressDescriptor =
   <| memattrs : MemoryAttributes;
-     paddress : FullAddress |>`;
+     paddress : FullAddress |>
+End
 
-val _ = Hol_datatype `MBReqDomain =
+Datatype: MBReqDomain =
     MBReqDomain_FullSystem
   | MBReqDomain_OuterShareable
   | MBReqDomain_InnerShareable
-  | MBReqDomain_Nonshareable`;
+  | MBReqDomain_Nonshareable
+End
 
-val _ = Hol_datatype `MBReqTypes = MBReqTypes_All | MBReqTypes_Writes`;
+Datatype: MBReqTypes = MBReqTypes_All | MBReqTypes_Writes
+End
 
-val _ = Hol_datatype `memory_access =
-  MEM_READ of FullAddress | MEM_WRITE of FullAddress => word8`;
+Datatype: memory_access =
+  MEM_READ FullAddress | MEM_WRITE FullAddress word8
+End
 
 (* Coprocessors *)
 
@@ -130,7 +152,8 @@ val _ = type_abbrev("cpid", ``:word4``);
 
 val _ = type_abbrev ("proc", ``:num``);
 
-val _ = Hol_datatype `iiid = <| proc : num |>`;
+Datatype: iiid = <| proc : num |>
+End
 
 
 (* ------------------------------------------------------------------------ *)
@@ -387,21 +410,25 @@ in
   val aligned_n2w = save_thm("aligned_n2w", rule aligned_def)
 end;
 
-val align_slice = Q.store_thm("align_slice",
-  `!n a:'a word. align (a,2 ** n) = (dimindex(:'a) - 1 '' n) a`,
+Theorem align_slice:
+   !n a:'a word. align (a,2 ** n) = (dimindex(:'a) - 1 '' n) a
+Proof
   STRIP_TAC \\ Cases
     \\ SRW_TAC [ARITH_ss] [align_def, word_slice_n2w, SLICE_THM, BITS_THM2,
          DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
-    \\ FULL_SIMP_TAC (srw_ss()) [dimword_def]);
+    \\ FULL_SIMP_TAC (srw_ss()) [dimword_def]
+QED
 
 val MIN_LEM = Q.prove(`!a b. MIN a (MIN a b) = MIN a b`, SRW_TAC [] [MIN_DEF]);
 
-val align_id = Q.store_thm("align_id",
-  `!n a. align (align (a,2 ** n),2 ** n) = align (a,2 ** n)`,
+Theorem align_id:
+   !n a. align (align (a,2 ** n),2 ** n) = align (a,2 ** n)
+Proof
   SRW_TAC [ARITH_ss,wordsLib.WORD_EXTRACT_ss]
           [DIMINDEX_GT_0,MIN_LEM,align_slice]
     \\ SRW_TAC [ARITH_ss] [MIN_DEF]
-    \\ `n = 0` by DECIDE_TAC \\ SRW_TAC [] []);
+    \\ `n = 0` by DECIDE_TAC \\ SRW_TAC [] []
+QED
 
 val align_id_248 = save_thm("align_id_248",
   numLib.REDUCE_RULE
@@ -435,12 +462,13 @@ val LOWEST_SET_BIT_LT_DIMINDEX = Q.prove(
     \\ `n < 2 ** n'` by DECIDE_TAC
     \\ METIS_TAC [NOT_BIT_GT_TWOEXP]);
 
-val lowest_set_bit_compute = Q.store_thm("lowest_set_bit_compute",
-  `!w. lowest_set_bit (w:'a word) =
+Theorem lowest_set_bit_compute:
+   !w. lowest_set_bit (w:'a word) =
        if w = 0w then
          dimindex(:'a)
        else
-         LOWEST_SET_BIT (w2n w)`,
+         LOWEST_SET_BIT (w2n w)
+Proof
   Cases \\ SRW_TAC [] [lowest_set_bit_def, LOWEST_SET_BIT_def]
     \\ MATCH_MP_TAC LEAST_THM
     \\ SRW_TAC [] []
@@ -448,15 +476,16 @@ val lowest_set_bit_compute = Q.store_thm("lowest_set_bit_compute",
     \\ FULL_SIMP_TAC (srw_ss()++ARITH_ss)
          [word_index, LOWEST_SET_BIT_LESS_LEAST]
     \\ MATCH_MP_TAC LEAST_BIT_INTRO
-    \\ METIS_TAC [BIT_EXISTS]);
+    \\ METIS_TAC [BIT_EXISTS]
+QED
 
 val NOT_IN_EMPTY_SPECIFICATION = save_thm("NOT_IN_EMPTY_SPECIFICATION",
   (GSYM o SIMP_RULE (srw_ss()) [] o Q.SPEC `{}`) pred_setTheory.SPECIFICATION);
 
 (* ------------------------------------------------------------------------ *)
 
-val encode_psr_bit = Q.store_thm("encode_psr_bit",
-  `(!cpsr. encode_psr cpsr ' 31 = cpsr.N) /\
+Theorem encode_psr_bit:
+   (!cpsr. encode_psr cpsr ' 31 = cpsr.N) /\
    (!cpsr. encode_psr cpsr ' 30 = cpsr.Z) /\
    (!cpsr. encode_psr cpsr ' 29 = cpsr.C) /\
    (!cpsr. encode_psr cpsr ' 28 = cpsr.V) /\
@@ -487,22 +516,26 @@ val encode_psr_bit = Q.store_thm("encode_psr_bit",
    (!cpsr. encode_psr cpsr ' 3 = cpsr.M ' 3) /\
    (!cpsr. encode_psr cpsr ' 2 = cpsr.M ' 2) /\
    (!cpsr. encode_psr cpsr ' 1 = cpsr.M ' 1) /\
-   (!cpsr. encode_psr cpsr ' 0 = cpsr.M ' 0)`,
-  SRW_TAC [fcpLib.FCP_ss] [encode_psr_def]);
+   (!cpsr. encode_psr cpsr ' 0 = cpsr.M ' 0)
+Proof
+  SRW_TAC [fcpLib.FCP_ss] [encode_psr_def]
+QED
 
 val extract_modify =
    (GEN_ALL o SIMP_CONV (arith_ss++fcpLib.FCP_ss++boolSimps.CONJ_ss)
     [word_extract_def, word_bits_def, w2w])
     ``(h >< l) ($FCP P) = value``;
 
-val encode_psr_bits = Q.store_thm("encode_psr_bits",
-  `(!cpsr. (26 >< 25) (encode_psr cpsr) = (1 >< 0) cpsr.IT) /\
+Theorem encode_psr_bits:
+   (!cpsr. (26 >< 25) (encode_psr cpsr) = (1 >< 0) cpsr.IT) /\
    (!cpsr. (23 >< 20) (encode_psr cpsr) = cpsr.Reserved) /\
    (!cpsr. (19 >< 16) (encode_psr cpsr) = cpsr.GE) /\
    (!cpsr. (15 >< 10) (encode_psr cpsr) = (7 >< 2) cpsr.IT) /\
-   (!cpsr. ( 4 >< 0 ) (encode_psr cpsr) = cpsr.M)`,
+   (!cpsr. ( 4 >< 0 ) (encode_psr cpsr) = cpsr.M)
+Proof
   REPEAT STRIP_TAC \\ REWRITE_TAC [encode_psr_def, extract_modify]
-    \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def, word_bits_def, w2w]);
+    \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def, word_bits_def, w2w]
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -542,4 +575,3 @@ val _ = computeLib.add_persistent_funs
    "num2Encoding_thm"];
 
 (* ------------------------------------------------------------------------ *)
-

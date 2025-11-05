@@ -296,28 +296,35 @@ QED
 fun Cases_on_i2w t =
    Q.ISPEC_THEN t Tactic.FULL_STRUCT_CASES_TAC ranged_int_word_nchotomy
 
-val DIMINDEX_SUB1 = Q.prove(
-  `2n ** (dimindex (:'a) - 1) < 2 ** dimindex (:'a)`,
-  Cases_on `dimindex (:'a)` \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0])
+Theorem DIMINDEX_SUB1[local]:
+   2n ** (dimindex (:'a) - 1) < 2 ** dimindex (:'a)
+Proof
+  Cases_on `dimindex (:'a)` \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0]
+QED
 
-val lem = Q.prove(
-  `!i. INT_MIN (:'a) <= i /\ i < 0 ==> Num (-i) <= INT_MIN (:'a)`,
+Theorem lem[local]:
+   !i. INT_MIN (:'a) <= i /\ i < 0 ==> Num (-i) <= INT_MIN (:'a)
+Proof
   SRW_TAC [] [INT_MIN_def, INT_MAX_def, wordsTheory.INT_MIN_def]
   \\ Cases_on `dimindex (:'a)`
   \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0]
-  \\ intLib.ARITH_TAC)
+  \\ intLib.ARITH_TAC
+QED
 
-val lem2 = Q.prove(
-  `!i. INT_MIN (:'a) <= i /\ i < 0 ==> Num (-i) < dimword(:'a)`,
+Theorem lem2[local]:
+   !i. INT_MIN (:'a) <= i /\ i < 0 ==> Num (-i) < dimword(:'a)
+Proof
   METIS_TAC [lem, wordsTheory.INT_MIN_LT_DIMWORD,
-             arithmeticTheory.LESS_EQ_LESS_TRANS])
+             arithmeticTheory.LESS_EQ_LESS_TRANS]
+QED
 
-val NEG_INT_ELIM = Q.prove(
-  `!i. INT_MIN (:'a) <= i /\ i < 0 /\ dimindex (:'a) <= dimindex(:'b) ==>
+Theorem NEG_INT_ELIM[local]:
+   !i. INT_MIN (:'a) <= i /\ i < 0 /\ dimindex (:'a) <= dimindex(:'b) ==>
        ?n. INT_MIN (:'a) <= n /\ n < dimword (:'a) /\
            (-n2w (Num (-i)) = n2w n : 'a word) /\
            (-n2w (Num (-i)) =
-               n2w (2 ** dimindex (:'b) - 2 ** dimindex (:'a) + n) : 'b word)`,
+               n2w (2 ** dimindex (:'b) - 2 ** dimindex (:'a) + n) : 'b word)
+Proof
   REPEAT STRIP_TAC
   \\ Q.EXISTS_TAC `dimword (:'a) - Num (-i)`
   \\ SRW_TAC [ARITH_ss]
@@ -338,7 +345,8 @@ val NEG_INT_ELIM = Q.prove(
           DECIDE ``c < b /\ b <= a ==> (a - b + (b - c) = a - c : num)``,
           wordsTheory.MOD_COMPLEMENT |> Q.SPECL [`n`,`1`] |> GSYM
           |> REWRITE_RULE [arithmeticTheory.MULT_LEFT_1]]
-  ])
+  ]
+QED
 
 Theorem sw2sw_i2w:
    !j. INT_MIN (:'b) <= j /\ j <= INT_MAX (:'b) /\
@@ -574,17 +582,21 @@ Proof
   THEN ASM_SIMP_TAC std_ss [word_literal_sub, sum_num]
 QED
 
-val mult_num = Q.prove(
-  `(!i j. 0 <= i /\ 0 <= j ==> (Num i * Num j = Num (i * j))) /\
-   (!i j. 0 <= i /\ j < 0 ==> (Num i * Num (-j) = Num (-(i * j))))`,
+Theorem mult_num[local]:
+   (!i j. 0 <= i /\ 0 <= j ==> (Num i * Num j = Num (i * j))) /\
+   (!i j. 0 <= i /\ j < 0 ==> (Num i * Num (-j) = Num (-(i * j))))
+Proof
   STRIP_TAC THEN Cases_on `i` THEN Cases_on `j`
-  THEN SRW_TAC [] [NUM_OF_INT, INT_NEG_RMUL])
+  THEN SRW_TAC [] [NUM_OF_INT, INT_NEG_RMUL]
+QED
 
-val mult_lt = Q.prove(
-  `(!i:int j. 0 <= i /\ j < 0 ==> i * j <= 0) /\
-   (!i:int j. i < 0 /\ 0 <= j ==> i * j <= 0)`,
+Theorem mult_lt[local]:
+   (!i:int j. 0 <= i /\ j < 0 ==> i * j <= 0) /\
+   (!i:int j. i < 0 /\ 0 <= j ==> i * j <= 0)
+Proof
   STRIP_TAC THEN Cases_on `i` THEN Cases_on `j`
-  THEN SRW_TAC [] [NUM_OF_INT, INT_MUL_CALCULATE])
+  THEN SRW_TAC [] [NUM_OF_INT, INT_MUL_CALCULATE]
+QED
 
 Theorem word_i2w_mul:
    !a b. i2w a * i2w b = i2w (a * b)
@@ -601,7 +613,10 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val MINUS_ONE = Q.prove(`-1w = i2w (-1)`, SRW_TAC [] [i2w_def])
+Theorem MINUS_ONE[local]:
+  -1w = i2w (-1)
+Proof SRW_TAC [] [i2w_def]
+QED
 
 Theorem MULT_MINUS_ONE:
    !i. -1w * i2w i = i2w (-i)
@@ -623,12 +638,15 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val DIV_POS = Q.prove(
-  `!i n. ~(i < 0) /\ 0n < n ==> ~(i / &n < 0)`,
-  Cases \\ SRW_TAC [ARITH_ss] [integerTheory.INT_DIV_CALCULATE])
+Theorem DIV_POS[local]:
+   !i n. ~(i < 0) /\ 0n < n ==> ~(i / &n < 0)
+Proof
+  Cases \\ SRW_TAC [ARITH_ss] [integerTheory.INT_DIV_CALCULATE]
+QED
 
-val DIV_NEG = Q.prove(
-  `!i n. i < 0i /\ 0n < n ==> i / &n < 0`,
+Theorem DIV_NEG[local]:
+   !i n. i < 0i /\ 0n < n ==> i / &n < 0
+Proof
   Cases \\ SRW_TAC [ARITH_ss] [integerTheory.INT_DIV_CALCULATE]
   \\ `&n' <> 0` by intLib.ARITH_TAC
   \\ SRW_TAC [] [integerTheory.int_div]
@@ -639,36 +657,46 @@ val DIV_NEG = Q.prove(
     \\ POP_ASSUM SUBST1_TAC
     \\ ASM_SIMP_TAC arith_ss [arithmeticTheory.ADD_DIV_RWT],
     intLib.ARITH_TAC
-  ])
+  ]
+QED
 
-val DIV_NUM_POS = Q.prove(
-  `!i j. 0 < j /\ 0i <= i ==> (Num (i / &j) = Num i DIV j)`,
-  Cases \\ SRW_TAC [ARITH_ss] [integerTheory.INT_DIV_CALCULATE])
+Theorem DIV_NUM_POS[local]:
+   !i j. 0 < j /\ 0i <= i ==> (Num (i / &j) = Num i DIV j)
+Proof
+  Cases \\ SRW_TAC [ARITH_ss] [integerTheory.INT_DIV_CALCULATE]
+QED
 
-val DIV_NUM_NEG = Q.prove(
-  `!i j. 0 < j /\ i < 0i ==>
+Theorem DIV_NUM_NEG[local]:
+   !i j. 0 < j /\ i < 0i ==>
          (Num (-(i / &j)) =
-          Num (-i) DIV j + (if Num (-i) MOD j = 0 then 0 else 1))`,
+          Num (-i) DIV j + (if Num (-i) MOD j = 0 then 0 else 1))
+Proof
   Cases \\ SRW_TAC [ARITH_ss] [integerTheory.INT_DIV_CALCULATE]
   \\ `&j <> 0` by intLib.ARITH_TAC
   \\ SRW_TAC [] [integerTheory.int_div, integerTheory.INT_NEG_ADD]
-  \\ intLib.ARITH_TAC)
+  \\ intLib.ARITH_TAC
+QED
 
-val NEG_NUM_LT_INT_MIN = Q.prove(
-  `!i. INT_MIN (:'a) <= i /\ i < 0 ==> Num (-i) <= INT_MIN (:'a)`,
+Theorem NEG_NUM_LT_INT_MIN[local]:
+   !i. INT_MIN (:'a) <= i /\ i < 0 ==> Num (-i) <= INT_MIN (:'a)
+Proof
   SRW_TAC [] [INT_MIN_def, INT_MAX_def, wordsTheory.INT_MIN_def]
   \\ Cases_on `dimindex (:'a)`
   \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0]
-  \\ intLib.ARITH_TAC)
+  \\ intLib.ARITH_TAC
+QED
 
-val NEG_NUM_LT_DIMWORD = Q.prove(
-  `!i. INT_MIN (:'a) <= i /\ i < 0 ==> Num (-i) < dimword(:'a)`,
+Theorem NEG_NUM_LT_DIMWORD[local]:
+   !i. INT_MIN (:'a) <= i /\ i < 0 ==> Num (-i) < dimword(:'a)
+Proof
   METIS_TAC [NEG_NUM_LT_INT_MIN, wordsTheory.INT_MIN_LT_DIMWORD,
-             arithmeticTheory.LESS_EQ_LESS_TRANS])
+             arithmeticTheory.LESS_EQ_LESS_TRANS]
+QED
 
-val NEG_MSB = Q.prove(
-  `!i. i < 0i /\ INT_MIN (:'a) <= i ==>
-      BIT (dimindex (:'a) - 1) (2 ** dimindex (:'a) - Num (-i))`,
+Theorem NEG_MSB[local]:
+   !i. i < 0i /\ INT_MIN (:'a) <= i ==>
+      BIT (dimindex (:'a) - 1) (2 ** dimindex (:'a) - Num (-i))
+Proof
   SRW_TAC [] [INT_MIN_def, INT_MAX_def, wordsTheory.INT_MIN_def]
   \\ `Num (-i) <= 2n ** (dimindex (:'a) - 1)` by intLib.ARITH_TAC
   \\ Cases_on `dimindex (:'a)`
@@ -682,11 +710,14 @@ val NEG_MSB = Q.prove(
   \\ ASM_SIMP_TAC bool_ss [EXP, BIT_def,
        DECIDE ``p < n ==> (2n * n - (n - p) = n + p)``,
        bitTheory.BITS_SUM |> Q.SPECL [`n`,`n`,`1`] |> SIMP_RULE std_ss []]
-  \\ SIMP_TAC std_ss [GSYM BIT_def, bitTheory.BIT_B])
+  \\ SIMP_TAC std_ss [GSYM BIT_def, bitTheory.BIT_B]
+QED
 
-val DIMINDEX_SUB1 = Q.prove(
-  `2n ** (dimindex (:'a) - 1) < 2 ** dimindex (:'a)`,
-  Cases_on `dimindex (:'a)` \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0])
+Theorem DIMINDEX_SUB1[local]:
+   2n ** (dimindex (:'a) - 1) < 2 ** dimindex (:'a)
+Proof
+  Cases_on `dimindex (:'a)` \\ FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0]
+QED
 
 Theorem i2w_DIV:
    !n i.
@@ -859,22 +890,20 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-Theorem INT_MIN:
+Theorem INT_MIN[simp]:
    INT_MIN (:'a) = -&words$INT_MIN (:'a)
 Proof
   SRW_TAC [] [INT_MIN_def, INT_MAX_def, wordsTheory.INT_MIN_def]
 QED
-val _ = export_rewrites ["INT_MIN"]
 
-Theorem INT_MAX:
+Theorem INT_MAX[simp]:
    INT_MAX (:'a) = &words$INT_MAX (:'a)
 Proof
   SRW_TAC [] [INT_MAX_def, wordsTheory.INT_MAX_def, int_arithTheory.INT_NUM_SUB]
   \\ FULL_SIMP_TAC arith_ss [wordsTheory.ZERO_LT_INT_MIN]
 QED
-val _ = export_rewrites ["INT_MAX"]
 
-Theorem UINT_MAX:
+Theorem UINT_MAX[simp]:
    UINT_MAX (:'a) = &words$UINT_MAX (:'a)
 Proof
   SRW_TAC [] [UINT_MAX_def, wordsTheory.UINT_MAX_def,
@@ -882,7 +911,6 @@ Proof
   \\ ASSUME_TAC wordsTheory.ZERO_LT_dimword
   \\ DECIDE_TAC
 QED
-val _ = export_rewrites ["UINT_MAX"]
 
 Theorem INT_BOUND_ORDER:
    INT_MIN (:'a) < INT_MAX (:'a) : int /\
@@ -892,12 +920,11 @@ Proof
   SRW_TAC [ARITH_ss] [BOUND_ORDER]
 QED
 
-Theorem INT_ZERO_LT_INT_MIN:
+Theorem INT_ZERO_LT_INT_MIN[simp]:
    INT_MIN (:'a) < 0
 Proof
   SRW_TAC [ARITH_ss] [ZERO_LT_INT_MIN]
 QED
-val _ = export_rewrites ["INT_ZERO_LT_INT_MIN"]
 
 Theorem INT_ZERO_LT_INT_MAX:
    1 < dimindex(:'a) ==> 0i < INT_MAX (:'a)
@@ -911,12 +938,11 @@ Proof
   SRW_TAC [ARITH_ss] [ZERO_LE_INT_MAX]
 QED
 
-Theorem INT_ZERO_LT_UINT_MAX:
+Theorem INT_ZERO_LT_UINT_MAX[simp]:
    0i < UINT_MAX (:'a)
 Proof
   SRW_TAC [ARITH_ss] [ZERO_LT_UINT_MAX]
 QED
-val _ = export_rewrites ["INT_ZERO_LT_UINT_MAX"]
 
 Theorem w2i_1:
    w2i (1w:'a word) = if dimindex(:'a) = 1 then -1 else 1
@@ -1033,28 +1059,31 @@ Proof
            wordsTheory.dimword_IS_TWICE_INT_MIN]
 QED
 
-val lem1 = Q.prove(
-  `!n. n <= INT_MIN (:'a) ==> (w2n (i2w (&n) : 'a word) = n)`,
+Theorem lem1[local]:
+   !n. n <= INT_MIN (:'a) ==> (w2n (i2w (&n) : 'a word) = n)
+Proof
   rw [wordsTheory.w2n_eq_0, i2w_def]
   \\ `n < dimword(:'a)`
   by metis_tac [wordsTheory.INT_MIN_LT_DIMWORD,
                 arithmeticTheory.LESS_EQ_LESS_TRANS]
   \\ simp []
-  )
+QED
 
-val lem2 = Q.prove(
-  `!n. n <= INT_MAX (:'a) ==> (w2n (i2w (&n) : 'a word) = n)`,
+Theorem lem2[local]:
+   !n. n <= INT_MAX (:'a) ==> (w2n (i2w (&n) : 'a word) = n)
+Proof
   rw [wordsTheory.w2n_eq_0, i2w_def]
   \\ `n < dimword(:'a)`
   by metis_tac [wordsTheory.INT_MAX_LT_DIMWORD,
                 arithmeticTheory.LESS_EQ_LESS_TRANS]
   \\ simp []
-  )
+QED
 
-val lem3 = Q.prove(
-  `!a b. (-1w * a = -1w * b) = (a = b)`,
+Theorem lem3[local]:
+   !a b. (-1w * a = -1w * b) = (a = b)
+Proof
   srw_tac [wordsLib.WORD_CANCEL_ss] []
-  )
+QED
 
 Theorem i2w_pos:
    !n. i2w (&n) = n2w n
@@ -1324,12 +1353,13 @@ Proof
   ]
 QED
 
-val add_min_overflow = Q.prove(
-  `!i j.
+Theorem add_min_overflow[local]:
+   !i j.
      i + j < INT_MIN (:'a) /\
      INT_MIN (:'a) <= i /\ i < 0 /\
      INT_MIN (:'a) <= j /\ j <= INT_MAX (:'a) ==>
-     0 <= w2i (i2w (i + j) : 'a word)`,
+     0 <= w2i (i2w (i + j) : 'a word)
+Proof
   srw_tac [] [w2i_def, WORD_MSB_INT_MIN_LS]
   \\ spose_not_then kall_tac
   \\ `i + j < 0` by intLib.ARITH_TAC
@@ -1345,14 +1375,16 @@ val add_min_overflow = Q.prove(
   >- fsrw_tac [ARITH_ss] [DECIDE ``0 < n ==> n <> 0n``]
   \\ `Num (-(i + j)) < dimword (:'a)` by DECIDE_TAC
   \\ `INT_MIN (:'a) < Num (-(i + j))` by intLib.ARITH_TAC
-  \\ fsrw_tac [ARITH_ss] [dimword_IS_TWICE_INT_MIN])
+  \\ fsrw_tac [ARITH_ss] [dimword_IS_TWICE_INT_MIN]
+QED
 
-val add_max_overflow = Q.prove(
-  `!i j.
+Theorem add_max_overflow[local]:
+   !i j.
      INT_MAX (:'a) < i + j /\
      0 <= i /\ i <= INT_MAX (:'a) /\
      INT_MIN (:'a) <= j /\ j <= INT_MAX (:'a) ==>
-     w2i (i2w (i + j) : 'a word) < 0`,
+     w2i (i2w (i + j) : 'a word) < 0
+Proof
   srw_tac [] [] \\ srw_tac [] [w2i_def, WORD_MSB_INT_MIN_LS]
   >| [
     spose_not_then strip_assume_tac
@@ -1371,7 +1403,7 @@ val add_max_overflow = Q.prove(
            [wordsTheory.INT_MAX_def,
             intLib.ARITH_PROVE ``~(y < 0i) ==> (&x < y = x < Num y)``]
   ]
-)
+QED
 
 val srw_add_min_overflow = SIMP_RULE (srw_ss()) [] add_min_overflow
 val srw_add_max_overflow = SIMP_RULE (srw_ss()) [] add_max_overflow
@@ -1465,26 +1497,32 @@ Proof
    \\ fsrw_tac [intLib.INT_ARITH_ss] []
 QED
 
-val lem_pos = Q.prove(
-   `!n:num. n <= INT_MAX (:'a) ==> ~(INT_MIN (:'a) <= n)`,
-   lrw [wordsTheory.BOUND_ORDER, arithmeticTheory.NOT_LESS_EQUAL])
+Theorem lem_pos[local]:
+    !n:num. n <= INT_MAX (:'a) ==> ~(INT_MIN (:'a) <= n)
+Proof
+   lrw [wordsTheory.BOUND_ORDER, arithmeticTheory.NOT_LESS_EQUAL]
+QED
 
-val lem_neg = Q.prove(
-   `!n. n <> 0n /\ n <= INT_MIN (:'a) ==>
-        &INT_MIN (:'a) <= (&dimword (:'a) - &n) % &dimword (:'a)`,
+Theorem lem_neg[local]:
+    !n. n <> 0n /\ n <= INT_MIN (:'a) ==>
+        &INT_MIN (:'a) <= (&dimword (:'a) - &n) % &dimword (:'a)
+Proof
    REPEAT strip_tac
    \\ `&n:int < &dimword (:'a)` by lrw [wordsTheory.BOUND_ORDER]
    \\ `0i <= &dimword (:'a) - &n /\ &dimword (:'a) - &n < &dimword (:'a) : int`
    by intLib.ARITH_TAC
    \\ lfs [integerTheory.INT_LESS_MOD, integerTheory.INT_SUB,
-           wordsTheory.dimword_IS_TWICE_INT_MIN])
+           wordsTheory.dimword_IS_TWICE_INT_MIN]
+QED
 
-val lem = Q.prove(
-  `!n. &INT_MIN (:'a) <= &dimword (:'a) - &n : int = n <= INT_MIN (:'a)`,
+Theorem lem[local]:
+   !n. &INT_MIN (:'a) <= &dimword (:'a) - &n : int = n <= INT_MIN (:'a)
+Proof
   srw_tac [intLib.INT_ARITH_ss]
     [intLib.ARITH_PROVE ``a <= b - c = c <= b - a : int``,
      intLib.ARITH_PROVE ``&(2n * a) - &a = &a : int``,
-     wordsTheory.dimword_IS_TWICE_INT_MIN])
+     wordsTheory.dimword_IS_TWICE_INT_MIN]
+QED
 
 Theorem overflow:
    !x y. w2i (x + y) <> w2i x + w2i y =
@@ -1583,9 +1621,11 @@ Proof
               GSYM integerTheory.int_sub, GSYM wordsTheory.TWO_COMP_POS_NEG]]
 QED
 
-val n2w_add_dimword = Q.prove(
-  `!n. n2w (dimword(:'a) + n) = n2w n : 'a word`,
-  simp [])
+Theorem n2w_add_dimword[local]:
+   !n. n2w (dimword(:'a) + n) = n2w n : 'a word
+Proof
+  simp []
+QED
 
 Theorem overflow_add:
    !x y. w2i (x + y) <> w2i x + w2i y = OVERFLOW x y F

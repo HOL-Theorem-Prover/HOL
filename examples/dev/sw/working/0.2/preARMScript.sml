@@ -41,14 +41,14 @@ val getS_def = Define
             | SV => cpsr ' 28
         `;
 
-val getS_thm = Q.store_thm (
-        "getS_thm",
-        `(getS (cpsr : CPSR) SN = cpsr ' 31) /\
+Theorem getS_thm:
+         (getS (cpsr : CPSR) SN = cpsr ' 31) /\
          (getS (cpsr : CPSR) SZ = cpsr ' 30) /\
          (getS (cpsr : CPSR) SC = cpsr ' 29) /\
          (getS (cpsr : CPSR) SV = cpsr ' 28)
-        `,
-        RW_TAC std_ss [getS_def]);
+Proof
+        RW_TAC std_ss [getS_def]
+QED
 
 
 val setS_def = Define
@@ -60,14 +60,14 @@ val setS_def = Define
                  | SV => (cpsr !! 0x10000000w)
         `;
 
-val setS_thm = Q.store_thm (
-   "setS_thm",
-        `(setS (cpsr : CPSR) SN = (cpsr !! 0x80000000w)) /\
+Theorem setS_thm:
+         (setS (cpsr : CPSR) SN = (cpsr !! 0x80000000w)) /\
     (setS (cpsr : CPSR) SZ = (cpsr !! 0x40000000w)) /\
     (setS (cpsr : CPSR) SC = (cpsr !! 0x20000000w)) /\
     (setS (cpsr : CPSR) SV = (cpsr !! 0x10000000w))
-        `,
-   RW_TAC std_ss [setS_def]);
+Proof
+   RW_TAC std_ss [setS_def]
+QED
 
 val setNZCV_def = Define
          `setNZCV (cpsr : CPSR) (N, Z, C, V) =
@@ -76,14 +76,14 @@ val setNZCV_def = Define
                  (i = 31) /\ N \/ (i = 30) /\ Z \/ (i = 29) /\ C \/
                  (i = 28) /\ V \/ i < 28 /\ b) cpsr`;
 
-val setNZCV_thm = Q.store_thm (
-   "setNZCV_thm",
-   `(getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SN = N) /\
+Theorem setNZCV_thm:
+    (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SN = N) /\
     (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SZ = Z) /\
     (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SC = C) /\
-    (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SV = V)`,
-
-   RW_TAC (std_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss) [getS_def, setNZCV_def, word_modify_def]);
+    (getS (setNZCV (cpsr : CPSR) (N,Z,C,V)) SV = V)
+Proof
+   RW_TAC (std_ss++fcpLib.FCP_ss++wordsLib.SIZES_ss) [getS_def, setNZCV_def, word_modify_def]
+QED
 
 
 (*-------------------------------------------------------------------------------*)
@@ -155,16 +155,18 @@ val _ = type_abbrev("INST", Type`:OPERATION # (EXP option) # (EXP list) # (OFFSE
 
 val _ = type_abbrev("STATE", Type`: ADDR # CPSR # (REGISTER |-> DATA) # (ADDR |-> DATA)`);
 
-val FORALL_DSTATE = Q.store_thm
-  ("FORALL_DSTATE",
-    `(!s:(REGISTER |-> DATA) # (ADDR |-> DATA). P s) =
-        !regs mem. P (regs,mem)`,
-    SIMP_TAC std_ss [FORALL_PROD]);
+Theorem FORALL_DSTATE:
+     (!s:(REGISTER |-> DATA) # (ADDR |-> DATA). P s) =
+        !regs mem. P (regs,mem)
+Proof
+    SIMP_TAC std_ss [FORALL_PROD]
+QED
 
-val FORALL_STATE = Q.store_thm
-  ("FORALL_STATE",
-    `(!s:STATE. P s) = !pc pcsr regs mem. P (pc,pcsr,(regs,mem))`,
-    SIMP_TAC std_ss [FORALL_PROD]);
+Theorem FORALL_STATE:
+     (!s:STATE. P s) = !pc pcsr regs mem. P (pc,pcsr,(regs,mem))
+Proof
+    SIMP_TAC std_ss [FORALL_PROD]
+QED
 
 (*---------------------------------------------------------------------------------*)
 (* Read and write registers and memory                                             *)
@@ -184,14 +186,15 @@ val read_def =
         REG r => regs ' r
 `;
 
-val read_thm = Q.store_thm (
-  "read_thm",
-  ` (read (regs,mem) (MEM (r,POS k)) = mem ' (w2n (regs ' r) + k)) /\
+Theorem read_thm:
+    (read (regs,mem) (MEM (r,POS k)) = mem ' (w2n (regs ' r) + k)) /\
     (read (regs,mem) (MEM (r,NEG k)) = mem ' (w2n (regs ' r) - k)) /\
     (read (regs,mem) (NCONST i) = n2w i) /\
     (read (regs,mem) (WCONST w) = w) /\
-    (read (regs,mem) (REG r) = regs ' r)`,
-    RW_TAC std_ss [read_def]);
+    (read (regs,mem) (REG r) = regs ' r)
+Proof
+    RW_TAC std_ss [read_def]
+QED
 
 val write_def =
   Define `
@@ -208,12 +211,13 @@ val write_def =
         _ => (regs, mem)
   `;
 
-val write_thm = Q.store_thm (
-  "write_thm",
-  ` (write (regs,mem) (MEM (r,POS k)) v = (regs, mem |+ (w2n (regs ' r) + k, v))) /\
+Theorem write_thm:
+    (write (regs,mem) (MEM (r,POS k)) v = (regs, mem |+ (w2n (regs ' r) + k, v))) /\
     (write (regs,mem) (MEM (r,NEG k)) v = (regs, mem |+ (w2n (regs ' r) - k, v))) /\
-    (write (regs,mem) (REG r) v = (regs |+ (r, v), mem))`,
-    RW_TAC std_ss [write_def]);
+    (write (regs,mem) (REG r) v = (regs |+ (r, v), mem))
+Proof
+    RW_TAC std_ss [write_def]
+QED
 
 (*---------------------------------------------------------------------------------*)
 (* Decoding and execution of an instruction                                        *)
@@ -228,12 +232,12 @@ val goto_def =
         | NEG n => pc - n
    `;
 
-val goto_thm = Q.store_thm (
-  "goto_thm",
-  ` (goto (pc, SOME (POS n)) = pc + n) /\
+Theorem goto_thm:
+    (goto (pc, SOME (POS n)) = pc + n) /\
     (goto (pc, SOME (NEG n)) = pc - n)
-  `,
-  RW_TAC std_ss [goto_def]);
+Proof
+  RW_TAC std_ss [goto_def]
+QED
 
 
 val decode_op_def =
@@ -340,9 +344,8 @@ val decode_op_def =
           BL =>  (cpsr, write s (REG 14) (n2w (SUC pc)))
   `;
 
-val decode_op_thm = Q.store_thm
-("decode_op_thm",
-  `!pc cpsr s dst src jump.
+Theorem decode_op_thm:
+   !pc cpsr s dst src jump.
   (decode_op (pc,cpsr,s) (MOV,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src)))) /\
   (decode_op (pc,cpsr,s) (ADD,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) + read s (HD (TL src))))) /\
   (decode_op (pc,cpsr,s) (SUB,SOME dst,src,jump) = (cpsr, write s dst (read s (HD src) - read s (HD (TL src))))) /\
@@ -400,9 +403,10 @@ val decode_op_thm = Q.store_thm
   (decode_op (pc,cpsr,s) (MRS,SOME dst,src,jump) = (cpsr,write s dst cpsr)) /\
   (decode_op (pc,cpsr,s) (MSR,NONE,src,jump) = (read s (HD src),s)) /\
   (decode_op (pc,cpsr,s) (B,NONE,src,jump) = (cpsr,s)) /\
-  (decode_op (pc,cpsr,s) (BL,NONE,src,jump) = (cpsr,write s (REG 14) (n2w (SUC pc))))`,
-
-   RW_TAC std_ss [decode_op_def]);
+  (decode_op (pc,cpsr,s) (BL,NONE,src,jump) = (cpsr,write s (REG 14) (n2w (SUC pc))))
+Proof
+   RW_TAC std_ss [decode_op_def]
+QED
 
 val decode_cond_cpsr_def =
     Define `(decode_cond_cpsr cpsr EQ = getS cpsr SZ) /\
@@ -434,14 +438,14 @@ val decode_cond_def =
               else (pc+1, cpsr, s))
   `;
 
-val decode_cond_thm = Q.store_thm
-( "decode_cond_thm",
-  `!pc cpsr s op sflag dst src jump.
+Theorem decode_cond_thm:
+   !pc cpsr s op sflag dst src jump.
           (decode_cond (pc,cpsr,s) ((op,NONE,sflag),dst,src,jump) = (pc+1, decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
      (decode_cond (pc,cpsr,s) ((op,SOME AL,sflag),dst,src,jump) = (goto(pc,jump), decode_op (pc,cpsr,s) (op,dst,src,jump))) /\
-          (decode_cond (pc,cpsr,s) ((op,SOME NV,sflag),dst,src,jump) = (pc+1, cpsr, s))`,
-
-  RW_TAC std_ss [decode_cond_def, decode_cond_cpsr_def]);
+          (decode_cond (pc,cpsr,s) ((op,SOME NV,sflag),dst,src,jump) = (pc+1, cpsr, s))
+Proof
+  RW_TAC std_ss [decode_cond_def, decode_cond_cpsr_def]
+QED
 
 
 
@@ -458,10 +462,10 @@ val upload_def = Define `
   `;
 
 
-val UPLOAD_NOT_AFFECT_LOWER = Q.store_thm (
-   "UPLOAD_NOT_AFFECT_LOWER",
-  `!instL iB start n. n < start ==>
-        ((upload instL iB start) n = iB n)`,
+Theorem UPLOAD_NOT_AFFECT_LOWER:
+   !instL iB start n. n < start ==>
+        ((upload instL iB start) n = iB n)
+Proof
    Induct_on `instL` THEN
    RW_TAC std_ss [upload_def] THEN
    Induct_on `n` THEN
@@ -471,52 +475,52 @@ val UPLOAD_NOT_AFFECT_LOWER = Q.store_thm (
    POP_ASSUM (K ALL_TAC) THEN
    POP_ASSUM (ASSUME_TAC o Q.SPEC `(\addr:num. if addr = start then h else iB addr)`) THEN
    FULL_SIMP_TAC arith_ss []
-   );
+QED
 
-val UPLOAD_LEM = Q.store_thm (
-   "UPLOAD_LEM",
-   `!instL iB start n. n < LENGTH instL ==>
-        ((upload instL iB start) (start+n) = EL n instL)`,
+Theorem UPLOAD_LEM:
+    !instL iB start n. n < LENGTH instL ==>
+        ((upload instL iB start) (start+n) = EL n instL)
+Proof
     Induct_on `n` THEN Induct_on `instL` THEN RW_TAC list_ss [upload_def] THENL [
         RW_TAC arith_ss [UPLOAD_NOT_AFFECT_LOWER],
         RES_TAC THEN
           POP_ASSUM (ASSUME_TAC o Q.SPECL [`SUC start`,`(\addr. if addr = start then h else iB addr)`]) THEN
           METIS_TAC [ADD_SUC, SUC_ADD_SYM, ADD_SYM]
     ]
-   );
+QED
 
-val UPLOAD_START_POINT_INDEPENDENT = Q.store_thm (
-  "UPLOAD_START_POINT_INDEPENDENT",
-  `!instL start1 start2 iB addr. addr < LENGTH instL ==>
-        ((upload instL iB start1) (start1+addr) = (upload instL iB start2) (start2+addr))`,
+Theorem UPLOAD_START_POINT_INDEPENDENT:
+   !instL start1 start2 iB addr. addr < LENGTH instL ==>
+        ((upload instL iB start1) (start1+addr) = (upload instL iB start2) (start2+addr))
+Proof
    RW_TAC std_ss [UPLOAD_LEM]
-  );
+QED
 
 val uploadCode_def =
   Define `uploadCode instL iB = upload instL iB 0`;
 
 
-val UPLOADCODE_LEM = Q.store_thm (
-   "UPLOADCODE_LEM",
-   `!instL iB n. n < LENGTH instL ==>
-        ((uploadCode instL iB) n = EL n instL)`,
+Theorem UPLOADCODE_LEM:
+    !instL iB n. n < LENGTH instL ==>
+        ((uploadCode instL iB) n = EL n instL)
+Proof
     RW_TAC std_ss [uploadCode_def] THEN
     IMP_RES_TAC UPLOAD_LEM THEN
     POP_ASSUM (ASSUME_TAC o Q.SPECL [`0`,`iB`]) THEN
     FULL_SIMP_TAC arith_ss []
-   );
+QED
 
 val uploadSeg_def = Define `
     (uploadSeg 0 segs iB = iB) /\
     (uploadSeg (SUC n) segs iB =
         upload (EL n segs) (uploadSeg n segs iB) (10 * n))`;
 
-val UPLOADSEG_LEM = Q.store_thm
-  ("UPLOADSEG_LEM",
-   `!n segs instB. uploadSeg n segs instB =
-        (if n > 0 then upload (EL (PRE n) segs) (uploadSeg (PRE n) segs instB) (10 * (PRE n)) else instB)`,
+Theorem UPLOADSEG_LEM:
+    !n segs instB. uploadSeg n segs instB =
+        (if n > 0 then upload (EL (PRE n) segs) (uploadSeg (PRE n) segs instB) (10 * (PRE n)) else instB)
+Proof
     Cases_on `n` THEN RW_TAC list_ss [uploadSeg_def]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (* Running of a ARM program                                                        *)
@@ -536,40 +540,40 @@ val (run_def,run_ind) =
 val _ = save_thm("run_def", run_def);
 val _ = save_thm("run_ind", run_ind);
 
-val RUN_LEM_1 = Q.store_thm
-  ("RUN_LEM_1",
-   `!n instB s.
+Theorem RUN_LEM_1:
+    !n instB s.
         (run (SUC n) instB P s =
                 if P s then s
                 else run n instB P (decode_cond s (instB (FST s)))
         ) /\
-        (run 0 instB P s = s)`,
+        (run 0 instB P s = s)
+Proof
    SIMP_TAC list_ss [FORALL_STATE] THEN REPEAT GEN_TAC THEN
    RW_TAC list_ss [Once run_def, LET_THM] THENL [
         RW_TAC list_ss [Once run_def, LET_THM],
         RW_TAC list_ss [Once run_def, LET_THM]
    ]
-  );
+QED
 
-val RUN_LEM_2 = Q.store_thm
-  ("RUN_LEM_2",
-   `!n instB P s. P s ==> (run n instB P s = s)`,
+Theorem RUN_LEM_2:
+    !n instB P s. P s ==> (run n instB P s = s)
+Proof
    SIMP_TAC list_ss [FORALL_STATE] THEN
    Induct_on `n` THEN RW_TAC list_ss [RUN_LEM_1]
-  );
+QED
 
 
-val RUN_THM_1 = Q.store_thm
-  ("RUN_THM_1",
-   `!m n s instB.
-        (run (m+n) instB P s = run n instB P (run m instB P s))`,
+Theorem RUN_THM_1:
+    !m n s instB.
+        (run (m+n) instB P s = run n instB P (run m instB P s))
+Proof
   Induct_on `m` THEN REPEAT GEN_TAC THENL [
         RW_TAC list_ss [RUN_LEM_1],
         `SUC m + n = SUC (m + n)` by RW_TAC list_ss [ADD_SUC] THEN
         ASM_REWRITE_TAC [] THEN RW_TAC list_ss [RUN_LEM_1] THEN
         RW_TAC list_ss [RUN_LEM_2]
         ]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (* An assistant theorem about LEAST                                                *)
@@ -594,30 +598,30 @@ QED
 (* Assistant theorems for the FUNPOW                                          *)
 (*----------------------------------------------------------------------------*)
 
-val FUNPOW_THM_1 = Q.store_thm
-  ("FUNPOW_THM_1",
-  ` (!f. FUNPOW f 0 = \x.x) /\
-    (!f n. FUNPOW f (SUC n) = f o (FUNPOW f n))`,
+Theorem FUNPOW_THM_1:
+    (!f. FUNPOW f 0 = \x.x) /\
+    (!f n. FUNPOW f (SUC n) = f o (FUNPOW f n))
+Proof
    RW_TAC list_ss [FUN_EQ_THM, FUNPOW_SUC] THEN
    RW_TAC list_ss [FUNPOW]
-  );
+QED
 
-val FUNPOW_THM_2 = Q.store_thm
-  ("FUNPOW_THM_2",
-  ` (!f. FUNPOW f 0 = \x.x) /\
-    (!f n. FUNPOW f (SUC n) = (FUNPOW f n) o f)`,
+Theorem FUNPOW_THM_2:
+    (!f. FUNPOW f 0 = \x.x) /\
+    (!f n. FUNPOW f (SUC n) = (FUNPOW f n) o f)
+Proof
    RW_TAC list_ss [FUN_EQ_THM, FUNPOW]
-  );
+QED
 
-val FUNPOW_FUNPOW = Q.store_thm
-  ("FUNPOW_FUNPOW",
-  ` !f m n. (FUNPOW f m) o (FUNPOW f n) = FUNPOW f (m+n)`,
+Theorem FUNPOW_FUNPOW:
+    !f m n. (FUNPOW f m) o (FUNPOW f n) = FUNPOW f (m+n)
+Proof
    Induct_on `m` THENL [
        RW_TAC list_ss [FUNPOW_THM_1] THEN
        METIS_TAC [],
        RW_TAC list_ss [FUNPOW_THM_1, GSYM SUC_ADD_SYM]
    ]
-  );
+QED
 
 
 (*----------------------------------------------------------------------------*)
@@ -635,12 +639,12 @@ val shortest_def = Define `
         LEAST n. P (FUNPOW g n x)`;
 
 
-val STOPAT_THM = Q.store_thm
-  ("STOPAT_THM",
-   `!m P g x.
+Theorem STOPAT_THM:
+    !m P g x.
        stopAt P g x /\
        m <= shortest P g x ==>
-       stopAt P g (FUNPOW g m x)`,
+       stopAt P g (FUNPOW g m x)
+Proof
     Cases_on `m` THENL [
         RW_TAC std_ss [shortest_def, stopAt_def, FUNPOW],
         RW_TAC std_ss [stopAt_def,shortest_def] THEN
@@ -649,16 +653,16 @@ val STOPAT_THM = Q.store_thm
         Q.EXISTS_TAC `n' - SUC n` THEN
         RW_TAC arith_ss [SIMP_RULE std_ss [FUN_EQ_THM] FUNPOW_FUNPOW]
     ]
-  );
+QED
 
-val SHORTEST_STOP = Q.store_thm
-  ("SHORTEST_STOP",
-   `!x P g.
+Theorem SHORTEST_STOP:
+    !x P g.
        stopAt P g x ==>
-       P (FUNPOW g (shortest P g x) x)`,
+       P (FUNPOW g (shortest P g x) x)
+Proof
     RW_TAC std_ss [stopAt_def, shortest_def] THEN
     METIS_TAC [Q.SPECL [`\n. P (FUNPOW g n x)`,`x`] LEAST_INTRO]
-  );
+QED
 
 Theorem SHORTEST_LEM:
   !x P g.
@@ -687,25 +691,25 @@ Proof
   ]
 QED
 
-val SHORTEST_THM = Q.store_thm
-  ("SHORTEST_THM",
-   `!x P g m.
+Theorem SHORTEST_THM:
+    !x P g m.
        stopAt P g x /\
        m <= shortest P g x ==>
-       (shortest P g x = (shortest P g (FUNPOW g m x) + m))`,
+       (shortest P g x = (shortest P g (FUNPOW g m x) + m))
+Proof
     RW_TAC std_ss [shortest_def, stopAt_def] THEN
     REWRITE_TAC [SIMP_RULE std_ss [FUN_EQ_THM] FUNPOW_FUNPOW] THEN
     CONV_TAC (DEPTH_CONV (ONCE_REWRITE_CONV [Once ADD_SYM])) THEN
     HO_MATCH_MP_TAC LEAST_ADD_LEM THEN
     METIS_TAC []
-  );
+QED
 
-val SHORTEST_CASES = Q.store_thm
-  ("SHORTEST_CASES",
-   `!x P g.
+Theorem SHORTEST_CASES:
+    !x P g.
        stopAt P g x ==>
        (P x ==> (shortest P g x = 0)) /\
-       (~P x ==> (shortest P g x = SUC (shortest P g (g x))))`,
+       (~P x ==> (shortest P g x = SUC (shortest P g (g x))))
+Proof
     RW_TAC std_ss [] THENL [
          METIS_TAC [SHORTEST_LEM],
          `1 <= shortest P g x` by METIS_TAC [SHORTEST_LEM] THEN
@@ -713,16 +717,16 @@ val SHORTEST_CASES = Q.store_thm
            ASSUME_TAC (DECIDE ``1 = SUC 0``) THEN
            METIS_TAC [FUNPOW, SUC_ONE_ADD, ADD_SYM]
    ]
-  );
+QED
 
-val SHORTEST_INDUCTIVE = Q.store_thm
-  ("SHORTEST_INDUCTIVE",
-   `!P g x n.
+Theorem SHORTEST_INDUCTIVE:
+    !P g x n.
        stopAt P g x /\
        (shortest P g x = SUC n) ==>
        stopAt P g (g x) /\
        ~(P x) /\
-       (n = shortest P g (g x))`,
+       (n = shortest P g (g x))
+Proof
     RW_TAC std_ss [] THENL [
         `SUC 0 <= shortest P g x` by RW_TAC arith_ss [] THEN
             METIS_TAC [Q.SPEC `SUC 0` STOPAT_THM, FUNPOW],
@@ -732,18 +736,18 @@ val SHORTEST_INDUCTIVE = Q.store_thm
              IMP_RES_TAC (Q.SPECL [`x`, `P`, `g`, `SUC 0`] SHORTEST_THM) THEN
              FULL_SIMP_TAC arith_ss [FUNPOW]
     ]
-  );
+QED
 
 
 (*----------------------------------------------------------------------------*)
 (* Stop when a specific condition holds                                       *)
 (*----------------------------------------------------------------------------*)
 
-val TERD_WHILE_EQ_UNROLL = Q.store_thm
-  ("TERD_WHILE_EQ_UNROLL",
-   `!x P g.
+Theorem TERD_WHILE_EQ_UNROLL:
+    !x P g.
     stopAt P g x ==>
-        (WHILE ($~ o P) g x = FUNPOW g (shortest P g x) x)`,
+        (WHILE ($~ o P) g x = FUNPOW g (shortest P g x) x)
+Proof
    Induct_on `shortest P g x` THENL [
        REWRITE_TAC [Once EQ_SYM_EQ] THEN
            REPEAT STRIP_TAC THEN
@@ -769,34 +773,34 @@ val TERD_WHILE_EQ_UNROLL = Q.store_thm
                    FULL_SIMP_TAC std_ss [FUNPOW]
            ]
    ]
-  );
+QED
 
 (*----------------------------------------------------------------------------*)
 (* Unroll the WHILE once, stop unrolling when a condition holds               *)
 (*----------------------------------------------------------------------------*)
 
-val UNROLL_ADVANCE = Q.store_thm
-  ("UNROLL_ADVANCE",
-   `!P g x.
+Theorem UNROLL_ADVANCE:
+    !P g x.
         stopAt P g x ==>
         (FUNPOW g (shortest P g x) x =
                 if (P x) then x
                 else FUNPOW g (shortest P g (g x)) (g x)
-        )`,
+        )
+Proof
    RW_TAC list_ss [] THEN
    METIS_TAC [SHORTEST_CASES, FUNPOW]
-  );
+QED
 
-val WHILE_STILL = Q.store_thm
-  ("WHILE_STILL",
-   `!P g x.
+Theorem WHILE_STILL:
+    !P g x.
         stopAt P g x ==>
-            (WHILE ($~ o P) g (WHILE ($~ o P) g x) = WHILE ($~ o P) g x)`,
+            (WHILE ($~ o P) g (WHILE ($~ o P) g x) = WHILE ($~ o P) g x)
+Proof
    SIMP_TAC std_ss [TERD_WHILE_EQ_UNROLL] THEN
    RW_TAC std_ss [stopAt_def, shortest_def] THEN
    IMP_RES_TAC (SIMP_RULE std_ss [] (Q.SPEC `\n.P (FUNPOW g n x)` LEAST_EXISTS_IMP)) THEN
    RW_TAC std_ss [Once WHILE]
-  );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
@@ -811,51 +815,51 @@ val step_def = Define `
   step instB =
        \(s,pcS).(decode_cond s (instB (FST s)),FST s INSERT pcS)`;
 
-val step_FORM1 = Q.store_thm
-  ("step_FORM1",
-   `!instB. step instB =
-         \s.(decode_cond (FST s) (instB (FST (FST s))),FST (FST s) INSERT (SND s))`,
+Theorem step_FORM1:
+    !instB. step instB =
+         \s.(decode_cond (FST s) (instB (FST (FST s))),FST (FST s) INSERT (SND s))
+Proof
    RW_TAC std_ss [FUN_EQ_THM] THEN
    `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
    RW_TAC std_ss [step_def]
-  );
+QED
 
-val STATE_PCS_SEPERATE = Q.store_thm
-  ("STATE_PCS_SEPERATE",
-  `!m pcS0 pcS1 instB s. FST (FUNPOW (step instB) m (s,pcS0)) =
-                         FST (FUNPOW (step instB) m (s,pcS1))`,
+Theorem STATE_PCS_SEPERATE:
+   !m pcS0 pcS1 instB s. FST (FUNPOW (step instB) m (s,pcS0)) =
+                         FST (FUNPOW (step instB) m (s,pcS1))
+Proof
   Induct_on `m` THEN RW_TAC std_ss [FUNPOW] THEN
   FULL_SIMP_TAC std_ss [step_def]
-  );
+QED
 
-val STOPAT_ANY_PCS = Q.store_thm
-  ("STOPAT_ANY_PCS",
-   `!pcS0 pcS1 instB j s.
+Theorem STOPAT_ANY_PCS:
+    !pcS0 pcS1 instB j s.
        stopAt (\s:STATEPCS. (FST s = j)) (step instB) (s,pcS0) ==>
-          stopAt (\s:STATEPCS. (FST s = j)) (step instB) (s,pcS1)`,
+          stopAt (\s:STATEPCS. (FST s = j)) (step instB) (s,pcS1)
+Proof
     RW_TAC std_ss [stopAt_def] THEN
     Q.EXISTS_TAC `n` THEN
     RW_TAC std_ss [STATE_PCS_SEPERATE]
-  );
+QED
 
-val STOPAT_ANY_PCS_2 = Q.store_thm
-  ("STOPAT_ANY_PCS_2",
-   `!pcS0 pcS1 instB j s.
+Theorem STOPAT_ANY_PCS_2:
+    !pcS0 pcS1 instB j s.
        stopAt (\s:STATEPCS. (FST (FST s) = j)) (step instB) (s,pcS0) ==>
-          stopAt (\s:STATEPCS. (FST (FST s) = j)) (step instB) (s,pcS1)`,
+          stopAt (\s:STATEPCS. (FST (FST s) = j)) (step instB) (s,pcS1)
+Proof
     RW_TAC std_ss [stopAt_def] THEN
     Q.EXISTS_TAC `n` THEN
     METIS_TAC [STATE_PCS_SEPERATE]
-  );
+QED
 
 
-val SHORTEST_INDEPENDENT_OF_PCS = Q.store_thm
-  ("SHORTEST_INDEPENDENT_OF_PCS",
-  `!s0 s1 instB j.
+Theorem SHORTEST_INDEPENDENT_OF_PCS:
+   !s0 s1 instB j.
         stopAt (\s. FST (FST s) = j) (step instB) s0 /\
         (FST s0 = FST s1) ==>
             (shortest (\s. FST (FST s) = j) (step instB) s0 =
-             shortest (\s. FST (FST s) = j) (step instB) s1)`,
+             shortest (\s. FST (FST s) = j) (step instB) s1)
+Proof
   Induct_on `shortest (\s. FST (FST s) = j) (step instB) s0` THENL [
       RW_TAC std_ss [] THEN
           IMP_RES_TAC SHORTEST_LEM THEN
@@ -879,7 +883,7 @@ val SHORTEST_INDEPENDENT_OF_PCS = Q.store_thm
                 by METIS_TAC [FUNPOW, SHORTEST_THM] THEN
            RW_TAC arith_ss []
        ]
-  );
+QED
 
 val runTo_def = Define `
   runTo instB j (s,pcS) =
@@ -889,10 +893,10 @@ val runTo_def = Define `
 (* A bunch of theorems about runTo                                            *)
 (*----------------------------------------------------------------------------*)
 
-val runTo_FORM1 = Q.store_thm
-  ("runTo_FORM1",
-   `!instB j s. runTo instB j s =
-        WHILE (\s. ~(FST (FST s) = j)) (step instB) s`,
+Theorem runTo_FORM1:
+    !instB j s. runTo instB j s =
+        WHILE (\s. ~(FST (FST s) = j)) (step instB) s
+Proof
    REPEAT GEN_TAC THEN
    `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
    RW_TAC std_ss [runTo_def] THEN
@@ -902,46 +906,45 @@ val runTo_FORM1 = Q.store_thm
            RW_TAC std_ss [],
        RW_TAC std_ss []
    ]
-  );
+QED
 
-val RUNTO_ADVANCE = Q.store_thm
-  ("RUNTO_ADVANCE",
-   `!instB j s pcS.
+Theorem RUNTO_ADVANCE:
+    !instB j s pcS.
         (runTo instB j (s,pcS) =
                 if (FST s = j) then (s,pcS)
                 else runTo instB j (decode_cond s (instB (FST s)), FST s INSERT pcS)
-        )`,
+        )
+Proof
    RW_TAC list_ss [runTo_def, step_def] THENL [
         RW_TAC list_ss [Once WHILE],
         RW_TAC list_ss [Once WHILE]
         ]
-  );
+QED
 
-val RUNTO_EXPAND_ONCE = Q.store_thm
-  ("RUNTO_EXPAND_ONCE",
-   `!instB j s.
+Theorem RUNTO_EXPAND_ONCE:
+    !instB j s.
         (runTo instB j s =
                 if (FST (FST s) = j) then s
                 else runTo instB j (step instB s)
-        )`,
+        )
+Proof
    REPEAT STRIP_TAC THEN
    `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
    RW_TAC list_ss [step_def, Once RUNTO_ADVANCE]
-  );
+QED
 
 
-val UNROLL_RUNTO = Q.store_thm
-  ("UNROLL_RUNTO",
-   `!instB j s.
+Theorem UNROLL_RUNTO:
+    !instB j s.
        stopAt (\s:STATEPCS. (FST (FST s) = j)) (step instB) s ==>
-          (runTo instB j s = FUNPOW (step instB) (shortest (\s.(FST (FST s) = j)) (step instB) s) s)`,
-
+          (runTo instB j s = FUNPOW (step instB) (shortest (\s.(FST (FST s) = j)) (step instB) s) s)
+Proof
     RW_TAC std_ss [runTo_FORM1] THEN
     ASSUME_TAC (INST_TYPE [alpha |-> Type `:STATEPCS`] TERD_WHILE_EQ_UNROLL) THEN
     RES_TAC THEN
     `$~ o (\s:STATEPCS. (FST (FST s) = j)) = (\s:STATEPCS. ~(FST (FST s) = j))` by RW_TAC std_ss [FUN_EQ_THM] THEN
     METIS_TAC []
-  );
+QED
 
 
 
@@ -953,35 +956,35 @@ val terd_def = Define `
 val set_ss = std_ss ++ SET_SPEC_ss ++ PRED_SET_ss;
 
 
-val RUNTO_STATE_PCS_SEPERATE = Q.store_thm
-  ("RUNTO_STATE_PCS_SEPERATE",
-  `!j pcS0 pcS1 instB s.
+Theorem RUNTO_STATE_PCS_SEPERATE:
+   !j pcS0 pcS1 instB s.
             stopAt (\s:STATEPCS.FST (FST s) = j) (step instB) (s,pcS0) ==>
-            (FST (runTo instB j (s,pcS0)) = FST (runTo instB j (s,pcS1)))`,
+            (FST (runTo instB j (s,pcS0)) = FST (runTo instB j (s,pcS1)))
+Proof
   RW_TAC std_ss [UNROLL_RUNTO] THEN
   IMP_RES_TAC STOPAT_ANY_PCS_2 THEN
   RW_TAC std_ss [UNROLL_RUNTO] THEN
   `FST (s,pcS0) = FST (s,pcS1)` by RW_TAC std_ss [] THEN
   METIS_TAC [SHORTEST_INDEPENDENT_OF_PCS, STATE_PCS_SEPERATE]
-  );
+QED
 
 
-val RUNTO_STILL = Q.store_thm
-  ("RUNTO_STILL",
-  `!j k instB s.
+Theorem RUNTO_STILL:
+   !j k instB s.
         terd instB j s ==>
         (runTo instB j (runTo instB j s) =
-                 runTo instB j s)`,
+                 runTo instB j s)
+Proof
    RW_TAC std_ss [terd_def, runTo_FORM1] THEN
    `$~ o (\s:STATEPCS. FST (FST s) = j) = (\s:STATEPCS. ~(FST (FST s) = j))` by RW_TAC std_ss [FUN_EQ_THM] THEN
    METIS_TAC [WHILE_STILL]
-  );
+QED
 
 
-val RUNTO_PCS_GROW = Q.store_thm
-  ("RUNTO_PCS_GROW",
-   `!n j instB s.
-        (SND s) SUBSET SND (FUNPOW (step instB) n s)`,
+Theorem RUNTO_PCS_GROW:
+    !n j instB s.
+        (SND s) SUBSET SND (FUNPOW (step instB) n s)
+Proof
    RW_TAC std_ss [terd_def] THEN
    Q.ID_SPEC_TAC `s` THEN
    Induct_on `n` THENL [
@@ -995,13 +998,13 @@ val RUNTO_PCS_GROW = Q.store_thm
                `SND s SUBSET (FST (FST s) INSERT SND s)` by RW_TAC set_ss [SUBSET_INSERT_RIGHT] THEN
                METIS_TAC [SUBSET_TRANS]
            ]
-   );
+QED
 
 
-val RUNTO_PCS_MEMBERS = Q.store_thm
-  ("RUNTO_PCS_MEMBERS",
-   `!n m instB s. m < n ==>
-        FST (FST (FUNPOW (step instB) m s)) IN (SND (FUNPOW(step instB) n s))`,
+Theorem RUNTO_PCS_MEMBERS:
+    !n m instB s. m < n ==>
+        FST (FST (FUNPOW (step instB) m s)) IN (SND (FUNPOW(step instB) n s))
+Proof
    Induct_on `n` THEN
    RW_TAC std_ss [] THEN
    Cases_on `m = n` THENL [
@@ -1013,12 +1016,12 @@ val RUNTO_PCS_MEMBERS = Q.store_thm
        `SND (FUNPOW (step instB) n s) SUBSET SND (FUNPOW (step instB) (SUC 0) (FUNPOW (step instB) n s))` by METIS_TAC [RUNTO_PCS_GROW]
        THEN FULL_SIMP_TAC set_ss [FUNPOW, SUBSET_DEF]
    ]
- );
+QED
 
-val RUNTO_PCS_MEMBERS_2 = Q.store_thm
-  ("RUNTO_PCS_MEMBERS_2",
-   `!n m instB s pcS. m < n ==>
-        FST (FST (FUNPOW (step instB) m (s,pcS))) IN (SND (FUNPOW(step instB) n (s,{})))`,
+Theorem RUNTO_PCS_MEMBERS_2:
+    !n m instB s pcS. m < n ==>
+        FST (FST (FUNPOW (step instB) m (s,pcS))) IN (SND (FUNPOW(step instB) n (s,{})))
+Proof
    Induct_on `n` THEN
    RW_TAC std_ss [] THEN
    Cases_on `m = n` THENL [
@@ -1032,14 +1035,14 @@ val RUNTO_PCS_MEMBERS_2 = Q.store_thm
        `SND (FUNPOW (step instB) n (s,{})) SUBSET SND (FUNPOW (step instB) (SUC 0) (FUNPOW (step instB) n (s,{})))` by METIS_TAC [RUNTO_PCS_GROW]
        THEN FULL_SIMP_TAC set_ss [FUNPOW, SUBSET_DEF]
    ]
- );
+QED
 
-val RUNTO_PCS_UNION_LEM = Q.store_thm
-  ("RUNTO_PCS_UNION_LEM",
-   `!n instB s pcS pcS'.
+Theorem RUNTO_PCS_UNION_LEM:
+    !n instB s pcS pcS'.
           pcS' SUBSET SND (FUNPOW (step instB) n (s,pcS)) ==>
           (SND (FUNPOW (step instB) n (s,pcS)) UNION pcS' =
-                  (SND (FUNPOW (step instB) n (s, pcS')) UNION pcS))`,
+                  (SND (FUNPOW (step instB) n (s, pcS')) UNION pcS))
+Proof
    Induct_on `n` THENL [
        RW_TAC set_ss [FUNPOW, UNION_COMM, SUBSET_UNION_ABSORPTION],
 
@@ -1058,29 +1061,29 @@ val RUNTO_PCS_UNION_LEM = Q.store_thm
        FULL_SIMP_TAC set_ss [] THEN
        METIS_TAC [INSERT_UNION, UNION_COMM]
     ]
-   );
+QED
 
 
-val RUNTO_PCS_UNION = Q.store_thm
-  ("RUNTO_PCS_UNION",
-   `!n instB s pcS.
+Theorem RUNTO_PCS_UNION:
+    !n instB s pcS.
        stopAt (\s:STATEPCS.FST (FST s) = j) (step instB) (s,pcS) ==>
        (SND (runTo instB j (s,pcS)) =
-            (SND (runTo instB j (s, ({}))) UNION pcS))`,
+            (SND (runTo instB j (s, ({}))) UNION pcS))
+Proof
     RW_TAC std_ss [UNROLL_RUNTO] THEN
     IMP_RES_TAC (Q.SPECL [`pcS`,`{}`,`instB`,`j`,`s`] STOPAT_ANY_PCS_2) THEN
     RW_TAC std_ss [UNROLL_RUNTO] THEN
     METIS_TAC [SHORTEST_INDEPENDENT_OF_PCS, RUNTO_PCS_UNION_LEM, EMPTY_SUBSET, UNION_EMPTY, FST]
-   );
+QED
 
 
-val RUNTO_COMPOSITION_LEM = Q.store_thm
-  ("RUNTO_COMPOSITION_LEM",
-   `!j k instB s0 pcS0.
+Theorem RUNTO_COMPOSITION_LEM:
+    !j k instB s0 pcS0.
         terd instB j (s0,pcS0) ==>
         let (s1,pcS1) = runTo instB j (s0,pcS0) in
             ~(k IN ((FST s0) INSERT pcS1)) ==>
-                (runTo instB k (s0,pcS0) = runTo instB k (s1,pcS1))`,
+                (runTo instB k (s0,pcS0) = runTo instB k (s1,pcS1))
+Proof
   REPEAT GEN_TAC THEN
   Cases_on `k = j` THENL [
       RW_TAC std_ss [] THEN
@@ -1138,22 +1141,22 @@ val RUNTO_COMPOSITION_LEM = Q.store_thm
         ]
      ]
     ]
-  );
+QED
 
 
-val RUNTO_COMPOSITION = Q.store_thm
-  ("RUNTO_COMPOSITION",
-   `!j k instB s0 pcS0 s1 pcS1.
+Theorem RUNTO_COMPOSITION:
+    !j k instB s0 pcS0 s1 pcS1.
         terd instB j (s0,pcS0) /\
         ((s1,pcS1) = runTo instB j (s0,pcS0)) /\
         ~(k IN ((FST s0) INSERT pcS1)) ==>
-                (runTo instB k (s0,pcS0) = runTo instB k (s1,pcS1))`,
+                (runTo instB k (s0,pcS0) = runTo instB k (s1,pcS1))
+Proof
     RW_TAC std_ss [] THEN
     IMP_RES_TAC (SIMP_RULE std_ss [LET_THM] RUNTO_COMPOSITION_LEM) THEN
     `?s' pcS'. runTo instB j (s0,pcS0) = (s',pcS')` by METIS_TAC [ABS_PAIR_THM] THEN
     FULL_SIMP_TAC std_ss [] THEN
     METIS_TAC [FST,SND]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (* Restriction on the modelling of registers and memory                            *)
@@ -1172,31 +1175,31 @@ val in_mem_dom_def = Define `
        !i:num. i IN (FDOM mem)`;
 
 
-val FUPDATE_REFL = Q.store_thm
-  ("FUPDATE_REFL",
-   `!i f. i IN FDOM f ==> (f |+ (i,f ' i) = f)`,
+Theorem FUPDATE_REFL:
+    !i f. i IN FDOM f ==> (f |+ (i,f ' i) = f)
+Proof
   RW_TAC list_ss [fmap_EXT] THENL [
        RW_TAC list_ss [FDOM_EQ_FDOM_FUPDATE],
        Cases_on `x = i` THEN
        RW_TAC list_ss [FAPPLY_FUPDATE_THM]
   ]
-  );
+QED
 
 (*------------------------------------------------------------------------------------------------------*)
 (* Additional theorems for finite maps                                                                  *)
 (*------------------------------------------------------------------------------------------------------*)
 
 (* Sort in ascending order                                                                              *)
-val FUPDATE_LT_COMMUTES = Q.store_thm (
-  "FUPDATE_LT_COMMUTES",
-  ` !f a b c d. c < a ==> (f |+ (a:num, b:word32) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+Theorem FUPDATE_LT_COMMUTES:
+    !f a b c d. c < a ==> (f |+ (a:num, b:word32) |+ (c,d) = f |+ (c,d) |+ (a,b))
+Proof
     RW_TAC arith_ss [FUPDATE_COMMUTES]
-    );
+QED
 
 (* Sort in descending order                                                                             *)
-val FUPDATE_GT_COMMUTES = Q.store_thm (
-  "FUPDATE_GT_COMMUTES",
-  ` !f a b c d. c > a ==> (f |+ (a:ADDR,b:'b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+Theorem FUPDATE_GT_COMMUTES:
+    !f a b c d. c > a ==> (f |+ (a:ADDR,b:'b) |+ (c,d) = f |+ (c,d) |+ (a,b))
+Proof
     RW_TAC arith_ss [FUPDATE_COMMUTES]
-    );
+QED
 

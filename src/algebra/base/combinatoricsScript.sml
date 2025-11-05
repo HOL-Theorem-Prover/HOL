@@ -41,16 +41,16 @@ Ancestors
   rich_list number listRange indexedLists relation
 
 
-val _ = temp_overload_on("SQ", ``\n. n * n``);
-val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+Overload SQ[local] = ``\n. n * n``
+Overload HALF[local] = ``\n. n DIV 2``
+Overload TWICE[local] = ``\n. 2 * n``
 
 (* ------------------------------------------------------------------------- *)
 (* List Reversal.                                                            *)
 (* ------------------------------------------------------------------------- *)
 
 (* Overload for REVERSE [m .. n] *)
-val _ = overload_on ("downto", ``\n m. REVERSE [m .. n]``);
+Overload downto = ``\n m. REVERSE [m .. n]``
 val _ = set_fixity "downto" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* ------------------------------------------------------------------------- *)
@@ -601,7 +601,7 @@ Proof
 QED
 
 (* Overload repeated turns *)
-val _ = overload_on("turn_exp", ``\l n. FUNPOW turn n l``);
+Overload turn_exp = ``\l n. FUNPOW turn n l``
 
 (* Theorem: turn_exp l 0 = l *)
 (* Proof:
@@ -1844,8 +1844,8 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload a positive list *)
-val _ = overload_on("POSITIVE", ``\l. !x. MEM x l ==> 0 < x``);
-val _ = overload_on("EVERY_POSITIVE", ``\l. EVERY (\k. 0 < k) l``);
+Overload POSITIVE = ``\l. !x. MEM x l ==> 0 < x``
+Overload EVERY_POSITIVE = ``\l. EVERY (\k. 0 < k) l``
 
 (* Theorem: EVERY_POSITIVE ls <=> POSITIVE ls *)
 (* Proof: by EVERY_MEM *)
@@ -1858,14 +1858,10 @@ QED
 (* Note: For product of a number list, any zero element will make the product 0. *)
 
 (* Define PROD, similar to SUM *)
-val PROD = new_recursive_definition
-      {name = "PROD",
-       rec_axiom = list_Axiom,
-       def = ``(PROD [] = 1) /\
-          (!h t. PROD (h::t) = h * PROD t)``};
-
-(* export simple definition *)
-val _ = export_rewrites["PROD"];
+Definition PROD[simp,nocompute]:
+  (PROD [] = 1) /\
+  (PROD (h::t) = h * PROD t)
+End
 
 (* Extract theorems from definition *)
 Theorem PROD_NIL = PROD |> CONJUNCT1;
@@ -2543,11 +2539,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define MAP3 similar to MAP2 in listTheory. *)
-Definition MAP3_DEF:
+Definition MAP3_DEF[simp]:
   (MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3) /\
   (MAP3 f x y z = [])
 End
-val _ = export_rewrites["MAP3_DEF"];
 Theorem MAP3:
   (!f. MAP3 f [] [] [] = []) /\
   (!f h1 t1 h2 t2 h3 t3. MAP3 f (h1::t1) (h2::t2) (h3::t3) = f h1 h2 h3::MAP3 f t1 t2 t3)
@@ -3532,25 +3527,21 @@ val it = |- MDILATE #0 3 [a; b; #1] = [a; #0; #0; b; #0; #0; #1]: thm
 
 (* Theorem: MDILATE e n [] = [] *)
 (* Proof: by MDILATE_def *)
-Theorem MDILATE_NIL:
+Theorem MDILATE_NIL[simp]:
     !e n. MDILATE e n [] = []
 Proof
   rw[MDILATE_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites["MDILATE_NIL"];
 
 (* Theorem: MDILATE e n [x] = [x] *)
 (* Proof: by MDILATE_def *)
-Theorem MDILATE_SING:
+Theorem MDILATE_SING[simp]:
     !e n x. MDILATE e n [x] = [x]
 Proof
   rw[MDILATE_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites["MDILATE_SING"];
 
 (* Theorem: MDILATE e n (h::t) =
             if t = [] then [h] else (h:: GENLIST (K e) (PRE n)) ++ (MDILATE e n t) *)
@@ -3970,19 +3961,15 @@ val it = |- DILATE 1 1 3 [1; 2; 3] = [1; 2; 1; 1; 1; 3]: thm
 
 (* Theorem: DILATE e n m [] = [] *)
 (* Proof: by DILATE_def *)
-Theorem DILATE_NIL = DILATE_def |> CONJUNCT1;
+Theorem DILATE_NIL[simp] = DILATE_def |> CONJUNCT1;
 (* val DILATE_NIL = |- !n m e. DILATE e n m [] = []: thm *)
 
-(* export simple result *)
-val _ = export_rewrites["DILATE_NIL"];
 
 (* Theorem: DILATE e n m [h] = [h] *)
 (* Proof: by DILATE_def *)
-Theorem DILATE_SING = DILATE_def |> CONJUNCT2 |> CONJUNCT1;
+Theorem DILATE_SING[simp] = DILATE_def |> CONJUNCT2 |> CONJUNCT1;
 (* val DILATE_SING = |- !n m h e. DILATE e n m [h] = [h]: thm *)
 
-(* export simple result *)
-val _ = export_rewrites["DILATE_SING"];
 
 (* Theorem: DILATE e n m (h::t) =
             if t = [] then [h] else h:: (TAKE n t ++ (GENLIST (K e) m) ++ DILATE e n m (DROP n t)) *)
@@ -5541,7 +5528,7 @@ val binomial_horizontal_def = Define `
 *)
 
 (* Use overloading for binomial_horizontal n. *)
-val _ = overload_on("binomial_horizontal", ``\n. GENLIST (binomial n) (n + 1)``);
+Overload binomial_horizontal = ``\n. GENLIST (binomial n) (n + 1)``
 
 (* Theorem: binomial_horizontal 0 = [1] *)
 (* Proof:
@@ -5815,11 +5802,11 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Stirling's formula: n! ~ sqrt(2 pi n) (n/e)^n. *)
-val _ = overload_on("Stirling",
+Overload Stirling =
    ``(!n. FACT n = (SQRT (2 * pi * n)) * (n DIV e) ** n) /\
      (!n. SQRT n = n ** h) /\ (2 * h = 1) /\ (0 < pi) /\ (0 < e) /\
      (!a b x y. (a * b) DIV (x * y) = (a DIV x) * (b DIV y)) /\
-     (!a b c. (a DIV c) DIV (b DIV c) = a DIV b)``);
+     (!a b c. (a DIV c) DIV (b DIV c) = a DIV b)``
 
 (* Theorem: Stirling ==>
             !n. 0 < n /\ EVEN n ==> (binomial n (HALF n) = (2 ** (n + 1)) DIV (SQRT (2 * pi * n))) *)
@@ -6826,12 +6813,10 @@ Note: to make 30, need 12, 20
 (* ------------------------------------------------------------------------- *)
 
 (* Define Leibniz Triangle *)
-Definition leibniz_def:
+Definition leibniz_def[simp]:
   leibniz n k = (n + 1) * binomial n k
 End
 
-(* export simple definition *)
-val _ = export_rewrites["leibniz_def"];
 
 (* Theorem: leibniz 0 n = if n = 0 then 1 else 0 *)
 (* Proof:
@@ -7439,13 +7424,11 @@ LCM a c
 (* ------------------------------------------------------------------------- *)
 
 (* Define LCM of a list of numbers *)
-Definition list_lcm_def:
+Definition list_lcm_def[simp]:
   (list_lcm [] = 1) /\
   (list_lcm (h::t) = lcm h (list_lcm t))
 End
 
-(* export simple definition *)
-val _ = export_rewrites["list_lcm_def"];
 
 (* Theorem: list_lcm [] = 1 *)
 (* Proof: by list_lcm_def. *)
@@ -7897,7 +7880,7 @@ val _ = overload_on("leibniz_vertical", ``\n. GENLIST ((+) 1) (n + 1)``);
 (* Define Vertical (downward list) in Leibniz Triangle *)
 
 (* Use overloading for leibniz_vertical n. *)
-val _ = overload_on("leibniz_vertical", ``\n. [1 .. (n+1)]``);
+Overload leibniz_vertical = ``\n. [1 .. (n+1)]``
 
 (* Theorem: leibniz_vertical n = GENLIST (\i. 1 + i) (n + 1) *)
 (* Proof:
@@ -8001,7 +7984,7 @@ Proof
 QED
 
 (* Use overloading for leibniz_up n. *)
-val _ = overload_on("leibniz_up", ``\n. REVERSE (leibniz_vertical n)``);
+Overload leibniz_up = ``\n. REVERSE (leibniz_vertical n)``
 
 (* Theorem: leibniz_up 0 = [1] *)
 (* Proof:
@@ -8084,7 +8067,7 @@ val _ = overload_on("leibniz_horizontal", ``\n. GENLIST (leibniz n) (n + 1)``);
 *)
 
 (* Use overloading for leibniz_horizontal n. *)
-val _ = overload_on("leibniz_horizontal", ``\n. GENLIST (leibniz n) (n + 1)``);
+Overload leibniz_horizontal = ``\n. GENLIST (leibniz n) (n + 1)``
 
 (*
 > EVAL ``leibniz_horizontal 0``;
@@ -8359,12 +8342,12 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define a triple type *)
-val _ = Hol_datatype`
+Datatype:
   triple = <| a: num;
               b: num;
               c: num
             |>
-`;
+End
 
 (* A triplet is a triple composed of Leibniz node and children. *)
 Definition triplet_def:
@@ -8396,9 +8379,9 @@ val _ = overload_on("tri_a", ``(triple n k).a``);
 val _ = overload_on("tri_b", ``(triple n k).b``);
 val _ = overload_on("tri_c", ``(triple n k).c``);
 *)
-val _ = temp_overload_on("ta", ``(triplet n k).a``);
-val _ = temp_overload_on("tb", ``(triplet n k).b``);
-val _ = temp_overload_on("tc", ``(triplet n k).c``);
+Overload ta[local] = ``(triplet n k).a``
+Overload tb[local] = ``(triplet n k).b``
+Overload tc[local] = ``(triplet n k).c``
 
 (* Theorem: (ta = leibniz n k) /\ (tb = leibniz (n + 1) k) /\ (tc = leibniz (n + 1) (k + 1)) *)
 (* Proof: by triplet_def *)
@@ -8498,14 +8481,14 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define a path type *)
-val _ = temp_type_abbrev("path", Type `:num list`);
+Type path[local] = “:num list”
 
 (* Define paths reachable by one zigzag *)
 Definition leibniz_zigzag_def:
     leibniz_zigzag (p1: path) (p2: path) <=>
     ?(n k):num (x y):path. (p1 = x ++ [tb; ta] ++ y) /\ (p2 = x ++ [tb; tc] ++ y)
 End
-val _ = overload_on("zigzag", ``leibniz_zigzag``);
+Overload zigzag = ``leibniz_zigzag``
 val _ = set_fixity "zigzag" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Theorem: p1 zigzag p2 ==> (list_lcm p1 = list_lcm p2) *)
@@ -8667,7 +8650,7 @@ val leibniz_wriggle_def = Define`
 *)
 
 (* Define paths reachable by many zigzags by closure *)
-val _ = overload_on("wriggle", ``RTC leibniz_zigzag``); (* RTC = reflexive transitive closure *)
+Overload wriggle = ``RTC leibniz_zigzag``(* RTC = reflexive transitive closure *)
 val _ = set_fixity "wriggle" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Theorem: p1 wriggle p2 ==> (list_lcm p1 = list_lcm p2) *)
@@ -8908,10 +8891,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use overloading for leibniz_col_arm rooted at leibniz a b, of length n. *)
-val _ = overload_on("leibniz_col_arm", ``\a b n. MAP (\x. leibniz (a - x) b) [0 ..< n]``);
+Overload leibniz_col_arm = ``\a b n. MAP (\x. leibniz (a - x) b) [0 ..< n]``
 
 (* Use overloading for leibniz_seg_arm rooted at leibniz a b, of length n. *)
-val _ = overload_on("leibniz_seg_arm", ``\a b n. MAP (\x. leibniz a (b + x)) [0 ..< n]``);
+Overload leibniz_seg_arm = ``\a b n. MAP (\x. leibniz a (b + x)) [0 ..< n]``
 
 (*
 > EVAL ``leibniz_col_arm 5 1 4``;
@@ -9475,15 +9458,15 @@ by Leibniz triplet.
 *)
 
 (* Introduce a segment, a partial horizontal row, in Leibniz Denominator Triangle *)
-val _ = overload_on("leibniz_seg", ``\n k h. IMAGE (\j. leibniz n (k + j)) (count h)``);
+Overload leibniz_seg = ``\n k h. IMAGE (\j. leibniz n (k + j)) (count h)``
 (* This is a segment starting at leibniz n k, of length h *)
 
 (* Introduce a horizontal row in Leibniz Denominator Triangle *)
-val _ = overload_on("leibniz_row", ``\n h. IMAGE (leibniz n) (count h)``);
+Overload leibniz_row = ``\n h. IMAGE (leibniz n) (count h)``
 (* This is a row starting at leibniz n 0, of length h *)
 
 (* Introduce a vertical column in Leibniz Denominator Triangle *)
-val _ = overload_on("leibniz_col", ``\h. IMAGE (\i. leibniz i 0) (count h)``);
+Overload leibniz_col = ``\h. IMAGE (\i. leibniz i 0) (count h)``
 (* This is a column starting at leibniz 0 0, descending for a length h *)
 
 (* Representations of paths based on indexed sets *)
@@ -10131,7 +10114,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload on consecutive LCM *)
-val _ = overload_on("lcm_run", ``\n. list_lcm [1 .. n]``);
+Overload lcm_run = ``\n. list_lcm [1 .. n]``
 
 (* Theorem: lcm_run n = FOLDL lcm 1 [1 .. n] *)
 (* Proof:
@@ -11519,7 +11502,7 @@ val beta_def = Define`
     beta n k = k * (binomial n k)
 `;
 *)
-val _ = temp_overload_on ("beta", ``\n k. k * (binomial n k)``); (* for temporary overloading *)
+Overload beta[local] = ``\n k. k * (binomial n k)``(* for temporary overloading *)
 (* can use overload, but then hard to print and change the appearance of too many theorem? *)
 
 (*
@@ -11686,7 +11669,7 @@ QED
 (* Use overloading for a row of beta n k, k = 1 to n. *)
 (* val _ = overload_on("beta_horizontal", ``\n. TL (GENLIST (beta n) (n + 1))``); *)
 (* use a direct GENLIST rather than tail of a GENLIST *)
-val _ = temp_overload_on("beta_horizontal", ``\n. GENLIST (beta n o SUC) n``); (* for temporary overloading *)
+Overload beta_horizontal[local] = ``\n. GENLIST (beta n o SUC) n``(* for temporary overloading *)
 
 (*
 > EVAL ``leibniz_horizontal 5``; --> [6; 30; 60; 60; 30; 6]
@@ -12507,7 +12490,7 @@ QED
 
    NOTE: this is FUNSET --Chun Tian
  *)
-val _ = temp_overload_on("over", ``\f s t. !x. x IN s ==> f x IN t``);
+Overload over[local] = ``\f s t. !x. x IN s ==> f x IN t``
 (* not easy to make this a good infix operator! *)
 
 (* Theorem: INJ f s t ==> over f s t *)
@@ -12660,10 +12643,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload bijectively equal. *)
-val _ = overload_on("bij_eq", ``\s t. ?f. BIJ f s t``);
+Overload bij_eq = ``\s t. ?f. BIJ f s t``
 val _ = set_fixity "bij_eq" (Infix(NONASSOC, 450)); (* same as relation *)
 
-val _ = overload_on ("=b=", ``$bij_eq``);
+Overload "=b=" = ``$bij_eq``
 val _ = set_fixity "=b=" (Infix(NONASSOC, 450));
 
 (*

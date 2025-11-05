@@ -6,7 +6,8 @@ Ancestors
 val _ = ParseExtras.temp_loose_equality()
 
 
-val _ = Hol_datatype `x86_permission = Xread | Xwrite | Xexecute`;
+Datatype: x86_permission = Xread | Xwrite | Xexecute
+End
 
 val _ = type_abbrev("x86_memory",``: word32 -> ((word8 # x86_permission set) option)``);
 
@@ -72,8 +73,8 @@ Definition XREAD_INSTR_BYTES_def:
     if n = 0 then [] else XREAD_INSTR a s :: XREAD_INSTR_BYTES (n-1) (a+1w) s
 End
 
-val w2bits_EL = store_thm("w2bits_EL",
-  ``(w2bits (w:word8) ++ ys = x1::x2::x3::x4::x5::x6::x7::x8::xs) =
+Theorem w2bits_EL:
+    (w2bits (w:word8) ++ ys = x1::x2::x3::x4::x5::x6::x7::x8::xs) =
     (EL 0 (w2bits (w:word8)) = x1) /\
     (EL 1 (w2bits (w:word8)) = x2) /\
     (EL 2 (w2bits (w:word8)) = x3) /\
@@ -81,10 +82,12 @@ val w2bits_EL = store_thm("w2bits_EL",
     (EL 4 (w2bits (w:word8)) = x5) /\
     (EL 5 (w2bits (w:word8)) = x6) /\
     (EL 6 (w2bits (w:word8)) = x7) /\
-    (EL 7 (w2bits (w:word8)) = x8) /\ (ys = xs)``,
+    (EL 7 (w2bits (w:word8)) = x8) /\ (ys = xs)
+Proof
   SIMP_TAC (std_ss++wordsLib.SIZES_ss) [w2bits_def]
   THEN NTAC 9 (ONCE_REWRITE_TAC [n2bits_def] THEN SIMP_TAC std_ss [CONS_11])
-  THEN SIMP_TAC std_ss [APPEND,CONS_11,EL,rich_listTheory.EL_CONS,HD]);
+  THEN SIMP_TAC std_ss [APPEND,CONS_11,EL,rich_listTheory.EL_CONS,HD]
+QED
 
 val expand_mem_read_bytes =
  (ONCE_REWRITE_CONV [XREAD_MEM_BYTES_def,word2bytes_def] THENC
@@ -331,22 +334,26 @@ val seq_monad_thm = save_thm("seq_monad_thm",let
            parT_unit_seq_lemma :: (CONJUNCTS monad_simp_lemma)
   in LIST_CONJ (map GEN_ALL xs) end);
 
-val CAN_XWRITE_MEM = store_thm("CAN_XWRITE_MEM",
-  ``CAN_XWRITE_MEM a (r,e,s,m,i) =
-    ~(m a = NONE) /\ Xwrite IN SND (THE (m a))``,
+Theorem CAN_XWRITE_MEM:
+    CAN_XWRITE_MEM a (r,e,s,m,i) =
+    ~(m a = NONE) /\ Xwrite IN SND (THE (m a))
+Proof
   SIMP_TAC std_ss [XWRITE_MEM_def,CAN_XWRITE_MEM_def]
   THEN Cases_on `m a` THEN ASM_SIMP_TAC std_ss [] THEN SRW_TAC [] []
-  THEN Cases_on `x` THEN Cases_on `Xwrite IN r'` THEN SRW_TAC [] []);
+  THEN Cases_on `x` THEN Cases_on `Xwrite IN r'` THEN SRW_TAC [] []
+QED
 
-val CAN_XREAD_MEM = store_thm("CAN_XREAD_MEM",
-  ``CAN_XREAD_MEM a (r,e,s,m,i) =
-    ~(m a = NONE) /\ Xread IN SND (THE (m a))``,
+Theorem CAN_XREAD_MEM:
+    CAN_XREAD_MEM a (r,e,s,m,i) =
+    ~(m a = NONE) /\ Xread IN SND (THE (m a))
+Proof
   SIMP_TAC std_ss [XREAD_MEM_def,CAN_XREAD_MEM_def]
   THEN Cases_on `m a` THEN ASM_SIMP_TAC std_ss [] THEN SRW_TAC [] []
-  THEN Cases_on `x` THEN SRW_TAC [] []);
+  THEN Cases_on `x` THEN SRW_TAC [] []
+QED
 
-val CAN_XREAD_XWRITE_THM = store_thm("CAN_XREAD_XWRITE_THM",
-  ``!s. (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XWRITE_REG r2 w s)) /\
+Theorem CAN_XREAD_XWRITE_THM:
+    !s. (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XWRITE_REG r2 w s)) /\
         (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XWRITE_EIP e s)) /\
         (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XWRITE_EFLAG f b s)) /\
         (CAN_XWRITE_MEM a s ==> CAN_XWRITE_MEM a (XCLEAR_ICACHE s)) /\
@@ -355,49 +362,63 @@ val CAN_XREAD_XWRITE_THM = store_thm("CAN_XREAD_XWRITE_THM",
         (CAN_XREAD_MEM a s ==> CAN_XREAD_MEM a (XWRITE_EIP e s)) /\
         (CAN_XREAD_MEM a s ==> CAN_XREAD_MEM a (XWRITE_EFLAG f b s)) /\
         (CAN_XREAD_MEM a s ==> CAN_XREAD_MEM a (XCLEAR_ICACHE s)) /\
-        (CAN_XREAD_MEM a s /\ CAN_XWRITE_MEM c s ==> CAN_XREAD_MEM a (XWRITE_MEM2 c x s))``,
+        (CAN_XREAD_MEM a s /\ CAN_XWRITE_MEM c s ==> CAN_XREAD_MEM a (XWRITE_MEM2 c x s))
+Proof
   STRIP_TAC THEN `?r2 e2 s2 m2 i2. s = (r2,e2,s2,m2,i2)` by METIS_TAC [pairTheory.PAIR]
   THEN ASM_SIMP_TAC std_ss [XREAD_REG_def,XREAD_EIP_def,
          XREAD_EFLAG_def, XWRITE_REG_def, XWRITE_MEM2_def, XREAD_MEM2_def,
          combinTheory.APPLY_UPDATE_THM, XWRITE_EIP_def,CAN_XREAD_MEM,
          XWRITE_EFLAG_def,XCLEAR_ICACHE_def,CAN_XWRITE_MEM]
-  THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []);
+  THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []
+QED
 
-val x86_else_none_write_mem_lemma = store_thm("x86_else_none_write_mem_lemma",
-  ``!a x t f. CAN_XWRITE_MEM a t ==>
-              (option_apply (XWRITE_MEM a x t) f = f (XWRITE_MEM2 a x t))``,
+Theorem x86_else_none_write_mem_lemma:
+    !a x t f. CAN_XWRITE_MEM a t ==>
+              (option_apply (XWRITE_MEM a x t) f = f (XWRITE_MEM2 a x t))
+Proof
   REPEAT STRIP_TAC
   THEN `?r e s m i. t = (r,e,s,m,i)` by METIS_TAC [pairTheory.PAIR]
   THEN FULL_SIMP_TAC std_ss [CAN_XWRITE_MEM,XWRITE_MEM_def,XWRITE_MEM2_def]
   THEN Cases_on `m a` THEN FULL_SIMP_TAC std_ss []
   THEN Cases_on `x'` THEN FULL_SIMP_TAC (srw_ss()) []
-  THEN SRW_TAC [] [option_apply_def]);
+  THEN SRW_TAC [] [option_apply_def]
+QED
 
-val x86_else_none_read_mem_lemma = store_thm("x86_else_none_read_mem_lemma",
-  ``!a x t f. CAN_XREAD_MEM a t ==>
-              (option_apply (XREAD_MEM a t) f = f (XREAD_MEM2 a t))``,
+Theorem x86_else_none_read_mem_lemma:
+    !a x t f. CAN_XREAD_MEM a t ==>
+              (option_apply (XREAD_MEM a t) f = f (XREAD_MEM2 a t))
+Proof
   REPEAT STRIP_TAC
   THEN `?r e s m i. t = (r,e,s,m,i)` by METIS_TAC [pairTheory.PAIR]
   THEN FULL_SIMP_TAC std_ss [CAN_XREAD_MEM,XREAD_MEM2_def,XREAD_MEM_def]
   THEN Cases_on `m a` THEN FULL_SIMP_TAC std_ss []
   THEN Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) []
-  THEN SRW_TAC [] [option_apply_def]);
+  THEN SRW_TAC [] [option_apply_def]
+QED
 
-val x86_else_none_eflag_lemma = store_thm("x86_else_none_eflag_lemma",
-  ``!m a f. ~(m a = NONE) ==>
-            (option_apply ((m:x86_state->bool option) a) (f:bool->'a option) = f (THE (m a)))``,
-  SIMP_TAC std_ss [option_apply_def]);
+Theorem x86_else_none_eflag_lemma:
+    !m a f. ~(m a = NONE) ==>
+            (option_apply ((m:x86_state->bool option) a) (f:bool->'a option) = f (THE (m a)))
+Proof
+  SIMP_TAC std_ss [option_apply_def]
+QED
 
-val x86_state_EXPAND = store_thm("x86_state_EXPAND",
-  ``?r i f m. s:x86_state = (r,i,f,m)``,
-  Cases_on `s` THEN Cases_on `r` THEN Cases_on `r'` THEN SIMP_TAC std_ss []);
+Theorem x86_state_EXPAND:
+    ?r i f m. s:x86_state = (r,i,f,m)
+Proof
+  Cases_on `s` THEN Cases_on `r` THEN Cases_on `r'` THEN SIMP_TAC std_ss []
+QED
 
-val XREAD_EIP_ADD_0 = store_thm("XREAD_EIP_ADD_0",
-  ``XREAD_MEM (XREAD_EIP s) s = XREAD_MEM (XREAD_EIP s + 0w) s``,
-  REWRITE_TAC [WORD_ADD_0]);
+Theorem XREAD_EIP_ADD_0:
+    XREAD_MEM (XREAD_EIP s) s = XREAD_MEM (XREAD_EIP s + 0w) s
+Proof
+  REWRITE_TAC [WORD_ADD_0]
+QED
 
-val x86_address_lemma = store_thm("x86_address_lemma",
-  ``~(0w = 1w:word32) /\ ~(0w = 2w:word32) /\ ~(0w = 3w:word32) /\
-    ~(1w = 2w:word32) /\ ~(1w = 3w:word32) /\ ~(2w = 3w:word32)``,
-  EVAL_TAC);
+Theorem x86_address_lemma:
+    ~(0w = 1w:word32) /\ ~(0w = 2w:word32) /\ ~(0w = 3w:word32) /\
+    ~(1w = 2w:word32) /\ ~(1w = 3w:word32) /\ ~(2w = 3w:word32)
+Proof
+  EVAL_TAC
+QED
 

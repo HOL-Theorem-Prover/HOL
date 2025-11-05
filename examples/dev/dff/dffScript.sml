@@ -46,10 +46,10 @@ val Del =
 
 (* Proof that there is no simple SINGLE abstraction from                *)
 (* a Boolean Dtype to Del.                                              *)
-val no_simple_abs =
-    store_thm("no_simple_abs",
-              ``~?p. Inf(p) /\
-                    !ck (d:num->bool) q. Dtype(ck,d,q) ==> Del(d when p, q when p)``,
+Theorem no_simple_abs:
+                ~?p. Inf(p) /\
+                    !ck (d:num->bool) q. Dtype(ck,d,q) ==> Del(d when p, q when p)
+Proof
               CONV_TAC NOT_EXISTS_CONV THEN
               REWRITE_TAC [DE_MORGAN_THM,SYM(SPEC_ALL IMP_DISJ_THM),Inf] THEN
               CONV_TAC (REDEPTH_CONV NOT_FORALL_CONV) THEN
@@ -57,14 +57,15 @@ val no_simple_abs =
               REWRITE_TAC [IMP_DISJ_THM, DE_MORGAN_THM,Dtype,Del,Rise] THEN
               MAP_EVERY EXISTS_TAC [``\t:num.F``, ``\t:num.T``, ``\t:num.F``] THEN
               CONV_TAC (DEPTH_CONV BETA_CONV) THEN
-              REWRITE_TAC[when,o_THM]);
+              REWRITE_TAC[when,o_THM]
+QED
 
-val Funpow_I =
- store_thm
-  ("Funpow_I",
-   ``Funpow n I x = x``,
+Theorem Funpow_I:
+     Funpow n I x = x
+Proof
    Induct_on `n`
-    THEN RW_TAC arith_ss [Funpow_DEF,I_THM,o_THM]);
+    THEN RW_TAC arith_ss [Funpow_DEF,I_THM,o_THM]
+QED
 
 (* Put tempabs' in the correct form for application to D-type           *)
 (* NOTE: Need to automate this... and the tactic below.                 *)
@@ -84,9 +85,10 @@ val tempabs =
  end;
 
 (* Correctness of Dtype w.r.t. the temporal abstraction Del.            *)
-val Dtype_correct =
-    store_thm("Dtype_correct"     ,
-              ``!ck.Inf(Rise ck) ==>
+Theorem Dtype_correct:
+                !ck.Inf(Rise ck) ==>
                    !d q. Dtype(ck,d,q) ==>
-                         Del(d when (Rise ck), q when (Rise ck))``,
-              PROVE_TAC[Del,tempabs]);
+                         Del(d when (Rise ck), q when (Rise ck))
+Proof
+              PROVE_TAC[Del,tempabs]
+QED

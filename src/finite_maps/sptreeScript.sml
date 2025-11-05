@@ -27,13 +27,14 @@ Libs
      up order. By far the fastest to EVAL.
 *)
 
-val _ = Datatype`spt = LN | LS 'a | BN spt spt | BS spt 'a spt`
+Datatype: spt = LN | LS 'a | BN spt spt | BS spt 'a spt
+End
 (* Leaf-None, Leaf-Some, Branch-None, Branch-Some *)
 
 Type num_map[pp] = “:'a spt”
 Type num_set[pp] = “:unit spt”
 
-val _ = overload_on ("isEmpty", ``\t. t = LN``)
+Overload isEmpty = ``\t. t = LN``
 
 Definition wf_def:
   (wf LN <=> T) /\
@@ -136,15 +137,19 @@ Proof
   simp[Once insert_def] >> rw[wf_def, insert_notEmpty] >> fs[wf_def]
 QED
 
-val mk_BN_thm = prove(
-  ``!t1 t2. mk_BN t1 t2 =
-            if isEmpty t1 /\ isEmpty t2 then LN else BN t1 t2``,
-  REPEAT Cases >> EVAL_TAC);
+Theorem mk_BN_thm[local]:
+    !t1 t2. mk_BN t1 t2 =
+            if isEmpty t1 /\ isEmpty t2 then LN else BN t1 t2
+Proof
+  REPEAT Cases >> EVAL_TAC
+QED
 
-val mk_BS_thm = prove(
-  ``!t1 t2. mk_BS t1 x t2 =
-            if isEmpty t1 /\ isEmpty t2 then LS x else BS t1 x t2``,
-  REPEAT Cases >> EVAL_TAC);
+Theorem mk_BS_thm[local]:
+    !t1 t2. mk_BS t1 x t2 =
+            if isEmpty t1 /\ isEmpty t2 then LS x else BS t1 x t2
+Proof
+  REPEAT Cases >> EVAL_TAC
+QED
 
 Theorem wf_delete:
     !t k. wf t ==> wf (delete k t)
@@ -159,11 +164,12 @@ Proof
   simp[Once insert_def] >> rw[lookup_def]
 QED
 
-val DIV2_EQ_DIV2 = prove(
-  ``(m DIV 2 = n DIV 2) <=>
+Theorem DIV2_EQ_DIV2[local]:
+    (m DIV 2 = n DIV 2) <=>
       (m = n) \/
       (n = m + 1) /\ EVEN m \/
-      (m = n + 1) /\ EVEN n``,
+      (m = n + 1) /\ EVEN n
+Proof
   `0 < 2` by simp[] >>
   map_every qabbrev_tac [`nq = n DIV 2`, `nr = n MOD 2`] >>
   qspec_then `2` mp_tac DIVISION >> asm_simp_tac bool_ss [] >>
@@ -175,12 +181,15 @@ val DIV2_EQ_DIV2 = prove(
   simp[EVEN_ADD, EVEN_MULT] >>
   `!p. p < 2 ==> (EVEN p <=> (p = 0))`
     by (rpt strip_tac >> `(p = 0) \/ (p = 1)` by decide_tac >> simp[]) >>
-  simp[]);
+  simp[]
+QED
 
-val EVEN_PRE = prove(
-  ``x <> 0 ==> (EVEN (x - 1) <=> ~EVEN x)``,
+Theorem EVEN_PRE[local]:
+    x <> 0 ==> (EVEN (x - 1) <=> ~EVEN x)
+Proof
   Induct_on `x` >> simp[] >> Cases_on `x` >> fs[] >>
-  simp_tac (srw_ss()) [EVEN]);
+  simp_tac (srw_ss()) [EVEN]
+QED
 
 Theorem lookup_insert:
     !k2 v t k1. lookup k1 (insert k2 v t) =
@@ -243,9 +252,11 @@ Proof
   metis_tac[]
 QED
 
-val optcase_lemma = prove(
-  ``(case opt of NONE => NONE | SOME v => SOME v) = opt``,
-  Cases_on `opt` >> simp[]);
+Theorem optcase_lemma[local]:
+    (case opt of NONE => NONE | SOME v => SOME v) = opt
+Proof
+  Cases_on `opt` >> simp[]
+QED
 
 Theorem lookup_union:
     !m1 m2 k. lookup k (union m1 m2) =
@@ -327,13 +338,17 @@ Definition difference_def:
        | BS t1' a' t2' => mk_BN (difference t1 t1') (difference t2 t2'))
 End
 
-val wf_mk_BN = prove(
-  ``!t1 t2. wf (mk_BN t1 t2) <=> wf t1 /\ wf t2``,
-  map_every Cases_on [`t1`,`t2`] >> fs [mk_BN_def,wf_def]);
+Theorem wf_mk_BN[local]:
+    !t1 t2. wf (mk_BN t1 t2) <=> wf t1 /\ wf t2
+Proof
+  map_every Cases_on [`t1`,`t2`] >> fs [mk_BN_def,wf_def]
+QED
 
-val wf_mk_BS = prove(
-  ``!t1 x t2. wf (mk_BS t1 x t2) <=> wf t1 /\ wf t2``,
-  map_every Cases_on [`t1`,`t2`] >> fs [mk_BS_def,wf_def]);
+Theorem wf_mk_BS[local]:
+    !t1 x t2. wf (mk_BS t1 x t2) <=> wf t1 /\ wf t2
+Proof
+  map_every Cases_on [`t1`,`t2`] >> fs [mk_BS_def,wf_def]
+QED
 
 Theorem wf_inter[simp]:
     !m1 m2. wf (inter m1 m2)
@@ -342,13 +357,17 @@ Proof
   Cases_on `m2` >> simp[wf_def,wf_mk_BS,wf_mk_BN]
 QED
 
-val lookup_mk_BN = prove(
-  ``lookup k (mk_BN t1 t2) = lookup k (BN t1 t2)``,
-  map_every Cases_on [`t1`,`t2`] >> fs [mk_BN_def,lookup_def]);
+Theorem lookup_mk_BN[local]:
+    lookup k (mk_BN t1 t2) = lookup k (BN t1 t2)
+Proof
+  map_every Cases_on [`t1`,`t2`] >> fs [mk_BN_def,lookup_def]
+QED
 
-val lookup_mk_BS = prove(
-  ``lookup k (mk_BS t1 x t2) = lookup k (BS t1 x t2)``,
-  map_every Cases_on [`t1`,`t2`] >> fs [mk_BS_def,lookup_def]);
+Theorem lookup_mk_BS[local]:
+    lookup k (mk_BS t1 x t2) = lookup k (BS t1 x t2)
+Proof
+  map_every Cases_on [`t1`,`t2`] >> fs [mk_BS_def,lookup_def]
+QED
 
 Theorem lookup_inter:
     !m1 m2 k. lookup k (inter m1 m2) =
@@ -405,7 +424,7 @@ Termination
   WF_REL_TAC `measure I` \\ fs [DIV_LT_X] \\ REPEAT STRIP_TAC \\ DECIDE_TAC
 End
 
-Triviality silly:
+Theorem silly[local]:
   NUMERAL (SUC x) = SUC x /\
   ZERO + ZERO = 0 /\
   BIT2 n <> 0 /\
@@ -468,8 +487,9 @@ QED
 
 val DIV2 = DIVISION |> Q.SPEC `2` |> REWRITE_RULE [DECIDE ``0 < 2``]
 
-val even_lem = Q.prove(
-  `EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 2 = k)`,
+Theorem even_lem[local]:
+   EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 2 = k)
+Proof
   qabbrev_tac `k0 = k - 1`  >>
   strip_tac >> `k = k0 + 1` by simp[Abbr`k0`] >>
   pop_assum SUBST_ALL_TAC >> qunabbrev_tac `k0` >>
@@ -478,10 +498,12 @@ val even_lem = Q.prove(
   map_every qabbrev_tac [`q = k0 DIV 2`, `r = k0 MOD 2`] >>
   markerLib.RM_ALL_ABBREVS_TAC >>
   fs[EVEN_ADD, EVEN_MULT] >>
-  `(r = 0) \/ (r = 1)` by simp[] >> fs[])
+  `(r = 0) \/ (r = 1)` by simp[] >> fs[]
+QED
 
-val odd_lem = Q.prove(
-  `~EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 1 = k)`,
+Theorem odd_lem[local]:
+   ~EVEN k /\ k <> 0 ==> (2 * ((k - 1) DIV 2) + 1 = k)
+Proof
   qabbrev_tac `k0 = k - 1`  >>
   strip_tac >> `k = k0 + 1` by simp[Abbr`k0`] >>
   pop_assum SUBST_ALL_TAC >> qunabbrev_tac `k0` >>
@@ -490,17 +512,22 @@ val odd_lem = Q.prove(
   map_every qabbrev_tac [`q = k0 DIV 2`, `r = k0 MOD 2`] >>
   markerLib.RM_ALL_ABBREVS_TAC >>
   fs[EVEN_ADD, EVEN_MULT] >>
-  `(r = 0) \/ (r = 1)` by simp[] >> fs[])
+  `(r = 0) \/ (r = 1)` by simp[] >> fs[]
+QED
 
 val even_lem' = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) even_lem
 val odd_lem' = CONV_RULE (RAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) odd_lem
 
-val even_imposs = Q.prove(
-  ‘EVEN n ==> !m. n <> 2 * m + 1’,
-  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]);
-val odd_imposs = Q.prove(
-  ‘~EVEN n ==> !m. n <> 2 * m + 2’,
-  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]);
+Theorem even_imposs[local]:
+   EVEN n ==> !m. n <> 2 * m + 1
+Proof
+  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]
+QED
+Theorem odd_imposs[local]:
+   ~EVEN n ==> !m. n <> 2 * m + 2
+Proof
+  rpt strip_tac >> fs[EVEN_ADD, EVEN_MULT]
+QED
 
 fun writeL th = CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [th]))
 
@@ -569,20 +596,26 @@ Proof
   `nn = n - (i + 1)` by decide_tac >> simp[]
 QED
 
-val bit_cases = prove(
-  ``!n. (n = 0) \/ (?m. n = 2 * m + 1) \/ (?m. n = 2 * m + 2)``,
+Theorem bit_cases[local]:
+    !n. (n = 0) \/ (?m. n = 2 * m + 1) \/ (?m. n = 2 * m + 2)
+Proof
   Induct >> simp[] >> fs[]
   >- (disj2_tac >> qexists_tac `m` >> simp[])
-  >- (disj1_tac >> qexists_tac `SUC m` >> simp[]))
+  >- (disj1_tac >> qexists_tac `SUC m` >> simp[])
+QED
 
-val oddevenlemma = prove(
-  ``2 * y + 1 <> 2 * x + 2``,
+Theorem oddevenlemma[local]:
+    2 * y + 1 <> 2 * x + 2
+Proof
   disch_then (mp_tac o AP_TERM ``EVEN``) >>
-  simp[EVEN_ADD, EVEN_MULT]);
+  simp[EVEN_ADD, EVEN_MULT]
+QED
 
-val MULT2_DIV' = prove(
-  ``(2 * m DIV 2 = m) /\ ((2 * m + 1) DIV 2 = m)``,
-  simp[DIV_EQ_X]);
+Theorem MULT2_DIV'[local]:
+    (2 * m DIV 2 = m) /\ ((2 * m + 1) DIV 2 = m)
+Proof
+  simp[DIV_EQ_X]
+QED
 
 Theorem domain_lookup:
     !t k. k IN domain t <=> ?v. lookup k t = SOME v
@@ -675,9 +708,11 @@ Proof
   >> simp[]
 QED
 
-val ODD_IMP_NOT_ODD = prove(
-  ``!k. ODD k ==> ~(ODD (k-1))``,
-  Cases >> fs [ODD]);
+Theorem ODD_IMP_NOT_ODD[local]:
+    !k. ODD k ==> ~(ODD (k-1))
+Proof
+  Cases >> fs [ODD]
+QED
 
 Theorem lookup_delete:
     !t k1 k2.
@@ -725,34 +760,41 @@ Proof
   rw[spt_acc_def] \\ Cases_on`k` \\ fs[spt_acc_def]
 QED
 
-val lemmas = prove(
-    ``(!x. EVEN (2 * x + 2)) /\
-      (!x. ODD (2 * x + 1))``,
+Theorem lemmas[local]:
+      (!x. EVEN (2 * x + 2)) /\
+      (!x. ODD (2 * x + 1))
+Proof
     conj_tac >- (
       simp[EVEN_EXISTS] >> rw[] >>
       qexists_tac`SUC x` >> simp[] ) >>
     simp[ODD_EXISTS,ADD1] >>
-    metis_tac[] )
+    metis_tac[]
+QED
 
-val bit_induction = prove(
-  ``!P. P 0 /\ (!n. P n ==> P (2 * n + 1)) /\
+Theorem bit_induction[local]:
+    !P. P 0 /\ (!n. P n ==> P (2 * n + 1)) /\
         (!n. P n ==> P (2 * n + 2)) ==>
-        !n. P n``,
+        !n. P n
+Proof
   gen_tac >> strip_tac >> completeInduct_on `n` >> simp[] >>
-  qspec_then `n` strip_assume_tac bit_cases >> simp[]);
+  qspec_then `n` strip_assume_tac bit_cases >> simp[]
+QED
 
-val lrnext212 = prove(
-  ``(lrnext (2 * m + 1) = 2 * lrnext m) /\
-    (lrnext (2 * m + 2) = 2 * lrnext m)``,
+Theorem lrnext212[local]:
+    (lrnext (2 * m + 1) = 2 * lrnext m) /\
+    (lrnext (2 * m + 2) = 2 * lrnext m)
+Proof
   conj_tac >| [
     `2 * m + 1 = BIT1 m` suffices_by simp[lrnext_thm] >>
     simp_tac bool_ss [BIT1, TWO, ONE, MULT_CLAUSES, ADD_CLAUSES],
     `2 * m + 2 = BIT2 m` suffices_by simp[lrnext_thm] >>
     simp_tac bool_ss [BIT2, TWO, ONE, MULT_CLAUSES, ADD_CLAUSES]
-  ]);
+  ]
+QED
 
-val lrlemma1 = prove(
-  ``lrnext (i + lrnext i) = 2 * lrnext i``,
+Theorem lrlemma1[local]:
+    lrnext (i + lrnext i) = 2 * lrnext i
+Proof
   qid_spec_tac `i` >> ho_match_mp_tac bit_induction >>
   simp[lrnext212, lrnext_thm] >> conj_tac
   >- (gen_tac >>
@@ -761,10 +803,12 @@ val lrlemma1 = prove(
   qx_gen_tac `i` >>
   `2 * i + (2 * lrnext i + 2) = 2 * (i + lrnext i) + 2`
     by decide_tac >>
-  simp[lrnext212]);
+  simp[lrnext212]
+QED
 
-val lrlemma2 = prove(
-  ``lrnext (i + 2 * lrnext i) = 2 * lrnext i``,
+Theorem lrlemma2[local]:
+    lrnext (i + 2 * lrnext i) = 2 * lrnext i
+Proof
   qid_spec_tac `i` >> ho_match_mp_tac bit_induction >>
   simp[lrnext212, lrnext_thm] >> conj_tac
   >- (qx_gen_tac `i` >>
@@ -772,7 +816,8 @@ val lrlemma2 = prove(
         by decide_tac >> simp[lrnext212]) >>
   gen_tac >>
   `2 * i + (4 * lrnext i + 2) = 2 * (i + 2 * lrnext i) + 2`
-     by decide_tac >> simp[lrnext212])
+     by decide_tac >> simp[lrnext212]
+QED
 
 Theorem spt_acc_eqn:
    !k i. spt_acc i k = lrnext i * k + i
@@ -908,10 +953,11 @@ Proof
   simp[] >> Induct >> simp[wf_def] >> metis_tac[]
 QED
 
-val toAList_append = prove(
-  ``!t n ls.
+Theorem toAList_append[local]:
+    !t n ls.
       foldi (\k v a. (k,v)::a) n ls t =
-      foldi (\k v a. (k,v)::a) n [] t ++ ls``,
+      foldi (\k v a. (k,v)::a) n [] t ++ ls
+Proof
   Induct
   >- simp[foldi_def]
   >- simp[foldi_def]
@@ -931,12 +977,14 @@ val toAList_append = prove(
     CONV_TAC(LAND_CONV(REWR_CONV th))) >>
   first_assum(fn th =>
     CONV_TAC(RAND_CONV(LAND_CONV(REWR_CONV th)))) >>
-  metis_tac[APPEND_ASSOC,APPEND] )
+  metis_tac[APPEND_ASSOC,APPEND]
+QED
 
-val toAList_inc = prove(
-  ``!t n.
+Theorem toAList_inc[local]:
+    !t n.
       foldi (\k v a. (k,v)::a) n [] t =
-      MAP (\(k,v). (n + lrnext n * k,v)) (foldi (\k v a. (k,v)::a) 0 [] t)``,
+      MAP (\(k,v). (n + lrnext n * k,v)) (foldi (\k v a. (k,v)::a) 0 [] t)
+Proof
   Induct
   >- simp[foldi_def]
   >- simp[foldi_def]
@@ -973,7 +1021,8 @@ val toAList_inc = prove(
     simp[MAP_MAP_o,combinTheory.o_DEF,APPEND_11_LENGTH] >>
     simp[MAP_EQ_f] >>
     simp[lrnext_thm,pairTheory.UNCURRY,pairTheory.FORALL_PROD] >>
-    simp[lrlemma1,lrlemma2] ))
+    simp[lrlemma1,lrlemma2] )
+QED
 
 Theorem ALL_DISTINCT_MAP_FST_toAList:
     !t. ALL_DISTINCT (MAP FST (toAList t))
@@ -1040,11 +1089,13 @@ QED
 
 val _ = remove_ovl_mapping "lrnext" {Name = "lrnext", Thy = "sptree"}
 
-val foldi_FOLDR_toAList_lemma = prove(
-  ``!t n a ls. foldi f n (FOLDR (UNCURRY f) a ls) t =
-               FOLDR (UNCURRY f) a (foldi (\k v a. (k,v)::a) n ls t)``,
+Theorem foldi_FOLDR_toAList_lemma[local]:
+    !t n a ls. foldi f n (FOLDR (UNCURRY f) a ls) t =
+               FOLDR (UNCURRY f) a (foldi (\k v a. (k,v)::a) n ls t)
+Proof
   Induct >> simp[foldi_def] >>
-  rw[] >> pop_assum(assume_tac o GSYM) >> simp[])
+  rw[] >> pop_assum(assume_tac o GSYM) >> simp[]
+QED
 
 Theorem foldi_FOLDR_toAList:
     !f a t. foldi f 0 a t = FOLDR (UNCURRY f) a (toAList t)
@@ -1104,8 +1155,9 @@ fun tac () = (
    simp[lemmas] >> NO_TAC) ORELSE
   (metis_tac[]));
 
-val MEM_toListA = prove(
-  ``!t acc x. MEM x (toListA acc t) <=> (MEM x acc \/ ?k. lookup k t = SOME x)``,
+Theorem MEM_toListA[local]:
+    !t acc x. MEM x (toListA acc t) <=> (MEM x acc \/ ?k. lookup k t = SOME x)
+Proof
   Induct >> simp[toListA_def,lookup_def] >- metis_tac[] >>
   rw[EQ_IMP_THM] >> rw[] >> pop_assum mp_tac >> rw[]
   >- (tac())
@@ -1116,7 +1168,8 @@ val MEM_toListA = prove(
   >- (tac())
   >- (tac())
   >- (tac())
-  >- (tac()));
+  >- (tac())
+QED
 
 Theorem MEM_toList:
     !x t. MEM x (toList t) <=> ?k. lookup k t = SOME x
@@ -1124,8 +1177,9 @@ Proof
   rw[toList_def,MEM_toListA]
 QED
 
-val div2_even_lemma = prove(
-  ``!x. ?n. (x = (n - 1) DIV 2) /\ EVEN n /\ 0 < n``,
+Theorem div2_even_lemma[local]:
+    !x. ?n. (x = (n - 1) DIV 2) /\ EVEN n /\ 0 < n
+Proof
   Induct >- ( qexists_tac`2` >> simp[] ) >> fs[] >>
   qexists_tac`n+2` >>
   simp[ADD1,EVEN_ADD] >>
@@ -1136,10 +1190,12 @@ val div2_even_lemma = prove(
   simp[] >> disch_then kall_tac >>
   qspec_then`2`mp_tac ADD_DIV_ADD_DIV >> simp[] >>
   disch_then(qspecl_then[`m`,`1`]mp_tac) >>
-  simp[]);
+  simp[]
+QED
 
-val div2_odd_lemma = prove(
-  ``!x. ?n. (x = (n - 1) DIV 2) /\ ODD n /\ 0 < n``,
+Theorem div2_odd_lemma[local]:
+    !x. ?n. (x = (n - 1) DIV 2) /\ ODD n /\ 0 < n
+Proof
   Induct >- ( qexists_tac`1` >> simp[] ) >> fs[] >>
   qexists_tac`n+2` >>
   simp[ADD1,ODD_ADD] >>
@@ -1150,7 +1206,8 @@ val div2_odd_lemma = prove(
   simp[] >> disch_then kall_tac >>
   qspec_then`2`mp_tac ADD_DIV_ADD_DIV >> simp[] >>
   disch_then(qspecl_then[`m`,`0`]mp_tac) >>
-  simp[]);
+  simp[]
+QED
 
 Theorem spt_eq_thm:
     !t1 t2. wf t1 /\ wf t2 ==>
@@ -1335,36 +1392,46 @@ Proof
   \\ Cases_on `lookup x t3` \\ fs []
 QED
 
-val numeral_div0 = prove(
-  ``(BIT1 n DIV 2 = n) /\
+Theorem numeral_div0[local]:
+    (BIT1 n DIV 2 = n) /\
     (BIT2 n DIV 2 = SUC n) /\
     (SUC (BIT1 n) DIV 2 = SUC n) /\
-    (SUC (BIT2 n) DIV 2 = SUC n)``,
+    (SUC (BIT2 n) DIV 2 = SUC n)
+Proof
   REWRITE_TAC[GSYM DIV2_def, numeralTheory.numeral_suc,
               REWRITE_RULE [NUMERAL_DEF]
-                           numeralTheory.numeral_div2])
-val BIT0 = prove(
-  ``BIT1 n <> 0  /\ BIT2 n <> 0``,
+                           numeralTheory.numeral_div2]
+QED
+Theorem BIT0[local]:
+    BIT1 n <> 0  /\ BIT2 n <> 0
+Proof
   REWRITE_TAC[BIT1, BIT2,
-              ADD_CLAUSES, numTheory.NOT_SUC]);
+              ADD_CLAUSES, numTheory.NOT_SUC]
+QED
 
-val PRE_BIT1 = prove(
-  ``BIT1 n - 1 = 2 * n``,
+Theorem PRE_BIT1[local]:
+    BIT1 n - 1 = 2 * n
+Proof
   REWRITE_TAC [BIT1, NUMERAL_DEF,
                ALT_ZERO, ADD_CLAUSES,
                BIT2, SUB_MONO_EQ,
-               MULT_CLAUSES, SUB_0]);
+               MULT_CLAUSES, SUB_0]
+QED
 
-val PRE_BIT2 = prove(
-  ``BIT2 n - 1 = 2 * n + 1``,
+Theorem PRE_BIT2[local]:
+    BIT2 n - 1 = 2 * n + 1
+Proof
   REWRITE_TAC [BIT1, NUMERAL_DEF,
                ALT_ZERO, ADD_CLAUSES,
                BIT2, SUB_MONO_EQ,
-               MULT_CLAUSES, SUB_0]);
+               MULT_CLAUSES, SUB_0]
+QED
 
-val BITDIV = prove(
-  ``((BIT1 n - 1) DIV 2 = n) /\ ((BIT2 n - 1) DIV 2 = n)``,
-  simp[PRE_BIT1, PRE_BIT2] >> simp[DIV_EQ_X]);
+Theorem BITDIV[local]:
+    ((BIT1 n - 1) DIV 2 = n) /\ ((BIT2 n - 1) DIV 2 = n)
+Proof
+  simp[PRE_BIT1, PRE_BIT2] >> simp[DIV_EQ_X]
+QED
 
 fun computerule th q =
     th
@@ -1609,11 +1676,13 @@ Definition subspt_eq:
      subspt t1 (spt_left t) /\ subspt t2 (spt_right t))
 End
 
-val subspt_lookup_lemma = Q.prove(
-  `(!x y. ((if x = 0:num then SOME a else f x) = SOME y) ==> p x y)
+Theorem subspt_lookup_lemma[local]:
+   (!x y. ((if x = 0:num then SOME a else f x) = SOME y) ==> p x y)
    <=>
-   p 0 a /\ (!x y. x <> 0 /\ (f x = SOME y) ==> p x y)`,
-  metis_tac [optionTheory.SOME_11]);
+   p 0 a /\ (!x y. x <> 0 /\ (f x = SOME y) ==> p x y)
+Proof
+  metis_tac [optionTheory.SOME_11]
+QED
 
 Theorem subspt_lookup:
    !t1 t2.
@@ -1780,10 +1849,12 @@ Proof
   simp[wf_def, wf_mk_BN, wf_mk_BS]
 QED
 
-val ALOOKUP_MAP_lemma = Q.prove(
-  `ALOOKUP (MAP (\kv. (FST kv, f (FST kv) (SND kv))) al) n =
-   OPTION_MAP (\v. f n v) (ALOOKUP al n)`,
-  Induct_on `al` >> simp[pairTheory.FORALL_PROD] >> rw[]);
+Theorem ALOOKUP_MAP_lemma[local]:
+   ALOOKUP (MAP (\kv. (FST kv, f (FST kv) (SND kv))) al) n =
+   OPTION_MAP (\v. f n v) (ALOOKUP al n)
+Proof
+  Induct_on `al` >> simp[pairTheory.FORALL_PROD] >> rw[]
+QED
 
 Theorem lookup_mk_BN:
    lookup i (mk_BN t1 t2) =
@@ -1882,21 +1953,23 @@ Proof
   SIMP_TAC std_ss [lookup_fromList] \\ DECIDE_TAC
 QED
 
-val lemmas = Q.prove(
-  `(2 + 2 * n - 1 = 2 * n + 1:num) /\
+Theorem lemmas[local]:
+   (2 + 2 * n - 1 = 2 * n + 1:num) /\
     ((2 + 2 * n' = 2 * n'' + 2) <=> (n' = n'':num)) /\
     ((2 * m = 2 * n) <=> (m = n)) /\
     ((2 * n'' + 1) DIV 2 = n'') /\
     ((2 * n) DIV 2 = n) /\
     (2 + 2 * n' <> 2 * n'' + 1) /\
-    (2 * m + 1 <> 2 * n' + 2)`,
+    (2 * m + 1 <> 2 * n' + 2)
+Proof
   REPEAT STRIP_TAC \\ SIMP_TAC std_ss [] \\ fs []
   \\ full_simp_tac(srw_ss())[ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]
   \\ full_simp_tac(srw_ss())[ONCE_REWRITE_RULE [MULT_COMM] DIV_MULT]
   \\ IMP_RES_TAC (METIS_PROVE [] ``(m = n) ==> (m MOD 2 = n MOD 2)``)
   \\ POP_ASSUM MP_TAC \\ SIMP_TAC std_ss []
   \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0 < 2:num``)]
-  \\ EVAL_TAC \\ fs[MOD_EQ_0,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
+  \\ EVAL_TAC \\ fs[MOD_EQ_0,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
+QED
 
 Definition spt_fold_def:
   (spt_fold f acc LN = acc) /\
@@ -2116,23 +2189,27 @@ Proof
   \\ simp[ADD1]
 QED
 
-val splem1 = Q.prove(`
-  a <> 0 ==> (a-1) DIV 2 < a`,
-  simp[DIV_LT_X]);
+Theorem splem1[local]:
+  a <> 0 ==> (a-1) DIV 2 < a
+Proof
+  simp[DIV_LT_X]
+QED
 
 val DIV2_P_UNIV =
   DIV_P_UNIV |> SPEC_ALL |> Q.INST [`n` |-> `2`] |> SIMP_RULE (srw_ss()) []
              |> EQ_IMP_RULE |> #2 |> Q.GENL [`P`, `m`]
 
-val splem3 = Q.prove(
-  `(EVEN c /\ EVEN a \/ ODD a /\ ODD c) /\ a <> c /\ a <> 0 /\ c <> 0 ==>
-   (a-1) DIV 2 <> (c-1) DIV 2`,
+Theorem splem3[local]:
+   (EVEN c /\ EVEN a \/ ODD a /\ ODD c) /\ a <> c /\ a <> 0 /\ c <> 0 ==>
+   (a-1) DIV 2 <> (c-1) DIV 2
+Proof
   map_every Cases_on [`a`, `c`] >>
   simp[DIV_LT_X, EVEN, ODD] >> DEEP_INTRO_TAC DIV2_P_UNIV >> rpt gen_tac >>
   rw[] >> fs[EVEN_ADD, EVEN_MULT, ODD_ADD, ODD_MULT] >>
   DEEP_INTRO_TAC DIV2_P_UNIV >> rw[] >>
   fs[EVEN_ADD, EVEN_MULT, ODD_ADD, ODD_MULT] >>
-  rpt (rename [‘x < 2’] >> ‘(x = 0) \/ (x = 1)’ by simp[] >> fs[]));
+  rpt (rename [‘x < 2’] >> ‘(x = 0) \/ (x = 1)’ by simp[] >> fs[])
+QED
 
 Theorem insert_swap:
   !t a b c d.
@@ -2184,7 +2261,7 @@ Proof
   metis_tac[]
 QED
 
-Triviality delete_mk_BN:
+Theorem delete_mk_BN[local]:
   (delete 0 (mk_BN t1 t2) = mk_BN t1 t2) /\
   (k <> 0 ==> delete k (mk_BN t1 t2) = delete k (BN t1 t2))
 Proof
@@ -2192,7 +2269,7 @@ Proof
   \\ fs [delete_def,mk_BN_def]
 QED
 
-Triviality delete_mk_BS:
+Theorem delete_mk_BS[local]:
   (delete 0 (mk_BS t1 s t2) = mk_BN t1 t2) /\
   (k <> 0 ==> delete k (mk_BS t1 s t2) = delete k (BS t1 s t2))
 Proof
@@ -2200,7 +2277,7 @@ Proof
   \\ fs [delete_def,mk_BS_def,mk_BN_def]
 QED
 
-Triviality DIV_2_lemma:
+Theorem DIV_2_lemma[local]:
   n DIV 2 = m DIV 2 /\ EVEN m = EVEN n ==> m = n
 Proof
   rw []
@@ -2298,9 +2375,9 @@ Definition spts_to_alist_add_pause_def:
   )
 End
 
-val _ = temp_overload_on("add_pause", ``spts_to_alist_add_pause``);
+Overload add_pause[local] = ``spts_to_alist_add_pause``
 
-Triviality SUM_add_pause:
+Theorem SUM_add_pause[local]:
   SUM (MAP FST (add_pause j q)) = j + SUM (MAP FST q)
 Proof
   simp [spts_to_alist_add_pause_def]
@@ -2390,10 +2467,10 @@ Proof
   \\ simp [MAP_MAP_o, Q.prove (`SND o (f ## g) = g o SND`, simp [FUN_EQ_THM])]
 QED
 
-val _ = temp_overload_on("inclist_stable",
-  `` \xs. FILTER ((~) o isEmpty o SND) (gather_inclist_offsets xs) ``)
+Overload inclist_stable[local] =
+  `` \xs. FILTER ((~) o isEmpty o SND) (gather_inclist_offsets xs) ``
 
-Triviality gather_add_pause:
+Theorem gather_add_pause[local]:
   inclist_stable (REVERSE (add_pause j xs)) =
   inclist_stable (REVERSE xs)
 Proof
@@ -2445,10 +2522,10 @@ Proof
   )
 QED
 
-Triviality MEM_case = (TypeBase.case_pred_disj_of ``: 'z option``
+Theorem MEM_case[local] = (TypeBase.case_pred_disj_of ``: 'z option``
   |> Q.ISPEC `MEM (x : 'z)` |> SIMP_RULE std_ss [])
 
-Triviality gather_inclist_offsets_MAP_I:
+Theorem gather_inclist_offsets_MAP_I[local]:
   gather_inclist_offsets (MAP (I ## f) xs) =
   MAP (I ## f) (gather_inclist_offsets xs)
 Proof
@@ -2456,7 +2533,7 @@ Proof
   \\ simp [gather_inclist_offsets_def, pairTheory.FORALL_PROD, MAP_MAP_o, MAP_CONG]
 QED
 
-Triviality spts_to_alist_aux_MEM:
+Theorem spts_to_alist_aux_MEM[local]:
   ! i xs acc_cent repeat.
   ! j ys acc2 repeat2.
     spts_to_alist_aux i xs acc_cent [] [] repeat = (j, ys, acc2, repeat2) ==>
@@ -2503,7 +2580,7 @@ Proof
   )
 QED
 
-Triviality MEM_spts_to_alist:
+Theorem MEM_spts_to_alist[local]:
   ! i xs acc_cent.
   ! k v. (MEM (k, v) (spts_to_alist i xs acc_cent) <=>
     MEM (k, v) acc_cent \/
@@ -2521,7 +2598,7 @@ Proof
   \\ fs [NULL_EQ]
 QED
 
-Triviality spts_to_alist_aux_SORTED:
+Theorem spts_to_alist_aux_SORTED[local]:
   ! i xs acc_cent acc_right acc_left repeat.
   ! j ys acc2 repeat2.
     spts_to_alist_aux i xs acc_cent acc_right acc_left repeat = (j, ys, acc2, repeat2) ==>
@@ -2559,7 +2636,7 @@ Proof
   )
 QED
 
-Triviality SORTED_spts_to_alist:
+Theorem SORTED_spts_to_alist[local]:
   ! i xs acc_cent.
   SORTED (<) (REVERSE (i :: MAP FST acc_cent)) /\
   EVERY ((\i. 0 < i) o FST) xs

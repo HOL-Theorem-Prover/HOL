@@ -328,25 +328,31 @@ val MULTd_dev = save_thm("MULTd_dev",
 (* ---------------------------------------------------------------
    MOD_CNTWd = MOD_CNTW
 --------------------------------------------------------------- *)
-val MOD_CNTW_EQ = store_thm("MOD_CNTW_EQ",
-    ``MOD_CNTWd = MOD_CNTW``,
-    METIS_TAC [MOD_CNTWd_def,MOD_CNTW_def]);
+Theorem MOD_CNTW_EQ:
+      MOD_CNTWd = MOD_CNTW
+Proof
+    METIS_TAC [MOD_CNTWd_def,MOD_CNTW_def]
+QED
 
 
 (* ---------------------------------------------------------------
    MSHIFTd(a,b,c) = MSHIFT a b c
 --------------------------------------------------------------- *)
-val MSHIFT_EQ = store_thm("MSHIFT_EQ",
-    ``!a b c. MSHIFTd(a,b,c) = (MSHIFT a b c)``,
-    RW_TAC arith_ss [MSHIFTd_def,MSHIFT_def]);
+Theorem MSHIFT_EQ:
+      !a b c. MSHIFTd(a,b,c) = (MSHIFT a b c)
+Proof
+    RW_TAC arith_ss [MSHIFTd_def,MSHIFT_def]
+QED
 
 
 (* ---------------------------------------------------------------
    ALUd(a,b,c,d) = ALU a b c d
 --------------------------------------------------------------- *)
-val ALU_EQ = store_thm("ALU_EQ",
-    ``!a b c d. ALUd(a,b,c,d) = (ALU a b c d)``,
-    RW_TAC arith_ss [ALUd_def,ALU_def]);
+Theorem ALU_EQ:
+      !a b c d. ALUd(a,b,c,d) = (ALU a b c d)
+Proof
+    RW_TAC arith_ss [ALUd_def,ALU_def]
+QED
 
 
 (* ---------------------------------------------------------------
@@ -359,21 +365,24 @@ End
 (* ---------------------------------------------------------------
    T2B(INITd(a,b,c,d)) = INIT a b c d
 --------------------------------------------------------------- *)
-val INIT_EQ = store_thm("INIT_EQ",
-    ``!a b c d. T2B(INITd(a,b,c,d)) = (INIT a b c d)``,
+Theorem INIT_EQ:
+      !a b c d. T2B(INITd(a,b,c,d)) = (INIT a b c d)
+Proof
     RW_TAC arith_ss [T2B_def,INITd_def,INIT_def]
     THEN `(mul1 = w2n c) /\ (count1 = 0) /\
           (mul = BITS 1 count1 mul1) /\
           (mshift = (if mul = 2 then 1 else count1))`
            by RW_TAC arith_ss []
-    THEN RW_TAC arith_ss []);
+    THEN RW_TAC arith_ss []
+QED
 
 
 (* ---------------------------------------------------------------
    T2B(NEXTd a) = NEXT(T2B a)
 --------------------------------------------------------------- *)
-val NEXT_EQ = store_thm("NEXT_EQ",
-    ``!a. T2B(NEXTd a) = (NEXT (T2B a))``,
+Theorem NEXT_EQ:
+      !a. T2B(NEXTd a) = (NEXT (T2B a))
+Proof
     Cases_on `a`
     THEN Cases_on `r`
     THEN Cases_on `r1`
@@ -383,7 +392,8 @@ val NEXT_EQ = store_thm("NEXT_EQ",
     THEN `(mshift' = MSHIFT borrow mul' count1) /\
           (count1 = MOD_CNTW (q3 DIV 2 + 1)) /\
           (rd' = ALU q2 q r alub)` by RW_TAC arith_ss []
-    THEN RW_TAC arith_ss [MSHIFT_EQ,MOD_CNTW_EQ,ALU_EQ]);
+    THEN RW_TAC arith_ss [MSHIFT_EQ,MOD_CNTW_EQ,ALU_EQ]
+QED
 
 
 
@@ -404,17 +414,20 @@ End
 (* ---------------------------------------------
    fEXP_LEMMA
 --------------------------------------------- *)
-val fEXP_LEMMA = store_thm("fEXP_LEMMA",
-    ``!f n inp. f (fEXP f n inp)
-                = (fEXP f (SUC n) inp)``,
+Theorem fEXP_LEMMA:
+      !f n inp. f (fEXP f n inp)
+                = (fEXP f (SUC n) inp)
+Proof
     Induct_on `n`
-    THEN METIS_TAC [fEXP_def,o_THM]);
+    THEN METIS_TAC [fEXP_def,o_THM]
+QED
 
 (* ---------------------------------------------
    fEXP_NEXT
 --------------------------------------------- *)
-val fEXP_NEXT = store_thm("fEXP_NEXT",
-    ``!a. T2B(fEXP NEXTd n a) = fEXP NEXT n (T2B a)``,
+Theorem fEXP_NEXT:
+      !a. T2B(fEXP NEXTd n a) = fEXP NEXT n (T2B a)
+Proof
     Induct_on `n`
     THENL [
           METIS_TAC[fEXP_def]
@@ -422,13 +435,15 @@ val fEXP_NEXT = store_thm("fEXP_NEXT",
           RW_TAC arith_ss [fEXP_def]
           THEN REPEAT GEN_TAC
           THEN METIS_TAC [fEXP_def,o_THM,NEXT_EQ]
-          ]);
+          ]
+QED
 
 (* ---------------------------------------------
    fEXP_APPLY_NEXTd
 --------------------------------------------- *)
-val fEXP_APPLY_NEXTd = store_thm("fEXP_APPLY_NEXTd",
-    ``!n inp. APPLY_NEXTd (n,inp) = fEXP NEXTd n inp``,
+Theorem fEXP_APPLY_NEXTd:
+      !n inp. APPLY_NEXTd (n,inp) = fEXP NEXTd n inp
+Proof
     Induct_on `n`
     THENL [
           METIS_TAC [APPLY_NEXTd_def,fEXP_def]
@@ -437,34 +452,40 @@ val fEXP_APPLY_NEXTd = store_thm("fEXP_APPLY_NEXTd",
                 by RW_TAC arith_ss []
           THEN METIS_TAC [APPLY_NEXTd_def,fEXP_def,
                           o_THM,NEXT_EQ]
-          ]);
+          ]
+QED
 
 (* ---------------------------------------------
    fEXP_STATE
 --------------------------------------------- *)
-val fEXP_STATE = store_thm("fEXP_STATE",
-    ``!n b c d e. STATE n b c d e
-                  = (fEXP NEXT n (INIT b c d e))``,
+Theorem fEXP_STATE:
+      !n b c d e. STATE n b c d e
+                  = (fEXP NEXT n (INIT b c d e))
+Proof
     Induct_on `n`
-    THEN METIS_TAC [STATE_def,fEXP_def,fEXP_LEMMA]);
+    THEN METIS_TAC [STATE_def,fEXP_def,fEXP_LEMMA]
+QED
 
 (* --------------------------------------------
    T2B(STATEd(a,b,c,d,e)) = STATE a b c d e
 -------------------------------------------- *)
-val STATE_EQ = store_thm("STATE_EQ",
-    ``!a b c d e. T2B(STATEd(a,b,c,d,e)) = (STATE a b c d e)``,
+Theorem STATE_EQ:
+      !a b c d e. T2B(STATEd(a,b,c,d,e)) = (STATE a b c d e)
+Proof
     REPEAT GEN_TAC
     THEN `T2B(STATEd(a,b,c,d,e)) = (fEXP NEXT a (T2B(INITd(b,c,d,e))))`
         by METIS_TAC [STATEd_def,APPLY_NEXTd_def,fEXP_APPLY_NEXTd,fEXP_NEXT]
-    THEN METIS_TAC [INIT_EQ,fEXP_STATE]);
+    THEN METIS_TAC [INIT_EQ,fEXP_STATE]
+QED
 
 
 
 (* ---------------------------------------------------------------
    DURd = DUR
 --------------------------------------------------------------- *)
-val DUR_EQ = store_thm("DUR_EQ",
-    ``DUR = DURd``,
+Theorem DUR_EQ:
+      DUR = DURd
+Proof
     `!w. DUR w = DURd w` by REWRITE_TAC []
     THENL [GEN_TAC
            THEN `w = n2w(w2n w)` by METIS_TAC [word32Theory.w2n_ELIM]
@@ -472,7 +493,8 @@ val DUR_EQ = store_thm("DUR_EQ",
            THEN METIS_TAC [DUR_EVAL]
            ,
            METIS_TAC []
-          ]);
+          ]
+QED
 
 
 
@@ -480,29 +502,33 @@ val DUR_EQ = store_thm("DUR_EQ",
 (* ---------------------------------------------------------------
    PROJ_RDd a = PROJ_RD(T2B a)
 --------------------------------------------------------------- *)
-val PROJ_RD_EQ = store_thm("PROJ_RD_EQ",
-    ``!a. PROJ_RDd a = PROJ_RD(T2B a)``,
+Theorem PROJ_RD_EQ:
+      !a. PROJ_RDd a = PROJ_RD(T2B a)
+Proof
     Cases_on `a` THEN
     Cases_on `r` THEN
     Cases_on `r1` THEN
     Cases_on `r` THEN
     Cases_on `r1` THEN
-    RW_TAC arith_ss [PROJ_RDd_def,PROJ_RD_def,T2B_def]);
+    RW_TAC arith_ss [PROJ_RDd_def,PROJ_RD_def,T2B_def]
+QED
 
 
 
 (* ---------------------------------------------------------------
    BOOTHMULTIPLYd(a,b,c,d) = BOOTHMULTIPLY a b c d
 --------------------------------------------------------------- *)
-val BOOTHMULTIPLY_EQ = store_thm("BOOTHMULTIPLY_EQ",
-    ``!a b c d. BOOTHMULTIPLYd(a,b,c,d) = (BOOTHMULTIPLY a b c d)``,
+Theorem BOOTHMULTIPLY_EQ:
+      !a b c d. BOOTHMULTIPLYd(a,b,c,d) = (BOOTHMULTIPLY a b c d)
+Proof
     `!a b c d. STATE (DURd c) a b c d = (T2B(STATEd(DURd c,a,b,c,d)))`
           by METIS_TAC [STATE_EQ]
     THEN `!a b c d. PROJ_RD(STATE (DURd c) a b c d)
                     = (PROJ_RD(T2B(STATEd(DURd c,a,b,c,d))))`
          by METIS_TAC [STATE_EQ]
     THEN RW_TAC arith_ss [BOOTHMULTIPLYd_def,BOOTHMULTIPLY_def,DUR_EQ]
-    THEN METIS_TAC [PROJ_RD_EQ]);
+    THEN METIS_TAC [PROJ_RD_EQ]
+QED
 
 
 
@@ -518,8 +544,9 @@ End
 (* ---------------------------------------------------------------
    MULTd = MULT32
 --------------------------------------------------------------- *)
-val MULTd_CORRECT = store_thm("MULTd_CORRECT",
-    ``MULTd = MULT32``,
+Theorem MULTd_CORRECT:
+      MULTd = MULT32
+Proof
     `MULT32 = UNCURRY $*`
       by RW_TAC std_ss [FUN_EQ_THM,UNCURRY,MULT32_def,FORALL_PROD]
     THEN POP_ASSUM(fn th => RW_TAC std_ss [th])
@@ -530,7 +557,8 @@ val MULTd_CORRECT = store_thm("MULTd_CORRECT",
     THEN `?P. P = (\p. MULTd p = UNCURRY $* p)` by RW_TAC arith_ss []
     THEN `!p. (\p. MULTd p = UNCURRY $* p) p` by METIS_TAC [pair_induction]
     THEN `!p. MULTd p = UNCURRY $* p` by metisLib.METIS_TAC [pair_induction]
-    THEN PROVE_TAC [(PairRules.PEXT (ASSUME ``!p. MULTd p = UNCURRY $* p``))]);
+    THEN PROVE_TAC [(PairRules.PEXT (ASSUME ``!p. MULTd p = UNCURRY $* p``))]
+QED
 
 (* ---------------------------------------------------------------
    Circuit ===> Dev MULT32

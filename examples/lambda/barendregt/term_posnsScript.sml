@@ -12,17 +12,18 @@ fun Save_Thm(n,th) = save_thm(n,th) before export_rewrites [n]
     type of (term) positions
    ---------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `redpos = Lt | Rt | In`;
+Datatype: redpos = Lt | Rt | In
+End
 
 val _ = type_abbrev ("posn", ``:redpos list``)
 
-val APPEND_CASES = store_thm(
-  "APPEND_CASES",
-  ``!l1 l2 m1 m2.
+Theorem APPEND_CASES:
+    !l1 l2 m1 m2.
         (APPEND l1 l2 = APPEND m1 m2) <=>
         (l1 = m1) /\ (l2 = m2) \/
         (?n. (m1 = APPEND l1 n) /\ (l2 = APPEND n m2) /\ ~(n = [])) \/
-        (?n. (l1 = APPEND m1 n) /\ (m2 = APPEND n l2) /\ ~(n = []))``,
+        (?n. (l1 = APPEND m1 n) /\ (m2 = APPEND n l2) /\ ~(n = []))
+Proof
   Induct THENL [
     SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][] THEN
     PROVE_TAC [listTheory.APPEND],
@@ -30,7 +31,8 @@ val APPEND_CASES = store_thm(
       SRW_TAC [][] THEN PROVE_TAC [],
       SRW_TAC [][EQ_IMP_THM] THEN PROVE_TAC [listTheory.APPEND_ASSOC]
     ]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     ordering positions
@@ -62,9 +64,9 @@ val posn_lt_nil = Store_Thm(
   ``!p : posn. ~(p < [])``,
   Cases THEN SRW_TAC [][] THEN Cases_on `h` THEN SRW_TAC [][]);
 
-val posn_lt_trans = store_thm(
-  "posn_lt_trans",
-  ``!p1 p2 p3 : posn. p1 < p2 /\ p2 < p3 ==> p1 < p3``,
+Theorem posn_lt_trans:
+    !p1 p2 p3 : posn. p1 < p2 /\ p2 < p3 ==> p1 < p3
+Proof
   Induct THENL [
     NTAC 2 (Cases THEN SIMP_TAC (srw_ss()) [posn_lt_def]),
     Cases THEN Induct THEN
@@ -72,18 +74,20 @@ val posn_lt_trans = store_thm(
     Cases THEN SIMP_TAC (srw_ss()) [posn_lt_def] THEN
     Induct THEN TRY Cases THEN ASM_SIMP_TAC (srw_ss()) [posn_lt_def] THEN
     PROVE_TAC []
-  ]);
+  ]
+QED
 
 val posn_lt_irrefl = Store_Thm(
   "posn_lt_irrefl",
   ``!p : posn. ~(p < p)``,
   Induct THEN SRW_TAC [][]);
 
-val posn_lt_antisym = store_thm(
-  "posn_lt_antisym",
-  ``!p1 p2. p1 < p2 ==> ~(p2 < p1)``,
+Theorem posn_lt_antisym:
+    !p1 p2. p1 < p2 ==> ~(p2 < p1)
+Proof
   HO_MATCH_MP_TAC (theorem "posn_lt_ind") THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 val posn_lt_Lt = Store_Thm(
   "posn_lt_Lt",
@@ -133,11 +137,12 @@ val valid_posns_FINITE = Store_Thm(
   ``!t : term. FINITE (valid_posns t)``,
   HO_MATCH_MP_TAC simple_induction THEN SIMP_TAC (srw_ss()) []);
 
-val all_valid_posns_comparable = store_thm(
-  "all_valid_posns_comparable",
-  ``!t p1 p2. p1 IN valid_posns t /\ p2 IN valid_posns t ==>
-              p1 < p2 \/ (p1 = p2) \/ p2 < p1``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+Theorem all_valid_posns_comparable:
+    !t p1 p2. p1 IN valid_posns t /\ p2 IN valid_posns t ==>
+              p1 < p2 \/ (p1 = p2) \/ p2 < p1
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
 (* ----------------------------------------------------------------------
     positions of all of a term's variables, free or bound.  (var_posns)
@@ -161,11 +166,12 @@ val var_posns_FINITE = Store_Thm(
   ``!t:term. FINITE (var_posns t)``,
   HO_MATCH_MP_TAC simple_induction THEN SIMP_TAC (srw_ss()) []);
 
-val var_posns_SUBSET_valid_posns = store_thm(
-  "var_posns_SUBSET_valid_posns",
-  ``!t p. p IN var_posns t ==> p IN valid_posns t``,
+Theorem var_posns_SUBSET_valid_posns:
+    !t p. p IN var_posns t ==> p IN valid_posns t
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 (* ----------------------------------------------------------------------
     positions with a term of a particular free variable (v_posns)
@@ -210,11 +216,12 @@ val v_posns_tpm_invariant = Store_Thm(
   POP_ASSUM (fn th => REWRITE_TAC [GSYM th]) THEN
   SRW_TAC [][lemma, GSYM nomsetTheory.pmact_decompose]);
 
-val v_posns_FV = store_thm(
-  "v_posns_FV",
-  ``!t. ~(v IN FV t) ==> (v_posns v t = {})``,
+Theorem v_posns_FV:
+    !t. ~(v IN FV t) ==> (v_posns v t = {})
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{v}` THEN
-  SRW_TAC [][v_posns_def]);
+  SRW_TAC [][v_posns_def]
+QED
 
 val v_posns_LAM = prove(
   ``v_posns v (LAM u t) = if v = u then {}
@@ -226,13 +233,13 @@ val v_posns_thm = Save_Thm(
   LIST_CONJ (butlast (CONJUNCTS (CONJUNCT1 v_posns_def)) @
              [GEN_ALL v_posns_LAM]))
 
-val v_posns_vsubst = store_thm(
-  "v_posns_vsubst",
-  ``!M x y z.
+Theorem v_posns_vsubst:
+    !M x y z.
         v_posns x ([VAR y/z] M) =
            if x = y then v_posns x M UNION v_posns z M
            else if x = z then {}
-           else v_posns x M``,
+           else v_posns x M
+Proof
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `M` THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `{x;y;z}` THEN
@@ -246,28 +253,31 @@ val v_posns_vsubst = store_thm(
 
     REPEAT GEN_TAC THEN STRIP_TAC THEN REPEAT GEN_TAC THEN
     REPEAT COND_CASES_TAC THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val v_posns_FV_EQ = store_thm(
-  "v_posns_FV_EQ",
-  ``!t v. (v_posns v t = {}) = ~(v IN FV t)``,
+Theorem v_posns_FV_EQ:
+    !t v. (v_posns v t = {}) = ~(v IN FV t)
+Proof
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM, v_posns_FV] THEN
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][v_posns_thm, IMAGE_EQ_EMPTY] THEN
-  PROVE_TAC [IMAGE_EQ_EMPTY]);
+  PROVE_TAC [IMAGE_EQ_EMPTY]
+QED
 
 val v_posns_LAM_COND = save_thm("v_posns_LAM_COND", v_posns_LAM);
 
-val v_posns_SUBSET_var_posns = store_thm(
-  "v_posns_SUBSET_var_posns",
-  ``!t v p. p IN v_posns v t ==> p IN var_posns t``,
+Theorem v_posns_SUBSET_var_posns:
+    !t v p. p IN v_posns v t ==> p IN var_posns t
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][v_posns_thm, var_posns_thm] THENL [
     PROVE_TAC [],
     PROVE_TAC [],
     Cases_on `v = v'` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     PROVE_TAC []
-  ]);
+  ]
+QED
 
 val IMAGE_DIFF = prove(
   ``(!x y. (f x = f y) = (x = y)) ==>
@@ -280,11 +290,11 @@ val IMAGE_CONS_APPEND = prove(
   SRW_TAC [][EXTENSION, EQ_IMP_THM, GSYM RIGHT_EXISTS_AND_THM,
              GSYM LEFT_EXISTS_AND_THM] THEN PROVE_TAC []);
 
-val var_posns_subst = store_thm(
-  "var_posns_subst",
-  ``!x v t. var_posns ([t/v] x) =
+Theorem var_posns_subst:
+    !x v t. var_posns ([t/v] x) =
                (var_posns x DIFF v_posns v x) UNION
-               {APPEND p1 p2 | p1 IN v_posns v x /\ p2 IN var_posns t}``,
+               {APPEND p1 p2 | p1 IN v_posns v x /\ p2 IN var_posns t}
+Proof
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `x` THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `v INSERT FV t` THEN REPEAT CONJ_TAC THENL [
@@ -297,7 +307,8 @@ val var_posns_subst = store_thm(
     SRW_TAC [][SUB_THM, var_posns_thm, v_posns_thm] THEN
     SRW_TAC [][IMAGE_DIFF, IMAGE_CONS_APPEND],
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     positions of the bound variables underneath an abstraction
@@ -333,20 +344,22 @@ val lam_posns_vsubst = Store_Thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR]);
 
-val lam_posns_SUBSET_valid_posns = store_thm(
-  "lam_posns_SUBSET_valid_posns",
-  ``!t p. p IN lam_posns t ==> p IN valid_posns t``,
+Theorem lam_posns_SUBSET_valid_posns:
+    !t p. p IN lam_posns t ==> p IN valid_posns t
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val lam_posns_var_posns = store_thm(
-  "lam_posns_var_posns",
-  ``!t p. ~(p IN lam_posns t /\ p IN var_posns t)``,
+Theorem lam_posns_var_posns:
+    !t p. ~(p IN lam_posns t /\ p IN var_posns t)
+Proof
   Q_TAC SUFF_TAC `!t p. p IN lam_posns t ==> ~(p IN var_posns t)`
         THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][var_posns_thm, lam_posns_thm] THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 (* ----------------------------------------------------------------------
     positions of all a term's redexes
@@ -367,11 +380,12 @@ val redex_posns_vsubst_invariant = Store_Thm(
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR, redex_posns_thm]);
 
-val redex_posns_are_valid = store_thm(
-  "redex_posns_are_valid",
-  ``!t p. p IN redex_posns t ==> p IN valid_posns t``,
+Theorem redex_posns_are_valid:
+    !t p. p IN redex_posns t ==> p IN valid_posns t
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
-  SRW_TAC [][valid_posns_thm, redex_posns_thm]);
+  SRW_TAC [][valid_posns_thm, redex_posns_thm]
+QED
 
 (* ----------------------------------------------------------------------
     bv_posns_at : posn -> term -> posn set
@@ -432,23 +446,24 @@ val bv_posns_at_vsubst = Store_Thm(
   SRW_TAC [][SUB_THM, SUB_VAR, v_posns_vsubst, bv_posns_at_thm,
              bv_posns_thm])
 
-val bv_posns_at_SUBSET_var_posns = store_thm(
-  "bv_posns_at_SUBSET_var_posns",
-  ``!t p1 p2. p1 IN lam_posns t /\ p2 IN bv_posns_at p1 t ==>
-              p2 IN var_posns t``,
+Theorem bv_posns_at_SUBSET_var_posns:
+    !t p1 p2. p1 IN lam_posns t /\ p2 IN bv_posns_at p1 t ==>
+              p2 IN var_posns t
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
   SIMP_TAC (srw_ss()) [lam_posns_thm, var_posns_thm, bv_posns_at_thm,
                        DISJ_IMP_THM, GSYM LEFT_FORALL_IMP_THM,
                        FORALL_AND_THM, RIGHT_AND_OVER_OR,
                        GSYM LEFT_EXISTS_AND_THM,
                        GSYM RIGHT_EXISTS_AND_THM, bv_posns_thm] THEN
-  PROVE_TAC [v_posns_SUBSET_var_posns]);
+  PROVE_TAC [v_posns_SUBSET_var_posns]
+QED
 
-val lam_posns_subst = store_thm(
-  "lam_posns_subst",
-  ``!t u v. lam_posns ([u/v] t) = lam_posns t UNION
+Theorem lam_posns_subst:
+    !t u v. lam_posns ([u/v] t) = lam_posns t UNION
                                   {APPEND p1 p2 | p1 IN v_posns v t /\
-                                                  p2 IN lam_posns u}``,
+                                                  p2 IN lam_posns u}
+Proof
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `t` THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV u` THEN
   SIMP_TAC (srw_ss()) [SUB_THM, SUB_VAR, lam_posns_thm, v_posns_thm] THEN
@@ -458,15 +473,16 @@ val lam_posns_subst = store_thm(
     SRW_TAC [DNF_ss][lam_posns_thm, v_posns_thm, EXTENSION,
                      v_posns_FV] THEN
     PROVE_TAC []
-  ]);
+  ]
+QED
 
-val v_posns_subst = store_thm(
-  "v_posns_subst",
-  ``!t u v w. v_posns v ([u/w] t) =
+Theorem v_posns_subst:
+    !t u v w. v_posns v ([u/w] t) =
               if v = w then { APPEND p1 p2 | p1 IN v_posns v t /\
                                              p2 IN v_posns v u}
               else v_posns v t UNION
-                   { APPEND p1 p2 | p1 IN v_posns w t /\ p2 IN v_posns v u}``,
+                   { APPEND p1 p2 | p1 IN v_posns w t /\ p2 IN v_posns v u}
+Proof
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `t` THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{v;w} UNION FV u` THEN
   SIMP_TAC (srw_ss()) [SUB_VAR, SUB_THM, v_posns_thm, EXTENSION] THEN
@@ -476,25 +492,27 @@ val v_posns_subst = store_thm(
     FULL_SIMP_TAC (srw_ss()) [],
     SRW_TAC [DNF_ss][] THEN PROVE_TAC [],
     SRW_TAC [DNF_ss][] THEN PROVE_TAC []
-  ]);
+  ]
+QED
 
-val bv_posns_at_subst = store_thm(
-  "bv_posns_at_subst",
-  ``!t u v p. p IN lam_posns t ==>
-              (bv_posns_at p ([v/u] t) = bv_posns_at p t)``,
+Theorem bv_posns_at_subst:
+    !t u v p. p IN lam_posns t ==>
+              (bv_posns_at p ([v/u] t) = bv_posns_at p t)
+Proof
   REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `t`] THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `u INSERT FV v` THEN
   SRW_TAC [][lam_posns_thm, SUB_THM, SUB_VAR, bv_posns_at_thm] THEN
   SRW_TAC [][lam_posns_thm, SUB_THM, SUB_VAR, bv_posns_at_thm,
              lam_posns_subst, bv_posns_thm, v_posns_subst, v_posns_FV] THEN
-  SRW_TAC [][EXTENSION]);
+  SRW_TAC [][EXTENSION]
+QED
 
-val bv_posns_at_subst2 = store_thm(
-  "bv_posns_at_subst2",
-  ``!t u v vp m.
+Theorem bv_posns_at_subst2:
+    !t u v vp m.
        vp IN v_posns v t /\ m IN lam_posns u ==>
        (bv_posns_at (APPEND vp m) ([u/v] t) =
-        IMAGE (APPEND vp) (bv_posns_at m u))``,
+        IMAGE (APPEND vp) (bv_posns_at m u))
+Proof
   REPEAT GEN_TAC THEN
   MAP_EVERY Q.ID_SPEC_TAC [`m`, `vp`, `t`] THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
@@ -511,41 +529,45 @@ val bv_posns_at_subst2 = store_thm(
       SRW_TAC [DNF_ss][bv_posns_at_thm, EXTENSION]
     ],
     SRW_TAC [][bv_posns_at_thm] THEN SRW_TAC [DNF_ss][EXTENSION]
-  ]);
+  ]
+QED
 
-val bv_posns_at_prefix_posn = store_thm(
-  "bv_posns_at_prefix_posn",
-  ``∀p t bvp. p ∈ lam_posns t /\ bvp ∈ bv_posns_at p t ==>
-              ∃m. bvp = p ++ [In] ++ m``,
+Theorem bv_posns_at_prefix_posn:
+    ∀p t bvp. p ∈ lam_posns t /\ bvp ∈ bv_posns_at p t ==>
+              ∃m. bvp = p ++ [In] ++ m
+Proof
   Induct THEN
   REPEAT GEN_TAC THEN SIMP_TAC (srw_ss()) [bv_posns_at_def] THEN
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
   ASM_SIMP_TAC (srw_ss() ++ DNF_ss ++ boolSimps.CONJ_ss)
                [lam_posns_thm, bv_posns_thm, bv_posns_at_thm] THEN
-  PROVE_TAC []);
+  PROVE_TAC []
+QED
 
-val v_posns_injective = store_thm(
-  "v_posns_injective",
-  ``!t v1 p. p IN v_posns v1 t ==> (p IN v_posns v2 t <=> (v1 = v2))``,
+Theorem v_posns_injective:
+    !t v1 p. p IN v_posns v1 t ==> (p IN v_posns v2 t <=> (v1 = v2))
+Proof
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM] THEN
   REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `t`] THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{v1;v2}` THEN
-  SRW_TAC [][v_posns_thm] THEN PROVE_TAC []);
+  SRW_TAC [][v_posns_thm] THEN PROVE_TAC []
+QED
 
-val v_posns_arent_bv_posns = store_thm(
-  "v_posns_arent_bv_posns",
-  ``!t lp p. lp IN lam_posns t /\ p IN bv_posns_at lp t ==>
-             !v. ~(p IN v_posns v t)``,
+Theorem v_posns_arent_bv_posns:
+    !t lp p. lp IN lam_posns t /\ p IN bv_posns_at lp t ==>
+             !v. ~(p IN v_posns v t)
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [] [lam_posns_thm, bv_posns_at_thm, v_posns_thm,
               bv_posns_thm] THEN
   POP_ASSUM MP_TAC THEN SRW_TAC [][bv_posns_at_thm] THEN
-  PROVE_TAC [v_posns_injective]);
+  PROVE_TAC [v_posns_injective]
+QED
 
-val no_var_posns_in_var_posn_prefix = store_thm(
-  "no_var_posns_in_var_posn_prefix",
-  ``!t p1 l.
-       p1 IN var_posns t /\ APPEND p1 l IN var_posns t ==> (l = [])``,
+Theorem no_var_posns_in_var_posn_prefix:
+    !t p1 l.
+       p1 IN var_posns t /\ APPEND p1 l IN var_posns t ==> (l = [])
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
   REWRITE_TAC[var_posns_thm, theorem "var_posns_vsubst_invariant"] THEN
   REPEAT CONJ_TAC THENL [
@@ -554,21 +576,23 @@ val no_var_posns_in_var_posn_prefix = store_thm(
     SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN ASM_REWRITE_TAC [],
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN ASM_REWRITE_TAC []
-  ]);
+  ]
+QED
 
-val APPEND_var_posns = store_thm(
-  "APPEND_var_posns",
-  ``!vp1 vp2 t.
+Theorem APPEND_var_posns:
+    !vp1 vp2 t.
         vp1 IN var_posns t /\ vp2 IN var_posns t ==>
-        !x y. (APPEND vp1 x = APPEND vp2 y) <=> (vp1 = vp2) /\ (x = y)``,
+        !x y. (APPEND vp1 x = APPEND vp2 y) <=> (vp1 = vp2) /\ (x = y)
+Proof
   SRW_TAC [][APPEND_CASES, EQ_IMP_THM] THEN
-  PROVE_TAC [no_var_posns_in_var_posn_prefix]);
+  PROVE_TAC [no_var_posns_in_var_posn_prefix]
+QED
 
-val valid_posns_subst = store_thm(
-  "valid_posns_subst",
-  ``!t u v. valid_posns ([u/v] t) =
+Theorem valid_posns_subst:
+    !t u v. valid_posns ([u/v] t) =
               valid_posns t UNION
-              {APPEND p1 p2 | p1 IN v_posns v t /\ p2 IN valid_posns u}``,
+              {APPEND p1 p2 | p1 IN v_posns v t /\ p2 IN valid_posns u}
+Proof
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `t` THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV u` THEN
   SRW_TAC [][valid_posns_thm, v_posns_thm, SUB_THM] THENL [
@@ -576,12 +600,13 @@ val valid_posns_subst = store_thm(
     SRW_TAC [][EXTENSION] THEN REPEAT (POP_ASSUM (K ALL_TAC)) THEN
     SRW_TAC [DNF_ss][] THEN PROVE_TAC [],
     SRW_TAC [DNF_ss][EXTENSION] THEN PROVE_TAC []
-  ]);
+  ]
+QED
 
-val cant_be_deeper_than_var_posns = store_thm(
-  "cant_be_deeper_than_var_posns",
-  ``!t p1 p. p1 IN var_posns t /\ APPEND p1 p IN valid_posns t ==>
-             (p = [])``,
+Theorem cant_be_deeper_than_var_posns:
+    !t p1 p. p1 IN var_posns t /\ APPEND p1 p IN valid_posns t ==>
+             (p = [])
+Proof
   HO_MATCH_MP_TAC simple_induction THEN REPEAT CONJ_TAC THENL [
     SRW_TAC [][var_posns_thm, valid_posns_thm],
     REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -590,14 +615,16 @@ val cant_be_deeper_than_var_posns = store_thm(
     REPEAT GEN_TAC THEN STRIP_TAC THEN
     SIMP_TAC (srw_ss() ++ DNF_ss) [var_posns_thm, valid_posns_thm] THEN
     PROVE_TAC [lemma14a]
-  ]);
+  ]
+QED
 
-val NIL_IN_v_posns = store_thm(
-  "NIL_IN_v_posns",
-  ``!t v. [] IN v_posns v t <=> (t = VAR v)``,
+Theorem NIL_IN_v_posns:
+    !t v. [] IN v_posns v t <=> (t = VAR v)
+Proof
   GEN_TAC THEN
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
-  SRW_TAC [][v_posns_thm, v_posns_LAM_COND]);
+  SRW_TAC [][v_posns_thm, v_posns_LAM_COND]
+QED
 
 val v_posns_FINITE = Store_Thm(
   "v_posns_FINITE",

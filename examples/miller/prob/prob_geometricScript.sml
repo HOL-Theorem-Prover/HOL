@@ -48,15 +48,16 @@ End
 (* 2. !n. prob {s | FST (prob_geometric s) = n} = (1 / 2) pow (n + 1)        *)
 (* ------------------------------------------------------------------------- *)
 
-val INDEP_FN_PROB_GEOMETRIC_ITER = store_thm
-  ("INDEP_FN_PROB_GEOMETRIC_ITER",
-   ``!a. prob_geometric_iter a IN indep_fn``,
+Theorem INDEP_FN_PROB_GEOMETRIC_ITER:
+     !a. prob_geometric_iter a IN indep_fn
+Proof
    RW_TAC std_ss [prob_geometric_iter_def, INDEP_FN_SDEST, INDEP_FN_BIND,
-                  INDEP_FN_UNIT]);
+                  INDEP_FN_UNIT]
+QED
 
-val PROB_GEOMETRIC_LOOP_TERMINATES = store_thm
-  ("PROB_GEOMETRIC_LOOP_TERMINATES",
-   ``prob_while_terminates FST prob_geometric_iter``,
+Theorem PROB_GEOMETRIC_LOOP_TERMINATES:
+     prob_while_terminates FST prob_geometric_iter
+Proof
    MATCH_MP_TAC PROB_WHILE_TERMINATES_SUFFICIENT
    >> RW_TAC std_ss [INDEP_FN_PROB_GEOMETRIC_ITER, possibly_bern_def,
                      possibly_def] \\
@@ -66,24 +67,27 @@ val PROB_GEOMETRIC_LOOP_TERMINATES = store_thm
    >- (RW_TAC std_ss [EVENTS_BERN_HALFSPACE, PROB_BERN_HALFSPACE]
        >> PROVE_TAC [REAL_LT_LE, HALF_POS])
    >> SET_EQ_TAC
-   >> RW_TAC std_ss [GSPECIFICATION, IN_HALFSPACE, sdest_def] ));
+   >> RW_TAC std_ss [GSPECIFICATION, IN_HALFSPACE, sdest_def] )
+QED
 
-val INDEP_FN_PROB_GEOMETRIC_LOOP = store_thm
-  ("INDEP_FN_PROB_GEOMETRIC_LOOP",
-   ``!a. prob_geometric_loop a IN indep_fn``,
+Theorem INDEP_FN_PROB_GEOMETRIC_LOOP:
+     !a. prob_geometric_loop a IN indep_fn
+Proof
    RW_TAC std_ss [prob_geometric_loop_def, INDEP_FN_PROB_WHILE,
                   PROB_GEOMETRIC_LOOP_TERMINATES,
-                  INDEP_FN_PROB_GEOMETRIC_ITER]);
+                  INDEP_FN_PROB_GEOMETRIC_ITER]
+QED
 
-val INDEP_FN_PROB_GEOMETRIC = store_thm
-  ("INDEP_FN_PROB_GEOMETRIC",
-   ``prob_geometric IN indep_fn``,
+Theorem INDEP_FN_PROB_GEOMETRIC:
+     prob_geometric IN indep_fn
+Proof
    RW_TAC std_ss [prob_geometric_def, INDEP_FN_BIND, INDEP_FN_UNIT,
-                  INDEP_FN_PROB_GEOMETRIC_LOOP]);
+                  INDEP_FN_PROB_GEOMETRIC_LOOP]
+QED
 
-val PROB_GEOMETRIC_LOOP_F = store_thm
-  ("PROB_GEOMETRIC_LOOP_F",
-   ``!n. !*s. FST (prob_geometric_loop (F, n) s) = (F, n)``,
+Theorem PROB_GEOMETRIC_LOOP_F:
+     !n. !*s. FST (prob_geometric_loop (F, n) s) = (F, n)
+Proof
    RW_TAC std_ss [prob_geometric_loop_def]
    >> MP_TAC (Q.ISPEC `\w : bool # num. w = (F, n)` PROB_WHILE)
    >> RW_TAC std_ss []
@@ -93,11 +97,12 @@ val PROB_GEOMETRIC_LOOP_F = store_thm
    >> MATCH_MP_TAC DEFINITELY_PROBABLY
    >> Cases_on `n'`
    >> RW_TAC std_ss [prob_while_cut_def, BIND_DEF, o_THM, UNCURRY,
-                     prob_geometric_iter_def, UNIT_DEF, sdest_def]);
+                     prob_geometric_iter_def, UNIT_DEF, sdest_def]
+QED
 
-val PROB_GEOMETRIC_LOOP_T_RANGE = store_thm
-  ("PROB_GEOMETRIC_LOOP_T_RANGE",
-   ``!n. !*s. n < SND (FST (prob_geometric_loop (T,n) s))``,
+Theorem PROB_GEOMETRIC_LOOP_T_RANGE:
+     !n. !*s. n < SND (FST (prob_geometric_loop (T,n) s))
+Proof
    RW_TAC std_ss [prob_geometric_loop_def]
    >> MP_TAC (Q.ISPEC `\w : bool # num. n < SND w` PROB_WHILE)
    >> RW_TAC std_ss []
@@ -118,11 +123,12 @@ val PROB_GEOMETRIC_LOOP_T_RANGE = store_thm
    >> Q.EXISTS_TAC `SUC n`
    >> CONJ_TAC >- DECIDE_TAC
    >> Q.PAT_X_ASSUM `!s. P s` MATCH_MP_TAC
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val PROB_GEOMETRIC_LOOP_STOPS = store_thm
-  ("PROB_GEOMETRIC_LOOP_STOPS",
-   ``!n. !*s. (SND (FST (prob_geometric_loop (b,n) s)) = n) = ~b``,
+Theorem PROB_GEOMETRIC_LOOP_STOPS:
+     !n. !*s. (SND (FST (prob_geometric_loop (b,n) s)) = n) = ~b
+Proof
    RW_TAC std_ss [prob_geometric_loop_def]
    >> MP_TAC (Q.ISPEC `\w : bool # num. (SND w = n) = ~b` PROB_WHILE)
    >> RW_TAC std_ss []
@@ -146,11 +152,11 @@ val PROB_GEOMETRIC_LOOP_STOPS = store_thm
    >> Q.SPEC_TAC (`stl s`, `s`)
    >> Induct_on `n''` >- RW_TAC arith_ss [prob_while_cut_def, UNIT_DEF]
    >> RW_TAC arith_ss [prob_while_cut_def, BIND_DEF, UNIT_DEF, UNCURRY, o_THM,
-                       prob_geometric_iter_def, sdest_def]);
+                       prob_geometric_iter_def, sdest_def]
+QED
 
-val PROB_BERN_GEOMETRIC_LOOP_LEMMA = store_thm
-  ("PROB_BERN_GEOMETRIC_LOOP_LEMMA",
-   ``!d n.
+Theorem PROB_BERN_GEOMETRIC_LOOP_LEMMA:
+     !d n.
        prob bern
        ((\x. SND x = n + SUC d) o FST o
         BIND sdest (\a. BIND (UNIT (a,SUC n)) prob_geometric_loop)) =
@@ -161,7 +167,8 @@ val PROB_BERN_GEOMETRIC_LOOP_LEMMA = store_thm
        1 / 2 *
        prob bern
        ((\x. SND x = n + SUC d) o FST o
-        (\a. BIND (UNIT (a,SUC n)) prob_geometric_loop) F)``,
+        (\a. BIND (UNIT (a,SUC n)) prob_geometric_loop) F)
+Proof
    REPEAT GEN_TAC
    >> (MP_TAC o
        Q.SPECL
@@ -183,13 +190,14 @@ val PROB_BERN_GEOMETRIC_LOOP_LEMMA = store_thm
        >> MATCH_MP_TAC INDEP_FN_PROB_WHILE
        >> RW_TAC std_ss [INDEP_FN_PROB_GEOMETRIC_ITER,
                          PROB_GEOMETRIC_LOOP_TERMINATES])
-   >> RW_TAC std_ss [ONE_MINUS_HALF, prob_geometric_loop_def]);
+   >> RW_TAC std_ss [ONE_MINUS_HALF, prob_geometric_loop_def]
+QED
 
-val PROB_BERN_GEOMETRIC_LOOP = store_thm
-  ("PROB_BERN_GEOMETRIC_LOOP",
-   ``!n d.
+Theorem PROB_BERN_GEOMETRIC_LOOP:
+     !n d.
        prob bern {s | SND (FST (prob_geometric_loop (T,n) s)) = n + SUC d} =
-       (1 / 2) pow SUC d``,
+       (1 / 2) pow SUC d
+Proof
    RW_TAC std_ss [prob_geometric_loop_def]
    >> RW_TAC std_ss [PROB_WHILE_ADVANCE, INDEP_FN_PROB_GEOMETRIC_ITER,
                      PROB_GEOMETRIC_LOOP_TERMINATES, prob_geometric_iter_def,
@@ -279,11 +287,12 @@ val PROB_BERN_GEOMETRIC_LOOP = store_thm
    >- (Rewr
        >> RW_TAC std_ss [])
    >> FUN_EQ_TAC
-   >> RW_TAC std_ss [BIND_DEF, UNIT_DEF, o_DEF, UNCURRY, ADD_CLAUSES]);
+   >> RW_TAC std_ss [BIND_DEF, UNIT_DEF, o_DEF, UNCURRY, ADD_CLAUSES]
+QED
 
-val PROB_BERN_GEOMETRIC = store_thm
-  ("PROB_BERN_GEOMETRIC",
-   ``!n. prob bern {s | FST (prob_geometric s) = n} = (1 / 2) pow (n + 1)``,
+Theorem PROB_BERN_GEOMETRIC:
+     !n. prob bern {s | FST (prob_geometric s) = n} = (1 / 2) pow (n + 1)
+Proof
    RW_TAC std_ss [prob_geometric_def, BIND_DEF, o_THM, UNCURRY, UNIT_DEF]
    >> Suff
       `prob bern {s | SND (FST (prob_geometric_loop (T,0) s)) - 1 = n} =
@@ -310,5 +319,6 @@ val PROB_BERN_GEOMETRIC = store_thm
     >> PSET_TAC []
     >> RW_TAC std_ss [SPECIFICATION, o_DEF],
     RW_TAC std_ss [GSPECIFICATION]
-    >> DECIDE_TAC]);
+    >> DECIDE_TAC]
+QED
 

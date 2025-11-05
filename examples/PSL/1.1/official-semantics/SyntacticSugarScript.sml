@@ -2,25 +2,11 @@
 (* Definitions from LRM Version 1.1, B.3 "Syntactic sugaring"                *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* START BOILERPLATE                                                         *)
-(*****************************************************************************)
-
-(*
-quietdec := true;
-map load ["intLib","ClockedSemanticsTheory"];
-quietdec := false;
-*)
-
 Theory SyntacticSugar
 Ancestors
   Syntax
 Libs
   intLib
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
 
 (******************************************************************************
 * Ensure term_of_int has correct type
@@ -114,13 +100,13 @@ End
 (******************************************************************************
 * Prove if-then-else form needed by computeLib
 ******************************************************************************)
-val RANGE_ITER_AUX =
- store_thm
-  ("RANGE_ITER_AUX",
-   ``RANGE_ITER_AUX op f i n =
+Theorem RANGE_ITER_AUX:
+     RANGE_ITER_AUX op f i n =
       if n=0 then f i
-             else op(f i, RANGE_ITER_AUX op f (i+1) (n-1))``,
-   Cases_on `n` THEN RW_TAC arith_ss [RANGE_ITER_AUX_def]);
+             else op(f i, RANGE_ITER_AUX op f (i+1) (n-1))
+Proof
+   Cases_on `n` THEN RW_TAC arith_ss [RANGE_ITER_AUX_def]
+QED
 
 val _ = computeLib.add_funs[RANGE_ITER_AUX];
 
@@ -131,10 +117,10 @@ End
 (******************************************************************************
 * Datatype to represent a number or range
 ******************************************************************************)
-val count_def =
- Hol_datatype
-  `count = NUM of num                            (* number                   *)
-         | RANGE of num # num option`;           (* range                    *)
+Datatype:
+   count = NUM    num                            (* number                   *)
+         | RANGE    (num # num option)           (* range                    *)
+End
 
 (******************************************************************************
 * S_RANGE_REPEAT(r, NUM i)      = r[*i]

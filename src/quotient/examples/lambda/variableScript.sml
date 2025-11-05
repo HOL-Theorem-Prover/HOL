@@ -18,14 +18,6 @@ Libs
   stringLib pred_setLib listLib numLib PairedLambda Psyntax
   dep_rewrite tactics
 
-(*
-app load ["stringTheory", "stringLib", "pred_setTheory", "pred_setLib",
-          "listTheory", "rich_listTheory", "listLib",
-          "numLib", "Datatype",
-          "arithmeticTheory", "Psyntax", "Define_type",
-          "more_listTheory", "more_setTheory",
-          "dep_rewrite", "bossLib" ];
-*)
 (*===========================================================*)
 (* The actual "names" of variables will be defined as a      *)
 (* composite type, containing not only a string but also a   *)
@@ -36,7 +28,8 @@ app load ["stringTheory", "stringLib", "pred_setTheory", "pred_setLib",
 (* will not be read; thus ("x",0) => "x" but ("y",2) => "y2".*)
 (*===========================================================*)
 
-val _ = Hol_datatype `var = VAR of string => num`;
+Datatype: var = VAR string num
+End
 
 (*
 val var_Axiom = theorem "var_Axiom";
@@ -211,18 +204,10 @@ QED
 (* set of them, of any size we like, all distinct from each other. *)
 (* =============================================================== *)
 
-fun new_prim_rec_definition (name,tm) =
- new_recursive_definition
-      {rec_axiom = prim_recTheory.num_Axiom,
-       name      = name,
-       def       = tm};
-
-val variant_set =
-    new_prim_rec_definition
-    ("variant_set",
-      “(variant_set x 0       = EMPTY)  /\
-          (variant_set x (SUC k) = (mk_variant x k) INSERT
-                                       (variant_set x k))”);
+Definition variant_set[nocompute]:
+  (variant_set x 0       = EMPTY)  /\
+  (variant_set x (SUC k) = (mk_variant x k) INSERT (variant_set x k))
+End
 
 Theorem IN_variant_set:
      !m x y. (y IN variant_set x m)
@@ -650,18 +635,12 @@ QED
 (* the provision that the list produced should have no duplicates. *)
 
 
-fun new_list_rec_def name tm =
-  new_recursive_definition
-      {rec_axiom = list_Axiom,
-       name      = name,
-       def       = tm};
-
-val variants =
-    new_list_rec_def "variants"
-      “(variants NIL s  =  NIL)  /\
-          (variants (CONS x xs) s  =
-               (let x' = variant x s in
-                  (CONS x' (variants xs (x' INSERT s)))))”;
+Definition variants[nocompute]:
+  (variants NIL s  =  NIL)  /\
+  (variants (CONS x xs) s  =
+     (let x' = variant x s in
+        (CONS x' (variants xs (x' INSERT s)))))
+End
 
 (* Alternative definition of variants:
 

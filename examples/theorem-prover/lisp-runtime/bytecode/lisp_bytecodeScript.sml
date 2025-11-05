@@ -8,27 +8,26 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* abstract syntax of bytecode *)
 
-val _ = Hol_datatype `
+Datatype:
   bc_inst_type =
   (* stack operations *)
     iPOP
-  | iPOPS of num
-  | iCONST_NUM of num
-  | iCONST_SYM of string
+  | iPOPS num
+  | iCONST_NUM num
+  | iCONST_SYM string
   | iCONST_LOOKUP
-  | iDATA of lisp_primitive_op
-  | iLOAD of num
-  | iSTORE of num
+  | iDATA lisp_primitive_op
+  | iLOAD num
+  | iSTORE num
   (* control-flow altering instructions *)
-  | iJUMP of num
-  | iCALL of num
-  | iJNIL of num
+  | iJUMP num
+  | iCALL num
+  | iJNIL num
   | iJUMP_SYM
   | iCALL_SYM
   | iRETURN
   | iFAIL
   (* special instructions *)
   | iCOMPILE
-  | iPRINT`;
-
-
+  | iPRINT
+End

@@ -13,11 +13,12 @@ val _ = ParseExtras.temp_tight_equality();
 
 (* ----------- Generic small-step --------- *)
 
-val _ = Datatype `
+Datatype:
   result =
     Terminate 'a
   | Diverge
-  | Crash`;
+  | Crash
+End
 
 (* A deterministic small-step semantics has
  * - a type of states, 'st,
@@ -27,11 +28,12 @@ val _ = Datatype `
  *   states to results
  * *)
 
-val _ = Datatype `
+Datatype:
   small = <| step : 'st -> 'st option;
              is_value : 'st -> bool;
              load : 'prog -> 'st;
-             unload : 'st -> 'res |>`;
+             unload : 'st -> 'res |>
+End
 
 (* Given a small-step semantics and program, get the result *)
 Definition small_sem_def:
@@ -49,11 +51,12 @@ End
 
 (* ----------- Generic functional big-step --------- *)
 
-val _ = Datatype `
+Datatype:
   fbs_res =
     Timeout
   | Error
-  | Val 'a`;
+  | Val 'a
+End
 
 (* A functional big-step semantics has
  * - a type of states, 'st, and environments 'env, and inital values for them
@@ -61,13 +64,14 @@ val _ = Datatype `
  * - an unload mapping from the evaluator's result to the actual result
  * - functions to get and set the clock from the state
  *)
-val _ = Datatype `
+Datatype:
   fbs = <| eval : 'st -> 'env -> 'prog -> 'st # 'v fbs_res;
            init_st : 'st;
            init_env : 'env;
            set_clock : num -> 'st -> 'st;
            get_clock : 'st -> num;
-           unload : 'v -> 'a |>`;
+           unload : 'v -> 'a |>
+End
 
 Definition eval_with_clock_def:
   eval_with_clock sem c p =
@@ -92,8 +96,8 @@ Definition check_result_def:
 End
 
 local val rw = srw_tac[] val fs = fsrw_tac[] in
-val small_fbs_equiv = Q.store_thm ("small_fbs_equiv",
-`!sem_f sem_s.
+Theorem small_fbs_equiv:
+ !sem_f sem_s.
   (?f.
      unbounded f ∧
      !c p.
@@ -107,7 +111,8 @@ val small_fbs_equiv = Q.store_thm ("small_fbs_equiv",
          check_result sem_f.unload r (sem_s.unload r'))
   ⇒
   !prog.
-    fbs_sem sem_f prog = small_sem sem_s prog`,
+    fbs_sem sem_f prog = small_sem sem_s prog
+Proof
  rw [small_sem_def, fbs_sem_def] >>
  `!s s'.
    (step_rel init_state s ∧ sem_s.step s = NONE) ∧
@@ -167,7 +172,8 @@ val small_fbs_equiv = Q.store_thm ("small_fbs_equiv",
  >- ( (* big term, small value *)
    first_x_assum (qspecl_then [`x`, `prog`] mp_tac) >>
    rw [check_result_def] >>
-   metis_tac []));
+   metis_tac [])
+QED
 end
 
 Definition same_result_def:
@@ -182,8 +188,8 @@ Definition same_result_def:
   ?s'. sem_s.step s = SOME s')
 End
 
-val small_fbs_equiv2 = Q.store_thm ("small_fbs_equiv2",
-`!sem_f sem_s.
+Theorem small_fbs_equiv2:
+ !sem_f sem_s.
   (!c p.
     SND (eval_with_clock sem_f c p) = Timeout ⇒
     sem_f.get_clock (FST (eval_with_clock sem_f c p)) = 0) ∧
@@ -195,7 +201,8 @@ val small_fbs_equiv2 = Q.store_thm ("small_fbs_equiv2",
          same_result sem_f sem_s (SND r) (LAST tr))
   ⇒
   !prog.
-    fbs_sem sem_f prog = small_sem sem_s prog`,
+    fbs_sem sem_f prog = small_sem sem_s prog
+Proof
  rpt gen_tac >>
  DISCH_TAC >>
  match_mp_tac small_fbs_equiv >>
@@ -214,5 +221,6 @@ val small_fbs_equiv2 = Q.store_thm ("small_fbs_equiv2",
    rw []
    >- metis_tac [] >>
    Cases_on `SND (eval_with_clock sem_f c p)` >>
-   fs [same_result_def, check_result_def]));
+   fs [same_result_def, check_result_def])
+QED
 

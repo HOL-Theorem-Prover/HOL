@@ -109,17 +109,18 @@ val lem2 =
         ((a + x = b + y) = (a = b) /\ (x = y))``
 
 (* Need ``(\a. ..) c`` below for automation to work *)
-val x64_MEMORY_INSERT = Q.store_thm("x64_MEMORY_INSERT",
-   `!f df c d.
+Theorem x64_MEMORY_INSERT:
+    !f df c d.
      c IN df /\ (\a. a && 7w = 0w) c ==>
-     (x64_mem64 c d * x64_MEMORY (df DELETE c) f = x64_MEMORY df ((c =+ d) f))`,
+     (x64_mem64 c d * x64_MEMORY (df DELETE c) f = x64_MEMORY df ((c =+ d) f))
+Proof
    match_mp_tac thm
    \\ rw [x64_MEMORY_def]
    \\ `(i = j) = (n2w i = n2w j: word64)` by simp []
    \\ asm_rewrite_tac []
    \\ match_mp_tac lem2
    \\ simp [lem1]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -162,28 +163,34 @@ val tac =
    \\ SIMP_TAC std_ss [lemma, lemma2]
    \\ METIS_TAC [SPEC_FRAME, temporal_stateTheory.TEMPORAL_NEXT_FRAME]
 
-val x64_mem32_READ_EXTEND = Q.store_thm("x64_mem32_READ_EXTEND",
-   `SPEC m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a (w2w w)) ==>
-    SPEC m (p * x64_mem64 a w) c (q * x64_mem64 a w)`,
-   tac)
+Theorem x64_mem32_READ_EXTEND:
+    SPEC m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a (w2w w)) ==>
+    SPEC m (p * x64_mem64 a w) c (q * x64_mem64 a w)
+Proof
+   tac
+QED
 
-val x64_mem32_WRITE_EXTEND = Q.store_thm("x64_mem32_WRITE_EXTEND",
-   `SPEC m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a v) ==>
+Theorem x64_mem32_WRITE_EXTEND:
+    SPEC m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a v) ==>
     SPEC m (p * x64_mem64 a w) c
-           (q * x64_mem64 a ((((63 >< 32) w):word32) @@ v))`,
-   tac)
+           (q * x64_mem64 a ((((63 >< 32) w):word32) @@ v))
+Proof
+   tac
+QED
 
-val x64_mem32_TEMPORAL_READ_EXTEND = Q.store_thm
-  ("x64_mem32_TEMPORAL_READ_EXTEND",
-   `TEMPORAL_NEXT m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a (w2w w)) ==>
-    TEMPORAL_NEXT m (p * x64_mem64 a w) c (q * x64_mem64 a w)`,
-   tac)
+Theorem x64_mem32_TEMPORAL_READ_EXTEND:
+    TEMPORAL_NEXT m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a (w2w w)) ==>
+    TEMPORAL_NEXT m (p * x64_mem64 a w) c (q * x64_mem64 a w)
+Proof
+   tac
+QED
 
-val x64_mem32_TEMPORAL_WRITE_EXTEND = Q.store_thm
-  ("x64_mem32_TEMPORAL_WRITE_EXTEND",
-   `TEMPORAL_NEXT m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a v) ==>
+Theorem x64_mem32_TEMPORAL_WRITE_EXTEND:
+    TEMPORAL_NEXT m (p * x64_mem32 a (w2w w)) c (q * x64_mem32 a v) ==>
     TEMPORAL_NEXT m (p * x64_mem64 a w) c
-                    (q * x64_mem64 a ((((63 >< 32) w):word32) @@ v))`,
-   tac)
+                    (q * x64_mem64 a ((((63 >< 32) w):word32) @@ v))
+Proof
+   tac
+QED
 
 (* ------------------------------------------------------------------------ *)

@@ -1,5 +1,5 @@
 open HolKernel Parse boolLib simpLib
-open testutils boolSimps BackchainingLib
+open testutils boolSimps
 
 val failcount = ref 0
 val _ = diemode := Remember failcount

@@ -494,6 +494,24 @@ Proof
       fs [] ]
 QED
 
+Theorem BIGUNION_IMAGE_UNION :
+    !f g s. BIGUNION (IMAGE f s) UNION BIGUNION (IMAGE g s) =
+            BIGUNION (IMAGE (\i. f i UNION g i) s)
+Proof
+    rw [Once EXTENSION, IN_BIGUNION_IMAGE]
+ >> EQ_TAC >> rw [] (* 4 subgoals *)
+ >| [ (* goal 1 (of 4) *)
+      rename1 ‘x IN f n’ \\
+      Q.EXISTS_TAC ‘n’ >> art [],
+      (* goal 2 (of 4) *)
+      rename1 ‘x IN g n’ \\
+      Q.EXISTS_TAC ‘n’ >> art [],
+      (* goal 3 (of 4) *)
+      DISJ1_TAC >> Q.EXISTS_TAC ‘i’ >> art [],
+      (* goal 4 (of 4) *)
+      DISJ2_TAC >> Q.EXISTS_TAC ‘i’ >> art [] ]
+QED
+
 Theorem BIGINTER_OVER_INTER_L :
     !f s d. s <> {} ==> (BIGINTER (IMAGE f s) INTER d =
                          BIGINTER (IMAGE (\i. f i INTER d) s))
@@ -1053,9 +1071,10 @@ Proof
   `n < m:num` by ASM_SIMP_TAC arith_ss [] THEN METIS_TAC []
 QED
 
-val finite_UN_disjointed_eq = prove (
-  ``!A n. BIGUNION {disjointed A i | i IN {x | 0 <= x /\ x < n}} =
-          BIGUNION {A i | i IN {x | 0 <= x /\ x < n}}``,
+Theorem finite_UN_disjointed_eq[local]:
+    !A n. BIGUNION {disjointed A i | i IN {x | 0 <= x /\ x < n}} =
+          BIGUNION {A i | i IN {x | 0 <= x /\ x < n}}
+Proof
   GEN_TAC THEN INDUCT_TAC THENL
   [FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN SET_TAC [], ALL_TAC] THEN
   FULL_SIMP_TAC std_ss [GSPECIFICATION] THEN
@@ -1068,16 +1087,20 @@ val finite_UN_disjointed_eq = prove (
   REWRITE_TAC [ARITH_PROVE ``i < SUC n <=> i < n \/ (i = n)``] THEN
   REWRITE_TAC [SET_RULE ``BIGUNION {(A:num->'a->bool) i | i < n \/ (i = n)} =
                           BIGUNION {A i | i < n} UNION A n``] THEN
-  SET_TAC []);
+  SET_TAC []
+QED
 
-val atLeast0LessThan = prove (
-  ``{x:num | 0 <= x /\ x < n} = {x | x < n}``,
-  SIMP_TAC arith_ss [EXTENSION, GSPECIFICATION]);
+Theorem atLeast0LessThan[local]:
+    {x:num | 0 <= x /\ x < n} = {x | x < n}
+Proof
+  SIMP_TAC arith_ss [EXTENSION, GSPECIFICATION]
+QED
 
-val UN_UN_finite_eq = prove (
-  ``!A.
+Theorem UN_UN_finite_eq[local]:
+    !A.
      BIGUNION {BIGUNION {A i | i IN {x | 0 <= x /\ x < n}} | n IN univ(:num)} =
-     BIGUNION {A n | n IN UNIV}``,
+     BIGUNION {A n | n IN UNIV}
+Proof
   SIMP_TAC std_ss [atLeast0LessThan] THEN
   RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION, IN_UNIV] THEN
   EQ_TAC THEN RW_TAC std_ss [] THENL
@@ -1087,23 +1110,27 @@ val UN_UN_finite_eq = prove (
   RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION, IN_UNIV] THENL
   [ALL_TAC, METIS_TAC []] THEN Q.EXISTS_TAC `A n` THEN
   FULL_SIMP_TAC std_ss [] THEN Q.EXISTS_TAC `n` THEN
-  SIMP_TAC arith_ss []);
+  SIMP_TAC arith_ss []
+QED
 
-val UN_finite_subset = prove (
-  ``!A C. (!n. BIGUNION {A i | i IN {x | 0 <= x /\ x < n}} SUBSET C) ==>
-               BIGUNION {A n | n IN univ(:num)} SUBSET C``,
+Theorem UN_finite_subset[local]:
+    !A C. (!n. BIGUNION {A i | i IN {x | 0 <= x /\ x < n}} SUBSET C) ==>
+               BIGUNION {A n | n IN univ(:num)} SUBSET C
+Proof
   RW_TAC std_ss [] THEN ONCE_REWRITE_TAC [GSYM UN_UN_finite_eq] THEN
   FULL_SIMP_TAC std_ss [SUBSET_DEF] THEN RW_TAC std_ss [] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   FULL_SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, IN_BIGUNION, IN_UNIV] THEN
   POP_ASSUM (MP_TAC o Q.SPEC `x`) THEN ASM_REWRITE_TAC [] THEN STRIP_TAC THEN
-  Q.EXISTS_TAC `n` THEN Q.EXISTS_TAC `s'` THEN METIS_TAC []);
+  Q.EXISTS_TAC `n` THEN Q.EXISTS_TAC `s'` THEN METIS_TAC []
+QED
 
-val UN_finite2_subset = prove (
-  ``!A B n k.
+Theorem UN_finite2_subset[local]:
+    !A B n k.
     (!n. BIGUNION {A i | i IN {x | 0 <= x /\ x < n}} SUBSET
          BIGUNION {B i | i IN {x | 0 <= x /\ x < n + k}}) ==>
-         BIGUNION {A n | n IN univ(:num)} SUBSET BIGUNION {B n | n IN univ(:num)}``,
+         BIGUNION {A n | n IN univ(:num)} SUBSET BIGUNION {B n | n IN univ(:num)}
+Proof
   RW_TAC std_ss [] THEN MATCH_MP_TAC UN_finite_subset THEN
   ONCE_REWRITE_TAC [GSYM UN_UN_finite_eq] THEN
   FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_BIGUNION, GSPECIFICATION, IN_UNIV] THEN
@@ -1112,13 +1139,15 @@ val UN_finite2_subset = prove (
   [ALL_TAC, METIS_TAC []] THEN DISCH_TAC THEN ASM_REWRITE_TAC [] THEN
   STRIP_TAC THEN Q.EXISTS_TAC `BIGUNION {B i | i < n + k}` THEN
   CONJ_TAC THENL [ALL_TAC, METIS_TAC []] THEN
-  SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION] THEN METIS_TAC []);
+  SIMP_TAC std_ss [IN_BIGUNION, GSPECIFICATION] THEN METIS_TAC []
+QED
 
-val UN_finite2_eq = prove (
-  ``!A B k.
+Theorem UN_finite2_eq[local]:
+    !A B k.
     (!n. BIGUNION {A i | i IN {x | 0 <= x /\ x < n}} =
          BIGUNION {B i | i IN {x | 0 <= x /\ x < n + k}}) ==>
-    (BIGUNION {A n | n IN univ(:num)} = BIGUNION {B n | n IN univ(:num)})``,
+    (BIGUNION {A n | n IN univ(:num)} = BIGUNION {B n | n IN univ(:num)})
+Proof
   RW_TAC std_ss [] THEN MATCH_MP_TAC SUBSET_ANTISYM THEN CONJ_TAC THENL
   [MATCH_MP_TAC  UN_finite2_subset THEN REWRITE_TAC [atLeast0LessThan] THEN
    METIS_TAC [SUBSET_REFL], ALL_TAC] THEN
@@ -1132,7 +1161,8 @@ val UN_finite2_eq = prove (
    Q.EXISTS_TAC `B n` THEN ASM_REWRITE_TAC [] THEN
    Q.EXISTS_TAC `n` THEN SIMP_TAC arith_ss []] THEN
   DISCH_TAC THEN ASM_REWRITE_TAC [] THEN RW_TAC std_ss [] THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 Theorem BIGUNION_disjointed : (* was: UN_disjointed_eq *)
     !A. BIGUNION {disjointed A i | i IN UNIV} = BIGUNION {A i | i IN UNIV}
@@ -1150,13 +1180,15 @@ QED
 val set_ss' = arith_ss ++ PRED_SET_ss;
 
 (* This lemma is provided by Konrad Slind *)
-val lemma = Q.prove
-  (`!P. ~(?N. INFINITE N /\ !n. N n ==> P n) <=> !N. N SUBSET P ==> FINITE N`,
+Theorem lemma[local]:
+    !P. ~(?N. INFINITE N /\ !n. N n ==> P n) <=> !N. N SUBSET P ==> FINITE N
+Proof
   rw_tac set_ss' [EQ_IMP_THM, SUBSET_DEF, IN_DEF]
   >- (`FINITE P \/ ?n. P n /\ ~P n` by metis_tac []
        >> imp_res_tac SUBSET_FINITE
        >> full_simp_tac std_ss [SUBSET_DEF, IN_DEF])
-  >- metis_tac[]);
+  >- metis_tac[]
+QED
 
 (* "From this and the original assumption, you should be able to get that P is finite,
     so has a maximum element." -- Konrad Slind, Feb 17, 2019.
@@ -1229,8 +1261,8 @@ Definition set_liminf_def:   (* "almost always" *)
       BIGUNION (IMAGE (\m. BIGINTER {E n | m <= n}) UNIV)
 End
 
-val _ = overload_on ("limsup", ``set_limsup``);
-val _ = overload_on ("liminf", ``set_liminf``);
+Overload limsup = ``set_limsup``
+Overload liminf = ``set_liminf``
 
 (* alternative definition of `limsup` using `from` *)
 Theorem set_limsup_alt:
@@ -1386,17 +1418,15 @@ QED
 (*  Basic definitions.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = type_abbrev_pp ("algebra", ``:('a set) # ('a set set)``);
+Type algebra[pp] = ``:('a set) # ('a set set)``
 
-Definition space_def:
+Definition space_def[simp]:
     space   (x :'a set, y :('a set) set) = x
 End
 
-Definition subsets_def:
+Definition subsets_def[simp]:
     subsets (x :'a set, y :('a set) set) = y
 End
-
-val _ = export_rewrites ["space_def", "subsets_def"];
 
 Definition subset_class_def:
     subset_class sp sts = !x. x IN sts ==> x SUBSET sp
@@ -4125,10 +4155,12 @@ Proof
 QED
 Theorem sigma_algebra_iff2 = sigma_algebra_alt_pow
 
-val lemma = prove ((* was: countable_Union *)
-  ``!sp sts c. sigma_algebra (sp,sts) /\ countable c /\ c SUBSET sts ==>
-               BIGUNION c IN sts``,
-    FULL_SIMP_TAC std_ss [sigma_algebra_def, subsets_def]);
+Theorem lemma[local]:  (* was: countable_Union *)
+    !sp sts c. sigma_algebra (sp,sts) /\ countable c /\ c SUBSET sts ==>
+               BIGUNION c IN sts
+Proof
+    FULL_SIMP_TAC std_ss [sigma_algebra_def, subsets_def]
+QED
 
 Theorem SIGMA_ALGEBRA_COUNTABLE_UN : (* was: countable_UN *)
     !sp sts A X. sigma_algebra (sp,sts) /\ IMAGE (A:num->'a->bool) X SUBSET sts ==>
@@ -4782,7 +4814,7 @@ Definition prod_sigma_def:
       sigma (space a CROSS space b) (prod_sets (subsets a) (subsets b))
 End
 
-val _ = overload_on ("CROSS", “prod_sigma”);
+Overload CROSS = “prod_sigma”
 
 (* NOTE: the following easy satifsiable antecedents are added, due to changes
          in ‘measurable’ which previously requires that a1 and a2 are

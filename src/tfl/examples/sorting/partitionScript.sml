@@ -65,9 +65,11 @@ QED
      vice-versa. The goal has been generalized.
  ---------------------------------------------------------------------------*)
 
-val MEM_APPEND_DISJ = Q.prove
-(`!x l1 l2. MEM x (APPEND l1 l2) = MEM x l1 \/ MEM x l2`,
-Induct_on `l1` THEN RW_TAC list_ss [APPEND,MEM] THEN PROVE_TAC[]);
+Theorem MEM_APPEND_DISJ[local]:
+  !x l1 l2. MEM x (APPEND l1 l2) = MEM x l1 \/ MEM x l2
+Proof
+Induct_on `l1` THEN RW_TAC list_ss [APPEND,MEM] THEN PROVE_TAC[]
+QED
 
 Theorem part_MEM:
   !P L a1 a2 l1 l2.

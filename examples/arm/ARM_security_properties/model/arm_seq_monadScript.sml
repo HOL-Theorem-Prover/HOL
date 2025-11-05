@@ -4,9 +4,6 @@
 (*     Defines ARM state-space and a sequential state-transforming Monad    *)
 (* ------------------------------------------------------------------------ *)
 
-(* interactive use:
-  app load ["arm_astTheory", "wordsLib"];
-*)
 Theory arm_seq_monad
 Ancestors
   arm_ast
@@ -37,7 +34,7 @@ Definition seqE_def:
   \y. let (v,x) = s y in f v x
 End
 
-val _ = Hol_datatype `ExclusiveMonitors =
+Datatype: ExclusiveMonitors =
   <| state                   : exclusive_state;
      MarkExclusiveGlobal     : exclusive_triple -> unit ExclusiveM;
      MarkExclusiveLocal      : exclusive_triple -> unit ExclusiveM;
@@ -45,15 +42,17 @@ val _ = Hol_datatype `ExclusiveMonitors =
      IsExclusiveLocal        : exclusive_triple -> bool ExclusiveM;
      ClearExclusiveByAddress : exclusive_triple -> unit ExclusiveM;
      ClearExclusiveLocal     : proc -> unit ExclusiveM
-  |>`;
+  |>
+End
 
 (* ---------------------- *)
 (* Monad for Coprocessors *)
 (* ---------------------- *)
 
-val _ = Hol_datatype `coproc_state =
+Datatype: coproc_state =
   <| cp14 : CP14reg;
-     cp15 : CP15reg |>`;
+     cp15 : CP15reg |>
+End
 
 val _ = type_abbrev("CoprocessorM", ``:coproc_state -> ('a # coproc_state)``);
 
@@ -66,7 +65,7 @@ Definition seqC_def:
   \y. let (v,x) = s y in f v x
 End
 
-val _ = Hol_datatype `Coprocessors =
+Datatype: Coprocessors =
   <| state        : coproc_state;
      accept       : CPinstruction -> bool CoprocessorM;
      internal_op  : CPinstruction -> unit CoprocessorM;
@@ -77,13 +76,14 @@ val _ = Hol_datatype `Coprocessors =
      get_one      : CPinstruction -> word32 CoprocessorM;
      send_two     : CPinstruction -> word32 # word32 -> unit CoprocessorM;
      get_two      : CPinstruction -> (word32 # word32) CoprocessorM
-  |>`;
+  |>
+End
 
 (* ------------- *)
 (* Monad for ARM *)
 (* ------------- *)
 
-val _ = Hol_datatype `arm_state =
+Datatype: arm_state =
   <| registers      : proc # RName -> word32;    (* general-purpose *)
      psrs           : proc # PSRName -> ARMpsr; (* program-status  *)
      event_register : proc -> bool;
@@ -93,11 +93,13 @@ val _ = Hol_datatype `arm_state =
      information    : ARMinfo;
      coprocessors   : Coprocessors;
      monitors       : ExclusiveMonitors (* synchronization & semaphores *)
-  |>`;
+  |>
+End
 
 (* ------------------------------------------------------------------------ *)
 
-val _ = Hol_datatype `error_option = ValueState of 'a => 'b | Error of string`;
+Datatype: error_option = ValueState 'a 'b | Error string
+End
 
 val _ = type_abbrev("M",``:arm_state -> ('a, arm_state) error_option``);
 
@@ -960,4 +962,3 @@ val _ = computeLib.add_persistent_funs
   ["have_security_ext",
    "have_thumbEE",
    "have_jazelle"];
-

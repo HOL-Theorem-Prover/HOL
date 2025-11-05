@@ -89,9 +89,8 @@ val from_reg_index_def = Define `
       else if i = 13 then R13
       else R14`;
 
-val from_reg_index_thm = Q.store_thm
-  ("from_reg_index_thm",
-   `(from_reg_index 0 = R0) /\
+Theorem from_reg_index_thm:
+    (from_reg_index 0 = R0) /\
     (from_reg_index 1 = R1) /\
     (from_reg_index 2 = R2) /\
     (from_reg_index 3 = R3) /\
@@ -105,9 +104,10 @@ val from_reg_index_thm = Q.store_thm
     (from_reg_index 11 = R11) /\
     (from_reg_index 12 = R12) /\
     (from_reg_index 13 = R13) /\
-    (from_reg_index 14 = R14)`,
+    (from_reg_index 14 = R14)
+Proof
    RW_TAC std_ss [from_reg_index_def]
-  );
+QED
 
 val toREG_def = Define `
     toREG r =
@@ -262,23 +262,23 @@ val eval_il_cond_def = Define `
   eval_il_cond cond = eval_cond (translate_condition cond)`;
 
 
-val TRANSLATE_ASSIGMENT_CORRECT = Q.store_thm
-  ("TRANSLATE_ASSIGMENT_CORRECT",
-   `!(stm:DOPER) pc cpsr st.
-       (SUC pc,cpsr,mdecode st stm) = decode_cond (pc,cpsr,st) (translate_assignment stm)`,
+Theorem TRANSLATE_ASSIGMENT_CORRECT:
+    !(stm:DOPER) pc cpsr st.
+       (SUC pc,cpsr,mdecode st stm) = decode_cond (pc,cpsr,st) (translate_assignment stm)
+Proof
      SIMP_TAC std_ss [FORALL_DSTATE] THEN
      Cases_on `stm` THEN
      RW_TAC list_ss [translate_assignment_def, decode_cond_thm, decode_op_thm, write_thm,  mdecode_def] THEN
      RW_TAC list_ss [pushL_def, popL_def, read_thm, w2n_w2w, dimindex_5, dimindex_32]
-  );
+QED
 
-val TRANSLATE_ASSIGMENT_CORRECT_2 = Q.store_thm
-  ("TRANSLATE_ASSIGMENT_CORRECT_2",
-   `!(stm:DOPER) s.
-       decode_cond s (translate_assignment stm) = (SUC (FST s),FST (SND s),mdecode (SND (SND s)) stm)`,
+Theorem TRANSLATE_ASSIGMENT_CORRECT_2:
+    !(stm:DOPER) s.
+       decode_cond s (translate_assignment stm) = (SUC (FST s),FST (SND s),mdecode (SND (SND s)) stm)
+Proof
      RW_TAC std_ss [] THEN
      METIS_TAC [ABS_PAIR_THM,FST,SND,TRANSLATE_ASSIGMENT_CORRECT]
-  );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
@@ -327,69 +327,71 @@ val WELL_FORMED_SUB_def = Define `
       (WELL_FORMED_SUB (CJ cond S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
       (WELL_FORMED_SUB (TR cond S1) = WELL_FORMED S1 /\ WF_TR (translate_condition cond, translate S1))`;
 
-val WELL_FORMED_SUB_thm = store_thm ("WELL_FORMED_SUB_thm",
-    ``!S_cfl. WELL_FORMED S_cfl = (WELL_FORMED_SUB S_cfl /\ well_formed (translate S_cfl))``,
+Theorem WELL_FORMED_SUB_thm:
+      !S_cfl. WELL_FORMED S_cfl = (WELL_FORMED_SUB S_cfl /\ well_formed (translate S_cfl))
+Proof
 
     Cases_on `S_cfl` THEN
     REWRITE_TAC [WELL_FORMED_def, WELL_FORMED_SUB_def] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Hoare Rules for CFL                                                        *)
 (*---------------------------------------------------------------------------------*)
 
-val HOARE_SC_CFL = Q.store_thm (
-   "HOARE_SC_CFL",
-   `!S1 S2 P Q R T.
+Theorem HOARE_SC_CFL:
+    !S1 S2 P Q R T.
         WELL_FORMED S1 /\ WELL_FORMED S2 /\
            (!st. P st ==> Q (run_cfl S1 st)) /\
            (!st. R st ==> T (run_cfl S2 st)) /\ (!st. Q st ==> R st) ==>
              !st. P st ==>
-                  T (run_cfl (SC S1 S2) st)`,
+                  T (run_cfl (SC S1 S2) st)
+Proof
    RW_TAC std_ss [WELL_FORMED_SUB_thm, run_cfl_def, translate_def, run_arm_def, eval_fl_def] THEN
    IMP_RES_TAC (SIMP_RULE std_ss [eval_fl_def, uploadCode_def]  HOARE_SC_FLAT)
-  );
+QED
 
-val HOARE_CJ_CFL = Q.store_thm (
-   "HOARE_CJ_CFL",
-   `!cond S_t S_f P Q R.
+Theorem HOARE_CJ_CFL:
+    !cond S_t S_f P Q R.
        WELL_FORMED S_t /\ WELL_FORMED S_f /\
            (!st. P st ==> Q (run_cfl S_t st)) /\
            (!st. P st ==> R (run_cfl S_f st)) ==>
              !st. P st ==>
                 if eval_il_cond cond st then Q (run_cfl (CJ cond S_t S_f) st)
-                    else R (run_cfl (CJ cond S_t S_f) st)`,
+                    else R (run_cfl (CJ cond S_t S_f) st)
+Proof
    RW_TAC std_ss [WELL_FORMED_SUB_thm, run_cfl_def, translate_def, run_arm_def, eval_fl_def, eval_il_cond_def] THEN
    IMP_RES_TAC (SIMP_RULE std_ss [eval_fl_def, uploadCode_def] HOARE_CJ_FLAT) THEN
    METIS_TAC []
-  );
+QED
 
-val HOARE_TR_CFL = Q.store_thm (
-   "HOARE_TR_CFL",
-   `!cond S_cfl P.
+Theorem HOARE_TR_CFL:
+    !cond S_cfl P.
        WELL_FORMED S_cfl /\  WF_TR (translate_condition cond, translate S_cfl) /\
          (!st. P st ==> P (run_cfl S_cfl st)) ==>
             !st. P st ==> P (run_cfl (TR cond S_cfl) st) /\
-                 eval_il_cond cond (run_cfl (TR cond S_cfl) st)`,
+                 eval_il_cond cond (run_cfl (TR cond S_cfl) st)
+Proof
    RW_TAC std_ss [WELL_FORMED_SUB_thm, run_cfl_def, translate_def, run_arm_def, eval_fl_def, eval_il_cond_def] THEN
    METIS_TAC [SIMP_RULE std_ss [eval_fl_def, uploadCode_def] HOARE_TR_FLAT]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Well-formedness of CFL programs                                            *)
 (*---------------------------------------------------------------------------------*)
 
-val UPLOAD_LEM_2 = Q.store_thm (
-   "UPLOAD_LEM_2",
-   `!s stm iB. (upload [stm] iB (FST s)) (FST s) = stm`,
+Theorem UPLOAD_LEM_2:
+    !s stm iB. (upload [stm] iB (FST s)) (FST s) = stm
+Proof
    RW_TAC std_ss [] THEN
    `0 < LENGTH [stm]` by RW_TAC list_ss [] THEN
    METIS_TAC [UPLOAD_LEM, FST, DECIDE (Term`!x.x + 0 = x`), EL, HD]
-   );
+QED
 
-val STATEMENT_IS_WELL_FORMED = Q.store_thm (
-   "STATEMENT_IS_WELL_FORMED",
-   `!stm. well_formed [translate_assignment stm]`,
+Theorem STATEMENT_IS_WELL_FORMED:
+    !stm. well_formed [translate_assignment stm]
+Proof
     RW_TAC list_ss [FORALL_DSTATE, well_formed_def, terminated_def, stopAt_def, status_independent_def] THENL [
         Cases_on `stm` THEN
             (fn g =>
@@ -412,12 +414,12 @@ val STATEMENT_IS_WELL_FORMED = Q.store_thm (
                 RW_TAC std_ss [Once RUNTO_ADVANCE]) g
             )
     ]
-  );
+QED
 
 
-val BLOCK_IS_WELL_FORMED = Q.store_thm (
-   "BLOCK_IS_WELL_FORMED",
-   `!stmL. WELL_FORMED (BLK stmL)`,
+Theorem BLOCK_IS_WELL_FORMED:
+    !stmL. WELL_FORMED (BLK stmL)
+Proof
     Induct_on `stmL` THENL [
         RW_TAC list_ss [WELL_FORMED_def, well_formed_def, translate_def, closed_def, terminated_def, status_independent_def, stopAt_def] THENL [
             RW_TAC set_ss [Once RUNTO_ADVANCE],
@@ -427,38 +429,40 @@ val BLOCK_IS_WELL_FORMED = Q.store_thm (
         GEN_TAC THEN `!h tl. h :: tl = [h:INST] ++ tl` by RW_TAC list_ss [] THEN
         METIS_TAC [WELL_FORMED_def, translate_def, mk_SC_def, SC_IS_WELL_FORMED, STATEMENT_IS_WELL_FORMED]
     ]
-);
+QED
 
-val CFL_SC_IS_WELL_FORMED = Q.store_thm (
-   "CFL_SC_IS_WELL_FORMED",
-   `!S1 S2. WELL_FORMED S1 /\ WELL_FORMED S2 = WELL_FORMED (SC S1 S2)`,
+Theorem CFL_SC_IS_WELL_FORMED:
+    !S1 S2. WELL_FORMED S1 /\ WELL_FORMED S2 = WELL_FORMED (SC S1 S2)
+Proof
     RW_TAC std_ss [WELL_FORMED_SUB_thm, WELL_FORMED_SUB_def, translate_def] THEN
     PROVE_TAC [SC_IS_WELL_FORMED]
-   );
+QED
 
-val CFL_CJ_IS_WELL_FORMED = Q.store_thm (
-   "CFL_CJ_IS_WELL_FORMED",
-   `!cond S_t S_f. WELL_FORMED S_t /\ WELL_FORMED S_f =
-        WELL_FORMED (CJ cond S_t S_f)`,
+Theorem CFL_CJ_IS_WELL_FORMED:
+    !cond S_t S_f. WELL_FORMED S_t /\ WELL_FORMED S_f =
+        WELL_FORMED (CJ cond S_t S_f)
+Proof
     RW_TAC std_ss [WELL_FORMED_SUB_thm, WELL_FORMED_SUB_def, translate_def] THEN
     PROVE_TAC [CJ_IS_WELL_FORMED]
-   );
+QED
 
-val CFL_TR_IS_WELL_FORMED = Q.store_thm (
-   "CFL_TR_IS_WELL_FORMED",
-   `!S_cfl cond. WELL_FORMED S_cfl /\ WF_TR (translate_condition cond, translate S_cfl) =
-        WELL_FORMED (TR cond S_cfl)`,
+Theorem CFL_TR_IS_WELL_FORMED:
+    !S_cfl cond. WELL_FORMED S_cfl /\ WF_TR (translate_condition cond, translate S_cfl) =
+        WELL_FORMED (TR cond S_cfl)
+Proof
     RW_TAC std_ss [WELL_FORMED_SUB_thm, WELL_FORMED_SUB_def, translate_def] THEN
     PROVE_TAC [TR_IS_WELL_FORMED]
-   );
+QED
 
-val WELL_FORMED_thm = store_thm ("WELL_FORMED_thm",
-    ``(WELL_FORMED (BLK stmL) = T) /\
+Theorem WELL_FORMED_thm:
+      (WELL_FORMED (BLK stmL) = T) /\
       (WELL_FORMED (SC S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
       (WELL_FORMED (CJ cond S1 S2) = WELL_FORMED S1 /\ WELL_FORMED S2) /\
-      (WELL_FORMED (TR cond S_body) = WELL_FORMED S_body /\ WF_TR (translate_condition cond, translate S_body))``,
+      (WELL_FORMED (TR cond S_body) = WELL_FORMED S_body /\ WF_TR (translate_condition cond, translate S_body))
+Proof
 
-      SIMP_TAC std_ss [BLOCK_IS_WELL_FORMED, CFL_SC_IS_WELL_FORMED, CFL_CJ_IS_WELL_FORMED, CFL_TR_IS_WELL_FORMED]);
+      SIMP_TAC std_ss [BLOCK_IS_WELL_FORMED, CFL_SC_IS_WELL_FORMED, CFL_CJ_IS_WELL_FORMED, CFL_TR_IS_WELL_FORMED]
+QED
 
 
 (*---------------------------------------------------------------------------------*)
@@ -466,22 +470,21 @@ val WELL_FORMED_thm = store_thm ("WELL_FORMED_thm",
 (*      Other interpreters will result in different semantics                      *)
 (*---------------------------------------------------------------------------------*)
 
-val CFL_SEMANTICS_SC = Q.store_thm (
-   "CFL_SEMANTICS_SC",
-   `WELL_FORMED S1 /\ WELL_FORMED S2 ==>
+Theorem CFL_SEMANTICS_SC:
+    WELL_FORMED S1 /\ WELL_FORMED S2 ==>
      (run_cfl (SC S1 S2) st =
-       run_cfl S2 (run_cfl S1 st))`,
+       run_cfl S2 (run_cfl S1 st))
+Proof
     METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`S1`,`S2`, `\st'. st' = st`, `\st'. st' = run_cfl S1 st`,
                `\st'. st' = run_cfl S1 st`, `\st'. st' =  run_cfl S2 (run_cfl S1 st)`] HOARE_SC_CFL)]
-   );
+QED
 
 
-val CFL_SEMANTICS_BLK = Q.store_thm (
-   "CFL_SEMANTICS_BLK",
-    `(run_cfl (BLK (stm::stmL)) st =
+Theorem CFL_SEMANTICS_BLK:
+     (run_cfl (BLK (stm::stmL)) st =
           run_cfl (BLK stmL) (mdecode st stm)) /\
-     (run_cfl (BLK []) st = st)`,
-
+     (run_cfl (BLK []) st = st)
+Proof
     REPEAT STRIP_TAC THENL [
        RW_TAC list_ss [run_cfl_def, translate_def] THEN
            `translate_assignment stm::translate (BLK stmL) = translate (SC (BLK [stm]) (BLK stmL))` by RW_TAC list_ss [translate_def,mk_SC_def] THEN
@@ -496,26 +499,25 @@ val CFL_SEMANTICS_BLK = Q.store_thm (
            FULL_SIMP_TAC list_ss [WELL_FORMED_def, CFL_SEMANTICS_SC, translate_def],
        RW_TAC list_ss [run_cfl_def, run_arm_def, translate_def, Once RUNTO_ADVANCE, get_st_def]
    ]
-  );
+QED
 
-val CFL_SEMANTICS_CJ = Q.store_thm (
-   "CFL_SEMANTICS_CJ",
-   ` WELL_FORMED S_t /\ WELL_FORMED S_f ==>
+Theorem CFL_SEMANTICS_CJ:
+     WELL_FORMED S_t /\ WELL_FORMED S_f ==>
      (run_cfl (CJ cond S_t S_f) st =
           if eval_il_cond cond st then run_cfl S_t st
-          else run_cfl S_f st)`,
+          else run_cfl S_f st)
+Proof
    RW_TAC std_ss [] THEN
    METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`cond`, `S_t`, `S_f`, `\st'. st' = st`, `\st'. st' = run_cfl S_t st`,
                  `\st'. st' = run_cfl S_f st`] HOARE_CJ_CFL)]
-  );
+QED
 
 
-val CFL_SEMANTICS_TR = Q.store_thm (
-   "CFL_SEMANTICS_TR",
-     `WELL_FORMED S_body /\ WF_TR (translate_condition cond,translate S_body) ==>
+Theorem CFL_SEMANTICS_TR:
+      WELL_FORMED S_body /\ WF_TR (translate_condition cond,translate S_body) ==>
       (run_cfl (TR cond S_body) st =
-         WHILE (\st'.~eval_il_cond cond st') (run_cfl S_body) st)`,
-
+         WHILE (\st'.~eval_il_cond cond st') (run_cfl S_body) st)
+Proof
     RW_TAC std_ss [WELL_FORMED_SUB_thm, run_cfl_def, run_arm_def, translate_def, eval_il_cond_def] THEN
     Q.ABBREV_TAC `arm = translate S_body` THEN
     IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`translate_condition cond`,`arm`,`(\i. ARB)`,`(0,0w,st):STATE`,`{}`] UNROLL_TR_LEM)) THEN
@@ -541,12 +543,11 @@ val CFL_SEMANTICS_TR = Q.store_thm (
                    get_st_def, run_cfl_def, run_arm_def] THEN
             METIS_TAC [SND,FST,get_st_def,FUNPOW_DSTATE, ABS_PAIR_THM]
       ]
-  );
+QED
 
 
-val SEMANTICS_OF_CFL = Q.store_thm (
-   "SEMANTICS_OF_CFL",
-   ` WELL_FORMED S1 /\ WELL_FORMED S2 ==>
+Theorem SEMANTICS_OF_CFL:
+     WELL_FORMED S1 /\ WELL_FORMED S2 ==>
      (run_cfl (BLK (stm::stmL)) st =
           run_cfl (BLK stmL) (mdecode st stm)) /\
      (run_cfl (BLK []) st = st) /\
@@ -555,8 +556,9 @@ val SEMANTICS_OF_CFL = Q.store_thm (
            (if eval_il_cond cond st then run_cfl S1 st else run_cfl S2 st)) /\
      ( WF_TR (translate_condition cond,translate S1) ==>
        (run_cfl (TR cond S1) st =
-           WHILE (\st'. ~eval_il_cond cond st') (run_cfl S1) st))`,
+           WHILE (\st'. ~eval_il_cond cond st') (run_cfl S1) st))
+Proof
    RW_TAC std_ss [CFL_SEMANTICS_BLK, CFL_SEMANTICS_CJ, CFL_SEMANTICS_SC, CFL_SEMANTICS_TR]
-  );
+QED
 
 

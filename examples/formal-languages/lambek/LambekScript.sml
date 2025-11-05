@@ -47,7 +47,8 @@ end;
 (*                                                                            *)
 (******************************************************************************)
 
-val _ = Datatype `Form = At 'a | Slash Form Form | Backslash Form Form | Dot Form Form`;
+Datatype:  Form = At 'a | Slash Form Form | Backslash Form Form | Dot Form Form
+End
 
 val _ = overload_on ("*", ``Dot``); (* \HOLTokenProd *)
 val _ = overload_on ("/", ``Slash``);
@@ -78,27 +79,33 @@ val [one, beta, beta', gamma, gamma', comp, arrow_plus] =
         (combine (["one", "beta", "beta'", "gamma", "gamma'", "comp", "arrow_plus"],
                   CONJUNCTS arrow_rules));
 
-val beta_EQ = store_thm ("beta_EQ",
-  ``!X A B C. arrow X A (Slash C B) = arrow X (Dot A B) C``,
+Theorem beta_EQ:
+    !X A B C. arrow X A (Slash C B) = arrow X (Dot A B) C
+Proof
     REPEAT STRIP_TAC
  >> EQ_TAC
  >| [ REWRITE_TAC [beta'],
-      REWRITE_TAC [beta] ]);
+      REWRITE_TAC [beta] ]
+QED
 
-val gamma_EQ = store_thm ("gamma_EQ",
-  ``!X A B C. arrow X B (Backslash A C) = arrow X (Dot A B) C``,
+Theorem gamma_EQ:
+    !X A B C. arrow X B (Backslash A C) = arrow X (Dot A B) C
+Proof
     REPEAT STRIP_TAC
  >> EQ_TAC
  >| [ REWRITE_TAC [gamma'],
-      REWRITE_TAC [gamma] ]);
+      REWRITE_TAC [gamma] ]
+QED
 
-val arrow_transitive = store_thm (
-   "arrow_transitive", ``!X. transitive (arrow X)``,
-   REWRITE_TAC [transitive_def, comp]);
+Theorem arrow_transitive:   !X. transitive (arrow X)
+Proof
+   REWRITE_TAC [transitive_def, comp]
+QED
 
-val arrow_reflexive = store_thm (
-   "arrow_reflexive", ``!X. reflexive (arrow X)``,
-   REWRITE_TAC [reflexive_def, one]);
+Theorem arrow_reflexive:   !X. reflexive (arrow X)
+Proof
+   REWRITE_TAC [reflexive_def, one]
+QED
 
 (** The arrow relationship and its extensions (like associativity, commutativity  etc.) **)
 
@@ -106,22 +113,31 @@ val _ = overload_on("add_extension", ``relation$RUNION``);
 (* X extends (to) X', or X is extended to X' *)
 val _ = overload_on("extends", ``relation$RSUBSET``);
 
-val no_extend = store_thm ("no_extend", ``!X. extends X X``,
-    RW_TAC bool_ss [RSUBSET]);
+Theorem no_extend:   !X. extends X X
+Proof
+    RW_TAC bool_ss [RSUBSET]
+QED
 
-val add_extend_l = store_thm ("add_extend_l", ``!X X'. extends X (add_extension X X')``,
-    RW_TAC bool_ss [RSUBSET, RUNION]);
+Theorem add_extend_l:   !X X'. extends X (add_extension X X')
+Proof
+    RW_TAC bool_ss [RSUBSET, RUNION]
+QED
 
-val add_extend_r = store_thm ("add_extend_r", ``!X X'. extends X' (add_extension X X')``,
-    RW_TAC bool_ss [RSUBSET, RUNION]);
+Theorem add_extend_r:   !X X'. extends X' (add_extension X X')
+Proof
+    RW_TAC bool_ss [RSUBSET, RUNION]
+QED
 
-val extends_trans = store_thm ("extends_trans",
-  ``!X Y Z. extends X Y /\ extends Y Z ==> extends X Z``,
-    RW_TAC bool_ss [RSUBSET]);
+Theorem extends_trans:
+    !X Y Z. extends X Y /\ extends Y Z ==> extends X Z
+Proof
+    RW_TAC bool_ss [RSUBSET]
+QED
 
-val extends_transitive = store_thm (
-   "extends_transitive", ``transitive extends``,
-    REWRITE_TAC [transitive_def, extends_trans]);
+Theorem extends_transitive:   transitive extends
+Proof
+    REWRITE_TAC [transitive_def, extends_trans]
+QED
 
 (** most popular extensions **)
 
@@ -143,21 +159,27 @@ val (NLP_rules, NLP_ind, NLP_cases) = Hol_reln `
 Definition LP_def:   LP = add_extension NLP L
 End
 
-val NLextendsAll = store_thm (
-   "NLextendsAll", ``!X. extends NL X``,
-    RW_TAC bool_ss [NL_def, EMPTY_REL_DEF, RSUBSET]);
+Theorem NLextendsAll:   !X. extends NL X
+Proof
+    RW_TAC bool_ss [NL_def, EMPTY_REL_DEF, RSUBSET]
+QED
 
-val NLPextendsLP = store_thm ("NLPextendsLP", ``extends NLP LP``,
-    REWRITE_TAC [LP_def, add_extend_l]);
+Theorem NLPextendsLP:   extends NLP LP
+Proof
+    REWRITE_TAC [LP_def, add_extend_l]
+QED
 
-val LextendsLP = store_thm ("LextendsLP", ``extends L LP``,
-    REWRITE_TAC [LP_def, add_extend_r]);
+Theorem LextendsLP:   extends L LP
+Proof
+    REWRITE_TAC [LP_def, add_extend_r]
+QED
 
 (* Some derived rules for arrow.
    Note: all theorems here can be simply proved by PROVE_TAC [arrow_rules]. *)
 
-val Dot_mono_right = store_thm ("Dot_mono_right",
-  ``!X A B B'. arrow X B' B ==> arrow X (Dot A B') (Dot A B)``,
+Theorem Dot_mono_right:
+    !X A B B'. arrow X B' B ==> arrow X (Dot A B') (Dot A B)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC gamma'
  >> MATCH_MP_TAC comp
@@ -165,10 +187,12 @@ val Dot_mono_right = store_thm ("Dot_mono_right",
  >> CONJ_TAC
  >- ASM_REWRITE_TAC []
  >> MATCH_MP_TAC gamma
- >> RW_TAC bool_ss [one]);
+ >> RW_TAC bool_ss [one]
+QED
 
-val Dot_mono_left = store_thm ("Dot_mono_left",
-  ``!X A B A'. arrow X A' A ==> arrow X (Dot A' B) (Dot A B)``,
+Theorem Dot_mono_left:
+    !X A B A'. arrow X A' A ==> arrow X (Dot A' B) (Dot A B)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC beta'
  >> MATCH_MP_TAC comp
@@ -176,29 +200,35 @@ val Dot_mono_left = store_thm ("Dot_mono_left",
  >> CONJ_TAC
  >- ASM_REWRITE_TAC []
  >> MATCH_MP_TAC beta
- >> RW_TAC bool_ss [one]);
+ >> RW_TAC bool_ss [one]
+QED
 
-val Dot_mono = store_thm ("Dot_mono",
-  ``!X A B C D. arrow X A C /\ arrow X B D ==> arrow X (Dot A B) (Dot C D)``,
+Theorem Dot_mono:
+    !X A B C D. arrow X A C /\ arrow X B D ==> arrow X (Dot A B) (Dot C D)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC comp
  >> EXISTS_TAC ``(Dot C B)``
  >> CONJ_TAC
  >| [ MATCH_MP_TAC Dot_mono_left >> RW_TAC bool_ss [],
-      MATCH_MP_TAC Dot_mono_right >> RW_TAC bool_ss [] ]);
+      MATCH_MP_TAC Dot_mono_right >> RW_TAC bool_ss [] ]
+QED
 
-val Slash_mono_left = store_thm ("Slash_mono_left",
-  ``!X C B C'. arrow X C' C ==> arrow X (Slash C' B) (Slash C B)``,
+Theorem Slash_mono_left:
+    !X C B C'. arrow X C' C ==> arrow X (Slash C' B) (Slash C B)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC beta
  >> MATCH_MP_TAC comp
  >> Q.EXISTS_TAC `C'`
  >> CONJ_TAC
  >| [ MATCH_MP_TAC beta' >> RW_TAC bool_ss [one],
-      RW_TAC bool_ss [] ]);
+      RW_TAC bool_ss [] ]
+QED
 
-val Slash_antimono_right = store_thm ("Slash_antimono_right",
-  ``!X C B B'. arrow X B' B ==> arrow X (Slash C B) (Slash C B')``,
+Theorem Slash_antimono_right:
+    !X C B B'. arrow X B' B ==> arrow X (Slash C B) (Slash C B')
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC beta
  >> MATCH_MP_TAC gamma'
@@ -208,10 +238,12 @@ val Slash_antimono_right = store_thm ("Slash_antimono_right",
  >- ASM_REWRITE_TAC []
  >> MATCH_MP_TAC gamma
  >> MATCH_MP_TAC beta'
- >> RW_TAC bool_ss [one]);
+ >> RW_TAC bool_ss [one]
+QED
 
-val Backslash_antimono_left = store_thm ("Backslash_antimono_left",
-  ``!X A C A'. arrow X A A' ==> arrow X (Backslash A' C) (Backslash A C)``,
+Theorem Backslash_antimono_left:
+    !X A C A'. arrow X A A' ==> arrow X (Backslash A' C) (Backslash A C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC gamma
  >> MATCH_MP_TAC beta'
@@ -221,10 +253,12 @@ val Backslash_antimono_left = store_thm ("Backslash_antimono_left",
  >- ASM_REWRITE_TAC []
  >> MATCH_MP_TAC beta
  >> MATCH_MP_TAC gamma'
- >> RW_TAC bool_ss [one]);
+ >> RW_TAC bool_ss [one]
+QED
 
-val Backslash_mono_right = store_thm ("Backslash_mono_right",
-  ``!X A C C'. arrow X C' C ==> arrow X (Backslash A C') (Backslash A C)``,
+Theorem Backslash_mono_right:
+    !X A C C'. arrow X C' C ==> arrow X (Backslash A C') (Backslash A C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC gamma
  >> MATCH_MP_TAC comp
@@ -234,10 +268,12 @@ val Backslash_mono_right = store_thm ("Backslash_mono_right",
       MATCH_MP_TAC beta \\
       MATCH_MP_TAC gamma' \\
       RW_TAC bool_ss [one],
-      ASM_REWRITE_TAC [] ]);
+      ASM_REWRITE_TAC [] ]
+QED
 
-val mono_X = store_thm ("mono_X",
-  ``!X' X A B. arrow X A B ==> extends X X' ==> arrow X' A B``,
+Theorem mono_X:
+    !X' X A B. arrow X A B ==> extends X X' ==> arrow X' A B
+Proof
     GEN_TAC
  >> Induct_on `arrow`
  >> REPEAT STRIP_TAC (* 7 sub-goals here *)
@@ -247,58 +283,77 @@ val mono_X = store_thm ("mono_X",
  >- RW_TAC bool_ss [gamma]
  >- RW_TAC bool_ss [gamma']
  >- PROVE_TAC [comp]
- >> PROVE_TAC [arrow_plus, RSUBSET]);
+ >> PROVE_TAC [arrow_plus, RSUBSET]
+QED
 
-val pi = store_thm ("pi",
-  ``!X. extends NLP X ==> !A B. arrow X (Dot A B) (Dot B A)``,
+Theorem pi:
+    !X. extends NLP X ==> !A B. arrow X (Dot A B) (Dot B A)
+Proof
     REPEAT STRIP_TAC
  >> `NLP (Dot A B) (Dot B A)` by REWRITE_TAC [NLP_rules]
  >> `arrow NLP (Dot A B) (Dot B A)` by RW_TAC bool_ss [arrow_plus]
- >> PROVE_TAC [mono_X]);
+ >> PROVE_TAC [mono_X]
+QED
 
-val pi_NLP = store_thm ("pi_NLP", ``!A B. arrow NLP (Dot A B) (Dot B A)``,
+Theorem pi_NLP:   !A B. arrow NLP (Dot A B) (Dot B A)
+Proof
     MATCH_MP_TAC pi
- >> REWRITE_TAC [no_extend]);
+ >> REWRITE_TAC [no_extend]
+QED
 
-val pi_LP = store_thm ("pi_LP", ``!A B. arrow LP (Dot A B) (Dot B A)``,
+Theorem pi_LP:   !A B. arrow LP (Dot A B) (Dot B A)
+Proof
     MATCH_MP_TAC pi
- >> REWRITE_TAC [NLPextendsLP]);
+ >> REWRITE_TAC [NLPextendsLP]
+QED
 
-val alfa = store_thm ("alfa",
-  ``!X. extends L X ==> !A B C. arrow X (Dot A (Dot B C)) (Dot (Dot A B) C)``,
+Theorem alfa:
+    !X. extends L X ==> !A B C. arrow X (Dot A (Dot B C)) (Dot (Dot A B) C)
+Proof
     REPEAT STRIP_TAC
  >> `L (Dot A (Dot B C)) (Dot (Dot A B) C)`
         by REWRITE_TAC [L_rule_rl]
  >> `arrow L (Dot A (Dot B C)) (Dot (Dot A B) C)`
         by RW_TAC bool_ss [arrow_plus]
- >> PROVE_TAC [mono_X]);
+ >> PROVE_TAC [mono_X]
+QED
 
-val alfa_L = store_thm ("alfa_L",
-  ``!A B C. arrow L (Dot A (Dot B C)) (Dot (Dot A B) C)``,
+Theorem alfa_L:
+    !A B C. arrow L (Dot A (Dot B C)) (Dot (Dot A B) C)
+Proof
     MATCH_MP_TAC alfa
- >> REWRITE_TAC [no_extend]);
+ >> REWRITE_TAC [no_extend]
+QED
 
-val alfa_LP = store_thm ("alfa_LP",
-  ``!A B C. arrow LP (Dot A (Dot B C)) (Dot (Dot A B) C)``,
+Theorem alfa_LP:
+    !A B C. arrow LP (Dot A (Dot B C)) (Dot (Dot A B) C)
+Proof
     MATCH_MP_TAC alfa
- >> REWRITE_TAC [LextendsLP]);
+ >> REWRITE_TAC [LextendsLP]
+QED
 
-val alfa' = store_thm ("alfa'",
-  ``!X. extends L X ==> !A B C. arrow X (Dot (Dot A B) C) (Dot A (Dot B C))``,
+Theorem alfa':
+    !X. extends L X ==> !A B C. arrow X (Dot (Dot A B) C) (Dot A (Dot B C))
+Proof
     REPEAT STRIP_TAC
  >> `L (Dot (Dot A B) C) (Dot A (Dot B C))` by REWRITE_TAC [L_rule_lr]
  >> `arrow L (Dot (Dot A B) C) (Dot A (Dot B C))` by RW_TAC bool_ss [arrow_plus]
- >> PROVE_TAC [mono_X]);
+ >> PROVE_TAC [mono_X]
+QED
 
-val alfa'_L = store_thm ("alfa'_L",
-  ``!A B C. arrow L (Dot (Dot A B) C) (Dot A (Dot B C))``,
+Theorem alfa'_L:
+    !A B C. arrow L (Dot (Dot A B) C) (Dot A (Dot B C))
+Proof
     MATCH_MP_TAC alfa'
- >> REWRITE_TAC [no_extend]);
+ >> REWRITE_TAC [no_extend]
+QED
 
-val alfa'_LP = store_thm ("alfa'_LP",
-  ``!A B C. arrow LP (Dot (Dot A B) C) (Dot A (Dot B C))``,
+Theorem alfa'_LP:
+    !A B C. arrow LP (Dot (Dot A B) C) (Dot A (Dot B C))
+Proof
     MATCH_MP_TAC alfa'
- >> REWRITE_TAC [LextendsLP]);
+ >> REWRITE_TAC [LextendsLP]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -306,21 +361,37 @@ val alfa'_LP = store_thm ("alfa'_LP",
 (*                                                                            *)
 (******************************************************************************)
 
-val L_a = store_thm ("L_a", ``!x. arrow L x x``, REWRITE_TAC [one]);
-val L_b = store_thm ("L_b",  ``!x y z. arrow L (Dot (Dot x y) z) (Dot x (Dot y z))``,
-    REWRITE_TAC [alfa'_L]);
-val L_b' = store_thm ("L_b'", ``!x y z. arrow L (Dot x (Dot y z)) (Dot (Dot x y) z)``,
-    REWRITE_TAC [alfa_L, alfa'_L]);
-val L_c  = store_thm ("L_c",  ``!x y z. arrow L (Dot x y) z ==> arrow L x (Slash z y)``,
-    REWRITE_TAC [beta]);
-val L_c' = store_thm ("L_c'", ``!x y z. arrow L (Dot x y) z ==> arrow L y (Backslash x z)``,
-    REWRITE_TAC [gamma]);
-val L_d  = store_thm ("L_d",  ``!x y z. arrow L x (Slash z y) ==> arrow L (Dot x y) z``,
-    REWRITE_TAC [beta']);
-val L_d' = store_thm ("L_d'", ``!x y z. arrow L y (Backslash x z) ==> arrow L (Dot x y) z``,
-    REWRITE_TAC [gamma']);
-val L_e  = store_thm ("L_e",  ``!x y z. arrow L x y /\ arrow L y z ==> arrow L x z``,
-    REWRITE_TAC [comp]);
+Theorem L_a:   !x. arrow L x x
+Proof REWRITE_TAC [one]
+QED
+Theorem L_b:    !x y z. arrow L (Dot (Dot x y) z) (Dot x (Dot y z))
+Proof
+    REWRITE_TAC [alfa'_L]
+QED
+Theorem L_b':   !x y z. arrow L (Dot x (Dot y z)) (Dot (Dot x y) z)
+Proof
+    REWRITE_TAC [alfa_L, alfa'_L]
+QED
+Theorem L_c:    !x y z. arrow L (Dot x y) z ==> arrow L x (Slash z y)
+Proof
+    REWRITE_TAC [beta]
+QED
+Theorem L_c':   !x y z. arrow L (Dot x y) z ==> arrow L y (Backslash x z)
+Proof
+    REWRITE_TAC [gamma]
+QED
+Theorem L_d:    !x y z. arrow L x (Slash z y) ==> arrow L (Dot x y) z
+Proof
+    REWRITE_TAC [beta']
+QED
+Theorem L_d':   !x y z. arrow L y (Backslash x z) ==> arrow L (Dot x y) z
+Proof
+    REWRITE_TAC [gamma']
+QED
+Theorem L_e:    !x y z. arrow L x y /\ arrow L y z ==> arrow L x z
+Proof
+    REWRITE_TAC [comp]
+QED
 
 val L_arrow_rules = save_thm (
    "L_arrow_rules", LIST_CONJ [L_a, L_b, L_b', L_c, L_c', L_d, L_d', L_e]);
@@ -380,7 +451,8 @@ end;
 (*                                                                            *)
 (******************************************************************************)
 
-val _ = Datatype `Term = OneForm ('a Form) | Comma Term Term`;
+Datatype:  Term = OneForm ('a Form) | Comma Term Term
+End
 
 val Term_induction = TypeBase.induction_of ``:'a Term``;
 val Term_nchotomy  = TypeBase.nchotomy_of ``:'a Term``;
@@ -396,14 +468,16 @@ Definition deltaTranslation_def:
    (deltaTranslation (Comma t1 t2) = Dot (deltaTranslation t1) (deltaTranslation t2))
 End
 
-val deltaTranslationOneForm = store_thm (
-   "deltaTranslationOneForm[simp]",
-  ``deltaTranslation (OneForm f) = f``, RW_TAC std_ss [deltaTranslation_def]);
+Theorem deltaTranslationOneForm[simp]:
+    deltaTranslation (OneForm f) = f
+Proof RW_TAC std_ss [deltaTranslation_def]
+QED
 
-val deltaTranslationComma = store_thm (
-   "deltaTranslationComma[simp]",
-  ``deltaTranslation (Comma t1 t2) = Dot (deltaTranslation t1) (deltaTranslation t2)``,
-    RW_TAC std_ss [deltaTranslation_def]);
+Theorem deltaTranslationComma[simp]:
+    deltaTranslation (Comma t1 t2) = Dot (deltaTranslation t1) (deltaTranslation t2)
+Proof
+    RW_TAC std_ss [deltaTranslation_def]
+QED
 
 (* Non-associative extension, an empty relation actually *)
 Definition NL_Sequent_def:
@@ -428,21 +502,27 @@ Definition LP_Sequent_def:
     LP_Sequent = add_extension NLP_Sequent L_Sequent
 End
 
-val NLP_Sequent_LP_Sequent = store_thm (
-   "NLP_Sequent_LP_Sequent", ``extends NLP_Sequent LP_Sequent``,
-    REWRITE_TAC [LP_Sequent_def, add_extend_l]);
+Theorem NLP_Sequent_LP_Sequent:   extends NLP_Sequent LP_Sequent
+Proof
+    REWRITE_TAC [LP_Sequent_def, add_extend_l]
+QED
 
-val L_Sequent_LP_Sequent = store_thm (
-   "L_Sequent_LP_Sequent", ``extends L_Sequent LP_Sequent``,
-    REWRITE_TAC [LP_Sequent_def, add_extend_r]);
+Theorem L_Sequent_LP_Sequent:   extends L_Sequent LP_Sequent
+Proof
+    REWRITE_TAC [LP_Sequent_def, add_extend_r]
+QED
 
-val LPextendsL = store_thm ("LPextendsL",
-  ``!E. extends LP_Sequent E ==> extends L_Sequent E``,
-    RW_TAC bool_ss [LP_Sequent_def, RSUBSET, RUNION]);
+Theorem LPextendsL:
+    !E. extends LP_Sequent E ==> extends L_Sequent E
+Proof
+    RW_TAC bool_ss [LP_Sequent_def, RSUBSET, RUNION]
+QED
 
-val LPextendsNLP = store_thm ("LPextendsNLP",
-  ``!E. extends LP_Sequent E ==> extends NLP_Sequent E``,
-    RW_TAC bool_ss [LP_Sequent_def, RSUBSET, RUNION]);
+Theorem LPextendsNLP:
+    !E. extends LP_Sequent E ==> extends NLP_Sequent E
+Proof
+    RW_TAC bool_ss [LP_Sequent_def, RSUBSET, RUNION]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -487,21 +567,29 @@ val (replaceCommaDot1_rules, replaceCommaDot1_ind, replaceCommaDot1_cases) = Hol
 Definition replaceCommaDot_def:   replaceCommaDot = RTC replaceCommaDot1
 End
 
-val replaceCommaDot_rule = store_thm ("replaceCommaDot_rule",
-  ``!T1 T2 A B. replace T1 T2 (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
-            ==> replaceCommaDot T1 T2``,
-    PROVE_TAC [replaceCommaDot_def, replaceCommaDot1_rules, RTC_SINGLE]);
+Theorem replaceCommaDot_rule:
+    !T1 T2 A B. replace T1 T2 (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B))
+            ==> replaceCommaDot T1 T2
+Proof
+    PROVE_TAC [replaceCommaDot_def, replaceCommaDot1_rules, RTC_SINGLE]
+QED
 
-val replaceTransitive = store_thm ("replaceTransitive", ``transitive replaceCommaDot``,
-    REWRITE_TAC [replaceCommaDot_def, RTC_TRANSITIVE]);
+Theorem replaceTransitive:   transitive replaceCommaDot
+Proof
+    REWRITE_TAC [replaceCommaDot_def, RTC_TRANSITIVE]
+QED
 
 (* a more practical version *)
-val replaceTransitive' = store_thm ("replaceTransitive'",
-  ``!T1 T2 T3. replaceCommaDot T1 T2 /\ replaceCommaDot T2 T3 ==> replaceCommaDot T1 T3``,
-    PROVE_TAC [replaceTransitive, transitive_def]);
+Theorem replaceTransitive':
+    !T1 T2 T3. replaceCommaDot T1 T2 /\ replaceCommaDot T2 T3 ==> replaceCommaDot T1 T3
+Proof
+    PROVE_TAC [replaceTransitive, transitive_def]
+QED
 
-val noReplace = store_thm ("noReplace[simp]", ``!T. replaceCommaDot T T``,
-    PROVE_TAC [replaceCommaDot_def, RTC_REFLEXIVE, reflexive_def]);
+Theorem noReplace[simp]:   !T. replaceCommaDot T T
+Proof
+    PROVE_TAC [replaceCommaDot_def, RTC_REFLEXIVE, reflexive_def]
+QED
 
 local
   val t = PROVE_TAC [replaceCommaDot1_rules, replaceCommaDot_def, replaceTransitive,
@@ -523,17 +611,19 @@ in
 end;
 
 (* An induction theorem for RTC replaceCommaDot1, similar to those generated by Hol_reln *)
-val replaceCommaDot_ind = store_thm ("replaceCommaDot_ind",
-  ``!(P:'a gentzen_extension).
+Theorem replaceCommaDot_ind:
+    !(P:'a gentzen_extension).
         (!x. P x x) /\
         (!x y z A B. replace x y (Comma (OneForm A) (OneForm B)) (OneForm (Dot A B)) /\ P y z ==> P x z)
-    ==> (!x y. replaceCommaDot x y ==> P x y)``,
+    ==> (!x y. replaceCommaDot x y ==> P x y)
+Proof
  (* The idea is to use RTC_INDUCT thm to prove induct theorems for RTCs *)
     REWRITE_TAC [replaceCommaDot_def]
  >> GEN_TAC   (* remove outer !P *)
  >> STRIP_TAC (* prepare for higher order matching *)
  >> HO_MATCH_MP_TAC (ISPEC ``replaceCommaDot1:'a gentzen_extension`` RTC_INDUCT)
- >> PROVE_TAC [replaceCommaDot1_cases]);
+ >> PROVE_TAC [replaceCommaDot1_cases]
+QED
 
 local
   val t = GEN_TAC \\ (* prepare for higher order matching and induction *)
@@ -548,38 +638,45 @@ in
              ==> replaceCommaDot (Comma T3 T1) (Comma T3 T2)``, t)
 end;
 
-val replaceMono = store_thm ("replaceMono",
-  ``!T1 T2 T3 T4. replaceCommaDot T1 T2 /\ replaceCommaDot T3 T4
-              ==> replaceCommaDot (Comma T1 T3) (Comma T2 T4)``,
+Theorem replaceMono:
+    !T1 T2 T3 T4. replaceCommaDot T1 T2 /\ replaceCommaDot T3 T4
+              ==> replaceCommaDot (Comma T1 T3) (Comma T2 T4)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC replaceTransitive'
  >> EXISTS_TAC ``Comma T2 T3``
- >> PROVE_TAC [replaceMonoLeft, replaceMonoRight]);
+ >> PROVE_TAC [replaceMonoLeft, replaceMonoRight]
+QED
 
-val replaceTranslation = store_thm ("replaceTranslation",
-  ``!T. replaceCommaDot T (OneForm (deltaTranslation T))``,
+Theorem replaceTranslation:
+    !T. replaceCommaDot T (OneForm (deltaTranslation T))
+Proof
     Induct
  >- PROVE_TAC [deltaTranslation_def, noReplace] (* base case *)
  >> REWRITE_TAC [deltaTranslation_def]        (* induct case *)
  >> MATCH_MP_TAC replaceTransitive'
  >> EXISTS_TAC ``Comma (OneForm (deltaTranslation T')) (OneForm (deltaTranslation T''))``
- >> PROVE_TAC [replaceOneComma, noReplace, replaceRoot, replaceMono]);
+ >> PROVE_TAC [replaceOneComma, noReplace, replaceRoot, replaceMono]
+QED
 
-val replace_inv1 = store_thm ("replace_inv1",
-  ``!Gamma' Delta X C.
-     replace (OneForm C) Gamma' (OneForm X) Delta ==> (Gamma' = Delta) /\ (X = C)``,
+Theorem replace_inv1:
+    !Gamma' Delta X C.
+     replace (OneForm C) Gamma' (OneForm X) Delta ==> (Gamma' = Delta) /\ (X = C)
+Proof
     REPEAT GEN_TAC
  >> ONCE_REWRITE_TAC [replace_cases] \\
  REPEAT STRIP_TAC
  >- ASM_REWRITE_TAC []
  >- PROVE_TAC [Term_11]
- >> PROVE_TAC [Term_distinct]);
+ >> PROVE_TAC [Term_distinct]
+QED
 
-val replace_inv2 = store_thm ("replace_inv2",
-  ``!Gamma1 Gamma2 Gamma' Delta X.
+Theorem replace_inv2:
+    !Gamma1 Gamma2 Gamma' Delta X.
      replace (Comma Gamma1 Gamma2) Gamma' (OneForm X) Delta ==>
      (?G. (Gamma' = Comma G Gamma2) /\ replace Gamma1 G (OneForm X) Delta) \/
-     (?G. (Gamma' = Comma Gamma1 G) /\ replace Gamma2 G (OneForm X) Delta)``,
+     (?G. (Gamma' = Comma Gamma1 G) /\ replace Gamma2 G (OneForm X) Delta)
+Proof
     REPEAT STRIP_TAC
  >> POP_ASSUM (MP_TAC o (ONCE_REWRITE_RULE [replace_cases]))
  >> REPEAT STRIP_TAC
@@ -593,14 +690,16 @@ val replace_inv2 = store_thm ("replace_inv2",
       ASM_REWRITE_TAC [] \\
       MATCH_MP_TAC OR_INTRO_THM2 \\
       Q.EXISTS_TAC `Gamma2'` \\
-      ASM_REWRITE_TAC [] ]);
+      ASM_REWRITE_TAC [] ]
+QED
 
-val doubleReplace = store_thm ("doubleReplace",
-  ``!Gamma Gamma' T1 T2.
+Theorem doubleReplace:
+    !Gamma Gamma' T1 T2.
      replace Gamma Gamma' T1 T2 ==>
      !Gamma2 A T3. replace Gamma' Gamma2 (OneForm A) T3 ==>
               (?G. replace Gamma G (OneForm A) T3 /\ replace G Gamma2 T1 T2) \/
-              (?G. replace T2 G (OneForm A) T3 /\ replace Gamma Gamma2 T1 G)``,
+              (?G. replace T2 G (OneForm A) T3 /\ replace Gamma Gamma2 T1 G)
+Proof
     Induct_on `replace`
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >| [ (* goal 1 (of 3) *)
@@ -660,11 +759,13 @@ val doubleReplace = store_thm ("doubleReplace",
           DISJ2_TAC \\
           Q.EXISTS_TAC `G'` \\
           CONJ_TAC >- ASM_REWRITE_TAC [] \\
-          MATCH_MP_TAC replaceRight >> ASM_REWRITE_TAC [] ] ] ]);
+          MATCH_MP_TAC replaceRight >> ASM_REWRITE_TAC [] ] ] ]
+QED
 
-val replaceSameP = store_thm ("replaceSameP",
-  ``!T1 T2 T3 T4. replace T1 T2 T3 T4 ==>
-                  !G. ?G'. replace T1 G' T3 G /\ replace G' T2 G T4``,
+Theorem replaceSameP:
+    !T1 T2 T3 T4. replace T1 T2 T3 T4 ==>
+                  !G. ?G'. replace T1 G' T3 G /\ replace G' T2 G T4
+Proof
     Induct_on `replace`
  >> REPEAT STRIP_TAC
  >| [ Q.EXISTS_TAC `G` >> REWRITE_TAC [replaceRoot],
@@ -675,22 +776,27 @@ val replaceSameP = store_thm ("replaceSameP",
       POP_ASSUM (ASSUME_TAC o (Q.SPEC `G`))
    >> POP_ASSUM CHOOSE_TAC
    >> EXISTS_TAC ``(Comma Delta G')``
-   >> RW_TAC bool_ss [replaceRight] ]);
+   >> RW_TAC bool_ss [replaceRight] ]
+QED
 
-val replaceTrans = store_thm ("replaceTrans",
-  ``!T5 T6 T1 T2 T3 T4.
-     replace T1 T2 T3 T4 ==> replace T3 T4 T5 T6 ==> replace T1 T2 T5 T6``,
+Theorem replaceTrans:
+    !T5 T6 T1 T2 T3 T4.
+     replace T1 T2 T3 T4 ==> replace T3 T4 T5 T6 ==> replace T1 T2 T5 T6
+Proof
     NTAC 2 GEN_TAC
  >> Induct_on `replace`
  >> REPEAT STRIP_TAC
  >| [ PROVE_TAC [replaceLeft],
-      PROVE_TAC [replaceRight] ]);
+      PROVE_TAC [replaceRight] ]
+QED
 
 (* easier for MATCH_MP_TAC *)
-val replaceTrans' = store_thm ("replaceTrans'",
-  ``!T5 T6 T1 T2 T3 T4.
-     replace T1 T2 T3 T4 /\ replace T3 T4 T5 T6 ==> replace T1 T2 T5 T6``,
-    PROVE_TAC [replaceTrans]);
+Theorem replaceTrans':
+    !T5 T6 T1 T2 T3 T4.
+     replace T1 T2 T3 T4 /\ replace T3 T4 T5 T6 ==> replace T1 T2 T5 T6
+Proof
+    PROVE_TAC [replaceTrans]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -729,33 +835,40 @@ val [NatAxiom, SlashIntro, BackslashIntro, DotIntro, SlashElim, BackslashElim, D
         (combine (["NatAxiom[simp]", "SlashIntro", "BackslashIntro", "DotIntro", "SlashElim",
                    "BackslashElim", "DotElim", "NatExt"], CONJUNCTS natDed_rules));
 
-val NatAxiomGeneralized = store_thm ("NatAxiomGeneralized[simp]",
-  ``!E Gamma. natDed E Gamma (deltaTranslation Gamma)``,
+Theorem NatAxiomGeneralized[simp]:
+    !E Gamma. natDed E Gamma (deltaTranslation Gamma)
+Proof
     Induct_on `Gamma:'a Term`
  >- PROVE_TAC [deltaTranslation_def, NatAxiom]
  >> REWRITE_TAC [deltaTranslation_def]
- >> PROVE_TAC [DotIntro]);
+ >> PROVE_TAC [DotIntro]
+QED
 
-val DotElimGeneralized = store_thm ("DotElimGeneralized",
-  ``!E C Gamma Gamma'. replaceCommaDot Gamma Gamma'
-                   ==> natDed E Gamma C ==> natDed E Gamma' C``,
+Theorem DotElimGeneralized:
+    !E C Gamma Gamma'. replaceCommaDot Gamma Gamma'
+                   ==> natDed E Gamma C ==> natDed E Gamma' C
+Proof
     NTAC 2 GEN_TAC
  >> HO_MATCH_MP_TAC replaceCommaDot_ind
  >> REPEAT STRIP_TAC
  >> `natDed E (OneForm (Dot A B)) (Dot A B)` by PROVE_TAC [NatAxiomGeneralized, deltaTranslation_def]
  >> `natDed E Gamma' C` by PROVE_TAC [DotElim]
- >> RW_TAC bool_ss []);
+ >> RW_TAC bool_ss []
+QED
 
-val NatTermToForm = store_thm ("NatTermToForm",
-  ``!E Gamma C. natDed E Gamma C ==> natDed E (OneForm (deltaTranslation Gamma)) C``,
+Theorem NatTermToForm:
+    !E Gamma C. natDed E Gamma C ==> natDed E (OneForm (deltaTranslation Gamma)) C
+Proof
     REPEAT STRIP_TAC
- >> PROVE_TAC [DotElimGeneralized, replaceTranslation]);
+ >> PROVE_TAC [DotElimGeneralized, replaceTranslation]
+QED
 
-val NatExtSimpl = store_thm (
-   "NatExtSimpl", ``!E Gamma Gamma' C. E Gamma Gamma' /\ natDed E Gamma C ==> natDed E Gamma' C``,
+Theorem NatExtSimpl:   !E Gamma Gamma' C. E Gamma Gamma' /\ natDed E Gamma C ==> natDed E Gamma' C
+Proof
     REPEAT STRIP_TAC
  >> `replace Gamma Gamma' Gamma Gamma'` by REWRITE_TAC [replaceRoot]
- >> IMP_RES_TAC NatExt);
+ >> IMP_RES_TAC NatExt
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -814,77 +927,97 @@ val [SeqAxiom, RightSlash, RightBackslash, RightDot, LeftSlash, LeftBackslash, L
                   CONJUNCTS gentzenSequent_rules));
 
 (* old name: axiomeGeneralisation *)
-val SeqAxiomGeneralized = store_thm ("SeqAxiomGeneralized[simp]",
-  ``!E Gamma. gentzenSequent E Gamma (deltaTranslation Gamma)``,
+Theorem SeqAxiomGeneralized[simp]:
+    !E Gamma. gentzenSequent E Gamma (deltaTranslation Gamma)
+Proof
     Induct_on `Gamma:'a Term`
  >| [ PROVE_TAC [deltaTranslation_def, SeqAxiom], (* base case *)
       REWRITE_TAC [deltaTranslation_def] \\     (* induct case *)
-      PROVE_TAC [RightDot] ]);
+      PROVE_TAC [RightDot] ]
+QED
 
 (* Some derived properties concerning gentzenSequent *)
 
-val LeftDotSimpl = store_thm ("LeftDotSimpl",
-  ``!E A B C. gentzenSequent E (Comma (OneForm A) (OneForm B)) C ==>
-              gentzenSequent E (OneForm (Dot A B)) C``,
+Theorem LeftDotSimpl:
+    !E A B C. gentzenSequent E (Comma (OneForm A) (OneForm B)) C ==>
+              gentzenSequent E (OneForm (Dot A B)) C
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDot
  >> EXISTS_TAC ``(Comma (OneForm A) (OneForm B))``
  >> Q.EXISTS_TAC `A`
  >> Q.EXISTS_TAC `B`
- >> PROVE_TAC [replaceRoot]);
+ >> PROVE_TAC [replaceRoot]
+QED
 
-val LeftDotGeneralized = store_thm ("LeftDotGeneralized",
-  ``!E C T1 T2. replaceCommaDot T1 T2 ==> gentzenSequent E T1 C ==> gentzenSequent E T2 C``,
+Theorem LeftDotGeneralized:
+    !E C T1 T2. replaceCommaDot T1 T2 ==> gentzenSequent E T1 C ==> gentzenSequent E T2 C
+Proof
     NTAC 2 GEN_TAC
  >> HO_MATCH_MP_TAC replaceCommaDot_ind
  >> REPEAT STRIP_TAC
- >> PROVE_TAC [LeftDot]);
+ >> PROVE_TAC [LeftDot]
+QED
 
-val SeqTermToForm = store_thm ("SeqTermToForm",
-  ``!E Gamma C. gentzenSequent E Gamma C
-            ==> gentzenSequent E (OneForm (deltaTranslation Gamma)) C``,
+Theorem SeqTermToForm:
+    !E Gamma C. gentzenSequent E Gamma C
+            ==> gentzenSequent E (OneForm (deltaTranslation Gamma)) C
+Proof
     REPEAT GEN_TAC
  >> MATCH_MP_TAC LeftDotGeneralized
- >> RW_TAC bool_ss [replaceTranslation]);
+ >> RW_TAC bool_ss [replaceTranslation]
+QED
 
-val LeftSlashSimpl = store_thm ("LeftSlashSimpl",
-  ``!E Gamma A B C. gentzenSequent E Gamma B /\ gentzenSequent E (OneForm A) C
-                ==> gentzenSequent E (Comma (OneForm (Slash A B)) Gamma) C``,
-    PROVE_TAC [replace_rules, replaceCommaDot_rules, LeftSlash]);
+Theorem LeftSlashSimpl:
+    !E Gamma A B C. gentzenSequent E Gamma B /\ gentzenSequent E (OneForm A) C
+                ==> gentzenSequent E (Comma (OneForm (Slash A B)) Gamma) C
+Proof
+    PROVE_TAC [replace_rules, replaceCommaDot_rules, LeftSlash]
+QED
 
-val LeftBackslashSimpl = store_thm ("LeftBackslashSimpl",
-  ``!E Gamma A B C. gentzenSequent E Gamma B /\ gentzenSequent E (OneForm A) C
-                ==> gentzenSequent E (Comma Gamma (OneForm (Backslash B A))) C``,
-    PROVE_TAC [replace_rules, replaceCommaDot_rules, LeftBackslash]);
+Theorem LeftBackslashSimpl:
+    !E Gamma A B C. gentzenSequent E Gamma B /\ gentzenSequent E (OneForm A) C
+                ==> gentzenSequent E (Comma Gamma (OneForm (Backslash B A))) C
+Proof
+    PROVE_TAC [replace_rules, replaceCommaDot_rules, LeftBackslash]
+QED
 
-val CutRuleSimpl = store_thm ("CutRuleSimpl",
-  ``!E Gamma A C. gentzenSequent E Gamma A /\ gentzenSequent E (OneForm A) C
-              ==> gentzenSequent E Gamma C``,
-    PROVE_TAC [replace_rules, replaceCommaDot_rules, CutRule]);
+Theorem CutRuleSimpl:
+    !E Gamma A C. gentzenSequent E Gamma A /\ gentzenSequent E (OneForm A) C
+              ==> gentzenSequent E Gamma C
+Proof
+    PROVE_TAC [replace_rules, replaceCommaDot_rules, CutRule]
+QED
 
-val DotRightSlash' = store_thm ("DotRightSlash'",
-  ``!E A B C. gentzenSequent E (OneForm A) (Slash C B)
-          ==> gentzenSequent E (OneForm (Dot A B)) C``,
-    PROVE_TAC [replace_rules, replaceCommaDot_rules, gentzenSequent_rules]);
+Theorem DotRightSlash':
+    !E A B C. gentzenSequent E (OneForm A) (Slash C B)
+          ==> gentzenSequent E (OneForm (Dot A B)) C
+Proof
+    PROVE_TAC [replace_rules, replaceCommaDot_rules, gentzenSequent_rules]
+QED
 
-val DotRightBackslash' = store_thm ("DotRightBackslash'",
-  ``!E A B C. gentzenSequent E (OneForm B) (Backslash A C)
-          ==> gentzenSequent E (OneForm (Dot A B)) C``,
-    PROVE_TAC [replace_rules, replaceCommaDot_rules, gentzenSequent_rules]);
+Theorem DotRightBackslash':
+    !E A B C. gentzenSequent E (OneForm B) (Backslash A C)
+          ==> gentzenSequent E (OneForm (Dot A B)) C
+Proof
+    PROVE_TAC [replace_rules, replaceCommaDot_rules, gentzenSequent_rules]
+QED
 
-val SeqExtSimpl = store_thm (
-   "SeqExtSimpl", ``!E Gamma Gamma' C. E Gamma Gamma' /\ gentzenSequent E Gamma C
-                                   ==> gentzenSequent E Gamma' C``,
+Theorem SeqExtSimpl:   !E Gamma Gamma' C. E Gamma Gamma' /\ gentzenSequent E Gamma C
+                                   ==> gentzenSequent E Gamma' C
+Proof
     REPEAT STRIP_TAC
  >> `replace Gamma Gamma' Gamma Gamma'` by REWRITE_TAC [replaceRoot]
- >> IMP_RES_TAC SeqExt);
+ >> IMP_RES_TAC SeqExt
+QED
 
 (* some definitions concerning extensions *)
 
-val LextensionSimpl = store_thm ("LextensionSimpl",
-  ``!E T1 T2 T3 C. extends L_Sequent E /\
+Theorem LextensionSimpl:
+    !E T1 T2 T3 C. extends L_Sequent E /\
                    gentzenSequent E (Comma T1 (Comma T2 T3)) C
-               ==> gentzenSequent E (Comma (Comma T1 T2) T3) C``,
+               ==> gentzenSequent E (Comma (Comma T1 T2) T3) C
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC SeqExt
  >> EXISTS_TAC ``(Comma T1 (Comma T2 T3))``     (* Gamma *)
@@ -893,12 +1026,15 @@ val LextensionSimpl = store_thm ("LextensionSimpl",
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >- REWRITE_TAC [replaceRoot]
  >- PROVE_TAC [RSUBSET, L_Intro_lr]
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
-val LextensionSimpl' = store_thm ("LextensionSimpl'", (* dual theorem of above *)
-  ``!E T1 T2 T3 C. extends L_Sequent E /\
+(* sn . (((sn \ n) / S) . S)) |- n *)
+Theorem LextensionSimpl':
+    !E T1 T2 T3 C. extends L_Sequent E /\
                    gentzenSequent E (Comma (Comma T1 T2) T3) C
-               ==> gentzenSequent E (Comma T1 (Comma T2 T3)) C``,
+               ==> gentzenSequent E (Comma T1 (Comma T2 T3)) C
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC SeqExt
  >> EXISTS_TAC ``(Comma (Comma T1 T2) T3)``     (* Gamma *)
@@ -907,12 +1043,14 @@ val LextensionSimpl' = store_thm ("LextensionSimpl'", (* dual theorem of above *
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >- REWRITE_TAC [replaceRoot]
  >- PROVE_TAC [RSUBSET, L_Intro_rl]
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
-val LextensionSimplDot = store_thm ("LextensionSimplDot",
-  ``!E A B C D. extends L_Sequent E /\
+Theorem LextensionSimplDot:
+    !E A B C D. extends L_Sequent E /\
                 gentzenSequent E (OneForm (Dot A (Dot B C))) D
-            ==> gentzenSequent E (OneForm (Dot (Dot A B) C)) D``,
+            ==> gentzenSequent E (OneForm (Dot (Dot A B) C)) D
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDotSimpl
  >> MATCH_MP_TAC LeftDot
@@ -926,12 +1064,15 @@ val LextensionSimplDot = store_thm ("LextensionSimplDot",
  >- ASM_REWRITE_TAC []
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(deltaTranslation (Comma (OneForm A) (Comma (OneForm B) (OneForm C))))``
- >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]);
+ >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]
+QED
 
-val LextensionSimplDot' = store_thm ("LextensionSimplDot'", (* dual theorem of above *)
-  ``!E A B C D. extends L_Sequent E /\
+(* dual theorem of above *)
+Theorem LextensionSimplDot':
+    !E A B C D. extends L_Sequent E /\
                 gentzenSequent E (OneForm (Dot (Dot A B) C)) D
-            ==> gentzenSequent E (OneForm (Dot A (Dot B C))) D``,
+            ==> gentzenSequent E (OneForm (Dot A (Dot B C))) D
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDotSimpl
  >> MATCH_MP_TAC LeftDot
@@ -945,12 +1086,14 @@ val LextensionSimplDot' = store_thm ("LextensionSimplDot'", (* dual theorem of a
  >- ASM_REWRITE_TAC []
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(deltaTranslation (Comma (Comma (OneForm A) (OneForm B)) (OneForm C)))``
- >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]);
+ >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]
+QED
 
-val NLPextensionSimpl = store_thm ("NLPextensionSimpl",
-  ``!E T1 T2 C. extends NLP_Sequent E /\
+Theorem NLPextensionSimpl:
+    !E T1 T2 C. extends NLP_Sequent E /\
                 gentzenSequent E (Comma T1 T2) C
-            ==> gentzenSequent E (Comma T2 T1) C``,
+            ==> gentzenSequent E (Comma T2 T1) C
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC SeqExt
  >> EXISTS_TAC ``(Comma T1 T2)``
@@ -959,12 +1102,14 @@ val NLPextensionSimpl = store_thm ("NLPextensionSimpl",
  >> REPEAT STRIP_TAC (* 3 sub-goals here *)
  >- REWRITE_TAC [replaceRoot]
  >- PROVE_TAC [RSUBSET, NLP_Intro]
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
-val NLPextensionSimplDot = store_thm ("NLPextensionSimplDot",
-  ``!E A B C. extends NLP_Sequent E /\
+Theorem NLPextensionSimplDot:
+    !E A B C. extends NLP_Sequent E /\
               gentzenSequent E (OneForm (Dot A B)) C
-          ==> gentzenSequent E (OneForm (Dot B A)) C``,
+          ==> gentzenSequent E (OneForm (Dot B A)) C
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDotSimpl
  >> MATCH_MP_TAC NLPextensionSimpl
@@ -972,13 +1117,15 @@ val NLPextensionSimplDot = store_thm ("NLPextensionSimplDot",
  >- ASM_REWRITE_TAC []
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(deltaTranslation (Comma (OneForm A) (OneForm B)))``
- >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]);
+ >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]
+QED
 
 (* original name: gentzenExtends, see also mono_X *)
-val mono_E = store_thm ("mono_E",
-  ``!E' E Gamma A. gentzenSequent E Gamma A
+Theorem mono_E:
+    !E' E Gamma A. gentzenSequent E Gamma A
                ==> extends E E'
-               ==> gentzenSequent E' Gamma A``,
+               ==> gentzenSequent E' Gamma A
+Proof
     GEN_TAC
  >> HO_MATCH_MP_TAC gentzenSequent_ind
  >> REPEAT STRIP_TAC (* 9 goals here *)
@@ -992,124 +1139,152 @@ val mono_E = store_thm ("mono_E",
  >- PROVE_TAC [CutRule]
  >> `E' Delta Delta'` by PROVE_TAC [RSUBSET]
  >> `gentzenSequent E' Gamma A` by RW_TAC bool_ss []
- >> PROVE_TAC [SeqExt]);
+ >> PROVE_TAC [SeqExt]
+QED
 
 (* Some theorems and derived properties
    These definitions can be applied for all gentzen extensions,
    we can see how CutRuleSimpl gets used in most of time. *)
 
-val application = store_thm ("application",
-  ``!E A B. gentzenSequent E (OneForm (Dot (Slash A B) B)) A``,
+Theorem application:
+    !E A B. gentzenSequent E (OneForm (Dot (Slash A B) B)) A
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDotSimpl
  >> MATCH_MP_TAC LeftSlashSimpl
- >> REWRITE_TAC [SeqAxiom]);
+ >> REWRITE_TAC [SeqAxiom]
+QED
 
-val application' = store_thm ("application'",
-  ``!E A B. gentzenSequent E (OneForm (Dot B (Backslash B A))) A``,
+Theorem application':
+    !E A B. gentzenSequent E (OneForm (Dot B (Backslash B A))) A
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC LeftDotSimpl
  >> MATCH_MP_TAC LeftBackslashSimpl
- >> REWRITE_TAC [SeqAxiom]);
+ >> REWRITE_TAC [SeqAxiom]
+QED
 
-val RightSlashDot = store_thm ("RightSlashDot",
-  ``!E A B C. gentzenSequent E (OneForm (Dot A C)) B
-          ==> gentzenSequent E (OneForm A) (Slash B C)``,
+Theorem RightSlashDot:
+    !E A B C. gentzenSequent E (OneForm (Dot A C)) B
+          ==> gentzenSequent E (OneForm A) (Slash B C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(deltaTranslation (Comma (OneForm A) (OneForm C)))``
- >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]);
+ >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]
+QED
 
-val RightBackslashDot = store_thm ("RightBackslashDot",
-  ``!E A B C. gentzenSequent E (OneForm (Dot B A)) C
-          ==> gentzenSequent E (OneForm A) (Backslash B C)``,
+Theorem RightBackslashDot:
+    !E A B C. gentzenSequent E (OneForm (Dot B A)) C
+          ==> gentzenSequent E (OneForm A) (Backslash B C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(deltaTranslation (Comma (OneForm B) (OneForm A)))``
- >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]);
+ >> RW_TAC bool_ss [SeqAxiomGeneralized, deltaTranslation_def]
+QED
 
-val coApplication = store_thm ("coApplication",
-  ``!E A B. gentzenSequent E (OneForm A) (Slash (Dot A B) B)``,
-    PROVE_TAC [RightSlash, RightDot, SeqAxiom]);
+Theorem coApplication:
+    !E A B. gentzenSequent E (OneForm A) (Slash (Dot A B) B)
+Proof
+    PROVE_TAC [RightSlash, RightDot, SeqAxiom]
+QED
 
-val coApplication' = store_thm ("coApplication'",
-  ``!E A B. gentzenSequent E (OneForm A) (Backslash B (Dot B A))``,
-    PROVE_TAC [RightBackslash, RightDot, SeqAxiom]);
+Theorem coApplication':
+    !E A B. gentzenSequent E (OneForm A) (Backslash B (Dot B A))
+Proof
+    PROVE_TAC [RightBackslash, RightDot, SeqAxiom]
+QED
 
-val monotonicity = store_thm ("monotonicity",
-  ``!E A B C D. gentzenSequent E (OneForm A) B /\
+Theorem monotonicity:
+    !E A B C D. gentzenSequent E (OneForm A) B /\
                 gentzenSequent E (OneForm C) D
-            ==> gentzenSequent E (OneForm (Dot A C)) (Dot B D)``,
-    PROVE_TAC [LeftDotSimpl, RightDot]);
+            ==> gentzenSequent E (OneForm (Dot A C)) (Dot B D)
+Proof
+    PROVE_TAC [LeftDotSimpl, RightDot]
+QED
 
-val isotonicity = store_thm ("isotonicity",
-  ``!E A B C. gentzenSequent E (OneForm A) B
-          ==> gentzenSequent E (OneForm (Slash A C)) (Slash B C)``,
+Theorem isotonicity:
+    !E A B C. gentzenSequent E (OneForm A) B
+          ==> gentzenSequent E (OneForm (Slash A C)) (Slash B C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC CutRuleSimpl
  >> Q.EXISTS_TAC `A`
- >> PROVE_TAC [LeftSlashSimpl, SeqAxiom]);
+ >> PROVE_TAC [LeftSlashSimpl, SeqAxiom]
+QED
 
-val isotonicity' = store_thm ("isotonicity'",
-  ``!E A B C. gentzenSequent E (OneForm A) B
-          ==> gentzenSequent E (OneForm (Backslash C A)) (Backslash C B)``,
+Theorem isotonicity':
+    !E A B C. gentzenSequent E (OneForm A) B
+          ==> gentzenSequent E (OneForm (Backslash C A)) (Backslash C B)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC CutRuleSimpl
  >> Q.EXISTS_TAC `A`
- >> PROVE_TAC [LeftBackslashSimpl, SeqAxiom]);
+ >> PROVE_TAC [LeftBackslashSimpl, SeqAxiom]
+QED
 
-val antitonicity = store_thm ("antitonicity",
-  ``!E A B C. gentzenSequent E (OneForm A) B
-          ==> gentzenSequent E (OneForm (Slash C B)) (Slash C A)``,
+Theorem antitonicity:
+    !E A B C. gentzenSequent E (OneForm A) B
+          ==> gentzenSequent E (OneForm (Slash C B)) (Slash C A)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(Dot (Slash C B) B)``
  >> STRIP_TAC
  >- PROVE_TAC [RightDot, SeqAxiom]
- >> REWRITE_TAC [application]);
+ >> REWRITE_TAC [application]
+QED
 
-val antitonicity' = store_thm ("antitonicity'",
-  ``!E A B C. gentzenSequent E (OneForm A) B
-          ==> gentzenSequent E (OneForm (Backslash B C)) (Backslash A C)``,
+Theorem antitonicity':
+    !E A B C. gentzenSequent E (OneForm A) B
+          ==> gentzenSequent E (OneForm (Backslash B C)) (Backslash A C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(Dot B (Backslash B C))``
  >> STRIP_TAC
  >- PROVE_TAC [RightDot, SeqAxiom]
- >> REWRITE_TAC [application']);
+ >> REWRITE_TAC [application']
+QED
 
-val lifting = store_thm ("lifting",
-  ``!E A B C. gentzenSequent E (OneForm A) (Slash B (Backslash A B))``,
+Theorem lifting:
+    !E A B C. gentzenSequent E (OneForm A) (Slash B (Backslash A B))
+Proof
     REPEAT GEN_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(Dot A (Backslash A B))``
  >> STRIP_TAC
  >- PROVE_TAC [RightDot, SeqAxiom]
- >> REWRITE_TAC [application']);
+ >> REWRITE_TAC [application']
+QED
 
-val lifting' = store_thm ("lifting'",
-  ``!E A B C. gentzenSequent E (OneForm A) (Backslash (Slash B A) B)``,
+Theorem lifting':
+    !E A B C. gentzenSequent E (OneForm A) (Backslash (Slash B A) B)
+Proof
     REPEAT GEN_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(Dot (Slash B A) A)``
  >> STRIP_TAC
  >- PROVE_TAC [RightDot, SeqAxiom]
- >> REWRITE_TAC [application]);
+ >> REWRITE_TAC [application]
+QED
 
 (* These definitions can be applied iff associativity is supported by our logical system *)
 
-val mainGeach = store_thm ("mainGeach",
-  ``!E A B C. extends L_Sequent E
+Theorem mainGeach:
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Slash A B))
-                               (Slash (Slash A C) (Slash B C))``,
+                               (Slash (Slash A C) (Slash B C))
+Proof
     REPEAT STRIP_TAC
  >> NTAC 2 (MATCH_MP_TAC RightSlash)
  >> MATCH_MP_TAC LextensionSimpl
@@ -1124,12 +1299,14 @@ val mainGeach = store_thm ("mainGeach",
         MATCH_MP_TAC LeftSlashSimpl \\
         STRIP_TAC \\
         REWRITE_TAC [SeqAxiom] ],
-      REWRITE_TAC [application] ]);
+      REWRITE_TAC [application] ]
+QED
 
-val mainGeach' = store_thm ("mainGeach'",
-  ``!E A B C. extends L_Sequent E
+Theorem mainGeach':
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Backslash B A))
-                               (Backslash (Backslash C B) (Backslash C A))``,
+                               (Backslash (Backslash C B) (Backslash C A))
+Proof
     REPEAT STRIP_TAC
  >> NTAC 2 (MATCH_MP_TAC RightBackslash)
  >> MATCH_MP_TAC LextensionSimpl'
@@ -1144,12 +1321,14 @@ val mainGeach' = store_thm ("mainGeach'",
         STRIP_TAC \\
         REWRITE_TAC [SeqAxiom],
         REWRITE_TAC [SeqAxiom] ] ,
-      REWRITE_TAC [application'] ]);
+      REWRITE_TAC [application'] ]
+QED
 
-val secondaryGeach = store_thm ("secondaryGeach",
-  ``!E A B C. extends L_Sequent E
+Theorem secondaryGeach:
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Slash B C))
-                               (Backslash (Slash A B) (Slash A C))``,
+                               (Backslash (Slash A B) (Slash A C))
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC RightSlash
@@ -1164,12 +1343,14 @@ val secondaryGeach = store_thm ("secondaryGeach",
         MATCH_MP_TAC LeftSlashSimpl \\
         STRIP_TAC \\
         REWRITE_TAC [SeqAxiom] ],
-      REWRITE_TAC [application] ]);
+      REWRITE_TAC [application] ]
+QED
 
-val secondaryGeach' = store_thm ("secondaryGeach'",
-``!E A B C. extends L_Sequent E
+Theorem secondaryGeach':
+  !E A B C. extends L_Sequent E
         ==> gentzenSequent E (OneForm (Backslash C B))
-                             (Slash (Backslash C A) (Backslash B A))``,
+                             (Slash (Backslash C A) (Backslash B A))
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC RightBackslash
@@ -1185,12 +1366,14 @@ val secondaryGeach' = store_thm ("secondaryGeach'",
         STRIP_TAC \\
         REWRITE_TAC [SeqAxiom],
         REWRITE_TAC [SeqAxiom] ] ,
-      REWRITE_TAC [application'] ]);
+      REWRITE_TAC [application'] ]
+QED
 
-val composition = store_thm ("composition",
-  ``!E A B C. extends L_Sequent E
+Theorem composition:
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Dot (Slash A B) (Slash B C)))
-                               (Slash A C)``,
+                               (Slash A C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(Dot (Slash (Slash A C) (Slash B C)) (Slash B C))``
@@ -1198,12 +1381,14 @@ val composition = store_thm ("composition",
  >| [ MATCH_MP_TAC monotonicity \\
       CONJ_TAC >|
       [ RW_TAC bool_ss [mainGeach], REWRITE_TAC [SeqAxiom] ],
-      REWRITE_TAC [application] ]);
+      REWRITE_TAC [application] ]
+QED
 
-val composition' = store_thm ("composition'",
-  ``!E A B C. extends L_Sequent E
+Theorem composition':
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Dot (Backslash C B) (Backslash B A)))
-                               (Backslash C A)``,
+                               (Backslash C A)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(Dot (Slash (Backslash C A) (Backslash B A)) (Backslash B A))``
@@ -1211,12 +1396,14 @@ val composition' = store_thm ("composition'",
  >| [ MATCH_MP_TAC monotonicity \\
       CONJ_TAC >|
       [ RW_TAC bool_ss [secondaryGeach'], REWRITE_TAC [SeqAxiom] ],
-      REWRITE_TAC [application] ]);
+      REWRITE_TAC [application] ]
+QED
 
-val restructuring = store_thm ("restructuring",
-  ``!E A B C. extends L_Sequent E
+Theorem restructuring:
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Slash (Backslash A B) C))
-                               (Backslash A (Slash B C))``,
+                               (Backslash A (Slash B C))
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslash
  >> MATCH_MP_TAC RightSlash
@@ -1230,12 +1417,14 @@ val restructuring = store_thm ("restructuring",
       CONJ_TAC >| [ REWRITE_TAC [SeqAxiom],
                     MATCH_MP_TAC LeftSlashSimpl \\
                     REWRITE_TAC [SeqAxiom] ],
-      REWRITE_TAC [application'] ]);
+      REWRITE_TAC [application'] ]
+QED
 
-val restructuring' = store_thm ("restructuring'",
-  ``!E A B C. extends L_Sequent E
+Theorem restructuring':
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Backslash A (Slash B C)))
-                               (Slash (Backslash A B) C)``,
+                               (Slash (Backslash A B) C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlash
  >> MATCH_MP_TAC RightBackslash
@@ -1249,23 +1438,27 @@ val restructuring' = store_thm ("restructuring'",
       CONJ_TAC >| [ MATCH_MP_TAC LeftBackslashSimpl \\
                     REWRITE_TAC [SeqAxiom],
                     REWRITE_TAC [SeqAxiom] ],
-      REWRITE_TAC [application] ]);
+      REWRITE_TAC [application] ]
+QED
 
-val currying = store_thm ("currying",
-  ``!E A B C. extends L_Sequent E
+Theorem currying:
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Slash A (Dot B C)))
-                               (Slash (Slash A C) B)``,
+                               (Slash (Slash A C) B)
+Proof
     REPEAT STRIP_TAC
  >> NTAC 2 (MATCH_MP_TAC RightSlashDot)
  >> MATCH_MP_TAC LextensionSimplDot
  >> CONJ_TAC
  >- POP_ASSUM ACCEPT_TAC
- >> REWRITE_TAC [application]);
+ >> REWRITE_TAC [application]
+QED
 
-val currying' = store_thm ("currying'",
-  ``!E A B C. extends L_Sequent E
+Theorem currying':
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Slash (Slash A C) B))
-                               (Slash A (Dot B C))``,
+                               (Slash A (Dot B C))
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlashDot
  >> MATCH_MP_TAC LextensionSimplDot'
@@ -1277,23 +1470,27 @@ val currying' = store_thm ("currying'",
  >| [ MATCH_MP_TAC monotonicity
    >> CONJ_TAC
    >> REWRITE_TAC [application, SeqAxiom],
-      REWRITE_TAC [application] ]);
+      REWRITE_TAC [application] ]
+QED
 
-val decurrying = store_thm ("decurrying",
-  ``!E A B C. extends L_Sequent E
+Theorem decurrying:
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Backslash (Dot A B) C))
-                               (Backslash B (Backslash A C))``,
+                               (Backslash B (Backslash A C))
+Proof
     REPEAT STRIP_TAC
  >> NTAC 2 (MATCH_MP_TAC RightBackslashDot)
  >> MATCH_MP_TAC LextensionSimplDot'
  >> CONJ_TAC
  >- POP_ASSUM ACCEPT_TAC
- >> REWRITE_TAC [application']);
+ >> REWRITE_TAC [application']
+QED
 
-val decurrying' = store_thm ("decurrying'",
-  ``!E A B C. extends L_Sequent E
+Theorem decurrying':
+    !E A B C. extends L_Sequent E
           ==> gentzenSequent E (OneForm (Backslash B (Backslash A C)))
-                               (Backslash (Dot A B) C)``,
+                               (Backslash (Dot A B) C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslashDot
  >> MATCH_MP_TAC LextensionSimplDot
@@ -1304,14 +1501,16 @@ val decurrying' = store_thm ("decurrying'",
  >> CONJ_TAC
  >| [ MATCH_MP_TAC monotonicity \\
       REWRITE_TAC [application', SeqAxiom],
-      REWRITE_TAC [application'] ]);
+      REWRITE_TAC [application'] ]
+QED
 
 (* Theorem for systems that support commutativity: if its extension extends NLP_Sequent *)
 
-val permutation = store_thm ("permutation",
-  ``!E A B C. extends NLP_Sequent E
+Theorem permutation:
+    !E A B C. extends NLP_Sequent E
           ==> gentzenSequent E (OneForm A) (Backslash B C)
-          ==> gentzenSequent E (OneForm B) (Backslash A C)``,
+          ==> gentzenSequent E (OneForm B) (Backslash A C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
@@ -1321,45 +1520,55 @@ val permutation = store_thm ("permutation",
  >> EXISTS_TAC ``(Dot B (Backslash B C))``
  >> CONJ_TAC
  >| [ MATCH_MP_TAC monotonicity >> ASM_REWRITE_TAC [SeqAxiom],
-      REWRITE_TAC [application'] ]);
+      REWRITE_TAC [application'] ]
+QED
 
-val exchange = store_thm ("exchange",
-  ``!E A B. extends NLP_Sequent E
-        ==> gentzenSequent E (OneForm (Slash A B)) (Backslash B A)``,
+Theorem exchange:
+    !E A B. extends NLP_Sequent E
+        ==> gentzenSequent E (OneForm (Slash A B)) (Backslash B A)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
- >> RW_TAC bool_ss [application]);
+ >> RW_TAC bool_ss [application]
+QED
 
-val exchange' = store_thm ("exchange'",
-  ``!E A B. extends NLP_Sequent E
-        ==> gentzenSequent E (OneForm (Backslash B A)) (Slash A B)``,
+Theorem exchange':
+    !E A B. extends NLP_Sequent E
+        ==> gentzenSequent E (OneForm (Backslash B A)) (Slash A B)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
- >> RW_TAC bool_ss [application']);
+ >> RW_TAC bool_ss [application']
+QED
 
-val preposing = store_thm ("preposing",
-  ``!E A B. extends NLP_Sequent E
-        ==> gentzenSequent E (OneForm A) (Slash B (Slash B A))``,
+Theorem preposing:
+    !E A B. extends NLP_Sequent E
+        ==> gentzenSequent E (OneForm A) (Slash B (Slash B A))
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightSlashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
- >> RW_TAC bool_ss [application]);
+ >> RW_TAC bool_ss [application]
+QED
 
-val postposing = store_thm ("postposing",
-  ``!E A B. extends NLP_Sequent E
-        ==> gentzenSequent E (OneForm A) (Backslash (Backslash A B) B)``,
+Theorem postposing:
+    !E A B. extends NLP_Sequent E
+        ==> gentzenSequent E (OneForm A) (Backslash (Backslash A B) B)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC RightBackslashDot
  >> MATCH_MP_TAC NLPextensionSimplDot
- >> RW_TAC bool_ss [application']);
+ >> RW_TAC bool_ss [application']
+QED
 
 (* For systems that support both commutativity and associativity *)
 
-val mixedComposition = store_thm ("mixedComposition",
-  ``!E A B C. extends LP_Sequent E
-          ==> gentzenSequent E (OneForm (Dot (Slash A B) (Backslash C B))) (Backslash C A)``,
+Theorem mixedComposition:
+    !E A B C. extends LP_Sequent E
+          ==> gentzenSequent E (OneForm (Dot (Slash A B) (Backslash C B))) (Backslash C A)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC NLPextensionSimplDot
  >> CONJ_TAC
@@ -1374,11 +1583,13 @@ val mixedComposition = store_thm ("mixedComposition",
  >| [ MATCH_MP_TAC monotonicity \\
       RW_TAC bool_ss [application', SeqAxiom],
       MATCH_MP_TAC NLPextensionSimplDot \\
-      RW_TAC bool_ss [application, LPextendsNLP] ]);
+      RW_TAC bool_ss [application, LPextendsNLP] ]
+QED
 
-val mixedComposition' = store_thm ("mixedComposition'",
-  ``!E A B C. extends LP_Sequent E
-         ==>  gentzenSequent E (OneForm (Dot (Slash B C) (Backslash B A))) (Slash A C)``,
+Theorem mixedComposition':
+    !E A B C. extends LP_Sequent E
+         ==>  gentzenSequent E (OneForm (Dot (Slash B C) (Backslash B A))) (Slash A C)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC NLPextensionSimplDot
  >> CONJ_TAC
@@ -1393,7 +1604,8 @@ val mixedComposition' = store_thm ("mixedComposition'",
  >| [ MATCH_MP_TAC monotonicity \\
       RW_TAC bool_ss [application, SeqAxiom],
       MATCH_MP_TAC NLPextensionSimplDot \\
-      RW_TAC bool_ss [application', LPextendsNLP] ]);
+      RW_TAC bool_ss [application', LPextendsNLP] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1401,11 +1613,12 @@ val mixedComposition' = store_thm ("mixedComposition'",
 (*                                                                            *)
 (******************************************************************************)
 
-val replace_arrow = store_thm ("replace_arrow",
-  ``!X Gamma Gamma' T1 T2.
+Theorem replace_arrow:
+    !X Gamma Gamma' T1 T2.
      replace Gamma Gamma' T1 T2 ==>
      arrow X (deltaTranslation T2) (deltaTranslation T1) ==>
-     arrow X (deltaTranslation Gamma') (deltaTranslation Gamma)``,
+     arrow X (deltaTranslation Gamma') (deltaTranslation Gamma)
+Proof
     GEN_TAC
  >> HO_MATCH_MP_TAC replace_ind
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
@@ -1416,17 +1629,20 @@ val replace_arrow = store_thm ("replace_arrow",
       REWRITE_TAC [deltaTranslation_def] \\
       RES_TAC \\
       POP_ASSUM (ASSUME_TAC o (MATCH_MP Dot_mono_right)) \\
-      ASM_REWRITE_TAC [] ]);
+      ASM_REWRITE_TAC [] ]
+QED
 
-val replace_arrow' = store_thm ("replace_arrow'",
-  ``!C X Gamma Gamma' T1 T2.
+Theorem replace_arrow':
+    !C X Gamma Gamma' T1 T2.
      replace Gamma Gamma' T1 T2 ==>
      arrow X (deltaTranslation T2) (deltaTranslation T1) ==>
      arrow X (deltaTranslation Gamma) C ==>
-     arrow X (deltaTranslation Gamma') C``,
+     arrow X (deltaTranslation Gamma') C
+Proof
     REPEAT STRIP_TAC
  >> IMP_RES_TAC replace_arrow
- >> IMP_RES_TAC comp);
+ >> IMP_RES_TAC comp
+QED
 
 (* from axiomatic presentation to sequent calculus *)
 Definition arrowToGentzenExt_def:
@@ -1434,13 +1650,14 @@ Definition arrowToGentzenExt_def:
         !A B. X A B ==> gentzenSequent E (OneForm A) B
 End
 
-val NLToNL_Sequent = store_thm (
-   "NLToNL_Sequent", ``arrowToGentzenExt NL NL_Sequent``,
+Theorem NLToNL_Sequent:   arrowToGentzenExt NL NL_Sequent
+Proof
     REWRITE_TAC [arrowToGentzenExt_def]
- >> RW_TAC std_ss [NL_def, EMPTY_REL_DEF]);
+ >> RW_TAC std_ss [NL_def, EMPTY_REL_DEF]
+QED
 
-val NLPToNLP_Sequent = store_thm (
-   "NLPToNLP_Sequent", ``arrowToGentzenExt NLP NLP_Sequent``,
+Theorem NLPToNLP_Sequent:   arrowToGentzenExt NLP NLP_Sequent
+Proof
     REWRITE_TAC [arrowToGentzenExt_def]
  >> REWRITE_TAC [NLP_cases]
  >> REPEAT STRIP_TAC
@@ -1448,10 +1665,11 @@ val NLPToNLP_Sequent = store_thm (
  >> ASSUME_TAC (ISPEC ``NLP_Sequent`` no_extend)
  >> MATCH_MP_TAC NLPextensionSimplDot
  >> ASM_REWRITE_TAC []
- >> REWRITE_TAC [SeqAxiom]);
+ >> REWRITE_TAC [SeqAxiom]
+QED
 
-val LToL_Sequent = store_thm (
-   "LToL_Sequent", ``arrowToGentzenExt L L_Sequent``,
+Theorem LToL_Sequent:   arrowToGentzenExt L L_Sequent
+Proof
     REWRITE_TAC [arrowToGentzenExt_def]
  >> REWRITE_TAC [L_cases]
  >> ASSUME_TAC (ISPEC ``L_Sequent`` no_extend)
@@ -1460,10 +1678,11 @@ val LToL_Sequent = store_thm (
  >| [ MATCH_MP_TAC LextensionSimplDot' >> ASM_REWRITE_TAC [] \\
       REWRITE_TAC [SeqAxiom],
       MATCH_MP_TAC LextensionSimplDot >> ASM_REWRITE_TAC [] \\
-      REWRITE_TAC [SeqAxiom] ]);
+      REWRITE_TAC [SeqAxiom] ]
+QED
 
-val LPToLP_Sequent = store_thm (
-   "LPToLP_Sequent", ``arrowToGentzenExt LP LP_Sequent``,
+Theorem LPToLP_Sequent:   arrowToGentzenExt LP LP_Sequent
+Proof
     REWRITE_TAC [arrowToGentzenExt_def, LP_def, RUNION]
  >> REPEAT STRIP_TAC (* two sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -1473,11 +1692,12 @@ val LPToLP_Sequent = store_thm (
       (* goal 2 (of 2) *)
       MP_TAC L_Sequent_LP_Sequent \\
       POP_ASSUM (MP_TAC o (MATCH_MP (REWRITE_RULE [arrowToGentzenExt_def] LToL_Sequent))) \\
-      REWRITE_TAC [mono_E] ]);
+      REWRITE_TAC [mono_E] ]
+QED
 
-val arrowToGentzen = store_thm (
-   "arrowToGentzen",
-  ``!E X A B. arrow X A B ==> arrowToGentzenExt X E ==> gentzenSequent E (OneForm A) B``,
+Theorem arrowToGentzen:
+    !E X A B. arrow X A B ==> arrowToGentzenExt X E ==> gentzenSequent E (OneForm A) B
+Proof
     GEN_TAC
  >> HO_MATCH_MP_TAC arrow_ind
  >> REPEAT STRIP_TAC (* 7 goals here, first is easy *)
@@ -1497,40 +1717,45 @@ val arrowToGentzen = store_thm (
       ASM_REWRITE_TAC [],
       (* goal 6 (of 6) *)
       POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [arrowToGentzenExt_def])) \\
-      RES_TAC ]);
+      RES_TAC ]
+QED
 
 (* particular cases for NLP, L; LP and NL systems *)
-val arrowToGentzenNL = store_thm (
-   "arrowToGentzenNL",
-  ``!A B. arrow NL A B ==> gentzenSequent NL_Sequent (OneForm A) B``,
+Theorem arrowToGentzenNL:
+    !A B. arrow NL A B ==> gentzenSequent NL_Sequent (OneForm A) B
+Proof
     REPEAT STRIP_TAC
  >> irule arrowToGentzen
  >> Q.EXISTS_TAC `NL`
- >> ASM_REWRITE_TAC [NLToNL_Sequent]);
+ >> ASM_REWRITE_TAC [NLToNL_Sequent]
+QED
 
-val arrowToGentzenNLP = store_thm (
-   "arrowToGentzenNLP",
-  ``!A B. arrow NLP A B ==> gentzenSequent NLP_Sequent (OneForm A) B``,
+Theorem arrowToGentzenNLP:
+    !A B. arrow NLP A B ==> gentzenSequent NLP_Sequent (OneForm A) B
+Proof
     REPEAT STRIP_TAC
  >> irule arrowToGentzen
  >> Q.EXISTS_TAC `NLP`
- >> ASM_REWRITE_TAC [NLPToNLP_Sequent]);
+ >> ASM_REWRITE_TAC [NLPToNLP_Sequent]
+QED
 
-val arrowToGentzenL = store_thm (
-   "arrowToGentzenL",
-  ``!A B. arrow L A B ==> gentzenSequent L_Sequent (OneForm A) B``,
+Theorem arrowToGentzenL:
+    !A B. arrow L A B ==> gentzenSequent L_Sequent (OneForm A) B
+Proof
     REPEAT STRIP_TAC
  >> irule arrowToGentzen
  >> Q.EXISTS_TAC `L`
- >> ASM_REWRITE_TAC [LToL_Sequent]);
+ >> ASM_REWRITE_TAC [LToL_Sequent]
+QED
 
-val arrowToGentzenLP = store_thm (
-   "arrowToGentzenLP",
-  ``!A B. arrow LP A B ==> gentzenSequent LP_Sequent (OneForm A) B``,
+Theorem arrowToGentzenLP:
+    !A B. arrow LP A B ==> gentzenSequent LP_Sequent (OneForm A) B
+Proof
     REPEAT STRIP_TAC
  >> irule arrowToGentzen
  >> Q.EXISTS_TAC `LP`
- >> ASM_REWRITE_TAC [LPToLP_Sequent]);
+ >> ASM_REWRITE_TAC [LPToLP_Sequent]
+QED
 
 (* from sequent calculus to axiomatic presentation.
    Notice the strange thing here: the order of T1 and T2 are changed from E to X. *)
@@ -1545,9 +1770,9 @@ Definition ToArrowExt_def:
         CURRY { (deltaTranslation y, deltaTranslation x) | (x,y) IN (UNCURRY E) }
 End
 
-val ToArrowExt_thm = store_thm (
-   "ToArrowExt_thm",
-  ``!E T1 T2. E T1 T2 ==> (ToArrowExt E) (deltaTranslation T2) (deltaTranslation T1)``,
+Theorem ToArrowExt_thm:
+    !E T1 T2. E T1 T2 ==> (ToArrowExt E) (deltaTranslation T2) (deltaTranslation T1)
+Proof
     REPEAT STRIP_TAC
  >> REWRITE_TAC [ToArrowExt_def, CURRY_DEF]
  >> ONCE_REWRITE_TAC [GSYM SPECIFICATION]
@@ -1555,36 +1780,41 @@ val ToArrowExt_thm = store_thm (
  >> Q.EXISTS_TAC `(T2, T1)`
  >> `(T1, T2) IN (UNCURRY E)`
         by PROVE_TAC [UNCURRY_DEF, SPECIFICATION]
- >> FULL_SIMP_TAC std_ss []);
+ >> FULL_SIMP_TAC std_ss []
+QED
 
-val gentzenToArrowExt_thm = store_thm (
-   "gentzenToArrowExt_thm", ``!E. gentzenToArrowExt E (ToArrowExt E)``,
-    REWRITE_TAC [gentzenToArrowExt_def, ToArrowExt_thm]);
+Theorem gentzenToArrowExt_thm:   !E. gentzenToArrowExt E (ToArrowExt E)
+Proof
+    REWRITE_TAC [gentzenToArrowExt_def, ToArrowExt_thm]
+QED
 
-val NL_SequentToNL = store_thm (
-   "NL_SequentToNL", ``gentzenToArrowExt NL_Sequent NL``,
+Theorem NL_SequentToNL:   gentzenToArrowExt NL_Sequent NL
+Proof
     REWRITE_TAC [gentzenToArrowExt_def]
- >> RW_TAC std_ss [NL_Sequent_def, EMPTY_REL_DEF]);
+ >> RW_TAC std_ss [NL_Sequent_def, EMPTY_REL_DEF]
+QED
 
-val NLP_SequentToNLP = store_thm (
-   "NLP_SequentToNLP", ``gentzenToArrowExt NLP_Sequent NLP``,
+Theorem NLP_SequentToNLP:   gentzenToArrowExt NLP_Sequent NLP
+Proof
     REWRITE_TAC [gentzenToArrowExt_def]
  >> REWRITE_TAC [NLP_Sequent_cases]
  >> REPEAT STRIP_TAC
  >> ASM_REWRITE_TAC [deltaTranslation_def]
- >> REWRITE_TAC [NLP_rules]);
+ >> REWRITE_TAC [NLP_rules]
+QED
 
-val L_SequentToL = store_thm (
-   "L_SequentToL", ``gentzenToArrowExt L_Sequent L``,
+Theorem L_SequentToL:   gentzenToArrowExt L_Sequent L
+Proof
     REWRITE_TAC [gentzenToArrowExt_def]
  >> REWRITE_TAC [L_Sequent_cases]
  >> REPEAT STRIP_TAC
  >> ASM_REWRITE_TAC [deltaTranslation_def]
  >| [ REWRITE_TAC [L_rule_lr],
-      REWRITE_TAC [L_rule_rl] ]);
+      REWRITE_TAC [L_rule_rl] ]
+QED
 
-val LP_SequentToLP = store_thm (
-   "LP_SequentToLP", ``gentzenToArrowExt LP_Sequent LP``,
+Theorem LP_SequentToLP:   gentzenToArrowExt LP_Sequent LP
+Proof
     REWRITE_TAC [gentzenToArrowExt_def, LP_Sequent_def, RUNION]
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -1594,12 +1824,13 @@ val LP_SequentToLP = store_thm (
       (* goal 2 (of 2) *)
       POP_ASSUM (MP_TAC o (MATCH_MP (REWRITE_RULE [gentzenToArrowExt_def] L_SequentToL))) \\
       MP_TAC LextendsLP \\
-      RW_TAC std_ss [RSUBSET] ]);
+      RW_TAC std_ss [RSUBSET] ]
+QED
 
-val gentzenToArrow' = store_thm (
-   "gentzenToArrow'",
-  ``!X E Gamma A. gentzenSequent E Gamma A ==> gentzenToArrowExt E X ==>
-                  arrow X (deltaTranslation Gamma) A``,
+Theorem gentzenToArrow':
+    !X E Gamma A. gentzenSequent E Gamma A ==> gentzenToArrowExt E X ==>
+                  arrow X (deltaTranslation Gamma) A
+Proof
     GEN_TAC
  >> HO_MATCH_MP_TAC gentzenSequent_ind
  >> REPEAT STRIP_TAC (* 9 sub-goals here *)
@@ -1660,56 +1891,63 @@ val gentzenToArrow' = store_thm (
      RES_TAC \\
      `arrow X (deltaTranslation Delta') (deltaTranslation Delta)`
         by PROVE_TAC [arrow_plus] \\
-     `arrow X (deltaTranslation Gamma') A` by PROVE_TAC [replace_arrow'] ]);
+     `arrow X (deltaTranslation Gamma') A` by PROVE_TAC [replace_arrow'] ]
+QED
 
-val gentzenToArrow = store_thm (
-   "gentzenToArrow",
-  ``!E X Gamma A. gentzenToArrowExt E X /\ gentzenSequent E Gamma A
-              ==> arrow X (deltaTranslation Gamma) A``,
+Theorem gentzenToArrow:
+    !E X Gamma A. gentzenToArrowExt E X /\ gentzenSequent E Gamma A
+              ==> arrow X (deltaTranslation Gamma) A
+Proof
     REPEAT STRIP_TAC
  >> PAT_X_ASSUM ``gentzenToArrowExt E X`` MP_TAC
  >> POP_ASSUM MP_TAC
- >> REWRITE_TAC [gentzenToArrow']);
+ >> REWRITE_TAC [gentzenToArrow']
+QED
 
-val gentzenToArrow_E = store_thm (
-   "gentzenToArrow_E",
-  ``!E Gamma A. gentzenSequent E Gamma A ==> arrow (ToArrowExt E) (deltaTranslation Gamma) A``,
+Theorem gentzenToArrow_E:
+    !E Gamma A. gentzenSequent E Gamma A ==> arrow (ToArrowExt E) (deltaTranslation Gamma) A
+Proof
     REPEAT STRIP_TAC
  >> ASSUME_TAC (Q.SPEC `E` gentzenToArrowExt_thm)
  >> NTAC 2 (POP_ASSUM MP_TAC)
- >> REWRITE_TAC [gentzenToArrow']);
+ >> REWRITE_TAC [gentzenToArrow']
+QED
 
-val NLGentzenToArrow = store_thm (
-   "NLGentzenToArrow",
-  ``!Gamma A. gentzenSequent NL_Sequent Gamma A ==> arrow NL (deltaTranslation Gamma) A``,
+Theorem NLGentzenToArrow:
+    !Gamma A. gentzenSequent NL_Sequent Gamma A ==> arrow NL (deltaTranslation Gamma) A
+Proof
     REPEAT STRIP_TAC
  >> MP_TAC NL_SequentToNL
  >> POP_ASSUM MP_TAC
- >> REWRITE_TAC [gentzenToArrow']);
+ >> REWRITE_TAC [gentzenToArrow']
+QED
 
-val NLPGentzenToArrow = store_thm (
-   "NLPGentzenToArrow",
-  ``!Gamma A. gentzenSequent NLP_Sequent Gamma A ==> arrow NLP (deltaTranslation Gamma) A``,
+Theorem NLPGentzenToArrow:
+    !Gamma A. gentzenSequent NLP_Sequent Gamma A ==> arrow NLP (deltaTranslation Gamma) A
+Proof
     REPEAT STRIP_TAC
  >> MP_TAC NLP_SequentToNLP
  >> POP_ASSUM MP_TAC
- >> REWRITE_TAC [gentzenToArrow']);
+ >> REWRITE_TAC [gentzenToArrow']
+QED
 
-val LGentzenToArrow = store_thm (
-   "LGentzenToArrow",
-  ``!Gamma A. gentzenSequent L_Sequent Gamma A ==> arrow L (deltaTranslation Gamma) A``,
+Theorem LGentzenToArrow:
+    !Gamma A. gentzenSequent L_Sequent Gamma A ==> arrow L (deltaTranslation Gamma) A
+Proof
     REPEAT STRIP_TAC
  >> MP_TAC L_SequentToL
  >> POP_ASSUM MP_TAC
- >> REWRITE_TAC [gentzenToArrow']);
+ >> REWRITE_TAC [gentzenToArrow']
+QED
 
-val LPGentzenToArrow = store_thm (
-   "LPGentzenToArrow",
-  ``!Gamma A. gentzenSequent LP_Sequent Gamma A ==> arrow LP (deltaTranslation Gamma) A``,
+Theorem LPGentzenToArrow:
+    !Gamma A. gentzenSequent LP_Sequent Gamma A ==> arrow LP (deltaTranslation Gamma) A
+Proof
     REPEAT STRIP_TAC
  >> MP_TAC LP_SequentToLP
  >> POP_ASSUM MP_TAC
- >> REWRITE_TAC [gentzenToArrow']);
+ >> REWRITE_TAC [gentzenToArrow']
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1717,25 +1955,27 @@ val LPGentzenToArrow = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val replaceGentzen = store_thm ("replaceGentzen",
-  ``!E Gamma Gamma' Delta Delta'.
+Theorem replaceGentzen:
+    !E Gamma Gamma' Delta Delta'.
      replace Gamma Gamma' Delta Delta' ==>
      gentzenSequent E Delta' (deltaTranslation Delta) ==>
-     gentzenSequent E Gamma' (deltaTranslation Gamma)``,
+     gentzenSequent E Gamma' (deltaTranslation Gamma)
+Proof
     X_GEN_TAC ``E :'a gentzen_extension``
  >> Induct_on `replace`
  >> REPEAT STRIP_TAC
  >> `gentzenSequent E Delta (deltaTranslation Delta)` by PROVE_TAC [SeqAxiomGeneralized]
  >> `gentzenSequent E Gamma' (deltaTranslation Gamma)` by PROVE_TAC []
- >> PROVE_TAC [RightDot, deltaTranslation_def]);
+ >> PROVE_TAC [RightDot, deltaTranslation_def]
+QED
 
-val replaceGentzen' = store_thm (
-   "replaceGentzen'",
-  ``!Gamma Gamma' Delta Delta' C E.
+Theorem replaceGentzen':
+    !Gamma Gamma' Delta Delta' C E.
      replace Gamma Gamma' Delta Delta' /\
      gentzenSequent E Delta' (deltaTranslation Delta) /\
      gentzenSequent E Gamma C ==>
-     gentzenSequent E Gamma' C``,
+     gentzenSequent E Gamma' C
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC CutRuleSimpl
  >> EXISTS_TAC ``(deltaTranslation Gamma)``
@@ -1744,13 +1984,15 @@ val replaceGentzen' = store_thm (
       IMP_RES_TAC replaceGentzen,
       (* goal 2 (of 2) *)
       MATCH_MP_TAC SeqTermToForm \\
-      ASM_REWRITE_TAC [] ]);
+      ASM_REWRITE_TAC [] ]
+QED
 
-val replaceNatDed = store_thm ("replaceNatDed",
-  ``!E Gamma Gamma' Delta Delta'.
+Theorem replaceNatDed:
+    !E Gamma Gamma' Delta Delta'.
     replace Gamma Gamma' Delta Delta' ==>
     natDed E Delta' (deltaTranslation Delta) ==>
-    natDed E Gamma' (deltaTranslation Gamma)``,
+    natDed E Gamma' (deltaTranslation Gamma)
+Proof
     GEN_TAC
  >> HO_MATCH_MP_TAC replace_ind
  >> CONJ_TAC
@@ -1759,7 +2001,8 @@ val replaceNatDed = store_thm ("replaceNatDed",
  >> CONJ_TAC
  >> REPEAT STRIP_TAC
  >> MATCH_MP_TAC DotIntro
- >> RW_TAC bool_ss [NatAxiomGeneralized]);
+ >> RW_TAC bool_ss [NatAxiomGeneralized]
+QED
 
 (* E T1[A] T2[A] ==> ?T1[Delta]. X T1[Delta] T2[Delta] *)
 Definition condCutExt_def:
@@ -1769,13 +2012,16 @@ Definition condCutExt_def:
                  ==> ?Gamma'. E Gamma' Gamma /\ replace T1 Gamma' (OneForm A) Delta
 End
 
-val conditionOKNL = store_thm ("conditionOKNL", ``condCutExt NL_Sequent``,
+Theorem conditionOKNL:   condCutExt NL_Sequent
+Proof
     REWRITE_TAC [condCutExt_def]
  >> REPEAT GEN_TAC
  >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [NL_Sequent_def]
- >> RW_TAC std_ss [EMPTY_REL_DEF]);
+ >> RW_TAC std_ss [EMPTY_REL_DEF]
+QED
 
-val conditionOKNLP = store_thm ("conditionOKNLP", ``condCutExt NLP_Sequent``,
+Theorem conditionOKNLP:   condCutExt NLP_Sequent
+Proof
     REWRITE_TAC [condCutExt_def]
  >> REPEAT GEN_TAC
  >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [NLP_Sequent_cases]
@@ -1794,9 +2040,11 @@ val conditionOKNLP = store_thm ("conditionOKNLP", ``condCutExt NLP_Sequent``,
       EXISTS_TAC ``(Comma G B)`` \\
       CONJ_TAC >| (* 2 sub-goals here *)
       [ REWRITE_TAC [NLP_Sequent_rules],
-        MATCH_MP_TAC replaceLeft >> ASM_REWRITE_TAC [] ] ]);
+        MATCH_MP_TAC replaceLeft >> ASM_REWRITE_TAC [] ] ]
+QED
 
-val conditionOKL = store_thm ("conditionOKL", ``condCutExt L_Sequent``,
+Theorem conditionOKL:   condCutExt L_Sequent
+Proof
     REWRITE_TAC [condCutExt_def]
  >> REPEAT GEN_TAC
  >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [L_Sequent_cases]
@@ -1856,11 +2104,12 @@ val conditionOKL = store_thm ("conditionOKL", ``condCutExt L_Sequent``,
           EXISTS_TAC ``(Comma (Comma A' B) G')``                        \\
           CONJ_TAC >- REWRITE_TAC [L_Sequent_rules]                     \\
           MATCH_MP_TAC replaceRight                                     \\
-          ASM_REWRITE_TAC [] ] ] ]);
+          ASM_REWRITE_TAC [] ] ] ]
+QED
 
-val condAddExt = store_thm (
-   "condAddExt",
-  ``!E E'. condCutExt E /\ condCutExt E' ==> condCutExt (add_extension E E')``,
+Theorem condAddExt:
+    !E E'. condCutExt E /\ condCutExt E' ==> condCutExt (add_extension E E')
+Proof
     REPEAT GEN_TAC
  >> REWRITE_TAC [condCutExt_def, RUNION]
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
@@ -1871,12 +2120,13 @@ val condAddExt = store_thm (
       (* goal 2 (of 2) *)
       RES_TAC \\
       Q.EXISTS_TAC `Gamma'` \\
-      ASM_REWRITE_TAC [] ]);
+      ASM_REWRITE_TAC [] ]
+QED
 
-val CutNatDed = store_thm (
-   "CutNatDed",
-  ``!Delta A E Gamma C. natDed E Gamma C ==> condCutExt E ==> natDed E Delta A ==>
-        !Gamma'. replace Gamma Gamma' (OneForm A) Delta ==> natDed E Gamma' C``,
+Theorem CutNatDed:
+    !Delta A E Gamma C. natDed E Gamma C ==> condCutExt E ==> natDed E Delta A ==>
+        !Gamma'. replace Gamma Gamma' (OneForm A) Delta ==> natDed E Gamma' C
+Proof
     NTAC 2 GEN_TAC
  >> Induct_on `natDed`
  >> REPEAT CONJ_TAC (* 8 sub-goals here *)
@@ -1988,22 +2238,24 @@ val CutNatDed = store_thm (
         Q.EXISTS_TAC `Delta'`                                           \\
         Q.EXISTS_TAC `Gamma'''`                                         \\
         CONJ_TAC >- ASM_REWRITE_TAC []                                  \\
-        ASM_REWRITE_TAC [] ] ] );
+        ASM_REWRITE_TAC [] ] ]
+QED
 
-val natDedComposition = store_thm (
-   "natDedComposition",
-  ``!E Gamma F1 F2. condCutExt E /\ natDed E Gamma F1 /\ natDed E (OneForm F1) F2
-                ==> natDed E Gamma F2``,
+Theorem natDedComposition:
+    !E Gamma F1 F2. condCutExt E /\ natDed E Gamma F1 /\ natDed E (OneForm F1) F2
+                ==> natDed E Gamma F2
+Proof
     REPEAT STRIP_TAC
  >> irule CutNatDed
  >> ASM_REWRITE_TAC []
  >> take [`F1`, `Gamma`, `OneForm F1`]
- >> RW_TAC std_ss [replaceRoot]);
+ >> RW_TAC std_ss [replaceRoot]
+QED
 
 (* The easy direction, doesn't depend on new theorems in this section *)
-val natDedToGentzen = store_thm (
-   "natDedToGentzen",
-  ``!E Gamma C. natDed E Gamma C ==> gentzenSequent E Gamma C``,
+Theorem natDedToGentzen:
+    !E Gamma C. natDed E Gamma C ==> gentzenSequent E Gamma C
+Proof
     HO_MATCH_MP_TAC natDed_ind (* or: Induct_on `natDed` *)
  >> REPEAT STRIP_TAC (* 8 sub-goals here *)
  >| [ (* goal 1 (of 8) *)
@@ -2056,12 +2308,13 @@ val natDedToGentzen = store_thm (
       ASM_REWRITE_TAC [],
       (* goal 8 (of 8) *)
       MP_TAC (SPEC_ALL SeqExt) >> REPEAT STRIP_TAC                      \\
-      RES_TAC ]);
+      RES_TAC ]
+QED
 
 (* The hard direction, heavily depends on theorems proved recently *)
-val gentzenToNatDed = store_thm (
-   "gentzenToNatDed",
-  ``!E Gamma C. gentzenSequent E Gamma C ==> condCutExt E ==> natDed E Gamma C``,
+Theorem gentzenToNatDed:
+    !E Gamma C. gentzenSequent E Gamma C ==> condCutExt E ==> natDed E Gamma C
+Proof
     HO_MATCH_MP_TAC gentzenSequent_ind (* or: Induct_on `gentzenSequent` *)
  >> REPEAT CONJ_TAC (* 9 sub-goals here *)
  >| [ (* goal 1 (of 9) *)
@@ -2167,11 +2420,12 @@ val gentzenToNatDed = store_thm (
       Q.EXISTS_TAC `Delta'`                                             \\
       CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
       CONJ_TAC >- ASM_REWRITE_TAC []                                    \\
-      RES_TAC ]);
+      RES_TAC ]
+QED
 
-val gentzenEqNatDed = store_thm (
-   "gentzenEqNatDed",
-  ``!E Gamma C. condCutExt E ==> (gentzenSequent E Gamma C = natDed E Gamma C)``,
+Theorem gentzenEqNatDed:
+    !E Gamma C. condCutExt E ==> (gentzenSequent E Gamma C = natDed E Gamma C)
+Proof
     REPEAT STRIP_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -2179,28 +2433,32 @@ val gentzenEqNatDed = store_thm (
       irule gentzenToNatDed \\ (* 2 sub-goals sharing the same tactical *)
       ASM_REWRITE_TAC [],
       (* goal 2 (of 2) *)
-      REWRITE_TAC [natDedToGentzen] ]);
+      REWRITE_TAC [natDedToGentzen] ]
+QED
 
-val NLgentzenEqNatDed = store_thm (
-   "NLgentzenEqNatDed",
-  ``!Gamma C. gentzenSequent NL_Sequent Gamma C = natDed NL_Sequent Gamma C``,
+Theorem NLgentzenEqNatDed:
+    !Gamma C. gentzenSequent NL_Sequent Gamma C = natDed NL_Sequent Gamma C
+Proof
     REPEAT STRIP_TAC
  >> MP_TAC conditionOKNL
- >> REWRITE_TAC [gentzenEqNatDed]);
+ >> REWRITE_TAC [gentzenEqNatDed]
+QED
 
-val LgentzenEqNatDed = store_thm (
-   "LgentzenEqNatDed",
-  ``!Gamma C. gentzenSequent L_Sequent Gamma C = natDed L_Sequent Gamma C``,
+Theorem LgentzenEqNatDed:
+    !Gamma C. gentzenSequent L_Sequent Gamma C = natDed L_Sequent Gamma C
+Proof
     REPEAT STRIP_TAC
  >> MP_TAC conditionOKL
- >> REWRITE_TAC [gentzenEqNatDed]);
+ >> REWRITE_TAC [gentzenEqNatDed]
+QED
 
-val NLPgentzenEqNatDed = store_thm (
-   "NLPgentzenEqNatDed",
- ``!Gamma C. gentzenSequent NLP_Sequent Gamma C = natDed NLP_Sequent Gamma C``,
+Theorem NLPgentzenEqNatDed:
+   !Gamma C. gentzenSequent NLP_Sequent Gamma C = natDed NLP_Sequent Gamma C
+Proof
     REPEAT STRIP_TAC
  >> MP_TAC conditionOKNLP
- >> REWRITE_TAC [gentzenEqNatDed]);
+ >> REWRITE_TAC [gentzenEqNatDed]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -2208,35 +2466,38 @@ val NLPgentzenEqNatDed = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val natDedToArrow = store_thm (
-   "natDedToArrow",
-  ``!E X Gamma A. gentzenToArrowExt E X ==>
-                  natDed E Gamma A ==> arrow X (deltaTranslation Gamma) A``,
+Theorem natDedToArrow:
+    !E X Gamma A. gentzenToArrowExt E X ==>
+                  natDed E Gamma A ==> arrow X (deltaTranslation Gamma) A
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC gentzenToArrow
  >> Q.EXISTS_TAC `E`
  >> CONJ_TAC
  >- ASM_REWRITE_TAC []
  >> MATCH_MP_TAC natDedToGentzen
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
-val natDedToArrow_E = store_thm (
-   "natDedToArrow_E",
-  ``!E Gamma A. natDed E Gamma A ==> arrow (ToArrowExt E) (deltaTranslation Gamma) A``,
+Theorem natDedToArrow_E:
+    !E Gamma A. natDed E Gamma A ==> arrow (ToArrowExt E) (deltaTranslation Gamma) A
+Proof
     REPEAT GEN_TAC
  >> MP_TAC (Q.SPEC `E` gentzenToArrowExt_thm)
- >> REWRITE_TAC [natDedToArrow]);
+ >> REWRITE_TAC [natDedToArrow]
+QED
 
-val arrowToNatDed = store_thm (
-   "arrowToNatDed",
-  ``!E X A B. condCutExt E /\ arrowToGentzenExt X E /\ arrow X A B
-          ==> natDed E (OneForm A) B``,
+Theorem arrowToNatDed:
+    !E X A B. condCutExt E /\ arrowToGentzenExt X E /\ arrow X A B
+          ==> natDed E (OneForm A) B
+Proof
     REPEAT STRIP_TAC
  >> irule gentzenToNatDed
  >> ASM_REWRITE_TAC []
  >> irule arrowToGentzen
  >> Q.EXISTS_TAC `X`
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
 (******************************************************************************)
 (*                                                                            *)

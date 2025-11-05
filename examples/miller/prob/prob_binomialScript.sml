@@ -66,18 +66,19 @@ End
 (*      prob bern {s | FST (prob_binomial n s) = m} = binomial n m / 2 pow n *)
 (* ------------------------------------------------------------------------- *)
 
-val INDEP_FN_PROB_BINOMIAL = store_thm
-  ("INDEP_FN_PROB_BINOMIAL",
-   ``!n. prob_binomial n IN indep_fn``,
+Theorem INDEP_FN_PROB_BINOMIAL:
+     !n. prob_binomial n IN indep_fn
+Proof
    Induct
    ++ RW_TAC std_ss [prob_binomial_def, INDEP_FN_SDEST, INDEP_FN_BIND,
-                     INDEP_FN_UNIT]);
+                     INDEP_FN_UNIT]
+QED
 
-val PROB_BERN_BINOMIAL = store_thm
-  ("PROB_BERN_BINOMIAL",
-   ``!n m.
+Theorem PROB_BERN_BINOMIAL:
+     !n m.
        prob bern {s | FST (prob_binomial n s) = m} =
-       &(binomial n m) * (1 / 2) pow n``,
+       &(binomial n m) * (1 / 2) pow n
+Proof
    Induct
    >> (Cases
        ++ RW_TAC arith_ss [prob_binomial_def, UNIT_DEF, binomial_def,
@@ -135,5 +136,6 @@ val PROB_BERN_BINOMIAL = store_thm
    ++ Know `!a b c d : real. (a = b) /\ (c = d) ==> (a + c = d + b)`
    >> REAL_ARITH_TAC
    ++ DISCH_THEN MATCH_MP_TAC
-   ++ PROVE_TAC [REAL_MUL_ASSOC, REAL_MUL_SYM]);
+   ++ PROVE_TAC [REAL_MUL_ASSOC, REAL_MUL_SYM]
+QED
 

@@ -6,13 +6,14 @@ val _ = ParseExtras.temp_loose_equality()
 
 val ARW_TAC = RW_TAC arith_ss;
 
-val int_is_ring = store_thm
-    ("int_is_ring",
-     “is_ring (ring int_0 int_1 $+ $* $~)”,
+Theorem int_is_ring:
+      is_ring (ring int_0 int_1 $+ $* $~)
+Proof
 ARW_TAC [ is_ring_def, ring_accessors, INT_0, INT_1,
           INT_ADD_RINV, INT_RDISTRIB,
           INT_ADD_ASSOC, INT_MUL_ASSOC, INT_ADD_LID, INT_MUL_LID] THEN
-MAP_FIRST MATCH_ACCEPT_TAC [ INT_ADD_SYM, INT_MUL_SYM ]);
+MAP_FIRST MATCH_ACCEPT_TAC [ INT_ADD_SYM, INT_MUL_SYM ]
+QED
 
 val int_ring_thms =
   EVAL_ringLib.store_ring { Name = "int", Theory = int_is_ring };

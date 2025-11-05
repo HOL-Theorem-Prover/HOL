@@ -29,7 +29,7 @@ Definition wellfounded_def:
   wellfounded R <=>
    !s. (?w. w IN s) ==> ?min. min IN s /\ !w. (w,min) IN R ==> w NOTIN s
 End
-val _ = overload_on ("Wellfounded", ``wellfounded``);
+Overload Wellfounded = ``wellfounded``
 
 Theorem wellfounded_WF:
     !R. wellfounded R <=> WF (CURRY R)
@@ -91,11 +91,11 @@ Definition elsOf_def:
   elsOf w = domain (destWO w) UNION range (destWO w)
 End
 
-val _ = overload_on("WIN", ``\p w. p IN strict (destWO w)``)
+Overload WIN = ``\p w. p IN strict (destWO w)``
 val _ = set_fixity "WIN" (Infix(NONASSOC, 425))
-val _ = overload_on("WLE", ``\p w. p IN destWO w``)
+Overload WLE = ``\p w. p IN destWO w``
 val _ = set_fixity "WLE" (Infix(NONASSOC, 425))
-val _ = overload_on ("wrange", ``\w. range (destWO w)``)
+Overload wrange = ``\w. range (destWO w)``
 
 Theorem WIN_elsOf:
     (x,y) WIN w ==> x IN elsOf w /\ y IN elsOf w
@@ -118,13 +118,12 @@ Proof
   fs[elsOf_def, wellorder_def, strict_def, linear_order_def] >> metis_tac[]
 QED
 
-Theorem WIN_REFL:
+Theorem WIN_REFL[simp]:
     (x,x) WIN w <=> F
 Proof
   `wellorder (destWO w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def, strict_def]
 QED
-val _ = export_rewrites ["WIN_REFL"]
 
 Theorem WLE_TRANS:
     (x,y) WLE w /\ (y,z) WLE w ==> (x,z) WLE w
@@ -499,9 +498,10 @@ Proof
   rw[Once SPECIFICATION]
 QED
 
-val FINITE_IMAGE_INJfn = prove(
-  ``!s. (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
-        (FINITE (IMAGE f s) = FINITE s)``,
+Theorem FINITE_IMAGE_INJfn[local]:
+    !s. (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
+        (FINITE (IMAGE f s) = FINITE s)
+Proof
   rpt strip_tac >> simp[EQ_IMP_THM, IMAGE_FINITE] >>
   qsuff_tac `!t. FINITE t ==>
                  !s'. s' SUBSET s /\ (t = IMAGE f s') ==> FINITE s'`
@@ -517,17 +517,20 @@ val FINITE_IMAGE_INJfn = prove(
   strip_tac >> qx_gen_tac `x` >>
   `!x. x IN s' ==> x IN s` by fs[SUBSET_DEF] >>
   Cases_on `x = f d` >> asm_simp_tac(srw_ss() ++ CONJ_ss)[] >- rw[] >>
-  first_x_assum (qspec_then `x` mp_tac) >> simp[] >> metis_tac []);
+  first_x_assum (qspec_then `x` mp_tac) >> simp[] >> metis_tac []
+QED
 
-val IMAGE_CARD_INJfn = prove(
-  ``!s. FINITE s /\ (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
-        (CARD (IMAGE f s) = CARD s)``,
+Theorem IMAGE_CARD_INJfn[local]:
+    !s. FINITE s /\ (!x y. x IN s /\ y IN s ==> ((f x = f y) = (x = y))) ==>
+        (CARD (IMAGE f s) = CARD s)
+Proof
   rpt strip_tac >>
   qsuff_tac `!t. FINITE t ==> t SUBSET s ==> (CARD (IMAGE f t) = CARD t)`
     >- metis_tac [SUBSET_REFL] >>
   Induct_on `FINITE t` >> simp[] >> rpt strip_tac >>
   `!x. x IN t ==> x IN s` by fs[SUBSET_DEF] >>
-  asm_simp_tac (srw_ss() ++ CONJ_ss) []);
+  asm_simp_tac (srw_ss() ++ CONJ_ss) []
+QED
 
 Theorem wobounds_preserve_bijections:
     BIJ f (elsOf w1) (elsOf w2) /\ x IN elsOf w1 /\
@@ -586,9 +589,11 @@ Definition wo2wo_def:
                    else wleast w2 s1)
 End
 
-val restrict_away = prove(
-  ``IMAGE (RESTRICT f (\x y. (x,y) WIN w) x) (iseg w x) = IMAGE f (iseg w x)``,
-  rw[EXTENSION, RESTRICT_DEF, iseg_def] >> srw_tac[CONJ_ss][]);
+Theorem restrict_away[local]:
+    IMAGE (RESTRICT f (\x y. (x,y) WIN w) x) (iseg w x) = IMAGE f (iseg w x)
+Proof
+  rw[EXTENSION, RESTRICT_DEF, iseg_def] >> srw_tac[CONJ_ss][]
+QED
 
 Theorem wo2wo_thm =
   wo2wo_def |> concl |> strip_forall |> #2 |> rhs |> strip_comb |> #2
@@ -658,9 +663,8 @@ Proof
   metis_tac [wo2wo_EQ_NONE, option_CASES]
 QED
 
-val _ = overload_on (
-  "woseg",
-  ``\w1 w2 x. IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)``)
+Overload woseg =
+  ``\w1 w2 x. IMAGE THE (IMAGE (wo2wo w1 w2) (iseg w1 x) DELETE NONE)``
 
 Theorem mono_woseg:
     (x1,x2) WIN w1 ==> woseg w1 w2 x1 SUBSET woseg w1 w2 x2
@@ -668,13 +672,15 @@ Proof
   simp_tac(srw_ss() ++ DNF_ss) [SUBSET_DEF, iseg_def]>> metis_tac [WIN_TRANS]
 QED
 
-val wo2wo_injlemma = prove(
-  ``(x,y) WIN w1 /\ (wo2wo w1 w2 y = SOME z) ==> (wo2wo w1 w2 x <> SOME z)``,
+Theorem wo2wo_injlemma[local]:
+    (x,y) WIN w1 /\ (wo2wo w1 w2 y = SOME z) ==> (wo2wo w1 w2 x <> SOME z)
+Proof
   rw[Once wo2wo_thm, LET_THM, SimpL ``$==>``] >> strip_tac >>
   `z IN woseg w1 w2 y`
      by (asm_simp_tac (srw_ss() ++ DNF_ss) [] >> qexists_tac `x` >>
          simp[iseg_def]) >>
-  metis_tac [wleast_IN_wo]);
+  metis_tac [wleast_IN_wo]
+QED
 
 Theorem wo2wo_11:
     x1 IN elsOf w1 /\ x2 IN elsOf w1 /\ (wo2wo w1 w2 x1 = SOME y) /\
@@ -813,28 +819,25 @@ QED
 Definition wZERO_def:  wZERO = mkWO {}
 End
 
-Theorem elsOf_wZERO:
+Theorem elsOf_wZERO[simp]:
     elsOf wZERO = {}
 Proof
   simp[wZERO_def, elsOf_def, destWO_mkWO,
        wellorder_EMPTY, EXTENSION, in_domain, in_range]
 QED
-val _ = export_rewrites ["elsOf_wZERO"]
 
-Theorem WIN_wZERO:
+Theorem WIN_wZERO[simp]:
     (x,y) WIN wZERO <=> F
 Proof
   simp[wZERO_def, destWO_mkWO, wellorder_EMPTY,
        strict_def]
 QED
-val _ = export_rewrites ["WIN_wZERO"]
 
-Theorem WLE_wZERO:
+Theorem WLE_wZERO[simp]:
     (x,y) WLE wZERO <=> F
 Proof
   simp[wZERO_def, destWO_mkWO, wellorder_EMPTY]
 QED
-val _ = export_rewrites ["WLE_wZERO"]
 
 Theorem orderiso_wZERO:
     orderiso wZERO w <=> (w = wZERO)
@@ -847,14 +850,13 @@ Proof
        FORALL_PROD]
 QED
 
-Theorem elsOf_EQ_EMPTY:
+Theorem elsOf_EQ_EMPTY[simp]:
     (elsOf w = {}) <=> (w = wZERO)
 Proof
   simp[EQ_IMP_THM] >> strip_tac >>
   qsuff_tac `orderiso w wZERO` >- metis_tac [orderiso_wZERO, orderiso_SYM] >>
   simp[orderiso_thm, BIJ_EMPTY] >> metis_tac [WIN_elsOf, NOT_IN_EMPTY]
 QED
-val _ = export_rewrites ["elsOf_EQ_EMPTY"]
 
 Theorem LT_wZERO:
     orderlt w wZERO = F

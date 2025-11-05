@@ -261,14 +261,15 @@ val lisp_inv_NIL = lisp_inv_Sym
 val lisp_inv_T = save_thm("lisp_inv_T",lisp_inv_Sym
   |> CONJUNCTS |> tl |> hd |> UNDISCH |> CONJUNCTS |> hd |> DISCH_ALL |> GEN_ALL);
 
-val mc_symbol_less_thm = store_thm("mc_symbol_less_thm",
-  ``lisp_inv ^STAT (x0,x1,x2,x3,x4,x5,^VAR_REST)
+Theorem mc_symbol_less_thm:
+    lisp_inv ^STAT (x0,x1,x2,x3,x4,x5,^VAR_REST)
        (w0,w1,w2,w3,w4,w5,df,f,^REST) ==> isSym x0 /\ isSym x1 ==>
     ?fi w0i w1i w2i w3i.
       mc_symbol_less_pre (w2w w0,w2w w1,sp,df,f,dg,g) /\
       (mc_symbol_less (w2w w0,w2w w1,sp,df,f,dg,g) = (tw0,w2w w0i,w2w w1i,w2w w2i,w2w w3i,sp,df,fi,dg,g)) /\
       lisp_inv ^STAT (LISP_SYMBOL_LESS x0 x1,Sym "NIL",Sym "NIL",Sym "NIL",x4,x5,^VAR_REST)
-        (w0i,w1i,w2i,w3i,w4,w5,df,fi,^REST)``,
+        (w0i,w1i,w2i,w3i,w4,w5,df,fi,^REST)
+Proof
   SIMP_TAC std_ss [AND_IMP_INTRO]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(b1 ==> b1 /\ b2 /\ b3 ==> b4) ==> (b1 /\ b2 /\ b3 ==> b4)``)
   \\ STRIP_TAC \\ SIMP_TAC std_ss [Once lisp_inv_def]
@@ -343,7 +344,8 @@ val mc_symbol_less_thm = store_thm("mc_symbol_less_thm",
   THEN1 (MATCH_MP_TAC lisp_inv_T \\ Q.LIST_EXISTS_TAC [`x0`,`w0`]
          \\ FULL_SIMP_TAC std_ss [])
   THEN1 (MATCH_MP_TAC lisp_inv_NIL \\ Q.LIST_EXISTS_TAC [`x0`,`w0`]
-         \\ FULL_SIMP_TAC std_ss []));
+         \\ FULL_SIMP_TAC std_ss [])
+QED
 
 
 (* helper function *)
@@ -398,16 +400,20 @@ Definition IO_INPUT_APPLY_def:
   IO_INPUT_APPLY f io = REPLACE_INPUT_IO (f (getINPUT io)) io
 End
 
-val IO_INPUT_LEMMA = store_thm("IO_INPUT_LEMMA",
-  ``(IO_READ (REPLACE_INPUT_IO (w::ws) io) = n2w (ORD w)) /\
+Theorem IO_INPUT_LEMMA:
+    (IO_READ (REPLACE_INPUT_IO (w::ws) io) = n2w (ORD w)) /\
     (IO_NEXT (REPLACE_INPUT_IO (w::ws) io) = REPLACE_INPUT_IO ws io) /\
     (IO_READ (REPLACE_INPUT_IO [] io) = ~0w) /\
-    (REPLACE_INPUT_IO (getINPUT io) io = io)``,
-  Cases_on `io` \\ SIMP_TAC std_ss [REPLACE_INPUT_IO_def,IO_READ_def,IO_NEXT_def,getINPUT_def]);
+    (REPLACE_INPUT_IO (getINPUT io) io = io)
+Proof
+  Cases_on `io` \\ SIMP_TAC std_ss [REPLACE_INPUT_IO_def,IO_READ_def,IO_NEXT_def,getINPUT_def]
+QED
 
-val IO_WRITE_APPEND = store_thm("IO_WRITE_APPEND",
-  ``!io x1 x2. IO_WRITE (IO_WRITE io x1) x2 = IO_WRITE io (x1 ++ x2)``,
-  Cases \\ ASM_SIMP_TAC std_ss [IO_WRITE_def,APPEND_ASSOC,MAP_APPEND]);
+Theorem IO_WRITE_APPEND:
+    !io x1 x2. IO_WRITE (IO_WRITE io x1) x2 = IO_WRITE io (x1 ++ x2)
+Proof
+  Cases \\ ASM_SIMP_TAC std_ss [IO_WRITE_def,APPEND_ASSOC,MAP_APPEND]
+QED
 
 Definition null_term_str_def:
   null_term_str a df f str =
@@ -515,13 +521,15 @@ Definition zIO_R_def:
      SEP_EXISTS ioi. zR 0x1w ioi * zIO (iow,ior,iod,ioi) io
 End
 
-val SPEC_EXISTS_EXISTS = store_thm("SPEC_EXISTS_EXISTS",
-  ``(!x. SPEC m (P x) c (Q x)) ==> SPEC m (SEP_EXISTS x. P x) c (SEP_EXISTS x. Q x)``,
+Theorem SPEC_EXISTS_EXISTS:
+    (!x. SPEC m (P x) c (Q x)) ==> SPEC m (SEP_EXISTS x. P x) c (SEP_EXISTS x. Q x)
+Proof
   SIMP_TAC std_ss [GSYM progTheory.SPEC_PRE_EXISTS]
   \\ REPEAT STRIP_TAC \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `x`)
   \\ IMP_RES_TAC progTheory.SPEC_WEAKEN
   \\ POP_ASSUM MATCH_MP_TAC
-  \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS_THM] \\ METIS_TAC []
+QED
 
 val ff = subst [IO |-> ``zIO``,
                 IOR |-> ``zIO_R``]
@@ -2990,12 +2998,13 @@ val (mc_print_nl_spec,mc_print_nl_def) = basic_decompile_strings x64_tools "mc_p
 
 val _ = save_thm("mc_print_nl_spec",mc_print_nl_spec);
 
-val mc_print_nl_thm = store_thm("mc_print_nl_thm",
-  ``^LISP ==>
+Theorem mc_print_nl_thm:
+    ^LISP ==>
     ?g2. mc_print_nl_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_nl (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io "\n")) /\
-         let (g,io) = (g2,IO_WRITE io "\n") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io "\n") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_nl_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3015,7 +3024,8 @@ val mc_print_nl_thm = store_thm("mc_print_nl_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print num *)
@@ -3381,12 +3391,13 @@ val (mc_print_sp_spec,mc_print_sp_def) = basic_decompile_strings x64_tools "mc_p
 
 val _ = save_thm("mc_print_sp_spec",mc_print_sp_spec);
 
-val mc_print_sp_thm = store_thm("mc_print_sp_thm",
-  ``^LISP ==>
+Theorem mc_print_sp_thm:
+    ^LISP ==>
     ?g2. mc_print_sp_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_sp (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io " ")) /\
-         let (g,io) = (g2,IO_WRITE io " ") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io " ") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_sp_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3406,7 +3417,8 @@ val mc_print_sp_thm = store_thm("mc_print_sp_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print "'" *)
@@ -3425,12 +3437,13 @@ val (mc_print_qt_spec,mc_print_qt_def) = basic_decompile_strings x64_tools "mc_p
 
 val _ = save_thm("mc_print_qt_spec",mc_print_qt_spec);
 
-val mc_print_qt_thm = store_thm("mc_print_qt_thm",
-  ``^LISP ==>
+Theorem mc_print_qt_thm:
+    ^LISP ==>
     ?g2. mc_print_qt_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_qt (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io "'")) /\
-         let (g,io) = (g2,IO_WRITE io "'") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io "'") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_qt_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3450,7 +3463,8 @@ val mc_print_qt_thm = store_thm("mc_print_qt_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print "(" *)
@@ -3469,12 +3483,13 @@ val (mc_print_open_spec,mc_print_open_def) = basic_decompile_strings x64_tools "
 
 val _ = save_thm("mc_print_open_spec",mc_print_open_spec);
 
-val mc_print_open_thm = store_thm("mc_print_open_thm",
-  ``^LISP ==>
+Theorem mc_print_open_thm:
+    ^LISP ==>
     ?g2. mc_print_open_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_open (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io "(")) /\
-         let (g,io) = (g2,IO_WRITE io "(") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io "(") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_open_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3494,7 +3509,8 @@ val mc_print_open_thm = store_thm("mc_print_open_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print ")" *)
@@ -3513,12 +3529,13 @@ val (mc_print_close_spec,mc_print_close_def) = basic_decompile_strings x64_tools
 
 val _ = save_thm("mc_print_close_spec",mc_print_close_spec);
 
-val mc_print_close_thm = store_thm("mc_print_close_thm",
-  ``^LISP ==>
+Theorem mc_print_close_thm:
+    ^LISP ==>
     ?g2. mc_print_close_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_close (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io ")")) /\
-         let (g,io) = (g2,IO_WRITE io ")") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io ")") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_close_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3538,7 +3555,8 @@ val mc_print_close_thm = store_thm("mc_print_close_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* print " . " *)
@@ -3559,12 +3577,13 @@ val (mc_print_dot_spec,mc_print_dot_def) = basic_decompile_strings x64_tools "mc
 
 val _ = save_thm("mc_print_dot_spec",mc_print_dot_spec);
 
-val mc_print_dot_thm = store_thm("mc_print_dot_thm",
-  ``^LISP ==>
+Theorem mc_print_dot_thm:
+    ^LISP ==>
     ?g2. mc_print_dot_pre (EL 0 cs,sp,df,f,dg,g,io) /\
          (mc_print_dot (EL 0 cs,sp,df,f,dg,g,io) =
            (EL 0 cs,tw0,tw1,sp,df,f,dg,g2,IO_WRITE io " . ")) /\
-         let (g,io) = (g2,IO_WRITE io " . ") in ^LISP``,
+         let (g,io) = (g2,IO_WRITE io " . ") in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_dot_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3585,7 +3604,8 @@ val mc_print_dot_thm = store_thm("mc_print_dot_thm",
    (FULL_SIMP_TAC std_ss [null_term_str_def,one_string_def,MAP,APPEND,
       ORD_CHR_RWT,EVERY_DEF,CHR_11] \\ METIS_TAC [])
   \\ IMP_RES_TAC null_term_str_IMP
-  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]);
+  \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC [lisp_inv_ignore_io]
+QED
 
 
 (* call stats function 1 *)
@@ -3610,12 +3630,13 @@ val (mc_print_stats1_spec,mc_print_stats1_def) = basic_decompile_strings x64_too
 
 val _ = save_thm("mc_print_stats1_spec",mc_print_stats1_spec);
 
-val mc_print_stats1_thm = store_thm("mc_print_stats1_thm",
-  ``^LISP ==>
+Theorem mc_print_stats1_thm:
+    ^LISP ==>
     ?g2. mc_print_stats1_pre (EL 2 cs,tw0,bp,sp,w2w w0,wi,we,df,f,io) /\
          (mc_print_stats1 (EL 2 cs,tw0,bp,sp,w2w w0,wi,we,df,f,io) =
            (EL 2 cs,tw0,tw1,we >>> 1,bp,sp,w2w w0,wi,we,df,f,IO_STATS 1 io)) /\
-         let (io,tw2) = (IO_STATS 1 io,we >>> 1) in ^LISP``,
+         let (io,tw2) = (IO_STATS 1 io,we >>> 1) in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_stats1_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3625,7 +3646,8 @@ val mc_print_stats1_thm = store_thm("mc_print_stats1_thm",
   THEN1 (METIS_TAC [lisp_inv_ignore_io,lisp_inv_ignore_tw2])
   \\ FULL_SIMP_TAC wstd_ss [w2n_n2w]
   \\ FULL_SIMP_TAC std_ss [lisp_inv_def,GSYM word_mul_n2w]
-  \\ Q.SPEC_TAC (`(n2w i):word64`,`w`) \\ blastLib.BBLAST_TAC);
+  \\ Q.SPEC_TAC (`(n2w i):word64`,`w`) \\ blastLib.BBLAST_TAC
+QED
 
 
 (* call stats function 2 *)
@@ -3650,12 +3672,13 @@ val (mc_print_stats2_spec,mc_print_stats2_def) = basic_decompile_strings x64_too
 
 val _ = save_thm("mc_print_stats2_spec",mc_print_stats2_spec);
 
-val mc_print_stats2_thm = store_thm("mc_print_stats2_thm",
-  ``^LISP ==>
+Theorem mc_print_stats2_thm:
+    ^LISP ==>
     ?g2. mc_print_stats2_pre (EL 2 cs,tw0,bp,sp,w2w w0,wi,we,df,f,io) /\
          (mc_print_stats2 (EL 2 cs,tw0,bp,sp,w2w w0,wi,we,df,f,io) =
            (EL 2 cs,tw0,tw1,we >>> 1,bp,sp,w2w w0,wi,we,df,f,IO_STATS 2 io)) /\
-         let (io,tw2) = (IO_STATS 2 io,we >>> 1) in ^LISP``,
+         let (io,tw2) = (IO_STATS 2 io,we >>> 1) in ^LISP
+Proof
   SIMP_TAC std_ss [LET_DEF,mc_print_stats2_def] \\ STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_cs_read
   \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,EMPTY_SUBSET]
@@ -3665,5 +3688,6 @@ val mc_print_stats2_thm = store_thm("mc_print_stats2_thm",
   THEN1 (METIS_TAC [lisp_inv_ignore_io,lisp_inv_ignore_tw2])
   \\ FULL_SIMP_TAC wstd_ss [w2n_n2w]
   \\ FULL_SIMP_TAC std_ss [lisp_inv_def,GSYM word_mul_n2w]
-  \\ Q.SPEC_TAC (`(n2w i):word64`,`w`) \\ blastLib.BBLAST_TAC);
+  \\ Q.SPEC_TAC (`(n2w i):word64`,`w`) \\ blastLib.BBLAST_TAC
+QED
 

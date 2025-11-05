@@ -1050,7 +1050,7 @@ Proof
   irule LESS_LESS_EQ_TRANS >> goal_assum drule >> simp[]
 QED
 
-Triviality MIN_lemma:
+Theorem MIN_lemma[local]:
   l <> 0 ==> MIN k (l - 1) + 1 = MIN (k+1) l
 Proof
   rw [MIN_DEF] \\ gvs []
@@ -1096,7 +1096,7 @@ Theorem cv_word_extract[cv_rep] =
   “from_word (word_extract h l (w:'a word) : 'b word)”
   |> SIMP_CONV std_ss [word_extract_def,cv_rep_word_w2w,cv_word_bits_thm];
 
-Triviality word_join_add:
+Theorem word_join_add[local]:
   FINITE univ(:'a) /\ FINITE univ(:'b) ==>
   word_join (v:'a word) (w:'b word) =
   (w2w v << dimindex (:'b)) + w2w w

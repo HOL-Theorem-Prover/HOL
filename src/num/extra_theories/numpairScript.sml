@@ -5,7 +5,6 @@ Libs
   HolKernel boolLib Parse BasicProvers TotalDefn numSimps numLib
   simpLib metisLib
 
-fun Store_thm(trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 fun fs ths = FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
 fun simp ths = ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) ths
 val metis_tac = METIS_TAC
@@ -33,10 +32,11 @@ Proof
   Q.EXISTS_TAC `0` THEN SRW_TAC [ARITH_ss][twotri_formula]
 QED
 
-val tri_eq_0 = Store_thm(
-  "tri_eq_0",
-  ``((tri n = 0) <=> (n = 0)) /\ ((0 = tri n) <=> (n = 0))``,
-  Cases_on `n` THEN SRW_TAC [ARITH_ss][tri_def]);
+Theorem tri_eq_0[simp]:
+  ((tri n = 0) <=> (n = 0)) /\ ((0 = tri n) <=> (n = 0))
+Proof
+  Cases_on `n` THEN SRW_TAC [ARITH_ss][tri_def]
+QED
 
 val DECIDE_TAC = SRW_TAC [ARITH_ss][]
 Theorem tri_LT_I:
@@ -46,25 +46,28 @@ Proof
   RES_TAC THEN DECIDE_TAC
 QED
 
-val tri_LT = Store_thm(
-  "tri_LT",
-  ``!n m. tri n < tri m <=> n < m``,
+Theorem tri_LT[simp]:
+  !n m. tri n < tri m <=> n < m
+Proof
   SRW_TAC [][EQ_IMP_THM, tri_LT_I] THEN
   SPOSE_NOT_THEN ASSUME_TAC THEN
   `(n = m) \/ m < n` by DECIDE_TAC THEN1 FULL_SIMP_TAC (srw_ss()) [] THEN
-  METIS_TAC [prim_recTheory.LESS_REFL, tri_LT_I, LESS_TRANS]);
+  METIS_TAC [prim_recTheory.LESS_REFL, tri_LT_I, LESS_TRANS]
+QED
 
-val tri_11 = Store_thm(
-  "tri_11",
-  ``!m n. (tri m = tri n) <=> (m = n)``,
+Theorem tri_11[simp]:
+  !m n. (tri m = tri n) <=> (m = n)
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN
   `m < n \/ n < m \/ (m = n)` by DECIDE_TAC THEN
-  METIS_TAC [tri_LT_I, prim_recTheory.LESS_REFL]);
+  METIS_TAC [tri_LT_I, prim_recTheory.LESS_REFL]
+QED
 
-val tri_LE = Store_thm(
-  "tri_LE",
-  ``!m n. tri m <= tri n <=> m <= n``,
-  SRW_TAC [][LESS_OR_EQ]);
+Theorem tri_LE[simp]:
+  !m n. tri m <= tri n <=> m <= n
+Proof
+  SRW_TAC [][LESS_OR_EQ]
+QED
 
 Definition invtri0_def:
   invtri0 n a = if n < a + 1 then (n,a)
@@ -111,12 +114,13 @@ Proof
   SRW_TAC [ARITH_ss][tri_def]
 QED
 
-val invtri_linverse = Store_thm(
-  "invtri_linverse",
-  ``invtri (tri n) = n``,
+Theorem invtri_linverse[simp]:
+  invtri (tri n) = n
+Proof
   MAP_EVERY (MP_TAC o Q.INST [`n` |-> `tri n`])
             [invtri_upper, invtri_lower] THEN
-  SRW_TAC [ARITH_ss][]);
+  SRW_TAC [ARITH_ss][]
+QED
 
 Theorem invtri_unique:
     tri y <= n /\ n < tri (y + 1) ==> (invtri n = y)
@@ -166,7 +170,7 @@ End
 
 val _ = set_fixity "*," (Infixr 601)
 val _ = Unicode.unicode_version {tmnm = "*,", u = UTF8.chr 0x2297 (* \otimes *)}
-val _ = overload_on ("*,", ``npair``)
+Overload "*," = ``npair``
 val _ = TeX_notation {TeX = ("\\ensuremath{\\otimes}", 1), hol = "*,"}
 val _ = TeX_notation {TeX = ("\\ensuremath{\\otimes}", 1),
                       hol = UTF8.chr 0x2297}
@@ -180,17 +184,19 @@ Definition nsnd_def:
   nsnd n = n - tri (invtri n)
 End
 
-val nfst_npair = Store_thm(
-  "nfst_npair",
-  ``nfst (x *, y) = x``,
+Theorem nfst_npair[simp]:
+  nfst (x *, y) = x
+Proof
   SRW_TAC [][nfst_def, npair_def] THEN
-  SRW_TAC [ARITH_ss][invtri_linverse_r]);
+  SRW_TAC [ARITH_ss][invtri_linverse_r]
+QED
 
-val nsnd_npair = Store_thm(
-  "nsnd_npair",
-  ``nsnd (x *, y) = y``,
+Theorem nsnd_npair[simp]:
+  nsnd (x *, y) = y
+Proof
   SRW_TAC [][nsnd_def, npair_def] THEN
-  SRW_TAC [ARITH_ss][invtri_linverse_r]);
+  SRW_TAC [ARITH_ss][invtri_linverse_r]
+QED
 
 Theorem npair_cases:
     !n. ?x y. n = (x *, y)
@@ -204,19 +210,21 @@ Proof
   ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
 QED
 
-val npair = Store_thm(
-  "npair",
-  ``!n. (nfst n *, nsnd n) = n``,
+Theorem npair[simp]:
+  !n. (nfst n *, nsnd n) = n
+Proof
   STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC npair_cases THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val npair_11 = Store_thm(
-  "npair_11",
-  ``(x1 *, y1 = x2 *, y2) <=> (x1 = x2) /\ (y1 = y2)``,
+Theorem npair_11[simp]:
+  (x1 *, y1 = x2 *, y2) <=> (x1 = x2) /\ (y1 = y2)
+Proof
   SRW_TAC [][EQ_IMP_THM] THENL [
     POP_ASSUM (MP_TAC o Q.AP_TERM `nfst`) THEN SRW_TAC [][],
     POP_ASSUM (MP_TAC o Q.AP_TERM `nsnd`) THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
 Theorem nfst_le:
     nfst n <= n
@@ -314,4 +322,3 @@ Proof
  >> MATCH_MP_TAC tri_LT_I
  >> SRW_TAC [ARITH_ss] []
 QED
-

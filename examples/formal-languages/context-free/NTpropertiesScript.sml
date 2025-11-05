@@ -459,7 +459,7 @@ Proof
   metis_tac[]
 QED
 
-Triviality heads_give_first:
+Theorem heads_give_first[local]:
   FLAT (MAP ptree_fringe subs) = tk :: rest ⇒
     ∃p sym s r0.
       p ++ [sym] ++ s = subs ∧ ptree_fringe sym = tk :: r0 ∧
@@ -481,7 +481,7 @@ Proof
   simp[nullable_def] >> rw[] >> metis_tac [valid_ptree_derive]
 QED
 
-Triviality MEM_last_strip:
+Theorem MEM_last_strip[local]:
   ∀l. MEM e l ⇒ ∃p s. l = p ++ [e] ++ s ∧ ¬MEM e s
 Proof metis_tac[MEM_SPLIT_APPEND_last]
 QED

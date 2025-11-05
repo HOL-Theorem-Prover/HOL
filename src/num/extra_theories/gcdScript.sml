@@ -117,12 +117,11 @@ Theorem GCD_IS_GREATEST_COMMON_DIVISOR =
   REWRITE_RULE [IS_GCD] GCD_IS_GCD
 
 
-Theorem GCD_REF:
+Theorem GCD_REF[simp]:
                         !a. gcd a a = a
 Proof
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_REF]
 QED
-val _ = export_rewrites ["GCD_REF"]
 
 Theorem GCD_SYM:
                         !a b. gcd a b = gcd b a
@@ -133,19 +132,17 @@ QED
 (* |- gcd a b = gcd b a *)
 Theorem GCD_COMM = GCD_SYM |> SPEC_ALL;
 
-Theorem GCD_0R:
+Theorem GCD_0R[simp]:
                         !a. gcd a 0 = a
 Proof
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0R]
 QED
-val _ = export_rewrites ["GCD_0R"]
 
-Theorem GCD_0L:
+Theorem GCD_0L[simp]:
                         !a. gcd 0 a = a
 Proof
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0L]
 QED
-val _ = export_rewrites ["GCD_0L"]
 
 (* Theorem: (gcd 0 x = x) /\ (gcd x 0 = x) *)
 (* Proof: by GCD_0L, GCD_0R *)
@@ -162,9 +159,8 @@ Proof
                         THEN ARW[GCD_IS_GCD,SPECL [Term `a:num`, Term `a+b`] IS_GCD_MINUS_R]
 QED
 
-Theorem GCD_ADD_R_THM =
+Theorem GCD_ADD_R_THM[simp] =
   CONJ GCD_ADD_R (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_R)
-val _ = export_rewrites ["GCD_ADD_R_THM"]
 
 Theorem GCD_ADD_L:
                         !a b. gcd (a+b) a = gcd a b
@@ -172,23 +168,21 @@ Proof
                         PROVE_TAC[GCD_SYM,GCD_ADD_R]
 QED
 
-Theorem GCD_ADD_L_THM =
+Theorem GCD_ADD_L_THM[simp] =
  CONJ GCD_ADD_L (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_L)
-val _ = export_rewrites ["GCD_ADD_L_THM"]
 
 Theorem GCD_EQ_0[simp]:
   !n m. (gcd n m = 0) <=> (n = 0) /\ (m = 0)
 Proof HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][gcd_def]
 QED
 
-Theorem GCD_1:
+Theorem GCD_1[simp]:
     (gcd 1 x = 1) /\ (gcd x 1 = 1)
 Proof
   Q_TAC SUFF_TAC `!m n. (m = 1) ==> (gcd m n = 1)`
         THEN1 PROVE_TAC [GCD_SYM] THEN
   HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][gcd_def]
 QED
-val _ = export_rewrites ["GCD_1"]
 
 Theorem PRIME_GCD:
                         !p b. prime p ==> divides p b \/ (gcd p b = 1)
@@ -196,17 +190,19 @@ Proof
                         PROVE_TAC[PRIME_IS_GCD,GCD_IS_GCD,IS_GCD_UNIQUE]
 QED
 
-val EUCLIDES_AUX = prove(Term
-`!a b c d. divides c (d*a) /\ divides c (d*b)
+Theorem EUCLIDES_AUX[local]:
+ !a b c d. divides c (d*a) /\ divides c (d*b)
                ==>
-             divides c (d*gcd a b)`,
+             divides c (d*gcd a b)
+Proof
 recInduct gcd_ind THEN SRW_TAC [][gcd_def]
   THEN FIRST_X_ASSUM MATCH_MP_TAC
   THENL [`?z. x = y+z` by (Q.EXISTS_TAC `x-y` THEN DECIDE_TAC),
          `?z. y = x+z` by (Q.EXISTS_TAC `y-x` THEN DECIDE_TAC)]
   THEN RW_TAC bool_ss [DECIDE (Term`(x + y) - x = y`)]
   THEN FULL_SIMP_TAC (srw_ss()) [MULT_CLAUSES, LEFT_ADD_DISTRIB]
-  THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC]);
+  THEN PROVE_TAC [DIVIDES_ADD_2,ADD_ASSOC]
+QED
 
 
 Theorem L_EUCLIDES:
@@ -290,9 +286,10 @@ Proof
 QED
 
 (* proof of LINEAR_GCD{_AUX} due to Laurent Thery *)
-val LINEAR_GCD_AUX = prove(
-  ``!m n. ~(n = 0) /\ ~(m = 0) ==>
-          (?p q. p * n = q * m + gcd m n) /\ ?p q. p * m = q * n + gcd m n``,
+Theorem LINEAR_GCD_AUX[local]:
+    !m n. ~(n = 0) /\ ~(m = 0) ==>
+          (?p q. p * n = q * m + gcd m n) /\ ?p q. p * m = q * n + gcd m n
+Proof
   HO_MATCH_MP_TAC GCD_SUCfree_ind THEN
   SRW_TAC [][LEFT_ADD_DISTRIB] THEN
   RULE_ASSUM_TAC (REWRITE_RULE [DECIDE ``0 < x <=> ~(x = 0)``]) THENL [
@@ -306,7 +303,8 @@ val LINEAR_GCD_AUX = prove(
     MAP_EVERY Q.EXISTS_TAC [`a + b`, `b`]
   ] THEN
   ASM_SIMP_TAC bool_ss [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB] THEN
-  SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) []);
+  SIMP_TAC (bool_ss ++ numSimps.ARITH_ss) []
+QED
 
 
 Theorem LINEAR_GCD:
@@ -326,15 +324,18 @@ Proof
   metis_tac[LINEAR_GCD, GCD_SYM, NOT_ZERO]
 QED
 
-val gcd_lemma0 = prove(
-  ``!a b. gcd a b = if b <= a then gcd (a - b) b
-                    else gcd a (b - a)``,
+Theorem gcd_lemma0[local]:
+    !a b. gcd a b = if b <= a then gcd (a - b) b
+                    else gcd a (b - a)
+Proof
   Cases THEN SIMP_TAC arith_ss [] THEN
   Cases THEN SIMP_TAC arith_ss [] THEN
-  REWRITE_TAC [gcd_def]);
+  REWRITE_TAC [gcd_def]
+QED
 
-val gcd_lemma = prove(
-  ``!n a b. n * b <= a ==> (gcd a b = gcd (a - n * b) b)``,
+Theorem gcd_lemma[local]:
+    !n a b. n * b <= a ==> (gcd a b = gcd (a - n * b) b)
+Proof
   Induct THENL [
     SIMP_TAC arith_ss [],
     SIMP_TAC bool_ss [MULT_CLAUSES] THEN REPEAT STRIP_TAC THEN
@@ -342,7 +343,8 @@ val gcd_lemma = prove(
     SIMP_TAC bool_ss [SUB_PLUS] THEN
     Q.SPECL_THEN [`a - n * b`, `b`] MP_TAC gcd_lemma0 THEN
     ASM_SIMP_TAC arith_ss []
-  ]);
+  ]
+QED
 
 Theorem GCD_EFFICIENTLY:
     !a b.
@@ -410,19 +412,17 @@ Proof
   ]
 QED
 
-Theorem LCM_0:
+Theorem LCM_0[simp]:
     (lcm 0 x = 0) /\ (lcm x 0 = 0)
 Proof
   SRW_TAC [][lcm_def]
 QED
-val _ = export_rewrites ["LCM_0"]
 
-Theorem LCM_1:
+Theorem LCM_1[simp]:
     (lcm 1 x = x) /\ (lcm x 1 = x)
 Proof
   SRW_TAC [][lcm_def]
 QED
-val _ = export_rewrites ["LCM_1"]
 
 Theorem LCM_COMM:
     lcm a b = lcm b a
@@ -433,7 +433,7 @@ QED
 (* |- !a b. lcm a b = lcm b a *)
 Theorem LCM_SYM = LCM_COMM |> GEN ``b:num`` |> GEN ``a:num``;
 
-Theorem LCM_LE:
+Theorem LCM_LE[simp]:
     0 < m /\ 0 < n ==> (m <= lcm m n) /\ (m <= lcm n m)
 Proof
   SIMP_TAC (srw_ss() ++ ARITH_ss) [lcm_def, GCD_SYM] THEN
@@ -446,7 +446,6 @@ Proof
   Q_TAC SUFF_TAC `1 <= a` THEN1 METIS_TAC [LE_MULT_LCANCEL, MULT_CLAUSES] THEN
   FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ZERO_LESS_MULT]
 QED
-val _ = export_rewrites ["LCM_LE"]
 
 Theorem LCM_LEAST:
     0 < m /\ 0 < n ==>
@@ -470,14 +469,18 @@ Proof
   THEN ASM_REWRITE_TAC [LEFT_ADD_DISTRIB,GCD_ADD_R]
 QED
 
-val GCD_EQ_IS_GCD = prove(
-  ``!m n. (gcd m n = k) = is_gcd m n k``,
-  METIS_TAC [GCD_IS_GCD,IS_GCD_UNIQUE]);
+Theorem GCD_EQ_IS_GCD[local]:
+    !m n. (gcd m n = k) = is_gcd m n k
+Proof
+  METIS_TAC [GCD_IS_GCD,IS_GCD_UNIQUE]
+QED
 
-val divides_IMP = prove(
-  ``!m n p. divides m n ==> divides m (p * n)``,
+Theorem divides_IMP[local]:
+    !m n p. divides m n ==> divides m (p * n)
+Proof
   REWRITE_TAC [divides_def] THEN REPEAT STRIP_TAC
-  THEN ASM_REWRITE_TAC [MULT_ASSOC] THEN METIS_TAC []);
+  THEN ASM_REWRITE_TAC [MULT_ASSOC] THEN METIS_TAC []
+QED
 
 Theorem GCD_CANCEL_MULT:
     !m n k. (gcd m k = 1) ==> (gcd m (k * n) = gcd m n)
@@ -497,8 +500,9 @@ Proof
   THEN ASM_REWRITE_TAC []
 QED
 
-val ODD_IMP_GCD_CANCEL_EVEN = prove(
-  ``!n. ODD n ==> (gcd n (2 * m) = gcd n m)``,
+Theorem ODD_IMP_GCD_CANCEL_EVEN[local]:
+    !n. ODD n ==> (gcd n (2 * m) = gcd n m)
+Proof
   REPEAT STRIP_TAC
   THEN MATCH_MP_TAC GCD_CANCEL_MULT
   THEN ONCE_REWRITE_TAC [GCD_SYM]
@@ -509,7 +513,8 @@ val ODD_IMP_GCD_CANCEL_EVEN = prove(
   THEN REWRITE_TAC [divides_def]
   THEN ONCE_REWRITE_TAC [MULT_COMM]
   THEN REWRITE_TAC [GSYM EVEN_EXISTS]
-  THEN FULL_SIMP_TAC bool_ss [ODD_EVEN]);
+  THEN FULL_SIMP_TAC bool_ss [ODD_EVEN]
+QED
 
 Theorem BINARY_GCD:
     !m n.

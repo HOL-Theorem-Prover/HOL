@@ -803,7 +803,7 @@ in
       if is_forall (concl th) then
          let
             val (hvs, con) = (HOLset.listItems ## I) (hyp_frees th, concl th)
-            val fvs = free_vars con
+            val fvs = HOLset.listItems (FVL [con] empty_tmset)
             val vars = fst (strip_forall con)
          in
             SPECL (snd (itlist varyAcc vars (hvs @ fvs, []))) th

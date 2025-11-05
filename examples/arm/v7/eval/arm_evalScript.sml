@@ -196,7 +196,9 @@ in
   val psr_update = save_thm("psr_update", GEN_ALL psr_update)
 end
 
-val proc = Q.store_thm("proc", `proc n f (n,x) = f x`, SRW_TAC [] [proc_def])
+Theorem proc:  proc n f (n,x) = f x
+Proof SRW_TAC [] [proc_def]
+QED
 
 val _ = computeLib.add_persistent_funs
   ["combin.o_THM", "proc", "register_update", "psr_update"]
