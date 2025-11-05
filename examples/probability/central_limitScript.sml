@@ -1822,7 +1822,7 @@ Proof
   cheat
 QED
 
-Theorem in_measurable_borel_boral_abs :
+Theorem in_measurable_borel_borel_abs :
     abs ∈ borel_measurable borel
 Proof
     MATCH_MP_TAC in_borel_measurable_continuous_on
@@ -1875,6 +1875,29 @@ Proof
  >> rw [FN_MINUS_FMUL, FN_PLUS_FMUL, FN_PLUS_POS_ID]
 QED
 
+Theorem std_normal_density_pos :
+    ∀x. 0 < std_normal_density x
+Proof
+    RW_TAC std_ss [std_normal_density_def] THEN MATCH_MP_TAC REAL_LT_MUL' THEN
+    SIMP_TAC std_ss [EXP_POS_LT, GSYM REAL_INV_1OVER, REAL_LT_INV_EQ] THEN
+    MATCH_MP_TAC SQRT_POS_LT THEN
+    MATCH_MP_TAC REAL_LT_MUL' THEN SIMP_TAC real_ss [REAL_LE_LT, PI_POS]
+QED
+
+Theorem in_borel_measurable_std_normal_density :
+   (λx. std_normal_density x) ∈ borel_measurable borel
+Proof
+  METIS_TAC [in_measurable_borel_normal_density]
+QED
+
+Theorem integrable_normal_density :
+    ∀mu sig. 0 < sig ⇒ integrable lborel (λx. Normal_density mu sig x)
+Proof
+  rpt STRIP_TAC
+  >> MP_TAC (measure_space_lborel)
+  >> rw [integrable_alt_def, IN_MEASURABLE_BOREL_normal_density]
+  >> cheat
+QED
 
 Theorem ext_normal_rv_abs_third_moment :
     ∀p X sig. prob_space p ∧ 0 < sig ∧
@@ -1897,7 +1920,7 @@ Proof
         MATCH_MP_TAC in_borel_measurable_pow \\
         qexistsl [‘3’, ‘λx. abs x’] \\
         fs [sigma_algebra_borel] \\
-        METIS_TAC [in_measurable_borel_boral_abs])
+        METIS_TAC [in_measurable_borel_borel_abs])
   >>  ‘𝟙 𝕌(:real) = λx. 1’ by rw [indicator_fn, indicator, normal_1, o_DEF]
   >> gs [] >> POP_ASSUM K_TAC
   >> Know ‘∫ (space Borel,subsets Borel,distribution p X) (λx. (abs x) pow 3) =
@@ -1923,8 +1946,51 @@ Proof
   >> MP_TAC (Q.SPECL [‘λx. (Normal (abs x))³’, ‘0’, ‘sig’] integral_normal_pmeasure_density)
   >> rw [cj 2 lborel_def]
   >> POP_ASSUM K_TAC
-  >> MP_TAC (standard_normal_abs_third_moment) >> rw []
+  >> MP_TAC (standard_normal_abs_third_moment) >> rw [mul_comm]
   >> POP_ASSUM (rw o wrap o SYM)
+  >> Know ‘(λx. Normal ((abs x)³ * std_normal_density x)) ∈ Borel_measurable borel’
+  >- (rw [GSYM o_DEF] \\
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> fs [sigma_algebra_borel] \\
+      MATCH_MP_TAC in_borel_measurable_mul \\
+      qexistsl [‘λx. (abs x)³’, ‘λx. std_normal_density x’] \\
+      rw [sigma_algebra_borel]
+      >- (MATCH_MP_TAC in_borel_measurable_pow \\
+          qexistsl [‘3’, ‘\x. (abs x)’] \\
+          simp [sigma_algebra_borel] \\
+          METIS_TAC [in_measurable_borel_borel_abs, in_borel_measurable_I]) \\
+      simp [in_borel_measurable_std_normal_density])
+  >> DISCH_TAC
+  >> Q.ABBREV_TAC ‘f = λx. Normal ((abs x)³ * std_normal_density x)’
+  >> MP_TAC (Q.SPECL [‘lborel’, ‘f’, ‘sig pow 3’] (INST_TYPE [“:'a” |-> “:real”] (GSYM integral_cmul)))
+  >> impl_tac
+  >- (rw [measure_space_lborel, Abbr ‘f’] \\
+      MATCH_MP_TAC integrable_bounded \\
+      qexists ‘λ(x :real). Normal (exp (-(x pow 2) / 4))’ \\
+      simp [measure_space_lborel, cj 2 lborel_def] \\
+      CONJ_TAC
+      (* integrable lborel (λx. Normal (exp (-x² / 4))) *)
+      >- (cheat) \\
+      cheat)
+  >> Rewr
+  >> rw [Abbr ‘f’, extreal_mul_eq]
+  >> MP_TAC (Q.SPECL [‘(λx. Normal ((abs x)³ * std_normal_density x))’, ‘inv sig’, ‘0’ ]
+              lebesgue_pos_integral_real_affine')
+  >> impl_tac >- (simp [GSYM REAL_LT_INV_EQ, REAL_LT_IMP_NE] \\
+                  rw [REAL_LE_LT_MUL, REAL_POW_LE, ABS_POS, std_normal_density_pos])
+  >> DISCH_TAC
+  >> Know ‘∀x. Normal_density 0 sig x = Normal (sig⁻¹ * std_normal_density (x / sig))’
+  >- (rw [normal_density] \\
+      RW_TAC boolSimps.bool_ss [real_div, REAL_INV_MUL'] \\
+      ‘sig⁻¹ * exp (-(x² * sig² ⁻¹) * 2⁻¹) * (sqrt (2 * pi))⁻¹ =
+       exp (-(x² * sig² ⁻¹) * 2⁻¹) * sig⁻¹ * (sqrt (2 * pi))⁻¹’ by REAL_ARITH_TAC >> POP_ORW \\
+      ‘exp (-x² * (2⁻¹ * sig² ⁻¹)) = exp (-(x² * sig² ⁻¹) * 2⁻¹)’ by REAL_ARITH_TAC >> POP_ORW \\
+      rw [REAL_EQ_MUL_LCANCEL] >> DISJ2_TAC \\
+      ‘sqrt (2 * (sig² * pi)) = sqrt (sig² * (2 * pi))’ by REAL_ARITH_TAC >> POP_ORW \\
+      MP_TAC (Q.SPECL [‘sig pow 2’, ‘2 * pi’] SQRT_MUL) \\
+      impl_tac >- (simp [REAL_LE_POW2, PI_POS, REAL_LT_IMP_LE]) \\
+      Rewr \\
+      rw [REAL_INV_MUL', POW_2_SQRT, PI_POS, REAL_LT_IMP_LE])
+  >> Rewr
   >> cheat
 QED
 
