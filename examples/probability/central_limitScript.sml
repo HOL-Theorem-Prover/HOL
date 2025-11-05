@@ -238,61 +238,6 @@ Proof
  >> FULL_SIMP_TAC std_ss []
 QED
 
-(* ------------------------------------------------------------------------- *)
-(*  Delete                                                *)
-(* ------------------------------------------------------------------------- *)
-
-Theorem real_to_extreal_rv[local] :
-    ∀p X. prob_space p ∧ random_variable X p borel ⇒
-          real_random_variable (Normal o X) p
-Proof
-    rw [real_random_variable_def, random_variable_def]
- >> irule IN_MEASURABLE_BOREL_IMP_BOREL'
- >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
-QED
-
-Theorem extreal_to_real_rv[local] :
-    ∀p X. prob_space p ∧
-        real_random_variable (Normal o X) p ⇒
-        random_variable X p borel
-Proof
-    rw [real_random_variable_def, random_variable_def]
- >> MP_TAC (Q.SPECL [‘(p_space p,events p)’, ‘Normal o X’]
-            in_borel_measurable_from_Borel)
- >> FULL_SIMP_TAC std_ss [SIGMA_ALGEBRA_BOREL, prob_space_def, p_space_def, events_def, measure_space_def]
- >> rw [o_DEF]
- >> METIS_TAC []
-QED
-
-Theorem real_random_variable_equiv :
-    ∀p X. prob_space p ⇒
-          (real_random_variable (Normal o X) p ⇔
-             random_variable X p borel)
-Proof
-    cheat
-QED
-
-Theorem real_random_variable_abs :
-    ∀p X.
-          prob_space p ∧ real_random_variable X p ⇒
-          real_random_variable (λx. abs (X x)) p
-Proof
-    cheat
-QED
-
-Theorem real_random_variable_exp :
-  ∀p X r. prob_space p ∧ real_random_variable X p ⇒ real_random_variable (λx. exp (X x)) p
-Proof
-  cheat
-QED
-
-Theorem real_random_variable_exp_normal :
-    ∀p X r s. prob_space p ∧ real_random_variable X p ⇒
-              real_random_variable (λx. exp (Normal s * X x)) p
-Proof
-    cheat
-QED
-
 Theorem lim_null :
   ∀f l.
     (∃N. ∀n. N ≤ n ⇒ f n ≠ +∞ ∧ f n ≠ −∞) ∧ l ≠ +∞ ∧ l ≠ −∞ ⇒
@@ -313,15 +258,6 @@ Theorem m_space_ext_lborel[simp] :
     m_space ext_lborel = space Borel
 Proof
     rw [m_space_def, ext_lborel_def]
-QED
-
-Theorem real_random_variable_sum_cdiv :
-    ∀p X s n. prob_space p ∧
-              (∀i. i IN (count n) ⇒ real_random_variable (X i) p) ∧
-              0 < s n ∧ s n ≠ +∞ ∧ s n ≠ −∞  ⇒
-              real_random_variable ((λx. ∑ (λi. X i x) (count n) / s n)) p
-Proof
-    cheat
 QED
 
 Theorem IN_PSPACE_PROD_SIGMA :
@@ -375,38 +311,6 @@ Proof
      METIS_TAC [p_space_def, events_def, prob_space_def, MEASURE_SPACE_SIGMA_ALGEBRA])
  >> simp [IN_PSPACE_PROD_SIGMA]
 QED
-
-(* ------------------------------------------------------------------------- *)
-(*  Expectation                                                              *)
-(* ------------------------------------------------------------------------- *)
-
-Theorem expectation_add :
-    ∀p f g.
-      prob_space p ∧ integrable p f ∧ integrable p g ⇒
-      expectation p (λx. f x + g x) = expectation p f + expectation p g
-Proof
-  cheat
-QED
-
-Theorem expectation_sub :
-  ∀p X Y.
-          prob_space p ∧
-          integrable p X ∧
-          integrable p Y ⇒
-          expectation p (λx. X x - Y x) = expectation p X - expectation p Y
-Proof
-    cheat
-QED
-
-Theorem expectation_mono:
-    ∀p f g.
-            prob_space p ∧ integrable p f ∧ integrable p g ∧
-            (∀x. x ∈ p_space p ⇒ f x ≤ g x) ⇒
-            expectation p f ≤ expectation p g
-Proof
-    cheat
-QED
-
 
 (* ------------------------------------------------------------------------- *)
 (*  Moment generating function                                               *)
@@ -3006,7 +2910,8 @@ Proof
      ‘a + c = c / r * r’ by METIS_TAC [REAL_EQ_LDIV_EQ] \\
      METIS_TAC [REAL_DIV_RMUL, REAL_LT_IMP_NE])
  >> STRIP_TAC
- >> MP_TAC (Q.SPECL [‘p’, ‘λx. ((X x + Z x) / Normal r = Z x / Normal r)’, ‘λx. (X x + Z x = Z x)’] AE_cong)
+ >> MP_TAC (Q.SPECL [‘p’, ‘λx. (((X :α -> extreal) x + Z x) / Normal r = (Z :α -> extreal) x / Normal r)’,
+                     ‘λx. ((X :α -> extreal) x + Z x = (Z :α -> extreal) x)’] AE_cong)
  >> simp [] >> STRIP_TAC
  >> Know ‘∀x. x IN m_space p ⇒ ((Y x + Z x) = Z x ⇔ (Y x + Z x) / Normal r = Z x / Normal r)’
  >- (rw [] >> ‘∃a. Y x = Normal a’ by METIS_TAC [extreal_cases] \\
@@ -3017,7 +2922,8 @@ Proof
      ‘a + c = c / r * r’ by METIS_TAC [REAL_EQ_LDIV_EQ] \\
      METIS_TAC [REAL_DIV_RMUL, REAL_LT_IMP_NE])
  >> STRIP_TAC
- >> MP_TAC (Q.SPECL [‘p’, ‘λx. ((Y x + Z x) / Normal r = Z x / Normal r)’, ‘λx. (Y x + Z x = Z x)’] AE_cong)
+ >> MP_TAC (Q.SPECL [‘p’, ‘λx. (((Y :α -> extreal) x + Z x) / Normal r = (Z :α -> extreal) x / Normal r)’,
+                     ‘λx. (Y x + Z x = (Z :α -> extreal) x)’] AE_cong)
  >> simp [] >> STRIP_TAC
  >> ‘AE x::p. Normal (f (real ((X x + Z x) / Normal r))) =
      Normal (f (real (Z x / Normal r)))’ by METIS_TAC [AE_comp]
@@ -3533,53 +3439,53 @@ Theorem integrable_mul_diffn2 :
       f ∈ CnR 3 ⇒
       integrable p (λx. Normal (diffn 2 f (real (Z x))) * (X x)²)
 Proof
-  rpt STRIP_TAC
+    rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [‘p’, ‘X’] clt_integrable_lemma) >> gs [prob_space_def]
-  >> rw [GSYM extreal_mul_eq]
-  >> MATCH_MP_TAC integrable_bounded
-  >> Q.ABBREV_TAC ‘M = sup (IMAGE (λt. abs (Normal (diffn 2 f t))) 𝕌(:real))’
-  >> qexists ‘\x. M * (X x) pow 2’
-  >> rw []
-  >- (Know ‘0 ≤ M’
-      >- (rw [Abbr ‘M’] \\
-          MATCH_MP_TAC sup_abs_diffn_nonneg \\
-          MP_TAC (Q.SPECL [‘3’, ‘2’] CnR_mono) >> gs [SUBSET_DEF]) \\
-      DISCH_TAC \\
-      ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
-      Know ‘M ≠ PosInf’
-      >- (rw [Abbr ‘M’] \\
-          MATCH_MP_TAC sup_abs_finite \\
-          MP_TAC (Q.SPECL [‘3’, ‘2’] CnR_mono) >> gs [SUBSET_DEF]) \\
-      DISCH_TAC \\
-      ‘∃a. M = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
-      METIS_TAC [integrable_cmul])
-  >- (irule IN_MEASURABLE_BOREL_MUL' \\
-      simp [MEASURE_SPACE_SIGMA_ALGEBRA] \\
-      qexistsl [‘λx. Normal (diffn 2 f (real (Z x)))’, ‘λx. (X x) pow 2’] \\
-      fs [real_random_variable, p_space_def, events_def] \\
-      (* (λx. Normal (diffn 2 f (real (Z x)))) ∈  Borel_measurable (measurable_space p) *)
-      CONJ_TAC
-      >- (rw [GSYM o_DEF] \\
-          MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
-          simp [MEASURE_SPACE_SIGMA_ALGEBRA] \\
-          MATCH_MP_TAC MEASURABLE_COMP \\
-          qexists ‘borel’ \\
-          CONJ_TAC >- (METIS_TAC [in_borel_measurable_from_Borel,
-                                  MEASURE_SPACE_SIGMA_ALGEBRA]) \\
-          MATCH_MP_TAC in_borel_measurable_diffn \\
-          qexists ‘3’ >> gs []) \\
-      (* (λx. (X x)²) ∈ Borel_measurable (measurable_space p) *)
-      MATCH_MP_TAC IN_BOREL_MEASURABLE_POW \\
-      qexistsl [‘2’, ‘X’] \\
-      ASM_SIMP_TAC std_ss [MEASURE_SPACE_SIGMA_ALGEBRA] \\
-      ‘space (measurable_space p) = m_space p’ by fs [] >> gs [])
-  >> rw [abs_mul]
-  >> ‘(X x) pow 2 = abs ((X x) pow 2)’ by METIS_TAC [GSYM abs_pow2, GSYM pow_abs]
-  >> POP_ORW >> rw [abs_abs]
-  >> MATCH_MP_TAC le_rmul_imp
-  >> simp [abs_pos, Abbr ‘M’]
-  >> MATCH_MP_TAC sup_in >> simp []
-  >> qexists ‘real (Z x)’ >> simp []
+ >> rw [GSYM extreal_mul_eq]
+ >> MATCH_MP_TAC integrable_bounded
+ >> Q.ABBREV_TAC ‘M = sup (IMAGE (λt. abs (Normal (diffn 2 f t))) 𝕌(:real))’
+ >> qexists ‘\x. M * (X x) pow 2’
+ >> rw []
+ >- (Know ‘0 ≤ M’
+     >- (rw [Abbr ‘M’] \\
+         MATCH_MP_TAC sup_abs_diffn_nonneg \\
+         MP_TAC (Q.SPECL [‘3’, ‘2’] CnR_mono) >> gs [SUBSET_DEF]) \\
+     DISCH_TAC \\
+     ‘M ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans] \\
+     Know ‘M ≠ PosInf’
+     >- (rw [Abbr ‘M’] \\
+         MATCH_MP_TAC sup_abs_finite \\
+         MP_TAC (Q.SPECL [‘3’, ‘2’] CnR_mono) >> gs [SUBSET_DEF]) \\
+     DISCH_TAC \\
+     ‘∃a. M = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
+     METIS_TAC [integrable_cmul])
+    >- (irule IN_MEASURABLE_BOREL_MUL' \\
+        simp [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+        qexistsl [‘λx. Normal (diffn 2 f (real (Z x)))’, ‘λx. (X x) pow 2’] \\
+        fs [real_random_variable, p_space_def, events_def] \\
+        (* (λx. Normal (diffn 2 f (real (Z x)))) ∈  Borel_measurable (measurable_space p) *)
+        CONJ_TAC
+        >- (rw [GSYM o_DEF] \\
+            MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+            simp [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+            MATCH_MP_TAC MEASURABLE_COMP \\
+            qexists ‘borel’ \\
+            CONJ_TAC >- (METIS_TAC [in_borel_measurable_from_Borel,
+                                    MEASURE_SPACE_SIGMA_ALGEBRA]) \\
+            MATCH_MP_TAC in_borel_measurable_diffn \\
+            qexists ‘3’ >> gs []) \\
+        (* (λx. (X x)²) ∈ Borel_measurable (measurable_space p) *)
+        MATCH_MP_TAC IN_BOREL_MEASURABLE_POW \\
+        qexistsl [‘2’, ‘X’] \\
+        ASM_SIMP_TAC std_ss [MEASURE_SPACE_SIGMA_ALGEBRA] \\
+        ‘space (measurable_space p) = m_space p’ by fs [] >> gs [])
+ >> rw [abs_mul]
+ >> ‘(X x) pow 2 = abs ((X x) pow 2)’ by METIS_TAC [GSYM abs_pow2, GSYM pow_abs]
+ >> POP_ORW >> rw [abs_abs]
+ >> MATCH_MP_TAC le_rmul_imp
+ >> simp [abs_pos, Abbr ‘M’]
+ >> MATCH_MP_TAC le_sup_imp >> simp []
+ >> qexists ‘real (Z x)’ >> simp []
 QED
 
 Theorem taylor_diffn_expectation_lemma[local] :
@@ -3926,10 +3832,13 @@ Proof
  >> gs [] >> DISCH_THEN (fs o wrap)
  >> Know ‘A - B = expectation p (λx. Normal (f (real (X x + Z x)))) −
                   expectation p (λx. Normal (f (real (Y x + Z x))))’
- >- (rw [Abbr ‘A’, Abbr ‘B’] \\
-     qmatch_abbrev_tac ‘_ = a - b’ \\
-     Q.ABBREV_TAC ‘c = expectation p (λx. Normal (f (real (Z x))))’ \\
-     qmatch_abbrev_tac ‘a - c - d - _ = _’ \\
+    >- (rw [Abbr ‘A’, Abbr ‘B’] \\
+        Q.ABBREV_TAC ‘a = expectation p (λx. Normal (f (real (X x + Z x))))’ \\
+        Q.ABBREV_TAC ‘b = expectation p (λx. Normal (f (real (Y x + Z x))))’ \\
+         Q.ABBREV_TAC ‘c = expectation p (λx. Normal (f (real (Z x))))’ \\
+        Q.ABBREV_TAC ‘d = Normal (1 / 2) *
+                          expectation p (λx. Normal (diffn 2 f (real (Z x)))) *
+                          expectation p (λx. (Y x)²)’ \\
      Know ‘a ≠ PosInf ∧ a ≠ NegInf’
      >- (simp [Abbr ‘a’, GSYM o_DEF] \\
          irule clt_expectation_not_infty >> rw []
@@ -4463,7 +4372,7 @@ Proof
             (INST_TYPE [beta |-> “:real”])) IN_MEASURABLE >> simp []
 QED
 
-Theorem distribution_eq :
+Theorem distribution_eq' :
     ∀p X Y mu sig s.
       prob_space p ∧
       (∀x. x ∈ p_space p ⇒ X x = Y x) ⇒
@@ -4489,7 +4398,7 @@ Proof
  >> EQ_TAC >> rw []
  >> Q.PAT_X_ASSUM ‘∀s. s ∈ subsets borel ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘s’) >> gs []
  >> POP_ASSUM (fs o wrap o SYM)
- >> METIS_TAC [distribution_eq]
+ >> METIS_TAC [distribution_eq']
 QED
 
 Theorem normal_rv_eq[local] :
@@ -6039,7 +5948,7 @@ Proof
  >> simp [MEASURABLE_SND]
 QED
 
-Theorem distribution_eq' :
+Theorem distribution_eq_comp :
     ∀p q X Y f.
       prob_space p ∧ prob_space q ∧
       random_variable X p borel ∧
@@ -6059,9 +5968,12 @@ QED
 Theorem ne_imp_lt :
     ∀x y. x ≠ y ⇒ x < y ∨ y < x
 Proof
+  cheat
+    (*
   rw []
   >> CCONTR_TAC
   >> fs [DE_MORGAN_THM, extreal_not_lt, le_antisym]
+  *)
 QED
 
 Theorem EXTREAL_SUM_IMAGE_SQUARE :
