@@ -21,5 +21,5 @@ and the tactic can solve the goal.
 
 ### See also
 
-[`BasicProvers.PROVE`](#BasicProvers.PROVE),
+[`BasicProvers.PROVE`](#BasicProvers.PROVE), [`Tactical.prove`](#Tactical.prove),
 [`Tactical.VALID`](#Tactical.VALID)

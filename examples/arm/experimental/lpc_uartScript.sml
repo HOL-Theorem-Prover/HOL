@@ -197,14 +197,17 @@ Definition BIT_UPDATE_def:
   BIT_UPDATE i b (w:'a word) = (FCP j. if i = j then b else w ' j):'a word
 End
 
-val APPLY_BIT_UPDATE_THM = store_thm("APPLY_BIT_UPDATE_THM",
-  ``!i j b w.
+Theorem APPLY_BIT_UPDATE_THM:
+    !i j b w.
       j < dimindex (:'a) ==>
-      (BIT_UPDATE i b (w:'a word) ' j = if i = j then b else w ' j)``,
-  SIMP_TAC std_ss [fcpTheory.CART_EQ,BIT_UPDATE_def,fcpTheory.FCP_BETA]);
+      (BIT_UPDATE i b (w:'a word) ' j = if i = j then b else w ' j)
+Proof
+  SIMP_TAC std_ss [fcpTheory.CART_EQ,BIT_UPDATE_def,fcpTheory.FCP_BETA]
+QED
 
-val UART0_NEXT_EXISTS = store_thm("UART0_NEXT_EXISTS",
-  ``!t s1. uart0_ok t s1 ==> ?s2. UART0_NEXT t [] s1 s2``,
+Theorem UART0_NEXT_EXISTS:
+    !t s1. uart0_ok t s1 ==> ?s2. UART0_NEXT t [] s1 s2
+Proof
   SIMP_TAC std_ss [UART0_NEXT_def,uart0_ok_def,MEM,REG32_NEXT_NIL]
   THEN REPEAT STRIP_TAC
   THEN EXISTS_TAC
@@ -217,7 +220,8 @@ val UART0_NEXT_EXISTS = store_thm("UART0_NEXT_EXISTS",
        input_time  := s1.input_time;
        output_list := s1.output_list;
        output_time := s1.output_time |>``
-  THEN SRW_TAC [] [APPLY_BIT_UPDATE_THM]);
+  THEN SRW_TAC [] [APPLY_BIT_UPDATE_THM]
+QED
 
 Definition UART0_READ_def:
   UART0_READ (uart0:uart0_state) =

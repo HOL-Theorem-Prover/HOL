@@ -14,17 +14,23 @@ Libs
 
 (* ------------------------------------------------------------------------- *)
 
-val FUNPOW_THM = store_thm("FUNPOW_THM",
-  `!f n x. FUNPOW f n (f x) = f (FUNPOW f n x)`,
-  Induct_on `n` \\ ASM_REWRITE_TAC [FUNPOW]);
+Theorem FUNPOW_THM:
+   !f n x. FUNPOW f n (f x) = f (FUNPOW f n x)
+Proof
+  Induct_on `n` \\ ASM_REWRITE_TAC [FUNPOW]
+QED
 
-val FUNPOW_EVAL = store_thm("FUNPOW_EVAL",
-  `!f n x. FUNPOW f n x = if n = 0 then x else FUNPOW f (n-1) (f x)`,
-  Induct_on `n` \\ RW_TAC arith_ss [FUNPOW]);
+Theorem FUNPOW_EVAL:
+   !f n x. FUNPOW f n x = if n = 0 then x else FUNPOW f (n-1) (f x)
+Proof
+  Induct_on `n` \\ RW_TAC arith_ss [FUNPOW]
+QED
 
-val FUNPOW_COMP = store_thm("FUNPOW_COMP",
-  `!f a b x. FUNPOW f (a+b) x = FUNPOW f a (FUNPOW f b x)`,
-  Induct_on `b` \\ ASM_REWRITE_TAC [ADD_CLAUSES,FUNPOW]);
+Theorem FUNPOW_COMP:
+   !f a b x. FUNPOW f (a+b) x = FUNPOW f a (FUNPOW f b x)
+Proof
+  Induct_on `b` \\ ASM_REWRITE_TAC [ADD_CLAUSES,FUNPOW]
+QED
 
 (*---------------------------------------------------------------------------
   - Iterated Maps -----------------------------------------------------------
@@ -146,10 +152,12 @@ End
   - Data Abstraction Id -----------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val DATA_ABSTRACTION_I = store_thm("DATA_ABSTRACTION_I",
-  `!abs initi. DATA_ABSTRACTION abs initi I = (!a. ?b. abs (initi b) = a)`,
+Theorem DATA_ABSTRACTION_I:
+   !abs initi. DATA_ABSTRACTION abs initi I = (!a. ?b. abs (initi b) = a)
+Proof
   RW_TAC std_ss [DATA_ABSTRACTION_def,RANGE_def,IMAGE_DEF,SURJ_DEF,
-    IN_UNIV,GSPECIFICATION] \\ PROVE_TAC []);
+    IN_UNIV,GSPECIFICATION] \\ PROVE_TAC []
+QED
 
 (*---------------------------------------------------------------------------
   - Uniform Immersions are Immersions ---------------------------------------
@@ -171,18 +179,22 @@ val UIMMERSION_MONO_LEMMA2 = prove(
    \\ FULL_SIMP_TAC bool_ss
         [SUC_COMM_LEMMA,LESS_IMP_LESS_ADD,ADD_COMM,UIMMERSION_def]);
 
-val UIMMERSION_IS_IMMERSION_LEMMA = store_thm("UIMMERSION_IS_IMMERSION_LEMMA",
-  `!imm f dur. UIMMERSION imm f dur ==> IMMERSION imm`,
+Theorem UIMMERSION_IS_IMMERSION_LEMMA:
+   !imm f dur. UIMMERSION imm f dur ==> IMMERSION imm
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC UIMMERSION_MONO_LEMMA2
     \\ FULL_SIMP_TAC bool_ss [UIMMERSION_def]
     \\ RW_TAC bool_ss [IMMERSION]
     \\ IMP_RES_TAC LESS_ADD_1
-    \\ ASM_REWRITE_TAC [UIMMERSION_MONO_LEMMA2]);
+    \\ ASM_REWRITE_TAC [UIMMERSION_MONO_LEMMA2]
+QED
 
-val UNIFORM_IMP_IMMERSION = store_thm("UNIFORM_IMP_IMMERSION",
-  `!imm f. UNIFORM imm f ==> IMMERSION imm`,
-  PROVE_TAC [UNIFORM_def,UIMMERSION_IS_IMMERSION_LEMMA]);
+Theorem UNIFORM_IMP_IMMERSION:
+   !imm f. UNIFORM imm f ==> IMMERSION imm
+Proof
+  PROVE_TAC [UNIFORM_def,UIMMERSION_IS_IMMERSION_LEMMA]
+QED
 
 (*---------------------------------------------------------------------------
   - Uniform Adjunct Immersions are Immersions -------------------------------
@@ -203,64 +215,77 @@ val AUIMMERSION_MONO_LEMMA2 = prove(
    \\ FULL_SIMP_TAC bool_ss
         [SUC_COMM_LEMMA,LESS_IMP_LESS_ADD,ADD_COMM,AUIMMERSION_def]);
 
-val AUIMMERSION_IS_IMMERSION_LEMMA = store_thm("AUIMMERSION_IS_IMMERSION_LEMMA",
-  `!f imm1 imm2 dur1 dur2.
-      AUIMMERSION imm1 imm2 f dur1 dur2 ==> IMMERSION imm1 /\ IMMERSION imm2`,
+Theorem AUIMMERSION_IS_IMMERSION_LEMMA:
+   !f imm1 imm2 dur1 dur2.
+      AUIMMERSION imm1 imm2 f dur1 dur2 ==> IMMERSION imm1 /\ IMMERSION imm2
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC AUIMMERSION_MONO_LEMMA2
     \\ FULL_SIMP_TAC bool_ss [AUIMMERSION_def]
     \\ IMP_RES_TAC UIMMERSION_IS_IMMERSION_LEMMA
     \\ RW_TAC bool_ss [IMMERSION]
     \\ IMP_RES_TAC LESS_ADD_1
-    \\ ASM_REWRITE_TAC [AUIMMERSION_MONO_LEMMA2]);
+    \\ ASM_REWRITE_TAC [AUIMMERSION_MONO_LEMMA2]
+QED
 
-val ADJUNCT_IMP_IMMERSIONS = store_thm("ADJUNCT_IMP_IMMERSIONS",
-  `!imm1 imm2 f. ADJUNCT imm1 imm2 f ==> IMMERSION imm1 /\ IMMERSION imm2`,
-  PROVE_TAC [ADJUNCT_def,AUIMMERSION_IS_IMMERSION_LEMMA]);
+Theorem ADJUNCT_IMP_IMMERSIONS:
+   !imm1 imm2 f. ADJUNCT imm1 imm2 f ==> IMMERSION imm1 /\ IMMERSION imm2
+Proof
+  PROVE_TAC [ADJUNCT_def,AUIMMERSION_IS_IMMERSION_LEMMA]
+QED
 
-val ADJUNCT_IMP_UNIFORM = store_thm("ADJUNCT_IMP__UNIFORM",
-  `!imm1 imm2 f. ADJUNCT imm1 imm2 f ==> UNIFORM imm2 f`,
-  PROVE_TAC [ADJUNCT_def,UNIFORM_def,AUIMMERSION_def]);
+Theorem ADJUNCT_IMP__UNIFORM:
+   !imm1 imm2 f. ADJUNCT imm1 imm2 f ==> UNIFORM imm2 f
+Proof
+  PROVE_TAC [ADJUNCT_def,UNIFORM_def,AUIMMERSION_def]
+QED
 
 (*---------------------------------------------------------------------------
   - Correct then Super Correct ----------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val CORRECT_IMP_CORRECT_SUP = store_thm("CORRECT_IMP_CORRECT_SUP",
-  `!spec impl. IS_CORRECT spec impl ==> IS_CORRECT_SUP spec impl`,
+Theorem CORRECT_IMP_CORRECT_SUP:
+   !spec impl. IS_CORRECT spec impl ==> IS_CORRECT_SUP spec impl
+Proof
   RW_TAC bool_ss [IS_CORRECT_def,IS_CORRECT_SUP_def]
     \\ EXISTS_TAC `\a t. t`
     \\ EXISTS_TAC `imm`
     \\ EXISTS_TAC `abs`
-    \\ FULL_SIMP_TAC arith_ss [CORRECT_def,CORRECT_SUP_def,IMMERSION]);
+    \\ FULL_SIMP_TAC arith_ss [CORRECT_def,CORRECT_SUP_def,IMMERSION]
+QED
 
 (*---------------------------------------------------------------------------
   - Iterated Maps Unique  ---------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val IMAP_UNIQUE1 = store_thm("IMAP_UNIQUE1",
-  `!f g init next. IMAP f init next /\ IMAP g init next ==> (f = g)`,
+Theorem IMAP_UNIQUE1:
+   !f g init next. IMAP f init next /\ IMAP g init next ==> (f = g)
+Proof
   RW_TAC bool_ss [IMAP_def]
     \\ ONCE_REWRITE_TAC [FUN_EQ_THM]
     \\ Induct
     \\ ONCE_REWRITE_TAC [FUN_EQ_THM]
-    \\ ASM_REWRITE_TAC []);
+    \\ ASM_REWRITE_TAC []
+QED
 
 (*---------------------------------------------------------------------------
   - Time-Consistency Results ------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val TC_IMP_IMAP = store_thm("TC_IMP_IMAP",
-  `!f. TCON f ==> IS_IMAP f`,
+Theorem TC_IMP_IMAP:
+   !f. TCON f ==> IS_IMAP f
+Proof
   RW_TAC bool_ss [TCON_def,IMAP_def,IS_IMAP_def]
     \\ EXISTS_TAC `f 0`
     \\ EXISTS_TAC `f (SUC 0)`
     \\ POP_ASSUM (fn th => ASSUME_TAC
          (GEN_ALL (ONCE_REWRITE_RULE [ADD_COMM] (SPECL [`1`,`t`] th))))
-    \\ ASM_REWRITE_TAC [ADD1,SYM ONE]);
+    \\ ASM_REWRITE_TAC [ADD1,SYM ONE]
+QED
 
-val TC_THM = store_thm("TC_THM",
-  `!f. TCON f <=> IS_IMAP f /\ (!t a. f 0 (f t a) = f t a)`,
+Theorem TC_THM:
+   !f. TCON f <=> IS_IMAP f /\ (!t a. f 0 (f t a) = f t a)
+Proof
   STRIP_TAC \\ EQ_TAC
     \\ REPEAT STRIP_TAC
     THENL [
@@ -269,51 +294,69 @@ val TC_THM = store_thm("TC_THM",
         \\ POP_ASSUM (fn th => REWRITE_TAC
              [GSYM (REDUCE_RULE (SPECL [`0`,`t`] th))]),
       FULL_SIMP_TAC bool_ss [TCON_def,IS_IMAP_def,IMAP_def]
-        \\ Induct_on `t1` \\ ASM_REWRITE_TAC [ADD_CLAUSES]]);
+        \\ Induct_on `t1` \\ ASM_REWRITE_TAC [ADD_CLAUSES]]
+QED
 
-val TC_I_THM = store_thm("TC_I_THM",
-  `!f. IS_IMAP_INIT f I ==> TCON f`,
-  PROVE_TAC [TC_THM,IS_IMAP_def,IS_IMAP_INIT_def,IMAP_def,I_THM]);
+Theorem TC_I_THM:
+   !f. IS_IMAP_INIT f I ==> TCON f
+Proof
+  PROVE_TAC [TC_THM,IS_IMAP_def,IS_IMAP_INIT_def,IMAP_def,I_THM]
+QED
 
-val TC_IMP_TC_IMMERSION = store_thm("TC_IMP_TC_IMMERSION",
-  `!f. TCON f ==> !imm. TCON_IMMERSION f imm`,
-  RW_TAC bool_ss [TCON_def,TCON_IMMERSION_def]);
+Theorem TC_IMP_TC_IMMERSION:
+   !f. TCON f ==> !imm. TCON_IMMERSION f imm
+Proof
+  RW_TAC bool_ss [TCON_def,TCON_IMMERSION_def]
+QED
 
-val TC_IMMERSION_TC = store_thm("TC_IMMERSION_TC",
-  `!f. TCON_IMMERSION f (\a t. t) = TCON f`,
+Theorem TC_IMMERSION_TC:
+   !f. TCON_IMMERSION f (\a t. t) = TCON f
+Proof
   STRIP_TAC \\ EQ_TAC \\
-    SIMP_TAC bool_ss [TC_IMP_TC_IMMERSION,TCON_def,TCON_IMMERSION_def]);
+    SIMP_TAC bool_ss [TC_IMP_TC_IMMERSION,TCON_def,TCON_IMMERSION_def]
+QED
 
-val IMAP_INIT = store_thm("IMAP_INIT",
-  `!f init. IS_IMAP_INIT f init ==> (f 0 = init)`,
-   RW_TAC bool_ss [IS_IMAP_INIT_def,IMAP_def,FUN_EQ_THM]);
+Theorem IMAP_INIT:
+   !f init. IS_IMAP_INIT f init ==> (f 0 = init)
+Proof
+   RW_TAC bool_ss [IS_IMAP_INIT_def,IMAP_def,FUN_EQ_THM]
+QED
 
-val STATE_FUNPOW_ADD = store_thm("STATE_FUNPOW_ADD",
-  `!f init next. IMAP f init next ==>
-      (!x y a. f (x + y) a = FUNPOW next x (f y a))`,
+Theorem STATE_FUNPOW_ADD:
+   !f init next. IMAP f init next ==>
+      (!x y a. f (x + y) a = FUNPOW next x (f y a))
+Proof
   RW_TAC bool_ss [IMAP_def]
    \\ Induct_on `x`
-   \\ ASM_REWRITE_TAC [ADD,FUNPOW,FUNPOW_THM]);
+   \\ ASM_REWRITE_TAC [ADD,FUNPOW,FUNPOW_THM]
+QED
 
-val STATE_FUNPOW_ZERO = store_thm("STATE_FUNPOW_ZERO",
-  `!f init next. IMAP f init next ==> (!t a. f t a = FUNPOW next t (f 0 a))`,
-  PROVE_TAC [ADD_0,STATE_FUNPOW_ADD]);
+Theorem STATE_FUNPOW_ZERO:
+   !f init next. IMAP f init next ==> (!t a. f t a = FUNPOW next t (f 0 a))
+Proof
+  PROVE_TAC [ADD_0,STATE_FUNPOW_ADD]
+QED
 
-val STATE_FUNPOW_INIT = store_thm("STATE_FUNPOW_INIT",
-  `!f init next. IMAP f init next ==> (!t a. f t a = FUNPOW next t (init a))`,
-  PROVE_TAC [STATE_FUNPOW_ZERO,IMAP_def]);
+Theorem STATE_FUNPOW_INIT:
+   !f init next. IMAP f init next ==> (!t a. f t a = FUNPOW next t (init a))
+Proof
+  PROVE_TAC [STATE_FUNPOW_ZERO,IMAP_def]
+QED
 
-val TC_IMMERSION_LEMMA = store_thm("TC_IMMERSION_LEMMA",
-  `!f imm. IMMERSION imm /\ TCON_IMMERSION f imm ==>
-       (!t a. f 0 (f (imm a t) a) = f (imm a t) a)`,
+Theorem TC_IMMERSION_LEMMA:
+   !f imm. IMMERSION imm /\ TCON_IMMERSION f imm ==>
+       (!t a. f 0 (f (imm a t) a) = f (imm a t) a)
+Proof
   RW_TAC bool_ss [TCON_IMMERSION_def,IMMERSION]
     \\ POP_ASSUM (fn th => ASSUME_TAC (SPECL [`0`,`t`,`a`] th))
     \\ PAT_ASSUM `!a. P` (fn th => RULE_ASSUM_TAC (SIMP_RULE arith_ss [th]))
-    \\ POP_ASSUM (fn th => REWRITE_TAC [SYM th]));
+    \\ POP_ASSUM (fn th => REWRITE_TAC [SYM th])
+QED
 
-val TC_IMMERSION_LEMMA2 = store_thm("TC_IMMERSION_LEMMA2",
-  `!f imm. IMMERSION imm /\ IS_IMAP f ==>
-     (TCON_IMMERSION f imm = !t a. f 0 (f (imm a t) a) = f (imm a t) a)`,
+Theorem TC_IMMERSION_LEMMA2:
+   !f imm. IMMERSION imm /\ IS_IMAP f ==>
+     (TCON_IMMERSION f imm = !t a. f 0 (f (imm a t) a) = f (imm a t) a)
+Proof
   RW_TAC bool_ss [IS_IMAP_def,IMMERSION,TCON_IMMERSION_def]
    \\ EQ_TAC
    \\ REPEAT STRIP_TAC THENL [
@@ -326,15 +369,17 @@ val TC_IMMERSION_LEMMA2 = store_thm("TC_IMMERSION_LEMMA2",
        \\ POP_ASSUM (fn th => RULE_ASSUM_TAC (REWRITE_RULE [th]))
        \\ IMP_RES_TAC STATE_FUNPOW_INIT
        \\ ASSUME_TAC FUNPOW_COMP
-       \\ ASM_REWRITE_TAC []]);
+       \\ ASM_REWRITE_TAC []]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val TC_IMM_LEM = store_thm("TC_IMM_LEM",
-  `!f g imm dur.
+Theorem TC_IMM_LEM:
+   !f g imm dur.
      TCON_IMMERSION f imm /\ UIMMERSION imm f dur /\
      IMAP g (f 0) (\a. f (dur a) a) ==>
-     !t a. g t a = f (imm a t) a`,
+     !t a. g t a = f (imm a t) a
+Proof
   NTAC 5 STRIP_TAC
     \\ FULL_SIMP_TAC bool_ss [UIMMERSION_def,IMAP_def,TCON_IMMERSION_def]
     \\ Induct \\ STRIP_TAC
@@ -348,19 +393,22 @@ val TC_IMM_LEM = store_thm("TC_IMM_LEM",
          (fn th => ASSUME_TAC (REDUCE_RULE (GEN_ALL (SPECL [`a`,`0`] th))))
     \\ PAT_ASSUM `!a. imm a 0 = 0` (fn th => FULL_SIMP_TAC arith_ss [th])
     \\ PAT_ASSUM `!a. f (imm a t) a = f 0 (f (imm a t) a)`
-         (fn th => FULL_SIMP_TAC bool_ss [GSYM th]));
+         (fn th => FULL_SIMP_TAC bool_ss [GSYM th])
+QED
 
-val TC_IMMERSION_THM = store_thm("TC_IMMERSION_THM",
-  `!f g imm dur.
+Theorem TC_IMMERSION_THM:
+   !f g imm dur.
            UIMMERSION imm f dur /\
            IMAP g (f 0) (\a. f (dur a) a) ==>
-           (TCON_IMMERSION f imm ==> TCON g)`,
+           (TCON_IMMERSION f imm ==> TCON g)
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC UIMMERSION_IS_IMMERSION_LEMMA
     \\ IMP_RES_TAC TC_IMMERSION_LEMMA
     \\ FULL_SIMP_TAC bool_ss [IS_IMAP_def,TC_THM]
     \\ STRIP_TAC >- PROVE_TAC []
-    \\ IMP_RES_TAC TC_IMM_LEM \\ FULL_SIMP_TAC bool_ss [IMAP_def]);
+    \\ IMP_RES_TAC TC_IMM_LEM \\ FULL_SIMP_TAC bool_ss [IMAP_def]
+QED
 
 (*---------------------------------------------------------------------------
   - Time-Consistency One-Step Theorems --------------------------------------
@@ -375,11 +423,12 @@ val SPLIT_ITER_LEMMA = prove(
     \\ FULL_SIMP_TAC bool_ss
          [FUNPOW_COMP,UIMMERSION_def,ONE,ADD_CLAUSES,FUNPOW,FUNPOW_THM]);
 
-val TC_IMMERSION_ONE_STEP_THM = store_thm("TC_IMMERSION_ONE_STEP_THM",
-  `!f imm . IS_IMAP f /\ UNIFORM imm f ==>
+Theorem TC_IMMERSION_ONE_STEP_THM:
+   !f imm . IS_IMAP f /\ UNIFORM imm f ==>
     (TCON_IMMERSION f imm <=>
        (!a. f 0 (f (imm a 0) a) = f (imm a 0) a) /\
-       (!a. f 0 (f (imm a 1) a) = f (imm a 1) a))`,
+       (!a. f 0 (f (imm a 1) a) = f (imm a 1) a))
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC UNIFORM_IMP_IMMERSION
     \\ EQ_TAC \\ STRIP_TAC
@@ -395,7 +444,8 @@ val TC_IMMERSION_ONE_STEP_THM = store_thm("TC_IMMERSION_ONE_STEP_THM",
     \\ POP_ASSUM (fn th => (ONCE_REWRITE_TAC [GSYM th] \\ ASSUME_TAC th))
     \\ IMP_RES_TAC STATE_FUNPOW_ZERO
     \\ POP_ASSUM (fn th => REWRITE_TAC [GSYM th])
-    \\ ASM_REWRITE_TAC []);
+    \\ ASM_REWRITE_TAC []
+QED
 
 val UNIFORM_ID = prove(
   `!f. UNIFORM (\a t. t) f`,
@@ -411,13 +461,15 @@ Proof
      SPECL [`f`,`\a t. t`]) TC_IMMERSION_ONE_STEP_THM]
 QED
 
-val TCON_IMMERSION_COR = store_thm("TCON_IMMERSION_COR",
-  `!f imm.
+Theorem TCON_IMMERSION_COR:
+   !f imm.
      UNIFORM imm f /\ TCON_IMMERSION f imm ==>
-       !t1 t2 a. imm a (t1 + t2) = imm (f (imm a t1) a) t2 + imm a t1`,
+       !t1 t2 a. imm a (t1 + t2) = imm (f (imm a t1) a) t2 + imm a t1
+Proof
   RW_TAC bool_ss [UNIFORM_def,UIMMERSION_def,TCON_IMMERSION_def]
     \\ Induct_on `t2` \\ ASM_REWRITE_TAC [ADD_CLAUSES]
-    \\ numLib.ARITH_TAC);
+    \\ numLib.ARITH_TAC
+QED
 
 (*---------------------------------------------------------------------------
   - Correctnes One-Step Theorems --------------------------------------------
@@ -483,7 +535,7 @@ Theorem ONE_STEP_SUP_THM:
          !a. spec (imm1 a 1) (abs a) = abs (impl (imm2 a 1) a))
 Proof
   REPEAT STRIP_TAC
-    \\ IMP_RES_TAC ADJUNCT_IMP_UNIFORM
+    \\ IMP_RES_TAC ADJUNCT_IMP__UNIFORM
     \\ EQ_TAC
     \\ RW_TAC bool_ss [CORRECT_SUP_def]
     THENL [
@@ -505,24 +557,28 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val CORRECT_TRANS = store_thm("CORRECT_TRANS",
-  `!f1 f2 f3 imm1 imm2 abs1 abs2.
+Theorem CORRECT_TRANS:
+   !f1 f2 f3 imm1 imm2 abs1 abs2.
      CORRECT f1 f2 imm1 abs1 /\ CORRECT f2 f3 imm2 abs2 ==>
-     CORRECT f1 f3 (\x. imm2 x o imm1 (abs2 x)) (abs1 o abs2)`,
+     CORRECT f1 f3 (\x. imm2 x o imm1 (abs2 x)) (abs1 o abs2)
+Proof
   RW_TAC bool_ss [CORRECT_def,IMMERSION,DATA_ABSTRACTION_def,o_THM,
                   SURJ_DEF,RANGE_def,IMAGE_DEF,IN_UNIV,GSPECIFICATION]
-    \\ PROVE_TAC []);
+    \\ PROVE_TAC []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val IMAP_COMP = store_thm("IMAP_COMP",
-  `!f init next. IMAP f init next ==>
-     (!t a. f t a = if t = 0 then init a else next (f (t-1) a))`,
+Theorem IMAP_COMP:
+   !f init next. IMAP f init next ==>
+     (!t a. f t a = if t = 0 then init a else next (f (t-1) a))
+Proof
    REPEAT STRIP_TAC \\ FULL_SIMP_TAC bool_ss [IMAP_def]
     \\ RW_TAC bool_ss []
     \\ RULE_ASSUM_TAC (REWRITE_RULE [NOT_ZERO_LT_ZERO])
     \\ IMP_RES_TAC LESS_ADD_1
-    \\ RW_TAC arith_ss [GSYM ADD1]);
+    \\ RW_TAC arith_ss [GSYM ADD1]
+QED
 
 val UIMMERSION_COMP = prove(
   `!imm f dur. UIMMERSION imm f dur ==>
@@ -535,19 +591,21 @@ val UIMMERSION_COMP = prove(
     \\ IMP_RES_TAC LESS_ADD_1
     \\ RW_TAC arith_ss [GSYM ADD1]);
 
-val UIMMERSION_ONE = store_thm("UIMMERSION_ONE",
-  `!f init next imm dur.
+Theorem UIMMERSION_ONE:
+   !f init next imm dur.
      IS_IMAP_INIT f init /\ UIMMERSION imm f dur ==>
-     !a. imm a 1 = dur (init a)`,
+     !a. imm a 1 = dur (init a)
+Proof
   RW_TAC bool_ss [UIMMERSION_def,IS_IMAP_INIT_def,IMAP_def,ONE,ADD_0]
-    \\ ASM_REWRITE_TAC []);
+    \\ ASM_REWRITE_TAC []
+QED
 
-val IMAP_NEXT = store_thm("IMAP_NEXT",
-  `!f init next. IMAP f init next ==>
+Theorem IMAP_NEXT:
+   !f init next. IMAP f init next ==>
       (f t a = b) /\ (next b = c) ==>
-      (f (t + 1) a = c)`,
+      (f (t + 1) a = c)
+Proof
   RW_TAC std_ss [IMAP_def,ADD1]
-);
+QED
 
 (* ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ *)
-

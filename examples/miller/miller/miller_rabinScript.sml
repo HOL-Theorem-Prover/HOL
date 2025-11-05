@@ -89,10 +89,10 @@ End
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val FACTOR_TWOS_CORRECT = store_thm
-  ("FACTOR_TWOS_CORRECT",
-   ``!n r s.
-       0 < n ==> ((factor_twos n = (r, s)) = ODD s /\ (2 EXP r * s = n))``,
+Theorem FACTOR_TWOS_CORRECT:
+     !n r s.
+       0 < n ==> ((factor_twos n = (r, s)) = ODD s /\ (2 EXP r * s = n))
+Proof
    recInduct factor_twos_ind
    >> S_TAC
    >> ONCE_REWRITE_TAC [factor_twos_def]
@@ -121,11 +121,12 @@ val FACTOR_TWOS_CORRECT = store_thm
     >> R_TAC [EXP, GSYM MULT_ASSOC],
     Cases_on `r` >- (R_TAC [] >> PROVE_TAC [EVEN_ODD])
     >> R_TAC [EXP, GSYM MULT_ASSOC]
-    >> PROVE_TAC [EVEN_EXISTS]]);
+    >> PROVE_TAC [EVEN_EXISTS]]
+QED
 
-val MODEXP_CORRECT = store_thm
-  ("MODEXP_CORRECT",
-   ``!n a b. 1 < n ==> (modexp n a b = (a EXP b) MOD n)``,
+Theorem MODEXP_CORRECT:
+     !n a b. 1 < n ==> (modexp n a b = (a EXP b) MOD n)
+Proof
    recInduct modexp_ind
    >> RW_TAC arith_ss []
    >> ONCE_REWRITE_TAC [modexp_def]
@@ -155,14 +156,15 @@ val MODEXP_CORRECT = store_thm
     >> Suff `2 * (b DIV 2) + 1 = b` >- DECIDE_TAC
     >> MP_TAC (Q.SPECL [`2`, `b`] DIVISION_ALT)
     >> R_TAC [MOD_TWO]
-    >> PROVE_TAC [MULT_COMM]]);
+    >> PROVE_TAC [MULT_COMM]]
+QED
 
-val WITNESS_TAIL_CORRECT = store_thm
-  ("WITNESS_TAIL_CORRECT",
-   ``!n a r s k.
+Theorem WITNESS_TAIL_CORRECT:
+     !n a r s k.
        ODD s /\ (2 EXP r * s = n - 1) /\ 0 < a /\ a < n /\ k <= r /\
        witness_tail n (a EXP (2 EXP (r - k) * s) MOD n) k ==>
-       ~prime n``,
+       ~prime n
+Proof
    Induct_on `k` >|
    [Simplify [witness_tail_def]
     >> Strip
@@ -196,11 +198,12 @@ val WITNESS_TAIL_CORRECT = store_thm
      >> RW_TAC std_ss []
      >> Q.PAT_X_ASSUM `SUC k <= r` MP_TAC
      >> KILL_TAC
-     >> DECIDE_TAC]]);
+     >> DECIDE_TAC]]
+QED
 
-val WITNESS_CORRECT = store_thm
-  ("WITNESS_CORRECT",
-   ``!n a. 0 < a /\ a < n /\ witness n a ==> ~prime n``,
+Theorem WITNESS_CORRECT:
+     !n a. 0 < a /\ a < n /\ witness n a ==> ~prime n
+Proof
    S_TAC
    >> Q.PAT_X_ASSUM `witness n a` MP_TAC
    >> RW_TAC std_ss [witness_def, LET_DEF]
@@ -209,23 +212,25 @@ val WITNESS_CORRECT = store_thm
    >> STRIP_TAC
    >> AR_TAC [FACTOR_TWOS_CORRECT, LET_DEF, MODEXP_CORRECT]
    >> MP_TAC (Q.SPECL [`n`, `a`, `q`, `r`, `q`] WITNESS_TAIL_CORRECT)
-   >> Simplify []);
+   >> Simplify []
+QED
 
-val WITNESS_TAIL_1 = store_thm
-  ("WITNESS_TAIL_1",
-   ``!n r. 1 < n ==> ~witness_tail n 1 r``,
+Theorem WITNESS_TAIL_1:
+     !n r. 1 < n ==> ~witness_tail n 1 r
+Proof
    Strip
    >> Cases_on `r`
    >> POP_ASSUM MP_TAC
    >> RW_TAC std_ss [witness_tail_def]
-   >> Simplify []);
+   >> Simplify []
+QED
 
-val WITNESS_TAIL_LEMMA = store_thm
-  ("WITNESS_TAIL_LEMMA",
-   ``!n r s a k.
+Theorem WITNESS_TAIL_LEMMA:
+     !n r s a k.
        1 < n /\ (2 EXP r * s = n - 1) /\ SUC k <= r /\
        witness_tail n (a EXP (2 EXP (r - k) * s) MOD n) k ==>
-       witness_tail n (a EXP (2 EXP (r - SUC k) * s) MOD n) (SUC k)``,
+       witness_tail n (a EXP (2 EXP (r - SUC k) * s) MOD n) (SUC k)
+Proof
    Strip
    >> POP_ASSUM MP_TAC
    >> Know `SUC (r - SUC k) = r - k` >- DECIDE_TAC
@@ -235,22 +240,24 @@ val WITNESS_TAIL_LEMMA = store_thm
    >> RW_TAC std_ss [GSYM EXP_ADD, MOD_MULT1, MOD_MULT2, MULT_ASSOC,
                      GSYM EXP, GSYM ONE, witness_tail_def,
                      GSYM RIGHT_ADD_DISTRIB, NUM_DOUBLE]
-   >> PROVE_TAC [WITNESS_TAIL_1]);
+   >> PROVE_TAC [WITNESS_TAIL_1]
+QED
 
-val NONWITNESS_TAIL_LEMMA = store_thm
-  ("NONWITNESS_TAIL_LEMMA",
-   ``!n r s a k.
+Theorem NONWITNESS_TAIL_LEMMA:
+     !n r s a k.
        1 < n /\ (2 EXP r * s = n - 1) /\ SUC k <= r /\
        ~witness_tail n (a EXP (2 EXP (r - SUC k) * s) MOD n) (SUC k) ==>
-       ~witness_tail n (a EXP (2 EXP (r - k) * s) MOD n) k``,
-   PROVE_TAC [WITNESS_TAIL_LEMMA]);
+       ~witness_tail n (a EXP (2 EXP (r - k) * s) MOD n) k
+Proof
+   PROVE_TAC [WITNESS_TAIL_LEMMA]
+QED
 
-val NONWITNESS_TAIL_1 = store_thm
-  ("NONWITNESS_TAIL_1",
-   ``!n r s a k.
+Theorem NONWITNESS_TAIL_1:
+     !n r s a k.
        1 < n /\ (2 EXP r * s = n - 1) /\ k <= r /\
        ~witness_tail n (a EXP (2 EXP (r - k) * s) MOD n) k ==>
-       (a EXP (n - 1) MOD n = 1)``,
+       (a EXP (n - 1) MOD n = 1)
+Proof
    Strip
    >> Induct_on `k` >- Simplify [witness_tail_def]
    >> Strip
@@ -258,16 +265,17 @@ val NONWITNESS_TAIL_1 = store_thm
    >> DISCH_THEN
       (fn th =>
        Q.PAT_X_ASSUM `x ==> y ==> z` (fn th2 => MATCH_MP_TAC (MP th2 th)))
-   >> PROVE_TAC [NONWITNESS_TAIL_LEMMA]);
+   >> PROVE_TAC [NONWITNESS_TAIL_LEMMA]
+QED
 
-val NONWITNESS_TAIL_2 = store_thm
-  ("NONWITNESS_TAIL_2",
-   ``!n r s a k j.
+Theorem NONWITNESS_TAIL_2:
+     !n r s a k j.
        1 < n /\ (2 EXP r * s = n - 1) /\ k <= r /\ r - k <= j /\
        ~witness_tail n (a EXP (2 EXP (r - k) * s) MOD n) k /\
        (a EXP (2 EXP SUC j * s) MOD n = 1) ==>
        (a EXP (2 EXP j * s) MOD n = 1) \/
-       (a EXP (2 EXP j * s) MOD n = n - 1)``,
+       (a EXP (2 EXP j * s) MOD n = n - 1)
+Proof
    NTAC 4 GEN_TAC
    >> Induct
    >- (RW_TAC arith_ss [witness_tail_def, LET_DEF]
@@ -292,22 +300,24 @@ val NONWITNESS_TAIL_2 = store_thm
    >> POP_ASSUM MP_TAC
    >> Know `0 < n` >- DECIDE_TAC
    >> RW_TAC std_ss [GSYM EXP_ADD, MOD_MULT1, MOD_MULT2, MULT_ASSOC,
-                     GSYM EXP, GSYM ONE, GSYM RIGHT_ADD_DISTRIB, NUM_DOUBLE]);
+                     GSYM EXP, GSYM ONE, GSYM RIGHT_ADD_DISTRIB, NUM_DOUBLE]
+QED
 
-val WITNESS_1 = store_thm
-  ("WITNESS_1",
-   ``!n. 1 < n ==> ~witness n 1``,
+Theorem WITNESS_1:
+     !n. 1 < n ==> ~witness n 1
+Proof
    RW_TAC std_ss [witness_def, LET_DEF]
    >> Cases_on `factor_twos (n - 1)`
    >> Know `0 < n - 1` >- DECIDE_TAC
    >> Strip
-   >> AR_TAC [FACTOR_TWOS_CORRECT, LET_DEF, MODEXP_CORRECT, WITNESS_TAIL_1]);
+   >> AR_TAC [FACTOR_TWOS_CORRECT, LET_DEF, MODEXP_CORRECT, WITNESS_TAIL_1]
+QED
 
-val NONWITNESS_1 = store_thm
-  ("NONWITNESS_1",
-   ``!n a.
+Theorem NONWITNESS_1:
+     !n a.
        1 < n /\ ODD n /\ 0 < a /\ a < n /\ ~witness n a ==>
-       (a EXP (n - 1) MOD n = 1)``,
+       (a EXP (n - 1) MOD n = 1)
+Proof
    RW_TAC std_ss [witness_def]
    >> Cases_on `factor_twos (n - 1)`
    >> Know `0 < n - 1` >- DECIDE_TAC
@@ -317,15 +327,16 @@ val NONWITNESS_1 = store_thm
    >> Q.EXISTS_TAC `q`
    >> Q.EXISTS_TAC `r`
    >> Q.EXISTS_TAC `q`
-   >> RW_TAC arith_ss [EXP]);
+   >> RW_TAC arith_ss [EXP]
+QED
 
-val NONWITNESS_2 = store_thm
-  ("NONWITNESS_2",
-   ``!n a r s j.
+Theorem NONWITNESS_2:
+     !n a r s j.
        1 < n /\ ODD n /\ 0 < a /\ a < n /\ ~witness n a /\ ODD s /\
        (2 EXP r * s = n - 1) /\ (a EXP (2 EXP SUC j * s) MOD n = 1) ==>
        (a EXP (2 EXP j * s) MOD n = 1) \/
-       (a EXP (2 EXP j * s) MOD n = n - 1)``,
+       (a EXP (2 EXP j * s) MOD n = n - 1)
+Proof
    RW_TAC std_ss [witness_def, LET_DEF]
    >> Know `0 < n - 1` >- DECIDE_TAC
    >> Strip
@@ -337,17 +348,19 @@ val NONWITNESS_2 = store_thm
    >> MATCH_MP_TAC NONWITNESS_TAIL_2
    >> Q.EXISTS_TAC `r`
    >> Q.EXISTS_TAC `r`
-   >> RW_TAC arith_ss [EXP]);
+   >> RW_TAC arith_ss [EXP]
+QED
 
-val NONWITNESS_MULT_GROUP = store_thm
-  ("NONWITNESS_MULT_GROUP",
-   ``!n a.
+Theorem NONWITNESS_MULT_GROUP:
+     !n a.
        1 < n /\ ODD n /\ 0 < a /\ a < n /\ ~witness n a ==>
-       a IN gset (mult_group n)``,
+       a IN gset (mult_group n)
+Proof
    Strip
    >> MATCH_MP_TAC POWER_ID_IN_MULT_GROUP
    >> Q.EXISTS_TAC `n - 1`
-   >> RW_TAC arith_ss [NONWITNESS_1]);
+   >> RW_TAC arith_ss [NONWITNESS_1]
+QED
 
 Theorem CARD_WITNESS:
    !n.
@@ -710,9 +723,9 @@ Proof
    >> PROVE_TAC [ODD_GT_1]
 QED
 
-val MILLER_RABIN_1_PRIME = store_thm
-  ("MILLER_RABIN_1_PRIME",
-   ``!n s. prime n ==> (FST (miller_rabin_1 n s) = T)``,
+Theorem MILLER_RABIN_1_PRIME:
+     !n s. prime n ==> (FST (miller_rabin_1 n s) = T)
+Proof
    (RW_TAC std_ss [miller_rabin_1_def, LET_DEF]
     >> RW_TAC std_ss []) >|
    [PROVE_TAC [NOT_PRIME_1],
@@ -726,11 +739,12 @@ val MILLER_RABIN_1_PRIME = store_thm
     >> Cases_on `n = 0` >- PROVE_TAC [EVEN_ODD_BASIC]
     >> Cases_on `n - 2` >- DECIDE_TAC
     >> Suff `q < SUC n'` >- DECIDE_TAC
-    >> PROVE_TAC [pairTheory.FST, PROB_UNIFORM_CUT_RANGE]]);
+    >> PROVE_TAC [pairTheory.FST, PROB_UNIFORM_CUT_RANGE]]
+QED
 
-val MILLER_RABIN_1_COMPOSITE = store_thm
-  ("MILLER_RABIN_1_COMPOSITE",
-   ``!n. ~prime n ==> 1 / 2 <= prob bern {s | FST (miller_rabin_1 n s) = F}``,
+Theorem MILLER_RABIN_1_COMPOSITE:
+     !n. ~prime n ==> 1 / 2 <= prob bern {s | FST (miller_rabin_1 n s) = F}
+Proof
    RW_TAC bool_ss []
    >> PURE_REWRITE_TAC [miller_rabin_1_def]
    >> Cases_on `n = 2` >- PROVE_TAC [PRIME_2]
@@ -819,33 +833,36 @@ val MILLER_RABIN_1_COMPOSITE = store_thm
     STRIP_TAC
     >> CONJ_TAC >- DECIDE_TAC
     >> CONJ_TAC >- DECIDE_TAC
-    >> RW_TAC std_ss [] ]);
+    >> RW_TAC std_ss [] ]
+QED
 
-val MILLER_RABIN_1_MONAD = store_thm
-  ("MILLER_RABIN_1_MONAD",
-   ``!n.
+Theorem MILLER_RABIN_1_MONAD:
+     !n.
        miller_rabin_1 n =
        (if n = 2 then UNIT T
         else if (n = 1) \/ EVEN n then UNIT F
         else BIND (prob_uniform_cut (2 * log2 (n - 1)) (n - 2))
-             (\a. UNIT (~witness n (a + 2))))``,
+             (\a. UNIT (~witness n (a + 2))))
+Proof
    FUN_EQ_TAC
-   >> RW_TAC std_ss [miller_rabin_1_def, BIND_DEF, UNIT_DEF, LET_DEF, o_THM]);
+   >> RW_TAC std_ss [miller_rabin_1_def, BIND_DEF, UNIT_DEF, LET_DEF, o_THM]
+QED
 
-val INDEP_FN_MILLER_RABIN_1 = store_thm
-  ("INDEP_FN_MILLER_RABIN_1",
-   ``!n. miller_rabin_1 n IN indep_fn``,
+Theorem INDEP_FN_MILLER_RABIN_1:
+     !n. miller_rabin_1 n IN indep_fn
+Proof
    RW_TAC std_ss [MILLER_RABIN_1_MONAD, INDEP_FN_UNIT]
    >> MATCH_MP_TAC INDEP_FN_BIND
    >> Cases_on `n - 2`
    >- (Suff `~(n = 1) ==> (n = 0)` >- PROVE_TAC [EVEN_ODD_BASIC]
        >> Q.PAT_X_ASSUM `~(a \/ b)` K_TAC
        >> DECIDE_TAC)
-   >> RW_TAC std_ss [INDEP_FN_PROB_UNIFORM_CUT, INDEP_FN_UNIT]);
+   >> RW_TAC std_ss [INDEP_FN_PROB_UNIFORM_CUT, INDEP_FN_UNIT]
+QED
 
-val MILLER_RABIN_1_COMPOSITE_UPPER = store_thm
-  ("MILLER_RABIN_1_COMPOSITE_UPPER",
-   ``!n. ~prime n ==> prob bern {s | FST (miller_rabin_1 n s) = T} <= 1 / 2``,
+Theorem MILLER_RABIN_1_COMPOSITE_UPPER:
+     !n. ~prime n ==> prob bern {s | FST (miller_rabin_1 n s) = T} <= 1 / 2
+Proof
    Strip
    >> MP_TAC (Q.SPEC `n` MILLER_RABIN_1_COMPOSITE)
    >> ASM_REWRITE_TAC []
@@ -855,30 +872,33 @@ val MILLER_RABIN_1_COMPOSITE_UPPER = store_thm
    >- REAL_ARITH_TAC
    >> RW_TAC std_ss' [HALF_CANCEL, INDEP_FN_PROB_FST_NOT,
                       INDEP_FN_MILLER_RABIN_1]
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val MILLER_RABIN_PRIME = store_thm
-  ("MILLER_RABIN_PRIME",
-   ``!n t s. prime n ==> FST (miller_rabin n t s) = T``,
+Theorem MILLER_RABIN_PRIME:
+     !n t s. prime n ==> FST (miller_rabin n t s) = T
+Proof
    Induct_on `t` >- RW_TAC std_ss [miller_rabin_def, MANY, UNIT_DEF]
    >> RW_TAC std_ss [miller_rabin_def, MANY, BIND_DEF, o_THM]
    >> Cases_on `miller_rabin_1 n s`
    >> Know `FST (miller_rabin_1 n s) = T`
    >- PROVE_TAC [MILLER_RABIN_1_PRIME]
    >> RW_TAC std_ss [GSYM miller_rabin_def]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val INDEP_FN_MILLER_RABIN = store_thm
-  ("INDEP_FN_MILLER_RABIN",
-   ``!n t. miller_rabin n t IN indep_fn``,
+Theorem INDEP_FN_MILLER_RABIN:
+     !n t. miller_rabin n t IN indep_fn
+Proof
    RW_TAC std_ss [INDEP_FN_MANY, miller_rabin_def,
-                  INDEP_FN_MILLER_RABIN_1]);
+                  INDEP_FN_MILLER_RABIN_1]
+QED
 
-val MILLER_RABIN_COMPOSITE_UPPER = store_thm
-  ("MILLER_RABIN_COMPOSITE_UPPER",
-   ``!n t.
+Theorem MILLER_RABIN_COMPOSITE_UPPER:
+     !n t.
        ~prime n ==>
-       prob bern {s | FST (miller_rabin n t s) = T} <= (1 / 2) pow t``,
+       prob bern {s | FST (miller_rabin n t s) = T} <= (1 / 2) pow t
+Proof
    Strip
    >> RW_TAC std_ss [miller_rabin_def]
    >> Know
@@ -898,13 +918,14 @@ val MILLER_RABIN_COMPOSITE_UPPER = store_thm
        >> RW_TAC std_ss [o_THM, I_THM])
    >> Rewr
    >> RW_TAC std_ss [INDEP_FN_FST_EVENTS, INDEP_FN_MILLER_RABIN_1,
-                     PROB_SPACE_BERN]);
+                     PROB_SPACE_BERN]
+QED
 
-val MILLER_RABIN_COMPOSITE = store_thm
-  ("MILLER_RABIN_COMPOSITE",
-   ``!n t.
+Theorem MILLER_RABIN_COMPOSITE:
+     !n t.
        ~prime n ==>
-        1 - (1 / 2) pow t <= prob bern {s | FST (miller_rabin n t s) = F}``,
+        1 - (1 / 2) pow t <= prob bern {s | FST (miller_rabin n t s) = F}
+Proof
    Strip
    >> Know
       `{s | FST (miller_rabin n t s) = F} =
@@ -922,12 +943,14 @@ val MILLER_RABIN_COMPOSITE = store_thm
        >> RW_TAC std_ss [SPECIFICATION, o_THM, I_THM])
    >> RW_TAC std_ss []
    >> POP_ASSUM MP_TAC
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val MILLER_RABIN_DEDUCE_COMPOSITE = store_thm
-  ("MILLER_RABIN_DEDUCE_COMPOSITE",
-   ``!n t s s'. (miller_rabin n t s = (F, s')) ==> ~prime n``,
+Theorem MILLER_RABIN_DEDUCE_COMPOSITE:
+     !n t s s'. (miller_rabin n t s = (F, s')) ==> ~prime n
+Proof
    RW_TAC std_ss []
    >> Suff `~FST (miller_rabin n t s) = T` >- PROVE_TAC [MILLER_RABIN_PRIME]
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 

@@ -465,6 +465,7 @@ fun smashErrm m =
   case m Pretype.Env.empty of
       errormonad.Error e => raise Preterm.mkExn e
     | errormonad.Some (_, result) => result
+
 val stdprinters = SOME(term_to_string,type_to_string)
 
 fun ctxt_absyn_to_preterm fvs a =
@@ -594,7 +595,7 @@ val temp_add_infix_type = mk_temp_tyd add_infix_type0
 val add_infix_type = mk_perm_tyd add_infix_type0
 
 fun replace_exnfn fnm f x =
-  f x handle HOL_ERR e => raise HOL_ERR (set_origin_function fnm e)
+  f x handle HOL_ERR e => raise HOL_ERR (set_top_function fnm e)
 
 fun thytype_abbrev0 r = [TYABBREV r]
 val temp_thytype_abbrev = mk_temp_tyd thytype_abbrev0

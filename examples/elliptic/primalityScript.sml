@@ -49,9 +49,9 @@ val Suff = Q_TAC SUFF_TAC;
 (* Helper theorems.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val divides_mod_zero = store_thm
-  ("divides_mod_zero",
-   ``!m n. 0 < n ==> (divides n m = (m MOD n = 0))``,
+Theorem divides_mod_zero:
+     !m n. 0 < n ==> (divides n m = (m MOD n = 0))
+Proof
    RW_TAC std_ss [divides_def]
    ++ (EQ_TAC ++ STRIP_TAC)
    ++ RW_TAC std_ss [MOD_EQ_0]
@@ -59,7 +59,8 @@ val divides_mod_zero = store_thm
    ++ ASM_SIMP_TAC std_ss []
    ++ DISCH_THEN (MP_TAC o Q.SPEC `m`)
    ++ ASM_SIMP_TAC arith_ss []
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Primality prover.                                                         *)
@@ -90,9 +91,9 @@ End
 
 val prime_checker_ind = fetch "-" "prime_checker_ind";
 
-val nat_sqrt = store_thm
-  ("nat_sqrt",
-   ``!n k. k * k <= n = k <= nat_sqrt n 0``,
+Theorem nat_sqrt:
+     !n k. k * k <= n = k <= nat_sqrt n 0
+Proof
    RW_TAC std_ss []
    ++ Suff `!n i k. k * k <= n \/ k < i = k <= nat_sqrt n i`
    >> METIS_TAC [ZERO_LESS_EQ, prim_recTheory.NOT_LESS_0]
@@ -124,11 +125,12 @@ val nat_sqrt = store_thm
    ++ RW_TAC std_ss []
    ++ Suff `~(k = k')` >> DECIDE_TAC
    ++ STRIP_TAC
-   ++ RW_TAC arith_ss []);
+   ++ RW_TAC arith_ss []
+QED
 
-val prime_condition = store_thm
-  ("prime_condition",
-   ``!p. prime p = 1 < p /\ !n. 1 < n /\ n * n <= p ==> ~(p MOD n = 0)``,
+Theorem prime_condition:
+     !p. prime p = 1 < p /\ !n. 1 < n /\ n * n <= p ==> ~(p MOD n = 0)
+Proof
    STRIP_TAC
    ++ Know `(p = 0) \/ 0 < p` >> DECIDE_TAC
    ++ STRIP_TAC >> RW_TAC bool_ss [NOT_PRIME_0, prim_recTheory.NOT_LESS_0]
@@ -164,11 +166,12 @@ val prime_condition = store_thm
    ++ REVERSE (RW_TAC arith_ss [divides_def, LE_MULT_LCANCEL])
    >> METIS_TAC [MULT_COMM]
    ++ REVERSE (Cases_on `b <= q`) >> DECIDE_TAC
-   ++ METIS_TAC [MULT_COMM]);
+   ++ METIS_TAC [MULT_COMM]
+QED
 
-val prime_checker = store_thm
-  ("prime_checker",
-   ``!p. prime p = 1 < p /\ prime_checker p (nat_sqrt p 0)``,
+Theorem prime_checker:
+     !p. prime p = 1 < p /\ prime_checker p (nat_sqrt p 0)
+Proof
    RW_TAC std_ss [prime_condition]
    ++ Cases_on `p = 0` >> RW_TAC arith_ss []
    ++ Cases_on `p = 1` >> RW_TAC arith_ss []
@@ -194,7 +197,8 @@ val prime_checker = store_thm
    >> RW_TAC arith_ss []
    ++ RW_TAC arith_ss []
    ++ Suff `i' <= i - 1 \/ (i' = i)` >> METIS_TAC []
-   ++ DECIDE_TAC);
+   ++ DECIDE_TAC
+QED
 
 val _ = html_theory "primality";
 

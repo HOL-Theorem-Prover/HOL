@@ -165,7 +165,7 @@ Proof
   Cases_on ‘bv’ >> simp[]
 QED
 
-val term_ind =
+Theorem cterm_bvc_induction =
     bvc_genind
         |> INST_TYPE [alpha |-> ``:'a ctrep``]
         |> Q.INST [`lp` |-> `^lp`]
@@ -187,12 +187,13 @@ val term_ind =
                                   [ASSUME ``!x:'b. FINITE (fv x:string set)``]
         |> SPEC_ALL |> UNDISCH
         |> genit |> DISCH_ALL |> Q.GEN `fv` |> Q.GEN `P`
+        |> SIMP_RULE bool_ss [] (* removes redundant (∀x. FINITE (fv x)) *);
 
 fun mkX_ind th = th |> Q.SPEC `λt x. Q t` |> Q.SPEC `λx. X`
                     |> SIMP_RULE std_ss [] |> Q.GEN `X`
                     |> Q.INST [`Q` |-> `P`] |> Q.GEN `P`
 
-Theorem cterm_induction = mkX_ind term_ind
+Theorem cterm_induction = mkX_ind cterm_bvc_induction
 
 Theorem LAM_eq_thm =
   ``LAM u t1 = LAM v t2``
@@ -301,14 +302,15 @@ Proof SRW_TAC [][] THEN METIS_TAC []
 QED
 
 (* quote the term in order to get the variable names specified *)
-val simple_induction = store_thm(
-  "simple_induction",
-  ``!P. (!s. P (VAR s)) /\
+Theorem simple_induction:
+    !P. (!s. P (VAR s)) /\
         (!M N. P M /\ P N ==> P (M @@ N)) /\
         (∀a. P (CONST a)) ∧
         (!v M. P M ==> P (LAM v M)) ==>
-        !M. P M``,
-  METIS_TAC [cterm_induction, FINITE_EMPTY, NOT_IN_EMPTY])
+        !M. P M
+Proof
+  METIS_TAC [cterm_induction, FINITE_EMPTY, NOT_IN_EMPTY]
+QED
 
 Theorem ctpm_eqr:
   (t = ctpm pi u) = (ctpm (REVERSE pi) t = u)
@@ -364,18 +366,20 @@ Proof
 QED
 
 (* "acyclicity" *)
-val APP_acyclic = store_thm(
-  "APP_acyclic",
-  ``!t1 t2. t1 <> t1 @@ t2 /\ t1 <> t2 @@ t1``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+Theorem APP_acyclic:
+    !t1 t2. t1 <> t1 @@ t2 /\ t1 <> t2 @@ t1
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
-val FORALL_TERM = store_thm(
-  "FORALL_TERM",
-  ``(∀t. P t) <=>
+Theorem FORALL_TERM:
+    (∀t. P t) <=>
       (∀s. P (VAR s)) ∧ (∀a. P (CONST a)) ∧ (∀t1 t2. P (t1 @@ t2)) ∧
-      (∀v t. P (LAM v t))``,
+      (∀v t. P (LAM v t))
+Proof
   EQ_TAC THEN SRW_TAC [][] THEN
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC cterm_CASES THEN SRW_TAC [][]);
+  Q.SPEC_THEN `t` STRUCT_CASES_TAC cterm_CASES THEN SRW_TAC [][]
+QED
 
 (* ----------------------------------------------------------------------
     Establish substitution function
@@ -877,11 +881,12 @@ Overload "'" = “ssub”
 
 Theorem ctpm_ssub = CONJUNCT2 ssub_def
 
-val single_ssub = store_thm(
-  "single_ssub",
-  ``∀N. (FEMPTY |+ (s,M)) ' N = [M/s]N``,
+Theorem single_ssub:
+    ∀N. (FEMPTY |+ (s,M)) ' N = [M/s]N
+Proof
   HO_MATCH_MP_TAC cterm_induction THEN Q.EXISTS_TAC `s INSERT cFV M` THEN
-  SRW_TAC [][SUB_VAR, cSUB_THM]);
+  SRW_TAC [][SUB_VAR, cSUB_THM]
+QED
 
 Theorem in_fmap_supp:
   x ∈ fmcFV fm ⇔ x ∈ FDOM fm ∨ ∃y. y ∈ FDOM fm ∧ x ∈ cFV (fm ' y)
@@ -904,10 +909,11 @@ Proof
   SRW_TAC [][cSUB_THM, SUB_VAR, pred_setTheory.EXTENSION] THEN METIS_TAC []
 QED
 
-val ssub_value = store_thm(
-  "ssub_value",
-  ``(cFV t = EMPTY) ==> ((phi : string |-> 'a cterm) ' t = t)``,
-  SRW_TAC [][ssub_14b]);
+Theorem ssub_value:
+    (cFV t = EMPTY) ==> ((phi : string |-> 'a cterm) ' t = t)
+Proof
+  SRW_TAC [][ssub_14b]
+QED
 
 Theorem ssub_FEMPTY[simp]:
   ∀t. (FEMPTY:string|->'a cterm) ' t = t

@@ -90,10 +90,11 @@ val InvSbox = save_thm("InvSbox",
 
 val _ = computeLib.add_persistent_funs ["Sbox", "InvSbox"];
 
-val Sbox_Inversion = Q.store_thm
-("Sbox_Inversion",
- `!w:word8. InvSbox (Sbox w) = w`,
- Cases_word_value THEN EVAL_TAC);
+Theorem Sbox_Inversion:
+  !w:word8. InvSbox (Sbox w) = w
+Proof
+ Cases_word_value THEN EVAL_TAC
+QED
 
 (*  The following has been superseded by the construction
     of tables in MultScript. We'll keep it for info purposes.

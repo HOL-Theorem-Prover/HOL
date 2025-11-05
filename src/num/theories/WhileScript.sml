@@ -20,9 +20,11 @@ end
 fun INDUCT_TAC g = INDUCT_THEN numTheory.INDUCTION ASSUME_TAC g;
 fun simp ths = asm_simp_tac (srw_ss()) ths
 
-val cond_lemma = prove(
-  ``(if ~p then q else r) = (if p then r else q)``,
-  Q.ASM_CASES_TAC `p` THEN ASM_REWRITE_TAC []);
+Theorem cond_lemma[local]:
+    (if ~p then q else r) = (if p then r else q)
+Proof
+  Q.ASM_CASES_TAC `p` THEN ASM_REWRITE_TAC []
+QED
 
 (* ----------------------------------------------------------------------
     Existence of WHILE
@@ -224,14 +226,13 @@ Proof
    REWRITE_TAC [LEAST_EXISTS]
 QED
 
-Theorem LEAST_EQ:
+Theorem LEAST_EQ[simp]:
     ((LEAST n. n = x) = x) /\ ((LEAST n. x = n) = x)
 Proof
   CONJ_TAC THEN
   Q.SPEC_THEN `\n. n = x` (MATCH_MP_TAC o BETA_RULE) LEAST_ELIM THEN
   SIMP_TAC (srw_ss()) []
 QED
-val _ = export_rewrites ["LEAST_EQ"]
 
 Theorem LEAST_T[simp]:
     (LEAST x. T) = 0
@@ -272,7 +273,7 @@ Proof
   ]
 QED
 
-Theorem OLEAST_EQNS:
+Theorem OLEAST_EQNS[simp]:
     ((OLEAST n. n = x) = SOME x) /\
     ((OLEAST n. x = n) = SOME x) /\
     ((OLEAST n. F) = NONE) /\
@@ -281,7 +282,6 @@ Proof
   REPEAT STRIP_TAC THEN DEEP_INTRO_TAC OLEAST_INTRO THEN SRW_TAC [][] THEN
   METIS_TAC [NOT_ZERO_LT_ZERO]
 QED
-val _ = export_rewrites ["OLEAST_EQNS"]
 
 Theorem OLEAST_EQ_NONE[simp]:
    ((OLEAST) P = NONE) <=> !n. ~P n
@@ -415,10 +415,12 @@ Proof
   ]
 QED
 
-val IF_SOME_EQ_SOME_LEMMA = prove(
-  ``!b (x:'a) y. ((if b then SOME x else NONE) = SOME y) <=> b /\ (x = y)``,
+Theorem IF_SOME_EQ_SOME_LEMMA[local]:
+    !b (x:'a) y. ((if b then SOME x else NONE) = SOME y) <=> b /\ (x = y)
+Proof
   Cases THEN
-  FULL_SIMP_TAC bool_ss [optionTheory.NOT_NONE_SOME,optionTheory.SOME_11]);
+  FULL_SIMP_TAC bool_ss [optionTheory.NOT_NONE_SOME,optionTheory.SOME_11]
+QED
 
 Theorem OWHILE_IND:
     !P G (f:'a->'a).

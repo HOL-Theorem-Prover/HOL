@@ -15,17 +15,21 @@ val _ = ParseExtras.temp_loose_equality()
 (* Auxiliary stuff                                 *)
 (***************************************************)
 
-val IS_SOME_OPTION_MAP = prove (
-  ``!f v. IS_SOME (OPTION_MAP f v) = IS_SOME v``,
+Theorem IS_SOME_OPTION_MAP[local]:
+    !f v. IS_SOME (OPTION_MAP f v) = IS_SOME v
+Proof
 Cases_on `v` THEN
-SIMP_TAC list_ss [])
+SIMP_TAC list_ss []
+QED
 
-val some_eq_SOME = prove (
-  ``!P x. ((some x. P x) = SOME x) ==> (P x)``,
+Theorem some_eq_SOME[local]:
+    !P x. ((some x. P x) = SOME x) ==> (P x)
+Proof
 SIMP_TAC std_ss [some_def] THEN
 REPEAT STRIP_TAC THEN
 SELECT_ELIM_TAC THEN
-PROVE_TAC[])
+PROVE_TAC[]
+QED
 
 Theorem some_var_bool_T:
     (some x. x) = SOME T
@@ -45,31 +49,39 @@ Proof
   REWRITE_TAC[]
 QED
 
-val some_eq_NONE = prove (
-  ``!P. ((some x. P x) = NONE) <=> (!x. ~(P x))``,
-SIMP_TAC std_ss [some_def])
+Theorem some_eq_NONE[local]:
+    !P. ((some x. P x) = NONE) <=> (!x. ~(P x))
+Proof
+SIMP_TAC std_ss [some_def]
+QED
 
-val some_IS_SOME = prove (
-  ``!P. (IS_SOME (some x. P x)) <=> (?x. P x)``,
-SIMP_TAC (std_ss++boolSimps.LIFT_COND_ss) [some_def])
+Theorem some_IS_SOME[local]:
+    !P. (IS_SOME (some x. P x)) <=> (?x. P x)
+Proof
+SIMP_TAC (std_ss++boolSimps.LIFT_COND_ss) [some_def]
+QED
 
-val some_IS_SOME_EXISTS = prove (
-  ``!P. (IS_SOME (some x. P x)) <=> (?x. P x /\ ((some x. P x) = SOME x))``,
+Theorem some_IS_SOME_EXISTS[local]:
+    !P. (IS_SOME (some x. P x)) <=> (?x. P x /\ ((some x. P x) = SOME x))
+Proof
 GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN (
   ASM_SIMP_TAC std_ss []
 ) THEN
 Cases_on `some x. P x` THEN FULL_SIMP_TAC std_ss [] THEN
 MATCH_MP_TAC some_eq_SOME THEN
-ASM_REWRITE_TAC[])
+ASM_REWRITE_TAC[]
+QED
 
-val OPTION_MAP_EQ_OPTION_MAP = prove (
-``(OPTION_MAP f x = OPTION_MAP f' x') =
+Theorem OPTION_MAP_EQ_OPTION_MAP[local]:
+  (OPTION_MAP f x = OPTION_MAP f' x') =
   (((x = NONE) /\ (x' = NONE)) \/
-   (?y y'. (x = SOME y) /\ (x' = SOME y') /\ (f y = f' y')))``,
+   (?y y'. (x = SOME y) /\ (x' = SOME y') /\ (f y = f' y')))
+Proof
 
 Cases_on `x` THEN Cases_on `x'` THEN (
   SIMP_TAC std_ss []
-))
+)
+QED
 
 
 (***************************************************)
@@ -1355,9 +1367,10 @@ Definition PMATCH_FLATTEN_FUN_def:
 End
 
 
-val PMATCH_FLATTEN_THM_AUX = prove (
- ``(PMATCH v [PMATCH_ROW p g (\x. (PMATCH x (MAP (\r. r x) rows')))]) =
-   (PMATCH v (MAP (\r. (PMATCH_FLATTEN_FUN p g r)) rows'))``,
+Theorem PMATCH_FLATTEN_THM_AUX[local]:
+   (PMATCH v [PMATCH_ROW p g (\x. (PMATCH x (MAP (\r. r x) rows')))]) =
+   (PMATCH v (MAP (\r. (PMATCH_FLATTEN_FUN p g r)) rows'))
+Proof
 
 REPEAT GEN_TAC THEN
 Induct_on `rows'` THEN1 (
@@ -1371,7 +1384,8 @@ Q.PAT_X_ASSUM `_ = _` (K ALL_TAC) THEN
 
 Cases_on `some x. PMATCH_ROW_COND p g v x` THEN (
   ASM_SIMP_TAC std_ss [PMATCH_FLATTEN_FUN_def]
-));
+)
+QED
 
 
 Theorem PMATCH_FLATTEN_THM_SINGLE:

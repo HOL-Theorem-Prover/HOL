@@ -23,7 +23,10 @@ val is_char =
  in mk_abs(n,mk_less(n,topnum))
  end;
 
-val CHAR_EXISTS = Q.prove (`?n. ^is_char n`, Q.EXISTS_TAC `0` THEN REDUCE_TAC);
+Theorem CHAR_EXISTS[local]:
+   ?n. ^is_char n
+Proof Q.EXISTS_TAC `0` THEN REDUCE_TAC
+QED
 
 val CHAR_TYPE = new_type_definition("char", CHAR_EXISTS);
 
@@ -32,9 +35,8 @@ val CHAR_TYPE_FACTS =
        {ABS="CHR", REP="ORD",name="char_BIJ", tyax=CHAR_TYPE});
 
 Theorem ORD_11 = prove_rep_fn_one_one CHAR_TYPE_FACTS
-Theorem CHR_11 =
+Theorem CHR_11[simp] =
                          BETA_RULE (prove_abs_fn_one_one CHAR_TYPE_FACTS);
-val _ = export_rewrites ["CHR_11"]
 Theorem ORD_ONTO =
                          BETA_RULE (prove_rep_fn_onto CHAR_TYPE_FACTS);
 Theorem CHR_ONTO =
@@ -43,12 +45,11 @@ Theorem CHR_ONTO =
 Theorem CHR_ORD[simp] = CONJUNCT1 CHAR_TYPE_FACTS
 Theorem ORD_CHR = BETA_RULE (CONJUNCT2 CHAR_TYPE_FACTS);
 
-Theorem ORD_CHR_RWT:
+Theorem ORD_CHR_RWT[simp]:
   !r. r < 256 ==> (ORD (CHR r) = r)
 Proof
  PROVE_TAC [ORD_CHR]
 QED
-val _ = export_rewrites ["ORD_CHR_RWT"]
 
 Theorem ORD_CHR_COMPUTE[compute]:
   !n. ORD (CHR n) =
@@ -238,7 +239,7 @@ QED
       representation.
  ---------------------------------------------------------------------------*)
 
-val _ = type_abbrev_pp ("string", ``:char list``)
+Type string[pp] = ``:char list``
 
 Overload STRING[inferior] = “CONS : char -> string -> string”
 Overload EMPTYSTRING[inferior] = “[] : string”
@@ -268,12 +269,16 @@ End
 Definition TRANSLATE_def:   TRANSLATE f (s:string) = CONCAT (MAP f s)
 End
 
-val SPLITP_MONO = Q.prove(
-  `!P l. LENGTH (SND (SPLITP P l)) <= LENGTH l`,
-  Induct_on `l` THEN SRW_TAC [] [SPLITP, DECIDE ``a <= b ==> a <= SUC b``]);
+Theorem SPLITP_MONO[local]:
+   !P l. LENGTH (SND (SPLITP P l)) <= LENGTH l
+Proof
+  Induct_on `l` THEN SRW_TAC [] [SPLITP, DECIDE ``a <= b ==> a <= SUC b``]
+QED
 
-val TAIL_MONO = Q.prove(
-  `!l. ~(l = []) ==> LENGTH (TL l) < LENGTH l`, Cases THEN SRW_TAC [] []);
+Theorem TAIL_MONO[local]:
+   !l. ~(l = []) ==> LENGTH (TL l) < LENGTH l
+Proof Cases THEN SRW_TAC [] []
+QED
 
 Definition TOKENS_def:
   (TOKENS P ([]:string) = []) /\
@@ -309,11 +314,10 @@ Definition IMPLODE_def[simp]:
   (IMPLODE (c::cs) = STRING c (IMPLODE cs))
 End
 
-Definition EXPLODE_def:
+Definition EXPLODE_def[simp]:
   (EXPLODE "" = []) /\
   (EXPLODE (STRING c s) = c :: EXPLODE s)
 End
-val _ = export_rewrites ["EXPLODE_def"]
 
 Theorem IMPLODE_EXPLODE_I[compute]:
   (EXPLODE s = s) /\ (IMPLODE s = s)
@@ -321,26 +325,31 @@ Proof
   Induct_on `s` THEN SRW_TAC [][]
 QED
 
-Theorem IMPLODE_EXPLODE:
+Theorem IMPLODE_EXPLODE[simp]:
     IMPLODE (EXPLODE s) = s
 Proof
   Induct_on `s` THEN SRW_TAC [][]
 QED
 
-Theorem EXPLODE_IMPLODE:
+Theorem EXPLODE_IMPLODE[simp]:
     EXPLODE (IMPLODE cs) = cs
 Proof
   Induct_on `cs` THEN SRW_TAC [][]
 QED
 
-fun stac(n,t) = store_thm(n,t,METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE])
-val EXPLODE_ONTO = stac("EXPLODE_ONTO", ``!cs. ?s. cs = EXPLODE s``);
-val IMPLODE_ONTO = stac("IMPLODE_ONTO", ``!s. ?cs. s = IMPLODE cs``);
-val EXPLODE_11 = stac("EXPLODE_11", ``(EXPLODE s1 = EXPLODE s2) = (s1 = s2)``)
-val IMPLODE_11 = stac("IMPLODE_11", ``(IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)``)
+Theorem EXPLODE_ONTO: !cs. ?s. cs = EXPLODE s
+Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
+QED
+Theorem IMPLODE_ONTO: !s. ?cs. s = IMPLODE cs
+Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
+QED
+Theorem EXPLODE_11[simp]: (EXPLODE s1 = EXPLODE s2) = (s1 = s2)
+Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
+QED
+Theorem IMPLODE_11[simp]: (IMPLODE cs1 = IMPLODE cs2) = (cs1 = cs2)
+Proof METIS_TAC [EXPLODE_IMPLODE, IMPLODE_EXPLODE]
+QED
 
-val _ = export_rewrites ["EXPLODE_11", "IMPLODE_11", "IMPLODE_EXPLODE",
-                         "EXPLODE_IMPLODE"]
 
 Theorem TOKENS_APPEND:
   !P l1 x l2.
@@ -407,16 +416,18 @@ QED
     Definability of prim. rec. functions over strings.
  ---------------------------------------------------------------------------*)
 
-val alt_string_Axiom = Q.prove
-(`!b g. ?f.  (f (IMPLODE []) = b) /\
-       (!c t. f (IMPLODE (c::t)) = g c t (f (IMPLODE t)))`,
+Theorem alt_string_Axiom[local]:
+  !b g. ?f.  (f (IMPLODE []) = b) /\
+       (!c t. f (IMPLODE (c::t)) = g c t (f (IMPLODE t)))
+Proof
 REPEAT GEN_TAC
   THEN STRIP_ASSUME_TAC
      (prove_rec_fn_exists listTheory.list_Axiom
         ``(list_rec (b:'a) f ([]:char list) = b) /\
           (list_rec b f (h::t) = f h t (list_rec b f t))``)
    THEN Q.EXISTS_TAC`list_rec b g o EXPLODE`
-   THEN RW_TAC bool_ss [combinTheory.o_DEF,list_case_def,EXPLODE_IMPLODE]);
+   THEN RW_TAC bool_ss [combinTheory.o_DEF,list_case_def,EXPLODE_IMPLODE]
+QED
 
 
 Theorem STRING_ACYCLIC:
@@ -448,11 +459,10 @@ QED
 (* with an ML definition of DEST_STRING in terms of the Basis String struct. *)
 (*---------------------------------------------------------------------------*)
 
-Definition DEST_STRING_def:
+Definition DEST_STRING_def[simp]:
    (DEST_STRING "" = NONE) /\
    (DEST_STRING (STRING c rst) = SOME(c,rst))
 End
-val _ = export_rewrites ["DEST_STRING_def"]
 
 Theorem DEST_STRING_LEMS:
   !s. ((DEST_STRING s = NONE) = (s = "")) /\
@@ -468,21 +478,19 @@ Theorem IMPLODE_EQNS = IMPLODE_def
     More rewrites for IMPLODE and EXPLODE
    ---------------------------------------------------------------------- *)
 
-Theorem IMPLODE_EQ_EMPTYSTRING:
+Theorem IMPLODE_EQ_EMPTYSTRING[simp]:
    ((IMPLODE l = "") = (l = [])) /\
    (("" = IMPLODE l) = (l = []))
 Proof
   Cases_on `l` THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["IMPLODE_EQ_EMPTYSTRING"]
 
-Theorem EXPLODE_EQ_NIL:
+Theorem EXPLODE_EQ_NIL[simp]:
    ((EXPLODE s = []) = (s = "")) /\
    (([] = EXPLODE s) = (s = ""))
 Proof
   Cases_on `s` THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["EXPLODE_EQ_NIL"]
 
 Theorem EXPLODE_EQ_THM:
   !s h t. ((h::t = EXPLODE s) = (s = STRING h (IMPLODE t))) /\

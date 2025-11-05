@@ -26,8 +26,10 @@ val bool_ss = bool_ss ++ boolSimps.LET_ss;
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `state_inp = <| state : 'a; inp : num -> 'b |>`;
-val _ = Hol_datatype `state_out = <| state : 'a; out : 'b |>`;
+Datatype: state_inp = <| state : 'a; inp : num -> 'b |>
+End
+Datatype: state_out = <| state : 'a; out : 'b |>
+End
 
 (*---------------------------------------------------------------------------
   - Paired Iterated Maps ----------------------------------------------------
@@ -128,13 +130,15 @@ End
 
 (* ---- *)
 
-val LEAST_THM = store_thm("LEAST_THM",
-  `!n. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)`,
+Theorem LEAST_THM:
+   !n. (!m. m < n ==> ~P m) /\ P n ==> ($LEAST P = n)
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC WhileTheory.FULL_LEAST_INTRO
     \\ Cases_on `$LEAST P = n` >- ASM_REWRITE_TAC []
     \\ `$LEAST P < n` by DECIDE_TAC
-    \\ PROVE_TAC []);
+    \\ PROVE_TAC []
+QED
 
 val lem = prove(
   `(!t1 t2. t1 < t2 ==> imm t1 < imm t2) ==>
@@ -147,8 +151,9 @@ val lem = prove(
 val lem2 = (SIMP_RULE std_ss [NOT_LESS] o SPEC `x` o
             INST [`P` |-> `\t. imm x < imm (t + 1)`]) LEAST_THM;
 
-val IMM_RET_THM = store_thm("IMM_RET_THM",
-  `!imm. FREE_IMMERSION imm ==> ((IMM_RET imm) o imm = I)`,
+Theorem IMM_RET_THM:
+   !imm. FREE_IMMERSION imm ==> ((IMM_RET imm) o imm = I)
+Proof
   RW_TAC bool_ss [FREE_IMMERSION_def]
     \\ REWRITE_TAC [FUN_EQ_THM]
     \\ SIMP_TAC std_ss [IMM_RET_def]
@@ -156,13 +161,16 @@ val IMM_RET_THM = store_thm("IMM_RET_THM",
     \\ POP_ASSUM (SPEC_THEN `x` ASSUME_TAC)
     \\ PAT_X_ASSUM `!t1 t2. P`
          (SPECL_THEN [`x`,`x + 1`] (ASSUME_TAC o SIMP_RULE arith_ss []))
-    \\ IMP_RES_TAC lem2);
+    \\ IMP_RES_TAC lem2
+QED
 
 (* ---- *)
 
-val PACKED_THM = store_thm("PACKED_THM",
-  `!imm strm. PACKED_STRM imm (PACK imm strm)`,
-  RW_TAC bool_ss [PACK_def,PACKED_STRM_def,LENGTH_GENLIST]);
+Theorem PACKED_THM:
+   !imm strm. PACKED_STRM imm (PACK imm strm)
+Proof
+  RW_TAC bool_ss [PACK_def,PACKED_STRM_def,LENGTH_GENLIST]
+QED
 
 (* ---- *)
 
@@ -238,11 +246,12 @@ val lem4 = prove(
          (SPEC_THEN `n` (ASSUME_TAC o SIMP_RULE arith_ss [NOT_LESS]))
     \\ ASM_REWRITE_TAC [ADD1]);
 
-val PACK_SERIALIZE = store_thm("PACK_SERIALIZE",
-  `!imm. FREE_IMMERSION imm ==>
+Theorem PACK_SERIALIZE:
+   !imm. FREE_IMMERSION imm ==>
       (!strm. PACKED_STRM imm strm ==>
              (PACK imm (SERIALIZE imm strm) = strm)) /\
-      (!strm. SERIALIZE imm (PACK imm strm) = strm)`,
+      (!strm. SERIALIZE imm (PACK imm strm) = strm)
+Proof
   RW_TAC bool_ss [PACKED_STRM_def]
     \\ REWRITE_TAC [FUN_EQ_THM,LIST_EQ]
     THENL [
@@ -271,7 +280,8 @@ val PACK_SERIALIZE = store_thm("PACK_SERIALIZE",
         \\ STRIP_TAC \\ POP_ASSUM (SPEC_THEN `x` ASSUME_TAC)
         \\ PAT_X_ASSUM `!x. P` (SPEC_THEN `x` ASSUME_TAC)
         \\ ASM_SIMP_TAC arith_ss
-             [SERIALIZE_def,PACK_def,EL_GENLIST,IMM_START_def,IMM_LEN_def]]);
+             [SERIALIZE_def,PACK_def,EL_GENLIST,IMM_START_def,IMM_LEN_def]]
+QED
 
 (*---------------------------------------------------------------------------
   - Stream Abstraction ------------------------------------------------------
@@ -429,13 +439,17 @@ val PUIMMERSION_ONE = prove(
   - Paired Map Results ------------------------------------------------------
   ---------------------------------------------------------------------------*)
 
-val ADVANCE_ZERO = store_thm("ADVANCE_ZERO",
-  `!i. ADVANCE 0 i = i`,
-  REWRITE_TAC [ADD,FUN_EQ_THM,ADVANCE_def]);
+Theorem ADVANCE_ZERO:
+   !i. ADVANCE 0 i = i
+Proof
+  REWRITE_TAC [ADD,FUN_EQ_THM,ADVANCE_def]
+QED
 
-val ADVANCE_COMP = store_thm("ADVANCE_COMP",
-  `!t1 t2 i. ADVANCE (t1 + t2) i = ADVANCE t1 (ADVANCE t2 i)`,
-  SIMP_TAC arith_ss [FUN_EQ_THM,ADVANCE_def]);
+Theorem ADVANCE_COMP:
+   !t1 t2 i. ADVANCE (t1 + t2) i = ADVANCE t1 (ADVANCE t2 i)
+Proof
+  SIMP_TAC arith_ss [FUN_EQ_THM,ADVANCE_def]
+QED
 
 val ADVANCE_ONE = save_thm("ADVANCE_ONE",
   (GEN_ALL o REWRITE_RULE [GSYM SUC_ONE_ADD] o SPECL [`1`,`t`]) ADVANCE_COMP);
@@ -945,10 +959,12 @@ Definition SNEXT_def:
     \x. <| state := next x.state (x.inp 0); inp := ADVANCE 1 x.inp |>
 End
 
-val SNEXT = store_thm("SNEXT",
-  `!f s i. SNEXT f <|state := s; inp := i |> =
-      <| state := f s (i 0); inp := ADVANCE 1 i |>`,
-  RW_TAC std_ss [SNEXT_def]);
+Theorem SNEXT:
+   !f s i. SNEXT f <|state := s; inp := i |> =
+      <| state := f s (i 0); inp := ADVANCE 1 i |>
+Proof
+  RW_TAC std_ss [SNEXT_def]
+QED
 
 (*---------------------------------------------------------------------------
   - Uniform Immersions ------------------------------------------------------
@@ -1031,12 +1047,14 @@ End
 val state_inp_component_equality = theorem "state_inp_component_equality";
 val state_out_component_equality = theorem "state_out_component_equality";
 
-val UIMMERSION_ONE = store_thm("UIMMERSION_ONE",
-  `!f init out imm dur.
+Theorem UIMMERSION_ONE:
+   !f init out imm dur.
      IS_IMAP_INIT f init /\ UIMMERSION imm f dur ==>
-     !x. imm x 1 = dur <| state := init x.state; inp := x.inp |>`,
+     !x. imm x 1 = dur <| state := init x.state; inp := x.inp |>
+Proof
   RW_TAC bool_ss [UIMMERSION_def,IS_IMAP_INIT_def,IMAP_def,
-    ADVANCE_ZERO,ONE,ADD_0] \\ ASM_SIMP_TAC (srw_ss()) []);
+    ADVANCE_ZERO,ONE,ADD_0] \\ ASM_SIMP_TAC (srw_ss()) []
+QED
 
 val IMAP_PMAP = prove(
   `!f g init next out.
@@ -1074,13 +1092,14 @@ val IMAP_TCON_IMMERSION = prove(
          (fn th => FULL_SIMP_TAC (srw_ss()) [Pstate_out_state,ADVANCE_COMP,th])
 );
 
-val TCON_IMMERSION_ONE_STEP_THM = store_thm("TCON_IMMERSION_ONE_STEP_THM",
-  `!strm f init out imm . IS_IMAP_INIT f init /\ UNIFORM imm f ==>
+Theorem TCON_IMMERSION_ONE_STEP_THM:
+   !strm f init out imm . IS_IMAP_INIT f init /\ UNIFORM imm f ==>
     (TCON_IMMERSION f imm strm =
        (!x. x.inp IN strm ==>
           (init (f (imm x 0) x).state = (f (imm x 0) x).state)) /\
        (!x. x.inp IN strm ==> (ADVANCE (imm x 1) x.inp) IN strm /\
-          (init (f (imm x 1) x).state = (f (imm x 1) x).state)))`,
+          (init (f (imm x 1) x).state = (f (imm x 1) x).state)))
+Proof
   RW_TAC bool_ss [IS_IMAP_INIT_def]
     \\ ISPECL_THEN [`init`,`next`,`out`] ASSUME_TAC THE_PMAP
     \\ IMP_RES_TAC IMAP_PMAP
@@ -1090,16 +1109,19 @@ val TCON_IMMERSION_ONE_STEP_THM = store_thm("TCON_IMMERSION_ONE_STEP_THM",
     \\ IMP_RES_TAC PTCON_IMMERSION_ONE_STEP_THM
     \\ NTAC 5 (POP_ASSUM (K ALL_TAC))
     \\ IMP_RES_TAC IMAP_TCON_IMMERSION \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
-    \\ ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss) [Pstate_out_state,PINIT_def]);
+    \\ ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss) [Pstate_out_state,PINIT_def]
+QED
 
 val UNIFORM_ID = prove(
   `!f. UNIFORM (\a t. t) f`,
   RW_TAC bool_ss [UNIFORM_def] \\ EXISTS_TAC `\a. 1`
     \\ REWRITE_TAC [UIMMERSION_def] \\ SIMP_TAC arith_ss []);
 
-val TCON_IMP_TCON_IMMERSION = store_thm("TCON_IMP_TCON_IMMERSION",
-  `!strm f. TCON f strm ==> !imm. TCON_IMMERSION f imm strm`,
-  RW_TAC bool_ss [TCON_def,TCON_IMMERSION]);
+Theorem TCON_IMP_TCON_IMMERSION:
+   !strm f. TCON f strm ==> !imm. TCON_IMMERSION f imm strm
+Proof
+  RW_TAC bool_ss [TCON_def,TCON_IMMERSION]
+QED
 
 val TCON_IMMERSION_TCON = prove(
   `!strm f. TCON_IMMERSION f (\a t. t) strm = TCON f strm`,
@@ -1140,13 +1162,14 @@ val IMAP_TCON = prove(
     \\ EQ_TAC \\ RW_TAC (srw_ss()++boolSimps.LET_ss)
          [Pstate_out_state,ADVANCE_COMP]);
 
-val TCON_IMMERSION_COR = store_thm("TCON_IMMERSION_COR",
-  `!strm f imm dur.
+Theorem TCON_IMMERSION_COR:
+   !strm f imm dur.
      IS_IMAP f /\ UNIFORM imm f /\ TCON_IMMERSION f imm strm ==>
        !t1 t2 x.
            x.inp IN strm ==> (imm x (t1 + t2) =
               imm <| state := (f (imm x t1) x).state;
-                     inp := ADVANCE (imm x t1) x.inp|> t2 + imm x t1)`,
+                     inp := ADVANCE (imm x t1) x.inp|> t2 + imm x t1)
+Proof
   RW_TAC bool_ss [IS_IMAP_def]
     \\ ISPECL_THEN [`init`,`next`,`out`] ASSUME_TAC THE_PMAP
     \\ IMP_RES_TAC IMAP_PMAP
@@ -1157,7 +1180,8 @@ val TCON_IMMERSION_COR = store_thm("TCON_IMMERSION_COR",
     \\ `PUNIFORM imm (THE_PMAP init next out)` by IMP_RES_TAC IMAP_UNIFORM
     \\ PAT_X_ASSUM `UNIFORM imm impl` (K ALL_TAC)
     \\ IMP_RES_TAC (REWRITE_RULE [Pstate_out_state] PTCON_IMMERSION_COR)
-    \\ FULL_SIMP_TAC (srw_ss()) []);
+    \\ FULL_SIMP_TAC (srw_ss()) []
+QED
 
 val IMAP_TCON_SMPL = prove(
   `!strm smpl imm f init next out. IMAP f init next out ==>
@@ -1219,8 +1243,8 @@ val OSMPL = prove(
   REWRITE_TAC [FUN_EQ_THM] \\ REPEAT STRIP_TAC
     \\ Cases_on `x` \\ SIMP_TAC (srw_ss()) [OSMPL_def]);
 
-val ONE_STEP_THM = store_thm("ONE_STEP_THM",
-  `!sstrm istrm spec impl imm abs osmpl ismpl f.
+Theorem ONE_STEP_THM:
+   !sstrm istrm spec impl imm abs osmpl ismpl f.
       IS_IMAP spec /\ IS_IMAP impl /\ UNIFORM imm impl /\
       DATA_ABSTRACTION abs (state_out_state o (impl 0))
                            (state_out_state o (spec 0)) /\
@@ -1236,7 +1260,8 @@ val ONE_STEP_THM = store_thm("ONE_STEP_THM",
       (!x. x.inp IN istrm ==>
          (OUTPUT spec <| state := abs x.state; inp := ismpl x|> 0 =
           osmpl (x,OUTPUT impl x) 0)) ==>
-      CORRECT spec impl imm abs osmpl ismpl sstrm istrm`,
+      CORRECT spec impl imm abs osmpl ismpl sstrm istrm
+Proof
   RW_TAC bool_ss [IS_IMAP_def,OSMPL] \\ RULE_ASSUM_TAC PairRules.PBETA_RULE
     \\ `PTCON (THE_PMAP init next out) sstrm` by IMP_RES_TAC IMAP_TCON
     \\ PAT_X_ASSUM `TCON spec sstrm` (K ALL_TAC)
@@ -1284,7 +1309,8 @@ val ONE_STEP_THM = store_thm("ONE_STEP_THM",
     \\ IMP_RES_TAC IMAP_OUTPUT
     \\ POP_ASSUM (fn th => FULL_SIMP_TAC std_ss [th,Pstate_out_state])
     \\ NTAC 2 (PAT_X_ASSUM `!x t. THE_PMAP _ _ _ t x = _`
-         (fn th => FULL_SIMP_TAC (srw_ss()) [th])));
+         (fn th => FULL_SIMP_TAC (srw_ss()) [th]))
+QED
 
 (*---------------------------------------------------------------------------
   - Data Abstraction Id -----------------------------------------------------
@@ -1298,10 +1324,11 @@ val lem2 = prove(
   `!a b c. (a = <| state := b; inp := c |>) ==> (a.state = b)`,
   SIMP_TAC (srw_ss()) []);
 
-val DATA_ABSTRACTION_I = store_thm("DATA_ABSTRACTION_I",
-  `!f fo g h go abs. IS_IMAP_INIT f I /\ IS_IMAP_INIT g h ==>
+Theorem DATA_ABSTRACTION_I:
+   !f fo g h go abs. IS_IMAP_INIT f I /\ IS_IMAP_INIT g h ==>
      (DATA_ABSTRACTION abs (state_out_state o g 0) (state_out_state o f 0) =
-        (!a. ?b. abs (h b) = a))`,
+        (!a. ?b. abs (h b) = a))
+Proof
   RW_TAC (srw_ss()++boolSimps.LET_ss) [IS_IMAP_INIT_def,IMAP_def,
     DATA_ABSTRACTION_def,RANGE_def,IMAGE_DEF,SURJ_DEF,IN_UNIV,GSPECIFICATION]
     \\ Tactical.REVERSE EQ_TAC >- METIS_TAC [lem,lem2]
@@ -1311,12 +1338,15 @@ val DATA_ABSTRACTION_I = store_thm("DATA_ABSTRACTION_I",
     \\ PAT_X_ASSUM `!x. (?x'. x = (f 0 x').state) ==>
          ?y. (?x. y = (g 0 x).state) /\ (abs y = x)` (SPEC_THEN `a` IMP_RES_TAC)
     \\ PAT_X_ASSUM `!x. (g 0 x).state = z` (SPEC_THEN `x` (ASSUME_TAC o SYM))
-    \\ METIS_TAC [GSYM lem,GSYM lem2]);
+    \\ METIS_TAC [GSYM lem,GSYM lem2]
+QED
 
-val DATA_ABSTRACTION_I_ABS = store_thm("DATA_ABSTRACTION_I_ABS",
-  `!f. DATA_ABSTRACTION I f f`,
+Theorem DATA_ABSTRACTION_I_ABS:
+   !f. DATA_ABSTRACTION I f f
+Proof
   RW_TAC std_ss [onestepTheory.DATA_ABSTRACTION_def,RANGE_def,IMAGE_DEF,
-    SURJ_DEF,IN_UNIV,GSPECIFICATION]);
+    SURJ_DEF,IN_UNIV,GSPECIFICATION]
+QED
 
 val lem = prove(
    `!x. <| state := x.state; inp := x.inp |> = x`,
@@ -1348,27 +1378,31 @@ val CORRECT = prove(
         (IMP_RES_TAC o SIMP_RULE (srw_ss()) [lem]))]
     \\ ASM_SIMP_TAC (srw_ss()) []);
 
-val CORRECT_TRANS = store_thm("CORRECT_TRANS",
-  `!f1 f2 f3 imm1 imm2 abs1 abs2 osmpl1 osmpl2 ismpl1 ismpl2 strm1 strm2 strm3.
+Theorem CORRECT_TRANS:
+   !f1 f2 f3 imm1 imm2 abs1 abs2 osmpl1 osmpl2 ismpl1 ismpl2 strm1 strm2 strm3.
      CORRECT f1 f2 imm1 abs1 osmpl1 ismpl1 strm1 strm2 /\
      CORRECT f2 f3 imm2 abs2 osmpl2 ismpl2 strm2 strm3 ==>
      CORRECT f1 f3 (\x. imm2 x o imm1 <| state := abs2 x.state; inp := ismpl2 x|>)
        (abs1 o abs2) (\(x,stm). osmpl1 (<|state := abs2 x.state; inp := ismpl2 x|>,osmpl2 (x,stm)))
-       (\x. ismpl1 <| state := abs2 x.state; inp := ismpl2 x|>) strm1 strm3`,
+       (\x. ismpl1 <| state := abs2 x.state; inp := ismpl2 x|>) strm1 strm3
+Proof
   RW_TAC (srw_ss()++boolSimps.LET_ss) [CORRECT,IMMERSION_def,
     DATA_ABSTRACTION_def,STREAM_ABSTRACTION_def,o_THM,FREE_IMMERSION_def,
     SURJ_DEF,RANGE_def,IMAGE_DEF,IN_UNIV,GSPECIFICATION]
-    \\ PROVE_TAC []);
+    \\ PROVE_TAC []
+QED
 
-val STATE_FUNPOW_INIT = store_thm("STATE_FUNPOW_INIT",
-  `!f init next out. IMAP f init next out ==>
-     (!t x. f t x = (FUNPOW (PNEXT next out) t (PINIT init out x)).state)`,
+Theorem STATE_FUNPOW_INIT:
+   !f init next out. IMAP f init next out ==>
+     (!t x. f t x = (FUNPOW (PNEXT next out) t (PINIT init out x)).state)
+Proof
   REPEAT STRIP_TAC
     \\ SPECL_THEN [`f`,`THE_PMAP init next out`,`init`,`next`,`out`]
          ASSUME_TAC IMAP_PMAP
     \\ SPECL_THEN [`THE_PMAP init next out`,`init`,`next`,`out`]
          ASSUME_TAC STATE_FUNPOW_LEMMA
-    \\ FULL_SIMP_TAC (srw_ss()) [THE_PMAP]);
+    \\ FULL_SIMP_TAC (srw_ss()) [THE_PMAP]
+QED
 
 val STATE_FUNPOW_INIT2 = prove(
   `!next out t x. (FUNPOW (PNEXT next out) t x).inp = ADVANCE t x.inp`,
@@ -1383,9 +1417,10 @@ val STATE_FUNPOW_INIT3 = prove(
     \\ ASM_SIMP_TAC arith_ss [ADVANCE_ZERO,ADVANCE_ONE,FUNPOW,FUNPOW_THM]
     \\ FULL_SIMP_TAC (srw_ss()++boolSimps.LET_ss) [SNEXT_def]);
 
-val STATE_FUNPOW_INIT4 = store_thm("STATE_FUNPOW_INIT4",
-  `!f init next out. IMAP f init next out ==>
-     (!t x. (f t x).state = (FUNPOW (SNEXT next) t (SINIT init x)).state)`,
+Theorem STATE_FUNPOW_INIT4:
+   !f init next out. IMAP f init next out ==>
+     (!t x. (f t x).state = (FUNPOW (SNEXT next) t (SINIT init x)).state)
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC STATE_FUNPOW_INIT
     \\ SPEC_TAC (`t`,`t`)
@@ -1396,18 +1431,23 @@ val STATE_FUNPOW_INIT4 = store_thm("STATE_FUNPOW_INIT4",
           SIMP_RULE (srw_ss()) [PNEXT_def] STATE_FUNPOW_INIT2,
           SIMP_RULE (srw_ss()) [SNEXT_def] STATE_FUNPOW_INIT3]
     \\ PAT_X_ASSUM `!x t. P` (fn th => ASM_SIMP_TAC (srw_ss()++boolSimps.LET_ss)
-         [GSYM th, PINIT_def,SINIT_def]));
+         [GSYM th, PINIT_def,SINIT_def])
+QED
 
-val STATE_FUNPOW_INIT2 = store_thm("STATE_FUNPOW_INIT2",
-  `!next t x.  <|state := (FUNPOW (SNEXT next) t x).state;
-                 inp := ADVANCE t x.inp|> = FUNPOW (SNEXT next) t x`,
+Theorem STATE_FUNPOW_INIT2:
+   !next t x.  <|state := (FUNPOW (SNEXT next) t x).state;
+                 inp := ADVANCE t x.inp|> = FUNPOW (SNEXT next) t x
+Proof
   REWRITE_TAC [GSYM STATE_FUNPOW_INIT3]
-    \\ SIMP_TAC (srw_ss()) [theorem "state_inp_component_equality"]);
+    \\ SIMP_TAC (srw_ss()) [theorem "state_inp_component_equality"]
+QED
 
-val OUTPUT_THM = store_thm("OUTPUT_THM",
-  `!f init next out. IMAP f init next out ==>
-    (!t x. (f t x).out = out ((f t x).state))`,
-  RW_TAC bool_ss [IMAP_def]);
+Theorem OUTPUT_THM:
+   !f init next out. IMAP f init next out ==>
+    (!t x. (f t x).out = out ((f t x).state))
+Proof
+  RW_TAC bool_ss [IMAP_def]
+QED
 
 val lem = prove(
   `!P a b. (a < SUC b ==> P a) ==> (a < b ==> P a)`, RW_TAC arith_ss []);
@@ -1426,21 +1466,23 @@ val lem3 = prove(
   `!t2 t. t2 < t ==> ((\s. (if s = t then i else y s)) t2 = y t2)`,
   RW_TAC arith_ss []);
 
-val IMAP_NEXT = store_thm("IMAP_NEXT",
-  `!spec init next out.
+Theorem IMAP_NEXT:
+   !spec init next out.
      IMAP spec init next out ==>
        !t a b c d e f.
        (spec t <| state := a; inp := b |> = <| state:= c; out := d |>) /\
        (next c e = f) /\
        (out f = g) ==>
        (spec (SUC t) <| state := a; inp := \s. if s = t then e else b s |> =
-                     <| state := f; out:= g|>)`,
+                     <| state := f; out:= g|>)
+Proof
   NTAC 5 STRIP_TAC \\ IMP_RES_TAC lem2
     \\ FULL_SIMP_TAC std_ss [IMAP_def]
     \\ RW_TAC std_ss [state_out_component_equality]
     \\ POP_ASSUM (ASSUME_TAC o GEN_ALL o INST
          [`i` |-> `(\s. (if s = t then e else b s))`, `j` |-> `b`] o SPEC_ALL)
-    \\ FULL_SIMP_TAC std_ss [lem3]);
+    \\ FULL_SIMP_TAC std_ss [lem3]
+QED
 
 (*---------------------------------------------------------------------------
   - All Input Stream Specialisation -----------------------------------------
@@ -1516,31 +1558,35 @@ val ONE_STEP_THMa = save_thm("ONE_STEP_THMa",
 
 (* ------------------------------------------------------------------------- *)
 
-val TCON_IMMERSION_THM = store_thm("TCON_IMMERSION_THM",
-  `!f imm strm.
+Theorem TCON_IMMERSION_THM:
+   !f imm strm.
          TCON_IMMERSION f imm strm =
            (let g = \t x. <|state:= (f t x).state; inp := ADVANCE t x.inp|> in
               !t1 t2 x. x.inp IN strm ==>
               (let s2 = imm x t2 in
                let s1 = imm (g s2 x) t1 in
               ADVANCE s2 x.inp IN strm /\
-              (g (s1 + s2) x = (g s1 o g s2) x)))`,
-  RW_TAC (srw_ss()++boolSimps.LET_ss) [ADVANCE_COMP,TCON_IMMERSION_def]);
+              (g (s1 + s2) x = (g s1 o g s2) x)))
+Proof
+  RW_TAC (srw_ss()++boolSimps.LET_ss) [ADVANCE_COMP,TCON_IMMERSION_def]
+QED
 
-val PP_TCON_IMMERSION_ONE_STEP_THM = store_thm("PP_TCON_IMMERSION_ONE_STEP_THM",
-  `!strm f init out imm.
+Theorem PP_TCON_IMMERSION_ONE_STEP_THM:
+   !strm f init out imm.
          IS_IMAP_INIT f init /\ UNIFORM imm f ==>
          (TCON_IMMERSION f imm strm =
           (!x. x.inp IN strm ==>
              (init (f (imm x 0) x).state = (f (imm x 0) x).state) /\
              (init (f (imm x 1) x).state = (f (imm x 1) x).state) /\
-            ADVANCE (imm x 1) x.inp IN strm))`,
+            ADVANCE (imm x 1) x.inp IN strm))
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC TCON_IMMERSION_ONE_STEP_THM
     \\ NTAC 5 (POP_ASSUM (K ALL_TAC))
-    \\ ASM_SIMP_TAC (std_ss++boolSimps.DNF_ss) [AC CONJ_COMM CONJ_ASSOC]);
+    \\ ASM_SIMP_TAC (std_ss++boolSimps.DNF_ss) [AC CONJ_COMM CONJ_ASSOC]
+QED
 
-val PP_ONE_STEP_THM = store_thm("PP_ONE_STEP_THM",
-  `!sstrm istrm spec impl imm abs osmpl ismpl f.
+Theorem PP_ONE_STEP_THM:
+   !sstrm istrm spec impl imm abs osmpl ismpl f.
      IS_IMAP spec /\ IS_IMAP impl /\ UNIFORM imm impl /\
      DATA_ABSTRACTION abs
        (state_out_state o impl 0) (state_out_state o spec 0) /\
@@ -1552,9 +1598,11 @@ val PP_ONE_STEP_THM = store_thm("PP_ONE_STEP_THM",
         ((spec 0 y).state = abs (impl (imm x 0) x).state) /\
         ((spec 1 y).state = abs (impl (imm x 1) x).state) /\
         (OUTPUT spec y 0 = osmpl (x,OUTPUT impl x) 0)) ==>
-     CORRECT spec impl imm abs osmpl ismpl sstrm istrm`,
+     CORRECT spec impl imm abs osmpl ismpl sstrm istrm
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC ONE_STEP_THM
-    \\ EXISTS_TAC `f` \\ FULL_SIMP_TAC (srw_ss()++boolSimps.LET_ss) []);
+    \\ EXISTS_TAC `f` \\ FULL_SIMP_TAC (srw_ss()++boolSimps.LET_ss) []
+QED
 
 val lem = prove(
    `!x. <| state := x.state; inp := x.inp |> = x`,

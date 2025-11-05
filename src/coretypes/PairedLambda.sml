@@ -100,7 +100,7 @@ fun PAIRED_ETA_CONV tm =
    in
      EXT (GEN xv (SUBS [SYM peq] bth))
    end
-   handle HOL_ERR {message, ...} => raise ERR "PAIRED_ETA_CONV" message
+   handle HOL_ERR herr => raise ERR "PAIRED_ETA_CONV" (message_of herr)
 end;
 
 (*--------------------------------------------------------------------*)

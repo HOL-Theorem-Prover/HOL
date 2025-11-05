@@ -109,13 +109,13 @@ Proof
   \\ gs []
 QED
 
-Triviality lt_or_gt:
+Theorem lt_or_gt[local]:
   (a: num) <> b ==> a < b \/ b < a
 Proof
   simp []
 QED
 
-Triviality num_bytes_nonzero:
+Theorem num_bytes_nonzero[local]:
   8 <= dimindex (:'a) <=> 0 < dimindex (:'a) DIV 8
 Proof
   iff_tac
@@ -215,7 +215,7 @@ Proof
       >> rfs [w2n_add_2, num_bytes_nonzero])
 QED
 
-Triviality word_of_bytes_eq_or_helper:
+Theorem word_of_bytes_eq_or_helper[local]:
   !bs n w. (!j. j < LENGTH bs ==> ~ (f (EL j bs) (j + n) ' ix)) /\
   ~ ((w : 'a word) ' ix) /\ ix < dimindex (: 'a) ==>
   ~ FOLDRi (\x b w. w || (f b (n + x))) w bs ' ix
@@ -239,11 +239,11 @@ Proof
   \\ simp [arithmeticTheory.ADD1]
 QED
 
-Triviality word_of_bytes_eq_or_helper2 =
+Theorem word_of_bytes_eq_or_helper2[local] =
     word_of_bytes_eq_or_helper |> Q.SPECL [`bs`, `0n`]
     |> SIMP_RULE std_ss []
 
-Triviality w2n_increment:
+Theorem w2n_increment[local]:
   w2n (x + 1w) = (if x = UINT_MAXw then 0n else w2n x + 1)
 Proof
   qspec_then `x` mp_tac wordsTheory.w2n_plus1

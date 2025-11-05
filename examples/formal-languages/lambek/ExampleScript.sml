@@ -59,17 +59,19 @@ val works = ``Backslash (At "np") (At "S")``;
 val John_works = ``(Dot ^John ^works)``;
 
 (* "John works" is a sentence, manual proof *)
-val John_works_thm = store_thm (
-   "John_works_thm", ``sentence ^John_works``,
+Theorem John_works_thm:   sentence ^John_works
+Proof
     REWRITE_TAC [sentence_def]
  >> MATCH_MP_TAC gamma'
- >> REWRITE_TAC [one]);
+ >> REWRITE_TAC [one]
+QED
 
 (* same proof, done automatically *)
-val John_works_thm2 = store_thm (
-   "John_works_thm2", ``sentence ^John_works``,
+Theorem John_works_thm2:   sentence ^John_works
+Proof
     REWRITE_TAC [sentence_def]
- >> PROVE_TAC [arrow_rules]);
+ >> PROVE_TAC [arrow_rules]
+QED
 
 local
     val before_tac = REWRITE_TAC [sentence_def]
@@ -88,8 +90,10 @@ val John_works_thm3 = save_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val Ex1 = store_thm ("Ex1", (* sn/n . n |- sn *)
-  ``natDed NL_Sequent (OneForm (Dot (Slash (At "sn") (At "n")) (At "n"))) (At "sn")``,
+(* sn/n . n |- sn *)
+Theorem Ex1:
+    natDed NL_Sequent (OneForm (Dot (Slash (At "sn") (At "n")) (At "n"))) (At "sn")
+Proof
     MATCH_MP_TAC DotElim
  >> ONCE_REWRITE_TAC [replace_cases]
  >> RW_TAC std_ss [Term_11, Term_distinct]
@@ -98,12 +102,15 @@ val Ex1 = store_thm ("Ex1", (* sn/n . n |- sn *)
  >> RW_TAC std_ss [NatAxiom]
  >> MATCH_MP_TAC SlashElim
  >> EXISTS_TAC ``At "n"``
- >> RW_TAC std_ss [NatAxiom]);
+ >> RW_TAC std_ss [NatAxiom]
+QED
 
-val Ex2 = store_thm ("Ex2", (* sn . (((sn \ n) / S) . S)) |- n *)
-  ``natDed NL_Sequent
+(* sn . (((sn \ n) / S) . S)) |- n *)
+Theorem Ex2:
+    natDed NL_Sequent
         (OneForm (Dot (At "sn") (Dot (Slash (Backslash (At "sn") (At "n")) (At "S")) (At "S"))))
-        (At "n")``,
+        (At "n")
+Proof
     MATCH_MP_TAC DotElim
  >> ONCE_REWRITE_TAC [replace_cases]
  >> RW_TAC std_ss [Term_11, Term_distinct]
@@ -121,7 +128,8 @@ val Ex2 = store_thm ("Ex2", (* sn . (((sn \ n) / S) . S)) |- n *)
  >> RW_TAC std_ss [NatAxiom]
  >> MATCH_MP_TAC SlashElim
  >> EXISTS_TAC ``At "S"``
- >> RW_TAC std_ss [NatAxiom]);
+ >> RW_TAC std_ss [NatAxiom]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -197,10 +205,10 @@ val cosa_guarda_passare_arrow = store_thm (
 ("cosa", ("guarda", "passare")) |- S
 
  *)
-val cosa_guarda_passare_natDed = store_thm (
-   "cosa_guarda_passare_natDed",
-  ``natDed L_Sequent (Comma (OneForm ^cosa) (Comma (OneForm ^guarda) (OneForm ^passare)))
-                     (At "S")``,
+Theorem cosa_guarda_passare_natDed:
+    natDed L_Sequent (Comma (OneForm ^cosa) (Comma (OneForm ^guarda) (OneForm ^passare)))
+                     (At "S")
+Proof
     MATCH_MP_TAC SlashElim
  >> EXISTS_TAC ``(At "S") / (At "np")`` (* guess 1 *)
  >> CONJ_TAC (* 2 sub-goals here *)
@@ -220,7 +228,8 @@ val cosa_guarda_passare_natDed = store_thm (
         (* goal 2.2 *)
         MATCH_MP_TAC SlashElim \\
         EXISTS_TAC ``At "np"`` \\ (* guess 3 *)
-        REWRITE_TAC [NatAxiom] ] ]);
+        REWRITE_TAC [NatAxiom] ] ]
+QED
 
 (* Lambek's Sequent Calculus:
 
@@ -239,10 +248,10 @@ val cosa_guarda_passare_natDed = store_thm (
 ("cosa", ("guarda", "passare")) |- S
 
  *)
-val cosa_guarda_passare_gentzenSequent = store_thm (
-   "cosa_guarda_passare_gentzenSequent",
-  ``gentzenSequent L_Sequent (Comma (OneForm ^cosa) (Comma (OneForm ^guarda) (OneForm ^passare)))
-                             (At "S")``,
+Theorem cosa_guarda_passare_gentzenSequent:
+    gentzenSequent L_Sequent (Comma (OneForm ^cosa) (Comma (OneForm ^guarda) (OneForm ^passare)))
+                             (At "S")
+Proof
     MATCH_MP_TAC LeftSlashSimpl
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 *)
@@ -259,7 +268,8 @@ val cosa_guarda_passare_gentzenSequent = store_thm (
         (* goal 1.2 *)
         REWRITE_TAC [SeqAxiom] ],
       (* goal 2 *)
-      REWRITE_TAC [SeqAxiom] ]);
+      REWRITE_TAC [SeqAxiom] ]
+QED
 
 val r0 =
   ``(Unf (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
@@ -275,22 +285,25 @@ val r1 =
         (Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
                                 (At "S" / At "np"))) ])``;
 
-val r0_to_r1 = store_thm (
-   "r0_to_r1", ``derivOne ^r0 ^r1``,
+Theorem r0_to_r1:   derivOne ^r0 ^r1
+Proof
     MATCH_MP_TAC derivLeftSlash
  >> EXISTS_TAC ``At "S"``
- >> REWRITE_TAC [replaceRoot]);
+ >> REWRITE_TAC [replaceRoot]
+QED
 
-val r0_to_r1' = store_thm (
-   "r0_to_r1'", ``deriv ^r0 ^r1``,
+Theorem r0_to_r1':   deriv ^r0 ^r1
+Proof
     MATCH_MP_TAC derivDerivOne
- >> REWRITE_TAC [r0_to_r1]);
+ >> REWRITE_TAC [r0_to_r1]
+QED
 
-val r0_to_r1'' = store_thm (
-   "r0_to_r1''", ``Deriv ^r0 ^r1``,
+Theorem r0_to_r1'':   Deriv ^r0 ^r1
+Proof
     REWRITE_TAC [Deriv_def]
  >> MATCH_MP_TAC RTC_SINGLE
- >> REWRITE_TAC [r0_to_r1']);
+ >> REWRITE_TAC [r0_to_r1']
+QED
 
 val r2 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
@@ -302,11 +315,12 @@ val r2 =
         (Unf (Sequent L_Sequent (Comma (OneForm (At "S" / At "inf")) (OneForm (At "inf" / At "np")))
                                 (At "S" / At "np"))) ])``;
 
-val r1_to_r2 = store_thm (
-   "r1_to_r2", ``deriv ^r1 ^r2``,
+Theorem r1_to_r2:   deriv ^r1 ^r2
+Proof
     MATCH_MP_TAC derivLeft
  >> MATCH_MP_TAC derivDerivOne
- >> REWRITE_TAC [derivSeqAxiom]);
+ >> REWRITE_TAC [derivSeqAxiom]
+QED
 
 val r3 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
@@ -323,11 +337,12 @@ val r3 =
                                            (OneForm (At "np")))
                                     (At "S"))) ]) ])``;
 
-val r2_to_r3 = store_thm (
-   "r2_to_r3", ``deriv ^r2 ^r3``,
+Theorem r2_to_r3:   deriv ^r2 ^r3
+Proof
     MATCH_MP_TAC derivRight
  >> MATCH_MP_TAC derivDerivOne
- >> REWRITE_TAC [derivRightSlash]);
+ >> REWRITE_TAC [derivRightSlash]
+QED
 
 val r4 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
@@ -349,8 +364,8 @@ val r4 =
                                                             (OneForm (At "np"))))
                                               (At "S"))) ]) ]) ])``;
 
-val r3_to_r4 = store_thm (
-   "r3_to_r4", ``deriv ^r3 ^r4``,
+Theorem r3_to_r4:   deriv ^r3 ^r4
+Proof
     MATCH_MP_TAC derivRight
  >> MATCH_MP_TAC derivOne
  >> MATCH_MP_TAC derivDerivOne
@@ -360,7 +375,8 @@ val r3_to_r4 = store_thm (
  >> EXISTS_TAC ``(Comma (Comma (OneForm (At "S" / At "inf"))
                                (OneForm (At "inf" / At "np")))
                         (OneForm (At "np")))``
- >> REWRITE_TAC [replaceRoot, L_Sequent_rules]);
+ >> REWRITE_TAC [replaceRoot, L_Sequent_rules]
+QED
 
 val r5 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
@@ -387,8 +403,8 @@ val r5 =
                                                   (At "S"))) ;
                           (Unf (Sequent L_Sequent (OneForm (At "np")) (At "np"))) ]) ]) ]) ])``;
 
-val r4_to_r5 = store_thm (
-   "r4_to_r5", ``deriv ^r4 ^r5``,
+Theorem r4_to_r5:   deriv ^r4 ^r5
+Proof
     MATCH_MP_TAC derivRight
  >> MATCH_MP_TAC derivOne
  >> MATCH_MP_TAC derivOne
@@ -396,7 +412,8 @@ val r4_to_r5 = store_thm (
  >> MATCH_MP_TAC derivLeftSlash
  >> EXISTS_TAC ``At "inf"``
  >> MATCH_MP_TAC replaceRight
- >> REWRITE_TAC [replaceRoot]);
+ >> REWRITE_TAC [replaceRoot]
+QED
 
 val r6 =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
@@ -426,8 +443,8 @@ val r6 =
                               (Unf (Sequent L_Sequent (OneForm (At "inf")) (At "inf"))) ]) ;
                           (Unf (Sequent L_Sequent (OneForm (At "np")) (At "np"))) ]) ]) ]) ])``;
 
-val r5_to_r6 = store_thm (
-   "r5_to_r6", ``deriv ^r5 ^r6``,
+Theorem r5_to_r6:   deriv ^r5 ^r6
+Proof
     MATCH_MP_TAC derivRight
  >> MATCH_MP_TAC derivOne
  >> MATCH_MP_TAC derivOne
@@ -435,7 +452,8 @@ val r5_to_r6 = store_thm (
  >> MATCH_MP_TAC derivDerivOne
  >> MATCH_MP_TAC derivLeftSlash
  >> EXISTS_TAC ``At "S"``
- >> REWRITE_TAC [replaceRoot]);
+ >> REWRITE_TAC [replaceRoot]
+QED
 
 val r_final =
   ``(Der (Sequent L_Sequent (Comma (OneForm (At "S" / (At "S" / At "np")))
@@ -465,17 +483,19 @@ val r_final =
                               (Der (Sequent L_Sequent (OneForm (At "inf")) (At "inf")) SeqAxiom []) ]) ;
                           (Der (Sequent L_Sequent (OneForm (At "np")) (At "np")) SeqAxiom []) ]) ]) ]) ])``;
 
-val r_finished = store_thm (
-   "r_finished", ``Proof ^r_final``,
-    PROVE_TAC [Proof_rules]);
+Theorem r_finished:   Proof ^r_final
+Proof
+    PROVE_TAC [Proof_rules]
+QED
 
-val r_degree_zero = store_thm (
-   "r_degree_zero", ``degreeProof ^r_final = 0``,
+Theorem r_degree_zero:   degreeProof ^r_final = 0
+Proof
     REWRITE_TAC [degreeProof_def]
- >> rw [MAX_EQ_0]);
+ >> rw [MAX_EQ_0]
+QED
 
-val r6_to_final = store_thm (
-   "r6_to_final", ``deriv ^r6 ^r_final``,
+Theorem r6_to_final:   deriv ^r6 ^r_final
+Proof
     MATCH_MP_TAC derivRight
  >> MATCH_MP_TAC derivOne
  >> MATCH_MP_TAC derivOne
@@ -484,13 +504,14 @@ val r6_to_final = store_thm (
  >| [ MATCH_MP_TAC derivBoth \\
       CONJ_TAC \\ (* 2 sub-goals, same tacticals *)
       MATCH_MP_TAC derivDerivOne >> REWRITE_TAC [derivSeqAxiom],
-      MATCH_MP_TAC derivDerivOne >> REWRITE_TAC [derivSeqAxiom] ]);
+      MATCH_MP_TAC derivDerivOne >> REWRITE_TAC [derivSeqAxiom] ]
+QED
 
 fun derivToDeriv thm =
     REWRITE_RULE [SYM Deriv_def] (MATCH_MP RTC_SINGLE thm);
 
-val r0_to_final = store_thm (
-   "r0_to_final", ``Deriv ^r0 ^r_final``,
+Theorem r0_to_final:   Deriv ^r0 ^r_final
+Proof
     ASSUME_TAC r0_to_r1''
  >> ASSUME_TAC (derivToDeriv r1_to_r2)
  >> ASSUME_TAC (derivToDeriv r2_to_r3)
@@ -498,7 +519,8 @@ val r0_to_final = store_thm (
  >> ASSUME_TAC (derivToDeriv r4_to_r5)
  >> ASSUME_TAC (derivToDeriv r5_to_r6)
  >> ASSUME_TAC (derivToDeriv r6_to_final)
- >> REPEAT (IMP_RES_TAC Deriv_trans));
+ >> REPEAT (IMP_RES_TAC Deriv_trans)
+QED
 
 val _ = html_theory "Example";
 

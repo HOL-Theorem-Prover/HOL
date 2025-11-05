@@ -16,15 +16,17 @@ End
 (* Theorems to allow pseudo-random bits to be computed.                      *)
 (* ------------------------------------------------------------------------- *)
 
-val SHD_PROB_PSEUDO = store_thm
-  ("SHD_PROB_PSEUDO",
-   ``!a b n x. shd (prob_pseudo a b n x) = EVEN x``,
-   RW_TAC std_ss [prob_pseudo_def, SHD_SITER]);
+Theorem SHD_PROB_PSEUDO:
+     !a b n x. shd (prob_pseudo a b n x) = EVEN x
+Proof
+   RW_TAC std_ss [prob_pseudo_def, SHD_SITER]
+QED
 
-val STL_PROB_PSEUDO = store_thm
-  ("STL_PROB_PSEUDO",
-   ``!a b n x.
+Theorem STL_PROB_PSEUDO:
+     !a b n x.
        stl (prob_pseudo a b n x) =
-       prob_pseudo a b n ((a * x + b) MOD (2 * n + 1))``,
-   RW_TAC std_ss [prob_pseudo_def, STL_SITER]);
+       prob_pseudo a b n ((a * x + b) MOD (2 * n + 1))
+Proof
+   RW_TAC std_ss [prob_pseudo_def, STL_SITER]
+QED
 

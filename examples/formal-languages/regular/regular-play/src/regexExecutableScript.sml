@@ -30,33 +30,33 @@ End
 
 (* rewrite theorems *)
 (* ----------------------------------------------------------------------------- *)
-val split_DEFs = store_thm ("split_DEFs", ``
+Theorem split_DEFs:
          (       split []      = [([],[])]                                            ) /\
          (!c cs. split (c::cs) = ([],c::cs)::(MAP (\s. (c::(FST s),SND s)) (split cs)))
-``,
+Proof
 
   REWRITE_TAC [split_def]
-);
+QED
 
-val parts_DEFs = store_thm ("parts_DEFs", ``
+Theorem parts_DEFs:
          (                        parts []      = [[]]                                                                      ) /\
          (!c.                     parts [c]     = [[[c]]]                                                                   ) /\
          (!c1 c2 cs. parts (c1::c2::cs) = FLAT (MAP (\ps. [(c1::(HD ps))::(TL ps);[c1]::(HD ps)::(TL ps)]) (parts (c2::cs))))
-``,
+Proof
 
   REWRITE_TAC [parts_def]
-);
+QED
 
-val accept_DEFs = store_thm ("accept_DEFs", ``
+Theorem accept_DEFs:
          (!u.     accept (Eps) u     = (u = [])                                                            ) /\
          (!c u.   accept (Sym c) u   = (u = [c])                                                           ) /\
          (!p q u. accept (Alt p q) u <=> accept p u \/ accept q u                                            ) /\
          (!p q u. accept (Seq p q) u = EXISTS (\u_12. accept p (FST u_12) /\ accept q (SND u_12)) (split u)) /\
          (!r u.   accept (Rep r) u   = EXISTS (\ps. EVERY (\u_i. accept r u_i) ps) (parts u)               )
-``,
+Proof
 
   REWRITE_TAC [accept_def]
-);
+QED
 
 
 
@@ -65,9 +65,9 @@ val accept_DEFs = store_thm ("accept_DEFs", ``
 
 (* sanity and helper lemmata *)
 (* ----------------------------------------------------------------------------- *)
-val split_APPEND_thm = store_thm ("split_APPEND_thm", ``
+Theorem split_APPEND_thm:
          (!w u v. (MEM (u, v) (split w)) <=> (w = u ++ v))
-``,
+Proof
 
   Induct_on `w` >> (
     SIMP_TAC list_ss [split_DEFs, MEM_MAP] >>
@@ -76,15 +76,15 @@ val split_APPEND_thm = store_thm ("split_APPEND_thm", ``
       ASM_SIMP_TAC (list_ss++QI_ss++boolSimps.EQUIV_EXTRACT_ss) []
     )
   )
-);
+QED
 
 (*
 val parts_DEF_c_alt_thm = Ho_Rewrite.REWRITE_RULE [concat_DEF, FLAT_FOLDL, FOLDL_MAP, boolTheory.BETA_THM] parts_DEF_c;
 *)
 
-val parts_FLAT_thm = store_thm ("parts_FLAT_thm", ``
+Theorem parts_FLAT_thm:
          (!w l. (MEM l (parts w)) <=> ((w = FLAT l) /\ (~MEM [] l)))
-``,
+Proof
 
   Cases_on `w` >- (
     SIMP_TAC (list_ss) [parts_DEFs, FLAT_EQ_NIL, boolTheory.EQ_IMP_THM] >>
@@ -142,7 +142,7 @@ val parts_FLAT_thm = store_thm ("parts_FLAT_thm", ``
 
   Q.EXISTS_TAC `(h2::hlt)::tl` >>
   FULL_SIMP_TAC list_ss []
-);
+QED
 
 
 (*
@@ -167,14 +167,14 @@ val FLAT_SINGLE_thm = prove(``
   Cases_on `h` >> FULL_SIMP_TAC list_ss [FLAT_NIL_thm]
 );
 
-val FLAT_FILTER_EMPTY_thm = store_thm ("FLAT_FILTER_EMPTY_thm", ``
+Theorem FLAT_FILTER_EMPTY_thm:
          (!l. (FLAT (FILTER (\x. x <> []) l)) = (FLAT l))
-``,
+Proof
 
   Induct_on `l` >- SIMP_TAC list_ss [] >>
 
   Cases_on `h` >> ASM_SIMP_TAC list_ss [FILTER, FLAT]
-);
+QED
 
 val FILTER_NIL_NONIL_thm = prove (``
          (!l m. (l = (FILTER (\x. x <> []) m)) ==> (~MEM [] l))
@@ -199,12 +199,12 @@ val parts_FLAT_FILTER_EMPTY_thm = prove(``
   METIS_TAC [FLAT_FILTER_EMPTY_thm, FILTER_NIL_NONIL_thm, NONIL_FILTER_NIL_EQ_thm, parts_FLAT_thm]
 );
 
-val APPEND_parts_EMPTY_thm = store_thm ("APPEND_parts_EMPTY_thm", ``
+Theorem APPEND_parts_EMPTY_thm:
          (!l. MEM (FILTER (\x. x <> []) l) (parts (FLAT l)))
-``,
+Proof
 
   SIMP_TAC (pure_ss++QI_ss) [parts_FLAT_FILTER_EMPTY_thm, Once (GSYM FLAT_FILTER_EMPTY_thm)]
-);
+QED
 
 
 
@@ -216,7 +216,8 @@ val APPEND_parts_EMPTY_thm = store_thm ("APPEND_parts_EMPTY_thm", ``
 
 (* correctness of definition *)
 (* ----------------------------------------------------------------------------- *)
-val accept_correctness_thm = store_thm("accept_correctness_thm", ``!r w. accept r w <=> w IN (language_of r)``,
+Theorem accept_correctness_thm:   !r w. accept r w <=> w IN (language_of r)
+Proof
 
   Induct_on `r` >> (
     ASM_SIMP_TAC (list_ss++pred_setSimps.PRED_SET_ss++QI_ss) [accept_DEFs, language_of_DEFs, GSYM split_APPEND_thm, parts_FLAT_thm, EXISTS_MEM, EVERY_MEM]
@@ -232,7 +233,7 @@ val accept_correctness_thm = store_thm("accept_correctness_thm", ``!r w. accept 
 
   Q.EXISTS_TAC `(FILTER (\x. x <> []) l)` >>
   ASM_SIMP_TAC list_ss [FLAT_FILTER_EMPTY_thm, MEM_FILTER]
-);
+QED
 
 
 

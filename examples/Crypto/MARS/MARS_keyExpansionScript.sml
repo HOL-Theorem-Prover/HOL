@@ -119,14 +119,14 @@ Definition Init_K_def:
           t1 ++ t2 ++ t3 ++ t4
 End
 
-val INIT_K_LENGTH = Q.store_thm
-("INIT_K_LENGTH",
- `!t. LENGTH (Init_K t) = 40`,
+Theorem INIT_K_LENGTH:
+  !t. LENGTH (Init_K t) = 40
+Proof
   RW_TAC list_ss [Init_K_def, store_10_words_def] THEN
   Q.UNABBREV_TAC `t1` THEN Q.UNABBREV_TAC `t2` THEN Q.UNABBREV_TAC `t3` THEN
   Q.UNABBREV_TAC `t4` THEN
   RW_TAC list_ss [LENGTH_APPEND, LENGTH]
-);
+QED
 
 
 (*--------------------Modify multiplication keys-----------------------------*)
@@ -170,12 +170,12 @@ Definition mul_def:
 End
 
 
-val MUL_RND_LENGTH = Q.store_thm
-("MUL_RND_LENGTH",
- `!k i. LENGTH (mul_rnd (k, i)) = LENGTH k`,
+Theorem MUL_RND_LENGTH:
+  !k i. LENGTH (mul_rnd (k, i)) = LENGTH k
+Proof
   SIMP_TAC std_ss [mul_rnd_def, LET_THM]
   THEN RW_TAC list_ss [LENGTH_UPDATE]
-);
+QED
 
 
 Definition key_expansion_def:
@@ -183,11 +183,11 @@ Definition key_expansion_def:
 End
 
 
-val KEY_EXPANSION_LENGTH = Q.store_thm
-("KEY_EXPANSION_LENGTH",
- `!k. LENGTH (key_expansion k) = 40`,
+Theorem KEY_EXPANSION_LENGTH:
+  !k. LENGTH (key_expansion k) = 40
+Proof
   SIMP_TAC std_ss [key_expansion_def, mul_def]
   THEN RW_TAC list_ss [INIT_K_LENGTH, MUL_RND_LENGTH]
-);
+QED
 
 

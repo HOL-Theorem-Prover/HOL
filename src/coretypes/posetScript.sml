@@ -66,14 +66,12 @@ val poset_def = new_definition
      (!x y z. s x /\ s y /\ s z /\ r x y /\ r y z ==> r x z)``);
 
 val carrier_def = new_definition
-  ("carrier_def",
+  ("carrier_def[simp]",
    ``carrier ((s,r) : 'a poset) = s``);
 
 val relation_def = new_definition
-  ("relation_def",
+  ("relation_def[simp]",
    ``relation ((s,r) : 'a poset) = r``);
-
-val _ = export_rewrites ["carrier_def", "relation_def"];
 
 val top_def = new_definition
   ("top_def",

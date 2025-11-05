@@ -18,8 +18,8 @@ val qspec_then = Q.SPEC_THEN
     lists of naturals encoded as naturals
    ---------------------------------------------------------------------- *)
 
-val _ = overload_on ("nnil", ``0``);
-val _ = overload_on ("0", ``0``);
+Overload nnil = ``0``
+Overload "0" = ``0``
 
 Definition ncons_def:
   ncons h t = h *, t + 1
@@ -163,10 +163,10 @@ Proof
 QED
 
 (* copy various functions on maps across to number land *)
-val _ = overload_on ("nlen", “\n. LENGTH (listOfN n)”)
-val _ = overload_on ("napp", “\n1 n2. nlist_of (listOfN n1 ++ listOfN n2)”)
-val _ = overload_on ("nfoldl", “\f a n. FOLDL f a (listOfN n)”)
-val _ = overload_on ("nmap", “\f n. nlist_of (MAP f (listOfN n))”)
+Overload nlen = “\n. LENGTH (listOfN n)”
+Overload napp = “\n1 n2. nlist_of (listOfN n1 ++ listOfN n2)”
+Overload nfoldl = “\f a n. FOLDL f a (listOfN n)”
+Overload nmap = “\f n. nlist_of (MAP f (listOfN n))”
 
 (* some functions are partial over general lists, but can be made total
    here by using 0 as default values *)
@@ -221,7 +221,7 @@ Proof
 QED
 
 (* ndrop ---------------------------------------------------------- *)
-val _ = overload_on ("ndrop", “\n l. nlist_of (DROP n (listOfN l))”)
+Overload ndrop = “\n l. nlist_of (DROP n (listOfN l))”
 
 Theorem ndrop_SUC[simp]:
   !l n. ndrop (SUC n) l = ntl (ndrop n l)

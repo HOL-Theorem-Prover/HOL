@@ -1,21 +1,28 @@
-\DOC
+## `MLname`
 
-\TYPE {}
+``` hol4
+qualified-MLname : MLtype
+```
 
-\SYNOPSIS
+------------------------------------------------------------------------
 
-\KEYWORDS
+<one line summary>
 
-\DESCRIBE
+<multi-paragraph description>
 
-\FAILURE
+### Failure
 
-\EXAMPLE
-{
-}
+<description of when and how the function might fail> 
 
-\COMMENTS
+### Example
 
-\SEEALSO
+<If appropriate>
 
-\ENDDOC
+### Comments
+
+<If appropriate>
+
+### See also
+
+([`Struct.entrypoint`](#Struct.entrypoint),)*
+[`Struct.entrypoint`](#Struct.entrypoint).

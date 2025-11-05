@@ -19,7 +19,7 @@ val meter = Count.mk_meter();
  * Start the theory.                                                         *
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `events = press_att_cws
+Datatype: events = press_att_cws
                      | press_cas_eng
                      | press_alt_eng
                      | press_fpa_sel
@@ -28,40 +28,46 @@ val _ = Hol_datatype `events = press_att_cws
                      | input_cas
                      | alt_reached
                      | fpa_reached
-                     | alt_gets_near`;
+                     | alt_gets_near
+End
 
 
-val _ = Hol_datatype `off_eng = off | engaged`;
+Datatype: off_eng = off | engaged
+End
 
 
-val _ = Hol_datatype `mode_status
+Datatype: mode_status
                      = armed
-                     | Mode of off_eng`;
+                     | Mode off_eng
+End
 
 
-val _ = Hol_datatype `disp_status
+Datatype: disp_status
                      = pre_selected
-                     | current`;
+                     | current
+End
 
 
-val _ = Hol_datatype `altitude_vals
+Datatype: altitude_vals
                      = away
                      | near_pre_selected
-                     | at_pre_selected`;
+                     | at_pre_selected
+End
 
 
 (*---------------------------------------------------------------------------*
  * Define state-type projection and update functions.                        *
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `states = <| att_cws  : off_eng;
+Datatype: states = <| att_cws  : off_eng;
                                   cas_eng  : off_eng;
                                   fpa_sel  : off_eng;
                                   alt_eng  : mode_status;
                                   alt_disp : disp_status;
                                   fpa_disp : disp_status;
                                   cas_disp : disp_status;
-                                  altitude : altitude_vals |>`;
+                                  altitude : altitude_vals |>
+End
 
 
 (*---------------------------------------------------------------------------*
@@ -320,30 +326,32 @@ val is_reachable_valid_state = prove
  * A couple of safety properties.                                            *
  *---------------------------------------------------------------------------*)
 
-val safety1 = store_thm(
-  "safety1",
-  ``!event st.
+Theorem safety1:
+    !event st.
        valid_state st
     /\ (st.fpa_sel = engaged)
     /\ ((nextstate st event).fpa_sel = off)
       ==>
-       ((nextstate st event).fpa_disp = current)``,
+       ((nextstate st event).fpa_disp = current)
+Proof
 Induct
-  THEN ZAP_TAC (ap_ss && tran_defs)  (tl (type_rws ``:off_eng``)));
+  THEN ZAP_TAC (ap_ss && tran_defs)  (tl (type_rws ``:off_eng``))
+QED
 
 
-val safety2 = store_thm(
-  "safety2",
-  ``!event st.
+Theorem safety2:
+    !event st.
              valid_state st
           /\ (st.alt_eng = Mode engaged)
           /\ ~(event = input_alt)
           /\ ((nextstate st event).alt_eng = Mode off)
             ==>
-             ((nextstate st event).alt_disp = current)``,
+             ((nextstate st event).alt_disp = current)
+Proof
 Induct
   THEN ZAP_TAC (ap_ss && tran_defs)
-             (tl(type_rws ``:off_eng``) @ tl(type_rws ``:mode_status``)));
+             (tl(type_rws ``:off_eng``) @ tl(type_rws ``:mode_status``))
+QED
 
 
 (*---------------------------------------------------------------------------*
@@ -361,4 +369,3 @@ val reachable_induct = prove
 
 
 val _ = Count.report (Count.read meter);
-

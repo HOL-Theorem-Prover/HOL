@@ -89,26 +89,36 @@ Definition modhat_def:
    modhat x y = x - y * ((2 * x + y) / (2 * y))
 End
 
-val MAP_MAP = prove(
-  ``!l f g. MAP f (MAP g l) = MAP (f o g) l``,
-  Induct THEN SRW_TAC [][combinTheory.o_THM]);
+Theorem MAP_MAP[local]:
+    !l f g. MAP f (MAP g l) = MAP (f o g) l
+Proof
+  Induct THEN SRW_TAC [][combinTheory.o_THM]
+QED
 
-val MAP2_MAP = prove(
-  ``!l f g pad. MAP2 pad f (MAP g l) l = MAP (\x. f (g x) x) l``,
-  Induct THEN SRW_TAC [][MAP2_def]);
+Theorem MAP2_MAP[local]:
+    !l f g pad. MAP2 pad f (MAP g l) l = MAP (\x. f (g x) x) l
+Proof
+  Induct THEN SRW_TAC [][MAP2_def]
+QED
 
-val MAP_MAP2 = prove(
-  ``!l f g h. MAP (\x. f (g x) (h x)) l = MAP2 0i f (MAP g l) (MAP h l)``,
-  Induct THEN SRW_TAC [][MAP2_def]);
+Theorem MAP_MAP2[local]:
+    !l f g h. MAP (\x. f (g x) (h x)) l = MAP2 0i f (MAP g l) (MAP h l)
+Proof
+  Induct THEN SRW_TAC [][MAP2_def]
+QED
 
-val MAP_ID = prove(``!l. MAP (\x.x) l = l``, Induct THEN SRW_TAC [][]);
+Theorem MAP_ID[local]:
+   !l. MAP (\x.x) l = l
+Proof Induct THEN SRW_TAC [][]
+QED
 
 val _ = print "Proving eliminability of equalities\n";
 
-val equality_removal0 = prove(
-  ``!c x cs vs.
+Theorem equality_removal0[local]:
+    !c x cs vs.
        0 < c /\ (c * x + sumc cs vs = 0) ==>
-       ?s. x = ~(c + 1) * s + sumc (MAP (\x. modhat x (c + 1)) cs) vs``,
+       ?s. x = ~(c + 1) * s + sumc (MAP (\x. modhat x (c + 1)) cs) vs
+Proof
   REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC [INT_ADD_COMM] THEN
   SIMP_TAC (srw_ss()) [GSYM int_sub, INT_EQ_SUB_LADD, GSYM INT_NEG_LMUL] THEN
@@ -160,7 +170,8 @@ val equality_removal0 = prove(
   REWRITE_TAC [GSYM MAP_MAP, GSYM sumc_MULT] THEN
   Q_TAC SUFF_TAC `c int_divides sumc cs vs` THEN1
     PROVE_TAC [INT_DIVIDES_LADD, INT_DIVIDES_MUL] THEN
-  PROVE_TAC [INT_DIVIDES, INT_MUL_COMM, INT_DIVIDES_NEG, INT_NEG_LMUL]);
+  PROVE_TAC [INT_DIVIDES, INT_MUL_COMM, INT_DIVIDES_NEG, INT_NEG_LMUL]
+QED
 
 Theorem equality_removal:
     !c x cs vs.
@@ -183,41 +194,52 @@ Definition evallower_def:
    (evallower x ((c,y) :: cs) = y <= &c * x /\ evallower x cs)
 End
 
-val lt_mono = prove(
-  ``!n (x:int) y. 0 < n ==> (&n * x < & n * y = x < y)``,
+Theorem lt_mono[local]:
+    !n (x:int) y. 0 < n ==> (&n * x < & n * y = x < y)
+Proof
   REPEAT STRIP_TAC THEN
   CONV_TAC (BINOP_CONV (LAND_CONV (REWR_CONV (GSYM INT_ADD_LID)))) THEN
   REWRITE_TAC [GSYM INT_LT_SUB_LADD, GSYM INT_SUB_LDISTRIB] THEN
-  SRW_TAC [ARITH_ss][INT_MUL_SIGN_CASES]);
+  SRW_TAC [ARITH_ss][INT_MUL_SIGN_CASES]
+QED
 
-val le_mono = prove(
-  ``!n (x:int) y. 0 < n ==> (&n * x <= & n * y = x <= y)``,
+Theorem le_mono[local]:
+    !n (x:int) y. 0 < n ==> (&n * x <= & n * y = x <= y)
+Proof
   REPEAT STRIP_TAC THEN
   CONV_TAC (BINOP_CONV (LAND_CONV (REWR_CONV (GSYM INT_ADD_LID)))) THEN
   REWRITE_TAC [GSYM INT_LT_SUB_LADD, GSYM INT_SUB_LDISTRIB] THEN
-  SRW_TAC [ARITH_ss][INT_MUL_SIGN_CASES, INT_LE_LT, lt_mono]);
+  SRW_TAC [ARITH_ss][INT_MUL_SIGN_CASES, INT_LE_LT, lt_mono]
+QED
 
-val less_exists = prove(
-  ``!p:int q. p < q = ?m. (q = p + m) /\ 0 < m``,
+Theorem less_exists[local]:
+    !p:int q. p < q = ?m. (q = p + m) /\ 0 < m
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     Q.EXISTS_TAC `q - p` THEN
     SRW_TAC [][INT_EQ_SUB_LADD, INT_LT_SUB_LADD],
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val ile_mono = prove(
-  ``!n x y. 0i < n ==> (n * x <= n * y = x <= y)``,
+Theorem ile_mono[local]:
+    !n x y. 0i < n ==> (n * x <= n * y = x <= y)
+Proof
   REPEAT STRIP_TAC THEN
   `?m. n = &m` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
-  FULL_SIMP_TAC (srw_ss()) [INT_LT, le_mono]);
-val ilt_mono = prove(
-  ``!n x y. 0i < n ==> (n * x < n * y = x < y)``,
+  FULL_SIMP_TAC (srw_ss()) [INT_LT, le_mono]
+QED
+Theorem ilt_mono[local]:
+    !n x y. 0i < n ==> (n * x < n * y = x < y)
+Proof
   REPEAT STRIP_TAC THEN
   `?m. n = &m` by PROVE_TAC [NUM_POSINT_EXISTS, INT_LE_LT] THEN
-  FULL_SIMP_TAC (srw_ss()) [lt_mono]);
+  FULL_SIMP_TAC (srw_ss()) [lt_mono]
+QED
 
-val div_le = prove(
-  ``!c x y:int. 0 < c ==> (c * x <= y = x <= y / c)``,
+Theorem div_le[local]:
+    !c x y:int. 0 < c ==> (c * x <= y = x <= y / c)
+Proof
   REPEAT STRIP_TAC THEN
   `~(c = 0) /\ ~(c < 0)` by PROVE_TAC [INT_LT_REFL, INT_LT_ANTISYM] THEN
   Q.SPEC_THEN `c` MP_TAC INT_DIVISION THEN SRW_TAC [][] THEN
@@ -234,7 +256,8 @@ val div_le = prove(
     PROVE_TAC [INT_DISCRETE, INT_ADD_LID],
     MATCH_MP_TAC INT_LE_TRANS THEN Q.EXISTS_TAC `c * q` THEN
     SRW_TAC [][ile_mono, MULT_AC]
-  ]);
+  ]
+QED
 
 Theorem smaller_satisfies_uppers:
     !uppers x y. evalupper x uppers /\ y < x ==> evalupper y uppers
@@ -257,22 +280,27 @@ Proof
   PROVE_TAC [INT_LET_TRANS, lt_mono, INT_LE_LT]
 QED
 
-val LE_SIGN_CASES = prove(
-  ``!x y:int. 0 <= x * y   =   0 <= x /\ 0 <= y \/ x <= 0 /\ y <= 0``,
+Theorem LE_SIGN_CASES[local]:
+    !x y:int. 0 <= x * y   =   0 <= x /\ 0 <= y \/ x <= 0 /\ y <= 0
+Proof
   REWRITE_TAC [INT_LE_LT, INT_MUL_SIGN_CASES, INT_ENTIRE,
                Q.ISPEC `0i` EQ_SYM_EQ] THEN
   REPEAT GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
-  PROVE_TAC [INT_LT_NEGTOTAL, INT_NEG_GT0]);
+  PROVE_TAC [INT_LT_NEGTOTAL, INT_NEG_GT0]
+QED
 
-val LE_LT1 = prove(
-  ``!x y. x <= y = x < y + 1``,
+Theorem LE_LT1[local]:
+    !x y. x <= y = x < y + 1
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THEN1 REWRITE_TAC [INT_LT_ADD1] THEN
   Q.SPECL_THEN [`y`, `x`] ASSUME_TAC
                (REWRITE_RULE [DE_MORGAN_THM] INT_DISCRETE) THEN
-  REWRITE_TAC [IMP_DISJ_THM, GSYM INT_NOT_LT] THEN PROVE_TAC []);
+  REWRITE_TAC [IMP_DISJ_THM, GSYM INT_NOT_LT] THEN PROVE_TAC []
+QED
 
-val M_LE_XM = prove(
-  ``!m x. m <= m * x =   0 <= m /\ 0 < x \/ m <= 0 /\ x <= 1``,
+Theorem M_LE_XM[local]:
+    !m x. m <= m * x =   0 <= m /\ 0 < x \/ m <= 0 /\ x <= 1
+Proof
   REPEAT GEN_TAC THEN
   CONV_TAC (LAND_CONV (LAND_CONV (REWR_CONV (GSYM INT_MUL_RID) THENC
                                   REWR_CONV (GSYM INT_ADD_LID)))) THEN
@@ -280,7 +308,8 @@ val M_LE_XM = prove(
                LE_SIGN_CASES] THEN
   SRW_TAC [] [INT_LE_SUB_LADD, INT_LE_SUB_RADD] THEN
   EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC [] THEN
-  FULL_SIMP_TAC (srw_ss()) [LE_LT1]);
+  FULL_SIMP_TAC (srw_ss()) [LE_LT1]
+QED
 
 Definition fst_nzero_def:   fst_nzero x = 0n < FST x
 End
@@ -338,15 +367,17 @@ Definition real_shadow_def:
       rshadow_row upper lowers /\ real_shadow ls lowers)
 End
 
-val rshadow_row_FOLDL = prove(
-  ``!lowers lc ly.
+Theorem rshadow_row_FOLDL[local]:
+    !lowers lc ly.
        rshadow_row (lc,ly) lowers =
-       FOLDL (\a r. &lc * SND r <= &(FST r) * ly /\ a) T lowers``,
+       FOLDL (\a r. &lc * SND r <= &(FST r) * ly /\ a) T lowers
+Proof
   CONV_TAC (STRIP_QUANT_CONV
               (LHS_CONV (REWR_CONV (tautLib.TAUT_PROVE ``p = T /\ p``)))) THEN
   Q.SPEC_TAC (`T`, `acc`) THEN CONV_TAC SWAP_VARS_CONV THEN
   Induct THEN SIMP_TAC (srw_ss())[rshadow_row_def, FORALL_PROD] THEN
-  POP_ASSUM (fn th => REWRITE_TAC [GSYM th]) THEN PROVE_TAC []);
+  POP_ASSUM (fn th => REWRITE_TAC [GSYM th]) THEN PROVE_TAC []
+QED
 
 Theorem singleton_real_shadow:
     !c L x.
@@ -505,10 +536,11 @@ Definition dark_shadow_condition_def:
             dark_shadow_condition uppers lowers)
 End
 
-val constraint_mid_existence = prove(
-  ``!x i j.  0 < x ==>
+Theorem constraint_mid_existence[local]:
+    !x i j.  0 < x ==>
              ((!k. x * k < i ==> x * (k + 1) <= j) =
-              (?k. i <= x * k /\ x * k <= j))``,
+              (?k. i <= x * k /\ x * k <= j))
+Proof
   REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
     Q.SPEC_THEN `x` MP_TAC INT_DIVISION THEN
     `~(x = 0)` by PROVE_TAC [INT_LT_REFL] THEN
@@ -531,13 +563,15 @@ val constraint_mid_existence = prove(
     `&n * k' < &n * k` by PROVE_TAC [INT_LTE_TRANS] THEN
     `&n * k < &n * (k' + 1)` by PROVE_TAC [INT_LET_TRANS] THEN
     PROVE_TAC [INT_DISCRETE, lt_mono]
-  ]);
+  ]
+QED
 
-val dark_shadowrow_constraint_imp = prove(
-  ``!lowers uppers c L x.
+Theorem dark_shadowrow_constraint_imp[local]:
+    !lowers uppers c L x.
        0 < c /\ EVERY fst_nzero lowers /\
        evalupper x uppers /\ evallower x lowers /\ &c * x <= L ==>
-       dark_shadow_cond_row (c,L) lowers``,
+       dark_shadow_cond_row (c,L) lowers
+Proof
   Induct THENL [
     SRW_TAC [][evallower_def, dark_shadow_cond_row_def],
     SIMP_TAC (srw_ss()) [FORALL_PROD, evallower_def,
@@ -557,26 +591,30 @@ val dark_shadowrow_constraint_imp = prove(
       PROVE_TAC [INT_DISCRETE],
       PROVE_TAC []
     ]
-  ]);
+  ]
+QED
 
-val dark_shadow_constraint_implied = prove(
-  ``!uppers lowers x.
+Theorem dark_shadow_constraint_implied[local]:
+    !uppers lowers x.
        evalupper x uppers /\ evallower x lowers /\
        EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
-       dark_shadow_condition uppers lowers``,
+       dark_shadow_condition uppers lowers
+Proof
   Induct THENL [
     SRW_TAC [][dark_shadow_condition_def],
     SIMP_TAC (srw_ss()) [FORALL_PROD, evalupper_def,
                          dark_shadow_condition_def] THEN
     PROVE_TAC [dark_shadowrow_constraint_imp]
-  ]);
+  ]
+QED
 
-val real_darkrow_implies_evals = prove(
-  ``!uppers lowers x c L.
+Theorem real_darkrow_implies_evals[local]:
+    !uppers lowers x c L.
        0 < c /\ evalupper x uppers /\ evallower x lowers /\
        EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
        rshadow_row (c,L) lowers /\ dark_shadow_cond_row (c,L) lowers ==>
-       ?y. &c * y <= L /\ evalupper y uppers /\ evallower y lowers``,
+       ?y. &c * y <= L /\ evalupper y uppers /\ evallower y lowers
+Proof
   Induct THENL [
     SIMP_TAC (srw_ss()) [evalupper_def] THEN
     Induct THENL [
@@ -631,14 +669,16 @@ val real_darkrow_implies_evals = prove(
       PROVE_TAC [INT_LTE_TRANS, INT_LE_LT, lt_mono],
       PROVE_TAC [INT_LE_TRANS, INT_NOT_LE, le_mono]
     ]
-  ]);
+  ]
+QED
 
 
-val real_darkcond_implies_evals = prove(
-  ``!uppers lowers.
+Theorem real_darkcond_implies_evals[local]:
+    !uppers lowers.
        EVERY fst_nzero uppers /\ EVERY fst_nzero lowers /\
        real_shadow uppers lowers /\ dark_shadow_condition uppers lowers ==>
-       ?x. evalupper x uppers /\ evallower x lowers``,
+       ?x. evalupper x uppers /\ evallower x lowers
+Proof
   Induct THENL [
     SIMP_TAC (srw_ss()) [evalupper_def, onlylowers_satisfiable],
     SIMP_TAC (srw_ss()) [evalupper_def, FORALL_PROD, dark_shadow_condition_def,
@@ -647,7 +687,8 @@ val real_darkcond_implies_evals = prove(
     `?y. evalupper y uppers /\ evallower y lowers` by PROVE_TAC [] THEN
     REWRITE_TAC [GSYM CONJ_ASSOC] THEN
     MATCH_MP_TAC real_darkrow_implies_evals THEN PROVE_TAC []
-  ]);
+  ]
+QED
 
 
 Theorem basic_shadow_equivalence:
@@ -675,9 +716,10 @@ Definition dark_shadow_def:
       dark_shadow_row c L lowers /\ dark_shadow uppers lowers)
 End
 
-val move_subs_out = prove(
-  ``!x:int y z. (x - y + z = x + z - y) /\ (x - y - z = x - (y + z)) /\
-                (x + (y - z) = x + y - z)``,
+Theorem move_subs_out[local]:
+    !x:int y z. (x - y + z = x + z - y) /\ (x - y - z = x - (y + z)) /\
+                (x + (y - z) = x + y - z)
+Proof
   REPEAT STRIP_TAC THENL [
     Q.SPECL_THEN [`x`, `z`, `y`, `0`]
                  (ACCEPT_TAC o SYM o
@@ -689,15 +731,17 @@ val move_subs_out = prove(
                                 INT_ADD_RID])
                  INT_ADD2_SUB2,
     SRW_TAC [][int_sub, ADD_AC]
-  ]);
+  ]
+QED
 
 
-val lemma0 = prove(
-  ``!c d (L:int) R i.
+Theorem lemma0[local]:
+    !c d (L:int) R i.
        0 < c /\ 0 < d ==>
        &c * &d * i < &c * R /\ &c * R <= &d * L /\
        &d * L < &c * &d * (i + 1) ==>
-       &d * L - &c * R <= &c * &d - &c - &d``,
+       &d * L - &c * R <= &c * &d - &c - &d
+Proof
   REPEAT STRIP_TAC THEN
   `&c * &d * (i + 1) - &d * L >= &d` by
      (`&c * &d * (i + 1) - &d * L = &d * (&c * (i + 1) - L)` by
@@ -727,7 +771,8 @@ val lemma0 = prove(
   Q_TAC SUFF_TAC `&(c * d) * i + (&c + &d + & d * L) <=
                   &(c * d) * i + (&c * R + &(c * d))` THEN1
     SRW_TAC [][ADD_AC] THEN
-  ASM_SIMP_TAC bool_ss [ADD_AC]);
+  ASM_SIMP_TAC bool_ss [ADD_AC]
+QED
 
 val lemma =
     CONV_RULE (STRIP_QUANT_CONV
@@ -741,10 +786,11 @@ val lemma =
               lemma0
 
 
-val dark_shadow_row_implies_row_condition = prove(
-  ``!lowers c L.
+Theorem dark_shadow_row_implies_row_condition[local]:
+    !lowers c L.
        EVERY fst_nzero lowers /\ 0 < c /\
-       dark_shadow_row c L lowers ==> dark_shadow_cond_row (c,L) lowers``,
+       dark_shadow_row c L lowers ==> dark_shadow_cond_row (c,L) lowers
+Proof
   Induct THEN1 SRW_TAC [][dark_shadow_row_def, dark_shadow_cond_row_def] THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_row_def,
                            dark_shadow_cond_row_def] THEN
@@ -755,20 +801,24 @@ val dark_shadow_row_implies_row_condition = prove(
   SRW_TAC [][ADD_AC] THEN
   FULL_SIMP_TAC (srw_ss()) [INT_ADD_ASSOC] THEN
   FULL_SIMP_TAC (srw_ss()) [INT_NOT_LT, INT_NOT_LE, ADD_AC, LE_LT1] THEN
-  PROVE_TAC [lemma]);
+  PROVE_TAC [lemma]
+QED
 
-val dark_shadow_implies_dark_condition = prove(
-  ``!uppers lowers.
+Theorem dark_shadow_implies_dark_condition[local]:
+    !uppers lowers.
        EVERY fst_nzero uppers /\ EVERY fst_nzero lowers ==>
-       (dark_shadow uppers lowers ==> dark_shadow_condition uppers lowers)``,
+       (dark_shadow uppers lowers ==> dark_shadow_condition uppers lowers)
+Proof
   Induct THEN1 SRW_TAC [][dark_shadow_condition_def] THEN
   ASM_SIMP_TAC (srw_ss()) [FORALL_PROD, dark_shadow_row_implies_row_condition,
-                           dark_shadow_def, dark_shadow_condition_def]);
+                           dark_shadow_def, dark_shadow_condition_def]
+QED
 
-val mult_lemma = prove(
-  ``!c:int d p q.
+Theorem mult_lemma[local]:
+    !c:int d p q.
        0 < c /\ 0 < d /\ 0 < p /\ 0 < q /\ c < d /\ p < q ==>
-       d + c * p <= d * q``,
+       d + c * p <= d * q
+Proof
   REPEAT STRIP_TAC THEN
   `?e. (q = p + e) /\ 0 < e` by PROVE_TAC [less_exists] THEN
   SRW_TAC [][INT_LDISTRIB] THEN
@@ -778,14 +828,18 @@ val mult_lemma = prove(
     CONV_TAC (LAND_CONV (REWR_CONV (GSYM INT_MUL_RID))) THEN
     SRW_TAC [][ile_mono] THEN
     SRW_TAC [][LE_LT1]
-  ]);
+  ]
+QED
 
-val neg_eliminate = prove(
-  ``!x y. (x + ~y = x - y) /\ (~x + y = y - x)``,
-  PROVE_TAC [int_sub, INT_ADD_COMM]);
+Theorem neg_eliminate[local]:
+    !x y. (x + ~y = x - y) /\ (~x + y = y - x)
+Proof
+  PROVE_TAC [int_sub, INT_ADD_COMM]
+QED
 
-val div_lemma0 = prove(
-  ``!n c d. 0 < c /\ c <= d /\ 0 < n ==> ~n / c <= ~n / d``,
+Theorem div_lemma0[local]:
+    !n c d. 0 < c /\ c <= d /\ 0 < n ==> ~n / c <= ~n / d
+Proof
   REPEAT STRIP_TAC THEN
   Cases_on `c = d` THEN1 PROVE_TAC [INT_LE_REFL] THEN
   `c < d` by PROVE_TAC [INT_LE_LT] THEN
@@ -838,12 +892,14 @@ val div_lemma0 = prove(
   `d + i * c < d + n` by PROVE_TAC [INT_LET_TRANS, INT_MUL_COMM] THEN
   FULL_SIMP_TAC (srw_ss())[] THEN
   `i * c < i * c` by  PROVE_TAC [INT_LTE_TRANS] THEN
-  PROVE_TAC [INT_LT_REFL]);
+  PROVE_TAC [INT_LT_REFL]
+QED
 
-val div_lemma = prove(
-  ``!c c' d.
+Theorem div_lemma[local]:
+    !c c' d.
        0 < c /\ 0 < c' /\ 0 < d /\ c <= c' ==>
-       (c * d - c - d) / c <= (c' * d - c' - d) / c'``,
+       (c * d - c - d) / c <= (c' * d - c' - d) / c'
+Proof
   REPEAT STRIP_TAC THEN
   REWRITE_TAC [int_sub] THEN
   `~(c = 0) /\ ~(c' = 0)` by PROVE_TAC [INT_LT_REFL] THEN
@@ -870,7 +926,8 @@ val div_lemma = prove(
      (ONCE_REWRITE_TAC [INT_MUL_COMM] THEN
       MATCH_MP_TAC INT_MUL_DIV THEN
       PROVE_TAC [INT_MOD_ID]) THEN
-  SRW_TAC [][div_lemma0]);
+  SRW_TAC [][div_lemma0]
+QED
 
 val _ = print "Now proving properties of nightmare function\n"
 Definition nightmare_def:

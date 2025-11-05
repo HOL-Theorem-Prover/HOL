@@ -41,10 +41,12 @@ End
 
 (* Verification of phase 1 *)
 
-val sem_t_Dec = store_thm("sem_t_Dec",
-  ``sem_t s (Dec v t) =
-    sem_t s (Seq (Exp (Assign v (Num 0))) t)``,
-  fs [sem_t_def,sem_e_def]);
+Theorem sem_t_Dec:
+    sem_t s (Dec v t) =
+    sem_t s (Seq (Exp (Assign v (Num 0))) t)
+Proof
+  fs [sem_t_def,sem_e_def]
+QED
 
 val sem_t_pull_if = prove(
   ``sem_t s1 (if b then t1 else t2) =
@@ -80,9 +82,10 @@ val sem_t_For_swap_body = prove(
   \\ imp_res_tac sem_t_clock
   \\ decide_tac);
 
-val sem_t_For = store_thm("sem_t_For",
-  ``!s b1 b2 t. sem_t s (For b1 b2 t) =
-                sem_t s (Loop (If b1 (Seq t (Exp b2)) Break))``,
+Theorem sem_t_For:
+    !s b1 b2 t. sem_t s (For b1 b2 t) =
+                sem_t s (Loop (If b1 (Seq t (Exp b2)) Break))
+Proof
   REPEAT STRIP_TAC
   \\ completeInduct_on `s.clock`
   \\ rw [sem_t_def_with_stop,sem_e_def,Once sem_t_Loop]
@@ -100,18 +103,23 @@ val sem_t_For = store_thm("sem_t_For",
   \\ fs [dec_clock_def]
   \\ imp_res_tac sem_e_clock
   \\ imp_res_tac sem_t_clock
-  \\ decide_tac);
+  \\ decide_tac
+QED
 
-val phase1_correct = store_thm("phase1_correct",
-  ``!t s. sem_t s (phase1 t) = sem_t s t``,
+Theorem phase1_correct:
+    !t s. sem_t s (phase1 t) = sem_t s t
+Proof
   Induct \\ fs [phase1_def,sem_t_def_with_stop,GSYM sem_t_For,GSYM sem_t_Dec]
   \\ REPEAT STRIP_TAC \\ ect \\ fs [STOP_def]
-  \\ MATCH_MP_TAC sem_t_For_swap_body \\ fs []);
+  \\ MATCH_MP_TAC sem_t_For_swap_body \\ fs []
+QED
 
-val phase1_pres = store_thm("phase1_pres",
-  ``!t. semantics (phase1 t) = semantics t``,
+Theorem phase1_pres:
+    !t. semantics (phase1 t) = semantics t
+Proof
   REPEAT STRIP_TAC \\ fs [FUN_EQ_THM] \\ Cases_on `x'`
-  \\ fs [semantics_def,phase1_correct]);
+  \\ fs [semantics_def,phase1_correct]
+QED
 
 
 (* === PHASE 2 : compiles expressions into very simple assignments === *)
@@ -222,9 +230,8 @@ val sem_e_possible_var_name = prove(
   rpt strip_tac >> SRW_TAC [] [] >>
   fs []);
 
-val comp_exp_correct = store_thm(
-  "comp_exp_correct",
-  “!e s t n res s1.
+Theorem comp_exp_correct:
+   !e s t n res s1.
       sem_e s e = (res,s1) /\ res <> Rfail /\
       possible_var_name n s.store /\
       s.store SUBMAP t.store /\ (t.clock = s.clock) /\
@@ -242,7 +249,8 @@ val comp_exp_correct = store_thm(
            (!k v. possible_var_name k s.store /\
                   exp_max e < LENGTH k /\ LENGTH k < LENGTH n /\
                   FLOOKUP t.store k = SOME v ==>
-                  FLOOKUP t1.store k = SOME v)”,
+                  FLOOKUP t1.store k = SOME v)
+Proof
   Induct \\ fs [sem_e_def,comp_exp_def,sem_t_def,store_var_def]
   \\ REPEAT STRIP_TAC
   THEN1
@@ -319,7 +327,8 @@ val comp_exp_correct = store_thm(
     \\ FIRST_X_ASSUM (MP_TAC o Q.SPECL [`t`,`n`])
     \\ fs [] \\ REPEAT STRIP_TAC \\ fs []
     \\ REPEAT STRIP_TAC
-    \\ fs [SUBMAP_DEF,FAPPLY_FUPDATE_THM,FLOOKUP_DEF, FILTER_APPEND_DISTRIB]));
+    \\ fs [SUBMAP_DEF,FAPPLY_FUPDATE_THM,FLOOKUP_DEF, FILTER_APPEND_DISTRIB])
+QED
 
 Definition phase2_subset_def:
   (phase2_subset (Dec v t) = F) /\
@@ -473,9 +482,10 @@ val lemma = prove(
    type check) and if the syntax of the compiler program fits with
    phase2_subset (i.e. syntax produced by phase1) *)
 
-val phase2_pres = store_thm("phase2_pres",
-  ``!t input. ~(Crash IN semantics t input) /\ phase2_subset t ==>
-              semantics (phase2 t) input SUBSET semantics t input``,
+Theorem phase2_pres:
+    !t input. ~(Crash IN semantics t input) /\ phase2_subset t ==>
+              semantics (phase2 t) input SUBSET semantics t input
+Proof
   REPEAT STRIP_TAC \\ fs [semantics_def,IN_DEF,SUBSET_DEF]
   \\ Cases \\ fs [semantics_def]
   \\ TRY
@@ -514,17 +524,19 @@ val phase2_pres = store_thm("phase2_pres",
       \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC
       THEN1 (fs [s_with_clock_def,init_st_def] \\ METIS_TAC [])
       \\ STRIP_TAC \\ fs [s_with_clock_def,init_st_def])
-  \\ rw []);
+  \\ rw []
+QED
 
 
 (* === PHASE 3 : maps the FOR language into assmembly code === *)
 
 (* We define the tagert deterministic assembly language *)
 
-val _ = Datatype `
-reg = Reg string`
+Datatype:
+reg = Reg string
+End
 
-val _ = Datatype `
+Datatype:
 instr =
     Add reg reg reg
   | Mov reg reg
@@ -532,10 +544,12 @@ instr =
   | Read reg
   | Write reg
   | Jmp num
-  | JmpIf reg num`;
+  | JmpIf reg num
+End
 
-val _ = Datatype `
-state_a = <| state : state; pc : num; instrs : instr list |>`;
+Datatype:
+state_a = <| state : state; pc : num; instrs : instr list |>
+End
 
 Definition do_jump_def:
 do_jump s n =
@@ -958,8 +972,8 @@ val phase3_aux_thm = store_thm("phase3_aux_thm",
   |> REWRITE_RULE [state_rel_def];
 end
 
-val phase3_correct = store_thm("phase3_correct",
-  ``!s1 t res s2 x xs ys b.
+Theorem phase3_correct:
+    !s1 t res s2 x xs ys b.
       (sem_t s1 t = (res,s2)) /\ phase3_subset t /\
       (x.state = s1) /\
       (x.pc = 0) /\
@@ -970,14 +984,16 @@ val phase3_correct = store_thm("phase3_correct",
         (x'.state = s2) /\
         (case res of
          | Rval v => (res' = Rval 0)
-         | _ => (res' = res))``,
+         | _ => (res' = res))
+Proof
   REPEAT STRIP_TAC
   \\ MP_TAC (SPEC_ALL phase3_aux_thm
        |> Q.INST [`xs`|->`[]`,`ys`|->`[]`,`b`|->`0`])
   \\ fs [phase3_def] \\ REPEAT STRIP_TAC \\ fs []
   \\ Cases_on `res` \\ fs [rich_listTheory.EL_LENGTH_APPEND]
   \\ SIMP_TAC std_ss [Once sem_a_def]
-  \\ fs [rich_listTheory.EL_LENGTH_APPEND]);
+  \\ fs [rich_listTheory.EL_LENGTH_APPEND]
+QED
 
 (* We prove that phase3 preserves semantics if the source does not
    contain Crash and if the syntax fits within the subset defined by
@@ -987,9 +1003,10 @@ val EVERY_IMP_FILTER = prove(
   ``!xs. EVERY P xs ==> FILTER P xs = xs``,
   Induct \\ fs []);
 
-val phase3_pres = store_thm("phase3_pres",
-  ``!t input. ~(Crash IN semantics t input) /\ phase3_subset t ==>
-              asm_semantics (phase3 t) input SUBSET semantics t input``,
+Theorem phase3_pres:
+    !t input. ~(Crash IN semantics t input) /\ phase3_subset t ==>
+              asm_semantics (phase3 t) input SUBSET semantics t input
+Proof
   REPEAT STRIP_TAC \\ fs [semantics_def,IN_DEF,SUBSET_DEF]
   \\ Cases \\ fs [semantics_def,asm_semantics_def]
   \\ TRY
@@ -1035,7 +1052,8 @@ val phase3_pres = store_thm("phase3_pres",
   \\ MATCH_MP_TAC IMP_IMP \\ STRIP_TAC THEN1
    (fs [a_state_def,s_with_clock_def,init_st_def]
     \\ fs [METIS_PROVE [] ``~b\/c <=> (b==>c)``] \\ res_tac \\ fs [])
-  \\ Cases_on `q` \\ fs []);
+  \\ Cases_on `q` \\ fs []
+QED
 
 
 (* === The end-to-end compiler === *)
@@ -1069,9 +1087,10 @@ val phase3_subset_phase2_phase1 = prove(
    behaviour of the source code, if Crash is not an observable
    behaviour of the course program. *)
 
-val compile_pres = store_thm("compile_pres",
-  ``!t input. ~(Crash IN semantics t input) ==>
-        asm_semantics (compile t) input SUBSET semantics t input``,
+Theorem compile_pres:
+    !t input. ~(Crash IN semantics t input) ==>
+        asm_semantics (compile t) input SUBSET semantics t input
+Proof
   fs [compile_def]
   \\ ONCE_REWRITE_TAC [GSYM phase1_pres]
   \\ REPEAT STRIP_TAC
@@ -1084,7 +1103,8 @@ val compile_pres = store_thm("compile_pres",
     \\ IMP_RES_TAC phase2_pres
     \\ fs [phase2_subset_phase1,SUBSET_DEF]
     \\ METIS_TAC [])
-  \\ MATCH_MP_TAC phase2_pres \\ fs [phase2_subset_phase1]);
+  \\ MATCH_MP_TAC phase2_pres \\ fs [phase2_subset_phase1]
+QED
 
 (* The simple type checker (defined in for_nd_semScript.sml) ensures
    that the source program cannot Crash. This leads to a cleaner

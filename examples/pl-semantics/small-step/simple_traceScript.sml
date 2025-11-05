@@ -3,22 +3,27 @@ Ancestors
   integer string alist list llist pred_set relation pair option
   finite_map arithmetic
 
-val hd_drop_last_take = Q.store_thm ("hd_drop_last_take",
-`!n l . 0 < n ∧ n ≤ LENGTH l ⇒ HD (DROP (n - 1) l) = LAST (TAKE n l)`,
+Theorem hd_drop_last_take:
+ !n l . 0 < n ∧ n ≤ LENGTH l ⇒ HD (DROP (n - 1) l) = LAST (TAKE n l)
+Proof
  Induct >> rw[] >>
  Cases_on `l` >> fs[] >>
  Cases_on `n` >> fs[] >>
  Cases_on `t` >> fs[]
-);
+QED
 
-val some_no_choice = Q.store_thm ("some_no_choice",
-`!f. (some x. f x) = NONE ⇔ ¬?x. f x`,
- rw [some_def]);
+Theorem some_no_choice:
+ !f. (some x. f x) = NONE ⇔ ¬?x. f x
+Proof
+ rw [some_def]
+QED
 
-val some_exists_determ = Q.store_thm ("some_exists_determ",
-`!f. (!x y. f x ∧ f y ⇒ x = y) ⇒ ((some x. f x) = SOME a ⇔ f a)`,
+Theorem some_exists_determ:
+ !f. (!x y. f x ∧ f y ⇒ x = y) ⇒ ((some x. f x) = SOME a ⇔ f a)
+Proof
  rw [some_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
 Definition monotone_def:
   monotone (f : num -> num) ⇔
@@ -42,10 +47,11 @@ End
 
 val check_trace_ind = fetch "-" "check_trace_ind";
 
-val check_trace_thm = Q.store_thm ("check_trace_thm",
-`!step s1 s2.
+Theorem check_trace_thm:
+ !step s1 s2.
   (λs1 s2. step s1 = SOME s2)^* s1 s2 ⇔
-  ?tr. tr ≠ [] ∧ HD tr = s1 ∧ LAST tr = s2 ∧ check_trace step tr`,
+  ?tr. tr ≠ [] ∧ HD tr = s1 ∧ LAST tr = s2 ∧ check_trace step tr
+Proof
  rw [] >>
  eq_tac
  >- (
@@ -67,17 +73,19 @@ val check_trace_thm = Q.store_thm ("check_trace_thm",
  fs [] >>
  Cases_on `tr` >>
  fs [check_trace_def] >>
- rw [Once RTC_CASES1]);
+ rw [Once RTC_CASES1]
+QED
 
-val check_trace_append = Q.store_thm ("check_trace_append",
-`!tr1 tr2.
+Theorem check_trace_append:
+ !tr1 tr2.
   check_trace step (tr1 ++ tr2) ⇔
   if tr1 = [] then
     check_trace step tr2
   else if tr2 = [] then
     check_trace step tr1
   else
-    check_trace step tr1 ∧ check_trace step tr2 ∧ step (LAST tr1) = SOME (HD tr2)`,
+    check_trace step tr1 ∧ check_trace step tr2 ∧ step (LAST tr1) = SOME (HD tr2)
+Proof
  Induct >>
  rw [] >>
  Cases_on `tr1` >>
@@ -88,14 +96,16 @@ val check_trace_append = Q.store_thm ("check_trace_append",
    metis_tac []) >>
  Cases_on `t` >>
  fs [check_trace_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val step_rel_determ = Q.store_thm ("step_rel_determ",
-`!s s1.
+Theorem step_rel_determ:
+ !s s1.
   (λs1 s2. step s1 = SOME s2)^* s s1 ⇒
   !s2. step s1 = NONE ∧ (λs1 s2. step s1 = SOME s2)^* s s2 ∧ step s2 = NONE
   ⇒
-  s1 = s2`,
+  s1 = s2
+Proof
  ho_match_mp_tac RTC_INDUCT >>
  rw []
  >- (
@@ -108,17 +118,19 @@ val step_rel_determ = Q.store_thm ("step_rel_determ",
  fs [] >>
  rw [] >>
  fs [] >>
- rw []);
+ rw []
+QED
 
-val trace_extends = Q.store_thm ("trace_extends",
-`!tr tr'.
+Theorem trace_extends:
+ !tr tr'.
   tr ≠ [] ∧ tr' ≠ [] ∧
   HD tr = HD tr' ∧
   LENGTH tr < LENGTH tr' ∧
   check_trace step tr ∧
   check_trace step tr'
   ⇒
-  step (LAST tr) ≠ NONE`,
+  step (LAST tr) ≠ NONE
+Proof
  Induct_on `tr` >>
  rw [] >>
  Cases_on `tr'` >>
@@ -133,23 +145,27 @@ val trace_extends = Q.store_thm ("trace_extends",
    fs [check_trace_def] >>
    rw [] >>
    first_x_assum (qspec_then `h'::t''` assume_tac) >>
-   fs []));
+   fs [])
+QED
 
-val check_trace_append2 = Q.store_thm ("check_trace_append2",
-`∀f ls ls'.
+Theorem check_trace_append2:
+ ∀f ls ls'.
  check_trace f ls ∧
  check_trace f ls' ∧
  f (LAST ls) = SOME (HD ls') ⇒
- check_trace f (ls++ls')`,
+ check_trace f (ls++ls')
+Proof
  ho_match_mp_tac check_trace_ind>>rw[]>>fs[check_trace_def]>>
- Cases_on`ls'`>>fs[check_trace_def])
+ Cases_on`ls'`>>fs[check_trace_def]
+QED
 
-val check_trace_drop = Q.store_thm ("check_trace_drop",
-`!tr n.
+Theorem check_trace_drop:
+ !tr n.
   check_trace step tr ∧
   n ≤ LENGTH tr
   ⇒
-  check_trace step (DROP n tr)`,
+  check_trace step (DROP n tr)
+Proof
  Induct_on `n` >>
  rw [] >>
  Cases_on `tr` >>
@@ -157,17 +173,19 @@ val check_trace_drop = Q.store_thm ("check_trace_drop",
  first_x_assum (qspec_then `t` match_mp_tac) >>
  rw [] >>
  Cases_on `t` >>
- fs [check_trace_def]);
+ fs [check_trace_def]
+QED
 
-val check_trace_twice_take = Q.store_thm ("check_trace_twice_take",
-`!tr tr'.
+Theorem check_trace_twice_take:
+ !tr tr'.
   tr ≠ [] ∧ tr' ≠ [] ∧
   HD tr = HD tr' ∧
   LENGTH tr ≤ LENGTH tr' ∧
   check_trace step tr ∧
   check_trace step tr'
   ⇒
-  TAKE (LENGTH tr) tr' = tr`,
+  TAKE (LENGTH tr) tr' = tr
+Proof
  Induct_on `tr` >>
  simp [] >>
  gen_tac >>
@@ -180,20 +198,23 @@ val check_trace_twice_take = Q.store_thm ("check_trace_twice_take",
  fs [] >>
  rw [] >>
  first_x_assum (qspec_then `h'::t''` strip_assume_tac) >>
- rfs []);
+ rfs []
+QED
 
-val check_trace_twice_suff = Q.store_thm ("check_trace_twice_suff",
-`!tr tr'.
+Theorem check_trace_twice_suff:
+ !tr tr'.
   tr ≠ [] ∧ tr' ≠ [] ∧
   HD tr = HD tr' ∧
   LENGTH tr ≤ LENGTH tr' ∧
   check_trace step tr ∧
   check_trace step tr'
   ⇒
-  HD (DROP (LENGTH tr - 1) tr') = (LAST tr) `,
+  HD (DROP (LENGTH tr - 1) tr') = (LAST tr)
+Proof
  rw [] >>
  `TAKE (LENGTH tr) tr' = tr` by metis_tac [check_trace_twice_take] >>
  fs [] >>
  `0 < LENGTH tr ∧ LENGTH tr ≤ LENGTH tr'` by (rw [] >> Cases_on `tr` >> fs [] >> decide_tac) >>
- metis_tac [hd_drop_last_take]);
+ metis_tac [hd_drop_last_take]
+QED
 

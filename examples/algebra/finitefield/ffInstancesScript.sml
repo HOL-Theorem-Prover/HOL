@@ -105,38 +105,43 @@ val _ = intLib.deprecate_int ();
    Since  prime 2     by PRIME_2
    Hence true by GF_finite_field.
 *)
-val GF_2_finite_field = store_thm(
-  "GF_2_finite_field",
-  ``FiniteField (GF 2)``,
-  rw[PRIME_2, GF_finite_field]);
+Theorem GF_2_finite_field:
+    FiniteField (GF 2)
+Proof
+  rw[PRIME_2, GF_finite_field]
+QED
 
 (* Theorem: Field (GF 2) *)
 (* Proof: by GF_2_finite_field. *)
-val GF_2_field = store_thm(
-  "GF_2_field",
-  ``Field (GF 2)``,
-  metis_tac[GF_2_finite_field, FiniteField_def]);
+Theorem GF_2_field:
+    Field (GF 2)
+Proof
+  metis_tac[GF_2_finite_field, FiniteField_def]
+QED
 
 (* Theorem: (GF 2).carrier = {0; 1} *)
 (* Proof: by GF_def *)
-val GF_2_carrier = store_thm(
-  "GF_2_carrier",
-  ``(GF 2).carrier = {0; 1}``,
-  rw[GF_def, EXTENSION]);
+Theorem GF_2_carrier:
+    (GF 2).carrier = {0; 1}
+Proof
+  rw[GF_def, EXTENSION]
+QED
 
 (* Theorem: (GF 2).sum.id = 0 *)
 (* Proof: by GF_def *)
-val GF_2_zero = store_thm(
-  "GF_2_zero",
-  ``(GF 2).sum.id = 0``,
-  rw[GF_def]);
+Theorem GF_2_zero:
+    (GF 2).sum.id = 0
+Proof
+  rw[GF_def]
+QED
 
 (* Theorem: (GF 2).prod.id = 1 *)
 (* Proof: by GF_def *)
-val GF_2_one = store_thm(
-  "GF_2_one",
-  ``(GF 2).prod.id = 1``,
-  rw[GF_def, including_def]);
+Theorem GF_2_one:
+    (GF 2).prod.id = 1
+Proof
+  rw[GF_def, including_def]
+QED
 
 (* export simple results *)
 val _ = export_rewrites ["GF_2_carrier", "GF_2_zero", "GF_2_one"];
@@ -154,10 +159,11 @@ val _ = temp_overload_on ("h", ``[1; 1; 1]``);
    hence Ring (GF 2)       by field_is_ring,
    thus true by poly_add_mult_ring.
 *)
-val GF_2_poly_ring = store_thm(
-  "GF_2_poly_ring",
-  ``Ring (PolyRing (GF 2))``,
-  rw[GF_2_field, poly_add_mult_ring]);
+Theorem GF_2_poly_ring:
+    Ring (PolyRing (GF 2))
+Proof
+  rw[GF_2_field, poly_add_mult_ring]
+QED
 
 (* Theorem: Poly (GF 2) h *)
 (* Proof:
@@ -165,10 +171,11 @@ val GF_2_poly_ring = store_thm(
    (1) 1 IN (GF 2).carrier, true by GF_2_carrier.
    (2) 1 <> (GF 2).sum.id, true by GF_2_zero.
 *)
-val GF_2_poly_h = store_thm(
-  "GF_2_poly_h",
-  ``Poly (GF 2) h``,
-  rw[Poly_def]);
+Theorem GF_2_poly_h:
+    Poly (GF 2) h
+Proof
+  rw[Poly_def]
+QED
 
 (* Theorem: poly_monic (GF 2) h *)
 (* Proof:
@@ -181,10 +188,11 @@ val GF_2_poly_h = store_thm(
        = 1                              by poly_lead_def
        = (GF 2).prod.id                 by GF_2_one
  *)
-val GF_2_monic_h = store_thm(
-  "GF_2_monic_h",
-  ``poly_monic (GF 2) h``,
-  rw[poly_monic_def]);
+Theorem GF_2_monic_h:
+    poly_monic (GF 2) h
+Proof
+  rw[poly_monic_def]
+QED
 
 (* Theorem: poly_deg (GF 2) h = 2 *)
 (* Proof:
@@ -192,10 +200,11 @@ val GF_2_monic_h = store_thm(
    But LENGTH h = 3        by LENGTH
    and PRE 3 = 2           by PRE
 *)
-val GF_2_deg_h = store_thm(
-  "GF_2_deg_h",
-  ``poly_deg (GF 2) h = 2``,
-  rw[poly_deg_def]);
+Theorem GF_2_deg_h:
+    poly_deg (GF 2) h = 2
+Proof
+  rw[poly_deg_def]
+QED
 
 (* Theorem: poly_roots (GF 2) h = {} *)
 (* Proof:
@@ -241,15 +250,16 @@ QED
    poly_roots (GF 2) h = {}               by GF_2_roots_h
    hence irreducible (PolyRing (GF 2)) p  by poly_deg_2_irreducible
 *)
-val GF_2_irreducible_h = store_thm(
-  "GF_2_irreducible_h",
-  ``irreducible (PolyRing (GF 2)) h``,
+Theorem GF_2_irreducible_h:
+    irreducible (PolyRing (GF 2)) h
+Proof
   rpt strip_tac >>
   `Field (GF 2)` by rw[GF_2_field] >>
   `poly_monic (GF 2) h` by rw[GF_2_monic_h] >>
   `poly_deg (GF 2) h = 2` by rw[GF_2_deg_h] >>
   `poly_roots (GF 2) h = {}` by rw[GF_2_roots_h] >>
-  rw[poly_deg_2_irreducible]);
+  rw[poly_deg_2_irreducible]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Quotient Field by Irreducible Polynomial h.                               *)
@@ -267,13 +277,14 @@ val GF_2_irreducible_h = store_thm(
    irreducible (PolyRing (GF 2)) h  by GF_2_irreducible_h
    thus true                        by poly_irreducible_quotient_field
 *)
-val GF_2_quotient_field_by_h = store_thm(
-  "GF_2_quotient_field_by_h",
-  ``Field (PolyRing (GF 2) / principal_ideal (PolyRing (GF 2)) h)``,
+Theorem GF_2_quotient_field_by_h:
+    Field (PolyRing (GF 2) / principal_ideal (PolyRing (GF 2)) h)
+Proof
   rpt strip_tac >>
   `Field (GF 2)` by rw[GF_2_field] >>
   `irreducible (PolyRing (GF 2)) h` by rw[GF_2_irreducible_h] >>
-  rw[poly_irreducible_quotient_field]);
+  rw[poly_irreducible_quotient_field]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Ring modulo Irreducible Polynomial h.                          *)
@@ -310,16 +321,17 @@ val _ = overload_on ("GF_4", ``PolyModRing (GF 2) h``);
    irreducible (PolyRing (GF 2)) h  by GF_2_irreducible_h
    Hence true                       by poly_quotient_field_iso_poly_mod
 *)
-val GF_2_quotient_field_iso = store_thm(
-  "GF_2_quotient_field_iso",
-  ``FieldIso (\x. coset (PolyRing (GF 2)).sum x (principal_ideal (PolyRing (GF 2)) h).carrier)
+Theorem GF_2_quotient_field_iso:
+    FieldIso (\x. coset (PolyRing (GF 2)).sum x (principal_ideal (PolyRing (GF 2)) h).carrier)
             (GF_4)
-            (PolyRing (GF 2) / principal_ideal (PolyRing (GF 2)) h)``,
+            (PolyRing (GF 2) / principal_ideal (PolyRing (GF 2)) h)
+Proof
   rpt strip_tac >>
   `Field (GF 2)` by rw[GF_2_field] >>
   `poly_monic (GF 2) h` by rw[GF_2_monic_h] >>
   `irreducible (PolyRing (GF 2)) h` by rw[GF_2_irreducible_h] >>
-  rw[poly_quotient_field_iso_poly_mod]);
+  rw[poly_quotient_field_iso_poly_mod]
+QED
 
 (* Theorem: Poly (GF 2) h /\ Unit (GF 2) (Lead (GF 2) h) /\ 0 < Deg (GF 2) h *)
 (* Proof:
@@ -328,10 +340,11 @@ val GF_2_quotient_field_iso = store_thm(
    irreducible (PolyRing (GF 2)) p   by GF_2_irreducible_h
    Hence true                        by poly_monic_irreducible_property
 *)
-val GF_2_h_property = store_thm(
-  "GF_2_h_property",
-  ``Poly (GF 2) h /\ Unit (GF 2) (Lead (GF 2) h) /\ 0 < Deg (GF 2) h``,
-  rw_tac std_ss[GF_2_field, GF_2_monic_h, GF_2_irreducible_h, poly_monic_irreducible_property]);
+Theorem GF_2_h_property:
+    Poly (GF 2) h /\ Unit (GF 2) (Lead (GF 2) h) /\ 0 < Deg (GF 2) h
+Proof
+  rw_tac std_ss[GF_2_field, GF_2_monic_h, GF_2_irreducible_h, poly_monic_irreducible_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* GF(4) -- Finite Field with 4 elements.                                    *)
@@ -348,10 +361,11 @@ val GF_2_h_property = store_thm(
    Poly (GF 2) h /\ Unit (GF 2) (Lead (GF 2) h)   by GF_2_h_property
    Hence true                                     by poly_mod_ring_ring
 *)
-val GF_4_ring = store_thm(
-  "GF_4_ring",
-  ``Ring (GF_4)``,
-  rw[GF_2_field, GF_2_h_property, poly_mod_ring_ring]);
+Theorem GF_4_ring:
+    Ring (GF_4)
+Proof
+  rw[GF_2_field, GF_2_h_property, poly_mod_ring_ring]
+QED
 
 (* Theorem: (GF_4).sum.id = [] *)
 (* Proof:
@@ -359,10 +373,11 @@ val GF_4_ring = store_thm(
    = (PolyRing (GF 2)).sum.id          by poly_mod_ring_def
    = []                                by poly_ring_def
 *)
-val GF_4_sum_id = store_thm(
-  "GF_4_sum_id",
-  ``(GF_4).sum.id = []``,
-  rw[poly_mod_ring_def]);
+Theorem GF_4_sum_id:
+    (GF_4).sum.id = []
+Proof
+  rw[poly_mod_ring_def]
+QED
 
 (* Theorem: (GF_4).prod.id = [1] *)
 (* Proof:
@@ -370,17 +385,18 @@ val GF_4_sum_id = store_thm(
    = (PolyRing (GF 2)).prod.id          by poly_mod_ring_def
    = [1]                                by poly_ring_def
 *)
-val GF_4_prod_id = store_thm(
-  "GF_4_prod_id",
-  ``(GF_4).prod.id = [1]``,
-  rw[poly_mod_ring_def, poly_ring_def]);
+Theorem GF_4_prod_id:
+    (GF_4).prod.id = [1]
+Proof
+  rw[poly_mod_ring_def, poly_ring_def]
+QED
 
 
 (* Theorem: (GF_4).carrier = {[], [1], [0;1], [1;1]} *)
 (* Proof: Expand by poly_mod_ring_def, poly_remainders_def, and check each case. *)
-val GF_4_carrier = store_thm(
-  "GF_4_carrier",
-  ``(GF_4).carrier = {[]; [1]; [0;1]; [1;1]}``,
+Theorem GF_4_carrier:
+    (GF_4).carrier = {[]; [1]; [0;1]; [1;1]}
+Proof
   rw_tac std_ss[poly_mod_ring_def, poly_remainders_def, EXTENSION] >>
   rw[poly_deg_def, EQ_IMP_THM] >| [
     `?a t. x = a::t` by metis_tac[list_CASES] >>
@@ -414,7 +430,8 @@ val GF_4_carrier = store_thm(
     rw[],
     rw[],
     rw[]
-  ]);
+  ]
+QED
 
 (* TODO: poly_lead_nonzero nees GEN_ALL:
 - poly_lead_nonzero;
@@ -433,15 +450,16 @@ val GF_4_carrier = store_thm(
     and poly_deg (GF 2) [1] = 0    by poly_deg_one
    Hence true                      by poly_mod_less.
 *)
-val GF_4_mult_1_1 = store_thm(
-  "GF_4_mult_1_1",
-  ``(GF_4).prod.op [1] [1] = [1]``,
+Theorem GF_4_mult_1_1:
+    (GF_4).prod.op [1] [1] = [1]
+Proof
   rw[poly_mod_ring_def, poly_ring_def, GF_mult] >>
   `Field (GF 2)` by rw[GF_2_field] >>
   `Poly (GF 2) h /\ 0 < poly_deg (GF 2) h /\ poly_lead (GF 2) h IN (Invertibles (GF 2).prod).carrier` by rw[GF_2_h_property] >>
   `Poly (GF 2) [1]` by rw[] >>
   `poly_deg (GF 2) [1] = 0` by rw[] >>
-  rw[poly_mod_less]);
+  rw[poly_mod_less]
+QED
 
 (* Theorem: (GF_4).prod.op [0;1] [1;1] = [1] *)
 (* Proof:
@@ -453,14 +471,15 @@ val GF_4_mult_1_1 = store_thm(
    Given Field (GF 2)                               by GF_2_field
    Hence true                                       by poly_field_add_mod
 *)
-val GF_4_mult_a_b = store_thm(
-  "GF_4_mult_a_b",
-  ``(GF_4).prod.op [0;1] [1;1] = [1]``,
+Theorem GF_4_mult_a_b:
+    (GF_4).prod.op [0;1] [1;1] = [1]
+Proof
   rw_tac std_ss[poly_ring_def, GF_mult] >>
   EVAL_TAC >>
   `(PolyRing (GF 2)).sum.op h [1] = poly_chop (GF 2) (weak_add (GF 2) h [1])` by rw_tac std_ss[poly_ring_def] >>
   `_ = [0;1;1]` by EVAL_TAC >>
-  rw[GF_2_field, poly_field_add_mod]);
+  rw[GF_2_field, poly_field_add_mod]
+QED
 
 (* Theorem: (GF_4).prod.op [1;1] [0;1] = [1] *)
 (* Proof:
@@ -471,14 +490,15 @@ val GF_4_mult_a_b = store_thm(
    Given Field (GF 2)                               by GF_2_field
    Hence true                                       by poly_field_add_mod
 *)
-val GF_4_mult_b_a = store_thm(
-  "GF_4_mult_b_a",
-  ``(GF_4).prod.op [1;1] [0;1] = [1]``,
+Theorem GF_4_mult_b_a:
+    (GF_4).prod.op [1;1] [0;1] = [1]
+Proof
   rw_tac std_ss[poly_ring_def, GF_mult] >>
   EVAL_TAC >>
   `(PolyRing (GF 2)).sum.op h [1] = poly_chop (GF 2) (weak_add (GF 2) h [1])` by rw_tac std_ss[poly_ring_def] >>
   `_ = [0;1;1]` by EVAL_TAC >>
-  rw[GF_2_field, poly_field_add_mod]);
+  rw[GF_2_field, poly_field_add_mod]
+QED
 
 (* Theorem: Group ((GF_4).prod excluding [] *)
 (* Proof:
@@ -487,13 +507,14 @@ val GF_4_mult_b_a = store_thm(
    irreducible (PolyRing (GF 2)) h   by GF_2_irreducible_h
    Hence true                        by poly_mod_prod_group
 *)
-val GF_4_prod_group = store_thm(
-  "GF_4_prod_group",
-  ``Group ((GF_4).prod excluding [])``,
+Theorem GF_4_prod_group:
+    Group ((GF_4).prod excluding [])
+Proof
   `Field (GF 2)` by rw[GF_2_field] >>
   `poly_monic (GF 2) h` by rw[GF_2_monic_h] >>
   `irreducible (PolyRing (GF 2)) h` by rw[GF_2_irreducible_h] >>
-  metis_tac[poly_mod_prod_group, poly_zero]);
+  metis_tac[poly_mod_prod_group, poly_zero]
+QED
 
 (* Theorem: Field (GF_4) *)
 (* Proof:
@@ -502,13 +523,14 @@ val GF_4_prod_group = store_thm(
    irreducible (PolyRing (GF 2)) h   by GF_2_irreducible_h
    Hence true                        by poly_mod_irreducible_field
 *)
-val GF_4_field = store_thm(
-  "GF_4_field",
-  ``Field (GF_4)``,
+Theorem GF_4_field:
+    Field (GF_4)
+Proof
   `Field (GF 2)` by rw[GF_2_field] >>
   `poly_monic (GF 2) h` by rw[GF_2_monic_h] >>
   `irreducible (PolyRing (GF 2)) h` by rw[GF_2_irreducible_h] >>
-  rw[poly_mod_irreducible_field]);
+  rw[poly_mod_irreducible_field]
+QED
 
 (* export simple results *)
 val _ = export_rewrites ["GF_4_field", "GF_4_sum_id", "GF_4_prod_id"];
@@ -522,34 +544,38 @@ val _ = temp_overload_on ("H", ``poly_lift (GF 2) h``);
 
 (* Theorem: H = [[1]; [1]; [1]] *)
 (* Proof: by EVAL. *)
-val GF_4_H_by_lift = store_thm(
-  "GF_4_H_by_lift",
-  ``H = [[1]; [1]; [1]]``,
-  EVAL_TAC);
+Theorem GF_4_H_by_lift:
+    H = [[1]; [1]; [1]]
+Proof
+  EVAL_TAC
+QED
 
 (* Theorem: x IN (GF_4).carrier <=> (x = []) \/ (x = [1]) \/ (x = [0; 1]) \/ (x = [1; 1]) *)
 (* Proof: by GF_4_carrier. *)
-val GF_4_elements = store_thm(
-  "GF_4_elements",
-  ``!x. x IN (GF_4).carrier <=> (x = []) \/ (x = [1]) \/ (x = [0; 1]) \/ (x = [1; 1])``,
-  rw[GF_4_carrier]);
+Theorem GF_4_elements:
+    !x. x IN (GF_4).carrier <=> (x = []) \/ (x = [1]) \/ (x = [0; 1]) \/ (x = [1; 1])
+Proof
+  rw[GF_4_carrier]
+QED
 
 (* Theorem: Poly (GF_4) H *)
 (* Proof: by Poly_def. *)
-val GF_4_H_poly = store_thm(
-  "GF_4_H_poly",
-  ``Poly (GF_4) H``,
-  rw[Poly_def, GF_4_elements]);
+Theorem GF_4_H_poly:
+    Poly (GF_4) H
+Proof
+  rw[Poly_def, GF_4_elements]
+QED
 
 (* Theorem: H IN (PolyRing GF_4).carrier *)
 (* Proof:
    Since Poly (GF_4) H   by GF_4_H_poly,
    This is true          by poly_ring_element
 *)
-val GF_4_H_ring_element = store_thm(
-  "GF_4_H_ring_element",
-  ``H IN (PolyRing GF_4).carrier``,
-  rw[GF_4_H_poly, poly_ring_element]);
+Theorem GF_4_H_ring_element:
+    H IN (PolyRing GF_4).carrier
+Proof
+  rw[GF_4_H_poly, poly_ring_element]
+QED
 
 (* Theorem: GF_4.sum.op [1] [1] = [] *)
 (* Proof:
@@ -559,16 +585,17 @@ val GF_4_H_ring_element = store_thm(
    goal reduces to: poly_mod (GF 2) [] h = []
    This is true                                   by poly_zero_mod.
 *)
-val GF_4_sum_1_1 = store_thm(
-  "GF_4_sum_1_1",
-  ``GF_4.sum.op [1] [1] = []``,
+Theorem GF_4_sum_1_1:
+    GF_4.sum.op [1] [1] = []
+Proof
   rw[poly_mod_ring_def] >>
   `(PolyRing (GF 2)).sum.op [1] [1] = []` by EVAL_TAC >>
   full_simp_tac std_ss[] >>
   `Ring (GF 2)` by rw[GF_2_field] >>
   `Poly (GF 2) h /\ 0 < poly_deg (GF 2) h /\ poly_lead (GF 2) h IN (Invertibles (GF 2).prod).carrier` by rw[GF_2_h_property] >>
   `(PolyRing (GF 2)).sum.id = []` by rw_tac std_ss[GF_4_ring, poly_ring_ids] >>
-  metis_tac[poly_zero_mod]);
+  metis_tac[poly_zero_mod]
+QED
 
 (* Theorem: GF_4.sum.op [1] [0;1] = [1;1] *)
 (* Proof:
@@ -578,15 +605,16 @@ val GF_4_sum_1_1 = store_thm(
    goal reduces to: poly_mod (GF 2) [1; 1] h = [1; 1]
    This is true                                   by poly_mod_less.
 *)
-val GF_4_sum_1_a = store_thm(
-  "GF_4_sum_1_a",
-  ``GF_4.sum.op [1] [0;1] = [1;1]``,
+Theorem GF_4_sum_1_a:
+    GF_4.sum.op [1] [0;1] = [1;1]
+Proof
   rw[poly_mod_ring_def] >>
   `(PolyRing (GF 2)).sum.op [1] [0; 1] = [1; 1]` by EVAL_TAC >>
   full_simp_tac std_ss[] >>
   `Ring (GF 2)` by rw[GF_2_field] >>
   `Poly (GF 2) h /\ 0 < poly_deg (GF 2) h /\ poly_lead (GF 2) h IN (Invertibles (GF 2).prod).carrier` by rw[GF_2_h_property] >>
-  rw[poly_mod_less]);
+  rw[poly_mod_less]
+QED
 
 (* Theorem: GF_4.sum.op [1] [1;1] = [0;1] *)
 (* Proof:
@@ -596,15 +624,16 @@ val GF_4_sum_1_a = store_thm(
    goal reduces to: poly_mod (GF 2) [0; 1] h = [0; 1]
    This is true                                         by poly_mod_less.
 *)
-val GF_4_sum_1_b = store_thm(
-  "GF_4_sum_1_b",
-  ``GF_4.sum.op [1] [1;1] = [0;1]``,
+Theorem GF_4_sum_1_b:
+    GF_4.sum.op [1] [1;1] = [0;1]
+Proof
   rw[poly_mod_ring_def] >>
   `(PolyRing (GF 2)).sum.op [1] [1; 1] = [0; 1]` by EVAL_TAC >>
   full_simp_tac std_ss[] >>
   `Ring (GF 2)` by rw[GF_2_field] >>
   `Poly (GF 2) h /\ 0 < poly_deg (GF 2) h /\ poly_lead (GF 2) h IN (Invertibles (GF 2).prod).carrier` by rw[GF_2_h_property] >>
-  rw[poly_mod_less]);
+  rw[poly_mod_less]
+QED
 
 (* Theorem: GF_4.sum.op [0;1] [1;1] = [1] *)
 (* Proof:
@@ -614,15 +643,16 @@ val GF_4_sum_1_b = store_thm(
    goal reduces to: poly_mod (GF 2) [1] h = [1]
    This is true                                         by poly_mod_less.
 *)
-val GF_4_sum_a_b = store_thm(
-  "GF_4_sum_a_b",
-  ``GF_4.sum.op [0;1] [1;1] = [1]``,
+Theorem GF_4_sum_a_b:
+    GF_4.sum.op [0;1] [1;1] = [1]
+Proof
   rw[poly_mod_ring_def] >>
   `(PolyRing (GF 2)).sum.op [0; 1] [1; 1] = [1]` by EVAL_TAC >>
   full_simp_tac std_ss[] >>
   `Ring (GF 2)` by rw[GF_2_field] >>
   `Poly (GF 2) h /\ 0 < poly_deg (GF 2) h /\ poly_lead (GF 2) h IN (Invertibles (GF 2).prod).carrier` by rw[GF_2_h_property] >>
-  rw[poly_mod_less]);
+  rw[poly_mod_less]
+QED
 
 (* Theorem: poly_eval GF_4 H [] = [1] *)
 (* Proof:
@@ -630,11 +660,12 @@ val GF_4_sum_a_b = store_thm(
    GF_4.sum.op [1] (GF_4.prod.op (GF_4.sum.op [1] (GF_4.prod.op (GF_4.sum.op [1] (GF_4.prod.op [] [])) [])) []) = [1]
    True by field operations.
 *)
-val GF_4_H_eval_at_0 = store_thm(
-  "GF_4_H_eval_at_0",
-  ``poly_eval GF_4 H [] = [1]``,
+Theorem GF_4_H_eval_at_0:
+    poly_eval GF_4 H [] = [1]
+Proof
   rw[poly_eval_def] >>
-  metis_tac[GF_4_field, GF_4_elements, GF_4_sum_id, GF_4_prod_id, field_mult_rzero, field_add_rzero]);
+  metis_tac[GF_4_field, GF_4_elements, GF_4_sum_id, GF_4_prod_id, field_mult_rzero, field_add_rzero]
+QED
 
 (* Theorem: poly_eval GF_4 H [1] = [1] *)
 (* Proof:
@@ -644,12 +675,13 @@ val GF_4_H_eval_at_0 = store_thm(
    GF_4.sum.op [1] [1] = [], true by GF_4_sum_1_1
    Hence true by field operations.
 *)
-val GF_4_H_eval_at_1 = store_thm(
-  "GF_4_H_eval_at_1",
-  ``poly_eval GF_4 H [1] = [1]``,
+Theorem GF_4_H_eval_at_1:
+    poly_eval GF_4 H [1] = [1]
+Proof
   rw[poly_eval_def] >>
   `GF_4.sum.op [1] [1] = []` by rw[GF_4_sum_1_1] >>
-  metis_tac[GF_4_field, GF_4_elements, GF_4_sum_id, GF_4_prod_id, field_mult_lzero, field_mult_rone, field_add_rzero]);
+  metis_tac[GF_4_field, GF_4_elements, GF_4_sum_id, GF_4_prod_id, field_mult_lzero, field_mult_rone, field_add_rzero]
+QED
 
 (* Theorem: poly_eval GF_4 H [0;1] = [] *)
 (* Proof:
@@ -661,14 +693,15 @@ val GF_4_H_eval_at_1 = store_thm(
    GF_4.sum.op [1] [1] = [],       true by GF_4_sum_1_1
    Hence true by field operations.
 *)
-val GF_4_H_eval_at_a = store_thm(
-  "GF_4_H_eval_at_a",
-  ``poly_eval GF_4 H [0; 1] = []``,
+Theorem GF_4_H_eval_at_a:
+    poly_eval GF_4 H [0; 1] = []
+Proof
   rw[poly_eval_def] >>
   `GF_4.sum.op [1] [0;1] = [1;1]` by rw[GF_4_sum_1_a] >>
   `GF_4.prod.op [1;1] [0;1] = [1]` by rw[GF_4_mult_b_a] >>
   `GF_4.sum.op [1] [1] = []` by rw[GF_4_sum_1_1] >>
-  metis_tac[GF_4_field, GF_4_elements, GF_4_sum_id, GF_4_prod_id, field_mult_lzero, field_mult_lone, field_add_rzero]);
+  metis_tac[GF_4_field, GF_4_elements, GF_4_sum_id, GF_4_prod_id, field_mult_lzero, field_mult_lone, field_add_rzero]
+QED
 
 (* Theorem: poly_eval GF_4 H [1;1] = [] *)
 (* Proof:
@@ -680,28 +713,31 @@ val GF_4_H_eval_at_a = store_thm(
    GF_4.sum.op [1] [1] = [],       true by GF_4_sum_1_1
    Hence true by field operations.
 *)
-val GF_4_H_eval_at_b = store_thm(
-  "GF_4_H_eval_at_b",
-  ``poly_eval GF_4 H [1;1] = []``,
+Theorem GF_4_H_eval_at_b:
+    poly_eval GF_4 H [1;1] = []
+Proof
   rw[poly_eval_def] >>
   `GF_4.sum.op [1] [1;1] = [0;1]` by rw[GF_4_sum_1_b] >>
   `GF_4.prod.op [0;1] [1;1] = [1]` by rw[GF_4_mult_a_b] >>
   `GF_4.sum.op [1] [1] = []` by rw[GF_4_sum_1_1] >>
-  metis_tac[GF_4_field, GF_4_elements, GF_4_sum_id, GF_4_prod_id, field_mult_lzero, field_mult_lone, field_add_rzero]);
+  metis_tac[GF_4_field, GF_4_elements, GF_4_sum_id, GF_4_prod_id, field_mult_lzero, field_mult_lone, field_add_rzero]
+QED
 
 (* Theorem: poly_root (GF_4) H [0;1] *)
 (* Proof: by GF_4_H_eval_at_a. *)
-val GF_4_H_root_a = store_thm(
-  "GF_4_H_root_a",
-  ``poly_root (GF_4) H [0;1]``,
-  rw_tac std_ss[poly_root_def, GF_4_H_eval_at_a, GF_4_sum_id]);
+Theorem GF_4_H_root_a:
+    poly_root (GF_4) H [0;1]
+Proof
+  rw_tac std_ss[poly_root_def, GF_4_H_eval_at_a, GF_4_sum_id]
+QED
 
 (* Theorem: poly_root (GF_4) H [1;1] *)
 (* Proof: by GF_4_H_eval_at_b. *)
-val GF_4_H_root_b = store_thm(
-  "GF_4_H_root_b",
-  ``poly_root (GF_4) H [1;1]``,
-  rw_tac std_ss[poly_root_def, GF_4_H_eval_at_b, GF_4_sum_id]);
+Theorem GF_4_H_root_b:
+    poly_root (GF_4) H [1;1]
+Proof
+  rw_tac std_ss[poly_root_def, GF_4_H_eval_at_b, GF_4_sum_id]
+QED
 
 (* Theorem: poly_roots (GF_4) H = {[0;1]; [1;1]} *)
 (* Proof:
@@ -715,9 +751,9 @@ val GF_4_H_root_b = store_thm(
    (4) poly_root GF_4 H [1; 1]
        True by GF_4_H_root_b.
 *)
-val GF_4_H_roots = store_thm(
-  "GF_4_H_roots",
-  ``poly_roots (GF_4) H = {[0;1]; [1;1]}``,
+Theorem GF_4_H_roots:
+    poly_roots (GF_4) H = {[0;1]; [1;1]}
+Proof
   `!x. x IN poly_roots (GF_4) H <=> (x = [0;1]) \/ (x = [1;1])` suffices_by rw[EXTENSION] >>
   `Field (GF_4)` by rw[GF_4_field] >>
   `(GF_4.sum.id = []) /\ (GF_4.prod.id = [1])` by rw[] >>
@@ -727,29 +763,32 @@ val GF_4_H_roots = store_thm(
     metis_tac[poly_root_def, GF_4_H_eval_at_1],
     rw_tac std_ss[GF_4_H_root_a],
     rw_tac std_ss[GF_4_H_root_b]
-  ]);
+  ]
+QED
 
 (* Theorem: CARD (poly_roots (GF_4) H) = 2 *)
 (* Proof: by GF_4_H_roots. *)
-val GF_4_H_roots_card = store_thm(
-  "GF_4_H_roots_card",
-  ``CARD (poly_roots (GF_4) H) = 2``,
-  rw[GF_4_H_roots]);
+Theorem GF_4_H_roots_card:
+    CARD (poly_roots (GF_4) H) = 2
+Proof
+  rw[GF_4_H_roots]
+QED
 
 (* Theorem: poly_deg (GF_4) H = 2 *)
 (* Proof: by EVAL. *)
-val GF_4_H_deg = store_thm(
-  "GF_4_H_deg",
-  ``poly_deg (GF_4) H = 2``,
-  rw[]);
+Theorem GF_4_H_deg:
+    poly_deg (GF_4) H = 2
+Proof
+  rw[]
+QED
 
 (* Theorem: x IN GF_4.carrier ==> GF_4.sum.op x x = GF_4.sum.id *)
 (* Proof:
    This is because: x + x = 2 * x = 0   as 2 = 0 in (GF 2).
 *)
-val GF_4_sum_x_x = store_thm(
-  "GF_4_sum_x_x",
-  ``!x. x IN GF_4.carrier ==> (GF_4.sum.op x x = GF_4.sum.id)``,
+Theorem GF_4_sum_x_x:
+    !x. x IN GF_4.carrier ==> (GF_4.sum.op x x = GF_4.sum.id)
+Proof
   rpt strip_tac >>
   `Field (GF_4)` by rw[GF_4_field] >>
   `GF_4.sum.op x x = GF_4.prod.op (GF_4.sum.exp GF_4.prod.id 2) x` by rw_tac std_ss[field_single_add_single] >>
@@ -758,17 +797,19 @@ val GF_4_sum_x_x = store_thm(
   `_ = GF_4.prod.op [] x` by rw_tac std_ss[GF_4_sum_1_1] >>
   `_ = GF_4.prod.op GF_4.sum.id x` by rw_tac std_ss[GF_4_sum_id] >>
   `_ = GF_4.sum.id` by rw_tac std_ss[field_mult_lzero] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: x IN GF_4.carrier ==> GF_4.sum.inv x = x *)
 (* Proof: by GF_4_sum_x_x and field_add_eq_zero. *)
-val GF_4_neg = store_thm(
-  "GF_4_neg",
-  ``!x. x IN GF_4.carrier ==> (GF_4.sum.inv x = x)``,
+Theorem GF_4_neg:
+    !x. x IN GF_4.carrier ==> (GF_4.sum.inv x = x)
+Proof
   rpt strip_tac >>
   `Field (GF_4)` by rw[GF_4_field] >>
   `GF_4.sum.op x x = GF_4.sum.id` by rw_tac std_ss[GF_4_sum_x_x] >>
-  metis_tac[field_add_eq_zero]);
+  metis_tac[field_add_eq_zero]
+QED
 
 (* Theorem: (PolyRing GF_4).prod.id = lift (GF 2) GF_4.prod.id *)
 (* Proof:
@@ -776,10 +817,11 @@ val GF_4_neg = store_thm(
    which is to show: [[1]] = lift [1]
    True by MAP.
 *)
-val GF_4_poly_one = store_thm(
-  "GF_4_poly_one",
-  ``(PolyRing GF_4).prod.id = poly_lift (GF 2) GF_4.prod.id``,
-  rw[poly_ring_def]);
+Theorem GF_4_poly_one:
+    (PolyRing GF_4).prod.id = poly_lift (GF 2) GF_4.prod.id
+Proof
+  rw[poly_ring_def]
+QED
 
 (* Theorem: x IN GF_4.carrier ==> GF_4.sum.op x [] = x *)
 (* Proof:
@@ -787,12 +829,13 @@ val GF_4_poly_one = store_thm(
      and GF_4.sum.id = []    by GF_4_sum_id
    Hence true                by field_add_rzero
 *)
-val GF_4_add_x_0 = store_thm(
-  "GF_4_add_x_0",
-  ``!x. x IN GF_4.carrier ==> (GF_4.sum.op x [] = x)``,
+Theorem GF_4_add_x_0:
+    !x. x IN GF_4.carrier ==> (GF_4.sum.op x [] = x)
+Proof
   `Field (GF_4)` by rw_tac std_ss[GF_4_field] >>
   `GF_4.sum.id = []` by rw_tac std_ss[GF_4_sum_id] >>
-  metis_tac[field_add_rzero]);
+  metis_tac[field_add_rzero]
+QED
 
 (* Theorem: x IN GF_4.carrier ==> GF_4.sum.op [] x = x *)
 (* Proof:
@@ -801,19 +844,21 @@ val GF_4_add_x_0 = store_thm(
      and [] IN (GF_4).carrier   by GF_4_elements
    Hence true                   by GF_4_add_x_0
 *)
-val GF_4_add_0_x = store_thm(
-  "GF_4_add_0_x",
-  ``!x. x IN GF_4.carrier ==> (GF_4.sum.op [] x = x)``,
+Theorem GF_4_add_0_x:
+    !x. x IN GF_4.carrier ==> (GF_4.sum.op [] x = x)
+Proof
   `Field (GF_4)` by rw_tac std_ss[GF_4_field] >>
   `[] IN (GF_4).carrier` by rw_tac std_ss[GF_4_elements] >>
-  metis_tac[GF_4_add_x_0, field_add_comm]);
+  metis_tac[GF_4_add_x_0, field_add_comm]
+QED
 
 (* Theorem: GF_4.sum.op [1] [] = [1] *)
 (* Proof: by GF_4_add_x_0. *)
-val GF_4_add_1_0 = store_thm(
-  "GF_4_add_1_0",
-  ``GF_4.sum.op [1] [] = [1]``,
-  rw_tac std_ss[GF_4_elements, GF_4_add_x_0]);
+Theorem GF_4_add_1_0:
+    GF_4.sum.op [1] [] = [1]
+Proof
+  rw_tac std_ss[GF_4_elements, GF_4_add_x_0]
+QED
 
 (* Theorem: x IN GF_4.carrier ==> GF_4.prod.op x [1] = x *)
 (* Proof:
@@ -821,12 +866,13 @@ val GF_4_add_1_0 = store_thm(
      and GF_4.prod.id = [1]  by GF_4_prod_id
    Hence true                by field_mult_rone
 *)
-val GF_4_mult_x_1 = store_thm(
-  "GF_4_mult_x_1",
-  ``!x. x IN GF_4.carrier ==> (GF_4.prod.op x [1] = x)``,
+Theorem GF_4_mult_x_1:
+    !x. x IN GF_4.carrier ==> (GF_4.prod.op x [1] = x)
+Proof
   `Field (GF_4)` by rw_tac std_ss[GF_4_field] >>
   `GF_4.prod.id = [1]` by rw_tac std_ss[GF_4_prod_id] >>
-  metis_tac[field_mult_rone]);
+  metis_tac[field_mult_rone]
+QED
 
 (* Theorem: x IN GF_4.carrier ==> GF_4.prod.op [1] x = x *)
 (* Proof:
@@ -835,19 +881,21 @@ val GF_4_mult_x_1 = store_thm(
      and [1] IN (GF_4).carrier  by GF_4_elements
    Hence true                   by GF_4_mult_x_1
 *)
-val GF_4_mult_1_x = store_thm(
-  "GF_4_mult_1_x",
-  ``!x. x IN GF_4.carrier ==> (GF_4.prod.op [1] x = x)``,
+Theorem GF_4_mult_1_x:
+    !x. x IN GF_4.carrier ==> (GF_4.prod.op [1] x = x)
+Proof
   `Field (GF_4)` by rw_tac std_ss[GF_4_field] >>
   `[1] IN (GF_4).carrier` by rw_tac std_ss[GF_4_elements] >>
-  metis_tac[GF_4_mult_x_1, field_mult_comm]);
+  metis_tac[GF_4_mult_x_1, field_mult_comm]
+QED
 
 (* Theorem: GF_4.prod.op [0; 1] [1] = [0; 1] *)
 (* Proof: by GF_4_mult_x_1. *)
-val GF_4_mult_a_1 = store_thm(
-  "GF_4_mult_a_1",
-  ``GF_4.prod.op [0; 1] [1] = [0; 1]``,
-  rw_tac std_ss[GF_4_elements, GF_4_mult_x_1]);
+Theorem GF_4_mult_a_1:
+    GF_4.prod.op [0; 1] [1] = [0; 1]
+Proof
+  rw_tac std_ss[GF_4_elements, GF_4_mult_x_1]
+QED
 
 (* not successful:
 GF_4_mult_x_1 |> SPEC ``[0; 1]`` |> UNDISCH |> PROVE_HYP (GF_4_elements |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH);
@@ -855,10 +903,11 @@ GF_4_mult_x_1 |> SPEC ``[0; 1]`` |> UNDISCH |> PROVE_HYP (GF_4_elements |> SPEC_
 
 (* Theorem: GF_4.prod.op [1] [1; 1] = [1; 1] *)
 (* Proof: by GF_4_mult_1_x. *)
-val GF_4_mult_1_b = store_thm(
-  "GF_4_mult_1_b",
-  ``GF_4.prod.op [1] [1; 1] = [1; 1] ``,
-  rw_tac std_ss[GF_4_elements, GF_4_mult_1_x]);
+Theorem GF_4_mult_1_b:
+    GF_4.prod.op [1] [1; 1] = [1; 1]
+Proof
+  rw_tac std_ss[GF_4_elements, GF_4_mult_1_x]
+QED
 
 (* Theorem: H = (PolyRing GF_4).prod.op (GF_4) (poly_factor (GF_4) [0;1]) (poly_factor (GF_4) [1;1]) *)
 (* Proof:
@@ -866,9 +915,9 @@ val GF_4_mult_1_b = store_thm(
    H = poly_chop GF_4 (weak_mult GF_4 [[0; 1]; [1]] [[1; 1]; [1]])
    True by computation.
 *)
-val GF_4_H_factors = store_thm(
-  "GF_4_H_factors",
-  ``H = (PolyRing GF_4).prod.op (poly_factor (GF_4) [0;1]) (poly_factor (GF_4) [1;1])``,
+Theorem GF_4_H_factors:
+    H = (PolyRing GF_4).prod.op (poly_factor (GF_4) [0;1]) (poly_factor (GF_4) [1;1])
+Proof
   rw_tac std_ss[poly_mult_def, poly_factor_def] >>
   `GF_4.sum.inv [0; 1] = [0; 1]` by rw_tac std_ss[GF_4_elements, GF_4_neg] >>
   `GF_4.sum.inv [1; 1] = [1; 1]` by rw_tac std_ss[GF_4_elements, GF_4_neg] >>
@@ -887,7 +936,8 @@ val GF_4_H_factors = store_thm(
   `GF_4.sum.op [1] [] = [1]` by rw_tac std_ss[GF_4_add_1_0] >>
   `GF_4.sum.op [0; 1] [1; 1] = [1]` by rw_tac std_ss[GF_4_sum_a_b] >>
   rw_tac std_ss[] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

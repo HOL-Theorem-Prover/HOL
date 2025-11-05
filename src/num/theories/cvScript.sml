@@ -434,7 +434,7 @@ QED
  * Theorems used in automation
  * ------------------------------------------------------------------------- *)
 
-Triviality c2b_if:
+Theorem c2b_if[local]:
   c2b (Num (if b then SUC 0 else 0)) = b
 Proof
   Cases_on ‘b’

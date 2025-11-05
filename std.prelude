@@ -81,6 +81,7 @@ in
   val _ = installPP (mosmlpp timepp)
   val _ = installPP (mosmlpp locpp)
   val _ = installPP (mosmlpp Feedback.pp_trace_elt)
+  val _ = installPP (mosmlpp Feedback.pp_hol_error)
 end;
 
 

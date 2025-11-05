@@ -17,7 +17,8 @@ Libs
 
 val _ = temp_add_monadsyntax()
 
-val _ = Datatype`Cont = Cont ((α -> β) -> β)`
+Datatype: Cont = Cont ((α -> β) -> β)
+End
 
 Definition runCont_def:  runCont (Cont f) = f
 End
@@ -35,10 +36,11 @@ val _ = overload_on ("return", ``CONT_UNIT``)
 val _ = overload_on ("monad_bind", ``CONT_BIND``)
 val _ = overload_on ("monad_unitbind", ``λm1 m2. CONT_BIND m1 (K m2)``)
 
-val t6 = Q.store_thm(
-  "t6",
-  `runCont (do x <- return 2; y <- return 3; return (2 + 3) od) SUC = 6`,
-  CONV_TAC EVAL)
+Theorem t6:
+   runCont (do x <- return 2; y <- return 3; return (2 + 3) od) SUC = 6
+Proof
+  CONV_TAC EVAL
+QED
 
 Definition throw_def:
   throw (v:ρ) : (α,ρ) Cont = Cont (λk. v)

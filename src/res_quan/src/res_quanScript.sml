@@ -22,9 +22,11 @@ fun simp thml = ASM_SIMP_TAC (bool_ss ++ pred_setSimps.PRED_SET_ss) thml;
 val CONJ_AC = AC CONJ_COMM CONJ_ASSOC;
 val ELIM_EXISTS_IMP = GSYM boolTheory.LEFT_FORALL_IMP_THM;
 
-val EMPTY = prove(
-  ``!s. (s = {}) <=> !x. x NOTIN s``,
-  prove_tac [MEMBER_NOT_EMPTY]);
+Theorem EMPTY[local]:
+    !s. (s = {}) <=> !x. x NOTIN s
+Proof
+  prove_tac [MEMBER_NOT_EMPTY]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Definitions to support restricted abstractions and quantifications    *)
@@ -62,23 +64,29 @@ Proof
     BETA_TAC >> EQ_TAC >> REPEAT STRIP_TAC >> RES_TAC
 QED
 
-val RES_FORALL_UNIQUE = store_thm("RES_FORALL_UNIQUE",
-    (``!P j. (!(i:'a)::($= j). P i) = P j``),
+Theorem RES_FORALL_UNIQUE:
+      !P j. (!(i:'a)::($= j). P i) = P j
+Proof
     REWRITE_TAC [RES_FORALL, SPECIFICATION] >> BETA_TAC >>
-    PROVE_TAC []);
+    PROVE_TAC []
+QED
 
-val RES_FORALL_FORALL = store_thm("RES_FORALL_FORALL",
-    (``!(P:'a->bool) (R:'a->'b->bool) (x:'b).
-        (!x. !i::P. R i x) = (!i::P. !x. R i x)``),
+Theorem RES_FORALL_FORALL:
+      !(P:'a->bool) (R:'a->'b->bool) (x:'b).
+        (!x. !i::P. R i x) = (!i::P. !x. R i x)
+Proof
     REPEAT STRIP_TAC >> REWRITE_TAC [RES_FORALL, SPECIFICATION]
     >> BETA_TAC >> EQ_TAC >> REPEAT STRIP_TAC >> RES_TAC
-    >> FIRST_ASSUM MATCH_ACCEPT_TAC);
+    >> FIRST_ASSUM MATCH_ACCEPT_TAC
+QED
 
-val RES_FORALL_REORDER = store_thm("RES_FORALL_REORDER",
-    (``!(P:'a->bool) (Q:'b->bool) (R:'a->'b->bool).
-        (!i::P. !j::Q. R i j) = (!j::Q. !i::P. R i j)``),
+Theorem RES_FORALL_REORDER:
+      !(P:'a->bool) (Q:'b->bool) (R:'a->'b->bool).
+        (!i::P. !j::Q. R i j) = (!j::Q. !i::P. R i j)
+Proof
     REPEAT STRIP_TAC >> REWRITE_TAC [RES_FORALL, SPECIFICATION] >>
-    BETA_TAC >> EQ_TAC >> REPEAT STRIP_TAC >> RES_TAC);
+    BETA_TAC >> EQ_TAC >> REPEAT STRIP_TAC >> RES_TAC
+QED
 
 Theorem RES_FORALL_T:
     !P s x. !x::s. T
@@ -187,23 +195,27 @@ Proof
     >> CONV_TAC (ONCE_DEPTH_CONV EXISTS_OR_CONV) >> REFL_TAC
 QED
 
-val RES_EXISTS_EQUAL = store_thm("RES_EXISTS_EQUAL",
-    (``!P j. (?(i:'a)::($= j). P i) = P j``),
+Theorem RES_EXISTS_EQUAL:
+      !P j. (?(i:'a)::($= j). P i) = P j
+Proof
     REWRITE_TAC [RES_EXISTS, SPECIFICATION] >> BETA_TAC >> REPEAT GEN_TAC
     >> EQ_TAC >|[
       DISCH_THEN (CHOOSE_THEN STRIP_ASSUME_TAC) >> ASM_REWRITE_TAC[],
-      DISCH_TAC >> EXISTS_TAC (``j:'a``) >>  ASM_REWRITE_TAC[]]);
+      DISCH_TAC >> EXISTS_TAC (``j:'a``) >>  ASM_REWRITE_TAC[]]
+QED
 
-val RES_EXISTS_REORDER = store_thm("RES_EXISTS_REORDER",
-    (``!(P:'a->bool) (Q:'b->bool) (R:'a->'b->bool).
-        (?i::P. ?j::Q. R i j) = (?j::Q. ?i::P. R i j)``),
+Theorem RES_EXISTS_REORDER:
+      !(P:'a->bool) (Q:'b->bool) (R:'a->'b->bool).
+        (?i::P. ?j::Q. R i j) = (?j::Q. ?i::P. R i j)
+Proof
     REPEAT STRIP_TAC >> REWRITE_TAC [RES_EXISTS, SPECIFICATION] >> BETA_TAC
     >> EQ_TAC >> DISCH_THEN (CHOOSE_THEN STRIP_ASSUME_TAC) >|[
       EXISTS_TAC (``x':'b``) >> CONJ_TAC >|[
         ALL_TAC, EXISTS_TAC ``x:'a`` >> CONJ_TAC],
       EXISTS_TAC ``x':'a`` >> CONJ_TAC >|[
         ALL_TAC, EXISTS_TAC ``x:'b`` >> CONJ_TAC]]
-    >> FIRST_ASSUM ACCEPT_TAC);
+    >> FIRST_ASSUM ACCEPT_TAC
+QED
 
 Theorem RES_EXISTS_F:
     !P s x. ~?s::x. F

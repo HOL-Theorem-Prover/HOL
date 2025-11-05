@@ -839,22 +839,24 @@ val loop_count_thm = save_thm("loop_count_thm",
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
              !x. guard x ==> (loop_count guard modify x = 0) *)
 (* Proof: by loop_count_def *)
-val loop_count_0 = store_thm(
-  "loop_count_0",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-   !x. guard x ==> (loop_count guard modify x = 0)``,
+Theorem loop_count_0:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+   !x. guard x ==> (loop_count guard modify x = 0)
+Proof
   rpt strip_tac >>
-  rw[Once loop_count_def]);
+  rw[Once loop_count_def]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
              !x. ~guard x ==> (loop_count guard modify x = SUC (loop_count guard modify (modify x))) *)
 (* Proof: by loop_count_def *)
-val loop_count_suc = store_thm(
-  "loop_count_suc",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-   !x. ~guard x ==> (loop_count guard modify x = SUC (loop_count guard modify (modify x)))``,
+Theorem loop_count_suc:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+   !x. ~guard x ==> (loop_count guard modify x = SUC (loop_count guard modify (modify x)))
+Proof
   rpt strip_tac >>
-  rw[Once loop_count_def]);
+  rw[Once loop_count_def]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
                 !x. guard (FUNPOW modify (loop_count guard modify x) x) *)
@@ -870,10 +872,10 @@ val loop_count_suc = store_thm(
       <=> guard (FUNPOW modify (loop_count guard modify (modify x)) (modify x)) by FUNPOW
       <=> T                                   by induction hypothesis
 *)
-val loop_count_iterating = store_thm(
-  "loop_count_iterating",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-                !x. guard (FUNPOW modify (loop_count guard modify x) x)``,
+Theorem loop_count_iterating:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+                !x. guard (FUNPOW modify (loop_count guard modify x) x)
+Proof
   ntac 4 strip_tac >>
   ho_match_mp_tac (theorem "loop_count_ind") >>
   rw[] >>
@@ -881,7 +883,8 @@ val loop_count_iterating = store_thm(
   metis_tac[loop_count_0, FUNPOW_0] >>
   qabbrev_tac `n = loop_count guard modify (modify x)` >>
   `guard (FUNPOW modify (loop_count guard modify x) x) <=> guard (FUNPOW modify (SUC n) x)` by metis_tac[loop_count_suc] >>
-  metis_tac[FUNPOW]);
+  metis_tac[FUNPOW]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==> ?n. guard (FUNPOW modify n x) *)
 (* Proof:
@@ -906,10 +909,10 @@ val loop_count_iterating = store_thm(
           and modify y = modify (FUNPOW modify n x)
                        = FUNPOW modify (SUC n) x      by FUNPOW_SUC
 *)
-val loop_count_exists = store_thm(
-  "loop_count_exists",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-                !x. ?n. guard (FUNPOW modify n x)``,
+Theorem loop_count_exists:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+                !x. ?n. guard (FUNPOW modify n x)
+Proof
   spose_not_then strip_assume_tac >>
   qabbrev_tac `s = IMAGE (\n. FUNPOW modify n x) univ(:num)` >>
   fs[relationTheory.WF_DEF] >>
@@ -920,7 +923,8 @@ val loop_count_exists = store_thm(
   rw[DISJ_EQ_IMP] >>
   simp[PULL_EXISTS] >>
   qexists_tac `SUC n` >>
-  simp[FUNPOW_SUC]);
+  simp[FUNPOW_SUC]
+QED
 
 (* Theorem:WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
    !x n. guard (FUNPOW modify n x) /\ (!m. m < n ==> ~guard (FUNPOW modify m x)) ==>
@@ -951,11 +955,11 @@ val loop_count_exists = store_thm(
       Thus loop_count guard modify (modify x) = k   by induction hypothesis
       or loop_count guard modify x = SUC k = n.
 *)
-val loop_count_minimal = store_thm(
-  "loop_count_minimal",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+Theorem loop_count_minimal:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
    !x n. guard (FUNPOW modify n x) /\ (!m. m < n ==> ~guard (FUNPOW modify m x)) ==>
-         (loop_count guard modify x = n)``,
+         (loop_count guard modify x = n)
+Proof
   ntac 4 strip_tac >>
   ho_match_mp_tac (theorem "loop_count_ind") >>
   rw[] >>
@@ -970,7 +974,8 @@ val loop_count_minimal = store_thm(
     rpt strip_tac >>
     first_x_assum (qspec_then `SUC m` mp_tac) >>
     simp[FUNPOW]
-  ]);
+  ]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
            !x. loop_count guard modify x = LEAST n. guard (FUNPOW modify n x) *)
@@ -980,15 +985,16 @@ val loop_count_minimal = store_thm(
    (2) !n. (!m. m < n ==> ~guard (FUNPOW modify m x)) /\ guard (FUNPOW modify n x) ==>
        loop_count guard modify x = n, true       by loop_count_minimal
 *)
-val loop_count_eqn = store_thm(
-  "loop_count_eqn",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-    !x. loop_count guard modify x = LEAST n. guard (FUNPOW modify n x)``,
+Theorem loop_count_eqn:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+    !x. loop_count guard modify x = LEAST n. guard (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   numLib.LEAST_ELIM_TAC >>
   rpt strip_tac >-
   metis_tac[loop_count_exists] >>
-  metis_tac[loop_count_minimal]);
+  metis_tac[loop_count_minimal]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Direct derivation of general results from loop_count.                     *)
@@ -1037,13 +1043,13 @@ val loop_count_eqn = store_thm(
       = quit (FUNPOW modify n x) + (SUM (f 0 :: GENLIST (f o SUC) m))     by SUM
       = quit (FUNPOW modify n x) + SUM (GENLIST f n)                      by GENLIST_CONS
 *)
-val loop_modify_count_eqn = store_thm(
-  "loop_modify_count_eqn",
-  ``!loop guard body quit modify R.
+Theorem loop_modify_count_eqn:
+    !loop guard body quit modify R.
     WF R /\ (!x. ~guard x ==> R (modify x) x) /\
     (!x. loop x = if guard x then quit x else body x + loop (modify x)) ==>
      !x. loop x = quit (FUNPOW modify (loop_count guard modify x) x) +
-                  SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))``,
+                  SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))
+Proof
   ntac 7 strip_tac >>
   ho_match_mp_tac (theorem "loop_count_ind") >>
   rpt strip_tac >>
@@ -1063,29 +1069,32 @@ val loop_modify_count_eqn = store_thm(
     `_ = quit (FUNPOW modify n x) + (f 0 + SUM (GENLIST (f o SUC) m))` by rw[FUNPOW] >>
     `_ = quit (FUNPOW modify n x) + SUM (GENLIST f n)` by rw[GENLIST_CONS] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: Equivalent form of loop_modify_count_eqn *)
 (* Proof: by loop_modify_count_eqn *)
-val loop_modify_count_eqn_1 = store_thm(
-  "loop_modify_count_eqn_1",
-  ``!loop guard body quit modify R.
+Theorem loop_modify_count_eqn_1:
+    !loop guard body quit modify R.
     WF R /\ (!x. ~guard x ==> R (modify x) x) /\
     (!x. loop x = if guard x then quit x else body x + loop (modify x)) ==>
      !x. let n = loop_count guard modify x in
-         loop x = quit (FUNPOW modify n x) + SUM (GENLIST (\j. body (FUNPOW modify j x)) n)``,
-  metis_tac[loop_modify_count_eqn]);
+         loop x = quit (FUNPOW modify n x) + SUM (GENLIST (\j. body (FUNPOW modify j x)) n)
+Proof
+  metis_tac[loop_modify_count_eqn]
+QED
 
 (* Theorem: Equivalent form of loop_modify_count_eqn *)
 (* Proof: by loop_modify_count_eqn *)
-val loop_modify_count_eqn_2 = store_thm(
-  "loop_modify_count_eqn_2",
-  ``!loop guard body quit modify R.
+Theorem loop_modify_count_eqn_2:
+    !loop guard body quit modify R.
     WF R /\ (!x. ~guard x ==> R (modify x) x) /\
     (!x. loop x = if guard x then quit x else body x + loop (modify x)) ==>
      !x. let n = loop_count guard modify x in
-         loop x = quit (FUNPOW modify n x) + SIGMA (\j. body (FUNPOW modify j x)) (count n)``,
-  metis_tac[loop_modify_count_eqn_1, SUM_GENLIST]);
+         loop x = quit (FUNPOW modify n x) + SIGMA (\j. body (FUNPOW modify j x)) (count n)
+Proof
+  metis_tac[loop_modify_count_eqn_1, SUM_GENLIST]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\
     (!x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)) ==>
@@ -1117,13 +1126,13 @@ val loop_modify_count_eqn_2 = store_thm(
       = quit (FUNPOW modify n x) + (SUM (f 0 :: GENLIST (f o SUC) m))     by SUM
       = quit (FUNPOW modify n x) + SUM (GENLIST f n)                      by GENLIST_CONS
 *)
-val loop_modify_count_exit_le = store_thm(
-  "loop_modify_count_exit_le",
-  ``!loop guard body quit exit modify R.
+Theorem loop_modify_count_exit_le:
+    !loop guard body quit exit modify R.
      WF R /\ (!x. ~guard x ==> R (modify x) x) /\
     (!x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)) ==>
      !x. loop x <= quit (FUNPOW modify (loop_count guard modify x) x) +
-                   SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))``,
+                   SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))
+Proof
   ntac 8 strip_tac >>
   ho_match_mp_tac (theorem "loop_count_ind") >>
   rpt strip_tac >>
@@ -1147,7 +1156,8 @@ val loop_modify_count_exit_le = store_thm(
     quit (FUNPOW modify n x) + (f 0 + SUM (GENLIST (f o SUC) m))` by rw[FUNPOW] >>
     `_ = quit (FUNPOW modify n x) + SUM (GENLIST f n)` by rw[GENLIST_CONS] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Estimation for Numeric Loops                                              *)
@@ -1191,14 +1201,14 @@ val loop_modify_count_exit_le = store_thm(
      = quit z + (cover z) * n                    by SUM_GENLIST_K
      = quit z + n * cover z                      by MULT_COMM
 *)
-val loop_rise_count_cover_exit_le = store_thm(
-  "loop_rise_count_cover_exit_le",
-  ``!loop body quit exit guard modify R.
+Theorem loop_rise_count_cover_exit_le:
+    !loop body quit exit guard modify R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                   in (!x. body x <= cover x) /\ MONO cover ==>
-                     loop x <= quit (FUNPOW modify n x) + n * cover (FUNPOW modify n x)``,
+                     loop x <= quit (FUNPOW modify n x) + n * cover (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)` >>
   simp[] >>
@@ -1220,7 +1230,8 @@ val loop_rise_count_cover_exit_le = store_thm(
   `cover u <= cover v` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover z)) n) = cover z * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)) ==>
@@ -1245,14 +1256,14 @@ val loop_rise_count_cover_exit_le = store_thm(
      = quit z + (cover x) * n                    by SUM_GENLIST_K
      = quit z + n * cover x                      by MULT_COMM
 *)
-val loop_rise_count_rcover_exit_le = store_thm(
-  "loop_rise_count_rcover_exit_le",
-  ``!loop body quit exit guard modify R.
+Theorem loop_rise_count_rcover_exit_le:
+    !loop body quit exit guard modify R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                   in (!x. body x <= cover x) /\ RMONO cover ==>
-                     loop x <= quit (FUNPOW modify n x) + n * cover x``,
+                     loop x <= quit (FUNPOW modify n x) + n * cover x
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)` >>
   simp[] >>
@@ -1274,7 +1285,8 @@ val loop_rise_count_rcover_exit_le = store_thm(
   `cover u <= cover x` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover x)) n) = cover x * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Numeric Loops with FALLING modify                                         *)
@@ -1300,14 +1312,14 @@ val loop_rise_count_rcover_exit_le = store_thm(
      = quit z + (cover x) * n                    by SUM_GENLIST_K
      = quit z + n * cover x                      by MULT_COMM
 *)
-val loop_fall_count_cover_exit_le = store_thm(
-  "loop_fall_count_cover_exit_le",
-  ``!loop guard body quit exit modify R.
+Theorem loop_fall_count_cover_exit_le:
+    !loop guard body quit exit modify R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                   in (!x. body x <= cover x) /\ MONO cover ==>
-                     loop x <= quit (FUNPOW modify n x) + n * cover x``,
+                     loop x <= quit (FUNPOW modify n x) + n * cover x
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)` >>
   simp[] >>
@@ -1329,7 +1341,8 @@ val loop_fall_count_cover_exit_le = store_thm(
   `cover u <= cover x` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover x)) n) = cover x * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)) ==>
@@ -1354,14 +1367,14 @@ val loop_fall_count_cover_exit_le = store_thm(
      = quit z + (cover z) * n                    by SUM_GENLIST_K
      = quit z + n * cover z                      by MULT_COMM
 *)
-val loop_fall_count_rcover_exit_le = store_thm(
-  "loop_fall_count_rcover_exit_le",
-  ``!loop guard body quit exit modify R.
+Theorem loop_fall_count_rcover_exit_le:
+    !loop guard body quit exit modify R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                   in (!x. body x <= cover x) /\ RMONO cover ==>
-                     loop x <= quit (FUNPOW modify n x) + n * cover (FUNPOW modify n x)``,
+                     loop x <= quit (FUNPOW modify n x) + n * cover (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x. loop x = if guard x then quit x else body x + if exit x then 0 else loop (modify x)` >>
   simp[] >>
@@ -1383,7 +1396,8 @@ val loop_fall_count_rcover_exit_le = store_thm(
   `cover u <= cover v` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover z)) n) = cover z * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* General Theory of Recurrence with 2 arguments                             *)
@@ -1411,47 +1425,50 @@ End
               if guard x y then 0
               else SUC (loop2_count guard modify transform (transform x) (modify y)) *)
 (* Proof: by loop_count_thm, loop2_count_def *)
-val loop2_count_thm = store_thm(
-  "loop2_count_thm",
-  ``!transform modify guard R.
+Theorem loop2_count_thm:
+    !transform modify guard R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) ==>
       !x y. loop2_count guard modify transform x y =
               if guard x y then 0
-              else SUC (loop2_count guard modify transform (transform x) (modify y))``,
+              else SUC (loop2_count guard modify transform (transform x) (modify y))
+Proof
   rw[loop2_count_def] >>
   imp_res_tac loop_count_thm >>
-  rw[Once pairTheory.FORALL_PROD]);
+  rw[Once pairTheory.FORALL_PROD]
+QED
 
 (* Obtain similar theorems. *)
-val loop2_count_0 = store_thm(
-  "loop2_count_0",
-  ``!transform modify guard R.
+Theorem loop2_count_0:
+    !transform modify guard R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) ==>
-      !x y. guard x y ==> (loop2_count guard modify transform x y = 0)``,
+      !x y. guard x y ==> (loop2_count guard modify transform x y = 0)
+Proof
   rw[loop2_count_def] >>
   imp_res_tac loop_count_0 >>
-  rw[Once pairTheory.FORALL_PROD]);
+  rw[Once pairTheory.FORALL_PROD]
+QED
 
-val loop2_count_suc = store_thm(
-  "loop2_count_suc",
-  ``!transform modify guard R.
+Theorem loop2_count_suc:
+    !transform modify guard R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) ==>
       !x y. ~guard x y ==> (loop2_count guard modify transform x y =
-            SUC (loop2_count guard modify transform (transform x) (modify y)))``,
+            SUC (loop2_count guard modify transform (transform x) (modify y)))
+Proof
   rw[loop2_count_def] >>
   imp_res_tac loop_count_suc >>
-  rw[Once pairTheory.FORALL_PROD]);
+  rw[Once pairTheory.FORALL_PROD]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) ==>
       !x y. guard (FUNPOW transform (loop2_count guard modify transform x y) x)
                   (FUNPOW modify (loop2_count guard modify transform x y) y) *)
 (* Proof: by loop_count_iterating, loop2_count_def. *)
-val loop2_count_iterating = store_thm(
-  "loop2_count_iterating",
-  ``!transform modify guard R.
+Theorem loop2_count_iterating:
+    !transform modify guard R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) ==>
       !x y. guard (FUNPOW transform (loop2_count guard modify transform x y) x)
-                  (FUNPOW modify (loop2_count guard modify transform x y) y)``,
+                  (FUNPOW modify (loop2_count guard modify transform x y) y)
+Proof
   rpt strip_tac >>
   assume_tac (loop_count_iterating
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b``]
@@ -1461,7 +1478,8 @@ val loop2_count_iterating = store_thm(
    |> SIMP_RULE bool_ss [FUNPOW_PAIR, GSYM loop2_count_def]
    |> Q.INST [`lp` |-> `loop`, `gd` |-> `guard`, `qt` |-> `quit`, `b` |-> `body`, `t` |-> `transform`, `m` |-> `modify`]
    |> PairRules.PBETA_RULE) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
         (!x y. loop x y = if guard x y then quit x y else body x y + loop (transform x) (modify y)) ==>
@@ -1470,15 +1488,15 @@ val loop2_count_iterating = store_thm(
                SUM (GENLIST (\j. body (FUNPOW transform j x) (FUNPOW modify j y))
                                       (loop2_count guard modify transform x y)) *)
 (* Proof: by loop_modify_count_eqn, loop2_count_def *)
-val loop2_modify_count_eqn = store_thm(
-  "loop2_modify_count_eqn",
-  ``!loop guard body quit modify transform R.
+Theorem loop2_modify_count_eqn:
+    !loop guard body quit modify transform R.
         WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
         (!x y. loop x y = if guard x y then quit x y else body x y + loop (transform x) (modify y)) ==>
          !x y. loop x y = quit (FUNPOW transform (loop2_count guard modify transform x y) x)
                                (FUNPOW modify (loop2_count guard modify transform x y) y) +
                SUM (GENLIST (\j. body (FUNPOW transform j x) (FUNPOW modify j y))
-                                      (loop2_count guard modify transform x y))``,
+                                      (loop2_count guard modify transform x y))
+Proof
   rpt strip_tac >>
   assume_tac (loop_modify_count_eqn
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b``]
@@ -1488,7 +1506,8 @@ val loop2_modify_count_eqn = store_thm(
    |> SIMP_RULE bool_ss [FUNPOW_PAIR, GSYM loop2_count_def]
    |> Q.INST [`lp` |-> `loop`, `gd` |-> `guard`, `qt` |-> `quit`, `b` |-> `body`, `t` |-> `transform`, `m` |-> `modify`]
    |> PairRules.PBETA_RULE) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
     (!x y. loop x y = if guard x y then quit x y else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
@@ -1497,15 +1516,15 @@ val loop2_modify_count_eqn = store_thm(
                SUM (GENLIST (\j. body (FUNPOW transform j x) (FUNPOW modify j y))
                                       (loop2_count guard modify transform x y)) *)
 (* Proof: by loop_modify_count_exit_le, loop2_count_def. *)
-val loop2_modify_count_exit_le = store_thm(
-  "loop2_modify_count_exit_le",
-  ``!loop guard body quit exit modify transform R.
+Theorem loop2_modify_count_exit_le:
+    !loop guard body quit exit modify transform R.
     WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
     (!x y. loop x y = if guard x y then quit x y else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
      !x y. loop x y <= quit (FUNPOW transform (loop2_count guard modify transform x y) x)
                                (FUNPOW modify (loop2_count guard modify transform x y) y) +
                SUM (GENLIST (\j. body (FUNPOW transform j x) (FUNPOW modify j y))
-                                      (loop2_count guard modify transform x y))``,
+                                      (loop2_count guard modify transform x y))
+Proof
   rpt strip_tac >>
   assume_tac (loop_modify_count_exit_le
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b``]
@@ -1515,7 +1534,8 @@ val loop2_modify_count_exit_le = store_thm(
    |> SIMP_RULE bool_ss [FUNPOW_PAIR, GSYM loop2_count_def]
    |> Q.INST [`lp` |-> `loop`, `gd` |-> `guard`, `qt` |-> `quit`, `et` |-> `exit`, `b` |-> `body`, `t` |-> `transform`, `m` |-> `modify`]
    |> PairRules.PBETA_RULE) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* List for Transform argument                                               *)
@@ -1535,17 +1555,19 @@ EVAL ``MAP ((combin$C (FUNPOW SQ)) 2) [0 ..< (pop 2 10)]``;  = [2; 4; 16; 256]:t
 
 (* Theorem: iterating f x 0 = [] *)
 (* Proof: by iterating_def *)
-val iterating_nil = store_thm(
-  "iterating_nil",
-  ``!f x. iterating f x 0 = []``,
-  rw[Once iterating_def]);
+Theorem iterating_nil:
+    !f x. iterating f x 0 = []
+Proof
+  rw[Once iterating_def]
+QED
 
 (* Theorem: iterating f x (SUC y) = x::iterating f (f x) y *)
 (* Proof: by iterating_def *)
-val iterating_cons = store_thm(
-  "iterating_cons",
-  ``!f x y. iterating f x (SUC y) = x::iterating f (f x) y``,
-  rw[Once iterating_def]);
+Theorem iterating_cons:
+    !f x y. iterating f x (SUC y) = x::iterating f (f x) y
+Proof
+  rw[Once iterating_def]
+QED
 
 (* Combine these theorems *)
 val iterating_alt = save_thm("iterating_alt", CONJ iterating_nil iterating_cons);
@@ -1579,9 +1601,9 @@ val iterating_alt = |- (!f x. iterating f x 0 = []) /\
        = MAP g (0::[1 ..< SUC y])      by MAP
        = MAP g [0 ..< SUC y]           by listRangeLHI_CONS
 *)
-val iterating_eqn = store_thm(
-  "iterating_eqn",
-  ``!f x y. iterating f x y = MAP (combin$C (FUNPOW f) x) [0 ..< y]``,
+Theorem iterating_eqn:
+    !f x y. iterating f x y = MAP (combin$C (FUNPOW f) x) [0 ..< y]
+Proof
   strip_tac >>
   Induct_on `y` >-
   rw[Once iterating_def] >>
@@ -1595,7 +1617,8 @@ val iterating_eqn = store_thm(
   `_ = x :: MAP (g o SUC) [0 ..< y]` by rw[] >>
   `_ = g 0 :: MAP g [1 ..< SUC y]` by rw[GSYM listRangeLHI_MAP_SUC, ADD1] >>
   `_ = MAP g [0 ..< SUC y]` by rw[listRangeLHI_CONS] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: LENGTH (iterating f x y) = y *)
 (* Proof:
@@ -1604,10 +1627,11 @@ val iterating_eqn = store_thm(
    = LENGTH [0 ..< y]                                  by LENGTH_MAP
    = y                                                 by listRangeLHI_LEN
 *)
-val iterating_length = store_thm(
-  "iterating_length",
-  ``!f x y. LENGTH (iterating f x y) = y``,
-  rw[iterating_eqn, listRangeLHI_LEN]);
+Theorem iterating_length:
+    !f x y. LENGTH (iterating f x y) = y
+Proof
+  rw[iterating_eqn, listRangeLHI_LEN]
+QED
 
 (* Theorem: j < y ==> MEM (FUNPOW f j x) (iterating f x y) *)
 (* Proof:
@@ -1616,11 +1640,12 @@ val iterating_length = store_thm(
    <=> ?t. k = combin$C (FUNPOW f) x t /\ MEM t [0 ..< y]  by MEM_MAP
    <=> ?t. k = FUNPOW f t x /\ 0 <= t /\ t < y             by listRangeLHI_MEM
 *)
-val iterating_member = store_thm(
-  "iterating_member",
-  ``!f x y j. j < y ==> MEM (FUNPOW f j x) (iterating f x y)``,
+Theorem iterating_member:
+    !f x y j. j < y ==> MEM (FUNPOW f j x) (iterating f x y)
+Proof
   rw[iterating_eqn, MEM_MAP] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: j < y ==> EL j (iterating f x y) = FUNPOW f j x *)
 (* Proof:
@@ -1631,10 +1656,11 @@ val iterating_member = store_thm(
    = combin$C (FUNPOW f) j k                        by listRangeLHI_EL
    = FUNPOW f j x
 *)
-val iterating_element = store_thm(
-  "iterating_element",
-  ``!f x y j. j < y ==> EL j (iterating f x y) = FUNPOW f j x``,
-  rw[iterating_eqn, iterating_length, EL_MAP, listRangeLHI_EL]);
+Theorem iterating_element:
+    !f x y j. j < y ==> EL j (iterating f x y) = FUNPOW f j x
+Proof
+  rw[iterating_eqn, iterating_length, EL_MAP, listRangeLHI_EL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Numeric Loops with transform and modify                                   *)
@@ -1685,9 +1711,8 @@ val iterating_element = store_thm(
      = quit p q + (cover p y) * n                    by SUM_GENLIST_K
      = quit p q + n * cover p y                      by MULT_COMM
 *)
-val loop2_rise_fall_count_cover_exit_le = store_thm(
-  "loop2_rise_fall_count_cover_exit_le",
-  ``!loop guard body quit exit modify transform R.
+Theorem loop2_rise_fall_count_cover_exit_le:
+    !loop guard body quit exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ FALLING modify /\
       (!x y. loop x y =
@@ -1696,7 +1721,8 @@ val loop2_rise_fall_count_cover_exit_le = store_thm(
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
                        loop x y <= quit (FUNPOW transform n x) (FUNPOW modify n y) +
-                                   n * cover (FUNPOW transform n x) y``,
+                                   n * cover (FUNPOW transform n x) y
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x y. loop x y =
                       if guard x y then quit x y
@@ -1723,7 +1749,8 @@ val loop2_rise_fall_count_cover_exit_le = store_thm(
   `cover u v <= cover (FUNPOW transform n x) y` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover p y)) n) = cover p y * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Numeric Loops with FALLING transform and FALLING modify                   *)
@@ -1755,9 +1782,8 @@ val loop2_rise_fall_count_cover_exit_le = store_thm(
      = quit p q + (cover x y) * n                    by SUM_GENLIST_K
      = quit p q + n * cover x y                      by MULT_COMM
 *)
-val loop2_fall_fall_count_cover_exit_le = store_thm(
-  "loop2_fall_fall_count_cover_exit_le",
-  ``!loop guard body quit exit modify transform R.
+Theorem loop2_fall_fall_count_cover_exit_le:
+    !loop guard body quit exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ FALLING modify /\
       (!x y. loop x y =
@@ -1765,7 +1791,8 @@ val loop2_fall_fall_count_cover_exit_le = store_thm(
              else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
-                       loop x y <= quit (FUNPOW transform n x) (FUNPOW modify n y) + n * cover x y``,
+                       loop x y <= quit (FUNPOW transform n x) (FUNPOW modify n y) + n * cover x y
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x y. loop x y =
                       if guard x y then quit x y
@@ -1793,7 +1820,8 @@ val loop2_fall_fall_count_cover_exit_le = store_thm(
   `cover u v <= cover x y` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover x y)) n) = cover x y * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Numeric Loops with FALLING transform and RISING modify                    *)
@@ -1826,9 +1854,8 @@ val loop2_fall_fall_count_cover_exit_le = store_thm(
      = quit p q + (cover x q) * n                    by SUM_GENLIST_K
      = quit p q + n * cover x q                      by MULT_COMM
 *)
-val loop2_fall_rise_count_cover_exit_le = store_thm(
-  "loop2_fall_rise_count_cover_exit_le",
-  ``!loop guard body quit exit modify transform R.
+Theorem loop2_fall_rise_count_cover_exit_le:
+    !loop guard body quit exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ RISING modify /\
       (!x y. loop x y =
@@ -1837,7 +1864,8 @@ val loop2_fall_rise_count_cover_exit_le = store_thm(
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
                        loop x y <= quit (FUNPOW transform n x) (FUNPOW modify n y) +
-                                   n * cover x (FUNPOW modify n y)``,
+                                   n * cover x (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x y. loop x y =
                       if guard x y then quit x y
@@ -1864,7 +1892,8 @@ val loop2_fall_rise_count_cover_exit_le = store_thm(
   `cover u v <= cover x (FUNPOW modify n y)` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover x q)) n) = cover x q * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Numeric Loops with RISING transform and RISING modify                     *)
@@ -1897,9 +1926,8 @@ val loop2_fall_rise_count_cover_exit_le = store_thm(
      = quit p q + (cover p q) * n                    by SUM_GENLIST_K
      = quit p q + n * cover p q                      by MULT_COMM
 *)
-val loop2_rise_rise_count_cover_exit_le = store_thm(
-  "loop2_rise_rise_count_cover_exit_le",
-  ``!loop guard body quit exit modify transform R.
+Theorem loop2_rise_rise_count_cover_exit_le:
+    !loop guard body quit exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ RISING modify /\
       (!x y. loop x y =
@@ -1908,7 +1936,8 @@ val loop2_rise_rise_count_cover_exit_le = store_thm(
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
                        loop x y <= quit (FUNPOW transform n x) (FUNPOW modify n y) +
-                                   n * cover (FUNPOW transform n x) (FUNPOW modify n y)``,
+                                   n * cover (FUNPOW transform n x) (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x y. loop x y =
                       if guard x y then quit x y
@@ -1934,7 +1963,8 @@ val loop2_rise_rise_count_cover_exit_le = store_thm(
   `cover u v <= cover (FUNPOW transform n x) (FUNPOW modify n y)` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover p q)) n) = cover p q * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* General Theory of Recurrence with 3 arguments                             *)
@@ -1962,49 +1992,52 @@ End
               if guard x y z then 0
               else SUC (loop3_count guard modify transform convert (convert x) (transform y) (modify z)) *)
 (* Proof: by loop_count_thm, loop3_count_def *)
-val loop3_count_thm = store_thm(
-  "loop3_count_thm",
-  ``!convert transform modify guard R.
+Theorem loop3_count_thm:
+    !convert transform modify guard R.
       WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) ==>
       !x y z. loop3_count guard modify transform convert x y z =
               if guard x y z then 0
-              else SUC (loop3_count guard modify transform convert (convert x) (transform y) (modify z))``,
+              else SUC (loop3_count guard modify transform convert (convert x) (transform y) (modify z))
+Proof
   rw[loop3_count_def] >>
   imp_res_tac loop_count_thm >>
-  fs[Once pairTheory.FORALL_PROD]);
+  fs[Once pairTheory.FORALL_PROD]
+QED
 
 (* Obtain similar theorems. *)
-val loop3_count_0 = store_thm(
-  "loop3_count_0",
-  ``!convert transform modify guard R.
+Theorem loop3_count_0:
+    !convert transform modify guard R.
       WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) ==>
-      !x y z. guard x y z ==> (loop3_count guard modify transform convert x y z = 0)``,
+      !x y z. guard x y z ==> (loop3_count guard modify transform convert x y z = 0)
+Proof
   rw[loop3_count_def] >>
   imp_res_tac loop_count_0 >>
-  fs[Once pairTheory.FORALL_PROD]);
+  fs[Once pairTheory.FORALL_PROD]
+QED
 
-val loop3_count_suc = store_thm(
-  "loop3_count_suc",
-  ``!convert transform modify guard R.
+Theorem loop3_count_suc:
+    !convert transform modify guard R.
       WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) ==>
       !x y z. ~guard x y z ==> (loop3_count guard modify transform convert x y z =
-            SUC (loop3_count guard modify transform convert (convert x) (transform y) (modify z)))``,
+            SUC (loop3_count guard modify transform convert (convert x) (transform y) (modify z)))
+Proof
   rw[loop3_count_def] >>
   imp_res_tac loop_count_suc >>
-  fs[Once pairTheory.FORALL_PROD]);
+  fs[Once pairTheory.FORALL_PROD]
+QED
 
 (* Theorem: WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) ==>
       !x y. guard (FUNPOW convert (loop3_count guard modify transform convert x y z) x)
                   (FUNPOW transform (loop3_count guard modify transform convert x y z) y)
                   (FUNPOW modify (loop3_count guard modify transform convert x y z) z) *)
 (* Proof: by loop_count_iterating, loop3_count_def. *)
-val loop3_count_iterating = store_thm(
-  "loop3_count_iterating",
-  ``!convert transform modify guard R.
+Theorem loop3_count_iterating:
+    !convert transform modify guard R.
       WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) ==>
       !x y z. guard (FUNPOW convert (loop3_count guard modify transform convert x y z) x)
                     (FUNPOW transform (loop3_count guard modify transform convert x y z) y)
-                    (FUNPOW modify (loop3_count guard modify transform convert x y z) z)``,
+                    (FUNPOW modify (loop3_count guard modify transform convert x y z) z)
+Proof
   rpt strip_tac >>
   assume_tac (loop_count_iterating
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b # 'c``]
@@ -2016,7 +2049,8 @@ val loop3_count_iterating = store_thm(
    |> Q.INST [`lp` |-> `loop`, `gd` |-> `guard`, `qt` |-> `quit`, `b` |-> `body`,
               `c` |-> `convert`, `t` |-> `transform`, `m` |-> `modify`]
    |> PairRules.PBETA_RULE) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem:  WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) /\
         (!x y z. loop x y z =
@@ -2028,9 +2062,8 @@ val loop3_count_iterating = store_thm(
                SUM (GENLIST (\j. body (FUNPOW convert j x) (FUNPOW transform j y) (FUNPOW modify j z))
                                       (loop3_count guard modify transform convert x y z)) *)
 (* Proof: by loop_modify_count_eqn, loop3_count_def *)
-val loop3_modify_count_eqn = store_thm(
-  "loop3_modify_count_eqn",
-  ``!loop guard body quit modify transform convert R.
+Theorem loop3_modify_count_eqn:
+    !loop guard body quit modify transform convert R.
         WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) /\
         (!x y z. loop x y z =
                  if guard x y z then quit x y z
@@ -2039,7 +2072,8 @@ val loop3_modify_count_eqn = store_thm(
                                    (FUNPOW transform (loop3_count guard modify transform convert x y z) y)
                                    (FUNPOW modify (loop3_count guard modify transform convert x y z) z) +
                SUM (GENLIST (\j. body (FUNPOW convert j x) (FUNPOW transform j y) (FUNPOW modify j z))
-                                      (loop3_count guard modify transform convert x y z))``,
+                                      (loop3_count guard modify transform convert x y z))
+Proof
   rpt strip_tac >>
   assume_tac (loop_modify_count_eqn
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b # 'c``]
@@ -2051,7 +2085,8 @@ val loop3_modify_count_eqn = store_thm(
    |> Q.INST [`lp` |-> `loop`, `gd` |-> `guard`, `qt` |-> `quit`, `b` |-> `body`,
               `c` |-> `convert`, `t` |-> `transform`, `m` |-> `modify`]
    |> PairRules.PBETA_RULE) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) /\
     (!x y z. loop x y z =
@@ -2063,9 +2098,8 @@ val loop3_modify_count_eqn = store_thm(
                SUM (GENLIST (\j. body (FUNPOW convert j x) (FUNPOW transform j y) (FUNPOW modify j z))
                                       (loop3_count guard modify transform convert x y z)) *)
 (* Proof: by loop_modify_count_exit_le, loop3_count_def. *)
-val loop3_modify_count_exit_le = store_thm(
-  "loop3_modify_count_exit_le",
-  ``!loop guard body quit exit modify transform convert R.
+Theorem loop3_modify_count_exit_le:
+    !loop guard body quit exit modify transform convert R.
     WF R /\ (!x y z. ~guard x y z ==> R (convert x, transform y,modify z) (x,y,z)) /\
     (!x y z. loop x y z =
              if guard x y z then quit x y z
@@ -2074,7 +2108,8 @@ val loop3_modify_count_exit_le = store_thm(
                                 (FUNPOW transform (loop3_count guard modify transform convert x y z) y)
                                 (FUNPOW modify (loop3_count guard modify transform convert x y z) z) +
                SUM (GENLIST (\j. body (FUNPOW convert j x) (FUNPOW transform j y) (FUNPOW modify j z))
-                                      (loop3_count guard modify transform convert x y z))``,
+                                      (loop3_count guard modify transform convert x y z))
+Proof
   rpt strip_tac >>
   assume_tac (loop_modify_count_exit_le
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b # 'c``]
@@ -2088,7 +2123,8 @@ val loop3_modify_count_exit_le = store_thm(
    |> PairRules.PBETA_RULE) >>
   qabbrev_tac `foo1 = !x y z. ~guard x y z ==> R (convert x,transform y,modify z) (x,y,z)` >>
   qabbrev_tac `foo2 = !x y z. loop x y z = if guard x y z then quit x y z else body x y z + if exit x y z then 0 else loop (convert x) (transform y) (modify z)` >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Original investigation, some with quit = constant, name has _quitc_       *)
@@ -2131,22 +2167,24 @@ val loop_arg_thm = save_thm("loop_arg_thm",
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
              !x. guard x ==> (loop_arg guard modify x = []) *)
 (* Proof: by loop_arg_def *)
-val loop_arg_nil = store_thm(
-  "loop_arg_nil",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-   !x. guard x ==> (loop_arg guard modify x = [])``,
+Theorem loop_arg_nil:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+   !x. guard x ==> (loop_arg guard modify x = [])
+Proof
   rpt strip_tac >>
-  rw[Once loop_arg_def]);
+  rw[Once loop_arg_def]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
              !x. ~guard x ==> (loop_arg guard modify x = x :: loop_arg guard modify (modify x)) *)
 (* Proof: by loop_arg_def *)
-val loop_arg_cons = store_thm(
-  "loop_arg_cons",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-   !x. ~guard x ==> (loop_arg guard modify x = x :: loop_arg guard modify (modify x))``,
+Theorem loop_arg_cons:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+   !x. ~guard x ==> (loop_arg guard modify x = x :: loop_arg guard modify (modify x))
+Proof
   rpt strip_tac >>
-  rw[Once loop_arg_def]);
+  rw[Once loop_arg_def]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
              !x. LENGTH (loop_arg guard modify x) = loop_count guard modify x *)
@@ -2164,16 +2202,17 @@ val loop_arg_cons = store_thm(
       = SUC (loop_count guard modify (modify x))          by induction hypothesis
       = loop_count guard modify x                         by loop_count_suc
 *)
-val loop_arg_length = store_thm(
-  "loop_arg_length",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-                    !x. LENGTH (loop_arg guard modify x) = loop_count guard modify x``,
+Theorem loop_arg_length:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+                    !x. LENGTH (loop_arg guard modify x) = loop_count guard modify x
+Proof
   ntac 4 strip_tac >>
   ho_match_mp_tac (theorem "loop_arg_ind") >>
   rpt strip_tac >>
   Cases_on `guard x` >-
   metis_tac[loop_arg_nil, loop_count_0, LENGTH] >>
-  metis_tac[loop_arg_cons, loop_count_suc, LENGTH]);
+  metis_tac[loop_arg_cons, loop_count_suc, LENGTH]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
             !x. loop_arg guard modify x = GENLIST (\j. FUNPOW modify j x) (loop_count guard modify x) *)
@@ -2195,10 +2234,10 @@ val loop_arg_length = store_thm(
        = GENLIST f (SUC n)                                by GENLIST_CONS
        = GENLIST f (loop_count guard modify x)            by loop_count_suc
 *)
-val loop_arg_eqn = store_thm(
-  "loop_arg_eqn",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-   !x. loop_arg guard modify x = GENLIST (\j. FUNPOW modify j x) (loop_count guard modify x)``,
+Theorem loop_arg_eqn:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+   !x. loop_arg guard modify x = GENLIST (\j. FUNPOW modify j x) (loop_count guard modify x)
+Proof
   ntac 4 strip_tac >>
   ho_match_mp_tac (theorem "loop_arg_ind") >>
   rpt strip_tac >>
@@ -2211,7 +2250,8 @@ val loop_arg_eqn = store_thm(
   `loop_arg guard modify x = x::loop_arg guard modify (modify x)` by metis_tac[loop_arg_cons] >>
   `_ = f 0:: GENLIST (f o SUC) n` by rw[Abbr`n`] >>
   `SUC n = loop_count guard modify x` by metis_tac[loop_count_suc] >>
-  rw[GSYM GENLIST_CONS, Abbr`n`]);
+  rw[GSYM GENLIST_CONS, Abbr`n`]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
              !x k. k < loop_count guard modify x ==>
@@ -2225,17 +2265,18 @@ val loop_arg_eqn = store_thm(
    = f k                              by EL_GENLIST, k < LENGTH ls
    = FUNPOW modify k x                by notation
 *)
-val loop_arg_element = store_thm(
-  "loop_arg_element",
-  ``!modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
-     !x k. k < loop_count guard modify x ==> (EL k (loop_arg guard modify x) = FUNPOW modify k x)``,
+Theorem loop_arg_element:
+    !modify guard R. WF R /\ (!x. ~guard x ==> R (modify x) x) ==>
+     !x k. k < loop_count guard modify x ==> (EL k (loop_arg guard modify x) = FUNPOW modify k x)
+Proof
   rpt strip_tac >>
   imp_res_tac loop_arg_eqn >>
   first_x_assum (qspec_then `x` strip_assume_tac) >>
   qabbrev_tac `f = \j. FUNPOW modify j x` >>
   qabbrev_tac `ls = loop_arg guard modify x` >>
   `LENGTH ls = loop_count guard modify x` by metis_tac[loop_arg_length] >>
-  fs[EL_GENLIST, Abbr`ls`, Abbr`f`]);
+  fs[EL_GENLIST, Abbr`ls`, Abbr`f`]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\
             (!x y. R x y ==> cover x <= cover y) ==>
@@ -2264,13 +2305,13 @@ val loop_arg_element = store_thm(
          = SUM (MAP (K (cover x) x::(loop_arg guard modify (modify x))))   by SUM, MAP
          = SUM (MAP (K (cover x) ls))                                      by ls above
 *)
-val loop_arg_cover_sum = store_thm(
-  "loop_arg_cover_sum",
-  ``!modify guard R cover.
+Theorem loop_arg_cover_sum:
+    !modify guard R cover.
          WF R /\ (!x. ~guard x ==> R (modify x) x) /\
          (!x y. R x y ==> cover x <= cover y) ==>
           !x. SUM (MAP cover (loop_arg guard modify x)) <=
-              SUM (MAP (K (cover x)) (loop_arg guard modify x))``,
+              SUM (MAP (K (cover x)) (loop_arg guard modify x))
+Proof
   ntac 5 strip_tac >>
   ho_match_mp_tac (theorem "loop_arg_ind") >>
   rw[] >>
@@ -2286,7 +2327,8 @@ val loop_arg_cover_sum = store_thm(
     `SUM (MAP (K (cover (modify x))) t) <= SUM (MAP (K (cover x)) t)` by rw[SUM_MAP_K_LE] >>
     `cover x + SUM (MAP (K (cover x)) t) = SUM (MAP (K (cover x)) ls)` by rw[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\
             (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
@@ -2309,12 +2351,12 @@ val loop_arg_cover_sum = store_thm(
       = c + SUM (MAP body (x :: (loop_arg guard modify (modify x))))   by MAP, SUM
       = c + SUM (MAP body (loop_arg guard modify x))    by loop_arg_cons, ~guard x
 *)
-val loop_modify_count_by_sum = store_thm(
-  "loop_modify_count_by_sum",
-  ``!loop guard body c modify R.
+Theorem loop_modify_count_by_sum:
+    !loop guard body c modify R.
         WF R /\ (!x. ~guard x ==> R (modify x) x) /\
         (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
-         !x. loop x = c + SUM (MAP body (loop_arg guard modify x))``,
+         !x. loop x = c + SUM (MAP body (loop_arg guard modify x))
+Proof
   ntac 7 strip_tac >>
   ho_match_mp_tac (theorem "loop_arg_ind") >>
   rpt strip_tac >>
@@ -2326,7 +2368,8 @@ val loop_modify_count_by_sum = store_thm(
     `_ = c + SUM (MAP body (x :: (loop_arg guard modify (modify x))))` by rw[] >>
     `_ = c + SUM (MAP body (loop_arg guard modify x))` by metis_tac[loop_arg_cons] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\
             (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
@@ -2349,12 +2392,12 @@ val loop_modify_count_by_sum = store_thm(
       = c + SUM (MAP body (x :: (loop_arg guard modify (modify x))))   by MAP, SUM
       = c + SUM (MAP body (loop_arg guard modify x))    by loop_arg_cons, ~guard x
 *)
-val loop_modify_count_exit_by_sum = store_thm(
-  "loop_modify_count_exit_by_sum",
-  ``!loop guard body c exit modify R.
+Theorem loop_modify_count_exit_by_sum:
+    !loop guard body c exit modify R.
         WF R /\ (!x. ~guard x ==> R (modify x) x) /\
         (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
-         !x. loop x <= c + SUM (MAP body (loop_arg guard modify x))``,
+         !x. loop x <= c + SUM (MAP body (loop_arg guard modify x))
+Proof
   ntac 8 strip_tac >>
   ho_match_mp_tac (theorem "loop_arg_ind") >>
   rpt strip_tac >>
@@ -2375,7 +2418,8 @@ val loop_modify_count_exit_by_sum = store_thm(
     c + SUM (MAP body (x :: (loop_arg guard modify (modify x))))` by rw[] >>
     `_ = c + SUM (MAP body (loop_arg guard modify x))` by metis_tac[loop_arg_cons] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\
             (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
@@ -2389,12 +2433,12 @@ val loop_modify_count_exit_by_sum = store_thm(
     = c + SUM (GENLIST (body o f) n)                by MAP_GENLIST
     = c + SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))
 *)
-val loop_modify_count_quitc_eqn = store_thm(
-  "loop_modify_count_quitc_eqn",
-  ``!loop guard body c modify R.
+Theorem loop_modify_count_quitc_eqn:
+    !loop guard body c modify R.
         WF R /\ (!x. ~guard x ==> R (modify x) x) /\
         (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
-         !x. loop x = c + SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))``,
+         !x. loop x = c + SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))
+Proof
   rpt strip_tac >>
   imp_res_tac loop_modify_count_by_sum >>
   first_x_assum (qspec_then `x` strip_assume_tac) >>
@@ -2405,7 +2449,8 @@ val loop_modify_count_quitc_eqn = store_thm(
   qabbrev_tac `f = \j. FUNPOW modify j x` >>
   qabbrev_tac `g = \j. body (FUNPOW modify j x)` >>
   `g = body o f` by rw[FUN_EQ_THM, Abbr`g`, Abbr`f`] >>
-  metis_tac[MAP_GENLIST]);
+  metis_tac[MAP_GENLIST]
+QED
 
 (* Note: this is the solution of the recurrence:
 
@@ -2426,12 +2471,12 @@ val loop_modify_count_quitc_eqn = store_thm(
      = c + SUM (GENLIST (body o f) n)                by MAP_GENLIST
      = c + SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))
 *)
-val loop_modify_count_quitc_exit_le = store_thm(
-  "loop_modify_count_quitc_exit_le",
-  ``!loop guard body c exit modify R.
+Theorem loop_modify_count_quitc_exit_le:
+    !loop guard body c exit modify R.
         WF R /\ (!x. ~guard x ==> R (modify x) x) /\
         (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
-         !x. loop x <= c + SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))``,
+         !x. loop x <= c + SUM (GENLIST (\j. body (FUNPOW modify j x)) (loop_count guard modify x))
+Proof
   rpt strip_tac >>
   imp_res_tac loop_modify_count_exit_by_sum >>
   first_x_assum (qspec_then `x` strip_assume_tac) >>
@@ -2442,7 +2487,8 @@ val loop_modify_count_quitc_exit_le = store_thm(
   qabbrev_tac `f = \j. FUNPOW modify j x` >>
   qabbrev_tac `g = \j. body (FUNPOW modify j x)` >>
   `g = body o f` by rw[FUN_EQ_THM, Abbr`g`, Abbr`f`] >>
-  metis_tac[MAP_GENLIST]);
+  metis_tac[MAP_GENLIST]
+QED
 
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\
@@ -2458,13 +2504,13 @@ val loop_modify_count_quitc_exit_le = store_thm(
      = (cover x) * LENGTH ls                     by SUM_MAP_K
      = (cover x) * (loop_count guard modify x)   by loop_arg_length
 *)
-val loop_modify_count_cover_exit_upper = store_thm(
-  "loop_modify_count_cover_exit_upper",
-  ``!loop guard body c cover exit modify R.
+Theorem loop_modify_count_cover_exit_upper:
+    !loop guard body c cover exit modify R.
         WF R /\ (!x. ~guard x ==> R (modify x) x) /\
         (!x. body x <= cover x) /\ (!x y. R x y ==> cover x <= cover y) /\
         (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
-         !x. loop x <= c + cover x * loop_count guard modify x``,
+         !x. loop x <= c + cover x * loop_count guard modify x
+Proof
   rpt strip_tac >>
   qabbrev_tac `ls = loop_arg guard modify x` >>
   `loop x <= c + SUM (MAP body ls)` by metis_tac[loop_modify_count_exit_by_sum] >>
@@ -2474,59 +2520,63 @@ val loop_modify_count_cover_exit_upper = store_thm(
   `SUM (MAP cover ls) <= SUM (MAP (K (cover x)) ls)` by metis_tac[loop_arg_cover_sum] >>
   `SUM (MAP (K (cover x)) ls) = (cover x) * LENGTH ls` by rw[SUM_MAP_K] >>
   `_ = (cover x) * (loop_count guard modify x)` by metis_tac[loop_arg_length] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\
             (!x y. R x y ==> body x <= body y) /\
             (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
              !x. loop x <= c + body x * loop_count guard modify x *)
 (* Proof: by loop_modify_count_cover_exit_upper with cover = body. *)
-val loop_modify_count_exit_upper = store_thm(
-  "loop_modify_count_exit_upper",
-  ``!loop guard body c exit modify R.
+Theorem loop_modify_count_exit_upper:
+    !loop guard body c exit modify R.
         WF R /\ (!x. ~guard x ==> R (modify x) x) /\
         (!x y. R x y ==> body x <= body y) /\
         (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
-         !x. loop x <= c + body x * loop_count guard modify x``,
+         !x. loop x <= c + body x * loop_count guard modify x
+Proof
   rpt strip_tac >>
   assume_tac loop_modify_count_cover_exit_upper >>
   last_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `body`, `exit`, `modify`, `R`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\
             (!x. body x <= cover x) /\ (!x y. R x y ==> cover x <= cover y) /\
             (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
              !x. loop x <= c + cover x * loop_count guard modify x *)
 (* Proof: by loop_modify_count_cover_exit_upper with exit = K F. *)
-val loop_modify_count_cover_upper = store_thm(
-  "loop_modify_count_cover_upper",
-  ``!loop guard body c cover modify R.
+Theorem loop_modify_count_cover_upper:
+    !loop guard body c cover modify R.
         WF R /\ (!x. ~guard x ==> R (modify x) x) /\
         (!x. body x <= cover x) /\ (!x y. R x y ==> cover x <= cover y) /\
         (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
-         !x. loop x <= c + cover x * loop_count guard modify x``,
+         !x. loop x <= c + cover x * loop_count guard modify x
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = (\x:'a. F)` >>
   assume_tac loop_modify_count_cover_exit_upper >>
   last_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `cover`, `exit`, `modify`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\
             (!x y. R x y ==> body x <= body y) /\
             (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
              !x. loop x <= c + body x * loop_count guard modify x *)
 (* Proof: by loop_modify_count_cover_upper with body = cover. *)
-val loop_modify_count_upper = store_thm(
-  "loop_modify_count_upper",
-  ``!loop guard body c modify R.
+Theorem loop_modify_count_upper:
+    !loop guard body c modify R.
         WF R /\ (!x. ~guard x ==> R (modify x) x) /\
         (!x y. R x y ==> body x <= body y) /\
         (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
-         !x. loop x <= c + body x * loop_count guard modify x``,
+         !x. loop x <= c + body x * loop_count guard modify x
+Proof
   rpt strip_tac >>
   assume_tac loop_modify_count_cover_upper >>
   last_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `body`, `modify`, `R`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* General Theory of Recurrence with 2 arguments                             *)
@@ -2691,12 +2741,12 @@ loop_modify_count_by_sum
         (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
          !x y. loop x y = c + SUM (MAP (UNCURRY body) (loop2_arg guard modify transform x y)) *)
 (* Proof: by loop_modify_count_by_sum, loop2_arg_def *)
-val loop2_modify_count_by_sum = store_thm(
-  "loop2_modify_count_by_sum",
-  ``!loop guard body c modify transform R.
+Theorem loop2_modify_count_by_sum:
+    !loop guard body c modify transform R.
         WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
         (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
-         !x y. loop x y = c + SUM (MAP (UNCURRY body) (loop2_arg guard modify transform x y))``,
+         !x y. loop x y = c + SUM (MAP (UNCURRY body) (loop2_arg guard modify transform x y))
+Proof
   rpt strip_tac >>
   assume_tac (loop_modify_count_by_sum
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b``]
@@ -2708,18 +2758,19 @@ val loop2_modify_count_by_sum = store_thm(
   qabbrev_tac `foo1 = !x y. ~guard x y ==> R (transform x,modify y) (x,y)` >>
   qabbrev_tac `foo2 = !x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)` >>
   `UNCURRY body = \(x,y). body x y` by rw[FUN_EQ_THM] >>
-  metis_tac[loop2_arg_def]);
+  metis_tac[loop2_arg_def]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
         (!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
          !x y. loop x y <= c + SUM (MAP (UNCURRY body) (loop2_arg guard modify transform x y)) *)
 (* Proof: by loop_modify_count_exit_by_sum, loop2_arg_def. *)
-val loop2_modify_count_exit_by_sum = store_thm(
-  "loop2_modify_count_exit_by_sum",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_modify_count_exit_by_sum:
+    !loop guard body c exit modify transform R.
     WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
     (!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
-     !x y. loop x y <= c + SUM (MAP (UNCURRY body) (loop2_arg guard modify transform x y))``,
+     !x y. loop x y <= c + SUM (MAP (UNCURRY body) (loop2_arg guard modify transform x y))
+Proof
   rpt strip_tac >>
   assume_tac (loop_modify_count_exit_by_sum
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b``]
@@ -2731,7 +2782,8 @@ val loop2_modify_count_exit_by_sum = store_thm(
   qabbrev_tac `foo1 = !x y. ~guard x y ==> R (transform x,modify y) (x,y)` >>
   qabbrev_tac `foo2 = !x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (transform x) (modify y)` >>
   `UNCURRY body = \(x,y). body x y` by rw[FUN_EQ_THM] >>
-  metis_tac[loop2_arg_def]);
+  metis_tac[loop2_arg_def]
+QED
 
 (*
 loop_modify_count_quitc_eqn
@@ -2757,13 +2809,13 @@ val it =
          !x y. loop x y = c + SUM (GENLIST (\j. body (FUNPOW transform j x) (FUNPOW modify j y))
                                            (loop2_count guard modify transform x y)) *)
 (* Proof: by loop_modify_count_quitc_eqn, loop2_count_def *)
-val loop2_modify_count_quitc_eqn = store_thm(
-  "loop2_modify_count_quitc_eqn",
-  ``!loop guard body c modify transform R.
+Theorem loop2_modify_count_quitc_eqn:
+    !loop guard body c modify transform R.
         WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
         (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
          !x y. loop x y = c + SUM (GENLIST (\j. body (FUNPOW transform j x) (FUNPOW modify j y))
-                                           (loop2_count guard modify transform x y))``,
+                                           (loop2_count guard modify transform x y))
+Proof
   rpt strip_tac >>
   assume_tac (loop_modify_count_quitc_eqn
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b``]
@@ -2775,7 +2827,8 @@ val loop2_modify_count_quitc_eqn = store_thm(
    |> PairRules.PBETA_RULE) >>
   qabbrev_tac `foo1 = !x y. ~guard x y ==> R (transform x,modify y) (x,y)` >>
   qabbrev_tac `foo2 = !x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)` >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
@@ -2784,14 +2837,14 @@ val loop2_modify_count_quitc_eqn = store_thm(
                                      (\j. body (FUNPOW transform j x) (FUNPOW modify j y))
                                      (loop2_count guard modify transform x y)) *)
 (* Proof: by loop_modify_count_quitc_exit_le, loop2_count_def. *)
-val loop2_modify_count_quitc_exit_le = store_thm(
-  "loop2_modify_count_quitc_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_modify_count_quitc_exit_le:
+    !loop guard body c exit modify transform R.
     WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
     (!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
      !x y. loop x y <= c + SUM (GENLIST
                                   (\j. body (FUNPOW transform j x) (FUNPOW modify j y))
-                                  (loop2_count guard modify transform x y))``,
+                                  (loop2_count guard modify transform x y))
+Proof
   rpt strip_tac >>
   assume_tac (loop_modify_count_quitc_exit_le
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b``]
@@ -2803,7 +2856,8 @@ val loop2_modify_count_quitc_exit_le = store_thm(
    |> PairRules.PBETA_RULE) >>
   qabbrev_tac `foo1 = !x y. ~guard x y ==> R (transform x,modify y) (x,y)` >>
   qabbrev_tac `foo2 = !x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (transform x) (modify y)` >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
    (!x y. body x y <= cover x y) /\
@@ -2811,14 +2865,14 @@ val loop2_modify_count_quitc_exit_le = store_thm(
    (!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
     !x y. loop x y <= c + (bcover x y) * loop2_count guard modify transform x y *)
 (* Proof: by loop_modify_count_cover_exit_upper, loop2_count_def *)
-val loop2_modify_count_bcover_exit_upper = store_thm(
-  "loop2_modify_count_bcover_exit_upper",
-  ``!loop guard body c exit bcover modify transform R.
+Theorem loop2_modify_count_bcover_exit_upper:
+    !loop guard body c exit bcover modify transform R.
    WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
    (!x y. body x y <= bcover x y) /\
    (!x1 x2 y1 y2. R (x1,y1) (x2,y2) ==> bcover x1 y1 <= bcover x2 y2) /\
    (!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
-    !x y. loop x y <= c + (bcover x y) * loop2_count guard modify transform x y``,
+    !x y. loop x y <= c + (bcover x y) * loop2_count guard modify transform x y
+Proof
   rpt strip_tac >>
   assume_tac (loop_modify_count_cover_exit_upper
    |> SPEC_ALL |> INST_TYPE [``:'a`` |-> ``:'a # 'b``]
@@ -2829,7 +2883,8 @@ val loop2_modify_count_bcover_exit_upper = store_thm(
               |> PairRules.PBETA_RULE) >>
   qabbrev_tac `foo1 = !x y. ~guard x y ==> R (transform x,modify y) (x,y)` >>
   qabbrev_tac `foo2 = !x y. body x y <= bcover x y` >>
-  metis_tac[loop2_count_def]);
+  metis_tac[loop2_count_def]
+QED
 
 (* Note: the most general form should involve tcover, for the transform. *)
 
@@ -2840,17 +2895,18 @@ val loop2_modify_count_bcover_exit_upper = store_thm(
    (!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
     !x y. loop x y <= c + (body x y) * loop2_count guard modify transform x y *)
 (* Proof: by loop2_modify_count_bcover_exit_upper, with bcover = body. *)
-val loop2_modify_count_exit_upper = store_thm(
-  "loop2_modify_count_exit_upper",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_modify_count_exit_upper:
+    !loop guard body c exit modify transform R.
    WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
    (!x1 x2 y1 y2. R (x1,y1) (x2,y2) ==> body x1 y1 <= body x2 y2) /\
    (!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
-    !x y. loop x y <= c + (body x y) * loop2_count guard modify transform x y``,
+    !x y. loop x y <= c + (body x y) * loop2_count guard modify transform x y
+Proof
   rpt strip_tac >>
   assume_tac loop2_modify_count_bcover_exit_upper >>
   last_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `body`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
    (!x y. body x y <= bcover x y) /\
@@ -2858,36 +2914,38 @@ val loop2_modify_count_exit_upper = store_thm(
    (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
     !x y. loop x y <= c + (bcover x y) * loop2_count guard modify transform x y *)
 (* Proof: by loop2_modify_count_bcover_exit_upper, with exit = F. *)
-val loop2_modify_count_bcover_upper = store_thm(
-  "loop2_modify_count_bcover_upper",
-  ``!loop guard body c bcover modify transform R.
+Theorem loop2_modify_count_bcover_upper:
+    !loop guard body c bcover modify transform R.
    WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
    (!x y. body x y <= bcover x y) /\
    (!x1 x2 y1 y2. R (x1,y1) (x2,y2) ==> bcover x1 y1 <= bcover x2 y2) /\
    (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
-    !x y. loop x y <= c + (bcover x y) * loop2_count guard modify transform x y``,
+    !x y. loop x y <= c + (bcover x y) * loop2_count guard modify transform x y
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x y. F` >>
   assume_tac loop2_modify_count_bcover_exit_upper >>
   last_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `bcover`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
    (!x1 x2 y1 y2. R (x1,y1) (x2,y2) ==> body x1 y1 <= body x2 y2) /\
    (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
     !x y. loop x y <= c + (bcover x y) * loop2_count guard modify transform x y *)
 (* Proof: by loop2_modify_count_bcover_upper, with bcover = body. *)
-val loop2_modify_count_upper = store_thm(
-  "loop2_modify_count_upper",
-  ``!loop guard body c modify transform R.
+Theorem loop2_modify_count_upper:
+    !loop guard body c modify transform R.
    WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
    (!x1 x2 y1 y2. R (x1,y1) (x2,y2) ==> body x1 y1 <= body x2 y2) /\
    (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
-    !x y. loop x y <= c + (body x y) * loop2_count guard modify transform x y``,
+    !x y. loop x y <= c + (body x y) * loop2_count guard modify transform x y
+Proof
   rpt strip_tac >>
   assume_tac loop2_modify_count_bcover_upper >>
   last_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `body`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Estimation for Numeric Loops                                              *)
@@ -2931,14 +2989,14 @@ val loop2_modify_count_upper = store_thm(
      = c + (cover z) * n                    by SUM_GENLIST_K
      = c + n * cover z                      by MULT_COMM
 *)
-val loop_rise_count_cover_quitc_exit_le = store_thm(
-  "loop_rise_count_cover_quitc_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop_rise_count_cover_quitc_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                     in (!x. body x <= cover x) /\ MONO cover ==>
-                       loop x <= c + n * cover (FUNPOW modify n x)``,
+                       loop x <= c + n * cover (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)` >>
   simp[] >>
@@ -2960,24 +3018,26 @@ val loop_rise_count_cover_quitc_exit_le = store_thm(
   `cover u <= cover v` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover z)) n) = cover z * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x. let n = loop_count guard modify x
             in MONO body ==> loop x <= c + n * body (FUNPOW modify n x) *)
 (* Proof: by loop_rise_count_cover_quitc_exit_le with cover = body. *)
-val loop_rise_count_exit_le = store_thm(
-  "loop_rise_count_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop_rise_count_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x. let n = loop_count guard modify x
-            in MONO body ==> loop x <= c + n * body (FUNPOW modify n x)``,
+            in MONO body ==> loop x <= c + n * body (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   imp_res_tac loop_rise_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
@@ -2985,36 +3045,38 @@ val loop_rise_count_exit_le = store_thm(
                     in (!x. body x <= cover x) /\ MONO cover ==>
                        loop x <= c + n * cover (FUNPOW modify n x) *)
 (* Proof: by loop_rise_count_cover_quitc_exit_le with exit = F. *)
-val loop_rise_count_cover_le = store_thm(
-  "loop_rise_count_cover_le",
-  ``!loop guard body c modify transform R.
+Theorem loop_rise_count_cover_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                     in (!x. body x <= cover x) /\ MONO cover ==>
-                       loop x <= c + n * cover (FUNPOW modify n x)``,
+                       loop x <= c + n * cover (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num. F` >>
   assume_tac loop_rise_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x. let n = loop_count guard modify x
             in MONO body ==> loop x <= c + n * body (FUNPOW modify n x) *)
 (* Proof: by loop_rise_count_cover_le with cover = body *)
-val loop_rise_count_le = store_thm(
-  "loop_rise_count_le",
-  ``!loop guard body c modify transform R.
+Theorem loop_rise_count_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x. let n = loop_count guard modify x
-            in MONO body ==> loop x <= c + n * body (FUNPOW modify n x)``,
+            in MONO body ==> loop x <= c + n * body (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   imp_res_tac loop_rise_count_cover_le >>
   first_x_assum (qspecl_then [`x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3040,14 +3102,14 @@ val loop_rise_count_le = store_thm(
      = c + (cover x) * n                    by SUM_GENLIST_K
      = c + n * cover x                      by MULT_COMM
 *)
-val loop_rise_count_rcover_quitc_exit_le = store_thm(
-  "loop_rise_count_rcover_quitc_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop_rise_count_rcover_quitc_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                     in (!x. body x <= cover x) /\ RMONO cover ==>
-                       loop x <= c + n * cover x``,
+                       loop x <= c + n * cover x
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)` >>
   simp[] >>
@@ -3068,24 +3130,26 @@ val loop_rise_count_rcover_quitc_exit_le = store_thm(
   `cover u <= cover x` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover x)) n) = cover x * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x. let n = loop_count guard modify x
                     in RMONO body ==> loop x <= c + n * body x *)
 (* Proof: by loop_rise_count_rcover_quitc_exit_le with cover = body. *)
-val loop_rise_count_rbody_exit_le = store_thm(
-  "loop_rise_count_rbody_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop_rise_count_rbody_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x. let n = loop_count guard modify x
-                    in RMONO body ==> loop x <= c + n * body x``,
+                    in RMONO body ==> loop x <= c + n * body x
+Proof
   rpt strip_tac >>
   imp_res_tac loop_rise_count_rcover_quitc_exit_le >>
   first_x_assum (qspecl_then [`x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
@@ -3093,36 +3157,38 @@ val loop_rise_count_rbody_exit_le = store_thm(
                     in (!x. body x <= cover x) /\ RMONO cover ==>
                        loop x <= c + n * cover x *)
 (* Proof: by loop_rise_count_rcover_quitc_exit_le with exit = F. *)
-val loop_rise_count_rcover_le = store_thm(
-  "loop_rise_count_rcover_le",
-  ``!loop guard body c modify transform R.
+Theorem loop_rise_count_rcover_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                   in (!x. body x <= cover x) /\ RMONO cover ==>
-                       loop x <= c + n * cover x``,
+                       loop x <= c + n * cover x
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num. F` >>
   assume_tac loop_rise_count_rcover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x. let n = loop_count guard modify x
             in RMONO body ==> loop x <= c + n * body x *)
 (* Proof: by loop_rise_count_rcover_le with cover = body. *)
-val loop_rise_count_rbody_le = store_thm(
-  "loop_rise_count_rbody_le",
-  ``!loop guard body c modify transform R.
+Theorem loop_rise_count_rbody_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ RISING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x. let n = loop_count guard modify x
-            in RMONO body ==> loop x <= c + n * body x``,
+            in RMONO body ==> loop x <= c + n * body x
+Proof
   rpt strip_tac >>
   imp_res_tac loop_rise_count_rcover_le >>
   first_x_assum (qspecl_then [`x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Numeric Loops with FALLING modify                                         *)
@@ -3147,14 +3213,14 @@ val loop_rise_count_rbody_le = store_thm(
      = c + (cover x) * n                    by SUM_GENLIST_K
      = c + n * cover x                      by MULT_COMM
 *)
-val loop_fall_count_cover_quitc_exit_le = store_thm(
-  "loop_fall_count_cover_quitc_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop_fall_count_cover_quitc_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                     in (!x. body x <= cover x) /\ MONO cover ==>
-                       loop x <= c + n * cover x``,
+                       loop x <= c + n * cover x
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)` >>
   simp[] >>
@@ -3175,24 +3241,26 @@ val loop_fall_count_cover_quitc_exit_le = store_thm(
   `cover u <= cover x` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover x)) n) = cover x * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x. let n = loop_count guard modify x
             in MONO body ==> loop x <= c + n * body x *)
 (* Proof: by loop_fall_count_cover_quitc_exit_le with cover = body *)
-val loop_fall_count_exit_le = store_thm(
-  "loop_fall_count_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop_fall_count_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x. let n = loop_count guard modify x
-                    in MONO body ==> loop x <= c + n * body x``,
+                    in MONO body ==> loop x <= c + n * body x
+Proof
   rpt strip_tac >>
   imp_res_tac loop_fall_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
@@ -3200,36 +3268,38 @@ val loop_fall_count_exit_le = store_thm(
                     in (!x. body x <= cover x) /\ MONO cover ==>
                        loop x <= c + n * cover x *)
 (* Proof: by loop_fall_count_cover_quitc_exit_le with exit = F. *)
-val loop_fall_count_cover_le = store_thm(
-  "loop_fall_count_cover_le",
-  ``!loop guard body c modify transform R.
+Theorem loop_fall_count_cover_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                     in (!x. body x <= cover x) /\ MONO cover ==>
-                       loop x <= c + n * cover x``,
+                       loop x <= c + n * cover x
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num. F` >>
   assume_tac loop_fall_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x. let n = loop_count guard modify x
             in MONO body ==> loop x <= c + n * body x *)
 (* Proof: by loop_fall_count_cover_le with cover = body *)
-val loop_fall_count_le = store_thm(
-  "loop_fall_count_le",
-  ``!loop guard body c modify transform R.
+Theorem loop_fall_count_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x. let n = loop_count guard modify x
-            in MONO body ==> loop x <= c + n * body x``,
+            in MONO body ==> loop x <= c + n * body x
+Proof
   rpt strip_tac >>
   imp_res_tac loop_fall_count_cover_le >>
   first_x_assum (qspecl_then [`x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3256,14 +3326,14 @@ val loop_fall_count_le = store_thm(
      = c + (cover z) * n                    by SUM_GENLIST_K
      = c + n * cover z                      by MULT_COMM
 *)
-val loop_fall_count_rcover_quitc_exit_le = store_thm(
-  "loop_fall_count_rcover_quitc_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop_fall_count_rcover_quitc_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                     in (!x. body x <= cover x) /\ RMONO cover ==>
-                       loop x <= c + n * cover (FUNPOW modify n x)``,
+                       loop x <= c + n * cover (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)` >>
   simp[] >>
@@ -3285,24 +3355,26 @@ val loop_fall_count_rcover_quitc_exit_le = store_thm(
   `cover u <= cover v` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover z)) n) = cover z * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x. let n = loop_count guard modify x
             in RMONO body ==> loop x <= c + n * body (FUNPOW modify n x) *)
 (* Proof: by loop_fall_count_rcover_quitc_exit_le with cover = body. *)
-val loop_fall_count_rbody_exit_le = store_thm(
-  "loop_fall_count_rbody_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop_fall_count_rbody_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)) ==>
        !x. let n = loop_count guard modify x
-            in RMONO body ==> loop x <= c + n * body (FUNPOW modify n x)``,
+            in RMONO body ==> loop x <= c + n * body (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   imp_res_tac loop_fall_count_rcover_quitc_exit_le >>
   first_x_assum (qspecl_then [`x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
@@ -3310,36 +3382,38 @@ val loop_fall_count_rbody_exit_le = store_thm(
                   in (!x. body x <= cover x) /\ RMONO cover ==>
                        loop x <= c + n * cover (FUNPOW modify n x) *)
 (* Proof: by loop_fall_count_rcover_quitc_exit_le with exit = F. *)
-val loop_fall_count_rcover_le = store_thm(
-  "loop_fall_count_rcover_le",
-  ``!loop guard body c modify transform R.
+Theorem loop_fall_count_rcover_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x cover. let n = loop_count guard modify x
                   in (!x. body x <= cover x) /\ RMONO cover ==>
-                       loop x <= c + n * cover (FUNPOW modify n x)``,
+                       loop x <= c + n * cover (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x: num. F` >>
   assume_tac loop_fall_count_rcover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x. let n = loop_count guard modify x
                     in RMONO body ==> loop x <= c + n * body (FUNPOW modify n x) *)
 (* Proof: by loop_fall_count_rcover_le with cover = body. *)
-val loop_fall_count_rbody_le = store_thm(
-  "loop_fall_count_rbody_le",
-  ``!loop guard body c modify transform R.
+Theorem loop_fall_count_rbody_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x. ~guard x ==> R (modify x) x) /\ FALLING modify /\
       (!x. loop x = if guard x then c else body x + loop (modify x)) ==>
        !x. let n = loop_count guard modify x
-                    in RMONO body ==> loop x <= c + n * body (FUNPOW modify n x)``,
+                    in RMONO body ==> loop x <= c + n * body (FUNPOW modify n x)
+Proof
   rpt strip_tac >>
   imp_res_tac loop_fall_count_rcover_le >>
   first_x_assum (qspecl_then [`x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -3386,9 +3460,8 @@ val loop_fall_count_rbody_le = store_thm(
      = c + (cover p y) * n                    by SUM_GENLIST_K
      = c + n * cover p y                      by MULT_COMM
 *)
-val loop2_rise_fall_count_cover_quitc_exit_le = store_thm(
-  "loop2_rise_fall_count_cover_quitc_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_rise_fall_count_cover_quitc_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ FALLING modify /\
       (!x y. loop x y =
@@ -3396,7 +3469,8 @@ val loop2_rise_fall_count_cover_quitc_exit_le = store_thm(
              else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
-                       loop x y <= c + n * cover (FUNPOW transform n x) y``,
+                       loop x y <= c + n * cover (FUNPOW transform n x) y
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x y. loop x y =
                       if guard x y then c
@@ -3422,7 +3496,8 @@ val loop2_rise_fall_count_cover_quitc_exit_le = store_thm(
   `cover u v <= cover (FUNPOW transform n x) y` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover p y)) n) = cover p y * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ FALLING modify /\
@@ -3432,20 +3507,21 @@ val loop2_rise_fall_count_cover_quitc_exit_le = store_thm(
        !x y. let n = loop2_count guard modify transform x y
               in MONO2 body ==> loop x y <= c + n * body (FUNPOW transform n x) y *)
 (* Proof: by loop2_rise_fall_count_cover_quitc_exit_le with cover = body. *)
-val loop2_rise_fall_count_exit_le = store_thm(
-  "loop2_rise_fall_count_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_rise_fall_count_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ FALLING modify /\
       (!x y. loop x y =
              if guard x y then c
              else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
        !x y. let n = loop2_count guard modify transform x y
-              in MONO2 body ==> loop x y <= c + n * body (FUNPOW transform n x) y``,
+              in MONO2 body ==> loop x y <= c + n * body (FUNPOW transform n x) y
+Proof
   rpt strip_tac >>
   imp_res_tac loop2_rise_fall_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`y`, `x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ FALLING modify /\
@@ -3454,20 +3530,21 @@ val loop2_rise_fall_count_exit_le = store_thm(
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
                        loop x y <= c + n * cover (FUNPOW transform n x) y *)
 (* Proof: by loop2_rise_fall_count_cover_quitc_exit_le with exit = F. *)
-val loop2_rise_fall_count_cover_le = store_thm(
-  "loop2_rise_fall_count_cover_le",
-  ``!loop guard body c modify transform R.
+Theorem loop2_rise_fall_count_cover_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ FALLING modify /\
       (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
-                       loop x y <= c + n * cover (FUNPOW transform n x) y``,
+                       loop x y <= c + n * cover (FUNPOW transform n x) y
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num y:num. F` >>
   assume_tac loop2_rise_fall_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ FALLING modify /\
@@ -3475,18 +3552,19 @@ val loop2_rise_fall_count_cover_le = store_thm(
        !x y. let n = loop2_count guard modify transform x y
               in MONO2 body ==> loop x y <= c + n * body (FUNPOW transform n x) y *)
 (* Proof: by loop2_rise_fall_count_cover_le with cover = body. *)
-val loop2_rise_fall_count_le = store_thm(
-  "loop2_rise_fall_count_le",
-  ``!loop guard body c modify transform R.
+Theorem loop2_rise_fall_count_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ FALLING modify /\
       (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
        !x y. let n = loop2_count guard modify transform x y
-              in MONO2 body ==> loop x y <= c + n * body (FUNPOW transform n x) y``,
+              in MONO2 body ==> loop x y <= c + n * body (FUNPOW transform n x) y
+Proof
   rpt strip_tac >>
   imp_res_tac loop2_rise_fall_count_cover_le >>
   first_x_assum (qspecl_then [`y`, `x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Numeric Loops with FALLING transform and FALLING modify                   *)
@@ -3516,9 +3594,8 @@ val loop2_rise_fall_count_le = store_thm(
      = c + (cover x y) * n                    by SUM_GENLIST_K
      = c + n * cover x y                      by MULT_COMM
 *)
-val loop2_fall_fall_count_cover_quitc_exit_le = store_thm(
-  "loop2_fall_fall_count_cover_quitc_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_fall_fall_count_cover_quitc_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ FALLING modify /\
       (!x y. loop x y =
@@ -3526,7 +3603,8 @@ val loop2_fall_fall_count_cover_quitc_exit_le = store_thm(
              else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
-                       loop x y <= c + n * cover x y``,
+                       loop x y <= c + n * cover x y
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x y. loop x y =
                       if guard x y then c
@@ -3552,7 +3630,8 @@ val loop2_fall_fall_count_cover_quitc_exit_le = store_thm(
   `cover u v <= cover x y` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover x y)) n) = cover x y * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ FALLING modify /\
@@ -3562,20 +3641,21 @@ val loop2_fall_fall_count_cover_quitc_exit_le = store_thm(
        !x y. let n = loop2_count guard modify transform x y
                     in MONO2 body ==> loop x y <= c + n * body x y *)
 (* Proof: by loop2_fall_fall_count_cover_quitc_exit_le with cover = body. *)
-val loop2_fall_fall_count_exit_le = store_thm(
-  "loop2_fall_fall_count_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_fall_fall_count_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ FALLING modify /\
       (!x y. loop x y =
              if guard x y then c
              else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
        !x y. let n = loop2_count guard modify transform x y
-                    in MONO2 body ==> loop x y <= c + n * body x y``,
+                    in MONO2 body ==> loop x y <= c + n * body x y
+Proof
   rpt strip_tac >>
   assume_tac loop2_fall_fall_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ FALLING modify /\
@@ -3584,20 +3664,21 @@ val loop2_fall_fall_count_exit_le = store_thm(
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
                        loop x y <= c + n * cover x y *)
 (* Proof: by loop2_fall_fall_count_cover_quitc_exit_le with exit = F. *)
-val loop2_fall_fall_count_cover_le = store_thm(
-  "loop2_fall_fall_count_cover_le",
-  ``!loop guard body c modify transform R.
+Theorem loop2_fall_fall_count_cover_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ FALLING modify /\
       (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
-                       loop x y <= c + n * cover x y``,
+                       loop x y <= c + n * cover x y
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num y:num. F` >>
   assume_tac loop2_fall_fall_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ FALLING modify /\
@@ -3605,18 +3686,19 @@ val loop2_fall_fall_count_cover_le = store_thm(
        !x y. let n = loop2_count guard modify transform x y
                     in MONO2 body ==> loop x y <= c + n * body x y *)
 (* Proof: by loop2_fall_fall_count_cover_le with cover = body *)
-val loop2_fall_fall_count_le = store_thm(
-  "loop2_fall_fall_count_le",
-  ``!loop guard body c modify transform R.
+Theorem loop2_fall_fall_count_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ FALLING modify /\
       (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
        !x y. let n = loop2_count guard modify transform x y
-                    in MONO2 body ==> loop x y <= c + n * body x y``,
+                    in MONO2 body ==> loop x y <= c + n * body x y
+Proof
   rpt strip_tac >>
   assume_tac loop2_fall_fall_count_cover_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Numeric Loops with FALLING transform and RISING modify                    *)
@@ -3647,9 +3729,8 @@ val loop2_fall_fall_count_le = store_thm(
      = c + (cover x q) * n                    by SUM_GENLIST_K
      = c + n * cover x q                      by MULT_COMM
 *)
-val loop2_fall_rise_count_cover_quitc_exit_le = store_thm(
-  "loop2_fall_rise_count_cover_quitc_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_fall_rise_count_cover_quitc_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ RISING modify /\
       (!x y. loop x y =
@@ -3657,7 +3738,8 @@ val loop2_fall_rise_count_cover_quitc_exit_le = store_thm(
              else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
-                       loop x y <= c + n * cover x (FUNPOW modify n y)``,
+                       loop x y <= c + n * cover x (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x y. loop x y =
                       if guard x y then c
@@ -3683,7 +3765,8 @@ val loop2_fall_rise_count_cover_quitc_exit_le = store_thm(
   `cover u v <= cover x (FUNPOW modify n y)` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover x q)) n) = cover x q * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ RISING modify /\
@@ -3693,20 +3776,21 @@ val loop2_fall_rise_count_cover_quitc_exit_le = store_thm(
        !x y. let n = loop2_count guard modify transform x y
               in MONO2 body ==> loop x y <= c + n * body x (FUNPOW modify n y) *)
 (* Proof: by loop2_fall_rise_count_cover_quitc_exit_le with cover = body. *)
-val loop2_fall_rise_count_exit_le = store_thm(
-  "loop2_fall_rise_count_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_fall_rise_count_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ RISING modify /\
       (!x y. loop x y =
              if guard x y then c
              else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
        !x y. let n = loop2_count guard modify transform x y
-              in MONO2 body ==> loop x y <= c + n * body x (FUNPOW modify n y)``,
+              in MONO2 body ==> loop x y <= c + n * body x (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   imp_res_tac loop2_fall_rise_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`y`, `x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ RISING modify /\
@@ -3715,20 +3799,21 @@ val loop2_fall_rise_count_exit_le = store_thm(
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
                        loop x y <= c + n * cover x (FUNPOW modify n y) *)
 (* Proof: by loop2_fall_rise_count_cover_quitc_exit_le with exit = F. *)
-val loop2_fall_rise_count_cover_le = store_thm(
-  "loop2_fall_rise_count_cover_le",
-  ``!loop guard body c modify transform R.
+Theorem loop2_fall_rise_count_cover_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ RISING modify /\
       (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
-                       loop x y <= c + n * cover x (FUNPOW modify n y)``,
+                       loop x y <= c + n * cover x (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num y:num. F` >>
   assume_tac loop2_fall_rise_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ RISING modify /\
@@ -3736,18 +3821,19 @@ val loop2_fall_rise_count_cover_le = store_thm(
        !x y. let n = loop2_count guard modify transform x y
                     in MONO2 body ==> loop x y <= c + n * body x (FUNPOW modify n y) *)
 (* Proof: by loop2_fall_rise_count_cover_le with cover = body. *)
-val loop2_fall_rise_count_le = store_thm(
-  "loop2_fall_rise_count_le",
-  ``!loop guard body c modify transform R.
+Theorem loop2_fall_rise_count_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       FALLING transform /\ RISING modify /\
       (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
        !x y. let n = loop2_count guard modify transform x y
-                    in MONO2 body ==> loop x y <= c + n * body x (FUNPOW modify n y)``,
+                    in MONO2 body ==> loop x y <= c + n * body x (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   imp_res_tac loop2_fall_rise_count_cover_le >>
   first_x_assum (qspecl_then [`y`, `x`, `body`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Numeric Loops with RISING transform and RISING modify                     *)
@@ -3779,9 +3865,8 @@ val loop2_fall_rise_count_le = store_thm(
      = c + (cover p q) * n                    by SUM_GENLIST_K
      = c + n * cover p q                      by MULT_COMM
 *)
-val loop2_rise_rise_count_cover_quitc_exit_le = store_thm(
-  "loop2_rise_rise_count_cover_quitc_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_rise_rise_count_cover_quitc_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ RISING modify /\
       (!x y. loop x y =
@@ -3789,7 +3874,8 @@ val loop2_rise_rise_count_cover_quitc_exit_le = store_thm(
              else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
-                       loop x y <= c + n * cover (FUNPOW transform n x) (FUNPOW modify n y)``,
+                       loop x y <= c + n * cover (FUNPOW transform n x) (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   qabbrev_tac `foo = !x y. loop x y =
                       if guard x y then c
@@ -3815,7 +3901,8 @@ val loop2_rise_rise_count_cover_quitc_exit_le = store_thm(
   `cover u v <= cover (FUNPOW transform n x) (FUNPOW modify n y)` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST (K (cover p q)) n) = cover p q * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ RISING modify /\
@@ -3826,9 +3913,8 @@ val loop2_rise_rise_count_cover_quitc_exit_le = store_thm(
                     in MONO2 body ==>
                        loop x y <= c + n * body (FUNPOW transform n x) (FUNPOW modify n y) *)
 (* Proof: by loop2_rise_rise_count_cover_quitc_exit_le with cover = body. *)
-val loop2_rise_rise_count_exit_le = store_thm(
-  "loop2_rise_rise_count_exit_le",
-  ``!loop guard body c exit modify transform R.
+Theorem loop2_rise_rise_count_exit_le:
+    !loop guard body c exit modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ RISING modify /\
       (!x y. loop x y =
@@ -3836,11 +3922,13 @@ val loop2_rise_rise_count_exit_le = store_thm(
              else body x y + if exit x y then 0 else loop (transform x) (modify y)) ==>
        !x y. let n = loop2_count guard modify transform x y
                     in MONO2 body ==>
-                       loop x y <= c + n * body (FUNPOW transform n x) (FUNPOW modify n y)``,
+                       loop x y <= c + n * body (FUNPOW transform n x) (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   assume_tac loop2_rise_rise_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ RISING modify /\
@@ -3849,20 +3937,21 @@ val loop2_rise_rise_count_exit_le = store_thm(
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
                        loop x y <= c + n * cover (FUNPOW transform n x) (FUNPOW modify n y) *)
 (* Proof: by loop2_rise_rise_count_cover_quitc_exit_le with exit = F. *)
-val loop2_rise_rise_count_cover_le = store_thm(
-  "loop2_rise_rise_count_cover_le",
-  ``!loop guard body c modify transform R.
+Theorem loop2_rise_rise_count_cover_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ RISING modify /\
       (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
        !x y cover. let n = loop2_count guard modify transform x y
                     in (!x y. body x y <= cover x y) /\ MONO2 cover ==>
-                       loop x y <= c + n * cover (FUNPOW transform n x) (FUNPOW modify n y)``,
+                       loop x y <= c + n * cover (FUNPOW transform n x) (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num y:num. F` >>
   assume_tac loop2_rise_rise_count_cover_quitc_exit_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `exit`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ RISING modify /\
@@ -3871,19 +3960,20 @@ val loop2_rise_rise_count_cover_le = store_thm(
                     in MONO2 body ==>
                        loop x y <= c + n * body (FUNPOW transform n x) (FUNPOW modify n y) *)
 (* Proof: by loop2_rise_rise_count_cover_le with cover = body. *)
-val loop2_rise_rise_count_le = store_thm(
-  "loop2_rise_rise_count_le",
-  ``!loop guard body c modify transform R.
+Theorem loop2_rise_rise_count_le:
+    !loop guard body c modify transform R.
       WF R /\ (!x y. ~guard x y ==> R (transform x,modify y) (x,y)) /\
       RISING transform /\ RISING modify /\
       (!x y. loop x y = if guard x y then c else body x y + loop (transform x) (modify y)) ==>
        !x y. let n = loop2_count guard modify transform x y
                     in MONO2 body ==>
-                       loop x y <= c + n * body (FUNPOW transform n x) (FUNPOW modify n y)``,
+                       loop x y <= c + n * body (FUNPOW transform n x) (FUNPOW modify n y)
+Proof
   rpt strip_tac >>
   assume_tac loop2_rise_rise_count_cover_le >>
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `c`, `modify`, `transform`, `R`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 
 

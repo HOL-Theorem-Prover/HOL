@@ -236,8 +236,10 @@ fun Call (f, ty, tm) =
    let
       val typ = Type.--> (Term.type_of tm, Ty ty)
       val vc = mk_local_const (f, typ)
-               handle HOL_ERR {origin_function = "mk_thy_const", ...} =>
-                 Term.mk_var (f, typ) (* for recursion *)
+               handle (e as HOL_ERR herr) =>
+                 if top_function_of herr = "mk_thy_const" then
+                    Term.mk_var (f, typ) (* for recursion *)
+                 else raise e
    in
       Term.mk_comb (vc, tm)
    end
@@ -249,8 +251,10 @@ fun Const (c, ty) =
       val typ = Ty ty
    in
       mk_local_const (c, typ)
-      handle HOL_ERR {origin_function = "mk_thy_const", ...} =>
-        Term.mk_var (c, typ) (* for recursion *)
+      handle (e as HOL_ERR herr) =>
+        if top_function_of herr = "mk_thy_const" then
+           Term.mk_var (c, typ) (* for recursion *)
+        else raise e
    end
 
 (* Variables *)
@@ -308,7 +312,10 @@ fun CS (x, cs) =
 
 fun Let (v,e,b) =
    boolSyntax.mk_let (Close (v, b), e)
-   handle HOL_ERR {origin_function = "mk_pabs", ...} => CS (e, [(v, b)])
+   handle HOL_ERR herr =>
+     if top_function_of herr = "mk_pabs" then
+        CS (e, [(v, b)])
+     else raise HOL_ERR herr
 
 (* Set of list *)
 

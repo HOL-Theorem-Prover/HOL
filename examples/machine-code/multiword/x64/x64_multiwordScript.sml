@@ -2582,9 +2582,11 @@ val (res,x64_div_def,x64_div_pre_def) = x64_compile `
           let r0 = r9 in
             (r0,r3,r6,xs,ys,zs,ss)`
 
-val mw_fix_SNOC = store_thm("mw_fix_SNOC",
- ``mw_fix (SNOC 0w xs) = mw_fix xs``,
-  SIMP_TAC std_ss [Once mw_fix_def,FRONT_SNOC,LAST_SNOC] \\ SRW_TAC [] []);
+Theorem mw_fix_SNOC:
+   mw_fix (SNOC 0w xs) = mw_fix xs
+Proof
+  SIMP_TAC std_ss [Once mw_fix_def,FRONT_SNOC,LAST_SNOC] \\ SRW_TAC [] []
+QED
 
 val mw_fix_REPLICATE = prove(
   ``!n. mw_fix (xs ++ REPLICATE n 0w) = mw_fix xs``,
@@ -3379,8 +3381,8 @@ val x64_header_XOR_1 = prove(
   Cases_on `s` \\ SIMP_TAC std_ss [x64_header_def,GSYM word_mul_n2w]
   \\ blastLib.BBLAST_TAC);
 
-val x64_iop_thm = store_thm("x64_iop_thm",
-  ``((x64_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
+Theorem x64_iop_thm:
+    ((x64_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
     ((x64_header (t,ys) = 0x0w) <=> (ys = [])) /\ mw_ok ys /\
     LENGTH xs + LENGTH ys < LENGTH zs /\ LENGTH zs < dimword (:63) /\
     (((iop = Div) \/ (iop = Mod)) ==> ys <> []) ==>
@@ -3393,7 +3395,8 @@ val x64_iop_thm = store_thm("x64_iop_thm",
         SND (mwi_op iop (s,xs) (t,ys)) ++ zs1,xa,ya,
         if iop = Dec then MAP (n2w o ORD) (int_to_str (mw2i (s,xs))) ++ ss
         else ss)) /\
-      (LENGTH (SND (mwi_op iop (s,xs) (t,ys)) ++ zs1) = LENGTH zs)``,
+      (LENGTH (SND (mwi_op iop (s,xs) (t,ys)) ++ zs1) = LENGTH zs)
+Proof
   Cases_on `iop` \\ SIMP_TAC std_ss [int_op_rep_def] \\ REPEAT STRIP_TAC
   \\ `LENGTH xs < dimword (:63) /\ LENGTH ys < dimword (:63)` by DECIDE_TAC
   \\ `LENGTH xs + LENGTH ys <= LENGTH zs` by DECIDE_TAC
@@ -3436,5 +3439,6 @@ val x64_iop_thm = store_thm("x64_iop_thm",
   \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC
   \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `ss`)
   \\ FULL_SIMP_TAC std_ss []
-  \\ EVAL_TAC);
+  \\ EVAL_TAC
+QED
 

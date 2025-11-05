@@ -50,12 +50,14 @@ val sexp_size_def =
     snd (TypeBase.size_of ``:sexp``) handle e =>
     sexpTheory.sexp_size_def;
 
-val SEXP_REDUCE = store_thm("SEXP_REDUCE",
-    ``!x. (|= consp x) ==>
+Theorem SEXP_REDUCE:
+      !x. (|= consp x) ==>
           sexp_size (car x) < sexp_size x /\
-          sexp_size (cdr x) < sexp_size x``,
+          sexp_size (cdr x) < sexp_size x
+Proof
     Cases THEN RW_TAC arith_ss [sexp_size_def,car_def,
-                                cdr_def,consp_def,ACL2_TRUE,t_def,nil_def]);
+                                cdr_def,consp_def,ACL2_TRUE,t_def,nil_def]
+QED
 
 val SEXP_TERMINAL = save_thm("SEXP_TERMINAL",
     REWRITE_CONV [ACL2_TRUE,REWRITE_CONV [nil_def] ``consp nil``,consp_def]
@@ -65,18 +67,20 @@ val SEXP_TERMINAL = save_thm("SEXP_TERMINAL",
 (* Induction over s-expressions, as performed by lists.                      *)
 (*****************************************************************************)
 
-val sexp_list_ind = store_thm("sexp_list_ind",
-    ``!P0 P1.
+Theorem sexp_list_ind:
+      !P0 P1.
           (!x. P1 x ==> P0 x) /\
           (!x. (|= consp x) /\ P0 (cdr x) ==> P1 x) /\
           (!x. ~(|= consp x) ==> P1 x) ==>
-               (!x. P0 x) /\ (!x. P1 x)``,
+               (!x. P0 x) /\ (!x. P1 x)
+Proof
         REPEAT STRIP_TAC THEN Induct_on `x` THEN
         TRY (METIS_TAC [sexpTheory.ACL2_TRUE,sexpTheory.consp_def]) THEN
         PAT_ASSUM ``!x. ~p ==> q`` (K ALL_TAC) THEN
         REPEAT (FIRST_ASSUM MATCH_MP_TAC) THEN
         ASM_REWRITE_TAC [consp_def,cdr_def,EVAL ``|= t``] THEN
-        METIS_TAC []);
+        METIS_TAC []
+QED
 
 (*****************************************************************************)
 (* Extra encoding functions:                                                 *)
@@ -213,20 +217,24 @@ val sexp_to_list_def =
     (WF_REL_TAC `measure (sexp_size o SND)` THEN
      RW_TAC arith_ss [sexp_size_def]);
 
-val sexp_to_list_thm = store_thm("sexp_to_list_thm",
-  ``!f x. sexp_to_list f x =
+Theorem sexp_to_list_thm:
+    !f x. sexp_to_list f x =
           if (|= consp x)
              then let (a,b) = sexp_to_pair f (sexp_to_list f) x in (a::b)
-             else []``,
+             else []
+Proof
         GEN_TAC THEN Induct THEN
         RW_TAC (std_ss ++ boolSimps.LET_ss)
                 [sexp_to_list_def,consp_def,ACL2_TRUE,t_def,nil_def,
-                 car_def,cdr_def,sexp_to_pair_def]);
+                 car_def,cdr_def,sexp_to_pair_def]
+QED
 
-val list_thm = store_thm("list_thm",
-  ``(!f x xs. list f (x::xs) = pair f (list f) (x,xs)) /\
-    (!f. list f [] = nil)``,
-        REWRITE_TAC [list_def,pair_def,pairTheory.FST,pairTheory.SND]);
+Theorem list_thm:
+    (!f x xs. list f (x::xs) = pair f (list f) (x,xs)) /\
+    (!f. list f [] = nil)
+Proof
+        REWRITE_TAC [list_def,pair_def,pairTheory.FST,pairTheory.SND]
+QED
 
 val listp_def = tDefine "listp"
  `(listp f (cons a b) = f a /\ listp f b) /\
@@ -234,13 +242,15 @@ val listp_def = tDefine "listp"
  (WF_REL_TAC `measure (sexp_size o SND)` THEN
   RW_TAC arith_ss [sexp_size_def]);
 
-val listp_thm = store_thm("listp_thm",
-    ``!f g x. listp f x = if (|= consp x) then
-                                pairp f (listp f) x else (x = list I [])``,
+Theorem listp_thm:
+      !f g x. listp f x = if (|= consp x) then
+                                pairp f (listp f) x else (x = list I [])
+Proof
         NTAC 2 GEN_TAC THEN Induct THEN
         REWRITE_TAC [list_def,pairp_def,listp_def,consp_def,ACL2_TRUE,
                 car_def,cdr_def,t_def,nil_def,sexp_distinct,sexp_11,
-                EVAL ``"T" = "NIL"``]);
+                EVAL ``"T" = "NIL"``]
+QED
 
 val fix_list_def =
     tDefine "fix_list"
@@ -249,27 +259,33 @@ val fix_list_def =
     (WF_REL_TAC `measure (sexp_size o SND)` THEN
      RW_TAC arith_ss [sexp_size_def]);
 
-val fix_list_thm = store_thm("fix_list_thm",
-    ``!f x. fix_list f x =
-         if pairp (K T) (K T) x then fix_pair f (fix_list f) x else list I []``,
+Theorem fix_list_thm:
+      !f x. fix_list f x =
+         if pairp (K T) (K T) x then fix_pair f (fix_list f) x else list I []
+Proof
     GEN_TAC THEN Induct THEN
     REWRITE_TAC [fix_list_def,fix_pair_def,consp_def,ACL2_TRUE,EVAL ``t = nil``,
-                 car_def,cdr_def,pairp_def,K_THM]);
+                 car_def,cdr_def,pairp_def,K_THM]
+QED
 
 (*****************************************************************************)
 (* Source theorem all_id: all (K T) ... (K T) = K T                          *)
 (*     Should really be moved into the respective theories...                *)
 (*****************************************************************************)
 
-val ALLID_PAIR = store_thm("ALLID_PAIR",
-    ``all_pair (K T) (K T) = K T``,
+Theorem ALLID_PAIR:
+      all_pair (K T) (K T) = K T
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN
-    REWRITE_TAC [K_THM,all_pair_def]);
+    REWRITE_TAC [K_THM,all_pair_def]
+QED
 
-val ALLID_LIST = store_thm("ALLID_LIST",
-    ``EVERY (K T) = K T``,
+Theorem ALLID_LIST:
+      EVERY (K T) = K T
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Induct THEN
-    ASM_REWRITE_TAC [EVERY_DEF,K_THM]);
+    ASM_REWRITE_TAC [EVERY_DEF,K_THM]
+QED
 
 val proves = ref ([]:(int * term) list);
 val stores = ref ([]:(int * string) list);
@@ -345,30 +361,38 @@ val IS_INT_eq = prove(``!a. IS_INT (com (abs_rat (abs_frac(a,1))) rat_0)``,
     FULL_SIMP_TAC int_ss [NMR,DNM,INT_LT_01,INT_MOD_COMMON_FACTOR,INT_LT_IMP_NE,
                           FRAC_DNMPOS]);
 
-val IS_INT_EXISTS = store_thm("IS_INT_EXISTS",
-     ``!a b. IS_INT (com a b) = (b = rat_0) /\
-                                ?c. a = abs_rat (abs_frac(c,1))``,
-     METIS_TAC [IS_INT_select,IS_INT_eq]);
+Theorem IS_INT_EXISTS:
+       !a b. IS_INT (com a b) = (b = rat_0) /\
+                                ?c. a = abs_rat (abs_frac(c,1))
+Proof
+     METIS_TAC [IS_INT_select,IS_INT_eq]
+QED
 
 (*****************************************************************************)
 (* Congruence theorems to make proofs easier...                              *)
 (*****************************************************************************)
 
-val NAT_CONG = store_thm("NAT_CONG",
-    ``!a b. (nat a = nat b) = (a = b)``,
+Theorem NAT_CONG:
+      !a b. (nat a = nat b) = (a = b)
+Proof
     RW_TAC intLib.int_ss [nat_def,int_def,cpx_def,sexpTheory.rat_def,
-                          ratTheory.RAT_EQ,fracTheory.NMR,fracTheory.DNM]);
+                          ratTheory.RAT_EQ,fracTheory.NMR,fracTheory.DNM]
+QED
 
-val INT_CONG = store_thm("INT_CONG",
-    ``!a b. (int a = int b) = (a = b)``,
+Theorem INT_CONG:
+      !a b. (int a = int b) = (a = b)
+Proof
     RW_TAC intLib.int_ss [nat_def,int_def,cpx_def,sexpTheory.rat_def,
-                          ratTheory.RAT_EQ,fracTheory.NMR,fracTheory.DNM]);
+                          ratTheory.RAT_EQ,fracTheory.NMR,fracTheory.DNM]
+QED
 
-val BOOL_CONG = store_thm("BOOL_CONG",
-    ``!a b. (bool a = bool b) = (a = b)``,
+Theorem BOOL_CONG:
+      !a b. (bool a = bool b) = (a = b)
+Proof
     REPEAT GEN_TAC THEN EQ_TAC THEN DISCH_TAC THEN TRY AP_TERM_TAC THEN
     Cases_on `a` THEN Cases_on `b` THEN POP_ASSUM MP_TAC THEN
-    RW_TAC std_ss [bool_def,nil_def,t_def]);
+    RW_TAC std_ss [bool_def,nil_def,t_def]
+QED
 
 (*****************************************************************************)
 (* Make sure all 'p' functions operate on |= instead of nil or t             *)
@@ -397,30 +421,38 @@ val ANDL_JUDGEMENT = prove(
     STRIP_TAC THENL [ALL_TAC,GEN_TAC THEN Induct] THEN
     RW_TAC std_ss [andl_def,TRUTH_REWRITES,ite_def]);
 
-val ANDL_REWRITE = store_thm("ANDL_REWRITE",
-    ``!a b. (|= andl []) /\ ((|= andl (a::b)) = (|= a) /\ (|= andl b))``,
-    GEN_TAC THEN Cases THEN RW_TAC std_ss [andl_def,TRUTH_REWRITES,ite_def]);
+Theorem ANDL_REWRITE:
+      !a b. (|= andl []) /\ ((|= andl (a::b)) = (|= a) /\ (|= andl b))
+Proof
+    GEN_TAC THEN Cases THEN RW_TAC std_ss [andl_def,TRUTH_REWRITES,ite_def]
+QED
 
-val NOT_REWRITE = store_thm("NOT_REWRITE",
-    ``(|= not a) = ~|= a``,RW_TAC std_ss [not_def,TRUTH_REWRITES,ite_def]);
+Theorem NOT_REWRITE:
+      (|= not a) = ~|= a
+ProofRW_TAC std_ss [not_def,TRUTH_REWRITES,ite_def]
+QED
 
 (*****************************************************************************)
 (* Encode, detect, all theorems (ENCDETALL).                                 *)
 (*****************************************************************************)
 
-val ENCDETALL_BOOL = store_thm("ENCDETALL_BOOL",
-    ``(sexp_to_bool o  booleanp) o bool = K T``,
+Theorem ENCDETALL_BOOL:
+      (sexp_to_bool o  booleanp) o bool = K T
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN
     Cases THEN RW_TAC std_ss [K_THM,ite_def,bool_def,booleanp_def,
-          TRUTH_REWRITES,equal_def,sexp_to_bool_def]);
+          TRUTH_REWRITES,equal_def,sexp_to_bool_def]
+QED
 
-val ENCDETALL_INT = store_thm("ENCDETALL_INT",
-    ``(sexp_to_bool o integerp) o int = K T``,
+Theorem ENCDETALL_INT:
+      (sexp_to_bool o integerp) o int = K T
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN
     RW_TAC std_ss [integerp_def,int_def,cpx_def,IS_INT_EXISTS,TRUTH_REWRITES,
                    K_THM,sexpTheory.rat_def,rat_0_def,frac_0_def,
                    sexp_to_bool_def] THEN
-    PROVE_TAC []);
+    PROVE_TAC []
+QED
 
  val natp_int_lem = prove(``(|= (natp (int x))) = 0 <= x``,
     RW_TAC arith_ss [natp_def,nat_def,
@@ -429,40 +461,54 @@ val ENCDETALL_INT = store_thm("ENCDETALL_INT",
     RW_TAC int_ss [int_def,less_def,cpx_def,TRUTH_REWRITES] THEN
     RW_TAC int_ss [sexpTheory.rat_def,RAT_LES_CALCULATE,NMR,DNM,INT_NOT_LT]);
 
-val ENCDETALL_NAT = store_thm("ENCDETALL_NAT",
-    ``(sexp_to_bool o natp) o nat = K T``,
-    RW_TAC int_ss [nat_def,o_THM,FUN_EQ_THM,natp_int_lem,sexp_to_bool_def]);
+Theorem ENCDETALL_NAT:
+      (sexp_to_bool o natp) o nat = K T
+Proof
+    RW_TAC int_ss [nat_def,o_THM,FUN_EQ_THM,natp_int_lem,sexp_to_bool_def]
+QED
 
-val ENCDETALL_RAT = store_thm("ENCDETALL_RAT",
-    ``(sexp_to_bool o  rationalp) o rat = K T``,
+Theorem ENCDETALL_RAT:
+      (sexp_to_bool o  rationalp) o rat = K T
+Proof
     RW_TAC std_ss [FUN_EQ_THM,o_THM,rationalp_def,rat_def,TRUTH_REWRITES,
-                   sexp_to_bool_def]);
+                   sexp_to_bool_def]
+QED
 
-val ENCDETALL_COM = store_thm("ENCDETALL_COM",
-    ``(sexp_to_bool o acl2_numberp) o num = K T``,
+Theorem ENCDETALL_COM:
+      (sexp_to_bool o acl2_numberp) o num = K T
+Proof
     RW_TAC std_ss [acl2_numberp_def,TRUTH_REWRITES,K_THM,o_THM,
-                   sexp_to_bool_def,FUN_EQ_THM]);
+                   sexp_to_bool_def,FUN_EQ_THM]
+QED
 
-val ENCDETALL_PAIR = store_thm("ENCDETALL_PAIR",
-    ``(pairp p0 p1 o pair f0 f1) = all_pair (p0 o f0) (p1 o f1)``,
+Theorem ENCDETALL_PAIR:
+      (pairp p0 p1 o pair f0 f1) = all_pair (p0 o f0) (p1 o f1)
+Proof
     REWRITE_TAC [FUN_EQ_THM,pair_def,pairp_def,o_THM] THEN Cases THEN
-    REWRITE_TAC [o_THM,all_pair_def,consp_def,car_def,cdr_def,TRUTH_REWRITES]);
+    REWRITE_TAC [o_THM,all_pair_def,consp_def,car_def,cdr_def,TRUTH_REWRITES]
+QED
 
-val ENCDETALL_LIST = store_thm("ENCDETALL_LIST",
-    ``(listp p o list f) = EVERY (p o f)``,
+Theorem ENCDETALL_LIST:
+      (listp p o list f) = EVERY (p o f)
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Induct THEN
     ASM_REWRITE_TAC [list_def,o_THM,EVERY_DEF,listp_def,nil_def] THEN
-    PROVE_TAC [o_THM]);
+    PROVE_TAC [o_THM]
+QED
 
-val ENCDETALL_CHAR = store_thm("ENCDETALL_CHAR",
-    ``(sexp_to_bool o characterp) o chr = K T``,
+Theorem ENCDETALL_CHAR:
+      (sexp_to_bool o characterp) o chr = K T
+Proof
     RW_TAC std_ss [sexp_to_bool_def,FUN_EQ_THM,o_THM,K_THM,characterp_def,
-                   TRUTH_REWRITES]);
+                   TRUTH_REWRITES]
+QED
 
-val ENCDETALL_STRING = store_thm("ENCDETALL_STRING",
-    ``(sexp_to_bool o  stringp) o str = K T``,
+Theorem ENCDETALL_STRING:
+      (sexp_to_bool o  stringp) o str = K T
+Proof
     RW_TAC std_ss [sexp_to_bool_def,FUN_EQ_THM,o_THM,K_THM,
-                   stringp_def,TRUTH_REWRITES]);
+                   stringp_def,TRUTH_REWRITES]
+QED
 
 (*****************************************************************************)
 (* Encode, decode, map (ENCDECMAP) proofs                                    *)
@@ -486,8 +532,9 @@ val RAT_CONG_TAC =
 
 in
 
-val ENCDECMAP_INT = store_thm("ENCDECMAP_INT",
-    ``(sexp_to_int o int) = I``,
+Theorem ENCDECMAP_INT:
+      (sexp_to_int o int) = I
+Proof
     REWRITE_TAC [FUN_EQ_THM,o_THM,I_THM] THEN
     RW_TAC int_ss [sexp_to_int_def,int_def,cpx_def,
                    sexpTheory.rat_def] THEN
@@ -499,62 +546,82 @@ val ENCDECMAP_INT = store_thm("ENCDECMAP_INT",
     POP_ASSUM MP_TAC THEN RW_TAC int_ss [NMR,DNM] THEN
     POP_ASSUM SUBST_ALL_TAC THEN
     MATCH_MP_TAC INT_DIV_RMUL THEN
-    PROVE_TAC [INT_POS_NZ,FRAC_DNMPOS])
+    PROVE_TAC [INT_POS_NZ,FRAC_DNMPOS]
+QED
 
 end;
 
-val ENCDECMAP_NAT = store_thm("ENCDECMAP_NAT",
-    ``(sexp_to_nat o nat) = I``,
+Theorem ENCDECMAP_NAT:
+      (sexp_to_nat o nat) = I
+Proof
     RW_TAC int_ss [o_THM,sexp_to_nat_def,nat_def,natp_int_lem,FUN_EQ_THM,I_THM,
-                   REWRITE_RULE [FUN_EQ_THM,I_THM,o_THM] ENCDECMAP_INT]);
+                   REWRITE_RULE [FUN_EQ_THM,I_THM,o_THM] ENCDECMAP_INT]
+QED
 
-val ENCDECMAP_RAT = store_thm("ENCDECMAP_RAT",
-    ``(sexp_to_rat o rat) = I``,
+Theorem ENCDECMAP_RAT:
+      (sexp_to_rat o rat) = I
+Proof
     RW_TAC int_ss [sexp_to_rat_def,rat_def,I_THM,o_THM,FUN_EQ_THM,
-                   rationalp_def,TRUTH_REWRITES]);
+                   rationalp_def,TRUTH_REWRITES]
+QED
 
-val ENCDECMAP_COM = store_thm("ENCDECMAP_COM",
-    ``(sexp_to_com o num) = I``,
-    RW_TAC std_ss [FUN_EQ_THM,o_THM,I_THM,sexp_to_com_def]);
+Theorem ENCDECMAP_COM:
+      (sexp_to_com o num) = I
+Proof
+    RW_TAC std_ss [FUN_EQ_THM,o_THM,I_THM,sexp_to_com_def]
+QED
 
-val ENCDECMAP_PAIR = store_thm("ENCDECMAP_PAIR",
-    ``(sexp_to_pair f0 f1 o pair g0 g1) = ((f0 o g0) ## (f1 o g1))``,
+Theorem ENCDECMAP_PAIR:
+      (sexp_to_pair f0 f1 o pair g0 g1) = ((f0 o g0) ## (f1 o g1))
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN
     REWRITE_TAC [pairTheory.PAIR_MAP,pair_def,sexp_to_pair_def,o_THM,consp_def,
-                 car_def,cdr_def,TRUTH_REWRITES]);
+                 car_def,cdr_def,TRUTH_REWRITES]
+QED
 
-val ENCDECMAP_LIST = store_thm("ENCDECMAP_LIST",
-    ``(sexp_to_list f o list g) = MAP (f o g)``,
+Theorem ENCDECMAP_LIST:
+      (sexp_to_list f o list g) = MAP (f o g)
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Induct THEN
     ASM_REWRITE_TAC [MAP,o_THM,list_def,sexp_to_list_def,nil_def] THEN
-    PROVE_TAC [o_THM]);
+    PROVE_TAC [o_THM]
+QED
 
-val ENCDECMAP_BOOL = store_thm("ENCDECMAP_BOOL",
-    ``(sexp_to_bool o bool) = I``,
+Theorem ENCDECMAP_BOOL:
+      (sexp_to_bool o bool) = I
+Proof
     REWRITE_TAC [FUN_EQ_THM,o_THM,I_THM] THEN
-    Cases THEN RW_TAC std_ss [bool_def,sexp_to_bool_def,TRUTH_REWRITES]);
+    Cases THEN RW_TAC std_ss [bool_def,sexp_to_bool_def,TRUTH_REWRITES]
+QED
 
-val ENCDECMAP_CHAR = store_thm("ENCDECMAP_CHAR",
-    ``(sexp_to_char o chr) = I``,
-    RW_TAC std_ss [sexp_to_char_def,FUN_EQ_THM,o_THM,I_THM]);
+Theorem ENCDECMAP_CHAR:
+      (sexp_to_char o chr) = I
+Proof
+    RW_TAC std_ss [sexp_to_char_def,FUN_EQ_THM,o_THM,I_THM]
+QED
 
-val ENCDECMAP_STRING = store_thm("ENCDECMAP_STRING",
-    ``(sexp_to_string o str) = I``,
-    RW_TAC std_ss [sexp_to_string_def,FUN_EQ_THM,o_THM,I_THM]);
+Theorem ENCDECMAP_STRING:
+      (sexp_to_string o str) = I
+Proof
+    RW_TAC std_ss [sexp_to_string_def,FUN_EQ_THM,o_THM,I_THM]
+QED
 
 (*****************************************************************************)
 (* Decode, Encode, Fix (DECENCFIX) theorems                                  *)
 (*****************************************************************************)
 
-val DECENCFIX_BOOL = store_thm("DECENCFIX_BOOL",
-    ``(bool o sexp_to_bool) = fix_bool``,
+Theorem DECENCFIX_BOOL:
+      (bool o sexp_to_bool) = fix_bool
+Proof
     RW_TAC int_ss [bool_def,sexp_to_bool_def,fix_bool_def,o_THM,FUN_EQ_THM,
                    ACL2_TRUE,booleanp_def,ite_def,equal_def] THEN
     Cases_on `x = nil` THEN RW_TAC arith_ss [bool_def] THEN
-    PROVE_TAC []);
+    PROVE_TAC []
+QED
 
-val DECENCFIX_INT = store_thm("DECENCFIX_INT",
-    ``(int o sexp_to_int) = ifix``,
+Theorem DECENCFIX_INT:
+      (int o sexp_to_int) = ifix
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN TRY (Cases_on `c`) THEN
     RW_TAC int_ss [ifix_def,sexp_to_int_def,o_THM,ite_def,nat_def,integerp_def,
                    ACL2_TRUE] THEN POP_ASSUM MP_TAC THEN
@@ -565,10 +632,12 @@ val DECENCFIX_INT = store_thm("DECENCFIX_INT",
     FULL_SIMP_TAC int_ss [DNM,NMR] THEN RW_TAC int_ss [] THEN
     REPEAT (AP_TERM_TAC ORELSE AP_THM_TAC) THEN
     MATCH_MP_TAC INT_DIV_RMUL THEN
-    PROVE_TAC [INT_POS_NZ,FRAC_DNMPOS]);
+    PROVE_TAC [INT_POS_NZ,FRAC_DNMPOS]
+QED
 
-val DECENCFIX_NAT = store_thm("DECENCFIX_NAT",
-    ``(nat o sexp_to_nat) = nfix``,
+Theorem DECENCFIX_NAT:
+      (nat o sexp_to_nat) = nfix
+Proof
     RW_TAC int_ss [nat_def,sexp_to_nat_def,FUN_EQ_THM,o_THM,nfix_def,natp_def,
                    ite_def,ISPEC ``int`` COND_RAND,
                    ISPEC ``$& : num -> int`` COND_RAND,ACL2_TRUE] THEN
@@ -583,107 +652,142 @@ val DECENCFIX_NAT = store_thm("DECENCFIX_NAT",
     POP_ASSUM MP_TAC THEN
     RW_TAC int_ss [int_def,less_def,cpx_def,sexpTheory.rat_def,not_def,
                    TRUTH_REWRITES,RAT_LES_CALCULATE,NMR,DNM] THEN
-    PROVE_TAC [INT_OF_NUM,INT_NOT_LT]);
+    PROVE_TAC [INT_OF_NUM,INT_NOT_LT]
+QED
 
-val DECENCFIX_RAT = store_thm("DECENCFIX_RAT",
-    ``(rat o sexp_to_rat) = fix_rat``,
+Theorem DECENCFIX_RAT:
+      (rat o sexp_to_rat) = fix_rat
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN TRY (Cases_on `c`) THEN
     REWRITE_TAC [fix_rat_def,rat_def,sexp_to_rat_def,o_THM,rationalp_def,
                  TRUTH_REWRITES,sexp_to_rat_def] THEN
-    PROVE_TAC []);
+    PROVE_TAC []
+QED
 
-val DECENCFIX_COM = store_thm("DECENCFIX_COM",
-    ``(num o sexp_to_com) = fix``,
+Theorem DECENCFIX_COM:
+      (num o sexp_to_com) = fix
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN
     RW_TAC int_ss [fix_def,sexp_to_com_def,acl2_numberp_def,ite_def,
                    TRUTH_REWRITES,com_0_def,cpx_def,sexpTheory.rat_def,
-                   rat_0_def,frac_0_def]);
+                   rat_0_def,frac_0_def]
+QED
 
-val DECENCFIX_CHAR = store_thm("DECENCFIX_CHAR",
-    ``(chr o sexp_to_char) = fix_char``,
+Theorem DECENCFIX_CHAR:
+      (chr o sexp_to_char) = fix_char
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN
     REWRITE_TAC [sexp_to_char_def,o_THM,fix_char_def,characterp_def,
-                 TRUTH_REWRITES]);
+                 TRUTH_REWRITES]
+QED
 
-val DECENCFIX_STRING = store_thm("DECENCFIX_STRING",
-    ``(str o sexp_to_string) = fix_string``,
+Theorem DECENCFIX_STRING:
+      (str o sexp_to_string) = fix_string
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN
     REWRITE_TAC [sexp_to_string_def,o_THM,fix_string_def,stringp_def,
-                 TRUTH_REWRITES]);
+                 TRUTH_REWRITES]
+QED
 
-val DECENCFIX_PAIR = store_thm("DECENCFIX_PAIR",
-    ``(pair f0 f1 o sexp_to_pair g0 g1) = fix_pair (f0 o g0) (f1 o g1)``,
+Theorem DECENCFIX_PAIR:
+      (pair f0 f1 o sexp_to_pair g0 g1) = fix_pair (f0 o g0) (f1 o g1)
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN
-    RW_TAC int_ss [fix_pair_def,o_THM,sexp_to_pair_def,pair_def]);
+    RW_TAC int_ss [fix_pair_def,o_THM,sexp_to_pair_def,pair_def]
+QED
 
-val DECENCFIX_LIST = store_thm("DECENCFIX_LIST",
-    ``(list f o sexp_to_list g) = fix_list (f o g)``,
+Theorem DECENCFIX_LIST:
+      (list f o sexp_to_list g) = fix_list (f o g)
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Induct THEN
     RW_TAC int_ss [fix_list_def,sexp_to_list_def,list_def] THEN
-    PROVE_TAC [o_THM]);
+    PROVE_TAC [o_THM]
+QED
 
 (*****************************************************************************)
 (* Encode map encode (ENCMAPENC) fusion theorems.                            *)
 (*****************************************************************************)
 
-val ENCMAPENC_LIST = store_thm("ENCMAPENC_LIST",
-    ``list f o MAP g = list (f o g)``,
+Theorem ENCMAPENC_LIST:
+      list f o MAP g = list (f o g)
+Proof
     REWRITE_TAC [FUN_EQ_THM] THEN Induct THEN
-    REWRITE_TAC [o_THM,MAP,list_def] THEN METIS_TAC [o_THM]);
+    REWRITE_TAC [o_THM,MAP,list_def] THEN METIS_TAC [o_THM]
+QED
 
-val ENCMAPENC_PAIR = store_thm("ENCMAPENC_PAIR",
-    ``pair f1 f2 o (g1 ## g2) = pair (f1 o g1) (f2 o g2)``,
-    REWRITE_TAC [FUN_EQ_THM,o_THM,pairTheory.PAIR_MAP,pair_def]);
+Theorem ENCMAPENC_PAIR:
+      pair f1 f2 o (g1 ## g2) = pair (f1 o g1) (f2 o g2)
+Proof
+    REWRITE_TAC [FUN_EQ_THM,o_THM,pairTheory.PAIR_MAP,pair_def]
+QED
 
 (*****************************************************************************)
 (* Fix identity (FIXID) theorems.                                            *)
 (*****************************************************************************)
 
-val FIXID_BOOL = store_thm("FIXID_BOOL",
-    ``!x. (sexp_to_bool o booleanp) x ==> (fix_bool x = x)``,
-    RW_TAC int_ss [fix_bool_def,booleanp_def,sexp_to_bool_def]);
+Theorem FIXID_BOOL:
+      !x. (sexp_to_bool o booleanp) x ==> (fix_bool x = x)
+Proof
+    RW_TAC int_ss [fix_bool_def,booleanp_def,sexp_to_bool_def]
+QED
 
-val FIXID_INT = store_thm("FIXID_INT",
-    ``!x. (sexp_to_bool o integerp) x ==> (ifix x = x)``,
+Theorem FIXID_INT:
+      !x. (sexp_to_bool o integerp) x ==> (ifix x = x)
+Proof
     RW_TAC int_ss [sexp_to_bool_def,integerp_def,ifix_def,ite_def,
-                   TRUTH_REWRITES]);
+                   TRUTH_REWRITES]
+QED
 
-val FIXID_NAT = store_thm("FIXID_NAT",
-    ``!x. (sexp_to_bool o natp) x ==> (nfix x = x)``,
+Theorem FIXID_NAT:
+      !x. (sexp_to_bool o natp) x ==> (nfix x = x)
+Proof
     RW_TAC int_ss [sexp_to_bool_def,natp_def,nfix_def,ite_def,
-                   TRUTH_REWRITES]);
+                   TRUTH_REWRITES]
+QED
 
-val FIXID_RAT = store_thm("FIXID_RAT",
-    ``!x. (sexp_to_bool o rationalp) x ==> (fix_rat x = x)``,
+Theorem FIXID_RAT:
+      !x. (sexp_to_bool o rationalp) x ==> (fix_rat x = x)
+Proof
     RW_TAC int_ss [sexp_to_bool_def,rationalp_def,fix_rat_def,ite_def,
-                   TRUTH_REWRITES]);
+                   TRUTH_REWRITES]
+QED
 
-val FIXID_COM = store_thm("FIXID_COM",
-    ``!x. (sexp_to_bool o acl2_numberp) x ==> (fix x = x)``,
+Theorem FIXID_COM:
+      !x. (sexp_to_bool o acl2_numberp) x ==> (fix x = x)
+Proof
     RW_TAC int_ss [sexp_to_bool_def,acl2_numberp_def,fix_def,ite_def,
-                   TRUTH_REWRITES]);
+                   TRUTH_REWRITES]
+QED
 
-val FIXID_CHAR = store_thm("FIXID_CHAR",
-    ``!x. (sexp_to_bool o characterp) x ==> (fix_char x = x)``,
+Theorem FIXID_CHAR:
+      !x. (sexp_to_bool o characterp) x ==> (fix_char x = x)
+Proof
     RW_TAC int_ss [sexp_to_bool_def,characterp_def,fix_char_def,ite_def,
-                   TRUTH_REWRITES]);
+                   TRUTH_REWRITES]
+QED
 
-val FIXID_STRING = store_thm("FIXID_STRING",
-    ``!x. (sexp_to_bool o stringp) x ==> (fix_string x = x)``,
+Theorem FIXID_STRING:
+      !x. (sexp_to_bool o stringp) x ==> (fix_string x = x)
+Proof
     RW_TAC int_ss [sexp_to_bool_def,stringp_def,fix_string_def,ite_def,
-                   TRUTH_REWRITES]);
+                   TRUTH_REWRITES]
+QED
 
-val FIXID_PAIR = store_thm("FIXID_PAIR",
-    ``(!x. p0 x ==> (f0 x = x)) /\
+Theorem FIXID_PAIR:
+      (!x. p0 x ==> (f0 x = x)) /\
       (!x. p1 x ==> (f1 x = x)) ==>
-            (!x. pairp p0 p1 x ==> (fix_pair f0 f1 x = x))``,
+            (!x. pairp p0 p1 x ==> (fix_pair f0 f1 x = x))
+Proof
     STRIP_TAC THEN Cases THEN RW_TAC int_ss [fix_pair_def,pairp_def,consp_def,
-                                             TRUTH_REWRITES,car_def,cdr_def]);
+                                             TRUTH_REWRITES,car_def,cdr_def]
+QED
 
-val FIXID_LIST = store_thm("FIXID_LIST",
-    ``(!x. p x ==> (f x = x)) ==>
-           (!x. listp p x ==> (fix_list f x = x))``,
-    STRIP_TAC THEN Induct THEN RW_TAC int_ss [fix_list_def,listp_def,list_def]);
+Theorem FIXID_LIST:
+      (!x. p x ==> (f x = x)) ==>
+           (!x. listp p x ==> (fix_list f x = x))
+Proof
+    STRIP_TAC THEN Induct THEN RW_TAC int_ss [fix_list_def,listp_def,list_def]
+QED
 
 (*****************************************************************************)
 (* Simple encode then decode theorems.                                       *)
@@ -762,80 +866,110 @@ val RATIONALP_RAT = save_thm("RATIONALP_RAT",make_ii ENCDET_RAT);
 (*                                                                           *)
 (*****************************************************************************)
 
-val DETDEAD_PAIR = store_thm("DETDEAD_PAIR",
-    ``~pairp f g nil``,
-    REWRITE_TAC [pairp_def,consp_def,TRUTH_REWRITES]);
+Theorem DETDEAD_PAIR:
+      ~pairp f g nil
+Proof
+    REWRITE_TAC [pairp_def,consp_def,TRUTH_REWRITES]
+QED
 
-val DETDEAD_LIST = store_thm("DETDEAD_LIST",
-    ``listp p nil``,
-    REWRITE_TAC [listp_def,pairp_def,nil_def]);
+Theorem DETDEAD_LIST:
+      listp p nil
+Proof
+    REWRITE_TAC [listp_def,pairp_def,nil_def]
+QED
 
-val DETDEAD_NAT = store_thm("DETDEAD_NAT",
-    ``~sexp_to_bool (natp nil)``,
+Theorem DETDEAD_NAT:
+      ~sexp_to_bool (natp nil)
+Proof
     REWRITE_TAC [ACL2_TRUE,natp_def,nil_def,integerp_def,sexp_to_bool_def,
-                 andl_def,ite_def]);
+                 andl_def,ite_def]
+QED
 
-val DETDEAD_INT = store_thm("DETDEAD_INT",
-    ``~sexp_to_bool (integerp nil)``,
-    REWRITE_TAC [ACL2_TRUE,natp_def,nil_def,integerp_def,sexp_to_bool_def]);
+Theorem DETDEAD_INT:
+      ~sexp_to_bool (integerp nil)
+Proof
+    REWRITE_TAC [ACL2_TRUE,natp_def,nil_def,integerp_def,sexp_to_bool_def]
+QED
 
-val DETDEAD_RAT = store_thm("DETDEAD_RAT",
-    ``~sexp_to_bool (rationalp nil)``,
-    REWRITE_TAC [ACL2_TRUE,rationalp_def,sexp_to_bool_def,nil_def]);
+Theorem DETDEAD_RAT:
+      ~sexp_to_bool (rationalp nil)
+Proof
+    REWRITE_TAC [ACL2_TRUE,rationalp_def,sexp_to_bool_def,nil_def]
+QED
 
-val DETDEAD_COM = store_thm("DETDEAD_COM",
-    ``~sexp_to_bool (acl2_numberp nil)``,
-    REWRITE_TAC [ACL2_TRUE,acl2_numberp_def,sexp_to_bool_def,nil_def]);
+Theorem DETDEAD_COM:
+      ~sexp_to_bool (acl2_numberp nil)
+Proof
+    REWRITE_TAC [ACL2_TRUE,acl2_numberp_def,sexp_to_bool_def,nil_def]
+QED
 
-val DETDEAD_CHAR = store_thm("DETDEAD_CHAR",
-    ``~sexp_to_bool (characterp nil)``,
-    REWRITE_TAC [ACL2_TRUE,characterp_def,sexp_to_bool_def,nil_def]);
+Theorem DETDEAD_CHAR:
+      ~sexp_to_bool (characterp nil)
+Proof
+    REWRITE_TAC [ACL2_TRUE,characterp_def,sexp_to_bool_def,nil_def]
+QED
 
-val DETDEAD_STRING = store_thm("DETDEAD_STRING",
-    ``~sexp_to_bool (stringp nil)``,
-    REWRITE_TAC [ACL2_TRUE,stringp_def,sexp_to_bool_def,nil_def]);
+Theorem DETDEAD_STRING:
+      ~sexp_to_bool (stringp nil)
+Proof
+    REWRITE_TAC [ACL2_TRUE,stringp_def,sexp_to_bool_def,nil_def]
+QED
 
-val DETDEAD_BOOL = store_thm("DETDEAD_BOOL",
-    ``sexp_to_bool (booleanp nil)``,
+Theorem DETDEAD_BOOL:
+      sexp_to_bool (booleanp nil)
+Proof
     REWRITE_TAC [sexp_to_bool_def,booleanp_def,ite_def,
-                 TRUTH_REWRITES,equal_def]);
+                 TRUTH_REWRITES,equal_def]
+QED
 
 (*****************************************************************************)
 (* General detect theorems: !x. detect p x ==> detect (K T) x                *)
 (*****************************************************************************)
 
-val GENERAL_DETECT_PAIR = store_thm("GENERAL_DETECT_PAIR",
-    ``!f g x. pairp f g x ==> pairp (K T) (K T) x``,
-    REWRITE_TAC [pairp_def,K_THM] THEN METIS_TAC []);
+Theorem GENERAL_DETECT_PAIR:
+      !f g x. pairp f g x ==> pairp (K T) (K T) x
+Proof
+    REWRITE_TAC [pairp_def,K_THM] THEN METIS_TAC []
+QED
 
-val GENERAL_DETECT_LIST = store_thm("GENERAL_DETECT_LIST",
-    ``!f x. listp f x ==> listp (K T) x``,
-    GEN_TAC THEN Induct THEN REWRITE_TAC [listp_def] THEN METIS_TAC [K_THM]);
+Theorem GENERAL_DETECT_LIST:
+      !f x. listp f x ==> listp (K T) x
+Proof
+    GEN_TAC THEN Induct THEN REWRITE_TAC [listp_def] THEN METIS_TAC [K_THM]
+QED
 
 (*****************************************************************************)
 (* Boolean theorems and definitions                                          *)
 (*****************************************************************************)
 
-val FLATTEN_BOOL = store_thm("FLATTEN_BOOL",
-    ``!a. bool ((sexp_to_bool o booleanp) a) = booleanp (I a)``,
+Theorem FLATTEN_BOOL:
+      !a. bool ((sexp_to_bool o booleanp) a) = booleanp (I a)
+Proof
     RW_TAC std_ss [booleanp_def,ite_def,equal_def,TRUTH_REWRITES,
-           sexp_to_bool_def,bool_def]);
+           sexp_to_bool_def,bool_def]
+QED
 
-val COND_REWRITE = store_thm("COND_REWRITE",
-    ``T ==>
+Theorem COND_REWRITE:
+      T ==>
     (bool p = P) /\ (p ==> (f a = A)) /\ (~p ==> (f b = B)) ==>
-                 (f (if p then a else b) = ite P A B)``,
+                 (f (if p then a else b) = ite P A B)
+Proof
         Cases_on `p` THEN
         RW_TAC arith_ss [ite_def,bool_def,TRUTH_REWRITES] THEN
-        METIS_TAC [TRUTH_REWRITES]);
+        METIS_TAC [TRUTH_REWRITES]
+QED
 
-val COND_T = store_thm("COND_T",
-    ``p ==> (f (if p then a else b) = f a)``,
-    METIS_TAC []);
+Theorem COND_T:
+      p ==> (f (if p then a else b) = f a)
+Proof
+    METIS_TAC []
+QED
 
-val COND_F = store_thm("COND_F",
-    ``~p ==> (f (if p then a else b) = f b)``,
-    METIS_TAC []);
+Theorem COND_F:
+      ~p ==> (f (if p then a else b) = f b)
+Proof
+    METIS_TAC []
+QED
 
 val BOOLEANP_EQUAL = prove(``!a b. |= booleanp (equal a b)``,RW_TAC std_ss [equal_def,booleanp_def,ite_def,TRUTH_REWRITES]);
 
@@ -868,55 +1002,71 @@ val BOOLEANP_ANDL = prove(``!a b. (|= booleanp a) /\ (|= booleanp (andl b)) ==> 
 val BOOLEANP_ANDL_NULL = prove(``|= booleanp (andl [])``,
         RW_TAC std_ss [andl_def,booleanp_def,ite_def,equal_def,TRUTH_REWRITES]);
 
-val BOOL_LEFT_AND = store_thm("BOOL_LEFT_AND",
-    ``!a b. T ==> (bool a = A) /\ (a ==> (bool b = B)) ==>
-              (bool (a /\ b) = andl [A; B])``,
+Theorem BOOL_LEFT_AND:
+      !a b. T ==> (bool a = A) /\ (a ==> (bool b = B)) ==>
+              (bool (a /\ b) = andl [A; B])
+Proof
     REPEAT Cases THEN
-    RW_TAC arith_ss [TRUTH_REWRITES,ite_def,bool_def,andl_def]);
+    RW_TAC arith_ss [TRUTH_REWRITES,ite_def,bool_def,andl_def]
+QED
 
-val BOOL_RIGHT_AND = store_thm("BOOL_RIGHT_AND",
-    ``!a b. T ==> (bool b = B) /\ (b ==> (bool a = A)) ==>
-              (bool (a /\ b) = andl [B; A])``,
+Theorem BOOL_RIGHT_AND:
+      !a b. T ==> (bool b = B) /\ (b ==> (bool a = A)) ==>
+              (bool (a /\ b) = andl [B; A])
+Proof
     REPEAT Cases THEN
-    RW_TAC arith_ss [TRUTH_REWRITES,ite_def,bool_def,andl_def]);
+    RW_TAC arith_ss [TRUTH_REWRITES,ite_def,bool_def,andl_def]
+QED
 
-val BOOL_LEFT_OR = store_thm("BOOL_LEFT_OR",
-    ``!a b. T ==> (bool ~a = A) /\ (~a ==> (bool ~b = B)) ==>
-            (bool (a \/ b) = not (andl [A ; B]))``,
-    REPEAT Cases THEN
-    RW_TAC arith_ss [TRUTH_REWRITES,ite_def,bool_def,andl_def,not_def] THEN
-    PROVE_TAC []);
-
-val BOOL_RIGHT_OR = store_thm("BOOL_RIGHT_OR",
-    ``!a b. T ==> (bool ~b = B) /\ (~b ==> (bool ~a = A)) ==>
-            (bool (a \/ b) = not (andl [B ; A]))``,
+Theorem BOOL_LEFT_OR:
+      !a b. T ==> (bool ~a = A) /\ (~a ==> (bool ~b = B)) ==>
+            (bool (a \/ b) = not (andl [A ; B]))
+Proof
     REPEAT Cases THEN
     RW_TAC arith_ss [TRUTH_REWRITES,ite_def,bool_def,andl_def,not_def] THEN
-    PROVE_TAC []);
+    PROVE_TAC []
+QED
 
-val BOOL_IMPLIES = store_thm("BOOL_IMPLIES",
-    ``!a b. T ==> (bool a = A) /\ (a ==> (bool b = B)) ==>
-            (bool (a ==> b) = implies A B)``,
+Theorem BOOL_RIGHT_OR:
+      !a b. T ==> (bool ~b = B) /\ (~b ==> (bool ~a = A)) ==>
+            (bool (a \/ b) = not (andl [B ; A]))
+Proof
+    REPEAT Cases THEN
+    RW_TAC arith_ss [TRUTH_REWRITES,ite_def,bool_def,andl_def,not_def] THEN
+    PROVE_TAC []
+QED
+
+Theorem BOOL_IMPLIES:
+      !a b. T ==> (bool a = A) /\ (a ==> (bool b = B)) ==>
+            (bool (a ==> b) = implies A B)
+Proof
    REPEAT Cases THEN
    RW_TAC arith_ss [implies_def,bool_def,andl_def,TRUTH_REWRITES,ite_def] THEN
-   METIS_TAC [TRUTH_REWRITES,ACL2_TRUE]);
+   METIS_TAC [TRUTH_REWRITES,ACL2_TRUE]
+QED
 
-val BOOL_EQUALITY = store_thm("BOOL_EQUALITY",
-    ``(!x. g (f x) = x) ==> (bool (a = b) = equal (f a) (f b))``,
+Theorem BOOL_EQUALITY:
+      (!x. g (f x) = x) ==> (bool (a = b) = equal (f a) (f b))
+Proof
     Cases_on `a = b` THEN
-    RW_TAC arith_ss [equal_def,bool_def,TRUTH_REWRITES] THEN PROVE_TAC []);
+    RW_TAC arith_ss [equal_def,bool_def,TRUTH_REWRITES] THEN PROVE_TAC []
+QED
 
-val BOOL_NOT = store_thm("BOOL_NOT",
-    ``!a. bool (~a) = not (bool a)``,
-    Cases THEN RW_TAC std_ss [not_def,TRUTH_REWRITES,bool_def]);
+Theorem BOOL_NOT:
+      !a. bool (~a) = not (bool a)
+Proof
+    Cases THEN RW_TAC std_ss [not_def,TRUTH_REWRITES,bool_def]
+QED
 
 val BOOL_T = save_thm("BOOL_T",CONJUNCT1 bool_def);
 
 val BOOL_F = save_thm("BOOL_F",CONJUNCT2 bool_def);
 
-val BOOL_PAIR = store_thm("BOOL_PAIR",
-    ``!x. bool (|= consp x) = consp x``,
-    Cases THEN REWRITE_TAC [consp_def,bool_def,ACL2_TRUE,EVAL ``t = nil``]);
+Theorem BOOL_PAIR:
+      !x. bool (|= consp x) = consp x
+Proof
+    Cases THEN REWRITE_TAC [consp_def,bool_def,ACL2_TRUE,EVAL ``t = nil``]
+QED
 
 val BOOL_PAIRP = save_thm("BOOL_PAIRP",
     (REWRITE_CONV [pairp_def] ``bool (pairp x y z)``));
@@ -924,20 +1074,25 @@ val BOOL_PAIRP = save_thm("BOOL_PAIRP",
 val BOOL_KT = save_thm("BOOL_KT",
     (REWRITE_CONV [combinTheory.K_THM] ``bool (K T x)``));
 
-val I_ENCODE = store_thm("I_ENCODE",
-    ``T ==> (encode a = A) ==> (I (encode a) = A)``,
-    RW_TAC std_ss [combinTheory.I_THM]);
+Theorem I_ENCODE:
+      T ==> (encode a = A) ==> (I (encode a) = A)
+Proof
+    RW_TAC std_ss [combinTheory.I_THM]
+QED
 
 (*****************************************************************************)
 (* Integer theorems:                                                         *)
 (*****************************************************************************)
 
-val FLATTEN_INT = store_thm("FLATTEN_INT",
-    ``!a. bool ((sexp_to_bool o integerp) a) = integerp (I a)``,
+Theorem FLATTEN_INT:
+      !a. bool ((sexp_to_bool o integerp) a) = integerp (I a)
+Proof
     Cases THEN RW_TAC std_ss [integerp_def,sexp_to_bool_def,
-             TRUTH_REWRITES,bool_def]);
+             TRUTH_REWRITES,bool_def]
+QED
 
-val INTEGERP_ADD = store_thm("INTEGERP_ADD",``!a b. (|= integerp a) /\ (|= integerp b) ==> |= integerp (add a b)``,
+Theorem INTEGERP_ADD:  !a b. (|= integerp a) /\ (|= integerp b) ==> |= integerp (add a b)
+Proof
         Cases THEN Cases THEN
         RW_TAC std_ss [sexpTheory.rat_def,int_def,integerp_def,cpx_def,rat_0_def,frac_0_def,add_def,TRUTH_REWRITES] THEN
         Cases_on `c` THEN Cases_on `c'` THEN
@@ -947,9 +1102,11 @@ val INTEGERP_ADD = store_thm("INTEGERP_ADD",``!a b. (|= integerp a) /\ (|= integ
         RAT_CONG_TAC THEN
         FULL_SIMP_TAC int_ss [INT_LT_01,DNM,NMR] THEN
         RW_TAC int_ss [RAT_EQ,FRAC_DNMPOS,INT_MUL_POS_SIGN,NMR,DNM,INT_LT_01,INT_RDISTRIB,INT_MUL_ASSOC] THEN
-        ARITH_TAC);
+        ARITH_TAC
+QED
 
-val INTEGERP_MULT = store_thm("INTEGERP_MULT",``!a b. (|= integerp a) /\ (|= integerp b) ==> |= integerp (mult a b)``,
+Theorem INTEGERP_MULT:  !a b. (|= integerp a) /\ (|= integerp b) ==> |= integerp (mult a b)
+Proof
         Cases THEN Cases THEN
         RW_TAC std_ss [sexpTheory.rat_def,int_def,integerp_def,cpx_def,rat_0_def,frac_0_def,mult_def,TRUTH_REWRITES] THEN
         Cases_on `c` THEN Cases_on `c'` THEN
@@ -959,239 +1116,336 @@ val INTEGERP_MULT = store_thm("INTEGERP_MULT",``!a b. (|= integerp a) /\ (|= int
         RAT_CONG_TAC THEN
         FULL_SIMP_TAC int_ss [INT_LT_01,DNM,NMR] THEN
         RW_TAC int_ss [RAT_EQ,FRAC_DNMPOS,INT_MUL_POS_SIGN,NMR,DNM,INT_LT_01,INT_RDISTRIB,INT_MUL_ASSOC] THEN
-        ARITH_TAC);
+        ARITH_TAC
+QED
 
-val INTEGERP_UNARY_MINUS = store_thm("INTEGERP_UNARY_MINUS",``!a. (|= integerp a) ==> |= integerp (unary_minus a)``,
+Theorem INTEGERP_UNARY_MINUS:  !a. (|= integerp a) ==> |= integerp (unary_minus a)
+Proof
         Cases THEN
         RW_TAC std_ss [sexpTheory.rat_def,int_def,integerp_def,cpx_def,rat_0_def,frac_0_def,unary_minus_def,TRUTH_REWRITES] THEN
         Cases_on `c` THEN
         FULL_SIMP_TAC std_ss [IS_INT_EXISTS,COMPLEX_SUB_def,RAT_ADD_RID,rat_0_def,GSYM rat_0,com_0_def] THEN
         POP_ASSUM MP_TAC THEN RW_TAC std_ss [RAT_SUB_RID,RAT_SUB_LID,RAT_AINV_0] THEN
         Q.EXISTS_TAC `~c` THEN
-        RW_TAC std_ss [RAT_AINV_CALCULATE,frac_ainv_def,NMR,INT_LT_01,DNM]);
+        RW_TAC std_ss [RAT_AINV_CALCULATE,frac_ainv_def,NMR,INT_LT_01,DNM]
+QED
 
-val INT_ADD = store_thm("INT_ADD",``!a b. int (a + b) = add (int a) (int b)``,
+Theorem INT_ADD:  !a b. int (a + b) = add (int a) (int b)
+Proof
         RW_TAC int_ss [add_def,int_def,cpx_def,sexpTheory.rat_def,COMPLEX_ADD_def,rat_add_def,frac_add_def,RAT_EQ,NMR,DNM,INT_LT_01] THEN
         RAT_CONG_TAC THEN
-        FULL_SIMP_TAC int_ss [NMR,DNM,INT_LT_01,RAT_EQ,FRAC_DNMPOS,INT_MUL_POS_SIGN,GSYM INT_ADD] THEN ARITH_TAC);
+        FULL_SIMP_TAC int_ss [NMR,DNM,INT_LT_01,RAT_EQ,FRAC_DNMPOS,INT_MUL_POS_SIGN,GSYM INT_ADD] THEN ARITH_TAC
+QED
 
-val INT_MULT = store_thm("INT_MULT",``!a b. int (a * b) = mult (int a) (int b)``,
+Theorem INT_MULT:  !a b. int (a * b) = mult (int a) (int b)
+Proof
         RW_TAC std_ss [mult_def,int_def,cpx_def,sexpTheory.rat_def,GSYM rat_0,GSYM frac_0_def,COMPLEX_MULT_def,
                 RAT_MUL_RZERO,RAT_SUB_RID,RAT_MUL_LZERO,RAT_ADD_RID] THEN
         RW_TAC int_ss [RAT_EQ,rat_mul_def,frac_mul_def,DNM,NMR,INT_LT_01] THEN
         RAT_CONG_TAC THEN
-        FULL_SIMP_TAC int_ss [DNM,NMR,INT_LT_01,FRAC_DNMPOS,INT_MUL_POS_SIGN] THEN ARITH_TAC);
+        FULL_SIMP_TAC int_ss [DNM,NMR,INT_LT_01,FRAC_DNMPOS,INT_MUL_POS_SIGN] THEN ARITH_TAC
+QED
 
-val INT_UNARY_MINUS = store_thm("INT_UNARY_MINUS",``!a. int (~a) = unary_minus (int a)``,
+Theorem INT_UNARY_MINUS:  !a. int (~a) = unary_minus (int a)
+Proof
         RW_TAC int_ss [unary_minus_def,int_def,cpx_def,sexpTheory.rat_def,GSYM rat_0,GSYM frac_0_def,COMPLEX_SUB_def,com_0_def,
-                rat_0_def,GSYM rat_0,RAT_SUB_LID,RAT_AINV_CALCULATE,RAT_AINV_0,FRAC_AINV_CALCULATE]);
+                rat_0_def,GSYM rat_0,RAT_SUB_LID,RAT_AINV_CALCULATE,RAT_AINV_0,FRAC_AINV_CALCULATE]
+QED
 
-val INT_EQUAL = store_thm("INT_EQUAL",
-    ``!a b. bool (a = b) = equal (int a) (int b)``,
-    RW_TAC std_ss [INT_CONG,equal_def,bool_def,TRUTH_REWRITES]);
+Theorem INT_EQUAL:
+      !a b. bool (a = b) = equal (int a) (int b)
+Proof
+    RW_TAC std_ss [INT_CONG,equal_def,bool_def,TRUTH_REWRITES]
+QED
 
-val INT_LT = store_thm("INT_LT",``!a b. bool (a < b) = less (int a) (int b)``,
-        RW_TAC intLib.int_ss [nat_def,int_def,cpx_def,sexpTheory.rat_def,ratTheory.RAT_EQ,fracTheory.NMR,fracTheory.DNM,less_def,RAT_LES_CALCULATE,bool_def]);
+Theorem INT_LT:  !a b. bool (a < b) = less (int a) (int b)
+Proof
+        RW_TAC intLib.int_ss [nat_def,int_def,cpx_def,sexpTheory.rat_def,ratTheory.RAT_EQ,fracTheory.NMR,fracTheory.DNM,less_def,RAT_LES_CALCULATE,bool_def]
+QED
 
 (*****************************************************************************)
 (* Nat theorems:                                                             *)
 (*****************************************************************************)
 
-val FLATTEN_NAT = store_thm("FLATTEN_NAT",
-    ``bool ((sexp_to_bool o natp) a) = natp (I a)``,
+Theorem FLATTEN_NAT:
+      bool ((sexp_to_bool o natp) a) = natp (I a)
+Proof
     REPEAT (RW_TAC arith_ss [natp_def,bool_def,less_def,andl_def,not_def,
-                             ite_def,TRUTH_REWRITES,sexp_to_bool_def]));
+                             ite_def,TRUTH_REWRITES,sexp_to_bool_def])
+QED
 
-val NAT_EQUAL = store_thm("NAT_EQUAL",``!a b. bool (a = b) = equal (nat a) (nat b)``,
-        RW_TAC int_ss [NAT_CONG,equal_def,bool_def]);
+Theorem NAT_EQUAL:  !a b. bool (a = b) = equal (nat a) (nat b)
+Proof
+        RW_TAC int_ss [NAT_CONG,equal_def,bool_def]
+QED
 
-val NAT_EQUAL_0 = store_thm("NAT_EQUAL_0",``!a. bool (a = 0n) = zp (nat a)``,
+Theorem NAT_EQUAL_0:  !a. bool (a = 0n) = zp (nat a)
+Proof
     Cases THEN RW_TAC int_ss [bool_def,zp_def,nat_def,INTEGERP_INT,
-          TRUTH_REWRITES,ite_def,GSYM int_def,GSYM INT_LT,not_def]);
+          TRUTH_REWRITES,ite_def,GSYM int_def,GSYM INT_LT,not_def]
+QED
 
-val NAT_0_LT = store_thm("NAT_0_LT",
-    ``!a. bool (0n < a) = not (zp (nat a))``,
+Theorem NAT_0_LT:
+      !a. bool (0n < a) = not (zp (nat a))
+Proof
     Cases THEN RW_TAC int_ss [bool_def,zp_def,nat_def,INTEGERP_INT,
-          TRUTH_REWRITES,ite_def,GSYM int_def,GSYM INT_LT,not_def]);
+          TRUTH_REWRITES,ite_def,GSYM int_def,GSYM INT_LT,not_def]
+QED
 
-val NAT_ADD = store_thm("NAT_ADD",
-    ``!a b. nat (a + b) = add (nat a) (nat b)``,
+Theorem NAT_ADD:
+      !a b. nat (a + b) = add (nat a) (nat b)
+Proof
     RW_TAC std_ss [nat_def,add_def,int_def,cpx_def,sexpTheory.rat_def,
            COMPLEX_ADD_def,rat_0_def,GSYM rat_0,GSYM frac_0_def,RAT_ADD_RID,
            rat_add_def,frac_add_def] THEN
     RAT_CONG_TAC THEN
     FULL_SIMP_TAC int_ss [NMR,DNM,INT_LT_01,RAT_EQ,FRAC_DNMPOS,
-                  INT_MUL_POS_SIGN,INT_LT_IMP_NE] THEN ARITH_TAC);
+                  INT_MUL_POS_SIGN,INT_LT_IMP_NE] THEN ARITH_TAC
+QED
 
-val NAT_SUC = store_thm("NAT_SUC",``!a. nat (SUC a) = add (nat a) (nat 1)``,
-    RW_TAC std_ss [NAT_ADD,ADD1]);
+Theorem NAT_SUC:  !a. nat (SUC a) = add (nat a) (nat 1)
+Proof
+    RW_TAC std_ss [NAT_ADD,ADD1]
+QED
 
-val NAT_PRE = store_thm("NAT_PRE",``!a. (?d. a = SUC d) ==>
-              (nat (PRE a) = add (nat a) (unary_minus (nat 1)))``,
+Theorem NAT_PRE:  !a. (?d. a = SUC d) ==>
+              (nat (PRE a) = add (nat a) (unary_minus (nat 1)))
+Proof
         Cases THEN
         RW_TAC arith_ss [nat_def,GSYM INT_UNARY_MINUS,GSYM INT_ADD] THEN
         AP_TERM_TAC THEN RW_TAC int_ss [ADD1,GSYM integerTheory.INT_ADD] THEN
-        ARITH_TAC);
+        ARITH_TAC
+QED
 
-val NAT_SUC_PRE = store_thm("NAT_SUC_PRE",
-    ``!a. (?d. a = SUC d) ==> (nat (SUC (PRE a)) = nat a)``,
-    Cases THEN REPEAT STRIP_TAC THEN AP_TERM_TAC THEN RW_TAC arith_ss [ADD1]);
+Theorem NAT_SUC_PRE:
+      !a. (?d. a = SUC d) ==> (nat (SUC (PRE a)) = nat a)
+Proof
+    Cases THEN REPEAT STRIP_TAC THEN AP_TERM_TAC THEN RW_TAC arith_ss [ADD1]
+QED
 
-val NAT_MULT = store_thm("NAT_MULT",
-    ``!a b. nat (a * b) = mult (nat a) (nat b)``,
+Theorem NAT_MULT:
+      !a b. nat (a * b) = mult (nat a) (nat b)
+Proof
     RW_TAC std_ss [nat_def,mult_def,int_def,cpx_def,sexpTheory.rat_def,
            COMPLEX_MULT_def,rat_0_def,GSYM rat_0,GSYM frac_0_def,
            RAT_MUL_RZERO,RAT_SUB_RID,rat_mul_def,frac_mul_def,RAT_ADD_RID] THEN
     RAT_CONG_TAC THEN
     FULL_SIMP_TAC int_ss [NMR,DNM,INT_LT_01,RAT_EQ,FRAC_DNMPOS,
         INT_MUL_POS_SIGN,INT_LT_IMP_NE,rat_0,frac_0_def,RAT_NMREQ0_CONG] THEN
-    ARITH_TAC);
+    ARITH_TAC
+QED
 
-val NAT_NUM = store_thm("NAT_NUM",
-    ``!a b. 0 <= a ==> (nat (Num a) = int a)``,
-    RW_TAC int_ss [nat_def,INT_OF_NUM,INT_CONG]);
+Theorem NAT_NUM:
+      !a b. 0 <= a ==> (nat (Num a) = int a)
+Proof
+    RW_TAC int_ss [nat_def,INT_OF_NUM,INT_CONG]
+QED
 
 (*****************************************************************************)
 (* Rational theorems:                                                        *)
 (*****************************************************************************)
 
-val FLATTEN_RAT = store_thm("FLATTEN_RAT",
-    ``!a. bool ((sexp_to_bool o rationalp) a) = rationalp (I a)``,
+Theorem FLATTEN_RAT:
+      !a. bool ((sexp_to_bool o rationalp) a) = rationalp (I a)
+Proof
     Cases THEN MAP_EVERY (TRY o Cases_on) [`c`,`c'`] THEN
     RW_TAC std_ss [rationalp_def,sexp_to_bool_def,
-             TRUTH_REWRITES,bool_def]);
+             TRUTH_REWRITES,bool_def]
+QED
 
-val RATIONALP_ADD = store_thm("RATIONALP_ADD",``!a b. (|= rationalp a) /\ (|= rationalp b) ==> |= rationalp (add a b)``,
+Theorem RATIONALP_ADD:  !a b. (|= rationalp a) /\ (|= rationalp b) ==> |= rationalp (add a b)
+Proof
         Cases THEN Cases THEN RW_TAC std_ss [rationalp_def,add_def,TRUTH_REWRITES] THEN
-        Cases_on `c` THEN Cases_on `c'` THEN FULL_SIMP_TAC std_ss [rationalp_def,COMPLEX_ADD_def,TRUTH_REWRITES,rat_0_def,GSYM rat_0,RAT_ADD_RID]);
+        Cases_on `c` THEN Cases_on `c'` THEN FULL_SIMP_TAC std_ss [rationalp_def,COMPLEX_ADD_def,TRUTH_REWRITES,rat_0_def,GSYM rat_0,RAT_ADD_RID]
+QED
 
-val RATIONALP_MULT = store_thm("RATIONALP_MULT",``!a b. (|= rationalp a) /\ (|= rationalp b) ==> |= rationalp (mult a b)``,
+Theorem RATIONALP_MULT:  !a b. (|= rationalp a) /\ (|= rationalp b) ==> |= rationalp (mult a b)
+Proof
         Cases THEN Cases THEN RW_TAC std_ss [rationalp_def,mult_def,TRUTH_REWRITES] THEN
-        Cases_on `c` THEN Cases_on `c'` THEN FULL_SIMP_TAC std_ss [rationalp_def,COMPLEX_MULT_def,TRUTH_REWRITES,rat_0_def,GSYM rat_0,RAT_ADD_RID,RAT_MUL_RZERO,RAT_MUL_LZERO]);
+        Cases_on `c` THEN Cases_on `c'` THEN FULL_SIMP_TAC std_ss [rationalp_def,COMPLEX_MULT_def,TRUTH_REWRITES,rat_0_def,GSYM rat_0,RAT_ADD_RID,RAT_MUL_RZERO,RAT_MUL_LZERO]
+QED
 
-val RATIONALP_UNARY_MINUS = store_thm("RATIONALP_UNARY_MINUS",``!a. (|= rationalp a) ==> |= rationalp (unary_minus a)``,
+Theorem RATIONALP_UNARY_MINUS:  !a. (|= rationalp a) ==> |= rationalp (unary_minus a)
+Proof
         Cases THEN RW_TAC std_ss [rationalp_def,unary_minus_def,TRUTH_REWRITES] THEN
-        Cases_on `c` THEN FULL_SIMP_TAC std_ss [rationalp_def,TRUTH_REWRITES,rat_0_def,GSYM rat_0,com_0_def,COMPLEX_SUB_def,RAT_SUB_RID]);
+        Cases_on `c` THEN FULL_SIMP_TAC std_ss [rationalp_def,TRUTH_REWRITES,rat_0_def,GSYM rat_0,com_0_def,COMPLEX_SUB_def,RAT_SUB_RID]
+QED
 
-val RATIONALP_RECIPROCAL = store_thm("RATIONALP_RECIPROCAL",``!a. (|= rationalp a) ==> |= rationalp (reciprocal a)``,
+Theorem RATIONALP_RECIPROCAL:  !a. (|= rationalp a) ==> |= rationalp (reciprocal a)
+Proof
         Cases THEN RW_TAC std_ss [rationalp_def,reciprocal_def,TRUTH_REWRITES,int_def,com_0_def,cpx_def,sexpTheory.rat_def,rat_0_def, GSYM rat_0,GSYM frac_0_def] THEN
         Cases_on `c` THEN FULL_SIMP_TAC std_ss [COMPLEX_RECIPROCAL_def,complex_rational_11,rationalp_def,TRUTH_REWRITES,rat_0_def,
-                GSYM rat_0,RAT_MUL_RZERO,RAT_ADD_RID,RAT_AINV_0,RAT_LDIV_EQ,RAT_NO_ZERODIV_NEG]);
+                GSYM rat_0,RAT_MUL_RZERO,RAT_ADD_RID,RAT_AINV_0,RAT_LDIV_EQ,RAT_NO_ZERODIV_NEG]
+QED
 
 
-val RAT_ADD = store_thm("RAT_ADD",``!a b. rat (a + b) = add (rat a) (rat b)``,
-        RW_TAC std_ss [add_def,COMPLEX_ADD_def,rat_0_def,GSYM rat_0,RAT_ADD_RID,rat_def]);
+Theorem RAT_ADD:  !a b. rat (a + b) = add (rat a) (rat b)
+Proof
+        RW_TAC std_ss [add_def,COMPLEX_ADD_def,rat_0_def,GSYM rat_0,RAT_ADD_RID,rat_def]
+QED
 
-val RAT_MULT = store_thm("RAT_MULT",``!a b. rat (a * b) = mult (rat a) (rat b)``,
-        RW_TAC std_ss [mult_def,COMPLEX_MULT_def,rat_0_def,GSYM rat_0,rat_def,RAT_SUB_RID,RAT_MUL_LZERO,RAT_MUL_RZERO,RAT_ADD_RID]);
+Theorem RAT_MULT:  !a b. rat (a * b) = mult (rat a) (rat b)
+Proof
+        RW_TAC std_ss [mult_def,COMPLEX_MULT_def,rat_0_def,GSYM rat_0,rat_def,RAT_SUB_RID,RAT_MUL_LZERO,RAT_MUL_RZERO,RAT_ADD_RID]
+QED
 
-val RAT_UNARY_MINUS = store_thm("RAT_UNARY_MINUS",``!a. rat (~a) = unary_minus (rat a)``,
-        RW_TAC std_ss [rat_def,unary_minus_def,com_0_def,COMPLEX_SUB_def,rat_0_def,GSYM rat_0,RAT_SUB_LID,RAT_AINV_0]);
+Theorem RAT_UNARY_MINUS:  !a. rat (~a) = unary_minus (rat a)
+Proof
+        RW_TAC std_ss [rat_def,unary_minus_def,com_0_def,COMPLEX_SUB_def,rat_0_def,GSYM rat_0,RAT_SUB_LID,RAT_AINV_0]
+QED
 
 val rat_divshiftthm = prove(``a * (b / c) = a * b / c:rat``,
     RW_TAC std_ss [RAT_DIV_MULMINV,RAT_MUL_ASSOC]);
 
-val RAT_DIV = store_thm("RAT_DIV",
-    ``!a b. ~(b = 0) ==> (rat (a / b) = mult (rat a) (reciprocal (rat b)))``,
+Theorem RAT_DIV:
+      !a b. ~(b = 0) ==> (rat (a / b) = mult (rat a) (reciprocal (rat b)))
+Proof
     RW_TAC std_ss [rat_def,mult_def,reciprocal_def,COMPLEX_RECIPROCAL_def,
            rat_0_def,GSYM rat_0,COMPLEX_MULT_def,RAT_MUL_RZERO,
            RAT_ADD_RID,RAT_MUL_LZERO,RAT_ADD_LID,RAT_AINV_0,int_def,
            RAT_SUB_RID,com_0_def,complex_rational_11,cpx_def,sexpTheory.rat_def,
            GSYM frac_0_def,RAT_LDIV_EQ,rat_divshiftthm,RAT_NO_ZERODIV_NEG,
            RAT_RDIV_EQ,RAT_MUL_ASSOC] THEN
-    CONV_TAC (AC_CONV (RAT_MUL_ASSOC,RAT_MUL_COMM)));
+    CONV_TAC (AC_CONV (RAT_MUL_ASSOC,RAT_MUL_COMM))
+QED
 
-val RAT_SUB = store_thm("RAT_SUB",``!a b. rat (a - b) = add (rat a) (unary_minus (rat b))``,
-        RW_TAC std_ss [rat_def,add_def,unary_minus_def,com_0_def,rat_0_def,GSYM rat_0,COMPLEX_SUB_def,COMPLEX_ADD_def,RAT_SUB_LID,RAT_ADD_RID,RAT_AINV_0,RAT_SUB_ADDAINV]);
+Theorem RAT_SUB:  !a b. rat (a - b) = add (rat a) (unary_minus (rat b))
+Proof
+        RW_TAC std_ss [rat_def,add_def,unary_minus_def,com_0_def,rat_0_def,GSYM rat_0,COMPLEX_SUB_def,COMPLEX_ADD_def,RAT_SUB_LID,RAT_ADD_RID,RAT_AINV_0,RAT_SUB_ADDAINV]
+QED
 
-val RAT_EQUAL = store_thm("RAT_EQUAL",``!a b. bool (a = b) = equal (rat a) (rat b)``,RW_TAC std_ss [bool_def,equal_def,rat_def,RAT_LES_REF]);
+Theorem RAT_EQUAL:  !a b. bool (a = b) = equal (rat a) (rat b)
+ProofRW_TAC std_ss [bool_def,equal_def,rat_def,RAT_LES_REF]
+QED
 
 (*****************************************************************************)
 (* Complex (general number) theorems:                                        *)
 (*****************************************************************************)
 
-val ACL2_NUMBERP_COM = store_thm("ACL2_NUMBERP_COM",``!a. |= acl2_numberp (num a)``,RW_TAC std_ss [acl2_numberp_def,TRUTH_REWRITES]);
+Theorem ACL2_NUMBERP_COM:  !a. |= acl2_numberp (num a)
+ProofRW_TAC std_ss [acl2_numberp_def,TRUTH_REWRITES]
+QED
 
-val ACL2_NUMBERP_ADD = store_thm("ACL2_NUMBERP_ADD",``!a b. |= acl2_numberp (add a b)``,
-        Cases THEN Cases THEN RW_TAC std_ss [acl2_numberp_def,add_def,TRUTH_REWRITES,int_def,cpx_def]);
+Theorem ACL2_NUMBERP_ADD:  !a b. |= acl2_numberp (add a b)
+Proof
+        Cases THEN Cases THEN RW_TAC std_ss [acl2_numberp_def,add_def,TRUTH_REWRITES,int_def,cpx_def]
+QED
 
-val ACL2_NUMBERP_MULT = store_thm("ACL2_NUMBERP_MULT",``!a b. |= acl2_numberp (mult a b)``,
-        Cases THEN Cases THEN RW_TAC std_ss [acl2_numberp_def,mult_def,TRUTH_REWRITES,int_def,cpx_def]);
+Theorem ACL2_NUMBERP_MULT:  !a b. |= acl2_numberp (mult a b)
+Proof
+        Cases THEN Cases THEN RW_TAC std_ss [acl2_numberp_def,mult_def,TRUTH_REWRITES,int_def,cpx_def]
+QED
 
-val ACL2_NUMBERP_UNARY_MINUS = store_thm("ACL2_NUMBERP_UNARY_MINUS",``!a. |= acl2_numberp (unary_minus a)``,
-        Cases_on `a` THEN RW_TAC std_ss [acl2_numberp_def,unary_minus_def,TRUTH_REWRITES,int_def,cpx_def]);
+Theorem ACL2_NUMBERP_UNARY_MINUS:  !a. |= acl2_numberp (unary_minus a)
+Proof
+        Cases_on `a` THEN RW_TAC std_ss [acl2_numberp_def,unary_minus_def,TRUTH_REWRITES,int_def,cpx_def]
+QED
 
-val ACL2_NUMBERP_RECIPROCAL = store_thm("ACL2_NUMBERP_RECIPROCAL",``!a. |= acl2_numberp (reciprocal a)``,
-        Cases_on `a` THEN RW_TAC std_ss [acl2_numberp_def,reciprocal_def,TRUTH_REWRITES,int_def,cpx_def]);
+Theorem ACL2_NUMBERP_RECIPROCAL:  !a. |= acl2_numberp (reciprocal a)
+Proof
+        Cases_on `a` THEN RW_TAC std_ss [acl2_numberp_def,reciprocal_def,TRUTH_REWRITES,int_def,cpx_def]
+QED
 
-val COM_ADD = store_thm("COM_ADD",``!a b. num (a + b) = add (num a) (num b)``,RW_TAC std_ss [add_def]);
+Theorem COM_ADD:  !a b. num (a + b) = add (num a) (num b)
+ProofRW_TAC std_ss [add_def]
+QED
 
-val COM_MULT = store_thm("COM_MULT",``!a b. num (a * b) = mult (num a) (num b)``,RW_TAC std_ss [mult_def]);
+Theorem COM_MULT:  !a b. num (a * b) = mult (num a) (num b)
+ProofRW_TAC std_ss [mult_def]
+QED
 
-val COM_UNARY_MINUS = store_thm("COM_UNARY_MINUS",``!a. num (~a) = unary_minus (num a)``,RW_TAC std_ss [unary_minus_def,COMPLEX_NEG_def]);
+Theorem COM_UNARY_MINUS:  !a. num (~a) = unary_minus (num a)
+ProofRW_TAC std_ss [unary_minus_def,COMPLEX_NEG_def]
+QED
 
-val COM_SUB = store_thm("COM_SUB",``num (a - b) = add (num a) (unary_minus (num b))``,
+Theorem COM_SUB:  num (a - b) = add (num a) (unary_minus (num b))
+Proof
         RW_TAC std_ss [unary_minus_def,add_def,com_0_def] THEN
         Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [COMPLEX_ADD_def,COMPLEX_SUB_def,rat_0_def,GSYM rat_0,RAT_SUB_LID,RAT_LSUB_EQ] THEN
-        METIS_TAC [RAT_ADD_COMM,RAT_ADD_ASSOC,RAT_ADD_RINV,RAT_ADD_RID]);
+        METIS_TAC [RAT_ADD_COMM,RAT_ADD_ASSOC,RAT_ADD_RINV,RAT_ADD_RID]
+QED
 
-val COM_DIV = store_thm("COM_DIV",``!a b. ~(b = com_0) ==> (num (a / b) = mult (num a) (reciprocal (num b)))``,
-        RW_TAC std_ss [mult_def,reciprocal_def,COMPLEX_DIV_def]);
+Theorem COM_DIV:  !a b. ~(b = com_0) ==> (num (a / b) = mult (num a) (reciprocal (num b)))
+Proof
+        RW_TAC std_ss [mult_def,reciprocal_def,COMPLEX_DIV_def]
+QED
 
-val COM_EQUAL = store_thm("COM_EQUAL",``bool (a = b) = equal (num a) (num b)``,
-        Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [bool_def,equal_def,TRUTH_REWRITES,complex_rational_11]);
+Theorem COM_EQUAL:  bool (a = b) = equal (num a) (num b)
+Proof
+        Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [bool_def,equal_def,TRUTH_REWRITES,complex_rational_11]
+QED
 
-val FIX_NUM = store_thm("FIX_NUM",``(!a. fix (num a) = num a) /\ (!a. fix (rat a) = rat a) /\ (!a. fix (int a) = int a) /\ (!a. fix (nat a) = nat a)``,
-        RW_TAC std_ss [fix_def,ACL2_NUMBERP_NUM,ite_def,TRUTH_REWRITES,rat_def,int_def,nat_def,cpx_def]);
+Theorem FIX_NUM:  (!a. fix (num a) = num a) /\ (!a. fix (rat a) = rat a) /\ (!a. fix (int a) = int a) /\ (!a. fix (nat a) = nat a)
+Proof
+        RW_TAC std_ss [fix_def,ACL2_NUMBERP_NUM,ite_def,TRUTH_REWRITES,rat_def,int_def,nat_def,cpx_def]
+QED
 
-val NAT_NFIX = store_thm("NAT_NFIX",``nfix (nat a) = nat a``,
+Theorem NAT_NFIX:  nfix (nat a) = nat a
+Proof
         RW_TAC std_ss [nfix_def,ite_def,TRUTH_REWRITES,nat_def,ANDL_REWRITE,INTEGERP_INT,GSYM INT_LT,GSYM BOOL_NOT] THEN
-        METIS_TAC [INT_POS,INT_NOT_LT]);
+        METIS_TAC [INT_POS,INT_NOT_LT]
+QED
 
-val INT_IFIX = store_thm("INT_IFIX",``ifix (int a) = int a``,RW_TAC std_ss [ifix_def,ite_def,TRUTH_REWRITES,INTEGERP_INT]);
+Theorem INT_IFIX:  ifix (int a) = int a
+ProofRW_TAC std_ss [ifix_def,ite_def,TRUTH_REWRITES,INTEGERP_INT]
+QED
 
 (*****************************************************************************)
 (* Pair theorems:                                                            *)
 (*****************************************************************************)
 
-val PAIR_FST = store_thm("PAIR_FST",
-    ``f (FST x) = car (pair f g x)``,
-    RW_TAC std_ss [pairTheory.FST,pair_def,car_def]);
+Theorem PAIR_FST:
+      f (FST x) = car (pair f g x)
+Proof
+    RW_TAC std_ss [pairTheory.FST,pair_def,car_def]
+QED
 
-val PAIR_SND = store_thm("PAIR_SND",
-    ``g (SND x) = cdr (pair f g x)``,
-    RW_TAC std_ss [pairTheory.SND,pair_def,cdr_def]);
+Theorem PAIR_SND:
+      g (SND x) = cdr (pair f g x)
+Proof
+    RW_TAC std_ss [pairTheory.SND,pair_def,cdr_def]
+QED
 
-val PAIR_CASE = store_thm("PAIR_CASE",
-    ``f (pair_case g x) = f ((\(a,b). g a b) x)``,
+Theorem PAIR_CASE:
+      f (pair_case g x) = f ((\(a,b). g a b) x)
+Proof
     Cases_on `x` THEN REWRITE_TAC [TypeBase.case_def_of ``:'a # 'b``] THEN
-    pairLib.GEN_BETA_TAC THEN REWRITE_TAC []);
+    pairLib.GEN_BETA_TAC THEN REWRITE_TAC []
+QED
 
 (*****************************************************************************)
 (* List theorems:                                                            *)
 (*****************************************************************************)
 
-val LIST_HD = store_thm("LIST_HD",
-    ``(?a b. l = a::b) ==> (encode (HD l) = car (list encode l))``,
-    Induct_on `l` THEN RW_TAC std_ss [list_def,HD,car_def]);
+Theorem LIST_HD:
+      (?a b. l = a::b) ==> (encode (HD l) = car (list encode l))
+Proof
+    Induct_on `l` THEN RW_TAC std_ss [list_def,HD,car_def]
+QED
 
-val LIST_TL = store_thm("LIST_TL",
-    ``(?a b. l = a :: b) ==> (list encode (TL l) = cdr (list encode l))``,
-    Induct_on `l` THEN RW_TAC std_ss [list_def,TL,cdr_def]);
+Theorem LIST_TL:
+      (?a b. l = a :: b) ==> (list encode (TL l) = cdr (list encode l))
+Proof
+    Induct_on `l` THEN RW_TAC std_ss [list_def,TL,cdr_def]
+QED
 
-val LIST_NULL = store_thm("LIST_NULL",
-    ``!l. bool (NULL l) = atom (list f l)``,
+Theorem LIST_NULL:
+      !l. bool (NULL l) = atom (list f l)
+Proof
     Cases THEN
     RW_TAC arith_ss [bool_def,hol_defaxiomsTheory.atom_def,list_def,NULL,
-           TRUTH_REWRITES,hol_defaxiomsTheory.not_def,consp_def]);
+           TRUTH_REWRITES,hol_defaxiomsTheory.not_def,consp_def]
+QED
 
-val LIST_LENGTH = store_thm("LIST_LENGTH",
-    ``nat (LENGTH l) = len (list f l)``,
+Theorem LIST_LENGTH:
+      nat (LENGTH l) = len (list f l)
+Proof
     Induct_on `l` THEN ONCE_REWRITE_TAC [len_def] THEN
     RW_TAC std_ss [LENGTH,list_def,consp_def,ite_def,
                    TRUTH_REWRITES,NAT_SUC,cdr_def] THEN
     POP_ASSUM (SUBST_ALL_TAC o GSYM) THEN
-    RW_TAC arith_ss [GSYM NAT_ADD]);
+    RW_TAC arith_ss [GSYM NAT_ADD]
+QED
 
 (*****************************************************************************)
 (* String theorems:                                                          *)
@@ -1199,51 +1453,67 @@ val LIST_LENGTH = store_thm("LIST_LENGTH",
 
 val list_rewrite = prove(``list_to_sexp = list``,REWRITE_TAC [FUN_EQ_THM] THEN GEN_TAC THEN Induct THEN METIS_TAC [list_def,list_to_sexp_def]);
 
-val STRING_EXPLODE = store_thm("STRING_EXPLODE",``list chr (EXPLODE s) = coerce (str s) (sym "COMMON-LISP" "LIST")``,
-        RW_TAC std_ss [coerce_def,coerce_string_to_list_def,list_rewrite]);
+Theorem STRING_EXPLODE:  list chr (EXPLODE s) = coerce (str s) (sym "COMMON-LISP" "LIST")
+Proof
+        RW_TAC std_ss [coerce_def,coerce_string_to_list_def,list_rewrite]
+QED
 
-val STRING_IMPLODE = store_thm("STRING_IMPLODE",``str (IMPLODE l) = coerce (list chr l) (sym "COMMON-LISP" "STRING")``,
+Theorem STRING_IMPLODE:  str (IMPLODE l) = coerce (list chr l) (sym "COMMON-LISP" "STRING")
+Proof
         Induct_on `l` THEN RW_TAC std_ss [coerce_def,coerce_list_to_string_def,list_rewrite,list_def,
                 nil_def,stringTheory.IMPLODE_EQNS,make_character_list_def] THEN
         Cases_on `list chr l` THEN POP_ASSUM MP_TAC THEN Cases_on `l` THEN
         REPEAT (RW_TAC std_ss [coerce_def,list_def,nil_def,stringTheory.IMPLODE_EQNS,
-                make_character_list_def,coerce_list_to_string_def] THEN REPEAT (POP_ASSUM MP_TAC)));
+                make_character_list_def,coerce_list_to_string_def] THEN REPEAT (POP_ASSUM MP_TAC))
+QED
 
 val coerce_rewrite = CONJ (GSYM STRING_EXPLODE) (GSYM STRING_IMPLODE);
 
-val STRING_LENGTH = store_thm("STRING_LENGTH",``nat (STRLEN s) = length (str s)``,
+Theorem STRING_LENGTH:  nat (STRLEN s) = length (str s)
+Proof
         RW_TAC std_ss [stringp_def,ite_def,TRUTH_REWRITES,length_def,coerce_def,coerce_string_to_list_def,
                         stringTheory.STRLEN_THM,GSYM LIST_LENGTH,list_rewrite,csym_def,COMMON_LISP_def,
-                        GSYM stringTheory.STRLEN_EXPLODE_THM]);
+                        GSYM stringTheory.STRLEN_EXPLODE_THM]
+QED
 
 
 (*****************************************************************************)
 (* Case theorems                                                             *)
 (*****************************************************************************)
 
-val NUM_CONSTRUCT = store_thm("NUM_CONSTRUCT",
-    ``!a. bool (?d. a = SUC d) = bool (0 < a)``,
-    Cases THEN RW_TAC arith_ss []);
+Theorem NUM_CONSTRUCT:
+      !a. bool (?d. a = SUC d) = bool (0 < a)
+Proof
+    Cases THEN RW_TAC arith_ss []
+QED
 
-val NUM_CASE = store_thm("NUM_CASE",
-    ``!X a b. f (num_case a b X) =
-                               f (if X = 0 then a else b (PRE X))``,
+Theorem NUM_CASE:
+      !X a b. f (num_case a b X) =
+                               f (if X = 0 then a else b (PRE X))
+Proof
     Cases THEN REWRITE_TAC [TypeBase.case_def_of ``:num``] THEN
-    RW_TAC arith_ss []);
+    RW_TAC arith_ss []
+QED
 
-val LIST_CASE = store_thm("LIST_CASE",
-    ``!l. f (list_case n c l) =
-                         f (if (l = []) then n else c (HD l) (TL l))``,
-    Cases THEN RW_TAC arith_ss [NULL,HD,TL]);
+Theorem LIST_CASE:
+      !l. f (list_case n c l) =
+                         f (if (l = []) then n else c (HD l) (TL l))
+Proof
+    Cases THEN RW_TAC arith_ss [NULL,HD,TL]
+QED
 
-val LIST_CONSTRUCT1 = store_thm("LIST_CONSTRUCT1",
-    ``!l. bool (l = []) = bool (NULL l)``,
-    Cases THEN REWRITE_TAC [NULL,GSYM (TypeBase.distinct_of ``:'a list``)]);
+Theorem LIST_CONSTRUCT1:
+      !l. bool (l = []) = bool (NULL l)
+Proof
+    Cases THEN REWRITE_TAC [NULL,GSYM (TypeBase.distinct_of ``:'a list``)]
+QED
 
-val LIST_CONSTRUCT2 = store_thm("LIST_CONSTRUCT2",
-    ``!l. bool (?a b. l = a::b) = bool (~NULL l)``,
+Theorem LIST_CONSTRUCT2:
+      !l. bool (?a b. l = a::b) = bool (~NULL l)
+Proof
     Cases THEN REWRITE_TAC [NULL] THEN
-    AP_TERM_TAC THEN EQ_TAC THEN METIS_TAC [TypeBase.distinct_of ``:'a list``]);
+    AP_TERM_TAC THEN EQ_TAC THEN METIS_TAC [TypeBase.distinct_of ``:'a list``]
+QED
 
 (*****************************************************************************)
 (* Comparison theorems:                                                      *)
@@ -1251,67 +1521,109 @@ val LIST_CONSTRUCT2 = store_thm("LIST_CONSTRUCT2",
 
 (* LT, LE, GT, GE *)
 
-val NAT_LT = store_thm("NAT_LT",``!a b. bool (a < b) = less (nat a) (nat b)``,
-        RW_TAC int_ss [nat_def,GSYM INT_LT,bool_def]);
+Theorem NAT_LT:  !a b. bool (a < b) = less (nat a) (nat b)
+Proof
+        RW_TAC int_ss [nat_def,GSYM INT_LT,bool_def]
+QED
 
-val RAT_LT = store_thm("RAT_LT",``!a b. bool (a < b) = less (rat a) (rat b)``,RW_TAC std_ss [bool_def,less_def,rat_def,RAT_LES_REF]);
+Theorem RAT_LT:  !a b. bool (a < b) = less (rat a) (rat b)
+ProofRW_TAC std_ss [bool_def,less_def,rat_def,RAT_LES_REF]
+QED
 
-val COM_LT = store_thm("COM_LT",``bool (a < b) = less (num a) (num b)``,
-        Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [bool_def,less_def,TRUTH_REWRITES,COMPLEX_LT_def]);
-
-
-val COM_NOT_LT = store_thm("COM_NOT_LT",``!a b. ~(a < b) = b <= a:complex_rational``,
-        Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [COMPLEX_LT_def,COMPLEX_LE_def,RAT_LEQ_LES,rat_leq_def] THEN METIS_TAC [RAT_LES_IMP_NEQ]);
-
-val NAT_LE = store_thm("NAT_LE",``bool (a <= b) = not (less (nat b) (nat a))``,RW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM NAT_LT,NOT_LESS]);
-
-val INT_LE = store_thm("INT_LE",``bool (a <= b) = not (less (int b) (int a))``,RW_TAC int_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM INT_LT,INT_NOT_LT]);
-
-val RAT_LE = store_thm("RAT_LE",``bool (a <= b) = not (less (rat b) (rat a))``,RW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM RAT_LT,RAT_LEQ_LES]);
-
-val COM_LE = store_thm("COM_LE",``bool (a <= b) = not (less (num b) (num a))``,RW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM COM_LT,COM_NOT_LT]);
+Theorem COM_LT:  bool (a < b) = less (num a) (num b)
+Proof
+        Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [bool_def,less_def,TRUTH_REWRITES,COMPLEX_LT_def]
+QED
 
 
-val NAT_GE = store_thm("NAT_GE",``bool (a >= b) = bool (b <= a:num)``,AP_TERM_TAC THEN DECIDE_TAC);
-val INT_GE = store_thm("INT_GE",``bool (a >= b) = bool (b <= a:int)``,AP_TERM_TAC THEN ARITH_TAC);
-val RAT_GE = store_thm("RAT_GE",``bool (a >= b) = bool (b <= a:rat)``,REWRITE_TAC [rat_geq_def]);
-val COM_GE = store_thm("COM_GE",``bool (a >= b) = bool (b <= a:complex_rational)``,
+Theorem COM_NOT_LT:  !a b. ~(a < b) = b <= a:complex_rational
+Proof
+        Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [COMPLEX_LT_def,COMPLEX_LE_def,RAT_LEQ_LES,rat_leq_def] THEN METIS_TAC [RAT_LES_IMP_NEQ]
+QED
+
+Theorem NAT_LE:  bool (a <= b) = not (less (nat b) (nat a))
+ProofRW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM NAT_LT,NOT_LESS]
+QED
+
+Theorem INT_LE:  bool (a <= b) = not (less (int b) (int a))
+ProofRW_TAC int_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM INT_LT,INT_NOT_LT]
+QED
+
+Theorem RAT_LE:  bool (a <= b) = not (less (rat b) (rat a))
+ProofRW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM RAT_LT,RAT_LEQ_LES]
+QED
+
+Theorem COM_LE:  bool (a <= b) = not (less (num b) (num a))
+ProofRW_TAC std_ss [bool_def,TRUTH_REWRITES,not_def,ite_def,GSYM COM_LT,COM_NOT_LT]
+QED
+
+
+Theorem NAT_GE:  bool (a >= b) = bool (b <= a:num)
+ProofAP_TERM_TAC THEN DECIDE_TAC
+QED
+Theorem INT_GE:  bool (a >= b) = bool (b <= a:int)
+ProofAP_TERM_TAC THEN ARITH_TAC
+QED
+Theorem RAT_GE:  bool (a >= b) = bool (b <= a:rat)
+ProofREWRITE_TAC [rat_geq_def]
+QED
+Theorem COM_GE:  bool (a >= b) = bool (b <= a:complex_rational)
+Proof
         AP_TERM_TAC THEN Cases_on `a` THEN Cases_on `b` THEN
         REWRITE_TAC [COMPLEX_LE_def,COMPLEX_GE_def,rat_gre_def,rat_geq_def] THEN
-        EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []);
+        EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []
+QED
 
-val NAT_GT = store_thm("NAT_GT",``bool (a > b) = bool (b < a:num)``,AP_TERM_TAC THEN DECIDE_TAC);
-val INT_GT = store_thm("INT_GT",``bool (a > b) = bool (b < a:int)``,AP_TERM_TAC THEN ARITH_TAC);
-val RAT_GT = store_thm("RAT_GT",``bool (a > b) = bool (b < a:rat)``,REWRITE_TAC [rat_gre_def]);
-val COM_GT = store_thm("COM_GT",``bool (a > b) = bool (b < a:complex_rational)``,
+Theorem NAT_GT:  bool (a > b) = bool (b < a:num)
+ProofAP_TERM_TAC THEN DECIDE_TAC
+QED
+Theorem INT_GT:  bool (a > b) = bool (b < a:int)
+ProofAP_TERM_TAC THEN ARITH_TAC
+QED
+Theorem RAT_GT:  bool (a > b) = bool (b < a:rat)
+ProofREWRITE_TAC [rat_gre_def]
+QED
+Theorem COM_GT:  bool (a > b) = bool (b < a:complex_rational)
+Proof
         AP_TERM_TAC THEN Cases_on `a` THEN Cases_on `b` THEN
         REWRITE_TAC [COMPLEX_LT_def,COMPLEX_GT_def,rat_gre_def,rat_geq_def] THEN
-        EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []);
+        EQ_TAC THEN REPEAT STRIP_TAC THEN ASM_REWRITE_TAC []
+QED
 
 (*****************************************************************************)
 (* Subtraction theorems:                                                     *)
 (*****************************************************************************)
 
-val INT_SUB = store_thm("INT_SUB",``!a b. int (a - b) = add (int a) (unary_minus (int b))``,
-        RW_TAC int_ss [GSYM INT_ADD,GSYM INT_UNARY_MINUS,int_sub]);
+Theorem INT_SUB:  !a b. int (a - b) = add (int a) (unary_minus (int b))
+Proof
+        RW_TAC int_ss [GSYM INT_ADD,GSYM INT_UNARY_MINUS,int_sub]
+QED
 
-val NAT_SUB = store_thm("NAT_SUB",
-    ``!a b. nat (a - b) = nfix (add (nat a) (unary_minus (nat b)))``,
+Theorem NAT_SUB:
+      !a b. nat (a - b) = nfix (add (nat a) (unary_minus (nat b)))
+Proof
     RW_TAC int_ss [nat_def,GSYM INT_SUB,nfix_def,ite_def,TRUTH_REWRITES,
            natp_def,INTEGERP_INT,GSYM INT_EQUAL,
            GSYM INT_LT,INT_CONG,GSYM BOOL_NOT,ANDL_REWRITE] THEN
     FULL_SIMP_TAC int_ss [INT_NOT_LT,INT_LE_SUB_RADD,INT_LT_SUB_LADD,
-                  integerTheory.INT_SUB,INT_LE_SUB_LADD,INT_LT_SUB_RADD] );
+                  integerTheory.INT_SUB,INT_LE_SUB_LADD,INT_LT_SUB_RADD]
+QED
 
-val RAT_SUB = store_thm("RAT_SUB",``rat (a - b) = add (rat a) (unary_minus (rat b))``,
-        RW_TAC std_ss [rat_sub_def,frac_sub_def,GSYM RAT_ADD,GSYM RAT_UNARY_MINUS,rat_ainv_def,rat_add_def,frac_ainv_def,RAT_ADD_CONG]);
-val COM_SUB = store_thm("COM_SUB",``num (a - b) = add (num a) (unary_minus (num b))``,
+Theorem RAT_SUB:  rat (a - b) = add (rat a) (unary_minus (rat b))
+Proof
+        RW_TAC std_ss [rat_sub_def,frac_sub_def,GSYM RAT_ADD,GSYM RAT_UNARY_MINUS,rat_ainv_def,rat_add_def,frac_ainv_def,RAT_ADD_CONG]
+QED
+Theorem COM_SUB:  num (a - b) = add (num a) (unary_minus (num b))
+Proof
         Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [COMPLEX_SUB_def,GSYM COM_UNARY_MINUS,GSYM COM_ADD,
-                COMPLEX_NEG_def,COMPLEX_ADD_def,com_0_def,RAT_SUB_LID,rat_0_def,GSYM rat_0,RAT_SUB_ADDAINV]);
+                COMPLEX_NEG_def,COMPLEX_ADD_def,com_0_def,RAT_SUB_LID,rat_0_def,GSYM rat_0,RAT_SUB_ADDAINV]
+QED
 
-val NAT_SUB_COND = store_thm("NAT_SUB_COND",``!a b. b <= a ==> (nat (a - b) = add (nat a) (unary_minus (nat b)))``,
+Theorem NAT_SUB_COND:  !a b. b <= a ==> (nat (a - b) = add (nat a) (unary_minus (nat b)))
+Proof
         RW_TAC int_ss [nat_def,GSYM INT_SUB,nfix_def,ite_def,TRUTH_REWRITES,natp_def,INTEGERP_INT,GSYM INT_EQUAL,GSYM INT_LT,INT_CONG] THEN
-        FULL_SIMP_TAC int_ss [INT_NOT_LT,INT_LE_SUB_RADD,INT_LT_SUB_LADD,integerTheory.INT_SUB] THEN FULL_SIMP_TAC int_ss [INT_EQ_SUB_LADD]);
+        FULL_SIMP_TAC int_ss [INT_NOT_LT,INT_LE_SUB_RADD,INT_LT_SUB_LADD,integerTheory.INT_SUB] THEN FULL_SIMP_TAC int_ss [INT_EQ_SUB_LADD]
+QED
 
 val MK_THMS = LIST_CONJ o (map GEN_ALL);
 
@@ -1319,34 +1631,43 @@ val MK_THMS = LIST_CONJ o (map GEN_ALL);
 (* Natural number judgement theorems:                                        *)
 (*****************************************************************************)
 
-val NATP_ADD = store_thm("NATP_ADD",
-    ``!a b. (|= natp a) /\ (|= natp b) ==> |= natp (add a b)``,
+Theorem NATP_ADD:
+      !a b. (|= natp a) /\ (|= natp b) ==> |= natp (add a b)
+Proof
     REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN
-    RW_TAC std_ss [GSYM NAT_ADD,NATP_NAT]);
+    RW_TAC std_ss [GSYM NAT_ADD,NATP_NAT]
+QED
 
-val NATP_MULT = store_thm("NATP_MULT",
-    ``!a b. (|= natp a) /\ (|= natp b) ==> |= natp (mult a b)``,
+Theorem NATP_MULT:
+      !a b. (|= natp a) /\ (|= natp b) ==> |= natp (mult a b)
+Proof
     REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN
-    RW_TAC std_ss [GSYM NAT_MULT,NATP_NAT]);
+    RW_TAC std_ss [GSYM NAT_MULT,NATP_NAT]
+QED
 
-val NATP_PRE = store_thm("NATP_PRE",
-    ``!a. (|= natp a) ==> ~(a = nat 0) ==>
-          |= natp (add a (unary_minus (nat 1)))``,
-    REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN
-    FULL_SIMP_TAC int_ss [nat_def,GSYM INT_ADD,GSYM INT_UNARY_MINUS,
-        INT_ADD_CALCULATE,natp_def,ANDL_REWRITE,INTEGERP_INT,GSYM INT_LT,
-        not_def,TRUTH_REWRITES,ite_def,INT_CONG]);
-
-val NATP_SUB = store_thm("NATP_SUB",
-    ``!a b. (|= natp a) /\ (|= natp b) /\ (|= not (less a b)) ==>
-         |= natp (add a (unary_minus b))``,
+Theorem NATP_PRE:
+      !a. (|= natp a) ==> ~(a = nat 0) ==>
+          |= natp (add a (unary_minus (nat 1)))
+Proof
     REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN
     FULL_SIMP_TAC int_ss [nat_def,GSYM INT_ADD,GSYM INT_UNARY_MINUS,
         INT_ADD_CALCULATE,natp_def,ANDL_REWRITE,INTEGERP_INT,GSYM INT_LT,
-        not_def,TRUTH_REWRITES,ite_def,INT_CONG]);
+        not_def,TRUTH_REWRITES,ite_def,INT_CONG]
+QED
 
-val NATP_NFIX = store_thm("NATP_NFIX",
-     ``!a. |= natp (nfix a)``,
+Theorem NATP_SUB:
+      !a b. (|= natp a) /\ (|= natp b) /\ (|= not (less a b)) ==>
+         |= natp (add a (unary_minus b))
+Proof
+    REPEAT STRIP_TAC THEN CHOOSEP_TAC THEN
+    FULL_SIMP_TAC int_ss [nat_def,GSYM INT_ADD,GSYM INT_UNARY_MINUS,
+        INT_ADD_CALCULATE,natp_def,ANDL_REWRITE,INTEGERP_INT,GSYM INT_LT,
+        not_def,TRUTH_REWRITES,ite_def,INT_CONG]
+QED
+
+Theorem NATP_NFIX:
+       !a. |= natp (nfix a)
+Proof
      RW_TAC std_ss [natp_def,nfix_def,ite_def,TRUTH_REWRITES,
             ANDL_REWRITE,nat_def] THEN
     FULL_SIMP_TAC std_ss [INTEGERP_INT,GSYM INT_LT,GSYM INT_EQUAL,
@@ -1354,7 +1675,8 @@ val NATP_NFIX = store_thm("NATP_NFIX",
     CHOOSEP_TAC THEN
     FULL_SIMP_TAC std_ss [GSYM BOOL_NOT,INTEGERP_INT,GSYM INT_LT,
                   GSYM INT_EQUAL,TRUTH_REWRITES] THEN
-    ARITH_TAC);
+    ARITH_TAC
+QED
 
 (*****************************************************************************)
 (* Grouped theorems for export.                                              *)

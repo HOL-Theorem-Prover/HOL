@@ -189,26 +189,29 @@ EVAL ``MAP prime_testM [1 .. 15]``; =
 
 (* Theorem: valueOf (factor_seekM n c q) = factor_seek n c q *)
 (* Proof: by induction on factor_seekM_def, factor_seek_def. *)
-val factor_seekM_value = store_thm(
-  "factor_seekM_value[simp]",
-  ``!n c q. valueOf (factor_seekM n c q) = factor_seek n c q``,
+Theorem factor_seekM_value[simp]:
+    !n c q. valueOf (factor_seekM n c q) = factor_seek n c q
+Proof
   ho_match_mp_tac (theorem "factor_seekM_ind") >>
   rw[] >>
-  rw[Once factor_seekM_def, Once factor_seek_def]);
+  rw[Once factor_seekM_def, Once factor_seek_def]
+QED
 
 (* Theorem: valueOf (prime_testM n) = prime_test n *)
 (* Proof: by prime_testM_def, prime_test_def *)
-val prime_testM_value = store_thm(
-  "prime_testM_value[simp]",
-  ``!n. valueOf (prime_testM n) = prime_test n``,
-  rw[prime_testM_def, prime_test_def]);
+Theorem prime_testM_value[simp]:
+    !n. valueOf (prime_testM n) = prime_test n
+Proof
+  rw[prime_testM_def, prime_test_def]
+QED
 
 (* Theorem: valueOf (prime_testM n) = prime n *)
 (* Proof: by prime_testM_value, prime_test_thm *)
-val prime_testM_thm = store_thm(
-  "prime_testM_thm",
-  ``!n. valueOf (prime_testM n) = prime n``,
-  rw[prime_test_thm]);
+Theorem prime_testM_thm:
+    !n. valueOf (prime_testM n) = prime n
+Proof
+  rw[prime_test_thm]
+QED
 
 (* Theorem: stepsOf (factor_seekM n c q) =
            size (MAX c q) + size (c - q) +
@@ -229,16 +232,17 @@ val prime_testM_thm = store_thm(
            if 1 < q /\ n MOD q = 0 then 0
           else size q + stepsOf (factor_seekM n c (q + 1))
 *)
-val factor_seekM_steps_thm = store_thm(
-  "factor_seekM_steps_thm",
-  ``!n c q. stepsOf (factor_seekM n c q) =
+Theorem factor_seekM_steps_thm:
+    !n c q. stepsOf (factor_seekM n c q) =
            size (MAX c q) + size (c - q) +
            if c <= q then 0
            else (size (MAX q 1) + size (q - 1) +
                 if q <= 1 then 0 else size n * size q + size (n MOD q)) +
                 if 1 < q /\ n MOD q = 0 then 0
-                else size q + stepsOf (factor_seekM n c (q + 1))``,
-  rw[Once factor_seekM_def, size_max]);
+                else size q + stepsOf (factor_seekM n c (q + 1))
+Proof
+  rw[Once factor_seekM_def, size_max]
+QED
 
 (* Theorem: stepsOf (prime_testM n) =
        2 * size n +
@@ -257,15 +261,16 @@ val factor_seekM_steps_thm = store_thm(
           stepsOf (factor_seekM n (1 + SQRT n) 2) +
           size (MAX (factor_seek n (1 + SQRT n) 2) n)
 *)
-val prime_testM_steps_thm = store_thm(
-  "prime_testM_steps_thm",
-  ``!n. stepsOf (prime_testM n) =
+Theorem prime_testM_steps_thm:
+    !n. stepsOf (prime_testM n) =
        2 * size n +
        if n <= 1 then 0
        else size (SQRT n) + size (MAX (factor_seek n (1 + SQRT n) 2) n) +
             stepsOf (sqrtM n) +
-            stepsOf (factor_seekM n (1 + SQRT n) 2)``,
-  rw[prime_testM_def, size_max]);
+            stepsOf (factor_seekM n (1 + SQRT n) 2)
+Proof
+  rw[prime_testM_def, size_max]
+QED
 
 (* Theorem: let body q = size c + size (c - q) + size (MAX q 1) + size (q - 1) +
                       (if q <= 1 then 0 else size n * size q + size (n MOD q)) +
@@ -295,20 +300,21 @@ val prime_testM_steps_thm = store_thm(
            if 1 < q /\ n MOD q = 0 then 0 else size q) +
           if 1 < q /\ n MOD q = 0 then 0 else stepsOf (factor_seekM n c (q + 1))
 *)
-val factor_seekM_steps_by_inc_loop = store_thm(
-  "factor_seekM_steps_by_inc_loop",
-  ``!n c. let body q = size c + size (c - q) + size (MAX q 1) + size (q - 1) +
+Theorem factor_seekM_steps_by_inc_loop:
+    !n c. let body q = size c + size (c - q) + size (MAX q 1) + size (q - 1) +
                       (if q <= 1 then 0 else size n * size q + size (n MOD q)) +
                       if 1 < q /\ n MOD q = 0 then 0 else size q
           in !q. stepsOf (factor_seekM n c q) =
                  if c <= q then (1 + size q)
                  else body q +
-                      if 1 < q /\ n MOD q = 0 then 0 else stepsOf (factor_seekM n c (q + 1))``,
+                      if 1 < q /\ n MOD q = 0 then 0 else stepsOf (factor_seekM n c (q + 1))
+Proof
   rw[Once factor_seekM_steps_thm] >>
   (Cases_on `c <= q` >> simp[MAX_DEF]) >>
   `(if c < q then q else c) = q` by decide_tac >>
   `c - q = 0` by decide_tac >>
-  rw[]);
+  rw[]
+QED
 
 (*
 This puts factor_seekM_steps in the category: increasing loop with body cover and exit.
@@ -336,20 +342,21 @@ However, for a prime n, n MOD q <> 0 for
    This will contradict prime n                    by prime_def
    Thus n MOD q <> 0, the result follows           by factor_seekM_def
 *)
-val factor_seekM_prime_steps_thm = store_thm(
-  "factor_seekM_prime_steps_thm",
-  ``!n c q. prime n /\ c <= n ==>
+Theorem factor_seekM_prime_steps_thm:
+    !n c q. prime n /\ c <= n ==>
            (stepsOf (factor_seekM n c q) =
             size (MAX c q) + size (c - q) +
             if c <= q then 0
             else size (MAX q 1) + size (q - 1) + size q +
                  (if 1 < q then size n * size q + size (n MOD q) else 0) +
-                      stepsOf (factor_seekM n c (q + 1)))``,
+                      stepsOf (factor_seekM n c (q + 1)))
+Proof
   rw[Once factor_seekM_def, size_max] >>
   (Cases_on `1 < q /\ n MOD q = 0` >> simp[]) >>
   `q divides n` by rw[DIVIDES_MOD_0] >>
   `q <> 1 /\ q <> n` by decide_tac >>
-  metis_tac[prime_def]);
+  metis_tac[prime_def]
+QED
 
 (* Theorem: prime n /\ c <= n ==>
          let body q = size c + size (c - q) + size (MAX q 1) + size (q - 1) + size q +
@@ -373,19 +380,20 @@ val factor_seekM_prime_steps_thm = store_thm(
           (if 1 < q then size n * size q + size (n MOD q) else 0) +
           stepsOf (factor_seekM n c (q + 1))
 *)
-val factor_seekM_prime_steps_by_inc_loop = store_thm(
-  "factor_seekM_prime_steps_by_inc_loop",
-  ``!n c. prime n /\ c <= n ==>
+Theorem factor_seekM_prime_steps_by_inc_loop:
+    !n c. prime n /\ c <= n ==>
          let body q = size c + size (c - q) + size (MAX q 1) + size (q - 1) + size q +
                       if 1 < q then size n * size q + size (n MOD q) else 0
           in !q. stepsOf (factor_seekM n c q) =
                  if c <= q then (1 + size q)
-                 else body q + stepsOf (factor_seekM n c (q + 1))``,
+                 else body q + stepsOf (factor_seekM n c (q + 1))
+Proof
   rw[Once factor_seekM_prime_steps_thm] >>
   (Cases_on `c <= q` >> simp[MAX_DEF]) >>
   `(if c < q then q else c) = q` by decide_tac >>
   `c - q = 0` by decide_tac >>
-  rw[]);
+  rw[]
+QED
 
 (*
 This puts factor_seekM_prime_steps in the category: increasing loop with body.
@@ -411,13 +419,13 @@ suitable for: loop_inc_count_eqn to deduce lower bound.
       = quit (q + p) + SUM (GENLIST (\j. body (q + j)) p)   by loop_inc_count_eqn
       = 1 + size (q + (c - q)) + SUM (GENLIST (\j. body (q + j)) (c - q))
 *)
-val factor_seekM_prime_steps_eqn = store_thm(
-  "factor_seekM_prime_steps_eqn",
-  ``!n c. prime n /\ c <= n ==>
+Theorem factor_seekM_prime_steps_eqn:
+    !n c. prime n /\ c <= n ==>
          let body q = size c + size (c - q) + size (MAX q 1) + size (q - 1) + size q +
                       if 1 < q then size n * size q + size (n MOD q) else 0
           in !q. stepsOf (factor_seekM n c q) =
-                 1 + size (q + (c - q)) + SUM (GENLIST (\j. body (q + j)) (c - q))``,
+                 1 + size (q + (c - q)) + SUM (GENLIST (\j. body (q + j)) (c - q))
+Proof
   rpt strip_tac >>
   imp_res_tac factor_seekM_prime_steps_by_inc_loop >>
   qabbrev_tac `body = \q. size c + size (c - q) + size (MAX q 1) + size (q - 1) + size q +
@@ -432,7 +440,8 @@ val factor_seekM_prime_steps_eqn = store_thm(
   `bop 1 c q = c - q` by rw[bop_1_m_c] >>
   imp_res_tac loop_inc_count_eqn >>
   first_x_assum (qspec_then `q` strip_assume_tac) >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: prime n ==>
        stepsOf (prime_testM n) =
@@ -450,16 +459,17 @@ val factor_seekM_prime_steps_eqn = store_thm(
    = 3 * size n + size (SQRT n) +
      stepsOf (sqrtM n) + stepsOf (factor_seekM n (1 + SQRT n) 2)
 *)
-val prime_testM_prime_steps_thm = store_thm(
-  "prime_testM_prime_steps_thm",
-  ``!n. prime n ==>
+Theorem prime_testM_prime_steps_thm:
+    !n. prime n ==>
        stepsOf (prime_testM n) =
-       3 * size n + size (SQRT n) + stepsOf (sqrtM n) + stepsOf (factor_seekM n (1 + SQRT n) 2)``,
+       3 * size n + size (SQRT n) + stepsOf (sqrtM n) + stepsOf (factor_seekM n (1 + SQRT n) 2)
+Proof
   rpt strip_tac >>
   `1 < n` by rw[ONE_LT_PRIME] >>
   `factor_seek n (1 + SQRT n) 2 <= n` by rw[factor_seek_bound] >>
   `MAX (factor_seek n (1 + SQRT n) 2) n = n` by fs[MAX_DEF] >>
-  rw[prime_testM_steps_thm]);
+  rw[prime_testM_steps_thm]
+QED
 
 (* Theorem: let c = 1 + SQRT n;
            body q = size c + size (c - q) + size (MAX q 1) + size (q - 1) + size q +
@@ -485,14 +495,14 @@ val prime_testM_prime_steps_thm = store_thm(
      stepsOf (sqrtM n) +
      1 + size c + SUM (GENLIST (\j. body (2 + j)) (c - 2))  by factor_seekM_prime_steps_eqn, c <= n
 *)
-val prime_testM_prime_steps_eqn = store_thm(
-  "prime_testM_prime_steps_eqn",
-  ``!n. let c = 1 + SQRT n;
+Theorem prime_testM_prime_steps_eqn:
+    !n. let c = 1 + SQRT n;
            body q = size c + size (c - q) + size (MAX q 1) + size (q - 1) + size q +
                       if 1 < q then size n * size q + size (n MOD q) else 0
         in prime n ==> stepsOf (prime_testM n) =
            1 + size c + 3 * size n + size (SQRT n) +
-           stepsOf (sqrtM n) + SUM (GENLIST (\j. body (2 + j)) (c - 2))``,
+           stepsOf (sqrtM n) + SUM (GENLIST (\j. body (2 + j)) (c - 2))
+Proof
   rw_tac std_ss[] >>
   `c <= n` by
   (`1 < n` by rw[ONE_LT_PRIME] >>
@@ -516,7 +526,8 @@ val prime_testM_prime_steps_eqn = store_thm(
   `!q. stepsOf (factor_seekM n c q) =
         1 + size (q + (c - q)) + SUM (GENLIST (\j. body (q + j)) (c - q))` by metis_tac[] >>
   first_x_assum (qspec_then `2` strip_assume_tac) >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: prime n ==> (SQRT n <= stepsOf (prime_testM n)) *)
 (* Proof:
@@ -535,9 +546,9 @@ val prime_testM_prime_steps_eqn = store_thm(
      >= (SQRT n) * size (SQRT n)                     by size_monotone_le
      >= SQRT n                                       by size_pos
 *)
-val prime_testM_prime_steps_lower = store_thm(
-  "prime_testM_prime_steps_lower",
-  ``!n. prime n ==> (SQRT n <= stepsOf (prime_testM n))``,
+Theorem prime_testM_prime_steps_lower:
+    !n. prime n ==> (SQRT n <= stepsOf (prime_testM n))
+Proof
   rpt strip_tac >>
   assume_tac prime_testM_prime_steps_eqn >>
   first_x_assum (qspec_then `n` strip_assume_tac) >>
@@ -561,7 +572,8 @@ val prime_testM_prime_steps_lower = store_thm(
   `!n. n <= n * size c` by rw[] >>
   `c - 1 <= (c - 1) * size c` by metis_tac[] >>
   `c - 1 = SQRT n` by rw[Abbr`c`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Thus the traditional primality test by trial factors is not polynomial-time in (ulog n). *)
 
@@ -591,9 +603,9 @@ val prime_testM_prime_steps_lower = store_thm(
      c * (2 * p) ** SUC k < b ** (2 * p)    by EXP_BASE_MULT
       Take 2 * p, the result follows by 0 < 2 * p.
 *)
-val power_lt_exp = store_thm(
-  "power_lt_exp",
-  ``!b. 1 < b ==> !c k. ?p. 0 < p /\ c * p ** k < b ** p``,
+Theorem power_lt_exp:
+    !b. 1 < b ==> !c k. ?p. 0 < p /\ c * p ** k < b ** p
+Proof
   ntac 2 strip_tac >>
   `0 < b` by decide_tac >>
   Induct_on `k` >| [
@@ -612,7 +624,8 @@ val power_lt_exp = store_thm(
     `c * (2 * p) ** SUC k < b ** (2 * p)` by decide_tac >>
     `0 < 2 * p` by decide_tac >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: c * p ** k < b ** p /\ 0 < p /\ 2 ** k < b ==>
         !d. c * (p + d) ** k < b ** (p + d) *)
@@ -637,10 +650,10 @@ val power_lt_exp = store_thm(
           < b * b ** z               by 2 ** k < b, induction hypothesis
           = b ** SUC z               by EXP
 *)
-val power_lt_exp_extended = store_thm(
-  "power_lt_exp_extended",
-  ``!c b k p. c * p ** k < b ** p /\ 0 < p /\ 2 ** k < b ==>
-         !d. c * (p + d) ** k < b ** (p + d)``,
+Theorem power_lt_exp_extended:
+    !c b k p. c * p ** k < b ** p /\ 0 < p /\ 2 ** k < b ==>
+         !d. c * (p + d) ** k < b ** (p + d)
+Proof
   ntac 5 strip_tac >>
   Induct >-
   rw[] >>
@@ -653,7 +666,8 @@ val power_lt_exp_extended = store_thm(
   `c * (2 * z) ** k = 2 ** k * (c * z ** k)` by rw[EXP_BASE_MULT] >>
   `2 ** k * (c * z ** k) < b * b ** z` by rw[LT_MONO_MULT2] >>
   `b * b ** z = b ** SUC z` by rw[EXP] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* For a fixed base b > 2 ** k, constant c and index k, there is a point p > 0
    after which for all n > p, c ** n ** k < b ** n. *)
@@ -666,9 +680,9 @@ val power_lt_exp_extended = store_thm(
    Then n = p + d          by p < n
    The result follows      by power_lt_exp_extended
 *)
-val power_lt_exp_all = store_thm(
-  "power_lt_exp_all",
-  ``!b k. 2 ** k < b ==> !c. ?p. 0 < p /\ (!n. p < n ==> c * n ** k < b ** n)``,
+Theorem power_lt_exp_all:
+    !b k. 2 ** k < b ==> !c. ?p. 0 < p /\ (!n. p < n ==> c * n ** k < b ** n)
+Proof
   rpt strip_tac >>
   `0 < 2 ** k` by rw[] >>
   `1 < b` by decide_tac >>
@@ -677,7 +691,8 @@ val power_lt_exp_all = store_thm(
   rw[] >>
   qabbrev_tac `d = n - p` >>
   `n = p + d` by rw[Abbr`d`] >>
-  rw[power_lt_exp_extended]);
+  rw[power_lt_exp_extended]
+QED
 
 (*
 For continuous functions, we can say: f(x) < g(x)  iff  g^-1(x) < f^-1(x)
@@ -704,9 +719,9 @@ However, we are using integer functions here.
    Thus b ** c <= c * k               by [2]
    which contradicts k * c < b ** c   by [1]
 *)
-val log_lt_root = store_thm(
-  "log_lt_root",
-  ``!k b. 0 < k /\ 1 < b ==> ?p. 0 < p /\ LOG b p < ROOT k p``,
+Theorem log_lt_root:
+    !k b. 0 < k /\ 1 < b ==> ?p. 0 < p /\ LOG b p < ROOT k p
+Proof
   spose_not_then strip_assume_tac >>
   `!p. 0 < p ==> (ROOT k p <= LOG b p)` by metis_tac[NOT_LESS] >>
   `?c. 0 < c /\ k * c ** 1 < b ** c` by rw[power_lt_exp] >>
@@ -717,7 +732,8 @@ val log_lt_root = store_thm(
   `ROOT k p = b ** c` by rw[ROOT_POWER, Abbr`p`] >>
   `LOG b p = c * k` by rw[LOG_EXACT_EXP, GSYM EXP_EXP_MULT, Abbr`p`] >>
   `ROOT k p <= LOG b p` by fs[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < k /\ 1 < b ==> !n. ?p. n < p /\ LOG b p < ROOT k p *)
 (* Proof:
@@ -759,9 +775,9 @@ val log_lt_root = store_thm(
             or         LOG b p < ROOT k p
       This contradicts ROOT k p <= LOG b p.
 *)
-val log_lt_root_all = store_thm(
-  "log_lt_root_all",
-  ``!k b. 0 < k /\ 1 < b ==> !n. ?p. n < p /\ LOG b p < ROOT k p``,
+Theorem log_lt_root_all:
+    !k b. 0 < k /\ 1 < b ==> !n. ?p. n < p /\ LOG b p < ROOT k p
+Proof
   spose_not_then strip_assume_tac >>
   Cases_on `n = 0` >-
   metis_tac[log_lt_root] >>
@@ -786,7 +802,8 @@ val log_lt_root_all = store_thm(
   `q <= c * q ** k` by decide_tac >>
   rw[EXP_BASE_LE_MONO]) >>
   `LOG b p < ROOT k p` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 
 (* To show this is false:    !n c k. n <= c * (ulog n) ** k *)
@@ -816,9 +833,9 @@ val log_lt_root_all = store_thm(
       Thus assert the existence of a  by induction hypothesis with (c * 2 ** k),
       Then let n = a ** 2, the result follows            by ONE_LT_EXP, 1 < a
 *)
-val ulog_power_nonlinear = store_thm(
-  "ulog_power_nonlinear",
-  ``!c k. ?n. 1 < n /\ c * (ulog n) ** k < n``,
+Theorem ulog_power_nonlinear:
+    !c k. ?n. 1 < n /\ c * (ulog n) ** k < n
+Proof
   Induct_on `k` >| [
     rpt strip_tac >>
     Cases_on `c = 0` >| [
@@ -841,7 +858,8 @@ val ulog_power_nonlinear = store_thm(
     `b * ulog a < a * a` by rw[LT_MONO_MULT2] >>
     `a * a = a ** 2` by rw[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 
 

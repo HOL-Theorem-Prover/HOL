@@ -39,14 +39,14 @@ val Stable =
          ``!sig t1 t2. Stable t1 t2 sig =
             !t. ((t1 <= t) /\ (t < t2)) ==> (sig(t) = sig(t1))``);;
 
-val Stable_pair =
-    store_thm
-    ("Stable_pair",
-     ``!f t1 t2.
-        Stable t1 t2 (\t. f t, g t) = ((Stable t1 t2 f) /\ Stable t1 t2 g)``,
+Theorem Stable_pair:
+       !f t1 t2.
+        Stable t1 t2 (\t. f t, g t) = ((Stable t1 t2 f) /\ Stable t1 t2 g)
+Proof
      REWRITE_TAC [Stable] THEN
      REPEAT STRIP_TAC THEN
      CONV_TAC (DEPTH_CONV BETA_CONV) THEN
      REWRITE_TAC [PAIR_EQ] THEN
      EQ_TAC THEN REPEAT STRIP_TAC THEN
-     RES_TAC);;
+     RES_TAC
+QED

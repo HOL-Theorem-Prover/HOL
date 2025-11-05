@@ -60,14 +60,15 @@ End
 
 (* ------------------------------------------------------------------------ *)
 
-val MIPS_PC_INTRO = Q.store_thm("MIPS_PC_INTRO",
-   `SPEC m (p1 * MIPS_PC pc) code
+Theorem MIPS_PC_INTRO:
+    SPEC m (p1 * MIPS_PC pc) code
            (p2 * mips_BranchDelay NONE * mips_PC pc') ==>
     (aligned 2 pc ==> aligned 2 pc') ==>
-    SPEC m (p1 * MIPS_PC pc) code (p2 * MIPS_PC pc')`,
+    SPEC m (p1 * MIPS_PC pc) code (p2 * MIPS_PC pc')
+Proof
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss
         [MIPS_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)

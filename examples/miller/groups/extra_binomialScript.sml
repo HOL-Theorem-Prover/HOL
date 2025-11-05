@@ -58,9 +58,9 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS arith_c;
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val BINOMIAL_1 = store_thm
-  ("BINOMIAL_1",
-   ``!n. 1 < n ==> (binomial n 1 = n)``,
+Theorem BINOMIAL_1:
+     !n. 1 < n ==> (binomial n 1 = n)
+Proof
    Induct >> AR_TAC []
    ++ REWRITE_TAC [ONE, binomial_def]
    ++ Cases_on `n` >> R_TAC []
@@ -69,40 +69,44 @@ val BINOMIAL_1 = store_thm
        ++ DECIDE_TAC)
    ++ AR_TAC []
    ++ R_TAC [binomial_def]
-   ++ DECIDE_TAC);
+   ++ DECIDE_TAC
+QED
 
-val BINOMIAL_GT_0 = store_thm
-  ("BINOMIAL_GT_0",
-   ``!a b. 0 < binomial (a + b) b``,
+Theorem BINOMIAL_GT_0:
+     !a b. 0 < binomial (a + b) b
+Proof
    Induct_on `b` >> R_TAC [BINOMIAL_DEF1]
-   ++ R_TAC [ADD_CLAUSES, BINOMIAL_DEF4]);
+   ++ R_TAC [ADD_CLAUSES, BINOMIAL_DEF4]
+QED
 
-val BINOMIAL_LESS = store_thm
-  ("BINOMIAL_LESS",
-   ``!n r. r <= n ==> 0 < binomial n r``,
+Theorem BINOMIAL_LESS:
+     !n r. r <= n ==> 0 < binomial n r
+Proof
    S_TAC
    ++ Know `n = (n - r) + r` >> DECIDE_TAC
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
-   ++ R_TAC [BINOMIAL_GT_0]);
+   ++ R_TAC [BINOMIAL_GT_0]
+QED
 
-val PRIME_EXPONENT_BINOMIAL = store_thm
-  ("PRIME_EXPONENT_BINOMIAL",
-   ``!a b p.
+Theorem PRIME_EXPONENT_BINOMIAL:
+     !a b p.
        prime p ==>
        (exponent p (binomial (a + b) b) + exponent p (FACT a) +
         exponent p (FACT b) =
-        exponent p (FACT (a + b)))``,
+        exponent p (FACT (a + b)))
+Proof
    S_TAC
    ++ R_TAC [GSYM PRIME_EXPONENT_MULT, BINOMIAL_GT_0, FACT_LESS,
-             GSYM MULT_ASSOC, BINOMIAL_FACT]);
+             GSYM MULT_ASSOC, BINOMIAL_FACT]
+QED
 
-val PRIME_ADD_1_EXP = store_thm
-  ("PRIME_ADD_1_EXP",
-   ``!p z k.
+Theorem PRIME_ADD_1_EXP:
+     !p z k.
        prime p /\ ODD p /\ ~divides p z ==>
        ?zk.
          ~divides p zk /\
-         ((1 + p * z) EXP (p EXP k) = 1 + p EXP (k + 1) * zk)``,
+         ((1 + p * z) EXP (p EXP k) = 1 + p EXP (k + 1) * zk)
+Proof
    S_TAC
    ++ REVERSE (Cases_on `0 < k`)
    >> (Know `k = 0` >> DECIDE_TAC
@@ -234,7 +238,8 @@ val PRIME_ADD_1_EXP = store_thm
      ++ Suff `p EXP n < p EXP k` >> R_TAC [EXP_MONO]
      ++ Suff `p EXP n <= p EXP k - SUC i` >> DECIDE_TAC
      ++ MATCH_MP_TAC DIVIDES_LE
-     ++ R_TAC []]]);
+     ++ R_TAC []]]
+QED
 
 (* non-interactive mode
 *)

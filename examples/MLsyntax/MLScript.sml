@@ -63,15 +63,16 @@ Ancestors
     Define the type of variables.
  ---------------------------------------------------------------------------*)
 
-val _ = Datatype `var = VAR string`;
+Datatype:  var = VAR string
+End
 
 
 (*---------------------------------------------------------------------------
     Define the datatype of ML syntax trees.
  ---------------------------------------------------------------------------*)
 
-val _ = Datatype
-        `atexp = var_exp var
+Datatype:
+         atexp = var_exp var
                | let_exp dec exp ;
 
            exp = aexp    atexp
@@ -92,7 +93,8 @@ val _ = Datatype
                | rec_bind valbind ;
 
            pat = wild_pat
-               | var_pat var`;
+               | var_pat var
+End
 
 
 (*---------------------------------------------------------------------------

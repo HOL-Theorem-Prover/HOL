@@ -223,7 +223,7 @@ Proof
   rw[rho_def,rho_alt_def]
 QED
 
-Triviality suc_help = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
+Theorem suc_help[local] = CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
 Theorem rho_preserves_lt_16:
   n < 16 ⇒ rho n < 16

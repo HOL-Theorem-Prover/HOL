@@ -739,13 +739,15 @@ val X64_LISP_EVEN = let
 
 (* assign 0 and 1 to all regs *)
 
-val SIGN_EXTEND_MOD = store_thm("SIGN_EXTEND_MOD",
-  ``SIGN_EXTEND 32 64 (w2n imm32) MOD 4294967296 = w2n (imm32:word32)``,
+Theorem SIGN_EXTEND_MOD:
+    SIGN_EXTEND 32 64 (w2n imm32) MOD 4294967296 = w2n (imm32:word32)
+Proof
   SIMP_TAC std_ss [SIGN_EXTEND_def,LET_DEF] \\ SRW_TAC [] []
   \\ (SIMP_RULE (std_ss++SIZES_ss) [] (INST_TYPE [``:'a``|->``:32``] w2n_lt)
        |> Q.SPEC `imm32` |> ASSUME_TAC) \\ FULL_SIMP_TAC std_ss []
   \\ REWRITE_TAC [GSYM (EVAL ``4294967295 * 4294967296``)]
-  \\ IMP_RES_TAC MOD_MULT \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC MOD_MULT \\ FULL_SIMP_TAC std_ss []
+QED
 
 val imm32_lemma = prove(
   ``n < 2**30 ==>
@@ -2849,16 +2851,18 @@ val zBYTE_MEMORY_Z_thm = prove(
   ``zBYTE_MEMORY dd d = zBYTE_MEMORY_Z dd d``,
   SIMP_TAC std_ss [zBYTE_MEMORY_Z_def,zBYTE_MEMORY_def]);
 
-val X64_LISP_WEAKEN_CODE = store_thm("X64_LISP_WEAKEN_CODE",
-  ``SPEC X64_MODEL
+Theorem X64_LISP_WEAKEN_CODE:
+    SPEC X64_MODEL
       (zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,SOME T,cu) (x0,x1,x2,x3,x4,x5,xs,xs1,io,xbp,qs,code,amnt,ok)) {}
-      (zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,SOME F,cu) (x0,x1,x2,x3,x4,x5,xs,xs1,io,xbp,qs,code,amnt,ok))``,
+      (zLISP (a1,a2,sl,sl1,e,ex,cs,rbp,SOME F,cu) (x0,x1,x2,x3,x4,x5,xs,xs1,io,xbp,qs,code,amnt,ok))
+Proof
   SIMP_TAC std_ss [zLISP_def]
   \\ REPEAT (HO_MATCH_MP_TAC SPEC_EXISTS_EXISTS \\ REPEAT STRIP_TAC)
   \\ REPEAT (MATCH_MP_TAC (SIMP_RULE std_ss [PULL_FORALL_IMP] SPEC_FRAME))
   \\ REPEAT (MATCH_MP_TAC (RW1 [STAR_COMM] (SIMP_RULE std_ss [PULL_FORALL_IMP] SPEC_FRAME)))
   \\ MATCH_MP_TAC (MATCH_MP SPEC_WEAKEN (SPEC_ALL SPEC_REFL))
-  \\ SIMP_TAC std_ss [zCODE_MEMORY_def,zCODE_IMP_BYTE_MEMORY,zBYTE_MEMORY_Z_thm]);
+  \\ SIMP_TAC std_ss [zCODE_MEMORY_def,zCODE_IMP_BYTE_MEMORY,zBYTE_MEMORY_Z_thm]
+QED
 
 
 (* converting data into code *)

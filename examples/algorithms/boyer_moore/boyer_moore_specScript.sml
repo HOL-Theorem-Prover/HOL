@@ -144,13 +144,13 @@ Definition solution_def:
 End
 
 (* Shifting capacity of the solution*)
-val SOL_SHF_THM = store_thm(
-    "SOL_SHF_THM",
-    ``(LENGTH pat <= LENGTH search) /\
+Theorem SOL_SHF_THM:
+      (LENGTH pat <= LENGTH search) /\
      (m <= LENGTH search) /\
      (!d. d < m ==> ~(d IN solutions pat search))
      ==> (m + solution pat (DROP m search)
-          = solution pat search)``,
+          = solution pat search)
+Proof
     rw[solution_def]
     >> Cases_on `solutions pat search = {}`
     >- (`solutions pat (DROP m search) = {}`
@@ -170,7 +170,7 @@ val SOL_SHF_THM = store_thm(
                  by rw[Abbr `sols`, Abbr `L`, solutions_def,
                        MIN_SET_UPPER_BOUND, DECIDE ``a <= b - c ==> a <= b``]
          >> fs[MIN_DEF,SOLS_MIN_SHF, Abbr `sols_d`, Abbr `sols`])
-    );
+QED
 
 
 
@@ -185,11 +185,11 @@ Definition valid_cha_shifts_def:
 End
 
 (* Confirmation that a valid character shift exists *)
-val CHA_SHIFT_EXISTS_THM = store_thm(
-    "CHA_SHIFT_EXISTS_THM",
-    ``valid_cha_shifts pat all_chars j a <> {}``,
+Theorem CHA_SHIFT_EXISTS_THM:
+      valid_cha_shifts pat all_chars j a <> {}
+Proof
     rw[valid_cha_shifts_def]
-    );
+QED
 
 (* Confirmation that skipped shifts not in valid_cha_shifts give
    invalid alignments *)
@@ -231,9 +231,9 @@ Definition valid_suf_shifts_def:
 End
 
 (* Confirmation that a valid suffix shift exists in correct circumstances *)
-val SUF_SHIFT_EXISTS_THM = store_thm(
-    "SUF_SHIFT_EXISTS_THM",
-    ``j < LENGTH pat ==> valid_suf_shifts pat j <> {}``,
+Theorem SUF_SHIFT_EXISTS_THM:
+      j < LENGTH pat ==> valid_suf_shifts pat j <> {}
+Proof
     rw[valid_suf_shifts_def]
     >> Cases_on `pat`
     >- fs[]
@@ -241,13 +241,12 @@ val SUF_SHIFT_EXISTS_THM = store_thm(
        >> qexists_tac `SUC (LENGTH t)`
        >> simp[]
        >> fs[])
-    );
+QED
 
 (* Confirmation that skipped shifts not in valid_suf_shifts give
    invalid alignments *)
-val SUF_SKIP_NOT_SOL = store_thm(
-    "SUF_SKIP_NOT_SOL",
-    ``((k <= LENGTH search - LENGTH pat) /\
+Theorem SUF_SKIP_NOT_SOL:
+      ((k <= LENGTH search - LENGTH pat) /\
       (j < LENGTH pat)
     /\ (!i. (j<i /\ i < LENGTH pat)
            ==> (EL i pat = EL (k+i) search))
@@ -256,7 +255,7 @@ val SUF_SKIP_NOT_SOL = store_thm(
     ==> (!d. d < MIN_SET (valid_suf_shifts pat j)
            ==> ~((k+d) IN solutions pat search)
         )
-    ``,
+Proof
     rw[solutions_def]
     >> Cases_on `d = 0`
     >- (simp[] >> metis_tac[])
@@ -298,5 +297,5 @@ val SUF_SKIP_NOT_SOL = store_thm(
                 >- simp[SUF_SHIFT_EXISTS_THM])
             )
         )
-    );
+QED
 

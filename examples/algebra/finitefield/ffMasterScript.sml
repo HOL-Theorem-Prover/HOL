@@ -322,10 +322,11 @@ val _ = intLib.deprecate_int ();
    <=> x ** (CARD R) = x                 by poly_master_root
    <=> T                                 by finite_field_fermat_thm
 *)
-val poly_master_root_all = store_thm(
-  "poly_master_root_all",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> root (master (CARD R)) x``,
-  rw[FiniteField_def, poly_master_root, finite_field_fermat_thm]);
+Theorem poly_master_root_all:
+    !r:'a field. FiniteField r ==> !x. x IN R ==> root (master (CARD R)) x
+Proof
+  rw[FiniteField_def, poly_master_root, finite_field_fermat_thm]
+QED
 
 (* Theorem: FiniteField r ==> (roots (master (CARD R)) = R) *)
 (* Proof:
@@ -333,11 +334,12 @@ val poly_master_root_all = store_thm(
    {x | x IN R /\ root (X ** CARD R - X) x} = R
    which is true by poly_master_root_all.
 *)
-val poly_master_roots_all = store_thm(
-  "poly_master_roots_all",
-  ``!r:'a field. FiniteField r ==> (roots (master (CARD R)) = R)``,
+Theorem poly_master_roots_all:
+    !r:'a field. FiniteField r ==> (roots (master (CARD R)) = R)
+Proof
   rw_tac std_ss[poly_roots_def, GSPECIFICATION, EXTENSION] >>
-  metis_tac[poly_master_root_all]);
+  metis_tac[poly_master_root_all]
+QED
 
 (* Theorem: s <<= r ==> !x. x IN B ==> !n. poly_root s (Master s n) x <=> root (master n) x *)
 (* Proof:
@@ -347,10 +349,11 @@ val poly_master_roots_all = store_thm(
      <=> x ** n = x           by subfield_exp
      <=> root (master n) x    by poly_master_root
 *)
-val poly_master_subfield_root = store_thm(
-  "poly_master_subfield_root",
-  ``!(r s):'a field. s <<= r ==> !x. x IN B ==> !n. poly_root s (Master s n) x <=> root (master n) x``,
-  metis_tac[subfield_element, poly_master_root, subfield_exp, field_is_ring]);
+Theorem poly_master_subfield_root:
+    !(r s):'a field. s <<= r ==> !x. x IN B ==> !n. poly_root s (Master s n) x <=> root (master n) x
+Proof
+  metis_tac[subfield_element, poly_master_root, subfield_exp, field_is_ring]
+QED
 
 (* Theorem: FiniteField r ==>
             !n. 0 < n ==> pgcd (master (CARD R ** n)) (diff (master (CARD R ** n))) ~~ |1| *)
@@ -369,10 +372,10 @@ val poly_master_subfield_root = store_thm(
    Hence pgcd p (diff p)
        = pgcd p (-|1|) ~~ |1| by poly_gcd_unit
 *)
-val poly_master_coprime_diff = store_thm(
-  "poly_master_coprime_diff",
-  ``!r:'a field. FiniteField r ==>
-   !n. 0 < n ==> pgcd (master (CARD R ** n)) (diff (master (CARD R ** n))) ~~ |1|``,
+Theorem poly_master_coprime_diff:
+    !r:'a field. FiniteField r ==>
+   !n. 0 < n ==> pgcd (master (CARD R ** n)) (diff (master (CARD R ** n))) ~~ |1|
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `b = CARD R ** n` >>
@@ -385,7 +388,8 @@ val poly_master_coprime_diff = store_thm(
   `diff p = -|1|` by rw[poly_diff_master_char_exp, Abbr`p`, Abbr`c`] >>
   `upoly |1|` by rw[poly_unit_one] >>
   `upoly (-|1|)` by rw[poly_unit_neg] >>
-  rw[poly_gcd_unit, Abbr`p`]);
+  rw[poly_gcd_unit, Abbr`p`]
+QED
 
 (* Theorem: FiniteField r ==> !n. monic (PPIMAGE (\k. master (CARD R ** k)) (natural n)) *)
 (* Proof:
@@ -400,9 +404,9 @@ val poly_master_coprime_diff = store_thm(
      so mset s                  by IN_IMAGE, poly_master_monic, 1 < m ** k for k IN (natural n)
    Thus monic (PPROD s)         by poly_monic_prod_set_monic
 *)
-val poly_master_prod_set_over_natural_monic = store_thm(
-  "poly_master_prod_set_over_natural_monic",
-  ``!r:'a field. FiniteField r ==> !n. monic (PPIMAGE (\k. master (CARD R ** k)) (natural n))``,
+Theorem poly_master_prod_set_over_natural_monic:
+    !r:'a field. FiniteField r ==> !n. monic (PPIMAGE (\k. master (CARD R ** k)) (natural n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = CARD R` >>
@@ -412,21 +416,24 @@ val poly_master_prod_set_over_natural_monic = store_thm(
   `FINITE (natural n)` by rw[natural_finite] >>
   `FINITE s` by rw[Abbr`s`] >>
   `mset s` by metis_tac[IN_IMAGE, poly_master_monic, natural_element, ONE_LT_EXP] >>
-  rw[poly_monic_prod_set_monic]);
+  rw[poly_monic_prod_set_monic]
+QED
 
 (* Theorem: FiniteField r ==> !n. poly (PPIMAGE (\k. master (CARD R ** k)) (natural n)) *)
 (* Proof: by poly_master_prod_set_over_natural_monic, poly_monic_poly *)
-val poly_master_prod_set_over_natural_poly = store_thm(
-  "poly_master_prod_set_over_natural_poly",
-  ``!r:'a field. FiniteField r ==> !n. poly (PPIMAGE (\k. master (CARD R ** k)) (natural n))``,
-  rw_tac std_ss[poly_master_prod_set_over_natural_monic, poly_monic_poly]);
+Theorem poly_master_prod_set_over_natural_poly:
+    !r:'a field. FiniteField r ==> !n. poly (PPIMAGE (\k. master (CARD R ** k)) (natural n))
+Proof
+  rw_tac std_ss[poly_master_prod_set_over_natural_monic, poly_monic_poly]
+QED
 
 (* Theorem: FiniteField r ==> !n. PPIMAGE (\k. master (CARD R ** k)) (natural n) <> |0| *)
 (* Proof: by poly_master_prod_set_over_natural_monic, poly_monic_nonzero *)
-val poly_master_prod_set_over_natural_nonzero = store_thm(
-  "poly_master_prod_set_over_natural_nonzero",
-  ``!r:'a field. FiniteField r ==> !n. PPIMAGE (\k. master (CARD R ** k)) (natural n) <> |0|``,
-  rw_tac std_ss[poly_master_prod_set_over_natural_monic, poly_monic_nonzero, finite_field_is_field, field_one_ne_zero]);
+Theorem poly_master_prod_set_over_natural_nonzero:
+    !r:'a field. FiniteField r ==> !n. PPIMAGE (\k. master (CARD R ** k)) (natural n) <> |0|
+Proof
+  rw_tac std_ss[poly_master_prod_set_over_natural_monic, poly_monic_nonzero, finite_field_is_field, field_one_ne_zero]
+QED
 
 (* Theorem: FiniteField r ==> let m = CARD R in
             !n. deg (PPIMAGE (\k. master (m ** k)) (natural n)) = m * (m ** n - 1) DIV (m - 1) *)
@@ -460,10 +467,10 @@ val poly_master_prod_set_over_natural_nonzero = store_thm(
       = SIGMA (\k. m ** k) (natural n)    by SIGMA_CONG
       = m * (m ** n - 1) DIV (m - 1)      by sigma_geometric_natural, 1 < m
 *)
-val poly_master_prod_set_over_natural_deg = store_thm(
-  "poly_master_prod_set_over_natural_deg",
-  ``!r:'a field. FiniteField r ==> let m = CARD R in
-   !n. deg (PPIMAGE (\k. master (m ** k)) (natural n)) = m * (m ** n - 1) DIV (m - 1)``,
+Theorem poly_master_prod_set_over_natural_deg:
+    !r:'a field. FiniteField r ==> let m = CARD R in
+   !n. deg (PPIMAGE (\k. master (m ** k)) (natural n)) = m * (m ** n - 1) DIV (m - 1)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   rw_tac std_ss[] >>
@@ -488,7 +495,8 @@ val poly_master_prod_set_over_natural_deg = store_thm(
   `_ = SIGMA (deg o f) (natural n)` by rw[sum_image_by_composition] >>
   `_ = SIGMA (\k. m ** k) (natural n)` by rw[SIGMA_CONG] >>
   `_ = m * (m ** n - 1) DIV (m - 1)` by rw[sigma_geometric_natural] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Irreducible Factors of Master Polynomial                                  *)
@@ -502,16 +510,17 @@ val poly_master_prod_set_over_natural_deg = store_thm(
    <=> (X ** n) % p = X % p      by poly_mod_eq
    <=> (X ** n == X) (pm p)      by pmod_def_alt
 *)
-val poly_ulead_divides_master_condition = store_thm(
-  "poly_ulead_divides_master_condition",
-  ``!r:'a ring. Ring r ==>
-   !p. ulead p ==> !n. p pdivides (master n) <=> (X ** n == X) (pm p)``,
+Theorem poly_ulead_divides_master_condition:
+    !r:'a ring. Ring r ==>
+   !p. ulead p ==> !n. p pdivides (master n) <=> (X ** n == X) (pm p)
+Proof
   rpt strip_tac >>
   `poly X /\ poly (master n)` by rw[] >>
   `p pdivides (master n) <=> (master n % p = |0|)` by rw_tac std_ss[poly_divides_alt] >>
   `_ = ((X ** n) % p = X % p)` by rw_tac std_ss[poly_mod_eq, poly_exp_poly] >>
   `_ = (X ** n == X) (pm p)` by rw_tac std_ss[pmod_def_alt] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r ==> !p. monic p /\ ipoly p ==> p pdivides (master (CARD R ** deg p)) *)
 (* Proof:
@@ -525,9 +534,9 @@ val poly_ulead_divides_master_condition = store_thm(
    Giving  (X ** (CARD R ** deg p) == X) (pm p)         by pmod_def_alt
        or  p pdivides (master (CARD R ** deg p))        by poly_ulead_divides_master_condition
 *)
-val poly_irreducible_divides_master = store_thm(
-  "poly_irreducible_divides_master",
-  ``!r:'a field. FiniteField r ==> !p. monic p /\ ipoly p ==> p pdivides (master (CARD R ** deg p))``,
+Theorem poly_irreducible_divides_master:
+    !r:'a field. FiniteField r ==> !p. monic p /\ ipoly p ==> p pdivides (master (CARD R ** deg p))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `pmonic p` by rw[poly_monic_irreducible_property] >>
   `poly X /\ poly (X % p) /\ deg (X % p) < deg p` by rw[poly_deg_mod_less] >>
@@ -537,7 +546,8 @@ val poly_irreducible_divides_master = store_thm(
   `_ = X ** (CARD (PolyModRing r p).carrier) % p` by rw[poly_mod_field_exp] >>
   `_ = X ** (CARD R ** deg p) % p` by metis_tac[poly_mod_irreducible_field_card] >>
   `(X ** (CARD R ** deg p) == X) (pm p)` by rw[pmod_def_alt] >>
-  rw[poly_ulead_divides_master_condition]);
+  rw[poly_ulead_divides_master_condition]
+QED
 
 (* This is a small milestone theorem. The big one is: poly_irreducible_master_divisibility *)
 
@@ -556,17 +566,18 @@ val poly_irreducible_divides_master = store_thm(
    <=>                           x ** n % p = x % p     by poly_mod_field_exp
    <=>                          (x ** n == x) (pm p)    by pmod_def_alt
 *)
-val poly_mod_master_root_condition = store_thm(
-  "poly_mod_master_root_condition",
-  ``!r:'a field. Field r ==> !p. monic p /\ ipoly p ==> !x. x IN (PolyModRing r p).carrier ==>
-   !n. poly_root (PolyModRing r p) (Master (PolyModRing r p) n) x <=> (x ** n == x) (pm p)``,
+Theorem poly_mod_master_root_condition:
+    !r:'a field. Field r ==> !p. monic p /\ ipoly p ==> !x. x IN (PolyModRing r p).carrier ==>
+   !n. poly_root (PolyModRing r p) (Master (PolyModRing r p) n) x <=> (x ** n == x) (pm p)
+Proof
   rpt strip_tac >>
   `pmonic p` by rw[poly_monic_irreducible_property] >>
   `Ring r /\ Ring (PolyModRing r p)` by rw[poly_mod_ring_ring] >>
   `poly x /\ deg x < deg p` by metis_tac[poly_mod_ring_element, NOT_ZERO] >>
   `x % p = x` by rw[poly_mod_less] >>
   `!n. (PolyModRing r p).prod.exp (x % p) n = (x ** n) % p` by rw[poly_mod_field_exp] >>
-  metis_tac[poly_master_root, pmod_def_alt]);
+  metis_tac[poly_master_root, pmod_def_alt]
+QED
 
 (* Theorem: Ring r ==> !p. pmonic p ==>
            !f. poly_fun f ==> !n. (poly_sum (GENLIST f n)) % p = poly_sum (GENLIST (\k. (f k) % p) n) % p *)
@@ -585,10 +596,10 @@ val poly_mod_master_root_condition = store_thm(
       = (poly_sum (GENLIST (\k. f k % p) n) + (f n) % p) % p       by poly_mod_mod, ulead p
       = poly_sum (GENLIST (\k. f k % p) (SUC n)) % p               by poly_sum_decompose_last
 *)
-val poly_mod_poly_sum_gen = store_thm(
-  "poly_mod_poly_sum_gen",
-  ``!r:'a ring. Ring r ==> !p. ulead p ==>
-   !f. poly_fun f ==> !n. (poly_sum (GENLIST f n)) % p = poly_sum (GENLIST (\k. (f k) % p) n) % p``,
+Theorem poly_mod_poly_sum_gen:
+    !r:'a ring. Ring r ==> !p. ulead p ==>
+   !f. poly_fun f ==> !n. (poly_sum (GENLIST f n)) % p = poly_sum (GENLIST (\k. (f k) % p) n) % p
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw_tac std_ss[GENLIST_0] >>
@@ -601,7 +612,8 @@ val poly_mod_poly_sum_gen = store_thm(
   `_ = (poly_sum (GENLIST (\k. f k % p) n) % p + ((f n) % p) % p) % p` by rw_tac std_ss[poly_mod_mod] >>
   `_ = (poly_sum (GENLIST (\k. f k % p) n) + (f n) % p) % p` by rw_tac std_ss[poly_mod_add, poly_mod_poly] >>
   `_ = poly_sum (GENLIST (\k. f k % p) (SUC n)) % p` by rw_tac std_ss[poly_sum_decompose_last] >>
-  rw[]);
+  rw[]
+QED
 
 (* The following theorem extends:
 > poly_irreducible_divides_master;
@@ -655,11 +667,11 @@ val it = |- !r. Field r ==> !k n m. pgcd (master (k ** n)) (master (k ** m)) ~~ 
      Therefore, (x ** b == x) (pm p)          by pmod_def_alt, x ** b % p = x % p
      Hence  poly_root s (Master s b) x        by poly_mod_master_root_condition
 *)
-val poly_irreducible_master_factor_all_roots = store_thm(
-  "poly_irreducible_master_factor_all_roots",
-  ``!r:'a field. FiniteField r ==> !p. monic p /\ ipoly p ==>
+Theorem poly_irreducible_master_factor_all_roots:
+    !r:'a field. FiniteField r ==> !p. monic p /\ ipoly p ==>
    !n. p pdivides (master (CARD R ** n)) ==>
-       (PolyModRing r p).carrier SUBSET poly_roots (PolyModRing r p) (Master ((PolyModRing r p)) (CARD R ** n))``,
+       (PolyModRing r p).carrier SUBSET poly_roots (PolyModRing r p) (Master ((PolyModRing r p)) (CARD R ** n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `poly X /\ poly |1| /\ !k. poly (X ** k)` by rw[] >>
@@ -691,7 +703,8 @@ val poly_irreducible_master_factor_all_roots = store_thm(
   `_ = poly_sum (GENLIST (\k. x ' k * X ** k) (SUC (deg x))) % p` by rw[GSYM poly_mod_poly_sum_gen] >>
   `_ = x % p` by metis_tac[poly_eq_poly_sum] >>
   `(x ** b == x) (pm p)` by rw[pmod_def_alt] >>
-  rw[poly_mod_master_root_condition, Abbr`s`]);
+  rw[poly_mod_master_root_condition, Abbr`s`]
+QED
 
 (* This is a simple consequence of the above theorem *)
 
@@ -725,10 +738,10 @@ val poly_irreducible_master_factor_all_roots = store_thm(
    Thus CARD R ** d <= CARD R ** n                by LESS_EQ_TRANS, from 3 and 4.
      or           d <= n                          by EXP_BASE_LE_MONO, 1 < CARD R
 *)
-val poly_irreducible_master_factor_deg = store_thm(
-  "poly_irreducible_master_factor_deg",
-  ``!r:'a field. FiniteField r ==> !p. monic p /\ ipoly p ==>
-   !n. 0 < n /\ p pdivides (master (CARD R ** n)) ==> deg p <= n``,
+Theorem poly_irreducible_master_factor_deg:
+    !r:'a field. FiniteField r ==> !p. monic p /\ ipoly p ==>
+   !n. 0 < n /\ p pdivides (master (CARD R ** n)) ==> deg p <= n
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `1 < CARD R` by rw[finite_field_card_gt_1] >>
   `1 < CARD R ** n` by rw[ONE_LT_EXP] >>
@@ -748,7 +761,8 @@ val poly_irreducible_master_factor_deg = store_thm(
   `CARD s.carrier = CARD R ** d` by metis_tac[poly_mod_ring_card, FiniteRing_def] >>
   `poly_deg s t = CARD R ** n` by metis_tac[poly_master_deg, field_one_ne_zero] >>
   `CARD R ** d <= CARD R ** n` by metis_tac[LESS_EQ_TRANS] >>
-  metis_tac[EXP_BASE_LE_MONO]);
+  metis_tac[EXP_BASE_LE_MONO]
+QED
 
 (* Theorem: FiniteField r ==> !p. monic p /\ ipoly p ==>
             !n. p pdivides (master (CARD R ** n)) <=> (deg p) divides n *)
@@ -785,10 +799,10 @@ val poly_irreducible_master_factor_deg = store_thm(
         and u pdivides v                    by poly_master_divisibility, d divides n
       hence p pdivides v                    by poly_divides_transitive
 *)
-val poly_irreducible_master_divisibility = store_thm(
-  "poly_irreducible_master_divisibility",
-  ``!r:'a field. FiniteField r ==> !p. monic p /\ ipoly p ==>
-   !n. p pdivides (master (CARD R ** n)) <=> (deg p) divides n``,
+Theorem poly_irreducible_master_divisibility:
+    !r:'a field. FiniteField r ==> !p. monic p /\ ipoly p ==>
+   !n. p pdivides (master (CARD R ** n)) <=> (deg p) divides n
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   qabbrev_tac `d = deg p` >>
@@ -812,7 +826,8 @@ val poly_irreducible_master_divisibility = store_thm(
     `1 < CARD R` by rw[finite_field_card_gt_1] >>
     `u pdivides v` by rw[poly_master_divisibility, Abbr`u`, Abbr`v`] >>
     metis_tac[poly_divides_transitive]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -838,10 +853,10 @@ poly_irreducible_master_divisibility |> ISPEC ``s:'a field``;
 |- FiniteField s ==> !p. Monic s p /\ IPoly s p ==>
                      !n. poly_divides s p (Master s (CARD B ** n)) <=> Deg s p divides n
 *)
-val poly_irreducible_master_subfield_divisibility = store_thm(
-  "poly_irreducible_master_subfield_divisibility",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p ==>
-   (p pdivides (master (CARD R)) <=> deg p divides (r <:> s))``,
+Theorem poly_irreducible_master_subfield_divisibility:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p ==>
+   (p pdivides (master (CARD R)) <=> deg p divides (r <:> s))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `s <= r` by rw[subfield_is_subring] >>
@@ -853,7 +868,8 @@ val poly_irreducible_master_subfield_divisibility = store_thm(
   qabbrev_tac `q = master (CARD R)` >>
   `Poly s q` by rw[poly_master_spoly, Abbr`q`] >>
   `CARD R = CARD B ** (r <:> s)` by rw[finite_subfield_card_eqn] >>
-  metis_tac[poly_irreducible_master_divisibility, subring_poly_divides_iff, subring_poly_master]);
+  metis_tac[poly_irreducible_master_divisibility, subring_poly_divides_iff, subring_poly_master]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Master as Product of Factors                                              *)
@@ -871,16 +887,17 @@ val poly_irreducible_master_subfield_divisibility = store_thm(
        = poly_factors (master (CARD R))             by poly_prod_factor_roots_eq_poly
        = PPROD (IMAGE factor R)                     by notation
 *)
-val poly_master_eq_root_factor_product = store_thm(
-  "poly_master_eq_root_factor_product",
-  ``!r:'a field. FiniteField r ==> (master (CARD R) = PPROD (IMAGE factor R))``,
+Theorem poly_master_eq_root_factor_product:
+    !r:'a field. FiniteField r ==> (master (CARD R) = PPROD (IMAGE factor R))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `roots (master (CARD R)) = R` by rw[poly_master_roots_all] >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `1 < CARD R` by rw[finite_field_card_gt_1] >>
   `monic (master (CARD R))` by rw[poly_master_monic] >>
   `deg (master (CARD R)) = CARD R` by rw[poly_master_deg] >>
-  metis_tac[poly_prod_factor_roots_eq_poly]);
+  metis_tac[poly_prod_factor_roots_eq_poly]
+QED
 
 (* Theorem: FiniteField r ==> (master (CARD R) = PPROD {X - c * |1| | c | c IN R}) *)
 (* Proof:
@@ -891,16 +908,17 @@ val poly_master_eq_root_factor_product = store_thm(
         master (CARD R)
       = PPROD {X - c * |1| | c | c IN R}    by poly_eq_prod_factor_roots_alt
 *)
-val poly_master_eq_root_factor_product_alt = store_thm(
-  "poly_master_eq_root_factor_product_alt",
-  ``!r:'a field. FiniteField r ==> (master (CARD R) = PPROD {X - c * |1| | c | c IN R})``,
+Theorem poly_master_eq_root_factor_product_alt:
+    !r:'a field. FiniteField r ==> (master (CARD R) = PPROD {X - c * |1| | c | c IN R})
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `1 < CARD R` by rw[finite_field_card_gt_1] >>
   `roots (master (CARD R)) = R` by rw[poly_master_roots_all] >>
   `monic (master (CARD R))` by rw[] >>
   `deg (master (CARD R)) = CARD R` by rw[] >>
-  metis_tac[poly_eq_prod_factor_roots_alt]);
+  metis_tac[poly_eq_prod_factor_roots_alt]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -934,10 +952,10 @@ val poly_master_eq_root_factor_product_alt = store_thm(
       Thus CARD (roots p) <= n             by poly_roots_count, p <> |0|
       This contradicts n < CARD (roots p).
 *)
-val subfield_element_condition = store_thm(
-  "subfield_element_condition",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==>
-   !x. x IN R ==> (x IN B <=> (x ** CARD B = x))``,
+Theorem subfield_element_condition:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==>
+   !x. x IN R ==> (x IN B <=> (x ** CARD B = x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   rw[EQ_IMP_THM] >-
@@ -959,7 +977,8 @@ val subfield_element_condition = store_thm(
   `FINITE (roots p)` by rw[poly_roots_finite] >>
   `n < CARD (roots p)` by rw[CARD_PSUBSET, Abbr`n`] >>
   `CARD (roots p) <= n` by metis_tac[poly_roots_count] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* This is a milestone theorem. *)
 
@@ -1040,10 +1059,10 @@ val subfield_element_condition = store_thm(
      Hence cpoly r s p                    by common_poly_alt
         or Poly s p                       by subring_poly_alt
 *)
-val subfield_poly_condition = store_thm(
-  "subfield_poly_condition",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==>
-   !p. poly p ==> (Poly s p <=> (p ** CARD B = peval p (X ** CARD B)))``,
+Theorem subfield_poly_condition:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==>
+   !p. poly p ==> (Poly s p <=> (p ** CARD B = peval p (X ** CARD B)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `Ring r /\ Ring s /\ #1 <> #0` by rw[] >>
@@ -1097,7 +1116,8 @@ val subfield_poly_condition = store_thm(
     ) >>
     `!k. p ' k IN B` by metis_tac[poly_coeff_element, subfield_element_condition] >>
     metis_tac[subfield_is_subring, subring_poly_alt, common_poly_alt]
-  ]);
+  ]
+QED
 
 (* Another milestone theorem! *)
 
@@ -1118,10 +1138,11 @@ End
 
 (* Theorem: p IN (monic_irreducibles_degree r n) <=> monic p /\ ipoly p /\ (deg p = n) *)
 (* Proof: by monic_irreducibles_degree_def *)
-val monic_irreducibles_degree_member = store_thm(
-  "monic_irreducibles_degree_member",
-  ``!(r:'a field) n p. p IN (monic_irreducibles_degree r n) <=> monic p /\ ipoly p /\ (deg p = n)``,
-  rw[monic_irreducibles_degree_def]);
+Theorem monic_irreducibles_degree_member:
+    !(r:'a field) n p. p IN (monic_irreducibles_degree r n) <=> monic p /\ ipoly p /\ (deg p = n)
+Proof
+  rw[monic_irreducibles_degree_def]
+QED
 
 (* Theorem: Field r ==> (p IN (monic_irreducibles_bounded r n) <=>
             monic p /\ ipoly p /\ (deg p <= n) /\ (deg p) divides n) *)
@@ -1137,16 +1158,17 @@ val monic_irreducibles_degree_member = store_thm(
     <=> (deg p) IN (divisors n)
     <=> (deg p <= n) /\ (deg p) divides n        by divisors_element
 *)
-val monic_irreducibles_bounded_member = store_thm(
-  "monic_irreducibles_bounded_member",
-  ``!(r:'a field) n p. Field r ==>
+Theorem monic_irreducibles_bounded_member:
+    !(r:'a field) n p. Field r ==>
       (p IN (monic_irreducibles_bounded r n) <=>
-       monic p /\ ipoly p /\ (deg p <= n) /\ (deg p) divides n)``,
+       monic p /\ ipoly p /\ (deg p <= n) /\ (deg p) divides n)
+Proof
   (rw[monic_irreducibles_bounded_def, monic_irreducibles_degree_member, divisors_element, EXTENSION, EQ_IMP_THM] >> simp[]) >>
   qexists_tac `monic_irreducibles_degree r (deg p)` >>
   simp[monic_irreducibles_degree_member] >>
   qexists_tac `deg p` >>
-  simp[poly_irreducible_deg_nonzero]);
+  simp[poly_irreducible_deg_nonzero]
+QED
 
 (* Theorem: FINITE R /\ #0 IN R ==> !n. FINITE (monic_irreducibles_degree r n) *)
 (* Proof:
@@ -1157,9 +1179,9 @@ val monic_irreducibles_bounded_member = store_thm(
      Now FINITE {p | poly p /\ deg p < m}       by poly_truncated_by_degree_finite
    Hence FINITE s                               by SUBSET_FINITE
 *)
-val monic_irreducibles_degree_finite = store_thm(
-  "monic_irreducibles_degree_finite",
-  ``!r:'a ring. FINITE R /\ #0 IN R ==> !n. FINITE (monic_irreducibles_degree r n)``,
+Theorem monic_irreducibles_degree_finite:
+    !r:'a ring. FINITE R /\ #0 IN R ==> !n. FINITE (monic_irreducibles_degree r n)
+Proof
   rpt strip_tac >>
   `n < SUC n` by decide_tac >>
   qabbrev_tac `s = monic_irreducibles_degree r n` >>
@@ -1167,7 +1189,8 @@ val monic_irreducibles_degree_finite = store_thm(
   `!p. p IN s ==> poly p /\ deg p < m` by metis_tac[monic_irreducibles_degree_member, poly_monic_poly] >>
   `s SUBSET {p | poly p /\ deg p < m}` by rw[SUBSET_DEF] >>
   `FINITE {p | poly p /\ deg p < m}` by rw[poly_truncated_by_degree_finite] >>
-  metis_tac[SUBSET_FINITE]);
+  metis_tac[SUBSET_FINITE]
+QED
 
 (* Theorem: FINITE R /\ #0 IN R ==> !n. FINITE (monic_irreducibles_bounded r n) *)
 (* Proof:
@@ -1181,12 +1204,13 @@ val monic_irreducibles_degree_finite = store_thm(
        That is, !x. x IN (divisors n), FINITE (monic_irreducibles_degree r x)   by IN_IMAGE
        This is true                       by monic_irreducibles_degree_finite
 *)
-val monic_irreducibles_bounded_finite = store_thm(
-  "monic_irreducibles_bounded_finite",
-  ``!r:'a ring. FINITE R /\ #0 IN R ==> !n. FINITE (monic_irreducibles_bounded r n)``,
+Theorem monic_irreducibles_bounded_finite:
+    !r:'a ring. FINITE R /\ #0 IN R ==> !n. FINITE (monic_irreducibles_bounded r n)
+Proof
   rw[monic_irreducibles_bounded_def] >-
   rw[divisors_finite] >>
-  rw[monic_irreducibles_degree_finite]);
+  rw[monic_irreducibles_degree_finite]
+QED
 
 (* Theorem: Field r ==> (monic_irreducibles_degree r 0 = {}) *)
 (* Proof:
@@ -1196,13 +1220,14 @@ val monic_irreducibles_bounded_finite = store_thm(
     But monic p /\ ipoly p ==> 0 < deg p            by poly_irreducible_deg_nonzero
     This contradicts deg p = 0.
 *)
-val monic_irreducibles_degree_0 = store_thm(
-  "monic_irreducibles_degree_0",
-  ``!r:'a field. Field r ==> (monic_irreducibles_degree r 0 = {})``,
+Theorem monic_irreducibles_degree_0:
+    !r:'a field. Field r ==> (monic_irreducibles_degree r 0 = {})
+Proof
   rw[monic_irreducibles_degree_member, EXTENSION] >>
   spose_not_then strip_assume_tac >>
   `0 < deg x` by rw[poly_irreducible_deg_nonzero] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Field r ==> (monic_irreducibles_degree r 1 = IMAGE factor R) *)
 (* Proof:
@@ -1218,16 +1243,17 @@ val monic_irreducibles_degree_0 = store_thm(
    (4) x' IN R ==> deg (factor x') = 1
        True            by poly_deg_factor
 *)
-val monic_irreducibles_degree_1 = store_thm(
-  "monic_irreducibles_degree_1",
-  ``!r:'a field. Field r ==> (monic_irreducibles_degree r 1 = IMAGE factor R)``,
+Theorem monic_irreducibles_degree_1:
+    !r:'a field. Field r ==> (monic_irreducibles_degree r 1 = IMAGE factor R)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   rw[monic_irreducibles_degree_member, EXTENSION, EQ_IMP_THM] >-
   metis_tac[poly_monic_deg1_factor] >-
   rw[poly_factor_monic] >-
   metis_tac[poly_factor_poly, poly_deg_factor, poly_deg_1_irreducible] >>
-  rw[poly_deg_factor]);
+  rw[poly_deg_factor]
+QED
 
 (* Theorem: Field r ==> (monic_irreducibles_bounded r 0 = {}) *)
 (* Proof:
@@ -1239,14 +1265,15 @@ val monic_irreducibles_degree_1 = store_thm(
         = (monic_irreducibles_degree r 0)                     by EXTENSION
         = {}                                                  by monic_irreducibles_degree_0
 *)
-val monic_irreducibles_bounded_0 = store_thm(
-  "monic_irreducibles_bounded_0",
-  ``!r:'a field. Field r ==> (monic_irreducibles_bounded r 0 = {})``,
+Theorem monic_irreducibles_bounded_0:
+    !r:'a field. Field r ==> (monic_irreducibles_bounded r 0 = {})
+Proof
   rpt strip_tac >>
   `(monic_irreducibles_bounded r 0) = (monic_irreducibles_degree r 0)`
     by rw[monic_irreducibles_bounded_member, monic_irreducibles_degree_member,
           EXTENSION, EQ_IMP_THM] >>
-  rw[monic_irreducibles_degree_0]);
+  rw[monic_irreducibles_degree_0]
+QED
 
 (* Theorem: Field r ==> (monic_irreducibles_bounded r 1 = IMAGE factor R) *)
 (* Proof:
@@ -1258,35 +1285,39 @@ val monic_irreducibles_bounded_0 = store_thm(
         = (monic_irreducibles_degree r 1)                     by EXTENSION
         = IMAGE factor R                                      by monic_irreducibles_degree_1
 *)
-val monic_irreducibles_bounded_1 = store_thm(
-  "monic_irreducibles_bounded_1",
-  ``!r:'a field. Field r ==> (monic_irreducibles_bounded r 1 = IMAGE factor R)``,
+Theorem monic_irreducibles_bounded_1:
+    !r:'a field. Field r ==> (monic_irreducibles_bounded r 1 = IMAGE factor R)
+Proof
   rpt strip_tac >>
   `(monic_irreducibles_bounded r 1) = (monic_irreducibles_degree r 1)`
     by rw[monic_irreducibles_bounded_member, monic_irreducibles_degree_member,
           DIVIDES_ONE, EXTENSION, EQ_IMP_THM] >>
-  rw[monic_irreducibles_degree_1]);
+  rw[monic_irreducibles_degree_1]
+QED
 
 (* Theorem: miset (monic_irreducibles_degree r n) *)
 (* Proof: by monic_irreducibles_degree_member *)
-val monic_irreducibles_degree_monic_irreducibles_set = store_thm(
-  "monic_irreducibles_degree_monic_irreducibles_set",
-  ``!r:'a ring. !n. miset (monic_irreducibles_degree r n)``,
-  rw_tac std_ss[monic_irreducibles_degree_member]);
+Theorem monic_irreducibles_degree_monic_irreducibles_set:
+    !r:'a ring. !n. miset (monic_irreducibles_degree r n)
+Proof
+  rw_tac std_ss[monic_irreducibles_degree_member]
+QED
 
 (* Theorem: mset (monic_irreducibles_degree r n) *)
 (* Proof: by monic_irreducibles_degree_member *)
-val monic_irreducibles_degree_monic_set = store_thm(
-  "monic_irreducibles_degree_monic_set",
-  ``!r:'a ring. !n. mset (monic_irreducibles_degree r n)``,
-  rw_tac std_ss[monic_irreducibles_degree_member]);
+Theorem monic_irreducibles_degree_monic_set:
+    !r:'a ring. !n. mset (monic_irreducibles_degree r n)
+Proof
+  rw_tac std_ss[monic_irreducibles_degree_member]
+QED
 
 (* Theorem: pset (monic_irreducibles_degree r n) *)
 (* Proof: by monic_irreducibles_degree_monic_set, monic_set_poly_set *)
-val monic_irreducibles_degree_poly_set = store_thm(
-  "monic_irreducibles_degree_poly_set",
-  ``!r:'a ring. !n. pset (monic_irreducibles_degree r n)``,
-  metis_tac[monic_irreducibles_degree_monic_set, monic_set_poly_set]);
+Theorem monic_irreducibles_degree_poly_set:
+    !r:'a ring. !n. pset (monic_irreducibles_degree r n)
+Proof
+  metis_tac[monic_irreducibles_degree_monic_set, monic_set_poly_set]
+QED
 
 (* Theorem: Field r ==> !n. pcoprime_set (monic_irreducibles_degree r n) *)
 (* Proof:
@@ -1300,12 +1331,13 @@ val monic_irreducibles_degree_poly_set = store_thm(
         ==> monic p /\ ipoly p /\ monic q /\ ipoly q   by monic_irreducibles_degree_member
        With p <> q ==> pcoprime p q                    by poly_monic_irreducibles_coprime
 *)
-val monic_irreducibles_degree_coprime_set = store_thm(
-  "monic_irreducibles_degree_coprime_set",
-  ``!r:'a field. Field r ==> !n. pcoprime_set (monic_irreducibles_degree r n)``,
+Theorem monic_irreducibles_degree_coprime_set:
+    !r:'a field. Field r ==> !n. pcoprime_set (monic_irreducibles_degree r n)
+Proof
   rw_tac std_ss[poly_coprime_set_def] >-
   metis_tac[monic_irreducibles_degree_member, poly_monic_poly] >>
-  metis_tac[monic_irreducibles_degree_member, poly_monic_irreducibles_coprime]);
+  metis_tac[monic_irreducibles_degree_member, poly_monic_irreducibles_coprime]
+QED
 
 (* Theorem: Field r ==> !n. pcoprime_set (monic_irreducibles_bounded r n) *)
 (* Proof:
@@ -1319,12 +1351,13 @@ val monic_irreducibles_degree_coprime_set = store_thm(
         ==> monic p /\ ipoly p /\ monic q /\ ipoly q   by monic_irreducibles_bounded_member
        With p <> q ==> pcoprime p q                    by poly_monic_irreducibles_coprime
 *)
-val monic_irreducibles_bounded_coprime_set = store_thm(
-  "monic_irreducibles_bounded_coprime_set",
-  ``!r:'a field. Field r ==> !n. pcoprime_set (monic_irreducibles_bounded r n)``,
+Theorem monic_irreducibles_bounded_coprime_set:
+    !r:'a field. Field r ==> !n. pcoprime_set (monic_irreducibles_bounded r n)
+Proof
   rw_tac std_ss[poly_coprime_set_def] >-
   metis_tac[monic_irreducibles_bounded_member, poly_monic_poly] >>
-  metis_tac[monic_irreducibles_bounded_member, poly_monic_irreducibles_coprime]);
+  metis_tac[monic_irreducibles_bounded_member, poly_monic_irreducibles_coprime]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Product of Monic Irreducibles of the same degree                          *)
@@ -1342,28 +1375,31 @@ val _ = overload_on("Psi", ``poly_psi r``);
     ==> monic (PPROD s)   by poly_monic_prod_set_monic
      or monic (Psi n)     by notation
 *)
-val monic_irreducibles_degree_prod_set_monic = store_thm(
-  "monic_irreducibles_degree_prod_set_monic",
-  ``!r:'a ring. FiniteRing r ==> !n. monic (Psi n)``,
+Theorem monic_irreducibles_degree_prod_set_monic:
+    !r:'a ring. FiniteRing r ==> !n. monic (Psi n)
+Proof
   rw[FiniteRing_def] >>
   qabbrev_tac `s = monic_irreducibles_degree r n` >>
   `FINITE s` by rw[monic_irreducibles_degree_finite, Abbr`s`] >>
   `mset s` by metis_tac[monic_irreducibles_degree_member] >>
-  rw[poly_monic_prod_set_monic]);
+  rw[poly_monic_prod_set_monic]
+QED
 
 (* Theorem: FiniteRing r ==> !n. poly (Psi n) *)
 (* Proof: by monic_irreducibles_degree_prod_set_monic, poly_monic_poly *)
-val monic_irreducibles_degree_prod_set_poly = store_thm(
-  "monic_irreducibles_degree_prod_set_poly",
-  ``!r:'a ring. FiniteRing r ==> !n. poly (Psi n)``,
-  rw_tac std_ss[monic_irreducibles_degree_prod_set_monic, poly_monic_poly]);
+Theorem monic_irreducibles_degree_prod_set_poly:
+    !r:'a ring. FiniteRing r ==> !n. poly (Psi n)
+Proof
+  rw_tac std_ss[monic_irreducibles_degree_prod_set_monic, poly_monic_poly]
+QED
 
 (* Theorem: FiniteRing r /\ #1 <> #0 ==> !n. Psi n <> |0| *)
 (* Proof: by monic_irreducibles_degree_prod_set_monic, poly_monic_nonzero *)
-val monic_irreducibles_degree_prod_set_nonzero = store_thm(
-  "monic_irreducibles_degree_prod_set_nonzero",
-  ``!r:'a ring. FiniteRing r /\ #1 <> #0 ==> !n. Psi n <> |0|``,
-  rw_tac std_ss[monic_irreducibles_degree_prod_set_monic, poly_monic_nonzero]);
+Theorem monic_irreducibles_degree_prod_set_nonzero:
+    !r:'a ring. FiniteRing r /\ #1 <> #0 ==> !n. Psi n <> |0|
+Proof
+  rw_tac std_ss[monic_irreducibles_degree_prod_set_monic, poly_monic_nonzero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Master Polynomial as Product of Monic Irreducibles.                       *)
@@ -1430,10 +1466,10 @@ Instead, the strategy goes like this:
         and poly_monic s p                         by above
       Hence unit_eq (PolyRing s) m p ==> (m = p)   by poly_unit_eq_monic_eq
 *)
-val poly_master_subfield_factors = store_thm(
-  "poly_master_subfield_factors",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==>
-    !n. 0 < n ==> (Master s (CARD B ** n) = poly_prod_set s (monic_irreducibles_bounded s n))``,
+Theorem poly_master_subfield_factors:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==>
+    !n. 0 < n ==> (Master s (CARD B ** n) = poly_prod_set s (monic_irreducibles_bounded s n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `FINITE B` by metis_tac[FiniteField_def] >>
@@ -1456,26 +1492,29 @@ val poly_master_subfield_factors = store_thm(
   rw[Abbr`b`, monic_irreducibles_bounded_member] >>
   rw[poly_master_coprime_diff, poly_gcd_one_coprime, Abbr`m`]
   ) >>
-  metis_tac[poly_unit_eq_monic_eq, field_is_ring]);
+  metis_tac[poly_unit_eq_monic_eq, field_is_ring]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r /\ 0 < n ==>
             (master (CARD B ** n) = poly_prod_set s (monic_irreducibles_bounded s n)) *)
 (* Proof: by poly_master_subfield_factors, subring_poly_master *)
-val poly_master_subfield_factors_alt = store_thm(
-  "poly_master_subfield_factors_alt",
-  ``!(r s):'a field n. FiniteField r /\ s <<= r /\ 0 < n ==>
-                      (master (CARD B ** n) = poly_prod_set s (monic_irreducibles_bounded s n))``,
-  metis_tac[poly_master_subfield_factors, subring_poly_master, subfield_is_subring]);
+Theorem poly_master_subfield_factors_alt:
+    !(r s):'a field n. FiniteField r /\ s <<= r /\ 0 < n ==>
+                      (master (CARD B ** n) = poly_prod_set s (monic_irreducibles_bounded s n))
+Proof
+  metis_tac[poly_master_subfield_factors, subring_poly_master, subfield_is_subring]
+QED
 
 (* This is a milestone theorem. *)
 
 (* Theorem: FiniteField r ==> !n. 0 < n ==> (master (CARD R ** n) = PPROD (monic_irreducibles_bounded r n)) *)
 (* Proof: by poly_master_subfield_factors, taking s = r. *)
-val poly_master_monic_irreducible_factors = store_thm(
-  "poly_master_monic_irreducible_factors",
-  ``!r:'a field. FiniteField r ==>
-   !n. 0 < n ==> (master (CARD R ** n) = PPROD (monic_irreducibles_bounded r n))``,
-  metis_tac[poly_master_subfield_factors, finite_field_is_field, subfield_refl]);
+Theorem poly_master_monic_irreducible_factors:
+    !r:'a field. FiniteField r ==>
+   !n. 0 < n ==> (master (CARD R ** n) = PPROD (monic_irreducibles_bounded r n))
+Proof
+  metis_tac[poly_master_subfield_factors, finite_field_is_field, subfield_refl]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==>
             (master (CARD R) = poly_prod_set s (monic_irreducibles_bounded s (r <:> s))) *)
@@ -1485,15 +1524,16 @@ val poly_master_monic_irreducible_factors = store_thm(
      and 0 < (r <:> s)                          by finite_subfield_card_eqn
    The result follows                           by poly_master_subfield_factors
 *)
-val poly_master_eq_irreducibles_product = store_thm(
-  "poly_master_eq_irreducibles_product",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==>
-       (master (CARD R) = poly_prod_set s (monic_irreducibles_bounded s (r <:> s)))``,
+Theorem poly_master_eq_irreducibles_product:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==>
+       (master (CARD R) = poly_prod_set s (monic_irreducibles_bounded s (r <:> s)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `s <= r` by rw[subfield_is_subring] >>
   `Master s (CARD R) = master (CARD R)` by rw[subring_poly_master] >>
   `(CARD R = CARD B ** (r <:> s)) /\ 0 < (r <:> s)` by rw[finite_subfield_card_eqn] >>
-  metis_tac[poly_master_subfield_factors]);
+  metis_tac[poly_master_subfield_factors]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Counting Monic Irreducible Polynomials                                    *)
@@ -1515,9 +1555,9 @@ End
       = n * CARD s                            by SIGMA_CONSTANT
       = n * (monic_irreducibles_count r n)    by monic_irreducibles_count_def
 *)
-val monic_irreducibles_degree_prod_set_deg = store_thm(
-  "monic_irreducibles_degree_prod_set_deg",
-  ``!r:'a ring. FiniteRing r ==> !n. deg (Psi n) = n * (monic_irreducibles_count r n)``,
+Theorem monic_irreducibles_degree_prod_set_deg:
+    !r:'a ring. FiniteRing r ==> !n. deg (Psi n) = n * (monic_irreducibles_count r n)
+Proof
   rw[FiniteRing_def] >>
   `#0 IN R` by rw[] >>
   qabbrev_tac `s = monic_irreducibles_degree r n` >>
@@ -1525,7 +1565,8 @@ val monic_irreducibles_degree_prod_set_deg = store_thm(
   `!p. p IN s ==> monic p /\ (deg p = n)` by rw[monic_irreducibles_degree_member, Abbr`s`] >>
   `deg (PPROD s) = SIGMA deg s` by rw[poly_monic_prod_set_deg] >>
   `_  = n * CARD s` by rw[SIGMA_CONSTANT] >>
-  rw[monic_irreducibles_count_def, Abbr`s`]);
+  rw[monic_irreducibles_count_def, Abbr`s`]
+QED
 
 (* Theorem: FiniteRing r ==>
    (deg o PPROD o monic_irreducibles_degree r = (\d. d * (monic_irreducibles_count r d))) *)
@@ -1536,11 +1577,12 @@ val monic_irreducibles_degree_prod_set_deg = store_thm(
         = (\d. d * (monic_irreducibles_count r d)) n      by application
    Hence the functions are equal                          by FUN_EQ_THM
 *)
-val monic_irreducibles_degree_prod_set_deg_fun = store_thm(
-  "monic_irreducibles_degree_prod_set_deg_fun",
-  ``!r:'a ring. FiniteRing r ==>
-   (deg o PPROD o monic_irreducibles_degree r = (\d. d * (monic_irreducibles_count r d)))``,
-  rw[monic_irreducibles_degree_prod_set_deg, FUN_EQ_THM]);
+Theorem monic_irreducibles_degree_prod_set_deg_fun:
+    !r:'a ring. FiniteRing r ==>
+   (deg o PPROD o monic_irreducibles_degree r = (\d. d * (monic_irreducibles_count r d)))
+Proof
+  rw[monic_irreducibles_degree_prod_set_deg, FUN_EQ_THM]
+QED
 
 (* Theorem: n <> m ==> DISJOINT (monic_irreducibles_degree r n) (monic_irreducibles_degree r m) *)
 (* Proof:
@@ -1554,10 +1596,11 @@ val monic_irreducibles_degree_prod_set_deg_fun = store_thm(
     and e IN t ==> deg e = m   by monic_irreducibles_degree_member
    This contradicts n <> m.
 *)
-val monic_irreducibles_degree_disjoint = store_thm(
-  "monic_irreducibles_degree_disjoint",
-  ``!r:'a ring. !n m. n <> m ==> DISJOINT (monic_irreducibles_degree r n) (monic_irreducibles_degree r m)``,
-  metis_tac[DISJOINT_DEF, IN_INTER, MEMBER_NOT_EMPTY, monic_irreducibles_degree_member]);
+Theorem monic_irreducibles_degree_disjoint:
+    !r:'a ring. !n m. n <> m ==> DISJOINT (monic_irreducibles_degree r n) (monic_irreducibles_degree r m)
+Proof
+  metis_tac[DISJOINT_DEF, IN_INTER, MEMBER_NOT_EMPTY, monic_irreducibles_degree_member]
+QED
 
 (* Theorem: PAIR_DISJOINT (IMAGE (monic_irreducibles_degree r) (divisors n)) *)
 (* Proof:
@@ -1567,10 +1610,11 @@ val monic_irreducibles_degree_disjoint = store_thm(
       x IN divisors n /\ x' IN divisors n /\ s <> t ==> DISJOINT s t
    Since s <> t ==> x <> x', hence true   by monic_irreducibles_degree_disjoint
 *)
-val monic_irreducibles_degree_pair_disjoint = store_thm(
-  "monic_irreducibles_degree_pair_disjoint",
-  ``!r:'a ring. !n. PAIR_DISJOINT (IMAGE (monic_irreducibles_degree r) (divisors n))``,
-  metis_tac[IN_IMAGE, monic_irreducibles_degree_disjoint]);
+Theorem monic_irreducibles_degree_pair_disjoint:
+    !r:'a ring. !n. PAIR_DISJOINT (IMAGE (monic_irreducibles_degree r) (divisors n))
+Proof
+  metis_tac[IN_IMAGE, monic_irreducibles_degree_disjoint]
+QED
 
 (* Theorem: FiniteField r ==> !p. monic p /\ ipoly p ==>
             !n. p pdivides Psi n <=> p IN (monic_irreducibles_degree r n) *)
@@ -1580,16 +1624,17 @@ val monic_irreducibles_degree_pair_disjoint = store_thm(
      and miset s                           by monic_irreducibles_degree_member
    Hence p pdivides PPROD s ==> p IN s     by poly_prod_monic_irreducible_set_divisor
 *)
-val monic_irreducibles_degree_prod_set_divisor = store_thm(
-  "monic_irreducibles_degree_prod_set_divisor",
-  ``!r:'a ring. FiniteField r ==> !p. monic p /\ ipoly p ==>
-   !n. p pdivides Psi n <=> p IN (monic_irreducibles_degree r n)``,
+Theorem monic_irreducibles_degree_prod_set_divisor:
+    !r:'a ring. FiniteField r ==> !p. monic p /\ ipoly p ==>
+   !n. p pdivides Psi n <=> p IN (monic_irreducibles_degree r n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #0 IN R` by rw[] >>
   qabbrev_tac `s = monic_irreducibles_degree r n` >>
   `FINITE s` by rw[monic_irreducibles_degree_finite, Abbr`s`] >>
   `miset s` by rw[monic_irreducibles_degree_member, Abbr`s`] >>
-  rw[poly_prod_monic_irreducible_set_divisor]);
+  rw[poly_prod_monic_irreducible_set_divisor]
+QED
 
 (* Theorem: FiniteField r ==>
             !n. INJ PPROD (IMAGE (monic_irreducibles_degree r) (divisors n)) univ(:'a poly) *)
@@ -1603,9 +1648,9 @@ val monic_irreducibles_degree_prod_set_divisor = store_thm(
     With PPROD s = PPROD t          by given
    Hence s = t                      by poly_prod_monic_irreducible_set_eq
 *)
-val monic_irreducibles_degree_poly_prod_inj = store_thm(
-  "monic_irreducibles_degree_poly_prod_inj",
-  ``!r:'a field. FiniteField r ==> !n. INJ PPROD (IMAGE (monic_irreducibles_degree r) (divisors n)) univ(:'a poly)``,
+Theorem monic_irreducibles_degree_poly_prod_inj:
+    !r:'a field. FiniteField r ==> !n. INJ PPROD (IMAGE (monic_irreducibles_degree r) (divisors n)) univ(:'a poly)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #0 IN R` by rw[] >>
   rw[INJ_DEF] >>
@@ -1613,7 +1658,8 @@ val monic_irreducibles_degree_poly_prod_inj = store_thm(
   qabbrev_tac `t = monic_irreducibles_degree r x''` >>
   `FINITE s /\ FINITE t` by rw[monic_irreducibles_degree_finite, Abbr`s`, Abbr`t`] >>
   `miset s /\ miset t` by rw[monic_irreducibles_degree_member, Abbr`s`, Abbr`t`] >>
-  metis_tac[poly_prod_monic_irreducible_set_eq]);
+  metis_tac[poly_prod_monic_irreducible_set_eq]
+QED
 
 (* Note:
    This assertion: INJ (monic_irreducibles_degree r) (divisors n) univ(:'a poly -> bool)
@@ -1654,12 +1700,13 @@ val monic_irreducibles_degree_poly_prod_inj = store_thm(
    This gives s = {},
    which contradicts s <> {}    by given implication.
 *)
-val monic_irreducibles_degree_nonempty_inj = store_thm(
-  "monic_irreducibles_degree_nonempty_inj",
-  ``!r:'a ring. !s. FINITE s /\ (!d. d IN s ==> monic_irreducibles_degree r d <> {}) ==>
-    INJ (monic_irreducibles_degree r) s univ(:'a poly -> bool)``,
+Theorem monic_irreducibles_degree_nonempty_inj:
+    !r:'a ring. !s. FINITE s /\ (!d. d IN s ==> monic_irreducibles_degree r d <> {}) ==>
+    INJ (monic_irreducibles_degree r) s univ(:'a poly -> bool)
+Proof
   rw[INJ_DEF] >>
-  metis_tac[monic_irreducibles_degree_disjoint, INTER_IDEMPOT, DISJOINT_DEF]);
+  metis_tac[monic_irreducibles_degree_disjoint, INTER_IDEMPOT, DISJOINT_DEF]
+QED
 
 (* Theorem: SIGMA (deg o PPROD) (IMAGE (monic_irreducibles_degree r) (divisors n)) =
             SIGMA (deg o PPROD o monic_irreducibles_degree r) (divisors n) *)
@@ -1683,16 +1730,17 @@ val monic_irreducibles_degree_nonempty_inj = store_thm(
         = SIGMA ((deg o PPROD) o g) s     by notation of f
         = SIGMA (deg o PPROD o g) s       by combinTheory.o_ASSOC
 *)
-val monic_irreducibles_degree_poly_prod_deg_sum = store_thm(
-  "monic_irreducibles_degree_poly_prod_deg_sum",
-  ``!r:'a ring. !n. SIGMA (deg o PPROD) (IMAGE (monic_irreducibles_degree r) (divisors n)) =
-                   SIGMA (deg o PPROD o monic_irreducibles_degree r) (divisors n)``,
+Theorem monic_irreducibles_degree_poly_prod_deg_sum:
+    !r:'a ring. !n. SIGMA (deg o PPROD) (IMAGE (monic_irreducibles_degree r) (divisors n)) =
+                   SIGMA (deg o PPROD o monic_irreducibles_degree r) (divisors n)
+Proof
   rpt strip_tac >>
   rewrite_tac[combinTheory.o_ASSOC] >>
   (irule sum_image_by_composition_with_partial_inj >> rpt conj_tac) >-
   rw_tac std_ss[monic_irreducibles_degree_nonempty_inj] >-
   rw_tac std_ss[divisors_finite] >>
-  rw_tac std_ss[poly_prod_set_empty, poly_deg_one]);
+  rw_tac std_ss[poly_prod_set_empty, poly_deg_one]
+QED
 
 (* Note:
    Again, the following is easy (?) if we know (monic_irreducibles_degree r n) is nonempty,
@@ -1721,10 +1769,10 @@ val monic_irreducibles_degree_poly_prod_deg_sum = store_thm(
    = PPROD (BIGUNION P)                      by monic_irreducibles_bounded_def
    = PPROD (IMAGE PPROD P)                   by poly_disjoint_bigunion_mult_fun
 *)
-val monic_irreducibles_bounded_prod_set = store_thm(
-  "monic_irreducibles_bounded_prod_set",
-  ``!r:'a field. FiniteField r ==> !n. PPROD (monic_irreducibles_bounded r n) =
-                                      PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (divisors n))``,
+Theorem monic_irreducibles_bounded_prod_set:
+    !r:'a field. FiniteField r ==> !n. PPROD (monic_irreducibles_bounded r n) =
+                                      PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (divisors n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #0 IN R` by rw[] >>
   qabbrev_tac `P = IMAGE (monic_irreducibles_degree r) (divisors n)` >>
@@ -1737,7 +1785,8 @@ val monic_irreducibles_bounded_prod_set = store_thm(
   `INJ PPROD P univ(:'a poly)` by rw[monic_irreducibles_degree_poly_prod_inj, Abbr`P`] >>
   `FINITE (IMAGE PPROD P)` by rw[] >>
   `mset (IMAGE PPROD P)` by prove_tac[poly_monic_prod_set_monic, monic_irreducibles_degree_member, IN_IMAGE] >>
-  metis_tac[monic_irreducibles_bounded_def, poly_disjoint_bigunion_mult_fun]);
+  metis_tac[monic_irreducibles_bounded_def, poly_disjoint_bigunion_mult_fun]
+QED
 
 (* Theorem: FiniteField r ==> !n. deg (PPROD (monic_irreducibles_bounded r n)) =
                                   SIGMA (\d. d * (monic_irreducibles_count r d)) (divisors n) *)
@@ -1763,10 +1812,10 @@ val monic_irreducibles_bounded_prod_set = store_thm(
    = SIGMA (deg o PPROD o monic_irreducibles_degree r) (divisors n)   by monic_irreducibles_degree_poly_prod_deg_sum
    = SIGMA  (\d. d * (monic_irreducibles_count r d)) (divisors n)     by monic_irreducibles_degree_prod_set_deg_fun
 *)
-val monic_irreducibles_bounded_prod_set_deg = store_thm(
-  "monic_irreducibles_bounded_prod_set_deg",
-  ``!r:'a field. FiniteField r ==> !n. deg (PPROD (monic_irreducibles_bounded r n)) =
-    SIGMA (\d. d * (monic_irreducibles_count r d)) (divisors n)``,
+Theorem monic_irreducibles_bounded_prod_set_deg:
+    !r:'a field. FiniteField r ==> !n. deg (PPROD (monic_irreducibles_bounded r n)) =
+    SIGMA (\d. d * (monic_irreducibles_count r d)) (divisors n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #0 IN R` by rw[] >>
   `FiniteRing r` by rw[finite_field_is_finite_ring] >>
@@ -1786,7 +1835,8 @@ val monic_irreducibles_bounded_prod_set_deg = store_thm(
   `_ = SIGMA (deg o PPROD) P` by rw[sum_image_by_composition] >>
   `_ = SIGMA ((deg o PPROD) o monic_irreducibles_degree r) (divisors n)` by rw[monic_irreducibles_degree_poly_prod_deg_sum, Abbr`P`] >>
   `_ = SIGMA  (\d. d * (monic_irreducibles_count r d)) (divisors n)` by rw[monic_irreducibles_degree_prod_set_deg_fun] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field and Subfield Order                                           *)
@@ -1804,16 +1854,17 @@ val monic_irreducibles_bounded_prod_set_deg = store_thm(
     = poly_deg s (poly_prod_set s (monic_irreducibles_bounded s n))   by poly_master_subfield_factors
     = SIGMA (\d. d * (monic_irreducibles_count s d)) (divisors n)     by monic_irreducibles_bounded_prod_set_deg
 *)
-val finite_subfield_card_exp_eqn = store_thm(
-  "finite_subfield_card_exp_eqn",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==>
-   !n. 0 < n ==> (CARD B ** n = SIGMA (\d. d * (monic_irreducibles_count s d)) (divisors n))``,
+Theorem finite_subfield_card_exp_eqn:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==>
+   !n. 0 < n ==> (CARD B ** n = SIGMA (\d. d * (monic_irreducibles_count s d)) (divisors n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `1 < CARD B` by rw[finite_field_card_gt_1] >>
   `1 < CARD B ** n` by rw[ONE_LT_EXP] >>
   `Ring s /\ s.prod.id <> s.sum.id` by rw[] >>
-  metis_tac[poly_master_deg, poly_master_subfield_factors, monic_irreducibles_bounded_prod_set_deg]);
+  metis_tac[poly_master_deg, poly_master_subfield_factors, monic_irreducibles_bounded_prod_set_deg]
+QED
 
 (* Theorem: FiniteField r ==>
             !n. 0 < n ==> (CARD R ** n = SIGMA (\d. d * (monic_irreducibles_count r d)) (divisors n)) *)
@@ -1823,11 +1874,12 @@ val finite_subfield_card_exp_eqn = store_thm(
      and subfield r r    by subfield_refl
    This is true          by finite_subfield_card_exp_eqn
 *)
-val finite_field_card_exp_eqn = store_thm(
-  "finite_field_card_exp_eqn",
-  ``!r:'a field. FiniteField r ==>
-   !n. 0 < n ==> (CARD R ** n = SIGMA (\d. d * (monic_irreducibles_count r d)) (divisors n))``,
-  metis_tac[finite_field_is_field, subfield_refl, finite_subfield_card_exp_eqn]);
+Theorem finite_field_card_exp_eqn:
+    !r:'a field. FiniteField r ==>
+   !n. 0 < n ==> (CARD R ** n = SIGMA (\d. d * (monic_irreducibles_count r d)) (divisors n))
+Proof
+  metis_tac[finite_field_is_field, subfield_refl, finite_subfield_card_exp_eqn]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -1843,12 +1895,13 @@ val finite_field_card_exp_eqn = store_thm(
    Thus root p #0            by poly_master_root_zero
      or #0 IN roots p        by poly_roots_member
 *)
-val poly_master_roots_char_n_zero = store_thm(
-  "poly_master_roots_char_n_zero",
-  ``!r:'a field. FiniteField r ==> !n. #0 IN roots (master ((char r) ** n))``,
+Theorem poly_master_roots_char_n_zero:
+    !r:'a field. FiniteField r ==> !n. #0 IN roots (master ((char r) ** n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `0 < (char r) ** n` by rw[finite_field_char_pos, EXP_POS] >>
-  rw[poly_master_root_zero, poly_roots_member]);
+  rw[poly_master_root_zero, poly_roots_member]
+QED
 
 (* Theorem: FiniteField r ==> !n. let p = master ((char r) ** n) in
             !x y. x IN roots p /\ y IN roots p ==> (x + y) IN roots p *)
@@ -1862,10 +1915,10 @@ val poly_master_roots_char_n_zero = store_thm(
       = x + y                             by above
    Thus (x + y) IN roots p                by poly_master_roots
 *)
-val poly_master_roots_add_root = store_thm(
-  "poly_master_roots_add_root",
-  ``!r:'a field. FiniteField r ==> !n. let p = master ((char r) ** n) in
-   !x y. x IN roots p /\ y IN roots p ==> (x + y) IN roots p``,
+Theorem poly_master_roots_add_root:
+    !r:'a field. FiniteField r ==> !n. let p = master ((char r) ** n) in
+   !x y. x IN roots p /\ y IN roots p ==> (x + y) IN roots p
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = (char r) ** n` >>
   rw_tac std_ss[] >>
@@ -1875,7 +1928,8 @@ val poly_master_roots_add_root = store_thm(
   `x + y IN R` by rw[] >>
   `(x + y) ** m = x ** m + y ** m` by rw[finite_field_freshman_all, Abbr`m`] >>
   `_ = x + y` by rw[] >>
-  metis_tac[poly_master_roots]);
+  metis_tac[poly_master_roots]
+QED
 
 (* Theorem: FiniteField r ==> !n. let p = master ((char r) ** n) in
             !x y. x IN roots p /\ y IN roots p ==> (x - y) IN roots p *)
@@ -1889,10 +1943,10 @@ val poly_master_roots_add_root = store_thm(
       = x - y                             by above
    Thus (x - y) IN roots p                by poly_master_roots
 *)
-val poly_master_roots_sub_root = store_thm(
-  "poly_master_roots_sub_root",
-  ``!r:'a field. FiniteField r ==> !n. let p = master ((char r) ** n) in
-   !x y. x IN roots p /\ y IN roots p ==> (x - y) IN roots p``,
+Theorem poly_master_roots_sub_root:
+    !r:'a field. FiniteField r ==> !n. let p = master ((char r) ** n) in
+   !x y. x IN roots p /\ y IN roots p ==> (x - y) IN roots p
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = (char r) ** n` >>
   rw_tac std_ss[] >>
@@ -1902,7 +1956,8 @@ val poly_master_roots_sub_root = store_thm(
   `x - y IN R` by rw[] >>
   `(x - y) ** m = x ** m - y ** m` by rw[finite_field_freshman_all_sub, Abbr`m`] >>
   `_ = x - y` by rw[] >>
-  metis_tac[poly_master_roots]);
+  metis_tac[poly_master_roots]
+QED
 
 (* Theorem: FiniteField r ==> !n. let p = master ((char r) ** n) in !x. x IN roots p ==> -x IN roots p *)
 (* Proof:
@@ -1914,9 +1969,9 @@ val poly_master_roots_sub_root = store_thm(
     and #0 - x = -x           by field_zero_sub
    Thus -x IN roots p         by poly_master_roots_sub_root
 *)
-val poly_master_roots_neg_root = store_thm(
-  "poly_master_roots_neg_root",
-  ``!r:'a field. FiniteField r ==> !n. let p = master ((char r) ** n) in !x. x IN roots p ==> -x IN roots p``,
+Theorem poly_master_roots_neg_root:
+    !r:'a field. FiniteField r ==> !n. let p = master ((char r) ** n) in !x. x IN roots p ==> -x IN roots p
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = (char r) ** n` >>
   rw_tac std_ss[] >>
@@ -1925,7 +1980,8 @@ val poly_master_roots_neg_root = store_thm(
   `#0 IN roots p` by rw[poly_master_root_zero, poly_roots_member, Abbr`p`] >>
   `x IN R` by metis_tac[poly_master_roots] >>
   `#0 - x = -x` by rw[field_zero_sub] >>
-  metis_tac[poly_master_roots_sub_root]);
+  metis_tac[poly_master_roots_sub_root]
+QED
 
 (* Theorem: Field r ==> !n. let p = master ((char r) ** n) in
             !x y. x IN roots p /\ y IN roots p ==> (x * y) IN roots p *)
@@ -1939,10 +1995,10 @@ val poly_master_roots_neg_root = store_thm(
       = x * y                             by above
    Thus (x * y) IN roots p                by poly_master_roots
 *)
-val poly_master_roots_mult_root = store_thm(
-  "poly_master_roots_mult_root",
-  ``!r:'a field. Field r ==> !n. let p = master ((char r) ** n) in
-   !x y. x IN roots p /\ y IN roots p ==> (x * y) IN roots p``,
+Theorem poly_master_roots_mult_root:
+    !r:'a field. Field r ==> !n. let p = master ((char r) ** n) in
+   !x y. x IN roots p /\ y IN roots p ==> (x * y) IN roots p
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = (char r) ** n` >>
   rw_tac std_ss[] >>
@@ -1952,7 +2008,8 @@ val poly_master_roots_mult_root = store_thm(
   `x * y IN R` by rw[] >>
   `(x * y) ** m = x ** m * y ** m` by rw[field_mult_exp] >>
   `_ = x * y` by rw[] >>
-  metis_tac[poly_master_roots]);
+  metis_tac[poly_master_roots]
+QED
 
 (* Theorem: Field r ==> !n. let p = master ((char r) ** n) in
             !x. x IN roots p /\ x <> #0 ==> |/ x IN roots p *)
@@ -1966,10 +2023,10 @@ val poly_master_roots_mult_root = store_thm(
       = |/ x                      by above
    Thus |/ x IN roots p           by poly_master_roots
 *)
-val poly_master_roots_inv_root = store_thm(
-  "poly_master_roots_inv_root",
-  ``!r:'a field. Field r ==> !n. let p = master ((char r) ** n) in
-   !x. x IN roots p /\ x <> #0 ==> |/ x IN roots p``,
+Theorem poly_master_roots_inv_root:
+    !r:'a field. Field r ==> !n. let p = master ((char r) ** n) in
+   !x. x IN roots p /\ x <> #0 ==> |/ x IN roots p
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = (char r) ** n` >>
   rw_tac std_ss[] >>
@@ -1979,16 +2036,18 @@ val poly_master_roots_inv_root = store_thm(
   `|/ x IN R` by rw[field_inv_element] >>
   `( |/ x) ** m = |/ (x ** m)` by rw[field_inv_exp] >>
   `_ = |/ x` by rw[] >>
-  metis_tac[poly_master_roots]);
+  metis_tac[poly_master_roots]
+QED
 
 (* Theorem: Field r ==> !n. let p = master ((char r) ** n) in
             !x y. x IN roots p /\ y IN roots p /\ y <> #0 ==> (x * |/ y) IN roots p *)
 (* Proof: by poly_master_roots_mult_root, poly_master_roots_inv_root *)
-val poly_master_roots_div_root = store_thm(
-  "poly_master_roots_div_root",
-  ``!r:'a field. Field r ==> !n. let p = master ((char r) ** n) in
-   !x y. x IN roots p /\ y IN roots p /\ y <> #0 ==> (x * |/ y) IN roots p``,
-  metis_tac[poly_master_roots_mult_root, poly_master_roots_inv_root]);
+Theorem poly_master_roots_div_root:
+    !r:'a field. Field r ==> !n. let p = master ((char r) ** n) in
+   !x y. x IN roots p /\ y IN roots p /\ y <> #0 ==> (x * |/ y) IN roots p
+Proof
+  metis_tac[poly_master_roots_mult_root, poly_master_roots_inv_root]
+QED
 
 (* Theorem: FiniteField r ==> !n. AbelianGroup (subset_field r (roots (master ((char r) ** n)))).sum *)
 (* Proof:
@@ -2012,9 +2071,9 @@ val poly_master_roots_div_root = store_thm(
        Note x IN R /\ y IN R            by poly_roots_element
          so x + y = y + x               by field_add_comm
 *)
-val poly_master_roots_sum_abelian_group = store_thm(
-  "poly_master_roots_sum_abelian_group",
-  ``!r:'a field. FiniteField r ==> !n. AbelianGroup (subset_field r (roots (master ((char r) ** n)))).sum``,
+Theorem poly_master_roots_sum_abelian_group:
+    !r:'a field. FiniteField r ==> !n. AbelianGroup (subset_field r (roots (master ((char r) ** n)))).sum
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = (char r) ** n` >>
   qabbrev_tac `p = master m` >>
@@ -2024,7 +2083,8 @@ val poly_master_roots_sum_abelian_group = store_thm(
   rw[poly_master_roots_char_n_zero, Abbr`p`, Abbr`m`] >-
   metis_tac[field_add_lzero, poly_roots_element] >-
   metis_tac[poly_master_roots_neg_root, field_add_lneg, poly_roots_element] >>
-  metis_tac[field_add_comm, poly_roots_element]);
+  metis_tac[field_add_comm, poly_roots_element]
+QED
 
 (* Theorem: FiniteField r ==> !n. let p = master ((char r) ** n) in
             AbelianGroup ((subset_field r (roots p)).prod excluding (subset_field r (roots p)).sum.id) *)
@@ -2057,10 +2117,10 @@ val poly_master_roots_sum_abelian_group = store_thm(
        Note x IN R /\ y IN R            by poly_roots_element
          so x * y = y * x               by field_mult_comm
 *)
-val poly_master_roots_prod_abelian_group = store_thm(
-  "poly_master_roots_prod_abelian_group",
-  ``!r:'a field. FiniteField r ==> !n. let p = master ((char r) ** n) in
-       AbelianGroup ((subset_field r (roots p)).prod excluding (subset_field r (roots p)).sum.id)``,
+Theorem poly_master_roots_prod_abelian_group:
+    !r:'a field. FiniteField r ==> !n. let p = master ((char r) ** n) in
+       AbelianGroup ((subset_field r (roots p)).prod excluding (subset_field r (roots p)).sum.id)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = (char r) ** n` >>
   rw_tac std_ss[] >>
@@ -2074,7 +2134,8 @@ val poly_master_roots_prod_abelian_group = store_thm(
   rw[] >-
   metis_tac[field_mult_lone, poly_roots_element] >-
   metis_tac[poly_master_roots_inv_root, poly_roots_element, field_inv_nonzero, field_mult_linv, field_nonzero_eq] >>
-  metis_tac[field_mult_comm, poly_roots_element]);
+  metis_tac[field_mult_comm, poly_roots_element]
+QED
 
 (* Theorem: FiniteField r ==> !n. Field (subset_field r (roots (master ((char r) ** n)))) *)
 (* Proof:
@@ -2093,9 +2154,9 @@ val poly_master_roots_prod_abelian_group = store_thm(
    (6) x IN roots p /\ y IN roots p /\ z IN roots p ==> x * (y + z) = x * y + x * z  by subset_field_property
        This is true                  by field_mult_radd, poly_roots_element
 *)
-val poly_master_roots_field = store_thm(
-  "poly_master_roots_field",
-  ``!r:'a field. FiniteField r ==> !n. Field (subset_field r (roots (master ((char r) ** n))))``,
+Theorem poly_master_roots_field:
+    !r:'a field. FiniteField r ==> !n. Field (subset_field r (roots (master ((char r) ** n))))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = (char r) ** n` >>
   qabbrev_tac `p = master m` >>
@@ -2107,7 +2168,8 @@ val poly_master_roots_field = store_thm(
  (fs[subset_field_property] >>
   metis_tac[field_mult_lzero, poly_roots_element]) >>
   fs[subset_field_property] >>
-  metis_tac[field_mult_radd, poly_roots_element]);
+  metis_tac[field_mult_radd, poly_roots_element]
+QED
 
 (* Theorem: FiniteField r ==> !n. FiniteField (subset_field r (roots (master (char r ** n)))) *)
 (* Proof:
@@ -2116,10 +2178,11 @@ val poly_master_roots_field = store_thm(
     and FINITE B              by poly_master_roots_finite_alt, subset_field_property
     ==> FiniteField s         by FiniteField_def
 *)
-val poly_master_roots_finite_field = store_thm(
-  "poly_master_roots_finite_field",
-  ``!r:'a field. FiniteField r ==> !n. FiniteField (subset_field r (roots (master (char r ** n))))``,
-  rw_tac std_ss[poly_master_roots_finite_alt, poly_master_roots_field, subset_field_property, FiniteField_def]);
+Theorem poly_master_roots_finite_field:
+    !r:'a field. FiniteField r ==> !n. FiniteField (subset_field r (roots (master (char r ** n))))
+Proof
+  rw_tac std_ss[poly_master_roots_finite_alt, poly_master_roots_field, subset_field_property, FiniteField_def]
+QED
 
 (* Theorem: FiniteField r ==> !n. subset_field r (roots (master ((char r) ** n))) <<= r *)
 (* Proof:
@@ -2136,9 +2199,9 @@ val poly_master_roots_finite_field = store_thm(
            By MonoidHomo_def, subset_field_property, field_carriers, this is to show:
            (1) x IN roots p ==> x IN R, true     by poly_roots_element
 *)
-val poly_master_roots_subfield = store_thm(
-  "poly_master_roots_subfield",
-  ``!r:'a field. FiniteField r ==> !n. subset_field r (roots (master ((char r) ** n))) <<= r``,
+Theorem poly_master_roots_subfield:
+    !r:'a field. FiniteField r ==> !n. subset_field r (roots (master ((char r) ** n))) <<= r
+Proof
   strip_tac >>
   stripDup[FiniteField_def] >>
   strip_tac >>
@@ -2151,7 +2214,8 @@ val poly_master_roots_subfield = store_thm(
  (rw_tac std_ss[GroupHomo_def, subset_field_property, field_carriers] >>
   metis_tac[poly_roots_element]) >>
   rw_tac std_ss[MonoidHomo_def, subset_field_property, field_carriers] >>
-  metis_tac[poly_roots_element]);
+  metis_tac[poly_roots_element]
+QED
 
 (* Theorem: FiniteField r ==> (FieldIso I (subset_field r (roots (master (char r ** (fdim r))))) r) *)
 (* Proof:
@@ -2165,9 +2229,9 @@ val poly_master_roots_subfield = store_thm(
        The assertion is true.
    (2) subfield sm r                       by poly_master_roots_subfield
 *)
-val poly_master_roots_subfield_iso_field = store_thm(
-  "poly_master_roots_subfield_iso_field",
-  ``!r:'a field. FiniteField r ==> (FieldIso I (subset_field r (roots (master (char r ** (fdim r))))) r)``,
+Theorem poly_master_roots_subfield_iso_field:
+    !r:'a field. FiniteField r ==> (FieldIso I (subset_field r (roots (master (char r ** (fdim r))))) r)
+Proof
   rpt strip_tac >>
   qabbrev_tac `sm = subset_field r (roots (master (char r ** (fdim r))))` >>
   (irule subfield_carrier_antisym >> rpt conj_tac) >| [
@@ -2176,7 +2240,8 @@ val poly_master_roots_subfield_iso_field = store_thm(
     `CARD R = char r ** fdim r` by rw[finite_field_card_eqn] >>
     metis_tac[],
     rw[poly_master_roots_subfield, Abbr`sm`]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> (FieldIso I (subset_field r (roots (master (char r ** (fdim r))))) r) *)
 (* Proof:
@@ -2186,10 +2251,11 @@ val poly_master_roots_subfield_iso_field = store_thm(
     ==> FieldIso I r s           by field_iso_I_iso, finite_field_is_field
     Thus r =ff= d                by notation
 *)
-val poly_master_roots_subfield_isomorphism = store_thm(
-  "poly_master_roots_subfield_isomorphism",
-  ``!r:'a field. FiniteField r ==> (r =ff= (subset_field r (roots (master (char r ** (fdim r))))))``,
-  metis_tac[poly_master_roots_subfield_iso_field, poly_master_roots_finite_field, field_iso_sym, finite_field_is_field]);
+Theorem poly_master_roots_subfield_isomorphism:
+    !r:'a field. FiniteField r ==> (r =ff= (subset_field r (roots (master (char r ** (fdim r))))))
+Proof
+  metis_tac[poly_master_roots_subfield_iso_field, poly_master_roots_finite_field, field_iso_sym, finite_field_is_field]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Results (for paper or proof investigation)                         *)
@@ -2209,21 +2275,22 @@ val poly_master_roots_subfield_isomorphism = store_thm(
                        (IMAGE (monic_irreducibles_degree s) (divisors n))
                                                        by monic_irreducibles_bounded_prod_set
 *)
-val poly_master_subfield_eq_monic_irreducibles_prod_image = store_thm(
-  "poly_master_subfield_eq_monic_irreducibles_prod_image",
-  ``!(r s):'a field n. FiniteField r /\ s <<= r /\ 0 < n ==> (master (CARD B ** n) =
-          poly_prod_image s (poly_prod_set s) (IMAGE (monic_irreducibles_degree s) (divisors n)))``,
+Theorem poly_master_subfield_eq_monic_irreducibles_prod_image:
+    !(r s):'a field n. FiniteField r /\ s <<= r /\ 0 < n ==> (master (CARD B ** n) =
+          poly_prod_image s (poly_prod_set s) (IMAGE (monic_irreducibles_degree s) (divisors n)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
-  metis_tac[monic_irreducibles_bounded_prod_set, poly_master_subfield_factors_alt]);
+  metis_tac[monic_irreducibles_bounded_prod_set, poly_master_subfield_factors_alt]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r /\ 0 < n ==>
             (master (CARD B ** n) = poly_prod_set s {poly_psi s d | d IN divisors n}) *)
 (* Proof: by poly_master_subfield_eq_monic_irreducibles_prod_image *)
-val poly_master_subfield_eq_monic_irreducibles_prod_image_alt_1 = store_thm(
-  "poly_master_subfield_eq_monic_irreducibles_prod_image_alt_1",
-  ``!(r s):'a field n. FiniteField r /\ s <<= r /\ 0 < n ==>
-          (master (CARD B ** n) = poly_prod_set s {poly_psi s d | d IN divisors n})``,
+Theorem poly_master_subfield_eq_monic_irreducibles_prod_image_alt_1:
+    !(r s):'a field n. FiniteField r /\ s <<= r /\ 0 < n ==>
+          (master (CARD B ** n) = poly_prod_set s {poly_psi s d | d IN divisors n})
+Proof
   rw[poly_master_subfield_eq_monic_irreducibles_prod_image] >>
   `IMAGE (poly_prod_set s) (IMAGE (monic_irreducibles_degree s) (divisors n)) = {poly_prod_set s (monic_irreducibles_degree s d) | d IN (divisors n)}` suffices_by rw[] >>
   rw[EXTENSION, EQ_IMP_THM] >| [
@@ -2232,15 +2299,16 @@ val poly_master_subfield_eq_monic_irreducibles_prod_image_alt_1 = store_thm(
     rw[EXTENSION] >>
     metis_tac[],
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r /\ 0 < n ==>
             (master (CARD B ** n) = poly_prod_set s {poly_psi s d | d divides n}) *)
 (* Proof: by poly_master_subfield_eq_monic_irreducibles_prod_image *)
-val poly_master_subfield_eq_monic_irreducibles_prod_image_alt_2 = store_thm(
-  "poly_master_subfield_eq_monic_irreducibles_prod_image_alt_2",
-  ``!(r s):'a field n. FiniteField r /\ s <<= r /\ 0 < n ==>
-             (master (CARD B ** n) = poly_prod_set s {poly_psi s d | d divides n})``,
+Theorem poly_master_subfield_eq_monic_irreducibles_prod_image_alt_2:
+    !(r s):'a field n. FiniteField r /\ s <<= r /\ 0 < n ==>
+             (master (CARD B ** n) = poly_prod_set s {poly_psi s d | d divides n})
+Proof
   rw[poly_master_subfield_eq_monic_irreducibles_prod_image] >>
   `IMAGE (poly_prod_set s) (IMAGE (monic_irreducibles_degree s) (divisors n)) = {poly_prod_set s (monic_irreducibles_degree s d) | d | d divides n}` suffices_by rw[] >>
   rw[EXTENSION, EQ_IMP_THM] >| [
@@ -2249,7 +2317,8 @@ val poly_master_subfield_eq_monic_irreducibles_prod_image_alt_2 = store_thm(
     rw[EXTENSION] >>
     metis_tac[],
     metis_tac[DIVIDES_LE, divisors_element_alt]
-  ]);
+  ]
+QED
 
 (* Next is better than above. *)
 
@@ -2261,18 +2330,19 @@ val poly_master_subfield_eq_monic_irreducibles_prod_image_alt_2 = store_thm(
    = PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (divisors n))
                                                        by monic_irreducibles_bounded_prod_set
 *)
-val poly_master_eq_monic_irreducibles_prod_image = store_thm(
-  "poly_master_eq_monic_irreducibles_prod_image",
-  ``!r:'a field. FiniteField r ==> !n. 0 < n ==>
-    (master (CARD R ** n) = PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (divisors n)))``,
-  rw[poly_master_monic_irreducible_factors, monic_irreducibles_bounded_prod_set]);
+Theorem poly_master_eq_monic_irreducibles_prod_image:
+    !r:'a field. FiniteField r ==> !n. 0 < n ==>
+    (master (CARD R ** n) = PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (divisors n)))
+Proof
+  rw[poly_master_monic_irreducible_factors, monic_irreducibles_bounded_prod_set]
+QED
 
 (* Theorem: FiniteField r /\ 0 < n ==> (master (CARD R ** n) = PPROD {Psi d | d IN (divisors n)}) *)
 (* Proof: by poly_master_eq_monic_irreducibles_prod_image *)
-val poly_master_eq_monic_irreducibles_prod_image_alt_1 = store_thm(
-  "poly_master_eq_monic_irreducibles_prod_image_alt_1",
-  ``!(r:'a field) n. FiniteField r /\ 0 < n ==>
-            (master (CARD R ** n) = PPROD {Psi d | d IN (divisors n)})``,
+Theorem poly_master_eq_monic_irreducibles_prod_image_alt_1:
+    !(r:'a field) n. FiniteField r /\ 0 < n ==>
+            (master (CARD R ** n) = PPROD {Psi d | d IN (divisors n)})
+Proof
   rw[poly_master_eq_monic_irreducibles_prod_image] >>
   `IMAGE PPROD (IMAGE (monic_irreducibles_degree r) (divisors n)) = {PPROD (monic_irreducibles_degree r d) | d IN (divisors n)}` suffices_by rw[] >>
   rw[EXTENSION, EQ_IMP_THM] >| [
@@ -2281,13 +2351,14 @@ val poly_master_eq_monic_irreducibles_prod_image_alt_1 = store_thm(
     rw[EXTENSION] >>
     metis_tac[],
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ 0 < n ==> (master (CARD R ** n) = PPROD {Psi d | d divides n}) *)
 (* Proof: by poly_master_eq_monic_irreducibles_prod_image *)
-val poly_master_eq_monic_irreducibles_prod_image_alt_2 = store_thm(
-  "poly_master_eq_monic_irreducibles_prod_image_alt_2",
-  ``!(r:'a field) n. FiniteField r /\ 0 < n ==> (master (CARD R ** n) = PPROD {Psi d | d divides n})``,
+Theorem poly_master_eq_monic_irreducibles_prod_image_alt_2:
+    !(r:'a field) n. FiniteField r /\ 0 < n ==> (master (CARD R ** n) = PPROD {Psi d | d divides n})
+Proof
   rw[poly_master_eq_monic_irreducibles_prod_image] >>
   `IMAGE PPROD (IMAGE (monic_irreducibles_degree r) (divisors n)) = {PPROD (monic_irreducibles_degree r d) | d divides n}` suffices_by rw[] >>
   rw[EXTENSION, EQ_IMP_THM] >| [
@@ -2296,7 +2367,8 @@ val poly_master_eq_monic_irreducibles_prod_image_alt_2 = store_thm(
     rw[EXTENSION] >>
     metis_tac[],
     metis_tac[DIVIDES_LE, divisors_element_alt]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monic Irreducible Products                                                *)
@@ -2312,15 +2384,16 @@ val poly_master_eq_monic_irreducibles_prod_image_alt_2 = store_thm(
     ==> monic (PPROD (f k))     by poly_monic_prod_set_monic
      or monic p                 by p = PPROD (f k)
 *)
-val monic_irreducibles_degree_prod_set_image_monic_set = store_thm(
-  "monic_irreducibles_degree_prod_set_image_monic_set",
-  ``!r:'a ring. FiniteRing r ==> !n. mset (IMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)))``,
+Theorem monic_irreducibles_degree_prod_set_image_monic_set:
+    !r:'a ring. FiniteRing r ==> !n. mset (IMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)))
+Proof
   rpt (stripDup[FiniteRing_def]) >>
   qabbrev_tac `s = IMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n))` >>
   `?k. p = PPROD (monic_irreducibles_degree r k)` by prove_tac[IN_IMAGE] >>
   `FINITE (monic_irreducibles_degree r k)` by rw[monic_irreducibles_degree_finite] >>
   `mset (monic_irreducibles_degree r k)` by metis_tac[monic_irreducibles_degree_member] >>
-  rw[poly_monic_prod_set_monic]);
+  rw[poly_monic_prod_set_monic]
+QED
 
 (* Theorem: FiniteRing r ==> !n. monic (PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n))) *)
 (* Proof:
@@ -2331,30 +2404,33 @@ val monic_irreducibles_degree_prod_set_image_monic_set = store_thm(
    Note mset s                         by monic_irreducibles_degree_prod_set_image_monic_set
    Hence monic (PPROD s)               by poly_monic_prod_set_monic, mset s
 *)
-val monic_irreducibles_degree_prod_set_image_monic = store_thm(
-  "monic_irreducibles_degree_prod_set_image_monic",
-  ``!r:'a ring. FiniteRing r ==> !n. monic (PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)))``,
+Theorem monic_irreducibles_degree_prod_set_image_monic:
+    !r:'a ring. FiniteRing r ==> !n. monic (PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)))
+Proof
   rpt (stripDup[FiniteRing_def]) >>
   qabbrev_tac `s = IMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n))` >>
   `FINITE s` by rw[natural_finite, Abbr`s`] >>
   `mset s` by metis_tac[monic_irreducibles_degree_prod_set_image_monic_set] >>
-  rw[poly_monic_prod_set_monic]);
+  rw[poly_monic_prod_set_monic]
+QED
 
 (* Theorem: FiniteRing r ==> !n. poly (PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n))) *)
 (* Proof: monic_irreducibles_degree_prod_set_image_monic, poly_monic_poly *)
-val monic_irreducibles_degree_prod_set_image_poly = store_thm(
-  "monic_irreducibles_degree_prod_set_image_poly",
-  ``!r:'a ring. FiniteRing r ==> !n. poly (PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)))``,
-  rw_tac std_ss[monic_irreducibles_degree_prod_set_image_monic, poly_monic_poly]);
+Theorem monic_irreducibles_degree_prod_set_image_poly:
+    !r:'a ring. FiniteRing r ==> !n. poly (PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)))
+Proof
+  rw_tac std_ss[monic_irreducibles_degree_prod_set_image_monic, poly_monic_poly]
+QED
 
 (* Theorem: FiniteRing r /\ #1 <> #0 ==>
            !n. PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)) <> |0| *)
 (* Proof: by monic_irreducibles_degree_prod_set_image_monic, poly_monic_nonzero *)
-val monic_irreducibles_degree_prod_set_image_nonzero = store_thm(
-  "monic_irreducibles_degree_prod_set_image_nonzero",
-  ``!r:'a ring. FiniteRing r /\ #1 <> #0 ==>
-   !n. PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)) <> |0|``,
-  rw_tac std_ss[monic_irreducibles_degree_prod_set_image_monic, poly_monic_nonzero]);
+Theorem monic_irreducibles_degree_prod_set_image_nonzero:
+    !r:'a ring. FiniteRing r /\ #1 <> #0 ==>
+   !n. PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)) <> |0|
+Proof
+  rw_tac std_ss[monic_irreducibles_degree_prod_set_image_monic, poly_monic_nonzero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Existence of Monic Irreducible by Master Polynomial                       *)
@@ -2427,10 +2503,10 @@ Thus m = n, or there is an irreducible in the subfield of degree n.
     ==> p pdivides q                         by poly_irreducible_divides_master
    Thus PPROD s pdivides q                   by poly_prod_coprime_set_divides
 *)
-val monic_irreducibles_degree_prod_set_divides_master = store_thm(
-  "monic_irreducibles_degree_prod_set_divides_master",
-  ``!r:'a field. FiniteField r ==>
-   !n. Psi n pdivides (master (CARD R ** n))``,
+Theorem monic_irreducibles_degree_prod_set_divides_master:
+    !r:'a field. FiniteField r ==>
+   !n. Psi n pdivides (master (CARD R ** n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `s = monic_irreducibles_degree r n` >>
   qabbrev_tac `q = master (CARD R ** n)` >>
@@ -2438,7 +2514,8 @@ val monic_irreducibles_degree_prod_set_divides_master = store_thm(
   `pcoprime_set s` by rw[monic_irreducibles_degree_coprime_set, Abbr`s`] >>
   `poly q` by rw[Abbr`q`] >>
   `!p. p IN s ==> p pdivides q` by metis_tac[monic_irreducibles_degree_member, poly_irreducible_divides_master] >>
-  rw[poly_prod_coprime_set_divides]);
+  rw[poly_prod_coprime_set_divides]
+QED
 
 (* Theorem: FiniteField r ==> !n. 0 < n ==>
             master (CARD R ** n) pdivides PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n)) *)
@@ -2460,10 +2537,10 @@ val monic_irreducibles_degree_prod_set_divides_master = store_thm(
 
    Thus PPROD s pdivides PPROD t          by poly_prod_set_divides_prod_set, Claim
 *)
-val poly_master_divides_monic_irreducibles_degree_prod_set_image = store_thm(
-  "poly_master_divides_monic_irreducibles_degree_prod_set_image",
-  ``!r:'a field. FiniteField r ==> !n. 0 < n ==>
-         master (CARD R ** n) pdivides PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n))``,
+Theorem poly_master_divides_monic_irreducibles_degree_prod_set_image:
+    !r:'a field. FiniteField r ==> !n. 0 < n ==>
+         master (CARD R ** n) pdivides PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) (natural n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[poly_master_eq_monic_irreducibles_prod_image] >>
   qabbrev_tac `s = IMAGE PPROD (IMAGE (monic_irreducibles_degree r) (divisors n))` >>
@@ -2477,7 +2554,8 @@ val poly_master_divides_monic_irreducibles_degree_prod_set_image = store_thm(
   `FINITE (monic_irreducibles_degree r (SUC x''))` by rw[monic_irreducibles_degree_finite] >>
   `pset (monic_irreducibles_degree r (SUC x''))` by metis_tac[monic_irreducibles_degree_poly_set] >>
   rw[poly_prod_set_poly]) >>
-  rw[poly_prod_set_divides_prod_set]);
+  rw[poly_prod_set_divides_prod_set]
+QED
 
 (* Theorem: FiniteField r ==> !s. FINITE s ==>
             PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) s) pdivides
@@ -2519,10 +2597,10 @@ val poly_master_divides_monic_irreducibles_degree_prod_set_image = store_thm(
 
    Therefore PPROD u pdivides t                    by poly_prod_coprime_set_divides, claims.
 *)
-val monic_irreducibles_degree_prod_set_image_divides_master_image = store_thm(
-  "monic_irreducibles_degree_prod_set_image_divides_master_image",
-  ``!r:'a field. FiniteField r ==> !s. FINITE s ==>
-   PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) s) pdivides PPIMAGE (\n. master (CARD R ** n)) s``,
+Theorem monic_irreducibles_degree_prod_set_image_divides_master_image:
+    !r:'a field. FiniteField r ==> !s. FINITE s ==>
+   PPIMAGE PPROD (IMAGE (monic_irreducibles_degree r) s) pdivides PPIMAGE (\n. master (CARD R ** n)) s
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   qabbrev_tac `f = \n. master (CARD R ** n)` >>
@@ -2552,7 +2630,8 @@ val monic_irreducibles_degree_prod_set_image_divides_master_image = store_thm(
   `master (CARD R ** n) IN (IMAGE f s)` by metis_tac[IN_IMAGE] >>
   `p pdivides (master (CARD R ** n))` by rw[monic_irreducibles_degree_prod_set_divides_master] >>
   metis_tac[poly_prod_set_element_divides, poly_divides_transitive]) >>
-  rw[poly_prod_coprime_set_divides]);
+  rw[poly_prod_coprime_set_divides]
+QED
 
 (* Theorem: FiniteField r ==> !n. 0 < n ==> ?p. monic p /\ ipoly p /\ (deg p = n) *)
 (* Proof:
@@ -2603,9 +2682,9 @@ val monic_irreducibles_degree_prod_set_image_divides_master_image = store_thm(
    ==> b ** n <= deg t                        by poly_field_divides_deg_le, t <> |0| ... (4)
    This contradicts deg t < b ** n            by (3), (4).
 *)
-val poly_monic_irreducible_exists_alt = store_thm(
-  "poly_monic_irreducible_exists_alt",
-  ``!r:'a field. FiniteField r ==> !n. 0 < n ==> ?p. monic p /\ ipoly p /\ (deg p = n)``,
+Theorem poly_monic_irreducible_exists_alt:
+    !r:'a field. FiniteField r ==> !n. 0 < n ==> ?p. monic p /\ ipoly p /\ (deg p = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   spose_not_then strip_assume_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
@@ -2644,7 +2723,8 @@ val poly_monic_irreducible_exists_alt = store_thm(
   `deg (master (b ** n)) = b ** n` by rw[poly_master_deg, ONE_LT_EXP] >>
   `pmonic (master (b ** n))` by rw[poly_monic_pmonic] >>
   `b ** n <= deg t` by metis_tac[poly_field_divides_deg_le] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Another proof of the existence of irreducible of a given degree, Yes! *)
 
@@ -2694,9 +2774,9 @@ val poly_monic_irreducible_exists_alt = store_thm(
   Thus CARD (roots (master n)) = n                      by above
     or roots (master (CARD G + 1)) = G UNION {#0}       by SUBSET_EQ_CARD
 *)
-val field_subgroup_master_roots = store_thm(
-  "field_subgroup_master_roots",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> (roots (master (CARD G + 1)) = G UNION {#0})``,
+Theorem field_subgroup_master_roots:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> (roots (master (CARD G + 1)) = G UNION {#0})
+Proof
   rpt (stripDup[FiniteField_def, Subgroup_def]) >>
   `FINITE G /\ FiniteGroup g` by metis_tac[FiniteGroup_def, field_subgroup_finite_group] >>
   `0 < CARD G` by rw[finite_group_card_pos] >>
@@ -2718,7 +2798,8 @@ val field_subgroup_master_roots = store_thm(
   `CARD (G UNION {#0}) = n` by rw[field_subgroup_card, Abbr`n`] >>
   `CARD (G UNION {#0}) <= CARD (roots (master n))` by rw[CARD_SUBSET] >>
   `CARD (roots (master n)) = n` by decide_tac >>
-  rw[SUBSET_EQ_CARD]);
+  rw[SUBSET_EQ_CARD]
+QED
 
 (* This is the key theorem to show that g <= f* eventually guarantees additive closure. *)
 
@@ -2748,22 +2829,24 @@ End
 
 (* Theorem: properties of subgroup_field *)
 (* Proof: by subgroup_field_def, including_def *)
-val subgroup_field_property = store_thm(
-  "subgroup_field_property",
-  ``!(r:'a field) (g:'a group).
+Theorem subgroup_field_property:
+    !(r:'a field) (g:'a group).
      ((subgroup_field r g).carrier = G UNION {#0}) /\
      ((subgroup_field r g).sum.carrier = G UNION {#0}) /\
      ((subgroup_field r g).prod.carrier = G UNION {#0}) /\
      ((subgroup_field r g).sum.op = r.sum.op) /\
-     ((subgroup_field r g).sum.id = #0)``,
-  rw_tac std_ss[subgroup_field_def, including_def]);
+     ((subgroup_field r g).sum.id = #0)
+Proof
+  rw_tac std_ss[subgroup_field_def, including_def]
+QED
 
 (* Theorem: ((subgroup_field r g).sum.op = r.sum.op) /\ ((subgroup_field r g).sum.id = #0) *)
 (* Proof: by subgroup_field_property *)
-val subgroup_field_sum_property = store_thm(
-  "subgroup_field_sum_property",
-  ``!(r:'a field) (g:'a group). ((subgroup_field r g).sum.op = r.sum.op) /\ ((subgroup_field r g).sum.id = #0)``,
-  rw[subgroup_field_property]);
+Theorem subgroup_field_sum_property:
+    !(r:'a field) (g:'a group). ((subgroup_field r g).sum.op = r.sum.op) /\ ((subgroup_field r g).sum.id = #0)
+Proof
+  rw[subgroup_field_property]
+QED
 
 (* Theorem: Field r /\ g <= f* ==>
     ((subgroup_field r g).prod.op = r.prod.op) /\ ((subgroup_field r g).prod.id = #1) *)
@@ -2782,23 +2865,25 @@ val subgroup_field_sum_property = store_thm(
       = f*.id                        by subgroup_id
       = #1                           by field_nonzero_mult_property
 *)
-val subgroup_field_prod_property = store_thm(
-  "subgroup_field_prod_property",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==>
-     ((subgroup_field r g).prod.op = r.prod.op) /\ ((subgroup_field r g).prod.id = #1)``,
+Theorem subgroup_field_prod_property:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==>
+     ((subgroup_field r g).prod.op = r.prod.op) /\ ((subgroup_field r g).prod.id = #1)
+Proof
   ntac 3 strip_tac >>
   `g.op = r.prod.op` by fs[Subgroup_def] >>
   `g.id = #1` by metis_tac[subgroup_id, field_nonzero_mult_property] >>
-  rw_tac std_ss[subgroup_field_def, including_def]);
+  rw_tac std_ss[subgroup_field_def, including_def]
+QED
 
 (* Theorem: Field r /\ g <= f* ==>
             ((subgroup_field r g).sum.id = #0) /\ ((subgroup_field r g).prod.id = #1) *)
 (* Proof: by subgroup_field_sum_property, subgroup_field_prod_property *)
-val subgroup_field_ids = store_thm(
-  "subgroup_field_ids",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==>
-     ((subgroup_field r g).sum.id = #0) /\ ((subgroup_field r g).prod.id = #1)``,
-  rw_tac std_ss[subgroup_field_sum_property, subgroup_field_prod_property]);
+Theorem subgroup_field_ids:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==>
+     ((subgroup_field r g).sum.id = #0) /\ ((subgroup_field r g).prod.id = #1)
+Proof
+  rw_tac std_ss[subgroup_field_sum_property, subgroup_field_prod_property]
+QED
 
 (* Theorem: FiniteGroup g /\ #0 NOTIN G ==> (CARD (subgroup_field r g).carrier = CARD G + 1) *)
 (* Proof:
@@ -2810,13 +2895,14 @@ val subgroup_field_ids = store_thm(
       = CARD G + CARD {#0} - CARD (G INTER {#0})       by CARD_UNION_EQN, FINITE_SING
       = CARD G + 1 - 0 = CARD G + 1                    by CARD_SING
 *)
-val subgroup_field_card = store_thm(
-  "subgroup_field_card",
-  ``!(r:'a field) g. FiniteGroup g /\ #0 NOTIN G ==> (CARD (subgroup_field r g).carrier = CARD G + 1)``,
+Theorem subgroup_field_card:
+    !(r:'a field) g. FiniteGroup g /\ #0 NOTIN G ==> (CARD (subgroup_field r g).carrier = CARD G + 1)
+Proof
   rpt (stripDup[FiniteGroup_def]) >>
   `(subgroup_field r g).carrier = G UNION {#0}` by rw[subgroup_field_property] >>
   `G INTER {#0} = {}` by metis_tac[IN_INTER, IN_SING, MEMBER_NOT_EMPTY] >>
-  rw[CARD_UNION_EQN]);
+  rw[CARD_UNION_EQN]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> #0 IN G UNION {#0} /\ #1 IN G UNION {#0} *)
 (* Proof:
@@ -2824,11 +2910,12 @@ val subgroup_field_card = store_thm(
     ==> #1 IN G UNION {#0}            by IN_UNION
     and #0 IN G UNION {#0}            by IN_UNION, IN_SING
 *)
-val subgroup_field_has_ids = store_thm(
-  "subgroup_field_has_ids",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> #0 IN G UNION {#0} /\ #1 IN G UNION {#0}``,
+Theorem subgroup_field_has_ids:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> #0 IN G UNION {#0} /\ #1 IN G UNION {#0}
+Proof
   ntac 3 strip_tac >>
-  metis_tac[field_subgroup_property, IN_UNION, IN_SING]);
+  metis_tac[field_subgroup_property, IN_UNION, IN_SING]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> !x. x IN G UNION {#0} ==> x IN R *)
 (* Proof:
@@ -2837,10 +2924,11 @@ val subgroup_field_has_ids = store_thm(
    If x IN G, x IN R          by field_subgroup_element
    If x = #0, #0 IN R         by field_zero_element
 *)
-val subgroup_field_element = store_thm(
-  "subgroup_field_element",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x. x IN G UNION {#0} ==> x IN R``,
-  metis_tac[IN_UNION, IN_SING, field_zero_element, field_subgroup_element]);
+Theorem subgroup_field_element:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x. x IN G UNION {#0} ==> x IN R
+Proof
+  metis_tac[IN_UNION, IN_SING, field_zero_element, field_subgroup_element]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> !x y. x IN G UNION {#0} /\ y IN G UNION {#0} ==> x * y IN G UNION {#0} *)
 (* Proof:
@@ -2849,15 +2937,16 @@ val subgroup_field_element = store_thm(
        Note g <= f* ==> Group g   by Subgroup_def
        This is true               by group_op_element
 *)
-val subgroup_field_mult_element = store_thm(
-  "subgroup_field_mult_element",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==>
-   !x y. x IN G UNION {#0} /\ y IN G UNION {#0} ==> x * y IN G UNION {#0}``,
+Theorem subgroup_field_mult_element:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==>
+   !x y. x IN G UNION {#0} /\ y IN G UNION {#0} ==> x * y IN G UNION {#0}
+Proof
   rpt (stripDup[Subgroup_def]) >>
   `!x. x IN G ==> x IN R+` by metis_tac[SUBSET_DEF, field_mult_carrier] >>
   `!x. x IN R+ <=> x IN R /\ x <> #0` by rw[field_nonzero_eq] >>
   fs[] >>
-  metis_tac[group_op_element]);
+  metis_tac[group_op_element]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> !x. x IN G UNION {#0} ==> !n. x ** n IN G UNION {#0} *)
 (* Proof:
@@ -2873,16 +2962,17 @@ val subgroup_field_mult_element = store_thm(
                  and #1 IN G      by field_subgroup_property
        If n <> 0, #0 ** n = #0    by field_zero_exp
 *)
-val subgroup_field_exp_element = store_thm(
-  "subgroup_field_exp_element",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==>
-   !x. x IN G UNION {#0} ==> !n. x ** n IN G UNION {#0}``,
+Theorem subgroup_field_exp_element:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==>
+   !x. x IN G UNION {#0} ==> !n. x ** n IN G UNION {#0}
+Proof
   rpt (stripDup[Subgroup_def]) >>
   `!x. x IN G ==> x IN R+` by metis_tac[SUBSET_DEF, field_mult_carrier] >>
   `!x. x IN R+ <=> x IN R /\ x <> #0` by rw[field_nonzero_eq] >>
   fs[] >-
   metis_tac[group_exp_element, subgroup_exp, field_nonzero_mult_property] >>
-  rw[field_zero_exp, field_subgroup_property]);
+  rw[field_zero_exp, field_subgroup_property]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> !x. x IN G ==> |/ x IN G *)
 (* Proof:
@@ -2891,10 +2981,11 @@ val subgroup_field_exp_element = store_thm(
     and g.inv x = |/ x              by field_subgroup_inv
    Hence |/ x IN G.
 *)
-val subgroup_field_inv_element = store_thm(
-  "subgroup_field_inv_element",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x. x IN G ==> |/ x IN G``,
-  metis_tac[Subgroup_def, field_subgroup_inv, group_inv_element]);
+Theorem subgroup_field_inv_element:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x. x IN G ==> |/ x IN G
+Proof
+  metis_tac[Subgroup_def, field_subgroup_inv, group_inv_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subgroup Field Additive Closure                                           *)
@@ -2909,11 +3000,12 @@ val subgroup_field_inv_element = store_thm(
    <=> x IN R /\ root (master n) x     by poly_roots_member
    <=> x IN R /\ (x ** n = x)          by poly_master_root
 *)
-val subgroup_field_element_iff_master_root = store_thm(
-  "subgroup_field_element_iff_master_root",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
-   !x. x IN G UNION {#0} <=> x IN R /\ (x ** (CARD G + 1) = x)``,
-  metis_tac[field_subgroup_master_roots, poly_roots_member, poly_master_root, finite_field_is_field, field_is_ring]);
+Theorem subgroup_field_element_iff_master_root:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
+   !x. x IN G UNION {#0} <=> x IN R /\ (x ** (CARD G + 1) = x)
+Proof
+  metis_tac[field_subgroup_master_roots, poly_roots_member, poly_master_root, finite_field_is_field, field_is_ring]
+QED
 
 (* This is the more accessible form of field_subgroup_master_roots,
    the key to show that (subgroup_field r g).sum has additive closure.
@@ -2935,17 +3027,18 @@ val subgroup_field_element_iff_master_root = store_thm(
       = x + y                        by subgroup_field_element_iff_master_root
    Thus x + y IN G UNION {#0}        by subgroup_field_element_iff_master_root
 *)
-val subgroup_field_add_element = store_thm(
-  "subgroup_field_add_element",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> !n. (CARD G = (char r) ** n - 1) ==>
-   !x y. x IN G UNION {#0} /\ y IN G UNION {#0} ==> x + y IN G UNION {#0}``,
+Theorem subgroup_field_add_element:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> !n. (CARD G = (char r) ** n - 1) ==>
+   !x y. x IN G UNION {#0} /\ y IN G UNION {#0} ==> x + y IN G UNION {#0}
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteGroup g` by metis_tac[field_subgroup_finite_group] >>
   `0 < CARD G` by rw[finite_group_card_pos] >>
   `(char r) ** n = CARD G + 1` by decide_tac >>
   `x IN R /\ y IN R` by metis_tac[subgroup_field_element] >>
   `x + y IN R` by rw[] >>
-  metis_tac[finite_field_freshman_all, subgroup_field_element_iff_master_root]);
+  metis_tac[finite_field_freshman_all, subgroup_field_element_iff_master_root]
+QED
 
 (* Theorem: FiniteField r /\ g <= f* ==> !n. (CARD G = (char r) ** n - 1) ==>
             !x y. x IN G UNION {#0} /\ y IN G UNION {#0} ==> x - y IN G UNION {#0} *)
@@ -2963,17 +3056,18 @@ val subgroup_field_add_element = store_thm(
       = x - y                        by subgroup_field_element_iff_master_root
    Thus x - y IN G UNION {#0}        by subgroup_field_element_iff_master_root
 *)
-val subgroup_field_sub_element = store_thm(
-  "subgroup_field_sub_element",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> !n. (CARD G = (char r) ** n - 1) ==>
-   !x y. x IN G UNION {#0} /\ y IN G UNION {#0} ==> x - y IN G UNION {#0}``,
+Theorem subgroup_field_sub_element:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> !n. (CARD G = (char r) ** n - 1) ==>
+   !x y. x IN G UNION {#0} /\ y IN G UNION {#0} ==> x - y IN G UNION {#0}
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteGroup g` by metis_tac[field_subgroup_finite_group] >>
   `0 < CARD G` by rw[finite_group_card_pos] >>
   `(char r) ** n = CARD G + 1` by decide_tac >>
   `x IN R /\ y IN R` by metis_tac[subgroup_field_element] >>
   `x - y IN R` by rw[] >>
-  metis_tac[finite_field_freshman_all_sub, subgroup_field_element_iff_master_root]);
+  metis_tac[finite_field_freshman_all_sub, subgroup_field_element_iff_master_root]
+QED
 
 (* Theorem: FiniteField r /\ g <= f* ==> !n. (CARD G = (char r) ** n - 1) ==>
             !x. x IN G UNION {#0} ==> -x IN G UNION {#0} *)
@@ -2985,15 +3079,16 @@ val subgroup_field_sub_element = store_thm(
    Since #0 - x IN G                 by subgroup_field_sub_element
       so -x IN G                     by above
 *)
-val subgroup_field_neg_element = store_thm(
-  "subgroup_field_neg_element",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> !n. (CARD G = (char r) ** n - 1) ==>
-   !x. x IN G UNION {#0} ==> -x IN G UNION {#0}``,
+Theorem subgroup_field_neg_element:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> !n. (CARD G = (char r) ** n - 1) ==>
+   !x. x IN G UNION {#0} ==> -x IN G UNION {#0}
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `x IN R` by metis_tac[subgroup_field_element] >>
   `-x IN R` by rw[] >>
   `#0 IN G UNION {#0} /\ (-x = #0 - x)` by rw[] >>
-  metis_tac[subgroup_field_sub_element]);
+  metis_tac[subgroup_field_sub_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subgroup Field Properties                                                 *)
@@ -3020,9 +3115,9 @@ val subgroup_field_neg_element = store_thm(
        Note AbelianGroup f*                    by field_subgroup_abelian_group
        Hence x IN G /\ y IN G ==> x * y IN G   by AbelianGroup_def
 *)
-val subgroup_field_prod_abelian_monoid = store_thm(
-  "subgroup_field_prod_abelian_monoid",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> AbelianMonoid (subgroup_field r g).prod``,
+Theorem subgroup_field_prod_abelian_monoid:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> AbelianMonoid (subgroup_field r g).prod
+Proof
   rpt (stripDup[Subgroup_def]) >>
   `!x. x IN G ==> x IN R+` by metis_tac[SUBSET_DEF, field_mult_carrier] >>
   `!x. x IN R+ <=> x IN R /\ x <> #0` by rw[field_nonzero_eq] >>
@@ -3034,14 +3129,16 @@ val subgroup_field_prod_abelian_monoid = store_thm(
   fs[] >-
   fs[] >>
   fs[] >>
-  metis_tac[field_subgroup_abelian_group, AbelianGroup_def]);
+  metis_tac[field_subgroup_abelian_group, AbelianGroup_def]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> Monoid (subgroup_field r g).prod *)
 (* Proof: by subgroup_field_prod_abelian_monoid, AbelianMonoid_def *)
-val subgroup_field_prod_monoid = store_thm(
-  "subgroup_field_prod_monoid",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> Monoid (subgroup_field r g).prod``,
-  metis_tac[subgroup_field_prod_abelian_monoid, AbelianMonoid_def]);
+Theorem subgroup_field_prod_monoid:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> Monoid (subgroup_field r g).prod
+Proof
+  metis_tac[subgroup_field_prod_abelian_monoid, AbelianMonoid_def]
+QED
 
 (* Theorem: FiniteField r /\ g <= f* ==>
             !n. (CARD G = (char r) ** n - 1) ==> AbelianGroup (subgroup_field r g).sum *)
@@ -3068,10 +3165,10 @@ val subgroup_field_prod_monoid = store_thm(
        Since x IN R /\ y IN R                  by subgroup_field_element
        Hence x + y + z = x + (y + z)           by field_add_comm
 *)
-val subgroup_field_sum_abelian_group = store_thm(
-  "subgroup_field_sum_abelian_group",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
-   !n. (CARD G = (char r) ** n - 1) ==> AbelianGroup (subgroup_field r g).sum``,
+Theorem subgroup_field_sum_abelian_group:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
+   !n. (CARD G = (char r) ** n - 1) ==> AbelianGroup (subgroup_field r g).sum
+Proof
   rpt (stripDup[FiniteField_def, Subgroup_def]) >>
   `!x. x IN G ==> x IN R+` by metis_tac[SUBSET_DEF, field_mult_carrier] >>
   `!x. x IN R+ <=> x IN R /\ x <> #0` by rw[field_nonzero_eq] >>
@@ -3081,16 +3178,18 @@ val subgroup_field_sum_abelian_group = store_thm(
   rw[] >-
   fs[] >-
   metis_tac[subgroup_field_neg_element, field_add_lneg, subgroup_field_element] >>
-  metis_tac[field_add_comm, subgroup_field_element]);
+  metis_tac[field_add_comm, subgroup_field_element]
+QED
 
 (* Theorem: FiniteField r /\ g <= f* ==>
             !n. (CARD G = (char r) ** n - 1) ==> Group (subgroup_field r g).sum *)
 (* Proof: by subgroup_field_sum_abelian_group, AbelianGroup_def *)
-val subgroup_field_sum_group = store_thm(
-  "subgroup_field_sum_group",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
-   !n. (CARD G = (char r) ** n - 1) ==> Group (subgroup_field r g).sum``,
-  metis_tac[subgroup_field_sum_abelian_group, AbelianGroup_def]);
+Theorem subgroup_field_sum_group:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
+   !n. (CARD G = (char r) ** n - 1) ==> Group (subgroup_field r g).sum
+Proof
+  metis_tac[subgroup_field_sum_abelian_group, AbelianGroup_def]
+QED
 
 (* Theorem: FiniteField r /\ g <= f* ==>
             !n. (CARD G = (char r) ** n - 1) ==> Ring (subgroup_field r g) *)
@@ -3102,15 +3201,16 @@ val subgroup_field_sum_group = store_thm(
        Since x IN R /\ y IN R /\ z IN R               by subgroup_field_element
        Hence x * (y + z) = x * y + x * z              by field_mult_radd
 *)
-val subgroup_field_ring = store_thm(
-  "subgroup_field_ring",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
-   !n. (CARD G = (char r) ** n - 1) ==> Ring (subgroup_field r g)``,
+Theorem subgroup_field_ring:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
+   !n. (CARD G = (char r) ** n - 1) ==> Ring (subgroup_field r g)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw_tac std_ss[Ring_def, subgroup_field_property, subgroup_field_prod_property] >-
   metis_tac[subgroup_field_sum_abelian_group] >-
   rw[subgroup_field_prod_abelian_monoid] >>
-  metis_tac[field_mult_radd, subgroup_field_element]);
+  metis_tac[field_mult_radd, subgroup_field_element]
+QED
 
 (* Theorem: FiniteField r /\ g <= f* ==>
             !n. (CARD G = (char r) ** n - 1) ==> Field (subgroup_field r g) *)
@@ -3125,17 +3225,18 @@ val subgroup_field_ring = store_thm(
          so x * |/ x = #1                      by field_mult_rinv
        Take y = |/ x, then y IN G UNION {#0}   by IN_UNION
 *)
-val subgroup_field_field = store_thm(
-  "subgroup_field_field",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
-   !n. (CARD G = (char r) ** n - 1) ==> Field (subgroup_field r g)``,
+Theorem subgroup_field_field:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==>
+   !n. (CARD G = (char r) ** n - 1) ==> Field (subgroup_field r g)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw_tac std_ss[field_def_by_inv, subgroup_field_property, subgroup_field_prod_property] >-
   metis_tac[subgroup_field_ring] >-
   rw[] >>
   `x IN G` by metis_tac[IN_UNION, IN_SING] >>
   `x IN R+` by metis_tac[field_subgroup_property, SUBSET_DEF] >>
-  metis_tac[subgroup_field_inv_element, field_mult_rinv, IN_UNION]);
+  metis_tac[subgroup_field_inv_element, field_mult_rinv, IN_UNION]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> subfield (subgroup_field r g) r *)
 (* Proof:
@@ -3153,15 +3254,16 @@ val subgroup_field_field = store_thm(
            This is true                            by subgroup_field_prod_property
        (3) (subgroup_field r g).prod.id = #1, true by subgroup_field_prod_property
 *)
-val subgroup_field_subfield = store_thm(
-  "subgroup_field_subfield",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> subfield (subgroup_field r g) r``,
+Theorem subgroup_field_subfield:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> subfield (subgroup_field r g) r
+Proof
   rw_tac std_ss[subfield_def, FieldHomo_def, RingHomo_def, subgroup_field_property] >-
   metis_tac[subgroup_field_element] >-
  (rw_tac std_ss[GroupHomo_def, subgroup_field_property, field_carriers] >>
   metis_tac[subgroup_field_element]) >>
   rw_tac std_ss[MonoidHomo_def, subgroup_field_property, subgroup_field_prod_property, field_carriers] >>
-  metis_tac[subgroup_field_element]);
+  metis_tac[subgroup_field_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subfield Classification                                                   *)
@@ -3189,9 +3291,9 @@ val subgroup_field_subfield = store_thm(
       = CARD B - 1                    by CARD_SING
    Take this g, and the result follows.
 *)
-val finite_field_subfield_gives_subgroup = store_thm(
-  "finite_field_subfield_gives_subgroup",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> ?g. g <= f* /\ (CARD G = (char r) ** (fdim s) - 1)``,
+Theorem finite_field_subfield_gives_subgroup:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> ?g. g <= f* /\ (CARD G = (char r) ** (fdim s) - 1)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `CARD B = char r ** fdim s` by rw[finite_field_card_alt, subfield_char] >>
@@ -3202,7 +3304,8 @@ val finite_field_subfield_gives_subgroup = store_thm(
   `g <= f*` by rw[subfield_mult_subset_group_subgroup, Abbr`g`] >>
   `G = B DIFF {#0}` by rw[subset_group_property, Abbr`g`] >>
   `CARD G = CARD B - 1` by rw[CARD_DIFF_EQN] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: FiniteField r ==> !g n. g <= f* /\ (CARD G = (char r) ** n - 1) ==>
             ?s. s <<= r /\ (fdim s = n) *)
@@ -3228,10 +3331,10 @@ val finite_field_subfield_gives_subgroup = store_thm(
    ==> fdim s = n                     by finite_field_dim_eq
    Take this s, and the result follows.
 *)
-val finite_field_subgroup_gives_subfield = store_thm(
-  "finite_field_subgroup_gives_subfield",
-  ``!r:'a field. FiniteField r ==> !g n. g <= f* /\ (CARD G = (char r) ** n - 1) ==>
-   ?s. s <<= r /\ (fdim s = n)``,
+Theorem finite_field_subgroup_gives_subfield:
+    !r:'a field. FiniteField r ==> !g n. g <= f* /\ (CARD G = (char r) ** n - 1) ==>
+   ?s. s <<= r /\ (fdim s = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = char r` >>
   `1 < p` by rw[finite_field_char_gt_1, Abbr`p`] >>
@@ -3249,7 +3352,8 @@ val finite_field_subgroup_gives_subfield = store_thm(
   `char s = p` by rw[subfield_char, Abbr`p`] >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `fdim s = n` by metis_tac[finite_field_dim_eq] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: FiniteField r ==> !n. (?s. s <<= r /\ (fdim s = n)) <=> (?g. g <= f* /\ (CARD G = (char r) ** n - 1)) *)
 (* Proof:
@@ -3258,11 +3362,12 @@ val finite_field_subgroup_gives_subfield = store_thm(
    Only-if part: g <= f* /\ (CARD G = (char r) ** n - 1) ==> ?s. s <<= r /\ (fdim s = n)
       This is true     by finite_field_subgroup_gives_subfield
 *)
-val finite_field_subfield_exists_iff_subgroup_exists = store_thm(
-  "finite_field_subfield_exists_iff_subgroup_exists",
-  ``!r:'a field. FiniteField r ==>
-   !n. (?s. s <<= r /\ (fdim s = n)) <=> (?g. g <= f* /\ (CARD G = (char r) ** n - 1))``,
-  metis_tac[finite_field_subfield_gives_subgroup, finite_field_subgroup_gives_subfield]);
+Theorem finite_field_subfield_exists_iff_subgroup_exists:
+    !r:'a field. FiniteField r ==>
+   !n. (?s. s <<= r /\ (fdim s = n)) <=> (?g. g <= f* /\ (CARD G = (char r) ** n - 1))
+Proof
+  metis_tac[finite_field_subfield_gives_subgroup, finite_field_subgroup_gives_subfield]
+QED
 
 (* This is a major theorem. *)
 
@@ -3280,9 +3385,9 @@ val finite_field_subfield_exists_iff_subgroup_exists = store_thm(
     <=> (p ** n - 1) divides (p ** d - 1)         by finite_field_mult_carrier_card
     <=> n divides d                               by power_predecessor_divisibility
 *)
-val finite_field_subfield_exists_condition = store_thm(
-  "finite_field_subfield_exists_condition",
-  ``!r:'a field. FiniteField r ==> !n. (?s. s <<= r /\ (fdim s = n)) <=> n divides fdim r``,
+Theorem finite_field_subfield_exists_condition:
+    !r:'a field. FiniteField r ==> !n. (?s. s <<= r /\ (fdim s = n)) <=> n divides fdim r
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FINITE F*` by rw[field_nonzero_finite, field_mult_carrier] >>
   `cyclic f*` by rw[finite_field_mult_group_cyclic] >>
@@ -3294,7 +3399,8 @@ val finite_field_subfield_exists_condition = store_thm(
   `_ = (p ** n - 1) divides (CARD F*)` by rw[cyclic_subgroup_condition] >>
   `_ = (p ** n - 1) divides (p ** d - 1)` by rw[finite_field_mult_carrier_card] >>
   `_ = n divides d` by rw[power_predecessor_divisibility] >>
-  rw[]);
+  rw[]
+QED
 
 (* This is a really cute proof of the subfield criteria. *)
 

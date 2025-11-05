@@ -284,8 +284,9 @@ val OBS_RELAB_PREFIX = save_thm (
 (* Prove TAU1:
    |- !u E. OBS_CONGR (prefix u (prefix tau E)) (prefix u E)
  *)
-val TAU1 = store_thm ("TAU1",
-  ``!(u :'a Action) E. OBS_CONGR (prefix u (prefix tau E)) (prefix u E)``,
+Theorem TAU1:
+    !(u :'a Action) E. OBS_CONGR (prefix u (prefix tau E)) (prefix u E)
+Proof
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [OBS_CONGR]
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
@@ -302,7 +303,8 @@ val TAU1 = store_thm ("TAU1",
       ASM_REWRITE_TAC [WEAK_TRANS, TAU_WEAK] \\
       EXISTS_TAC ``prefix (u :'a Action) (prefix tau E2)`` \\
       EXISTS_TAC ``prefix (tau :'a Action) E2`` \\
-      ASM_REWRITE_TAC [EPS_REFL, PREFIX] ]);
+      ASM_REWRITE_TAC [EPS_REFL, PREFIX] ]
+QED
 
 (* Prove WEAK_TAU1:
    |- !u E. WEAK_EQUIV (prefix u (prefix tau E)) (prefix u E)
@@ -313,8 +315,9 @@ val WEAK_TAU1 = save_thm ("WEAK_TAU1",
 (* Prove TAU2:
    |- !E. OBS_CONGR (sum E (prefix tau E)) (prefix tau E)
  *)
-val TAU2 = store_thm ("TAU2",
-  ``!E. OBS_CONGR (sum E (prefix tau E)) (prefix tau E)``,
+Theorem TAU2:
+    !E. OBS_CONGR (sum E (prefix tau E)) (prefix tau E)
+Proof
     GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [OBS_CONGR]
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
@@ -339,7 +342,8 @@ val TAU2 = store_thm ("TAU2",
       take [`sum E (prefix tau E)`, `E2`] \\
       REWRITE_TAC [EPS_REFL] \\
       MATCH_MP_TAC SUM2 \\
-      PURE_ONCE_ASM_REWRITE_TAC [] ]);
+      PURE_ONCE_ASM_REWRITE_TAC [] ]
+QED
 
 (* Prove WEAK_TAU2:
    |- !E. WEAK_EQUIV (sum E (prefix tau E)) (prefix tau E)
@@ -352,10 +356,11 @@ val WEAK_TAU2 = save_thm ("WEAK_TAU2",
        OBS_CONGR (sum (prefix u (sum E (prefix tau E'))) (prefix u E'))
                  (prefix u (sum E (prefix tau E')))
  *)
-val TAU3 = store_thm ("TAU3",
-  ``!(u :'a Action) E E'.
+Theorem TAU3:
+    !(u :'a Action) E E'.
         OBS_CONGR (sum (prefix u (sum E (prefix tau E'))) (prefix u E'))
-                  (prefix u (sum E (prefix tau E')))``,
+                  (prefix u (sum E (prefix tau E')))
+Proof
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [OBS_CONGR]
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
@@ -383,7 +388,8 @@ val TAU3 = store_thm ("TAU3",
       take [`sum (prefix u (sum E (prefix tau E'))) (prefix u E')`, `E2`] \\
       REWRITE_TAC [EPS_REFL] \\
       MATCH_MP_TAC SUM1 \\
-      PURE_ONCE_ASM_REWRITE_TAC [] ]);
+      PURE_ONCE_ASM_REWRITE_TAC [] ]
+QED
 
 (* Prove WEAK_TAU3:
    |- !u E E'.

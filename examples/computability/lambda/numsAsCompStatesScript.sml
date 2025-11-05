@@ -2,7 +2,8 @@ Theory numsAsCompStates
 Ancestors
   prterm arithmetic
 
-val _ = Datatype ‘compstate = CS num’;
+Datatype:  compstate = CS num
+End
 
 Definition terminated_def:
   terminated (CS cs) ⇔ (pr_bnf [cs] = 1)

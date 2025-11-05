@@ -355,214 +355,233 @@ val MPC_n_TAC =
   tac1 >> tac2 >> tac3 >>
   SIMP_TAC arith_ss [ADDn_def]
 
-val MPC_0_THM = store_thm ("MPC_0_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_0_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 0) ==>
     ((mpc (t+1),mem (t+1),mar (t+1),pc (t+1),acc (t+1)) =
-     (1,mem t,pc t,pc t,acc t))”,
+     (1,mem t,pc t,pc t,acc t))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_1_THM = store_thm ("MPC_1_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_1_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 1) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1),ir (t+1)) =
-     (2,mem t,pc t,acc t,mem t (Bits (0,n) (mar t))))”,
+     (2,mem t,pc t,acc t,mem t (Bits (0,n) (mar t))))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_2_THM = store_thm ("MPC_2_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_2_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 2) ==>
     ((mpc (t+1),mem (t+1),mar (t+1),pc (t+1),acc (t+1),ir (t+1)) =
-     ((Bits (n,3) (ir t)) + 3,mem t,ir t,pc t,acc t,ir t))”,
+     ((Bits (n,3) (ir t)) + 3,mem t,ir t,pc t,acc t,ir t))
+Proof
 
   MPC_n_TAC >>
   ‘Bits (n,3) (ir t) < 8’ by SIMP_TAC arith_ss [Bits_def] >>
   DECIDE_TAC
-);
+QED
 
 
 
-val MPC_3_THM = store_thm ("MPC_3_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_3_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 3) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1),ir (t+1)) =
-     (((if ((acc t) = 0) then 4 else 10),mem t,pc t,acc t,ir t)))”,
+     (((if ((acc t) = 0) then 4 else 10),mem t,pc t,acc t,ir t)))
+Proof
   MPC_n_TAC
-);
+QED
 
 
-val MPC_4_THM = store_thm ("MPC_4_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_4_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 4) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1)) =
-     (0,mem t,ir t,acc t))”,
+     (0,mem t,ir t,acc t))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_5_THM = store_thm ("MPC_5_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_5_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 5) ==>
     ((mpc (t+1),mem (t+1),mar (t+1),pc (t+1),acc (t+1),arg (t+1)) =
-     (12,mem t,mar t,pc t,acc t,acc t))”,
+     (12,mem t,mar t,pc t,acc t,acc t))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_6_THM = store_thm ("MPC_6_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_6_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 6) ==>
     ((mpc (t+1),mem (t+1),mar (t+1),pc (t+1),acc (t+1),arg (t+1)) =
-     (13,mem t,mar t,pc t,acc t,acc t))”,
+     (13,mem t,mar t,pc t,acc t,acc t))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_7_THM = store_thm ("MPC_7_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_7_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 7) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1)) =
-     (10,mem t,pc t,mem t (Bits (0,n) (mar t))))”,
+     (10,mem t,pc t,mem t (Bits (0,n) (mar t))))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_8_THM = store_thm ("MPC_8_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_8_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 8) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1)) =
-     (10,Update (mem t,Bits (0,n) (mar t),acc t),pc t,acc t))”,
+     (10,Update (mem t,Bits (0,n) (mar t),acc t),pc t,acc t))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_9_THM = store_thm ("MPC_9_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_9_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 9) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1)) =
-     (10,mem t,pc t,acc t))”,
+     (10,mem t,pc t,acc t))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
 
-val MPC_10_THM = store_thm ("MPC_10_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_10_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 10) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1),buf (t+1)) =
-     (11,mem t,pc t,acc t,INCn (n+3) (pc t)))”,
+     (11,mem t,pc t,acc t,INCn (n+3) (pc t)))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_11_THM = store_thm ("MPC_11_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_11_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 11) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1)) =
-     (0,mem t,buf t,acc t))”,
+     (0,mem t,buf t,acc t))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_12_THM = store_thm ("MPC_12_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_12_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 12) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1),buf (t+1)) =
      (14,mem t,pc t,acc t,
-      ADDn (n+3) (arg t,mem t (Bits (0,n) (mar t)))))”,
+      ADDn (n+3) (arg t,mem t (Bits (0,n) (mar t)))))
+Proof
 
   MPC_n_TAC
-);
+QED
 
 
-val MPC_13_THM = store_thm ("MPC_13_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_13_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 13) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1),buf (t+1)) =
      (14,mem t,pc t,acc t,
-      SUBn (n+3) (arg t,mem t (Bits (0,n) (mar t)))))”,
+      SUBn (n+3) (arg t,mem t (Bits (0,n) (mar t)))))
+Proof
 
-  MPC_n_TAC);
+  MPC_n_TAC
+QED
 
 
-val MPC_14_THM = store_thm ("MPC_14_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_14_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 14) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1)) =
-     (10,mem t,pc t,buf t))”,
+     (10,mem t,pc t,buf t))
+Proof
 
-  MPC_n_TAC);
+  MPC_n_TAC
+QED
 
 
-val MPC_15_THM = store_thm ("MPC_15_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem MPC_15_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
     (mpc t = 15) ==>
     ((mpc (t+1),mem (t+1),pc (t+1),acc (t+1)) =
-     (0,mem t,pc t,acc t))”,
+     (0,mem t,pc t,acc t))
+Proof
 
-  MPC_n_TAC);
+  MPC_n_TAC
+QED
 
 
 (* Nowadays, we have much more computational power at our hands. We
@@ -570,8 +589,8 @@ val MPC_15_THM = store_thm ("MPC_15_THM",
    via brute force. The main idea is using Skolemization in reverse.
    Apart from that, it is unfolding and a little bit of simple reordering. *)
 
-val Tamarack_EVAL_THM = store_thm ("Tamarack_EVAL_THM",
-   “!n mpc mem mar pc acc ir arg buf.
+Theorem Tamarack_EVAL_THM:
+    !n mpc mem mar pc acc ir arg buf.
           Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf) <=>
           !t.
               if mpc t = 0 then
@@ -674,7 +693,8 @@ val Tamarack_EVAL_THM = store_thm ("Tamarack_EVAL_THM",
                 (mar (t + 1) = mar t) /\ (pc (t + 1) = pc t) /\
                 (acc (t + 1) = acc t) /\ (ir (t + 1) = ir t) /\
                 (arg (t + 1) = arg t) /\
-                ?bus. buf (t + 1) = ADDn (n + 3) (arg t,bus)”,
+                ?bus. buf (t + 1) = ADDn (n + 3) (arg t,bus)
+Proof
 
 REPEAT STRIP_TAC >>
 SIMP_TAC std_ss [Tamarack_def, CntlUnit_def,
@@ -694,7 +714,8 @@ SIMP_TAC (std_ss++boolSimps.EQUIV_EXTRACT_ss) [Microcode_EVALS, ADDn_def,
   ‘Bits (n, 3) m < 8’ by SIMP_TAC arith_ss [Bits_def] >>
   DECIDE_TAC
 ) >>
-ASM_SIMP_TAC (arith_ss++boolSimps.LIFT_COND_ss) []);
+ASM_SIMP_TAC (arith_ss++boolSimps.LIFT_COND_ss) []
+QED
 
 
 
@@ -724,8 +745,8 @@ fun EXEC_INST_FETCH_TAC n =
    EXEC_MPC_TACn n
 
 
-val JZR_T_INST_THM = store_thm ("JZR_T_INST_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem JZR_T_INST_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
@@ -735,14 +756,16 @@ val JZR_T_INST_THM = store_thm ("JZR_T_INST_THM",
     ==>
     (mpc (t+5) = 0) /\
     ((mem (t+5),pc (t+5),acc (t+5)) =
-      NextState n (mem t,pc t,acc t))”,
+      NextState n (mem t,pc t,acc t))
+Proof
 
 EXEC_INST_FETCH_TAC 5 >>
-ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def]);
+ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def]
+QED
 
 
-val JZR_F_INST_THM = store_thm ("JZR_F_INST_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem JZR_F_INST_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
@@ -752,14 +775,16 @@ val JZR_F_INST_THM = store_thm ("JZR_F_INST_THM",
     ==>
     (mpc (t+6) = 0) /\
     ((mem (t+6),pc (t+6),acc (t+6)) =
-      NextState n (mem t,pc t,acc t))”,
+      NextState n (mem t,pc t,acc t))
+Proof
 
 EXEC_INST_FETCH_TAC 6 >>
-ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def]);
+ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def]
+QED
 
 
-val JMP_INST_THM = store_thm ("JMP_INST_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem JMP_INST_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
@@ -768,14 +793,16 @@ val JMP_INST_THM = store_thm ("JMP_INST_THM",
     ==>
     (mpc (t+4) = 0) /\
     ((mem (t+4),pc (t+4),acc (t+4)) =
-      NextState n (mem t,pc t,acc t))”,
+      NextState n (mem t,pc t,acc t))
+Proof
 
 EXEC_INST_FETCH_TAC 4 >>
-ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def]);
+ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def]
+QED
 
 
-val ADD_INST_THM = store_thm ("ADD_INST_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem ADD_INST_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
@@ -784,15 +811,17 @@ val ADD_INST_THM = store_thm ("ADD_INST_THM",
     ==>
     (mpc (t+8) = 0) /\
     ((mem (t+8),pc (t+8),acc (t+8)) =
-      NextState n (mem t,pc t,acc t))”,
+      NextState n (mem t,pc t,acc t))
+Proof
 
 EXEC_INST_FETCH_TAC 8 >>
 ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def,
-  ADDn_def, Addr_def]);
+  ADDn_def, Addr_def]
+QED
 
 
-val SUB_INST_THM = store_thm ("SUB_INST_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem SUB_INST_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
@@ -801,15 +830,17 @@ val SUB_INST_THM = store_thm ("SUB_INST_THM",
     ==>
     (mpc (t+8) = 0) /\
     ((mem (t+8),pc (t+8),acc (t+8)) =
-      NextState n (mem t,pc t,acc t))”,
+      NextState n (mem t,pc t,acc t))
+Proof
 
 EXEC_INST_FETCH_TAC 8 >>
 ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def,
-  ADDn_def, Addr_def]);
+  ADDn_def, Addr_def]
+QED
 
 
-val LD_INST_THM = store_thm ("LD_INST_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem LD_INST_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
@@ -818,15 +849,17 @@ val LD_INST_THM = store_thm ("LD_INST_THM",
     ==>
     (mpc (t+6) = 0) /\
     ((mem (t+6),pc (t+6),acc (t+6)) =
-      NextState n (mem t,pc t,acc t))”,
+      NextState n (mem t,pc t,acc t))
+Proof
 
 EXEC_INST_FETCH_TAC 6 >>
 ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def,
-  ADDn_def, Update_def, Addr_def]);
+  ADDn_def, Update_def, Addr_def]
+QED
 
 
-val ST_INST_THM = store_thm ("ST_INST_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem ST_INST_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
@@ -835,15 +868,17 @@ val ST_INST_THM = store_thm ("ST_INST_THM",
     ==>
     (mpc (t+6) = 0) /\
     ((mem (t+6),pc (t+6),acc (t+6)) =
-      NextState n (mem t,pc t,acc t))”,
+      NextState n (mem t,pc t,acc t))
+Proof
 
 EXEC_INST_FETCH_TAC 6 >>
 ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def,
-  ADDn_def, Update_def, Addr_def]);
+  ADDn_def, Update_def, Addr_def]
+QED
 
 
-val NOP1_INST_THM = store_thm ("NOP1_INST_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem NOP1_INST_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
@@ -852,15 +887,17 @@ val NOP1_INST_THM = store_thm ("NOP1_INST_THM",
     ==>
     (mpc (t+6) = 0) /\
     ((mem (t+6),pc (t+6),acc (t+6)) =
-      NextState n (mem t,pc t,acc t))”,
+      NextState n (mem t,pc t,acc t))
+Proof
 
 EXEC_INST_FETCH_TAC 6 >>
 ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def,
-  ADDn_def, Update_def, Addr_def]);
+  ADDn_def, Update_def, Addr_def]
+QED
 
 
-val NOP2_INST_THM = store_thm ("NOP2_INST_THM",
-“!n mpc mem mar pc acc ir arg buf.
+Theorem NOP2_INST_THM:
+ !n mpc mem mar pc acc ir arg buf.
   Tamarack n (mpc,mem,mar,pc,acc,ir,arg,buf)
   ==>
   !t.
@@ -869,11 +906,13 @@ val NOP2_INST_THM = store_thm ("NOP2_INST_THM",
     ==>
     (mpc (t+5) = 0) /\
     ((mem (t+5),pc (t+5),acc (t+5)) =
-      NextState n (mem t,pc t,acc t))”,
+      NextState n (mem t,pc t,acc t))
+Proof
 
 EXEC_INST_FETCH_TAC 5 >>
 ASM_SIMP_TAC std_ss [NextState_def, LET_DEF, Inst_def, Opc_def,
-  ADDn_def, Update_def, Addr_def]);
+  ADDn_def, Update_def, Addr_def]
+QED
 
 
 (* --------------------------- *)

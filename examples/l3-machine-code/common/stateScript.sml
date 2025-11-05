@@ -69,9 +69,11 @@ Definition NEXT_REL_def:
    ?u. r s u /\ (next u = SOME t)
 End
 
-val NEXT_REL_EQ = Q.store_thm ("NEXT_REL_EQ",
-   `!next. NEXT_REL (=) next = \s t. next s = SOME t`,
-   rw [NEXT_REL_def, FUN_EQ_THM])
+Theorem NEXT_REL_EQ:
+    !next. NEXT_REL (=) next = \s t. next s = SOME t
+Proof
+   rw [NEXT_REL_def, FUN_EQ_THM]
+QED
 
 (* ------------------------------------------------------------------------
    SELECT_STATE is used to construct a "set view" of states.
@@ -190,10 +192,11 @@ End
 
    ------------------------------------------------------------------------ *)
 
-val SPLIT_STATE = Q.store_thm ("SPLIT_STATE",
-   `!m s u v.
+Theorem SPLIT_STATE:
+    !m s u v.
       SPLIT (STATE m s) (u, v) =
-      ?y. (u = SELECT_STATE m y s) /\ (v = FRAME_STATE m y s)`,
+      ?y. (u = SELECT_STATE m y s) /\ (v = FRAME_STATE m y s)
+Proof
    rw [SPLIT_def, STATE_def, SELECT_STATE_def, FRAME_STATE_def,
        pred_setTheory.DISJOINT_DEF, fun2set_def]
    \\ eq_tac
@@ -204,25 +207,29 @@ val SPLIT_STATE = Q.store_thm ("SPLIT_STATE",
       \\ metis_tac [pairTheory.FST],
       eq_tac \\ rw [],
       metis_tac [pairTheory.FST]
-   ])
+   ]
+QED
 
 val SPLIT_STATE_cor = METIS_PROVE [SPLIT_STATE]
    ``p (SELECT_STATE m y s) ==>
      ?u v. SPLIT (STATE m s) (u, v) /\ p u /\ (\v. v = FRAME_STATE m y s) v``
 
-val FRAME_SET_EQ = Q.store_thm ("FRAME_SET_EQ",
-   `!m x y s t. (FRAME_STATE m x s = FRAME_STATE m y t) ==> (x = y)`,
+Theorem FRAME_SET_EQ:
+    !m x y s t. (FRAME_STATE m x s = FRAME_STATE m y t) ==> (x = y)
+Proof
    simp [pred_setTheory.EXTENSION, FRAME_STATE_def, SELECT_STATE_def,
          fun2set_def]
-   \\ metis_tac [pairTheory.FST])
+   \\ metis_tac [pairTheory.FST]
+QED
 
-val R_STATE_SEMANTICS = Q.store_thm ("R_STATE_SEMANTICS",
-   `!m next instr r p q.
+Theorem R_STATE_SEMANTICS:
+    !m next instr r p q.
        SPEC (STATE m, next, instr, r, K F) p {} q =
        !y s t1 seq.
           p (SELECT_STATE m y t1) /\ r t1 s /\ rel_sequence next seq s ==>
           ?k t2. q (SELECT_STATE m y t2) /\ r t2 (seq k) /\
-                 (FRAME_STATE m y t1 = FRAME_STATE m y t2)`,
+                 (FRAME_STATE m y t1 = FRAME_STATE m y t2)
+Proof
    simp [GSYM RUN_EQ_SPEC, RUN_def, STAR_def, SEP_REFINE_def]
    \\ REPEAT strip_tac
    \\ Tactical.REVERSE eq_tac
@@ -237,16 +244,18 @@ val R_STATE_SEMANTICS = Q.store_thm ("R_STATE_SEMANTICS",
    \\ res_tac
    \\ full_simp_tac bool_ss [SPLIT_STATE]
    \\ metis_tac [FRAME_SET_EQ]
-   )
+QED
 
-val STATE_SEMANTICS = Q.store_thm ("STATE_SEMANTICS",
-   `!m next instr p q.
+Theorem STATE_SEMANTICS:
+    !m next instr p q.
        SPEC (STATE m, next, instr, $=, K F) p {} q =
        !y s seq.
           p (SELECT_STATE m y s) /\ rel_sequence next seq s ==>
           ?k. q (SELECT_STATE m y (seq k)) /\
-              (FRAME_STATE m y s = FRAME_STATE m y (seq k))`,
-   rw [R_STATE_SEMANTICS])
+              (FRAME_STATE m y s = FRAME_STATE m y (seq k))
+Proof
+   rw [R_STATE_SEMANTICS]
+QED
 
 val IMP_R_SPEC = Q.prove(
    `!r m next instr p q.
@@ -286,10 +295,12 @@ val IMP_R_SPEC = Q.prove(
    \\ metis_tac [optionTheory.SOME_11]
    )
 
-val PreOrder_EQ = Q.store_thm ("PreOrder_EQ",
-   `PreOrder (=)`,
+Theorem PreOrder_EQ:
+    PreOrder (=)
+Proof
    rw [relationTheory.PreOrder, relationTheory.reflexive_def,
-       relationTheory.transitive_def])
+       relationTheory.transitive_def]
+QED
 
 val IMP_SPEC = Q.prove(
    `!m next instr p q.
@@ -336,9 +347,11 @@ val IMP_SPEC = Theory.save_thm ("IMP_SPEC",
    |> Q.GENL [`m`, `next`, `instr`, `c`, `p`, `q`]
    )
 
-val SEP_EQ_SINGLETON = Q.store_thm ("SEP_EQ_SINGLETON",
-   `!x. SEP_EQ x = { x }`,
-   rw [SEP_EQ_def, pred_setTheory.EXTENSION, boolTheory.IN_DEF])
+Theorem SEP_EQ_SINGLETON:
+    !x. SEP_EQ x = { x }
+Proof
+   rw [SEP_EQ_def, pred_setTheory.EXTENSION, boolTheory.IN_DEF]
+QED
 
 val CODE_POOL = Theory.save_thm ("CODE_POOL",
    REWRITE_RULE [GSYM SEP_EQ_def, SEP_EQ_SINGLETON] CODE_POOL_def)
@@ -397,11 +410,12 @@ val fun2set_DIFF2 = Q.prove(
    metis_tac [fun2set_DIFF, SUBSET_fun2set, PAIR_GRAPH]
    )
 
-val STAR_SELECT_STATE = Q.store_thm ("STAR_SELECT_STATE",
-   `!cd m p s x.
+Theorem STAR_SELECT_STATE:
+    !cd m p s x.
        ({cd} * p) (SELECT_STATE m x s) =
        (!c d. (c, d) IN cd ==> (m s c = d)) /\ IMAGE FST cd SUBSET x /\
-       p (SELECT_STATE m (x DIFF IMAGE FST cd) s)`,
+       p (SELECT_STATE m (x DIFF IMAGE FST cd) s)
+Proof
    REPEAT strip_tac
    \\ once_rewrite_tac [GSYM SEP_EQ_SINGLETON]
    \\ simp [SELECT_STATE_def, EQ_STAR]
@@ -412,7 +426,7 @@ val STAR_SELECT_STATE = Q.store_thm ("STAR_SELECT_STATE",
    >- metis_tac [fun2set_DIFF2, PAIR_GRAPH]
    >- metis_tac [fun2set_DIFF, PAIR_GRAPH]
    \\ metis_tac [SUBSET_fun2set, PAIR_GRAPH]
-   )
+QED
 
 (*
 val STAR_SELECT_STATE1 = Theory.save_thm ("STAR_SELECT_STATE1",
@@ -423,21 +437,23 @@ val STAR_SELECT_STATE1 = Theory.save_thm ("STAR_SELECT_STATE1",
    )
 *)
 
-val emp_SELECT_STATE = Q.store_thm ("emp_SELECT_STATE",
-   `!m x s. emp (SELECT_STATE m x s) = (x = {})`,
+Theorem emp_SELECT_STATE:
+    !m x s. emp (SELECT_STATE m x s) = (x = {})
+Proof
    rw [emp_def, SELECT_STATE_def, fun2set_def, pred_setTheory.EXTENSION]
-   )
+QED
 
 (* ........................................................................ *)
 
-val UPDATE_FRAME_STATE = Q.store_thm ("UPDATE_FRAME_STATE",
-   `!m f u r.
+Theorem UPDATE_FRAME_STATE:
+    !m f u r.
       (!b s a w. b <> f a ==> (m (u s a w) b = m (r s) b)) ==>
       !a w s x.
-          f a IN x ==> (FRAME_STATE m x (u s a w) = FRAME_STATE m x (r s))`,
+          f a IN x ==> (FRAME_STATE m x (u s a w) = FRAME_STATE m x (r s))
+Proof
    rw [FRAME_STATE_def, SELECT_STATE_def, fun2set_def, pred_setTheory.EXTENSION]
    \\ metis_tac []
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -446,30 +462,34 @@ val cond_true_elim = Theory.save_thm("cond_true_elim",
       ``(!p:'a set set. p * cond T = p) /\
         (!p:'a set set. cond T * p = p)``)
 
-val UNION_STAR = Q.store_thm("UNION_STAR",
-   `!a b c. DISJOINT a b ==> ({a UNION b} * c = {a} * {b} * c)`,
+Theorem UNION_STAR:
+    !a b c. DISJOINT a b ==> ({a UNION b} * c = {a} * {b} * c)
+Proof
    simp [set_sepTheory.STAR_def, set_sepTheory.SPLIT_def]
-   )
+QED
 
-val BIGUNION_IMAGE_1 = Q.store_thm("BIGUNION_IMAGE_1",
-   `!f x. BIGUNION (IMAGE f {x}) = f x`,
+Theorem BIGUNION_IMAGE_1:
+    !f x. BIGUNION (IMAGE f {x}) = f x
+Proof
    simp []
-   )
+QED
 
-val BIGUNION_IMAGE_2 = Q.store_thm("BIGUNION_IMAGE_2",
-   `!f x y. BIGUNION (IMAGE f {x; y}) = f x UNION f y`,
+Theorem BIGUNION_IMAGE_2:
+    !f x y. BIGUNION (IMAGE f {x; y}) = f x UNION f y
+Proof
    simp []
-   )
+QED
 
 (* ........................................................................ *)
 
-val SEP_EQ_STAR = Q.store_thm("SEP_EQ_STAR",
-   `((q = p1 UNION p2) /\ DISJOINT p1 p2) ==>
-    ((SEP_EQ p1 * SEP_EQ p2) = (SEP_EQ q))`,
+Theorem SEP_EQ_STAR:
+    ((q = p1 UNION p2) /\ DISJOINT p1 p2) ==>
+    ((SEP_EQ p1 * SEP_EQ p2) = (SEP_EQ q))
+Proof
   REPEAT strip_tac
   \\ simp_tac std_ss [SEP_EQ_def, Once FUN_EQ_THM, STAR_def, SPLIT_def]
   \\ METIS_TAC []
-  )
+QED
 
 Theorem MAPPED_COMPONENT_INSERT:
    !P n x y single_c map_c.
@@ -504,8 +524,8 @@ val MAPPED_COMPONENT_INSERT1 = Theory.save_thm("MAPPED_COMPONENT_INSERT1",
             THENC REWRITE_CONV [combinTheory.K_THM]))
    |> Drule.GEN_ALL)
 
-val MAPPED_COMPONENT_INSERT_OPT = Q.store_thm("MAPPED_COMPONENT_INSERT_OPT",
-   `!y x single_c map_c.
+Theorem MAPPED_COMPONENT_INSERT_OPT:
+    !y x single_c map_c.
       (!c d. single_c c d = {{(x c,y d)}}) ==>
       (!a b. (x a = x b) <=> (a = b)) /\
       (!df f.
@@ -513,7 +533,8 @@ val MAPPED_COMPONENT_INSERT_OPT = Q.store_thm("MAPPED_COMPONENT_INSERT_OPT",
          {BIGUNION {BIGUNION (single_c c (SOME (f c))) | c IN df}}) ==>
       !f df c d.
         c IN df ==>
-        (single_c c (SOME d) * map_c (df DELETE c) f = map_c df ((c =+ d) f))`,
+        (single_c c (SOME d) * map_c (df DELETE c) f = map_c df ((c =+ d) f))
+Proof
    REPEAT strip_tac
    \\ asm_rewrite_tac [GSYM SEP_EQ_SINGLETON]
    \\ match_mp_tac SEP_EQ_STAR
@@ -523,18 +544,19 @@ val MAPPED_COMPONENT_INSERT_OPT = Q.store_thm("MAPPED_COMPONENT_INSERT_OPT",
    >- metis_tac []
    \\ Cases_on `x'` \\ simp [] (* shouldn't rely on name here *)
    \\ metis_tac []
-   )
+QED
 
 (* ........................................................................ *)
 
-val SEP_ARRAY_FRAME = Q.store_thm("SEP_ARRAY_FRAME",
-   `!x (prefix: 'a word list) (postfix: 'a word list) p c q m i a l1 l2.
+Theorem SEP_ARRAY_FRAME:
+    !x (prefix: 'a word list) (postfix: 'a word list) p c q m i a l1 l2.
        (LENGTH l2 = LENGTH l1) /\
        SPEC x (p * SEP_ARRAY m i a l1) c (q * SEP_ARRAY m i a l2) ==>
        SPEC x (p * SEP_ARRAY m i (a - n2w (LENGTH prefix) * i)
                              (prefix ++ l1 ++ postfix)) c
               (q * SEP_ARRAY m i (a - n2w (LENGTH prefix) * i)
-                             (prefix ++ l2 ++ postfix))`,
+                             (prefix ++ l2 ++ postfix))
+Proof
    REPEAT strip_tac
    \\ rewrite_tac [set_sepTheory.SEP_ARRAY_APPEND]
    \\ pop_assum
@@ -550,7 +572,7 @@ val SEP_ARRAY_FRAME = Q.store_thm("SEP_ARRAY_FRAME",
                          n2w (LENGTH (prefix ++ l1)) * i)
                         (postfix: 'a word list)``)
    \\ full_simp_tac (srw_ss()++helperLib.star_ss) []
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 

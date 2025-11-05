@@ -33,7 +33,7 @@ val forget_tac = WEAKEN_TAC
 
 fun irule_with q = reverse $ subgoal q THENL [pop_assum irule,all_tac];
 
-Triviality APPEND_EQNS[simp] = LIST_CONJ [APPEND,APPEND_NIL,APPEND_eq_NIL];
+Theorem APPEND_EQNS[local,simp] = LIST_CONJ [APPEND,APPEND_NIL,APPEND_eq_NIL];
 
 (*---------------------------------------------------------------------------*)
 (*---------------------------------------------------------------------------*)
@@ -329,7 +329,7 @@ Proof
   rw[]
 QED
 
-Triviality sing_absorb:
+Theorem sing_absorb[local]:
   {x} ∪ t = {y} ⇔ x = y ∧ t ⊆ {x}
 Proof
   rw[EXTENSION,SUBSET_DEF] >> metis_tac[]
@@ -411,7 +411,7 @@ QED
 (* Weaker version is easier to apply right-to-left                           *)
 (*---------------------------------------------------------------------------*)
 
-Triviality flat_filter_not_null[simp]:
+Theorem flat_filter_not_null[local,simp]:
   FLAT (FILTER ($~ o NULL) lists) = FLAT lists
 Proof
   Induct_on ‘lists’ >> rw[NULL_EQ]
@@ -503,7 +503,7 @@ Proof
       metis_tac [APPEND_EQNS,EPSILON_IN_KSTAR])
 QED
 
-Triviality lemB_lem[local]:
+Theorem lemB_lem[local]:
   KSTAR A • B ⊆ KSTAR (A ∪ B)
 Proof
   rw [IN_dot,SUBSET_DEF] >>
@@ -924,7 +924,7 @@ Definition prefixes_def:
   prefixes w = {w1 | ∃w2. w = w1 ++ w2}
 End
 
-Triviality prefixes_snoc:
+Theorem prefixes_snoc[local]:
   prefixes (SNOC h t) = (SNOC h t) INSERT prefixes t
 Proof
   rw[prefixes_def,EXTENSION,EQ_IMP_THM, SNOC_APPEND]
@@ -995,26 +995,22 @@ QED
 (* Closure properties for FINITE_STATE                                       *)
 (*---------------------------------------------------------------------------*)
 
-Theorem FINITE_STATE_UNION:
-  FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 ∪ L2, A)
-Proof
-  rw [FINITE_STATE_def,IS_FORMAL_LANG_def] >>
-  rw [INTRINSIC_STATES_def] >>
-  rw [GSPEC_IMAGE,combinTheory.o_DEF,IMAGE_applied] >>
-  cheat
-QED
+fun Conjecture name q s = Parse.Term q
 
-Theorem FINITE_STATE_DOT:
-  FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 • L2, A)
-Proof
-  cheat
-QED
+val _ =
+  Conjecture "FINITE_STATE_UNION"
+    ‘FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 ∪ L2, A)’
+    "";
 
-Theorem FINITE_STATE_KSTAR:
-  FINITE_STATE(L,A) ⇒ FINITE_STATE(KSTAR L, A)
-Proof
-  cheat
-QED
+val _ =
+  Conjecture "FINITE_STATE_DOT"
+    ‘FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 • L2, A)’
+    "";
+
+val _ =
+  Conjecture "FINITE_STATE_KSTAR"
+    ‘FINITE_STATE(L,A) ⇒ FINITE_STATE(KSTAR L, A)’
+    "";
 
 (*---------------------------------------------------------------------------*)
 (* Inductive definition of regular sets                                      *)
@@ -1033,13 +1029,7 @@ Inductive REGSET:
   (∀L. REGSET (L,A) ⇒ REGSET (KSTAR L, A))
 End
 
-(*
-Theorem REGSET_IMP_FINITE_STATE:
-  REGSET ⊆ FINITE_STATE
-Proof
- simp [SUBSET_DEF,IN_DEF] >>
- ho_match_mp_tac REGSET_ind >> rw[]
- >- metis_tac [FINITE_STATE_EMPTYSET]
- >> cheat
-QED
-*)
+val _ =
+  Conjecture "REGSET_SUBSET_FINITE_STATE"
+    ‘REGSET ⊆ FINITE_STATE’
+    "";

@@ -979,7 +979,10 @@ Proof
  >> METIS_TAC [ROOT_11, REAL_LT_LE]
 QED
 
-val lem = prove(Term`0<2:num`, REWRITE_TAC[TWO,LESS_0]);
+Theorem lem[local]:
+  0<2:num
+Proof REWRITE_TAC[TWO,LESS_0]
+QED
 
 Theorem EVEN_MOD[local] :
     !n. EVEN(n) = (n MOD 2 = 0)
@@ -1451,8 +1454,9 @@ Proof
         ASM_REWRITE_TAC[]]]]
 QED
 
-val pi = new_definition("pi",
-  Term `pi = &2 * @x. &0 <= x /\ x <= &2 /\ (cos x = &0)`);
+Definition pi[nocompute]:
+  pi = &2 * @x. &0 <= x /\ x <= &2 /\ (cos x = &0)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Periodicity and related properties of the trig functions                  *)
@@ -3647,14 +3651,17 @@ QED
 (* ----------- exp is a convex function (from "miller" example) ------------ *)
 (* ------------------------------------------------------------------------- *)
 
-val exp_convex_lemma1 = prove (
-   ``!t. (t + (1 - t) * exp 0 - exp ((1 - t) * 0) = 0) /\
-         (t * exp 0 + (1 - t) - exp (t * 0) = 0)``,
-   RW_TAC real_ss [EXP_0] >> REAL_ARITH_TAC);
+Theorem exp_convex_lemma1[local]:
+     !t. (t + (1 - t) * exp 0 - exp ((1 - t) * 0) = 0) /\
+         (t * exp 0 + (1 - t) - exp (t * 0) = 0)
+Proof
+   RW_TAC real_ss [EXP_0] >> REAL_ARITH_TAC
+QED
 
-val exp_convex_lemma2 = prove (
-   ``!t x. ((\x. (1 - t) * exp x - exp ((1 - t) * x)) diffl
-            (\x. (1-t) * exp x - (1 - t)*exp ((1-t)*x)) x) x``,
+Theorem exp_convex_lemma2[local]:
+     !t x. ((\x. (1 - t) * exp x - exp ((1 - t) * x)) diffl
+            (\x. (1-t) * exp x - (1 - t)*exp ((1-t)*x)) x) x
+Proof
    RW_TAC std_ss []
    >> `(\x. (1 - t) * exp x - exp ((1 - t) * x)) =
        (\x. (\x. (1 - t) * exp x) x - (\x. exp ((1 - t) * x)) x)`
@@ -3687,25 +3694,31 @@ val exp_convex_lemma2 = prove (
    >> `(\x. (1 - t) * 1 * x) = (\x. (1-t) * (\x. x) x)` by RW_TAC real_ss [FUN_EQ_THM]
    >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
    >> MATCH_MP_TAC DIFF_CMUL
-   >> RW_TAC std_ss [DIFF_X]);
+   >> RW_TAC std_ss [DIFF_X]
+QED
 
-val exp_convex_lemma3 = prove (
-   ``!t x. (\x. (1-t) * exp x - exp ((1-t)*x)) contl x``,
-   METIS_TAC [DIFF_CONT, exp_convex_lemma2]);
+Theorem exp_convex_lemma3[local]:
+     !t x. (\x. (1-t) * exp x - exp ((1-t)*x)) contl x
+Proof
+   METIS_TAC [DIFF_CONT, exp_convex_lemma2]
+QED
 
-val exp_convex_lemma4 = prove (
-   ``!x. 0 < x /\ 0 < t /\ t < 1 ==> 0 < (\x. (1-t) * exp x - (1 - t)*exp ((1-t)*x)) x``,
+Theorem exp_convex_lemma4[local]:
+     !x. 0 < x /\ 0 < t /\ t < 1 ==> 0 < (\x. (1-t) * exp x - (1 - t)*exp ((1-t)*x)) x
+Proof
    RW_TAC real_ss [REAL_LT_SUB_LADD] >> MATCH_MP_TAC REAL_LT_LMUL_IMP
    >> RW_TAC real_ss [REAL_LT_SUB_LADD, EXP_MONO_LT, REAL_SUB_RDISTRIB]
    >> RW_TAC real_ss [REAL_LT_SUB_RADD, REAL_LT_ADDR] >> MATCH_MP_TAC REAL_LT_MUL
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val exp_convex_lemma5 = prove (
-   ``!f f' i j. (!x. (f diffl f' x) x) /\
+Theorem exp_convex_lemma5[local]:
+     !f f' i j. (!x. (f diffl f' x) x) /\
                 (!x. f contl x) /\
                 (0 <= i /\ i < j) /\
                 (!x. i < x /\ x < j ==> 0 < f' x) ==>
-                        f i < f j``,
+                        f i < f j
+Proof
    REPEAT STRIP_TAC
    >> MATCH_MP_TAC REAL_LET_TRANS >> Q.EXISTS_TAC `0 + f i` >> CONJ_TAC >- RW_TAC real_ss []
    >> RW_TAC real_ss [GSYM REAL_LT_SUB_LADD]
@@ -3717,11 +3730,13 @@ val exp_convex_lemma5 = prove (
    >> `l = f' z`
         by (MATCH_MP_TAC DIFF_UNIQ >> Q.EXISTS_TAC `f` >> Q.EXISTS_TAC `z` >> RW_TAC std_ss [])
    >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm])
-   >> Q.PAT_X_ASSUM `!x. i < x /\ x < j ==> 0 < f' x` MATCH_MP_TAC >> RW_TAC std_ss []);
+   >> Q.PAT_X_ASSUM `!x. i < x /\ x < j ==> 0 < f' x` MATCH_MP_TAC >> RW_TAC std_ss []
+QED
 
-val exp_convex_lemma6 = prove (
-   ``!x y t. 0 < t /\ t < 1 /\ x < y ==>
-                exp (t * x + (1 - t) * y) <= t * exp x + (1 - t) * exp y``,
+Theorem exp_convex_lemma6[local]:
+     !x y t. 0 < t /\ t < 1 /\ x < y ==>
+                exp (t * x + (1 - t) * y) <= t * exp x + (1 - t) * exp y
+Proof
    REPEAT STRIP_TAC
    >> Q.ABBREV_TAC `z = y - x`
    >> `0 < z` by (Q.UNABBREV_TAC `z` >> RW_TAC real_ss [REAL_LT_SUB_LADD])
@@ -3750,7 +3765,8 @@ val exp_convex_lemma6 = prove (
    >> MATCH_MP_TAC exp_convex_lemma5
    >> Q.EXISTS_TAC `(\x. (1-t) * exp x - (1 - t)*exp ((1-t)*x))`
    >> Q.UNABBREV_TAC `f`
-   >> RW_TAC real_ss [exp_convex_lemma2, exp_convex_lemma3, exp_convex_lemma4]);
+   >> RW_TAC real_ss [exp_convex_lemma2, exp_convex_lemma3, exp_convex_lemma4]
+QED
 
 Theorem exp_convex:
      exp IN convex_fn

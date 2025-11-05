@@ -26,17 +26,18 @@ val POP_ORW = POP_ASSUM (fn thm => ONCE_REWRITE_TAC [thm]);
 (*------------------------------*)
 val _ = type_abbrev( "event" , ``:'a ->bool``);
 
-val _ = Hol_datatype` gate = AND of gate list
-                            | OR of gate list
-                            | NOT of gate
-                            | atomic of 'a  event
-`;
+Datatype:
+  gate =
+    AND    (gate list)
+  | OR     (gate list)
+  | NOT    gate
+  | atomic ('a  event)
+End
 
 (*----------------------------------------------*)
 (*      Fault Tree  Semantic Function        *)
 (*----------------------------------------------*)
 Definition FTree_def :
-
     (FTree p (atomic a)  = a) /\
     (FTree p (NOT a) =  p_space p DIFF FTree p a)/\
     (FTree p (AND []) = p_space p) /\
@@ -49,7 +50,6 @@ End
 
 (*---gate list from atomic events---*)
 Definition gate_list_def :
-
     (gate_list [] = []) /\
     (gate_list (h::t) =  atomic h::gate_list t)
 End
@@ -2324,4 +2324,3 @@ Theorem PROB_INCLUSION_EXCLUSION_PRINCIPLE :
 Proof
 RW_TAC std_ss[GSYM BIGUNION_EQ_UNION_LIST, PROB_INCLUSION_EXCLUSION_list]
 QED
-

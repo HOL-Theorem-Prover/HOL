@@ -39,46 +39,60 @@ End
 
 (* theorems *)
 
-val option_apply_SOME = store_thm("option_apply_SOME",
-  ``!x f. option_apply (SOME x) f = f x``,SRW_TAC [] [option_apply_def]);
+Theorem option_apply_SOME:
+    !x f. option_apply (SOME x) f = f x
+ProofSRW_TAC [] [option_apply_def]
+QED
 
-val option_then_assoc = store_thm("option_then_assoc",
-  ``!x y z. (x >> y) >> z = x >> (y >> z)``,
+Theorem option_then_assoc:
+    !x y z. (x >> y) >> z = x >> (y >> z)
+Proof
   SIMP_TAC std_ss [FUN_EQ_THM,option_then_def,LET_DEF]
-  THEN REPEAT STRIP_TAC THEN Cases_on `x x'` THEN SRW_TAC [] []);
+  THEN REPEAT STRIP_TAC THEN Cases_on `x x'` THEN SRW_TAC [] []
+QED
 
-val option_orelse_assoc = store_thm("option_orelse_assoc",
-  ``!x y z. option_orelse (option_orelse x y) z =
-            option_orelse x (option_orelse y z)``,
+Theorem option_orelse_assoc:
+    !x y z. option_orelse (option_orelse x y) z =
+            option_orelse x (option_orelse y z)
+Proof
   SIMP_TAC std_ss [FUN_EQ_THM,option_orelse_def,LET_DEF]
-  THEN REPEAT STRIP_TAC THEN Cases_on `x x'` THEN SRW_TAC [] []);
+  THEN REPEAT STRIP_TAC THEN Cases_on `x x'` THEN SRW_TAC [] []
+QED
 
-val option_orelse_SOME = store_thm("option_orelse_SOME",
-  ``!f g h.
-      (option_orelse f g) >> SOME o k = option_orelse (f >> SOME o k) (g >> SOME o k)``,
+Theorem option_orelse_SOME:
+    !f g h.
+      (option_orelse f g) >> SOME o k = option_orelse (f >> SOME o k) (g >> SOME o k)
+Proof
   SIMP_TAC std_ss [FUN_EQ_THM,option_orelse_def,option_then_def,LET_DEF]
   THEN REPEAT STRIP_TAC THEN Cases_on `f x`
-  THEN ASM_SIMP_TAC std_ss []);
+  THEN ASM_SIMP_TAC std_ss []
+QED
 
-val option_then_OVER_orelse = store_thm("option_then_OVER_orelse",
-  ``!x:'a -> 'b option y:'b -> 'c option g.
+Theorem option_then_OVER_orelse:
+    !x:'a -> 'b option y:'b -> 'c option g.
       (option_orelse (x >> y) (x >> z) = x >> (option_orelse y z)) /\
       (option_orelse (option_orelse g (x >> y)) (x >> z) = option_orelse g (x >> (option_orelse y z))) /\
       (option_orelse (x >> y) (option_orelse (x >> z) g) = option_orelse (x >> (option_orelse y z)) g) /\
       (option_orelse h (option_orelse (x >> y) (option_orelse (x >> z) g)) =
-       option_orelse h (option_orelse (x >> (option_orelse y z)) g))``,
+       option_orelse h (option_orelse (x >> (option_orelse y z)) g))
+Proof
   REPEAT STRIP_TAC THEN `option_orelse (x >> y) (x >> z) = x >> (option_orelse y z)` by
     (SIMP_TAC std_ss [FUN_EQ_THM,option_orelse_def,option_then_def,LET_DEF]
      THEN REPEAT STRIP_TAC THEN Cases_on `x x'` THEN SRW_TAC [] [])
-  THEN METIS_TAC [option_orelse_assoc]);
+  THEN METIS_TAC [option_orelse_assoc]
+QED
 
-val pull_if_lemma = store_thm("pull_if_lemma",
-  ``!b x y (f:'a->'b). (f (if b then x else y) = if b then f x else f y) /\
-                       ((if b then h else k) z = if b then h z else (k:'c->'d) z)``,
-  Cases THEN SIMP_TAC std_ss []);
+Theorem pull_if_lemma:
+    !b x y (f:'a->'b). (f (if b then x else y) = if b then f x else f y) /\
+                       ((if b then h else k) z = if b then h z else (k:'c->'d) z)
+Proof
+  Cases THEN SIMP_TAC std_ss []
+QED
 
-val if_some_lemma = store_thm("if_some_lemma",
-  ``!b x (y:'a) (z:'b). (if b then SOME (z,x) else SOME (z,y)) = SOME (z,if b then x else y)``,
-  Cases THEN SIMP_TAC std_ss []);
+Theorem if_some_lemma:
+    !b x (y:'a) (z:'b). (if b then SOME (z,x) else SOME (z,y)) = SOME (z,if b then x else y)
+Proof
+  Cases THEN SIMP_TAC std_ss []
+QED
 
 

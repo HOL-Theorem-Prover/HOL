@@ -44,10 +44,11 @@ val _ = type_abbrev("state", ``:block # key # word32``);
 (* Case analysis on a state                                                  *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_STATE = Q.store_thm
-("FORALL_STATE",
- `(!x:state. P x) = !v0 v1 k0 k1 k2 k3 sum. P((v0,v1),(k0,k1,k2,k3),sum)`,
-    METIS_TAC [PAIR]);
+Theorem FORALL_STATE:
+  (!x:state. P x) = !v0 v1 k0 k1 k2 k3 sum. P((v0,v1),(k0,k1,k2,k3),sum)
+Proof
+    METIS_TAC [PAIR]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Basic constants and operations.                                           *)
@@ -145,11 +146,12 @@ End
 (* Basic inversion lemma                                                     *)
 (*---------------------------------------------------------------------------*)
 
-val OneRound_Inversion = Q.store_thm
-("OneRound_Inversion",
- `!s:state. InvRound (Round s) = s`,
+Theorem OneRound_Inversion:
+  !s:state. InvRound (Round s) = s
+Proof
  SIMP_TAC std_ss [FORALL_STATE] THEN
- RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB, LET_THM]);
+ RW_TAC list_ss [Round_def, InvRound_def,WORD_ADD_SUB, LET_THM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Tweaked version of Rounds induction is more useful for this proof.        *)
@@ -184,19 +186,20 @@ val lemma2 = Q.prove
    `?m. n = m + 1w` by METIS_TAC [WORD_PRED_EXISTS] THEN
    RW_TAC std_ss [WORD_ADD_SUB,WORD_MULT_CLAUSES]]);
 
-val DELTA_SHIFT = Q.store_thm
-("DELTA_SHIFT",
- `DELTA << 5 = DELTA * 32w`,
- REWRITE_TAC [DELTA_def] THEN WORD_EVAL_TAC);
+Theorem DELTA_SHIFT:
+  DELTA << 5 = DELTA * 32w
+Proof
+ REWRITE_TAC [DELTA_def] THEN WORD_EVAL_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Basic theorem about encryption/decryption                                 *)
 (*---------------------------------------------------------------------------*)
 
-val tea_correct = Q.store_thm
-("tea_correct",
- `!plaintext keys.
-     teaDecrypt (keys,teaEncrypt (keys,plaintext)) = plaintext`,
+Theorem tea_correct:
+  !plaintext keys.
+     teaDecrypt (keys,teaEncrypt (keys,plaintext)) = plaintext
+Proof
  RW_TAC list_ss [teaEncrypt_def, teaDecrypt_def, DELTA_SHIFT]
   THEN rename [‘Rounds(_,_,keys,_) = (_,keys_1,sum)’]
   THEN `(keys_1 = keys) /\ (sum = DELTA * 32w)`
@@ -206,7 +209,8 @@ val tea_correct = Q.store_thm
   THEN POP_ASSUM MP_TAC
   THEN computeLib.RESTR_EVAL_TAC
            (flatten(map decls ["Round", "InvRound", "DELTA"]))
-  THEN RW_TAC std_ss [OneRound_Inversion]);
+  THEN RW_TAC std_ss [OneRound_Inversion]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Generate ML code in current directory. The generated code depends on      *)

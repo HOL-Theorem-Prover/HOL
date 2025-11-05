@@ -309,12 +309,13 @@ val _ = intLib.deprecate_int ();
       multiplicity (p * q) x = multiplicity p x + multiplicity q x
    This is true by poly_root_multiplicity_mult.
 *)
-val poly_root_multiplicity_mult_bag_union = store_thm(
-  "poly_root_multiplicity_mult_bag_union",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
-      (multiplicity (p * q) = BAG_UNION (multiplicity p) (multiplicity q))``,
+Theorem poly_root_multiplicity_mult_bag_union:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
+      (multiplicity (p * q) = BAG_UNION (multiplicity p) (multiplicity q))
+Proof
   rw_tac std_ss[BAG_UNION, FUN_EQ_THM] >>
-  rw[poly_root_multiplicity_mult]);
+  rw[poly_root_multiplicity_mult]
+QED
 
 (* Theorem: poly p /\ p <> |0| ==> (SET_OF_BAG (multiplicity p) = roots p) *)
 (* Proof:
@@ -322,12 +323,13 @@ val poly_root_multiplicity_mult_bag_union = store_thm(
       multiplicity p x >= 1 <=> x IN roots p
    This is true by poly_root_multiplicity_eq_0.
 *)
-val poly_root_multiplicity_set_of_bag = store_thm(
-  "poly_root_multiplicity_set_of_bag",
-  ``!r:'a ring. Ring r ==>
-   !p. poly p /\ p <> |0| ==> (SET_OF_BAG (multiplicity p) = roots p)``,
+Theorem poly_root_multiplicity_set_of_bag:
+    !r:'a ring. Ring r ==>
+   !p. poly p /\ p <> |0| ==> (SET_OF_BAG (multiplicity p) = roots p)
+Proof
   rw_tac std_ss[EXTENSION, IN_SET_OF_BAG, BAG_IN, BAG_INN] >>
-  metis_tac[poly_root_multiplicity_eq_0, DECIDE``x >= 1 <=> x <> 0``]);
+  metis_tac[poly_root_multiplicity_eq_0, DECIDE``x >= 1 <=> x <> 0``]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ p <> |0| ==> FINITE_BAG (multiplicity p) *)
 (* Proof:
@@ -336,13 +338,14 @@ val poly_root_multiplicity_set_of_bag = store_thm(
    <=> FINITE (roots p)                      by poly_root_multiplicity_set_of_bag
    <=> T                                     by poly_roots_finite, p <> |0|
 *)
-val poly_root_multiplicity_finite_bag = store_thm(
-  "poly_root_multiplicity_finite_bag",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> FINITE_BAG (multiplicity p)``,
+Theorem poly_root_multiplicity_finite_bag:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> FINITE_BAG (multiplicity p)
+Proof
   rpt strip_tac >>
   rewrite_tac[GSYM FINITE_SET_OF_BAG] >>
   `SET_OF_BAG (multiplicity p) = roots p` by rw[poly_root_multiplicity_set_of_bag] >>
-  metis_tac[poly_roots_finite]);
+  metis_tac[poly_roots_finite]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c. c IN R ==> (multiplicity (factor c) = {| c |}) *)
 (* Proof:
@@ -356,26 +359,28 @@ val poly_root_multiplicity_finite_bag = store_thm(
     But x NOTIN {c}                     by IN_SING, x <> c
     ==> multiplicity (factor c) x = 0   by poly_root_multiplicity_eq_0
 *)
-val poly_root_multiplicity_factor_sing_bag = store_thm(
-  "poly_root_multiplicity_factor_sing_bag",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (multiplicity (factor c) = {| c |})``,
+Theorem poly_root_multiplicity_factor_sing_bag:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (multiplicity (factor c) = {| c |})
+Proof
   rw_tac std_ss[BAG_INSERT, EMPTY_BAG, FUN_EQ_THM] >>
   rw[poly_root_multiplicity_factor] >>
   `poly (factor c) /\ factor c <> |0|` by rw[poly_factor_poly, poly_factor_nonzero] >>
   `roots (factor c) = {c}` by rw[poly_roots_factor] >>
   `x NOTIN {c}` by rw[] >>
-  metis_tac[poly_root_multiplicity_eq_0]);
+  metis_tac[poly_root_multiplicity_eq_0]
+QED
 
 (* Theorem: c IN R /\ c <> #0 ==> (multiplicity [c] = {||}) *)
 (* Proof:
    By EMPTY_BAG, FUN_EQ_THM, this is to show: multiplicity [c] x = 0
    This is true by poly_root_multiplicity_const.
 *)
-val poly_root_multiplicity_nonzero_const_empty = store_thm(
-  "poly_root_multiplicity_nonzero_const_empty",
-  ``!r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==> (multiplicity [c] = {||})``,
+Theorem poly_root_multiplicity_nonzero_const_empty:
+    !r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==> (multiplicity [c] = {||})
+Proof
   rw[EMPTY_BAG, FUN_EQ_THM] >>
-  rw[poly_root_multiplicity_const]);
+  rw[poly_root_multiplicity_const]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Splitting Field of Polynomial                                             *)
@@ -395,10 +400,11 @@ End
    also deg [c] = 0                by poly_deg_const
    Thus splitting r [c]            by splitting_def
 *)
-val splitting_const = store_thm(
-  "splitting_const",
-  ``!r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==> splitting r [c]``,
-  rw[splitting_def, poly_root_multiplicity_nonzero_const_empty]);
+Theorem splitting_const:
+    !r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==> splitting r [c]
+Proof
+  rw[splitting_def, poly_root_multiplicity_nonzero_const_empty]
+QED
 
 (* Theorem: Field r ==> !c. c IN R ==>
             !p. poly p /\ p <> |0| /\ splitting r p ==> splitting r (factor c * p) *)
@@ -417,17 +423,18 @@ val splitting_const = store_thm(
     = BAG_CARD ((multiplicity p)) + 1                by BAG_CARD_THM
     = deg p + 1                                      by splitting_def, splitting r p
 *)
-val splitting_factor_splitting = store_thm(
-  "splitting_factor_splitting",
-  ``!r:'a field. Field r ==> !c. c IN R ==>
-   !p. poly p /\ p <> |0| /\ splitting r p ==> splitting r (factor c * p)``,
+Theorem splitting_factor_splitting:
+    !r:'a field. Field r ==> !c. c IN R ==>
+   !p. poly p /\ p <> |0| /\ splitting r p ==> splitting r (factor c * p)
+Proof
   rw_tac std_ss[splitting_def] >>
   `poly (factor c)` by rw[poly_factor_poly] >>
   `factor c <> |0|` by rw[poly_factor_nonzero] >>
   simp[poly_deg_mult_nonzero, poly_root_multiplicity_mult_bag_union] >>
   `multiplicity (factor c) = {| c |}` by rw[poly_root_multiplicity_factor_sing_bag] >>
   simp[BAG_UNION_INSERT, BAG_CARD_THM, poly_root_multiplicity_finite_bag] >>
-  rw[poly_factor_deg]);
+  rw[poly_factor_deg]
+QED
 
 (* Theorem: FiniteField r /\ INFINITE univ(:'a) ==> !p. poly p /\ 0 < deg p ==>
             ?(s:'a field) (t:'a field) f. FieldIso f r s /\ s <<= t /\ FINITE C /\ (splitting t (MAP f p)) *)
@@ -505,10 +512,10 @@ val splitting_factor_splitting = store_thm(
       Note MAP f1 fp = MAP (f1 o f) p             by MAP_COMPOSE, fp = MAP f p
       Take s1, t1, f1 o f, and the result follows.
 *)
-val poly_splitting_field_exists = store_thm(
-  "poly_splitting_field_exists",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'a) ==> !p. poly p /\ 0 < deg p ==>
-   ?(s:'a field) (t:'a field) f. FieldIso f r s /\ s <<= t /\ FINITE C /\ (splitting t (MAP f p))``,
+Theorem poly_splitting_field_exists:
+    !r:'a field. FiniteField r /\ INFINITE univ(:'a) ==> !p. poly p /\ 0 < deg p ==>
+   ?(s:'a field) (t:'a field) f. FieldIso f r s /\ s <<= t /\ FINITE C /\ (splitting t (MAP f p))
+Proof
   ntac 2 strip_tac >>
   completeInduct_on `deg p` >>
   rpt strip_tac >>
@@ -559,7 +566,8 @@ val poly_splitting_field_exists = store_thm(
     `splitting t1 (MAP f1 fp)` by rw[splitting_factor_splitting] >>
     `MAP f1 fp = MAP (f1 o f) p` by rw[GSYM MAP_COMPOSE] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Existence by Splitting Field                                 *)
@@ -583,10 +591,10 @@ val poly_splitting_field_exists = store_thm(
       = CARD (SET_OF_BAG b)             by BAG_CARD_EQ_CARD_SET_OF_BAG
       = CARD (roots p)                  by poly_root_multiplicity_set_of_bag, p <> |0|
 *)
-val poly_separable_bag_of_roots = store_thm(
-  "poly_separable_bag_of_roots",
-  ``!r:'a field. Field r ==>
-   !p. poly p /\ separable p ==> (BAG_CARD (multiplicity p) = CARD (roots p))``,
+Theorem poly_separable_bag_of_roots:
+    !r:'a field. Field r ==>
+   !p. poly p /\ separable p ==> (BAG_CARD (multiplicity p) = CARD (roots p))
+Proof
   rw_tac std_ss[poly_separable_def] >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `b = multiplicity p` >>
@@ -598,7 +606,8 @@ val poly_separable_bag_of_roots = store_thm(
   `FINITE_BAG b` by rw[poly_root_multiplicity_finite_bag, Abbr`b`] >>
   `BAG_CARD b = CARD (SET_OF_BAG b)` by rw[BAG_CARD_EQ_CARD_SET_OF_BAG] >>
   `_ = CARD (roots p)` by rw[poly_root_multiplicity_set_of_bag, Abbr`b`] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: prime p /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p) *)
 (* Proof:
@@ -612,16 +621,17 @@ val poly_separable_bag_of_roots = store_thm(
                = p                              by above
    Take this FiniteField r, the result follows.
 *)
-val finite_field_prime_order_exists = store_thm(
-  "finite_field_prime_order_exists",
-  ``!p. prime p /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p)``,
+Theorem finite_field_prime_order_exists:
+    !p. prime p /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p)
+Proof
   rpt strip_tac >>
   `FiniteField (ZN p)` by rw[ZN_finite_field] >>
   `CARD (ZN p).carrier = p` by rw[ZN_card] >>
   qabbrev_tac `f = eqcard_bij (ZN p).carrier (clone (ZN p).carrier)` >>
   qabbrev_tac `r = homo_field (ZN p) f` >>
   `FiniteField r /\ FieldIso f (ZN p) r` by metis_tac[finite_field_clone] >>
-  metis_tac[field_iso_card_eq, FiniteField_def]);
+  metis_tac[field_iso_card_eq, FiniteField_def]
+QED
 
 (* Theorem: prime p /\ 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p ** n) *)
 (* Proof:
@@ -668,9 +678,9 @@ val finite_field_prime_order_exists = store_thm(
    Take FiniteField sm,
    with CARD (sm.carrier) = q
 *)
-val finite_field_prime_power_order_exists = store_thm(
-  "finite_field_prime_power_order_exists",
-  ``!p n. prime p /\ 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p ** n)``,
+Theorem finite_field_prime_power_order_exists:
+    !p n. prime p /\ 0 < n /\ INFINITE univ(:'a) ==> ?r:'a field. FiniteField r /\ (CARD R = p ** n)
+Proof
   rpt strip_tac >>
   `?r:'a field. FiniteField r /\ (CARD R = p)` by rw[finite_field_prime_order_exists] >>
   `char r = p` by rw[finite_field_card_prime] >>
@@ -699,7 +709,8 @@ val finite_field_prime_power_order_exists = store_thm(
   `_ = BAG_CARD (poly_root_multiplicity t fq)` by rw[GSYM poly_separable_bag_of_roots] >>
   `_ = Deg t fq` by rw[GSYM splitting_def] >>
   `_ = deg (master q)` by metis_tac[field_iso_poly_deg, subring_poly_deg] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* These are major milestones. *)
 
@@ -720,9 +731,9 @@ val finite_field_prime_power_order_exists = store_thm(
       = CARD (roots (master (CARD R)))             by poly_master_roots_all
       = BAG_CARD (multiplicity (master (CARD R)))  by poly_separable_bag_of_roots
 *)
-val finite_field_is_master_splitting_field = store_thm(
-  "finite_field_is_master_splitting_field",
-  ``!r:'a field. FiniteField r ==> splitting r (master (CARD R))``,
+Theorem finite_field_is_master_splitting_field:
+    !r:'a field. FiniteField r ==> splitting r (master (CARD R))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   rw_tac std_ss[splitting_def] >>
@@ -736,7 +747,8 @@ val finite_field_is_master_splitting_field = store_thm(
   `deg (master (CARD R)) = CARD R` by rw[poly_master_deg] >>
   `_ = CARD (roots (master (CARD R)))` by rw[poly_master_roots_all] >>
   `_ = BAG_CARD (multiplicity (master (CARD R)))` by rw[poly_separable_bag_of_roots] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Splitting Field of Polynomial (almost)                                    *)
@@ -783,13 +795,14 @@ poly_unit_eq_mult is common multiple only!
             = c * PPIMAGE f (roots [c])  by above
    Thus [c] splits_in r
 *)
-val splits_in_const = store_thm(
-  "splits_in_const",
-  ``!r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==> [c] splits_in r``,
+Theorem splits_in_const:
+    !r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==> [c] splits_in r
+Proof
   rpt strip_tac >>
   `roots [c] = {}` by rw[poly_roots_const] >>
   `[c] = c * |1|` by rw[poly_cmult_one] >>
-  metis_tac[splits_in_def, poly_prod_image_empty]);
+  metis_tac[splits_in_def, poly_prod_image_empty]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c. c IN R ==> (factor c) splits_in r *)
 (* Proof:
@@ -808,9 +821,9 @@ val splits_in_const = store_thm(
       = #1 * PPIMAGE f (roots (factor c))   by poly_cmult_lone
    Thus (factor c) splits_in r              by ring_one_element
 *)
-val splits_in_factor = store_thm(
-  "splits_in_factor",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (factor c) splits_in r``,
+Theorem splits_in_factor:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (factor c) splits_in r
+Proof
   rpt strip_tac >>
   `poly (factor c)` by rw[poly_factor_poly] >>
   `roots (factor c) = {c}` by rw[poly_factor_roots] >>
@@ -819,7 +832,8 @@ val splits_in_factor = store_thm(
   `f c = factor c` by rw[poly_exp_1, Abbr`f`] >>
   rw[splits_in_def, poly_prod_set_sing] >>
   `#1 IN R /\ (factor c = #1 * factor c)` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Field r ==> !b c. b IN R /\ b <> #0 /\ c IN R ==> (b * factor c) splits_in r *)
 (* Proof:
@@ -853,9 +867,9 @@ val splits_in_factor = store_thm(
     and b * e <> #0                     by field_mult_eq_zero, Field r
     Thus splits_in r                    by splits_in_def
 *)
-val splits_in_factor_cmult = store_thm(
-  "splits_in_factor_cmult",
-  ``!r:'a field. Field r ==> !b c. b IN R /\ b <> #0 /\ c IN R ==> (b * factor c) splits_in r``,
+Theorem splits_in_factor_cmult:
+    !r:'a field. Field r ==> !b c. b IN R /\ b <> #0 /\ c IN R ==> (b * factor c) splits_in r
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `p = b * factor c` >>
@@ -875,7 +889,8 @@ val splits_in_factor_cmult = store_thm(
   `_ = (b * e) * q` by rw[GSYM poly_cmult_cmult] >>
   `b * e IN R` by rw[] >>
   `b * e <> #0` by metis_tac[field_mult_eq_zero] >>
-  metis_tac[splits_in_def]);
+  metis_tac[splits_in_def]
+QED
 
 (* Theorem: Field r ==> !b c. b IN R /\ b <> #0 /\ c IN R ==> (factor c) * [b] splits_in r *)
 (* Proof:
@@ -886,15 +901,16 @@ val splits_in_factor_cmult = store_thm(
       = b * factor c                    by poly_mult_lconst
    Thus (factor c) * [b] splits_in r    by splits_in_factor_cmult
 *)
-val splits_in_factor_const = store_thm(
-  "splits_in_factor_const",
-  ``!r:'a field. Field r ==> !b c. b IN R /\ b <> #0 /\ c IN R ==> (factor c) * [b] splits_in r``,
+Theorem splits_in_factor_const:
+    !r:'a field. Field r ==> !b c. b IN R /\ b <> #0 /\ c IN R ==> (factor c) * [b] splits_in r
+Proof
   rpt strip_tac >>
   `poly [b]` by rw[poly_nonzero_element_poly] >>
   `poly (factor c)` by rw[poly_factor_poly] >>
   `(factor c) * [b] = [b] * factor c` by rw[poly_mult_comm] >>
   `_ = b * factor c` by rw[poly_mult_lconst] >>
-  rw[splits_in_factor_cmult]);
+  rw[splits_in_factor_cmult]
+QED
 
 (* Theorem: Field r ==> !b c. b IN R /\ b <> #0 /\ c IN R ==> !n. b * (factor c ** n) splits_in r *)
 (* Proof:
@@ -926,9 +942,9 @@ val splits_in_factor_const = store_thm(
          = b * PPIMAGE (term p) (roots p)   by above
       Hence p splits_in r                   by splits_in_def
 *)
-val splits_in_factor_exp = store_thm(
-  "splits_in_factor_exp",
-  ``!r:'a field. Field r ==> !b c. b IN R /\ b <> #0 /\ c IN R ==> !n. b * (factor c ** n) splits_in r``,
+Theorem splits_in_factor_exp:
+    !r:'a field. Field r ==> !b c. b IN R /\ b <> #0 /\ c IN R ==> !n. b * (factor c ** n) splits_in r
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   Cases_on `n = 0` >-
@@ -947,7 +963,8 @@ val splits_in_factor_exp = store_thm(
   `p = b * (\x. factor x ** multiplicity p x) c` by rw[Abbr`p`] >>
   `_ = b * PPIMAGE (\x. factor x ** multiplicity p x) {c}` by rw[poly_prod_set_sing] >>
   `_ = b * PPIMAGE (\x. factor x ** multiplicity p x) (roots p)` by rw[] >>
-  metis_tac[splits_in_def]);
+  metis_tac[splits_in_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Splitting Field of Polynomial (old).                                      *)
@@ -976,11 +993,12 @@ val it = |- !r p. splits p <=> (CARD (roots p) = deg p): thm
     so R <> {}             by MEMBER_NOT_EMPTY
    which contradicts R = {}.
 *)
-val poly_splits_nonzero = store_thm(
-  "poly_splits_nonzero",
-  ``!r:'a field. FiniteField r ==> !p. splits p ==> p <> |0|``,
+Theorem poly_splits_nonzero:
+    !r:'a field. FiniteField r ==> !p. splits p ==> p <> |0|
+Proof
   rw_tac std_ss[poly_splits_def, poly_roots_zero, poly_deg_zero, FiniteField_def] >>
-  metis_tac[field_zero_element, MEMBER_NOT_EMPTY, CARD_EQ_0]);
+  metis_tac[field_zero_element, MEMBER_NOT_EMPTY, CARD_EQ_0]
+QED
 
 (* Theorem: FiniteRing r ==> ~(splits |0|) *)
 (* Proof:
@@ -990,14 +1008,15 @@ val poly_splits_nonzero = store_thm(
    Thus CARD (roots |0|) <> deg |0|   by above
      or ~(splits |0|)                 by poly_splits_def
 *)
-val poly_zero_splits_not = store_thm(
-  "poly_zero_splits_not",
-  ``!r:'a ring. FiniteRing r ==> ~(splits |0|)``,
+Theorem poly_zero_splits_not:
+    !r:'a ring. FiniteRing r ==> ~(splits |0|)
+Proof
   rpt (stripDup[FiniteRing_def]) >>
   `roots |0| = R` by rw[poly_roots_zero] >>
   `deg |0| = 0` by rw[] >>
   `0 < CARD R` by rw[finite_ring_card_pos] >>
-  metis_tac[poly_splits_def, NOT_ZERO_LT_ZERO]);
+  metis_tac[poly_splits_def, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> splits X *)
 (* Proof:
@@ -1007,13 +1026,14 @@ val poly_zero_splits_not = store_thm(
       = deg X                    by poly_deg_X, #1 <> #0
      or splits X                 by poly_splits_def
 *)
-val poly_X_splits = store_thm(
-  "poly_X_splits",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> splits X``,
+Theorem poly_X_splits:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> splits X
+Proof
   rpt strip_tac >>
   `roots X = {#0}` by rw[poly_roots_X] >>
   `deg X = 1` by rw[] >>
-  rw[poly_splits_def]);
+  rw[poly_splits_def]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| /\
             DISJOINT (roots p) (roots q) /\ splits p /\ splits q ==> splits (p * q) *)
@@ -1026,11 +1046,12 @@ val poly_X_splits = store_thm(
    = deg p + deg q                       by poly_splits_def
    = deg (p * q)                         by poly_deg_mult_nonzero, p <> |0|, q <> |0|
 *)
-val poly_splits_mult = store_thm(
-  "poly_splits_mult",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| /\
-                DISJOINT (roots p) (roots q) /\ splits p /\ splits q ==> splits (p * q)``,
-  rw[poly_splits_def, poly_roots_finite, poly_roots_mult, CARD_UNION_DISJOINT, poly_deg_mult_nonzero]);
+Theorem poly_splits_mult:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| /\
+                DISJOINT (roots p) (roots q) /\ splits p /\ splits q ==> splits (p * q)
+Proof
+  rw[poly_splits_def, poly_roots_finite, poly_roots_mult, CARD_UNION_DISJOINT, poly_deg_mult_nonzero]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| /\
             DISJOINT (roots p) (roots q) /\ splits p /\ splits (p * q) ==> splits q *)
@@ -1046,26 +1067,28 @@ val poly_splits_mult = store_thm(
    Hence CARD (roots q) = deq q          by arithmetic
       or splits q                        by poly_splits_def
 *)
-val poly_splits_mult_each = store_thm(
-  "poly_splits_mult_each",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| /\
-                DISJOINT (roots p) (roots q) /\ splits p /\ splits (p * q) ==> splits q``,
+Theorem poly_splits_mult_each:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| /\
+                DISJOINT (roots p) (roots q) /\ splits p /\ splits (p * q) ==> splits q
+Proof
   rw_tac std_ss[poly_splits_def] >>
   `FINITE (roots p) /\ FINITE (roots q)` by rw[poly_roots_finite] >>
   `deg (p * q) = deg p + deg q` by rw[poly_deg_mult_nonzero] >>
   `CARD (roots (p * q)) = CARD ((roots p) UNION (roots q))` by rw[GSYM poly_roots_mult] >>
   `_ = CARD (roots p) + CARD (roots q)` by rw[CARD_UNION_DISJOINT] >>
   `_ = deg p + CARD (roots q)` by rw[poly_splits_def] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| /\
             DISJOINT (roots p) (roots q) /\ splits p ==> (splits (p * q) <=> splits q) *)
 (* Proof: by poly_splits_mult, poly_splits_mult_each *)
-val poly_splits_mult_iff = store_thm(
-  "poly_splits_mult_iff",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| /\
-                DISJOINT (roots p) (roots q) /\ splits p ==> (splits (p * q) <=> splits q)``,
-  metis_tac[poly_splits_mult, poly_splits_mult_each]);
+Theorem poly_splits_mult_iff:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| /\
+                DISJOINT (roots p) (roots q) /\ splits p ==> (splits (p * q) <=> splits q)
+Proof
+  metis_tac[poly_splits_mult, poly_splits_mult_each]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Splitting Field of Unity Polynomial.                                      *)
@@ -1113,9 +1136,9 @@ val poly_splits_mult_iff = store_thm(
          = deg (unity n)                    by poly_unity_deg
      Hence splits (unity n)                 by poly_splits_def
 *)
-val poly_unity_splitting_condition = store_thm(
-  "poly_unity_splitting_condition",
-  ``!r:'a field. FiniteField r ==> !n. 0 < n ==> (splits (unity n) <=> n divides (CARD R+))``,
+Theorem poly_unity_splitting_condition:
+    !r:'a field. FiniteField r ==> !n. 0 < n ==> (splits (unity n) <=> n divides (CARD R+))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `F* = R+` by rw[field_mult_carrier] >>
   `FiniteGroup f*` by rw[finite_field_mult_finite_group] >>
@@ -1144,7 +1167,8 @@ val poly_unity_splitting_condition = store_thm(
     `_ = n` by rw[generated_group_card, Abbr`z`] >>
     `_ = deg (unity n)` by rw[] >>
     rw[poly_splits_def]
-  ]);
+  ]
+QED
 
 (* This is a major theorem *)
 
@@ -1175,9 +1199,9 @@ val poly_unity_splitting_condition = store_thm(
        and splits (roots (unity (n - 1))) = (n - 1) divides (CARD R+)  by poly_unity_splitting_condition
       Thus splits (master n) <=> (n - 1) divides (CARD R+)             by poly_splits_mult_iff
 *)
-val poly_master_splitting_condition = store_thm(
-  "poly_master_splitting_condition",
-  ``!r:'a field. FiniteField r ==> !n. 0 < n ==> (splits (master n) <=> (n - 1) divides (CARD R+))``,
+Theorem poly_master_splitting_condition:
+    !r:'a field. FiniteField r ==> !n. 0 < n ==> (splits (master n) <=> (n - 1) divides (CARD R+))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   Cases_on `n = 1` >| [
@@ -1196,7 +1220,8 @@ val poly_master_splitting_condition = store_thm(
     metis_tac[SING_INTER, poly_roots_member]) >>
     `splits X` by rw[poly_X_splits] >>
     metis_tac[poly_splits_mult_iff, poly_unity_splitting_condition]
-  ]);
+  ]
+QED
 
 (* Another major theorem *)
 
@@ -1222,9 +1247,9 @@ val poly_master_splitting_condition = store_thm(
       <=> (c ** n - 1) divides (c ** (fdim r) - 1)   by finite_field_card_eqn
       <=> n divides (fdim r)                         by power_predecessor_divisibility, 1 < c
 *)
-val poly_master_char_n_splitting = store_thm(
-  "poly_master_char_n_splitting",
-  ``!r:'a field. FiniteField r ==> !n. splits (master ((char r) ** n)) <=> n divides (fdim r)``,
+Theorem poly_master_char_n_splitting:
+    !r:'a field. FiniteField r ==> !n. splits (master ((char r) ** n)) <=> n divides (fdim r)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `c = char r` >>
   qabbrev_tac `m = c ** n` >>
@@ -1241,7 +1266,8 @@ val poly_master_char_n_splitting = store_thm(
     `_ = (c ** n - 1) divides (c ** (fdim r) - 1)` by rw[finite_field_card_eqn, Abbr`m`, Abbr`c`] >>
     `_ = n divides (fdim r)` by rw[power_predecessor_divisibility] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Another proof of subfield existence                                       *)
@@ -1268,10 +1294,10 @@ val poly_master_char_n_splitting = store_thm(
     and char (subset_field r (roots p)) = c                by subfield_char
     ==> fdim (subset_field r (roots p)) = n                by finite_field_dim_eq
 *)
-val poly_master_roots_subfield_dim = store_thm(
-  "poly_master_roots_subfield_dim",
-  ``!r:'a field. FiniteField r ==> !n. n divides fdim r ==>
-                (fdim (subset_field r (roots (master ((char r) ** n)))) = n)``,
+Theorem poly_master_roots_subfield_dim:
+    !r:'a field. FiniteField r ==> !n. n divides fdim r ==>
+                (fdim (subset_field r (roots (master ((char r) ** n)))) = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `c = char r` >>
   qabbrev_tac `m = c ** n` >>
@@ -1281,7 +1307,8 @@ val poly_master_roots_subfield_dim = store_thm(
   `deg p = m` by rw[poly_master_deg, Abbr`p`] >>
   `CARD (roots p) = m` by metis_tac[poly_master_char_n_splitting, poly_splits_def] >>
   `subset_field r (roots p) <<= r` by rw[poly_master_roots_subfield, Abbr`p`, Abbr`m`, Abbr`c`] >>
-  metis_tac[finite_field_dim_eq, subfield_finite_field, subfield_char, subset_field_property]);
+  metis_tac[finite_field_dim_eq, subfield_finite_field, subfield_char, subset_field_property]
+QED
 
 (* Theorem: FiniteField r ==> !n. n divides fdim r <=> ?s. s <<= r /\ (fdim s = n) *)
 (* Proof:
@@ -1292,10 +1319,11 @@ val poly_master_roots_subfield_dim = store_thm(
    Only-if part: subfield s r ==> fdim s divides fdim r
       True                          by finite_field_subfield_dim_divides
 *)
-val finite_field_subfield_exists_iff = store_thm(
-  "finite_field_subfield_exists_iff",
-  ``!r:'a field. FiniteField r ==> !n. n divides fdim r <=> ?s. s <<= r /\ (fdim s = n)``,
-  metis_tac[poly_master_roots_subfield, poly_master_roots_subfield_dim, finite_field_subfield_dim_divides]);
+Theorem finite_field_subfield_exists_iff:
+    !r:'a field. FiniteField r ==> !n. n divides fdim r <=> ?s. s <<= r /\ (fdim s = n)
+Proof
+  metis_tac[poly_master_roots_subfield, poly_master_roots_subfield_dim, finite_field_subfield_dim_divides]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Splitting Field Equivalence.                                              *)
@@ -1307,10 +1335,11 @@ val finite_field_subfield_exists_iff = store_thm(
    = CARD (roots p)        by poly_PFROOTS_deg
    = deg p                 by poly_splits_def
 *)
-val poly_splits_factor_prod_deg = store_thm(
-  "poly_splits_factor_prod_deg",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (splits p <=> (deg (PFROOTS p) = deg p))``,
-  rw[poly_prod_factor_roots_deg, poly_splits_def]);
+Theorem poly_splits_factor_prod_deg:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (splits p <=> (deg (PFROOTS p) = deg p))
+Proof
+  rw[poly_prod_factor_roots_deg, poly_splits_def]
+QED
 
 (*
 poly_splits_def;
@@ -1339,9 +1368,9 @@ val it = |- !r p. splits p <=> (CARD (roots p) = deg p): thm
                   = CARD (roots p)                by poly_prod_factor_roots_deg
       Hence split p                               by poly_splits_def
 *)
-val poly_splits_monic_alt = store_thm(
-  "poly_splits_monic_alt",
-  ``!r:'a field. Field r ==> !p. monic p ==> (splits p <=> (p = PFROOTS p))``,
+Theorem poly_splits_monic_alt:
+    !r:'a field. Field r ==> !p. monic p ==> (splits p <=> (p = PFROOTS p))
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0 ` by rw[] >>
   `poly p /\ p <> |0|` by rw[poly_monic_nonzero] >>
@@ -1357,7 +1386,8 @@ val poly_splits_monic_alt = store_thm(
     `q = |1|` by rw[GSYM poly_monic_deg_0] >>
     metis_tac[poly_mult_lone],
     metis_tac[poly_splits_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclotomic Factorisation of Unity Polynomial                              *)
@@ -1379,10 +1409,11 @@ val it = ``:'a poly -> 'a``: hol_type
 
 (* Theorem: Field r /\ Field s ==> (FieldIso up r s ==> FieldIso down s r) *)
 (* Proof: by field_iso_sym *)
-val field_iso_up_down = store_thm(
-  "field_iso_up_down",
-  ``!(r:'a field) s. Field r /\ Field s ==> (FieldIso up r s ==> FieldIso down s r)``,
-  metis_tac[field_iso_sym]);
+Theorem field_iso_up_down:
+    !(r:'a field) s. Field r /\ Field s ==> (FieldIso up r s ==> FieldIso down s r)
+Proof
+  metis_tac[field_iso_sym]
+QED
 
 (* Theorem: Field r /\ Field s /\ FieldIso up r s ==>
             !p q. (poly p /\ (q = MAP up p)) <=> (Poly s q /\ (p = MAP down q)) *)
@@ -1396,11 +1427,12 @@ val field_iso_up_down = store_thm(
       (1) Poly s q ==> poly (MAP down q), true                 by field_iso_inverse_polynomial
       (2) Poly s q ==> q = MAP (\e. up e) (MAP down q), true   by field_iso_inverse_polynomial
 *)
-val field_iso_poly_up_down = store_thm(
-  "field_iso_poly_up_down",
-  ``!(r:'a field) s. Field r /\ Field s /\ FieldIso up r s ==>
-     !p q. (poly p /\ (q = MAP up p)) <=> (Poly s q /\ (p = MAP down q))``,
-  metis_tac[field_iso_poly, field_iso_poly_inv, field_iso_inverse_polynomial]);
+Theorem field_iso_poly_up_down:
+    !(r:'a field) s. Field r /\ Field s /\ FieldIso up r s ==>
+     !p q. (poly p /\ (q = MAP up p)) <=> (Poly s q /\ (p = MAP down q))
+Proof
+  metis_tac[field_iso_poly, field_iso_poly_inv, field_iso_inverse_polynomial]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Field Extension                                                *)
@@ -1436,11 +1468,11 @@ poly_monic_irreducible_exists
    (6) deg z = n ==> PolyModRing r z <:> PolyModConst r z = n, true by poly_mod_const_subfield_dim
    (7) ?z. monic z /\ ipoly z /\ (deg z = n) /\ (t = PolyModRing r z) /\ (st = PolyModConst r z) Take the z.
 *)
-val field_poly_extend_exists = store_thm(
-  "field_poly_extend_exists",
-  ``!(r:'a field) n. FiniteField r /\ 0 < n ==>
+Theorem field_poly_extend_exists:
+    !(r:'a field) n. FiniteField r /\ 0 < n ==>
    ?t st. FiniteField t /\ st <<= t /\ FieldIso up r st /\ ((t <:> st) = n) /\
-   ?z. monic z /\ ipoly z /\ (deg z = n) /\ (t = PolyModRing r z) /\ (st = PolyModConst r z)``,
+   ?z. monic z /\ ipoly z /\ (deg z = n) /\ (t = PolyModRing r z) /\ (st = PolyModConst r z)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `?z. monic z /\ ipoly z /\ (deg z = n)` by rw[poly_monic_irreducible_exists] >>
   qexists_tac `PolyModRing r z` >>
@@ -1452,7 +1484,8 @@ val field_poly_extend_exists = store_thm(
   rw[poly_mod_const_subfield_poly_mod] >-
   rw[poly_mod_const_iso_field_alt] >-
   rw[poly_mod_const_subfield_dim] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Apply Skolemization *)
 val lemma = prove(
@@ -1503,20 +1536,22 @@ val it = |- !r n. FiniteField r /\ 0 < n ==>
 (* Theorem: FiniteField r /\ 0 < n ==> let t = FieldHigh n in let st = FieldLow n in
             FiniteField t /\ st <<= t /\ FieldIso up r st /\ ((t <:> st) = n) *)
 (* Proof: by field_poly_extend_def *)
-val field_poly_extend_property = store_thm(
-  "field_poly_extend_property",
-  ``!(r:'a field) n. FiniteField r /\ 0 < n ==> let t = FieldHigh n in let st = FieldLow n in
-                    FiniteField t /\ st <<= t /\ FieldIso up r st /\ ((t <:> st) = n)``,
-  rw[field_poly_extend_def]);
+Theorem field_poly_extend_property:
+    !(r:'a field) n. FiniteField r /\ 0 < n ==> let t = FieldHigh n in let st = FieldLow n in
+                    FiniteField t /\ st <<= t /\ FieldIso up r st /\ ((t <:> st) = n)
+Proof
+  rw[field_poly_extend_def]
+QED
 
 (* Theorem: FiniteField r /\ 0 < n ==> ?z. monic z /\ ipoly z /\ (deg z = n) /\
             (FieldHigh n = PolyModRing r z) /\ (FieldLow n = PolyModConst r z) *)
 (* Proof: by field_poly_extend_def *)
-val field_poly_extend_irreducible_exists = store_thm(
-  "field_poly_extend_irreducible_exists",
-  ``!(r:'a field) n. FiniteField r /\ 0 < n ==> ?z. monic z /\ ipoly z /\ (deg z = n) /\
-                    (FieldHigh n = PolyModRing r z) /\ (FieldLow n = PolyModConst r z)``,
-  rw[field_poly_extend_def]);
+Theorem field_poly_extend_irreducible_exists:
+    !(r:'a field) n. FiniteField r /\ 0 < n ==> ?z. monic z /\ ipoly z /\ (deg z = n) /\
+                    (FieldHigh n = PolyModRing r z) /\ (FieldLow n = PolyModConst r z)
+Proof
+  rw[field_poly_extend_def]
+QED
 
 (* Theorem: FiniteField r /\ 0 < n ==> let t = FieldHigh n in let st = FieldLow n in
             (st.sum.id = |0|) /\ (st.prod.id = |1|) /\ (t.sum.id = |0|) /\ (t.prod.id = |1|) *)
@@ -1542,16 +1577,17 @@ val field_poly_extend_irreducible_exists = store_thm(
        = up #1       by field_iso_ids
        = |1|         by up_one, field_one_ne_zero
 *)
-val field_poly_extend_ids = store_thm(
-  "field_poly_extend_ids",
-  ``!(r:'a field) n. FiniteField r /\ 0 < n ==>
+Theorem field_poly_extend_ids:
+    !(r:'a field) n. FiniteField r /\ 0 < n ==>
     let t = FieldHigh n in let st = FieldLow n in
-    (st.sum.id = |0|) /\ (st.prod.id = |1|) /\ (t.sum.id = |0|) /\ (t.prod.id = |1|)``,
+    (st.sum.id = |0|) /\ (st.prod.id = |1|) /\ (t.sum.id = |0|) /\ (t.prod.id = |1|)
+Proof
   ntac 3 (stripDup[FiniteField_def]) >>
   `(FieldLow n) <<= (FieldHigh n) /\ FieldIso up r (FieldLow n)` by metis_tac[field_poly_extend_property] >>
   qabbrev_tac `f = \e. up e` >>
   `!x. f x = up x` by rw[] >>
-  metis_tac[subfield_ids, field_iso_ids, up_zero, up_one, field_one_ne_zero]);
+  metis_tac[subfield_ids, field_iso_ids, up_zero, up_one, field_one_ne_zero]
+QED
 
 (* Theorem: FiniteField r /\ 0 < n ==>
             (CARD (FieldLow n).carrier = CARD R) /\ (CARD (FieldHigh n).carrier = (CARD R) ** n) *)
@@ -1562,12 +1598,13 @@ val field_poly_extend_ids = store_thm(
    Thus CARD st.carrier = CARD R              by field_iso_card_eq
     and CARD t.carrier = (CARD R) ** n        by finite_subfield_card_eqn
 *)
-val field_poly_extend_cards = store_thm(
-  "field_poly_extend_cards",
-  ``!(r:'a field) n. FiniteField r /\ 0 < n ==>
+Theorem field_poly_extend_cards:
+    !(r:'a field) n. FiniteField r /\ 0 < n ==>
                     (CARD (FieldLow n).carrier = CARD R) /\
-                    (CARD (FieldHigh n).carrier = (CARD R) ** n)``,
-  metis_tac[field_poly_extend_property, finite_subfield_card_eqn, field_iso_card_eq, finite_field_is_field]);
+                    (CARD (FieldHigh n).carrier = (CARD R) ** n)
+Proof
+  metis_tac[field_poly_extend_property, finite_subfield_card_eqn, field_iso_card_eq, finite_field_is_field]
+QED
 
 (* Theorem: FiniteField r /\ 0 < k ==> let t = FieldHigh k in let st = FieldLow k in
             !n. (Master t n = Master st n) /\
@@ -1587,12 +1624,12 @@ val field_poly_extend_cards = store_thm(
         Now poly (master n)                   by poly_master_poly
          so master n = MAP down (Master st n) by field_iso_poly_up_down
 *)
-val field_poly_extend_master = store_thm(
-  "field_poly_extend_master",
-  ``!(r:'a field) k. FiniteField r /\ 0 < k ==>
+Theorem field_poly_extend_master:
+    !(r:'a field) k. FiniteField r /\ 0 < k ==>
     let t = FieldHigh k in let st = FieldLow k in
     !n. (Master t n = Master st n) /\
-        (Master st n = MAP up (master n)) /\ (master n = MAP down (Master st n))``,
+        (Master st n = MAP up (master n)) /\ (master n = MAP down (Master st n))
+Proof
   ntac 3 (stripDup[FiniteField_def]) >>
   rw_tac std_ss[] >| [
     `st <<= t` by metis_tac[field_poly_extend_property] >>
@@ -1603,7 +1640,8 @@ val field_poly_extend_master = store_thm(
     `Master st n = MAP up (master n)` by rw[field_iso_poly_master] >>
     `poly (master n)` by rw[] >>
     metis_tac[field_iso_poly_up_down]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ 0 < k ==> let t = FieldHigh k in let st = FieldLow k in
             !n. (Unity t n = Unity st n) /\
@@ -1623,12 +1661,12 @@ val field_poly_extend_master = store_thm(
         Now poly (unity n)                    by poly_unity_poly
          so unity n = MAP down (Unity st n)   by field_iso_poly_up_down
 *)
-val field_poly_extend_unity = store_thm(
-  "field_poly_extend_unity",
-  ``!(r:'a field) k. FiniteField r /\ 0 < k ==>
+Theorem field_poly_extend_unity:
+    !(r:'a field) k. FiniteField r /\ 0 < k ==>
     let t = FieldHigh k in let st = FieldLow k in
     !n. (Unity t n = Unity st n) /\
-        (Unity st n = MAP up (unity n)) /\ (unity n = MAP down (Unity st n))``,
+        (Unity st n = MAP up (unity n)) /\ (unity n = MAP down (Unity st n))
+Proof
   ntac 3 (stripDup[FiniteField_def]) >>
   rw_tac std_ss[] >| [
     `st <<= t` by metis_tac[field_poly_extend_property] >>
@@ -1639,7 +1677,8 @@ val field_poly_extend_unity = store_thm(
     `Unity st n = MAP up (unity n)` by rw[field_iso_poly_unity] >>
     `poly (unity n)` by rw[] >>
     metis_tac[field_iso_poly_up_down]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Splitting Field Extension                                      *)
@@ -1657,10 +1696,11 @@ val _ = overload_on("SplitLow", ``\n. FieldLow (ordz n (CARD R))``);
    Then CARD R = 1                   by coprime_0L
    But this contradicts 1 < CARD R   by finite_field_card_gt_1
 *)
-val finite_field_card_coprime_pos = store_thm(
-  "finite_field_card_coprime_pos",
-  ``!r:'a field. FiniteField r ==> !n. coprime n (CARD R) ==> 0 < n``,
-  metis_tac[coprime_0L, finite_field_card_gt_1, LESS_NOT_EQ, NOT_LT_ZERO_EQ_ZERO]);
+Theorem finite_field_card_coprime_pos:
+    !r:'a field. FiniteField r ==> !n. coprime n (CARD R) ==> 0 < n
+Proof
+  metis_tac[coprime_0L, finite_field_card_gt_1, LESS_NOT_EQ, NOT_LT_ZERO_EQ_ZERO]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==>
             let t = SplitHigh n in let st = SplitLow n in
@@ -1676,19 +1716,20 @@ val finite_field_card_coprime_pos = store_thm(
    Also CARD st.carrier = CARD R             by field_iso_card_eq
    Thus n divides (CARD (ring_nonzero t))    by subfield_card_coprime_iff
 *)
-val field_split_extend_property = store_thm(
-  "field_split_extend_property",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
+Theorem field_split_extend_property:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
    let t = SplitHigh n in let st = SplitLow n in
       FiniteField t /\ st <<= t /\ FieldIso up r st /\
-      ((t <:> st) = ordz n (CARD R)) /\ n divides (CARD (ring_nonzero t))``,
+      ((t <:> st) = ordz n (CARD R)) /\ n divides (CARD (ring_nonzero t))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `0 < n` by metis_tac[finite_field_card_coprime_pos] >>
   qabbrev_tac `d = ordz n (CARD R)` >>
   `0 < d` by rw[ZN_coprime_order, Abbr`d`] >>
   qabbrev_tac `t = FieldHigh d` >>
   qabbrev_tac `st = FieldLow d` >>
-  metis_tac[field_poly_extend_property, field_iso_card_eq, subfield_card_coprime_iff]);
+  metis_tac[field_poly_extend_property, field_iso_card_eq, subfield_card_coprime_iff]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==>
             ?z. monic z /\ ipoly z /\ (deg z = ordz n (CARD R)) /\
@@ -1699,12 +1740,13 @@ val field_split_extend_property = store_thm(
     ==> ?z. monic z /\ ipoly z /\ (deg z = ordz n (CARD R)) /\
            (t = PolyModRing r z) /\ (st = PolyModConst r z)   by field_poly_extend_irreducible_exists
 *)
-val field_split_extend_irreducible_exists = store_thm(
-  "field_split_extend_irreducible_exists",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
+Theorem field_split_extend_irreducible_exists:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
    ?z. monic z /\ ipoly z /\ (deg z = ordz n (CARD R)) /\
-       (SplitHigh n = PolyModRing r z) /\ (SplitLow n = PolyModConst r z)``,
-  metis_tac[finite_field_card_coprime_pos, ZN_coprime_order, field_poly_extend_irreducible_exists]);
+       (SplitHigh n = PolyModRing r z) /\ (SplitLow n = PolyModConst r z)
+Proof
+  metis_tac[finite_field_card_coprime_pos, ZN_coprime_order, field_poly_extend_irreducible_exists]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==> let t = SplitHigh n in let st = SplitLow n in
             (st.sum.id = |0|) /\ (st.prod.id = |1|) /\ (t.sum.id = |0|) /\ (t.prod.id = |1|) *)
@@ -1717,15 +1759,16 @@ val field_split_extend_irreducible_exists = store_thm(
     ==> (st.sum.id = |0|) /\ (st.prod.id = |1|) /\
         (t.sum.id = |0|) /\ (t.prod.id = |1|)   by field_poly_extend_ids
 *)
-val field_split_extend_ids = store_thm(
-  "field_split_extend_ids",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
+Theorem field_split_extend_ids:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
     let t = SplitHigh n in let st = SplitLow n in
-    (st.sum.id = |0|) /\ (st.prod.id = |1|) /\ (t.sum.id = |0|) /\ (t.prod.id = |1|)``,
+    (st.sum.id = |0|) /\ (st.prod.id = |1|) /\ (t.sum.id = |0|) /\ (t.prod.id = |1|)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `0 < n` by metis_tac[finite_field_card_coprime_pos] >>
   `0 < ordz n (CARD R)` by rw[ZN_coprime_order] >>
-  metis_tac[field_poly_extend_ids]);
+  metis_tac[field_poly_extend_ids]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==>
             (CARD (SplitLow n).carrier = CARD R) /\ (CARD (SplitHigh n).carrier = (CARD R) ** (ordz n (CARD R))) *)
@@ -1736,16 +1779,17 @@ val field_split_extend_ids = store_thm(
    Thus CARD st.carrier = CARD R                            by field_iso_card_eq
     and CARD t.carrier = (CARD R) ** ordz n (CARD R)        by finite_subfield_card_eqn
 *)
-val field_split_extend_cards = store_thm(
-  "field_split_extend_cards",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
+Theorem field_split_extend_cards:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
                     (CARD (SplitLow n).carrier = CARD R) /\
-                    (CARD (SplitHigh n).carrier = (CARD R) ** (ordz n (CARD R)))``,
+                    (CARD (SplitHigh n).carrier = (CARD R) ** (ordz n (CARD R)))
+Proof
   ntac 3 (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = SplitHigh n` >>
   qabbrev_tac `st = SplitLow n` >>
   `FiniteField t /\ st <<= t /\ FieldIso up r st /\ ((t <:> st) = ordz n (CARD R))` by metis_tac[field_split_extend_property] >>
-  metis_tac[finite_subfield_card_eqn, field_iso_card_eq]);
+  metis_tac[finite_subfield_card_eqn, field_iso_card_eq]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==>
             let t = SplitHigh k in let st = SplitLow k in
@@ -1756,16 +1800,17 @@ val field_split_extend_cards = store_thm(
      so 0 < ordz k (CARD R)   by ZN_coprime_order, 0 < k
    Thus true                  by field_poly_extend_master, 0 < ordz k (CARD R)
 *)
-val field_split_extend_master = store_thm(
-  "field_split_extend_master",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
+Theorem field_split_extend_master:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
     let t = SplitHigh k in let st = SplitLow k in
     !n. (Master t n = Master st n) /\
-        (Master st n = MAP up (master n)) /\ (master n = MAP down (Master st n))``,
+        (Master st n = MAP up (master n)) /\ (master n = MAP down (Master st n))
+Proof
   ntac 3 (stripDup[FiniteField_def]) >>
   `0 < k` by metis_tac[finite_field_card_coprime_pos] >>
   `0 < ordz k (CARD R)` by rw[ZN_coprime_order] >>
-  metis_tac[field_poly_extend_master]);
+  metis_tac[field_poly_extend_master]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==>
             let t = SplitHigh k in let st = SplitLow k in
@@ -1776,16 +1821,17 @@ val field_split_extend_master = store_thm(
      so 0 < ordz k (CARD R)   by ZN_coprime_order, 0 < k
    Thus true                  by field_poly_extend_unity, 0 < ordz k (CARD R)
 *)
-val field_split_extend_unity = store_thm(
-  "field_split_extend_unity",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
+Theorem field_split_extend_unity:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
     let t = SplitHigh k in let st = SplitLow k in
     !n. (Unity t n = Unity st n) /\
-        (Unity st n = MAP up (unity n)) /\ (unity n = MAP down (Unity st n))``,
+        (Unity st n = MAP up (unity n)) /\ (unity n = MAP down (Unity st n))
+Proof
   ntac 3 (stripDup[FiniteField_def]) >>
   `0 < k` by metis_tac[finite_field_card_coprime_pos] >>
   `0 < ordz k (CARD R)` by rw[ZN_coprime_order] >>
-  metis_tac[field_poly_extend_unity]);
+  metis_tac[field_poly_extend_unity]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==>
             let t = SplitHigh n in poly_splits t (Unity t n) *)
@@ -1794,15 +1840,16 @@ val field_split_extend_unity = store_thm(
     and FiniteField t /\ n divides CARD (ring_nonzero t)  by field_split_extend_property
    Thus poly_splits t (Unity t n)                         by poly_unity_splitting_condition
 *)
-val field_split_extend_splits_unity = store_thm(
-  "field_split_extend_splits_unity",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
-    let t = SplitHigh n in poly_splits t (Unity t n)``,
+Theorem field_split_extend_splits_unity:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
+    let t = SplitHigh n in poly_splits t (Unity t n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw_tac std_ss[] >>
   `0 < n` by metis_tac[finite_field_card_coprime_pos] >>
   `FiniteField t /\ n divides CARD (ring_nonzero t)` by metis_tac[field_split_extend_property] >>
-  rw[poly_unity_splitting_condition]);
+  rw[poly_unity_splitting_condition]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==>
             let t = SplitHigh n in (Unity t n = poly_prod_image t (poly_cyclo t) (divisors n)) *)
@@ -1810,11 +1857,12 @@ val field_split_extend_splits_unity = store_thm(
    Note FiniteField t /\ n divides CARD (ring_nonzero t)           by field_split_extend_property
     ==> Unity t n = poly_prod_image t (poly_cyclo t) (divisors n)  by poly_unity_eq_poly_cyclo_product
 *)
-val field_split_extend_unity_factors = store_thm(
-  "field_split_extend_unity_factors",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
-    let t = SplitHigh n in (Unity t n = poly_prod_image t (poly_cyclo t) (divisors n))``,
-  metis_tac[poly_unity_eq_poly_cyclo_product, field_split_extend_property]);
+Theorem field_split_extend_unity_factors:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
+    let t = SplitHigh n in (Unity t n = poly_prod_image t (poly_cyclo t) (divisors n))
+Proof
+  metis_tac[poly_unity_eq_poly_cyclo_product, field_split_extend_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclotomic Factorisation of Unity                                         *)
@@ -1832,14 +1880,15 @@ val _ = overload_on("Phi", ``\n m. MAP down (poly_cyclo (SplitHigh n) m)``);
      so poly (MAP down (poly_cyclo t n))               by field_iso_poly, field_iso_sym
      or poly (Phi k n)                                 by notation
 *)
-val poly_phi_poly = store_thm(
-  "poly_phi_poly",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==> !n. poly (Phi k n)``,
+Theorem poly_phi_poly:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==> !n. poly (Phi k n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = SplitHigh k` >>
   qabbrev_tac `st = SplitLow k` >>
   `FiniteField t /\ st <<= t /\ FieldIso up r st` by metis_tac[field_split_extend_property] >>
-  metis_tac[poly_cyclo_spoly, field_iso_poly, field_iso_sym]);
+  metis_tac[poly_cyclo_spoly, field_iso_poly, field_iso_sym]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==> !n. monic (Phi k n) *)
 (* Proof:
@@ -1853,9 +1902,9 @@ val poly_phi_poly = store_thm(
     ==> monic (MAP down (poly_cyclo t n))              by field_iso_poly_monic_iff
      or monic (Phi k n)                                by notation
 *)
-val poly_phi_monic = store_thm(
-  "poly_phi_monic",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==> !n. monic (Phi k n)``,
+Theorem poly_phi_monic:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==> !n. monic (Phi k n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = SplitHigh k` >>
   qabbrev_tac `st = SplitLow k` >>
@@ -1863,7 +1912,8 @@ val poly_phi_monic = store_thm(
   `Poly st (poly_cyclo t n)` by rw[poly_cyclo_spoly] >>
   `Monic t (poly_cyclo t n)` by rw[poly_cyclo_monic] >>
   `Monic st (poly_cyclo t n)` by metis_tac[subring_poly_monic_iff, subfield_is_subring] >>
-  metis_tac[field_iso_poly_monic_iff, field_iso_sym]);
+  metis_tac[field_iso_poly_monic_iff, field_iso_sym]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==>
             !n. deg (Phi k n) = if n divides (CARD (ring_nonzero (SplitHigh k))) then phi n else 0 *)
@@ -1880,17 +1930,18 @@ val poly_phi_monic = store_thm(
       = Deg t (poly_cyclo t n)           by subring_poly_deg
       = if n divides (CARD (ring_nonzero t)) then phi n else 0   by poly_cyclo_deg_eqn
 *)
-val poly_phi_deg = store_thm(
-  "poly_phi_deg",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
-   !n. deg (Phi k n) = if n divides (CARD (ring_nonzero (SplitHigh k))) then phi n else 0``,
+Theorem poly_phi_deg:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
+   !n. deg (Phi k n) = if n divides (CARD (ring_nonzero (SplitHigh k))) then phi n else 0
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = SplitHigh k` >>
   qabbrev_tac `st = SplitLow k` >>
   `FiniteField t /\ st <<= t /\ FieldIso up r st` by metis_tac[field_split_extend_property] >>
   `deg (Phi k n) = Deg st (poly_cyclo t n)` by rw[field_iso_poly_deg, field_iso_sym] >>
   `_ = Deg t (poly_cyclo t n)` by rw[subring_poly_deg, subfield_is_subring] >>
-  metis_tac[poly_cyclo_deg_eqn]);
+  metis_tac[poly_cyclo_deg_eqn]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==> !n. n divides k ==> (deg (Phi k n) = phi n) *)
 (* Proof:
@@ -1899,12 +1950,13 @@ val poly_phi_deg = store_thm(
    Thus n divides CARD (ring_nonzero t)    by DIVIDES_TRANS, n divides k
     ==> deg (Phi k n) = phi n              by poly_phi_deg
 *)
-val poly_phi_deg_weak = store_thm(
-  "poly_phi_deg_weak",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==> !n. n divides k ==> (deg (Phi k n) = phi n)``,
+Theorem poly_phi_deg_weak:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==> !n. n divides k ==> (deg (Phi k n) = phi n)
+Proof
   rpt strip_tac >>
   `k divides CARD (ring_nonzero (SplitHigh k))` by metis_tac[field_split_extend_property] >>
-  metis_tac[poly_phi_deg, DIVIDES_TRANS]);
+  metis_tac[poly_phi_deg, DIVIDES_TRANS]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==> !n. MAP up (Phi k n) = poly_cyclo (SplitHigh k) n *)
 (* Proof:
@@ -1914,16 +1966,17 @@ val poly_phi_deg_weak = store_thm(
     Now Poly st p                        by poly_cyclo_spoly
    Thus MAP up (MAP down p) = p          by field_iso_inverse_polynomial
 *)
-val poly_phi_up_cyclo = store_thm(
-  "poly_phi_up_cyclo",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
-   !n. MAP up (Phi k n) = poly_cyclo (SplitHigh k) n``,
+Theorem poly_phi_up_cyclo:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
+   !n. MAP up (Phi k n) = poly_cyclo (SplitHigh k) n
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = SplitHigh k` >>
   qabbrev_tac `st = SplitLow k` >>
   `FiniteField t /\ st <<= t /\ FieldIso up r st` by metis_tac[field_split_extend_property] >>
   `Poly st (poly_cyclo t n)` by rw[poly_cyclo_spoly] >>
-  metis_tac[field_iso_inverse_polynomial]);
+  metis_tac[field_iso_inverse_polynomial]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==> (unity n = PPIMAGE (Phi n) (divisors n)) *)
 (* Proof:
@@ -1947,9 +2000,9 @@ val poly_phi_up_cyclo = store_thm(
    = PPROD (IMAGE (\m. MAP down (poly_cyclo t m)) (divisors n))    by IMAGE_COMPOSE, FUN_EQ_THM
    = PPIMAGE (Phi n) (divisors n)   by notation
 *)
-val poly_unity_cyclo_factors = store_thm(
-  "poly_unity_cyclo_factors",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==> (unity n = PPIMAGE (Phi n) (divisors n))``,
+Theorem poly_unity_cyclo_factors:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==> (unity n = PPIMAGE (Phi n) (divisors n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = SplitHigh n` >>
   qabbrev_tac `st = SplitLow n` >>
@@ -1962,20 +2015,22 @@ val poly_unity_cyclo_factors = store_thm(
   (`!x. x IN p <=> ?m. (x = poly_cyclo t m) /\ m IN (divisors n)` by rw[Abbr`p`] >>
   metis_tac[poly_cyclo_spoly]) >>
   (`!(f:'a poly -> 'a) (g:num -> 'a poly poly) s. IMAGE (MAP f) (IMAGE g s) = IMAGE (\m. MAP f (g m)) s` by (rw[IMAGE_COMPOSE, FUN_EQ_THM] >> metis_tac[])) >>
-  metis_tac[field_split_extend_unity, field_split_extend_unity_factors, subring_poly_prod_set, field_iso_poly_prod_set, field_iso_sym]);
+  metis_tac[field_split_extend_unity, field_split_extend_unity_factors, subring_poly_prod_set, field_iso_poly_prod_set, field_iso_sym]
+QED
 
 (* This is a milestone theorem! *)
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==>
             (unity n = PPROD {Phi n m | m | m IN (divisors n)}) *)
 (* Proof: by poly_unity_cyclo_factors *)
-val poly_unity_cyclo_factors_alt = store_thm(
-  "poly_unity_cyclo_factors_alt",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
-                    (unity n = PPROD {Phi n m | m | m IN (divisors n)})``,
+Theorem poly_unity_cyclo_factors_alt:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
+                    (unity n = PPROD {Phi n m | m | m IN (divisors n)})
+Proof
   rpt strip_tac >>
   `{Phi n m | m | m IN (divisors n)} = IMAGE (Phi n) (divisors n)` by rw[EXTENSION] >>
-  simp[poly_unity_cyclo_factors]);
+  simp[poly_unity_cyclo_factors]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==>
             !n. n divides k ==> (Phi k n) pdivides (unity k) /\ (deg (Phi k n) = phi n) *)
@@ -1994,10 +2049,10 @@ val poly_unity_cyclo_factors_alt = store_thm(
    (2) n divides k ==> deg (Phi k n) = phi n
        True                                   by poly_phi_deg_weak
 *)
-val poly_phi_divides_unity = store_thm(
-  "poly_phi_divides_unity",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
-   !n. n divides k ==> (Phi k n) pdivides (unity k) /\ (deg (Phi k n) = phi n)``,
+Theorem poly_phi_divides_unity:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
+   !n. n divides k ==> (Phi k n) pdivides (unity k) /\ (deg (Phi k n) = phi n)
+Proof
   rpt (stripDup[FiniteField_def]) >| [
     qabbrev_tac `p = IMAGE (Phi k) (divisors k)` >>
     `!x. x IN p <=> ?m. (x = Phi k m) /\ m IN divisors k` by rw[Abbr`p`] >>
@@ -2010,7 +2065,8 @@ val poly_phi_divides_unity = store_thm(
     `pset p` by metis_tac[poly_phi_poly] >>
     metis_tac[poly_prod_set_element_divides, field_is_ring],
     rw[poly_phi_deg_weak]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==> let t = SplitHigh k in
             !x n. x IN poly_roots t (MAP up (Phi k n)) ==> (order (t.prod excluding |0|) x = n) *)
@@ -2022,30 +2078,32 @@ val poly_phi_divides_unity = store_thm(
     Now Poly st (poly_cyclo t n)                      by poly_cyclo_spoly
    Thus order (t.prod excluding |0|) x = n            by poly_cyclo_root_order
 *)
-val poly_phi_root_order = store_thm(
-  "poly_phi_root_order",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==> let t = SplitHigh k in
-    !x n. x IN poly_roots t (MAP up (Phi k n)) ==> (order (t.prod excluding |0|) x = n)``,
+Theorem poly_phi_root_order:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==> let t = SplitHigh k in
+    !x n. x IN poly_roots t (MAP up (Phi k n)) ==> (order (t.prod excluding |0|) x = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw_tac std_ss[poly_phi_up_cyclo] >>
   qabbrev_tac `st = SplitLow k` >>
   `FiniteField t /\ st <<= t /\ FieldIso up r st` by metis_tac[field_split_extend_property] >>
   `t.sum.id = |0|` by metis_tac[field_split_extend_ids] >>
   `Poly st (poly_cyclo t n)` by rw[poly_cyclo_spoly] >>
-  metis_tac[poly_cyclo_root_order]);
+  metis_tac[poly_cyclo_root_order]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==>
             !n. n divides k ==> (Phi k n) pdivides (unity k) /\ (deg (Phi k n) = phi n) /\
                 let t = SplitHigh k in
                 !x. x IN poly_roots t (MAP up (Phi k n)) ==> (order (t.prod excluding |0|) x = n) *)
 (* Proof: by poly_phi_divides_unity, poly_phi_root_order *)
-val poly_unity_phi_factor_property = store_thm(
-  "poly_unity_phi_factor_property",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
+Theorem poly_unity_phi_factor_property:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
    !n. n divides k ==> (Phi k n) pdivides (unity k) /\ (deg (Phi k n) = phi n) /\
    let t = SplitHigh k in
-   !x. x IN poly_roots t (MAP up (Phi k n)) ==> (order (t.prod excluding |0|) x = n)``,
-  metis_tac[poly_phi_divides_unity, poly_phi_root_order]);
+   !x. x IN poly_roots t (MAP up (Phi k n)) ==> (order (t.prod excluding |0|) x = n)
+Proof
+  metis_tac[poly_phi_divides_unity, poly_phi_root_order]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) ==>
             !p. monic p /\ ipoly p ==> !n. 0 < n /\ p pdivides (Phi k n) ==> (deg p = ordz n (CARD R)) *)
@@ -2080,10 +2138,10 @@ val it = |- FiniteField t /\ st <<= t ==>
             !p. Monic t p /\ IPoly st p ==> !n. 0 < n /\ poly_divides t p (poly_cyclo t n) ==>
                 (Deg t p = ordz n (CARD st.carrier)): thm
 *)
-val poly_phi_irreducible_factor_deg = store_thm(
-  "poly_phi_irreducible_factor_deg",
-  ``!(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
-   !p. monic p /\ ipoly p ==> !n. 0 < n /\ p pdivides (Phi k n) ==> (deg p = ordz n (CARD R))``,
+Theorem poly_phi_irreducible_factor_deg:
+    !(r:'a field) k. FiniteField r /\ coprime k (CARD R) ==>
+   !p. monic p /\ ipoly p ==> !n. 0 < n /\ p pdivides (Phi k n) ==> (deg p = ordz n (CARD R))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = SplitHigh k` >>
   qabbrev_tac `st = SplitLow k` >>
@@ -2097,7 +2155,8 @@ val poly_phi_irreducible_factor_deg = store_thm(
   `Monic st q /\ Monic t q /\ IPoly st q` by metis_tac[field_iso_poly_monic, subring_poly_monic, field_iso_poly_irreducible] >>
   `Poly st q /\ Poly st (poly_cyclo t n)` by rw[poly_cyclo_spoly] >>
   `poly_divides t q (poly_cyclo t n)` by metis_tac[subring_poly_divides] >>
-  metis_tac[poly_cyclo_irreducible_factor_deg, field_iso_card_eq]);
+  metis_tac[poly_cyclo_irreducible_factor_deg, field_iso_card_eq]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Unity Splitting Field                                                     *)
@@ -2115,18 +2174,19 @@ val poly_phi_irreducible_factor_deg = store_thm(
       or n divides ((CARD R) ** d - 1)                 by ZN_order_divisibility, 0 < n
    Thus true by poly_unity_splitting_condition, 0 < n.
 *)
-val unity_splitting_field = store_thm(
-  "unity_splitting_field",
-  ``!r:'a field. FiniteField r ==> !z. monic z /\ ipoly z ==>
+Theorem unity_splitting_field:
+    !r:'a field. FiniteField r ==> !z. monic z /\ ipoly z ==>
    !n. 0 < n /\ (deg z = ordz n (CARD R)) ==>
-       poly_splits (PolyModRing r z) (Unity (PolyModRing r z) n)``,
+       poly_splits (PolyModRing r z) (Unity (PolyModRing r z) n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `d = order (ZN n).prod (CARD R)` >>
   `pmonic z` by rw[poly_monic_irreducible_property] >>
   `FiniteField (PolyModRing r z)` by rw[poly_mod_irreducible_finite_field] >>
   `CARD (PolyModRing r z).carrier = CARD R ** d` by rw[poly_mod_irreducible_field_card, Abbr`d`] >>
   `n divides ((CARD R) ** d - 1)` by rw[ZN_order_divisibility, Abbr`d`] >>
-  metis_tac[poly_unity_splitting_condition, finite_field_nonzero_carrier_card]);
+  metis_tac[poly_unity_splitting_condition, finite_field_nonzero_carrier_card]
+QED
 
 (* Theorem: FiniteField r ==> !n. splits (unity n) ==> 0 < n *)
 (* Proof:
@@ -2141,9 +2201,9 @@ val unity_splitting_field = store_thm(
    which contradicts
       CARD (roots |0|) = deg |0|  by poly_splits_def
 *)
-val unity_splitting_deg_pos = store_thm(
-  "unity_splitting_deg_pos",
-  ``!r:'a field. FiniteField r ==> !n. splits (unity n) ==> 0 < n``,
+Theorem unity_splitting_deg_pos:
+    !r:'a field. FiniteField r ==> !n. splits (unity n) ==> 0 < n
+Proof
   rpt (stripDup[FiniteField_def]) >>
   spose_not_then strip_assume_tac >>
   `n = 0` by decide_tac >>
@@ -2151,7 +2211,8 @@ val unity_splitting_deg_pos = store_thm(
   `roots |0| = R` by rw[poly_roots_zero] >>
   `CARD R <> 0` by metis_tac[CARD_EQ_0, field_one_element, MEMBER_NOT_EMPTY] >>
   `deg |0| = 0` by rw[] >>
-  metis_tac[poly_splits_def]);
+  metis_tac[poly_splits_def]
+QED
 
 (* Theorem: splits (unity n) <=> (CARD (roots (unity n)) = n) *)
 (* Proof:
@@ -2160,10 +2221,11 @@ val unity_splitting_deg_pos = store_thm(
                                 = n                by poly_unity_deg
    The result follows.
 *)
-val splitting_field_uroots_card = store_thm(
-  "splitting_field_uroots_card",
-  ``!r:'a field. Field r ==> !n. splits (unity n) <=> (CARD (roots (unity n)) = n)``,
-  rw[poly_splits_def, poly_unity_deg]);
+Theorem splitting_field_uroots_card:
+    !r:'a field. Field r ==> !n. splits (unity n) <=> (CARD (roots (unity n)) = n)
+Proof
+  rw[poly_splits_def, poly_unity_deg]
+QED
 
 (* Theorem: FiniteField r ==> !n. splits (unity n) ==> ?x. x IN roots (unity n) /\ (order f* x = n) *)
 (* Proof:
@@ -2179,9 +2241,9 @@ val splitting_field_uroots_card = store_thm(
             (order f* x = CARD (roots_of_unity f* n).carrier)  by cyclic_uroots_has_primitive
      or x IN roots (unity n) /\ (order f* x = n)
 *)
-val splitting_field_uroots_primitive = store_thm(
-  "splitting_field_uroots_primitive",
-  ``!r:'a field. FiniteField r ==> !n. splits (unity n) ==> ?x. x IN roots (unity n) /\ (order f* x = n)``,
+Theorem splitting_field_uroots_primitive:
+    !r:'a field. FiniteField r ==> !n. splits (unity n) ==> ?x. x IN roots (unity n) /\ (order f* x = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteGroup f*` by rw[finite_field_mult_finite_group] >>
   `FINITE F*` by metis_tac[FiniteGroup_def] >>
@@ -2189,7 +2251,8 @@ val splitting_field_uroots_primitive = store_thm(
   `(roots_of_unity f* n).carrier = roots (unity n)` by rw[field_uroots_are_roots] >>
   `CARD (roots (unity n)) = n` by rw[GSYM splitting_field_uroots_card] >>
   `cyclic f*` by rw[finite_field_mult_group_cyclic] >>
-  metis_tac[cyclic_uroots_has_primitive]);
+  metis_tac[cyclic_uroots_has_primitive]
+QED
 
 (* Theorem: FiniteField r ==> !z. monic z /\ ipoly z ==>
             !n. 0 < n /\ coprime n (CARD R) /\ (deg z = ordz n (CARD R)) ==>
@@ -2221,11 +2284,11 @@ val splitting_field_uroots_primitive = store_thm(
       or (x ** n == |1|) (pm z)               by pmod_def_alt
    Therefore, take p = x, and check conditions.
 *)
-val poly_primitive_root_of_unity_order = store_thm(
-  "poly_primitive_root_of_unity_order",
-  ``!r:'a field. FiniteField r ==> !z. monic z /\ ipoly z ==>
+Theorem poly_primitive_root_of_unity_order:
+    !r:'a field. FiniteField r ==> !z. monic z /\ ipoly z ==>
    !n. 0 < n /\ coprime n (CARD R) /\ (deg z = ordz n (CARD R)) ==>
-   ?p. poly p /\ p <> |0| /\ deg p < deg z /\ (p ** n == |1|) (pm z) /\ (forderz p = n)``,
+   ?p. poly p /\ p <> |0| /\ deg p < deg z /\ (p ** n == |1|) (pm z) /\ (forderz p = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FiniteField (PolyModRing r z)` by rw[poly_mod_irreducible_finite_field] >>
@@ -2245,7 +2308,8 @@ val poly_primitive_root_of_unity_order = store_thm(
   `n <> 0` by decide_tac >>
   `x <> |0|` by metis_tac[poly_zero_order] >>
   `(x ** n) % z = |1|` by metis_tac[ring_sub_eq_zero, poly_mod_field_exp, ring_exp_element] >>
-  metis_tac[pmod_def_alt, poly_mod_one]);
+  metis_tac[pmod_def_alt, poly_mod_one]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More Field Isomorphism Theorems                                           *)
@@ -2282,12 +2346,13 @@ Take the corresponding minimal polynomial, use MAP down to get a monic ipoly, an
    = {factor_ (f a), factor_ (f b), factor_ (f c), ...} by field_iso_poly_factor
    = IMAGE (factor_) (IMAGE f s)                        by EXTENSION
 *)
-val field_iso_image_factor = store_thm(
-  "field_iso_image_factor",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==>
-   !s. s SUBSET R ==> (IMAGE (MAP f o factor) s = IMAGE (factor_) (IMAGE f s))``,
+Theorem field_iso_image_factor:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==>
+   !s. s SUBSET R ==> (IMAGE (MAP f o factor) s = IMAGE (factor_) (IMAGE f s))
+Proof
   rw[EXTENSION] >>
-  metis_tac[field_iso_poly_factor, SUBSET_DEF, MAP]);
+  metis_tac[field_iso_poly_factor, SUBSET_DEF, MAP]
+QED
 
 (* Theorem: (r === r_) f ==>
             !n. IMAGE (MAP f o factor) (orders f* n) = IMAGE (factor_) (orders f_* n) *)
@@ -2297,18 +2362,20 @@ val field_iso_image_factor = store_thm(
    = IMAGE (factor_) (IMAGE f (orders f* n))  by field_iso_image_factor
    = IMAGE (factor_) (orders f_* n)           by field_iso_orders
 *)
-val field_iso_image_factor_orders = store_thm(
-  "field_iso_image_factor_orders",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==>
-   !n. IMAGE (MAP f o factor) (orders f* n) = IMAGE (factor_) (orders f_* n)``,
-  metis_tac[field_iso_image_factor, field_iso_orders, field_orders_subset_carrier]);
+Theorem field_iso_image_factor_orders:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==>
+   !n. IMAGE (MAP f o factor) (orders f* n) = IMAGE (factor_) (orders f_* n)
+Proof
+  metis_tac[field_iso_image_factor, field_iso_orders, field_orders_subset_carrier]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !s. s SUBSET R ==> pset (IMAGE factor s) *)
 (* Proof: by poly_map_factor, poly_map_image_poly_set *)
-val poly_set_image_factor = store_thm(
-  "poly_set_image_factor",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !s. s SUBSET R ==> pset (IMAGE factor s)``,
-  metis_tac[poly_map_factor, poly_map_image_poly_set]);
+Theorem poly_set_image_factor:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !s. s SUBSET R ==> pset (IMAGE factor s)
+Proof
+  metis_tac[poly_map_factor, poly_map_image_poly_set]
+QED
 
 (* Theorem: FiniteField r /\ (r === r_) f ==> !n. MAP f (cyclo n) = cyclo_ n *)
 (* Proof:
@@ -2327,9 +2394,9 @@ val poly_set_image_factor = store_thm(
    = poly_prod_factors r_ (orders f_* n)         by notation
    = cyclo_ n                                    by poly_cyclo_def
 *)
-val field_iso_poly_cyclo = store_thm(
-  "field_iso_poly_cyclo",
-  ``!(r:'a field) (r_:'b field) f. FiniteField r /\ (r === r_) f ==> !n. MAP f (cyclo n) = cyclo_ n``,
+Theorem field_iso_poly_cyclo:
+    !(r:'a field) (r_:'b field) f. FiniteField r /\ (r === r_) f ==> !n. MAP f (cyclo n) = cyclo_ n
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[poly_cyclo_def] >>
   qabbrev_tac `s = IMAGE factor (orders f* n)` >>
@@ -2337,7 +2404,8 @@ val field_iso_poly_cyclo = store_thm(
   `(orders f* n) SUBSET R` by rw[field_orders_subset_carrier] >>
   `FINITE s` by rw[Abbr`s`] >>
   `pset s` by metis_tac[poly_set_image_factor, field_is_ring, field_one_ne_zero] >>
-  metis_tac[field_iso_poly_prod_set, field_iso_image_factor_orders, IMAGE_COMPOSE]);
+  metis_tac[field_iso_poly_prod_set, field_iso_image_factor_orders, IMAGE_COMPOSE]
+QED
 
 (*
 poly_minimal_divides_unity_order
@@ -2356,9 +2424,9 @@ poly_minimal_divides_cyclo_order -- missing!
     and pset t                        by poly_map_image_poly_set, field_orders_subset_carrier, poly_minimal_poly
    Thus (minimal x) pdivides PPROD t  by poly_prod_set_element_divides
 *)
-val poly_minimal_divides_cyclo_order = store_thm(
-  "poly_minimal_divides_cyclo_order",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==> minimal x pdivides cyclo (forder x)``,
+Theorem poly_minimal_divides_cyclo_order:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==> minimal x pdivides cyclo (forder x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `n = forder x` >>
   qabbrev_tac `t = IMAGE minimal (orders f* n)` >>
@@ -2367,7 +2435,8 @@ val poly_minimal_divides_cyclo_order = store_thm(
   `FINITE (orders f* n)` by rw[field_orders_finite] >>
   `FINITE t` by rw[Abbr`t`] >>
   `pset t` by metis_tac[poly_map_image_poly_set, field_orders_subset_carrier, poly_minimal_poly] >>
-  rw[poly_prod_set_element_divides, Abbr`t`]);
+  rw[poly_prod_set_element_divides, Abbr`t`]
+QED
 
 (*
 poly_minimal_roots
@@ -2385,11 +2454,12 @@ finite_field_conjugates_order
      so y IN Conj x                    by poly_minimal_roots
     ==> forder y = forder x            by finite_field_conjugates_order
 *)
-val poly_minimal_root_order = store_thm(
-  "poly_minimal_root_order",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x y. x IN R /\ y IN R /\ root (minimal x) y ==> (forder y = forder x)``,
-  metis_tac[poly_roots_member, poly_minimal_roots, finite_field_conjugates_order]);
+Theorem poly_minimal_root_order:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x y. x IN R /\ y IN R /\ root (minimal x) y ==> (forder y = forder x)
+Proof
+  metis_tac[poly_roots_member, poly_minimal_roots, finite_field_conjugates_order]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The Minimal Polynomial by Element Order                                   *)
@@ -2420,15 +2490,16 @@ In fact, (mini n) = CHOICE (IMAGE minimal (orders f* n)) conceptually.
     ==> minimal (CHOICE t) IN (IMAGE minimal t)  by IN_IMAGE
      or (mini n) IN (IMAGE minimal t)            by poly_mini_def
 *)
-val poly_mini_in_image_minimal_orders = store_thm(
-  "poly_mini_in_image_minimal_orders",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !n. n divides CARD R+ ==> (mini n) IN (IMAGE minimal (orders f* n))``,
+Theorem poly_mini_in_image_minimal_orders:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !n. n divides CARD R+ ==> (mini n) IN (IMAGE minimal (orders f* n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   `t <> {}` by rw[GSYM finite_field_orders_nonempty_iff, Abbr`t`] >>
   `CHOICE t IN t` by rw[CHOICE_DEF] >>
-  metis_tac[poly_mini_def, IN_IMAGE]);
+  metis_tac[poly_mini_def, IN_IMAGE]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> monic (mini n) *)
 (* Proof:
@@ -2439,22 +2510,24 @@ val poly_mini_in_image_minimal_orders = store_thm(
    Thus monic (minimal (CHOICE t))  by poly_minimal_monic
      or monic (mini n)              by poly_mini_def
 *)
-val poly_mini_monic = store_thm(
-  "poly_mini_monic",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> monic (mini n)``,
+Theorem poly_mini_monic:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> monic (mini n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   `t <> {}` by rw[GSYM finite_field_orders_nonempty_iff, Abbr`t`] >>
   `CHOICE t IN t` by rw[CHOICE_DEF] >>
   `CHOICE t IN R` by metis_tac[field_orders_element] >>
-  rw[poly_minimal_monic, poly_mini_def, Abbr`t`]);
+  rw[poly_minimal_monic, poly_mini_def, Abbr`t`]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> monic (mini n) *)
 (* Proof: by poly_mini_monic *)
-val poly_mini_poly = store_thm(
-  "poly_mini_poly",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> poly (mini n)``,
-  rw[poly_mini_monic]);
+Theorem poly_mini_poly:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> poly (mini n)
+Proof
+  rw[poly_mini_monic]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> IPoly s (mini n) *)
 (* Proof:
@@ -2465,22 +2538,24 @@ val poly_mini_poly = store_thm(
    Thus IPoly s (minimal (CHOICE t))  by poly_minimal_subfield_irreducible
      or IPoly s (mini n)              by poly_mini_def
 *)
-val poly_mini_subfield_irreducible = store_thm(
-  "poly_mini_subfield_irreducible",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> IPoly s (mini n)``,
+Theorem poly_mini_subfield_irreducible:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> IPoly s (mini n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   `t <> {}` by rw[GSYM finite_field_orders_nonempty_iff, Abbr`t`] >>
   `CHOICE t IN t` by rw[CHOICE_DEF] >>
   `CHOICE t IN R` by metis_tac[field_orders_element] >>
-  rw[poly_minimal_subfield_irreducible, poly_mini_def, Abbr`t`]);
+  rw[poly_minimal_subfield_irreducible, poly_mini_def, Abbr`t`]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> Poly s (mini n) *)
 (* Proof: by poly_mini_subfield_irreducible, poly_irreducible_poly *)
-val poly_mini_subfield_poly = store_thm(
-  "poly_mini_subfield_poly",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> Poly s (mini n)``,
-  rw[poly_mini_subfield_irreducible, poly_irreducible_poly]);
+Theorem poly_mini_subfield_poly:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> Poly s (mini n)
+Proof
+  rw[poly_mini_subfield_irreducible, poly_irreducible_poly]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> Monic s (mini n) *)
 (* Proof:
@@ -2488,10 +2563,11 @@ val poly_mini_subfield_poly = store_thm(
      and monic (mini n)         by poly_mini_monic
     Thus Monic (mini n)         by subring_poly_monic_iff, subfield_is_subring
 *)
-val poly_mini_subfield_monic = store_thm(
-  "poly_mini_subfield_monic",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> Monic s (mini n)``,
-  metis_tac[poly_mini_monic, poly_mini_subfield_poly, subring_poly_monic_iff, subfield_is_subring]);
+Theorem poly_mini_subfield_monic:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> Monic s (mini n)
+Proof
+  metis_tac[poly_mini_monic, poly_mini_subfield_poly, subring_poly_monic_iff, subfield_is_subring]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> (deg (mini n) = ordz n (CARD B)) *)
 (* Proof:
@@ -2505,16 +2581,17 @@ val poly_mini_subfield_monic = store_thm(
       = ordz (forder (CHOICE t)) (CARD B)  by poly_minimal_deg_eqn, CHOICE t IN R+
       = ordz n (CARD B)                    by above
 *)
-val poly_mini_deg = store_thm(
-  "poly_mini_deg",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> (deg (mini n) = ordz n (CARD B))``,
+Theorem poly_mini_deg:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. n divides CARD R+ ==> (deg (mini n) = ordz n (CARD B))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   `t <> {}` by rw[GSYM finite_field_orders_nonempty_iff, Abbr`t`] >>
   `CHOICE t IN t` by rw[CHOICE_DEF] >>
   `forder (CHOICE t) = n` by metis_tac[field_orders_element_order] >>
   `CHOICE t IN R+` by metis_tac[field_orders_element_property] >>
-  rw[poly_minimal_deg_eqn, poly_mini_def, Abbr`t`]);
+  rw[poly_minimal_deg_eqn, poly_mini_def, Abbr`t`]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !n. n divides CARD R+ ==> (mini n) pdivides (cyclo n) *)
@@ -2527,17 +2604,18 @@ val poly_mini_deg = store_thm(
    Thus minimal (CHOICE t) pdivides (cyclo n)   by poly_minimal_divides_cyclo_order
      or (mini n) pdivides (cyclo n)   by poly_mini_def
 *)
-val poly_mini_divides_poly_cyclo = store_thm(
-  "poly_mini_divides_poly_cyclo",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !n. n divides CARD R+ ==> (mini n) pdivides (cyclo n)``,
+Theorem poly_mini_divides_poly_cyclo:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !n. n divides CARD R+ ==> (mini n) pdivides (cyclo n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   `t <> {}` by rw[GSYM finite_field_orders_nonempty_iff, Abbr`t`] >>
   `CHOICE t IN t` by rw[CHOICE_DEF] >>
   `CHOICE t IN R+` by metis_tac[field_orders_element_property] >>
   `forder (CHOICE t) = n` by metis_tac[field_orders_element_order] >>
-  metis_tac[poly_minimal_divides_cyclo_order, poly_mini_def]);
+  metis_tac[poly_minimal_divides_cyclo_order, poly_mini_def]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !n. n divides CARD R+ ==> (mini n) pdivides (unity n) *)
@@ -2550,17 +2628,18 @@ val poly_mini_divides_poly_cyclo = store_thm(
    Thus minimal (CHOICE t) pdivides (unity n)   by poly_minimal_divides_unity_order
      or (mini n) pdivides (unity n)   by poly_mini_def
 *)
-val poly_mini_divides_poly_unity = store_thm(
-  "poly_mini_divides_poly_unity",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !n. n divides CARD R+ ==> (mini n) pdivides (unity n)``,
+Theorem poly_mini_divides_poly_unity:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !n. n divides CARD R+ ==> (mini n) pdivides (unity n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   `t <> {}` by rw[GSYM finite_field_orders_nonempty_iff, Abbr`t`] >>
   `CHOICE t IN t` by rw[CHOICE_DEF] >>
   `CHOICE t IN R` by metis_tac[field_orders_element] >>
   `forder (CHOICE t) = n` by metis_tac[field_orders_element_order] >>
-  metis_tac[poly_minimal_divides_unity_order, poly_mini_def]);
+  metis_tac[poly_minimal_divides_unity_order, poly_mini_def]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !n. n divides CARD R+ ==> !x. x IN R /\ root (mini n) x ==> (forder x = n) *)
@@ -2574,17 +2653,18 @@ val poly_mini_divides_poly_unity = store_thm(
       = forder (CHOICE t)             by poly_minimal_root_order
       = n                             by field_orders_element_order
 *)
-val poly_mini_root_order = store_thm(
-  "poly_mini_root_order",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !n. n divides CARD R+ ==> !x. x IN R /\ root (mini n) x ==> (forder x = n)``,
+Theorem poly_mini_root_order:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !n. n divides CARD R+ ==> !x. x IN R /\ root (mini n) x ==> (forder x = n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   `t <> {}` by rw[GSYM finite_field_orders_nonempty_iff, Abbr`t`] >>
   `CHOICE t IN t` by rw[CHOICE_DEF] >>
   `CHOICE t IN R` by metis_tac[field_orders_element] >>
   `forder (CHOICE t) = n` by metis_tac[field_orders_element_order] >>
-  metis_tac[poly_minimal_root_order, poly_mini_def]);
+  metis_tac[poly_minimal_root_order, poly_mini_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Another Cyclotomic Factorisation of Unity Polynomial                      *)
@@ -2634,10 +2714,10 @@ val it = |- FiniteField t ==> !n. 0 < n ==> (poly_splits t (Unity t n) <=> n div
    (1) FieldIso up r st, true                   by poly_mod_const_iso_field
    (2) poly_splits t (Unity t n), true          by poly_unity_splitting_condition, 0 < n, and claim.
 *)
-val poly_unity_splitting_field_exists = store_thm(
-  "poly_unity_splitting_field_exists",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
-   ?(t st):'a poly field. FiniteField t /\ st <<= t /\ FieldIso up r st /\ poly_splits t (Unity t n)``,
+Theorem poly_unity_splitting_field_exists:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
+   ?(t st):'a poly field. FiniteField t /\ st <<= t /\ FieldIso up r st /\ poly_splits t (Unity t n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `0 < n` by
   (`1 < CARD R` by rw[finite_field_card_gt_1] >>
@@ -2662,7 +2742,8 @@ val poly_unity_splitting_field_exists = store_thm(
   `CARD R = CARD st.carrier` by rw[poly_mod_const_subfield_card, Abbr`st`] >>
   metis_tac[subfield_card_coprime_iff]
   ) >>
-  metis_tac[poly_unity_splitting_condition, poly_mod_const_iso_field]);
+  metis_tac[poly_unity_splitting_condition, poly_mod_const_iso_field]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==>
             ?f:num -> 'a poly. (f 0 = |1|) /\ (f 1 = X - |1|) /\ (!k. monic (f k)) /\
@@ -2720,11 +2801,11 @@ val poly_unity_splitting_field_exists = store_thm(
        = PPIMAGE (MAP f) s                      by field_iso_poly_prod_set
        = PPIMAGE (MAP f o g) (divisors n)       by IMAGE_COMPOSE, notation
 *)
-val poly_unity_cyclo_factor_exists = store_thm(
-  "poly_unity_cyclo_factor_exists",
-  ``!(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
+Theorem poly_unity_cyclo_factor_exists:
+    !(r:'a field) n. FiniteField r /\ coprime n (CARD R) ==>
    ?f:num -> 'a poly. (f 0 = |1|) /\ (f 1 = X - |1|) /\ (!k. monic (f k)) /\
-                      (!k. k divides n ==> (deg (f k) = phi k)) /\ (unity n = PPIMAGE f (divisors n))``,
+                      (!k. k divides n ==> (deg (f k) = phi k)) /\ (unity n = PPIMAGE f (divisors n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `0 < n` by
   (`1 < CARD R` by rw[finite_field_card_gt_1] >>
@@ -2768,7 +2849,8 @@ val poly_unity_cyclo_factor_exists = store_thm(
     `_ = PPIMAGE (MAP f) s` by rw[field_iso_poly_prod_set] >>
     `_ = PPIMAGE (MAP f o g) (divisors n)` by rw[IMAGE_COMPOSE, Abbr`s`] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* This is a major theorem *)
 
@@ -2809,45 +2891,51 @@ val it = |- !r n. FiniteField r /\ coprime n (CARD R) ==>
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==> (PHI 0 = |1|) *)
 (* Proof: by poly_PHI_def *)
-val poly_PHI_0 = store_thm(
-  "poly_PHI_0",
-  ``!r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> (PHI 0 = |1|)``,
-  rw[poly_PHI_def]);
+Theorem poly_PHI_0:
+    !r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> (PHI 0 = |1|)
+Proof
+  rw[poly_PHI_def]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==> (PHI 1 = X - |1|) *)
 (* Proof: by poly_PHI_def *)
-val poly_PHI_1 = store_thm(
-  "poly_PHI_1",
-  ``!r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> (PHI 1 = X - |1|)``,
-  rw[poly_PHI_def]);
+Theorem poly_PHI_1:
+    !r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> (PHI 1 = X - |1|)
+Proof
+  rw[poly_PHI_def]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==> !k. poly (PHI k) *)
 (* Proof: by poly_PHI_def, poly_monic_poly *)
-val poly_PHI_poly = store_thm(
-  "poly_PHI_poly",
-  ``!r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> !k. poly (PHI k)``,
-  rw[poly_PHI_def]);
+Theorem poly_PHI_poly:
+    !r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> !k. poly (PHI k)
+Proof
+  rw[poly_PHI_def]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==> !k. monic (PHI k) *)
 (* Proof: by poly_PHI_def *)
-val poly_PHI_monic = store_thm(
-  "poly_PHI_monic",
-  ``!r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> !k. monic (PHI k)``,
-  rw[poly_PHI_def]);
+Theorem poly_PHI_monic:
+    !r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> !k. monic (PHI k)
+Proof
+  rw[poly_PHI_def]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==> !k. k divides n ==> (deg (PHI k) = phi k) *)
 (* Proof: by poly_PHI_def *)
-val poly_PHI_deg = store_thm(
-  "poly_PHI_deg",
-  ``!r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> !k. k divides n ==> (deg (PHI k) = phi k)``,
-  rw[poly_PHI_def]);
+Theorem poly_PHI_deg:
+    !r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> !k. k divides n ==> (deg (PHI k) = phi k)
+Proof
+  rw[poly_PHI_def]
+QED
 
 (* Theorem: FiniteField r /\ coprime n (CARD R) ==> (unity n = PPIMAGE PHI (divisors n)) *)
 (* Proof: by poly_PHI_def *)
-val poly_unity_eq_poly_PHI_product = store_thm(
-  "poly_unity_eq_poly_PHI_product",
-  ``!r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> (unity n = PPIMAGE PHI (divisors n))``,
-  rw[poly_PHI_def]);
+Theorem poly_unity_eq_poly_PHI_product:
+    !r:'a field. !n. FiniteField r /\ coprime n (CARD R) ==> (unity n = PPIMAGE PHI (divisors n))
+Proof
+  rw[poly_PHI_def]
+QED
 
 (* Compare this result with:
 poly_unity_eq_poly_cyclo_product;

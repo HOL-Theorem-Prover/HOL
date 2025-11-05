@@ -110,10 +110,11 @@ Proof
   metis_tac [predn_rules]
 QED
 
-val RTCredn_ap_congruence = store_thm(
-  "RTCredn_ap_congruence",
-  “!x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y”,
-  Induct_on ‘RTC’ >> metis_tac [RTC_rules, redn_rules]);
+Theorem RTCredn_ap_congruence:
+   !x y. x -->* y ==> !z. x # z -->* y # z /\ z # x -->* z # y
+Proof
+  Induct_on ‘RTC’ >> metis_tac [RTC_rules, redn_rules]
+QED
 
 Theorem predn_RTCredn:
   !x y. x -||-> y  ==>  x -->* y

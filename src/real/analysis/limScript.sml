@@ -26,7 +26,7 @@ Definition tends_real_real :
 End
 
 val _ = add_infix("->", 250, HOLgrammars.RIGHT)
-val _ = overload_on ("->", ``tends_real_real``);
+Overload "->" = ``tends_real_real``
 
 Theorem LIM:
    !f y0 x0. (f -> y0)(x0) =

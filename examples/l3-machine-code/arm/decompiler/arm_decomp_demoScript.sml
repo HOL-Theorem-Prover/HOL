@@ -130,8 +130,8 @@ val PID_C_lemma =
     GSYM get_lower_def,GSYM get_upper_def,Once LET_DEF,lemma]
   |> SIMP_RULE std_ss [LET_DEF,put_get_simp,word_add_n2w,lemma]
 
-val PID_ADA_EQUIV_PID_C = store_thm("PID_ADA_EQUIV_PID_C",
-  ``(word_read m2 r0 = word_read m1 0w) /\
+Theorem PID_ADA_EQUIV_PID_C:
+    (word_read m2 r0 = word_read m1 0w) /\
     (word_read m2 0w = word_read m1 4w) /\
     (word_read m2 r3 = word_read m1 8w) /\
     (word_read m2 r2 = word_read m1 16w) ==>
@@ -139,8 +139,10 @@ val PID_ADA_EQUIV_PID_C = store_thm("PID_ADA_EQUIV_PID_C",
             PID_ADA (d5,d6,d7,dm,m1,rmode) in
     let (r0_c,r1_c,r2_c,r3_c,r13_c,d5_c,d6_c,d7_c,dm_c,m_c,rmode_c) =
             PID_C (r0,r1,r2,r3,r13,d5,d6,d7,dm,m2,rmode) in
-      (d7_a,rmode_a) = (d7_c,rmode_c)``,
-  SIMP_TAC std_ss [PID_ADA_lemma,PID_C_lemma,LET_DEF]);
+      (d7_a,rmode_a) = (d7_c,rmode_c)
+Proof
+  SIMP_TAC std_ss [PID_ADA_lemma,PID_C_lemma,LET_DEF]
+QED
 
 (* the second PID example *)
 

@@ -61,12 +61,13 @@ End
 (* Case analysis on a block.                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_BLOCK = Q.store_thm
-("FORALL_BLOCK",
- `(!b:block. P b) =
+Theorem FORALL_BLOCK:
+  (!b:block. P b) =
    !w1 w2 w3 w4 w5 w6 w7 w8 w9 w10 w11 w12 w13 w14 w15 w16.
-    P (w1,w2,w3,w4,w5,w6,w7,w8,w9,w10,w11,w12,w13,w14,w15,w16)`,
- SIMP_TAC std_ss [FORALL_PROD]);
+    P (w1,w2,w3,w4,w5,w6,w7,w8,w9,w10,w11,w12,w13,w14,w15,w16)
+Proof
+ SIMP_TAC std_ss [FORALL_PROD]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* XOR on blocks. Definition and algebraic properties.                       *)
@@ -82,29 +83,33 @@ Definition XOR_BLOCK_def:
        a12 ?? b12, a13 ?? b13, a14 ?? b14, a15 ?? b15)
 End
 
-val XOR_BLOCK_ZERO = Q.store_thm
-("XOR_BLOCK_ZERO",
- `!x:block. XOR_BLOCK x ZERO_BLOCK = x`,
+Theorem XOR_BLOCK_ZERO:
+  !x:block. XOR_BLOCK x ZERO_BLOCK = x
+Proof
  SIMP_TAC std_ss
-   [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, WORD_XOR_CLAUSES]);
+   [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, WORD_XOR_CLAUSES]
+QED
 
-val XOR_BLOCK_INV = Q.store_thm
-("XOR_BLOCK_INV",
- `!x:block. XOR_BLOCK x x = ZERO_BLOCK`,
+Theorem XOR_BLOCK_INV:
+  !x:block. XOR_BLOCK x x = ZERO_BLOCK
+Proof
  SIMP_TAC std_ss
-   [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, WORD_XOR_CLAUSES]);
+   [FORALL_BLOCK,XOR_BLOCK_def, ZERO_BLOCK_def, WORD_XOR_CLAUSES]
+QED
 
-val XOR_BLOCK_AC = Q.store_thm
-("XOR_BLOCK_AC",
- `(!x y z:block. XOR_BLOCK (XOR_BLOCK x y) z = XOR_BLOCK x (XOR_BLOCK y z)) /\
-  (!x y:block. XOR_BLOCK x y = XOR_BLOCK y x)`,
- SIMP_TAC (srw_ss()) [FORALL_BLOCK,XOR_BLOCK_def]);
+Theorem XOR_BLOCK_AC:
+  (!x y z:block. XOR_BLOCK (XOR_BLOCK x y) z = XOR_BLOCK x (XOR_BLOCK y z)) /\
+  (!x y:block. XOR_BLOCK x y = XOR_BLOCK y x)
+Proof
+ SIMP_TAC (srw_ss()) [FORALL_BLOCK,XOR_BLOCK_def]
+QED
 
-val XOR_BLOCK_IDEM = Q.store_thm
-("XOR_BLOCK_IDEM",
- `(!v u. XOR_BLOCK (XOR_BLOCK v u) u = v) /\
-  (!v u. XOR_BLOCK v (XOR_BLOCK v u) = u)`,
- METIS_TAC [XOR_BLOCK_INV,XOR_BLOCK_AC,XOR_BLOCK_ZERO]);
+Theorem XOR_BLOCK_IDEM:
+  (!v u. XOR_BLOCK (XOR_BLOCK v u) u = v) /\
+  (!v u. XOR_BLOCK v (XOR_BLOCK v u) = u)
+Proof
+ METIS_TAC [XOR_BLOCK_INV,XOR_BLOCK_AC,XOR_BLOCK_ZERO]
+QED
 
 (*---------------------------------------------------------------------------*)
 (*    Moving data into and out of a state                                    *)
@@ -128,16 +133,18 @@ Definition from_state_def:
 End
 
 
-val to_state_Inversion = Q.store_thm
-  ("to_state_Inversion",
-   `!s:state. from_state(to_state s) = s`,
-   SIMP_TAC std_ss [FORALL_BLOCK, from_state_def, to_state_def]);
+Theorem to_state_Inversion:
+    !s:state. from_state(to_state s) = s
+Proof
+   SIMP_TAC std_ss [FORALL_BLOCK, from_state_def, to_state_def]
+QED
 
 
-val from_state_Inversion = Q.store_thm
-  ("from_state_Inversion",
-   `!s:state. to_state(from_state s) = s`,
-   SIMP_TAC std_ss [FORALL_BLOCK, from_state_def, to_state_def]);
+Theorem from_state_Inversion:
+    !s:state. to_state(from_state s) = s
+Proof
+   SIMP_TAC std_ss [FORALL_BLOCK, from_state_def, to_state_def]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -164,10 +171,11 @@ End
 Definition InvSubBytes_def:   InvSubBytes = genSubBytes InvSbox
 End
 
-val SubBytes_Inversion = Q.store_thm
-("SubBytes_Inversion",
- `!s:state. genSubBytes InvSbox (genSubBytes Sbox s) = s`,
- SIMP_TAC std_ss [FORALL_BLOCK,genSubBytes_def,Sbox_Inversion]);
+Theorem SubBytes_Inversion:
+  !s:state. genSubBytes InvSbox (genSubBytes Sbox s) = s
+Proof
+ SIMP_TAC std_ss [FORALL_BLOCK,genSubBytes_def,Sbox_Inversion]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -203,25 +211,28 @@ End
         InvShiftRows inverts ShiftRows
  ---------------------------------------------------------------------------*)
 
-val ShiftRows_Inversion = Q.store_thm
-("ShiftRows_Inversion",
- `!s:state. InvShiftRows (ShiftRows s) = s`,
- SIMP_TAC std_ss [FORALL_BLOCK] THEN REPEAT STRIP_TAC THEN EVAL_TAC);
+Theorem ShiftRows_Inversion:
+  !s:state. InvShiftRows (ShiftRows s) = s
+Proof
+ SIMP_TAC std_ss [FORALL_BLOCK] THEN REPEAT STRIP_TAC THEN EVAL_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* For alternative decryption scheme                                         *)
 (*---------------------------------------------------------------------------*)
 
-val ShiftRows_SubBytes_Commute = Q.store_thm
- ("ShiftRows_SubBytes_Commute",
-  `!s. ShiftRows (SubBytes s) = SubBytes (ShiftRows s)`,
- SIMP_TAC std_ss [FORALL_BLOCK] THEN REPEAT STRIP_TAC THEN EVAL_TAC);
+Theorem ShiftRows_SubBytes_Commute:
+   !s. ShiftRows (SubBytes s) = SubBytes (ShiftRows s)
+Proof
+ SIMP_TAC std_ss [FORALL_BLOCK] THEN REPEAT STRIP_TAC THEN EVAL_TAC
+QED
 
 
-val InvShiftRows_InvSubBytes_Commute = Q.store_thm
- ("InvShiftRows_InvSubBytes_Commute",
-  `!s. InvShiftRows (InvSubBytes s) = InvSubBytes (InvShiftRows s)`,
- SIMP_TAC std_ss [FORALL_BLOCK] THEN REPEAT STRIP_TAC THEN EVAL_TAC);
+Theorem InvShiftRows_InvSubBytes_Commute:
+   !s. InvShiftRows (InvSubBytes s) = InvSubBytes (InvShiftRows s)
+Proof
+ SIMP_TAC std_ss [FORALL_BLOCK] THEN REPEAT STRIP_TAC THEN EVAL_TAC
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -412,12 +423,13 @@ End
 Definition InvMixColumns_def:   InvMixColumns = genMixColumns InvMultCol
 End
 
-val MixColumns_Inversion = Q.store_thm
-("MixColumns_Inversion",
- `!s. genMixColumns InvMultCol (genMixColumns MultCol s) = s`,
+Theorem MixColumns_Inversion:
+  !s. genMixColumns InvMultCol (genMixColumns MultCol s) = s
+Proof
  SIMP_TAC std_ss [FORALL_BLOCK]
   THEN RESTR_EVAL_TAC [mult,n2w]
-  THEN RW_TAC std_ss [mix_lemma1,mix_lemma2,mix_lemma3,mix_lemma4]);
+  THEN RW_TAC std_ss [mix_lemma1,mix_lemma2,mix_lemma3,mix_lemma4]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -431,11 +443,12 @@ End
 (* For alternative decryption scheme                                         *)
 (*---------------------------------------------------------------------------*)
 
-val InvMixColumns_Distrib = Q.store_thm
-("InvMixColumns_Distrib",
- `!s k. InvMixColumns (AddRoundKey s k)
+Theorem InvMixColumns_Distrib:
+  !s k. InvMixColumns (AddRoundKey s k)
             =
-        AddRoundKey (InvMixColumns s) (InvMixColumns k)`,
+        AddRoundKey (InvMixColumns s) (InvMixColumns k)
+Proof
  SIMP_TAC std_ss [FORALL_BLOCK] THEN
  SRW_TAC [] [XOR_BLOCK_def, AddRoundKey_def, InvMixColumns_def, LET_THM,
-             genMixColumns_def, InvMultCol_def, ConstMultDistrib]);
+             genMixColumns_def, InvMultCol_def, ConstMultDistrib]
+QED

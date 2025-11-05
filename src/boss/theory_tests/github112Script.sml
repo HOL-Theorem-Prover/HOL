@@ -14,7 +14,8 @@ val fg_def = tDefine "fg" `
   (g x = if x then f 0 else 1)
 ` (WF_REL_TAC `measure (\x. case x of INL n => n + 1 | INR T => 2 | INR F => 0)`)
 
-val _ = Hol_datatype`foo = C1 of num | C2 of bool`
+Datatype: foo = C1 num | C2 bool
+End
 
 Definition h_def:  (h (C1 x) = (x < 2)) /\ (h (C2 x) = ~x)
 End
@@ -23,4 +24,3 @@ Definition test_def:
   (test n 0 = n) /\
   (test m _ = SUC m)
 End
-

@@ -30,16 +30,16 @@ End
 (* evaluation, while the other is good for brute-force.                      *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_BYTE_VARS = Q.store_thm
-("FORALL_BYTE_VARS",
- `(!x:word8. P x) = !b7 b6 b5 b4 b3 b2 b1 b0. P(BYTE b7 b6 b5 b4 b3 b2 b1 b0)`,
+Theorem FORALL_BYTE_VARS:
+  (!x:word8. P x) = !b7 b6 b5 b4 b3 b2 b1 b0. P(BYTE b7 b6 b5 b4 b3 b2 b1 b0)
+Proof
  EQ_TAC THEN RW_TAC std_ss []
-  THEN Cases_on `x` THEN PROVE_TAC[]);
+  THEN Cases_on `x` THEN PROVE_TAC[]
+QED
 
 
-val FORALL_BYTE_BITS = Q.store_thm
-("FORALL_BYTE_BITS",
- `(!x:word8. P x) =
+Theorem FORALL_BYTE_BITS:
+  (!x:word8. P x) =
   P (BYTE F F F F F F F F) /\ P (BYTE F F F F F F F T) /\ P (BYTE F F F F F F T F) /\
   P (BYTE F F F F F F T T) /\ P (BYTE F F F F F T F F) /\ P (BYTE F F F F F T F T) /\
   P (BYTE F F F F F T T F) /\ P (BYTE F F F F F T T T) /\ P (BYTE F F F F T F F F) /\
@@ -125,11 +125,13 @@ val FORALL_BYTE_BITS = Q.store_thm
   P (BYTE T T T T F T T F) /\ P (BYTE T T T T F T T T) /\ P (BYTE T T T T T F F F) /\
   P (BYTE T T T T T F F T) /\ P (BYTE T T T T T F T F) /\ P (BYTE T T T T T F T T) /\
   P (BYTE T T T T T T F F) /\ P (BYTE T T T T T T F T) /\ P (BYTE T T T T T T T F) /\
-  P (BYTE T T T T T T T T)`,
+  P (BYTE T T T T T T T T)
+Proof
  EQ_TAC THENL
   [DISCH_TAC THEN ASM_REWRITE_TAC [],
    STRIP_TAC THEN SIMP_TAC std_ss [FORALL_BYTE_VARS, FORALL_BOOL]
-    THEN ASM_REWRITE_TAC[]]);
+    THEN ASM_REWRITE_TAC[]]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -160,15 +162,17 @@ Definition NUM_TO_BYTE:
 End
 
 
-val BYTE_TO_NUM_TO_BYTE = Q.store_thm
-("BYTE_TO_NUM_TO_BYTE",
- `!b. NUM_TO_BYTE(BYTE_TO_NUM b) = b`,
- SIMP_TAC std_ss [FORALL_BYTE_BITS] THEN EVAL_TAC);
+Theorem BYTE_TO_NUM_TO_BYTE:
+  !b. NUM_TO_BYTE(BYTE_TO_NUM b) = b
+Proof
+ SIMP_TAC std_ss [FORALL_BYTE_BITS] THEN EVAL_TAC
+QED
 
-val NUM_TO_BYTE_TO_NUM = Q.store_thm
-("NUM_TO_BYTE_TO_NUM",
- `!n. n < 256 ==> (BYTE_TO_NUM (NUM_TO_BYTE n) = n)`,
- CONV_TAC (REPEATC (numLib.BOUNDED_FORALL_CONV EVAL)) THEN PROVE_TAC []);
+Theorem NUM_TO_BYTE_TO_NUM:
+  !n. n < 256 ==> (BYTE_TO_NUM (NUM_TO_BYTE n) = n)
+Proof
+ CONV_TAC (REPEATC (numLib.BOUNDED_FORALL_CONV EVAL)) THEN PROVE_TAC []
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -184,21 +188,21 @@ Definition RightShift:
 End
 
 
-val LeftShift_lem =
- Q.store_thm
- ("LeftShift_lem",
-  `!b. LeftShift b =
+Theorem LeftShift_lem:
+   !b. LeftShift b =
          case b
-          of (BYTE b7 b6 b5 b4 b3 b2 b1 b0) -> BYTE b6 b5 b4 b3 b2 b1 b0 F`,
-  SIMP_TAC std_ss [FORALL_BYTE_VARS,LeftShift,word8_case_def]);
+          of (BYTE b7 b6 b5 b4 b3 b2 b1 b0) -> BYTE b6 b5 b4 b3 b2 b1 b0 F
+Proof
+  SIMP_TAC std_ss [FORALL_BYTE_VARS,LeftShift,word8_case_def]
+QED
 
-val RightShift_lem =
- Q.store_thm
- ("RightShift_lem",
-  `!b. RightShift b =
+Theorem RightShift_lem:
+   !b. RightShift b =
          case b
-          of (BYTE b7 b6 b5 b4 b3 b2 b1 b0) -> BYTE F b7 b6 b5 b4 b3 b2 b1`,
-  SIMP_TAC std_ss [FORALL_BYTE_VARS,RightShift,word8_case_def]);
+          of (BYTE b7 b6 b5 b4 b3 b2 b1 b0) -> BYTE F b7 b6 b5 b4 b3 b2 b1
+Proof
+  SIMP_TAC std_ss [FORALL_BYTE_VARS,RightShift,word8_case_def]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -275,20 +279,23 @@ val _ = set_fixity "&" (Infixl 650);
 (* Algebraic lemmas for XOR8                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val XOR8_ZERO = Q.store_thm
-("XOR8_ZERO",
- `!x. x # ZERO = x`,
- SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]);
+Theorem XOR8_ZERO:
+  !x. x # ZERO = x
+Proof
+ SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]
+QED
 
-val XOR8_INV = Q.store_thm
-("XOR8_INV",
- `!x. x # x = ZERO`,
- SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]);
+Theorem XOR8_INV:
+  !x. x # x = ZERO
+Proof
+ SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]
+QED
 
-val XOR8_AC = Q.store_thm
-("XOR8_AC",
- `(!x y z:word8. (x # y) # z = x # (y # z)) /\
-  (!x y:word8. (x # y) = (y # x))`,
+Theorem XOR8_AC:
+  (!x y z:word8. (x # y) # z = x # (y # z)) /\
+  (!x y:word8. (x # y) = (y # x))
+Proof
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def]
-  THEN RW_TAC std_ss [] THEN DECIDE_TAC);
+  THEN RW_TAC std_ss [] THEN DECIDE_TAC
+QED
 

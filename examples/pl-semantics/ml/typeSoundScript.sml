@@ -46,25 +46,30 @@ fun match_exists_tac tm (g as (_,w)) =
 (* -- *)
 
 (* TODO: move to HOL standard lib *)
-val LUPDATE_ID = store_thm("LUPDATE_ID",
-  ``∀n ls. n < LENGTH ls ⇒ (LUPDATE (EL n ls) n ls = ls)``,
-  rw[LIST_EQ_REWRITE,EL_LUPDATE] >> rw[])
+Theorem LUPDATE_ID:
+    ∀n ls. n < LENGTH ls ⇒ (LUPDATE (EL n ls) n ls = ls)
+Proof
+  rw[LIST_EQ_REWRITE,EL_LUPDATE] >> rw[]
+QED
 
-val FLOOKUP_f_o_f = store_thm("FLOOKUP_f_o_f",
-  ``FLOOKUP (f1 f_o_f f2) k =
+Theorem FLOOKUP_f_o_f:
+    FLOOKUP (f1 f_o_f f2) k =
     case FLOOKUP f2 k of
     | NONE => NONE
-    | SOME v => FLOOKUP f1 v``,
+    | SOME v => FLOOKUP f1 v
+Proof
   simp[FLOOKUP_DEF] >>
-  simp[f_o_f_DEF] >> rw[] >> fs[])
+  simp[f_o_f_DEF] >> rw[] >> fs[]
+QED
 (* -- *)
 
 (* Syntax *)
 
-val _ = Datatype`lit =
-  Int int | Unit`
+Datatype: lit =
+  Int int | Unit
+End
 
-val _ = Datatype`exp =
+Datatype: exp =
   | Lit lit
   | Var string
   | App exp exp
@@ -76,7 +81,8 @@ val _ = Datatype`exp =
   | Assign exp exp
   | Letexn string exp
   | Raise exp exp
-  | Handle exp exp exp`
+  | Handle exp exp exp
+End
 
 (* Differences from W&F:
    - we have specific constants (ints and unit)
@@ -97,12 +103,13 @@ anyway).
 
 (* Values *)
 
-val _ = Datatype`v =
+Datatype: v =
   | Litv lit
   | Clos ((string,v) alist) string exp
   | Closrec ((string,v) alist) string string exp
   | Loc num
-  | Exn num`
+  | Exn num
+End
 
 val v_induction = theorem"v_induction"
 val v_ind =
@@ -125,8 +132,9 @@ intimately tied up with the mechanics of their small-step semantics, we simply
 generate a new exception value for every (dynamic) Letexn expression.
 *)
 
-val _ = Datatype`
-  state = <| clock : num; refs : v list; next_exn : num |>`
+Datatype:
+  state = <| clock : num; refs : v list; next_exn : num |>
+End
 
 val state_component_equality = theorem"state_component_equality"
 
@@ -145,13 +153,17 @@ Definition dec_clock_def:
   dec_clock s = s with clock := s.clock - 1
 End
 
-val dec_clock_refs = store_thm("dec_clock_refs[simp]",
-  ``(dec_clock s).refs = s.refs``,
-  rw[dec_clock_def])
+Theorem dec_clock_refs[simp]:
+    (dec_clock s).refs = s.refs
+Proof
+  rw[dec_clock_def]
+QED
 
-val dec_clock_next_exn = store_thm("dec_clock_next_exn[simp]",
-  ``(dec_clock s).next_exn = s.next_exn``,
-  rw[dec_clock_def])
+Theorem dec_clock_next_exn[simp]:
+    (dec_clock s).next_exn = s.next_exn
+Proof
+  rw[dec_clock_def]
+QED
 
 Definition is_closure_def:
   is_closure (Clos _ _ _) = T ∧
@@ -162,11 +174,12 @@ val _ = export_rewrites["is_closure_def"]
 
 (* results *)
 
-val _ = Datatype`
+Datatype:
   r = Rval v
     | Rraise num v
     | Rfail
-    | Rtimeout`
+    | Rtimeout
+End
 
 (* big-step semantics as a function *)
 
@@ -270,8 +283,9 @@ machinery that was used to get the function through the termination checker
 
 val sem_ind = theorem"sem_ind"
 
-val sem_clock = store_thm("sem_clock",
-  ``∀env s e r s'. sem env s e = (r, s') ⇒ s'.clock ≤ s.clock``,
+Theorem sem_clock:
+    ∀env s e r s'. sem env s e = (r, s') ⇒ s'.clock ≤ s.clock
+Proof
   ho_match_mp_tac sem_ind >>
   rpt conj_tac >>
   simp[sem_def] >>
@@ -279,7 +293,8 @@ val sem_clock = store_thm("sem_clock",
   BasicProvers.EVERY_CASE_TAC >>
   simp[check_clock_def,dec_clock_def] >>
   rpt(IF_CASES_TAC >> simp[]) >>
-  rpt strip_tac >> res_tac >> simp[] >> fs[])
+  rpt strip_tac >> res_tac >> simp[] >> fs[]
+QED
 
 val r = term_rewrite [``check_clock s1 s = s1``,
     ``s.clock <> 0 /\ s1.clock <> 0 <=> s1.clock <> 0``]
@@ -456,9 +471,10 @@ val v_nchotomy = theorem"v_nchotomy";
 val v_11 = theorem"v_11";
 val r_distinct = theorem"r_distinct";
 
-val sem_imp_eval = Q.store_thm("sem_imp_eval",
-  `∀env s e. FST (sem env s e) ≠ Rtimeout ⇒
-      eval env s e (sem env s e)`,
+Theorem sem_imp_eval:
+   ∀env s e. FST (sem env s e) ≠ Rtimeout ⇒
+      eval env s e (sem env s e)
+Proof
   ho_match_mp_tac sem_ind >> rw[sem_def]
   >- rw[Once eval_cases]
   >- (
@@ -510,17 +526,18 @@ val sem_imp_eval = Q.store_thm("sem_imp_eval",
     every_case_tac >> fs[] >>
     metis_tac[is_closure_def,dest_closure_def,v_distinct,v_nchotomy]
     )
-  );
+QED
 
 val dest_closure_SOME_is_closure = Q.prove(
   `dest_closure x y = SOME z ⇒ is_closure y`,
   Cases_on`y`>>rw[])
 
-val eval_imp_sem = Q.store_thm("eval_imp_sem",
-  `∀env s e res.
+Theorem eval_imp_sem:
+   ∀env s e res.
     eval env s e res ⇒
       FST (sem env s e) = Rtimeout ∨
-      sem env s e = res`,
+      sem env s e = res
+Proof
   ho_match_mp_tac eval_ind >> rw[sem_def] >>
   BasicProvers.CASE_TAC >> fs[] >> rw[] >>
   TRY(BasicProvers.CASE_TAC >> fs[] >> rw[]) >>
@@ -528,7 +545,8 @@ val eval_imp_sem = Q.store_thm("eval_imp_sem",
   TRY(BasicProvers.CASE_TAC >> fs[] >> rw[]) >>
   TRY(BasicProvers.CASE_TAC >> fs[] >> rw[]) >>
   imp_res_tac dest_closure_SOME_is_closure >> fs[] >>
-  every_case_tac >> fs[]);
+  every_case_tac >> fs[]
+QED
 
 (* Typing *)
 
@@ -549,16 +567,18 @@ val _ = export_rewrites["is_value_def"]
 
 (* syntax of types *)
 
-val _ = Datatype`tctor =
+Datatype: tctor =
   | TC_int
   | TC_fn
   | TC_ref
   | TC_unit
-  | TC_exn`
+  | TC_exn
+End
 
-val _ = Datatype`t =
+Datatype: t =
   | Tvar string
-  | Tapp (t list) tctor`
+  | Tapp (t list) tctor
+End
 
 val t_size_def = definition"t_size_def"
 val t_induction = theorem"t_induction"
@@ -615,10 +635,12 @@ Definition tenv_vars_def:
     BIGUNION (IMAGE ((λ(tvs,t). tyvars t DIFF tvs) o SND) (set tenv))
 End
 
-val tenv_vars_cons = store_thm("tenv_vars_cons",
-  ``tenv_vars ((x,tvs,t)::tenv) =
-    tyvars t DIFF tvs ∪ tenv_vars tenv``,
-  rw[tenv_vars_def])
+Theorem tenv_vars_cons:
+    tenv_vars ((x,tvs,t)::tenv) =
+    tyvars t DIFF tvs ∪ tenv_vars tenv
+Proof
+  rw[tenv_vars_def]
+QED
 
 (* typing relation *)
 
@@ -723,67 +745,83 @@ val type_env_clauses =
   |> List.map (SIMP_CONV (srw_ss()) [Once type_v_cases])
   |> LIST_CONJ
 
-val type_v_extend = store_thm("type_v_extend",
-  ``(∀v t. type_v s e v t ⇒ type_v (s++s') (e++e') v t) ∧
-    (∀env tenv. type_env s e env tenv ⇒ type_env (s++s') (e++e') env tenv)``,
+Theorem type_v_extend:
+    (∀v t. type_v s e v t ⇒ type_v (s++s') (e++e') v t) ∧
+    (∀env tenv. type_env s e env tenv ⇒ type_env (s++s') (e++e') env tenv)
+Proof
   ho_match_mp_tac type_v_ind >>
   simp[type_v_clauses,type_env_clauses] >>
-  rw[] >> simp[rich_listTheory.EL_APPEND1] >> metis_tac[])
+  rw[] >> simp[rich_listTheory.EL_APPEND1] >> metis_tac[]
+QED
 
-val FINITE_tyvars = store_thm("FINITE_tyvars[simp]",
-  ``∀t. FINITE (tyvars t)``,
+Theorem FINITE_tyvars[simp]:
+    ∀t. FINITE (tyvars t)
+Proof
   ho_match_mp_tac t_ind >> simp[] >>
-  simp[EVERY_MEM,PULL_EXISTS])
+  simp[EVERY_MEM,PULL_EXISTS]
+QED
 
-val FINITE_tenv_vars = store_thm("FINITE_tenv_vars[simp]",
-  ``FINITE (tenv_vars tenv)``,
-  rw[tenv_vars_def,EXISTS_PROD] >> rw[])
+Theorem FINITE_tenv_vars[simp]:
+    FINITE (tenv_vars tenv)
+Proof
+  rw[tenv_vars_def,EXISTS_PROD] >> rw[]
+QED
 
-val tysubst_tysubst = store_thm("tysubst_tysubst",
-  ``∀s t s'. tysubst s' (tysubst s t) = tysubst ((tysubst s' o_f s) ⊌ s') t``,
+Theorem tysubst_tysubst:
+    ∀s t s'. tysubst s' (tysubst s t) = tysubst ((tysubst s' o_f s) ⊌ s') t
+Proof
   ho_match_mp_tac tysubst_ind >>
   conj_tac >- (
     simp[] >>
     rpt gen_tac >>
     simp[FLOOKUP_o_f,FLOOKUP_FUNION] >>
     BasicProvers.CASE_TAC >> simp[] ) >>
-  rw[MAP_MAP_o,MAP_EQ_f])
+  rw[MAP_MAP_o,MAP_EQ_f]
+QED
 
-val tysubst_nil = store_thm("tysubst_nil[simp]",
-  ``∀t. tysubst FEMPTY t = t``,
+Theorem tysubst_nil[simp]:
+    ∀t. tysubst FEMPTY t = t
+Proof
   ho_match_mp_tac t_ind >>
-  simp[EVERY_MEM,LIST_EQ_REWRITE,EL_MAP,MEM_EL,PULL_EXISTS])
+  simp[EVERY_MEM,LIST_EQ_REWRITE,EL_MAP,MEM_EL,PULL_EXISTS]
+QED
 
-val tyvars_tysubst = store_thm("tyvars_tysubst",
-  ``∀t. tyvars (tysubst s t) = (tyvars t DIFF FDOM s) ∪ BIGUNION { tyvars u | ∃x. x ∈ tyvars t ∧ FLOOKUP s x = SOME u }``,
+Theorem tyvars_tysubst:
+    ∀t. tyvars (tysubst s t) = (tyvars t DIFF FDOM s) ∪ BIGUNION { tyvars u | ∃x. x ∈ tyvars t ∧ FLOOKUP s x = SOME u }
+Proof
   ho_match_mp_tac t_ind >> simp[] >> rw[] >>
   TRY BasicProvers.CASE_TAC >>
   TRY (fs[FLOOKUP_DEF] >> NO_TAC) >> rw[] >- (
     rw[Once EXTENSION,PULL_EXISTS] ) >>
   fs[PULL_EXISTS,EVERY_MEM] >>
   fs[Once EXTENSION,PULL_EXISTS,MEM_MAP] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
-val tysubst_frees = store_thm("tysubst_frees",
-  ``∀t. (∀x. x ∈ tyvars t ⇒
+Theorem tysubst_frees:
+    ∀t. (∀x. x ∈ tyvars t ⇒
           FLOOKUP s1 x = FLOOKUP s2 x) ⇒
-        tysubst s1 t = tysubst s2 t``,
+        tysubst s1 t = tysubst s2 t
+Proof
   ho_match_mp_tac t_ind >> simp[] >>
   rw[LIST_EQ_REWRITE,EL_MAP] >>
   fs[EVERY_MEM,PULL_EXISTS,MEM_EL] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
-val tysubst_frees_gen = store_thm("tysubst_frees_gen",
-  ``∀t. (∀x. x ∈ tyvars t ⇒
+Theorem tysubst_frees_gen:
+    ∀t. (∀x. x ∈ tyvars t ⇒
           FLOOKUP (s1 ⊌ FUN_FMAP Tvar {x}) x = FLOOKUP (s2 ⊌ FUN_FMAP Tvar {x}) x) ⇒
-        tysubst s1 t = tysubst s2 t``,
+        tysubst s1 t = tysubst s2 t
+Proof
   ho_match_mp_tac t_ind >>
   conj_tac >- (
     simp[FLOOKUP_FUNION,FLOOKUP_FUN_FMAP] >>
     gen_tac >> BasicProvers.EVERY_CASE_TAC ) >>
   rw[LIST_EQ_REWRITE,EL_MAP] >>
   fs[EVERY_MEM,PULL_EXISTS,MEM_EL] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
 (* alpha-equivalence of type schemes *)
 
@@ -807,21 +845,26 @@ Definition tsaconv_def:
         raconv f tvs1 tvs2 t1 t2
 End
 
-val raconv_refl = store_thm("raconv_refl",
-  ``∀tvs t. raconv (λx. x) tvs tvs t t``,
+Theorem raconv_refl:
+    ∀tvs t. raconv (λx. x) tvs tvs t t
+Proof
   gen_tac >> ho_match_mp_tac t_ind >>
-  simp[LIST_REL_EL_EQN,EVERY_MEM,MEM_EL,PULL_EXISTS])
+  simp[LIST_REL_EL_EQN,EVERY_MEM,MEM_EL,PULL_EXISTS]
+QED
 
-val tsaconv_refl = store_thm("tsaconv_refl[simp]",
-  ``∀ts. tsaconv ts ts``,
+Theorem tsaconv_refl[simp]:
+    ∀ts. tsaconv ts ts
+Proof
   Cases >> simp[tsaconv_def] >>
   qspec_tac(`q ∩ tyvars r`,`tvs`) >> gen_tac >>
   qexists_tac`λx. x` >>
   conj_tac >- simp[BIJ_ID] >>
-  metis_tac[raconv_refl])
+  metis_tac[raconv_refl]
+QED
 
-val tsaconv_sym = store_thm("tsaconv_sym",
-  ``∀t1 t2. tsaconv t1 t2 ⇒ tsaconv t2 t1``,
+Theorem tsaconv_sym:
+    ∀t1 t2. tsaconv t1 t2 ⇒ tsaconv t2 t1
+Proof
   Cases >> Cases >> simp[tsaconv_def] >>
   qspec_tac(`q ∩ tyvars r`,`tvs1`) >> gen_tac >>
   qspec_tac(`q' ∩ tyvars r'`,`tvs2`) >> gen_tac >>
@@ -840,15 +883,17 @@ val tsaconv_sym = store_thm("tsaconv_sym",
     metis_tac[INJ_DEF]) >>
   gen_tac >> strip_tac >>
   gen_tac >> Cases >> simp[] >>
-  fs[EVERY_MEM,LIST_REL_EL_EQN,MEM_EL,PULL_EXISTS])
+  fs[EVERY_MEM,LIST_REL_EL_EQN,MEM_EL,PULL_EXISTS]
+QED
 
-val raconv_trans = store_thm("raconv_trans",
-  ``∀f1 tvs1 tvs2 t1 t2 t3.
+Theorem raconv_trans:
+    ∀f1 tvs1 tvs2 t1 t2 t3.
     BIJ f1 tvs1 tvs2 ⇒
     raconv f1 tvs1 tvs2 t1 t2 ⇒
     BIJ f2 tvs2 tvs3 ⇒
     raconv f2 tvs2 tvs3 t2 t3 ⇒
-    raconv (f2 o f1) tvs1 tvs3 t1 t3``,
+    raconv (f2 o f1) tvs1 tvs3 t1 t3
+Proof
   ho_match_mp_tac raconv_ind >>
   conj_tac >- (
     ntac 5 gen_tac >>
@@ -861,12 +906,15 @@ val raconv_trans = store_thm("raconv_trans",
     fs[LIST_REL_EL_EQN,MEM_EL,PULL_EXISTS] >>
     rw[] >> first_x_assum (match_mp_tac o MP_CANON) >>
     metis_tac[] ) >>
-  simp[])
+  simp[]
+QED
 
-val tsaconv_trans = store_thm("tsaconv_trans",
-  ``∀t1 t2 t3. tsaconv t1 t2 ∧ tsaconv t2 t3 ⇒ tsaconv t1 t3``,
+Theorem tsaconv_trans:
+    ∀t1 t2 t3. tsaconv t1 t2 ∧ tsaconv t2 t3 ⇒ tsaconv t1 t3
+Proof
   Cases >> Cases >> Cases >> rw[tsaconv_def] >> fs[LET_THM] >>
-  PROVE_TAC[raconv_trans,BIJ_COMPOSE])
+  PROVE_TAC[raconv_trans,BIJ_COMPOSE]
+QED
 
 val raconv_tyvars_eq = prove(
   ``∀f tvs1 tvs2 t1 t2.
@@ -880,36 +928,42 @@ val raconv_tyvars_eq = prove(
     metis_tac[] ) >>
   fs[BIJ_DEF,INJ_DEF] >> metis_tac[] )
 
-val tsaconv_tyvars_eq = store_thm("tsaconv_tyvars_eq",
-  ``∀t1 t2. tsaconv t1 t2 ⇒
+Theorem tsaconv_tyvars_eq:
+    ∀t1 t2. tsaconv t1 t2 ⇒
       tyvars (SND t1) DIFF (FST t1) =
-      tyvars (SND t2) DIFF (FST t2)``,
+      tyvars (SND t2) DIFF (FST t2)
+Proof
   Cases >> Cases >> simp[tsaconv_def] >>
   strip_tac >> imp_res_tac raconv_tyvars_eq >>
-  fs[EXTENSION] >> metis_tac[])
+  fs[EXTENSION] >> metis_tac[]
+QED
 
-val raconv_imp_tysubst = store_thm("raconv_imp_tysubst",
-  ``∀f tvs1 tvs2 t1 t2.
+Theorem raconv_imp_tysubst:
+    ∀f tvs1 tvs2 t1 t2.
       BIJ f tvs1 tvs2 ⇒
       FINITE tvs1 ⇒
       raconv f tvs1 tvs2 t1 t2 ⇒
-      tysubst (FUN_FMAP (Tvar o f) tvs1) t1 = t2``,
+      tysubst (FUN_FMAP (Tvar o f) tvs1) t1 = t2
+Proof
   ho_match_mp_tac raconv_ind >>
   rw[] >>
   simp[FUN_FMAP_DEF,FLOOKUP_FUN_FMAP] >>
-  fs[LIST_REL_EL_EQN,MEM_EL,PULL_EXISTS,LIST_EQ_REWRITE,EL_MAP])
+  fs[LIST_REL_EL_EQN,MEM_EL,PULL_EXISTS,LIST_EQ_REWRITE,EL_MAP]
+QED
 
-val tsaconv_imp_tysubst = store_thm("tsaconv_imp_tysubst",
-  ``∀t1 t2. tsaconv t1 t2 ⇒
+Theorem tsaconv_imp_tysubst:
+    ∀t1 t2. tsaconv t1 t2 ⇒
     FINITE (FST t1) ⇒
     ∃s. FDOM s = FST t1 ∩ tyvars (SND t1) ∧
         FRANGE s = IMAGE Tvar (FST t2 ∩ tyvars (SND t2)) ∧
-        tysubst s (SND t1) = SND t2``,
+        tysubst s (SND t1) = SND t2
+Proof
   Cases >> Cases >> simp[tsaconv_def] >> rw[] >>
   qmatch_assum_rename_tac`BIJ f (tvs1 ∩ tyvars t1) (tvs2 ∩ tyvars t2)` >>
   imp_res_tac raconv_imp_tysubst >> rfs[] >>
   qexists_tac`FUN_FMAP (Tvar o f) (tvs1 ∩ tyvars t1)` >> rw[] >>
-  fs[BIJ_DEF,IMAGE_COMPOSE,IMAGE_SURJ])
+  fs[BIJ_DEF,IMAGE_COMPOSE,IMAGE_SURJ]
+QED
 
 Theorem tysubst_imp_raconv:
   ∀f tvs1 tvs2 t1 t2.
@@ -936,13 +990,14 @@ Proof
   gs[FLOOKUP_FUN_FMAP]
 QED
 
-val tysubst_imp_aconv = store_thm("tysubst_imp_aconv",
-  ``∀f tvs1 t1 tvs2.
+Theorem tysubst_imp_aconv:
+    ∀f tvs1 t1 tvs2.
     FINITE tvs1 ∧
     BIJ f tvs1 tvs2 ∧
     DISJOINT tvs2 (tyvars t1)
     ⇒
-    tsaconv (tvs1,t1) (tvs2,tysubst (FUN_FMAP (Tvar o f) tvs1) t1)``,
+    tsaconv (tvs1,t1) (tvs2,tysubst (FUN_FMAP (Tvar o f) tvs1) t1)
+Proof
   rw[tsaconv_def] >>
   qexists_tac`f` >>
   conj_asm1_tac >- (
@@ -955,7 +1010,8 @@ val tysubst_imp_aconv = store_thm("tysubst_imp_aconv",
     match_mp_tac tysubst_frees >>
     simp[FLOOKUP_FUN_FMAP] ) >>
   fs[IN_DISJOINT,tyvars_tysubst,FLOOKUP_FUN_FMAP,PULL_EXISTS] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
 val raconv_eq = prove(
   ``∀t1 t2. raconv f ∅ ∅ t1 t2 ⇒ t1 = t2``,
@@ -967,10 +1023,12 @@ val raconv_eq = prove(
   fs[LIST_REL_EL_EQN,EVERY_MEM,MEM_EL,PULL_EXISTS] >>
   rw[LIST_EQ_REWRITE])
 
-val tsaconv_eq = store_thm("tsaconv_eq",
-  ``tsaconv ({},t1) ({},t2) ⇔ t1 = t2``,
+Theorem tsaconv_eq:
+    tsaconv ({},t1) ({},t2) ⇔ t1 = t2
+Proof
   reverse EQ_TAC >- metis_tac[tsaconv_refl] >>
-  rw[tsaconv_def] >> metis_tac[raconv_eq])
+  rw[tsaconv_def] >> metis_tac[raconv_eq]
+QED
 
 val tsaconv_empty_imp = prove(
   ``tsaconv (∅,t) ts ⇒ FST ts ∩ tyvars (SND ts) = ∅``,
@@ -978,24 +1036,27 @@ val tsaconv_empty_imp = prove(
 
 (* the typing rules respect alpha-equivalence *)
 
-val ALOOKUP_MAP_FST_EQ_MAP_SND_REL = store_thm("ALOOKUP_MAP_FST_EQ_MAP_SND_REL",
-  ``∀l1 l2 x y1.
+Theorem ALOOKUP_MAP_FST_EQ_MAP_SND_REL:
+    ∀l1 l2 x y1.
     MAP FST l1 = MAP FST l2 ∧
     LIST_REL R (MAP SND l1) (MAP SND l2) ∧
     ALOOKUP l1 x = SOME y1 ⇒
-    ∃y2. ALOOKUP l2 x = SOME y2 ∧ R y1 y2``,
+    ∃y2. ALOOKUP l2 x = SOME y2 ∧ R y1 y2
+Proof
   Induct >> simp[] >>
   Cases >> Cases >> simp[] >>
-  Cases_on`h`>>rw[] >> rw[])
+  Cases_on`h`>>rw[] >> rw[]
+QED
 
-val type_e_aconv = store_thm("type_e_aconv",
-  ``∀tenv e t. type_e tenv e t ⇒
+Theorem type_e_aconv:
+    ∀tenv e t. type_e tenv e t ⇒
       EVERY (FINITE o FST o SND) tenv ⇒
       ∀tenv'.
         EVERY (FINITE o FST o SND) tenv' ∧
         MAP FST tenv = MAP FST tenv' ∧
         LIST_REL tsaconv (MAP SND tenv) (MAP SND tenv') ⇒
-        type_e tenv' e t``,
+        type_e tenv' e t
+Proof
   ho_match_mp_tac type_e_ind >>
   conj_tac >- simp[type_e_clauses] >>
   conj_tac >- simp[type_e_clauses] >>
@@ -1075,12 +1136,14 @@ val type_e_aconv = store_thm("type_e_aconv",
     metis_tac[]) >>
   simp[type_e_clauses] >>
   rw[] >> fs[] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
-val type_v_ts_aconv = store_thm("type_v_ts_aconv",
-  ``FINITE tvs ∧
+Theorem type_v_ts_aconv:
+    FINITE tvs ∧
     type_v_ts rt et v tvs t ∧ tsaconv (tvs,t) (tvs',t') ⇒
-    type_v_ts rt et v tvs' t'``,
+    type_v_ts rt et v tvs' t'
+Proof
   rw[] >>
   imp_res_tac tsaconv_imp_tysubst >>
   rfs[] >> rw[] >>
@@ -1094,7 +1157,8 @@ val type_v_ts_aconv = store_thm("type_v_ts_aconv",
   imp_res_tac tsaconv_tyvars_eq >>
   fs[EXTENSION] >>
   fs[SUBSET_DEF] >> rw[] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
 (* a type scheme that is fresh for any finite set of variables exists *)
 
@@ -1114,11 +1178,12 @@ Theorem fresh_seq_def =
   fresh_seq_def0
   |> SIMP_RULE (std_ss++boolSimps.ETA_ss)[]
 
-val fresh_seq_thm = store_thm("fresh_seq_thm",
-  ``∀avoid n.
+Theorem fresh_seq_thm:
+    ∀avoid n.
       FINITE avoid ⇒
       fresh_seq avoid n ∉ avoid ∧
-      ∀k. k < n ⇒ fresh_seq avoid n ≠ fresh_seq avoid k``,
+      ∀k. k < n ⇒ fresh_seq avoid n ≠ fresh_seq avoid k
+Proof
   simp[fresh_seq_def] >>
   rpt gen_tac >> strip_tac >>
   Q.PAT_ABBREV_TAC`s = avoid ∪ X` >>
@@ -1126,7 +1191,8 @@ val fresh_seq_thm = store_thm("fresh_seq_thm",
   qspec_then`s`mp_tac fresh_def >>
   simp[Abbr`s`] >> rw[] >>
   fs[fresh_seq_def] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
 val ALL_DISTINCT_fresh_seq = prove(
   ``∀n avoid. FINITE avoid ⇒ ALL_DISTINCT (GENLIST (fresh_seq avoid) n)``,
@@ -1138,10 +1204,12 @@ val DISJOINT_fresh_seq = prove(
   Induct >> simp[GENLIST,LIST_TO_SET_SNOC] >>
   metis_tac[fresh_seq_thm])
 
-val BIJ_UPDATE_NOTIN = store_thm("BIJ_UPDATE_NOTIN",
-  ``BIJ f s t ∧ x ∉ s ⇒ BIJ ((x =+ y) f) s t``,
+Theorem BIJ_UPDATE_NOTIN:
+    BIJ f s t ∧ x ∉ s ⇒ BIJ ((x =+ y) f) s t
+Proof
   rw[BIJ_DEF,INJ_DEF,SURJ_DEF,combinTheory.APPLY_UPDATE_THM] >> rw[] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
 val BIJ_fresh_seq = prove(
   ``∀s. FINITE s ⇒ ∀a. FINITE a ⇒
@@ -1211,25 +1279,30 @@ Definition tssubst_def:
       t2 = tysubst (DRESTRICT s (tyvars t' DIFF tvs2)) t'
 End
 
-val tssubst_tysubst = store_thm("tssubst_tysubst",
-  ``tssubst s ({},t) ({},tysubst s t)``,
+Theorem tssubst_tysubst:
+    tssubst s ({},t) ({},tysubst s t)
+Proof
   simp[tssubst_def] >>
   qexists_tac`t` >> simp[] >>
   match_mp_tac tysubst_frees >>
-  simp[FLOOKUP_DRESTRICT])
+  simp[FLOOKUP_DRESTRICT]
+QED
 
-val tssubst_FINITE = store_thm("tssubst_FINITE",
-  ``FINITE (FST ts) ∧ tssubst s ts ts' ⇒ FINITE (FST ts')``,
+Theorem tssubst_FINITE:
+    FINITE (FST ts) ∧ tssubst s ts ts' ⇒ FINITE (FST ts')
+Proof
   Cases_on`ts`>>Cases_on`ts'`>>simp[tssubst_def] >>
-  metis_tac[FINITE_tyvars,SUBSET_FINITE])
+  metis_tac[FINITE_tyvars,SUBSET_FINITE]
+QED
 
-val tysubst_tssubst = store_thm("tysubst_tssubst",
-  ``FINITE tvs ∧
+Theorem tysubst_tssubst:
+    FINITE tvs ∧
     FDOM s ⊆ tvs ∧
     tssubst s' (tvs,t) (tvs',t')
     ⇒
     ∃s''. FDOM s'' ⊆ tvs' ∧
-          tysubst s' (tysubst s t) = tysubst s'' t'``,
+          tysubst s' (tysubst s t) = tysubst s'' t'
+Proof
   rw[tssubst_def,PULL_EXISTS] >>
   fs[tsaconv_def,LET_THM] >>
   imp_res_tac raconv_imp_tysubst >> rfs[] >> res_tac >>
@@ -1268,14 +1341,16 @@ val tysubst_tssubst = store_thm("tysubst_tssubst",
   simp[FLOOKUP_FUNION,FLOOKUP_FUN_FMAP,FLOOKUP_f_o_f,FLOOKUP_o_f] >>
   rw[] >>
   fs[IN_FRANGE_FLOOKUP,FLOOKUP_DRESTRICT,PULL_EXISTS,IN_DISJOINT] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
-val tssubst_frees = store_thm("tssubst_frees",
-  ``FINITE (FST ts) ∧
+Theorem tssubst_frees:
+    FINITE (FST ts) ∧
     (∀x. x ∈ tyvars (SND ts) DIFF (FST ts) ⇒
          FLOOKUP s1 x = FLOOKUP s2 x) ∧
     tssubst s1 ts ts' ⇒
-    tssubst s2 ts ts'``,
+    tssubst s2 ts ts'
+Proof
   map_every Cases_on[`ts`,`ts'`] >>
   rw[tssubst_def,PULL_EXISTS] >>
   first_assum(match_exists_tac o concl) >>
@@ -1285,10 +1360,12 @@ val tssubst_frees = store_thm("tssubst_frees",
     fs[IN_FRANGE_FLOOKUP,FLOOKUP_DRESTRICT,PULL_EXISTS] >>
     metis_tac[] ) >>
   match_mp_tac tysubst_frees >>
-  simp[FLOOKUP_DRESTRICT])
+  simp[FLOOKUP_DRESTRICT]
+QED
 
-val tssubst_exists = store_thm("tssubst_exists",
-  ``∀s ts. FINITE (FST ts) ⇒ ∃ts'. tssubst s ts ts'``,
+Theorem tssubst_exists:
+    ∀s ts. FINITE (FST ts) ⇒ ∃ts'. tssubst s ts ts'
+Proof
   rw[EXISTS_PROD] >>
   `∃tvs t. ts = (tvs,t)` by metis_tac[PAIR] >>
   rw[tssubst_def,PULL_EXISTS] >>
@@ -1301,7 +1378,8 @@ val tssubst_exists = store_thm("tssubst_exists",
   first_assum(match_exists_tac o concl) >>
   simp[IN_FRANGE_FLOOKUP,tyvars_tysubst,PULL_EXISTS,FLOOKUP_DRESTRICT,FDOM_DRESTRICT] >>
   fs[SUBSET_DEF,IN_DISJOINT,Abbr`a`,PULL_EXISTS,IN_FRANGE_FLOOKUP] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
 Definition tenv_subst_def:
   tenv_subst s tenv tenv' ⇔
@@ -1309,15 +1387,18 @@ Definition tenv_subst_def:
     LIST_REL (tssubst s) (MAP SND tenv) (MAP SND tenv')
 End
 
-val tenv_subst_cons = store_thm("tenv_subst_cons",
-  ``tenv_subst s tenv tenv' ∧
+Theorem tenv_subst_cons:
+    tenv_subst s tenv tenv' ∧
     tssubst s ts ts'
-    ⇒ tenv_subst s ((x,ts)::tenv) ((x,ts')::tenv')``,
-  rw[tenv_subst_def])
+    ⇒ tenv_subst s ((x,ts)::tenv) ((x,ts')::tenv')
+Proof
+  rw[tenv_subst_def]
+QED
 
-val tenv_subst_exists = store_thm("tenv_subst_exists",
-  ``EVERY (FINITE o FST o SND) tenv ⇒
-    ∃tenv'. tenv_subst s tenv tenv'``,
+Theorem tenv_subst_exists:
+    EVERY (FINITE o FST o SND) tenv ⇒
+    ∃tenv'. tenv_subst s tenv tenv'
+Proof
   rw[tenv_subst_def] >>
   simp[exists_list_GENLIST] >>
   qexists_tac`LENGTH tenv` >>
@@ -1326,26 +1407,30 @@ val tenv_subst_exists = store_thm("tenv_subst_exists",
   simp[LIST_REL_EL_EQN] >> rw[] >>
   SELECT_ELIM_TAC >> simp[] >>
   fs[EVERY_MEM,MEM_EL,PULL_EXISTS] >>
-  metis_tac[tssubst_exists])
+  metis_tac[tssubst_exists]
+QED
 
-val tyvars_tssubst_eq = store_thm("tyvars_tssubst_eq",
-  ``tssubst s ts (bvs,b) ⇒ FINITE (FST ts) ⇒
+Theorem tyvars_tssubst_eq:
+    tssubst s ts (bvs,b) ⇒ FINITE (FST ts) ⇒
     tyvars b DIFF bvs =
       (tyvars (SND ts) DIFF (FST ts ∪ FDOM s)) ∪
-      BIGUNION (IMAGE tyvars (FRANGE (DRESTRICT s (tyvars (SND ts) DIFF (FST ts)))))``,
+      BIGUNION (IMAGE tyvars (FRANGE (DRESTRICT s (tyvars (SND ts) DIFF (FST ts)))))
+Proof
   `∃tvs t. ts = (tvs,t)` by metis_tac[PAIR] >>
   simp[tssubst_def,PULL_EXISTS] >> rw[] >>
   simp[Once EXTENSION,PULL_EXISTS,tyvars_tysubst,FLOOKUP_DRESTRICT,FDOM_DRESTRICT,IN_FRANGE_FLOOKUP] >>
   imp_res_tac tsaconv_tyvars_eq >> fs[] >>
   fs[tyvars_tysubst,SUBSET_DEF,PULL_EXISTS,FDOM_DRESTRICT,FLOOKUP_DRESTRICT,EXTENSION,IN_FRANGE_FLOOKUP,IN_DISJOINT] >>
-  metis_tac[] )
+  metis_tac[]
+QED
 
-val tenv_vars_tenv_subst_eq = store_thm("tenv_vars_tenv_subst_eq",
-  ``EVERY (FINITE o FST o SND) tenv ⇒
+Theorem tenv_vars_tenv_subst_eq:
+    EVERY (FINITE o FST o SND) tenv ⇒
     tenv_subst s tenv tenv' ⇒
     tenv_vars tenv' =
     (tenv_vars tenv DIFF FDOM s) ∪
-      BIGUNION (IMAGE tyvars (FRANGE (DRESTRICT s (tenv_vars tenv))))``,
+      BIGUNION (IMAGE tyvars (FRANGE (DRESTRICT s (tenv_vars tenv))))
+Proof
   qid_spec_tac`tenv'` >>
   Induct_on`tenv` >- simp[tenv_subst_def,tenv_vars_def,DRESTRICT_IS_FEMPTY] >>
   simp[FORALL_PROD] >>
@@ -1361,12 +1446,14 @@ val tenv_vars_tenv_subst_eq = store_thm("tenv_vars_tenv_subst_eq",
   fs[Once EXTENSION,PULL_EXISTS] >>
   fs[IN_FRANGE_FLOOKUP,FLOOKUP_DRESTRICT,PULL_EXISTS] >>
   `∀k v. FLOOKUP s k = SOME v ⇒ k ∈ FDOM s` by simp[FLOOKUP_DEF] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
-val tssubst_id = store_thm("tssubst_id",
-  ``FST ts ⊆ tyvars (SND ts) ∧
+Theorem tssubst_id:
+    FST ts ⊆ tyvars (SND ts) ∧
     DISJOINT (FDOM s) (tyvars (SND ts) DIFF (FST ts))
-    ⇒ tssubst s ts ts``,
+    ⇒ tssubst s ts ts
+Proof
   Cases_on`ts`>>simp[tssubst_def] >> rw[] >>
   qexists_tac`r` >> rw[] >- (
     fs[IN_FRANGE_FLOOKUP,FLOOKUP_DRESTRICT,IN_DISJOINT] >>
@@ -1375,13 +1462,15 @@ val tssubst_id = store_thm("tssubst_id",
     simp[FLOOKUP_EXT,FUN_EQ_THM,FLOOKUP_DRESTRICT] >>
     fs[IN_DISJOINT,FLOOKUP_DEF] >>
     metis_tac[] ) >>
-  rw[])
+  rw[]
+QED
 
-val tenv_subst_id = store_thm("tenv_subst_id",
-  ``EVERY (λ(tvs,t). tvs ⊆ tyvars t) (MAP SND tenv) ∧
+Theorem tenv_subst_id:
+    EVERY (λ(tvs,t). tvs ⊆ tyvars t) (MAP SND tenv) ∧
     DISJOINT (FDOM s) (tenv_vars tenv)
     ⇒
-    tenv_subst s tenv tenv``,
+    tenv_subst s tenv tenv
+Proof
   Induct_on`tenv`>-simp[tenv_subst_def] >>
   Cases >> rw[] >> fs[] >>
   match_mp_tac tenv_subst_cons >>
@@ -1392,7 +1481,8 @@ val tenv_subst_id = store_thm("tenv_subst_id",
     metis_tac[] ) >>
   match_mp_tac tssubst_id >>
   fs[IN_DISJOINT] >>
-  metis_tac[])
+  metis_tac[]
+QED
 
 (* lemmas about type environment and its relationship to value environment *)
 
@@ -1904,8 +1994,8 @@ QED
 
 val eval_strongind = theorem"eval_strongind";
 
-val eval_type_soundness = Q.store_thm("eval_type_soundness",
-  `∀env s e res. eval env s e res ⇒
+Theorem eval_type_soundness:
+   ∀env s e res. eval env s e res ⇒
      ∀tenv t rt et r s'.
        type_e tenv e t ∧
        LIST_REL (type_v rt et) s.refs rt ∧
@@ -1922,7 +2012,8 @@ val eval_type_soundness = Q.store_thm("eval_type_soundness",
          | Rraise n v' =>
              n < LENGTH (et++et') ∧
              type_v (rt++rt') (et++et') v' (EL n (et++et'))
-         | _ => F`,
+         | _ => F
+Proof
   ho_match_mp_tac eval_strongind >>
   (* Lit *)
   conj_tac >- ( simp[sem_def,type_v_clauses,type_e_clauses,LENGTH_NIL] >> metis_tac[APPEND_NIL]) >>
@@ -2258,5 +2349,6 @@ val eval_type_soundness = Q.store_thm("eval_type_soundness",
   disch_then(fn th => first_assum(mp_tac o MATCH_MP th)) >> rw[] >>
   full_simp_tac std_ss [GSYM APPEND_ASSOC] >>
   first_assum(match_exists_tac o concl) >> simp[] >>
-  BasicProvers.CASE_TAC >> fs[] >> simp[])
+  BasicProvers.CASE_TAC >> fs[] >> simp[]
+QED
 

@@ -4,7 +4,7 @@ Ancestors
 
 val _ = ParseExtras.temp_loose_equality()
 
-val _ = Datatype`
+Datatype:
   ltl_frml
   = VAR 'a
   | N_VAR 'a
@@ -12,7 +12,8 @@ val _ = Datatype`
   | CONJ ltl_frml ltl_frml
   | X ltl_frml
   | U ltl_frml ltl_frml
-  | R ltl_frml ltl_frml`;
+  | R ltl_frml ltl_frml
+End
 
 Definition MODELS_def:
      (MODELS w (VAR a) = (a IN (at w 0)))
@@ -26,11 +27,11 @@ Definition MODELS_def:
         !n. (MODELS (suff w n) f2) \/ ?i. (i < n) /\ (MODELS (suff w i) f1))
 End
 
-val R_COND_LEMM = store_thm
-  ("R_COND_LEMM",
-   ``!w f1 f2. (!n. (MODELS (suff w n) f2) \/ ?i. (i < n) /\ (MODELS (suff w i) f1))
+Theorem R_COND_LEMM:
+     !w f1 f2. (!n. (MODELS (suff w n) f2) \/ ?i. (i < n) /\ (MODELS (suff w i) f1))
       = ((!n. MODELS (suff w n) f2) \/
-         ?n. MODELS (suff w n) f1 /\ !i. i <= n ==> MODELS (suff w i) f2)``,
+         ?n. MODELS (suff w n) f1 /\ !i. i <= n ==> MODELS (suff w i) f2)
+Proof
    rpt strip_tac >> rw[EQ_IMP_THM]
     >- (Cases_on `!n. MODELS (suff w n) f2` >> fs[]
         >> qabbrev_tac `N = LEAST n. ~MODELS (suff w n) f2`
@@ -47,7 +48,7 @@ val R_COND_LEMM = store_thm
       >- metis_tac[]
       >- (`n < n'` by simp[] >> metis_tac[])
        )
-  );
+QED
 
 Definition TRUE_def:   TRUE = DISJ (VAR ARB) (N_VAR ARB)
 End
@@ -70,18 +71,19 @@ Definition subForms_def:
     /\ (subForms (R f1 f2) = {R f1 f2} ∪ (subForms f1) ∪ (subForms f2))
 End
 
-val SUBFORMS_REFL = store_thm
-  ("SUBFORMS_REFL",
-   ``!f. f ∈ subForms f``,
-   Induct_on `f` >> simp[subForms_def]);
+Theorem SUBFORMS_REFL:
+     !f. f ∈ subForms f
+Proof
+   Induct_on `f` >> simp[subForms_def]
+QED
 
-val SUBFORMS_TRANS = store_thm
-  ("SUBFORMS_TRANS",
-  ``!f1 f2 f3. f1 ∈ subForms f2 /\ f2 ∈ subForms f3 ==> f1 ∈ subForms f3``,
+Theorem SUBFORMS_TRANS:
+    !f1 f2 f3. f1 ∈ subForms f2 /\ f2 ∈ subForms f3 ==> f1 ∈ subForms f3
+Proof
   Induct_on `f3` >> rpt strip_tac >> dsimp[] >> fs[subForms_def, UNION_DEF]
   >> fs[subForms_def, UNION_DEF]
   >> metis_tac[]
-  );
+QED
 
 Definition no_tmp_op_def:
  (no_tmp_op (VAR a) = 1)
@@ -93,13 +95,14 @@ Definition no_tmp_op_def:
     /\ (no_tmp_op (R f1 f2) =(no_tmp_op f1) + (no_tmp_op f2) +1)
 End
 
-val NO_TMP_LEMM = store_thm
-  ("NO_TMP_LEMM", ``!f. no_tmp_op f >= 1``,
-    Induct_on `f` >> simp[no_tmp_op_def]);
+Theorem NO_TMP_LEMM:   !f. no_tmp_op f >= 1
+Proof
+    Induct_on `f` >> simp[no_tmp_op_def]
+QED
 
-val TMP_OP_DECR_WITH_SF = store_thm
-  ("TMP_OP_DECR_WITH_SF",
-   ``!f f'. (f' ∈ subForms f ==> (no_tmp_op f' <= no_tmp_op f))``,
+Theorem TMP_OP_DECR_WITH_SF:
+     !f f'. (f' ∈ subForms f ==> (no_tmp_op f' <= no_tmp_op f))
+Proof
    Induct_on `f` >> fs[subForms_def, no_tmp_op_def] >> rpt strip_tac
    >> simp[no_tmp_op_def]
    >- (`no_tmp_op f'' <= no_tmp_op f` by metis_tac[] >> simp[])
@@ -111,11 +114,11 @@ val TMP_OP_DECR_WITH_SF = store_thm
    >- (`no_tmp_op f'' <= no_tmp_op f'` by metis_tac[] >> simp[])
    >- (`no_tmp_op f'' <= no_tmp_op f` by metis_tac[] >> simp[])
    >- (`no_tmp_op f'' <= no_tmp_op f'` by metis_tac[] >> simp[])
-  );
+QED
 
-val TMP_OP_EQ_LEMM = store_thm
-  ("TMP_OP_EQ_LEMM",
-   ``!f g. f ∈ subForms g ∧ (no_tmp_op f = no_tmp_op g) ==> (f = g)``,
+Theorem TMP_OP_EQ_LEMM:
+     !f g. f ∈ subForms g ∧ (no_tmp_op f = no_tmp_op g) ==> (f = g)
+Proof
    Induct_on `g` >> fs[] >> rpt strip_tac
    >> fs[subForms_def, no_tmp_op_def]
    >- (`no_tmp_op f <= no_tmp_op g` by metis_tac[TMP_OP_DECR_WITH_SF]
@@ -135,11 +138,11 @@ val TMP_OP_EQ_LEMM = store_thm
                                     >> fs[])
    >- (`no_tmp_op f <= no_tmp_op g'` by metis_tac[TMP_OP_DECR_WITH_SF]
                                      >> fs[])
-  );
+QED
 
-val SF_ANTISYM_LEMM = store_thm
-  ("SF_ANTISYM_LEMM",
-   ``!f1 f2. (f1 ∈ subForms f2) /\ (f2 ∈ subForms f1) ==> (f1 = f2)``,
+Theorem SF_ANTISYM_LEMM:
+     !f1 f2. (f1 ∈ subForms f2) /\ (f2 ∈ subForms f1) ==> (f1 = f2)
+Proof
    Induct_on `f1` >> simp[subForms_def] >> rpt strip_tac >> simp[]
    >> `!f1 f2. (f1 ∈ subForms f2) ==> (no_tmp_op f1 <= no_tmp_op f2)`
         by metis_tac[TMP_OP_DECR_WITH_SF]
@@ -183,7 +186,7 @@ val SF_ANTISYM_LEMM = store_thm
        >> `no_tmp_op (R f1 f1') <= no_tmp_op f2` by metis_tac[TMP_OP_DECR_WITH_SF]
        >> fs[no_tmp_op_def]
       )
-  );
+QED
 
 Definition is_until_def:
    (is_until (U f1 f2) = T)
@@ -211,9 +214,9 @@ Definition TSF_def:
   TSF (x,y) = x ∈ tempSubForms y
 End
 
-val TSF_REFL = store_thm
-  ("TSF_REFL",
-   ``!f. reflexive (rrestrict TSF (tempSubForms f)) (tempSubForms f)``,
+Theorem TSF_REFL:
+     !f. reflexive (rrestrict TSF (tempSubForms f)) (tempSubForms f)
+Proof
    fs[reflexive_def, rrestrict_def, TSF_def]
    >> Induct_on `f` >> fs[IN_DEF, TSF_def, tempSubForms_def] >> rpt strip_tac >> fs[]
    >- (`x ∈ tempSubForms x` suffices_by metis_tac[tempSubForms_def,IN_DEF]
@@ -222,28 +225,28 @@ val TSF_REFL = store_thm
        >> metis_tac[IN_DEF])
    >- (`!f1 f2. (R f1 f2) ∈ tempSubForms (R f1 f2)` by rw[tempSubForms_def]
        >> metis_tac[IN_DEF])
-);
+QED
 
-val TSF_SF_TRANS_LEMM = store_thm
-  ("TSF_SF_TRANS_LEMM",
-   ``!f1 f2 f3. f1 ∈ tempSubForms f2 /\ f2 ∈ subForms f3 ==> f1 ∈ tempSubForms f3``,
+Theorem TSF_SF_TRANS_LEMM:
+     !f1 f2 f3. f1 ∈ tempSubForms f2 /\ f2 ∈ subForms f3 ==> f1 ∈ tempSubForms f3
+Proof
    Induct_on `f3` >> rpt strip_tac >> fs[tempSubForms_def, subForms_def]
    >> fs[tempSubForms_def] >> metis_tac[]
-  );
+QED
 
-val TSF_IMPL_SF = store_thm
-  ("TSF_IMPL_SF",
-   ``!f g. f ∈ tempSubForms g ==> f ∈ subForms g``,
+Theorem TSF_IMPL_SF:
+     !f g. f ∈ tempSubForms g ==> f ∈ subForms g
+Proof
    Induct_on `g` >> rpt strip_tac >> fs[tempSubForms_def, subForms_def]
-  );
+QED
 
-val TSF_TRANS_LEMM = store_thm
-  ("TSF_TRANS_LEMM",
-   ``transitive TSF``,
+Theorem TSF_TRANS_LEMM:
+     transitive TSF
+Proof
    simp[transitive_def,IN_DEF,TSF_def,tempSubForms_def]
    >> `!x y. tempSubForms x y = (y ∈ tempSubForms x)` by metis_tac[IN_DEF]
    >> Induct_on `z` >> dsimp[tempSubForms_def] >> metis_tac[]
-  );
+QED
 
 (* val TSF_TRANS_LEMM2 = store_thm *)
 (*   ("TSF_TRANS_LEMM2", *)
@@ -252,34 +255,34 @@ val TSF_TRANS_LEMM = store_thm
 (* ) *)
 
 
-val TSF_TRANS = store_thm
-  ("TSF_TRANS",
-  ``!f. transitive (rrestrict TSF (tempSubForms f))``,
+Theorem TSF_TRANS:
+    !f. transitive (rrestrict TSF (tempSubForms f))
+Proof
   metis_tac[RRESTRICT_TRANS, TSF_TRANS_LEMM]
-  );
+QED
 
-val TSF_FINITE = store_thm
-  ("TSF_FINITE",
-   ``!f. FINITE (tempSubForms f)``,
+Theorem TSF_FINITE:
+     !f. FINITE (tempSubForms f)
+Proof
     Induct_on `f` >> fs[tempSubForms_def] >> strip_tac
-  );
+QED
 
-val TSF_ANTISYM_LEMM = store_thm
-  ("TSF_ANTISYM_LEMM",
-   ``!f1 f2. (f1 ∈ tempSubForms f2) /\ (f2 ∈ tempSubForms f1) ==> (f1 = f2)``,
+Theorem TSF_ANTISYM_LEMM:
+     !f1 f2. (f1 ∈ tempSubForms f2) /\ (f2 ∈ tempSubForms f1) ==> (f1 = f2)
+Proof
    rpt strip_tac >> metis_tac[TSF_IMPL_SF, SF_ANTISYM_LEMM]
-  );
+QED
 
-val TSF_ANTISYM = store_thm
-  ("TSF_ANTISYM",
-   ``!f. antisym (rrestrict TSF (tempSubForms f))``,
+Theorem TSF_ANTISYM:
+     !f. antisym (rrestrict TSF (tempSubForms f))
+Proof
    `antisym TSF` suffices_by metis_tac[RRESTRICT_ANTISYM]
    >> fs[TSF_def, antisym_def,IN_DEF] >> metis_tac[TSF_ANTISYM_LEMM,IN_DEF]
-  );
+QED
 
-val TSF_PO = store_thm
-  ("TSF_PO",
-  ``!f. partial_order (rrestrict TSF (tempSubForms f)) (tempSubForms f)``,
+Theorem TSF_PO:
+    !f. partial_order (rrestrict TSF (tempSubForms f)) (tempSubForms f)
+Proof
   fs[partial_order_def]
   >> rpt strip_tac
     >- (fs[domain_def, SUBSET_DEF, rrestrict_def] >> rpt strip_tac)
@@ -287,11 +290,11 @@ val TSF_PO = store_thm
     >- metis_tac[TSF_TRANS]
     >- metis_tac[TSF_REFL]
     >- metis_tac[TSF_ANTISYM]
-  );
+QED
 
-val STRICT_TSF_WF = store_thm
-  ("STRICT_TSF_WF",
-  ``WF (λf1 f2. f1 ∈ tempSubForms f2 ∧ ~(f1 = f2))``,
+Theorem STRICT_TSF_WF:
+    WF (λf1 f2. f1 ∈ tempSubForms f2 ∧ ~(f1 = f2))
+Proof
   rw[WF_IFF_WELLFOUNDED] >> simp[wellfounded_def] >> rpt strip_tac
   >> CCONTR_TAC >> fs[]
   >> `!n. no_tmp_op (f (SUC n)) < no_tmp_op (f n)` by (
@@ -308,17 +311,19 @@ val STRICT_TSF_WF = store_thm
   )
   >> `~wellfounded (inv_image ($<) (no_tmp_op o f))` by fs[inv_image_def]
   >> metis_tac[WF_LESS,WF_inv_image,WF_IFF_WELLFOUNDED]
-  );
+QED
 
-val DISJ_TEMP_SUBF = store_thm
-  ("DISJ_TEMP_SUBF",
-   ``!f f1 f2. ~(DISJ f1 f2 ∈ tempSubForms f)``,
-   Induct_on `f` >> simp[tempSubForms_def]);
+Theorem DISJ_TEMP_SUBF:
+     !f f1 f2. ~(DISJ f1 f2 ∈ tempSubForms f)
+Proof
+   Induct_on `f` >> simp[tempSubForms_def]
+QED
 
-val CONJ_TEMP_SUBF = store_thm
-  ("CONJ_TEMP_SUBF",
-   ``!f f1 f2. ~(CONJ f1 f2 ∈ tempSubForms f)``,
-    Induct_on `f` >> simp[tempSubForms_def]);
+Theorem CONJ_TEMP_SUBF:
+     !f f1 f2. ~(CONJ f1 f2 ∈ tempSubForms f)
+Proof
+    Induct_on `f` >> simp[tempSubForms_def]
+QED
 
 
 (*
@@ -337,15 +342,15 @@ Definition tempDNF_def:
  /\ (tempDNF (R f1 f2) = {{R f1 f2}})
 End
 
-val TEMPDNF_NOT_EMPTY = store_thm
-  ("TEMPDNF_NOT_EMPTY",
-   ``!f qs. qs ∈ tempDNF f ==> ~(qs = {})``,
+Theorem TEMPDNF_NOT_EMPTY:
+     !f qs. qs ∈ tempDNF f ==> ~(qs = {})
+Proof
    Induct_on `f` >> fs[tempDNF_def]
-  );
+QED
 
-val TEMPDNF_TEMPSUBF = store_thm
-  ("TEMPDNF_TEMPSUBF",
-   ``!f s. (s ∈ tempDNF f) ==> (s ⊆ tempSubForms f)``,
+Theorem TEMPDNF_TEMPSUBF:
+     !f s. (s ∈ tempDNF f) ==> (s ⊆ tempSubForms f)
+Proof
    Induct_on `f` >> simp[tempSubForms_def, tempDNF_def]
    >- (strip_tac >> ASM_CASES_TAC ``s ∈ tempDNF f`` >> simp[]
        >- (`tempSubForms f ⊆ tempSubForms f ∪ tempSubForms f'`
@@ -362,7 +367,7 @@ val TEMPDNF_TEMPSUBF = store_thm
        >> `f''' ⊆ tempSubForms f'` by metis_tac[]
        >> fs[SUBSET_DEF]
        >> rpt strip_tac >> metis_tac[])
-  );
+QED
 
 (*
   LTL language
@@ -383,31 +388,35 @@ End
 Definition W1_def:   W1 = WORD (\x. {x})
 End
 
-val EX1 = store_thm
- ("EX1", ``(MODELS W1 TRUE)``,  fs[MODELS_def,TRUE_def]);
+Theorem EX1:   (MODELS W1 TRUE)
+Proof  fs[MODELS_def,TRUE_def]
+QED
 
-val EX2 = store_thm
- ("EX2", ``MODELS W1 (VAR 0)``, simp[MODELS_def, at_def, W1_def]);
+Theorem EX2:   MODELS W1 (VAR 0)
+Proof simp[MODELS_def, at_def, W1_def]
+QED
 
-val EX3 = store_thm
- ("EX3",``MODELS W1 (U TRUE (VAR 23))``,
-  simp [MODELS_def, TRUE_def, suff_def, at_def, W1_def]);
+Theorem EX3:  MODELS W1 (U TRUE (VAR 23))
+Proof
+  simp [MODELS_def, TRUE_def, suff_def, at_def, W1_def]
+QED
 
-val EX4 = store_thm
-  ("EX4",``!x. ?y. MODELS (suff W1 x) (U (VAR x) (VAR y))``,
+Theorem EX4:  !x. ?y. MODELS (suff W1 x) (U (VAR x) (VAR y))
+Proof
    simp [MODELS_def, suff_def, at_def, W1_def] >> rpt strip_tac
      >> exists_tac ``0`` >> simp[]
-  );
+QED
 
 (* Full LTL *)
 
-val _ = Datatype`
+Datatype:
   full_ltl_frml
   = F_VAR 'a
   | F_CONJ full_ltl_frml full_ltl_frml
   | F_NEG full_ltl_frml
   | F_X full_ltl_frml
-  | F_U full_ltl_frml full_ltl_frml`;
+  | F_U full_ltl_frml full_ltl_frml
+End
 
 Definition FLTL_MODELS_def:
        (FLTL_MODELS w (F_VAR a) = (a ∈ (at w 0)))
@@ -430,18 +439,18 @@ Definition NNF_def:
   ∧ (NNF (F_U f1 f2) = U (NNF f1) (NNF f2))
 End
 
-val NNF_NEG_LEMM = store_thm
-  ("NNF_NEG_LEMM",
-   ``!f w. MODELS w (NNF (F_NEG f)) = ~MODELS w (NNF f)``,
+Theorem NNF_NEG_LEMM:
+     !f w. MODELS w (NNF (F_NEG f)) = ~MODELS w (NNF f)
+Proof
    Induct_on `f` >> fs[MODELS_def, NNF_def]
-  );
+QED
 
-val NNF_THM = store_thm
-  ("NNF_THM",
-   ``!f w. FLTL_MODELS w f = MODELS w (NNF f)``,
+Theorem NNF_THM:
+     !f w. FLTL_MODELS w f = MODELS w (NNF f)
+Proof
    Induct_on `f` >> fs[FLTL_MODELS_def, MODELS_def, NNF_def]
    >> metis_tac[NNF_NEG_LEMM]
-  );
+QED
 
 Definition LTL_FALSE_def[nocompute]:
   LTL_FALSE p  = F_CONJ (F_VAR p) (F_NEG (F_VAR p))

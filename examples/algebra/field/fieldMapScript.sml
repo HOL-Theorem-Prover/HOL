@@ -293,10 +293,11 @@ val _ = overload_on("F_*", ``f_*.carrier``);
 
 (* Theorem: (r ~~~ r_) f ==> (f #0 = #0_) *)
 (* Proof:by FieldHomo_def, ring_homo_zero. *)
-val field_homo_zero = store_thm(
-  "field_homo_zero",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> (f #0 = #0_)``,
-  rw[FieldHomo_def, ring_homo_zero]);
+Theorem field_homo_zero:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> (f #0 = #0_)
+Proof
+  rw[FieldHomo_def, ring_homo_zero]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> (f #1 = #1_) *)
 (* Proof:by FieldHomo_def, ring_homo_one. *)
@@ -314,105 +315,119 @@ QED
 
 (* Theorem: FieldHomo f r r_ ==> !x. x IN R ==> f x IN R_ *)
 (* Proof: by FieldHomo_def, ring_homo_element. *)
-val field_homo_element = store_thm(
-  "field_homo_element",
-  ``!(r:'a field) (r_:'b field) f.
-     FieldHomo f r r_ ==> !x. x IN R ==> f x IN R_``,
-  metis_tac[FieldHomo_def, ring_homo_element]);
+Theorem field_homo_element:
+    !(r:'a field) (r_:'b field) f.
+     FieldHomo f r r_ ==> !x. x IN R ==> f x IN R_
+Proof
+  metis_tac[FieldHomo_def, ring_homo_element]
+QED
 
 (* Theorem: FieldHomo f r r_ <=> RingHomo f r r_ *)
 (* Proof: by FieldHomo_def *)
-val field_homo_eq_ring_homo = store_thm(
-  "field_homo_eq_ring_homo",
-  ``!(r:'a field) (r_:'b field) f. FieldHomo f r r_ <=> RingHomo f r r_``,
-  rw[FieldHomo_def]);
+Theorem field_homo_eq_ring_homo:
+    !(r:'a field) (r_:'b field) f. FieldHomo f r r_ <=> RingHomo f r r_
+Proof
+  rw[FieldHomo_def]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> (r ~r~ r_) f *)
 (* Proof: by FieldHomo_def, field_is_ring *)
-val field_homo_is_ring_homo = store_thm(
-  "field_homo_is_ring_homo",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> (r ~r~ r_) f``,
-  rw_tac std_ss[FieldHomo_def, field_is_ring]);
+Theorem field_homo_is_ring_homo:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> (r ~r~ r_) f
+Proof
+  rw_tac std_ss[FieldHomo_def, field_is_ring]
+QED
 
 (* Theorem: Field r /\ FieldHomo f r r_ ==>
             !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y)) *)
 (* Proof: by FieldHomo_def, ring_homo_property. *)
-val field_homo_property = store_thm(
-  "field_homo_property",
-  ``!(r:'a field) (r_:'b field) f. Field r /\ FieldHomo f r r_ ==>
-    !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y))``,
-  rw[FieldHomo_def, ring_homo_property]);
+Theorem field_homo_property:
+    !(r:'a field) (r_:'b field) f. Field r /\ FieldHomo f r r_ ==>
+    !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y))
+Proof
+  rw[FieldHomo_def, ring_homo_property]
+QED
 
 (* Theorem: Field r /\ Field r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (FieldHomo f1 r r_ = FieldHomo f2 r r_) *)
 (* Proof: by FieldHomo_def, field_is_ring, ring_homo_cong. *)
-val field_homo_cong = store_thm(
-  "field_homo_cong",
-  ``!(r:'a field) (r_:'b field) f1 f2. Field r /\ Field r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==>
-                 (FieldHomo f1 r r_ = FieldHomo f2 r r_)``,
-  metis_tac[FieldHomo_def, field_is_ring, ring_homo_cong]);
+Theorem field_homo_cong:
+    !(r:'a field) (r_:'b field) f1 f2. Field r /\ Field r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==>
+                 (FieldHomo f1 r r_ = FieldHomo f2 r r_)
+Proof
+  metis_tac[FieldHomo_def, field_is_ring, ring_homo_cong]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) *)
 (* Proof: by FieldHomo_def, ring_homo_add. *)
-val field_homo_add = store_thm(
-  "field_homo_add",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y))``,
-  rw[FieldHomo_def, ring_homo_add]);
+Theorem field_homo_add:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y))
+Proof
+  rw[FieldHomo_def, ring_homo_add]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y)) *)
 (* Proof: by FieldHomo_def, ring_homo_mult. *)
-val field_homo_mult = store_thm(
-  "field_homo_mult",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y))``,
-  rw[FieldHomo_def, ring_homo_mult]);
+Theorem field_homo_mult:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y))
+Proof
+  rw[FieldHomo_def, ring_homo_mult]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x)) *)
 (* Proof: by FieldHomo_def and ring_homo_neg. *)
-val field_homo_neg = store_thm(
-  "field_homo_neg",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x))``,
-  rw[FieldHomo_def, ring_homo_neg]);
+Theorem field_homo_neg:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x))
+Proof
+  rw[FieldHomo_def, ring_homo_neg]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x - y) = (f x) -_ (f y)) *)
 (* Proof: by FieldHomo_def, ring_homo_sub. *)
-val field_homo_sub = store_thm(
-  "field_homo_sub",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x - y) = (f x) -_ (f y))``,
-  rw[FieldHomo_def, ring_homo_sub]);
+Theorem field_homo_sub:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x y. x IN R /\ y IN R ==> (f (x - y) = (f x) -_ (f y))
+Proof
+  rw[FieldHomo_def, ring_homo_sub]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> !n. f ##n = ##_ #1_ n *)
 (* Proof: by FieldHomo_def and ring_homo_num. *)
-val field_homo_num = store_thm(
-  "field_homo_num",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !n. f ##n = ##_ #1_ n``,
-  rw[FieldHomo_def, ring_homo_num]);
+Theorem field_homo_num:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !n. f ##n = ##_ #1_ n
+Proof
+  rw[FieldHomo_def, ring_homo_num]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n *)
 (* Proof: by FieldHomo_def and ring_homo_exp. *)
-val field_homo_exp = store_thm(
-  "field_homo_exp",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n``,
-  rw[FieldHomo_def, ring_homo_exp]);
+Theorem field_homo_exp:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n
+Proof
+  rw[FieldHomo_def, ring_homo_exp]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> !x. unit x ==> unit_ (f x) *)
 (* Proof: by field_homo_is_ring_homo, ring_homo_unit *)
-val field_homo_unit = store_thm(
-  "field_homo_unit",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. unit x ==> unit_ (f x)``,
-  metis_tac[field_homo_is_ring_homo, ring_homo_unit]);
+Theorem field_homo_unit:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. unit x ==> unit_ (f x)
+Proof
+  metis_tac[field_homo_is_ring_homo, ring_homo_unit]
+QED
 
 (* Theorem: FieldHomo I r r *)
 (* Proof: by FieldHomo_def, ring_homo_I_refl. *)
-val field_homo_I_refl = store_thm(
-  "field_homo_I_refl",
-  ``!r:'a field. FieldHomo I r r``,
-  rw[FieldHomo_def, ring_homo_I_refl]);
+Theorem field_homo_I_refl:
+    !r:'a field. FieldHomo I r r
+Proof
+  rw[FieldHomo_def, ring_homo_I_refl]
+QED
 
 (* Theorem: FieldHomo f1 r s /\ FieldHomo f2 s t ==> FieldHomo f2 o f1 r t *)
 (* Proof: by FieldHomo_def, and ring_homo_trans. *)
-val field_homo_trans = store_thm(
-  "field_homo_trans",
-  ``!(r:'a field) (s:'b field) (t:'c field). !f1 f2. FieldHomo f1 r s /\ FieldHomo f2 s t ==> FieldHomo (f2 o f1) r t``,
-  metis_tac[FieldHomo_def, ring_homo_trans]);
+Theorem field_homo_trans:
+    !(r:'a field) (s:'b field) (t:'c field). !f1 f2. FieldHomo f1 r s /\ FieldHomo f2 s t ==> FieldHomo (f2 o f1) r t
+Proof
+  metis_tac[FieldHomo_def, ring_homo_trans]
+QED
 
 (* Theorem: (r ~~~ r_) f /\ BIJ f R R_ ==> FieldHomo (LINV f R) r_ r *)
 (* Proof:
@@ -421,18 +436,20 @@ val field_homo_trans = store_thm(
    ==> RingHomo (LINV f R) r_ r    by ring_homo_sym, BIJ f R R_
    <=> FieldHomo (LINV f R) r_ r   by FieldHomo_def
 *)
-val field_homo_sym = store_thm(
-  "field_homo_sym",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f /\ BIJ f R R_ ==> FieldHomo (LINV f R) r_ r``,
-  rw[FieldHomo_def, ring_homo_sym]);
+Theorem field_homo_sym:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f /\ BIJ f R R_ ==> FieldHomo (LINV f R) r_ r
+Proof
+  rw[FieldHomo_def, ring_homo_sym]
+QED
 
 (* Theorem: FieldHomo f1 r s /\ FieldHomo f2 s t ==> FieldHomo (f2 o f1) r t *)
 (* Proof: by FieldHomo_def, ring_homo_compose *)
-val field_homo_compose = store_thm(
-  "field_homo_compose",
-  ``!(r:'a field) (s:'b field) (t:'c field).
-   !f1 f2. FieldHomo f1 r s /\ FieldHomo f2 s t ==> FieldHomo (f2 o f1) r t``,
-  metis_tac[FieldHomo_def, ring_homo_compose]);
+Theorem field_homo_compose:
+    !(r:'a field) (s:'b field) (t:'c field).
+   !f1 f2. FieldHomo f1 r s /\ FieldHomo f2 s t ==> FieldHomo (f2 o f1) r t
+Proof
+  metis_tac[FieldHomo_def, ring_homo_compose]
+QED
 (* This is the same as field_homo_trans. *)
 
 (* Theorem: Field r /\ Field r_ /\ FieldHomo f r r_ /\ ==> FieldHomo (LINV f R) r_ r *)
@@ -442,10 +459,11 @@ val field_homo_compose = store_thm(
    Thus RingHomo (LINV f R) r_ r    by ring_homo_linv_homo
      or FieldHomo (LINV f R) r_ r   by field_homo_eq_ring_homo
 *)
-val field_homo_linv_homo = store_thm(
-  "field_homo_linv_homo",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f /\ BIJ f R R_ ==> FieldHomo (LINV f R) r_ r``,
-  rw_tac std_ss[field_homo_eq_ring_homo, field_is_ring, ring_homo_linv_homo]);
+Theorem field_homo_linv_homo:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f /\ BIJ f R R_ ==> FieldHomo (LINV f R) r_ r
+Proof
+  rw_tac std_ss[field_homo_eq_ring_homo, field_is_ring, ring_homo_linv_homo]
+QED
 (* This is the same as field_homo_sym. *)
 
 (* Theorem: (r ~~~ r_) f ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0)) *)
@@ -466,9 +484,9 @@ val field_homo_linv_homo = store_thm(
    Hence a contradiction.
    Only-if part: (x = #0) ==> (f x = #0_), true  by field_homo_zero.
 *)
-val field_homo_eq_zero = store_thm(
-  "field_homo_eq_zero",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0))``,
+Theorem field_homo_eq_zero:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0))
+Proof
   rw_tac std_ss[field_homo_zero, EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   `x IN R+` by rw[field_nonzero_eq] >>
@@ -478,7 +496,8 @@ val field_homo_eq_zero = store_thm(
   `_ = f (x * |/ x)` by rw[] >>
   `_ = (f x) *_ (f ( |/ x))` by rw[field_homo_property] >>
   `_ = #0_` by rw[] >>
-  metis_tac[field_one_ne_zero]);
+  metis_tac[field_one_ne_zero]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> !x. x IN R+ ==> (f ( |/ x) = |/_ (f x)) *)
 (* Proof:
@@ -494,9 +513,9 @@ val field_homo_eq_zero = store_thm(
    = #1_                         by field_homo_one
    Hence |/_ (f x) = f ( |/ x)   by field_linv_unique
 *)
-val field_homo_inv = store_thm(
-  "field_homo_inv",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. x IN R+ ==> (f ( |/ x) = |/_ (f x))``,
+Theorem field_homo_inv:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> !x. x IN R+ ==> (f ( |/ x) = |/_ (f x))
+Proof
   rpt strip_tac >>
   `|/ x IN R+` by rw[field_inv_nonzero] >>
   `x IN R /\ |/ x IN R` by rw[field_nonzero_element] >>
@@ -505,7 +524,8 @@ val field_homo_inv = store_thm(
   `f ( |/ x) *_ (f x) = f ( |/ x * x)` by rw[field_homo_property] >>
   `_ = f #1` by rw[] >>
   `_ = #1_` by rw[field_homo_one] >>
-  rw[GSYM field_linv_unique]);
+  rw[GSYM field_linv_unique]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> GroupHomo f f* f_* *)
 (* Proof:
@@ -514,13 +534,14 @@ val field_homo_inv = store_thm(
    (2) x IN R /\ x <> #0 /\ FieldHomo f r r_ ==> f x <> #0_, true                by field_homo_eq_zero
    (3) x IN R /\ y IN R /\ FieldHomo f r r_ ==> f (x * y) = (f x) *_ (f y), true by ring_homo_property
 *)
-val field_homo_mult_group_homo = store_thm(
-  "field_homo_mult_group_homo",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> GroupHomo f f* f_*``,
+Theorem field_homo_mult_group_homo:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> GroupHomo f f* f_*
+Proof
   rw[FieldHomo_def, GroupHomo_def, excluding_def] >-
   metis_tac[ring_homo_element, field_is_ring] >-
   metis_tac[field_homo_eq_zero, FieldHomo_def] >>
-  rw[ring_homo_property]);
+  rw[ring_homo_property]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> INJ f R R_ *)
 (* Proof:
@@ -534,15 +555,16 @@ val field_homo_mult_group_homo = store_thm(
        Hence x - y = #0               by field_homo_eq_zero
           or x = y                    by field_sub_eq_zero
 *)
-val field_homo_map_inj = store_thm(
-  "field_homo_map_inj",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> INJ f R R_``,
+Theorem field_homo_map_inj:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> INJ f R R_
+Proof
   rw[INJ_DEF] >-
   metis_tac[field_homo_element] >>
   `f x IN R_ /\ f y IN R_` by metis_tac[field_homo_element] >>
   `f (x - y) = (f x) -_ (f y)` by rw[field_homo_sub] >>
   `_ = #0_` by rw[] >>
-  metis_tac[field_homo_eq_zero, field_sub_eq_zero, field_sub_element]);
+  metis_tac[field_homo_eq_zero, field_sub_eq_zero, field_sub_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Isomorphisms                                                        *)
@@ -550,34 +572,38 @@ val field_homo_map_inj = store_thm(
 
 (* Theorem: (r === r_) f ==> (f #0 = #0_) *)
 (* Proof: by FieldIso_def, field_homo_zero. *)
-val field_iso_zero = store_thm(
-  "field_iso_zero",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> (f #0 = #0_)``,
-  rw[FieldIso_def, field_homo_zero]);
+Theorem field_iso_zero:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> (f #0 = #0_)
+Proof
+  rw[FieldIso_def, field_homo_zero]
+QED
 
 (* Theorem: (r === r_) f ==> (f #1 = #1_) *)
 (* Proof: by FieldIso_def, field_homo_one. *)
-val field_iso_one = store_thm(
-  "field_iso_one",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> (f #1 = #1_)``,
-  rw[FieldIso_def, field_homo_one]);
+Theorem field_iso_one:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> (f #1 = #1_)
+Proof
+  rw[FieldIso_def, field_homo_one]
+QED
 
 (* Theorem: (r === r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by field_iso_zero, field_iso_one *)
-val field_iso_ids = store_thm(
-  "field_iso_ids",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)``,
-  rw_tac std_ss[field_iso_zero, field_iso_one]);
+Theorem field_iso_ids:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)
+Proof
+  rw_tac std_ss[field_iso_zero, field_iso_one]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["field_iso_ids"];
 
 (* Theorem: FieldIso f r r_ ==> !x. x IN R ==> f x IN R_ *)
 (* Proof: by FieldIso_def, field_homo_element. *)
-val field_iso_element = store_thm(
-  "field_iso_element",
-  ``!(r:'a field) (r_:'b field) f. FieldIso f r r_ ==> !x. x IN R ==> f x IN R_``,
-  metis_tac[FieldIso_def, field_homo_element]);
+Theorem field_iso_element:
+    !(r:'a field) (r_:'b field) f. FieldIso f r r_ ==> !x. x IN R ==> f x IN R_
+Proof
+  metis_tac[FieldIso_def, field_homo_element]
+QED
 
 (* Theorem: FieldIso f r r_ <=> RingIso f r r_ *)
 (* Proof:
@@ -586,10 +612,11 @@ val field_iso_element = store_thm(
    <=> RingHomo f r r_ /\ BIJ f R R_     by FieldHomo_def
    <=> RingIso f r r_                    by RingIso_def
 *)
-val field_iso_eq_ring_iso = store_thm(
-  "field_iso_eq_ring_iso",
-  ``!(r:'a field) (r_:'b field) f. FieldIso f r r_ <=> RingIso f r r_``,
-  rw[FieldIso_def, FieldHomo_def, RingIso_def]);
+Theorem field_iso_eq_ring_iso:
+    !(r:'a field) (r_:'b field) f. FieldIso f r r_ <=> RingIso f r r_
+Proof
+  rw[FieldIso_def, FieldHomo_def, RingIso_def]
+QED
 
 (* Theorem: (r === r_) f ==> (r =r= r_) f *)
 (* Proof:
@@ -598,19 +625,21 @@ val field_iso_eq_ring_iso = store_thm(
     and FieldIso f r r_ = RingIso f r r_   by field_iso_eq_ring_iso
    Thus (r =r= r_) f                       by notation
 *)
-val field_iso_is_ring_iso = store_thm(
-  "field_iso_is_ring_iso",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> (r =r= r_) f``,
-  rw[field_iso_eq_ring_iso]);
+Theorem field_iso_is_ring_iso:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> (r =r= r_) f
+Proof
+  rw[field_iso_eq_ring_iso]
+QED
 
 (* Theorem: Field r /\ FieldIso f r r_ ==>
             !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y)) *)
 (* Proof: by FieldIso_def, field_homo_property. *)
-val field_iso_property = store_thm(
-  "field_iso_property",
-  ``!(r:'a field) (r_:'b field) f. Field r /\ FieldIso f r r_ ==>
-    !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y))``,
-  rw[FieldIso_def, field_homo_property]);
+Theorem field_iso_property:
+    !(r:'a field) (r_:'b field) f. Field r /\ FieldIso f r r_ ==>
+    !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) /\ (f (x * y) = (f x) *_ (f y))
+Proof
+  rw[FieldIso_def, field_homo_property]
+QED
 
 (* Theorem: Field r /\ Field r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (FieldIso f1 r r_ <=> FieldIso f2 r r_) *)
 (* Proof:
@@ -621,63 +650,71 @@ val field_iso_property = store_thm(
      or FieldHomo f1 r r_ /\ BIJ f R R_ <=> FieldHomo f2 r r_ /\ BIJ f R R_  by FieldHomo_def
      or FieldIso f1 r r_ <=> FieldIso f2 r r_                                by FieldIso_def
 *)
-val field_iso_cong = store_thm(
-  "field_iso_cong",
-  ``!(r:'a field) (r_:'b field) f1 f2. Field r /\ Field r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==>
-        (FieldIso f1 r r_ <=> FieldIso f2 r r_)``,
-  metis_tac[FieldIso_def, FieldHomo_def, RingIso_def, ring_iso_cong, field_is_ring]);
+Theorem field_iso_cong:
+    !(r:'a field) (r_:'b field) f1 f2. Field r /\ Field r_ /\ (!x. x IN R ==> (f1 x = f2 x)) ==>
+        (FieldIso f1 r r_ <=> FieldIso f2 r r_)
+Proof
+  metis_tac[FieldIso_def, FieldHomo_def, RingIso_def, ring_iso_cong, field_is_ring]
+QED
 
 (* Theorem: (r === r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y)) *)
 (* Proof: by FieldIso_def, field_homo_add. *)
-val field_iso_add = store_thm(
-  "field_iso_add",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y))``,
-  rw[FieldIso_def, field_homo_add]);
+Theorem field_iso_add:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x y. x IN R /\ y IN R ==> (f (x + y) = (f x) +_ (f y))
+Proof
+  rw[FieldIso_def, field_homo_add]
+QED
 
 (* Theorem: (r === r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y)) *)
 (* Proof: by FieldIso_def, field_homo_mult. *)
-val field_iso_mult = store_thm(
-  "field_iso_mult",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y))``,
-  rw[FieldIso_def, field_homo_mult]);
+Theorem field_iso_mult:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x y. x IN R /\ y IN R ==> (f (x * y) = (f x) *_ (f y))
+Proof
+  rw[FieldIso_def, field_homo_mult]
+QED
 
 (* Theorem: (r === r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x)) *)
 (* Proof: by FieldIso_def, field_homo_neg *)
-val field_iso_neg = store_thm(
-  "field_iso_neg",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x))``,
-  rw[FieldIso_def, field_homo_neg]);
+Theorem field_iso_neg:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> (f (-x) = $-_ (f x))
+Proof
+  rw[FieldIso_def, field_homo_neg]
+QED
 
 (* Theorem: (r === r_) f ==> !n. f (##n) = ##_ #1_ n *)
 (* Proof: by FieldIso_def, field_homo_num *)
-val field_iso_num = store_thm(
-  "field_iso_num",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !n. f (##n) = ##_ #1_ n``,
-  rw[FieldIso_def, field_homo_num]);
+Theorem field_iso_num:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !n. f (##n) = ##_ #1_ n
+Proof
+  rw[FieldIso_def, field_homo_num]
+QED
 
 (* Theorem: (r === r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n *)
 (* Proof: by FieldIso_def, field_homo_exp *)
-val field_iso_exp = store_thm(
-  "field_iso_exp",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n``,
-  rw[FieldIso_def, field_homo_exp]);
+Theorem field_iso_exp:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> !n. f (x ** n) = (f x) **_ n
+Proof
+  rw[FieldIso_def, field_homo_exp]
+QED
 
 (* Theorem: (r === r_) f ==> !x. unit x ==> unit_ (f x) *)
 (* Proof: by field_iso_is_ring_iso, ring_iso_unit *)
-val field_iso_unit = store_thm(
-  "field_iso_unit",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. unit x ==> unit_ (f x)``,
-  metis_tac[FieldIso_def, field_homo_unit]);
+Theorem field_iso_unit:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. unit x ==> unit_ (f x)
+Proof
+  metis_tac[FieldIso_def, field_homo_unit]
+QED
 
 (* Theorem: FieldIso I r r *)
 (* Proof:
    By FieldIso_def, FieldHomo_def, this is to show:
    RingHomo I r r /\ BIJ I R R, true by ring_iso_I_refl.
 *)
-val field_iso_I_refl = store_thm(
-  "field_iso_I_refl",
-  ``!r:'a field. FieldIso I r r``,
-  rw[FieldIso_def, field_homo_I_refl, BIJ_I_SAME]);
+Theorem field_iso_I_refl:
+    !r:'a field. FieldIso I r r
+Proof
+  rw[FieldIso_def, field_homo_I_refl, BIJ_I_SAME]
+QED
 
 (* Theorem: FieldIso f1 r s /\ FieldIso f2 s t ==> FieldIso (f2 o f1) r t *)
 (* Proof:
@@ -687,12 +724,13 @@ val field_iso_I_refl = store_thm(
    (2) BIJ f1 R s.carrier /\ BIJ f2 s.carrier t.carrier ==> BIJ (f2 o f1) R t.carrier
        True by BIJ_COMPOSE.
 *)
-val field_iso_trans = store_thm(
-  "field_iso_trans",
-  ``!(r:'a field) (s:'b field) (t:'c field). !f1 f2. FieldIso f1 r s /\ FieldIso f2 s t ==> FieldIso (f2 o f1) r t``,
+Theorem field_iso_trans:
+    !(r:'a field) (s:'b field) (t:'c field). !f1 f2. FieldIso f1 r s /\ FieldIso f2 s t ==> FieldIso (f2 o f1) r t
+Proof
   rw[FieldIso_def] >-
   metis_tac[field_homo_trans] >>
-  metis_tac[BIJ_COMPOSE]);
+  metis_tac[BIJ_COMPOSE]
+QED
 
 (* Theorem: (r === r_) f ==> FieldIso (LINV f R) r_ r *)
 (* Proof:
@@ -706,10 +744,11 @@ val field_iso_trans = store_thm(
    (1) FieldHomo f r r_ /\ BIJ f R R_ ==> FieldHomo (LINV f R) r_ r, true by field_homo_sym
    (2) BIJ f R R_ ==> BIJ (LINV f R) R_ R, true                           by BIJ_LINV_BIJ
 *)
-val field_iso_sym = store_thm(
-  "field_iso_sym",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> FieldIso (LINV f R) r_ r``,
-  rw[FieldIso_def, field_homo_sym, BIJ_LINV_BIJ]);
+Theorem field_iso_sym:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> FieldIso (LINV f R) r_ r
+Proof
+  rw[FieldIso_def, field_homo_sym, BIJ_LINV_BIJ]
+QED
 
 (* Theorem: FieldIso f1 r s /\ FieldIso f2 s t ==> FieldIso (f2 o f1) r t *)
 (* Proof:
@@ -719,13 +758,14 @@ val field_iso_sym = store_thm(
    (2) BIJ f1 R s.carrier /\ BIJ f2 s.carrier t.carrier ==> BIJ (f2 o f1) R t.carrier
        True by BIJ_COMPOSE
 *)
-val field_iso_compose = store_thm(
-  "field_iso_compose",
-  ``!(r:'a field) (s:'b field) (t:'c field).
-   !f1 f2. FieldIso f1 r s /\ FieldIso f2 s t ==> FieldIso (f2 o f1) r t``,
+Theorem field_iso_compose:
+    !(r:'a field) (s:'b field) (t:'c field).
+   !f1 f2. FieldIso f1 r s /\ FieldIso f2 s t ==> FieldIso (f2 o f1) r t
+Proof
   rw_tac std_ss[FieldIso_def] >-
   metis_tac[field_homo_compose] >>
-  metis_tac[BIJ_COMPOSE]);
+  metis_tac[BIJ_COMPOSE]
+QED
 (* This is the same as field_iso_trans. *)
 
 (* Theorem: (r === r_) f ==> FieldIso (LINV f R) r_ r *)
@@ -735,46 +775,52 @@ val field_iso_compose = store_thm(
    Thus RingIso (LINV f R) r_ r    by ring_iso_linv_iso
      or FieldIso (LINV f R) r_ r   by field_iso_eq_ring_iso
 *)
-val field_iso_linv_iso = store_thm(
-  "field_iso_linv_iso",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> FieldIso (LINV f R) r_ r``,
-  rw_tac std_ss[field_iso_eq_ring_iso, field_is_ring, ring_iso_linv_iso]);
+Theorem field_iso_linv_iso:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> FieldIso (LINV f R) r_ r
+Proof
+  rw_tac std_ss[field_iso_eq_ring_iso, field_is_ring, ring_iso_linv_iso]
+QED
 (* This is the same as field_iso_sym. *)
 
 (* Theorem: (r === r_) f ==> BIJ f R R_ *)
 (* Proof: by FieldIso_def *)
-val field_iso_bij = store_thm(
-  "field_iso_bij",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> BIJ f R R_``,
-  rw_tac std_ss[FieldIso_def]);
+Theorem field_iso_bij:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> BIJ f R R_
+Proof
+  rw_tac std_ss[FieldIso_def]
+QED
 
 (* Theorem: FieldIso f r r_ /\ FINITE R ==> (CARD R = CARD R_) *)
 (* Proof: by field_iso_eq_ring_iso, ring_iso_card_eq *)
-val field_iso_card_eq = store_thm(
-  "field_iso_card_eq",
-  ``!(r:'a field) (r_:'b field). !f. FieldIso f r r_ /\ FINITE R ==> (CARD R = CARD R_)``,
-  metis_tac[field_iso_eq_ring_iso, ring_iso_card_eq]);
+Theorem field_iso_card_eq:
+    !(r:'a field) (r_:'b field). !f. FieldIso f r r_ /\ FINITE R ==> (CARD R = CARD R_)
+Proof
+  metis_tac[field_iso_eq_ring_iso, ring_iso_card_eq]
+QED
 
 (* Theorem: (r === r_) f ==> (char r_ = char r) *)
 (* Proof: by field_iso_eq_ring_iso, ring_iso_char_eq *)
-val field_iso_char_eq = store_thm(
-  "field_iso_char_eq",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> (char r_ = char r)``,
-  metis_tac[field_iso_eq_ring_iso, ring_iso_char_eq, field_is_ring]);
+Theorem field_iso_char_eq:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> (char r_ = char r)
+Proof
+  metis_tac[field_iso_eq_ring_iso, ring_iso_char_eq, field_is_ring]
+QED
 
 (* Theorem: (r === r_) f ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0)) *)
 (* Proof: by field_iso_is_ring_iso, ring_iso_eq_zero *)
-val field_iso_eq_zero = store_thm(
-  "field_iso_eq_zero",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0))``,
-  metis_tac[field_iso_is_ring_iso, ring_iso_eq_zero]);
+Theorem field_iso_eq_zero:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> ((f x = #0_) <=> (x = #0))
+Proof
+  metis_tac[field_iso_is_ring_iso, ring_iso_eq_zero]
+QED
 
 (* Theorem: (r === r_) f ==> !x. x IN R+ ==> !x. x IN R+ ==> (f x) IN R+_ *)
 (* Proof: by field_iso_is_ring_iso, ring_iso_nonzero *)
-val field_iso_nonzero = store_thm(
-  "field_iso_nonzero",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R+ ==> (f x) IN R+_``,
-  metis_tac[field_iso_is_ring_iso, ring_iso_nonzero]);
+Theorem field_iso_nonzero:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R+ ==> (f x) IN R+_
+Proof
+  metis_tac[field_iso_is_ring_iso, ring_iso_nonzero]
+QED
 
 (* Theorem: (r === r_) f ==> !x. x IN R+ ==> (f ( |/ x) = |/_ (f x)) *)
 (* Proof:
@@ -783,41 +829,46 @@ val field_iso_nonzero = store_thm(
    The result follows             by ring_iso_inv
    or simply                      by FieldIso_def, field_homo_inv
 *)
-val field_iso_inv = store_thm(
-  "field_iso_inv",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R+ ==> (f ( |/ x) = |/_ (f x))``,
-  rw[FieldIso_def, field_homo_inv]);
+Theorem field_iso_inv:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R+ ==> (f ( |/ x) = |/_ (f x))
+Proof
+  rw[FieldIso_def, field_homo_inv]
+QED
 
 (* Theorem: (r === r_) f ==> !x. x IN R ==> ((f x = #1_) <=> (x = #1)) *)
 (* Proof: by field_iso_is_ring_iso, ring_iso_eq_one *)
-val field_iso_eq_one = store_thm(
-  "field_iso_eq_one",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> ((f x = #1_) <=> (x = #1))``,
-  metis_tac[field_iso_is_ring_iso, ring_iso_eq_one]);
+Theorem field_iso_eq_one:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> ((f x = #1_) <=> (x = #1))
+Proof
+  metis_tac[field_iso_is_ring_iso, ring_iso_eq_one]
+QED
 
 (* Theorem: (r === r_) f ==> !y. y IN R_ ==> (LINV f R y) IN R /\ (y = f (LINV f R y)) *)
 (* Proof: by field_iso_is_ring_iso, ring_iso_inverse_element *)
-val field_iso_inverse_element = store_thm(
-  "field_iso_inverse_element",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !y. y IN R_ ==> (LINV f R y) IN R /\ (y = f (LINV f R y))``,
-  metis_tac[field_iso_is_ring_iso, ring_iso_inverse_element]);
+Theorem field_iso_inverse_element:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !y. y IN R_ ==> (LINV f R y) IN R /\ (y = f (LINV f R y))
+Proof
+  metis_tac[field_iso_is_ring_iso, ring_iso_inverse_element]
+QED
 
 (* Theorem: (r === r_) f ==> !y. y IN R_ ==> ?x. x IN R /\ (y = f x) *)
 (* Proof: by field_iso_inverse_element *)
-val field_iso_inverse = store_thm(
-  "field_iso_inverse",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !y. y IN R_ ==> ?x. x IN R /\ (y = f x)``,
-  metis_tac[field_iso_inverse_element]);
+Theorem field_iso_inverse:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !y. y IN R_ ==> ?x. x IN R /\ (y = f x)
+Proof
+  metis_tac[field_iso_inverse_element]
+QED
 
 (* Theorem: (r === r_) f ==> !x y. x IN R /\ y IN R ==> ((f x = f y) <=> (x = y)) *)
 (* Proof:
    Note INJ R R_                   by FieldIso_def, BIJ_DEF
    Hence (f x = f y) <=> (x = y)   by INJ_DEF
 *)
-val field_iso_element_unique = store_thm(
-  "field_iso_element_unique",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x y. x IN R /\ y IN R ==> ((f x = f y) <=> (x = y))``,
-  prove_tac[FieldIso_def, BIJ_DEF, INJ_DEF]);
+Theorem field_iso_element_unique:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x y. x IN R /\ y IN R ==> ((f x = f y) <=> (x = y))
+Proof
+  prove_tac[FieldIso_def, BIJ_DEF, INJ_DEF]
+QED
 
 (* Theorem: Field r /\ Field s /\ FieldIso f1 r s /\ FieldIso f2 r t ==> FieldIso (f2 o (LINV f1 R)) s t *)
 (* Proof:
@@ -825,11 +876,12 @@ val field_iso_element_unique = store_thm(
    ==> FieldIso (LINV f R) s r /\ FieldIso f2 r t      by field_iso_sym
    ==> FieldIso (f2 o (LINV f1 R)) s t                 by field_iso_trans
 *)
-val field_iso_iso = store_thm(
-  "field_iso_iso",
-  ``!(r:'a field) (s:'b field) (t:'c field) f1 f2.
-   Field r /\ Field s /\ FieldIso f1 r s /\ FieldIso f2 r t ==> FieldIso (f2 o (LINV f1 R)) s t``,
-  metis_tac[field_iso_sym, field_iso_trans]);
+Theorem field_iso_iso:
+    !(r:'a field) (s:'b field) (t:'c field) f1 f2.
+   Field r /\ Field s /\ FieldIso f1 r s /\ FieldIso f2 r t ==> FieldIso (f2 o (LINV f1 R)) s t
+Proof
+  metis_tac[field_iso_sym, field_iso_trans]
+QED
 
 (* Theorem: Field r /\ Field s /\ FieldIso f s r /\ FieldIso f t r ==> FieldIso I s t *)
 (* Proof:
@@ -846,17 +898,18 @@ val field_iso_iso = store_thm(
 
    Hence FieldIso I s t                by field_iso_cong
 *)
-val field_iso_eq = store_thm(
-  "field_iso_eq",
-  ``!r:'a field (s t):'b field f.
-   Field r /\ Field s /\ Field t /\ FieldIso f r s /\ FieldIso f r t ==> FieldIso I s t``,
+Theorem field_iso_eq:
+    !r:'a field (s t):'b field f.
+   Field r /\ Field s /\ Field t /\ FieldIso f r s /\ FieldIso f r t ==> FieldIso I s t
+Proof
   rpt strip_tac >>
   `FieldIso (LINV f R) s r` by rw[field_iso_sym] >>
   `FieldIso (f o LINV f R) s t` by metis_tac[field_iso_trans] >>
   `!x. x IN s.carrier ==> ((f o LINV f R) x = I x)` by
   (rw[FUN_EQ_THM] >>
   metis_tac[FieldIso_def, BIJ_LINV_THM]) >>
-  metis_tac[field_iso_cong]);
+  metis_tac[field_iso_cong]
+QED
 
 (* Note:
 FieldIso I s t ==> s = t cannot be proved,
@@ -879,9 +932,9 @@ that demands things like: $* = f.op, which is not possible for arbitrary argumen
 
    Hence  FieldIso I s r                 by field_iso_cong, Claim
 *)
-val field_iso_I_iso = store_thm(
-  "field_iso_I_iso",
-  ``!(r s):'a field. Field r /\ Field s /\ FieldIso I r s ==> FieldIso I s r``,
+Theorem field_iso_I_iso:
+    !(r s):'a field. Field r /\ Field s /\ FieldIso I r s ==> FieldIso I s r
+Proof
   rpt strip_tac >>
   `FieldIso (LINV I R) s r` by rw[field_iso_sym] >>
   `!x. x IN B ==> ((LINV I R) x = I x)` by
@@ -890,14 +943,16 @@ val field_iso_I_iso = store_thm(
   `?y. y IN R /\ (x = I y)` by metis_tac[SURJ_DEF] >>
   `(LINV I R) (I y) = y` by metis_tac[LINV_DEF] >>
   rw[]) >>
-  metis_tac[field_iso_cong]);
+  metis_tac[field_iso_cong]
+QED
 
 (* Theorem: Field r /\ Field s ==> (FieldIso I r s <=> FieldIso I s r) *)
 (* Proof: by field_iso_I_iso *)
-val field_iso_I_iso_iff = store_thm(
-  "field_iso_I_iso_iff",
-  ``!(r s):'a field. Field r /\ Field s ==> (FieldIso I r s <=> FieldIso I s r)``,
-  metis_tac[field_iso_I_iso]);
+Theorem field_iso_I_iso_iff:
+    !(r s):'a field. Field r /\ Field s ==> (FieldIso I r s <=> FieldIso I s r)
+Proof
+  metis_tac[field_iso_I_iso]
+QED
 
 (* Theorem: (r === r_) f ==> !y. y IN R+_ ==> ?x. x IN R+ /\ (y = f x) *)
 (* Proof:
@@ -907,10 +962,11 @@ val field_iso_I_iso_iff = store_thm(
    Thus x IN R+                            by field_nonzero_eq
    So take this x.
 *)
-val field_iso_inverse_nonzero = store_thm(
-  "field_iso_inverse_nonzero",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !y. y IN R+_ ==> ?x. x IN R+ /\ (y = f x)``,
-  metis_tac[field_nonzero_eq, field_iso_inverse, field_iso_eq_zero]);
+Theorem field_iso_inverse_nonzero:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !y. y IN R+_ ==> ?x. x IN R+ /\ (y = f x)
+Proof
+  metis_tac[field_nonzero_eq, field_iso_inverse, field_iso_eq_zero]
+QED
 
 (* Theorem: (r === r_) f ==> !x. x IN R ==> (forder_ (f x) = forder x) *)
 (* Proof:
@@ -940,9 +996,9 @@ val field_iso_inverse_nonzero = store_thm(
 
       Then forder_ y = n               by field_order_thm
 *)
-val field_iso_order = store_thm(
-  "field_iso_order",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> (forder_ (f x) = forder x)``,
+Theorem field_iso_order:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !x. x IN R ==> (forder_ (f x) = forder x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `n = forder x` >>
   qabbrev_tac `y = f x` >>
@@ -963,7 +1019,8 @@ val field_iso_order = store_thm(
     `x ** m = #1` by metis_tac[field_iso_eq_one, field_exp_element] >>
     metis_tac[]) >>
     metis_tac[field_order_thm]
-  ]);
+  ]
+QED
 
 (* Theorem: (r === r_) f ==> !n. IMAGE f (orders f* n) = orders f_* n *)
 (* Proof:
@@ -974,15 +1031,16 @@ val field_iso_order = store_thm(
    = {f x| (f x) IN F_* /\ (forder_ (f x) = n)}       by field_iso_order
    = orders f_* n                                     by orders_def
 *)
-val field_iso_orders = store_thm(
-  "field_iso_orders",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !n. IMAGE f (orders f* n) = orders f_* n``,
+Theorem field_iso_orders:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !n. IMAGE f (orders f* n) = orders f_* n
+Proof
   rw[orders_def, EXTENSION] >>
   rw[EQ_IMP_THM] >-
   metis_tac[field_iso_nonzero, field_mult_carrier] >-
   metis_tac[field_iso_order, field_nonzero_element_alt] >>
   `?y. y IN F* /\ (x = f y)` by metis_tac[field_iso_inverse_nonzero, field_mult_carrier] >>
-  metis_tac[field_iso_order, field_nonzero_element_alt]);
+  metis_tac[field_iso_order, field_nonzero_element_alt]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Automorphisms.                                                       *)
@@ -990,31 +1048,35 @@ val field_iso_orders = store_thm(
 
 (* Theorem: Field r /\ FieldAuto f r ==> (f #0 = #0) *)
 (* Proof: by FieldAuto_def, field_iso_zero. *)
-val field_auto_zero = store_thm(
-  "field_auto_zero",
-  ``!(r:'a field) f. Field r /\ FieldAuto f r ==> (f #0 = #0)``,
-  rw_tac std_ss[FieldAuto_def, field_iso_zero]);
+Theorem field_auto_zero:
+    !(r:'a field) f. Field r /\ FieldAuto f r ==> (f #0 = #0)
+Proof
+  rw_tac std_ss[FieldAuto_def, field_iso_zero]
+QED
 
 (* Theorem: (r === r_) f ==> (f #1 = #1_) *)
 (* Proof: by FieldIso_def, field_homo_one. *)
-val field_auto_one = store_thm(
-  "field_auto_one",
-  ``!(r:'a field) f. Field r /\ FieldAuto f r ==> (f #1 = #1)``,
-  rw[FieldAuto_def, field_iso_one]);
+Theorem field_auto_one:
+    !(r:'a field) f. Field r /\ FieldAuto f r ==> (f #1 = #1)
+Proof
+  rw[FieldAuto_def, field_iso_one]
+QED
 
 (* Theorem: Field r /\ FieldAuto f r ==> (f #0 = #0) /\ (f #1 = #1) *)
 (* Proof: by field_auto_zero, field_auto_one *)
-val field_auto_ids = store_thm(
-  "field_auto_ids",
-  ``!(r:'a field) f. Field r /\ FieldAuto f r ==> (f #0 = #0) /\ (f #1 = #1)``,
-  rw_tac std_ss[field_auto_zero, field_auto_one]);
+Theorem field_auto_ids:
+    !(r:'a field) f. Field r /\ FieldAuto f r ==> (f #0 = #0) /\ (f #1 = #1)
+Proof
+  rw_tac std_ss[field_auto_zero, field_auto_one]
+QED
 
 (* Theorem: FieldAuto f r ==> !x. x IN R ==> f x IN R *)
 (* Proof: by FieldAuto_def, field_iso_elemen. *)
-val field_auto_element = store_thm(
-  "field_auto_element",
-  ``!(r:'a field) f. FieldAuto f r ==> !x. x IN R ==> f x IN R``,
-  metis_tac[FieldAuto_def, field_iso_element]);
+Theorem field_auto_element:
+    !(r:'a field) f. FieldAuto f r ==> !x. x IN R ==> f x IN R
+Proof
+  metis_tac[FieldAuto_def, field_iso_element]
+QED
 
 (* Theorem: FieldAuto f r = RingAuto f r *)
 (* Proof:
@@ -1023,31 +1085,35 @@ val field_auto_element = store_thm(
    = RingIso f r r      by field_iso_eq_ring_iso
    = RingAuto f r       by RingAuto_def
 *)
-val field_auto_eq_ring_auto = store_thm(
-  "field_auto_eq_ring_auto",
-  ``!(r:'a field) f. FieldAuto f r = RingAuto f r``,
-  rw_tac std_ss[FieldAuto_def, RingAuto_def, field_iso_eq_ring_iso]);
+Theorem field_auto_eq_ring_auto:
+    !(r:'a field) f. FieldAuto f r = RingAuto f r
+Proof
+  rw_tac std_ss[FieldAuto_def, RingAuto_def, field_iso_eq_ring_iso]
+QED
 
 (* Theorem: Field r /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (FieldAuto f1 r <=> FieldAuto f2 r) *)
 (* Proof: by FieldAuto_def, field_iso_cong. *)
-val field_auto_cong = store_thm(
-  "field_auto_cong",
-  ``!(r:'a field) f1 f2. Field r /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (FieldAuto f1 r <=> FieldAuto f2 r)``,
-  rw_tac std_ss[FieldAuto_def, field_iso_cong]);
+Theorem field_auto_cong:
+    !(r:'a field) f1 f2. Field r /\ (!x. x IN R ==> (f1 x = f2 x)) ==> (FieldAuto f1 r <=> FieldAuto f2 r)
+Proof
+  rw_tac std_ss[FieldAuto_def, field_iso_cong]
+QED
 
 (* Theorem: FieldAuto f1 r /\ FieldAuto f2 r ==> FieldAuto (f1 o f2) r *)
 (* Proof: by FieldAuto_def, field_iso_compose *)
-val field_auto_compose = store_thm(
-  "field_auto_compose",
-  ``!(r:'a field). !f1 f2. FieldAuto f1 r /\ FieldAuto f2 r ==> FieldAuto (f1 o f2) r``,
-  metis_tac[FieldAuto_def, field_iso_compose]);
+Theorem field_auto_compose:
+    !(r:'a field). !f1 f2. FieldAuto f1 r /\ FieldAuto f2 r ==> FieldAuto (f1 o f2) r
+Proof
+  metis_tac[FieldAuto_def, field_iso_compose]
+QED
 
 (* Theorem: FieldAuto I r *)
 (* Proof: by FieldAuto_def, field_iso_I_refl *)
-val field_auto_I = store_thm(
-  "field_auto_I",
-  ``!(r:'a field). FieldAuto I r``,
-  rw_tac std_ss[FieldAuto_def, field_iso_I_refl]);
+Theorem field_auto_I:
+    !(r:'a field). FieldAuto I r
+Proof
+  rw_tac std_ss[FieldAuto_def, field_iso_I_refl]
+QED
 
 (* Theorem: Field r /\ FieldAuto f r ==> FieldAuto (LINV f R) r *)
 (* Proof:
@@ -1056,31 +1122,35 @@ val field_auto_I = store_thm(
    ==> FieldIso (LINV f R) r         by field_iso_linv_iso
    ==> FieldAuto (LINV f R) r        by FieldAuto_def
 *)
-val field_auto_linv_auto = store_thm(
-  "field_auto_linv_auto",
-  ``!(r:'a field) f. Field r /\ FieldAuto f r ==> FieldAuto (LINV f R) r``,
-  rw_tac std_ss[FieldAuto_def, field_iso_linv_iso]);
+Theorem field_auto_linv_auto:
+    !(r:'a field) f. Field r /\ FieldAuto f r ==> FieldAuto (LINV f R) r
+Proof
+  rw_tac std_ss[FieldAuto_def, field_iso_linv_iso]
+QED
 
 (* Theorem: Field r /\ FieldAuto f r ==> f PERMUTES R *)
 (* Proof: by FieldAuto_def, field_iso_bij *)
-val field_auto_bij = store_thm(
-  "field_auto_bij",
-  ``!(r:'a field) f. Field r /\ FieldAuto f r ==> f PERMUTES R``,
-  rw_tac std_ss[FieldAuto_def, field_iso_bij]);
+Theorem field_auto_bij:
+    !(r:'a field) f. Field r /\ FieldAuto f r ==> f PERMUTES R
+Proof
+  rw_tac std_ss[FieldAuto_def, field_iso_bij]
+QED
 
 (* Theorem: Field r /\ FieldAuto f r ==> !x. x IN R ==> (forder (f x) = forder x) *)
 (* Proof: by FieldAuto_def, field_iso_order *)
-val field_auto_order = store_thm(
-  "field_auto_order",
-  ``!(r:'a field) f. Field r /\ FieldAuto f r ==> !x. x IN R ==> (forder (f x) = forder x)``,
-  rw[FieldAuto_def, field_iso_order]);
+Theorem field_auto_order:
+    !(r:'a field) f. Field r /\ FieldAuto f r ==> !x. x IN R ==> (forder (f x) = forder x)
+Proof
+  rw[FieldAuto_def, field_iso_order]
+QED
 
 (* Theorem: Field r /\ FieldAuto f r ==> !n. IMAGE f (orders f* n) = orders f* n *)
 (* Proof: by FieldAuto_def, field_iso_orders *)
-val field_auto_orders = store_thm(
-  "field_auto_orders",
-  ``!(r:'a field) f. Field r /\ FieldAuto f r ==> !n. IMAGE f (orders f* n) = orders f* n``,
-  rw[FieldAuto_def, field_iso_orders]);
+Theorem field_auto_orders:
+    !(r:'a field) f. Field r /\ FieldAuto f r ==> !n. IMAGE f (orders f* n) = orders f* n
+Proof
+  rw[FieldAuto_def, field_iso_orders]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subfields                                                                 *)
@@ -1092,10 +1162,11 @@ val _ = set_fixity "<<=" (Infixl 500); (* same as + in arithmeticScript.sml *)
 
 (* Theorem: s <<= r <=> Field r /\ Field s /\ FieldHomo I s r *)
 (* Proof: by subfield_def *)
-val subfield_alt = store_thm(
-  "subfield_alt",
-  ``!(r s):'a field. s <<= r <=> Field r /\ Field s /\ FieldHomo I s r``,
-  rw_tac std_ss[subfield_def]);
+Theorem subfield_alt:
+    !(r s):'a field. s <<= r <=> Field r /\ Field s /\ FieldHomo I s r
+Proof
+  rw_tac std_ss[subfield_def]
+QED
 
 (* Theorem: subfield s r <=> subring s r *)
 (* Proof:
@@ -1104,10 +1175,11 @@ val subfield_alt = store_thm(
     <=> RingHomo I s r        by FieldHomo_def
     <=> subring s r           by subring_def
 *)
-val subfield_eq_subring = store_thm(
-  "subfield_eq_subring",
-  ``!(r s):'a field. subfield s r <=> subring s r``,
-  rw[subfield_def, subring_def, FieldHomo_def]);
+Theorem subfield_eq_subring:
+    !(r s):'a field. subfield s r <=> subring s r
+Proof
+  rw[subfield_def, subring_def, FieldHomo_def]
+QED
 
 (* Theorem: s <<= r ==> s <= r *)
 (* Proof:
@@ -1115,24 +1187,27 @@ val subfield_eq_subring = store_thm(
         Field s ==> Ring s            by field_is_ring
         subfield s r <=> subring s r  by subfield_eq_subring
 *)
-val subfield_is_subring = store_thm(
-  "subfield_is_subring",
-  ``!(r s):'a field. s <<= r ==> s <= r``,
-  rw[subfield_eq_subring]);
+Theorem subfield_is_subring:
+    !(r s):'a field. s <<= r ==> s <= r
+Proof
+  rw[subfield_eq_subring]
+QED
 
 (* Theorem: subfield s r ==> !x. x IN B ==> x IN R *)
 (* Proof: by subfield_eq_subring, subring_element *)
-val subfield_element = store_thm(
-  "subfield_element",
-  ``!(r s):'a field. subfield s r ==> !x. x IN B ==> x IN R``,
-  metis_tac[subfield_eq_subring, subring_element]);
+Theorem subfield_element:
+    !(r s):'a field. subfield s r ==> !x. x IN B ==> x IN R
+Proof
+  metis_tac[subfield_eq_subring, subring_element]
+QED
 
 (* Theorem: subfield s r ==> B SUBSET R *)
 (* Proof: by subfield_element, SUBSET_DEF. *)
-val subfield_carrier_subset = store_thm(
-  "subfield_carrier_subset",
-  ``!(r s):'a field. subfield s r ==> B SUBSET R``,
-  metis_tac[subfield_element, SUBSET_DEF]);
+Theorem subfield_carrier_subset:
+    !(r s):'a field. subfield s r ==> B SUBSET R
+Proof
+  metis_tac[subfield_element, SUBSET_DEF]
+QED
 
 (* Theorem: FiniteField r /\ subfield s r ==> FINITE B *)
 (* Proof:
@@ -1140,30 +1215,33 @@ val subfield_carrier_subset = store_thm(
      and subfield s r ==> subring s r    by subfield_eq_subring
    Hence FINITE B                        by subring_carrier_finite
 *)
-val subfield_carrier_finite = store_thm(
-  "subfield_carrier_finite",
-  ``!(r s):'a field. FiniteField r /\ subfield s r ==> FINITE B``,
-  metis_tac[finite_field_is_finite_ring, subfield_eq_subring, subring_carrier_finite]);
+Theorem subfield_carrier_finite:
+    !(r s):'a field. FiniteField r /\ subfield s r ==> FINITE B
+Proof
+  metis_tac[finite_field_is_finite_ring, subfield_eq_subring, subring_carrier_finite]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> FiniteField s *)
 (* Proof:
    Since FINITE B        by subfield_carrier_finite
    Hence FiniteField s   by FiniteField_def
 *)
-val subfield_finite_field = store_thm(
-  "subfield_finite_field",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> FiniteField s``,
-  metis_tac[FiniteField_def, subfield_carrier_finite]);;
+Theorem subfield_finite_field:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> FiniteField s
+Proof
+  metis_tac[FiniteField_def, subfield_carrier_finite]
+QED
 
 (* Theorem: subfield r r *)
 (* Proof:
    By subfield_def, this is to show:
    FieldHomo I r r, true by field_homo_I_refl.
 *)
-val subfield_refl = store_thm(
-  "subfield_refl",
-  ``!r:'a field. subfield r r``,
-  rw[subfield_def, field_homo_I_refl]);
+Theorem subfield_refl:
+    !r:'a field. subfield r r
+Proof
+  rw[subfield_def, field_homo_I_refl]
+QED
 
 (* Theorem: subfield r s /\ subfield s t ==> subfield r t *)
 (* Proof:
@@ -1172,10 +1250,11 @@ val subfield_refl = store_thm(
    Since I o I = I       by combinTheory.I_o_ID
    This is true          by field_homo_trans
 *)
-val subfield_trans = store_thm(
-  "subfield_trans",
-  ``!r s t:'a field. subfield r s /\ subfield s t ==> subfield r t``,
-  prove_tac[subfield_def, combinTheory.I_o_ID, field_homo_trans]);
+Theorem subfield_trans:
+    !r s t:'a field. subfield r s /\ subfield s t ==> subfield r t
+Proof
+  prove_tac[subfield_def, combinTheory.I_o_ID, field_homo_trans]
+QED
 
 (* Theorem: subfield s r /\ subfield r s ==> FieldIso I s r *)
 (* Proof:
@@ -1185,12 +1264,13 @@ val subfield_trans = store_thm(
    (1) x IN B ==> x IN R, true    by subfield_carrier_subset, subfield s r
    (2) x IN R ==> x IN B, true    by subfield_carrier_subset, subfield r s
 *)
-val subfield_I_antisym = store_thm(
-  "subfield_I_antisym",
-  ``!(r:'a field) s. subfield s r /\ subfield r s ==> FieldIso I s r``,
+Theorem subfield_I_antisym:
+    !(r:'a field) s. subfield s r /\ subfield r s ==> FieldIso I s r
+Proof
   rw_tac std_ss[subfield_def, FieldIso_def] >>
   fs[FieldHomo_def, RingHomo_def] >>
-  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]);
+  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]
+QED
 
 (* Theorem: subfield s r /\ R SUBSET B ==> FieldIso I s r *)
 (* Proof:
@@ -1200,21 +1280,23 @@ val subfield_I_antisym = store_thm(
    (1) x IN B ==> x IN R, true    by subring_carrier_subset, subring s r
    (2) x IN R ==> x IN B, true    by R SUBSET B, given
 *)
-val subfield_carrier_antisym = store_thm(
-  "subfield_carrier_antisym",
-  ``!(r:'a field) s. subfield s r /\ R SUBSET B ==> FieldIso I s r``,
+Theorem subfield_carrier_antisym:
+    !(r:'a field) s. subfield s r /\ R SUBSET B ==> FieldIso I s r
+Proof
   rpt (stripDup[subfield_def]) >>
   rw_tac std_ss[FieldIso_def] >>
   `B SUBSET R` by rw[subfield_carrier_subset] >>
   fs[FieldHomo_def, SUBSET_DEF] >>
-  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]);
+  rw_tac std_ss[BIJ_DEF, INJ_DEF, SURJ_DEF]
+QED
 
 (* Theorem: s <<= r <=> Field r /\ Field s /\ subring s r *)
 (* Proof: by subfield_eq_subring *)
-val subfield_by_subring = store_thm(
-  "subfield_by_subring",
-  ``!(r:'a field) (s:'a field). s <<= r <=> Field r /\ Field s /\ subring s r``,
-  rw_tac std_ss[subfield_eq_subring]);
+Theorem subfield_by_subring:
+    !(r:'a field) (s:'a field). s <<= r <=> Field r /\ Field s /\ subring s r
+Proof
+  rw_tac std_ss[subfield_eq_subring]
+QED
 
 (* Theorem: s <<= r <=> Field r /\ Field s /\ subgroup s.sum r.sum /\ submonoid s.prod r.prod *)
 (* Proof:
@@ -1233,17 +1315,18 @@ val subfield_by_subring = store_thm(
         or s <= r                    by subring_def
         or s <<= r                   by subfield_eq_subring
 *)
-val subfield_by_subgroup_submonoid = store_thm(
-  "subfield_by_subgroup_submonoid",
-  ``!(r:'a field) (s:'a field). s <<= r <=>
-     Field r /\ Field s /\ subgroup s.sum r.sum /\ submonoid s.prod r.prod``,
+Theorem subfield_by_subgroup_submonoid:
+    !(r:'a field) (s:'a field). s <<= r <=>
+     Field r /\ Field s /\ subgroup s.sum r.sum /\ submonoid s.prod r.prod
+Proof
   rw[EQ_IMP_THM] >-
   rw[subfield_is_subring, subring_sum_subgroup] >-
   rw[subfield_is_subring, subring_prod_submonoid] >>
   rw_tac std_ss[subfield_eq_subring, subring_def, RingHomo_def] >-
   metis_tac[subgroup_subset, field_carriers, SUBSET_DEF] >-
   fs[subgroup_def] >>
-  fs[submonoid_def]);
+  fs[submonoid_def]
+QED
 
 (* Theorem: subfield s r /\ FieldHomo f r r_ ==> FieldHomo f s r_ *)
 (* Proof:
@@ -1251,10 +1334,11 @@ val subfield_by_subgroup_submonoid = store_thm(
    Thus RingHomo f r r_ ==> RingHomo f s r_    by subring_homo_homo
      or FieldHomo f r r_ ==> FieldHomo f s r_  by field_homo_eq_ring_homo
 *)
-val subfield_homo_homo = store_thm(
-  "subfield_homo_homo",
-  ``!(r:'a field) (s:'a field) (r_:'b field) f. subfield s r /\ FieldHomo f r r_ ==> FieldHomo f s r_``,
-  metis_tac[subring_homo_homo, subfield_eq_subring, field_homo_eq_ring_homo]);
+Theorem subfield_homo_homo:
+    !(r:'a field) (s:'a field) (r_:'b field) f. subfield s r /\ FieldHomo f r r_ ==> FieldHomo f s r_
+Proof
+  metis_tac[subring_homo_homo, subfield_eq_subring, field_homo_eq_ring_homo]
+QED
 
 (* Theorem: s <<= r ==> !t:'a field. Field t /\ FieldIso I t s ==> t <<= r *)
 (* Proof:
@@ -1266,13 +1350,14 @@ val subfield_homo_homo = store_thm(
      so FieldHomo I t r         by field_homo_cong
      or t <<= r                 by notation
 *)
-val subfield_iso_I_subfield = store_thm(
-  "subfield_iso_I_subfield",
-  ``!(r s):'a field. s <<= r ==> !t:'a field. Field t /\ FieldIso I t s ==> t <<= r``,
+Theorem subfield_iso_I_subfield:
+    !(r s):'a field. s <<= r ==> !t:'a field. Field t /\ FieldIso I t s ==> t <<= r
+Proof
   rw[subfield_def] >>
   `FieldHomo (I o I) t r` by prove_tac[field_homo_trans, FieldIso_def] >>
   `!x. x IN t.carrier ==> ((I o I) x = I x)` by rw[] >>
-  metis_tac[field_homo_cong]);
+  metis_tac[field_homo_cong]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subfield Theorems                                                         *)
@@ -1280,31 +1365,35 @@ val subfield_iso_I_subfield = store_thm(
 
 (* Theorem: s <<= r ==> (s.sum.id = #0) *)
 (* Proof: by subfield_is_subring, subring_zero *)
-val subfield_zero = store_thm(
-  "subfield_zero",
-  ``!(r s):'a field. s <<= r ==> (s.sum.id = #0)``,
-  rw[subfield_is_subring, subring_zero]);
+Theorem subfield_zero:
+    !(r s):'a field. s <<= r ==> (s.sum.id = #0)
+Proof
+  rw[subfield_is_subring, subring_zero]
+QED
 
 (* Theorem: s <<= r ==> (s.prod.id = #1) *)
 (* Proof: by subfield_is_subring, subring_one *)
-val subfield_one = store_thm(
-  "subfield_one",
-  ``!(r s):'a field. s <<= r ==> (s.prod.id = #1)``,
-  rw[subfield_is_subring, subring_one]);
+Theorem subfield_one:
+    !(r s):'a field. s <<= r ==> (s.prod.id = #1)
+Proof
+  rw[subfield_is_subring, subring_one]
+QED
 
 (* Theorem: s <<= r ==> (s.sum.id = #0) /\ (s.prod.id = #1) *)
 (* Proof: by subfield_is_subring, subring_ids *)
-val subfield_ids = store_thm(
-  "subfield_ids",
-  ``!(r s):'a field. s <<= r ==> (s.sum.id = #0) /\ (s.prod.id = #1)``,
-  rw[subfield_is_subring, subring_ids]);
+Theorem subfield_ids:
+    !(r s):'a field. s <<= r ==> (s.sum.id = #0) /\ (s.prod.id = #1)
+Proof
+  rw[subfield_is_subring, subring_ids]
+QED
 
 (* Theorem: s <<= r ==> !x. x IN B ==> x IN R *)
 (* Proof: by subfield_is_subring, subring_element_alt. *)
-val subfield_element_alt = store_thm(
-  "subfield_element_alt",
-  ``!(r s):'a field. s <<= r ==> !x. x IN B ==> x IN R``,
-  metis_tac[subfield_is_subring, subring_element_alt]);
+Theorem subfield_element_alt:
+    !(r s):'a field. s <<= r ==> !x. x IN B ==> x IN R
+Proof
+  metis_tac[subfield_is_subring, subring_element_alt]
+QED
 
 (* Theorem: s <<= r ==> !x. x IN B* ==> x IN R+ *)
 (* Proof:
@@ -1314,67 +1403,76 @@ val subfield_element_alt = store_thm(
    ==> x IN R /\ x <> #0           by subfield_element
    <=> x IN R+                     by field_nonzero_eq
 *)
-val subfield_nonzero_element = store_thm(
-  "subfield_nonzero_element",
-  ``!(r:'a field) s. s <<= r ==> !x. x IN B* ==> x IN R+``,
-  metis_tac[subfield_element, field_nonzero_eq, subfield_zero, field_mult_carrier]);
+Theorem subfield_nonzero_element:
+    !(r:'a field) s. s <<= r ==> !x. x IN B* ==> x IN R+
+Proof
+  metis_tac[subfield_element, field_nonzero_eq, subfield_zero, field_mult_carrier]
+QED
 
 (* Theorem: subfield preserves sum and product. *)
 (* Proof: by field_is_ring, subfield_eq_subring, subring_property. *)
-val subfield_property = store_thm(
-  "subfield_property",
-  ``!(r s):'a field. Field s /\ subfield s r ==>
-     !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y) /\ (s.prod.op x y = x * y)``,
-  metis_tac[field_is_ring, subfield_eq_subring, subring_property]);
+Theorem subfield_property:
+    !(r s):'a field. Field s /\ subfield s r ==>
+     !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y) /\ (s.prod.op x y = x * y)
+Proof
+  metis_tac[field_is_ring, subfield_eq_subring, subring_property]
+QED
 
 (* Theorem: s <<= r ==> !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y) *)
 (* Proof: by subfield_is_subring, subring_add. *)
-val subfield_add = store_thm(
-  "subfield_add",
-  ``!(r s):'a field. s <<= r ==> !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y)``,
-  rw[subfield_is_subring, subring_add]);
+Theorem subfield_add:
+    !(r s):'a field. s <<= r ==> !x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y)
+Proof
+  rw[subfield_is_subring, subring_add]
+QED
 
 (* Theorem: s <<= r ==> !x y. x IN B /\ y IN B ==> (s.prod.op x y = x * y) *)
 (* Proof: by subfield_is_subring, subring_mult. *)
-val subfield_mult = store_thm(
-  "subfield_mult",
-  ``!(r s):'a field. s <<= r ==> !x y. x IN B /\ y IN B ==> (s.prod.op x y = x * y)``,
-  rw[subfield_is_subring, subring_mult]);
+Theorem subfield_mult:
+    !(r s):'a field. s <<= r ==> !x y. x IN B /\ y IN B ==> (s.prod.op x y = x * y)
+Proof
+  rw[subfield_is_subring, subring_mult]
+QED
 
 (* Theorem: s <<= r ==> !x. x IN B ==> (s.sum.inv x = -x) *)
 (* Proof: by subfield_is_subring, subring_neg. *)
-val subfield_neg = store_thm(
-  "subfield_neg",
-  ``!(r s):'a field. s <<= r ==> !x. x IN B ==> (s.sum.inv x = -x)``,
-  rw[subfield_is_subring, subring_neg]);
+Theorem subfield_neg:
+    !(r s):'a field. s <<= r ==> !x. x IN B ==> (s.sum.inv x = -x)
+Proof
+  rw[subfield_is_subring, subring_neg]
+QED
 
 (* Theorem: s <<= r ==> !x y. x IN B /\ y IN B ==> (ring_sub s x y = x - y) *)
 (* Proof: by subfield_is_subring, subring_sub. *)
-val subfield_sub = store_thm(
-  "subfield_sub",
-  ``!(r s):'a field. s <<= r ==> !x y. x IN B /\ y IN B ==> (ring_sub s x y = x - y)``,
-  rw[subfield_is_subring, subring_sub]);
+Theorem subfield_sub:
+    !(r s):'a field. s <<= r ==> !x y. x IN B /\ y IN B ==> (ring_sub s x y = x - y)
+Proof
+  rw[subfield_is_subring, subring_sub]
+QED
 
 (* Theorem: s <<= r ==> !n. s.sum.exp s.prod.id n = ##n *)
 (* Proof: by subfield_is_subring, subring_num. *)
-val subfield_num = store_thm(
-  "subfield_num",
-  ``!(r s):'a field. s <<= r ==> !n. s.sum.exp s.prod.id n = ##n``,
-  rw[subfield_is_subring, subring_num]);
+Theorem subfield_num:
+    !(r s):'a field. s <<= r ==> !n. s.sum.exp s.prod.id n = ##n
+Proof
+  rw[subfield_is_subring, subring_num]
+QED
 
 (* Theorem: s <<= r ==> !x. x IN B ==> !n. s.prod.exp x n = x ** n *)
 (* Proof: by subfield_is_subring, subring_exp *)
-val subfield_exp = store_thm(
-  "subfield_exp",
-  ``!(r s):'a field. s <<= r ==> !x. x IN B ==> !n. s.prod.exp x n = x ** n``,
-  rw[subfield_is_subring, subring_exp]);
+Theorem subfield_exp:
+    !(r s):'a field. s <<= r ==> !x. x IN B ==> !n. s.prod.exp x n = x ** n
+Proof
+  rw[subfield_is_subring, subring_exp]
+QED
 
 (* Theorem: s <<= r ==> !x. Unit s x ==> unit x *)
 (* Proof: by subfield_is_subring, subring_unit *)
-val subfield_unit = store_thm(
-  "subfield_unit",
-  ``!r:'a field s. s <<= r ==> !x. Unit s x ==> unit x``,
-  metis_tac[subfield_is_subring, subring_unit]);
+Theorem subfield_unit:
+    !r:'a field s. s <<= r ==> !x. Unit s x ==> unit x
+Proof
+  metis_tac[subfield_is_subring, subring_unit]
+QED
 
 (* Theorem: s <<= r ==> !x. x IN B /\ x <> #0 ==> |/ x IN B *)
 (* Proof:
@@ -1385,21 +1483,23 @@ val subfield_unit = store_thm(
      or (Invertibles s.prod).inv x = |/ x            by I_THM
     But (Invertibles s.prod).inv x IN B              by field_inv_element
 *)
-val subfield_inv = store_thm(
-  "subfield_inv",
-  ``!(r s):'a field. s <<= r ==> !x. x IN B /\ x <> #0 ==> |/ x IN B``,
+Theorem subfield_inv:
+    !(r s):'a field. s <<= r ==> !x. x IN B /\ x <> #0 ==> |/ x IN B
+Proof
   rpt strip_tac >>
   `x IN ring_nonzero s` by metis_tac[subfield_zero, field_nonzero_eq] >>
   `FieldHomo I s r` by rw[GSYM subfield_def] >>
   `(Invertibles s.prod).inv x = |/ x` by metis_tac[field_homo_inv, combinTheory.I_THM] >>
-  metis_tac[field_inv_element]);
+  metis_tac[field_inv_element]
+QED
 
 (* Theorem: s <<= r ==> (char s = char r) *)
 (* Proof: by subfield_eq_subring, subring_char *)
-val subfield_char = store_thm(
-  "subfield_char",
-  ``!(r s):'a field. s <<= r ==> (char s = char r)``,
-  rw[subfield_eq_subring, subring_char]);
+Theorem subfield_char:
+    !(r s):'a field. s <<= r ==> (char s = char r)
+Proof
+  rw[subfield_eq_subring, subring_char]
+QED
 
 (* Theorem: s <<= r ==> !x. x IN B ==> (order s* x = forder x) *)
 (* Proof:
@@ -1412,13 +1512,14 @@ val subfield_char = store_thm(
     <=> T                                    by subfield_exp
    The result follows by order_def, period_def.
 *)
-val subfield_order = store_thm(
-  "subfield_order",
-  ``!(r:'a field) s. s <<= r ==> !x. x IN B ==> (order s* x = forder x)``,
+Theorem subfield_order:
+    !(r:'a field) s. s <<= r ==> !x. x IN B ==> (order s* x = forder x)
+Proof
   rpt strip_tac >>
   `s*.id = f*.id` by rw[excluding_def, subfield_ids] >>
   `!k. s*.exp x k = f*.exp x k` by rw[field_nonzero_exp, subfield_exp] >>
-  rw[order_def, period_def]);
+  rw[order_def, period_def]
+QED
 
 (* Theorem: s <<= r ==> !n. (orders s* n) SUBSET (orders f* n) *)
 (* Proof:
@@ -1433,11 +1534,12 @@ val subfield_order = store_thm(
    <=> x IN R+ /\ forder x = n                      by field_nonzero_eq
    <=> x IN orders f* n                             by field_orders_element_property
 *)
-val subfield_orders_subset = store_thm(
-  "subfield_orders_subset",
-  ``!(r:'a field) s. s <<= r ==> !n. (orders s* n) SUBSET (orders f* n)``,
+Theorem subfield_orders_subset:
+    !(r:'a field) s. s <<= r ==> !n. (orders s* n) SUBSET (orders f* n)
+Proof
   rw[SUBSET_DEF] >>
-  metis_tac[subfield_order, field_orders_element_property, subfield_element, field_nonzero_eq, subfield_ids]);
+  metis_tac[subfield_order, field_orders_element_property, subfield_element, field_nonzero_eq, subfield_ids]
+QED
 
 (* Theorem: Properties of subfield: s <<= r ==>
             (!x. x IN B ==> x IN R) /\
@@ -1453,13 +1555,13 @@ val subfield_orders_subset = store_thm(
    (5) x IN s.carrier /\ y IN s.carrier ==> s.prod.op x y = x * y, true by field_homo_property.
    (6) s.sum.exp s.prod.id n = ##n, true by field_homo_num.
 *)
-val subfield_property_alt = store_thm(
-  "subfield_property_alt",
-  ``!(r s):'a field. s <<= r ==>
+Theorem subfield_property_alt:
+    !(r s):'a field. s <<= r ==>
     (!x. x IN B ==> x IN R) /\
     (s.sum.id = #0) /\ (s.prod.id = #1) /\
     (!x y. x IN B /\ y IN B ==> (s.sum.op x y = x + y) /\ (s.prod.op x y = x * y)) /\
-    (!n. s.sum.exp s.prod.id n = ##n)``,
+    (!n. s.sum.exp s.prod.id n = ##n)
+Proof
   ntac 2 strip_tac >>
   `!x. I x = x` by rw[] >>
   rw[subfield_def] >| [
@@ -1469,7 +1571,8 @@ val subfield_property_alt = store_thm(
     metis_tac[field_homo_property],
     metis_tac[field_homo_property],
     metis_tac[field_homo_num]
-  ]);
+  ]
+QED
 
 (* Theorem: subfield s r /\ FieldIso f r r_ ==> FieldHomo f s r_ *)
 (* Proof:
@@ -1478,24 +1581,26 @@ val subfield_property_alt = store_thm(
    Thus FieldHomo (f o I) s r_                  by field_homo_compose
      or FieldHomo f s r_                        by I_o_ID
 *)
-val subfield_field_iso_compose = store_thm(
-  "subfield_field_iso_compose",
-  ``!(r:'a field) (s:'a field) (r_:'b field) f. subfield s r /\ FieldIso f r r_ ==> FieldHomo f s r_``,
+Theorem subfield_field_iso_compose:
+    !(r:'a field) (s:'a field) (r_:'b field) f. subfield s r /\ FieldIso f r r_ ==> FieldHomo f s r_
+Proof
   rpt strip_tac >>
   `FieldHomo I s r` by rw[GSYM subfield_def] >>
   `FieldHomo f r r_` by metis_tac[FieldIso_def] >>
-  prove_tac[field_homo_compose, combinTheory.I_o_ID]);
+  prove_tac[field_homo_compose, combinTheory.I_o_ID]
+QED
 
 (* Theorem: FieldHomo f f1 f2 /\ FieldIso g f2 f3 ==> FieldHomo (g o f) f1 f3 *)
 (* Proof:
    Note FieldHomo g f2 f3          by FieldIso_def
      so FieldHomo (g o f) f1 f3    by field_homo_compose
 *)
-val field_homo_iso_homo = store_thm(
-  "field_homo_iso_homo",
-  ``!(f1:'a field) (f2:'b field) (f3:'c field) f g.
-     FieldHomo f f1 f2 /\ FieldIso g f2 f3 ==> FieldHomo (g o f) f1 f3``,
-  metis_tac[field_homo_compose, FieldIso_def]);
+Theorem field_homo_iso_homo:
+    !(f1:'a field) (f2:'b field) (f3:'c field) f g.
+     FieldHomo f f1 f2 /\ FieldIso g f2 f3 ==> FieldHomo (g o f) f1 f3
+Proof
+  metis_tac[field_homo_compose, FieldIso_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphic Image of Field.                                               *)
@@ -1532,9 +1637,9 @@ val _ = overload_on("homo_field", ``homo_ring``);
           = f #1                                by field_mult_rinv
           = (homo_field r f).prod.id            by MonoidHomo_def
 *)
-val homo_field_field = store_thm(
-  "homo_field_field",
-  ``!(r:'a field) f. Field r /\ FieldHomo f r (homo_field r f) /\ f #1 <> f #0 ==> Field (homo_field r f)``,
+Theorem homo_field_field:
+    !(r:'a field) f. Field r /\ FieldHomo f r (homo_field r f) /\ f #1 <> f #0 ==> Field (homo_field r f)
+Proof
   rw_tac std_ss[FieldHomo_def] >>
   rw_tac std_ss[field_def_by_inv] >-
   rw[homo_ring_ring] >-
@@ -1545,14 +1650,16 @@ val homo_field_field = store_thm(
   `a IN R+` by rw[field_nonzero_eq] >>
   `|/ a IN R /\ (a * |/ a = #1)` by rw[] >>
   `MonoidHomo f r.prod (homo_field r f).prod` by metis_tac[RingHomo_def] >>
-  metis_tac[MonoidHomo_def, field_carriers]);
+  metis_tac[MonoidHomo_def, field_carriers]
+QED
 
 (* Theorem: Field r /\ INJ f R UNIV ==> FieldHomo f r (homo_field r f) *)
 (* Proof: by FieldHomo_def, homo_ring_by_inj. *)
-val homo_field_by_inj = store_thm(
-  "homo_field_by_inj",
-  ``!(r:'a field) (f:'a -> 'b). Field r /\ INJ f R UNIV ==> FieldHomo f r (homo_field r f)``,
-  rw[FieldHomo_def, homo_ring_by_inj]);
+Theorem homo_field_by_inj:
+    !(r:'a field) (f:'a -> 'b). Field r /\ INJ f R UNIV ==> FieldHomo f r (homo_field r f)
+Proof
+  rw[FieldHomo_def, homo_ring_by_inj]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphic Image between Fields.                                         *)
@@ -1609,9 +1716,9 @@ QED
    Expanding by definitions, it all comes down to: x' IN R ==> f x' IN R_
    which is true by field_homo_element.
 *)
-val field_homo_subfield = store_thm(
-  "field_homo_subfield",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> subfield (ring_homo_image f r r_) r_``,
+Theorem field_homo_subfield:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> subfield (ring_homo_image f r r_) r_
+Proof
   rw[subfield_def] >>
   `!x. x IN R ==> f x IN R_` by metis_tac[field_homo_element] >>
   rw_tac std_ss[FieldHomo_def, RingHomo_def] >-
@@ -1619,7 +1726,8 @@ val field_homo_subfield = store_thm(
  (rw[GroupHomo_def, ring_homo_image_def, homo_image_def] >>
   rw[]) >>
   rw[MonoidHomo_def, ring_homo_image_def, homo_image_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* This is similar to: homo_ring_subring *)
 
@@ -1629,13 +1737,14 @@ val field_homo_subfield = store_thm(
    Since (ring_homo_image f r r_).carrier = IMAGE f R     by ring_homo_image_def
    Hence true                                             by INJ_IMAGE_BIJ
 *)
-val field_homo_map_image_bij = store_thm(
-  "field_homo_map_image_bij",
-  ``!(r:'a field) (r_:'b field). !f. (r ~~~ r_) f ==> BIJ f R (ring_homo_image f r r_).carrier``,
+Theorem field_homo_map_image_bij:
+    !(r:'a field) (r_:'b field). !f. (r ~~~ r_) f ==> BIJ f R (ring_homo_image f r r_).carrier
+Proof
   rpt strip_tac >>
   `INJ f R R_` by rw[field_homo_map_inj] >>
   `(ring_homo_image f r r_).carrier = IMAGE f R` by rw[ring_homo_image_def] >>
-  metis_tac[INJ_IMAGE_BIJ]);
+  metis_tac[INJ_IMAGE_BIJ]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> FieldHomo f r (ring_homo_image f r r_ *)
 (* Proof:
@@ -1649,14 +1758,15 @@ val field_homo_map_image_bij = store_thm(
        Expanding by definitions, this is to show: f (x * y) = f x *_ f y
        True by field_homo_property.
 *)
-val field_homo_image_homo = store_thm(
-  "field_homo_image_homo",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> FieldHomo f r (ring_homo_image f r r_)``,
+Theorem field_homo_image_homo:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> FieldHomo f r (ring_homo_image f r r_)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[FieldHomo_def, RingHomo_def] >-
   rw[ring_homo_image_def] >-
   rw[GroupHomo_def, ring_homo_image_def, homo_image_def, field_homo_property] >>
-  rw[MonoidHomo_def, ring_homo_image_def, homo_image_def, field_homo_property]);
+  rw[MonoidHomo_def, ring_homo_image_def, homo_image_def, field_homo_property]
+QED
 
 (* Theorem: (r ~~~ r_) f ==> FieldIso f r (ring_homo_image f r r_) *)
 (* Proof:
@@ -1664,10 +1774,11 @@ val field_homo_image_homo = store_thm(
    (1) FieldHomo f r (ring_homo_image f r r_), true by field_homo_image_homo
    (2) BIJ f R (ring_homo_image f r r_).carrier, true by field_homo_map_image_bij.
 *)
-val field_homo_image_iso = store_thm(
-  "field_homo_image_iso",
-  ``!(r:'a field) (r_:'b field). !f. (r ~~~ r_) f ==> FieldIso f r (ring_homo_image f r r_)``,
-  rw[FieldIso_def, field_homo_image_homo, field_homo_map_image_bij]);
+Theorem field_homo_image_iso:
+    !(r:'a field) (r_:'b field). !f. (r ~~~ r_) f ==> FieldIso f r (ring_homo_image f r r_)
+Proof
+  rw[FieldIso_def, field_homo_image_homo, field_homo_map_image_bij]
+QED
 
 (* Theorem: (r ~~~ r_) f /\ s <<= r ==> (s ~~~ (ring_homo_image f s r_)) f *)
 (* Proof:
@@ -1680,10 +1791,10 @@ val field_homo_image_iso = store_thm(
         ==> RingHomo f s (ring_homo_image f s r_)  by ring_homo_image_homo
          or FieldHomo f s (ring_homo_image f s r_) by FieldHomo_def
 *)
-val field_homo_subfield_homo = store_thm(
-  "field_homo_subfield_homo",
-  ``!(r:'a field) (s:'a field) (r_:'b field) f.
-      (r ~~~ r_) f /\ s <<= r ==> (s ~~~ (ring_homo_image f s r_)) f``,
+Theorem field_homo_subfield_homo:
+    !(r:'a field) (s:'a field) (r_:'b field) f.
+      (r ~~~ r_) f /\ s <<= r ==> (s ~~~ (ring_homo_image f s r_)) f
+Proof
   ntac 5 strip_tac >>
   `FieldHomo f s r_` by metis_tac[subfield_homo_homo] >>
   rw_tac std_ss[] >-
@@ -1691,7 +1802,8 @@ val field_homo_subfield_homo = store_thm(
   `s <= r` by rw[subfield_is_subring] >>
   `RingHomo f s r_` by rw[GSYM FieldHomo_def] >>
   `RingHomo f s (ring_homo_image f s r_)` by rw[ring_homo_image_homo] >>
-  metis_tac[FieldHomo_def]);
+  metis_tac[FieldHomo_def]
+QED
 
 (* Theorem: (r === r_) f /\ s <<= r ==> (s === (ring_homo_image f s r_)) f *)
 (* Proof:
@@ -1706,10 +1818,10 @@ val field_homo_subfield_homo = store_thm(
        Thus RingIso f s (ring_homo_image f s r_)   by ring_homo_image_iso
          or FieldIso f s (ring_homo_image f s r_)  by field_iso_eq_ring_iso
 *)
-val field_iso_subfield_iso = store_thm(
-  "field_iso_subfield_iso",
-  ``!(r:'a field) (s:'a field) (r_:'b field) f.
-      (r === r_) f /\ s <<= r ==> (s === (ring_homo_image f s r_)) f``,
+Theorem field_iso_subfield_iso:
+    !(r:'a field) (s:'a field) (r_:'b field) f.
+      (r === r_) f /\ s <<= r ==> (s === (ring_homo_image f s r_)) f
+Proof
   ntac 5 strip_tac >>
   `FieldHomo f r r_ /\ BIJ f R R_` by metis_tac[FieldIso_def] >>
   `FieldHomo f s r_` by metis_tac[subfield_homo_homo] >>
@@ -1719,7 +1831,8 @@ val field_iso_subfield_iso = store_thm(
   `s <= r` by rw[subfield_is_subring] >>
   `RingHomo f s r_` by rw[GSYM FieldHomo_def] >>
   `RingIso f s (ring_homo_image f s r_)` by rw[ring_homo_image_iso] >>
-  rw[field_iso_eq_ring_iso]);
+  rw[field_iso_eq_ring_iso]
+QED
 
 (* have:
 ring_homo_image_is_subring |- !r r_ f. (r ~r~ r_) f ==> subring (ring_homo_image f r r_) r_
@@ -1733,14 +1846,15 @@ field_homo_subfield        |- !r r_ f. (r ~~~ r_) f ==> subfield (ring_homo_imag
     ==> (ring_homo_image f r r_) <= r_   by ring_homo_image_subring, (r ~r~ r_) f
    Thus (ring_homo_image f r r_) <<= r_  by subfield_eq_subring
 *)
-val ring_homo_image_subfield = store_thm(
-  "ring_homo_image_subfield",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> ring_homo_image f r r_ <<= r_``,
+Theorem ring_homo_image_subfield:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> ring_homo_image f r r_ <<= r_
+Proof
   ntac 4 strip_tac >>
   `Field (ring_homo_image f r r_)` by rw[ring_homo_image_field] >>
   `(r ~r~ r_) f` by rw[GSYM field_homo_eq_ring_homo] >>
   `(ring_homo_image f r r_) <= r_` by rw[ring_homo_image_subring] >>
-  rw[subfield_eq_subring]);
+  rw[subfield_eq_subring]
+QED
 
 (* Theorem alias *)
 val field_homo_ring_homo_subfield = save_thm("field_homo_ring_homo_subfield", field_homo_subfield);
@@ -1753,10 +1867,11 @@ val field_homo_ring_homo_subfield = |- !r r_ f. (r ~~~ r_) f ==> subfield (ring_
    Note FieldIso f r r_ ==> FieldHomo f r r_   by FieldIso_def
    Thus subring (ring_homo_image f r r_) r_    by field_homo_ring_homo_subfield
 *)
-val field_iso_ring_homo_subfield = store_thm(
-  "field_iso_ring_homo_subfield",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> subfield (ring_homo_image f r r_) r_``,
-  rw_tac std_ss[field_homo_ring_homo_subfield, FieldIso_def]);
+Theorem field_iso_ring_homo_subfield:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> subfield (ring_homo_image f r r_) r_
+Proof
+  rw_tac std_ss[field_homo_ring_homo_subfield, FieldIso_def]
+QED
 
 (* Theorem: s <<= r /\ (r === r_) f ==> (ring_homo_image f s r_) <<= r_ *)
 (* Proof:
@@ -1764,11 +1879,12 @@ val field_iso_ring_homo_subfield = store_thm(
    Thus (s ~~~ r_) f                       by notation, Field s
     ==> (ring_homo_image f s r_) <<= r_    by ring_homo_image_subfield
 *)
-val subfield_field_iso_ring_homo_subfield = store_thm(
-  "subfield_field_iso_ring_homo_subfield",
-  ``!(r:'a field) (s:'a field) (r_:'b field) f.
-     s <<= r /\ (r === r_) f ==> (ring_homo_image f s r_) <<= r_``,
-  metis_tac[ring_homo_image_subfield, subfield_field_iso_compose]);
+Theorem subfield_field_iso_ring_homo_subfield:
+    !(r:'a field) (s:'a field) (r_:'b field) f.
+     s <<= r /\ (r === r_) f ==> (ring_homo_image f s r_) <<= r_
+Proof
+  metis_tac[ring_homo_image_subfield, subfield_field_iso_compose]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subset Field (to be subfield)                                             *)
@@ -1787,31 +1903,34 @@ End
 
 (* Theorem: properties of subset_field *)
 (* Proof: by subset_field_def *)
-val subset_field_property = store_thm(
-  "subset_field_property",
-  ``!(r:'a field) s.
+Theorem subset_field_property:
+    !(r:'a field) s.
      ((subset_field r s).carrier = s) /\
      ((subset_field r s).sum.carrier = s) /\
      ((subset_field r s).prod.carrier = s) /\
      ((subset_field r s).sum.op = r.sum.op) /\
      ((subset_field r s).sum.id = #0) /\
      ((subset_field r s).prod.op = r.prod.op) /\
-     ((subset_field r s).prod.id = #1)``,
-  rw_tac std_ss[subset_field_def]);
+     ((subset_field r s).prod.id = #1)
+Proof
+  rw_tac std_ss[subset_field_def]
+QED
 
 (* Theorem: (subset_field r s).sum = subset_group r.sum s *)
 (* Proof: by subset_field_def, subset_group_def *)
-val subset_field_sum_eq_subset_group_sum = store_thm(
-  "subset_field_sum_eq_subset_group_sum",
-  ``!(r:'a field) s. (subset_field r s).sum = subset_group r.sum s``,
-  rw[subset_field_def, subset_group_def]);
+Theorem subset_field_sum_eq_subset_group_sum:
+    !(r:'a field) s. (subset_field r s).sum = subset_group r.sum s
+Proof
+  rw[subset_field_def, subset_group_def]
+QED
 
 (* Theorem: (subset_field r s).prod = subset_group r.prod s *)
 (* Proof: by subset_field_def, subset_group_def *)
-val subset_field_prod_eq_subset_group_prod = store_thm(
-  "subset_field_prod_eq_subset_group_prod",
-  ``!(r:'a field) s. (subset_field r s).prod = subset_group r.prod s``,
-  rw[subset_field_def, subset_group_def]);
+Theorem subset_field_prod_eq_subset_group_prod:
+    !(r:'a field) s. (subset_field r s).prod = subset_group r.prod s
+Proof
+  rw[subset_field_def, subset_group_def]
+QED
 
 (* Theorem: x IN s ==> !n. (subset_field r s).sum.exp x n = r.sum.exp x n *)
 (* Proof:
@@ -1829,13 +1948,14 @@ val subset_field_prod_eq_subset_group_prod = store_thm(
         = x + r.sum.exp x n               by induction hypothesis
         = r.sum.exp x (SUC n)             by group_exp_SUC
 *)
-val subset_field_sum_exp = store_thm(
-  "subset_field_sum_exp",
-  ``!(r:'a field) s. !x. x IN s ==> !n. (subset_field r s).sum.exp x n = r.sum.exp x n``,
+Theorem subset_field_sum_exp:
+    !(r:'a field) s. !x. x IN s ==> !n. (subset_field r s).sum.exp x n = r.sum.exp x n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[subset_field_property] >>
-  rw[subset_field_property]);
+  rw[subset_field_property]
+QED
 
 (* Theorem: x IN s ==> !n. (subset_field r s).prod.exp x n = x ** n *)
 (* Proof:
@@ -1853,20 +1973,22 @@ val subset_field_sum_exp = store_thm(
         = x * (x ** n)                 by induction hypothesis
         = x ** SUC n                   by field_exp_SUC
 *)
-val subset_field_prod_exp = store_thm(
-  "subset_field_prod_exp",
-  ``!(r:'a field) s. !x. x IN s ==> !n. (subset_field r s).prod.exp x n = x ** n``,
+Theorem subset_field_prod_exp:
+    !(r:'a field) s. !x. x IN s ==> !n. (subset_field r s).prod.exp x n = x ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[subset_field_property] >>
-  rw[subset_field_property]);
+  rw[subset_field_property]
+QED
 
 (* Theorem: #1 IN s ==> !n. (subset_field r s).sum.exp (subset_field r s).prod.id n = ##n *)
 (* Proof: by subset_field_sum_exp, subset_field_property *)
-val subset_field_sum_num = store_thm(
-  "subset_field_sum_num",
-  ``!(r:'a field) s. #1 IN s ==> !n. (subset_field r s).sum.exp (subset_field r s).prod.id n = ##n``,
-  rw_tac std_ss[subset_field_sum_exp, subset_field_property]);
+Theorem subset_field_sum_num:
+    !(r:'a field) s. #1 IN s ==> !n. (subset_field r s).sum.exp (subset_field r s).prod.id n = ##n
+Proof
+  rw_tac std_ss[subset_field_sum_exp, subset_field_property]
+QED
 
 (* Theorem: x IN s ==> (order ((subset_field r s).prod excluding #0) x = forder x) *)
 (* Proof:
@@ -1875,14 +1997,15 @@ val subset_field_sum_num = store_thm(
     and g.id = f*.id                  by excluding_def, subset_field_property
    Thus order g x = forder x          by order_def, period_def
 *)
-val subset_field_order = store_thm(
-  "subset_field_order",
-  ``!(r:'a field) s. !x. x IN s ==> (order ((subset_field r s).prod excluding #0) x = forder x)``,
+Theorem subset_field_order:
+    !(r:'a field) s. !x. x IN s ==> (order ((subset_field r s).prod excluding #0) x = forder x)
+Proof
   rw[order_def, period_def] >>
   qabbrev_tac `g = (subset_field r s).prod excluding #0` >>
   `!k. g.exp x k = f*.exp x k` by rw[group_excluding_exp, subset_field_prod_exp, Abbr`g`] >>
   `#e = f*.id` by rw[excluding_def, subset_field_property, Abbr`g`] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: #1 IN s ==> (char (subset_field r s) = char r) *)
 (* Proof:
@@ -1893,12 +2016,13 @@ val subset_field_order = store_thm(
    = order r.sum #1                       by subset_group_order, #1 IN s
    = char r                               by char_def
 *)
-val subset_field_char = store_thm(
-  "subset_field_char",
-  ``!(r:'a field) s. #1 IN s ==> (char (subset_field r s) = char r)``,
+Theorem subset_field_char:
+    !(r:'a field) s. #1 IN s ==> (char (subset_field r s) = char r)
+Proof
   rw[char_def, subset_field_property] >>
   rw[subset_field_sum_eq_subset_group_sum] >>
-  rw[subset_group_order]);
+  rw[subset_group_order]
+QED
 
 (* Note:
 Given a subset s of field elements, to make (subset_field r s) a field
@@ -1933,15 +2057,16 @@ Therefore, subgroup_field is defined and investigated in ffMaster.
         and r.sum.carrier = R       by ring_carriers
         and B SUBSET R              by subring_carrier_subset
 *)
-val subring_add_subset_group_subgroup = store_thm(
-  "subring_add_subset_group_subgroup",
-  ``!(r:'a ring) s. s <= r ==> (subset_group r.sum s.sum.carrier) <= r.sum``,
+Theorem subring_add_subset_group_subgroup:
+    !(r:'a ring) s. s <= r ==> (subset_group r.sum s.sum.carrier) <= r.sum
+Proof
   rpt strip_tac >>
   (irule subset_group_subgroup >> rpt conj_tac) >-
   metis_tac[ring_neg_element, ring_add_element, ring_carriers, subring_neg, subring_add] >-
   rw[ring_add_group] >-
   rw[ring_carrier_nonempty] >>
-  rw[subring_carrier_subset]);
+  rw[subring_carrier_subset]
+QED
 
 (* Theorem: s <= r ==> (subset_group r.prod s.prod.carrier) << r.prod *)
 (* Proof:
@@ -1958,29 +2083,32 @@ val subring_add_subset_group_subgroup = store_thm(
         and r.prod.carrier = R      by ring_carriers
         and B SUBSET R              by subring_carrier_subset
 *)
-val subring_mult_subset_group_submonoid = store_thm(
-  "subring_mult_subset_group_submonoid",
-  ``!(r:'a ring) s. s <= r ==> Submonoid (subset_group r.prod s.prod.carrier) r.prod``,
+Theorem subring_mult_subset_group_submonoid:
+    !(r:'a ring) s. s <= r ==> Submonoid (subset_group r.prod s.prod.carrier) r.prod
+Proof
   rpt strip_tac >>
   (irule subset_group_submonoid >> rpt conj_tac) >-
   metis_tac[ring_mult_element, ring_carriers, subring_mult] >-
   rw[ring_mult_monoid] >-
   metis_tac[subring_one, ring_one_element, ring_carriers] >>
-  rw[subring_carrier_subset]);
+  rw[subring_carrier_subset]
+QED
 
 (* Theorem: s <<= r ==> (subset_group r.sum s.sum.carrier) <= r.sum *)
 (* Proof: by subfield_is_subring, subring_add_subset_group_subgroup *)
-val subfield_add_subset_group_subgroup = store_thm(
-  "subfield_add_subset_group_subgroup",
-  ``!(r:'a field) s. s <<= r ==> (subset_group r.sum s.sum.carrier) <= r.sum``,
-  metis_tac[subfield_is_subring, subring_add_subset_group_subgroup]);
+Theorem subfield_add_subset_group_subgroup:
+    !(r:'a field) s. s <<= r ==> (subset_group r.sum s.sum.carrier) <= r.sum
+Proof
+  metis_tac[subfield_is_subring, subring_add_subset_group_subgroup]
+QED
 
 (* Theorem: s <<= r ==> (subset_group r.prod s.prod.carrier) << r.prod *)
 (* Proof: by subfield_is_subring, subring_mult_subset_group_submonoid *)
-val subfield_mult_subset_group_submonoid = store_thm(
-  "subfield_mult_subset_group_submonoid",
-  ``!(r:'a field) s. s <<= r ==> Submonoid (subset_group r.prod s.prod.carrier) r.prod``,
-  metis_tac[subfield_is_subring, subring_mult_subset_group_submonoid]);
+Theorem subfield_mult_subset_group_submonoid:
+    !(r:'a field) s. s <<= r ==> Submonoid (subset_group r.prod s.prod.carrier) r.prod
+Proof
+  metis_tac[subfield_is_subring, subring_mult_subset_group_submonoid]
+QED
 
 (*
 > field_homo_inv |> ISPEC ``s:'a ring`` |> ISPEC ``r:'a ring`` |> ISPEC ``I``;
@@ -2022,9 +2150,9 @@ val it = |- (s ~~~ r) I ==> !x. x IN ring_nonzero s ==> (I ((Invertibles s.prod)
         ==> x IN R+                   by field_nonzero_eq
          or x IN F*                   by field_mult_carrier
 *)
-val subfield_mult_subset_group_subgroup = store_thm(
-  "subfield_mult_subset_group_subgroup",
-  ``!(r:'a field) s. s <<= r ==> (subset_group f* (s.prod.carrier DIFF {#0})) <= f*``,
+Theorem subfield_mult_subset_group_subgroup:
+    !(r:'a field) s. s <<= r ==> (subset_group f* (s.prod.carrier DIFF {#0})) <= f*
+Proof
   rpt strip_tac >>
   (irule subset_group_subgroup >> rpt conj_tac) >| [
     rw_tac std_ss[group_excluding_property, field_carriers, IN_DIFF, IN_SING] >| [
@@ -2043,7 +2171,8 @@ val subfield_mult_subset_group_subgroup = store_thm(
     metis_tac[field_carriers, MEMBER_NOT_EMPTY],
     rw_tac std_ss[field_carriers, SUBSET_DEF, IN_DIFF, IN_SING] >>
     metis_tac[subfield_element, field_mult_carrier, field_nonzero_eq]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> (subset_group f* R+ <= f* ) *)
 (* Proof:
@@ -2055,15 +2184,16 @@ val subfield_mult_subset_group_subgroup = store_thm(
        Note f*.op x (f*.inv y) = x * |/ y    by field_nonzero_mult_property, field_mult_inv
        Thus x * |/ y IN R+                   by field_mult_nonzero, field_inv_nonzero
 *)
-val field_subset_group_subgroup = store_thm(
-  "field_subset_group_subgroup",
-  ``!r:'a field. Field r ==> (subset_group f* R+ <= f* )``,
+Theorem field_subset_group_subgroup:
+    !r:'a field. Field r ==> (subset_group f* R+ <= f* )
+Proof
   rpt strip_tac >>
   (REVERSE (irule subset_group_subgroup >> rpt conj_tac)) >-
   rw[field_nonzero_subset, field_mult_carrier] >-
   rw[field_nonzero_carrier_nonempty] >-
   rw[field_mult_group] >>
-  rw[field_nonzero_mult_property, field_mult_inv]);
+  rw[field_nonzero_mult_property, field_mult_inv]
+QED
 
 (* Theorem: Field r ==> (subset_group f* R+ = f* ) *)
 (* Proof:
@@ -2071,13 +2201,14 @@ val field_subset_group_subgroup = store_thm(
     and (subset_group f* R+).carrier = R+    by subset_group_property
     ==> subset_group f* R+ = f*              by subgroup_eq_carrier, field_mult_carrier
 *)
-val field_subset_group_self = store_thm(
-  "field_subset_group_self",
-  ``!r:'a field. Field r ==> (subset_group f* R+ = f* )``,
+Theorem field_subset_group_self:
+    !r:'a field. Field r ==> (subset_group f* R+ = f* )
+Proof
   rpt strip_tac >>
   `subset_group f* R+ <= f*` by rw[field_subset_group_subgroup] >>
   `(subset_group f* R+).carrier = R+` by rw[subset_group_property] >>
-  metis_tac[subgroup_eq_carrier, field_mult_carrier]);
+  metis_tac[subgroup_eq_carrier, field_mult_carrier]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Injective Image of Field.                                                 *)

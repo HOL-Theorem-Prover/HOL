@@ -35,20 +35,21 @@ val list_case_eq = prove_case_eq_thm{
 };
 
 
-val _ = Datatype`tokrel = Reduce | Shift`
+Datatype: tokrel = Reduce | Shift
+End
 
 val tokrel_case_eq = prove_case_eq_thm {
   case_def = theorem "tokrel_case_def",
   nchotomy = theorem "tokrel_nchotomy"
 };
 
-val _ = Datatype`
+Datatype:
   pMachine = <| rules : 'tok # 'tok -> tokrel option ; (* stk tok , strm tok *)
                 reduce : 'trm -> 'tok -> 'trm -> 'trm option ;
                 lift : 'tok -> 'trm ;
                 isOp : 'tok -> bool ;
                 mkApp : 'trm -> 'trm -> 'trm option |>
-`;
+End
 
 
 (* stack is list of tokens + terms *)
@@ -91,39 +92,43 @@ Definition wfStk_def:
 End
 val _ = export_rewrites ["wfStk_def"]
 
-val wfStk_ignores_hdvalues = store_thm(
-  "wfStk_ignores_hdvalues[simp]",
-  ``wfStk (INL l::t) = wfStk (INL ARB :: t) ∧
-    wfStk (INR r::t) = wfStk (INR ARB :: t)``,
+Theorem wfStk_ignores_hdvalues[simp]:
+    wfStk (INL l::t) = wfStk (INL ARB :: t) ∧
+    wfStk (INR r::t) = wfStk (INR ARB :: t)
+Proof
   Cases_on `t` >> simp[] >> rename1 `wfStk (INL ARB :: el2 :: tl)` >>
-  Cases_on `el2` >> simp[]);
+  Cases_on `el2` >> simp[]
+QED
 
-val precparse1_preserves_wfStk = store_thm(
-  "precparse1_preserves_wfStk",
-  ``wfStk stk0 ∧ precparse1 pM (stk0, strm0) = SOME (stk, strm) ⇒
-    wfStk stk``,
+Theorem precparse1_preserves_wfStk:
+    wfStk stk0 ∧ precparse1 pM (stk0, strm0) = SOME (stk, strm) ⇒
+    wfStk stk
+Proof
   Cases_on `strm0` >> Cases_on `stk0` >>
   dsimp[precparse1_def, list_case_eq, sum_case_eq, bool_case_eq,
         option_case_eq, tokrel_case_eq] >>
-  rw[] >> fs[]);
+  rw[] >> fs[]
+QED
 
-val wfStk_ALT = store_thm(
-  "wfStk_ALT",
-  ``wfStk l ⇔ (l ≠ [] ⇒ ∀opn. LAST l ≠ INL opn) ∧
-              (∀i. i + 1 < LENGTH l ⇒ ISR (EL i l) ≠ ISR (EL (i + 1) l))``,
+Theorem wfStk_ALT:
+    wfStk l ⇔ (l ≠ [] ⇒ ∀opn. LAST l ≠ INL opn) ∧
+              (∀i. i + 1 < LENGTH l ⇒ ISR (EL i l) ≠ ISR (EL (i + 1) l))
+Proof
   Induct_on `l` >> simp[] >> Cases >> simp[] >> rename1 `wfStk (_ :: stk)` >>
   Cases_on `stk` >> simp[] >> fs[] >> rename1 `wfStk (_ :: el2 :: stk)` >>
   Cases_on `el2` >> simp[] >- (disj2_tac >> qexists_tac `0` >> simp[]) >>
   simp[DECIDE ``x + 1 < SUC y ⇔ x < y``] >>
-  dsimp[arithmeticTheory.LT_SUC, DECIDE ``x + 1 = SUC x``])
+  dsimp[arithmeticTheory.LT_SUC, DECIDE ``x + 1 = SUC x``]
+QED
 
-val precparse1_reduces = store_thm(
-  "precparse1_reduces",
-  ``precparse1 pM (stk0,strm0) = SOME (stk,strm) ⇒
-      LENGTH strm < LENGTH strm0 ∨ strm = strm0 ∧ LENGTH stk < LENGTH stk0``,
+Theorem precparse1_reduces:
+    precparse1 pM (stk0,strm0) = SOME (stk,strm) ⇒
+      LENGTH strm < LENGTH strm0 ∨ strm = strm0 ∧ LENGTH stk < LENGTH stk0
+Proof
   Cases_on `strm0` >> Cases_on `stk0` >>
   dsimp[precparse1_def, list_case_eq, sum_case_eq, bool_case_eq,
-        option_case_eq, tokrel_case_eq] >> rw[] >> simp[]);
+        option_case_eq, tokrel_case_eq] >> rw[] >> simp[]
+QED
 
 Definition isFinal_def:
   (isFinal ([INR _],[]) ⇔ T) ∧

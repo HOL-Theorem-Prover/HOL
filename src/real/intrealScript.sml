@@ -74,27 +74,33 @@ val real_arch_least1 =
 
 val Num_suc1 = ARITH_PROVE ``Num (&n + 1) = n + 1``
 
-val lem = Q.prove( `!n. -&n <= 0r`, simp [REAL_NEG_LE0])
+Theorem lem[local]:
+   !n. -&n <= 0r
+Proof simp [REAL_NEG_LE0]
+QED
 
-val lem2 = Q.prove(
-  `!n. -&(n + 1n) = -&n - 1r`,
+Theorem lem2[local]:
+   !n. -&(n + 1n) = -&n - 1r
+Proof
   once_rewrite_tac [GSYM add_ints]
   \\ simp [real_sub]
-  )
+QED
 
 val lem3 = ARITH_PROVE ``-&n + 1 < 0i ==> (Num (&n + -1i) = (n - 1))``
 
-val lem4 = Q.prove(
-  `!n. n <> 0 ==> (-&(n - 1n) = -&n + 1r)`,
+Theorem lem4[local]:
+   !n. n <> 0 ==> (-&(n - 1n) = -&n + 1r)
+Proof
   strip_tac
   \\ Cases_on `n = 1` >- simp []
   \\ metis_tac [REAL_SUB, REAL_NEG_SUB,
                 REAL_ARITH ``-a + b = b - a: real``,
                 DECIDE ``n <> 0 /\ n <> 1 ==> (n - 1 <> 0n)``]
-  )
+QED
 
-val lem5 = Q.prove(
-  `!m n. n + 1 < m ==> -&m + 1 <= -&n - 1r`,
+Theorem lem5[local]:
+   !m n. n + 1 < m ==> -&m + 1 <= -&n - 1r
+Proof
   REPEAT strip_tac
   \\ once_rewrite_tac [GSYM REAL_LE_NEG]
   \\ rewrite_tac [REAL_NEG_SUB, REAL_NEG_ADD,
@@ -104,7 +110,7 @@ val lem5 = Q.prove(
   \\ REWRITE_TAC [GSYM REAL_ADD,
                   REAL_ARITH ``a + b + -b = a: real``]
   \\ simp []
-  )
+QED
 
 (* cf. INT_FLOOR_BOUNDS' for another form where ‘real_of_int (INT_FLOOR r)’
        stays in the middle.
@@ -227,8 +233,9 @@ val tac =
   \\ first_assum (qspec_then `n` assume_tac)
   \\ TRY decide_tac
 
-val int_floor_2 = Q.prove(
-  `0 < m ==> (INT_FLOOR (&n / &m) = &n / &m)`,
+Theorem int_floor_2[local]:
+   0 < m ==> (INT_FLOOR (&n / &m) = &n / &m)
+Proof
   strip_tac
   \\ rewrite_tac [INT_FLOOR]
   \\ srw_tac[][real_of_int, le_ratr, lt_ratl, Num_suc1]
@@ -236,32 +243,35 @@ val int_floor_2 = Q.prove(
   >- tac
   >- ARITH_TAC
   \\ tac
-  )
+QED
 
 val lem1 =
   metisLib.METIS_PROVE
     [REAL_POS_NZ, REAL_DIV_REFL, neg_rat]
     ``!a. 0r < a ==> (-a / a = -1)``
 
-val lem2 = Q.prove(
-  `!n. 0n < n ==> (-&n / &n = -1i)`,
+Theorem lem2[local]:
+   !n. 0n < n ==> (-&n / &n = -1i)
+Proof
   REPEAT strip_tac
   \\ `0i < &n` by ARITH_TAC
   \\ simp [int_div]
-  )
+QED
 
-val lem3 = Q.prove(
-  `!n m. 0n < n /\ n < m ==> (-&n / &m = -1i)`,
+Theorem lem3[local]:
+   !n m. 0n < n /\ n < m ==> (-&n / &m = -1i)
+Proof
   REPEAT strip_tac
   \\ `0i < &n` by ARITH_TAC
   \\ simp [int_div, arithmeticTheory.LESS_DIV_EQ_ZERO]
-  )
+QED
 
 val tac2 =
    metis_tac [arithmeticTheory.X_MOD_Y_EQ_X, DECIDE ``x < y ==> ~(y < x:num)``]
 
-val lem4 = Q.prove(
-  `!n m. 0 < m /\ m < n ==> -&n / &m < -1i`,
+Theorem lem4[local]:
+   !n m. 0 < m /\ m < n ==> -&n / &m < -1i
+Proof
   NTAC 3 strip_tac
   \\ `&m <> 0i` by ARITH_TAC
   \\ simp [int_div]
@@ -276,20 +286,22 @@ val lem4 = Q.prove(
   \\ strip_tac
   \\ full_simp_tac(srw_ss())[]
   \\ tac2
-  )
+QED
 
-val lem5 = Q.prove(
-  `!n m. 0n < m /\ n <> 0 /\ (n MOD m = 0) /\ n <> m ==> 1 < n DIV m`,
+Theorem lem5[local]:
+   !n m. 0n < m /\ n <> 0 /\ (n MOD m = 0) /\ n <> m ==> 1 < n DIV m
+Proof
   srw_tac[][arithmeticTheory.X_LT_DIV]
   \\ imp_res_tac arithmeticTheory.MOD_EQ_0_DIVISOR
   \\ Cases_on `d = 0` >- full_simp_tac(srw_ss())[]
   \\ Cases_on `d = 1` >- full_simp_tac(srw_ss())[]
   \\ `2 <= d` by decide_tac
   \\ metis_tac [arithmeticTheory.LESS_MONO_MULT]
-  )
+QED
 
-val int_floor_3 = Q.prove(
-  `0 < m ==> (INT_FLOOR (-&n / &m) = -&n / &m)`,
+Theorem int_floor_3[local]:
+   0 < m ==> (INT_FLOOR (-&n / &m) = -&n / &m)
+Proof
   strip_tac
   \\ rewrite_tac [INT_FLOOR]
   \\ Cases_on `n = 0`
@@ -306,10 +318,11 @@ val int_floor_3 = Q.prove(
          ARITH_PROVE ``a + 1 + -1 = a: int``,
          ARITH_PROVE ``1n < a ==> (Num (&a + -1) = a - 1)``]
   \\ tac
-  )
+QED
 
-val INT_CEILING_IMP = Q.prove (
-  `!r i. real_of_int (i - 1) < r /\ r <= real_of_int i ==> (INT_CEILING r = i)`,
+Theorem INT_CEILING_IMP[local]:
+   !r i. real_of_int (i - 1) < r /\ r <= real_of_int i ==> (INT_CEILING r = i)
+Proof
   srw_tac[][INT_CEILING_def, LEAST_INT_DEF]
   \\ SELECT_ELIM_TAC
   \\ conj_tac
@@ -351,7 +364,7 @@ val INT_CEILING_IMP = Q.prove (
   \\ imp_res_tac REAL_LTE_TRANS
   \\ full_simp_tac(srw_ss())[]
   \\ ARITH_TAC
-  )
+QED
 
 Theorem INT_CEILING_INT_FLOOR:
    !r. INT_CEILING r =

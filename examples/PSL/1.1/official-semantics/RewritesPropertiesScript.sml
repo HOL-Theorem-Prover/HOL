@@ -1,4 +1,3 @@
-
 (*****************************************************************************)
 (* Correctness of the PSL 1.1 rewrites                                       *)
 (* (guided in some places by hand proofs due to Dana Fisman)                 *)
@@ -8,30 +7,6 @@
 (* Completed: Sat Mar 06, 2004                                               *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* START BOILERPLATE                                                         *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-* (commented out for compilation)
-******************************************************************************)
-(*
-quietdec := true;
-loadPath
- :=
- "../official-semantics" :: "../../regexp" :: "../../path" :: !loadPath;
-map load
- ["UnclockedSemanticsTheory",
-  "SyntacticSugarTheory", "ClockedSemanticsTheory", "RewritesTheory",
-  "rich_listTheory", "intLib", "res_quanLib", "res_quanTheory","LemmasTheory"];
-open FinitePSLPathTheory PSLPathTheory SyntaxTheory SyntacticSugarTheory
-     UnclockedSemanticsTheory ClockedSemanticsTheory RewritesTheory
-     arithmeticTheory listTheory rich_listTheory res_quanLib res_quanTheory
-     ClockedSemanticsTheory LemmasTheory;
-quietdec := false;
-*)
-
 Theory RewritesProperties
 Ancestors
   FinitePSLPath PSLPath Syntax SyntacticSugar UnclockedSemantics
@@ -39,10 +14,6 @@ Ancestors
   ClockedSemantics Lemmas FinitePSLPath PSLPath
 Libs
   res_quanLib
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
 
 val _ = ParseExtras.temp_loose_equality()
 
@@ -64,14 +35,13 @@ val resq_SS =
 (* SEREs only need finite paths *)
 open FinitePSLPathTheory;
 
-val US_SEM_BOOL_REWRITE_LEMMA =
- store_thm
-  ("US_SEM_BOOL_REWRITE_LEMMA",
-   ``US_SEM v (S_CAT (S_REPEAT (S_BOOL (B_NOT c)),S_BOOL (B_AND (c,b)))) =
+Theorem US_SEM_BOOL_REWRITE_LEMMA:
+     US_SEM v (S_CAT (S_REPEAT (S_BOOL (B_NOT c)),S_BOOL (B_AND (c,b)))) =
       LENGTH v > 0 /\
       B_SEM (ELEM v (LENGTH v - 1)) b /\
       B_SEM (ELEM v (LENGTH v - 1)) c /\
-      !i. i < LENGTH v - 1 ==> B_SEM (ELEM v i) (B_NOT c)``,
+      !i. i < LENGTH v - 1 ==> B_SEM (ELEM v i) (B_NOT c)
+Proof
    RW_TAC  (std_ss++resq_SS) [US_SEM_def,LENGTH1]
     THEN EQ_TAC
     THEN RW_TAC list_ss [LENGTH_APPEND]
@@ -104,16 +74,16 @@ val US_SEM_BOOL_REWRITE_LEMMA =
          IMP_RES_TAC EL_PRE_LENGTH
           THEN POP_ASSUM(fn th => RW_TAC list_ss [GSYM th])
           THEN Cases_on `EL (LENGTH v - 1) v`
-          THEN FULL_SIMP_TAC std_ss [B_SEM_def]]]);
+          THEN FULL_SIMP_TAC std_ss [B_SEM_def]]]
+QED
 
 (******************************************************************************
 * v |=c r  <==>  v |= (S_CLOCK_COMP c r)
 ******************************************************************************)
 
-val S_CLOCK_COMP_CORRECT =
- store_thm
-  ("S_CLOCK_COMP_CORRECT",
-   ``!r v c. S_SEM v c r = US_SEM v (S_CLOCK_COMP c r)``,
+Theorem S_CLOCK_COMP_CORRECT:
+     !r v c. S_SEM v c r = US_SEM v (S_CLOCK_COMP c r)
+Proof
    INDUCT_THEN sere_induct ASSUME_TAC
     THENL
      [(* S_BOOL b *)
@@ -135,7 +105,8 @@ val S_CLOCK_COMP_CORRECT =
       (* S_REPEAT r *)
       RW_TAC (std_ss ++ resq_SS) [S_SEM_def, US_SEM_def, S_CLOCK_COMP_def],
       (* S_CLOCK (r,p_2) *)
-      RW_TAC (std_ss ++ resq_SS) [S_SEM_def, US_SEM_def, S_CLOCK_COMP_def]]);
+      RW_TAC (std_ss ++ resq_SS) [S_SEM_def, US_SEM_def, S_CLOCK_COMP_def]]
+QED
 
 (******************************************************************************
 * Structural induction rule for FL formulas
@@ -159,27 +130,26 @@ val fl_induct =
          [`P`,`\ (f,b). P f`,`\ (r,f). P f`,`\ (f1,f2). P f1 /\ P f2`]
          (TypeBase.induction_of ``:'a fl``)))));
 
-val LS_LE_X =
- store_thm
-  ("LS_LE_X",
-   ``m:num < n:xnum ==> m <= n``,
+Theorem LS_LE_X:
+     m:num < n:xnum ==> m <= n
+Proof
    Cases_on `n`
-    THEN RW_TAC arith_ss [LS,LE]);
+    THEN RW_TAC arith_ss [LS,LE]
+QED
 
-val LS_TRANS_X =
- store_thm
-  ("LS_TRANS_X",
-   ``m:num < n:num ==> n < p:xnum ==> m < p``,
+Theorem LS_TRANS_X:
+     m:num < n:num ==> n < p:xnum ==> m < p
+Proof
    Cases_on `p`
-    THEN RW_TAC arith_ss [LS]);
+    THEN RW_TAC arith_ss [LS]
+QED
 
 local
 open FinitePSLPathTheory
 in
-val RESTN_NIL_LENGTH =
- store_thm
-  ("RESTN_NIL_LENGTH",
-   ``!k v. k <= LENGTH v ==> ((RESTN v k = []) = (LENGTH v = k))``,
+Theorem RESTN_NIL_LENGTH:
+     !k v. k <= LENGTH v ==> ((RESTN v k = []) = (LENGTH v = k))
+Proof
    Induct
     THEN RW_TAC list_ss [FinitePSLPathTheory.RESTN_def,LENGTH_NIL,REST_def]
     THEN ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `TL v` (el 2 thl)))
@@ -187,70 +157,70 @@ val RESTN_NIL_LENGTH =
     THEN `LENGTH(TL v) = LENGTH v - 1` by PROVE_TAC[LENGTH_TL]
     THEN `k <= LENGTH(TL v)` by DECIDE_TAC
     THEN RES_TAC
-    THEN RW_TAC list_ss []);
+    THEN RW_TAC list_ss []
+QED
 end;
 
-val PATH_LENGTH_RESTN_0 =
- store_thm
-  ("PATH_LENGTH_RESTN_0",
-   ``!k v.
+Theorem PATH_LENGTH_RESTN_0:
+     !k v.
        k <= LENGTH v
        ==>
-       ((LENGTH(RESTN v k) = XNUM 0) = (LENGTH v = XNUM k))``,
+       ((LENGTH(RESTN v k) = XNUM 0) = (LENGTH v = XNUM k))
+Proof
    REPEAT GEN_TAC
     THEN Cases_on `v`
     THEN RW_TAC list_ss [LENGTH_RESTN_INFINITE,LENGTH_def,LE]
     THEN RW_TAC list_ss
           [xnum_11,LENGTH_NIL,RESTN_def,LENGTH_def,
-           RESTN_FINITE,RESTN_NIL_LENGTH]);
+           RESTN_FINITE,RESTN_NIL_LENGTH]
+QED
 
-val PATH_FINITE_LENGTH_RESTN_0 =
- store_thm
-  ("PATH_FINITE_LENGTH_RESTN_0",
-   ``!k v.
+Theorem PATH_FINITE_LENGTH_RESTN_0:
+     !k v.
        k <= LENGTH v
        ==>
        ((LENGTH(RESTN v k) = XNUM 0) =
-        ?l. (LENGTH l = k) /\ (v = FINITE l))``,
+        ?l. (LENGTH l = k) /\ (v = FINITE l))
+Proof
    REPEAT GEN_TAC
     THEN Cases_on `v`
     THEN RW_TAC list_ss [LENGTH_RESTN_INFINITE,LENGTH_def,LE]
     THEN RW_TAC list_ss
           [xnum_11,LENGTH_NIL,RESTN_def,LENGTH_def,
-           RESTN_FINITE,RESTN_NIL_LENGTH]);
+           RESTN_FINITE,RESTN_NIL_LENGTH]
+QED
 
-val LIST_LENGTH_RESTN_0 =
- store_thm
-  ("LIST_LENGTH_RESTN_0",
-   ``!k l.
+Theorem LIST_LENGTH_RESTN_0:
+     !k l.
        k <= LENGTH l
        ==>
-       ((LENGTH(RESTN l k) = 0) = (LENGTH l = k))``,
+       ((LENGTH(RESTN l k) = 0) = (LENGTH l = k))
+Proof
    RW_TAC list_ss [LENGTH_RESTN_INFINITE,LENGTH_def,LE]
     THEN RW_TAC list_ss
           [LENGTH_NIL,RESTN_def,LENGTH_def,
-           RESTN_FINITE,RESTN_NIL_LENGTH]);
+           RESTN_FINITE,RESTN_NIL_LENGTH]
+QED
 
-val PATH_FINITE_LENGTH_RESTN_0_COR =
- store_thm
-  ("PATH_FINITE_LENGTH_RESTN_0_COR",
-   ``!k v.
+Theorem PATH_FINITE_LENGTH_RESTN_0_COR:
+     !k v.
        k < LENGTH v
        ==>
        ((LENGTH(RESTN v k) = XNUM 0) =
-        ?l. (LENGTH l = k) /\ (v = FINITE l))``,
-   PROVE_TAC[LS_LE_X,PATH_FINITE_LENGTH_RESTN_0]);
+        ?l. (LENGTH l = k) /\ (v = FINITE l))
+Proof
+   PROVE_TAC[LS_LE_X,PATH_FINITE_LENGTH_RESTN_0]
+QED
 
 (******************************************************************************
 * Unclocked semantics of [!c U (c /\ f)]
 ******************************************************************************)
-val UF_SEM_F_U_CLOCK =
- store_thm
-  ("UF_SEM_F_U_CLOCK",
-   ``UF_SEM v (F_U_CLOCK c f) =
+Theorem UF_SEM_F_U_CLOCK:
+     UF_SEM v (F_U_CLOCK c f) =
       ?j :: LESS(LENGTH v).
         UF_SEM (RESTN v j) (F_AND(F_WEAK_BOOL c,f)) /\
-        !i. i < j ==> B_SEM (ELEM v i) (B_NOT c)``,
+        !i. i < j ==> B_SEM (ELEM v i) (B_NOT c)
+Proof
    RW_TAC (arith_ss ++ resq_SS)
     [F_U_CLOCK_def,ELEM_RESTN,UF_SEM_def,CLOCK_TICK_def,LENGTH_SEL]
     THEN EQ_TAC
@@ -275,69 +245,70 @@ val UF_SEM_F_U_CLOCK =
      Q.EXISTS_TAC `j`
        THEN RW_TAC std_ss [],
      Q.EXISTS_TAC `j`
-       THEN RW_TAC std_ss []]);
+       THEN RW_TAC std_ss []]
+QED
 
-val COMPLEMENT_LETTER_COMPLEMENT_LETTER =
- store_thm
-  ("COMPLEMENT_LETTER_COMPLEMENT_LETTER",
-   ``COMPLEMENT_LETTER(COMPLEMENT_LETTER l) = l``,
+Theorem COMPLEMENT_LETTER_COMPLEMENT_LETTER:
+     COMPLEMENT_LETTER(COMPLEMENT_LETTER l) = l
+Proof
    Cases_on `l`
-    THEN RW_TAC std_ss [COMPLEMENT_LETTER_def]);
+    THEN RW_TAC std_ss [COMPLEMENT_LETTER_def]
+QED
 
-val COMPLEMENT_LETTER_COMPLEMENT_LETTER_o =
- store_thm
-  ("COMPLEMENT_LETTER_COMPLEMENT_LETTER_o",
-   ``COMPLEMENT_LETTER o COMPLEMENT_LETTER = I``,
+Theorem COMPLEMENT_LETTER_COMPLEMENT_LETTER_o:
+     COMPLEMENT_LETTER o COMPLEMENT_LETTER = I
+Proof
     CONV_TAC FUN_EQ_CONV
-     THEN RW_TAC std_ss [COMPLEMENT_LETTER_COMPLEMENT_LETTER]);
+     THEN RW_TAC std_ss [COMPLEMENT_LETTER_COMPLEMENT_LETTER]
+QED
 
-val MAP_I =
- store_thm
-  ("MAP_I",
-   ``!l. MAP I l = l``,
+Theorem MAP_I:
+     !l. MAP I l = l
+Proof
    Induct
-    THEN RW_TAC list_ss []);
+    THEN RW_TAC list_ss []
+QED
 
-val COMPLEMENT_COMPLEMENT =
- store_thm
-  ("COMPLEMENT_COMPLEMENT",
-   ``COMPLEMENT(COMPLEMENT l) = l``,
+Theorem COMPLEMENT_COMPLEMENT:
+     COMPLEMENT(COMPLEMENT l) = l
+Proof
    Cases_on `l`
     THEN RW_TAC std_ss
           [COMPLEMENT_def,MAP_I,MAP_MAP_o,
            COMPLEMENT_LETTER_COMPLEMENT_LETTER_o]
     THEN ONCE_REWRITE_TAC[combinTheory.o_ASSOC]
     THEN REWRITE_TAC
-          [COMPLEMENT_LETTER_COMPLEMENT_LETTER_o,combinTheory.I_o_ID]);
+          [COMPLEMENT_LETTER_COMPLEMENT_LETTER_o,combinTheory.I_o_ID]
+QED
 
-val LENGTH_COMPLEMENT =
- store_thm
-  ("LENGTH_COMPLEMENT",
-   ``LENGTH(COMPLEMENT v) = LENGTH v``,
+Theorem LENGTH_COMPLEMENT:
+     LENGTH(COMPLEMENT v) = LENGTH v
+Proof
    Cases_on `v`
     THEN RW_TAC std_ss
-          [COMPLEMENT_def,LENGTH_def,LENGTH_MAP]);
+          [COMPLEMENT_def,LENGTH_def,LENGTH_MAP]
+QED
 
-val HD_MAP =
- store_thm
-  ("HD_MAP",
-   ``!f l. ~(l=[]) ==> (HD(MAP f l) = f(HD l))``,
+Theorem HD_MAP:
+     !f l. ~(l=[]) ==> (HD(MAP f l) = f(HD l))
+Proof
    GEN_TAC
     THEN Induct
-    THEN RW_TAC list_ss []);
+    THEN RW_TAC list_ss []
+QED
 
-val TL_MAP =
- store_thm
-  ("TL_MAP",
-   ``!f l. ~(l=[]) ==> (TL(MAP f l) = MAP f (TL l))``,
+Theorem TL_MAP:
+     !f l. ~(l=[]) ==> (TL(MAP f l) = MAP f (TL l))
+Proof
    GEN_TAC
     THEN Induct
-    THEN RW_TAC list_ss []);
+    THEN RW_TAC list_ss []
+QED
 
-val RESTN_COMPLEMENT =  (* Harder to prove than expected *)
- store_thm
-  ("RESTN_COMPLEMENT",
-  ``!n v. n < LENGTH v ==> (RESTN (COMPLEMENT v) n = COMPLEMENT(RESTN v n))``,
+(* Harder to prove than expected *)
+Theorem RESTN_COMPLEMENT:
+    !n v. n < LENGTH v ==> (RESTN (COMPLEMENT v) n = COMPLEMENT(RESTN v n))
+Proof
    Induct
     THEN Induct
     THEN RW_TAC list_ss [RESTN_def,COMPLEMENT_def,REST_def]
@@ -355,7 +326,8 @@ val RESTN_COMPLEMENT =  (* Harder to prove than expected *)
        THEN RW_TAC list_ss [],
       ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `REST(INFINITE f)` (el 2 thl)))
        THEN FULL_SIMP_TAC list_ss
-             [LENGTH_def,LS,COMPLEMENT_def,REST_def,combinTheory.o_DEF]]);
+             [LENGTH_def,LS,COMPLEMENT_def,REST_def,combinTheory.o_DEF]]
+QED
 
 val RESTN_COMPLEMENT_COR =
  save_thm
@@ -365,10 +337,9 @@ val RESTN_COMPLEMENT_COR =
     [LENGTH_def,LS]
     (ISPECL[``n:num``,``FINITE(l:'a letter list)``]RESTN_COMPLEMENT));
 
-val ELEM_COMPLEMENT =
- store_thm
-  ("ELEM_COMPLEMENT",
-  ``!n v. n < LENGTH v ==> (ELEM (COMPLEMENT v) n = COMPLEMENT_LETTER(ELEM v n))``,
+Theorem ELEM_COMPLEMENT:
+    !n v. n < LENGTH v ==> (ELEM (COMPLEMENT v) n = COMPLEMENT_LETTER(ELEM v n))
+Proof
    Induct
     THEN Induct
     THEN RW_TAC list_ss [RESTN_def,COMPLEMENT_def,REST_def,ELEM_def,HEAD_def]
@@ -391,7 +362,8 @@ val ELEM_COMPLEMENT =
       ASSUM_LIST(fn thl => ASSUME_TAC(Q.SPEC `REST(INFINITE f)` (el 2 thl)))
        THEN FULL_SIMP_TAC list_ss
              [LENGTH_def,LS,COMPLEMENT_def,REST_def,combinTheory.o_DEF,
-              RESTN_def,COMPLEMENT_def,REST_def,ELEM_def,HEAD_def]]);
+              RESTN_def,COMPLEMENT_def,REST_def,ELEM_def,HEAD_def]]
+QED
 
 val ELEM_COMPLEMENT_COR =
  save_thm
@@ -404,61 +376,60 @@ val ELEM_COMPLEMENT_COR =
 (******************************************************************************
 * Formula disjunction: f1 \/ f2
 ******************************************************************************)
-val UF_SEM_F_OR =
- store_thm
-  ("UF_SEM_F_OR",
-   ``UF_SEM v (F_OR(f1,f2)) = UF_SEM v f1 \/ UF_SEM v f2``,
-   RW_TAC (std_ss ++ resq_SS) [UF_SEM_def,F_OR_def,COMPLEMENT_COMPLEMENT]);
+Theorem UF_SEM_F_OR:
+     UF_SEM v (F_OR(f1,f2)) = UF_SEM v f1 \/ UF_SEM v f2
+Proof
+   RW_TAC (std_ss ++ resq_SS) [UF_SEM_def,F_OR_def,COMPLEMENT_COMPLEMENT]
+QED
 
 (******************************************************************************
 * Formula conjunction: f1 /\ f2
 ******************************************************************************)
-val UF_SEM_F_AND =
- store_thm
-  ("UF_SEM_F_AND",
-   ``UF_SEM v (F_AND(f1,f2)) = UF_SEM v f1 /\ UF_SEM v f2``,
-   RW_TAC (std_ss ++ resq_SS) [UF_SEM_def]);
+Theorem UF_SEM_F_AND:
+     UF_SEM v (F_AND(f1,f2)) = UF_SEM v f1 /\ UF_SEM v f2
+Proof
+   RW_TAC (std_ss ++ resq_SS) [UF_SEM_def]
+QED
 
 (******************************************************************************
 * Formula implication: f1 --> f2
 ******************************************************************************)
-val UF_SEM_F_IMPLIES =
- store_thm
-  ("UF_SEM_F_IMPLIES",
-   ``UF_SEM v (F_IMPLIES (f1,f2)) = UF_SEM (COMPLEMENT v) f1 ==> UF_SEM v f2``,
+Theorem UF_SEM_F_IMPLIES:
+     UF_SEM v (F_IMPLIES (f1,f2)) = UF_SEM (COMPLEMENT v) f1 ==> UF_SEM v f2
+Proof
    RW_TAC (std_ss ++ resq_SS) [UF_SEM_def,F_IMPLIES_def,UF_SEM_F_OR]
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
-val UF_SEM_RESTN_F_WEAK_BOOL =
- store_thm
-  ("UF_SEM_RESTN_F_WEAK_BOOL",
-   ``!j v.
+Theorem UF_SEM_RESTN_F_WEAK_BOOL:
+     !j v.
       j < LENGTH v
       ==>
-      (UF_SEM (RESTN v j) (F_WEAK_BOOL b) = B_SEM (ELEM v j) b)``,
+      (UF_SEM (RESTN v j) (F_WEAK_BOOL b) = B_SEM (ELEM v j) b)
+Proof
    RW_TAC list_ss [UF_SEM_def,ELEM_RESTN]
     THEN EQ_TAC
     THEN RW_TAC list_ss []
     THEN IMP_RES_TAC LS_LE_X
     THEN IMP_RES_TAC PATH_LENGTH_RESTN_0
     THEN `j < XNUM j` by PROVE_TAC[]
-    THEN FULL_SIMP_TAC list_ss [LS]);
+    THEN FULL_SIMP_TAC list_ss [LS]
+QED
 
-val UF_SEM_RESTN_F_WEAK_BOOL_COR =
- store_thm
-  ("UF_SEM_RESTN_F_WEAK_BOOL_COR",
-   ``!j v.
+Theorem UF_SEM_RESTN_F_WEAK_BOOL_COR:
+     !j v.
       j < LENGTH v /\ UF_SEM (RESTN v j) (F_WEAK_BOOL b) =
-      j < LENGTH v /\ B_SEM (ELEM v j) b``,
-   PROVE_TAC[UF_SEM_RESTN_F_WEAK_BOOL]);
+      j < LENGTH v /\ B_SEM (ELEM v j) b
+Proof
+   PROVE_TAC[UF_SEM_RESTN_F_WEAK_BOOL]
+QED
 
 (******************************************************************************
 * Eventually: F f (implication)
 ******************************************************************************)
-val UF_SEM_F_F_IMP =
- store_thm
-  ("UF_SEM_F_F_IMP",
-   ``UF_SEM v (F_F f) ==> ?i :: LESS(LENGTH v). UF_SEM (RESTN v i) f``,
+Theorem UF_SEM_F_F_IMP:
+     UF_SEM v (F_F f) ==> ?i :: LESS(LENGTH v). UF_SEM (RESTN v i) f
+Proof
    RW_TAC (arith_ss ++ resq_SS) [UF_SEM_def,F_F_def,B_SEM_def]
     THEN Cases_on `v`
     THEN RW_TAC arith_ss
@@ -466,20 +437,20 @@ val UF_SEM_F_F_IMP =
            FinitePSLPathTheory.LENGTH_RESTN,LENGTH_RESTN_INFINITE,LS]
     THEN Q.EXISTS_TAC `k`
     THEN RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN,GSYM RESTN_FINITE]
-    THEN PROVE_TAC[LENGTH_def,LS]);
+    THEN PROVE_TAC[LENGTH_def,LS]
+QED
 
 (******************************************************************************
 * Eventually: F f (equation)
 * N.B. Probably can simplify proof to avoid cases on v, as in UF_SEM_F_G
 ******************************************************************************)
-val UF_SEM_F_F =
- store_thm
-  ("UF_SEM_F_F",
-   ``UF_SEM v (F_F f) =
+Theorem UF_SEM_F_F:
+     UF_SEM v (F_F f) =
       ?i :: LESS(LENGTH v).
         UF_SEM (RESTN v i) f
         /\
-        !j :: LESS i. (ELEM v j = BOTTOM) ==> (LENGTH v = XNUM j)``,
+        !j :: LESS i. (ELEM v j = BOTTOM) ==> (LENGTH v = XNUM j)
+Proof
    RW_TAC (arith_ss ++ resq_SS) [UF_SEM_def,F_F_def,B_SEM_def]
     THEN Cases_on `v`
     THEN RW_TAC arith_ss
@@ -520,7 +491,8 @@ val UF_SEM_F_F =
        THEN RES_TAC
        THEN FULL_SIMP_TAC list_ss [ELEM_RESTN]
        THEN Cases_on `ELEM (INFINITE f') j`
-       THEN RW_TAC std_ss [B_SEM_def]]);
+       THEN RW_TAC std_ss [B_SEM_def]]
+QED
 
 (******************************************************************************
 * Globally: G f
@@ -531,14 +503,13 @@ val UF_SEM_F_G_LEMMA =
      DECIDE ``~A \/ B \/ C = A ==> (B \/ C)``]
     ``UF_SEM v (F_G f)``;
 
-val UF_SEM_F_G =
- store_thm
-  ("UF_SEM_F_G",
-   ``UF_SEM v (F_G f) =
+Theorem UF_SEM_F_G:
+     UF_SEM v (F_G f) =
       !i :: LESS(LENGTH v).
         UF_SEM (RESTN v i) f
         \/
-        ?j :: LESS i. (ELEM v j = TOP) /\ ~(LENGTH v = XNUM j)``,
+        ?j :: LESS i. (ELEM v j = TOP) /\ ~(LENGTH v = XNUM j)
+Proof
    RW_TAC (arith_ss ++ resq_SS) [UF_SEM_F_G_LEMMA]
     THEN EQ_TAC
     THEN RW_TAC arith_ss []
@@ -562,7 +533,8 @@ val UF_SEM_F_G =
        THEN RW_TAC arith_ss []
        THEN `j < LENGTH v` by PROVE_TAC[LS_TRANS_X]
        THEN IMP_RES_TAC ELEM_COMPLEMENT
-       THEN RW_TAC std_ss [COMPLEMENT_LETTER_def]]);
+       THEN RW_TAC std_ss [COMPLEMENT_LETTER_def]]
+QED
 
 (******************************************************************************
 * Unclocked semantics of [!c W (c /\ f)]
@@ -573,14 +545,13 @@ val UF_SEM_F_W_CLOCK_LEMMA =
      UF_SEM_F_OR,ELEM_RESTN]
     ``UF_SEM v (F_W_CLOCK c f)``;
 
-val UF_SEM_F_W_CLOCK =
- store_thm
-  ("UF_SEM_F_W_CLOCK",
-   ``UF_SEM v (F_W_CLOCK c f) =
+Theorem UF_SEM_F_W_CLOCK:
+     UF_SEM v (F_W_CLOCK c f) =
       UF_SEM v (F_U_CLOCK c f)
       \/
       !i :: LESS(LENGTH v).
-        B_SEM (ELEM v i) (B_NOT c) \/ ?j :: LESS i. ELEM v j = TOP``,
+        B_SEM (ELEM v i) (B_NOT c) \/ ?j :: LESS i. ELEM v j = TOP
+Proof
    RW_TAC (arith_ss ++ resq_SS)
     [F_W_CLOCK_def,UF_SEM_def,UF_SEM_F_W_CLOCK_LEMMA]
     THEN EQ_TAC
@@ -602,7 +573,8 @@ val UF_SEM_F_W_CLOCK =
        THEN RW_TAC std_ss []
        THEN IMP_RES_TAC LS_TRANS_X
        THEN `j < XNUM j` by PROVE_TAC[]
-       THEN FULL_SIMP_TAC list_ss [LS]]);
+       THEN FULL_SIMP_TAC list_ss [LS]]
+QED
 
 local
 
@@ -615,11 +587,10 @@ val AUX_TAC1 =
 
 in
 
-val F_STRONG_BOOL_CLOCK_COMP =
- store_thm
-  ("F_STRONG_BOOL_CLOCK_COMP",
-   ``!b v c. F_SEM v c (F_STRONG_BOOL b) =
-              UF_SEM v (F_CLOCK_COMP c (F_STRONG_BOOL b))``,
+Theorem F_STRONG_BOOL_CLOCK_COMP:
+     !b v c. F_SEM v c (F_STRONG_BOOL b) =
+              UF_SEM v (F_CLOCK_COMP c (F_STRONG_BOOL b))
+Proof
    RW_TAC (arith_ss  ++ resq_SS)
     [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,UF_SEM_F_U_CLOCK,
      CLOCK_TICK_def,LENGTH_SEL,ELEM_EL]
@@ -651,7 +622,8 @@ val F_STRONG_BOOL_CLOCK_COMP =
        THEN `0 <= i /\ i <= j` by DECIDE_TAC
        THEN IMP_RES_TAC
              (INST_TYPE[{redex=``:'a``, residue=``:'a letter``}]EL_SEL)
-       THEN FULL_SIMP_TAC arith_ss [ELEM_EL]])
+       THEN FULL_SIMP_TAC arith_ss [ELEM_EL]]
+QED
 
 end;
 
@@ -693,11 +665,10 @@ val EL_SEL_LEMMA1 =
 val EL_SEL_LEMMA2 =
  SIMP_RULE arith_ss [] (SPECL[``0``,``i:num``, ``j:num``]EL_SEL);
 
-val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
- store_thm
-  ("F_WEAK_BOOL_CLOCK_COMP_IMP1",
-   ``!b v c. F_SEM v c (F_WEAK_BOOL b) ==>
-              UF_SEM v (F_CLOCK_COMP c (F_WEAK_BOOL b))``,
+Theorem F_WEAK_BOOL_CLOCK_COMP_IMP1:
+     !b v c. F_SEM v c (F_WEAK_BOOL b) ==>
+              UF_SEM v (F_CLOCK_COMP c (F_WEAK_BOOL b))
+Proof
    SIMP_TAC (arith_ss  ++ resq_SS) [F_SEM_def]
     THEN SIMP_TAC (list_ss ++ resq_SS)
           [CLOCK_TICK_def,LENGTH_SEL,ELEM_EL,
@@ -909,13 +880,13 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP1 =
                THEN IMP_RES_TAC ELEM_COMPLEMENT
                THEN `ELEM (COMPLEMENT v) i'' = STATE f'''''`
                     by PROVE_TAC[COMPLEMENT_LETTER_def]
-               THEN RES_TAC]]]]]);
+               THEN RES_TAC]]]]]
+QED
 
-val F_WEAK_BOOL_CLOCK_COMP_IMP2 =
- store_thm
-  ("F_WEAK_BOOL_CLOCK_COMP_IMP2",
-   ``!b v c. UF_SEM v (F_CLOCK_COMP c (F_WEAK_BOOL b)) ==>
-              F_SEM v c (F_WEAK_BOOL b)``,
+Theorem F_WEAK_BOOL_CLOCK_COMP_IMP2:
+     !b v c. UF_SEM v (F_CLOCK_COMP c (F_WEAK_BOOL b)) ==>
+              F_SEM v c (F_WEAK_BOOL b)
+Proof
    SIMP_TAC (arith_ss  ++ resq_SS) [F_SEM_def]
     THEN SIMP_TAC (list_ss ++ resq_SS)
           [CLOCK_TICK_def,LENGTH_SEL,ELEM_EL,
@@ -977,31 +948,31 @@ val F_WEAK_BOOL_CLOCK_COMP_IMP2 =
           THEN `j' < LENGTH v` by PROVE_TAC[LS_TRANS_X]
           THEN IMP_RES_TAC ELEM_COMPLEMENT
           THEN `ELEM (COMPLEMENT v) j' = BOTTOM` by PROVE_TAC[COMPLEMENT_LETTER_def]
-          THEN PROVE_TAC[B_SEM_def]]]);
+          THEN PROVE_TAC[B_SEM_def]]]
+QED
 
-val F_WEAK_BOOL_CLOCK_COMP =
- store_thm
-  ("F_WEAK_BOOL_CLOCK_COMP",
-   ``!b v c. F_SEM v c (F_WEAK_BOOL b) =
-              UF_SEM v (F_CLOCK_COMP c (F_WEAK_BOOL b))``,
+Theorem F_WEAK_BOOL_CLOCK_COMP:
+     !b v c. F_SEM v c (F_WEAK_BOOL b) =
+              UF_SEM v (F_CLOCK_COMP c (F_WEAK_BOOL b))
+Proof
    PROVE_TAC
-    [F_WEAK_BOOL_CLOCK_COMP_IMP1,F_WEAK_BOOL_CLOCK_COMP_IMP2]);
+    [F_WEAK_BOOL_CLOCK_COMP_IMP1,F_WEAK_BOOL_CLOCK_COMP_IMP2]
+QED
 
-val EL_SEL_THM =
- store_thm
-  ("EL_SEL_THM",
-   ``!p. i + n <= j ==> (EL n (SEL p (i,j)) = ELEM p (i + n))``,
-   PROVE_TAC[SIMP_RULE arith_ss [] (Q.SPECL[`i`,`n+i`,`j`]EL_SEL)]);
+Theorem EL_SEL_THM:
+     !p. i + n <= j ==> (EL n (SEL p (i,j)) = ELEM p (i + n))
+Proof
+   PROVE_TAC[SIMP_RULE arith_ss [] (Q.SPECL[`i`,`n+i`,`j`]EL_SEL)]
+QED
 
-val F_NEXT_CLOCK_COMP_IMP1 =
- store_thm
-  ("F_NEXT_CLOCK_COMP_IMP1",
-   ``!f.
+Theorem F_NEXT_CLOCK_COMP_IMP1:
+     !f.
        (!v c.
          F_SEM v c f = UF_SEM v (F_CLOCK_COMP c f))
        ==>
        !v c.
-         F_SEM v c (F_NEXT f) ==> UF_SEM v (F_CLOCK_COMP c (F_NEXT f))``,
+         F_SEM v c (F_NEXT f) ==> UF_SEM v (F_CLOCK_COMP c (F_NEXT f))
+Proof
     SIMP_TAC (arith_ss++resq_SS)
        [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def]
        THEN SIMP_TAC (arith_ss++resq_SS)
@@ -1042,14 +1013,14 @@ val F_NEXT_CLOCK_COMP_IMP1 =
             `(j + 1) + i <= k` by DECIDE_TAC
              THEN RES_TAC
              THEN `i + (j + 1) = (j + 1) + i` by DECIDE_TAC
-             THEN PROVE_TAC[EL_SEL_THM]]]);
+             THEN PROVE_TAC[EL_SEL_THM]]]
+QED
 
-val F_NEXT_CLOCK_COMP_IMP2 =
- store_thm
-  ("F_NEXT_CLOCK_COMP_IMP2",
-   ``!f. (!v c. F_SEM v c f = UF_SEM v (F_CLOCK_COMP c f))
+Theorem F_NEXT_CLOCK_COMP_IMP2:
+     !f. (!v c. F_SEM v c f = UF_SEM v (F_CLOCK_COMP c f))
          ==>
-         !v c. UF_SEM v (F_CLOCK_COMP c (F_NEXT f)) ==> F_SEM v c (F_NEXT f)``,
+         !v c. UF_SEM v (F_CLOCK_COMP c (F_NEXT f)) ==> F_SEM v c (F_NEXT f)
+Proof
       SIMP_TAC (arith_ss++resq_SS)
        [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def]
        THEN SIMP_TAC (arith_ss++resq_SS)
@@ -1110,26 +1081,26 @@ val F_NEXT_CLOCK_COMP_IMP2 =
             FULL_SIMP_TAC list_ss [ELEM_RESTN]
              THEN RW_TAC list_ss [EL_SEL_THM],
             FULL_SIMP_TAC list_ss [ELEM_RESTN]
-             THEN RW_TAC list_ss [EL_SEL_THM]]]);
+             THEN RW_TAC list_ss [EL_SEL_THM]]]
+QED
 
-val F_NEXT_CLOCK_COMP =
- store_thm
-  ("F_NEXT_CLOCK_COMP",
-   ``!f. (!v c. F_SEM v c f = UF_SEM v (F_CLOCK_COMP c f)) ==>
+Theorem F_NEXT_CLOCK_COMP:
+     !f. (!v c. F_SEM v c f = UF_SEM v (F_CLOCK_COMP c f)) ==>
          !v c. F_SEM v c (F_NEXT f) =
-                UF_SEM v (F_CLOCK_COMP c (F_NEXT f))``,
-   PROVE_TAC[F_NEXT_CLOCK_COMP_IMP1,F_NEXT_CLOCK_COMP_IMP2]);
+                UF_SEM v (F_CLOCK_COMP c (F_NEXT f))
+Proof
+   PROVE_TAC[F_NEXT_CLOCK_COMP_IMP1,F_NEXT_CLOCK_COMP_IMP2]
+QED
 
-val F_UNTIL_CLOCK_COMP_IMP1 =
- store_thm
-  ("F_UNTIL_CLOCK_COMP_IMP1",
-   ``!f1 f2.
+Theorem F_UNTIL_CLOCK_COMP_IMP1:
+     !f1 f2.
        (!v c. F_SEM v c f1 = UF_SEM v (F_CLOCK_COMP c f1))
        /\
        (!v c. F_SEM v c f2 = UF_SEM v (F_CLOCK_COMP c f2))
        ==>
        !v c. F_SEM v c (F_UNTIL(f1,f2))
-             ==> UF_SEM v (F_CLOCK_COMP c (F_UNTIL(f1,f2)))``,
+             ==> UF_SEM v (F_CLOCK_COMP c (F_UNTIL(f1,f2)))
+Proof
     SIMP_TAC (arith_ss++resq_SS)
        [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def]
        THEN SIMP_TAC (arith_ss++resq_SS)
@@ -1156,18 +1127,18 @@ val F_UNTIL_CLOCK_COMP_IMP1 =
           THEN IMP_RES_TAC RESTN_COMPLEMENT
           THEN `B_SEM (ELEM (RESTN (COMPLEMENT v) j) 0) c`
                 by PROVE_TAC[]
-          THEN FULL_SIMP_TAC arith_ss[ELEM_RESTN]]);
+          THEN FULL_SIMP_TAC arith_ss[ELEM_RESTN]]
+QED
 
-val F_UNTIL_CLOCK_COMP_IMP2 =
- store_thm
-  ("F_UNTIL_CLOCK_COMP_IMP2",
-   ``!f1 f2.
+Theorem F_UNTIL_CLOCK_COMP_IMP2:
+     !f1 f2.
        (!v c. F_SEM v c f1 = UF_SEM v (F_CLOCK_COMP c f1))
        /\
        (!v c. F_SEM v c f2 = UF_SEM v (F_CLOCK_COMP c f2))
        ==>
        !v c. UF_SEM v (F_CLOCK_COMP c (F_UNTIL(f1,f2)))
-             ==> F_SEM v c (F_UNTIL(f1,f2))``,
+             ==> F_SEM v c (F_UNTIL(f1,f2))
+Proof
     SIMP_TAC (arith_ss++resq_SS)
        [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def]
        THEN SIMP_TAC (arith_ss++resq_SS)
@@ -1199,32 +1170,32 @@ val F_UNTIL_CLOCK_COMP_IMP2 =
           THEN ASSUM_LIST
                 (fn thl =>
                   ASSUME_TAC(SIMP_RULE arith_ss [GSYM(el 2 thl)] (el 5 thl)))
-          THEN FULL_SIMP_TAC arith_ss[ELEM_RESTN]]);
+          THEN FULL_SIMP_TAC arith_ss[ELEM_RESTN]]
+QED
 
-val F_UNTIL_CLOCK_COMP =
- store_thm
-  ("F_UNTIL_CLOCK_COMP",
-   ``!f1 f2.
+Theorem F_UNTIL_CLOCK_COMP:
+     !f1 f2.
        (!v c. F_SEM v c f1 = UF_SEM v (F_CLOCK_COMP c f1)) /\
        (!v c. F_SEM v c f2 = UF_SEM v (F_CLOCK_COMP c f2))
        ==>
        !v c. F_SEM v c (F_UNTIL(f1,f2)) =
-              UF_SEM v (F_CLOCK_COMP c (F_UNTIL(f1,f2)))``,
+              UF_SEM v (F_CLOCK_COMP c (F_UNTIL(f1,f2)))
+Proof
    RW_TAC std_ss []
     THEN EQ_TAC
     THEN RW_TAC std_ss []
     THENL
      [IMP_RES_TAC F_UNTIL_CLOCK_COMP_IMP1,
-      IMP_RES_TAC F_UNTIL_CLOCK_COMP_IMP2]);
+      IMP_RES_TAC F_UNTIL_CLOCK_COMP_IMP2]
+QED
 
 val AUX_TAC2 =
  RW_TAC (arith_ss  ++ resq_SS)
   [F_SEM_def,UF_SEM_def,F_CLOCK_COMP_def,CLOCK_TICK_def];
 
-val F_CLOCK_COMP_CORRECT =
- store_thm
-  ("F_CLOCK_COMP_CORRECT",
-   ``!f v c. F_SEM v c f = UF_SEM v (F_CLOCK_COMP c f)``,
+Theorem F_CLOCK_COMP_CORRECT:
+     !f v c. F_SEM v c f = UF_SEM v (F_CLOCK_COMP c f)
+Proof
    INDUCT_THEN fl_induct ASSUME_TAC
     THENL
      [(* F_STRONG_BOOL b *)
@@ -1252,7 +1223,8 @@ val F_CLOCK_COMP_CORRECT =
       (* F_SUFFIX_IMP(s,f) *)
       AUX_TAC2
        THEN PROVE_TAC[S_CLOCK_COMP_CORRECT]
-     ]);
+     ]
+QED
 
 (* Theoem saved when compiling:
 Saving theorem US_SEM_BOOL_REWRITE_LEMMA

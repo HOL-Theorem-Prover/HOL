@@ -84,11 +84,12 @@ val JOIN_TAC =
          LENGTH_TL,LENGTH_GENLIST,LENGTH_SNOC,(GSYM o CONJUNCT2) EL]
     \\ SIMP_TAC list_ss [];
 
-val JOIN = store_thm("JOIN",
-  `(!n ys. JOIN n [] ys = ys) /\
+Theorem JOIN:
+   (!n ys. JOIN n [] ys = ys) /\
    (!xs. JOIN 0 xs [] = xs) /\
    (!x xs y ys. JOIN 0 (x::xs) (y::ys) = y :: JOIN 0 xs ys) /\
-   (!n xs y ys. JOIN (SUC n) (x::xs) ys = x :: (JOIN n xs ys))`,
+   (!n xs y ys. JOIN (SUC n) (x::xs) ys = x :: (JOIN n xs ys))
+Proof
   RW_TAC (list_ss++boolSimps.LET_ss) [JOIN_def,JOIN_lem]
     \\ MATCH_MP_TAC LIST_EQ
     << [
@@ -96,28 +97,33 @@ val JOIN = store_thm("JOIN",
         \\ `?p. LENGTH ys = SUC p` by METIS_TAC [ADD1,LESS_ADD_1,ADD_CLAUSES]
         \\ ASM_SIMP_TAC list_ss [HD_GENLIST],
       RW_TAC arith_ss [LENGTH_GENLIST,EL_GENLIST],
-      JOIN_TAC, JOIN_TAC]);
+      JOIN_TAC, JOIN_TAC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val APPLY_LUPDATE_THM = store_thm("APPLY_LUPDATE_THM",
-  `!a b l m. (a |: l) m b =
+Theorem APPLY_LUPDATE_THM:
+   !a b l m. (a |: l) m b =
       let na = w2n a and nb = w2n b in
       let d = nb - na in
-        if na <= nb /\ d < LENGTH l then EL d l else m b`,
+        if na <= nb /\ d < LENGTH l then EL d l else m b
+Proof
   NTAC 2 Cases
     \\ RW_TAC (std_ss++boolSimps.LET_ss) [WORD_LS,LUPDATE_def]
-    \\ FULL_SIMP_TAC arith_ss []);
+    \\ FULL_SIMP_TAC arith_ss []
+QED
 
-val UPDATE_LUPDATE = store_thm("UPDATE_LUPDATE",
-   `!a b m. (a =+ b) m = (a |: [b]) m`,
+Theorem UPDATE_LUPDATE:
+    !a b m. (a =+ b) m = (a |: [b]) m
+Proof
   RW_TAC (std_ss++boolSimps.LET_ss) [FUN_EQ_THM,LUPDATE_def,UPDATE_def]
     \\ Cases_on `a = x`
     \\ ASM_SIMP_TAC list_ss [WORD_LOWER_EQ_REFL]
-    \\ ASM_SIMP_TAC arith_ss [WORD_LOWER_OR_EQ,WORD_LO]);
+    \\ ASM_SIMP_TAC arith_ss [WORD_LOWER_OR_EQ,WORD_LO]
+QED
 
-val LUPDATE_LUPDATE = store_thm("LUPDATE_LUPDATE",
-  `!a b x y m. (a |: y) ((b |: x) m) =
+Theorem LUPDATE_LUPDATE:
+   !a b x y m. (a |: y) ((b |: x) m) =
      let lx = LENGTH x and ly = LENGTH y in
         if a <=+ b then
           if w2n b - w2n a <= ly then
@@ -131,7 +137,8 @@ val LUPDATE_LUPDATE = store_thm("LUPDATE_LUPDATE",
           if w2n a - w2n b < lx then
             (b |: JOIN (w2n a - w2n b) x y) m
           else
-            (b |: x) ((a |: y) m)`,
+            (b |: x) ((a |: y) m)
+Proof
   REPEAT STRIP_TAC \\ SIMP_TAC (bool_ss++boolSimps.LET_ss) []
     \\ Cases_on `a <=+ b`
     \\ FULL_SIMP_TAC std_ss [WORD_NOT_LOWER_EQUAL,WORD_LS,WORD_LO]
@@ -148,57 +155,70 @@ val LUPDATE_LUPDATE = store_thm("LUPDATE_LUPDATE",
           FULL_SIMP_TAC arith_ss [NOT_LESS]
             \\ IMP_RES_TAC LENGTH_NIL
             \\ RW_TAC (arith_ss++boolSimps.LET_ss) [WORD_LS,LUPDATE_def]
-            \\ FULL_SIMP_TAC arith_ss []]]);
+            \\ FULL_SIMP_TAC arith_ss []]]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val UPDATE_SORT_RULE1 = store_thm("UPDATE_SORT_RULE1",
-  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
+Theorem UPDATE_SORT_RULE1:
+   !R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
      ((a =+> e) ((b =+> d) m) =
          if R a b then
            (b =+< d) ((a =+> e) m)
          else
-           (a =+< e) ((b =+> d) m))`,
-  METIS_TAC [Ua_def,Ub_def,UPDATE_COMMUTES]);
+           (a =+< e) ((b =+> d) m))
+Proof
+  METIS_TAC [Ua_def,Ub_def,UPDATE_COMMUTES]
+QED
 
-val UPDATE_SORT_RULE2 = store_thm("UPDATE_SORT_RULE2",
-  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
+Theorem UPDATE_SORT_RULE2:
+   !R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
      ((a =+> e) ((b =+< d) m) =
          if R a b then
            (b =+< d) ((a =+> e) m)
          else
-           (a =+< e) ((b =+< d) m))`,
-  METIS_TAC [Ua_def,Ub_def,UPDATE_COMMUTES]);
+           (a =+< e) ((b =+< d) m))
+Proof
+  METIS_TAC [Ua_def,Ub_def,UPDATE_COMMUTES]
+QED
 
-val UPDATE_EQ_RULE = store_thm("UPDATE_EQ_RULE",
-  `((a =+< e) ((a =+> d) m) = (a =+> e) m) /\
+Theorem UPDATE_EQ_RULE:
+   ((a =+< e) ((a =+> d) m) = (a =+> e) m) /\
    ((a =+< e) ((a =+< d) m) = (a =+< e) m) /\
-   ((a =+> e) ((a =+> d) m) = (a =+> e) m)`,
-  REWRITE_TAC [Ua_def,Ub_def,UPDATE_EQ]);
+   ((a =+> e) ((a =+> d) m) = (a =+> e) m)
+Proof
+  REWRITE_TAC [Ua_def,Ub_def,UPDATE_EQ]
+QED
 
-val FCP_UPDATE_SORT_RULE1 = store_thm("FCP_UPDATE_SORT_RULE1",
-  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
+Theorem FCP_UPDATE_SORT_RULE1:
+   !R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
      ((a :+> e) ((b :+> d) m) =
          if R a b then
            (b :+< d) ((a :+> e) m)
          else
-           (a :+< e) ((b :+> d) m))`,
-  METIS_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_COMMUTES]);
+           (a :+< e) ((b :+> d) m))
+Proof
+  METIS_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_COMMUTES]
+QED
 
-val FCP_UPDATE_SORT_RULE2 = store_thm("FCP_UPDATE_SORT_RULE2",
-  `!R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
+Theorem FCP_UPDATE_SORT_RULE2:
+   !R m a b d e. (!x y. R x y ==> ~(x = y)) ==>
      ((a :+> e) ((b :+< d) m) =
          if R a b then
            (b :+< d) ((a :+> e) m)
          else
-           (a :+< e) ((b :+< d) m))`,
-  METIS_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_COMMUTES]);
+           (a :+< e) ((b :+< d) m))
+Proof
+  METIS_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_COMMUTES]
+QED
 
-val FCP_UPDATE_EQ_RULE = store_thm("FCP_UPDATE_EQ_RULE",
-  `((a :+< e) ((a :+> d) m) = (a :+> e) m) /\
+Theorem FCP_UPDATE_EQ_RULE:
+   ((a :+< e) ((a :+> d) m) = (a :+> e) m) /\
    ((a :+< e) ((a :+< d) m) = (a :+< e) m) /\
-   ((a :+> e) ((a :+> d) m) = (a :+> e) m)`,
-  REWRITE_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_EQ]);
+   ((a :+> e) ((a :+> d) m) = (a :+> e) m)
+Proof
+  REWRITE_TAC [FUa_def,FUb_def,fcpTheory.FCP_UPDATE_EQ]
+QED
 
 val LIST_UPDATE_SORT_RULE1 = save_thm("LIST_UPDATE_SORT_RULE1",
   METIS_PROVE [LUa_def,LUb_def,LUPDATE_LUPDATE]

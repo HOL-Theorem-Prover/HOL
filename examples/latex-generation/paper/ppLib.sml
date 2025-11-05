@@ -12,5 +12,4 @@ val _ = add_rule {
   paren_style = OnlyIfNecessary
 }
 
-
 end (* struct *)

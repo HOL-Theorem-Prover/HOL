@@ -50,19 +50,25 @@ end
 fun prove t =
   if squolem_installed then
     (HolQbfLib.prove t; print ".")
-    handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
-      die ("Prove failed on term '" ^ Hol_pp.term_to_string t ^
-        "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
-        " " ^ locn.toString source_location ^ ", message: " ^ message ^ ")")
+    handle Feedback.HOL_ERR holerr =>
+      die (String.concat
+        ["Prove failed on term '", Hol_pp.term_to_string t,
+         "': exception HOL_ERR (in ", Feedback.top_structure_of holerr,
+         ".", Feedback.top_function_of holerr,
+         " ", locn.toString (Feedback.top_location_of holerr),
+         ", message: ", Feedback.message_of holerr, ")"])
   else ()
 
 fun disprove t =
   if squolem_installed then
     (HolQbfLib.disprove t; print ".")
-    handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
-      die ("Disprove failed on term '" ^ Hol_pp.term_to_string t ^
-        "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
-        " " ^ locn.toString source_location ^ ", message: " ^ message ^ ")")
+    handle Feedback.HOL_ERR holerr =>
+      die (String.concat
+        ["Disprove failed on term '", Hol_pp.term_to_string t,
+         "': exception HOL_ERR (in ", Feedback.top_structure_of holerr,
+         ".", Feedback.top_function_of holerr,
+         " ", locn.toString (Feedback.top_location_of holerr),
+         ", message: ", Feedback.message_of holerr, ")"])
   else ()
 
 val thmeq = Lib.pair_eq (Lib.list_eq Term.aconv) Term.aconv
@@ -78,10 +84,13 @@ fun decide t =
             else die ("Decide proved bad theorem on term '" ^
               Hol_pp.term_to_string t ^ "'")
     in print "." end
-    handle Feedback.HOL_ERR {origin_structure, origin_function, source_location, message} =>
-      die ("Decide failed on term '" ^ Hol_pp.term_to_string t ^
-        "': exception HOL_ERR (in " ^ origin_structure ^ "." ^ origin_function ^
-        " " ^ locn.toString source_location ^ ", message: " ^ message ^ ")")
+    handle Feedback.HOL_ERR holerr =>
+      die (String.concat
+          ["Decide failed on term '", Hol_pp.term_to_string t,
+           "': exception HOL_ERR (in ", Feedback.top_structure_of holerr,
+           ".", Feedback.top_function_of holerr,
+           " ", locn.toString (Feedback.top_location_of holerr),
+           ", message: ", Feedback.message_of holerr, ")"])
   else ()
 
 local

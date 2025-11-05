@@ -7,10 +7,11 @@ Libs
 
 val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
-val FUNPOW_extends_mono = Q.store_thm(
-"FUNPOW_extends_mono",
-`∀P f. (∀x. P x ⇒ P (f x)) ∧ P x ⇒ P (FUNPOW f n x)`,
-STRIP_TAC >> Induct_on `n` >> SRW_TAC [][FUNPOW_SUC]);
+Theorem FUNPOW_extends_mono:
+ ∀P f. (∀x. P x ⇒ P (f x)) ∧ P x ⇒ P (FUNPOW f n x)
+Proof
+STRIP_TAC >> Induct_on `n` >> SRW_TAC [][FUNPOW_SUC]
+QED
 
 val _ = type_abbrev_pp ("subst", ``:(num |-> 'a term)``);
 
@@ -23,15 +24,17 @@ val FINITE_rangevars = RWstore_thm(
 `FINITE (rangevars s)`,
 SRW_TAC [][rangevars_def] >> SRW_TAC [][]);
 
-val IN_FRANGE_rangevars = Q.store_thm(
-"IN_FRANGE_rangevars",
-`t ∈ FRANGE s ⇒ vars t SUBSET rangevars s`,
-SRW_TAC [][rangevars_def,SUBSET_DEF] >> METIS_TAC []);
+Theorem IN_FRANGE_rangevars:
+ t ∈ FRANGE s ⇒ vars t SUBSET rangevars s
+Proof
+SRW_TAC [][rangevars_def,SUBSET_DEF] >> METIS_TAC []
+QED
 
-val rangevars_FUPDATE = Q.store_thm(
-"rangevars_FUPDATE",
-`v ∉ FDOM s ⇒ (rangevars (s |+ (v,t)) = rangevars s UNION vars t)`,
-SRW_TAC [][rangevars_def,DOMSUB_NOT_IN_DOM,UNION_COMM]);
+Theorem rangevars_FUPDATE:
+ v ∉ FDOM s ⇒ (rangevars (s |+ (v,t)) = rangevars s UNION vars t)
+Proof
+SRW_TAC [][rangevars_def,DOMSUB_NOT_IN_DOM,UNION_COMM]
+QED
 
 Definition substvars_def:
   substvars s = FDOM s UNION rangevars s
@@ -56,18 +59,19 @@ SRW_TAC [][wfs_def] >>
 Q_TAC SUFF_TAC `vR FEMPTY = EMPTY_REL` >- METIS_TAC [WF_EMPTY_REL] >>
 SRW_TAC [][FUN_EQ_THM,vR_def]);
 
-val wfs_SUBMAP = Q.store_thm(
-"wfs_SUBMAP",
-`wfs sx /\ s SUBMAP sx ==> wfs s`,
+Theorem wfs_SUBMAP:
+ wfs sx /\ s SUBMAP sx ==> wfs s
+Proof
 SRW_TAC [][wfs_def,SUBMAP_DEF] >>
 Q_TAC SUFF_TAC `!y x.vR s y x ==> vR sx y x`
   >- METIS_TAC [WF_SUBSET] >>
 SRW_TAC [][vR_def,FLOOKUP_DEF] >>
-METIS_TAC []);
+METIS_TAC []
+QED
 
-val wfs_no_cycles = Q.store_thm(
-  "wfs_no_cycles",
-  `wfs s <=> !v. ~(vR s)^+ v v`,
+Theorem wfs_no_cycles:
+   wfs s <=> !v. ~(vR s)^+ v v
+Proof
   EQ_TAC >- METIS_TAC [WF_TC,wfs_def,WF_NOT_REFL] >>
   SRW_TAC [] [wfs_def,WF_IFF_WELLFOUNDED,wellfounded_def] >>
   SPOSE_NOT_THEN STRIP_ASSUME_TAC >>
@@ -94,7 +98,8 @@ val wfs_no_cycles = Q.store_thm(
        Q.EXISTS_TAC `x` >> Q.EXISTS_TAC `y - x - 1`,
        Q.EXISTS_TAC `y` >> Q.EXISTS_TAC `x - y - 1`
      ] >> SRW_TAC [ARITH_ss] [ADD1])
-  >> METIS_TAC []);
+  >> METIS_TAC []
+QED
 
 Definition subst_APPLY_def:
   (subst_APPLY s (Var v) = case FLOOKUP s v of NONE => Var v | SOME t => t) /\
@@ -105,38 +110,41 @@ val _ = set_fixity "❜" (Infixr 700);
 val _ = overload_on ("❜", ``subst_APPLY``)
 val _ = export_rewrites["subst_APPLY_def"];
 
-val subst_APPLY_FAPPLY = Q.store_thm(
-"subst_APPLY_FAPPLY",
-`v IN FDOM s ==> (s ' v = s ❜ (Var v))`,
-SRW_TAC [][subst_APPLY_def,FLOOKUP_DEF]);
+Theorem subst_APPLY_FAPPLY:
+ v IN FDOM s ==> (s ' v = s ❜ (Var v))
+Proof
+SRW_TAC [][subst_APPLY_def,FLOOKUP_DEF]
+QED
 
 Definition noids_def:
   noids s = ∀v. FLOOKUP s v ≠ SOME (Var v)
 End
 
-val subst_APPLY_id = Q.store_thm(
-"subst_APPLY_id",
-`(s ❜ t = t) <=> !v.v IN (vars t) ∧ v IN FDOM s ⇒ (s ' v = Var v)`,
+Theorem subst_APPLY_id:
+ (s ❜ t = t) <=> !v.v IN (vars t) ∧ v IN FDOM s ⇒ (s ' v = Var v)
+Proof
 EQ_TAC >>
 Induct_on `t` >> SRW_TAC [][FLOOKUP_DEF] >>
-FULL_SIMP_TAC (srw_ss()) []);
+FULL_SIMP_TAC (srw_ss()) []
+QED
 
 Definition idempotent_def:
   idempotent s = !t.s ❜ (s ❜ t) = s ❜ t
 End
 
-val wfs_noids = Q.store_thm(
-"wfs_noids",
-`wfs s ⇒ noids s`,
+Theorem wfs_noids:
+ wfs s ⇒ noids s
+Proof
 SRW_TAC [][wfs_no_cycles,noids_def] >>
 SPOSE_NOT_THEN STRIP_ASSUME_TAC >>
 FIRST_X_ASSUM (Q.SPEC_THEN `v` MP_TAC) >>
 SRW_TAC [][] >> MATCH_MP_TAC TC_SUBSET >>
-SRW_TAC [][vR_def]);
+SRW_TAC [][vR_def]
+QED
 
-val idempotent_rangevars = Q.store_thm(
-"idempotent_rangevars",
-`idempotent s ∧ noids s <=> DISJOINT (FDOM s) (rangevars s)`,
+Theorem idempotent_rangevars:
+ idempotent s ∧ noids s <=> DISJOINT (FDOM s) (rangevars s)
+Proof
 EQ_TAC >- (
   rw[DISJOINT_BIGUNION,idempotent_def,noids_def,FLOOKUP_DEF,rangevars_def] >>
   `∃v. v IN FDOM s ∧ (s ' v = x)`
@@ -155,20 +163,22 @@ rw[noids_def,IN_DISJOINT,FLOOKUP_DEF,idempotent_def,subst_APPLY_id,
 Cases_on `v IN FDOM s` >> SRW_TAC [][] >>
 `s ' v IN FRANGE s` by (SRW_TAC [][FRANGE_DEF] >> METIS_TAC []) >>
 `v NOTIN (vars (s ' v))` by METIS_TAC [] >>
-Cases_on `s ' v` >> FULL_SIMP_TAC (srw_ss()) []);
+Cases_on `s ' v` >> FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val wfs_FAPPLY_var = Q.store_thm(
-"wfs_FAPPLY_var",
-`wfs s ==> !v.v IN FDOM s ==> s ' v <> (Var v)`,
+Theorem wfs_FAPPLY_var:
+ wfs s ==> !v.v IN FDOM s ==> s ' v <> (Var v)
+Proof
 SRW_TAC [][wfs_no_cycles] >>
 `~vR s v v` by METIS_TAC [TC_SUBSET] >>
 POP_ASSUM MP_TAC >>
 Cases_on `s ' v` >>
-SRW_TAC [][vR_def,FLOOKUP_DEF]);
+SRW_TAC [][vR_def,FLOOKUP_DEF]
+QED
 
-val TC_vR_vars_FRANGE = Q.store_thm(
-"TC_vR_vars_FRANGE",
-`∀u v. (vR s)^+ u v ⇒ v IN FDOM s ⇒ u IN BIGUNION (IMAGE vars (FRANGE s))`,
+Theorem TC_vR_vars_FRANGE:
+ ∀u v. (vR s)^+ u v ⇒ v IN FDOM s ⇒ u IN BIGUNION (IMAGE vars (FRANGE s))
+Proof
 HO_MATCH_MP_TAC TC_STRONG_INDUCT_RIGHT1 >>
 SRW_TAC [][vR_def] >- (
   Cases_on `FLOOKUP s v` >> FULL_SIMP_TAC (srw_ss()) [FLOOKUP_DEF] >>
@@ -179,11 +189,12 @@ FIRST_X_ASSUM MATCH_MP_TAC >>
 IMP_RES_TAC TC_CASES2_E >>
 FULL_SIMP_TAC (srw_ss()) [vR_def] >>
 FULL_SIMP_TAC (srw_ss()) [FLOOKUP_DEF] >>
-Cases_on `v IN FDOM s` >> FULL_SIMP_TAC (srw_ss()) []);
+Cases_on `v IN FDOM s` >> FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val wfs_idempotent = Q.store_thm(
-"wfs_idempotent",
-`idempotent s ∧ noids s ⇒ wfs s`,
+Theorem wfs_idempotent:
+ idempotent s ∧ noids s ⇒ wfs s
+Proof
 STRIP_TAC >> IMP_RES_TAC idempotent_rangevars >>
 FULL_SIMP_TAC (srw_ss()) [rangevars_def] >>
 SRW_TAC [][wfs_no_cycles] >>
@@ -193,7 +204,8 @@ IMP_RES_TAC TC_CASES2_E >>
 FULL_SIMP_TAC (srw_ss()) [vR_def,FLOOKUP_DEF] >>
 Cases_on `v IN FDOM s` >> FULL_SIMP_TAC (srw_ss()) [] >>
 RES_TAC >> SRW_TAC [][] >>
-METIS_TAC [IN_DISJOINT]);
+METIS_TAC [IN_DISJOINT]
+QED
 
 val _ = set_fixity "s_o_s"(Infixl 740);
 
@@ -205,21 +217,23 @@ Definition selfapp_def:
   (selfapp s = ($❜ s) o_f s)
 End
 
-val selfapp_eq_iter_APPLY = Q.store_thm(
-"selfapp_eq_iter_APPLY",
-`∀t. (selfapp s) ❜ t = s ❜ (s ❜ t)`,
-Induct >> SRW_TAC [][selfapp_def,FLOOKUP_DEF]);
+Theorem selfapp_eq_iter_APPLY:
+ ∀t. (selfapp s) ❜ t = s ❜ (s ❜ t)
+Proof
+Induct >> SRW_TAC [][selfapp_def,FLOOKUP_DEF]
+QED
 
 val FDOM_selfapp = RWstore_thm(
 "FDOM_selfapp",
 `FDOM (selfapp s) = FDOM s`,
 SRW_TAC [][selfapp_def]);
 
-val selfapp_eq_s_o_s = Q.store_thm(
-"selfapp_eq_s_o_s",
-`selfapp s = s s_o_s s`,
+Theorem selfapp_eq_s_o_s:
+ selfapp s = s s_o_s s
+Proof
 SRW_TAC [][GSYM fmap_EQ,selfapp_def,s_o_s_def,FUN_FMAP_DEF,FUN_EQ_THM] >>
-Cases_on `x ∈ FDOM s` >> rw[FUN_FMAP_DEF,NOT_FDOM_FAPPLY_FEMPTY,FLOOKUP_DEF]);
+Cases_on `x ∈ FDOM s` >> rw[FUN_FMAP_DEF,NOT_FDOM_FAPPLY_FEMPTY,FLOOKUP_DEF]
+QED
 
 Theorem IN_vars_APPLY:
   ∀t v. v IN vars (s ❜ t) ⇔ v ∉ FDOM s ∧ v ∈ vars t ∨ ∃x. vR s v x ∧ x ∈ vars t
@@ -234,22 +248,24 @@ Definition vR1_def:
   vR1 s y x <=> vR s y x ∧ y NOTIN FDOM s
 End
 
-val vR_selfapp = Q.store_thm(
-"vR_selfapp",
-`vR (selfapp s) = vR1 s RUNION NRC (vR s) 2`,
+Theorem vR_selfapp:
+ vR (selfapp s) = vR1 s RUNION NRC (vR s) 2
+Proof
 SRW_TAC [][RUNION,FUN_EQ_THM,vR1_def,selfapp_def,vR_def,
            FLOOKUP_DEF,EQ_IMP_THM] >>
 FULL_SIMP_TAC bool_ss [TWO,ONE,NRC] >>
 Cases_on `x' IN FDOM s` >>
 FULL_SIMP_TAC (srw_ss()) [IN_vars_APPLY,vR_def,FLOOKUP_DEF] >>
-METIS_TAC []);
+METIS_TAC []
+QED
 
-val vR1_selfapp = Q.store_thm(
-"vR1_selfapp",
-`vR1 (selfapp s) = vR1 s RUNION (vR s O vR1 s)`,
+Theorem vR1_selfapp:
+ vR1 (selfapp s) = vR1 s RUNION (vR s O vR1 s)
+Proof
 SRW_TAC [][FUN_EQ_THM,EQ_IMP_THM,vR1_def] >>
 FULL_SIMP_TAC (srw_ss()) [vR_selfapp,RUNION,O_DEF] >>
-FULL_SIMP_TAC bool_ss [TWO,ONE,NRC,vR1_def] >> METIS_TAC []);
+FULL_SIMP_TAC bool_ss [TWO,ONE,NRC,vR1_def] >> METIS_TAC []
+QED
 
 val FDOM_FUNPOW_selfapp = RWstore_thm(
 "FDOM_FUNPOW_selfapp",
@@ -258,9 +274,9 @@ val FDOM_FUNPOW_selfapp = RWstore_thm(
       SIMP_RULE (srw_ss()) [] |> MATCH_MP_TAC ) >>
 SRW_TAC [][]);
 
-val NRC_2_IMP_TC_vR_selfapp = Q.store_thm(
-"NRC_2_IMP_TC_vR_selfapp",
-`∀n v u. NRC (vR s) (2* SUC n) v u ⇒ (vR (selfapp s))^+ v u`,
+Theorem NRC_2_IMP_TC_vR_selfapp:
+ ∀n v u. NRC (vR s) (2* SUC n) v u ⇒ (vR (selfapp s))^+ v u
+Proof
 Induct >> SRW_TAC [][] >- (
   MATCH_MP_TAC TC_SUBSET >>
   SRW_TAC [][vR_selfapp,RUNION] ) >>
@@ -275,11 +291,12 @@ RES_TAC >>
   SRW_TAC [][vR_selfapp,RUNION] >>
   SIMP_TAC bool_ss [TWO,ONE,NRC] >>
   METIS_TAC [] ) >>
-METIS_TAC [TC_RULES]);
+METIS_TAC [TC_RULES]
+QED
 
-val NRC_2_1_IMP_TC_vR_selfapp = Q.store_thm(
-"NRC_2_1_IMP_TC_vR_selfapp",
-`∀n v u. NRC (vR s) (2 * n) v u ∧ vR1 s w v ⇒ (vR (selfapp s))^+ w u`,
+Theorem NRC_2_1_IMP_TC_vR_selfapp:
+ ∀n v u. NRC (vR s) (2 * n) v u ∧ vR1 s w v ⇒ (vR (selfapp s))^+ w u
+Proof
 Induct >> SRW_TAC [][] >- (
   MATCH_MP_TAC TC_SUBSET >>
   SRW_TAC [][vR_selfapp,RUNION] ) >>
@@ -294,7 +311,8 @@ RES_TAC >>
   SRW_TAC [][vR_selfapp,RUNION] >>
   SIMP_TAC bool_ss [TWO,ONE,NRC] >>
   METIS_TAC [] ) >>
-IMP_RES_TAC TC_RULES);
+IMP_RES_TAC TC_RULES
+QED
 
 Theorem TC_vR_selfapp:
   (vR (selfapp s))^+ v u ⇔
@@ -327,9 +345,9 @@ IMP_RES_TAC NRC_2_IMP_TC_vR_selfapp >>
 IMP_RES_TAC NRC_2_1_IMP_TC_vR_selfapp
 QED
 
-val wfs_selfapp = Q.store_thm(
-"wfs_selfapp",
-`wfs s ⇔ wfs (selfapp s)`,
+Theorem wfs_selfapp:
+ wfs s ⇔ wfs (selfapp s)
+Proof
 SRW_TAC [][wfs_no_cycles,EQ_IMP_THM,TC_vR_selfapp] >>
 SPOSE_NOT_THEN STRIP_ASSUME_TAC >| [
   Cases_on `2 * SUC n` >> FULL_SIMP_TAC (srw_ss()) [] >>
@@ -342,11 +360,12 @@ SPOSE_NOT_THEN STRIP_ASSUME_TAC >| [
   IMP_RES_TAC NRC_ADD_I >>
   FULL_SIMP_TAC (srw_ss()++ARITH_ss) [] >>
   METIS_TAC []
-]);
+]
+QED
 
-val vR_LRC_ALL_DISTINCT = Q.store_thm(
-"vR_LRC_ALL_DISTINCT",
-`wfs s ⇒ ∀ls v u. LRC (vR s) ls v u ⇒ ALL_DISTINCT ls`,
+Theorem vR_LRC_ALL_DISTINCT:
+ wfs s ⇒ ∀ls v u. LRC (vR s) ls v u ⇒ ALL_DISTINCT ls
+Proof
 STRIP_TAC >> Induct >> SRW_TAC [][LRC_def] >- (
   SPOSE_NOT_THEN STRIP_ASSUME_TAC >>
   IMP_RES_TAC LRC_MEM_right >>
@@ -363,29 +382,32 @@ STRIP_TAC >> Induct >> SRW_TAC [][LRC_def] >- (
   IMP_RES_TAC TC_eq_NRC >>
   SRW_TAC [][] >>
   NTAC 2 (IMP_RES_TAC TC_RULES) >>
-  RES_TAC) >> RES_TAC);
+  RES_TAC) >> RES_TAC
+QED
 
-val vR_LRC_FDOM = Q.store_thm(
-"vR_LRC_FDOM",
-`LRC (vR s) (h::t) v u ∧ MEM e t ⇒ e IN FDOM s`,
+Theorem vR_LRC_FDOM:
+ LRC (vR s) (h::t) v u ∧ MEM e t ⇒ e IN FDOM s
+Proof
 SRW_TAC [][] >> IMP_RES_TAC LRC_MEM_right >>
 Cases_on `e IN FDOM s` >>
-FULL_SIMP_TAC (srw_ss()) [LRC_def,vR_def,FLOOKUP_DEF]);
+FULL_SIMP_TAC (srw_ss()) [LRC_def,vR_def,FLOOKUP_DEF]
+QED
 
-val vR_LRC_bound = Q.store_thm(
-"vR_LRC_bound",
-`wfs s ∧ LRC (vR s) ls v u ⇒ LENGTH ls ≤ CARD (FDOM s) + 1`,
+Theorem vR_LRC_bound:
+ wfs s ∧ LRC (vR s) ls v u ⇒ LENGTH ls ≤ CARD (FDOM s) + 1
+Proof
 Cases_on `ls` >> SRW_TAC [ARITH_ss][ADD1] >>
 IMP_RES_TAC vR_LRC_ALL_DISTINCT >>
 IMP_RES_TAC vR_LRC_FDOM >>
 FULL_SIMP_TAC (srw_ss()) [] >>
 IMP_RES_TAC ALL_DISTINCT_CARD_LIST_TO_SET >>
 `set t SUBSET FDOM s` by SRW_TAC [][SUBSET_DEF] >>
-METIS_TAC [CARD_SUBSET,FDOM_FINITE]);
+METIS_TAC [CARD_SUBSET,FDOM_FINITE]
+QED
 
-val idempotent_selfapp = Q.store_thm(
-"idempotent_selfapp",
-`idempotent s ⇔ (selfapp s = s)`,
+Theorem idempotent_selfapp:
+ idempotent s ⇔ (selfapp s = s)
+Proof
 SRW_TAC [][idempotent_def,EQ_IMP_THM,GSYM fmap_EQ,FUN_EQ_THM] >- (
   Cases_on `x IN FDOM s` >- (
     FIRST_X_ASSUM (Q.SPEC_THEN `Var x` MP_TAC) >>
@@ -395,23 +417,26 @@ SRW_TAC [][idempotent_def,EQ_IMP_THM,GSYM fmap_EQ,FUN_EQ_THM] >- (
 Induct_on `t` >> SRW_TAC [][] >>
 Cases_on `n IN FDOM s` >> SRW_TAC [][FLOOKUP_DEF] >>
 FIRST_X_ASSUM (Q.SPEC_THEN `n` MP_TAC) >>
-SRW_TAC [][selfapp_def,o_f_DEF]);
+SRW_TAC [][selfapp_def,o_f_DEF]
+QED
 
-val fixpoint_IMP_wfs = Q.store_thm(
-"fixpoint_IMP_wfs",
-`idempotent (FUNPOW selfapp n s) ∧ noids (FUNPOW selfapp n s) ⇒ wfs s`,
+Theorem fixpoint_IMP_wfs:
+ idempotent (FUNPOW selfapp n s) ∧ noids (FUNPOW selfapp n s) ⇒ wfs s
+Proof
 SRW_TAC [][] >> IMP_RES_TAC wfs_idempotent >>
 POP_ASSUM MP_TAC >>
 REPEAT (POP_ASSUM (K ALL_TAC)) >>
 Induct_on `n` >> SRW_TAC [][] >>
 FULL_SIMP_TAC (srw_ss()) [FUNPOW_SUC] >>
 IMP_RES_TAC wfs_selfapp >>
-RES_TAC);
+RES_TAC
+QED
 
-val idempotent_substeq = Q.store_thm(
-"idempotent_substeq",
-`($❜ s1 = $❜ s2) ⇒ (idempotent s1 ⇔ idempotent s2)`,
-SRW_TAC [][idempotent_def,EQ_IMP_THM]);
+Theorem idempotent_substeq:
+ ($❜ s1 = $❜ s2) ⇒ (idempotent s1 ⇔ idempotent s2)
+Proof
+SRW_TAC [][idempotent_def,EQ_IMP_THM]
+QED
 
 Theorem vR_FUNPOW_selfapp_bound:
   ∀n v u. vR (FUNPOW selfapp n s) v u ⇒
@@ -430,9 +455,9 @@ Cases_on `z IN FDOM s` >> FULL_SIMP_TAC (srw_ss()) [] >>
 DECIDE_TAC
 QED
 
-val idempotent_or_vR = Q.store_thm(
-"idempotent_or_vR",
-`idempotent s ∨ ∃u v. vR s v u ∧ v IN FDOM s`,
+Theorem idempotent_or_vR:
+ idempotent s ∨ ∃u v. vR s v u ∧ v IN FDOM s
+Proof
 Cases_on `idempotent s` >> SRW_TAC [][] >>
 FULL_SIMP_TAC (srw_ss()) [idempotent_def] >>
 Induct_on `t` >> SRW_TAC [][] >| [
@@ -443,11 +468,12 @@ Induct_on `t` >> SRW_TAC [][] >| [
   FULL_SIMP_TAC (srw_ss()) [] >> METIS_TAC [],
   METIS_TAC [],
   METIS_TAC []
-]);
+]
+QED
 
-val wfs_IMP_fixpoint = Q.store_thm(
-"wfs_IMP_fixpoint",
-`wfs s ⇒ ∃n. idempotent (FUNPOW selfapp n s) ∧ noids (FUNPOW selfapp n s)`,
+Theorem wfs_IMP_fixpoint:
+ wfs s ⇒ ∃n. idempotent (FUNPOW selfapp n s) ∧ noids (FUNPOW selfapp n s)
+Proof
 STRIP_TAC >>
 `∀n. wfs (FUNPOW selfapp n s)`
 by (MATCH_MP_TAC FUNPOW_extends_mono >>
@@ -465,12 +491,14 @@ by METIS_TAC [vR_FUNPOW_selfapp_bound] >>
 by METIS_TAC [NRC_LRC] >>
 POP_ASSUM (Q.SPEC_THEN `CARD (FDOM s) + 2` STRIP_ASSUME_TAC) >>
 IMP_RES_TAC vR_LRC_bound >>
-DECIDE_TAC);
+DECIDE_TAC
+QED
 
-val wfs_iff_fixpoint = Q.store_thm(
-"wfs_iff_fixpoint",
-`wfs s ⇔ ∃n. idempotent (FUNPOW selfapp n s) ∧ noids (FUNPOW selfapp n s)`,
-METIS_TAC [wfs_IMP_fixpoint,fixpoint_IMP_wfs]);
+Theorem wfs_iff_fixpoint:
+ wfs s ⇔ ∃n. idempotent (FUNPOW selfapp n s) ∧ noids (FUNPOW selfapp n s)
+Proof
+METIS_TAC [wfs_IMP_fixpoint,fixpoint_IMP_wfs]
+QED
 
 (*
 val BIG_BAG_UNION_def = Define`

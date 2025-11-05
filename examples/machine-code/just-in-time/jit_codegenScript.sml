@@ -220,34 +220,40 @@ Definition one_string_0_def:
   one_string_0 a (s:string) b = one_string a (s ++ [CHR 0]) b
 End
 
-val one_string_STRCAT = store_thm("one_string_STRCAT",
-  ``!s t a c.
+Theorem one_string_STRCAT:
+    !s t a c.
       one_string a (s ++ t) c =
       one_string a s (a + n2w (LENGTH s)) *
-      one_string (a + n2w (LENGTH s)) t c``,
+      one_string (a + n2w (LENGTH s)) t c
+Proof
   Induct
   \\ FULL_SIMP_TAC std_ss [one_string_def,WORD_ADD_0,SEP_CLAUSES,
        ADD,MAP,LENGTH,one_list_def,APPEND]
   \\ SIMP_TAC std_ss [ADD1,GSYM word_add_n2w]
-  \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,STAR_ASSOC]);
+  \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,STAR_ASSOC]
+QED
 
-val one_string_0_STRCAT = store_thm("one_string_0_STRCAT",
-  ``!s t a c.
+Theorem one_string_0_STRCAT:
+    !s t a c.
       one_string_0 a (s ++ t) c =
       one_string a s (a + n2w (LENGTH s)) *
-      one_string_0 (a + n2w (LENGTH s)) t c``,
+      one_string_0 (a + n2w (LENGTH s)) t c
+Proof
   SIMP_TAC std_ss [one_string_0_def,GSYM APPEND_ASSOC]
-  \\ REWRITE_TAC [one_string_STRCAT]);
+  \\ REWRITE_TAC [one_string_STRCAT]
+QED
 
-val one_space_ADD = store_thm("one_space_ADD",
-  ``!m n a c.
+Theorem one_space_ADD:
+    !m n a c.
       one_space a (m + n) c =
       one_space a m (a + n2w m) *
-      one_space (a + n2w m) n c``,
+      one_space (a + n2w m) n c
+Proof
   Induct
   \\ ASM_SIMP_TAC std_ss [one_space_def,WORD_ADD_0,SEP_CLAUSES,ADD]
   \\ SIMP_TAC std_ss [ADD1,GSYM word_add_n2w]
-  \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,STAR_ASSOC]);
+  \\ SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM,STAR_ASSOC]
+QED
 
 val LENGTH_X86_ENCODE = prove(
   ``!n b. LENGTH (X86_ENCODE b n) = LENGTH (X86_ENCODE (\x.0w) n)``,
@@ -568,13 +574,15 @@ val SEP_CODE_IN_MEM_LOOP_thm = prove(
        BYTES_IN_MEM_def,SEP_CLAUSES,X86_IMMEDIATE_def,APPEND]
   \\ SEP_READ_TAC);
 
-val SEP_CODE_IN_MEM_IMP = store_thm("SEP_CODE_IN_MEM_IMP",
-  ``!x a ns f df xs l p ns.
+Theorem SEP_CODE_IN_MEM_IMP:
+    !x a ns f df xs l p ns.
       (x * SEP_CODE_IN_MEM a ns) (fun2set (f,df)) ==>
-      CODE_IN_MEM (xs,l,p,ns) a df f``,
+      CODE_IN_MEM (xs,l,p,ns) a df f
+Proof
   SIMP_TAC std_ss [SEP_CODE_IN_MEM_def] \\ REPEAT STRIP_TAC
   \\ IMP_RES_TAC SEP_CODE_IN_MEM_LOOP_thm
-  \\ FULL_SIMP_TAC std_ss [CODE_IN_MEM_def,LET_DEF]);
+  \\ FULL_SIMP_TAC std_ss [CODE_IN_MEM_def,LET_DEF]
+QED
 
 fun subst_SPEC_PC th tm = let
   val p = find_term (can (match_term ``aPC p``)) (cdr (concl th)) handle e =>

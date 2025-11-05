@@ -140,23 +140,28 @@ QED
 (* seemingly needs to be proved in two stages, one with RTC_STRONG_INDUCT,
    one with RTC_STRONG_INDUCT_RIGHT1 *)
 
-val NOT_IN_RTC_EQ = prove (
-``!R:'a reln s p q. (p NOTIN s \/ q NOTIN s) /\ (R ^|^ s)^* p q ==> (p = q)``,
+Theorem NOT_IN_RTC_EQ[local]:
+  !R:'a reln s p q. (p NOTIN s \/ q NOTIN s) /\ (R ^|^ s)^* p q ==> (p = q)
+Proof
 REPEAT GEN_TAC THEN CONV_TAC ANTE_CONJ_CONV THEN STRIP_TAC THENL
 [ONCE_REWRITE_TAC [RTC_CASES1], ONCE_REWRITE_TAC [RTC_CASES2]] THEN
  CONV_TAC CONTRAPOS_CONV THEN DISCH_TAC THEN AR THEN
  CONV_TAC NOT_EXISTS_CONV THEN GEN_TAC THEN
- ASM_REWRITE_TAC [BRESTR, DRESTR, RRESTR]);
+ ASM_REWRITE_TAC [BRESTR, DRESTR, RRESTR]
+QED
 
-val RTC_INSERT_MONO = prove (
-``!R:'a reln s a w z. (R ^|^ s)^* w z ==> (R ^|^ (a INSERT s))^* w z``,
+Theorem RTC_INSERT_MONO[local]:
+  !R:'a reln s a w z. (R ^|^ s)^* w z ==> (R ^|^ (a INSERT s))^* w z
+Proof
 REPEAT GEN_TAC THEN MATCH_MP_TAC RTC_MONOTONE THEN
 REPEAT GEN_TAC THEN REWRITE_TAC [BRESTR, DRESTR, RRESTR, IN_INSERT] THEN
-STRIP_TAC THEN AR);
+STRIP_TAC THEN AR
+QED
 
-val RTC_INSERT_RIGHT_IMP = prove (
-``!R:'a reln s a w z. (R ^|^ (a INSERT s))^* w z ==>
-(R ^|^ s)^* w z \/ ((a = z) \/ ?y. y IN s /\ R a y /\ (R ^|^ s)^* y z)``,
+Theorem RTC_INSERT_RIGHT_IMP[local]:
+  !R:'a reln s a w z. (R ^|^ (a INSERT s))^* w z ==>
+(R ^|^ s)^* w z \/ ((a = z) \/ ?y. y IN s /\ R a y /\ (R ^|^ s)^* y z)
+Proof
 REPEAT GEN_TAC THEN
 Cases_on `a IN s`
 THEN1 (IMP_RES_THEN SUBST1_TAC ABSORPTION_RWT THEN
@@ -194,11 +199,13 @@ ASM_REWRITE_TAC [RTC_REFL] THENL
     ASM_REWRITE_TAC [BRESTR, DRESTR, RRESTR, IN_INSERT]
    ]]
   ,DISJ2_TAC THEN DISJ2_TAC THEN Q.EXISTS_TAC `y'` THEN AR
- ]);
+ ]
+QED
 
-val RTC_INSERT_LEFT_IMP = prove (
-``!R:'a reln s a w z. (R ^|^ (a INSERT s))^* w z ==>
-   (R ^|^ s)^* w z \/ ((a = w) \/ ?x. x IN s /\ (R ^|^ s)^* w x /\ R x a)``,
+Theorem RTC_INSERT_LEFT_IMP[local]:
+  !R:'a reln s a w z. (R ^|^ (a INSERT s))^* w z ==>
+   (R ^|^ s)^* w z \/ ((a = w) \/ ?x. x IN s /\ (R ^|^ s)^* w x /\ R x a)
+Proof
 REPEAT GEN_TAC THEN
 Cases_on `a IN s`
 THEN1 (IMP_RES_THEN SUBST1_TAC ABSORPTION_RWT THEN
@@ -236,7 +243,8 @@ ASM_REWRITE_TAC [RTC_REFL] THENL
     ASM_REWRITE_TAC [BRESTR, DRESTR, RRESTR, IN_INSERT]
    ]]
   ,DISJ2_TAC THEN DISJ2_TAC THEN Q.EXISTS_TAC `x'` THEN AR
- ]);
+ ]
+QED
 
 Theorem RTC_INSERT:
   !R:'a reln s a w z. (R ^|^ (a INSERT s))^* w z <=>
@@ -280,31 +288,38 @@ REPEAT GEN_TAC THEN EQ_TAC THENL
 ]]]]
 QED
 
-val NOT_EQ_RTC_IN = prove (
-``!R:'a reln s p q. p <> q \/ q <> p ==> (R ^|^ s)^* p q ==> p IN s /\ q IN s``,
+Theorem NOT_EQ_RTC_IN[local]:
+  !R:'a reln s p q. p <> q \/ q <> p ==> (R ^|^ s)^* p q ==> p IN s /\ q IN s
+Proof
 REPEAT GEN_TAC THEN CONV_TAC CONTRAPOS_CONV THEN
 REWRITE_TAC [DE_MORGAN_THM, NOT_IMP] THEN REPEAT STRIP_TAC THENL
 [ALL_TAC, CONV_TAC (REWR_CONV EQ_SYM_EQ),
  ALL_TAC, CONV_TAC (REWR_CONV EQ_SYM_EQ)] THEN
-MATCH_MP_TAC (Q.SPECL [`R`, `s`] NOT_IN_RTC_EQ) THEN AR);
+MATCH_MP_TAC (Q.SPECL [`R`, `s`] NOT_IN_RTC_EQ) THEN AR
+QED
 
-val RTC_IN_LR = prove (
-``(!R:'a reln s p q. p IN s /\ (R ^|^ s)^* p q ==> q IN s)``,
+Theorem RTC_IN_LR[local]:
+  (!R:'a reln s p q. p IN s /\ (R ^|^ s)^* p q ==> q IN s)
+Proof
 REPEAT STRIP_TAC THEN
 Cases_on `q IN s` THEN1 AR THEN
 IMP_RES_TAC NOT_IN_RTC_EQ THEN
-Q.UNDISCH_THEN `p = q` (SUBST1_TAC o SYM) THEN AR);
+Q.UNDISCH_THEN `p = q` (SUBST1_TAC o SYM) THEN AR
+QED
 
-val RTC_IN_RL = prove (
-``(!R:'a reln s p q. q IN s /\ (R ^|^ s)^* p q ==> p IN s)``,
+Theorem RTC_IN_RL[local]:
+  (!R:'a reln s p q. q IN s /\ (R ^|^ s)^* p q ==> p IN s)
+Proof
 REPEAT STRIP_TAC THEN
 Cases_on `p IN s` THEN1 AR THEN
 IMP_RES_TAC NOT_IN_RTC_EQ THEN
-Q.UNDISCH_THEN `p = q` SUBST1_TAC THEN AR);
+Q.UNDISCH_THEN `p = q` SUBST1_TAC THEN AR
+QED
 
-val RTC_subTC1 = prove (
-``!R:'a reln s a w x. R w x /\ (R ^|^ (a INSERT s))^* x a ==>
-                      subTC R s w a``,
+Theorem RTC_subTC1[local]:
+  !R:'a reln s a w x. R w x /\ (R ^|^ (a INSERT s))^* x a ==>
+                      subTC R s w a
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [subTC, RTC_INSERT] THEN STRIP_TAC THENL
 [Cases_on `a = x` THEN1 AR THEN
  DISJ2_TAC THEN IMP_RES_TAC RTC_CASES2
@@ -317,11 +332,13 @@ REPEAT GEN_TAC THEN REWRITE_TAC [subTC, RTC_INSERT] THEN STRIP_TAC THENL
 ,AR
 ,DISJ2_TAC THEN Q.EXISTS_TAC `x` THEN Q.EXISTS_TAC `x'` THEN
  IMP_RES_TAC RTC_IN_RL THEN AR
-]);
+]
+QED
 
-val RTC_subTC2 = prove (
-``!R:'a reln s a y z. (R ^|^ (a INSERT s))^* a y /\ R y z ==>
-                      subTC R s a z``,
+Theorem RTC_subTC2[local]:
+  !R:'a reln s a y z. (R ^|^ (a INSERT s))^* a y /\ R y z ==>
+                      subTC R s a z
+Proof
 REPEAT GEN_TAC THEN REWRITE_TAC [subTC, RTC_INSERT] THEN STRIP_TAC THENL
 [Cases_on `a = y` THEN1 AR THEN
  DISJ2_TAC THEN IMP_RES_TAC RTC_CASES1 THEN
@@ -333,7 +350,8 @@ REPEAT GEN_TAC THEN REWRITE_TAC [subTC, RTC_INSERT] THEN STRIP_TAC THENL
 ,AR
 ,DISJ2_TAC THEN Q.EXISTS_TAC `y'` THEN Q.EXISTS_TAC `y` THEN
  IMP_RES_TAC RTC_IN_LR THEN AR
-]);
+]
+QED
 
 (* The big lemma: what enlarging s by one does to subTC R x *)
 
@@ -460,14 +478,16 @@ REWRITE_TAC [SPECIFICATION, subTC_INSERT, COND_RATOR, rrs IN_UNION] THEN
 tautLib.TAUT_TAC
 QED
 
-val RDOM_EMPTY = prove (
-``!R:'a reln. (RDOM R = {}) ==> (R = REMPTY) /\ (!s. subTC R s = REMPTY)``,
+Theorem RDOM_EMPTY[local]:
+  !R:'a reln. (RDOM R = {}) ==> (R = REMPTY) /\ (!s. subTC R s = REMPTY)
+Proof
 GEN_TAC THEN CONV_TAC (LAND_CONV FUN_EQ_CONV) THEN
 REWRITE_TAC [RDOM_DEF, rrs NOT_IN_EMPTY] THEN
 CONV_TAC (ONCE_DEPTH_CONV NOT_EXISTS_CONV) THEN STRIP_TAC THEN
 CONJ_TAC THEN REPEAT GEN_TAC THEN
 REPEAT (CONV_TAC FUN_EQ_CONV THEN GEN_TAC) THEN
-ASM_REWRITE_TAC [subTC, EMPTY_REL_DEF]);
+ASM_REWRITE_TAC [subTC, EMPTY_REL_DEF]
+QED
 
 (* *************************************************************** *)
 (* Define the mapping by which set-valued finite maps represent    *)

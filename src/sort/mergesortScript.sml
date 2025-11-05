@@ -8,23 +8,27 @@ val _ = temp_tight_equality ();
 
 val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 
-val last_reverse = Q.prove (
-`!l. l <> [] ==> LAST (REVERSE l) = HD l`,
+Theorem last_reverse[local]:
+ !l. l <> [] ==> LAST (REVERSE l) = HD l
+Proof
  Induct_on `l` >>
- srw_tac[][]);
+ srw_tac[][]
+QED
 
-val mem_sorted_append = Q.prove (
-`!R l1 l2 x y.
+Theorem mem_sorted_append[local]:
+ !R l1 l2 x y.
   transitive R /\
   SORTED R (l1 ++ l2) /\
   MEM x l1 /\
   MEM y l2
   ==>
-  R x y`,
+  R x y
+Proof
  Induct_on `l1` >>
  srw_tac[][] >>
  REV_FULL_SIMP_TAC (srw_ss()) [SORTED_EQ] >>
- metis_tac []);
+ metis_tac []
+QED
 
 Definition stable_def:
 stable R l1 l2 =
@@ -446,27 +450,31 @@ Proof
  srw_tac[][merge_def]
 QED
 
-val merge_last_lem1 = Q.prove (
-`!R l1 l2 x.
+Theorem merge_last_lem1[local]:
+ !R l1 l2 x.
   (!y. MEM y l2 ==> ~R x y)
   ==>
-  merge R (l1 ++ [x]) l2 = merge R l1 l2 ++ [x]`,
+  merge R (l1 ++ [x]) l2 = merge R l1 l2 ++ [x]
+Proof
  ho_match_mp_tac merge_ind >>
  srw_tac[][merge_def, merge_empty] >>
  Induct_on `v5` >>
  srw_tac[][merge_empty, merge_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
-val merge_last_lem2 = Q.prove (
-`!R l1 l2 y.
+Theorem merge_last_lem2[local]:
+ !R l1 l2 y.
   (!x. MEM x l1 ==> R x y)
   ==>
-  merge R l1 (l2 ++ [y]) = merge R l1 l2 ++ [y]`,
+  merge R l1 (l2 ++ [y]) = merge R l1 l2 ++ [y]
+Proof
  ho_match_mp_tac merge_ind >>
  srw_tac[][merge_def, merge_empty] >>
  Induct_on `v9` >>
  srw_tac[][merge_empty, merge_def] >>
- metis_tac []);
+ metis_tac []
+QED
 
 Theorem merge_tail_correct2:
  !neg R l1 l2 acc.

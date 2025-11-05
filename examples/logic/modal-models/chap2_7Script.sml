@@ -30,22 +30,24 @@ val (PE_rules, PE_ind, PE_cases) = Hol_reln`
   (!f. PE f ==> PE (DIAM f))`;
 
 
-val thm_2_78_half1_lemma = store_thm(
-  "thm_2_78_half1_lemma",
-  ``!phi. PE phi ==> (!μ ν. preserved_under_sim μ ν phi)``,
+Theorem thm_2_78_half1_lemma:
+    !phi. PE phi ==> (!μ ν. preserved_under_sim μ ν phi)
+Proof
    Induct_on `PE phi` >> rw[preserved_under_sim_def] (* 6 *)
    >- fs[satis_def]
    >- fs[satis_def,TRUE_def]
    >- (fs[satis_def] >> metis_tac[sim_def])
    >- (fs[satis_AND] >> metis_tac[])
    >- (fs[satis_def] >> metis_tac[])
-   >- (fs[satis_def] >> imp_res_tac sim_def >> metis_tac[]));
+   >- (fs[satis_def] >> imp_res_tac sim_def >> metis_tac[])
+QED
 
-val thm_2_78_half1 = store_thm(
-  "thm_2_78_half1",
-  ``!phi phi0. (PE phi0 /\ equiv0 (:β) phi phi0 /\ equiv0 (:γ) phi phi0) ==> preserved_under_sim (:β) (:γ) phi``,
+Theorem thm_2_78_half1:
+    !phi phi0. (PE phi0 /\ equiv0 (:β) phi phi0 /\ equiv0 (:γ) phi phi0) ==> preserved_under_sim (:β) (:γ) phi
+Proof
   rw[] >> `preserved_under_sim (:β) (:γ) phi0` by metis_tac[thm_2_78_half1_lemma] >>
-  fs[preserved_under_sim_def] >> rw[] >> fs[equiv0_def] >> `satis M w phi0` by metis_tac[] >> metis_tac[]);
+  fs[preserved_under_sim_def] >> rw[] >> fs[equiv0_def] >> `satis M w phi0` by metis_tac[] >> metis_tac[]
+QED
 
 
 Theorem FINITE_SUBSET_IMAGE_lemma :

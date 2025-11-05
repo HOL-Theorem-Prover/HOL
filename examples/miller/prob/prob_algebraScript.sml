@@ -64,13 +64,14 @@ Definition premeasurable_def:
                              !s. s IN subsets b ==> ((PREIMAGE f s)INTER(space a)) IN subsets a}
 End
 
-val IN_PREMEASURABLE = store_thm
-  ("IN_PREMEASURABLE",
-   ``!a b f. f IN premeasurable a b =
+Theorem IN_PREMEASURABLE:
+     !a b f. f IN premeasurable a b =
                 algebra a /\ algebra b /\
                 f IN (space a -> space b) /\
-                (!s. s IN subsets b ==> (PREIMAGE f s) INTER (space a) IN subsets a)``,
-   RW_TAC std_ss [premeasurable_def, GSPECIFICATION]);
+                (!s. s IN subsets b ==> (PREIMAGE f s) INTER (space a) IN subsets a)
+Proof
+   RW_TAC std_ss [premeasurable_def, GSPECIFICATION]
+QED
 
 (* NOTE: added ‘sigma_algebra a /\ sigma_algebra b’ into antecedents,
          due to changes of ‘measurable’
@@ -84,13 +85,14 @@ Proof
                      SIGMA_ALGEBRA_ALGEBRA]
 QED
 
-val MEASURABLE_IS_PREMEASURABLE = store_thm
-  ("MEASURABLE_IS_PREMEASURABLE",
-  ``!a b. sigma_algebra a /\ sigma_algebra b ==> (measurable a b = premeasurable a b)``,
+Theorem MEASURABLE_IS_PREMEASURABLE:
+    !a b. sigma_algebra a /\ sigma_algebra b ==> (measurable a b = premeasurable a b)
+Proof
    rpt STRIP_TAC
    >> RW_TAC std_ss [EXTENSION, measurable_def, premeasurable_def, GSPECIFICATION]
    >> IMP_RES_TAC SIGMA_ALGEBRA_ALGEBRA
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
 Theorem PREMEASURABLE_SIGMA :
     !f a b sp.
@@ -104,43 +106,47 @@ Proof
  >> MATCH_MP_TAC MEASURABLE_SIGMA >> art []
 QED
 
-val PREMEASURABLE_SUBSET = store_thm
-  ("PREMEASURABLE_SUBSET",
-   ``!a b. sigma_algebra a ==>
-        premeasurable a b SUBSET premeasurable a (sigma (space b) (subsets b))``,
+Theorem PREMEASURABLE_SUBSET:
+     !a b. sigma_algebra a ==>
+        premeasurable a b SUBSET premeasurable a (sigma (space b) (subsets b))
+Proof
    RW_TAC std_ss [SUBSET_DEF]
    >> MATCH_MP_TAC PREMEASURABLE_SIGMA
-   >> PROVE_TAC [IN_PREMEASURABLE, algebra_def]);
+   >> PROVE_TAC [IN_PREMEASURABLE, algebra_def]
+QED
 
-val PREMEASURABLE_LIFT = store_thm
-  ("PREMEASURABLE_LIFT",
-   ``!f a b.
+Theorem PREMEASURABLE_LIFT:
+     !f a b.
        sigma_algebra a /\ f IN premeasurable a b ==>
-       f IN premeasurable a (sigma (space b) (subsets b))``,
-   PROVE_TAC [PREMEASURABLE_SUBSET, SUBSET_DEF]);
+       f IN premeasurable a (sigma (space b) (subsets b))
+Proof
+   PROVE_TAC [PREMEASURABLE_SUBSET, SUBSET_DEF]
+QED
 
-val PREMEASURABLE_I = store_thm
-  ("PREMEASURABLE_I",
-   ``!a. algebra a ==> I IN premeasurable a a``,
+Theorem PREMEASURABLE_I:
+     !a. algebra a ==> I IN premeasurable a a
+Proof
    RW_TAC std_ss [IN_PREMEASURABLE, I_THM, PREIMAGE_I, IN_FUNSET,
                   GSPEC_ID, SPACE, SUBSET_REFL]
    >> Know `s INTER space a = s`
    >- (FULL_SIMP_TAC std_ss [Once EXTENSION, algebra_def, IN_INTER,
                              subset_class_def, SUBSET_DEF]
        >> METIS_TAC [])
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val PREMEASURABLE_COMP = store_thm
-  ("PREMEASURABLE_COMP",
-   ``!f g a b c.
+Theorem PREMEASURABLE_COMP:
+     !f g a b c.
        f IN premeasurable a b /\ g IN premeasurable b c ==>
-       (g o f) IN premeasurable a c``,
+       (g o f) IN premeasurable a c
+Proof
    RW_TAC std_ss [IN_PREMEASURABLE, GSYM PREIMAGE_COMP, IN_FUNSET,
                   algebra_def, space_def, subsets_def, GSPECIFICATION]
    >> `PREIMAGE f (PREIMAGE g s) INTER space a =
        PREIMAGE f (PREIMAGE g s INTER space b) INTER space a`
         by (RW_TAC std_ss [Once EXTENSION, IN_INTER, IN_PREIMAGE] >> METIS_TAC [])
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
 (* NOTE: there's also prob_preserving_def in real_probabilityTheory *)
 Definition prob_preserving_def:
@@ -152,48 +158,52 @@ Definition prob_preserving_def:
            (measure m1 ((PREIMAGE f s)INTER(m_space m1)) = measure m2 s)}
 End
 
-val PROB_PRESERVING = store_thm (
-   "PROB_PRESERVING",
-  ``!p1 p2.
+Theorem PROB_PRESERVING:
+    !p1 p2.
        prob_preserving p1 p2 =
        {f |
         f IN premeasurable (p_space p1, events p1) (p_space p2, events p2) /\
-        !s. s IN events p2 ==> (prob p1 ((PREIMAGE f s) INTER (p_space p1)) = prob p2 s)}``,
+        !s. s IN events p2 ==> (prob p1 ((PREIMAGE f s) INTER (p_space p1)) = prob p2 s)}
+Proof
    REPEAT GEN_TAC
    >> REWRITE_TAC [EXTENSION]
    >> GEN_TAC
    >> REWRITE_TAC [GSPECIFICATION]
    >> BETA_TAC
    >> REWRITE_TAC [PAIR_EQ]
-   >> RW_TAC std_ss [prob_preserving_def, events_def, prob_def, p_space_def, GSPECIFICATION]);
+   >> RW_TAC std_ss [prob_preserving_def, events_def, prob_def, p_space_def, GSPECIFICATION]
+QED
 
-val IN_PROB_PRESERVING = store_thm
-  ("IN_PROB_PRESERVING",
-   ``!p1 p2 f.
+Theorem IN_PROB_PRESERVING:
+     !p1 p2 f.
        f IN prob_preserving p1 p2 =
        f IN premeasurable (p_space p1, events p1) (p_space p2, events p2) /\
-       !s. s IN events p2 ==> (prob p1 ((PREIMAGE f s) INTER (p_space p1)) = prob p2 s)``,
-   RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION]);
+       !s. s IN events p2 ==> (prob p1 ((PREIMAGE f s) INTER (p_space p1)) = prob p2 s)
+Proof
+   RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION]
+QED
 
-val PROB_SPACE_REDUCE = store_thm
-  ("PROB_SPACE_REDUCE", ``!p. (p_space p, events p, prob p) = p``,
+Theorem PROB_SPACE_REDUCE:   !p. (p_space p, events p, prob p) = p
+Proof
    Cases
    >> Q.SPEC_TAC (`r`, `r`)
    >> Cases
    >> RW_TAC std_ss [p_space_def, events_def, prob_def,
-                     m_space_def, measurable_sets_def, measure_def]);
+                     m_space_def, measurable_sets_def, measure_def]
+QED
 
-val ALGEBRA_REDUCE = store_thm
-  ("ALGEBRA_REDUCE", ``!a. algebra a ==> ((space a, subsets a) = a)``,
-    Cases >> RW_TAC std_ss [space_def, subsets_def]);
+Theorem ALGEBRA_REDUCE:   !a. algebra a ==> ((space a, subsets a) = a)
+Proof
+    Cases >> RW_TAC std_ss [space_def, subsets_def]
+QED
 
-val PROB_PRESERVING_LIFT = store_thm (
-   "PROB_PRESERVING_LIFT",
-  ``!p1 p2 a f.
+Theorem PROB_PRESERVING_LIFT:
+    !p1 p2 a f.
        prob_space p1 /\ prob_space p2 /\
        (events p2 = subsets (sigma (p_space p2) a)) /\
        f IN prob_preserving p1 (p_space p2, a, prob p2) ==>
-       f IN prob_preserving p1 p2``,
+       f IN prob_preserving p1 p2
+Proof
    RW_TAC std_ss []
    >> reverse (Cases_on `algebra (p_space p2, a)`)
    >- ( Q.PAT_X_ASSUM `f IN P`
@@ -296,72 +306,79 @@ val PROB_PRESERVING_LIFT = store_thm (
     >> DISCH_THEN (ONCE_REWRITE_TAC o wrap)
     >> MATCH_MP_TAC MEASURE_COUNTABLY_ADDITIVE
     >> RW_TAC std_ss [IN_FUNSET, IN_UNIV, o_THM, IN_DISJOINT, PREIMAGE_DISJOINT, IN_INTER]
-    >> METIS_TAC [IN_DISJOINT, PREIMAGE_DISJOINT]]);
+    >> METIS_TAC [IN_DISJOINT, PREIMAGE_DISJOINT]]
+QED
 
-val PROB_PRESERVING_SUBSET = store_thm (
-   "PROB_PRESERVING_SUBSET",
-  ``!p1 p2 a.
+Theorem PROB_PRESERVING_SUBSET:
+    !p1 p2 a.
        prob_space p1 /\ prob_space p2 /\
        (events p2 = subsets (sigma (p_space p2) a)) ==>
        prob_preserving p1 (p_space p2, a, prob p2) SUBSET
-       prob_preserving p1 p2``,
+       prob_preserving p1 p2
+Proof
    RW_TAC std_ss [SUBSET_DEF]
    >> MATCH_MP_TAC PROB_PRESERVING_LIFT
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PREMEASURABLE_UP_LIFT = store_thm
-  ("PREMEASURABLE_UP_LIFT",
-   ``!sp a b c f. f IN premeasurable (sp, a) c /\
-               algebra (sp, b) /\ a SUBSET b ==> f IN premeasurable (sp, b) c``,
-   RW_TAC std_ss [IN_PREMEASURABLE, GSPECIFICATION, SUBSET_DEF, IN_FUNSET, space_def, subsets_def]);
+Theorem PREMEASURABLE_UP_LIFT:
+     !sp a b c f. f IN premeasurable (sp, a) c /\
+               algebra (sp, b) /\ a SUBSET b ==> f IN premeasurable (sp, b) c
+Proof
+   RW_TAC std_ss [IN_PREMEASURABLE, GSPECIFICATION, SUBSET_DEF, IN_FUNSET, space_def, subsets_def]
+QED
 
-val PREMEASURABLE_UP_SUBSET = store_thm
-  ("PREMEASURABLE_UP_SUBSET",
-   ``!sp a b c. a SUBSET b /\ algebra (sp, b)
-        ==> premeasurable (sp, a) c SUBSET premeasurable (sp, b) c``,
+Theorem PREMEASURABLE_UP_SUBSET:
+     !sp a b c. a SUBSET b /\ algebra (sp, b)
+        ==> premeasurable (sp, a) c SUBSET premeasurable (sp, b) c
+Proof
    RW_TAC std_ss [PREMEASURABLE_UP_LIFT, SUBSET_DEF]
    >> MATCH_MP_TAC PREMEASURABLE_UP_LIFT
    >> Q.EXISTS_TAC `a`
-   >> ASM_REWRITE_TAC [SUBSET_DEF]);
+   >> ASM_REWRITE_TAC [SUBSET_DEF]
+QED
 
-val PREMEASURABLE_UP_SIGMA = store_thm
-  ("PREMEASURABLE_UP_SIGMA",
-   ``!a b. premeasurable a b SUBSET premeasurable (sigma (space a) (subsets a)) b``,
+Theorem PREMEASURABLE_UP_SIGMA:
+     !a b. premeasurable a b SUBSET premeasurable (sigma (space a) (subsets a)) b
+Proof
    RW_TAC std_ss [SUBSET_DEF, IN_PREMEASURABLE, space_def, subsets_def, SPACE_SIGMA]
    >- ( MATCH_MP_TAC SIGMA_ALGEBRA_ALGEBRA \\
         MATCH_MP_TAC SIGMA_ALGEBRA_SIGMA >> FULL_SIMP_TAC std_ss [algebra_def])
-   >> PROVE_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF]);
+   >> PROVE_TAC [SIGMA_SUBSET_SUBSETS, SUBSET_DEF]
+QED
 
-val PROB_PRESERVING_UP_LIFT = store_thm (
-   "PROB_PRESERVING_UP_LIFT",
-  ``!p1 p2 f a.
+Theorem PROB_PRESERVING_UP_LIFT:
+    !p1 p2 f a.
        f IN prob_preserving (p_space p1, a, prob p1) p2 /\
        algebra (p_space p1, events p1) /\
        a SUBSET events p1 ==>
-       f IN prob_preserving p1 p2``,
+       f IN prob_preserving p1 p2
+Proof
    RW_TAC std_ss [prob_preserving_def, GSPECIFICATION, SUBSET_DEF, events_def, p_space_def,
                   measure_def, measurable_sets_def, m_space_def, SPACE, prob_def]
    >> MATCH_MP_TAC PREMEASURABLE_UP_LIFT
    >> Q.EXISTS_TAC `a`
-   >> RW_TAC std_ss [SUBSET_DEF]);
+   >> RW_TAC std_ss [SUBSET_DEF]
+QED
 
-val PROB_PRESERVING_UP_SUBSET = store_thm (
-   "PROB_PRESERVING_UP_SUBSET",
-  ``!p1 p2 a.
+Theorem PROB_PRESERVING_UP_SUBSET:
+    !p1 p2 a.
        prob_space p1 /\
        a SUBSET events p1 /\
        algebra (p_space p1, events p1) ==>
-       prob_preserving (p_space p1, a, prob p1) p2 SUBSET prob_preserving p1 p2``,
+       prob_preserving (p_space p1, a, prob p1) p2 SUBSET prob_preserving p1 p2
+Proof
     RW_TAC std_ss [PROB_PRESERVING_UP_LIFT, SUBSET_DEF]
  >> MATCH_MP_TAC PROB_PRESERVING_UP_LIFT
- >> PROVE_TAC [SUBSET_DEF]);
+ >> PROVE_TAC [SUBSET_DEF]
+QED
 
-val PROB_PRESERVING_UP_SIGMA = store_thm (
-   "PROB_PRESERVING_UP_SIGMA",
-  ``!p1 p2 a.
+Theorem PROB_PRESERVING_UP_SIGMA:
+    !p1 p2 a.
        prob_space p1 /\
        (events p1 = subsets (sigma (p_space p1) a)) ==>
-       prob_preserving (p_space p1, a, prob p1) p2 SUBSET prob_preserving p1 p2``,
+       prob_preserving (p_space p1, a, prob p1) p2 SUBSET prob_preserving p1 p2
+Proof
    RW_TAC std_ss [PROB_PRESERVING_UP_LIFT, SUBSET_DEF]
    >> MATCH_MP_TAC PROB_PRESERVING_UP_LIFT
    >> ASM_REWRITE_TAC [SIGMA_SUBSET_SUBSETS, SIGMA_REDUCE]
@@ -376,7 +393,8 @@ val PROB_PRESERVING_UP_SIGMA = store_thm (
         Q.PAT_X_ASSUM `algebra (m_space p1, a)` MP_TAC \\
         RW_TAC std_ss [algebra_def, space_def, subsets_def] )
    >> KILL_TAC
-   >> REWRITE_TAC [SUBSET_DEF, IN_SIGMA]);
+   >> REWRITE_TAC [SUBSET_DEF, IN_SIGMA]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems leading to:                                                      *)
@@ -394,67 +412,76 @@ val PROB_PRESERVING_UP_SIGMA = store_thm (
 (* 12. a IN prob_algebra ==> prob_measure (a o sdrop n) = prob_measure a     *)
 (* ------------------------------------------------------------------------- *)
 
-val IN_HALFSPACE = store_thm
-  ("IN_HALFSPACE",
-   ``!x b. x IN halfspace b = (shd x = b)``,
-   RW_TAC std_ss [halfspace_def, SPECIFICATION]);
+Theorem IN_HALFSPACE:
+     !x b. x IN halfspace b = (shd x = b)
+Proof
+   RW_TAC std_ss [halfspace_def, SPECIFICATION]
+QED
 
-val COMPL_HALFSPACE = store_thm
-  ("COMPL_HALFSPACE",
-   ``!b. COMPL (halfspace b) = halfspace (~b)``,
+Theorem COMPL_HALFSPACE:
+     !b. COMPL (halfspace b) = halfspace (~b)
+Proof
    PSET_TAC [IN_HALFSPACE, EXTENSION]
    >> Cases_on `b`
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val HALFSPACE_INTER = store_thm
-  ("HALFSPACE_INTER",
-   ``!b. halfspace T INTER halfspace F = {}``,
-   PSET_TAC [IN_HALFSPACE, EXTENSION]);
+Theorem HALFSPACE_INTER:
+     !b. halfspace T INTER halfspace F = {}
+Proof
+   PSET_TAC [IN_HALFSPACE, EXTENSION]
+QED
 
-val HALFSPACE_UNION = store_thm
-  ("HALFSPACE_UNION",
-   ``!b. halfspace T UNION halfspace F = UNIV``,
-   PSET_TAC [IN_HALFSPACE, EXTENSION]);
+Theorem HALFSPACE_UNION:
+     !b. halfspace T UNION halfspace F = UNIV
+Proof
+   PSET_TAC [IN_HALFSPACE, EXTENSION]
+QED
 
-val PREFIX_SET_BASIC = store_thm
-  ("PREFIX_SET_BASIC",
-   ``(prefix_set [] = UNIV) /\ (prefix_set [h] = halfspace h)``,
-   PSET_TAC [prefix_set_def, IN_HALFSPACE, EXTENSION]);
+Theorem PREFIX_SET_BASIC:
+     (prefix_set [] = UNIV) /\ (prefix_set [h] = halfspace h)
+Proof
+   PSET_TAC [prefix_set_def, IN_HALFSPACE, EXTENSION]
+QED
 
-val PREFIX_SET_SCONS = store_thm
-  ("PREFIX_SET_SCONS",
-   ``!h t x xs.
-       scons h t IN prefix_set (x :: xs) = (h = x) /\ t IN prefix_set xs``,
-   PSET_TAC [prefix_set_def, IN_HALFSPACE, SHD_SCONS, STL_SCONS, EXTENSION]);
+Theorem PREFIX_SET_SCONS:
+     !h t x xs.
+       scons h t IN prefix_set (x :: xs) = (h = x) /\ t IN prefix_set xs
+Proof
+   PSET_TAC [prefix_set_def, IN_HALFSPACE, SHD_SCONS, STL_SCONS, EXTENSION]
+QED
 
-val PREFIX_SET_NIL = store_thm
-  ("PREFIX_SET_NIL",
-   ``!l. (prefix_set l = UNIV) = (l = [])``,
+Theorem PREFIX_SET_NIL:
+     !l. (prefix_set l = UNIV) = (l = [])
+Proof
    Cases >- RW_TAC std_ss [prefix_set_def]
    >> RW_TAC std_ss [EXTENSION, IN_UNIV]
    >> Q.EXISTS_TAC `sconst (~h)`
    >> RW_TAC std_ss [prefix_set_def]
    >> Cases_on `h`
-   >> RW_TAC std_ss [IN_HALFSPACE, IN_INTER, SHD_SCONST]);
+   >> RW_TAC std_ss [IN_HALFSPACE, IN_INTER, SHD_SCONST]
+QED
 
-val PREFIX_SET_NONEMPTY = store_thm
-  ("PREFIX_SET_NONEMPTY",
-   ``!b. ~(prefix_set b = {})``,
+Theorem PREFIX_SET_NONEMPTY:
+     !b. ~(prefix_set b = {})
+Proof
    Induct >- PSET_TAC [prefix_set_def, EXTENSION]
    >> PSET_TAC [prefix_set_def, EXTENSION]
    >> Q.EXISTS_TAC `scons h x`
-   >> PSET_TAC [IN_HALFSPACE, SHD_SCONS, IN_o, STL_SCONS]);
+   >> PSET_TAC [IN_HALFSPACE, SHD_SCONS, IN_o, STL_SCONS]
+QED
 
-val PREFIX_SET_POPULATED = store_thm
-  ("PREFIX_SET_POPULATED",
-   ``!b. ?x. x IN prefix_set b``,
+Theorem PREFIX_SET_POPULATED:
+     !b. ?x. x IN prefix_set b
+Proof
    STRIP_TAC
    >> MP_TAC (Q.SPEC `b` PREFIX_SET_NONEMPTY)
-   >> PSET_TAC [EXTENSION]);
+   >> PSET_TAC [EXTENSION]
+QED
 
-val PREFIX_SET_PREFIX_SUBSET = store_thm
-  ("PREFIX_SET_PREFIX_SUBSET",
-   ``!b c. prefix_set b SUBSET prefix_set c = IS_PREFIX b c``,
+Theorem PREFIX_SET_PREFIX_SUBSET:
+     !b c. prefix_set b SUBSET prefix_set c = IS_PREFIX b c
+Proof
    Induct
    >- PSET_TAC [prefix_set_def, IS_PREFIX_NIL, GSYM PREFIX_SET_NIL, EXTENSION]
    >> Cases_on `c`
@@ -473,14 +500,15 @@ val PREFIX_SET_PREFIX_SUBSET = store_thm
    >> MP_TAC (Q.SPEC `b` PREFIX_SET_NONEMPTY)
    >> PSET_TAC [EXTENSION]
    >> Q.EXISTS_TAC `scons h' x`
-   >> RW_TAC std_ss [SHD_SCONS, STL_SCONS]);
+   >> RW_TAC std_ss [SHD_SCONS, STL_SCONS]
+QED
 
-val PREFIX_SET_SUBSET = store_thm
-  ("PREFIX_SET_SUBSET",
-   ``!b c.
+Theorem PREFIX_SET_SUBSET:
+     !b c.
        DISJOINT (prefix_set b) (prefix_set c) \/
        (prefix_set b) SUBSET (prefix_set c) \/
-       (prefix_set c) SUBSET (prefix_set b)``,
+       (prefix_set c) SUBSET (prefix_set b)
+Proof
    REWRITE_TAC [PREFIX_SET_PREFIX_SUBSET]
    >> Induct >- PSET_TAC [IS_PREFIX, EXTENSION]
    >> Cases_on `c` >- PSET_TAC [IS_PREFIX, EXTENSION]
@@ -491,74 +519,84 @@ val PREFIX_SET_SUBSET = store_thm
    >> Cases_on `h'`
    >> RW_TAC std_ss [OR_CLAUSES, GSYM DISJ_ASSOC]
    >> POP_ASSUM (MP_TAC o Q.SPEC `stl x`)
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PREFIX_SET_TWINS = store_thm
-  ("PREFIX_SET_TWINS",
-   ``!l. prefix_set (SNOC T l) UNION prefix_set (SNOC F l) = prefix_set l``,
+Theorem PREFIX_SET_TWINS:
+     !l. prefix_set (SNOC T l) UNION prefix_set (SNOC F l) = prefix_set l
+Proof
    Induct >- PSET_TAC [SNOC, prefix_set_def, IN_HALFSPACE, EXTENSION]
    >> PSET_TAC [SNOC, prefix_set_def, IN_HALFSPACE, EXTENSION]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PREFIX_SEQ = store_thm
-  ("PREFIX_SEQ",
-   ``!l. prefix_seq l IN prefix_set l``,
+Theorem PREFIX_SEQ:
+     !l. prefix_seq l IN prefix_set l
+Proof
    Induct >- RW_TAC std_ss [prefix_set_def, IN_UNIV]
    >> RW_TAC std_ss [prefix_set_def, prefix_seq_def, IN_INTER, IN_HALFSPACE,
-                     SHD_SCONS, GSYM PREIMAGE_ALT, IN_PREIMAGE, STL_SCONS]);
+                     SHD_SCONS, GSYM PREIMAGE_ALT, IN_PREIMAGE, STL_SCONS]
+QED
 
-val IN_PROB_EMBED = store_thm
-  ("IN_PROB_EMBED",
-   ``!b. x IN prob_embed b = (?l. MEM l b /\ x IN prefix_set l)``,
+Theorem IN_PROB_EMBED:
+     !b. x IN prob_embed b = (?l. MEM l b /\ x IN prefix_set l)
+Proof
    RW_TAC std_ss [prob_embed_def, IN_UNIONL, MEM_MAP]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_EMBED_BASIC = store_thm
-  ("PROB_EMBED_BASIC",
-   ``(prob_embed [] = {}) /\ (prob_embed [[]] = UNIV) /\
-     (!b. prob_embed [[b]] = halfspace b)``,
-   PSET_TAC [prob_embed_def, prefix_set_def, IN_PROB_EMBED, MEM, EXTENSION]);
+Theorem PROB_EMBED_BASIC:
+     (prob_embed [] = {}) /\ (prob_embed [[]] = UNIV) /\
+     (!b. prob_embed [[b]] = halfspace b)
+Proof
+   PSET_TAC [prob_embed_def, prefix_set_def, IN_PROB_EMBED, MEM, EXTENSION]
+QED
 
-val PROB_EMBED_NIL = store_thm
-  ("PROB_EMBED_NIL",
-   ``prob_embed [] = {}``,
-   PSET_TAC [prob_embed_def, MEM_MAP, MEM, EXTENSION]);
-
-val PROB_EMBED_CONS = store_thm
-  ("PROB_EMBED_CONS",
-   ``!x xs. prob_embed (x :: xs) = prefix_set x UNION prob_embed xs``,
+Theorem PROB_EMBED_NIL:
+     prob_embed [] = {}
+Proof
    PSET_TAC [prob_embed_def, MEM_MAP, MEM, EXTENSION]
-   >> PROVE_TAC []);
+QED
 
-val PROB_EMBED_TRANSPOSE = store_thm
-  ("PROB_EMBED_TRANSPOSE",
-   ``!x y z. prob_embed (x :: y :: z) = prob_embed (y :: x :: z)``,
+Theorem PROB_EMBED_CONS:
+     !x xs. prob_embed (x :: xs) = prefix_set x UNION prob_embed xs
+Proof
+   PSET_TAC [prob_embed_def, MEM_MAP, MEM, EXTENSION]
+   >> PROVE_TAC []
+QED
+
+Theorem PROB_EMBED_TRANSPOSE:
+     !x y z. prob_embed (x :: y :: z) = prob_embed (y :: x :: z)
+Proof
    PSET_TAC [PROB_EMBED_CONS, EXTENSION]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_EMBED_APPEND = store_thm
-  ("PROB_EMBED_APPEND",
-   ``!l1 l2.
-       prob_embed (APPEND l1 l2) = prob_embed l1 UNION prob_embed l2``,
+Theorem PROB_EMBED_APPEND:
+     !l1 l2.
+       prob_embed (APPEND l1 l2) = prob_embed l1 UNION prob_embed l2
+Proof
    PSET_TAC [IN_PROB_EMBED, EXTENSION, MEM_APPEND]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_EMBED_TLS = store_thm
-  ("PROB_EMBED_TLS",
-   ``!l b.
+Theorem PROB_EMBED_TLS:
+     !l b.
        (scons h t) IN prob_embed (MAP (CONS b) l) =
-       (h = b) /\ t IN prob_embed l``,
+       (h = b) /\ t IN prob_embed l
+Proof
    PSET_TAC [IN_PROB_EMBED, MEM_MAP, EXTENSION]
    >> EQ_TAC
    >- (PSET_TAC [PREFIX_SET_SCONS, EXTENSION]
        >> PROVE_TAC [])
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `b :: l'`
-   >> PSET_TAC [PREFIX_SET_SCONS, EXTENSION]);
+   >> PSET_TAC [PREFIX_SET_SCONS, EXTENSION]
+QED
 
-val PROB_CANON_PREFS_EMBED = store_thm
-  ("PROB_CANON_PREFS_EMBED",
-   ``!l b. prob_embed (prob_canon_prefs l b) = prob_embed (l :: b)``,
+Theorem PROB_CANON_PREFS_EMBED:
+     !l b. prob_embed (prob_canon_prefs l b) = prob_embed (l :: b)
+Proof
    STRIP_TAC
    >> Induct >- RW_TAC list_ss [prob_canon_prefs_def]
    >> RW_TAC list_ss [prob_canon_prefs_def]
@@ -567,11 +605,12 @@ val PROB_CANON_PREFS_EMBED = store_thm
    >> Q.PAT_X_ASSUM `!x. P x = Q x` K_TAC
    >> EQ_TAC >- PROVE_TAC []
    >> RW_TAC std_ss []
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_CANON_FIND_EMBED = store_thm
-  ("PROB_CANON_FIND_EMBED",
-   ``!l b. prob_embed (prob_canon_find l b) = prob_embed (l :: b)``,
+Theorem PROB_CANON_FIND_EMBED:
+     !l b. prob_embed (prob_canon_find l b) = prob_embed (l :: b)
+Proof
    STRIP_TAC
    >> Induct >- RW_TAC list_ss [prob_canon_find_def]
    >> PSET_TAC [prob_canon_find_def, GSYM PREFIX_SET_PREFIX_SUBSET,
@@ -582,47 +621,52 @@ val PROB_CANON_FIND_EMBED = store_thm
     ONCE_REWRITE_TAC [PROB_EMBED_TRANSPOSE]
     >> ONCE_REWRITE_TAC [PROB_EMBED_CONS]
     >> PSET_TAC [EXTENSION],
-    PSET_TAC [PROB_CANON_PREFS_EMBED, EXTENSION]]);
+    PSET_TAC [PROB_CANON_PREFS_EMBED, EXTENSION]]
+QED
 
-val PROB_CANON1_EMBED = store_thm
-  ("PROB_CANON1_EMBED",
-   ``!l. prob_embed (prob_canon1 l) = prob_embed l``,
+Theorem PROB_CANON1_EMBED:
+     !l. prob_embed (prob_canon1 l) = prob_embed l
+Proof
    REWRITE_TAC [prob_canon1_def]
    >> Induct >- RW_TAC list_ss []
    >> STRIP_TAC
    >> POP_ASSUM MP_TAC
    >> MP_TAC PROB_CANON_FIND_EMBED
-   >> RW_TAC list_ss [PROB_EMBED_CONS]);
+   >> RW_TAC list_ss [PROB_EMBED_CONS]
+QED
 
-val PROB_CANON_MERGE_EMBED = store_thm
-  ("PROB_CANON_MERGE_EMBED",
-   ``!l b. prob_embed (prob_canon_merge l b) = prob_embed (l :: b)``,
+Theorem PROB_CANON_MERGE_EMBED:
+     !l b. prob_embed (prob_canon_merge l b) = prob_embed (l :: b)
+Proof
    Induct_on `b` >- RW_TAC std_ss [prob_canon_merge_def]
    >> RW_TAC list_ss [prob_canon_merge_def, prob_twin_def]
    >> POP_ASSUM (K ALL_TAC)
    >> RW_TAC std_ss [BUTLAST, PROB_EMBED_CONS]
    >> MP_TAC (Q.SPEC `l'` PREFIX_SET_TWINS)
    >> PSET_TAC [EXTENSION]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_CANON2_EMBED = store_thm
-  ("PROB_CANON2_EMBED",
-   ``!l. prob_embed (prob_canon2 l) = prob_embed l``,
+Theorem PROB_CANON2_EMBED:
+     !l. prob_embed (prob_canon2 l) = prob_embed l
+Proof
    REWRITE_TAC [prob_canon2_def]
    >> Induct >- RW_TAC list_ss []
    >> STRIP_TAC
    >> POP_ASSUM MP_TAC
    >> MP_TAC PROB_CANON_MERGE_EMBED
-   >> RW_TAC list_ss [PROB_EMBED_CONS]);
+   >> RW_TAC list_ss [PROB_EMBED_CONS]
+QED
 
-val PROB_CANON_EMBED = store_thm
-  ("PROB_CANON_EMBED",
-   ``!l. prob_embed (prob_canon l) = prob_embed l``,
-   RW_TAC std_ss [prob_canon_def, PROB_CANON1_EMBED, PROB_CANON2_EMBED]);
+Theorem PROB_CANON_EMBED:
+     !l. prob_embed (prob_canon l) = prob_embed l
+Proof
+   RW_TAC std_ss [prob_canon_def, PROB_CANON1_EMBED, PROB_CANON2_EMBED]
+QED
 
-val PROB_CANONICAL_UNIV = store_thm
-  ("PROB_CANONICAL_UNIV",
-   ``!l. prob_canonical l /\ (prob_embed l = UNIV) ==> (l = [[]])``,
+Theorem PROB_CANONICAL_UNIV:
+     !l. prob_canonical l /\ (prob_embed l = UNIV) ==> (l = [[]])
+Proof
    Suff `!l. prob_canonical l ==> (prob_embed l = UNIV) ==> (l = [[]])`
    >- PROVE_TAC []
    >> HO_MATCH_MP_TAC PROB_CANONICAL_INDUCT
@@ -639,12 +683,13 @@ val PROB_CANONICAL_UNIV = store_thm
     Q.PAT_X_ASSUM `x ==> (l' = y)` MATCH_MP_TAC
     >> PSET_TAC [EXTENSION]
     >> POP_ASSUM (MP_TAC o Q.SPEC `scons F x`)
-    >> PSET_TAC [PROB_EMBED_TLS, PROB_EMBED_APPEND, EXTENSION]]);
+    >> PSET_TAC [PROB_EMBED_TLS, PROB_EMBED_APPEND, EXTENSION]]
+QED
 
-val PROB_CANON_REP = store_thm
-  ("PROB_CANON_REP",
-   ``!b c.
-       (prob_canon b = prob_canon c) = (prob_embed b = prob_embed c)``,
+Theorem PROB_CANON_REP:
+     !b c.
+       (prob_canon b = prob_canon c) = (prob_embed b = prob_embed c)
+Proof
    REPEAT STRIP_TAC
    >> EQ_TAC >- PROVE_TAC [PROB_CANON_EMBED]
    >> Suff `!b. prob_canonical b ==> (!c. prob_canonical c ==>
@@ -689,63 +734,72 @@ val PROB_CANON_REP = store_thm
     >> KILL_TAC
     >> PSET_TAC [PROB_EMBED_APPEND, EXTENSION]
     >> POP_ASSUM (MP_TAC o Q.SPEC `scons F x`)
-    >> RW_TAC std_ss [PROB_EMBED_TLS]]);
+    >> RW_TAC std_ss [PROB_EMBED_TLS]]
+QED
 
-val PROB_CANONICAL_EMBED_EMPTY = store_thm
-  ("PROB_CANONICAL_EMBED_EMPTY",
-   ``!l. prob_canonical l ==> ((prob_embed l = {}) = (l = []))``,
+Theorem PROB_CANONICAL_EMBED_EMPTY:
+     !l. prob_canonical l ==> ((prob_embed l = {}) = (l = []))
+Proof
    RW_TAC std_ss []
    >> reverse EQ_TAC >- PSET_TAC [PROB_EMBED_BASIC, EXTENSION]
    >> RW_TAC std_ss []
    >> Suff `prob_canon l = prob_canon []`
    >- PROVE_TAC [prob_canonical_def, PROB_CANON_BASIC]
-   >> PSET_TAC [PROB_CANON_REP, PROB_EMBED_BASIC, EXTENSION]);
+   >> PSET_TAC [PROB_CANON_REP, PROB_EMBED_BASIC, EXTENSION]
+QED
 
-val PROB_CANONICAL_EMBED_UNIV = store_thm
-  ("PROB_CANONICAL_EMBED_UNIV",
-   ``!l. prob_canonical l ==> ((prob_embed l = UNIV) = (l = [[]]))``,
+Theorem PROB_CANONICAL_EMBED_UNIV:
+     !l. prob_canonical l ==> ((prob_embed l = UNIV) = (l = [[]]))
+Proof
    RW_TAC std_ss []
    >> reverse EQ_TAC >- PSET_TAC [PROB_EMBED_BASIC, EXTENSION]
    >> RW_TAC std_ss []
    >> Suff `prob_canon l = prob_canon [[]]`
    >- PROVE_TAC [prob_canonical_def, PROB_CANON_BASIC]
-   >> PSET_TAC [PROB_CANON_REP, PROB_EMBED_BASIC, EXTENSION]);
+   >> PSET_TAC [PROB_CANON_REP, PROB_EMBED_BASIC, EXTENSION]
+QED
 
-val IN_PROB_ALGEBRA = store_thm
-  ("IN_PROB_ALGEBRA",
-   ``!x. x IN (subsets prob_algebra) = (?b. x = prob_embed b)``,
-   RW_TAC std_ss [prob_algebra_def, subsets_def, GSPECIFICATION]);
+Theorem IN_PROB_ALGEBRA:
+     !x. x IN (subsets prob_algebra) = (?b. x = prob_embed b)
+Proof
+   RW_TAC std_ss [prob_algebra_def, subsets_def, GSPECIFICATION]
+QED
 
-val PROB_EMBED_ALGEBRA = store_thm
-  ("PROB_EMBED_ALGEBRA",
-   ``!b. (prob_embed b) IN (subsets prob_algebra)``,
-   PROVE_TAC [IN_PROB_ALGEBRA, subsets_def]);
+Theorem PROB_EMBED_ALGEBRA:
+     !b. (prob_embed b) IN (subsets prob_algebra)
+Proof
+   PROVE_TAC [IN_PROB_ALGEBRA, subsets_def]
+QED
 
-val SPACE_PROB_ALGEBRA = store_thm
-  ("SPACE_PROB_ALGEBRA", ``space prob_algebra = UNIV``,
-    PROVE_TAC [prob_algebra_def, space_def]);
+Theorem SPACE_PROB_ALGEBRA:   space prob_algebra = UNIV
+Proof
+    PROVE_TAC [prob_algebra_def, space_def]
+QED
 
-val SPACE_SUBSETS_PROB_ALGEBRA = store_thm
-  ("SPACE_SUBSETS_PROB_ALGEBRA",
-  ``(space prob_algebra, subsets prob_algebra) = prob_algebra``,
-    REWRITE_TAC [prob_algebra_def, space_def, subsets_def]);
+Theorem SPACE_SUBSETS_PROB_ALGEBRA:
+    (space prob_algebra, subsets prob_algebra) = prob_algebra
+Proof
+    REWRITE_TAC [prob_algebra_def, space_def, subsets_def]
+QED
 
-val PROB_ALGEBRA_EMPTY = store_thm
-  ("PROB_ALGEBRA_EMPTY",
-   ``{} IN (subsets prob_algebra)``,
-   PROVE_TAC [IN_PROB_ALGEBRA, PROB_EMBED_BASIC, subsets_def]);
+Theorem PROB_ALGEBRA_EMPTY:
+     {} IN (subsets prob_algebra)
+Proof
+   PROVE_TAC [IN_PROB_ALGEBRA, PROB_EMBED_BASIC, subsets_def]
+QED
 
-val PROB_ALGEBRA_UNION = store_thm
-  ("PROB_ALGEBRA_UNION",
-   ``!s t. s IN (subsets prob_algebra) /\ t IN (subsets prob_algebra)
-        ==> (s UNION t) IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_UNION:
+     !s t. s IN (subsets prob_algebra) /\ t IN (subsets prob_algebra)
+        ==> (s UNION t) IN (subsets prob_algebra)
+Proof
     PSET_TAC [IN_PROB_ALGEBRA, EXTENSION, subsets_def]
  >> Q.EXISTS_TAC `APPEND b b'`
- >> PSET_TAC [PROB_EMBED_APPEND, EXTENSION]);
+ >> PSET_TAC [PROB_EMBED_APPEND, EXTENSION]
+QED
 
-val PROB_ALGEBRA_COMPL = store_thm
-  ("PROB_ALGEBRA_COMPL",
-  ``!s. s IN (subsets prob_algebra) ==> COMPL s IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_COMPL:
+    !s. s IN (subsets prob_algebra) ==> COMPL s IN (subsets prob_algebra)
+Proof
       PSET_TAC [IN_PROB_ALGEBRA, EXTENSION, subsets_def]
    >> POP_ASSUM MP_TAC
    >> Suff `!l. prob_canonical l ==>
@@ -765,48 +819,54 @@ val PROB_ALGEBRA_COMPL = store_thm
    >> STRIP_TAC
    >> SEQ_CASES_TAC `x`
    >> PSET_TAC [PROB_EMBED_APPEND, PROB_EMBED_TLS, EXTENSION]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_ALGEBRA_ALGEBRA = store_thm
-  ("PROB_ALGEBRA_ALGEBRA", ``algebra prob_algebra``,
+Theorem PROB_ALGEBRA_ALGEBRA:   algebra prob_algebra
+Proof
     RW_TAC std_ss [algebra_def, subset_class_def, prob_algebra_def, space_def, subsets_def,
                    PROB_ALGEBRA_EMPTY, PROB_ALGEBRA_UNION, IN_UNIV, SUBSET_UNIV]
  >> REWRITE_TAC [GSYM COMPL_DEF]
  >> POP_ASSUM MP_TAC
  >> REWRITE_TAC [GSYM (REWRITE_CONV [subsets_def, prob_algebra_def] ``subsets prob_algebra``)]
- >> REWRITE_TAC [PROB_ALGEBRA_COMPL]);
+ >> REWRITE_TAC [PROB_ALGEBRA_COMPL]
+QED
 
-val PROB_ALGEBRA_UNIV = store_thm
-  ("PROB_ALGEBRA_UNIV", ``UNIV IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_UNIV:   UNIV IN (subsets prob_algebra)
+Proof
     `UNIV = space prob_algebra` by PROVE_TAC [prob_algebra_def, space_def]
- >> PROVE_TAC [PROB_ALGEBRA_ALGEBRA, ALGEBRA_SPACE]);
+ >> PROVE_TAC [PROB_ALGEBRA_ALGEBRA, ALGEBRA_SPACE]
+QED
 
-val PROB_ALGEBRA_INTER = store_thm
-  ("PROB_ALGEBRA_INTER",
-  ``!s t. s IN (subsets prob_algebra) /\ t IN (subsets prob_algebra)
-        ==> (s INTER t) IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_INTER:
+    !s t. s IN (subsets prob_algebra) /\ t IN (subsets prob_algebra)
+        ==> (s INTER t) IN (subsets prob_algebra)
+Proof
     ASSUME_TAC PROB_ALGEBRA_ALGEBRA
  >> ASSUME_TAC (ISPEC ``prob_algebra`` ALGEBRA_INTER)
- >> FULL_SIMP_TAC std_ss [subsets_def]);
+ >> FULL_SIMP_TAC std_ss [subsets_def]
+QED
 
-val PROB_ALGEBRA_HALFSPACE = store_thm
-  ("PROB_ALGEBRA_HALFSPACE",
-   ``!b. halfspace b IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_HALFSPACE:
+     !b. halfspace b IN (subsets prob_algebra)
+Proof
    PSET_TAC [IN_PROB_ALGEBRA, EXTENSION]
    >> Q.EXISTS_TAC `[[b]]`
    >> PSET_TAC [IN_PROB_EMBED, IN_HALFSPACE, MEM_MAP, MEM, prefix_set_def,
-                EXTENSION]);
+                EXTENSION]
+QED
 
-val PROB_ALGEBRA_BASIC = store_thm
-  ("PROB_ALGEBRA_BASIC",
-   ``{} IN (subsets prob_algebra) /\
+Theorem PROB_ALGEBRA_BASIC:
+     {} IN (subsets prob_algebra) /\
      UNIV IN (subsets prob_algebra) /\
-     (!b. halfspace b IN (subsets prob_algebra))``,
-   PROVE_TAC [PROB_ALGEBRA_EMPTY, PROB_ALGEBRA_UNIV, PROB_ALGEBRA_HALFSPACE]);
+     (!b. halfspace b IN (subsets prob_algebra))
+Proof
+   PROVE_TAC [PROB_ALGEBRA_EMPTY, PROB_ALGEBRA_UNIV, PROB_ALGEBRA_HALFSPACE]
+QED
 
-val PROB_ALGEBRA_STL = store_thm
-  ("PROB_ALGEBRA_STL",
-   ``!p. (p o stl) IN (subsets prob_algebra) = p IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_STL:
+     !p. (p o stl) IN (subsets prob_algebra) = p IN (subsets prob_algebra)
+Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA]
    >> reverse EQ_TAC
    >- (PSET_TAC [o_DEF, EXTENSION]
@@ -841,20 +901,22 @@ val PROB_ALGEBRA_STL = store_thm
    >> Q.EXISTS_TAC `l1`
    >> STRIP_TAC
    >> POP_ASSUM (MP_TAC o Q.SPEC `scons T x`)
-   >> PSET_TAC [PROB_EMBED_APPEND, STL_SCONS, PROB_EMBED_TLS, EXTENSION]);
+   >> PSET_TAC [PROB_EMBED_APPEND, STL_SCONS, PROB_EMBED_TLS, EXTENSION]
+QED
 
-val PROB_ALGEBRA_SDROP = store_thm
-  ("PROB_ALGEBRA_SDROP",
-   ``!n p. (p o sdrop n) IN (subsets prob_algebra) = p IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_SDROP:
+     !n p. (p o sdrop n) IN (subsets prob_algebra) = p IN (subsets prob_algebra)
+Proof
    Induct >- RW_TAC std_ss' [sdrop_def, o_DEF, I_THM]
-   >> RW_TAC bool_ss [sdrop_def, o_ASSOC, PROB_ALGEBRA_STL]);
+   >> RW_TAC bool_ss [sdrop_def, o_ASSOC, PROB_ALGEBRA_STL]
+QED
 
-val PROB_ALGEBRA_INTER_HALVES = store_thm
-  ("PROB_ALGEBRA_INTER_HALVES",
-   ``!p.
+Theorem PROB_ALGEBRA_INTER_HALVES:
+     !p.
        (halfspace T INTER p) IN (subsets prob_algebra) /\
        (halfspace F INTER p) IN (subsets prob_algebra) =
-       p IN (subsets prob_algebra)``,
+       p IN (subsets prob_algebra)
+Proof
    STRIP_TAC
    >> reverse EQ_TAC >- PROVE_TAC [PROB_ALGEBRA_INTER, PROB_ALGEBRA_HALFSPACE]
    >> REPEAT STRIP_TAC
@@ -862,14 +924,15 @@ val PROB_ALGEBRA_INTER_HALVES = store_thm
    >- PROVE_TAC [PROB_ALGEBRA_UNION]
    >> KILL_TAC
    >> PSET_TAC [IN_HALFSPACE, EXTENSION]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_ALGEBRA_HALVES = store_thm
-  ("PROB_ALGEBRA_HALVES",
-   ``!p q.
+Theorem PROB_ALGEBRA_HALVES:
+     !p q.
        (halfspace T INTER p) UNION (halfspace F INTER q) IN (subsets prob_algebra) =
        (halfspace T INTER p) IN (subsets prob_algebra) /\
-       (halfspace F INTER q) IN (subsets prob_algebra)``,
+       (halfspace F INTER q) IN (subsets prob_algebra)
+Proof
    REPEAT STRIP_TAC
    >> reverse EQ_TAC >- PROVE_TAC [PROB_ALGEBRA_UNION]
    >> REPEAT STRIP_TAC >|
@@ -886,11 +949,12 @@ val PROB_ALGEBRA_HALVES = store_thm
     >- PROVE_TAC [PROB_ALGEBRA_HALFSPACE, PROB_ALGEBRA_INTER]
     >> KILL_TAC
     >> PSET_TAC [IN_HALFSPACE, EXTENSION]
-    >> PROVE_TAC []]);
+    >> PROVE_TAC []]
+QED
 
-val PROB_ALGEBRA_INTER_SHD = store_thm
-  ("PROB_ALGEBRA_INTER_SHD",
-   ``!b p. (halfspace b INTER p o stl) IN (subsets prob_algebra) = p IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_INTER_SHD:
+     !b p. (halfspace b INTER p o stl) IN (subsets prob_algebra) = p IN (subsets prob_algebra)
+Proof
    RW_TAC std_ss []
    >> reverse EQ_TAC
    >- PROVE_TAC [PROB_ALGEBRA_STL, PROB_ALGEBRA_HALFSPACE, PROB_ALGEBRA_INTER]
@@ -921,52 +985,58 @@ val PROB_ALGEBRA_INTER_SHD = store_thm
    >> STRIP_TAC
    >> POP_ASSUM (MP_TAC o Q.SPEC `scons b v`)
    >> PSET_TAC [PROB_EMBED_APPEND, PROB_EMBED_TLS, SHD_SCONS,
-                STL_SCONS, EXTENSION]);
+                STL_SCONS, EXTENSION]
+QED
 
-val PROB_TWINS_MEASURE = store_thm
-  ("PROB_TWINS_MEASURE",
-  ``!l.
+Theorem PROB_TWINS_MEASURE:
+    !l.
        (1 / 2):real pow LENGTH (SNOC T l) + (1 / 2) pow LENGTH (SNOC F l) =
-       (1 / 2) pow LENGTH l``,
+       (1 / 2) pow LENGTH l
+Proof
     RW_TAC std_ss [LENGTH_SNOC]
  >> REWRITE_TAC [Q.SPEC `LENGTH (l :bool list)` POW_HALF_TWICE]
- >> REAL_ARITH_TAC);
+ >> REAL_ARITH_TAC
+QED
 
-val PROB_PREMEASURE_BASIC = store_thm
-  ("PROB_PREMEASURE_BASIC",
-   ``(prob_premeasure [] = 0) /\ (prob_premeasure [[]] = 1) /\
-     (!b. prob_premeasure [[b]] = 1 / 2)``,
-   RW_TAC real_ss [prob_premeasure_def, LENGTH, pow]);
+Theorem PROB_PREMEASURE_BASIC:
+     (prob_premeasure [] = 0) /\ (prob_premeasure [[]] = 1) /\
+     (!b. prob_premeasure [[b]] = 1 / 2)
+Proof
+   RW_TAC real_ss [prob_premeasure_def, LENGTH, pow]
+QED
 
-val PROB_PREMEASURE_POS = store_thm
-  ("PROB_PREMEASURE_POS",
-   ``!l. 0 <= prob_premeasure l``,
+Theorem PROB_PREMEASURE_POS:
+     !l. 0 <= prob_premeasure l
+Proof
    Induct >- PROVE_TAC [prob_premeasure_def, REAL_ARITH ``(0:real) <= 0``]
    >> RW_TAC list_ss [prob_premeasure_def]
    >> PROVE_TAC [REAL_ARITH ``(0:real) < a /\ 0 <= b ==> 0 <= a + b``,
-                 POW_HALF_POS]);
+                 POW_HALF_POS]
+QED
 
-val PROB_PREMEASURE_APPEND = store_thm
-  ("PROB_PREMEASURE_APPEND",
-   ``!l1 l2. prob_premeasure (APPEND l1 l2) = prob_premeasure l1 + prob_premeasure l2``,
+Theorem PROB_PREMEASURE_APPEND:
+     !l1 l2. prob_premeasure (APPEND l1 l2) = prob_premeasure l1 + prob_premeasure l2
+Proof
    NTAC 2 STRIP_TAC
    >> Induct_on `l1`
    >- (RW_TAC list_ss [prob_premeasure_def, APPEND] >> REAL_ARITH_TAC)
    >> RW_TAC list_ss [prob_premeasure_def, APPEND]
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val PROB_PREMEASURE_TLS = store_thm
-  ("PROB_PREMEASURE_TLS",
-   ``!l b. 2 * prob_premeasure (MAP (CONS b) l) = prob_premeasure l``,
+Theorem PROB_PREMEASURE_TLS:
+     !l b. 2 * prob_premeasure (MAP (CONS b) l) = prob_premeasure l
+Proof
    Induct >- (RW_TAC list_ss [prob_premeasure_def] >> REAL_ARITH_TAC)
    >> RW_TAC list_ss [prob_premeasure_def, MAP, pow]
    >> REWRITE_TAC [REAL_ADD_LDISTRIB, REAL_MUL_ASSOC, HALF_CANCEL,
                    REAL_MUL_LID]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_CANON_PREFS_MONO = store_thm
-  ("PROB_CANON_PREFS_MONO",
-   ``!l b. prob_premeasure (prob_canon_prefs l b) <= prob_premeasure (l :: b)``,
+Theorem PROB_CANON_PREFS_MONO:
+     !l b. prob_premeasure (prob_canon_prefs l b) <= prob_premeasure (l :: b)
+Proof
    STRIP_TAC
    >> Induct >- RW_TAC list_ss [prob_canon_prefs_def, REAL_LE_REFL]
    >> reverse (RW_TAC list_ss [prob_canon_prefs_def])
@@ -976,11 +1046,12 @@ val PROB_CANON_PREFS_MONO = store_thm
    >> KILL_TAC
    >> RW_TAC list_ss [prob_premeasure_def]
    >> ASSUME_TAC (SPEC ``LENGTH (h:bool list)`` POW_HALF_POS)
-   >> PROVE_TAC [REAL_ARITH ``0 < (x:real) ==> a + b <= a + (x + b)``]);
+   >> PROVE_TAC [REAL_ARITH ``0 < (x:real) ==> a + b <= a + (x + b)``]
+QED
 
-val PROB_CANON_FIND_MONO = store_thm
-  ("PROB_CANON_FIND_MONO",
-   ``!l b. prob_premeasure (prob_canon_find l b) <= prob_premeasure (l :: b)``,
+Theorem PROB_CANON_FIND_MONO:
+     !l b. prob_premeasure (prob_canon_find l b) <= prob_premeasure (l :: b)
+Proof
    STRIP_TAC
    >> Induct >- RW_TAC list_ss [prob_canon_find_def, REAL_LE_REFL]
    >> RW_TAC list_ss [prob_canon_find_def] >|
@@ -992,22 +1063,24 @@ val PROB_CANON_FIND_MONO = store_thm
     >> POP_ASSUM MP_TAC
     >> REWRITE_TAC [prob_premeasure_def]
     >> REAL_ARITH_TAC,
-    PROVE_TAC [PROB_CANON_PREFS_MONO]]);
+    PROVE_TAC [PROB_CANON_PREFS_MONO]]
+QED
 
-val PROB_CANON1_MONO = store_thm
-  ("PROB_CANON1_MONO",
-   ``!l. prob_premeasure (prob_canon1 l) <= prob_premeasure l``,
+Theorem PROB_CANON1_MONO:
+     !l. prob_premeasure (prob_canon1 l) <= prob_premeasure l
+Proof
    REWRITE_TAC [prob_canon1_def]
    >> Induct >- RW_TAC list_ss [REAL_LE_REFL, FOLDR]
    >> RW_TAC list_ss [FOLDR]
    >> Suff `prob_premeasure (h::FOLDR prob_canon_find [] l)
                    <= prob_premeasure (h::l)`
    >- PROVE_TAC [PROB_CANON_FIND_MONO, REAL_LE_TRANS]
-   >> PROVE_TAC [prob_premeasure_def, REAL_LE_LADD]);
+   >> PROVE_TAC [prob_premeasure_def, REAL_LE_LADD]
+QED
 
-val PROB_CANON_MERGE_MONO = store_thm
-  ("PROB_CANON_MERGE_MONO",
-   ``!l b. prob_premeasure (prob_canon_merge l b) <= prob_premeasure (l::b)``,
+Theorem PROB_CANON_MERGE_MONO:
+     !l b. prob_premeasure (prob_canon_merge l b) <= prob_premeasure (l::b)
+Proof
    Induct_on `b` >- RW_TAC real_ss [prob_canon_merge_def, REAL_LE_REFL]
    >> RW_TAC real_ss [prob_canon_merge_def, prob_twin_def]
    >> RW_TAC std_ss [BUTLAST]
@@ -1015,46 +1088,51 @@ val PROB_CANON_MERGE_MONO = store_thm
    >- PROVE_TAC [REAL_LE_TRANS]
    >> KILL_TAC
    >> RW_TAC std_ss [prob_premeasure_def, REAL_ADD_ASSOC, PROB_TWINS_MEASURE,
-                     REAL_LE_REFL]);
+                     REAL_LE_REFL]
+QED
 
-val PROB_CANON2_MONO = store_thm
-  ("PROB_CANON2_MONO",
-   ``!l. prob_premeasure (prob_canon2 l) <= prob_premeasure l``,
+Theorem PROB_CANON2_MONO:
+     !l. prob_premeasure (prob_canon2 l) <= prob_premeasure l
+Proof
    REWRITE_TAC [prob_canon2_def]
    >> Induct >- RW_TAC list_ss [REAL_LE_REFL, FOLDR]
    >> RW_TAC list_ss [FOLDR]
    >> Suff `prob_premeasure (h::FOLDR prob_canon_merge [] l)
                    <= prob_premeasure (h::l)`
    >- PROVE_TAC [PROB_CANON_MERGE_MONO, REAL_LE_TRANS]
-   >> PROVE_TAC [prob_premeasure_def, REAL_LE_LADD]);
+   >> PROVE_TAC [prob_premeasure_def, REAL_LE_LADD]
+QED
 
-val PROB_CANON_MONO = store_thm
-  ("PROB_CANON_MONO",
-   ``!l. prob_premeasure (prob_canon l) <= prob_premeasure l``,
+Theorem PROB_CANON_MONO:
+     !l. prob_premeasure (prob_canon l) <= prob_premeasure l
+Proof
    RW_TAC std_ss [prob_canon_def]
-   >> PROVE_TAC [PROB_CANON1_MONO, PROB_CANON2_MONO, REAL_LE_TRANS]);
+   >> PROVE_TAC [PROB_CANON1_MONO, PROB_CANON2_MONO, REAL_LE_TRANS]
+QED
 
-val PROB_MEASURE_ALT = store_thm
-  ("PROB_MEASURE_ALT",
-   ``!l. prob_measure (prob_embed l) = prob_premeasure (prob_canon l)``,
+Theorem PROB_MEASURE_ALT:
+     !l. prob_measure (prob_embed l) = prob_premeasure (prob_canon l)
+Proof
    RW_TAC std_ss [prob_measure_def]
    >> HO_MATCH_MP_TAC REAL_INF_MIN
    >> RW_TAC std_ss [GSPECIFICATION]
    >- PROVE_TAC [PROB_CANON_REP, PROB_CANON_IDEMPOT]
    >> Suff `prob_premeasure (prob_canon c) <= prob_premeasure c`
    >- PROVE_TAC [PROB_CANON_REP]
-   >> PROVE_TAC [PROB_CANON_MONO]);
+   >> PROVE_TAC [PROB_CANON_MONO]
+QED
 
-val PROB_MEASURE_BASIC = store_thm
-  ("PROB_MEASURE_BASIC",
-   ``(prob_measure {} = 0) /\ (prob_measure UNIV = 1) /\
-     (!b. prob_measure (halfspace b) = 1 / 2)``,
+Theorem PROB_MEASURE_BASIC:
+     (prob_measure {} = 0) /\ (prob_measure UNIV = 1) /\
+     (!b. prob_measure (halfspace b) = 1 / 2)
+Proof
    RW_TAC std_ss [GSYM PROB_EMBED_BASIC, PROB_MEASURE_ALT,
-                  PROB_CANON_BASIC, PROB_PREMEASURE_BASIC]);
+                  PROB_CANON_BASIC, PROB_PREMEASURE_BASIC]
+QED
 
-val PROB_CANONICAL_MEASURE_MAX = store_thm
-  ("PROB_CANONICAL_MEASURE_MAX",
-   ``!l. prob_canonical l ==> prob_premeasure l <= 1``,
+Theorem PROB_CANONICAL_MEASURE_MAX:
+     !l. prob_canonical l ==> prob_premeasure l <= 1
+Proof
    HO_MATCH_MP_TAC PROB_CANONICAL_INDUCT
    >> CONJ_TAC >- (RW_TAC list_ss [prob_premeasure_def] >> REAL_ARITH_TAC)
    >> CONJ_TAC >- (RW_TAC list_ss [prob_premeasure_def, pow] >> REAL_ARITH_TAC)
@@ -1063,24 +1141,26 @@ val PROB_CANONICAL_MEASURE_MAX = store_thm
             (2 * prob_premeasure (MAP (CONS F) l') = prob_premeasure l')`
    >- PROVE_TAC [REAL_ARITH ``(2 * a = b) /\ (2 * c = d) /\ b <= 1 /\ d <= 1
                               ==> a + c <= (1:real)``]
-   >> PROVE_TAC [PROB_PREMEASURE_TLS]);
+   >> PROVE_TAC [PROB_PREMEASURE_TLS]
+QED
 
-val PROB_MEASURE_MAX = store_thm
-  ("PROB_MEASURE_MAX",
-   ``!l. l IN (subsets prob_algebra) ==> prob_measure l <= 1``,
+Theorem PROB_MEASURE_MAX:
+     !l. l IN (subsets prob_algebra) ==> prob_measure l <= 1
+Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA]
    >> RW_TAC std_ss [PROB_MEASURE_ALT]
    >> MP_TAC (Q.SPEC `prob_canon b` PROB_CANONICAL_MEASURE_MAX)
-   >> RW_TAC std_ss [prob_canonical_def, PROB_CANON_IDEMPOT]);
+   >> RW_TAC std_ss [prob_canonical_def, PROB_CANON_IDEMPOT]
+QED
 
-val PROB_PREMEASURE_COMPL = store_thm
-  ("PROB_PREMEASURE_COMPL",
-   ``!b.
+Theorem PROB_PREMEASURE_COMPL:
+     !b.
        prob_canonical b ==>
        !c.
          prob_canonical c ==>
          (COMPL (prob_embed b) = prob_embed c) ==>
-         (prob_premeasure b + prob_premeasure c = 1)``,
+         (prob_premeasure b + prob_premeasure c = 1)
+Proof
    HO_MATCH_MP_TAC PROB_CANONICAL_INDUCT
    >> CONJ_TAC
    >- (PSET_TAC [PROB_PREMEASURE_BASIC, PROB_EMBED_BASIC, EXTENSION]
@@ -1128,11 +1208,11 @@ val PROB_PREMEASURE_COMPL = store_thm
     >- PROVE_TAC []
     >> STRIP_TAC
     >> POP_ASSUM (MP_TAC o Q.SPEC `scons F v`)
-    >> RW_TAC std_ss [PROB_EMBED_TLS, SHD_SCONS, STL_SCONS]]);
+    >> RW_TAC std_ss [PROB_EMBED_TLS, SHD_SCONS, STL_SCONS]]
+QED
 
-val PROB_PREMEASURE_ADDITIVE = store_thm
-  ("PROB_PREMEASURE_ADDITIVE",
-   ``!b.
+Theorem PROB_PREMEASURE_ADDITIVE:
+     !b.
        prob_canonical b ==>
        !c.
          prob_canonical c ==>
@@ -1140,7 +1220,8 @@ val PROB_PREMEASURE_ADDITIVE = store_thm
            prob_canonical d ==>
            (prob_embed c INTER prob_embed d = {}) /\
            (prob_embed b = prob_embed c UNION prob_embed d) ==>
-           (prob_premeasure b = prob_premeasure c + prob_premeasure d)``,
+           (prob_premeasure b = prob_premeasure c + prob_premeasure d)
+Proof
    HO_MATCH_MP_TAC PROB_CANONICAL_INDUCT
    >> CONJ_TAC
    >- (PSET_TAC [PROB_PREMEASURE_BASIC, PROB_EMBED_BASIC, EXTENSION]
@@ -1253,11 +1334,12 @@ val PROB_PREMEASURE_ADDITIVE = store_thm
      >> RW_TAC std_ss [EXTENSION, IN_UNION]
      >> POP_ASSUM (MP_TAC o Q.SPEC `scons F x`)
      >> RW_TAC std_ss [PROB_EMBED_TLS, STL_SCONS, SHD_SCONS,
-                       PROB_EMBED_APPEND, IN_UNION]]]);
+                       PROB_EMBED_APPEND, IN_UNION]]]
+QED
 
-val PROB_MEASURE_ADDITIVE = store_thm
-  ("PROB_MEASURE_ADDITIVE",
-  ``additive (space prob_algebra, subsets prob_algebra, prob_measure)``,
+Theorem PROB_MEASURE_ADDITIVE:
+    additive (space prob_algebra, subsets prob_algebra, prob_measure)
+Proof
     RW_TAC std_ss [additive_def, IN_PROB_ALGEBRA, DISJOINT_DEF,
                    measure_def, measurable_sets_def]
  >> Know `(prob_embed b UNION prob_embed b') IN (subsets prob_algebra)`
@@ -1272,24 +1354,27 @@ val PROB_MEASURE_ADDITIVE = store_thm
  >> POP_ASSUM (MP_TAC o Q.SPEC `prob_canon b'`)
  >> RW_TAC std_ss [prob_canonical_def, PROB_CANON_IDEMPOT]
  >> POP_ASSUM MATCH_MP_TAC
- >> RW_TAC std_ss [PROB_CANON_EMBED]);
+ >> RW_TAC std_ss [PROB_CANON_EMBED]
+QED
 
-val PROB_MEASURE_POS = store_thm
-  ("PROB_MEASURE_POS",
-   ``!l. 0 <= prob_measure (prob_embed l)``,
-   RW_TAC std_ss [PROB_MEASURE_ALT, PROB_PREMEASURE_POS]);
+Theorem PROB_MEASURE_POS:
+     !l. 0 <= prob_measure (prob_embed l)
+Proof
+   RW_TAC std_ss [PROB_MEASURE_ALT, PROB_PREMEASURE_POS]
+QED
 
-val PROB_MEASURE_POSITIVE = store_thm
-  ("PROB_MEASURE_POSITIVE",
-   ``positive (space prob_algebra, subsets prob_algebra, prob_measure)``,
+Theorem PROB_MEASURE_POSITIVE:
+     positive (space prob_algebra, subsets prob_algebra, prob_measure)
+Proof
    RW_TAC std_ss [positive_def, PROB_MEASURE_BASIC, IN_PROB_ALGEBRA,
                   measure_def, measurable_sets_def]
-   >> RW_TAC std_ss [PROB_MEASURE_POS]);
+   >> RW_TAC std_ss [PROB_MEASURE_POS]
+QED
 
-val INFINITE_TLS = store_thm
-  ("INFINITE_TLS",
-   ``?sel. !s.
-       INFINITE s ==> INFINITE {TL x | x IN s /\ (HD x : bool = sel s)}``,
+Theorem INFINITE_TLS:
+     ?sel. !s.
+       INFINITE s ==> INFINITE {TL x | x IN s /\ (HD x : bool = sel s)}
+Proof
    Suff
    `!s. ?sel.
       INFINITE s ==> INFINITE {TL x | x IN s /\ (HD x : bool = sel)}`
@@ -1307,14 +1392,15 @@ val INFINITE_TLS = store_thm
    >> Suff `{TL x | x IN s /\ HD x} UNION {TL x | x IN s /\ ~HD x} = IMAGE TL s`
    >- PROVE_TAC [FINITE_UNION]
    >> PSET_TAC [EXTENSION]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PREFIX_SET_UNION_UNIV = store_thm
-  ("PREFIX_SET_UNION_UNIV",
-   ``!s : bool list -> bool.
+Theorem PREFIX_SET_UNION_UNIV:
+     !s : bool list -> bool.
        (!a b. a IN s /\ b IN s /\ ~(a = b) ==> ~(IS_PREFIX a b)) /\
        (BIGUNION (IMAGE prefix_set s) = UNIV) ==>
-       FINITE s``,
+       FINITE s
+Proof
    MP_TAC INFINITE_TLS
    >> RW_TAC std_ss []
    >> CCONTR_TAC
@@ -1358,24 +1444,26 @@ val PREFIX_SET_UNION_UNIV = store_thm
    >> Q.PAT_X_ASSUM `!a b. P a b`
       (MP_TAC o Q.SPECL [`sel (s : bool list -> bool) :: t`,
                          `sel (s : bool list -> bool) :: t'`])
-   >> RW_TAC std_ss [IS_PREFIX]);
+   >> RW_TAC std_ss [IS_PREFIX]
+QED
 
-val IN_PROB_ALGEBRA_CANONICAL = store_thm
-  ("IN_PROB_ALGEBRA_CANONICAL",
-   ``!x. x IN (subsets prob_algebra) = ?b. prob_canonical b /\ (x = prob_embed b)``,
+Theorem IN_PROB_ALGEBRA_CANONICAL:
+     !x. x IN (subsets prob_algebra) = ?b. prob_canonical b /\ (x = prob_embed b)
+Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA]
    >> reverse EQ_TAC >- PROVE_TAC []
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `prob_canon b`
-   >> RW_TAC std_ss [prob_canonical_def, PROB_CANON_IDEMPOT, PROB_CANON_EMBED]);
+   >> RW_TAC std_ss [prob_canonical_def, PROB_CANON_IDEMPOT, PROB_CANON_EMBED]
+QED
 
-val ALGEBRA_COUNTABLE_UNION_UNIV = store_thm
-  ("ALGEBRA_COUNTABLE_UNION_UNIV",
-   ``!f : num -> (num -> bool) -> bool.
+Theorem ALGEBRA_COUNTABLE_UNION_UNIV:
+     !f : num -> (num -> bool) -> bool.
        f IN (UNIV -> subsets prob_algebra) /\
        (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
        (BIGUNION (IMAGE f UNIV) = UNIV) ==>
-       ?N. !n. N <= n ==> (f n = {})``,
+       ?N. !n. N <= n ==> (f n = {})
+Proof
    RW_TAC std_ss [IN_FUNSET, IN_UNIV, IN_PROB_ALGEBRA_CANONICAL]
    >> Q.PAT_X_ASSUM `!x. ?b. P x b`
       (MP_TAC o CONV_RULE (SKOLEM_CONV THENC DEPTH_CONV FORALL_AND_CONV))
@@ -1440,11 +1528,12 @@ val ALGEBRA_COUNTABLE_UNION_UNIV = store_thm
                      NOT_IN_EMPTY, IN_INTER] >|
    [PROVE_TAC [],
     PROVE_TAC [PROB_CANONICAL_PREFIXFREE],
-    PROVE_TAC [PROB_CANONICAL_PREFIXFREE]]);
+    PROVE_TAC [PROB_CANONICAL_PREFIXFREE]]
+QED
 
-val PROB_EMBED_TLS_EMPTY = store_thm
-  ("PROB_EMBED_TLS_EMPTY",
-   ``!l b. (prob_embed (MAP (CONS b) l) = {}) = (prob_embed l = {})``,
+Theorem PROB_EMBED_TLS_EMPTY:
+     !l b. (prob_embed (MAP (CONS b) l) = {}) = (prob_embed l = {})
+Proof
    PSET_TAC [EXTENSION]
    >> EQ_TAC >|
    [RW_TAC std_ss []
@@ -1454,15 +1543,16 @@ val PROB_EMBED_TLS_EMPTY = store_thm
     >> MP_TAC (Q.ISPEC `x : num -> bool` SCONS_SURJ)
     >> STRIP_TAC
     >> RW_TAC std_ss []
-    >> RW_TAC std_ss [PROB_EMBED_TLS]]);
+    >> RW_TAC std_ss [PROB_EMBED_TLS]]
+QED
 
-val ALGEBRA_COUNTABLE_UNION = store_thm
-  ("ALGEBRA_COUNTABLE_UNION",
-   ``!f : num -> (num -> bool) -> bool.
+Theorem ALGEBRA_COUNTABLE_UNION:
+     !f : num -> (num -> bool) -> bool.
        f IN (UNIV -> subsets prob_algebra) /\
        (!m n. ~(m = n) ==> DISJOINT (f m) (f n)) /\
        (BIGUNION (IMAGE f UNIV) IN (subsets prob_algebra)) ==>
-       ?N. !n. N <= n ==> (f n = {})``,
+       ?N. !n. N <= n ==> (f n = {})
+Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA]
    >> REPEAT (POP_ASSUM MP_TAC)
    >> ONCE_REWRITE_TAC [GSYM PROB_CANON_EMBED]
@@ -1558,11 +1648,12 @@ val ALGEBRA_COUNTABLE_UNION = store_thm
     >> ONCE_REWRITE_TAC [EXTENSION]
     >> RW_TAC std_ss [IN_BIGUNION_IMAGE, IN_UNIV, o_THM]
     >> POP_ASSUM (MP_TAC o Q.SPEC `scons F x`)
-    >> RW_TAC std_ss [PROB_EMBED_TLS, PROB_EMBED_APPEND, IN_UNION]]);
+    >> RW_TAC std_ss [PROB_EMBED_TLS, PROB_EMBED_APPEND, IN_UNION]]
+QED
 
-val PROB_MEASURE_COUNTABLY_ADDITIVE = store_thm
-  ("PROB_MEASURE_COUNTABLY_ADDITIVE",
-  ``countably_additive (space prob_algebra, subsets prob_algebra, prob_measure)``,
+Theorem PROB_MEASURE_COUNTABLY_ADDITIVE:
+    countably_additive (space prob_algebra, subsets prob_algebra, prob_measure)
+Proof
     RW_TAC std_ss [countably_additive_def, measure_def, measurable_sets_def]
  >> MP_TAC (Q.SPEC `f` ALGEBRA_COUNTABLE_UNION)
  >> RW_TAC std_ss []
@@ -1578,47 +1669,53 @@ val PROB_MEASURE_COUNTABLY_ADDITIVE = store_thm
                    PROB_MEASURE_ADDITIVE, measure_def, measurable_sets_def, m_space_def]
  >> POP_ASSUM (REWRITE_TAC o wrap o GSYM)
  >> MATCH_MP_TAC SER_0
- >> RW_TAC std_ss [o_THM, PROB_MEASURE_BASIC]);
+ >> RW_TAC std_ss [o_THM, PROB_MEASURE_BASIC]
+QED
 
-val PROB_EMBED_PREFIX_SET = store_thm
-  ("PROB_EMBED_PREFIX_SET",
-   ``!l. prob_embed [l] = prefix_set l``,
-   PSET_TAC [PROB_EMBED_CONS, PROB_EMBED_NIL, EXTENSION]);
+Theorem PROB_EMBED_PREFIX_SET:
+     !l. prob_embed [l] = prefix_set l
+Proof
+   PSET_TAC [PROB_EMBED_CONS, PROB_EMBED_NIL, EXTENSION]
+QED
 
-val PROB_ALGEBRA_PREFIX_SET = store_thm
-  ("PROB_ALGEBRA_PREFIX_SET",
-   ``!l. prefix_set l IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_PREFIX_SET:
+     !l. prefix_set l IN (subsets prob_algebra)
+Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA, GSYM PROB_EMBED_PREFIX_SET]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_MEASURE_PREFIX_SET = store_thm
-  ("PROB_MEASURE_PREFIX_SET",
-   ``!l. prob_measure (prefix_set l) = (1 / 2) pow (LENGTH l)``,
+Theorem PROB_MEASURE_PREFIX_SET:
+     !l. prob_measure (prefix_set l) = (1 / 2) pow (LENGTH l)
+Proof
    RW_TAC prob_canon_ss [GSYM PROB_EMBED_PREFIX_SET, PROB_MEASURE_ALT,
-                         prob_premeasure_def, REAL_ADD_RID]);
+                         prob_premeasure_def, REAL_ADD_RID]
+QED
 
-val PREMEASURABLE_PROB_ALGEBRA_STL = store_thm
-  ("PREMEASURABLE_PROB_ALGEBRA_STL",
-  ``stl IN premeasurable prob_algebra prob_algebra``,
+Theorem PREMEASURABLE_PROB_ALGEBRA_STL:
+    stl IN premeasurable prob_algebra prob_algebra
+Proof
     RW_TAC std_ss [IN_PREMEASURABLE, PROB_ALGEBRA_ALGEBRA, PREIMAGE_def,
                    SPACE_PROB_ALGEBRA, space_def, subsets_def, IN_FUNSET, IN_UNIV]
  >> Suff `{x | stl x IN s} = (s o stl)`
  >- PROVE_TAC [PROB_ALGEBRA_STL, PROB_ALGEBRA_UNIV, INTER_COMM, INTER_UNIV]
  >> ONCE_REWRITE_TAC [EXTENSION]
- >> RW_TAC std_ss [GSPECIFICATION, IN_o]);
+ >> RW_TAC std_ss [GSPECIFICATION, IN_o]
+QED
 
-val PREMEASURABLE_PROB_ALGEBRA_SDROP = store_thm
-  ("PREMEASURABLE_PROB_ALGEBRA_SDROP",
-  ``!n. sdrop n IN premeasurable prob_algebra prob_algebra``,
+Theorem PREMEASURABLE_PROB_ALGEBRA_SDROP:
+    !n. sdrop n IN premeasurable prob_algebra prob_algebra
+Proof
     Induct >- RW_TAC std_ss [PROB_ALGEBRA_ALGEBRA, PREMEASURABLE_I, sdrop_def]
  >> RW_TAC std_ss [sdrop_def]
  >> MATCH_MP_TAC PREMEASURABLE_COMP
  >> Q.EXISTS_TAC `prob_algebra`
- >> RW_TAC std_ss [PREMEASURABLE_PROB_ALGEBRA_STL]);
+ >> RW_TAC std_ss [PREMEASURABLE_PROB_ALGEBRA_STL]
+QED
 
-val PROB_ALGEBRA_SCONS = store_thm
-  ("PROB_ALGEBRA_SCONS",
-   ``!p. (!b. (p o scons b) IN (subsets prob_algebra)) = p IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_SCONS:
+     !p. (!b. (p o scons b) IN (subsets prob_algebra)) = p IN (subsets prob_algebra)
+Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA]
    >> EQ_TAC
    >- (ONCE_REWRITE_TAC [EXTENSION]
@@ -1647,21 +1744,23 @@ val PROB_ALGEBRA_SCONS = store_thm
        >> PSET_TAC [PROB_EMBED_BASIC, EXTENSION])
    >> PSET_TAC [PROB_EMBED_APPEND, PROB_EMBED_TLS, EXTENSION]
    >> Cases_on `b'`
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PREMEASURABLE_PROB_ALGEBRA_SCONS = store_thm
-  ("PREMEASURABLE_PROB_ALGEBRA_SCONS",
-  ``!b. scons b IN premeasurable prob_algebra prob_algebra``,
+Theorem PREMEASURABLE_PROB_ALGEBRA_SCONS:
+    !b. scons b IN premeasurable prob_algebra prob_algebra
+Proof
     ASSUME_TAC SPACE_PROB_ALGEBRA
  >> RW_TAC std_ss [IN_PREMEASURABLE, PROB_ALGEBRA_ALGEBRA, PREIMAGE_def, IN_FUNSET, IN_UNIV]
  >> Suff `{x | scons b x IN s} = s o scons b`
  >- PROVE_TAC [PROB_ALGEBRA_SCONS, INTER_UNIV]
  >> ONCE_REWRITE_TAC [EXTENSION]
- >> RW_TAC std_ss [GSPECIFICATION, IN_o]);
+ >> RW_TAC std_ss [GSPECIFICATION, IN_o]
+QED
 
-val PROB_MEASURE_STL = store_thm
-  ("PROB_MEASURE_STL",
-   ``!a. a IN (subsets prob_algebra) ==> (prob_measure (a o stl) = prob_measure a)``,
+Theorem PROB_MEASURE_STL:
+     !a. a IN (subsets prob_algebra) ==> (prob_measure (a o stl) = prob_measure a)
+Proof
    RW_TAC std_ss []
    >> Know `(a o stl) IN (subsets prob_algebra)` >- RW_TAC std_ss [PROB_ALGEBRA_STL]
    >> RW_TAC std_ss [GSYM PREIMAGE_ALT]
@@ -1712,71 +1811,79 @@ val PROB_MEASURE_STL = store_thm
     >> DISCH_THEN MATCH_MP_TAC
     >> RW_TAC std_ss [PROB_PREMEASURE_APPEND, PROB_PREMEASURE_TLS,
                       REAL_ADD_LDISTRIB]
-    >> REAL_ARITH_TAC]);
+    >> REAL_ARITH_TAC]
+QED
 
-val PROB_MEASURE_SDROP = store_thm
-  ("PROB_MEASURE_SDROP",
-   ``!n a.
-       a IN (subsets prob_algebra) ==> (prob_measure (a o sdrop n) = prob_measure a)``,
+Theorem PROB_MEASURE_SDROP:
+     !n a.
+       a IN (subsets prob_algebra) ==> (prob_measure (a o sdrop n) = prob_measure a)
+Proof
    Induct >- RW_TAC std_ss' [sdrop_def, o_DEF, I_THM]
-   >> RW_TAC bool_ss [sdrop_def, o_ASSOC, PROB_MEASURE_STL, PROB_ALGEBRA_SDROP]);
+   >> RW_TAC bool_ss [sdrop_def, o_ASSOC, PROB_MEASURE_STL, PROB_ALGEBRA_SDROP]
+QED
 
-val PROB_PRESERVING_PROB_ALGEBRA_STL = store_thm
-  ("PROB_PRESERVING_PROB_ALGEBRA_STL",
-  ``stl IN prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
-                           (space prob_algebra, subsets prob_algebra, prob_measure)``,
+Theorem PROB_PRESERVING_PROB_ALGEBRA_STL:
+    stl IN prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
+                           (space prob_algebra, subsets prob_algebra, prob_measure)
+Proof
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
                    PREMEASURABLE_PROB_ALGEBRA_STL, PREIMAGE_ALT,
                    p_space_def, m_space_def]
  >> ASSUME_TAC SPACE_PROB_ALGEBRA
  >> POP_ORW
- >> RW_TAC std_ss [PROB_MEASURE_STL, INTER_UNIV]);
+ >> RW_TAC std_ss [PROB_MEASURE_STL, INTER_UNIV]
+QED
 
-val PROB_PRESERVING_PROB_ALGEBRA_SDROP = store_thm
-  ("PROB_PRESERVING_PROB_ALGEBRA_SDROP",
-  ``!n. sdrop n IN
+Theorem PROB_PRESERVING_PROB_ALGEBRA_SDROP:
+    !n. sdrop n IN
        prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
-                       (space prob_algebra, subsets prob_algebra, prob_measure)``,
+                       (space prob_algebra, subsets prob_algebra, prob_measure)
+Proof
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
                    PREMEASURABLE_PROB_ALGEBRA_SDROP, PREIMAGE_ALT,
                    p_space_def, m_space_def]
  >> ASSUME_TAC SPACE_PROB_ALGEBRA
  >> POP_ORW
- >> RW_TAC std_ss [PROB_MEASURE_SDROP, INTER_UNIV]);
+ >> RW_TAC std_ss [PROB_MEASURE_SDROP, INTER_UNIV]
+QED
 
-val MIRROR_MIRROR = store_thm
-  ("MIRROR_MIRROR",
-   ``!x. mirror (mirror x) = x``,
-   RW_TAC std_ss [mirror_def, SHD_SCONS, STL_SCONS, SCONS_SHD_STL]);
+Theorem MIRROR_MIRROR:
+     !x. mirror (mirror x) = x
+Proof
+   RW_TAC std_ss [mirror_def, SHD_SCONS, STL_SCONS, SCONS_SHD_STL]
+QED
 
-val MIRROR_o_MIRROR = store_thm
-  ("MIRROR_o_MIRROR",
-   ``mirror o mirror = I``,
+Theorem MIRROR_o_MIRROR:
+     mirror o mirror = I
+Proof
    FUN_EQ_TAC
-   >> RW_TAC std_ss [o_THM, I_THM, MIRROR_MIRROR]);
+   >> RW_TAC std_ss [o_THM, I_THM, MIRROR_MIRROR]
+QED
 
-val MIRROR_SCONS = store_thm
-  ("MIRROR_SCONS",
-   ``!b x. mirror (scons b x) = scons (~b) x``,
-   RW_TAC std_ss [mirror_def, SHD_SCONS, STL_SCONS]);
+Theorem MIRROR_SCONS:
+     !b x. mirror (scons b x) = scons (~b) x
+Proof
+   RW_TAC std_ss [mirror_def, SHD_SCONS, STL_SCONS]
+QED
 
-val PREIMAGE_MIRROR_TLS = store_thm
-  ("PREIMAGE_MIRROR_TLS",
-   ``!l1 l2.
+Theorem PREIMAGE_MIRROR_TLS:
+     !l1 l2.
        PREIMAGE mirror (prob_embed (APPEND (MAP (CONS T) l1) (MAP (CONS F) l2)))
        =
-       prob_embed (APPEND (MAP (CONS T) l2) (MAP (CONS F) l1))``,
+       prob_embed (APPEND (MAP (CONS T) l2) (MAP (CONS F) l1))
+Proof
    PSET_TAC [EXTENSION]
    >> MP_TAC (Q.ISPEC `x : num -> bool` SCONS_SURJ)
    >> RW_TAC std_ss []
    >> RW_TAC std_ss [MIRROR_SCONS, PROB_EMBED_APPEND, IN_UNION, PROB_EMBED_TLS]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PREMEASURABLE_PROB_ALGEBRA_MIRROR = store_thm
-  ("PREMEASURABLE_PROB_ALGEBRA_MIRROR",
-  ``mirror IN premeasurable prob_algebra prob_algebra``,
+Theorem PREMEASURABLE_PROB_ALGEBRA_MIRROR:
+    mirror IN premeasurable prob_algebra prob_algebra
+Proof
     RW_TAC std_ss [IN_PREMEASURABLE, IN_PROB_ALGEBRA, PROB_ALGEBRA_ALGEBRA,
                    IN_FUNSET, IN_UNIV, INTER_UNIV, SPACE_PROB_ALGEBRA]
  >> Suff
@@ -1793,20 +1900,22 @@ val PREMEASURABLE_PROB_ALGEBRA_MIRROR = store_thm
  >- ( Q.EXISTS_TAC `[[]]` \\
       RW_TAC std_ss [PREIMAGE_UNIV, PROB_EMBED_BASIC] )
  >> RW_TAC std_ss [PREIMAGE_MIRROR_TLS]
- >> PROVE_TAC []);
+ >> PROVE_TAC []
+QED
 
-val PROB_ALGEBRA_MIRROR = store_thm
-  ("PROB_ALGEBRA_MIRROR",
-  ``!p. p o mirror IN (subsets prob_algebra) = p IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_MIRROR:
+    !p. p o mirror IN (subsets prob_algebra) = p IN (subsets prob_algebra)
+Proof
     MP_TAC PREMEASURABLE_PROB_ALGEBRA_MIRROR
  >> RW_TAC std_ss [IN_PREMEASURABLE, PREIMAGE_ALT, INTER_UNIV, SPACE_PROB_ALGEBRA]
  >> reverse EQ_TAC >- PROVE_TAC []
  >> POP_ASSUM (MP_TAC o Q.SPEC `p o mirror`)
- >> RW_TAC std_ss [GSYM o_ASSOC, MIRROR_o_MIRROR, I_o_ID]);
+ >> RW_TAC std_ss [GSYM o_ASSOC, MIRROR_o_MIRROR, I_o_ID]
+QED
 
-val PROB_MEASURE_MIRROR = store_thm
-  ("PROB_MEASURE_MIRROR",
-   ``!a. a IN (subsets prob_algebra) ==> (prob_measure (a o mirror) = prob_measure a)``,
+Theorem PROB_MEASURE_MIRROR:
+     !a. a IN (subsets prob_algebra) ==> (prob_measure (a o mirror) = prob_measure a)
+Proof
    RW_TAC std_ss [IN_PROB_ALGEBRA_CANONICAL, GSYM PREIMAGE_ALT]
    >> POP_ASSUM MP_TAC
    >> Q.SPEC_TAC (`b`, `b`)
@@ -1828,51 +1937,57 @@ val PROB_MEASURE_MIRROR = store_thm
    >> Know `!a b : real. (2 * a = 2 * b) ==> (a = b)` >- REAL_ARITH_TAC
    >> DISCH_THEN MATCH_MP_TAC
    >> RW_TAC std_ss [REAL_ADD_LDISTRIB, PROB_PREMEASURE_TLS]
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val PROB_PRESERVING_PROB_ALGEBRA_MIRROR = store_thm
-  ("PROB_PRESERVING_PROB_ALGEBRA_MIRROR",
-   ``mirror IN
+Theorem PROB_PRESERVING_PROB_ALGEBRA_MIRROR:
+     mirror IN
      prob_preserving (space prob_algebra, subsets prob_algebra, prob_measure)
-                     (space prob_algebra, subsets prob_algebra, prob_measure)``,
+                     (space prob_algebra, subsets prob_algebra, prob_measure)
+Proof
     ASSUME_TAC SPACE_SUBSETS_PROB_ALGEBRA
  >> RW_TAC std_ss [PROB_PRESERVING, GSPECIFICATION, EVENTS, PROB,
                    PREMEASURABLE_PROB_ALGEBRA_MIRROR, PREIMAGE_ALT,
                    p_space_def, m_space_def]
  >> ASSUME_TAC SPACE_PROB_ALGEBRA
  >> POP_ORW
- >> RW_TAC std_ss [PROB_MEASURE_MIRROR, INTER_UNIV]);
+ >> RW_TAC std_ss [PROB_MEASURE_MIRROR, INTER_UNIV]
+QED
 
-val PREIMAGE_SHD_SING = store_thm
-  ("PREIMAGE_SHD_SING",
-   ``!b. PREIMAGE shd {b} = halfspace b``,
-   RW_TAC std_ss [EXTENSION, IN_HALFSPACE, IN_PREIMAGE, IN_SING]);
+Theorem PREIMAGE_SHD_SING:
+     !b. PREIMAGE shd {b} = halfspace b
+Proof
+   RW_TAC std_ss [EXTENSION, IN_HALFSPACE, IN_PREIMAGE, IN_SING]
+QED
 
-val PREIMAGE_SHD_CASES = store_thm
-  ("PREIMAGE_SHD_CASES",
-   ``!x.
+Theorem PREIMAGE_SHD_CASES:
+     !x.
        (PREIMAGE shd x = {}) \/ (PREIMAGE shd x = UNIV) \/
-       (?b. PREIMAGE shd x = halfspace b)``,
+       (?b. PREIMAGE shd x = halfspace b)
+Proof
    HO_MATCH_MP_TAC BOOL_SET_CASES
    >> RW_TAC std_ss [PREIMAGE_EMPTY, PREIMAGE_UNIV, PREIMAGE_SHD_SING]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PROB_ALGEBRA_SHD = store_thm
-  ("PROB_ALGEBRA_SHD",
-   ``!x. (x o shd) IN (subsets prob_algebra)``,
+Theorem PROB_ALGEBRA_SHD:
+     !x. (x o shd) IN (subsets prob_algebra)
+Proof
    STRIP_TAC
    >> MP_TAC (Q.SPEC `x` PREIMAGE_SHD_CASES)
    >> RW_TAC std_ss [PREIMAGE_ALT]
-   >> RW_TAC std_ss [PROB_ALGEBRA_BASIC]);
+   >> RW_TAC std_ss [PROB_ALGEBRA_BASIC]
+QED
 
-val HALFSPACE_T_UNION_F = store_thm
-  ("HALFSPACE_T_UNION_F",
-   ``halfspace T UNION halfspace F = UNIV``,
-   RW_TAC std_ss [EXTENSION, IN_UNION, IN_UNIV, IN_HALFSPACE]);
+Theorem HALFSPACE_T_UNION_F:
+     halfspace T UNION halfspace F = UNIV
+Proof
+   RW_TAC std_ss [EXTENSION, IN_UNION, IN_UNIV, IN_HALFSPACE]
+QED
 
-val EXIST_LONG_PREFIX_SETS = store_thm
-  ("EXIST_LONG_PREFIX_SETS",
-   ``!x n. ?l. (LENGTH l = n) /\ x IN prefix_set l``,
+Theorem EXIST_LONG_PREFIX_SETS:
+     !x n. ?l. (LENGTH l = n) /\ x IN prefix_set l
+Proof
    REPEAT GEN_TAC
    >> Q.SPEC_TAC (`x`, `x`)
    >> Induct_on `n`
@@ -1885,47 +2000,52 @@ val EXIST_LONG_PREFIX_SETS = store_thm
    >> RW_TAC std_ss []
    >> Q.EXISTS_TAC `h :: l`
    >> RW_TAC std_ss [LENGTH, prefix_set_def, IN_INTER, IN_o, IN_HALFSPACE,
-                     SHD_SCONS, STL_SCONS]);
+                     SHD_SCONS, STL_SCONS]
+QED
 
-val PREFIX_SET_APPEND = store_thm
-  ("PREFIX_SET_APPEND",
-   ``!s l1 l2. s IN prefix_set (APPEND l1 l2) ==> s IN prefix_set l1``,
+Theorem PREFIX_SET_APPEND:
+     !s l1 l2. s IN prefix_set (APPEND l1 l2) ==> s IN prefix_set l1
+Proof
    Induct_on `l1` >- RW_TAC std_ss [prefix_set_def, IN_UNIV]
    >> RW_TAC std_ss [APPEND]
    >> SEQ_CASES_TAC `s`
    >> POP_ASSUM MP_TAC
    >> RW_TAC std_ss [PREFIX_SET_SCONS]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val IS_PREFIX_APPEND1 = store_thm
-  ("IS_PREFIX_APPEND1",
-   ``!a b c. IS_PREFIX c (APPEND a b) ==> IS_PREFIX c a``,
+Theorem IS_PREFIX_APPEND1:
+     !a b c. IS_PREFIX c (APPEND a b) ==> IS_PREFIX c a
+Proof
    Induct >- RW_TAC std_ss [IS_PREFIX]
    >> RW_TAC std_ss []
    >> Cases_on `c`
    >> POP_ASSUM MP_TAC
    >> RW_TAC std_ss [IS_PREFIX, APPEND]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val IS_PREFIX_APPEND2 = store_thm
-  ("IS_PREFIX_APPEND2",
-   ``!a b c. IS_PREFIX (APPEND b c) a ==> IS_PREFIX b a \/ IS_PREFIX a b``,
+Theorem IS_PREFIX_APPEND2:
+     !a b c. IS_PREFIX (APPEND b c) a ==> IS_PREFIX b a \/ IS_PREFIX a b
+Proof
    Induct >- RW_TAC std_ss [IS_PREFIX]
    >> RW_TAC std_ss []
    >> Cases_on `b` >- RW_TAC std_ss [IS_PREFIX]
    >> POP_ASSUM MP_TAC
    >> RW_TAC std_ss [IS_PREFIX, APPEND]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val IS_PREFIX_APPENDS = store_thm
-  ("IS_PREFIX_APPENDS",
-   ``!a b c. IS_PREFIX (APPEND a c) (APPEND a b) = IS_PREFIX c b``,
+Theorem IS_PREFIX_APPENDS:
+     !a b c. IS_PREFIX (APPEND a c) (APPEND a b) = IS_PREFIX c b
+Proof
    Induct >- RW_TAC std_ss [APPEND]
-   >> RW_TAC std_ss [APPEND, IS_PREFIX]);
+   >> RW_TAC std_ss [APPEND, IS_PREFIX]
+QED
 
-val PREFIX_SET_UNFIXED_SDROP = store_thm
-  ("PREFIX_SET_UNFIXED_SDROP",
-   ``!l n. ?s. s IN prefix_set l /\ ~(sdrop (SUC n) s = s)``,
+Theorem PREFIX_SET_UNFIXED_SDROP:
+     !l n. ?s. s IN prefix_set l /\ ~(sdrop (SUC n) s = s)
+Proof
    REPEAT GEN_TAC
    >> Induct_on `l`
    >- (Q.EXISTS_TAC `FUNPOW (scons T) (SUC n) (scons F s)`
@@ -1948,37 +2068,41 @@ val PREFIX_SET_UNFIXED_SDROP = store_thm
    >- RW_TAC std_ss [o_THM]
    >> RW_TAC bool_ss [STL_o_SDROP]
    >> POP_ASSUM MP_TAC
-   >> RW_TAC std_ss [sdrop_def, STL_SCONS, o_THM]);
+   >> RW_TAC std_ss [sdrop_def, STL_SCONS, o_THM]
+QED
 
-val PREFIX_SET_UNFIXED_STL = store_thm
-  ("PREFIX_SET_UNFIXED_STL",
-   ``!l. ?s. s IN prefix_set l /\ ~(stl s = s)``,
+Theorem PREFIX_SET_UNFIXED_STL:
+     !l. ?s. s IN prefix_set l /\ ~(stl s = s)
+Proof
    GEN_TAC
    >> MP_TAC (Q.SPECL [`l`, `0`] PREFIX_SET_UNFIXED_SDROP)
-   >> RW_TAC bool_ss [sdrop_def, I_o_ID]);
+   >> RW_TAC bool_ss [sdrop_def, I_o_ID]
+QED
 
-val SDROP_APPEND = store_thm
-  ("SDROP_APPEND",
-   ``!s x y.
+Theorem SDROP_APPEND:
+     !s x y.
        s IN prefix_set (APPEND x y) =
-       s IN prefix_set x /\ sdrop (LENGTH x) s IN prefix_set y``,
+       s IN prefix_set x /\ sdrop (LENGTH x) s IN prefix_set y
+Proof
    Induct_on `x`
    >- RW_TAC list_ss [sdrop_def, I_THM, APPEND, LENGTH, prefix_set_def, IN_UNIV]
    >> RW_TAC list_ss [sdrop_def, o_THM]
    >> SEQ_CASES_TAC `s`
    >> FULL_SIMP_TAC std_ss [PREFIX_SET_SCONS, STL_SCONS]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val SDROP_PREFIX_SEQ_APPEND = store_thm
-  ("SDROP_PREFIX_SEQ_APPEND",
-   ``!s x y. sdrop (LENGTH x) (prefix_seq (APPEND x y)) = prefix_seq y``,
+Theorem SDROP_PREFIX_SEQ_APPEND:
+     !s x y. sdrop (LENGTH x) (prefix_seq (APPEND x y)) = prefix_seq y
+Proof
    Induct_on `x` >- RW_TAC list_ss [sdrop_def, I_THM]
    >> RW_TAC list_ss [sdrop_def, o_THM, APPEND, prefix_seq_def]
-   >> FULL_SIMP_TAC std_ss [PREFIX_SET_SCONS, STL_SCONS]);
+   >> FULL_SIMP_TAC std_ss [PREFIX_SET_SCONS, STL_SCONS]
+QED
 
-val PREFIX_SET_INJ = store_thm
-  ("PREFIX_SET_INJ",
-   ``!a b. (prefix_set a = prefix_set b) = (a = b)``,
+Theorem PREFIX_SET_INJ:
+     !a b. (prefix_set a = prefix_set b) = (a = b)
+Proof
    Induct
    >- (RW_TAC std_ss [PREFIX_SET_BASIC]
        >> PROVE_TAC [PREFIX_SET_NIL])
@@ -1998,40 +2122,45 @@ val PREFIX_SET_INJ = store_thm
    >> SET_EQ_TAC
    >> STRIP_TAC
    >> POP_ASSUM (MP_TAC o Q.SPEC `scons h (prefix_seq t)`)
-   >> RW_TAC std_ss [PREFIX_SET_SCONS, PREFIX_SEQ]);
+   >> RW_TAC std_ss [PREFIX_SET_SCONS, PREFIX_SEQ]
+QED
 
-val STL_MIRROR = store_thm
-  ("STL_MIRROR",
-   ``!x. stl (mirror x) = stl x``,
+Theorem STL_MIRROR:
+     !x. stl (mirror x) = stl x
+Proof
    GEN_TAC
    >> SEQ_CASES_TAC `x`
-   >> RW_TAC std_ss [STL_SCONS, MIRROR_SCONS]);
+   >> RW_TAC std_ss [STL_SCONS, MIRROR_SCONS]
+QED
 
-val MIRROR_NEQ = store_thm
-  ("MIRROR_NEQ",
-   ``!x. ~(mirror x = x)``,
+Theorem MIRROR_NEQ:
+     !x. ~(mirror x = x)
+Proof
    GEN_TAC
    >> SEQ_CASES_TAC `x`
    >> RW_TAC std_ss [MIRROR_SCONS, SCONS_EQ]
    >> Cases_on `h`
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PREFIX_SET_ALT = store_thm
-  ("PREFIX_SET_ALT",
-   ``!l. prefix_set l = {s | stake (LENGTH l) s = l}``,
+Theorem PREFIX_SET_ALT:
+     !l. prefix_set l = {s | stake (LENGTH l) s = l}
+Proof
    Induct
    >- (SET_EQ_TAC
        >> RW_TAC std_ss [GSPECIFICATION, prefix_set_def, IN_UNIV, LENGTH,
                          stake_def])
    >> SET_EQ_TAC
    >> RW_TAC std_ss [GSPECIFICATION, prefix_set_def, IN_INTER, LENGTH,
-                     stake_def, IN_HALFSPACE, IN_o]);
+                     stake_def, IN_HALFSPACE, IN_o]
+QED
 
-val IMAGE_MIRROR = store_thm
-  ("IMAGE_MIRROR",
-   ``IMAGE mirror = PREIMAGE mirror``,
+Theorem IMAGE_MIRROR:
+     IMAGE mirror = PREIMAGE mirror
+Proof
    FUN_EQ_TAC
    >> SET_EQ_TAC
    >> PSET_TAC []
-   >> PROVE_TAC [MIRROR_MIRROR]);
+   >> PROVE_TAC [MIRROR_MIRROR]
+QED
 

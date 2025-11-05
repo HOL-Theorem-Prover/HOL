@@ -318,10 +318,11 @@ Theorem FRESH_LAM[simp]:
 Proof SRW_TAC [][] THEN METIS_TAC []
 QED
 
-val FV_EMPTY = store_thm(
-  "FV_EMPTY",
-  ``(FV t = {}) <=> !v. v NOTIN FV t``,
-  SIMP_TAC (srw_ss()) [EXTENSION]);
+Theorem FV_EMPTY:
+    (FV t = {}) <=> !v. v NOTIN FV t
+Proof
+  SIMP_TAC (srw_ss()) [EXTENSION]
+QED
 
 (* A term is "closed" if it's FV is empty (otherwise the term is open).
 
@@ -332,13 +333,14 @@ Definition closed_def :
 End
 
 (* quote the term in order to get the variable names specified *)
-val simple_induction = store_thm(
-  "simple_induction",
-  ``!P. (!s. P (VAR s)) /\
+Theorem simple_induction:
+    !P. (!s. P (VAR s)) /\
         (!M N. P M /\ P N ==> P (M @@ N)) /\
         (!v M. P M ==> P (LAM v M)) ==>
-        !M. P M``,
-  METIS_TAC [nc_INDUCTION2, FINITE_EMPTY, NOT_IN_EMPTY])
+        !M. P M
+Proof
+  METIS_TAC [nc_INDUCTION2, FINITE_EMPTY, NOT_IN_EMPTY]
+QED
 
 Theorem tpm_eqr:
   (t = tpm pi u) = (tpm (REVERSE pi) t = u)
@@ -365,16 +367,18 @@ Proof
     SIMP_TAC std_ss [SNOC_APPEND, GSYM pmact_decompose]
 QED
 
-val tpm_ALPHA = store_thm(
-  "tpm_ALPHA",
-  ``v ∉ FV u ==> (LAM x u = LAM v (tpm [(v,x)] u))``,
-  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, pmact_flip_args]);
+Theorem tpm_ALPHA:
+    v ∉ FV u ==> (LAM x u = LAM v (tpm [(v,x)] u))
+Proof
+  SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, pmact_flip_args]
+QED
 
 (* cases theorem *)
-val term_CASES = store_thm(
-  "term_CASES",
-  ``!t. (?s. t = VAR s) \/ (?t1 t2. t = t1 @@ t2) \/ (?v t0. t = LAM v t0)``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN METIS_TAC []);
+Theorem term_CASES:
+    !t. (?s. t = VAR s) \/ (?t1 t2. t = t1 @@ t2) \/ (?v t0. t = LAM v t0)
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 
 (* should derive automatically *)
 Theorem term_distinct[simp]:
@@ -394,17 +398,19 @@ Proof
 QED
 
 (* "acyclicity" *)
-val APP_acyclic = store_thm(
-  "APP_acyclic",
-  ``!t1 t2. t1 <> t1 @@ t2 /\ t1 <> t2 @@ t1``,
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]);
+Theorem APP_acyclic:
+    !t1 t2. t1 <> t1 @@ t2 /\ t1 <> t2 @@ t1
+Proof
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
+QED
 
-val FORALL_TERM = store_thm(
-  "FORALL_TERM",
-  ``(∀t. P t) <=>
-      (∀s. P (VAR s)) ∧ (∀t1 t2. P (t1 @@ t2)) ∧ (∀v t. P (LAM v t))``,
+Theorem FORALL_TERM:
+    (∀t. P t) <=>
+      (∀s. P (VAR s)) ∧ (∀t1 t2. P (t1 @@ t2)) ∧ (∀v t. P (LAM v t))
+Proof
   EQ_TAC THEN SRW_TAC [][] THEN
-  Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN SRW_TAC [][]);
+  Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN SRW_TAC [][]
+QED
 
 (* ----------------------------------------------------------------------
     Establish substitution function
@@ -414,15 +420,17 @@ val tpm_COND = prove(
   ``tpm pi (if P then x else y) = if P then tpm pi x else tpm pi y``,
   SRW_TAC [][]);
 
-val tpm_apart = store_thm(
-  "tpm_apart",
-  ``!t. ~(x IN FV t) /\ (y IN FV t) ==> ~(tpm [(x,y)] t = t)``,
-  metis_tac[supp_apart, pmact_flip_args]);
+Theorem tpm_apart:
+    !t. ~(x IN FV t) /\ (y IN FV t) ==> ~(tpm [(x,y)] t = t)
+Proof
+  metis_tac[supp_apart, pmact_flip_args]
+QED
 
-val tpm_fresh = store_thm(
-  "tpm_fresh",
-  ``∀t x y. x ∉ FV t ∧ y ∉ FV t ==> (tpm [(x,y)] t = t)``,
-  srw_tac [][supp_fresh]);
+Theorem tpm_fresh:
+    ∀t x y. x ∉ FV t ∧ y ∉ FV t ==> (tpm [(x,y)] t = t)
+Proof
+  srw_tac [][supp_fresh]
+QED
 
 val rewrite_pairing = prove(
   ``(∃f: term -> (string # term) -> term. P f) <=>
@@ -1180,11 +1188,12 @@ val _ = overload_on ("'", ``ssub``)
 
 val tpm_ssub = save_thm("tpm_ssub", CONJUNCT2 ssub_def)
 
-val single_ssub = store_thm(
-  "single_ssub",
-  ``∀N. (FEMPTY |+ (s,M)) ' N = [M/s]N``,
+Theorem single_ssub:
+    ∀N. (FEMPTY |+ (s,M)) ' N = [M/s]N
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION THEN Q.EXISTS_TAC `s INSERT FV M` THEN
-  SRW_TAC [][SUB_VAR, SUB_THM]);
+  SRW_TAC [][SUB_VAR, SUB_THM]
+QED
 
 Theorem in_fmap_supp:
   x ∈ fmFV fm ⇔ x ∈ FDOM fm ∨ ∃y. y ∈ FDOM fm ∧ x ∈ FV (fm ' y)
@@ -1219,10 +1228,11 @@ QED
 (* |- !t. DISJOINT (FV t) (FDOM phi) ==> phi ' t = t *)
 Theorem ssub_14b' = ssub_14b |> REWRITE_RULE [GSYM DISJOINT_DEF]
 
-val ssub_value = store_thm(
-  "ssub_value",
-  ``(FV t = EMPTY) ==> ((phi : string |-> term) ' t = t)``,
-  SRW_TAC [][ssub_14b]);
+Theorem ssub_value:
+    (FV t = EMPTY) ==> ((phi : string |-> term) ' t = t)
+Proof
+  SRW_TAC [][ssub_14b]
+QED
 
 Theorem ssub_FEMPTY[simp]:
   ∀t. (FEMPTY:string|->term) ' t = t

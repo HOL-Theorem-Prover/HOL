@@ -156,97 +156,95 @@ End
 * Lemmata about paths
 ******************************************************************************)
 
-val PATH_USED_VARS_THM =
- store_thm
-  ("PATH_USED_VARS_THM",
-   ``!w x. (?n. x IN w n) = (x IN PATH_USED_VARS w)``,
+Theorem PATH_USED_VARS_THM:
+     !w x. (?n. x IN w n) = (x IN PATH_USED_VARS w)
+Proof
 
    SIMP_TAC arith_ss [PATH_USED_VARS_def, IN_BIGUNION, GSPECIFICATION, EXISTS_PROD] THEN
-   METIS_TAC[])
+   METIS_TAC[]
+QED
 
 
-val PATH_DIFF_EMPTY =
- store_thm
-  ("PATH_DIFF_EMPTY",
-   ``!v. PATH_DIFF v EMPTY = v``,
+Theorem PATH_DIFF_EMPTY:
+     !v. PATH_DIFF v EMPTY = v
+Proof
 
    REWRITE_TAC[PATH_DIFF_def, PATH_MAP_def, DIFF_DEF, NOT_IN_EMPTY] THEN
    ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
-   SIMP_TAC arith_ss [EXTENSION, GSPECIFICATION]);
+   SIMP_TAC arith_ss [EXTENSION, GSPECIFICATION]
+QED
 
 
-val PATH_DIFF_PATH_RESTRICT =
- store_thm
-  ("PATH_DIFF_PATH_RESTRICT",
-   ``!v S. (PATH_DIFF v (COMPL S) = PATH_RESTRICT v S) /\
-           (PATH_RESTRICT v (COMPL S) = PATH_DIFF v S)``,
+Theorem PATH_DIFF_PATH_RESTRICT:
+     !v S. (PATH_DIFF v (COMPL S) = PATH_RESTRICT v S) /\
+           (PATH_RESTRICT v (COMPL S) = PATH_DIFF v S)
+Proof
 
    REWRITE_TAC[PATH_DIFF_def, INTER_DEF, PATH_RESTRICT_def, PATH_MAP_def, DIFF_DEF, NOT_IN_EMPTY, IN_COMPL] THEN
    ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
-   SIMP_TAC arith_ss [EXTENSION, GSPECIFICATION]);
+   SIMP_TAC arith_ss [EXTENSION, GSPECIFICATION]
+QED
 
 
-val PATH_UNION_COMM =
- store_thm
-  ("PATH_UNION_COMM",
-   ``!v w. PATH_UNION v w = PATH_UNION w v``,
-
-   REWRITE_TAC[PATH_UNION_def] THEN
-   PROVE_TAC [UNION_COMM]);
-
-
-val PATH_UNION_ASSOC =
- store_thm
-  ("PATH_UNION_ASSOC",
-   ``!s t u. PATH_UNION s (PATH_UNION t u) = PATH_UNION (PATH_UNION s t) u``,
+Theorem PATH_UNION_COMM:
+     !v w. PATH_UNION v w = PATH_UNION w v
+Proof
 
    REWRITE_TAC[PATH_UNION_def] THEN
-   PROVE_TAC [UNION_ASSOC]);
+   PROVE_TAC [UNION_COMM]
+QED
 
 
-val PATH_UNION_EMPTY_PATH =
- store_thm
-  ("PATH_UNION_EMPTY_PATH",
-   ``!v. (PATH_UNION v EMPTY_PATH = v) /\ (PATH_UNION EMPTY_PATH v = v)``,
+Theorem PATH_UNION_ASSOC:
+     !s t u. PATH_UNION s (PATH_UNION t u) = PATH_UNION (PATH_UNION s t) u
+Proof
+
+   REWRITE_TAC[PATH_UNION_def] THEN
+   PROVE_TAC [UNION_ASSOC]
+QED
+
+
+Theorem PATH_UNION_EMPTY_PATH:
+     !v. (PATH_UNION v EMPTY_PATH = v) /\ (PATH_UNION EMPTY_PATH v = v)
+Proof
 
    REWRITE_TAC[PATH_UNION_def, EMPTY_PATH_def, UNION_EMPTY] THEN
-   METIS_TAC []);
+   METIS_TAC []
+QED
 
 
-val PATH_RESTRICT_SUBSET =
- store_thm
-  ("PATH_RESTRICT_SUBSET",
-   ``!v w S. (v = PATH_RESTRICT w S) ==> (!n. (v n) SUBSET S)``,
+Theorem PATH_RESTRICT_SUBSET:
+     !v w S. (v = PATH_RESTRICT w S) ==> (!n. (v n) SUBSET S)
+Proof
 
-   SIMP_TAC arith_ss [PATH_RESTRICT_def, PATH_MAP_def, SUBSET_DEF, INTER_DEF, GSPECIFICATION]);
+   SIMP_TAC arith_ss [PATH_RESTRICT_def, PATH_MAP_def, SUBSET_DEF, INTER_DEF, GSPECIFICATION]
+QED
 
 
-val PATH_RESTRICT_PATH_SUBSET =
- store_thm
-  ("PATH_RESTRICT_PATH_SUBSET",
-    ``!w S. (PATH_RESTRICT w S = w) = PATH_SUBSET w S``,
+Theorem PATH_RESTRICT_PATH_SUBSET:
+      !w S. (PATH_RESTRICT w S = w) = PATH_SUBSET w S
+Proof
 
     SIMP_TAC std_ss [PATH_SUBSET_def, PATH_RESTRICT_def, PATH_MAP_def, SUBSET_DEF] THEN
     ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
     ASM_SIMP_TAC std_ss [EXTENSION, IN_INTER] THEN
     PROVE_TAC[]
-  );
+QED
 
 
-val PATH_SUBSET_PATH_DIFF =
- store_thm
-  ("PATH_SUBSET_PATH_DIFF",
-  ``!w S1 S2. PATH_SUBSET (PATH_DIFF w S1) S2 = PATH_SUBSET w (S2 UNION S1)``,
+Theorem PATH_SUBSET_PATH_DIFF:
+    !w S1 S2. PATH_SUBSET (PATH_DIFF w S1) S2 = PATH_SUBSET w (S2 UNION S1)
+Proof
 
   SIMP_TAC std_ss [PATH_SUBSET_def, PATH_DIFF_def, SUBSET_DEF, IN_DIFF, IN_UNION] THEN
-  METIS_TAC[]);
+  METIS_TAC[]
+QED
 
 
-val PATH_PARTITION =
- store_thm
-  ("PATH_PARTITION",
+Theorem PATH_PARTITION:
 
-  ``!w S1 S2. (PATH_SUBSET w (S1 UNION S2)) ==> (w = PATH_UNION (PATH_RESTRICT w S1) (PATH_RESTRICT w S2))``,
+    !w S1 S2. (PATH_SUBSET w (S1 UNION S2)) ==> (w = PATH_UNION (PATH_RESTRICT w S1) (PATH_RESTRICT w S2))
+Proof
 
    SIMP_TAC std_ss [PATH_UNION_def,
                     PATH_MAP_def,
@@ -259,95 +257,94 @@ val PATH_PARTITION =
    SIMP_TAC arith_ss [EXTENSION, GSPECIFICATION] THEN
    REPEAT STRIP_TAC THEN
    METIS_TAC []
-)
+QED
 
 
-val PATH_VAR_RENAMING_11 =
- store_thm
-  ("PATH_VAR_RENAMING_11",
+Theorem PATH_VAR_RENAMING_11:
 
-   ``!f S x y. (PATH_SUBSET x S /\ PATH_SUBSET y S /\ INJ f S UNIV) ==>
-               ((PATH_VAR_RENAMING f x = PATH_VAR_RENAMING f y) = (x = y))``,
+     !f S x y. (PATH_SUBSET x S /\ PATH_SUBSET y S /\ INJ f S UNIV) ==>
+               ((PATH_VAR_RENAMING f x = PATH_VAR_RENAMING f y) = (x = y))
+Proof
 
      SIMP_TAC std_ss [PATH_SUBSET_def, SUBSET_DEF, INJ_DEF, PATH_VAR_RENAMING_def, IN_UNIV,
                       PATH_MAP_def, IMAGE_DEF] THEN
      REPEAT STRIP_TAC THEN
      ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
      SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN
-     METIS_TAC[]);
+     METIS_TAC[]
+QED
 
 
-val PATH_SUBSET_UNIV =
- store_thm
-  ("PATH_SUBSET_UNIV",
+Theorem PATH_SUBSET_UNIV:
 
-   ``!w. PATH_SUBSET w UNIV``,
+     !w. PATH_SUBSET w UNIV
+Proof
 
-   REWRITE_TAC [PATH_SUBSET_def, SUBSET_UNIV]);
-
-
-val PATH_RESTN_PATH_RESTN_ELIM =
- store_thm
-  ("PATH_RESTN_PATH_RESTN_ELIM",
-   ``!v n1 n2. (PATH_RESTN (PATH_RESTN v n1) n2) = PATH_RESTN v (n1+n2)``,
-
-   SIMP_TAC arith_ss [PATH_RESTN_def]);
+   REWRITE_TAC [PATH_SUBSET_def, SUBSET_UNIV]
+QED
 
 
-val IMP_ON_PATH_RESTN___GREATER_IMPL =
- store_thm
-  ("IMP_ON_PATH_RESTN___GREATER_IMPL",
-   ``!v t a b. IMP_ON_PATH_RESTN t v a b = (!t'. t' >= t ==> IMP_ON_PATH_RESTN t' v a b)``,
+Theorem PATH_RESTN_PATH_RESTN_ELIM:
+     !v n1 n2. (PATH_RESTN (PATH_RESTN v n1) n2) = PATH_RESTN v (n1+n2)
+Proof
+
+   SIMP_TAC arith_ss [PATH_RESTN_def]
+QED
+
+
+Theorem IMP_ON_PATH_RESTN___GREATER_IMPL:
+     !v t a b. IMP_ON_PATH_RESTN t v a b = (!t'. t' >= t ==> IMP_ON_PATH_RESTN t' v a b)
+Proof
    SIMP_TAC arith_ss [IMP_ON_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       METIS_TAC[GREATER_EQ, LESS_EQ_TRANS],
       METIS_TAC[GREATER_EQ, LESS_EQ_REFL]
-   ]);
+   ]
+QED
 
 
-val EQUIV_ON_PATH_RESTN___IMP_ON_PATH_RESTN =
- store_thm
-  ("EQUIV_ON_PATH_RESTN___IMP_ON_PATH_RESTN",
-   ``!t v a1 a2. (EQUIV_ON_PATH_RESTN t v a1 a2) =
-      (IMP_ON_PATH_RESTN t v a1 a2 /\ IMP_ON_PATH_RESTN t v a2 a1)``,
+Theorem EQUIV_ON_PATH_RESTN___IMP_ON_PATH_RESTN:
+     !t v a1 a2. (EQUIV_ON_PATH_RESTN t v a1 a2) =
+      (IMP_ON_PATH_RESTN t v a1 a2 /\ IMP_ON_PATH_RESTN t v a2 a1)
+Proof
 
    REWRITE_TAC[IMP_ON_PATH_RESTN_def, EQUIV_ON_PATH_RESTN_def] THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
 
-val EQUIV_ON_PATH_RESTN___GREATER_IMPL =
- store_thm
-  ("EQUIV_ON_PATH_RESTN___GREATER_IMPL",
-   ``!v t a b. EQUIV_ON_PATH_RESTN t v a b = (!t'. t' >= t ==> EQUIV_ON_PATH_RESTN t' v a b)``,
-   METIS_TAC[IMP_ON_PATH_RESTN___GREATER_IMPL,EQUIV_ON_PATH_RESTN___IMP_ON_PATH_RESTN]);
+Theorem EQUIV_ON_PATH_RESTN___GREATER_IMPL:
+     !v t a b. EQUIV_ON_PATH_RESTN t v a b = (!t'. t' >= t ==> EQUIV_ON_PATH_RESTN t' v a b)
+Proof
+   METIS_TAC[IMP_ON_PATH_RESTN___GREATER_IMPL,EQUIV_ON_PATH_RESTN___IMP_ON_PATH_RESTN]
+QED
 
 
-val NAND_ON_PATH_RESTN___GREATER_IMPL =
- store_thm
-  ("NAND_ON_PATH_RESTN___GREATER_IMPL",
-   ``!v t a b. NAND_ON_PATH_RESTN t v a b = (!t'. t' >= t ==> NAND_ON_PATH_RESTN t' v a b)``,
+Theorem NAND_ON_PATH_RESTN___GREATER_IMPL:
+     !v t a b. NAND_ON_PATH_RESTN t v a b = (!t'. t' >= t ==> NAND_ON_PATH_RESTN t' v a b)
+Proof
    SIMP_TAC arith_ss [NAND_ON_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       METIS_TAC[GREATER_EQ, LESS_EQ_TRANS],
       METIS_TAC[GREATER_EQ, LESS_EQ_REFL]
-   ]);
+   ]
+QED
 
 
-val NOT_ON_PATH_RESTN___GREATER_IMPL =
- store_thm
-  ("NOT_ON_PATH_RESTN___GREATER_IMPL",
-   ``!v t a. NOT_ON_PATH_RESTN t v a = (!t'. t' >= t ==> NOT_ON_PATH_RESTN t' v a)``,
+Theorem NOT_ON_PATH_RESTN___GREATER_IMPL:
+     !v t a. NOT_ON_PATH_RESTN t v a = (!t'. t' >= t ==> NOT_ON_PATH_RESTN t' v a)
+Proof
    SIMP_TAC arith_ss [NOT_ON_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       METIS_TAC[GREATER_EQ, LESS_EQ_TRANS],
       METIS_TAC[GREATER_EQ, LESS_EQ_REFL]
-   ]);
+   ]
+QED
 
 
-val IS_ON_PATH_RESTN___GREATER_IMPL =
- store_thm
-  ("IS_ON_PATH_RESTN___GREATER_IMPL",
-   ``!v t a. IS_ON_PATH_RESTN t v a = (?t0. (t <= t0) /\ (P_SEM (v t0) a) /\ (!t'. (t <= t' /\ t' <= t0) ==> IS_ON_PATH_RESTN t' v a))``,
+Theorem IS_ON_PATH_RESTN___GREATER_IMPL:
+     !v t a. IS_ON_PATH_RESTN t v a = (?t0. (t <= t0) /\ (P_SEM (v t0) a) /\ (!t'. (t <= t' /\ t' <= t0) ==> IS_ON_PATH_RESTN t' v a))
+Proof
 
    SIMP_TAC arith_ss [IS_ON_PATH_RESTN_def, NOT_ON_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -356,24 +353,24 @@ val IS_ON_PATH_RESTN___GREATER_IMPL =
 
       EXISTS_TAC ``t0:num`` THEN
       METIS_TAC[]
-   ]);
+   ]
+QED
 
 
-val EQUIV_PATH_RESTN___GREATER_IMPL =
- store_thm
-  ("EQUIV_PATH_RESTN___GREATER_IMPL",
-   ``!t v1 v2. EQUIV_PATH_RESTN t v1 v2 = (!t'. t' >= t ==> EQUIV_PATH_RESTN t' v1 v2)``,
+Theorem EQUIV_PATH_RESTN___GREATER_IMPL:
+     !t v1 v2. EQUIV_PATH_RESTN t v1 v2 = (!t'. t' >= t ==> EQUIV_PATH_RESTN t' v1 v2)
+Proof
    SIMP_TAC arith_ss [EQUIV_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       METIS_TAC[GREATER_EQ, LESS_EQ_TRANS],
       METIS_TAC[GREATER_EQ, LESS_EQ_REFL]
-   ]);
+   ]
+QED
 
 
-val EQUIV_PATH_RESTN___PATH_RESTN =
- store_thm
-  ("EQUIV_PATH_RESTN___PATH_RESTN",
-   ``!t v1 v2. (EQUIV_PATH_RESTN t v1 v2) = (PATH_RESTN v1 t = PATH_RESTN v2 t)``,
+Theorem EQUIV_PATH_RESTN___PATH_RESTN:
+     !t v1 v2. (EQUIV_PATH_RESTN t v1 v2) = (PATH_RESTN v1 t = PATH_RESTN v2 t)
+Proof
    SIMP_TAC arith_ss [EQUIV_PATH_RESTN_def, PATH_RESTN_def, EXTENSION] THEN
    ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
    SIMP_TAC std_ss [EXTENSION] THEN
@@ -383,50 +380,48 @@ val EQUIV_PATH_RESTN___PATH_RESTN =
 
       `?x. t + x = l` by METIS_TAC[LESS_EQ_EXISTS] THEN
       METIS_TAC[]
-   ]);
+   ]
+QED
 
 
-val EQUIV_PATH_RESTN_SYM =
- store_thm
-  ("EQUIV_PATH_RESTN_SYM",
-   ``!v1 v2 t. EQUIV_PATH_RESTN t v1 v2 = EQUIV_PATH_RESTN t v2 v1``,
-   EVAL_TAC THEN PROVE_TAC[]);
+Theorem EQUIV_PATH_RESTN_SYM:
+     !v1 v2 t. EQUIV_PATH_RESTN t v1 v2 = EQUIV_PATH_RESTN t v2 v1
+Proof
+   EVAL_TAC THEN PROVE_TAC[]
+QED
 
 
-val BEFORE_ON_PATH_STRONG___BEFORE_ON_PATH =
- store_thm
-  ("BEFORE_ON_PATH_STRONG___BEFORE_ON_PATH",
-   ``!v t a b. BEFORE_ON_PATH_RESTN_STRONG t v a b ==> BEFORE_ON_PATH_RESTN t v a b``,
+Theorem BEFORE_ON_PATH_STRONG___BEFORE_ON_PATH:
+     !v t a b. BEFORE_ON_PATH_RESTN_STRONG t v a b ==> BEFORE_ON_PATH_RESTN t v a b
+Proof
    REWRITE_TAC [BEFORE_ON_PATH_RESTN_STRONG_def, BEFORE_ON_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN
    `?u. t <= u /\ u < t' /\ P_SEM (v u) a` by PROVE_TAC[] THEN
    EXISTS_TAC ``u:num`` THEN
-   FULL_SIMP_TAC arith_ss []);
+   FULL_SIMP_TAC arith_ss []
+QED
 
-val NOT_ON_PATH___IMP_ON_PATH =
- store_thm
-  ("NOT_ON_PATH___IMP_ON_PATH",
-   ``!v t a1 a2. NOT_ON_PATH_RESTN t v a1 ==> IMP_ON_PATH_RESTN t v a1 a2``,
+Theorem NOT_ON_PATH___IMP_ON_PATH:
+     !v t a1 a2. NOT_ON_PATH_RESTN t v a1 ==> IMP_ON_PATH_RESTN t v a1 a2
+Proof
 
    METIS_TAC[NOT_ON_PATH_RESTN_def, IMP_ON_PATH_RESTN_def, GREATER_EQ]
-);
+QED
 
 
-val NOT_ON_PATH___BEFORE_ON_PATH_STRONG =
- store_thm
-  ("NOT_ON_PATH___BEFORE_ON_PATH_STRONG",
-   ``!v t a1 a2. NOT_ON_PATH_RESTN t v a2 ==> BEFORE_ON_PATH_RESTN_STRONG t v a1 a2``,
+Theorem NOT_ON_PATH___BEFORE_ON_PATH_STRONG:
+     !v t a1 a2. NOT_ON_PATH_RESTN t v a2 ==> BEFORE_ON_PATH_RESTN_STRONG t v a1 a2
+Proof
 
    PROVE_TAC[NOT_ON_PATH_RESTN_def, BEFORE_ON_PATH_RESTN_STRONG_def]
-);
+QED
 
 
-val BEFORE_ON_PATH_STRONG___LESS_IMPL =
- store_thm
-  ("BEFORE_ON_PATH_STRONG___LESS_IMPL",
-   ``!v t t2 a1 a2.
+Theorem BEFORE_ON_PATH_STRONG___LESS_IMPL:
+     !v t t2 a1 a2.
       (t <= t2 /\ (!j. (t <= j /\  j < t2) ==> ~(P_SEM (v j) a2)) /\
-      BEFORE_ON_PATH_RESTN_STRONG t2 v a1 a2) ==> (BEFORE_ON_PATH_RESTN_STRONG t v a1 a2)``,
+      BEFORE_ON_PATH_RESTN_STRONG t2 v a1 a2) ==> (BEFORE_ON_PATH_RESTN_STRONG t v a1 a2)
+Proof
 
    REWRITE_TAC[BEFORE_ON_PATH_RESTN_STRONG_def] THEN
    REPEAT STRIP_TAC THEN
@@ -435,15 +430,15 @@ val BEFORE_ON_PATH_STRONG___LESS_IMPL =
    `?u. t2 <= u /\ u < t' /\ P_SEM (v u) a1` by METIS_TAC[] THEN
    EXISTS_TAC ``u:num`` THEN
    ASM_REWRITE_TAC[] THEN
-   DECIDE_TAC);
+   DECIDE_TAC
+QED
 
 
-val BEFORE_ON_PATH___LESS_IMPL =
- store_thm
-  ("BEFORE_ON_PATH___LESS_IMPL",
-   ``!v t t2 a1 a2.
+Theorem BEFORE_ON_PATH___LESS_IMPL:
+     !v t t2 a1 a2.
       (t <= t2 /\ (!j. (t <= j /\  j < t2) ==> ~(P_SEM (v j) a2)) /\
-      BEFORE_ON_PATH_RESTN t2 v a1 a2) ==> (BEFORE_ON_PATH_RESTN t v a1 a2)``,
+      BEFORE_ON_PATH_RESTN t2 v a1 a2) ==> (BEFORE_ON_PATH_RESTN t v a1 a2)
+Proof
 
    REWRITE_TAC[BEFORE_ON_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN
@@ -452,15 +447,15 @@ val BEFORE_ON_PATH___LESS_IMPL =
    `?u. t2 <= u /\ u <= t' /\ P_SEM (v u) a1` by METIS_TAC[] THEN
    EXISTS_TAC ``u:num`` THEN
    ASM_REWRITE_TAC[] THEN
-   DECIDE_TAC);
+   DECIDE_TAC
+QED
 
 
-val BEFORE_ON_PATH_STRONG___GREATER_IMPL =
- store_thm
-  ("BEFORE_ON_PATH_STRONG___GREATER_IMPL",
-   ``!v t t2 a1 a2.
+Theorem BEFORE_ON_PATH_STRONG___GREATER_IMPL:
+     !v t t2 a1 a2.
       (t <= t2 /\ (!j. (t <= j /\  j < t2) ==> ~(P_SEM (v j) a1)) /\
-      BEFORE_ON_PATH_RESTN_STRONG t v a1 a2) ==> (BEFORE_ON_PATH_RESTN_STRONG t2 v a1 a2)``,
+      BEFORE_ON_PATH_RESTN_STRONG t v a1 a2) ==> (BEFORE_ON_PATH_RESTN_STRONG t2 v a1 a2)
+Proof
 
    REWRITE_TAC[BEFORE_ON_PATH_RESTN_STRONG_def] THEN
    REPEAT STRIP_TAC THEN
@@ -469,15 +464,15 @@ val BEFORE_ON_PATH_STRONG___GREATER_IMPL =
    EXISTS_TAC ``u:num`` THEN
    ASM_REWRITE_TAC[] THEN
    `~(u < t2)` by METIS_TAC[] THEN
-   DECIDE_TAC);
+   DECIDE_TAC
+QED
 
 
-val BEFORE_ON_PATH___GREATER_IMPL =
- store_thm
-  ("BEFORE_ON_PATH___GREATER_IMPL",
-   ``!v t t2 a1 a2.
+Theorem BEFORE_ON_PATH___GREATER_IMPL:
+     !v t t2 a1 a2.
       (t <= t2 /\ (!j. (t <= j /\  j < t2) ==> ~(P_SEM (v j) a1)) /\
-      BEFORE_ON_PATH_RESTN t v a1 a2) ==> (BEFORE_ON_PATH_RESTN t2 v a1 a2)``,
+      BEFORE_ON_PATH_RESTN t v a1 a2) ==> (BEFORE_ON_PATH_RESTN t2 v a1 a2)
+Proof
 
    REWRITE_TAC[BEFORE_ON_PATH_RESTN_def] THEN
    REPEAT STRIP_TAC THEN
@@ -486,52 +481,52 @@ val BEFORE_ON_PATH___GREATER_IMPL =
    EXISTS_TAC ``u:num`` THEN
    ASM_REWRITE_TAC[] THEN
    `~(u < t2)` by METIS_TAC[] THEN
-   DECIDE_TAC);
+   DECIDE_TAC
+QED
 
 
-val BEFORE_ON_PATH___IMPL_START =
- store_thm
-  ("BEFORE_ON_PATH___IMPL_START",
-   ``!v t a1 a2. (BEFORE_ON_PATH_RESTN t v a1 a2 /\ P_SEM (v t) a2) ==> P_SEM (v t) a1``,
-
-   REWRITE_TAC[BEFORE_ON_PATH_RESTN_def] THEN
-   METIS_TAC[LESS_EQ_REFL, EQ_LESS_EQ]);
-
-
-val BEFORE_ON_PATH___IMPL_START2 =
- store_thm
-  ("BEFORE_ON_PATH___IMPL_START2",
-   ``!v t a1 a2. P_SEM (v t) a1 ==> BEFORE_ON_PATH_RESTN t v a1 a2``,
+Theorem BEFORE_ON_PATH___IMPL_START:
+     !v t a1 a2. (BEFORE_ON_PATH_RESTN t v a1 a2 /\ P_SEM (v t) a2) ==> P_SEM (v t) a1
+Proof
 
    REWRITE_TAC[BEFORE_ON_PATH_RESTN_def] THEN
-   METIS_TAC[LESS_EQ_REFL]);
+   METIS_TAC[LESS_EQ_REFL, EQ_LESS_EQ]
+QED
 
 
-val BEFORE_ON_PATH_STRONG___IMPL_START =
- store_thm
-  ("BEFORE_ON_PATH_STRONG___IMPL_START",
-   ``!v t a1 a2. (BEFORE_ON_PATH_RESTN_STRONG t v a1 a2) ==> ~P_SEM (v t) a2``,
+Theorem BEFORE_ON_PATH___IMPL_START2:
+     !v t a1 a2. P_SEM (v t) a1 ==> BEFORE_ON_PATH_RESTN t v a1 a2
+Proof
+
+   REWRITE_TAC[BEFORE_ON_PATH_RESTN_def] THEN
+   METIS_TAC[LESS_EQ_REFL]
+QED
+
+
+Theorem BEFORE_ON_PATH_STRONG___IMPL_START:
+     !v t a1 a2. (BEFORE_ON_PATH_RESTN_STRONG t v a1 a2) ==> ~P_SEM (v t) a2
+Proof
 
    REWRITE_TAC[BEFORE_ON_PATH_RESTN_STRONG_def] THEN
-   METIS_TAC[NOT_LESS, LESS_EQ_REFL]);
+   METIS_TAC[NOT_LESS, LESS_EQ_REFL]
+QED
 
 
-val BEFORE_ON_PATH_STRONG___IMPL_START2 =
- store_thm
-  ("BEFORE_ON_PATH_STRONG___IMPL_START2",
-   ``!v t a1 a2. P_SEM (v t) a1 /\  ~P_SEM (v t) a2 ==> BEFORE_ON_PATH_RESTN_STRONG t v a1 a2``,
+Theorem BEFORE_ON_PATH_STRONG___IMPL_START2:
+     !v t a1 a2. P_SEM (v t) a1 /\  ~P_SEM (v t) a2 ==> BEFORE_ON_PATH_RESTN_STRONG t v a1 a2
+Proof
    REWRITE_TAC[BEFORE_ON_PATH_RESTN_STRONG_def] THEN
    REPEAT STRIP_TAC THEN
    `~(t = t')` by PROVE_TAC[] THEN
    `t < t'` by DECIDE_TAC THEN
    EXISTS_TAC ``t:num`` THEN
-   PROVE_TAC[LESS_EQ_REFL]);
+   PROVE_TAC[LESS_EQ_REFL]
+QED
 
 
-val BEFORE_ON_PATH_CASES =
- store_thm
-  ("BEFORE_ON_PATH_CASES",
-   ``!v t a1 a2. BEFORE_ON_PATH_RESTN t v a1 a2 \/ BEFORE_ON_PATH_RESTN t v a2 a1``,
+Theorem BEFORE_ON_PATH_CASES:
+     !v t a1 a2. BEFORE_ON_PATH_RESTN t v a1 a2 \/ BEFORE_ON_PATH_RESTN t v a2 a1
+Proof
 
    REPEAT STRIP_TAC THEN
    Cases_on `BEFORE_ON_PATH_RESTN t v a1 a2` THENL [
@@ -544,13 +539,13 @@ val BEFORE_ON_PATH_CASES =
       `t' <= t''` by DECIDE_TAC THEN
       EXISTS_TAC ``t':num`` THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
-val BEFORE_ON_PATH___SUC =
- store_thm
-  ("BEFORE_ON_PATH___SUC",
-   ``!v t a1 a2. BEFORE_ON_PATH_RESTN t v a1 a2  ==> (P_SEM (v t) a1 \/ BEFORE_ON_PATH_RESTN (SUC t) v a1 a2)``,
+Theorem BEFORE_ON_PATH___SUC:
+     !v t a1 a2. BEFORE_ON_PATH_RESTN t v a1 a2  ==> (P_SEM (v t) a1 \/ BEFORE_ON_PATH_RESTN (SUC t) v a1 a2)
+Proof
 
    REPEAT STRIP_TAC THENL [
       Cases_on `P_SEM (v t) a1` THENL [
@@ -564,13 +559,13 @@ val BEFORE_ON_PATH___SUC =
          `SUC t <= u` by DECIDE_TAC THEN
          METIS_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
-val BEFORE_ON_PATH_STRONG___SUC =
- store_thm
-  ("BEFORE_ON_PATH_STRONG___SUC",
-   ``!v t a1 a2. BEFORE_ON_PATH_RESTN_STRONG t v a1 a2  ==> (P_SEM (v t) a1 \/ BEFORE_ON_PATH_RESTN_STRONG (SUC t) v a1 a2)``,
+Theorem BEFORE_ON_PATH_STRONG___SUC:
+     !v t a1 a2. BEFORE_ON_PATH_RESTN_STRONG t v a1 a2  ==> (P_SEM (v t) a1 \/ BEFORE_ON_PATH_RESTN_STRONG (SUC t) v a1 a2)
+Proof
 
    REPEAT STRIP_TAC THENL [
       Cases_on `P_SEM (v t) a1` THENL [
@@ -584,13 +579,13 @@ val BEFORE_ON_PATH_STRONG___SUC =
          `SUC t <= u` by DECIDE_TAC THEN
          METIS_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
-val BEFORE_ON_PATH_RESTN___NEGATION_IMPL =
- store_thm
-  ("BEFORE_ON_PATH_RESTN___NEGATION_IMPL",
-   ``!t v a b. ~(BEFORE_ON_PATH_RESTN t v a b) ==> BEFORE_ON_PATH_RESTN_STRONG t v b a``,
+Theorem BEFORE_ON_PATH_RESTN___NEGATION_IMPL:
+     !t v a b. ~(BEFORE_ON_PATH_RESTN t v a b) ==> BEFORE_ON_PATH_RESTN_STRONG t v b a
+Proof
 
    SIMP_TAC arith_ss [BEFORE_ON_PATH_RESTN_def, BEFORE_ON_PATH_RESTN_STRONG_def] THEN
    REPEAT STRIP_TAC THEN
@@ -598,21 +593,21 @@ val BEFORE_ON_PATH_RESTN___NEGATION_IMPL =
    ASM_REWRITE_TAC[] THEN
    CCONTR_TAC THEN
    `t'' <= t'` by DECIDE_TAC THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
 
-val ELEMENTS_OF_PATH_NOT_EMPTY =
- store_thm
-  ("ELEMENTS_OF_PATH_NOT_EMPTY",
-    ``!w. ~(ELEMENTS_OF_PATH w = EMPTY)``,
+Theorem ELEMENTS_OF_PATH_NOT_EMPTY:
+      !w. ~(ELEMENTS_OF_PATH w = EMPTY)
+Proof
 
-    SIMP_TAC std_ss [ELEMENTS_OF_PATH_def, EXTENSION, GSPECIFICATION, NOT_IN_EMPTY]);
+    SIMP_TAC std_ss [ELEMENTS_OF_PATH_def, EXTENSION, GSPECIFICATION, NOT_IN_EMPTY]
+QED
 
 
-val INF_ELEMENTS_OF_PATH_NOT_EMPTY =
- store_thm
-  ("INF_ELEMENTS_OF_PATH_NOT_EMPTY",
-    ``!S. FINITE S ==> (!w. ((!n. w n IN S) ==> ~(INF_ELEMENTS_OF_PATH w = EMPTY)))``,
+Theorem INF_ELEMENTS_OF_PATH_NOT_EMPTY:
+      !S. FINITE S ==> (!w. ((!n. w n IN S) ==> ~(INF_ELEMENTS_OF_PATH w = EMPTY)))
+Proof
 
     PSet_ind.SET_INDUCT_TAC FINITE_INDUCT THEN1 REWRITE_TAC[NOT_IN_EMPTY] THEN
 
@@ -657,21 +652,21 @@ val INF_ELEMENTS_OF_PATH_NOT_EMPTY =
         ]
     ) THEN
 
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 
 
 
-val PATH_EXTENSION_EQUIV_THM =
- store_thm
-  ("PATH_EXTENSION_EQUIV_THM",
-   ``!w q P S. (PATH_SUBSET w S /\ ~(q IN S)) ==> (
+Theorem PATH_EXTENSION_EQUIV_THM:
+     !w q P S. (PATH_SUBSET w S /\ ~(q IN S)) ==> (
 
       !w'. (w' = (PATH_EXTENSION w q P)) =
          ((PATH_SUBSET w' (q INSERT S)) /\
          ((PATH_DIFF w' {q}) = w) /\
          ((PATH_RESTRICT w' S) = w) /\
-         (!n. (q IN (w' n)) = (P n))))``,
+         (!n. (q IN (w' n)) = (P n))))
+Proof
 
    REPEAT STRIP_TAC THEN EQ_TAC  THENL [
       REPEAT DISCH_TAC THEN
@@ -694,14 +689,14 @@ val PATH_EXTENSION_EQUIV_THM =
           NOT_IN_EMPTY, PATH_RESTRICT_def, PATH_MAP_def, IN_INTER, PATH_SUBSET_def] THEN
         METIS_TAC[]
       )
-  ]);
+  ]
+QED
 
 
-val PATH_VAR_RENAMING___ORIG_PATH_EXISTS =
- store_thm
-  ("PATH_VAR_RENAMING___ORIG_PATH_EXISTS",
+Theorem PATH_VAR_RENAMING___ORIG_PATH_EXISTS:
 
-   ``!w f S. (PATH_SUBSET w (IMAGE f S)) ==> (?w'. (PATH_SUBSET w' S) /\ (w = PATH_VAR_RENAMING f w'))``,
+     !w f S. (PATH_SUBSET w (IMAGE f S)) ==> (?w'. (PATH_SUBSET w' S) /\ (w = PATH_VAR_RENAMING f w'))
+Proof
 
    SIMP_TAC std_ss [IMAGE_DEF, PATH_SUBSET_def, PATH_VAR_RENAMING_def, PATH_MAP_def, SUBSET_DEF, GSPECIFICATION] THEN
    REPEAT STRIP_TAC THEN
@@ -716,7 +711,8 @@ val PATH_VAR_RENAMING___ORIG_PATH_EXISTS =
       ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
       SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
 Definition IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE_def:
@@ -731,11 +727,11 @@ Definition IS_ULTIMATIVELY_PERIODIC_PATH_def:
 End
 
 
-val IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE___ALTERNATIVE_DEF =
- store_thm ("IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE___ALTERNATIVE_DEF",
-  ``!p n0 n. 0 < n ==>
+Theorem IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE___ALTERNATIVE_DEF:
+    !p n0 n. 0 < n ==>
       (IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE p n0 n =
-     (!m. p (n0 + m) = p (n0 + m MOD n)))``,
+     (!m. p (n0 + m) = p (n0 + m MOD n)))
+Proof
 
     SIMP_TAC std_ss [IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE_def] THEN
     REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -765,7 +761,8 @@ val IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE___ALTERNATIVE_DEF =
       `?m'. m' = m - n0` by METIS_TAC[] THEN
       `m = n0 + m'` by DECIDE_TAC THEN
       METIS_TAC[ADD_ASSOC, ADD_MODULUS]
-    ]);
+    ]
+QED
 
 
 Definition CUT_PATH_PERIODICALLY_def:
@@ -774,9 +771,9 @@ Definition CUT_PATH_PERIODICALLY_def:
 End
 
 
-val CUT_PATH_PERIODICALLY___BEGINNING =
- store_thm ("CUT_PATH_PERIODICALLY___BEGINNING",
-    ``!n0 n p t. (t < (n+n0)) ==> (((CUT_PATH_PERIODICALLY p n0 n) t) = (p t))``,
+Theorem CUT_PATH_PERIODICALLY___BEGINNING:
+      !n0 n p t. (t < (n+n0)) ==> (((CUT_PATH_PERIODICALLY p n0 n) t) = (p t))
+Proof
 
     SIMP_TAC std_ss [CUT_PATH_PERIODICALLY_def] THEN
     REPEAT STRIP_TAC THEN
@@ -785,20 +782,22 @@ val CUT_PATH_PERIODICALLY___BEGINNING =
 
       `t - n0 < n` by DECIDE_TAC THEN
       ASM_SIMP_TAC arith_ss [LESS_MOD]
-    ]);
+    ]
+QED
 
 
-val CUT_PATH_PERIODICALLY_1 =
- store_thm ("CUT_PATH_PERIODICALLY_1",
-    ``!n0 p t. (t >= n0) ==> (((CUT_PATH_PERIODICALLY p n0 1) t) = (p n0))``,
+Theorem CUT_PATH_PERIODICALLY_1:
+      !n0 p t. (t >= n0) ==> (((CUT_PATH_PERIODICALLY p n0 1) t) = (p n0))
+Proof
 
-    ASM_SIMP_TAC arith_ss [CUT_PATH_PERIODICALLY_def]);
+    ASM_SIMP_TAC arith_ss [CUT_PATH_PERIODICALLY_def]
+QED
 
 
 
-val CUT_PATH_PERIODICALLY___IS_ULTIMATIVELY_PERIODIC =
- store_thm ("CUT_PATH_PERIODICALLY___IS_ULTIMATIVELY_PERIODIC",
-  ``!p n0 n. IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE (CUT_PATH_PERIODICALLY p n0 n) n0 n``,
+Theorem CUT_PATH_PERIODICALLY___IS_ULTIMATIVELY_PERIODIC:
+    !p n0 n. IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE (CUT_PATH_PERIODICALLY p n0 n) n0 n
+Proof
 
     SIMP_TAC std_ss [IS_ULTIMATIVELY_PERIODIC_PATH___CONCRETE_def,
                     CUT_PATH_PERIODICALLY_def] THEN
@@ -809,26 +808,29 @@ val CUT_PATH_PERIODICALLY___IS_ULTIMATIVELY_PERIODIC =
 
       `0 < n /\ ((m + n - n0) = (n + (m - n0)))` by DECIDE_TAC THEN
       ASM_SIMP_TAC std_ss [arithmeticTheory.ADD_MODULUS_RIGHT]
-    ]);
+    ]
+QED
 
 
 
 
-val PATH_RESTRICT___CUT_PATH_PERIODICALLY =
-  store_thm (
-    "PATH_RESTRICT___CUT_PATH_PERIODICALLY",
+Theorem PATH_RESTRICT___CUT_PATH_PERIODICALLY:
 
-    ``!p n0 n S.
+      !p n0 n S.
     (PATH_RESTRICT (CUT_PATH_PERIODICALLY p n0 n) S) =
-    (CUT_PATH_PERIODICALLY (PATH_RESTRICT p S) n0 n)``,
+    (CUT_PATH_PERIODICALLY (PATH_RESTRICT p S) n0 n)
+Proof
 
     ONCE_REWRITE_TAC[FUN_EQ_THM] THEN
     REPEAT GEN_TAC THEN
-    SIMP_TAC std_ss [CUT_PATH_PERIODICALLY_def, PATH_RESTRICT_def, PATH_MAP_def, COND_RAND]);
+    SIMP_TAC std_ss [CUT_PATH_PERIODICALLY_def, PATH_RESTRICT_def, PATH_MAP_def, COND_RAND]
+QED
 
 
-val PATH_SUBSET_RESTRICT = store_thm ("PATH_SUBSET_RESTRICT",
-  ``!w S. PATH_SUBSET (PATH_RESTRICT w S) S``,
-SIMP_TAC std_ss [PATH_RESTRICT_def, PATH_MAP_def, INTER_SUBSET, PATH_SUBSET_def])
+Theorem PATH_SUBSET_RESTRICT:
+    !w S. PATH_SUBSET (PATH_RESTRICT w S) S
+Proof
+SIMP_TAC std_ss [PATH_RESTRICT_def, PATH_MAP_def, INTER_SUBSET, PATH_SUBSET_def]
+QED
 
 

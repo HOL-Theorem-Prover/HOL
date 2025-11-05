@@ -129,7 +129,7 @@ Proof
   simp[]
 QED
 
-Triviality FUNPOW_o:
+Theorem FUNPOW_o[local]:
   FUNPOW f 0 = I ∧
   FUNPOW f (SUC n) = f o FUNPOW f n
 Proof

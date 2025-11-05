@@ -443,12 +443,13 @@ val _ = set_fixity "pdivides_" (Infix(NONASSOC, 450)); (* same as relation *)
        and f h = f #0 = #0                  by given
      Hence zerop (MAP f (h::p))             by zero_poly_cons
 *)
-val zero_poly_map = store_thm(
-  "zero_poly_map",
-  ``!r:'a ring. !f p. (f #0 = #0) /\ zerop p ==> zerop (MAP f p)``,
+Theorem zero_poly_map:
+    !r:'a ring. !f p. (f #0 = #0) /\ zerop p ==> zerop (MAP f p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >>
-  rw[]);
+  rw[]
+QED
 (* good exercise *)
 
 (* Theorem: (f #0 = #0) ==> (chop (MAP f (chop p)) = chop (MAP f p)) *)
@@ -484,24 +485,26 @@ val zero_poly_map = store_thm(
               = f h:: chop (MAP f p)                       by poly_chop_cons
               = f h:: chop (MAP f (chop p)) = LHS          by induction hypothesis
 *)
-val poly_chop_map = store_thm(
-  "poly_chop_map",
-  ``!r:'a ring. !f p. (f #0 = #0) ==> (chop (MAP f (chop p)) = chop (MAP f p))``,
+Theorem poly_chop_map:
+    !r:'a ring. !f p. (f #0 = #0) ==> (chop (MAP f (chop p)) = chop (MAP f p))
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   rw[] >-
   metis_tac[zero_poly_map] >-
   metis_tac[zero_poly_eq_zero_poly_chop] >>
-  metis_tac[zero_poly_eq_zero_poly_chop]);
+  metis_tac[zero_poly_eq_zero_poly_chop]
+QED
 (* good exercise *)
 
 (* Theorem: !p q. (p = q) ==> (MAP f p = MAP f q) *)
 (* Proof: by equality of map. *)
-val poly_eq_map = store_thm(
-  "poly_eq_map",
-  ``!(r:'a ring) (s:'b ring) f. !p q:'a poly. (p = q) ==> (MAP f p = MAP f q)``,
-  rw[]);
+Theorem poly_eq_map:
+    !(r:'a ring) (s:'b ring) f. !p q:'a poly. (p = q) ==> (MAP f p = MAP f q)
+Proof
+  rw[]
+QED
 
 (* Theorem: !p. poly_deg s (MAP f p) = deg p *)
 (* Proof:
@@ -517,13 +520,14 @@ val poly_eq_map = store_thm(
       = PRE (LENGTH p)            by LENGTH_MAP
       = deg p                     by poly_deg_def, p <> |0|
 *)
-val poly_deg_map = store_thm(
-  "poly_deg_map",
-  ``!(r:'a ring) (s:'b ring) f. !p. poly_deg s (MAP f p) = deg p``,
+Theorem poly_deg_map:
+    !(r:'a ring) (s:'b ring) f. !p. poly_deg s (MAP f p) = deg p
+Proof
   rpt strip_tac >>
   Cases_on `p` >-
   rw[] >>
-  rw[poly_deg_def, MAP_EQ_NIL]);
+  rw[poly_deg_def, MAP_EQ_NIL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Homomorphism                                                         *)
@@ -546,12 +550,13 @@ val poly_deg_map = store_thm(
       = zerop_ (f h :: p_)         by MAP
       = true                       by above, zero_poly_cons
 *)
-val ring_homo_zero_poly = store_thm(
-  "ring_homo_zero_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p. zerop p ==> zerop_ p_``,
+Theorem ring_homo_zero_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p. zerop p ==> zerop_ p_
+Proof
   rpt strip_tac >>
   Induct_on `p` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. weak p ==> (zerop p <=> zerop_ p_) *)
 (* Proof:
@@ -571,14 +576,15 @@ val ring_homo_zero_poly = store_thm(
            zerop_ p_               by induction hypothesis
        <=> zerop_ (MAP f (h::p))   by zero_poly_cons
 *)
-val ring_homo_eq_zero_poly = store_thm(
-  "ring_homo_eq_zero_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. weak p ==> (zerop p <=> zerop_ p_)``,
+Theorem ring_homo_eq_zero_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. weak p ==> (zerop p <=> zerop_ p_)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   rw[] >>
-  metis_tac[ring_homo_eq_zero]);
+  metis_tac[ring_homo_eq_zero]
+QED
 
 (* Theorem: RingHomo f r r_ ==> !p. weak p ==> weak_ p_ *)
 (* Proof:
@@ -595,14 +601,15 @@ val ring_homo_eq_zero_poly = store_thm(
    ==> weak_ (f h :: p_)        by weak_cons
      = weak_ (MAP f (h::p))     by MAP
 *)
-val ring_homo_weak = store_thm(
-  "ring_homo_weak",
-  ``!(r:'a ring) (r_:'b ring) f. RingHomo f r r_ ==> !p. weak p ==> weak_ p_``,
+Theorem ring_homo_weak:
+    !(r:'a ring) (r_:'b ring) f. RingHomo f r r_ ==> !p. weak p ==> weak_ p_
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   rw_tac std_ss[weak_cons, MAP] >>
-  metis_tac[ring_homo_element]);
+  metis_tac[ring_homo_element]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. poly p ==> poly_ p_ *)
 (* Proof:
@@ -619,9 +626,9 @@ val ring_homo_weak = store_thm(
         so p_ <> |0|_                 by MAP_EQ_NIL, poly_zero
      Hence poly_ p_                   by poly_def_alt
 *)
-val ring_homo_poly = store_thm(
-  "ring_homo_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. poly p ==> poly_ p_``,
+Theorem ring_homo_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. poly p ==> poly_ p_
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
@@ -631,7 +638,8 @@ val ring_homo_poly = store_thm(
   `f #0 = #0_` by rw[ring_homo_zero] >>
   `LAST p_ <> #0_` by prove_tac[INJ_DEF, weak_last_element, ring_zero_element] >>
   `p_ <> |0|_` by metis_tac[MAP_EQ_NIL, poly_zero] >>
-  rw[poly_def_alt]);
+  rw[poly_def_alt]
+QED
 
 (* Theorem: RingHomo f r r_ ==> !p. poly p ==> poly_ (chop_ p_) *)
 (* Proof:
@@ -639,10 +647,11 @@ val ring_homo_poly = store_thm(
      and weak p ==> weak_ p_       by ring_homo_weak
     Thus poly_ (chop_ p_)          by poly_chop_weak_poly
 *)
-val ring_homo_poly_of_chop = store_thm(
-  "ring_homo_poly_of_chop",
-  ``!(r:'a ring) (r_:'b ring) f. RingHomo f r r_ ==> !p. poly p ==> poly_ (chop_ p_)``,
-  metis_tac[poly_is_weak, ring_homo_weak, poly_chop_weak_poly]);
+Theorem ring_homo_poly_of_chop:
+    !(r:'a ring) (r_:'b ring) f. RingHomo f r r_ ==> !p. poly p ==> poly_ (chop_ p_)
+Proof
+  metis_tac[poly_is_weak, ring_homo_weak, poly_chop_weak_poly]
+QED
 
 (* Theorem: (p = |0|) <=> (p_ = |0|_) *)
 (* Proof:
@@ -651,10 +660,11 @@ val ring_homo_poly_of_chop = store_thm(
    <=> p_ = []       by MAP_EQ_NIL
    <=> p_ = |0|_     by poly_zero
 *)
-val ring_homo_eq_poly_zero = store_thm(
-  "ring_homo_eq_poly_zero",
-  ``!(r:'a ring) (r_:'b ring) (f:'a -> 'b). !p. (p = |0|) <=> (p_ = |0|_)``,
-  rw[MAP_EQ_NIL]);
+Theorem ring_homo_eq_poly_zero:
+    !(r:'a ring) (r_:'b ring) (f:'a -> 'b). !p. (p = |0|) <=> (p_ = |0|_)
+Proof
+  rw[MAP_EQ_NIL]
+QED
 
 (* Theorem: MAP f |0| = |0|_ *)
 (* Proof:
@@ -663,10 +673,11 @@ val ring_homo_eq_poly_zero = store_thm(
      = []              by MAP
      = |0|_            by poly_zero
 *)
-val ring_homo_poly_zero = store_thm(
-  "ring_homo_poly_zero",
-  ``!(r:'a ring) (r_:'b ring) f. MAP f |0| = |0|_``,
-  rw[]);
+Theorem ring_homo_poly_zero:
+    !(r:'a ring) (r_:'b ring) f. MAP f |0| = |0|_
+Proof
+  rw[]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> (MAP f |1| = |1|_) *)
 (* Proof:
@@ -688,16 +699,17 @@ val ring_homo_poly_zero = store_thm(
      = [#1_]           by ring_homo_one, above
      = |1|_            by poly_one, #0_ <> #1_
 *)
-val ring_homo_poly_one = store_thm(
-  "ring_homo_poly_one",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> (MAP f |1| = |1|_)``,
+Theorem ring_homo_poly_one:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> (MAP f |1| = |1|_)
+Proof
   rpt strip_tac >>
   `f #0 = #0_` by rw[ring_homo_zero] >>
   `f #1 = #1_` by rw[ring_homo_one] >>
   Cases_on `#1 = #0` >-
   metis_tac[poly_one, MAP] >>
   `#0_ <> #1_` by metis_tac[INJ_DEF, ring_zero_element, ring_one_element] >>
-  rw[poly_one]);
+  rw[poly_one]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> (MAP f |1| = |1|_) *)
 (* Proof:
@@ -709,12 +721,13 @@ val ring_homo_poly_one = store_thm(
    = [#1_]            by ring_homo_one
    = |1|_             by poly_one
 *)
-val ring_homo_poly_one_alt = store_thm(
-  "ring_homo_poly_one_alt",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> (MAP f |1| = |1|_)``,
+Theorem ring_homo_poly_one_alt:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> (MAP f |1| = |1|_)
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[ring_homo_one, ring_homo_zero] >>
-  rw[poly_one]);
+  rw[poly_one]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. weak p ==> (MAP f (chop p) = chop_ p_) *)
 (* Proof:
@@ -743,9 +756,9 @@ val ring_homo_poly_one_alt = store_thm(
       = chop_ (f h:: p_)                   by poly_chop_cons
       = chop_ (MAP f (h::p))               by MAP
 *)
-val ring_homo_poly_chop = store_thm(
-  "ring_homo_poly_chop",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. weak p ==> (MAP f (chop p) = chop_ p_)``,
+Theorem ring_homo_poly_chop:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. weak p ==> (MAP f (chop p) = chop_ p_)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -761,7 +774,8 @@ val ring_homo_poly_chop = store_thm(
     `_ = chop_ (f h:: p_)` by rw[] >>
     `_ = chop_(MAP f (h::p))` by rw[] >>
     rw_tac std_ss[]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p. chop_ (MAP f (chop p)) = chop_ p_ *)
 (* Proof:
@@ -796,16 +810,17 @@ val ring_homo_poly_chop = store_thm(
             = f h :: chop_ (MAP f (chop p))     by induction hypothesis
             = LHS
 *)
-val ring_homo_poly_chop_of_chop = store_thm(
-  "ring_homo_poly_chop_of_chop",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p. chop_ (MAP f (chop p)) = chop_ p_``,
+Theorem ring_homo_poly_chop_of_chop:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p. chop_ (MAP f (chop p)) = chop_ p_
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   `f #0 = #0_` by rw[ring_homo_zero] >>
   rw[] >-
   metis_tac[ring_homo_zero_poly] >>
-  metis_tac[zero_poly_eq_zero_poly_chop]);
+  metis_tac[zero_poly_eq_zero_poly_chop]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_) *)
 (* Proof:
@@ -838,15 +853,16 @@ val ring_homo_poly_chop_of_chop = store_thm(
             = ||_ (f h':: p_) (f h:: q_)                 by MAP
             = (f h') +_ (f h):: p_ ||_ q_                by weak_add_cons
 *)
-val ring_homo_weak_add = store_thm(
-  "ring_homo_weak_add",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_)``,
+Theorem ring_homo_weak_add:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_)
+Proof
   ntac 4 strip_tac >>
   Induct_on `p` >-
   rw[] >>
   Induct_on `q` >-
   rw[] >>
-  rw[ring_homo_property]);
+  rw[ring_homo_property]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ poly q ==> (MAP f (p + q) = p_ +_ q_) *)
 (* Proof:
@@ -858,17 +874,18 @@ val ring_homo_weak_add = store_thm(
    = chop_ (p_ ||_ q_)        by ring_homo_weak_add, weak p, weak q
    = p_ +_ q_                 by poly_add_def
 *)
-val ring_homo_poly_add = store_thm(
-  "ring_homo_poly_add",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p q. poly p /\ poly q ==> (MAP f (p + q) = p_ +_ q_)``,
+Theorem ring_homo_poly_add:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p q. poly p /\ poly q ==> (MAP f (p + q) = p_ +_ q_)
+Proof
   rpt strip_tac >>
   `weak p /\ weak q /\ weak (p || q)` by rw[] >>
   `MAP f (p + q) = MAP f (chop (p || q))` by rw_tac std_ss[poly_add_def] >>
   `_ = chop_ (MAP f (p ||q))` by rw[ring_homo_poly_chop] >>
   `_ = chop_ (p_ ||_ q_)` by metis_tac[ring_homo_weak_add] >>
   `_ = p_ +_ q_` by rw_tac std_ss[poly_add_def] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p q. poly p /\ poly q ==> (chop_ (MAP f (p + q)) = p_ +_ q_) *)
 (* Proof:
@@ -878,12 +895,13 @@ val ring_homo_poly_add = store_thm(
    = chop_ (p_ ||_ q_)                  by ring_homo_weak_add
    = p_ +_ q_                           by poly_add_def
 *)
-val ring_homo_poly_add_chop = store_thm(
-  "ring_homo_poly_add_chop",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p q. poly p /\ poly q ==> (chop_ (MAP f (p + q)) = p_ +_ q_)``,
+Theorem ring_homo_poly_add_chop:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p q. poly p /\ poly q ==> (chop_ (MAP f (p + q)) = p_ +_ q_)
+Proof
   rw_tac std_ss[poly_add_def] >>
-  metis_tac[ring_homo_poly_chop_of_chop, ring_homo_weak_add, poly_is_weak]);
+  metis_tac[ring_homo_poly_chop_of_chop, ring_homo_weak_add, poly_is_weak]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p. weak p ==> (MAP f (neg p) = neg_ p_) *)
 (* Proof:
@@ -906,13 +924,14 @@ val ring_homo_poly_add_chop = store_thm(
       = neg_ (f h:: p_)         by weak_neg_def
       = neg_ (MAP f (h::p))     by MAP
 *)
-val ring_homo_weak_neg = store_thm(
-  "ring_homo_weak_neg",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p. weak p ==> (MAP f (neg p) = neg_ p_)``,
+Theorem ring_homo_weak_neg:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p. weak p ==> (MAP f (neg p) = neg_ p_)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
-  rw[ring_homo_neg]);
+  rw[ring_homo_neg]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. poly p ==> (MAP f (- p) = $-_ p_) *)
 (* Proof:
@@ -922,10 +941,11 @@ val ring_homo_weak_neg = store_thm(
    = neg_ p_                   by ring_homo_weak_neg
    = $-_ p_                    by poly_neg_def, poly_ p_
 *)
-val ring_homo_poly_neg = store_thm(
-  "ring_homo_poly_neg",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. poly p ==> (MAP f (- p) = $-_ p_)``,
-  metis_tac[poly_neg_def, ring_homo_weak_neg, ring_homo_poly, poly_is_weak]);
+Theorem ring_homo_poly_neg:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. poly p ==> (MAP f (- p) = $-_ p_)
+Proof
+  metis_tac[poly_neg_def, ring_homo_weak_neg, ring_homo_poly, poly_is_weak]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p. poly p ==> (chop_ (MAP f (-p)) = ($-_ (chop_ p_))) *)
 (* Proof:
@@ -937,16 +957,17 @@ val ring_homo_poly_neg = store_thm(
    = neg_ (chop_ p_)                   by poly_chop_neg, weak_ p_
    = $-_ (chop_ p_)                    by poly_neg_def
 *)
-val ring_homo_poly_neg_chop = store_thm(
-  "ring_homo_poly_neg_chop",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p. poly p ==> (chop_ (MAP f (-p)) = ($-_ (chop_ p_)))``,
+Theorem ring_homo_poly_neg_chop:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p. poly p ==> (chop_ (MAP f (-p)) = ($-_ (chop_ p_)))
+Proof
   rpt strip_tac >>
   `poly_ (chop_ p_)` by metis_tac[ring_homo_poly_of_chop] >>
   `weak_ p_` by metis_tac[ring_homo_weak, poly_is_weak] >>
   `chop_ (MAP f (-p)) = chop_ (MAP f (neg p))` by rw[poly_neg_def] >>
   `_ = chop_ (neg_ p_)` by metis_tac[ring_homo_weak_neg, poly_is_weak] >>
-  rw[poly_chop_neg, poly_neg_def]);
+  rw[poly_chop_neg, poly_neg_def]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ poly q ==> (MAP f (p - q) = p_ -_ q_) *)
 (* Proof:
@@ -957,11 +978,12 @@ val ring_homo_poly_neg_chop = store_thm(
    = p_ +_ ($-_ q_)        by ring_homo_poly_neg
    = p_ -_ q_              by poly_sub_def
 *)
-val ring_homo_poly_sub = store_thm(
-  "ring_homo_poly_sub",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p q. poly p /\ poly q ==> (MAP f (p - q) = p_ -_ q_)``,
-  metis_tac[poly_sub_def, ring_homo_poly_add, ring_homo_poly_neg, poly_neg_poly]);
+Theorem ring_homo_poly_sub:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p q. poly p /\ poly q ==> (MAP f (p - q) = p_ -_ q_)
+Proof
+  metis_tac[poly_sub_def, ring_homo_poly_add, ring_homo_poly_neg, poly_neg_poly]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p q. poly p /\ poly q ==> (chop_ (MAP f (p - q)) = p_ -_ (chop_ q_)) *)
 (* Proof:
@@ -975,15 +997,16 @@ val ring_homo_poly_sub = store_thm(
    = p_ +_ ($-_ (chop_ q_))               by poly_add_def
    = p_ -_ (chop_ q_)                     by poly_sub_def
 *)
-val ring_homo_poly_sub_chop = store_thm(
-  "ring_homo_poly_sub_chop",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p q. poly p /\ poly q ==> (chop_ (MAP f (p - q)) = p_ -_ (chop_ q_))``,
+Theorem ring_homo_poly_sub_chop:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p q. poly p /\ poly q ==> (chop_ (MAP f (p - q)) = p_ -_ (chop_ q_))
+Proof
   rpt strip_tac >>
   `poly (-q)` by rw[] >>
   `weak_ p_ /\ weak_ (MAP f (-q))` by metis_tac[ring_homo_weak, poly_is_weak] >>
   `chop_ (MAP f (p - q)) = chop_ (MAP f (p + -q))` by rw[poly_sub_def] >>
-  rw_tac std_ss[ring_homo_poly_add_chop, poly_chop_add_comm, ring_homo_poly_neg_chop, poly_add_def, poly_sub_def]);
+  rw_tac std_ss[ring_homo_poly_add_chop, poly_chop_add_comm, ring_homo_poly_neg_chop, poly_add_def, poly_sub_def]
+QED
 
 (* Theorem: !p. deg_ p_ = deg p *)
 (* Proof:
@@ -1000,10 +1023,11 @@ val ring_homo_poly_sub_chop = store_thm(
       = PRE (LENGTH p)        by LENGTH_MAP
       = deg p                 by poly_deg_def
 *)
-val ring_homo_poly_deg = store_thm(
-  "ring_homo_poly_deg",
-  ``!(r:'a ring) (r_:'b ring) (f:'a -> 'b). !p. deg_ p_ = deg p``,
-  rw[poly_deg_def, MAP_EQ_NIL]);
+Theorem ring_homo_poly_deg:
+    !(r:'a ring) (r_:'b ring) (f:'a -> 'b). !p. deg_ p_ = deg p
+Proof
+  rw[poly_deg_def, MAP_EQ_NIL]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p. lead_ p_ = f (lead p) *)
 (* Proof:
@@ -1021,13 +1045,14 @@ val ring_homo_poly_deg = store_thm(
       = f (LAST p)             by LAST_MAP
       = f (lead p)             by poly_lead_alt
 *)
-val ring_homo_poly_lead = store_thm(
-  "ring_homo_poly_lead",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p. lead_ p_ = f (lead p)``,
+Theorem ring_homo_poly_lead:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p. lead_ p_ = f (lead p)
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
-  metis_tac[MAP_EQ_NIL, poly_lead_alt, LAST_MAP, poly_zero]);
+  metis_tac[MAP_EQ_NIL, poly_lead_alt, LAST_MAP, poly_zero]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p k. p_ '_ k = f (p ' k) *)
 (* Proof:
@@ -1089,14 +1114,15 @@ QED
       = (f c) o_ (f h :: p_)              by weak_cmult_cons
       = (f c) o_ (MAP f (h::p))           by MAP
 *)
-val ring_homo_weak_cmult = store_thm(
-  "ring_homo_weak_cmult",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_)``,
+Theorem ring_homo_weak_cmult:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
-  rw[ring_homo_property]);
+  rw[ring_homo_property]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p c. poly p /\ c IN R ==> (MAP f (c * p) = (f c) *_ p_) *)
 (* Proof:
@@ -1107,17 +1133,18 @@ val ring_homo_weak_cmult = store_thm(
    = chop_ ((f c) o_ p_)      by ring_homo_weak_cmult
    = (f c) *_ p_              by poly_cmult_def
 *)
-val ring_homo_poly_cmult = store_thm(
-  "ring_homo_poly_cmult",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p c. poly p /\ c IN R ==> (MAP f (c * p) = (f c) *_ p_)``,
+Theorem ring_homo_poly_cmult:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p c. poly p /\ c IN R ==> (MAP f (c * p) = (f c) *_ p_)
+Proof
   rpt strip_tac >>
   `weak p` by rw[] >>
   `MAP f (c * p) = MAP f (chop (c o p))` by rw_tac std_ss[poly_cmult_def] >>
   `_ = chop_ (MAP f (c o p))` by rw[ring_homo_poly_chop] >>
   `_ = chop_ ((f c) o_ p_)` by metis_tac[ring_homo_weak_cmult] >>
   `_ = (f c) *_ p_` by rw_tac std_ss[poly_cmult_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p c. poly p /\ c IN R ==> (chop_ (MAP f (c * p)) = f c *_ p_) *)
 (* Proof:
@@ -1127,12 +1154,13 @@ val ring_homo_poly_cmult = store_thm(
    = chop_ ((f c) o_ p_)            by ring_homo_weak_cmult
    = (f c) *_ p_                    by poly_cmult_def
 *)
-val ring_homo_poly_cmult_chop = store_thm(
-  "ring_homo_poly_cmult_chop",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p c. poly p /\ c IN R ==> (chop_ (MAP f (c * p)) = f c *_ p_)``,
+Theorem ring_homo_poly_cmult_chop:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p c. poly p /\ c IN R ==> (chop_ (MAP f (c * p)) = f c *_ p_)
+Proof
   rw_tac std_ss[poly_cmult_def] >>
-  metis_tac[ring_homo_poly_chop_of_chop, ring_homo_weak_cmult, poly_is_weak]);
+  metis_tac[ring_homo_poly_chop_of_chop, ring_homo_weak_cmult, poly_is_weak]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p n. MAP f (p >> n) = p_ >>_ n *)
 (* Proof:
@@ -1159,16 +1187,17 @@ val ring_homo_poly_cmult_chop = store_thm(
       = #0_ :: p_ >>_ n         by ring_homo_zero
       = p_ >>_  (SUC n)         by poly_shift_suc
 *)
-val ring_homo_poly_shift = store_thm(
-  "ring_homo_poly_shift",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p n. MAP f (p >> n) = p_ >>_ n``,
+Theorem ring_homo_poly_shift:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p n. MAP f (p >> n) = p_ >>_ n
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
   Induct_on `n` >-
   rw[] >>
   `p_ <> |0|_` by metis_tac[ring_homo_eq_poly_zero, poly_zero] >>
-  rw[poly_shift_suc]);
+  rw[poly_shift_suc]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p o q) = p_ o_ q_) *)
 (* Proof:
@@ -1194,9 +1223,9 @@ val ring_homo_poly_shift = store_thm(
       = (f h:: MAP f p) o_ q_                  by weak_mult_cons
       = MAP f (h::p) o_ q_                     by MAP
 *)
-val ring_homo_weak_mult = store_thm(
-  "ring_homo_weak_mult",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p o q) = p_ o_ q_)``,
+Theorem ring_homo_weak_mult:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p o q) = p_ o_ q_)
+Proof
   ntac 4 strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -1211,7 +1240,8 @@ val ring_homo_weak_mult = store_thm(
   `_ = (f h) o_ q_ ||_  (p_ o_ q_) >>_ 1` by rw[] >>
   `_ = (f h:: MAP f p) o_ q_` by rw[] >>
   `_ = MAP f (h::p) o_ q_ ` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ poly q ==> (MAP f (p * q) = p_ *_ q_) *)
 (* Proof:
@@ -1222,16 +1252,17 @@ val ring_homo_weak_mult = store_thm(
    = chop_ (p_ o_ q_)        by ring_homo_weak_mult
    = p_ *_ q_                by poly_mult_def
 *)
-val ring_homo_poly_mult = store_thm(
-  "ring_homo_poly_mult",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p q. poly p /\ poly q ==> (MAP f (p * q) = p_ *_ q_)``,
+Theorem ring_homo_poly_mult:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p q. poly p /\ poly q ==> (MAP f (p * q) = p_ *_ q_)
+Proof
   rpt strip_tac >>
   `MAP f (p * q) = MAP f (chop (p o q))` by rw_tac std_ss[poly_mult_def] >>
   `_ = chop_ (MAP f (p o q))` by rw[ring_homo_poly_chop] >>
   `_ = chop_ (p_ o_ q_)` by metis_tac[ring_homo_weak_mult, poly_is_weak] >>
   `_ = p_ *_ q_` by rw[poly_mult_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p q. poly p /\ poly q ==> (chop_ (MAP f (p * q)) = p_ *_ q_) *)
 (* Proof:
@@ -1241,11 +1272,12 @@ val ring_homo_poly_mult = store_thm(
    = chop_ (p_ o_ q_)              by ring_homo_weak_mult
    = p_ *_ q_                      by poly_mult_def
 *)
-val ring_homo_poly_mult_chop = store_thm(
-  "ring_homo_poly_mult_chop",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p q. poly p /\ poly q ==> (chop_ (MAP f (p * q)) = p_ *_ q_)``,
-  metis_tac[poly_mult_def, ring_homo_poly_chop_of_chop, ring_homo_weak_mult, poly_is_weak]);
+Theorem ring_homo_poly_mult_chop:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p q. poly p /\ poly q ==> (chop_ (MAP f (p * q)) = p_ *_ q_)
+Proof
+  metis_tac[poly_mult_def, ring_homo_poly_chop_of_chop, ring_homo_weak_mult, poly_is_weak]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. poly p ==> !n. MAP f (p ** n) = p_ **_ n *)
 (* Proof:
@@ -1264,10 +1296,10 @@ val ring_homo_poly_mult_chop = store_thm(
       = p_ *_ p_ **_ n        by induction hypothesis
       = p_ **_ SUC n          by poly_exp_SUC
 *)
-val ring_homo_poly_exp = store_thm(
-  "ring_homo_poly_exp",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p. poly p ==> !n. MAP f (p ** n) = p_ **_ n``,
+Theorem ring_homo_poly_exp:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p. poly p ==> !n. MAP f (p ** n) = p_ **_ n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[ring_homo_poly_one] >>
@@ -1276,7 +1308,8 @@ val ring_homo_poly_exp = store_thm(
   `_ = p_ *_ MAP f (p ** n)` by rw[ring_homo_poly_mult] >>
   `_ = p_ *_ p_ **_ n` by rw[] >>
   `_ = p_ **_ SUC n` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !p. poly p ==> !n. chop_ (MAP f (p ** n)) = p_ **_ n *)
 (* Proof:
@@ -1299,17 +1332,18 @@ val ring_homo_poly_exp = store_thm(
          = p_ **_ SUC n                            by poly_exp_SUC
          = RHS
 *)
-val ring_homo_poly_exp_chop = store_thm(
-  "ring_homo_poly_exp_chop",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !p. poly p ==> !n. chop_ (MAP f (p ** n)) = p_ **_ n``,
+Theorem ring_homo_poly_exp_chop:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !p. poly p ==> !n. chop_ (MAP f (p ** n)) = p_ **_ n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   metis_tac[ring_homo_poly_one_alt, poly_exp_0, poly_chop_one] >>
   `weak_ p_ /\ weak_ (MAP f (p ** n))` by metis_tac[ring_homo_weak, poly_exp_poly, poly_is_weak] >>
   `chop_ (MAP f (p ** SUC n)) = chop_ (MAP f (p * p ** n))` by rw[poly_exp_SUC] >>
   `_ = p_ *_ (MAP f (p ** n))` by rw[ring_homo_poly_mult_chop] >>
-  rw_tac std_ss[poly_chop_mult_comm, poly_mult_def, poly_exp_SUC]);
+  rw_tac std_ss[poly_chop_mult_comm, poly_mult_def, poly_exp_SUC]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p x. poly p /\ x IN R ==> (f (eval p x) = eval_ p_ (f x)) *)
 (* Proof:
@@ -1331,10 +1365,10 @@ val ring_homo_poly_exp_chop = store_thm(
       = eval_ (f h :: p_) (f x)         by poly_eval_cons
       = eval_ (MAP f (h::p)) (f x)      by MAP
 *)
-val ring_homo_poly_eval = store_thm(
-  "ring_homo_poly_eval",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p x. poly p /\ x IN R ==> (f (eval p x) = eval_ p_ (f x))``,
+Theorem ring_homo_poly_eval:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p x. poly p /\ x IN R ==> (f (eval p x) = eval_ p_ (f x))
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -1342,7 +1376,8 @@ val ring_homo_poly_eval = store_thm(
   `f (eval (h::p) x) = f (h + eval p x * x)` by rw[] >>
   `_ = f h +_ f (eval p x * x)` by rw[ring_homo_property] >>
   `_ = f h +_ f (eval p x) *_ f x` by metis_tac[ring_homo_property, poly_eval_element] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p x. poly p /\ x IN R /\ root p x ==> root_ p_ (f x) *)
 (* Proof:
@@ -1352,11 +1387,12 @@ val ring_homo_poly_eval = store_thm(
    ==> eval_ p_ (f x) = #0_    by ring_homo_poly_eval, ring_homo_zero
    <=> root_ p_ (f x)          by poly_root_def
 *)
-val ring_homo_poly_root = store_thm(
-  "ring_homo_poly_root",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p x. poly p /\ x IN R /\ root p x ==> root_ p_ (f x)``,
-  metis_tac[poly_root_def, ring_homo_poly_eval, ring_homo_zero]);
+Theorem ring_homo_poly_root:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p x. poly p /\ x IN R /\ root p x ==> root_ p_ (f x)
+Proof
+  metis_tac[poly_root_def, ring_homo_poly_eval, ring_homo_zero]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ poly q /\ p pdivides q ==> p_ pdivides_ q_ *)
 (* Proof:
@@ -1370,11 +1406,12 @@ val ring_homo_poly_root = store_thm(
        = (MAP f t) *_ p_             by ring_homo_poly_mult
    Hence p_ pdivides_ q_             by poly_divides_def
 *)
-val ring_homo_poly_divides = store_thm(
-  "ring_homo_poly_divides",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p q. poly p /\ poly q /\ p pdivides q ==> p_ pdivides_ q_``,
-  metis_tac[poly_divides_def, ring_homo_poly, ring_homo_poly_mult]);
+Theorem ring_homo_poly_divides:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p q. poly p /\ poly q /\ p pdivides q ==> p_ pdivides_ q_
+Proof
+  metis_tac[poly_divides_def, ring_homo_poly, ring_homo_poly_mult]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p q. poly p /\ poly q /\ p pdivides q ==> chop_ p_ pdivides_ chop_ q_ *)
 (* Proof:
@@ -1393,10 +1430,10 @@ val ring_homo_poly_divides = store_thm(
          poly_ (chop_ p_)                 by poly_chop_weak_poly
    Hence chop_ p_ pdivides_ chop_ q_      by poly_divides_def
 *)
-val ring_homo_poly_divides_chop = store_thm(
-  "ring_homo_poly_divides_chop",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p q. poly p /\ poly q /\ p pdivides q ==> (chop_ p_) pdivides_ (chop_ q_)``,
+Theorem ring_homo_poly_divides_chop:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p q. poly p /\ poly q /\ p pdivides q ==> (chop_ p_) pdivides_ (chop_ q_)
+Proof
   rpt strip_tac >>
   `?t. poly t /\ (q = t * p)` by rw[GSYM poly_divides_def] >>
   qabbrev_tac `t_ = MAP f t` >>
@@ -1405,7 +1442,8 @@ val ring_homo_poly_divides_chop = store_thm(
   `_ = chop_ (t_ o_ p_)` by rw_tac std_ss[poly_mult_def] >>
   `_ = chop_ ((chop_ t_) o_ (chop_ p_))` by rw_tac std_ss[poly_chop_mult_chop] >>
   `_ = (chop_ t_) *_ (chop_ p_)` by rw_tac std_ss[poly_mult_def] >>
-  metis_tac[poly_divides_def, poly_chop_weak_poly]);
+  metis_tac[poly_divides_def, poly_chop_weak_poly]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphism between Polynomial Rings                                     *)
@@ -1427,9 +1465,9 @@ val ring_homo_poly_divides_chop = store_thm(
            True by ring_homo_poly_mult
        (3) f #1 = #1_ ==> MAP f |1| = |1|_, true by ring_homo_poly_one
 *)
-val ring_homo_poly_ring_homo = store_thm(
-  "ring_homo_poly_ring_homo",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> RingHomo (MAP f) (PolyRing r) (PolyRing r_)``,
+Theorem ring_homo_poly_ring_homo:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> RingHomo (MAP f) (PolyRing r) (PolyRing r_)
+Proof
   rpt (stripDup[RingHomo_def]) >>
   rw_tac std_ss[RingHomo_def, poly_ring_element] >-
   metis_tac[ring_homo_poly] >-
@@ -1441,7 +1479,8 @@ val ring_homo_poly_ring_homo = store_thm(
   rw[poly_ring_element] >-
   metis_tac[ring_homo_poly] >-
   rw[ring_homo_poly_mult] >>
-  rw[ring_homo_poly_one]);
+  rw[ring_homo_poly_one]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -1458,16 +1497,17 @@ val ring_homo_poly_ring_homo = store_thm(
        = chop_ ((chop_ (MAP f x)) ||_ (chop_ (MAP f y)))  by poly_chop_add_chop
        = (chop_ (MAP f x)) +_ (chop_ (MAP f y))       by poly_add_def
 *)
-val ring_homo_group_homo_poly = store_thm(
-  "ring_homo_group_homo_poly",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-       GroupHomo (chop_ o MAP f) (PolyRing r).sum (PolyRing r_).sum``,
+Theorem ring_homo_group_homo_poly:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+       GroupHomo (chop_ o MAP f) (PolyRing r).sum (PolyRing r_).sum
+Proof
   rpt strip_tac >>
   `Ring (PolyRing r) /\ Ring (PolyRing r_)` by rw[poly_add_mult_ring] >>
   rw_tac std_ss[GroupHomo_def, poly_ring_element] >-
   metis_tac[ring_homo_poly_of_chop] >>
   `weak_ (MAP f x) /\ weak_ (MAP f y)` by metis_tac[ring_homo_weak, poly_is_weak] >>
-  rw_tac std_ss[ring_homo_poly_add_chop, poly_add_def, poly_chop_add_chop]);
+  rw_tac std_ss[ring_homo_poly_add_chop, poly_add_def, poly_chop_add_chop]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
             MonoidHomo (chop_ o MAP f) (PolyRing r).prod (PolyRing r_).prod *)
@@ -1487,17 +1527,18 @@ val ring_homo_group_homo_poly = store_thm(
        = chop_ |1|_          by ring_homo_poly_one_alt
        = |1|_                by poly_chop_one, #1_ <> #0_
 *)
-val ring_homo_monoid_homo_poly = store_thm(
-  "ring_homo_monoid_homo_poly",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-     MonoidHomo (chop_ o MAP f) (PolyRing r).prod (PolyRing r_).prod``,
+Theorem ring_homo_monoid_homo_poly:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+     MonoidHomo (chop_ o MAP f) (PolyRing r).prod (PolyRing r_).prod
+Proof
   rpt strip_tac >>
   `Ring (PolyRing r) /\ Ring (PolyRing r_)` by rw[poly_add_mult_ring] >>
   rw_tac std_ss[MonoidHomo_def, poly_ring_element] >-
   metis_tac[ring_homo_poly_of_chop] >-
  (`weak_ (MAP f x) /\ weak_ (MAP f y)` by metis_tac[ring_homo_weak, poly_is_weak] >>
   rw_tac std_ss[ring_homo_poly_mult_chop, poly_mult_def, poly_chop_mult_chop]) >>
-  metis_tac[ring_homo_poly_one_alt, poly_chop_one]);
+  metis_tac[ring_homo_poly_one_alt, poly_chop_one]
+QED
 
 (* Theorem: RingHomo give polynomial RingHomo.
             (r ~r~ r_) f /\ #1_ <> #0_ ==> RingHomo (chop_ o MAP f) (PolyRing r) (PolyRing r_) *)
@@ -1510,15 +1551,16 @@ val ring_homo_monoid_homo_poly = store_thm(
    (3) MonoidHomo (chop_ o MAP f) (PolyRing r).prod (PolyRing r_).prod
        True by ring_homo_monoid_homo_poly.
 *)
-val ring_homo_ring_homo_poly = store_thm(
-  "ring_homo_ring_homo_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-        RingHomo (chop_ o MAP f) (PolyRing r) (PolyRing r_)``,
+Theorem ring_homo_ring_homo_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+        RingHomo (chop_ o MAP f) (PolyRing r) (PolyRing r_)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[RingHomo_def] >-
   metis_tac[ring_homo_poly_of_chop, poly_ring_element] >-
   rw[ring_homo_group_homo_poly] >>
-  rw[ring_homo_monoid_homo_poly]);
+  rw[ring_homo_monoid_homo_poly]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More Ring Homomorphism Theorems                                           *)
@@ -1532,10 +1574,11 @@ val ring_homo_ring_homo_poly = store_thm(
    = (|1|_) >>_ 1              by ring_homo_poly_one_alt
    = X_                        by notation
 *)
-val ring_homo_poly_X = store_thm(
-  "ring_homo_poly_X",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> (MAP f X = X_)``,
-  metis_tac[ring_homo_poly_shift, ring_homo_poly_one_alt]);
+Theorem ring_homo_poly_X:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> (MAP f X = X_)
+Proof
+  metis_tac[ring_homo_poly_shift, ring_homo_poly_one_alt]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !c:num. 0 < c /\ c < char r_ ==> (MAP f |c| = |c|_) *)
 (* Proof:
@@ -1547,13 +1590,14 @@ val ring_homo_poly_X = store_thm(
    = [##_ #1_ c]             by ring_homo_num
    = |c|_                    by poly_ring_sum_c, ##_ #1_ c <> #0_
 *)
-val ring_homo_poly_sum_num = store_thm(
-  "ring_homo_poly_sum_num",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !c:num. 0 < c /\ c < char r_ ==> (MAP f |c| = |c|_)``,
+Theorem ring_homo_poly_sum_num:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !c:num. 0 < c /\ c < char r_ ==> (MAP f |c| = |c|_)
+Proof
   rpt strip_tac >>
   `##c <> #0 /\ ##_ #1_ c <> #0_` by metis_tac[ring_homo_sum_num_property] >>
-  rw[ring_homo_num, poly_ring_sum_c]);
+  rw[ring_homo_num, poly_ring_sum_c]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !p. weak p /\ (lead p = #1) ==> poly_ p_ *)
 (* Proof:
@@ -1564,11 +1608,12 @@ val ring_homo_poly_sum_num = store_thm(
         <> #0_                   by given
    Hence poly_ p_                by poly_nonzero_lead_nonzero
 *)
-val ring_homo_weak_monic_poly = store_thm(
-  "ring_homo_weak_monic_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !p. weak p /\ (lead p = #1) ==> poly_ p_``,
-  metis_tac[ring_homo_weak, ring_homo_poly_lead, ring_homo_one, poly_nonzero_lead_nonzero]);
+Theorem ring_homo_weak_monic_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !p. weak p /\ (lead p = #1) ==> poly_ p_
+Proof
+  metis_tac[ring_homo_weak, ring_homo_poly_lead, ring_homo_one, poly_nonzero_lead_nonzero]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !p. monic p ==> monic_ p_ *)
 (* Proof:
@@ -1581,12 +1626,13 @@ val ring_homo_weak_monic_poly = store_thm(
        = f #1               by given
        = #1_                by ring_homo_one
 *)
-val ring_homo_monic_monic = store_thm(
-  "ring_homo_monic_monic",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !p. monic p ==> poly_monic r_ p_``,
+Theorem ring_homo_monic_monic:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !p. monic p ==> poly_monic r_ p_
+Proof
   rw[poly_monic_def] >-
   metis_tac[ring_homo_weak_monic_poly, poly_is_weak] >>
-  metis_tac[ring_homo_poly_lead, ring_homo_one]);
+  metis_tac[ring_homo_poly_lead, ring_homo_one]
+QED
 
 (* Theorem: !p. monic p ==> !n. monic_ (MAP f (p ** n)) *)
 (* Proof:
@@ -1594,11 +1640,12 @@ val ring_homo_monic_monic = store_thm(
      ==> monic (p ** n)                     by poly_monic_exp_monic
      ==> monic_ (MAP f (p ** n))            by ring_homo_monic_monic
 *)
-val ring_homo_monic_exp_monic = store_thm(
-  "ring_homo_monic_exp_monic",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !p. monic p ==> !n. monic_ (MAP f (p ** n))``,
-  metis_tac[ring_homo_monic_monic, poly_monic_exp_monic]);
+Theorem ring_homo_monic_exp_monic:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !p. monic p ==> !n. monic_ (MAP f (p ** n))
+Proof
+  metis_tac[ring_homo_monic_monic, poly_monic_exp_monic]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !p. monic p ==> !n. MAP f (p ** n) = p_ **_ n *)
 (* Proof:
@@ -1609,14 +1656,15 @@ val ring_homo_monic_exp_monic = store_thm(
        = chop_ (MAP f (p ** n))             by poly_chop_poly
        = p_ **_ n                           by ring_homo_poly_exp_chop
 *)
-val ring_homo_monic_poly_exp = store_thm(
-  "ring_homo_monic_poly_exp",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !p. monic p ==> !n. MAP f (p ** n) = p_ **_ n``,
+Theorem ring_homo_monic_poly_exp:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !p. monic p ==> !n. MAP f (p ** n) = p_ **_ n
+Proof
   rpt strip_tac >>
   `monic_ (MAP f (p ** n))` by rw[ring_homo_monic_exp_monic] >>
   `poly p /\ poly_ (MAP f (p ** n))` by rw[] >>
-  metis_tac[ring_homo_poly_exp_chop, poly_chop_poly]);
+  metis_tac[ring_homo_poly_exp_chop, poly_chop_poly]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !c. 0 < c /\ c < char r_ ==> poly_ (MAP f |c|) *)
 (* Proof:
@@ -1629,35 +1677,38 @@ val ring_homo_monic_poly_exp = store_thm(
   Since f (##c) IN R_            by ring_homo_element
   Thus poly_ [f (##c)]           by poly_nonzero_element_poly
 *)
-val ring_homo_poly_sum_num_poly = store_thm(
-  "ring_homo_poly_sum_num_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !c. 0 < c /\ c < char r_ ==> poly_ (MAP f |c|)``,
+Theorem ring_homo_poly_sum_num_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !c. 0 < c /\ c < char r_ ==> poly_ (MAP f |c|)
+Proof
   rpt strip_tac >>
   `##c <> #0 /\ f (##c) <> #0_` by metis_tac[ring_homo_num_nonzero] >>
   `MAP f |c| = [f (##c)]` by rw[poly_ring_sum_c] >>
   `f (##c) IN R_` by metis_tac[ring_homo_element, ring_num_element] >>
-  rw[poly_nonzero_element_poly]);
+  rw[poly_nonzero_element_poly]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. monic_ (MAP f (X + |c|)) *)
 (* Proof:
    Note monic (X + |c|)            by poly_monic_X_add_c
    Thus monic_ (MAP f (X + |c|))   by ring_homo_monic_monic
 *)
-val ring_homo_X_add_c_monic = store_thm(
-  "ring_homo_X_add_c_monic",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. monic_ (MAP f (X + |c|))``,
-  metis_tac[poly_monic_X_add_c, ring_homo_monic_monic]);
+Theorem ring_homo_X_add_c_monic:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. monic_ (MAP f (X + |c|))
+Proof
+  metis_tac[poly_monic_X_add_c, ring_homo_monic_monic]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. poly_ (MAP f (X + |c|)) *)
 (* Proof:
    Since monic_ (MAP f (X + |c|))    by ring_homo_X_add_c_monic
      ==> poly_ (MAP (X + |c|))       by poly_monic_poly
 *)
-val ring_homo_X_add_c_poly = store_thm(
-  "ring_homo_X_add_c_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. poly_ (MAP f (X + |c|))``,
-  rw[ring_homo_X_add_c_monic]);
+Theorem ring_homo_X_add_c_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. poly_ (MAP f (X + |c|))
+Proof
+  rw[ring_homo_X_add_c_monic]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. MAP f (X + |c|) = (MAP f X) +_ (MAP f |c|) *)
 (* Proof:
@@ -1666,25 +1717,27 @@ val ring_homo_X_add_c_poly = store_thm(
    = chop_ (MAP f (X + |c|))         by poly_chop_poly
    = (MAP f X) +_ (MAP f |c|)        by ring_homo_poly_add_chop
 *)
-val ring_homo_poly_X_add_c = store_thm(
-  "ring_homo_poly_X_add_c",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !c:num. MAP f (X + |c|) = (MAP f X) +_ (MAP f |c|)``,
+Theorem ring_homo_poly_X_add_c:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !c:num. MAP f (X + |c|) = (MAP f X) +_ (MAP f |c|)
+Proof
   rpt strip_tac >>
   `poly X /\ poly |c|` by rw[] >>
   `poly_ (MAP f (X + |c|))` by rw[ring_homo_X_add_c_poly] >>
-  metis_tac[poly_chop_poly, ring_homo_poly_add_chop]);
+  metis_tac[poly_chop_poly, ring_homo_poly_add_chop]
+QED
 
 (* Theorem: 0 < n ==> !c. monic_ (MAP f (X ** n + |c|)) *)
 (* Proof:
    Note monic (X ** n + |c|)            by poly_monic_X_exp_n_add_c, 0 < n.
    Thus monic_ (MAP f (X ** n - |c|))   by ring_homo_monic_monic
 *)
-val ring_homo_X_exp_n_add_c_monic = store_thm(
-  "ring_homo_X_exp_n_add_c_monic",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !n. 0 < n ==> !c:num. monic_ (MAP f (X ** n + |c|))``,
-  metis_tac[poly_monic_X_exp_n_add_c, ring_homo_monic_monic]);
+Theorem ring_homo_X_exp_n_add_c_monic:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n. 0 < n ==> !c:num. monic_ (MAP f (X ** n + |c|))
+Proof
+  metis_tac[poly_monic_X_exp_n_add_c, ring_homo_monic_monic]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
             !n c. 0 < n ==> poly_ (MAP f (X ** n + |c|)) *)
@@ -1693,11 +1746,12 @@ val ring_homo_X_exp_n_add_c_monic = store_thm(
          monic_ (MAP f (X ** n + |c|))   by ring_homo_X_exp_n_add_c_monic
    Hence poly_ (MAP f (X ** n + |c|))    by poly_monic_poly
 *)
-val ring_homo_X_exp_n_add_c_poly = store_thm(
-  "ring_homo_X_exp_n_add_c_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !n. 0 < n ==> !c:num. poly_ (MAP f (X ** n + |c|))``,
-  rw[ring_homo_X_exp_n_add_c_monic]);
+Theorem ring_homo_X_exp_n_add_c_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n. 0 < n ==> !c:num. poly_ (MAP f (X ** n + |c|))
+Proof
+  rw[ring_homo_X_exp_n_add_c_monic]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
             !c n. 0 < n ==> (MAP f (X ** n + |c|) = MAP f X **_ n +_ MAP f |c|) *)
@@ -1709,36 +1763,39 @@ val ring_homo_X_exp_n_add_c_poly = store_thm(
    = (MAP f (X ** n)) +_ (MAP f |c|)      by ring_homo_poly_add_chop
    = (MAP f X) **_ n +_ (MAP f |c|)       by ring_homo_monic_poly_exp
 *)
-val ring_homo_poly_X_exp_n_add_c = store_thm(
-  "ring_homo_poly_X_exp_n_add_c",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !n c:num. 0 < n ==> (MAP f (X ** n + |c|) = MAP f X **_ n +_ MAP f |c|)``,
+Theorem ring_homo_poly_X_exp_n_add_c:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n c:num. 0 < n ==> (MAP f (X ** n + |c|) = MAP f X **_ n +_ MAP f |c|)
+Proof
   rpt strip_tac >>
   `monic X` by rw[] >>
   `poly_ (MAP f (X ** n + |c|))` by rw[ring_homo_X_exp_n_add_c_poly] >>
   `MAP f (X ** n + |c|) = chop_ (MAP f (X ** n + |c|))` by rw[poly_chop_poly] >>
   `_ = (MAP f (X ** n)) +_ (MAP f |c|)` by rw[ring_homo_poly_add_chop] >>
-  metis_tac[ring_homo_monic_poly_exp]);
+  metis_tac[ring_homo_monic_poly_exp]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. monic_ (MAP f (X - |c|)) *)
 (* Proof:
    Note monic (X - |c|)            by poly_monic_X_sub_c
    Thus monic_ (MAP f (X + |c|))   by ring_homo_monic_monic
 *)
-val ring_homo_X_sub_c_monic = store_thm(
-  "ring_homo_X_sub_c_monic",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. monic_ (MAP f (X - |c|))``,
-  metis_tac[poly_monic_X_sub_c, ring_homo_monic_monic]);
+Theorem ring_homo_X_sub_c_monic:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. monic_ (MAP f (X - |c|))
+Proof
+  metis_tac[poly_monic_X_sub_c, ring_homo_monic_monic]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !c. poly_ (MAP f (X - |c|)) *)
 (* Proof:
    Since monic_ (MAP f (X - |c|))    by ring_homo_X_sub_c_monic
      ==> poly_ (MAP (X - |c|))       by poly_monic_poly
 *)
-val ring_homo_X_sub_c_poly = store_thm(
-  "ring_homo_X_sub_c_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. poly_ (MAP f (X - |c|))``,
-  rw[ring_homo_X_sub_c_monic]);
+Theorem ring_homo_X_sub_c_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !c:num. poly_ (MAP f (X - |c|))
+Proof
+  rw[ring_homo_X_sub_c_monic]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
             !c. 0 < c /\ c < char r_ ==> (MAP f (X - |c|) = (MAP f X) -_ (MAP f |c|)) *)
@@ -1750,26 +1807,28 @@ val ring_homo_X_sub_c_poly = store_thm(
    = (MAP f X) -_ chop_ (MAP f |c|)  by ring_homo_poly_sub_chop
    = (MAP f X) -_ (MAP f |c|)        by poly_chop_poly
 *)
-val ring_homo_poly_X_sub_c = store_thm(
-  "ring_homo_poly_X_sub_c",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !c:num. 0 < c /\ c < char r_ ==> (MAP f (X - |c|) = (MAP f X) -_ (MAP f |c|))``,
+Theorem ring_homo_poly_X_sub_c:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !c:num. 0 < c /\ c < char r_ ==> (MAP f (X - |c|) = (MAP f X) -_ (MAP f |c|))
+Proof
   rpt strip_tac >>
   `poly X /\ poly |c|` by rw[] >>
   `poly_ (MAP f (X - |c|))` by rw[ring_homo_X_sub_c_poly] >>
   `poly_ (MAP f |c|)` by rw[ring_homo_poly_sum_num_poly] >>
-  metis_tac[poly_chop_poly, ring_homo_poly_sub_chop]);
+  metis_tac[poly_chop_poly, ring_homo_poly_sub_chop]
+QED
 
 (* Theorem: 0 < n ==> !c. monic_ (MAP f (X ** n - |c|)) *)
 (* Proof:
    Note monic (X ** n - |c|)            by poly_monic_X_exp_n_sub_c, 0 < n.
    Thus monic_ (MAP f (X ** n - |c|))   by ring_homo_monic_monic
 *)
-val ring_homo_X_exp_n_sub_c_monic = store_thm(
-  "ring_homo_X_exp_n_sub_c_monic",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !n. 0 < n ==> !c:num. monic_ (MAP f (X ** n - |c|))``,
-  metis_tac[poly_monic_X_exp_n_sub_c, ring_homo_monic_monic]);
+Theorem ring_homo_X_exp_n_sub_c_monic:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n. 0 < n ==> !c:num. monic_ (MAP f (X ** n - |c|))
+Proof
+  metis_tac[poly_monic_X_exp_n_sub_c, ring_homo_monic_monic]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
             !n c. 0 < n ==> poly_ (MAP f (X ** n - |c|)) *)
@@ -1778,11 +1837,12 @@ val ring_homo_X_exp_n_sub_c_monic = store_thm(
          monic_ (MAP f (X ** n - |c|))   by ring_homo_X_exp_n_sub_c_monic
    Hence poly_ (MAP f (X ** n - |c|))    by poly_monic_poly
 *)
-val ring_homo_X_exp_n_sub_c_poly = store_thm(
-  "ring_homo_X_exp_n_sub_c_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !n. 0 < n ==> !c:num. poly_ (MAP f (X ** n - |c|))``,
-  rw[ring_homo_X_exp_n_sub_c_monic]);
+Theorem ring_homo_X_exp_n_sub_c_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n. 0 < n ==> !c:num. poly_ (MAP f (X ** n - |c|))
+Proof
+  rw[ring_homo_X_exp_n_sub_c_monic]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
             !c. 0 < c /\ c < char r_ ==> !n. 0 < n ==> (MAP f (X ** n - |c|) = MAP f X **_ n -_ MAP f |c|) *)
@@ -1800,17 +1860,18 @@ val ring_homo_X_exp_n_sub_c_poly = store_thm(
      and poly (X ** n)                        by poly_X, poly_exp_poly
     Hence result is true                      by ring_homo_poly_sub_chop
 *)
-val ring_homo_poly_X_exp_n_sub_c = store_thm(
-  "ring_homo_poly_X_exp_n_sub_c",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !n. 0 < n ==> !c. 0 < c /\ c < char r_ ==> (MAP f (X ** n - |c|) = MAP f X **_ n -_ MAP f |c|)``,
+Theorem ring_homo_poly_X_exp_n_sub_c:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n. 0 < n ==> !c. 0 < c /\ c < char r_ ==> (MAP f (X ** n - |c|) = MAP f X **_ n -_ MAP f |c|)
+Proof
   rpt strip_tac >>
   `##c <> #0 /\ ##_ #1_ c <> #0_` by metis_tac[ring_homo_sum_num_property] >>
   `MAP f (X ** n - |c|) = (MAP f (X ** n)) -_ (MAP f |c|)` suffices_by metis_tac[ring_homo_monic_poly_exp, poly_monic_X] >>
   `poly_ (MAP f |c|)` by rw[ring_homo_poly_sum_num_poly] >>
   `poly_ (MAP f (X ** n - |c|))` by rw[ring_homo_X_exp_n_sub_c_poly] >>
   `poly |c| /\ poly (X ** n)` by rw[] >>
-  metis_tac[ring_homo_poly_sub_chop, poly_chop_poly]);
+  metis_tac[ring_homo_poly_sub_chop, poly_chop_poly]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
             !n. poly_ (MAP f (unity n)) *)
@@ -1824,14 +1885,15 @@ val ring_homo_poly_X_exp_n_sub_c = store_thm(
    Note |1| = ### 1              by poly_ring_sum_1
    Thus poly_ (MAP f (unity n))  by ring_homo_X_exp_n_sub_c_poly
 *)
-val ring_homo_unity_poly = store_thm(
-  "ring_homo_unity_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. poly_ (MAP f (unity n))``,
+Theorem ring_homo_unity_poly:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. poly_ (MAP f (unity n))
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[poly_unity_0, ring_homo_poly_zero] >>
   `0 < n` by decide_tac >>
-  metis_tac[ring_homo_X_exp_n_sub_c_poly, poly_ring_sum_1]);
+  metis_tac[ring_homo_X_exp_n_sub_c_poly, poly_ring_sum_1]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !n. MAP f (unity n) = MAP f X **_ n -_ MAP f |1| *)
 (* Proof:
@@ -1847,16 +1909,17 @@ val ring_homo_unity_poly = store_thm(
      and poly (X ** n)                        by poly_X, poly_exp_poly
     Hence the result is true                  by ring_homo_poly_sub_chop
 *)
-val ring_homo_poly_unity = store_thm(
-  "ring_homo_poly_unity",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !n. MAP f (unity n) = MAP f X **_ n -_ MAP f |1|``,
+Theorem ring_homo_poly_unity:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !n. MAP f (unity n) = MAP f X **_ n -_ MAP f |1|
+Proof
   rpt strip_tac >>
   `MAP f (unity n) = (MAP f (X ** n)) -_ (MAP f |1|)` suffices_by metis_tac[ring_homo_monic_poly_exp, poly_monic_X] >>
   `poly_ (MAP f |1|)` by metis_tac[ring_homo_poly_one_alt, poly_one_poly] >>
   `poly_ (MAP f (unity n))` by rw[ring_homo_unity_poly] >>
   `poly |1| /\ poly (X ** n)` by rw[] >>
-  metis_tac[ring_homo_poly_sub_chop, poly_chop_poly]);
+  metis_tac[ring_homo_poly_sub_chop, poly_chop_poly]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
             !p q. poly p /\ poly q ==> (chop_ (MAP f (peval p q)) = peval_ p_ q_) *)
@@ -1896,10 +1959,10 @@ val ring_homo_poly_unity = store_thm(
          = peval_ (MAP f (h::p)) q_         by MAP
          = RHS
 *)
-val ring_homo_peval_chop = store_thm(
-  "ring_homo_peval_chop",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !p q. poly p /\ poly q ==> (chop_ (MAP f (peval p q)) = peval_ p_ q_)``,
+Theorem ring_homo_peval_chop:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !p q. poly p /\ poly q ==> (chop_ (MAP f (peval p q)) = peval_ p_ q_)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -1922,7 +1985,8 @@ val ring_homo_peval_chop = store_thm(
   `_ = ((f h) *_ |1|_) +_ ((peval_ p_ q_) *_ q_)` by rw_tac std_ss[poly_add_def] >>
   `_ = peval_ ((f h)::p_) q_` by rw_tac std_ss[poly_peval_cons] >>
   `_ = peval_ (MAP f (h::p)) q_` by rw_tac std_ss[MAP] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==> !p. poly p /\ f (lead p) <> #0_ ==> poly_ p_ /\ p_ <> |0|_ *)
 (* Proof:
@@ -1938,15 +2002,16 @@ val ring_homo_peval_chop = store_thm(
        <> #0_               by given
     This is true            by poly_nonzero_lead_nonzero
 *)
-val ring_homo_poly_nonzero = store_thm(
-  "ring_homo_poly_nonzero",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+Theorem ring_homo_poly_nonzero:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
    !p. poly p /\ f (lead p) <> #0_ ==>
-       poly_ p_ /\ p_ <> |0|_``,
+       poly_ p_ /\ p_ <> |0|_
+Proof
   ntac 6 strip_tac >>
   Cases_on `p = |0|` >-
   metis_tac[poly_lead_zero, ring_homo_zero] >>
-  metis_tac[ring_homo_weak, poly_is_weak, ring_homo_poly_lead, poly_nonzero_lead_nonzero]);
+  metis_tac[ring_homo_weak, poly_is_weak, ring_homo_poly_lead, poly_nonzero_lead_nonzero]
+QED
 
 (* Theorem: (r ~r~ r_) f ==> !p. poly p /\ f (lead p) <> #0_ ==> (MAP f (-p) = $-_ p_) *)
 (* Proof:
@@ -1969,10 +2034,10 @@ val ring_homo_poly_nonzero = store_thm(
    = chop_ ($-_ p_)                   by poly_chop_negate
    = $-_ p_                           by poly_chop_poly
 *)
-val ring_homo_poly_negate = store_thm(
-  "ring_homo_poly_negate",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p. poly p /\ f (lead p) <> #0_ ==> (MAP f (-p) = $-_ p_)``,
+Theorem ring_homo_poly_negate:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p. poly p /\ f (lead p) <> #0_ ==> (MAP f (-p) = $-_ p_)
+Proof
   rpt strip_tac >>
   `poly_ p_` by metis_tac[ring_homo_poly_nonzero] >>
   `poly_ ($-_ p_)` by rw[] >>
@@ -1982,7 +2047,8 @@ val ring_homo_poly_negate = store_thm(
   `_ = $-_ (f (lead p))` by rw[ring_homo_neg] >>
   `$-_ (f (lead p)) <> #0_` by rw[ring_neg_eq_zero] >>
   `poly_ (MAP f (-p))` by metis_tac[ring_homo_poly_nonzero, poly_neg_poly] >>
-  metis_tac[ring_homo_poly_neg_chop, poly_chop_negate, poly_chop_poly]);
+  metis_tac[ring_homo_poly_neg_chop, poly_chop_negate, poly_chop_poly]
+QED
 
 (* Theorem: (r ~r~ r_) f ==>
            !p q. poly p /\ poly q /\ f (lead q) <> #0_ ==> (chop_ (MAP f (p - q)) = p_ -_ q_) *)
@@ -1993,11 +2059,12 @@ val ring_homo_poly_negate = store_thm(
    = p_ -_ (chop_ q_)        by ring_homo_poly_sub_chop
    = p_ -_ q_                by poly_chop_poly
 *)
-val ring_homo_poly_sub_chop_alt = store_thm(
-  "ring_homo_poly_sub_chop_alt",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p q. poly p /\ poly q /\ f (lead q) <> #0_ ==> (chop_ (MAP f (p - q)) = p_ -_ q_)``,
-  metis_tac[ring_homo_poly_nonzero, ring_homo_poly_sub_chop, poly_chop_poly]);
+Theorem ring_homo_poly_sub_chop_alt:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p q. poly p /\ poly q /\ f (lead q) <> #0_ ==> (chop_ (MAP f (p - q)) = p_ -_ q_)
+Proof
+  metis_tac[ring_homo_poly_nonzero, ring_homo_poly_sub_chop, poly_chop_poly]
+QED
 
 (* Theorem: (r ~r~ r_) f ==>
            !p q. poly p /\ poly q ==> (chop_ (MAP f (p - q)) = (chop_ p_) -_ (chop_ q_)) *)
@@ -2012,15 +2079,16 @@ val ring_homo_poly_sub_chop_alt = store_thm(
    = (chop_ p_) +_ ($-_ (chop_ q_))                by poly_add_def
    = (chop_ p_) -_ (chop_ q_)                      by poly_sub_def
 *)
-val ring_homo_sub_chop_chop = store_thm(
-  "ring_homo_sub_chop_chop",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
-   !p q. poly p /\ poly q ==> (chop_ (MAP f (p - q)) = (chop_ p_) -_ (chop_ q_))``,
+Theorem ring_homo_sub_chop_chop:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f ==>
+   !p q. poly p /\ poly q ==> (chop_ (MAP f (p - q)) = (chop_ p_) -_ (chop_ q_))
+Proof
   rpt strip_tac >>
   `poly (-q)` by rw[] >>
   `weak_ p_ /\ weak_ (MAP f (-q))` by metis_tac[ring_homo_weak, poly_is_weak] >>
   `chop_ (MAP f (p - q)) = chop_ (MAP f (p + -q))` by rw[poly_sub_def] >>
-  rw_tac std_ss[ring_homo_poly_add_chop, poly_chop_add_chop, ring_homo_poly_neg_chop, poly_add_def, poly_sub_def]);
+  rw_tac std_ss[ring_homo_poly_add_chop, poly_chop_add_chop, ring_homo_poly_neg_chop, poly_add_def, poly_sub_def]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==>
             !p. ulead p ==> poly_ p_ /\ (unit_ (lead_ p_)) *)
@@ -2030,11 +2098,12 @@ val ring_homo_sub_chop_chop = store_thm(
     and unit (lead p) ==> unit_ (lead_ p_)     by ring_homo_poly_lead, ring_homo_unit
    Thus all assertions are true.
 *)
-val ring_homo_ulead = store_thm(
-  "ring_homo_ulead",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p. ulead p ==> poly_ p_ /\ (unit_ (lead_ p_))``,
-  prove_tac[ring_homo_poly, ring_homo_poly_lead, ring_homo_unit]);
+Theorem ring_homo_ulead:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p. ulead p ==> poly_ p_ /\ (unit_ (lead_ p_))
+Proof
+  prove_tac[ring_homo_poly, ring_homo_poly_lead, ring_homo_unit]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==>
             !p. pmonic p ==> poly_ p_ /\ (unit_ (lead_ p_)) /\ 0 < deg_ p_ *)
@@ -2046,11 +2115,12 @@ val ring_homo_ulead = store_thm(
     and unit (lead p) ==> unit_ (lead_ p_)     by ring_homo_poly_lead, ring_homo_unit
    Thus all assertions are true.
 *)
-val ring_homo_pmonic = store_thm(
-  "ring_homo_pmonic",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p. pmonic p ==> poly_ p_ /\ (unit_ (lead_ p_)) /\ 0 < deg_ p_``,
-  prove_tac[ring_homo_poly_deg, ring_homo_poly, ring_homo_poly_lead, ring_homo_unit]);
+Theorem ring_homo_pmonic:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p. pmonic p ==> poly_ p_ /\ (unit_ (lead_ p_)) /\ 0 < deg_ p_
+Proof
+  prove_tac[ring_homo_poly_deg, ring_homo_poly, ring_homo_poly_lead, ring_homo_unit]
+QED
 
 (* The following similar theorems do not rely on INJ f R R_, just #1_ <> #0_ *)
 
@@ -2064,14 +2134,15 @@ val ring_homo_pmonic = store_thm(
      and f (lead p) = lead_ p_                  by ring_homo_poly_lead
    All assertions are true.
 *)
-val ring_homo_poly_ulead = store_thm(
-  "ring_homo_poly_ulead",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !p. ulead p ==> poly_ p_ /\ unit_ (lead_ p_)``,
+Theorem ring_homo_poly_ulead:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !p. ulead p ==> poly_ p_ /\ unit_ (lead_ p_)
+Proof
   ntac 6 strip_tac >>
   `unit_ (f (lead p))` by metis_tac[ring_homo_unit] >>
   `f (lead p) <> #0_` by rw[ring_unit_nonzero] >>
-  prove_tac[ring_homo_poly_nonzero, ring_homo_poly_lead]);
+  prove_tac[ring_homo_poly_nonzero, ring_homo_poly_lead]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ #1_ <> #0_ ==>
             !p. pmonic p ==> poly_ p_ /\ unit_ (lead_ p_) /\ 0 < deg_ p_ *)
@@ -2085,14 +2156,15 @@ val ring_homo_poly_ulead = store_thm(
      and deg_ p_ = deg p                       by poly_deg_map
    All assertions are true.
 *)
-val ring_homo_poly_pmonic = store_thm(
-  "ring_homo_poly_pmonic",
-  ``!(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
-   !p. pmonic p ==> poly_ p_ /\ unit_ (lead_ p_) /\ 0 < deg_ p_``,
+Theorem ring_homo_poly_pmonic:
+    !(r: 'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ #1_ <> #0_ ==>
+   !p. pmonic p ==> poly_ p_ /\ unit_ (lead_ p_) /\ 0 < deg_ p_
+Proof
   ntac 6 strip_tac >>
   `unit_ (f (lead p))` by metis_tac[ring_homo_unit] >>
   `f (lead p) <> #0_` by rw[ring_unit_nonzero] >>
-  prove_tac[ring_homo_poly_nonzero, ring_homo_poly_lead, poly_deg_map]);
+  prove_tac[ring_homo_poly_nonzero, ring_homo_poly_lead, poly_deg_map]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ ulead q ==>
             (MAP f (p / q) = p_ /_ q_) /\ (MAP f (p % q) = p_ %_ q_) *)
@@ -2123,10 +2195,10 @@ val ring_homo_poly_pmonic = store_thm(
     Now deg_ t_ < deg_ q_                by ring_homo_poly_deg, deg t < deg q
    Thus s_ = p_ /_ q_ /\ t_ = p_ %_ q_   by poly_div_mod_eqn, pmonic_ q_
 *)
-val ring_homo_poly_div_mod = store_thm(
-  "ring_homo_poly_div_mod",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ ulead q ==>
-    (MAP f (p / q) = p_ /_ q_) /\ (MAP f (p % q) = p_ %_ q_)``,
+Theorem ring_homo_poly_div_mod:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ ulead q ==>
+    (MAP f (p / q) = p_ /_ q_) /\ (MAP f (p % q) = p_ %_ q_)
+Proof
   ntac 7 strip_tac >>
   qabbrev_tac `s = p / q` >>
   qabbrev_tac `t = p % q` >>
@@ -2146,7 +2218,8 @@ val ring_homo_poly_div_mod = store_thm(
     `_ = s_ *_ q_ +_ t_` by metis_tac[ring_homo_poly_mult] >>
     `deg_ t_ < deg_ q_` by metis_tac[ring_homo_poly_deg] >>
     metis_tac[poly_div_mod_eqn]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ pmonic q ==>
             (p_ = MAP f (p / q) *_ q_ +_ MAP f (p % q)) /\ (deg_ (MAP f (p % q)) < deg_ q_) *)
@@ -2161,10 +2234,10 @@ val ring_homo_poly_div_mod = store_thm(
    Note poly_ p_ /\ poly_ q_        by ring_homo_poly, INJ f R R_
    The result follows               by poly_division, Ring r_
 *)
-val ring_homo_poly_div_mod_eqn = store_thm(
-  "ring_homo_poly_div_mod_eqn",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ pmonic q ==>
-    (p_ = MAP f (p / q) *_ q_ +_ MAP f (p % q)) /\ (deg_ (MAP f (p % q)) < deg_ q_)``,
+Theorem ring_homo_poly_div_mod_eqn:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ pmonic q ==>
+    (p_ = MAP f (p / q) *_ q_ +_ MAP f (p % q)) /\ (deg_ (MAP f (p % q)) < deg_ q_)
+Proof
   ntac 7 strip_tac >>
   qabbrev_tac `s = p / q` >>
   qabbrev_tac `t = p % q` >>
@@ -2174,23 +2247,26 @@ val ring_homo_poly_div_mod_eqn = store_thm(
   `deg_ q_ = deg q` by rw[ring_homo_poly_deg] >>
   `0 < deg_ q_` by decide_tac >>
   `poly_ p_ /\ poly_ q_` by metis_tac[ring_homo_poly] >>
-  metis_tac[poly_division]);
+  metis_tac[poly_division]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ ulead q ==> (MAP f (p / q) = p_ /_ q_) *)
 (* Proof: by ring_homo_poly_div_mod *)
-val ring_homo_poly_div = store_thm(
-  "ring_homo_poly_div",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p q. poly p /\ ulead q ==> (MAP f (p / q) = p_ /_ q_)``,
-  rw_tac std_ss[ring_homo_poly_div_mod]);
+Theorem ring_homo_poly_div:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p q. poly p /\ ulead q ==> (MAP f (p / q) = p_ /_ q_)
+Proof
+  rw_tac std_ss[ring_homo_poly_div_mod]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p q. poly p /\ ulead q ==> (MAP f (p / q) = p_ %_ q_) *)
 (* Proof: by ring_homo_poly_div_mod *)
-val ring_homo_poly_mod = store_thm(
-  "ring_homo_poly_mod",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p q. poly p /\ ulead q ==> (MAP f (p % q) = p_ %_ q_)``,
-  rw_tac std_ss[ring_homo_poly_div_mod]);
+Theorem ring_homo_poly_mod:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p q. poly p /\ ulead q ==> (MAP f (p % q) = p_ %_ q_)
+Proof
+  rw_tac std_ss[ring_homo_poly_div_mod]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphism between Polynomial Modulo Rings                              *)
@@ -2207,15 +2283,16 @@ val ring_homo_poly_mod = store_thm(
     and deg_ p_ = deg p              by ring_homo_poly_deg
    Thus both assertions are true.
 *)
-val ring_homo_poly_mod_ring_element = store_thm(
-  "ring_homo_poly_mod_ring_element",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
-   !p x. x IN (PolyModRing r p).carrier ==> MAP f x IN (PolyModRing r_ p_).carrier``,
+Theorem ring_homo_poly_mod_ring_element:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==>
+   !p x. x IN (PolyModRing r p).carrier ==> MAP f x IN (PolyModRing r_ p_).carrier
+Proof
   rpt strip_tac >>
   fs[poly_mod_ring_element] >>
   `deg_ (MAP f x) = deg x` by rw[ring_homo_poly_deg] >>
   `deg_ p_ = deg p` by rw[ring_homo_poly_deg] >>
-  metis_tac[ring_homo_poly]);
+  metis_tac[ring_homo_poly]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. ulead p ==>
             GroupHomo (MAP f) (PolyModRing r p).sum (PolyModRing r_ p_).sum *)
@@ -2252,10 +2329,10 @@ val ring_homo_poly_mod_ring_element = store_thm(
           = (x_ +_ y_) %_ p_                    by ring_homo_poly_add, INJ f R R_
           = (PolyModRing r_ p_).sum.op x_ y_    by poly_mod_ring_property
 *)
-val ring_homo_poly_mod_ring_sum_homo = store_thm(
-  "ring_homo_poly_mod_ring_sum_homo",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. ulead p ==>
-      GroupHomo (MAP f) (PolyModRing r p).sum (PolyModRing r_ p_).sum``,
+Theorem ring_homo_poly_mod_ring_sum_homo:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. ulead p ==>
+      GroupHomo (MAP f) (PolyModRing r p).sum (PolyModRing r_ p_).sum
+Proof
   rpt strip_tac >>
   `ulead_ p_` by metis_tac[ring_homo_poly, ring_homo_poly_lead, ring_homo_unit] >>
   `deg_ p_ = deg p` by rw[ring_homo_poly_deg] >>
@@ -2279,7 +2356,8 @@ val ring_homo_poly_mod_ring_sum_homo = store_thm(
     `MAP f ((x + y) % p) = (MAP f (x + y)) %_ p_` by rw[ring_homo_poly_mod] >>
     `_ = (x_ +_ y_) %_ p_` by metis_tac[ring_homo_poly_add] >>
     rw[poly_mod_ring_property, Abbr`x_`, Abbr`y_`]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. ulead p ==>
             MonoidHomo (MAP f) (PolyModRing r p).prod (PolyModRing r_ p_).prod *)
@@ -2318,10 +2396,10 @@ val ring_homo_poly_mod_ring_sum_homo = store_thm(
           = (PolyModRing r_ p_).prod.op x_ y_   by poly_mod_ring_property
    (4) MAP f |1| = |1|_, true                   by ring_homo_poly_one, INJ f R R_
 *)
-val ring_homo_poly_mod_ring_prod_homo = store_thm(
-  "ring_homo_poly_mod_ring_prod_homo",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. ulead p ==>
-    MonoidHomo (MAP f) (PolyModRing r p).prod (PolyModRing r_ p_).prod``,
+Theorem ring_homo_poly_mod_ring_prod_homo:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. ulead p ==>
+    MonoidHomo (MAP f) (PolyModRing r p).prod (PolyModRing r_ p_).prod
+Proof
   rpt strip_tac >>
   `ulead_ p_` by metis_tac[ring_homo_poly, ring_homo_poly_lead, ring_homo_unit] >>
   `deg_ p_ = deg p` by rw[ring_homo_poly_deg] >>
@@ -2347,7 +2425,8 @@ val ring_homo_poly_mod_ring_prod_homo = store_thm(
     `_ = (x_ *_ y_) %_ p_` by metis_tac[ring_homo_poly_mult] >>
     rw[poly_mod_ring_property, Abbr`x_`, Abbr`y_`]) >>
     rw[ring_homo_poly_one]
-  ]);
+  ]
+QED
 
 (* Theorem: (r ~r~ r_) f /\ INJ f R R_ ==> !p. ulead p ==>
             (((PolyModRing r p)) ~r~ ((PolyModRing r_ p_))) (MAP f) *)
@@ -2366,10 +2445,10 @@ val ring_homo_poly_mod_ring_prod_homo = store_thm(
        (3) MonoidHomo (MAP f) (PolyModRing r p).prod (PolyModRing r_ p_).prod
            This is true                  by ring_homo_poly_mod_ring_prod_homo, INJ f R R_
 *)
-val ring_homo_poly_mod_ring_homo = store_thm(
-  "ring_homo_poly_mod_ring_homo",
-  ``!(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. ulead p ==>
-            (((PolyModRing r p)) ~r~ ((PolyModRing r_ p_))) (MAP f)``,
+Theorem ring_homo_poly_mod_ring_homo:
+    !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f /\ INJ f R R_ ==> !p. ulead p ==>
+            (((PolyModRing r p)) ~r~ ((PolyModRing r_ p_))) (MAP f)
+Proof
   rpt strip_tac >-
   rw[poly_mod_ring_ring] >-
  (`poly_ p_ /\ (unit_ (lead_ p_))` by metis_tac[ring_homo_ulead] >>
@@ -2377,7 +2456,8 @@ val ring_homo_poly_mod_ring_homo = store_thm(
   rw_tac std_ss[RingHomo_def] >-
   metis_tac[ring_homo_poly_mod_ring_element] >-
   rw[ring_homo_poly_mod_ring_sum_homo] >>
-  rw[ring_homo_poly_mod_ring_prod_homo]);
+  rw[ring_homo_poly_mod_ring_prod_homo]
+QED
 
 (* Theorem: pmonic z /\ pmonic p /\ z pdivides p ==>
             RingHomo (\x. x % z) (PolyModRing r p) (PolyModRing r z) *)
@@ -2394,16 +2474,17 @@ val ring_homo_poly_mod_ring_homo = store_thm(
        = (x * x') % z               by poly_divides_mod_mod, z pdivides p
        = (x % z * x' % z) % z       by poly_mod_mult
 *)
-val poly_divides_poly_mod_ring_homo = store_thm(
-  "poly_divides_poly_mod_ring_homo",
-  ``!r:'a ring z p. Ring r /\ pmonic z /\ pmonic p /\ z pdivides p ==>
-   RingHomo (\x. x % z) (PolyModRing r p) (PolyModRing r z)``,
+Theorem poly_divides_poly_mod_ring_homo:
+    !r:'a ring z p. Ring r /\ pmonic z /\ pmonic p /\ z pdivides p ==>
+   RingHomo (\x. x % z) (PolyModRing r p) (PolyModRing r z)
+Proof
   rpt strip_tac >>
   `deg z <> 0 /\ deg p <> 0` by decide_tac >>
   `!x. poly x ==> deg (x % z) < deg z` by rw[poly_deg_mod_less] >>
   rw[RingHomo_def, GroupHomo_def, MonoidHomo_def, poly_mod_ring_property] >-
   rw[poly_divides_mod_mod, GSYM poly_mod_add] >>
-  rw[poly_divides_mod_mod, GSYM poly_mod_mult]);
+  rw[poly_divides_mod_mod, GSYM poly_mod_mult]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Isomorphism                                                          *)
@@ -2411,31 +2492,35 @@ val poly_divides_poly_mod_ring_homo = store_thm(
 
 (* Theorem: (r =r= r_) f ==> !p. zerop p ==> zerop_ p_ *)
 (* Proof: by RingIso_def, ring_homo_zero_poly *)
-val ring_iso_zero_poly = store_thm(
-  "ring_iso_zero_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. zerop p ==> zerop_ p_``,
-  metis_tac[RingIso_def, ring_homo_zero_poly]);
+Theorem ring_iso_zero_poly:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. zerop p ==> zerop_ p_
+Proof
+  metis_tac[RingIso_def, ring_homo_zero_poly]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. weak p ==> (zerop p <=> zerop_ p_) *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_eq_zero_poly *)
-val ring_iso_eq_zero_poly = store_thm(
-  "ring_iso_eq_zero_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. weak p ==> (zerop p <=> zerop_ p_)``,
-  rw[RingIso_def, BIJ_DEF, ring_homo_eq_zero_poly]);
+Theorem ring_iso_eq_zero_poly:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. weak p ==> (zerop p <=> zerop_ p_)
+Proof
+  rw[RingIso_def, BIJ_DEF, ring_homo_eq_zero_poly]
+QED
 
 (* Theorem: RingIso f r r_ ==> !p. weak p ==> weak_ p_ *)
 (* Proof: by RingIso_def, ring_homo_weak *)
-val ring_iso_weak = store_thm(
-  "ring_iso_weak",
-  ``!(r:'a ring) (r_:'b ring) f. RingIso f r r_ ==> !p. weak p ==> weak_ p_``,
-  metis_tac[RingIso_def, ring_homo_weak]);
+Theorem ring_iso_weak:
+    !(r:'a ring) (r_:'b ring) f. RingIso f r r_ ==> !p. weak p ==> weak_ p_
+Proof
+  metis_tac[RingIso_def, ring_homo_weak]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. poly p ==> poly_ p_ *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_poly *)
-val ring_iso_poly = store_thm(
-  "ring_iso_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. poly p ==> poly_ p_``,
-  metis_tac[RingIso_def, BIJ_DEF, ring_homo_poly]);
+Theorem ring_iso_poly:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. poly p ==> poly_ p_
+Proof
+  metis_tac[RingIso_def, BIJ_DEF, ring_homo_poly]
+QED
 
 (* Theorem: (p = |0|) <=> (p_ = |0|_) *)
 (* Proof: by ring_homo_eq_poly_zero *)
@@ -2449,52 +2534,59 @@ val ring_iso_poly_zero = save_thm("ring_iso_poly_zero", ring_homo_poly_zero);
 
 (* Theorem: (r =r= r_) f ==> (MAP f |1| = |1|_) *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_poly_one *)
-val ring_iso_poly_one = store_thm(
-  "ring_iso_poly_one",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (MAP f |1| = |1|_)``,
-  rw[RingIso_def, BIJ_DEF, ring_homo_poly_one]);
+Theorem ring_iso_poly_one:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (MAP f |1| = |1|_)
+Proof
+  rw[RingIso_def, BIJ_DEF, ring_homo_poly_one]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. weak p ==> (MAP f (chop p) = chop_ p_) *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_poly_chop *)
-val ring_iso_poly_chop = store_thm(
-  "ring_iso_poly_chop",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. weak p ==> (MAP f (chop p) = chop_ p_)``,
-  rw[RingIso_def, BIJ_DEF, ring_homo_poly_chop]);
+Theorem ring_iso_poly_chop:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. weak p ==> (MAP f (chop p) = chop_ p_)
+Proof
+  rw[RingIso_def, BIJ_DEF, ring_homo_poly_chop]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_) *)
 (* Proof: by RingIso_def, ring_homo_weak_add *)
-val ring_iso_weak_add = store_thm(
-  "ring_iso_weak_add",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_)``,
-  rw[RingIso_def, ring_homo_weak_add]);
+Theorem ring_iso_weak_add:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_)
+Proof
+  rw[RingIso_def, ring_homo_weak_add]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p + q) = p_ +_ q_) *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_poly_add *)
-val ring_iso_poly_add = store_thm(
-  "ring_iso_poly_add",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p + q) = p_ +_ q_)``,
-  rw[RingIso_def, BIJ_DEF, ring_homo_poly_add]);
+Theorem ring_iso_poly_add:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p + q) = p_ +_ q_)
+Proof
+  rw[RingIso_def, BIJ_DEF, ring_homo_poly_add]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. weak p ==> (MAP f (neg p) = neg_ p_) *)
 (* Proof: by RingIso_def, ring_homo_weak_neg *)
-val ring_iso_weak_neg = store_thm(
-  "ring_iso_weak_neg",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. weak p ==> (MAP f (neg p) = neg_ p_)``,
-  rw[RingIso_def, ring_homo_weak_neg]);
+Theorem ring_iso_weak_neg:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. weak p ==> (MAP f (neg p) = neg_ p_)
+Proof
+  rw[RingIso_def, ring_homo_weak_neg]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. poly p ==> (MAP f (-p) = $-_ p_) *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_poly_neg *)
-val ring_iso_poly_neg = store_thm(
-  "ring_iso_poly_neg",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. poly p ==> (MAP f (-p) = $-_ p_)``,
-  rw[RingIso_def, BIJ_DEF, ring_homo_poly_neg]);
+Theorem ring_iso_poly_neg:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. poly p ==> (MAP f (-p) = $-_ p_)
+Proof
+  rw[RingIso_def, BIJ_DEF, ring_homo_poly_neg]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p - q) = p_ -_ q_) *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_poly_sub *)
-val ring_iso_poly_sub = store_thm(
-  "ring_iso_poly_sub",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p - q) = p_ -_ q_)``,
-  rw[RingIso_def, BIJ_DEF, ring_homo_poly_sub]);
+Theorem ring_iso_poly_sub:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p - q) = p_ -_ q_)
+Proof
+  rw[RingIso_def, BIJ_DEF, ring_homo_poly_sub]
+QED
 
 (* Theorem: deg_ p_ = deg p *)
 (* Proof: by ring_homo_poly_deg *)
@@ -2503,10 +2595,11 @@ val ring_iso_poly_deg = save_thm("ring_iso_poly_deg", ring_homo_poly_deg);
 
 (* Theorem: (r =r= r_) f ==> !p. lead_ p_ = f (lead p) *)
 (* Proof: by RingIso_def, ring_homo_poly_lead *)
-val ring_iso_poly_lead = store_thm(
-  "ring_iso_poly_lead",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. lead_ p_ = f (lead p)``,
-  rw[RingIso_def, ring_homo_poly_lead]);
+Theorem ring_iso_poly_lead:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. lead_ p_ = f (lead p)
+Proof
+  rw[RingIso_def, ring_homo_poly_lead]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p k. p_ '_ k = f (p ' k) *)
 (* Proof: by RingIso_def, ring_homo_poly_coeff *)
@@ -2519,38 +2612,43 @@ QED
 
 (* Theorem: (r =r= r_) f ==> !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_) *)
 (* Proof: by RingIso_def, ring_homo_weak_cmult *)
-val ring_iso_weak_cmult = store_thm(
-  "ring_iso_weak_cmult",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_)``,
-  rw[RingIso_def, ring_homo_weak_cmult]);
+Theorem ring_iso_weak_cmult:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_)
+Proof
+  rw[RingIso_def, ring_homo_weak_cmult]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p c. poly p /\ c IN R ==> (MAP f (c * p) = (f c) *_ p_) *)
 (* Proof: RingIso_def, BIJ_DEF, ring_homo_poly_cmult *)
-val ring_iso_poly_cmult = store_thm(
-  "ring_iso_poly_cmult",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p c. poly p /\ c IN R ==> (MAP f (c * p) = (f c) *_ p_)``,
-  rw[RingIso_def, BIJ_DEF, ring_homo_poly_cmult]);
+Theorem ring_iso_poly_cmult:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p c. poly p /\ c IN R ==> (MAP f (c * p) = (f c) *_ p_)
+Proof
+  rw[RingIso_def, BIJ_DEF, ring_homo_poly_cmult]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p n. MAP f (p >> n) = p_ >>_ n *)
 (* Proof: by RingIso_def, ring_homo_poly_shift *)
-val ring_iso_poly_shift = store_thm(
-  "ring_iso_poly_shift",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p n. MAP f (p >> n) = p_ >>_ n``,
-  rw[RingIso_def, ring_homo_poly_shift]);
+Theorem ring_iso_poly_shift:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p n. MAP f (p >> n) = p_ >>_ n
+Proof
+  rw[RingIso_def, ring_homo_poly_shift]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p o q) = p_ o_ q_) *)
 (* Proof: by RingIso_def, ring_homo_weak_mult *)
-val ring_iso_weak_mult = store_thm(
-  "ring_iso_weak_mult",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p o q) = p_ o_ q_)``,
-  rw[RingIso_def, ring_homo_weak_mult]);
+Theorem ring_iso_weak_mult:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p o q) = p_ o_ q_)
+Proof
+  rw[RingIso_def, ring_homo_weak_mult]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p * q) = p_ *_ q_) *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_poly_mult *)
-val ring_iso_poly_mult = store_thm(
-  "ring_iso_poly_mult",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p * q) = p_ *_ q_)``,
-  rw[RingIso_def, BIJ_DEF, ring_homo_poly_mult]);
+Theorem ring_iso_poly_mult:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p * q) = p_ *_ q_)
+Proof
+  rw[RingIso_def, BIJ_DEF, ring_homo_poly_mult]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Isomorphism between Polynomial Rings                                      *)
@@ -2568,9 +2666,9 @@ val ring_iso_poly_mult = store_thm(
          ==> !k.          x ' k = y ' k            by INJ_DEF
        Hence                  x = y                by poly_coeff_eq_poly_eq
 *)
-val ring_iso_poly_inj = store_thm(
-  "ring_iso_poly_inj",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> INJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier``,
+Theorem ring_iso_poly_inj:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> INJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier
+Proof
   rw[INJ_DEF, poly_ring_element] >-
   metis_tac[RingIso_def, BIJ_DEF, ring_homo_poly] >>
   `INJ f R R_` by metis_tac[RingIso_def, BIJ_DEF] >>
@@ -2578,7 +2676,8 @@ val ring_iso_poly_inj = store_thm(
   (rpt strip_tac >>
   `x ' k IN R /\ y ' k IN R` by rw[] >>
   metis_tac[ring_iso_poly_coeff, INJ_DEF]) >>
-  metis_tac[poly_coeff_eq_poly_eq]);
+  metis_tac[poly_coeff_eq_poly_eq]
+QED
 
 (* Theorem: (r =r= r_) f ==> SURJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier *)
 (* Proof:
@@ -2603,9 +2702,9 @@ val ring_iso_poly_inj = store_thm(
           = MAP I x                     by above
           = x                           by MAP_ID
  *)
-val ring_iso_poly_surj = store_thm(
-  "ring_iso_poly_surj",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> SURJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier``,
+Theorem ring_iso_poly_surj:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> SURJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier
+Proof
   rw[SURJ_DEF, poly_ring_element] >-
   metis_tac[RingIso_def, BIJ_DEF, ring_homo_poly] >>
   `RingIso (LINV f R) r_ r` by rw[ring_iso_sym] >>
@@ -2621,14 +2720,16 @@ val ring_iso_poly_surj = store_thm(
   `e IN R_` by rw[] >>
   `BIJ f R R_` by metis_tac[RingIso_def] >>
   metis_tac[BIJ_LINV_INV]) >>
-  rw[MAP_ID]);
+  rw[MAP_ID]
+QED
 
 (* Theorem: (r =r= r_) f ==> BIJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier *)
 (* Proof: by BIJ_DEF, ring_iso_poly_inj, ring_iso_poly_surj *)
-val ring_iso_poly_bij = store_thm(
-  "ring_iso_poly_bij",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> BIJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier``,
-  rw[BIJ_DEF, ring_iso_poly_inj, ring_iso_poly_surj]);
+Theorem ring_iso_poly_bij:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> BIJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier
+Proof
+  rw[BIJ_DEF, ring_iso_poly_inj, ring_iso_poly_surj]
+QED
 
 (* Theorem: (r =r= r_) f ==> RingIso (MAP f) (PolyRing r) (PolyRing r_) *)
 (* Proof:
@@ -2638,13 +2739,14 @@ val ring_iso_poly_bij = store_thm(
    (2) RingIso f r r_ ==> BIJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier
        True by ring_iso_poly_bij.
 *)
-val ring_iso_poly_ring_iso = store_thm(
-  "ring_iso_poly_ring_iso",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> RingIso (MAP f) (PolyRing r) (PolyRing r_)``,
+Theorem ring_iso_poly_ring_iso:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> RingIso (MAP f) (PolyRing r) (PolyRing r_)
+Proof
   rpt strip_tac >>
   rw[RingIso_def] >-
   metis_tac[RingIso_def, BIJ_DEF, ring_homo_poly_ring_homo] >>
-  rw[ring_iso_poly_bij]);
+  rw[ring_iso_poly_bij]
+QED
 
 (* Another milestone theorem. *)
 
@@ -2654,31 +2756,35 @@ val ring_iso_poly_ring_iso = store_thm(
 
 (* Theorem: (r =r= r_) f ==> !p. poly p ==> !n. MAP f (p ** n) = p_ **_ n *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_poly_exp *)
-val ring_iso_poly_exp = store_thm(
-  "ring_iso_poly_exp",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. poly p ==> !n. MAP f (p ** n) = p_ **_ n``,
-  rw[RingIso_def, BIJ_DEF, ring_homo_poly_exp]);
+Theorem ring_iso_poly_exp:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. poly p ==> !n. MAP f (p ** n) = p_ **_ n
+Proof
+  rw[RingIso_def, BIJ_DEF, ring_homo_poly_exp]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p x. poly p /\ x IN R ==> (f (eval p x) = eval_ p_ (f x)) *)
 (* Proof: RingIso_def, ring_homo_poly_eval *)
-val ring_iso_poly_eval = store_thm(
-  "ring_iso_poly_eval",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p x. poly p /\ x IN R ==> (f (eval p x) = eval_ p_ (f x))``,
-  rw[RingIso_def, ring_homo_poly_eval]);
+Theorem ring_iso_poly_eval:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p x. poly p /\ x IN R ==> (f (eval p x) = eval_ p_ (f x))
+Proof
+  rw[RingIso_def, ring_homo_poly_eval]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p x. poly p /\ x IN R /\ root p x ==> root_ p_ (f x) *)
 (* Proof: by RingIso_def, ring_homo_poly_root *)
-val ring_iso_poly_root = store_thm(
-  "ring_iso_poly_root",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p x. poly p /\ x IN R /\ root p x ==> root_ p_ (f x)``,
-  metis_tac[RingIso_def, ring_homo_poly_root]);
+Theorem ring_iso_poly_root:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p x. poly p /\ x IN R /\ root p x ==> root_ p_ (f x)
+Proof
+  metis_tac[RingIso_def, ring_homo_poly_root]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. poly p /\ poly q /\ p pdivides q ==> p_ pdivides_ q_ *)
 (* Proof: by RingIso_def, BIJ_DEF, ring_homo_poly_divides *)
-val ring_iso_poly_divides = store_thm(
-  "ring_iso_poly_divides",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q /\ p pdivides q ==> p_ pdivides_ q_``,
-  metis_tac[RingIso_def, BIJ_DEF, ring_homo_poly_divides]);
+Theorem ring_iso_poly_divides:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q /\ p pdivides q ==> p_ pdivides_ q_
+Proof
+  metis_tac[RingIso_def, BIJ_DEF, ring_homo_poly_divides]
+QED
 
 (* Theorem: (r =r= r_) f ==> !c:num. (MAP f |c|) = |c|_ *)
 (* Proof:
@@ -2696,23 +2802,25 @@ val ring_iso_poly_divides = store_thm(
        = |1|_ +_ |c|_                 by ring_iso_poly_one
        = poly_num r_ (SUC c)          by poly_sum_num_SUC
 *)
-val ring_iso_poly_sum_num = store_thm(
-  "ring_iso_poly_sum_num",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !c:num. (MAP f |c|) = |c|_``,
+Theorem ring_iso_poly_sum_num:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !c:num. (MAP f |c|) = |c|_
+Proof
   rpt strip_tac >>
   Induct_on `c` >-
   metis_tac[poly_ring_sum_0, ring_iso_poly_zero] >>
   rw[poly_sum_num_SUC] >>
-  metis_tac[ring_iso_poly_one, ring_iso_poly_add, poly_one_poly, poly_sum_num_poly]);
+  metis_tac[ring_iso_poly_one, ring_iso_poly_add, poly_one_poly, poly_sum_num_poly]
+QED
 
 (* Theorem: (r =r= r_) f ==>
             !p. pmonic p ==> poly_ p_ /\ 0 < deg_ p_ /\ (unit_ (lead_ p_)) *)
 (* Proof: by ring_homo_pmonic, RingIso_def, BIJ_DEF *)
-val ring_iso_pmonic = store_thm(
-  "ring_iso_pmonic",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==>
-   !p. pmonic p ==> poly_ p_ /\ 0 < deg_ p_ /\ (unit_ (lead_ p_))``,
-  metis_tac[ring_homo_pmonic, RingIso_def, BIJ_DEF]);
+Theorem ring_iso_pmonic:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==>
+   !p. pmonic p ==> poly_ p_ /\ 0 < deg_ p_ /\ (unit_ (lead_ p_))
+Proof
+  metis_tac[ring_homo_pmonic, RingIso_def, BIJ_DEF]
+QED
 
 (* Theorem: (r =r= r_) f ==> !q. weak_ q ==>
             weak (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q) *)
@@ -2741,24 +2849,26 @@ val ring_iso_pmonic = store_thm(
      = MAP I q                      by MAP_CONG, claim
      = q                            by MAP_ID
 *)
-val ring_iso_inverse_weak_poly = store_thm(
-  "ring_iso_inverse_weak_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !q. weak_ q ==>
-    weak (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q)``,
+Theorem ring_iso_inverse_weak_poly:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !q. weak_ q ==>
+    weak (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q)
+Proof
   ntac 6 strip_tac >>
   fs[weak_def_alt, EVERY_MAP, EVERY_MEM, MAP_MAP_o] >>
   rpt strip_tac >-
   metis_tac[ring_iso_inverse_element] >>
   `MAP (f o LINV f R) q = MAP I q` suffices_by rw[] >>
   (irule MAP_CONG >> simp[]) >>
-  metis_tac[ring_iso_inverse_element]);
+  metis_tac[ring_iso_inverse_element]
+QED
 
 (* Theorem: (r =r= r_) f ==> !q. weak_ q ==> ?p. weak p /\ (q = p_) *)
 (* Proof: by ring_iso_inverse_weak_poly *)
-val ring_iso_inverse_weak = store_thm(
-  "ring_iso_inverse_weak",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !q. weak_ q ==> ?p. weak p /\ (q = p_)``,
-  metis_tac[ring_iso_inverse_weak_poly]);
+Theorem ring_iso_inverse_weak:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !q. weak_ q ==> ?p. weak p /\ (q = p_)
+Proof
+  metis_tac[ring_iso_inverse_weak_poly]
+QED
 
 (* Theorem: (r =r= r_) f ==> !q. poly_ q ==>
             poly (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q) *)
@@ -2778,10 +2888,10 @@ val ring_iso_inverse_weak = store_thm(
         so LAST p <> #0              by ring_iso_eq_zero
      Hence poly p                    by poly_def_alt
 *)
-val ring_iso_inverse_polynomial = store_thm(
-  "ring_iso_inverse_polynomial",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !q. poly_ q ==>
-    poly (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q)``,
+Theorem ring_iso_inverse_polynomial:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !q. poly_ q ==>
+    poly (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q)
+Proof
   ntac 6 strip_tac >>
   `weak_ q` by rw[poly_is_weak] >>
   qabbrev_tac `p = MAP (LINV f R) q` >>
@@ -2793,14 +2903,16 @@ val ring_iso_inverse_polynomial = store_thm(
   `LAST p IN R /\ LAST q IN R_` by metis_tac[poly_lead_alt, weak_lead_element] >>
   `f (LAST p) = LAST q` by metis_tac[LAST_MAP, BIJ_LINV_THM, poly_zero] >>
   `LAST p <> #0` by metis_tac[ring_iso_eq_zero] >>
-  rw[poly_def_alt]);
+  rw[poly_def_alt]
+QED
 
 (* Theorem: (r =r= r_) f ==> !q. poly_ q ==> ?p. poly p /\ (p_ = q) *)
 (* Proof: by ring_iso_inverse_polynomial *)
-val ring_iso_inverse_poly = store_thm(
-  "ring_iso_inverse_poly",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !q. poly_ q ==> ?p. poly p /\ (p_ = q)``,
-  metis_tac[ring_iso_inverse_polynomial]);
+Theorem ring_iso_inverse_poly:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !q. poly_ q ==> ?p. poly p /\ (p_ = q)
+Proof
+  metis_tac[ring_iso_inverse_polynomial]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. poly p /\ poly q ==> ((p_ = q_) <=> (p = q)) *)
 (* Proof:
@@ -2810,49 +2922,54 @@ val ring_iso_inverse_poly = store_thm(
     and q IN (PolyRing r).carrier /\ q_ IN (PolyRing r_).carrier  by ring_iso_poly, poly_ring_element
     ==> p = q                                                     by INJ_DEF
 *)
-val ring_iso_poly_unique = store_thm(
-  "ring_iso_poly_unique",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q ==> ((p_ = q_) <=> (p = q))``,
+Theorem ring_iso_poly_unique:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ poly q ==> ((p_ = q_) <=> (p = q))
+Proof
   rpt strip_tac >>
   `RingIso (MAP f) (PolyRing r) (PolyRing r_)` by rw[ring_iso_poly_ring_iso] >>
   `INJ (MAP f) (PolyRing r).carrier (PolyRing r_).carrier` by metis_tac[RingIso_def, BIJ_DEF] >>
   `p IN (PolyRing r).carrier /\ p_ IN (PolyRing r_).carrier` by metis_tac[ring_iso_poly, poly_ring_element] >>
   `q IN (PolyRing r).carrier /\ q_ IN (PolyRing r_).carrier` by metis_tac[ring_iso_poly, poly_ring_element] >>
-  metis_tac[INJ_DEF]);
+  metis_tac[INJ_DEF]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. poly p /\ pmonic q ==>
             (MAP f (p / q) = p_ /_ q_) /\ (MAP f (p % q) = p_ %_ q_) *)
 (* Proof: by ring_homo_poly_div_mod, RingIso_def, BIJ_DEF. *)
-val ring_iso_poly_div_mod = store_thm(
-  "ring_iso_poly_div_mod",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ pmonic q ==>
-    (MAP f (p / q) = p_ /_ q_) /\ (MAP f (p % q) = p_ %_ q_)``,
-  rw_tac std_ss[ring_homo_poly_div_mod, RingIso_def, BIJ_DEF]);
+Theorem ring_iso_poly_div_mod:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ pmonic q ==>
+    (MAP f (p / q) = p_ /_ q_) /\ (MAP f (p % q) = p_ %_ q_)
+Proof
+  rw_tac std_ss[ring_homo_poly_div_mod, RingIso_def, BIJ_DEF]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. poly p /\ pmonic q ==>
             (p_ = MAP f (p / q) *_ q_ +_ MAP f (p % q)) /\ (deg_ (MAP f (p % q)) < deg_ q_) *)
 (* Proof: by ring_homo_poly_div_mod_eqn, RingIso_def, BIJ_DEF *)
-val ring_iso_poly_div_mod_eqn = store_thm(
-  "ring_iso_poly_div_mod_eqn",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ pmonic q ==>
-    (p_ = MAP f (p / q) *_ q_ +_ MAP f (p % q)) /\ (deg_ (MAP f (p % q)) < deg_ q_)``,
-  rw_tac std_ss[ring_homo_poly_div_mod_eqn, RingIso_def, BIJ_DEF]);
+Theorem ring_iso_poly_div_mod_eqn:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p q. poly p /\ pmonic q ==>
+    (p_ = MAP f (p / q) *_ q_ +_ MAP f (p % q)) /\ (deg_ (MAP f (p % q)) < deg_ q_)
+Proof
+  rw_tac std_ss[ring_homo_poly_div_mod_eqn, RingIso_def, BIJ_DEF]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. poly p /\ pmonic q ==> (MAP f (p / q) = p_ /_ q_) *)
 (* Proof: by ring_iso_poly_div_mod *)
-val ring_iso_poly_div = store_thm(
-  "ring_iso_poly_div",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==>
-   !p q. poly p /\ pmonic q ==> (MAP f (p / q) = p_ /_ q_)``,
-  rw_tac std_ss[ring_iso_poly_div_mod]);
+Theorem ring_iso_poly_div:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==>
+   !p q. poly p /\ pmonic q ==> (MAP f (p / q) = p_ /_ q_)
+Proof
+  rw_tac std_ss[ring_iso_poly_div_mod]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p q. poly p /\ pmonic q ==> (MAP f (p / q) = p_ %_ q_) *)
 (* Proof: by ring_iso_poly_div_mod *)
-val ring_iso_poly_mod = store_thm(
-  "ring_iso_poly_mod",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==>
-   !p q. poly p /\ pmonic q ==> (MAP f (p % q) = p_ %_ q_)``,
-  rw_tac std_ss[ring_iso_poly_div_mod]);
+Theorem ring_iso_poly_mod:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==>
+   !p q. poly p /\ pmonic q ==> (MAP f (p % q) = p_ %_ q_)
+Proof
+  rw_tac std_ss[ring_iso_poly_div_mod]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Isomorphism between Polynomial Modulo Rings                               *)
@@ -2861,38 +2978,42 @@ val ring_iso_poly_mod = store_thm(
 (* Theorem: (r =r= r_) f ==>
             !p x. x IN (PolyModRing r p).carrier ==> MAP f x IN (PolyModRing r_ p_).carrier *)
 (* Proof: by ring_homo_poly_mod_ring_element, RingIso_def, BIJ_DEF *)
-val ring_iso_poly_mod_ring_element = store_thm(
-  "ring_iso_poly_mod_ring_element",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==>
-   !p x. x IN (PolyModRing r p).carrier ==> MAP f x IN (PolyModRing r_ p_).carrier``,
-  metis_tac[ring_homo_poly_mod_ring_element, RingIso_def, BIJ_DEF]);
+Theorem ring_iso_poly_mod_ring_element:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==>
+   !p x. x IN (PolyModRing r p).carrier ==> MAP f x IN (PolyModRing r_ p_).carrier
+Proof
+  metis_tac[ring_homo_poly_mod_ring_element, RingIso_def, BIJ_DEF]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. pmonic p ==>
             GroupHomo (MAP f) (PolyModRing r p).sum (PolyModRing r_ p_).sum *)
 (* Proof: by ring_homo_poly_mod_ring_sum_homo, RingIso_def, BIJ_DEF *)
-val ring_iso_poly_mod_ring_sum_homo = store_thm(
-  "ring_iso_poly_mod_ring_sum_homo",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
-      GroupHomo (MAP f) (PolyModRing r p).sum (PolyModRing r_ p_).sum``,
-  rw_tac std_ss[ring_homo_poly_mod_ring_sum_homo, RingIso_def, BIJ_DEF]);
+Theorem ring_iso_poly_mod_ring_sum_homo:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
+      GroupHomo (MAP f) (PolyModRing r p).sum (PolyModRing r_ p_).sum
+Proof
+  rw_tac std_ss[ring_homo_poly_mod_ring_sum_homo, RingIso_def, BIJ_DEF]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. pmonic p ==>
             MonoidHomo (MAP f) (PolyModRing r p).prod (PolyModRing r_ p_).prod *)
 (* Proof: by ring_homo_poly_mod_ring_prod_homo, RingIso_def, BIJ_DEF *)
-val ring_iso_poly_mod_ring_prod_homo = store_thm(
-  "ring_iso_poly_mod_ring_prod_homo",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
-    MonoidHomo (MAP f) (PolyModRing r p).prod (PolyModRing r_ p_).prod``,
-  rw_tac std_ss[ring_homo_poly_mod_ring_prod_homo, RingIso_def, BIJ_DEF]);
+Theorem ring_iso_poly_mod_ring_prod_homo:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
+    MonoidHomo (MAP f) (PolyModRing r p).prod (PolyModRing r_ p_).prod
+Proof
+  rw_tac std_ss[ring_homo_poly_mod_ring_prod_homo, RingIso_def, BIJ_DEF]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. pmonic p ==>
             (((PolyModRing r p)) ~r~ ((PolyModRing r_ p_))) (MAP f) *)
 (* Proof: by ring_homo_poly_mod_ring_homo, RingIso_def, BIJ_DEF *)
-val ring_iso_poly_mod_ring_homo = store_thm(
-  "ring_iso_poly_mod_ring_homo",
-  ``!(r:'a field) (r_:'b field) f. (r =r= r_) f ==> !p. pmonic p ==>
-       (((PolyModRing r p)) ~r~ ((PolyModRing r_ p_))) (MAP f)``,
-  metis_tac[ring_homo_poly_mod_ring_homo, RingIso_def, BIJ_DEF]);
+Theorem ring_iso_poly_mod_ring_homo:
+    !(r:'a field) (r_:'b field) f. (r =r= r_) f ==> !p. pmonic p ==>
+       (((PolyModRing r p)) ~r~ ((PolyModRing r_ p_))) (MAP f)
+Proof
+  metis_tac[ring_homo_poly_mod_ring_homo, RingIso_def, BIJ_DEF]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. pmonic p ==>
             INJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier *)
@@ -2905,14 +3026,15 @@ val ring_iso_poly_mod_ring_homo = store_thm(
           poly x /\ poly y /\ (MAP f x = MAP f y) ==> (x = y)
        This is true              by ring_iso_poly_unique
 *)
-val ring_iso_poly_mod_ring_inj = store_thm(
-  "ring_iso_poly_mod_ring_inj",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
-      INJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier``,
+Theorem ring_iso_poly_mod_ring_inj:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
+      INJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier
+Proof
   rw_tac std_ss[INJ_DEF] >-
   metis_tac[ring_iso_poly_mod_ring_element] >>
   fs[poly_mod_ring_element] >>
-  metis_tac[ring_iso_poly_unique]);
+  metis_tac[ring_iso_poly_unique]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. pmonic p ==>
             SURJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier *)
@@ -2927,15 +3049,16 @@ val ring_iso_poly_mod_ring_inj = store_thm(
         and deg y = deg_ p_               by ring_iso_poly_deg
        Take this y, the result is true.
 *)
-val ring_iso_poly_mod_ring_surj = store_thm(
-  "ring_iso_poly_mod_ring_surj",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
-      SURJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier``,
+Theorem ring_iso_poly_mod_ring_surj:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
+      SURJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier
+Proof
   rw_tac std_ss[SURJ_DEF] >-
   metis_tac[ring_iso_poly_mod_ring_element] >>
   fs[poly_mod_ring_element] >>
   `deg_ x < deg_ p_` by metis_tac[ring_iso_poly_deg, NOT_ZERO] >>
-  metis_tac[ring_iso_inverse_poly, ring_iso_poly_deg]);
+  metis_tac[ring_iso_inverse_poly, ring_iso_poly_deg]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. pmonic p ==>
             BIJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier *)
@@ -2946,11 +3069,12 @@ val ring_iso_poly_mod_ring_surj = store_thm(
    (2) SURJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier
        This is true        by ring_iso_poly_mod_ring_surj
 *)
-val ring_iso_poly_mod_ring_bij = store_thm(
-  "ring_iso_poly_mod_ring_bij",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
-      BIJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier``,
-  rw_tac std_ss[BIJ_DEF, ring_iso_poly_mod_ring_inj, ring_iso_poly_mod_ring_surj]);
+Theorem ring_iso_poly_mod_ring_bij:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
+      BIJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier
+Proof
+  rw_tac std_ss[BIJ_DEF, ring_iso_poly_mod_ring_inj, ring_iso_poly_mod_ring_surj]
+QED
 
 (* Theorem: (r =r= r_) f ==> !p. pmonic p ==>
             (((PolyModRing r p)) =r= ((PolyModRing r_ p_))) (MAP f) *)
@@ -2968,17 +3092,18 @@ val ring_iso_poly_mod_ring_bij = store_thm(
        (2) BIJ (MAP f) (PolyModRing r p).carrier (PolyModRing r_ p_).carrier
            This is true                  by ring_iso_poly_mod_ring_bij
 *)
-val ring_iso_poly_mod_ring_iso = store_thm(
-  "ring_iso_poly_mod_ring_iso",
-  ``!(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
-       (((PolyModRing r p)) =r= ((PolyModRing r_ p_))) (MAP f)``,
+Theorem ring_iso_poly_mod_ring_iso:
+    !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> !p. pmonic p ==>
+       (((PolyModRing r p)) =r= ((PolyModRing r_ p_))) (MAP f)
+Proof
   rpt strip_tac >-
   rw[poly_mod_ring_ring] >-
  (`poly_ p_ /\ 0 < deg_ p_ /\ (unit_ (lead_ p_))` by metis_tac[ring_iso_pmonic] >>
   rw[poly_mod_ring_ring]) >>
   rw_tac std_ss[RingIso_def] >-
   rw[ring_iso_poly_mod_ring_homo] >>
-  rw[ring_iso_poly_mod_ring_bij]);
+  rw[ring_iso_poly_mod_ring_bij]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Homomorphism and Isomorphism                                        *)
@@ -2990,10 +3115,11 @@ val ring_iso_poly_mod_ring_iso = store_thm(
      and FieldHomo f r r_ ==> INJ f R R_        by field_homo_map_inj
    The result follows                           by ring_homo_poly_ring_homo, field_is_ring
 *)
-val field_homo_poly_ring_homo = store_thm(
-  "field_homo_poly_ring_homo",
-  ``!(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> RingHomo (MAP f) (PolyRing r) (PolyRing r_)``,
-  rw[FieldHomo_def, ring_homo_poly_ring_homo, field_homo_map_inj]);
+Theorem field_homo_poly_ring_homo:
+    !(r:'a field) (r_:'b field) f. (r ~~~ r_) f ==> RingHomo (MAP f) (PolyRing r) (PolyRing r_)
+Proof
+  rw[FieldHomo_def, ring_homo_poly_ring_homo, field_homo_map_inj]
+QED
 
 (* Theorem: (r === r_) f ==> RingIso (MAP f) (PolyRing r) (PolyRing r_) *)
 (* Proof:
@@ -3002,10 +3128,11 @@ val field_homo_poly_ring_homo = store_thm(
      and FieldHomo f r r_ <=> RingHomo f r r_                 by FieldHomo_def
    The result follows                                         by ring_iso_poly_ring_iso
 *)
-val field_iso_poly_ring_iso = store_thm(
-  "field_iso_poly_ring_iso",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> RingIso (MAP f) (PolyRing r) (PolyRing r_)``,
-  rw[FieldIso_def, RingIso_def, FieldHomo_def, ring_iso_poly_ring_iso]);
+Theorem field_iso_poly_ring_iso:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> RingIso (MAP f) (PolyRing r) (PolyRing r_)
+Proof
+  rw[FieldIso_def, RingIso_def, FieldHomo_def, ring_iso_poly_ring_iso]
+QED
 
 (* Theorem: (r === r_) f ==> !p. ipoly p ==> RingIso (MAP f) (PolyModRing r p) (PolyModRing r_ p_) *)
 (* Proof:
@@ -3017,13 +3144,14 @@ val field_iso_poly_ring_iso = store_thm(
                 (PolyModRing r p)
                 (PolyModRing r_ p_)  by ring_iso_poly_mod_ring_iso
 *)
-val field_iso_poly_mod_ring_iso = store_thm(
-  "field_iso_poly_mod_ring_iso",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ipoly p ==>
-    RingIso (MAP f) (PolyModRing r p) (PolyModRing r_ p_)``,
+Theorem field_iso_poly_mod_ring_iso:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ipoly p ==>
+    RingIso (MAP f) (PolyModRing r p) (PolyModRing r_ p_)
+Proof
   rpt strip_tac >>
   `pmonic p` by rw[poly_irreducible_pmonic] >>
-  metis_tac[ring_iso_poly_mod_ring_iso, field_iso_is_ring_iso]);
+  metis_tac[ring_iso_poly_mod_ring_iso, field_iso_is_ring_iso]
+QED
 
 (* This is a  milestone theorem! *)
 
@@ -3038,10 +3166,11 @@ val field_iso_poly_mod_ring_iso = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> zerop p ==> zerop_ p_                   by ring_iso_zero_poly
 *)
-val field_iso_zero_poly = store_thm(
-  "field_iso_zero_poly",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. zerop p ==> zerop_ p_``,
-  metis_tac[field_iso_eq_ring_iso, ring_iso_zero_poly, field_is_ring]);
+Theorem field_iso_zero_poly:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. zerop p ==> zerop_ p_
+Proof
+  metis_tac[field_iso_eq_ring_iso, ring_iso_zero_poly, field_is_ring]
+QED
 
 (* Theorem: (r === r_) f ==> !p. weak p ==> (zerop p <=> zerop_ p_) *)
 (* Proof:
@@ -3050,10 +3179,11 @@ val field_iso_zero_poly = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> weak p ==> (zerop p <=> zerop_ p_)      by ring_iso_eq_zero_poly
 *)
-val field_iso_eq_zero_poly = store_thm(
-  "field_iso_eq_zero_poly",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> (zerop p <=> zerop_ p_)``,
-  metis_tac[field_iso_eq_ring_iso, ring_iso_eq_zero_poly, field_is_ring]);
+Theorem field_iso_eq_zero_poly:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> (zerop p <=> zerop_ p_)
+Proof
+  metis_tac[field_iso_eq_ring_iso, ring_iso_eq_zero_poly, field_is_ring]
+QED
 
 (* Theorem: (r === r_) f ==> !p. weak p ==> weak_ p_ *)
 (* Proof:
@@ -3062,10 +3192,11 @@ val field_iso_eq_zero_poly = store_thm(
    ==> RingIso f r r_                          by field_iso_eq_ring_iso
    ==> weak p ==> weak_ p_                     by ring_iso_weak
 *)
-val field_iso_weak = store_thm(
-  "field_iso_weak",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> weak_ p_``,
-  metis_tac[field_iso_eq_ring_iso, ring_iso_weak]);
+Theorem field_iso_weak:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> weak_ p_
+Proof
+  metis_tac[field_iso_eq_ring_iso, ring_iso_weak]
+QED
 
 (* Theorem: (r === r_) f ==> !p. poly p ==> poly_ p_ *)
 (* Proof:
@@ -3074,24 +3205,27 @@ val field_iso_weak = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> poly p ==> poly_ p_                     by ring_iso_poly
 *)
-val field_iso_poly = store_thm(
-  "field_iso_poly",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> poly_ p_``,
-  metis_tac[field_iso_eq_ring_iso, ring_iso_poly, field_is_ring]);
+Theorem field_iso_poly:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> poly_ p_
+Proof
+  metis_tac[field_iso_eq_ring_iso, ring_iso_poly, field_is_ring]
+QED
 
 (* Theorem: (p = |0|) <=> (p_ = |0|_) *)
 (* Proof: by ring_iso_eq_poly_zero *)
-val field_iso_eq_poly_zero = store_thm(
-  "field_iso_eq_poly_zero",
-  ``!(r:'a field) (r_:'b field) (f:'a -> 'b). !p. (p = |0|) <=> (p_ = |0|_)``,
-  rw[ring_iso_eq_poly_zero]);
+Theorem field_iso_eq_poly_zero:
+    !(r:'a field) (r_:'b field) (f:'a -> 'b). !p. (p = |0|) <=> (p_ = |0|_)
+Proof
+  rw[ring_iso_eq_poly_zero]
+QED
 
 (* Theorem: MAP f |0| = |0|_ *)
 (* Proof: by ring_iso_poly_zero *)
-val field_iso_poly_zero = store_thm(
-  "field_iso_poly_zero",
-  ``!(r:'a field) (r_:'b field) f. MAP f |0| = |0|_``,
-  rw[ring_iso_poly_zero]);
+Theorem field_iso_poly_zero:
+    !(r:'a field) (r_:'b field) f. MAP f |0| = |0|_
+Proof
+  rw[ring_iso_poly_zero]
+QED
 
 (* Theorem: (r === r_) f ==> (MAP f |1| = |1|_) *)
 (* Proof:
@@ -3100,17 +3234,19 @@ val field_iso_poly_zero = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> MAP f |1| = |1|_                        by ring_iso_poly_one
 *)
-val field_iso_poly_one = store_thm(
-  "field_iso_poly_one",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> (MAP f |1| = |1|_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_one]);
+Theorem field_iso_poly_one:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> (MAP f |1| = |1|_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_one]
+QED
 
 (* Theorem: (r === r_) f ==> !c:num. (MAP f |c|) = |c|_ *)
 (* Proof: by field_iso_eq_ring_iso, ring_iso_poly_sum_num *)
-val field_iso_poly_sum_num = store_thm(
-  "field_iso_poly_sum_num",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !c:num. (MAP f |c|) = |c|_``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_sum_num]);
+Theorem field_iso_poly_sum_num:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !c:num. (MAP f |c|) = |c|_
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_sum_num]
+QED
 
 (* Theorem: (r === r_) f ==> !p. weak p ==> (MAP f (chop p) = chop_ p_) *)
 (* Proof:
@@ -3119,10 +3255,11 @@ val field_iso_poly_sum_num = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> weak p ==> (MAP f (chop p) = chop_ p_   by ring_iso_poly_chop
 *)
-val field_iso_poly_chop = store_thm(
-  "field_iso_poly_chop",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> (MAP f (chop p) = chop_ p_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_chop]);
+Theorem field_iso_poly_chop:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> (MAP f (chop p) = chop_ p_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_chop]
+QED
 
 (* Theorem: (r === r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_) *)
 (* Proof:
@@ -3132,10 +3269,11 @@ val field_iso_poly_chop = store_thm(
    ==> weak p /\ weak q ==>
        (MAP f (p || q) = p_ ||_ q_)            by ring_iso_weak_add
 *)
-val field_iso_weak_add = store_thm(
-  "field_iso_weak_add",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_weak_add]);
+Theorem field_iso_weak_add:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p || q) = p_ ||_ q_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_weak_add]
+QED
 
 (* Theorem: (r === r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p + q) = p_ +_ q_) *)
 (* Proof:
@@ -3145,10 +3283,11 @@ val field_iso_weak_add = store_thm(
    ==> poly p /\ poly q ==>
        (MAP f (p + q) = p_ +_ q_)              by ring_iso_poly_add
 *)
-val field_iso_poly_add = store_thm(
-  "field_iso_poly_add",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p + q) = p_ +_ q_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_add]);
+Theorem field_iso_poly_add:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p + q) = p_ +_ q_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_add]
+QED
 
 (* Theorem: (r === r_) f ==> !p. weak p ==> (MAP f (neg p) = neg_ p_) *)
 (* Proof:
@@ -3157,10 +3296,11 @@ val field_iso_poly_add = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> weak p ==> (MAP f (neg p) = neg_ p_)    by ring_iso_weak_neg
 *)
-val field_iso_weak_neg = store_thm(
-  "field_iso_weak_neg",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> (MAP f (neg p) = neg_ p_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_weak_neg]);
+Theorem field_iso_weak_neg:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> (MAP f (neg p) = neg_ p_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_weak_neg]
+QED
 
 (* Theorem: (r === r_) f ==> !p. poly p ==> (MAP f (-p) = $-_ p_) *)
 (* Proof:
@@ -3169,10 +3309,11 @@ val field_iso_weak_neg = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> poly p ==> (MAP f (-p) = $-_ p_)        by ring_iso_poly_neg
 *)
-val field_iso_poly_neg = store_thm(
-  "field_iso_poly_neg",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (MAP f (-p) = $-_ p_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_neg]);
+Theorem field_iso_poly_neg:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (MAP f (-p) = $-_ p_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_neg]
+QED
 
 (* Theorem: (r === r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p - q) = p_ -_ q_) *)
 (* Proof:
@@ -3182,10 +3323,11 @@ val field_iso_poly_neg = store_thm(
    ==> poly p /\ poly q ==>
        (MAP f (p - q) = p_ -_ q_)              by ring_iso_poly_sub
 *)
-val field_iso_poly_sub = store_thm(
-  "field_iso_poly_sub",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p - q) = p_ -_ q_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_sub]);
+Theorem field_iso_poly_sub:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p - q) = p_ -_ q_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_sub]
+QED
 
 (* Theorem: (r === r_) f ==> !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_) *)
 (* Proof:
@@ -3195,10 +3337,11 @@ val field_iso_poly_sub = store_thm(
    ==> weak p /\ c IN R ==>
        (MAP f (c o p) = (f c) o_ p_)           by ring_iso_weak_cmult
 *)
-val field_iso_weak_cmult = store_thm(
-  "field_iso_weak_cmult",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_weak_cmult]);
+Theorem field_iso_weak_cmult:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p c. weak p /\ c IN R ==> (MAP f (c o p) = (f c) o_ p_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_weak_cmult]
+QED
 
 (* Theorem: (r === r_) f ==> !p c. poly p /\ c IN R ==> (MAP f (c * p) = (f c) *_ p_) *)
 (* Proof:
@@ -3208,10 +3351,11 @@ val field_iso_weak_cmult = store_thm(
    ==> poly p /\ c IN R ==>
        (MAP f (c * p) = (f c) *_ p_)           by ring_iso_poly_cmult
 *)
-val field_iso_poly_cmult = store_thm(
-  "field_iso_poly_cmult",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p c. poly p /\ c IN R ==> (MAP f (c * p) = (f c) *_ p_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_cmult]);
+Theorem field_iso_poly_cmult:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p c. poly p /\ c IN R ==> (MAP f (c * p) = (f c) *_ p_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_cmult]
+QED
 
 (* Theorem: (r === r_) f ==> !p n. MAP f (p >> n) = p_ >>_ n *)
 (* Proof:
@@ -3220,10 +3364,11 @@ val field_iso_poly_cmult = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> MAP f (p >> n) = p_ >>_ n               by ring_iso_poly_shift
 *)
-val field_iso_poly_shift = store_thm(
-  "field_iso_poly_shift",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p n. MAP f (p >> n) = p_ >>_ n``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_shift]);
+Theorem field_iso_poly_shift:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p n. MAP f (p >> n) = p_ >>_ n
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_shift]
+QED
 
 (* Theorem: (r === r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p o q) = p_ o_ q_) *)
 (* Proof:
@@ -3233,10 +3378,11 @@ val field_iso_poly_shift = store_thm(
    ==> weak p /\ weak q ==>
        (MAP f (p o q) = p_ o_ q_)              by ring_iso_weak_mult
 *)
-val field_iso_weak_mult = store_thm(
-  "field_iso_weak_mult",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p o q) = p_ o_ q_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_weak_mult]);
+Theorem field_iso_weak_mult:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. weak p /\ weak q ==> (MAP f (p o q) = p_ o_ q_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_weak_mult]
+QED
 
 (* Theorem: (r === r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p * q) = p_ *_ q_) *)
 (* Proof:
@@ -3246,10 +3392,11 @@ val field_iso_weak_mult = store_thm(
    ==> poly p /\ poly q ==>
        (MAP f (p * q) = p_ *_ q_)              by ring_iso_poly_mult
 *)
-val field_iso_poly_mult = store_thm(
-  "field_iso_poly_mult",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p * q) = p_ *_ q_)``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_mult]);
+Theorem field_iso_poly_mult:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==> (MAP f (p * q) = p_ *_ q_)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_mult]
+QED
 
 (* Theorem: (r === r_) f ==> !p. poly p ==> !n. MAP f (p ** n) = p_ **_ n *)
 (* Proof:
@@ -3258,17 +3405,19 @@ val field_iso_poly_mult = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> MAP f (p ** n) = p_ **_ n               by ring_iso_poly_exp
 *)
-val field_iso_poly_exp = store_thm(
-  "field_iso_poly_exp",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> !n. MAP f (p ** n) = p_ **_ n``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_exp]);
+Theorem field_iso_poly_exp:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> !n. MAP f (p ** n) = p_ **_ n
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_exp]
+QED
 
 (* Theorem: deg_ p_ = deg p *)
 (* Proof: by ring_iso_poly_deg *)
-val field_iso_poly_deg = store_thm(
-  "field_iso_poly_deg",
-  ``!(r:'a field) (r_:'b field) (f:'a -> 'b). !p. deg_ p_ = deg p``,
-  rw[ring_iso_poly_deg]);
+Theorem field_iso_poly_deg:
+    !(r:'a field) (r_:'b field) (f:'a -> 'b). !p. deg_ p_ = deg p
+Proof
+  rw[ring_iso_poly_deg]
+QED
 
 (* Theorem: (r === r_) f ==> !p. lead_ p_ = f (lead p) *)
 (* Proof:
@@ -3277,10 +3426,11 @@ val field_iso_poly_deg = store_thm(
    ==> Ring r /\ Ring r_ /\ RingIso f r r_     by field_iso_eq_ring_iso, field_is_ring
    ==> lead_ p_ = f (lead p)                   by ring_iso_poly_lead
 *)
-val field_iso_poly_lead = store_thm(
-  "field_iso_poly_lead",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. lead_ p_ = f (lead p)``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_lead]);
+Theorem field_iso_poly_lead:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. lead_ p_ = f (lead p)
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_lead]
+QED
 
 (* Theorem: (r === r_) f ==> !p k. p_ '_ k = f (p ' k) *)
 (* Proof:
@@ -3299,41 +3449,46 @@ QED
 (* Theorem: (r === r_) f ==> !y. y IN R_ ==> !q. weak_ q ==>
             weak (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q) *)
 (* Proof: by field_iso_is_ring_iso, ring_iso_inverse_weak_poly *)
-val field_iso_inverse_weak_poly = store_thm(
-  "field_iso_inverse_weak_poly",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !q. weak_ q ==>
-    weak (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q)``,
-  metis_tac[field_iso_is_ring_iso, ring_iso_inverse_weak_poly]);
+Theorem field_iso_inverse_weak_poly:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !q. weak_ q ==>
+    weak (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q)
+Proof
+  metis_tac[field_iso_is_ring_iso, ring_iso_inverse_weak_poly]
+QED
 
 (* Theorem: (r === r_) f ==> !y. y IN R_ ==> !q. weak_ q ==> ?p. weak p /\ (q = p_) *)
 (* Proof: by field_iso_inverse_weak_poly *)
-val field_iso_inverse_weak = store_thm(
-  "field_iso_inverse_weak",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !q. weak_ q ==> ?p. weak p /\ (q = p_)``,
-  metis_tac[field_iso_inverse_weak_poly]);
+Theorem field_iso_inverse_weak:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !q. weak_ q ==> ?p. weak p /\ (q = p_)
+Proof
+  metis_tac[field_iso_inverse_weak_poly]
+QED
 
 (* Theorem: (r === r_) f ==> !q. poly_ q ==>
             poly (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q) *)
 (* Proof: by field_iso_is_ring_iso, ring_iso_inverse_polynomial *)
-val field_iso_inverse_polynomial = store_thm(
-  "field_iso_inverse_polynomial",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !q. poly_ q ==>
-    poly (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q)``,
-  metis_tac[field_iso_is_ring_iso, ring_iso_inverse_polynomial]);
+Theorem field_iso_inverse_polynomial:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !q. poly_ q ==>
+    poly (MAP (LINV f R) q) /\ (MAP f (MAP (LINV f R) q) = q)
+Proof
+  metis_tac[field_iso_is_ring_iso, ring_iso_inverse_polynomial]
+QED
 
 (* Theorem: (r === r_) f ==> !q. poly_ q ==> ?p. poly p /\ (p_ = q) *)
 (* Proof: by field_iso_inverse_polynomial *)
-val field_iso_inverse_poly = store_thm(
-  "field_iso_inverse_poly",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !q. poly_ q ==> ?p. poly p /\ (p_ = q)``,
-  metis_tac[field_iso_inverse_polynomial]);
+Theorem field_iso_inverse_poly:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !q. poly_ q ==> ?p. poly p /\ (p_ = q)
+Proof
+  metis_tac[field_iso_inverse_polynomial]
+QED
 
 (* Theorem: (r === r_) f ==> !p q. poly p /\ poly q ==> ((p_ = q_) <=> (p = q)) *)
 (* Proof: by field_iso_is_ring_iso, ring_iso_poly_unique *)
-val field_iso_poly_unique = store_thm(
-  "field_iso_poly_unique",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==> ((p_ = q_) <=> (p = q))``,
-  metis_tac[field_iso_is_ring_iso, ring_iso_poly_unique]);
+Theorem field_iso_poly_unique:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==> ((p_ = q_) <=> (p = q))
+Proof
+  metis_tac[field_iso_is_ring_iso, ring_iso_poly_unique]
+QED
 
 (* Theorem: (r === r_) f ==> (MAP f X = X_) *)
 (* Proof:
@@ -3342,10 +3497,11 @@ val field_iso_poly_unique = store_thm(
    = (MAP f |1|) >>_ 1   by field_iso_poly_shift
    = |1|_ >>_ 1          by field_iso_poly_one
 *)
-val field_iso_poly_X = store_thm(
-  "field_iso_poly_X",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> (MAP f X = X_)``,
-  metis_tac[field_iso_poly_shift, field_iso_poly_one]);
+Theorem field_iso_poly_X:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> (MAP f X = X_)
+Proof
+  metis_tac[field_iso_poly_shift, field_iso_poly_one]
+QED
 
 (* Theorem: (r === r_) f ==> !n. MAP f (unity n) = unity_ n *)
 (* Proof:
@@ -3357,12 +3513,13 @@ val field_iso_poly_X = store_thm(
    = X_ **_ n -_ |1|_                  by field_iso_poly_X
    = unity_ n                          by notation
 *)
-val field_iso_poly_unity = store_thm(
-  "field_iso_poly_unity",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !n. MAP f (unity n) = unity_ n``,
+Theorem field_iso_poly_unity:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !n. MAP f (unity n) = unity_ n
+Proof
   rpt strip_tac >>
   `Ring r /\ poly X /\ poly |1| /\ poly (X ** n)` by rw[] >>
-  metis_tac[field_iso_poly_sub, field_iso_poly_one, field_iso_poly_X, field_iso_poly_exp]);
+  metis_tac[field_iso_poly_sub, field_iso_poly_one, field_iso_poly_X, field_iso_poly_exp]
+QED
 
 (* Theorem: (r === r_) f ==> !n. MAP f (master n) = master_ n *)
 (* Proof:
@@ -3374,12 +3531,13 @@ val field_iso_poly_unity = store_thm(
    = X_ **_ n -_ X_                  by field_iso_poly_X
    = master_ n                       by notation
 *)
-val field_iso_poly_master = store_thm(
-  "field_iso_poly_master",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !n. MAP f (master n) = master_ n``,
+Theorem field_iso_poly_master:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !n. MAP f (master n) = master_ n
+Proof
   rpt strip_tac >>
   `Ring r /\ poly X /\ poly (X ** n)` by rw[] >>
-  metis_tac[field_iso_poly_sub, field_iso_poly_X, field_iso_poly_exp]);
+  metis_tac[field_iso_poly_sub, field_iso_poly_X, field_iso_poly_exp]
+QED
 
 (* Theorem: (r === r_) f ==> !s. FINITE s /\ pset s ==> (MAP f (PPROD s) = poly_prod_image r_ (MAP f) s) *)
 (* Proof:
@@ -3410,10 +3568,10 @@ val field_iso_poly_master = store_thm(
        = poly_prod_set r_ ((MAP f e) INSERT (IMAGE (MAP f) s)) by t = IMAGE (MAP f) s
        = poly_prod_image r_ (MAP f) (e INSERT s)               by IMAGE_INSERT
 *)
-val field_iso_poly_prod_set = store_thm(
-  "field_iso_poly_prod_set",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==>
-   !s. FINITE s /\ pset s ==> (MAP f (PPROD s) = poly_prod_image r_ (MAP f) s)``,
+Theorem field_iso_poly_prod_set:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==>
+   !s. FINITE s /\ pset s ==> (MAP f (PPROD s) = poly_prod_image r_ (MAP f) s)
+Proof
   ntac 4 strip_tac >>
   `!s. FINITE s ==> pset s ==> (MAP f (PPROD s) = poly_prod_image r_ (MAP f) s)` suffices_by rw[] >>
   Induct_on `FINITE` >>
@@ -3427,14 +3585,16 @@ val field_iso_poly_prod_set = store_thm(
   `MAP f e NOTIN t` by prove_tac[field_iso_poly_unique, IN_IMAGE] >>
   `MAP f (PPROD (e INSERT s)) = MAP f (e * PPROD s)` by rw[poly_prod_set_insert] >>
   `_ = (MAP f e) *_ poly_prod_image r_ (MAP f) s` by metis_tac[field_iso_poly_mult] >>
-  metis_tac[poly_prod_set_insert, field_iso_poly, field_is_ring]);
+  metis_tac[poly_prod_set_insert, field_iso_poly, field_is_ring]
+QED
 
 (* Theorem: (r === r_) f ==> !p q. poly p /\ poly q /\ p pdivides q ==> p_ pdivides_ q_ *)
 (* Proof: by field_iso_eq_ring_iso, ring_iso_poly_divides *)
-val field_iso_poly_divides = store_thm(
-  "field_iso_poly_divides",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q /\ p pdivides q ==> p_ pdivides_ q_``,
-  metis_tac[field_iso_eq_ring_iso, ring_iso_poly_divides, field_is_ring]);
+Theorem field_iso_poly_divides:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q /\ p pdivides q ==> p_ pdivides_ q_
+Proof
+  metis_tac[field_iso_eq_ring_iso, ring_iso_poly_divides, field_is_ring]
+QED
 
 (* Theorem: (r === r_) f ==> !p q. poly p /\ poly q ==> (p pdivides q <=> p_ pdivides_ q_) *)
 (* Proof:
@@ -3451,10 +3611,10 @@ val field_iso_poly_divides = store_thm(
          so  q = t * p                     by field_iso_poly_unique
          so p pdivides q                   by poly_divides_def
 *)
-val field_iso_poly_divides_iff = store_thm(
-  "field_iso_poly_divides_iff",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==>
-    (p pdivides q <=> p_ pdivides_ q_)``,
+Theorem field_iso_poly_divides_iff:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p q. poly p /\ poly q ==>
+    (p pdivides q <=> p_ pdivides_ q_)
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[field_iso_poly_divides] >>
   fs[poly_divides_def] >>
@@ -3462,7 +3622,8 @@ val field_iso_poly_divides_iff = store_thm(
   qexists_tac `t` >>
   `MAP f (t * p) = s *_ p_` by rw[field_iso_poly_mult] >>
   `poly (t * p)` by rw[] >>
-  metis_tac[field_iso_poly_unique]);
+  metis_tac[field_iso_poly_unique]
+QED
 
 (* Theorem: (r === r_) f ==> !p. weak p ==> (p = MAP (LINV f R) p_) *)
 (* Proof:
@@ -3477,20 +3638,22 @@ val field_iso_poly_divides_iff = store_thm(
      = MAP I p                                 by MAP_CONG, (1) and (2)
      = p                                       by MAP_ID
 *)
-val field_iso_weak_inv = store_thm(
-  "field_iso_weak_inv",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> (p = MAP (LINV f R) p_)``,
+Theorem field_iso_weak_inv:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. weak p ==> (p = MAP (LINV f R) p_)
+Proof
   rw[weak_def_alt, EVERY_MEM, MAP_MAP_o] >>
   `MAP (LINV f R o f) p = MAP I p` suffices_by rw[] >>
   (irule MAP_CONG >> simp[]) >>
-  metis_tac[FieldIso_def, BIJ_LINV_THM]);
+  metis_tac[FieldIso_def, BIJ_LINV_THM]
+QED
 
 (* Theorem: (r === r_) f ==> !p. poly p ==> (p = MAP (LINV f R) p_) *)
 (* Proof: by field_iso_weak_inv, poly_is_weak *)
-val field_iso_poly_inv = store_thm(
-  "field_iso_poly_inv",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (p = MAP (LINV f R) p_)``,
-  metis_tac[field_iso_weak_inv, poly_is_weak]);
+Theorem field_iso_poly_inv:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (p = MAP (LINV f R) p_)
+Proof
+  metis_tac[field_iso_weak_inv, poly_is_weak]
+QED
 
 (* Theorem: (r === r_) f ==> !p. monic p ==> monic_ p_ *)
 (* Proof:
@@ -3503,10 +3666,11 @@ val field_iso_poly_inv = store_thm(
       = MAP f #1               by above
       = #1_                    by field_iso_one
 *)
-val field_iso_poly_monic = store_thm(
-  "field_iso_poly_monic",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. monic p ==> monic_ p_``,
-  metis_tac[poly_monic_def, field_iso_poly, field_iso_poly_lead, field_iso_one]);
+Theorem field_iso_poly_monic:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. monic p ==> monic_ p_
+Proof
+  metis_tac[poly_monic_def, field_iso_poly, field_iso_poly_lead, field_iso_one]
+QED
 
 (* Theorem: (r === r_) f ==> !p. poly p ==> (monic p <=> monic_ p_) *)
 (* Proof:
@@ -3520,15 +3684,16 @@ val field_iso_poly_monic = store_thm(
        Thus lead p = #1     by field_iso_eq_one
          or monic p         by poly_monic_def
 *)
-val field_iso_poly_monic_iff = store_thm(
-  "field_iso_poly_monic_iff",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (monic p <=> monic_ p_)``,
+Theorem field_iso_poly_monic_iff:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (monic p <=> monic_ p_)
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[field_iso_poly_monic] >>
   `lead_ p_ = f (lead p)` by rw[field_iso_poly_lead] >>
   `lead_ p_ = #1_` by rw[GSYM poly_monic_lead] >>
   `lead p = #1` by metis_tac[field_iso_eq_one, poly_lead_element, field_is_ring] >>
-  rw[poly_monic_def]);
+  rw[poly_monic_def]
+QED
 
 (* Theorem: (r === r_) f ==> !p. ulead p ==> ulead_ p_ *)
 (* Proof:
@@ -3538,10 +3703,11 @@ val field_iso_poly_monic_iff = store_thm(
     and !x unit x <=> unit_ (f x)               by field_iso_unit
    Thus ulead_ p_  iff ulead p                  by notation
 *)
-val field_iso_poly_ulead = store_thm(
-  "field_iso_poly_ulead",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ulead p ==> ulead_ p_``,
-  metis_tac[field_iso_poly_lead, field_iso_unit, field_iso_poly]);
+Theorem field_iso_poly_ulead:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ulead p ==> ulead_ p_
+Proof
+  metis_tac[field_iso_poly_lead, field_iso_unit, field_iso_poly]
+QED
 
 (* Theorem: (r === r_) f ==> !p. pmonic p ==> pmonic_ p_ *)
 (* Proof:
@@ -3553,10 +3719,11 @@ val field_iso_poly_ulead = store_thm(
     and      deg p = deg_ p_                    by field_iso_poly_deg
    Thus pmonic_ p_  iff pmonic p                by notation
 *)
-val field_iso_poly_pmonic = store_thm(
-  "field_iso_poly_pmonic",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. pmonic p ==> pmonic_ p_``,
-  prove_tac[field_iso_poly_deg, field_iso_poly_lead, field_iso_unit, field_iso_poly]);
+Theorem field_iso_poly_pmonic:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. pmonic p ==> pmonic_ p_
+Proof
+  prove_tac[field_iso_poly_deg, field_iso_poly_lead, field_iso_unit, field_iso_poly]
+QED
 
 (* Theorem: (r === r_) f ==> !p. upoly p ==> upoly_ p_ *)
 (* Proof:
@@ -3567,12 +3734,13 @@ val field_iso_poly_pmonic = store_thm(
      and deg_ p_ = deg p = 0                   by field_iso_poly_deg
    Hence upoly_ p_                             by poly_field_unit
 *)
-val field_iso_poly_unit = store_thm(
-  "field_iso_poly_unit",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. upoly p ==> upoly_ p_``,
+Theorem field_iso_poly_unit:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. upoly p ==> upoly_ p_
+Proof
   rw[poly_field_unit] >-
   metis_tac[field_iso_poly] >>
-  metis_tac[field_iso_poly_deg]);
+  metis_tac[field_iso_poly_deg]
+QED
 
 (* Theorem: (r === r_) f ==> !p. poly p ==> (upoly p <=> upoly_ p_) *)
 (* Proof:
@@ -3582,13 +3750,14 @@ val field_iso_poly_unit = store_thm(
      and deg_ p_ = deg p = 0                 by field_iso_poly_deg
    Hence upoly p                             by poly_field_unit
 *)
-val field_iso_poly_unit_iff = store_thm(
-  "field_iso_poly_unit_iff",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (upoly p <=> upoly_ p_)``,
+Theorem field_iso_poly_unit_iff:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (upoly p <=> upoly_ p_)
+Proof
   rw[poly_field_unit, EQ_IMP_THM] >-
   metis_tac[field_iso_poly] >-
   metis_tac[field_iso_poly_deg] >>
-  metis_tac[field_iso_poly_deg]);
+  metis_tac[field_iso_poly_deg]
+QED
 
 (* Theorem: (r === r_) f ==> !p. ipoly p ==> ipoly_ p_ *)
 (* Proof:
@@ -3609,9 +3778,9 @@ val field_iso_poly_unit_iff = store_thm(
      or upoly u \/ upoly v            by poly_irreducible_def, above
     ==> upoly_ x \/ upoly_ y          by field_iso_poly_unit
 *)
-val field_iso_poly_irreducible = store_thm(
-  "field_iso_poly_irreducible",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ipoly p ==> ipoly_ p_``,
+Theorem field_iso_poly_irreducible:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ipoly p ==> ipoly_ p_
+Proof
   rw[poly_irreducible_def] >-
   metis_tac[field_iso_poly] >-
   metis_tac[field_iso_poly_unit_iff] >>
@@ -3619,22 +3788,25 @@ val field_iso_poly_irreducible = store_thm(
   `?v. poly v /\ (y = MAP f v)` by metis_tac[field_iso_inverse_poly] >>
   `p_ = MAP f (u * v)` by metis_tac[field_iso_poly_mult] >>
   `p = u * v` by metis_tac[field_iso_poly_unique, poly_mult_poly, field_is_ring] >>
-  metis_tac[field_iso_poly_unit]);
+  metis_tac[field_iso_poly_unit]
+QED
 
 (* Theorem: (r === r_) f ==> !p x. poly p /\ x IN R ==> (f (eval p x) = eval_ p_ (f x)) *)
 (* Proof: by field_iso_eq_ring_iso, ring_iso_poly_eval *)
-val field_iso_poly_eval = store_thm(
-  "field_iso_poly_eval",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==>
-   !p x. poly p /\ x IN R ==> (f (eval p x) = eval_ p_ (f x))``,
-  rw[field_iso_eq_ring_iso, ring_iso_poly_eval]);
+Theorem field_iso_poly_eval:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==>
+   !p x. poly p /\ x IN R ==> (f (eval p x) = eval_ p_ (f x))
+Proof
+  rw[field_iso_eq_ring_iso, ring_iso_poly_eval]
+QED
 
 (* Theorem: (r === r_) f ==> !p x. poly p /\ x IN R /\ root p x ==> root_ p_ (f x) *)
 (* Proof: by field_iso_eq_ring_iso, ring_iso_poly_root *)
-val field_iso_poly_root = store_thm(
-  "field_iso_poly_root",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p x. poly p /\ x IN R /\ root p x ==> root_ p_ (f x)``,
-  metis_tac[field_iso_eq_ring_iso, ring_iso_poly_root, field_is_ring]);
+Theorem field_iso_poly_root:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p x. poly p /\ x IN R /\ root p x ==> root_ p_ (f x)
+Proof
+  metis_tac[field_iso_eq_ring_iso, ring_iso_poly_root, field_is_ring]
+QED
 
 (* Theorem: (r === r_) f ==> !p x. poly p /\ x IN R ==> (root p x <=> root_ p_ (f x)) *)
 (* Proof:
@@ -3644,11 +3816,12 @@ val field_iso_poly_root = store_thm(
    <=> eval_ p_ (f x) = #0_     by field_iso_poly_eval
    <=> root_ p_ (f x)           by poly_root_def
 *)
-val field_iso_poly_root_iff = store_thm(
-  "field_iso_poly_root_iff",
-  ``!(r:'a ring) (r_:'b ring) f. (r === r_) f ==>
-   !p x. poly p /\ x IN R ==> (root p x <=> root_ p_ (f x))``,
-  metis_tac[poly_root_def, field_iso_poly_eval, field_iso_eq_zero, poly_eval_element, field_is_ring]);
+Theorem field_iso_poly_root_iff:
+    !(r:'a ring) (r_:'b ring) f. (r === r_) f ==>
+   !p x. poly p /\ x IN R ==> (root p x <=> root_ p_ (f x))
+Proof
+  metis_tac[poly_root_def, field_iso_poly_eval, field_iso_eq_zero, poly_eval_element, field_is_ring]
+QED
 
 (* Theorem: (r === r_) f ==>
             !p s. poly p /\ s SUBSET R ==> ((roots p) SUBSET s <=> (roots_ p_) SUBSET (IMAGE f s)) *)
@@ -3686,10 +3859,10 @@ val field_iso_poly_root_iff = store_thm(
         or y IN R /\ (f y = f x)        by SUBSET_DEF, s SUBSET R
        ==> x = y, or x IN s             by INJ_DEF
 *)
-val field_iso_poly_roots = store_thm(
-  "field_iso_poly_roots",
-  ``!(r:'a ring) (r_:'b ring) f. (r === r_) f ==>
-   !p s. poly p /\ s SUBSET R ==> ((roots p) SUBSET s <=> (roots_ p_) SUBSET (IMAGE f s))``,
+Theorem field_iso_poly_roots:
+    !(r:'a ring) (r_:'b ring) f. (r === r_) f ==>
+   !p s. poly p /\ s SUBSET R ==> ((roots p) SUBSET s <=> (roots_ p_) SUBSET (IMAGE f s))
+Proof
   rpt strip_tac >>
   `poly_ p_` by metis_tac[field_iso_poly] >>
   rw[poly_roots_member, SUBSET_DEF, EQ_IMP_THM] >| [
@@ -3702,7 +3875,8 @@ val field_iso_poly_roots = store_thm(
     `?y. (f x = f y) /\ y IN s` by rw[] >>
     `INJ f R R_` by metis_tac[FieldIso_def, BIJ_DEF] >>
     metis_tac[SUBSET_DEF, INJ_DEF]
-  ]);
+  ]
+QED
 
 (* Theorem: (r === r_) f ==> !p. poly p ==> (roots_ p_ = IMAGE f (roots p)) *)
 (* Proof:
@@ -3721,9 +3895,9 @@ val field_iso_poly_roots = store_thm(
         ==> root_ p_ (f x)                 by field_iso_poly_root_iff
          or f x IN (roots_ p_)             by poly_roots_member
 *)
-val field_iso_poly_roots_iff = store_thm(
-  "field_iso_poly_roots_iff",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (roots_ p_ = IMAGE f (roots p))``,
+Theorem field_iso_poly_roots_iff:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> (roots_ p_ = IMAGE f (roots p))
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = roots p` >>
   `s SUBSET R` by metis_tac[poly_roots_member, SUBSET_DEF] >>
@@ -3734,7 +3908,8 @@ val field_iso_poly_roots_iff = store_thm(
   `x' IN R` by metis_tac[SUBSET_DEF] >>
   `f x' IN R_` by metis_tac[field_iso_element] >>
   metis_tac[field_iso_poly_root_iff, poly_roots_member]) >>
-  rw[SUBSET_ANTISYM]);
+  rw[SUBSET_ANTISYM]
+QED
 
 (* Theorem: (r === r_) f ==> !p. poly p ==> ((p_ = X_) <=> (p = X)) *)
 (* Proof:
@@ -3744,10 +3919,11 @@ val field_iso_poly_roots_iff = store_thm(
          so p = X                 by field_iso_poly_unique
    Only-if part: p = X ==> p_ = X_, true  by field_iso_poly_X
 *)
-val field_iso_poly_X_iff = store_thm(
-  "field_iso_poly_X_iff",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> ((p_ = X_) <=> (p = X))``,
-  metis_tac[field_iso_poly_unique, poly_X, field_iso_poly_X, field_is_ring]);
+Theorem field_iso_poly_X_iff:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p ==> ((p_ = X_) <=> (p = X))
+Proof
+  metis_tac[field_iso_poly_unique, poly_X, field_iso_poly_X, field_is_ring]
+QED
 
 (* Theorem: (r === s) I ==> !p. poly p <=> Poly s p *)
 (* Proof:
@@ -3760,10 +3936,11 @@ val field_iso_poly_X_iff = store_thm(
        ==> ?q. poly q /\ (MAP I p = q)   by field_iso_inverse_poly
        ==> p = q, so poly p              by MAP_ID
 *)
-val field_iso_I_poly_iff = store_thm(
-  "field_iso_I_poly_iff",
-  ``!(r s):'a field. (r === s) I ==> !p. poly p <=> Poly s p``,
-  metis_tac[field_iso_poly, field_iso_inverse_poly, MAP_ID]);
+Theorem field_iso_I_poly_iff:
+    !(r s):'a field. (r === s) I ==> !p. poly p <=> Poly s p
+Proof
+  metis_tac[field_iso_poly, field_iso_inverse_poly, MAP_ID]
+QED
 
 (* Theorem: (r === r_) f ==> !c:num. MAP f (X + |c|) = X_ +_ |c|_ *)
 (* Proof:
@@ -3771,12 +3948,13 @@ val field_iso_I_poly_iff = store_thm(
     and MAP f |c| = poly_num r_ c      by field_iso_poly_sum_num
    Thus MAP f (X + |c|) = X_ +_ |c|_   by field_iso_poly_add
 *)
-val field_iso_poly_X_add_c = store_thm(
-  "field_iso_poly_X_add_c",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !c:num. MAP f (X + |c|) = X_ +_ |c|_``,
+Theorem field_iso_poly_X_add_c:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !c:num. MAP f (X + |c|) = X_ +_ |c|_
+Proof
   rpt strip_tac >>
   `poly X /\ poly |c|` by rw[] >>
-  metis_tac[field_iso_poly_X, field_iso_poly_sum_num, field_iso_poly_add]);
+  metis_tac[field_iso_poly_X, field_iso_poly_sum_num, field_iso_poly_add]
+QED
 
 (* Theorem: (r === r_) f ==> !c:num. MAP f (X - |c|) = X_ -_ |c|_ *)
 (* Proof:
@@ -3784,12 +3962,13 @@ val field_iso_poly_X_add_c = store_thm(
     and MAP f |c| = poly_num r_ c      by field_iso_poly_sum_num
    Thus MAP f (X - |c|) = X_ -_ |c|_   by field_iso_poly_sub
 *)
-val field_iso_poly_X_sub_c = store_thm(
-  "field_iso_poly_X_sub_c",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !c:num. MAP f (X - |c|) = X_ -_ |c|_``,
+Theorem field_iso_poly_X_sub_c:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !c:num. MAP f (X - |c|) = X_ -_ |c|_
+Proof
   rpt strip_tac >>
   `poly X /\ poly |c|` by rw[] >>
-  metis_tac[field_iso_poly_X, field_iso_poly_sum_num, field_iso_poly_sub]);
+  metis_tac[field_iso_poly_X, field_iso_poly_sum_num, field_iso_poly_sub]
+QED
 
 (* Theorem: (r === r_) f ==> !c. c IN R ==> (MAP f (factor c) = factor_ (f c)) *)
 (* Proof:
@@ -3799,10 +3978,11 @@ val field_iso_poly_X_sub_c = store_thm(
    = $-_ (f c):: |1|_            by field_iso_neg, field_iso_poly_one
    = factor_ (f c)               by poly_factor_def
 *)
-val field_iso_poly_factor = store_thm(
-  "field_iso_poly_factor",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !c. c IN R ==> (MAP f (factor c) = factor_ (f c))``,
-  rw[poly_factor_def, field_iso_neg, field_iso_poly_one]);
+Theorem field_iso_poly_factor:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !c. c IN R ==> (MAP f (factor c) = factor_ (f c))
+Proof
+  rw[poly_factor_def, field_iso_neg, field_iso_poly_one]
+QED
 
 (* Theorem: (r === r_) f ==> !p x. x IN R /\ poly p ==>
                              (poly_root_multiplicity r_ p_ (f x) = multiplicity p x) *)
@@ -3821,10 +4001,10 @@ val field_iso_poly_factor = store_thm(
        Note f x IN R_         by field_iso_element
        Thus there is a contradiction, hence true.
 *)
-val field_iso_poly_root_multiplicity = store_thm(
-  "field_iso_poly_root_multiplicity",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==>
-   !p x. x IN R /\ poly p ==> (poly_root_multiplicity r_ p_ (f x) = multiplicity p x)``,
+Theorem field_iso_poly_root_multiplicity:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==>
+   !p x. x IN R /\ poly p ==> (poly_root_multiplicity r_ p_ (f x) = multiplicity p x)
+Proof
   rw_tac std_ss[poly_root_multiplicity_def] >>
   `poly_root_multiplicity_set r_ p_ (f x) = multiplicity_set p x` suffices_by rw[] >>
   rw[poly_root_multiplicity_set_def, EXTENSION] >| [
@@ -3833,7 +4013,8 @@ val field_iso_poly_root_multiplicity = store_thm(
     `MAP f (factor x ** x') = factor_ (f x) **_ x'` by metis_tac[field_iso_poly_exp] >>
     prove_tac[field_iso_poly_divides_iff],
     metis_tac[field_iso_element]
-  ]);
+  ]
+QED
 
 (* Theorem: (r === r_) f ==> !p. poly p /\ separable p ==> poly_separable r_ p_*)
 (* Proof:
@@ -3847,15 +4028,16 @@ val field_iso_poly_root_multiplicity = store_thm(
           = multiplicity p c          by field_iso_poly_root_multiplicity
           = 1                         by poly_separable_def, separable p
 *)
-val field_iso_poly_separable = store_thm(
-  "field_iso_poly_separable",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p /\ separable p ==> poly_separable r_ p_``,
+Theorem field_iso_poly_separable:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. poly p /\ separable p ==> poly_separable r_ p_
+Proof
   rw_tac std_ss[poly_separable_def] >-
   metis_tac[field_iso_eq_poly_zero] >>
   fs[poly_roots_member] >>
   `?z. z IN R /\ (c = f z)` by prove_tac[FieldIso_def, BIJ_DEF, SURJ_DEF] >>
   `root p z` by metis_tac[field_iso_poly_root_iff] >>
-  metis_tac[field_iso_poly_root_multiplicity]);
+  metis_tac[field_iso_poly_root_multiplicity]
+QED
 
 (* Theorem: (r === r_) f ==> !p. ipoly p ==>
             (((PolyModRing r p)) === ((PolyModRing r_ p_))) (MAP f) *)
@@ -3873,24 +4055,26 @@ val field_iso_poly_separable = store_thm(
                     (PolyModRing r p)
                     (PolyModRing r_ p_)  by field_iso_eq_ring_iso
 *)
-val field_iso_poly_mod_field_iso = store_thm(
-  "field_iso_poly_mod_field_iso",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ipoly p ==>
-    (((PolyModRing r p)) === ((PolyModRing r_ p_))) (MAP f)``,
+Theorem field_iso_poly_mod_field_iso:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ipoly p ==>
+    (((PolyModRing r p)) === ((PolyModRing r_ p_))) (MAP f)
+Proof
   rpt strip_tac >-
   rw[poly_mod_irreducible_field] >-
  (`ipoly_ p_` by metis_tac[field_iso_poly_irreducible] >>
   rw[poly_mod_irreducible_field]) >>
-  rw[field_iso_poly_mod_ring_iso, field_iso_eq_ring_iso]);
+  rw[field_iso_poly_mod_ring_iso, field_iso_eq_ring_iso]
+QED
 
 (* Theorem: (r =f= r_) ==> !p. ipoly p ==>
             ?f:'a poly -> 'b poly. (((PolyModRing r p)) =f= ((PolyModRing r_ (f p)))) *)
 (* Proof: by field_iso_poly_mod_field_iso *)
-val field_iso_poly_mod_field_isomorphism = store_thm(
-  "field_iso_poly_mod_field_isomorphism",
-  ``!(r:'a field) (r_:'b field). (r =f= r_) ==> !p. ipoly p ==>
-    ?f:'a poly -> 'b poly. (((PolyModRing r p)) =f= ((PolyModRing r_ (f p))))``,
-  metis_tac[field_iso_poly_mod_field_iso]);
+Theorem field_iso_poly_mod_field_isomorphism:
+    !(r:'a field) (r_:'b field). (r =f= r_) ==> !p. ipoly p ==>
+    ?f:'a poly -> 'b poly. (((PolyModRing r p)) =f= ((PolyModRing r_ (f p))))
+Proof
+  metis_tac[field_iso_poly_mod_field_iso]
+QED
 
 (* Another milestone theorem: This is almost F[X] iso F[Y]. *)
 

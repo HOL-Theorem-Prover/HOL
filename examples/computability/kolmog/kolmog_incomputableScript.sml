@@ -19,11 +19,11 @@ Proof
   simp[Once num_to_bool_list_def] >> rw[]
 QED
 
-Triviality BIT1_smaller: x ≠ 0 ⇒ (x - 1) DIV 2 < x
+Theorem BIT1_smaller[local]: x ≠ 0 ⇒ (x - 1) DIV 2 < x
 Proof Cases_on ‘x’ >> simp[ADD1, DIV_LT_X]
 QED
 
-Triviality BIT2_smaller:
+Theorem BIT2_smaller[local]:
   x ≠ 0 ∧ EVEN x ⇒ (x - 2) DIV 2 < x
 Proof
   Cases_on ‘x’ >> simp[EVEN] >> rename [‘EVEN m’] >> Cases_on ‘m’ >>

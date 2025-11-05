@@ -18,7 +18,7 @@ Definition s2n_def:
   (s2n (STRING c s) = s2n s * 256 + ORD c + 1)
 End
 
-Theorem s2n_n2s:
+Theorem s2n_n2s[simp]:
     !n. s2n (n2s n) = n
 Proof
   completeInduct_on `n` THEN ONCE_REWRITE_TAC [n2s_def] THEN
@@ -57,7 +57,7 @@ Proof
   ]
 QED
 
-Theorem n2s_s2n:
+Theorem n2s_s2n[simp]:
     n2s (s2n s) = s
 Proof
   Induct_on `s` THEN ASM_SIMP_TAC (srw_ss()) [s2n_def, Once n2s_def] THEN
@@ -88,12 +88,12 @@ Proof
   ]
 QED
 
-Theorem n2s_11:
+Theorem n2s_11[simp]:
     (n2s x = n2s y) = (x = y)
 Proof
   METIS_TAC [s2n_n2s]
 QED
-Theorem s2n_11:
+Theorem s2n_11[simp]:
     (s2n x = s2n y) = (x = y)
 Proof
   METIS_TAC [n2s_s2n]
@@ -112,29 +112,31 @@ Proof
 QED
 
 
-val _ = export_rewrites ["n2s_s2n", "s2n_n2s", "n2s_11", "s2n_11"]
 
 Definition n2nsum_def:
   n2nsum n = if ODD n then INL (n DIV 2) else INR (n DIV 2)
 End
 
-Definition nsum2n_def:
+Definition nsum2n_def[simp]:
   (nsum2n (INL n) = 2 * n + 1) /\
   (nsum2n (INR n) = 2 * n)
 End
-val _ = export_rewrites ["nsum2n_def"]
 
-val div_lemma = prove(
-  ``(2 * x DIV 2 = x) /\ ((2 * x + 1) DIV 2 = x)``,
+Theorem div_lemma[local]:
+    (2 * x DIV 2 = x) /\ ((2 * x + 1) DIV 2 = x)
+Proof
   `0 < 2 /\ (1 DIV 2 = 0)` by simp[] >>
-  metis_tac[MULT_DIV, ADD_DIV_ADD_DIV, MULT_COMM, ADD_CLAUSES]);
+  metis_tac[MULT_DIV, ADD_DIV_ADD_DIV, MULT_COMM, ADD_CLAUSES]
+QED
 
-val odd_lemma = prove(
-  ``(ODD x ==> (2 * (x DIV 2) + 1 = x)) /\
-    (~ODD x ==> (2 * (x DIV 2) = x))``,
+Theorem odd_lemma[local]:
+    (ODD x ==> (2 * (x DIV 2) + 1 = x)) /\
+    (~ODD x ==> (2 * (x DIV 2) = x))
+Proof
   conj_tac
   >- dsimp[ODD_EXISTS, ADD1, div_lemma]
-  >- dsimp[GSYM EVEN_ODD, EVEN_EXISTS, div_lemma])
+  >- dsimp[GSYM EVEN_ODD, EVEN_EXISTS, div_lemma]
+QED
 
 Theorem n2nsum_nsum2n[simp]:
     n2nsum (nsum2n ns) = ns
@@ -156,13 +158,17 @@ Definition ssum2s_def:
   ssum2s sm = n2s (nsum2n (SUM_MAP s2n s2n sm))
 End
 
-val sumpp_compose = prove(
-  ``SUM_MAP f g (SUM_MAP a b x) = SUM_MAP (f o a) (g o b) x``,
-  Cases_on `x` >> simp[]);
+Theorem sumpp_compose[local]:
+    SUM_MAP f g (SUM_MAP a b x) = SUM_MAP (f o a) (g o b) x
+Proof
+  Cases_on `x` >> simp[]
+QED
 
-val sumpp_I = prove(
-  ``SUM_MAP (\x. x) (\x. x) y = y``,
-  Cases_on `y` >> simp[]);
+Theorem sumpp_I[local]:
+    SUM_MAP (\x. x) (\x. x) y = y
+Proof
+  Cases_on `y` >> simp[]
+QED
 
 Theorem s2ssum_ssum2s[simp]:
     s2ssum (ssum2s sm) = sm

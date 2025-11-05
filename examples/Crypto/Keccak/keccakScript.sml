@@ -237,7 +237,7 @@ Proof
   rw[state_array_to_string_def]
 QED
 
-Triviality GENLIST_AND_LENGTH:
+Theorem GENLIST_AND_LENGTH[local]:
   GENLIST (λx. x < n ∧ P x) n = GENLIST P n
 Proof
   qid_spec_tac`P` \\
@@ -594,7 +594,7 @@ End
 
 (* compute-friendly versions and tests *)
 
-Triviality iota_some_elim:
+Theorem iota_some_elim[local]:
   (some j. j ≤ l ∧ z = 2 ** j - 1)
   = if z = 2 ** LOG2 (SUC z) - 1 ∧ LOG2 (SUC z) ≤ l
     then SOME (LOG2 (SUC z))
@@ -604,7 +604,7 @@ Proof
   rw[ADD1, SUB_ADD, LOG_POW, LOG2_def]
 QED
 
-Triviality iota_case_cond:
+Theorem iota_case_cond[local]:
   (case (if b then SOME x else NONE) of NONE => y | SOME z => f z) =
   if b then f x else y
 Proof
@@ -3938,7 +3938,7 @@ Termination
   WF_REL_TAC ‘measure $ λ(a,tt,ww,x,y,w,z,a'). w - z’
 End
 
-Triviality while1_thm:
+Theorem while1_thm[local]:
   ∀a tt ww x y w z a'.
     SND (WHILE (λ(z,a'). z < w)
                (λ(z,a').
@@ -4027,7 +4027,7 @@ Proof
   \\ Cases_on ‘r’ \\ gvs [rc_step_def]
 QED
 
-Triviality rc_eq:
+Theorem rc_eq[local]:
   rc t = rc_steps (t MOD 255) [T;F;F;F;F;F;F;F]
 Proof
   rewrite_tac [rc_def,EVAL “REPLICATE 7 x”]
@@ -4120,7 +4120,7 @@ Proof
   rewrite_tac [GSYM sptreeTheory.LENGTH_toSortedAList] \\ rw []
 QED
 
-Triviality size_while1_neq_0:
+Theorem size_while1_neq_0[local]:
   ∀a tt ww x y w z s.
     size s ≠ 0 ⇒
     size (while1 a tt ww x y w z s) ≠ 0
@@ -4133,7 +4133,7 @@ Proof
   \\ gvs [size_insert] \\ rw []
 QED
 
-Triviality size_while2_neq_0:
+Theorem size_while2_neq_0[local]:
   ∀a w ww x y t s.
     size s ≠ 0 ⇒
     size (while2 a w ww x y t s) ≠ 0
@@ -4147,7 +4147,7 @@ Proof
   \\ irule size_while1_neq_0 \\ fs []
 QED
 
-Triviality Keccak_p_spt_NOT_NIL:
+Theorem Keccak_p_spt_NOT_NIL[local]:
   xs ≠ [] ⇒ Keccak_p_spt n xs ≠ []
 Proof
   gvs [Keccak_p_spt_def,spt_to_string_def]
@@ -4207,7 +4207,7 @@ Definition Keccak_spt_def:
       TAKE x' Z
 End
 
-Triviality sponge_foldl_NOT_NIL:
+Theorem sponge_foldl_NOT_NIL[local]:
   ∀xs S0 Pis.
     S0 ≠ [] ∧ xs ≠ [] ⇒
     sponge_foldl xs S0 Pis ≠ []

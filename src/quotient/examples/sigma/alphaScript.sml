@@ -26,8 +26,7 @@ val entry1 =  ty_antiq( ==`:string # method1`== );
 
 (* Here is the syntax, repeated for clarity:
 
-val _ = Hol_datatype
-
+Datatype:
        (* obj1 ::= x | [li=mi] i in 1..n |  a.l | a.l:=m *)
 
         ` obj1  = OVAR1 of var
@@ -37,8 +36,8 @@ val _ = Hol_datatype
 
        (* method ::= sigma(x)b *)
 
-          method1 = SIGMA1 of var => obj1 ` ;
-
+          method1 = SIGMA1 of var => obj1
+End
 *)
 
 
@@ -927,9 +926,8 @@ fun FIND_INSTANTIATION th (asm,gl) =
 *)
 
 
-val ALPHA1_FV = store_thm
-   ("ALPHA1_FV",
-    (“(!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
+Theorem ALPHA1_FV:
+     (!o1 o2 xs ys. ALPHA1_obj o1 o2 xs ys ==>
          (!x. x IN FV_obj1 o1 ==>
               (?y. y IN FV_obj1 o2 /\ alpha_match xs ys x y))) /\
 
@@ -943,7 +941,8 @@ val ALPHA1_FV = store_thm
 
         (!m1 m2 xs ys. ALPHA1_method m1 m2 xs ys ==>
          (!x. x IN FV_method1 m1 ==>
-              (?y. y IN FV_method1 m2 /\ alpha_match xs ys x y)))”),
+              (?y. y IN FV_method1 m2 /\ alpha_match xs ys x y)))
+Proof
 
     rule_induct ALPHA1_strong_ind
     THEN REWRITE_TAC[FV_object1_def]
@@ -957,7 +956,7 @@ val ALPHA1_FV = store_thm
     THEN EXISTS_TAC “y':var”
     THEN IMP_RES_TAC alpha_match_NOT_EQ
     THEN ASM_REWRITE_TAC[]
-   );
+QED
 (* Glory to God!  Soli Deo Gloria! *)
 
 

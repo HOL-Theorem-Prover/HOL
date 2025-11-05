@@ -30,12 +30,12 @@ val tr_ind = fetch "-" "tr_ind";
 (* HOL programs is converted to sc, tr and cj structures                     *)
 (*---------------------------------------------------------------------------*)
 
-val tr_INTRO = store_thm
-("tr_INTRO",
- ``!f f1 f2.
+Theorem tr_INTRO:
+   !f f1 f2.
      (!x:'a. f x = if f1(x) then x else f(f2 x))
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f2 x) x))
-     ==> (f:'a->'a = tr f1 f2)``,
+     ==> (f:'a->'a = tr f1 f2)
+Proof
 
   REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
@@ -44,14 +44,14 @@ val tr_INTRO = store_thm
   IMP_RES_TAC (DISCH_ALL tr_def) THEN
   POP_ASSUM (fn th => ONCE_REWRITE_TAC[th]) THEN
   METIS_TAC[]
- );
+QED
 
-val rec_INTRO = store_thm
-("rec_INTRO",
- ``!f f1 f2 f3.
+Theorem rec_INTRO:
+   !f f1 f2 f3.
      (!x:'a. f x = if f1(x) then f2(x) else f(f3 x))
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f3 x) x))
-     ==> (f:'a->'b = sc (tr f1 f3) f2)``,
+     ==> (f:'a->'b = sc (tr f1 f3) f2)
+Proof
 
   REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
@@ -66,7 +66,7 @@ val rec_INTRO = store_thm
     IMP_RES_TAC (DISCH_ALL tr_def) THEN
     METIS_TAC [sc_def]
   ]
- );
+QED
 
 
 (*---------------------------------------------------------------------------------*)

@@ -53,15 +53,17 @@ Proof
     THEN FULL_SIMP_TAC arith_ss [GSUM_ADD]
 QED
 
-val GSUM_MONO2 = prove(
-  `!p m n f. GSUM (p,m) f < GSUM (p,n) f ==> m < n`,
+Theorem GSUM_MONO2[local]:
+   !p m n f. GSUM (p,m) f < GSUM (p,n) f ==> m < n
+Proof
   Induct_on `n` THEN1 REWRITE_TAC [prim_recTheory.NOT_LESS_0,GSUM_def]
     THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC
     THEN RULE_ASSUM_TAC (REWRITE_RULE [NOT_LESS,GSYM LESS_EQ])
     THEN IMP_RES_TAC LESS_ADD_1 THEN POP_ASSUM (K ALL_TAC)
     THEN POP_ASSUM (fn th => RULE_ASSUM_TAC (REWRITE_RULE [GSUM_ADD,
            REWRITE_RULE [DECIDE (Term `!a b. a + (b + 1) = SUC a + b`)] th]))
-    THEN DECIDE_TAC);
+    THEN DECIDE_TAC
+QED
 
 Theorem GSUM_LESS:
   !p m n f.
@@ -93,26 +95,30 @@ Proof
             THEN DECIDE_TAC]]
 QED
 
-val GSUM_EQUAL_LEM = prove(
-  `!p m n f. n < m /\ (!q. p + n <= q /\ q < p + m ==> (f q = 0)) ==>
-            (GSUM (p,m) f = GSUM (p,n) f)`,
+Theorem GSUM_EQUAL_LEM[local]:
+   !p m n f. n < m /\ (!q. p + n <= q /\ q < p + m ==> (f q = 0)) ==>
+            (GSUM (p,m) f = GSUM (p,n) f)
+Proof
   REPEAT STRIP_TAC THEN IMP_RES_TAC LESS_ADD
     THEN POP_ASSUM (fn th => FULL_SIMP_TAC arith_ss [GSUM_ADD,GSUM_ZERO,SYM th])
     THEN Induct_on `p'` THEN RW_TAC arith_ss [GSUM_def]
-    THEN Cases_on `p'` THEN FULL_SIMP_TAC arith_ss [GSUM_def]);
+    THEN Cases_on `p'` THEN FULL_SIMP_TAC arith_ss [GSUM_def]
+QED
 
-val GSUM_EQUAL_LEM2 = prove(
-  `!p m n f. (GSUM (p,m) f = GSUM (p,n) f) =
+Theorem GSUM_EQUAL_LEM2[local]:
+   !p m n f. (GSUM (p,m) f = GSUM (p,n) f) =
            ((m = n) \/
             (m < n /\ (!q. p + m <= q /\ q < p + n ==> (f q = 0))) \/
-            (n < m /\ (!q. p + n <= q /\ q < p + m ==> (f q = 0))))`,
+            (n < m /\ (!q. p + n <= q /\ q < p + m ==> (f q = 0))))
+Proof
   REPEAT STRIP_TAC THEN Tactical.REVERSE EQ_TAC
     THEN1 PROVE_TAC [GSUM_EQUAL_LEM]
     THEN Cases_on `m = n` THEN1 ASM_REWRITE_TAC []
     THEN IMP_RES_TAC (DECIDE (Term `!(a:num) b. ~(a = b) ==> (a < b) \/ (b < a)`))
     THEN ASM_SIMP_TAC arith_ss []
     THEN SPOSE_NOT_THEN STRIP_ASSUME_TAC
-    THEN IMP_RES_TAC GSUM_LESS THEN DECIDE_TAC);
+    THEN IMP_RES_TAC GSUM_LESS THEN DECIDE_TAC
+QED
 
 Theorem GSUM_EQUAL:
    !p m n f. (GSUM (p,m) f = GSUM (p,n) f) =

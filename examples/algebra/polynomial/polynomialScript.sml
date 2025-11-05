@@ -301,17 +301,19 @@ Overload poly_exp = “\r. (PolyRing r).prod.exp”
 
 (* Theorem: poly_ring sum.id = |0| and prod.id = |1|. *)
 (* Proof: by definition. *)
-val poly_ring_ids = store_thm(
-  "poly_ring_ids",
-  ``!r:'a ring. ( |0| = []) /\ ( |1| = chop [#1])``,
-  rw_tac std_ss[poly_ring_def]);
+Theorem poly_ring_ids:
+    !r:'a ring. ( |0| = []) /\ ( |1| = chop [#1])
+Proof
+  rw_tac std_ss[poly_ring_def]
+QED
 
 (* Theorem: Definition of p + q. *)
 (* Proof: by poly_ring_def. *)
-val poly_add_def = store_thm(
-  "poly_add_def",
-  ``!(p q):'a poly. p + q = chop (p || q)``,
-  rw_tac std_ss[poly_ring_def]);
+Theorem poly_add_def:
+    !(p q):'a poly. p + q = chop (p || q)
+Proof
+  rw_tac std_ss[poly_ring_def]
+QED
 
 (* Theorem: Definition of p * q. *)
 (* Proof: by poly_ring_def. *)

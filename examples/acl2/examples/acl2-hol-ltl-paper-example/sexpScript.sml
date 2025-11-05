@@ -806,22 +806,22 @@ val symbolp_def =
 (*****************************************************************************)
 (* Following theorem may not be needed                                       *)
 (*****************************************************************************)
-val VALID_PKG_TRIPLES =
- store_thm
-  ("VALID_PKG_TRIPLES",
-   ``VALID_PKG_TRIPLES triples =
+Theorem VALID_PKG_TRIPLES:
+     VALID_PKG_TRIPLES triples =
        (triples = [])
        \/
        ((LOOKUP (SND(SND(HD triples))) triples (FST(HD triples)) =
           (SND(SND(HD triples))))                 /\
         ~((FST(HD triples)) = "ACL2-PKG-WITNESS") /\
         ~((SND(SND(HD triples))) = "")            /\
-        (VALID_PKG_TRIPLES_AUX (TL triples) triples))``,
+        (VALID_PKG_TRIPLES_AUX (TL triples) triples))
+Proof
    Induct_on `triples`
     THEN RW_TAC list_ss [VALID_PKG_TRIPLES_def,VALID_PKG_TRIPLES_AUX_def]
     THEN Cases_on `h`
     THEN Cases_on `r`
-    THEN RW_TAC list_ss [VALID_PKG_TRIPLES_def,VALID_PKG_TRIPLES_AUX_def]);
+    THEN RW_TAC list_ss [VALID_PKG_TRIPLES_def,VALID_PKG_TRIPLES_AUX_def]
+QED
 
 val LOOKUP_IDEMPOTENT_LEMMA =
  prove
@@ -839,16 +839,16 @@ val LOOKUP_IDEMPOTENT_LEMMA =
     THEN FULL_SIMP_TAC std_ss [VALID_PKG_TRIPLES_AUX_def,LOOKUP_def]
     THEN BasicProvers.NORM_TAC std_ss []);
 
-val LOOKUP_IDEMPOTENT =
- store_thm
-  ("LOOKUP_IDEMPOTENT",
-   ``let orig_pkg_name = LOOKUP pkg_name triples sym_name
+Theorem LOOKUP_IDEMPOTENT:
+     let orig_pkg_name = LOOKUP pkg_name triples sym_name
      in
      (VALID_PKG_TRIPLES triples
       ==>
-      (LOOKUP orig_pkg_name triples sym_name = orig_pkg_name))``,
+      (LOOKUP orig_pkg_name triples sym_name = orig_pkg_name))
+Proof
    RW_TAC std_ss []
-    THEN PROVE_TAC [LOOKUP_IDEMPOTENT_LEMMA,VALID_PKG_TRIPLES_def]);
+    THEN PROVE_TAC [LOOKUP_IDEMPOTENT_LEMMA,VALID_PKG_TRIPLES_def]
+QED
 
 val LOOKUP_NOT_EMPTY_STRING_LEMMA =
  prove
@@ -864,13 +864,13 @@ val LOOKUP_NOT_EMPTY_STRING_LEMMA =
     THEN FULL_SIMP_TAC std_ss [VALID_PKG_TRIPLES_AUX_def,LOOKUP_def]
     THEN PROVE_TAC[]);
 
-val LOOKUP_NOT_EMPTY_STRING =
- store_thm
-  ("LOOKUP_NOT_EMPTY_STRING",
-   ``VALID_PKG_TRIPLES triples /\ ~(pkg_name = "")
+Theorem LOOKUP_NOT_EMPTY_STRING:
+     VALID_PKG_TRIPLES triples /\ ~(pkg_name = "")
      ==>
-     ~(LOOKUP pkg_name triples sym_name = "")``,
-   PROVE_TAC[VALID_PKG_TRIPLES_def,LOOKUP_NOT_EMPTY_STRING_LEMMA]);
+     ~(LOOKUP pkg_name triples sym_name = "")
+Proof
+   PROVE_TAC[VALID_PKG_TRIPLES_def,LOOKUP_NOT_EMPTY_STRING_LEMMA]
+QED
 
 val LOOKUP_PKG_WITNESS_LEMMA =
  prove
@@ -886,13 +886,13 @@ val LOOKUP_PKG_WITNESS_LEMMA =
     THEN FULL_SIMP_TAC std_ss [VALID_PKG_TRIPLES_AUX_def,LOOKUP_def]
     THEN PROVE_TAC[]);
 
-val LOOKUP_PKG_WITNESS =
- store_thm
-  ("LOOKUP_PKG_WITNESS",
-   ``VALID_PKG_TRIPLES triples
+Theorem LOOKUP_PKG_WITNESS:
+     VALID_PKG_TRIPLES triples
      ==>
-     (LOOKUP pkg_name triples "ACL2-PKG-WITNESS" = pkg_name)``,
-   PROVE_TAC[VALID_PKG_TRIPLES_def,LOOKUP_PKG_WITNESS_LEMMA]);
+     (LOOKUP pkg_name triples "ACL2-PKG-WITNESS" = pkg_name)
+Proof
+   PROVE_TAC[VALID_PKG_TRIPLES_def,LOOKUP_PKG_WITNESS_LEMMA]
+QED
 
 (*****************************************************************************)
 (* Use the lexicographic order to lift an order from elements to lists       *)
@@ -908,20 +908,19 @@ Definition LIST_LEX_ORDER_def:
      R a b \/ ((a = b) /\ LIST_LEX_ORDER R al bl))
 End
 
-val LIST_LEX_ORDER_IRREFLEXIVE =
- store_thm
-  ("LIST_LEX_ORDER_IRREFLEXIVE",
-   ``(!x. ~(R x x)) ==> !xl. ~(LIST_LEX_ORDER R xl xl)``,
+Theorem LIST_LEX_ORDER_IRREFLEXIVE:
+     (!x. ~(R x x)) ==> !xl. ~(LIST_LEX_ORDER R xl xl)
+Proof
    STRIP_TAC
     THEN Induct
-    THEN RW_TAC list_ss [LIST_LEX_ORDER_def]);
+    THEN RW_TAC list_ss [LIST_LEX_ORDER_def]
+QED
 
-val LIST_LEX_ORDER_ANTISYM =
- store_thm
-  ("LIST_LEX_ORDER_ANTISYM",
-   ``(!x y. ~(R x y /\ R y x))
+Theorem LIST_LEX_ORDER_ANTISYM:
+     (!x y. ~(R x y /\ R y x))
      ==>
-     !xl yl. ~(LIST_LEX_ORDER R xl yl /\ LIST_LEX_ORDER R yl xl)``,
+     !xl yl. ~(LIST_LEX_ORDER R xl yl /\ LIST_LEX_ORDER R yl xl)
+Proof
    STRIP_TAC
     THEN Induct
     THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def]
@@ -931,16 +930,16 @@ val LIST_LEX_ORDER_ANTISYM =
       GEN_TAC
        THEN Induct
        THEN RW_TAC list_ss [LIST_LEX_ORDER_def]
-       THEN PROVE_TAC[]]);
+       THEN PROVE_TAC[]]
+QED
 
-val LIST_LEX_ORDER_TRANS =
- store_thm
-  ("LIST_LEX_ORDER_TRANS",
-   ``(!x y z. R x y /\ R y z ==> R x z)
+Theorem LIST_LEX_ORDER_TRANS:
+     (!x y z. R x y /\ R y z ==> R x z)
      ==>
      !xl yl zl. LIST_LEX_ORDER R xl yl /\ LIST_LEX_ORDER R yl zl
                 ==>
-                LIST_LEX_ORDER R xl zl``,
+                LIST_LEX_ORDER R xl zl
+Proof
    STRIP_TAC
     THEN Induct
     THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def]
@@ -956,14 +955,14 @@ val LIST_LEX_ORDER_TRANS =
        THEN GEN_TAC
        THEN Induct
        THEN RW_TAC list_ss [LIST_LEX_ORDER_def]
-       THEN PROVE_TAC[]]);
+       THEN PROVE_TAC[]]
+QED
 
-val LIST_LEX_ORDER_TRICHOTOMY =
- store_thm
-  ("LIST_LEX_ORDER_TRICHOTOMY",
-   ``(!x y. R x y \/ R y x \/ (x = y))
+Theorem LIST_LEX_ORDER_TRICHOTOMY:
+     (!x y. R x y \/ R y x \/ (x = y))
      ==>
-     !xl yl. LIST_LEX_ORDER R xl yl \/ LIST_LEX_ORDER R yl xl \/ (xl = yl)``,
+     !xl yl. LIST_LEX_ORDER R xl yl \/ LIST_LEX_ORDER R yl xl \/ (xl = yl)
+Proof
    STRIP_TAC
     THEN Induct
     THEN SIMP_TAC list_ss [LIST_LEX_ORDER_def]
@@ -973,7 +972,8 @@ val LIST_LEX_ORDER_TRICHOTOMY =
       GEN_TAC
        THEN Induct
        THEN RW_TAC list_ss [LIST_LEX_ORDER_def]
-       THEN PROVE_TAC[]]);
+       THEN PROVE_TAC[]]
+QED
 
 (*****************************************************************************)
 (* Define an order on strings                                                *)
@@ -990,91 +990,90 @@ Definition STRING_LESS_EQ_def:
    STRING_LESS_EQ s1 s2 = STRING_LESS s1 s2 \/ (s1 = s2)
 End
 
-val STRING_LESS_IRREFLEXIVE =
- store_thm
-  ("STRING_LESS_IRREFLEXIVE",
-   ``~(STRING_LESS s s)``,
+Theorem STRING_LESS_IRREFLEXIVE:
+     ~(STRING_LESS s s)
+Proof
    METIS_TAC
     [STRING_LESS_def,LIST_LEX_ORDER_IRREFLEXIVE,
-     DECIDE ``!(m:num). ~(m<m)``]);
+     DECIDE ``!(m:num). ~(m<m)``]
+QED
 
-val STRING_LESS_SYM =
- store_thm
-  ("STRING_LESS_SYM",
-   ``~(STRING_LESS s1 s2 /\ STRING_LESS s2 s1)``,
+Theorem STRING_LESS_SYM:
+     ~(STRING_LESS s1 s2 /\ STRING_LESS s2 s1)
+Proof
    METIS_TAC
     [STRING_LESS_def,LIST_LEX_ORDER_ANTISYM,
-     DECIDE ``!(m:num) n. ~(m<n /\ n<m)``]);
+     DECIDE ``!(m:num) n. ~(m<n /\ n<m)``]
+QED
 
-val STRING_LESS_EQ_SYM =
- store_thm
-  ("STRING_LESS_EQ_SYM",
-   ``STRING_LESS_EQ s1 s2 /\ STRING_LESS_EQ s2 s1 ==> (s1 = s2)``,
+Theorem STRING_LESS_EQ_SYM:
+     STRING_LESS_EQ s1 s2 /\ STRING_LESS_EQ s2 s1 ==> (s1 = s2)
+Proof
    METIS_TAC
     [STRING_LESS_EQ_def,STRING_LESS_def,LIST_LEX_ORDER_ANTISYM,
-     DECIDE ``!(m:num) n. ~(m<n /\ n<m)``]);
+     DECIDE ``!(m:num) n. ~(m<n /\ n<m)``]
+QED
 
-val MAP_ORD_11 =
- store_thm
-  ("MAP_ORD_11",
-   ``!l1 l2. (MAP ORD l1 = MAP ORD l2) = (l1 = l2)``,
+Theorem MAP_ORD_11:
+     !l1 l2. (MAP ORD l1 = MAP ORD l2) = (l1 = l2)
+Proof
    Induct
     THEN SIMP_TAC list_ss []
     THENL
      [PROVE_TAC[],
       GEN_TAC
        THEN Induct
-       THEN RW_TAC list_ss [stringTheory.ORD_11]]);
+       THEN RW_TAC list_ss [stringTheory.ORD_11]]
+QED
 
-val STRING_LESS_ANTISYM =
- store_thm
-  ("STRING_LESS_ANTISYM",
-   ``~STRING_LESS s1 s2 /\ ~STRING_LESS s2 s1 ==> (s1 = s2)``,
+Theorem STRING_LESS_ANTISYM:
+     ~STRING_LESS s1 s2 /\ ~STRING_LESS s2 s1 ==> (s1 = s2)
+Proof
    METIS_TAC
     [STRING_LESS_def,
      stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
-     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
+     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]
+QED
 
-val STRING_LESS_EQ_ANTISYM =
- store_thm
-  ("STRING_LESS_EQ_ANTISYM",
-   ``~STRING_LESS_EQ s1 s2 /\ ~STRING_LESS_EQ s2 s1 ==> (s1 = s2)``,
+Theorem STRING_LESS_EQ_ANTISYM:
+     ~STRING_LESS_EQ s1 s2 /\ ~STRING_LESS_EQ s2 s1 ==> (s1 = s2)
+Proof
    METIS_TAC
     [STRING_LESS_EQ_def,STRING_LESS_def,
      stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
-     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
+     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]
+QED
 
-val STRING_LESS_TRICHOTOMY =
- store_thm
-  ("STRING_LESS_TRICHOTOMY",
-   ``STRING_LESS s1 s2 \/ STRING_LESS s2 s1 \/ (s1 = s2)``,
+Theorem STRING_LESS_TRICHOTOMY:
+     STRING_LESS s1 s2 \/ STRING_LESS s2 s1 \/ (s1 = s2)
+Proof
    METIS_TAC
     [STRING_LESS_def,
      stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
-     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
+     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]
+QED
 
-val STRING_LESS_EQ_TRICHOTOMY =
- store_thm
-  ("STRING_LESS_EQ_TRICHOTOMY",
-   ``STRING_LESS_EQ s1 s2 \/ STRING_LESS_EQ s2 s1``,
+Theorem STRING_LESS_EQ_TRICHOTOMY:
+     STRING_LESS_EQ s1 s2 \/ STRING_LESS_EQ s2 s1
+Proof
    METIS_TAC
     [STRING_LESS_EQ_def,STRING_LESS_def,
      stringTheory.EXPLODE_11,MAP_ORD_11,LIST_LEX_ORDER_TRICHOTOMY,
-     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]);
+     DECIDE ``!(m:num) n. m<n \/ n<m \/ (m=n)``]
+QED
 
-val STRING_LESS_TRANS =
- store_thm
-  ("STRING_LESS_TRANS",
-   ``STRING_LESS s1 s2 /\ STRING_LESS s2 s3 ==> STRING_LESS s1 s3``,
+Theorem STRING_LESS_TRANS:
+     STRING_LESS s1 s2 /\ STRING_LESS s2 s3 ==> STRING_LESS s1 s3
+Proof
    RW_TAC list_ss [STRING_LESS_def]
     THEN METIS_TAC
          [LIST_LEX_ORDER_TRANS,stringTheory.EXPLODE_11,MAP_ORD_11,
-          DECIDE ``!(m:num) n p. m<n /\ n<p ==> m<p``]);
+          DECIDE ``!(m:num) n p. m<n /\ n<p ==> m<p``]
+QED
 
-val STRING_LESS_EQ_TRANS =
- store_thm
-  ("STRING_LESS_EQ_TRANS",
-   ``STRING_LESS_EQ s1 s2 /\ STRING_LESS_EQ s2 s3 ==> STRING_LESS_EQ s1 s3``,
+Theorem STRING_LESS_EQ_TRANS:
+     STRING_LESS_EQ s1 s2 /\ STRING_LESS_EQ s2 s3 ==> STRING_LESS_EQ s1 s3
+Proof
    RW_TAC list_ss [STRING_LESS_EQ_def,STRING_LESS_def]
     THEN Cases_on `s1 = s2`
     THEN RW_TAC std_ss []
@@ -1082,19 +1081,20 @@ val STRING_LESS_EQ_TRANS =
     THEN RW_TAC std_ss []
     THEN METIS_TAC
          [LIST_LEX_ORDER_TRANS,stringTheory.EXPLODE_11,MAP_ORD_11,
-          DECIDE ``!(m:num) n p. m<n /\ n<p ==> m<p``]);
+          DECIDE ``!(m:num) n p. m<n /\ n<p ==> m<p``]
+QED
 
-val STRING_LESS_TRANS_NOT =
- store_thm
-  ("STRING_LESS_TRANS_NOT",
-   ``~STRING_LESS s1 s2 /\ ~STRING_LESS s2 s3 ==> ~STRING_LESS s1 s3``,
-   METIS_TAC[STRING_LESS_TRANS,STRING_LESS_ANTISYM]);
+Theorem STRING_LESS_TRANS_NOT:
+     ~STRING_LESS s1 s2 /\ ~STRING_LESS s2 s3 ==> ~STRING_LESS s1 s3
+Proof
+   METIS_TAC[STRING_LESS_TRANS,STRING_LESS_ANTISYM]
+QED
 
-val STRING_LESS_EQ_TRANS_NOT =
- store_thm
-  ("STRING_LESS_EQ_TRANS_NOT",
-   ``~STRING_LESS_EQ s1 s2 /\ ~STRING_LESS_EQ s2 s3 ==> ~STRING_LESS_EQ s1 s3``,
-   METIS_TAC[STRING_LESS_EQ_TRANS,STRING_LESS_EQ_ANTISYM]);
+Theorem STRING_LESS_EQ_TRANS_NOT:
+     ~STRING_LESS_EQ s1 s2 /\ ~STRING_LESS_EQ s2 s3 ==> ~STRING_LESS_EQ s1 s3
+Proof
+   METIS_TAC[STRING_LESS_EQ_TRANS,STRING_LESS_EQ_ANTISYM]
+QED
 
 Definition SEXP_SYM_LESS_def:
    SEXP_SYM_LESS (sym p1 n1) (sym p2 n2) =
@@ -1236,12 +1236,12 @@ val ACL2_TRUE_def =
  xDefine "ACL2_TRUE"
   `(|= p) = (ite (equal p nil) nil t = t)`;
 
-val ACL2_TRUE =
- store_thm
-  ("ACL2_TRUE",
-   ``(|= p) = ~(p = nil)``,
+Theorem ACL2_TRUE:
+     (|= p) = ~(p = nil)
+Proof
    ACL2_SIMP_TAC [ACL2_TRUE_def]
-    THEN PROVE_TAC[fetch "-" "sexp_11",T_NIL]);
+    THEN PROVE_TAC[fetch "-" "sexp_11",T_NIL]
+QED
 
 (*****************************************************************************)
 (* Same as translateTheory.bool_def                                          *)
@@ -1388,10 +1388,9 @@ Definition andl_def:
    (andl(x::y::l) = ite x (andl(y::l)) nil)
 End
 
-val andl_append =
- store_thm
-  ("andl_append",
-   ``!l1 l2. andl(andl l1 :: l2) = andl(l1 ++ l2)``,
+Theorem andl_append:
+     !l1 l2. andl(andl l1 :: l2) = andl(l1 ++ l2)
+Proof
    Induct
     THEN RW_TAC list_ss [andl_def,ite_def,List_def]
     THENL
@@ -1403,21 +1402,22 @@ val andl_append =
         [Cases_on `l1` THEN Cases_on `l2`
           THEN RW_TAC list_ss [andl_def,ite_def,List_def,EVAL ``t=nil``],
          Cases_on `l1`
-          THEN RW_TAC list_ss [andl_def,ite_def,List_def,EVAL ``t=nil``]]]);
+          THEN RW_TAC list_ss [andl_def,ite_def,List_def,EVAL ``t=nil``]]]
+QED
 
-val andl_fold =
- store_thm
-  ("andl_fold",
-   ``(ite x y nil = andl[x;y])
+Theorem andl_fold:
+     (ite x y nil = andl[x;y])
      /\
      (andl[x; andl(y::l)] = andl(x::(y::l)))
      /\
-     (andl(andl(x::y::l1)::l2) = andl(x::y::(l1++l2)))``,
+     (andl(andl(x::y::l1)::l2) = andl(x::y::(l1++l2)))
+Proof
    RW_TAC std_ss [andl_def,ite_def,List_def]
     THENL
      [Cases_on `l2`
        THEN RW_TAC std_ss [andl_def,ite_def,List_def],
-      RW_TAC list_ss [andl_append]]);
+      RW_TAC list_ss [andl_append]]
+QED
 
 Definition itel_def:
    (itel [] val'               = val')
@@ -1425,24 +1425,24 @@ Definition itel_def:
    (itel ((test,val)::sl) val' = ite test val (itel sl val'))
 End
 
-val itel_fold =
- store_thm
-  ("itel_fold",
-   ``(ite x y z = itel [(x,y)] z)
+Theorem itel_fold:
+     (ite x y z = itel [(x,y)] z)
      /\
-     (itel [p] (itel pl v) = itel (p::pl) v)``,
+     (itel [p] (itel pl v) = itel (p::pl) v)
+Proof
    Cases_on `p`
-    THEN RW_TAC std_ss [itel_def,ite_def]);
+    THEN RW_TAC std_ss [itel_def,ite_def]
+QED
 
-val itel_append =
- store_thm
-  ("itel_append",
-   ``itel l1 (itel l2 v) = itel (l1 ++ l2) v``,
+Theorem itel_append:
+     itel l1 (itel l2 v) = itel (l1 ++ l2) v
+Proof
    Induct_on `l1`
     THEN RW_TAC list_ss [itel_def,ite_def]
     THEN Cases_on `h`
     THEN Cases_on `q=nil`
-    THEN RW_TAC list_ss [itel_def,ite_def,List_def,EVAL ``t=nil``]);
+    THEN RW_TAC list_ss [itel_def,ite_def,List_def,EVAL ``t=nil``]
+QED
 
 (*****************************************************************************)
 (* Infrastructure for making recursive definitions                           *)
@@ -1464,140 +1464,140 @@ val itel_append =
 (* 4. The resulting termination conditions should be trivial to prove.       *)
 (*****************************************************************************)
 
-val ite_CONG1 =
- store_thm
-  ("ite_CONG1",
-   ``!p q x x' y y'.
+Theorem ite_CONG1:
+     !p q x x' y y'.
       (p = q) /\ (~(q = nil) ==> (x = x')) /\ ((q = nil) ==> (y = y'))
       ==>
-      (ite p x y = ite q x' y')``,
-   RW_TAC std_ss [ite_def]);
+      (ite p x y = ite q x' y')
+Proof
+   RW_TAC std_ss [ite_def]
+QED
 
-val ite_CONG2 =
- store_thm
-  ("ite_CONG2",
-   ``!p q x x' y y'.
+Theorem ite_CONG2:
+     !p q x x' y y'.
       (p = q) /\ ((|= q) ==> (x = x')) /\ (~(|= q) ==> (y = y'))
       ==>
-      (ite p x y = ite q x' y')``,
-   RW_TAC std_ss [ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]);
+      (ite p x y = ite q x' y')
+Proof
+   RW_TAC std_ss [ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]
+QED
 
 val _ = DefnBase.write_congs (ite_CONG1::ite_CONG2::DefnBase.read_congs());
 
-val itel_CONG1 =
- store_thm
-  ("itel_CONG1",
-   ``!p q x x' l l' y y'.
+Theorem itel_CONG1:
+     !p q x x' l l' y y'.
       (p = q)
       /\
       (~(q = nil) ==> (x = x'))
       /\
       ((q = nil) ==> (itel l y = itel l' y'))
       ==>
-      (itel ((p,x)::l) y = itel ((q,x')::l') y')``,
-   RW_TAC std_ss [itel_def,ite_def]);
+      (itel ((p,x)::l) y = itel ((q,x')::l') y')
+Proof
+   RW_TAC std_ss [itel_def,ite_def]
+QED
 
-val itel_CONG2 =
- store_thm
-  ("itel_CONG2",
-   ``!p q x x' l l' y y'.
+Theorem itel_CONG2:
+     !p q x x' l l' y y'.
       (p = q)
       /\
       ((|= q) ==> (x = x'))
       /\
       (~(|= q) ==> (itel l y = itel l' y'))
       ==>
-      (itel ((p,x)::l) y = itel ((q,x')::l') y')``,
-   RW_TAC std_ss [itel_def,ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]);
+      (itel ((p,x)::l) y = itel ((q,x')::l') y')
+Proof
+   RW_TAC std_ss [itel_def,ite_def,ACL2_TRUE_def,equal_def,EVAL ``t=nil``]
+QED
 
 val _ = DefnBase.write_congs (itel_CONG1::itel_CONG2::DefnBase.read_congs());
 
-val andl_CONG =
- store_thm
-  ("andl_CONG",
-   ``!p q x x'.
-      (p = q) /\ (~(p = nil) ==> (x = x')) ==> (andl[p;x] = andl[q;x'])``,
+Theorem andl_CONG:
+     !p q x x'.
+      (p = q) /\ (~(p = nil) ==> (x = x')) ==> (andl[p;x] = andl[q;x'])
+Proof
    Cases
-    THEN RW_TAC std_ss [andl_def,ite_def]);
+    THEN RW_TAC std_ss [andl_def,ite_def]
+QED
 
 val _ = DefnBase.write_congs (andl_CONG::DefnBase.read_congs());
 
-val sexp_size_car =
- store_thm
-  ("sexp_size_car",
-   ``!x. ~(consp x = nil) ==> (sexp_size (car x) < sexp_size x)``,
+Theorem sexp_size_car:
+     !x. ~(consp x = nil) ==> (sexp_size (car x) < sexp_size x)
+Proof
    Cases
     THEN RW_TAC arith_ss
           [car_def,nil_def,consp_def,arithmeticTheory.MAX_DEF,
-           fetch "-" "sexp_size_def"]);
+           fetch "-" "sexp_size_def"]
+QED
 
-val sexp_size_cdr =
- store_thm
-  ("sexp_size_cdr",
-   ``!x. ~(consp x = nil) ==> (sexp_size (cdr x) < sexp_size x)``,
+Theorem sexp_size_cdr:
+     !x. ~(consp x = nil) ==> (sexp_size (cdr x) < sexp_size x)
+Proof
    Cases
     THEN RW_TAC arith_ss
           [cdr_def,nil_def,consp_def,arithmeticTheory.MAX_DEF,
-           fetch "-" "sexp_size_def"]);
+           fetch "-" "sexp_size_def"]
+QED
 
 (*****************************************************************************)
 (* Definitions and lemmas used used in the Ray-Kaufmann LTL example          *)
 (*****************************************************************************)
-val let_simp =
- store_thm
-  ("let_simp",
-   ``(!P1 v y.
+Theorem let_simp:
+     (!P1 v y.
        (let (x,y) = (v,y) in P1 x y) = (let x = v in P1 x y))
      /\
      (!P2 v y z.
        (let (x,y,z) = (v,y,z) in P2 x y z) = (let x = v in P2 x y z))
      /\
      (!P3 v y z w.
-       (let (x,y,z,w) = (v,y,z,w) in P3 x y z w) = (let x = v in P3 x y z w))``,
+       (let (x,y,z,w) = (v,y,z,w) in P3 x y z w) = (let x = v in P3 x y z w))
+Proof
    RW_TAC std_ss []
-    THEN FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def]);
+    THEN FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def]
+QED
 
-val forall_fold =
- store_thm
-  ("forall_fold",
-   ``bool_to_sexp (!v. |= P v) = forall x. P x``,
-   RW_TAC std_ss [forall_def]);
+Theorem forall_fold:
+     bool_to_sexp (!v. |= P v) = forall x. P x
+Proof
+   RW_TAC std_ss [forall_def]
+QED
 
-val exists_fold =
- store_thm
-  ("exists_fold",
-   ``bool_to_sexp (?v. |= P v) = exists x. P x``,
-   RW_TAC std_ss [exists_def]);
+Theorem exists_fold:
+     bool_to_sexp (?v. |= P v) = exists x. P x
+Proof
+   RW_TAC std_ss [exists_def]
+QED
 
-val bool_to_sexp =
- store_thm
-  ("bool_to_sexp",
-   ``bool_to_sexp b = if b then t else nil``,
+Theorem bool_to_sexp:
+     bool_to_sexp b = if b then t else nil
+Proof
    Cases_on `b`
-    THEN RW_TAC std_ss [bool_to_sexp_def]);
+    THEN RW_TAC std_ss [bool_to_sexp_def]
+QED
 
-val forall2_thm =
- store_thm
-  ("forall2_thm",
-   ``(bool_to_sexp !x y. |= P x y) =
-      bool_to_sexp (!x. |= bool_to_sexp !y. |= P x y)``,
+Theorem forall2_thm:
+     (bool_to_sexp !x y. |= P x y) =
+      bool_to_sexp (!x. |= bool_to_sexp !y. |= P x y)
+Proof
    RW_TAC std_ss [bool_to_sexp,ACL2_TRUE]
-    THEN METIS_TAC[]);
+    THEN METIS_TAC[]
+QED
 
-val exists2_thm =
- store_thm
-  ("exists2_thm",
-   ``(bool_to_sexp ?x y. |= P x y) =
-      bool_to_sexp (?x. |= bool_to_sexp ?y. |= P x y)``,
+Theorem exists2_thm:
+     (bool_to_sexp ?x y. |= P x y) =
+      bool_to_sexp (?x. |= bool_to_sexp ?y. |= P x y)
+Proof
    RW_TAC std_ss [bool_to_sexp,ACL2_TRUE]
-    THEN METIS_TAC[]);
+    THEN METIS_TAC[]
+QED
 
-val t_nil =
- store_thm
-  ("t_nil",
-   ``~(t = nil) /\ ~(nil = t) /\ (|= t) /\ ~(|= nil) /\
-     !x. ((x = nil) = ~(|= x)) /\ (~(x = nil) = (|= x))``,
-   RW_TAC std_ss [t_def,nil_def,ACL2_TRUE]);
+Theorem t_nil:
+     ~(t = nil) /\ ~(nil = t) /\ (|= t) /\ ~(|= nil) /\
+     !x. ((x = nil) = ~(|= x)) /\ (~(x = nil) = (|= x))
+Proof
+   RW_TAC std_ss [t_def,nil_def,ACL2_TRUE]
+QED
 
 val bool_to_sexp =
  prove
@@ -1609,68 +1609,68 @@ val implies_def =
  acl2Define "ACL2::IMPLIES"
   `implies p q = ite p (andl [q; t]) t`;
 
-val implies_ite =
- store_thm
-  ("implies_ite",
-   ``implies p q = ite p (ite q t nil) t``,
-   RW_TAC std_ss [implies_def,ite_def,itel_def,andl_def]);
+Theorem implies_ite:
+     implies p q = ite p (ite q t nil) t
+Proof
+   RW_TAC std_ss [implies_def,ite_def,itel_def,andl_def]
+QED
 
-val implies =
- store_thm
-  ("implies",
-   ``(|= implies p q) = (|= p) ==> (|= q)``,
-   RW_TAC std_ss [implies_def,ite_def,itel_def,andl_def,t_nil]);
+Theorem implies:
+     (|= implies p q) = (|= p) ==> (|= q)
+Proof
+   RW_TAC std_ss [implies_def,ite_def,itel_def,andl_def,t_nil]
+QED
 
-val consp_nil =
- store_thm
-  ("consp_nil",
-   ``(consp nil = nil) /\ ~|= consp nil``,
-   RW_TAC std_ss [consp_def,nil_def,ACL2_TRUE]);
+Theorem consp_nil:
+     (consp nil = nil) /\ ~|= consp nil
+Proof
+   RW_TAC std_ss [consp_def,nil_def,ACL2_TRUE]
+QED
 
-val ite_simp =
- store_thm
-  ("ite_simp",
-   ``!a b c.
+Theorem ite_simp:
+     !a b c.
       ((|= (if a then b else c)) = (a /\ (|= b)) \/ (~a /\ |= c))
       /\
-      (ite nil b c = c) /\ (ite t b c = b)``,
+      (ite nil b c = c) /\ (ite t b c = b)
+Proof
    GEN_TAC
     THEN Cases_on `a`
-    THEN RW_TAC std_ss [t_nil,ite_def]);
+    THEN RW_TAC std_ss [t_nil,ite_def]
+QED
 
-val andl_simp =
- store_thm
-  ("andl_simp",
-    ``!a b. (|= andl []) /\ ((|= andl (a::b)) = (|= a) /\ (|= andl b))``,
+Theorem andl_simp:
+      !a b. (|= andl []) /\ ((|= andl (a::b)) = (|= a) /\ (|= andl b))
+Proof
     GEN_TAC
      THEN Cases
      THEN RW_TAC std_ss [andl_def,t_nil,ite_def]
-     THEN METIS_TAC[]);
+     THEN METIS_TAC[]
+QED
 
 val not_def =
  acl2Define "COMMON-LISP::NOT"
   `not p = ite p nil t`;
 
-val not_simp =
- store_thm
-  ("not_simp",
-   ``(|= not a) = ~|= a``,
-   RW_TAC std_ss [not_def,t_nil,ite_def]);
+Theorem not_simp:
+     (|= not a) = ~|= a
+Proof
+   RW_TAC std_ss [not_def,t_nil,ite_def]
+QED
 
-val equal_memberp_imp =
- store_thm
-  ("equal_memberp_imp",
-   ``!a s1 s2.
+Theorem equal_memberp_imp:
+     !a s1 s2.
       (|= equal (memberp a s1) (memberp a s2))
       ==>
-      ((|= memberp a s1) = (|= memberp a s2))``,
-   RW_TAC std_ss [equal_def,t_nil]);
+      ((|= memberp a s1) = (|= memberp a s2))
+Proof
+   RW_TAC std_ss [equal_def,t_nil]
+QED
 
-val equal_imp =
- store_thm
-  ("equal_imp",
-   ``!a s1 s2. (|= equal s1 s2) ==> ((|= s1) = (|= s2))``,
-   RW_TAC std_ss [equal_def,t_nil]);
+Theorem equal_imp:
+     !a s1 s2. (|= equal s1 s2) ==> ((|= s1) = (|= s2))
+Proof
+   RW_TAC std_ss [equal_def,t_nil]
+QED
 
 (*****************************************************************************)
 (* HOL version of Matt's ACL2 function imported-symbol-names                 *)

@@ -692,15 +692,17 @@ SIMP_TAC std_ss [GUESS_REWRITES, EXISTS_UNIQUE_THM]
 QED
 
 
-val QUANT_UNIT_ELIM = prove (``
+Theorem QUANT_UNIT_ELIM[local]:
   ((!x:unit. P x) = (P ())) /\
-  ((?x:unit. P x) = (P ()))``,
+  ((?x:unit. P x) = (P ()))
+Proof
 REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   ASM_REWRITE_TAC[],
   Cases_on `x` THEN ASM_REWRITE_TAC[],
   Cases_on `x` THEN ASM_REWRITE_TAC[],
   EXISTS_TAC ``()`` THEN ASM_REWRITE_TAC[]
-]);
+]
+QED
 
 
 
@@ -1279,47 +1281,63 @@ Theorem HD_TL_EQ_1[simp]:
 Proof HD_TL_EQ_TAC
 QED
 
-val HD_TL_EQ_2 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (TL (TL l)) = l) <=> (LENGTH l > 1)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_2[local]:
+    !l. (HD l :: (HD (TL l)) :: (TL (TL l)) = l) <=> (LENGTH l > 1)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_3 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (TL (TL (TL l))) = l) <=> (LENGTH l > 2)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_3[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (TL (TL (TL l))) = l) <=> (LENGTH l > 2)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_4 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) :: TL (TL (TL (TL l))) = l) <=> (LENGTH l > 3)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_4[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) :: TL (TL (TL (TL l))) = l) <=> (LENGTH l > 3)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_5 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
-        (HD (TL (TL (TL (TL l))))) :: TL (TL (TL (TL (TL l)))) = l) <=> (LENGTH l > 4)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_5[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: TL (TL (TL (TL (TL l)))) = l) <=> (LENGTH l > 4)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_6 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
-        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) :: TL (TL (TL (TL (TL (TL l))))) = l) <=> (LENGTH l > 5)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_6[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) :: TL (TL (TL (TL (TL (TL l))))) = l) <=> (LENGTH l > 5)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_7 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+Theorem HD_TL_EQ_7[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
         (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
-        HD (TL (TL (TL (TL (TL (TL l)))))) :: TL (TL (TL (TL (TL (TL (TL l)))))) = l) <=> (LENGTH l > 6)``,
-HD_TL_EQ_TAC)
+        HD (TL (TL (TL (TL (TL (TL l)))))) :: TL (TL (TL (TL (TL (TL (TL l)))))) = l) <=> (LENGTH l > 6)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_8 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+Theorem HD_TL_EQ_8[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
         (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
         HD (TL (TL (TL (TL (TL (TL l)))))) :: HD (TL (TL (TL (TL (TL (TL (TL l))))))) ::
-        TL (TL (TL (TL (TL (TL (TL (TL l))))))) = l) <=> (LENGTH l > 7)``,
-HD_TL_EQ_TAC)
+        TL (TL (TL (TL (TL (TL (TL (TL l))))))) = l) <=> (LENGTH l > 7)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_9 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+Theorem HD_TL_EQ_9[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
         (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
         HD (TL (TL (TL (TL (TL (TL l)))))) :: HD (TL (TL (TL (TL (TL (TL (TL l))))))) ::
-        HD (TL (TL (TL (TL (TL (TL (TL (TL l)))))))) :: TL (TL (TL (TL (TL (TL (TL (TL (TL l)))))))) = l) <=> (LENGTH l > 8)``,
-HD_TL_EQ_TAC)
+        HD (TL (TL (TL (TL (TL (TL (TL (TL l)))))))) :: TL (TL (TL (TL (TL (TL (TL (TL (TL l)))))))) = l) <=> (LENGTH l > 8)
+Proof
+HD_TL_EQ_TAC
+QED
 
 
 Theorem HD_TL_EQ_NIL_1[local]:
@@ -1333,47 +1351,63 @@ Theorem HD_TL_EQ_NIL_1_bothways[simp] =
                          (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])))
                         HD_TL_EQ_NIL_1)
 
-val HD_TL_EQ_NIL_2 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: [] = l) <=> (LENGTH l = 2)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_NIL_2[local]:
+    !l. (HD l :: (HD (TL l)) :: [] = l) <=> (LENGTH l = 2)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_NIL_3 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: [] = l) <=> (LENGTH l = 3)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_NIL_3[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: [] = l) <=> (LENGTH l = 3)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_NIL_4 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) :: [] = l) <=> (LENGTH l = 4)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_NIL_4[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) :: [] = l) <=> (LENGTH l = 4)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_NIL_5 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
-        (HD (TL (TL (TL (TL l))))) :: [] = l) <=> (LENGTH l = 5)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_NIL_5[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: [] = l) <=> (LENGTH l = 5)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_NIL_6 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
-        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) :: [] = l) <=> (LENGTH l = 6)``,
-HD_TL_EQ_TAC)
+Theorem HD_TL_EQ_NIL_6[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+        (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) :: [] = l) <=> (LENGTH l = 6)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_NIL_7 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+Theorem HD_TL_EQ_NIL_7[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
         (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
-        HD (TL (TL (TL (TL (TL (TL l)))))) :: [] = l) <=> (LENGTH l = 7)``,
-HD_TL_EQ_TAC)
+        HD (TL (TL (TL (TL (TL (TL l)))))) :: [] = l) <=> (LENGTH l = 7)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_NIL_8 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+Theorem HD_TL_EQ_NIL_8[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
         (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
         HD (TL (TL (TL (TL (TL (TL l)))))) :: HD (TL (TL (TL (TL (TL (TL (TL l))))))) ::
-        [] = l) <=> (LENGTH l = 8)``,
-HD_TL_EQ_TAC)
+        [] = l) <=> (LENGTH l = 8)
+Proof
+HD_TL_EQ_TAC
+QED
 
-val HD_TL_EQ_NIL_9 = prove (
-  ``!l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
+Theorem HD_TL_EQ_NIL_9[local]:
+    !l. (HD l :: (HD (TL l)) :: (HD (TL (TL l))) :: (HD (TL (TL (TL l)))) ::
         (HD (TL (TL (TL (TL l))))) :: HD (TL (TL (TL (TL (TL l))))) ::
         HD (TL (TL (TL (TL (TL (TL l)))))) :: HD (TL (TL (TL (TL (TL (TL (TL l))))))) ::
-        HD (TL (TL (TL (TL (TL (TL (TL (TL l)))))))) :: [] = l) <=> (LENGTH l = 9)``,
-HD_TL_EQ_TAC)
+        HD (TL (TL (TL (TL (TL (TL (TL (TL l)))))))) :: [] = l) <=> (LENGTH l = 9)
+Proof
+HD_TL_EQ_TAC
+QED
 
 val HD_TL_EQ_THMS_1 = [
   HD_TL_EQ_1,

@@ -132,9 +132,11 @@ Proof
   THEN RW_TAC list_ss [DFT_def] THEN METIS_TAC [APPEND]
 QED
 
-val FOLDR_UNROLL = Q.prove
-(`!f x b l. FOLDR f (f x b) l = FOLDR f b (l ++ [x])`,
- Induct_on `l` THEN RW_TAC list_ss []);
+Theorem FOLDR_UNROLL[local]:
+  !f x b l. FOLDR f (f x b) l = FOLDR f b (l ++ [x])
+Proof
+ Induct_on `l` THEN RW_TAC list_ss []
+QED
 
 Theorem DFT_FOLD:
   !G f seen to_visit acc.
@@ -146,13 +148,15 @@ Proof
  RW_TAC list_ss [DFT_def] THEN METIS_TAC [FOLDR_UNROLL,DFT_CONS,APPEND]
 QED
 
-val DFT_ALL_DISTINCT_LEM = Q.prove
-(`!G f seen to_visit acc.
+Theorem DFT_ALL_DISTINCT_LEM[local]:
+  !G f seen to_visit acc.
     FINITE (Parents G) /\ (f = CONS) /\
     ALL_DISTINCT acc /\ (!x. MEM x acc ==> MEM x seen)
       ==>
-    ALL_DISTINCT (DFT G f seen to_visit acc)`,
- recInduct DFT_ind THEN RW_TAC list_ss [DFT_def] THEN METIS_TAC []);
+    ALL_DISTINCT (DFT G f seen to_visit acc)
+Proof
+ recInduct DFT_ind THEN RW_TAC list_ss [DFT_def] THEN METIS_TAC []
+QED
 
 Theorem DFT_ALL_DISTINCT:
   !G seen to_visit.

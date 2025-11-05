@@ -47,8 +47,8 @@ theories.tex: theories.stex $(PS_STUFF) $(dprot $(SIGOBJ)/realTheory.uo) \
 	$(PS_COMMAND)
 
 math.tex: math.stex $(PS_STUFF) $(dprot $(SIGOBJ)/probabilityTheory.uo) \
-	$(HOLDIR)/examples/probability/large_numberTheory.uo \
-	$(HOLDIR)/examples/probability/lebesgue_measureTheory.uo
+    $(dprot $(SIGOBJ)/lebesgue_measureTheory.uo) \
+	$(HOLDIR)/examples/probability/large_numberTheory.uo
 	$(PS_COMMAND)
 
 simplifier.tex: simplifier.stex $(PS_STUFF)

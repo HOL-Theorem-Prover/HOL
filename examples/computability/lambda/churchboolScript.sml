@@ -39,17 +39,19 @@ val cB_lameq11 = Store_thm(
     by METIS_TAC [corollary3_2_1, beta_normal_form_bnf, bnf_cB] THEN
   FULL_SIMP_TAC (srw_ss()) [])
 
-val cB_behaviour = store_thm(
-  "cB_behaviour",
-  ``cB T @@ x @@ y -n->* x ∧ cB F @@ x @@ y -n->* y``,
+Theorem cB_behaviour:
+    cB T @@ x @@ y -n->* x ∧ cB F @@ x @@ y -n->* y
+Proof
   SRW_TAC [][cB_def] THEN FRESH_TAC THEN
-  SRW_TAC [NORMSTAR_ss][]);
+  SRW_TAC [NORMSTAR_ss][]
+QED
 
-val wh_cB = store_thm(
-  "wh_cB",
-  ``cB T @@ x @@ y -w->* x ∧ cB F @@ x @@ y -w->* y``,
+Theorem wh_cB:
+    cB T @@ x @@ y -w->* x ∧ cB F @@ x @@ y -w->* y
+Proof
   REWRITE_TAC [cB_def] THEN CONJ_TAC THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy (srw_ss())) []);
+  ASM_SIMP_TAC (whfy (srw_ss())) []
+QED
 val _ = export_betarwt "wh_cB"
 
 Definition cnot_def:
@@ -63,11 +65,12 @@ val bnf_cnot = Store_thm(
   "bnf_cnot",
   ``bnf cnot``,
   SRW_TAC [][cnot_def]);
-val cnot_behaviour = store_thm(
-  "cnot_behaviour",
-  ``cnot @@ cB p -n->* cB (¬p)``,
+Theorem cnot_behaviour:
+    cnot @@ cB p -n->* cB (¬p)
+Proof
   Cases_on `p` THEN
-  SIMP_TAC (bsrw_ss()) [cnot_def]);
+  SIMP_TAC (bsrw_ss()) [cnot_def]
+QED
 val _ = export_betarwt "cnot_behaviour"
 
 Definition cand_def:
@@ -85,30 +88,34 @@ val is_abs_cand = Store_thm(
   "is_abs_cand",
   ``is_abs cand``,
   SRW_TAC [][cand_def]);
-val cand_behaviour = store_thm(
-  "cand_behaviour",
-  ``cand @@ cB p @@ cB q -n->* cB (p /\ q)``,
+Theorem cand_behaviour:
+    cand @@ cB p @@ cB q -n->* cB (p /\ q)
+Proof
   SIMP_TAC (bsrw_ss()) [cand_def] THEN
-  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) []);
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) []
+QED
 val _ = export_betarwt "cand_behaviour"
 
-val wh_cand = store_thm(
-  "wh_cand",
-  ``cand @@ b1 @@ b2 -w->* b1 @@ b2 @@ cB F``,
+Theorem wh_cand:
+    cand @@ b1 @@ b2 -w->* b1 @@ b2 @@ cB F
+Proof
   REWRITE_TAC [cand_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) []);
+  ASM_SIMP_TAC (whfy(srw_ss())) []
+QED
 
-val cand_F1 = store_thm(
-  "cand_F1",
-  ``cand @@ cB F @@ X -n->* cB F``,
-  SIMP_TAC (bsrw_ss()) [cand_def]);
+Theorem cand_F1:
+    cand @@ cB F @@ X -n->* cB F
+Proof
+  SIMP_TAC (bsrw_ss()) [cand_def]
+QED
 val _ = export_betarwt "cand_F1"
 
-val cand_T1 = store_thm(
-  "cand_T1",
-  ``cand @@ cB T @@ X -w->* X``,
+Theorem cand_T1:
+    cand @@ cB T @@ X -w->* X
+Proof
   unvarify_tac whstar_substitutive THEN
-  SIMP_TAC (whfy(srw_ss())) [wh_cand, wh_cB]);
+  SIMP_TAC (whfy(srw_ss())) [wh_cand, wh_cB]
+QED
 
 Definition cor_def:
   cor = LAM "p" (LAM "q" (VAR "p" @@ cB T @@ VAR "q"))
@@ -122,23 +129,26 @@ val bnf_cor = Store_thm(
   ``bnf cor``,
   SRW_TAC [][cor_def]);
 
-val cor_behaviour = store_thm(
-  "cor_behaviour",
-  ``cor @@ cB p @@ cB q -n->* cB (p ∨ q)``,
+Theorem cor_behaviour:
+    cor @@ cB p @@ cB q -n->* cB (p ∨ q)
+Proof
   SIMP_TAC (bsrw_ss()) [cor_def] THEN
-  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) []);
+  Cases_on `p` THEN SIMP_TAC (bsrw_ss()) []
+QED
 val _ = export_betarwt "cor_behaviour"
 
-val cor_T1 = store_thm(
-  "cor_T1",
-  ``cor @@ cB T @@ X == cB T``,
-  SIMP_TAC (bsrw_ss()) [cor_def]);
+Theorem cor_T1:
+    cor @@ cB T @@ X == cB T
+Proof
+  SIMP_TAC (bsrw_ss()) [cor_def]
+QED
 val _ = export_betarwt "cor_T1"
 
-val cor_F1 = store_thm(
-  "cor_F1",
-  ``cor @@ cB F @@ X == X``,
-  SIMP_TAC (bsrw_ss()) [cor_def]);
+Theorem cor_F1:
+    cor @@ cB F @@ X == X
+Proof
+  SIMP_TAC (bsrw_ss()) [cor_def]
+QED
 val _ = export_betarwt "cor_F1"
 
 val cB_mynames = prove(
@@ -146,10 +156,10 @@ val cB_mynames = prove(
   SRW_TAC [DNF_ss][cB_def, LAM_eq_thm] THEN
   SRW_TAC [][basic_swapTheory.swapstr_def] THEN METIS_TAC []);
 
-val whead_tests = store_thm(
-  "whead_tests",
-  ``(M == cB T ⇒ M @@ x @@ y -w->* x) ∧
-    (M == cB F ⇒ M @@ x @@ y -w->* y)``,
+Theorem whead_tests:
+    (M == cB T ⇒ M @@ x @@ y -w->* x) ∧
+    (M == cB F ⇒ M @@ x @@ y -w->* y)
+Proof
   Q_TAC SUFF_TAC `∀M b x y. M == cB b ⇒ M @@ x @@ y -w->* if b then x else y`
         THEN1 METIS_TAC [] THEN
   REPEAT STRIP_TAC THEN
@@ -183,23 +193,27 @@ val whead_tests = store_thm(
      by METIS_TAC [whstar_substitutive] THEN
   POP_ASSUM MP_TAC THEN
   Cases_on `b` THEN ASM_SIMP_TAC (srw_ss()) [lemma14b] THEN
-  METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE]);
+  METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE]
+QED
 
-val wh_S = store_thm(
-  "wh_S",
-  ``S @@ f @@ g @@ x -w->* f @@ x @@ (g @@ x)``,
+Theorem wh_S:
+    S @@ f @@ g @@ x -w->* f @@ x @@ (g @@ x)
+Proof
   REWRITE_TAC [chap2Theory.S_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy (srw_ss())) []);
+  ASM_SIMP_TAC (whfy (srw_ss())) []
+QED
 
-val wh_K = store_thm(
-  "wh_K",
-  ``K @@ x @@ y -w->* x``,
+Theorem wh_K:
+    K @@ x @@ y -w->* x
+Proof
   REWRITE_TAC [chap2Theory.K_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy (srw_ss())) []);
+  ASM_SIMP_TAC (whfy (srw_ss())) []
+QED
 
-val wh_B = store_thm(
-  "wh_B",
-  ``B @@ f @@ g @@ x -w->* f @@ (g @@ x)``,
+Theorem wh_B:
+    B @@ f @@ g @@ x -w->* f @@ (g @@ x)
+Proof
   unvarify_tac whstar_substitutive THEN
-  SIMP_TAC (whfy(srw_ss())) [chap2Theory.B_def, wh_S, wh_K]);
+  SIMP_TAC (whfy(srw_ss())) [chap2Theory.B_def, wh_S, wh_K]
+QED
 

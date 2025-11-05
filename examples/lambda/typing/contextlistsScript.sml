@@ -40,10 +40,11 @@ Theorem MEM_ctxtswap[simp]:
 Proof SRW_TAC [][MEM_listpm]
 QED
 
-val ctxtFV_ctxtswap = store_thm(
-  "ctxtFV_ctxtswap",
-  “ctxtFV (ctxtswap pi G) = setpm string_pmact pi (ctxtFV G)”,
-  MATCH_ACCEPT_TAC perm_supp);
+Theorem ctxtFV_ctxtswap:
+   ctxtFV (ctxtswap pi G) = setpm string_pmact pi (ctxtFV G)
+Proof
+  MATCH_ACCEPT_TAC perm_supp
+QED
 val _ = export_rewrites ["ctxtFV_ctxtswap"]
 
 (* valid_ctxt also respects permutation *)
@@ -51,10 +52,11 @@ val valid_ctxt_swap0 = prove(
   “!G. valid_ctxt G ==> !x y. valid_ctxt (ctxtswap pi G)”,
   Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]);
 
-val valid_ctxt_swap = store_thm(
-  "valid_ctxt_swap",
-  “valid_ctxt (ctxtswap pi G) = valid_ctxt G”,
-  METIS_TAC [valid_ctxt_swap0, pmact_inverse]);
+Theorem valid_ctxt_swap:
+   valid_ctxt (ctxtswap pi G) = valid_ctxt G
+Proof
+  METIS_TAC [valid_ctxt_swap0, pmact_inverse]
+QED
 val _ = export_rewrites ["valid_ctxt_swap"]
 
 (* contexts have finitely many free variables *)
@@ -63,10 +65,11 @@ Proof
   Induct_on ‘G’ >> simp[pairTheory.FORALL_PROD, supp_pairpm]
 QED
 
-val ctxtswap_fresh = store_thm(
-  "ctxtswap_fresh",
-  “¬(x ∈ ctxtFV G) /\ ¬(y ∈ ctxtFV G) ==> (ctxtswap [(x,y)] G = G)”,
-  MATCH_ACCEPT_TAC supp_fresh)
+Theorem ctxtswap_fresh:
+   ¬(x ∈ ctxtFV G) /\ ¬(y ∈ ctxtFV G) ==> (ctxtswap [(x,y)] G = G)
+Proof
+  MATCH_ACCEPT_TAC supp_fresh
+QED
 
 (* sub-context relation, overloaded to use SUBSET *)
 Definition subctxt_def:
@@ -83,12 +86,13 @@ Proof SRW_TAC [][subctxt_def]
 QED
 
 (* cute, but unnecessary *)
-val subctxt_ctxtFV = store_thm(
-  "subctxt_ctxtFV",
-  “C1 ⊆ C2 ==> ctxtFV C1 ⊆ ctxtFV C2”,
+Theorem subctxt_ctxtFV:
+   C1 ⊆ C2 ==> ctxtFV C1 ⊆ ctxtFV C2
+Proof
   SIMP_TAC (srw_ss()) [pred_setTheory.SUBSET_DEF, subctxt_def,
                        IN_supp_listpm, pairTheory.EXISTS_PROD] THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 val PERM_RULES = LIST_CONJ [Q.SPEC ‘[]’ PERM_REFL,
                             prove(“∀x l1 l2. PERM l1 l2 ==>
@@ -100,41 +104,46 @@ val PERM_RULES = LIST_CONJ [Q.SPEC ‘[]’ PERM_REFL,
                             PERM_TRANS]
 val strong_perm_ind = IndDefLib.derive_strong_induction (PERM_RULES, PERM_IND)
 
-val valid_ctxt_PERM = store_thm(
-  "valid_ctxt_PERM",
-  “!G1 G2. PERM G1 G2 ==> (valid_ctxt G1 = valid_ctxt G2)”,
+Theorem valid_ctxt_PERM:
+   !G1 G2. PERM G1 G2 ==> (valid_ctxt G1 = valid_ctxt G2)
+Proof
   HO_MATCH_MP_TAC strong_perm_ind THEN
   SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, NOT_IN_supp_listpm] THEN
-  SRW_TAC [][] THEN METIS_TAC [PERM_MEM_EQ]);
+  SRW_TAC [][] THEN METIS_TAC [PERM_MEM_EQ]
+QED
 
-val valid_ctxt_FILTER = store_thm(
-  "valid_ctxt_FILTER",
-  “valid_ctxt G ==> valid_ctxt (FILTER P G)”,
+Theorem valid_ctxt_FILTER:
+   valid_ctxt G ==> valid_ctxt (FILTER P G)
+Proof
   Induct_on ‘G’ THEN
   SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, NOT_IN_supp_listpm] THEN
-  SRW_TAC [][IN_supp_listpm, pairTheory.EXISTS_PROD, listTheory.MEM_FILTER]);
+  SRW_TAC [][IN_supp_listpm, pairTheory.EXISTS_PROD, listTheory.MEM_FILTER]
+QED
 Definition domfilter_def:
   domfilter (G:'a ctxt) P = FILTER (λ(x,ty). x ∈ P) G
 End
 val _ = overload_on ("INTER", “domfilter”)
 
-val domfilter_thm = store_thm(
-  "domfilter_thm",
-  “([] ∩ P = []) ∧
-    ((h :: G) ∩ P = if FST h ∈ P then h :: (G ∩ P) else G ∩ P)”,
-  Cases_on ‘h’ THEN SRW_TAC [][domfilter_def])
+Theorem domfilter_thm:
+   ([] ∩ P = []) ∧
+    ((h :: G) ∩ P = if FST h ∈ P then h :: (G ∩ P) else G ∩ P)
+Proof
+  Cases_on ‘h’ THEN SRW_TAC [][domfilter_def]
+QED
 val _ = export_rewrites ["domfilter_thm"]
 
-val valid_ctxt_domfilter = store_thm(
-  "valid_ctxt_domfilter",
-  “valid_ctxt G ==> valid_ctxt (G ∩ P)”,
-  SRW_TAC [][domfilter_def, valid_ctxt_FILTER]);
+Theorem valid_ctxt_domfilter:
+   valid_ctxt G ==> valid_ctxt (G ∩ P)
+Proof
+  SRW_TAC [][domfilter_def, valid_ctxt_FILTER]
+QED
 
-val IN_ctxtFV_domfilter = store_thm(
-  "IN_ctxtFV_domfilter",
-  “x ∈ ctxtFV (G ∩ P) ⇔ x ∈ ctxtFV G ∧ x ∈ P”,
+Theorem IN_ctxtFV_domfilter:
+   x ∈ ctxtFV (G ∩ P) ⇔ x ∈ ctxtFV G ∧ x ∈ P
+Proof
   Induct_on ‘G’ THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
-  SRW_TAC [][] THEN METIS_TAC []);
+  SRW_TAC [][] THEN METIS_TAC []
+QED
 val _ = export_rewrites ["IN_ctxtFV_domfilter"]
 
 Theorem MEM_domfilter[simp]:
@@ -143,13 +152,15 @@ Proof
   SRW_TAC [][domfilter_def, listTheory.MEM_FILTER]
 QED
 
-val subctxt_domfilter = store_thm(
-  "subctxt_domfilter",
-  “(G:'a ctxt) ∩ P ⊆ G”,
-  SRW_TAC [][subctxt_def, domfilter_def, listTheory.MEM_FILTER]);
+Theorem subctxt_domfilter:
+   (G:'a ctxt) ∩ P ⊆ G
+Proof
+  SRW_TAC [][subctxt_def, domfilter_def, listTheory.MEM_FILTER]
+QED
 
-val domfilter_delete = store_thm(
-  "domfilter_delete",
-  “¬(v ∈ ctxtFV G) ==> (G ∩ (s DELETE v) = G ∩ s)”,
-  Induct_on ‘G’ THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]);
+Theorem domfilter_delete:
+   ¬(v ∈ ctxtFV G) ==> (G ∩ (s DELETE v) = G ∩ s)
+Proof
+  Induct_on ‘G’ THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]
+QED
 

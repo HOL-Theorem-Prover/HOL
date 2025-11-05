@@ -29,19 +29,19 @@ val _ = type_abbrev("state", ``:string |-> num``);
 (* neval and beval don't end up playing a role.                              *)
 (*---------------------------------------------------------------------------*)
 
-val _ =
- Datatype
-      `nexp = Var string
+Datatype:
+       nexp = Var string
             | Const num
             | Plus nexp nexp
             | Times nexp nexp
-            | Sub nexp nexp`;
+            | Sub nexp nexp
+End
 
-val _ =
- Datatype
-      `bexp = Equal nexp nexp
+Datatype:
+       bexp = Equal nexp nexp
             | Less nexp nexp
-            | Not bexp`;
+            | Not bexp
+End
 
 Definition neval_def:
    (neval (Var s) sigma = (sigma ' s)) /\
@@ -62,13 +62,13 @@ End
 (* Datatype of programs                                                      *)
 (*---------------------------------------------------------------------------*)
 
-val _ =
- Datatype
-  `program = Skip
+Datatype:
+   program = Skip
            | Assign string nexp
            | Seq    program program
            | Cond   bexp program program
-           | While  bexp program`;
+           | While  bexp program
+End
 
 
 (*---------------------------------------------------------------------------*)
@@ -113,45 +113,52 @@ val sinduction = derive_strong_induction(rules,induction);
 (* rules are driven "backwards', inferring premisses from conclusions.  *)
 (* =====================================================================*)
 
-val SKIP_THM = store_thm
-("SKIP_THM",
- ``!s1 s2. EVAL Skip s1 s2 = (s1 = s2)``,
- RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
+Theorem SKIP_THM:
+   !s1 s2. EVAL Skip s1 s2 = (s1 = s2)
+Proof
+ RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel
+QED
 
-val ASSIGN_THM = store_thm
-("ASSIGN_THM",
- ``!s1 s2 v e. EVAL (Assign v e) s1 s2 = (s2 = s1 |+ (v,neval e s1))``,
- RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
+Theorem ASSIGN_THM:
+   !s1 s2 v e. EVAL (Assign v e) s1 s2 = (s2 = s1 |+ (v,neval e s1))
+Proof
+ RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel
+QED
 
-val SEQ_THM = store_thm
-("SEQ_THM",
- ``!s1 s3 c1 c2. EVAL (Seq c1 c2) s1 s3 = ?s2. EVAL c1 s1 s2 /\ EVAL c2 s2 s3``,
- RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
+Theorem SEQ_THM:
+   !s1 s3 c1 c2. EVAL (Seq c1 c2) s1 s3 = ?s2. EVAL c1 s1 s2 /\ EVAL c2 s2 s3
+Proof
+ RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel
+QED
 
-val IF_T_THM = store_thm
-("IF_T_THM",
- ``!s1 s2 b c1 c2.
-     beval b s1 ==> (EVAL (Cond b c1 c2) s1 s2 = EVAL c1 s1 s2)``,
- RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
+Theorem IF_T_THM:
+   !s1 s2 b c1 c2.
+     beval b s1 ==> (EVAL (Cond b c1 c2) s1 s2 = EVAL c1 s1 s2)
+Proof
+ RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel
+QED
 
-val IF_F_THM = store_thm
-("IF_F_THM",
- ``!s1 s2 b c1 c2.
-     ~beval b s1 ==> (EVAL (Cond b c1 c2) s1 s2 = EVAL c2 s1 s2)``,
- RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
+Theorem IF_F_THM:
+   !s1 s2 b c1 c2.
+     ~beval b s1 ==> (EVAL (Cond b c1 c2) s1 s2 = EVAL c2 s1 s2)
+Proof
+ RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel
+QED
 
-val WHILE_T_THM = store_thm
-("WHILE_T_THM",
- ``!s1 s3 b c.
+Theorem WHILE_T_THM:
+   !s1 s3 b c.
     beval b s1 ==>
       (EVAL (While b c) s1 s3 = ?s2. EVAL c s1 s2 /\
-                                     EVAL (While b c) s2 s3)``,
- RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
+                                     EVAL (While b c) s2 s3)
+Proof
+ RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel
+QED
 
-val WHILE_F_THM = store_thm
-("WHILE_F_THM",
- ``!s1 s2 b c. ~beval b s1 ==> (EVAL (While b c) s1 s2 = (s1 = s2))``,
- RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel);
+Theorem WHILE_F_THM:
+   !s1 s2 b c. ~beval b s1 ==> (EVAL (While b c) s1 s2 = (s1 = s2))
+Proof
+ RW_TAC std_ss [EQ_IMP_THM,Once ecases] THEN METIS_TAC rulel
+QED
 
 (*---------------------------------------------------------------------------*)
 (* THEOREM: the operational semantics is deterministic.                      *)
@@ -163,13 +170,14 @@ val WHILE_F_THM = store_thm
 (* cases---one per rule, rather than one per constructor.                    *)
 (*---------------------------------------------------------------------------*)
 
-val EVAL_DETERMINISTIC = store_thm
-("EVAL_DETERMINISTIC",
- ``!c st1 st2. EVAL c st1 st2 ==> !st3. EVAL c st1 st3 ==> (st2 = st3)``,
+Theorem EVAL_DETERMINISTIC:
+   !c st1 st2. EVAL c st1 st2 ==> !st3. EVAL c st1 st3 ==> (st2 = st3)
+Proof
  HO_MATCH_MP_TAC induction THEN
  RW_TAC std_ss [SKIP_THM,ASSIGN_THM,SEQ_THM,
                 IF_T_THM,IF_F_THM,WHILE_T_THM, WHILE_F_THM] THEN
- METIS_TAC[]);
+ METIS_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Definition of Floyd-Hoare logic judgements for partial correctness and    *)
@@ -185,41 +193,45 @@ End
 (* Skip rule                                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val SKIP_RULE = store_thm
-("SKIP_RULE",
- ``!P. SPEC P Skip P``,
- RW_TAC std_ss [SPEC_def,SKIP_THM]);
+Theorem SKIP_RULE:
+   !P. SPEC P Skip P
+Proof
+ RW_TAC std_ss [SPEC_def,SKIP_THM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Assignment rule                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val ASSIGN_RULE = store_thm
-("ASSIGN_RULE",
- ``!P v e.
-      SPEC (\s. P (s |+ (v,neval e s))) (Assign v e) P``,
- RW_TAC std_ss [SPEC_def] THEN METIS_TAC [ASSIGN_THM]);
+Theorem ASSIGN_RULE:
+   !P v e.
+      SPEC (\s. P (s |+ (v,neval e s))) (Assign v e) P
+Proof
+ RW_TAC std_ss [SPEC_def] THEN METIS_TAC [ASSIGN_THM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Sequencing rule                                                           *)
 (*---------------------------------------------------------------------------*)
 
-val SEQ_RULE = store_thm
-("SEQ_RULE",
- ``!P c1 c2 Q R.
-       SPEC P c1 Q /\ SPEC Q c2 R ==> SPEC P (Seq c1 c2) R``,
- RW_TAC std_ss [SPEC_def] THEN METIS_TAC [SEQ_THM]);
+Theorem SEQ_RULE:
+   !P c1 c2 Q R.
+       SPEC P c1 Q /\ SPEC Q c2 R ==> SPEC P (Seq c1 c2) R
+Proof
+ RW_TAC std_ss [SPEC_def] THEN METIS_TAC [SEQ_THM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Conditional rule                                                          *)
 (*---------------------------------------------------------------------------*)
 
-val COND_RULE = store_thm
-("COND_RULE",
- ``!P b c1 c2 Q.
+Theorem COND_RULE:
+   !P b c1 c2 Q.
       SPEC (\s. P(s) /\ beval b s) c1 Q /\
-      SPEC (\s. P(s) /\ ~beval b s) c2 Q ==> SPEC P (Cond b c1 c2) Q``,
- RW_TAC std_ss [SPEC_def] THEN METIS_TAC [IF_T_THM, IF_F_THM]);
+      SPEC (\s. P(s) /\ ~beval b s) c2 Q ==> SPEC P (Cond b c1 c2) Q
+Proof
+ RW_TAC std_ss [SPEC_def] THEN METIS_TAC [IF_T_THM, IF_F_THM]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* While rule                                                                *)
@@ -237,43 +249,48 @@ val lemma2 = Q.prove
              (P s1 ==> P s2)`,
  HO_MATCH_MP_TAC sinduction THEN RW_TAC std_ss [] THEN METIS_TAC[]);
 
-val WHILE_RULE = store_thm
-("WHILE_RULE",
- ``!P b c. SPEC (\s. P(s) /\ beval b s) c P ==>
-           SPEC P (While b c) (\s. P s /\ ~beval b s)``,
- RW_TAC std_ss [SPEC_def] THENL [METIS_TAC[lemma2],METIS_TAC[lemma1]]);
+Theorem WHILE_RULE:
+   !P b c. SPEC (\s. P(s) /\ beval b s) c P ==>
+           SPEC P (While b c) (\s. P s /\ ~beval b s)
+Proof
+ RW_TAC std_ss [SPEC_def] THENL [METIS_TAC[lemma2],METIS_TAC[lemma1]]
+QED
 
 
 (*---------------------------------------------------------------------------*)
 (* Precondition strengthening                                                *)
 (*---------------------------------------------------------------------------*)
 
-val PRE_STRENGTHEN = store_thm
-("PRE_STRENGTHEN",
- ``!P c Q P'. (!s. P' s ==> P s) /\  SPEC P c Q ==> SPEC P' c Q``,
- RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
+Theorem PRE_STRENGTHEN:
+   !P c Q P'. (!s. P' s ==> P s) /\  SPEC P c Q ==> SPEC P' c Q
+Proof
+ RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* postcondition weakening                                                   *)
 (*---------------------------------------------------------------------------*)
 
-val POST_WEAKEN = store_thm
-("POST_WEAKEN",
- ``!P c Q Q'. (!s. Q s ==> Q' s) /\  SPEC P c Q ==> SPEC P c Q'``,
- RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
+Theorem POST_WEAKEN:
+   !P c Q Q'. (!s. Q s ==> Q' s) /\  SPEC P c Q ==> SPEC P c Q'
+Proof
+ RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Boolean combinations of pre-and-post-conditions.                          *)
 (*---------------------------------------------------------------------------*)
 
-val CONJ_TRIPLE = store_thm
-("CONJ_TRIPLE",
- ``!P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2
-                   ==> SPEC (\s. P1 s /\ P2 s) c (\s. Q1 s /\ Q2 s)``,
- RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
+Theorem CONJ_TRIPLE:
+   !P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2
+                   ==> SPEC (\s. P1 s /\ P2 s) c (\s. Q1 s /\ Q2 s)
+Proof
+ RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]
+QED
 
-val DISJ_TRIPLE = store_thm
-("DISJ_TRIPLE",
- ``!P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2
-                   ==> SPEC (\s. P1 s \/ P2 s) c (\s. Q1 s \/ Q2 s)``,
- RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]);
+Theorem DISJ_TRIPLE:
+   !P1 P2 c Q1 Q2. SPEC P1 c Q1 /\ SPEC P2 c Q2
+                   ==> SPEC (\s. P1 s \/ P2 s) c (\s. Q1 s \/ Q2 s)
+Proof
+ RW_TAC std_ss [SPEC_def] THEN METIS_TAC[]
+QED

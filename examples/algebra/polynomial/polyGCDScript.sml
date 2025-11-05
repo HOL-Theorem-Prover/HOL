@@ -409,67 +409,74 @@ val it = |- !r p q. pgcd p q = ring_gcd (PolyRing r) (\p. norm p) p q: thm *)
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> poly (pgcd p q) *)
 (* Proof: by poly_ring_euclid_ring, ring_gcd_element *)
-val poly_gcd_poly = store_thm(
-  "poly_gcd_poly",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> poly (pgcd p q)``,
-  metis_tac[poly_gcd_def, poly_ring_euclid_ring, ring_gcd_element, poly_ring_element]);
+Theorem poly_gcd_poly:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> poly (pgcd p q)
+Proof
+  metis_tac[poly_gcd_def, poly_ring_euclid_ring, ring_gcd_element, poly_ring_element]
+QED
 
 (* export simple result *)
 val _ = export_rewrites["poly_gcd_poly"];
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> (pgcd p q = pgcd q p) *)
 (* Proof: by poly_ring_euclid_ring, ring_gcd_sym *)
-val poly_gcd_sym = store_thm(
-  "poly_gcd_sym",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (pgcd p q = pgcd q p)``,
-  metis_tac[poly_gcd_def, poly_ring_euclid_ring, ring_gcd_sym, poly_ring_element]);
+Theorem poly_gcd_sym:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> (pgcd p q = pgcd q p)
+Proof
+  metis_tac[poly_gcd_def, poly_ring_euclid_ring, ring_gcd_sym, poly_ring_element]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> pgcd p q pdivides p /\ pgcd p q pdivides q *)
 (* Proof: by poly_ring_euclid_ring, ring_gcd_divides, poly_divides_is_ring_divides *)
-val poly_gcd_divides = store_thm(
-  "poly_gcd_divides",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> pgcd p q pdivides p /\ pgcd p q pdivides q``,
+Theorem poly_gcd_divides:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> pgcd p q pdivides p /\ pgcd p q pdivides q
+Proof
   metis_tac[poly_gcd_def, poly_ring_euclid_ring, ring_gcd_divides,
-            poly_ring_element, poly_divides_is_ring_divides]);
+            poly_ring_element, poly_divides_is_ring_divides]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==>
             !t. poly t /\ t pdivides p /\ t pdivides q ==> t pdivides pgcd p q *)
 (* Proof: by poly_ring_euclid_ring, ring_gcd_property, poly_divides_is_ring_divides *)
-val poly_gcd_property = store_thm(
-  "poly_gcd_property",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   !t. poly t /\ t pdivides p /\ t pdivides q ==> t pdivides pgcd p q``,
+Theorem poly_gcd_property:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   !t. poly t /\ t pdivides p /\ t pdivides q ==> t pdivides pgcd p q
+Proof
   metis_tac[poly_gcd_def, poly_ring_euclid_ring, ring_gcd_property,
-            poly_ring_element, poly_divides_is_ring_divides]);
+            poly_ring_element, poly_divides_is_ring_divides]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> pgcd p q pdivides p /\ pgcd p q pdivides q /\
             !t. poly t /\ t pdivides p /\ t pdivides q ==> t pdivides pgcd p q *)
 (* Proof: by poly_gcd_property, poly_gcd_divides *)
-val poly_gcd_is_gcd = store_thm(
-  "poly_gcd_is_gcd",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> pgcd p q pdivides p /\ pgcd p q pdivides q /\
-   !t. poly t /\ t pdivides p /\ t pdivides q ==> t pdivides pgcd p q``,
-  rw[poly_gcd_property, poly_gcd_divides]);
+Theorem poly_gcd_is_gcd:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> pgcd p q pdivides p /\ pgcd p q pdivides q /\
+   !t. poly t /\ t pdivides p /\ t pdivides q ==> t pdivides pgcd p q
+Proof
+  rw[poly_gcd_property, poly_gcd_divides]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> ?s t. poly s /\ poly t /\ (pgcd p q = s * p + t * q) *)
 (* Proof: by poly_ring_euclid_ring, ring_gcd_linear *)
-val poly_gcd_linear = store_thm(
-  "poly_gcd_linear",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   ?s t. poly s /\ poly t /\ (pgcd p q = s * p + t * q)``,
+Theorem poly_gcd_linear:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   ?s t. poly s /\ poly t /\ (pgcd p q = s * p + t * q)
+Proof
   rpt strip_tac >>
   `EuclideanRing (PolyRing r) (\p. norm p)` by rw[poly_ring_euclid_ring] >>
   `p IN (PolyRing r).carrier /\ q IN (PolyRing r).carrier` by rw[poly_ring_element] >>
   `?s t. s IN (PolyRing r).carrier /\ t IN (PolyRing r).carrier /\
     (ring_gcd (PolyRing r) (\p. norm p) p q = s * p + t * q)` by rw[ring_gcd_linear] >>
-  metis_tac[poly_gcd_def, poly_ring_element]);
+  metis_tac[poly_gcd_def, poly_ring_element]
+QED
 
 (* Theorem: Field r ==> !p. poly p ==> (pgcd p |0| = p) /\ (pgcd |0| p = p) *)
 (* Proof: by poly_ring_euclid_ring, ring_gcd_zero *)
-val poly_gcd_zero = store_thm(
-  "poly_gcd_zero",
-  ``!r:'a field. Field r ==> !p. poly p ==> (pgcd p |0| = p) /\ (pgcd |0| p = p)``,
-  metis_tac[poly_gcd_def, poly_ring_euclid_ring, ring_gcd_zero]);
+Theorem poly_gcd_zero:
+    !r:'a field. Field r ==> !p. poly p ==> (pgcd p |0| = p) /\ (pgcd |0| p = p)
+Proof
+  metis_tac[poly_gcd_def, poly_ring_euclid_ring, ring_gcd_zero]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> ((pgcd p q = |0|) <=> (p = |0|) /\ (q = |0|)) *)
 (* Proof:
@@ -481,9 +488,9 @@ val poly_gcd_zero = store_thm(
    Only-if part: (p = |0|) /\ (q = |0|) ==> (pgcd p q = |0|)
        pgcd |0| |0| = |0|                 by poly_gcd_zero
 *)
-val poly_gcd_eq_zero = store_thm(
-  "poly_gcd_eq_zero",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> ((pgcd p q = |0|) <=> (p = |0|) /\ (q = |0|))``,
+Theorem poly_gcd_eq_zero:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> ((pgcd p q = |0|) <=> (p = |0|) /\ (q = |0|))
+Proof
   rewrite_tac[EQ_IMP_THM] >>
   ntac 5 strip_tac >>
   conj_tac >| [
@@ -493,7 +500,8 @@ val poly_gcd_eq_zero = store_thm(
     `d pdivides p /\ d pdivides q` by rw[poly_gcd_is_gcd, Abbr`d`] >>
     rw[GSYM poly_zero_divides],
     metis_tac[poly_gcd_zero]
-  ]);
+  ]
+QED
 
 (* This is Auxillary Lemma for Euclid's Lemma. *)
 
@@ -510,17 +518,18 @@ val poly_gcd_eq_zero = store_thm(
       and s pdivides (t * q)                  by given
     Hence s pdivides (t * d)                  by poly_divides_linear_comm
 *)
-val poly_divides_gcd_multiple = store_thm(
-  "poly_divides_gcd_multiple",
-  ``!r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
-    s pdivides (t * p) /\ s pdivides (t * q) ==> s pdivides (t * pgcd p q)``,
+Theorem poly_divides_gcd_multiple:
+    !r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
+    s pdivides (t * p) /\ s pdivides (t * q) ==> s pdivides (t * pgcd p q)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = pgcd p q` >>
   `poly d` by rw[poly_gcd_poly, Abbr`d`] >>
   `?x y. poly x /\ poly y /\ (d = x * p + y * q)` by rw[poly_gcd_linear, Abbr`d`] >>
   `t * d = t * (x * p) + t * (y * q)` by rw[poly_mult_radd] >>
   `_ = x * (t * p) + y * (t * q)` by rw[poly_mult_assoc_comm] >>
-  rw[poly_divides_linear_comm]);
+  rw[poly_divides_linear_comm]
+QED
 
 (* This is Euclid's Lemma for polynomial factors. *)
 
@@ -535,16 +544,17 @@ val poly_divides_gcd_multiple = store_thm(
    Since pgcd p q = |1|, t * |1| = t     by poly_mult_rone
    Hence p pdivides t                    by above
 *)
-val poly_gcd_one_factor = store_thm(
-  "poly_gcd_one_factor",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ (pgcd p q = |1|) ==>
-   !t. poly t /\ p pdivides (q * t) ==> p pdivides t``,
+Theorem poly_gcd_one_factor:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ (pgcd p q = |1|) ==>
+   !t. poly t /\ p pdivides (q * t) ==> p pdivides t
+Proof
   rpt strip_tac >>
   `p pdivides p` by rw[poly_divides_reflexive] >>
   `p pdivides (t * p)` by rw[poly_divides_multiple] >>
   `p pdivides (t * q)` by rw[poly_mult_comm] >>
   `t * |1| = t` by rw[] >>
-  metis_tac[poly_divides_gcd_multiple]);
+  metis_tac[poly_divides_gcd_multiple]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==>
             !t. poly t /\ t pdivides p /\ t pdivides q /\
@@ -558,12 +568,13 @@ val poly_gcd_one_factor = store_thm(
     but t pdivdes d                   by poly_gcd_property
     Thus d ~~ t                       by poly_field_divides_antisym
 *)
-val poly_gcd_condition = store_thm(
-  "poly_gcd_condition",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+Theorem poly_gcd_condition:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
    !t. poly t /\ t pdivides p /\ t pdivides q /\
-   (!s. poly s /\ s pdivides p /\ s pdivides q ==> s pdivides t) ==> pgcd p q ~~ t``,
-  rw[poly_gcd_divides, poly_gcd_property, poly_field_divides_antisym]);
+   (!s. poly s /\ s pdivides p /\ s pdivides q ==> s pdivides t) ==> pgcd p q ~~ t
+Proof
+  rw[poly_gcd_divides, poly_gcd_property, poly_field_divides_antisym]
+QED
 
 (* Theorem: Field r ==> !p q t. poly p /\ poly q /\ poly t ==> (pgcd p q ~~ t <=>
             t pdivides p /\ t pdivides q /\ (!s. poly s /\ s pdivides p /\ s pdivides q ==> s pdivides t)) *)
@@ -585,11 +596,11 @@ val poly_gcd_condition = store_thm(
    Only-if part: t pdivides p /\ t pdivides q /\ (!s. poly s /\ s pdivides p /\ s pdivides q ==> s pdivides t)
              ==> d ~~ t, true    by poly_gcd_condition
 *)
-val poly_gcd_unit_eq = store_thm(
-  "poly_gcd_unit_eq",
-  ``!r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t ==>
+Theorem poly_gcd_unit_eq:
+    !r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t ==>
    (pgcd p q ~~ t <=>
-    t pdivides p /\ t pdivides q /\ (!s. poly s /\ s pdivides p /\ s pdivides q ==> s pdivides t))``,
+    t pdivides p /\ t pdivides q /\ (!s. poly s /\ s pdivides p /\ s pdivides q ==> s pdivides t))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `d = pgcd p q` >>
@@ -599,7 +610,8 @@ val poly_gcd_unit_eq = store_thm(
     metis_tac[poly_gcd_divides, poly_unit_eq_divides],
     metis_tac[poly_gcd_is_gcd, poly_unit_eq_divisor],
     metis_tac[poly_gcd_condition]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> !t. poly t ==> (pgcd p q ~~ pgcd p (q - t * p)) *)
 (* Proof:
@@ -622,9 +634,9 @@ val poly_gcd_unit_eq = store_thm(
    Hence pgcd p s ~~ d               by poly_gcd_condition
       or d ~~ pgcd p s               by poly_unit_eq_sym
 *)
-val poly_gcd_reduction = store_thm(
-  "poly_gcd_reduction",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> !t. poly t ==> (pgcd p q ~~ pgcd p (q - t * p))``,
+Theorem poly_gcd_reduction:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> !t. poly t ==> (pgcd p q ~~ pgcd p (q - t * p))
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = q - t * p` >>
   qabbrev_tac `d = pgcd p q` >>
@@ -640,7 +652,8 @@ val poly_gcd_reduction = store_thm(
   `_ = t * p + |1| * s` by rw[] >>
   `u pdivides q` by rw[poly_divides_linear_comm] >>
   rw[poly_gcd_property, Abbr`d`]) >>
-  rw[poly_gcd_condition, poly_unit_eq_sym]);
+  rw[poly_gcd_condition, poly_unit_eq_sym]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> pgcd p (q * p) ~~ p *)
 (* Proof:
@@ -649,13 +662,14 @@ val poly_gcd_reduction = store_thm(
     = pgcd p |0|               by poly_sub_eq
     = p                        by poly_gcd_zero
 *)
-val poly_gcd_multiple = store_thm(
-  "poly_gcd_multiple",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> pgcd p (q * p) ~~ p``,
+Theorem poly_gcd_multiple:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> pgcd p (q * p) ~~ p
+Proof
   rpt strip_tac >>
   `pgcd p (q * p) ~~ pgcd p (q * p - q * p)` by rw[poly_gcd_reduction] >>
   `q * p - q * p = |0|` by rw[] >>
-  metis_tac[poly_gcd_zero]);
+  metis_tac[poly_gcd_zero]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> (p pdivides q <=> pgcd p q ~~ p) *)
 (* Proof:
@@ -669,22 +683,24 @@ val poly_gcd_multiple = store_thm(
         and poly (pgcd p q)              by poly_gcd_poly
       Given pgcd p q ~~ p, p pdivides q  by poly_unit_eq_divides
 *)
-val poly_divides_iff_gcd_fix = store_thm(
-  "poly_divides_iff_gcd_fix",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (p pdivides q <=> pgcd p q ~~ p)``,
+Theorem poly_divides_iff_gcd_fix:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> (p pdivides q <=> pgcd p q ~~ p)
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[poly_divides_def, poly_gcd_multiple] >>
-  metis_tac[poly_gcd_poly, poly_gcd_divides, poly_unit_eq_divides, field_is_ring]);
+  metis_tac[poly_gcd_poly, poly_gcd_divides, poly_unit_eq_divides, field_is_ring]
+QED
 
 (* Theorem: Field r ==> !p. poly p ==> (pgcd p p ~~ p) *)
 (* Proof:
    Since p pdivides p      by poly_divides_reflexive
       so pgcd p p ~~ p     by poly_divides_iff_gcd_fix
 *)
-val poly_gcd_refl = store_thm(
-  "poly_gcd_refl",
-  ``!r:'a field. Field r ==> !p. poly p ==> (pgcd p p ~~ p)``,
-  rw[poly_divides_reflexive, GSYM poly_divides_iff_gcd_fix]);
+Theorem poly_gcd_refl:
+    !r:'a field. Field r ==> !p. poly p ==> (pgcd p p ~~ p)
+Proof
+  rw[poly_divides_reflexive, GSYM poly_divides_iff_gcd_fix]
+QED
 
 (* Theorem: Field r ==> !p q t. poly p /\ poly q /\ poly t ==> pgcd (t * p) (t * q) ~~ t * pgcd p q *)
 (* Proof:
@@ -704,9 +720,9 @@ val poly_gcd_refl = store_thm(
        then s pdivides (t * d)   by poly_divides_linear_comm
    Therefore e ~~ t * d          by poly_gcd_condition
 *)
-val poly_gcd_common_factor = store_thm(
-  "poly_gcd_common_factor",
-  ``!r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t ==> pgcd (t * p) (t * q) ~~ t * pgcd p q``,
+Theorem poly_gcd_common_factor:
+    !r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t ==> pgcd (t * p) (t * q) ~~ t * pgcd p q
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `d = pgcd p q` >>
@@ -719,7 +735,8 @@ val poly_gcd_common_factor = store_thm(
   `t * d = t * (u * p) + t * (v * q)` by rw[poly_mult_radd] >>
   `_ = u * (t * p) + v * (t * q)` by rw[poly_mult_assoc_comm] >>
   `!s. poly s /\ s pdivides (t * p) /\ s pdivides (t * q) ==> s pdivides (t * d)` by rw[poly_divides_linear_comm] >>
-  rw[poly_gcd_condition, Abbr`e`]);
+  rw[poly_gcd_condition, Abbr`e`]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Coprime.                                                       *)
@@ -739,10 +756,11 @@ val _ = overload_on("pcoprime", ``\(p q):'a poly. upoly (pgcd p q)``);
    <=> ?u. upoly u /\ (pgcd p q = u * |1|)    by poly_mult_rone
    <=> pgcd p q ~~ |1|                        by poly_unit_eq_property
 *)
-val poly_gcd_one_coprime = store_thm(
-  "poly_gcd_one_coprime",
-  ``!r:'a ring. Ring r ==> !p q. pcoprime p q <=> pgcd p q ~~ |1|``,
-  metis_tac[poly_unit_eq_property, poly_unit_poly, poly_mult_rone]);
+Theorem poly_gcd_one_coprime:
+    !r:'a ring. Ring r ==> !p q. pcoprime p q <=> pgcd p q ~~ |1|
+Proof
+  metis_tac[poly_unit_eq_property, poly_unit_poly, poly_mult_rone]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> (pcoprime p q <=> pcoprime q p) *)
 (* Proof:
@@ -751,10 +769,11 @@ val poly_gcd_one_coprime = store_thm(
    <=> (pgcd q p ~~ |1|)    by poly_gcd_sym
    <=> pcoprime q p         by poly_gcd_one_coprime
 *)
-val poly_coprime_sym = store_thm(
-  "poly_coprime_sym",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (pcoprime p q <=> pcoprime q p)``,
-  rw[poly_gcd_one_coprime, poly_gcd_sym]);
+Theorem poly_coprime_sym:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> (pcoprime p q <=> pcoprime q p)
+Proof
+  rw[poly_gcd_one_coprime, poly_gcd_sym]
+QED
 
 (* Theorem: Field r ==> !p. poly p ==> pgcd p |1| ~~ |1| /\ pgcd |1| p ~~ |1| *)
 (* Proof:
@@ -762,12 +781,13 @@ val poly_coprime_sym = store_thm(
    Hence pgcd |1| p ~~ |1|                by poly_divides_iff_gcd_fix
      and pgcd p |1| = pgcd |1| p ~~ |1|   by poly_gcd_sym
 *)
-val poly_gcd_one = store_thm(
-  "poly_gcd_one",
-  ``!r:'a field. Field r ==> !p. poly p ==> pgcd p |1| ~~ |1| /\ pgcd |1| p ~~ |1|``,
+Theorem poly_gcd_one:
+    !r:'a field. Field r ==> !p. poly p ==> pgcd p |1| ~~ |1| /\ pgcd |1| p ~~ |1|
+Proof
   ntac 4 strip_tac >>
   `pgcd |1| p ~~ |1|` suffices_by rw[poly_gcd_sym] >>
-  rw[poly_one_divides_all, GSYM poly_divides_iff_gcd_fix]);
+  rw[poly_one_divides_all, GSYM poly_divides_iff_gcd_fix]
+QED
 
 (* Theorem: Field r ==> !p. poly p ==> !u. upoly u ==> pgcd p u ~~ |1| /\ pgcd u p ~~ |1| *)
 (* Proof:
@@ -777,16 +797,17 @@ val poly_gcd_one = store_thm(
     also u ~~ |1|                     by poly_unit_eq_one
    Hence pgcd u p ~~ |1|              by poly_unit_eq_trans, poly_gcd_poly
 *)
-val poly_gcd_unit = store_thm(
-  "poly_gcd_unit",
-  ``!r:'a field. Field r ==> !p. poly p ==> !u. upoly u ==> pgcd p u ~~ |1| /\ pgcd u p ~~ |1|``,
+Theorem poly_gcd_unit:
+    !r:'a field. Field r ==> !p. poly p ==> !u. upoly u ==> pgcd p u ~~ |1| /\ pgcd u p ~~ |1|
+Proof
   ntac 6 strip_tac >>
   `poly u` by rw[poly_unit_poly] >>
   `pgcd u p ~~ |1|` suffices_by rw[poly_gcd_sym] >>
   `u pdivides p` by rw[poly_unit_divides_all] >>
   `pgcd u p ~~ u` by rw[GSYM poly_divides_iff_gcd_fix] >>
   `u ~~ |1|` by rw[GSYM poly_unit_eq_one] >>
-  metis_tac[poly_gcd_poly, poly_unit_eq_trans, poly_one_poly, field_is_ring]);
+  metis_tac[poly_gcd_poly, poly_unit_eq_trans, poly_one_poly, field_is_ring]
+QED
 
 (* Theorem: Field r ==> !p q. ipoly p /\ poly q ==> (pcoprime p q) \/ p pdivides q *)
 (* Proof:
@@ -798,11 +819,12 @@ val poly_gcd_unit = store_thm(
                 upoly (ring_gcd (PolyRing r) f p q) \/ ring_divides (PolyRing r) p q: thm
    and use poly_gcd_def, poly_divides_is_ring_divides, poly_ring_element.
 *)
-val poly_irreducible_gcd = store_thm(
-  "poly_irreducible_gcd",
-  ``!r:'a field. Field r ==> !p q. ipoly p /\ poly q ==> (pcoprime p q) \/ p pdivides q``,
+Theorem poly_irreducible_gcd:
+    !r:'a field. Field r ==> !p q. ipoly p /\ poly q ==> (pcoprime p q) \/ p pdivides q
+Proof
   metis_tac[poly_ring_euclid_ring, poly_irreducible_poly,
-             ring_irreducible_gcd, poly_gcd_def, poly_divides_is_ring_divides, poly_ring_element]);
+             ring_irreducible_gcd, poly_gcd_def, poly_divides_is_ring_divides, poly_ring_element]
+QED
 
 (* Theorem: Field r ==> !p q. ipoly p /\ ipoly q ==> pcoprime p q \/ (p ~~ q) *)
 (* Proof:
@@ -813,10 +835,11 @@ val poly_irreducible_gcd = store_thm(
    Since pcoprime p q <=> pcoprime q p   by poly_coprime_sym
    Hence p ~~ q                          by poly_field_divides_antisym
 *)
-val poly_irreducibles_coprime = store_thm(
-  "poly_irreducibles_coprime",
-  ``!r:'a field. Field r ==> !p q. ipoly p /\ ipoly q ==> pcoprime p q \/ (p ~~ q)``,
-  metis_tac[poly_irreducible_poly, poly_irreducible_gcd, poly_field_divides_antisym, poly_coprime_sym]);
+Theorem poly_irreducibles_coprime:
+    !r:'a field. Field r ==> !p q. ipoly p /\ ipoly q ==> pcoprime p q \/ (p ~~ q)
+Proof
+  metis_tac[poly_irreducible_poly, poly_irreducible_gcd, poly_field_divides_antisym, poly_coprime_sym]
+QED
 
 (* Theorem: Field r ==> !p q. monic p /\ ipoly p /\ monic q /\ ipoly q ==> pcoprime p q \/ (p = q) *)
 (* Proof:
@@ -825,10 +848,11 @@ val poly_irreducibles_coprime = store_thm(
     With monic p /\ monic q            by given
     then p ~~ q ==> (p = q)            by poly_unit_eq_monic_eq
 *)
-val poly_monic_irreducibles_coprime = store_thm(
-  "poly_monic_irreducibles_coprime",
-  ``!r:'a field. Field r ==> !p q. monic p /\ ipoly p /\ monic q /\ ipoly q ==> pcoprime p q \/ (p = q)``,
-  metis_tac[poly_irreducibles_coprime, poly_unit_eq_monic_eq, field_is_ring]);
+Theorem poly_monic_irreducibles_coprime:
+    !r:'a field. Field r ==> !p q. monic p /\ ipoly p /\ monic q /\ ipoly q ==> pcoprime p q \/ (p = q)
+Proof
+  metis_tac[poly_irreducibles_coprime, poly_unit_eq_monic_eq, field_is_ring]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* GCD divisibility condition for unity polynomials.                         *)
@@ -856,10 +880,10 @@ val poly_monic_irreducibles_coprime = store_thm(
      ~~ pgcd (X ** m - |1|) ((X ** n - |1|) - X ** (n - m) * (X ** m - |1|))  by poly_gcd_reduction
       = pgcd (X ** m - |1|) (X ** (n - m) - |1|)               by lemma
 *)
-val poly_unity_gcd_reduction = store_thm(
-  "poly_unity_gcd_reduction",
-  ``!r:'a field. Field r ==> !n m. 0 < m /\ m < n ==>
-    pgcd (unity n) (unity m) ~~ pgcd (unity m) (unity (n - m))``,
+Theorem poly_unity_gcd_reduction:
+    !r:'a field. Field r ==> !n m. 0 < m /\ m < n ==>
+    pgcd (unity n) (unity m) ~~ pgcd (unity m) (unity (n - m))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   `m <= n` by decide_tac >>
@@ -875,7 +899,8 @@ val poly_unity_gcd_reduction = store_thm(
   `_ = X ** n - |1| - (X ** n - |1|) + (X ** (n - m) - |1|)` by rw_tac std_ss[poly_sub_minus] >>
   `_ = X ** (n - m) - |1|` by rw_tac std_ss[poly_sub_eq, poly_add_lzero] >>
   rw_tac std_ss[]) >>
-  metis_tac[poly_gcd_sym, poly_gcd_reduction]);
+  metis_tac[poly_gcd_sym, poly_gcd_reduction]
+QED
 
 (* Theorem: Field r ==> !n m. pgcd (unity n) (unity m) ~~ (unity (gcd n m)) *)
 (* Proof:
@@ -934,9 +959,9 @@ val poly_unity_gcd_reduction = store_thm(
         ~~ X ** gcd n (m - n) - |1|                 by induction hypothesis, n + (m - n) = m
         = X ** gcd n m - |1|                        by GCD_SUB_R, n <= m
 *)
-val poly_unity_gcd_identity = store_thm(
-  "poly_unity_gcd_identity",
-  ``!r:'a field. Field r ==> !n m. pgcd (unity n) (unity m) ~~ (unity (gcd n m))``,
+Theorem poly_unity_gcd_identity:
+    !r:'a field. Field r ==> !n m. pgcd (unity n) (unity m) ~~ (unity (gcd n m))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   `!k. poly (X ** k - |1|)` by rw[] >>
@@ -970,7 +995,8 @@ val poly_unity_gcd_identity = store_thm(
         metis_tac[poly_eq_unit_eq, poly_unit_eq_trans, poly_gcd_poly]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !n m. (unity n) pdivides (unity m) <=> n divides m *)
 (* Proof:
@@ -1019,9 +1045,9 @@ val poly_unity_gcd_identity = store_thm(
      Then (X ** n - |1|) pdivides (X ** (n * q) - |1|       by poly_unity_divides
        or (X ** n - |1|) pdivides (X ** m - |1|)            by MULT_COMM
 *)
-val poly_unity_divisibility = store_thm(
-  "poly_unity_divisibility",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n m. (unity n) pdivides (unity m) <=> n divides m``,
+Theorem poly_unity_divisibility:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n m. (unity n) pdivides (unity m) <=> n divides m
+Proof
   rpt strip_tac >>
   `!k. poly (X ** k - |1|)` by rw[] >>
   `poly X /\ poly (X ** n) /\ ( |1| = ###1)` by rw[poly_ring_sum_1] >>
@@ -1052,7 +1078,8 @@ val poly_unity_divisibility = store_thm(
     decide_tac) >>
     metis_tac[divides_def, ADD_0],
     full_simp_tac std_ss[divides_def, poly_unity_divides, MULT_COMM]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* GCD divisibility condition for master polynomials.                        *)
@@ -1087,10 +1114,10 @@ val poly_unity_divisibility = store_thm(
     = X ** SUC (k ** (gcd n m) - 1) - X                    by poly_exp_SUC
     = X ** (k ** (gcd n m)) - X                            by above
 *)
-val poly_master_gcd_identity = store_thm(
-  "poly_master_gcd_identity",
-  ``!r:'a field. Field r ==>
-    !k n m. pgcd (master (k ** n)) (master (k ** m)) ~~ master (k ** gcd n m)``,
+Theorem poly_master_gcd_identity:
+    !r:'a field. Field r ==>
+    !k n m. pgcd (master (k ** n)) (master (k ** m)) ~~ master (k ** gcd n m)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   Cases_on `k = 0` >| [
@@ -1127,7 +1154,8 @@ val poly_master_gcd_identity = store_thm(
     `_ = X * X ** (k ** (gcd n m) - 1) - X` by rw[poly_mult_rsub] >>
     `_ = X ** SUC (k ** (gcd n m) - 1) - X` by rw[poly_exp_SUC] >>
     metis_tac[poly_eq_unit_eq, poly_unit_eq_trans, poly_gcd_poly, poly_mult_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !k. 1 < k ==>
             !n m. master (k ** n) pdivides master (k ** m) <=> n divides m *)
@@ -1172,10 +1200,10 @@ val poly_master_gcd_identity = store_thm(
           = X ** n - X                                         by above
          or (X ** (k ** n) - X) pdivides (X ** (k ** m) - X)   by poly_divides_iff_gcd_fix
 *)
-val poly_master_divisibility = store_thm(
-  "poly_master_divisibility",
-  ``!r:'a field. Field r ==> !k. 1 < k ==>
-   !n m. master (k ** n) pdivides master (k ** m) <=> n divides m``,
+Theorem poly_master_divisibility:
+    !r:'a field. Field r ==> !k. 1 < k ==>
+   !n m. master (k ** n) pdivides master (k ** m) <=> n divides m
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `poly X /\ !k. poly (X ** k) /\ poly (X ** k - |1|) /\ poly(X ** k - X)` by rw[] >>
@@ -1210,7 +1238,8 @@ val poly_master_divisibility = store_thm(
       `pgcd (X ** (k ** n) - X) (X ** (k ** m) - X) ~~ X ** (k ** n) - X` by metis_tac[poly_master_gcd_identity] >>
       rw[poly_divides_iff_gcd_fix]
     ]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monic Polynomial GCD (except when both are zero)                          *)
@@ -1225,18 +1254,20 @@ val _ = overload_on("mpgcd", ``poly_monic_gcd r``);
 
 (* Theorem: (pgcd p q = |0|) ==> (mpgcd p q = |0|) *)
 (* Proof: by poly_monic_gcd_def *)
-val poly_monic_gcd_zero_zero = store_thm(
-  "poly_monic_gcd_zero_zero",
-  ``!r:'a ring. !p q. (pgcd p q = |0|) ==> (mpgcd p q = |0|)``,
-  rw_tac std_ss[poly_monic_gcd_def]);
+Theorem poly_monic_gcd_zero_zero:
+    !r:'a ring. !p q. (pgcd p q = |0|) ==> (mpgcd p q = |0|)
+Proof
+  rw_tac std_ss[poly_monic_gcd_def]
+QED
 (* Note: (pgcd p q = |0|) <=> (mpgcd p q = |0|) is poly_monic_gcd_eq_zero, need more conditions. *)
 
 (* Theorem: pgcd p q <> |0| ==> (mpgcd p q = |/ (lead (pgcd p q)) * pgcd p q) *)
 (* Proof: by poly_monic_gcd_def *)
-val poly_monic_gcd_nonzero = store_thm(
-  "poly_monic_gcd_nonzero",
-  ``!r:'a ring. !p q. pgcd p q <> |0| ==> (mpgcd p q = |/ (lead (pgcd p q)) * pgcd p q)``,
-  rw[poly_monic_gcd_def]);
+Theorem poly_monic_gcd_nonzero:
+    !r:'a ring. !p q. pgcd p q <> |0| ==> (mpgcd p q = |/ (lead (pgcd p q)) * pgcd p q)
+Proof
+  rw[poly_monic_gcd_def]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ ~((p = |0|) /\ (q = |0|)) ==> monic (mpgcd p q) *)
 (* Proof:
@@ -1247,15 +1278,16 @@ val poly_monic_gcd_nonzero = store_thm(
     Thus mpgcd p q = |/ (lead d) * d    by poly_monic_gcd_def
    Hence monic (mpgcd p q)              by poly_monic_by_cmult
 *)
-val poly_monic_gcd_monic = store_thm(
-  "poly_monic_gcd_monic",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ ~((p = |0|) /\ (q = |0|)) ==> monic (mpgcd p q)``,
+Theorem poly_monic_gcd_monic:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ ~((p = |0|) /\ (q = |0|)) ==> monic (mpgcd p q)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = pgcd p q` >>
   `poly d` by rw[poly_gcd_poly, Abbr`d`] >>
   `d <> |0|` by metis_tac[poly_gcd_eq_zero] >>
   rw_tac std_ss[poly_monic_gcd_def] >>
-  rw_tac std_ss[poly_monic_by_cmult]);
+  rw_tac std_ss[poly_monic_by_cmult]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> poly (mpgcd p q) *)
 (* Proof:
@@ -1267,15 +1299,16 @@ val poly_monic_gcd_monic = store_thm(
       Then monic (mpgcd p q)       by poly_monic_gcd_monic
         so poly (mpgcd p q)        by poly_monic_poly
 *)
-val poly_monic_gcd_poly = store_thm(
-  "poly_monic_gcd_poly",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> poly (mpgcd p q)``,
+Theorem poly_monic_gcd_poly:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> poly (mpgcd p q)
+Proof
   rpt strip_tac >>
   Cases_on `(p = |0|) /\ (q = |0|)` >| [
     `pgcd p q = |0|` by rw[poly_gcd_eq_zero] >>
     rw_tac std_ss[poly_monic_gcd_def, poly_zero_poly],
     metis_tac[poly_monic_gcd_monic, poly_monic_poly]
-  ]);
+  ]
+QED
 
 (* export simple result *)
 val _ = export_rewrites["poly_monic_gcd_poly"];
@@ -1299,16 +1332,17 @@ val _ = export_rewrites["poly_monic_gcd_poly"];
    Only-if part: (pgcd p q = |0|) ==> (mpgcd p q = |0|)
       Note d = |0| ==> mpgcd p q = |0|           by poly_monic_gcd_def
 *)
-val poly_monic_gcd_eq_zero = store_thm(
-  "poly_monic_gcd_eq_zero",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> ((mpgcd p q = |0|) <=> (pgcd p q = |0|))``,
+Theorem poly_monic_gcd_eq_zero:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> ((mpgcd p q = |0|) <=> (pgcd p q = |0|))
+Proof
   rw_tac std_ss[poly_monic_gcd_def] >>
   rw_tac std_ss[EQ_IMP_THM] >>
   `poly d` by rw[poly_gcd_poly, Abbr`d`] >>
   `(lead d) IN R+` by rw[field_nonzero_eq] >>
   `|/ (lead d) IN R /\ ( |/ (lead d) * (lead d) = #1)` by metis_tac[field_inv_element, field_mult_linv] >>
   `Ring r /\ #1 <> #0` by rw[] >>
-  metis_tac[poly_cmult_eq_zero]);
+  metis_tac[poly_cmult_eq_zero]
+QED
 
 (* Theorem: Field r ==> !p. monic p ==> (mpgcd p |0| = p) /\ (mpgcd |0| p = p) *)
 (* Proof:
@@ -1320,10 +1354,11 @@ val poly_monic_gcd_eq_zero = store_thm(
                      = p                        by poly_cmult_lone
      and mpgcd |0| p = |/ (lead p) * p = p      by the same argument
 *)
-val poly_monic_gcd_zero = store_thm(
-  "poly_monic_gcd_zero",
-  ``!r:'a field. Field r ==> !p. monic p ==> (mpgcd p |0| = p) /\ (mpgcd |0| p = p)``,
-  rw[poly_gcd_zero, poly_monic_nonzero, poly_monic_gcd_def]);
+Theorem poly_monic_gcd_zero:
+    !r:'a field. Field r ==> !p. monic p ==> (mpgcd p |0| = p) /\ (mpgcd |0| p = p)
+Proof
+  rw[poly_gcd_zero, poly_monic_nonzero, poly_monic_gcd_def]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> ((mpgcd p q = |1|) <=> (pgcd p q ~~ |1|)) *)
 (* Proof:
@@ -1362,9 +1397,9 @@ val poly_monic_gcd_zero = store_thm(
         = [#1]                                 by above
         = |1|                                  by poly_one, #1 <> #0.
 *)
-val poly_monic_gcd_eq_one = store_thm(
-  "poly_monic_gcd_eq_one",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> ((mpgcd p q = |1|) <=> (pgcd p q ~~ |1|))``,
+Theorem poly_monic_gcd_eq_one:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> ((mpgcd p q = |1|) <=> (pgcd p q ~~ |1|))
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0 /\ |1| <> |0|` by rw[] >>
   qabbrev_tac `d = pgcd p q` >>
@@ -1387,17 +1422,19 @@ val poly_monic_gcd_eq_one = store_thm(
     `c IN R+` by rw[field_nonzero_eq] >>
     `|/c * c = #1` by rw[field_mult_linv] >>
     metis_tac[poly_cmult_const_nonzero, poly_one]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p. poly p ==> (mpgcd p |1| = |1|) /\ (mpgcd |1| p = |1|) *)
 (* Proof:
    Since pgcd p |1| ~~ |1| /\ pgcd |1| p ~~ |1|      by poly_gcd_one
       so (mpgcd p |1| = |1|) /\ (mpgcd |1| p = |1|)  by poly_monic_gcd_eq_one
 *)
-val poly_monic_gcd_one = store_thm(
-  "poly_monic_gcd_one",
-  ``!r:'a field. Field r ==> !p. poly p ==> (mpgcd p |1| = |1|) /\ (mpgcd |1| p = |1|)``,
-  rw[poly_gcd_one, poly_monic_gcd_eq_one]);
+Theorem poly_monic_gcd_one:
+    !r:'a field. Field r ==> !p. poly p ==> (mpgcd p |1| = |1|) /\ (mpgcd |1| p = |1|)
+Proof
+  rw[poly_gcd_one, poly_monic_gcd_eq_one]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> (pcoprime p q <=> (mpgcd p q = |1|)) *)
 (* Proof:
@@ -1405,10 +1442,11 @@ val poly_monic_gcd_one = store_thm(
    <=> pgcd p q ~~ |1|     by poly_gcd_one_coprime
    <=> (mpgcd p q = |1|)   by poly_monic_gcd_eq_one
 *)
-val poly_monic_gcd_one_coprime = store_thm(
-  "poly_monic_gcd_one_coprime",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (pcoprime p q <=> (mpgcd p q = |1|))``,
-  rw[poly_gcd_one_coprime, poly_monic_gcd_eq_one]);
+Theorem poly_monic_gcd_one_coprime:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> (pcoprime p q <=> (mpgcd p q = |1|))
+Proof
+  rw[poly_gcd_one_coprime, poly_monic_gcd_eq_one]
+QED
 
 (* Theorem: Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t ==>
                         (pgcd p q ~~ pgcd s t <=> (mpgcd p q = mpgcd s t)) *)
@@ -1465,10 +1503,10 @@ val poly_monic_gcd_one_coprime = store_thm(
             so upoly [c]              by poly_field_unit_alt
          Thus d ~~ e                  by poly_unit_eq_property
 *)
-val poly_gcd_unit_eq_monic_gcd_eq = store_thm(
-  "poly_gcd_unit_eq_monic_gcd_eq",
-  ``!r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t ==>
-      (pgcd p q ~~ pgcd s t <=> (mpgcd p q = mpgcd s t))``,
+Theorem poly_gcd_unit_eq_monic_gcd_eq:
+    !r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t ==>
+      (pgcd p q ~~ pgcd s t <=> (mpgcd p q = mpgcd s t))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `d = pgcd p q` >>
@@ -1520,7 +1558,8 @@ val poly_gcd_unit_eq_monic_gcd_eq = store_thm(
     `c IN R /\ c <> #0` by rw[Abbr`c`, field_mult_eq_zero] >>
     `upoly [c]` by rw[poly_field_unit_alt] >>
     metis_tac[poly_unit_eq_property]
-  ]);
+  ]
+QED
 
 (* This looks like an elementary property, but the proof is not that short, like a milestone! *)
 
@@ -1548,9 +1587,9 @@ val poly_gcd_unit_eq_monic_gcd_eq = store_thm(
          = #1 * p                 by above, |/ c * c = #1
          = p                      by poly_mult_lone
 *)
-val poly_monic_gcd_refl = store_thm(
-  "poly_monic_gcd_refl",
-  ``!r:'a field. Field r ==> !p. monic p ==> (mpgcd p p = p)``,
+Theorem poly_monic_gcd_refl:
+    !r:'a field. Field r ==> !p. monic p ==> (mpgcd p p = p)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = pgcd p p` >>
   Cases_on `d = |0|` >| [
@@ -1564,7 +1603,8 @@ val poly_monic_gcd_refl = store_thm(
     (`mpgcd p p = |/ (lead d) * d` by (rw_tac std_ss[poly_monic_gcd_def] >> rw_tac std_ss[])) >>
     `_ = |/ c * (c * p)` by metis_tac[] >>
     rw[poly_cmult_cmult]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> (mpgcd p q = mpgcd q p) *)
 (* Proof:
@@ -1577,10 +1617,11 @@ val poly_monic_gcd_refl = store_thm(
       mpgcd p q = |/ (lead d) * d    by poly_monic_gcd_def
                 = mpgcd q p          by poly_monic_gcd_def
 *)
-val poly_monic_gcd_sym = store_thm(
-  "poly_monic_gcd_sym",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (mpgcd p q = mpgcd q p)``,
-  metis_tac[poly_monic_gcd_def, poly_gcd_sym]);
+Theorem poly_monic_gcd_sym:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> (mpgcd p q = mpgcd q p)
+Proof
+  metis_tac[poly_monic_gcd_def, poly_gcd_sym]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> mpgcd p q pdivides p /\ mpgcd p q pdivides q *)
 (* Proof:
@@ -1598,9 +1639,9 @@ val poly_monic_gcd_sym = store_thm(
        thus ( |/ (lead d) * d) pdivides p     by poly_field_cmult_divides
         and ( |/ (lead d) * d) pdivides q     by poly_field_cmult_divides
 *)
-val poly_monic_gcd_divides = store_thm(
-  "poly_monic_gcd_divides",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> mpgcd p q pdivides p /\ mpgcd p q pdivides q``,
+Theorem poly_monic_gcd_divides:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> mpgcd p q pdivides p /\ mpgcd p q pdivides q
+Proof
   ntac 5 strip_tac >>
   qabbrev_tac `d = pgcd p q` >>
   `poly d` by rw[poly_gcd_poly, Abbr`d`] >>
@@ -1610,7 +1651,8 @@ val poly_monic_gcd_divides = store_thm(
   (`mpgcd p q = |/ (lead d) * d` by (rw_tac std_ss[poly_monic_gcd_def] >> rw_tac std_ss[])) >>
   `lead d <> #0` by rw[poly_lead_nonzero] >>
   `lead d IN R+ /\ |/ (lead d) IN R+` by rw[field_nonzero_eq, field_inv_nonzero] >>
-  metis_tac[poly_gcd_divides, poly_field_cmult_divides, field_nonzero_eq]);
+  metis_tac[poly_gcd_divides, poly_field_cmult_divides, field_nonzero_eq]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ monic (pgcd p q) ==> (pgcd p q = mpgcd p q) *)
 (* Proof:
@@ -1621,15 +1663,16 @@ val poly_monic_gcd_divides = store_thm(
                    = #1 * d            by field_inv_one
                    = d                 by field_mult_lone
 *)
-val poly_monic_gcd_is_monic_gcd = store_thm(
-  "poly_monic_gcd_is_monic_gcd",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ monic (pgcd p q) ==> (pgcd p q = mpgcd p q)``,
+Theorem poly_monic_gcd_is_monic_gcd:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ monic (pgcd p q) ==> (pgcd p q = mpgcd p q)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = pgcd p q` >>
   `d <> |0|` by rw[poly_monic_nonzero, Abbr`d`] >>
   rw_tac std_ss[poly_monic_gcd_def] >>
   rw_tac std_ss[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==>
             !t. monic t /\ t ~~ pgcd p q ==> (t = mpgcd p q) *)
@@ -1659,10 +1702,10 @@ val poly_monic_gcd_is_monic_gcd = store_thm(
        = [c] * d                      by poly_mult_lconst
        = t                            by above
 *)
-val poly_monic_gcd_eq_monic_gcd = store_thm(
-  "poly_monic_gcd_eq_monic_gcd",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   !t. monic t /\ t ~~ pgcd p q ==> (t = mpgcd p q)``,
+Theorem poly_monic_gcd_eq_monic_gcd:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   !t. monic t /\ t ~~ pgcd p q ==> (t = mpgcd p q)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = pgcd p q` >>
   `poly d` by rw[poly_gcd_poly, Abbr`d`] >>
@@ -1676,7 +1719,8 @@ val poly_monic_gcd_eq_monic_gcd = store_thm(
   (`mpgcd p q = |/ (lead d) * d` by (rw_tac std_ss[poly_monic_gcd_def] >> rw_tac std_ss[])) >>
   `_ = c * d` by rw[field_inv_inv] >>
   `_ = [c] * d` by rw[poly_mult_lconst] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==>
        mpgcd p q pdivides p /\ mpgcd p q pdivides q /\
@@ -1697,11 +1741,11 @@ val poly_monic_gcd_eq_monic_gcd = store_thm(
        so t pdivides ( |/ (lead d) * d)  by poly_divides_cmult
        or t pdivides mpgcd p q           by poly_monic_gcd_def, d <> |0|
 *)
-val poly_monic_gcd_is_gcd = store_thm(
-  "poly_monic_gcd_is_gcd",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+Theorem poly_monic_gcd_is_gcd:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
        mpgcd p q pdivides p /\ mpgcd p q pdivides q /\
-       !t. poly t /\ t pdivides p /\ t pdivides q ==> t pdivides mpgcd p q``,
+       !t. poly t /\ t pdivides p /\ t pdivides q ==> t pdivides mpgcd p q
+Proof
   rw_tac std_ss[poly_monic_gcd_divides] >>
   qabbrev_tac `d = pgcd p q` >>
   `poly d` by rw[poly_gcd_poly, Abbr`d`] >>
@@ -1714,7 +1758,8 @@ val poly_monic_gcd_is_gcd = store_thm(
     `(lead d) IN R+` by rw[field_nonzero_eq] >>
     `|/ (lead d) IN R` by rw[field_inv_element] >>
     rw[poly_divides_cmult]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p q t. poly p /\ poly q /\ monic t ==>
    ((mpgcd p q = t) <=> t pdivides p /\ t pdivides q /\ (!s. poly s /\ s pdivides p /\ s pdivides q ==> s pdivides t)) *)
@@ -1731,11 +1776,11 @@ val poly_monic_gcd_is_gcd = store_thm(
                         or t ~~ pgcd p q         by poly_unit_eq_sym
       With monic t /\ t ~~ pgcd p q ==> (t = d)  by poly_monic_gcd_eq_monic_gcd
 *)
-val poly_monic_gcd_eq = store_thm(
-  "poly_monic_gcd_eq",
-  ``!r:'a field. Field r ==> !p q t. poly p /\ poly q /\ monic t ==>
+Theorem poly_monic_gcd_eq:
+    !r:'a field. Field r ==> !p q t. poly p /\ poly q /\ monic t ==>
    ((mpgcd p q = t) <=>
-    t pdivides p /\ t pdivides q /\ (!s. poly s /\ s pdivides p /\ s pdivides q ==> s pdivides t))``,
+    t pdivides p /\ t pdivides q /\ (!s. poly s /\ s pdivides p /\ s pdivides q ==> s pdivides t))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `d = mpgcd p q` >>
@@ -1746,7 +1791,8 @@ val poly_monic_gcd_eq = store_thm(
   rw[poly_monic_gcd_is_gcd, Abbr`d`] >>
   `pgcd p q ~~ t` by rw[poly_gcd_unit_eq] >>
   `t ~~ pgcd p q` by rw[poly_unit_eq_sym] >>
-  rw[poly_monic_gcd_eq_monic_gcd, poly_gcd_poly, Abbr`d`]);
+  rw[poly_monic_gcd_eq_monic_gcd, poly_gcd_poly, Abbr`d`]
+QED
 
 (* Theorem: Field r ==> !p q t. poly p /\ poly q /\ monic t /\ p <> |0| ==>
             ((mpgcd p q = t) <=> t pdivides p /\ t pdivides q /\
@@ -1774,11 +1820,11 @@ val poly_monic_gcd_eq = store_thm(
 
       Thus d = t                                 by poly_monic_gcd_eq
 *)
-val poly_monic_gcd_condition = store_thm(
-  "poly_monic_gcd_condition",
-  ``!r:'a field. Field r ==> !p q t. poly p /\ poly q /\ monic t /\ p <> |0| ==>
+Theorem poly_monic_gcd_condition:
+    !r:'a field. Field r ==> !p q t. poly p /\ poly q /\ monic t /\ p <> |0| ==>
    ((mpgcd p q = t) <=> t pdivides p /\ t pdivides q /\
-       (!s. monic s /\ s pdivides p /\ s pdivides q ==> s pdivides t))``,
+       (!s. monic s /\ s pdivides p /\ s pdivides q ==> s pdivides t))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `d = mpgcd p q` >>
@@ -1797,7 +1843,8 @@ val poly_monic_gcd_condition = store_thm(
   `s = (lead s) * ss` by metis_tac[poly_cmult_inv_eq, poly_monic_poly, field_nonzero_eq] >>
   `c IN R /\ c <> #0` by metis_tac[field_nonzero_eq, field_inv_nonzero] >>
   metis_tac[poly_field_cmult_divides, poly_monic_poly]) >>
-  metis_tac[poly_monic_gcd_eq]);
+  metis_tac[poly_monic_gcd_eq]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> ?s t. poly s /\ poly t /\
             (p = s * (mpgcd p q)) /\ (q = t * (mpgcd p q)) /\ (mpgcd s t = |1|) *)
@@ -1837,10 +1884,10 @@ val poly_monic_gcd_condition = store_thm(
        Also monic e                     by poly_monic_gcd_monic, ~((s = |0|) /\ (t = |0|))
       Hence e = |1|                     by poly_unit_monic
 *)
-val poly_monic_gcd_factor_out = store_thm(
-  "poly_monic_gcd_factor_out",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> ?s t. poly s /\ poly t /\
-    (p = s * (mpgcd p q)) /\ (q = t * (mpgcd p q)) /\ (mpgcd s t = |1|)``,
+Theorem poly_monic_gcd_factor_out:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> ?s t. poly s /\ poly t /\
+    (p = s * (mpgcd p q)) /\ (q = t * (mpgcd p q)) /\ (mpgcd s t = |1|)
+Proof
   rpt strip_tac >>
   Cases_on `(p = |0|) /\ (q = |0|)` >| [
     MAP_EVERY qexists_tac [`|1|`, `|1|`] >>
@@ -1871,7 +1918,8 @@ val poly_monic_gcd_factor_out = store_thm(
     `e * d pdivides d` by metis_tac[poly_monic_gcd_is_gcd] >>
     `monic e` by metis_tac[poly_monic_gcd_monic, poly_mult_lzero] >>
     metis_tac[poly_zero_divides, poly_mult_divides_factor, poly_unit_monic, field_is_ring]
-  ]);
+  ]
+QED
 
 (* This is Bézout's identity for monic polynomial GCD. *)
 
@@ -1901,10 +1949,10 @@ val poly_monic_gcd_factor_out = store_thm(
     Since poly (c * s) /\ poly (c * t)   by poly_cmult_poly
      Take s = c * s, t = c * t, and we are done.
 *)
-val poly_monic_gcd_linear = store_thm(
-  "poly_monic_gcd_linear",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-       ?s t. poly s /\ poly t /\ (mpgcd p q = s * p + t * q)``,
+Theorem poly_monic_gcd_linear:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+       ?s t. poly s /\ poly t /\ (mpgcd p q = s * p + t * q)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `d = pgcd p q` >>
@@ -1922,7 +1970,8 @@ val poly_monic_gcd_linear = store_thm(
     `_ = (c * s) * p + (c * t) * q` by rw_tac std_ss[poly_cmult_mult] >>
     `poly (c * s) /\ poly (c * t)` by rw[] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* This is Auxillary Lemma for Euclid's Lemma. *)
 
@@ -1950,10 +1999,10 @@ val poly_monic_gcd_linear = store_thm(
      Since s pdivides t * d             by poly_divides_gcd_multiple
      Hence s pdivides (t * mpgcd p q)   by poly_divides_cmult
 *)
-val poly_divides_monic_gcd_multiple = store_thm(
-  "poly_divides_monic_gcd_multiple",
-  ``!r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
-    s pdivides (t * p) /\ s pdivides (t * q) ==> s pdivides (t * mpgcd p q)``,
+Theorem poly_divides_monic_gcd_multiple:
+    !r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
+    s pdivides (t * p) /\ s pdivides (t * q) ==> s pdivides (t * mpgcd p q)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = pgcd p q` >>
   `poly d` by rw[poly_gcd_poly, Abbr`d`] >>
@@ -1968,7 +2017,8 @@ val poly_divides_monic_gcd_multiple = store_thm(
     qabbrev_tac `c = |/ (lead d)` >>
     `s pdivides t * d` by rw[poly_divides_gcd_multiple, Abbr`d`] >>
     rw[poly_divides_cmult, poly_mult_cmult]
-  ]);
+  ]
+QED
 
 (* This is Euclid's Lemma for polynomial factors. *)
 
@@ -1983,16 +2033,17 @@ val poly_divides_monic_gcd_multiple = store_thm(
    Since mpgcd p q = |1|, t * |1| = t    by poly_mult_rone
    Hence p pdivides t                    by above
 *)
-val poly_monic_gcd_one_factor = store_thm(
-  "poly_monic_gcd_one_factor",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ (mpgcd p q = |1|) ==>
-   !t. poly t /\ p pdivides (q * t) ==> p pdivides t``,
+Theorem poly_monic_gcd_one_factor:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ (mpgcd p q = |1|) ==>
+   !t. poly t /\ p pdivides (q * t) ==> p pdivides t
+Proof
   rpt strip_tac >>
   `p pdivides p` by rw[poly_divides_reflexive] >>
   `p pdivides (t * p)` by rw[poly_divides_multiple] >>
   `p pdivides (t * q)` by rw[poly_mult_comm] >>
   `t * |1| = t` by rw[] >>
-  metis_tac[poly_divides_monic_gcd_multiple]);
+  metis_tac[poly_divides_monic_gcd_multiple]
+QED
 
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ (pcoprime p q) ==>
@@ -2001,11 +2052,12 @@ val poly_monic_gcd_one_factor = store_thm(
    Since pcoprime p q <=> mpgcd p q = |1|    by poly_monic_gcd_one_coprime
    Hence result follows                      by poly_monic_gcd_one_factor
 *)
-val poly_coprime_divides_product = store_thm(
-  "poly_coprime_divides_product",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ (pcoprime p q) ==>
-   !t. poly t /\ p pdivides (q * t) ==> p pdivides t``,
-  metis_tac[poly_monic_gcd_one_coprime, poly_monic_gcd_one_factor]);
+Theorem poly_coprime_divides_product:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ (pcoprime p q) ==>
+   !t. poly t /\ p pdivides (q * t) ==> p pdivides t
+Proof
+  metis_tac[poly_monic_gcd_one_coprime, poly_monic_gcd_one_factor]
+QED
 
 (* This is GCD_CANCEL_MULT for polynomial GCD *)
 
@@ -2018,11 +2070,12 @@ val poly_coprime_divides_product = store_thm(
       Note poly t               by poly_irreducible_poly
        ==> t pdivides q         by poly_coprime_divides_product
 *)
-val poly_irreducible_divides_product = store_thm(
-  "poly_irreducible_divides_product",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   !t. ipoly t /\ t pdivides (p * q) ==> (t pdivides p) \/ (t pdivides q)``,
-  metis_tac[poly_irreducible_gcd, poly_irreducible_poly, poly_coprime_divides_product]);
+Theorem poly_irreducible_divides_product:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   !t. ipoly t /\ t pdivides (p * q) ==> (t pdivides p) \/ (t pdivides q)
+Proof
+  metis_tac[poly_irreducible_gcd, poly_irreducible_poly, poly_coprime_divides_product]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==>
             !t. poly t ==> (pgcd p (q * t) ~~ pgcd p t) *)
@@ -2052,10 +2105,10 @@ val poly_irreducible_divides_product = store_thm(
           ==> s pdivides d         by poly_gcd_is_gcd
    From the claim, d ~~ t          by poly_gcd_condition, [1], [2], [3]
 *)
-val poly_gcd_multiple_reduction = store_thm(
-  "poly_gcd_multiple_reduction",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==>
-   !t. poly t ==> (pgcd p (q * t) ~~ pgcd p t)``,
+Theorem poly_gcd_multiple_reduction:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==>
+   !t. poly t ==> (pgcd p (q * t) ~~ pgcd p t)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `d = pgcd p t` >>
@@ -2072,7 +2125,8 @@ val poly_gcd_multiple_reduction = store_thm(
   `pcoprime s q` by rw_tac std_ss[poly_monic_gcd_one_coprime] >>
   `s pdivides t` by metis_tac[poly_coprime_divides_product] >>
   rw[poly_gcd_is_gcd, Abbr`d`]) >>
-  rw[poly_gcd_condition]);
+  rw[poly_gcd_condition]
+QED
 
 (* This is GCD_CANCEL_MULT for monic polynomial GCD *)
 
@@ -2083,11 +2137,12 @@ val poly_gcd_multiple_reduction = store_thm(
          pgcd p (q * t) ~~ pgcd p t     by poly_gcd_multiple_reduction
    Hence mpgcd p (q * t) = mpgcd p t    by poly_gcd_unit_eq_monic_gcd_eq
 *)
-val poly_monic_gcd_multiple_reduction = store_thm(
-  "poly_monic_gcd_multiple_reduction",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==>
-   !t. poly t ==> (mpgcd p (q * t) = mpgcd p t)``,
-  rw[poly_gcd_multiple_reduction, GSYM poly_gcd_unit_eq_monic_gcd_eq]);
+Theorem poly_monic_gcd_multiple_reduction:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==>
+   !t. poly t ==> (mpgcd p (q * t) = mpgcd p t)
+Proof
+  rw[poly_gcd_multiple_reduction, GSYM poly_gcd_unit_eq_monic_gcd_eq]
+QED
 
 (* This is coprime_product_coprime_sym for polynomials. *)
 
@@ -2098,11 +2153,12 @@ val poly_monic_gcd_multiple_reduction = store_thm(
     With pcoprime t q <=> mpgcd t q = |1|                by poly_monic_gcd_one_coprime
       so mpgcd t (p * q) = |1| <=> coprime t (p * q)     by poly_monic_gcd_one_coprime
 *)
-val poly_coprime_product_by_coprimes = store_thm(
-  "poly_coprime_product_by_coprimes",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   !t. poly t /\ pcoprime t p /\ pcoprime t q ==> pcoprime t (p * q)``,
-  metis_tac[poly_monic_gcd_multiple_reduction, poly_monic_gcd_one_coprime, poly_mult_poly, field_is_ring]);
+Theorem poly_coprime_product_by_coprimes:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   !t. poly t /\ pcoprime t p /\ pcoprime t q ==> pcoprime t (p * q)
+Proof
+  metis_tac[poly_monic_gcd_multiple_reduction, poly_monic_gcd_one_coprime, poly_mult_poly, field_is_ring]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomiald LCM                                                           *)
@@ -2131,9 +2187,9 @@ val it = |- !r p q. plcm p q = if deg (mpgcd p q) = 0 then p * q else p * q / mp
        Since poly (p * q)            by poly_mult_poly
           so poly (plcm p q)         by poly_field_div_poly, d <> 0
 *)
-val poly_lcm_poly = store_thm(
-  "poly_lcm_poly",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> poly (plcm p q)``,
+Theorem poly_lcm_poly:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> poly (plcm p q)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = mpgcd p q` >>
   `poly d` by rw[Abbr`d`] >>
@@ -2143,7 +2199,8 @@ val poly_lcm_poly = store_thm(
     rw_tac std_ss[poly_lcm_def] >>
     `0 < deg d` by decide_tac >>
     rw[poly_field_div_poly]
-  ]);
+  ]
+QED
 
 (* export simple result *)
 val _ = export_rewrites["poly_lcm_poly"];
@@ -2175,9 +2232,9 @@ val _ = export_rewrites["poly_lcm_poly"];
         = d * (p * q / d)              by poly_lcm_def
         = p * q                        by poly_div_multiple_alt, (p * q) % d = |0|
 *)
-val poly_lcm_eqn = store_thm(
-  "poly_lcm_eqn",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> (mpgcd p q * plcm p q = p * q)``,
+Theorem poly_lcm_eqn:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> (mpgcd p q * plcm p q = p * q)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = mpgcd p q` >>
   Cases_on `(p = |0|) /\ (q = |0|)` >| [
@@ -2197,7 +2254,8 @@ val poly_lcm_eqn = store_thm(
       `(p * q) % d = |0|` by rw[GSYM poly_divides_alt] >>
       rw[poly_div_multiple_alt]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p. poly p ==> (plcm p |0| = |0|) /\ (plcm |0| p = |0|) *)
 (* Proof:
@@ -2225,9 +2283,9 @@ val poly_lcm_eqn = store_thm(
       Also |0| / d = |0|                   by poly_zero_div, ulead d
      Hence plcm p |0| = plcm |0| p
 *)
-val poly_lcm_zero = store_thm(
-  "poly_lcm_zero",
-  ``!r:'a field. Field r ==> !p. poly p ==> (plcm p |0| = |0|) /\ (plcm |0| p = |0|)``,
+Theorem poly_lcm_zero:
+    !r:'a field. Field r ==> !p. poly p ==> (plcm p |0| = |0|) /\ (plcm |0| p = |0|)
+Proof
   ntac 4 strip_tac >>
   qabbrev_tac `d = mpgcd p |0|` >>
   `d = mpgcd |0| p` by rw[poly_monic_gcd_sym] >>
@@ -2242,7 +2300,8 @@ val poly_lcm_zero = store_thm(
     `ulead d` by rw[] >>
     `|0| / d = |0|` by rw[poly_zero_div] >>
     rw_tac std_ss[poly_mult_zero]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p. poly p ==> (plcm p |1| = p) /\ (plcm |1| p = p) *)
 (* Proof:
@@ -2255,15 +2314,16 @@ val poly_lcm_zero = store_thm(
      and plcm |1| p = |1| * p   by poly_lcm_def
                     = p         by poly_mult_lone
 *)
-val poly_lcm_one = store_thm(
-  "poly_lcm_one",
-  ``!r:'a field. Field r ==> !p. poly p ==> (plcm p |1| = p) /\ (plcm |1| p = p)``,
+Theorem poly_lcm_one:
+    !r:'a field. Field r ==> !p. poly p ==> (plcm p |1| = p) /\ (plcm |1| p = p)
+Proof
   ntac 4 strip_tac >>
   qabbrev_tac `d = mpgcd p |1|` >>
   `d = mpgcd |1| p` by rw[poly_monic_gcd_sym] >>
   `d = |1|` by rw[poly_monic_gcd_one] >>
   `deg d = 0` by rw[] >>
-  metis_tac[poly_lcm_def, poly_mult_one, field_is_ring]);
+  metis_tac[poly_lcm_def, poly_mult_one, field_is_ring]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==> (plcm p q = p * q) *)
 (* Proof:
@@ -2272,12 +2332,13 @@ val poly_lcm_one = store_thm(
      and deg d = deg |1| = 0          by poly_deg_one
    Hence plcm p q = p * q             by poly_lcm_def
 *)
-val poly_coprime_lcm = store_thm(
-  "poly_coprime_lcm",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==> (plcm p q = p * q)``,
+Theorem poly_coprime_lcm:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==> (plcm p q = p * q)
+Proof
   rpt strip_tac >>
   `mpgcd p q = |1|` by rw[GSYM poly_monic_gcd_one_coprime] >>
-  rw[poly_lcm_def]);
+  rw[poly_lcm_def]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==> p pdivides (plcm p q) /\ q pdivides (plcm p q) *)
 (* Proof:
@@ -2303,9 +2364,9 @@ val poly_coprime_lcm = store_thm(
       thus p * q / d = (p / d) * q   by poly_mult_div_alt
      Hence q pdivdes plcm p q        by poly_divides_def, poly_div_poly
 *)
-val poly_lcm_divisors = store_thm(
-  "poly_lcm_divisors",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==> p pdivides (plcm p q) /\ q pdivides (plcm p q)``,
+Theorem poly_lcm_divisors:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==> p pdivides (plcm p q) /\ q pdivides (plcm p q)
+Proof
   ntac 5 strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `d = mpgcd p q` >>
@@ -2325,7 +2386,8 @@ val poly_lcm_divisors = store_thm(
       `d pdivides p` by rw[poly_monic_gcd_divides, Abbr`d`] >>
       metis_tac[poly_divides_alt, poly_mult_div_alt, poly_divides_def, poly_div_poly]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==>
             !t. poly t /\ p pdivides t /\ q pdivides t ==> (plcm p q) pdivides t *)
@@ -2384,10 +2446,10 @@ val poly_lcm_divisors = store_thm(
     Hence p = t * e                 by step 3 and step 4
        or e pdivides p              by pdivides_def
 *)
-val poly_lcm_is_lcm = store_thm(
-  "poly_lcm_is_lcm",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   !t. poly t /\ p pdivides t /\ q pdivides t ==> (plcm p q) pdivides t``,
+Theorem poly_lcm_is_lcm:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   !t. poly t /\ p pdivides t /\ q pdivides t ==> (plcm p q) pdivides t
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = mpgcd p q` >>
   qabbrev_tac `e = plcm p q` >>
@@ -2421,7 +2483,8 @@ val poly_lcm_is_lcm = store_thm(
     `_ = (d * x) * (y * d)` by rw[poly_mult_comm] >>
     `_ = d * (x * y * d)` by rw[poly_mult_assoc] >>
     metis_tac[poly_mult_lcancel]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -2433,11 +2496,12 @@ val poly_lcm_is_lcm = store_thm(
      ==> plcm p q = p * q    by poly_coprime_lcm
    Hence (p * q) pdivides t  by poly_lcm_is_lcm
 *)
-val poly_coprime_product_divides = store_thm(
-  "poly_coprime_product_divides",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==>
-   !t. poly t /\ p pdivides t /\ q pdivides t ==> (p * q) pdivides t``,
-  metis_tac[poly_monic_gcd_one_coprime, poly_coprime_lcm, poly_lcm_is_lcm]);
+Theorem poly_coprime_product_divides:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ pcoprime p q ==>
+   !t. poly t /\ p pdivides t /\ q pdivides t ==> (p * q) pdivides t
+Proof
+  metis_tac[poly_monic_gcd_one_coprime, poly_coprime_lcm, poly_lcm_is_lcm]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Coprime Polynomial Sets                                               *)
@@ -2475,10 +2539,10 @@ val it = |- !r s. pcoprime_set s <=> (!p. p IN s ==> poly p) /\
         and poly (PPROD s)            by poly_prod_set_poly
       Hence pcoprime p (e * PPROD s)  by poly_coprime_product_by_coprimes
 *)
-val poly_coprime_poly_prod = store_thm(
-  "poly_coprime_poly_prod",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ (!q. q IN s ==> poly q) ==>
-   !p. poly p /\ p NOTIN s /\ (!q. q IN s ==> pcoprime p q) ==> pcoprime p (PPROD s)``,
+Theorem poly_coprime_poly_prod:
+    !r:'a field. Field r ==> !s. FINITE s /\ (!q. q IN s ==> poly q) ==>
+   !p. poly p /\ p NOTIN s /\ (!q. q IN s ==> pcoprime p q) ==> pcoprime p (PPROD s)
+Proof
   ntac 2 strip_tac >>
   `!s. FINITE s ==> (!q. q IN s ==> poly q) ==>
    !p. poly p /\ p NOTIN s /\ (!q. q IN s ==> pcoprime p q) ==> pcoprime p (PPROD s)` suffices_by rw[] >>
@@ -2488,7 +2552,8 @@ val poly_coprime_poly_prod = store_thm(
   `PPROD (e INSERT s) = e * PPROD (s DELETE e)` by rw[poly_prod_set_thm] >>
   `_ = e * PPROD s` by metis_tac[DELETE_NON_ELEMENT] >>
   fs[IN_INSERT] >>
-  rw[poly_coprime_product_by_coprimes, poly_prod_set_poly]);
+  rw[poly_coprime_product_by_coprimes, poly_prod_set_poly]
+QED
 
 (* Theorem: Field r ==> !s p. FINITE s /\ p NOTIN s /\ pcoprime_set (p INSERT s) ==>
             poly p /\ pcoprime_set s /\ pcoprime p (PPROD s) *)
@@ -2505,17 +2570,18 @@ val poly_coprime_poly_prod = store_thm(
        !x. x IN s ==> pcoprime p x                        by IN_INSERT
        Hence pcoprime p (PPROD s)                         by poly_coprime_poly_prod
 *)
-val poly_coprime_set_insert = store_thm(
-  "poly_coprime_set_insert",
-  ``!r:'a field. Field r ==> !s p. FINITE s /\ p NOTIN s /\ pcoprime_set (p INSERT s) ==>
-         poly p /\ pcoprime_set s /\ pcoprime p (PPROD s)``,
+Theorem poly_coprime_set_insert:
+    !r:'a field. Field r ==> !s p. FINITE s /\ p NOTIN s /\ pcoprime_set (p INSERT s) ==>
+         poly p /\ pcoprime_set s /\ pcoprime p (PPROD s)
+Proof
   ntac 5 strip_tac >>
   `!x. x IN (p INSERT s) ==> poly x /\
     !x y. x IN (p INSERT s) /\ y IN (p INSERT s) /\ x <> y ==> pcoprime x y` by metis_tac[poly_coprime_set_def] >>
   fs[IN_INSERT] >>
   rw[poly_coprime_set_def] >>
   `!x. x IN s ==> pcoprime p x` by metis_tac[] >>
-  rw[poly_coprime_poly_prod]);
+  rw[poly_coprime_poly_prod]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ pcoprime_set s ==>
             !t. poly t /\ (!p. p IN s ==> p pdivides t) ==> (PPROD s) pdivides t *)
@@ -2539,10 +2605,10 @@ val poly_coprime_set_insert = store_thm(
         and pcoprime e (PPROD s)             by above
       Hence (e * PPROD s) pdivides t         by poly_coprime_product_divides
 *)
-val poly_prod_coprime_set_divides = store_thm(
-  "poly_prod_coprime_set_divides",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ pcoprime_set s ==>
-   !t. poly t /\ (!p. p IN s ==> p pdivides t) ==> (PPROD s) pdivides t``,
+Theorem poly_prod_coprime_set_divides:
+    !r:'a field. Field r ==> !s. FINITE s /\ pcoprime_set s ==>
+   !t. poly t /\ (!p. p IN s ==> p pdivides t) ==> (PPROD s) pdivides t
+Proof
   ntac 2 strip_tac >>
   `Ring r` by rw[] >>
   `!s. FINITE s ==> pcoprime_set s ==>
@@ -2557,7 +2623,8 @@ val poly_prod_coprime_set_divides = store_thm(
   `PPROD (e INSERT s) = e * PPROD (s DELETE e)` by rw[poly_prod_set_thm] >>
   `_ = e * PPROD s` by metis_tac[DELETE_NON_ELEMENT] >>
   `poly (PPROD s)` by rw[poly_prod_set_poly] >>
-  rw[poly_coprime_product_divides]);
+  rw[poly_coprime_product_divides]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -2570,15 +2637,16 @@ val poly_prod_coprime_set_divides = store_thm(
     ==> PPROD (IMAGE f s) pdivides p           by poly_prod_coprime_set_divides
      or (PPIMAGE f s) pdivides p               by notation
 *)
-val poly_prod_coprime_image_divides = store_thm(
-  "poly_prod_coprime_image_divides",
-  ``!r:'a field. Field r ==> !f s. FINITE s /\ pcoprime_set (IMAGE f s) ==>
-   !p. poly p /\ (!x. x IN s ==> (f x) pdivides p) ==> (PPIMAGE f s) pdivides p``,
+Theorem poly_prod_coprime_image_divides:
+    !r:'a field. Field r ==> !f s. FINITE s /\ pcoprime_set (IMAGE f s) ==>
+   !p. poly p /\ (!x. x IN s ==> (f x) pdivides p) ==> (PPIMAGE f s) pdivides p
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = IMAGE f s` >>
   `FINITE t` by rw[Abbr`t`] >>
   `!y. y IN t ==> y pdivides p` by metis_tac[IN_IMAGE] >>
-  rw[poly_prod_coprime_set_divides]);
+  rw[poly_prod_coprime_set_divides]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monic Irreducible Sets                                                    *)
@@ -2592,24 +2660,27 @@ val _ = overload_on("miset", ``monic_irreducibles_set r``);
 
 (* Theorem: miset s ==> pset s *)
 (* Proof: by poly_monic_poly *)
-val monic_irreducible_set_poly_set = store_thm(
-  "monic_irreducible_set_poly_set",
-  ``!(r:'a ring) s. miset s ==> pset s``,
-  rw[]);
+Theorem monic_irreducible_set_poly_set:
+    !(r:'a ring) s. miset s ==> pset s
+Proof
+  rw[]
+QED
 
 (* Theorem: miset s ==> mset s *)
 (* Proof: by notation *)
-val monic_irreducible_set_monic_set = store_thm(
-  "monic_irreducible_set_monic_set",
-  ``!(r:'a ring) s. miset s ==> mset s``,
-  rw[]);
+Theorem monic_irreducible_set_monic_set:
+    !(r:'a ring) s. miset s ==> mset s
+Proof
+  rw[]
+QED
 
 (* Theorem: (!x. x IN s ==> miset x) ==> miset (BIGUNION s) *)
 (* Proof: by IN_BIGUNION *)
-val monic_irreducible_set_bigunion = store_thm(
-  "monic_irreducible_set_bigunion",
-  ``!(r:'a ring) s. (!x. x IN s ==> miset x) ==> miset (BIGUNION s)``,
-  metis_tac[IN_BIGUNION]);
+Theorem monic_irreducible_set_bigunion:
+    !(r:'a ring) s. (!x. x IN s ==> miset x) ==> miset (BIGUNION s)
+Proof
+  metis_tac[IN_BIGUNION]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ miset s ==>
             !p. monic p /\ ipoly p ==> (p pdivides PPROD s <=> p IN s) *)
@@ -2644,10 +2715,10 @@ val monic_irreducible_set_bigunion = store_thm(
           Since p pdivides (PPROD s)         by poly_prod_set_element_divides
           Hence p pdivides e * PPROD s       by poly_divides_multiple
 *)
-val poly_prod_monic_irreducible_set_divisor = store_thm(
-  "poly_prod_monic_irreducible_set_divisor",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ miset s ==>
-       !p. monic p /\ ipoly p ==> (p pdivides PPROD s <=> p IN s)``,
+Theorem poly_prod_monic_irreducible_set_divisor:
+    !r:'a field. Field r ==> !s. FINITE s /\ miset s ==>
+       !p. monic p /\ ipoly p ==> (p pdivides PPROD s <=> p IN s)
+Proof
   ntac 2 strip_tac >>
   `Ring r` by rw[] >>
   `!s. FINITE s ==>
@@ -2671,7 +2742,8 @@ val poly_prod_monic_irreducible_set_divisor = store_thm(
       metis_tac[poly_divides_def, poly_mult_comm],
       rw[poly_prod_set_element_divides, poly_divides_multiple]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t ==>
             ((PPROD s = PPROD t) <=> (s = t)) *)
@@ -2689,10 +2761,10 @@ val poly_prod_monic_irreducible_set_divisor = store_thm(
    Only-if part: (s = t) ==> (PPROD s = PPROD t)
       This is trivially true.
 *)
-val poly_prod_monic_irreducible_set_eq = store_thm(
-  "poly_prod_monic_irreducible_set_eq",
-  ``!r:'a field. Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t ==>
-      ((PPROD s = PPROD t) <=> (s = t))``,
+Theorem poly_prod_monic_irreducible_set_eq:
+    !r:'a field. Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t ==>
+      ((PPROD s = PPROD t) <=> (s = t))
+Proof
   rw[EQ_IMP_THM] >>
   (irule SUBSET_ANTISYM >> rpt conj_tac) >| [
     rw[SUBSET_DEF] >>
@@ -2703,7 +2775,8 @@ val poly_prod_monic_irreducible_set_eq = store_thm(
     `pset t` by rw[] >>
     `x pdivides (PPROD s)` by metis_tac[poly_prod_set_element_divides, field_is_ring] >>
     metis_tac[poly_prod_monic_irreducible_set_divisor]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -2722,16 +2795,17 @@ val poly_prod_monic_irreducible_set_eq = store_thm(
 
    The result follows with PPROD as f          by poly_disjoint_bigunion_mult_fun
 *)
-val poly_prod_disjoint_bigunion = store_thm(
-  "poly_prod_disjoint_bigunion",
-  ``!r:'a field. Field r ==> !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P /\
-   (!s. s IN P ==> miset s) ==> (PPROD (BIGUNION P) = PPIMAGE PPROD P)``,
+Theorem poly_prod_disjoint_bigunion:
+    !r:'a field. Field r ==> !P. FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P /\
+   (!s. s IN P ==> miset s) ==> (PPROD (BIGUNION P) = PPIMAGE PPROD P)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   `poly_set_multiplicative_fun r PPROD` by rw_tac std_ss[poly_prod_set_mult_fun] >>
   `EVERY_PSET P` by metis_tac[monic_irreducible_set_poly_set] >>
   (`INJ PPROD P univ(:'a poly)` by (rw[INJ_DEF] >> metis_tac[poly_prod_monic_irreducible_set_eq])) >>
-  metis_tac[poly_disjoint_bigunion_mult_fun]);
+  metis_tac[poly_disjoint_bigunion_mult_fun]
+QED
 
 (* Theorem: Field r ==> !s. miset s ==> pcoprime_set s *)
 (* Proof:
@@ -2739,11 +2813,12 @@ val poly_prod_disjoint_bigunion = store_thm(
    (1) pset s, or !x. x IN s ==> poly s, true                  by poly_monic_poly
    (2) !p q. p IN s /\ q IN s /\ p <> q ==> pcoprime p q, true by poly_monic_irreducibles_coprime
 *)
-val poly_monic_irreducibles_coprime_set = store_thm(
-  "poly_monic_irreducibles_coprime_set",
-  ``!r:'a field. Field r ==> !s. miset s ==> pcoprime_set s``,
+Theorem poly_monic_irreducibles_coprime_set:
+    !r:'a field. Field r ==> !s. miset s ==> pcoprime_set s
+Proof
   rw[poly_coprime_set_def] >>
-  metis_tac[poly_monic_irreducibles_coprime]);
+  metis_tac[poly_monic_irreducibles_coprime]
+QED
 
 (* Theorem: Field r ==> !s. s SUBSET R ==> miset (IMAGE factor s) *)
 (* Proof:
@@ -2751,10 +2826,11 @@ val poly_monic_irreducibles_coprime_set = store_thm(
    (1) !x. x IN s ==> monic (factor x), true  by poly_factor_monic
    (2) !x. x IN s ==> ipoly (factor x), true  by poly_deg_factor, poly_deg_1_irreducible
 *)
-val poly_factor_image_monic_irreducibles_set = store_thm(
-  "poly_factor_image_monic_irreducibles_set",
-  ``!r:'a field. Field r ==> !s. s SUBSET R ==> miset (IMAGE factor s)``,
-  (rw[SUBSET_DEF] >> rw[poly_factor_monic, poly_deg_factor, poly_deg_1_irreducible]));
+Theorem poly_factor_image_monic_irreducibles_set:
+    !r:'a field. Field r ==> !s. s SUBSET R ==> miset (IMAGE factor s)
+Proof
+  (rw[SUBSET_DEF] >> rw[poly_factor_monic, poly_deg_factor, poly_deg_1_irreducible])
+QED
 
 (* Theorem: Field r ==> !p. poly p ==> !s. s SUBSET (roots p) ==> (PIFACTOR s) pdivides p *)
 (* Proof:
@@ -2775,9 +2851,9 @@ val poly_factor_image_monic_irreducibles_set = store_thm(
            ==> miset (IMAGE factor s)         by poly_factor_image_monic_irreducibles_set
            ==> pcoprime_set (IMAGE factor s)  by poly_monic_irreducibles_coprime_set
 *)
-val poly_prod_factors_divides = store_thm(
-  "poly_prod_factors_divides",
-  ``!r:'a field. Field r ==> !p. poly p ==> !s. s SUBSET (roots p) ==> (PIFACTOR s) pdivides p``,
+Theorem poly_prod_factors_divides:
+    !r:'a field. Field r ==> !p. poly p ==> !s. s SUBSET (roots p) ==> (PIFACTOR s) pdivides p
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[poly_divides_zero] >>
@@ -2788,7 +2864,8 @@ val poly_prod_factors_divides = store_thm(
   `(roots p) SUBSET R` by rw[poly_roots_def, SUBSET_DEF] >>
   `s SUBSET R` by metis_tac[SUBSET_TRANS] >>
   `miset (IMAGE factor s)` by metis_tac[poly_factor_image_monic_irreducibles_set] >>
-  rw[poly_monic_irreducibles_coprime_set]);
+  rw[poly_monic_irreducibles_coprime_set]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Product of Monic Irreducible Sets                                         *)
@@ -2801,13 +2878,14 @@ val poly_prod_factors_divides = store_thm(
                    ==> p <> |0|   by poly_irreducible_nonzero
    Hence PPROD s <> |0|           by poly_prod_set_nonzero
 *)
-val poly_prod_monic_irreducible_set_nonzero = store_thm(
-  "poly_prod_monic_irreducible_set_nonzero",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ miset s ==> PPROD s <> |0|``,
+Theorem poly_prod_monic_irreducible_set_nonzero:
+    !r:'a field. Field r ==> !s. FINITE s /\ miset s ==> PPROD s <> |0|
+Proof
   rpt strip_tac >>
   `pset s` by rw[monic_irreducible_set_poly_set] >>
   `!p. p IN s ==> p <> |0|` by rw[poly_irreducible_nonzero] >>
-  metis_tac[poly_prod_set_nonzero]);
+  metis_tac[poly_prod_set_nonzero]
+QED
 
 (* Theorem: Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t ==>
             ((PPROD t) pdivides (PPROD s) <=> (t SUBSET s)) *)
@@ -2832,10 +2910,10 @@ val poly_prod_monic_irreducible_set_nonzero = store_thm(
      Thus !x. x IN t ==> x pdivides q    by above
       ==> p pdivides q         by poly_prod_coprime_set_divides
 *)
-val poly_prod_monic_irreducible_set_divisibility = store_thm(
-  "poly_prod_monic_irreducible_set_divisibility",
-  ``!r:'a field. Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t ==>
-       ((PPROD t) pdivides (PPROD s) <=> (t SUBSET s))``,
+Theorem poly_prod_monic_irreducible_set_divisibility:
+    !r:'a field. Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t ==>
+       ((PPROD t) pdivides (PPROD s) <=> (t SUBSET s))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `p = PPROD t` >>
@@ -2851,7 +2929,8 @@ val poly_prod_monic_irreducible_set_divisibility = store_thm(
     `pcoprime_set t` by rw[poly_monic_irreducibles_coprime_set] >>
     `!x. x IN t ==> x pdivides q` by metis_tac[poly_prod_set_element_divides, SUBSET_DEF] >>
     rw[poly_prod_coprime_set_divides, Abbr`p`]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t /\
             DISJOINT s t ==> pcoprime (PPROD s) (PPROD t) *)
@@ -2876,10 +2955,10 @@ val poly_prod_monic_irreducible_set_divisibility = store_thm(
     ==> m = |1|                                    by poly_monic_deg_0
      or pcoprime p q                               by poly_monic_gcd_one_coprime, poly_monic_poly
 *)
-val poly_prod_monic_irreducible_set_coprime = store_thm(
-  "poly_prod_monic_irreducible_set_coprime",
-  ``!r:'a field. Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t /\
-      DISJOINT s t ==> pcoprime (PPROD s) (PPROD t)``,
+Theorem poly_prod_monic_irreducible_set_coprime:
+    !r:'a field. Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t /\
+      DISJOINT s t ==> pcoprime (PPROD s) (PPROD t)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `p = PPROD s` >>
@@ -2896,7 +2975,8 @@ val poly_prod_monic_irreducible_set_coprime = store_thm(
   `i pdivides p /\ i pdivides q` by metis_tac[poly_divides_transitive, poly_monic_poly] >>
   `i IN s /\ i IN t` by metis_tac[poly_prod_monic_irreducible_set_divisor] >>
   metis_tac[DISJOINT_DEF, IN_INTER, MEMBER_NOT_EMPTY]) >>
-  metis_tac[poly_monic_deg_0, poly_monic_gcd_one_coprime, poly_monic_poly]);
+  metis_tac[poly_monic_deg_0, poly_monic_gcd_one_coprime, poly_monic_poly]
+QED
 
 (* This improved version makes the next one obsolete. *)
 
@@ -2905,10 +2985,11 @@ val poly_prod_monic_irreducible_set_coprime = store_thm(
    Note miset s ==> pset s    by monic_irreducible_set_poly_set
    The result follows         by poly_prod_set_by_partition
 *)
-val poly_prod_monic_irreducible_set_by_product = store_thm(
-  "poly_prod_monic_irreducible_set_by_product",
-  ``!r:'a ring. Ring r ==> !s. FINITE s /\ miset s ==> !u v. s =|= u # v ==> (PPROD s = PPROD u * PPROD v)``,
-  metis_tac[poly_prod_set_by_partition, monic_irreducible_set_poly_set]);
+Theorem poly_prod_monic_irreducible_set_by_product:
+    !r:'a ring. Ring r ==> !s. FINITE s /\ miset s ==> !u v. s =|= u # v ==> (PPROD s = PPROD u * PPROD v)
+Proof
+  metis_tac[poly_prod_set_by_partition, monic_irreducible_set_poly_set]
+QED
 
 
 (* Theorem: Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t ==>
@@ -2939,10 +3020,10 @@ val poly_prod_monic_irreducible_set_by_product = store_thm(
         = PPROD s * (PPROD (t DIFF s) * PPROD st) by poly_mult_assoc
         = PPROD s * PPROD t                       by Step 2
 *)
-val poly_prod_monic_irreducible_sets_product = store_thm(
-  "poly_prod_monic_irreducible_sets_product",
-  ``!r:'a field. Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t ==>
-    (PPROD (s UNION t) * PPROD (s INTER t) = PPROD s * PPROD t)``,
+Theorem poly_prod_monic_irreducible_sets_product:
+    !r:'a field. Field r ==> !s t. FINITE s /\ miset s /\ FINITE t /\ miset t ==>
+    (PPROD (s UNION t) * PPROD (s INTER t) = PPROD s * PPROD t)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `u = s UNION t` >>
@@ -2958,7 +3039,8 @@ val poly_prod_monic_irreducible_sets_product = store_thm(
   `miset (t DIFF s) /\ miset st` by metis_tac[IN_DIFF, IN_INTER] >>
   `PPROD t = PPROD (t DIFF s) * PPROD st` by rw[poly_prod_monic_irreducible_set_by_product] >>
   `!s. FINITE s /\ miset s ==> poly (PPROD s)` by rw[monic_irreducible_set_poly_set, poly_prod_set_poly] >>
-  rw[poly_mult_assoc]);
+  rw[poly_mult_assoc]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ miset s ==> !p q. monic p /\ monic q /\ (p * q = PPROD s) ==>
             ?s1 s2. (s = s1 UNION s2) /\ (DISJOINT s1 s2) /\ (p = PPROD s1) /\ (q = PPROD s2) *)
@@ -3002,11 +3084,11 @@ val poly_prod_monic_irreducible_sets_product = store_thm(
       or (p = PPROD s1) /\ (q = PPROD s2)        by poly_mult_lone
     Take these s1 and s2, the result follows.
 *)
-val poly_prod_monic_irreducible_set_divisors = store_thm(
-  "poly_prod_monic_irreducible_set_divisors",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ miset s ==>
+Theorem poly_prod_monic_irreducible_set_divisors:
+    !r:'a field. Field r ==> !s. FINITE s /\ miset s ==>
    !p q. monic p /\ monic q /\ (p * q = PPROD s) ==>
-   ?s1 s2. (s = s1 UNION s2) /\ (DISJOINT s1 s2) /\ (p = PPROD s1) /\ (q = PPROD s2)``,
+   ?s1 s2. (s = s1 UNION s2) /\ (DISJOINT s1 s2) /\ (p = PPROD s1) /\ (q = PPROD s2)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `s1 = {x | x IN s /\ x pdivides p}` >>
@@ -3046,7 +3128,8 @@ val poly_prod_monic_irreducible_set_divisors = store_thm(
   `monic ps /\ monic qs` by metis_tac[poly_monic_monic_mult, poly_mult_comm] >>
   `(ps = |1|) /\ (qs = |1|)` by rw[poly_field_unit_deg, GSYM poly_monic_deg_0] >>
   `(p = tp) /\ (q = tq)` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ miset s ==>
             !p. monic p /\ p pdivides (PPROD s) ==> ?t. t SUBSET s /\ (p = PPROD t) *)
@@ -3060,10 +3143,10 @@ val poly_prod_monic_irreducible_set_divisors = store_thm(
    Note s1 SUBSET s                         by SUBSET_UNION
    Hence take t = s1, and the result follows.
 *)
-val poly_prod_monic_irreducible_set_divisor_form = store_thm(
-  "poly_prod_monic_irreducible_set_divisor_form",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ miset s ==>
-   !p. monic p /\ p pdivides (PPROD s) ==> ?t. t SUBSET s /\ (p = PPROD t)``,
+Theorem poly_prod_monic_irreducible_set_divisor_form:
+    !r:'a field. Field r ==> !s. FINITE s /\ miset s ==>
+   !p. monic p /\ p pdivides (PPROD s) ==> ?t. t SUBSET s /\ (p = PPROD t)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   `monic (PPROD s)` by rw[poly_monic_prod_set_monic] >>
@@ -3072,7 +3155,8 @@ val poly_prod_monic_irreducible_set_divisor_form = store_thm(
   `monic q` by metis_tac[poly_monic_monic_mult, poly_monic_poly] >>
   `?s1 s2. (s = s1 UNION s2) /\ DISJOINT s1 s2 /\ (p = PPROD s1) /\ (q = PPROD s2)` by rw[poly_prod_monic_irreducible_set_divisors] >>
   `s1 SUBSET s` by rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Note: The following is slightly better than poly_prod_factors_divisibility:
 |- !r. Field r ==> !s t. FINITE s /\ s SUBSET R /\ FINITE t /\ t SUBSET R ==>
@@ -3087,11 +3171,12 @@ val poly_prod_monic_irreducible_set_divisor_form = store_thm(
    Thus t SUBSET roots (PIFACTOR s)         by given, t SUBSET s
     ==> (PIFACTOR t) pdivides (PIFACTOR s)  by poly_prod_factors_divides
 *)
-val poly_prod_factors_divides_poly_prod_factor = store_thm(
-  "poly_prod_factors_divides_poly_prod_factor",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
-   !t. t SUBSET s ==> (PIFACTOR t) pdivides (PIFACTOR s)``,
-  rw[poly_prod_factors_poly, poly_prod_factors_roots, poly_prod_factors_divides]);
+Theorem poly_prod_factors_divides_poly_prod_factor:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
+   !t. t SUBSET s ==> (PIFACTOR t) pdivides (PIFACTOR s)
+Proof
+  rw[poly_prod_factors_poly, poly_prod_factors_roots, poly_prod_factors_divides]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ s SUBSET R ==>
             !p. monic p ==> (p pdivides (PIFACTOR s) <=> ?t. t SUBSET s /\ (p = PIFACTOR t)) *)
@@ -3109,10 +3194,10 @@ val poly_prod_factors_divides_poly_prod_factor = store_thm(
    Only-if part: ?t. t SUBSET s /\ (p = PIFACTOR t) ==> p pdivides s
       True by poly_prod_factors_divides_poly_prod_factor
 *)
-val poly_prod_factors_monic_divisor = store_thm(
-  "poly_prod_factors_monic_divisor",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
-   !p. monic p ==> (p pdivides (PIFACTOR s) <=> ?t. t SUBSET s /\ (p = PIFACTOR t))``,
+Theorem poly_prod_factors_monic_divisor:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R ==>
+   !p. monic p ==> (p pdivides (PIFACTOR s) <=> ?t. t SUBSET s /\ (p = PIFACTOR t))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   rw[EQ_IMP_THM] >| [
@@ -3125,7 +3210,8 @@ val poly_prod_factors_monic_divisor = store_thm(
     (`IMAGE factor t = tt` by (rw[EXTENSION] >> metis_tac[SUBSET_DEF, IN_IMAGE])) >>
     metis_tac[],
     rw[poly_prod_factors_divides_poly_prod_factor]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
             !p. monic p /\ p pdivides (PIFACTOR s) /\ p pdivides (PIFACTOR t) ==> p pdivides PIFACTOR (s INTER t) *)
@@ -3141,10 +3227,10 @@ val poly_prod_factors_monic_divisor = store_thm(
     and (s INTER t) SUBSET R                 by INTER_SUBSET, SUBSET_TRANS
     ==> p pdivides (PPROD (s INTER t))       by poly_prod_factors_divides_poly_prod_factor
 *)
-val poly_prod_factors_monic_common_divisor = store_thm(
-  "poly_prod_factors_monic_common_divisor",
-  ``!r:'a field. Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
-   !p. monic p /\ p pdivides (PIFACTOR s) /\ p pdivides (PIFACTOR t) ==> p pdivides PIFACTOR (s INTER t)``,
+Theorem poly_prod_factors_monic_common_divisor:
+    !r:'a field. Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
+   !p. monic p /\ p pdivides (PIFACTOR s) /\ p pdivides (PIFACTOR t) ==> p pdivides PIFACTOR (s INTER t)
+Proof
   rpt strip_tac >>
   `?u. u SUBSET s /\ (p = PIFACTOR u)` by rw[GSYM poly_prod_factors_monic_divisor] >>
   `FINITE u` by metis_tac[SUBSET_FINITE] >>
@@ -3153,7 +3239,8 @@ val poly_prod_factors_monic_common_divisor = store_thm(
   `u SUBSET (s INTER t)` by rw[] >>
   `FINITE (s INTER t)` by rw[] >>
   `(s INTER t) SUBSET R` by metis_tac[INTER_SUBSET, SUBSET_TRANS] >>
-  rw[poly_prod_factors_divides_poly_prod_factor]);
+  rw[poly_prod_factors_divides_poly_prod_factor]
+QED
 
 (* Theorem: Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
             (mpgcd (PIFACTOR s) (PIFACTOR t) = PIFACTOR (s INTER t)) *)
@@ -3172,10 +3259,10 @@ val poly_prod_factors_monic_common_divisor = store_thm(
          p pdivides PIFACTOR (s INTER t)                 by poly_prod_factors_monic_common_divisor
    Thus mpgcd (PIFACTOR s) (PIFACTOR t) = (PIFACTOR st)  by poly_monic_gcd_condition
 *)
-val poly_prod_factors_monic_gcd = store_thm(
-  "poly_prod_factors_monic_gcd",
-  ``!r:'a field. Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
-    (mpgcd (PIFACTOR s) (PIFACTOR t) = PIFACTOR (s INTER t))``,
+Theorem poly_prod_factors_monic_gcd:
+    !r:'a field. Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
+    (mpgcd (PIFACTOR s) (PIFACTOR t) = PIFACTOR (s INTER t))
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FINITE (s INTER t)` by rw[] >>
@@ -3183,7 +3270,8 @@ val poly_prod_factors_monic_gcd = store_thm(
   `(s INTER t) SUBSET s /\ (s INTER t) SUBSET t` by rw[] >>
   `monic (PIFACTOR s) /\ monic (PIFACTOR t)` by rw[poly_prod_factors_monic] >>
   `monic (PIFACTOR (s INTER t))` by rw[poly_prod_factors_monic] >>
-  rw[poly_prod_factors_divisibility, poly_prod_factors_monic_common_divisor, poly_monic_gcd_condition, poly_monic_nonzero]);
+  rw[poly_prod_factors_divisibility, poly_prod_factors_monic_common_divisor, poly_monic_gcd_condition, poly_monic_nonzero]
+QED
 
 (* Theorem: Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
              ((PIFACTOR s = PIFACTOR t) <=> (s = t)) *)
@@ -3195,14 +3283,15 @@ val poly_prod_factors_monic_gcd = store_thm(
    <=>         IMAGE factor s = IMAGE factor t                by poly_prod_monic_irreducible_set_eq
    <=>                      s = t                             by poly_factor_image_eq
 *)
-val poly_prod_factors_eq = store_thm(
-  "poly_prod_factors_eq",
-  ``!r:'a field. Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
-    ((PIFACTOR s = PIFACTOR t) <=> (s = t))``,
+Theorem poly_prod_factors_eq:
+    !r:'a field. Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
+    ((PIFACTOR s = PIFACTOR t) <=> (s = t))
+Proof
   rpt strip_tac >>
   `FINITE (IMAGE factor s) /\ FINITE (IMAGE factor t)` by rw[] >>
   `miset (IMAGE factor s) /\ miset (IMAGE factor t)` by metis_tac[poly_factor_image_monic_irreducibles_set] >>
-  rw[poly_prod_monic_irreducible_set_eq, poly_factor_image_eq]);
+  rw[poly_prod_monic_irreducible_set_eq, poly_factor_image_eq]
+QED
 
 (* Theorem: Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
             (PIFACTOR (s UNION t) * PIFACTOR (s INTER t) = (PIFACTOR s) * (PIFACTOR t)) *)
@@ -3216,10 +3305,10 @@ val poly_prod_factors_eq = store_thm(
     ==> PPROD (ss UNION tt) * PPROD (ss INTER tt)
       = PPROD ss * PPROD tt                        by poly_prod_monic_irreducible_sets_product
 *)
-val poly_prod_factors_product = store_thm(
-  "poly_prod_factors_product",
-  ``!r:'a field. Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
-    (PIFACTOR (s UNION t) * PIFACTOR (s INTER t) = (PIFACTOR s) * (PIFACTOR t))``,
+Theorem poly_prod_factors_product:
+    !r:'a field. Field r ==> !s t. FINITE s /\ FINITE t /\ s SUBSET R /\ t SUBSET R ==>
+    (PIFACTOR (s UNION t) * PIFACTOR (s INTER t) = (PIFACTOR s) * (PIFACTOR t))
+Proof
   rpt strip_tac >>
   qabbrev_tac `fs = IMAGE factor s` >>
   qabbrev_tac `ft = IMAGE factor t` >>
@@ -3228,7 +3317,8 @@ val poly_prod_factors_product = store_thm(
   rw[IMAGE_UNION] >>
   `FINITE fs /\ FINITE ft` by rw[Abbr`fs`, Abbr`ft`] >>
   `miset fs /\ miset ft` by metis_tac[poly_factor_image_monic_irreducibles_set] >>
-  rw[poly_prod_monic_irreducible_sets_product]);
+  rw[poly_prod_monic_irreducible_sets_product]
+QED
 
 
 (* Theorem: Field r ==> ring_set_multiplicative_fun r PIFACTOR *)
@@ -3240,15 +3330,16 @@ val poly_prod_factors_product = store_thm(
        PIFACTOR (s UNION t) * PIFACTOR (s INTER t) = PIFACTOR s * PIFACTOR t
        This is true                            by poly_prod_factors_product
 *)
-val poly_prod_factors_ring_mult_fun = store_thm(
-  "poly_prod_factors_ring_mult_fun",
-  ``!r:'a field. Field r ==> ring_set_multiplicative_fun r PIFACTOR``,
+Theorem poly_prod_factors_ring_mult_fun:
+    !r:'a field. Field r ==> ring_set_multiplicative_fun r PIFACTOR
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   rw_tac std_ss[ring_set_multiplicative_fun_def] >-
   rw[poly_prod_set_empty] >-
   rw[poly_prod_factors_poly] >>
-  rw[poly_prod_factors_product]);
+  rw[poly_prod_factors_product]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Coprime with Derivative                                                   *)
@@ -3283,10 +3374,10 @@ val poly_prod_factors_ring_mult_fun = store_thm(
        giving deg q = 0                             by poly_field_unit_deg
        which contradicts 0 < deg q.
 *)
-val poly_coprime_diff_simple_divisor = store_thm(
-  "poly_coprime_diff_simple_divisor",
-  ``!r:'a field. Field r ==> !p. poly p /\ pgcd p (diff p) ~~ |1| ==>
-   !q. poly q /\ 0 < deg q /\ q pdivides p ==> !k. 1 < k ==> ~(q ** k pdivides p)``,
+Theorem poly_coprime_diff_simple_divisor:
+    !r:'a field. Field r ==> !p. poly p /\ pgcd p (diff p) ~~ |1| ==>
+   !q. poly q /\ 0 < deg q /\ q pdivides p ==> !k. 1 < k ==> ~(q ** k pdivides p)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   `?s. poly s /\ (p = s * (q ** k))` by rw[GSYM poly_divides_def] >>
@@ -3307,7 +3398,8 @@ val poly_coprime_diff_simple_divisor = store_thm(
   `upoly (pgcd p (diff p))` by rw[poly_unit_eq_one] >>
   `upoly q` by metis_tac[poly_divides_unit] >>
   `deg q = 0` by rw[poly_field_unit_deg] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ pcoprime p (diff p) ==> p <> |0| *)
 (* Proof:
@@ -3318,16 +3410,17 @@ val poly_coprime_diff_simple_divisor = store_thm(
     and mpgcd |0| |0| = |0|                   by poly_monic_gcd_zero_zero
    This is a contradiction since |0| <> |1|   by poly_one_ne_poly_zero
 *)
-val poly_coprime_diff_nonzero = store_thm(
-  "poly_coprime_diff_nonzero",
-  ``!r:'a field. Field r ==> !p. poly p /\ pcoprime p (diff p) ==> p <> |0|``,
+Theorem poly_coprime_diff_nonzero:
+    !r:'a field. Field r ==> !p. poly p /\ pcoprime p (diff p) ==> p <> |0|
+Proof
   rpt strip_tac >>
   qabbrev_tac `q = diff p` >>
   `poly q` by rw[poly_diff_poly, Abbr`q`] >>
   `mpgcd p q = |1|` by rw[GSYM poly_monic_gcd_one_coprime] >>
   `q = |0|` by rw[poly_diff_zero, Abbr`q`] >>
   `Ring r /\ |1| <> |0| /\ poly |0|` by rw[] >>
-  metis_tac[poly_gcd_zero, poly_monic_gcd_zero_zero]);
+  metis_tac[poly_gcd_zero, poly_monic_gcd_zero_zero]
+QED
 
 (* Theorem: Field r ==> !t. poly t /\ pcoprime t (diff t) ==>
             !s. FINITE s /\ (!p. p IN s ==> poly p) /\
@@ -3360,11 +3453,11 @@ val poly_coprime_diff_nonzero = store_thm(
      But ~(q ** 2 pdivides t)      by poly_coprime_diff_simple_divisor
    This is a contradiction.
 *)
-val poly_coprime_diff_unit_eq_prod_set = store_thm(
-  "poly_coprime_diff_unit_eq_prod_set",
-  ``!r:'a field. Field r ==> !t. poly t /\ pcoprime t (diff t) ==>
+Theorem poly_coprime_diff_unit_eq_prod_set:
+    !r:'a field. Field r ==> !t. poly t /\ pcoprime t (diff t) ==>
    !s. FINITE s /\ pset s /\ (PPROD s) pdivides t /\
-    (!p. monic p /\ ipoly p /\ p pdivides t ==> p IN s) ==>  t ~~ PPROD s``,
+    (!p. monic p /\ ipoly p /\ p pdivides t ==> p IN s) ==>  t ~~ PPROD s
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   qabbrev_tac `p = PPROD s` >>
@@ -3391,7 +3484,8 @@ val poly_coprime_diff_unit_eq_prod_set = store_thm(
   `pgcd t (diff t) ~~ |1|` by rw[GSYM poly_gcd_one_coprime] >>
   `0 < deg q` by rw[poly_irreducible_deg_nonzero] >>
   `q ** 2 pdivides t` by metis_tac[poly_divides_def, poly_mult_poly] >>
-  metis_tac[poly_coprime_diff_simple_divisor, DECIDE``1 < 2``]);
+  metis_tac[poly_coprime_diff_simple_divisor, DECIDE``1 < 2``]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

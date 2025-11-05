@@ -199,9 +199,9 @@ Proof
   PROVE_TAC [compat_closure_rules]
 QED
 
-val reduction_compatible = store_thm(
-  "reduction_compatible",
-  ``!R. compatible (reduction R)``,
+Theorem reduction_compatible:
+    !R. compatible (reduction R)
+Proof
   GEN_TAC THEN
   Q_TAC SUFF_TAC `!x y. RTC (compat_closure R) x y ==>
                         !c. one_hole_context c ==>
@@ -209,18 +209,19 @@ val reduction_compatible = store_thm(
     SRW_TAC [][compatible_def] THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
   PROVE_TAC [compatible_def, compat_closure_compatible,
-             RTC_RULES]);
+             RTC_RULES]
+QED
 
-val reduction_rules = store_thm(
-  "reduction_rules",
-  ``(!x. reduction R x x) /\
+Theorem reduction_rules:
+    (!x. reduction R x x) /\
     (!x y. R x y ==> reduction R x y) /\
     (!x y. compat_closure R x y ==> reduction R x y) /\
     (!x y z. reduction R x y /\ reduction R y z ==>
              reduction R x z) /\
     (!x y z. reduction R x y ==> reduction R (z @@ x) (z @@ y)) /\
     (!x y z. reduction R x y ==> reduction R (x @@ z) (y @@ z)) /\
-    (!x y v. reduction R x y ==> reduction R (LAM v x) (LAM v y))``,
+    (!x y v. reduction R x y ==> reduction R (LAM v x) (LAM v y))
+Proof
   REPEAT STRIP_TAC THENL [
     PROVE_TAC [RTC_RULES],
     PROVE_TAC [RTC_RULES, compat_closure_rules],
@@ -229,18 +230,20 @@ val reduction_rules = store_thm(
     PROVE_TAC [leftctxt, compatible_def, reduction_compatible],
     PROVE_TAC [rightctxt_thm, rightctxt, compatible_def, reduction_compatible],
     PROVE_TAC [absctxt, compatible_def, reduction_compatible]
-  ]);
+  ]
+QED
 
-val conversion_compatible = store_thm(
-  "conversion_compatible",
-  ``!R. compatible (conversion R)``,
+Theorem conversion_compatible:
+    !R. compatible (conversion R)
+Proof
   GEN_TAC THEN
   Q_TAC SUFF_TAC `!x y. equiv_closure (compat_closure R) x y ==>
                         !c. one_hole_context c ==>
                             equiv_closure (compat_closure R) (c x) (c y)` THEN1
     SRW_TAC [][compatible_def] THEN
   HO_MATCH_MP_TAC equiv_closure_ind THEN SRW_TAC [][] THEN
-  PROVE_TAC [compatible_def, equiv_closure_rules, compat_closure_compatible]);
+  PROVE_TAC [compatible_def, equiv_closure_rules, compat_closure_compatible]
+QED
 
 Theorem conversion_monotone :
     !r1 r2. r1 RSUBSET r2 ==> (conversion r1) RSUBSET (conversion r2)
@@ -271,12 +274,13 @@ QED
 
 (* "Follows from an induction on the structure of M, and the
     compatibility of reduction R" *)
-val lemma3_8 = store_thm(
-  "lemma3_8",
-  ``!M. reduction R N N' ==> reduction R ([N/x] M) ([N'/x] M)``,
+Theorem lemma3_8:
+    !M. reduction R N N' ==> reduction R ([N/x] M) ([N'/x] M)
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `x INSERT FV N UNION FV N'` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR] THEN PROVE_TAC [reduction_rules]);
+  SRW_TAC [][SUB_THM, SUB_VAR] THEN PROVE_TAC [reduction_rules]
+QED
 
 Definition redex_def:  redex (R:'a -> 'a -> bool) t = ?u. R t u
 End
@@ -287,11 +291,12 @@ val (can_reduce_rules, can_reduce_ind, can_reduce_cases) =
            (!M N. can_reduce R M ==> can_reduce R (N @@ M)) /\
            (!v M. can_reduce R M ==> can_reduce R (LAM v M))`
 
-val can_reduce_reduces = store_thm(
-  "can_reduce_reduces",
-  ``!R t. can_reduce R t ==> ?u. compat_closure R t u``,
+Theorem can_reduce_reduces:
+    !R t. can_reduce R t ==> ?u. compat_closure R t u
+Proof
   GEN_TAC THEN HO_MATCH_MP_TAC can_reduce_ind THEN SRW_TAC [][redex_def] THEN
-  PROVE_TAC [compat_closure_rules]);
+  PROVE_TAC [compat_closure_rules]
+QED
 
 Definition normal_form_def:  normal_form R t = ~can_reduce R t
 End

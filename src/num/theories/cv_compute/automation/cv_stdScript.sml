@@ -172,13 +172,13 @@ Proof
   \\ Induct_on ‘xs’ \\ gvs [list_mem_def] \\ metis_tac []
 QED
 
-Triviality conj_eq_if:
+Theorem conj_eq_if[local]:
   x /\ y <=> if x then y else F
 Proof
   Cases_on ‘x’ \\ gvs []
 QED
 
-Triviality if_not:
+Theorem if_not[local]:
   (if ~b then x else y) = if b then y else x
 Proof
   Cases_on ‘b’ \\ gvs []
@@ -196,7 +196,7 @@ val res = cv_trans is_prefix;
 
 val res = cv_trans LUPDATE_DEF;
 
-Triviality index_of:
+Theorem index_of[local]:
   INDEX_OF x [] = NONE /\
   INDEX_OF x (y::ys) =
     if x = y then SOME 0 else

@@ -158,10 +158,8 @@ End
 (******************************************************************************
 * Derivation of "golden" form of clocked "SEM 1" semantics of Sugar formulas
 ******************************************************************************)
-val OLD_F_SEM =
-  store_thm
-   ("OLD_F_SEM",
-    ``(OLD_F_SEM w c (F_BOOL b) = B_SEM (ELEM w 0) b)
+Theorem OLD_F_SEM:
+      (OLD_F_SEM w c (F_BOOL b) = B_SEM (ELEM w 0) b)
       /\
       (OLD_F_SEM w c (F_NOT f) =
         ~(OLD_F_SEM w  c  f))
@@ -219,8 +217,10 @@ val OLD_F_SEM =
         ?i :: (0 to LENGTH w).
           S_SEM (SEL w (0,i)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c1)),S_BOOL c1))
           /\
-          OLD_F_SEM (RESTN w i) c1 f)``,
-      RW_TAC arith_ss [OLD_F_SEM_def,ELEM_RESTN,B_SEM_def]);
+          OLD_F_SEM (RESTN w i) c1 f)
+Proof
+      RW_TAC arith_ss [OLD_F_SEM_def,ELEM_RESTN,B_SEM_def]
+QED
 
 (******************************************************************************
 * Clocked "SEM 1" semantics of Sugar formulas, partly unfolded
@@ -297,10 +297,8 @@ End
 (******************************************************************************
 * Derivation of "golden" form of clocked "SEM 1" semantics of Sugar formulas
 ******************************************************************************)
-val F_SEM =
-  store_thm
-   ("F_SEM",
-    ``(F_SEM w c (F_BOOL b) =
+Theorem F_SEM:
+      (F_SEM w c (F_BOOL b) =
         LENGTH w > 0 /\ B_SEM (ELEM w 0) b)
       /\
       (F_SEM w c (F_NOT f) =
@@ -359,7 +357,8 @@ val F_SEM =
         ?i :: (0 to LENGTH w).
           S_SEM (SEL w (0,i)) B_TRUE (S_CAT(S_REPEAT(S_BOOL(B_NOT c1)),S_BOOL c1))
           /\
-          F_SEM (RESTN w i) c1 f)``,
+          F_SEM (RESTN w i) c1 f)
+Proof
       RW_TAC arith_ss [F_SEM_def,ELEM_RESTN,B_SEM_def]
        THEN Cases_on `w`
        THEN RW_TAC (arith_ss ++ resq_SS)
@@ -380,4 +379,5 @@ val F_SEM =
          REPEAT DISJ2_TAC
           THEN Q.EXISTS_TAC `i`
           THEN RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN]
-          THEN PROVE_TAC[]]);
+          THEN PROVE_TAC[]]
+QED

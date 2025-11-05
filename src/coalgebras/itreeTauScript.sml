@@ -576,7 +576,7 @@ Definition itree_bind_def:
         (INL t)
 End
 
-Triviality itree_unfold_bind_INR:
+Theorem itree_unfold_bind_INR[local]:
   itree_unfold
   (λx.
      case x of
@@ -835,7 +835,7 @@ Proof
   metis_tac[]
 QED
 
-Triviality itree_wbisim_coind_upto_equiv:
+Theorem itree_wbisim_coind_upto_equiv[local]:
   !R t t'.
     itree_wbisim t t' ==>
     (?t2 t3. t = Tau t2 /\ t' = Tau t3 /\ (R t2 t3 \/ itree_wbisim t2 t3)) \/
@@ -1009,7 +1009,7 @@ Proof
   rw[itree_bind_thm]
 QED
 
-Triviality itree_bind_vis_tau_wbisim:
+Theorem itree_bind_vis_tau_wbisim[local]:
   itree_wbisim (Vis a g) (Tau u) ==>
   ?e k' k''.
     strip_tau (itree_bind (Vis a g) k) (Vis e k') /\

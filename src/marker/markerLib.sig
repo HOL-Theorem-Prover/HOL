@@ -106,9 +106,12 @@ sig
   val NoAsms : thm
 
   val process_taclist_then : {arg: thm list} -> (thm list -> tactic) -> tactic
-  val suspend : string -> tactic
 
-end
+  val suspend : string -> tactic
+  val resume : (thm * string * tactic) -> {main: thm, subresult:thm, label:string}
+  val extract_suspended_goal : thm -> string -> (term list * term)
+
+end (* sig *)
 
 (*
    [stmark_term t] wraps term t in a "short term marker".

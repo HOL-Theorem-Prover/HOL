@@ -70,7 +70,7 @@ Definition vs2pretty_def:
   vs2pretty vs = MAP (λx. v2pretty x) vs
 End
 
-Triviality vs2pretty_thm:
+Theorem vs2pretty_thm[local]:
   vs2pretty [] = [] ∧
   vs2pretty (v::vs) = v2pretty v :: vs2pretty vs
 Proof
@@ -108,7 +108,7 @@ val pre = cv_auto_trans_pre_rec "" v2pretty_eq
            \\ simp [Once $ fetch "-" "cv_dest_list_def"] \\ rw [] \\ gvs [])
        \\ drule cv_dest_list_size \\ gvs []));
 
-Triviality dest_list_v_size:
+Theorem dest_list_v_size[local]:
   ∀v vs t.
     dest_list v = (vs,t) ⇒
     list_size v_size vs < v_size v ∧
@@ -138,20 +138,20 @@ QED
 val res = cv_auto_trans
   (is_protected_def |> SRULE [protected_names_def,source_valuesTheory.name_def]);
 
-Triviality exps2v_eq:
+Theorem exps2v_eq[local]:
   exps2v [] = [] ∧
   exps2v (x::xs) = exp2v x :: exps2v xs
 Proof
   metis_tac [exp2v_def]
 QED
 
-Triviality cv_EL_trivial:
+Theorem cv_EL_trivial[local]:
   ∀n m. cv_EL (cv$Num n) (cv$Num m) = cv$Num 0
 Proof
   Induct >> rw[] >> simp[Once cv_EL_def]
 QED
 
-Triviality cv_EL_size:
+Theorem cv_EL_size[local]:
   ∀l n. cv_size (cv_EL n l) ≤ cv_size l
 Proof
   Induct >> rw[] >> simp[Once cv_EL_def] >>
@@ -166,13 +166,13 @@ val _ = cv_trans dest_case_tree_def;
 val _ = cv_trans dest_case_enum_def;
 val _ = cv_trans dest_cons_chain_def;
 
-Triviality cv_get_Op_Head_size:
+Theorem cv_get_Op_Head_size[local]:
   ∀x. cv_size (cv_get_Op_Head x) ≤ cv_size x
 Proof
   Induct >> rw[fetch "-" "cv_get_Op_Head_def"] >> cv_termination_tac
 QED
 
-Triviality cv_dest_case_lets_size:
+Theorem cv_dest_case_lets_size[local]:
   ∀a b x.
     cv_dest_case_lets a b = x
   ⇒ cv_size (cv_snd x) ≤ cv_size b + 3
@@ -221,7 +221,7 @@ Proof
   >- (Cases_on `cv_v` >> gvs[])
 QED
 
-Triviality cv_dest_cons_chain_size:
+Theorem cv_dest_cons_chain_size[local]:
   ∀a x y. cv_dest_cons_chain a = cv$Pair x y ⇒ cv_size y < cv_size a
 Proof
   recInduct $ fetch "-" "cv_dest_cons_chain_ind" >> rw[] >>

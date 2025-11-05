@@ -158,7 +158,7 @@ Theorem sexpPEG_exec_thm[compute] =
 Theorem FDOM_sexpPEG = fdom_thm
 Theorem sexpPEG_applied = LIST_CONJ applieds
 
-Triviality frange_image:
+Theorem frange_image[local]:
   FRANGE fm = IMAGE (FAPPLY fm) (FDOM fm)
 Proof
   simp[finite_mapTheory.FRANGE_DEF, pred_setTheory.EXTENSION] >> metis_tac[]

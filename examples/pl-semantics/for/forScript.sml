@@ -25,26 +25,29 @@ val ect = BasicProvers.EVERY_CASE_TAC;
 
 (* === Syntax === *)
 
-val _ = Datatype `
+Datatype:
 e = Var string
   | Num int
   | Add e e
-  | Assign string e`;
+  | Assign string e
+End
 
-val _ = Datatype `
+Datatype:
 t =
   | Dec string t
   | Exp e
   | Break
   | Seq t t
   | If e t t
-  | For e e t`;
+  | For e e t
+End
 
-val _ = Datatype `
+Datatype:
 r = Rval int
   | Rbreak
   | Rtimeout
-  | Rfail`;
+  | Rfail
+End
 
 val r_distinct = fetch "-" "r_distinct";
 val r_11 = fetch "-" "r_11";
@@ -52,8 +55,9 @@ val r_11 = fetch "-" "r_11";
 
 (* === Functional big-step semantics === *)
 
-val _ = Datatype `
-state = <| store : string |-> int; clock : num |>`;
+Datatype:
+state = <| store : string |-> int; clock : num |>
+End
 
 val state_component_equality = fetch "-" "state_component_equality";
 
@@ -98,10 +102,12 @@ End
    to the definition of the sem_t function. These redundant checks are
    removed later in the script. *)
 
-val sem_e_clock = Q.store_thm ("sem_e_clock",
-`!s e r s'. sem_e s e = (r, s') ⇒ s.clock = s'.clock`,
+Theorem sem_e_clock:
+ !s e r s'. sem_e s e = (r, s') ⇒ s.clock = s'.clock
+Proof
  Induct_on `e` >> rw [sem_e_def] >> ect >>
- fs [] >> rw [] >> metis_tac []);
+ fs [] >> rw [] >> metis_tac []
+QED
 
 val sem_e_store = Q.prove (
 `!s e r s'. sem_e s e = (r, s') ⇒ FDOM s.store ⊆ FDOM s'.store`,
@@ -122,9 +128,11 @@ Definition dec_clock_def:
 dec_clock s = s with clock := s.clock - 1
 End
 
-val dec_clock_store = Q.store_thm ("dec_clock_store[simp]",
-`!s. (dec_clock s).store = s.store`,
- rw [dec_clock_def]);
+Theorem dec_clock_store[simp]:
+ !s. (dec_clock s).store = s.store
+Proof
+ rw [dec_clock_def]
+QED
 
 (* Statement evaluation -- with redundant check_clock *)
 Definition sem_t_def:
@@ -170,8 +178,9 @@ Termination
   \\ DECIDE_TAC
 End
 
-val sem_t_clock = Q.store_thm ("sem_t_clock",
-`!s t r s'. sem_t s t = (r, s') ⇒ s'.clock ≤ s.clock`,
+Theorem sem_t_clock:
+ !s t r s'. sem_t s t = (r, s') ⇒ s'.clock ≤ s.clock
+Proof
  ho_match_mp_tac (fetch "-" "sem_t_ind") >>
  reverse (rpt strip_tac) >>
  pop_assum mp_tac >>
@@ -183,7 +192,8 @@ val sem_t_clock = Q.store_thm ("sem_t_clock",
  TRY decide_tac >>
  rfs [] >>
  res_tac >>
- decide_tac);
+ decide_tac
+QED
 
 val check_clock_id = Q.prove (
 `!s s'. s.clock ≤ s'.clock ⇒ check_clock s s' = s`,
@@ -279,8 +289,9 @@ val sem_t_store = Q.prove (
 
 (* The top-level semantics defines what is externally observable *)
 
-val _ = Datatype `
-  observation = Terminate | Diverge | Crash`;
+Datatype:
+  observation = Terminate | Diverge | Crash
+End
 
 Definition s_with_clock_def:
   s_with_clock c = <| store := FEMPTY; clock := c |>
@@ -380,11 +391,12 @@ val bool_cases_eq = Q.prove(
   ‘(if p then q else r) = v ⇔ p /\ q = v ∨ ¬p ∧ r = v’,
   Cases_on `p` >> simp[]);
 
-val sem_e_succeeds = Q.store_thm(
-  "sem_e_succeeds",
+Theorem sem_e_succeeds:
   (* would make this an automatic rewrite except it might break old proofs *)
-  ‘sem_e s0 e ≠ (Rbreak, s) ∧ sem_e s0 e ≠ (Rtimeout, s)’,
-  metis_tac[sem_e_res]);
+   sem_e s0 e ≠ (Rbreak, s) ∧ sem_e s0 e ≠ (Rtimeout, s)
+Proof
+  metis_tac[sem_e_res]
+QED
 
 (* Have to use sem_t_ind, and not type_t_ind or t_induction. This is different
  * from small-step-based type soundness *)
@@ -456,8 +468,9 @@ val type_sound_t = Q.prove (
 
 (* A type checked program does not Crash. *)
 
-val type_soundness = Q.store_thm("type_soundness",
-`!t. type_t F {} t ⇒ semantics t ≠ Crash`,
+Theorem type_soundness:
+ !t. type_t F {} t ⇒ semantics t ≠ Crash
+Proof
  rw [semantics_def] >>
  REPEAT STRIP_TAC >>
  imp_res_tac type_sound_t >>
@@ -466,7 +479,8 @@ val type_soundness = Q.store_thm("type_soundness",
  \\ REPEAT STRIP_TAC
  \\ fs []
  \\ Cases_on `r` \\ fs[]
- \\ METIS_TAC []);
+ \\ METIS_TAC []
+QED
 
 (* === A relational (optionally clocked) big-step semantics === *)
 
@@ -860,12 +874,14 @@ val semttac = simp[Once simple_sem_t_reln_cases,is_rval_def]
 val semetac = simp[Once sem_e_reln_cases]
 
 (* Determinism of simple_sem_t_reln *)
-val sem_e_reln_determ = Q.store_thm("sem_e_reln_determ",
-`∀s e res.
+Theorem sem_e_reln_determ:
+ ∀s e res.
   sem_e_reln s e res ⇒
-  ∀res'. sem_e_reln s e res' ⇒ res=res'`,
+  ∀res'. sem_e_reln s e res' ⇒ res=res'
+Proof
   rw[]>>
-  fs[big_sem_correct_lem3])
+  fs[big_sem_correct_lem3]
+QED
 
 val simple_sem_t_reln_determ = Q.prove(
 `∀s t res.
@@ -976,10 +992,11 @@ val simple_sem_t_reln_not_timeout = prove(``
   ho_match_mp_tac simple_sem_t_reln_ind>>rw[]>>
   TRY(metis_tac[sem_e_reln_not_timeout,FST]))
 
-val simple_sem_t_reln_iff_sem_t = store_thm("simple_sem_t_reln_iff_sem_t",``
+Theorem simple_sem_t_reln_iff_sem_t:
    ∀s t r s'.
    simple_sem_t_reln s t (r,s' with clock:=s.clock) ⇔
-   ∃c'. sem_t (s with clock:=c') t = (r,s') ∧ r ≠ Rtimeout``,
+   ∃c'. sem_t (s with clock:=c') t = (r,s') ∧ r ≠ Rtimeout
+Proof
    rw[]>>EQ_TAC>>strip_tac>>fs[]
    >-
      (imp_res_tac simple_sem_t_reln_imp_sem_t>>fs[]>>
@@ -989,7 +1006,8 @@ val simple_sem_t_reln_iff_sem_t = store_thm("simple_sem_t_reln_iff_sem_t",``
      imp_res_tac sem_t_imp_simple_sem_t_reln>>
      fs[]>>
      imp_res_tac simple_sem_t_reln_ignores_clock>>
-     first_assum(qspec_then`s.clock` assume_tac)>>fs[clock_rm])
+     first_assum(qspec_then`s.clock` assume_tac)>>fs[clock_rm]
+QED
 
 (* Next, we prove that simple_sem_t_div covers all diverging cases of sem_t *)
 
@@ -1205,15 +1223,17 @@ val reln_type_soundness = Q.prove(
 (* Pretty big-step semantics, inductive interpretation only *)
 
 (* Wrapping the datatypes *)
-val _ = Datatype `
+Datatype:
 pbr =
   | Ter (r#state)
-  | Div`;
+  | Div
+End
 
-val _ = Datatype `
+Datatype:
 pbt =
   | Trm t
-  | Forn num pbr e e t`;
+  | Forn num pbr e e t
+End
 
 Definition abort_def:
   (abort flag Div ⇔ T) ∧
@@ -1360,7 +1380,7 @@ val _ = set_trace "Goalstack.print_goal_at_top" 0;
 val pbrsem_tac = simp[Once pb_sem_t_size_reln_cases]
 
 (* Connect pretty-big-step to relational semantics *)
-Triviality reln_to_pb_reln:
+Theorem reln_to_pb_reln[local]:
   ∀s t r.
     simple_sem_t_reln s t r ⇒
     ∃h. pb_sem_t_size_reln h s (Trm t) (Ter r)
@@ -1444,9 +1464,11 @@ val pb_sem_t_size_reln_equiv_lemma2 = prove(``
   \\ once_rewrite_tac [pb_sem_t_size_reln_cases] \\ fs []
   \\ metis_tac []);
 
-val pb_sem_t_size_reln_equiv = store_thm("pb_sem_t_size_reln_equiv",
-  ``∀s t r. pb_sem_t_reln s t r ⇔ ∃n. pb_sem_t_size_reln n s t r``,
-  metis_tac [pb_sem_t_size_reln_equiv_lemma2,pb_sem_t_size_reln_equiv_lemma1]);
+Theorem pb_sem_t_size_reln_equiv:
+    ∀s t r. pb_sem_t_reln s t r ⇔ ∃n. pb_sem_t_size_reln n s t r
+Proof
+  metis_tac [pb_sem_t_size_reln_equiv_lemma2,pb_sem_t_size_reln_equiv_lemma1]
+QED
 
 (* Pretty printing for paper *)
 Definition OMIT_def:   OMIT x = x

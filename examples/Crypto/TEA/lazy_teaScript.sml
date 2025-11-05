@@ -94,12 +94,13 @@ val teaDecrypt_lemma = Q.prove
 (`teaDecrypt(k,t) = FST(FUNPOW InvRound 32 (t,k,DELTA << 5))`,
  RW_TAC std_ss [teaDecrypt_def,lemma2] THEN RW_TAC std_ss []);
 
-val lazy_tea_correct = Q.store_thm
-("lazy_tea_correct",
- `!plaintext keys.
-   lazy_teaDecrypt keys (lazy_teaEncrypt keys plaintext) = plaintext`,
+Theorem lazy_tea_correct:
+  !plaintext keys.
+   lazy_teaDecrypt keys (lazy_teaEncrypt keys plaintext) = plaintext
+Proof
   RW_TAC list_ss
     [lazy_teaEncrypt_def, lazy_teaDecrypt_def,
      LNTH_FWD_UNROLL,LNTH_BWD_UNROLL,
      GSYM teaEncrypt_lemma,GSYM teaDecrypt_lemma] THEN
-  METIS_TAC [tea_correct]);
+  METIS_TAC [tea_correct]
+QED

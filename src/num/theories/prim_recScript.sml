@@ -57,6 +57,7 @@
 Theory prim_rec[bare]
 Libs
   HolKernel boolLib Prim_rec Parse simpLib boolSimps
+  BasicProvers[qualified] (* enable [simp] tag *)
 
 
 type thm = Thm.thm
@@ -73,7 +74,7 @@ fun INDUCT_TAC g = INDUCT_THEN INDUCTION ASSUME_TAC g;
 
 val LESS_DEF = new_definition (
   "LESS_DEF",
-  Term `$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)`)
+  “$< m n = ?P. (!n. P(SUC n) ==> P n) /\ P m /\ ~(P n)”)
 val _ = set_fixity "<" (Infix(NONASSOC, 450))
 val _ = TeX_notation {hol = "<", TeX = ("\\HOLTokenLt{}", 1)}
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="<"},name=(["Number","Natural"],"<")}
@@ -176,15 +177,21 @@ QED
 
 (* now show that < is the transitive closure of the successor relation *)
 
-val TC_LESS_0 = prove ( “!n. TC (\x y. y = SUC x) 0 (SUC n)”,
+Theorem TC_LESS_0[local]:
+    !n. TC (\x y. y = SUC x) 0 (SUC n)
+Proof
   INDUCT_TAC
   THENL [ irule relationTheory.TC_SUBSET THEN BETA_TAC THEN REFL_TAC,
     ONCE_REWRITE_TAC [relationTheory.TC_CASES2] THEN DISJ2_TAC
-    THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]) ;
+    THEN EXISTS_TAC ``SUC n`` THEN BETA_TAC THEN ASM_REWRITE_TAC [] ]
+QED
 
-val TC_NOT_LESS_0 = prove ( “!n. ~(TC (\x y. y = SUC x) n 0)”,
+Theorem TC_NOT_LESS_0[local]:
+    !n. ~(TC (\x y. y = SUC x) n 0)
+Proof
   ONCE_REWRITE_TAC [relationTheory.TC_CASES2]
-  THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC] ) ;
+  THEN BETA_TAC THEN REWRITE_TAC [GSYM NOT_SUC]
+QED
 
 Theorem TC_IM_RTC_SUC:
     !m n. TC (\x y. y = SUC x) m (SUC n) = RTC (\x y. y = SUC x) m n
@@ -207,9 +214,11 @@ Proof
    THEN ASM_REWRITE_TAC []
 QED
 
-val TC_LESS_MONO_EQ = prove (
-  ``!m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n``,
-  REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC] ) ;
+Theorem TC_LESS_MONO_EQ[local]:
+    !m n. TC (\x y. y = SUC x) (SUC m) (SUC n) = TC (\x y. y = SUC x) m n
+Proof
+  REWRITE_TAC [TC_IM_RTC_SUC, RTC_IM_TC]
+QED
 
 Theorem LESS_ALT:
     $< = TC (\x y. y = SUC x)
@@ -352,10 +361,10 @@ QED
 val SIMP_REC_REL =
  new_definition
   ("SIMP_REC_REL",
-   Term`!(fun:num->'a) (x:'a) (f:'a->'a) (n:num).
-            SIMP_REC_REL fun x f n <=>
-                (fun 0 = x) /\
-                !m. (m < n) ==> (fun(SUC m) = f(fun m))`);
+   “!(fun:num->'a) (x:'a) (f:'a->'a) (n:num).
+        SIMP_REC_REL fun x f n <=>
+          (fun 0 = x) /\
+          !m. (m < n) ==> (fun(SUC m) = f(fun m))”);
 
 Theorem SIMP_REC_EXISTS:
     !x f n. ?fun:num->'a. SIMP_REC_REL fun x f n
@@ -500,12 +509,11 @@ local
        THEN ASM_REWRITE_TAC [SIMP_REC_THM]
        THEN BETA_TAC THEN RES_TAC THEN IMP_RES_TAC DCkey)
 in
-val DC = store_thm("DC",
-Term
-  `!P R a.
+Theorem DC: !P R a.
       P a /\ (!x. P x ==> ?y. P y /\ R x y)
           ==>
-      ?f. (f 0 = a) /\ (!n. P (f n) /\ R (f n) (f (SUC n)))`,
+      ?f. (f 0 = a) /\ (!n. P (f n) /\ R (f n) (f (SUC n)))
+Proof
 REPEAT STRIP_TAC
   THEN EXISTS_TAC (Term`SIMP_REC a (\x. @y. P y /\ R x y)`)
   THEN REWRITE_TAC [SIMP_REC_THM] THEN BETA_TAC THEN GEN_TAC
@@ -513,7 +521,8 @@ REPEAT STRIP_TAC
        (Term`P (SIMP_REC a (\x. @y. P y /\ R x y) n)`) ASSUME_TAC THENL
   [MATCH_MP_TAC totalDClem THEN ASM_REWRITE_TAC[],
    ASM_REWRITE_TAC[] THEN RES_THEN MP_TAC THEN DISCH_THEN (K ALL_TAC)
-  THEN DISCH_THEN (CHOOSE_THEN (ACCEPT_TAC o CONJUNCT2 o MATCH_MP DCkey))])
+  THEN DISCH_THEN (CHOOSE_THEN (ACCEPT_TAC o CONJUNCT2 o MATCH_MP DCkey))]
+QED
 end;
 
 
@@ -549,7 +558,7 @@ Proof
 QED
 
 val [num_case_def] = Prim_rec.define_case_constant num_Axiom
-val _ = overload_on("case", “num_CASE”)
+Overload case = “num_CASE”
 
 val _ = TypeBase.export $ TypeBasePure.gen_datatype_info
           {ax=num_Axiom, case_defs=[num_case_def], ind=INDUCTION}
@@ -567,14 +576,15 @@ Q.new_definition
   ("wellfounded_def",
    `wellfounded (R:'a->'a->bool) = ~?f. !n. R (f (SUC n)) (f n)`);
 
-val _ = overload_on ("Wellfounded", ``wellfounded``);
+Overload Wellfounded = ``wellfounded``
 
 (*---------------------------------------------------------------------------
  * First half of showing that the two definitions of wellfoundedness agree.
  *---------------------------------------------------------------------------*)
 
-val WF_IMP_WELLFOUNDED = Q.prove(
-`!R. WF R ==> wellfounded R`,
+Theorem WF_IMP_WELLFOUNDED[local]:
+ !R. WF R ==> wellfounded R
+Proof
  GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
  THEN REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
  THEN STRIP_TAC
@@ -586,14 +596,16 @@ val WF_IMP_WELLFOUNDED = Q.prove(
    REWRITE_TAC[GSYM IMP_DISJ_THM]
     THEN GEN_TAC THEN DISCH_THEN (CHOOSE_THEN SUBST1_TAC)
     THEN Q.EXISTS_TAC`f(SUC n)` THEN ASM_REWRITE_TAC[]
-    THEN Q.EXISTS_TAC`SUC n` THEN REFL_TAC]);
+    THEN Q.EXISTS_TAC`SUC n` THEN REFL_TAC]
+QED
 
 (*---------------------------------------------------------------------------
  * Second half.
  *---------------------------------------------------------------------------*)
 
-val WELLFOUNDED_IMP_WF = Q.prove(
-`!R. wellfounded R ==> WF R`,
+Theorem WELLFOUNDED_IMP_WF[local]:
+ !R. wellfounded R ==> WF R
+Proof
  REWRITE_TAC[wellfounded_def,relationTheory.WF_DEF]
   THEN GEN_TAC THEN CONV_TAC CONTRAPOS_CONV
   THEN Ho_Rewrite.REWRITE_TAC
@@ -608,7 +620,8 @@ val WELLFOUNDED_IMP_WF = Q.prove(
   THEN RES_TAC
   THEN IMP_RES_TAC(BETA_RULE
      (Q.SPEC `\q. R q (SIMP_REC w (\x. @q. R q x /\ B q) n) /\ B q`
-              boolTheory.SELECT_AX)));
+              boolTheory.SELECT_AX))
+QED
 
 
 Theorem WF_IFF_WELLFOUNDED:
@@ -641,12 +654,11 @@ QED
  * closure of predecessor.
  *---------------------------------------------------------------------------*)
 
-Theorem WF_LESS:  WF $<
+Theorem WF_LESS[simp]:  WF $<
 Proof
   REWRITE_TAC[LESS_ALT, relationTheory.WF_TC_EQN, WF_PRED]
 QED
 
-val _ = BasicProvers.export_rewrites ["WF_LESS"]
 
 
 (*---------------------------------------------------------------------------
@@ -657,13 +669,12 @@ val _ = BasicProvers.export_rewrites ["WF_LESS"]
 val measure_def = Q.new_definition ("measure_def", `measure = inv_image $<`);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="measure"},name=(["Relation"],"measure")}
 
-Theorem WF_measure:  !m. WF (measure m)
+Theorem WF_measure[simp]:  !m. WF (measure m)
 Proof
 REWRITE_TAC[measure_def]
  THEN MATCH_MP_TAC relationTheory.WF_inv_image
  THEN ACCEPT_TAC WF_LESS
 QED
-val _ = BasicProvers.export_rewrites ["WF_measure"]
 
 Theorem measure_thm[simp]:
    !f x y. measure f x y <=> f x < f y
@@ -671,4 +682,3 @@ Proof
  REWRITE_TAC [measure_def,relationTheory.inv_image_def] THEN BETA_TAC THEN
  REWRITE_TAC []
 QED
-

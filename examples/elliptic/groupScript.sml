@@ -87,29 +87,32 @@ fun match_tac th =
 (* Helper theorems.                                                          *)
 (* ------------------------------------------------------------------------- *)
 
-val FUNPOW_ADD = store_thm
-  ("FUNPOW_ADD",
-   ``!f p q x. FUNPOW f (p + q) x = FUNPOW f p (FUNPOW f q x)``,
+Theorem FUNPOW_ADD:
+     !f p q x. FUNPOW f (p + q) x = FUNPOW f p (FUNPOW f q x)
+Proof
    Induct_on `q`
-   ++ RW_TAC arith_ss [FUNPOW, ADD_CLAUSES]);
+   ++ RW_TAC arith_ss [FUNPOW, ADD_CLAUSES]
+QED
 
-val FUNPOW_MULT = store_thm
-  ("FUNPOW_MULT",
-   ``!f p q x. FUNPOW f (p * q) x = FUNPOW (\x. FUNPOW f p x) q x``,
+Theorem FUNPOW_MULT:
+     !f p q x. FUNPOW f (p * q) x = FUNPOW (\x. FUNPOW f p x) q x
+Proof
    Induct_on `q`
    ++ RW_TAC arith_ss [FUNPOW, MULT_CLAUSES]
    ++ ONCE_REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] FUNPOW_ADD]
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
-val DELETE_INSERT = store_thm
-  ("DELETE_INSERT",
-   ``!e s. ~(e IN s) ==> ((e INSERT s) DELETE e = s)``,
+Theorem DELETE_INSERT:
+     !e s. ~(e IN s) ==> ((e INSERT s) DELETE e = s)
+Proof
    RW_TAC std_ss [EXTENSION, IN_DELETE, IN_INSERT]
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
-val finite_image_card = store_thm
-  ("finite_image_card",
-   ``!f s. FINITE s ==> CARD (IMAGE f s) <= CARD s``,
+Theorem finite_image_card:
+     !f s. FINITE s ==> CARD (IMAGE f s) <= CARD s
+Proof
    RW_TAC std_ss []
    ++ POP_ASSUM MP_TAC
    ++ Q.SPEC_TAC (`s`,`s`)
@@ -117,13 +120,14 @@ val finite_image_card = store_thm
    ++ RW_TAC std_ss
         [INJ_DEF, CARD_INSERT, NOT_IN_EMPTY, SUBSET_DEF, IN_IMAGE,
          IMAGE_EMPTY, CARD_EMPTY, IN_INSERT, IMAGE_INSERT, IMAGE_FINITE]
-   ++ RW_TAC arith_ss []);
+   ++ RW_TAC arith_ss []
+QED
 
-val finite_inj_card = store_thm
-  ("finite_inj_card",
-   ``!f s t.
+Theorem finite_inj_card:
+     !f s t.
        FINITE s ==>
-       (INJ f s t = IMAGE f s SUBSET t /\ (CARD s = CARD (IMAGE f s)))``,
+       (INJ f s t = IMAGE f s SUBSET t /\ (CARD s = CARD (IMAGE f s)))
+Proof
    RW_TAC std_ss []
    ++ POP_ASSUM MP_TAC
    ++ Q.SPEC_TAC (`s`,`s`)
@@ -137,46 +141,52 @@ val finite_inj_card = store_thm
    ++ RW_TAC std_ss []
    ++ DISJ2_TAC
    ++ MATCH_MP_TAC (DECIDE ``b <= a ==> ~(SUC a = b)``)
-   ++ RW_TAC arith_ss [finite_image_card]);
+   ++ RW_TAC arith_ss [finite_image_card]
+QED
 
-val finite_inj_surj_imp = store_thm
-  ("finite_inj_surj_imp",
-   ``!f s. FINITE s /\ SURJ f s s ==> INJ f s s``,
-   RW_TAC std_ss [IMAGE_SURJ, finite_inj_card, SUBSET_REFL]);
+Theorem finite_inj_surj_imp:
+     !f s. FINITE s /\ SURJ f s s ==> INJ f s s
+Proof
+   RW_TAC std_ss [IMAGE_SURJ, finite_inj_card, SUBSET_REFL]
+QED
 
-val finite_inj_surj_imp' = store_thm
-  ("finite_inj_surj_imp'",
-   ``!f s. FINITE s /\ INJ f s s ==> SURJ f s s``,
+Theorem finite_inj_surj_imp':
+     !f s. FINITE s /\ INJ f s s ==> SURJ f s s
+Proof
    RW_TAC std_ss [IMAGE_SURJ]
    ++ POP_ASSUM MP_TAC
-   ++ RW_TAC std_ss [finite_inj_card, IMAGE_FINITE, SUBSET_EQ_CARD]);
+   ++ RW_TAC std_ss [finite_inj_card, IMAGE_FINITE, SUBSET_EQ_CARD]
+QED
 
-val finite_inj_surj = store_thm
-  ("finite_inj_surj",
-   ``!f s. FINITE s ==> (INJ f s s = SURJ f s s)``,
-   METIS_TAC [finite_inj_surj_imp, finite_inj_surj_imp']);
+Theorem finite_inj_surj:
+     !f s. FINITE s ==> (INJ f s s = SURJ f s s)
+Proof
+   METIS_TAC [finite_inj_surj_imp, finite_inj_surj_imp']
+QED
 
-val delete_absent = store_thm
-  ("delete_absent",
-   ``!s e. ~(e IN s) ==> (s DELETE e = s)``,
+Theorem delete_absent:
+     !s e. ~(e IN s) ==> (s DELETE e = s)
+Proof
    RW_TAC std_ss [EXTENSION, IN_DELETE]
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
-val commuting_itset = store_thm
-  ("commuting_itset",
-   ``!f.
+Theorem commuting_itset:
+     !f.
        (!x y z. f x (f y z) = f y (f x z)) ==>
        !e s b.
          FINITE s /\ ~(e IN s) ==>
-         (ITSET f (e INSERT s) b = f e (ITSET f s b))``,
+         (ITSET f (e INSERT s) b = f e (ITSET f s b))
+Proof
    RW_TAC std_ss []
    ++ Know `s DELETE e = s` >> METIS_TAC [delete_absent]
    ++ MP_TAC (Q.SPECL [`f`,`e`,`s`,`b`] COMMUTING_ITSET_RECURSES)
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
-val finite_num = store_thm
-  ("finite_num",
-   ``!s. FINITE s = ?n : num. !m. m IN s ==> m < n``,
+Theorem finite_num:
+     !s. FINITE s = ?n : num. !m. m IN s ==> m < n
+Proof
    RW_TAC std_ss []
    ++ EQ_TAC
    >> (Q.SPEC_TAC (`s`,`s`)
@@ -206,19 +216,22 @@ val finite_num = store_thm
    ++ FIRST_ASSUM MATCH_MP_TAC
    ++ RW_TAC arith_ss [IN_DELETE]
    ++ RES_TAC
-   ++ DECIDE_TAC);
+   ++ DECIDE_TAC
+QED
 
-val DIVIDES_ONE = store_thm
-  ("DIVIDES_ONE",
-   ``!n. divides n 1 = (n = 1)``,
-   RW_TAC std_ss [divides_def, MULT_EQ_1]);
+Theorem DIVIDES_ONE:
+     !n. divides n 1 = (n = 1)
+Proof
+   RW_TAC std_ss [divides_def, MULT_EQ_1]
+QED
 
-val prime_one_lt = store_thm
-  ("prime_one_lt",
-   ``!p. prime p ==> 1 < p``,
+Theorem prime_one_lt:
+     !p. prime p ==> 1 < p
+Proof
    RW_TAC std_ss []
    ++ Suff `~(p = 0) /\ ~(p = 1)` >> DECIDE_TAC
-   ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]);
+   ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]
+QED
 
 (* ========================================================================= *)
 (* Number Theory                                                             *)
@@ -236,11 +249,11 @@ End
 (* Fermat's Little Theorem                                                   *)
 (* ------------------------------------------------------------------------- *)
 
-val mult_lcancel_gcd_imp = store_thm
-  ("mult_lcancel_gcd_imp",
-   ``!n a b c.
+Theorem mult_lcancel_gcd_imp:
+     !n a b c.
        0 < n /\ (gcd n a = 1) /\ ((a * b) MOD n = (a * c) MOD n) ==>
-       (b MOD n = c MOD n)``,
+       (b MOD n = c MOD n)
+Proof
    RW_TAC std_ss []
    ++ Cases_on `n = 1` >> METIS_TAC [MOD_1]
    ++ Cases_on `a = 0` >> METIS_TAC [GCD_0R]
@@ -258,36 +271,41 @@ val mult_lcancel_gcd_imp = store_thm
    ++ ASM_REWRITE_TAC []
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
    ++ RW_TAC std_ss [ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
-   ++ RW_TAC arith_ss [MOD_MOD]);
+   ++ RW_TAC arith_ss [MOD_MOD]
+QED
 
-val mult_lcancel_gcd = store_thm
-  ("mult_lcancel_gcd",
-   ``!n a b c.
+Theorem mult_lcancel_gcd:
+     !n a b c.
        0 < n /\ (gcd n a = 1) ==>
-       (((a * b) MOD n = (a * c) MOD n) = (b MOD n = c MOD n))``,
-   METIS_TAC [MOD_TIMES2, mult_lcancel_gcd_imp]);
+       (((a * b) MOD n = (a * c) MOD n) = (b MOD n = c MOD n))
+Proof
+   METIS_TAC [MOD_TIMES2, mult_lcancel_gcd_imp]
+QED
 
-val is_gcd_1 = store_thm
-  ("is_gcd_1",
-   ``!n. is_gcd n 1 1``,
-   RW_TAC std_ss [is_gcd_def, ONE_DIVIDES_ALL]);
+Theorem is_gcd_1:
+     !n. is_gcd n 1 1
+Proof
+   RW_TAC std_ss [is_gcd_def, ONE_DIVIDES_ALL]
+QED
 
-val gcd_1 = store_thm
-  ("gcd_1",
-   ``!n. gcd n 1 = 1``,
-   METIS_TAC [is_gcd_1, GCD_IS_GCD, IS_GCD_UNIQUE]);
+Theorem gcd_1:
+     !n. gcd n 1 = 1
+Proof
+   METIS_TAC [is_gcd_1, GCD_IS_GCD, IS_GCD_UNIQUE]
+QED
 
-val divides_gcd = store_thm
-  ("divides_gcd",
-   ``!a b. divides (gcd a b) a /\ divides (gcd a b) b``,
+Theorem divides_gcd:
+     !a b. divides (gcd a b) a /\ divides (gcd a b) b
+Proof
    Suff `!a b. divides (gcd a b) a` >> METIS_TAC [GCD_SYM]
    ++ RW_TAC std_ss []
    ++ Know `is_gcd a b (gcd a b)` >> METIS_TAC [GCD_IS_GCD]
-   ++ RW_TAC std_ss [is_gcd_def]);
+   ++ RW_TAC std_ss [is_gcd_def]
+QED
 
-val is_gcd_1_mult_imp = store_thm
-  ("is_gcd_1_mult_imp",
-   ``!n a b. is_gcd n a 1 /\ is_gcd n b 1 ==> is_gcd n (a * b) 1``,
+Theorem is_gcd_1_mult_imp:
+     !n a b. is_gcd n a 1 /\ is_gcd n b 1 ==> is_gcd n (a * b) 1
+Proof
    RW_TAC std_ss [is_gcd_def, ONE_DIVIDES_ALL]
    ++ Cases_on `gcd a d = 1`
    >> (MP_TAC (Q.SPECL [`a`,`d`,`b`] L_EUCLIDES)
@@ -298,21 +316,24 @@ val is_gcd_1_mult_imp = store_thm
    ++ RW_TAC std_ss []
    ++ Q.PAT_X_ASSUM `!i. P i` (K ALL_TAC)
    ++ Q.PAT_X_ASSUM `!i. P i` MATCH_MP_TAC
-   ++ METIS_TAC [DIVIDES_TRANS,  divides_gcd]);
+   ++ METIS_TAC [DIVIDES_TRANS,  divides_gcd]
+QED
 
-val gcd_1_mult_imp = store_thm
-  ("gcd_1_mult_imp",
-   ``!n a b. (gcd n a = 1) /\ (gcd n b = 1) ==> (gcd n (a * b) = 1)``,
-   METIS_TAC [is_gcd_1_mult_imp, GCD_IS_GCD, IS_GCD_UNIQUE]);
+Theorem gcd_1_mult_imp:
+     !n a b. (gcd n a = 1) /\ (gcd n b = 1) ==> (gcd n (a * b) = 1)
+Proof
+   METIS_TAC [is_gcd_1_mult_imp, GCD_IS_GCD, IS_GCD_UNIQUE]
+QED
 
-val gcd_modr = store_thm
-  ("gcd_modr",
-   ``!n a. 0 < n ==> (gcd n (a MOD n) = gcd n a)``,
-   METIS_TAC [GCD_SYM, DECIDE ``0 < n ==> ~(n = 0)``, GCD_EFFICIENTLY]);
+Theorem gcd_modr:
+     !n a. 0 < n ==> (gcd n (a MOD n) = gcd n a)
+Proof
+   METIS_TAC [GCD_SYM, DECIDE ``0 < n ==> ~(n = 0)``, GCD_EFFICIENTLY]
+QED
 
-val euler_totient = store_thm
-  ("euler_totient",
-   ``!n a. (gcd n a = 1) ==> (a ** totient n MOD n = 1 MOD n)``,
+Theorem euler_totient:
+     !n a. (gcd n a = 1) ==> (a ** totient n MOD n = 1 MOD n)
+Proof
    RW_TAC std_ss []
    ++ Cases_on `n = 0`
    >> RW_TAC bool_ss
@@ -409,11 +430,12 @@ val euler_totient = store_thm
    ++ MP_TAC (Q.SPEC `n` MOD_TIMES2)
    ++ ASM_SIMP_TAC std_ss []
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   ++ RW_TAC std_ss [MOD_MOD]);
+   ++ RW_TAC std_ss [MOD_MOD]
+QED
 
-val prime_is_gcd_1 = store_thm
-  ("prime_is_gcd_1",
-   ``!p a. prime p ==> (is_gcd p a 1 = ~divides p a)``,
+Theorem prime_is_gcd_1:
+     !p a. prime p ==> (is_gcd p a 1 = ~divides p a)
+Proof
    RW_TAC std_ss [is_gcd_def, DIVIDES_ONE, ONE_DIVIDES_ALL]
    ++ EQ_TAC
    >> (DISCH_THEN (MP_TAC o Q.SPEC `p`)
@@ -425,16 +447,18 @@ val prime_is_gcd_1 = store_thm
    ++ ASM_REWRITE_TAC []
    ++ STRIP_TAC
    ++ RW_TAC std_ss []
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
-val prime_gcd_1 = store_thm
-  ("prime_gcd_1",
-   ``!p a. prime p ==> ((gcd p a = 1) = ~divides p a)``,
-   METIS_TAC [prime_is_gcd_1, GCD_IS_GCD, IS_GCD_UNIQUE]);
+Theorem prime_gcd_1:
+     !p a. prime p ==> ((gcd p a = 1) = ~divides p a)
+Proof
+   METIS_TAC [prime_is_gcd_1, GCD_IS_GCD, IS_GCD_UNIQUE]
+QED
 
-val prime_totient = store_thm
-  ("prime_totient",
-   ``!p. prime p ==> (totient p = p - 1)``,
+Theorem prime_totient:
+     !p. prime p ==> (totient p = p - 1)
+Proof
    RW_TAC std_ss [totient_def, prime_gcd_1]
    ++ Suff `{i | 0 < i /\ i < p /\ ~divides p i} = count p DELETE 0`
    >> (RW_TAC std_ss [CARD_DELETE, FINITE_COUNT, CARD_COUNT]
@@ -446,17 +470,19 @@ val prime_totient = store_thm
    ++ RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_DELETE, count_def]
    ++ Suff `0 < x /\ x < p ==> ~divides p x`
    >> METIS_TAC [DECIDE ``0 < p = ~(p = 0)``]
-   ++ METIS_TAC [DIVIDES_LE, DECIDE ``~(a : num < b) = b <= a``]);
+   ++ METIS_TAC [DIVIDES_LE, DECIDE ``~(a : num < b) = b <= a``]
+QED
 
-val fermat_little = store_thm
-  ("fermat_little",
-   ``!p a. prime p /\ ~divides p a ==> (a ** (p - 1) MOD p = 1)``,
+Theorem fermat_little:
+     !p a. prime p /\ ~divides p a ==> (a ** (p - 1) MOD p = 1)
+Proof
    RW_TAC std_ss []
    ++ MP_TAC (Q.SPECL [`p`,`a`] euler_totient)
    ++ RW_TAC std_ss [prime_gcd_1, prime_totient]
    ++ Suff `0 < p /\ 1 < p` >> METIS_TAC [X_MOD_Y_EQ_X]
    ++ Suff `~(p = 0) /\ ~(p = 1)` >> DECIDE_TAC
-   ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]);
+   ++ METIS_TAC [NOT_PRIME_0, NOT_PRIME_1]
+QED
 
 (* ========================================================================= *)
 (* Groups                                                                    *)
@@ -466,11 +492,12 @@ val fermat_little = store_thm
 (* The basic definitions                                                     *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype
-  `group = <| carrier : 'a -> bool;
+Datatype:
+   group = <| carrier : 'a -> bool;
               id : 'a;
               inv : 'a -> 'a;
-              mult : 'a -> 'a -> 'a |>`;
+              mult : 'a -> 'a -> 'a |>
+End
 
 Definition Group_def:
    Group =
@@ -550,116 +577,129 @@ val is_group_exp = can dest_group_exp;
 
 (* Theorems *)
 
-val AbelianGroup_Group = store_thm
-  ("AbelianGroup_Group",
-   ``!g. g IN AbelianGroup ==> g IN Group``,
-   RW_TAC std_ss [AbelianGroup_def, GSPECIFICATION]);
+Theorem AbelianGroup_Group:
+     !g. g IN AbelianGroup ==> g IN Group
+Proof
+   RW_TAC std_ss [AbelianGroup_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_judgement2 AbelianGroup_Group context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val FiniteGroup_Group = store_thm
-  ("FiniteGroup_Group",
-   ``!g. g IN FiniteGroup ==> g IN Group``,
-   RW_TAC std_ss [FiniteGroup_def, GSPECIFICATION]);
+Theorem FiniteGroup_Group:
+     !g. g IN FiniteGroup ==> g IN Group
+Proof
+   RW_TAC std_ss [FiniteGroup_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_judgement2 FiniteGroup_Group context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val FiniteAbelianGroup_FiniteGroup = store_thm
-  ("FiniteAbelianGroup_FiniteGroup",
-   ``!g. g IN FiniteAbelianGroup ==> g IN FiniteGroup``,
-   RW_TAC std_ss [FiniteAbelianGroup_def, GSPECIFICATION]);
+Theorem FiniteAbelianGroup_FiniteGroup:
+     !g. g IN FiniteAbelianGroup ==> g IN FiniteGroup
+Proof
+   RW_TAC std_ss [FiniteAbelianGroup_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_judgement2 FiniteAbelianGroup_FiniteGroup context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val FiniteAbelianGroup_AbelianGroup = store_thm
-  ("FiniteAbelianGroup_AbelianGroup",
-   ``!g. g IN FiniteAbelianGroup ==> g IN AbelianGroup``,
-   RW_TAC std_ss [FiniteAbelianGroup_def, GSPECIFICATION]);
+Theorem FiniteAbelianGroup_AbelianGroup:
+     !g. g IN FiniteAbelianGroup ==> g IN AbelianGroup
+Proof
+   RW_TAC std_ss [FiniteAbelianGroup_def, GSPECIFICATION]
+QED
 
 val context =
     subtypeTools.add_judgement2 FiniteAbelianGroup_AbelianGroup context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val FiniteAbelianGroup_alt = store_thm
-  ("FiniteAbelianGroup_alt",
-   ``FiniteAbelianGroup =
+Theorem FiniteAbelianGroup_alt:
+     FiniteAbelianGroup =
      { (g : 'a group) |
        g IN Group /\
        (!x y :: (g.carrier). g.mult x y = g.mult y x) /\
-       FINITE g.carrier }``,
+       FINITE g.carrier }
+Proof
    RW_TAC std_ss
      [FiniteAbelianGroup_def, FiniteGroup_def, AbelianGroup_def,
       EXTENSION, GSPECIFICATION]
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
-val group_id_carrier = store_thm
-  ("group_id_carrier",
-   ``!g :: Group. g.id IN g.carrier``,
-   RW_TAC resq_ss [Group_def, GSPECIFICATION]);
+Theorem group_id_carrier:
+     !g :: Group. g.id IN g.carrier
+Proof
+   RW_TAC resq_ss [Group_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_reduction2 group_id_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_inv_carrier = store_thm
-  ("group_inv_carrier",
-   ``!g :: Group. !x :: (g.carrier). g.inv x IN g.carrier``,
-   RW_TAC resq_ss [Group_def, GSPECIFICATION]);
+Theorem group_inv_carrier:
+     !g :: Group. !x :: (g.carrier). g.inv x IN g.carrier
+Proof
+   RW_TAC resq_ss [Group_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_reduction2 group_inv_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_mult_carrier = store_thm
-  ("group_mult_carrier",
-   ``!g :: Group. !x y :: (g.carrier). g.mult x y IN g.carrier``,
-   RW_TAC resq_ss [Group_def, GSPECIFICATION]);
+Theorem group_mult_carrier:
+     !g :: Group. !x y :: (g.carrier). g.mult x y IN g.carrier
+Proof
+   RW_TAC resq_ss [Group_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_reduction2 group_mult_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_lid = store_thm
-  ("group_lid",
-   ``!g :: Group. !x :: (g.carrier). g.mult g.id x = x``,
-   RW_TAC resq_ss [Group_def, GSPECIFICATION]);
+Theorem group_lid:
+     !g :: Group. !x :: (g.carrier). g.mult g.id x = x
+Proof
+   RW_TAC resq_ss [Group_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_rewrite2 group_lid context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_linv = store_thm
-  ("group_linv",
-   ``!g :: Group. !x :: (g.carrier). g.mult (g.inv x) x = g.id``,
-   RW_TAC resq_ss [Group_def, GSPECIFICATION]);
+Theorem group_linv:
+     !g :: Group. !x :: (g.carrier). g.mult (g.inv x) x = g.id
+Proof
+   RW_TAC resq_ss [Group_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_rewrite2 group_linv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_assoc = store_thm
-  ("group_assoc",
-   ``!g :: Group. !x y z :: (g.carrier).
-       g.mult (g.mult x y) z = g.mult x (g.mult y z)``,
-   RW_TAC resq_ss [Group_def, GSPECIFICATION]);
+Theorem group_assoc:
+     !g :: Group. !x y z :: (g.carrier).
+       g.mult (g.mult x y) z = g.mult x (g.mult y z)
+Proof
+   RW_TAC resq_ss [Group_def, GSPECIFICATION]
+QED
 
 val context = subtypeTools.add_rewrite2'' group_assoc context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_comm = store_thm
-  ("group_comm",
-   ``!g :: AbelianGroup. !x y :: (g.carrier). g.mult x y = g.mult y x``,
-   RW_TAC resq_ss [AbelianGroup_def, GSPECIFICATION]);
+Theorem group_comm:
+     !g :: AbelianGroup. !x y :: (g.carrier). g.mult x y = g.mult y x
+Proof
+   RW_TAC resq_ss [AbelianGroup_def, GSPECIFICATION]
+QED
 
-val group_comm' = store_thm
-  ("group_comm'",
-   ``!g :: AbelianGroup. !x y z :: (g.carrier).
-        g.mult x (g.mult y z) = g.mult y (g.mult x z)``,
+Theorem group_comm':
+     !g :: AbelianGroup. !x y z :: (g.carrier).
+        g.mult x (g.mult y z) = g.mult y (g.mult x z)
+Proof
    RW_TAC resq_ss []
    ++ RW_TAC alg_ss [GSYM group_assoc]
-   ++ METIS_TAC [group_comm]);
+   ++ METIS_TAC [group_comm]
+QED
 
-val group_rinv = store_thm
-  ("group_rinv",
-   ``!g :: Group. !x :: (g.carrier). g.mult x (g.inv x) = g.id``,
+Theorem group_rinv:
+     !g :: Group. !x :: (g.carrier). g.mult x (g.inv x) = g.id
+Proof
    RW_TAC resq_ss []
    ++ MATCH_MP_TAC EQ_TRANS
    ++ Q.EXISTS_TAC `g.mult g.id (g.mult x (g.inv x))`
@@ -699,14 +739,15 @@ val group_rinv = store_thm
        ++ match_tac group_lid
        ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
    ++ match_tac group_linv
-   ++ METIS_TAC [group_inv_carrier, group_mult_carrier]);
+   ++ METIS_TAC [group_inv_carrier, group_mult_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 group_rinv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_rid = store_thm
-  ("group_rid",
-   ``!g :: Group. !x :: (g.carrier). g.mult x g.id = x``,
+Theorem group_rid:
+     !g :: Group. !x :: (g.carrier). g.mult x g.id = x
+Proof
    RW_TAC resq_ss []
    ++ MATCH_MP_TAC EQ_TRANS
    ++ Q.EXISTS_TAC `g.mult x (g.mult (g.inv x) x)`
@@ -726,14 +767,15 @@ val group_rid = store_thm
        ++ match_tac group_rinv
        ++ METIS_TAC [group_inv_carrier, group_mult_carrier])
    ++ match_tac group_lid
-   ++ METIS_TAC [group_inv_carrier, group_mult_carrier]);
+   ++ METIS_TAC [group_inv_carrier, group_mult_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 group_rid context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_lcancel = store_thm
-  ("group_lcancel",
-   ``!g :: Group. !x y z :: (g.carrier). (g.mult x y = g.mult x z) = (y = z)``,
+Theorem group_lcancel:
+     !g :: Group. !x y z :: (g.carrier). (g.mult x y = g.mult x z) = (y = z)
+Proof
    RW_TAC resq_ss []
    ++ REVERSE EQ_TAC >> RW_TAC std_ss []
    ++ RW_TAC std_ss []
@@ -749,44 +791,49 @@ val group_lcancel = store_thm
    ++ Q.EXISTS_TAC `g.mult (g.inv x) (g.mult x z)`
    ++ REVERSE CONJ_TAC
    >> (match_tac (GSYM group_assoc) ++ METIS_TAC [group_inv_carrier])
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
 val context = subtypeTools.add_rewrite2' group_lcancel context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_lcancel_imp = store_thm
-  ("group_lcancel_imp",
-   ``!g :: Group. !x y z :: (g.carrier).
-       (g.mult x y = g.mult x z) ==> (y = z)``,
-   METIS_TAC [group_lcancel]);
+Theorem group_lcancel_imp:
+     !g :: Group. !x y z :: (g.carrier).
+       (g.mult x y = g.mult x z) ==> (y = z)
+Proof
+   METIS_TAC [group_lcancel]
+QED
 
-val group_lcancel_id = store_thm
-  ("group_lcancel_id",
-   ``!g :: Group. !x y :: (g.carrier). (g.mult x y = x) = (y = g.id)``,
+Theorem group_lcancel_id:
+     !g :: Group. !x y :: (g.carrier). (g.mult x y = x) = (y = g.id)
+Proof
    RW_TAC resq_ss []
    ++ MATCH_MP_TAC EQ_TRANS
    ++ Q.EXISTS_TAC `g.mult x y = g.mult x g.id`
    ++ CONJ_TAC
    >> RW_TAC std_ss [group_rid]
    ++ match_tac group_lcancel
-   ++ RW_TAC std_ss [group_id_carrier]);
+   ++ RW_TAC std_ss [group_id_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2' group_lcancel_id context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_lcancel_id_imp = store_thm
-  ("group_lcancel_id_imp",
-   ``!g :: Group. !x y :: (g.carrier). (g.mult x y = x) ==> (y = g.id)``,
-   METIS_TAC [group_lcancel_id]);
+Theorem group_lcancel_id_imp:
+     !g :: Group. !x y :: (g.carrier). (g.mult x y = x) ==> (y = g.id)
+Proof
+   METIS_TAC [group_lcancel_id]
+QED
 
-val group_lcancel_id_imp' = store_thm
-  ("group_lcancel_id_imp'",
-   ``!g :: Group. !x y :: (g.carrier). (y = g.id) ==> (g.mult x y = x)``,
-   METIS_TAC [group_lcancel_id]);
+Theorem group_lcancel_id_imp':
+     !g :: Group. !x y :: (g.carrier). (y = g.id) ==> (g.mult x y = x)
+Proof
+   METIS_TAC [group_lcancel_id]
+QED
 
-val group_rcancel = store_thm
-  ("group_rcancel",
-   ``!g :: Group. !x y z :: (g.carrier). (g.mult y x = g.mult z x) = (y = z)``,
+Theorem group_rcancel:
+     !g :: Group. !x y z :: (g.carrier). (g.mult y x = g.mult z x) = (y = z)
+Proof
    RW_TAC resq_ss []
    ++ REVERSE EQ_TAC >> RW_TAC std_ss []
    ++ RW_TAC std_ss []
@@ -802,123 +849,138 @@ val group_rcancel = store_thm
    ++ Q.EXISTS_TAC `g.mult (g.mult z x) (g.inv x)`
    ++ REVERSE CONJ_TAC
    >> (match_tac group_assoc ++ METIS_TAC [group_inv_carrier])
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
 val context = subtypeTools.add_rewrite2' group_rcancel context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_rcancel_imp = store_thm
-  ("group_rcancel_imp",
-   ``!g :: Group. !x y z :: (g.carrier).
-       (g.mult y x = g.mult z x) ==> (y = z)``,
-   METIS_TAC [group_rcancel]);
+Theorem group_rcancel_imp:
+     !g :: Group. !x y z :: (g.carrier).
+       (g.mult y x = g.mult z x) ==> (y = z)
+Proof
+   METIS_TAC [group_rcancel]
+QED
 
-val group_rcancel_id = store_thm
-  ("group_rcancel_id",
-   ``!g :: Group. !x y :: (g.carrier). (g.mult y x = x) = (y = g.id)``,
+Theorem group_rcancel_id:
+     !g :: Group. !x y :: (g.carrier). (g.mult y x = x) = (y = g.id)
+Proof
    RW_TAC resq_ss []
    ++ MATCH_MP_TAC EQ_TRANS
    ++ Q.EXISTS_TAC `g.mult y x = g.mult g.id x`
    ++ CONJ_TAC
    >> RW_TAC std_ss [group_lid]
    ++ match_tac group_rcancel
-   ++ RW_TAC std_ss [group_id_carrier]);
+   ++ RW_TAC std_ss [group_id_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2' group_rcancel_id context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_rcancel_id_imp = store_thm
-  ("group_rcancel_id_imp",
-   ``!g :: Group. !x y :: (g.carrier). (g.mult y x = x) ==> (y = g.id)``,
-   METIS_TAC [group_rcancel_id]);
+Theorem group_rcancel_id_imp:
+     !g :: Group. !x y :: (g.carrier). (g.mult y x = x) ==> (y = g.id)
+Proof
+   METIS_TAC [group_rcancel_id]
+QED
 
-val group_rcancel_id_imp' = store_thm
-  ("group_rcancel_id_imp'",
-   ``!g :: Group. !x y :: (g.carrier). (y = g.id) ==> (g.mult y x = x)``,
-   METIS_TAC [group_rcancel_id]);
+Theorem group_rcancel_id_imp':
+     !g :: Group. !x y :: (g.carrier). (y = g.id) ==> (g.mult y x = x)
+Proof
+   METIS_TAC [group_rcancel_id]
+QED
 
-val group_inv_cancel_imp = store_thm
-  ("group_inv_cancel_imp",
-   ``!g :: Group. !x y :: (g.carrier). (g.inv x = g.inv y) ==> (x = y)``,
+Theorem group_inv_cancel_imp:
+     !g :: Group. !x y :: (g.carrier). (g.inv x = g.inv y) ==> (x = y)
+Proof
    RW_TAC resq_ss []
    ++ match_tac group_lcancel_imp
    ++ Q.EXISTS_TAC `g`
    ++ Q.EXISTS_TAC `g.inv x`
    ++ RW_TAC std_ss [group_inv_carrier]
-   ++ METIS_TAC [group_linv]);
+   ++ METIS_TAC [group_linv]
+QED
 
-val group_inv_cancel = store_thm
-  ("group_inv_cancel",
-   ``!g :: Group. !x y :: (g.carrier). (g.inv x = g.inv y) = (x = y)``,
-   METIS_TAC [group_inv_cancel_imp]);
+Theorem group_inv_cancel:
+     !g :: Group. !x y :: (g.carrier). (g.inv x = g.inv y) = (x = y)
+Proof
+   METIS_TAC [group_inv_cancel_imp]
+QED
 
 val context = subtypeTools.add_rewrite2' group_inv_cancel context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_inv_inv = store_thm
-  ("group_inv_inv",
-   ``!g :: Group. !x :: (g.carrier). g.inv (g.inv x) = x``,
+Theorem group_inv_inv:
+     !g :: Group. !x :: (g.carrier). g.inv (g.inv x) = x
+Proof
    RW_TAC resq_ss []
    ++ match_tac group_lcancel_imp
    ++ Q.EXISTS_TAC `g`
    ++ Q.EXISTS_TAC `g.inv x`
    ++ RW_TAC std_ss [group_inv_carrier]
-   ++ METIS_TAC [group_inv_carrier, group_linv, group_rinv]);
+   ++ METIS_TAC [group_inv_carrier, group_linv, group_rinv]
+QED
 
 val context = subtypeTools.add_rewrite2 group_inv_inv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_inv_eq_swap_imp = store_thm
-  ("group_inv_eq_swap_imp",
-   ``!g :: Group. !x y :: (g.carrier). (g.inv x = y) ==> (x = g.inv y)``,
-   METIS_TAC [group_inv_inv]);
+Theorem group_inv_eq_swap_imp:
+     !g :: Group. !x y :: (g.carrier). (g.inv x = y) ==> (x = g.inv y)
+Proof
+   METIS_TAC [group_inv_inv]
+QED
 
-val group_inv_eq_swap = store_thm
-  ("group_inv_eq_swap",
-   ``!g :: Group. !x y :: (g.carrier). (g.inv x = y) = (x = g.inv y)``,
-   METIS_TAC [group_inv_eq_swap_imp]);
+Theorem group_inv_eq_swap:
+     !g :: Group. !x y :: (g.carrier). (g.inv x = y) = (x = g.inv y)
+Proof
+   METIS_TAC [group_inv_eq_swap_imp]
+QED
 
-val group_inv_eq_swap_imp' = store_thm
-  ("group_inv_eq_swap_imp'",
-   ``!g :: Group. !x y :: (g.carrier). (x = g.inv y) ==> (g.inv x = y)``,
-   METIS_TAC [group_inv_eq_swap]);
+Theorem group_inv_eq_swap_imp':
+     !g :: Group. !x y :: (g.carrier). (x = g.inv y) ==> (g.inv x = y)
+Proof
+   METIS_TAC [group_inv_eq_swap]
+QED
 
-val group_inv_id = store_thm
-  ("group_inv_id",
-   ``!g :: Group. g.inv g.id = g.id``,
+Theorem group_inv_id:
+     !g :: Group. g.inv g.id = g.id
+Proof
    RW_TAC resq_ss []
    ++ match_tac group_lcancel_imp
    ++ Q.EXISTS_TAC `g`
    ++ Q.EXISTS_TAC `g.id`
    ++ RW_TAC std_ss [group_inv_carrier, group_id_carrier, group_rinv]
-   ++ RW_TAC std_ss [group_lid, group_id_carrier]);
+   ++ RW_TAC std_ss [group_lid, group_id_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 group_inv_id context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_inv_eq_imp = store_thm
-  ("group_inv_eq_imp",
-   ``!g :: Group. !x y :: (g.carrier). (g.inv x = y) ==> (g.mult x y = g.id)``,
-   RW_TAC resq_ss [group_rinv]);
+Theorem group_inv_eq_imp:
+     !g :: Group. !x y :: (g.carrier). (g.inv x = y) ==> (g.mult x y = g.id)
+Proof
+   RW_TAC resq_ss [group_rinv]
+QED
 
-val group_inv_eq_imp' = store_thm
-  ("group_inv_eq_imp'",
-   ``!g :: Group. !x y :: (g.carrier). (g.mult x y = g.id) ==> (g.inv x = y)``,
+Theorem group_inv_eq_imp':
+     !g :: Group. !x y :: (g.carrier). (g.mult x y = g.id) ==> (g.inv x = y)
+Proof
    RW_TAC resq_ss []
    ++ match_tac group_lcancel_imp
    ++ Q.EXISTS_TAC `g`
    ++ Q.EXISTS_TAC `x`
-   ++ RW_TAC std_ss [group_inv_carrier, group_rinv]);
+   ++ RW_TAC std_ss [group_inv_carrier, group_rinv]
+QED
 
-val group_inv_eq = store_thm
-  ("group_inv_eq",
-   ``!g :: Group. !x y :: (g.carrier). (g.inv x = y) = (g.mult x y = g.id)``,
-   METIS_TAC [group_inv_eq_imp, group_inv_eq_imp']);
+Theorem group_inv_eq:
+     !g :: Group. !x y :: (g.carrier). (g.inv x = y) = (g.mult x y = g.id)
+Proof
+   METIS_TAC [group_inv_eq_imp, group_inv_eq_imp']
+QED
 
-val group_inv_mult = store_thm
-  ("group_inv_mult",
-   ``!g :: Group. !x y :: (g.carrier).
-       g.inv (g.mult x y) = g.mult (g.inv y) (g.inv x)``,
+Theorem group_inv_mult:
+     !g :: Group. !x y :: (g.carrier).
+       g.inv (g.mult x y) = g.mult (g.inv y) (g.inv x)
+Proof
    RW_TAC resq_ss []
    ++ match_tac group_inv_eq_imp'
    ++ RW_TAC std_ss [group_mult_carrier, group_inv_carrier]
@@ -933,37 +995,40 @@ val group_inv_mult = store_thm
    >> (AP_TERM_TAC
        ++ match_tac (GSYM group_assoc)
        ++ METIS_TAC [group_mult_carrier, group_inv_carrier])
-   ++ RW_TAC std_ss [group_rinv, group_lid, group_inv_carrier]);
+   ++ RW_TAC std_ss [group_rinv, group_lid, group_inv_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2'' group_inv_mult context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_exp_carrier = store_thm
-  ("group_exp_carrier",
-   ``!g :: Group. !x :: (g.carrier). !n. group_exp g x n IN g.carrier``,
+Theorem group_exp_carrier:
+     !g :: Group. !x :: (g.carrier). !n. group_exp g x n IN g.carrier
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
    ++ RW_TAC std_ss [group_exp_def]
-   ++ METIS_TAC [group_id_carrier, group_mult_carrier]);
+   ++ METIS_TAC [group_id_carrier, group_mult_carrier]
+QED
 
 val context = subtypeTools.add_reduction2 group_exp_carrier context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_id_exp = store_thm
-  ("group_id_exp",
-   ``!g :: Group. !n. group_exp g g.id n = g.id``,
+Theorem group_id_exp:
+     !g :: Group. !n. group_exp g g.id n = g.id
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
-   ++ RW_TAC std_ss [group_exp_def, group_lid, group_id_carrier]);
+   ++ RW_TAC std_ss [group_exp_def, group_lid, group_id_carrier]
+QED
 
 val context = subtypeTools.add_rewrite2 group_id_exp context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_comm_exp = store_thm
-  ("group_comm_exp",
-   ``!g :: Group. !x y :: (g.carrier). !n.
+Theorem group_comm_exp:
+     !g :: Group. !x y :: (g.carrier). !n.
         (g.mult x y = g.mult y x) ==>
-        (g.mult (group_exp g x n) y = g.mult y (group_exp g x n))``,
+        (g.mult (group_exp g x n) y = g.mult y (group_exp g x n))
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
    ++ RW_TAC std_ss [group_exp_def, group_lid, group_rid]
@@ -983,22 +1048,24 @@ val group_comm_exp = store_thm
    ++ REVERSE CONJ_TAC
    >> (match_tac group_assoc
        ++ METIS_TAC [group_mult_carrier, group_exp_carrier])
-   ++ ASM_REWRITE_TAC []);
+   ++ ASM_REWRITE_TAC []
+QED
 
-val group_exp_comm = store_thm
-  ("group_exp_comm",
-   ``!g :: Group. !x :: (g.carrier). !n.
-        g.mult (group_exp g x n) x = g.mult x (group_exp g x n)``,
+Theorem group_exp_comm:
+     !g :: Group. !x :: (g.carrier). !n.
+        g.mult (group_exp g x n) x = g.mult x (group_exp g x n)
+Proof
    RW_TAC resq_ss []
    ++ match_tac group_comm_exp
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
-val group_mult_exp = store_thm
-  ("group_mult_exp",
-   ``!g :: Group. !x y :: (g.carrier). !n.
+Theorem group_mult_exp:
+     !g :: Group. !x y :: (g.carrier). !n.
         (g.mult x y = g.mult y x) ==>
         (group_exp g (g.mult x y) n =
-         g.mult (group_exp g x n) (group_exp g y n))``,
+         g.mult (group_exp g x n) (group_exp g y n))
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `n`
    ++ RW_TAC std_ss
@@ -1029,22 +1096,24 @@ val group_mult_exp = store_thm
    ++ AP_THM_TAC
    ++ AP_TERM_TAC
    ++ match_tac (GSYM group_comm_exp)
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
-val group_exp_add = store_thm
-  ("group_exp_add",
-   ``!g :: Group. !x :: (g.carrier). !m n.
-        group_exp g x (m + n) = g.mult (group_exp g x m) (group_exp g x n)``,
+Theorem group_exp_add:
+     !g :: Group. !x :: (g.carrier). !m n.
+        group_exp g x (m + n) = g.mult (group_exp g x m) (group_exp g x n)
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `m`
    ++ RW_TAC std_ss [group_exp_def, group_lid, group_exp_carrier, ADD]
    ++ match_tac (GSYM group_assoc)
-   ++ RW_TAC std_ss [group_exp_carrier]);
+   ++ RW_TAC std_ss [group_exp_carrier]
+QED
 
-val group_exp_mult = store_thm
-  ("group_exp_mult",
-   ``!g :: Group. !x :: (g.carrier). !m n.
-        group_exp g x (m * n) = group_exp g (group_exp g x m) n``,
+Theorem group_exp_mult:
+     !g :: Group. !x :: (g.carrier). !m n.
+        group_exp g x (m * n) = group_exp g (group_exp g x m) n
+Proof
    RW_TAC resq_ss []
    ++ Induct_on `m`
    ++ RW_TAC std_ss [group_exp_def, group_id_exp, group_exp_carrier, MULT]
@@ -1054,12 +1123,14 @@ val group_exp_mult = store_thm
    ++ match_tac group_mult_exp
    ++ RW_TAC std_ss [group_exp_carrier]
    ++ match_tac (GSYM group_exp_comm)
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
-val group_id_alt = store_thm
-  ("group_id_alt",
-   ``!g :: Group. !x :: (g.carrier). (g.mult x x = x) = (x = g.id)``,
-   RW_TAC alg_ss []);
+Theorem group_id_alt:
+     !g :: Group. !x :: (g.carrier). (g.mult x x = x) = (x = g.id)
+Proof
+   RW_TAC alg_ss []
+QED
 
 val group_ac_conv =
     {name = "group_ac_conv",
@@ -1080,15 +1151,15 @@ val group_ac_conv =
 val context = subtypeTools.add_conversion2'' group_ac_conv context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_exp_eval = store_thm
-  ("group_exp_eval",
-   ``!g :: Group. !x :: (g.carrier). !n.
+Theorem group_exp_eval:
+     !g :: Group. !x :: (g.carrier). !n.
        group_exp g x n =
        if n = 0 then g.id
        else
          let x' = g.mult x x in
          let n' = n DIV 2 in
-         if EVEN n then group_exp g x' n' else g.mult x (group_exp g x' n')``,
+         if EVEN n then group_exp g x' n' else g.mult x (group_exp g x' n')
+Proof
    RW_TAC resq_ss [LET_DEF]
    ++ RW_TAC alg_ss [group_exp_def, group_mult_exp, GSYM group_exp_add]
    ++ RW_TAC alg_ss [GSYM group_exp_def]
@@ -1097,7 +1168,8 @@ val group_exp_eval = store_thm
    ++ SIMP_TAC alg_ss [MOD_2]
    ++ DISCH_THEN (MP_TAC o Q.SPEC `n`)
    ++ RW_TAC std_ss []
-   ++ DECIDE_TAC);
+   ++ DECIDE_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Homomorphisms, isomorphisms, endomorphisms, automorphisms and subgroups.  *)
@@ -1137,13 +1209,14 @@ Definition trivial_group_def:
    <| carrier := {e}; id := e; inv := (\x. e); mult := (\x y. e) |>
 End
 
-val trivial_group = store_thm
-  ("trivial_group",
-   ``!e. trivial_group e IN FiniteAbelianGroup``,
+Theorem trivial_group:
+     !e. trivial_group e IN FiniteAbelianGroup
+Proof
    RW_TAC resq_ss
      [FiniteAbelianGroup_def, GSPECIFICATION, FiniteGroup_def, Group_def,
       AbelianGroup_def, trivial_group_def, FINITE_INSERT, FINITE_EMPTY,
-      IN_INSERT, NOT_IN_EMPTY, combinTheory.K_THM]);
+      IN_INSERT, NOT_IN_EMPTY, combinTheory.K_THM]
+QED
 
 val context = subtypeTools.add_reduction2 trivial_group context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
@@ -1164,9 +1237,8 @@ Definition cyclic_group_def:
                 (FUNPOW f (xi + yi) e = z)) |>
 End
 
-val cyclic_group_alt = store_thm
-  ("cyclic_group_alt",
-   ``!e f n.
+Theorem cyclic_group_alt:
+     !e f n.
        (?k. ~(k = 0) /\ (FUNPOW f k e = e)) /\
        (n = LEAST k. ~(k = 0) /\ (FUNPOW f k e = e)) ==>
        ((cyclic_group e f).carrier = { FUNPOW f k e | k < n }) /\
@@ -1176,7 +1248,8 @@ val cyclic_group_alt = store_thm
           FUNPOW f ((n - i MOD n) MOD n) e) /\
        (!i j.
           (cyclic_group e f).mult (FUNPOW f i e) (FUNPOW f j e) =
-          FUNPOW f ((i + j) MOD n) e)``,
+          FUNPOW f ((i + j) MOD n) e)
+Proof
    REPEAT GEN_TAC
    ++ SIMP_TAC std_ss [WhileTheory.LEAST_EXISTS]
    ++ Q.SPEC_TAC (`LEAST k. ~(k = 0) /\ (FUNPOW f k e = e)`,`k`)
@@ -1314,13 +1387,14 @@ val cyclic_group_alt = store_thm
        ++ POP_ASSUM (MP_TAC o Q.SPECL [`i`,`j`])
        ++ RW_TAC std_ss []
        ++ RW_TAC std_ss []
-       ++ METIS_TAC [DIVISION]]);
+       ++ METIS_TAC [DIVISION]]
+QED
 
-val cyclic_group = store_thm
-  ("cyclic_group",
-   ``!e f.
+Theorem cyclic_group:
+     !e f.
        (?n. ~(n = 0) /\ (FUNPOW f n e = e)) ==>
-       cyclic_group e f IN FiniteAbelianGroup``,
+       cyclic_group e f IN FiniteAbelianGroup
+Proof
    REPEAT GEN_TAC
    ++ DISCH_THEN ASSUME_TAC
    ++ MP_TAC (Q.SPECL [`e`,`f`,`LEAST n. ~(n = 0) /\ (FUNPOW f n e = e)`]
@@ -1389,7 +1463,8 @@ val cyclic_group = store_thm
        ++ MATCH_MP_TAC IMAGE_FINITE
        ++ RW_TAC std_ss [finite_num]
        ++ Q.EXISTS_TAC `k`
-       ++ RW_TAC std_ss [GSPECIFICATION]]);
+       ++ RW_TAC std_ss [GSPECIFICATION]]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The group of addition modulo n.                                           *)
@@ -1406,9 +1481,9 @@ Definition add_mod_def:
       mult := (\i j. (i + j) MOD n) |>
 End
 
-val group_add_mod = store_thm
-  ("group_add_mod",
-   ``!n :: Nonzero. add_mod n IN Group``,
+Theorem group_add_mod:
+     !n :: Nonzero. add_mod n IN Group
+Proof
    RW_TAC resq_ss
      [Group_def,GSPECIFICATION,add_mod_def,combinTheory.K_THM,Nonzero_def]
    ++ Know `0 < n /\ !m. m < n = (m MOD n = m)` >> RW_TAC arith_ss []
@@ -1427,17 +1502,19 @@ val group_add_mod = store_thm
        ++ ASM_REWRITE_TAC []
        ++ DISCH_THEN (fn th => REWRITE_TAC [th])
        ++ POP_ASSUM (K ALL_TAC)
-       ++ RW_TAC arith_ss []]);
+       ++ RW_TAC arith_ss []]
+QED
 
-val add_mod = store_thm
-  ("add_mod",
-   ``!n :: Nonzero. add_mod n IN FiniteAbelianGroup``,
+Theorem add_mod:
+     !n :: Nonzero. add_mod n IN FiniteAbelianGroup
+Proof
    RW_TAC resq_ss
      [group_add_mod,FiniteAbelianGroup_def,AbelianGroup_def,
       GSPECIFICATION,combinTheory.K_THM,FiniteGroup_def,Nonzero_def]
    ++ REPEAT (POP_ASSUM MP_TAC)
    ++ RW_TAC arith_ss [add_mod_def, finite_num, GSPECIFICATION]
-   ++ METIS_TAC []);
+   ++ METIS_TAC []
+QED
 
 val context = subtypeTools.add_reduction2 add_mod context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
@@ -1457,18 +1534,19 @@ Definition mult_mod_def:
       mult := (\i j. (i * j) MOD p) |>
 End
 
-val Prime_Nonzero = store_thm
-  ("Prime_Nonzero",
-   ``!p. p IN Prime ==> p IN Nonzero``,
+Theorem Prime_Nonzero:
+     !p. p IN Prime ==> p IN Nonzero
+Proof
    RW_TAC std_ss [Prime_def, Nonzero_def, GSPECIFICATION]
-   ++ METIS_TAC [NOT_PRIME_0]);
+   ++ METIS_TAC [NOT_PRIME_0]
+QED
 
 val context = subtypeTools.add_judgement2 Prime_Nonzero context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
 
-val group_mult_mod = store_thm
-  ("group_mult_mod",
-   ``!p :: Prime. mult_mod p IN Group``,
+Theorem group_mult_mod:
+     !p :: Prime. mult_mod p IN Group
+Proof
    RW_TAC resq_ss
      [Group_def,GSPECIFICATION,mult_mod_def,combinTheory.K_THM,Prime_def]
    ++ RW_TAC arith_ss [prime_one_lt]
@@ -1517,17 +1595,19 @@ val group_mult_mod = store_thm
        ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th] ++ ASSUME_TAC th)
        ++ DISCH_THEN (fn th => REWRITE_TAC [th])
        ++ ASM_REWRITE_TAC []
-       ++ METIS_TAC [MULT_ASSOC, MULT_COMM]]);
+       ++ METIS_TAC [MULT_ASSOC, MULT_COMM]]
+QED
 
-val mult_mod = store_thm
-  ("mult_mod",
-   ``!p :: Prime. mult_mod p IN FiniteAbelianGroup``,
+Theorem mult_mod:
+     !p :: Prime. mult_mod p IN FiniteAbelianGroup
+Proof
    RW_TAC resq_ss
      [group_mult_mod,FiniteAbelianGroup_def,AbelianGroup_def,
       GSPECIFICATION,combinTheory.K_THM,FiniteGroup_def,Nonzero_def]
    ++ REPEAT (POP_ASSUM MP_TAC)
    ++ RW_TAC arith_ss [mult_mod_def, finite_num, GSPECIFICATION]
-   ++ METIS_TAC [MULT_COMM]);
+   ++ METIS_TAC [MULT_COMM]
+QED
 
 val context = subtypeTools.add_reduction2 mult_mod context;
 val {simplify = alg_ss, normalize = alg_ss'} = subtypeTools.simpset2 context;
@@ -1549,11 +1629,11 @@ Definition elgamal_decrypt_def:
    elgamal_decrypt G x (a,b) = G.mult (G.inv (group_exp G a x)) b
 End
 
-val elgamal_correctness = store_thm
-  ("elgamal_correctness",
-   ``!G :: Group. !g h m :: (G.carrier). !k x.
+Theorem elgamal_correctness:
+     !G :: Group. !g h m :: (G.carrier). !k x.
        (h = group_exp G g x) ==>
-       (elgamal_decrypt G x (elgamal_encrypt G g h m k) = m)``,
+       (elgamal_decrypt G x (elgamal_encrypt G g h m k) = m)
+Proof
    RW_TAC resq_ss [elgamal_encrypt_def, elgamal_decrypt_def]
    ++ MATCH_MP_TAC EQ_TRANS
    ++ Q.EXISTS_TAC
@@ -1564,7 +1644,8 @@ val elgamal_correctness = store_thm
    ++ RW_TAC alg_ss [GSYM group_exp_mult]
    ++ MP_TAC (Q.SPECL [`x`,`k`] MULT_COMM)
    ++ DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   ++ RW_TAC alg_ss []);
+   ++ RW_TAC alg_ss []
+QED
 
 val _ = html_theory "group";
 

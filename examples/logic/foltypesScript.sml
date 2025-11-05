@@ -133,10 +133,10 @@ Proof
        listpm_MAP]
 QED
 
-val _ = Datatype‘
+Datatype:
   raw_fof = imp0 raw_fof raw_fof | raw_falsity | rawP string (foterm list)
           | rawALL string raw_fof
-’;
+End
 
 Definition rawfpm_def[simp]:
   (rawfpm pi (imp0 rf1 rf2) = imp0 (rawfpm pi rf1) (rawfpm pi rf2)) ∧

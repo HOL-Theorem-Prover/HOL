@@ -15,5 +15,5 @@ val _ = assert
                    HOLset.member(atoms, v2))
           t
 
-val th = save_thm("th", DISCH_ALL (ASSUME t))
+Theorem th = DISCH_ALL (ASSUME t)
 

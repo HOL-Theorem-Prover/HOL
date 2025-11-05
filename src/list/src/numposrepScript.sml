@@ -85,9 +85,11 @@ Proof
     \\ DECIDE_TAC
 QED
 
-val LOG_DIV_LESS = Q.prove(
-  `!b n. b <= n /\ 1 < b ==> LOG b (n DIV b) < LOG b n`,
-  SRW_TAC [] [] \\ IMP_RES_TAC LOG_DIV \\ DECIDE_TAC);
+Theorem LOG_DIV_LESS[local]:
+   !b n. b <= n /\ 1 < b ==> LOG b (n DIV b) < LOG b n
+Proof
+  SRW_TAC [] [] \\ IMP_RES_TAC LOG_DIV \\ DECIDE_TAC
+QED
 
 Theorem l2n_n2l:
    !b n. 1 < b ==> (l2n b (n2l b n) = n)
@@ -143,8 +145,9 @@ Proof
          SIMP_RULE arith_ss [] (CONJ MOD_TIMES ADD_DIV_ADD_DIV)]
 QED
 
-val lem = Q.prove(
-  `!b n. 1 < b ==> PRE (LENGTH (n2l b n)) <= LENGTH (n2l b (n DIV b))`,
+Theorem lem[local]:
+   !b n. 1 < b ==> PRE (LENGTH (n2l b n)) <= LENGTH (n2l b (n DIV b))
+Proof
   SRW_TAC [ARITH_ss] [LENGTH_n2l]
     >| [
       `0 <= n DIV b /\ 0 < n` by DECIDE_TAC
@@ -152,7 +155,8 @@ val lem = Q.prove(
         \\ SRW_TAC [ARITH_ss] [LOG_RWT],
       IMP_RES_TAC (METIS_PROVE [LESS_DIV_EQ_ZERO,NOT_LESS_EQUAL]
          ``!b n. 1 < b /\ ~(n DIV b = 0) ==> b <= n``)
-        \\ SRW_TAC [ARITH_ss] [LOG_DIV]]);
+        \\ SRW_TAC [ARITH_ss] [LOG_DIV]]
+QED
 
 Theorem EL_n2l:
    !b x n. 1 < b /\ x < LENGTH (n2l b n) ==>
@@ -211,9 +215,11 @@ Proof
   GEN_TAC THEN Induct THEN simp[l2n_def]
 QED
 
-val MOD_EQ_0_0 = prove(
-  ``!n b. 0 < b ==> (n MOD b = 0) ==> n < b ==> (n = 0)``,
-  SRW_TAC[][MOD_EQ_0_DIVISOR] THEN Cases_on`d` THEN FULL_SIMP_TAC(srw_ss())[])
+Theorem MOD_EQ_0_0[local]:
+    !n b. 0 < b ==> (n MOD b = 0) ==> n < b ==> (n = 0)
+Proof
+  SRW_TAC[][MOD_EQ_0_DIVISOR] THEN Cases_on`d` THEN FULL_SIMP_TAC(srw_ss())[]
+QED
 
 Theorem LOG_l2n:
     !b. 1 < b ==> !l. l <> [] /\ 0 < LAST l /\ EVERY ($> b) l ==>
@@ -317,34 +323,38 @@ QED
 Definition l2n2[nocompute]: l2n2 = l2n 2
 End
 
-val l2n2_empty = Q.prove(
-   `l2n2 [] = ZERO`,
+Theorem l2n2_empty[local]:
+    l2n2 [] = ZERO
+Proof
    REWRITE_TAC [l2n2, l2n_def, arithmeticTheory.ALT_ZERO]
-   )
+QED
 
 val l2n_2 =
    SIMP_RULE arith_ss [bitTheory.MOD_2EXP_def, bitTheory.TIMES_2EXP_def]
       (Q.SPEC `1` (Thm.CONJUNCT2 l2n_pow2_compute))
 
-val l2n2_cons0 = Q.prove(
-   `!t. l2n2 (0::t) = numeral$iDUB (l2n2 t)`,
+Theorem l2n2_cons0[local]:
+    !t. l2n2 (0::t) = numeral$iDUB (l2n2 t)
+Proof
    SIMP_TAC arith_ss [l2n2, l2n_2]
    \\ METIS_TAC [arithmeticTheory.MULT_COMM, arithmeticTheory.TIMES2,
                  numeralTheory.iDUB]
-   )
+QED
 
-val l2n2_cons1 = Q.prove(
-   `!t. l2n2 (1::t) = arithmetic$BIT1 (l2n2 t)`,
+Theorem l2n2_cons1[local]:
+    !t. l2n2 (1::t) = arithmetic$BIT1 (l2n2 t)
+Proof
    SIMP_TAC arith_ss [l2n2, l2n_2]
    \\ METIS_TAC [numLib.DECIDE ``2 * a + 1 = a + (a + SUC 0)``,
                  arithmeticTheory.BIT1]
-   )
+QED
 
-val l2n2 = Q.prove(
-   `(!t. l2n 2 (0::t) = NUMERAL (l2n2 (0::t))) /\
-    (!t. l2n 2 (1::t) = NUMERAL (l2n2 (1::t)))`,
+Theorem l2n2[local]:
+    (!t. l2n 2 (0::t) = NUMERAL (l2n2 (0::t))) /\
+    (!t. l2n 2 (1::t) = NUMERAL (l2n2 (1::t)))
+Proof
    REWRITE_TAC [l2n2, arithmeticTheory.NUMERAL_DEF]
-   )
+QED
 
 Theorem l2n_2_thms =
    LIST_CONJ (CONJUNCTS l2n2 @ [l2n2_empty, l2n2_cons0, l2n2_cons1])
@@ -414,8 +424,9 @@ Proof
   Induct_on `l1` \\ SRW_TAC [ARITH_ss] [EXP, l2n_def]
 QED
 
-val EXP_MONO = Q.prove(
-  `!b m n x. 1 < b /\ m < n /\ x < b ** m ==> (b ** m + x < b ** n)`,
+Theorem EXP_MONO[local]:
+   !b m n x. 1 < b /\ m < n /\ x < b ** m ==> (b ** m + x < b ** n)
+Proof
   Induct_on `n`
     \\ SRW_TAC [ARITH_ss] [EXP]
     \\ Cases_on `m = n`
@@ -426,11 +437,14 @@ val EXP_MONO = Q.prove(
          \\ FULL_SIMP_TAC arith_ss [LEFT_ADD_DISTRIB],
       `m < n` by DECIDE_TAC \\ RES_TAC
         \\ `b ** n < b * b ** n` by SRW_TAC [ARITH_ss] []
-        \\ DECIDE_TAC]);
+        \\ DECIDE_TAC]
+QED
 
-val l2n_b_1 = Q.prove(
-  `!b. 1 < b ==> (l2n b [1] = 1)`,
-  SRW_TAC [] [l2n_def]);
+Theorem l2n_b_1[local]:
+   !b. 1 < b ==> (l2n b [1] = 1)
+Proof
+  SRW_TAC [] [l2n_def]
+QED
 
 Theorem l2n_11:
    !b l1 l2.

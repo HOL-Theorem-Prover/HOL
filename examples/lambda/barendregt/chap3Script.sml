@@ -19,12 +19,12 @@ Definition beta_def:  beta M N = ?x body arg. (M = LAM x body @@ arg) /\
 End
 val _ = Unicode.unicode_version {u = UnicodeChars.beta, tmnm = "beta"}
 
-val beta_alt = store_thm(
-  "beta_alt",
-  ``!X M N. FINITE X ==>
+Theorem beta_alt:
+    !X M N. FINITE X ==>
             (beta M N = ?x body arg. (M = LAM x body @@ arg) /\
                                      (N = [arg/x] body) /\
-                                     ~(x IN X))``,
+                                     ~(x IN X))
+Proof
   SRW_TAC [][beta_def, EQ_IMP_THM] THENL [
     SRW_TAC [][LAM_eq_thm] THEN
     Q_TAC (NEW_TAC "z") `x INSERT FV body UNION X` THEN
@@ -34,15 +34,16 @@ val beta_alt = store_thm(
           THEN1 SRW_TAC [][lemma15a] THEN
     SRW_TAC [][GSYM fresh_tpm_subst, pmact_flip_args],
     METIS_TAC []
-  ]);
+  ]
+QED
 
-val strong_bvc_term_ind = store_thm(
-  "strong_bvc_term_ind",
-  ``!P fv. (!s x. P (VAR s) x) /\
+Theorem strong_bvc_term_ind:
+    !P fv. (!s x. P (VAR s) x) /\
            (!M N x. (!x. P M x) /\ (!x. P N x) ==> P (M @@ N) x) /\
            (!v x M. ~(v IN fv x) /\ (!x. P M x) ==> P (LAM v M) x) /\
            (!x. FINITE (fv x)) ==>
-           !t x. P t x``,
+           !t x. P t x
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!t p x. P (tpm p t) x` THEN1 METIS_TAC [pmact_nil] THEN
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN
@@ -52,7 +53,8 @@ val strong_bvc_term_ind = store_thm(
   `LAM u M = LAM z (tpm [(z, u)] M)` by SRW_TAC [][tpm_ALPHA] THEN
   `tpm [(z,u)] M = tpm ((z,u)::p) t`
      by SRW_TAC [][Abbr`M`, GSYM pmact_decompose] THEN
-  SRW_TAC [][])
+  SRW_TAC [][]
+QED
 
 val _ = set_fixity "-b->" (Infix(NONASSOC, 450))
 val _ = overload_on("-b->", ``compat_closure beta``)
@@ -108,30 +110,34 @@ Theorem ccbeta_ind =
                        |> Q.INST [‘P'’ |-> ‘P’]
                        |> SRULE[] |> Q.GENL [‘P’, ‘X’]
 
-val beta_substitutive = store_thm(
-  "beta_substitutive",
-  ``substitutive beta``,
+Theorem beta_substitutive:
+    substitutive beta
+Proof
   SRW_TAC [][substitutive_def] THEN
   Q.SPEC_THEN `v INSERT FV N` ASSUME_TAC beta_alt THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
-  Q.EXISTS_TAC `x` THEN SRW_TAC [][SUB_THM, GSYM substitution_lemma]);
+  Q.EXISTS_TAC `x` THEN SRW_TAC [][SUB_THM, GSYM substitution_lemma]
+QED
 
-val cc_beta_subst = store_thm(
-  "cc_beta_subst",
-  ``!M N. M -b-> N ==> !P v. [P/v]M -b-> [P/v]N``,
+Theorem cc_beta_subst:
+    !M N. M -b-> N ==> !P v. [P/v]M -b-> [P/v]N
+Proof
   METIS_TAC [beta_substitutive, compat_closure_substitutive,
-             substitutive_def]);
+             substitutive_def]
+QED
 
-val reduction_beta_subst = store_thm(
-  "reduction_beta_subst",
-  ``!M N. M -b->* N ==> !P v. [P/v]M -b->* [P/v]N``,
-  METIS_TAC [beta_substitutive, reduction_substitutive, substitutive_def]);
+Theorem reduction_beta_subst:
+    !M N. M -b->* N ==> !P v. [P/v]M -b->* [P/v]N
+Proof
+  METIS_TAC [beta_substitutive, reduction_substitutive, substitutive_def]
+QED
 
-val cc_beta_FV_SUBSET = store_thm(
-  "cc_beta_FV_SUBSET",
-  ``!M N. M -b-> N ==> FV N SUBSET FV M``,
+Theorem cc_beta_FV_SUBSET:
+    !M N. M -b-> N ==> FV N SUBSET FV M
+Proof
   HO_MATCH_MP_TAC ccbeta_ind THEN Q.EXISTS_TAC `{}` THEN
-  SRW_TAC [][SUBSET_DEF, FV_SUB] THEN PROVE_TAC []);
+  SRW_TAC [][SUBSET_DEF, FV_SUB] THEN PROVE_TAC []
+QED
 
 Theorem betastar_FV_SUBSET :
     !M N. M -b->* N ==> FV N SUBSET FV M
@@ -148,19 +154,20 @@ Proof
   METIS_TAC [compat_closure_rules, beta_def]
 QED
 
-val cc_beta_tpm_eqn = store_thm(
-  "cc_beta_tpm_eqn",
-  ``tpm pi M -b-> N <=> M -b-> tpm (REVERSE pi) N``,
-  METIS_TAC [pmact_inverse, cc_beta_tpm]);
+Theorem cc_beta_tpm_eqn:
+    tpm pi M -b-> N <=> M -b-> tpm (REVERSE pi) N
+Proof
+  METIS_TAC [pmact_inverse, cc_beta_tpm]
+QED
 
-val cc_beta_thm = store_thm(
-  "cc_beta_thm",
-  ``(!s t. VAR s -b-> t <=> F) /\
+Theorem cc_beta_thm:
+    (!s t. VAR s -b-> t <=> F) /\
     (!M N P. M @@ N -b-> P <=>
                (?v M0. (M = LAM v M0) /\ (P = [N/v]M0)) \/
                (?M'. (P = M' @@ N) /\ M -b-> M') \/
                (?N'. (P = M @@ N') /\ N -b-> N')) /\
-    (!v M N. LAM v M -b-> N <=> ?N0. (N = LAM v N0) /\ M -b-> N0)``,
+    (!v M N. LAM v M -b-> N <=> ?N0. (N = LAM v N0) /\ M -b-> N0)
+Proof
   REPEAT CONJ_TAC THEN
   SIMP_TAC (srw_ss()) [beta_def, SimpLHS, Once compat_closure_cases] THEN
   REPEAT STRIP_TAC THEN EQ_TAC THEN
@@ -178,11 +185,11 @@ val cc_beta_thm = store_thm(
     SRW_TAC [][pmact_flip_args, cc_beta_tpm_eqn] THEN
     METIS_TAC [cc_beta_FV_SUBSET, SUBSET_DEF],
     PROVE_TAC []
-  ]);
+  ]
+QED
 
-val ccbeta_rwt = store_thm(
-  "ccbeta_rwt",
-  ``(VAR s -b-> N <=> F) /\
+Theorem ccbeta_rwt:
+    (VAR s -b-> N <=> F) /\
     (LAM x M -b-> N <=> ?N0. (N = LAM x N0) /\ M -b-> N0) /\
     (LAM x M @@ N -b-> P <=>
        (?M'. (P = LAM x M' @@ N) /\ M -b-> M') \/
@@ -191,7 +198,8 @@ val ccbeta_rwt = store_thm(
     (~is_abs M ==>
       (M @@ N -b-> P <=>
         (?M'. (P = M' @@ N) /\ M -b-> M') \/
-        (?N'. (P = M @@ N') /\ N -b-> N')))``,
+        (?N'. (P = M @@ N') /\ N -b-> N')))
+Proof
   SRW_TAC [][cc_beta_thm] THENL [
     SRW_TAC [][EQ_IMP_THM, LAM_eq_thm] THEN SRW_TAC [][] THENL [
       METIS_TAC [fresh_tpm_subst, lemma15a],
@@ -200,7 +208,8 @@ val ccbeta_rwt = store_thm(
     Q_TAC SUFF_TAC `!v M'. M <> LAM v M'` THEN1 METIS_TAC[] THEN
     Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
 Theorem ccbeta_LAMl_rwt :
     !vs M N. LAMl vs M -b-> N <=> ?M'. N = LAMl vs M' /\ M -b-> M'
@@ -212,9 +221,9 @@ Proof
  >> Q.EXISTS_TAC ‘LAMl vs M'’ >> rw []
 QED
 
-val beta_normal_form_bnf = store_thm(
-  "beta_normal_form_bnf",
-  ``normal_form beta = bnf``,
+Theorem beta_normal_form_bnf:
+    normal_form beta = bnf
+Proof
   SIMP_TAC (srw_ss()) [FUN_EQ_THM, EQ_IMP_THM, normal_form_def,
                        FORALL_AND_THM] THEN
   CONJ_TAC THENL [
@@ -231,16 +240,17 @@ val beta_normal_form_bnf = store_thm(
     Q_TAC SUFF_TAC `!t. can_reduce beta t ==> ~bnf t` THEN1 PROVE_TAC [] THEN
     HO_MATCH_MP_TAC can_reduce_ind THEN SRW_TAC [][redex_def, beta_def] THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
 Definition nf_of_def:  nf_of R M N <=> normal_form R N /\ conversion R M N
 End
 
-val prop3_10 = store_thm(
-  "prop3_10",
-  ``!R M N.
+Theorem prop3_10:
+    !R M N.
        compat_closure R M N = ?P Q c. one_hole_context c /\ (M = c P) /\
-                                      (N = c Q) /\ R P Q``,
+                                      (N = c Q) /\ R P Q
+Proof
   GEN_TAC THEN SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN
   CONJ_TAC THENL [
     HO_MATCH_MP_TAC compat_closure_ind THEN SRW_TAC [][] THENL [
@@ -255,12 +265,13 @@ val prop3_10 = store_thm(
     ],
     PROVE_TAC [compat_closure_compatible, compatible_def,
                compat_closure_rules]
-  ]);
+  ]
+QED
 
-val corollary3_2_1 = store_thm(
-  "corollary3_2_1",
-  ``!R M. normal_form R M ==> (!N. ~compat_closure R M N) /\
-                              (!N. reduction R M N ==> (M = N))``,
+Theorem corollary3_2_1:
+    !R M. normal_form R M ==> (!N. ~compat_closure R M N) /\
+                              (!N. reduction R M N ==> (M = N))
+Proof
   SIMP_TAC (srw_ss()) [normal_form_def] THEN REPEAT GEN_TAC THEN
   STRIP_TAC THEN
   Q.SUBGOAL_THEN `!N. ~compat_closure R M N` ASSUME_TAC THENL [
@@ -271,12 +282,14 @@ val corollary3_2_1 = store_thm(
     PROVE_TAC [can_reduce_rules, redex_def],
     ALL_TAC
   ] THEN ASM_SIMP_TAC (srw_ss()) [] THEN
-  PROVE_TAC [RTC_CASES1]);
+  PROVE_TAC [RTC_CASES1]
+QED
 
-val bnf_reduction_to_self = store_thm(
-  "bnf_reduction_to_self",
-  ``bnf M ==> (M -b->* N <=> (N = M))``,
-  METIS_TAC [corollary3_2_1, beta_normal_form_bnf, RTC_RULES]);
+Theorem bnf_reduction_to_self:
+    bnf M ==> (M -b->* N <=> (N = M))
+Proof
+  METIS_TAC [corollary3_2_1, beta_normal_form_bnf, RTC_RULES]
+QED
 
 local open relationTheory
 in
@@ -296,21 +309,22 @@ val _ = overload_on("diamond_property", ``relation$diamond``)
 Definition CR_def:  CR R = diamond_property (reduction R)
 End
 
-val theorem3_13 = store_thm(
-  "theorem3_13",
-  ``!R. CR R ==>
-        !M N. conversion R M N ==> ?Z. reduction R M Z /\ reduction R N Z``,
+Theorem theorem3_13:
+    !R. CR R ==>
+        !M N. conversion R M N ==> ?Z. reduction R M Z /\ reduction R N Z
+Proof
   GEN_TAC THEN STRIP_TAC THEN SIMP_TAC (srw_ss()) [] THEN
   HO_MATCH_MP_TAC equiv_closure_ind THEN REVERSE (SRW_TAC [][]) THEN1
     (`?Z2. reduction R Z Z2 /\ reduction R Z' Z2` by
         PROVE_TAC [CR_def, diamond_property_def] THEN
      PROVE_TAC [reduction_rules]) THEN
-  PROVE_TAC [reduction_rules]);
+  PROVE_TAC [reduction_rules]
+QED
 
-val corollary3_3_1 = store_thm(
-  "corollary3_3_1",
-  ``!R. CR R ==> (!M N. nf_of R M N ==> reduction R M N) /\
-                 (!M N1 N2. nf_of R M N1 /\ nf_of R M N2 ==> (N1 = N2))``,
+Theorem corollary3_3_1:
+    !R. CR R ==> (!M N. nf_of R M N ==> reduction R M N) /\
+                 (!M N1 N2. nf_of R M N1 /\ nf_of R M N2 ==> (N1 = N2))
+Proof
   SRW_TAC [][nf_of_def] THENL [
     PROVE_TAC [corollary3_2_1, theorem3_13],
     `conversion R N1 N2` by
@@ -319,23 +333,25 @@ val corollary3_3_1 = store_thm(
     `?Z. reduction R N1 Z /\ reduction R N2 Z` by
        PROVE_TAC [theorem3_13] THEN
     PROVE_TAC [corollary3_2_1]
-  ]);
+  ]
+QED
 
 
 val diamond_TC = diamond_TC_diamond
 
-val bvc_cases = store_thm(
-  "bvc_cases",
-  ``!X. FINITE X ==>
+Theorem bvc_cases:
+    !X. FINITE X ==>
         !t. (?s. t = VAR s) \/ (?t1 t2. t = t1 @@ t2) \/
-            (?v t0. ~(v IN X) /\ (t = LAM v t0))``,
+            (?v t0. ~(v IN X) /\ (t = LAM v t0))
+Proof
   SRW_TAC [][] THEN
   Q.SPEC_THEN `t` FULL_STRUCT_CASES_TAC term_CASES THEN
   SRW_TAC [][LAM_eq_thm] THEN
   SRW_TAC [boolSimps.DNF_ss][] THEN
   SRW_TAC [][Once tpm_eqr] THEN
   Q_TAC (NEW_TAC "z") `v INSERT X UNION FV t0` THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 (* Definition 3.2.3 [1, p60] (one-step parallel beta-reduction) *)
 Inductive grandbeta :
@@ -359,9 +375,8 @@ val gbarrow = "=" ^ UnicodeChars.beta ^ "=>"
 val _ = Unicode.unicode_version {u = gbarrow, tmnm = "=b=>"}
 val _ = Unicode.unicode_version {u = gbarrow ^ "*", tmnm = "=b=>*"}
 
-val grandbeta_bvc_gen_ind = store_thm(
-  "grandbeta_bvc_gen_ind",
-  ``!P fv.
+Theorem grandbeta_bvc_gen_ind:
+    !P fv.
         (!M x. P M M x) /\
         (!v M1 M2 x. v NOTIN fv x /\ (!x. P M1 M2 x) ==>
                      P (LAM v M1) (LAM v M2) x) /\
@@ -372,7 +387,8 @@ val grandbeta_bvc_gen_ind = store_thm(
                   (!x. P M1 M2 x) /\ (!x. P N1 N2 x) ==>
                   P ((LAM v M1) @@ N1) ([N2/v]M2) x) /\
         (!x. FINITE (fv x)) ==>
-        !M N. M =b=> N ==> !x. P M N x``,
+        !M N. M =b=> N ==> !x. P M N x
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!M N. grandbeta M N ==> !p x. P (tpm p M) (tpm p N) x`
         THEN1 METIS_TAC [pmact_nil] THEN
@@ -407,7 +423,8 @@ val grandbeta_bvc_gen_ind = store_thm(
      (tpm [(z,v)] M2 = tpm ((z,v)::p) NL)`
         by SRW_TAC [][GSYM pmact_decompose, Abbr`M1`,Abbr`M2`] THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
 val grandbeta_bvc_ind = save_thm(
   "grandbeta_bvc_ind",
@@ -416,55 +433,62 @@ val grandbeta_bvc_ind = save_thm(
    SPECL [``(\M:term N:term x:'a. P M N:bool)``, ``\x:'a. X:string -> bool``])
   grandbeta_bvc_gen_ind);
 
-val exercise3_3_1 = store_thm(
-  "exercise3_3_1",
-  ``!M N. M -b-> N ==> M =b=> N``,
+Theorem exercise3_3_1:
+    !M N. M -b-> N ==> M =b=> N
+Proof
   HO_MATCH_MP_TAC compat_closure_ind THEN SRW_TAC [][beta_def] THEN
-  PROVE_TAC [grandbeta_rules]);
+  PROVE_TAC [grandbeta_rules]
+QED
 
-val app_grandbeta = store_thm(  (* property 3 on p. 37 *)
-  "app_grandbeta",
-  ``!M N L. M @@ N =b=> L <=>
+(* property 3 on p. 37 *)
+Theorem app_grandbeta:
+    !M N L. M @@ N =b=> L <=>
                (?M' N'. M =b=> M' /\ N =b=> N' /\ (L = M' @@ N')) \/
                (?x P P' N'. (M = LAM x P) /\ P =b=> P' /\
-                            N =b=> N' /\ (L = [N'/x]P'))``,
+                            N =b=> N' /\ (L = [N'/x]P'))
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     SIMP_TAC (srw_ss()) [SimpL ``(==>)``, Once grandbeta_cases] THEN
     SIMP_TAC (srw_ss()) [DISJ_IMP_THM, GSYM LEFT_FORALL_IMP_THM,
                          grandbeta_rules] THEN PROVE_TAC [],
     SRW_TAC [][] THEN PROVE_TAC [grandbeta_rules]
-  ]);
+  ]
+QED
 
-val grandbeta_permutative = store_thm(
-  "grandbeta_permutative",
-  ``!M N. M =b=> N ==> !pi. tpm pi M =b=> tpm pi N``,
+Theorem grandbeta_permutative:
+    !M N. M =b=> N ==> !pi. tpm pi M =b=> tpm pi N
+Proof
   HO_MATCH_MP_TAC grandbeta_ind THEN SRW_TAC [][tpm_subst] THEN
-  METIS_TAC [grandbeta_rules]);
+  METIS_TAC [grandbeta_rules]
+QED
 
-val grandbeta_permutative_eqn = store_thm(
-  "grandbeta_permutative_eqn",
-  ``tpm pi M =b=> tpm pi N  <=>  M =b=> N``,
-  METIS_TAC [pmact_inverse, grandbeta_permutative]);
+Theorem grandbeta_permutative_eqn:
+    tpm pi M =b=> tpm pi N  <=>  M =b=> N
+Proof
+  METIS_TAC [pmact_inverse, grandbeta_permutative]
+QED
 val _ = export_rewrites ["grandbeta_permutative_eqn"]
 
-val grandbeta_substitutive = store_thm(
-  "grandbeta_substitutive",
-  ``!M N. M =b=> N ==> [P/x]M =b=> [P/x]N``,
+Theorem grandbeta_substitutive:
+    !M N. M =b=> N ==> [P/x]M =b=> [P/x]N
+Proof
   HO_MATCH_MP_TAC grandbeta_bvc_ind THEN
   Q.EXISTS_TAC `x INSERT FV P` THEN
   SRW_TAC [][SUB_THM, grandbeta_rules] THEN
-  SRW_TAC [][lemma2_11, grandbeta_rules]);
+  SRW_TAC [][lemma2_11, grandbeta_rules]
+QED
 
-val grandbeta_FV = store_thm(
-  "grandbeta_FV",
-  ``!M N. M =b=> N ==> FV N SUBSET FV M``,
+Theorem grandbeta_FV:
+    !M N. M =b=> N ==> FV N SUBSET FV M
+Proof
   HO_MATCH_MP_TAC grandbeta_ind THEN
   SRW_TAC [][SUBSET_DEF, FV_SUB] THEN
-  PROVE_TAC []);
+  PROVE_TAC []
+QED
 
-val abs_grandbeta = store_thm(
-  "abs_grandbeta",
-  ``!M N v. LAM v M =b=> N <=> ∃N0. N = LAM v N0 /\ M =b=> N0``,
+Theorem abs_grandbeta:
+    !M N v. LAM v M =b=> N <=> ∃N0. N = LAM v N0 /\ M =b=> N0
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [
     SIMP_TAC (srw_ss()) [Once grandbeta_cases, SimpL ``(==>)``] THEN
     SIMP_TAC (srw_ss()) [DISJ_IMP_THM, grandbeta_rules] THEN
@@ -474,16 +498,17 @@ val abs_grandbeta = store_thm(
       PROVE_TAC [SUBSET_DEF, grandbeta_FV]
     ],
     PROVE_TAC [grandbeta_rules]
-  ]);
+  ]
+QED
 
 val lemma3_15 = save_thm("lemma3_15", abs_grandbeta);
 
-val redex_grandbeta = store_thm(
-  "redex_grandbeta",
-  ``LAM v M @@ N =b=> L <=>
+Theorem redex_grandbeta:
+    LAM v M @@ N =b=> L <=>
         (∃M' N'. M =b=> M' /\ N =b=> N' /\
                  (L = LAM v M' @@ N')) \/
-        (∃M' N'. M =b=> M' /\ N =b=> N' /\ (L = [N'/v]M'))``,
+        (∃M' N'. M =b=> M' /\ N =b=> N' /\ (L = [N'/v]M'))
+Proof
   SRW_TAC [][app_grandbeta, EQ_IMP_THM] THENL [
     PROVE_TAC [abs_grandbeta],
     FULL_SIMP_TAC (srw_ss()) [LAM_eq_thm] THEN DISJ2_TAC THENL [
@@ -497,25 +522,28 @@ val redex_grandbeta = store_thm(
     ],
     METIS_TAC [grandbeta_rules],
     METIS_TAC []
-  ]);
+  ]
+QED
 
-val var_grandbeta = store_thm(
-  "var_grandbeta",
-  ``!v N. VAR v =b=> N <=> (N = VAR v)``,
+Theorem var_grandbeta:
+    !v N. VAR v =b=> N <=> (N = VAR v)
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [grandbeta_cases] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val grandbeta_cosubstitutive = store_thm(
-  "grandbeta_cosubstitutive",
-  ``!M. N =b=> N' ==> [N/x] M =b=> [N'/x] M``,
+Theorem grandbeta_cosubstitutive:
+    !M. N =b=> N' ==> [N/x] M =b=> [N'/x] M
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `x INSERT FV N UNION FV N'` THEN
-  SRW_TAC [][grandbeta_rules, SUB_VAR]);
+  SRW_TAC [][grandbeta_rules, SUB_VAR]
+QED
 
 (* property 1 on p37, and Barendregt's lemma 3.2.4 *)
-val grandbeta_subst = store_thm(
-  "grandbeta_subst",
-  ``M =b=> M' /\ N =b=> N' ==> [N/x]M =b=> [N'/x]M'``,
+Theorem grandbeta_subst:
+    M =b=> M' /\ N =b=> N' ==> [N/x]M =b=> [N'/x]M'
+Proof
   Q_TAC SUFF_TAC
         `!M M'. M =b=> M' ==> N =b=> N' ==>
                 [N/x] M =b=> [N'/x]M'` THEN1
@@ -526,7 +554,8 @@ val grandbeta_subst = store_thm(
     METIS_TAC [grandbeta_cosubstitutive],
     RES_TAC THEN
     SRW_TAC [][lemma2_11, grandbeta_rules]
-  ]);
+  ]
+QED
 
 val strong_grandbeta_ind =
     IndDefLib.derive_strong_induction (grandbeta_rules, grandbeta_ind)
@@ -538,9 +567,10 @@ val strong_grandbeta_bvc_gen_ind =
      Q.SPEC `\M N x. P M N x /\ grandbeta M N`)
     grandbeta_bvc_gen_ind
 
-val lemma3_16 = store_thm( (* p. 37 *)
-  "lemma3_16",
-  ``diamond_property grandbeta``,
+(* p. 37 *)
+Theorem lemma3_16:
+    diamond_property grandbeta
+Proof
   Q_TAC SUFF_TAC `!M M1. M =b=> M1 ==>
                          !M2. M =b=> M2 ==>
                               ?M3. M1 =b=> M3 /\ M2 =b=> M3` THEN1
@@ -588,7 +618,8 @@ val lemma3_16 = store_thm( (* p. 37 *)
       Q.EXISTS_TAC `[Nfin/x]Mfin` THEN
       METIS_TAC [grandbeta_rules, grandbeta_subst]
     ]
-  ]);
+  ]
+QED
 
 Theorem theorem3_17:
   TC grandbeta = reduction beta
@@ -619,15 +650,17 @@ Proof
   PROVE_TAC [CR_def, lemma3_16, theorem3_17, diamond_TC]
 QED
 
-val betaCR_square = store_thm(
-  "betaCR_square",
-  ``M -b->* N1 /\ M -b->* N2 ==> ?N. N1 -b->* N /\ N2 -b->* N``,
-  METIS_TAC [beta_CR, diamond_property_def, CR_def]);
+Theorem betaCR_square:
+    M -b->* N1 /\ M -b->* N2 ==> ?N. N1 -b->* N /\ N2 -b->* N
+Proof
+  METIS_TAC [beta_CR, diamond_property_def, CR_def]
+QED
 
-val bnf_triangle = store_thm(
-  "bnf_triangle",
-  ``M -b->* N /\ M -b->* N' /\ bnf N ==> N' -b->* N``,
-  METIS_TAC [betaCR_square, bnf_reduction_to_self]);
+Theorem bnf_triangle:
+    M -b->* N /\ M -b->* N' /\ bnf N ==> N' -b->* N
+Proof
+  METIS_TAC [betaCR_square, bnf_reduction_to_self]
+QED
 
 (* cf. normal_orderTheory.Omega_has_no_bnf *)
 Theorem Omega_betaloops[simp] :
@@ -691,9 +724,9 @@ Proof
  >> RW_TAC std_ss []
 QED
 
-val lameq_betaconversion = store_thm(
-  "lameq_betaconversion",
-  ``!M N. M == N <=> conversion beta M N``,
+Theorem lameq_betaconversion:
+    !M N. M == N <=> conversion beta M N
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
     HO_MATCH_MP_TAC lameq_ind THEN REPEAT STRIP_TAC THENL [
       Q_TAC SUFF_TAC `beta (LAM x M @@ N) ([N/x] M)` THEN1
@@ -712,7 +745,8 @@ val lameq_betaconversion = store_thm(
       (HO_MATCH_MP_TAC compat_closure_ind THEN SRW_TAC [][beta_def] THEN
        PROVE_TAC [lameq_rules]) THEN
     PROVE_TAC [lameq_rules]
-  ]);
+  ]
+QED
 
 val prop3_18 = save_thm("prop3_18", lameq_betaconversion);
 
@@ -720,21 +754,24 @@ val prop3_18 = save_thm("prop3_18", lameq_betaconversion);
 Theorem lameq_CR = REWRITE_RULE [GSYM lameq_betaconversion, beta_CR]
                                 (Q.SPEC ‘beta’ theorem3_13)
 
-val ccbeta_lameq = store_thm(
-  "ccbeta_lameq",
-  ``!M N. M -b-> N ==> M == N``,
-  SRW_TAC [][lameq_betaconversion, EQC_R]);
+Theorem ccbeta_lameq:
+    !M N. M -b-> N ==> M == N
+Proof
+  SRW_TAC [][lameq_betaconversion, EQC_R]
+QED
 
-val betastar_lameq = store_thm(
-  "betastar_lameq",
-  ``!M N. M -b->* N ==> M == N``,
-  SRW_TAC [][lameq_betaconversion, RTC_EQC]);
+Theorem betastar_lameq:
+    !M N. M -b->* N ==> M == N
+Proof
+  SRW_TAC [][lameq_betaconversion, RTC_EQC]
+QED
 
-val betastar_lameq_bnf = store_thm(
-  "betastar_lameq_bnf",
-  ``bnf N ==> (M -b->* N <=> M == N)``,
+Theorem betastar_lameq_bnf:
+    bnf N ==> (M -b->* N <=> M == N)
+Proof
   METIS_TAC [theorem3_13, beta_CR, betastar_lameq, bnf_reduction_to_self,
-             lameq_betaconversion]);
+             lameq_betaconversion]
+QED
 
 (* moved here from churchnumScript.sml *)
 Theorem lameq_triangle :
@@ -781,9 +818,9 @@ Proof
  >> MATCH_MP_TAC TC_SUBSET >> art []
 QED
 
-val lameq_consistent = store_thm(
-  "lameq_consistent",
-  ``consistent $==``,
+Theorem lameq_consistent:
+    consistent $==
+Proof
   SRW_TAC [][consistent_def] THEN
   MAP_EVERY Q.EXISTS_TAC [`S`,`K`] THEN STRIP_TAC THEN
   `conversion beta S K` by PROVE_TAC [prop3_18] THEN
@@ -792,7 +829,8 @@ val lameq_consistent = store_thm(
   `normal_form beta S` by PROVE_TAC [S_beta_normal, beta_normal_form_bnf] THEN
   `normal_form beta K` by PROVE_TAC [K_beta_normal, beta_normal_form_bnf] THEN
   `S = K` by PROVE_TAC [corollary3_2_1] THEN
-  FULL_SIMP_TAC (srw_ss()) [S_def, K_def]);
+  FULL_SIMP_TAC (srw_ss()) [S_def, K_def]
+QED
 
 Theorem incompatible_not_lameq :
     !M N. incompatible M N ==> ~(M == N)
@@ -804,24 +842,26 @@ Proof
  >> rw [consistent_def]
 QED
 
-val has_bnf_thm = store_thm(
-  "has_bnf_thm",
-  ``has_bnf M <=> ?N. M -b->* N /\ bnf N``,
+Theorem has_bnf_thm:
+    has_bnf M <=> ?N. M -b->* N /\ bnf N
+Proof
   EQ_TAC THENL [
     METIS_TAC [lameq_betaconversion, chap2Theory.has_bnf_def, theorem3_13,
                beta_CR, beta_normal_form_bnf, corollary3_2_1],
     SRW_TAC [][chap2Theory.has_bnf_def, lameq_betaconversion] THEN
     METIS_TAC [RTC_EQC]
-  ]);
+  ]
+QED
 
-val Omega_reachable_no_bnf = store_thm(
-  "Omega_reachable_no_bnf",
-  ``M -b->* Omega ==> ~has_bnf M``,
+Theorem Omega_reachable_no_bnf:
+    M -b->* Omega ==> ~has_bnf M
+Proof
   REPEAT STRIP_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [has_bnf_thm] THEN
   `Omega -b->* N` by METIS_TAC [bnf_triangle] THEN
   `N = Omega` by FULL_SIMP_TAC (srw_ss()) [] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
 val weak_diamond_def =
     save_thm("weak_diamond_def", WCR_def)
@@ -837,31 +877,35 @@ End
 Definition SN_def:  SN R = relation$SN (compat_closure R)
 End
 
-val newmans_lemma = store_thm( (* lemma3_22, p39 *)
-  "newmans_lemma",
-  ``!R. SN R /\ WCR R ==> CR R``,
+(* lemma3_22, p39 *)
+Theorem newmans_lemma:
+    !R. SN R /\ WCR R ==> CR R
+Proof
   SIMP_TAC (srw_ss()) [SN_def, WCR_def, Newmans_lemma,
                        CR_def,
                        GSYM relationTheory.diamond_def,
-                       GSYM relationTheory.CR_def]);
+                       GSYM relationTheory.CR_def]
+QED
 
 Definition commute_def:   (* p43 *)
     commute R1 R2 = !x x1 x2. R1 x x1 /\ R2 x x2 ==>
                                      ?x3. R2 x1 x3 /\ R1 x2 x3
 End
 
-val commute_COMM = store_thm(
-  "commute_COMM",
-  ``commute R1 R2 = commute R2 R1``,
-  PROVE_TAC [commute_def]);
+Theorem commute_COMM:
+    commute R1 R2 = commute R2 R1
+Proof
+  PROVE_TAC [commute_def]
+QED
 
 val diamond_RC = diamond_RC_diamond
   (* |- !R. diamond_property R ==> diamond_property (RC R) *)
 
-val diamond_RTC = store_thm(
-  "diamond_RTC",
-  ``!R. diamond_property R ==> diamond_property (RTC R)``,
-  PROVE_TAC [diamond_TC, diamond_RC, TC_RC_EQNS]);
+Theorem diamond_RTC:
+    !R. diamond_property R ==> diamond_property (RTC R)
+Proof
+  PROVE_TAC [diamond_TC, diamond_RC, TC_RC_EQNS]
+QED
 
 val hr_lemma0 = prove(
   ``!R1 R2. diamond_property R1 /\ diamond_property R2 /\ commute R1 R2 ==>
@@ -873,16 +917,17 @@ val hr_lemma0 = prove(
                             RUNION] THEN
   PROVE_TAC []);
 
-val CC_RUNION_MONOTONE = store_thm(
-  "CC_RUNION_MONOTONE",
-  ``!R1 x y. compat_closure R1 x y ==> compat_closure (R1 RUNION R2) x y``,
+Theorem CC_RUNION_MONOTONE:
+    !R1 x y. compat_closure R1 x y ==> compat_closure (R1 RUNION R2) x y
+Proof
   GEN_TAC THEN HO_MATCH_MP_TAC compat_closure_ind THEN
-  PROVE_TAC [compat_closure_rules, RUNION]);
+  PROVE_TAC [compat_closure_rules, RUNION]
+QED
 
-val CC_RUNION_DISTRIB = store_thm(
-  "CC_RUNION_DISTRIB",
-  ``!R1 R2. compat_closure (R1 RUNION R2) =
-            compat_closure R1 RUNION compat_closure R2``,
+Theorem CC_RUNION_DISTRIB:
+    !R1 R2. compat_closure (R1 RUNION R2) =
+            compat_closure R1 RUNION compat_closure R2
+Proof
   REPEAT GEN_TAC THEN
   Q_TAC SUFF_TAC
      `(!x y. compat_closure (R1 RUNION R2) x y ==>
@@ -895,14 +940,16 @@ val CC_RUNION_DISTRIB = store_thm(
     PROVE_TAC [compat_closure_rules, RUNION],
     SRW_TAC [][RUNION] THEN
     PROVE_TAC [RUNION_COMM, CC_RUNION_MONOTONE]
-  ]);
+  ]
+QED
 
-val hindley_rosen_lemma = store_thm( (* p43 *)
-  "hindley_rosen_lemma",
-  ``(!R1 R2. diamond_property R1 /\ diamond_property R2 /\ commute R1 R2 ==>
+(* p43 *)
+Theorem hindley_rosen_lemma:
+    (!R1 R2. diamond_property R1 /\ diamond_property R2 /\ commute R1 R2 ==>
              diamond_property (RTC (R1 RUNION R2))) /\
     (!R1 R2. CR R1 /\ CR R2 /\ commute (reduction R1) (reduction R2) ==>
-             CR (R1 RUNION R2))``,
+             CR (R1 RUNION R2))
+Proof
   CONJ_TAC THENL [
     MATCH_ACCEPT_TAC hr_lemma0,
     SRW_TAC [][CR_def] THEN
@@ -910,7 +957,8 @@ val hindley_rosen_lemma = store_thm( (* p43 *)
                             RTC (compat_closure R2)))`
         by PROVE_TAC [hr_lemma0] THEN
     FULL_SIMP_TAC (srw_ss()) [RTC_RUNION, CC_RUNION_DISTRIB]
-  ]);
+  ]
+QED
 
 Definition eta_def:
     eta M N <=> ∃v. M = LAM v (N @@ VAR v) ∧ v ∉ FV N
@@ -918,9 +966,9 @@ End
 
 val _ = Unicode.unicode_version {u = UnicodeChars.eta, tmnm = "eta"}
 
-val eta_normal_form_enf = store_thm(
-  "eta_normal_form_enf",
-  ``normal_form eta = enf``,
+Theorem eta_normal_form_enf:
+    normal_form eta = enf
+Proof
   Q_TAC SUFF_TAC `(!x. ~enf x ==> can_reduce eta x) /\
                   (!x. can_reduce eta x ==> ~enf x)` THEN1
     (SIMP_TAC (srw_ss())[normal_form_def, FUN_EQ_THM, EQ_IMP_THM,
@@ -940,87 +988,98 @@ val eta_normal_form_enf = store_thm(
     HO_MATCH_MP_TAC can_reduce_ind THEN
     SRW_TAC [][redex_def, eta_def] THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val no_eta_thm = store_thm(
-  "no_eta_thm",
-  ``(!s t. ~(eta (VAR s) t)) /\
-    (!t u v. ~(eta (t @@ u) v))``,
-  SRW_TAC [][eta_def]);
+Theorem no_eta_thm:
+    (!s t. ~(eta (VAR s) t)) /\
+    (!t u v. ~(eta (t @@ u) v))
+Proof
+  SRW_TAC [][eta_def]
+QED
 
-val cc_eta_thm = store_thm(
-  "cc_eta_thm",
-  ``(!s t. compat_closure eta (VAR s) t <=> F) /\
+Theorem cc_eta_thm:
+    (!s t. compat_closure eta (VAR s) t <=> F) /\
     (!t u v. compat_closure eta (t @@ u) v <=>
              (?t'. (v = t' @@ u) /\ compat_closure eta t t') \/
-             (?u'. (v = t @@ u') /\ compat_closure eta u u'))``,
+             (?u'. (v = t @@ u') /\ compat_closure eta u u'))
+Proof
   REPEAT CONJ_TAC THEN
   SIMP_TAC (srw_ss()) [SimpLHS, Once compat_closure_cases] THEN
   SIMP_TAC (srw_ss()) [no_eta_thm, EQ_IMP_THM, DISJ_IMP_THM,
                        GSYM LEFT_FORALL_IMP_THM, RIGHT_AND_OVER_OR,
                        LEFT_AND_OVER_OR, FORALL_AND_THM,
-                       is_comb_APP_EXISTS, GSYM LEFT_EXISTS_AND_THM]);
+                       is_comb_APP_EXISTS, GSYM LEFT_EXISTS_AND_THM]
+QED
 
-val eta_substitutive = store_thm(
-  "eta_substitutive",
-  ``substitutive eta``,
+Theorem eta_substitutive:
+    substitutive eta
+Proof
   SRW_TAC [][substitutive_def, eta_def] THEN
   Q_TAC (NEW_TAC "z") `{v;v'} UNION FV M' UNION FV N` THEN
   `LAM v (M' @@ VAR v) = LAM z ([VAR z/v] (M' @@ VAR v))`
      by SRW_TAC [][SIMPLE_ALPHA] THEN
   ` _ = LAM z ([VAR z/v] M' @@ VAR z)` by SRW_TAC [][SUB_THM] THEN
   ASM_SIMP_TAC (srw_ss()) [SUB_THM, lemma14b] THEN
-  Q.EXISTS_TAC `z` THEN SRW_TAC [][FV_SUB]);
+  Q.EXISTS_TAC `z` THEN SRW_TAC [][FV_SUB]
+QED
 
-val cc_eta_subst = store_thm(
-  "cc_eta_subst",
-  ``!M N. compat_closure eta M N ==>
-          !P v. compat_closure eta ([P/v] M) ([P/v] N)``,
-  METIS_TAC [eta_substitutive, compat_closure_substitutive, substitutive_def]);
+Theorem cc_eta_subst:
+    !M N. compat_closure eta M N ==>
+          !P v. compat_closure eta ([P/v] M) ([P/v] N)
+Proof
+  METIS_TAC [eta_substitutive, compat_closure_substitutive, substitutive_def]
+QED
 
-val cc_eta_tpm = store_thm(
-  "cc_eta_tpm",
-  ``!M N. compat_closure eta M N ==>
-          compat_closure eta (tpm pi M) (tpm pi N)``,
+Theorem cc_eta_tpm:
+    !M N. compat_closure eta M N ==>
+          compat_closure eta (tpm pi M) (tpm pi N)
+Proof
   METIS_TAC [compat_closure_permutative, substitutive_implies_permutative,
-             eta_substitutive, permutative_def])
-val cc_eta_tpm_eqn = store_thm(
-  "cc_eta_tpm_eqn",
-  ``compat_closure eta (tpm pi M) N =
-    compat_closure eta M (tpm (REVERSE pi) N)``,
-  METIS_TAC [cc_eta_tpm, pmact_inverse]);
+             eta_substitutive, permutative_def]
+QED
+Theorem cc_eta_tpm_eqn:
+    compat_closure eta (tpm pi M) N =
+    compat_closure eta M (tpm (REVERSE pi) N)
+Proof
+  METIS_TAC [cc_eta_tpm, pmact_inverse]
+QED
 
-val eta_deterministic = store_thm(
-  "eta_deterministic",
-  ``!M N1 N2. eta M N1 /\ eta M N2 ==> (N1 = N2)``,
-  SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [eta_def, LAM_eq_thm, tpm_fresh]);
+Theorem eta_deterministic:
+    !M N1 N2. eta M N1 /\ eta M N2 ==> (N1 = N2)
+Proof
+  SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss) [eta_def, LAM_eq_thm, tpm_fresh]
+QED
 
-val cc_eta_FV_SUBSET = store_thm(
-  "cc_eta_FV_SUBSET",
-  ``!M N. compat_closure eta M N ==> FV N SUBSET FV M``,
+Theorem cc_eta_FV_SUBSET:
+    !M N. compat_closure eta M N ==> FV N SUBSET FV M
+Proof
   HO_MATCH_MP_TAC compat_closure_ind THEN
   SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
   Q_TAC SUFF_TAC `!M N. eta M N ==> !s. s IN FV N ==> s IN FV M` THEN1
         PROVE_TAC [] THEN
-  SIMP_TAC (srw_ss()) [eta_def, GSYM LEFT_FORALL_IMP_THM]);
+  SIMP_TAC (srw_ss()) [eta_def, GSYM LEFT_FORALL_IMP_THM]
+QED
 
-val cc_eta_LAM = store_thm(
-  "cc_eta_LAM",
-  ``!t v u. compat_closure eta (LAM v t) u <=>
+Theorem cc_eta_LAM:
+    !t v u. compat_closure eta (LAM v t) u <=>
             (?t'. (u = LAM v t') /\ compat_closure eta t t') \/
-            eta (LAM v t) u``,
+            eta (LAM v t) u
+Proof
   SIMP_TAC (srw_ss()) [Once compat_closure_cases, SimpLHS] THEN
   SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)[LAM_eq_thm, EQ_IMP_THM, tpm_eqr,
                                           cc_eta_tpm_eqn, pmact_flip_args] THEN
   REPEAT STRIP_TAC THEN DISJ1_TAC THEN
   Q_TAC SUFF_TAC `~(v' IN FV (tpm [(v,v')] y))` THEN1 SRW_TAC [][] THEN
-  METIS_TAC [cc_eta_FV_SUBSET, SUBSET_DEF]);
+  METIS_TAC [cc_eta_FV_SUBSET, SUBSET_DEF]
+QED
 
-val eta_LAM = store_thm(
-  "eta_LAM",
-  ``!v t u. eta (LAM v t) u <=> t = u @@ VAR v ∧ v ∉ FV u``,
+Theorem eta_LAM:
+    !v t u. eta (LAM v t) u <=> t = u @@ VAR v ∧ v ∉ FV u
+Proof
   SRW_TAC [][eta_def, LAM_eq_thm, EQ_IMP_THM] THEN SRW_TAC [][tpm_fresh] THEN
-  SRW_TAC [boolSimps.DNF_ss][]);
+  SRW_TAC [boolSimps.DNF_ss][]
+QED
 
 val CR_eta_lemma = prove(
   ``!M M1 M2. eta M M1 /\ compat_closure eta M M2 /\ ~(M1 = M2) ==>
@@ -1056,22 +1115,24 @@ val eta_diamond = prove(
     METIS_TAC [cc_eta_FV_SUBSET, SUBSET_DEF]
   ]);
 
-val eta_CR = store_thm(
-  "eta_CR",
-  ``CR eta``,
+Theorem eta_CR:
+    CR eta
+Proof
   Q_TAC SUFF_TAC `diamond_property (RC (compat_closure eta))` THEN1
         (SRW_TAC [][CR_def] THEN
          PROVE_TAC [TC_RC_EQNS, diamond_TC]) THEN
   SIMP_TAC (srw_ss()) [diamond_property_def, RC_DEF,
                        RIGHT_AND_OVER_OR, LEFT_AND_OVER_OR, EXISTS_OR_THM,
                        DISJ_IMP_THM, FORALL_AND_THM] THEN
-  PROVE_TAC [eta_diamond]);
+  PROVE_TAC [eta_diamond]
+QED
 
-val wonky_diamond_commutes = store_thm( (* Barendregt, lemma 3.3.6 *)
-  "wonky_diamond_commutes",
-  ``!R1 R2.
+(* Barendregt, lemma 3.3.6 *)
+Theorem wonky_diamond_commutes:
+    !R1 R2.
         (!x y z. R1 x y /\ R2 x z ==> ?w. RTC R1 z w /\ RC R2 y w) ==>
-        commute (RTC R1) (RTC R2)``,
+        commute (RTC R1) (RTC R2)
+Proof
   REPEAT STRIP_TAC THEN
   `!x y. RTC R1 x y ==> !z. R2 x z ==> ?w. RTC R1 z w /\ RTC R2 y w` by
       (HO_MATCH_MP_TAC RTC_STRONG_INDUCT THEN
@@ -1087,16 +1148,18 @@ val wonky_diamond_commutes = store_thm( (* Barendregt, lemma 3.3.6 *)
                                   ?w. RTC R2 z w /\ RTC R1 y w` THEN1
         (SRW_TAC [][commute_def] THEN PROVE_TAC []) THEN
   HO_MATCH_MP_TAC RTC_INDUCT THEN
-  PROVE_TAC [RTC_RULES, RTC_RTC]);
+  PROVE_TAC [RTC_RULES, RTC_RTC]
+QED
 
-val eta_cosubstitutive = store_thm(
-  "eta_cosubstitutive",
-  ``!P M N x. compat_closure eta M N ==> reduction eta ([M/x] P) ([N/x] P)``,
+Theorem eta_cosubstitutive:
+    !P M N x. compat_closure eta M N ==> reduction eta ([M/x] P) ([N/x] P)
+Proof
   REPEAT GEN_TAC THEN Q.ID_SPEC_TAC `P` THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN
   Q.EXISTS_TAC `x INSERT FV M UNION FV N` THEN
   SRW_TAC [][SUB_THM, SUB_VAR] THEN
-  PROVE_TAC [reduction_rules]);
+  PROVE_TAC [reduction_rules]
+QED
 
 val ccredex = prove(
   ``compat_closure beta (LAM v M @@ N) ([N/v]M)``,
@@ -1111,9 +1174,9 @@ val strong_ccbeta_gen_ind = save_thm(
      Q.INST [`P` |-> `\M N x. P M N x /\ compat_closure beta M N`])
     ccbeta_gen_ind)
 
-val eta_beta_commute = store_thm(
-  "eta_beta_commute",
-  ``commute (reduction eta) (reduction beta)``,
+Theorem eta_beta_commute:
+    commute (reduction eta) (reduction beta)
+Proof
   SIMP_TAC (srw_ss()) [] THEN
   MATCH_MP_TAC wonky_diamond_commutes THEN
   Q_TAC SUFF_TAC
@@ -1162,17 +1225,19 @@ val eta_beta_commute = store_thm(
         METIS_TAC [RC_DEF, reduction_rules]
       ]
     ]
-  ])
+  ]
+QED
 
-val beta_eta_CR = store_thm(
-  "beta_eta_CR",
-  ``CR (beta RUNION eta)``,
+Theorem beta_eta_CR:
+    CR (beta RUNION eta)
+Proof
   MATCH_MP_TAC (CONJUNCT2 hindley_rosen_lemma) THEN
-  PROVE_TAC [beta_CR, eta_CR, eta_beta_commute, commute_COMM]);
+  PROVE_TAC [beta_CR, eta_CR, eta_beta_commute, commute_COMM]
+QED
 
-val beta_eta_lameta = store_thm(
-  "beta_eta_lameta",
-  ``conversion (beta RUNION eta) = lameta``,
+Theorem beta_eta_lameta:
+    conversion (beta RUNION eta) = lameta
+Proof
   SIMP_TAC (srw_ss()) [FUN_EQ_THM, EQ_IMP_THM, FORALL_AND_THM] THEN
   CONJ_TAC THENL [
     SIMP_TAC (srw_ss()) [] THEN
@@ -1200,7 +1265,8 @@ val beta_eta_lameta = store_thm(
          (SRW_TAC [][eta_def, RUNION] THEN PROVE_TAC []) THEN
       PROVE_TAC [conversion_rules]
     ]
-  ]);
+  ]
+QED
 
 (* |- !M N.
         lameta M N ==> ?Z. reduction (beta RUNION eta) M Z /\
@@ -1209,9 +1275,9 @@ val beta_eta_lameta = store_thm(
 Theorem lameta_CR = REWRITE_RULE [beta_eta_lameta, beta_eta_CR]
                                  (Q.SPEC ‘beta RUNION eta’ theorem3_13)
 
-val beta_eta_normal_form_benf = store_thm(
-  "beta_eta_normal_form_benf",
-  ``normal_form (beta RUNION eta) = benf``,
+Theorem beta_eta_normal_form_benf:
+    normal_form (beta RUNION eta) = benf
+Proof
   SIMP_TAC (srw_ss()) [FUN_EQ_THM, EQ_IMP_THM, benf_def, FORALL_AND_THM,
                        normal_form_def] THEN CONJ_TAC
   THENL [
@@ -1248,11 +1314,12 @@ val beta_eta_normal_form_benf = store_thm(
     SIMP_TAC (srw_ss()) [bnf_thm, enf_thm, DISJ_IMP_THM, redex_def,
                          RUNION, GSYM LEFT_FORALL_IMP_THM,
                          beta_def, eta_def]
-  ]);
+  ]
+QED
 
-val lameta_consistent = store_thm(
-  "lameta_consistent",
-  ``consistent lameta``,
+Theorem lameta_consistent:
+    consistent lameta
+Proof
   SIMP_TAC (srw_ss()) [consistent_def, GSYM beta_eta_lameta] THEN
   MAP_EVERY Q.EXISTS_TAC [`S`, `K`] THEN STRIP_TAC THEN
   `?Z. reduction (beta RUNION eta) S Z /\ reduction (beta RUNION eta) K Z` by
@@ -1264,20 +1331,23 @@ val lameta_consistent = store_thm(
        SRW_TAC [][beta_eta_normal_form_benf, benf_def, bnf_thm, enf_thm,
                   K_def] THEN
   `S = K` by PROVE_TAC [corollary3_2_1] THEN
-  FULL_SIMP_TAC (srw_ss()) [S_def, K_def]);
+  FULL_SIMP_TAC (srw_ss()) [S_def, K_def]
+QED
 
-val is_comb_subst = store_thm(
-  "is_comb_subst",
-  ``!t u v. is_comb t ==> is_comb ([u/v]t)``,
+Theorem is_comb_subst:
+    !t u v. is_comb t ==> is_comb ([u/v]t)
+Proof
   SIMP_TAC (srw_ss()) [SUB_THM, is_comb_APP_EXISTS,
-                       GSYM LEFT_FORALL_IMP_THM]);
+                       GSYM LEFT_FORALL_IMP_THM]
+QED
 
-val rator_isub_commutes = store_thm(
-  "rator_isub_commutes",
-  ``!R t. is_comb t ==> (rator (t ISUB R) = rator t ISUB R)``,
+Theorem rator_isub_commutes:
+    !R t. is_comb t ==> (rator (t ISUB R) = rator t ISUB R)
+Proof
   Induct THEN
   ASM_SIMP_TAC (srw_ss()) [ISUB_def, pairTheory.FORALL_PROD,
-                           rator_subst_commutes, is_comb_subst]);
+                           rator_subst_commutes, is_comb_subst]
+QED
 
 (* ----------------------------------------------------------------------
     Reordering β and η steps
@@ -1591,9 +1661,9 @@ QED
 
 val RTC1_step = CONJUNCT2 (SPEC_ALL RTC_RULES)
 
-val betastar_LAM = store_thm(
-  "betastar_LAM",
-  ``!M N. LAM x M -b->* LAM x N  <=>  M -b->* N``,
+Theorem betastar_LAM:
+    !M N. LAM x M -b->* LAM x N  <=>  M -b->* N
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, FORALL_AND_THM] THEN CONJ_TAC THENL [
     Q_TAC SUFF_TAC `!M N. M -b->* N ==>
                           !v M0 N0. (M = LAM v M0) /\ (N = LAM v N0) ==>
@@ -1605,40 +1675,47 @@ val betastar_LAM = store_thm(
     HO_MATCH_MP_TAC RTC_INDUCT THEN
     SRW_TAC [][] THEN
     METIS_TAC [compat_closure_rules, RTC_RULES]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["betastar_LAM"]
 
-val betastar_LAM_I = store_thm(
-  "betastar_LAM_I",
-  ``!v M N. M -b->* N ==> LAM v M -b->* LAM v N``,
-  METIS_TAC [betastar_LAM]);
+Theorem betastar_LAM_I:
+    !v M N. M -b->* N ==> LAM v M -b->* LAM v N
+Proof
+  METIS_TAC [betastar_LAM]
+QED
 
-val betastar_APPr = store_thm(
-  "betastar_APPr",
-  ``!M N. M -b->* N ==> P @@ M -b->* P @@ N``,
+Theorem betastar_APPr:
+    !M N. M -b->* N ==> P @@ M -b->* P @@ N
+Proof
   HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
-  METIS_TAC [RTC1_step, compat_closure_rules]);
+  METIS_TAC [RTC1_step, compat_closure_rules]
+QED
 
-val betastar_APPl = store_thm(
-  "betastar_APPl",
-  ``!M N. M -b->* N ==> M @@ P -b->* N @@ P``,
+Theorem betastar_APPl:
+    !M N. M -b->* N ==> M @@ P -b->* N @@ P
+Proof
   HO_MATCH_MP_TAC RTC_INDUCT THEN SRW_TAC [][] THEN
-  METIS_TAC [RTC1_step, compat_closure_rules]);
+  METIS_TAC [RTC1_step, compat_closure_rules]
+QED
 
-val betastar_APPlr = store_thm(
-  "betastar_APPlr",
-  ``M -b->* M' ==> N -b->* N' ==> M @@ N -b->* M' @@ N'``,
-  METIS_TAC [RTC_CASES_RTC_TWICE, betastar_APPl, betastar_APPr]);
+Theorem betastar_APPlr:
+    M -b->* M' ==> N -b->* N' ==> M @@ N -b->* M' @@ N'
+Proof
+  METIS_TAC [RTC_CASES_RTC_TWICE, betastar_APPl, betastar_APPr]
+QED
 
-val beta_betastar = store_thm(
-  "beta_betastar",
-  ``LAM v M @@ N -b->* [N/v]M``,
-  SRW_TAC [][ccbeta_rwt, RTC_SINGLE]);
+Theorem beta_betastar:
+    LAM v M @@ N -b->* [N/v]M
+Proof
+  SRW_TAC [][ccbeta_rwt, RTC_SINGLE]
+QED
 
-val betastar_eq_cong = store_thm(
-  "betastar_eq_cong",
-  ``bnf N ==> M -b->* M' ==> (M -b->* N  <=> M' -b->* N)``,
-  METIS_TAC [bnf_triangle, RTC_CASES_RTC_TWICE]);
+Theorem betastar_eq_cong:
+    bnf N ==> M -b->* M' ==> (M -b->* N  <=> M' -b->* N)
+Proof
+  METIS_TAC [bnf_triangle, RTC_CASES_RTC_TWICE]
+QED
 
 (* |- !x y z. x -b->* y /\ y -b->* z ==> x -b->* z *)
 Theorem betastar_TRANS =

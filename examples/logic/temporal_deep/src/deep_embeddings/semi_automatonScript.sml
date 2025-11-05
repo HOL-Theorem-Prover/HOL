@@ -37,13 +37,13 @@ val _ = ParseExtras.temp_loose_equality()
 (* representation of non deterministic semi automata, that use               *)
 (* the powerset of a set of propositional varibales as inputs                *)
 (*****************************************************************************)
-val semi_automaton_def =
- Hol_datatype
-  `semi_automaton =
+Datatype:
+   semi_automaton =
     <| S:  'state set;                         (*set of states *)
        I:  'input set;                         (*set of inputs *)
        S0: ('state # 'input set) set;          (*initial states*)
-       R:  ('state # 'input set # 'state # 'input set) set  (*transition relation*) |>`;
+       R:  ('state # 'input set # 'state # 'input set) set  (*transition relation*) |>
+End
 
 Theorem semi_automaton_REWRITES =
         LIST_CONJ (TypeBase.one_one_of “:(α,β) semi_automaton” ::
@@ -83,13 +83,12 @@ Definition IS_DET_TOTAL_SEMI_AUTOMATON_def:
 End
 
 
-val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
-  store_thm (
-    "IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS",
+Theorem IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS:
 
-    ``!A. (IS_DET_TOTAL_SEMI_AUTOMATON A /\
+      !A. (IS_DET_TOTAL_SEMI_AUTOMATON A /\
     IS_WELL_FORMED_SEMI_AUTOMATON A) ==>
-    (!i. ?!w. IS_RUN_THROUGH_SEMI_AUTOMATON A i w)``,
+    (!i. ?!w. IS_RUN_THROUGH_SEMI_AUTOMATON A i w)
+Proof
 
 
     SIMP_TAC std_ss [IS_RUN_THROUGH_SEMI_AUTOMATON_def,
@@ -157,7 +156,8 @@ val IS_DET_TOTAL_SEMI_AUTOMATON___UNIQUE_RUN_EXISTS =
         REPEAT STRIP_TAC THEN
         PROVE_TAC[]
       ]
-    ]);
+    ]
+QED
 
 
 
@@ -170,10 +170,8 @@ Definition SEMI_AUTOMATON_STATE_VAR_RENAMING_def:
                      (\(s1, i, s2, i'). (g s1, i, g s2, i') IN A.R))
 End
 
-val SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN =
-  store_thm (
-    "SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN",
-    ``(!A f g i w.
+Theorem SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN:
+      (!A f g i w.
           IS_WELL_FORMED_SEMI_AUTOMATON A /\ INJ f A.S UNIV /\
           (!s. s IN A.S ==> (g (f s) = s)) /\ (!n. w n IN A.S) ==>
           (IS_RUN_THROUGH_SEMI_AUTOMATON
@@ -186,7 +184,8 @@ val SEMI_AUTOMATON_STATE_VAR_RENAMING___RUN =
          (!n. w n IN IMAGE f A.S) ==>
          (IS_RUN_THROUGH_SEMI_AUTOMATON
             (SEMI_AUTOMATON_STATE_VAR_RENAMING A f g) i w =
-          IS_RUN_THROUGH_SEMI_AUTOMATON A i (PATH_MAP (\n. g) w)))``,
+          IS_RUN_THROUGH_SEMI_AUTOMATON A i (PATH_MAP (\n. g) w)))
+Proof
 
 
 SIMP_TAC std_ss [IS_RUN_THROUGH_SEMI_AUTOMATON_def,
@@ -201,7 +200,8 @@ SIMP_TAC std_ss [IS_RUN_THROUGH_SEMI_AUTOMATON_def,
           SIMP_TAC std_ss [IN_DEF])] THEN
 REPEAT STRIP_TAC THEN
 REPEAT BOOL_EQ_STRIP_TAC THEN
-METIS_TAC[FST, SND]);
+METIS_TAC[FST, SND]
+QED
 
 
 

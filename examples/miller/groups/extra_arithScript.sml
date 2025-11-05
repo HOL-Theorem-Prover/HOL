@@ -42,13 +42,14 @@ End
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val PRIME_SUBSET_GTNUM1 = store_thm
-  ("PRIME_SUBSET_GTNUM1",
-   ``!p. prime p ==> p IN gtnum 1``,
+Theorem PRIME_SUBSET_GTNUM1:
+     !p. prime p ==> p IN gtnum 1
+Proof
    S_TAC
    >> R_TAC [IN_GTNUM]
    >> Suff `~(p = 0) /\ ~(p = 1)` >- DECIDE_TAC
-   >> PROVE_TAC [NOT_PRIME_1, NOT_PRIME_0]);
+   >> PROVE_TAC [NOT_PRIME_1, NOT_PRIME_0]
+QED
 
 Theorem DIVIDES_ONE_UNIQUE = dividesTheory.DIVIDES_ONE
 
@@ -58,19 +59,21 @@ Proof
   simp[dividesTheory.compute_divides, EQ_IMP_THM, DISJ_IMP_THM]
 QED
 
-val DIVIDES_UPR = store_thm
-  ("DIVIDES_UPR",
-   ``!n a. divides n (n * a)``,
-   PROVE_TAC [DIVIDES_MULT, DIVIDES_REFL]);
+Theorem DIVIDES_UPR:
+     !n a. divides n (n * a)
+Proof
+   PROVE_TAC [DIVIDES_MULT, DIVIDES_REFL]
+QED
 
-val DIVIDES_UPL = store_thm
-  ("DIVIDES_UPL",
-   ``!n a. divides n (a * n)``,
-   PROVE_TAC [DIVIDES_UPR, MULT_COMM]);
+Theorem DIVIDES_UPL:
+     !n a. divides n (a * n)
+Proof
+   PROVE_TAC [DIVIDES_UPR, MULT_COMM]
+QED
 
-val DIVIDES_CANCEL = store_thm
-  ("DIVIDES_CANCEL",
-   ``!p a b. 0 < p ==> (divides (p * a) (p * b) = divides a b)``,
+Theorem DIVIDES_CANCEL:
+     !p a b. 0 < p ==> (divides (p * a) (p * b) = divides a b)
+Proof
    S_TAC
    >> EQ_TAC >|
    [R_TAC [divides_def]
@@ -81,30 +84,33 @@ val DIVIDES_CANCEL = store_thm
     R_TAC [divides_def]
     >> S_TAC
     >> Q.EXISTS_TAC `q`
-    >> PROVE_TAC [MULT_COMM, MULT_ASSOC]]);
+    >> PROVE_TAC [MULT_COMM, MULT_ASSOC]]
+QED
 
-val DIVIDES_SUB = store_thm
-  ("DIVIDES_SUB",
-   ``!n a b. divides n a /\ divides n b ==> divides n (a - b)``,
+Theorem DIVIDES_SUB:
+     !n a b. divides n a /\ divides n b ==> divides n (a - b)
+Proof
    R_TAC [divides_def]
    >> S_TAC
    >> Q.EXISTS_TAC `q - q'`
-   >> AR_TAC [RIGHT_SUB_DISTRIB]);
+   >> AR_TAC [RIGHT_SUB_DISTRIB]
+QED
 
-val DIFF_EXISTS = store_thm
-  ("DIFF_EXISTS",
-   ``!x:num y. ?c. (y = x + c) \/ (x = y + c)``,
+Theorem DIFF_EXISTS:
+     !x:num y. ?c. (y = x + c) \/ (x = y + c)
+Proof
    S_TAC
    >> (Know `y <= x \/ x <= y` >- DECIDE_TAC)
    >> S_TAC >|
    [Q.EXISTS_TAC `x - y`
     >> DECIDE_TAC,
     Q.EXISTS_TAC `y - x`
-    >> DECIDE_TAC]);
+    >> DECIDE_TAC]
+QED
 
-val GCD_SUBTYPE = store_thm
-  ("GCD_SUBTYPE",
-   ``gcd IN ((gtnum 0 -> UNIV -> gtnum 0) INTER (UNIV -> gtnum 0 -> gtnum 0))``,
+Theorem GCD_SUBTYPE:
+     gcd IN ((gtnum 0 -> UNIV -> gtnum 0) INTER (UNIV -> gtnum 0 -> gtnum 0))
+Proof
    R_TAC [IN_FUNSET, IN_GTNUM, IN_UNIV, IN_INTER]
    >> S_TAC >|
    [Suff `~(gcd x' x = 0)` >- DECIDE_TAC
@@ -112,7 +118,8 @@ val GCD_SUBTYPE = store_thm
     >> R_TAC [GCD_EQ_0],
     Suff `~(gcd x' x = 0)` >- DECIDE_TAC
     >> Know `~(x = 0)` >- DECIDE_TAC
-    >> R_TAC [GCD_EQ_0]]);
+    >> R_TAC [GCD_EQ_0]]
+QED
 
 (* Consolidate theorems so far in a simplification context *)
 
@@ -146,20 +153,21 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS arith1_c;
 (* back to proving *)
 val NOT_LT_DIV = dividesTheory.NOT_LT_DIVIDES
 
-val PRIME_2 = store_thm
-  ("PRIME_2",
-   ``prime 2``,
+Theorem PRIME_2:
+     prime 2
+Proof
    R_TAC [prime_def]
    >> S_TAC
    >> Cases_on `2 < b`
    >- (Know `0:num < 2` >- DECIDE_TAC
        >> PROVE_TAC [NOT_LT_DIV])
    >> Cases_on `b = 0` >- AR_TAC [divides_def]
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val EXISTS_PRIME_DIVISOR = store_thm
-  ("EXISTS_PRIME_DIVISOR",
-   ``!n. ~(n = 1) = ?p. prime p /\ divides p n``,
+Theorem EXISTS_PRIME_DIVISOR:
+     !n. ~(n = 1) = ?p. prime p /\ divides p n
+Proof
    S_TAC
    >> REVERSE EQ_TAC >- (S_TAC >> AR_TAC [NOT_PRIME_1])
    >> Cases_on `n = 0` >- (R_TAC [] >> ho_PROVE_TAC [PRIME_2])
@@ -176,11 +184,12 @@ val EXISTS_PRIME_DIVISOR = store_thm
        >> PROVE_TAC [NOT_LT_DIV])
    >> S_TAC
    >> RES_TAC
-   >> PROVE_TAC [DIVIDES_TRANS]);
+   >> PROVE_TAC [DIVIDES_TRANS]
+QED
 
-val DIVIDES_GCD = store_thm
-  ("DIVIDES_GCD",
-   ``!p a b. divides p (gcd a b) = divides p a /\ divides p b``,
+Theorem DIVIDES_GCD:
+     !p a b. divides p (gcd a b) = divides p a /\ divides p b
+Proof
    S_TAC
    >> EQ_TAC >|
    [Suff `!p a b g. divides p g /\ is_gcd a b g ==> divides p a`
@@ -191,22 +200,25 @@ val DIVIDES_GCD = store_thm
     S_TAC
     >> Suff `!g. is_gcd a b g ==> divides p g` >- PROVE_TAC [GCD_IS_GCD]
     >> R_TAC [is_gcd_def]
-    >> PROVE_TAC []]);
+    >> PROVE_TAC []]
+QED
 
-val GCD_1R = store_thm
-  ("GCD_1R",
-   ``!n. gcd n 1 = 1``,
+Theorem GCD_1R:
+     !n. gcd n 1 = 1
+Proof
    Suff `!n g. is_gcd n 1 g ==> (g = 1)` >- PROVE_TAC [GCD_IS_GCD]
-   >> R_TAC [is_gcd_def]);
+   >> R_TAC [is_gcd_def]
+QED
 
-val GCD_1L = store_thm
-  ("GCD_1L",
-   ``!n. gcd 1 n = 1``,
-   PROVE_TAC [GCD_1R, GCD_SYM]);
+Theorem GCD_1L:
+     !n. gcd 1 n = 1
+Proof
+   PROVE_TAC [GCD_1R, GCD_SYM]
+QED
 
-val GCD_1_MULTR = store_thm
-  ("GCD_1_MULTR",
-   ``!n a b. (gcd n (a * b) = 1) = (gcd n a = 1) /\ (gcd n b = 1)``,
+Theorem GCD_1_MULTR:
+     !n a b. (gcd n (a * b) = 1) = (gcd n a = 1) /\ (gcd n b = 1)
+Proof
    S_TAC
    >> EQ_TAC >|
    [Q.SPEC_TAC (`a`, `a`)
@@ -236,18 +248,20 @@ val GCD_1_MULTR = store_thm
      >> AR_TAC [NOT_PRIME_1],
      Know `divides x (gcd n b)` >- PROVE_TAC [DIVIDES_GCD]
      >> S_TAC
-     >> AR_TAC [NOT_PRIME_1]]]);
+     >> AR_TAC [NOT_PRIME_1]]]
+QED
 
-val GCD_1_MULTL = store_thm
-  ("GCD_1_MULTL",
-   ``!n a b. (gcd (a * b) n = 1) = (gcd a n = 1) /\ (gcd b n = 1)``,
-   PROVE_TAC [GCD_1_MULTR, GCD_SYM]);
+Theorem GCD_1_MULTL:
+     !n a b. (gcd (a * b) n = 1) = (gcd a n = 1) /\ (gcd b n = 1)
+Proof
+   PROVE_TAC [GCD_1_MULTR, GCD_SYM]
+QED
 
-val SUC_MOD = store_thm
-  ("SUC_MOD",
-   ``!m n.
+Theorem SUC_MOD:
+     !m n.
        0 < n ==>
-       (SUC m MOD n = if divides n (SUC m) then 0 else SUC (m MOD n))``,
+       (SUC m MOD n = if divides n (SUC m) then 0 else SUC (m MOD n))
+Proof
    S_TAC
    >> MATCH_MP_TAC MOD_UNIQUE
    >> Cases_on `divides n (SUC m)` >- AR_TAC [divides_def]
@@ -266,11 +280,12 @@ val SUC_MOD = store_thm
    >> R_TAC [divides_def]
    >> Q.EXISTS_TAC `SUC (m DIV SUC n')`
    >> R_TAC [MULT, ADD_CLAUSES]
-   >> PROVE_TAC [Q.SPEC `SUC n'` DIVISION_ALT]);
+   >> PROVE_TAC [Q.SPEC `SUC n'` DIVISION_ALT]
+QED
 
-val DIVIDES_ALT = store_thm
-  ("DIVIDES_ALT",
-   ``!a b. 0 < a ==> (divides a b = ((b DIV a) * a = b))``,
+Theorem DIVIDES_ALT:
+     !a b. 0 < a ==> (divides a b = ((b DIV a) * a = b))
+Proof
    S_TAC
    >> R_TAC [divides_def]
    >> REVERSE EQ_TAC >- PROVE_TAC []
@@ -278,13 +293,14 @@ val DIVIDES_ALT = store_thm
    >> Suff `b DIV a = q` >- R_TAC []
    >> MATCH_MP_TAC DIV_UNIQUE
    >> Q.EXISTS_TAC `0`
-   >> R_TAC []);
+   >> R_TAC []
+QED
 
-val SUC_DIV = store_thm
-  ("SUC_DIV",
-   ``!n m.
+Theorem SUC_DIV:
+     !n m.
        0 < n ==>
-       (SUC m DIV n = if divides n (SUC m) then SUC (m DIV n) else m DIV n)``,
+       (SUC m DIV n = if divides n (SUC m) then SUC (m DIV n) else m DIV n)
+Proof
    S_TAC
    >> MATCH_MP_TAC DIV_UNIQUE
    >> Q.EXISTS_TAC `SUC m MOD n`
@@ -304,35 +320,39 @@ val SUC_DIV = store_thm
        >> KILL_TAC
        >> R_TAC []
        >> DECIDE_TAC)
-   >> R_TAC [MULT_CLAUSES]);
+   >> R_TAC [MULT_CLAUSES]
+QED
 
-val GCD_1_PRIMEL = store_thm
-  ("GCD_1_PRIMEL",
-   ``!p b. prime p ==> ((gcd p b = 1) = ~divides p b)``,
+Theorem GCD_1_PRIMEL:
+     !p b. prime p ==> ((gcd p b = 1) = ~divides p b)
+Proof
    S_TAC
    >> REVERSE EQ_TAC >- ho_PROVE_TAC [PRIME_GCD]
    >> S_TAC
    >> Suff `divides p 1` >- PROVE_TAC [DIVIDES_ONE_UNIQUE, NOT_PRIME_1]
    >> Suff `divides p (gcd p b)` >- R_TAC []
-   >> R_TAC [DIVIDES_GCD]);
+   >> R_TAC [DIVIDES_GCD]
+QED
 
-val GCD_1_PRIMER = store_thm
-  ("GCD_1_PRIMER",
-   ``!p b. prime p ==> ((gcd b p = 1) = ~divides p b)``,
-   PROVE_TAC [GCD_1_PRIMEL, GCD_SYM]);
+Theorem GCD_1_PRIMER:
+     !p b. prime p ==> ((gcd b p = 1) = ~divides p b)
+Proof
+   PROVE_TAC [GCD_1_PRIMEL, GCD_SYM]
+QED
 
-val DIVIDES_PRIME = store_thm
-  ("DIVIDES_PRIME",
-   ``!p n. prime p ==> (divides n p = (n = 1) \/ (n = p))``,
+Theorem DIVIDES_PRIME:
+     !p n. prime p ==> (divides n p = (n = 1) \/ (n = p))
+Proof
    R_TAC [prime_def]
    >> S_TAC
    >> EQ_TAC >- PROVE_TAC []
    >> S_TAC
-   >> R_TAC []);
+   >> R_TAC []
+QED
 
-val DIVIDES_PRIME_POWER = store_thm
-  ("DIVIDES_PRIME_POWER",
-   ``!p n r. prime p ==> (divides n (p EXP r) = ?s. s <= r /\ (n = p EXP s))``,
+Theorem DIVIDES_PRIME_POWER:
+     !p n r. prime p ==> (divides n (p EXP r) = ?s. s <= r /\ (n = p EXP s))
+Proof
    S_TAC
    >> Q.SPEC_TAC (`n`, `n`)
    >> Induct_on `r` >- (R_TAC [EXP] >> ho_PROVE_TAC [])
@@ -360,22 +380,25 @@ val DIVIDES_PRIME_POWER = store_thm
     >> AR_TAC []
     >> S_TAC
     >> Q.EXISTS_TAC `SUC s`
-    >> R_TAC [EXP]]);
+    >> R_TAC [EXP]]
+QED
 
-val PRIME_DIVIDES_PRIME = store_thm
-  ("PRIME_DIVIDES_PRIME",
-   ``!p q. prime p /\ prime q ==> (divides p q = (p = q))``,
-   R_TAC [DIVIDES_PRIME]);
+Theorem PRIME_DIVIDES_PRIME:
+     !p q. prime p /\ prime q ==> (divides p q = (p = q))
+Proof
+   R_TAC [DIVIDES_PRIME]
+QED
 
-val EUCLID = store_thm
-  ("EUCLID",
-   ``!p a b. prime p ==> (divides p (a * b) = divides p a \/ divides p b)``,
-   PROVE_TAC [P_EUCLIDES, MULT_COMM, DIVIDES_MULT]);
+Theorem EUCLID:
+     !p a b. prime p ==> (divides p (a * b) = divides p a \/ divides p b)
+Proof
+   PROVE_TAC [P_EUCLIDES, MULT_COMM, DIVIDES_MULT]
+QED
 
-val PRIME_DIVIDES_PRIME_POWER = store_thm
-  ("PRIME_DIVIDES_PRIME_POWER",
-   ``!p q a.
-       prime p /\ prime q /\ 0 < a ==> (divides p (q EXP a) = (p = q))``,
+Theorem PRIME_DIVIDES_PRIME_POWER:
+     !p q a.
+       prime p /\ prime q /\ 0 < a ==> (divides p (q EXP a) = (p = q))
+Proof
    S_TAC
    >> R_TAC [DIVIDES_PRIME_POWER]
    >> Cases_on `p = q`
@@ -386,11 +409,12 @@ val PRIME_DIVIDES_PRIME_POWER = store_thm
    >> R_TAC []
    >> Suff `!x. ~divides p (q EXP x)` >- ho_PROVE_TAC [DIVIDES_REFL]
    >> Induct >- R_TAC []
-   >> R_TAC [EXP, EUCLID, PRIME_DIVIDES_PRIME]);
+   >> R_TAC [EXP, EUCLID, PRIME_DIVIDES_PRIME]
+QED
 
-val GCD_1_PRIME_POWERL = store_thm
-  ("GCD_1_PRIME_POWERL",
-   ``!p n a. prime p /\ 0 < a ==> ((gcd (p EXP a) n = 1) = ~divides p n)``,
+Theorem GCD_1_PRIME_POWERL:
+     !p n a. prime p /\ 0 < a ==> ((gcd (p EXP a) n = 1) = ~divides p n)
+Proof
    S_TAC
    >> EQ_TAC >|
    [S_TAC
@@ -403,22 +427,24 @@ val GCD_1_PRIME_POWERL = store_thm
     S_TAC
     >> Suff `!q. prime q ==> ~divides q (gcd (p EXP a) n)`
     >- PROVE_TAC [EXISTS_PRIME_DIVISOR]
-    >> R_TAC [DIVIDES_GCD, PRIME_DIVIDES_PRIME_POWER]]);
+    >> R_TAC [DIVIDES_GCD, PRIME_DIVIDES_PRIME_POWER]]
+QED
 
-val GCD_1_PRIME_POWERR = store_thm
-  ("GCD_1_PRIME_POWERR",
-   ``!p n a. prime p /\ 0 < a ==> ((gcd n (p EXP a) = 1) = ~divides p n)``,
+Theorem GCD_1_PRIME_POWERR:
+     !p n a. prime p /\ 0 < a ==> ((gcd n (p EXP a) = 1) = ~divides p n)
+Proof
    S_TAC
    >> MP_TAC (Q.SPECL [`p`, `n`, `a`] GCD_1_PRIME_POWERL)
-   >> PROVE_TAC [GCD_SYM]);
+   >> PROVE_TAC [GCD_SYM]
+QED
 
-val FACTOR_INDUCT = store_thm
-  ("FACTOR_INDUCT",
-   ``!prop.
+Theorem FACTOR_INDUCT:
+     !prop.
         prop 0 /\
         prop 1 /\
         (!n p. prime p /\ prop n ==> prop (p * n)) ==>
-        !n. prop n``,
+        !n. prop n
+Proof
    S_TAC
    >> completeInduct_on `n`
    >> Cases_on `n = 0` >- (Q.PAT_X_ASSUM `!n p. P n p` K_TAC >> R_TAC [])
@@ -439,17 +465,18 @@ val FACTOR_INDUCT = store_thm
    >> Q.PAT_X_ASSUM `!m. P m` MATCH_MP_TAC
    >> MATCH_MP_TAC DIV_LESS
    >> Know `~(p = 0) /\ ~(p = 1)` >- PROVE_TAC [NOT_PRIME_0, NOT_PRIME_1]
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val FACTOR_INDUCT_DIV = store_thm
-  ("FACTOR_INDUCT_DIV",
-   ``!prop.
+Theorem FACTOR_INDUCT_DIV:
+     !prop.
         prop 0 /\
         prop 1 /\
         (!n p.
            prime p /\ divides p n /\ prop (n DIV p) /\ ~(n DIV p = 0) ==>
            prop n) ==>
-        !n. prop n``,
+        !n. prop n
+Proof
    S_TAC
    >> completeInduct_on `n`
    >> Cases_on `n = 0` >- (Q.PAT_X_ASSUM `!n p. P n p` K_TAC >> R_TAC [])
@@ -468,11 +495,12 @@ val FACTOR_INDUCT_DIV = store_thm
     >> DECIDE_TAC,
     MP_TAC (Q.SPECL [`p`, `n`] NOT_LT_DIV)
     >> ASM_REWRITE_TAC [DE_MORGAN_THM]
-    >> DECIDE_TAC]);
+    >> DECIDE_TAC]
+QED
 
-val PRIME_EXP = store_thm
-  ("PRIME_EXP",
-   ``!m n. prime (m EXP n) = prime m /\ (n = 1)``,
+Theorem PRIME_EXP:
+     !m n. prime (m EXP n) = prime m /\ (n = 1)
+Proof
    S_TAC
    >> Cases_on `n` >- R_TAC [NOT_PRIME_1]
    >> Cases_on `n'` >- R_TAC []
@@ -486,7 +514,8 @@ val PRIME_EXP = store_thm
    >> R_TAC [divides_def]
    >> CONJ_TAC >- ho_PROVE_TAC []
    >> Suff `~(m * 1 = m * (m * m EXP n))` >- RW_TAC std_ss [MULT_CLAUSES]
-   >> R_TAC []);
+   >> R_TAC []
+QED
 
 (* Consolidate theorems so far in a simplification context *)
 
@@ -513,21 +542,22 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS arith2_c;
 
 (* back to proving *)
 
-val DIVIDES_PRIME_MOD = store_thm
-  ("DIVIDES_PRIME_MOD",
-   ``!a p. prime p ==> (divides p (a MOD p) = divides p a)``,
+Theorem DIVIDES_PRIME_MOD:
+     !a p. prime p ==> (divides p (a MOD p) = divides p a)
+Proof
    S_TAC
    >> Suff `(gcd p (a MOD p) = 1) = (gcd p a = 1)`
    >- R_TAC [GCD_1_PRIMEL]
    >> CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [GCD_EFFICIENTLY]))
    >> R_TAC []
-   >> PROVE_TAC [GCD_SYM]);
+   >> PROVE_TAC [GCD_SYM]
+QED
 
-val DIVIDES_DIV = store_thm
-  ("DIVIDES_DIV",
-   ``!a m n.
+Theorem DIVIDES_DIV:
+     !a m n.
        0 < a /\ divides a m /\ divides a n ==>
-       (divides (m DIV a) (n DIV a) = divides m n)``,
+       (divides (m DIV a) (n DIV a) = divides m n)
+Proof
    R_TAC [DIVIDES_ALT]
    >> R_TAC [divides_def]
    >> S_TAC
@@ -540,11 +570,12 @@ val DIVIDES_DIV = store_thm
    >> Cases_on `a` >- AR_TAC []
    >> Suff `n DIV SUC n' * SUC n' = (q * (m DIV SUC n')) * SUC n'`
    >- R_TAC [MULT_SUC_EQ]
-   >> PROVE_TAC [MULT_COMM, MULT_ASSOC]);
+   >> PROVE_TAC [MULT_COMM, MULT_ASSOC]
+QED
 
-val GCD_1_DIVL = store_thm
-  ("GCD_1_DIVL",
-   ``!a m n. 0 < a /\ divides a m /\ (gcd m n = 1) ==> (gcd (m DIV a) n = 1)``,
+Theorem GCD_1_DIVL:
+     !a m n. 0 < a /\ divides a m /\ (gcd m n = 1) ==> (gcd (m DIV a) n = 1)
+Proof
    S_TAC
    >> Suff `!p. prime p ==> ~divides p (gcd (m DIV a) n)`
    >- PROVE_TAC [EXISTS_PRIME_DIVISOR]
@@ -557,28 +588,32 @@ val GCD_1_DIVL = store_thm
    >> POP_ASSUM K_TAC
    >> S_TAC
    >> Know `divides p (gcd m n)` >- R_TAC [DIVIDES_GCD]
-   >> R_TAC []);
+   >> R_TAC []
+QED
 
-val GCD_1_DIVR = store_thm
-  ("GCD_1_DIVR",
-   ``!a m n. 0 < a /\ divides a n /\ (gcd m n = 1) ==> (gcd m (n DIV a) = 1)``,
-   PROVE_TAC [GCD_1_DIVL, GCD_SYM]);
+Theorem GCD_1_DIVR:
+     !a m n. 0 < a /\ divides a n /\ (gcd m n = 1) ==> (gcd m (n DIV a) = 1)
+Proof
+   PROVE_TAC [GCD_1_DIVL, GCD_SYM]
+QED
 
-val DIVIDES_MULTR = store_thm
-  ("DIVIDES_MULTR",
-   ``!a b c. divides a b ==> divides a (b * c)``,
-   PROVE_TAC [DIVIDES_MULT]);
+Theorem DIVIDES_MULTR:
+     !a b c. divides a b ==> divides a (b * c)
+Proof
+   PROVE_TAC [DIVIDES_MULT]
+QED
 
-val DIVIDES_MULTL = store_thm
-  ("DIVIDES_MULTL",
-   ``!a b c. divides a b ==> divides a (c * b)``,
-   PROVE_TAC [DIVIDES_MULTR, MULT_COMM]);
+Theorem DIVIDES_MULTL:
+     !a b c. divides a b ==> divides a (c * b)
+Proof
+   PROVE_TAC [DIVIDES_MULTR, MULT_COMM]
+QED
 
-val DIVIDES_MULT_PRIME = store_thm
-  ("DIVIDES_MULT_PRIME",
-   ``!p a n.
+Theorem DIVIDES_MULT_PRIME:
+     !p a n.
        prime p /\ divides a n /\ divides p n /\ ~divides p a ==>
-       divides (p * a) n``,
+       divides (p * a) n
+Proof
    S_TAC
    >> Q.PAT_X_ASSUM `divides a n` MP_TAC
    >> R_TAC [divides_def]
@@ -591,25 +626,27 @@ val DIVIDES_MULT_PRIME = store_thm
    >> POP_ASSUM (ASSUME_TAC o SYM)
    >> Q.EXISTS_TAC `q'`
    >> Suff `n = q' * p * a` >- PROVE_TAC [MULT_COMM, MULT_ASSOC]
-   >> ASM_REWRITE_TAC []);
+   >> ASM_REWRITE_TAC []
+QED
 
-val DIVIDES_DIV_PRIME = store_thm
-  ("DIVIDES_DIV_PRIME",
-   ``!p a n.
+Theorem DIVIDES_DIV_PRIME:
+     !p a n.
        prime p /\ divides a n /\ divides p n /\ ~divides p a ==>
-       divides a (n DIV p)``,
+       divides a (n DIV p)
+Proof
    S_TAC
    >> Suff `divides (a * p DIV p) (n DIV p)`
    >- (Suff `0 < p` >- PROVE_TAC [MULT_DIV]
        >> Suff `~(p = 0)` >- DECIDE_TAC
        >> PROVE_TAC [NOT_PRIME_0])
    >> R_TAC [DIVIDES_DIV, DIVIDES_MULT]
-   >> PROVE_TAC [DIVIDES_MULT_PRIME, MULT_COMM]);
+   >> PROVE_TAC [DIVIDES_MULT_PRIME, MULT_COMM]
+QED
 
-val GCD_1_LCM = store_thm
-  ("GCD_1_LCM",
-   ``!n a b.
-       (gcd a b = 1) ==> (divides (a * b) n = divides a n /\ divides b n)``,
+Theorem GCD_1_LCM:
+     !n a b.
+       (gcd a b = 1) ==> (divides (a * b) n = divides a n /\ divides b n)
+Proof
    S_TAC
    >> EQ_TAC
    >- (R_TAC [divides_def]
@@ -644,11 +681,12 @@ val GCD_1_LCM = store_thm
     Suff `divides (a * b) n` >- PROVE_TAC [DIVIDES_MULTL]
     >> Q.PAT_X_ASSUM `!a. P a` MATCH_MP_TAC
     >> AR_TAC [GSYM GCD_1_PRIMEL]
-    >> PROVE_TAC [L_EUCLIDES]]);
+    >> PROVE_TAC [L_EUCLIDES]]
+QED
 
-val GCD_IS_GCD_UNIQUE = store_thm
-  ("GCD_IS_GCD_UNIQUE",
-   ``!a b g. is_gcd a b g = (g = gcd a b)``,
+Theorem GCD_IS_GCD_UNIQUE:
+     !a b g. is_gcd a b g = (g = gcd a b)
+Proof
    S_TAC
    >> REVERSE EQ_TAC >- R_TAC [GCD_IS_GCD]
    >> S_TAC
@@ -656,11 +694,12 @@ val GCD_IS_GCD_UNIQUE = store_thm
    >> Q.SPEC_TAC (`gcd a b`, `h`)
    >> S_TAC
    >> AR_TAC [is_gcd_def]
-   >> PROVE_TAC [DIVIDES_ANTISYM]);
+   >> PROVE_TAC [DIVIDES_ANTISYM]
+QED
 
-val GCD_MULT = store_thm
-  ("GCD_MULT",
-   ``!p a b. gcd (p * a) (p * b) = p * gcd a b``,
+Theorem GCD_MULT:
+     !p a b. gcd (p * a) (p * b) = p * gcd a b
+Proof
    HO_MATCH_MP_TAC FACTOR_INDUCT
    >> CONJ_TAC >- R_TAC []
    >> CONJ_TAC >- R_TAC []
@@ -701,42 +740,48 @@ val GCD_MULT = store_thm
      >> Know `divides d b` >- PROVE_TAC [L_EUCLIDES]
      >> S_TAC
      >> RES_TAC
-     >> PROVE_TAC [DIVIDES_MULTL]]]);
+     >> PROVE_TAC [DIVIDES_MULTL]]]
+QED
 
-val DIV_DIVIDES = store_thm
-  ("DIV_DIVIDES",
-   ``!a b c. 0 < a /\ divides a b ==> ((c * b) DIV a = c * (b DIV a))``,
+Theorem DIV_DIVIDES:
+     !a b c. 0 < a /\ divides a b ==> ((c * b) DIV a = c * (b DIV a))
+Proof
    R_TAC [divides_def]
    >> S_TAC
    >> ASM_REWRITE_TAC [MULT_ASSOC]
-   >> AR_TAC [MULT_DIV]);
+   >> AR_TAC [MULT_DIV]
+QED
 
-val GCD_DIVIDESL = store_thm
-  ("GCD_DIVIDESL",
-   ``!a b. divides (gcd a b) a``,
-   PROVE_TAC [GCD_IS_GCD_UNIQUE, is_gcd_def]);
+Theorem GCD_DIVIDESL:
+     !a b. divides (gcd a b) a
+Proof
+   PROVE_TAC [GCD_IS_GCD_UNIQUE, is_gcd_def]
+QED
 
-val GCD_DIVIDESR = store_thm
-  ("GCD_DIVIDESR",
-   ``!a b. divides (gcd a b) b``,
-   PROVE_TAC [GCD_DIVIDESL, GCD_SYM]);
+Theorem GCD_DIVIDESR:
+     !a b. divides (gcd a b) b
+Proof
+   PROVE_TAC [GCD_DIVIDESL, GCD_SYM]
+QED
 
-val DIVIDES_DOWNR = store_thm
-  ("DIVIDES_DOWNR",
-   ``!a b c. divides (a * b) c ==> divides b c``,
+Theorem DIVIDES_DOWNR:
+     !a b c. divides (a * b) c ==> divides b c
+Proof
    R_TAC [divides_def]
    >> S_TAC
    >> Q.EXISTS_TAC `q * a`
-   >> R_TAC [GSYM MULT_ASSOC]);
+   >> R_TAC [GSYM MULT_ASSOC]
+QED
 
-val DIVIDES_DOWNL = store_thm
-  ("DIVIDES_DOWNL",
-   ``!a b c. divides (a * b) c ==> divides a c``,
-   PROVE_TAC [DIVIDES_DOWNR, MULT_COMM]);
+Theorem DIVIDES_DOWNL:
+     !a b c. divides (a * b) c ==> divides a c
+Proof
+   PROVE_TAC [DIVIDES_DOWNR, MULT_COMM]
+QED
 
-val LCM_IS_LCM = store_thm
-  ("LCM_IS_LCM",
-   ``!a b. is_lcm a b (lcm a b)``,
+Theorem LCM_IS_LCM:
+     !a b. is_lcm a b (lcm a b)
+Proof
    S_TAC
    >> R_TAC [is_lcm_def, lcm_def]
    >> Cases_on `(a = 0) /\ (b = 0)` >- R_TAC []
@@ -783,11 +828,12 @@ val LCM_IS_LCM = store_thm
    >> S_TAC
    >> Know `?n'. n = p * n'` >- PROVE_TAC [divides_def, MULT_COMM]
    >> S_TAC
-   >> AR_TAC [DIVIDES_CANCEL]);
+   >> AR_TAC [DIVIDES_CANCEL]
+QED
 
-val LCM_IS_LCM_UNIQUE = store_thm
-  ("LCM_IS_LCM_UNIQUE",
-   ``!l a b. is_lcm a b l = (l = lcm a b)``,
+Theorem LCM_IS_LCM_UNIQUE:
+     !l a b. is_lcm a b l = (l = lcm a b)
+Proof
    S_TAC
    >> REVERSE EQ_TAC >- R_TAC [LCM_IS_LCM]
    >> S_TAC
@@ -795,7 +841,8 @@ val LCM_IS_LCM_UNIQUE = store_thm
    >> Q.SPEC_TAC (`lcm a b`, `h`)
    >> S_TAC
    >> AR_TAC [is_lcm_def]
-   >> PROVE_TAC [DIVIDES_ANTISYM]);
+   >> PROVE_TAC [DIVIDES_ANTISYM]
+QED
 
 (* Consolidate theorems so far in a simplification context *)
 
@@ -816,18 +863,19 @@ val (R_TAC, AR_TAC, R_TAC', AR_TAC') = SIMPLIFY_TACS arith3_c;
 
 (* back to proving *)
 
-val DIV_CANCEL = store_thm
-  ("DIV_CANCEL",
-   ``!p a b. 0 < p /\ 0 < b ==> (p * a DIV (p * b) = a DIV b)``,
+Theorem DIV_CANCEL:
+     !p a b. 0 < p /\ 0 < b ==> (p * a DIV (p * b) = a DIV b)
+Proof
    S_TAC
    >> AR_TAC []
    >> R_TAC [GSYM DIV_DIV_DIV_MULT]
    >> ONCE_REWRITE_TAC [MULT_COMM]
-   >> R_TAC [MULT_DIV]);
+   >> R_TAC [MULT_DIV]
+QED
 
-val DIV_GCD = store_thm
-  ("DIV_GCD",
-   ``!a b. 0 < a ==> (gcd (a DIV gcd a b) (b DIV gcd a b) = 1)``,
+Theorem DIV_GCD:
+     !a b. 0 < a ==> (gcd (a DIV gcd a b) (b DIV gcd a b) = 1)
+Proof
    Suff
      `!g a b. 0 < a /\ (gcd a b = g) ==> (gcd (a DIV g) (b DIV g) = 1)`
    >- (S_TAC
@@ -845,11 +893,12 @@ val DIV_GCD = store_thm
        >> S_TAC
        >> AR_TAC [])
    >> S_TAC
-   >> AR_TAC [GCD_MULT, DIV_CANCEL]);
+   >> AR_TAC [GCD_MULT, DIV_CANCEL]
+QED
 
-val PRIME_EXPONENT_EXISTS0 = store_thm
-  ("PRIME_EXPONENT_EXISTS0",
-   ``!n p. 0 < n /\ prime p ==> ?k. ~divides (p EXP (SUC k)) n``,
+Theorem PRIME_EXPONENT_EXISTS0:
+     !n p. 0 < n /\ prime p ==> ?k. ~divides (p EXP (SUC k)) n
+Proof
    HO_MATCH_MP_TAC FACTOR_INDUCT
    >> CONJ_TAC >- R_TAC []
    >> CONJ_TAC >- R_TAC []
@@ -865,7 +914,8 @@ val PRIME_EXPONENT_EXISTS0 = store_thm
    >> R_TAC []
    >> MATCH_MP_TAC L_EUCLIDES
    >> Q.EXISTS_TAC `p`
-   >> R_TAC [GCD_1_PRIME_POWERR]);
+   >> R_TAC [GCD_1_PRIME_POWERR]
+QED
 
 Theorem PRIME_EXPONENT:
    !n p.
@@ -883,10 +933,10 @@ Proof
    >> gs[]
 QED
 
-val PRIME_EXPONENT_DIVIDES = store_thm
-  ("PRIME_EXPONENT_DIVIDES",
-   ``!n p k.
-       0 < n /\ prime p ==> (divides (p EXP k) n = k <= exponent p n)``,
+Theorem PRIME_EXPONENT_DIVIDES:
+     !n p k.
+       0 < n /\ prime p ==> (divides (p EXP k) n = k <= exponent p n)
+Proof
    S_TAC
    >> REVERSE EQ_TAC
    >- (S_TAC
@@ -906,35 +956,38 @@ val PRIME_EXPONENT_DIVIDES = store_thm
    >> S_TAC
    >> Know `divides (p EXP SUC (exponent p n)) n`
    >- PROVE_TAC [DIVIDES_DOWNL]
-   >> R_TAC [PRIME_EXPONENT]);
+   >> R_TAC [PRIME_EXPONENT]
+QED
 
-val PRIME_EXPONENT_UNIQUE = store_thm
-  ("PRIME_EXPONENT_UNIQUE",
-   ``!n p e.
+Theorem PRIME_EXPONENT_UNIQUE:
+     !n p e.
        0 < n /\ prime p /\ divides (p EXP e) n /\ ~divides (p EXP (SUC e)) n ==>
-       (exponent p n = e)``,
+       (exponent p n = e)
+Proof
    R_TAC [PRIME_EXPONENT_DIVIDES]
    >> S_TAC
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val IS_PRIME_EXPONENT = store_thm
-  ("IS_PRIME_EXPONENT",
-   ``!n p e.
+Theorem IS_PRIME_EXPONENT:
+     !n p e.
        0 < n /\ prime p ==>
        ((exponent p n = e) =
-        divides (p EXP e) n /\ ~divides (p EXP (SUC e)) n)``,
+        divides (p EXP e) n /\ ~divides (p EXP (SUC e)) n)
+Proof
    S_TAC
    >> EQ_TAC >|
    [DISCH_THEN (R_TAC o wrap o SYM)
     >> R_TAC [PRIME_EXPONENT],
     S_TAC
-    >> R_TAC [Q_RESQ_SPEC `n` PRIME_EXPONENT_UNIQUE]]);
+    >> R_TAC [Q_RESQ_SPEC `n` PRIME_EXPONENT_UNIQUE]]
+QED
 
-val GCD_PRIME_EXPONENT = store_thm
-  ("GCD_PRIME_EXPONENT",
-   ``!a b p.
+Theorem GCD_PRIME_EXPONENT:
+     !a b p.
        0 < a /\ 0 < b /\ prime p ==>
-       (exponent p (gcd a b) = min (exponent p a) (exponent p b))``,
+       (exponent p (gcd a b) = min (exponent p a) (exponent p b))
+Proof
    S_TAC
    >> Know `exponent p a <= exponent p b \/ exponent p b <= exponent p a`
    >- DECIDE_TAC
@@ -942,14 +995,15 @@ val GCD_PRIME_EXPONENT = store_thm
    [R_TAC [IS_PRIME_EXPONENT, PRIME_EXPONENT, DIVIDES_GCD]
     >> R_TAC [PRIME_EXPONENT_DIVIDES],
     R_TAC [IS_PRIME_EXPONENT, PRIME_EXPONENT, DIVIDES_GCD]
-    >> R_TAC [PRIME_EXPONENT_DIVIDES]]);
+    >> R_TAC [PRIME_EXPONENT_DIVIDES]]
+QED
 
-val PRIME_EXPONENT_PRIME_MULT = store_thm
-  ("PRIME_EXPONENT_PRIME_MULT",
-   ``!a p q.
+Theorem PRIME_EXPONENT_PRIME_MULT:
+     !a p q.
        0 < a /\ prime p /\ prime q ==>
        (exponent p (q * a) =
-        if p = q then SUC (exponent p a) else exponent p a)``,
+        if p = q then SUC (exponent p a) else exponent p a)
+Proof
    S_TAC
    >> R_TAC [IS_PRIME_EXPONENT]
    >> Cases_on `p = q`
@@ -964,17 +1018,19 @@ val PRIME_EXPONENT_PRIME_MULT = store_thm
    >> MATCH_MP_TAC L_EUCLIDES
    >> Q.EXISTS_TAC `q`
    >> REVERSE CONJ_TAC >- R_TAC []
-   >> R_TAC [GCD_1_PRIME_POWERR]);
+   >> R_TAC [GCD_1_PRIME_POWERR]
+QED
 
-val PRIME_EXPONENT_1 = store_thm
-  ("PRIME_EXPONENT_1",
-   ``!p. prime p ==> (exponent p 1 = 0)``,
+Theorem PRIME_EXPONENT_1:
+     !p. prime p ==> (exponent p 1 = 0)
+Proof
    S_TAC
-   >> R_TAC [IS_PRIME_EXPONENT, EXP]);
+   >> R_TAC [IS_PRIME_EXPONENT, EXP]
+QED
 
-val PRIME_EXPONENT_1_UNIQUE = store_thm
-  ("PRIME_EXPONENT_1_UNIQUE",
-   ``!n. 0 < n ==> ((!p. prime p ==> (exponent p n = 0)) = (n = 1))``,
+Theorem PRIME_EXPONENT_1_UNIQUE:
+     !n. 0 < n ==> ((!p. prime p ==> (exponent p n = 0)) = (n = 1))
+Proof
    S_TAC
    >> REVERSE EQ_TAC >- R_TAC [PRIME_EXPONENT_1]
    >> S_TAC
@@ -983,13 +1039,14 @@ val PRIME_EXPONENT_1_UNIQUE = store_thm
    >> S_TAC
    >> Q.PAT_X_ASSUM `!p. P p` (MP_TAC o Q.SPEC `p`)
    >> R_TAC [IS_PRIME_EXPONENT]
-   >> R_TAC [EXP]);
+   >> R_TAC [EXP]
+QED
 
-val PRIME_EXPONENTS_EQ = store_thm
-  ("PRIME_EXPONENTS_EQ",
-   ``!a b.
+Theorem PRIME_EXPONENTS_EQ:
+     !a b.
        0 < a /\ 0 < b /\ (!p. prime p ==> (exponent p a = exponent p b)) ==>
-       (a = b)``,
+       (a = b)
+Proof
    HO_MATCH_MP_TAC FACTOR_INDUCT
    >> CONJ_TAC >- R_TAC []
    >> CONJ_TAC
@@ -1014,14 +1071,15 @@ val PRIME_EXPONENTS_EQ = store_thm
    >> Q.PAT_X_ASSUM `!p'. P p'` (MP_TAC o Q.SPEC `p'`)
    >> R_TAC [PRIME_EXPONENT_PRIME_MULT]
    >> Cases_on `p' = p`
-   >> R_TAC []);
+   >> R_TAC []
+QED
 
-val FACTOR_GCD = store_thm
-  ("FACTOR_GCD",
-   ``!a b p.
+Theorem FACTOR_GCD:
+     !a b p.
        prime p /\ 0 < a /\ 0 < b ==>
        (gcd (p * a) b = gcd a b) \/
-       (gcd a (p * b) = gcd a b)``,
+       (gcd a (p * b) = gcd a b)
+Proof
    S_TAC
    >> Know `exponent p a <= exponent p b \/ exponent p b <= exponent p a`
    >- DECIDE_TAC
@@ -1041,50 +1099,57 @@ val FACTOR_GCD = store_thm
     >> R_TAC [PRIME_EXPONENT_PRIME_MULT, GCD_PRIME_EXPONENT]
     >> REVERSE (Cases_on `p' = p`) >- R_TAC []
     >> R_TAC [min_def]
-    >> DECIDE_TAC]);
+    >> DECIDE_TAC]
+QED
 
-val LCM_SYM = store_thm
-  ("LCM_SYM",
-   ``!a b. lcm a b = lcm b a``,
+Theorem LCM_SYM:
+     !a b. lcm a b = lcm b a
+Proof
    R_TAC [lcm_def]
-   >> PROVE_TAC [MULT_COMM, GCD_SYM]);
+   >> PROVE_TAC [MULT_COMM, GCD_SYM]
+QED
 
-val DIVIDES_LCM_L = store_thm
-  ("DIVIDES_LCM_L",
-   ``!a b. divides a (lcm a b)``,
+Theorem DIVIDES_LCM_L:
+     !a b. divides a (lcm a b)
+Proof
    Suff `!a b l. is_lcm a b l ==> divides a l`
    >- PROVE_TAC [LCM_IS_LCM_UNIQUE]
-   >> R_TAC [is_lcm_def]);
+   >> R_TAC [is_lcm_def]
+QED
 
-val DIVIDES_LCM_R = store_thm
-  ("DIVIDES_LCM_R",
-   ``!a b. divides b (lcm a b)``,
-   PROVE_TAC [LCM_SYM, DIVIDES_LCM_L]);
+Theorem DIVIDES_LCM_R:
+     !a b. divides b (lcm a b)
+Proof
+   PROVE_TAC [LCM_SYM, DIVIDES_LCM_L]
+QED
 
-val LCM_REFL = store_thm
-  ("LCM_REFL",
-   ``!a. lcm a a = a``,
+Theorem LCM_REFL:
+     !a. lcm a a = a
+Proof
    R_TAC [lcm_def]
    >> S_TAC
    >> REVERSE (Cases_on `0 < a`)
    >- (Know `a = 0` >- DECIDE_TAC >> R_TAC [])
-   >> R_TAC []);
+   >> R_TAC []
+QED
 
-val FUNPOW_SUC = store_thm
-  ("FUNPOW_SUC",
-   ``!f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)``,
+Theorem FUNPOW_SUC:
+     !f n x. FUNPOW f (SUC n) x = f (FUNPOW f n x)
+Proof
    S_TAC
    >> Q.SPEC_TAC (`x`, `x`)
    >> Induct_on `n` >- RW_TAC std_ss [FUNPOW]
    >> ONCE_REWRITE_TAC [FUNPOW]
-   >> RW_TAC std_ss [FUNPOW]);
+   >> RW_TAC std_ss [FUNPOW]
+QED
 
-val MOD_PRIME_INTEGRAL = store_thm
-  ("MOD_PRIME_INTEGRAL",
-   ``!p a b.
+Theorem MOD_PRIME_INTEGRAL:
+     !p a b.
        prime p ==>
-       (((a * b) MOD p = 0) = (a MOD p = 0) \/ (b MOD p = 0))``,
-   R_TAC [EUCLID, DIVIDES_MOD]);
+       (((a * b) MOD p = 0) = (a MOD p = 0) \/ (b MOD p = 0))
+Proof
+   R_TAC [EUCLID, DIVIDES_MOD]
+QED
 
 (* Consolidate theorems so far in a simplification context *)
 
@@ -1106,36 +1171,39 @@ val Simplify = R_TAC;
 
 (* back to proving *)
 
-val DIVIDES_0L = store_thm
-  ("DIVIDES_0L",
-   ``!n. divides 0 n = (n = 0)``,
-   R_TAC [divides_def]);
+Theorem DIVIDES_0L:
+     !n. divides 0 n = (n = 0)
+Proof
+   R_TAC [divides_def]
+QED
 
-val DIVIDES_POWER_CANCEL = store_thm
-  ("DIVIDES_POWER_CANCEL",
-   ``!a b c d.
+Theorem DIVIDES_POWER_CANCEL:
+     !a b c d.
        0 < a ==>
        (divides (a EXP b) (a EXP d * c) =
-        divides (a EXP (b - d)) c)``,
+        divides (a EXP (b - d)) c)
+Proof
    Induct_on `d` >- R_TAC []
    >> S_TAC
    >> Cases_on `b` >- R_TAC []
-   >> R_TAC [EXP, GSYM MULT_ASSOC]);
+   >> R_TAC [EXP, GSYM MULT_ASSOC]
+QED
 
-val DIVIDES_SUB_2 = store_thm
-  ("DIVIDES_SUB_2",
-   ``!n a b. divides n a /\ b <= a /\ divides n (a - b) ==> divides n b``,
+Theorem DIVIDES_SUB_2:
+     !n a b. divides n a /\ b <= a /\ divides n (a - b) ==> divides n b
+Proof
    R_TAC [divides_def]
    >> S_TAC
    >> Q.EXISTS_TAC `q - q'`
    >> R_TAC [RIGHT_SUB_DISTRIB]
    >> Q.PAT_X_ASSUM `x = y` (ONCE_REWRITE_TAC o wrap o SYM)
    >> Q.PAT_X_ASSUM `x = y` (ONCE_REWRITE_TAC o wrap o SYM)
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val PRIME_POWER_GE = store_thm
-  ("PRIME_POWER_GE",
-   ``!p n. prime p /\ ODD p /\ 0 < n ==> n + 2 <= p EXP n``,
+Theorem PRIME_POWER_GE:
+     !p n. prime p /\ ODD p /\ 0 < n ==> n + 2 <= p EXP n
+Proof
    S_TAC
    >> Cases_on `p` >- AR_TAC []
    >> Cases_on `n'` >- AR_TAC []
@@ -1154,14 +1222,15 @@ val PRIME_POWER_GE = store_thm
    >- DECIDE_TAC
    >> ONCE_REWRITE_TAC [MULT]
    >> ONCE_REWRITE_TAC [MULT]
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val FACTOR_PRIME_POWER = store_thm
-  ("FACTOR_PRIME_POWER",
-   ``!p n r s.
+Theorem FACTOR_PRIME_POWER:
+     !p n r s.
        prime p ==>
        (divides n ((p EXP r) * s) =
-        ?r' s'. ((p EXP r') * s' = n) /\ r' <= r /\ divides s' s)``,
+        ?r' s'. ((p EXP r') * s' = n) /\ r' <= r /\ divides s' s)
+Proof
    S_TAC
    >> Q.SPEC_TAC (`s`, `s`)
    >> Q.SPEC_TAC (`n`, `n`)
@@ -1210,14 +1279,15 @@ val FACTOR_PRIME_POWER = store_thm
      >- (AR_TAC [EXP, GSYM MULT_ASSOC]
          >> PROVE_TAC [divides_def, MULT_COMM])
      >> AR_TAC []
-     >> PROVE_TAC [DIVIDES_MULTL]]]);
+     >> PROVE_TAC [DIVIDES_MULTL]]]
+QED
 
-val FACTOR_PRIME_POWER_SANDWICH = store_thm
-  ("FACTOR_PRIME_POWER_SANDWICH",
-   ``!p n r s.
+Theorem FACTOR_PRIME_POWER_SANDWICH:
+     !p n r s.
        prime p /\ ~divides n ((p EXP r) * s) /\
        divides n ((p EXP SUC r) * s) ==>
-       divides (p EXP SUC r) n``,
+       divides (p EXP SUC r) n
+Proof
    R_TAC [FACTOR_PRIME_POWER]
    >> S_TAC
    >> Q.PAT_X_ASSUM `!x. P x` (MP_TAC o Q.SPECL [`r'`, `s'`])
@@ -1226,13 +1296,14 @@ val FACTOR_PRIME_POWER_SANDWICH = store_thm
    >> Know `r' = SUC r` >- DECIDE_TAC
    >> S_TAC
    >> AR_TAC []
-   >> PROVE_TAC [divides_def, MULT_COMM]);
+   >> PROVE_TAC [divides_def, MULT_COMM]
+QED
 
-val PRIME_POWER_SANDWICH = store_thm
-  ("PRIME_POWER_SANDWICH",
-   ``!p n r s.
+Theorem PRIME_POWER_SANDWICH:
+     !p n r s.
        prime p /\ divides s n /\ divides n (p EXP r * s) ==>
-       ?k. k <= r /\ (p EXP k * s = n)``,
+       ?k. k <= r /\ (p EXP k * s = n)
+Proof
    S_TAC
    >> Q.PAT_X_ASSUM `divides s n` MP_TAC
    >> R_TAC [divides_def]
@@ -1242,19 +1313,21 @@ val PRIME_POWER_SANDWICH = store_thm
    >> POP_ASSUM MP_TAC
    >> ONCE_REWRITE_TAC [MULT_COMM]
    >> AR_TAC []
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val PRIME_EXPONENT_REFL = store_thm
-  ("PRIME_EXPONENT_REFL",
-   ``!p. prime p ==> (exponent p p = 1)``,
+Theorem PRIME_EXPONENT_REFL:
+     !p. prime p ==> (exponent p p = 1)
+Proof
    S_TAC
-   >> R_TAC [IS_PRIME_EXPONENT, EXP, SQUARED_GT_1]);
+   >> R_TAC [IS_PRIME_EXPONENT, EXP, SQUARED_GT_1]
+QED
 
-val PRIME_EXPONENT_MULT = store_thm
-  ("PRIME_EXPONENT_MULT",
-   ``!a b p.
+Theorem PRIME_EXPONENT_MULT:
+     !a b p.
        prime p /\ 0 < a /\ 0 < b ==>
-       (exponent p (a * b) = exponent p a + exponent p b)``,
+       (exponent p (a * b) = exponent p a + exponent p b)
+Proof
    HO_MATCH_MP_TAC FACTOR_INDUCT
    >> CONJ_TAC >- R_TAC []
    >> CONJ_TAC >- R_TAC [PRIME_EXPONENT_1]
@@ -1262,22 +1335,24 @@ val PRIME_EXPONENT_MULT = store_thm
    >> AR_TAC [GSYM MULT_ASSOC, PRIME_EXPONENT_PRIME_MULT]
    >> Q.PAT_X_ASSUM `!b. P b` (MP_TAC o Q.SPECL [`b`, `p`])
    >> Cases_on `p' = p`
-   >> R_TAC [ADD_CLAUSES]);
+   >> R_TAC [ADD_CLAUSES]
+QED
 
-val PRIME_EXPONENT_POWER = store_thm
-  ("PRIME_EXPONENT_POWER",
-   ``!p n. prime p ==> (exponent p (p EXP n) = n)``,
+Theorem PRIME_EXPONENT_POWER:
+     !p n. prime p ==> (exponent p (p EXP n) = n)
+Proof
    S_TAC
    >> Induct_on `n` >- R_TAC [PRIME_EXPONENT_1]
    >> R_TAC [EXP, PRIME_EXPONENT_MULT, PRIME_EXPONENT_REFL]
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val PRIME_EXPONENT_EQ = store_thm
-  ("PRIME_EXPONENT_EQ",
-   ``!p a b.
+Theorem PRIME_EXPONENT_EQ:
+     !p a b.
        prime p /\ 0 < a /\ 0 < b ==>
        ((exponent p a = exponent p b) =
-        !n. divides (p EXP n) a = divides (p EXP n) b)``,
+        !n. divides (p EXP n) a = divides (p EXP n) b)
+Proof
    S_TAC
    >> R_TAC [PRIME_EXPONENT_DIVIDES]
    >> EQ_TAC >|
@@ -1287,14 +1362,15 @@ val PRIME_EXPONENT_EQ = store_thm
     >> POP_ASSUM
        (fn th =>
         MP_TAC (Q.SPEC `exponent p a` th) >> MP_TAC (Q.SPEC `exponent p b` th))
-    >> DECIDE_TAC]);
+    >> DECIDE_TAC]
+QED
 
-val NUM_DECOMPOSE = store_thm
-  ("NUM_DECOMPOSE",
-   ``!n.
+Theorem NUM_DECOMPOSE:
+     !n.
        1 < n ==>
        (~(?p q. 1 < p /\ 1 < q /\ (p * q = n) /\ (gcd p q = 1)) =
-        (?p a. prime p /\ 0 < a /\ (p EXP a = n)))``,
+        (?p a. prime p /\ 0 < a /\ (p EXP a = n)))
+Proof
    Strip
    >> Know `?p. prime p /\ divides p n`
    >- (Suff `~(n = 1)` >- PROVE_TAC [EXISTS_PRIME_DIVISOR]
@@ -1370,11 +1446,12 @@ val NUM_DECOMPOSE = store_thm
     >> Simplify [PRIME_DIVIDES_PRIME_POWER]
     >> Strip
     >> RW_TAC std_ss []
-    >> PROVE_TAC []]);
+    >> PROVE_TAC []]
+QED
 
-val MULT_EQ_PRIME = store_thm
-  ("MULT_EQ_PRIME",
-   ``!p a b. prime p /\ (a * b = p) ==> (a = 1) \/ (a = p)``,
+Theorem MULT_EQ_PRIME:
+     !p a b. prime p /\ (a * b = p) ==> (a = 1) \/ (a = p)
+Proof
    Strip
    >> Cases_on `a = 1` >- RW_TAC arith_ss []
    >> Simplify []
@@ -1383,13 +1460,15 @@ val MULT_EQ_PRIME = store_thm
    >> STRIP_TAC
    >> POP_ASSUM (MP_TAC o Q.SPEC `a`)
    >> Simplify [divides_def]
-   >> PROVE_TAC [MULT_COMM]);
+   >> PROVE_TAC [MULT_COMM]
+QED
 
-val NOT_PRIME_EVEN = store_thm
-  ("NOT_PRIME_EVEN",
-   ``!n. EVEN n /\ prime n ==> (n = 2)``,
+Theorem NOT_PRIME_EVEN:
+     !n. EVEN n /\ prime n ==> (n = 2)
+Proof
    RW_TAC std_ss [EVEN_EXISTS]
    >> Know `divides 2 (2 * m)` >- PROVE_TAC [divides_def, MULT_COMM]
    >> Simplify [PRIME_DIVIDES_PRIME]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 

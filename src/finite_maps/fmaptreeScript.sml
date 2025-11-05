@@ -81,19 +81,26 @@ Proof
   SRW_TAC [][o_f_FAPPLY, fmap_bij_thm]
 QED
 
-val fromF_11 = prove(
-  ``wf x /\ wf y ==> ((fromF x = fromF y) = (x = y))``,
-  METIS_TAC [fmap_bij_thm]);
+Theorem fromF_11[local]:
+    wf x /\ wf y ==> ((fromF x = fromF y) = (x = y))
+Proof
+  METIS_TAC [fmap_bij_thm]
+QED
 
-val toF_11 = prove(``(toF f = toF g) = (f = g)``, METIS_TAC [fmap_bij_thm]);
+Theorem toF_11[local]:
+   (toF f = toF g) = (f = g)
+Proof METIS_TAC [fmap_bij_thm]
+QED
 
-val toF_o_f_11 = prove(
-  ``((toF o_f f) = (toF o_f g)) = (f = g)``,
+Theorem toF_o_f_11[local]:
+    ((toF o_f f) = (toF o_f g)) = (f = g)
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN
   FULL_SIMP_TAC (srw_ss()) [fmap_EXT, o_f_FAPPLY] THEN
   `!x. x IN FDOM g ==> (toF (f ' x) = toF (g ' x))`
       by METIS_TAC [o_f_FAPPLY] THEN
-  FULL_SIMP_TAC (srw_ss()) [toF_11]);
+  FULL_SIMP_TAC (srw_ss()) [toF_11]
+QED
 
 Theorem FTNode_11[simp]:
   (FTNode i1 f1 = FTNode i2 f2) <=> (i1 = i2) /\ (f1 = f2)
@@ -150,9 +157,11 @@ Definition fupd_at_path_def:
      else NONE)
 End
 
-val forall_ft = prove(
-  ``(!ft. P ft) = (!f. wf f ==> P (fromF f))``,
-  METIS_TAC [fmap_bij_thm])
+Theorem forall_ft[local]:
+    (!ft. P ft) = (!f. wf f ==> P (fromF f))
+Proof
+  METIS_TAC [fmap_bij_thm]
+QED
 
 val wf_strong_ind = IndDefLib.derive_strong_induction(wf_rules, wf_ind)
 
@@ -169,11 +178,13 @@ Proof
   SRW_TAC [][fmap_EXT, o_f_FAPPLY] THEN METIS_TAC [fmap_bij_thm]
 QED
 
-val list_GSPEC_cases = prove(
-  ``{ l | P l } = (if P [] then {[]} else {}) UNION
-                  { h :: t | P (h :: t) }``,
+Theorem list_GSPEC_cases[local]:
+    { l | P l } = (if P [] then {[]} else {}) UNION
+                  { h :: t | P (h :: t) }
+Proof
   SRW_TAC [][EXTENSION, EQ_IMP_THM] THEN SRW_TAC [][] THEN
-  Cases_on `x` THEN SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
+  Cases_on `x` THEN SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 Theorem applicable_paths_FINITE:
     !ft. FINITE { p | ?ft'. apply_path p ft = SOME ft' }
@@ -212,21 +223,25 @@ val (relrec_rules, relrec_ind, relrec_cases) = Hol_reln`
              relrec h (FTNode i fm) (h i rfm fm)
 `;
 
-val relrec_fn = prove(
-  ``!ft r1. relrec h ft r1 ==> !r2. relrec h ft r2 ==> (r1 = r2)``,
+Theorem relrec_fn[local]:
+    !ft r1. relrec h ft r1 ==> !r2. relrec h ft r2 ==> (r1 = r2)
+Proof
   HO_MATCH_MP_TAC relrec_ind THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
   ONCE_REWRITE_TAC [relrec_cases] THEN SRW_TAC [][] THEN
   Q_TAC SUFF_TAC `rfm = rfm'` THEN1 SRW_TAC [][] THEN
-  SRW_TAC [][fmap_EXT]);
+  SRW_TAC [][fmap_EXT]
+QED
 
-val relrec_total = prove(
-  ``!ft. ?r. relrec h ft r``,
+Theorem relrec_total[local]:
+    !ft. ?r. relrec h ft r
+Proof
   HO_MATCH_MP_TAC ft_ind THEN REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC [relrec_cases] THEN SRW_TAC [][] THEN
   `?f. !k. k IN FDOM fm ==> relrec h (fm ' k) (f k)`
      by METIS_TAC [] THEN
   Q.EXISTS_TAC `FUN_FMAP f (FDOM fm)` THEN
-  SRW_TAC [][FUN_FMAP_DEF]);
+  SRW_TAC [][FUN_FMAP_DEF]
+QED
 
 Definition fmtreerec_def:
   fmtreerec h ft = @r. relrec h ft r

@@ -347,12 +347,13 @@ End
 
 (* Theorem: valueOf (expM b n) = b ** n *)
 (* Proof: by induction from expM_ind_def, matching with EXP_EQN. *)
-val expM_value = store_thm(
-  "expM_value[simp]",
-  ``!b n. valueOf (expM b n) = b ** n``,
+Theorem expM_value[simp]:
+    !b n. valueOf (expM b n) = b ** n
+Proof
   ho_match_mp_tac (theorem "expM_ind") >>
   rw[] >>
-  rw[Once expM_def, Once EXP_EQN]);
+  rw[Once expM_def, Once EXP_EQN]
+QED
 
 (* Theorem: stepsOf (expM b n) =
             if n = 0 then 1
@@ -382,21 +383,23 @@ val expM_value = store_thm(
           (if EVEN n then 0 else (size b) * (size ((b * b) ** (HALF n)))) +
           stepsOf (expM (b * b) (HALF n))
 *)
-val expM_steps_thm = store_thm(
-  "expM_steps_thm",
-  ``!b n. stepsOf (expM b n) =
+Theorem expM_steps_thm:
+    !b n. stepsOf (expM b n) =
           if n = 0 then 1
           else 1 + 5 * size n + (size b) ** 2 +
                (if EVEN n then 0 else (size b) * (size ((b * b) ** (HALF n)))) +
-               stepsOf (expM (b * b) (HALF n))``,
-  rw[Once expM_def]);
+               stepsOf (expM (b * b) (HALF n))
+Proof
+  rw[Once expM_def]
+QED
 
 (* Theorem: stepsOf (expM b 0) = 1 *)
 (* Proof: by expM_steps_thm *)
-val expM_steps_b_0 = store_thm(
-  "expM_steps_b_0",
-  ``!b. stepsOf (expM b 0) = 1``,
-  rw[Once expM_steps_thm]);
+Theorem expM_steps_b_0:
+    !b. stepsOf (expM b 0) = 1
+Proof
+  rw[Once expM_steps_thm]
+QED
 
 (* Theorem: let body b n = 1 + 5 * size n + (size b) ** 2 +
                       if EVEN n then 0 else (size b) * (size ((b * b) ** (HALF n)))
@@ -412,22 +415,24 @@ val expM_steps_b_0 = store_thm(
    where body n = 1 + 5 * size n + (size b) ** 2 +
            (if EVEN n then 0 else (size b) * (size ((b * b) ** (HALF n))))
 *)
-val expM_steps_by_sq_div_loop = store_thm(
-  "expM_steps_by_sq_div_loop",
-  ``let body b n = 1 + 5 * size n + (size b) ** 2 +
+Theorem expM_steps_by_sq_div_loop:
+    let body b n = 1 + 5 * size n + (size b) ** 2 +
                    if EVEN n then 0 else (size b) * (size ((b * b) ** (HALF n)))
     in !b n. stepsOf (expM b n) =
-             if n = 0 then 1 else body b n + stepsOf (expM (b * b) (HALF n))``,
-  rw[Once expM_steps_thm]);
+             if n = 0 then 1 else body b n + stepsOf (expM (b * b) (HALF n))
+Proof
+  rw[Once expM_steps_thm]
+QED
 
 (* Alternate form of expM_steps_by_sq_div_loop *)
-val expM_steps_by_sq_div_loop_alt = store_thm(
-  "expM_steps_by_sq_div_loop_alt",
-  ``let body b n = 1 + 5 * size n + (size b) ** 2 +
+Theorem expM_steps_by_sq_div_loop_alt:
+    let body b n = 1 + 5 * size n + (size b) ** 2 +
                   if EVEN n then 0 else (size b) * (size ((b ** 2) ** (HALF n)))
     in !b n. stepsOf (expM b n) =
-             if n = 0 then 1 else body b n + stepsOf (expM (b ** 2) (HALF n))``,
-  metis_tac[expM_steps_by_sq_div_loop, EXP_2]);
+             if n = 0 then 1 else body b n + stepsOf (expM (b ** 2) (HALF n))
+Proof
+  metis_tac[expM_steps_by_sq_div_loop, EXP_2]
+QED
 
 (*
 This puts expM_steps in the category: halving loop with body cover, RISING SQ.
@@ -484,10 +489,10 @@ suitable for: loop2_div_rise_count_cover_le
      <= 1 + size n * (1 + 5 * size n + 8 * n ** 3 * size b ** 2)
       = 1 + size n + 5 * size n ** 2 + 8 * size n * n ** 3 * size b ** 2  by LEFT_ADD_DISTRIB
 *)
-val expM_steps_upper = store_thm(
-  "expM_steps_upper",
-  ``!b n. stepsOf (expM b n) <=
-          1 + size n + 5 * size n ** 2 + 8 * size n * n ** 3 * size b ** 2``,
+Theorem expM_steps_upper:
+    !b n. stepsOf (expM b n) <=
+          1 + size n + 5 * size n ** 2 + 8 * size n * n ** 3 * size b ** 2
+Proof
   rpt strip_tac >>
   qabbrev_tac `loop = \b n. stepsOf (expM b n)` >>
   `loop b n <= 1 + size n + 5 * size n ** 2 + 8 * size n * n ** 3 * size b ** 2` suffices_by rw[Abbr`loop`] >>
@@ -545,7 +550,8 @@ val expM_steps_upper = store_thm(
     size n + 5 * size n * size n + 8 * size n * n ** 3 * size b ** 2` by decide_tac >>
     `_ = size n + 5 * size n ** 2 + 8 * size n * n ** 3 * size b ** 2` by rw[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Extract theorems *)
 val expM_steps_0_upper = save_thm("expM_steps_0_upper",
@@ -567,9 +573,9 @@ val expM_steps_1_upper =
     = 15 * n ** 3 * size n ** 2 * size b ** 2
    Use (MAX 1 n) to cater for n = 0.
 *)
-val expM_steps_bound = store_thm(
-  "expM_steps_bound",
-  ``!b n. stepsOf (expM b n) <= 15 * (MAX 1 n) ** 3 * size b ** 2 * size n ** 2``,
+Theorem expM_steps_bound:
+    !b n. stepsOf (expM b n) <= 15 * (MAX 1 n) ** 3 * size b ** 2 * size n ** 2
+Proof
   rpt strip_tac >>
   assume_tac expM_steps_upper >>
   last_x_assum (qspecl_then [`b`, `n`] strip_assume_tac) >>
@@ -593,7 +599,8 @@ val expM_steps_bound = store_thm(
   `m ** 3 * size n * size b ** 2 <= m ** 3 * size n * size b ** 2 * (size n)` by rw[MULT_POS] >>
   `m ** 3 * size n * size b ** 2 * (size n) = t` by rw[Abbr`t`] >>
   decide_tac) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o expM b) IN big_O (POLY 1 o (\n. n ** 3 * size b ** 2 * size n ** 2)) *)
 (* Proof:
@@ -605,15 +612,16 @@ val expM_steps_bound = store_thm(
    Then MAX 1 n = n       by MAX_DEF, 0 < n
    and the result follows.
 *)
-val expM_steps_O_base = store_thm(
-  "expM_steps_O_base",
-  ``!b. (stepsOf o expM b) IN big_O (POLY 1 o (\n. n ** 3 * size b ** 2 * size n ** 2))``,
+Theorem expM_steps_O_base:
+    !b. (stepsOf o expM b) IN big_O (POLY 1 o (\n. n ** 3 * size b ** 2 * size n ** 2))
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `0` >>
   qexists_tac `15` >>
   rpt strip_tac >>
   `MAX 1 n = n` by rw[MAX_DEF] >>
-  metis_tac[expM_steps_bound]);
+  metis_tac[expM_steps_bound]
+QED
 
 (* Theorem: (stepsOf o expM b) IN big_O (POLY 1 o (\n. n ** 3 * (size n) ** 2)) *)
 (* Proof:
@@ -626,9 +634,9 @@ val expM_steps_O_base = store_thm(
    and the result follows.
    or, by expM_steps_O_base.
 *)
-val expM_steps_O_poly = store_thm(
-  "expM_steps_O_poly",
-  ``!b. (stepsOf o expM b) IN big_O (POLY 1 o (\n. n ** 3 * (size n) ** 2))``,
+Theorem expM_steps_O_poly:
+    !b. (stepsOf o expM b) IN big_O (POLY 1 o (\n. n ** 3 * (size n) ** 2))
+Proof
   rw[big_O_def, POLY_def] >>
   assume_tac expM_steps_bound >>
   first_x_assum (qspec_then `b` strip_assume_tac) >>
@@ -637,7 +645,8 @@ val expM_steps_O_poly = store_thm(
   rpt strip_tac >>
   `MAX 1 n = n` by rw[MAX_DEF] >>
   `15 * size b ** 2 * n ** 3 * size n ** 2 = 15 * n ** 3 * size b ** 2 * size n ** 2` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: (stepsOf o combin$C expM n) IN O_poly 2 *)
 (* Proof:
@@ -647,9 +656,9 @@ val expM_steps_O_poly = store_thm(
    Take any h, say 0, k = 15 * MAX 1 n ** 3 * size n ** 2,
    The result follows.
 *)
-val expM_steps_O_swap = store_thm(
-  "expM_steps_O_swap",
-  ``!n. (stepsOf o combin$C expM n) IN O_poly 2``,
+Theorem expM_steps_O_swap:
+    !n. (stepsOf o combin$C expM n) IN O_poly 2
+Proof
   rw[O_poly_thm] >>
   assume_tac expM_steps_bound >>
   qexists_tac `0` >>
@@ -657,7 +666,8 @@ val expM_steps_O_swap = store_thm(
   qx_gen_tac `b` >>
   rpt strip_tac >>
   last_x_assum (qspecl_then [`b`, `n`] strip_assume_tac) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o expM b) IN big_O (\n. n ** 3 * (ulog n) ** 2) *)
 (* Proof:
@@ -676,9 +686,9 @@ val expM_steps_O_swap = store_thm(
    Thus (stepsOf o expM b) IN big_O (\n. n ** 3 * (ulog n) ** 2)
      by big_O_def, with 1 < n, and k = 60 * size b ** 2.
 *)
-val expM_steps_big_O = store_thm(
-  "expM_steps_big_O",
-  ``!b. (stepsOf o expM b) IN big_O (\n. n ** 3 * (ulog n) ** 2)``,
+Theorem expM_steps_big_O:
+    !b. (stepsOf o expM b) IN big_O (\n. n ** 3 * (ulog n) ** 2)
+Proof
   rw[big_O_def] >>
   qexists_tac `1` >>
   qexists_tac `60 * size b ** 2` >>
@@ -694,16 +704,18 @@ val expM_steps_big_O = store_thm(
     15 * size b ** 2 * n ** 3 * size n ** 2` by rw[] >>
   `size b ** 2 * n ** 3 * size n ** 2 <=
     size b ** 2 * n ** 3 * (4 * ulog n ** 2)` by rw[MULT_POS] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (valueOf (expM b n) = b ** n) /\
             (stepsOf o expM b) IN big_O (\n. n ** 3 * (ulog n) ** 2) *)
 (* Proof: by expM_value, expM_steps_big_O *)
-val expM_thm = store_thm(
-  "expM_thm",
-  ``!b n. (valueOf (expM b n) = b ** n) /\
-         (stepsOf o expM b) IN big_O (\n. n ** 3 * (ulog n) ** 2)``,
-  metis_tac[expM_value, expM_steps_big_O]);
+Theorem expM_thm:
+    !b n. (valueOf (expM b n) = b ** n) /\
+         (stepsOf o expM b) IN big_O (\n. n ** 3 * (ulog n) ** 2)
+Proof
+  metis_tac[expM_value, expM_steps_big_O]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Root Extraction                                                           *)
@@ -780,14 +792,15 @@ End
        = (HALF n) DIV (2 ** k)          by induction hypothesis
        = n DIV 2 ** (SUC k)             by HALF_DIV_TWO_POWER
 *)
-val shrinkM_value = store_thm(
-  "shrinkM_value[simp]",
-  ``!n k. valueOf (shrinkM n k) = n DIV (2 ** k)``,
+Theorem shrinkM_value[simp]:
+    !n k. valueOf (shrinkM n k) = n DIV (2 ** k)
+Proof
   ho_match_mp_tac (theorem "shrinkM_ind") >>
   rw[] >>
   rw[Once shrinkM_def] >>
   `SUC (k - 1) = k` by decide_tac >>
-  rw[HALF_DIV_TWO_POWER]);
+  rw[HALF_DIV_TWO_POWER]
+QED
 
 (* Theorem: stepsOf (shrinkM n k) =
             size k +
@@ -801,23 +814,25 @@ val shrinkM_value = store_thm(
    = size k + if k = 0 then 0
      else 2 * size n + size k + stepsOf (shrinkM (HALF n) (k - 1))
 *)
-val shrinkM_steps_thm = store_thm(
-  "shrinkM_steps_thm",
-  ``!n k. stepsOf (shrinkM n k) =
+Theorem shrinkM_steps_thm:
+    !n k. stepsOf (shrinkM n k) =
           size k +
           if k = 0 then 0
-          else 2 * size n + size k + stepsOf (shrinkM (HALF n) (k - 1))``,
-  rw[Once shrinkM_def]);
+          else 2 * size n + size k + stepsOf (shrinkM (HALF n) (k - 1))
+Proof
+  rw[Once shrinkM_def]
+QED
 
 (* Theorem: stepsOf (shrinkM n 0) = 1 *)
 (* Proof:
       stepsOf (shrinkM n 0)
     = size 0 = 1             by shrinkM_steps_thm, size_0
 *)
-val shrinkM_steps_0 = store_thm(
-  "shrinkM_steps_0",
-  ``!n. stepsOf (shrinkM n 0) = 1``,
-  rw[Once shrinkM_steps_thm]);
+Theorem shrinkM_steps_0:
+    !n. stepsOf (shrinkM n 0) = 1
+Proof
+  rw[Once shrinkM_steps_thm]
+QED
 
 (* Theorem: stepsOf (shrinkM n 1) = 3 + 2 * size n *)
 (* Proof:
@@ -826,10 +841,11 @@ val shrinkM_steps_0 = store_thm(
     = 1 + 2 * size n + 1 + 1           by shrinkM_steps_0
     = 3 + 2 * size n                   by arithmetic
 *)
-val shrinkM_steps_1 = store_thm(
-  "shrinkM_steps_1",
-  ``!n. stepsOf (shrinkM n 1) = 3 + 2 * size n``,
-  rw[Once shrinkM_steps_thm, shrinkM_steps_0]);
+Theorem shrinkM_steps_1:
+    !n. stepsOf (shrinkM n 1) = 3 + 2 * size n
+Proof
+  rw[Once shrinkM_steps_thm, shrinkM_steps_0]
+QED
 
 (* Theorem: stepsOf (shrinkM n k) =
             if k = 0 then 1
@@ -843,12 +859,13 @@ val shrinkM_steps_1 = store_thm(
    = if k = 0 then size 0              and size 0 = 1 by size_0
      else 2 * size k + 2 * size n + stepsOf (shrinkM (HALF n) (k - 1))
 *)
-val shrinkM_steps_by_half_dec_loop = store_thm(
-  "shrinkM_steps_by_half_dec_loop",
-  ``!n k. stepsOf (shrinkM n k) =
+Theorem shrinkM_steps_by_half_dec_loop:
+    !n k. stepsOf (shrinkM n k) =
           if k = 0 then 1
-          else 2 * size k + 2 * size n + stepsOf (shrinkM (HALF n) (k - 1))``,
-  rw[Once shrinkM_steps_thm]);
+          else 2 * size k + 2 * size n + stepsOf (shrinkM (HALF n) (k - 1))
+Proof
+  rw[Once shrinkM_steps_thm]
+QED
 
 (*
 This puts shrinkM_steps in the category: dividing loop with body cover and transform.
@@ -871,9 +888,9 @@ suitable for: loop2_dec_fall_count_le
       = 1 + k * (2 * size k + 2 * size n)                  by hop_1_n
       = 1 + 2 * k * size k + 2 * k * size n
 *)
-val shrinkM_steps_upper = store_thm(
-  "shrinkM_steps_upper",
-  ``!n k. stepsOf (shrinkM n k) <= 1 + 2 * k * size k + 2 * k * size n``,
+Theorem shrinkM_steps_upper:
+    !n k. stepsOf (shrinkM n k) <= 1 + 2 * k * size k + 2 * k * size n
+Proof
   rpt strip_tac >>
   qabbrev_tac `loop = \n k. stepsOf (shrinkM n k)` >>
   qabbrev_tac `body = \n k. 2 * size k + 2 * size n` >>
@@ -893,7 +910,8 @@ val shrinkM_steps_upper = store_thm(
   `loop n k <= 1 + k * body n k` by metis_tac[hop_1_n] >>
   `k * body n k = k * (2 * size k + 2 * size n)` by rw[Abbr`body`] >>
   `_ = 2 * k * size k + 2 * k * size n` by decide_tac >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: stepsOf (shrinkM n k) <= 5 * MAX 1 k * size k * size n *)
 (* Proof:
@@ -903,9 +921,9 @@ val shrinkM_steps_upper = store_thm(
     = 5 * k * size k * size n
    Use (MAX 1 k) to cater for k = 0.
 *)
-val shrinkM_steps_bound = store_thm(
-  "shrinkM_steps_bound",
-  ``!n k. stepsOf (shrinkM n k) <= 5 * MAX 1 k * size k * size n``,
+Theorem shrinkM_steps_bound:
+    !n k. stepsOf (shrinkM n k) <= 5 * MAX 1 k * size k * size n
+Proof
   rpt strip_tac >>
   assume_tac shrinkM_steps_upper >>
   last_x_assum (qspecl_then [`n`, `k`] strip_assume_tac) >>
@@ -925,7 +943,8 @@ val shrinkM_steps_bound = store_thm(
   `m * size n <= m * size n * size k` by rw[MULT_POS] >>
   `m * size n * size k = t` by rw[Abbr`t`] >>
   decide_tac) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o (combin$C shrinkM) k) IN big_O (POLY 1 o (\n. (MAX 1 k) * size k * size n)) *)
 (* Proof:
@@ -934,16 +953,17 @@ val shrinkM_steps_bound = store_thm(
    Note !n. stepsOf (shrinkM n k) <= 5 * MAX 1 k * size k * size n   by shrinkM_steps_bound
    Take h = 0, c = 5, the result follows.
 *)
-val shrinkM_steps_O_base = store_thm(
-  "shrinkM_steps_O_base",
-  ``!k. (stepsOf o (combin$C shrinkM) k) IN big_O (POLY 1 o (\n. (MAX 1 k) * size k * size n))``,
+Theorem shrinkM_steps_O_base:
+    !k. (stepsOf o (combin$C shrinkM) k) IN big_O (POLY 1 o (\n. (MAX 1 k) * size k * size n))
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `0` >>
   qexists_tac `5` >>
   rpt strip_tac >>
   assume_tac shrinkM_steps_bound >>
   last_x_assum (qspecl_then [`n`, `k`] strip_assume_tac) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o (combin$C shrinkM) k) IN O_poly 1 *)
 (* Proof:
@@ -952,11 +972,12 @@ val shrinkM_steps_O_base = store_thm(
    Note !n. stepsOf (shrinkM n k) <= 5 * MAX 1 k * size k * size n   by shrinkM_steps_bound
    Take any h, k' = 5 * MAX 1 k * size k, the result follows.
 *)
-val shrinkM_steps_O_poly = store_thm(
-  "shrinkM_steps_O_poly",
-  ``!k. (stepsOf o (combin$C shrinkM) k) IN O_poly 1``,
+Theorem shrinkM_steps_O_poly:
+    !k. (stepsOf o (combin$C shrinkM) k) IN O_poly 1
+Proof
   rw[O_poly_thm] >>
-  metis_tac[shrinkM_steps_bound]);
+  metis_tac[shrinkM_steps_bound]
+QED
 
 (* Theorem: (stepsOf o (combin$C shrinkM) k) IN big_O (\n. (ulog n)) *)
 (* Proof:
@@ -966,22 +987,24 @@ val shrinkM_steps_O_poly = store_thm(
       = (\n. ulog n)                      by POLY_def, FUN_EQ_THM
    The result follows.
 *)
-val shrinkM_steps_big_O = store_thm(
-  "shrinkM_steps_big_O",
-  ``!k. (stepsOf o (combin$C shrinkM) k) IN big_O (\n. (ulog n))``,
+Theorem shrinkM_steps_big_O:
+    !k. (stepsOf o (combin$C shrinkM) k) IN big_O (\n. (ulog n))
+Proof
   assume_tac shrinkM_steps_O_poly >>
   `O_poly 1 = big_O (POLY 1 o ulog)` by rw[O_poly_eq_O_poly_ulog] >>
   `POLY 1 o ulog = \n. ulog n` by rw[FUN_EQ_THM, POLY_def] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (valueOf (shrinkM n k) = n DIV 2 ** k) /\
             (stepsOf o (combin$C shrinkM) k) IN big_O (\n. (ulog n)) *)
 (* Proof: vy shrinkM_value, shrinkM_steps_big_O *)
-val shrinkM_thm = store_thm(
-  "shrinkM_thm",
-  ``!n k. (valueOf (shrinkM n k) = n DIV 2 ** k) /\
-         (stepsOf o (combin$C shrinkM) k) IN big_O (\n. (ulog n))``,
-  metis_tac[shrinkM_value, shrinkM_steps_big_O]);
+Theorem shrinkM_thm:
+    !n k. (valueOf (shrinkM n k) = n DIV 2 ** k) /\
+         (stepsOf o (combin$C shrinkM) k) IN big_O (\n. (ulog n))
+Proof
+  metis_tac[shrinkM_value, shrinkM_steps_big_O]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integer Root in Monadic Style                                             *)
@@ -1041,15 +1064,16 @@ End
        (if (2 * (ROOT k (n DIV 2 ** k)) + 1) ** k <= n then 1 else 0) = ROOT k n
        This is true                     by ROOT_EQN
 *)
-val rootM_value = store_thm(
-  "rootM_value[simp]",
-  ``!k n. valueOf (rootM k n) = ROOT k n``,
+Theorem rootM_value[simp]:
+    !k n. valueOf (rootM k n) = ROOT k n
+Proof
   ho_match_mp_tac (theorem "rootM_ind") >>
   rw[] >>
   rw[Once rootM_def] >>
   assume_tac ROOT_EQN >>
   last_x_assum (qspecl_then [`k`, `n`] strip_assume_tac) >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: let r = ROOT k (n DIV (2 ** k)) in
       stepsOf (rootM k n) =
@@ -1098,9 +1122,8 @@ val rootM_value = store_thm(
           stepsOf (expM (2 * r + 1) k) +
           stepsOf (rootM k (n DIV (2 ** k)))
 *)
-val rootM_steps_thm = store_thm(
-  "rootM_steps_thm",
-  ``!k n. let r = ROOT k (n DIV (2 ** k)) in
+Theorem rootM_steps_thm:
+    !k n. let r = ROOT k (n DIV (2 ** k)) in
          stepsOf (rootM k n) =
          size k + size n +
          if (k = 0) \/ (n = 0) then 0
@@ -1108,14 +1131,16 @@ val rootM_steps_thm = store_thm(
               MAX (size ((2 * r + 1) ** k)) (size n) + size ((2 * r + 1) ** k - n) +
               stepsOf (shrinkM n k) +
               stepsOf (expM (2 * r + 1) k) +
-              stepsOf (rootM k (n DIV (2 ** k)))``,
+              stepsOf (rootM k (n DIV (2 ** k)))
+Proof
   (rw[Once rootM_def] >> fs[]) >>
   qabbrev_tac `r = ROOT k (n DIV 2 ** k)` >>
   `size (if (TWICE r + 1) ** k <= n then 1 else 0) = 1` by
   ((Cases_on `(TWICE r + 1) ** k <= n` >> rw[])) >>
   qabbrev_tac `t = size (if (TWICE r + 1) ** k <= n then 1 else 0)` >>
   `MAX (size (TWICE r)) t = size (2 * r)` by metis_tac[max_1_size_n, MAX_COMM] >>
-  simp[]);
+  simp[]
+QED
 
 (* Theorem: stepsOf (rootM 0 n) = 1 + size k *)
 (* Proof:
@@ -1123,12 +1148,13 @@ val rootM_steps_thm = store_thm(
    = size k + size 0 + 0       by rootM_steps_thm
    = 1 + size k                by size_0
 *)
-val rootM_steps_k_0 = store_thm(
-  "rootM_steps_k_0",
-  ``!k. stepsOf (rootM k 0) = 1 + size k``,
+Theorem rootM_steps_k_0:
+    !k. stepsOf (rootM k 0) = 1 + size k
+Proof
   rpt strip_tac >>
   `stepsOf (rootM k 0) = size k + size 0 + 0` by metis_tac[rootM_steps_thm] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: stepsOf (rootM 0 n) = 1 + size n *)
 (* Proof:
@@ -1136,12 +1162,13 @@ val rootM_steps_k_0 = store_thm(
    = size 0 + size n + 0       by rootM_steps_thm
    = 1 + size n                by size_0
 *)
-val rootM_steps_0_n = store_thm(
-  "rootM_steps_0_n",
-  ``!n. stepsOf (rootM 0 n) = 1 + size n``,
+Theorem rootM_steps_0_n:
+    !n. stepsOf (rootM 0 n) = 1 + size n
+Proof
   rpt strip_tac >>
   `stepsOf (rootM 0 n) = size 0 + size n + 0` by metis_tac[rootM_steps_thm] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: let body n = let r = ROOT k (n DIV (2 ** k)) in
                 if k = 0 then 0
@@ -1185,9 +1212,8 @@ val rootM_steps_0_n = store_thm(
          = stepsOf (rootM 0 n)            by DIV_1
          = 1 + size n                     by rootM_steps_0_n
 *)
-val rootM_steps_by_div_loop = store_thm(
-  "rootM_steps_by_div_loop",
-  ``!k. let body n = let r = ROOT k (n DIV (2 ** k)) in
+Theorem rootM_steps_by_div_loop:
+    !k. let body n = let r = ROOT k (n DIV (2 ** k)) in
                if k = 0 then 0
                else 1 + size k + size n + 2 * size r + 2 * size (2 * r) +
                     MAX (size ((2 * r + 1) ** k)) (size n) + size ((2 * r + 1) ** k - n) +
@@ -1195,7 +1221,8 @@ val rootM_steps_by_div_loop = store_thm(
                     stepsOf (expM (2 * r + 1) k)
        in !n. stepsOf (rootM k n) =
               if n = 0 then 1 + size k
-              else body n + stepsOf (rootM k (n DIV (2 ** k)))``,
+              else body n + stepsOf (rootM k (n DIV (2 ** k)))
+Proof
   rw[] >>
   (Cases_on `n = 0` >> simp[]) >-
   rw[rootM_steps_k_0] >>
@@ -1209,7 +1236,8 @@ val rootM_steps_by_div_loop = store_thm(
            stepsOf (expM (TWICE r + 1) k) +
            stepsOf (rootM k (n DIV 2 ** k))` by metis_tac[] >>
   (Cases_on `k = 0 \/ n = 0` >> simp[]) >>
-  fs[rootM_steps_0_n]);
+  fs[rootM_steps_0_n]
+QED
 
 (*
 This puts rootM_steps in the category: dividing loop with body cover.
@@ -1310,15 +1338,15 @@ suitable for: loop_div_count_cover_le
 
    Overall, x + y + z <= 3 + 4k + sk + 7sn + 5 k sk sn + 135 * k ** 3 * sn ** 2 * sk ** 2
 *)
-val rootM_body_upper = store_thm(
-  "rootM_body_upper",
-  ``!k. let body n = (let r = ROOT k (n DIV 2 ** k) in
+Theorem rootM_body_upper:
+    !k. let body n = (let r = ROOT k (n DIV 2 ** k) in
             if k = 0 then 0
             else 1 + size k + size n + 2 * size r + 2 * size (2 * r) +
                  MAX (size ((2 * r + 1) ** k)) (size n) + size ((2 * r + 1) ** k - n) +
                  stepsOf (shrinkM n k) + stepsOf (expM (TWICE r + 1) k))
         in !n. body n <=
-               3 + 4 * k + size k + 7 * size n + 5 * k * size k * size n + 135 * k ** 3 * size k ** 2 * size n ** 2``,
+               3 + 4 * k + size k + 7 * size n + 5 * k * size k * size n + 135 * k ** 3 * size k ** 2 * size n ** 2
+Proof
   rw_tac std_ss[] >>
   rw_tac bool_ss[Abbr`body`] >>
   qabbrev_tac `b = 2 * r + 1` >>
@@ -1393,7 +1421,8 @@ val rootM_body_upper = store_thm(
     `15 * k ** 3 * (3 * size n) ** 2 * size k ** 2 = 15 * 9 * k ** 3 * size k ** 2 * size n ** 2` by rw[EXP_BASE_MULT] >>
     decide_tac
   ]) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* A very useful result! *)
 
@@ -1411,14 +1440,14 @@ val rootM_body_upper = store_thm(
     = 155 * k ** 3 * size k ** 2 * size n ** 2
    Can use (MAX 1 k), but body n = 0 when k = 0 in this case.
 *)
-val rootM_body_bound = store_thm(
-  "rootM_body_bound",
-  ``!k. let body n = (let r = ROOT k (n DIV 2 ** k) in
+Theorem rootM_body_bound:
+    !k. let body n = (let r = ROOT k (n DIV 2 ** k) in
              if k = 0 then 0
              else 1 + size k + size n + 2 * size r + 2 * size (2 * r) +
                   MAX (size ((2 * r + 1) ** k)) (size n) + size ((2 * r + 1) ** k - n) +
                   stepsOf (shrinkM n k) + stepsOf (expM (TWICE r + 1) k))
-        in !n. body n <= 155 * k ** 3 * size k ** 2 * size n ** 2``,
+        in !n. body n <= 155 * k ** 3 * size k ** 2 * size n ** 2
+Proof
   rpt strip_tac >>
   assume_tac rootM_body_upper >>
   last_x_assum (qspec_then `k` strip_assume_tac) >>
@@ -1454,7 +1483,8 @@ val rootM_body_bound = store_thm(
     decide_tac) >>
     `k ** 3 * size k ** 2 * size n ** 2 = t` by rw[Abbr`t`] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: stepsOf (rootM k n) <=
          1 + size k + 3 * size n + 4 * k * size n + size k * size n +
@@ -1488,11 +1518,11 @@ val rootM_body_bound = store_thm(
                                                 by notation
          = 1 + sk + 3 * sn + 4 * k * sn + sk * sn + 7 * sn ** 2 + 5 * k * sk * sn ** 2 + 135 * k ** 3 * sk ** 2 * sn ** 3
 *)
-val rootM_steps_upper = store_thm(
-  "rootM_steps_upper",
-  ``!k n. stepsOf (rootM k n) <=
+Theorem rootM_steps_upper:
+    !k n. stepsOf (rootM k n) <=
          1 + size k + 3 * size n + 4 * k * size n + size k * size n +
-         7 * size n ** 2 + 5 * k * size k * size n ** 2 + 135 * k ** 3 * size k ** 2 * size n ** 3``,
+         7 * size n ** 2 + 5 * k * size k * size n ** 2 + 135 * k ** 3 * size k ** 2 * size n ** 3
+Proof
   rpt strip_tac >>
   assume_tac rootM_steps_by_div_loop >>
   first_x_assum (qspec_then `k` strip_assume_tac) >>
@@ -1537,7 +1567,8 @@ val rootM_steps_upper = store_thm(
     `pop b n <= size n` by rw[pop_size] >>
     `pop b n * cover n <= size n * cover n` by rw[] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: stepsOf (rootM k n) <= 157 * (MAX 1 k) ** 3 * (size k) ** 2 * (size n) ** 3 *)
 (* Proof:
@@ -1549,9 +1580,9 @@ val rootM_steps_upper = store_thm(
     = 157 * k ** 3 * sk ** 2 * sn ** 3
    Replace k by (MAX 1 k) to cater for k = 0.
 *)
-val rootM_steps_bound = store_thm(
-  "rootM_steps_bound",
-  ``!k n. stepsOf (rootM k n) <= 157 * (MAX 1 k) ** 3 * (size k) ** 2 * (size n) ** 3``,
+Theorem rootM_steps_bound:
+    !k n. stepsOf (rootM k n) <= 157 * (MAX 1 k) ** 3 * (size k) ** 2 * (size n) ** 3
+Proof
   rpt strip_tac >>
   assume_tac rootM_steps_upper >>
   last_x_assum (qspecl_then [`k`, `n`] strip_assume_tac) >>
@@ -1593,7 +1624,8 @@ val rootM_steps_bound = store_thm(
               (`k ** 3 * sk ** 2 * sn ** 3 <= m ** 3 * sk ** 2 * sn ** 3` by rw[] >>
   `m ** 3 * sk ** 2 * sn ** 3 = t` by rw[Abbr`t`] >>
   decide_tac) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o combin$C rootM n) IN
             big_O (POLY 1 o (\k. k ** 3 * (size k) ** 2 * (size n) ** 3)) *)
@@ -1604,10 +1636,10 @@ val rootM_steps_bound = store_thm(
    Then 0 < k ==> MAX 1 k = k    by MAX_DEF
    The result follows            by rootM_steps_bound
 *)
-val rootM_steps_O_base = store_thm(
-  "rootM_steps_O_base",
-  ``!n. (stepsOf o combin$C rootM n) IN
-        big_O (POLY 1 o (\k. k ** 3 * (size k) ** 2 * (size n) ** 3))``,
+Theorem rootM_steps_O_base:
+    !n. (stepsOf o combin$C rootM n) IN
+        big_O (POLY 1 o (\k. k ** 3 * (size k) ** 2 * (size n) ** 3))
+Proof
   rw[big_O_def, POLY_def] >>
   qexists_tac `0` >>
   qexists_tac `157` >>
@@ -1615,7 +1647,8 @@ val rootM_steps_O_base = store_thm(
   assume_tac rootM_steps_bound >>
   last_x_assum (qspecl_then [`n'`, `n`] strip_assume_tac) >>
   `MAX 1 n' = n'` by rw[MAX_DEF] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (stepsOf o rootM k) IN O_poly 3 *)
 (* Proof:
@@ -1625,11 +1658,12 @@ val rootM_steps_O_base = store_thm(
                                                by rootM_steps_bound
    Take any h, say 0, and k' = 157 * MAX 1 k ** 3 * size k ** 2, the result follows.
 *)
-val rootM_steps_O_poly = store_thm(
-  "rootM_steps_O_poly",
-  ``!k. (stepsOf o rootM k) IN O_poly 3``,
+Theorem rootM_steps_O_poly:
+    !k. (stepsOf o rootM k) IN O_poly 3
+Proof
   rw[O_poly_thm] >>
-  metis_tac[rootM_steps_bound]);
+  metis_tac[rootM_steps_bound]
+QED
 
 (* This is a spectacular achievement! *)
 
@@ -1641,22 +1675,24 @@ val rootM_steps_O_poly = store_thm(
       = (\n. ulog n ** 3)                 by POLY_def, FUN_EQ_THM
    The result follows.
 *)
-val rootM_steps_big_O = store_thm(
-  "rootM_steps_big_O",
-  ``!k. (stepsOf o rootM k) IN big_O (\n. (ulog n) ** 3)``,
+Theorem rootM_steps_big_O:
+    !k. (stepsOf o rootM k) IN big_O (\n. (ulog n) ** 3)
+Proof
   assume_tac rootM_steps_O_poly >>
   `O_poly 3 = big_O (POLY 3 o ulog)` by rw[O_poly_eq_O_poly_ulog] >>
   `POLY 3 o ulog = \n. ulog n ** 3` by rw[FUN_EQ_THM, POLY_def] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (valueOf (rootM k n) = ROOT k n) /\
             (stepsOf o rootM k) IN big_O (\n. (ulog n) ** 3) *)
 (* Proof: by rootM_value, rootM_steps_big_O *)
-val rootM_thm = store_thm(
-  "rootM_thm",
-  ``!k n. (valueOf (rootM k n) = ROOT k n) /\
-         (stepsOf o rootM k) IN big_O (\n. (ulog n) ** 3)``,
-  metis_tac[rootM_value, rootM_steps_big_O]);
+Theorem rootM_thm:
+    !k n. (valueOf (rootM k n) = ROOT k n) /\
+         (stepsOf o rootM k) IN big_O (\n. (ulog n) ** 3)
+Proof
+  metis_tac[rootM_value, rootM_steps_big_O]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integer Square-root in Monadic Style                                      *)
@@ -1677,10 +1713,11 @@ End
 
 (* Theorem: valueOf (sqrtM n) = SQRT n *)
 (* Proof: by sqrtM_def *)
-val sqrtM_value = store_thm(
-  "sqrtM_value[simp]",
-  ``!n. valueOf (sqrtM n) = SQRT n``,
-  rw[sqrtM_def]);
+Theorem sqrtM_value[simp]:
+    !n. valueOf (sqrtM n) = SQRT n
+Proof
+  rw[sqrtM_def]
+QED
 
 (* Obtain theorems *)
 val sqrtM_steps_upper = save_thm("sqrtM_steps_upper",
@@ -1795,9 +1832,9 @@ End
           ROOT k n ** k <> n ==> n power_free_upto k - 1 <=> n power_free_upto k
           This follows                by power_free_upto_def
 *)
-val power_free_loopM_value = store_thm(
-  "power_free_loopM_value[simp]",
-  ``!n k. valueOf (power_free_loopM n k) = (n power_free_upto k)``,
+Theorem power_free_loopM_value[simp]:
+    !n k. valueOf (power_free_loopM n k) = (n power_free_upto k)
+Proof
   ho_match_mp_tac (theorem "power_free_loopM_ind") >>
   rw[] >>
   rw[Once power_free_loopM_def] >-
@@ -1809,7 +1846,8 @@ val power_free_loopM_value = store_thm(
     fs[power_free_upto_def],
     rw[power_free_upto_def, EQ_IMP_THM] >>
     metis_tac[LESS_OR_EQ, DECIDE``j < k ==> j <= k - 1``]
-  ]);
+  ]
+QED
 
 (* Theorem: valueOf (power_freeM n) = power_free_test n *)
 (* Proof:
@@ -1822,17 +1860,19 @@ val power_free_loopM_value = store_thm(
          so 1 < n                    by n <> 0, n <> 1
        The result follows            by power_free_test_def, 1 < n
 *)
-val power_freeM_value = store_thm(
-  "power_freeM_value[simp]",
-  ``!n. valueOf (power_freeM n) = power_free_test n``,
-  rw[power_freeM_def, power_free_test_def, ulog_eq_0]);
+Theorem power_freeM_value[simp]:
+    !n. valueOf (power_freeM n) = power_free_test n
+Proof
+  rw[power_freeM_def, power_free_test_def, ulog_eq_0]
+QED
 
 (* Theorem: valueOf (power_freeM n) = power_free n *)
 (* Proof: by power_freeM_value, power_free_test_eqn. *)
-val power_freeM_value_alt = store_thm(
-  "power_freeM_value_alt",
-  ``!n. valueOf (power_freeM n) = power_free n``,
-  rw[power_free_test_eqn]);
+Theorem power_freeM_value_alt:
+    !n. valueOf (power_freeM n) = power_free n
+Proof
+  rw[power_free_test_eqn]
+QED
 
 (* Theorem: stepsOf (power_freeM n) =
             if n = 0 then 2
@@ -1853,18 +1893,19 @@ val power_freeM_value_alt = store_thm(
    = if n = 0 then 2 else if n = 1 then 12
      else stepsOf (ulogM n) + size (ulog n) + stepsOf (power_free_loopM n (ulog n))
 *)
-val power_freeM_steps_thm = store_thm(
-  "power_freeM_steps_thm",
-  ``!n. stepsOf (power_freeM n) =
+Theorem power_freeM_steps_thm:
+    !n. stepsOf (power_freeM n) =
         if n = 0 then 2
         else if n = 1 then 12
-             else stepsOf (ulogM n) + size (ulog n) + stepsOf (power_free_loopM n (ulog n))``,
+             else stepsOf (ulogM n) + size (ulog n) + stepsOf (power_free_loopM n (ulog n))
+Proof
   rpt strip_tac >>
   `(ulog 0 = 0) /\ (ulog 1 = 0)` by rw[] >>
   (rw[power_freeM_def] >> simp[]) >-
   rw[ulogM_steps_0] >-
   rw[ulogM_steps_1] >>
-  fs[ulog_eq_0]);
+  fs[ulog_eq_0]
+QED
 
 (* Theorem: stepsOf (power_free_loopM n 0) = 2 *)
 (* Proof:
@@ -1872,10 +1913,11 @@ val power_freeM_steps_thm = store_thm(
    = stepsOf (zeroM 0) + stepsOf (oneM 0)   by power_free_loopM_def
    = size 0 + size 0 = 1 + 1 = 2            by size_0
 *)
-val power_free_loopM_steps_n_0 = store_thm(
-  "power_free_loopM_steps_n_0",
-  ``!n. stepsOf (power_free_loopM n 0) = 2``,
-  rw[Once power_free_loopM_def]);
+Theorem power_free_loopM_steps_n_0:
+    !n. stepsOf (power_free_loopM n 0) = 2
+Proof
+  rw[Once power_free_loopM_def]
+QED
 
 (* Theorem: stepsOf (power_free_loopM n k) =
             2 * size k +
@@ -1907,14 +1949,14 @@ val power_free_loopM_steps_n_0 = store_thm(
           size n + if ((ROOT k n) ** k = n) then 0
           else size k + stepsOf (power_free_loopM n (k - 1))
 *)
-val power_free_loopM_steps_thm = store_thm(
-  "power_free_loopM_steps_thm",
-  ``!n k. stepsOf (power_free_loopM n k) =
+Theorem power_free_loopM_steps_thm:
+    !n k. stepsOf (power_free_loopM n k) =
           2 * size k +
           if k = 0 \/ k = 1 then 0
           else size n + stepsOf (rootM k n) + stepsOf (expM (ROOT k n) k) +
                if ((ROOT k n) ** k = n) then 0
-               else size k + stepsOf (power_free_loopM n (k - 1))``,
+               else size k + stepsOf (power_free_loopM n (k - 1))
+Proof
   rpt strip_tac >>
   `0 < k ==> MAX (size (ROOT k n ** k)) (size n) = size n` by
   (rpt strip_tac >>
@@ -1922,7 +1964,8 @@ val power_free_loopM_steps_thm = store_thm(
   `r <= n` by rw[ROOT, Abbr`r`] >>
   `MAX r n = n` by rw[MAX_DEF] >>
   rw[GSYM size_max]) >>
-  (rw[] >> rw[Once power_free_loopM_def]));
+  (rw[] >> rw[Once power_free_loopM_def])
+QED
 
 (* Theorem: let eq k = ((ROOT k n) ** k = n);
                 body k =
@@ -1948,19 +1991,20 @@ val power_free_loopM_steps_thm = store_thm(
           size n + if (ROOT k n) ** k = n then 0 else size k) +
           if (ROOT k n) ** k = n then 0 else stepsOf (power_free_loopM n (k - 1))
 *)
-val power_free_loopM_steps_by_dec_loop = store_thm(
-  "power_free_loopM_steps_by_dec_loop",
-  ``!n. let eq k = ((ROOT k n) ** k = n);
+Theorem power_free_loopM_steps_by_dec_loop:
+    !n. let eq k = ((ROOT k n) ** k = n);
            body k =
               if k <= 1 then 2
               else size n + 2 * size k +
                    stepsOf (rootM k n) + stepsOf (expM (ROOT k n) k) + if eq k then 0 else size k
         in !k. stepsOf (power_free_loopM n k) =
                if k = 0 then 2
-               else body k + if eq k then 0 else stepsOf (power_free_loopM n (k - 1))``,
+               else body k + if eq k then 0 else stepsOf (power_free_loopM n (k - 1))
+Proof
   (rw[Once power_free_loopM_steps_thm] >> rw[]) >-
   rw[] >>
-  fs[ROOT_1]);
+  fs[ROOT_1]
+QED
 
 (*
 This puts power_free_loopM_steps in the category: decreasing loop with body cover and exit.
@@ -2000,15 +2044,15 @@ suitable for: loop_dec_count_cover_exit_le
    Thus x + y + z
      <= size n + 3 * size k + 157 * k ** 3 * size k ** 2 * size n ** 3 + 15 * k ** 3 * size k ** 2 * size n ** 2
 *)
-val power_free_loopM_body_upper = store_thm(
-  "power_free_loopM_body_upper",
-  ``!n. let eq k = ((ROOT k n) ** k = n);
+Theorem power_free_loopM_body_upper:
+    !n. let eq k = ((ROOT k n) ** k = n);
            body k =
              if k <= 1 then 2
              else size n + 2 * size k + stepsOf (rootM k n) + stepsOf (expM (ROOT k n) k) +
                   if eq k then 0 else size k
         in !k. body k <=
-               size n + 3 * size k + 15 * k ** 3 * size k ** 2 * size n ** 2 + 157 * k ** 3 * size k ** 2 * size n ** 3``,
+               size n + 3 * size k + 15 * k ** 3 * size k ** 2 * size n ** 2 + 157 * k ** 3 * size k ** 2 * size n ** 3
+Proof
   rw_tac std_ss[] >>
   Cases_on `k <= 1` >| [
     `body k = 2` by metis_tac[] >>
@@ -2029,7 +2073,8 @@ val power_free_loopM_body_upper = store_thm(
     `k ** 3 * size (ROOT k n) ** 2 * sk ** 2 <= k ** 3 * sn ** 2 * sk ** 2` by rw[] >>
     decide_tac) >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: let eq k = ((ROOT k n) ** k = n);
                 body k =
@@ -2045,14 +2090,14 @@ val power_free_loopM_body_upper = store_thm(
     = 176 * k ** 3 * (size k) ** 2 * (size n) ** 3
    Use (MAX 1 k) to cater for k = 0.
 *)
-val power_free_loopM_body_bound = store_thm(
-  "power_free_loopM_body_bound",
-  ``!n. let eq k = ((ROOT k n) ** k = n);
+Theorem power_free_loopM_body_bound:
+    !n. let eq k = ((ROOT k n) ** k = n);
            body k =
              if k <= 1 then 2
              else size n + 2 * size k +
                   stepsOf (rootM k n) + stepsOf (expM (ROOT k n) k) + if eq k then 0 else size k
-        in !k. body k <= 176 * (MAX 1 k) ** 3 * (size k) ** 2 * (size n) ** 3``,
+        in !k. body k <= 176 * (MAX 1 k) ** 3 * (size k) ** 2 * (size n) ** 3
+Proof
   rpt strip_tac >>
   assume_tac power_free_loopM_body_upper >>
   last_x_assum (qspecl_then [`n`] strip_assume_tac) >>
@@ -2083,7 +2128,8 @@ val power_free_loopM_body_bound = store_thm(
   `m ** 3 * sk ** 2 * sn ** 2 * sn = t` by rw[Abbr`t`] >>
   decide_tac) >>
   `k ** 3 * sk ** 2 * sn ** 3 <= t` by rw[Abbr`t`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: stepsOf (power_free_loopM n k) <= 2 + 176 * k ** 4 * size k ** 2 * size n ** 3 *)
 (* Proof:
@@ -2111,9 +2157,9 @@ val power_free_loopM_body_bound = store_thm(
       = 2 + 176 * k ** 4 * size k ** 2 * size n ** 3
                                        by EXP
 *)
-val power_free_loopM_steps_upper = store_thm(
-  "power_free_loopM_steps_upper",
-  ``!n k. stepsOf (power_free_loopM n k) <= 2 + 176 * k ** 4 * size k ** 2 * size n ** 3``,
+Theorem power_free_loopM_steps_upper:
+    !n k. stepsOf (power_free_loopM n k) <= 2 + 176 * k ** 4 * size k ** 2 * size n ** 3
+Proof
   rpt strip_tac >>
   assume_tac power_free_loopM_steps_by_dec_loop >>
   last_x_assum (qspec_then `n` strip_assume_tac) >>
@@ -2137,7 +2183,8 @@ val power_free_loopM_steps_upper = store_thm(
     imp_res_tac loop_dec_count_cover_exit_le >>
     first_x_assum (qspec_then `k` strip_assume_tac) >>
     metis_tac[hop_1_n]
-  ]);
+  ]
+QED
 
 (* Theorem: stepsOf (power_free_loopM n k) <= 178 * (MAX 1 k) ** 4 * size k ** 2 * size n ** 3 *)
 (* Proof:
@@ -2147,9 +2194,9 @@ val power_free_loopM_steps_upper = store_thm(
     = 178 * k ** 4 * size k ** 2 * size n ** 3
    Use (MAX 1 k) to take care of k = 0.
 *)
-val power_free_loopM_steps_bound = store_thm(
-  "power_free_loopM_steps_bound",
-  ``!n k. stepsOf (power_free_loopM n k) <= 178 * (MAX 1 k) ** 4 * size k ** 2 * size n ** 3``,
+Theorem power_free_loopM_steps_bound:
+    !n k. stepsOf (power_free_loopM n k) <= 178 * (MAX 1 k) ** 4 * size k ** 2 * size n ** 3
+Proof
   rpt strip_tac >>
   assume_tac power_free_loopM_steps_upper >>
   last_x_assum (qspecl_then [`n`, `k`] strip_assume_tac) >>
@@ -2157,7 +2204,8 @@ val power_free_loopM_steps_bound = store_thm(
   `1 <= m /\ k <= m` by rw[Abbr`m`] >>
   `2 <= 2 * m ** 4 * size k ** 2 * size n ** 3` by rw[MULT_POS] >>
   `k ** 4 * size k ** 2 * size n ** 3 <= m ** 4 * size k ** 2 * size n ** 3` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o power_free_loopM n) IN
             big_O (POLY 1 o (\k. k ** 4 * (size k) ** 2 * (size n) ** 3)) *)
@@ -2169,16 +2217,17 @@ val power_free_loopM_steps_bound = store_thm(
             178 * (MAX 1 k) ** 4 * size k ** 2 * size n ** 3  by power_free_loopM_steps_bound
    Let k = 0, c = 178, the result follows.
 *)
-val power_free_loopM_steps_O_base = store_thm(
-  "power_free_loopM_steps_O_base",
-  ``!n. (stepsOf o power_free_loopM n) IN
-            big_O (POLY 1 o (\k. k ** 4 * (size k) ** 2 * (size n) ** 3))``,
+Theorem power_free_loopM_steps_O_base:
+    !n. (stepsOf o power_free_loopM n) IN
+            big_O (POLY 1 o (\k. k ** 4 * (size k) ** 2 * (size n) ** 3))
+Proof
   rw_tac bool_ss[big_O_def, POLY_def, GSPECIFICATION, combinTheory.o_THM, EXP_1] >>
   qexists_tac `0` >>
   qexists_tac `178` >>
   rpt strip_tac >>
   `MAX 1 n' = n'` by rw[MAX_DEF] >>
-  metis_tac[power_free_loopM_steps_bound, MULT_ASSOC]);
+  metis_tac[power_free_loopM_steps_bound, MULT_ASSOC]
+QED
 
 (* Theorem: stepsOf (power_freeM n) <= 11 + 9 * size n + 11 * size n ** 2 + 176 * size n ** 9 *)
 (* Proof:
@@ -2199,9 +2248,9 @@ val power_free_loopM_steps_O_base = store_thm(
      <= 9 + 8 * size n + 11 * size n ** 2 + size n + 2 + 176 * size n ** 9    by above
       = 11 + 9 * size n + 11 * size n ** 2 + 176 * size n ** 9
 *)
-val power_freeM_steps_upper = store_thm(
-  "power_freeM_steps_upper",
-  ``!n. stepsOf (power_freeM n) <= 11 + 9 * size n + 11 * size n ** 2 + 176 * size n ** 9``,
+Theorem power_freeM_steps_upper:
+    !n. stepsOf (power_freeM n) <= 11 + 9 * size n + 11 * size n ** 2 + 176 * size n ** 9
+Proof
   rpt strip_tac >>
   assume_tac power_freeM_steps_thm >>
   last_x_assum (qspec_then `n` strip_assume_tac) >>
@@ -2219,7 +2268,8 @@ val power_freeM_steps_upper = store_thm(
   `sn ** 4 * size k ** 2 * sn ** 3 <= sn ** 4 * sn ** 2 * sn ** 3` by rw[] >>
   `sn ** 4 * sn ** 2 * sn ** 3 = sn ** 9` by rw[EXP_BASE_MULT] >>
   decide_tac) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: stepsOf (power_freeM n) <= 207 * size n ** 9 *)
 (* Proof:
@@ -2228,9 +2278,9 @@ val power_freeM_steps_upper = store_thm(
    <= (11 + 9 + 11 + 176) * size n ** 9                        by dominant term
     = 207 * size n ** 9
 *)
-val power_freeM_steps_bound = store_thm(
-  "power_freeM_steps_bound",
-  ``!n. stepsOf (power_freeM n) <= 207 * size n ** 9``,
+Theorem power_freeM_steps_bound:
+    !n. stepsOf (power_freeM n) <= 207 * size n ** 9
+Proof
   rpt strip_tac >>
   assume_tac power_freeM_steps_upper >>
   last_x_assum (qspec_then `n` strip_assume_tac) >>
@@ -2241,7 +2291,8 @@ val power_freeM_steps_bound = store_thm(
   `z ** 2 <= z ** 2 * z ** 7` by rw[] >>
   `z * z ** 8 = z ** 9` by rw[] >>
   `z ** 2 * z ** 7 = z ** 9` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o power_freeM) IN O_poly 9 *)
 (* Proof:
@@ -2250,11 +2301,12 @@ val power_freeM_steps_bound = store_thm(
    Note stepsOf (power_freeM n) <= 207 * size n ** 9   by power_freeM_steps_bound
    Take any h, say 0, and k = 207, the result follows.
 *)
-val power_freeM_steps_O_poly = store_thm(
-  "power_freeM_steps_O_poly",
-  ``(stepsOf o power_freeM) IN O_poly 9``,
+Theorem power_freeM_steps_O_poly:
+    (stepsOf o power_freeM) IN O_poly 9
+Proof
   rw[O_poly_thm] >>
-  metis_tac[power_freeM_steps_bound]);
+  metis_tac[power_freeM_steps_bound]
+QED
 
 (* This is the first truly significant complexity result! *)
 
@@ -2266,22 +2318,24 @@ val power_freeM_steps_O_poly = store_thm(
       = (\n. ulog n ** 9)                       by POLY_def, FUN_EQ_THM
    The result follows.
 *)
-val power_freeM_steps_big_O = store_thm(
-  "power_freeM_steps_big_O",
-  ``(stepsOf o power_freeM) IN big_O (\n. (ulog n) ** 9)``,
+Theorem power_freeM_steps_big_O:
+    (stepsOf o power_freeM) IN big_O (\n. (ulog n) ** 9)
+Proof
   assume_tac power_freeM_steps_O_poly >>
   `O_poly 9 = big_O (POLY 9 o ulog)` by rw[O_poly_eq_O_poly_ulog] >>
   `POLY 9 o ulog = \n. ulog n ** 9` by rw[FUN_EQ_THM, POLY_def] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (valueOf (power_freeM n) <=> power_free n) /\
             (stepsOf o power_freeM) IN big_O (\n. (ulog n) ** 9) *)
 (* Proof: by power_freeM_value_alt, power_freeM_steps_big_O *)
-val power_freeM_thm = store_thm(
-  "power_freeM_thm",
-  ``!n. (valueOf (power_freeM n) <=> power_free n) /\
-       (stepsOf o power_freeM) IN big_O (\n. (ulog n) ** 9)``,
-  metis_tac[power_freeM_value_alt, power_freeM_steps_big_O]);
+Theorem power_freeM_thm:
+    !n. (valueOf (power_freeM n) <=> power_free n) /\
+       (stepsOf o power_freeM) IN big_O (\n. (ulog n) ** 9)
+Proof
+  metis_tac[power_freeM_value_alt, power_freeM_steps_big_O]
+QED
 
 (*
 From the AKS paper, the best-known power-free test is in O((log n) ** 3).

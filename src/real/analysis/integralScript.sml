@@ -117,10 +117,17 @@ Definition gauge :
    gauge(E) (g:real->real) = !x. E x ==> &0 < g(x)
 End
 
+Theorem gauge' :
+    !E g. gauge E g <=> !x. x IN E ==> 0 < g x
+Proof
+    rw [IN_APP, gauge]
+QED
+
 (* connection to integrationTheory, thus the function g (as the gauge) will be
    used as the radius of each division as open intervals. *)
 Theorem gauge_alt :
-    !c E g. 0 < c ==> (gauge E g <=> Gauge (\x. ball(x, if E x then c * g(x) else 1)))
+    !c E g. 0 < c ==>
+           (gauge E g <=> Gauge (\x. ball(x, if E x then c * g(x) else 1)))
 Proof
     rw [gauge, gauge_def, CENTRE_IN_BALL, OPEN_BALL]
  >> EQ_TAC >> rw []

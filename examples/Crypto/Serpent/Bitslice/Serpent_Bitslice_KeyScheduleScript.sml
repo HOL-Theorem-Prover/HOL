@@ -89,12 +89,12 @@ Definition makeKey_def:
   revPreKey2SubKey revPreKey
 End
 
-val makeSubKeyBitSliceLength = Q.store_thm(
-"makeSubKeyBitSliceLength",
-`!longKey n.
+Theorem makeSubKeyBitSliceLength:
+ !longKey n.
     (LENGTH longKey>= 8)
     ==>
-    (LENGTH (makeSubKeyBitSlice longKey n ) = n+LENGTH longKey+1)`,
+    (LENGTH (makeSubKeyBitSlice longKey n ) = n+LENGTH longKey+1)
+Proof
   Induct_on `n` THENL [
     FULL_SIMP_TAC list_ss [makeSubKeyBitSlice_def,LENGTH,LET_THM] THEN
     RW_TAC std_ss [] THEN
@@ -109,12 +109,13 @@ val makeSubKeyBitSliceLength = Q.store_thm(
       by METIS_TAC [listInstGreaterEq8] THEN
     FULL_SIMP_TAC list_ss [makeSubKeyBitSlice_def] THEN
     RW_TAC list_ss [] THEN
-    FULL_SIMP_TAC list_ss [Abbrev_def]]);
+    FULL_SIMP_TAC list_ss [Abbrev_def]]
+QED
 
-val makeRevPreKeyLength = Q.store_thm(
-"makeRevPreKeyLength",
-`!userKey.
-    LENGTH (makeRevPreKey userKey) = 132`,
+Theorem makeRevPreKeyLength:
+ !userKey.
+    LENGTH (makeRevPreKey userKey) = 132
+Proof
   RW_TAC std_ss [makeRevPreKey_def,LET_THM] THEN
   `LENGTH (word256to32l userKey) = 8` by METIS_TAC [word256to32lLength] THEN
   `LENGTH (word256to32l userKey)>= 8` by RW_TAC arith_ss [] THEN
@@ -123,12 +124,14 @@ val makeRevPreKeyLength = Q.store_thm(
      by METIS_TAC [makeSubKeyBitSliceLength,LENGTH_REVERSE] THEN
   `8 <=  LENGTH (makeSubKeyBitSlice (word256to32l userKey) 131)`
      by FULL_SIMP_TAC arith_ss [] THEN
-  FULL_SIMP_TAC list_ss [LENGTH_myBUTLASTN,LENGTH_REVERSE]);
+  FULL_SIMP_TAC list_ss [LENGTH_myBUTLASTN,LENGTH_REVERSE]
+QED
 
 (*only length matters in functional correctness*)
-val makeKeyLength = Q.store_thm(
-"makeKeyLength",
-`!userKey kl.
-    LENGTH (makeKey userKey kl) = 33`,
-  RW_TAC list_ss [makeKey_def,revPreKey2SubKey_def,LET_THM]);
+Theorem makeKeyLength:
+ !userKey kl.
+    LENGTH (makeKey userKey kl) = 33
+Proof
+  RW_TAC list_ss [makeKey_def,revPreKey2SubKey_def,LET_THM]
+QED
 

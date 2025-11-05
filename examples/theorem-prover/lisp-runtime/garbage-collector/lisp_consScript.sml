@@ -184,11 +184,13 @@ val ADDR_w2w_ALIGNED = prove(
         (((b+4w) && 3w = 0w) = (b && 3w = 0w:word64))``,
   REPEAT STRIP_TAC \\ blastLib.BBLAST_TAC);
 
-val ADDR_SIMP = store_thm("ADDR_SIMP",
-  ``!a b.
+Theorem ADDR_SIMP:
+    !a b.
       ((w2w (0x4w * a + b && 0x3w:word64) = 0x0w:word32) = (b && 3w = 0w)) /\
-      ((w2w (0x4w * a + b + 4w && 0x3w:word64) = 0x0w:word32) = (b && 3w = 0w))``,
-  METIS_TAC [ADDR_SIMP_LEMMA,ADDR_SIMP_LEMMA2,WORD_ADD_ASSOC]);
+      ((w2w (0x4w * a + b + 4w && 0x3w:word64) = 0x0w:word32) = (b && 3w = 0w))
+Proof
+  METIS_TAC [ADDR_SIMP_LEMMA,ADDR_SIMP_LEMMA2,WORD_ADD_ASSOC]
+QED
 
 Definition ref_aux_def:
   (ref_aux a H_EMP = SEP_EXISTS x y. one (a:word64,x) * one (a+4w,y)) /\
@@ -217,11 +219,12 @@ val ref_mem_SPLIT = prove(
   \\ `RANGE (b,e) i /\ ~(e < i)` by RANGE_TAC \\ RES_TAC
   \\ ASM_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
 
-val ref_mem_RANGE = store_thm("ref_mem_RANGE",
-  ``!m b e i.
+Theorem ref_mem_RANGE:
+    !m b e i.
       RANGE(b,e)i ==>
       (ref_mem a m b e = ref_mem a m b i * ref_aux (a + n2w (8 * i)) (m i) *
-                         ref_mem a m (SUC i) e)``,
+                         ref_mem a m (SUC i) e)
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC ref_mem_SPLIT
   \\ ASM_SIMP_TAC std_ss [GSYM STAR_ASSOC] \\ AP_TERM_TAC
   \\ POP_ASSUM (K ALL_TAC) \\ POP_ASSUM MP_TAC
@@ -231,7 +234,8 @@ val ref_mem_RANGE = store_thm("ref_mem_RANGE",
     \\ ASM_SIMP_TAC std_ss [ref_mem_def,ref_mem_EQ_EMP])
   \\ ASM_SIMP_TAC std_ss [ref_mem_def,ref_mem_EQ_EMP]
   \\ `~(e < i) /\ ~(e < SUC i) /\ RANGE (b,e) i` by RANGE_TAC
-  \\ ASM_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
+  \\ ASM_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]
+QED
 
 val ref_mem_IGNORE = prove(
   ``!e i b m a. ~RANGE(b,e)i ==> (ref_mem a ((i =+ x) m) b e = ref_mem a m b e)``,
@@ -240,17 +244,19 @@ val ref_mem_IGNORE = prove(
   \\ `~(i = e) /\ ~RANGE (b,e) i` by RANGE_TAC \\ RES_TAC
   \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM]);
 
-val ref_mem_UPDATE = store_thm("ref_mem_UPDATE",
-  ``!m b e i.
+Theorem ref_mem_UPDATE:
+    !m b e i.
       RANGE(b,e)i ==>
       (ref_mem a ((i =+ x) m) b e =
        ref_mem a m b i *
        ref_aux (a + n2w (8 * i)) x *
-       ref_mem a m (SUC i) e)``,
+       ref_mem a m (SUC i) e)
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC ref_mem_RANGE
   \\ ASM_SIMP_TAC std_ss [APPLY_UPDATE_THM]
   \\ `~RANGE(b,i)i /\ ~RANGE(SUC i,e)i` by RANGE_TAC
-  \\ ASM_SIMP_TAC std_ss [ref_mem_IGNORE]);
+  \\ ASM_SIMP_TAC std_ss [ref_mem_IGNORE]
+QED
 
 Definition memory_ok_def:
   memory_ok m =
@@ -580,14 +586,15 @@ val ref_mem_CUT = prove(
   \\ FULL_SIMP_TAC std_ss [ref_aux_def,SEP_CLAUSES,SEP_EXISTS_THM,oneTheory.one]
   \\ METIS_TAC []);
 
-val mc_gc_thm = store_thm("mc_gc_thm",
-  ``memory_ok mF /\ memory_ok mT /\ e < 2**31 /\ (r6 && 3w = 0w) /\ (r15 && 3w = 0w) /\ (r14 && 3w = 0w) ==>
+Theorem mc_gc_thm:
+    memory_ok mF /\ memory_ok mT /\ e < 2**31 /\ (r6 && 3w = 0w) /\ (r15 && 3w = 0w) /\ (r14 && 3w = 0w) ==>
     (split_gc (xs,mF,mT,e) = (T,i2,xs2,mT2,e)) ==>
     (ref_mem r6 mF 0 e * ref_mem r15 mT 0 e * ref_stack r14 xs * p) (fun2set (f,df)) ==>
     ?fi.
       memory_ok mT2 /\ mc_gc_pre (r6,r14,r15,df,f) /\
       (mc_gc (r6,r14,r15,df,f) = (r15,n2w (2 * i2),r6,df,fi)) /\
-      (ref_mem r6 (\x.H_EMP) 0 e * ref_mem r15 mT2 0 e * ref_stack r14 xs2 * p) (fun2set (fi,df))``,
+      (ref_mem r6 (\x.H_EMP) 0 e * ref_mem r15 mT2 0 e * ref_stack r14 xs2 * p) (fun2set (fi,df))
+Proof
   STRIP_TAC \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ SIMP_TAC std_ss [split_gc_def]
   \\ `?c6 xs6 j6 mF6 mT6. split_move_list (xs,0,mF,mT,e) = (c6,xs6,j6,mF6,mT6)` by METIS_TAC [PAIR]
   \\ `?c7 i7 mF7 mT7. split_gc_loop (0,j6,mF6,mT6,e) = (c7,i7,mF7,mT7)` by METIS_TAC [PAIR]
@@ -623,7 +630,8 @@ val mc_gc_thm = store_thm("mc_gc_thm",
   \\ `((p * ref_stack r14 xs6 * ref_mem r6 (CUT (0,0) mF7) 0 e) *
        ref_mem r15 (CUT (0,i7) mT7) 0 e) (fun2set (fi',df))` by
          (MATCH_MP_TAC ref_mem_CUT \\ FULL_SIMP_TAC (std_ss++star_ss) [])
-  \\ FULL_SIMP_TAC (std_ss++star_ss) []);
+  \\ FULL_SIMP_TAC (std_ss++star_ss) []
+QED
 
 Definition word64_3232_def:
   word64_3232 (w:word64) = (w2w w, w2w (w >>> 32)):word32 # word32
@@ -674,10 +682,11 @@ val IN_D0 = SIMP_CONV bool_ss [IN_DEF, D0_def] ``x IN D0 m``
 val IN_D1 = (REWRITE_CONV [IN_DEF] THENC SIMP_CONV bool_ss [D1_def])
                 ``x IN D1 m``
 
-val ok_split_heap = store_thm("ok_split_heap",
-  ``!roots m i e.
+Theorem ok_split_heap:
+    !roots m i e.
       ok_split_heap (roots,m,i,e) =
-      memory_ok m /\ ?h. ok_full_heap (h,roots) (0,i,e,e,e + e,m)``,
+      memory_ok m /\ ?h. ok_full_heap (h,roots) (0,i,e,e,e + e,m)
+Proof
   REPEAT STRIP_TAC \\ SIMP_TAC std_ss [ok_split_heap_def,ok_full_heap_def]
   \\ REVERSE EQ_TAC \\ STRIP_TAC \\ ASM_SIMP_TAC std_ss [] THEN1
    (FULL_SIMP_TAC std_ss [RANGE_def,NOT_LESS,UNION_SUBSET,ok_heap_def]
@@ -733,5 +742,6 @@ val ok_split_heap = store_thm("ok_split_heap",
     \\ FULL_SIMP_TAC std_ss [ADDR_SET_def,GSPECIFICATION]
     \\ FULL_SIMP_TAC std_ss [IN_D0,getBLOCK_def,SUBSET_DEF]
     \\ FULL_SIMP_TAC std_ss [IN_D1,ADDR_SET_def,GSPECIFICATION]
-    \\ METIS_TAC []));
+    \\ METIS_TAC [])
+QED
 

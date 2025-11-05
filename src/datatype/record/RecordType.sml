@@ -149,6 +149,13 @@ fun freshsubst avoids tyvs =
     #2 (List.foldl foldthis (avoids, []) tyvs)
   end
 
+fun mk_var_avds (nm, ty, avoids) =
+  let
+    val v0 = mk_var(nm, ty)
+  in
+    variant avoids v0
+  end
+
 
 (* ----------------------------------------------------------------------
     prove_recordtype_thms
@@ -324,9 +331,49 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     Term`^(Term.inst s acc) (^fupd ^f ^var) = ^f (^acc ^var)`
   end
   val diag_goals = ListPair.map create_goal (accfn_terms, fupdfn_terms)
-  val tactic = STRUCT_CASES_TAC (SPEC var cases_thm) THEN
-    REWRITE_TAC [accessor_thm, fupdfn_thm, combinTheory.o_THM] THEN
-    BETA_TAC THEN REWRITE_TAC []
+  local
+     fun sing f [x] = f x
+       | sing f _ = raise ERR "sing" "Bind Error"
+     (* The induction theorem is recursive for recursive records and
+        not useful for case spliting *)
+     val induction_thm' =
+     let
+        val (var, body) = dest_forall (concl cases_thm)
+        val (field_vars,body) = strip_exists body
+        val typ = type_of var
+        val pred_r = mk_var_avds("P", typ --> bool, var::field_vars)
+        val (lhs,rhs) = dest_eq body
+        val new_body = (mk_forall (pred_r, mk_imp (list_mk_forall(field_vars,(mk_comb (pred_r,rhs))),
+                               mk_forall(var,(mk_comb (pred_r,lhs))))))
+     in
+        prove(new_body,
+             rpt STRIP_TAC THEN
+             STRUCT_CASES_TAC (SPEC var cases_thm) THEN
+             ASM_REWRITE_TAC[])
+     end
+  in
+    fun FAST_CASES_ON_TAC a :tactic =
+        (fn (g as (asl,w)) => let
+            val P = mk_abs (a,w) (* (\a. ...)  a *)
+            val imp = (SPEC P induction_thm') (* !a1 ... xn . . (\a. ...) (rec ...) ==> !a. (\a. ...) a *)
+            val (ant,_) = dest_imp (concl imp)
+            val (xs,body) = strip_forall ant
+            val beta_eq = SYM (BETA_CONV body) (* .. [v/x] = (\x.u) v *)
+            fun validation thm = let
+                  val thm = EQ_MP beta_eq thm
+                  val thm = GENL xs thm
+                  val thm = MP imp thm
+                  val thm = SPEC a thm
+                in
+                  (CONV_RULE BETA_CONV) thm
+                end
+         in
+            ([(asl , lhs (concl beta_eq))], (sing validation))
+         end)
+  end
+  val tactic = FAST_CASES_ON_TAC var THEN
+    PURE_REWRITE_TAC [accessor_thm, fupdfn_thm, combinTheory.o_THM] THEN
+    REFL_TAC
   val thms = map (C (curry prove) tactic) (goals @ diag_goals)
   val accfupd_thm =
     save_thm(typename^"_accfupds", LIST_CONJ (map GEN_ALL thms))
@@ -440,7 +487,7 @@ fun prove_recordtype_thms (tyinfo, fields) = let
     val goal = mk_eq(lhs, rhs)
     val tactic =
       REPEAT GEN_TAC THEN
-      MAP_EVERY (STRUCT_CASES_TAC o C SPEC cases_thm) [var1, var2] THEN
+      MAP_EVERY FAST_CASES_ON_TAC [var1, var2] THEN
       REWRITE_TAC [oneone_thm, accessor_thm]
     val thm0 = prove(goal, tactic)
   in
@@ -475,12 +522,6 @@ fun prove_recordtype_thms (tyinfo, fields) = let
             (v11 = v12) /\ (v21 = v22) /\ (v31 = v32)
   *)
   local
-    fun mk_var_avds (nm, ty, avoids) = let
-      val v0 = mk_var(nm, ty)
-    in
-      variant avoids v0
-    end
-
     fun rng_of_dom ty = ty |> dom_rng |> #1 |> dom_rng |> #2
     fun dom_of_dom ty = ty |> dom_rng |> #1 |> dom_rng |> #1
     val value_vars =

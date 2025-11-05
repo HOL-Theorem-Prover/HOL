@@ -122,15 +122,16 @@ End
    = FUNPOW ($* x) n #1                           by (PF r).prod.op = r.prod.op
    = x ** n                                       by monoid_exp_def |> ISPEC ``r.prod``
 *)
-val PF_property = store_thm(
-  "PF_property",
-  ``!r:'a field. ((PF r).carrier = IMAGE (r.sum.exp #1) univ(:num)) /\
+Theorem PF_property:
+    !r:'a field. ((PF r).carrier = IMAGE (r.sum.exp #1) univ(:num)) /\
                 ((PF r).sum.carrier = IMAGE (r.sum.exp #1) univ(:num)) /\
                 ((PF r).sum.op = r.sum.op) /\ ((PF r).sum.id = #0) /\
                 ((PF r).prod.carrier = IMAGE (r.sum.exp #1) univ(:num)) /\
                 ((PF r).prod.op = r.prod.op) /\ ((PF r).prod.id = #1) /\
-                ((PF r).prod.exp = r.prod.exp)``,
-  rw[PF_def, monoid_exp_def, FUN_EQ_THM]);
+                ((PF r).prod.exp = r.prod.exp)
+Proof
+  rw[PF_def, monoid_exp_def, FUN_EQ_THM]
+QED
 
 (* Overload PF carrier *)
 val _ = overload_on ("Fp", ``(PF r).carrier``);
@@ -141,18 +142,20 @@ val _ = overload_on ("Fp", ``(PF r).carrier``);
    This is to show: ##(x:num) IN R    by SUBSET_DEF
    This is true                       by ring_num_element
 *)
-val prime_field_carrier_subset = store_thm(
-  "prime_field_carrier_subset",
-  ``!r:'a ring. Ring r ==> Fp SUBSET R``,
+Theorem prime_field_carrier_subset:
+    !r:'a ring. Ring r ==> Fp SUBSET R
+Proof
   rw[PF_property, SUBSET_DEF] >>
-  rw[ring_num_element]);
+  rw[ring_num_element]
+QED
 
 (* Theorem: Ring r ==> !x. x IN Fp ==> x IN R *)
 (* Proof: by prime_field_carrier_subset, SUBSET_DEF *)
-val prime_field_element = store_thm(
-  "prime_field_element",
-  ``!r:'a ring. Ring r ==> !x. x IN Fp ==> x IN R``,
-  rw[prime_field_carrier_subset, GSYM SUBSET_DEF]);
+Theorem prime_field_element:
+    !r:'a ring. Ring r ==> !x. x IN Fp ==> x IN R
+Proof
+  rw[prime_field_carrier_subset, GSYM SUBSET_DEF]
+QED
 
 (* export simple result -- this affects some proofs below, better export prime_field_element_element later. *)
 (* val _ = export_rewrites ["prime_field_element"]; *)
@@ -171,9 +174,9 @@ val prime_field_element = store_thm(
        = ##(x'' + x')   by ADD_COMM
        = ##x'' + ##x'   by field_num_add
 *)
-val prime_field_sum_abelian_group = store_thm(
-  "prime_field_sum_abelian_group",
-  ``!r:'a field. Field r /\ 0 < char r ==> AbelianGroup (PF r).sum``,
+Theorem prime_field_sum_abelian_group:
+    !r:'a field. Field r /\ 0 < char r ==> AbelianGroup (PF r).sum
+Proof
   rpt strip_tac >>
   rw_tac std_ss[AbelianGroup_def, group_def_alt, PF_def, GSPECIFICATION, IN_IMAGE, IN_UNIV] >-
   metis_tac[field_num_add] >-
@@ -181,7 +184,8 @@ val prime_field_sum_abelian_group = store_thm(
   metis_tac[field_num_0] >-
   rw[field_add_lzero] >-
   metis_tac[field_num_negative] >>
-  metis_tac[field_num_add, ADD_COMM]);
+  metis_tac[field_num_add, ADD_COMM]
+QED
 
 (* Theorem: Field r /\ 0 < char r ==> AbelianGroup ((PF r).prod excluding #0) *)
 (* Proof:
@@ -195,9 +199,9 @@ val prime_field_sum_abelian_group = store_thm(
    (7) ?y. ((?x. (y = ##x) /\ y <> #0) /\ (y * ##x' = #1), true              by field_num_inverse, 0 < char r
    (8) ##x' * ##x'' = ##x'' * ##x', true                                     by field_mult_comm
 *)
-val prime_field_prod_abelian_group = store_thm(
-  "prime_field_prod_abelian_group",
-  ``!r:'a field. Field r /\ 0 < char r ==> AbelianGroup ((PF r).prod excluding #0)``,
+Theorem prime_field_prod_abelian_group:
+    !r:'a field. Field r /\ 0 < char r ==> AbelianGroup ((PF r).prod excluding #0)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[AbelianGroup_def, group_def_alt, excluding_def, PF_def, GSPECIFICATION, IN_IMAGE, IN_DIFF, IN_SING, IN_UNIV] >-
   metis_tac[field_num_mult] >-
@@ -207,7 +211,8 @@ val prime_field_prod_abelian_group = store_thm(
   rw[] >-
   rw[] >-
   metis_tac[field_num_inverse] >>
-  rw[field_mult_comm]);
+  rw[field_mult_comm]
+QED
 
 (* Theorem: Field r /\ 0 < char r ==> Field (PF r) *)
 (* Proof:
@@ -219,9 +224,9 @@ val prime_field_prod_abelian_group = store_thm(
    (5) (PF r).prod.op (PF r).sum.id x = (PF r).sum.id, true     by PF_property, field_mult_lzero for ##0 * x = #0
    (6) ##x' * (##x'' + ##x''') = ##x' * ##x'' + ##x' * ##x''', true by field_mult_radd
 *)
-val prime_field_is_field = store_thm(
-  "prime_field_is_field",
-  ``!r:'a field. Field r /\ 0 < char r ==> Field (PF r)``,
+Theorem prime_field_is_field:
+    !r:'a field. Field r /\ 0 < char r ==> Field (PF r)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[field_def_alt] >-
   rw[prime_field_sum_abelian_group] >-
@@ -229,14 +234,16 @@ val prime_field_is_field = store_thm(
   rw[PF_property] >-
   rw[PF_property] >-
   metis_tac[PF_property, field_mult_lzero, IN_IMAGE, field_num_element] >>
-  fs[PF_property]);
+  fs[PF_property]
+QED
 
 (* Theorem: FiniteField r ==> Field (PF r) *)
 (* Proof: by prime_field_is_field, finite_field_char_pos *)
-val prime_field_field = store_thm(
-  "prime_field_field",
-  ``!r:'a field. FiniteField r ==> Field (PF r)``,
-  rw[prime_field_is_field, finite_field_char_pos, finite_field_is_field]);
+Theorem prime_field_field:
+    !r:'a field. FiniteField r ==> Field (PF r)
+Proof
+  rw[prime_field_is_field, finite_field_char_pos, finite_field_is_field]
+QED
 
 (* Theorem: FiniteField r ==> FiniteField (PF r) *)
 (* Proof:
@@ -247,9 +254,9 @@ val prime_field_field = store_thm(
        Since IMAGE $## univ(:num) = IMAGE $## (count p)  by field_num_mod, MOD_LESS
        result follows                                    by FINITE_COUNT
 *)
-val prime_field_finite_field = store_thm(
-  "prime_field_finite_field",
-  ``!r:'a field. FiniteField r ==> FiniteField (PF r)``,
+Theorem prime_field_finite_field:
+    !r:'a field. FiniteField r ==> FiniteField (PF r)
+Proof
   rpt strip_tac >>
   rw[FiniteField_def] >-
   rw[prime_field_field] >>
@@ -260,7 +267,8 @@ val prime_field_finite_field = store_thm(
   `IMAGE $## univ(:num) = IMAGE $## (count p)` by
   (rw[EXTENSION] >>
   metis_tac[field_num_mod, MOD_LESS]) >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Field r ==> subfield (PF r) r  *)
 (* Proof:
@@ -272,15 +280,16 @@ val prime_field_finite_field = store_thm(
    (3) MonoidHomo I (PF r).prod r.prod
        True by definitions, and field_num_element.
 *)
-val prime_field_subfield = store_thm(
-  "prime_field_subfield",
-  ``!r:'a field. Field r ==> subfield (PF r) r``,
+Theorem prime_field_subfield:
+    !r:'a field. Field r ==> subfield (PF r) r
+Proof
   rw_tac std_ss[subfield_def, FieldHomo_def, RingHomo_def] >-
   metis_tac[PF_property, IN_IMAGE, field_num_element] >-
  (rw_tac std_ss[GroupHomo_def, PF_def, IN_IMAGE] >>
   metis_tac[field_num_element, field_carriers]) >>
   rw_tac std_ss[MonoidHomo_def, PF_def, IN_IMAGE] >>
-  metis_tac[field_num_element, field_carriers]);
+  metis_tac[field_num_element, field_carriers]
+QED
 
 (* Theorem: FiniteField r ==> (PF r) <<= r *)
 (* Proof:
@@ -289,20 +298,22 @@ val prime_field_subfield = store_thm(
                  ==> subfield (PF r) r         by prime_field_subfield
    Hence (PF r) <<= r                          by notation
 *)
-val prime_field_is_subfield = store_thm(
-  "prime_field_is_subfield",
-  ``!r:'a field. FiniteField r ==> (PF r) <<= r``,
-  rw_tac std_ss[FiniteField_def, prime_field_field, prime_field_subfield]);
+Theorem prime_field_is_subfield:
+    !r:'a field. FiniteField r ==> (PF r) <<= r
+Proof
+  rw_tac std_ss[FiniteField_def, prime_field_field, prime_field_subfield]
+QED
 
 (* Theorem: FiniteField r ==> (char (PF r) = char r) *)
 (* Proof:
    Note (PF r) <<= r            by prime_field_is_subfield
      so char (PF r) = char r    by subfield_char
 *)
-val prime_field_char = store_thm(
-  "prime_field_char",
-  ``!r:'a field. FiniteField r ==> (char (PF r) = char r)``,
-  rw_tac std_ss[prime_field_is_subfield, subfield_char]);
+Theorem prime_field_char:
+    !r:'a field. FiniteField r ==> (char (PF r) = char r)
+Proof
+  rw_tac std_ss[prime_field_is_subfield, subfield_char]
+QED
 
 (* Theorem: x IN Fp ==> x IN R *)
 (* Proof:
@@ -350,9 +361,9 @@ QED
        (d) ##((0 * 0) MOD char r) = ##0 * ##0
            True by field_num_mult.
 *)
-val finite_field_homo_GF_PF = store_thm(
-  "finite_field_homo_GF_PF",
-  ``!r:'a field. FiniteField r ==> FieldHomo (r.sum.exp #1) (GF (char r)) (PF r)``,
+Theorem finite_field_homo_GF_PF:
+    !r:'a field. FiniteField r ==> FieldHomo (r.sum.exp #1) (GF (char r)) (PF r)
+Proof
   rpt strip_tac >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   rw[FieldHomo_def, RingHomo_def] >| [
@@ -368,7 +379,8 @@ val finite_field_homo_GF_PF = store_thm(
     rw[] >-
     rw[] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> FieldIso $## (GF (char r)) (PF (char r)) *)
 (* Proof:
@@ -385,15 +397,16 @@ val finite_field_homo_GF_PF = store_thm(
            n MOD char r < char r     by MOD_LESS
            ##(x' MOD char r) = ##x'  by field_num_mod
 *)
-val finite_field_iso_GF_PF = store_thm(
-  "finite_field_iso_GF_PF",
-  ``!r:'a field. FiniteField r ==> FieldIso (r.sum.exp #1) (GF (char r)) (PF r)``,
+Theorem finite_field_iso_GF_PF:
+    !r:'a field. FiniteField r ==> FieldIso (r.sum.exp #1) (GF (char r)) (PF r)
+Proof
   rw[FieldIso_def] >-
   rw[finite_field_homo_GF_PF] >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   rw[GF_property, PF_property, BIJ_DEF, SURJ_DEF, INJ_DEF] >-
   metis_tac[field_num_eq] >>
-  metis_tac[field_num_mod, MOD_LESS, finite_field_char_pos]);
+  metis_tac[field_num_mod, MOD_LESS, finite_field_char_pos]
+QED
 
 (* Theorem: FiniteField r ==> FieldHomo $## (ZN (char r)) (PF (char r)) *)
 (* Proof:
@@ -415,9 +428,9 @@ val finite_field_iso_GF_PF = store_thm(
            = ##(x * y)               by field_num_mod, 0 < char r
            = ##x * ##y               by field_num_mult
 *)
-val finite_field_homo_ZN_PF = store_thm(
-  "finite_field_homo_ZN_PF",
-  ``!r:'a field. FiniteField r ==> FieldHomo (r.sum.exp #1) (ZN (char r)) (PF r)``,
+Theorem finite_field_homo_ZN_PF:
+    !r:'a field. FiniteField r ==> FieldHomo (r.sum.exp #1) (ZN (char r)) (PF r)
+Proof
   rpt strip_tac >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   `0 < char r` by rw[finite_field_char_pos] >>
@@ -429,7 +442,8 @@ val finite_field_homo_ZN_PF = store_thm(
   `(ZN (char r)).prod.carrier = (ZN (char r)).carrier` by rw[ZN_ring, ring_carriers] >>
   rw[MonoidHomo_def, ZN_property, PF_property, including_def] >-
   metis_tac[field_char_ne_1] >>
-  metis_tac[field_num_mod, field_num_mult]);
+  metis_tac[field_num_mod, field_num_mult]
+QED
 
 (* Theorem: FiniteField r ==> FieldIso $## (ZN (char r)) (PF (char r)) *)
 (* Proof:
@@ -446,16 +460,17 @@ val finite_field_homo_ZN_PF = store_thm(
            n MOD char r < char r     by MOD_LESS
            ##(x' MOD char r) = ##x'  by field_num_mod
 *)
-val finite_field_iso_ZN_PF = store_thm(
-  "finite_field_iso_ZN_PF",
-  ``!r:'a field. FiniteField r ==> FieldIso (r.sum.exp #1) (ZN (char r)) (PF r)``,
+Theorem finite_field_iso_ZN_PF:
+    !r:'a field. FiniteField r ==> FieldIso (r.sum.exp #1) (ZN (char r)) (PF r)
+Proof
   rw[FieldIso_def] >-
   rw[finite_field_homo_ZN_PF] >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   `0 < char r` by rw[finite_field_char_pos] >>
   rw[ZN_property, PF_property, BIJ_DEF, SURJ_DEF, INJ_DEF] >-
   metis_tac[field_num_eq] >>
-  metis_tac[field_num_mod, MOD_LESS]);
+  metis_tac[field_num_mod, MOD_LESS]
+QED
 
 (* Theorem: s <<= r ==> subfield (PF r) s *)
 (* Proof:
@@ -491,10 +506,11 @@ QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> (PF r) <<= s *)
 (* Proof: by prime_field_every_subfield, prime_field_field *)
-val prime_field_minimal_subfield = store_thm(
-  "prime_field_minimal_subfield",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> (PF r) <<= s``,
-  rw_tac std_ss[prime_field_every_subfield, prime_field_field]);
+Theorem prime_field_minimal_subfield:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> (PF r) <<= s
+Proof
+  rw_tac std_ss[prime_field_every_subfield, prime_field_field]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN Fp ==> ((PF r).sum.inv x = -x) *)
 (* Proof:
@@ -508,14 +524,15 @@ val prime_field_minimal_subfield = store_thm(
     Also Group r.sum /\ (R = r.sum.carrier)   by field_add_group
    Hence (PF r).sum.inv x = -x                by group_linv_unique
 *)
-val prime_field_neg = store_thm(
-  "prime_field_neg",
-  ``!r:'a field. FiniteField r ==> !x. x IN Fp ==> ((PF r).sum.inv x = -x)``,
+Theorem prime_field_neg:
+    !r:'a field. FiniteField r ==> !x. x IN Fp ==> ((PF r).sum.inv x = -x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Field (PF r)` by rw[prime_field_field] >>
   `(PF r).sum.inv x IN Fp` by rw[] >>
   `(PF r).sum.inv x + x = #0` by metis_tac[PF_property, field_add_lneg] >>
-  metis_tac[field_add_group, group_linv_unique, prime_field_element, field_is_ring]);
+  metis_tac[field_add_group, group_linv_unique, prime_field_element, field_is_ring]
+QED
 
 (* Theorem: FiniteField r ==> (CARD Fp = char r) *)
 (* Proof:
@@ -531,23 +548,25 @@ val prime_field_neg = store_thm(
    = CARD (count (char r))                   by GF_property
    = char r                                  by CARD_COUNT
 *)
-val prime_field_card = store_thm(
-  "prime_field_card",
-  ``!r:'a field. FiniteField r ==> (CARD Fp = char r)``,
+Theorem prime_field_card:
+    !r:'a field. FiniteField r ==> (CARD Fp = char r)
+Proof
   rpt strip_tac >>
   `FieldIso $## (GF (char r)) (PF r)` by rw[finite_field_iso_GF_PF] >>
   `BIJ $## (GF (char r)).carrier Fp` by metis_tac[FieldIso_def] >>
   `prime (char r)` by rw[finite_field_char] >>
   `FiniteField (GF (char r))` by rw[GF_finite_field] >>
   `FiniteField (PF r)` by rw[prime_field_finite_field] >>
-  metis_tac[FiniteField_def, FINITE_BIJ_CARD_EQ, GF_property, CARD_COUNT]);
+  metis_tac[FiniteField_def, FINITE_BIJ_CARD_EQ, GF_property, CARD_COUNT]
+QED
 
 (* Theorem: FiniteField r ==> (PF r) <<= r /\ (CARD Fp = char r) *)
 (* Proof: by prime_field_is_subfield, prime_field_card. *)
-val prime_field_subfield_property = store_thm(
-  "prime_field_subfield_property",
-  ``!r:'a field. FiniteField r ==> (PF r) <<= r /\ (CARD Fp = char r)``,
-  rw[prime_field_is_subfield, prime_field_card]);
+Theorem prime_field_subfield_property:
+    !r:'a field. FiniteField r ==> (PF r) <<= r /\ (CARD Fp = char r)
+Proof
+  rw[prime_field_is_subfield, prime_field_card]
+QED
 
 (*
 > finite_field_fermat_thm |> SPEC ``PF r``;
@@ -561,10 +580,11 @@ val it = |- FiniteField (PF r) ==> !x. x IN Fp ==> ((PF r).prod.exp x (CARD Fp) 
     and (PF r).prod.exp = $**     by PF_property
    Hence x ** char r = x          by finite_field_fermat_thm
 *)
-val prime_field_fermat_thm = store_thm(
-  "prime_field_fermat_thm",
-  ``!r:'a field. FiniteField r ==> !x. x IN Fp ==> (x ** char r = x)``,
-  metis_tac[prime_field_finite_field, prime_field_card, finite_field_fermat_thm, PF_property]);
+Theorem prime_field_fermat_thm:
+    !r:'a field. FiniteField r ==> !x. x IN Fp ==> (x ** char r = x)
+Proof
+  metis_tac[prime_field_finite_field, prime_field_card, finite_field_fermat_thm, PF_property]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN Fp ==> !n. x ** char r ** n = x *)
 (* Proof:
@@ -573,10 +593,11 @@ val prime_field_fermat_thm = store_thm(
     and (PF r).prod.exp = $**     by PF_property
    Hence x ** char r ** n = x     by finite_field_fermat_all
 *)
-val prime_field_fermat_all = store_thm(
-  "prime_field_fermat_all",
-  ``!r:'a field. FiniteField r ==> !x. x IN Fp ==> !n. x ** char r ** n = x``,
-  metis_tac[prime_field_finite_field, prime_field_card, finite_field_fermat_all, PF_property]);
+Theorem prime_field_fermat_all:
+    !r:'a field. FiniteField r ==> !x. x IN Fp ==> !n. x ** char r ** n = x
+Proof
+  metis_tac[prime_field_finite_field, prime_field_card, finite_field_fermat_all, PF_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Theorems for Finite Field.                                         *)
@@ -727,9 +748,9 @@ QED
        Note Field (ZN n)                         by ZN_field, prime n
        Thus subfield (PF (ZN n)) (ZN n)          by prime_field_subfield
 *)
-val ZN_prime_field_iso_itself = store_thm(
-  "ZN_prime_field_iso_itself",
-  ``!n. prime n ==> FieldIso I (PF (ZN n)) (ZN n)``,
+Theorem ZN_prime_field_iso_itself:
+    !n. prime n ==> FieldIso I (PF (ZN n)) (ZN n)
+Proof
   rpt strip_tac >>
   (irule subfield_carrier_antisym >> rpt conj_tac) >| [
     `(ZN n).carrier = count n` by rw[ZN_eval] >>
@@ -739,7 +760,8 @@ val ZN_prime_field_iso_itself = store_thm(
     metis_tac[LESS_MOD],
     `Field (ZN n)` by rw[ZN_field] >>
     rw[prime_field_subfield]
-  ]);
+  ]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -758,9 +780,9 @@ val ZN_prime_field_iso_itself = store_thm(
    (5) ?y. (?x. (y = ##x) /\ (y + ##x' = #0), true           by ring_num_negative
    (6) ##x' + ##x'' = ##x'' + ##x', true                     by ring_num_add, ADD_COMM
 *)
-val scalar_ring_sum_abelian_group = store_thm(
-  "scalar_ring_sum_abelian_group",
-  ``!r:'a ring. Ring r /\ 0 < char r ==> AbelianGroup (PF r).sum``,
+Theorem scalar_ring_sum_abelian_group:
+    !r:'a ring. Ring r /\ 0 < char r ==> AbelianGroup (PF r).sum
+Proof
   rpt strip_tac >>
   rw_tac std_ss[AbelianGroup_def, group_def_alt, PF_def, GSPECIFICATION, IN_IMAGE, IN_UNIV] >-
   metis_tac[ring_num_add] >-
@@ -768,14 +790,16 @@ val scalar_ring_sum_abelian_group = store_thm(
   metis_tac[ring_num_0] >-
   rw[] >-
   metis_tac[ring_num_negative] >>
-  metis_tac[ring_num_add, ADD_COMM]);
+  metis_tac[ring_num_add, ADD_COMM]
+QED
 
 (* Theorem: Ring r /\ 0 < char r ==> Group (PF r).sum *)
 (* Proof: by scalar_ring_sum_abelian_group, AbelianGroup_def. *)
-val scalar_ring_sum_group = store_thm(
-  "scalar_ring_sum_group",
-  ``!r:'a ring. Ring r /\ 0 < char r ==> Group (PF r).sum``,
-  metis_tac[scalar_ring_sum_abelian_group, AbelianGroup_def]);
+Theorem scalar_ring_sum_group:
+    !r:'a ring. Ring r /\ 0 < char r ==> Group (PF r).sum
+Proof
+  metis_tac[scalar_ring_sum_abelian_group, AbelianGroup_def]
+QED
 
 (* Easier to show first AbelianMonoid, then Monoid *)
 
@@ -789,23 +813,25 @@ val scalar_ring_sum_group = store_thm(
    (5) ##x' * #1 = ##x', true                                by ring_mult_rone, ring_num_element
    (6) ##x' * ##x'' = ##x'' * ##x', true                     by ring_num_mult, MULT_COMM
 *)
-val scalar_ring_prod_abelian_monoid = store_thm(
-  "scalar_ring_prod_abelian_monoid",
-  ``!r:'a ring. Ring r ==> AbelianMonoid (PF r).prod``,
+Theorem scalar_ring_prod_abelian_monoid:
+    !r:'a ring. Ring r ==> AbelianMonoid (PF r).prod
+Proof
   rw_tac std_ss[AbelianMonoid_def, Monoid_def, PF_def, GSPECIFICATION, IN_IMAGE, IN_UNIV] >-
   metis_tac[ring_num_mult] >-
   metis_tac[ring_num_mult, MULT_ASSOC] >-
   metis_tac[ring_num_1] >-
   rw[] >-
   rw[] >>
-  metis_tac[ring_num_mult, MULT_COMM]);
+  metis_tac[ring_num_mult, MULT_COMM]
+QED
 
 (* Theorem: Ring r ==> Monoid (PF r).prod *)
 (* Proof: by scalar_ring_prod_abelian_monoid, AbelianMonoid_def. *)
-val scalar_ring_prod_monoid = store_thm(
-  "scalar_ring_prod_monoid",
-  ``!r:'a ring. Ring r ==> Monoid (PF r).prod``,
-  metis_tac[scalar_ring_prod_abelian_monoid, AbelianMonoid_def]);
+Theorem scalar_ring_prod_monoid:
+    !r:'a ring. Ring r ==> Monoid (PF r).prod
+Proof
+  metis_tac[scalar_ring_prod_abelian_monoid, AbelianMonoid_def]
+QED
 
 (* Theorem: Ring r /\ 0 < char r ==> Ring (PF r) *)
 (* Proof:
@@ -817,21 +843,23 @@ val scalar_ring_prod_monoid = store_thm(
    (5) x IN Fp /\ y IN Fp /\ z IN Fp ==> x * (y + z) = x * y + x * z, or
        ##x' * (##x'' + ##x''') = ##x' * ##x'' + ##x' * ##x''', true bu PF_property
 *)
-val scalar_ring_is_ring = store_thm(
-  "scalar_ring_is_ring",
-  ``!r:'a ring. Ring r /\ 0 < char r ==> Ring (PF r)``,
+Theorem scalar_ring_is_ring:
+    !r:'a ring. Ring r /\ 0 < char r ==> Ring (PF r)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[Ring_def, PF_property, IN_IMAGE, IN_UNIV] >-
   rw[scalar_ring_sum_abelian_group] >-
   rw[scalar_ring_prod_abelian_monoid] >>
-  metis_tac[ring_num_mult_radd, ring_num_element]);
+  metis_tac[ring_num_mult_radd, ring_num_element]
+QED
 
 (* Theorem: FiniteRing r ==> Ring (PF r) *)
 (* Proof: by scalar_ring_is_ring, finite_ring_char_pos *)
-val scalar_ring_ring = store_thm(
-  "scalar_ring_ring",
-  ``!r:'a ring. FiniteRing r ==> Ring (PF r)``,
-  rw[scalar_ring_is_ring, finite_ring_char_pos, FiniteRing_def]);
+Theorem scalar_ring_ring:
+    !r:'a ring. FiniteRing r ==> Ring (PF r)
+Proof
+  rw[scalar_ring_is_ring, finite_ring_char_pos, FiniteRing_def]
+QED
 
 (*
 > ring_num_eq |> ISPEC ``(PF r)``;
@@ -906,14 +934,15 @@ QED
        = char (ZN (char r))                      by ring_iso_char_eq
        = char r                                  by ZN_char
 *)
-val scalar_ring_char = store_thm(
-  "scalar_ring_char",
-  ``!r:'a ring. Ring r /\ 0 < char r ==> (char (PF r) = char r)``,
+Theorem scalar_ring_char:
+    !r:'a ring. Ring r /\ 0 < char r ==> (char (PF r) = char r)
+Proof
   rpt strip_tac >>
   `Ring (ZN (char r))` by rw[ZN_ring] >>
   `Ring (PF r)` by rw[scalar_ring_is_ring] >>
   `RingIso (\n. ##n) (ZN (char r)) (PF r)` by rw[scalar_ring_iso_ZN_char] >>
-  metis_tac[ring_iso_char_eq, ZN_char]);
+  metis_tac[ring_iso_char_eq, ZN_char]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

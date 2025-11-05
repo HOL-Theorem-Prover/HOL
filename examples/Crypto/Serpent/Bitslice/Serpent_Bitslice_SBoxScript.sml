@@ -478,14 +478,30 @@ val tac =
     RND06_def,InvRND06_def,RND07_def,InvRND07_def] THEN
   SRW_TAC [] [] THEN WORD_DECIDE_TAC;
 
-val RND00_THM = Q.store_thm("RND00_THM", `!v. InvRND00 (RND00 v) = v`, tac);
-val RND01_THM = Q.store_thm("RND01_THM", `!v. InvRND01 (RND01 v) = v`, tac);
-val RND02_THM = Q.store_thm("RND02_THM", `!v. InvRND02 (RND02 v) = v`, tac);
-val RND03_THM = Q.store_thm("RND03_THM", `!v. InvRND03 (RND03 v) = v`, tac);
-val RND04_THM = Q.store_thm("RND04_THM", `!v. InvRND04 (RND04 v) = v`, tac);
-val RND05_THM = Q.store_thm("RND05_THM", `!v. InvRND05 (RND05 v) = v`, tac);
-val RND06_THM = Q.store_thm("RND06_THM", `!v. InvRND06 (RND06 v) = v`, tac);
-val RND07_THM = Q.store_thm("RND07_THM", `!v. InvRND07 (RND07 v) = v`, tac);
+Theorem RND00_THM:  !v. InvRND00 (RND00 v) = v
+Proof tac
+QED
+Theorem RND01_THM:  !v. InvRND01 (RND01 v) = v
+Proof tac
+QED
+Theorem RND02_THM:  !v. InvRND02 (RND02 v) = v
+Proof tac
+QED
+Theorem RND03_THM:  !v. InvRND03 (RND03 v) = v
+Proof tac
+QED
+Theorem RND04_THM:  !v. InvRND04 (RND04 v) = v
+Proof tac
+QED
+Theorem RND05_THM:  !v. InvRND05 (RND05 v) = v
+Proof tac
+QED
+Theorem RND06_THM:  !v. InvRND06 (RND06 v) = v
+Proof tac
+QED
+Theorem RND07_THM:  !v. InvRND07 (RND07 v) = v
+Proof tac
+QED
 
 val tac = METIS_TAC
   [RND08_def,InvRND08_def,RND09_def,InvRND09_def,RND10_def,InvRND10_def,
@@ -499,28 +515,76 @@ val tac = METIS_TAC
    RND00_THM,RND01_THM,RND02_THM,RND03_THM,RND04_THM,RND05_THM,RND06_THM,
    RND07_THM];
 
-val RND08_THM = Q.store_thm ("RND08_THM", `!v. InvRND08 (RND08 v) = v`, tac);
-val RND09_THM = Q.store_thm ("RND09_THM", `!v. InvRND09 (RND09 v) = v`, tac);
-val RND10_THM = Q.store_thm ("RND10_THM", `!v. InvRND10 (RND10 v) = v`, tac);
-val RND11_THM = Q.store_thm ("RND11_THM", `!v. InvRND11 (RND11 v) = v`, tac);
-val RND12_THM = Q.store_thm ("RND12_THM", `!v. InvRND12 (RND12 v) = v`, tac);
-val RND13_THM = Q.store_thm ("RND13_THM", `!v. InvRND13 (RND13 v) = v`, tac);
-val RND14_THM = Q.store_thm ("RND14_THM", `!v. InvRND14 (RND14 v) = v`, tac);
-val RND15_THM = Q.store_thm ("RND15_THM", `!v. InvRND15 (RND15 v) = v`, tac);
-val RND16_THM = Q.store_thm ("RND16_THM", `!v. InvRND16 (RND16 v) = v`, tac);
-val RND17_THM = Q.store_thm ("RND17_THM", `!v. InvRND17 (RND17 v) = v`, tac);
-val RND18_THM = Q.store_thm ("RND18_THM", `!v. InvRND18 (RND18 v) = v`, tac);
-val RND19_THM = Q.store_thm ("RND19_THM", `!v. InvRND19 (RND19 v) = v`, tac);
-val RND20_THM = Q.store_thm ("RND20_THM", `!v. InvRND20 (RND20 v) = v`, tac);
-val RND21_THM = Q.store_thm ("RND21_THM", `!v. InvRND21 (RND21 v) = v`, tac);
-val RND22_THM = Q.store_thm ("RND22_THM", `!v. InvRND22 (RND22 v) = v`, tac);
-val RND23_THM = Q.store_thm ("RND23_THM", `!v. InvRND23 (RND23 v) = v`, tac);
-val RND24_THM = Q.store_thm ("RND24_THM", `!v. InvRND24 (RND24 v) = v`, tac);
-val RND25_THM = Q.store_thm ("RND25_THM", `!v. InvRND25 (RND25 v) = v`, tac);
-val RND26_THM = Q.store_thm ("RND26_THM", `!v. InvRND26 (RND26 v) = v`, tac);
-val RND27_THM = Q.store_thm ("RND27_THM", `!v. InvRND27 (RND27 v) = v`, tac);
-val RND28_THM = Q.store_thm ("RND28_THM", `!v. InvRND28 (RND28 v) = v`, tac);
-val RND29_THM = Q.store_thm ("RND29_THM", `!v. InvRND29 (RND29 v) = v`, tac);
-val RND30_THM = Q.store_thm ("RND30_THM", `!v. InvRND30 (RND30 v) = v`, tac);
-val RND31_THM = Q.store_thm ("RND31_THM", `!v. InvRND31 (RND31 v) = v`, tac);
+Theorem RND08_THM:  !v. InvRND08 (RND08 v) = v
+Proof tac
+QED
+Theorem RND09_THM:  !v. InvRND09 (RND09 v) = v
+Proof tac
+QED
+Theorem RND10_THM:  !v. InvRND10 (RND10 v) = v
+Proof tac
+QED
+Theorem RND11_THM:  !v. InvRND11 (RND11 v) = v
+Proof tac
+QED
+Theorem RND12_THM:  !v. InvRND12 (RND12 v) = v
+Proof tac
+QED
+Theorem RND13_THM:  !v. InvRND13 (RND13 v) = v
+Proof tac
+QED
+Theorem RND14_THM:  !v. InvRND14 (RND14 v) = v
+Proof tac
+QED
+Theorem RND15_THM:  !v. InvRND15 (RND15 v) = v
+Proof tac
+QED
+Theorem RND16_THM:  !v. InvRND16 (RND16 v) = v
+Proof tac
+QED
+Theorem RND17_THM:  !v. InvRND17 (RND17 v) = v
+Proof tac
+QED
+Theorem RND18_THM:  !v. InvRND18 (RND18 v) = v
+Proof tac
+QED
+Theorem RND19_THM:  !v. InvRND19 (RND19 v) = v
+Proof tac
+QED
+Theorem RND20_THM:  !v. InvRND20 (RND20 v) = v
+Proof tac
+QED
+Theorem RND21_THM:  !v. InvRND21 (RND21 v) = v
+Proof tac
+QED
+Theorem RND22_THM:  !v. InvRND22 (RND22 v) = v
+Proof tac
+QED
+Theorem RND23_THM:  !v. InvRND23 (RND23 v) = v
+Proof tac
+QED
+Theorem RND24_THM:  !v. InvRND24 (RND24 v) = v
+Proof tac
+QED
+Theorem RND25_THM:  !v. InvRND25 (RND25 v) = v
+Proof tac
+QED
+Theorem RND26_THM:  !v. InvRND26 (RND26 v) = v
+Proof tac
+QED
+Theorem RND27_THM:  !v. InvRND27 (RND27 v) = v
+Proof tac
+QED
+Theorem RND28_THM:  !v. InvRND28 (RND28 v) = v
+Proof tac
+QED
+Theorem RND29_THM:  !v. InvRND29 (RND29 v) = v
+Proof tac
+QED
+Theorem RND30_THM:  !v. InvRND30 (RND30 v) = v
+Proof tac
+QED
+Theorem RND31_THM:  !v. InvRND31 (RND31 v) = v
+Proof tac
+QED
 

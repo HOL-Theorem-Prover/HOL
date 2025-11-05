@@ -2597,19 +2597,19 @@ QED
 
 (********** Misc lemmas **********)
 
-Triviality APPLY_UPDATE_ALT_THM:
+Theorem APPLY_UPDATE_ALT_THM[local]:
   ∀f a b c. f⦇a ↦ b⦈ c = if c = a then b else f c
 Proof
   rw[combinTheory.APPLY_UPDATE_THM]
 QED
 
-Triviality FLOOKUP_UPDATE_ALT:
+Theorem FLOOKUP_UPDATE_ALT[local]:
   ∀fm k1 v k2. FLOOKUP (fm |+ (k1,v)) k2 = if k2 = k1 then SOME v else FLOOKUP fm k2
 Proof
   rw[FLOOKUP_UPDATE]
 QED
 
-Triviality load_store_encode_lemma:
+Theorem load_store_encode_lemma[local]:
   (w : word64 = w2w ((11 >< 0) (w ⋙ 3)) ≪ 3 ⇔
     ∃j : word12. w = (0w : 49 word) @@ j @@ (0w : word3)) ∧
   (w : word64 = w2w ((11 >< 0) (w ⋙ 2)) ≪ 2 ⇔

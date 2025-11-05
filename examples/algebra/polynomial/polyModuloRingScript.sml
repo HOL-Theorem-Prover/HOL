@@ -189,11 +189,12 @@ End
 
 (* Theorem: properties of poly_remainders r z *)
 (* Proof: by poly_remainders_def. *)
-val poly_remainders_property = store_thm(
-  "poly_remainders_property",
-  ``!r:'a ring z:'a poly p. p IN poly_remainders r z <=>
-      (poly p /\ (if deg z = 0 then p = |0| else deg p < deg z))``,
-  rw[poly_remainders_def]);
+Theorem poly_remainders_property:
+    !r:'a ring z:'a poly p. p IN poly_remainders r z <=>
+      (poly p /\ (if deg z = 0 then p = |0| else deg p < deg z))
+Proof
+  rw[poly_remainders_def]
+QED
 
 (* Modulo Ring by division of a polynomial *)
 Definition poly_mod_ring_def:
@@ -237,53 +238,59 @@ val _ = overload_on("-z", ``negz``); (* becomes $-z *)
 
 (* Theorem: properties of PolyModRing r z *)
 (* Proof: by poly_mod_ring_def, poly_remainders_def. *)
-val poly_mod_ring_property = store_thm(
-  "poly_mod_ring_property",
-  ``!(r:'a ring) (z:'a poly).
+Theorem poly_mod_ring_property:
+    !(r:'a ring) (z:'a poly).
      (!p. p IN Rz <=> poly p /\ if deg z = 0 then p = |0| else deg p < deg z) /\
      (!p q. p IN Rz /\ q IN Rz ==> (p +z q = (p + q) % z)) /\
      (!p q. p IN Rz /\ q IN Rz ==> (p *z q = (p * q) % z)) /\
      ((PolyModRing r z).sum.carrier = Rz) /\
      ((PolyModRing r z).prod.carrier = Rz) /\
-     (#0z = |0|) /\ (#1z = if deg z = 0 then |0| else |1|)``,
-  rw[poly_mod_ring_def, poly_remainders_def]);
+     (#0z = |0|) /\ (#1z = if deg z = 0 then |0| else |1|)
+Proof
+  rw[poly_mod_ring_def, poly_remainders_def]
+QED
 
 (* Theorem: p IN Rz <=> poly p /\ if deg z = 0 then p = |0| else deg p < deg z *)
 (* Proof: by poly_mod_ring_property. *)
-val poly_mod_ring_element = store_thm(
-  "poly_mod_ring_element",
-  ``!(r:'a ring) (z:'a poly). !p. p IN Rz <=>
-        poly p /\ if deg z = 0 then p = |0| else deg p < deg z``,
-  rw[poly_mod_ring_property]);
+Theorem poly_mod_ring_element:
+    !(r:'a ring) (z:'a poly). !p. p IN Rz <=>
+        poly p /\ if deg z = 0 then p = |0| else deg p < deg z
+Proof
+  rw[poly_mod_ring_property]
+QED
 
 (* Theorem: ((PolyModRing r z).sum.carrier = Rz) /\ ((PolyModRing r z).prod.carrier = Rz) *)
 (* Proof: by poly_mod_ring_property. *)
-val poly_mod_ring_carriers = store_thm(
-  "poly_mod_ring_carriers",
-  ``!(r:'a ring) (z:'a poly). ((PolyModRing r z).sum.carrier = Rz) /\
-                             ((PolyModRing r z).prod.carrier = Rz)``,
-  rw[poly_mod_ring_property]);
+Theorem poly_mod_ring_carriers:
+    !(r:'a ring) (z:'a poly). ((PolyModRing r z).sum.carrier = Rz) /\
+                             ((PolyModRing r z).prod.carrier = Rz)
+Proof
+  rw[poly_mod_ring_property]
+QED
 
 (* Theorem: (#0z = |0|) /\ (#1z = if deg z = 0 then |0| else |1|) *)
 (* Proof: by poly_mod_ring_property. *)
-val poly_mod_ring_ids = store_thm(
-  "poly_mod_ring_ids",
-  ``!(r:'a ring) (z:'a poly). (#0z = |0|) /\ (#1z = if deg z = 0 then |0| else |1|)``,
-  rw[poly_mod_ring_property]);
+Theorem poly_mod_ring_ids:
+    !(r:'a ring) (z:'a poly). (#0z = |0|) /\ (#1z = if deg z = 0 then |0| else |1|)
+Proof
+  rw[poly_mod_ring_property]
+QED
 
 (* Theorem: p IN Rz /\ q IN Rz ==> (p +z q = (p + q) % z) *)
 (* Proof: by poly_mod_ring_property *)
-val poly_mod_ring_add = store_thm(
-  "poly_mod_ring_add",
-  ``!r:'a ring. !p q z. p IN Rz /\ q IN Rz ==> (p +z q = (p + q) % z)``,
-  rw[poly_mod_ring_property]);
+Theorem poly_mod_ring_add:
+    !r:'a ring. !p q z. p IN Rz /\ q IN Rz ==> (p +z q = (p + q) % z)
+Proof
+  rw[poly_mod_ring_property]
+QED
 
 (* Theorem: p IN Rz /\ q IN Rz ==> (p *z q = (p * q) % z) *)
 (* Proof: by poly_mod_ring_property *)
-val poly_mod_ring_mult = store_thm(
-  "poly_mod_ring_mult",
-  ``!r:'a ring. !p q z. p IN Rz /\ q IN Rz ==> (p *z q = (p * q) % z)``,
-  rw[poly_mod_ring_property]);
+Theorem poly_mod_ring_mult:
+    !r:'a ring. !p q z. p IN Rz /\ q IN Rz ==> (p *z q = (p * q) % z)
+Proof
+  rw[poly_mod_ring_property]
+QED
 
 (* Theorem: Ring r ==> !z. ulead z ==> AbelianGroup (PolyModRing r z).sum *)
 (* Proof:
@@ -316,9 +323,9 @@ val poly_mod_ring_mult = store_thm(
        = |0|                       by poly_zero_mod
    (8) (x + y) % z = (y + x) % z, true by poly_add_comm
 *)
-val poly_mod_ring_sum_abelian_group = store_thm(
-  "poly_mod_ring_sum_abelian_group",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==> AbelianGroup (PolyModRing r z).sum``,
+Theorem poly_mod_ring_sum_abelian_group:
+    !r:'a ring. Ring r ==> !z. ulead z ==> AbelianGroup (PolyModRing r z).sum
+Proof
   rpt strip_tac >>
   Cases_on `deg z = 0` >-
   (rw_tac std_ss[AbelianGroup_def, group_def_alt, poly_mod_ring_def, poly_remainders_def, GSPECIFICATION] >> rw[poly_mod_of_zero]) >>
@@ -336,7 +343,8 @@ val poly_mod_ring_sum_abelian_group = store_thm(
   `_ = (- (x % z) + x % z) % z` by rw_tac std_ss[poly_mod_neg, poly_mod_mod] >>
   `_ = |0| % z` by rw_tac std_ss[poly_add_lneg] >>
   rw[poly_deg_neg, poly_division]) >>
-  rw[poly_add_comm]);
+  rw[poly_add_comm]
+QED
 
 (* Theorem: Ring r ==> !z. ulead z ==> AbelianMonoid (PolyModRing r z).prod *)
 (* Proof:
@@ -363,9 +371,9 @@ val poly_mod_ring_sum_abelian_group = store_thm(
    (7) (x * |1|) % z = x, true         by poly_mult_rone
    (8) (x * y) % z = (y * x) % z, true by poly_mult_comm
 *)
-val poly_mod_ring_prod_abelian_monoid = store_thm(
-  "poly_mod_ring_prod_abelian_monoid",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==> AbelianMonoid (PolyModRing r z).prod``,
+Theorem poly_mod_ring_prod_abelian_monoid:
+    !r:'a ring. Ring r ==> !z. ulead z ==> AbelianMonoid (PolyModRing r z).prod
+Proof
   rpt strip_tac >>
   Cases_on `deg z = 0` >-
   (rw_tac std_ss[AbelianMonoid_def, Monoid_def, poly_mod_ring_def, poly_remainders_def, GSPECIFICATION] >> rw[poly_mod_of_zero]) >>
@@ -377,7 +385,8 @@ val poly_mod_ring_prod_abelian_monoid = store_thm(
   rw[] >-
   rw[poly_mod_less] >-
   rw[poly_mod_less] >>
-  rw[poly_mult_comm]);
+  rw[poly_mult_comm]
+QED
 
 (* Theorem: Ring r ==> !z. ulead z ==> Ring (PolyModRing r z) *)
 (* Proof:
@@ -398,9 +407,9 @@ val poly_mod_ring_prod_abelian_monoid = store_thm(
        = (x * y + x * z') % z               by poly_mult_radd
        = ((x * y) % z + (x * z') % z) % z   by poly_mod_add
 *)
-val poly_mod_ring_ring = store_thm(
-  "poly_mod_ring_ring",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==> Ring (PolyModRing r z)``,
+Theorem poly_mod_ring_ring:
+    !r:'a ring. Ring r ==> !z. ulead z ==> Ring (PolyModRing r z)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[Ring_def] >-
   rw[poly_mod_ring_sum_abelian_group] >-
@@ -415,7 +424,8 @@ val poly_mod_ring_ring = store_thm(
   `poly (y + z') /\ poly ((y + z') % z) /\ poly (x * y) /\ poly (x * z')` by rw[] >>
   `(x * (y + z') % z) % z = ((x % z) * (y + z') % z) % z` by rw_tac std_ss[poly_mod_mult, poly_mod_mod] >>
   `_ = (x * (y + z')) % z` by rw_tac std_ss[poly_mod_mult] >>
-  rw_tac std_ss[poly_mult_radd, poly_mod_add]);
+  rw_tac std_ss[poly_mult_radd, poly_mod_add]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -447,9 +457,9 @@ val poly_mod_ring_ring = store_thm(
              = - (p % z)            by above, poly_mod_less
              = (-p) % z             by poly_mod_neg
 *)
-val poly_mod_ring_neg = store_thm(
-  "poly_mod_ring_neg",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==> !p. p IN Rz ==> ($-z p = (-p) % z)``,
+Theorem poly_mod_ring_neg:
+    !r:'a ring. Ring r ==> !z. ulead z ==> !p. p IN Rz ==> ($-z p = (-p) % z)
+Proof
   rpt strip_tac >>
   `Ring (PolyModRing r z)` by rw[poly_mod_ring_ring] >>
   `($-z p) +z p = |0|` by rw[ring_add_lneg, poly_mod_ring_ids] >>
@@ -466,7 +476,8 @@ val poly_mod_ring_neg = store_thm(
   `p % z = p` by rw[poly_mod_less] >>
   `q + p = |0|` by metis_tac[poly_mod_ring_add] >>
   `- (p % z) = (-p) % z` by rw[poly_mod_neg] >>
-  metis_tac[poly_add_eq_zero]);
+  metis_tac[poly_add_eq_zero]
+QED
 
 (* Theorem: Ring r ==> !z. ulead z ==> !p q. p IN Rz /\ q IN Rz ==> (p -z q = (p - q) % z) *)
 (* Proof:
@@ -489,9 +500,9 @@ val poly_mod_ring_neg = store_thm(
    = (p + -q) % z                   by poly_mod_add
    = (p - q) % z                    by poly_sub_def
 *)
-val poly_mod_ring_sub = store_thm(
-  "poly_mod_ring_sub",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==> !p q. p IN Rz /\ q IN Rz ==> (p -z q = (p - q) % z)``,
+Theorem poly_mod_ring_sub:
+    !r:'a ring. Ring r ==> !z. ulead z ==> !p q. p IN Rz /\ q IN Rz ==> (p -z q = (p - q) % z)
+Proof
   rpt strip_tac >>
   `Ring (PolyModRing r z)` by rw[poly_mod_ring_ring] >>
   `$-z q IN Rz` by rw[] >>
@@ -501,7 +512,8 @@ val poly_mod_ring_sub = store_thm(
     `poly p /\ deg p < deg z` by metis_tac[poly_mod_ring_element] >>
     `poly (-q)` by metis_tac[poly_mod_ring_element, poly_neg_poly] >>
     rw_tac std_ss[ring_sub_def, poly_mod_ring_add, poly_mod_ring_neg, poly_mod_less, poly_mod_add, poly_sub_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Modulo Ring isomorphic to Quotient Ring by Principal Ideal     *)
@@ -523,18 +535,19 @@ val poly_mod_ring_sub = store_thm(
     ==> x o I IN CosetPartition RX.sum I.sum   by ideal_coset_property
     ==> x o I IN (RX / I).carrier              by quotient_ring_def
 *)
-val poly_ideal_coset = store_thm(
-  "poly_ideal_coset",
-  ``!r:'a ring. Ring r ==> !z. poly z ==> !x. x IN Rz ==>
+Theorem poly_ideal_coset:
+    !r:'a ring. Ring r ==> !z. poly z ==> !x. x IN Rz ==>
    coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier IN
-   (PolyRing r / principal_ideal (PolyRing r) z).carrier``,
+   (PolyRing r / principal_ideal (PolyRing r) z).carrier
+Proof
   rpt strip_tac >>
   `Ring (PolyRing r)` by rw[poly_add_mult_ring] >>
   `z IN (PolyRing r).carrier` by metis_tac[poly_ring_property] >>
   `(principal_ideal (PolyRing r) z) << (PolyRing r)` by rw[principal_ideal_ideal] >>
   `!x. x IN Rz ==> poly x` by rw[poly_mod_ring_element] >>
   `x IN (PolyRing r).carrier` by rw[GSYM poly_ring_property] >>
-  rw[ideal_coset_property, quotient_ring_def]);
+  rw[ideal_coset_property, quotient_ring_def]
+QED
 
 (* Idea (some abuse in notation):
    Given Ring r and ulead z IN R[X], let I = principal_ideal R[X] z.
@@ -556,11 +569,11 @@ val poly_ideal_coset = store_thm(
    <=> (p - q) % z = |0|              by poly_mod_eq_zero, poly_mult_comm
    <=> (p == q) (pm z)                by poly_mod_eq_alt
 *)
-val poly_ideal_coset_eq = store_thm(
-  "poly_ideal_coset_eq",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==> !p q. poly p /\ poly q ==>
+Theorem poly_ideal_coset_eq:
+    !r:'a ring. Ring r ==> !z. ulead z ==> !p q. poly p /\ poly q ==>
      ((coset (PolyRing r).sum p (principal_ideal (PolyRing r) z).carrier =
-       coset (PolyRing r).sum q (principal_ideal (PolyRing r) z).carrier) <=> (p == q) (pm z))``,
+       coset (PolyRing r).sum q (principal_ideal (PolyRing r) z).carrier) <=> (p == q) (pm z))
+Proof
   rpt strip_tac >>
   qabbrev_tac `rx = (PolyRing r)` >>
   qabbrev_tac `zz = (principal_ideal rx z)` >>
@@ -577,7 +590,8 @@ val poly_ideal_coset_eq = store_thm(
   `_ = ?t. poly t /\ (p - q = z * t)` by metis_tac[principal_ideal_element] >>
   `_ = ((p - q) % z = |0|)` by metis_tac[poly_mod_eq_zero, poly_mult_comm] >>
   `_ = (p == q) (pm z)` by metis_tac[poly_mod_eq_alt] >>
-  simp[]);
+  simp[]
+QED
 
 (* Idea (some abuse in notation):
    Given Ring r and ulead z IN R[X], let I = principal_ideal R[X] z.
@@ -603,12 +617,12 @@ val poly_ideal_coset_eq = store_thm(
    Then p o I = q o I       by ideal_cogen_property
    Thus (p == q) (pm z)     by poly_ideal_coset_eq
 *)
-val poly_ideal_cogen_property = store_thm(
-  "poly_ideal_cogen_property",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==> !p q. poly p /\ poly q ==>
+Theorem poly_ideal_cogen_property:
+    !r:'a ring. Ring r ==> !z. ulead z ==> !p q. poly p /\ poly q ==>
    ((q = cogen (PolyRing r).sum
                (principal_ideal (PolyRing r) z).sum
-               (coset (PolyRing r).sum p (principal_ideal (PolyRing r) z).carrier)) ==> (p == q) (pm z))``,
+               (coset (PolyRing r).sum p (principal_ideal (PolyRing r) z).carrier)) ==> (p == q) (pm z))
+Proof
   rpt strip_tac >>
   qabbrev_tac `rx = (PolyRing r)` >>
   qabbrev_tac `zz = (principal_ideal rx z)` >>
@@ -621,7 +635,8 @@ val poly_ideal_cogen_property = store_thm(
   `p IN rx.sum.carrier` by fs[poly_ring_property, Abbr`rx`] >>
   metis_tac[coset_partition_element, ideal_carriers]) >>
   `coset rx.sum q Z = coset rx.sum p Z` by metis_tac[ideal_cogen_property] >>
-  metis_tac[poly_ideal_coset_eq]);
+  metis_tac[poly_ideal_coset_eq]
+QED
 
 (* Idea (some abuse in notation):
    Given Ring r and ulead z IN R[X], let I = principal_ideal R[X] z = <z>.
@@ -668,12 +683,12 @@ val poly_ideal_cogen_property = store_thm(
        and (x + x' == (x + x') % z) (pm z)     by pmod_mod
        ==> ((x + x') % z == y + y') (pm z)     by poly_mod_transitive
 *)
-val poly_mod_sum_group_homo_quotient_ring = store_thm(
-  "poly_mod_sum_group_homo_quotient_ring",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==>
+Theorem poly_mod_sum_group_homo_quotient_ring:
+    !r:'a ring. Ring r ==> !z. ulead z ==>
        GroupHomo (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
                (PolyModRing r z).sum
-               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z)).sum``,
+               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z)).sum
+Proof
   rpt strip_tac >>
   qabbrev_tac `rx = (PolyRing r)` >>
   qabbrev_tac `zz = (principal_ideal rx z)` >>
@@ -700,7 +715,8 @@ val poly_mod_sum_group_homo_quotient_ring = store_thm(
     `(x + x' == y + y') (pm z)` by rw[pmod_add] >>
     `((x + x') % z == x + x') (pm z)` by rw[pmod_mod] >>
     metis_tac[poly_mod_transitive]
-  ]);
+  ]
+QED
 
 
 (* Idea (some abuse in notation):
@@ -764,12 +780,12 @@ val poly_mod_sum_group_homo_quotient_ring = store_thm(
          goal is: ( |1| == |1|) (pm z)  by poly_ideal_coset_eq
          This is true trivially.
 *)
-val poly_mod_prod_monoid_homo_quotient_ring = store_thm(
-  "poly_mod_prod_monoid_homo_quotient_ring",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==>
+Theorem poly_mod_prod_monoid_homo_quotient_ring:
+    !r:'a ring. Ring r ==> !z. ulead z ==>
        MonoidHomo (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
                (PolyModRing r z).prod
-               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z)).prod``,
+               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z)).prod
+Proof
   rpt strip_tac >>
   qabbrev_tac `rx = (PolyRing r)` >>
   qabbrev_tac `zz = (principal_ideal rx z)` >>
@@ -806,7 +822,8 @@ val poly_mod_prod_monoid_homo_quotient_ring = store_thm(
       `#1z = |1|` by metis_tac[poly_mod_ring_ids] >>
       metis_tac[poly_ideal_coset_eq, poly_one_poly]
     ]
-  ]);
+  ]
+QED
 
 (* Idea (some abuse in notation):
    Given Ring r and ulead z IN R[X], let I = principal_ideal R[X] z = <z>.
@@ -836,12 +853,12 @@ val poly_mod_prod_monoid_homo_quotient_ring = store_thm(
    (3) MonoidHomo (\x. coset rx.sum x Z) (PolyModRing r z).prod (rx / zz).prod
        This is true                  by poly_mod_prod_monoid_homo_quotient_ring
 *)
-val poly_mod_ring_homo_quotient_ring = store_thm(
-  "poly_mod_ring_homo_quotient_ring",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==>
+Theorem poly_mod_ring_homo_quotient_ring:
+    !r:'a ring. Ring r ==> !z. ulead z ==>
        RingHomo (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
                (PolyModRing r z)
-               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))``,
+               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))
+Proof
   rpt strip_tac >>
   qabbrev_tac `rx = (PolyRing r)` >>
   qabbrev_tac `zz = (principal_ideal rx z)` >>
@@ -854,7 +871,8 @@ val poly_mod_ring_homo_quotient_ring = store_thm(
     rw[quotient_ring_def],
     metis_tac[poly_mod_sum_group_homo_quotient_ring],
     metis_tac[poly_mod_prod_monoid_homo_quotient_ring]
-  ]);
+  ]
+QED
 
 
 (* Idea (some abuse in notation):
@@ -914,12 +932,12 @@ val poly_mod_ring_homo_quotient_ring = store_thm(
               or need: (p % z) % z = p % z     by pmod_def_alt
               This is true since p % z = p     by poly_mod_less, deg (p % z) < deg p
 *)
-val poly_mod_ring_iso_quotient_ring = store_thm(
-  "poly_mod_ring_iso_quotient_ring",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==>
+Theorem poly_mod_ring_iso_quotient_ring:
+    !r:'a ring. Ring r ==> !z. ulead z ==>
        RingIso (\x. coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier)
                (PolyModRing r z)
-               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))``,
+               (quotient_ring (PolyRing r) (principal_ideal (PolyRing r) z))
+Proof
   rpt strip_tac >>
   qabbrev_tac `rx = (PolyRing r)` >>
   qabbrev_tac `zz = (principal_ideal rx z)` >>
@@ -946,7 +964,8 @@ val poly_mod_ring_iso_quotient_ring = store_thm(
     metis_tac[poly_mod_ring_property, poly_ideal_coset_eq, poly_mod_eq_alt, poly_mod_by_const],
     `deg (p % z) < deg z` by rw[poly_division] >>
     metis_tac[poly_mod_ring_property, poly_ideal_coset_eq, pmod_mod]
-  ]);
+  ]
+QED
 
 (* This isomorphism between
         (PolyModRing r z) and (PolyRing r / principal_ideal (PolyRing r) z)
@@ -982,12 +1001,13 @@ val poly_mod_ring_iso_quotient_ring = store_thm(
    = { p | poly p /\ ((p = []) \/ deg p < deg z) }
                                           by EXTENSION, poly_deg_zero
 *)
-val poly_mod_ring_carrier_alt = store_thm(
-  "poly_mod_ring_carrier_alt",
-  ``!r:'a ring z:'a poly. Rz = {p | poly p /\ ((p = []) \/ deg p < deg z)}``,
+Theorem poly_mod_ring_carrier_alt:
+    !r:'a ring z:'a poly. Rz = {p | poly p /\ ((p = []) \/ deg p < deg z)}
+Proof
   rw[poly_mod_ring_def, poly_remainders_def, EXTENSION] >>
   rw[EQ_IMP_THM] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteRing r ==> FINITE Rz *)
 (* Proof:
@@ -1000,12 +1020,13 @@ val poly_mod_ring_carrier_alt = store_thm(
      so FINITE t          by FINITE_BIJ
      or FINITE Rz         by poly_mod_ring_carrier_alt
 *)
-val poly_mod_ring_finite = store_thm(
-  "poly_mod_ring_finite",
-  ``!r:'a ring z:'a poly. FiniteRing r ==> FINITE Rz``,
+Theorem poly_mod_ring_finite:
+    !r:'a ring z:'a poly. FiniteRing r ==> FINITE Rz
+Proof
   rw[FiniteRing_def] >>
   `#0 IN R` by rw[] >>
-  metis_tac[weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ, poly_mod_ring_carrier_alt]);
+  metis_tac[weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ, poly_mod_ring_carrier_alt]
+QED
 
 (* Theorem: FiniteRing r ==> CARD Rz = (CARD R) ** (deg z)  *)
 (* Proof:
@@ -1014,12 +1035,13 @@ val poly_mod_ring_finite = store_thm(
    = CARD { p | weak p /\ (LENGTH p = deg z) }             by weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ
    = CARD R ** (deg z)                                     by weak_poly_card
 *)
-val poly_mod_ring_card = store_thm(
-  "poly_mod_ring_card",
-  ``!r:'a ring z. FiniteRing r ==> (CARD Rz = (CARD R) ** (deg z))``,
+Theorem poly_mod_ring_card:
+    !r:'a ring z. FiniteRing r ==> (CARD Rz = (CARD R) ** (deg z))
+Proof
   rw[FiniteRing_def] >>
   `#0 IN R` by rw[] >>
-  metis_tac[poly_mod_ring_carrier_alt, weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ, weak_poly_card]);
+  metis_tac[poly_mod_ring_carrier_alt, weak_poly_poly_bij, weak_poly_finite, FINITE_BIJ, weak_poly_card]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Modulo Theorems                                                *)
@@ -1028,11 +1050,12 @@ val poly_mod_ring_card = store_thm(
 (* Theorem: ((PolyModRing r z).prod excluding |0|).id =
             if deg z = 0 then |0| else |1| *)
 (* Proof: by poly_mod_ring_def, excluding_def *)
-val poly_mod_prod_nonzero_id = store_thm(
-  "poly_mod_prod_nonzero_id",
-  ``!(r:'a ring) z. ((PolyModRing r z).prod excluding |0|).id =
-       if deg z = 0 then |0| else |1|``,
-  rw_tac std_ss[poly_mod_ring_def, excluding_def]);
+Theorem poly_mod_prod_nonzero_id:
+    !(r:'a ring) z. ((PolyModRing r z).prod excluding |0|).id =
+       if deg z = 0 then |0| else |1|
+Proof
+  rw_tac std_ss[poly_mod_ring_def, excluding_def]
+QED
 
 (* Theorem: ulead z ==> FINITE ((PolyModRing r z).prod excluding |0|).carrier *)
 (* Proof:
@@ -1043,29 +1066,31 @@ val poly_mod_prod_nonzero_id = store_thm(
     Since  FINITE (PolyModRing r z).carrier                               by poly_mod_ring_finite
     Hence  FINITE ((PolyModRing r z).prod excluding |0|).carrier          by SUBSET_FINITE
 *)
-val poly_mod_ring_prod_finite = store_thm(
-  "poly_mod_ring_prod_finite",
-  ``!r:'a ring z. FiniteRing r /\ ulead z ==>
-                 FINITE ((PolyModRing r z).prod excluding |0|).carrier``,
+Theorem poly_mod_ring_prod_finite:
+    !r:'a ring z. FiniteRing r /\ ulead z ==>
+                 FINITE ((PolyModRing r z).prod excluding |0|).carrier
+Proof
   rpt strip_tac >>
   `Ring r` by metis_tac[FiniteRing_def] >>
   `Ring (PolyModRing r z)` by rw[poly_mod_ring_ring] >>
   `(PolyModRing r z).prod.carrier = (PolyModRing r z).carrier` by rw[ring_mult_monoid] >>
   `((PolyModRing r z).prod excluding |0|).carrier SUBSET (PolyModRing r z).prod.carrier` by rw[excluding_def] >>
   `FINITE (PolyModRing r z).carrier` by rw[poly_mod_ring_finite] >>
-  metis_tac[SUBSET_FINITE]);
+  metis_tac[SUBSET_FINITE]
+QED
 
 (* Theorem: Ring r /\ 0 < deg z ==>
             !p. p IN ((PolyModRing r z).prod excluding |0|).carrier <=>
                 (poly p /\ p <> |0| /\ deg p < deg z) *)
 (* Proof: by poly_mod_ring_property, excluding_def. *)
-val poly_mod_ring_nonzero_element = store_thm(
-  "poly_mod_ring_nonzero_element",
-  ``!r:'a ring z. Ring r /\ 0 < deg z ==>
+Theorem poly_mod_ring_nonzero_element:
+    !r:'a ring z. Ring r /\ 0 < deg z ==>
    !p. p IN ((PolyModRing r z).prod excluding |0|).carrier <=>
-           (poly p /\ p <> |0| /\ deg p < deg z)``,
+           (poly p /\ p <> |0| /\ deg p < deg z)
+Proof
   rw[poly_mod_ring_property, excluding_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Exponentiation in Polynomial Ring                                         *)
@@ -1116,10 +1141,10 @@ val poly_mod_ring_nonzero_element = store_thm(
         = FUNPOW ($* p) (SUC n) |1| % z              by FUNPOW_SUC
         = RHS
 *)
-val poly_mod_exp_alt = store_thm(
-  "poly_mod_exp_alt",
-  ``!r:'a ring. Ring r ==> !p z. poly p /\ ulead z ==>
-   !n. ((PolyModRing r z).prod excluding |0|).exp p n = (p ** n) % z``,
+Theorem poly_mod_exp_alt:
+    !r:'a ring. Ring r ==> !p z. poly p /\ ulead z ==>
+   !n. ((PolyModRing r z).prod excluding |0|).exp p n = (p ** n) % z
+Proof
   rw[poly_mod_ring_def, poly_remainders_def, monoid_exp_def, excluding_def] >>
   (Cases_on `deg z = 0` >> simp[]) >| [
     Induct_on `n` >-
@@ -1132,7 +1157,8 @@ val poly_mod_exp_alt = store_thm(
     rw_tac std_ss[FUNPOW_SUC] >>
     `!n. poly (FUNPOW ($* p) n |1|)` by metis_tac[poly_exp_poly, poly_mult_monoid, monoid_exp_def] >>
     metis_tac[poly_mod_mult, poly_mod_mod, poly_mod_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ ulead z ==> !p. p IN Rz ==> !n. p **z n = (p ** n) % z *)
 (* Proof:
@@ -1173,9 +1199,9 @@ val poly_mod_exp_alt = store_thm(
        = (p * p ** n) % z              by poly_mod_mult
        = (p ** SUC n) % z              by poly_exp_SUC
 *)
-val poly_mod_ring_exp = store_thm(
-  "poly_mod_ring_exp",
-  ``!r:'a ring z:'a poly. Ring r /\ ulead z ==> !p. p IN Rz ==> !n. p **z n = (p ** n) % z``,
+Theorem poly_mod_ring_exp:
+    !r:'a ring z:'a poly. Ring r /\ ulead z ==> !p. p IN Rz ==> !n. p **z n = (p ** n) % z
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[poly_mod_ring_ids, poly_mod_by_const] >>
@@ -1187,7 +1213,8 @@ val poly_mod_ring_exp = store_thm(
     `poly p /\ deg p < deg z` by metis_tac[poly_mod_ring_element] >>
     `poly (p **z n) /\ deg (p **z n) < deg z` by metis_tac[poly_mod_ring_element] >>
     rw_tac std_ss[ring_exp_SUC, poly_mod_ring_mult, poly_mod_less, poly_mod_mult, poly_exp_poly, poly_exp_SUC]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Theorems when coefficient is field rather than ring.           *)
@@ -1198,47 +1225,63 @@ poly_field_unit_lead
 |- !r. Field r ==> !p. poly p /\ p <> |0| ==> unit (lead p)
 *)
 
-val poly_field_mod_ring_sum_abelian_group = store_thm("poly_field_mod_ring_sum_abelian_group",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> AbelianGroup (PolyModRing r z).sum``,
-  rw[poly_mod_ring_sum_abelian_group]);
+Theorem poly_field_mod_ring_sum_abelian_group:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> AbelianGroup (PolyModRing r z).sum
+Proof
+  rw[poly_mod_ring_sum_abelian_group]
+QED
 
-val poly_field_mod_ring_prod_abelian_monoid = store_thm("poly_field_mod_ring_prod_abelian_monoid",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> AbelianMonoid (PolyModRing r z).prod``,
-  rw[poly_mod_ring_prod_abelian_monoid]);
+Theorem poly_field_mod_ring_prod_abelian_monoid:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> AbelianMonoid (PolyModRing r z).prod
+Proof
+  rw[poly_mod_ring_prod_abelian_monoid]
+QED
 
-val poly_field_mod_ring_ring = store_thm("poly_field_mod_ring_ring",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> Ring (PolyModRing r z)``,
-  rw[poly_mod_ring_ring]);
+Theorem poly_field_mod_ring_ring:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> Ring (PolyModRing r z)
+Proof
+  rw[poly_mod_ring_ring]
+QED
 
-val poly_field_mod_ring_neg = store_thm("poly_field_mod_ring_neg",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> !p. p IN Rz ==> ($-z p = (-p) % z)``,
-  rw[poly_mod_ring_neg]);
+Theorem poly_field_mod_ring_neg:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> !p. p IN Rz ==> ($-z p = (-p) % z)
+Proof
+  rw[poly_mod_ring_neg]
+QED
 
-val poly_field_mod_ring_sub = store_thm("poly_field_mod_ring_sub",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
-    !p q. p IN Rz /\ q IN Rz ==> (p -z q = (p - q) % z)``,
-  rw[poly_mod_ring_sub]);
+Theorem poly_field_mod_ring_sub:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
+    !p q. p IN Rz /\ q IN Rz ==> (p -z q = (p - q) % z)
+Proof
+  rw[poly_mod_ring_sub]
+QED
 
-val poly_field_ideal_coset = store_thm("poly_field_ideal_coset",
-  ``!r:'a field. Field r ==> !z. poly z ==>
+Theorem poly_field_ideal_coset:
+    !r:'a field. Field r ==> !z. poly z ==>
     !x. x IN Rz ==> coset (PolyRing r).sum x (principal_ideal (PolyRing r) z).carrier IN
-                          (PolyRing r / principal_ideal (PolyRing r) z).carrier``,
-  rw[poly_ideal_coset]);
+                          (PolyRing r / principal_ideal (PolyRing r) z).carrier
+Proof
+  rw[poly_ideal_coset]
+QED
 
-val poly_field_ideal_coset_eq = store_thm("poly_field_ideal_coset_eq",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
+Theorem poly_field_ideal_coset_eq:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
     !p q. poly p /\ poly q ==>
      ((coset (PolyRing r).sum p (principal_ideal (PolyRing r) z).carrier =
-       coset (PolyRing r).sum q (principal_ideal (PolyRing r) z).carrier) <=> (p == q) (pm z))``,
-  rw[poly_ideal_coset_eq]);
+       coset (PolyRing r).sum q (principal_ideal (PolyRing r) z).carrier) <=> (p == q) (pm z))
+Proof
+  rw[poly_ideal_coset_eq]
+QED
 
-val poly_field_ideal_cogen_property = store_thm("poly_field_ideal_cogen_property",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
+Theorem poly_field_ideal_cogen_property:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
     !p q. poly p /\ poly q ==>
    ((q = cogen (PolyRing r).sum
                (principal_ideal (PolyRing r) z).sum
-               (coset (PolyRing r).sum p (principal_ideal (PolyRing r) z).carrier)) ==> (p == q) (pm z))``,
-  rw[poly_ideal_cogen_property]);
+               (coset (PolyRing r).sum p (principal_ideal (PolyRing r) z).carrier)) ==> (p == q) (pm z))
+Proof
+  rw[poly_ideal_cogen_property]
+QED
 
 Theorem poly_field_mod_sum_group_homo_quotient_ring:
   !r:'a field.
@@ -1287,15 +1330,19 @@ Proof
   rw[poly_mod_ring_iso_quotient_ring]
 QED
 
-val poly_field_mod_exp_alt = store_thm("poly_field_mod_exp_alt",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
-    !n. ((PolyModRing r z).prod excluding |0|).exp p n = (p ** n) % z``,
-  rw[poly_mod_exp_alt]);
+Theorem poly_field_mod_exp_alt:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
+    !n. ((PolyModRing r z).prod excluding |0|).exp p n = (p ** n) % z
+Proof
+  rw[poly_mod_exp_alt]
+QED
 
-val poly_field_mod_ring_exp = store_thm("poly_field_mod_ring_exp",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
-    !p. p IN Rz ==> !n. p **z n = (p ** n) % z``,
-  rw[poly_mod_ring_exp]);
+Theorem poly_field_mod_ring_exp:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
+    !p. p IN Rz ==> !n. p **z n = (p ** n) % z
+Proof
+  rw[poly_mod_ring_exp]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

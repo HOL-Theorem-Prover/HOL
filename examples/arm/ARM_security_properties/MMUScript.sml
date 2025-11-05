@@ -174,17 +174,17 @@ End
 
 (* relate permitted_byte with permitted_byte_pure *)
 
-val permitted_byte_simp = store_thm (
-    "permitted_byte_simp",
-    ``!u p m adr is_write c1 c2 c3 priv mem.
+Theorem permitted_byte_simp:
+      !u p m adr is_write c1 c2 c3 priv mem.
       ((u,p,m) = permitted_byte adr is_write c1 c2 c3 priv mem) /\ u
-       ==> (permitted_byte_pure adr is_write c1 c2 c3 priv mem = p)``,
+       ==> (permitted_byte_pure adr is_write c1 c2 c3 priv mem = p)
+Proof
     REPEAT STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) [permitted_byte_def, permitted_byte_pure_def]
     THEN Cases_on `~enabled_MMU c1` THEN FULL_SIMP_TAC (srw_ss()) []
     THEN RW_TAC (srw_ss()) []
     THEN FULL_SIMP_TAC (srw_ss()) [LET_DEF]
     THEN Cases_on `sd_supports_MMU content_of_sd si` THEN Cases_on `bit2_c3` THEN Cases_on `bit1_c3` THEN Cases_on `AP=0w` THEN Cases_on `AP=1w` THEN Cases_on `priv` THEN Cases_on `AP=2w` THEN Cases_on `AP=3w` THEN FULL_SIMP_TAC (srw_ss()) []
-);
+QED
 
 
 (* check_accesses                            *)
@@ -276,11 +276,11 @@ val check_accesses_TAC  = (fn IS_WRITE =>
     THEN (NO_TAC ORELSE METIS_TAC []));
 
 
-val check_accesses_simp = store_thm (
-    "check_accesses_simp",
-    ``!u a add acc c1 c2 c3 priv mem.
+Theorem check_accesses_simp:
+      !u a add acc c1 c2 c3 priv mem.
       ((u,a,add) = check_accesses acc c1 c2 c3 priv mem) /\ u
-       ==> (check_accesses_pure acc c1 c2 c3 priv mem = a)``,
+       ==> (check_accesses_pure acc c1 c2 c3 priv mem = a)
+Proof
     Induct_on `acc`
     THENL [RW_TAC (srw_ss()) [check_accesses_def, check_accesses_pure_def],
            ONCE_REWRITE_TAC [check_accesses_def, check_accesses_pure_def]
@@ -288,18 +288,19 @@ val check_accesses_simp = store_thm (
              THEN NTAC 8 STRIP_TAC
              THEN CASE_TAC
              THENL [check_accesses_TAC ("F"), check_accesses_TAC ("T")]
-        ]);
+        ]
+QED
 
 
 
 
 (* conclude the understandability of check_accesses from the understandability of permitted_byte *)
 
-val check_accesses_understand = store_thm (
-    "check_accesses_understand",
-    ``!acc c1 c2 c3 priv mem.
+Theorem check_accesses_understand:
+      !acc c1 c2 c3 priv mem.
        (!add is_write. FST (permitted_byte add is_write c1 c2 c3 priv mem))
-     ==>  (FST (check_accesses acc c1 c2 c3 priv mem))``,
+     ==>  (FST (check_accesses acc c1 c2 c3 priv mem))
+Proof
     Induct_on `acc`
     THENL [RW_TAC (srw_ss()) [check_accesses_def],
              ONCE_REWRITE_TAC [check_accesses_def]
@@ -308,7 +309,8 @@ val check_accesses_understand = store_thm (
              THEN CASE_TAC
              THEN PairRules.PBETA_TAC
              THEN RW_TAC (srw_ss()) []
-        ]);
+        ]
+QED
 
 
 
@@ -325,11 +327,12 @@ End
 
 (* empty access list, no violation *)
 
-val empty_accesses_full_lem = store_thm(
-    "empty_accesses_full_lem",
-    ``(s.accesses = []) ==> ((access_violation_full s) = (T,F, ARB))``,
+Theorem empty_accesses_full_lem:
+      (s.accesses = []) ==> ((access_violation_full s) = (T,F, ARB))
+Proof
     NTAC 2 (PURE_ONCE_REWRITE_TAC [access_violation_full_def, check_accesses_def])
-      THEN RW_TAC (srw_ss()) []);
+      THEN RW_TAC (srw_ss()) []
+QED
 
 
 
@@ -347,13 +350,14 @@ End
 
 (* relate access_violation_pure and access_violation_full *)
 
-val access_violation_simp_pure= store_thm(
-    "access_violation_simp_pure",
-    ``!u a add s.
+Theorem access_violation_simp_pure:
+      !u a add s.
       ((u,a,add) = access_violation_full s) /\ u
-       ==> (access_violation_pure s = a)``,
+       ==> (access_violation_pure s = a)
+Proof
       FULL_SIMP_TAC (srw_ss()) [access_violation_full_def, access_violation_pure_def]
-        THEN METIS_TAC [check_accesses_simp]);
+        THEN METIS_TAC [check_accesses_simp]
+QED
 
 
 (* partially specified access_violation *)
@@ -367,31 +371,34 @@ val access_violation_def = new_axiom("access_violation_axiom", ``!state u x add.
 
 (* if full version is understood, access_violation is equal to pure version *)
 
-val access_violation_simp = store_thm (
-    "access_violation_simp",
-    ``!s x add.
+Theorem access_violation_simp:
+      !s x add.
       ((T,x,add) = access_violation_full s)
-       ==> (access_violation s = access_violation_pure s)``,
-      METIS_TAC [access_violation_simp_pure, access_violation_def]);
+       ==> (access_violation s = access_violation_pure s)
+Proof
+      METIS_TAC [access_violation_simp_pure, access_violation_def]
+QED
 
-val access_violation_simp_FST = store_thm (
-    "access_violation_simp_FST",
-    ``!s. (FST (access_violation_full s))
-       ==> (access_violation s = access_violation_pure s)``,
+Theorem access_violation_simp_FST:
+      !s. (FST (access_violation_full s))
+       ==> (access_violation s = access_violation_pure s)
+Proof
      REPEAT STRIP_TAC
        THEN Cases_on `access_violation_full s`
        THEN Cases_on `r`
-       THEN FULL_SIMP_TAC (srw_ss()) [access_violation_simp]);
+       THEN FULL_SIMP_TAC (srw_ss()) [access_violation_simp]
+QED
 
 (* empty access list, no violation *)
 
-val empty_accesses_lem = store_thm(
-    "empty_accesses_lem",
-    ``(s.accesses = []) ==> (~access_violation s)``,
+Theorem empty_accesses_lem:
+      (s.accesses = []) ==> (~access_violation s)
+Proof
     STRIP_TAC
       THEN IMP_RES_TAC empty_accesses_full_lem
       THEN ASSUME_TAC (SPECL [``s:arm_state``, ``T``, ``F``, ``ARB:word32``] access_violation_def)
-      THEN FULL_SIMP_TAC (srw_ss()) []);
+      THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 (* take data abort exception *)
 

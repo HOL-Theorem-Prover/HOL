@@ -123,11 +123,13 @@ val (mc_const_load_spec,mc_const_load_def) = basic_decompile_strings x64_tools "
 val PULL_EXISTS_OVER_CONJ = METIS_PROVE []
   ``((?x. P x) /\ Q = ?x. P x /\ Q) /\ (Q /\ (?x. P x) = ?x. P x /\ Q)``
 
-val ref_heap_addr_alt = store_thm("ref_heap_addr_alt",
-  ``(ref_heap_addr (H_ADDR a) = n2w a << 1) /\
+Theorem ref_heap_addr_alt:
+    (ref_heap_addr (H_ADDR a) = n2w a << 1) /\
     (ref_heap_addr (H_DATA (INL w)) = w2w w << 2 + 0x1w) /\
-    (ref_heap_addr (H_DATA (INR v)) = w2w v << 3 + 0x3w)``,
-  SIMP_TAC std_ss [ref_heap_addr_def] \\ blastLib.BBLAST_TAC);
+    (ref_heap_addr (H_DATA (INR v)) = w2w v << 3 + 0x3w)
+Proof
+  SIMP_TAC std_ss [ref_heap_addr_def] \\ blastLib.BBLAST_TAC
+QED
 
 val mc_const_load_blast = prove(
   ``w2w ((0x1w:word32) + w2w w << 2) = (0x1w:word64) + w2w (w:word30) << 2``,
@@ -211,13 +213,15 @@ val (mc_const_store_spec,mc_const_store_def) = basic_decompile_strings x64_tools
        mov r0d,3
    `)
 
-val EL_UPDATE_NTH = store_thm("EL_UPDATE_NTH",
-  ``!xs n k x. EL n (UPDATE_NTH k x xs) =
-               if (k = n) /\ k < LENGTH xs then x else EL n xs``,
+Theorem EL_UPDATE_NTH:
+    !xs n k x. EL n (UPDATE_NTH k x xs) =
+               if (k = n) /\ k < LENGTH xs then x else EL n xs
+Proof
   Induct \\ Cases_on `k` \\ SIMP_TAC std_ss [LENGTH,UPDATE_NTH_def]
   THEN1 (Cases_on `n` \\ FULL_SIMP_TAC std_ss [EL,HD,TL] \\ FULL_SIMP_TAC std_ss [ADD1])
   \\ Cases_on `n'` \\ FULL_SIMP_TAC std_ss [EL,HD,TL]
-  \\ FULL_SIMP_TAC std_ss [ADD1]);
+  \\ FULL_SIMP_TAC std_ss [ADD1]
+QED
 
 val mc_const_store_blast = blastLib.BBLAST_PROVE
   ``(31 -- 0) (w:word64) = w2w ((w2w w):word32)``
@@ -2006,12 +2010,13 @@ val (mc_calc_addr_spec,mc_calc_addr_def) = basic_decompile_strings x64_tools "mc
 
 val _ = save_thm("mc_calc_addr_spec",mc_calc_addr_spec);
 
-val mc_calc_addr_thm = store_thm("mc_calc_addr_thm",
-  ``^LISP ==> isVal x2 ==>
+Theorem mc_calc_addr_thm:
+    ^LISP ==> isVal x2 ==>
     ?tw2i. mc_calc_addr_pre (tw2,sp,w2w w2,df,f) /\
            (mc_calc_addr (tw2,sp,w2w w2,df,f) = (tw2i,sp,w2w w2,df,f)) /\
            (tw2i = EL 4 cs + n2w (getVal x2)) /\
-           let tw2 = tw2i in ^LISP``,
+           let tw2 = tw2i in ^LISP
+Proof
   FULL_SIMP_TAC std_ss [LET_DEF,mc_calc_addr_def] \\ NTAC 2 STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [isVal_thm,getVal_def,INSERT_SUBSET,EMPTY_SUBSET]
   \\ IMP_RES_TAC lisp_inv_cs_read \\ FULL_SIMP_TAC std_ss []
@@ -2028,7 +2033,8 @@ val mc_calc_addr_thm = store_thm("mc_calc_addr_thm",
     \\ `a < 18446744073709551616` by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [DIV_EQ_X] \\ DECIDE_TAC)
   \\ ASM_SIMP_TAC std_ss [AC WORD_ADD_ASSOC WORD_ADD_COMM]
-  \\ MATCH_MP_TAC (GEN_ALL lisp_inv_ignore_tw2) \\ METIS_TAC []);
+  \\ MATCH_MP_TAC (GEN_ALL lisp_inv_ignore_tw2) \\ METIS_TAC []
+QED
 
 
 (* return stack *)

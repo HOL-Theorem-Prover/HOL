@@ -6,46 +6,23 @@ Ancestors
 Libs
   tuerk_tacticsLib res_quanTools numLib Sanity
 
-(*
-quietdec := true;
-
-val home_dir = (concat Globals.HOLDIR "/examples/temporal_deep/");
-loadPath := (concat home_dir "src/deep_embeddings") ::
-            (concat home_dir "src/tools") :: !loadPath;
-
-map load
- ["tuerk_tacticsLib", "res_quanTools", "prop_logicTheory",
-  "infinite_pathTheory", "symbolic_kripke_structureTheory", "numLib",
-  "full_ltlTheory", "pred_setTheory",
-  "symbolic_semi_automatonTheory", "automaton_formulaTheory",
-  "temporal_deep_mixedTheory", "pairTheory", "set_lemmataTheory"];
-*)
-
 val _ = hide "S";
 val _ = hide "I";
-
-(*
-show_assums := false;
-show_assums := true;
-show_types := true;
-show_types := false;
-quietdec := false;
-*)
 
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val _ = ParseExtras.temp_loose_equality()
 
 
-val ctl_star_def =
- Hol_datatype
-  `ctl_star = CTL_STAR_PROP       of 'a prop_logic               (* boolean expression      *)
-            | CTL_STAR_NOT        of ctl_star                    (* \neg f                  *)
-            | CTL_STAR_AND        of ctl_star # ctl_star         (* f1 \wedge f2            *)
-            | CTL_STAR_PSNEXT     of ctl_star                    (* X f                     *)
-            | CTL_STAR_PSUNTIL    of ctl_star # ctl_star         (* f1 U f2                 *)
-            | CTL_STAR_NEXT       of ctl_star                    (* X f                     *)
-            | CTL_STAR_SUNTIL     of ctl_star # ctl_star         (* f1 U f2                 *)
-            | CTL_STAR_E          of ctl_star`;                  (* E f                     *)
+Datatype:
+   ctl_star = CTL_STAR_PROP       ('a prop_logic)             (* boolean expression      *)
+            | CTL_STAR_NOT        ctl_star                    (* \neg f                  *)
+            | CTL_STAR_AND        (ctl_star # ctl_star)       (* f1 \wedge f2            *)
+            | CTL_STAR_PSNEXT     ctl_star                    (* X f                     *)
+            | CTL_STAR_PSUNTIL    (ctl_star # ctl_star)       (* f1 U f2                 *)
+            | CTL_STAR_NEXT       ctl_star                    (* X f                     *)
+            | CTL_STAR_SUNTIL     (ctl_star # ctl_star)       (* f1 U f2                 *)
+            | CTL_STAR_E          ctl_star                    (* E f                     *)
+End
 
 
 val ctl_star_induct =
@@ -154,42 +131,42 @@ Definition CTL_STAR_USED_VARS_def:
 End
 
 
-val FINITE___CTL_STAR_USED_VARS =
- store_thm
-  ("FINITE___CTL_STAR_USED_VARS",
+Theorem FINITE___CTL_STAR_USED_VARS:
 
-  ``!p. FINITE(CTL_STAR_USED_VARS p)``,
+    !p. FINITE(CTL_STAR_USED_VARS p)
+Proof
 
   INDUCT_THEN ctl_star_induct ASSUME_TAC THEN (
       ASM_REWRITE_TAC[CTL_STAR_USED_VARS_def, FINITE___P_USED_VARS,
                       FINITE_UNION]
-  ));
+  )
+QED
 
 
-val IS_CTL_STAR_PROP_FORMULA___IS_PATH_STATE_FORMULA =
-  store_thm
-    ("IS_CTL_STAR_PROP_FORMULA___IS_PATH_STATE_FORMULA",
+Theorem IS_CTL_STAR_PROP_FORMULA___IS_PATH_STATE_FORMULA:
 
-     ``!f. IS_CTL_STAR_PROP_FORMULA f = (IS_CTL_STAR_STATE_FORMULA f /\ IS_CTL_STAR_PATH_FORMULA f)``,
+       !f. IS_CTL_STAR_PROP_FORMULA f = (IS_CTL_STAR_STATE_FORMULA f /\ IS_CTL_STAR_PATH_FORMULA f)
+Proof
 
     INDUCT_THEN ctl_star_induct ASSUME_TAC THEN
     FULL_SIMP_TAC std_ss [IS_CTL_STAR_STATE_FORMULA_def,
       IS_CTL_STAR_PATH_FORMULA_def, IS_CTL_STAR_PROP_FORMULA_def] THEN
-    METIS_TAC[]);
+    METIS_TAC[]
+QED
 
 
 (*For state formulas just the first element of a path matters*)
-val IS_CTL_STAR_STATE_FORMULA___SEM =
-  store_thm
-    ("IS_CTL_STAR_STATE_FORMULA___SEM",
+Theorem IS_CTL_STAR_STATE_FORMULA___SEM:
 
-     ``!f t M p s. (IS_CTL_STAR_STATE_FORMULA f /\ (p t = s)) ==>
-                 (CTL_STAR_SEM_STATE M f s = CTL_STAR_SEM_PATH_TIME t M f p)``,
+       !f t M p s. (IS_CTL_STAR_STATE_FORMULA f /\ (p t = s)) ==>
+                 (CTL_STAR_SEM_STATE M f s = CTL_STAR_SEM_PATH_TIME t M f p)
+Proof
 
     INDUCT_THEN ctl_star_induct ASSUME_TAC THEN
     FULL_SIMP_TAC std_ss [IS_CTL_STAR_STATE_FORMULA_def,
       CTL_STAR_SEM_STATE_def, CTL_STAR_SEM_PATH_def,
-      CTL_STAR_SEM_PATH_TIME_def]);
+      CTL_STAR_SEM_PATH_TIME_def]
+QED
 
 
 (*This inspieres the following definitions*)
@@ -212,28 +189,27 @@ Definition CTL_STAR_SEM_NO_MODEL_PATH_def:
 End
 
 
-val IS_CTL_STAR_PATH_FORMULA___NO_MODEL_SEM =
-  store_thm
-    ("IS_CTL_STAR_PATH_FORMULA___NO_MODEL_SEM",
+Theorem IS_CTL_STAR_PATH_FORMULA___NO_MODEL_SEM:
 
-     ``!f t M p. IS_CTL_STAR_PATH_FORMULA f ==>
+       !f t M p. IS_CTL_STAR_PATH_FORMULA f ==>
                  (CTL_STAR_SEM_PATH_TIME t M f p =
-                  CTL_STAR_SEM_NO_MODEL_PATH_TIME t f p)``,
+                  CTL_STAR_SEM_NO_MODEL_PATH_TIME t f p)
+Proof
 
     INDUCT_THEN ctl_star_induct ASSUME_TAC THEN
     FULL_SIMP_TAC std_ss [IS_CTL_STAR_PATH_FORMULA_def,
       CTL_STAR_SEM_PATH_TIME_def, CTL_STAR_SEM_NO_MODEL_PATH_TIME_def] THEN
-    METIS_TAC[]);
+    METIS_TAC[]
+QED
 
 
 
-val CTL_STAR_USED_VARS_LABEL_RESTRICT_THM___NO_MODEL_SEM_PATH_TIME =
-  store_thm
-    ("CTL_STAR_USED_VARS_LABEL_RESTRICT_THM___NO_MODEL_SEM_PATH_TIME",
-     ``!f t p S. (CTL_STAR_USED_VARS f SUBSET S /\
+Theorem CTL_STAR_USED_VARS_LABEL_RESTRICT_THM___NO_MODEL_SEM_PATH_TIME:
+       !f t p S. (CTL_STAR_USED_VARS f SUBSET S /\
                     IS_CTL_STAR_PATH_FORMULA f) ==>
                 (CTL_STAR_SEM_NO_MODEL_PATH_TIME t f p =
-                 CTL_STAR_SEM_NO_MODEL_PATH_TIME t f (PATH_RESTRICT p S))``,
+                 CTL_STAR_SEM_NO_MODEL_PATH_TIME t f (PATH_RESTRICT p S))
+Proof
 
       INDUCT_THEN ctl_star_induct ASSUME_TAC THEN1 (
         (*Case PROP*)
@@ -242,17 +218,18 @@ val CTL_STAR_USED_VARS_LABEL_RESTRICT_THM___NO_MODEL_SEM_PATH_TIME =
         PROVE_TAC[P_USED_VARS_INTER_SUBSET_THM]
       ) THEN
       ASM_SIMP_TAC std_ss [CTL_STAR_USED_VARS_def, CTL_STAR_SEM_NO_MODEL_PATH_TIME_def, UNION_SUBSET, IS_CTL_STAR_PATH_FORMULA_def] THEN
-      PROVE_TAC[]);
+      PROVE_TAC[]
+QED
 
 
-val CTL_STAR_USED_VARS_NO_MODEL_SEM_PATH_TIME___PATH_RESTRICT_THM =
-  store_thm
-    ("CTL_STAR_USED_VARS_NO_MODEL_SEM_PATH_TIME___PATH_RESTRICT_THM",
-     ``!f t p. IS_CTL_STAR_PATH_FORMULA f ==>
+Theorem CTL_STAR_USED_VARS_NO_MODEL_SEM_PATH_TIME___PATH_RESTRICT_THM:
+       !f t p. IS_CTL_STAR_PATH_FORMULA f ==>
                 (CTL_STAR_SEM_NO_MODEL_PATH_TIME t f p =
-                 CTL_STAR_SEM_NO_MODEL_PATH_TIME t f (PATH_RESTRICT p (CTL_STAR_USED_VARS f)))``,
+                 CTL_STAR_SEM_NO_MODEL_PATH_TIME t f (PATH_RESTRICT p (CTL_STAR_USED_VARS f)))
+Proof
 
-     PROVE_TAC[SUBSET_REFL, CTL_STAR_USED_VARS_LABEL_RESTRICT_THM___NO_MODEL_SEM_PATH_TIME]);
+     PROVE_TAC[SUBSET_REFL, CTL_STAR_USED_VARS_LABEL_RESTRICT_THM___NO_MODEL_SEM_PATH_TIME]
+QED
 
 
 
@@ -370,11 +347,11 @@ val CTL_STAR_SEM___CTL_STAR_A =
 
 
 
-val CTL_STAR_SEM___FAIRNESS =
-  store_thm ("CTL_STAR_SEM___FAIRNESS",
-    ``!M FC p t.
+Theorem CTL_STAR_SEM___FAIRNESS:
+      !M FC p t.
       (CTL_STAR_SEM_PATH_TIME t M (CTL_STAR_FAIRNESS FC) p =
-       (!b. MEM b FC ==> !t0. ?t. t >= t0 /\ P_SEM (p t) b))``,
+       (!b. MEM b FC ==> !t0. ?t. t >= t0 /\ P_SEM (p t) b))
+Proof
 
     Induct_on `FC` THENL [
       SIMP_TAC list_ss [CTL_STAR_FAIRNESS_def, CTL_STAR_SEM_PATH_TIME_def, P_SEM_THM],
@@ -405,7 +382,8 @@ val CTL_STAR_SEM___FAIRNESS =
         EXISTS_TAC ``t':num`` THEN
         ASM_SIMP_TAC arith_ss []
       ]
-    ]);
+    ]
+QED
 
 
 val CTL_STAR_SEM___FAIR_E_FAIR_A =
@@ -470,49 +448,52 @@ Definition LTL_TO_CTL_STAR_def:
 End
 
 
-val LTL_FORMULAS_ARE_PATH_FORMULAS =
-  store_thm (
-    "LTL_FORMULAS_ARE_PATH_FORMULAS",
-    ``!f. IS_CTL_STAR_PATH_FORMULA (LTL_TO_CTL_STAR f)``,
+Theorem LTL_FORMULAS_ARE_PATH_FORMULAS:
+      !f. IS_CTL_STAR_PATH_FORMULA (LTL_TO_CTL_STAR f)
+Proof
 
       INDUCT_THEN ltl_induct ASSUME_TAC THEN
       ASM_SIMP_TAC std_ss [IS_CTL_STAR_PATH_FORMULA_def,
-        LTL_TO_CTL_STAR_def]);
+        LTL_TO_CTL_STAR_def]
+QED
 
 
-val LTL_TO_CTL_STAR_THM =
-  store_thm ("LTL_TO_CTL_STAR_THM",
-    ``!l p M t.
-        CTL_STAR_SEM_PATH_TIME t M (LTL_TO_CTL_STAR l) p = (LTL_SEM_TIME t p l)``,
+Theorem LTL_TO_CTL_STAR_THM:
+      !l p M t.
+        CTL_STAR_SEM_PATH_TIME t M (LTL_TO_CTL_STAR l) p = (LTL_SEM_TIME t p l)
+Proof
 
     INDUCT_THEN ltl_induct ASSUME_TAC THEN
     FULL_SIMP_TAC arith_ss [LTL_TO_CTL_STAR_def,
       LTL_SEM_THM, CTL_STAR_SEM_THM] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 
-val LTL_TO_CTL_STAR_NO_MODEL_THM =
-  store_thm ("LTL_TO_CTL_STAR_NO_MODEL_THM",
-    ``!l p t.
+Theorem LTL_TO_CTL_STAR_NO_MODEL_THM:
+      !l p t.
         CTL_STAR_SEM_NO_MODEL_PATH_TIME t (LTL_TO_CTL_STAR l) p =
-        LTL_SEM_TIME t p l``,
+        LTL_SEM_TIME t p l
+Proof
 
     REPEAT STRIP_TAC THEN
     `IS_CTL_STAR_PATH_FORMULA (LTL_TO_CTL_STAR l)` by
       PROVE_TAC[LTL_FORMULAS_ARE_PATH_FORMULAS] THEN
     PROVE_TAC [IS_CTL_STAR_PATH_FORMULA___NO_MODEL_SEM,
-               LTL_TO_CTL_STAR_THM]);
+               LTL_TO_CTL_STAR_THM]
+QED
 
 
 
-val LTL_KS_SEM___TO___CTL_STAR_KS_SEM =
-  store_thm ("LTL_KS_SEM___TO___CTL_STAR_KS_SEM",
-    ``!M f. CTL_STAR_KS_SEM M (CTL_STAR_A (LTL_TO_CTL_STAR f)) = LTL_KS_SEM M f``,
+Theorem LTL_KS_SEM___TO___CTL_STAR_KS_SEM:
+      !M f. CTL_STAR_KS_SEM M (CTL_STAR_A (LTL_TO_CTL_STAR f)) = LTL_KS_SEM M f
+Proof
 
     SIMP_TAC std_ss [LTL_KS_SEM_def, CTL_STAR_KS_SEM_def,
       LTL_TO_CTL_STAR_THM, CTL_STAR_SEM_THM, LTL_SEM_def,
       IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 
 
@@ -520,14 +501,14 @@ val LTL_KS_SEM___TO___CTL_STAR_KS_SEM =
  *  Fair CTL
  ******************************************************************************)
 
-val fair_ctl_def =
- Hol_datatype
-  `fair_ctl =   FAIR_CTL_PROP     of 'a prop_logic                     (* boolean expression      *)
-         | FAIR_CTL_NOT      of fair_ctl                                    (* \neg f                  *)
-         | FAIR_CTL_AND      of fair_ctl # fair_ctl                              (* f1 \wedge f2            *)
-         | FAIR_CTL_E_NEXT   of ('a prop_logic list) => fair_ctl            (* X f                     *)
-         | FAIR_CTL_E_SUNTIL of ('a prop_logic list) => (fair_ctl # fair_ctl)    (* strong_until            *)
-         | FAIR_CTL_E_UNTIL  of ('a prop_logic list) => (fair_ctl # fair_ctl)`;  (* weak until              *)
+Datatype:
+   fair_ctl =   FAIR_CTL_PROP     ('a prop_logic)                          (* boolean expression      *)
+         | FAIR_CTL_NOT      fair_ctl                                      (* \neg f                  *)
+         | FAIR_CTL_AND      (fair_ctl # fair_ctl)                         (* f1 \wedge f2            *)
+         | FAIR_CTL_E_NEXT   ('a prop_logic list) fair_ctl                 (* X f                     *)
+         | FAIR_CTL_E_SUNTIL ('a prop_logic list) (fair_ctl # fair_ctl)    (* strong_until            *)
+         | FAIR_CTL_E_UNTIL  ('a prop_logic list) (fair_ctl # fair_ctl)    (* weak until              *)
+End
 
 val fair_ctl_induct =
  save_thm
@@ -567,22 +548,23 @@ Definition FAIR_CTL_KS_SEM_def:
 End
 
 
-val FAIR_CTL_KS_SEM___TO___CTL_STAR_KS_SEM =
-  store_thm ("FAIR_CTL_KS_SEM___TO___CTL_STAR_KS_SEM",
-    ``!M f. FAIR_CTL_KS_SEM M f = CTL_STAR_KS_SEM M (FAIR_CTL_TO_CTL_STAR f)``,
+Theorem FAIR_CTL_KS_SEM___TO___CTL_STAR_KS_SEM:
+      !M f. FAIR_CTL_KS_SEM M f = CTL_STAR_KS_SEM M (FAIR_CTL_TO_CTL_STAR f)
+Proof
 
     SIMP_TAC std_ss [FAIR_CTL_KS_SEM_def, CTL_STAR_KS_SEM_def,
-      FAIR_CTL_SEM_def]);
+      FAIR_CTL_SEM_def]
+QED
 
 
-val FAIR_CTL_FORMULAS_ARE_STATE_FORMULAS =
-  store_thm (
-    "FAIR_CTL_FORMULAS_ARE_STATE_FORMULAS",
-    ``!f. IS_CTL_STAR_STATE_FORMULA (FAIR_CTL_TO_CTL_STAR f)``,
+Theorem FAIR_CTL_FORMULAS_ARE_STATE_FORMULAS:
+      !f. IS_CTL_STAR_STATE_FORMULA (FAIR_CTL_TO_CTL_STAR f)
+Proof
 
       INDUCT_THEN fair_ctl_induct ASSUME_TAC THEN
       ASM_SIMP_TAC std_ss [IS_CTL_STAR_STATE_FORMULA_def,
-          FAIR_CTL_TO_CTL_STAR_def, CTL_STAR_FAIR_E_def]);
+          FAIR_CTL_TO_CTL_STAR_def, CTL_STAR_FAIR_E_def]
+QED
 
 
 Definition FAIR_CTL_USED_VARS_def:
@@ -827,14 +809,14 @@ val FAIR_CTL_SEM_THM =
  *  CTL
  ******************************************************************************)
 
-val ctl_def =
- Hol_datatype
-  `ctl =   CTL_PROP     of 'a prop_logic     (* boolean expression      *)
-         | CTL_NOT      of ctl               (* \neg f                  *)
-         | CTL_AND      of ctl # ctl         (* f1 \wedge f2            *)
-         | CTL_E_NEXT   of ctl               (* X f                     *)
-         | CTL_E_SUNTIL of ctl # ctl         (* strong_until            *)
-         | CTL_E_UNTIL  of ctl # ctl`;       (* weak until              *)
+Datatype:
+   ctl =   CTL_PROP     ('a prop_logic)   (* boolean expression      *)
+         | CTL_NOT      ctl               (* \neg f                  *)
+         | CTL_AND      (ctl # ctl)       (* f1 \wedge f2            *)
+         | CTL_E_NEXT   ctl               (* X f                     *)
+         | CTL_E_SUNTIL (ctl # ctl)       (* strong_until            *)
+         | CTL_E_UNTIL  (ctl # ctl)       (* weak until              *)
+End
 
 
 val ctl_induct =
@@ -885,20 +867,22 @@ Definition CTL_KS_FAIR_SEM_def:
 End
 
 
-val CTL_KS_SEM___TO___FAIR_CTL_KS_SEM =
-  store_thm ("CTL_KS_SEM___TO___FAIR_CTL_KS_SEM",
-    ``!M f. CTL_KS_SEM M f = FAIR_CTL_KS_SEM M (CTL_TO_FAIR_CTL [] f)``,
+Theorem CTL_KS_SEM___TO___FAIR_CTL_KS_SEM:
+      !M f. CTL_KS_SEM M f = FAIR_CTL_KS_SEM M (CTL_TO_FAIR_CTL [] f)
+Proof
 
     SIMP_TAC std_ss [CTL_KS_SEM_def, FAIR_CTL_KS_SEM_def,
-      CTL_SEM_def]);
+      CTL_SEM_def]
+QED
 
 
-val CTL_KS_FAIR_SEM___TO___FAIR_CTL_KS_SEM =
-  store_thm ("CTL_KS_FAIR_SEM___TO___FAIR_CTL_KS_SEM",
-    ``!M f fc. CTL_KS_FAIR_SEM M f fc = FAIR_CTL_KS_SEM M (CTL_TO_FAIR_CTL fc f)``,
+Theorem CTL_KS_FAIR_SEM___TO___FAIR_CTL_KS_SEM:
+      !M f fc. CTL_KS_FAIR_SEM M f fc = FAIR_CTL_KS_SEM M (CTL_TO_FAIR_CTL fc f)
+Proof
 
     SIMP_TAC std_ss [CTL_KS_FAIR_SEM_def, FAIR_CTL_KS_SEM_def,
-      CTL_FAIR_SEM_def]);
+      CTL_FAIR_SEM_def]
+QED
 
 
 Definition CTL_USED_VARS_def:
@@ -954,9 +938,8 @@ End
 
 
 
-val CTL_TO_FAIR_CTL_THM =
-  store_thm ("CTL_TO_FAIR_CTL_THM",
-    ``!b f f1 f2 c fc.
+Theorem CTL_TO_FAIR_CTL_THM:
+      !b f f1 f2 c fc.
         (CTL_TO_FAIR_CTL fc (CTL_PROP b) = (FAIR_CTL_PROP b)) /\
         (CTL_TO_FAIR_CTL fc (CTL_NOT f) = (FAIR_CTL_NOT (CTL_TO_FAIR_CTL fc f))) /\
         (CTL_TO_FAIR_CTL fc (CTL_AND (f1, f2)) = (FAIR_CTL_AND (CTL_TO_FAIR_CTL fc f1, CTL_TO_FAIR_CTL fc f2))) /\
@@ -981,14 +964,16 @@ val CTL_TO_FAIR_CTL_THM =
         (CTL_TO_FAIR_CTL fc (CTL_E_WHILE (f1, f2)) = (FAIR_CTL_E_WHILE fc (CTL_TO_FAIR_CTL fc f1, CTL_TO_FAIR_CTL fc f2))) /\
         (CTL_TO_FAIR_CTL fc (CTL_A_WHILE (f1, f2)) = (FAIR_CTL_A_WHILE fc (CTL_TO_FAIR_CTL fc f1, CTL_TO_FAIR_CTL fc f2))) /\
         (CTL_TO_FAIR_CTL fc (CTL_E_SWHILE (f1, f2)) = (FAIR_CTL_E_SWHILE fc (CTL_TO_FAIR_CTL fc f1, CTL_TO_FAIR_CTL fc f2))) /\
-        (CTL_TO_FAIR_CTL fc (CTL_A_SWHILE (f1, f2)) = (FAIR_CTL_A_SWHILE fc (CTL_TO_FAIR_CTL fc f1, CTL_TO_FAIR_CTL fc f2)))``,
+        (CTL_TO_FAIR_CTL fc (CTL_A_SWHILE (f1, f2)) = (FAIR_CTL_A_SWHILE fc (CTL_TO_FAIR_CTL fc f1, CTL_TO_FAIR_CTL fc f2)))
+Proof
 
-    EVAL_TAC THEN PROVE_TAC[]);
+    EVAL_TAC THEN PROVE_TAC[]
+QED
 
 
 
-val CTL_SEM_THM = store_thm ("CTL_SEM_THM",
-    ``!M b f f1 f2 s.
+Theorem CTL_SEM_THM:
+      !M b f f1 f2 s.
 
    (CTL_SEM M CTL_TRUE s) /\ ~(CTL_SEM M CTL_FALSE s) /\
 
@@ -1027,24 +1012,24 @@ val CTL_SEM_THM = store_thm ("CTL_SEM_THM",
 
    (CTL_SEM M (CTL_A_UNTIL(f1, f2)) s = (!p. (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE M p /\
       (p 0 = s)) ==> ((?k. CTL_SEM M f2 (p k) /\ (!j. j < k ==> CTL_SEM M f1 (p j))) \/
-                      (!j. CTL_SEM M f1 (p j)))))``,
+                      (!j. CTL_SEM M f1 (p j)))))
+Proof
 
 
    SIMP_TAC std_ss [CTL_SEM_def, CTL_TO_FAIR_CTL_THM, FAIR_CTL_SEM_THM,
     IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___EMPTY_FAIRNESS,
-    CTL_TRUE_def, CTL_FALSE_def, P_SEM_THM]);
+    CTL_TRUE_def, CTL_FALSE_def, P_SEM_THM]
+QED
 
 
-val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM =
-  store_thm ("IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM",
-    ``!M fc. IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE M fc =
-             CTL_KS_FAIR_SEM M (CTL_A_EVENTUAL CTL_FALSE) fc``,
+Theorem IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___TO___CTL_KS_FAIR_SEM:
+      !M fc. IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE M fc =
+             CTL_KS_FAIR_SEM M (CTL_A_EVENTUAL CTL_FALSE) fc
+Proof
 
   SIMP_TAC std_ss [CTL_KS_FAIR_SEM_def, CTL_FAIR_SEM_def,
     CTL_TO_FAIR_CTL_THM, CTL_FALSE_def, FAIR_CTL_SEM_THM, P_SEM_THM,
     IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_def,
     IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def] THEN
-  METIS_TAC[]);
-
-
-
+  METIS_TAC[]
+QED

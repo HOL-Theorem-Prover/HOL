@@ -293,9 +293,11 @@ Proof
   SIMP_TAC std_ss [LINEAR_SUM, o_DEF, LINEAR_CMUL]
 QED
 
-val lemma = prove (
- ``x = sum {1..1} (\i. x * &i)``,
-  REWRITE_TAC [SUM_SING_NUMSEG] THEN BETA_TAC THEN REAL_ARITH_TAC);
+Theorem lemma[local]:
+   x = sum {1..1} (\i. x * &i)
+Proof
+  REWRITE_TAC [SUM_SING_NUMSEG] THEN BETA_TAC THEN REAL_ARITH_TAC
+QED
 
 Theorem LINEAR_BOUNDED:
    !f:real->real. linear f ==> ?B. !x. abs(f x) <= B * abs(x)
@@ -409,10 +411,12 @@ Proof
   SIMP_TAC std_ss [real_sub, BILINEAR_RNEG, BILINEAR_RADD]
 QED
 
-val lemma = prove (
- ``!s t. s CROSS t = {(x,y) | x IN s /\ y IN t}``,
+Theorem lemma[local]:
+   !s t. s CROSS t = {(x,y) | x IN s /\ y IN t}
+Proof
   REWRITE_TAC [CROSS_DEF] THEN
-  SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, EXISTS_PROD]);
+  SIMP_TAC std_ss [EXTENSION, GSPECIFICATION, EXISTS_PROD]
+QED
 
 Theorem BILINEAR_SUM:
    !h:real->real->real.
@@ -434,9 +438,11 @@ Proof
   SIMP_TAC std_ss [lemma]
 QED
 
-val lemma = prove (
- ``!x. x = sum {1:num..1:num} (\i. x * &i)``,
-  REWRITE_TAC [SUM_SING_NUMSEG] THEN BETA_TAC THEN REAL_ARITH_TAC);
+Theorem lemma[local]:
+   !x. x = sum {1:num..1:num} (\i. x * &i)
+Proof
+  REWRITE_TAC [SUM_SING_NUMSEG] THEN BETA_TAC THEN REAL_ARITH_TAC
+QED
 
 Theorem BILINEAR_BOUNDED:
    !h:real->real->real.
@@ -763,7 +769,7 @@ Proof
    FIRST_X_ASSUM MATCH_MP_TAC THEN
    SIMP_TAC std_ss [REAL_ADD_LDISTRIB, REAL_MUL_ASSOC] THEN
    ASM_MESON_TAC [IN_DEF, REAL_ADD_LID, REAL_ADD_ASSOC, REAL_ADD_SYM,
-                REAL_MUL_LID, REAL_MUL_RZERO]]
+                  REAL_MUL_LID, REAL_MUL_RZERO]]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -3157,8 +3163,8 @@ Proof
         ASM_REWRITE_TAC [] THEN REAL_ARITH_TAC
 QED
 
-val _ = overload_on ("segment", ``open_segment``);
-val _ = overload_on ("segment", ``closed_segment``);
+Overload segment = ``open_segment``
+Overload segment = ``closed_segment``
 
 Theorem segment:
    (segment[a,b] = {(&1 - u) * a + u * b | &0 <= u /\ u <= &1:real}) /\
@@ -4247,9 +4253,11 @@ Proof
   MESON_TAC[open_def, DIST_SYM, OPEN_BALL, CENTRE_IN_BALL, IN_BALL]
 QED
 
-val lemma = prove (
- ``&0 < d:real ==> x <= d / &2 ==> x < d``,
- SIMP_TAC std_ss [REAL_LE_RDIV_EQ, REAL_LT] THEN REAL_ARITH_TAC);
+Theorem lemma[local]:
+   &0 < d:real ==> x <= d / &2 ==> x < d
+Proof
+ SIMP_TAC std_ss [REAL_LE_RDIV_EQ, REAL_LT] THEN REAL_ARITH_TAC
+QED
 
 Theorem APPROACHABLE_LT_LE:
    !P f. (?d:real. &0 < d /\ !x. f(x) < d ==> P x) =
@@ -5461,14 +5469,16 @@ Proof
   SIMP_TAC std_ss [FRONTIER_FRONTIER, FRONTIER_CLOSED]
 QED
 
-val lemma = prove (
- ``!s t x. x IN frontier s /\ x IN interior t ==> x IN frontier(s INTER t)``,
+Theorem lemma[local]:
+   !s t x. x IN frontier s /\ x IN interior t ==> x IN frontier(s INTER t)
+Proof
   REWRITE_TAC[FRONTIER_STRADDLE, IN_INTER, IN_INTERIOR, SUBSET_DEF, IN_BALL] THEN
   REPEAT GEN_TAC THEN
   DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC (X_CHOOSE_TAC ``d:real``)) THEN
   X_GEN_TAC ``e:real`` THEN DISCH_TAC THEN
   FIRST_X_ASSUM(MP_TAC o SPEC ``min d e:real``) THEN
-  ASM_REWRITE_TAC[REAL_LT_MIN] THEN ASM_MESON_TAC[]);
+  ASM_REWRITE_TAC[REAL_LT_MIN] THEN ASM_MESON_TAC[]
+QED
 
 Theorem UNION_FRONTIER:
    !s t:real->bool. frontier(s) UNION frontier(t) =
@@ -6292,9 +6302,11 @@ Proof
   METIS_TAC[REAL_LT_HALF1, REAL_LT_ADD2, DIST_TRIANGLE_ADD, GSYM REAL_HALF_DOUBLE]
 QED
 
-val lemma = prove (
- ``abs(x - y) <= abs(a - b) ==> dist(a,b) < e ==> dist(x,y) < e``,
-  REWRITE_TAC [dist] THEN REAL_ARITH_TAC);
+Theorem lemma[local]:
+   abs(x - y) <= abs(a - b) ==> dist(a,b) < e ==> dist(x,y) < e
+Proof
+  REWRITE_TAC [dist] THEN REAL_ARITH_TAC
+QED
 
 Theorem LIM_ABS:
    !net:('a)net f:'a->real l.
@@ -6989,9 +7001,11 @@ Proof
   METIS_TAC[ARITH_PROVE ``~(x <= n:num /\ n + 1 <= x)``]
 QED
 
-val lemma = prove (
- ``(if p then x else y) = (if ~p then y else x)``,
- RW_TAC std_ss []);
+Theorem lemma[local]:
+   (if p then x else y) = (if ~p then y else x)
+Proof
+ RW_TAC std_ss []
+QED
 
 Theorem LIM_CASES_COFINITE_SEQUENTIALLY:
    !f g l. FINITE {n | ~P n}
@@ -7438,6 +7452,23 @@ Definition bounded_def :
 End
 Overload bounded = “Bounded”
 
+(* NOTE: The alternative definition is usually better for providing “0 <= a” *)
+Theorem bounded_alt :
+    !(s :real set). bounded s <=> ?a. 0 <= a /\ !x. x IN s ==> abs x <= a
+Proof
+    rw [bounded_def]
+ >> reverse EQ_TAC >- (STRIP_TAC >> Q.EXISTS_TAC ‘a’ >> art [])
+ >> STRIP_TAC
+ >> Cases_on ‘s = {}’ >> simp []
+ >- (Q.EXISTS_TAC ‘0’ >> simp [])
+ >> fs [GSYM MEMBER_NOT_EMPTY]
+ >> Cases_on ‘0 <= a’ >- (Q.EXISTS_TAC ‘a’ >> art [])
+ >> fs [REAL_NOT_LE]
+ >> ‘abs x <= a’ by PROVE_TAC []
+ >> ‘abs x < 0’ by PROVE_TAC [REAL_LET_TRANS]
+ >> METIS_TAC [ABS_POS, REAL_LET_ANTISYM]
+QED
+
 Theorem BOUNDED_EMPTY:
    bounded {}
 Proof
@@ -7801,11 +7832,12 @@ QED
 (* Subset and overlapping relations on balls.                                *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = prove (
-   ``(!a':real r r'.
+Theorem lemma[local]:
+     (!a':real r r'.
        cball(a,r) SUBSET cball(a',r') <=> dist(a,a') + r <= r' \/ r < &0) /\
      (!a':real r r'.
-       cball(a,r) SUBSET ball(a',r') <=> dist(a,a') + r < r' \/ r < &0)``,
+       cball(a,r) SUBSET ball(a',r') <=> dist(a,a') + r < r' \/ r < &0)
+Proof
     CONJ_TAC THENL
     [KNOW_TAC ``(!a' r r'.
   cball (a,r) SUBSET cball (a',r') <=> dist (a,a') + r <= r' \/ r < 0) =
@@ -7892,7 +7924,8 @@ val lemma = prove (
       ASM_SIMP_TAC std_ss [ABS_MUL, ABS_DIV, ABS_ABS, ABS_NEG, REAL_POS,
                    REAL_LE_DIV, ABS_POS, REAL_ADD_RDISTRIB, REAL_DIV_RMUL,
                ABS_ZERO, REAL_ARITH ``&0 <= x ==> (abs(&1 + x) = &1 + x:real)``] THEN
-      ASM_REAL_ARITH_TAC]));
+      ASM_REAL_ARITH_TAC])
+QED
 
 val tac = DISCH_THEN(MP_TAC o MATCH_MP SUBSET_CLOSURE) THEN
           ASM_SIMP_TAC std_ss [CLOSED_CBALL, CLOSURE_CLOSED, CLOSURE_BALL];
@@ -9128,9 +9161,11 @@ QED
 (* Finite intersection property. I could make it an equivalence in fact.     *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = prove (
- ``(s = UNIV DIFF t) <=> (UNIV DIFF s = t)``,
-  SET_TAC[]);
+Theorem lemma[local]:
+   (s = UNIV DIFF t) <=> (UNIV DIFF s = t)
+Proof
+  SET_TAC[]
+QED
 
 Theorem COMPACT_IMP_FIP:
    !s:real->bool f.
@@ -9984,10 +10019,12 @@ Proof
   ASM_MESON_TAC[REAL_LT_RDIV_EQ, REAL_MUL_SYM]
 QED
 
-val lemma = prove (
- ``(!y. ((?x. (y = f x) /\ P x) /\ Q y ==> R y)) <=>
-   (!x. P x /\ Q (f x) ==> R (f x))``,
-  MESON_TAC[]);
+Theorem lemma[local]:
+   (!y. ((?x. (y = f x) /\ P x) /\ Q y ==> R y)) <=>
+   (!x. P x /\ Q (f x) ==> R (f x))
+Proof
+  MESON_TAC[]
+QED
 
 Theorem UNIFORMLY_CONTINUOUS_ON_COMPOSE:
    !f g s. f uniformly_continuous_on s /\
@@ -11831,9 +11868,11 @@ Proof
   MATCH_MP_TAC EQ_IMPLIES THEN AP_TERM_TAC THEN ASM_SET_TAC[]]
 QED
 
-val lemma = prove (
- ``!s t. closed_in (subtopology euclidean s) t ==> compact s ==> compact t``,
-  MESON_TAC[COMPACT_EQ_BOUNDED_CLOSED, BOUNDED_SUBSET, CLOSED_IN_CLOSED_EQ]);
+Theorem lemma[local]:
+   !s t. closed_in (subtopology euclidean s) t ==> compact s ==> compact t
+Proof
+  MESON_TAC[COMPACT_EQ_BOUNDED_CLOSED, BOUNDED_SUBSET, CLOSED_IN_CLOSED_EQ]
+QED
 
 Theorem PROPER_MAP_FROM_COMPOSITION_RIGHT:
    !f:real->real g:real->real s t u.
@@ -15538,8 +15577,8 @@ Definition CLOSED_interval :
       {x:real | FST (HD l) <= x /\ x <= SND (HD l)}
 End
 
-val _ = overload_on ("interval", ``OPEN_interval``);
-val _ = overload_on ("interval", ``CLOSED_interval``);
+Overload interval = ``OPEN_interval``
+Overload interval = ``CLOSED_interval``
 
 Theorem interval:
    (interval (a,b) = {x:real | a < x /\ x < b}) /\
@@ -16900,16 +16939,19 @@ Proof
                  REAL_MUL_LID, IMAGE_ID]]
 QED
 
-val lemma0 = prove ((* unused *)
-  ``!c. &0 < c
+Theorem lemma0[local]:  (* unused *)
+    !c. &0 < c
        ==> !s:real->bool. is_interval(IMAGE (\x. c * x) s) <=>
-                            is_interval s``,
-  SIMP_TAC std_ss [IS_INTERVAL_SCALING_EQ, REAL_LT_IMP_NE]);
+                            is_interval s
+Proof
+  SIMP_TAC std_ss [IS_INTERVAL_SCALING_EQ, REAL_LT_IMP_NE]
+QED
 
-val lemma = prove (
-  ``~(?a b c:real. a < b /\ b < c /\
+Theorem lemma[local]:
+    ~(?a b c:real. a < b /\ b < c /\
                a IN s /\ b IN s /\ c IN s)
-     ==> FINITE s /\ CARD(s) <= 2``,
+     ==> FINITE s /\ CARD(s) <= 2
+Proof
     ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN
     REWRITE_TAC[TAUT `~(p /\ q) <=> p ==> ~q`] THEN
     REWRITE_TAC[ARITH_PROVE ``~(n <= 2) <=> 3 <= n:num``] THEN
@@ -16932,7 +16974,8 @@ val lemma = prove (
        (!m n p. m <= n /\ n <= p ==> P m n p)
        ==> !m n p. P m n p``) THEN
     CONJ_TAC THENL [METIS_TAC[], ALL_TAC] THEN
-    SIMP_TAC std_ss [REAL_LT_LE] THEN METIS_TAC[]);
+    SIMP_TAC std_ss [REAL_LT_LE] THEN METIS_TAC[]
+QED
 
 Theorem CARD_FRONTIER_INTERVAL:
    !s:real->bool.
@@ -18478,7 +18521,7 @@ QED
 (* any dependence on the theories of analysis.                               *)
 (* ------------------------------------------------------------------------- *)
 
-Triviality lemma:
+Theorem lemma[local]:
   !s m n. sum (s INTER {m..n}) (\i. inv(&3 pow i)) < &3 / &2 / &3 pow m
 Proof
     REPEAT GEN_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
@@ -19036,9 +19079,10 @@ QED
 (* Homeomorphism of hyperplanes.                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = prove (
-   ``~(a = 0)
-     ==> {x:real | a * x = b} homeomorphic {x:real | x = &0}``,
+Theorem lemma[local]:
+     ~(a = 0)
+     ==> {x:real | a * x = b} homeomorphic {x:real | x = &0}
+Proof
     REPEAT STRIP_TAC THEN SUBGOAL_THEN ``?c:real. a * c = b``
     STRIP_ASSUME_TAC THENL
      [EXISTS_TAC ``inv a * b:real`` THEN
@@ -19067,7 +19111,8 @@ val lemma = prove (
       DISCH_TAC THEN ONCE_REWRITE_TAC [GSYM REAL_EQ_NEG] THEN
       REWRITE_TAC [real_div, REAL_ARITH ``-(a * b) = a * -b:real``] THEN
       ASM_SIMP_TAC std_ss [REAL_NEG_INV, GSYM real_div] THEN
-      ASM_SIMP_TAC real_ss [REAL_EQ_RDIV_EQ] THEN ASM_REAL_ARITH_TAC]);
+      ASM_SIMP_TAC real_ss [REAL_EQ_RDIV_EQ] THEN ASM_REAL_ARITH_TAC]
+QED
 
 Theorem HOMEOMORPHIC_HYPERPLANES:
    !a:real b c:real d.
@@ -19118,7 +19163,7 @@ Proof
   DISCH_THEN(fn th => X_GEN_TAC ``d:real`` THEN DISCH_TAC THEN MP_TAC th) THEN
   DISCH_THEN(MP_TAC o SPEC ``d * e:real``) THEN ASM_SIMP_TAC std_ss [REAL_LT_MUL] THEN
   METIS_TAC[REAL_LE_RDIV_EQ, REAL_MUL_SYM, REAL_LET_TRANS, SUBSPACE_SUB,
-                REAL_LT_LDIV_EQ]
+            REAL_LT_LDIV_EQ]
 QED
 
 Theorem COMPLETE_ISOMETRIC_IMAGE:
@@ -19696,7 +19741,7 @@ val sums = sums_def;
 Definition suminf_def : (* cf. seqTheory.suminf *)
     infsum s f = @l. (f sums l) s
 End
-val _ = overload_on ("suminf", ``infsum``);
+Overload suminf = ``infsum``
 val infsum = suminf_def;
 
 Definition summable_def : (* cf. seqTheory.summable *)
@@ -20952,15 +20997,17 @@ QED
 (* Rearranging absolutely convergent series.                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = prove (
-   ``!f:'a->real s t.
+Theorem lemma[local]:
+     !f:'a->real s t.
           FINITE s /\ FINITE t
-          ==> (sum s f - sum t f = sum (s DIFF t) f - sum (t DIFF s) f)``,
+          ==> (sum s f - sum t f = sum (s DIFF t) f - sum (t DIFF s) f)
+Proof
     REPEAT STRIP_TAC THEN
     ONCE_REWRITE_TAC[SET_RULE ``s DIFF t = s DIFF (s INTER t)``] THEN
     ASM_SIMP_TAC std_ss [SUM_DIFF', INTER_SUBSET] THEN
     GEN_REWR_TAC (RAND_CONV o RAND_CONV o ONCE_DEPTH_CONV) [INTER_COMM] THEN
-    REAL_ARITH_TAC);
+    REAL_ARITH_TAC
+QED
 
 Theorem SERIES_INJECTIVE_IMAGE_STRONG:
    !x:num->real s f.
@@ -22242,7 +22289,7 @@ Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[hausdist] THEN
   SIMP_TAC std_ss [FORALL_IN_GSPEC, FORALL_IN_UNION] THEN
   COND_CASES_TAC THEN REWRITE_TAC[REAL_LE_REFL] THEN
-  MATCH_MP_TAC REAL_LE_SUP' THEN
+  MATCH_MP_TAC REAL_LE_SUP2 THEN
   ASM_SIMP_TAC std_ss [FORALL_IN_GSPEC, FORALL_IN_UNION, SETDIST_POS_LE] THEN
   KNOW_TAC ``?(y :real) (b :real).
   y IN {setdist ({x},(t :real -> bool)) | x IN (s :real -> bool)} UNION
@@ -22417,7 +22464,7 @@ Proof
   REWRITE_TAC[hausdist, SETDIST_SINGS] THEN
   ASM_SIMP_TAC real_ss [EMPTY_UNION, SET_RULE ``({f x | x IN s} = {}) <=> (s = {})``] THEN
   SIMP_TAC real_ss [FORALL_IN_UNION, FORALL_IN_GSPEC] THEN COND_CASES_TAC THENL
-   [MATCH_MP_TAC REAL_LE_SUP' THEN
+   [MATCH_MP_TAC REAL_LE_SUP2 THEN
     ASM_SIMP_TAC real_ss [EMPTY_UNION, SET_RULE ``({f x | x IN s} = {}) <=> (s = {})``] THEN
     SIMP_TAC real_ss [FORALL_IN_UNION, FORALL_IN_GSPEC],
     FIRST_X_ASSUM(MP_TAC o REWRITE_RULE [NOT_EXISTS_THM]) THEN
@@ -22567,8 +22614,7 @@ Proof
   GEN_REWR_TAC RAND_CONV [GSYM REAL_HALF] THEN
   MATCH_MP_TAC(REAL_ARITH ``&0 < e / 2 /\ x <= e / &2 ==> x < e / 2 + e / 2:real``) THEN
   ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_HAUSDIST_LE THEN
-  METIS_TAC[SETDIST_LE_DIST, DIST_SYM, REAL_LE_TRANS,
-                IN_SING, REAL_LT_IMP_LE]
+  METIS_TAC [SETDIST_LE_DIST, DIST_SYM, REAL_LE_TRANS, IN_SING, REAL_LT_IMP_LE]
 QED
 
 Theorem HAUSDIST_NONTRIVIAL:
@@ -22630,7 +22676,7 @@ Proof
   DISCH_THEN (X_CHOOSE_TAC ``a:real``) THEN EXISTS_TAC ``a:real`` THEN
   POP_ASSUM MP_TAC THEN SIMP_TAC real_ss [FORALL_IN_GSPEC, GSYM dist] THEN
   METIS_TAC[SETDIST_LE_DIST, dist, DIST_SYM, REAL_LE_TRANS,
-                MEMBER_NOT_EMPTY, IN_SING]
+            MEMBER_NOT_EMPTY, IN_SING]
 QED
 
 Theorem HAUSDIST_UNION_LE:
@@ -22744,11 +22790,12 @@ Proof
   SIMP_TAC real_ss [GSYM dist, HAUSDIST_COMPACT_EXISTS]
 QED
 
-val lemma = prove (
- ``!s t u:real->bool.
+Theorem lemma[local]:
+   !s t u:real->bool.
           bounded s /\ bounded t /\ bounded u /\
           ~(s = {}) /\ ~(t = {}) /\ ~(u = {})
-          ==> !x. x IN s ==> setdist({x},u) <= hausdist(s,t) + hausdist(t,u)``,
+          ==> !x. x IN s ==> setdist({x},u) <= hausdist(s,t) + hausdist(t,u)
+Proof
     REPEAT STRIP_TAC THEN
     MP_TAC(ISPECL [``closure s:real->bool``, ``closure t:real->bool``]
         HAUSDIST_COMPACT_EXISTS) THEN
@@ -22765,7 +22812,8 @@ val lemma = prove (
     MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC ``dist(x:real,z)`` THEN CONJ_TAC THENL
      [METIS_TAC[SETDIST_CLOSURE, SETDIST_LE_DIST, IN_SING], ALL_TAC] THEN
     MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC ``dist(x:real,y) + dist(y,z)`` THEN
-    REWRITE_TAC[DIST_TRIANGLE] THEN ASM_REAL_ARITH_TAC);
+    REWRITE_TAC[DIST_TRIANGLE] THEN ASM_REAL_ARITH_TAC
+QED
 
 Theorem HAUSDIST_TRANS:
    !s t u:real->bool.
@@ -23037,8 +23085,8 @@ QED
 (* Urysohn's lemma (for real, where the proof is easy using distances).      *)
 (* ------------------------------------------------------------------------- *)
 
-val lemma = prove (
-   ``!s t u a b.
+Theorem lemma[local]:
+     !s t u a b.
           closed_in (subtopology euclidean u) s /\
           closed_in (subtopology euclidean u) t /\
           (s INTER t = {}) /\ ~(s = {}) /\ ~(t = {}) /\ ~(a = b)
@@ -23046,7 +23094,8 @@ val lemma = prove (
                  f continuous_on u /\
                  (!x. x IN u ==> f(x) IN segment[a,b]) /\
                  (!x. x IN u ==> ((f x = a) <=> x IN s)) /\
-                 (!x. x IN u ==> ((f x = b) <=> x IN t))``,
+                 (!x. x IN u ==> ((f x = b) <=> x IN t))
+Proof
     REPEAT STRIP_TAC THEN EXISTS_TAC
       ``\x:real. a + setdist({x},s) / (setdist({x},s) + setdist({x},t)) *
                       (b - a:real)`` THEN SIMP_TAC std_ss [] THEN
@@ -23110,7 +23159,8 @@ val lemma = prove (
     ASM_SIMP_TAC std_ss [REAL_SUB_0, REAL_EQ_LDIV_EQ,
                  REAL_MUL_LZERO, REAL_MUL_LID] THEN
     REWRITE_TAC[REAL_ARITH ``(x:real = x + y) <=> (y = &0)``] THEN
-    ASM_REWRITE_TAC[]);
+    ASM_REWRITE_TAC[]
+QED
 
 Theorem URYSOHN_LOCAL_STRONG:
    !s t u a b.
@@ -23369,10 +23419,11 @@ Proof
   ASM_SIMP_TAC std_ss [OPEN_INTER] THEN ASM_SET_TAC[]
 QED
 
-val lemma = prove (
-  ``!P Q f g. (!s t. P s /\ homeomorphism (s,t) (f,g) ==> Q t)
+Theorem lemma[local]:
+    !P Q f g. (!s t. P s /\ homeomorphism (s,t) (f,g) ==> Q t)
         ==> (!s:real->bool t:real->bool.
-                locally P s /\ homeomorphism (s,t) (f,g) ==> locally Q t)``,
+                locally P s /\ homeomorphism (s,t) (f,g) ==> locally Q t)
+Proof
     REPEAT GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
     REWRITE_TAC[locally] THEN STRIP_TAC THEN
     FIRST_X_ASSUM(STRIP_ASSUME_TAC o REWRITE_RULE [homeomorphism]) THEN
@@ -23406,7 +23457,8 @@ val lemma = prove (
       TRY(FIRST_X_ASSUM(MATCH_MP_TAC o MATCH_MP (REWRITE_RULE[CONJ_EQ_IMP]
           CONTINUOUS_ON_SUBSET))),
       ALL_TAC] THEN
-    RULE_ASSUM_TAC(REWRITE_RULE[open_in]) THEN ASM_SET_TAC[]);
+    RULE_ASSUM_TAC(REWRITE_RULE[open_in]) THEN ASM_SET_TAC[]
+QED
 
 Theorem HOMEOMORPHISM_LOCALLY:
    !P Q f:real->real g.

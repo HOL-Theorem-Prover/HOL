@@ -1,10 +1,16 @@
 Theory ptop
 
-val tautAcceptInPlace = store_thm ("V_IMP_V_EQ_TRUE",``(v:bool) ==> (v <=> T)``,(REPEAT (CHANGED_TAC EVAL_TAC)));
-val _ = save_thm("PTOP_ACCEPT_IN_PLACE",UNDISCH (tautAcceptInPlace));
+(* tautAcceptInPlace *)
+Theorem V_IMP_V_EQ_TRUE:  (v:bool) ==> (v <=> T)
+Proof(REPEAT (CHANGED_TAC EVAL_TAC))
+QED
+val _ = save_thm("PTOP_ACCEPT_IN_PLACE",UNDISCH (V_IMP_V_EQ_TRUE));
 
-val tautRejectInPlace = store_thm("NOTV_IMP_V_EQ_FALSE",``(~(v:bool)) ==> (v <=> F)``,(REPEAT (CHANGED_TAC EVAL_TAC)));
-val _ = save_thm("PTOP_REJECT_IN_PLACE",UNDISCH (tautRejectInPlace));
+(* tautRejectInPlace *)
+Theorem NOTV_IMP_V_EQ_FALSE:  (~(v:bool)) ==> (v <=> F)
+Proof(REPEAT (CHANGED_TAC EVAL_TAC))
+QED
+val _ = save_thm("PTOP_REJECT_IN_PLACE",UNDISCH (NOTV_IMP_V_EQ_FALSE));
 
 val _ = set_fixity "[=." (Infixl 500);
 
@@ -36,4 +42,3 @@ val _ = xDefine "ptopSC" `sc f g s s' = (? s'' . ( (f s s'') /\ (g s'' s') ) ) `
 val _ = xDefine "ptopSUBS" `subs f x e s s'
               = (let s'' = \y. if ( x = y) then (e s) else (s y)
                   in (f s'' s') ) `;
-

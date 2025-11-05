@@ -1,8 +1,10 @@
 Theory github462
 
-val _ = Datatype ‘exp = Lit num | Log exp exp’;
+Datatype:  exp = Lit num | Log exp exp
+End
 
-val _ = Datatype ‘exp_or_val = Exp exp | Val num’;
+Datatype:  exp_or_val = Exp exp | Val num
+End
 
 Definition do_log_def:   do_log v e = ARB
 End

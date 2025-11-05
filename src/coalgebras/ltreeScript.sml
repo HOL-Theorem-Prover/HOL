@@ -583,7 +583,7 @@ Proof
   \\ rw [] \\ Cases_on `LNTH h ts` \\ fs []
 QED
 
-Triviality ltree_lookup_map:
+Theorem ltree_lookup_map[local]:
   ltree_lookup (ltree_map f t) path =
   case ltree_lookup t path of
   | NONE => NONE

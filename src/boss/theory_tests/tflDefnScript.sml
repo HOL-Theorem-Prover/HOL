@@ -1,6 +1,7 @@
 Theory tflDefn
 
-val _ = Datatype`expr = C1 num expr | C2 num`
+Datatype: expr = C1 num expr | C2 num
+End
 
 val _ = new_constant("do_log", ``:num -> expr list option``)
 

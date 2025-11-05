@@ -147,11 +147,12 @@ val MAP_EQ_GENLIST = prove(
   Induct_on `l` THEN1 SRW_TAC [][GENLIST] THEN
   SRW_TAC [][GENLIST_CONS, combinTheory.o_DEF]);
 
-val TAKE_EQ_GENLIST = store_thm(
-  "TAKE_EQ_GENLIST",
-  ``n ≤ LENGTH l ⇒ (TAKE n l = GENLIST (λi. l ' i) n)``,
+Theorem TAKE_EQ_GENLIST:
+    n ≤ LENGTH l ⇒ (TAKE n l = GENLIST (λi. l ' i) n)
+Proof
   Q.ID_SPEC_TAC `n` THEN Induct_on `l` THEN SRW_TAC [][GENLIST] THEN
-  Cases_on `n` >> simp[GENLIST_CONS, combinTheory.o_DEF]);
+  Cases_on `n` >> simp[GENLIST_CONS, combinTheory.o_DEF]
+QED
 
 Definition swap2_def:
   (swap2 f [] = f [0; 0]) ∧
@@ -159,9 +160,9 @@ Definition swap2_def:
   (swap2 f (h1::h2::t) = f (h2::h1::t))
 End
 
-val primrec_swap2 = store_thm(
-  "primrec_swap2",
-  ``2 ≤ n ∧ primrec f n ⇒ primrec (swap2 f) n``,
+Theorem primrec_swap2:
+    2 ≤ n ∧ primrec f n ⇒ primrec (swap2 f) n
+Proof
   STRIP_TAC THEN
   Q_TAC SUFF_TAC `swap2 f = Cn f (proj 1 :: proj 0 ::
                                   GENLIST (λi. proj (i + 2)) (n - 2))`
@@ -204,11 +205,12 @@ val primrec_swap2 = store_thm(
         ]
       ]
     ]
-  ]);
+  ]
+QED
 
-val primrec_cons = store_thm(
-  "primrec_cons",
-  ``primrec f n ⇒ primrec (λl. f (c::l)) n``,
+Theorem primrec_cons:
+    primrec f n ⇒ primrec (λl. f (c::l)) n
+Proof
   STRIP_TAC THEN
   `0 < n` by IMP_RES_TAC primrec_nzero THEN
   Q_TAC SUFF_TAC
@@ -232,7 +234,8 @@ val primrec_cons = store_thm(
       `i < LENGTH l ∨ LENGTH l ≤ i` by DECIDE_TAC THEN
       SRW_TAC [ARITH_ss][proj_def, EL_APPEND1, EL_APPEND2, EL_GENLIST]
     ]
-  ]);
+  ]
+QED
 
 
 
@@ -269,9 +272,9 @@ val nfst_snd_div3 = Store_thm(
   Q.EXISTS_TAC `n DIV 3` THEN
   SRW_TAC [ARITH_ss][DIV_LESS, nfst_le, nsnd_le])
 
-val prtermrec1_correct = store_thm(
-  "prtermrec1_correct",
-  ``prtermrec1 v c a [n; p] = prtermrec v c a [n; p]``,
+Theorem prtermrec1_correct:
+    prtermrec1 v c a [n; p] = prtermrec v c a [n; p]
+Proof
   SRW_TAC [][prtermrec1_def] THEN
   Q.MATCH_ABBREV_TAC `nel n (f [n; p]) = prtermrec v c a [n; p]` THEN
   Q_TAC SUFF_TAC
@@ -289,7 +292,8 @@ val prtermrec1_correct = store_thm(
     SRW_TAC [ARITH_ss][Once prtermrec_def, SimpRHS, LET_THM] THEN
     SRW_TAC [ARITH_ss][GSYM nel_correct, DIV_LESS, LENGTH_GENLIST,
                        EL_GENLIST]
-  ]);
+  ]
+QED
 
 val _ = overload_on ("nsnoc", “λn e. nlist_of (listOfN n ++ [e])”)
 
@@ -397,11 +401,12 @@ val pr_is_abs_thm = Store_thm(
     (pr_is_abs [dBnum (dV i)] = 0)``,
   SRW_TAC [][pr_is_abs_def, dBnum_def, MOD3_thm]);
 
-val pr_is_abs_correct = store_thm(
-  "pr_is_abs_correct",
-  ``pr_is_abs [n] = nB (is_dABS (numdB n))``,
+Theorem pr_is_abs_correct:
+    pr_is_abs [n] = nB (is_dABS (numdB n))
+Proof
   SRW_TAC [][pr_is_abs_def, Once numdB_def] THEN
-  `n MOD 3 < 3` by SRW_TAC [][MOD_LESS] THEN DECIDE_TAC);
+  `n MOD 3 < 3` by SRW_TAC [][MOD_LESS] THEN DECIDE_TAC
+QED
 
 Definition pr_bnf_def:
   pr_bnf =
@@ -474,11 +479,12 @@ Definition maxf_def:
   (maxf f (SUC n) = MAX (f (SUC n)) (maxf f n))
 End
 
-val LE_maxf = store_thm(
-  "LE_maxf",
-  ``∀n m. m ≤ n ⇒ f m ≤ maxf f n``,
+Theorem LE_maxf:
+    ∀n m. m ≤ n ⇒ f m ≤ maxf f n
+Proof
   Induct THEN SRW_TAC [][maxf_def] THEN
-  `m ≤ n ∨ (m = SUC n)` by DECIDE_TAC THEN SRW_TAC [][]);
+  `m ≤ n ∨ (m = SUC n)` by DECIDE_TAC THEN SRW_TAC [][]
+QED
 
 val primrec_maxf = Store_thm(
   "primrec_maxf",
@@ -1036,11 +1042,11 @@ val bnf_noreduct = prove(
   ``¬bnf t ⇒ ∃u. noreduct t = SOME u``,
   Cases_on `noreduct t` THEN FULL_SIMP_TAC (srw_ss())[noreduct_bnf]);
 
-val pr_noreduct_correct = store_thm(
-  "pr_noreduct_correct",
-  ``pr_noreduct [n] =
+Theorem pr_noreduct_correct:
+    pr_noreduct [n] =
       if dbnf (numdB n) then n
-      else dBnum (THE (dnoreduct (numdB n)))``,
+      else dBnum (THE (dnoreduct (numdB n)))
+Proof
   ASM_SIMP_TAC (srw_ss()) [pr_noreduct_def] THEN
   `∃d. n = dBnum d` by METIS_TAC [dBnum_onto] THEN
   ASM_SIMP_TAC (srw_ss()) [] THEN POP_ASSUM SUBST_ALL_TAC THEN
@@ -1058,22 +1064,25 @@ val pr_noreduct_correct = store_thm(
 
     SRW_TAC [][] THEN IMP_RES_TAC notbnf_dnoreduct THEN
     SRW_TAC [][dBnum_def]
-  ]);
+  ]
+QED
 
-val prnsub = store_thm(
-  "prnsub",
-  ``primrec f n ∧ primrec g n ∧ primrec h n ⇒
-    primrec (λl. dBnum (nsub (numdB (f l)) (g l) (numdB (h l)))) n``,
+Theorem prnsub:
+    primrec f n ∧ primrec g n ∧ primrec h n ⇒
+    primrec (λl. dBnum (nsub (numdB (f l)) (g l) (numdB (h l)))) n
+Proof
   STRIP_TAC THEN Q.MATCH_ABBREV_TAC `primrec FF n` THEN
   Q_TAC SUFF_TAC `FF = Cn pr_nsub [f;g;h]` THEN1 SRW_TAC [][primrec_rules] THEN
-  SRW_TAC [][Abbr`FF`, FUN_EQ_THM]);
+  SRW_TAC [][Abbr`FF`, FUN_EQ_THM]
+QED
 
-val prdbnf = store_thm(
-  "prdbnf",
-  ``primrec f n ⇒ primrec (λl. nB (dbnf (numdB (f l)))) n``,
+Theorem prdbnf:
+    primrec f n ⇒ primrec (λl. nB (dbnf (numdB (f l)))) n
+Proof
   STRIP_TAC THEN Q.MATCH_ABBREV_TAC `primrec FF n` THEN
   Q_TAC SUFF_TAC `FF = Cn pr_bnf [f]` THEN SRW_TAC [][primrec_rules] THEN
-  SRW_TAC [][Abbr`FF`, FUN_EQ_THM]);
+  SRW_TAC [][Abbr`FF`, FUN_EQ_THM]
+QED
 
 val primrec_noreduct = Store_thm(
   "primrec_noreduct",
@@ -1110,9 +1119,9 @@ val primrec_steps = Store_thm(
   SRW_TAC [][LET_THM, primrec_rules] THEN
   intro prCOND THEN SRW_TAC [][prCn1, prpred, combinTheory.o_ABS_R, prdbnf]);
 
-val pr_steps_correct = store_thm(
-  "pr_steps_correct",
-  ``pr_steps [n; t] = dBnum (fromTerm (steps n (toTerm (numdB t))))``,
+Theorem pr_steps_correct:
+    pr_steps [n; t] = dBnum (fromTerm (steps n (toTerm (numdB t))))
+Proof
   `∃d. t = dBnum d` by METIS_TAC [dBnum_onto] THEN
   SRW_TAC [][pr_steps_def, LET_THM] THEN
   `∃M. d = fromTerm M` by METIS_TAC [fromTerm_onto] THEN SRW_TAC [][] THEN
@@ -1133,7 +1142,8 @@ val pr_steps_correct = store_thm(
     `M' = steps 1 M` by (ASM_REWRITE_TAC [ONE, steps_def] THEN
                          SRW_TAC [][]) THEN
     SRW_TAC [ARITH_ss][GSYM steps_plus]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     bnf_of (requires minimisation - and thus recursivefnsTheory
@@ -1143,15 +1153,17 @@ Definition pr_steps_pred_def:
   pr_steps_pred =
   Cn (pr2 $-) [K 1; Cn pr_bnf [pr_steps]]
 End
-val pr_steps_pred_correct = store_thm(
-  "pr_steps_pred_correct",
-  ``pr_steps_pred [n; t] = nB (¬dbnf (fromTerm (steps n (toTerm (numdB t)))))``,
-  SRW_TAC [][pr_steps_pred_def, pr_steps_correct]);
+Theorem pr_steps_pred_correct:
+    pr_steps_pred [n; t] = nB (¬dbnf (fromTerm (steps n (toTerm (numdB t)))))
+Proof
+  SRW_TAC [][pr_steps_pred_def, pr_steps_correct]
+QED
 
-val pr_steps_pred_EQ0 = store_thm(
-  "pr_steps_pred_EQ0",
-  ``(pr_steps_pred [n; t] = 0) ⇔ bnf (steps n (toTerm (numdB t)))``,
-  SRW_TAC [][pr_steps_pred_correct]);
+Theorem pr_steps_pred_EQ0:
+    (pr_steps_pred [n; t] = 0) ⇔ bnf (steps n (toTerm (numdB t)))
+Proof
+  SRW_TAC [][pr_steps_pred_correct]
+QED
 
 val primrec_steps_pred = Store_thm(
   "primrec_steps_pred",
@@ -1216,9 +1228,9 @@ Definition pr_is_ichurch_def:
                       (K 0)
 End
 
-val pr_is_ichurch_correct = store_thm(
-  "pr_is_ichurch_correct",
-  ``pr_is_ichurch [n] = nB (∃m. numdB n = FUNPOW (dAPP (dV 0)) m (dV 1))``,
+Theorem pr_is_ichurch_correct:
+    pr_is_ichurch [n] = nB (∃m. numdB n = FUNPOW (dAPP (dV 0)) m (dV 1))
+Proof
   SRW_TAC [][pr_is_ichurch_def, LET_THM] THEN
   `∃d. n = dBnum d` by METIS_TAC [dBnum_onto] THEN
   SRW_TAC [][] THEN Induct_on `d` THEN SRW_TAC [][] THENL [
@@ -1232,7 +1244,8 @@ val pr_is_ichurch_correct = store_thm(
       METIS_TAC []
     ],
     Cases_on `m` THEN SRW_TAC [][FUNPOW_SUC]
-  ]);
+  ]
+QED
 
 val primrec_is_ichurch = Store_thm(
   "primrec_is_ichurch",
@@ -1417,20 +1430,22 @@ val recfn_recPhi_applied = Store_thm(
   simp[FUN_EQ_THM, recCn_def] >> simp[recPhi_def, recCn_def]);
 
 
-val recPhi_correct = store_thm(
-  "recPhi_correct",
-  ``recPhi [i; n] = Phi i n``,
+Theorem recPhi_correct:
+    recPhi [i; n] = Phi i n
+Proof
   SRW_TAC [][Phi_def, recPhi_def, recCn_def, LET_THM] THEN
   Cases_on `bnf_of (toTerm (numdB i) @@ church n)` THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val recPhi_rec2Phi = store_thm(
-  "recPhi_rec2Phi[simp]",
-  ``recPhi = rec2 Phi``,
+Theorem recPhi_rec2Phi[simp]:
+    recPhi = rec2 Phi
+Proof
   simp[FUN_EQ_THM] >> Cases
   >- simp[recPhi_def, recCn_def, GSYM recPhi_correct] >>
   rename1 `recPhi (h::rest)` >> Cases_on `rest` >>
-  simp[recPhi_def, recCn_def, GSYM recPhi_correct])
+  simp[recPhi_def, recCn_def, GSYM recPhi_correct]
+QED
 
 (* the other way - every recursive function can be emulated in the λ-calculus *)
 Definition cnel_def:
@@ -1450,9 +1465,9 @@ QED
 
 val cnel_equiv = brackabs.brackabs_equiv [] cnel_def
 
-val cnel_behaviour = store_thm(
-  "cnel_behaviour",
-  ``cnel @@ church i @@ church n -n->* church (nel i n)``,
+Theorem cnel_behaviour:
+    cnel @@ church i @@ church n -n->* church (nel i n)
+Proof
   SIMP_TAC (bsrw_ss()) [cnel_equiv] THEN
   Q.ID_SPEC_TAC `n` THEN Induct_on `i` THEN
   ASM_SIMP_TAC (bsrw_ss()) [natrec_behaviour, cis_zero_behaviour] THENL [
@@ -1472,7 +1487,8 @@ val cnel_behaviour = store_thm(
                                 cnsnd_behaviour] THEN
       SRW_TAC [ARITH_ss][ncons_def]
     ]
-  ]);
+  ]
+QED
 val nel_proj = prove(
   ``nel i (nlist_of l) = proj i l``,
   SRW_TAC [ARITH_ss][proj_def, nel_nlist_of] THEN
@@ -1495,13 +1511,14 @@ val FV_cnlist_of = Store_thm(
 
 val cnlist_of_equiv = brackabs.brackabs_equiv [] cnlist_of_def
 
-val cnlist_of_behaviour = store_thm(
-  "cnlist_of_behaviour",
-  ``cnlist_of @@ cvlist (MAP church ns) -n->* church (nlist_of ns)``,
+Theorem cnlist_of_behaviour:
+    cnlist_of @@ cvlist (MAP church ns) -n->* church (nlist_of ns)
+Proof
   SIMP_TAC (bsrw_ss()) [cnlist_of_equiv] THEN Induct_on `ns` THEN1
     SIMP_TAC (bsrw_ss()) [cnil_def] THEN
   ASM_SIMP_TAC (bsrw_ss()) [wh_cvcons, cnpair_behaviour, csuc_behaviour,
-                            ncons_def, arithmeticTheory.ADD1]);
+                            ncons_def, arithmeticTheory.ADD1]
+QED
 
 
 Definition crecCn_def:
@@ -1531,11 +1548,11 @@ val FV_crecCn = Store_thm(
 
 val crecCn_equiv = brackabs.brackabs_equiv [] crecCn_def
 
-val crecCn_fails = store_thm(
-  "crecCn_fails",
-  ``∀i f gs x.
+Theorem crecCn_fails:
+    ∀i f gs x.
       MEM i gs ∧ (Phi i x = NONE) ⇒
-      (bnf_of (crecCn @@ f @@ cvlist (MAP church gs) @@ church x) = NONE)``,
+      (bnf_of (crecCn @@ f @@ cvlist (MAP church gs) @@ church x) = NONE)
+Proof
   SIMP_TAC (bsrw_ss()) [crecCn_equiv] THEN
   Q.HO_MATCH_ABBREV_TAC `
     ∀i f gs x. MEM i gs ∧ (Phi i x = NONE) ⇒
@@ -1557,12 +1574,12 @@ val crecCn_fails = store_thm(
   THEN1 SRW_TAC [][PhiNONE_cbnf_ofk] THEN
   IMP_RES_TAC PhiSOME_cbnf_ofk THEN
   ASM_SIMP_TAC (bsrw_ss()) [] THEN
-  FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC []);
+  FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC []
+QED
 
 
-val crecCn_succeeds1 = store_thm(
-  "crecCn_succeeds1",
-  ``∀f gs x.
+Theorem crecCn_succeeds1:
+    ∀f gs x.
       (∀i. MEM i gs ⇒ ∃j. Phi i x = SOME j) ⇒
       (bnf_of (crecCn @@ f @@ cvlist (MAP church gs) @@ church x) =
        bnf_of
@@ -1574,7 +1591,8 @@ val crecCn_succeeds1 = store_thm(
                                 @@ cvlist
                                      (MAP church
                                           (MAP (λg. THE (Phi g x))
-                                               gs)))))))``,
+                                               gs)))))))
+Proof
   SIMP_TAC (bsrw_ss()) [crecCn_equiv, cchurch_behaviour,
                         cfold_correct] THEN
   Q.HO_MATCH_ABBREV_TAC `
@@ -1605,7 +1623,8 @@ val crecCn_succeeds1 = store_thm(
   FIRST_X_ASSUM (Q.SPECL_THEN [`f`, `x`, `ks ++ [force_num (toTerm v)]`]
                               MP_TAC) THEN
   ASM_SIMP_TAC (bsrw_ss()) [cappend_snoc] THEN
-  DISCH_THEN (K ALL_TAC) THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]);
+  DISCH_THEN (K ALL_TAC) THEN REWRITE_TAC [GSYM APPEND_ASSOC, APPEND]
+QED
 
 val MAP_CONG' = SPEC_ALL (REWRITE_RULE [GSYM AND_IMP_INTRO] listTheory.MAP_CONG)
 
@@ -1614,20 +1633,22 @@ Definition cntl_def:
 End
 val FV_cntl = Store_thm("FV_cntl", ``FV cntl = {}``,
                         SRW_TAC [][EXTENSION, cntl_def]);
-val cntl_behaviour = store_thm(
-  "cntl_behaviour",
-  ``cntl @@ church n == church (ntl n)``,
-  SIMP_TAC (bsrw_ss()) [cntl_def, cminus_behaviour, ntl_def, cnsnd_behaviour]);
+Theorem cntl_behaviour:
+    cntl @@ church n == church (ntl n)
+Proof
+  SIMP_TAC (bsrw_ss()) [cntl_def, cminus_behaviour, ntl_def, cnsnd_behaviour]
+QED
 
 Definition cnhd_def:
   cnhd = LAM "ns" (cnfst @@ (cminus @@ VAR "ns" @@ church 1))
 End
 val FV_cnhd = Store_thm("FV_cnhd", ``FV cnhd = {}``,
                         SRW_TAC [][EXTENSION, cnhd_def]);
-val cnhd_behaviour = store_thm(
-  "cnhd_behaviour",
-  ``cnhd @@ church n == church (nhd n)``,
-  SIMP_TAC (bsrw_ss()) [cnhd_def, cminus_behaviour, nhd_def, cnfst_behaviour]);
+Theorem cnhd_behaviour:
+    cnhd @@ church n == church (nhd n)
+Proof
+  SIMP_TAC (bsrw_ss()) [cnhd_def, cminus_behaviour, nhd_def, cnfst_behaviour]
+QED
 
 Definition cncons_def:
   cncons = LAM "h" (LAM "t" (csuc @@ (cnpair @@ VAR "h" @@ VAR "t")))
@@ -1638,11 +1659,12 @@ val FV_cncons = Store_thm(
   ``FV cncons = {}``,
   SRW_TAC [][EXTENSION, cncons_def]);
 
-val cncons_behaviour = store_thm(
-  "cncons_behaviour",
-  ``cncons @@ church h @@ church (nlist_of t) == church (nlist_of (h::t))``,
+Theorem cncons_behaviour:
+    cncons @@ church h @@ church (nlist_of t) == church (nlist_of (h::t))
+Proof
   SIMP_TAC (bsrw_ss()) [cncons_equiv, cnpair_behaviour, ncons_def,
-                        csuc_behaviour, ADD1]);
+                        csuc_behaviour, ADD1]
+QED
 
 (* emulating primitive recursion.
 
@@ -1735,24 +1757,25 @@ val BIforcenum = bstore_thm(
   Q_TAC SUFF_TAC `T1 = T2` THEN1 SRW_TAC [][] THEN
   SRW_TAC [][termTheory.LAM_eq_thm, Abbr`T1`, Abbr`T2`, termTheory.tpm_fresh]);
 
-val crecPr_cons0 = store_thm(
-  "crecPr_cons0",
-  ``crecPr @@ b @@ s @@ church (0 ⊗ t) ==
+Theorem crecPr_cons0:
+    crecPr @@ b @@ s @@ church (0 ⊗ t) ==
     cbnf_ofk @@ cforce_num @@ (cdAPP @@ (cnumdB @@ b)
-                                     @@ cDB (fromTerm (church t)))``,
+                                     @@ cDB (fromTerm (church t)))
+Proof
   SIMP_TAC (bsrw_ss()) [crecPr_equiv,
                         cnhd_behaviour, cntl_behaviour, natrec_behaviour,
-                        cchurch_behaviour]);
+                        cchurch_behaviour]
+QED
 
-val crecPr_consSUC = store_thm(
-  "crecPr_consSUC",
-  ``bnf_of (crecPr @@ church b @@ church s @@ church (SUC n ⊗ t)) =
+Theorem crecPr_consSUC:
+    bnf_of (crecPr @@ church b @@ church s @@ church (SUC n ⊗ t)) =
       case bnf_of (crecPr
                      @@ church b
                      @@ church s
                      @@ church (n ⊗ t)) of
         NONE => NONE
-      | SOME tm => OPTION_MAP church (Phi s (n ⊗ force_num tm ⊗ t))``,
+      | SOME tm => OPTION_MAP church (Phi s (n ⊗ force_num tm ⊗ t))
+Proof
   SIMP_TAC (bsrw_ss()) [crecPr_equiv, cis_zero_behaviour, cB_behaviour,
                         cntl_behaviour, cnhd_behaviour] THEN
   Q.HO_MATCH_ABBREV_TAC `
@@ -1813,7 +1836,8 @@ val crecPr_consSUC = store_thm(
   Cases_on `Phi s (n ⊗ m ⊗ t)` >-
     asm_simp_tac (bsrw_ss()) [PhiNONE_cbnf_ofk] >>
   imp_res_tac PhiSOME_cbnf_ofk >>
-  asm_simp_tac (bsrw_ss()) [bnf_bnf_of]);
+  asm_simp_tac (bsrw_ss()) [bnf_bnf_of]
+QED
 
 Definition cminimise_def:
   cminimise =
@@ -1835,11 +1859,11 @@ QED
 
 val cminimise_equiv = brackabs.brackabs_equiv [] cminimise_def
 
-val cminimise_fail1 = store_thm(
-  "cminimise_fail1",
-  ``(Phi i (n ⊗ l) = NONE) ∧
+Theorem cminimise_fail1:
+    (Phi i (n ⊗ l) = NONE) ∧
     (∀m j. m < n ∧ (Phi i (m ⊗ l) = SOME j) ⇒ 0 < j) ⇒
-    (bnf_of (cminimise @@ church i @@ church l) = NONE)``,
+    (bnf_of (cminimise @@ church i @@ church l) = NONE)
+Proof
   simp_tac (bsrw_ss()) [cminimise_equiv, cfindleast_behaviour] >>
   strip_tac >>
   Q.MATCH_ABBREV_TAC `bnf_of (cfindbody P (church 0) I) = NONE` >>
@@ -1873,7 +1897,8 @@ val cminimise_fail1 = store_thm(
   RULE_ASSUM_TAC (SIMP_RULE bool_ss [AND_IMP_INTRO]) >>
   FIRST_X_ASSUM MATCH_MP_TAC >>
   Q.EXISTS_TAC `n` >> asm_simp_tac (srw_ss() ++ ARITH_ss) [] >>
-  FIRST_X_ASSUM ACCEPT_TAC);
+  FIRST_X_ASSUM ACCEPT_TAC
+QED
 
 val appcongl = prove(
   ``(x = y) ==> (x @@ z = y @@ z)``,
@@ -1884,10 +1909,10 @@ val S' = prove(
           VAR "xx" @@ VAR "zz" @@ (VAR "yy" @@ VAR "zz"))))``,
   srw_tac [][termTheory.LAM_eq_thm, chap2Theory.S_def]);
 
-val cminimise_fail2 = store_thm(
-  "cminimise_fail2",
-  ``(∀n j. (Phi i (n ⊗ l) = SOME j) ⇒ 0 < j) ⇒
-    (bnf_of (cminimise @@ church i @@ church l) = NONE)``,
+Theorem cminimise_fail2:
+    (∀n j. (Phi i (n ⊗ l) = SOME j) ⇒ 0 < j) ⇒
+    (bnf_of (cminimise @@ church i @@ church l) = NONE)
+Proof
   strip_tac >>
   Cases_on `∃n. Phi i (n ⊗ l) = NONE`
    >- (MATCH_MP_TAC (GEN_ALL cminimise_fail1) >> metis_tac []) >>
@@ -1918,13 +1943,14 @@ val cminimise_fail2 = store_thm(
    `∃r. cfindleast @@ P @@ I == r ∧ bnf r`
       by metis_tac [chap2Theory.has_bnf_def] >>
    `∃m. P @@ church m == cB T` by metis_tac [cfindleast_bnfE] >>
-   POP_ASSUM MP_TAC >> asm_simp_tac (bsrw_ss()) []);
+   POP_ASSUM MP_TAC >> asm_simp_tac (bsrw_ss()) []
+QED
 
-val cminimise_succeeds = store_thm(
-  "cminimise_succeeds",
-  ``(Phi i (j ⊗ l) = SOME 0) ∧
+Theorem cminimise_succeeds:
+    (Phi i (j ⊗ l) = SOME 0) ∧
     (∀k. k < j ⇒ ∃r. (Phi i (k ⊗ l) = SOME r) ∧ 0 < r) ⇒
-    (bnf_of (cminimise @@ church i @@ church l) = SOME (church j))``,
+    (bnf_of (cminimise @@ church i @@ church l) = SOME (church j))
+Proof
   strip_tac >>
   simp_tac (bsrw_ss()) [cminimise_equiv, cfindleast_behaviour] >>
   Q.MATCH_ABBREV_TAC `bnf_of (cfindbody P (church 0) I) = SOME (church j)` >>
@@ -1953,7 +1979,8 @@ val cminimise_succeeds = store_thm(
   simp_tac (bsrw_ss()) [Cong cfindbody_cong] >>
   RULE_ASSUM_TAC (SIMP_RULE bool_ss [AND_IMP_INTRO]) >>
   FIRST_X_ASSUM MATCH_MP_TAC >>
-  asm_simp_tac (srw_ss() ++ ARITH_ss) []);
+  asm_simp_tac (srw_ss() ++ ARITH_ss) []
+QED
 
 Theorem recfns_in_Phi:
   ∀f n. recfn f n ⇒ ∃i. ∀l. LENGTH l = n ⇒ Phi i (fold l) = f l

@@ -519,26 +519,29 @@ val finite_field_is_field = save_thm("finite_field_is_field", FiniteField_def |>
 
 (* Theorem: FiniteField r ==> FiniteRing r *)
 (* Proof: by FiniteField_def, FiniteRing_def, field_is_ring *)
-val finite_field_is_finite_ring = store_thm(
-  "finite_field_is_finite_ring",
-  ``!r:'a field. FiniteField r ==> FiniteRing r``,
-  rw[FiniteField_def, FiniteRing_def]);
+Theorem finite_field_is_finite_ring:
+    !r:'a field. FiniteField r ==> FiniteRing r
+Proof
+  rw[FiniteField_def, FiniteRing_def]
+QED
 
 (* Theorem: r.sum.carrier = R /\ r.prod.carrier = R *)
 (* Proof: by definitions. *)
-val field_carriers = store_thm(
-  "field_carriers",
-  ``!r:'a field. Field r ==> (r.sum.carrier = R) /\ (r.prod.carrier = R)``,
-  rw_tac std_ss[Field_def, Ring_def]);
+Theorem field_carriers:
+    !r:'a field. Field r ==> (r.sum.carrier = R) /\ (r.prod.carrier = R)
+Proof
+  rw_tac std_ss[Field_def, Ring_def]
+QED
 
 val _ = export_rewrites ["field_carriers"];
 
 (* Theorem: Field r ==> F* = R+ *)
 (* Proof: by ring_nonzero_mult_carrier, field_is_ring *)
-val field_mult_carrier = store_thm(
-  "field_mult_carrier",
-  ``!r:'a field. Field r ==> (F* = R+ )``,
-  rw_tac std_ss[ring_nonzero_mult_carrier, field_is_ring]);
+Theorem field_mult_carrier:
+    !r:'a field. Field r ==> (F* = R+ )
+Proof
+  rw_tac std_ss[ring_nonzero_mult_carrier, field_is_ring]
+QED
 
 (* Theorem: FiniteField r ==> FiniteRing r /\ FiniteGroup f* *)
 (* Proof:
@@ -546,18 +549,20 @@ val field_mult_carrier = store_thm(
    FINITE R ==> FINITE F*
    which is true by field_carriers, excluding_def.
 *)
-val finite_field_alt = store_thm(
-  "finite_field_alt",
-  ``!r:'a field. FiniteField r <=> FiniteRing r /\ FiniteGroup f*``,
+Theorem finite_field_alt:
+    !r:'a field. FiniteField r <=> FiniteRing r /\ FiniteGroup f*
+Proof
   rw[FiniteField_def, FiniteRing_def, FiniteGroup_def, Field_def, EQ_IMP_THM] >>
-  rw[field_carriers, excluding_def]);
+  rw[field_carriers, excluding_def]
+QED
 
 (* Theorem: Field r ==> R <> {} *)
 (* Proof: by field_is_ring, ring_carrier_nonempty *)
-val field_carrier_nonempty = store_thm(
-  "field_carrier_nonempty",
-  ``!r:'a field. Field r ==> R <> {}``,
-  rw_tac std_ss[field_is_ring, ring_carrier_nonempty]);
+Theorem field_carrier_nonempty:
+    !r:'a field. Field r ==> R <> {}
+Proof
+  rw_tac std_ss[field_is_ring, ring_carrier_nonempty]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lifting Theorems from Ring                                                *)
@@ -753,20 +758,22 @@ val field_exp_element = lift_ring_thm "exp_element";
 
 (* Theorem: x ** 0 = #1 *)
 (* Proof: by group_exp_0 *)
-val field_exp_0 = store_thm(
-  "field_exp_0",
-  ``!x:'a. x ** 0 = #1``,
-  rw[]);
+Theorem field_exp_0:
+    !x:'a. x ** 0 = #1
+Proof
+  rw[]
+QED
 (* The following is no longer valid, as ring_exp_0 has no Ring r ==> ... *)
 (* val field_exp_0 = lift_ring_thm "exp_0"; *)
 (* > val field_exp_0 = |- !x. x ** 0 = #1: thm *)
 
 (* Theorem: x ** (SUC n) = x * x ** n *)
 (* Proof: by group_exp_SUC *)
-val field_exp_SUC = store_thm(
-  "field_exp_SUC",
-  ``!x n. x ** (SUC n) = x * x ** n``,
-  rw[]);
+Theorem field_exp_SUC:
+    !x n. x ** (SUC n) = x * x ** n
+Proof
+  rw[]
+QED
 (* The following is no longer valid, as ring_exp_0 has no Ring r ==> ... *)
 (* val field_exp_SUC = lift_ring_thm "exp_SUC"; *)
 (* > val field_exp_SUC = |- !x n. x ** SUC n = x * x ** n *)
@@ -1259,34 +1266,38 @@ val field_nonzero_element = save_thm("field_nonzero_element", ring_nonzero_eleme
    Since R+ = R DIFF {#0}    by field_nonzero_def
    Hence R+ SUBSET R         by DIFF_SUBSET
 *)
-val field_nonzero_subset = store_thm(
-  "field_nonzero_subset",
-  ``!r:'a field. R+ SUBSET R``,
-  rw[field_nonzero_def]);
+Theorem field_nonzero_subset:
+    !r:'a field. R+ SUBSET R
+Proof
+  rw[field_nonzero_def]
+QED
 
 (* Theorem: FINITE R ==> FINITE R+ *)
 (* Proof:
    Since R+ = R DIFF {#0}          by field_nonzero_def
    Hence FINITE R ==> FINITE R+    by FINITE_DIFF
 *)
-val field_nonzero_finite = store_thm(
-  "field_nonzero_finite",
-  ``!r:'a field. FINITE R ==> FINITE R+``,
-  rw[field_nonzero_def]);
+Theorem field_nonzero_finite:
+    !r:'a field. FINITE R ==> FINITE R+
+Proof
+  rw[field_nonzero_def]
+QED
 
 (* Theorem: Field r ==> Monoid f* *)
 (* Proof: by Field_def, group_is_monoid *)
-val field_nonzero_monoid = store_thm(
-  "field_nonzero_monoid",
-  ``!r:'a field. Field r ==> Monoid f*``,
-  rw_tac std_ss[Field_def, group_is_monoid]);
+Theorem field_nonzero_monoid:
+    !r:'a field. Field r ==> Monoid f*
+Proof
+  rw_tac std_ss[Field_def, group_is_monoid]
+QED
 
 (* Theorem: Field r ==> Group f* *)
 (* Proof: by Field_def *)
-val field_nonzero_group = store_thm(
-  "field_nonzero_group",
-  ``!r:'a field. Field r ==> Group f*``,
-  rw_tac std_ss[Field_def]);
+Theorem field_nonzero_group:
+    !r:'a field. Field r ==> Group f*
+Proof
+  rw_tac std_ss[Field_def]
+QED
 
 (* Same theorem by transform *)
 
@@ -1306,37 +1317,41 @@ val field_nonzero_mult_is_group = save_thm("field_nonzero_mult_is_group",
    For f*.exp = r.prod.exp
        due to Monoid f* and monoid_exp_def.
 *)
-val field_nonzero_mult_property = store_thm(
-  "field_nonzero_mult_property",
-  ``!r:'a field. Field r ==> (F* = R+ ) /\
+Theorem field_nonzero_mult_property:
+    !r:'a field. Field r ==> (F* = R+ ) /\
                              (f*.id = #1) /\
                              (f*.op = r.prod.op) /\
-                             (f*.exp = r.prod.exp)``,
-  rw[excluding_def, monoid_exp_def, ring_nonzero_def, FUN_EQ_THM]);
+                             (f*.exp = r.prod.exp)
+Proof
+  rw[excluding_def, monoid_exp_def, ring_nonzero_def, FUN_EQ_THM]
+QED
 
 (* Theorem: Field r ==> (f*.exp = $** ) *)
 (* Proof: by field_nonzero_mult_property *)
-val field_nonzero_exp = store_thm(
-  "field_nonzero_exp",
-  ``!r:'a field. Field r ==> (f*.exp = $** )``,
-  rw[field_nonzero_mult_property]);
+Theorem field_nonzero_exp:
+    !r:'a field. Field r ==> (f*.exp = $** )
+Proof
+  rw[field_nonzero_mult_property]
+QED
 
 (* Theorem: A Field has AbelianGroup f* *)
 (* Proof: by field_nonzero_mult_is_group and Ring has AbelianMonoid (r.prod). *)
-val field_nonzero_mult_is_abelian_group = store_thm(
-  "field_nonzero_mult_is_abelian_group",
-  ``!r:'a field. Field r ==> AbelianGroup f*``,
+Theorem field_nonzero_mult_is_abelian_group:
+    !r:'a field. Field r ==> AbelianGroup f*
+Proof
   rw_tac std_ss[AbelianGroup_def, field_mult_monoid, field_nonzero_element,
-                 field_nonzero_mult_is_group, field_nonzero_mult_property]);
+                 field_nonzero_mult_is_group, field_nonzero_mult_property]
+QED
 
 (* Theorem: Field multiplications form an Abelian group *)
 (* Proof: by field_nonzero_mult_is_abelian_group. *)
-val field_mult_group = store_thm(
-  "field_mult_group",
-  ``!r:'a field. Field r ==> Group f* /\
+Theorem field_mult_group:
+    !r:'a field. Field r ==> Group f* /\
                    (F* = R+ ) /\
-                   !x y. x IN R+ /\ y IN R+ ==> (x * y = y * x)``,
-  metis_tac[AbelianGroup_def, field_nonzero_mult_property, field_nonzero_mult_is_abelian_group]);
+                   !x y. x IN R+ /\ y IN R+ ==> (x * y = y * x)
+Proof
+  metis_tac[AbelianGroup_def, field_nonzero_mult_property, field_nonzero_mult_is_abelian_group]
+QED
 
 (* Theorem: FiniteField r ==> FiniteGroup f* *)
 (* Proof:
@@ -1346,10 +1361,11 @@ val field_mult_group = store_thm(
    Hence FINITE R ==> FINITE R+                    by FINITE_DIFF
    and   FINITE F* /\ Group f* ==> FiniteGroup f*  by FiniteGroup_def
 *)
-val finite_field_mult_finite_group = store_thm(
-  "finite_field_mult_finite_group",
-  ``!r:'a field. FiniteField r ==> FiniteGroup f*``,
-  rw[FiniteField_def, FiniteGroup_def, field_mult_group, ring_nonzero_def]);
+Theorem finite_field_mult_finite_group:
+    !r:'a field. FiniteField r ==> FiniteGroup f*
+Proof
+  rw[FiniteField_def, FiniteGroup_def, field_mult_group, ring_nonzero_def]
+QED
 
 (* Theorem: FiniteField r ==> (CARD F* = CARD R - 1) *)
 (* Proof:
@@ -1361,26 +1377,29 @@ val finite_field_mult_finite_group = store_thm(
    = CARD R - CARD {#0}           by INTER_SING
    = CARD R - 1                   by CARD_SING
 *)
-val finite_field_mult_carrier_card = store_thm(
-  "finite_field_mult_carrier_card",
-  ``!r:'a field. FiniteField r ==> (CARD F* = CARD R - 1)``,
-  rw[FiniteField_def, field_nonzero_mult_property, field_nonzero_def, INTER_SING]);
+Theorem finite_field_mult_carrier_card:
+    !r:'a field. FiniteField r ==> (CARD F* = CARD R - 1)
+Proof
+  rw[FiniteField_def, field_nonzero_mult_property, field_nonzero_def, INTER_SING]
+QED
 
 (* Theorem: x IN R+ and y IN R+ ==> x * y IN R+ *)
 (* Proof: by field_mult_group, group_op_element. *)
-val field_mult_nonzero = store_thm(
-  "field_mult_nonzero",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> (x * y) IN R+``,
-  metis_tac[group_op_element, field_mult_group, field_nonzero_mult_property]);
+Theorem field_mult_nonzero:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> (x * y) IN R+
+Proof
+  metis_tac[group_op_element, field_mult_group, field_nonzero_mult_property]
+QED
 
 val _ = export_rewrites ["field_mult_nonzero"];
 
 (* Theorem: #1 in Group f* is unique. *)
 (* Proof: by group_id_unique. *)
-val field_id_unique = store_thm(
-  "field_id_unique",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ((y * x = x) <=> (y = #1)) /\ ((x * y = x) <=> (y = #1))``,
-  metis_tac[group_id_unique, field_mult_group, field_nonzero_mult_property]);
+Theorem field_id_unique:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ((y * x = x) <=> (y = #1)) /\ ((x * y = x) <=> (y = #1))
+Proof
+  metis_tac[group_id_unique, field_mult_group, field_nonzero_mult_property]
+QED
 
 (* Theorem: (x * y = #0) <=> (x = #0) \/ (y = #0) *)
 (* Proof: by field_mult_nonzero, field_mult_lzero and field_mult_rzero.
@@ -1395,27 +1414,30 @@ val field_id_unique = store_thm(
       If x = #0, #0 * y = #0  by field_mult_lzero
       If y = #0, x * #y = #0  by field_mult_rzero
 *)
-val field_mult_eq_zero = store_thm(
-  "field_mult_eq_zero",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0))``,
-  metis_tac[field_mult_nonzero, field_nonzero_eq, field_mult_lzero, field_mult_rzero]);
+Theorem field_mult_eq_zero:
+    !r:'a field. Field r ==> !x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0))
+Proof
+  metis_tac[field_mult_nonzero, field_nonzero_eq, field_mult_lzero, field_mult_rzero]
+QED
 
 (* another popular name *)
 val field_zero_product = save_thm("field_zero_product", field_mult_eq_zero);
 
 (* Theorem: Field r ==> ##2 = #1 + #1 *)
 (* Proof: by field_num_add. *)
-val field_num_2 = store_thm(
-  "field_num_2",
-  ``!r:'a field. Field r ==> (##2 = #1 + #1)``,
-  metis_tac[field_num_add, field_num_1, DECIDE ``2 = 1 + 1``]);
+Theorem field_num_2:
+    !r:'a field. Field r ==> (##2 = #1 + #1)
+Proof
+  metis_tac[field_num_add, field_num_1, DECIDE ``2 = 1 + 1``]
+QED
 
 (* Theorem: Field r ==> !x. x IN F* ==> x IN R *)
 (* Proof: by field_nonzero_element, field_mult_carrier *)
-val field_nonzero_element_alt = store_thm(
-  "field_nonzero_element_alt",
-  ``!r:'a field. Field r ==> !x. x IN F* ==> x IN R``,
-  rw[field_nonzero_element, field_mult_carrier]);
+Theorem field_nonzero_element_alt:
+    !r:'a field. Field r ==> !x. x IN F* ==> x IN R
+Proof
+  rw[field_nonzero_element, field_mult_carrier]
+QED
 (* This is not very useful: nonzero is easier than element of something excluding zero *)
 
 (* Do not export this, otherwise all x IN R will try to prove x IN F*, usually fails. *)
@@ -1423,38 +1445,42 @@ val field_nonzero_element_alt = store_thm(
 
 (* Theorem: Field r ==> !x. x IN R /\ x <> #0 ==> x IN F* *)
 (* Proof: by field_nonzero_eq, field_mult_carrier *)
-val field_nonzero_alt = store_thm(
-  "field_nonzero_alt",
-  ``!r:'a field. Field r ==> !x. x IN R /\ x <> #0 ==> x IN F*``,
-  rw[field_nonzero_eq, field_mult_carrier]);
+Theorem field_nonzero_alt:
+    !r:'a field. Field r ==> !x. x IN R /\ x <> #0 ==> x IN F*
+Proof
+  rw[field_nonzero_eq, field_mult_carrier]
+QED
 
 (* Theorem: For a Field, #1 <> #0 *)
 (* Proof: by ring_one_eq_zero and group_carrier_nonempty. *)
-val field_one_ne_zero = store_thm(
-  "field_one_ne_zero",
-  ``!r:'a field. Field r ==> #1 <> #0``,
+Theorem field_one_ne_zero:
+    !r:'a field. Field r ==> #1 <> #0
+Proof
   rpt strip_tac >>
   `R = {#0}` by rw_tac std_ss[GSYM ring_one_eq_zero, field_is_ring] >>
   `F* = {}` by rw[field_nonzero_mult_property, ring_nonzero_def] >>
-  metis_tac[field_nonzero_mult_is_group, group_carrier_nonempty]);
+  metis_tac[field_nonzero_mult_is_group, group_carrier_nonempty]
+QED
 
 val _ = export_rewrites ["field_one_ne_zero"];
 
 (* Theorem: #1 IN R+ *)
 (* Proof: by #1 <> #0 and field_nonzero_eq. *)
-val field_one_nonzero = store_thm(
-  "field_one_nonzero",
-  ``!r:'a field. Field r ==> #1 IN R+``,
-  rw[field_nonzero_eq]);
+Theorem field_one_nonzero:
+    !r:'a field. Field r ==> #1 IN R+
+Proof
+  rw[field_nonzero_eq]
+QED
 
 val _ = export_rewrites ["field_one_nonzero"];
 
 (* Theorem: Field r ==> R+ <> {} *)
 (* Proof: by field_one_nonzero, MEMBER_NOT_EMPTY*)
-val field_nonzero_carrier_nonempty = store_thm(
-  "field_nonzero_carrier_nonempty",
-  ``!r:'a field. Field r ==> R+ <> {}``,
-  metis_tac[field_one_nonzero, MEMBER_NOT_EMPTY]);
+Theorem field_nonzero_carrier_nonempty:
+    !r:'a field. Field r ==> R+ <> {}
+Proof
+  metis_tac[field_one_nonzero, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: FiniteField r ==> 0 < CARD R+ *)
 (* Proof:
@@ -1466,13 +1492,14 @@ val field_nonzero_carrier_nonempty = store_thm(
    Thus R+ <> {}                  by MEMBER_NOT_EMPTY
      or 0 < CARD R+               by CARD_EQ_0
 *)
-val field_nonzero_card_pos = store_thm(
-  "field_nonzero_card_pos",
-  ``!r:'a field. FiniteField r ==> 0 < CARD R+``,
+Theorem field_nonzero_card_pos:
+    !r:'a field. FiniteField r ==> 0 < CARD R+
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `#1 IN R+` by rw[field_nonzero_eq] >>
   `FINITE R+` by rw[field_nonzero_def] >>
-  metis_tac[MEMBER_NOT_EMPTY, CARD_EQ_0, NOT_ZERO_LT_ZERO]);
+  metis_tac[MEMBER_NOT_EMPTY, CARD_EQ_0, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: FiniteField r ==> ((R+ = {#1}) <=> (CARD R+ = 1)) *)
 (* Proof:
@@ -1484,15 +1511,16 @@ val field_nonzero_card_pos = store_thm(
       also SING R+            by CARD_EQ_1
      Hence R+ = {#1}          by SING_DEF, IN_SING
 *)
-val field_nonzero_card_eq_1 = store_thm(
-  "field_nonzero_card_eq_1",
-  ``!r:'a field. FiniteField r ==> ((R+ = {#1}) <=> (CARD R+ = 1))``,
+Theorem field_nonzero_card_eq_1:
+    !r:'a field. FiniteField r ==> ((R+ = {#1}) <=> (CARD R+ = 1))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >>
   `#1 IN R+` by rw[] >>
   `FINITE R+` by rw[field_nonzero_finite] >>
   `SING R+` by rw[GSYM CARD_EQ_1] >>
-  metis_tac[SING_DEF, IN_SING]);
+  metis_tac[SING_DEF, IN_SING]
+QED
 
 (* Theorem: Field r ==> x IN R+ <=> unit x *)
 (* Proof:
@@ -1513,9 +1541,9 @@ val field_nonzero_card_eq_1 = store_thm(
    Also unit x ==> x IN R                               by ring_unit_element
    Hence x IN R+                                        by field_nonzero_eq
 *)
-val field_nonzero_unit = store_thm(
-  "field_nonzero_unit",
-  ``!r:'a field. Field r ==> !x. x IN R+ <=> unit x``,
+Theorem field_nonzero_unit:
+    !r:'a field. Field r ==> !x. x IN R+ <=> unit x
+Proof
   rw_tac std_ss[Invertibles_def, monoid_invertibles_def, field_carriers, GSPECIFICATION] >>
   `Ring r /\ Group f*` by metis_tac[Field_def] >>
   rw[ring_nonzero_element, EQ_IMP_THM] >| [
@@ -1527,7 +1555,8 @@ val field_nonzero_unit = store_thm(
     rw[ring_nonzero_element],
     `x <> #0` by metis_tac[field_mult_lzero, field_mult_rzero, field_one_ne_zero] >>
     rw[field_nonzero_eq]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Exponential Nonzero Theorems.                                       *)
@@ -1542,12 +1571,13 @@ val field_nonzero_unit = store_thm(
       x ** SUC n = x * x ** n    by field_exp_SUC
       hence true by field_mult_nonzero and induction hypothesis
 *)
-val field_exp_nonzero = store_thm(
-  "field_exp_nonzero",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !n. x ** n IN R+``,
+Theorem field_exp_nonzero:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !n. x ** n IN R+
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[field_nonzero_element]);
+  rw[field_nonzero_element]
+QED
 
 val _ = export_rewrites ["field_exp_nonzero"];
 
@@ -1565,12 +1595,13 @@ val _ = export_rewrites ["field_exp_nonzero"];
    Only-if part: n <> 0 /\ x = #0 ==> x ** n = #0
       true by field_zero_exp.
 *)
-val field_exp_eq_zero = store_thm(
-  "field_exp_eq_zero",
-  ``!r:'a field. Field r ==> !x. x IN R ==> !n. (x ** n = #0) <=> n <> 0 /\ (x = #0)``,
+Theorem field_exp_eq_zero:
+    !r:'a field. Field r ==> !x. x IN R ==> !n. (x ** n = #0) <=> n <> 0 /\ (x = #0)
+Proof
   rw_tac std_ss[field_zero_exp, EQ_IMP_THM] >-
   metis_tac[field_exp_0, field_one_ne_zero] >>
-  metis_tac[field_exp_nonzero, field_nonzero_eq, field_exp_element]);
+  metis_tac[field_exp_nonzero, field_nonzero_eq, field_exp_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Inversion Theorems.                                                 *)
@@ -1586,16 +1617,17 @@ val field_exp_eq_zero = store_thm(
    Now   F* = R+                    by field_nonzero_mult_property
    Hence f*.inv x = |/ x            by group_linv_unique
 *)
-val field_mult_inv = store_thm(
-  "field_mult_inv",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> (f*.inv x = |/ x)``,
+Theorem field_mult_inv:
+    !r:'a field. Field r ==> !x. x IN R+ ==> (f*.inv x = |/ x)
+Proof
   rpt strip_tac >>
   `Ring r /\ Group f*` by metis_tac[Field_def] >>
   `unit x` by rw[GSYM field_nonzero_unit] >>
   `unit ( |/x)` by rw[ring_unit_has_inv] >>
   `|/x IN R+` by rw[field_nonzero_unit] >>
   `|/x * x = #1` by rw[ring_unit_linv] >>
-  metis_tac[group_linv_unique, field_nonzero_mult_property]);
+  metis_tac[group_linv_unique, field_nonzero_mult_property]
+QED
 
 (*
 - show_assums := true;
@@ -1715,10 +1747,11 @@ val _ = export_rewrites ["field_inv_nonzero"];
 
 (* Theorem: Field r ==> x IN R => |/x IN R *)
 (* Proof: by field_inv_nonzero and field_nonzero_element. *)
-val field_inv_element = store_thm(
-  "field_inv_element",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> |/ x IN R``,
-  rw_tac std_ss[field_inv_nonzero, field_nonzero_element]);
+Theorem field_inv_element:
+    !r:'a field. Field r ==> !x. x IN R+ ==> |/ x IN R
+Proof
+  rw_tac std_ss[field_inv_nonzero, field_nonzero_element]
+QED
 
 val _ = export_rewrites ["field_inv_element"];
 
@@ -1739,32 +1772,36 @@ val _ = export_rewrites ["field_mult_linv", "field_mult_rinv"];
 
 (* Theorem: |/ x * x * y = y *)
 (* Proof: by field_mult_linv. *)
-val field_mult_linv_assoc = store_thm(
-  "field_mult_linv_assoc",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> (y = x * ( |/ x * y)) /\ (y = |/ x * (x * y))``,
-  metis_tac[field_mult_linv, field_mult_rinv, field_mult_lone, field_mult_assoc, field_inv_nonzero, field_nonzero_element]);
+Theorem field_mult_linv_assoc:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> (y = x * ( |/ x * y)) /\ (y = |/ x * (x * y))
+Proof
+  metis_tac[field_mult_linv, field_mult_rinv, field_mult_lone, field_mult_assoc, field_inv_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: x * |/ x * y = y *)
 (* Proof: by field_mult_rinv. *)
-val field_mult_rinv_assoc = store_thm(
-  "field_mult_rinv_assoc",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> (y = y * |/ x * x) /\ (y = y * x * |/ x)``,
-  rw_tac std_ss[field_mult_linv, field_mult_rinv, field_mult_rone, field_mult_assoc, field_inv_nonzero, field_nonzero_element]);
+Theorem field_mult_rinv_assoc:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> (y = y * |/ x * x) /\ (y = y * x * |/ x)
+Proof
+  rw_tac std_ss[field_mult_linv, field_mult_rinv, field_mult_rone, field_mult_assoc, field_inv_nonzero, field_nonzero_element]
+QED
 
 
 (* Theorem: x * y = x * z <=> y = z *)
 (* Proof: by field_mult_linv_assoc. *)
-val field_mult_lcancel = store_thm(
-  "field_mult_lcancel",
-  ``!r:'a field. Field r ==> !x y z. x IN R+ /\ y IN R /\ z IN R ==> ((x * y = x * z) = (y = z))``,
-  metis_tac[field_mult_linv_assoc, field_inv_nonzero]);
+Theorem field_mult_lcancel:
+    !r:'a field. Field r ==> !x y z. x IN R+ /\ y IN R /\ z IN R ==> ((x * y = x * z) = (y = z))
+Proof
+  metis_tac[field_mult_linv_assoc, field_inv_nonzero]
+QED
 
 (* Theorem: y * x = z * x <=> y = z *)
 (* Proof: by field_mult_lcancel and field_mult_comm. *)
-val field_mult_rcancel = store_thm(
-  "field_mult_rcancel",
-  ``!r:'a field. Field r ==> !x y z. x IN R+ /\ y IN R /\ z IN R ==> ((y * x = z * x) = (y = z))``,
-  rw_tac std_ss[field_mult_lcancel, field_mult_comm, field_nonzero_element]);
+Theorem field_mult_rcancel:
+    !r:'a field. Field r ==> !x y z. x IN R+ /\ y IN R /\ z IN R ==> ((y * x = z * x) = (y = z))
+Proof
+  rw_tac std_ss[field_mult_lcancel, field_mult_comm, field_nonzero_element]
+QED
 
 (* Theorem: Field r ==> !x. x IN R+ ==> !y. y IN R /\ ((x * y = x) \/ (y * x = x)) ==> (y = #1) *)
 (* Proof:
@@ -1773,13 +1810,14 @@ val field_mult_rcancel = store_thm(
     Also y * x = x = #1 * x         by field_mult_lone
       so     y = #1                 by field_mult_rcancel, x IN R+
 *)
-val field_nonzero_mult_eq_self = store_thm(
-  "field_nonzero_mult_eq_self",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !y. y IN R /\ ((x * y = x) \/ (y * x = x)) ==> (y = #1)``,
+Theorem field_nonzero_mult_eq_self:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !y. y IN R /\ ((x * y = x) \/ (y * x = x)) ==> (y = #1)
+Proof
   ntac 5 strip_tac >>
   `x IN R` by metis_tac[field_nonzero_eq] >>
   `#1 IN R /\ (x * #1 = x) /\ (#1 * x = x)` by rw[] >>
-  metis_tac[field_mult_lcancel, field_mult_rcancel]);
+  metis_tac[field_mult_lcancel, field_mult_rcancel]
+QED
 
 (* Theorem: !x y. x IN R+ /\ y IN R+ ==> (( |/ x * y = #1) <=> (x = y)) *)
 (* Proof:
@@ -1788,10 +1826,11 @@ val field_nonzero_mult_eq_self = store_thm(
    val it = |- Group f* ==> !x y. x IN F* /\ y IN F* ==> ((f*.op (f*.inv x) y = f*.id) <=> (x = y)): thm
    Then use field_nonzero_mult_property and field_mult_inv.
 *)
-val field_mult_linv_eq_one = store_thm(
-  "field_mult_linv_eq_one",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> (( |/ x * y = #1) <=> (x = y))``,
-  metis_tac[field_mult_group, group_op_linv_eq_id, field_nonzero_mult_property, field_mult_inv]);
+Theorem field_mult_linv_eq_one:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> (( |/ x * y = #1) <=> (x = y))
+Proof
+  metis_tac[field_mult_group, group_op_linv_eq_id, field_nonzero_mult_property, field_mult_inv]
+QED
 
 (* Theorem: !x y. x IN R+ /\ y IN R+ ==> ((x * |/ y = #1) <=> (x = y)) *)
 (* Proof:
@@ -1800,10 +1839,11 @@ val field_mult_linv_eq_one = store_thm(
    val it = |- Group f* ==> !x y. x IN F* /\ y IN F* ==> ((f*.op x (f*.inv y) = f*.id) <=> (x = y)): thm
    Then use field_nonzero_mult_property and field_mult_inv.
 *)
-val field_mult_rinv_eq_one = store_thm(
-  "field_mult_rinv_eq_one",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ((x * |/ y = #1) <=> (x = y))``,
-  metis_tac[field_mult_group, group_op_rinv_eq_id, field_nonzero_mult_property, field_mult_inv]);
+Theorem field_mult_rinv_eq_one:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ((x * |/ y = #1) <=> (x = y))
+Proof
+  metis_tac[field_mult_group, group_op_rinv_eq_id, field_nonzero_mult_property, field_mult_inv]
+QED
 
 (* Theorem: !x y z. x IN R+ /\ y IN R /\ z IN R ==> (( |/ x * y = z) <=> (y = x * z)) *)
 (* Proof:
@@ -1864,21 +1904,23 @@ QED
 
 (* Theorem: |/ (x * y) = |/ y * |/ x *)
 (* Proof: by group_inv_op, field_mult_inv, and r.prod group. *)
-val field_inv_mult_comm = store_thm(
-  "field_inv_mult_comm",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ( |/ (x * y) = |/ y * |/ x)``,
+Theorem field_inv_mult_comm:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ( |/ (x * y) = |/ y * |/ x)
+Proof
   metis_tac[group_inv_op |> SPEC ``f*`` |> UNDISCH_ALL
    |> PROVE_HYP (field_mult_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1) |> DISCH_ALL,
-   field_mult_group, field_nonzero_mult_property, group_op_element, field_mult_inv]);
+   field_mult_group, field_nonzero_mult_property, group_op_element, field_mult_inv]
+QED
 (* > val field_inv_mult_comm = |- !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ( |/ (x * y) = |/ y * |/ x) : thm *)
 (* Surprisingly, this is used in the proof of field_single_mult_inv_exp. *)
 
 (* Theorem: for Field, |/ (x * y) = |/ x * |/ y *)
 (* Proof: by field_inv_mult_comm and field_mult_comm. *)
-val field_inv_mult = store_thm(
-  "field_inv_mult",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ( |/ (x * y) = ( |/ x) * ( |/ y))``,
-  rw_tac std_ss[field_inv_mult_comm, field_mult_comm, field_inv_element]);
+Theorem field_inv_mult:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> ( |/ (x * y) = ( |/ x) * ( |/ y))
+Proof
+  rw_tac std_ss[field_inv_mult_comm, field_mult_comm, field_inv_element]
+QED
 
 (* export simple theorem *)
 val _ = export_rewrites ["field_inv_mult"];
@@ -1912,10 +1954,11 @@ QED
    then by field_nonzero_eq, x <> #0 but -x = #0
    This contradicts field_neg_eq_zero: - x = #0 <=> x = #0.
 *)
-val field_neg_nonzero = store_thm(
-  "field_neg_nonzero",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> - x IN R+``,
-  rw_tac std_ss[field_neg_eq_zero, field_nonzero_eq, field_nonzero_element, field_neg_element]);
+Theorem field_neg_nonzero:
+    !r:'a field. Field r ==> !x. x IN R+ ==> - x IN R+
+Proof
+  rw_tac std_ss[field_neg_eq_zero, field_nonzero_eq, field_nonzero_element, field_neg_element]
+QED
 
 (* export simple theorem *)
 val _ = export_rewrites ["field_neg_nonzero"];
@@ -1929,25 +1972,27 @@ val _ = export_rewrites ["field_neg_nonzero"];
    hence
       |/ (- x) = - ( |/ x)     by field_mult_rcancel
 *)
-val field_inv_neg = store_thm(
-  "field_inv_neg",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> ( |/ (- x) = - ( |/ x))``,
+Theorem field_inv_neg:
+    !r:'a field. Field r ==> !x. x IN R+ ==> ( |/ (- x) = - ( |/ x))
+Proof
   rpt strip_tac >>
   `- x IN R+ /\ |/x IN R+ /\ |/ (- x) IN R+ /\ - ( |/ x) IN R+` by rw[] >>
   `x IN R /\ |/ x IN R /\ |/ (- x) IN R /\ - ( |/ x) IN R` by rw_tac std_ss[field_nonzero_element] >>
-  metis_tac[field_mult_neg_neg, field_mult_linv, field_mult_rcancel]);
+  metis_tac[field_mult_neg_neg, field_mult_linv, field_mult_rcancel]
+QED
 
 (* export simple theorem *)
 val _ = export_rewrites ["field_inv_neg"];
 
 (* Theorem: x IN R+ ==> |/ x ** n = |/ (x ** n) *)
 (* Proof: by group_inv_exp. *)
-val field_inv_exp = store_thm(
-  "field_inv_exp",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !n. |/ x ** n = |/ (x ** n)``,
+Theorem field_inv_exp:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !n. |/ x ** n = |/ (x ** n)
+Proof
   metis_tac[group_inv_exp |> SPEC ``f*`` |> UNDISCH_ALL
    |> PROVE_HYP (field_mult_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1) |> DISCH_ALL,
-   field_mult_group, field_nonzero_mult_property, group_exp_element, field_mult_inv]);
+   field_mult_group, field_nonzero_mult_property, group_exp_element, field_mult_inv]
+QED
 (* > val field_inv_exp = |- !r:'a field. Field r ==> !x. x IN R+ ==> !n. |/ x ** n = |/ (x ** n) : thm *)
 
 (* export simple theorem *)
@@ -1955,42 +2000,45 @@ val _ = export_rewrites ["field_inv_exp"];
 
 (* Theorem: x IN R+ ==> |/ (x ** n) = |/ x ** n *)
 (* Proof: by group_exp_inv. *)
-val field_exp_inv = store_thm(
-  "field_exp_inv",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !n. |/ (x ** n) = |/ x ** n``,
+Theorem field_exp_inv:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !n. |/ (x ** n) = |/ x ** n
+Proof
   metis_tac[group_exp_inv |> SPEC ``f*`` |> UNDISCH_ALL
    |> PROVE_HYP (field_mult_group |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1) |> DISCH_ALL,
-   field_mult_group, field_nonzero_mult_property, group_exp_element, field_mult_inv]);
+   field_mult_group, field_nonzero_mult_property, group_exp_element, field_mult_inv]
+QED
 (* > val field_exp_inv = |- !r:'a field. Field r ==> !x. x IN R+ ==> !n. |/ (x ** n) = |/ x ** n : thm *)
 
 (* Theorem: x ** n * |/ x = if n = 0 then |/ x else x ** (n - 1) *)
 (* Proof: by cases on n = 0. *)
-val field_mult_exp_inv = store_thm(
-  "field_mult_exp_inv",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !n. x ** n * |/ x = if n = 0 then |/ x else x ** (n - 1)``,
+Theorem field_mult_exp_inv:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !n. x ** n * |/ x = if n = 0 then |/ x else x ** (n - 1)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[] >-
   rw[field_nonzero_element] >>
   `n = SUC (n-1)` by decide_tac >>
   `x IN R /\ |/ x IN R` by rw[field_nonzero_element] >>
   `x ** n * |/ x = x ** (n-1) * x * |/ x` by metis_tac[field_exp_suc] >>
-  rw[field_mult_assoc]);
+  rw[field_mult_assoc]
+QED
 
 (* Theorem: x ** n * ( |/ x * y) = if n = 0 then |/ x * y else x ** (n - 1) * y *)
 (* Proof: by field_mult_exp_inv. *)
-val field_mult_exp_inv_assoc = store_thm(
-  "field_mult_exp_inv_assoc",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> !n. x ** n * ( |/ x * y) = if n = 0 then |/ x * y else x ** (n - 1) * y``,
+Theorem field_mult_exp_inv_assoc:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> !n. x ** n * ( |/ x * y) = if n = 0 then |/ x * y else x ** (n - 1) * y
+Proof
   rpt strip_tac >>
   `x ** n IN R /\ |/x IN R` by rw[field_nonzero_element] >>
   `x ** n * ( |/ x * y) = (x ** n * |/ x) * y` by rw[field_mult_assoc] >>
-  rw_tac std_ss[field_mult_exp_inv]);
+  rw_tac std_ss[field_mult_exp_inv]
+QED
 
 (* Theorem: x ** m * |/ (x ** n) = if m < n then |/ (x ** (n - m)) else x ** (m - n) *)
 (* Proof: by cases of m < n. *)
-val field_mult_exp_inv_exp = store_thm(
-  "field_mult_exp_inv_exp",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !m n. x ** m * |/ (x ** n) = if m < n then |/ (x ** (n - m)) else x ** (m - n)``,
+Theorem field_mult_exp_inv_exp:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !m n. x ** m * |/ (x ** n) = if m < n then |/ (x ** (n - m)) else x ** (m - n)
+Proof
   rpt strip_tac >>
   `x IN R /\ |/ x IN R+ /\ |/ x IN R` by rw[field_nonzero_element] >>
   rw_tac std_ss[] >| [
@@ -2003,71 +2051,79 @@ val field_mult_exp_inv_exp = store_thm(
     `x ** m * |/ (x ** n) = x ** (m - n) * x ** n * |/ (x ** n)`
       by metis_tac[field_exp_add, DECIDE ``~(m < n) ==> (m = m - n + n)``] >>
     rw[field_mult_assoc, field_nonzero_element]
-  ]);
+  ]
+QED
 
 (* Theorem: x ** m * ( |/ (x ** n) * y) = if m < n then |/ (x ** (n - m)) * y else x ** (m - n) * y *)
 (* Proof: by field_mult_exp_inv_exp. *)
-val field_mult_exp_inv_exp_assoc = store_thm(
-  "field_mult_exp_inv_exp_assoc",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==>
-   !m n. x ** m * ( |/ (x ** n) * y) =  if m < n then |/ (x ** (n - m)) * y else x ** (m - n) * y``,
+Theorem field_mult_exp_inv_exp_assoc:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==>
+   !m n. x ** m * ( |/ (x ** n) * y) =  if m < n then |/ (x ** (n - m)) * y else x ** (m - n) * y
+Proof
   rpt strip_tac >>
   `x ** m * ( |/ (x ** n) * y) = x ** m * |/ (x ** n) * y` by rw[field_mult_assoc, field_nonzero_element] >>
-  rw_tac std_ss[field_mult_exp_inv_exp]);
+  rw_tac std_ss[field_mult_exp_inv_exp]
+QED
 
 (* Theorem: |/ x * |/ x = |/ (x ** 2) *)
 (* Proof: |/ x * |/ x = | /(x * x) = |/ (x ** 2) *)
-val field_inv_mult_inv = store_thm(
-  "field_inv_mult_inv",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> ( |/ x * |/ x = |/ (x ** 2))``,
-  rw_tac std_ss[field_inv_mult, field_exp_small, field_nonzero_element]);
+Theorem field_inv_mult_inv:
+    !r:'a field. Field r ==> !x. x IN R+ ==> ( |/ x * |/ x = |/ (x ** 2))
+Proof
+  rw_tac std_ss[field_inv_mult, field_exp_small, field_nonzero_element]
+QED
 
 (* Theorem: |/ x * ( |/ x * y) = |/ (x ** 2) * y *)
 (* Proof: by field_inv_mult_inv. *)
-val field_inv_mult_inv_assoc = store_thm(
-  "field_inv_mult_inv_assoc",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> ( |/ x * ( |/ x * y) = |/ (x ** 2) * y)``,
+Theorem field_inv_mult_inv_assoc:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> ( |/ x * ( |/ x * y) = |/ (x ** 2) * y)
+Proof
   rpt strip_tac >>
   `|/ x * ( |/ x * y) = |/ x * |/ x * y` by rw[field_mult_assoc] >>
-  rw_tac std_ss[field_inv_mult_inv]);
+  rw_tac std_ss[field_inv_mult_inv]
+QED
 
 (* Theorem: |/ x * |/ (x ** n) = |/ (x ** (n + 1)) *)
 (* Proof: by field_inv_mult and field_single_mult_exp. *)
-val field_inv_mult_inv_exp = store_thm(
-  "field_inv_mult_inv_exp",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !n. |/ x * |/ (x ** n) = |/ (x ** (n + 1))``,
-  metis_tac[field_inv_mult, field_single_mult_exp, field_exp_nonzero, field_nonzero_element]);
+Theorem field_inv_mult_inv_exp:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !n. |/ x * |/ (x ** n) = |/ (x ** (n + 1))
+Proof
+  metis_tac[field_inv_mult, field_single_mult_exp, field_exp_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: |/ x * ( |/ (x ** n) * y) = |/ (x ** (n + 1)) * y *)
 (* Proof: by field_inv_mult_inv_exp. *)
-val field_inv_mult_inv_exp_assoc = store_thm(
-  "field_inv_mult_inv_exp_assoc",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> !n. |/ x * ( |/ (x ** n) * y) = |/ (x ** (n + 1)) * y``,
+Theorem field_inv_mult_inv_exp_assoc:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> !n. |/ x * ( |/ (x ** n) * y) = |/ (x ** (n + 1)) * y
+Proof
   rpt strip_tac >>
   `|/ x * ( |/ (x ** n) * y) = |/ x * |/ (x ** n) * y` by rw[field_mult_assoc, field_nonzero_element] >>
-  rw_tac std_ss[field_inv_mult_inv_exp]);
+  rw_tac std_ss[field_inv_mult_inv_exp]
+QED
 
 (* Theorem: |/ (x ** m) * |/ (x ** n) = |/ (x ** (m + n)) *)
 (* Proof: by field_inv_mult, field_exp_add. *)
-val field_inv_exp_mult_inv_exp = store_thm(
-  "field_inv_exp_mult_inv_exp",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !m n. |/ (x ** m) * |/ (x ** n) = |/ (x ** (m + n))``,
-  rw_tac std_ss[field_inv_mult, field_exp_add, field_exp_nonzero, field_nonzero_element]);
+Theorem field_inv_exp_mult_inv_exp:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !m n. |/ (x ** m) * |/ (x ** n) = |/ (x ** (m + n))
+Proof
+  rw_tac std_ss[field_inv_mult, field_exp_add, field_exp_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: |/ (x ** m) * ( |/ (x ** n) * y) = |/ (x ** (m + n)) * y *)
 (* Proof: by field_inv_exp_mult_inv_exp. *)
-val field_inv_exp_mult_inv_exp_assoc = store_thm(
-  "field_inv_exp_mult_inv_exp_assoc",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> !m n. |/ (x ** m) * ( |/ (x ** n) * y) = |/ (x ** (m + n)) * y``,
+Theorem field_inv_exp_mult_inv_exp_assoc:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==> !m n. |/ (x ** m) * ( |/ (x ** n) * y) = |/ (x ** (m + n)) * y
+Proof
   rpt strip_tac >>
   `|/ (x ** m) * ( |/ (x ** n) * y) = |/ (x ** m) * |/ (x ** n) * y` by rw[field_mult_assoc] >>
-  rw_tac std_ss[field_inv_exp_mult_inv_exp]);
+  rw_tac std_ss[field_inv_exp_mult_inv_exp]
+QED
 
 (* Theorem: x * |/ (x ** n) = if n = 0 then x else |/ (x ** (n - 1)) *)
 (* Proof: by cases on n = 0. *)
-val field_single_mult_inv_exp = store_thm(
-  "field_single_mult_inv_exp",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !n. x * |/ (x ** n) = if n = 0 then x else |/ (x ** (n - 1))``,
+Theorem field_single_mult_inv_exp:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !n. x * |/ (x ** n) = if n = 0 then x else |/ (x ** (n - 1))
+Proof
   rpt strip_tac >>
   rw_tac std_ss[] >-
   rw[field_nonzero_element] >>
@@ -2075,17 +2131,19 @@ val field_single_mult_inv_exp = store_thm(
   `n = SUC(n - 1)` by decide_tac >>
   `x * |/ (x ** n) = x * |/ (x ** (n-1) * x)` by metis_tac[field_exp_suc] >>
   `_ = x * |/ x * |/ (x ** (n-1))` by rw_tac std_ss[field_inv_mult_comm, field_mult_assoc] >>
-  rw_tac std_ss[field_mult_lone, field_mult_rinv]);
+  rw_tac std_ss[field_mult_lone, field_mult_rinv]
+QED
 
 (* Theorem: x * ( |/ (x ** n) * y) = if n = 0 then x * y else |/ (x ** (n - 1)) * y *)
 (* Proof: by field_single_mult_inv_exp. *)
-val field_single_mult_inv_exp_assoc = store_thm(
-  "field_single_mult_inv_exp_assoc",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==>
-   !n. x * ( |/ (x ** n) * y) = if n = 0 then x * y else |/ (x ** (n - 1)) * y``,
+Theorem field_single_mult_inv_exp_assoc:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R ==>
+   !n. x * ( |/ (x ** n) * y) = if n = 0 then x * y else |/ (x ** (n - 1)) * y
+Proof
   rpt strip_tac >>
   `x * ( |/ (x ** n) * y) = x * |/ (x ** n) * y` by rw[field_mult_assoc, field_nonzero_element] >>
-  rw_tac std_ss[field_single_mult_inv_exp]);
+  rw_tac std_ss[field_single_mult_inv_exp]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Division Theorems.                                                  *)
@@ -2102,17 +2160,19 @@ val _ = export_rewrites ["field_div_def"];
 
 (* Theorem: x / y IN R *)
 (* Proof: by definition. *)
-val field_div_element = store_thm(
-  "field_div_element",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> x / y IN R``,
-  rw_tac std_ss[field_div_def, field_inv_element, field_mult_element]);
+Theorem field_div_element:
+    !r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> x / y IN R
+Proof
+  rw_tac std_ss[field_div_def, field_inv_element, field_mult_element]
+QED
 
 (* Theorem: x / y IN R+ *)
 (* Proof: by definition. *)
-val field_div_nonzero = store_thm(
-  "field_div_nonzero",
-  ``!r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> x / y IN R+``,
-  rw_tac std_ss[field_div_def, field_inv_nonzero, field_mult_nonzero]);
+Theorem field_div_nonzero:
+    !r:'a field. Field r ==> !x y. x IN R+ /\ y IN R+ ==> x / y IN R+
+Proof
+  rw_tac std_ss[field_div_def, field_inv_nonzero, field_mult_nonzero]
+QED
 
 val _ = export_rewrites ["field_div_element", "field_div_nonzero"];
 
@@ -2122,10 +2182,11 @@ val _ = export_rewrites ["field_div_element", "field_div_nonzero"];
             = - (x * |/ y)   by field_mult_lneg
             = - (x / y)      by field_div_def
 *)
-val field_div_lneg = store_thm(
-  "field_div_lneg",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> (- x / y = - (x / y))``,
-  rw_tac std_ss[field_div_def, field_mult_lneg, field_inv_element]);
+Theorem field_div_lneg:
+    !r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> (- x / y = - (x / y))
+Proof
+  rw_tac std_ss[field_div_def, field_mult_lneg, field_inv_element]
+QED
 
 (* Theorem:  x / - y = - (x / y) *)
 (* Proof:
@@ -2134,19 +2195,21 @@ val field_div_lneg = store_thm(
             = - (x * |/ y)   by field_mult_rneg
             = - (x / y)      by field_div_def
 *)
-val field_div_rneg = store_thm(
-  "field_div_rneg",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> (x / - y = - (x / y))``,
-  rw_tac std_ss[field_div_def, field_mult_rneg, field_inv_neg, field_inv_element]);
+Theorem field_div_rneg:
+    !r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> (x / - y = - (x / y))
+Proof
+  rw_tac std_ss[field_div_def, field_mult_rneg, field_inv_neg, field_inv_element]
+QED
 
 val _ = export_rewrites ["field_div_lneg", "field_div_rneg"];
 
 (* Theorem:  - (x / y) = x / - y and  - (x / y) = - x / y *)
 (* Proof: by field_div_lneg and field_div_rneg. *)
-val field_neg_div = store_thm(
-  "field_neg_div",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> ((- (x / y) = - x / y) /\ (- (x / y) = x / - y))``,
-  rw_tac std_ss[field_div_lneg, field_div_rneg]);
+Theorem field_neg_div:
+    !r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> ((- (x / y) = - x / y) /\ (- (x / y) = x / - y))
+Proof
+  rw_tac std_ss[field_div_lneg, field_div_rneg]
+QED
 
 (* Theorem: x + y / z = (x * z + y) / z *)
 (* Proof:
@@ -2157,13 +2220,14 @@ val field_neg_div = store_thm(
    = (x * z + y) * |/ z          by field_mult_ladd
    = (x * z + y) / z             by field_div_def
 *)
-val field_div_ladd = store_thm(
-  "field_div_ladd",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x + y / z = (x * z + y) / z)``,
+Theorem field_div_ladd:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x + y / z = (x * z + y) / z)
+Proof
   rpt strip_tac >>
   `|/ z IN R+ /\ z IN R /\ |/ z IN R` by rw[field_nonzero_element] >>
   `x + (y / z) =  |/ z * (z * x) + y * |/ z` by metis_tac[field_mult_linv_assoc, field_div_def] >>
-  rw_tac std_ss[field_div_def, field_mult_ladd, field_mult_comm, field_mult_element]);
+  rw_tac std_ss[field_div_def, field_mult_ladd, field_mult_comm, field_mult_element]
+QED
 
 (* Theorem: y / z + x = (y + x * z) / z *)
 (* Proof:
@@ -2172,12 +2236,13 @@ val field_div_ladd = store_thm(
    = (x * z + y) / z   by field_div_ladd
    = (y + x * z) / z   by field_add_comm
 *)
-val field_div_radd = store_thm(
-  "field_div_radd",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (y / z + x = (y + x * z) / z)``,
+Theorem field_div_radd:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (y / z + x = (y + x * z) / z)
+Proof
   rpt strip_tac >>
   `|/ z IN R+ /\ z IN R /\ |/ z IN R` by rw[field_nonzero_element] >>
-  rw[field_div_ladd, field_add_comm]);
+  rw[field_div_ladd, field_add_comm]
+QED
 
 (* Theorem: x - y / z = (x * z - y) / z *)
 (* Proof:
@@ -2186,13 +2251,14 @@ val field_div_radd = store_thm(
              = (x * z + - y) / z   by field_div_ladd
              = (x * z - y) / z     by field_sub_def
 *)
-val field_div_lsub = store_thm(
-  "field_div_lsub",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x - y / z = (x * z - y) / z)``,
+Theorem field_div_lsub:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x - y / z = (x * z - y) / z)
+Proof
   rpt strip_tac >>
   `|/ z IN R+ /\ z IN R /\ |/ z IN R /\ -y IN R` by rw[field_nonzero_element] >>
   `x - y / z = x + (- y /z)` by rw_tac std_ss[field_div_lneg, field_sub_def] >>
-  rw_tac std_ss[field_div_ladd, field_sub_def]);
+  rw_tac std_ss[field_div_ladd, field_sub_def]
+QED
 
 (* Theorem:  y / z - x = (y - x * z) / z *)
 (* Proof:
@@ -2201,11 +2267,12 @@ val field_div_lsub = store_thm(
              = (y + - (x * z)) / z   by field_mult_lneg
              = (y - x * z) / z       by field_sub_def
 *)
-val field_div_rsub = store_thm(
-  "field_div_rsub",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (y / z - x = (y - x * z) / z)``,
+Theorem field_div_rsub:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (y / z - x = (y - x * z) / z)
+Proof
   rw_tac std_ss[field_div_radd, field_mult_lneg, field_sub_def,
-    field_inv_nonzero, field_nonzero_element, field_neg_element]);
+    field_inv_nonzero, field_nonzero_element, field_neg_element]
+QED
 
 (* Theorem: x * (y / z) = x * y / z *)
 (* Proof:
@@ -2214,10 +2281,11 @@ val field_div_rsub = store_thm(
    = (x * y) * |/ z  by field_mult_assoc
    = x * y / z       by field_div_def
 *)
-val field_div_lmult = store_thm(
-  "field_div_lmult",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x * (y / z) = x * y / z)``,
-  rw_tac std_ss[field_div_def, field_mult_assoc, field_inv_element]);
+Theorem field_div_lmult:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x * (y / z) = x * y / z)
+Proof
+  rw_tac std_ss[field_div_def, field_mult_assoc, field_inv_element]
+QED
 
 (* Theorem: (y / z) * x = y * x / z *)
 (* Proof:
@@ -2228,10 +2296,11 @@ val field_div_lmult = store_thm(
    = (y * x) * |/ z   by field_mult_assoc
    = (y * x) / z      by field_div_def
 *)
-val field_div_rmult = store_thm(
-  "field_div_rmult",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> ((y / z) * x = y * x / z)``,
-  rw_tac std_ss[field_div_def, field_mult_comm, field_mult_assoc, field_inv_nonzero, field_nonzero_element]);
+Theorem field_div_rmult:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> ((y / z) * x = y * x / z)
+Proof
+  rw_tac std_ss[field_div_def, field_mult_comm, field_mult_assoc, field_inv_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: (x / y) ** n = x ** n / y ** n *)
 (* Proof:
@@ -2241,10 +2310,11 @@ val field_div_rmult = store_thm(
    = x ** n * |/ (y ** n)   by field_inv_exp
    = x ** n / y ** n        by field_div_def
 *)
-val field_div_exp = store_thm(
-  "field_div_exp",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> !n. (x / y) ** n = x ** n / y ** n``,
-  rw_tac std_ss[field_mult_exp, field_inv_exp, field_div_def, field_inv_nonzero, field_nonzero_element]);
+Theorem field_div_exp:
+    !r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> !n. (x / y) ** n = x ** n / y ** n
+Proof
+  rw_tac std_ss[field_mult_exp, field_inv_exp, field_div_def, field_inv_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: x / y / z = x / (y * z) *)
 (* Proof:
@@ -2254,10 +2324,11 @@ val field_div_exp = store_thm(
    = x * |/ (y * z)      by field_inv_mult
    = x / (y * z)         by field_div_def
 *)
-val field_div_ldiv = store_thm(
-  "field_div_ldiv",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R+ /\ z IN R+ ==> (x / y / z = x / (y * z))``,
-  rw_tac std_ss[field_inv_mult, field_mult_assoc, field_div_def, field_inv_nonzero, field_nonzero_element]);
+Theorem field_div_ldiv:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R+ /\ z IN R+ ==> (x / y / z = x / (y * z))
+Proof
+  rw_tac std_ss[field_inv_mult, field_mult_assoc, field_div_def, field_inv_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: x / (y / z) = (x * z) / y *)
 (* Proof:
@@ -2269,11 +2340,12 @@ val field_div_ldiv = store_thm(
    = (x * z) * |/ y         by field_mult_assoc
    = (x * z) / y            by field_div_def
 *)
-val field_div_rdiv = store_thm(
-  "field_div_rdiv",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R+ /\ z IN R+ ==> (x / (y / z) = (x * z) / y)``,
+Theorem field_div_rdiv:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R+ /\ z IN R+ ==> (x / (y / z) = (x * z) / y)
+Proof
   rw_tac std_ss[field_inv_mult, field_inv_inv, field_mult_comm, field_mult_assoc,
-    field_div_def, field_inv_nonzero, field_nonzero_element]);
+    field_div_def, field_inv_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: y / z + x = (y + z * x) / z *)
 (* Proof:
@@ -2283,11 +2355,12 @@ val field_div_rdiv = store_thm(
    = (y + x * z) / z   by field_add_comm
    = (y + z * x) / z   by field_mult_comm
 *)
-val field_add_ldiv = store_thm(
-  "field_add_ldiv",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (y / z + x = (y + z * x) / z)``,
+Theorem field_add_ldiv:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (y / z + x = (y + z * x) / z)
+Proof
   rw_tac std_ss[field_div_ladd, field_add_comm, field_mult_comm, field_mult_element,
-    field_div_element, field_inv_nonzero, field_nonzero_element]);
+    field_div_element, field_inv_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: y / z + (x + t) = (y + z * x) / z + t *)
 (* Proof:
@@ -2295,12 +2368,13 @@ val field_add_ldiv = store_thm(
    = (y / z + x) + t       by field_add_assoc
    = (y + z * x) / z + t   by field_add_ldiv
 *)
-val field_add_ldiv_assoc = store_thm(
-  "field_add_ldiv_assoc",
-  ``!r:'a field. Field r ==> !x y t z. x IN R /\ y IN R /\ t IN R /\ z IN R+ ==> (y / z + (x + t) = (y + z * x) / z + t)``,
+Theorem field_add_ldiv_assoc:
+    !r:'a field. Field r ==> !x y t z. x IN R /\ y IN R /\ t IN R /\ z IN R+ ==> (y / z + (x + t) = (y + z * x) / z + t)
+Proof
   rpt strip_tac >>
   `y / z + (x + t) = (y / z + x) + t` by rw[field_add_assoc] >>
-  rw_tac std_ss[field_add_ldiv]);
+  rw_tac std_ss[field_add_ldiv]
+QED
 
 (* Theorem: x + y / z = (z * x + y) / z *)
 (* Proof:
@@ -2310,13 +2384,14 @@ val field_add_ldiv_assoc = store_thm(
    = (x * z + y) / z  by field_add_comm
    = (z * x + y) / z  by field_mult_comm
 *)
-val field_add_rdiv = store_thm(
-  "field_add_rdiv",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x + y / z = (z * x + y) / z)``,
+Theorem field_add_rdiv:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x + y / z = (z * x + y) / z)
+Proof
   rpt strip_tac >>
   `|/ z IN R+ /\ z IN R /\ |/ z IN R /\ y / z IN R /\ x * z IN R` by rw[field_nonzero_element] >>
   `x + y / z = y / z + x` by rw_tac std_ss[field_add_comm] >>
-  rw_tac std_ss[field_div_radd, field_add_comm, field_mult_comm]);
+  rw_tac std_ss[field_div_radd, field_add_comm, field_mult_comm]
+QED
 
 (* Theorem: x + (y / z + t) = (z * x + y) / z + t *)
 (* Proof:
@@ -2324,12 +2399,13 @@ val field_add_rdiv = store_thm(
    = (x + y / z) + t      by field_add_assoc
    = (z * x + y) / z + t  by field_add_rdiv
 *)
-val field_add_rdiv_assoc = store_thm(
-  "field_add_rdiv_assoc",
-  ``!r:'a field. Field r ==> !x y t z. x IN R /\ y IN R /\ t IN R /\ z IN R+ ==> (x + (y / z + t) = (z * x + y) / z + t)``,
+Theorem field_add_rdiv_assoc:
+    !r:'a field. Field r ==> !x y t z. x IN R /\ y IN R /\ t IN R /\ z IN R+ ==> (x + (y / z + t) = (z * x + y) / z + t)
+Proof
   rpt strip_tac >>
   `x + (y / z + t) = (x + y / z) + t` by rw[field_add_assoc] >>
-  rw_tac std_ss[field_add_rdiv]);
+  rw_tac std_ss[field_add_rdiv]
+QED
 
 (* Theorem: (x / y) * y = x *)
 (* Proof:
@@ -2339,10 +2415,11 @@ val field_add_rdiv_assoc = store_thm(
    = x * #1          by field_mult_linv
    = x               by field_mult_rone
 *)
-val field_div_mult_cancel = store_thm(
-  "field_div_mult_cancel",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> ((x / y) * y = x)``,
-  rw_tac std_ss[field_mult_linv, field_mult_rone, field_mult_assoc, field_div_def, field_inv_nonzero, field_nonzero_element]);
+Theorem field_div_mult_cancel:
+    !r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> ((x / y) * y = x)
+Proof
+  rw_tac std_ss[field_mult_linv, field_mult_rone, field_mult_assoc, field_div_def, field_inv_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: x / z + y / z = (x + y) / z *)
 (* Proof:
@@ -2350,10 +2427,11 @@ val field_div_mult_cancel = store_thm(
    = ((x / z) * z + y) / z     by field_div_ladd
    = (x + y) / z               by field_div_mult_cancel
 *)
-val field_div_add_common = store_thm(
-  "field_div_add_common",
-  ``!r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x / z + y / z = (x + y) / z)``,
-  rw_tac std_ss[field_div_mult_cancel, field_div_ladd, field_div_element, field_inv_nonzero, field_nonzero_element]);
+Theorem field_div_add_common:
+    !r:'a field. Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x / z + y / z = (x + y) / z)
+Proof
+  rw_tac std_ss[field_div_mult_cancel, field_div_ladd, field_div_element, field_inv_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: v / (x * y) + w / (x * z) = (z * v + y * w) / (x * (y * z)) *)
 (* Proof:
@@ -2371,10 +2449,10 @@ val field_div_add_common = store_thm(
    = (z * v) / (x * (y * z)) + (y * w) / (x * (y * z))             by field_div_def
    = (z * v + y * w) / x * (y * z)                                 by field_div_add_common
 *)
-val field_add_div = store_thm(
-  "field_add_div",
-  ``!r:'a field. Field r ==> !v w x y z. v IN R /\ w IN R /\ x IN R+ /\ y IN R+ /\ z IN R+ ==>
-                            (v / (x * y) + w / (x * z) = (z * v + y * w) / (x * (y * z)))``,
+Theorem field_add_div:
+    !r:'a field. Field r ==> !v w x y z. v IN R /\ w IN R /\ x IN R+ /\ y IN R+ /\ z IN R+ ==>
+                            (v / (x * y) + w / (x * z) = (z * v + y * w) / (x * (y * z)))
+Proof
   rpt strip_tac >>
   `!t. t IN R+ ==> |/t IN R+ /\ t IN R /\ |/t IN R` by rw_tac std_ss[field_inv_nonzero, field_nonzero_element] >>
   `!p q. p IN R /\ q IN R ==> p * q IN R` by rw_tac std_ss[field_mult_element] >>
@@ -2386,7 +2464,8 @@ val field_add_div = store_thm(
   `_ = v * z * |/ (x * (y * z)) + w * y * |/ (x * (z * y))` by rw_tac std_ss[field_mult_assoc] >>
   `_ = z * v * |/ (x * (y * z)) + y * w * |/ (x * (y * z))` by rw_tac std_ss[field_mult_comm] >>
   `_ = (z * v) / (x * (y * z)) + (y * w) / (x * (y * z))` by rw_tac std_ss[field_div_def] >>
-  rw_tac std_ss[field_div_add_common]);
+  rw_tac std_ss[field_div_add_common]
+QED
 
 (* Theorem: v / (x * y) + (w / (x * z) + t) = (z * v + y * w) / (x * (y * z)) + t *)
 (* Proof:
@@ -2394,14 +2473,15 @@ val field_add_div = store_thm(
    = (v / (x * y) + w / (x * z)) + t      by field_add_assoc
    = (z * v + y * w) / (x * (y * z)) + t  by field_add_div
 *)
-val field_add_div_assoc = store_thm(
-  "field_add_div_assoc",
-  ``!r:'a field. Field r ==> !v w t x y z. v IN R /\ w IN R /\ t IN R /\ x IN R+ /\ y IN R+ /\ z IN R+ ==>
-                            (v / (x * y) + (w / (x * z) + t) = (z * v + y * w) / (x * (y * z)) + t)``,
+Theorem field_add_div_assoc:
+    !r:'a field. Field r ==> !v w t x y z. v IN R /\ w IN R /\ t IN R /\ x IN R+ /\ y IN R+ /\ z IN R+ ==>
+                            (v / (x * y) + (w / (x * z) + t) = (z * v + y * w) / (x * (y * z)) + t)
+Proof
   rpt strip_tac >>
   `v / (x * y) IN R /\ w / (x * z) IN R` by rw[] >>
   `v / (x * y) + (w / (x * z) + t) = (v / (x * y) + w / (x * z)) + t` by rw[field_add_assoc] >>
-  rw_tac std_ss[field_add_div]);
+  rw_tac std_ss[field_add_div]
+QED
 
 (* Theorem: (x * y) / y = x *)
 (* Proof:
@@ -2412,10 +2492,11 @@ val field_add_div_assoc = store_thm(
    = x               by field_mult_rone
    or almost by group_rinv_assoc, but x in R, not R+, so make a case for x = #0.
 *)
-val field_mult_div_cancel = store_thm(
-  "field_mult_div_cancel",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> ((x * y) / y = x)``,
-  rw[field_mult_assoc, field_nonzero_element]);
+Theorem field_mult_div_cancel:
+    !r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> ((x * y) / y = x)
+Proof
+  rw[field_mult_assoc, field_nonzero_element]
+QED
 
 (* Theorem: (x * y) / (x * z) = y / z *)
 (* Proof:
@@ -2424,37 +2505,41 @@ val field_mult_div_cancel = store_thm(
    = (y * x) / x / z    by field_mult_comm
    = x / z              by field_mult_div_cancel
 *)
-val field_div_cancel = store_thm(
-  "field_div_cancel",
-  ``!r:'a field. Field r ==> !x y z. x IN R+ /\ y IN R /\ z IN R+ ==> ((x * y) / (x * z) = y / z)``,
+Theorem field_div_cancel:
+    !r:'a field. Field r ==> !x y z. x IN R+ /\ y IN R /\ z IN R+ ==> ((x * y) / (x * z) = y / z)
+Proof
   rpt strip_tac >>
   `x IN R /\ x * y IN R` by rw[field_nonzero_element] >>
   `(x * y) / (x * z) = (x * y) / x / z` by rw_tac std_ss[field_div_ldiv] >>
   `_ = (y * x) / x / z` by rw_tac std_ss[field_mult_comm] >>
-  rw_tac std_ss[field_mult_div_cancel]);
+  rw_tac std_ss[field_mult_div_cancel]
+QED
 
 (* Theorem: |/ x <> #0 *)
 (* Proof: by field_inv_nonzero, field_nonzero_eq *)
-val field_inv_not_zero = store_thm(
-  "field_inv_not_zero",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> |/ x <> #0``,
-  metis_tac[field_nonzero_eq, field_inv_nonzero, field_nonzero_element]);
+Theorem field_inv_not_zero:
+    !r:'a field. Field r ==> !x. x IN R+ ==> |/ x <> #0
+Proof
+  metis_tac[field_nonzero_eq, field_inv_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: (x / y = #0) <=> (x = #0) *)
 (* Proof: by field_mult_eq_zero and field_inv_not_zero *)
-val field_div_eq_zero = store_thm(
-  "field_div_eq_zero",
-  ``!r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> ((x / y = #0) <=> (x = #0))``,
+Theorem field_div_eq_zero:
+    !r:'a field. Field r ==> !x y. x IN R /\ y IN R+ ==> ((x / y = #0) <=> (x = #0))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >-
   metis_tac[field_mult_eq_zero, field_inv_not_zero, field_inv_element, field_div_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Field r ==> !x. x IN R ==> (#0 rdivides x <=> (x = #0)) *)
 (* Proof: by ring_zero_divides, field_is_ring *)
-val field_zero_divides = store_thm(
-  "field_zero_divides",
-  ``!r:'a field. Field r ==> !x. x IN R ==> (#0 rdivides x <=> (x = #0))``,
-  rw[ring_zero_divides]);
+Theorem field_zero_divides:
+    !r:'a field. Field r ==> !x. x IN R ==> (#0 rdivides x <=> (x = #0))
+Proof
+  rw[ring_zero_divides]
+QED
 
 (* Theorem: Field r ==> !x y z. x IN R /\ y IN R /\ z IN R+ ==> (x = y * z <=> y = x / z) *)
 (* Proof:
@@ -2508,26 +2593,29 @@ QED
    (2) #1 <> #0, true                             by field_one_ne_zero
    (3) x * y = #0 <=> (x = #0) \/ (y = #0), true  by field_mult_eq_zero
 *)
-val field_is_integral_domain = store_thm(
-  "field_is_integral_domain",
-  ``!r:'a field. Field r ==> IntegralDomain r``,
-  rw_tac std_ss[field_is_ring, field_one_ne_zero, field_mult_eq_zero, IntegralDomain_def]);
+Theorem field_is_integral_domain:
+    !r:'a field. Field r ==> IntegralDomain r
+Proof
+  rw_tac std_ss[field_is_ring, field_one_ne_zero, field_mult_eq_zero, IntegralDomain_def]
+QED
 
 (* Theorem: Field r ==> !x. x IN R /\ x <> #0 ==>
             !m n. m < n /\ (x ** m = x ** n) ==> (x ** (n - m) = #1) *)
 (* Proof: by integral_domain_exp_eq *)
-val field_exp_eq = store_thm(
-  "field_exp_eq",
-  ``!r:'a field. Field r ==> !x. x IN R /\ x <> #0 ==>
-   !m n. m < n /\ (x ** m = x ** n) ==> (x ** (n - m) = #1)``,
-  rw_tac std_ss[field_is_integral_domain, integral_domain_exp_eq, field_nonzero_eq]);
+Theorem field_exp_eq:
+    !r:'a field. Field r ==> !x. x IN R /\ x <> #0 ==>
+   !m n. m < n /\ (x ** m = x ** n) ==> (x ** (n - m) = #1)
+Proof
+  rw_tac std_ss[field_is_integral_domain, integral_domain_exp_eq, field_nonzero_eq]
+QED
 
 (* Theorem: FiniteField r ==> FiniteIntegralDomain r *)
 (* Proof: by finite_integral_domain_is_field, FiniteIntegralDomain_def, FiniteField_def *)
-val finite_field_is_finite_integral_domain = store_thm(
-  "finite_field_is_finite_integral_domain",
-  ``!r:'a ring. FiniteField r ==> FiniteIntegralDomain r``,
-  rw_tac std_ss[FiniteIntegralDomain_def, FiniteField_def, field_is_integral_domain]);
+Theorem finite_field_is_finite_integral_domain:
+    !r:'a ring. FiniteField r ==> FiniteIntegralDomain r
+Proof
+  rw_tac std_ss[FiniteIntegralDomain_def, FiniteField_def, field_is_integral_domain]
+QED
 
 (* Theorem: A FINITE Integeral Domain is a Field: FiniteIntegralDomain r ==> Field r *)
 (* Proof:
@@ -2538,25 +2626,28 @@ val finite_field_is_finite_integral_domain = store_thm(
    (1) Ring r, true        by integral_domain_is_ring
    (2) Group f*, true      by finite_integral_domain_nonzero_group
 *)
-val finite_integral_domain_is_field = store_thm(
-  "finite_integral_domain_is_field",
-  ``!r:'a ring. FiniteIntegralDomain r ==> Field r``,
+Theorem finite_integral_domain_is_field:
+    !r:'a ring. FiniteIntegralDomain r ==> Field r
+Proof
   rpt (stripDup[FiniteIntegralDomain_def]) >>
-  rw_tac std_ss[Field_def, integral_domain_is_ring, finite_integral_domain_nonzero_group]);
+  rw_tac std_ss[Field_def, integral_domain_is_ring, finite_integral_domain_nonzero_group]
+QED
 
 (* Theorem: A FINITE Integeral Domain is a FINITE Field: FiniteIntegralDomain r ==> FiniteField r *)
 (* Proof: by finite_integral_domain_is_field, FiniteIntegralDomain_def, FiniteField_def *)
-val finite_integral_domain_is_finite_field = store_thm(
-  "finite_integral_domain_is_finite_field",
-  ``!r:'a ring. FiniteIntegralDomain r ==> FiniteField r``,
-  rw_tac std_ss[finite_integral_domain_is_field, FiniteIntegralDomain_def, FiniteField_def]);
+Theorem finite_integral_domain_is_finite_field:
+    !r:'a ring. FiniteIntegralDomain r ==> FiniteField r
+Proof
+  rw_tac std_ss[finite_integral_domain_is_field, FiniteIntegralDomain_def, FiniteField_def]
+QED
 
 (* Theorem: FiniteIntegralDomain r = FiniteField r *)
 (* Proof: by finite_integral_domain_is_finite_field, finite_field_is_finite_integral_domain *)
-val finite_integral_domain_eq_finite_field = store_thm(
-  "finite_integral_domain_eq_finite_field",
-  ``!r:'a ring. FiniteIntegralDomain r = FiniteField r``,
-  metis_tac[finite_integral_domain_is_finite_field, finite_field_is_finite_integral_domain]);
+Theorem finite_integral_domain_eq_finite_field:
+    !r:'a ring. FiniteIntegralDomain r = FiniteField r
+Proof
+  metis_tac[finite_integral_domain_is_finite_field, finite_field_is_finite_integral_domain]
+QED
 
 (* These are major results. *)
 
@@ -2571,13 +2662,14 @@ val finite_integral_domain_eq_finite_field = store_thm(
    it is also a finite integral domain    by FiniteIntegralDomain_def
    Thus it is a finite field              by finite_integral_domain_is_finite_field
 *)
-val finite_field_from_finite_ring = store_thm(
-  "finite_field_from_finite_ring",
-  ``!r:'a ring. FiniteRing r /\ #1 <> #0 /\
-       (!x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0))) ==> FiniteField r``,
+Theorem finite_field_from_finite_ring:
+    !r:'a ring. FiniteRing r /\ #1 <> #0 /\
+       (!x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0))) ==> FiniteField r
+Proof
   rw_tac std_ss[FiniteRing_def] >>
   `FiniteIntegralDomain r` by metis_tac[FiniteIntegralDomain_def, IntegralDomain_def] >>
-  rw[GSYM finite_integral_domain_is_finite_field]);
+  rw[GSYM finite_integral_domain_is_finite_field]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Defintion without explicit mention of Ring.                         *)
@@ -2635,14 +2727,14 @@ val finite_field_from_finite_ring = store_thm(
    (4) AbelianGroup f* ==> Group f*
        This follows from AbelianGroup_def.
 *)
-val field_def_alt = store_thm(
-  "field_def_alt",
-  ``!r:'a field. Field r <=> AbelianGroup r.sum  /\
+Theorem field_def_alt:
+    !r:'a field. Field r <=> AbelianGroup r.sum  /\
                           AbelianGroup f* /\
                           (r.sum.carrier = R) /\
                           (r.prod.carrier = R) /\
                           (!x. x IN R ==> (#0 * x = #0)) /\
-                          (!x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y + z) = (x * y) + (x * z)))``,
+                          (!x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y + z) = (x * y) + (x * z)))
+Proof
   rw_tac std_ss[Field_def, Ring_def, EQ_IMP_THM] >| [
     `f*.op = $*` by rw_tac std_ss[excluding_def] >>
     `!x. x IN F* ==> x IN R` by rw[excluding_def] >>
@@ -2693,7 +2785,8 @@ val field_def_alt = store_thm(
       metis_tac[]
     ],
     metis_tac[AbelianGroup_def]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r <=> Ring r /\ #1 <> #0 /\ !x. x IN R /\ x <> #0 ==> ?y. y IN R /\ x * y = #1 *)
 (* Proof: by definition, this is to show:
@@ -2716,9 +2809,9 @@ val field_def_alt = store_thm(
        (5) x IN R ==> #1 * x = x, true by ring_mult_lone.
        (6) x IN R /\ x <> #0 /\ !x. x IN R /\ x <> #0 ==> ?y. y IN R /\ (x * y = #1) ==> ?y. (y IN R /\ y <> #0) /\ (y * x = #1)
 *)
-val field_def_by_inv = store_thm(
-  "field_def_by_inv",
-  ``!r:'a ring. Field r <=> Ring r /\ #1 <> #0 /\ !x. x IN R /\ x <> #0 ==> ?y. y IN R /\ (x * y = #1)``,
+Theorem field_def_by_inv:
+    !r:'a ring. Field r <=> Ring r /\ #1 <> #0 /\ !x. x IN R /\ x <> #0 ==> ?y. y IN R /\ (x * y = #1)
+Proof
   rw[Field_def, EQ_IMP_THM] >| [
     `x IN F*` by rw[ring_mult_monoid, excluding_def] >>
     `f*.inv x IN F*` by rw[group_inv_element] >>
@@ -2736,7 +2829,8 @@ val field_def_by_inv = store_thm(
       rw[],
       metis_tac[ring_mult_comm, ring_mult_lzero]
     ]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* A Ring can be a Field if the Units group is large enough.                 *)
@@ -2793,9 +2887,9 @@ End
       Now #0 NOTIN R*                  by ring_units_has_zero, but #0 <> #1
       Hence Group (r* including #0 excluding #0)  by group_including_excluding_group.
 *)
-val field_units_is_field = store_thm(
-  "field_units_is_field",
-  ``!r:'a ring. Ring r /\ (R* = R+ ) /\ #0 <> #1 ==> Field (field_units r)``,
+Theorem field_units_is_field:
+    !r:'a ring. Ring r /\ (R* = R+ ) /\ #0 <> #1 ==> Field (field_units r)
+Proof
   rw_tac std_ss[Field_def] >| [
     `R+ UNION {r.sum.id} = R` by rw[UNION_DIFF, ring_nonzero_def] >>
     `(r* including #0).carrier = r.prod.carrier` by rw_tac std_ss[including_def, Invertibles_def, ring_mult_monoid] >>
@@ -2809,17 +2903,19 @@ val field_units_is_field = store_thm(
     `#0 NOTIN R*` by metis_tac[ring_units_has_zero] >>
     `Group r*` by rw_tac std_ss[ring_mult_monoid, monoid_invertibles_is_group] >>
     rw_tac std_ss[GSYM group_including_excluding_group]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> R* = R+ *)
 (* Proof:
    R* = (Invertibles r.prod).carrier   by overload
    Hence true by field_nonzero_unit
 *)
-val field_units_nonzero = store_thm(
-  "field_units_nonzero",
-  ``!r:'a field. Field r ==> (R* = R+)``,
-  rw[field_nonzero_unit, EXTENSION]);
+Theorem field_units_nonzero:
+    !r:'a field. Field r ==> (R* = R+)
+Proof
+  rw[field_nonzero_unit, EXTENSION]
+QED
 
 (* Theore m: Field r ==> (R* = F* ) *)
 (* Proof:
@@ -2836,20 +2932,22 @@ QED
 
 (* Theorem: Field r ==> !x. unit x ==> unit ( |/ x) *)
 (* Proof: by ring_unit_has_inv, field_is_ring. *)
-val field_unit_has_inv = store_thm(
-  "field_unit_has_inv",
-  ``!r:'a field. Field r ==> !x. unit x ==> unit ( |/ x)``,
-  rw[ring_unit_has_inv]);
+Theorem field_unit_has_inv:
+    !r:'a field. Field r ==> !x. unit x ==> unit ( |/ x)
+Proof
+  rw[ring_unit_has_inv]
+QED
 
 (* Theorem: Field r ==> !n. Group (roots_of_unity f* n *)
 (* Proof:
    Field r ==> AbelianGroup f*               by field_nonzero_mult_is_abelian_group
            ==> Group (roots_of_unity f* n)   by group_uroots_group
 *)
-val field_uroots_is_group = store_thm(
-  "field_uroots_is_group",
-  ``!r:'a field. Field r ==> !n. Group (roots_of_unity f* n)``,
-  rw[field_nonzero_mult_is_abelian_group, group_uroots_group]);
+Theorem field_uroots_is_group:
+    !r:'a field. Field r ==> !n. Group (roots_of_unity f* n)
+Proof
+  rw[field_nonzero_mult_is_abelian_group, group_uroots_group]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Characteristic.                                                     *)
@@ -2857,24 +2955,27 @@ val field_uroots_is_group = store_thm(
 
 (* Theorem: Field r ==> (char r = 0) \/ prime (char r) *)
 (* Proof: by integral_domain_char. *)
-val field_char = store_thm(
-  "field_char",
-  ``!r:'a ring. Field r ==> (char r = 0) \/ prime (char r)``,
-  rw_tac std_ss[field_is_integral_domain, integral_domain_char]);
+Theorem field_char:
+    !r:'a ring. Field r ==> (char r = 0) \/ prime (char r)
+Proof
+  rw_tac std_ss[field_is_integral_domain, integral_domain_char]
+QED
 
 (* Theorem: Field r /\ 0 < char r ==> prime (char r) *)
 (* Proof: by field_char. *)
-val field_char_prime = store_thm(
-  "field_char_prime",
-  ``!r:'a field. Field r /\ 0 < char r ==> prime (char r)``,
-  metis_tac[field_char, NOT_ZERO_LT_ZERO]);
+Theorem field_char_prime:
+    !r:'a field. Field r /\ 0 < char r ==> prime (char r)
+Proof
+  metis_tac[field_char, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: Field r /\ (char r = 0) ==> INFINITE R *)
 (* Proof: field_is_ring, ring_char_0 *)
-val field_char_0 = store_thm(
-  "field_char_0",
-  ``!r:'a field. Field r /\ (char r = 0) ==> INFINITE R``,
-  rw[ring_char_0]);
+Theorem field_char_0:
+    !r:'a field. Field r /\ (char r = 0) ==> INFINITE R
+Proof
+  rw[ring_char_0]
+QED
 
 (* Theorem: Field r ==> char r <> 1 *)
 (* Proof:
@@ -2884,10 +2985,11 @@ val field_char_0 = store_thm(
     ==> #1 = #0               by ring_one_eq_zero
    This contradicts #1 <> #0  by field_one_ne_zero
 *)
-val field_char_ne_1 = store_thm(
-  "field_char_ne_1",
-  ``!r:'a field. Field r ==> char r <> 1``,
-  metis_tac[field_is_ring, field_one_ne_zero, ring_char_1, ring_one_eq_zero]);
+Theorem field_char_ne_1:
+    !r:'a field. Field r ==> char r <> 1
+Proof
+  metis_tac[field_is_ring, field_one_ne_zero, ring_char_1, ring_one_eq_zero]
+QED
 
 (* Note: in fact:
 finite_field_char |- !r. FiniteField r ==> prime (char r)
@@ -2895,10 +2997,11 @@ finite_field_char |- !r. FiniteField r ==> prime (char r)
 
 (* Theorem: Field r /\ (char r = 2) ==> !x. x IN R ==> (-x = x) *)
 (* Proof: by ring_neg_char_2 *)
-val field_neg_char_2 = store_thm(
-  "field_neg_char_2",
-  ``!r:'a field. Field r /\ (char r = 2) ==> !x. x IN R ==> (-x = x)``,
-  rw[ring_neg_char_2]);
+Theorem field_neg_char_2:
+    !r:'a field. Field r /\ (char r = 2) ==> !x. x IN R ==> (-x = x)
+Proof
+  rw[ring_neg_char_2]
+QED
 
 (* Theorem: Field r ==> !n. 0 < n ==> ((char r = n) <=> (##n = #0) /\ !m. 0 < m /\ m < n ==> ##m <> #0) *)
 val field_char_alt = lift_ring_thm "char_alt";
@@ -2907,24 +3010,27 @@ val field_char_alt = lift_ring_thm "char_alt";
 
 (* Theorem: Field r /\ 0 < char r ==> (##(char r) = #0) /\ !n. 0 < n /\ n < char r ==> ##n <> #0 *)
 (* Proof: by field_char_alt *)
-val field_char_eqn = store_thm(
-  "field_char_eqn",
-  ``!r:'a field. Field r /\ 0 < char r ==> (##(char r) = #0) /\ !n. 0 < n /\ n < char r ==> ##n <> #0``,
-  metis_tac[field_char_alt]);
+Theorem field_char_eqn:
+    !r:'a field. Field r /\ 0 < char r ==> (##(char r) = #0) /\ !n. 0 < n /\ n < char r ==> ##n <> #0
+Proof
+  metis_tac[field_char_alt]
+QED
 
 (* Theorem: Field r ==> ((-#1 = #1) <=> (char r = 2)) *)
 (* Proof: by ring_neg_one_eq_one, field_one_ne_zero *)
-val field_neg_one_eq_one = store_thm(
-  "field_neg_one_eq_one",
-  ``!r:'a field. Field r ==> ((-#1 = #1) <=> (char r = 2))``,
-  rw[ring_neg_one_eq_one]);
+Theorem field_neg_one_eq_one:
+    !r:'a field. Field r ==> ((-#1 = #1) <=> (char r = 2))
+Proof
+  rw[ring_neg_one_eq_one]
+QED
 
 (* Theorem: Field r ==> !x. x IN R ==> !n. r.sum.exp x n = x * ##n *)
 (* Proof: by field_is_ring, ring_add_exp_eqn *)
-val field_add_exp_eqn = store_thm(
-  "field_add_exp_eqn",
-  ``!r:'a field. Field r ==> !x. x IN R ==> !n. r.sum.exp x n = x * ##n``,
-  rw_tac std_ss[field_is_ring, ring_add_exp_eqn]);
+Theorem field_add_exp_eqn:
+    !r:'a field. Field r ==> !x. x IN R ==> !n. r.sum.exp x n = x * ##n
+Proof
+  rw_tac std_ss[field_is_ring, ring_add_exp_eqn]
+QED
 
 (* Theorem: Field r /\ 0 < char r ==> !x. x IN R+ ==> (order r.sum x = char r) *)
 (* Proof:
@@ -2945,9 +3051,9 @@ val field_add_exp_eqn = store_thm(
        But 0 < m /\ m < c ==> ##m <> #0    by field_char_alt
        Thus this is a contradiction.
 *)
-val field_add_order = store_thm(
-  "field_add_order",
-  ``!r:'a field. Field r /\ 0 < char r ==> !x. x IN R+ ==> (order r.sum x = char r)``,
+Theorem field_add_order:
+    !r:'a field. Field r /\ 0 < char r ==> !x. x IN R+ ==> (order r.sum x = char r)
+Proof
   rpt strip_tac >>
   qabbrev_tac `c = char r` >>
   `x IN R /\ x <> #0` by metis_tac[field_nonzero_eq] >>
@@ -2955,29 +3061,33 @@ val field_add_order = store_thm(
   `(r.sum.exp x c = #0) /\ !m. 0 < m /\ m < c ==> r.sum.exp x m <> #0` suffices_by rw[group_order_thm] >>
   rpt strip_tac >-
   metis_tac[field_add_exp_eqn, char_property, field_mult_rzero] >>
-  metis_tac[field_add_exp_eqn, field_mult_eq_zero, field_num_element, field_char_alt]);
+  metis_tac[field_add_exp_eqn, field_mult_eq_zero, field_num_element, field_char_alt]
+QED
 
 (* Theorem: Field r ==> !n m. n < char r /\ m < char r ==> (##n = ##m <=> (n = m)) *)
 (* Proof: by ring_num_eq. *)
-val field_num_eq = store_thm(
-  "field_num_eq",
-  ``!r:'a field. Field r ==> !n m. n < char r /\ m < char r ==> ((##n = ##m) <=> (n = m))``,
-  rw[ring_num_eq]);
+Theorem field_num_eq:
+    !r:'a field. Field r ==> !n m. n < char r /\ m < char r ==> ((##n = ##m) <=> (n = m))
+Proof
+  rw[ring_num_eq]
+QED
 
 (* Theorem: Field r /\ 0 < char r ==> !n. ##n = ##(n MOD (char r)) *)
 (* Proof: by ring_num_mod. *)
-val field_num_mod = store_thm(
-  "field_num_mod",
-  ``!r:'a field. Field r /\ 0 < char r ==> !n. ##n = ##(n MOD (char r))``,
-  rw[Once ring_num_mod]);
+Theorem field_num_mod:
+    !r:'a field. Field r /\ 0 < char r ==> !n. ##n = ##(n MOD (char r))
+Proof
+  rw[Once ring_num_mod]
+QED
 
 (* Theorem: Field r /\ 0 < char r ==> !z. ?y x. (y = ##x) /\ (y + ##z = #0) *)
 (* Proof: by ring_num_negative *)
-val field_num_negative = store_thm(
-  "field_num_negative",
-  ``!r:'a field. Field r /\ 0 < char r ==>
-   !z. ?y x. (y = ##x) /\ (y + ##z = #0)``,
-  rw[ring_num_negative]);
+Theorem field_num_negative:
+    !r:'a field. Field r /\ 0 < char r ==>
+   !z. ?y x. (y = ##x) /\ (y + ##z = #0)
+Proof
+  rw[ring_num_negative]
+QED
 
 (* Theorem: Field r /\ 0 < char r ==>
    !z. ##z <> #0 ==> ?y. ((?x. (y = ##x) /\ x IN univ(:num)) /\ y <> #0) /\ (y * ##z = #1) *)
@@ -2998,10 +3108,10 @@ val field_num_negative = store_thm(
            = ##(v * u) MOD p     by finite_field_num_mod
            = ##1
 *)
-val field_num_inverse = store_thm(
-  "field_num_inverse",
-  ``!r:'a field. Field r /\ 0 < char r ==>
-   !z. ##z <> #0 ==> ?y x. (y = ##x) /\ y <> #0 /\ (y * ##z = #1)``,
+Theorem field_num_inverse:
+    !r:'a field. Field r /\ 0 < char r ==>
+   !z. ##z <> #0 ==> ?y x. (y = ##x) /\ y <> #0 /\ (y * ##z = #1)
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = char r` >>
   `prime p` by rw[field_char_prime, Abbr`p`] >>
@@ -3016,7 +3126,8 @@ val field_num_inverse = store_thm(
   `_ = ##(v MOD p) * ## (u MOD p)` by rw[field_num_mult] >>
   `_ = ##v * ##u` by metis_tac[field_num_mod] >>
   `#1 <> #0` by rw[] >>
-  metis_tac[field_mult_eq_zero, field_num_element]);
+  metis_tac[field_mult_eq_zero, field_num_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field.                                                             *)
@@ -3030,34 +3141,37 @@ val field_num_inverse = store_thm(
    Now FiniteField r ==> Field r    by finite_field_is_field
    The result then follows from field_char.
 *)
-val finite_field_char = store_thm(
-  "finite_field_char",
-  ``!r:'a ring. FiniteField r ==> prime (char r)``,
+Theorem finite_field_char:
+    !r:'a ring. FiniteField r ==> prime (char r)
+Proof
   rpt strip_tac >>
   `FiniteRing r` by metis_tac[FiniteField_def, field_is_ring, FiniteRing_def] >>
   `0 < char r` by rw_tac std_ss[finite_ring_char_pos] >>
   `char r <> 0` by decide_tac >>
-  metis_tac[finite_field_is_field, field_char]);
+  metis_tac[finite_field_is_field, field_char]
+QED
 
 (* Theorem: FiniteField r ==> 0 < char r *)
 (* Proof:
    Note prime (char r)        by finite_field_char
      so 0 < char r            by PRIME_POS
 *)
-val finite_field_char_pos = store_thm(
-  "finite_field_char_pos",
-  ``!r:'a field. FiniteField r ==> 0 < char r``,
-  rw_tac std_ss[finite_field_char, PRIME_POS]);
+Theorem finite_field_char_pos:
+    !r:'a field. FiniteField r ==> 0 < char r
+Proof
+  rw_tac std_ss[finite_field_char, PRIME_POS]
+QED
 
 (* Theorem: FiniteField r ==> 1 < char r *)
 (* Proof:
    Note prime (char r)        by finite_field_char
      so 1 < char r            by ONE_LT_PRIME
 *)
-val finite_field_char_gt_1 = store_thm(
-  "finite_field_char_gt_1",
-  ``!r:'a field. FiniteField r ==> 1 < char r``,
-  rw_tac std_ss[finite_field_char, ONE_LT_PRIME]);
+Theorem finite_field_char_gt_1:
+    !r:'a field. FiniteField r ==> 1 < char r
+Proof
+  rw_tac std_ss[finite_field_char, ONE_LT_PRIME]
+QED
 
 (* Theorem: FiniteField r ==> 1 < CARD R *)
 (* Proof:
@@ -3069,31 +3183,34 @@ val finite_field_char_gt_1 = store_thm(
      and CARD R <> 1                              by finite_ring_card_eq_1
       so 1 < CARD R
 *)
-val finite_field_card_gt_1 = store_thm(
-  "finite_field_card_gt_1",
-  ``!r:'a field. FiniteField r ==> 1 < CARD R``,
+Theorem finite_field_card_gt_1:
+    !r:'a field. FiniteField r ==> 1 < CARD R
+Proof
   rw[FiniteField_def] >>
   `Ring r /\ #1 IN R /\ #0 IN R /\ #1 <> #0` by rw[] >>
   `CARD R <> 0` by metis_tac[CARD_EQ_0, MEMBER_NOT_EMPTY] >>
   `CARD R <> 1` by metis_tac[finite_ring_card_eq_1, FiniteRing_def] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FiniteField r ==> 0 < CARD R *)
 (* Proof:
    Since 1 < CARD R   by finite_field_card_gt_1
    The result follows by 0 < 1.
 *)
-val finite_field_card_pos = store_thm(
-  "finite_field_card_pos",
-  ``!r:'a field. FiniteField r ==> 0 < CARD R``,
-  metis_tac[finite_field_card_gt_1, DECIDE``!n. 1 < n ==> 0 < n``]);
+Theorem finite_field_card_pos:
+    !r:'a field. FiniteField r ==> 0 < CARD R
+Proof
+  metis_tac[finite_field_card_gt_1, DECIDE``!n. 1 < n ==> 0 < n``]
+QED
 
 (* Theorem: FiniteField r /\ prime (CARD R) ==> (char r = CARD R) *)
 (* Proof: by finite_field_is_finite_ring, finite_ring_card_prime *)
-val finite_field_card_prime = store_thm(
-  "finite_field_card_prime",
-  ``!r:'a field. FiniteField r /\ prime (CARD R) ==> (char r = CARD R)``,
-  rw_tac std_ss[finite_field_is_finite_ring, finite_ring_card_prime]);
+Theorem finite_field_card_prime:
+    !r:'a field. FiniteField r /\ prime (CARD R) ==> (char r = CARD R)
+Proof
+  rw_tac std_ss[finite_field_is_finite_ring, finite_ring_card_prime]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Properties from Finite Group.                                             *)
@@ -3110,9 +3227,9 @@ val finite_field_card_prime = store_thm(
    Giving  f*.exp x (CARD F* ) = f*.id       by finite_group_Fermat
        or  x ** (CARD R+) = #1               by field_nonzero_mult_property
 *)
-val finite_field_Fermat = store_thm(
-  "finite_field_Fermat",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> (x ** CARD R+ = #1)``,
+Theorem finite_field_Fermat:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> (x ** CARD R+ = #1)
+Proof
   rpt strip_tac >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   `Group f*` by rw[field_mult_group] >>
@@ -3120,7 +3237,8 @@ val finite_field_Fermat = store_thm(
   `FINITE R+` by metis_tac[field_nonzero_eq, SUBSET_DEF, SUBSET_FINITE] >>
   `FiniteGroup f*` by metis_tac[FiniteGroup_def] >>
   `f*.exp x (CARD F* ) = f*.id` by metis_tac[finite_group_Fermat] >>
-  metis_tac[field_nonzero_mult_property]);
+  metis_tac[field_nonzero_mult_property]
+QED
 
 (* Theorem: FiniteField r ==> CARD R = SUC (CARD R+) *)
 (* Proof:
@@ -3144,9 +3262,9 @@ val finite_field_Fermat = store_thm(
    Hence
    CARD R = 1 + CARD R+ = SUC (CARD R+)      by SUC_ONE_ADD.
 *)
-val finite_field_carrier_card = store_thm(
-  "finite_field_carrier_card",
-  ``!r:'a field. FiniteField r ==> (CARD R = SUC (CARD R+))``,
+Theorem finite_field_carrier_card:
+    !r:'a field. FiniteField r ==> (CARD R = SUC (CARD R+))
+Proof
   rpt strip_tac >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   `{#0} SUBSET R` by rw[] >>
@@ -3159,7 +3277,8 @@ val finite_field_carrier_card = store_thm(
   `_ = CARD R - 1` by rw[CARD_SING] >>
   `#1 IN R+` by rw[] >>
   `CARD R+ <> 0` by metis_tac[MEMBER_NOT_EMPTY, CARD_EQ_0] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FiniteField r ==> (CARD R+ = CARD R - 1) *)
 (* Proof:
@@ -3167,21 +3286,23 @@ val finite_field_carrier_card = store_thm(
      and CARD F* = CARD R - 1   by finite_field_mult_carrier_card
    Hence the result follows.
 *)
-val finite_field_nonzero_carrier_card = store_thm(
-  "finite_field_nonzero_carrier_card",
-  ``!r:'a field. FiniteField r ==> (CARD R+ = CARD R - 1)``,
-  metis_tac[finite_field_mult_carrier_card, field_mult_carrier, finite_field_is_field]);
+Theorem finite_field_nonzero_carrier_card:
+    !r:'a field. FiniteField r ==> (CARD R+ = CARD R - 1)
+Proof
+  metis_tac[finite_field_mult_carrier_card, field_mult_carrier, finite_field_is_field]
+QED
 
 (* Theorem: FiniteField r ==>
             (EVEN (CARD R) ==> ODD (CARD R+)) /\ (ODD (CARD R) ==> EVEN (CARD R+)) *)
 (* Proof: by finite_field_carrier_card, EVEN_ODD_SUC *)
-val finite_field_carrier_parity = store_thm(
-  "finite_field_carrier_parity",
-  ``!r:'a field. FiniteField r ==>
-   (EVEN (CARD R) ==> ODD (CARD R+)) /\ (ODD (CARD R) ==> EVEN (CARD R+))``,
+Theorem finite_field_carrier_parity:
+    !r:'a field. FiniteField r ==>
+   (EVEN (CARD R) ==> ODD (CARD R+)) /\ (ODD (CARD R) ==> EVEN (CARD R+))
+Proof
   ntac 2 strip_tac >>
   `CARD R = SUC (CARD (R+))` by rw[finite_field_carrier_card] >>
-  metis_tac[EVEN_ODD_SUC]);
+  metis_tac[EVEN_ODD_SUC]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> x ** (CARD R) = x *)
 (* Proof:
@@ -3199,16 +3320,17 @@ val finite_field_carrier_parity = store_thm(
          = #1 * x                            by finite_field_Fermat
          = x = RHS                           by field_mult_lone
 *)
-val finite_field_fermat_thm = store_thm(
-  "finite_field_fermat_thm",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> (x ** CARD R = x)``,
+Theorem finite_field_fermat_thm:
+    !r:'a field. FiniteField r ==> !x. x IN R ==> (x ** CARD R = x)
+Proof
   rpt strip_tac >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   `#0 IN R` by rw[] >>
   `CARD R <> 0` by metis_tac[MEMBER_NOT_EMPTY, CARD_EQ_0] >>
   Cases_on `x = #0` >-
   rw[field_zero_exp] >>
-  rw[field_nonzero_eq, finite_field_carrier_card, field_exp_suc, finite_field_Fermat]);
+  rw[field_nonzero_eq, finite_field_carrier_card, field_exp_suc, finite_field_Fermat]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> !n. x ** (CARD R ** n) = x *)
 (* Proof:
@@ -3225,12 +3347,13 @@ val finite_field_fermat_thm = store_thm(
       = x ** (m ** n)           by finite_field_fermat_thm
       = x                       by induction hypothesis
 *)
-val finite_field_fermat_all = store_thm(
-  "finite_field_fermat_all",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> !n. x ** (CARD R ** n) = x``,
+Theorem finite_field_fermat_all:
+    !r:'a field. FiniteField r ==> !x. x IN R ==> !n. x ** (CARD R ** n) = x
+Proof
   rpt (stripDup[FiniteField_def]) >>
   Induct_on `n` >>
-  rw[EXP, field_exp_mult, finite_field_fermat_thm]);
+  rw[EXP, field_exp_mult, finite_field_fermat_thm]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> !n. x ** n = x ** (n MOD (CARD R)) *)
 (* Proof:
@@ -3244,15 +3367,16 @@ val finite_field_fermat_all = store_thm(
    = #1 ** (n DIV m) * x ** (n MOD m)         by finite_field_fermat_thm
    = x ** (n MOD m)                           by field_one_exp
 *)
-val finite_field_exp_mod = store_thm(
-  "finite_field_exp_mod",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> !n. x ** n = x ** (n MOD (CARD R+))``,
+Theorem finite_field_exp_mod:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> !n. x ** n = x ** (n MOD (CARD R+))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD R+` >>
   `0 < m` by rw[field_nonzero_card_pos, Abbr`m`] >>
   `x IN R` by rw[field_nonzero_element] >>
   `x ** n = x ** (m * (n DIV m) + n MOD m)` by metis_tac[DIVISION, MULT_COMM] >>
-  rw[field_exp_add, field_exp_mult, finite_field_Fermat, Abbr`m`]);
+  rw[field_exp_add, field_exp_mult, finite_field_Fermat, Abbr`m`]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Subgroup                                                            *)
@@ -3284,11 +3408,11 @@ val finite_field_exp_mod = store_thm(
    (5) #1 IN G, true                by group_id_element, (1)
    (6) #0 NOTIN G, true             by SUBSET_DEF, (4), #0 NOTIN F*
 *)
-val field_subgroup_property = store_thm(
-  "field_subgroup_property",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==>
+Theorem field_subgroup_property:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==>
     (g.id = #1) /\ (g.op = r.prod.op) /\ (!x n. x IN G ==> (g.exp x n = r.prod.exp x n)) /\
-    G SUBSET R+ /\ #1 IN G /\ #0 NOTIN G``,
+    G SUBSET R+ /\ #1 IN G /\ #0 NOTIN G
+Proof
   ntac 3 (stripDup[Subgroup_def]) >>
   `#e = #1` by metis_tac[subgroup_id, field_nonzero_mult_property] >>
   `#0 NOTIN F*` by rw[excluding_def] >>
@@ -3297,31 +3421,35 @@ val field_subgroup_property = store_thm(
   rpt strip_tac >-
   metis_tac[subgroup_exp, field_nonzero_mult_property] >-
   metis_tac[group_id_element] >>
-  metis_tac[SUBSET_DEF]);
+  metis_tac[SUBSET_DEF]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> !x. x IN G ==> x IN R /\ x <> #0 *)
 (* Proof:
    Since G SUBSET R+    by field_subgroup_property
    The result follows   by SUBSET_DEF, field_nonzero_eq
 *)
-val field_subgroup_element = store_thm(
-  "field_subgroup_element",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x. x IN G ==> x IN R /\ x <> #0``,
-  metis_tac[field_subgroup_property, SUBSET_DEF, field_nonzero_eq]);
+Theorem field_subgroup_element:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x. x IN G ==> x IN R /\ x <> #0
+Proof
+  metis_tac[field_subgroup_property, SUBSET_DEF, field_nonzero_eq]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> (#e = #1) *)
 (* Proof: by field_subgroup_property *)
-val field_subgroup_id = store_thm(
-  "field_subgroup_id",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> (#e = #1)``,
-  rw[field_subgroup_property]);
+Theorem field_subgroup_id:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> (#e = #1)
+Proof
+  rw[field_subgroup_property]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> !x n. x IN G ==> (g.exp x n = r.prod.exp x n) *)
 (* Proof: by field_subgroup_property *)
-val field_subgroup_exp = store_thm(
-  "field_subgroup_exp",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x n. x IN G ==> (g.exp x n = r.prod.exp x n)``,
-  rw[field_subgroup_property]);
+Theorem field_subgroup_exp:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x n. x IN G ==> (g.exp x n = r.prod.exp x n)
+Proof
+  rw[field_subgroup_property]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> !x. x IN G ==> (g.inv x = |/ x) *)
 (* Proof:
@@ -3330,20 +3458,22 @@ val field_subgroup_exp = store_thm(
    = f*.inv x      by subgroup_inv
    = |/ x          by field_mult_inv, x IN R+
 *)
-val field_subgroup_inv = store_thm(
-  "field_subgroup_inv",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x. x IN G ==> (g.inv x = |/ x)``,
-  metis_tac[field_subgroup_property, SUBSET_DEF, subgroup_inv, field_mult_inv]);
+Theorem field_subgroup_inv:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> !x. x IN G ==> (g.inv x = |/ x)
+Proof
+  metis_tac[field_subgroup_property, SUBSET_DEF, subgroup_inv, field_mult_inv]
+QED
 
 (* Theorem: Field r /\ g <= f* ==> AbelianGroup g *)
 (* Proof:
    Note AbelianGroup f*    by field_nonzero_mult_is_abelian_group
      so AbelianGroup g     by abelian_subgroup_abelian
 *)
-val field_subgroup_abelian_group = store_thm(
-  "field_subgroup_abelian_group",
-  ``!(r:'a field) (g:'a group). Field r /\ g <= f* ==> AbelianGroup g``,
-  metis_tac[field_nonzero_mult_is_abelian_group, abelian_subgroup_abelian]);
+Theorem field_subgroup_abelian_group:
+    !(r:'a field) (g:'a group). Field r /\ g <= f* ==> AbelianGroup g
+Proof
+  metis_tac[field_nonzero_mult_is_abelian_group, abelian_subgroup_abelian]
+QED
 
 (* Theorem: FiniteField r /\ g <= f* ==> FiniteGroup g *)
 (* Proof:
@@ -3355,13 +3485,14 @@ val field_subgroup_abelian_group = store_thm(
    Thus FINITE G                    by SUBSET_FINITE
      so FiniteGroup g               by FiniteGroup_def
 *)
-val field_subgroup_finite_group = store_thm(
-  "field_subgroup_finite_group",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> FiniteGroup g``,
+Theorem field_subgroup_finite_group:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> FiniteGroup g
+Proof
   rpt (stripDup[FiniteField_def, Subgroup_def]) >>
   `F* = R+` by rw[field_mult_carrier] >>
   `FINITE F*` by rw[field_nonzero_finite] >>
-  metis_tac[FiniteGroup_def, SUBSET_FINITE]);
+  metis_tac[FiniteGroup_def, SUBSET_FINITE]
+QED
 
 (* Theorem: FiniteField r /\ g <= f* ==> (CARD (G UNION {#0}) = CARD G + 1) *)
 (* Proof:
@@ -3378,15 +3509,16 @@ val field_subgroup_finite_group = store_thm(
       = CARD G + 1 - 0                            by above
       = CARD G + 1                                by arithmetic
 *)
-val field_subgroup_card = store_thm(
-  "field_subgroup_card",
-  ``!(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> (CARD (G UNION {#0}) = CARD G + 1)``,
+Theorem field_subgroup_card:
+    !(r:'a field) (g:'a group). FiniteField r /\ g <= f* ==> (CARD (G UNION {#0}) = CARD G + 1)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteGroup g` by metis_tac[field_subgroup_finite_group] >>
   `FINITE G` by metis_tac[FiniteGroup_def] >>
   `#0 NOTIN G` by rw[field_subgroup_property] >>
   `G INTER {#0} = {}` by metis_tac[IN_INTER, IN_SING, MEMBER_NOT_EMPTY] >>
-  rw[CARD_UNION_EQN]);
+  rw[CARD_UNION_EQN]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Subset Field and Subgroup Field                                           *)

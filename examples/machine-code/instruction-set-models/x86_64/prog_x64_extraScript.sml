@@ -557,9 +557,10 @@ val stack_list_rev_APPEND = prove(
   \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM,LENGTH,
        GSYM WORD_SUB_PLUS,word_add_n2w,MULT_CLAUSES]);
 
-val stack_ok_POPS = store_thm("stack_ok_POPS",
-  ``stack_ok rsp top base stack dm m /\ k <= LENGTH stack ==>
-    stack_ok (rsp + n2w (8 * k)) top base (DROP k stack) dm m``,
+Theorem stack_ok_POPS:
+    stack_ok rsp top base stack dm m /\ k <= LENGTH stack ==>
+    stack_ok (rsp + n2w (8 * k)) top base (DROP k stack) dm m
+Proof
   SIMP_TAC std_ss [stack_ok_thm] \\ STRIP_TAC
   \\ IMP_RES_TAC LENGTH_LESS_EQ \\ FULL_SIMP_TAC std_ss []
   \\ POP_ASSUM (ASSUME_TAC o GSYM)
@@ -575,7 +576,8 @@ val stack_ok_POPS = store_thm("stack_ok_POPS",
   \\ FULL_SIMP_TAC std_ss [AC ADD_COMM ADD_ASSOC,word_mul_n2w]
   \\ ONCE_REWRITE_TAC [GSYM LENGTH_REVERSE]
   \\ ASM_SIMP_TAC std_ss [stack_list_rev_REVERSE]
-  \\ FULL_SIMP_TAC std_ss [REVERSE_REVERSE,AC STAR_COMM STAR_ASSOC,LENGTH_REVERSE]);
+  \\ FULL_SIMP_TAC std_ss [REVERSE_REVERSE,AC STAR_COMM STAR_ASSOC,LENGTH_REVERSE]
+QED
 
 val imm32_lemma = prove(
   ``(k:num) < 2 ** 28 ==>
@@ -717,13 +719,14 @@ val EL_LENGTH = prove(
   ``!xs y ys. EL (LENGTH xs) (xs ++ y::ys) = y``,
   Induct \\ FULL_SIMP_TAC std_ss [LENGTH,EL,APPEND,HD,TL]);
 
-val stack_ok_EL = store_thm("stack_ok_EL",
-  ``stack_ok rsp top base stack dm m /\
+Theorem stack_ok_EL:
+    stack_ok rsp top base stack dm m /\
     w2n r8 DIV 8 < LENGTH stack /\ (w2n r8 MOD 8 = 0) ==>
     (r8 + rsp IN dm /\ (r8 + rsp && 0x7w = 0x0w)) /\
     stack_ok rsp top base (LUPDATE r0 (w2n r8 DIV 8) stack) dm
       ((r8 + rsp =+ r0) m) /\
-    (m (r8 + rsp) = EL (w2n r8 DIV 8) stack)``,
+    (m (r8 + rsp) = EL (w2n r8 DIV 8) stack)
+Proof
   SIMP_TAC std_ss [stack_ok_thm] \\ STRIP_TAC
   \\ Cases_on `r8` \\ FULL_SIMP_TAC (srw_ss()) []
   \\ MP_TAC (DIVISION |> SIMP_RULE std_ss [PULL_FORALL]
@@ -741,7 +744,8 @@ val stack_ok_EL = store_thm("stack_ok_EL",
   \\ SEP_R_TAC \\ STRIP_TAC
   THEN1 (SIMP_TAC std_ss [GSYM word_mul_n2w]
          \\ Q.PAT_X_ASSUM `0x7w && rsp = 0x0w` MP_TAC \\ blastLib.BBLAST_TAC)
-  \\ SEP_W_TAC \\ FULL_SIMP_TAC (std_ss++star_ss) []);
+  \\ SEP_W_TAC \\ FULL_SIMP_TAC (std_ss++star_ss) []
+QED
 
 val LENGTH_LESS_REV = prove(
   ``!xs m. m < LENGTH xs ==> ?ys z zs. (xs = ys ++ z::zs) /\ (LENGTH zs = m)``,
@@ -751,11 +755,12 @@ val LENGTH_LESS_REV = prove(
   THEN1 (METIS_TAC []) \\ RES_TAC \\ Q.LIST_EXISTS_TAC [`ys`,`z`,`zs ++ [x]`]
   \\ FULL_SIMP_TAC std_ss [APPEND,LENGTH,GSYM APPEND_ASSOC,LENGTH_APPEND,ADD1]);
 
-val stack_ok_REV_EL = store_thm("stack_ok_REV_EL",
-  ``stack_ok rsp top base stack dm m /\
+Theorem stack_ok_REV_EL:
+    stack_ok rsp top base stack dm m /\
     w2n r8 DIV 8 < LENGTH stack /\ (w2n r8 MOD 8 = 0) ==>
     (base - 8w - r8 IN dm /\ (base - 8w - r8 && 0x7w = 0x0w)) /\
-    (m (base - 8w - r8) = EL (w2n r8 DIV 8) (REVERSE stack))``,
+    (m (base - 8w - r8) = EL (w2n r8 DIV 8) (REVERSE stack))
+Proof
   SIMP_TAC std_ss [stack_ok_thm] \\ STRIP_TAC
   \\ Cases_on `r8` \\ FULL_SIMP_TAC std_ss [w2n_n2w]
   \\ MP_TAC (DIVISION |> SIMP_RULE std_ss [PULL_FORALL]
@@ -784,7 +789,8 @@ val stack_ok_REV_EL = store_thm("stack_ok_REV_EL",
   \\ SEP_R_TAC \\ FULL_SIMP_TAC std_ss []
   \\ SIMP_TAC std_ss [GSYM word_mul_n2w]
   \\ Q.PAT_X_ASSUM `rsp && 0x7w = 0x0w` MP_TAC
-  \\ blastLib.BBLAST_TAC);
+  \\ blastLib.BBLAST_TAC
+QED
 
 val x64_el_r0_r8 = save_thm("x64_el_r0_r8",let
   val ((th,_,_),_) = x64_spec_memory64 (x64_encode "mov [rsp+r8], r0")

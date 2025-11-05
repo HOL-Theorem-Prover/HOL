@@ -4,10 +4,11 @@ Ancestors
 Libs
   TotalDefn Datatype BasicProvers
 
-val _ = Hol_datatype
- ` index = Left_idx of index
-         | Right_idx of index
-         | End_idx `;
+Datatype:
+   index = Left_idx index
+         | Right_idx index
+         | End_idx
+End
 
 Definition index_compare_def:
    (index_compare End_idx End_idx = EQUAL)
@@ -25,10 +26,12 @@ fun type_rws ty = #rewrs (TypeBase.simpls_of ty)
 val index_discr = tl (type_rws ``:index``);
 
 
-val compare_index_equal = store_thm("compare_index_equal",
-  “!i1 i2. (index_compare i1 i2 = EQUAL) = (i1 = i2)”,
+Theorem compare_index_equal:
+   !i1 i2. (index_compare i1 i2 = EQUAL) = (i1 = i2)
+Proof
 Induct THEN Induct THEN
-RW_TAC bool_ss (index_compare_def :: index_discr));
+RW_TAC bool_ss (index_compare_def :: index_discr)
+QED
 
 
 val compare_list_index = save_thm(
@@ -40,10 +43,11 @@ Definition index_lt_def:    index_lt i1 i2 = (index_compare i1 i2 = LESS)
 End
 
 
-val _ = Hol_datatype
- ` varmap =
+Datatype:
+   varmap =
      Empty_vm
-   | Node_vm of 'a => varmap => varmap `;
+   | Node_vm 'a varmap varmap
+End
 
 
 Definition varmap_find_def:
@@ -52,5 +56,3 @@ Definition varmap_find_def:
 /\ (varmap_find (Left_idx i1)  (Node_vm x v1 v2) = varmap_find i1 v1)
 /\ (varmap_find i v = @x.T)
 End
-
-

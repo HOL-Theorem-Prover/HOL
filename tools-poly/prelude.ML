@@ -119,7 +119,8 @@ in
   PolyML.addPrettyPrinter (pp2polypp proofManagerLib.pp_proof);
   PolyML.addPrettyPrinter (pp2polypp proofManagerLib.pp_proofs);
   PolyML.addPrettyPrinter (pp2polypp type_grammar.prettyprint_grammar);
-  PolyML.addPrettyPrinter (pp2polypp Feedback.pp_trace_elt)
+  PolyML.addPrettyPrinter (pp2polypp Feedback.pp_trace_elt);
+  PolyML.addPrettyPrinter (pp2polypp Feedback.pp_hol_error)
 end
 
 val _ = PolyML.use (OS.Path.concat(HOLDIR, "tools-poly/holinteractive.ML"));

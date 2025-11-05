@@ -64,14 +64,18 @@ val IS_RESET_LEM = prove(
     \\ SPEC_THEN `i t` (fn th => ONCE_REWRITE_TAC [th]) form_7tuple
     \\ SIMP_TAC std_ss [PROJ_NRESET_def]);
 
-val IS_RESET_THM = store_thm("IS_RESET_THM",
-  `!i x. (!t. ~(t < x) \/ ~IS_RESET i t) ==> (!t. (t < x) ==> FST (i t))`,
-  PROVE_TAC [IS_RESET_LEM]);
+Theorem IS_RESET_THM:
+   !i x. (!t. ~(t < x) \/ ~IS_RESET i t) ==> (!t. (t < x) ==> FST (i t))
+Proof
+  PROVE_TAC [IS_RESET_LEM]
+QED
 
-val IS_RESET_THM2 = store_thm("IS_RESET_THM2",
-  `!y x i. (!t. (t < x) ==> ~IS_RESET i t) /\ y <= x ==>
-            (!t. (t < y) ==> ~IS_RESET i t)`,
-  METIS_TAC [LESS_LESS_EQ_TRANS]);
+Theorem IS_RESET_THM2:
+   !y x i. (!t. (t < x) ==> ~IS_RESET i t) /\ y <= x ==>
+            (!t. (t < y) ==> ~IS_RESET i t)
+Proof
+  METIS_TAC [LESS_LESS_EQ_TRANS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -209,19 +213,23 @@ val SPEC_AFTER_NRESET2 = save_thm("SPEC_AFTER_NRESET2",
    INST [`t` |-> `t - 3`] o SIMP_RULE (srw_ss()) [lem] o
    SPEC `<| state := a; inp := ADVANCE t i|>`) AFTER_NRESET2_THM2);
 
-val AFTER_NRESET2_THM3 = store_thm("AFTER_NRESET2_THM3",
-  `!a.  AFTER_NRESET2 a ==> (INIT_ARM6 a = a)`,
+Theorem AFTER_NRESET2_THM3:
+   !a.  AFTER_NRESET2 a ==> (INIT_ARM6 a = a)
+Proof
   Cases_arm6 \\ RW_TAC (std_ss++SIZES_ss)
-    [AFTER_NRESET2_def,INIT_ARM6_def,MASK_def,n2w_11]);
+    [AFTER_NRESET2_def,INIT_ARM6_def,MASK_def,n2w_11]
+QED
 
-val AFTER_NRESET2_THM4 = store_thm("AFTER_NRESET2_THM4",
-  `!a j k l m. AFTER_NRESET2 a ==>
+Theorem AFTER_NRESET2_THM4:
+   !a j k l m. AFTER_NRESET2 a ==>
      (NEXT_ARM (ABS_ARM6 j) ((\(a,b,c) d. (a,b,c,d))
          (case ABS_ARM6 a
             of ARM_EX v v1 v2 =>
-               (exc2exception v2 v k,l,v1)) m) = ABS_ARM6 a)`,
+               (exc2exception v2 v k,l,v1)) m) = ABS_ARM6 a)
+Proof
   Cases_arm6 \\ RW_TAC std_ss [AFTER_NRESET2_def,ABS_ARM6_def,PROJ_Reset_def,
-    NEXT_ARM_def,IS_Reset_def,exc2exception_def,num2exception_thm,word_0_n2w]);
+    NEXT_ARM_def,IS_Reset_def,exc2exception_def,num2exception_thm,word_0_n2w]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -242,9 +250,10 @@ val lem2 = prove(
     \\ PAT_X_ASSUM `!t. IS_RESET i t ==> b` (SPEC_THEN `n` IMP_RES_TAC)
     \\ FULL_SIMP_TAC arith_ss []);
 
-val PREVIOUS_THREE_RESET = store_thm("PREVIOUS_THREE_RESET",
-  `!i t. i IN STRM_ARM6 /\ IS_RESET i t /\ ~IS_RESET i (t + 1) ==>
-           IS_RESET i (t - 1) /\ IS_RESET i (t - 2) /\ IS_RESET i (t - 3)`,
+Theorem PREVIOUS_THREE_RESET:
+   !i t. i IN STRM_ARM6 /\ IS_RESET i t /\ ~IS_RESET i (t + 1) ==>
+           IS_RESET i (t - 1) /\ IS_RESET i (t - 2) /\ IS_RESET i (t - 3)
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC lem
     \\ FULL_SIMP_TAC bool_ss [IN_DEF,STRM_ARM6_def]
     \\ Cases_on `t` \\ FULL_SIMP_TAC arith_ss [ADD1]
@@ -253,12 +262,14 @@ val PREVIOUS_THREE_RESET = store_thm("PREVIOUS_THREE_RESET",
     \\ FULL_SIMP_TAC arith_ss []
     \\ POP_ASSUM (SPEC_THEN `n - 1` IMP_RES_TAC)
     \\ FULL_SIMP_TAC arith_ss []
-    \\ PROVE_TAC [DECIDE ``!n. ~(n = 0) ==> (n - 1 + 3 = n + 2)``]);
+    \\ PROVE_TAC [DECIDE ``!n. ~(n = 0) ==> (n - 1 + 3 = n + 2)``]
+QED
 
-val LEAST_RESET_GT_TWO = store_thm("LEAST_RESET_GT_TWO",
-  `!i t. i IN STRM_ARM6 /\ IS_RESET i t ==>
+Theorem LEAST_RESET_GT_TWO:
+   !i t. i IN STRM_ARM6 /\ IS_RESET i t ==>
         2 < (LEAST t. IS_RESET i t /\ ~IS_RESET i (t + 1) /\
-                     ~IS_RESET i (t + 2))`,
+                     ~IS_RESET i (t + 2))
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC LEAST_NOT_RESET
     \\ PAT_X_ASSUM `IS_RESET i t` (K ALL_TAC)
     \\ IMP_RES_TAC PREVIOUS_THREE_RESET
@@ -269,101 +280,122 @@ val LEAST_RESET_GT_TWO = store_thm("LEAST_RESET_GT_TWO",
     \\ FULL_SIMP_TAC arith_ss [IN_DEF,STRM_ARM6_def]
     \\ POP_ASSUM (fn th => FULL_SIMP_TAC arith_ss [th])
     \\ PAT_X_ASSUM `!n. IS_RESET i t ==> b` IMP_RES_TAC
-    \\ FULL_SIMP_TAC arith_ss []);
+    \\ FULL_SIMP_TAC arith_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val AREGN1_THM = store_thm("AREGN1_THM",
-  `!resetstart dataabt1 fiqactl irqactl coproc1 iregabt2.
+Theorem AREGN1_THM:
+   !resetstart dataabt1 fiqactl irqactl coproc1 iregabt2.
       (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2 = 2w) =
-     ~resetstart /\ ~dataabt1 /\ ~fiqactl /\ ~irqactl /\ ~coproc1 /\ ~iregabt2`,
-  RW_TAC (std_ss++SIZES_ss) [AREGN1_def,n2w_11]);
+     ~resetstart /\ ~dataabt1 /\ ~fiqactl /\ ~irqactl /\ ~coproc1 /\ ~iregabt2
+Proof
+  RW_TAC (std_ss++SIZES_ss) [AREGN1_def,n2w_11]
+QED
 
-val interrupt_exists = store_thm("interrupt_exists",
-  `!i f. ?aregn:word3.
+Theorem interrupt_exists:
+   !i f. ?aregn:word3.
       ~(aregn IN {0w; 1w; 2w; 5w}) /\
-      ((aregn = 7w) ==> f) /\ ((aregn = 6w) ==> i)`,
+      ((aregn = 7w) ==> f) /\ ((aregn = 6w) ==> i)
+Proof
   NTAC 2 STRIP_TAC \\ EXISTS_TAC `3w`
     \\ RW_TAC (std_ss++SIZES_ss) [pred_setTheory.IN_INSERT,n2w_11,
-         pred_setTheory.NOT_IN_EMPTY]);
+         pred_setTheory.NOT_IN_EMPTY]
+QED
 
-val AREGN1_BIJ = store_thm("AREGN1_BIJ",
-  `!resetstart dataabt1 fiqactl irqactl coproc1 iregabt2.
+Theorem AREGN1_BIJ:
+   !resetstart dataabt1 fiqactl irqactl coproc1 iregabt2.
       exception2num (num2exception (
         w2n (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2))) =
-        w2n (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2)`,
+        w2n (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2)
+Proof
   SIMP_TAC std_ss [GSYM exception2num_num2exception,
     (SIMP_RULE (std_ss++SIZES_ss) [] o
-     Thm.INST_TYPE [alpha |-> ``:3``]) w2n_lt]);
+     Thm.INST_TYPE [alpha |-> ``:3``]) w2n_lt]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
 val LESS_THM =
   CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM;
 
-val num2exception_word3 = store_thm("num2exception_word3",
-  `(!aregn:word3. (num2exception (w2n aregn) = reset)     = (aregn = 0w)) /\
+Theorem num2exception_word3:
+   (!aregn:word3. (num2exception (w2n aregn) = reset)     = (aregn = 0w)) /\
    (!aregn:word3. (num2exception (w2n aregn) = undefined) = (aregn = 1w)) /\
    (!aregn:word3. (num2exception (w2n aregn) = software)  = (aregn = 2w)) /\
    (!aregn:word3. (num2exception (w2n aregn) = pabort)    = (aregn = 3w)) /\
    (!aregn:word3. (num2exception (w2n aregn) = dabort)    = (aregn = 4w)) /\
    (!aregn:word3. (num2exception (w2n aregn) = address)   = (aregn = 5w)) /\
    (!aregn:word3. (num2exception (w2n aregn) = interrupt) = (aregn = 6w)) /\
-    !aregn:word3. (num2exception (w2n aregn) = fast)      = (aregn = 7w)`,
+    !aregn:word3. (num2exception (w2n aregn) = fast)      = (aregn = 7w)
+Proof
   REPEAT STRIP_TAC \\ `w2n aregn < 8`
     by PROVE_TAC [w2n_lt,EVAL ``dimword (:3)``]
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss)
          [num2exception_thm,exception_EQ_exception,exception2num_thm,
-          GSYM w2n_11,w2n_n2w,LESS_THM]);
+          GSYM w2n_11,w2n_n2w,LESS_THM]
+QED
 
-val INTERRUPT_ADDRESS = store_thm("INTERRUPT_ADDRESS",
-  `!aregn2:word3. n2w (4 * exception2num (num2exception (w2n aregn2))) =
-       4w:word32 * w2w aregn2`,
+Theorem INTERRUPT_ADDRESS:
+   !aregn2:word3. n2w (4 * exception2num (num2exception (w2n aregn2))) =
+       4w:word32 * w2w aregn2
+Proof
   STRIP_TAC \\ `w2n aregn2 < 8` by PROVE_TAC [w2n_lt,EVAL ``dimword (:3)``]
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss)
-         [word_mul_def,w2n_w2w,w2n_n2w,exception2num_num2exception]);
+         [word_mul_def,w2n_w2w,w2n_n2w,exception2num_num2exception]
+QED
 
 val SOFTWARE_ADDRESS = save_thm("SOFTWARE_ADDRESS",
   (REWRITE_RULE [EVAL ``w2n (2w:word3)``,num2exception_thm] o
     SPEC `2w`) INTERRUPT_ADDRESS);
 
-val NOT_RESET = store_thm("NOT_RESET",
-  `!x n irqactl iregabt2 fiqactl dataabt1 coproc1.
+Theorem NOT_RESET:
+   !x n irqactl iregabt2 fiqactl dataabt1 coproc1.
      ~IS_Reset (exc2exception (num2exception (w2n
-      (AREGN1 F dataabt1 fiqactl irqactl coproc1 iregabt2))) x n)`,
+      (AREGN1 F dataabt1 fiqactl irqactl coproc1 iregabt2))) x n)
+Proof
   RW_TAC (std_ss++SIZES_ss) [IS_Reset_def,exc2exception_def,num2exception_thm,
-   AREGN1_def,w2n_n2w]);
+   AREGN1_def,w2n_n2w]
+QED
 
-val NOT_RESET2 = store_thm("NOT_RESET2",
-  `!x ointstart n aregn.
+Theorem NOT_RESET2:
+   !x ointstart n aregn.
     ~(aregn IN {0w; 2w; 5w}) ==>
      ~IS_Reset (exc2exception (num2exception (w2n
-      (if ointstart then aregn else 2w:word3))) x n)`,
+      (if ointstart then aregn else 2w:word3))) x n)
+Proof
   RW_TAC (std_ss++SIZES_ss++pred_setSimps.PRED_SET_ss) [IS_Reset_def,
          exc2exception_def,num2exception_thm,w2n_n2w]
     \\ Cases_on `num2exception (w2n aregn)`
-    \\ FULL_SIMP_TAC (srw_ss()) [num2exception_word3]);
+    \\ FULL_SIMP_TAC (srw_ss()) [num2exception_word3]
+QED
 
-val IS_Reset_IMP_EXISTS_SOME_Reset = store_thm("IS_Reset_IMP_EXISTS_SOME_Reset",
-  `!i. IS_Reset i ==> (?s. i = SOME (Reset s))`,
+Theorem IS_Reset_IMP_EXISTS_SOME_Reset:
+   !i. IS_Reset i ==> (?s. i = SOME (Reset s))
+Proof
   Cases \\ RW_TAC std_ss [IS_Reset_def] \\ Cases_on `x`
-    \\ FULL_SIMP_TAC std_ss [interrupts_case_def] \\ PROVE_TAC []);
+    \\ FULL_SIMP_TAC std_ss [interrupts_case_def] \\ PROVE_TAC []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val SIMP_IS_Dabort = store_thm("SIMP_IS_Dabort",
-  `!x n irqactl iregabt2 fiqactl dataabt1 coproc1.
+Theorem SIMP_IS_Dabort:
+   !x n irqactl iregabt2 fiqactl dataabt1 coproc1.
     IS_Dabort (exc2exception (num2exception (w2n
-    (AREGN1 F dataabt1 fiqactl irqactl coproc1 iregabt2))) x n) = dataabt1`,
+    (AREGN1 F dataabt1 fiqactl irqactl coproc1 iregabt2))) x n) = dataabt1
+Proof
   RW_TAC (std_ss++SIZES_ss) [IS_Dabort_def,AREGN1_def,exc2exception_def,
-    num2exception_thm,w2n_n2w]);
+    num2exception_thm,w2n_n2w]
+QED
 
-val SIMP_PROJ_Dabort = store_thm("SIMP_PROJ_Dabort",
-  `!x n irqactl iregabt2 fiqactl coproc1.
+Theorem SIMP_PROJ_Dabort:
+   !x n irqactl iregabt2 fiqactl coproc1.
     PROJ_Dabort  (exc2exception (num2exception (w2n
-    (AREGN1 F T fiqactl irqactl coproc1 iregabt2))) x n) = n`,
+    (AREGN1 F T fiqactl irqactl coproc1 iregabt2))) x n) = n
+Proof
   RW_TAC (std_ss++SIZES_ss) [PROJ_Dabort_def,AREGN1_def,exc2exception_def,
-    num2exception_thm,w2n_n2w]);
+    num2exception_thm,w2n_n2w]
+QED
 
 val CP_NOT = prove(
   `!ic. ic IN {cdp_und; mrc; mcr; stc; ldc} ==> ~(ic = mrs_msr)`,
@@ -377,8 +409,8 @@ val EXTRACT_UNDEFINED =
      ic IN {reset; software; address} \/ (ic = undefined)``;
 *)
 
-val SIMP_interrupt2exception = store_thm("SIMP_interrupt2exception",
-  `!y reg psr ointstart n ireg i f aregn.
+Theorem SIMP_interrupt2exception:
+   !y reg psr ointstart n ireg i f aregn.
     CONDITION_PASSED (NZCV (CPSR_READ psr)) ireg /\
     ~(DECODE_INST ireg = mrs_msr) /\
    (((aregn = 1w) ==> DECODE_INST ireg IN {cdp_und; mrc; mcr; stc; ldc}) /\
@@ -388,20 +420,22 @@ val SIMP_interrupt2exception = store_thm("SIMP_interrupt2exception",
      ((interrupt2exception (ARM_EX (ARM reg psr) ireg software) (i,f)
         (exc2exception (num2exception (
           w2n (if ointstart then aregn else 2w:word3))) y n)) =
-       (num2exception (w2n (if ointstart then aregn else 2w))))`,
+       (num2exception (w2n (if ointstart then aregn else 2w))))
+Proof
   NTAC 9 STRIP_TAC \\ Cases_on `num2exception (w2n aregn)`
     \\ Cases_on `ointstart` \\ ASM_SIMP_TAC (srw_ss()++SIZES_ss++
           boolSimps.LET_ss++ pred_setSimps.PRED_SET_ss)
          [DECODE_PSR_def,w2n_n2w,exc2exception_def,num2exception_thm,
           interrupt2exception_def]
-    \\ FULL_SIMP_TAC std_ss [num2exception_word3]);
+    \\ FULL_SIMP_TAC std_ss [num2exception_word3]
+QED
 
 val SIMP_interrupt2exception2 = save_thm("SIMP_interrupt2exception2",
   (GEN_ALL o REWRITE_RULE [] o INST [`ointstart` |-> `T`] o
    SPEC_ALL) SIMP_interrupt2exception);
 
-val SIMP_interrupt2exception3 = store_thm("SIMP_interrupt2exception3",
-  `!y resetstart reg psr n irqactl iregabt2 ireg i fiqactl f dataabt1 coproc1.
+Theorem SIMP_interrupt2exception3:
+   !y resetstart reg psr n irqactl iregabt2 ireg i fiqactl f dataabt1 coproc1.
      DECODE_INST ireg IN {cdp_und; mrc; mcr; stc; ldc} /\
      CONDITION_PASSED (NZCV (CPSR_READ psr)) ireg /\
      (fiqactl ==> ~f) /\ (irqactl ==> ~i) ==>
@@ -409,21 +443,25 @@ val SIMP_interrupt2exception3 = store_thm("SIMP_interrupt2exception3",
        (exc2exception (num2exception (w2n
          (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2))) y n)) =
        (num2exception (w2n
-         (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2))))`,
+         (AREGN1 resetstart dataabt1 fiqactl irqactl coproc1 iregabt2))))
+Proof
   RW_TAC (std_ss++SIZES_ss) [DECODE_PSR_def,AREGN1_def,CP_NOT,
-    interrupt2exception_def,exc2exception_def,num2exception_thm,w2n_n2w]);
+    interrupt2exception_def,exc2exception_def,num2exception_thm,w2n_n2w]
+QED
 
-val SIMP_interrupt2exception4 = store_thm("SIMP_interrupt2exception4",
-  `!y resetstart reg psr n irqactl iregabt2 ireg i fiqactl f exc dataabt1.
+Theorem SIMP_interrupt2exception4:
+   !y resetstart reg psr n irqactl iregabt2 ireg i fiqactl f exc dataabt1.
     ((exc = software) ==> ~CONDITION_PASSED (NZCV (CPSR_READ psr)) ireg) /\
     (fiqactl ==> ~f) /\ (irqactl ==> ~i) ==>
     ((interrupt2exception (ARM_EX (ARM reg psr) ireg exc) (i,f)
       (exc2exception (num2exception (w2n
         (AREGN1 resetstart dataabt1 fiqactl irqactl F iregabt2))) y n)) =
       (num2exception (w2n
-        (AREGN1 resetstart dataabt1 fiqactl irqactl F iregabt2))))`,
+        (AREGN1 resetstart dataabt1 fiqactl irqactl F iregabt2))))
+Proof
   RW_TAC (std_ss++SIZES_ss) [DECODE_PSR_def,AREGN1_def,
-    interrupt2exception_def,exc2exception_def,num2exception_thm,w2n_n2w]);
+    interrupt2exception_def,exc2exception_def,num2exception_thm,w2n_n2w]
+QED
 
 val SIMP_interrupt2exception5 = prove(
   `!y resetstart reg psr n irqactl iregabt2 ireg i' fiqactl f' dataabt1.

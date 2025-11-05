@@ -14,9 +14,9 @@ Definition DU_def:
                                 valt := \v w. (f (FST w)).valt v (SND w) |>
 End
 
-val prop_2_3 = store_thm(
-  "prop_2_3",
-  ``!w f. (FST w) IN dom ==> (satis (f (FST w)) (SND w) phi <=> satis (DU (f, dom)) w phi)``,
+Theorem prop_2_3:
+    !w f. (FST w) IN dom ==> (satis (f (FST w)) (SND w) phi <=> satis (DU (f, dom)) w phi)
+Proof
   Induct_on `phi` >> rw[satis_def,EQ_IMP_THM] (* 10 *)
   >- (fs[DU_def] >> map_every qexists_tac [`FST w`,`SND w`] >> rw[])
   >- fs[DU_def,IN_DEF]
@@ -35,7 +35,8 @@ val prop_2_3 = store_thm(
   >- (qexists_tac `SND v` >> rw[]
      >- fs[DU_def]
      >- fs[DU_def]
-     >- (`FST v = FST w` by fs[DU_def] >> metis_tac[])));
+     >- (`FST v = FST w` by fs[DU_def] >> metis_tac[]))
+QED
 
 
 Definition M_union_def:
@@ -62,9 +63,9 @@ End
 
 
 
-val prop_2_6 = store_thm(
-"prop_2_6",
-``!w phi M1 M2. GENSUBMODEL M1 M2 /\ w IN M1.frame.world ==> (satis M1 w phi <=> satis M2 w phi)``,
+Theorem prop_2_6:
+  !w phi M1 M2. GENSUBMODEL M1 M2 /\ w IN M1.frame.world ==> (satis M1 w phi <=> satis M2 w phi)
+Proof
 Induct_on `phi` >> rw[satis_def]
 >- (eq_tac
    >- (rpt strip_tac
@@ -103,7 +104,7 @@ Induct_on `phi` >> rw[satis_def]
    >- (rpt strip_tac
       >> qexists_tac `v`
       >> metis_tac[SUBMODEL_def,GENSUBMODEL_def,IN_DEF]))
-);
+QED
 
 
 
@@ -143,12 +144,13 @@ Definition modal_eq_def:
  modal_eq M M' w w'<=> (tau_theory M w = tau_theory M' w')
 End
 
-val modal_eq_tau = store_thm(
-"modal_eq_tau",
-``!M M' w w'. modal_eq M M' w w' <=> (!form. satis M w form <=> satis M' w' form)``,
+Theorem modal_eq_tau:
+  !M M' w w'. modal_eq M M' w w' <=> (!form. satis M w form <=> satis M' w' form)
+Proof
 rw[EQ_IMP_THM] >> fs[modal_eq_def,tau_theory_def,EXTENSION]
 >- metis_tac[]
->- rw[EQ_IMP_THM])
+>- rw[EQ_IMP_THM]
+QED
 
 Definition tau_theory_model_def:
 tau_theory_model M = {form | !w. w IN M.frame.world ==> satis M w form}
@@ -162,9 +164,9 @@ End
 
 
 
-val lemma_2_9 = store_thm(
-"lemma_2_9",
-``!M M' w w' f form. strong_hom f M M' /\ (f w) = w' /\ w IN M.frame.world /\ SURJ f M.frame.world M'.frame.world ==> (satis M w form <=> satis M' w' form) ``,
+Theorem lemma_2_9:
+  !M M' w w' f form. strong_hom f M M' /\ (f w) = w' /\ w IN M.frame.world /\ SURJ f M.frame.world M'.frame.world ==> (satis M w form <=> satis M' w' form)
+Proof
 Induct_on `form` >> rw[satis_def]
 >- metis_tac[strong_hom_def]
 >- metis_tac[strong_hom_def]
@@ -178,22 +180,24 @@ Induct_on `form` >> rw[satis_def]
       >> `?x. x IN M.frame.world /\ f x = v` by metis_tac[SURJ_DEF]
       >> qexists_tac `x`
       >> metis_tac[strong_hom_def,IN_DEF])
-     ));
+     )
+QED
 
 
 
-val prop_2_9 = store_thm(
-"prop_2_9",
-``!M M' w w' f form. strong_hom f M M' /\ (f w) = w' /\ w IN M.frame.world /\ SURJ f M.frame.world M'.frame.world ==> modal_eq M M' w w' ``,
+Theorem prop_2_9:
+  !M M' w w' f form. strong_hom f M M' /\ (f w) = w' /\ w IN M.frame.world /\ SURJ f M.frame.world M'.frame.world ==> modal_eq M M' w w'
+Proof
 rw[modal_eq_def,tau_theory_def]
 >> `!form. satis M w form <=> satis M' (f w) form` suffices_by metis_tac[SET_EQ_SUBSET,SUBSET_DEF]
->> metis_tac[lemma_2_9]);
+>> metis_tac[lemma_2_9]
+QED
 
 
 
-val prop_2_9_ii = store_thm(
-"prop_2_9_ii",
-``!M M' f. iso f M M' ==> modal_eq_model M M'``,
+Theorem prop_2_9_ii:
+  !M M' f. iso f M M' ==> modal_eq_model M M'
+Proof
 fs[modal_eq_model_def,iso_def,tau_theory_model_def]
 >> rpt strip_tac
 >> `!form. (∀w. w ∈ M.frame.world ⇒ satis M w form) <=>  (∀w. w ∈ M'.frame.world ⇒ satis M' w form)` suffices_by fs[SET_EQ_SUBSET,SUBSET_DEF]
@@ -209,7 +213,7 @@ fs[modal_eq_model_def,iso_def,tau_theory_model_def]
    >> `(f w) IN M'.frame.world` by metis_tac[strong_hom_def]
    >> `satis M' (f w) form` by metis_tac[]
    >> metis_tac[lemma_2_9])
-);
+QED
 
 
 
@@ -290,28 +294,30 @@ End
 
 
 
-val RTC_PREDECESSOR_LEMMA = store_thm(
-"RTC_PREDECESSOR_LEMMA",
-``!R x y. RTC R x y ==> x <> y ==> ?p. R p y /\ p <> y``,
+Theorem RTC_PREDECESSOR_LEMMA:
+  !R x y. RTC R x y ==> x <> y ==> ?p. R p y /\ p <> y
+Proof
 gen_tac >>
 ho_match_mp_tac relationTheory.RTC_STRONG_INDUCT >>
-rw[] >> metis_tac[]);
+rw[] >> metis_tac[]
+QED
 
 
 
-val TC_PREDECESSOR_LEMMA = store_thm(
-"TC_PREDECESSOR_LEMMA",
-``!R x y. TC R x y ==> x <> y ==> ?p. R p y /\ p <> y``,
+Theorem TC_PREDECESSOR_LEMMA:
+  !R x y. TC R x y ==> x <> y ==> ?p. R p y /\ p <> y
+Proof
 gen_tac >>
 ho_match_mp_tac relationTheory.TC_STRONG_INDUCT_LEFT1 >>
-rw[] >> metis_tac[]);
+rw[] >> metis_tac[]
+QED
 
 
 
 val _ = clear_overloads_on "R";
-val tree_no_loop = store_thm(
-"tree_no_loop",
-``!s r. tree s r ==> !t0 t. (TC (RESTRICT s.rel s.world) t0 t) ==> t0 <> t``,
+Theorem tree_no_loop:
+  !s r. tree s r ==> !t0 t. (TC (RESTRICT s.rel s.world) t0 t) ==> t0 <> t
+Proof
 rpt gen_tac >> strip_tac >>
 qabbrev_tac `R = RESTRICT s.rel s.world` >>
 rpt strip_tac >>
@@ -334,7 +340,7 @@ Cases_on `t0 = t1` >-
 >> metis_tac[tree_def,RESTRICT_def]
 )
 )
-);
+QED
 
 
 
@@ -375,9 +381,9 @@ End
 
 
 
-val prop_2_15_subgoal_1 = store_thm(
-  "prop_2_15_subgoal_1",
-  ``rooted_model M x M' ==> bounded_mor LAST (bounded_preimage_rooted M x) M``,
+Theorem prop_2_15_subgoal_1:
+    rooted_model M x M' ==> bounded_mor LAST (bounded_preimage_rooted M x) M
+Proof
   rw[bounded_mor_def] (* 4 *)
      >- (fs[bounded_preimage_rooted_def,RESTRICT_def] >>
         `LENGTH w <> 0`
@@ -470,12 +476,13 @@ val prop_2_15_subgoal_1 = store_thm(
                  `w <> []`
                      by (SPOSE_NOT_THEN ASSUME_TAC >> fs[LENGTH]) >>
                  rw[LAST_EL] >> metis_tac[]))
-            >- (rw [EL_APPEND1]))));
+            >- (rw [EL_APPEND1])))
+QED
 
 
-val LAST_in_world = store_thm(
-  "LAST_in_world",
-  ``rooted_model M x M' /\ w ∈ (bounded_preimage_rooted M x).frame.world ==> LAST w ∈ M.frame.world``,
+Theorem LAST_in_world:
+    rooted_model M x M' /\ w ∈ (bounded_preimage_rooted M x).frame.world ==> LAST w ∈ M.frame.world
+Proof
    rw[bounded_preimage_rooted_def] >>
    Cases_on `LENGTH w = 1` (* 2 *)
    >- (`?x. w = [x]` by fs[LIST_LENGTH_1] >>
@@ -489,13 +496,14 @@ val LAST_in_world = store_thm(
       `LENGTH w - 2 + 1 = PRE (LENGTH w)` by fs[] >>
       `w <> []`
          by (SPOSE_NOT_THEN ASSUME_TAC >> fs[LENGTH]) >>
-      rw[LAST_EL] >> metis_tac[]));
+      rw[LAST_EL] >> metis_tac[])
+QED
 
 
 
-val prop_2_15_subgoal_2 = store_thm(
-  "prop_2_15_subgoal_2",
-  ``rooted_model M x M' ==> SURJ LAST (bounded_preimage_rooted M x).frame.world M.frame.world``,
+Theorem prop_2_15_subgoal_2:
+    rooted_model M x M' ==> SURJ LAST (bounded_preimage_rooted M x).frame.world M.frame.world
+Proof
   rw[SURJ_DEF]
      >- metis_tac[LAST_in_world]
      >- (fs[rooted_model_def] >>
@@ -549,12 +557,13 @@ val prop_2_15_subgoal_2 = store_thm(
                     metis_tac[])
                  >- (`(RESTRICT M'.frame.rel M'.frame.world)^* (HD y) (LAST y)`
                         by (`(LAST y) IN M.frame.world` by metis_tac[LAST_in_world] >> metis_tac[]) >>
-                    metis_tac[RTC_CASES2]))))));
+                    metis_tac[RTC_CASES2])))))
+QED
 
-val FRONT_in_world = store_thm(
-  "FRONT_in_world",
-  ``rooted_model M x M' /\ t IN (bounded_preimage_rooted M x).frame.world /\ LENGTH t > 1 ==>
-    (FRONT t) IN (bounded_preimage_rooted M x).frame.world``,
+Theorem FRONT_in_world:
+    rooted_model M x M' /\ t IN (bounded_preimage_rooted M x).frame.world /\ LENGTH t > 1 ==>
+    (FRONT t) IN (bounded_preimage_rooted M x).frame.world
+Proof
   rw[bounded_preimage_rooted_def] (* 3 *)
   >- (Cases_on `t` >- fs[] >- (Cases_on `t'` >> fs[]))
   >- (`LENGTH t - 1 > 0` by fs[] >>
@@ -571,13 +580,14 @@ val FRONT_in_world = store_thm(
                      `EL m (FRONT t) = EL m t` by fs[EL_FRONT] >>
                      `m + 1 < LENGTH (FRONT t)` by fs[] >>
                      `EL (m + 1) (FRONT t) = EL (m + 1) t` by fs[EL_FRONT] >>
-                     metis_tac[])));
+                     metis_tac[]))
+QED
 
 
-val prop_2_15_subgoal_4 = store_thm(
-  "prop_2_15_subgoal_4",
-  ``rooted_model M x M' /\ t ∈ (bounded_preimage_rooted M x).frame.world ==>
-        (RESTRICT (bounded_preimage_rooted M x).frame.rel (bounded_preimage_rooted M x).frame.world)^* [x] t``,
+Theorem prop_2_15_subgoal_4:
+    rooted_model M x M' /\ t ∈ (bounded_preimage_rooted M x).frame.world ==>
+        (RESTRICT (bounded_preimage_rooted M x).frame.rel (bounded_preimage_rooted M x).frame.world)^* [x] t
+Proof
   rw[] >>
   completeInduct_on `LENGTH t` >> rw[] >>
   `t = [] \/ ?x l. t = SNOC x l` by metis_tac[SNOC_CASES] (* 2 *)
@@ -614,23 +624,25 @@ val prop_2_15_subgoal_4 = store_thm(
         `?a. t = [a]` by fs[LIST_LENGTH_1] >>
         `HD t = x` by fs[bounded_preimage_rooted_def] >>
         `HD [a] = a` by fs[HD] >>
-        `x = a` by rw[] >> fs[])));
+        `x = a` by rw[] >> fs[]))
+QED
 
 
-val prop_2_15_subgoal_5 = store_thm(
-  "prop_2_15_subgoal_5",
-  ``rooted_model M x M' /\ r0 ∈ (bounded_preimage_rooted M x).frame.world ==>
-    ¬(bounded_preimage_rooted M x).frame.rel r0 [x]``,
+Theorem prop_2_15_subgoal_5:
+    rooted_model M x M' /\ r0 ∈ (bounded_preimage_rooted M x).frame.world ==>
+    ¬(bounded_preimage_rooted M x).frame.rel r0 [x]
+Proof
   rw[] >> SPOSE_NOT_THEN ASSUME_TAC >>
   `LENGTH r0 + 1 = LENGTH [x]` by fs[bounded_preimage_rooted_def] >>
   `LENGTH [x] = 1` by fs[] >>
   `LENGTH r0 = 0` by fs[] >>
-  `¬(LENGTH r0 > 0)` by fs[] >> fs[bounded_preimage_rooted_def]);
+  `¬(LENGTH r0 > 0)` by fs[] >> fs[bounded_preimage_rooted_def]
+QED
 
-val FRONT_rel = store_thm(
-  "FRONT_rel",
-  ``rooted_model M x M' /\ t IN (bounded_preimage_rooted M x).frame.world /\ LENGTH t > 1 ==>
-    (bounded_preimage_rooted M x).frame.rel (FRONT t) t``,
+Theorem FRONT_rel:
+    rooted_model M x M' /\ t IN (bounded_preimage_rooted M x).frame.world /\ LENGTH t > 1 ==>
+    (bounded_preimage_rooted M x).frame.rel (FRONT t) t
+Proof
   rw[] >> `t <> []` by (SPOSE_NOT_THEN ASSUME_TAC >> fs[]) >>
   `?x' l. t = SNOC x' l` by metis_tac[SNOC_CASES] >>
   rw[bounded_preimage_rooted_def] (* 2 *)
@@ -648,14 +660,15 @@ val FRONT_rel = store_thm(
          `l ++ [x'] <> []` by fs[] >>
          `EL (LENGTH l) (l ++ [x']) = LAST (l ++ [x'])` by metis_tac[LAST_EL] >>
          `LAST (l ++ [x']) = x'` by fs[] >> metis_tac[]))
-  >- (`SNOC x' l = l ++ [x']` by fs[SNOC_APPEND] >> metis_tac[EL_APPEND1]));
+  >- (`SNOC x' l = l ++ [x']` by fs[SNOC_APPEND] >> metis_tac[EL_APPEND1])
+QED
 
 
 
-val prop_2_15_subgoal_6 = store_thm(
-  "prop_2_15_subgoal_6",
-  ``rooted_model M x M' /\ t ∈ (bounded_preimage_rooted M x).frame.world /\ t ≠ [x] ==>
-    ∃!t0. t0 ∈ (bounded_preimage_rooted M x).frame.world ∧ (bounded_preimage_rooted M x).frame.rel t0 t``,
+Theorem prop_2_15_subgoal_6:
+    rooted_model M x M' /\ t ∈ (bounded_preimage_rooted M x).frame.world /\ t ≠ [x] ==>
+    ∃!t0. t0 ∈ (bounded_preimage_rooted M x).frame.world ∧ (bounded_preimage_rooted M x).frame.rel t0 t
+Proof
   rw[EXISTS_UNIQUE_THM] (* 2 *)
   >- (qexists_tac `FRONT t` >> rw[] (* 2 *)
      >- (`LENGTH t > 1`
@@ -711,17 +724,18 @@ val prop_2_15_subgoal_6 = store_thm(
          >- (`LENGTH t0' + 1 = LENGTH t` by fs[bounded_preimage_rooted_def] >>
             `LENGTH (FRONT t) = LENGTH t - 1` suffices_by fs[] >>
             Cases_on `t = []` >- fs[bounded_preimage_rooted_def]
-                              >- rw[LENGTH_FRONT]))));
+                              >- rw[LENGTH_FRONT])))
+QED
 
 
 
 
 
 
-val prop_2_15_strengthen = store_thm(
-  "prop_2_15_strengthen",
-  ``!M x:'b M'. rooted_model M x M' ==>
-            ?MODEL f s:'b list. bounded_mor_image f MODEL M /\ tree MODEL.frame s /\ f s = x``,
+Theorem prop_2_15_strengthen:
+    !M x:'b M'. rooted_model M x M' ==>
+            ?MODEL f s:'b list. bounded_mor_image f MODEL M /\ tree MODEL.frame s /\ f s = x
+Proof
   rpt strip_tac >>
   map_every qexists_tac [`bounded_preimage_rooted M x`,`LAST`,`[x]`] >>
   rw[tree_def,bounded_mor_image_def] (* 6 *)
@@ -730,7 +744,8 @@ val prop_2_15_strengthen = store_thm(
   >- fs[bounded_preimage_rooted_def]
   >- metis_tac[prop_2_15_subgoal_4]
   >- metis_tac[prop_2_15_subgoal_5]
-  >- metis_tac[prop_2_15_subgoal_6]);
+  >- metis_tac[prop_2_15_subgoal_6]
+QED
 
 
 
@@ -741,19 +756,20 @@ rel := λw1 w2. w1 IN M.frame.world /\ w2 IN M.frame.world /\ M.frame.rel w1 w2|
           valt := M.valt |>
 End
 
-val point_GENSUBMODEL_GENSUBMODEL = store_thm(
-  "point_GENSUBMODEL_GENSUBMODEL",
-  ``!M w. w IN M.frame.world ==> GENSUBMODEL (point_GENSUBMODEL M w) M``,
+Theorem point_GENSUBMODEL_GENSUBMODEL:
+    !M w. w IN M.frame.world ==> GENSUBMODEL (point_GENSUBMODEL M w) M
+Proof
   rw[GENSUBMODEL_def,point_GENSUBMODEL_def] (* 2 *)
   >- (rw[SUBMODEL_def] >> fs[SUBSET_DEF])
   >- (simp[Once RTC_CASES2] >>
      `∃u. (RESTRICT M.frame.rel M.frame.world)^* w u ∧ RESTRICT M.frame.rel M.frame.world u w2` suffices_by metis_tac[] >>
-     qexists_tac `w1` >> simp[Once RESTRICT_def]));
+     qexists_tac `w1` >> simp[Once RESTRICT_def])
+QED
 
 
-val point_GENSUBMODEL_rooted = store_thm(
-  "point_GENSUBMODEL_rooted",
-  ``!M w. w IN M.frame.world ==> rooted_model (point_GENSUBMODEL M w) w M``,
+Theorem point_GENSUBMODEL_rooted:
+    !M w. w IN M.frame.world ==> rooted_model (point_GENSUBMODEL M w) w M
+Proof
   rw[rooted_model_def] >> eq_tac >> rw[] (* 7 *)
   >- fs[point_GENSUBMODEL_def]
   >- fs[point_GENSUBMODEL_def]
@@ -761,22 +777,24 @@ val point_GENSUBMODEL_rooted = store_thm(
   >- (fs[point_GENSUBMODEL_def] >> metis_tac[RESTRICT_def])
   >- (fs[point_GENSUBMODEL_def] >> metis_tac[RESTRICT_def])
   >- fs[point_GENSUBMODEL_def]
-  >- fs[point_GENSUBMODEL_def]);
+  >- fs[point_GENSUBMODEL_def]
+QED
 
-val point_GENSUBMODEL_satis = store_thm(
-  "point_GENSUBMODEL_satis",
-  ``!M w f. satis M w f ==> satis (point_GENSUBMODEL M w) w f``,
+Theorem point_GENSUBMODEL_satis:
+    !M w f. satis M w f ==> satis (point_GENSUBMODEL M w) w f
+Proof
   rw[] >>
   `w IN M.frame.world` by metis_tac[satis_in_world] >>
   `GENSUBMODEL (point_GENSUBMODEL M w) M` by metis_tac[point_GENSUBMODEL_GENSUBMODEL] >>
   `(RESTRICT M.frame.rel M.frame.world)^* w w` by metis_tac[RTC_CASES2] >>
   `w IN (point_GENSUBMODEL M w).frame.world` by fs[point_GENSUBMODEL_def] >>
-  metis_tac[prop_2_6]);
+  metis_tac[prop_2_6]
+QED
 
-val prop_2_15_corollary = store_thm(
-  "prop_2_15_corollary",
-  ``!M (w:'b) form. satis M w form ==>
-  ?MODEL (s:'b list). tree MODEL.frame s /\ satis MODEL s form``,
+Theorem prop_2_15_corollary:
+    !M (w:'b) form. satis M w form ==>
+  ?MODEL (s:'b list). tree MODEL.frame s /\ satis MODEL s form
+Proof
   rw[] >>
   `w IN M.frame.world` by metis_tac[satis_in_world] >>
   `satis (point_GENSUBMODEL M w) w form` by metis_tac[point_GENSUBMODEL_satis] >>
@@ -784,5 +802,6 @@ val prop_2_15_corollary = store_thm(
   drule prop_2_15_strengthen >> rw[] >>
   qexists_tac `MODEL` >> rw[] >> qexists_tac `s` >> rw[] >>
   fs[bounded_mor_image_def] >>
-  `s IN MODEL.frame.world` by metis_tac[tree_def] >> metis_tac[prop_2_14]);
+  `s IN MODEL.frame.world` by metis_tac[tree_def] >> metis_tac[prop_2_14]
+QED
 

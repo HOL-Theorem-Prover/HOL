@@ -25,10 +25,9 @@ Libs
      [axioms: ] [] |- |= implies (character_listp x) (eqlable_listp x),
 *)
 
-val character_listp_forward_to_eqlable_listp_defaxiom =
- store_thm
-  ("character_listp_forward_to_eqlable_listp_defaxiom",
-   ``|= implies (character_listp x) (eqlable_listp x)``,
+Theorem character_listp_forward_to_eqlable_listp_defaxiom:
+     |= implies (character_listp x) (eqlable_listp x)
+Proof
    SIMP_TAC arith_ss [implies]
     THEN Induct_on `x`
     THENL
@@ -40,17 +39,17 @@ val character_listp_forward_to_eqlable_listp_defaxiom =
        THEN ACL2_SIMP_TAC [itel_def]
        THEN FULL_SIMP_TAC arith_ss [GSYM ACL2_TRUE,GSYM nil_def]
        THEN Cases_on `x`
-       THEN ACL2_FULL_SIMP_TAC [characterp_def]]);
+       THEN ACL2_FULL_SIMP_TAC [characterp_def]]
+QED
 
 (*
      [oracles: DEFTHM ACL2::STANDARD-CHAR-LISTP-FORWARD-TO-CHARACTER-LISTP]
      [axioms: ] [] |- |= implies (standard_char_listp x) (character_listp x),
 *)
 
-val standard_char_listp_forward_to_character_listp_defaxiom =
- store_thm
-  ("standard_char_listp_forward_to_character_listp_defaxiom",
-   ``|= implies (standard_char_listp x) (character_listp x)``,
+Theorem standard_char_listp_forward_to_character_listp_defaxiom:
+     |= implies (standard_char_listp x) (character_listp x)
+Proof
    SIMP_TAC arith_ss [implies]
     THEN Induct_on `x`
     THEN ONCE_REWRITE_TAC[character_listp_def,standard_char_listp_def]
@@ -60,7 +59,8 @@ val standard_char_listp_forward_to_character_listp_defaxiom =
       ACL2_SIMP_TAC [],
       ACL2_SIMP_TAC [],
       ACL2_SIMP_TAC []
-       THEN FULL_SIMP_TAC std_ss [GSYM nil_def,GSYM ACL2_TRUE]]);
+       THEN FULL_SIMP_TAC std_ss [GSYM nil_def,GSYM ACL2_TRUE]]
+QED
 
 
 (*
@@ -68,40 +68,40 @@ val standard_char_listp_forward_to_character_listp_defaxiom =
      |- |= character_listp (coerce acl2_str (csym "LIST")),
 *)
 
-val character_listp_list_to_sexp =
- store_thm
-  ("character_listp_list_to_sexp",
-   ``!l. |= character_listp(list_to_sexp chr l)``,
+Theorem character_listp_list_to_sexp:
+     !l. |= character_listp(list_to_sexp chr l)
+Proof
    Induct
     THEN ACL2_SIMP_TAC[list_to_sexp_def]
-    THEN ACL2_FULL_SIMP_TAC[ACL2_TRUE,nil_def]);
+    THEN ACL2_FULL_SIMP_TAC[ACL2_TRUE,nil_def]
+QED
 
-val character_listp_coerce_defaxiom =
- store_thm
-  ("character_listp_coerce_defaxiom",
-   ``|= character_listp (coerce acl2_str (csym "LIST"))``,
+Theorem character_listp_coerce_defaxiom:
+     |= character_listp (coerce acl2_str (csym "LIST"))
+Proof
    Cases_on `acl2_str`
     THEN ACL2_SIMP_TAC
           [csym_def,COMMON_LISP_def,coerce_string_to_list_def,
            coerce_list_to_string_def,list_to_sexp_def,
            EVAL ``EXPLODE ""``,stringTheory.EXPLODE_EQNS,
            make_character_list_def]
-    THEN PROVE_TAC[character_listp_list_to_sexp,nil_def,ACL2_TRUE]);
+    THEN PROVE_TAC[character_listp_list_to_sexp,nil_def,ACL2_TRUE]
+QED
 
-val assoc_nil =
- store_thm
-  ("assoc_nil",
-   ``assoc x nil = nil``,
+Theorem assoc_nil:
+     assoc x nil = nil
+Proof
    CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[assoc_def]))
-    THEN ACL2_SIMP_TAC[itel_def]);
+    THEN ACL2_SIMP_TAC[itel_def]
+QED
 
-val assoc_cons =
- store_thm
-  ("assoc_cons",
-   ``assoc x (cons (cons x' y) l) =
-      if |= equal x x' then cons x' y else assoc x l``,
+Theorem assoc_cons:
+     assoc x (cons (cons x' y) l) =
+      if |= equal x x' then cons x' y else assoc x l
+Proof
    CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[assoc_def]))
-    THEN ACL2_SIMP_TAC[itel_def]);
+    THEN ACL2_SIMP_TAC[itel_def]
+QED
 
 (*
 val lower_case_p_char_downcase_defaxiom =

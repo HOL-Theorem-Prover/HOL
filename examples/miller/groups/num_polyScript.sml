@@ -68,63 +68,69 @@ End
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val EVAL_POLY_0 = store_thm
-  ("EVAL_POLY_0",
-   ``!h t. eval_poly (h :: t) 0 = h``,
-   R_TAC [eval_poly_def]);
+Theorem EVAL_POLY_0:
+     !h t. eval_poly (h :: t) 0 = h
+Proof
+   R_TAC [eval_poly_def]
+QED
 
-val EVAL_POLY_BUTLAST = store_thm
-  ("EVAL_POLY_BUTLAST",
-   ``!h t.
+Theorem EVAL_POLY_BUTLAST:
+     !h t.
        (LAST (h :: t) = 0) ==>
-       (eval_poly (BUTLAST (h :: t)) = eval_poly (h :: t))``,
+       (eval_poly (BUTLAST (h :: t)) = eval_poly (h :: t))
+Proof
    !! GEN_TAC
    ++ Q.SPEC_TAC (`h`, `h`)
    ++ Q.SPEC_TAC (`t`, `t`)
    ++ FUN_EQ_TAC
    ++ Induct >> R_TAC [BUTLAST_CONS, LAST_CONS, eval_poly_def]
-   ++ R_TAC [BUTLAST_CONS, LAST_CONS, eval_poly_def]);
+   ++ R_TAC [BUTLAST_CONS, LAST_CONS, eval_poly_def]
+QED
 
-val MOD_POLY_1_ROOT = store_thm
-  ("MOD_POLY_1_ROOT",
-   ``!p a x.
+Theorem MOD_POLY_1_ROOT:
+     !p a x.
        a < p ==>
-       ((eval_poly [p - a; 1] x MOD p = 0) = (x MOD p = a))``,
+       ((eval_poly [p - a; 1] x MOD p = 0) = (x MOD p = a))
+Proof
    S_TAC
    ++ R_TAC [eval_poly_def]
    ++ Suff `((a + (p - a + x)) MOD p = a MOD p) = (x MOD p = a)`
    >> R_TAC [MOD_ADD_CANCEL]
-   ++ R_TAC [ADD_ASSOC]);
+   ++ R_TAC [ADD_ASSOC]
+QED
 
-val EVAL_MOD_EQ = store_thm
-  ("EVAL_MOD_EQ",
-   ``!f p a b.
+Theorem EVAL_MOD_EQ:
+     !f p a b.
        0 < p /\ (a MOD p = b MOD p) ==>
-       (eval_poly f a MOD p = eval_poly f b MOD p)``,
+       (eval_poly f a MOD p = eval_poly f b MOD p)
+Proof
    S_TAC
    ++ Induct_on `f` >> R_TAC [eval_poly_def]
-   ++ R_TAC [eval_poly_def]);
+   ++ R_TAC [eval_poly_def]
+QED
 
-val FACTOR_POLY_LENGTH = store_thm
-  ("FACTOR_POLY_LENGTH",
-   ``!h t a. LENGTH (factor_poly (h :: t) a) = LENGTH (h :: t)``,
+Theorem FACTOR_POLY_LENGTH:
+     !h t a. LENGTH (factor_poly (h :: t) a) = LENGTH (h :: t)
+Proof
    S_TAC
    ++ Q.SPEC_TAC (`h`, `h`)
    ++ Induct_on `t` >> R_TAC [factor_poly_def, LENGTH]
-   ++ R_TAC [factor_poly_def, LENGTH, LET_DEF]);
+   ++ R_TAC [factor_poly_def, LENGTH, LET_DEF]
+QED
 
-val FACTOR_POLY_EQ_NIL = store_thm
-  ("FACTOR_POLY_EQ_NIL",
-   ``!h t a. ~(factor_poly (h :: t) a = [])``,
+Theorem FACTOR_POLY_EQ_NIL:
+     !h t a. ~(factor_poly (h :: t) a = [])
+Proof
    S_TAC
    ++ Suff `~(LENGTH (factor_poly (h :: t) a) = LENGTH ([] : num list))`
    >> PROVE_TAC []
    ++ R_TAC [FACTOR_POLY_LENGTH]
-   ++ R_TAC [LENGTH]);
+   ++ R_TAC [LENGTH]
+QED
 
-val FACTOR_POLY_LAST = store_thm
-  ("FACTOR_POLY_LAST",
-   ``!h t a. LAST (factor_poly (h :: t) a) = 0``,
+Theorem FACTOR_POLY_LAST:
+     !h t a. LAST (factor_poly (h :: t) a) = 0
+Proof
    S_TAC
    ++ Q.SPEC_TAC (`h`, `h`)
    ++ Induct_on `t` >> R_TAC [factor_poly_def, LAST_CONS]
@@ -135,24 +141,26 @@ val FACTOR_POLY_LAST = store_thm
    >> (Suff `~(LENGTH (factor_poly (h :: t) a) = LENGTH ([]:num list))`
        >> PROVE_TAC []
        ++ R_TAC [FACTOR_POLY_LENGTH, LENGTH])
-   ++ R_TAC [LAST_CONS]);
+   ++ R_TAC [LAST_CONS]
+QED
 
-val FACTOR_POLY_HD = store_thm
-  ("FACTOR_POLY_HD",
-   ``!h t a. HD (factor_poly (h :: t) a) = eval_poly t a``,
+Theorem FACTOR_POLY_HD:
+     !h t a. HD (factor_poly (h :: t) a) = eval_poly t a
+Proof
    S_TAC
    ++ Q.SPEC_TAC (`h`, `h`)
    ++ Induct_on `t` >> R_TAC [eval_poly_def, factor_poly_def]
    ++ R_TAC [eval_poly_def, factor_poly_def]
    ++ S_TAC
-   ++ R_TAC [LET_DEF]);
+   ++ R_TAC [LET_DEF]
+QED
 
-val FACTOR_POLY = store_thm
-  ("FACTOR_POLY",
-   ``!f a x.
+Theorem FACTOR_POLY:
+     !f a x.
        ~(f = []) /\ a < x ==>
        (((x - a) * eval_poly (factor_poly f a) x + eval_poly f a) =
-        eval_poly f x)``,
+        eval_poly f x)
+Proof
    S_TAC
    ++ Induct_on `f` >> R_TAC []
    ++ Cases_on `f` >> AR_TAC [eval_poly_def, factor_poly_def]
@@ -173,18 +181,19 @@ val FACTOR_POLY = store_thm
    >> PROVE_TAC [MULT_COMM, MULT_ASSOC]
    ++ DISCH_THEN (ONCE_REWRITE_TAC o wrap)
    ++ R_TAC [GSYM LEFT_ADD_DISTRIB]
-   ++ PROVE_TAC [ADD_COMM]);
+   ++ PROVE_TAC [ADD_COMM]
+QED
 
-val FACTOR_MOD_POLY = store_thm
-  ("FACTOR_MOD_POLY",
-   ``!p f a.
+Theorem FACTOR_MOD_POLY:
+     !p f a.
        a < p /\ ~(f = []) ==>
        ((eval_poly f a MOD p = 0) =
         ?g.
           LENGTH g < LENGTH f /\
           !x.
             (eval_poly [p - a; 1] x * eval_poly g x) MOD p =
-            eval_poly f x MOD p)``,
+            eval_poly f x MOD p)
+Proof
    S_TAC
    ++ REVERSE EQ_TAC
    >> (S_TAC
@@ -223,13 +232,14 @@ val FACTOR_MOD_POLY = store_thm
    ++ Q.PAT_X_ASSUM `_ = _` K_TAC
    ++ R_TAC [FACTOR_POLY]
    ++ MATCH_MP_TAC EVAL_MOD_EQ
-   ++ R_TAC []);
+   ++ R_TAC []
+QED
 
-val MOD_POLY_ROOTS = store_thm
-  ("MOD_POLY_ROOTS",
-   ``!p f.
+Theorem MOD_POLY_ROOTS:
+     !p f.
        prime p /\ ~(!x. eval_poly f x MOD p = 0) ==>
-       CARD (\x. x < p /\ (eval_poly f x MOD p = 0)) < LENGTH f``,
+       CARD (\x. x < p /\ (eval_poly f x MOD p = 0)) < LENGTH f
+Proof
    S_TAC
    ++ completeInduct_on `LENGTH f`
    ++ STRIP_TAC
@@ -295,15 +305,16 @@ val MOD_POLY_ROOTS = store_thm
    ++ Q.SPEC_TAC (`CARD a`, `b`)
    ++ STRIP_TAC
    ++ Cases_on `x' IN a`
-   ++ RW_TAC arith_ss []);
+   ++ RW_TAC arith_ss []
+QED
 
-val NTH_ROOT_MOD_POLY = store_thm
-  ("NTH_ROOT_MOD_POLY",
-   ``!p n.
+Theorem NTH_ROOT_MOD_POLY:
+     !p n.
        prime p ==>
        ?f.
          (LENGTH f <= SUC n) /\
-         !x. ((x EXP n) MOD p = 1) = (eval_poly f x MOD p = 0)``,
+         !x. ((x EXP n) MOD p = 1) = (eval_poly f x MOD p = 0)
+Proof
    S_TAC
    ++ Know `!x. (x MOD p = 0) = ((1 + x) MOD p = 1 MOD p)`
    >> (S_TAC
@@ -333,13 +344,14 @@ val NTH_ROOT_MOD_POLY = store_thm
    ++ Q.SPEC_TAC (`SUC n`, `n`)
    ++ Induct >> RW_TAC arith_ss [EXP, eval_poly_def, APPEND, FUNPOW]
    ++ RW_TAC arith_ss [EXP, eval_poly_def, APPEND, FUNPOW_SUC]
-   ++ POP_ASSUM (fn th => R_TAC [GSYM th]));
+   ++ POP_ASSUM (fn th => R_TAC [GSYM th])
+QED
 
-val MOD_POLY_NTH_ROOTS = store_thm
-  ("MOD_POLY_NTH_ROOTS",
-   ``!p n.
+Theorem MOD_POLY_NTH_ROOTS:
+     !p n.
        0 < n /\ prime p ==>
-       CARD (\x. x < p /\ ((x EXP n) MOD p = 1)) <= n``,
+       CARD (\x. x < p /\ ((x EXP n) MOD p = 1)) <= n
+Proof
    S_TAC
    ++ MP_TAC (Q.SPECL [`p`, `n`] NTH_ROOT_MOD_POLY)
    ++ R_TAC []
@@ -352,7 +364,8 @@ val MOD_POLY_NTH_ROOTS = store_thm
    ++ DISCH_TAC
    ++ MP_TAC (Q.SPECL [`p`, `f`] MOD_POLY_ROOTS)
    ++ R_TAC []
-   ++ DECIDE_TAC);
+   ++ DECIDE_TAC
+QED
 
 (* non-interactive mode
 *)

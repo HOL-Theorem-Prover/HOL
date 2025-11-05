@@ -17,31 +17,33 @@ End
 
 val dfa_path_ind = fetch "-" "dfa_path_ind";
 
-val dfa_path_append = Q.store_thm
-("dfa_path_append",
- `!trans s1 s2 p1 p2.
+Theorem dfa_path_append:
+  !trans s1 s2 p1 p2.
     dfa_path trans s1 s2 (p1 ++ p2) =
-    ?s'. dfa_path trans s1 s' p1 /\ dfa_path trans s' s2 p2`,
+    ?s'. dfa_path trans s1 s' p1 /\ dfa_path trans s' s2 p2
+Proof
  ho_match_mp_tac dfa_path_ind
   >> rw [dfa_path_def]
   >> Cases_on `trans (s1,c)`
   >> fs []
-  >> metis_tac []);
+  >> metis_tac []
+QED
 
-val dfa_path_extend = Q.store_thm
-("dfa_path_extend",
- `!trans s1 s2 p c s3.
+Theorem dfa_path_extend:
+  !trans s1 s2 p c s3.
     dfa_path trans s1 s2 p /\ (trans (s2,c) = SOME s3)
     ==>
-   dfa_path trans s1 s3 (p++[(c,s3)])`,
+   dfa_path trans s1 s3 (p++[(c,s3)])
+Proof
  rw [dfa_path_append]
  >> rw [dfa_path_def]
  >> qexists_tac `s2`
- >> rw []);
+ >> rw []
+QED
 
-val dfa_path_last = Q.store_thm
-("dfa_path_last",
- `!trans s1 s2 p. dfa_path trans s1 s2 p /\ (p <> []) ==> ?p' c. p = p' ++ [(c,s2)]`,
+Theorem dfa_path_last:
+  !trans s1 s2 p. dfa_path trans s1 s2 p /\ (p <> []) ==> ?p' c. p = p' ++ [(c,s2)]
+Proof
  Induct_on `p`
   >> rw [dfa_path_def]
   >> PairCases_on `h`
@@ -52,14 +54,15 @@ val dfa_path_last = Q.store_thm
   >> fs []
   >> Cases_on `p = []`
   >> fs [dfa_path_def]
-  >> rw []);
+  >> rw []
+QED
 
-val dfa_path_determ = Q.store_thm
-("dfa_path_determ",
- `!trans s1 s2 p s2' p'.
+Theorem dfa_path_determ:
+  !trans s1 s2 p s2' p'.
    dfa_path trans s1 s2 p /\ dfa_path trans s1 s2' p' /\ (MAP FST p = MAP FST p')
    ==>
-   (p = p') /\ (s2 = s2')`,
+   (p = p') /\ (s2 = s2')
+Proof
  Induct_on `p`
   >> rw [dfa_path_def]
   >> fs [dfa_path_def]
@@ -71,5 +74,6 @@ val dfa_path_determ = Q.store_thm
   >> EVERY_CASE_TAC
   >> fs []
   >> rw []
-  >> metis_tac []);
+  >> metis_tac []
+QED
 

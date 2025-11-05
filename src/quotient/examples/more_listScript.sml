@@ -4,13 +4,6 @@ Ancestors
 Libs
   listLib numLib Psyntax tactics
 
-(*
-app load [
-          "numTheory", "listTheory", "rich_listTheory", "listLib", "pred_setLib",
-          "more_setTheory",
-          "arithLib", "Psyntax" ];
-*)
-
 Theorem MAP2_APPEND:
      !s1 s2 t1 t2 (f:'a->'b->'c).
           (LENGTH s1 = LENGTH s2) ==>
@@ -104,12 +97,10 @@ FILTER_MAP;
 *)
 
 
-val SL =
-    new_recursive_definition
-      {rec_axiom = listTheory.list_Axiom,
-       name      = "SL",
-       def       = “(SL NIL = {}) /\
-                       (SL (CONS (y:'a) l) = y INSERT (SL l))”};
+Definition SL[nocompute]:
+  (SL NIL = {}) /\
+  (SL (CONS (y:'a) l) = y INSERT (SL l))
+End
 
 
 Theorem SL_APPEND:
@@ -144,12 +135,10 @@ Proof
 QED
 
 
-val DL =
-    new_recursive_definition
-      {rec_axiom = listTheory.list_Axiom,
-       name      = "DL",
-       def       = “(DL NIL = T) /\
-                       (DL (CONS (y:'a) l) = (~(y IN SL l) /\ DL l))”};
+Definition DL[nocompute]:
+  (DL NIL = T) /\
+  (DL (CONS (y:'a) l) = (~(y IN SL l) /\ DL l))
+End
 
 
 

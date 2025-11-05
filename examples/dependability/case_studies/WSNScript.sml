@@ -180,7 +180,6 @@ Theorem rel_parallel_series_exp_fail_rate :
       1 - (list_prod o (one_minus_list) of
         (\a. list_prod (exp_func_list a t))) C)
 Proof
-
 REPEAT GEN_TAC >> REPEAT STRIP_TAC
 >> DEP_REWRITE_TAC[parallel_series_struct_rbd_v2]
 >> DEP_REWRITE_TAC[parallel_series_exp_fail_rate]

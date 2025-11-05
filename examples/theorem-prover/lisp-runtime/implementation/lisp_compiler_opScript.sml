@@ -1249,10 +1249,11 @@ val REPLACE_CODE_RW = prove(
   \\ `code_ptr (WRITE_CODE (BC_CODE (q',r')) x_code) = code_ptr (BC_CODE (q,r))` by METIS_TAC []
   \\ FULL_SIMP_TAC std_ss [code_ptr_def,code_ptr_WRITE_CODE]);
 
-val code_mem_WRITE_CODE_LESS = store_thm("code_mem_WRITE_CODE_LESS",
-  ``!xs code i.
+Theorem code_mem_WRITE_CODE_LESS:
+    !xs code i.
       i < code_ptr code ==>
-      (code_mem (WRITE_CODE code xs) i = code_mem code i)``,
+      (code_mem (WRITE_CODE code xs) i = code_mem code i)
+Proof
   Induct
   THEN1 (Cases_on `code` \\ Cases_on `p` \\ SIMP_TAC std_ss [WRITE_CODE_def])
   \\ ONCE_REWRITE_TAC [GSYM (EVAL ``[x] ++ ys``)]
@@ -1264,7 +1265,8 @@ val code_mem_WRITE_CODE_LESS = store_thm("code_mem_WRITE_CODE_LESS",
   \\ RES_TAC \\ ASM_SIMP_TAC std_ss []
   \\ Cases_on `code` \\ Cases_on `p`
   \\ FULL_SIMP_TAC std_ss [WRITE_CODE_def,code_mem_def,APPLY_UPDATE_THM,code_ptr_def]
-  \\ `~(i = r)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []);
+  \\ `~(i = r)` by DECIDE_TAC \\ ASM_SIMP_TAC std_ss []
+QED
 
 val code_mem_WRITE_CODE = prove(
   ``!xs y ys code.
@@ -4122,9 +4124,11 @@ val BC_EV_HILBERT_LEMMA = prove(
   ``bc_inv bc /\ BC_ev T (t,a,q,bc) y ==> ((@result. BC_ev T (t,a,q,bc) result) = y)``,
   METIS_TAC [BC_ev_DETERMINISTIC,bc_inv_def]);
 
-val INSERT_UNION_INSERT = store_thm("INSERT_UNION_INSERT",
-  ``x INSERT (y UNION (z INSERT t)) = x INSERT z INSERT (y UNION t)``,
-  SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_UNION] \\ METIS_TAC []);
+Theorem INSERT_UNION_INSERT:
+    x INSERT (y UNION (z INSERT t)) = x INSERT z INSERT (y UNION t)
+Proof
+  SIMP_TAC std_ss [EXTENSION,IN_INSERT,IN_UNION] \\ METIS_TAC []
+QED
 
 fun abbrev_code (th,def_name) = let
   fun mk_tuple [] = fail()
@@ -4384,11 +4388,13 @@ val bc_state_tree_WRITE_BYTECODE = prove(
   Induct \\ FULL_SIMP_TAC std_ss [WRITE_BYTECODE_def]
   \\ FULL_SIMP_TAC (srw_ss()) [bc_state_tree_def,const_tree_def]);
 
-val WRITE_BYTECODE_code_end = store_thm("WRITE_BYTECODE_code_end",
-  ``!xs a bc. ((WRITE_BYTECODE bc a xs).code_end = bc.code_end) /\
+Theorem WRITE_BYTECODE_code_end:
+    !xs a bc. ((WRITE_BYTECODE bc a xs).code_end = bc.code_end) /\
               ((WRITE_BYTECODE bc a xs).instr_length = bc.instr_length) /\
-              ((WRITE_BYTECODE bc a xs).consts = bc.consts)``,
-  Induct \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def]);
+              ((WRITE_BYTECODE bc a xs).consts = bc.consts)
+Proof
+  Induct \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def]
+QED
 
 val BC_CODE_OK_WRITE_BYTECODE_LEMMA = prove(
   ``!xs a bc x y.
@@ -4396,19 +4402,21 @@ val BC_CODE_OK_WRITE_BYTECODE_LEMMA = prove(
       (WRITE_BYTECODE (bc with <|code := x|>) a xs).code``,
   Induct \\ ASM_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def]);
 
-val WRITE_CODE_EQ_WRITE_BYTECODE = store_thm("WRITE_CODE_EQ_WRITE_BYTECODE",
-  ``!xs bc.
+Theorem WRITE_CODE_EQ_WRITE_BYTECODE:
+    !xs bc.
      (bc_length = bc.instr_length) ==>
      (WRITE_CODE (BC_CODE (bc.code,bc.code_end)) xs =
       BC_CODE ((WRITE_BYTECODE bc bc.code_end xs).code,
-               bc.code_end + iLENGTH bc_length xs))``,
+               bc.code_end + iLENGTH bc_length xs))
+Proof
   Induct \\ FULL_SIMP_TAC (srw_ss()) [WRITE_BYTECODE_def,WRITE_CODE_def,iLENGTH_def]
   \\ REPEAT STRIP_TAC
   \\ Q.PAT_X_ASSUM `!bc.bbb`
     (MP_TAC o Q.SPEC `(bc with code_end := bc.code_end + bc_length h)
                           with code := (bc.code_end =+ SOME h) bc.code`)
   \\ FULL_SIMP_TAC (srw_ss()) [ADD_ASSOC] \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [BC_CODE_OK_WRITE_BYTECODE_LEMMA]);
+  \\ FULL_SIMP_TAC std_ss [BC_CODE_OK_WRITE_BYTECODE_LEMMA]
+QED
 
 val bc_inv_WRITE_BYTECODE = prove(
   ``!xs bc.
@@ -4503,9 +4511,11 @@ val mc_only_compile_thm = prove(
   \\ MATCH_MP_TAC WRITE_BYTECODE_code \\ ASM_SIMP_TAC std_ss [])
   |> SIMP_RULE std_ss [LET_DEF];
 
-val bc_inv_BC_ONLY_COMPILE = store_thm("bc_inv_BC_ONLY_COMPILE",
-  ``bc_inv bc ==> bc_inv (BC_ONLY_COMPILE (MAP getSym (sexp2list params),sexp2term body,bc))``,
-  ASM_SIMP_TAC std_ss [mc_only_compile_thm]);
+Theorem bc_inv_BC_ONLY_COMPILE:
+    bc_inv bc ==> bc_inv (BC_ONLY_COMPILE (MAP getSym (sexp2list params),sexp2term body,bc))
+Proof
+  ASM_SIMP_TAC std_ss [mc_only_compile_thm]
+QED
 
 val mc_compile_inst_thm = prove(
   ``bc_inv bc /\ (FUN_LOOKUP bc.compiled (getSym fname) = NONE) ==>

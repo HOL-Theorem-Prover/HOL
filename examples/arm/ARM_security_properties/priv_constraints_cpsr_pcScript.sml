@@ -62,10 +62,10 @@ fun define_cfc_goal_abs a expr =
             (priv_cpsr_flags_constraints_abs ^a ^sctlr) ``)
     end;
 
-val seqT_priv_cpsr_flags_constraints_thm =
-    store_thm("seqT_priv_cpsr_flags_constraints_thm",
-              `` !f g sctlr. priv_cpsr_flags_constraints_abs f sctlr ==>
-             priv_cpsr_flags_constraints (g >>= f) sctlr``,
+Theorem seqT_priv_cpsr_flags_constraints_thm:
+                 !f g sctlr. priv_cpsr_flags_constraints_abs f sctlr ==>
+             priv_cpsr_flags_constraints (g >>= f) sctlr
+Proof
               (RW_TAC (srw_ss()) [priv_cpsr_flags_constraints_def,
                                   priv_cpsr_flags_constraints_abs_def])
                   THEN Cases_on `g s`
@@ -79,12 +79,12 @@ val seqT_priv_cpsr_flags_constraints_thm =
                   THEN FULL_SIMP_TAC (srw_ss()) []
                   THEN RES_TAC
                   THEN FULL_SIMP_TAC (srw_ss()) []
-             );
+QED
 
-val parT_priv_cpsr_flags_constraints_thm =
-    store_thm("parT_priv_cpsr_flags_constraints_thm",
-              `` !f g  ee. priv_cpsr_flags_constraints f ee ==>
-             priv_cpsr_flags_constraints (g ||| f)  ee``,
+Theorem parT_priv_cpsr_flags_constraints_thm:
+                 !f g  ee. priv_cpsr_flags_constraints f ee ==>
+             priv_cpsr_flags_constraints (g ||| f)  ee
+Proof
               (RW_TAC (srw_ss())
                       [
                        priv_cpsr_flags_constraints_def])
@@ -103,11 +103,11 @@ val parT_priv_cpsr_flags_constraints_thm =
                                         THEN RW_TAC (srw_ss()) [] ,
                                     (UNDISCH_ALL_TAC
                                          THEN  EVAL_TAC
-                                         THEN  RW_TAC (srw_ss()) [])]);
+                                         THEN  RW_TAC (srw_ss()) [])]
+QED
 
-val write_cpsr_cfc_thm =
-    store_thm("write_cpsr_cfc_thm",
-              ``! sctlr.
+Theorem write_cpsr_cfc_thm:
+                ! sctlr.
              (priv_cpsr_flags_constraints
                       ( write_cpsr <|proc:=0|>
                           (cpsr with
@@ -134,31 +134,33 @@ val write_cpsr_cfc_thm =
                             ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
                           E := sctlr.EE|>)) sctlr)
-             ``,
+Proof
               EVAL_TAC
                   THEN RW_TAC (srw_ss()) [priv_cpsr_flags_constraints_def]
                   THEN EVAL_TAC
-                  THEN RW_TAC (srw_ss()) []);
+                  THEN RW_TAC (srw_ss()) []
+QED
 
 
-val cfc_first_abs_lemma =
-    store_thm ("cfc_first_abs_lemma",
-               ``!f g x. (f=g) ==> ((priv_cpsr_flags_constraints f x) =
-                                    (priv_cpsr_flags_constraints g x))``,
-               RW_TAC (srw_ss()) []);
+Theorem cfc_first_abs_lemma:
+                 !f g x. (f=g) ==> ((priv_cpsr_flags_constraints f x) =
+                                    (priv_cpsr_flags_constraints g x))
+Proof
+               RW_TAC (srw_ss()) []
+QED
 
 
-val cfc_second_abs_lemma =
-    store_thm ("cfc_second_abs_lemma",
-               ``! f x. (! y. priv_cpsr_flags_constraints (f y) x ) =
-    priv_cpsr_flags_constraints_abs f x``,
+Theorem cfc_second_abs_lemma:
+                 ! f x. (! y. priv_cpsr_flags_constraints (f y) x ) =
+    priv_cpsr_flags_constraints_abs f x
+Proof
                RW_TAC (srw_ss()) [priv_cpsr_flags_constraints_def,
                                   priv_cpsr_flags_constraints_abs_def]
-                      THEN METIS_TAC []);
+                      THEN METIS_TAC []
+QED
 
-val branch_to_ut_cfc_thm =
-    store_thm ("branch_to_ut_cfc_thm",
-               ``! s s' a x ee.
+Theorem branch_to_ut_cfc_thm:
+                 ! s s' a x ee.
               (((s.psrs (0, CPSR)).I = T)
                /\
                     ((s.psrs (0, CPSR)).J = F)
@@ -173,14 +175,15 @@ val branch_to_ut_cfc_thm =
                /\
                     ((s'.psrs (0, CPSR)).IT = 0w) /\
                                                        ((s'.psrs (0,CPSR)).E = ee)
-              )``,
+              )
+Proof
                EVAL_TAC THEN
                         RW_TAC (srw_ss()) [] THEN
-                        RW_TAC (srw_ss()) []);
+                        RW_TAC (srw_ss()) []
+QED
 
-val constT_cfc_ut_thm =
-    store_thm ("constT_cfc_ut_thm",
-               ``! s s' a ii x.
+Theorem constT_cfc_ut_thm:
+                 ! s s' a ii x.
               (((s.psrs (ii.proc, CPSR)).I = T)
                /\
                     ((s.psrs (ii.proc, CPSR)).J = F)
@@ -191,15 +194,17 @@ val constT_cfc_ut_thm =
                /\
                     ((s'.psrs (ii.proc, CPSR)).J = F)
                /\
-                    ((s'.psrs (ii.proc, CPSR)).IT = 0w))``,
+                    ((s'.psrs (ii.proc, CPSR)).IT = 0w))
+Proof
                EVAL_TAC THEN
                         RW_TAC (srw_ss()) [] THEN
-                        RW_TAC (srw_ss()) []);
+                        RW_TAC (srw_ss()) []
+QED
 
-val branch_cfc_thm =
-    store_thm("branch_cfc_thm",
-              `` !f sctlr x . priv_cpsr_flags_constraints f sctlr ==>
-             (priv_cpsr_flags_constraints (f ||| branch_to <|proc:=0|> x) sctlr)``,
+Theorem branch_cfc_thm:
+                 !f sctlr x . priv_cpsr_flags_constraints f sctlr ==>
+             (priv_cpsr_flags_constraints (f ||| branch_to <|proc:=0|> x) sctlr)
+Proof
               (RW_TAC (srw_ss()) [parT_def,
                                   seqT_def,priv_cpsr_flags_constraints_def])
                   THEN
@@ -221,12 +226,12 @@ val branch_cfc_thm =
               (UNDISCH_ALL_TAC
                    THEN  EVAL_TAC
                    THEN  RW_TAC (srw_ss()) [])]
-             );
+QED
 
-val constT_cfc_thm =
-    store_thm("constT_cfc_thm",
-              `` !f  ee . priv_cpsr_flags_constraints f ee ==>
-             (priv_cpsr_flags_constraints (f >>= (λ(u1:unit,u2:unit,u3:unit,u4:unit). constT ()))) ee ``,
+Theorem constT_cfc_thm:
+                 !f  ee . priv_cpsr_flags_constraints f ee ==>
+             (priv_cpsr_flags_constraints (f >>= (λ(u1:unit,u2:unit,u3:unit,u4:unit). constT ()))) ee
+Proof
               (RW_TAC (srw_ss()) [seqT_def,priv_cpsr_flags_constraints_def,
                                   priv_cpsr_flags_constraints_abs_def,constT_def])
                   THEN Cases_on `f s`
@@ -239,18 +244,20 @@ val constT_cfc_thm =
                                          ``a:(unit#unit#unit#unit)``] thm))
                   THEN (UNDISCH_ALL_TAC
                             THEN  EVAL_TAC
-                            THEN  RW_TAC (srw_ss()) []));
+                            THEN  RW_TAC (srw_ss()) [])
+QED
 
-val joint_point_cfc_thm =
-    store_thm("joint_point_cfc_thm",
-              ``!H sctlr. (priv_cpsr_flags_constraints H sctlr) ==>
-             (priv_cpsr_flags_constraints_abs ((\(pc,ExcVectorBase,cpsr,scr,sctlr). H ):(word32 # word32 # ARMpsr # CP15scr # CP15sctlr -> unit M)) sctlr)``,
+Theorem joint_point_cfc_thm:
+                !H sctlr. (priv_cpsr_flags_constraints H sctlr) ==>
+             (priv_cpsr_flags_constraints_abs ((\(pc,ExcVectorBase,cpsr,scr,sctlr). H ):(word32 # word32 # ARMpsr # CP15scr # CP15sctlr -> unit M)) sctlr)
+Proof
     UNDISCH_ALL_TAC THEN
                     EVAL_TAC THEN
                     RW_TAC (srw_ss()) [priv_cpsr_flags_constraints_def,priv_cpsr_flags_constraints_abs_def]THEN
                     (PAT_X_ASSUM ``! s s' a. X`` (fn thm => (ASSUME_TAC (SPECL [``s:'a``,``s':arm_state``,``a:'b``] thm)))) THEN
                     FULL_SIMP_TAC (srw_ss()) [priv_cpsr_flags_constraints_def,priv_cpsr_flags_constraints_abs_def] THEN
-                    RW_TAC (srw_ss()) [priv_cpsr_flags_constraints_def,priv_cpsr_flags_constraints_abs_def]);
+                    RW_TAC (srw_ss()) [priv_cpsr_flags_constraints_def,priv_cpsr_flags_constraints_abs_def]
+QED
 
 val base_thms = [priv_cpsr_flags_constraints_def,
                  seqT_priv_cpsr_flags_constraints_thm,
@@ -385,16 +392,15 @@ val fiq_read_write_cpsr_cfc_thm =
               end
              );
 
-val const_comp_seqT_priv_cpsr_flags_constraints_thm =
-    store_thm(
-    "const_comp_seqT_priv_cpsr_flags_constraints_thm",
-    ``! f g s s' a x.
+Theorem const_comp_seqT_priv_cpsr_flags_constraints_thm:
+      ! f g s s' a x.
              (const_comp f) ==>
              ¬access_violation s' ==>
              priv_cpsr_flags_constraints_abs g x ==>
              ((f>>=g) s = ValueState a s') ==>
              ((((s'.psrs (0,CPSR)).I ⇔ T) ∧ ((s'.psrs (0,CPSR)).J ⇔ F) ∧
-                                          ((s'.psrs (0,CPSR)).IT = 0w) ∧ ((s'.psrs (0,CPSR)).E ⇔ x.EE)))``,
+                                          ((s'.psrs (0,CPSR)).IT = 0w) ∧ ((s'.psrs (0,CPSR)).E ⇔ x.EE)))
+Proof
     RW_TAC (srw_ss()) [const_comp_def,priv_cpsr_flags_constraints_def,
                        priv_cpsr_flags_constraints_abs_def]
            THEN FULL_SIMP_TAC (srw_ss()) []
@@ -406,7 +412,7 @@ val const_comp_seqT_priv_cpsr_flags_constraints_thm =
                                                              ``a:'b``,``a':'a``] thm ))
            THEN RES_TAC
            THEN FULL_SIMP_TAC (srw_ss()) []
-    );
+QED
 
 
 fun prove_take_exception_cfc_thm
@@ -506,15 +512,15 @@ fun prove_take_exception_cfc_thm
 
 
 
-val take_undef_instr_exception_cfc_thm =
-    store_thm ("take_undef_instr_exception_cfc_thm",
-               ``!s a s'.
+Theorem take_undef_instr_exception_cfc_thm:
+                 !s a s'.
               (¬access_violation s')==>
               (take_undef_instr_exception <|proc:=0|> s = ValueState a s') ==>
               (((s'.psrs (0,CPSR)).I ⇔ T)
                    ∧((s'.psrs (0,CPSR)).J ⇔ F) ∧
                    ((s'.psrs (0,CPSR)).IT = 0w) ∧
-                   ((s'.psrs (0,CPSR)).E ⇔ s.coprocessors.state.cp15.SCTLR.EE))``,
+                   ((s'.psrs (0,CPSR)).E ⇔ s.coprocessors.state.cp15.SCTLR.EE))
+Proof
                let
                    val athm = SIMP_CONV (bool_ss) [take_undef_instr_exception_def]
                                         ``take_undef_instr_exception <|proc:=0|> ``;
@@ -541,17 +547,17 @@ val take_undef_instr_exception_cfc_thm =
                        const_comp_rp_thm fixed_sctrl_thm
                        fixed_sctrl_thm2 ltype
                end
-);
+QED
 
-val take_data_abort_exception_cfc_thm =
-    store_thm ("take_data_abort_exception_cfc_thm",
-               ``!s a s'.
+Theorem take_data_abort_exception_cfc_thm:
+                 !s a s'.
               (¬access_violation s')==>
               (take_data_abort_exception <|proc:=0|> s = ValueState a s') ==>
               (((s'.psrs (0,CPSR)).I ⇔ T)
                    ∧((s'.psrs (0,CPSR)).J ⇔ F) ∧
                    ((s'.psrs (0,CPSR)).IT = 0w) ∧
-                   ((s'.psrs (0,CPSR)).E ⇔ s.coprocessors.state.cp15.SCTLR.EE))``,
+                   ((s'.psrs (0,CPSR)).E ⇔ s.coprocessors.state.cp15.SCTLR.EE))
+Proof
                let
                    val athm = SIMP_CONV (bool_ss) [take_data_abort_exception_def]
                                         ``take_data_abort_exception <|proc:=0|> ``;
@@ -581,18 +587,18 @@ val take_data_abort_exception_cfc_thm =
                        fixed_sctrl_thm1
                        fixed_sctrl_thm2 ltype
                end
-);
+QED
 
 
-val take_prefetch_abort_exception_cfc_thm =
-    store_thm ("take_prefetch_abort_exception_cfc_thm",
-               ``!s a s'.
+Theorem take_prefetch_abort_exception_cfc_thm:
+                 !s a s'.
               (¬access_violation s')==>
               (take_prefetch_abort_exception <|proc:=0|> s = ValueState a s') ==>
               (((s'.psrs (0,CPSR)).I ⇔ T)
                    ∧((s'.psrs (0,CPSR)).J ⇔ F) ∧
                    ((s'.psrs (0,CPSR)).IT = 0w) ∧
-                   ((s'.psrs (0,CPSR)).E ⇔ s.coprocessors.state.cp15.SCTLR.EE))``,
+                   ((s'.psrs (0,CPSR)).E ⇔ s.coprocessors.state.cp15.SCTLR.EE))
+Proof
                let
                    val athm = SIMP_CONV (bool_ss) [take_prefetch_abort_exception_def]
                                         ``take_prefetch_abort_exception <|proc:=0|> ``;
@@ -622,19 +628,19 @@ val take_prefetch_abort_exception_cfc_thm =
                        fixed_sctrl_thm1
                        fixed_sctrl_thm2 ltype
                end
-);
+QED
 
 
 
-val take_irq_exception_cfc_thm =
-    store_thm ("take_irq_exception_cfc_thm",
-               ``!s a s'.
+Theorem take_irq_exception_cfc_thm:
+                 !s a s'.
               (¬access_violation s')==>
               (take_irq_exception <|proc:=0|> s = ValueState a s') ==>
               (((s'.psrs (0,CPSR)).I ⇔ T)
                    ∧((s'.psrs (0,CPSR)).J ⇔ F) ∧
                    ((s'.psrs (0,CPSR)).IT = 0w) ∧
-                   ((s'.psrs (0,CPSR)).E ⇔ s.coprocessors.state.cp15.SCTLR.EE))``,
+                   ((s'.psrs (0,CPSR)).E ⇔ s.coprocessors.state.cp15.SCTLR.EE))
+Proof
                let
                    val athm = SIMP_CONV (bool_ss) [take_irq_exception_def]
                                         ``take_irq_exception <|proc:=0|> ``;
@@ -664,7 +670,7 @@ val take_irq_exception_cfc_thm =
                        fixed_sctrl_thm1
                        fixed_sctrl_thm2 ltype
                end
-);
+QED
 
 
 (* TO DO SVC *)
@@ -749,21 +755,22 @@ Definition set_pc_to_abs_def:
                 (s2.registers (0, RName_PC) =  HD (TL(vector_table_address vt m))))
 End
 
-val branch_to_spc_thm =
-    store_thm("branch_to_spc_thm",
-              ``! m adr  . (adr = HD(vector_table_address ExcVectorBase m))
+Theorem branch_to_spc_thm:
+                ! m adr  . (adr = HD(vector_table_address ExcVectorBase m))
                          \/ (adr = HD(TL(vector_table_address ExcVectorBase m))) ==>
-             set_pc_to (branch_to <|proc := 0|> adr) m ExcVectorBase``,
+             set_pc_to (branch_to <|proc := 0|> adr) m ExcVectorBase
+Proof
               EVAL_TAC THEN
                        FULL_SIMP_TAC (srw_ss()) [] THEN
                        RW_TAC (srw_ss()) [] THEN
                        EVAL_TAC THEN
-                       FULL_SIMP_TAC (srw_ss()) []);
+                       FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val seqT_set_pc_to_thm =
-    store_thm("seqT_set_pc_to_thm",
-              `` !g f m vt. set_pc_to_abs g m vt ==>
-             set_pc_to (f >>=  g) m vt``,
+Theorem seqT_set_pc_to_thm:
+                 !g f m vt. set_pc_to_abs g m vt ==>
+             set_pc_to (f >>=  g) m vt
+Proof
               (RW_TAC (srw_ss()) [seqT_def,set_pc_to_abs_def,
                                   set_pc_to_def])
                   THEN Cases_on `f s1`
@@ -778,12 +785,13 @@ val seqT_set_pc_to_thm =
                   (fn thm => ASSUME_TAC
                                  (SPECL [``b:arm_state``,``s2:arm_state``,``c:('b)``] thm))
                   THEN RES_TAC
-                  THEN FULL_SIMP_TAC (srw_ss()) []);
+                  THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val parT_set_pc_to_thm =
-    store_thm("parT_set_pc_to_thm",
-              `` !g f m vt. set_pc_to g m vt ==>
-             set_pc_to (f ||| g) m vt ``,
+Theorem parT_set_pc_to_thm:
+                 !g f m vt. set_pc_to g m vt ==>
+             set_pc_to (f ||| g) m vt
+Proof
               (RW_TAC (srw_ss()) [parT_def,seqT_def,set_pc_to_def])
                   THEN  Cases_on `f s1`
                   THEN  Cases_on `g b`
@@ -793,40 +801,43 @@ val parT_set_pc_to_thm =
                   THEN  RES_TAC
                   THEN  UNDISCH_ALL_TAC
                   THEN  EVAL_TAC
-                  THEN  (RW_TAC (srw_ss()) []));
+                  THEN  (RW_TAC (srw_ss()) [])
+QED
 
-val pc_first_abs_lemma =
-    store_thm ("pc_first_abs_lemma",
-               ``!f g m vt . (f=g) ==> ((set_pc_to f m vt) =
-                                    (set_pc_to  g m vt))``,
-               RW_TAC (srw_ss()) []);
+Theorem pc_first_abs_lemma:
+                 !f g m vt . (f=g) ==> ((set_pc_to f m vt) =
+                                    (set_pc_to  g m vt))
+Proof
+               RW_TAC (srw_ss()) []
+QED
 
-val pc_second_abs_lemma =
-    store_thm ("pc_second_abs_lemma",
-               ``! f m vt. (! y. set_pc_to (f y) m vt) =
-    set_pc_to_abs f m vt``,
+Theorem pc_second_abs_lemma:
+                 ! f m vt. (! y. set_pc_to (f y) m vt) =
+    set_pc_to_abs f m vt
+Proof
                RW_TAC (srw_ss()) [set_pc_to_def,set_pc_to_abs_def]
-                      THEN METIS_TAC []);
+                      THEN METIS_TAC []
+QED
 
-val  vector_table_adr_thm =
-     store_thm(
-     "vector_table_adr_thm",
-     ``!vt.
+Theorem vector_table_adr_thm:
+       !vt.
       (HD (vector_table_address vt (19w:bool[5])) = (vt + 8w:bool[32] ))
      /\
       (HD (vector_table_address vt (23w:bool[5])) = (vt + 16w:bool[32] ))
      /\
       (HD (TL(vector_table_address vt (23w:bool[5]))) = (vt + 12w:bool[32] ))
      /\
-        (HD (vector_table_address vt (27w:bool[5])) = (vt + 4w:bool[32]))``,
+        (HD (vector_table_address vt (27w:bool[5])) = (vt + 4w:bool[32]))
+Proof
      EVAL_TAC
-         THEN RW_TAC (srw_ss()) []);
+         THEN RW_TAC (srw_ss()) []
+QED
 
 
-val constT_spc_thm =
-    store_thm("constT_spc_thm",
-              `` !f m vt. set_pc_to f m vt ==>
-             (set_pc_to (f >>= (λ(u1:unit,u2:unit,u3:unit,u4:unit). constT ())) m vt)``,
+Theorem constT_spc_thm:
+                 !f m vt. set_pc_to f m vt ==>
+             (set_pc_to (f >>= (λ(u1:unit,u2:unit,u3:unit,u4:unit). constT ())) m vt)
+Proof
               (RW_TAC (srw_ss())
                       [seqT_def,set_pc_to_def,constT_def])
                   THEN
@@ -838,7 +849,8 @@ val constT_spc_thm =
                                 RES_TAC,
                          UNDISCH_ALL_TAC
                              THEN  EVAL_TAC
-                             THEN  RW_TAC (srw_ss()) []]);
+                             THEN  RW_TAC (srw_ss()) []]
+QED
 
 fun define_set_pc_goal a [expr,vt] =
     set_goal([], ``
@@ -1014,9 +1026,8 @@ fun prove_take_exception_spc
     end;
 
 
-val take_data_abort_exception_spc_thm =
-    store_thm ("take_data_abort_exception_spc_thm",
-               ``!s a s'.
+Theorem take_data_abort_exception_spc_thm:
+                 !s a s'.
               (¬access_violation s')==>
               (¬access_violation s)==>
               (take_data_abort_exception <|proc:=0|> s =
@@ -1028,7 +1039,7 @@ val take_data_abort_exception_spc_thm =
               (s'.registers (0,RName_PC) =
                (HD (TL (vector_table_address
                 (get_base_vector_table s) 23w)))))
-              ``,
+Proof
                let
                    val body =
                        get_action_body ``take_data_abort_exception``
@@ -1050,11 +1061,10 @@ val take_data_abort_exception_spc_thm =
                      fixed_vb_rp_thm1 joint_write_body_spc_thm
                      l_type spec_list1 spec_list2
                end
-);
+QED
 
-val take_prefetch_abort_exception_spc_thm =
-    store_thm ("take_prefetch_abort_exception_spc_thm",
-               ``!s a s'.
+Theorem take_prefetch_abort_exception_spc_thm:
+                 !s a s'.
               (¬access_violation s')==>
               (¬access_violation s)==>
               (take_prefetch_abort_exception <|proc:=0|> s =
@@ -1063,7 +1073,7 @@ val take_prefetch_abort_exception_spc_thm =
                HD (vector_table_address (get_base_vector_table s) 23w)) ∨
               (s'.registers (0,RName_PC) =
                HD (TL (vector_table_address (get_base_vector_table s) 23w))))
-              ``,
+Proof
                let
                    val body =
                        get_action_body ``take_prefetch_abort_exception``
@@ -1085,12 +1095,11 @@ val take_prefetch_abort_exception_spc_thm =
                      fixed_vb_rp_thm1 joint_write_body_spc_thm
                      l_type spec_list1 spec_list2
                end
-);
+QED
 
 
-val take_undef_instr_exception_spc_thm =
-    store_thm ("take_undef_instr_exception_spc_thm",
-               ``!s a s'.
+Theorem take_undef_instr_exception_spc_thm:
+                 !s a s'.
               (¬access_violation s')==>
               (¬access_violation s)==>
               (take_undef_instr_exception <|proc:=0|> s =
@@ -1102,7 +1111,7 @@ val take_undef_instr_exception_spc_thm =
               (s'.registers (0,RName_PC) =
                (HD (TL (vector_table_address
                 (get_base_vector_table s) 27w)))))
-              ``,
+Proof
                let
                    val body =
                        get_action_body ``take_undef_instr_exception``
@@ -1121,12 +1130,11 @@ val take_undef_instr_exception_spc_thm =
                      fixed_vb_rp_thm1 joint_write_body_undef_instr_spc_thm
                      l_type spec_list1 spec_list2
                end
-              );
+QED
 
 
-val take_irq_exception_spc_thm =
-    store_thm ("take_irq_exception_spc_thm",
-               ``!s a s'.
+Theorem take_irq_exception_spc_thm:
+                 !s a s'.
               (¬access_violation s')==>
               (¬access_violation s)==>
               (take_irq_exception <|proc:=0|> s =
@@ -1137,7 +1145,8 @@ val take_irq_exception_spc_thm =
               \/
               (s'.registers (0,RName_PC) =
                (HD (TL (vector_table_address
-                (get_base_vector_table s) 18w)))))``,
+                (get_base_vector_table s) 18w)))))
+Proof
                let
                    val body =
                        get_action_body ``take_irq_exception``
@@ -1159,7 +1168,7 @@ val take_irq_exception_spc_thm =
                      fixed_vb_rp_thm1 joint_write_body_irq_spc_thm
                      l_type spec_list1 spec_list2
                end
-              );
+QED
 
 
 val take_svc_exception_spc_thm =

@@ -244,10 +244,11 @@ val _ = set_fixity "zpmod" (Infixl 650); (* same as MOD *)
    = MAP2 (\x y. (x + y) MOD m) [] []   by ZN_poly_add_def
    = []                                 by MAP2
 *)
-val ZN_poly_add_zero_zero = store_thm(
-  "ZN_poly_add_zero_zero",
-  ``!n:num. [] +z [] = []``,
-  rw_tac std_ss[ZN_poly_add_def, MAP2]);
+Theorem ZN_poly_add_zero_zero:
+    !n:num. [] +z [] = []
+Proof
+  rw_tac std_ss[ZN_poly_add_def, MAP2]
+QED
 
 (* Theorem: zweak p /\ zweak q /\ (LENGTH p = LENGTH q) ==> (p +z q = p zwadd q) *)
 (* Proof:
@@ -259,12 +260,13 @@ val ZN_poly_add_zero_zero = store_thm(
     ==> (ZN n).sum.op x y = (x + y) MOD m   by ZN_property
    Thus the maps are equal                  by MAP2_CONG, LENGTH p = LENGTH q
 *)
-val ZN_poly_add_alt = store_thm(
-  "ZN_poly_add_alt",
-  ``!(n:num) p q. zweak p /\ zweak q /\ (LENGTH p = LENGTH q) ==> (p +z q = p zwadd q)``,
+Theorem ZN_poly_add_alt:
+    !(n:num) p q. zweak p /\ zweak q /\ (LENGTH p = LENGTH q) ==> (p +z q = p zwadd q)
+Proof
   rw[ZN_poly_add_def, weak_add_map2] >>
   (irule MAP2_CONG >> simp[]) >>
-  metis_tac[weak_every_mem, ZN_property]);
+  metis_tac[weak_every_mem, ZN_property]
+QED
 
 (* Theorem: (LENGTH p = LENGTH q) ==> (LENGTH (p +z q) = LENGTH q) *)
 (* Proof:
@@ -272,10 +274,11 @@ val ZN_poly_add_alt = store_thm(
    = LENGTH (MAP2 (\x y. (x + y) MOD n) p q)    by ZN_poly_add_def
    = LENGTH q                                   by LENGTH_MAP2, LENGTH p = LENGTH q
 *)
-val ZN_poly_add_length = store_thm(
-  "ZN_poly_add_length",
-  ``!(n:num) p q. (LENGTH p = LENGTH q) ==> (LENGTH (p +z q) = LENGTH q)``,
-  rw_tac std_ss[ZN_poly_add_def, LENGTH_MAP2]);
+Theorem ZN_poly_add_length:
+    !(n:num) p q. (LENGTH p = LENGTH q) ==> (LENGTH (p +z q) = LENGTH q)
+Proof
+  rw_tac std_ss[ZN_poly_add_def, LENGTH_MAP2]
+QED
 
 (* Theorem: zweak p /\ c < n ==> (c oz p = c zcmult p) *)
 (* Proof:
@@ -285,13 +288,14 @@ val ZN_poly_add_length = store_thm(
     ==> (ZN n).prod.op c x = (c * x) MOD n   by ZN_property
    Thus the maps are equal                   by MAP_CONG
 *)
-val ZN_poly_cmult_alt = store_thm(
-  "ZN_poly_cmult_alt",
-  ``!(n:num) p c. zweak p ==> (c oz p = c zcmult p)``,
+Theorem ZN_poly_cmult_alt:
+    !(n:num) p c. zweak p ==> (c oz p = c zcmult p)
+Proof
   rpt strip_tac >>
   rw[ZN_poly_cmult_def, weak_cmult_map] >>
   (irule MAP_CONG >> simp[]) >>
-  metis_tac[weak_every_mem, ZN_property]);
+  metis_tac[weak_every_mem, ZN_property]
+QED
 
 (* Theorem: LENGTH (c oz p) = LENGTH p *)
 (* Proof:
@@ -299,10 +303,11 @@ val ZN_poly_cmult_alt = store_thm(
    = LENGTH (MAP (\x. (c * x) MOD n) p)    by ZN_poly_cmult_def
    = LENGTH p                              by LENGTH_MAP
 *)
-val ZN_poly_cmult_length = store_thm(
-  "ZN_poly_cmult_length",
-  ``!(n:num) p c. LENGTH (c oz p) = LENGTH p``,
-  rw_tac std_ss[ZN_poly_cmult_def, LENGTH_MAP]);
+Theorem ZN_poly_cmult_length:
+    !(n:num) p c. LENGTH (c oz p) = LENGTH p
+Proof
+  rw_tac std_ss[ZN_poly_cmult_def, LENGTH_MAP]
+QED
 
 (* Theorem: 0 < n /\ zweak p1 /\ zweak p2 /\ zweak q /\ (LENGTH p1 = LENGTH p2) ==>
             (ZN_slide n p1 p2 q = poly_slide (ZN n) p1 p2 q) *)
@@ -331,10 +336,10 @@ val ZN_poly_cmult_length = store_thm(
         = poly_slide (ZN n) (h zcmult p2 zwadd p1) (turn p2) q  by [1]
         = poly_slide (ZN n) p1 p2 (h::q)                        by poly_slide_def
 *)
-val ZN_slide_alt = store_thm(
-  "ZN_slide_alt",
-  ``!n q p1 p2. 0 < n /\ zweak p1 /\ zweak p2 /\ zweak q /\ (LENGTH p1 = LENGTH p2) ==>
-               (ZN_slide n p1 p2 q = poly_slide (ZN n) p1 p2 q)``,
+Theorem ZN_slide_alt:
+    !n q p1 p2. 0 < n /\ zweak p1 /\ zweak p2 /\ zweak q /\ (LENGTH p1 = LENGTH p2) ==>
+               (ZN_slide n p1 p2 q = poly_slide (ZN n) p1 p2 q)
+Proof
   strip_tac >>
   Induct >-
   rw[ZN_slide_def, poly_slide_def] >>
@@ -348,7 +353,8 @@ val ZN_slide_alt = store_thm(
   `h oz p2 +z p1 = (h zcmult p2) zwadd p1` by rw_tac std_ss[ZN_poly_add_alt] >>
   `zweak (h oz p2 +z p1)` by metis_tac[weak_add_weak] >>
   `zweak (turn p2)` by rw_tac std_ss[weak_turn] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 0 < n /\ zweak p1 /\ zweak p2 /\ zweak q /\ (LENGTH p1 = LENGTH p2) ==>
             (LENGTH (ZN_slide n p1 p2 q) = LENGTH p2) *)
@@ -358,11 +364,12 @@ val ZN_slide_alt = store_thm(
    = if q = [] then LENGTH p1 else LENGTH p2    by poly_slide_length, LENGTH p1 <= LENGTH p2
    = LENGTH p2                                  by LENGTH p1 = LENGTH p2
 *)
-val ZN_slide_length = store_thm(
-  "ZN_slide_length",
-  ``!(n:num) q p1 p2. 0 < n /\ zweak p1 /\ zweak p2 /\ zweak q /\ (LENGTH p1 = LENGTH p2) ==>
-                     (LENGTH (ZN_slide n p1 p2 q) = LENGTH p2)``,
-  rw[ZN_slide_alt, poly_slide_length]);
+Theorem ZN_slide_length:
+    !(n:num) q p1 p2. 0 < n /\ zweak p1 /\ zweak p2 /\ zweak q /\ (LENGTH p1 = LENGTH p2) ==>
+                     (LENGTH (ZN_slide n p1 p2 q) = LENGTH p2)
+Proof
+  rw[ZN_slide_alt, poly_slide_length]
+QED
 
 (* Theorem: 0 < n /\ zweak p /\ zweak q /\ q <> [] ==>
             let k = LENGTH p in (p *z q = unity_mod_mult (ZN n) p q) *)
@@ -379,10 +386,10 @@ val ZN_slide_length = store_thm(
    = poly_slide (ZN n) (poly_zero (ZN n)) p q   by poly_slide_init_zero_poly
    = unity_mod_mult (ZN n) p q                  by unity_mod_mult_def
 *)
-val ZN_poly_mult_alt = store_thm(
-  "ZN_poly_mult_alt",
-  ``!n p q. 0 < n /\ zweak p /\ zweak q /\ q <> [] ==>
-            let k = LENGTH p in (p *z q = unity_mod_mult (ZN n) p q)``,
+Theorem ZN_poly_mult_alt:
+    !n p q. 0 < n /\ zweak p /\ zweak q /\ q <> [] ==>
+            let k = LENGTH p in (p *z q = unity_mod_mult (ZN n) p q)
+Proof
   rw_tac std_ss[] >>
   rw[ZN_poly_mult_def, unity_mod_mult_def] >>
   qabbrev_tac `t = GENLIST (K 0) k` >>
@@ -390,7 +397,8 @@ val ZN_poly_mult_alt = store_thm(
   `zero_poly (ZN n) t` by metis_tac[zero_poly_genlist_zero, ZN_property] >>
   `zweak t` by rw[zero_poly_weak] >>
   `LENGTH t = k` by rw[Abbr`t`] >>
-  rw[ZN_slide_alt, Once poly_slide_init_zero_poly]);
+  rw[ZN_slide_alt, Once poly_slide_init_zero_poly]
+QED
 
 (* Theorem: 0 < n /\ zweak p /\ zweak q /\ q <> [] ==>
             let k = LENGTH p in (LENGTH (p *z q) = LENGTH p) *)
@@ -399,11 +407,12 @@ val ZN_poly_mult_alt = store_thm(
    = LENGTH (unity_mod_mult (ZN n) p q)      by ZN_poly_mult_alt
    = LENGTH p                                by unity_mod_mult_length, q <> []
 *)
-val ZN_poly_mult_length = store_thm(
-  "ZN_poly_mult_length",
-  ``!n p q. 0 < n /\ zweak p /\ zweak q /\ q <> [] ==>
-            let k = LENGTH p in (LENGTH (p *z q) = LENGTH p)``,
-  metis_tac[ZN_poly_mult_alt, unity_mod_mult_length]);
+Theorem ZN_poly_mult_length:
+    !n p q. 0 < n /\ zweak p /\ zweak q /\ q <> [] ==>
+            let k = LENGTH p in (LENGTH (p *z q) = LENGTH p)
+Proof
+  metis_tac[ZN_poly_mult_alt, unity_mod_mult_length]
+QED
 
 (* Theorem: 0 < n /\ zweak p /\ p <> [] ==> let k = LENGTH p in (sqz p = unity_mod_sq (ZN n) p) *)
 (* Proof:
@@ -412,10 +421,11 @@ val ZN_poly_mult_length = store_thm(
    = unity_mod_mult (ZN n) p p)      by ZN_poly_mult_alt, p <> []
    = unity_mod_sq (ZN n) p           by unity_mod_sq_def
 *)
-val ZN_poly_sq_alt = store_thm(
-  "ZN_poly_sq_alt",
-  ``!n p. 0 < n /\ zweak p /\ p <> [] ==> let k = LENGTH p in (sqz p = unity_mod_sq (ZN n) p)``,
-  metis_tac[ZN_poly_sq_def, unity_mod_sq_def, ZN_poly_mult_alt]);
+Theorem ZN_poly_sq_alt:
+    !n p. 0 < n /\ zweak p /\ p <> [] ==> let k = LENGTH p in (sqz p = unity_mod_sq (ZN n) p)
+Proof
+  metis_tac[ZN_poly_sq_def, unity_mod_sq_def, ZN_poly_mult_alt]
+QED
 
 (* Theorem: 0 < n /\ zweak p /\ p <> [] ==> let k = LENGTH p in (LENGTH (sqz p) = LENGTH p) *)
 (* Proof:
@@ -423,10 +433,11 @@ val ZN_poly_sq_alt = store_thm(
    = LENGTH (unity_mod_sq (ZN n) p)      by ZN_poly_sq_alt
    = LENGTH p                            by unity_mod_sq_length
 *)
-val ZN_poly_sq_length = store_thm(
-  "ZN_poly_sq_length",
-  ``!n p. 0 < n /\ zweak p /\ p <> [] ==> let k = LENGTH p in (LENGTH (sqz p) = LENGTH p)``,
-  metis_tac[ZN_poly_sq_alt, unity_mod_sq_length]);
+Theorem ZN_poly_sq_length:
+    !n p. 0 < n /\ zweak p /\ p <> [] ==> let k = LENGTH p in (LENGTH (sqz p) = LENGTH p)
+Proof
+  metis_tac[ZN_poly_sq_alt, unity_mod_sq_length]
+QED
 
 (* Theorem: 1 < n /\ zweak p /\ p <> [] ==> let k = LENGTH p in (p **z m = unity_mod_exp (ZN n) p m) *)
 (* Proof:
@@ -480,9 +491,9 @@ val ZN_poly_sq_length = store_thm(
          = unity_mod_mult (ZN n) p t         by unity_mod_mult_alt, t <> []
          = unity_mod_exp (ZN n) p n          by unity_mod_exp_def, ~EVEN m
 *)
-val ZN_poly_exp_alt = store_thm(
-  "ZN_poly_exp_alt",
-  ``!n p m. 1 < n /\ zweak p /\ p <> [] ==> let k = LENGTH p in (p **z m = unity_mod_exp (ZN n) p m)``,
+Theorem ZN_poly_exp_alt:
+    !n p m. 1 < n /\ zweak p /\ p <> [] ==> let k = LENGTH p in (p **z m = unity_mod_exp (ZN n) p m)
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
@@ -516,7 +527,8 @@ val ZN_poly_exp_alt = store_thm(
     `LENGTH t = LENGTH q` by metis_tac[unity_mod_exp_length, ZN_ids_alt, DECIDE``1 <> 0``] >>
     `t <> []` by metis_tac[LENGTH_NIL] >>
     metis_tac[ZN_poly_mult_alt]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n /\ zweak p /\ p <> [] ==>
             !m. 0 < m ==> let k = LENGTH p in (LENGTH (p **z m) = LENGTH p) *)
@@ -526,13 +538,14 @@ val ZN_poly_exp_alt = store_thm(
    = LENGTH (unity_mod_exp (ZN n) p m)              by ZN_poly_exp_alt
    = LENGTH p                                       by unity_mod_exp_length, m <> 0
 *)
-val ZN_poly_exp_length = store_thm(
-  "ZN_poly_exp_length",
-  ``!n p. 1 < n /\ zweak p /\ p <> [] ==>
-   !m. 0 < m ==> let k = LENGTH p in (LENGTH (p **z m) = LENGTH p)``,
+Theorem ZN_poly_exp_length:
+    !n p. 1 < n /\ zweak p /\ p <> [] ==>
+   !m. 0 < m ==> let k = LENGTH p in (LENGTH (p **z m) = LENGTH p)
+Proof
   rpt strip_tac >>
   `((ZN n).prod.id = 1) /\ ((ZN n).sum.id = 0)` by metis_tac[ZN_ids_alt] >>
-  metis_tac[ZN_poly_exp_alt, unity_mod_exp_length, NOT_ZERO, ONE_NOT_ZERO]);
+  metis_tac[ZN_poly_exp_alt, unity_mod_exp_length, NOT_ZERO, ONE_NOT_ZERO]
+QED
 
 (* Theorem: 1 < n ==> !k m c. ZN_poly_special n k m c = unity_mod_special (ZN n) k m c *)
 (* Proof:
@@ -568,15 +581,16 @@ val ZN_poly_exp_length = store_thm(
             ((ZN n).sum.exp 1 c::PAD_LEFT (ZN n).sum.id (m MOD k) [(ZN n).prod.id])  by above
       = unity_mod_special (ZN n) k m c           by unity_mod_special_def
 *)
-val ZN_poly_special_alt = store_thm(
-  "ZN_poly_special_alt",
-  ``!n. 1 < n ==> !k m c. ZN_poly_special n k m c = unity_mod_special (ZN n) k m c``,
+Theorem ZN_poly_special_alt:
+    !n. 1 < n ==> !k m c. ZN_poly_special n k m c = unity_mod_special (ZN n) k m c
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `((ZN n).prod.id = 1) /\ ((ZN n).sum.id = 0)` by metis_tac[ZN_ids_alt] >>
   `(1 + c) MOD n = (1 MOD n + c MOD n) MOD n` by metis_tac[MOD_PLUS] >>
-  rw[ZN_poly_special_def, unity_mod_special_def, ZN_property, ZN_num]);
+  rw[ZN_poly_special_def, unity_mod_special_def, ZN_property, ZN_num]
+QED
 
 (* Theorem: 1 < n ==> !k m c. LENGTH (ZN_poly_special n k m c) = k *)
 (* Proof:
@@ -584,10 +598,11 @@ val ZN_poly_special_alt = store_thm(
    = LENGTH (unity_mod_special (ZN n) k m c)   by ZN_poly_special_alt
    = k                                         by unity_mod_special_length
 *)
-val ZN_poly_special_length = store_thm(
-  "ZN_poly_special_length",
-  ``!n. 1 < n ==> !k m c. LENGTH (ZN_poly_special n k m c) = k``,
-  rw[ZN_poly_special_alt, unity_mod_special_length]);
+Theorem ZN_poly_special_length:
+    !n. 1 < n ==> !k m c. LENGTH (ZN_poly_special n k m c) = k
+Proof
+  rw[ZN_poly_special_alt, unity_mod_special_length]
+QED
 
 (* Theorem: 1 < n ==> !k c. ZN_poly_monomial n k c = unity_mod_monomial (ZN n) k c *)
 (* Proof:
@@ -615,15 +630,16 @@ val ZN_poly_special_length = store_thm(
       = PAD_RIGHT (ZN n).sum.id k [(ZN n).sum.exp 1 c; (ZN n).prod.id]  by above
       = unity_mod_monomial (ZN n) k c   by unity_mod_monomial_def, k <> 0, k <> 1
 *)
-val ZN_poly_monomial_alt = store_thm(
-  "ZN_poly_monomial_alt",
-  ``!n. 1 < n ==> !k c. ZN_poly_monomial n k c = unity_mod_monomial (ZN n) k c``,
+Theorem ZN_poly_monomial_alt:
+    !n. 1 < n ==> !k c. ZN_poly_monomial n k c = unity_mod_monomial (ZN n) k c
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `((ZN n).prod.id = 1) /\ ((ZN n).sum.id = 0)` by metis_tac[ZN_ids_alt] >>
   `(1 + c) MOD n = (1 MOD n + c MOD n) MOD n` by metis_tac[MOD_PLUS] >>
-  rw[ZN_poly_monomial_def, unity_mod_monomial_def, ZN_property, ZN_num]);
+  rw[ZN_poly_monomial_def, unity_mod_monomial_def, ZN_property, ZN_num]
+QED
 
 (* Theorem: 1 < n ==> !k c. LENGTH (ZN_poly_monomial n k c) = k *)
 (* Proof:
@@ -631,10 +647,11 @@ val ZN_poly_monomial_alt = store_thm(
    = LENGTH (unity_mod_monomial (ZN n) k c)  by ZN_poly_monomial_alt
    = k                                       by unity_mod_monomial_length
 *)
-val ZN_poly_monomial_length = store_thm(
-  "ZN_poly_monomial_length",
-  ``!n. 1 < n ==> !k c. LENGTH (ZN_poly_monomial n k c) = k``,
-  rw[ZN_poly_monomial_alt, unity_mod_monomial_length]);
+Theorem ZN_poly_monomial_length:
+    !n. 1 < n ==> !k c. LENGTH (ZN_poly_monomial n k c) = k
+Proof
+  rw[ZN_poly_monomial_alt, unity_mod_monomial_length]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Direct Versions of Correctness Theorems                                   *)
@@ -661,10 +678,11 @@ val it = |- Ring (ZN n) /\ (ZN n).prod.id <> (ZN n).sum.id ==>
 
 (* Theorem: 1 < n /\ 1 < k /\ zweak p /\ (LENGTH p = k) ==> (zchop (turn p) = (p zpmult zpX) zpmod (x^- n k)) *)
 (* Proof: by chop_turn_eqn *)
-val ZN_chop_turn_eqn = store_thm(
-  "ZN_chop_turn_eqn",
-  ``!k n p. 1 < n /\ 1 < k /\ zweak p /\ (LENGTH p = k) ==> (zchop (turn p) = (p zpmult zpX) zpmod (x^- n k))``,
-  metis_tac[chop_turn_eqn, ZN_ring, ZN_ids_alt, DECIDE``(1 < n ==> 0 < n) /\ (0 <> 1)``]);
+Theorem ZN_chop_turn_eqn:
+    !k n p. 1 < n /\ 1 < k /\ zweak p /\ (LENGTH p = k) ==> (zchop (turn p) = (p zpmult zpX) zpmod (x^- n k))
+Proof
+  metis_tac[chop_turn_eqn, ZN_ring, ZN_ids_alt, DECIDE``(1 < n ==> 0 < n) /\ (0 <> 1)``]
+QED
 
 (*
 > unity_mod_mult_eqn |> ISPEC ``ZN n``;
@@ -679,21 +697,23 @@ val it = |- 0 < n ==> !p q. zweak p /\ zweak q /\ q <> [] ==>
 (* Theorem: 1 < n /\ 1 < k /\ zweak p /\ zweak q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
             (zchop (p *z q) = (p zpmult q) zpmod (x^- n k)) *)
 (* Proof: by unity_mod_mult_eqn, ZN_poly_mult_alt *)
-val ZN_poly_mult_eqn = store_thm(
-  "ZN_poly_mult_eqn",
-  ``!k n p q. 1 < n /\ 1 < k /\ zweak p /\ zweak q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
-             (zchop (p *z q) = (p zpmult q) zpmod (x^- n k))``,
+Theorem ZN_poly_mult_eqn:
+    !k n p q. 1 < n /\ 1 < k /\ zweak p /\ zweak q /\ (LENGTH p = k) /\ (LENGTH q = k) ==>
+             (zchop (p *z q) = (p zpmult q) zpmod (x^- n k))
+Proof
   rpt strip_tac >>
   `Ring (ZN n) /\ (ZN n).prod.id <> (ZN n).sum.id` by rw[ZN_ring, ZN_ids_alt] >>
   `q <> []` by metis_tac[LENGTH_NIL, DECIDE``1 < k ==> k <> 0``] >>
-  metis_tac[unity_mod_mult_eqn, poly_zero, ZN_poly_mult_alt, DECIDE``1 < n ==> 0 < n``]);
+  metis_tac[unity_mod_mult_eqn, poly_zero, ZN_poly_mult_alt, DECIDE``1 < n ==> 0 < n``]
+QED
 
 (* Theorem: 1 < n /\ 1 < k /\ zweak p /\ (LENGTH p = k) ==> (zchop (sqz p) = (p zpmult p) zpmod (x^- n k)) *)
 (* Proof: by ZN_poly_sq_def, ZN_poly_mult_eqn *)
-val ZN_poly_sq_eqn = store_thm(
-  "ZN_poly_sq_eqn",
-  ``!k n p q. 1 < n /\ 1 < k /\ zweak p /\ (LENGTH p = k) ==> (zchop (sqz p) = (p zpmult p) zpmod (x^- n k))``,
-  rw_tac std_ss[ZN_poly_sq_def, ZN_poly_mult_eqn]);
+Theorem ZN_poly_sq_eqn:
+    !k n p q. 1 < n /\ 1 < k /\ zweak p /\ (LENGTH p = k) ==> (zchop (sqz p) = (p zpmult p) zpmod (x^- n k))
+Proof
+  rw_tac std_ss[ZN_poly_sq_def, ZN_poly_mult_eqn]
+QED
 
 (*
 > unity_mod_exp_eqn |> ISPEC ``ZN n``;
@@ -708,14 +728,15 @@ val it = |- 1 < n ==> !n' p. zweak p /\ p <> [] ==>
 (* Theorem: 1 < n /\ 1 < k /\ zweak p /\ (LENGTH p = k) ==>
              (zchop (p **z m) = (poly_exp (ZN n) p m) zpmod (x^- n k)) *)
 (* Proof: by unity_mod_exp_eqn, ZN_poly_exp_alt *)
-val ZN_poly_exp_eqn = store_thm(
-  "ZN_poly_exp_eqn",
-  ``!k n p m. 1 < n /\ 1 < k /\ zweak p /\ (LENGTH p = k) ==>
-             (zchop (p **z m) = (poly_exp (ZN n) p m) zpmod (x^- n k))``,
+Theorem ZN_poly_exp_eqn:
+    !k n p m. 1 < n /\ 1 < k /\ zweak p /\ (LENGTH p = k) ==>
+             (zchop (p **z m) = (poly_exp (ZN n) p m) zpmod (x^- n k))
+Proof
   rpt strip_tac >>
   `Ring (ZN n) /\ (ZN n).prod.id <> (ZN n).sum.id` by rw[ZN_ring, ZN_ids_alt] >>
   `p <> []` by metis_tac[LENGTH_NIL, DECIDE``1 < k ==> k <> 0``] >>
-  metis_tac[unity_mod_exp_eqn, ZN_poly_exp_alt, DECIDE``1 < n ==> 0 < n``]);
+  metis_tac[unity_mod_exp_eqn, ZN_poly_exp_alt, DECIDE``1 < n ==> 0 < n``]
+QED
 
 (*
 poly_unity_mod_X_exp_n_add_c
@@ -726,10 +747,11 @@ val it = |- Ring (ZN n) /\ (ZN n).prod.id <> (ZN n).sum.id ==>
 
 (* Theorem: 1 < n /\ 0 < k ==> (x^+ n c n zpmod x^- n k = x^+ n c (n MOD k)) *)
 (* Proof: by poly_unity_mod_X_exp_n_add_c *)
-val ZN_unity_mod_X_exp_n_add_c = store_thm(
-  "ZN_unity_mod_X_exp_n_add_c",
-  ``!k n (c:num). 1 < n /\ 0 < k ==> (x^+ n c n zpmod x^- n k = x^+ n c (n MOD k))``,
-  metis_tac[poly_unity_mod_X_exp_n_add_c, ZN_ring, ZN_ids_alt, DECIDE``(1 < n ==> 0 < n) /\ 1 <> 0``]);
+Theorem ZN_unity_mod_X_exp_n_add_c:
+    !k n (c:num). 1 < n /\ 0 < k ==> (x^+ n c n zpmod x^- n k = x^+ n c (n MOD k))
+Proof
+  metis_tac[poly_unity_mod_X_exp_n_add_c, ZN_ring, ZN_ids_alt, DECIDE``(1 < n ==> 0 < n) /\ 1 <> 0``]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

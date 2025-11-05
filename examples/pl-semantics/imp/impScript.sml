@@ -18,18 +18,21 @@ http://www.concrete-semantics.org/
 
 val _ = temp_type_abbrev("vname",``:string``);
 
-val _ = Datatype `
-  aexp = N int | V vname | Plus aexp aexp`;
+Datatype:
+  aexp = N int | V vname | Plus aexp aexp
+End
 
-val _ = Datatype `
-  bexp = Bc bool | Not bexp | And bexp bexp | Less aexp aexp`;
+Datatype:
+  bexp = Bc bool | Not bexp | And bexp bexp | Less aexp aexp
+End
 
-val _ = Datatype `
+Datatype:
   com = SKIP
       | Assign vname aexp
       | Seq com com
       | If bexp com com
-      | While bexp com`
+      | While bexp com
+End
 
 Definition aval_def:
   (aval (N n) s = n) /\

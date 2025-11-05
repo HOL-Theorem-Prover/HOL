@@ -174,7 +174,7 @@ Definition fnsum_def[nocompute]:
 End
 
 val _ = set_fixity "++" (Infixl 480)
-val _ = inferior_overload_on ("++", “fnsum”);
+Overload "++"[inferior] = “fnsum”
 
 Theorem fnsum_monotone:
    !f1 f2. monotone f1 /\ monotone f2 ==> monotone (fnsum f1 f2)

@@ -222,64 +222,71 @@ val _ = save_thm ("inv_b_mix_ind", inv_b_mix_ind);
 (*---------------------------------------------------------------------------*)
 
 (* -------------------First comes the foward mixing operations --------------*)
-val Fwd_Mix_Inversion = Q.store_thm
-  ("Fwd_Mix_Inversion",
-  `!b i. de_b_rnd(en_f_rnd(b,i),i) = b`,
+Theorem Fwd_Mix_Inversion:
+   !b i. de_b_rnd(en_f_rnd(b,i),i) = b
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK, en_f_rnd_def, de_b_rnd_def, LET_THM]
-    THEN SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]);
+    THEN SRW_TAC [] [WORD_LEFT_ADD_DISTRIB]
+QED
 
 val [en_f_rnd] = decls "en_f_rnd";
 val [de_b_rnd] = decls "de_b_rnd";
 
-val Fwd_Mix_LEMMA = Q.store_thm
-("Fwd_Mix_LEMMA",
- `!b:block k:keysched. de_b_mix(en_f_mix(b,k),k) = b`,
+Theorem Fwd_Mix_LEMMA:
+  !b:block k:keysched. de_b_mix(en_f_mix(b,k),k) = b
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK]
     THEN RESTR_EVAL_TAC [en_f_rnd, de_b_rnd]
-    THEN SRW_TAC [] [Fwd_Mix_Inversion]);
+    THEN SRW_TAC [] [Fwd_Mix_Inversion]
+QED
 
 (* ------------------Then the keyed transformation operations ---------------*)
 val PBETA_ss = simpLib.conv_ss
   {name="PBETA",trace = 3,conv=K (K PairRules.PBETA_CONV),
    key = SOME([],``(\(x:'a,y:'b). s1) s2:'c``)};
 
-val Core_Inversion = Q.store_thm
-  ("Core_Inversion",
-  `!b k i. de_core_rnd(en_core_rnd(b,k,i),k,i) = b`,
+Theorem Core_Inversion:
+   !b k i. de_core_rnd(en_core_rnd(b,k,i),k,i) = b
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK]
-    THEN SRW_TAC [] [en_core_rnd_def,de_core_rnd_def, LET_THM, UNCURRY]);
+    THEN SRW_TAC [] [en_core_rnd_def,de_core_rnd_def, LET_THM, UNCURRY]
+QED
 
 val [en_core_rnd] = decls "en_core_rnd";
 val [de_core_rnd] = decls "de_core_rnd";
 
-val Keyed_Trans_LEMMA = Q.store_thm
-("Keyed_Trans_LEMMA",
- `!b:block k:keysched. de_core(en_core(b,k),k) = b`,
+Theorem Keyed_Trans_LEMMA:
+  !b:block k:keysched. de_core(en_core(b,k),k) = b
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK]
     THEN RESTR_EVAL_TAC [en_core_rnd, de_core_rnd]
-    THEN RW_TAC std_ss [Core_Inversion]);
+    THEN RW_TAC std_ss [Core_Inversion]
+QED
 
 (* -------------------Finally the backward mixing operations ----------------*)
-val Bwd_Mix_Inversion = Q.store_thm
-  ("Bwd_Mix_Inversion",
-  `!b i. de_f_rnd(en_b_rnd(b,i),i) = b`,
+Theorem Bwd_Mix_Inversion:
+   !b i. de_f_rnd(en_b_rnd(b,i),i) = b
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK, en_b_rnd_def, de_f_rnd_def, LET_THM] THEN
-  SRW_TAC [][wordsTheory.word_rol_def]);
+  SRW_TAC [][wordsTheory.word_rol_def]
+QED
 
-val Whitening_Inversion = Q.store_thm
-  ("Whitening_Inversion",
-  `!b k. PreWhitening(PostWhitening(b,k),k) = b`,
+Theorem Whitening_Inversion:
+   !b k. PreWhitening(PostWhitening(b,k),k) = b
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK]
-    THEN SRW_TAC [] [PreWhitening_def, PostWhitening_def]);
+    THEN SRW_TAC [] [PreWhitening_def, PostWhitening_def]
+QED
 
 val [en_b_rnd] = decls "en_b_rnd";
 val [de_f_rnd] = decls "de_f_rnd";
 
-val Bwd_Mix_LEMMA = Q.store_thm
-("Bwd_Mix_LEMMA",
- `!b:block k:keysched. de_f_mix(en_b_mix(b,k),k) = b`,
+Theorem Bwd_Mix_LEMMA:
+  !b:block k:keysched. de_f_mix(en_b_mix(b,k),k) = b
+Proof
    SIMP_TAC std_ss [FORALL_BLOCK] THEN RESTR_EVAL_TAC [en_b_rnd, de_f_rnd]
-     THEN RW_TAC std_ss [Whitening_Inversion, Bwd_Mix_Inversion]);
+     THEN RW_TAC std_ss [Whitening_Inversion, Bwd_Mix_Inversion]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
@@ -298,12 +305,13 @@ End
 (*---------------------------------------------------------------------------*)
 (* Main lemma                                                                *)
 (*---------------------------------------------------------------------------*)
-val MARS_LEMMA = Q.store_thm
-("MARS_LEMMA",
- `!(plaintext:block) (keys:keysched).
-     MARSDecrypt keys (MARSEncrypt keys plaintext) = plaintext`,
+Theorem MARS_LEMMA:
+  !(plaintext:block) (keys:keysched).
+     MARSDecrypt keys (MARSEncrypt keys plaintext) = plaintext
+Proof
    RW_TAC std_ss [MARSEncrypt_def,MARSDecrypt_def] THEN
-   RW_TAC std_ss [Fwd_Mix_LEMMA, Keyed_Trans_LEMMA, Bwd_Mix_LEMMA]);
+   RW_TAC std_ss [Fwd_Mix_LEMMA, Keyed_Trans_LEMMA, Bwd_Mix_LEMMA]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Sanity check                                                              *)
@@ -322,11 +330,12 @@ Definition MARS_def:
    in (MARSEncrypt keys,  MARSDecrypt keys)
 End
 
-val MARS_CORRECT = Q.store_thm
-  ("MARS_CORRECT",
-   `!key plaintext.
+Theorem MARS_CORRECT:
+    !key plaintext.
        ((encrypt,decrypt) = MARS key)
        ==>
-       (decrypt (encrypt plaintext) = plaintext)`,
-         RW_TAC std_ss [MARS_def,LET_THM,MARS_LEMMA]);
+       (decrypt (encrypt plaintext) = plaintext)
+Proof
+         RW_TAC std_ss [MARS_def,LET_THM,MARS_LEMMA]
+QED
 

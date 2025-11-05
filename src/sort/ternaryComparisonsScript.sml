@@ -13,13 +13,12 @@ val thms =
 Theorem ordering_eq_dec =
   PURE_REWRITE_RULE[GSYM (hd (rev (CONJUNCTS (SPEC_ALL EQ_CLAUSES))))] thms;
 
-Definition bool_compare_def:
+Definition bool_compare_def[simp]:
   (bool_compare T T = EQUAL) /\
   (bool_compare F F = EQUAL) /\
   (bool_compare T F = GREATER) /\
   (bool_compare F T = LESS)
 End
-val _ = export_rewrites ["bool_compare_def"]
 
 (* Lifting comparison functions through various type operators *)
 Definition pair_compare_def:
@@ -29,13 +28,12 @@ Definition pair_compare_def:
       | res => res
 End
 
-Definition option_compare_def:
+Definition option_compare_def[simp]:
   (option_compare c NONE NONE = EQUAL) /\
   (option_compare c NONE (SOME _) = LESS) /\
   (option_compare c (SOME _) NONE = GREATER) /\
   (option_compare c (SOME v1) (SOME v2) = c v1 v2)
 End
-val _ = export_rewrites ["option_compare_def"]
 
 Definition num_compare_def:
   num_compare n1 n2 =
@@ -82,12 +80,11 @@ Definition list_merge_def:
       else y::list_merge a_lt (x::l1) l2)
 End
 
-Definition invert_comparison_def:
+Definition invert_comparison_def[simp]:
   (invert_comparison GREATER = LESS) /\
   (invert_comparison LESS = GREATER) /\
   (invert_comparison EQUAL = EQUAL)
 End
-val _ = export_rewrites["invert_comparison_def"]
 
 Theorem invert_eq_EQUAL[simp]:
     !x. (invert_comparison x = EQUAL) <=> (x = EQUAL)

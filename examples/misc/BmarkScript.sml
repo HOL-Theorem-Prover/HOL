@@ -39,14 +39,16 @@ val ADD_INV_0        = arithmeticTheory.ADD_INV_0;
 val ADD1             = arithmeticTheory.ADD1;
 val ADD_CLAUSES      = arithmeticTheory.ADD_CLAUSES;
 
-val FUN_EQ_LEMMA = store_thm ("FUN_EQ_LEMMA",
-   “!f:'a->bool. !x1 x2. f x1 /\ ~f x2 ==> ~(x1 = x2)”,
+Theorem FUN_EQ_LEMMA:
+    !f:'a->bool. !x1 x2. f x1 /\ ~f x2 ==> ~(x1 = x2)
+Proof
    REPEAT STRIP_TAC
     THEN IMP_RES_TAC
           (DISCH_ALL(SUBS[ASSUME “(x1:'a)=x2”]
                          (ASSUME“(f:'a->bool)x1”)))
     THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]);
+    THEN ASM_REWRITE_TAC[]
+QED
 
 val NEXT =
  new_definition
@@ -61,16 +63,16 @@ val STABLE =
    “!(i:num->'a). !x1 x2.
       STABLE (x1,x2) i = !x. ((x1 <= x) /\ (x < x2)) ==> (i x = i x1)”);
 
-val NEXT_SUC1 =
- store_thm
-  ("NEXT_SUC1",
-   “!done x. done(SUC x) ==> NEXT (x,SUC x) done”,
+Theorem NEXT_SUC1:
+    !done x. done(SUC x) ==> NEXT (x,SUC x) done
+Proof
    REPEAT STRIP_TAC
     THEN REWRITE_TAC[NEXT]
     THEN REPEAT STRIP_TAC
     THEN ASM_REWRITE_TAC[LESS_SUC_REFL]
     THEN IMP_RES_TAC LESS_LESS_SUC
-    THEN ASM_REWRITE_TAC[]);
+    THEN ASM_REWRITE_TAC[]
+QED
 
 (* LESS_SUC_EQ_LEMMA = |- ~(n = SUC m) ==> m < n ==> (SUC m) < n *)
 val LESS_SUC_EQ_LEMMA =
@@ -81,11 +83,10 @@ val LESS_SUC_EQ_LEMMA =
 
 local val FUN_EQ_LEMMA' = INST_TYPE[alpha |-> Type`:num`] FUN_EQ_LEMMA
 in
-val NEXT_SUC2 =
- store_thm
-  ("NEXT_SUC2",
-   “!done x1 x2.
-      (NEXT (x1,x2) done /\ ~(done(SUC x1))) ==> NEXT (SUC x1,x2) done”,
+Theorem NEXT_SUC2:
+    !done x1 x2.
+      (NEXT (x1,x2) done /\ ~(done(SUC x1))) ==> NEXT (SUC x1,x2) done
+Proof
    REPEAT GEN_TAC
     THEN REWRITE_TAC[NEXT]
     THEN REPEAT STRIP_TAC
@@ -97,13 +98,13 @@ val NEXT_SUC2 =
                 “x2:num”,
                 “SUC x1”] FUN_EQ_LEMMA')
     THEN IMP_RES_TAC LESS_SUC_EQ_LEMMA
-    THEN ASM_REWRITE_TAC[])
+    THEN ASM_REWRITE_TAC[]
+QED
 end;
 
-val STABLE_SUC =
- store_thm
-  ("STABLE_SUC",
-   “!x1 x2 (i:num->'a). (STABLE (x1,x2) i) ==> (STABLE ((SUC x1),x2) i)”,
+Theorem STABLE_SUC:
+    !x1 x2 (i:num->'a). (STABLE (x1,x2) i) ==> (STABLE ((SUC x1),x2) i)
+Proof
    REPEAT GEN_TAC
     THEN REWRITE_TAC[STABLE,LESS_OR_EQ]
     THEN REPEAT STRIP_TAC
@@ -112,7 +113,8 @@ val STABLE_SUC =
     THEN IMP_RES_TAC LESS_TRANS
     THEN ASSUME_TAC(SPEC (“x1:num”) LESS_SUC_REFL)
     THEN RES_TAC
-    THEN ASM_REWRITE_TAC[]);
+    THEN ASM_REWRITE_TAC[]
+QED
 
 val SUC_LEMMA =
  let val [th1,th2,th3,th4] = CONJUNCTS ADD_CLAUSES
@@ -124,9 +126,10 @@ val stb_SUC =
   (ASSUME (“!x'. ((x <= x') /\ (x' < ((SUC x) + d))) ==>
                    ((i:num->'a) x' = (i x))”));
 
-val STABLE_LEMMA = store_thm("STABLE_LEMMA",
-   “!x d (i:num->'a).
-     ((STABLE (x,((SUC x)+d)) i) /\ ~(d = 0)) ==> (i x = i(SUC x))”,
+Theorem STABLE_LEMMA:
+    !x d (i:num->'a).
+     ((STABLE (x,((SUC x)+d)) i) /\ ~(d = 0)) ==> (i x = i(SUC x))
+Proof
    REWRITE_TAC[STABLE]
     THEN REPEAT STRIP_TAC
     THEN ASSUME_TAC stb_SUC
@@ -134,13 +137,13 @@ val STABLE_LEMMA = store_thm("STABLE_LEMMA",
     THEN CONV_TAC SYM_CONV
     THEN FIRST_ASSUM MATCH_MP_TAC
     THEN ASSUME_TAC(SPEC (“x:num”) LESS_EQ_SUC_REFL)
-    THEN ASM_REWRITE_TAC[]);
+    THEN ASM_REWRITE_TAC[]
+QED
 
-val NEXT_LEMMA1 =
- store_thm
-  ("NEXT_LEMMA1",
-   “!done x1 x2.
-      (NEXT (x1,x2) done /\ NEXT (x1,x3) done) ==> (x2 = x3)”,
+Theorem NEXT_LEMMA1:
+    !done x1 x2.
+      (NEXT (x1,x2) done /\ NEXT (x1,x3) done) ==> (x2 = x3)
+Proof
    REPEAT GEN_TAC
     THEN REWRITE_TAC[NEXT]
     THEN STRIP_TAC
@@ -148,7 +151,8 @@ val NEXT_LEMMA1 =
     THEN ASM_CASES_TAC (“x2 < x3”)
     THEN ASM_REWRITE_TAC[]
     THEN IMP_RES_TAC LESS_CASES_IMP
-    THEN RES_TAC);
+    THEN RES_TAC
+QED
 
 val next_SUC =
  DISCH_ALL
@@ -157,15 +161,15 @@ val next_SUC =
    (SUBS [ASSUME (“d = 0”)]
          (ASSUME (“(done:num->bool) (SUC x + d)”))));
 
-val NEXT_LEMMA2 =
- store_thm
-  ("NEXT_LEMMA2",
-   “!x d done.
-      (NEXT (x,(SUC x)+d) done /\ ~(done(SUC x))) ==> ~(d = 0)”,
+Theorem NEXT_LEMMA2:
+    !x d done.
+      (NEXT (x,(SUC x)+d) done /\ ~(done(SUC x))) ==> ~(d = 0)
+Proof
    REWRITE_TAC[NEXT]
     THEN REPEAT STRIP_TAC
     THEN IMP_RES_TAC next_SUC
-    THEN RES_TAC);
+    THEN RES_TAC
+QED
 
 val assm =
  ASSUME (“(!x. (done x = f(s x)) /\ (s(SUC x) = g(i x,s x))) /\
@@ -180,10 +184,8 @@ val ind_hyp =
 val s_tm =
  ASSUME (“s(SUC x + d) = (FN:('a#'b)->'b)(i(SUC x),g(i(SUC x),s(SUC x)))”);
 
-val NEXT_THM =
- store_thm
-  ("NEXT_THM",
-   “!(FN : 'a#'b -> 'b).
+Theorem NEXT_THM:
+    !(FN : 'a#'b -> 'b).
       !(f:'b->bool).
       !(g: 'a#'b -> 'b).
       !(done : num->bool).
@@ -193,7 +195,8 @@ val NEXT_THM =
       (!a b. FN(a,b) = (if f b then b else FN(a,g(a,b)))))    ==>
       (!d x.
         (NEXT(x,x+d)done /\ STABLE(x,x+d)i) ==>
-        (s(x+d) = FN(i x,g(i x,s x))))”,
+        (s(x+d) = FN(i x,g(i x,s x))))
+Proof
    REPEAT GEN_TAC
     THEN REWRITE_TAC[SYM(SPEC_ALL ADD1)]
     THEN REPEAT DISCH_TAC
@@ -224,7 +227,8 @@ val NEXT_THM =
           (ASSUME (“~done(SUC x)”)::(map SYM (CONJUNCTS(SPEC_ALL done_s))))
     THEN IMP_RES_TAC NEXT_LEMMA2
     THEN IMP_RES_TAC STABLE_LEMMA
-    THEN REWRITE_TAC[ASSUME (“(i:num->'a) x = i(SUC x)”),done_s]);
+    THEN REWRITE_TAC[ASSUME (“(i:num->'a) x = i(SUC x)”),done_s]
+QED
 
 (****************************************************************************)
 (****************************************************************************)
@@ -265,30 +269,34 @@ val MULT_FUN_CURRY = new_recursive_definition
  *     THEN ASM_REWRITE_TAC[MULT_FUN_CURRY,SUC_SUB1,SUB]);
  *---------------------------------------------------------------------------*)
 
-val MULT_FUN_CURRY_THM = store_thm("MULT_FUN_CURRY_THM",
-   “!i1 i2 m n t.
+Theorem MULT_FUN_CURRY_THM:
+    !i1 i2 m n t.
       MULT_FUN_CURRY n i1 i2 m t =
        (if t then (m,n,t)
-        else MULT_FUN_CURRY(n-1) i1 i2 (if i1=0 then m else i2+m) (((n-1)-1=0)\/(i2=0)))”,
+        else MULT_FUN_CURRY(n-1) i1 i2 (if i1=0 then m else i2+m) (((n-1)-1=0)\/(i2=0)))
+Proof
    REPEAT GEN_TAC
     THEN STRUCT_CASES_TAC(SPEC (“n:num”) num_CASES)
     THEN ASM_CASES_TAC (“t:bool”)
     THEN REWRITE_TAC[SUC_SUB1]
-    THEN ASM_REWRITE_TAC[MULT_FUN_CURRY,SUB]);
+    THEN ASM_REWRITE_TAC[MULT_FUN_CURRY,SUB]
+QED
 
 
 val MULT_FUN = new_definition("MULT_FUN",
    “MULT_FUN((i1,i2),m,n,t) = MULT_FUN_CURRY n i1 i2 m t”);
 
-val MULT_FUN_DEF = store_thm("MULT_FUN_DEF",
-   “!i1 i2 m n t.
+Theorem MULT_FUN_DEF:
+    !i1 i2 m n t.
      MULT_FUN((i1,i2),m,n,t) =
       (if t then (m,n,t)
        else MULT_FUN ((i1,i2), (if i1=0 then m else i2+m), (n-1),
-                     ((((n-1)-1)=0) \/ (i2=0))))”,
+                     ((((n-1)-1)=0) \/ (i2=0))))
+Proof
    REPEAT GEN_TAC
     THEN REWRITE_TAC[MULT_FUN]
-    THEN ACCEPT_TAC(SPEC_ALL MULT_FUN_CURRY_THM));
+    THEN ACCEPT_TAC(SPEC_ALL MULT_FUN_CURRY_THM)
+QED
 
 (****************************************************************************)
 (****************************************************************************)
@@ -312,45 +320,44 @@ val SUC_SUB1          = arithmeticTheory.SUC_SUB1;
 
 (* val MULT_FUN_DEF = MULT_FUN_CURRYTheory.MULT_FUN_DEF; *)
 
-val MULT_FUN_T =
- store_thm
-  ("MULT_FUN_T",
-   “!i1 i2 m n.
-     MULT_FUN((i1,i2),m,n,T) = (m,n,T)”,
+Theorem MULT_FUN_T:
+    !i1 i2 m n.
+     MULT_FUN((i1,i2),m,n,T) = (m,n,T)
+Proof
    REPEAT GEN_TAC
     THEN ASM_CASES_TAC (“t:bool”)
-    THEN REWRITE_TAC[INST [“t:bool” |-> “T”] (SPEC_ALL MULT_FUN_DEF)]);
+    THEN REWRITE_TAC[INST [“t:bool” |-> “T”] (SPEC_ALL MULT_FUN_DEF)]
+QED
 
-val MULT_FUN_F =
- store_thm
-  ("MULT_FUN_F",
-   “!i1 i2 m n.
+Theorem MULT_FUN_F:
+    !i1 i2 m n.
      MULT_FUN((i1,i2),m,n,F) =
-     MULT_FUN((i1,i2),(if i1=0 then m else i2+m),(n-1),((((n-1)-1)=0) \/ (i2=0)))”,
+     MULT_FUN((i1,i2),(if i1=0 then m else i2+m),(n-1),((((n-1)-1)=0) \/ (i2=0)))
+Proof
    REPEAT GEN_TAC
     THEN ASM_CASES_TAC (“t:bool”)
-    THEN REWRITE_TAC[INST[“t:bool” |-> “F”] (SPEC_ALL MULT_FUN_DEF)]);
+    THEN REWRITE_TAC[INST[“t:bool” |-> “F”] (SPEC_ALL MULT_FUN_DEF)]
+QED
 
-val LESS_EQ_0 =
- store_thm
-  ("LESS_EQ_0",
-   “!m. 0 <= m”,
+Theorem LESS_EQ_0:
+    !m. 0 <= m
+Proof
    INDUCT_TAC
-   THEN ASM_REWRITE_TAC[LESS_OR_EQ,LESS_0]);
+   THEN ASM_REWRITE_TAC[LESS_OR_EQ,LESS_0]
+QED
 
-val LESS_EQ_SUC_1 =
- store_thm
-  ("LESS_EQ_SUC_1",
-   “!m. 1 <= SUC m”,
+Theorem LESS_EQ_SUC_1:
+    !m. 1 <= SUC m
+Proof
    INDUCT_TAC
-   THEN ASM_REWRITE_TAC[num_CONV (“1”),LESS_OR_EQ,LESS_MONO_EQ,LESS_0]);
+   THEN ASM_REWRITE_TAC[num_CONV (“1”),LESS_OR_EQ,LESS_MONO_EQ,LESS_0]
+QED
 
 val EQ_SYM_EQ' = INST_TYPE[alpha |-> Type`:num`] EQ_SYM_EQ;
 
-val SUB_LEMMA1 =
- store_thm
-  ("SUB_LEMMA1",
-   “!m.(~(m=0)) ==> (((m-1)=0) ==> (m=1))”,
+Theorem SUB_LEMMA1:
+    !m.(~(m=0)) ==> (((m-1)=0) ==> (m=1))
+Proof
    INDUCT_TAC
     THEN REWRITE_TAC
           [SYM
@@ -362,39 +369,38 @@ val SUB_LEMMA1 =
               (SPEC (“m:num”) LESS_EQ_SUC_1))),
            ADD_CLAUSES]
     THEN REPEAT STRIP_TAC
-    THEN ASM_REWRITE_TAC[]);
+    THEN ASM_REWRITE_TAC[]
+QED
 
-val SUB_LEMMA2 =
- store_thm
-  ("SUB_LEMMA2",
-   “!m.(m=0) ==> ((~((m-1)=0)) ==> F)”,
+Theorem SUB_LEMMA2:
+    !m.(m=0) ==> ((~((m-1)=0)) ==> F)
+Proof
     GEN_TAC
      THEN DISCH_TAC
-     THEN ASM_REWRITE_TAC[SUB_0]);
+     THEN ASM_REWRITE_TAC[SUB_0]
+QED
 
-val MULT_NOT_0_LESS =
- store_thm
-  ("MULT_NOT_0_LESS",
-   “!m n. (~(m = 0)) ==> (n <= (m * n))”,
+Theorem MULT_NOT_0_LESS:
+    !m n. (~(m = 0)) ==> (n <= (m * n))
+Proof
    INDUCT_TAC
    THEN GEN_TAC
    THEN REWRITE_TAC[MULT_CLAUSES,SUBS[SPEC_ALL ADD_SYM]
-                                     (SPEC_ALL LESS_EQ_ADD)]);
+                                     (SPEC_ALL LESS_EQ_ADD)]
+QED
 
-val MULT_ADD_LEMMA1 =
- store_thm
-  ("MULT_ADD_LEMMA1",
-   “!m. (~(m=0)) ==> (!n p. (((m-1)*n)+(n+p)) = ((m*n)+p))”,
+Theorem MULT_ADD_LEMMA1:
+    !m. (~(m=0)) ==> (!n p. (((m-1)*n)+(n+p)) = ((m*n)+p))
+Proof
    REPEAT STRIP_TAC
    THEN REWRITE_TAC[ADD_ASSOC,RIGHT_SUB_DISTRIB,MULT_CLAUSES]
    THEN IMP_RES_THEN (ASSUME_TAC o SPEC (“n:num”)) MULT_NOT_0_LESS
    THEN IMP_RES_TAC SUB_ADD
-   THEN ASM_REWRITE_TAC[]);
+   THEN ASM_REWRITE_TAC[]
+QED
 
-val MULT_FUN_THM =
- store_thm
-  ("MULT_FUN_THM",
-   “!n i1 i2 m t.
+Theorem MULT_FUN_THM:
+    !n i1 i2 m t.
      MULT_FUN((i1,i2),m,n,t) =
        if t then
        (m,n,t)
@@ -402,7 +408,8 @@ val MULT_FUN_THM =
        (if ((n-1)=0)\/(i2=0) then
         ((if i1=0 then m else i2+m),(n-1),T)
         else
-        ((if i1=0 then m else ((n-1)*i2)+m),1,T))”,
+        ((if i1=0 then m else ((n-1)*i2)+m),1,T))
+Proof
        INDUCT_TAC
        THEN REPEAT GEN_TAC
        THEN ASM_CASES_TAC (“t:bool”)
@@ -415,24 +422,24 @@ val MULT_FUN_THM =
        THEN IMP_RES_TAC SUB_LEMMA1
        THEN IMP_RES_TAC SUB_LEMMA2
        THEN IMP_RES_TAC MULT_ADD_LEMMA1
-       THEN ASM_REWRITE_TAC[MULT_CLAUSES]);
+       THEN ASM_REWRITE_TAC[MULT_CLAUSES]
+QED
 
-val MULT_ADD_LEMMA2 =
- store_thm
-  ("MULT_ADD_LEMMA2",
-   “!m. ~(m=0) ==> !n. ((m-1)*n)+n = m*n”,
+Theorem MULT_ADD_LEMMA2:
+    !m. ~(m=0) ==> !n. ((m-1)*n)+n = m*n
+Proof
    REPEAT STRIP_TAC
     THEN REWRITE_TAC[RIGHT_SUB_DISTRIB,MULT_CLAUSES]
     THEN IMP_RES_THEN (ASSUME_TAC o SPEC (“n:num”)) MULT_NOT_0_LESS
     THEN IMP_RES_TAC SUB_ADD
-    THEN ASM_REWRITE_TAC[]);
+    THEN ASM_REWRITE_TAC[]
+QED
 
-val MULT_FUN_LEMMA =
-     store_thm
-      ("MULT_FUN_LEMMA",
-       “!i1 i2.
+Theorem MULT_FUN_LEMMA:
+        !i1 i2.
          (MULT_FUN((i1,i2),(if i1=0 then 0 else i2),i1,(((i1-1)=0)\/(i2=0)))) =
-          ((i1*i2), (if ((i1-1)=0)\/(i2=0) then i1 else 1), T)”,
+          ((i1*i2), (if ((i1-1)=0)\/(i2=0) then i1 else 1), T)
+Proof
        REPEAT GEN_TAC
         THEN ASM_CASES_TAC (“i1=0”)
         THEN ASM_CASES_TAC (“i2=0”)
@@ -440,7 +447,8 @@ val MULT_FUN_LEMMA =
         THEN ASM_CASES_TAC (“(i1-1)=0”)
         THEN IMP_RES_TAC SUB_LEMMA1
         THEN IMP_RES_TAC MULT_ADD_LEMMA2
-        THEN ASM_REWRITE_TAC[MULT_CLAUSES]);
+        THEN ASM_REWRITE_TAC[MULT_CLAUSES]
+QED
 
 (****************************************************************************)
 (****************************************************************************)
@@ -516,14 +524,16 @@ val MULT_IMP_EXPAND =
   save_thm("MULT_IMP_EXPAND",
          unwindLib.EXPAND_AUTO_RIGHT_RULE prims MULT_IMP);
 
-val COND_ADD_LEMMA = store_thm("COND_ADD_LEMMA",
-   “((if b then m else n) + p) = (if b then m + p else n + p)”,
+Theorem COND_ADD_LEMMA:
+    ((if b then m else n) + p) = (if b then m + p else n + p)
+Proof
    COND_CASES_TAC
-    THEN ASM_REWRITE_TAC[]);
+    THEN ASM_REWRITE_TAC[]
+QED
 
 
-val MULT_FUN_EXPANDED_DEF = store_thm("MULT_FUN_EXPANDED_DEF",
-   “!i1 i2 m n t.
+Theorem MULT_FUN_EXPANDED_DEF:
+    !i1 i2 m n t.
      MULT_FUN((i1,i2),m,n,t) =
       (if t then
        (m,n,t)
@@ -532,10 +542,12 @@ val MULT_FUN_EXPANDED_DEF = store_thm("MULT_FUN_EXPANDED_DEF",
         ((i1, i2),
          (if t then (if i1 = 0 then 0 else i2) else (if i1 = 0 then 0 else i2) + m),
          (if t then i1 else n - 1),
-         (((if t then i1 - 1 else (n - 1) - 1) = 0) \/ (i2 = 0))))”,
+         (((if t then i1 - 1 else (n - 1) - 1) = 0) \/ (i2 = 0))))
+Proof
     REPEAT GEN_TAC
      THEN ASM_CASES_TAC (“t:bool”)
-     THEN ASM_REWRITE_TAC[MULT_FUN_T,MULT_FUN_F,COND_ADD_LEMMA,ADD_CLAUSES]);
+     THEN ASM_REWRITE_TAC[MULT_FUN_T,MULT_FUN_F,COND_ADD_LEMMA,ADD_CLAUSES]
+QED
 
 
 val G_FUN = new_definition("G_FUN",
@@ -562,14 +574,16 @@ val NEXT_MULT_LEMMA1 = save_thm("NEXT_MULT_LEMMA1",
                                     (done:num->bool) x)”]
                            NEXT_THM')));
 
-val NEXT_MULT_LEMMA2 = store_thm("NEXT_MULT_LEMMA2",
-   “MULT_IMP(i1,i2,o1,o2,done)
+Theorem NEXT_MULT_LEMMA2:
+    MULT_IMP(i1,i2,o1,o2,done)
       ==> !x.
             (o2(x + 1),o1(x + 1),done(x + 1)) =
-             G_FUN((i1 x,i2 x),o2 x,o1 x,done x)”,
+             G_FUN((i1 x,i2 x),o2 x,o1 x,done x)
+Proof
    REWRITE_TAC[MULT_IMP_EXPAND]
     THEN REPEAT STRIP_TAC
-    THEN ASM_REWRITE_TAC[G_FUN]);
+    THEN ASM_REWRITE_TAC[G_FUN]
+QED
 
 val PAIR = pairTheory.PAIR;
 
@@ -595,21 +609,24 @@ val NEXT_MULT_LEMMA4 = save_thm("NEXT_MULT_LEMMA4",
 
 val MULT_FUN_LEMMA1 = MULT_FUN_LEMMA;
 
-val MULT_FUN_LEMMA2 = store_thm("MULT_FUN_LEMMA2",
- “(done:num->bool) x ==>
+Theorem MULT_FUN_LEMMA2:
+  (done:num->bool) x ==>
     (MULT_FUN((i1 x,i2 x),G_FUN((i1 x,i2 x),o2 x,o1 x,done x)) =
              ((i1 x * i2 x),
               (if ((i1 x - 1) = 0) \/ (i2 x = 0)
                then i1 x
                else 1),
-              T))”,
-   DISCH_TAC THEN ASM_REWRITE_TAC[MULT_FUN_LEMMA1,G_FUN]);
+              T))
+Proof
+   DISCH_TAC THEN ASM_REWRITE_TAC[MULT_FUN_LEMMA1,G_FUN]
+QED
 
 (* Already exists in theory "pair" *)
 
-val PAIR_SPLIT = store_thm("PAIR_SPLIT",
-   “!(x1:'a) (y1:'b) x2 y2.
-     ((x1,y1) = (x2,y2)) <=> (x1 = x2) /\ (y1 = y2)”,
+Theorem PAIR_SPLIT:
+    !(x1:'a) (y1:'b) x2 y2.
+     ((x1,y1) = (x2,y2)) <=> (x1 = x2) /\ (y1 = y2)
+Proof
    REPEAT GEN_TAC
     THEN EQ_TAC
     THEN REPEAT STRIP_TAC
@@ -620,19 +637,22 @@ val PAIR_SPLIT = store_thm("PAIR_SPLIT",
     THEN ASSUME_TAC (REWRITE_RULE []
        (AP_TERM (“SND:('a#'b)->'b”)
             (ASSUME (“(x1:'a,(y1:'b)) = (x2,y2)”))))
-    THEN ASM_REWRITE_TAC[]);
+    THEN ASM_REWRITE_TAC[]
+QED
 
-val MULT_CORRECTNESS = store_thm("MULT_CORRECTNESS",
-   “MULT_IMP(i1,i2,o1,o2,done)        /\
+Theorem MULT_CORRECTNESS:
+    MULT_IMP(i1,i2,o1,o2,done)        /\
       NEXT(x,x + d) done                /\
       STABLE(x,x + d)(\x'. i1 x',i2 x') /\
       done x                           ==>
-       (o2(x + d) = i1 x * i2 x)”,
+       (o2(x + d) = i1 x * i2 x)
+Proof
    REPEAT STRIP_TAC
     THEN IMP_RES_TAC NEXT_MULT_LEMMA4
     THEN ASSUME_TAC (UNDISCH MULT_FUN_LEMMA2)
     THEN IMP_RES_TAC EQ_TRANS
-    THEN IMP_RES_TAC(fst(EQ_IMP_RULE(SPEC_ALL PAIR_SPLIT))));
+    THEN IMP_RES_TAC(fst(EQ_IMP_RULE(SPEC_ALL PAIR_SPLIT)))
+QED
 
 
 (*---------------------------------------------------------------------------*

@@ -17,11 +17,12 @@ val RW1 = ONCE_REWRITE_RULE;
 (* The x86 set                                                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `
-  x86_el =  xReg of Xreg => word32
-          | xStatus of Xeflags => bool option
-          | xEIP of word32
-          | xMem of word32 => ((word8 # x86_permission set) option) => bool `;
+Datatype:
+  x86_el =  xReg Xreg word32
+          | xStatus Xeflags (bool option)
+          | xEIP word32
+          | xMem word32 ((word8 # x86_permission set) option) bool
+End
 
 val x86_el_11 = DB.fetch "-" "x86_el_11";
 val x86_el_distinct = DB.fetch "-" "x86_el_distinct";
@@ -212,11 +213,12 @@ val lemma =
   METIS_PROVE [SPLIT_x86_2set]
   ``p (x86_2set' y s) ==> (?u v. SPLIT (x86_2set s) (u,v) /\ p u /\ (\v. v = x86_2set'' y s) v)``;
 
-val X86_SPEC_SEMANTICS = store_thm("X86_SPEC_SEMANTICS",
-  ``SPEC X86_MODEL p {} q =
+Theorem X86_SPEC_SEMANTICS:
+    SPEC X86_MODEL p {} q =
     !y s t1 seq.
       p (x86_2set' y t1) /\ X86_ICACHE t1 s /\ rel_sequence X86_NEXT_REL seq s ==>
-      ?k t2. q (x86_2set' y t2) /\ X86_ICACHE t2 (seq k) /\ (x86_2set'' y t1 = x86_2set'' y t2)``,
+      ?k t2. q (x86_2set' y t2) /\ X86_ICACHE t2 (seq k) /\ (x86_2set'' y t1 = x86_2set'' y t2)
+Proof
   SIMP_TAC std_ss [GSYM RUN_EQ_SPEC,RUN_def,X86_MODEL_def,STAR_def,SEP_REFINE_def]
   \\ REPEAT STRIP_TAC \\ REVERSE EQ_TAC \\ REPEAT STRIP_TAC THENL [
     FULL_SIMP_TAC bool_ss [SPLIT_x86_2set_EXISTS]
@@ -229,15 +231,16 @@ val X86_SPEC_SEMANTICS = store_thm("X86_SPEC_SEMANTICS",
     \\ FULL_SIMP_TAC std_ss [GSYM AND_IMP_INTRO]
     \\ IMP_RES_TAC lemma \\ RES_TAC
     \\ FULL_SIMP_TAC bool_ss [SPLIT_x86_2set_EXISTS]
-    \\ IMP_RES_TAC x86_2set''_11 \\ METIS_TAC []]);
+    \\ IMP_RES_TAC x86_2set''_11 \\ METIS_TAC []]
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
 (* Theorems for construction of |- SPEC X86_MODEL ...                            *)
 (* ----------------------------------------------------------------------------- *)
 
-val STAR_x86_2set = store_thm("STAR_x86_2set",
-  ``((xR a x * p) (x86_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
+Theorem STAR_x86_2set:
+    ((xR a x * p) (x86_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
       (x = r a) /\ a IN rs /\ p (x86_2set' (rs DELETE a,st,ei,ms) (r,e,s,m,i))) /\
     ((xS1 c z * p) (x86_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
       (z = s c) /\ c IN st /\ p (x86_2set' (rs,st DELETE c,ei,ms) (r,e,s,m,i))) /\
@@ -248,7 +251,8 @@ val STAR_x86_2set = store_thm("STAR_x86_2set",
     ((~(xM1 b y) * p) (x86_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
       (y = m b) /\ b IN ms /\ p (x86_2set' (rs,st,ei,ms DELETE b) (r,e,s,m,i))) /\
     ((cond g * p) (x86_2set' (rs,st,ei,ms) (r,e,s,m,i)) =
-      g /\ p (x86_2set' (rs,st,ei,ms) (r,e,s,m,i)))``,
+      g /\ p (x86_2set' (rs,st,ei,ms) (r,e,s,m,i)))
+Proof
   REPEAT STRIP_TAC
   \\ SIMP_TAC std_ss [SEP_HIDE_def,SEP_CLAUSES]
   \\ SIMP_TAC std_ss [SEP_EXISTS]
@@ -259,7 +263,8 @@ val STAR_x86_2set = store_thm("STAR_x86_2set",
   THEN1 METIS_TAC [DELETE_x86_2set]
   \\ Cases_on `y = m b` \\ ASM_SIMP_TAC std_ss []
   \\ Cases_on `w = X86_ACCURATE b (r,e,s,m,i)`
-  \\ ASM_SIMP_TAC std_ss [DELETE_x86_2set,AC CONJ_ASSOC CONJ_COMM]);
+  \\ ASM_SIMP_TAC std_ss [DELETE_x86_2set,AC CONJ_ASSOC CONJ_COMM]
+QED
 
 val CODE_POOL_x86_2set_AUX_LEMMA = prove(
   ``!x y z. ~(z IN y) ==> ((x = z INSERT y) = z IN x /\ (x DELETE z = y))``,
@@ -337,33 +342,39 @@ val CODE_POOL_x86_2set_LEMMA = prove(
   \\ Cases_on `p IN ms` \\ ASM_REWRITE_TAC [GSYM CONJ_ASSOC]
   \\ FULL_SIMP_TAC bool_ss []);
 
-val CODE_POOL_x86_2set = store_thm("CODE_POOL_x86_2set",
-  ``!cs p ms.
+Theorem CODE_POOL_x86_2set:
+    !cs p ms.
       xCODE {(p,(cs,d))} (x86_2set' (rs,st,ei,ms) (r,s,e,m,i)) =
       if LENGTH cs < 5000 then
         (ms = address_list p (LENGTH cs)) /\ (rs = {}) /\ (st = {}) /\ ~ei /\
         x86_pool (r,s,e,m,i) p (cs,d)
-      else xCODE {(p,(cs,d))} (x86_2set' (rs,st,ei,ms) (r,s,e,m,i))``,
-  METIS_TAC [CODE_POOL_x86_2set_LEMMA]);
+      else xCODE {(p,(cs,d))} (x86_2set' (rs,st,ei,ms) (r,s,e,m,i))
+Proof
+  METIS_TAC [CODE_POOL_x86_2set_LEMMA]
+QED
 
 Definition icache_revert_def:
   icache_revert (m1:x86_memory,i1:x86_memory) (m2:x86_memory,i2:x86_memory) a =
     if m1 a = m2 a then i1 a else i2 a
 End
 
-val X86_ACCURATE_UPDATE = store_thm("X86_ACCURATE_UPDATE",
-  ``(X86_ACCURATE a ((xr =+ yr) r,e,s,m,i) = X86_ACCURATE a (r,e,s,m,i)) /\
+Theorem X86_ACCURATE_UPDATE:
+    (X86_ACCURATE a ((xr =+ yr) r,e,s,m,i) = X86_ACCURATE a (r,e,s,m,i)) /\
     (X86_ACCURATE a (r,xe,s,m,i) = X86_ACCURATE a (r,e,s,m,i)) /\
     (X86_ACCURATE a (r,e,(xs =+ ys) s,m,i) = X86_ACCURATE a (r,e,s,m,i)) /\
     (~(xm = a) ==> (X86_ACCURATE a (r,e,s,(xm =+ ym) m,i) = X86_ACCURATE a (r,e,s,m,i))) /\
     (~(a = b) ==>
        (X86_ACCURATE a (r,e,s,m,icache_revert (m,i) ((b =+ w) m2,i2)) =
-        X86_ACCURATE a (r,e,s,m,icache_revert (m,i) (m2,i2))))``,
-  SIMP_TAC std_ss [X86_ACCURATE_def,APPLY_UPDATE_THM,icache_revert_def]);
+        X86_ACCURATE a (r,e,s,m,icache_revert (m,i) (m2,i2))))
+Proof
+  SIMP_TAC std_ss [X86_ACCURATE_def,APPLY_UPDATE_THM,icache_revert_def]
+QED
 
-val icache_revert_ID = store_thm("icache_revert_ID",
-  ``!m i y. icache_revert (m,i) (m,y) = i``,
-  SIMP_TAC std_ss [FUN_EQ_THM,icache_revert_def]);
+Theorem icache_revert_ID:
+    !m i y. icache_revert (m,i) (m,y) = i
+Proof
+  SIMP_TAC std_ss [FUN_EQ_THM,icache_revert_def]
+QED
 
 val icache_revert_update = prove(
   ``b IN ms ==>
@@ -374,8 +385,8 @@ val icache_revert_update = prove(
        XREAD_EIP_def,X86_GET_MEMORY_def,X86_ACCURATE_def,icache_revert_def]
   \\ METIS_TAC []);
 
-val UPDATE_x86_2set'' = store_thm("UPDATE_x86_2set''",
-  ``(!a x. a IN rs ==>
+Theorem UPDATE_x86_2set'':
+    (!a x. a IN rs ==>
       (x86_2set'' (rs,st,ei,ms) ((a =+ x) r,e,s,m,i) = x86_2set'' (rs,st,ei,ms) (r,e,s,m,i))) /\
     (!a x. a IN st ==>
       (x86_2set'' (rs,st,ei,ms) (r,e,(a =+ x) s,m,i) = x86_2set'' (rs,st,ei,ms) (r,e,s,m,i))) /\
@@ -385,13 +396,15 @@ val UPDATE_x86_2set'' = store_thm("UPDATE_x86_2set''",
       (x86_2set'' (rs,st,ei,ms) (r,e,s,(a =+ x) m,i) = x86_2set'' (rs,st,ei,ms) (r,e,s,m,i))) /\
     (!a x. a IN ms ==>
       (x86_2set'' (rs,st,ei,ms) (r,x,t,m, icache_revert (m,i) ((a =+ w) m2,j)) =
-       x86_2set'' (rs,st,ei,ms) (r,x,t,m, icache_revert (m,i) (m2,j))))``,
+       x86_2set'' (rs,st,ei,ms) (r,x,t,m, icache_revert (m,i) (m2,j))))
+Proof
   SIMP_TAC std_ss [x86_2set_def,x86_2set''_def,x86_2set'_def,EXTENSION,IN_UNION,
        IN_INSERT,NOT_IN_EMPTY,IN_IMAGE,IN_DIFF,IN_UNIV,XREAD_REG_def,XREAD_MEM_def,
        XREAD_EFLAG_def,APPLY_UPDATE_THM,XREAD_EIP_def,icache_revert_update]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [] \\ SRW_TAC [] [X86_ACCURATE_UPDATE]
-  \\ METIS_TAC [X86_ACCURATE_UPDATE]);
+  \\ METIS_TAC [X86_ACCURATE_UPDATE]
+QED
 
 val X86_SPEC_CODE = save_thm("X86_SPEC_CODE",
   RW [GSYM X86_MODEL_def,GSYM xCODE_def]
@@ -465,9 +478,10 @@ Definition X86_ICACHE_REVERT_def:
     (r2,e2,s2,m2,icache_revert (m1,i1) (m2,i2))
 End
 
-val X86_ICACHE_X86_ICACHE_REVERT = store_thm("X86_ICACHE_X86_ICACHE_REVERT",
-  ``!s t u. X86_ICACHE s t /\ (X86_ICACHE_EXTRACT t = X86_ICACHE_EXTRACT u) ==>
-            X86_ICACHE (X86_ICACHE_REVERT u s) u``,
+Theorem X86_ICACHE_X86_ICACHE_REVERT:
+    !s t u. X86_ICACHE s t /\ (X86_ICACHE_EXTRACT t = X86_ICACHE_EXTRACT u) ==>
+            X86_ICACHE (X86_ICACHE_REVERT u s) u
+Proof
   NTAC 3 STRIP_TAC
   \\ `?r1 e1 s1 m1 i1. s = (r1,e1,s1,m1,i1)` by METIS_TAC [PAIR]
   \\ `?r2 e2 s2 m2 i2. t = (r2,e2,s2,m2,i2)` by METIS_TAC [PAIR]
@@ -476,41 +490,50 @@ val X86_ICACHE_X86_ICACHE_REVERT = store_thm("X86_ICACHE_X86_ICACHE_REVERT",
   \\ REPEAT STRIP_TAC
   \\ `(r1,e1,s1,m1) = (r2,e2,s2,m2)` by FULL_SIMP_TAC std_ss [X86_ICACHE_def]
   \\ FULL_SIMP_TAC std_ss []
-  \\ METIS_TAC [X86_ICACHE_icache_revert]);
+  \\ METIS_TAC [X86_ICACHE_icache_revert]
+QED
 
-val X86_ICACHE_EXTRACT_CLAUSES = store_thm("X86_ICACHE_EXTRACT_CLAUSES",
-  ``!s r w f fv.
+Theorem X86_ICACHE_EXTRACT_CLAUSES:
+    !s r w f fv.
       (X86_ICACHE_EXTRACT (XWRITE_EIP w s) = X86_ICACHE_EXTRACT s) /\
       (X86_ICACHE_EXTRACT (XWRITE_REG r w s) = X86_ICACHE_EXTRACT s) /\
-      (X86_ICACHE_EXTRACT (XWRITE_EFLAG f fv s) = X86_ICACHE_EXTRACT s)``,
+      (X86_ICACHE_EXTRACT (XWRITE_EFLAG f fv s) = X86_ICACHE_EXTRACT s)
+Proof
   REPEAT STRIP_TAC
   THEN `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   THEN ASM_SIMP_TAC std_ss [X86_ICACHE_EXTRACT_def,XWRITE_EIP_def,
-          XWRITE_REG_def,XWRITE_EFLAG_def]);
+          XWRITE_REG_def,XWRITE_EFLAG_def]
+QED
 
-val X86_ACCURATE_CLAUSES = store_thm("X86_ACCURATE_CLAUSES",
-  ``(X86_ACCURATE a ((r =+ w) x,e,s,m,i) = X86_ACCURATE a (x,e,s,m,i)) /\
+Theorem X86_ACCURATE_CLAUSES:
+    (X86_ACCURATE a ((r =+ w) x,e,s,m,i) = X86_ACCURATE a (x,e,s,m,i)) /\
     (X86_ACCURATE a (x,e,(f =+ fv) s,m,i) = X86_ACCURATE a (x,e,s,m,i)) /\
-    (~(b = a) ==> (X86_ACCURATE a (x,e,s,(b =+ v) m,i) = X86_ACCURATE a (x,e,s,m,i)))``,
-  SIMP_TAC std_ss [X86_ACCURATE_def,APPLY_UPDATE_THM]);
+    (~(b = a) ==> (X86_ACCURATE a (x,e,s,(b =+ v) m,i) = X86_ACCURATE a (x,e,s,m,i)))
+Proof
+  SIMP_TAC std_ss [X86_ACCURATE_def,APPLY_UPDATE_THM]
+QED
 
-val X86_ACCURATE_IMP = store_thm("X86_ACCURATE_IMP",
-  ``X86_ACCURATE a (r,e2,t,m,i) ==>
+Theorem X86_ACCURATE_IMP:
+    X86_ACCURATE a (r,e2,t,m,i) ==>
     X86_ACCURATE a (r,e1,t,m,icache_revert (m,i) (m,icache x m i)) /\
     X86_ACCURATE a (r,e1,t,m,icache x m i) /\
-    X86_ACCURATE a (r,e1,t,m,i)``,
+    X86_ACCURATE a (r,e1,t,m,i)
+Proof
   Cases_on `x` THEN SIMP_TAC std_ss [X86_ACCURATE_def,icache_revert_def,icache_def]
-  THEN METIS_TAC []);
+  THEN METIS_TAC []
+QED
 
-val XREAD_INSTR_IMP = store_thm("XREAD_INSTR_IMP",
-  ``!x r e t i m a w p.
+Theorem XREAD_INSTR_IMP:
+    !x r e t i m a w p.
       (m a = SOME (w,X86_INSTR_PERM p)) /\ X86_ACCURATE a (r,e,t,m,i) ==>
-      (XREAD_INSTR a (r,e,t,m,icache x m i) = SOME w)``,
+      (XREAD_INSTR a (r,e,t,m,icache x m i) = SOME w)
+Proof
   Cases THEN REPEAT STRIP_TAC
   THEN FULL_SIMP_TAC std_ss [X86_ACCURATE_def,icache_def,XREAD_INSTR_def]
   THEN Cases_on `a IN q` \\ ASM_SIMP_TAC std_ss []
   THEN Cases_on `a IN r` \\ ASM_SIMP_TAC (srw_ss()) []
-  THEN Cases_on `p` \\ ASM_SIMP_TAC (srw_ss()) [X86_INSTR_PERM_def]);
+  THEN Cases_on `p` \\ ASM_SIMP_TAC (srw_ss()) [X86_INSTR_PERM_def]
+QED
 
 val X86_ICACHE_REVERT_EMPTY = prove(
   ``(X86_ICACHE_EXTRACT v = X86_ICACHE_EMPTY) ==>
@@ -555,10 +578,12 @@ val IMP_X86_SPEC = save_thm("IMP_X86_SPEC",
    SPECL [``CODE_POOL X86_INSTR {(eip,c)} * p``,
           ``CODE_POOL X86_INSTR {(eip,c)} * q``]) IMP_X86_SPEC_LEMMA2);
 
-val xS_HIDE = store_thm("xS_HIDE",
-  ``~xS = ~xS1 X_CF * ~xS1 X_PF * ~xS1 X_AF * ~xS1 X_ZF * ~xS1 X_SF * ~xS1 X_OF``,
+Theorem xS_HIDE:
+    ~xS = ~xS1 X_CF * ~xS1 X_PF * ~xS1 X_AF * ~xS1 X_ZF * ~xS1 X_SF * ~xS1 X_OF
+Proof
   SIMP_TAC std_ss [SEP_HIDE_def,xS_def,SEP_CLAUSES,FUN_EQ_THM]
-  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [xS_def,PAIR]);
+  \\ SIMP_TAC std_ss [SEP_EXISTS] \\ METIS_TAC [xS_def,PAIR]
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -588,11 +613,13 @@ End
 Definition xBYTE_MEMORY_X_def:   xBYTE_MEMORY_X = xBYTE_MEMORY_ANY T
 End
 
-val IN_xDATA_PERM = store_thm("IN_xDATA_PERM",
-  ``(Xread IN xDATA_PERM exec) /\
+Theorem IN_xDATA_PERM:
+    (Xread IN xDATA_PERM exec) /\
     (Xwrite IN xDATA_PERM exec) /\
-    (Xexecute IN xDATA_PERM exec = exec)``,
-  Cases_on `exec` \\ SRW_TAC [] [xDATA_PERM_def,IN_INSERT,NOT_IN_EMPTY]);
+    (Xexecute IN xDATA_PERM exec = exec)
+Proof
+  Cases_on `exec` \\ SRW_TAC [] [xDATA_PERM_def,IN_INSERT,NOT_IN_EMPTY]
+QED
 
 val IN_xBYTE_MEMORY_ANY_SET = prove(
   ``a IN df ==>
@@ -622,10 +649,11 @@ val xBYTE_MEMORY_ANY_C_INSERT = prove(
   \\ FULL_SIMP_TAC std_ss [xBYTE_MEMORY_ANY_SET_def,EXTENSION,GSPECIFICATION,IN_DELETE,IN_INSERT]
   \\ METIS_TAC []);
 
-val xBYTE_MEMORY_ANY_INSERT = store_thm("xBYTE_MEMORY_ANY_INSERT",
-  ``a IN df ==>
+Theorem xBYTE_MEMORY_ANY_INSERT:
+    a IN df ==>
     (xBYTE_MEMORY_ANY e df ((a =+ w) g) =
-     ~xM1 a (SOME (w,xDATA_PERM e)) * xBYTE_MEMORY_ANY e (df DELETE a) g)``,
+     ~xM1 a (SOME (w,xDATA_PERM e)) * xBYTE_MEMORY_ANY e (df DELETE a) g)
+Proof
   SIMP_TAC std_ss [FUN_EQ_THM]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC THENL [
     FULL_SIMP_TAC std_ss [xBYTE_MEMORY_ANY_def,SEP_CLAUSES]
@@ -642,21 +670,24 @@ val xBYTE_MEMORY_ANY_INSERT = store_thm("xBYTE_MEMORY_ANY_INSERT",
     \\ FULL_SIMP_TAC std_ss [SEP_HIDE_def,SEP_CLAUSES]
     \\ FULL_SIMP_TAC std_ss [SEP_EXISTS]
     \\ Q.EXISTS_TAC `(a =+ y') y`
-    \\ ASM_SIMP_TAC std_ss [xBYTE_MEMORY_ANY_C_INSERT]]);
+    \\ ASM_SIMP_TAC std_ss [xBYTE_MEMORY_ANY_C_INSERT]]
+QED
 
 val xBYTE_MEMORY_ANY_INSERT_SET =
   SIMP_RULE std_ss [IN_INSERT,DELETE_INSERT,APPLY_UPDATE_ID]
   (Q.INST [`df`|->`a INSERT df`,`w`|->`g a`] xBYTE_MEMORY_ANY_INSERT);
 
-val xBYTE_MEMORY_ANY_INTRO = store_thm("xBYTE_MEMORY_ANY_INTRO",
-  ``SPEC m (~xM1 a (SOME (v,xDATA_PERM e)) * P) c
+Theorem xBYTE_MEMORY_ANY_INTRO:
+    SPEC m (~xM1 a (SOME (v,xDATA_PERM e)) * P) c
            (~xM1 a (SOME (w,xDATA_PERM e)) * Q) ==>
     a IN df ==>
     SPEC m (xBYTE_MEMORY_ANY e df ((a =+ v) f) * P) c
-           (xBYTE_MEMORY_ANY e df ((a =+ w) f) * Q)``,
+           (xBYTE_MEMORY_ANY e df ((a =+ w) f) * Q)
+Proof
   ONCE_REWRITE_TAC [STAR_COMM]
   \\ SIMP_TAC std_ss [xBYTE_MEMORY_ANY_INSERT,STAR_ASSOC]
-  \\ METIS_TAC [SPEC_FRAME]);
+  \\ METIS_TAC [SPEC_FRAME]
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -705,11 +736,13 @@ val xM_LEMMA = prove(
   \\ SIMP_TAC std_ss [xBYTE_MEMORY_ANY_def,SEP_EXISTS,SEP_EQ_def]
   \\ SIMP_TAC std_ss [xBYTE_MEMORY_ANY_SET_def,NOT_IN_EMPTY,EXTENSION,GSPECIFICATION,emp_def]);
 
-val xM_THM = store_thm("xM_THM",
-  ``!a w f. ALIGNED a ==> (xMEMORY {a} ((a =+ w) f) = xM a w) /\
-                          (xMEMORY {a} (\x. w) = xM a w)``,
+Theorem xM_THM:
+    !a w f. ALIGNED a ==> (xMEMORY {a} ((a =+ w) f) = xM a w) /\
+                          (xMEMORY {a} (\x. w) = xM a w)
+Proof
   SIMP_TAC std_ss [GSYM xM_LEMMA,GSYM (RW [APPLY_UPDATE_ID]
-    (Q.SPECL [`(f:word32->word32) a`,`a`,`f`] xM_LEMMA))]);
+    (Q.SPECL [`(f:word32->word32) a`,`a`,`f`] xM_LEMMA))]
+QED
 
 val xBYTE_MEMORY_ANY_SET_EQ = prove(
   ``xBYTE_MEMORY_ANY_SET df f exec c =
@@ -778,13 +811,15 @@ val xMEMORY_INSERT = prove(
   \\ SIMP_TAC std_ss [ADDR30_ADDR32,APPLY_UPDATE_THM]
   \\ METIS_TAC []);
 
-val xMEMORY_INTRO = store_thm("xMEMORY_INTRO",
-  ``SPEC m (xM a v * P) c (xM a w * Q) ==>
+Theorem xMEMORY_INTRO:
+    SPEC m (xM a v * P) c (xM a w * Q) ==>
     ALIGNED a /\ a IN df ==>
-    SPEC m (xMEMORY df ((a =+ v) f) * P) c (xMEMORY df ((a =+ w) f) * Q)``,
+    SPEC m (xMEMORY df ((a =+ v) f) * P) c (xMEMORY df ((a =+ w) f) * Q)
+Proof
   ONCE_REWRITE_TAC [STAR_COMM]
   \\ SIMP_TAC std_ss [xMEMORY_INSERT,STAR_ASSOC]
-  \\ METIS_TAC [SPEC_FRAME]);
+  \\ METIS_TAC [SPEC_FRAME]
+QED
 
 
 (* ----------------------------------------------------------------------------- *)
@@ -794,8 +829,9 @@ val xMEMORY_INTRO = store_thm("xMEMORY_INTRO",
 Definition xCODE_SET_def:   xCODE_SET df f = { (a,[f a],T) | a IN df }
 End
 
-val xCODE_IMP_BYTE_MEMORY = store_thm("xCODE_IMP_BYTE_MEMORY",
-  ``!df f. SEP_IMP (xCODE (xCODE_SET df f)) (xBYTE_MEMORY_X df f)``,
+Theorem xCODE_IMP_BYTE_MEMORY:
+    !df f. SEP_IMP (xCODE (xCODE_SET df f)) (xBYTE_MEMORY_X df f)
+Proof
   SIMP_TAC std_ss [SEP_IMP_def,xCODE_def,CODE_POOL_def,SEP_EQ_def,
     xBYTE_MEMORY_X_def,xBYTE_MEMORY_ANY_def,SEP_EXISTS,xBYTE_MEMORY_ANY_SET_def]
   \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `\x.T`
@@ -812,7 +848,8 @@ val xCODE_IMP_BYTE_MEMORY = store_thm("xCODE_IMP_BYTE_MEMORY",
   \\ ASM_SIMP_TAC std_ss [X86_INSTR_def,IN_INSERT,X86_INSTR_PERM_def]
   \\ Q.EXISTS_TAC `(a,[f a],T)`
   \\ ASM_SIMP_TAC std_ss [X86_INSTR_def,IN_INSERT,X86_INSTR_PERM_def]
-  \\ ASM_SIMP_TAC std_ss [GSPECIFICATION]);
+  \\ ASM_SIMP_TAC std_ss [GSPECIFICATION]
+QED
 
 Theorem x86_2set_ICACHE_EMPTY[local]:
   (x86_2set' (rs,st,ei,ms) (r,e2,t,m,(\a. if a IN ms then NONE else i a)) =
@@ -867,8 +904,9 @@ val jmp_esi = let
   val th = RW [XREAD_REG_def,X86_ICACHE_UPDATE_def,XWRITE_EIP_def,XCLEAR_ICACHE_def] th
   in th end
 
-val WORD_FINITE = store_thm("WORD_FINITE",
-  ``!s:'a word set. FINITE s``,
+Theorem WORD_FINITE:
+    !s:'a word set. FINITE s
+Proof
   STRIP_TAC
   \\ MATCH_MP_TAC ((ONCE_REWRITE_RULE [CONJ_COMM] o
     REWRITE_RULE [AND_IMP_INTRO] o GEN_ALL o DISCH_ALL o SPEC_ALL o
@@ -890,7 +928,8 @@ val WORD_FINITE = store_thm("WORD_FINITE",
   \\ ASM_SIMP_TAC std_ss [EXTENSION,GSPECIFICATION,NOT_IN_EMPTY,IN_INSERT]
   \\ REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [DECIDE ``n < SUC k = n < k \/ (n = k)``]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
 val WORD_SET_INDUCT = save_thm("WORD_SET_INDUCT",
   REWRITE_RULE [WORD_FINITE]
@@ -915,10 +954,11 @@ val xBYTE_MEMORY_X_x86_2set = prove(
     \\ ASM_SIMP_TAC std_ss [xDATA_PERM_def,INSERT_SUBSET,SUBSET_DELETE]
     \\ METIS_TAC []]);
 
-val xCODE_SET_INSERT = store_thm("xCODE_SET_INSERT",
-  ``~(e IN df) ==>
+Theorem xCODE_SET_INSERT:
+    ~(e IN df) ==>
     (xCODE (xCODE_SET (e INSERT df) f) =
-     xM1 e (SOME (f e, {Xread; Xwrite; Xexecute})) T * xCODE (xCODE_SET df f))``,
+     xM1 e (SOME (f e, {Xread; Xwrite; Xexecute})) T * xCODE (xCODE_SET df f))
+Proof
   SIMP_TAC std_ss [xCODE_def,xCODE_SET_def,xM1_def,EQ_STAR,FUN_EQ_THM] \\ STRIP_TAC
   \\ SIMP_TAC std_ss [CODE_POOL_def,INSERT_SUBSET,EMPTY_SUBSET]
   \\ `~((e,[f e],T) IN {(a,[f a],T) | a IN df}) /\
@@ -939,7 +979,8 @@ val xCODE_SET_INSERT = store_thm("xCODE_SET_INSERT",
   \\ ASM_SIMP_TAC std_ss [IN_IMAGE,IN_BIGUNION]
   \\ SIMP_TAC std_ss [METIS_PROVE [] ``e \/ b = ~e ==> b``,GSPECIFICATION]
   \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss [X86_INSTR_def,IN_INSERT,NOT_IN_EMPTY,x86_el_11]);
+  \\ FULL_SIMP_TAC std_ss [X86_INSTR_def,IN_INSERT,NOT_IN_EMPTY,x86_el_11]
+QED
 
 val xCODE_SET_x86_2set = prove(
   ``!df ms.
@@ -960,11 +1001,12 @@ val xCODE_SET_x86_2set = prove(
     \\ ASM_SIMP_TAC std_ss [INSERT_SUBSET,SUBSET_DELETE,DIFF_INSERT]
     \\ METIS_TAC []]);
 
-val xCODE_INTRO = store_thm("xCODE_INTRO",
-  ``SPEC X86_MODEL
+Theorem xCODE_INTRO:
+    SPEC X86_MODEL
       (xR ESI esi * xPC eip * xBYTE_MEMORY_X df f)
       {(eip,[0xFFw;0xE6w],T)}
-      (xR ESI esi * xPC esi * xCODE (xCODE_SET df f))``,
+      (xR ESI esi * xPC esi * xCODE (xCODE_SET df f))
+Proof
   MATCH_MP_TAC IMP_X86_SPEC2 \\ REPEAT STRIP_TAC \\ Q.EXISTS_TAC `r ESI`
   \\ STRIP_TAC THENL [MATCH_MP_TAC jmp_esi,ALL_TAC]
   \\ REPEAT (POP_ASSUM MP_TAC)
@@ -991,7 +1033,8 @@ val xCODE_INTRO = store_thm("xCODE_INTRO",
   \\ SIMP_TAC std_ss [UPDATE_x86_2set'',IN_INSERT]
   \\ STRIP_TAC \\ IMP_RES_TAC X86_ACCURATE_IMP
   \\ ASM_SIMP_TAC std_ss [] \\ FULL_SIMP_TAC std_ss [markerTheory.Abbrev_def]
-  \\ SIMP_TAC std_ss [X86_ACCURATE_def,X86_ICACHE_EMPTY_def]);
+  \\ SIMP_TAC std_ss [X86_ACCURATE_def,X86_ICACHE_EMPTY_def]
+QED
 
 val SPLIT_CODE_SEQ = prove(
   ``SPEC X86_MODEL p ((a,x::xs,T) INSERT s) q =
@@ -1053,16 +1096,17 @@ val STAR6 = prove(
   ``p1 * p2 * p3 * p4 * p5 * p6 = (p1 * p2 * p5) * (STAR p3 p4 * p6)``,
   SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
 
-val xSTACK_INTRO_EBX = store_thm("xSTACK_INTRO_EBX",
-  ``(ALIGNED ebp ==>
+Theorem xSTACK_INTRO_EBX:
+    (ALIGNED ebp ==>
      SPEC X86_MODEL (q1 * xR EBP ebp * xM (ebp - n2w n) x) c
                     (q2 * xR EBP ebp * xM (ebp - n2w n) y)) ==>
     !xs ys.
       (4 * LENGTH xs = n) ==>
       SPEC X86_MODEL (q1 * xSTACK ebp (xs ++ [x] ++ ys))
-                   c (q2 * xSTACK ebp (xs ++ [y] ++ ys))``,
+                   c (q2 * xSTACK ebp (xs ++ [y] ++ ys))
+Proof
   SIMP_TAC std_ss [xSTACK_def,SEP_ARRAY_APPEND,GSYM WORD_NEG_RMUL,STAR_ASSOC,
     RW1 [MULT_COMM] word_mul_n2w,GSYM word_sub_def,SEP_ARRAY_def,SEP_CLAUSES,
     LENGTH,LENGTH_APPEND,SPEC_MOVE_COND] \\ ONCE_REWRITE_TAC [STAR6]
-  \\ METIS_TAC [SPEC_FRAME]);
-
+  \\ METIS_TAC [SPEC_FRAME]
+QED

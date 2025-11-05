@@ -60,11 +60,10 @@ val trat_mul = new_infixl_definition("trat_mul",
     (PRE((SUC x)*(SUC x')),
      PRE((SUC y)*(SUC y')))”, 600);
 
-val trat_sucint = new_recursive_definition
-  {name = "trat_sucint",
-   def = “(trat_sucint 0 = trat_1) /\
-              (trat_sucint (SUC n) = (trat_sucint n) trat_add trat_1)”,
-   rec_axiom = num_Axiom}
+Definition trat_sucint[nocompute]:
+  (trat_sucint 0 = trat_1) /\
+  (trat_sucint (SUC n) = (trat_sucint n) trat_add trat_1)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Definition of the equivalence relation, and proof that it *is* one        *)
@@ -428,4 +427,3 @@ Theorem HRAT_SUCINT:
 Proof
   MATCH_ACCEPT_TAC HRAT_SUCINT
 QED
-

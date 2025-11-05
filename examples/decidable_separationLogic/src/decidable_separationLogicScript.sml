@@ -4,24 +4,6 @@ Ancestors
 Libs
   congLib
 
-(*
-quietdec := true;
-loadPath :=
-            (concat [Globals.HOLDIR, "/examples/decidable_separationLogic/src"]) ::
-            !loadPath;
-
-map load ["finite_mapTheory", "relationTheory", "congLib", "sortingTheory",
-   "rich_listTheory"];
-show_assums := true;
-*)
-
-(*
-load "decidable_separationLogicTheory";
-open decidable_separationLogicTheory;
-
-quietdec := false;
-*)
-
 val _ = ParseExtras.temp_loose_equality()
 val std_ss = std_ss -* ["lift_disj_eq", "lift_imp_disj"]
 val list_ss = list_ss -* ["lift_disj_eq", "lift_imp_disj"]
@@ -96,23 +78,25 @@ end;
 
 
 
-val PAIR_BETA_THM = store_thm ("PAIR_BETA_THM",
-“!f. (\x. f x (FST x) (SND x)) = (λ(x1,x2). f (x1,x2) x1 x2)”,
+Theorem PAIR_BETA_THM:
+ !f. (\x. f x (FST x) (SND x)) = (λ(x1,x2). f (x1,x2) x1 x2)
+Proof
 
    SIMP_TAC std_ss [FUN_EQ_THM] THEN
    Cases_on ‘x’ THEN
    SIMP_TAC std_ss []
-);
+QED
 
-val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
+Theorem EL_DISJOINT_FILTER:
 
-   “!n1 n2 P l. (~(n1 = n2) /\ (n1 < LENGTH l) /\ (n2 < LENGTH l) /\
+    !n1 n2 P l. (~(n1 = n2) /\ (n1 < LENGTH l) /\ (n2 < LENGTH l) /\
                    (EL n1 l = EL n2 l) /\ (P (EL n2 l))) ==>
                  ?n1' n2'. ~(n1' = n2') /\
                            (n1' < LENGTH (FILTER P l)) /\
                            (n2' < LENGTH (FILTER P l)) /\
                            (EL n1' (FILTER P l) = EL n2 l) /\
-                           (EL n2' (FILTER P l) = EL n2 l)”,
+                           (EL n2' (FILTER P l) = EL n2 l)
+Proof
 
    HO_MATCH_MP_TAC (prove (“((!n1 n2. P n1 n2 = P n2 n1) /\ (!n1 n2. (n1 <= n2) ==> P n1 n2)) ==>
                              (!n1 n2. P n1 n2)”,
@@ -139,14 +123,15 @@ val EL_DISJOINT_FILTER = store_thm ("EL_DISJOINT_FILTER",
    Q.EXISTS_TAC ‘LENGTH (FILTER P l1) + n'’ THEN
    ASM_SIMP_TAC list_ss [EL_APPEND1, EL_APPEND2] THEN
    METIS_TAC[]
-);
+QED
 
 
 
 
-val FORALL_LESS_SUC = store_thm ("FORALL_LESS_SUC",
-   “!P m. ((!n. n < SUC m ==> P n) =
-            (P 0 /\ (!n. n < m ==> P (SUC n))))”,
+Theorem FORALL_LESS_SUC:
+    !P m. ((!n. n < SUC m ==> P n) =
+            (P 0 /\ (!n. n < m ==> P (SUC n))))
+Proof
 
    REPEAT GEN_TAC THEN
    EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -157,20 +142,23 @@ val FORALL_LESS_SUC = store_thm ("FORALL_LESS_SUC",
          ASM_REWRITE_TAC[],
          ASM_SIMP_TAC arith_ss []
       ]
-   ]);
+   ]
+QED
 
 
 
-val IN_FDOM_FOLDR_UNION = store_thm ("IN_FDOM_FOLDR_UNION",
-“!x hL. x IN FDOM (FOLDR FUNION FEMPTY hL) =
-        ?h. MEM h hL /\ x IN FDOM h”,
+Theorem IN_FDOM_FOLDR_UNION:
+ !x hL. x IN FDOM (FOLDR FUNION FEMPTY hL) =
+        ?h. MEM h hL /\ x IN FDOM h
+Proof
 
 Induct_on ‘hL’ THENL [
    SIMP_TAC list_ss [FDOM_FEMPTY, NOT_IN_EMPTY],
 
    FULL_SIMP_TAC list_ss [FDOM_FUNION, IN_UNION, DISJ_IMP_THM] THEN
    METIS_TAC[]
-]);
+]
+QED
 
 Definition REPLACE_ELEMENT_def:
    (REPLACE_ELEMENT e n [] = []) /\
@@ -179,12 +167,13 @@ Definition REPLACE_ELEMENT_def:
 End
 
 
-val REPLACE_ELEMENT_SEM = store_thm ("REPLACE_ELEMENT_SEM",
-   “!e n l.
+Theorem REPLACE_ELEMENT_SEM:
+    !e n l.
          (LENGTH (REPLACE_ELEMENT e n l) = LENGTH l) /\
          (!p. p < LENGTH l ==>
             (EL p (REPLACE_ELEMENT e n l) =
-             if (p = n) then e else EL p l))”,
+             if (p = n) then e else EL p l))
+Proof
 
    Induct_on ‘n’ THENL [
       Cases_on ‘l’ THEN (
@@ -201,7 +190,8 @@ val REPLACE_ELEMENT_SEM = store_thm ("REPLACE_ELEMENT_SEM",
       Cases_on ‘p’ THEN (
          ASM_SIMP_TAC list_ss []
       )
-   ]);
+   ]
+QED
 
 
 
@@ -223,10 +213,11 @@ Proof
 QED
 
 
-val EL_ALL_DISTINCT_EQ = store_thm ("EL_ALL_DISTINCT_EQ",
-   “!l. ALL_DISTINCT l =
+Theorem EL_ALL_DISTINCT_EQ:
+    !l. ALL_DISTINCT l =
          (!n1 n2. n1 < LENGTH l /\ n2 < LENGTH l ==>
-         ((EL n1 l = EL n2 l) = (n1 = n2)))”,
+         ((EL n1 l = EL n2 l) = (n1 = n2)))
+Proof
 
    Induct_on ‘l’ THENL [
       SIMP_TAC list_ss [],
@@ -260,19 +251,23 @@ val EL_ALL_DISTINCT_EQ = store_thm ("EL_ALL_DISTINCT_EQ",
             METIS_TAC[]
          ]
       ]
-   ]);
+   ]
+QED
 
 
 
-val EL_ALL_DISTINCT = store_thm ("EL_ALL_DISTINCT",
-   “!l n1 n2. ALL_DISTINCT l /\ n1 < LENGTH l /\ n2 < LENGTH l ==>
-         ((EL n1 l = EL n2 l) = (n1 = n2))”,
+Theorem EL_ALL_DISTINCT:
+    !l n1 n2. ALL_DISTINCT l /\ n1 < LENGTH l /\ n2 < LENGTH l ==>
+         ((EL n1 l = EL n2 l) = (n1 = n2))
+Proof
 
-   METIS_TAC[EL_ALL_DISTINCT_EQ]);
+   METIS_TAC[EL_ALL_DISTINCT_EQ]
+QED
 
 
-val FILTER_ALL_DISTINCT = store_thm ("FILTER_ALL_DISTINCT",
-   “!P l. ALL_DISTINCT l ==> ALL_DISTINCT (FILTER P l)”,
+Theorem FILTER_ALL_DISTINCT:
+    !P l. ALL_DISTINCT l ==> ALL_DISTINCT (FILTER P l)
+Proof
 
    Induct_on ‘l’ THENL [
       SIMP_TAC list_ss [],
@@ -283,13 +278,15 @@ val FILTER_ALL_DISTINCT = store_thm ("FILTER_ALL_DISTINCT",
          ASM_SIMP_TAC list_ss [MEM_FILTER],
          ASM_SIMP_TAC list_ss []
       ]
-   ])
+   ]
+QED
 
 
-val PERM_ALL_DISTINCT = store_thm ("PERM_ALL_DISTINCT",
-“ !l1 l2. (ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\
+Theorem PERM_ALL_DISTINCT:
+  !l1 l2. (ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\
             (!x. MEM x l1 = MEM x l2)) ==>
-           PERM l1 l2”,
+           PERM l1 l2
+Proof
 
 Induct_on ‘l1’ THENL [
    Cases_on ‘l2’ THEN SIMP_TAC list_ss [FORALL_AND_THM, PERM_REFL],
@@ -334,12 +331,14 @@ Induct_on ‘l1’ THENL [
 
       METIS_TAC[]
    ]
-]);
+]
+QED
 
-val EL_HD_LAST = store_thm ("EL_HD_LAST",
-   “!l. 0 < LENGTH l ==>
+Theorem EL_HD_LAST:
+    !l. 0 < LENGTH l ==>
           ((HD l = EL 0 l) /\
-          (LAST l = EL (PRE (LENGTH l)) l))”,
+          (LAST l = EL (PRE (LENGTH l)) l))
+Proof
 
    SIMP_TAC list_ss [] THEN
    Induct_on ‘l’ THENL [
@@ -350,10 +349,12 @@ val EL_HD_LAST = store_thm ("EL_HD_LAST",
          SIMP_TAC list_ss [],
          FULL_SIMP_TAC list_ss []
       ]
-   ]);
+   ]
+QED
 
-val MEM_FRONT = store_thm ("MEM_FRONT",
-   “!l y. MEM y (FRONT (e::l)) ==> MEM y (e::l)”,
+Theorem MEM_FRONT:
+    !l y. MEM y (FRONT (e::l)) ==> MEM y (e::l)
+Proof
 
 Induct_on ‘l’ THENL [
    SIMP_TAC list_ss [],
@@ -361,104 +362,128 @@ Induct_on ‘l’ THENL [
    Cases_on ‘l’ THEN
    FULL_SIMP_TAC list_ss [DISJ_IMP_THM] THEN
    METIS_TAC[]
-]);
+]
+QED
 
 
-val LAST_APPEND = store_thm ("LAST_APPEND",
-   “LAST (l1 ++ (e::l2)) = LAST (e::l2)”,
+Theorem LAST_APPEND:
+    LAST (l1 ++ (e::l2)) = LAST (e::l2)
+Proof
    Induct_on ‘l1’ THENL [
       SIMP_TAC list_ss [],
       ASM_SIMP_TAC list_ss [LAST_DEF]
-   ])
+   ]
+QED
 
-val MEM_LAST = store_thm ("MEM_LAST",
-   “!e l. MEM (LAST (e::l)) (e::l)”,
+Theorem MEM_LAST:
+    !e l. MEM (LAST (e::l)) (e::l)
+Proof
      Induct_on ‘l’ THENL [
          ASM_SIMP_TAC list_ss [],
 
          SIMP_TAC std_ss [Once MEM, LAST_CONS] THEN
          ASM_SIMP_TAC std_ss []
-      ])
+      ]
+QED
 
 
-val ALL_DISTINCT_APPEND = store_thm ("ALL_DISTINCT_APPEND",
-   “!l1 l2. ALL_DISTINCT (l1++l2) =
+Theorem ALL_DISTINCT_APPEND:
+    !l1 l2. ALL_DISTINCT (l1++l2) =
              (ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\
-             (!e. MEM e l1 ==> ~(MEM e l2)))”,
+             (!e. MEM e l1 ==> ~(MEM e l2)))
+Proof
 
    Induct_on ‘l1’ THENL [
       SIMP_TAC list_ss [],
 
       ASM_SIMP_TAC list_ss [DISJ_IMP_THM, FORALL_AND_THM] THEN
       PROVE_TAC[]
-   ])
+   ]
+QED
 
-val ALL_DISTINCT_SNOC = store_thm ("ALL_DISTINCT_SNOC",
-   “!x l. ALL_DISTINCT (SNOC x l) =
-             ~(MEM x l) /\ (ALL_DISTINCT l)”,
+Theorem ALL_DISTINCT_SNOC:
+    !x l. ALL_DISTINCT (SNOC x l) =
+             ~(MEM x l) /\ (ALL_DISTINCT l)
+Proof
 
    SIMP_TAC list_ss [SNOC_APPEND, ALL_DISTINCT_APPEND] THEN
-   METIS_TAC[])
+   METIS_TAC[]
+QED
 
 
-val FUNION_EQ_FEMPTY = store_thm ("FUNION_EQ_FEMPTY",
-“!h1 h2. (FUNION h1 h2 = FEMPTY) = ((h1 = FEMPTY) /\ (h2 = FEMPTY))”,
+Theorem FUNION_EQ_FEMPTY:
+ !h1 h2. (FUNION h1 h2 = FEMPTY) = ((h1 = FEMPTY) /\ (h2 = FEMPTY))
+Proof
 
    SIMP_TAC std_ss [GSYM fmap_EQ_THM, EXTENSION, FDOM_FEMPTY, FUNION_DEF,
       NOT_IN_EMPTY, IN_UNION, DISJ_IMP_THM, FORALL_AND_THM] THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
 
 
-val SUBMAP___FUNION_EQ = store_thm ("SUBMAP___FUNION_EQ",
-“(!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f2) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f3)))) /\
-  (!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f3 DIFF (FDOM f2)) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f2))))”,
+Theorem SUBMAP___FUNION_EQ:
+ (!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f2) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f3)))) /\
+  (!f1 f2 f3. DISJOINT (FDOM f1) (FDOM f3 DIFF (FDOM f2)) ==> (((f1 SUBMAP (FUNION f2 f3)) = (f1 SUBMAP f2))))
+Proof
 
   SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION,
    NOT_IN_EMPTY, IN_INTER, IN_DIFF] THEN
-  METIS_TAC[])
+  METIS_TAC[]
+QED
 
 
-val SUBMAP___FUNION = store_thm ("SUBMAP___FUNION",
-“!f1 f2 f3. (f1 SUBMAP f2) \/ ((DISJOINT (FDOM f1) (FDOM f2) /\ (f1 SUBMAP f3))) ==> (f1 SUBMAP (FUNION f2 f3))”,
+Theorem SUBMAP___FUNION:
+ !f1 f2 f3. (f1 SUBMAP f2) \/ ((DISJOINT (FDOM f1) (FDOM f2) /\ (f1 SUBMAP f3))) ==> (f1 SUBMAP (FUNION f2 f3))
+Proof
 
 SIMP_TAC std_ss [SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION,
    NOT_IN_EMPTY, IN_INTER] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
-val SUBMAP___FUNION___ID = store_thm ("SUBMAP___FUNION___ID",
-“(!f1 f2. (f1 SUBMAP (FUNION f1 f2))) /\
-(!f1 f2. (DISJOINT (FDOM f1) (FDOM f2)) ==> (f2 SUBMAP (FUNION f1 f2)))”,
+Theorem SUBMAP___FUNION___ID:
+ (!f1 f2. (f1 SUBMAP (FUNION f1 f2))) /\
+(!f1 f2. (DISJOINT (FDOM f1) (FDOM f2)) ==> (f2 SUBMAP (FUNION f1 f2)))
+Proof
 
-METIS_TAC[SUBMAP_REFL, SUBMAP___FUNION, DISJOINT_SYM]);
+METIS_TAC[SUBMAP_REFL, SUBMAP___FUNION, DISJOINT_SYM]
+QED
 
-val FEMPTY_SUBMAP = store_thm ("FEMPTY_SUBMAP",
-   “!h. h SUBMAP FEMPTY = (h = FEMPTY)”,
+Theorem FEMPTY_SUBMAP:
+    !h. h SUBMAP FEMPTY = (h = FEMPTY)
+Proof
 
    SIMP_TAC std_ss [SUBMAP_DEF, FDOM_FEMPTY, NOT_IN_EMPTY, GSYM fmap_EQ_THM,
       EXTENSION] THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
 
-val FUNION_EQ = store_thm ("FUNION_EQ",
-“!f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
+Theorem FUNION_EQ:
+ !f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
               DISJOINT (FDOM f1) (FDOM f3)) ==>
-             (((FUNION f1 f2) = (FUNION f1 f3)) = (f2 = f3))”,
+             (((FUNION f1 f2) = (FUNION f1 f3)) = (f2 = f3))
+Proof
 
   SIMP_TAC std_ss [GSYM SUBMAP_ANTISYM, SUBMAP_DEF, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION,
    NOT_IN_EMPTY, IN_INTER, IN_DIFF] THEN
-  METIS_TAC[])
+  METIS_TAC[]
+QED
 
-val FUNION_EQ___IMPL = store_thm ("FUNION_EQ___IMPL",
-“!f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
+Theorem FUNION_EQ___IMPL:
+ !f1 f2 f3. (DISJOINT (FDOM f1) (FDOM f2) /\
               DISJOINT (FDOM f1) (FDOM f3) /\ (f2 = f3)) ==>
-             ((FUNION f1 f2) = (FUNION f1 f3))”,
+             ((FUNION f1 f2) = (FUNION f1 f3))
+Proof
 
-  METIS_TAC[FUNION_EQ]);
+  METIS_TAC[FUNION_EQ]
+QED
 
 
-val DOMSUB_FUNION = store_thm ("DOMSUB_FUNION",
-“(FUNION f g) \\ k = FUNION (f \\ k) (g \\ k)”,
+Theorem DOMSUB_FUNION:
+ (FUNION f g) \\ k = FUNION (f \\ k) (g \\ k)
+Proof
 
 SIMP_TAC std_ss [GSYM fmap_EQ_THM, FDOM_DOMSUB, FUNION_DEF, EXTENSION,
    IN_UNION, IN_DELETE] THEN
@@ -466,41 +491,51 @@ REPEAT STRIP_TAC THENL [
    METIS_TAC[],
    ASM_SIMP_TAC std_ss [DOMSUB_FAPPLY_NEQ, FUNION_DEF],
    ASM_SIMP_TAC std_ss [DOMSUB_FAPPLY_NEQ, FUNION_DEF]
-]);
+]
+QED
 
 
-val FUNION___COMM = store_thm ("FUNION___COMM",
-“!f g. (DISJOINT (FDOM f) (FDOM g)) ==> ((FUNION f g) = (FUNION g f))”,
+Theorem FUNION___COMM:
+ !f g. (DISJOINT (FDOM f) (FDOM g)) ==> ((FUNION f g) = (FUNION g f))
+Proof
 
    SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, IN_UNION, DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER] THEN
-   METIS_TAC[])
+   METIS_TAC[]
+QED
 
-val FUNION___ASSOC = store_thm ("FUNION___ASSOC",
-“!f g h. ((FUNION f (FUNION g h)) = (FUNION (FUNION f g) h))”,
+Theorem FUNION___ASSOC:
+ !f g h. ((FUNION f (FUNION g h)) = (FUNION (FUNION f g) h))
+Proof
 
    SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, IN_UNION, EXTENSION] THEN
-   METIS_TAC[])
+   METIS_TAC[]
+QED
 
-val FRONT___APPEND = store_thm ("FRONT___APPEND",
+Theorem FRONT___APPEND:
 
-   “FRONT (l1 ++ e::l2) = l1++FRONT(e::l2)”,
+    FRONT (l1 ++ e::l2) = l1++FRONT(e::l2)
+Proof
 
-     Induct_on ‘l1’ THEN ASM_SIMP_TAC list_ss [FRONT_DEF])
+     Induct_on ‘l1’ THEN ASM_SIMP_TAC list_ss [FRONT_DEF]
+QED
 
 
-val FRONT___LENGTH = store_thm ("FRONT___LENGTH",
-   “!l. ~(l = []) ==> (LENGTH (FRONT l) = PRE (LENGTH l))”,
+Theorem FRONT___LENGTH:
+    !l. ~(l = []) ==> (LENGTH (FRONT l) = PRE (LENGTH l))
+Proof
    Induct_on ‘l’ THENL [
       SIMP_TAC std_ss [],
 
       ASM_SIMP_TAC list_ss [FRONT_DEF, COND_RATOR, COND_RAND] THEN
       Cases_on ‘l’ THEN SIMP_TAC list_ss []
-   ])
+   ]
+QED
 
 
-val EL_FRONT = store_thm ("EL_FRONT",
-   “!l n. ((n < LENGTH (FRONT l)) /\ (~(l = []))) ==>
-           (EL n (FRONT l) = EL n l)”,
+Theorem EL_FRONT:
+    !l n. ((n < LENGTH (FRONT l)) /\ (~(l = []))) ==>
+           (EL n (FRONT l) = EL n l)
+Proof
 
    Induct_on ‘l’ THENL [
       SIMP_TAC list_ss [],
@@ -512,12 +547,14 @@ val EL_FRONT = store_thm ("EL_FRONT",
          SIMP_TAC list_ss [],
          FULL_SIMP_TAC list_ss []
       ]
-   ])
+   ]
+QED
 
 
-val BUTFIRSTN___CONCAT_EL = store_thm ("BUTFIRSTN___CONCAT_EL",
-   “!n. (n < LENGTH l) ==>
-         ((BUTFIRSTN n l) = (EL n l) :: (BUTFIRSTN (SUC n) l))”,
+Theorem BUTFIRSTN___CONCAT_EL:
+    !n. (n < LENGTH l) ==>
+         ((BUTFIRSTN n l) = (EL n l) :: (BUTFIRSTN (SUC n) l))
+Proof
 
    Induct_on ‘l’ THENL [
       FULL_SIMP_TAC list_ss [],
@@ -528,7 +565,8 @@ val BUTFIRSTN___CONCAT_EL = store_thm ("BUTFIRSTN___CONCAT_EL",
          SIMP_TAC list_ss [BUTFIRSTN],
          FULL_SIMP_TAC list_ss [BUTFIRSTN]
       ]
-   ])
+   ]
+QED
 
 
 Definition ALL_DISJOINT_def:
@@ -538,10 +576,11 @@ End
 
 
 
-val EL_ALL_DISJOINT_EQ = store_thm ("EL_ALL_DISJOINT_EQ",
-   “!l. ALL_DISJOINT l =
+Theorem EL_ALL_DISJOINT_EQ:
+    !l. ALL_DISJOINT l =
          (!n1 n2. n1 < LENGTH l /\ n2 < LENGTH l ==>
-         (DISJOINT (EL n1 l) (EL n2 l) = (~(n1 = n2) \/ (EL n1 l = EMPTY))))”,
+         (DISJOINT (EL n1 l) (EL n2 l) = (~(n1 = n2) \/ (EL n1 l = EMPTY))))
+Proof
 
    Induct_on ‘l’ THENL [
       SIMP_TAC list_ss [ALL_DISJOINT_def],
@@ -574,43 +613,51 @@ val EL_ALL_DISJOINT_EQ = store_thm ("EL_ALL_DISJOINT_EQ",
             FULL_SIMP_TAC list_ss []
          ]
       ]
-   ]);
+   ]
+QED
 
-val MAP_EQ_f = store_thm ("MAP_EQ_f",
+Theorem MAP_EQ_f:
 
-   “!f1 f2 l. (MAP f1 l = MAP f2 l) = (!e. MEM e l ==> (f1 e = f2 e))”,
+    !f1 f2 l. (MAP f1 l = MAP f2 l) = (!e. MEM e l ==> (f1 e = f2 e))
+Proof
 
    Induct_on ‘l’ THENL [
       SIMP_TAC list_ss [],
 
       ASM_SIMP_TAC list_ss [] THEN
       METIS_TAC[]
-   ])
+   ]
+QED
 
 
 
-val DRESTRICT_FUNION = store_thm ("DRESTRICT_FUNION",
-   “!h s1 s2. FUNION (DRESTRICT h s1) (DRESTRICT h s2) =
-               DRESTRICT h (s1 UNION s2)”,
+Theorem DRESTRICT_FUNION:
+    !h s1 s2. FUNION (DRESTRICT h s1) (DRESTRICT h s2) =
+               DRESTRICT h (s1 UNION s2)
+Proof
 
     SIMP_TAC std_ss [DRESTRICT_DEF, GSYM fmap_EQ_THM, EXTENSION,
       FUNION_DEF, IN_INTER, IN_UNION, DISJ_IMP_THM,
-      LEFT_AND_OVER_OR]);
+      LEFT_AND_OVER_OR]
+QED
 
 
 
-val DRESTRICT_EQ_FUNION = store_thm ("DRESTRICT_EQ_FUNION",
-   “!h h1 h2. (DISJOINT (FDOM h1) (FDOM h2)) /\ (FUNION h1 h2 = h) ==> (h2 = DRESTRICT h (COMPL (FDOM h1)))”,
+Theorem DRESTRICT_EQ_FUNION:
+    !h h1 h2. (DISJOINT (FDOM h1) (FDOM h2)) /\ (FUNION h1 h2 = h) ==> (h2 = DRESTRICT h (COMPL (FDOM h1)))
+Proof
 
     SIMP_TAC std_ss [DRESTRICT_DEF, GSYM fmap_EQ_THM, EXTENSION,
       FUNION_DEF, IN_INTER, IN_UNION, IN_COMPL, DISJOINT_DEF,
       NOT_IN_EMPTY] THEN
-    METIS_TAC[]);
+    METIS_TAC[]
+QED
 
 
 
-val ALL_DISJOINT___PERM = store_thm ("ALL_DISJOINT___PERM",
-   “!l1 l2. PERM l1 l2 ==> (ALL_DISJOINT l1 = ALL_DISJOINT l2)”,
+Theorem ALL_DISJOINT___PERM:
+    !l1 l2. PERM l1 l2 ==> (ALL_DISJOINT l1 = ALL_DISJOINT l2)
+Proof
 
    ‘!l1 l2. PERM l1 l2 ==> ((PERM l1 l2) /\ (ALL_DISJOINT l1 = ALL_DISJOINT l2))’ suffices_by (STRIP_TAC THEN
       METIS_TAC[]
@@ -624,12 +671,14 @@ val ALL_DISJOINT___PERM = store_thm ("ALL_DISJOINT___PERM",
       ASM_REWRITE_TAC[PERM_SWAP_AT_FRONT],
       METIS_TAC[DISJOINT_SYM, PERM_MEM_EQ],
       PROVE_TAC [PERM_TRANS, PERM_SYM]
-   ])
+   ]
+QED
 
 
 
-val ALL_DISTINCT___PERM = store_thm ("ALL_DISTINCT___PERM",
-   “!l1 l2. PERM l1 l2 ==> (ALL_DISTINCT l1 = ALL_DISTINCT l2)”,
+Theorem ALL_DISTINCT___PERM:
+    !l1 l2. PERM l1 l2 ==> (ALL_DISTINCT l1 = ALL_DISTINCT l2)
+Proof
 
    ‘!l1 l2. PERM l1 l2 ==> ((PERM l1 l2) /\ (ALL_DISTINCT l1 = ALL_DISTINCT l2))’ suffices_by (STRIP_TAC THEN
       METIS_TAC[]
@@ -643,7 +692,8 @@ val ALL_DISTINCT___PERM = store_thm ("ALL_DISTINCT___PERM",
       ASM_REWRITE_TAC[PERM_SWAP_AT_FRONT],
       METIS_TAC[DISJOINT_SYM, PERM_MEM_EQ],
       PROVE_TAC [PERM_TRANS, PERM_SYM]
-   ]);
+   ]
+QED
 
 
 (*----------------------------------------------------------------------------------*)
@@ -653,9 +703,10 @@ val ALL_DISTINCT___PERM = store_thm ("ALL_DISTINCT___PERM",
 
 
 
-val _ = Hol_datatype ‘ds_value =
+Datatype: ds_value =
      dsv_nil
-   | dsv_const of 'value’
+   | dsv_const 'value
+End
 
 val ds_value_11 = DB.fetch "-" "ds_value_11";
 val ds_value_distinct = DB.fetch "-" "ds_value_distinct";
@@ -667,61 +718,72 @@ Definition IS_DSV_NIL_def:
    (IS_DSV_NIL _ = F)
 End
 
-val IS_DSV_NIL_THM = store_thm ("IS_DSV_NIL_THM",
-   “!x. IS_DSV_NIL x = (x = dsv_nil)”,
+Theorem IS_DSV_NIL_THM:
+    !x. IS_DSV_NIL x = (x = dsv_nil)
+Proof
 
    Cases_on ‘x’ THENL [
       SIMP_TAC std_ss [IS_DSV_NIL_def],
       SIMP_TAC std_ss [IS_DSV_NIL_def, ds_value_distinct]
-   ])
+   ]
+QED
 
 
-val NOT_IS_DSV_NIL_THM = store_thm ("NOT_IS_DSV_NIL_THM",
-   “!x. ~(IS_DSV_NIL x) = ?c. (x = dsv_const c)”,
+Theorem NOT_IS_DSV_NIL_THM:
+    !x. ~(IS_DSV_NIL x) = ?c. (x = dsv_const c)
+Proof
 
    Cases_on ‘x’ THENL [
       SIMP_TAC std_ss [IS_DSV_NIL_def, ds_value_distinct],
       SIMP_TAC std_ss [IS_DSV_NIL_def, ds_value_11]
-   ])
+   ]
+QED
 
 
 Definition GET_DSV_VALUE_def:
    (GET_DSV_VALUE (dsv_const v) = v)
 End
 
-val GET_DSV_VALUE_11 = store_thm ("GET_DSV_VALUE_11",
-   “!v1 v2. (~(IS_DSV_NIL v1) /\ ~(IS_DSV_NIL v2)) ==>
-     ((GET_DSV_VALUE v1 = GET_DSV_VALUE v2) = (v1 = v2))”,
+Theorem GET_DSV_VALUE_11:
+    !v1 v2. (~(IS_DSV_NIL v1) /\ ~(IS_DSV_NIL v2)) ==>
+     ((GET_DSV_VALUE v1 = GET_DSV_VALUE v2) = (v1 = v2))
+Proof
 
    Cases_on ‘v1’ THEN Cases_on ‘v2’ THEN
-   REWRITE_TAC[GET_DSV_VALUE_def, IS_DSV_NIL_def, ds_value_11])
+   REWRITE_TAC[GET_DSV_VALUE_def, IS_DSV_NIL_def, ds_value_11]
+QED
 
 
-val dsv_const_GET_DSV_VALUE = store_thm ("dsv_const_GET_DSV_VALUE",
-   “!v. ~(IS_DSV_NIL v) ==> (dsv_const (GET_DSV_VALUE v) = v)”,
+Theorem dsv_const_GET_DSV_VALUE:
+    !v. ~(IS_DSV_NIL v) ==> (dsv_const (GET_DSV_VALUE v) = v)
+Proof
 
    Cases_on ‘v’ THEN
-   SIMP_TAC std_ss [IS_DSV_NIL_def, GET_DSV_VALUE_def]);
+   SIMP_TAC std_ss [IS_DSV_NIL_def, GET_DSV_VALUE_def]
+QED
 
-val _ = Hol_datatype ‘ds_expression =
-     dse_const of 'value ds_value
-   | dse_var of 'vars’;
+Datatype: ds_expression =
+     dse_const ('value ds_value)
+   | dse_var 'vars
+End
 
 
 Definition dse_nil_def:   dse_nil = dse_const dsv_nil
 End
 
-val _ = Hol_datatype ‘ds_pure_formula =
+Datatype: ds_pure_formula =
      pf_true
-   | pf_equal of ('vars, 'value) ds_expression => ('vars, 'value) ds_expression
-   | pf_unequal of ('vars, 'value) ds_expression => ('vars, 'value) ds_expression
-   | pf_and of ds_pure_formula => ds_pure_formula’;
+   | pf_equal (('vars, 'value) ds_expression) (('vars, 'value) ds_expression)
+   | pf_unequal (('vars, 'value) ds_expression) (('vars, 'value) ds_expression)
+   | pf_and ds_pure_formula ds_pure_formula
+End
 
-val _ = Hol_datatype ‘ds_spatial_formula =
+Datatype: ds_spatial_formula =
      sf_emp
-   | sf_points_to of ('vars, 'value) ds_expression => ('field # ('vars, 'value) ds_expression) list
-   | sf_tree of 'field list => ('vars, 'value) ds_expression => ('vars, 'value) ds_expression
-   | sf_star of ds_spatial_formula => ds_spatial_formula’;
+   | sf_points_to (('vars, 'value) ds_expression) (('field # ('vars, 'value) ds_expression) list)
+   | sf_tree ('field list) (('vars, 'value) ds_expression) (('vars, 'value) ds_expression)
+   | sf_star ds_spatial_formula ds_spatial_formula
+End
 
 
 val ds_expression_11 = DB.fetch "-" "ds_expression_11";
@@ -777,8 +839,8 @@ Definition HEAP_READ_ENTRY_def:
 End
 
 
-val HEAP_READ_ENTRY_THM = store_thm ("HEAP_READ_ENTRY_THM",
-“ (!x.
+Theorem HEAP_READ_ENTRY_THM:
+  (!x.
    (HEAP_READ_ENTRY s h e f = (SOME x)) =
 
    (~IS_DSV_NIL (DS_EXPRESSION_EVAL s e) /\
@@ -797,10 +859,11 @@ val HEAP_READ_ENTRY_THM = store_thm ("HEAP_READ_ENTRY_THM",
    (~IS_DSV_NIL (DS_EXPRESSION_EVAL s e) /\
     (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e) IN (FDOM h)) /\
     (f IN (FDOM (h ' (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e)))))))
-”,
+Proof
 
    SIMP_TAC std_ss [HEAP_READ_ENTRY_def] THEN
-   METIS_TAC[optionTheory.option_CLAUSES]);
+   METIS_TAC[optionTheory.option_CLAUSES]
+QED
 
 
 Definition DS_POINTS_TO_def:
@@ -813,43 +876,49 @@ Definition DS_POINTS_TO_def:
 End
 
 
-val DS_POINTS_TO___DOMSUB = store_thm ("DS_POINTS_TO___DOMSUB",
-   “!s h e1 a k.
+Theorem DS_POINTS_TO___DOMSUB:
+    !s h e1 a k.
       DS_POINTS_TO s (h\\k) e1 a ==>
-      DS_POINTS_TO s h e1 a”,
+      DS_POINTS_TO s h e1 a
+Proof
 
    SIMP_TAC std_ss [DS_POINTS_TO_def, FDOM_DOMSUB, IN_DELETE,
       DOMSUB_FAPPLY_THM] THEN
    REPEAT STRIP_TAC THEN
    Q.PAT_X_ASSUM ‘EVERY P l’ MP_TAC THEN
-   ASM_SIMP_TAC std_ss [])
+   ASM_SIMP_TAC std_ss []
+QED
 
 
-val DS_POINTS_TO___SUBMAP = store_thm ("DS_POINTS_TO___SUBMAP",
-   “!s h h' e1 a.
+Theorem DS_POINTS_TO___SUBMAP:
+    !s h h' e1 a.
       (h' SUBMAP h /\ DS_POINTS_TO s h' e1 a) ==>
-      DS_POINTS_TO s h e1 a”,
+      DS_POINTS_TO s h e1 a
+Proof
 
    SIMP_TAC std_ss [DS_POINTS_TO_def, SUBMAP_DEF] THEN
-   METIS_TAC[])
+   METIS_TAC[]
+QED
 
 
-val DS_POINTS_TO___SUBLIST = store_thm ("DS_POINTS_TO___SUBLIST",
-   “!s h e a a'.
+Theorem DS_POINTS_TO___SUBLIST:
+    !s h e a a'.
       ((!x. MEM x a' ==> MEM x a) /\ DS_POINTS_TO s h e a) ==>
-      DS_POINTS_TO s h e a'”,
+      DS_POINTS_TO s h e a'
+Proof
 
    SIMP_TAC std_ss [DS_POINTS_TO_def, EVERY_MEM] THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
 
-val DS_POINTS_TO___SPLIT =
-   store_thm ("DS_POINTS_TO___SPLIT",
+Theorem DS_POINTS_TO___SPLIT:
 
-“!s h e f aL.
+ !s h e f aL.
    (~(aL = [])) ==>
    (DS_POINTS_TO s h e aL =
-   EVERY I (MAP (\a. DS_POINTS_TO s h e [a]) aL))”,
+   EVERY I (MAP (\a. DS_POINTS_TO s h e [a]) aL))
+Proof
 
 Induct_on ‘aL’ THENL [
    SIMP_TAC std_ss [],
@@ -865,19 +934,21 @@ Induct_on ‘aL’ THENL [
       SIMP_TAC list_ss [DS_POINTS_TO_def] THEN
       METIS_TAC[]
    ]
-]);
+]
+QED
 
 
 
 
-val DS_POINTS_TO___HEAP_READ_ENTRY_THM =
-   store_thm ("DS_POINTS_TO___HEAP_READ_ENTRY_THM",
+Theorem DS_POINTS_TO___HEAP_READ_ENTRY_THM:
 
-“!s h e f c.
+ !s h e f c.
    (HEAP_READ_ENTRY s h e f = SOME c) =
-   DS_POINTS_TO s h e [f, dse_const c]”,
+   DS_POINTS_TO s h e [f, dse_const c]
+Proof
 
-SIMP_TAC list_ss [HEAP_READ_ENTRY_THM, DS_POINTS_TO_def, DS_EXPRESSION_EVAL_def]);
+SIMP_TAC list_ss [HEAP_READ_ENTRY_THM, DS_POINTS_TO_def, DS_EXPRESSION_EVAL_def]
+QED
 
 
 
@@ -928,13 +999,15 @@ Definition WEAK_SF_SEM___sf_tree_len_def:
 End
 
 
-val WEAK_SF_SEM___sf_tree_len_THM = store_thm ("WEAK_SF_SEM___sf_tree_len_THM",
-   “WEAK_SF_SEM___sf_tree_len s h fL fL n e1 e2 =
-     SF_SEM___sf_tree_len s h fL n e1 e2”,
+Theorem WEAK_SF_SEM___sf_tree_len_THM:
+    WEAK_SF_SEM___sf_tree_len s h fL fL n e1 e2 =
+     SF_SEM___sf_tree_len s h fL n e1 e2
+Proof
 
    Cases_on ‘n’ THEN (
       SIMP_TAC std_ss [SF_SEM___sf_tree_len_def, WEAK_SF_SEM___sf_tree_len_def]
-   ));
+   )
+QED
 
 
 
@@ -956,10 +1029,11 @@ Definition BALANCED_SF_SEM___sf_tree_len_def:
 End
 
 
-val BALANCED_SF_SEM___sf_tree_len_THM = store_thm ("BALANCED_SF_SEM___sf_tree_len_THM",
-   “!s h fL n e1 e2.
+Theorem BALANCED_SF_SEM___sf_tree_len_THM:
+    !s h fL n e1 e2.
      BALANCED_SF_SEM___sf_tree_len s h fL n e1 e2 ==>
-     SF_SEM___sf_tree_len s h fL n e1 e2”,
+     SF_SEM___sf_tree_len s h fL n e1 e2
+Proof
 
    Induct_on ‘n’ THENL [
       SIMP_TAC std_ss [BALANCED_SF_SEM___sf_tree_len_def, SF_SEM___sf_tree_len_def],
@@ -974,15 +1048,17 @@ val BALANCED_SF_SEM___sf_tree_len_THM = store_thm ("BALANCED_SF_SEM___sf_tree_le
       RES_TAC THEN
       Cases_on ‘e’ THEN
       FULL_SIMP_TAC std_ss []
-   ])
+   ]
+QED
 
 
 
-val SF_SEM___sf_tree_len_THM = store_thm ("SF_SEM___sf_tree_len_THM",
-   “!s h fL e1 e2 n1 n2.
+Theorem SF_SEM___sf_tree_len_THM:
+    !s h fL e1 e2 n1 n2.
          (n1 <= n2 /\
           SF_SEM___sf_tree_len s h fL n1 e1 e2) ==>
-         SF_SEM___sf_tree_len s h fL n2 e1 e2”,
+         SF_SEM___sf_tree_len s h fL n2 e1 e2
+Proof
 
    Induct_on ‘n2’ THENL [
       SIMP_TAC std_ss [],
@@ -1009,7 +1085,8 @@ val SF_SEM___sf_tree_len_THM = store_thm ("SF_SEM___sf_tree_len_THM",
             ]
          ]
       ]
-   ]);
+   ]
+QED
 
 
 
@@ -1368,8 +1445,8 @@ val WEAK_SF_SEM___sf_tree_len_SUBTREE_THM = prove (
 
 
 
-val SF_SEM___sf_tree_len___EXTENDED_DEF = store_thm ("SF_SEM___sf_tree_len___EXTENDED_DEF",
-“(SF_SEM___sf_tree_len s h fL 0 e1 e2 = ((h = FEMPTY) /\ (PF_SEM s (pf_equal e2 e1)))) /\
+Theorem SF_SEM___sf_tree_len___EXTENDED_DEF:
+ (SF_SEM___sf_tree_len s h fL 0 e1 e2 = ((h = FEMPTY) /\ (PF_SEM s (pf_equal e2 e1)))) /\
   (SF_SEM___sf_tree_len s h fL (SUC n) e1 e2 = (
       (SF_SEM___sf_tree_len s h fL 0 e1 e2) \/
 
@@ -1387,7 +1464,8 @@ val SF_SEM___sf_tree_len___EXTENDED_DEF = store_thm ("SF_SEM___sf_tree_len___EXT
             (!x. x IN FDOM h /\ ~(dsv_const x = DS_EXPRESSION_EVAL s e2) ==>
                  ?h'. MEM h' hL /\ x IN FDOM h')
       )
-   ))”,
+   ))
+Proof
 
 
 
@@ -1437,14 +1515,15 @@ REPEAT CONJ_TAC THENL [
    STRIP_EQ_FORALL_TAC THEN
    STRIP_EQ_BOOL_TAC THEN
    FULL_SIMP_TAC list_ss [HEAP_READ_ENTRY_def, MEM_EL, GSYM LEFT_FORALL_IMP_THM]
-]);
+]
+QED
 
 
 
 
 
-val BALANCED_SF_SEM___sf_tree_len___EXTENDED_DEF = store_thm ("BALANCED_SF_SEM___sf_tree_len___EXTENDED_DEF",
-“(BALANCED_SF_SEM___sf_tree_len s h fL 0 e1 e2 = ((h = FEMPTY) /\ (PF_SEM s (pf_equal e2 e1)))) /\
+Theorem BALANCED_SF_SEM___sf_tree_len___EXTENDED_DEF:
+ (BALANCED_SF_SEM___sf_tree_len s h fL 0 e1 e2 = ((h = FEMPTY) /\ (PF_SEM s (pf_equal e2 e1)))) /\
   (BALANCED_SF_SEM___sf_tree_len s h fL (SUC n) e1 e2 = (
       (PF_SEM s (pf_unequal e2 e1)) /\
       (?hL.
@@ -1460,7 +1539,8 @@ val BALANCED_SF_SEM___sf_tree_len___EXTENDED_DEF = store_thm ("BALANCED_SF_SEM__
             (!x. x IN FDOM h /\ ~(dsv_const x = DS_EXPRESSION_EVAL s e2) ==>
                  ?h'. MEM h' hL /\ x IN FDOM h')
       )
-   ))”,
+   ))
+Proof
 
 
 SIMP_TAC list_ss [BALANCED_SF_SEM___sf_tree_len_def, PF_SEM_def,
@@ -1509,17 +1589,20 @@ REPEAT CONJ_TAC THENL [
    STRIP_EQ_FORALL_TAC THEN
    STRIP_EQ_BOOL_TAC THEN
    FULL_SIMP_TAC list_ss [HEAP_READ_ENTRY_def, MEM_EL, GSYM LEFT_FORALL_IMP_THM]
-]);
+]
+QED
 
 
 
 
-val SF_SEM___sf_tree_len_SUBTREE_THM = store_thm ("SF_SEM___sf_tree_len_SUBTREE_THM",
-   “!s h f fL e1 e2 n.
+Theorem SF_SEM___sf_tree_len_SUBTREE_THM:
+    !s h f fL e1 e2 n.
          (SF_SEM___sf_tree_len s h (f::fL) n e1 e2) ==>
-         ?h'. h' SUBMAP h /\ SF_SEM___sf_tree_len s h' fL n e1 e2”,
+         ?h'. h' SUBMAP h /\ SF_SEM___sf_tree_len s h' fL n e1 e2
+Proof
 
-   METIS_TAC[WEAK_SF_SEM___sf_tree_len_SUBTREE_THM, WEAK_SF_SEM___sf_tree_len_THM])
+   METIS_TAC[WEAK_SF_SEM___sf_tree_len_SUBTREE_THM, WEAK_SF_SEM___sf_tree_len_THM]
+QED
 
 
 
@@ -1529,7 +1612,6 @@ Theorem SF_SEM___sf_tree_len_PERM_THM:
     !s h es e.
       SF_SEM___sf_tree_len s h fL  n es e = SF_SEM___sf_tree_len s h fL' n es e
 Proof
-
    SIMP_TAC std_ss [EQ_IMP_THM, FORALL_AND_THM, IMP_CONJ_THM] THEN
    reverse conj_asm1_tac THEN1 METIS_TAC[PERM_SYM] THEN
 
@@ -1650,12 +1732,13 @@ QED
 
 
 
-val SF_SEM___sf_tree_len___DS_EXPRESSION_EQUAL_THM = store_thm ("SF_SEM___sf_tree_len___DS_EXPRESSION_EQUAL_THM",
- “!s h fL es es' e e' n.
+Theorem SF_SEM___sf_tree_len___DS_EXPRESSION_EQUAL_THM:
+  !s h fL es es' e e' n.
       DS_EXPRESSION_EQUAL s es es' /\
       DS_EXPRESSION_EQUAL s e e' ==>
       (SF_SEM___sf_tree_len s h fL n es e =
-       SF_SEM___sf_tree_len s h fL n es' e')”,
+       SF_SEM___sf_tree_len s h fL n es' e')
+Proof
 
 Induct_on ‘n’ THENL [
    SIMP_TAC std_ss [SF_SEM___sf_tree_len_def, PF_SEM_def, DS_EXPRESSION_EQUAL_def],
@@ -1674,7 +1757,8 @@ Induct_on ‘n’ THENL [
    pairLib.GEN_BETA_TAC THEN
    Q.PAT_X_ASSUM ‘!s h. P s h’ MATCH_MP_TAC THEN
    ASM_REWRITE_TAC[]
-]);
+]
+QED
 
 
 Definition SF_SEM_def:
@@ -1725,42 +1809,51 @@ Definition DS_EQUIV_def:
       !s h. (DS_SEM s h f1 = DS_SEM s h f2)
 End
 
-val DS_EQUIV___ENTAILS = store_thm ("DS_EQUIV___ENTAILS",
-“!f1 f2. DS_EQUIV f1 f2 = (DS_ENTAILS f1 f2 /\ DS_ENTAILS f2 f1)”,
+Theorem DS_EQUIV___ENTAILS:
+ !f1 f2. DS_EQUIV f1 f2 = (DS_ENTAILS f1 f2 /\ DS_ENTAILS f2 f1)
+Proof
 
 SIMP_TAC std_ss [DS_ENTAILS_def, DS_EQUIV_def] THEN
-PROVE_TAC[]);
+PROVE_TAC[]
+QED
 
 
 
-val SF_STAR_CONG = store_thm ("SF_STAR_CONG",
-   “(SF_EQUIV sf1 sf1' /\
+Theorem SF_STAR_CONG:
+    (SF_EQUIV sf1 sf1' /\
       SF_EQUIV sf2 sf2') ==>
-     (SF_EQUIV (sf_star sf1 sf2) (sf_star sf1' sf2'))”,
+     (SF_EQUIV (sf_star sf1 sf2) (sf_star sf1' sf2'))
+Proof
 
-   SIMP_TAC std_ss [SF_EQUIV_def, SF_SEM_def])
+   SIMP_TAC std_ss [SF_EQUIV_def, SF_SEM_def]
+QED
 
 
 (*access just a part of SF_SEM_def, technical theorem used for rewriting*)
 val SF_SEM___STAR_THM = save_thm ("SF_SEM___STAR_THM",
    SIMP_CONV std_ss [SF_SEM_def] “SF_SEM s h (sf_star sf1 sf2)”);
 
-val SF_SEM___STAR_EMP = store_thm ("SF_SEM___STAR_EMP",
-   “(SF_EQUIV (sf_star sf sf_emp) sf) /\
-     (SF_EQUIV (sf_star sf_emp sf) sf)”,
+Theorem SF_SEM___STAR_EMP:
+    (SF_EQUIV (sf_star sf sf_emp) sf) /\
+     (SF_EQUIV (sf_star sf_emp sf) sf)
+Proof
 
    SIMP_TAC std_ss [SF_SEM_def, SF_EQUIV_def, FDOM_FEMPTY, pred_setTheory.DISJOINT_EMPTY,
-      FUNION_FEMPTY_2, FUNION_FEMPTY_1])
+      FUNION_FEMPTY_2, FUNION_FEMPTY_1]
+QED
 
-val SF_SEM_EMP_EXTEND = store_thm ("SF_SEM_EMP_EXTEND",
-   “!s h sf. SF_SEM s h sf = SF_SEM s h (sf_star sf sf_emp)”,
+Theorem SF_SEM_EMP_EXTEND:
+    !s h sf. SF_SEM s h sf = SF_SEM s h (sf_star sf sf_emp)
+Proof
 
    SIMP_TAC std_ss [SF_SEM_def, SF_EQUIV_def, FDOM_FEMPTY, pred_setTheory.DISJOINT_EMPTY,
-      FUNION_FEMPTY_2, FUNION_FEMPTY_1])
+      FUNION_FEMPTY_2, FUNION_FEMPTY_1]
+QED
 
-val SF_SEM___STAR_ASSOC = store_thm ("SF_SEM___STAR_ASSOC",
-   “!s h. SF_SEM s h (sf_star (sf_star sf1 sf2) sf3) =
-           SF_SEM s h (sf_star sf1 (sf_star sf2 sf3))”,
+Theorem SF_SEM___STAR_ASSOC:
+    !s h. SF_SEM s h (sf_star (sf_star sf1 sf2) sf3) =
+           SF_SEM s h (sf_star sf1 (sf_star sf2 sf3))
+Proof
 
    SIMP_TAC std_ss [SF_SEM_def, GSYM RIGHT_EXISTS_AND_THM,
       GSYM LEFT_EXISTS_AND_THM] THEN
@@ -1790,12 +1883,14 @@ val SF_SEM___STAR_ASSOC = store_thm ("SF_SEM___STAR_ASSOC",
          METIS_TAC[],
          METIS_TAC[]
       ]
-   ])
+   ]
+QED
 
 
-val SF_SEM___STAR_COMM = store_thm ("SF_SEM___STAR_COMM",
-   “!s h. SF_SEM s h (sf_star sf1 sf2) =
-           SF_SEM s h (sf_star sf2 sf1)”,
+Theorem SF_SEM___STAR_COMM:
+    !s h. SF_SEM s h (sf_star sf1 sf2) =
+           SF_SEM s h (sf_star sf2 sf1)
+Proof
 
    SIMP_TAC std_ss [SF_SEM_def] THEN
    REPEAT GEN_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -1820,13 +1915,15 @@ val SF_SEM___STAR_COMM = store_thm ("SF_SEM___STAR_COMM",
 
          METIS_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
-val SF_SEM___STAR_ASSOC_COMM1 = store_thm ("SF_SEM___STAR_ASSOC_COMM1",
-“!s h sf1 sf2 sf3.
+Theorem SF_SEM___STAR_ASSOC_COMM1:
+ !s h sf1 sf2 sf3.
         SF_SEM s h (sf_star sf1 (sf_star sf2 sf3)) =
-        SF_SEM s h (sf_star sf2 (sf_star sf1 sf3))”,
+        SF_SEM s h (sf_star sf2 (sf_star sf1 sf3))
+Proof
 
 
 
@@ -1834,7 +1931,8 @@ REWRITE_TAC [Once SF_SEM___STAR_COMM] THEN
 REWRITE_TAC [SF_SEM___STAR_ASSOC] THEN
 REWRITE_TAC [Once SF_SEM___STAR_THM] THEN
 REWRITE_TAC [Once SF_SEM___STAR_COMM] THEN
-REWRITE_TAC [SF_SEM___STAR_THM]);
+REWRITE_TAC [SF_SEM___STAR_THM]
+QED
 
 
 
@@ -2144,8 +2242,8 @@ Induct_on ‘fL’ THENL [
 
 
 
-val SF_SEM___sf_tree_EXISTS_THM = store_thm ("SF_SEM___sf_tree_EXISTS_THM",
-  “!s h fL es e.
+Theorem SF_SEM___sf_tree_EXISTS_THM:
+   !s h fL es e.
    SF_SEM s h (sf_tree fL es e) = (
       if (DS_EXPRESSION_EQUAL s e es) then
          (h = FEMPTY)
@@ -2153,7 +2251,8 @@ val SF_SEM___sf_tree_EXISTS_THM = store_thm ("SF_SEM___sf_tree_EXISTS_THM",
          (?cL. (LENGTH cL = LENGTH fL) /\
                (SF_SEM s h (sf_star
                  (sf_points_to e (MAP (\(f, c). (f, dse_const c)) (ZIP (fL, cL))))
-                 (FOLDR (\c sf. sf_star (sf_tree fL es (dse_const c)) sf) sf_emp cL)))))”,
+                 (FOLDR (\c sf. sf_star (sf_tree fL es (dse_const c)) sf) sf_emp cL)))))
+Proof
 
 
    REWRITE_TAC [SF_SEM___sf_tree_THM1, SF_SEM___sf_tree_THM2] THEN
@@ -2219,15 +2318,16 @@ val SF_SEM___sf_tree_EXISTS_THM = store_thm ("SF_SEM___sf_tree_EXISTS_THM",
          ASM_SIMP_TAC list_ss [ds_spatial_formula_11] THEN
          METIS_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
 
 
 
 
-val SF_SEM___sf_tree_THM = store_thm ("SF_SEM___sf_tree_THM",
-  “!s h fL es e.
+Theorem SF_SEM___sf_tree_THM:
+   !s h fL es e.
    SF_SEM s h (sf_tree fL es e) = (
       if (DS_EXPRESSION_EQUAL s e es) then
          (h = FEMPTY)
@@ -2235,7 +2335,8 @@ val SF_SEM___sf_tree_THM = store_thm ("SF_SEM___sf_tree_THM",
          (let cL = MAP (\f. h ' (DS_EXPRESSION_EVAL_VALUE s e) ' f) fL in
                (SF_SEM s h (sf_star
                  (sf_points_to e (MAP (\(f, c). (f, dse_const c)) (ZIP (fL, cL))))
-                 (FOLDR (\c sf. sf_star (sf_tree fL es (dse_const c)) sf) sf_emp cL)))))”,
+                 (FOLDR (\c sf. sf_star (sf_tree fL es (dse_const c)) sf) sf_emp cL)))))
+Proof
 
 
    REWRITE_TAC [SF_SEM___sf_tree_EXISTS_THM] THEN
@@ -2275,7 +2376,8 @@ val SF_SEM___sf_tree_THM = store_thm ("SF_SEM___sf_tree_THM",
          Q.PAT_X_ASSUM ‘!fL. P fL’ MATCH_MP_TAC THEN
          FULL_SIMP_TAC list_ss [DS_POINTS_TO_def]
       ]
-   ])
+   ]
+QED
 
 
 
@@ -2292,8 +2394,8 @@ End
 
 
 
-val SF_SEM___sf_ls_EXISTS_THM = store_thm ("SF_SEM___sf_ls_EXISTS_THM",
-  “!s h f e1 e2.
+Theorem SF_SEM___sf_ls_EXISTS_THM:
+   !s h f e1 e2.
    SF_SEM s h (sf_ls f e1 e2) = (
       if (DS_EXPRESSION_EQUAL s e1 e2) then
          (h = FEMPTY)
@@ -2301,7 +2403,8 @@ val SF_SEM___sf_ls_EXISTS_THM = store_thm ("SF_SEM___sf_ls_EXISTS_THM",
          (?c. (SF_SEM s h (sf_star
                  (sf_points_to e1 [f, dse_const c])
                  (sf_ls f (dse_const c) e2))))
-   )”,
+   )
+Proof
 
 SIMP_TAC std_ss [sf_ls_def, SF_SEM___sf_tree_EXISTS_THM] THEN
 REPEAT GEN_TAC THEN
@@ -2319,13 +2422,14 @@ EQ_TAC THENL [
    FULL_SIMP_TAC list_ss [SF_SEM_def, FUNION_FEMPTY_2,
       FDOM_FEMPTY, DISJOINT_EMPTY] THEN
    METIS_TAC[]
-])
+]
+QED
 
 
 
 
-val SF_SEM___sf_ls_THM = store_thm ("SF_SEM___sf_ls_THM",
-  “!s h f e1 e2.
+Theorem SF_SEM___sf_ls_THM:
+   !s h f e1 e2.
    SF_SEM s h (sf_ls f e1 e2) = (
       if (DS_EXPRESSION_EQUAL s e1 e2) then
          (h = FEMPTY)
@@ -2334,10 +2438,12 @@ val SF_SEM___sf_ls_THM = store_thm ("SF_SEM___sf_ls_THM",
           (SF_SEM s h (sf_star
                  (sf_points_to e1 [f, dse_const c])
                  (sf_ls f (dse_const c) e2))))
-   )”,
+   )
+Proof
 
 SIMP_TAC list_ss [sf_ls_def, SF_SEM___sf_tree_THM, LET_THM] THEN
-SIMP_TAC std_ss [SF_SEM_def, FDOM_FEMPTY, DISJOINT_EMPTY, FUNION_FEMPTY_2])
+SIMP_TAC std_ss [SF_SEM_def, FDOM_FEMPTY, DISJOINT_EMPTY, FUNION_FEMPTY_2]
+QED
 
 
 Definition SF_SEM___sf_ls_len_def:
@@ -2358,9 +2464,10 @@ Definition SF_SEM___sf_ls_def:
 End
 
 
-val SF_SEM___sf_ls_SEM = store_thm ("SF_SEM___sf_ls_SEM",
-   “!s h f e1 e2. SF_SEM s h (sf_ls f e1 e2) =
-         SF_SEM___sf_ls s h f e1 e2”,
+Theorem SF_SEM___sf_ls_SEM:
+    !s h f e1 e2. SF_SEM s h (sf_ls f e1 e2) =
+         SF_SEM___sf_ls s h f e1 e2
+Proof
 
 SIMP_TAC std_ss [sf_ls_def, SF_SEM_def, SF_SEM___sf_tree_def, SF_SEM___sf_ls_def,
 EQ_IMP_THM, FORALL_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
@@ -2404,14 +2511,15 @@ CONJ_TAC THENL [
       Q.EXISTS_TAC ‘[h \\ GET_DSV_VALUE (DS_EXPRESSION_EVAL s e1)]’ THEN
       ASM_SIMP_TAC list_ss [ALL_DISJOINT_def, FUNION_FEMPTY_2]
    ]
-]);
+]
+QED
 
 
-val BALANCED_SF_SEM___sf_ls_len = store_thm ("BALANCED_SF_SEM___sf_ls_len",
-   “!s h f n e1 e2.
+Theorem BALANCED_SF_SEM___sf_ls_len:
+    !s h f n e1 e2.
       BALANCED_SF_SEM___sf_tree_len s h [f] n e2 e1 =
       SF_SEM___sf_ls_len s h f n e1 e2
-   ”,
+Proof
 
    Induct_on ‘n’ THENL [
       SIMP_TAC std_ss [SF_SEM___sf_ls_len_def, BALANCED_SF_SEM___sf_tree_len_def],
@@ -2432,7 +2540,8 @@ val BALANCED_SF_SEM___sf_ls_len = store_thm ("BALANCED_SF_SEM___sf_ls_len",
             FUNION_FEMPTY_2] THEN
          METIS_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
 
@@ -2445,8 +2554,8 @@ End
 
 
 
-val SF_SEM___sf_bin_tree_EXISTS_THM = store_thm ("SF_SEM___sf_bin_tree_EXISTS_THM",
-  “!s h f1 f2 e.
+Theorem SF_SEM___sf_bin_tree_EXISTS_THM:
+   !s h f1 f2 e.
    SF_SEM s h (sf_bin_tree (f1,f2) e) = (
       if (DS_EXPRESSION_EQUAL s e dse_nil) then
          (h = FEMPTY)
@@ -2457,7 +2566,8 @@ val SF_SEM___sf_bin_tree_EXISTS_THM = store_thm ("SF_SEM___sf_bin_tree_EXISTS_TH
                  (sf_star (sf_bin_tree (f1,f2) (dse_const c1))
                           (sf_bin_tree (f1,f2) (dse_const c2)))))
          )
-   )”,
+   )
+Proof
 
 
 SIMP_TAC list_ss [sf_bin_tree_def, SF_SEM___sf_tree_EXISTS_THM] THEN
@@ -2483,11 +2593,12 @@ EQ_TAC THENL [
    FULL_SIMP_TAC list_ss [SF_SEM_def, FUNION_FEMPTY_2,
       FDOM_FEMPTY, DISJOINT_EMPTY] THEN
    METIS_TAC[]
-]);
+]
+QED
 
 
-val SF_SEM___sf_bin_tree_THM = store_thm ("SF_SEM___sf_bin_tree_THM",
-  “!s h f1 f2 e.
+Theorem SF_SEM___sf_bin_tree_THM:
+   !s h f1 f2 e.
    SF_SEM s h (sf_bin_tree (f1,f2) e) = (
       if (DS_EXPRESSION_EQUAL s e dse_nil) then
          (h = FEMPTY)
@@ -2499,11 +2610,13 @@ val SF_SEM___sf_bin_tree_THM = store_thm ("SF_SEM___sf_bin_tree_THM",
                  (sf_star (sf_bin_tree (f1,f2) (dse_const c1))
                           (sf_bin_tree (f1,f2) (dse_const c2)))))
          )
-   )”,
+   )
+Proof
 
 
 SIMP_TAC list_ss [sf_bin_tree_def, SF_SEM___sf_tree_THM, LET_THM] THEN
-SIMP_TAC std_ss [SF_SEM_def, FDOM_FEMPTY, DISJOINT_EMPTY, FUNION_FEMPTY_2])
+SIMP_TAC std_ss [SF_SEM_def, FDOM_FEMPTY, DISJOINT_EMPTY, FUNION_FEMPTY_2]
+QED
 
 
 
@@ -2512,12 +2625,13 @@ SIMP_TAC std_ss [SF_SEM_def, FDOM_FEMPTY, DISJOINT_EMPTY, FUNION_FEMPTY_2])
 
 
 
-val SF_SEM___sf_points_to_THM = store_thm ("SF_SEM___sf_points_to_THM",
-“
+Theorem SF_SEM___sf_points_to_THM:
+
    (SF_SEM s h (sf_star (sf_points_to e a) sf)) =
 
     DS_POINTS_TO s h e a /\
-    (SF_SEM s (h \\ (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e))) sf)”,
+    (SF_SEM s (h \\ (GET_DSV_VALUE (DS_EXPRESSION_EVAL s e))) sf)
+Proof
 
    SIMP_TAC std_ss [SF_SEM_def, LET_THM, DS_POINTS_TO_def] THEN
    Q.ABBREV_TAC ‘e_eval = GET_DSV_VALUE (DS_EXPRESSION_EVAL s e)’ THEN
@@ -2563,7 +2677,8 @@ val SF_SEM___sf_points_to_THM = store_thm ("SF_SEM___sf_points_to_THM",
 
          ASM_SIMP_TAC std_ss [FAPPLY_FUPDATE]
       ]
-   ]);
+   ]
+QED
 
 
 (*
@@ -3092,23 +3207,26 @@ Definition LIST_DS_SEM_def:
 End
 
 
-val LIST_SEM_INTRO_THM = store_thm ("LIST_SEM_INTRO_THM",
-   “(PF_SEM s pf = LIST_PF_SEM s [pf]) /\
+Theorem LIST_SEM_INTRO_THM:
+    (PF_SEM s pf = LIST_PF_SEM s [pf]) /\
      (SF_SEM s h sf = LIST_SF_SEM s h [sf]) /\
-     (DS_SEM s h (pf,sf) = LIST_DS_SEM s h ([pf], [sf]))”,
+     (DS_SEM s h (pf,sf) = LIST_DS_SEM s h ([pf], [sf]))
+Proof
 
    SIMP_TAC list_ss [PF_SEM_def, LIST_PF_SEM_def,
       LIST_SF_SEM_def, SIMP_RULE std_ss [SF_EQUIV_def] SF_SEM___STAR_EMP,
-      DS_SEM_def, LIST_DS_SEM_def]);
+      DS_SEM_def, LIST_DS_SEM_def]
+QED
 
 
 
 
 
-val LIST_PF_SEM_THM = store_thm ("LIST_PF_SEM_THM",
-   “(LIST_PF_SEM s [] = T) /\
+Theorem LIST_PF_SEM_THM:
+    (LIST_PF_SEM s [] = T) /\
      (LIST_PF_SEM s (pf::l) = (PF_SEM s pf /\ LIST_PF_SEM s l)) /\
-     (LIST_PF_SEM s (APPEND l1 l2) = (LIST_PF_SEM s l1 /\ LIST_PF_SEM s l2))”,
+     (LIST_PF_SEM s (APPEND l1 l2) = (LIST_PF_SEM s l1 /\ LIST_PF_SEM s l2))
+Proof
 
    REPEAT STRIP_TAC THENL [
       SIMP_TAC list_ss [LIST_PF_SEM_def, PF_SEM_def],
@@ -3118,16 +3236,19 @@ val LIST_PF_SEM_THM = store_thm ("LIST_PF_SEM_THM",
          SIMP_TAC list_ss [LIST_PF_SEM_def, PF_SEM_def],
          FULL_SIMP_TAC list_ss [LIST_PF_SEM_def, PF_SEM_def] THEN METIS_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
-val MEM_LIST_PF_SEM = store_thm ("MEM_LIST_PF_SEM",
-   “!s pfL. LIST_PF_SEM s pfL = (!pf. MEM pf pfL ==> PF_SEM s pf)”,
+Theorem MEM_LIST_PF_SEM:
+    !s pfL. LIST_PF_SEM s pfL = (!pf. MEM pf pfL ==> PF_SEM s pf)
+Proof
 
    Induct_on ‘pfL’ THENL [
       SIMP_TAC list_ss [LIST_PF_SEM_THM],
       ASM_SIMP_TAC list_ss [LIST_PF_SEM_THM, DISJ_IMP_THM, FORALL_AND_THM]
-   ])
+   ]
+QED
 
 
 Definition MEM_UNEQ_PF_LIST_def:
@@ -3135,26 +3256,30 @@ Definition MEM_UNEQ_PF_LIST_def:
    MEM (pf_unequal e1 e2) pfL \/ MEM (pf_unequal e2 e1) pfL
 End
 
-val MEM_UNEQ_PF_LIST_SEM = store_thm ("MEM_UNEQ_PF_LIST_SEM",
-“ !e1 e2 pfL s.
+Theorem MEM_UNEQ_PF_LIST_SEM:
+  !e1 e2 pfL s.
    (MEM_UNEQ_PF_LIST e1 e2 pfL /\
    LIST_PF_SEM s pfL) ==>
-   ~(DS_EXPRESSION_EQUAL s e1 e2)”,
+   ~(DS_EXPRESSION_EQUAL s e1 e2)
+Proof
 
    SIMP_TAC std_ss [MEM_LIST_PF_SEM, MEM_UNEQ_PF_LIST_def] THEN
    REPEAT STRIP_TAC THEN (
       RES_TAC THEN
       FULL_SIMP_TAC std_ss [PF_SEM_def, DS_EXPRESSION_EQUAL_def]
-   ));
+   )
+QED
 
 
-val LIST_PF_SEM_PERM = store_thm ("LIST_PF_SEM_PERM",
-“!l1 l2. PERM l1 l2 ==>
-          !s. (LIST_PF_SEM s l1 = LIST_PF_SEM s l2)”,
+Theorem LIST_PF_SEM_PERM:
+ !l1 l2. PERM l1 l2 ==>
+          !s. (LIST_PF_SEM s l1 = LIST_PF_SEM s l2)
+Proof
 
 HO_MATCH_MP_TAC PERM_IND THEN
 SIMP_TAC list_ss [LIST_PF_SEM_THM] THEN
-PROVE_TAC[]);
+PROVE_TAC[]
+QED
 
 
 
@@ -3167,25 +3292,29 @@ Definition DS_FLAT_PF_def:
 End
 
 
-val LIST_PF_SEM_FLAT_INTRO = store_thm ("LIST_PF_SEM_FLAT_INTRO",
-   “!s. PF_SEM s pf = LIST_PF_SEM s (DS_FLAT_PF pf)”,
+Theorem LIST_PF_SEM_FLAT_INTRO:
+    !s. PF_SEM s pf = LIST_PF_SEM s (DS_FLAT_PF pf)
+Proof
 
    Induct_on ‘pf’ THENL [
       SIMP_TAC std_ss [DS_FLAT_PF_def, LIST_PF_SEM_THM, PF_SEM_def],
       SIMP_TAC std_ss [DS_FLAT_PF_def, LIST_PF_SEM_THM],
       SIMP_TAC std_ss [DS_FLAT_PF_def, LIST_PF_SEM_THM],
       ASM_SIMP_TAC std_ss [DS_FLAT_PF_def, LIST_PF_SEM_THM, PF_SEM_def]
-   ]);
+   ]
+QED
 
-val DS_FLAT_PF_THM = store_thm ("DS_FLAT_PF_THM",
-   “!s pfL. LIST_PF_SEM s pfL = LIST_PF_SEM s (FLAT (MAP DS_FLAT_PF pfL))”,
+Theorem DS_FLAT_PF_THM:
+    !s pfL. LIST_PF_SEM s pfL = LIST_PF_SEM s (FLAT (MAP DS_FLAT_PF pfL))
+Proof
 
 Induct_on ‘pfL’ THEN1 SIMP_TAC list_ss [] THEN
-ASM_SIMP_TAC list_ss [LIST_PF_SEM_THM, LIST_PF_SEM_FLAT_INTRO]);
+ASM_SIMP_TAC list_ss [LIST_PF_SEM_THM, LIST_PF_SEM_FLAT_INTRO]
+QED
 
 
-val LIST_SF_SEM_THM = store_thm ("LIST_SF_SEM_THM",
-   “(!s h. (LIST_SF_SEM s h [] = (h = FEMPTY))) /\
+Theorem LIST_SF_SEM_THM:
+    (!s h. (LIST_SF_SEM s h [] = (h = FEMPTY))) /\
      (!s h sf. (LIST_SF_SEM s h [sf] = (SF_SEM s h sf))) /\
      (!s h sf l. (LIST_SF_SEM s h (sf::l) = (?h1 h2.
          (h = FUNION h1 h2) /\ DISJOINT (FDOM h1) (FDOM h2) /\
@@ -3193,7 +3322,8 @@ val LIST_SF_SEM_THM = store_thm ("LIST_SF_SEM_THM",
 
      (!s h l1 l2. (LIST_SF_SEM s h (APPEND l1 l2) = (?h1 h2.
          (h = FUNION h1 h2) /\ DISJOINT (FDOM h1) (FDOM h2) /\
-         (LIST_SF_SEM s h1 l1 /\ LIST_SF_SEM s h2 l2))))”,
+         (LIST_SF_SEM s h1 l1 /\ LIST_SF_SEM s h2 l2))))
+Proof
 
    REPEAT CONJ_TAC THENL [
       SIMP_TAC list_ss [LIST_SF_SEM_def, SF_SEM_def],
@@ -3234,12 +3364,14 @@ val LIST_SF_SEM_THM = store_thm ("LIST_SF_SEM_THM",
             DISJ_IMP_THM] THEN
          METIS_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
-val LIST_SF_SEM_PERM = store_thm ("LIST_SF_SEM_PERM",
-“!l1 l2. PERM l1 l2 ==>
-          !s h. (LIST_SF_SEM s h l1 = LIST_SF_SEM s h l2)”,
+Theorem LIST_SF_SEM_PERM:
+ !l1 l2. PERM l1 l2 ==>
+          !s h. (LIST_SF_SEM s h l1 = LIST_SF_SEM s h l2)
+Proof
 
 HO_MATCH_MP_TAC PERM_IND THEN
 SIMP_TAC list_ss [LIST_SF_SEM_THM,
@@ -3263,7 +3395,8 @@ MATCH_MP_TAC (prove (“(b1 = b2) ==> ((a = b1) = (a = b2))”, METIS_TAC[])) TH
 FULL_SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, NOT_IN_EMPTY, IN_INTER] THEN
 ASM_SIMP_TAC std_ss [GSYM fmap_EQ_THM, FUNION_DEF, EXTENSION, IN_UNION,
    DISJ_IMP_THM] THEN
-METIS_TAC[])
+METIS_TAC[]
+QED
 
 
 
@@ -3275,36 +3408,42 @@ Definition DS_FLAT_SF_def:
 End
 
 
-val LIST_SF_SEM_FLAT_INTRO = store_thm ("LIST_SF_SEM_FLAT_INTRO",
-   “!s h sf. SF_SEM s h sf = LIST_SF_SEM s h (DS_FLAT_SF sf)”,
+Theorem LIST_SF_SEM_FLAT_INTRO:
+    !s h sf. SF_SEM s h sf = LIST_SF_SEM s h (DS_FLAT_SF sf)
+Proof
 
    Induct_on ‘sf’ THENL [
       SIMP_TAC std_ss [DS_FLAT_SF_def, LIST_SF_SEM_THM, SF_SEM_def],
       SIMP_TAC std_ss [DS_FLAT_SF_def, LIST_SF_SEM_THM],
       SIMP_TAC std_ss [DS_FLAT_SF_def, LIST_SF_SEM_THM],
       ASM_SIMP_TAC std_ss [DS_FLAT_SF_def, LIST_SF_SEM_THM, SF_SEM_def]
-   ]);
+   ]
+QED
 
 
 
-val DS_FLAT_SF_THM = store_thm ("DS_FLAT_SF_THM",
-   “!s h sfL. LIST_SF_SEM s h sfL = LIST_SF_SEM s h (FLAT (MAP DS_FLAT_SF sfL))”,
+Theorem DS_FLAT_SF_THM:
+    !s h sfL. LIST_SF_SEM s h sfL = LIST_SF_SEM s h (FLAT (MAP DS_FLAT_SF sfL))
+Proof
 
 Induct_on ‘sfL’ THEN1 SIMP_TAC list_ss [] THEN
-ASM_SIMP_TAC list_ss [LIST_SF_SEM_THM, LIST_SF_SEM_FLAT_INTRO]);
+ASM_SIMP_TAC list_ss [LIST_SF_SEM_THM, LIST_SF_SEM_FLAT_INTRO]
+QED
 
 
 
-val LIST_DS_SEM_FLAT_INTRO = store_thm ("LIST_DS_SEM_FLAT_INTRO",
-   “(!s h sf pf. DS_SEM s h (pf, sf) = LIST_DS_SEM s h ((DS_FLAT_PF pf), DS_FLAT_SF sf)) /\
+Theorem LIST_DS_SEM_FLAT_INTRO:
+    (!s h sf pf. DS_SEM s h (pf, sf) = LIST_DS_SEM s h ((DS_FLAT_PF pf), DS_FLAT_SF sf)) /\
      (!s sf. PF_SEM s pf = LIST_DS_SEM s FEMPTY (DS_FLAT_PF pf, [])) /\
-     (!s h sf. SF_SEM s h sf = LIST_DS_SEM s h ([], DS_FLAT_SF sf))”,
+     (!s h sf. SF_SEM s h sf = LIST_DS_SEM s h ([], DS_FLAT_SF sf))
+Proof
 
    SIMP_TAC std_ss [DS_SEM_def, LIST_PF_SEM_FLAT_INTRO, LIST_SF_SEM_FLAT_INTRO,
-      LIST_DS_SEM_def, LIST_PF_SEM_THM, LIST_SF_SEM_THM]);
+      LIST_DS_SEM_def, LIST_PF_SEM_THM, LIST_SF_SEM_THM]
+QED
 
 
-val LIST_DS_SEM_THM = store_thm ("LIST_DS_SEM_THM", “
+Theorem LIST_DS_SEM_THM:
 (!s h pfL. (LIST_DS_SEM s h (pfL, []) = LIST_PF_SEM s pfL /\ (h = FEMPTY))) /\
 (!s h sfL. (LIST_DS_SEM s h ([], sfL) = LIST_SF_SEM s h sfL)) /\
 (!s h pfL sfL e. (LIST_DS_SEM s h (pfL, e::sfL) =
@@ -3315,10 +3454,12 @@ val LIST_DS_SEM_THM = store_thm ("LIST_DS_SEM_THM", “
 
 (!s h pfL sfL1 sfL2 e. (LIST_DS_SEM s h (pfL, sfL1++sfL2) =
    ?h1 h2. (h = FUNION h1 h2) /\ (DISJOINT (FDOM h1) (FDOM h2)) /\
-           LIST_DS_SEM s h1 (pfL, sfL1) /\ LIST_DS_SEM s h2 (pfL, sfL2)))”,
+           LIST_DS_SEM s h1 (pfL, sfL1) /\ LIST_DS_SEM s h2 (pfL, sfL2)))
+Proof
 
 SIMP_TAC std_ss [LIST_DS_SEM_def, LIST_SF_SEM_THM, LIST_PF_SEM_THM] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 
@@ -3516,12 +3657,14 @@ val LIST_DS_SEM_EVAL = save_thm ("LIST_DS_SEM_EVAL",
 
 
 
-val LIST_DS_SEM_PERM = store_thm ("LIST_DS_SEM_PERM",
-“!pfL1 pfL2 sfL1 sfL2. (PERM pfL1 pfL2 /\ PERM sfL1 sfL2) ==>
-          !s h. (LIST_DS_SEM s h (pfL1, sfL1) = LIST_DS_SEM s h (pfL2, sfL2))”,
+Theorem LIST_DS_SEM_PERM:
+ !pfL1 pfL2 sfL1 sfL2. (PERM pfL1 pfL2 /\ PERM sfL1 sfL2) ==>
+          !s h. (LIST_DS_SEM s h (pfL1, sfL1) = LIST_DS_SEM s h (pfL2, sfL2))
+Proof
 
    SIMP_TAC std_ss [LIST_DS_SEM_def] THEN
-   PROVE_TAC[LIST_PF_SEM_PERM, LIST_SF_SEM_PERM])
+   PROVE_TAC[LIST_PF_SEM_PERM, LIST_SF_SEM_PERM]
+QED
 
 
 
@@ -3538,23 +3681,27 @@ Definition SF_SEM___EXTEND_def:
 End
 
 
-val NOT_DS_POINTER_DANGLES = store_thm ("NOT_DS_POINTER_DANGLES",
-   “!s h e. ~(DS_POINTER_DANGLES s h e) =
+Theorem NOT_DS_POINTER_DANGLES:
+    !s h e. ~(DS_POINTER_DANGLES s h e) =
       (~IS_DSV_NIL (DS_EXPRESSION_EVAL s e) /\
-      GET_DSV_VALUE (DS_EXPRESSION_EVAL s e) IN FDOM h)”,
+      GET_DSV_VALUE (DS_EXPRESSION_EVAL s e) IN FDOM h)
+Proof
 
    SIMP_TAC std_ss [DS_POINTER_DANGLES_def, DS_POINTS_TO_def] THEN
    REPEAT GEN_TAC THEN EQ_TAC THEN STRIP_TAC THEN ASM_REWRITE_TAC[] THEN
    Q.EXISTS_TAC ‘[]’ THEN
-   SIMP_TAC list_ss []);
+   SIMP_TAC list_ss []
+QED
 
 
-val DS_POINTER_DANGLES = store_thm ("DS_POINTER_DANGLES",
-   “!s h e. (DS_POINTER_DANGLES s h e) =
+Theorem DS_POINTER_DANGLES:
+    !s h e. (DS_POINTER_DANGLES s h e) =
       (IS_DSV_NIL (DS_EXPRESSION_EVAL s e) \/
-      ~(GET_DSV_VALUE (DS_EXPRESSION_EVAL s e) IN FDOM h))”,
+      ~(GET_DSV_VALUE (DS_EXPRESSION_EVAL s e) IN FDOM h))
+Proof
 
-   METIS_TAC[NOT_DS_POINTER_DANGLES]);
+   METIS_TAC[NOT_DS_POINTER_DANGLES]
+QED
 
 
 
@@ -3563,20 +3710,24 @@ Definition DS_VAR_SUBST_def:
    (DS_VAR_SUBST v e (dse_var v') = if (v = v') then e else (dse_var v'))
 End
 
-val DS_VAR_SUBST_NIL = store_thm ("DS_VAR_SUBST_NIL",
-   “!v e. DS_VAR_SUBST v e dse_nil = dse_nil”,
-   SIMP_TAC std_ss [dse_nil_def, DS_VAR_SUBST_def])
+Theorem DS_VAR_SUBST_NIL:
+    !v e. DS_VAR_SUBST v e dse_nil = dse_nil
+Proof
+   SIMP_TAC std_ss [dse_nil_def, DS_VAR_SUBST_def]
+QED
 
 
-val DS_VAR_SUBST_SEM = store_thm ("DS_VAR_SUBST_SEM",
-“!s d. DS_EXPRESSION_EVAL s (DS_VAR_SUBST v e d) =
+Theorem DS_VAR_SUBST_SEM:
+ !s d. DS_EXPRESSION_EVAL s (DS_VAR_SUBST v e d) =
     (DS_EXPRESSION_EVAL
-         (\x. (if x = v then DS_EXPRESSION_EVAL s e else s x)) d)”,
+         (\x. (if x = v then DS_EXPRESSION_EVAL s e else s x)) d)
+Proof
 
   Cases_on ‘d’ THENL [
       SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def, DS_VAR_SUBST_def],
       SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def, DS_VAR_SUBST_def, COND_RATOR, COND_RAND]
-   ])
+   ]
+QED
 
 
 Definition PF_SUBST_def:
@@ -3588,10 +3739,11 @@ Definition PF_SUBST_def:
 End
 
 
-val PF_SUBST_SEM = store_thm ("PF_SUBST_SEM",
-   “!s pf v e.
+Theorem PF_SUBST_SEM:
+    !s pf v e.
             PF_SEM s (PF_SUBST v e pf) =
-            PF_SEM (\x. if x = v then DS_EXPRESSION_EVAL s e else s x) pf”,
+            PF_SEM (\x. if x = v then DS_EXPRESSION_EVAL s e else s x) pf
+Proof
 
    Induct_on ‘pf’ THENL [
       SIMP_TAC std_ss [PF_SEM_def, PF_SUBST_def],
@@ -3603,18 +3755,21 @@ val PF_SUBST_SEM = store_thm ("PF_SUBST_SEM",
          DS_VAR_SUBST_SEM],
 
       ASM_SIMP_TAC std_ss [PF_SUBST_def, PF_SEM_def]
-   ]);
+   ]
+QED
 
-val LIST_PF_SUBST_SEM = store_thm ("LIST_PF_SUBST_SEM",
-   “!s pfL v e.
+Theorem LIST_PF_SUBST_SEM:
+    !s pfL v e.
             LIST_PF_SEM s (MAP (PF_SUBST v e) pfL) =
-            LIST_PF_SEM (\x. if x = v then DS_EXPRESSION_EVAL s e else s x) pfL”,
+            LIST_PF_SEM (\x. if x = v then DS_EXPRESSION_EVAL s e else s x) pfL
+Proof
 
    SIMP_TAC std_ss [LIST_PF_SEM_def, FOLDR_MAP] THEN
    Induct_on ‘pfL’ THENL [
       SIMP_TAC list_ss [PF_SEM_def],
       ASM_SIMP_TAC list_ss [PF_SEM_def, PF_SUBST_SEM]
-   ]);
+   ]
+QED
 
 
 Definition SF_SUBST_def:
@@ -3625,22 +3780,25 @@ Definition SF_SUBST_def:
 End
 
 
-val SF_SUBST_THM = store_thm ("SF_SUBST_THM",
- “(SF_SUBST v e sf_emp = sf_emp) /\
+Theorem SF_SUBST_THM:
+  (SF_SUBST v e sf_emp = sf_emp) /\
    (SF_SUBST v e (sf_points_to e1 a) = sf_points_to (DS_VAR_SUBST v e e1) (MAP (\x. (FST x, DS_VAR_SUBST v e (SND x))) a)) /\
    (SF_SUBST v e (sf_tree fL e1 e2) = sf_tree fL (DS_VAR_SUBST v e e1) (DS_VAR_SUBST v e e2)) /\
    (SF_SUBST v e (sf_bin_tree (f1,f2) e1) = sf_bin_tree (f1,f2) (DS_VAR_SUBST v e e1)) /\
-   (SF_SUBST v e (sf_ls f e1 e2) = sf_ls f (DS_VAR_SUBST v e e1) (DS_VAR_SUBST v e e2))”,
+   (SF_SUBST v e (sf_ls f e1 e2) = sf_ls f (DS_VAR_SUBST v e e1) (DS_VAR_SUBST v e e2))
+Proof
 
 SIMP_TAC std_ss [SF_SUBST_def, sf_bin_tree_def, dse_nil_def, DS_VAR_SUBST_def,
-   sf_ls_def])
+   sf_ls_def]
+QED
 
 
 
-val SF_SUBST_SEM = store_thm ("SF_SUBST_SEM",
-   “!s h sf v e.
+Theorem SF_SUBST_SEM:
+    !s h sf v e.
             SF_SEM s h (SF_SUBST v e sf) =
-            SF_SEM (\x. if x = v then DS_EXPRESSION_EVAL s e else s x) h sf”,
+            SF_SEM (\x. if x = v then DS_EXPRESSION_EVAL s e else s x) h sf
+Proof
 
    Induct_on ‘sf’ THENL [
       SIMP_TAC std_ss [SF_SUBST_def, SF_SEM_def],
@@ -3818,21 +3976,24 @@ val SF_SUBST_SEM = store_thm ("SF_SUBST_SEM",
 
 
       ASM_SIMP_TAC std_ss [SF_SEM_def, SF_SUBST_def]
-   ]);
+   ]
+QED
 
 
 
 
-val LIST_SF_SUBST_SEM = store_thm ("LIST_SF_SUBST_SEM",
-   “!s h sfL v e.
+Theorem LIST_SF_SUBST_SEM:
+    !s h sfL v e.
             LIST_SF_SEM s h (MAP (SF_SUBST v e) sfL) =
-            LIST_SF_SEM (\x. if x = v then DS_EXPRESSION_EVAL s e else s x) h sfL”,
+            LIST_SF_SEM (\x. if x = v then DS_EXPRESSION_EVAL s e else s x) h sfL
+Proof
 
    SIMP_TAC std_ss [LIST_SF_SEM_def, FOLDR_MAP] THEN
    Induct_on ‘sfL’ THENL [
       SIMP_TAC list_ss [SF_SEM_def],
       ASM_SIMP_TAC list_ss [SF_SEM_def, SF_SUBST_SEM]
-   ])
+   ]
+QED
 
 
 
@@ -3843,20 +4004,25 @@ Definition SF_IS_PRECISE_def:
                        SF_SEM s h1 sf /\ SF_SEM s h2 sf) ==> (h1 = h2))
 End
 
-val SF_IS_PRECISE___sf_emp = store_thm ("SF_IS_PRECISE___sf_emp",
-   “SF_IS_PRECISE sf_emp”,
-   SIMP_TAC std_ss [SF_IS_PRECISE_def, SF_SEM_def])
+Theorem SF_IS_PRECISE___sf_emp:
+    SF_IS_PRECISE sf_emp
+Proof
+   SIMP_TAC std_ss [SF_IS_PRECISE_def, SF_SEM_def]
+QED
 
-val SF_IS_PRECISE___sf_points_to = store_thm ("SF_IS_PRECISE___sf_points_to",
-   “!e a. SF_IS_PRECISE (sf_points_to e a)”,
+Theorem SF_IS_PRECISE___sf_points_to:
+    !e a. SF_IS_PRECISE (sf_points_to e a)
+Proof
    SIMP_TAC std_ss [SF_IS_PRECISE_def, SF_SEM_def, DS_POINTS_TO_def,
-      GSYM fmap_EQ_THM, IN_SING, DS_EXPRESSION_EVAL_VALUE_def, SUBMAP_DEF])
+      GSYM fmap_EQ_THM, IN_SING, DS_EXPRESSION_EVAL_VALUE_def, SUBMAP_DEF]
+QED
 
 
 
-val SF_IS_PRECISE___sf_star = store_thm ("SF_IS_PRECISE___sf_star",
-   “!sf1 sf2. (SF_IS_PRECISE sf1 /\ SF_IS_PRECISE sf2) ==>
-                SF_IS_PRECISE (sf_star sf1 sf2)”,
+Theorem SF_IS_PRECISE___sf_star:
+    !sf1 sf2. (SF_IS_PRECISE sf1 /\ SF_IS_PRECISE sf2) ==>
+                SF_IS_PRECISE (sf_star sf1 sf2)
+Proof
    SIMP_TAC std_ss [SF_IS_PRECISE_def, SF_SEM_def] THEN
    REPEAT STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [] THEN
@@ -3865,13 +4031,14 @@ val SF_IS_PRECISE___sf_star = store_thm ("SF_IS_PRECISE___sf_star",
    ‘h1'' SUBMAP h’ by METIS_TAC[SUBMAP___FUNION___ID, SUBMAP_TRANS, DISJOINT_SYM] THEN
    ‘h2'' SUBMAP h’ by METIS_TAC[SUBMAP___FUNION___ID, SUBMAP_TRANS, DISJOINT_SYM] THEN
    METIS_TAC[]
-);
+QED
 
 
 
 
-val SF_IS_PRECISE___sf_tree = store_thm ("SF_IS_PRECISE___sf_tree",
-   “!fL e1 e2. SF_IS_PRECISE (sf_tree fL e1 e2)”,
+Theorem SF_IS_PRECISE___sf_tree:
+    !fL e1 e2. SF_IS_PRECISE (sf_tree fL e1 e2)
+Proof
 
    SIMP_TAC std_ss [SF_IS_PRECISE_def, SF_SEM_def,
       SF_SEM___sf_tree_def] THEN
@@ -4039,32 +4206,37 @@ val SF_IS_PRECISE___sf_tree = store_thm ("SF_IS_PRECISE___sf_tree",
             ]
          ]
       ]
-   ]);
+   ]
+QED
 
 
 
 
-val SF_IS_PRECISE_THM = store_thm ("SF_IS_PRECISE_THM",
-   “!sf. SF_IS_PRECISE sf”,
+Theorem SF_IS_PRECISE_THM:
+    !sf. SF_IS_PRECISE sf
+Proof
 
    Induct_on ‘sf’ THENL [
       REWRITE_TAC [SF_IS_PRECISE___sf_emp],
       REWRITE_TAC [SF_IS_PRECISE___sf_points_to],
       REWRITE_TAC [SF_IS_PRECISE___sf_tree],
       ASM_SIMP_TAC std_ss [SF_IS_PRECISE___sf_star]
-   ]);
+   ]
+QED
 
 
 
-val SF_IS_SIMPLE___MEM_DS_FLAT_SF = store_thm ("SF_IS_SIMPLE___MEM_DS_FLAT_SF",
-   “(!sf e. MEM e (DS_FLAT_SF sf) ==> SF_IS_SIMPLE e) /\
-     (!sf. SF_IS_SIMPLE sf ==> (DS_FLAT_SF sf = [sf]))”,
+Theorem SF_IS_SIMPLE___MEM_DS_FLAT_SF:
+    (!sf e. MEM e (DS_FLAT_SF sf) ==> SF_IS_SIMPLE e) /\
+     (!sf. SF_IS_SIMPLE sf ==> (DS_FLAT_SF sf = [sf]))
+Proof
 
    CONJ_TAC THEN (
       Induct_on ‘sf’ THEN
       SIMP_TAC list_ss [DS_FLAT_SF_def, SF_IS_SIMPLE_def] THEN
       METIS_TAC[]
-   ));
+   )
+QED
 
 
 
@@ -4076,13 +4248,15 @@ Definition PF_EXPRESSION_SET_def:
       PF_EXPRESSION_SET pf1 UNION PF_EXPRESSION_SET pf2)
 End
 
-val PF_EXPRESSION_SET___FINITE = store_thm ("PF_EXPRESSION_SET___FINITE",
-   “!pf. FINITE (PF_EXPRESSION_SET pf)”,
+Theorem PF_EXPRESSION_SET___FINITE:
+    !pf. FINITE (PF_EXPRESSION_SET pf)
+Proof
 
    Induct_on ‘pf’ THEN (
       ASM_SIMP_TAC std_ss [PF_EXPRESSION_SET_def, FINITE_EMPTY, FINITE_INSERT,
          FINITE_UNION]
-   ))
+   )
+QED
 
 Definition SF_EXPRESSION_SET_def:
    (SF_EXPRESSION_SET sf_emp = {}) /\
@@ -4092,35 +4266,39 @@ Definition SF_EXPRESSION_SET_def:
       SF_EXPRESSION_SET sf1 UNION SF_EXPRESSION_SET sf2)
 End
 
-val SF_EXPRESSION_SET___FINITE = store_thm ("SF_EXPRESSION_SET___FINITE",
-   “!sf. FINITE (SF_EXPRESSION_SET sf)”,
+Theorem SF_EXPRESSION_SET___FINITE:
+    !sf. FINITE (SF_EXPRESSION_SET sf)
+Proof
 
    Induct_on ‘sf’ THEN (
       ASM_SIMP_TAC std_ss [SF_EXPRESSION_SET_def, FINITE_EMPTY, FINITE_INSERT,
          FINITE_UNION, FINITE_LIST_TO_SET]
-   ));
+   )
+QED
 
 
 
 
-val SF_EXPRESSION_SET___MEM_DS_FLAT_SF = store_thm ("SF_EXPRESSION_SET___MEM_DS_FLAT_SF",
-   “(!sf e. MEM e (DS_FLAT_SF sf) ==>
-         SF_EXPRESSION_SET e SUBSET SF_EXPRESSION_SET sf)”,
+Theorem SF_EXPRESSION_SET___MEM_DS_FLAT_SF:
+    (!sf e. MEM e (DS_FLAT_SF sf) ==>
+         SF_EXPRESSION_SET e SUBSET SF_EXPRESSION_SET sf)
+Proof
 
    Induct_on ‘sf’ THEN
    SIMP_TAC list_ss [DS_FLAT_SF_def, SF_EXPRESSION_SET_def, SUBSET_EMPTY, SUBSET_REFL] THEN
    METIS_TAC[SUBSET_UNION, SUBSET_TRANS]
-);
+QED
 
 
 
 
 
 
-val SIMPLE_SUB_FORMULA_TO_FRONT = store_thm ("SIMPLE_SUB_FORMULA_TO_FRONT",
-“!sf sf'. MEM sf' (DS_FLAT_SF sf) ==>
+Theorem SIMPLE_SUB_FORMULA_TO_FRONT:
+ !sf sf'. MEM sf' (DS_FLAT_SF sf) ==>
          ?sf''. (SF_EQUIV (sf_star sf' sf'') sf /\
-                 (SF_EXPRESSION_SET sf = SF_EXPRESSION_SET sf' UNION SF_EXPRESSION_SET sf''))”,
+                 (SF_EXPRESSION_SET sf = SF_EXPRESSION_SET sf' UNION SF_EXPRESSION_SET sf''))
+Proof
 
 Induct_on ‘sf’ THENL [
    SIMP_TAC list_ss [DS_FLAT_SF_def],
@@ -4156,7 +4334,8 @@ Induct_on ‘sf’ THENL [
          METIS_TAC[]
       ]
    ]
-]);
+]
+QED
 
 
 
@@ -4175,16 +4354,16 @@ val DS_POINTS_TO___IN_DISTANCE___RIGHT = save_thm (
    "DS_POINTS_TO___IN_DISTANCE___RIGHT",
    DS_POINTS_TO___IN_DISTANCE_def);
 
-val DS_POINTS_TO___IN_DISTANCE___LEFT = store_thm (
-   "DS_POINTS_TO___IN_DISTANCE___LEFT",
-“ (!s h fL e1 e2.
+Theorem DS_POINTS_TO___IN_DISTANCE___LEFT:
+  (!s h fL e1 e2.
    (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 0 = (DS_EXPRESSION_EQUAL s e1 e2))) /\
 
    (!s h fL e1 e2 n.
    (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 (SUC n) =
       ?y f. (DS_POINTS_TO___IN_DISTANCE s h fL y e2 n) /\
             (MEM f fL) /\
-            (DS_POINTS_TO s h e1 [(f, y)])))”,
+            (DS_POINTS_TO s h e1 [(f, y)])))
+Proof
 
    CONJ_TAC THEN1 (
       SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE_def]
@@ -4205,16 +4384,18 @@ val DS_POINTS_TO___IN_DISTANCE___LEFT = store_thm (
 
       ONCE_REWRITE_TAC [DS_POINTS_TO___IN_DISTANCE_def] THEN
       METIS_TAC[]
-   ])
+   ]
+QED
 
 
 
 
 
-val DS_POINTS_TO___IN_DISTANCE___DS_EXPRESSION_EQUAL = store_thm ("DS_POINTS_TO___IN_DISTANCE___DS_EXPRESSION_EQUAL",
-   “!s h fL e e1 e2. DS_EXPRESSION_EQUAL s e e1 ==> (
+Theorem DS_POINTS_TO___IN_DISTANCE___DS_EXPRESSION_EQUAL:
+    !s h fL e e1 e2. DS_EXPRESSION_EQUAL s e e1 ==> (
       (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 = DS_POINTS_TO___IN_DISTANCE s h fL e e2) /\
-      (DS_POINTS_TO___IN_DISTANCE s h fL e2 e1 = DS_POINTS_TO___IN_DISTANCE s h fL e2 e))”,
+      (DS_POINTS_TO___IN_DISTANCE s h fL e2 e1 = DS_POINTS_TO___IN_DISTANCE s h fL e2 e))
+Proof
 
    SIMP_TAC std_ss [FUN_EQ_THM, GSYM FORALL_AND_THM, GSYM RIGHT_FORALL_IMP_THM] THEN
    Induct_on ‘x’ THENL [
@@ -4225,28 +4406,32 @@ val DS_POINTS_TO___IN_DISTANCE___DS_EXPRESSION_EQUAL = store_thm ("DS_POINTS_TO_
          METIS_TAC[],
          FULL_SIMP_TAC list_ss [DS_POINTS_TO_def, DS_EXPRESSION_EQUAL_def]
       ]
-   ])
+   ]
+QED
 
-val DS_POINTS_TO___IN_DISTANCE___SUBSET = store_thm ("DS_POINTS_TO___IN_DISTANCE___SUBSET",
-   “!s h fL1 fL2 e e' n.
+Theorem DS_POINTS_TO___IN_DISTANCE___SUBSET:
+    !s h fL1 fL2 e e' n.
      (DS_POINTS_TO___IN_DISTANCE s h fL1 e e' n /\
       (!f. MEM f fL1 ==> MEM f fL2)) ==>
-     (DS_POINTS_TO___IN_DISTANCE s h fL2 e e' n)”,
+     (DS_POINTS_TO___IN_DISTANCE s h fL2 e e' n)
+Proof
 
    Induct_on ‘n’ THENL [
       SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE_def],
 
       SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE_def] THEN
       METIS_TAC[]
-   ])
+   ]
+QED
 
 
-val DS_POINTS_TO___IN_DISTANCE___SUM_IMPL1 = store_thm ("DS_POINTS_TO___IN_DISTANCE___SUM_IMPL1",
+Theorem DS_POINTS_TO___IN_DISTANCE___SUM_IMPL1:
 
-   “!s h fL e e1 e2 n1 n2.
+    !s h fL e e1 e2 n1 n2.
      (DS_POINTS_TO___IN_DISTANCE s h fL e e1 n1 /\
       DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 n2) ==>
-     (DS_POINTS_TO___IN_DISTANCE s h fL e e2 (n1 + n2))”,
+     (DS_POINTS_TO___IN_DISTANCE s h fL e e2 (n1 + n2))
+Proof
 
    Induct_on ‘n1’ THENL [
       SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE_def] THEN
@@ -4258,15 +4443,17 @@ val DS_POINTS_TO___IN_DISTANCE___SUM_IMPL1 = store_thm ("DS_POINTS_TO___IN_DISTA
       REWRITE_TAC[DS_POINTS_TO___IN_DISTANCE___LEFT] THEN
       FULL_SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE___RIGHT] THEN
       METIS_TAC[]
-   ]);
+   ]
+QED
 
 
-val DS_POINTS_TO___IN_DISTANCE___SUM_IMPL2 = store_thm ("DS_POINTS_TO___IN_DISTANCE___SUM_IMPL2",
+Theorem DS_POINTS_TO___IN_DISTANCE___SUM_IMPL2:
 
-   “!s h fL e e1 e2 n1 n2.
+    !s h fL e e1 e2 n1 n2.
      (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 (n1 + n2)) ==>
      ?e. (DS_POINTS_TO___IN_DISTANCE s h fL e1 e n1 /\
-          DS_POINTS_TO___IN_DISTANCE s h fL e e2 n2)”,
+          DS_POINTS_TO___IN_DISTANCE s h fL e e2 n2)
+Proof
 
    Induct_on ‘n1’ THENL [
       SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE_def] THEN
@@ -4278,20 +4465,23 @@ val DS_POINTS_TO___IN_DISTANCE___SUM_IMPL2 = store_thm ("DS_POINTS_TO___IN_DISTA
       REWRITE_TAC[DS_POINTS_TO___IN_DISTANCE___RIGHT] THEN
       FULL_SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE___LEFT] THEN
       METIS_TAC[]
-   ]);
+   ]
+QED
 
 
-val DS_POINTS_TO___IN_DISTANCE___SUBMAP = store_thm ("DS_POINTS_TO___IN_DISTANCE___SUBMAP",
-   “!s fL h h' n e1 e2. (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 n /\
+Theorem DS_POINTS_TO___IN_DISTANCE___SUBMAP:
+    !s fL h h' n e1 e2. (DS_POINTS_TO___IN_DISTANCE s h fL e1 e2 n /\
                           h SUBMAP h') ==>
-                         (DS_POINTS_TO___IN_DISTANCE s h' fL e1 e2 n)”,
+                         (DS_POINTS_TO___IN_DISTANCE s h' fL e1 e2 n)
+Proof
 
    Induct_on ‘n’ THENL [
       SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE_def],
 
       SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE_def] THEN
       METIS_TAC[DS_POINTS_TO___SUBMAP]
-   ])
+   ]
+QED
 
 
 Definition DS_POINTS_TO___RTC_def:
@@ -4300,39 +4490,46 @@ Definition DS_POINTS_TO___RTC_def:
 End
 
 
-val DS_POINTS_TO___RTC___SUBMAP = store_thm ("DS_POINTS_TO___RTC___SUBMAP",
-   “!h h' s fL e1 e2. (DS_POINTS_TO___RTC s h fL e1 e2 /\
-                       h SUBMAP h') ==> DS_POINTS_TO___RTC s h' fL e1 e2”,
+Theorem DS_POINTS_TO___RTC___SUBMAP:
+    !h h' s fL e1 e2. (DS_POINTS_TO___RTC s h fL e1 e2 /\
+                       h SUBMAP h') ==> DS_POINTS_TO___RTC s h' fL e1 e2
+Proof
 
    SIMP_TAC std_ss [DS_POINTS_TO___RTC_def] THEN
-   METIS_TAC[DS_POINTS_TO___IN_DISTANCE___SUBMAP])
+   METIS_TAC[DS_POINTS_TO___IN_DISTANCE___SUBMAP]
+QED
 
 
-val DS_POINTS_TO___RTC___SUBSET = store_thm ("DS_POINTS_TO___RTC___SUBSET",
-   “!s h fL1 fL2 e e'.
+Theorem DS_POINTS_TO___RTC___SUBSET:
+    !s h fL1 fL2 e e'.
      (DS_POINTS_TO___RTC s h fL1 e e' /\
       (!f. MEM f fL1 ==> MEM f fL2)) ==>
-     (DS_POINTS_TO___RTC s h fL2 e e')”,
+     (DS_POINTS_TO___RTC s h fL2 e e')
+Proof
 
    SIMP_TAC std_ss [DS_POINTS_TO___RTC_def] THEN
-   METIS_TAC[DS_POINTS_TO___IN_DISTANCE___SUBSET]);
+   METIS_TAC[DS_POINTS_TO___IN_DISTANCE___SUBSET]
+QED
 
 
-val DS_POINTS_TO___RTC___is_reflexive = store_thm ("DS_POINTS_TO___RTC___is_reflexive",
-   “!s h fL. reflexive (DS_POINTS_TO___RTC s h fL)”,
+Theorem DS_POINTS_TO___RTC___is_reflexive:
+    !s h fL. reflexive (DS_POINTS_TO___RTC s h fL)
+Proof
 
    SIMP_TAC std_ss [reflexive_def, DS_POINTS_TO___RTC_def] THEN
    REPEAT GEN_TAC THEN
    EXISTS_TAC “0:num” THEN
    SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE_def, DS_EXPRESSION_EQUAL_def]
-);
+QED
 
 
-val DS_POINTS_TO___RTC___is_transitive = store_thm ("DS_POINTS_TO___RTC___is_transitive",
-   “!s h fL. transitive (DS_POINTS_TO___RTC s h fL)”,
+Theorem DS_POINTS_TO___RTC___is_transitive:
+    !s h fL. transitive (DS_POINTS_TO___RTC s h fL)
+Proof
 
    SIMP_TAC std_ss [transitive_def, DS_POINTS_TO___RTC_def] THEN
-   METIS_TAC[DS_POINTS_TO___IN_DISTANCE___SUM_IMPL1]);
+   METIS_TAC[DS_POINTS_TO___IN_DISTANCE___SUM_IMPL1]
+QED
 
 
 
@@ -4341,10 +4538,11 @@ val DS_POINTS_TO___RTC___is_transitive = store_thm ("DS_POINTS_TO___RTC___is_tra
 
 
 
-val SF_SEM___sf_tree___ROOT_DANGLES = store_thm ("SF_SEM___sf_tree___ROOT_DANGLES",
-“!s h fL es e.
+Theorem SF_SEM___sf_tree___ROOT_DANGLES:
+ !s h fL es e.
 SF_SEM s h (sf_tree fL es e) /\ DS_POINTER_DANGLES s h e ==>
-((h = FEMPTY) /\ (DS_EXPRESSION_EQUAL s e es))”,
+((h = FEMPTY) /\ (DS_EXPRESSION_EQUAL s e es))
+Proof
 
 SIMP_TAC std_ss [SF_SEM___sf_tree_def, SF_SEM_def] THEN
 REPEAT GEN_TAC THEN STRIP_TAC THEN
@@ -4353,22 +4551,26 @@ Cases_on ‘n’ THENL [
 
    FULL_SIMP_TAC std_ss [SF_SEM___sf_tree_len_def, PF_SEM_def, DS_POINTER_DANGLES] THEN
    FULL_SIMP_TAC std_ss []
-])
+]
+QED
 
 
-val SF_SEM___sf_ls___ROOT_DANGLES = store_thm ("SF_SEM___sf_ls___ROOT_DANGLES",
-“!s h f e1 e2.
+Theorem SF_SEM___sf_ls___ROOT_DANGLES:
+ !s h f e1 e2.
 SF_SEM s h (sf_ls f e1 e2) /\ DS_POINTER_DANGLES s h e1 ==>
-((h = FEMPTY) /\ (DS_EXPRESSION_EQUAL s e1 e2))”,
+((h = FEMPTY) /\ (DS_EXPRESSION_EQUAL s e1 e2))
+Proof
 
-METIS_TAC[sf_ls_def, SF_SEM___sf_tree___ROOT_DANGLES]);
+METIS_TAC[sf_ls_def, SF_SEM___sf_tree___ROOT_DANGLES]
+QED
 
 
 
 
-val LEMMA_3_1_1 = store_thm ("LEMMA_3_1_1",
-“!s h fL es e.
-SF_SEM s h (sf_tree fL es e) ==> DS_POINTER_DANGLES s h es”,
+Theorem LEMMA_3_1_1:
+ !s h fL es e.
+SF_SEM s h (sf_tree fL es e) ==> DS_POINTER_DANGLES s h es
+Proof
 
 SIMP_TAC list_ss [SF_SEM_def, SF_SEM___sf_tree_def,
    GSYM LEFT_FORALL_IMP_THM] THEN
@@ -4413,24 +4615,28 @@ Induct_on ‘n’ THENL [
       FULL_SIMP_TAC std_ss [DS_POINTER_DANGLES] THEN
       FULL_SIMP_TAC std_ss []
    ]
-]);
+]
+QED
 
 
-val LEMMA_3_1_1___sf_ls = store_thm ("LEMMA_3_1_1___sf_ls",
-“!s h f e1 e2.
-SF_SEM s h (sf_ls f e1 e2) ==> DS_POINTER_DANGLES s h e2”,
+Theorem LEMMA_3_1_1___sf_ls:
+ !s h f e1 e2.
+SF_SEM s h (sf_ls f e1 e2) ==> DS_POINTER_DANGLES s h e2
+Proof
 
 SIMP_TAC std_ss [sf_ls_def] THEN
-METIS_TAC[LEMMA_3_1_1]);
+METIS_TAC[LEMMA_3_1_1]
+QED
 
 
 
 
-val LEMMA_3_1_2 = store_thm ("LEMMA_3_1_2",
-“!s h f fL e1 e2 es e.
+Theorem LEMMA_3_1_2:
+ !s h f fL e1 e2 es e.
 (SF_SEM s h (sf_tree fL es e) /\ ~(DS_EXPRESSION_EQUAL s es e2) /\
  MEM f fL /\ DS_POINTS_TO s h e1 [(f,e2)]) ==>
-(~(DS_POINTER_DANGLES s h e2))”,
+(~(DS_POINTER_DANGLES s h e2))
+Proof
 
 
 SIMP_TAC std_ss [DS_POINTER_DANGLES, SF_SEM_def, SF_SEM___sf_tree_def,
@@ -4586,25 +4792,29 @@ Induct_on ‘n’ THENL [
          ]
       ]
    ]
-]);
+]
+QED
 
 
-val LEMMA_3_1_2___list = store_thm ("LEMMA_3_1_2___list",
-“!s h f e1 e2 e3 e4.
+Theorem LEMMA_3_1_2___list:
+ !s h f e1 e2 e3 e4.
 (SF_SEM s h (sf_ls f e1 e2) /\ ~(DS_EXPRESSION_EQUAL s e2 e4) /\
  DS_POINTS_TO s h e3 [f, e4]) ==>
-(~(DS_POINTER_DANGLES s h e4))”,
+(~(DS_POINTER_DANGLES s h e4))
+Proof
 
 SIMP_TAC std_ss [sf_ls_def] THEN
-METIS_TAC[LEMMA_3_1_2, DS_EXPRESSION_EQUAL_def, MEM])
+METIS_TAC[LEMMA_3_1_2, DS_EXPRESSION_EQUAL_def, MEM]
+QED
 
 
 
-val LEMMA_3_1_2_a = store_thm ("LEMMA_3_1_2_a",
-“!s h f fL v es e f.
+Theorem LEMMA_3_1_2_a:
+ !s h f fL v es e f.
 (SF_SEM s h (sf_tree fL es e) /\
 (v IN FDOM h) /\ MEM f fL) ==>
-f IN FDOM (h ' v)”,
+f IN FDOM (h ' v)
+Proof
 
 SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_def,
    GSYM LEFT_EXISTS_AND_THM, GSYM LEFT_FORALL_IMP_THM] THEN
@@ -4626,16 +4836,18 @@ Induct_on ‘n’ THENL [
       ‘f IN FDOM (h' ' v)’ by METIS_TAC[MEM_EL] THEN
       METIS_TAC[SUBMAP_DEF]
    ]
-]);
+]
+QED
 
 
-val LEMMA_25 = store_thm ("LEMMA_25",
-   “!s h1 h2 f e1 e2 e3.
+Theorem LEMMA_25:
+    !s h1 h2 f e1 e2 e3.
          (DISJOINT (FDOM h1) (FDOM h2) /\
              SF_SEM s h1 (sf_ls f e1 e2) /\
              (DS_POINTER_DANGLES s h1 e3) /\
              SF_SEM s h2 (sf_ls f e2 e3)) ==>
-         SF_SEM s (FUNION h1 h2) (sf_ls f e1 e3)”,
+         SF_SEM s (FUNION h1 h2) (sf_ls f e1 e3)
+Proof
 
 SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_len_def, sf_ls_def,
    SF_SEM___sf_tree_def, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
@@ -4703,14 +4915,16 @@ Induct_on ‘n’ THENL [
       METIS_TAC[]
    ) THEN
    METIS_TAC[]
-]);
+]
+QED
 
 
 
-val LEMMA_26 = store_thm ("LEMMA_26",
-   “!s h fL es e. (~(DS_EXPRESSION_EQUAL s e es) /\
+Theorem LEMMA_26:
+    !s h fL es e. (~(DS_EXPRESSION_EQUAL s e es) /\
                  (SF_SEM s h (sf_tree fL es e))) ==>
-                 (!f. MEM f fL ==> ?e'. DS_POINTS_TO s h e' [(f, es)])”,
+                 (!f. MEM f fL ==> ?e'. DS_POINTS_TO s h e' [(f, es)])
+Proof
 
 
    SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_def, GSYM RIGHT_EXISTS_AND_THM,
@@ -4773,16 +4987,17 @@ val LEMMA_26 = store_thm ("LEMMA_26",
       ASM_SIMP_TAC list_ss [DS_EXPRESSION_EQUAL_def, HEAP_READ_ENTRY_def,
          DS_EXPRESSION_EVAL_def, DS_POINTS_TO_def]
    ]
-);
+QED
 
 
 
-val LEMMA_26a = store_thm ("LEMMA_26a",
-   “!s h fL es e e'. (~(DS_EXPRESSION_EQUAL s e e') /\
+Theorem LEMMA_26a:
+    !s h fL es e e'. (~(DS_EXPRESSION_EQUAL s e e') /\
                        ~(IS_DSV_NIL (DS_EXPRESSION_EVAL s e')) /\
                        (DS_EXPRESSION_EVAL_VALUE s e' IN FDOM h) /\
                        (SF_SEM s h (sf_tree fL es e))) ==>
-                 (?e'' f. MEM f fL /\ DS_POINTS_TO s h e'' [(f, e')])”,
+                 (?e'' f. MEM f fL /\ DS_POINTS_TO s h e'' [(f, e')])
+Proof
 
 
    SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_def, GSYM RIGHT_EXISTS_AND_THM,
@@ -4824,15 +5039,16 @@ val LEMMA_26a = store_thm ("LEMMA_26a",
    Q.EXISTS_TAC ‘dse_const (h ' v ' f)’ THEN
    ASM_SIMP_TAC std_ss [DS_EXPRESSION_EQUAL_def, DS_EXPRESSION_EVAL_def] THEN
    METIS_TAC[]
-);
+QED
 
 
-val LEMMA_26b = store_thm ("LEMMA_26b",
-   “!s h fL es e e' f. (~(DS_EXPRESSION_EQUAL s es e') /\
+Theorem LEMMA_26b:
+    !s h fL es e e' f. (~(DS_EXPRESSION_EQUAL s es e') /\
                        ~(IS_DSV_NIL (DS_EXPRESSION_EVAL s e')) /\
                        (DS_EXPRESSION_EVAL_VALUE s e' IN FDOM h) /\
                        (SF_SEM s h (sf_tree fL es e)) /\ MEM f fL) ==>
-                 ?e''. DS_POINTS_TO s h e' [(f, e'')]”,
+                 ?e''. DS_POINTS_TO s h e' [(f, e'')]
+Proof
 
 
    SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_def, GSYM RIGHT_EXISTS_AND_THM,
@@ -4878,19 +5094,20 @@ val LEMMA_26b = store_thm ("LEMMA_26b",
    ASM_SIMP_TAC std_ss [DS_EXPRESSION_EQUAL_def, DS_EXPRESSION_EVAL_def,
       ds_value_11] THEN
    METIS_TAC[]
-);
+QED
 
 
 
-val LEMMA_26c = store_thm ("LEMMA_26c",
-   “!s h fL es e e' e'' f.
+Theorem LEMMA_26c:
+    !s h fL es e e' e'' f.
       (~(DS_EXPRESSION_EQUAL s es e') /\
        MEM f fL /\
        DS_POINTS_TO s h e'' [(f, e')] /\
        SF_SEM s h (sf_tree fL es e)) ==>
 
    ~(IS_DSV_NIL (DS_EXPRESSION_EVAL s e')) /\
-   (DS_EXPRESSION_EVAL_VALUE s e' IN FDOM h)”,
+   (DS_EXPRESSION_EVAL_VALUE s e' IN FDOM h)
+Proof
 
    SIMP_TAC list_ss [SF_SEM_def, SF_SEM___sf_tree_def, GSYM RIGHT_EXISTS_AND_THM,
       GSYM LEFT_FORALL_IMP_THM, DS_POINTS_TO_def] THEN
@@ -4948,13 +5165,13 @@ val LEMMA_26c = store_thm ("LEMMA_26c",
       METIS_TAC[SUBMAP_DEF],
       METIS_TAC[]
    ]
-);
+QED
 
 
 
 
-val LEMMA_26d = store_thm ("LEMMA_26d",
-   “!s h fL es e e' m1 m2. (~(DS_EXPRESSION_EQUAL s es e') /\
+Theorem LEMMA_26d:
+    !s h fL es e e' m1 m2. (~(DS_EXPRESSION_EQUAL s es e') /\
                        ~(IS_DSV_NIL (DS_EXPRESSION_EVAL s e')) /\
                        (DS_EXPRESSION_EVAL_VALUE s e' IN FDOM h) /\
                        (SF_SEM s h (sf_tree fL es e)) /\
@@ -4963,7 +5180,8 @@ val LEMMA_26d = store_thm ("LEMMA_26d",
                  ?e1 e2. DS_POINTS_TO s h e' [(EL m1 fL, e1); (EL m2 fL, e2)] /\
                             ((DS_EXPRESSION_EQUAL s e1 es /\
                             DS_EXPRESSION_EQUAL s e2 es) \/
-                            ~(DS_EXPRESSION_EQUAL s e1 e2))”,
+                            ~(DS_EXPRESSION_EQUAL s e1 e2))
+Proof
 
 
    SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_def, GSYM RIGHT_EXISTS_AND_THM,
@@ -5033,15 +5251,16 @@ val LEMMA_26d = store_thm ("LEMMA_26d",
    ] THEN
    Q.PAT_X_ASSUM ‘!s h. P s h’ MATCH_MP_TAC THEN
    METIS_TAC[]
-);
+QED
 
 
 
-val SF_EXPRESSION_SET___FDOM_HEAP = store_thm ("SF_EXPRESSION_SET___FDOM_HEAP",
-“ !s h sf x. (SF_SEM s h sf /\ (x IN FDOM h)) ==>
+Theorem SF_EXPRESSION_SET___FDOM_HEAP:
+  !s h sf x. (SF_SEM s h sf /\ (x IN FDOM h)) ==>
               ((?e. (e IN SF_EXPRESSION_SET sf) /\ (DS_EXPRESSION_EVAL s e = dsv_const x)) \/
                (?x' f. (x' IN FDOM h) /\ (f IN FDOM (h ' x')) /\
-                       (h ' x' ' f = dsv_const x)))”,
+                       (h ' x' ' f = dsv_const x)))
+Proof
 
 Induct_on ‘sf’ THENL [
    SIMP_TAC std_ss [SF_SEM_def, FDOM_FEMPTY, NOT_IN_EMPTY],
@@ -5071,15 +5290,17 @@ Induct_on ‘sf’ THENL [
       GSYM LEFT_EXISTS_AND_THM, FUNION_DEF, SF_EXPRESSION_SET_def, IN_UNION, DISJOINT_DEF,
       EXTENSION, IN_INTER, NOT_IN_EMPTY] THEN
    METIS_TAC[]
-])
+]
+QED
 
 
 
-val LEMMA_27 = store_thm ("LEMMA_27",
-“!s h f e1 e2 e3.
+Theorem LEMMA_27:
+ !s h f e1 e2 e3.
          (SF_SEM s h (sf_ls f e1 e3) /\
           ~(DS_POINTER_DANGLES s h e2)) ==>
-         SF_SEM s h (sf_star (sf_ls f e1 e2) (sf_ls f e2 e3))”,
+         SF_SEM s h (sf_star (sf_ls f e1 e2) (sf_ls f e2 e3))
+Proof
 
 SIMP_TAC std_ss [SF_SEM_def, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
    GSYM LEFT_FORALL_IMP_THM, sf_ls_def, SF_SEM___sf_tree_def] THEN
@@ -5161,15 +5382,17 @@ Induct_on ‘n’ THENL [
       ) THEN
       METIS_TAC[]
    ]
-]);
+]
+QED
 
 
 
 
 
-val LEMMA_28_1 = store_thm ("LEMMA_28_1",
-   “!s h fL es e. SF_SEM s h (sf_tree fL es e) ==>
-                   !e f. MEM f fL ==> ~(DS_POINTS_TO s h e [(f, e)])”,
+Theorem LEMMA_28_1:
+    !s h fL es e. SF_SEM s h (sf_tree fL es e) ==>
+                   !e f. MEM f fL ==> ~(DS_POINTS_TO s h e [(f, e)])
+Proof
 
    SIMP_TAC std_ss [SF_SEM_def, GSYM LEFT_FORALL_IMP_THM,
       SF_SEM___sf_tree_def] THEN
@@ -5289,22 +5512,24 @@ val LEMMA_28_1 = store_thm ("LEMMA_28_1",
          FULL_SIMP_TAC std_ss [] THEN
          METIS_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
 
 
 
 
-val LEMMA_28_a = store_thm ("LEMMA_28_a",
+Theorem LEMMA_28_a:
 
-“!e1 e2 e3 fL h' h'' h.
+ !e1 e2 e3 fL h' h'' h.
 (h' SUBMAP h /\ h'' SUBMAP h /\ ~(fL = []) /\
 ~(DS_EXPRESSION_EQUAL s e2 e3) /\
 SF_SEM s h' (sf_tree fL e2 e1) /\
 SF_SEM s h'' (sf_tree fL e3 e1)) ==>
 (~(DS_POINTER_DANGLES s h'' e2) \/
- ~(DS_POINTER_DANGLES s h' e3))”,
+ ~(DS_POINTER_DANGLES s h' e3))
+Proof
 
 
 
@@ -5371,14 +5596,16 @@ Induct_on ‘n’ THENL [
       ASM_SIMP_TAC std_ss [NOT_NIL_CONS] THEN
       METIS_TAC[EL,HD,MEM_EL,SUBMAP_TRANS]
    ]
-])
+]
+QED
 
 
-val LEMMA_28_2 = store_thm ("LEMMA_28_2",
-   “!s h h' f e1 e2 e3 e4. (SF_SEM s h (sf_ls f e1 e4) /\
+Theorem LEMMA_28_2:
+    !s h h' f e1 e2 e3 e4. (SF_SEM s h (sf_ls f e1 e4) /\
                        ~(DS_EXPRESSION_EQUAL s e2 e3) /\ (h' SUBMAP h) /\
                        SF_SEM s h' (sf_ls f e2 e3)) ==>
-      (!h''. h'' SUBMAP h ==> ~(SF_SEM s h'' (sf_ls f e3 e2)))”,
+      (!h''. h'' SUBMAP h ==> ~(SF_SEM s h'' (sf_ls f e3 e2)))
+Proof
 
    SIMP_TAC std_ss [SF_SEM_def, GSYM LEFT_EXISTS_AND_THM, GSYM RIGHT_EXISTS_AND_THM,
       GSYM LEFT_FORALL_IMP_THM, GSYM RIGHT_FORALL_IMP_THM,
@@ -5489,17 +5716,19 @@ val LEMMA_28_2 = store_thm ("LEMMA_28_2",
          FULL_SIMP_TAC std_ss [DS_POINTER_DANGLES, DS_EXPRESSION_EQUAL_def,
             FUNION_DEF, IN_UNION, SUBMAP_DEF]
       ]
-   ]);
+   ]
+QED
 
 
-val LEMMA_29 = store_thm ("LEMMA_29",
+Theorem LEMMA_29:
 
-   “!s h h' f e1 e2 e3 e4.
+    !s h h' f e1 e2 e3 e4.
          (SF_SEM s h (sf_ls f e1 e4) /\
          ~(DS_EXPRESSION_EQUAL s e2 e3) /\ (h' SUBMAP h) /\
          SF_SEM s h' (sf_ls f e2 e3)) ==>
 
-         SF_SEM s h (sf_star (sf_ls f e1 e2) (sf_star (sf_ls f e2 e3) (sf_ls f e3 e4)))”,
+         SF_SEM s h (sf_star (sf_ls f e1 e2) (sf_star (sf_ls f e2 e3) (sf_ls f e3 e4)))
+Proof
 
    REPEAT STRIP_TAC THEN
    ‘SF_SEM s h (sf_star (sf_ls f e1 e2) (sf_ls f e2 e4))’ by (
@@ -5579,7 +5808,7 @@ val LEMMA_29 = store_thm ("LEMMA_29",
 
       ASM_SIMP_TAC std_ss []
    ]
-);
+QED
 
 
 
@@ -5736,11 +5965,12 @@ val LEMMA_3_1_3 = save_thm ("LEMMA_3_1_3", LEMMA_30);
 
 
 
-val DS_POINTS_TO___RTC___sf_tree_ROOT_TO_ALL = store_thm ("DS_POINTS_TO___RTC___sf_tree_ROOT_TO_ALL",
-“!s h fL es e e'.
+Theorem DS_POINTS_TO___RTC___sf_tree_ROOT_TO_ALL:
+ !s h fL es e e'.
 SF_SEM s h (sf_tree fL es e) /\
 ~(DS_POINTER_DANGLES s h e') ==>
-(DS_POINTS_TO___RTC s h fL e e')”,
+(DS_POINTS_TO___RTC s h fL e e')
+Proof
 
 
 SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_def, GSYM LEFT_EXISTS_AND_THM,
@@ -5829,15 +6059,16 @@ Tactical.REVERSE (CONJ_TAC) THEN1 (
 Q.PAT_X_ASSUM ‘!s h fL. P s h fL’ MATCH_MP_TAC THEN
 FULL_SIMP_TAC std_ss [] THEN
 METIS_TAC[]
-);
+QED
 
 
 
-val DS_POINTS_TO___RTC___sf_tree_ROOT_TO_LEAF = store_thm ("DS_POINTS_TO___RTC___sf_tree_ROOT_TO_LEAF",
-“!s h fL f es e.
+Theorem DS_POINTS_TO___RTC___sf_tree_ROOT_TO_LEAF:
+ !s h fL f es e.
 MEM f fL /\
 SF_SEM s h (sf_tree fL es e) ==>
-DS_POINTS_TO___RTC s h [f] e es”,
+DS_POINTS_TO___RTC s h [f] e es
+Proof
 
 
 SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_def, GSYM LEFT_EXISTS_AND_THM,
@@ -5881,17 +6112,19 @@ CONJ_TAC THENL [
    METIS_TAC[],
 
    METIS_TAC[MEM_EL]
-])
+]
+QED
 
 
 
 
-val SF_SEM___sf_tree_SUBTREE_THM = store_thm ("SF_SEM___sf_tree_SUBTREE_THM",
-“!s h fL es e e'.
+Theorem SF_SEM___sf_tree_SUBTREE_THM:
+ !s h fL es e e'.
 SF_SEM s h (sf_tree fL es e) /\
 ~(DS_POINTER_DANGLES s h e') ==>
 (?h'. h' SUBMAP h /\ ((DS_EXPRESSION_EVAL_VALUE s e IN FDOM h') ==> DS_EXPRESSION_EQUAL s e e') /\
-SF_SEM s h' (sf_tree fL es e'))”,
+SF_SEM s h' (sf_tree fL es e'))
+Proof
 
 SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_def, GSYM LEFT_EXISTS_AND_THM,
    GSYM LEFT_FORALL_IMP_THM, DS_POINTER_DANGLES] THEN
@@ -5947,16 +6180,18 @@ REPEAT STRIP_TAC THENL [
    PROVE_TAC[SUBMAP_TRANS],
    METIS_TAC[SUBMAP_DEF],
    METIS_TAC[]
-]);
+]
+QED
 
 
 
 
-val DS_POINTS_TO___RTC___sf_tree_ALL_TO_LEAF = store_thm ("DS_POINTS_TO___RTC___sf_tree_ALL_TO_LEAF",
-“!s h fL f es e e'.
+Theorem DS_POINTS_TO___RTC___sf_tree_ALL_TO_LEAF:
+ !s h fL f es e e'.
 SF_SEM s h (sf_tree fL es e) /\ MEM f fL /\
 ~(DS_POINTER_DANGLES s h e') ==>
-(DS_POINTS_TO___RTC s h [f] e' es)”,
+(DS_POINTS_TO___RTC s h [f] e' es)
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -5971,19 +6206,20 @@ Cases_on ‘DS_EXPRESSION_EQUAL s e' es’ THEN1 (
 MATCH_MP_TAC DS_POINTS_TO___RTC___SUBMAP THEN
 Q.EXISTS_TAC ‘h'’ THEN
 ASM_REWRITE_TAC[] THEN
-METIS_TAC [DS_POINTS_TO___RTC___sf_tree_ROOT_TO_LEAF]);
+METIS_TAC [DS_POINTS_TO___RTC___sf_tree_ROOT_TO_LEAF]
+QED
 
 
 
-val DS_POINTS_TO___IN_DISTANCE___SING_UNIQUE = store_thm (
-   "DS_POINTS_TO___IN_DISTANCE___SING_UNIQUE",
+Theorem DS_POINTS_TO___IN_DISTANCE___SING_UNIQUE:
 
-“!s h1 h2 h f e e1 e2 n.
+ !s h1 h2 h f e e1 e2 n.
    ((h1 SUBMAP h) /\ (h2 SUBMAP h) /\
    DS_POINTS_TO___IN_DISTANCE s h1 [f] e e1 n /\
    DS_POINTS_TO___IN_DISTANCE s h2 [f] e e2 n) ==>
 
-   (DS_EXPRESSION_EQUAL s e1 e2)”,
+   (DS_EXPRESSION_EQUAL s e1 e2)
+Proof
 
 Induct_on ‘n’ THENL [
    SIMP_TAC std_ss [DS_POINTS_TO___IN_DISTANCE_def, DS_EXPRESSION_EQUAL_def] THEN
@@ -5993,18 +6229,20 @@ Induct_on ‘n’ THENL [
    REPEAT STRIP_TAC THEN
    ‘DS_EXPRESSION_EQUAL s y y'’ by METIS_TAC[] THEN
    FULL_SIMP_TAC list_ss [DS_POINTS_TO_def, DS_EXPRESSION_EQUAL_def, SUBMAP_DEF]
-])
+]
+QED
 
 
 
 
 
 
-val SF_SEM___sf_tree___DS_POINTS_TO___RTC___SUBMAP = store_thm ("SF_SEM___sf_tree___DS_POINTS_TO___RTC___SUBMAP",
-“!s h h' fL es e e'. (SF_SEM s h (sf_tree fL es e) /\ (h SUBMAP h') /\
+Theorem SF_SEM___sf_tree___DS_POINTS_TO___RTC___SUBMAP:
+ !s h h' fL es e e'. (SF_SEM s h (sf_tree fL es e) /\ (h SUBMAP h') /\
                    (DS_POINTS_TO___RTC s h' fL e e') /\
                    ~(DS_POINTS_TO___RTC s h' fL es e')) ==>
-         ~(DS_POINTER_DANGLES s h e')”,
+         ~(DS_POINTER_DANGLES s h e')
+Proof
 
 
 
@@ -6053,14 +6291,16 @@ Induct_on ‘n’ THENL [
 
       METIS_TAC[]
    ]
-]);
+]
+QED
 
 
 
-val SF_SEM___sf_tree___DS_POINTS_TO___RTC = store_thm ("SF_SEM___sf_tree___DS_POINTS_TO___RTC",
-“!s h fL es e e'. (SF_SEM s h (sf_tree fL es e) /\
+Theorem SF_SEM___sf_tree___DS_POINTS_TO___RTC:
+ !s h fL es e e'. (SF_SEM s h (sf_tree fL es e) /\
                    (DS_POINTS_TO___RTC s h fL e e')) ==>
-         (DS_EXPRESSION_EQUAL s es e' \/ ~(DS_POINTER_DANGLES s h e'))”,
+         (DS_EXPRESSION_EQUAL s es e' \/ ~(DS_POINTER_DANGLES s h e'))
+Proof
 
 REPEAT STRIP_TAC THEN
 MP_TAC (
@@ -6074,14 +6314,16 @@ Cases_on ‘n’ THENL [
 
    FULL_SIMP_TAC list_ss [DS_POINTS_TO___IN_DISTANCE___LEFT, DS_POINTS_TO_def,
       DS_POINTER_DANGLES]
-])
+]
+QED
 
 
 
 
-val TREE_NIL_THM = store_thm ("TREE_NIL_THM",
-“!s h es e. ~(DS_EXPRESSION_EQUAL s e es) ==>
-(SF_SEM s h (sf_tree [] es e) = SF_SEM s h (sf_points_to e []))”,
+Theorem TREE_NIL_THM:
+ !s h es e. ~(DS_EXPRESSION_EQUAL s e es) ==>
+(SF_SEM s h (sf_tree [] es e) = SF_SEM s h (sf_points_to e []))
+Proof
 
 
 SIMP_TAC list_ss [SF_EQUIV_def, SF_SEM_def, SF_SEM___sf_tree_def,
@@ -6112,13 +6354,14 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
 
    ASM_SIMP_TAC std_ss [GSYM fmap_EQ_THM, FDOM_FEMPTY, FDOM_DOMSUB, NOT_IN_EMPTY,
       EXTENSION, IN_DELETE, IN_SING, DS_EXPRESSION_EVAL_VALUE_def]
-]);
+]
+QED
 
 
 
 
-val SUBTREE_SUBTREE_SING = store_thm ("SUBTREE_SUBTREE_SING",
-“!s h h' fL n es e es' e'.
+Theorem SUBTREE_SUBTREE_SING:
+ !s h h' fL n es e es' e'.
 
 (SF_SEM___sf_tree_len s h fL (SUC n) es e /\ h' SUBMAP h /\ ~(fL = []) /\
 ~(DS_EXPRESSION_EQUAL s e' es') /\
@@ -6127,7 +6370,8 @@ SF_SEM___sf_tree s h' fL es' e') ==>
 (DS_EXPRESSION_EQUAL s e' e \/
 ?h'' f. (h'' SUBMAP h) /\ (h' SUBMAP h'') /\
       MEM f fL /\
-      SF_SEM___sf_tree_len s h'' fL n es (dse_const (THE (HEAP_READ_ENTRY s h e f))))”,
+      SF_SEM___sf_tree_len s h'' fL n es (dse_const (THE (HEAP_READ_ENTRY s h e f))))
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -6252,18 +6496,20 @@ REPEAT STRIP_TAC THENL [
       ) THEN
       FULL_SIMP_TAC std_ss [DS_POINTER_DANGLES, DS_EXPRESSION_EVAL_def]
    ]
-])
+]
+QED
 
 
-val SUBTREE___IS_POSTFIX___OR___LIST = store_thm ("SUBTREE___IS_POSTFIX___OR___LIST",
+Theorem SUBTREE___IS_POSTFIX___OR___LIST:
 
-“!s h h' fL es e es' e'.
+ !s h h' fL es e es' e'.
 
 (SF_SEM s h (sf_tree fL es e) /\ h' SUBMAP h /\
 SF_SEM s h' (sf_tree fL es' e') /\ ~(fL = []) /\
 ~DS_EXPRESSION_EQUAL s e' es') ==>
 
-(DS_EXPRESSION_EQUAL s es es' \/ ?f. (fL = [f]))”,
+(DS_EXPRESSION_EQUAL s es es' \/ ?f. (fL = [f]))
+Proof
 
 
 SIMP_TAC std_ss [SF_SEM_def, SF_SEM___sf_tree_def, GSYM LEFT_EXISTS_AND_THM,
@@ -6437,15 +6683,16 @@ Induct_on ‘n’ THENL [
    FULL_SIMP_TAC std_ss [DS_POINTER_DANGLES, DISJOINT_DEF, EXTENSION,
       NOT_IN_EMPTY, IN_INTER] THEN
    METIS_TAC[]
-]);
+]
+QED
 
 
 
 
 
-val SUBTREE_EXCHANGEABLE_THM = store_thm ("SUBTREE_EXCHANGEABLE_THM",
+Theorem SUBTREE_EXCHANGEABLE_THM:
 
-“!s h1 h2 fL es e e1' e2'.
+ !s h1 h2 fL es e e1' e2'.
 
 (SF_SEM s (FUNION h1 h2) (sf_tree fL es e) /\
 SF_SEM s h1 (sf_tree fL e1' e2') /\
@@ -6455,7 +6702,8 @@ SF_SEM s h1 (sf_tree fL e1' e2') /\
 SF_SEM s h1' (sf_tree fL e1' e2') /\
 DS_POINTER_DANGLES s h1' es /\
 (DISJOINT (FDOM h1') (FDOM h2)) ==>
-SF_SEM s (FUNION h1' h2) (sf_tree fL es e))”,
+SF_SEM s (FUNION h1' h2) (sf_tree fL es e))
+Proof
 
 
 REPEAT GEN_TAC THEN
@@ -6991,13 +7239,14 @@ REPEAT STRIP_TAC THEN
    ) THEN
    ‘FUNION h1' (FUNION h1'' h2'') =  FUNION (FUNION h1'' h1') h2''’ by METIS_TAC[FUNION___COMM, FUNION___ASSOC] THEN
    METIS_TAC[]
-]);
+]
+QED
 
 
 
 
-val BALANCED_SF_SEM___sf_tree_len___MODEL_EXISTS = store_thm ("BALANCED_SF_SEM___sf_tree_len___MODEL_EXISTS",
-   “!s fL n es e X. ((FINITE (X:'b set)) /\ INFINITE (UNIV:'b set) /\
+Theorem BALANCED_SF_SEM___sf_tree_len___MODEL_EXISTS:
+    !s fL n es e X. ((FINITE (X:'b set)) /\ INFINITE (UNIV:'b set) /\
          (ALL_DISTINCT fL) /\
          ((n = 0) ==> DS_EXPRESSION_EQUAL s es e) /\
          (~(n = 0) ==> (
@@ -7007,7 +7256,8 @@ val BALANCED_SF_SEM___sf_tree_len___MODEL_EXISTS = store_thm ("BALANCED_SF_SEM__
            (!h'. h' IN (FRANGE h) ==> (FDOM h' = LIST_TO_SET fL)) /\
           (DISJOINT (FDOM h DIFF (
                if IS_DSV_NIL(DS_EXPRESSION_EVAL s e) then {} else
-                  {DS_EXPRESSION_EVAL_VALUE s e})) X))”,
+                  {DS_EXPRESSION_EVAL_VALUE s e})) X))
+Proof
 
 
 Cases_on ‘n’ THENL [
@@ -7190,14 +7440,16 @@ Cases_on ‘n’ THENL [
          ]
       ]
    ]
-]);
+]
+QED
 
 
 
-val BALANCED_SF_SEM___sf_tree_len_1___MODEL_SIZE = store_thm ("BALANCED_SF_SEM___sf_tree_len_1___MODEL_SIZE",
-   “!s h fL es e. BALANCED_SF_SEM___sf_tree_len s h fL 1 es e ==>
+Theorem BALANCED_SF_SEM___sf_tree_len_1___MODEL_SIZE:
+    !s h fL es e. BALANCED_SF_SEM___sf_tree_len s h fL 1 es e ==>
                    (~(IS_DSV_NIL (DS_EXPRESSION_EVAL s e)) /\
-                   (FDOM h = {DS_EXPRESSION_EVAL_VALUE s e}))”,
+                   (FDOM h = {DS_EXPRESSION_EVAL_VALUE s e}))
+Proof
 
    REWRITE_TAC [ONE, BALANCED_SF_SEM___sf_tree_len_def] THEN
    REPEAT STRIP_TAC THEN
@@ -7217,13 +7469,13 @@ val BALANCED_SF_SEM___sf_tree_len_1___MODEL_SIZE = store_thm ("BALANCED_SF_SEM__
    Q.PAT_X_ASSUM ‘EVERY X (ZIP (cL,hL))’ MP_TAC THEN
    ASM_SIMP_TAC std_ss [EVERY_MEM, MEM_ZIP, GSYM LEFT_FORALL_IMP_THM] THEN
    METIS_TAC[MEM_EL]
-)
+QED
 
 
 
 
-val BALANCED_SF_SEM___sf_tree_len_2___MODEL_EXISTS = store_thm ("BALANCED_SF_SEM___sf_tree_len_2___MODEL_EXISTS",
-“!s fL es e X. ((FINITE (X:'b set)) /\ INFINITE (UNIV:'b set) /\
+Theorem BALANCED_SF_SEM___sf_tree_len_2___MODEL_EXISTS:
+ !s fL es e X. ((FINITE (X:'b set)) /\ INFINITE (UNIV:'b set) /\
          (ALL_DISTINCT fL) /\ ~(IS_DSV_NIL (DS_EXPRESSION_EVAL s e)) /\
          ~(DS_EXPRESSION_EQUAL s es e)) ==>
 
@@ -7245,7 +7497,7 @@ val BALANCED_SF_SEM___sf_tree_len_2___MODEL_EXISTS = store_thm ("BALANCED_SF_SEM
    (!f1 f2. MEM f1 fL /\ MEM f2 fL ==> (((h2 ' (DS_EXPRESSION_EVAL_VALUE s e) ' f1) =
                                         (h2 ' (DS_EXPRESSION_EVAL_VALUE s e) ' f2)) =
                                         (f1 = f2))))
-”,
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -7449,15 +7701,16 @@ REPEAT STRIP_TAC THENL [
    FULL_SIMP_TAC std_ss [NOT_IS_DSV_NIL_THM, DS_EXPRESSION_EVAL_def,
       DS_EXPRESSION_EVAL_VALUE_def, GET_DSV_VALUE_def, ds_value_11] THEN
    SIMP_TAC std_ss [DISJOINT_DEF, EXTENSION, IN_INTER, IN_SING, NOT_IN_EMPTY]
-]);
+]
+QED
 
 
 
 
 
 
-val BALANCED_SF_SEM___sf_tree_len_2___MODEL_EXISTS_WITH_ELEMENT = store_thm ("BALANCED_SF_SEM___sf_tree_len_2___MODEL_EXISTS_WITH_ELEMENT",
-“!s fL es e c X. ((FINITE (X:'b set)) /\ INFINITE (UNIV:'b set) /\
+Theorem BALANCED_SF_SEM___sf_tree_len_2___MODEL_EXISTS_WITH_ELEMENT:
+ !s fL es e c X. ((FINITE (X:'b set)) /\ INFINITE (UNIV:'b set) /\
          (ALL_DISTINCT fL) /\ ~(IS_DSV_NIL (DS_EXPRESSION_EVAL s e)) /\
          ~(DS_EXPRESSION_EQUAL s es e) /\ ~(fL = []) /\
          ~(DS_EXPRESSION_EQUAL s es (dse_const (dsv_const c))) /\ ~(c IN X)) ==>
@@ -7466,7 +7719,7 @@ val BALANCED_SF_SEM___sf_tree_len_2___MODEL_EXISTS_WITH_ELEMENT = store_thm ("BA
    (BALANCED_SF_SEM___sf_tree_len s h fL 2 es e) /\
    (DISJOINT (FDOM h DIFF {DS_EXPRESSION_EVAL_VALUE s e}) X) /\
    (c IN FDOM h))
-”,
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -7623,14 +7876,15 @@ REPEAT STRIP_TAC THENL [
       RES_TAC THEN
       FULL_SIMP_TAC list_ss []
    ]
-]);
+]
+QED
 
 
 
 
 
-val SF_SEM___sf_tree_len___MODEL_EXISTS = store_thm ("SF_SEM___sf_tree_len___MODEL_EXISTS",
-   “!s fL n es e X. ((FINITE (X:'b set)) /\ INFINITE (UNIV:'b set) /\
+Theorem SF_SEM___sf_tree_len___MODEL_EXISTS:
+    !s fL n es e X. ((FINITE (X:'b set)) /\ INFINITE (UNIV:'b set) /\
          (ALL_DISTINCT fL) /\
 
          ((n = 0) \/ IS_DSV_NIL (DS_EXPRESSION_EVAL s e) ==>
@@ -7638,7 +7892,8 @@ val SF_SEM___sf_tree_len___MODEL_EXISTS = store_thm ("SF_SEM___sf_tree_len___MOD
       (?h. (SF_SEM___sf_tree_len s h fL n es e) /\
           (DISJOINT (FDOM h DIFF (
                if IS_DSV_NIL(DS_EXPRESSION_EVAL s e) then {} else
-                  {DS_EXPRESSION_EVAL_VALUE s e})) X))”,
+                  {DS_EXPRESSION_EVAL_VALUE s e})) X))
+Proof
 
    REPEAT STRIP_TAC THEN
    MP_TAC (Q.SPECL [‘s’, ‘fL’, ‘n’, ‘es’, ‘e’, ‘X’] BALANCED_SF_SEM___sf_tree_len___MODEL_EXISTS) THEN
@@ -7656,7 +7911,8 @@ val SF_SEM___sf_tree_len___MODEL_EXISTS = store_thm ("SF_SEM___sf_tree_len___MOD
 
          METIS_TAC[BALANCED_SF_SEM___sf_tree_len_THM]
       ]
-   ]);
+   ]
+QED
 
 
 
@@ -7664,11 +7920,12 @@ val SF_SEM___sf_tree_len___MODEL_EXISTS = store_thm ("SF_SEM___sf_tree_len___MOD
 
 
 
-val lemma_31_list = store_thm ("lemma_31_list",
-   “!s h sfL hs. ((LIST_SF_SEM s h sfL) /\ (FCARD hs = 1) /\ (hs SUBMAP h)) ==>
+Theorem lemma_31_list:
+    !s h sfL hs. ((LIST_SF_SEM s h sfL) /\ (FCARD hs = 1) /\ (hs SUBMAP h)) ==>
                  (?sf' h'.  (MEM sf' sfL) /\
                                (h' SUBMAP h) /\ (DISJOINT (FDOM hs) (FDOM h')) /\
-                               (SF_SEM s (FUNION hs h') sf'))”,
+                               (SF_SEM s (FUNION hs h') sf'))
+Proof
 
    Induct_on ‘sfL’ THENL [
       SIMP_TAC std_ss [LIST_SF_SEM_THM, SUBMAP_DEF, FDOM_FEMPTY, NOT_IN_EMPTY, FCARD_DEF] THEN
@@ -7710,17 +7967,19 @@ val lemma_31_list = store_thm ("lemma_31_list",
       Q.EXISTS_TAC ‘h''’ THEN
       ASM_SIMP_TAC std_ss [] THEN
       METIS_TAC[SUBMAP___FUNION___ID, SUBMAP_TRANS, SUBMAP_REFL]
-   ]);
+   ]
+QED
 
 
 
-val LEMMA_31 = store_thm ("LEMMA_31",
-   “!s h sf hs. ((SF_SEM s h sf) /\ (FCARD hs = 1) /\ (hs SUBMAP h)) ==>
+Theorem LEMMA_31:
+    !s h sf hs. ((SF_SEM s h sf) /\ (FCARD hs = 1) /\ (hs SUBMAP h)) ==>
                  (?sf' h' sf''.  SF_IS_SIMPLE sf' /\
                                (SF_EXPRESSION_SET sf = SF_EXPRESSION_SET sf' UNION SF_EXPRESSION_SET sf'') /\
                                (SF_EQUIV sf (sf_star sf' sf'')) /\
                                (h' SUBMAP h) /\ (DISJOINT (FDOM hs) (FDOM h')) /\
-                               (SF_SEM s (FUNION hs h') sf'))”,
+                               (SF_SEM s (FUNION hs h') sf'))
+Proof
 
    SIMP_TAC std_ss [LIST_SF_SEM_FLAT_INTRO] THEN
    REPEAT STRIP_TAC THEN
@@ -7731,7 +7990,8 @@ val LEMMA_31 = store_thm ("LEMMA_31",
    Q.EXISTS_TAC ‘h'’ THEN
    ‘(SF_IS_SIMPLE sf') /\ (DS_FLAT_SF sf' = [sf'])’ by METIS_TAC[SF_IS_SIMPLE___MEM_DS_FLAT_SF] THEN
    ASM_SIMP_TAC std_ss [GSYM LIST_SF_SEM_FLAT_INTRO] THEN
-   METIS_TAC[SIMPLE_SUB_FORMULA_TO_FRONT, SF_EQUIV_def]);
+   METIS_TAC[SIMPLE_SUB_FORMULA_TO_FRONT, SF_EQUIV_def]
+QED
 
 
 
@@ -7751,7 +8011,6 @@ Theorem LEMMA_5:
     DS_POINTER_DANGLES s h e2 ==>
     PF_SEM s pf' /\ SF_SEM___EXTEND s h (sf_tree fL e3 e2) sf'
 Proof
-
 REPEAT GEN_TAC THEN STRIP_TAC THEN
 Cases_on ‘DS_EXPRESSION_EVAL s e2’ THEN1 (
    FULL_SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def, DS_EXPRESSION_EQUAL_def, dse_nil_def]
@@ -8653,8 +8912,8 @@ End
 
 
 
-val HEAP_DISTINCT___IND_DEF = store_thm ("HEAP_DISTINCT___IND_DEF",
-“ (!s h. HEAP_DISTINCT s h [] [] = T) /\
+Theorem HEAP_DISTINCT___IND_DEF:
+  (!s h. HEAP_DISTINCT s h [] [] = T) /\
    (!s h e c. HEAP_DISTINCT s h (e::c) d = (HEAP_DISTINCT s h c d /\
                                          ~(IS_DSV_NIL (DS_EXPRESSION_EVAL s e)) /\
                                          ~(GET_DSV_VALUE (DS_EXPRESSION_EVAL s e) IN FDOM h) /\
@@ -8673,7 +8932,8 @@ val HEAP_DISTINCT___IND_DEF = store_thm ("HEAP_DISTINCT___IND_DEF",
                                                            ((DS_EXPRESSION_EQUAL s e1' e2') \/
                                                            (~(DS_EXPRESSION_EQUAL s e1 e1')))) /\
 
-                                         (!e'. MEM e' c ==> (~(DS_EXPRESSION_EQUAL s e1 e')))))))”,
+                                         (!e'. MEM e' c ==> (~(DS_EXPRESSION_EQUAL s e1 e')))))))
+Proof
 
 
 REPEAT CONJ_TAC THENL [
@@ -8717,21 +8977,25 @@ REPEAT CONJ_TAC THENL [
           METIS_TAC[GET_DSV_VALUE_11]
       ]
    ]
-])
+]
+QED
 
 
-val HEAP_DISTINCT___FUNION = store_thm ("HEAP_DISTINCT___FUNION",
-“!s h1 h2 e c d.
+Theorem HEAP_DISTINCT___FUNION:
+ !s h1 h2 e c d.
       HEAP_DISTINCT s (FUNION h1 h2) c d =
-      HEAP_DISTINCT s h1 c d /\ HEAP_DISTINCT s h2 c d”,
+      HEAP_DISTINCT s h1 c d /\ HEAP_DISTINCT s h2 c d
+Proof
 
 SIMP_TAC std_ss [HEAP_DISTINCT_def, FDOM_FUNION, IN_UNION, DS_POINTER_DANGLES] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
-val HEAP_DISTINCT___PERM = store_thm ("HEAP_DISTINCT___PERM",
-“!s h c1 c2 d1 d2. (PERM c1 c2 /\ PERM d1 d2) ==>
-              (HEAP_DISTINCT s h c1 d1 = HEAP_DISTINCT s h c2 d2)”,
+Theorem HEAP_DISTINCT___PERM:
+ !s h c1 c2 d1 d2. (PERM c1 c2 /\ PERM d1 d2) ==>
+              (HEAP_DISTINCT s h c1 d1 = HEAP_DISTINCT s h c2 d2)
+Proof
 
 
 SIMP_TAC std_ss [HEAP_DISTINCT_def] THEN
@@ -8749,39 +9013,45 @@ BINOP_TAC THENL [
    MATCH_MP_TAC PERM_MAP THEN
    MATCH_MP_TAC PERM_FILTER THEN
    ASM_REWRITE_TAC[]
-])
+]
+QED
 
 
 
 
-val HEAP_DISTINCT___dse_nil = store_thm ("HEAP_DISTINCT___dse_nil",
-   “!s h c d x. MEM x c /\ (HEAP_DISTINCT s h c d) ==>
-                 ~(DS_EXPRESSION_EQUAL s x dse_nil)”,
+Theorem HEAP_DISTINCT___dse_nil:
+    !s h c d x. MEM x c /\ (HEAP_DISTINCT s h c d) ==>
+                 ~(DS_EXPRESSION_EQUAL s x dse_nil)
+Proof
 
 SIMP_TAC std_ss [HEAP_DISTINCT_def, DS_EXPRESSION_EQUAL_def, dse_nil_def, DS_EXPRESSION_EVAL_def] THEN
 REPEAT STRIP_TAC THEN
 RES_TAC THEN
-METIS_TAC[IS_DSV_NIL_def]);
+METIS_TAC[IS_DSV_NIL_def]
+QED
 
 
 
 
-val HEAP_DISTINCT___NOT_ALL_DISTINCT = store_thm ("HEAP_DISTINCT___NOT_ALL_DISTINCT",
-   “!s h c d n1 n2. ((n1 < LENGTH c) /\ (n2 < LENGTH c) /\ ~(n1 = n2) /\ (EL n1 c = EL n2 c)) ==>
-             ~(HEAP_DISTINCT s h c d)”,
+Theorem HEAP_DISTINCT___NOT_ALL_DISTINCT:
+    !s h c d n1 n2. ((n1 < LENGTH c) /\ (n2 < LENGTH c) /\ ~(n1 = n2) /\ (EL n1 c = EL n2 c)) ==>
+             ~(HEAP_DISTINCT s h c d)
+Proof
 
 SIMP_TAC list_ss [HEAP_DISTINCT_def, EL_ALL_DISTINCT_EQ] THEN
 REPEAT STRIP_TAC THEN
 DISJ2_TAC THEN DISJ1_TAC THEN
 Q.EXISTS_TAC ‘n1’ THEN
 Q.EXISTS_TAC ‘n2’ THEN
-ASM_SIMP_TAC std_ss [EL_MAP])
+ASM_SIMP_TAC std_ss [EL_MAP]
+QED
 
 
 
-val HEAP_DISTINCT___NOT_ALL_DISTINCT2 = store_thm ("HEAP_DISTINCT___NOT_ALL_DISTINCT2",
-   “!s h c d n1 n2. ((n1 < LENGTH d) /\ (n2 < LENGTH d) /\ ~(n1 = n2) /\ (EL n1 d = EL n2 d) /\
-             (HEAP_DISTINCT s h c d)) ==> DS_EXPRESSION_EQUAL s (FST (EL n1 d)) (SND (EL n1 d))”,
+Theorem HEAP_DISTINCT___NOT_ALL_DISTINCT2:
+    !s h c d n1 n2. ((n1 < LENGTH d) /\ (n2 < LENGTH d) /\ ~(n1 = n2) /\ (EL n1 d = EL n2 d) /\
+             (HEAP_DISTINCT s h c d)) ==> DS_EXPRESSION_EQUAL s (FST (EL n1 d)) (SND (EL n1 d))
+Proof
 
 SIMP_TAC list_ss [HEAP_DISTINCT_def, EL_ALL_DISTINCT_EQ] THEN
 REPEAT STRIP_TAC THEN
@@ -8794,25 +9064,30 @@ CCONTR_TAC THEN
 FULL_SIMP_TAC std_ss [EL_MAP] THEN
 Q.PAT_X_ASSUM ‘!n1 (n2:num). P n1 n2’ (fn thm => MP_TAC (Q.SPECL [‘n1'’, ‘n2'’] thm)) THEN
 pairLib.GEN_BETA_TAC THEN
-ASM_REWRITE_TAC[])
+ASM_REWRITE_TAC[]
+QED
 
 
 
-val HEAP_DISTINCT___EQUAL = store_thm ("HEAP_DISTINCT___EQUAL",
-   “!s h c d e. HEAP_DISTINCT s h c ((e,e)::d) =
-                 HEAP_DISTINCT s h c d”,
+Theorem HEAP_DISTINCT___EQUAL:
+    !s h c d e. HEAP_DISTINCT s h c ((e,e)::d) =
+                 HEAP_DISTINCT s h c d
+Proof
 
-   SIMP_TAC std_ss [HEAP_DISTINCT___IND_DEF, DS_EXPRESSION_EQUAL_def])
+   SIMP_TAC std_ss [HEAP_DISTINCT___IND_DEF, DS_EXPRESSION_EQUAL_def]
+QED
 
 
-val HEAP_DISTINCT___UNEQUAL = store_thm ("HEAP_DISTINCT___UNEQUAL",
-   “!s h c d e1 e2. ~(DS_EXPRESSION_EQUAL s e1 e2) ==>
+Theorem HEAP_DISTINCT___UNEQUAL:
+    !s h c d e1 e2. ~(DS_EXPRESSION_EQUAL s e1 e2) ==>
 
                  (HEAP_DISTINCT s h c ((e1,e2)::d) =
-                  HEAP_DISTINCT s h (e1::c) d)”,
+                  HEAP_DISTINCT s h (e1::c) d)
+Proof
 
    SIMP_TAC std_ss [HEAP_DISTINCT___IND_DEF] THEN
-   METIS_TAC[])
+   METIS_TAC[]
+QED
 
 
 
@@ -8823,14 +9098,14 @@ End
 
 
 
-val LIST_DS_ENTAILS___PERM = store_thm (
-"LIST_DS_ENTAILS___PERM",
-“!c1 c2 pf sf pf' sf' c12 c22 pf2 sf2 pf2' sf2'.
+Theorem LIST_DS_ENTAILS___PERM:
+ !c1 c2 pf sf pf' sf' c12 c22 pf2 sf2 pf2' sf2'.
 
 ((PERM c1 c12) /\ (PERM c2 c22) /\ (PERM pf pf2) /\ (PERM sf sf2) /\ (PERM pf' pf2') /\ (PERM sf' sf2')) ==>
 
 (LIST_DS_ENTAILS (c1,c2) (pf, sf) (pf', sf') =
-LIST_DS_ENTAILS (c12,c22) (pf2, sf2) (pf2', sf2'))”,
+LIST_DS_ENTAILS (c12,c22) (pf2, sf2) (pf2', sf2'))
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_def] THEN
 REPEAT STRIP_TAC THEN
@@ -8844,25 +9119,29 @@ REPEAT STRIP_TAC THEN
 ) THEN
 ‘!s (h:('a, 'c) heap). HEAP_DISTINCT s h c1 c2 = HEAP_DISTINCT s h c12 c22’ by
    ASM_SIMP_TAC std_ss [HEAP_DISTINCT___PERM] THEN
-ASM_SIMP_TAC std_ss []);
+ASM_SIMP_TAC std_ss []
+QED
 
 
 
 
 (*Normalization Rules*)
 
-val INFERENCE_INCONSISTENT = store_thm ("INFERENCE_INCONSISTENT",
-“!e c1 c2 pfL sfL pfL' sfL'. LIST_DS_ENTAILS (c1,c2) ((pf_unequal e e)::pfL, sfL) (sfL', pfL')”,
+Theorem INFERENCE_INCONSISTENT:
+ !e c1 c2 pfL sfL pfL' sfL'. LIST_DS_ENTAILS (c1,c2) ((pf_unequal e e)::pfL, sfL) (sfL', pfL')
+Proof
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL,
-   DS_EXPRESSION_EQUAL_def]);
+   DS_EXPRESSION_EQUAL_def]
+QED
 
 
 
 
-val INFERENCE_SUBSTITUTION = store_thm ("INFERENCE_SUBSTITUTION",
-“!e c1 c2 v pfL sfL pfL' sfL'.
+Theorem INFERENCE_SUBSTITUTION:
+ !e c1 c2 v pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (MAP (DS_VAR_SUBST v e) c1, MAP (\x. (DS_VAR_SUBST v e (FST x), DS_VAR_SUBST v e (SND x))) c2) (MAP (PF_SUBST v e) pfL, MAP (SF_SUBST v e) sfL) (MAP (PF_SUBST v e) pfL', MAP (SF_SUBST v e) sfL') =
-      LIST_DS_ENTAILS (c1,c2) ((pf_equal (dse_var v) e)::pfL, sfL) (pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) ((pf_equal (dse_var v) e)::pfL, sfL) (pfL', sfL')
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_def,
    DS_EXPRESSION_EQUAL_def, DS_EXPRESSION_EVAL_def,
@@ -8890,38 +9169,44 @@ EQ_TAC THEN STRIP_TAC THENL [
       SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def],
       SIMP_TAC std_ss [DS_EXPRESSION_EVAL_def, COND_RATOR, COND_RAND]
    ]
-]);
+]
+QED
 
 
 
-val INFERENCE_REFLEXIVE_L = store_thm ("INFERENCE_REFLEXIVE_L",
-“!e c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_REFLEXIVE_L:
+ !e c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) ((pf_equal e e)::pfL, sfL) (pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) ((pf_equal e e)::pfL, sfL) (pfL', sfL')
+Proof
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM,
-   DS_EXPRESSION_EQUAL_def, PF_SEM_def]);
+   DS_EXPRESSION_EQUAL_def, PF_SEM_def]
+QED
 
 
 
 
-val INFERENCE_NIL_NOT_LVAL___points_to = store_thm ("INFERENCE_NIL_NOT_LVAL___points_to",
-“!e c1 c2 a pfL sfL pfL' sfL'.
+Theorem INFERENCE_NIL_NOT_LVAL___points_to:
+ !e c1 c2 a pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) ((pf_unequal e dse_nil)::pfL, (sf_points_to e a)::sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e a)::sfL) (pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e a)::sfL) (pfL', sfL')
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM,
    DS_EXPRESSION_EQUAL_def, DS_POINTS_TO_def, DS_EXPRESSION_EVAL_def,
    IS_DSV_NIL_THM, dse_nil_def, SF_SEM_def, PF_SEM_def] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 
-val INFERENCE_NIL_NOT_LVAL___tree = store_thm ("INFERENCE_NIL_NOT_LVAL___tree",
-“!e1 e2 fL c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_NIL_NOT_LVAL___tree:
+ !e1 e2 fL c1 c2 pfL sfL pfL' sfL'.
       MEM_UNEQ_PF_LIST e1 e2 pfL ==>
 
       (LIST_DS_ENTAILS (c1,c2) ((pf_unequal e2 dse_nil)::pfL, (sf_tree fL e1 e2)::sfL) (pfL', sfL') =
-       LIST_DS_ENTAILS (c1,c2) (pfL, (sf_tree fL e1 e2)::sfL) (pfL', sfL'))”,
+       LIST_DS_ENTAILS (c1,c2) (pfL, (sf_tree fL e1 e2)::sfL) (pfL', sfL'))
+Proof
 
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM,
@@ -8940,42 +9225,48 @@ Cases_on ‘n’ THENL [
 
    FULL_SIMP_TAC std_ss [SF_SEM___sf_tree_len_def, PF_SEM_def, DS_EXPRESSION_EQUAL_def,
       IS_DSV_NIL_THM]
-])
+]
+QED
 
 
 
-val INFERENCE_NIL_NOT_LVAL___list = store_thm ("INFERENCE_NIL_NOT_LVAL___list",
-“!e1 e2 f c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_NIL_NOT_LVAL___list:
+ !e1 e2 f c1 c2 pfL sfL pfL' sfL'.
       MEM_UNEQ_PF_LIST e2 e1 pfL ==>
 
       (LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 dse_nil)::pfL, (sf_ls f e1 e2)::sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', sfL'))
+Proof
 
 SIMP_TAC std_ss [sf_ls_def] THEN
-METIS_TAC[INFERENCE_NIL_NOT_LVAL___tree]);
+METIS_TAC[INFERENCE_NIL_NOT_LVAL___tree]
+QED
 
 
 
 
 
-val INFERENCE_PARTIAL___points_to___points_to = store_thm ("INFERENCE_PARTIAL___points_to___points_to",
-“!e1 e2 a1 a2 c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_PARTIAL___points_to___points_to:
+ !e1 e2 a1 a2 c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e2)::pfL, (sf_points_to e1 a1)::(sf_points_to e2 a2)::sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e1 a1)::(sf_points_to e2 a2)::sfL) (pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e1 a1)::(sf_points_to e2 a2)::sfL) (pfL', sfL')
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL,
    DS_EXPRESSION_EQUAL_def, DS_POINTS_TO_def, DS_EXPRESSION_EVAL_def,
    IS_DSV_NIL_THM, dse_nil_def, FDOM_DOMSUB, IN_DELETE] THEN
-METIS_TAC[GET_DSV_VALUE_11])
+METIS_TAC[GET_DSV_VALUE_11]
+QED
 
 
 
-val INFERENCE_PARTIAL___points_to___tree = store_thm ("INFERENCE_PARTIAL___points_to___tree",
-“!e1 e2 e3 e4 fL c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_PARTIAL___points_to___tree:
+ !e1 e2 e3 e4 fL c1 c2 pfL sfL pfL' sfL'.
       MEM_UNEQ_PF_LIST e3 e4 pfL ==>
       (
       LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e3)::pfL, (sf_points_to e1 e2)::(sf_tree fL e4 e3)::sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e1 e2)::(sf_tree fL e4 e3)::sfL) (pfL', sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e1 e2)::(sf_tree fL e4 e3)::sfL) (pfL', sfL'))
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL, DS_EXPRESSION_EQUAL_def] THEN
 REPEAT STRIP_TAC THEN
@@ -8986,16 +9277,18 @@ STRIP_EQ_BOOL_TAC THEN
 ‘~(DS_EXPRESSION_EQUAL s e3 e4)’ by METIS_TAC[MEM_UNEQ_PF_LIST_SEM, LIST_DS_SEM_def] THEN
 FULL_SIMP_TAC std_ss [LIST_DS_SEM_EVAL, DS_EXPRESSION_EQUAL_def, LET_THM] THEN
 FULL_SIMP_TAC std_ss [DS_POINTS_TO_def, FDOM_DOMSUB, IN_DELETE] THEN
-METIS_TAC[])
+METIS_TAC[]
+QED
 
 
 
-val INFERENCE_PARTIAL___tree___tree = store_thm ("INFERENCE_PARTIAL___tree___tree",
-“!e1 e2 e3 e4 fL fL' c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_PARTIAL___tree___tree:
+ !e1 e2 e3 e4 fL fL' c1 c2 pfL sfL pfL' sfL'.
       (MEM_UNEQ_PF_LIST e1 e2 pfL /\ MEM_UNEQ_PF_LIST e3 e4 pfL) ==>
 
       (LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e3)::pfL, (sf_tree fL e2 e1)::(sf_tree fL' e4 e3)::sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_tree fL e2 e1)::(sf_tree fL' e4 e3)::sfL) (pfL', sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_tree fL e2 e1)::(sf_tree fL' e4 e3)::sfL) (pfL', sfL'))
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL, DS_EXPRESSION_EQUAL_def] THEN
 REPEAT STRIP_TAC THEN
@@ -9016,16 +9309,18 @@ FULL_SIMP_TAC std_ss [LIST_DS_SEM_EVAL, LET_THM, MAP_MAP_o] THEN
 ) THEN
 FULL_SIMP_TAC list_ss [LIST_DS_SEM_EVAL, LET_THM] THEN
 FULL_SIMP_TAC std_ss [DS_POINTS_TO_def, FDOM_DOMSUB, IN_DELETE] THEN
-METIS_TAC[])
+METIS_TAC[]
+QED
 
 
 
-val INFERENCE_PARTIAL___precondition___points_to = store_thm ("INFERENCE_PARTIAL___precondition___points_to",
-“!e1 e2 e3 c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_PARTIAL___precondition___points_to:
+ !e1 e2 e3 c1 c2 pfL sfL pfL' sfL'.
       MEM e3 c1 ==>
 
       (LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e3)::pfL, (sf_points_to e1 e2)::sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e1 e2)::sfL) (pfL', sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e1 e2)::sfL) (pfL', sfL'))
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL,
    DS_EXPRESSION_EQUAL_def, DS_POINTS_TO_def, DS_EXPRESSION_EVAL_def,
@@ -9036,15 +9331,16 @@ STRIP_EQ_BOOL_TAC THEN
 ASM_SIMP_TAC std_ss [] THEN
 STRIP_EQ_BOOL_TAC THEN
 METIS_TAC[HEAP_DISTINCT_def]
-);
+QED
 
 
-val INFERENCE_PARTIAL___precondition___tree = store_thm ("INFERENCE_PARTIAL___precondition___tree",
-“!es e e' fL c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_PARTIAL___precondition___tree:
+ !es e e' fL c1 c2 pfL sfL pfL' sfL'.
       (MEM e' c1 /\ MEM_UNEQ_PF_LIST e es pfL) ==>
 
       (LIST_DS_ENTAILS (c1,c2) ((pf_unequal e e')::pfL, (sf_tree fL es e)::sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_tree fL es e)::sfL) (pfL', sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_tree fL es e)::sfL) (pfL', sfL'))
+Proof
 
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL, DS_EXPRESSION_EQUAL_def] THEN
@@ -9060,58 +9356,67 @@ Q.PAT_X_ASSUM ‘SF_SEM s h1 Y’ MP_TAC THEN
 ‘~(DS_EXPRESSION_EQUAL s e es)’ by METIS_TAC[MEM_UNEQ_PF_LIST_SEM, LIST_DS_SEM_def] THEN
 ASM_SIMP_TAC std_ss [SF_SEM___sf_tree_THM, DS_EXPRESSION_EQUAL_def, LET_THM,
 SF_SEM___sf_points_to_THM, DS_POINTS_TO_def, FDOM_FUNION, IN_UNION] THEN
-METIS_TAC[])
+METIS_TAC[]
+QED
 
 
 
 
 
 
-val INFERENCE_EXCLUDED_MIDDLE = store_thm ("INFERENCE_EXCLUDED_MIDDLE",
-“!e1:('b, 'a) ds_expression e2 c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_EXCLUDED_MIDDLE:
+ !e1:('b, 'a) ds_expression e2 c1 c2 pfL sfL pfL' sfL'.
       (LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e2)::pfL, sfL) (pfL', sfL') /\
        LIST_DS_ENTAILS (c1,c2) ((pf_equal e1 e2)::pfL, sfL) (pfL', sfL'))
       =
-      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL')
+Proof
 
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM, PF_SEM_def] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 
 
 
 
-val INFERENCE_EMP_TREE_L = store_thm ("INFERENCE_EMP_TREE_L",
-“!e fL c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_EMP_TREE_L:
+ !e fL c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_tree fL e e)::sfL) (pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_tree fL e e)::sfL) (pfL', sfL')
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM] THEN
 ONCE_REWRITE_TAC [SF_SEM___sf_tree_THM] THEN
 SIMP_TAC std_ss [DS_EXPRESSION_EQUAL_def,
-   DISJOINT_EMPTY, FDOM_FEMPTY, FUNION_FEMPTY_1])
+   DISJOINT_EMPTY, FDOM_FEMPTY, FUNION_FEMPTY_1]
+QED
 
 
 
-val INFERENCE_EMP_BIN_TREE_L = store_thm ("INFERENCE_EMP_BIN_TREE_L",
-“!f1 f2 c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_EMP_BIN_TREE_L:
+ !f1 f2 c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_bin_tree (f1,f2) dse_nil)::sfL) (pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_bin_tree (f1,f2) dse_nil)::sfL) (pfL', sfL')
+Proof
 
 SIMP_TAC std_ss [sf_bin_tree_def] THEN
-METIS_TAC[INFERENCE_EMP_TREE_L])
+METIS_TAC[INFERENCE_EMP_TREE_L]
+QED
 
 
 
-val INFERENCE_EMP_LIST_L = store_thm ("INFERENCE_EMP_LIST_L",
-“!f e c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_EMP_LIST_L:
+ !f e c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e e)::sfL) (pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e e)::sfL) (pfL', sfL')
+Proof
 
 SIMP_TAC std_ss [sf_ls_def] THEN
-METIS_TAC[INFERENCE_EMP_TREE_L])
+METIS_TAC[INFERENCE_EMP_TREE_L]
+QED
 
 
 
@@ -9122,70 +9427,83 @@ METIS_TAC[INFERENCE_EMP_TREE_L])
 (*Subtraction Rules*)
 
 
-val INFERENCE_AXIOM = store_thm ("INFERENCE_AXIOM",
-“!pfL c1 c2. LIST_DS_ENTAILS (c1,c2) (pfL, []) ([], [])”,
-SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM, LIST_SF_SEM_THM]);
+Theorem INFERENCE_AXIOM:
+ !pfL c1 c2. LIST_DS_ENTAILS (c1,c2) (pfL, []) ([], [])
+Proof
+SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM, LIST_SF_SEM_THM]
+QED
 
 
 
-val INFERENCE_REFLEXIVE_R = store_thm ("INFERENCE_REFLEXIVE_R",
-“!e c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_REFLEXIVE_R:
+ !e c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) ((pf_equal e e)::pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) ((pf_equal e e)::pfL', sfL')
+Proof
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL,
-   DS_EXPRESSION_EQUAL_def]);
+   DS_EXPRESSION_EQUAL_def]
+QED
 
 
 
-val INFERENCE_HYPOTHESIS = store_thm ("INFERENCE_HYPOTHESIS",
-“!pf c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_HYPOTHESIS:
+ !pf c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS c (pf::pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS c (pf::pfL, sfL) (pf::pfL', sfL')”,
+      LIST_DS_ENTAILS c (pf::pfL, sfL) (pf::pfL', sfL')
+Proof
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def,
    LIST_DS_SEM_def, LIST_PF_SEM_THM] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
 
 
-val INFERENCE_EMP_TREE_R = store_thm ("INFERENCE_EMP_TREE_R",
-“!e fL c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_EMP_TREE_R:
+ !e fL c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', (sf_tree fL e e)::sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', (sf_tree fL e e)::sfL')
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM] THEN
 ONCE_REWRITE_TAC [SF_SEM___sf_tree_THM] THEN
 SIMP_TAC std_ss [DS_EXPRESSION_EQUAL_def,
-   DISJOINT_EMPTY, FDOM_FEMPTY, FUNION_FEMPTY_1])
+   DISJOINT_EMPTY, FDOM_FEMPTY, FUNION_FEMPTY_1]
+QED
 
 
 
-val INFERENCE_EMP_BIN_TREE_R = store_thm ("INFERENCE_EMP_BIN_TREE_R",
-“!f1 f2 c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_EMP_BIN_TREE_R:
+ !f1 f2 c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', (sf_bin_tree (f1,f2) dse_nil)::sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', (sf_bin_tree (f1,f2) dse_nil)::sfL')
+Proof
 
 SIMP_TAC std_ss [sf_bin_tree_def] THEN
-METIS_TAC[INFERENCE_EMP_TREE_R])
+METIS_TAC[INFERENCE_EMP_TREE_R]
+QED
 
 
 
-val INFERENCE_EMP_LIST_R = store_thm ("INFERENCE_EMP_LIST_R",
-“!f e c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_EMP_LIST_R:
+ !f e c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', (sf_ls f e e)::sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', (sf_ls f e e)::sfL')
+Proof
 
 SIMP_TAC std_ss [sf_ls_def] THEN
-METIS_TAC[INFERENCE_EMP_TREE_R]);
+METIS_TAC[INFERENCE_EMP_TREE_R]
+QED
 
 
 
 
 
-val INFERENCE_STAR_INTRODUCTION___IMPL = store_thm ("INFERENCE_STAR_INTRODUCTION___IMPL",
-“!sf c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_STAR_INTRODUCTION___IMPL:
+ !sf c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) (pfL, sfL) (pfL', sfL') ==>
-      LIST_DS_ENTAILS (c1,c2) (pfL, sf::sfL) (pfL', sf::sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, sf::sfL) (pfL', sf::sfL')
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_def,
    LIST_SF_SEM_THM, GSYM RIGHT_EXISTS_AND_THM] THEN
@@ -9194,18 +9512,20 @@ Q.EXISTS_TAC ‘h1’ THEN
 Q.EXISTS_TAC ‘h2’ THEN
 ASM_SIMP_TAC std_ss [] THEN
 Q.PAT_X_ASSUM ‘!s h. P s h’ MATCH_MP_TAC THEN
-FULL_SIMP_TAC std_ss [HEAP_DISTINCT___FUNION]);
+FULL_SIMP_TAC std_ss [HEAP_DISTINCT___FUNION]
+QED
 
 
 
 
-val INFERENCE_STAR_INTRODUCTION___points_to = store_thm ("INFERENCE_STAR_INTRODUCTION___points_to",
-“!e a1 a2 c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_STAR_INTRODUCTION___points_to:
+ !e a1 a2 c1 c2 pfL sfL pfL' sfL'.
       ((!x. MEM x a2 ==> MEM x a1) /\
        ALL_DISTINCT (MAP FST a1)) ==>
       (
       LIST_DS_ENTAILS (e::c1, c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e a1)::sfL) (pfL', (sf_points_to e a2)::sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e a1)::sfL) (pfL', (sf_points_to e a2)::sfL'))
+Proof
 
 SIMP_TAC list_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL, DISJ_IMP_THM, FORALL_AND_THM] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
@@ -9283,16 +9603,18 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
       METIS_TAC[GET_DSV_VALUE_def, NOT_IS_DSV_NIL_THM]
    ) THEN
    ASM_SIMP_TAC std_ss [DOMSUB_FUNION, FUNION_FEMPTY_1]
-]);
+]
+QED
 
 
 
-val INFERENCE_STAR_INTRODUCTION___tree = store_thm ("INFERENCE_STAR_INTRODUCTION___tree",
-“!e es fL fL' c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_STAR_INTRODUCTION___tree:
+ !e es fL fL' c1 c2 pfL sfL pfL' sfL'.
       (PERM fL fL') ==>
       (
       LIST_DS_ENTAILS (c1, (e,es)::c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1, c2) (pfL, (sf_tree fL es e)::sfL) (pfL', (sf_tree fL' es e)::sfL'))”,
+      LIST_DS_ENTAILS (c1, c2) (pfL, (sf_tree fL es e)::sfL) (pfL', (sf_tree fL' es e)::sfL'))
+Proof
 
 SIMP_TAC list_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_THM, DISJ_IMP_THM, FORALL_AND_THM] THEN
 REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
@@ -9379,40 +9701,46 @@ REPEAT STRIP_TAC THEN EQ_TAC THEN STRIP_TAC THENL [
    ) THEN
    Q.PAT_X_ASSUM ‘FUNION h2 h = Y’ MP_TAC THEN
    ASM_SIMP_TAC std_ss [FUNION_EQ]
-])
+]
+QED
 
 
 
 
-val INFERENCE_STAR_INTRODUCTION___list = store_thm ("INFERENCE_STAR_INTRODUCTION___list",
-“!e1 e2 f c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_STAR_INTRODUCTION___list:
+ !e1 e2 f c1 c2 pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1, (e1,e2)::c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1, c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', (sf_ls f e1 e2)::sfL')”,
+      LIST_DS_ENTAILS (c1, c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', (sf_ls f e1 e2)::sfL')
+Proof
 
 SIMP_TAC std_ss [sf_ls_def] THEN
 REPEAT GEN_TAC THEN
 MATCH_MP_TAC INFERENCE_STAR_INTRODUCTION___tree THEN
-SIMP_TAC std_ss [PERM_REFL])
+SIMP_TAC std_ss [PERM_REFL]
+QED
 
 
-val INFERENCE_STAR_INTRODUCTION___bin_tree = store_thm ("INFERENCE_STAR_INTRODUCTION___bin_tree",
-“!e f1 f2 f1' f2' c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_STAR_INTRODUCTION___bin_tree:
+ !e f1 f2 f1' f2' c1 c2 pfL sfL pfL' sfL'.
       (((f1 = f1') /\  (f2 = f2')) \/ ((f1 = f2') /\  (f2 = f1'))) ==>
 
      (LIST_DS_ENTAILS (c1, (e,dse_nil)::c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1, c2) (pfL, (sf_bin_tree (f1,f2) e)::sfL) (pfL', (sf_bin_tree (f1',f2') e)::sfL'))”,
+      LIST_DS_ENTAILS (c1, c2) (pfL, (sf_bin_tree (f1,f2) e)::sfL) (pfL', (sf_bin_tree (f1',f2') e)::sfL'))
+Proof
 
 SIMP_TAC std_ss [sf_bin_tree_def] THEN
 REPEAT STRIP_TAC THEN (
    MATCH_MP_TAC INFERENCE_STAR_INTRODUCTION___tree THEN
    ASM_SIMP_TAC std_ss [PERM_REFL, PERM_SWAP_AT_FRONT]
-));
+)
+QED
 
 
-val LIST_DS_ENTAILS___ELIM_PRECONDITION_1 = store_thm ("LIST_DS_ENTAILS___ELIM_PRECONDITION_1",
-“!c11 c12 c2 pfL pfL' sfL sfL'.
+Theorem LIST_DS_ENTAILS___ELIM_PRECONDITION_1:
+ !c11 c12 c2 pfL pfL' sfL sfL'.
       LIST_DS_ENTAILS ((c11++c12), c2) (pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c12,c2) (pfL,(MAP (\e. sf_points_to e []) c11)++sfL) (pfL',(MAP (\e. sf_points_to e []) c11)++ sfL')”,
+      LIST_DS_ENTAILS (c12,c2) (pfL,(MAP (\e. sf_points_to e []) c11)++sfL) (pfL',(MAP (\e. sf_points_to e []) c11)++ sfL')
+Proof
 
 Induct_on ‘c11’ THENL [
    SIMP_TAC list_ss [],
@@ -9432,7 +9760,8 @@ Induct_on ‘c11’ THENL [
    Q.EXISTS_TAC ‘c11’ THEN
    Q.EXISTS_TAC ‘c12’ THEN
    SIMP_TAC std_ss [PERM_REFL]
-]);
+]
+QED
 
 
 Theorem LIST_DS_ENTAILS___ELIM_PRECONDITION_2:
@@ -9487,14 +9816,15 @@ Proof
   SIMP_TAC std_ss [PERM_REFL, PERM_APPEND]
 QED
 
-val INFERENCE_NON_EMPTY_TREE = store_thm ("INFERENCE_NON_EMPTY_TREE",
-“!e es c1 c2 eL fL a pfL sfL pfL' sfL'.
+Theorem INFERENCE_NON_EMPTY_TREE:
+ !e es c1 c2 eL fL a pfL sfL pfL' sfL'.
       ((LENGTH eL = LENGTH fL) /\ ALL_DISTINCT fL /\
       (!n. n < LENGTH eL ==> MEM (EL n fL, EL n eL) a)) ==>
 
       ((LIST_DS_ENTAILS (c1,c2) ((pf_unequal e es)::pfL, (sf_points_to e a)::sfL) (pfL',
        (sf_points_to e a)::((MAP (\e. sf_tree fL es e) eL)++sfL'))) =
-       LIST_DS_ENTAILS (c1,c2) ((pf_unequal e es)::pfL, (sf_points_to e a)::sfL) (pfL', (sf_tree fL es e)::sfL'))”,
+       LIST_DS_ENTAILS (c1,c2) ((pf_unequal e es)::pfL, (sf_points_to e a)::sfL) (pfL', (sf_tree fL es e)::sfL'))
+Proof
 
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def] THEN
@@ -9550,7 +9880,8 @@ Induct_on ‘fL’ THENL [
          METIS_TAC[SF_SEM___sf_tree_len___DS_EXPRESSION_EQUAL_THM, DS_EXPRESSION_EQUAL_def]
       ]
    ]
-]);
+]
+QED
 
 
 
@@ -9560,12 +9891,13 @@ Induct_on ‘fL’ THENL [
 
 
 
-val INFERENCE_NON_EMPTY_LS = store_thm ("INFERENCE_NON_EMPTY_LS",
-“!e1 e2 e3 f a c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_NON_EMPTY_LS:
+ !e1 e2 e3 f a c1 c2 pfL sfL pfL' sfL'.
       (MEM (f, e2) a) ==>
 
       ((LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e3)::pfL, (sf_points_to e1 a)::sfL) (pfL', (sf_points_to e1 a)::(sf_ls f e2 e3)::sfL')) =
-       LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e3)::pfL, (sf_points_to e1 a)::sfL) (pfL', (sf_ls f e1 e3)::sfL'))”,
+       LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e3)::pfL, (sf_points_to e1 a)::sfL) (pfL', (sf_ls f e1 e3)::sfL'))
+Proof
 
 
 SIMP_TAC std_ss [sf_ls_def] THEN
@@ -9573,16 +9905,18 @@ REPEAT STRIP_TAC THEN
 MP_TAC (
    Q.SPECL [‘e1’, ‘e3’, ‘c1’, ‘c2’, ‘[e2]’, ‘[f]’, ‘a’, ‘pfL’, ‘sfL’, ‘pfL'’, ‘sfL'’] INFERENCE_NON_EMPTY_TREE
 ) THEN
-ASM_SIMP_TAC list_ss [prove (“n < 1 = (n = 0)”, DECIDE_TAC)]);
+ASM_SIMP_TAC list_ss [prove (“n < 1 = (n = 0)”, DECIDE_TAC)]
+QED
 
 
 
 
-val INFERENCE_NON_EMPTY_BIN_TREE = store_thm ("INFERENCE_NON_EMPTY_BIN_TREE",
-“!e e1 e2 f1 f2 a c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_NON_EMPTY_BIN_TREE:
+ !e e1 e2 f1 f2 a c1 c2 pfL sfL pfL' sfL'.
       ((MEM (f1, e1) a) /\ (MEM (f2, e2) a) /\ ~(f1 = f2)) ==>
       ((LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e a)::sfL) (pfL', (sf_points_to e a)::(sf_bin_tree (f1,f2) e1)::(sf_bin_tree (f1,f2) e2)::sfL')) =
-       (LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e a)::sfL) (pfL', (sf_bin_tree (f1,f2) e)::sfL')))”,
+       (LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to e a)::sfL) (pfL', (sf_bin_tree (f1,f2) e)::sfL')))
+Proof
 
 
 SIMP_TAC std_ss [sf_bin_tree_def] THEN
@@ -9592,7 +9926,8 @@ MP_TAC (
 ) THEN
 ASM_SIMP_TAC list_ss [prove (“n < 2 = ((n = 0) \/ (n = 1))”, DECIDE_TAC),
    DISJ_IMP_THM] THEN
-SIMP_TAC std_ss [INFERENCE_NIL_NOT_LVAL___points_to]);
+SIMP_TAC std_ss [INFERENCE_NIL_NOT_LVAL___points_to]
+QED
 
 
 
@@ -9689,15 +10024,16 @@ Proof
    METIS_TAC[DISJOINT_SYM, FUNION___COMM]
 QED
 
-val INFERENCE_UNROLL_COLLAPSE_LS = store_thm ("INFERENCE_UNROLL_COLLAPSE_LS",
-“!e1:('b, 'a) ds_expression e2 c1 c2 f pfL sfL pfL' sfL'.
+Theorem INFERENCE_UNROLL_COLLAPSE_LS:
+ !e1:('b, 'a) ds_expression e2 c1 c2 f pfL sfL pfL' sfL'.
       INFINITE (UNIV:'b set) ==>
 
       ((
       (LIST_DS_ENTAILS (c1,c2) ((pf_equal e1 e2)::pfL, sfL) (pfL', sfL') /\
        (!x. LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e2)::(pf_unequal (dse_const x) e2)::pfL,
                               (sf_points_to e1 [(f, dse_const x)])::(sf_points_to (dse_const x) [(f, e2)])::sfL) (pfL', sfL')))) =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', sfL'))
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -9745,7 +10081,8 @@ EQ_TAC THENL [
          NOT_IN_EMPTY, DISJOINT_DEF] THEN
       METIS_TAC[]
    ]
-]);
+]
+QED
 
 
 
@@ -9902,8 +10239,8 @@ val INFERENCE_UNROLL_COLLAPSE_BIN_TREE___IMPL___EMPTY = prove (
 
 
 
-val INFERENCE_UNROLL_COLLAPSE_BIN_TREE = store_thm ("INFERENCE_UNROLL_COLLAPSE_BIN_TREE",
-“!e:('b, 'a) ds_expression f1 f2 c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_UNROLL_COLLAPSE_BIN_TREE:
+ !e:('b, 'a) ds_expression f1 f2 c1 c2 pfL sfL pfL' sfL'.
       (INFINITE (UNIV:'b set) /\ (~(f1 = f2))) ==>
 
 
@@ -9911,7 +10248,8 @@ val INFERENCE_UNROLL_COLLAPSE_BIN_TREE = store_thm ("INFERENCE_UNROLL_COLLAPSE_B
        (!x1 x2. LIST_DS_ENTAILS (c1,c2) ((pf_unequal e dse_nil)::(pf_unequal (dse_const x1) dse_nil)::(pf_unequal (dse_const x2) dse_nil)::pfL,
                               (sf_points_to e [(f1, dse_const x1);(f2, dse_const x2)])::(sf_points_to (dse_const x1) [(f1, dse_nil);(f2, dse_nil)])::(sf_points_to (dse_const x2) [(f1, dse_nil);(f2, dse_nil)])::sfL) (pfL', sfL'))) =
 
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_bin_tree (f1,f2) e)::sfL) (pfL', sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_bin_tree (f1,f2) e)::sfL) (pfL', sfL'))
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -9979,37 +10317,43 @@ EQ_TAC THENL [
          METIS_TAC[]
       ]
    ]
-]);
+]
+QED
 
 
 
 
 
 (* own inference *)
-val INFERENCE_INCONSISTENT___NIL_POINTS_TO = store_thm ("INFERENCE_INCONSISTENT___NIL_POINTS_TO",
-“!a c1 c2 pfL sfL pfL' sfL'.
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to dse_nil a)::sfL) (pfL', sfL')”,
+Theorem INFERENCE_INCONSISTENT___NIL_POINTS_TO:
+ !a c1 c2 pfL sfL pfL' sfL'.
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_points_to dse_nil a)::sfL) (pfL', sfL')
+Proof
 
 REPEAT GEN_TAC THEN
 ONCE_REWRITE_TAC [GSYM INFERENCE_NIL_NOT_LVAL___points_to] THEN
-SIMP_TAC std_ss [INFERENCE_INCONSISTENT])
+SIMP_TAC std_ss [INFERENCE_INCONSISTENT]
+QED
 
 
-val INFERENCE_INCONSISTENT___precondition_POINTS_TO = store_thm ("INFERENCE_INCONSISTENT___precondition_POINTS_TO",
-“!e a c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_INCONSISTENT___precondition_POINTS_TO:
+ !e a c1 c2 pfL sfL pfL' sfL'.
       MEM e c1 ==>
-      (LIST_DS_ENTAILS (c1, c2) (pfL, (sf_points_to e a)::sfL) (pfL', sfL'))”,
+      (LIST_DS_ENTAILS (c1, c2) (pfL, (sf_points_to e a)::sfL) (pfL', sfL'))
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, HEAP_DISTINCT_def] THEN
 REPEAT STRIP_TAC THEN
 RES_TAC THEN
-FULL_SIMP_TAC std_ss [LIST_DS_SEM_EVAL, DS_POINTS_TO_def]);
+FULL_SIMP_TAC std_ss [LIST_DS_SEM_EVAL, DS_POINTS_TO_def]
+QED
 
 
-val INFERENCE_INCONSISTENT___precondition_BIN_TREE = store_thm ("INFERENCE_INCONSISTENT___precondition_BIN_TREE",
-“!e f1 f2 c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_INCONSISTENT___precondition_BIN_TREE:
+ !e f1 f2 c1 c2 pfL sfL pfL' sfL'.
       MEM e c1 ==>
-      (LIST_DS_ENTAILS (c1,c2) (pfL, (sf_bin_tree (f1, f2) e)::sfL) (pfL', sfL'))”,
+      (LIST_DS_ENTAILS (c1,c2) (pfL, (sf_bin_tree (f1, f2) e)::sfL) (pfL', sfL'))
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, HEAP_DISTINCT_def] THEN
 REPEAT STRIP_TAC THEN
@@ -10023,14 +10367,16 @@ Cases_on ‘DS_EXPRESSION_EQUAL s e dse_nil’ THENL [
       DS_EXPRESSION_EVAL_def] THEN
    Q.PAT_X_ASSUM ‘h = FUNION h1 h2’ ASSUME_TAC THEN
    FULL_SIMP_TAC std_ss [FUNION_DEF, IN_UNION]
-])
+]
+QED
 
 
 
-val INFERENCE___NIL_LIST = store_thm ("INFERENCE___NIL_LIST",
-“!c1 c2 e f pfL sfL pfL' sfL'.
+Theorem INFERENCE___NIL_LIST:
+ !c1 c2 e f pfL sfL pfL' sfL'.
       LIST_DS_ENTAILS (c1,c2) ((pf_equal e dse_nil)::pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f dse_nil e)::sfL) (pfL', sfL')”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f dse_nil e)::sfL) (pfL', sfL')
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL] THEN
 REPEAT GEN_TAC THEN
@@ -10043,16 +10389,18 @@ Cases_on ‘DS_EXPRESSION_EQUAL s e dse_nil’ THENL [
    ‘~(DS_EXPRESSION_EQUAL s dse_nil e)’ by METIS_TAC[DS_EXPRESSION_EQUAL_def] THEN
    ASM_SIMP_TAC std_ss [LIST_DS_SEM_EVAL, DS_POINTS_TO_def, dse_nil_def,
       DS_EXPRESSION_EVAL_def, IS_DSV_NIL_def, LET_THM]
-])
+]
+QED
 
 
 
-val INFERENCE___precondition_LIST = store_thm ("INFERENCE___precondition_LIST",
-“!c1 c2 e' e f pfL sfL pfL' sfL'.
+Theorem INFERENCE___precondition_LIST:
+ !c1 c2 e' e f pfL sfL pfL' sfL'.
       MEM e' c1 ==>
 
       (LIST_DS_ENTAILS (c1, c2) ((pf_equal e e')::pfL, sfL) (pfL', sfL') =
-      LIST_DS_ENTAILS (c1, c2) (pfL, (sf_ls f e' e)::sfL) (pfL', sfL'))”,
+      LIST_DS_ENTAILS (c1, c2) (pfL, (sf_ls f e' e)::sfL) (pfL', sfL'))
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL] THEN
 REPEAT STRIP_TAC THEN
@@ -10069,34 +10417,38 @@ RES_TAC THEN
 REPEAT GEN_TAC THEN
 Cases_on ‘h = FUNION h1 h2’ THEN ASM_REWRITE_TAC[] THEN
 FULL_SIMP_TAC std_ss [FDOM_FUNION, IN_UNION]
-);
+QED
 
 
-val INFERENCE___precondition_STRENGTHEN = store_thm ("INFERENCE___precondition_STRENGTHEN",
-“!c1 c2 e1 e2 pfL sfL pfL' sfL'.
+Theorem INFERENCE___precondition_STRENGTHEN:
+ !c1 c2 e1 e2 pfL sfL pfL' sfL'.
       (LIST_DS_ENTAILS (e1::c1, c2) ((pf_unequal e1 e2)::pfL, sfL) (pfL', sfL') =
-       LIST_DS_ENTAILS (c1, ((e1,e2)::c2)) ((pf_unequal e1 e2)::pfL, sfL) (pfL', sfL'))”,
+       LIST_DS_ENTAILS (c1, ((e1,e2)::c2)) ((pf_unequal e1 e2)::pfL, sfL) (pfL', sfL'))
+Proof
 
 SIMP_TAC std_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL] THEN
-METIS_TAC[HEAP_DISTINCT___UNEQUAL])
+METIS_TAC[HEAP_DISTINCT___UNEQUAL]
+QED
 
 
 
 
 
-val INFERENCE_UNROLL_COLLAPSE_LS___NON_EMPTY = store_thm ("INFERENCE_UNROLL_COLLAPSE_LS___NON_EMPTY",
-“!e1:('b, 'a) ds_expression e2 f c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_UNROLL_COLLAPSE_LS___NON_EMPTY:
+ !e1:('b, 'a) ds_expression e2 f c1 c2 pfL sfL pfL' sfL'.
       (INFINITE (UNIV:'b set)) ==>
 
       ((!x. LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e2)::(pf_unequal (dse_const x) e2)::pfL,
                               (sf_points_to e1 [(f, dse_const x)])::(sf_points_to (dse_const x) [(f, e2)])::sfL) (pfL', sfL')) =
-      LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e2)::pfL, (sf_ls f e1 e2)::sfL) (pfL', sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) ((pf_unequal e1 e2)::pfL, (sf_ls f e1 e2)::sfL) (pfL', sfL'))
+Proof
 
 
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [Once (GSYM INFERENCE_UNROLL_COLLAPSE_LS)] THEN
 SIMP_TAC list_ss [LIST_DS_ENTAILS_def, LIST_DS_SEM_EVAL] THEN
-METIS_TAC[])
+METIS_TAC[]
+QED
 
 
 
@@ -10143,12 +10495,13 @@ FULL_SIMP_TAC std_ss [DS_EXPRESSION_EQUAL_def])
 
 
 
-val INFERENCE_APPEND_LIST___nil = store_thm ("INFERENCE_APPEND_LIST___nil",
-“!e1:('b, 'a) ds_expression e2 f c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_APPEND_LIST___nil:
+ !e1:('b, 'a) ds_expression e2 f c1 c2 pfL sfL pfL' sfL'.
       (INFINITE (UNIV:'b set)) ==>
 
       ((LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', (sf_ls f e1 e2)::(sf_ls f e2 dse_nil)::sfL')) =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', (sf_ls f e1 dse_nil)::sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', (sf_ls f e1 dse_nil)::sfL'))
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -10189,18 +10542,20 @@ BINOP_TAC THENL [
    ASM_SIMP_TAC std_ss [] THEN
    FULL_SIMP_TAC std_ss [DS_EXPRESSION_EQUAL_def, NOT_IS_DSV_NIL_THM, DS_POINTS_TO_def,
       dse_nil_def, DS_EXPRESSION_EVAL_def, ds_value_distinct]
-])
+]
+QED
 
 
 
 
-val INFERENCE_APPEND_LIST___precond = store_thm ("INFERENCE_APPEND_LIST___precond",
-“!e1:('b, 'a) ds_expression e2 e3 f c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_APPEND_LIST___precond:
+ !e1:('b, 'a) ds_expression e2 e3 f c1 c2 pfL sfL pfL' sfL'.
       (INFINITE (UNIV:'b set) /\
        MEM_UNEQ_PF_LIST e1 e3 pfL) ==>
 
       ((LIST_DS_ENTAILS (e3::c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', (sf_ls f e1 e2)::(sf_ls f e2 e3)::sfL')) =
-      LIST_DS_ENTAILS (e3::c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', (sf_ls f e1 e3)::sfL'))”,
+      LIST_DS_ENTAILS (e3::c1,c2) (pfL, (sf_ls f e1 e2)::sfL) (pfL', (sf_ls f e1 e3)::sfL'))
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -10241,18 +10596,20 @@ BINOP_TAC THENL [
    FULL_SIMP_TAC list_ss [DS_EXPRESSION_EQUAL_def, DS_POINTS_TO_def,
       dse_nil_def, DS_EXPRESSION_EVAL_def, ds_value_distinct, DS_EXPRESSION_EVAL_VALUE_def, HEAP_DISTINCT___IND_DEF, FDOM_DOMSUB, IN_DELETE] THEN
    METIS_TAC[]
-]);
+]
+QED
 
 
 
 
-val INFERENCE_APPEND_LIST___points_to = store_thm ("INFERENCE_APPEND_LIST___points_to",
-“!e1:('b, 'a) ds_expression e2 e3 a f c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_APPEND_LIST___points_to:
+ !e1:('b, 'a) ds_expression e2 e3 a f c1 c2 pfL sfL pfL' sfL'.
       (INFINITE (UNIV:'b set) /\
        MEM_UNEQ_PF_LIST e1 e3 pfL) ==>
 
       ((LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::(sf_points_to e3 a)::sfL) (pfL', (sf_ls f e1 e2)::(sf_ls f e2 e3)::sfL')) =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::(sf_points_to e3 a)::sfL) (pfL', (sf_ls f e1 e3)::sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::(sf_points_to e3 a)::sfL) (pfL', (sf_ls f e1 e3)::sfL'))
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -10293,18 +10650,20 @@ BINOP_TAC THENL [
    FULL_SIMP_TAC list_ss [DS_EXPRESSION_EQUAL_def, DS_POINTS_TO_def,
       dse_nil_def, DS_EXPRESSION_EVAL_def, ds_value_distinct, DS_EXPRESSION_EVAL_VALUE_def, HEAP_DISTINCT___IND_DEF, FDOM_DOMSUB, IN_DELETE] THEN
    METIS_TAC[]
-])
+]
+QED
 
 
 
-val INFERENCE_APPEND_LIST___tree = store_thm ("INFERENCE_APPEND_LIST___tree",
-“!e1:('b, 'a) ds_expression e2 e3 fL es f c1 c2 pfL sfL pfL' sfL'.
+Theorem INFERENCE_APPEND_LIST___tree:
+ !e1:('b, 'a) ds_expression e2 e3 fL es f c1 c2 pfL sfL pfL' sfL'.
       (INFINITE (UNIV:'b set) /\
        MEM_UNEQ_PF_LIST e1 e3 pfL /\
        MEM_UNEQ_PF_LIST e3 es pfL) ==>
 
       ((LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::(sf_tree fL es e3)::sfL) (pfL', (sf_ls f e1 e2)::(sf_ls f e2 e3)::sfL')) =
-      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::(sf_tree fL es e3)::sfL) (pfL', (sf_ls f e1 e3)::sfL'))”,
+      LIST_DS_ENTAILS (c1,c2) (pfL, (sf_ls f e1 e2)::(sf_tree fL es e3)::sfL) (pfL', (sf_ls f e1 e3)::sfL'))
+Proof
 
 
 REPEAT STRIP_TAC THEN
@@ -10348,5 +10707,5 @@ BINOP_TAC THENL [
       dse_nil_def, DS_EXPRESSION_EVAL_def, ds_value_distinct, DS_EXPRESSION_EVAL_VALUE_def, FDOM_DOMSUB, IN_DELETE, LIST_DS_SEM_THM, SF_SEM___sf_tree_THM, LET_THM, SF_SEM___sf_points_to_THM] THEN
    REPEAT STRIP_TAC THEN
    METIS_TAC[]
-])
-
+]
+QED

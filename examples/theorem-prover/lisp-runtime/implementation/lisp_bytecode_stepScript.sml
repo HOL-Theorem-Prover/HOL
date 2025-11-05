@@ -578,16 +578,18 @@ val CODE_POOL_UNION_LEMMA = prove(
   \\ SIMP_TAC std_ss [SPLIT_def,cond_def,UNION_EMPTY,DISJOINT_EMPTY]
   \\ FULL_SIMP_TAC std_ss [FUN_EQ_THM] \\ METIS_TAC []);
 
-val SPEC_CODE_UNION = store_thm("SPEC_CODE_UNION",
-  ``!x p c d q. SPEC x p (c UNION d) q ==>
+Theorem SPEC_CODE_UNION:
+    !x p c d q. SPEC x p (c UNION d) q ==>
                 SPEC x (CODE_POOL ((FST (SND (SND x))):'a -> 'b -> bool) c * p) d
-                       (CODE_POOL (FST (SND (SND x))) c * q)``,
+                       (CODE_POOL (FST (SND (SND x))) c * q)
+Proof
   STRIP_TAC \\ `?x1 x2 x3 x4 x5. x = (x1,x2,x3,x4,x5)` by METIS_TAC [PAIR]
   \\ FULL_SIMP_TAC std_ss [SPEC_def,RUN_def] \\ REPEAT STRIP_TAC
   \\ MP_TAC (Q.ISPEC `x3:'a->'b->bool` (Q.SPECL [`c`,`d`] (GSYM CODE_POOL_UNION_LEMMA)))
   \\ REPEAT STRIP_TAC
   \\ Q.PAT_X_ASSUM `!state. bbb` (MP_TAC o Q.SPECL [`state`,`r * r'`])
-  \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]);
+  \\ FULL_SIMP_TAC std_ss [AC STAR_ASSOC STAR_COMM]
+QED
 
 val SPEC_zCODE_SPLIT_UNION = prove(
   ``SPEC X64_MODEL p (c UNION d) q ==>
@@ -1085,13 +1087,14 @@ val zLISP_BYTECODE_PC_BOUND = prove(
   \\ IMP_RES_TAC zLISP_BOUND \\ POP_ASSUM (fn th => SIMP_TAC std_ss [Once th])
   \\ FULL_SIMP_TAC (std_ss++sep_cond_ss) [SPEC_MOVE_COND]);
 
-val X64_LISP_iSTEP = store_thm("X64_LISP_iSTEP",
-  ``!xs1 p1 r1 bc1 xs2 p2 r2 bc2.
+Theorem X64_LISP_iSTEP:
+    !xs1 p1 r1 bc1 xs2 p2 r2 bc2.
       iSTEP (xs1,p1,r1,bc1) (xs2,p2,r2,bc2) ==>
       SPEC X64_MODEL
         (zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,SOME T,NONE) (xs1,EL 4 cs + n2w p1,MAP (\n. EL 4 cs + n2w n) r1,bc1) (stack,input,xbp,rstack,amnt,EL 4 cs))
         (code_abbrevs cs)
-        (zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,SOME T,NONE) (xs2,EL 4 cs + n2w p2,MAP (\n. EL 4 cs + n2w n) r2,bc2) (stack,input,xbp,rstack,amnt,EL 4 cs))``,
+        (zLISP_BYTECODE (a1,a2,sl,sl1,e,ex,cs,rbp,SOME T,NONE) (xs2,EL 4 cs + n2w p2,MAP (\n. EL 4 cs + n2w n) r2,bc2) (stack,input,xbp,rstack,amnt,EL 4 cs))
+Proof
   NTAC 8 STRIP_TAC \\ Cases_on `bc1.code p1 = SOME iCOMPILE`
   THEN1 (STRIP_TAC \\ MATCH_MP_TAC X64_LISP_iSTEP_COMPILE \\ ASM_SIMP_TAC std_ss [])
   \\ Cases_on `?s. bc1.code p1 = SOME (iCONST_SYM s)` THEN1
@@ -1115,7 +1118,8 @@ val X64_LISP_iSTEP = store_thm("X64_LISP_iSTEP",
   \\ `bc_ref (p1,syms) xx = bc_ref (p1,syms) (THE (bc1.code p1))` by
        FULL_SIMP_TAC std_ss []
   \\ ONCE_ASM_REWRITE_TAC []
-  \\ MATCH_MP_TAC X64_LISP_iSTEP_MOST_CASES \\ ASM_SIMP_TAC std_ss []);
+  \\ MATCH_MP_TAC X64_LISP_iSTEP_MOST_CASES \\ ASM_SIMP_TAC std_ss []
+QED
 
 val X64_LISP_RTC_iSTEP = prove(
   ``!x y. RTC iSTEP x y ==>

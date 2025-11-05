@@ -15,13 +15,13 @@ local
 
    val fast_proof_tag = "fast_proof"
 
-   fun fast_prover (t, tac: Abbrev.tactic) =
-      mk_oracle_thm fast_proof_tag ([], t)
+   fun fast_prover (g, tac: Abbrev.tactic) =
+      mk_oracle_thm fast_proof_tag g
 
-   fun first_fast_prover (t, tac: Abbrev.tactic) =
+   fun first_fast_prover (g, tac: Abbrev.tactic) =
       (HOL_MESG "using fast prover - proofs unchecked"
        ; Tactical.set_prover fast_prover
-       ; mk_oracle_thm fast_proof_tag ([], t))
+       ; mk_oracle_thm fast_proof_tag g)
 in
    val () = Tactical.set_prover first_fast_prover
 end

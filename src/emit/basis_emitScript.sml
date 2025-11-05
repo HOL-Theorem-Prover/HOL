@@ -33,8 +33,14 @@ val addition_thms =
  in REWRITE_RULE [iZ] (LIST_CONJ thms)
  end;
 
-val T_INTRO = Q.prove(`!x. x = (x = T)`, REWRITE_TAC []);
-val F_INTRO = Q.prove(`!x. ~x = (x = F)`, REWRITE_TAC []);
+Theorem T_INTRO[local]:
+  !x. x = (x = T)
+Proof REWRITE_TAC []
+QED
+Theorem F_INTRO[local]:
+  !x. ~x = (x = F)
+Proof REWRITE_TAC []
+QED
 
 val (even,odd) =
   let val [a,b,c,d,e,f] = CONJUNCTS (SPEC_ALL numeral_evenodd)
@@ -44,13 +50,17 @@ val (even,odd) =
      (LIST_CONJ [a',b',c'], LIST_CONJ [d',e',f'])
   end;
 
-val DIV_FAIL = Q.prove
-(`!m.  m DIV ZERO = FAIL $DIV ^(mk_var("zero denominator",bool)) m ZERO`,
-REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem DIV_FAIL[local]:
+  !m.  m DIV ZERO = FAIL $DIV ^(mk_var("zero denominator",bool)) m ZERO
+Proof
+REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
-val MOD_FAIL = Q.prove
-(`!m.  m MOD ZERO = FAIL $MOD ^(mk_var("zero denominator",bool)) m ZERO`,
-REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem MOD_FAIL[local]:
+  !m.  m MOD ZERO = FAIL $MOD ^(mk_var("zero denominator",bool)) m ZERO
+Proof
+REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
 val (div_eqns, mod_eqns) =
  let val [a,b,c,d] = CONJUNCTS DIVMOD_NUMERAL_CALC
@@ -370,13 +380,17 @@ val TAKE2_CONJUNCTS = TAKE2 o CONJUNCTS;
 val F_INTRO = PURE_REWRITE_RULE [PROVE[] (Term `~x = (x = F)`)];
 val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)];
 
-val BIGINTER_EMPTY = Q.prove
-(`BIGINTER EMPTY = FAIL BIGINTER ^(mk_var("empty set",bool)) EMPTY`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem BIGINTER_EMPTY[local]:
+  BIGINTER EMPTY = FAIL BIGINTER ^(mk_var("empty set",bool)) EMPTY
+Proof
+ REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
-val MIN_SET_EMPTY = Q.prove
-(`MIN_SET EMPTY = FAIL MIN_SET ^(mk_var("empty set",bool)) EMPTY`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem MIN_SET_EMPTY[local]:
+  MIN_SET EMPTY = FAIL MIN_SET ^(mk_var("empty set",bool)) EMPTY
+Proof
+ REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
 val (tyg,tmg) = (type_grammar(),term_grammar())
 val tyg' = type_grammar.remove_abbreviation tyg "set"
@@ -386,9 +400,11 @@ val _ = temp_clear_overloads_on "set"
 
 Definition IS_EMPTY_def:  IS_EMPTY s = if s = {} then T else F
 End
-val IS_EMPTY_THM = Q.prove
-(`(IS_EMPTY {} = T) /\ (IS_EMPTY (x INSERT s) = F)`,
- SRW_TAC[][IS_EMPTY_def])
+Theorem IS_EMPTY_THM[local]:
+  (IS_EMPTY {} = T) /\ (IS_EMPTY (x INSERT s) = F)
+Proof
+ SRW_TAC[][IS_EMPTY_def]
+QED
 Theorem IS_EMPTY_REWRITE:
   ((s = {}) = IS_EMPTY s) /\ (({} = s) = IS_EMPTY s)
 Proof
@@ -478,9 +494,11 @@ val _ = eCAML "set"
 
 (* == Option ============================================================== *)
 
-val THE_NONE = Q.prove (
-  `THE NONE = FAIL THE ^(mk_var("applied to NONE",bool)) NONE`,
-  REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem THE_NONE[local]:
+   THE NONE = FAIL THE ^(mk_var("applied to NONE",bool)) NONE
+Proof
+  REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
 val _ = ConstMapML.insert_cons(Term.prim_mk_const{Name="SOME",Thy="option"});
 val _ = ConstMapML.insert_cons(Term.prim_mk_const{Name="NONE",Thy="option"});
@@ -512,51 +530,67 @@ val _ = eCAML "basicSize" (MLSIGSTRUCT ["type num = NumML.num"] @ defs);
 
 val LENGTH_THM = REWRITE_RULE [arithmeticTheory.ADD1] LENGTH;
 
-val HD_NIL = Q.prove(`HD [] = FAIL HD ^(mk_var("Empty list",bool)) []`,
-                     REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem HD_NIL[local]:
+  HD [] = FAIL HD ^(mk_var("Empty list",bool)) []
+Proof
+                     REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
-val TL_NIL = Q.prove(`TL [] = FAIL TL ^(mk_var("Empty list",bool)) []`,
-                     REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem TL_NIL[local]:
+  TL [] = FAIL TL ^(mk_var("Empty list",bool)) []
+Proof
+                     REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
-val MAP2_FAIL = Q.prove
-(`(!f h t.
+Theorem MAP2_FAIL[local]:
+  (!f h t.
    (MAP2 (f:'a->'b->'c) [] (h::t) =
     FAIL MAP2 ^(mk_var("unequal length lists",bool)) f [] (h::t))) /\
   !f h t.
     (MAP2 (f:'a->'b->'c) (h::t) [] =
-     FAIL MAP2 ^(mk_var("unequal length lists",bool)) f (h::t) [])`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
+     FAIL MAP2 ^(mk_var("unequal length lists",bool)) f (h::t) [])
+Proof
+ REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
 val MAP2_THM = let val [a,b] = CONJUNCTS MAP2
                    val [c,d] = CONJUNCTS MAP2_FAIL
                in LIST_CONJ [a,c,d,b]
                end;
 
-val ZIP_FAIL = Q.prove
-(`(!(h:'b) t. ZIP ([]:'a list,h::t) =
+Theorem ZIP_FAIL[local]:
+  (!(h:'b) t. ZIP ([]:'a list,h::t) =
          FAIL ZIP ^(mk_var("unequal length lists",bool)) ([],h::t)) /\
   (!(h:'a) t. ZIP (h::t,[]:'b list) =
-              FAIL ZIP ^(mk_var("unequal length lists",bool)) (h::t,[]))`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
+              FAIL ZIP ^(mk_var("unequal length lists",bool)) (h::t,[]))
+Proof
+ REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
 val ZIP_THM = let val [a,b] = CONJUNCTS ZIP
                   val [c,d] = CONJUNCTS ZIP_FAIL
                in LIST_CONJ [a,c,d,b]
                end;
 
-val LAST_NIL = Q.prove
-(`LAST [] = FAIL LAST ^(mk_var("empty list",bool))  []`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem LAST_NIL[local]:
+  LAST [] = FAIL LAST ^(mk_var("empty list",bool))  []
+Proof
+ REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
-val FRONT_NIL = Q.prove
-(`FRONT [] = FAIL FRONT ^(mk_var("empty list",bool))  []`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem FRONT_NIL[local]:
+  FRONT [] = FAIL FRONT ^(mk_var("empty list",bool))  []
+Proof
+ REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
-val GENLIST_compute = Q.prove(
-  `!n l.
-     GENLIST f n = if n = 0 then [] else SNOC (f (PRE n)) (GENLIST f (PRE n))`,
+Theorem GENLIST_compute[local]:
+   !n l.
+     GENLIST f n = if n = 0 then [] else SNOC (f (PRE n)) (GENLIST f (PRE n))
+Proof
   STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC arithmeticTheory.num_CASES
-    THEN REWRITE_TAC [numTheory.NOT_SUC, prim_recTheory.PRE, GENLIST]);
+    THEN REWRITE_TAC [numTheory.NOT_SUC, prim_recTheory.PRE, GENLIST]
+QED
 
 val defs =
   map DEFN [NULL_DEF, CONJ HD_NIL HD, CONJ TL_NIL TL, APPEND, FLAT, MAP,
@@ -590,44 +624,52 @@ val num_CASES = arithmeticTheory.num_CASES;
 val NOT_SUC = numTheory.NOT_SUC;
 val PRE = prim_recTheory.PRE;
 
-val BUTFIRSTN_compute = Q.prove(
-  `!n l. BUTFIRSTN n l =
+Theorem BUTFIRSTN_compute[local]:
+   !n l. BUTFIRSTN n l =
            if n = 0 then l else
            if l = [] then
              FAIL BUTFIRSTN ^(mk_var("List too short",bool)) n []
            else
-             BUTFIRSTN (PRE n) (TL l)`,
+             BUTFIRSTN (PRE n) (TL l)
+Proof
   STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES
     THEN1 REWRITE_TAC [BUTFIRSTN]
     THEN STRIP_TAC THEN Q.SPEC_THEN `l` STRUCT_CASES_TAC list_CASES
     THEN REWRITE_TAC [NOT_CONS_NIL, TL, NOT_SUC, PRE, BUTFIRSTN,
-                      combinTheory.FAIL_THM]);
+                      combinTheory.FAIL_THM]
+QED
 
-val ELL_compute = Q.prove(
-  `!n l. ELL n l = if n = 0 then LAST l else ELL (PRE n) (FRONT l)`,
+Theorem ELL_compute[local]:
+   !n l. ELL n l = if n = 0 then LAST l else ELL (PRE n) (FRONT l)
+Proof
    STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES
-     THEN REWRITE_TAC [NOT_SUC, PRE, ELL]);
+     THEN REWRITE_TAC [NOT_SUC, PRE, ELL]
+QED
 
-val FIRSTN_compute = Q.prove(
-  `!n l. FIRSTN n l =
+Theorem FIRSTN_compute[local]:
+   !n l. FIRSTN n l =
            if n = 0 then [] else
            if l = [] then
              FAIL FIRSTN ^(mk_var("List too short",bool)) n []
            else
-             (HD l)::FIRSTN (PRE n) (TL l)`,
+             (HD l)::FIRSTN (PRE n) (TL l)
+Proof
   STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES
     THEN1 REWRITE_TAC [FIRSTN]
     THEN STRIP_TAC THEN Q.SPEC_THEN `l` STRUCT_CASES_TAC list_CASES
     THEN REWRITE_TAC [NOT_CONS_NIL, HD, TL, NOT_SUC, PRE, FIRSTN,
-                      combinTheory.FAIL_THM]);
+                      combinTheory.FAIL_THM]
+QED
 
-val REPLICATE_compute = Q.prove(
-  `!n l. REPLICATE n l = if n = 0 then [] else l::(REPLICATE (PRE n) l)`,
+Theorem REPLICATE_compute[local]:
+   !n l. REPLICATE n l = if n = 0 then [] else l::(REPLICATE (PRE n) l)
+Proof
   STRIP_TAC THEN Q.SPEC_THEN `n` STRUCT_CASES_TAC num_CASES
-    THEN REWRITE_TAC [NOT_SUC, PRE, REPLICATE]);
+    THEN REWRITE_TAC [NOT_SUC, PRE, REPLICATE]
+QED
 
-val SEG_compute = Q.prove(
-  `!m k l. SEG m k l =
+Theorem SEG_compute[local]:
+   !m k l. SEG m k l =
              if m = 0 then [] else
              if l = [] then
                FAIL SEG ^(mk_var("List too short",bool)) m k []
@@ -635,21 +677,25 @@ val SEG_compute = Q.prove(
                if k = 0 then
                  (HD l)::SEG (PRE m) 0 (TL l)
                else
-                 SEG m (PRE k) (TL l)`,
+                 SEG m (PRE k) (TL l)
+Proof
   STRIP_TAC THEN Q.SPEC_THEN `m` STRUCT_CASES_TAC num_CASES
     THEN1 REWRITE_TAC [SEG]
     THEN STRIP_TAC THEN Q.SPEC_THEN `k` STRUCT_CASES_TAC num_CASES
     THEN STRIP_TAC THEN Q.SPEC_THEN `l` STRUCT_CASES_TAC list_CASES
     THEN REWRITE_TAC [NOT_CONS_NIL, HD, TL, NOT_SUC, PRE, SEG,
-                      combinTheory.FAIL_THM]);
+                      combinTheory.FAIL_THM]
+QED
 
-val LUPDATE_compute = Q.prove(
-`(!e n. LUPDATE e n [] = []) /\
+Theorem LUPDATE_compute[local]:
+ (!e n. LUPDATE e n [] = []) /\
  (!e n x l. LUPDATE e n (x::l) =
-  if n = 0 then e::l else x::LUPDATE e (PRE n) l)`,
+  if n = 0 then e::l else x::LUPDATE e (PRE n) l)
+Proof
 SRW_TAC[][LUPDATE_def] THEN
 Cases_on `n` THEN
-FULL_SIMP_TAC (srw_ss()) [LUPDATE_def])
+FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]
+QED
 
 val defs =
   map DEFN [AND_EL_DEF,BUTFIRSTN_compute,ELL_compute,FIRSTN_compute,
@@ -683,15 +729,19 @@ val _ = cpi (``STRCAT``, "STRCAT")
 val _ = cpi (``STRLEN``, "STRLEN")
 val _ = cpi (``STRING``, "STRING")
 
-val PAD_LEFT = Q.prove(
-  `PAD_LEFT c n s =
-     STRCAT (IMPLODE (GENLIST (K c) (n - STRLEN s))) s`,
-  REWRITE_TAC [listTheory.PAD_LEFT, IMPLODE_EXPLODE_I]);
+Theorem PAD_LEFT[local]:
+   PAD_LEFT c n s =
+     STRCAT (IMPLODE (GENLIST (K c) (n - STRLEN s))) s
+Proof
+  REWRITE_TAC [listTheory.PAD_LEFT, IMPLODE_EXPLODE_I]
+QED
 
-val PAD_RIGHT = Q.prove(
-  `PAD_RIGHT c n s =
-     STRCAT s (IMPLODE (GENLIST (K c) (n - STRLEN s)))`,
-  REWRITE_TAC [listTheory.PAD_RIGHT, IMPLODE_EXPLODE_I]);
+Theorem PAD_RIGHT[local]:
+   PAD_RIGHT c n s =
+     STRCAT s (IMPLODE (GENLIST (K c) (n - STRLEN s)))
+Proof
+  REWRITE_TAC [listTheory.PAD_RIGHT, IMPLODE_EXPLODE_I]
+QED
 
 val defs =
   map DEFN [char_size_def, STRCAT_EXPLODE,
@@ -765,10 +815,12 @@ val _ = app (fn n => ConstMapML.insert
 
 (* == Finite map ========================================================== *)
 
-val FAPPLY_FEMPTY = Q.prove
-(`FAPPLY (FEMPTY:('a,'b)fmap) x :'b =
-  FAIL FAPPLY ^(mk_var("empty map",bool)) FEMPTY x`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem FAPPLY_FEMPTY[local]:
+  FAPPLY (FEMPTY:('a,'b)fmap) x :'b =
+  FAIL FAPPLY ^(mk_var("empty map",bool)) FEMPTY x
+Proof
+ REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
 val DRESTRICT_PRED_THM =
   SIMP_RULE std_ss [boolTheory.IN_DEF]
@@ -784,25 +836,31 @@ val th = GEN_ALL
                  (SIMP_RULE std_ss [IN_SING,IN_DEF]
                    (Q.SPEC `{x}` (Q.SPEC `a` IN_COMPL)))));
 
-val RRESTRICT_PRED_THM = Q.prove
-(`(!P. RRESTRICT (FEMPTY:'a|->'b) P = (FEMPTY:'a|->'b)) /\
+Theorem RRESTRICT_PRED_THM[local]:
+  (!P. RRESTRICT (FEMPTY:'a|->'b) P = (FEMPTY:'a|->'b)) /\
   (!(f:'a|->'b) P x y.
        RRESTRICT (f |+ (x,y)) P =
         if P y then RRESTRICT f P |+ (x,y)
-          else RRESTRICT (DRESTRICT f (\a. ~(a = x))) P)`,
+          else RRESTRICT (DRESTRICT f (\a. ~(a = x))) P)
+Proof
  REWRITE_TAC [RRESTRICT_FEMPTY]
-  THEN METIS_TAC [REWRITE_RULE [th] RRESTRICT_FUPDATE, IN_DEF]);
+  THEN METIS_TAC [REWRITE_RULE [th] RRESTRICT_FUPDATE, IN_DEF]
+QED
 
-val FRANGE_EQNS = Q.prove
-(`(FRANGE (FEMPTY:'a|->'b) = ({}:'b -> bool)) /\
+Theorem FRANGE_EQNS[local]:
+  (FRANGE (FEMPTY:'a|->'b) = ({}:'b -> bool)) /\
   (!(f:'a |-> 'b) (x:'a) (y:'b).
-         FRANGE (f |+ (x,y)) = y INSERT FRANGE (DRESTRICT f (\a. ~(a = x))))`,
- METIS_TAC [REWRITE_RULE [th] FRANGE_FUPDATE, FRANGE_FEMPTY]);
+         FRANGE (f |+ (x,y)) = y INSERT FRANGE (DRESTRICT f (\a. ~(a = x))))
+Proof
+ METIS_TAC [REWRITE_RULE [th] FRANGE_FUPDATE, FRANGE_FEMPTY]
+QED
 
-val o_f_EQNS = Q.prove
-(`(f          o_f (FEMPTY:'a|->'b) = (FEMPTY:'a|->'c)) /\
-  ((f:'b->'c) o_f ((fm:'a|->'b) |+ (k,v)) = (f o_f fm) |+ (k,f v))`,
- METIS_TAC [o_f_FEMPTY, o_f_FUPDATE])
+Theorem o_f_EQNS[local]:
+  (f          o_f (FEMPTY:'a|->'b) = (FEMPTY:'a|->'c)) /\
+  ((f:'b->'c) o_f ((fm:'a|->'b) |+ (k,v)) = (f o_f fm) |+ (k,f v))
+Proof
+ METIS_TAC [o_f_FEMPTY, o_f_FUPDATE]
+QED
 
 val T_INTRO = PURE_ONCE_REWRITE_RULE [PROVE[] (Term `x = (x = T)`)]
 
@@ -838,24 +896,32 @@ val _ = eCAML "fmap"
 
 (* == Sum ================================================================= *)
 
-val OUTL_INR = Q.prove
-(`!y. OUTL(INR y:'a+'b) =
-      FAIL OUTL ^(mk_var("applied to INR",bool)) (INR y:'a+'b)`,
- REWRITE_TAC [combinTheory.FAIL_THM]);
+Theorem OUTL_INR[local]:
+  !y. OUTL(INR y:'a+'b) =
+      FAIL OUTL ^(mk_var("applied to INR",bool)) (INR y:'a+'b)
+Proof
+ REWRITE_TAC [combinTheory.FAIL_THM]
+QED
 
-val OUTR = Q.prove
-(`(!x. OUTR(INL x:'a+'b) =
+Theorem OUTR[local]:
+  (!x. OUTR(INL x:'a+'b) =
       FAIL OUTR ^(mk_var("applied to INL",bool)) (INL x:'a+'b)) /\
-  (!y. OUTR(INR y:'a+'b) = y)`,
- REWRITE_TAC [combinTheory.FAIL_THM,OUTR]);
+  (!y. OUTR(INR y:'a+'b) = y)
+Proof
+ REWRITE_TAC [combinTheory.FAIL_THM,OUTR]
+QED
 
-val ISL_THM = Q.prove
-(`(!x. ISL (INL x:'a+'b) = T) /\ !y. ISL (INR y:'a+'b) = F`,
- REWRITE_TAC[ISL]);
+Theorem ISL_THM[local]:
+  (!x. ISL (INL x:'a+'b) = T) /\ !y. ISL (INR y:'a+'b) = F
+Proof
+ REWRITE_TAC[ISL]
+QED
 
-val ISR_THM = Q.prove
-(`(!x. ISR (INL x:'a+'b) = F) /\ !y. ISR (INR y:'a+'b) = T`,
- REWRITE_TAC[ISR])
+Theorem ISR_THM[local]:
+  (!x. ISR (INL x:'a+'b) = F) /\ !y. ISR (INR y:'a+'b) = T
+Proof
+ REWRITE_TAC[ISR]
+QED
 
 val defs =
   DATATYPE `sum = INL 'a | INR 'b`
@@ -869,37 +935,47 @@ val _ = eCAML "sum" defs;
 val PRE = prim_recTheory.PRE;
 val NOT_SUC = numTheory.NOT_SUC;
 
-val NUMERAL_1 = Q.prove(
-  `!n. (NUMERAL (BIT1 n) = 1) = (n = 0)`,
+Theorem NUMERAL_1[local]:
+   !n. (NUMERAL (BIT1 n) = 1) = (n = 0)
+Proof
   REWRITE_TAC [GSYM (REWRITE_CONV [GSYM ALT_ZERO] ``NUMERAL (BIT1 0)``)]
     THEN SIMP_TAC bool_ss [BIT1, NUMERAL_DEF]
-    THEN DECIDE_TAC);
+    THEN DECIDE_TAC
+QED
 
-val NUMERAL_1b = Q.prove(
-  `!n. ~(NUMERAL (BIT2 n) = 1)`,
+Theorem NUMERAL_1b[local]:
+   !n. ~(NUMERAL (BIT2 n) = 1)
+Proof
   REWRITE_TAC [GSYM (REWRITE_CONV [GSYM ALT_ZERO] ``NUMERAL (BIT1 0)``)]
     THEN SIMP_TAC bool_ss [BIT1, BIT2, NUMERAL_DEF]
-    THEN DECIDE_TAC);
+    THEN DECIDE_TAC
+QED
 
-val iDUB_SUC = Q.prove(`!n. numeral$iDUB (SUC n) = BIT2 n`,
-  SIMP_TAC bool_ss [iDUB, BIT2, ADD1] THEN DECIDE_TAC);
+Theorem iDUB_SUC[local]:
+  !n. numeral$iDUB (SUC n) = BIT2 n
+Proof
+  SIMP_TAC bool_ss [iDUB, BIT2, ADD1] THEN DECIDE_TAC
+QED
 
-val DIV2_BIT1_SUC = Q.prove(
-  `!n. DIV2 (NUMERAL (BIT1 (SUC n))) = n + 1`,
+Theorem DIV2_BIT1_SUC[local]:
+   !n. DIV2 (NUMERAL (BIT1 (SUC n))) = n + 1
+Proof
   REWRITE_TAC [DIV2_def]
     THEN GEN_REWRITE_TAC (DEPTH_CONV o RATOR_CONV o RAND_CONV) empty_rewrites
          [BIT1, Q.SPEC `BIT1 (SUC n)` NUMERAL_DEF]
-    THEN SIMP_TAC arith_ss [ADD1, ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]);
+    THEN SIMP_TAC arith_ss [ADD1, ONCE_REWRITE_RULE [MULT_COMM] ADD_DIV_ADD_DIV]
+QED
 
-val LOG2_compute = Q.prove(
-  `!n. LOG2 n =
+Theorem LOG2_compute[local]:
+   !n. LOG2 n =
          if n = 0 then
            FAIL LOG2 ^(mk_var("undefined",bool)) n
          else
            if n = 1 then
              0
            else
-             1 + LOG2 (DIV2 n)`,
+             1 + LOG2 (DIV2 n)
+Proof
   Cases THEN REWRITE_TAC [NOT_SUC, combinTheory.FAIL_THM]
     THEN Q.SPEC_TAC (`n'`,`n`) THEN CONV_TAC numLib.SUC_TO_NUMERAL_DEFN_CONV
     THEN STRIP_TAC
@@ -909,62 +985,77 @@ val LOG2_compute = Q.prove(
                 REWRITE_TAC [iDUB_SUC, DIV2_BIT1_SUC, numeral_ilog2]
                   THEN SIMP_TAC arith_ss [iLOG2_def]],
        REWRITE_TAC [NUMERAL_1b, numeral_div2, numeral_ilog2, numeral_log2,
-                    NUMERAL_DEF, iLOG2_def, ADD1]]);
+                    NUMERAL_DEF, iLOG2_def, ADD1]]
+QED
 
-val BITWISE_compute = Q.prove(
-  `!n opr a b.
+Theorem BITWISE_compute[local]:
+   !n opr a b.
       BITWISE n opr a b =
         if n = 0 then 0 else
           2 * BITWISE (PRE n) opr (DIV2 a) (DIV2 b) +
-          (if opr (ODD a) (ODD b) then 1 else 0)`,
+          (if opr (ODD a) (ODD b) then 1 else 0)
+Proof
   Cases THEN1 REWRITE_TAC [CONJUNCT1 BITWISE_def]
     THEN REWRITE_TAC
-         [DIV2_def, NOT_SUC, PRE, EXP, BITWISE_EVAL, BIT0_ODD, SBIT_def]);
+         [DIV2_def, NOT_SUC, PRE, EXP, BITWISE_EVAL, BIT0_ODD, SBIT_def]
+QED
 
-val BIT_MODF_compute = Q.prove(
-  `!n f x b e y.
+Theorem BIT_MODF_compute[local]:
+   !n f x b e y.
       BIT_MODF n f x b e y =
         if n = 0 then y else
           BIT_MODF (PRE n) f (DIV2 x) (b + 1) (2 * e)
-           (if f b (ODD x) then e + y else y)`,
-  Cases THEN REWRITE_TAC [DIV2_def, NOT_SUC, PRE, BIT_MODF_def]);
+           (if f b (ODD x) then e + y else y)
+Proof
+  Cases THEN REWRITE_TAC [DIV2_def, NOT_SUC, PRE, BIT_MODF_def]
+QED
 
-val BIT_REV_compute = Q.prove(
-  `!n x y.
+Theorem BIT_REV_compute[local]:
+   !n x y.
       BIT_REV n x y =
         if n = 0 then y else
-          BIT_REV (PRE n) (DIV2 x) (2 * y + (if ODD x then 1 else 0))`,
-  Cases THEN REWRITE_TAC [DIV2_def, NOT_SUC, PRE, BIT_REV_def, EXP, SBIT_def]);
+          BIT_REV (PRE n) (DIV2 x) (2 * y + (if ODD x then 1 else 0))
+Proof
+  Cases THEN REWRITE_TAC [DIV2_def, NOT_SUC, PRE, BIT_REV_def, EXP, SBIT_def]
+QED
 
-val TIMES_2EXP_lem = Q.prove(
-  `!n. FUNPOW numeral$iDUB n 1 = 2 ** n`,
+Theorem TIMES_2EXP_lem[local]:
+   !n. FUNPOW numeral$iDUB n 1 = 2 ** n
+Proof
   Induct THEN ASM_SIMP_TAC arith_ss
-    [EXP,CONJUNCT1 FUNPOW,FUNPOW_SUC,iDUB,GSYM TIMES2]);
+    [EXP,CONJUNCT1 FUNPOW,FUNPOW_SUC,iDUB,GSYM TIMES2]
+QED
 
-val TIMES_2EXP_compute = Q.prove(
-  `!n x. TIMES_2EXP n x = if x = 0 then 0 else x * FUNPOW numeral$iDUB n 1`,
-  RW_TAC bool_ss [MULT, TIMES_2EXP_lem, CONJUNCT1 FUNPOW, TIMES_2EXP_def]);
+Theorem TIMES_2EXP_compute[local]:
+   !n x. TIMES_2EXP n x = if x = 0 then 0 else x * FUNPOW numeral$iDUB n 1
+Proof
+  RW_TAC bool_ss [MULT, TIMES_2EXP_lem, CONJUNCT1 FUNPOW, TIMES_2EXP_def]
+QED
 
 val TIMES_2EXP1 =
   (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
    Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def;
 
-val MOD_2EXP_EQ_compute = Q.prove(
-  `!n a b. MOD_2EXP_EQ n a b =
+Theorem MOD_2EXP_EQ_compute[local]:
+   !n a b. MOD_2EXP_EQ n a b =
              if n = 0 then T else
-               (ODD a = ODD b) /\ MOD_2EXP_EQ (n - 1) (DIV2 a) (DIV2 b)`,
-  Cases THEN SRW_TAC [] [MOD_2EXP_EQ])
+               (ODD a = ODD b) /\ MOD_2EXP_EQ (n - 1) (DIV2 a) (DIV2 b)
+Proof
+  Cases THEN SRW_TAC [] [MOD_2EXP_EQ]
+QED
 
-val BOOLIFY_compute = Q.prove(
-  `!n. BOOLIFY n m a =
+Theorem BOOLIFY_compute[local]:
+   !n. BOOLIFY n m a =
          if n = 0 then
            a
          else
-           BOOLIFY (PRE n) (DIV2 m) (ODD m::a)`,
-  Cases THEN SRW_TAC [] [BOOLIFY_def]);
+           BOOLIFY (PRE n) (DIV2 m) (ODD m::a)
+Proof
+  Cases THEN SRW_TAC [] [BOOLIFY_def]
+QED
 
-val HEX_compute = Q.prove(
-  `!n. HEX n =
+Theorem HEX_compute[local]:
+   !n. HEX n =
           if n = 0 then #"0"
      else if n = 1 then #"1"
      else if n = 2 then #"2"
@@ -981,11 +1072,13 @@ val HEX_compute = Q.prove(
      else if n = 13 then #"D"
      else if n = 14 then #"E"
      else if n = 15 then #"F"
-     else FAIL HEX ^(mk_var("not a hex digit",bool)) n`,
-  SRW_TAC [] [HEX_def,combinTheory.FAIL_THM]);
+     else FAIL HEX ^(mk_var("not a hex digit",bool)) n
+Proof
+  SRW_TAC [] [HEX_def,combinTheory.FAIL_THM]
+QED
 
-val UNHEX_compute = Q.prove(
-  `!n. UNHEX c =
+Theorem UNHEX_compute[local]:
+   !n. UNHEX c =
           if c = #"0" then 0
      else if c = #"1" then 1
      else if c = #"2" then 2
@@ -1002,18 +1095,22 @@ val UNHEX_compute = Q.prove(
      else if c = #"D" then 13
      else if c = #"E" then 14
      else if c = #"F" then 15
-     else FAIL UNHEX ^(mk_var("not a hex digit",bool)) c`,
-  SRW_TAC [] [UNHEX_def,combinTheory.FAIL_THM])
+     else FAIL UNHEX ^(mk_var("not a hex digit",bool)) c
+Proof
+  SRW_TAC [] [UNHEX_def,combinTheory.FAIL_THM]
+QED
 
-val LOWEST_SET_BIT_emit = Q.prove(
-  `!n. LOWEST_SET_BIT n =
+Theorem LOWEST_SET_BIT_emit[local]:
+   !n. LOWEST_SET_BIT n =
          if n = 0 then
            FAIL LOWEST_SET_BIT ^(mk_var("zero value",bool)) n
          else if ODD n then
            0
          else
-           1 + LOWEST_SET_BIT (DIV2 n)`,
-  SRW_TAC [] [LOWEST_SET_BIT, combinTheory.FAIL_THM]);
+           1 + LOWEST_SET_BIT (DIV2 n)
+Proof
+  SRW_TAC [] [LOWEST_SET_BIT, combinTheory.FAIL_THM]
+QED
 
 val defs =
   map (DEFN o PURE_REWRITE_RULE [TIMES_2EXP1])
@@ -1100,19 +1197,23 @@ val TIMES_2EXP1 =
     (GSYM o REWRITE_RULE [arithmeticTheory.MULT_LEFT_1] o
      Q.SPECL [`x`,`1`]) bitTheory.TIMES_2EXP_def
 
-val word_reduce = Q.prove(
-  `!b. $FCP (K b) = n2w (if b then 1 else 0) : 1 word`,
+Theorem word_reduce[local]:
+   !b. $FCP (K b) = n2w (if b then 1 else 0) : 1 word
+Proof
   SRW_TAC [fcpLib.FCP_ss]
      [word_index, DECIDE ``x < 1 <=> (x = 0n)``, fcpTheory.index_one,
-      bitTheory.BITS_THM, bitTheory.BIT_def]);
+      bitTheory.BITS_THM, bitTheory.BIT_def]
+QED
 
-val bit_field_insert = Q.prove(
-  `!h l a.
+Theorem bit_field_insert[local]:
+   !h l a.
      bit_field_insert h l a w =
        word_modify
-         (\i b. if l <= i /\ i <= h then word_index a (i - l) else b) w`,
+         (\i b. if l <= i /\ i <= h then word_index a (i - l) else b) w
+Proof
   SRW_TAC [fcpLib.FCP_ss]
-    [word_index_def, bit_field_insert_def, word_modify_def]);
+    [word_index_def, bit_field_insert_def, word_modify_def]
+QED
 
 val n2w_w2n_RULE = REWRITE_RULE [n2w_w2n] o Q.SPEC `w2n w`
 val word_eq_n2w = REWRITE_RULE [n2w_11] (Q.SPECL [`n2w m`,`n2w n`] word_eq_def)
@@ -1248,11 +1349,13 @@ fun emit_conv l1 l2 = LIST_CONJ
 val lem1 = DECIDE ``~(n + 1n <= m) ==> (n + 1 - m = (n - m) + 1)``;
 val lem2 = DECIDE ``m + 1n + (n + 1) = m + n + 1 + 1``;
 
-val INT_NEG_EMIT = Q.prove(
-  `(!n. ~ (int_of_num n) =
+Theorem INT_NEG_EMIT[local]:
+   (!n. ~ (int_of_num n) =
          if n = 0 then int_of_num 0 else neg_int_of_num (n - 1)) /\
-   (!n. ~ (neg_int_of_num n) = int_of_num (n + 1))`,
-  SRW_TAC [ARITH_ss] [neg_int_of_num_def]);
+   (!n. ~ (neg_int_of_num n) = int_of_num (n + 1))
+Proof
+  SRW_TAC [ARITH_ss] [neg_int_of_num_def]
+QED
 
 val INT_ADD_EMIT = emit_conv [emit_rule INT_ADD_REDUCE, lem1, lem2]
    [``int_of_num m + int_of_num n``,
@@ -1278,54 +1381,66 @@ val INT_LT_EMIT = emit_conv [emit_rule INT_LT_CALCULATE]
     ``int_of_num m < neg_int_of_num n``,
     ``neg_int_of_num m < neg_int_of_num n``];
 
-val INT_NEG_EXP = Q.prove(
-  `!m n.
+Theorem INT_NEG_EXP[local]:
+   !m n.
       neg_int_of_num m ** n =
         if EVEN n then
           int_of_num ((m + 1) ** n)
         else
-          ~int_of_num ((m + 1) ** n)`,
+          ~int_of_num ((m + 1) ** n)
+Proof
   SRW_TAC [] [neg_int_of_num_def, INT_EXP_NEG]
-    THEN FULL_SIMP_TAC std_ss [INT_EXP_NEG, GSYM ODD_EVEN]);
+    THEN FULL_SIMP_TAC std_ss [INT_EXP_NEG, GSYM ODD_EVEN]
+QED
 
 val INT_EXP_EMIT = CONJ INT_EXP INT_NEG_EXP;
 
-val INT_Num_EMIT = Q.prove(
-  `(!n. Num (int_of_num n) = n) /\
+Theorem INT_Num_EMIT[local]:
+   (!n. Num (int_of_num n) = n) /\
    (!n. Num (neg_int_of_num n) =
-     FAIL $Num ^(mk_var("negative",bool)) (neg_int_of_num n))`,
-  SRW_TAC [] [combinTheory.FAIL_THM]);
+     FAIL $Num ^(mk_var("negative",bool)) (neg_int_of_num n))
+Proof
+  SRW_TAC [] [combinTheory.FAIL_THM]
+QED
 
-val INT_DIV_EMIT = Q.prove(
-  `!i j. i / j =
+Theorem INT_DIV_EMIT[local]:
+   !i j. i / j =
       if j = 0 then FAIL $/ ^(mk_var("zero denominator",bool)) i j
       else
-        ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_div)`,
-  SRW_TAC [] [combinTheory.FAIL_THM, int_div]);
+        ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_div)
+Proof
+  SRW_TAC [] [combinTheory.FAIL_THM, int_div]
+QED
 
-val INT_MOD_EMIT = Q.prove(
-  `!i j. i % j =
+Theorem INT_MOD_EMIT[local]:
+   !i j. i % j =
       if j = 0 then FAIL $% ^(mk_var("zero denominator",bool)) i j
       else
-        ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_mod)`,
-  SRW_TAC [] [combinTheory.FAIL_THM, int_mod]);
+        ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_mod)
+Proof
+  SRW_TAC [] [combinTheory.FAIL_THM, int_mod]
+QED
 
-val INT_QUOTE_EMIT = Q.prove(
-  `!i j. i quot j =
+Theorem INT_QUOTE_EMIT[local]:
+   !i j. i quot j =
       if j = 0 then FAIL $quot ^(mk_var("zero denominator",bool)) i j
       else
-        ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_quot)`,
-  SRW_TAC [] [combinTheory.FAIL_THM, int_quot]);
+        ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_quot)
+Proof
+  SRW_TAC [] [combinTheory.FAIL_THM, int_quot]
+QED
 
-val INT_REM_EMIT = Q.prove(
-  `!i j. i rem j =
+Theorem INT_REM_EMIT[local]:
+   !i j. i rem j =
       if j = 0 then FAIL $rem ^(mk_var("zero denominator",bool)) i j
       else
-        ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_rem)`,
-  SRW_TAC [] [combinTheory.FAIL_THM, int_rem]);
+        ^((rhs o snd o dest_imp o snd o strip_forall o concl) int_rem)
+Proof
+  SRW_TAC [] [combinTheory.FAIL_THM, int_rem]
+QED
 
 val _ = temp_clear_overloads_on "&";
-val _ = temp_overload_on("int_of_num", ``integer$int_of_num``);
+Overload int_of_num[local] = ``integer$int_of_num``
 
 val _ = eSML "int"
  (OPEN ["num", "words"]
@@ -1395,4 +1510,4 @@ val _ = eSML "sorting" defs;
 val _ = eCAML "sorting" defs;
 
 (* restore "standard" set type abbreviation to have pride of place *)
-val _ = type_abbrev("set", alpha --> bool)
+Type set = alpha --> bool

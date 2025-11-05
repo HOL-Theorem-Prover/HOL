@@ -399,13 +399,15 @@ val mc_full_init_thm = prove(
          NO_CODE_def,WORD_ADD_0,EL_UPDATE_NTH,code_ptr_def]))
   |> SIMP_RULE std_ss [LET_DEF];
 
-val mc_full_init_pre_thm = store_thm("mc_full_init_pre_thm",
-  ``mc_full_init_pre (sp,df,f,dg,g) /\
+Theorem mc_full_init_pre_thm:
+    mc_full_init_pre (sp,df,f,dg,g) /\
     lisp_init (a1,a2,sl,sl1,e,ex,cs) io (df,f,dg,g,dd,d,sp,sa1,sa_len,ds) =
-    lisp_init (a1,a2,sl,sl1,e,ex,cs) io (df,f,dg,g,dd,d,sp,sa1,sa_len,ds)``,
+    lisp_init (a1,a2,sl,sl1,e,ex,cs) io (df,f,dg,g,dd,d,sp,sa1,sa_len,ds)
+Proof
   REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss []
   \\ MP_TAC mc_full_init_thm \\ ASM_SIMP_TAC std_ss []
-  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []);
+  \\ REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
+QED
 
 val _ = save_thm("mc_full_init_thm",mc_full_init_thm);
 

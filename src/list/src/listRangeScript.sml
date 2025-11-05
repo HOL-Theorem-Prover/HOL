@@ -237,21 +237,19 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                                   TOK "]"],
                    term_name = "listRangeINC" }
 
-Theorem listRangeINC_SING:
+Theorem listRangeINC_SING[simp]:
     [m .. m] = [m]
 Proof
   SIMP_TAC (srw_ss()) [listRangeINC_def]
 QED
-val _ = export_rewrites ["listRangeINC_SING"]
 
-Theorem MEM_listRangeINC:
+Theorem MEM_listRangeINC[simp]:
     MEM x [m .. n] <=> m <= x /\ x <= n
 Proof
   SIMP_TAC (srw_ss() ++ ARITH_ss)
            [listRangeINC_def, MEM_GENLIST, EQ_IMP_THM] THEN
   STRIP_TAC THEN Q.EXISTS_TAC `x - m` THEN DECIDE_TAC
 QED
-val _ = export_rewrites ["MEM_listRangeINC"]
 
 Theorem listRangeINC_CONS:
     m <= n ==> ([m .. n] = m :: [m+1 .. n])
@@ -280,20 +278,18 @@ val _ = add_rule { block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                                   TOK "]"],
                    term_name = "listRangeLHI" }
 
-Theorem listRangeLHI_EQ:
+Theorem listRangeLHI_EQ[simp]:
     [m ..< m] = []
 Proof
   SRW_TAC[][listRangeLHI_def]
 QED
-val _ = export_rewrites ["listRangeLHI_EQ"]
 
-Theorem MEM_listRangeLHI:
+Theorem MEM_listRangeLHI[simp]:
     MEM x [m ..< n] <=> m <= x /\ x < n
 Proof
   SRW_TAC[ARITH_ss][listRangeLHI_def, MEM_GENLIST, EQ_IMP_THM] THEN
   Q.EXISTS_TAC `x - m` THEN DECIDE_TAC
 QED
-val _ = export_rewrites ["MEM_listRangeLHI"]
 
 Theorem listRangeLHI_EMPTY:
     hi <= lo ==> ([lo ..< hi] = [])
@@ -311,21 +307,19 @@ Proof
   SRW_TAC[ARITH_ss][listTheory.GENLIST_CONS, listTheory.GENLIST_FUN_EQ]
 QED
 
-Theorem listRangeLHI_ALL_DISTINCT:
+Theorem listRangeLHI_ALL_DISTINCT[simp]:
     ALL_DISTINCT [lo ..< hi]
 Proof
   Induct_on `hi - lo` THEN SRW_TAC[][listRangeLHI_EMPTY] THEN
   `lo < hi` by DECIDE_TAC THEN
   SRW_TAC[ARITH_ss][listRangeLHI_CONS]
 QED
-val _ = export_rewrites ["listRangeLHI_ALL_DISTINCT"]
 
-Theorem LENGTH_listRangeLHI:
+Theorem LENGTH_listRangeLHI[simp]:
     LENGTH [lo ..< hi] = hi - lo
 Proof
   SRW_TAC[][listRangeLHI_def]
 QED
-val _ = export_rewrites ["LENGTH_listRangeLHI"]
 
 Theorem EL_listRangeLHI:
     lo + i < hi ==> (EL i [lo ..< hi] = lo + i)

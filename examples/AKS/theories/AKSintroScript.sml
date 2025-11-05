@@ -200,11 +200,12 @@ val _ = set_fixity "intro" (Infix(NONASSOC, 450)); (* same as relation *)
    <=> poly p /\ (p ** n == peval p (X ** n)) (pm z)             by poly_intro_def
    <=> poly p /\ ((peval p X) ** n == peval p (X ** n)) (pm z)   by poly_peval_by_X
 *)
-val poly_intro_peval_alt = store_thm(
-  "poly_intro_peval_alt",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
-   !n p. n intro p <=> (poly p /\ ((peval p X) ** n == peval p (X ** n)) (pm (unity k)))``,
-  metis_tac[poly_intro_def, poly_peval_by_X]);
+Theorem poly_intro_peval_alt:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
+   !n p. n intro p <=> (poly p /\ ((peval p X) ** n == peval p (X ** n)) (pm (unity k)))
+Proof
+  metis_tac[poly_intro_def, poly_peval_by_X]
+QED
 
 (* Theorem: n intro p ==> (peval p (X ** n) == p ** n) (pm z) *)
 (* Proof:
@@ -214,12 +215,13 @@ val poly_intro_peval_alt = store_thm(
    <=> poly p /\ (p ** n == peval p (X ** n)) (pm z)             by poly_peval_by_X
    <=> poly p /\ (peval p (X ** n) == p ** n) (pm z)             by poly_mod_symmetric
 *)
-val poly_intro_peval_X_exp = store_thm(
-  "poly_intro_peval_X_exp",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
-   !p n. n intro p ==> (peval p (X ** n) == p ** n) (pm (unity k))``,
+Theorem poly_intro_peval_X_exp:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
+   !p n. n intro p ==> (peval p (X ** n) == p ** n) (pm (unity k))
+Proof
   rw_tac std_ss[poly_intro_peval_alt] >>
-  metis_tac[poly_peval_by_X, poly_mod_symmetric]);
+  metis_tac[poly_peval_by_X, poly_mod_symmetric]
+QED
 
 (* Theorem: Ring r /\ (#1 = #0) ==> !k n p. 0 < k /\ poly p ==> n intro p *)
 (* Proof:
@@ -231,13 +233,14 @@ val poly_intro_peval_X_exp = store_thm(
     and poly (peval p (X ** n))    by poly_peval_poly, poly_X_exp
    Hence true                      by poly_mod_reflexive
 *)
-val poly_intro_trivial = store_thm(
-  "poly_intro_trivial",
-  ``!r:'a ring. Ring r /\ (#1 = #0) ==> !k n p. 0 < k /\ poly p ==> n intro p``,
+Theorem poly_intro_trivial:
+    !r:'a ring. Ring r /\ (#1 = #0) ==> !k n p. 0 < k /\ poly p ==> n intro p
+Proof
   rw_tac std_ss[poly_intro_def] >>
   `!p. poly p ==> (p = |0|)` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   `poly (p ** n) /\ poly (peval p (X ** n))` by rw[] >>
-  rw_tac std_ss[poly_mod_reflexive]);
+  rw_tac std_ss[poly_mod_reflexive]
+QED
 
 (* Theorem: 0 < k ==> !m n p. n intro p /\ m intro p ==> (n * m) intro p *)
 (* Proof:
@@ -281,9 +284,9 @@ val poly_intro_trivial = store_thm(
        p ** (n * m) == peval p (X ** (n * m)) (pm z)       by poly_mod_transitive
     or n * m intro p                                       by poly_intro_def
 *)
-val poly_intro_mult = store_thm(
-  "poly_intro_mult",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==> !m n p. n intro p /\ m intro p ==> n * m intro p``,
+Theorem poly_intro_mult:
+    !r:'a ring. Ring r ==> !k. 0 < k ==> !m n p. n intro p /\ m intro p ==> n * m intro p
+Proof
   rpt (stripDup[poly_intro_def]) >>
   qabbrev_tac `z = unity k` >>
   `!x. poly x ==> !n. poly (x ** n)` by rw[] >>
@@ -307,7 +310,8 @@ val poly_intro_mult = store_thm(
   `_ = peval q (X ** n) * t * z` by rw_tac std_ss[poly_mult_assoc] >>
   `(peval (p ** m) (X ** n) - peval p (X ** (n * m)) == |0|) (pm z)` by metis_tac[pmod_eq_zero, poly_sub_poly, poly_mult_poly] >>
   rw_tac std_ss[poly_pmod_sub_eq_zero]) >>
-  metis_tac[poly_mod_transitive, poly_intro_def]);
+  metis_tac[poly_mod_transitive, poly_intro_def]
+QED
 
 (* Theorem: 0 < k ==> !n p q. n intro p /\ n intro q ==> n intro (p * q) *)
 (* Proof:
@@ -324,9 +328,9 @@ val poly_intro_mult = store_thm(
    and  peval p (X ** n) * peval q (X ** n) = peval (p * q) (X ** n) by poly_peval_mult
    Hence n intro (p * q)                                             by poly_intro_def
 *)
-val poly_intro_compose = store_thm(
-  "poly_intro_compose",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==> !p q n. n intro p /\ n intro q ==> n intro p * q``,
+Theorem poly_intro_compose:
+    !r:'a ring. Ring r ==> !k. 0 < k ==> !p q n. n intro p /\ n intro q ==> n intro p * q
+Proof
   rpt (stripDup[poly_intro_def]) >>
   Cases_on `#1 = #0` >-
   rw_tac std_ss[poly_intro_trivial, poly_mult_poly] >>
@@ -334,7 +338,8 @@ val poly_intro_compose = store_thm(
   `!x. poly x ==> !n. poly (x ** n)` by rw[] >>
   `!p q. poly p /\ poly q ==> poly (peval p q)` by rw[] >>
   `poly X /\ pmonic z` by rw[poly_unity_pmonic, Abbr`z`] >>
-  rw_tac std_ss[poly_intro_def, poly_mult_poly, pmod_mult, poly_mult_exp, poly_peval_mult]);
+  rw_tac std_ss[poly_intro_def, poly_mult_poly, pmod_mult, poly_mult_exp, poly_peval_mult]
+QED
 
 (* Theorem: 0 < k ==> !p. poly p ==> 1 intro p *)
 (* Proof:
@@ -351,10 +356,11 @@ val poly_intro_compose = store_thm(
                                            by poly_mod_reflexive
    Thus 1 intro p                          by poly_intro_peval_alt
 *)
-val poly_intro_1 = store_thm(
-  "poly_intro_1",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==> !p. poly p ==> 1 intro p``,
-  rw[poly_intro_peval_alt]);
+Theorem poly_intro_1:
+    !r:'a ring. Ring r ==> !k. 0 < k ==> !p. poly p ==> 1 intro p
+Proof
+  rw[poly_intro_peval_alt]
+QED
 
 (* Theorem: 0 < k ==> !n. n intro |1| *)
 (* Proof:
@@ -374,10 +380,11 @@ val poly_intro_1 = store_thm(
    Also poly |1|                       by poly_one_poly
    Thus n intro |1|                    by poly_intro_peval_alt
 *)
-val poly_intro_one = store_thm(
-  "poly_intro_one",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==> !n. n intro |1|``,
-  rw[poly_intro_peval_alt]);
+Theorem poly_intro_one:
+    !r:'a ring. Ring r ==> !k. 0 < k ==> !n. n intro |1|
+Proof
+  rw[poly_intro_peval_alt]
+QED
 
 (* Theorem: 0 < k /\ 0 < n ==> !n. n intro |0| *)
 (* Proof:
@@ -397,11 +404,12 @@ val poly_intro_one = store_thm(
    Also poly |0|                       by poly_zero_poly
    Thus n intro |0|                    by poly_intro_peval_alt
 *)
-val poly_intro_zero = store_thm(
-  "poly_intro_zero",
-  ``!r:'a ring. Ring r ==> !k n. 0 < k /\ 0 < n ==> n intro |0|``,
+Theorem poly_intro_zero:
+    !r:'a ring. Ring r ==> !k n. 0 < k /\ 0 < n ==> n intro |0|
+Proof
   rw_tac std_ss[poly_intro_peval_alt, poly_peval_zero, poly_zero_poly, poly_zero_exp] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> ~(0 intro |0|) *)
 (* Proof:
@@ -414,13 +422,14 @@ val poly_intro_zero = store_thm(
    <=> #1 = #0                     by poly_one_eq_poly_zero
    which contradicts #1 <> #0.
 *)
-val poly_intro_not_0_zero = store_thm(
-  "poly_intro_not_0_zero",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !k. 0 < k ==> ~(0 intro |0|)``,
+Theorem poly_intro_not_0_zero:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !k. 0 < k ==> ~(0 intro |0|)
+Proof
   rw_tac std_ss[poly_intro_def, poly_zero_poly, poly_peval_zero, poly_zero_exp] >>
   qabbrev_tac `z = unity k` >>
   `poly X /\ pmonic z` by rw[poly_unity_pmonic, Abbr`z`] >>
-  metis_tac[pmod_def_alt, poly_mod_one, poly_mod_zero, poly_one_eq_poly_zero]);
+  metis_tac[pmod_def_alt, poly_mod_one, poly_mod_zero, poly_one_eq_poly_zero]
+QED
 
 (* Theorem: 0 < k ==> !n. n intro X *)
 (* Proof:
@@ -437,10 +446,11 @@ val poly_intro_not_0_zero = store_thm(
    Also poly X                      by poly_X
    Thus n intro X                   by poly_intro_peval_alt
 *)
-val poly_intro_X = store_thm(
-  "poly_intro_X",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==> !n. n intro X``,
-  rw_tac std_ss[poly_intro_peval_alt, poly_peval_X, poly_mod_reflexive, poly_exp_poly, poly_X]);
+Theorem poly_intro_X:
+    !r:'a ring. Ring r ==> !k. 0 < k ==> !n. n intro X
+Proof
+  rw_tac std_ss[poly_intro_peval_alt, poly_peval_X, poly_mod_reflexive, poly_exp_poly, poly_X]
+QED
 
 (* Theorem: 0 < k ==> !n. n intro X ** m *)
 (* Proof:
@@ -465,14 +475,15 @@ val poly_intro_X = store_thm(
    Also poly (X ** m)               by poly_X_exp
    Thus n intro (X ** n)            by poly_intro_peval_alt
 *)
-val poly_intro_X_exp = store_thm(
-  "poly_intro_X_exp",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==> !n m. n intro (X ** m)``,
+Theorem poly_intro_X_exp:
+    !r:'a ring. Ring r ==> !k. 0 < k ==> !n m. n intro (X ** m)
+Proof
   rpt strip_tac >>
   `peval (X ** m) X ** n = X ** (m * n)` by rw[poly_peval_X_exp, poly_exp_mult] >>
   `peval (X ** m) (X ** n) = X ** (n * m)` by rw[poly_peval_X_exp, poly_exp_mult] >>
   `_ = X ** (m * n)`by rw_tac bool_ss[MULT_COMM] >>
-  rw[poly_intro_peval_alt, poly_mod_reflexive]);
+  rw[poly_intro_peval_alt, poly_mod_reflexive]
+QED
 
 (* Theorem: 0 < k ==> !n c. n intro (X + |c|) <=> ((X + |c|) ** n == (X ** n + |c|)) (pm (unity k)) *)
 (* Proof:
@@ -480,14 +491,15 @@ val poly_intro_X_exp = store_thm(
    (1) poly (X + |c|),                          true by poly_X_add_c
    (2) peval (X + |c|) (X ** n) = X ** n + |c|, true by poly_peval_X_add_c
 *)
-val poly_intro_X_add_c = store_thm(
-  "poly_intro_X_add_c",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
-   !n c:num. n intro (X + |c|) <=> ((X + |c|) ** n == (X ** n + |c|)) (pm (unity k))``,
+Theorem poly_intro_X_add_c:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
+   !n c:num. n intro (X + |c|) <=> ((X + |c|) ** n == (X ** n + |c|)) (pm (unity k))
+Proof
   rw_tac std_ss[poly_intro_def] >>
   `poly (X + |c|)` by rw[] >>
   `peval (X + |c|) (X ** n) = X ** n + |c|` by rw[poly_peval_X_add_c] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: !c. 0 intro (X + |c|) <=> |c| = |0| *)
 (* Proof:
@@ -514,9 +526,9 @@ val poly_intro_X_add_c = store_thm(
    This is to show:  ( |c| == |0|) (pm z) <=> ( |c| = |0|)
    which is true                             by poly_pmod_ring_sum_eq_zero
 *)
-val poly_intro_X_add_c_0 = store_thm(
-  "poly_intro_X_add_c_0",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==> !c:num. 0 intro (X + |c|) <=> ( |c| = |0|)``,
+Theorem poly_intro_X_add_c_0:
+    !r:'a ring. Ring r ==> !k. 0 < k ==> !c:num. 0 intro (X + |c|) <=> ( |c| = |0|)
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >| [
     rw_tac std_ss[EQ_IMP_THM] >-
@@ -531,7 +543,8 @@ val poly_intro_X_add_c_0 = store_thm(
     `( |1| + |c| - |1| == |0|) (pm z) <=> ( |c| = |0|)` suffices_by metis_tac[poly_pmod_sub_eq_zero] >>
     `( |c| == |0|) (pm z) <=> ( |c| = |0|)` suffices_by metis_tac[poly_add_sub_comm] >>
     rw_tac std_ss[poly_pmod_ring_sum_eq_zero]
-  ]);
+  ]
+QED
 
 (* Note: |c| = |0| <=> c = 0  by poly_sum_num_eq requires FiniteRing r *)
 
@@ -550,12 +563,13 @@ val it = |- Ring (PolyModRing r z) ==> !p. Poly (PolyModRing r z) p ==>
    or  ((poly_eval (PolyRing r) (lift p) X) ** n % z =
         (poly_eval (PolyRing r) (lift p) (X ** n)) % z)           by poly_peval_alt
 *)
-val poly_intro_eval_alt = store_thm(
-  "poly_intro_eval_alt",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==> !n p. n intro p <=> poly p /\
+Theorem poly_intro_eval_alt:
+    !r:'a ring. Ring r ==> !k. 0 < k ==> !n p. n intro p <=> poly p /\
     (((poly_eval (PolyRing r) (lift p) X) ** n) % (unity k) =
-     (poly_eval (PolyRing r) (lift p) (X ** n)) % (unity k))``,
-  metis_tac[poly_intro_peval_alt, poly_peval_alt, pmod_def_alt, poly_X, poly_exp_poly]);
+     (poly_eval (PolyRing r) (lift p) (X ** n)) % (unity k))
+Proof
+  metis_tac[poly_intro_peval_alt, poly_peval_alt, pmod_def_alt, poly_X, poly_exp_poly]
+QED
 
 (* Note: the following cannot be proved,
    as X will be required to be an element in (PolyModRing r z), i.e. deg X < deg z.
@@ -582,10 +596,10 @@ g `!(r:'a ring) (z:'a poly). Ring r ==> !n p. n intro p <=> poly p /\
    <=> poly p /\ 0 < k /\ (p ** n == peval p (X ** n)) (pm (unity k))       by poly_intro_def
    <=> poly p /\ 0 < k /\ (unity k) pdivides (p ** n - (peval p (X ** n)))  by poly_divides_sub
 *)
-val poly_intro_alt_1 = store_thm(
-  "poly_intro_alt_1",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
-   !n p. n intro p <=> poly p /\ (unity k) pdivides (p ** n - (peval p (X ** n)))``,
+Theorem poly_intro_alt_1:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
+   !n p. n intro p <=> poly p /\ (unity k) pdivides (p ** n - (peval p (X ** n)))
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >| [
     rw_tac std_ss[EQ_IMP_THM] >-
@@ -595,7 +609,8 @@ val poly_intro_alt_1 = store_thm(
     metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero, poly_divides_zero]) >>
     rw_tac std_ss[poly_intro_trivial],
     metis_tac[poly_intro_def, poly_unity_pmonic, poly_divides_sub, poly_X, poly_exp_poly, poly_peval_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < k ==> !n p. n intro p <=> poly p /\ (p ** n - (peval p (X ** n)) == |0|) (pm (unity k)) *)
 (* Proof:
@@ -614,10 +629,10 @@ val poly_intro_alt_1 = store_thm(
    <=> poly p /\ 0 < k /\ (p ** n == peval p (X ** n)) (pm (unity k))          by poly_intro_def
    <=> poly p /\ 0 < k /\ (p ** n - (peval p (X ** n)) == |0|) (pm (unity k))  by poly_pmod_sub_eq_zero
 *)
-val poly_intro_alt_2 = store_thm(
-  "poly_intro_alt_2",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
-   !n p. n intro p <=> poly p /\ (p ** n - (peval p (X ** n)) == |0|) (pm (unity k))``,
+Theorem poly_intro_alt_2:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
+   !n p. n intro p <=> poly p /\ (p ** n - (peval p (X ** n)) == |0|) (pm (unity k))
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >| [
     rw_tac std_ss[EQ_IMP_THM] >-
@@ -627,7 +642,8 @@ val poly_intro_alt_2 = store_thm(
     metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero, poly_mod_reflexive]) >>
     rw_tac std_ss[poly_intro_trivial],
     metis_tac[poly_intro_def, poly_unity_pmonic, poly_pmod_sub_eq_zero, poly_X, poly_exp_poly, poly_peval_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < k ==> !n c. n intro X + |c| <=> (unity k) pdivides ((X + |c|) ** n - (X ** n + |c|)) *)
 (* Proof:
@@ -648,10 +664,10 @@ val poly_intro_alt_2 = store_thm(
     and (p == q) (pm z) <=> z pdivides p - q   by poly_divides_sub, pmonic z.
    Thus the result follows                     by poly_intro_X_add_c
 *)
-val poly_intro_X_add_c_alt_1 = store_thm(
-  "poly_intro_X_add_c_alt_1",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
-   !n (c:num). n intro X + |c| <=> (unity k) pdivides ((X + |c|) ** n - (X ** n + |c|))``,
+Theorem poly_intro_X_add_c_alt_1:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
+   !n (c:num). n intro X + |c| <=> (unity k) pdivides ((X + |c|) ** n - (X ** n + |c|))
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >| [
     rw_tac std_ss[EQ_IMP_THM] >| [
@@ -663,7 +679,8 @@ val poly_intro_X_add_c_alt_1 = store_thm(
     `poly ((X + |c|) ** n)` by rw[] >>
     `poly (X ** n + |c|)` by rw[] >>
     metis_tac[poly_divides_sub, poly_unity_pmonic]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < k ==> !n c. n intro X + |c| <=> ((X + |c|) ** n - (X ** n + |c|) == |0|) (pm (unity k)) *)
 (* Proof:
@@ -684,10 +701,10 @@ val poly_intro_X_add_c_alt_1 = store_thm(
     and (p == q) (pm z) <=> (p - q == |0|) (pm z)    by poly_pmod_sub_eq_zero, pmonic z.
    Thus the result follows                           by poly_intro_X_add_c
 *)
-val poly_intro_X_add_c_alt_2 = store_thm(
-  "poly_intro_X_add_c_alt_2",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
-   !n (c:num). n intro X + |c| <=> ((X + |c|) ** n - (X ** n + |c|) == |0|) (pm (unity k))``,
+Theorem poly_intro_X_add_c_alt_2:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
+   !n (c:num). n intro X + |c| <=> ((X + |c|) ** n - (X ** n + |c|) == |0|) (pm (unity k))
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >| [
     rw_tac std_ss[EQ_IMP_THM] >| [
@@ -699,7 +716,8 @@ val poly_intro_X_add_c_alt_2 = store_thm(
     `poly ((X + |c|) ** n)` by rw[] >>
     `poly (X ** n + |c|)` by rw[] >>
     metis_tac[poly_pmod_sub_eq_zero, poly_unity_pmonic]
-  ]);
+  ]
+QED
 
 (* Theorem: prime (char r) ==> !k c. 0 < k ==> (char r) intro (X + |c|) *)
 (* Proof:
@@ -714,10 +732,10 @@ val poly_intro_X_add_c_alt_2 = store_thm(
            = X ** p + |c|               by poly_peval_X_add_c
        Hence true                       by poly_mod_reflexive.
 *)
-val poly_intro_X_add_c_prime_char = store_thm(
-  "poly_intro_X_add_c_prime_char",
-  ``!r:'a ring. Ring r /\ prime (char r) ==>
-   !k c:num. 0 < k ==> (char r) intro (X + |c|)``,
+Theorem poly_intro_X_add_c_prime_char:
+    !r:'a ring. Ring r /\ prime (char r) ==>
+   !k c:num. 0 < k ==> (char r) intro (X + |c|)
+Proof
   rw_tac std_ss[poly_intro_def] >-
   rw[] >>
   qabbrev_tac `z = unity k` >>
@@ -725,28 +743,31 @@ val poly_intro_X_add_c_prime_char = store_thm(
   `poly X /\ poly |c| /\ poly (X + |c|) /\ poly (X ** p) /\ poly (X ** p + |c|)` by rw[] >>
   `(X + |c|) ** p = X ** p + |c|` by metis_tac[poly_freshman_thm, poly_fermat_thm] >>
   `peval (X + |c|) (X ** p) = X ** p + |c|` by rw[poly_peval_X_add_c] >>
-  metis_tac[poly_mod_reflexive]);
+  metis_tac[poly_mod_reflexive]
+QED
 
 (* Theorem: Ring r /\ prime (char r) /\ 0 < k ==>
             ((X + |c|) ** (char r) == (X ** (char r) + |c|)) (pm (unity k)) *)
 (* Proof: by poly_intro_X_add_c_prime_char, poly_intro_def, poly_peval_X_add_c *)
-val poly_intro_X_add_c_prime_char_alt = store_thm(
-  "poly_intro_X_add_c_prime_char_alt",
-  ``!r:'a ring k c:num. Ring r /\ prime (char r) /\ 0 < k ==>
-           ((X + |c|) ** (char r) == (X ** (char r) + |c|)) (pm (unity k))``,
+Theorem poly_intro_X_add_c_prime_char_alt:
+    !r:'a ring k c:num. Ring r /\ prime (char r) /\ 0 < k ==>
+           ((X + |c|) ** (char r) == (X ** (char r) + |c|)) (pm (unity k))
+Proof
   rpt strip_tac >>
   imp_res_tac poly_intro_X_add_c_prime_char >>
   fs[poly_intro_def] >>
   qabbrev_tac `p = char r` >>
   `peval (X + |c|) (X ** p) = X ** p + |c|` by rw[poly_peval_X_add_c] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: FiniteField r /\ 0 < k ==> (char r) intro X + |c| *)
 (* Proof: by poly_intro_X_add_c_prime_char, finite_field_char *)
-val poly_intro_X_add_c_finite_field = store_thm(
-  "poly_intro_X_add_c_finite_field",
-  ``!r:'a field k c:num. FiniteField r /\ 0 < k ==> (char r) intro X + |c|``,
-  rw[poly_intro_X_add_c_prime_char, finite_field_char, finite_field_is_field]);
+Theorem poly_intro_X_add_c_finite_field:
+    !r:'a field k c:num. FiniteField r /\ 0 < k ==> (char r) intro X + |c|
+Proof
+  rw[poly_intro_X_add_c_prime_char, finite_field_char, finite_field_is_field]
+QED
 
 (* Theorem: 0 < k ==> !n p. n intro p <=> poly p /\
             !x. poly x /\ (x ** k == |1|) (pm (unity k)) ==>
@@ -787,12 +808,12 @@ val poly_intro_X_add_c_finite_field = store_thm(
      Overall (p ** n == peval p (X ** n)) (pm z))  by poly_mod_reflexive, poly_mod_transitive
           or n intro p                  by poly_intro_def
 *)
-val poly_intro_unity_roots_1 = store_thm(
-  "poly_intro_unity_roots_1",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
+Theorem poly_intro_unity_roots_1:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
    !n p. n intro p <=> poly p /\
    !x. poly x /\ (x ** k == |1|) (pm (unity k)) ==>
-       ((peval p x) ** n == peval p (x ** n)) (pm (unity k))``,
+       ((peval p x) ** n == peval p (x ** n)) (pm (unity k))
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >| [
     rw_tac std_ss[EQ_IMP_THM] >-
@@ -820,7 +841,8 @@ val poly_intro_unity_roots_1 = store_thm(
       `!z x. poly z /\ poly x ==> poly (peval z x)` by rw[] >>
       metis_tac[poly_peval_by_X, poly_mod_reflexive, poly_mod_transitive]
     ]
-  ]);
+  ]
+QED
 
 (* Note: This leads to an Injection Map without prime k *)
 
@@ -871,12 +893,12 @@ val poly_intro_unity_roots_1 = store_thm(
           Hence (peval p X ** n == p ** n) (pm z)             by poly_mod_reflexive
             and (p ** n == peval p (X ** n)) (pm z)           by poly_mod_transitive
 *)
-val poly_intro_unity_roots_2 = store_thm(
-  "poly_intro_unity_roots_2",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
+Theorem poly_intro_unity_roots_2:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
    !n p. n intro p <=> poly p /\
    !x h. poly x /\ pmonic h /\ ((unity k) % h = |0|) /\ (x ** k == |1|) (pm h) ==>
-       ((peval p x) ** n == peval p (x ** n)) (pm h)``,
+       ((peval p x) ** n == peval p (x ** n)) (pm h)
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >| [
     rw_tac std_ss[EQ_IMP_THM] >-
@@ -905,7 +927,8 @@ val poly_intro_unity_roots_2 = store_thm(
       `z % z = |0|` by rw[poly_div_mod_id] >>
       metis_tac[poly_peval_by_X, poly_mod_reflexive, poly_mod_transitive]
     ]
-  ]);
+  ]
+QED
 
 (* If only we have this:
   Theorem: Given any poly p, there is "an extension field where p splits",
@@ -935,11 +958,12 @@ val _ = overload_on("poly_intro_range",
 
 (* Theorem: poly_intro_range r k m s /\ poly_intro_range r k n s ==> poly_intro_range r k (m * n) s *)
 (* Proof: by poly_intro_mult *)
-val poly_intro_range_product = store_thm(
-  "poly_intro_range_product",
-  ``!r:'a ring k. Ring r /\ 0 < k ==>
-   !m n s. poly_intro_range r k m s /\ poly_intro_range r k n s ==> poly_intro_range r k (m * n) s``,
-  rw_tac std_ss[poly_intro_mult]);
+Theorem poly_intro_range_product:
+    !r:'a ring k. Ring r /\ 0 < k ==>
+   !m n s. poly_intro_range r k m s /\ poly_intro_range r k n s ==> poly_intro_range r k (m * n) s
+Proof
+  rw_tac std_ss[poly_intro_mult]
+QED
 
 (* Overload polynomial introspective checks for ZN polynomials. *)
 val _ = overload_on("poly_intro_checks",
@@ -954,13 +978,14 @@ EVAL ``let n = 7; k = 7 in EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^-
 (* Theorem: poly_intro_checks n k s <=>
             EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) [1 .. s] *)
 (* Proof: by listRangeINC_EVERY, overloading of poly_intro_checks *)
-val poly_intro_checks_thm = store_thm(
-  "poly_intro_checks_thm",
-  ``!n k s. poly_intro_checks n k s <=>
-           EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) [1 .. s]``,
+Theorem poly_intro_checks_thm:
+    !n k s. poly_intro_checks n k s <=>
+           EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) [1 .. s]
+Proof
   rpt strip_tac >>
   `!c. 0 < c <=> 1 <= c` by decide_tac >>
-  rw[listRangeINC_EVERY]);
+  rw[listRangeINC_EVERY]
+QED
 (* cannot put into computeLib due to LHS is a lambda expression *)
 
 (* Put poly_intro_checks as definition (for printing) *)
@@ -976,14 +1001,15 @@ End
     ==> poly_intro (ZN n) k n (x+ n c) = (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))
                                          by poly_intro_X_add_c, 0 < k
 *)
-val ZN_intro_eqn = store_thm(
-  "ZN_intro_eqn",
-  ``!n k. 0 < k /\ 0 < n ==>
-   !c. poly_intro (ZN n) k n (x+ n c) = (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))``,
+Theorem ZN_intro_eqn:
+    !n k. 0 < k /\ 0 < n ==>
+   !c. poly_intro (ZN n) k n (x+ n c) = (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))
+Proof
   rpt strip_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `char (ZN n) = n` by rw[ZN_char] >>
-  rw[poly_intro_X_add_c]);
+  rw[poly_intro_X_add_c]
+QED
 
 (* Theorem: 0 < k /\ 0 < n ==> !m. poly_intro_range (ZN n) k n m =
    (!c. 0 < c /\ c <= m ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))) *)
@@ -992,11 +1018,12 @@ val ZN_intro_eqn = store_thm(
     = !c. 0 < c /\ c <= m ==> poly_intro (ZN n) k n (x+ n c)                     by notation
     = !c. 0 < c /\ c <= m ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))   by ZN_intro_eqn
 *)
-val ZN_intro_range_eqn = store_thm(
-  "ZN_intro_range_eqn",
-  ``!n k. 0 < k /\ 0 < n ==> !m. poly_intro_range (ZN n) k n m =
-   (!c. 0 < c /\ c <= m ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))``,
-  rw_tac std_ss[ZN_intro_eqn]);
+Theorem ZN_intro_range_eqn:
+    !n k. 0 < k /\ 0 < n ==> !m. poly_intro_range (ZN n) k n m =
+   (!c. 0 < c /\ c <= m ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
+Proof
+  rw_tac std_ss[ZN_intro_eqn]
+QED
 
 (* Theorem: prime n /\ 0 < k ==> poly_intro (ZN n) k n (x+ n c) *)
 (* Proof:
@@ -1007,21 +1034,23 @@ val ZN_intro_range_eqn = store_thm(
    Also char (ZN n) = n                   by ZN_char, 0 < n
    The result follows                     by poly_intro_X_add_c_prime_char, 0 < k
 *)
-val ZN_intro_by_prime = store_thm(
-  "ZN_intro_by_prime",
-  ``!n k c. prime n /\ 0 < k ==> poly_intro (ZN n) k n (x+ n c)``,
+Theorem ZN_intro_by_prime:
+    !n k c. prime n /\ 0 < k ==> poly_intro (ZN n) k n (x+ n c)
+Proof
   rpt strip_tac >>
   `1 < n` by rw[ONE_LT_PRIME] >>
   `Ring (ZN n) /\ (ZN n).prod.id <> (ZN n).sum.id` by rw[ZN_ring, ZN_ids_alt] >>
   `char (ZN n) = n` by rw[ZN_char] >>
-  metis_tac[poly_intro_X_add_c_prime_char]);
+  metis_tac[poly_intro_X_add_c_prime_char]
+QED
 
 (* Theorem: prime n /\ 0 < k ==> poly_intro_range (ZN n) k n m *)
 (* Proof: by ZN_intro_by_prime *)
-val ZN_intro_range_by_prime = store_thm(
-  "ZN_intro_range_by_prime",
-  ``!n k m. prime n /\ 0 < k ==> poly_intro_range (ZN n) k n m``,
-  rw_tac std_ss[ZN_intro_by_prime]);
+Theorem ZN_intro_range_by_prime:
+    !n k m. prime n /\ 0 < k ==> poly_intro_range (ZN n) k n m
+Proof
+  rw_tac std_ss[ZN_intro_by_prime]
+QED
 
 (* Theorem: prime n /\ 0 < k ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)) *)
 (* Proof:
@@ -1032,27 +1061,30 @@ val ZN_intro_range_by_prime = store_thm(
     Now poly_intro (ZN n) k n (x+ n c)    by ZN_intro_by_prime, by prime n, 0 < k
    Thus (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))    by poly_intro_X_add_c, [1], [2]
 *)
-val ZN_intro_range_by_prime_alt = store_thm(
-  "ZN_intro_range_by_prime_alt",
-  ``!n k c. prime n /\ 0 < k ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))``,
+Theorem ZN_intro_range_by_prime_alt:
+    !n k c. prime n /\ 0 < k ==> (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))
+Proof
   rpt strip_tac >>
   `1 < n` by rw[ONE_LT_PRIME] >>
   `Ring (ZN n) /\ (ZN n).prod.id <> (ZN n).sum.id` by rw[ZN_ring, ZN_ids_alt] >>
-  metis_tac[ZN_intro_by_prime, poly_intro_X_add_c]);
+  metis_tac[ZN_intro_by_prime, poly_intro_X_add_c]
+QED
 
 (* Theorem: prime n /\ 0 < k ==> poly_intro_checks n k m *)
 (* Proof: by ZN_intro_range_by_prime_alt. *)
-val ZN_intro_checks_by_prime = store_thm(
-  "ZN_intro_checks_by_prime",
-  ``!n k m. prime n /\ 0 < k ==> poly_intro_checks n k m``,
-  rw_tac std_ss[ZN_intro_range_by_prime_alt]);
+Theorem ZN_intro_checks_by_prime:
+    !n k m. prime n /\ 0 < k ==> poly_intro_checks n k m
+Proof
+  rw_tac std_ss[ZN_intro_range_by_prime_alt]
+QED
 
 (* Theorem: s <= t /\ poly_intro_checks n k t ==> poly_intro_checks n k s *)
 (* Proof: by LESS_EQ_TRANS *)
-val ZN_intro_checks_imp = store_thm(
-  "ZN_intro_checks_imp",
-  ``!n k s t. s <= t /\ poly_intro_checks n k t ==> poly_intro_checks n k s``,
-  rw[]);
+Theorem ZN_intro_checks_imp:
+    !n k s t. s <= t /\ poly_intro_checks n k t ==> poly_intro_checks n k s
+Proof
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Introspective between Fields                                              *)
@@ -1081,10 +1113,10 @@ val ZN_intro_checks_imp = store_thm(
    Expand by poly_intro_X_add_c_alt_1,
    The result follows                         by subring_poly_divides_iff, poly_monic_pmonic, subring_poly_deg
 *)
-val subfield_poly_intro = store_thm(
-  "subfield_poly_intro",
-  ``!(r s):'a field. s <<= r ==> !k. 0 < k ==>
-   !n c:num. n intro X + |c| <=> poly_intro s k n (poly_add s (poly_shift s (poly_one s) 1) (poly_num s c))``,
+Theorem subfield_poly_intro:
+    !(r s):'a field. s <<= r ==> !k. 0 < k ==>
+   !n c:num. n intro X + |c| <=> poly_intro s k n (poly_add s (poly_shift s (poly_one s) 1) (poly_num s c))
+Proof
   rpt strip_tac >>
   `s <= r` by rw[subfield_is_subring] >>
   `#1 <> #0 /\ s.prod.id <> s.sum.id` by rw[] >>
@@ -1101,7 +1133,8 @@ val subfield_poly_intro = store_thm(
   metis_tac[subring_poly_sub]) >>
   `!r:'a ring. Ring r ==> poly ((X + |c|) ** n - (X ** n + |c|))` by rw[] >>
   `!r:'a ring. Ring r /\ #1 <> #0 ==> !k. 0 < k ==> monic (unity k) /\ (deg (unity k) = k)` by rw[poly_unity_monic, poly_unity_deg] >>
-  metis_tac[poly_intro_X_add_c_alt_1, subring_poly_divides_iff, poly_monic_pmonic, subring_poly_deg]);
+  metis_tac[poly_intro_X_add_c_alt_1, subring_poly_divides_iff, poly_monic_pmonic, subring_poly_deg]
+QED
 
 (* Theorem: (r === r_) f ==> !k. 0 < k ==> !n c. n intro X + |c| <=> poly_intro r_ k n (X_ +_ |c|_) *)
 (* Proof:
@@ -1120,10 +1153,10 @@ val subfield_poly_intro = store_thm(
    Expand by poly_intro_X_add_c_alt_1,
    The result follows                     by field_iso_poly_divides_iff
 *)
-val field_iso_poly_intro = store_thm(
-  "field_iso_poly_intro",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !k. 0 < k ==>
-   !n c:num. n intro X + |c| <=> poly_intro r_ k n (X_ +_ |c|_)``,
+Theorem field_iso_poly_intro:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !k. 0 < k ==>
+   !n c:num. n intro X + |c| <=> poly_intro r_ k n (X_ +_ |c|_)
+Proof
   rpt strip_tac >>
   `Ring r /\ Ring r_` by rw[] >>
   `MAP f X = X_` by rw[field_iso_poly_X] >>
@@ -1138,7 +1171,8 @@ val field_iso_poly_intro = store_thm(
   qabbrev_tac `p = unity k` >>
   qabbrev_tac `q = (X + |c|) ** n - (X ** n + |c|)` >>
   `poly p /\ poly q` by rw[Abbr`p`, Abbr`q`] >>
-  metis_tac[poly_intro_X_add_c_alt_1, field_iso_poly_divides_iff]);
+  metis_tac[poly_intro_X_add_c_alt_1, field_iso_poly_divides_iff]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Introspective for Divisor                                                 *)
@@ -1197,19 +1231,21 @@ This won't work. Better use Tao's suggestion:
     and prime (char r)            by finite_field_char
      so (char r) intro X + |c|    by poly_intro_X_add_c_prime_char
 *)
-val poly_intro_X_add_c_prime_char_1 = store_thm(
-  "poly_intro_X_add_c_prime_char_1",
-  ``!r:'a field. FiniteField r ==> !k. 0 < k ==> !c:num. (char r) intro X + |c|``,
-  rw[poly_intro_X_add_c_prime_char, finite_field_is_field, finite_field_char]);
+Theorem poly_intro_X_add_c_prime_char_1:
+    !r:'a field. FiniteField r ==> !k. 0 < k ==> !c:num. (char r) intro X + |c|
+Proof
+  rw[poly_intro_X_add_c_prime_char, finite_field_is_field, finite_field_char]
+QED
 
 (* Theorem: FiniteField r /\ 0 < k ==>
             ((X + |c|) ** (char r) == (X ** (char r) + |c|)) (pm (unity k)) *)
 (* Proof: by poly_intro_X_add_c_prime_char_alt, finite_field_char *)
-val poly_intro_X_add_c_prime_char_1_alt = store_thm(
-  "poly_intro_X_add_c_prime_char_1_alt",
-  ``!r:'a field k c:num. FiniteField r /\ 0 < k ==>
-           ((X + |c|) ** (char r) == (X ** (char r) + |c|)) (pm (unity k))``,
-  rw_tac std_ss[poly_intro_X_add_c_prime_char_alt, finite_field_char, finite_field_is_field, field_is_ring]);
+Theorem poly_intro_X_add_c_prime_char_1_alt:
+    !r:'a field k c:num. FiniteField r /\ 0 < k ==>
+           ((X + |c|) ** (char r) == (X ** (char r) + |c|)) (pm (unity k))
+Proof
+  rw_tac std_ss[poly_intro_X_add_c_prime_char_alt, finite_field_char, finite_field_is_field, field_is_ring]
+QED
 
 (* Idea:
 Let s be a subfield of r, possibly s is the prime subfield.
@@ -1300,10 +1336,10 @@ poly_unity_eq_poly_cyclo_product
    Thus (u == v) (pm (unity k))             by poly_unity_mod_exp_char_eq
      or q intro X + |c|                     by poly_intro_X_add_c
 *)
-val poly_intro_X_add_c_prime_char_2 = store_thm(
-  "poly_intro_X_add_c_prime_char_2",
-  ``!r:'a field. FiniteField r ==> !k. k divides (CARD R+) ==>
-   !n c:num. (char r) divides n /\ n intro X + |c| ==> (n DIV (char r)) intro X + |c|``,
+Theorem poly_intro_X_add_c_prime_char_2:
+    !r:'a field. FiniteField r ==> !k. k divides (CARD R+) ==>
+   !n c:num. (char r) divides n /\ n intro X + |c| ==> (n DIV (char r)) intro X + |c|
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `p = char r` >>
@@ -1320,7 +1356,8 @@ val poly_intro_X_add_c_prime_char_2 = store_thm(
   `v ** p = (X ** q) ** p + |c| ** p` by rw_tac std_ss[poly_freshman_thm, Abbr`v`, Abbr`p`] >>
   `_ = X ** n + |c| ** p ` by rw[poly_exp_mult] >>
   `_ = X ** n + |c|` by rw_tac std_ss[poly_fermat_thm, Abbr`p`] >>
-  metis_tac[poly_intro_X_add_c, poly_unity_mod_exp_char_eq]);
+  metis_tac[poly_intro_X_add_c, poly_unity_mod_exp_char_eq]
+QED
 
 (* This is a good result, but need a better version to be useful. *)
 
@@ -1371,10 +1408,10 @@ val poly_intro_X_add_c_prime_char_2 = store_thm(
     ==> poly_intro st k q Xc_st                 by subfield_poly_intro, st <= t
     ==> q intro X + |c|                         by field_iso_poly_intro, FieldIso up r st
 *)
-val poly_intro_X_add_c_prime_char_3 = store_thm(
-  "poly_intro_X_add_c_prime_char_3",
-  ``!r:'a field. FiniteField r ==> !k. coprime k (CARD R) /\ 1 < ordz k (CARD R) ==>
-   !n c:num. char r divides n /\ n intro X + |c| ==> n DIV char r intro X + |c|``,
+Theorem poly_intro_X_add_c_prime_char_3:
+    !r:'a field. FiniteField r ==> !k. coprime k (CARD R) /\ 1 < ordz k (CARD R) ==>
+   !n c:num. char r divides n /\ n intro X + |c| ==> n DIV char r intro X + |c|
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `d = ordz k (CARD R)` >>
   `1 < k` by metis_tac[ZN_order_with_coprime_1, finite_field_card_gt_1] >>
@@ -1401,7 +1438,8 @@ val poly_intro_X_add_c_prime_char_3 = store_thm(
   `poly_intro t k n Xc_t` by metis_tac[subfield_poly_intro] >>
   `poly_intro t k q Xc_t` by metis_tac[poly_intro_X_add_c_prime_char_2] >>
   `poly_intro st k q Xc_st` by metis_tac[subfield_poly_intro] >>
-  `q intro X + |c|` by metis_tac[field_iso_poly_intro]);
+  `q intro X + |c|` by metis_tac[field_iso_poly_intro]
+QED
 
 (* Yes! This is the theorem I always wanted. *)
 
@@ -1417,10 +1455,11 @@ val poly_intro_X_add_c_prime_char_3 = store_thm(
 
 (* Theorem: FiniteField r /\ 0 < k ==> poly_intro_range r k (char r) s *)
 (* Proof: by poly_intro_X_add_c_prime_char_1 *)
-val poly_intro_range_char = store_thm(
-  "poly_intro_range_char",
-  ``!r:'a field k s. FiniteField r /\ 0 < k ==> poly_intro_range r k (char r) s``,
-  rw[poly_intro_X_add_c_prime_char_1]);
+Theorem poly_intro_range_char:
+    !r:'a field k s. FiniteField r /\ 0 < k ==> poly_intro_range r k (char r) s
+Proof
+  rw[poly_intro_X_add_c_prime_char_1]
+QED
 
 (* Theorem: FiniteField r /\ k divides CARD R+ ==>
             !n c:num. char r divides n /\ n intro (X + |c|) ==> (n DIV char r) intro (X + |c|) *)
@@ -1449,10 +1488,10 @@ val poly_intro_range_char = store_thm(
    Thus (u - v == |0|) (pm z)               by poly_distinct_irreducibles_mod_exp_eq_zero
      or q intro X + |c|                     by poly_intro_X_add_c_alt_2
 *)
-val poly_intro_X_add_c_prime_char_cofactor_1 = store_thm(
-  "poly_intro_X_add_c_prime_char_cofactor_1",
-  ``!r:'a field k. FiniteField r /\ k divides CARD R+ ==>
-   !n c:num. char r divides n /\ n intro (X + |c|) ==> (n DIV char r) intro (X + |c|)``,
+Theorem poly_intro_X_add_c_prime_char_cofactor_1:
+    !r:'a field k. FiniteField r /\ k divides CARD R+ ==>
+   !n c:num. char r divides n /\ n intro (X + |c|) ==> (n DIV char r) intro (X + |c|)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `p = char r` >>
@@ -1473,7 +1512,8 @@ val poly_intro_X_add_c_prime_char_cofactor_1 = store_thm(
   `((u - v) ** p == |0|) (pm z)` by metis_tac[poly_intro_X_add_c_alt_2, poly_freshman_thm_sub] >>
   `?s. FINITE s /\ miset s /\ s <> {} /\ (z = PPROD s)` by rw[poly_unity_by_distinct_irreducibles, Abbr`z`] >>
   `(u - v == |0|) (pm z)` by metis_tac[poly_distinct_irreducibles_mod_exp_eq_zero, poly_sub_poly] >>
-  metis_tac[poly_intro_X_add_c_alt_2]);
+  metis_tac[poly_intro_X_add_c_alt_2]
+QED
 (* This result is the same as: poly_intro_X_add_c_prime_char_2, different proof. *)
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) ==>
@@ -1523,10 +1563,10 @@ val poly_intro_X_add_c_prime_char_cofactor_1 = store_thm(
     ==> poly_intro st k q Xc_st                 by subfield_poly_intro, st <= t
     ==> q intro X + |c|                         by field_iso_poly_intro, FieldIso up r st
 *)
-val poly_intro_X_add_c_prime_char_cofactor_2 = store_thm(
-  "poly_intro_X_add_c_prime_char_cofactor_2",
-  ``!r:'a field k. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) ==>
-   !n c:num. char r divides n /\ n intro X + |c| ==> n DIV char r intro X + |c|``,
+Theorem poly_intro_X_add_c_prime_char_cofactor_2:
+    !r:'a field k. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) ==>
+   !n c:num. char r divides n /\ n intro X + |c| ==> n DIV char r intro X + |c|
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `d = ordz k (CARD R)` >>
   `1 < k` by metis_tac[ZN_order_with_coprime_1, finite_field_card_gt_1] >>
@@ -1553,7 +1593,8 @@ val poly_intro_X_add_c_prime_char_cofactor_2 = store_thm(
   `poly_intro t k n Xc_t` by metis_tac[subfield_poly_intro] >>
   `poly_intro t k q Xc_t` by metis_tac[poly_intro_X_add_c_prime_char_2] >>
   `poly_intro st k q Xc_st` by metis_tac[subfield_poly_intro] >>
-  `q intro X + |c|` by metis_tac[field_iso_poly_intro]);
+  `q intro X + |c|` by metis_tac[field_iso_poly_intro]
+QED
 (* This result is the same as: poly_intro_X_add_c_prime_char_3, same proof almost. *)
 
 (* Above two give Sutherland's argument: obtain (f == 0) from (f ** p == 0), poly_distinct_irreducibles_mod_exp_eq_zero.
@@ -1579,19 +1620,21 @@ End
 
 (* Theorem: poly p ==> !z. introspective r z n p <=> ((peval p X) ** n == peval p (X ** n)) (pm z) *)
 (* Proof: by introspective_def, poly_peval_by_X *)
-val introspective_alt = store_thm(
-  "introspective_alt",
-  ``!r:'a ring. Ring r ==> !n p. poly p ==>
-   !z. introspective r z n p <=> ((peval p X) ** n == peval p (X ** n)) (pm z)``,
-  rw[introspective_def, poly_peval_by_X]);
+Theorem introspective_alt:
+    !r:'a ring. Ring r ==> !n p. poly p ==>
+   !z. introspective r z n p <=> ((peval p X) ** n == peval p (X ** n)) (pm z)
+Proof
+  rw[introspective_def, poly_peval_by_X]
+QED
 
 (* Theorem: 0 < k ==> poly_intro r k n p <=> poly p /\ introspective r (unity k) n p *)
 (* Proof: by poly_intro_def, introspective_def *)
-val poly_intro_introspective = store_thm(
-  "poly_intro_introspective",
-  ``!r:'a ring. Ring r ==> !k. 0 < k ==>
-   !n p. poly_intro r k n p <=> poly p /\ introspective r (unity k) n p``,
-  metis_tac[poly_intro_def, introspective_def]);
+Theorem poly_intro_introspective:
+    !r:'a ring. Ring r ==> !k. 0 < k ==>
+   !n p. poly_intro r k n p <=> poly p /\ introspective r (unity k) n p
+Proof
+  metis_tac[poly_intro_def, introspective_def]
+QED
 
 (* Theorem: Ring r /\ (#1 = #0) ==> !z n p. poly p ==> introspective r z n p *)
 (* Proof:
@@ -1603,13 +1646,14 @@ val poly_intro_introspective = store_thm(
     and poly (peval p (X ** n))    by poly_peval_poly, poly_X_exp
    Hence true                      by poly_mod_reflexive
 *)
-val introspective_trivial = store_thm(
-  "introspective_trivial",
-  ``!r:'a ring. Ring r /\ (#1 = #0) ==> !z n p. poly p ==> introspective r z n p``,
+Theorem introspective_trivial:
+    !r:'a ring. Ring r /\ (#1 = #0) ==> !z n p. poly p ==> introspective r z n p
+Proof
   rw_tac std_ss[introspective_def] >>
   `!p. poly p ==> (p = |0|)` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   `poly (p ** n) /\ poly (peval p (X ** n))` by rw[] >>
-  rw_tac std_ss[poly_mod_reflexive]);
+  rw_tac std_ss[poly_mod_reflexive]
+QED
 
 (* Theorem: pmonic p /\ pmonic z /\ z pdivides p ==>
       !n q. poly q /\ introspective r p n q ==> introspective r z n q *)
@@ -1621,15 +1665,16 @@ val introspective_trivial = store_thm(
    = (q ** n == peval q (X ** n)) (pm z)    by poly_divides_pmod_eq, z pdivides p
    = introspective r z n q                  by introspective_def
 *)
-val introspective_shift_factor = store_thm(
-  "introspective_shift_factor",
-  ``!r:'a ring p z. Ring r /\ ulead p /\ ulead z /\ z pdivides p ==>
-   !n q. poly q /\ introspective r p n q ==> introspective r z n q``,
+Theorem introspective_shift_factor:
+    !r:'a ring p z. Ring r /\ ulead p /\ ulead z /\ z pdivides p ==>
+   !n q. poly q /\ introspective r p n q ==> introspective r z n q
+Proof
   rw[introspective_def] >>
   qabbrev_tac `u = q ** n` >>
   qabbrev_tac `v = peval q (X ** n)` >>
   `poly u /\ poly v` by rw[Abbr`u`, Abbr`v`] >>
-  metis_tac[poly_divides_pmod_eq]);
+  metis_tac[poly_divides_pmod_eq]
+QED
 
 (* Theorem: 0 < k /\ ulead z /\ z pdivides (unity k) ==>
       !n p. poly_intro r k n p ==> introspective r z n p *)
@@ -1640,11 +1685,12 @@ val introspective_shift_factor = store_thm(
        introspective r (unity k) n p    by poly_intro_introspective
    ==> introspective r z n p            by introspective_shift_factor, z pdivides (unity k)
 *)
-val poly_intro_shift_factor = store_thm(
-  "poly_intro_shift_factor",
-  ``!r:'a ring. Ring r ==> !k z. 0 < k /\ ulead z /\ z pdivides (unity k) ==>
-   !n p. poly_intro r k n p ==> introspective r z n p``,
-  metis_tac[poly_intro_introspective, introspective_shift_factor, poly_unity_poly, poly_unity_lead, ring_unit_one]);
+Theorem poly_intro_shift_factor:
+    !r:'a ring. Ring r ==> !k z. 0 < k /\ ulead z /\ z pdivides (unity k) ==>
+   !n p. poly_intro r k n p ==> introspective r z n p
+Proof
+  metis_tac[poly_intro_introspective, introspective_shift_factor, poly_unity_poly, poly_unity_lead, ring_unit_one]
+QED
 
 (*
 ring_homo_intro_ZN_to_ZN_X_add_c
@@ -1715,11 +1761,11 @@ Note: the introspective multiplicative property requires the modulus z = unity k
        p ** (n * m) == peval p (X ** (n * m)) (pm z)       by poly_mod_transitive
     or n * m intro p                                       by introspective_def
 *)
-val introspective_unity_mult = store_thm(
-  "introspective_unity_mult",
-  ``!r:'a ring. Ring r ==> !p k. poly p /\ 0 < k ==>
+Theorem introspective_unity_mult:
+    !r:'a ring. Ring r ==> !p k. poly p /\ 0 < k ==>
    !n m. introspective r (unity k) n p /\ introspective r (unity k) m p ==>
-         introspective r (unity k) (n * m) p``,
+         introspective r (unity k) (n * m) p
+Proof
   rpt (stripDup[introspective_def]) >>
   qabbrev_tac `z = unity k` >>
   `ulead z` by rw[Abbr`z`] >>
@@ -1747,7 +1793,8 @@ val introspective_unity_mult = store_thm(
   `(peval (p ** m) (X ** n) - peval p (X ** (n * m)) == |0|) (pm z)` by metis_tac[pmod_eq_zero] >>
   rw[poly_pmod_sub_eq_zero]) >>
   `poly (p ** (n * m)) /\ poly (peval (p ** m) (X ** n)) /\ poly (peval p (X ** (n * m)))` by rw[] >>
-  metis_tac[poly_mod_transitive, introspective_def]);
+  metis_tac[poly_mod_transitive, introspective_def]
+QED
 
 (* Theorem: ulead z /\ poly p /\ poly q ==>
         !n. introspective r z n p /\ introspective r z n q ==> introspective r z n (p * q) *)
@@ -1762,15 +1809,16 @@ val introspective_unity_mult = store_thm(
    and  peval p (X ** n) * peval q (X ** n) = peval (p * q) (X ** n) by poly_peval_mult
    Hence introspective r z n (p * q)                                 by introspective_def
 *)
-val introspective_compose = store_thm(
-  "introspective_compose",
-  ``!r:'a ring. Ring r ==> !z p q. ulead z /\ poly p /\ poly q ==>
-   !n. introspective r z n p /\ introspective r z n q ==> introspective r z n (p * q)``,
+Theorem introspective_compose:
+    !r:'a ring. Ring r ==> !z p q. ulead z /\ poly p /\ poly q ==>
+   !n. introspective r z n p /\ introspective r z n q ==> introspective r z n (p * q)
+Proof
   rw_tac std_ss[introspective_def] >>
   `(p ** n * q ** n == peval p (X ** n) * peval q (X ** n)) (pm z)` by rw[pmod_mult] >>
   `p ** n * q ** n = (p * q) ** n` by rw[poly_mult_exp] >>
   `peval (p * q) (X ** n) = peval p (X ** n) * peval q (X ** n)` by rw[poly_peval_mult] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: poly z /\ poly p ==> introspective r z 1 p *)
 (* Proof:
@@ -1780,11 +1828,12 @@ val introspective_compose = store_thm(
    Now  peval p X = p                      by poly_peval_by_X
    Hence true                              by poly_mod_reflexive
 *)
-val introspective_1 = store_thm(
-  "introspective_1",
-  ``!r:'a ring. Ring r ==> !z p. poly z /\ poly p ==> introspective r z 1 p``,
+Theorem introspective_1:
+    !r:'a ring. Ring r ==> !z p. poly z /\ poly p ==> introspective r z 1 p
+Proof
   rw_tac std_ss[introspective_def] >>
-  rw_tac std_ss[poly_exp_1, poly_X, poly_peval_by_X, poly_mod_reflexive]);
+  rw_tac std_ss[poly_exp_1, poly_X, poly_peval_by_X, poly_mod_reflexive]
+QED
 
 (* Theorem: poly z ==> !n. introspective r z n |1| *)
 (* Proof:
@@ -1795,10 +1844,11 @@ val introspective_1 = store_thm(
    = |1| ** n                       by poly_one_exp
    Hence true                       by poly_mod_reflexive
 *)
-val introspective_one = store_thm(
-  "introspective_one",
-  ``!r:'a ring. Ring r ==> !z. poly z ==> !n. introspective r z n |1|``,
-  rw[introspective_def]);
+Theorem introspective_one:
+    !r:'a ring. Ring r ==> !z. poly z ==> !n. introspective r z n |1|
+Proof
+  rw[introspective_def]
+QED
 
 (* Theorem: poly z /\ 0 < n ==> introspective r z n |0| *)
 (* Proof:
@@ -1809,13 +1859,14 @@ val introspective_one = store_thm(
    = |0| ** n                      by poly_zero_exp, n <> 0.
    Hence true                      by poly_mod_reflexive.
 *)
-val introspective_zero = store_thm(
-  "introspective_zero",
-  ``!r:'a ring. Ring r ==> !z n. poly z /\ 0 < n ==> introspective r z n |0|``,
+Theorem introspective_zero:
+    !r:'a ring. Ring r ==> !z n. poly z /\ 0 < n ==> introspective r z n |0|
+Proof
   rw_tac std_ss[introspective_def] >>
   `n <> 0` by decide_tac >>
   rw_tac std_ss[poly_peval_zero, poly_zero_exp] >>
-  rw_tac std_ss[poly_mod_reflexive, poly_zero_poly]);
+  rw_tac std_ss[poly_mod_reflexive, poly_zero_poly]
+QED
 
 (* Theorem: Ring r /\ pmonic z ==> ~(0 intro |0|) *)
 (* Proof:
@@ -1827,14 +1878,15 @@ val introspective_zero = store_thm(
     => z = |0|                     by poly_one_eq_poly_zero
    which contradicts pmonic z      by poly_deg_pos_nonzero
 *)
-val introspective_not_0_zero = store_thm(
-  "introspective_not_0_zero",
-  ``!r:'a ring z. Ring r /\ pmonic z ==> ~(introspective r z 0 |0|)``,
+Theorem introspective_not_0_zero:
+    !r:'a ring z. Ring r /\ pmonic z ==> ~(introspective r z 0 |0|)
+Proof
   rw_tac std_ss[introspective_def, poly_zero_poly, poly_peval_zero, poly_zero_exp] >>
   spose_not_then strip_assume_tac >>
   `|1| = |0|` by metis_tac[pmod_def_alt, poly_mod_one, poly_mod_zero] >>
   `z = |0|` by metis_tac[poly_one_eq_zero] >>
-  metis_tac[poly_deg_pos_nonzero]);
+  metis_tac[poly_deg_pos_nonzero]
+QED
 
 (* Theorem: poly z ==> !n. introspective r z n X *)
 (* Proof:
@@ -1843,11 +1895,12 @@ val introspective_not_0_zero = store_thm(
    Since peval X (X ** n) = X ** n  by poly_peval_X
    Hence true                       by poly_mod_reflexive.
 *)
-val introspective_X = store_thm(
-  "introspective_X",
-  ``!r:'a ring z. Ring r /\ poly z ==> !n. introspective r z n X``,
+Theorem introspective_X:
+    !r:'a ring z. Ring r /\ poly z ==> !n. introspective r z n X
+Proof
   rw_tac std_ss[introspective_def] >>
-  rw_tac std_ss[poly_peval_X, poly_mod_reflexive, poly_X, poly_exp_poly]);
+  rw_tac std_ss[poly_peval_X, poly_mod_reflexive, poly_X, poly_exp_poly]
+QED
 
 (* Theorem: poly z ==>
         !n c. introspective r z n (X + |c|) <=> ((X + |c|) ** n == X ** n + |c|) (pm z) *)
@@ -1856,12 +1909,13 @@ val introspective_X = store_thm(
    <=> ((X + |c|) ** n == peval (X + |c|) (X ** n)) (pm z)   by introspective_def
    <=> ((X + |c|) ** n == (X ** n) + |c|) (pm z)             by poly_peval_X_add_c
 *)
-val introspective_X_add_c = store_thm(
-  "introspective_X_add_c",
-  ``!r:'a ring z. Ring r /\ poly z ==>
-   !n c:num. introspective r z n (X + |c|) <=> ((X + |c|) ** n == X ** n + |c|) (pm z)``,
+Theorem introspective_X_add_c:
+    !r:'a ring z. Ring r /\ poly z ==>
+   !n c:num. introspective r z n (X + |c|) <=> ((X + |c|) ** n == X ** n + |c|) (pm z)
+Proof
   rw_tac std_ss[introspective_def] >>
-  rw[poly_peval_X_add_c]);
+  rw[poly_peval_X_add_c]
+QED
 
 (* Theorem: ulead z ==>
       !n c. introspective r z n (X + |c|) <=> z pdivides ((X + |c|) ** n - (X ** n + |c|)) *)
@@ -1870,12 +1924,13 @@ val introspective_X_add_c = store_thm(
    <=> ((X + |c|) ** n == (X ** n) + |c|) (pm z)   by introspective_X_add_c
    <=> z pdivides (X + |c|) ** n - (X ** n + |c|)  by poly_divides_sub, ulead z
 *)
-val introspective_X_add_c_alt = store_thm(
-  "introspective_X_add_c_alt",
-  ``!r:'a ring z. Ring r /\ ulead z ==>
-   !n c:num. introspective r z n (X + |c|) <=> z pdivides ((X + |c|) ** n - (X ** n + |c|))``,
+Theorem introspective_X_add_c_alt:
+    !r:'a ring z. Ring r /\ ulead z ==>
+   !n c:num. introspective r z n (X + |c|) <=> z pdivides ((X + |c|) ** n - (X ** n + |c|))
+Proof
   rw_tac std_ss[introspective_X_add_c] >>
-  rw[poly_divides_sub]);
+  rw[poly_divides_sub]
+QED
 
 (* Theorem: prime (char r) ==> !z. poly z ==> introspective r z (char r) (X + |c|) *)
 (* Proof:
@@ -1889,16 +1944,17 @@ val introspective_X_add_c_alt = store_thm(
        = X ** p + |c|               by poly_peval_X_add_c
    Hence true                       by poly_mod_reflexive
 *)
-val introspective_X_add_c_prime_char = store_thm(
-  "introspective_X_add_c_prime_char",
-  ``!r:'a ring. Ring r /\ prime (char r) ==>
-   !z. poly z ==> introspective r z (char r) (X + |c|)``,
+Theorem introspective_X_add_c_prime_char:
+    !r:'a ring. Ring r /\ prime (char r) ==>
+   !z. poly z ==> introspective r z (char r) (X + |c|)
+Proof
   rw_tac std_ss[introspective_def] >>
   qabbrev_tac `p = char r` >>
   `poly X /\ poly |c| /\ poly (X + |c|) /\ poly (X ** p) /\ poly (X ** p + |c|)` by rw[] >>
   `(X + |c|) ** p = X ** p + |c|` by metis_tac[poly_freshman_thm, poly_fermat_thm] >>
   `peval (X + |c|) (X ** p) = X ** p + |c|` by rw[poly_peval_X_add_c] >>
-  metis_tac[poly_mod_reflexive]);
+  metis_tac[poly_mod_reflexive]
+QED
 
 (* Theorem: FiniteField r /\ poly z ==> introspective r z (char r) (X + |c|) *)
 (* Proof:
@@ -1906,12 +1962,13 @@ val introspective_X_add_c_prime_char = store_thm(
     and prime (char r)       by finite_field_char
    The result follows        by introspective_X_add_c_prime_char
 *)
-val introspective_X_add_c_prime_char_1 = store_thm(
-  "introspective_X_add_c_prime_char_1",
-  ``!r:'a field z. FiniteField r /\ poly z ==> introspective r z (char r) (X + |c|)``,
+Theorem introspective_X_add_c_prime_char_1:
+    !r:'a field z. FiniteField r /\ poly z ==> introspective r z (char r) (X + |c|)
+Proof
   rpt strip_tac >>
   `Ring r /\ prime (char r)` by rw[finite_field_is_field, finite_field_char] >>
-  rw[introspective_X_add_c_prime_char]);
+  rw[introspective_X_add_c_prime_char]
+QED
 
 (* Theorem: FiniteField r ==> !k. introspective r (unity k) (char r) (X + |c|) *)
 (* Proof:
@@ -1919,12 +1976,13 @@ val introspective_X_add_c_prime_char_1 = store_thm(
     and poly (unity k)     by poly_unity_poly
    The result follows      by introspective_X_add_c_prime_char_1
 *)
-val introspective_unity_X_add_c_char = store_thm(
-  "introspective_unity_X_add_c_char",
-  ``!r:'a field. FiniteField r ==> !k. introspective r (unity k) (char r) (X + |c|)``,
+Theorem introspective_unity_X_add_c_char:
+    !r:'a field. FiniteField r ==> !k. introspective r (unity k) (char r) (X + |c|)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[finite_field_is_field, field_is_ring] >>
-  metis_tac[introspective_X_add_c_prime_char_1, poly_unity_poly]);
+  metis_tac[introspective_X_add_c_prime_char_1, poly_unity_poly]
+QED
 
 (*
 To show that: (char r) divides n /\ (n intro (X + |c|)) gives (n DIV (char r) intro (X + |c|))
@@ -1970,11 +2028,11 @@ This is introspective_unity_X_add_c_char_cofactor.
    Thus (u == v) (pm z)                     by poly_unity_mod_exp_char_eq
      or introspective r z q (X + |c|)       by poly_intro_X_add_c
 *)
-val introspective_unity_X_add_c_char_cofactor_0 = store_thm(
-  "introspective_unity_X_add_c_char_cofactor_0",
-  ``!r:'a field. FiniteField r ==> !k n c:num. k divides (CARD R+) /\ (char r) divides n /\
+Theorem introspective_unity_X_add_c_char_cofactor_0:
+    !r:'a field. FiniteField r ==> !k n c:num. k divides (CARD R+) /\ (char r) divides n /\
          introspective r (unity k) n (X + |c|) ==>
-         introspective r (unity k) (n DIV (char r)) (X + |c|)``,
+         introspective r (unity k) (n DIV (char r)) (X + |c|)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `p = char r` >>
@@ -1996,7 +2054,8 @@ val introspective_unity_X_add_c_char_cofactor_0 = store_thm(
   `_ = X ** n + |c|` by rw_tac std_ss[poly_fermat_thm, Abbr`p`] >>
   metis_tac[introspective_X_add_c]) >>
   `(u == v) (pm z)` by rw[poly_unity_mod_exp_char_eq, Abbr`p`, Abbr`z`] >>
-  rw[introspective_X_add_c]);
+  rw[introspective_X_add_c]
+QED
 
 (* Theorem: (r === r_) f ==> !p. ulead p ==>
       !n c. introspective r p n (X + |c|) <=> introspective r_ p_ n (X_ +_ |c|_) *)
@@ -2015,10 +2074,10 @@ val introspective_unity_X_add_c_char_cofactor_0 = store_thm(
    Expand by introspective_X_add_c_alt,
    The result follows                     by field_iso_poly_divides_iff
 *)
-val field_iso_introspective = store_thm(
-  "field_iso_introspective",
-  ``!(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ulead p ==>
-   !n c:num. introspective r p n (X + |c|) <=> introspective r_ p_ n (X_ +_ |c|_)``,
+Theorem field_iso_introspective:
+    !(r:'a field) (r_:'b field) f. (r === r_) f ==> !p. ulead p ==>
+   !n c:num. introspective r p n (X + |c|) <=> introspective r_ p_ n (X_ +_ |c|_)
+Proof
   rw_tac std_ss[introspective_X_add_c_alt] >>
   rpt strip_tac >>
   `Ring r /\ Ring r_` by rw[] >>
@@ -2032,7 +2091,8 @@ val field_iso_introspective = store_thm(
   `ulead_ p_` by metis_tac[field_iso_poly_ulead] >>
   qabbrev_tac `q = (X + |c|) ** n - (X ** n + |c|)` >>
   `poly q` by rw[Abbr`q`] >>
-  metis_tac[introspective_X_add_c_alt, field_iso_poly_divides_iff]);
+  metis_tac[introspective_X_add_c_alt, field_iso_poly_divides_iff]
+QED
 
 (* Theorem: s <= r ==> !z. Pmonic s z ==>
       !n c. introspective r z n (X + |c|) <=>
@@ -2056,11 +2116,11 @@ val field_iso_introspective = store_thm(
    Expand by introspective_X_add_c_alt,
    The result follows                         by subring_poly_divides_iff, ulead z
 *)
-val subring_introspective = store_thm(
-  "subring_introspective",
-  ``!(r s):'a ring. s <= r ==> !z. Ulead s z ==>
+Theorem subring_introspective:
+    !(r s):'a ring. s <= r ==> !z. Ulead s z ==>
    !n c:num. introspective r z n (X + |c|) <=>
-             introspective s z n (poly_add s (poly_shift s (poly_one s) 1) (poly_num s c))``,
+             introspective s z n (poly_add s (poly_shift s (poly_one s) 1) (poly_num s c))
+Proof
   rpt strip_tac >>
   `poly_shift s (poly_one s) 1 = X` by rw[subring_poly_X] >>
   `poly_num s c = |c|` by rw[subring_poly_sum_num] >>
@@ -2075,7 +2135,8 @@ val subring_introspective = store_thm(
   `poly_add s (poly_exp s X n) |c| = X ** n + |c|` by metis_tac[subring_poly_add, subring_poly_exp, poly_add_poly, poly_exp_poly] >>
   metis_tac[subring_poly_sub]) >>
   `!r:'a ring. Ring r ==> poly ((X + |c|) ** n - (X ** n + |c|))` by rw[] >>
-  metis_tac[subring_poly_divides_iff]);
+  metis_tac[subring_poly_divides_iff]
+QED
 
 (* Theorem: FiniteField r ==> !k n c:num. coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
             char r divides n /\ introspective r (unity k) n (X + |c|) ==>
@@ -2129,11 +2190,11 @@ val subring_introspective = store_thm(
     ==> introspective st u_ q Xc_st             by subring_introspective, st <= t
     ==> introspective r q (X + |c|)             by field_iso_introspective, FieldIso up r st
 *)
-val introspective_unity_X_add_c_char_cofactor = store_thm(
-  "introspective_unity_X_add_c_char_cofactor",
-  ``!r:'a field. FiniteField r ==> !k n c:num. coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
+Theorem introspective_unity_X_add_c_char_cofactor:
+    !r:'a field. FiniteField r ==> !k n c:num. coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
                 char r divides n /\ introspective r (unity k) n (X + |c|) ==>
-                introspective r (unity k) (n DIV char r) (X + |c|)``,
+                introspective r (unity k) (n DIV char r) (X + |c|)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `d = ordz k (CARD R)` >>
   `1 < k` by metis_tac[ZN_order_with_coprime_1, finite_field_card_gt_1] >>
@@ -2164,7 +2225,8 @@ val introspective_unity_X_add_c_char_cofactor = store_thm(
   `introspective t u_ n Xc_t` by metis_tac[subring_introspective] >>
   `introspective t u_ q Xc_t` by metis_tac[introspective_unity_X_add_c_char_cofactor_0] >>
   `introspective st u_ q Xc_st` by metis_tac[subring_introspective] >>
-  metis_tac[field_iso_introspective]);
+  metis_tac[field_iso_introspective]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

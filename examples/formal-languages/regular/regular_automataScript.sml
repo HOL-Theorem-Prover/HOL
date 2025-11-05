@@ -1522,14 +1522,14 @@ Proof
   simp[munge_def, EQ_SYM_EQ]
 QED
 
-Triviality EXISTS_NUM:
+Theorem EXISTS_NUM[local]:
   (∃n. P n) ⇔ P 0 ∨ (∃n. P (SUC n))
 Proof
   rw[EQ_IMP_THM] >- (Cases_on ‘n’ >> metis_tac[]) >>
   metis_tac[]
 QED
 
-Triviality FORALL_NUM:
+Theorem FORALL_NUM[local]:
   (∀n. P n) ⇔ P 0 ∧ ∀n. P (SUC n)
 Proof
   rw[EQ_IMP_THM] >> Cases_on ‘n’ >> simp[]
@@ -1543,7 +1543,7 @@ Proof
   Cases >> simp[]
 QED
 
-Triviality REPLICATE_NIL'[simp]:
+Theorem REPLICATE_NIL'[local,simp]:
   [] = REPLICATE n e ⇔ n = 0
 Proof
   metis_tac[REPLICATE_NIL]

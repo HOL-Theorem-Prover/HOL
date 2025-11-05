@@ -38,14 +38,14 @@ val toPTR_def = Define `
     (toPTR TSP = sp) /\
     (toPTR TLR = lr)`;
 
-val toPTR_lem = Q.store_thm
-  ("toPTR_lem",
-   `!p. ~(toPTR p = 0) /\ ~(toPTR p = 1) /\ ~(toPTR p = 2) /\
+Theorem toPTR_lem:
+    !p. ~(toPTR p = 0) /\ ~(toPTR p = 1) /\ ~(toPTR p = 2) /\
         ~(toPTR p = 3) /\ ~(toPTR p = 4) /\ ~(toPTR p = 5) /\
-        ~(toPTR p = 6) /\ ~(toPTR p = 7) /\ ~(toPTR p = 8)`,
+        ~(toPTR p = 6) /\ ~(toPTR p = 7) /\ ~(toPTR p = 8)
+Proof
     Cases_on `p` THEN
     RW_TAC arith_ss [toPTR_def, tp_def, gp_def, fp_def, ip_def, sp_def, lr_def]
-  );
+QED
 
 (* Data regisiters *)
 
@@ -63,9 +63,8 @@ val data_reg_index_def = Define `
     (data_reg_index r7 = 7) /\
     (data_reg_index r8 = 8)`;
 
-val data_reg_name_lem = Q.store_thm
-  ("data_reg_name_lem",
-   `!r.((data_reg_index r = 0) = (r = r0)) /\
+Theorem data_reg_name_lem:
+    !r.((data_reg_index r = 0) = (r = r0)) /\
        ((data_reg_index r = 1) = (r = r1)) /\
        ((data_reg_index r = 2) = (r = r2)) /\
        ((data_reg_index r = 3) = (r = r3)) /\
@@ -73,10 +72,11 @@ val data_reg_name_lem = Q.store_thm
        ((data_reg_index r = 5) = (r = r5)) /\
        ((data_reg_index r = 6) = (r = r6)) /\
        ((data_reg_index r = 7) = (r = r7)) /\
-       ((data_reg_index r = 8) = (r = r8))`,
+       ((data_reg_index r = 8) = (r = r8))
+Proof
     Cases_on `r` THEN
     RW_TAC std_ss [data_reg_index_def]
-  );
+QED
 
 val data_reg_name_def = Define `
     data_reg_name i =
@@ -90,9 +90,8 @@ val data_reg_name_def = Define `
       else if i = 7 then r7
       else r8`;
 
-val data_reg_name_thm = Q.store_thm
-  ("data_reg_name_thm",
-   `(data_reg_name 0 = r0) /\
+Theorem data_reg_name_thm:
+    (data_reg_name 0 = r0) /\
     (data_reg_name 1 = r1) /\
     (data_reg_name 2 = r2) /\
     (data_reg_name 3 = r3) /\
@@ -100,36 +99,37 @@ val data_reg_name_thm = Q.store_thm
     (data_reg_name 5 = r5) /\
     (data_reg_name 6 = r6) /\
     (data_reg_name 7 = r7) /\
-    (data_reg_name 8 = r8)`,
+    (data_reg_name 8 = r8)
+Proof
    RW_TAC std_ss [data_reg_name_def]
-  );
+QED
 
-val toPTR_lem_2 = Q.store_thm
-  ("toPTR_lem_2",
-   `!p r. ~(toPTR p = data_reg_index r)`,
+Theorem toPTR_lem_2:
+    !p r. ~(toPTR p = data_reg_index r)
+Proof
     Cases_on `p` THEN Cases_on `r` THEN
     RW_TAC arith_ss [toPTR_lem, data_reg_index_def]
-  );
+QED
 
 val conv_reg_def = Define `
     conv_reg = from_reg_index o data_reg_index`;
 
 
-val conv_reg_thm = Q.store_thm (
-  "conv_reg_thm",
-  `(conv_reg r0 = R0) /\ (conv_reg r1 = R1) /\ (conv_reg r2 = R2) /\ (conv_reg r3 = R3) /\ (conv_reg r4 = R4) /\
-   (conv_reg r5 = R5) /\ (conv_reg r6 = R6) /\ (conv_reg r7 = R7) /\ (conv_reg r8 = R8)`,
+Theorem conv_reg_thm:
+   (conv_reg r0 = R0) /\ (conv_reg r1 = R1) /\ (conv_reg r2 = R2) /\ (conv_reg r3 = R3) /\ (conv_reg r4 = R4) /\
+   (conv_reg r5 = R5) /\ (conv_reg r6 = R6) /\ (conv_reg r7 = R7) /\ (conv_reg r8 = R8)
+Proof
   SIMP_TAC std_ss [conv_reg_def, data_reg_index_def, from_reg_index_def]
-  );
+QED
 
-val CONV_REG_LEM = Q.store_thm (
-  "CONV_REG_LEM",
-  `!r r'. (data_reg_index r = index_of_reg (conv_reg r)) /\
-        ((data_reg_index r = data_reg_index r') ==> (r = r'))`,
+Theorem CONV_REG_LEM:
+   !r r'. (data_reg_index r = index_of_reg (conv_reg r)) /\
+        ((data_reg_index r = data_reg_index r') ==> (r = r'))
+Proof
   SIMP_TAC std_ss [conv_reg_def] THEN
   Cases_on `r` THEN Cases_on `r'` THEN
   RW_TAC std_ss [data_reg_index_def, from_reg_index_def, index_of_reg_def]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Data in memory, Expressions                                                *)
@@ -137,11 +137,11 @@ val CONV_REG_LEM = Q.store_thm (
 
 val _ = type_abbrev("TSTATE", Type`:(num |-> bool ** 32) # (num |-> bool ** 32)`);
 
-val FORALL_TSTATE = Q.store_thm (
-    "FORALL_TSTATE",
-    `(!s.P s) = (!rg sk. P ((rg,sk):TSTATE))`,
+Theorem FORALL_TSTATE:
+     (!s.P s) = (!rg sk. P ((rg,sk):TSTATE))
+Proof
     RW_TAC std_ss [FORALL_PROD]
-   );
+QED
 
 val _ = type_abbrev("TMEM", Type`:PTR # OFFSET`);      (* memory in HSL *)
 
@@ -373,41 +373,38 @@ val CSPEC_def = Define `
 (*      Sc, Cj and Tr rules are analogous to their peers in CFL                    *)
 (*---------------------------------------------------------------------------------*)
 
-val Sc_RULE = Q.store_thm (
-   "Sc_RULE",
-   `!S1 S2 in_f1 f1 f2 out_f1 out_f2.
+Theorem Sc_RULE:
+    !S1 S2 in_f1 f1 f2 out_f1 out_f2.
      CSPEC S1 (in_f1,f1,out_f1) /\ CSPEC S2 (out_f1,f2,out_f2)
        ==>
-       CSPEC (Sc S1 S2) (in_f1, sc f1 f2,out_f2)`,
-
+       CSPEC (Sc S1 S2) (in_f1, sc f1 f2,out_f2)
+Proof
      RW_TAC std_ss [CSPEC_def, run_hsl_def, sc_def]
-   );
+QED
 
-val Cj_RULE = Q.store_thm (
-   "Cj_RULE",
-   `!cond St Sf cond_f in_f f1 f2 out_f.
+Theorem Cj_RULE:
+    !cond St Sf cond_f in_f f1 f2 out_f.
      CSPEC St (in_f,f1,out_f) /\ CSPEC Sf (in_f,f2,out_f) /\
      (!s. cond_f (in_f s) = eval_TCND cond s)
         ==>
-       CSPEC (Cj cond St Sf) (in_f, cj cond_f f1 f2, out_f)`,
-
+       CSPEC (Cj cond St Sf) (in_f, cj cond_f f1 f2, out_f)
+Proof
      RW_TAC std_ss [CSPEC_def, run_hsl_def, cj_def] THEN
      METIS_TAC []
-   );
+QED
 
-val WF_DEF_2 = Q.store_thm (
-   "WF_DEF_2",
-   `WF R = !P. (?w. P w) ==> ?min. P min /\ !b. R b min ==> ~P b`,
+Theorem WF_DEF_2:
+    WF R = !P. (?w. P w) ==> ?min. P min /\ !b. R b min ==> ~P b
+Proof
    RW_TAC std_ss [relationTheory.WF_DEF]
-  );
+QED
 
-val WF_HSL_TR_LEM_2 = Q.store_thm (
-   "WF_HSL_TR_LEM_2",
-    `!cond S_hsl prj_f f cond_f.
+Theorem WF_HSL_TR_LEM_2:
+     !cond S_hsl prj_f f cond_f.
         (!s. cond_f (prj_f s) = eval_TCND cond s) /\ (!s. prj_f (run_hsl S_hsl s) = f (prj_f s)) /\
         WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0)) ==>
-           WF (\s1 s0. ~eval_TCND cond s0 /\ (s1 = run_hsl S_hsl s0))`,
-
+           WF (\s1 s0. ~eval_TCND cond s0 /\ (s1 = run_hsl S_hsl s0))
+Proof
    RW_TAC std_ss [WF_DEF_2] THEN
    Q.PAT_ASSUM `!P.p` (ASSUME_TAC o Q.SPEC `\t:'a. ?y:TSTATE. (prj_f y = t) /\ P y`) THEN
    FULL_SIMP_TAC std_ss [GSYM RIGHT_EXISTS_IMP_THM] THEN
@@ -418,38 +415,36 @@ val WF_HSL_TR_LEM_2 = Q.store_thm (
    RES_TAC THEN
    Q.PAT_ASSUM `!t1.p` (ASSUME_TAC o Q.SPEC `prj_f (s1:TSTATE)`) THEN
    METIS_TAC []
-  );
+QED
 
-val WF_HSL_TR_LEM_3 = Q.store_thm (
-   "WF_HSL_TR_LEM_3",
-   `!cond_f f. (?R. WF R /\ !t0. ~cond_f t0 ==> R (f t0) t0) ==>
-            WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0))`,
+Theorem WF_HSL_TR_LEM_3:
+    !cond_f f. (?R. WF R /\ !t0. ~cond_f t0 ==> R (f t0) t0) ==>
+            WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0))
+Proof
    RW_TAC std_ss [] THEN
    MATCH_MP_TAC relationTheory.WF_SUBSET THEN
    Q.EXISTS_TAC `R` THEN
    RW_TAC std_ss []
-   );
+QED
 
-val WF_HSL_TR_THM = Q.store_thm (
-   "WF_HSL_TR_THM",
-    `!cond S_hsl prj_f f cond_f.
+Theorem WF_HSL_TR_THM:
+     !cond S_hsl prj_f f cond_f.
         (!s. cond_f (prj_f s) = eval_TCND cond s) /\ (!s. prj_f (run_hsl S_hsl s) = f (prj_f s)) /\
         (?R. WF R /\ !t0. ~cond_f t0 ==> R (f t0) t0) ==>
-           WF (\s1 s0. ~eval_TCND cond s0 /\ (s1 = run_hsl S_hsl s0))`,
-
+           WF (\s1 s0. ~eval_TCND cond s0 /\ (s1 = run_hsl S_hsl s0))
+Proof
     RW_TAC std_ss [] THEN
     METIS_TAC [WF_HSL_TR_LEM_2, WF_HSL_TR_LEM_3]
-  );
+QED
 
 
-val Tr_RULE = Q.store_thm (
-   "Tr_RULE",
-   `!cond S_hsl cond_f prj_f f.
+Theorem Tr_RULE:
+    !cond S_hsl cond_f prj_f f.
         (?R. WF R /\ (!x. ~cond_f x ==> R (f x) x)) /\
         (!s. cond_f (prj_f s) = eval_TCND cond s) /\
         CSPEC S_hsl (prj_f,f,prj_f) ==>
-          CSPEC (Tr cond S_hsl) (prj_f, tr cond_f f, prj_f)`,
-
+          CSPEC (Tr cond S_hsl) (prj_f, tr cond_f f, prj_f)
+Proof
     RW_TAC std_ss [CSPEC_def, run_hsl_def] THEN
     IMP_RES_TAC WF_HSL_TR_THM THEN
     IMP_RES_TAC  relationTheory.WF_INDUCTION_THM THEN
@@ -465,31 +460,29 @@ val Tr_RULE = Q.store_thm (
         RW_TAC std_ss [],
       METIS_TAC [DISCH_ALL tr_def]
     ]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Properites of the "transfer" operation                                     *)
 (*---------------------------------------------------------------------------------*)
 
-val TRANSFER_LEM_1 = Q.store_thm (
-   "TRANSFER_LEM_1",
-    `!h dstL srcL s1 s0. unique_list (h::dstL) /\ (LENGTH dstL = LENGTH srcL) ==>
-       (tread (transfer (s1,s0) (dstL,srcL)) h = tread s1 h)`,
-
+Theorem TRANSFER_LEM_1:
+     !h dstL srcL s1 s0. unique_list (h::dstL) /\ (LENGTH dstL = LENGTH srcL) ==>
+       (tread (transfer (s1,s0) (dstL,srcL)) h = tread s1 h)
+Proof
      Induct_on `srcL` THEN Induct_on `dstL` THEN
      RW_TAC list_ss [unique_list_def, transfer_def] THEN
      `?rg sk. s1 = (rg,sk)` by METIS_TAC [ABS_PAIR_THM] THEN
      Cases_on `h` THEN  Cases_on `h''` THEN
      RW_TAC std_ss [tread_def, twrite_def] THEN
      METIS_TAC [FAPPLY_FUPDATE_THM, CONV_REG_LEM]
-   );
+QED
 
-val TRANSFER_THM = Q.store_thm (
-   "TRANSFER_THM",
-   `!dstL srcL s1 s0. unique_list dstL /\ (LENGTH dstL = LENGTH srcL) /\ EVERY notC dstL
+Theorem TRANSFER_THM:
+    !dstL srcL s1 s0. unique_list dstL /\ (LENGTH dstL = LENGTH srcL) /\ EVERY notC dstL
        ==>
-        (MAP (tread (transfer (s1,s0) (dstL,srcL))) dstL = MAP (tread s0) srcL)`,
-
+        (MAP (tread (transfer (s1,s0) (dstL,srcL))) dstL = MAP (tread s0) srcL)
+Proof
    Induct_on `srcL` THEN Induct_on `dstL` THEN
    RW_TAC list_ss [unique_list_def, transfer_def] THEN
    RW_TAC list_ss [SIMP_RULE list_ss [unique_list_def] TRANSFER_LEM_1] THEN
@@ -497,21 +490,20 @@ val TRANSFER_THM = Q.store_thm (
    Cases_on `h` THEN
    FULL_SIMP_TAC std_ss [tread_def, twrite_def, notC_def] THEN
    METIS_TAC [FAPPLY_FUPDATE_THM]
-  );
+QED
 
-val TRANSFER_INTACT = Q.store_thm (
-   "TRANSFER_INTACT",
-   `!dstL srcL s1 s0 x. (LENGTH dstL = LENGTH srcL) /\  ~(MEM x dstL)
+Theorem TRANSFER_INTACT:
+    !dstL srcL s1 s0 x. (LENGTH dstL = LENGTH srcL) /\  ~(MEM x dstL)
        ==>
-        (tread (transfer (s1,s0) (dstL,srcL)) x = tread s1 x)`,
-
+        (tread (transfer (s1,s0) (dstL,srcL)) x = tread s1 x)
+Proof
    Induct_on `srcL` THEN Induct_on `dstL` THEN
    RW_TAC list_ss [transfer_def] THEN
    `?rg sk. s1 = (rg,sk)` by METIS_TAC [ABS_PAIR_THM] THEN
    Cases_on `x` THEN  Cases_on `h` THEN
    FULL_SIMP_TAC std_ss [tread_def, twrite_def] THEN
    METIS_TAC [FAPPLY_FUPDATE_THM, CONV_REG_LEM]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Rules for function calls                                                   *)
@@ -527,23 +519,22 @@ val valid_arg_list_def = Define `
     (LENGTH caller_i = LENGTH callee_i) /\ (LENGTH caller_o = LENGTH callee_o) /\
     EVERY notC callee_i /\ EVERY notC caller_o`;
 
-val Fc_RULE = Q.store_thm (
-   "Fc_RULE",
-   `!S_hsl f caller_i caller_o callee_i callee_o m1 m2 caller_i_f caller_o_f callee_i_f callee_o_f g1 g2.
+Theorem Fc_RULE:
+    !S_hsl f caller_i caller_o callee_i callee_o m1 m2 caller_i_f caller_o_f callee_i_f callee_o_f g1 g2.
       valid_arg_list (caller_i, caller_o, callee_i, callee_o) /\
       (match caller_i_f caller_i g1 /\ match callee_i_f callee_i g1) /\
       (match caller_o_f caller_o g2 /\ match callee_o_f callee_o g2)
        ==>
         CSPEC S_hsl (callee_i_f,f,callee_o_f) ==>
-          CSPEC (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) (caller_i_f, f, caller_o_f)`,
-
+          CSPEC (Fc (caller_i, callee_i) S_hsl (caller_o, callee_o) (m1,m2)) (caller_i_f, f, caller_o_f)
+Proof
    RW_TAC std_ss [valid_arg_list_def, match_def, CSPEC_def, run_hsl_def] THEN
    `(MAP (tread (transfer (s,s2) (caller_o,callee_o))) caller_o = MAP (tread s2) callee_o) /\
     (MAP (tread s) caller_i = MAP (tread s1) callee_i)` by (Q.UNABBREV_TAC `s1` THEN METIS_TAC [TRANSFER_THM]) THEN
    FULL_SIMP_TAC std_ss [] THEN
    Q.UNABBREV_TAC `s2` THEN
    METIS_TAC []
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 

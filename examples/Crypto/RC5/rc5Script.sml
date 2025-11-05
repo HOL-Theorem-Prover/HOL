@@ -364,7 +364,6 @@ QED
    !n (w:word64) (k:word64) w1 w2 A B Lk Sk i j. Split64(w)=(w1,w2)/\ rc5keys n k = (A,B,Lk,Sk,i,j) ==>
    RoundDe64 n (RoundEn64 n w k) k= w
 Proof
-
      simp[rc5keys_def]
   >> Induct_on ‘n’
   >- (rw[RoundEn64_def,RoundDe64_def]\\

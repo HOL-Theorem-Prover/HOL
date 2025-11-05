@@ -112,19 +112,21 @@ val _ = overload_on ("ipoly", ``\x. IPoly r x``);
    (5) x IN (PolyRing r).carrier /\ y IN (PolyRing r).carrier ==> upoly x \/ upoly y
        similar to (3), by poly_ring_property and given implication.
 *)
-val poly_irreducible_def = store_thm(
-  "poly_irreducible_def",
-  ``!(r:'a ring) (p:'a poly). ipoly p <=>
+Theorem poly_irreducible_def:
+    !(r:'a ring) (p:'a poly). ipoly p <=>
         (poly p) /\ (p <> |0|) /\ (~ upoly p) /\
-        (!x y. poly x /\ poly y /\ (p = x * y) ==> upoly x \/ upoly y)``,
-  rw_tac std_ss[irreducible_def, ring_nonzero_def, poly_ring_property, IN_DIFF, IN_SING, EQ_IMP_THM]);
+        (!x y. poly x /\ poly y /\ (p = x * y) ==> upoly x \/ upoly y)
+Proof
+  rw_tac std_ss[irreducible_def, ring_nonzero_def, poly_ring_property, IN_DIFF, IN_SING, EQ_IMP_THM]
+QED
 
 (* Theorem: ipoly p ==> ~ upoly p *)
 (* Proof: by irreducible_def. *)
-val poly_irreducible_not_unit = store_thm(
-  "poly_irreducible_not_unit",
-  ``!(r:'a ring) p. ipoly p ==> ~ upoly p``,
-  rw[irreducible_def]);
+Theorem poly_irreducible_not_unit:
+    !(r:'a ring) p. ipoly p ==> ~ upoly p
+Proof
+  rw[irreducible_def]
+QED
 
 (* Theorem: ipoly p ==> poly p *)
 (* Proof:
@@ -133,10 +135,11 @@ val poly_irreducible_not_unit = store_thm(
    ==> p IN (PolyRing r).carrier        by ring_nonzero_element
    ==> poly p                           by poly_ring_element
 *)
-val poly_irreducible_poly = store_thm(
-  "poly_irreducible_poly",
-  ``!r:'a ring. !p. ipoly p ==> poly p``,
-  rw[irreducible_def, ring_nonzero_element, GSYM poly_ring_element]);
+Theorem poly_irreducible_poly:
+    !r:'a ring. !p. ipoly p ==> poly p
+Proof
+  rw[irreducible_def, ring_nonzero_element, GSYM poly_ring_element]
+QED
 
 (* DO NOT export this! -- otherwise all "poly p" will try "ipoly p". *)
 (* val _ = export_rewrites ["poly_irreducible_poly"]; *)
@@ -147,10 +150,11 @@ val poly_irreducible_poly = store_thm(
    ==> p IN ring_nonzero (PolyRing r)   by irreducible_def
    ==> p <> |0|                         by ring_nonzero_eq
 *)
-val poly_irreducible_nonzero = store_thm(
-  "poly_irreducible_nonzero",
-  ``!r:'a ring. !p. ipoly p ==> p <> |0|``,
-  rw[irreducible_def, ring_nonzero_eq]);
+Theorem poly_irreducible_nonzero:
+    !r:'a ring. !p. ipoly p ==> p <> |0|
+Proof
+  rw[irreducible_def, ring_nonzero_eq]
+QED
 
 (* Theorem: Ring r ==> !p. ipoly p ==> p <> |1| *)
 (* Proof:
@@ -158,10 +162,11 @@ val poly_irreducible_nonzero = store_thm(
      but upoly |1|                 by poly_unit_one
       so p <> |1|
 *)
-val poly_irreducible_ne_poly_one = store_thm(
-  "poly_irreducible_ne_poly_one",
-  ``!r:'a ring. Ring r ==> !p. ipoly p ==> p <> |1|``,
-  metis_tac[poly_irreducible_not_unit, poly_unit_one]);
+Theorem poly_irreducible_ne_poly_one:
+    !r:'a ring. Ring r ==> !p. ipoly p ==> p <> |1|
+Proof
+  metis_tac[poly_irreducible_not_unit, poly_unit_one]
+QED
 
 (* Theorem: Field r ==> poly p /\ deg p = 1 ==> ipoly p *)
 (* Proof:
@@ -182,9 +187,9 @@ val poly_irreducible_ne_poly_one = store_thm(
        If deg x = 0, with x <> |0| ==> upoly x   by poly_field_units
        If deg y = 0, with y <> |0| ==> upoly y   by poly_field_units
 *)
-val poly_deg_1_irreducible = store_thm(
-  "poly_deg_1_irreducible",
-  ``!r:'a field. Field r ==> !p. poly p /\ (deg p = 1) ==> ipoly p``,
+Theorem poly_deg_1_irreducible:
+    !r:'a field. Field r ==> !p. poly p /\ (deg p = 1) ==> ipoly p
+Proof
   rw[irreducible_def] >| [
     `p <> |0|` by metis_tac[poly_deg_zero, DECIDE ``0 <> 1``] >>
     `Ring r` by rw[] >>
@@ -197,7 +202,8 @@ val poly_deg_1_irreducible = store_thm(
     `(deg x = 0) \/ (deg y = 0)` by rw_tac arith_ss[] >-
     rw[poly_field_units] >>
     rw[poly_field_units]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p. ipoly p ==> 0 < deg p *)
 (* Proof:
@@ -210,9 +216,9 @@ val poly_deg_1_irreducible = store_thm(
    But ipoly p ==> ~(upoly p) by poly_irreducible_def
    which is a contradiction.
 *)
-val poly_irreducible_deg_nonzero = store_thm(
-  "poly_irreducible_deg_nonzero",
-  ``!r:'a field. Field r ==> !p. ipoly p ==> 0 < deg p``,
+Theorem poly_irreducible_deg_nonzero:
+    !r:'a field. Field r ==> !p. ipoly p ==> 0 < deg p
+Proof
   rpt strip_tac >>
   spose_not_then strip_assume_tac >>
   `deg p = 0` by decide_tac >>
@@ -220,14 +226,16 @@ val poly_irreducible_deg_nonzero = store_thm(
   `poly p` by rw[poly_irreducible_poly] >>
   `?h. h IN R /\ h <> #0 /\ (p = [h])` by metis_tac[poly_deg_eq_zero] >>
   `upoly p` by rw[poly_field_const_unit] >>
-  metis_tac[poly_irreducible_def]);
+  metis_tac[poly_irreducible_def]
+QED
 
 (* Theorem: Field r ==> !p. ipoly p ==> p <> |0| /\ 0 < deg p *)
 (* Proof: by poly_irreducible_nonzero, poly_irreducible_deg_nonzero *)
-val poly_irreducible_property = store_thm(
-  "poly_irreducible_property",
-  ``!r:'a field. Field r ==> !p. ipoly p ==> p <> |0| /\ 0 < deg p``,
-  rw_tac std_ss[poly_irreducible_nonzero, poly_irreducible_deg_nonzero]);
+Theorem poly_irreducible_property:
+    !r:'a field. Field r ==> !p. ipoly p ==> p <> |0| /\ 0 < deg p
+Proof
+  rw_tac std_ss[poly_irreducible_nonzero, poly_irreducible_deg_nonzero]
+QED
 
 (* Theorem: Field r ==> !p. ipoly p ==> ulead p *)
 (* Proof:
@@ -235,10 +243,11 @@ val poly_irreducible_property = store_thm(
     and p <> |0|      by poly_irreducible_nonzero
     ==> ulead p       by poly_field_poly_ulead
 *)
-val poly_irreducible_ulead = store_thm(
-  "poly_irreducible_ulead",
-  ``!r:'a field. Field r ==> !p. ipoly p ==> ulead p``,
-  rw_tac std_ss[poly_irreducible_poly, poly_irreducible_nonzero, poly_field_poly_ulead]);
+Theorem poly_irreducible_ulead:
+    !r:'a field. Field r ==> !p. ipoly p ==> ulead p
+Proof
+  rw_tac std_ss[poly_irreducible_poly, poly_irreducible_nonzero, poly_field_poly_ulead]
+QED
 
 (* Theorem: Field r ==> !p. ipoly p ==> pmonic p *)
 (* Proof:
@@ -246,10 +255,11 @@ val poly_irreducible_ulead = store_thm(
     and 0 < deg p     by poly_irreducible_deg_nonzero
     ==> pmonic p      by poly_field_poly_pmonic
 *)
-val poly_irreducible_pmonic = store_thm(
-  "poly_irreducible_pmonic",
-  ``!r:'a field. Field r ==> !p. ipoly p ==> pmonic p``,
-  rw_tac std_ss[poly_irreducible_poly, poly_irreducible_deg_nonzero, poly_field_poly_pmonic]);
+Theorem poly_irreducible_pmonic:
+    !r:'a field. Field r ==> !p. ipoly p ==> pmonic p
+Proof
+  rw_tac std_ss[poly_irreducible_poly, poly_irreducible_deg_nonzero, poly_field_poly_pmonic]
+QED
 
 (* Theorem: Field r ==> !p. monic p /\ ipoly p ==> poly p /\ 0 < deg p /\ unit (lead p) *)
 (* Proof:
@@ -260,13 +270,14 @@ val poly_irreducible_pmonic = store_thm(
    Hence  deg p <> 0                    by poly_field_units
    or 0 < deg p                         by decide_tac
 *)
-val poly_monic_irreducible_property = store_thm(
-  "poly_monic_irreducible_property",
-  ``!r:'a field. Field r ==> !p. monic p /\ ipoly p ==> poly p /\ 0 < deg p /\ unit (lead p)``,
+Theorem poly_monic_irreducible_property:
+    !r:'a field. Field r ==> !p. monic p /\ ipoly p ==> poly p /\ 0 < deg p /\ unit (lead p)
+Proof
   rw[poly_monic_def] >>
   `p <> |0|` by rw[poly_irreducible_nonzero] >>
   `deg p <> 0` by metis_tac[poly_irreducible_not_unit, poly_field_units] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Irreducible Factors.                                                      *)
@@ -280,10 +291,11 @@ val _ = overload_on ("mifactor", ``\h z. monic h /\ ipoly h /\ (z % h = |0|)``);
    This is to show: ipoly h ==> 0 < deg h
    which is true by poly_irreducible_deg_nonzero
 *)
-val poly_monic_irreducible_factor = store_thm(
-  "poly_monic_irreducible_factor",
-  ``!r:'a field. Field r ==> !h z. mifactor h z ==> pmonic h``,
-  rw[poly_irreducible_deg_nonzero]);
+Theorem poly_monic_irreducible_factor:
+    !r:'a field. Field r ==> !h z. mifactor h z ==> pmonic h
+Proof
+  rw[poly_irreducible_deg_nonzero]
+QED
 
 (* Theorem: ipoly (X + |c|) *)
 (* Proof:
@@ -291,10 +303,11 @@ val poly_monic_irreducible_factor = store_thm(
      and deg (X + |c|) = 1    by poly_deg_X_add_c
    Hence ipoly (X + |c|)      by poly_deg_1_irreducible
 *)
-val poly_X_add_c_irreducible = store_thm(
-  "poly_X_add_c_irreducible",
-  ``!r:'a field. Field r ==> !c:num. ipoly (X + |c|)``,
-  rw[poly_X_add_c, poly_deg_X_add_c, poly_deg_1_irreducible]);
+Theorem poly_X_add_c_irreducible:
+    !r:'a field. Field r ==> !c:num. ipoly (X + |c|)
+Proof
+  rw[poly_X_add_c, poly_deg_X_add_c, poly_deg_1_irreducible]
+QED
 
 (* Theorem: ipoly (X - |c|) *)
 (* Proof:
@@ -302,10 +315,11 @@ val poly_X_add_c_irreducible = store_thm(
      and deg (X - |c|) = 1    by poly_deg_X_sub_c
    Hence ipoly (X - |c|)      by poly_deg_1_irreducible
 *)
-val poly_X_sub_c_irreducible = store_thm(
-  "poly_X_sub_c_irreducible",
-  ``!r:'a field. Field r ==> !c:num. ipoly (X - |c|)``,
-  rw[poly_X_sub_c, poly_deg_X_sub_c, poly_deg_1_irreducible]);
+Theorem poly_X_sub_c_irreducible:
+    !r:'a field. Field r ==> !c:num. ipoly (X - |c|)
+Proof
+  rw[poly_X_sub_c, poly_deg_X_sub_c, poly_deg_1_irreducible]
+QED
 
 (* Theorem: Field r ==> !c. c IN R ==> ipoly (factor c) *)
 (* Proof:
@@ -313,10 +327,11 @@ val poly_X_sub_c_irreducible = store_thm(
     and deg (factor c) = 1     by poly_factor_deg
    Thus ipoly (factor c)       by poly_deg_1_irreducible
 *)
-val poly_factor_irreducible = store_thm(
-  "poly_factor_irreducible",
-  ``!r:'a field. Field r ==> !c. c IN R ==> ipoly (factor c)``,
-  rw[poly_factor_poly, poly_factor_deg, poly_deg_1_irreducible]);
+Theorem poly_factor_irreducible:
+    !r:'a field. Field r ==> !c. c IN R ==> ipoly (factor c)
+Proof
+  rw[poly_factor_poly, poly_factor_deg, poly_deg_1_irreducible]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ 1 < deg p /\ ~ipoly p ==>
             ?x y. poly x /\ poly y /\ 0 < deg x /\ 0 < deg y /\ (p = x * y) *)
@@ -333,14 +348,15 @@ val poly_factor_irreducible = store_thm(
       or 0 < deg x /\ 0 < deg y
      So just take x' = x, y' = y.
 *)
-val poly_reducible_has_factors = store_thm(
-  "poly_reducible_has_factors",
-  ``!r:'a field. Field r ==> !p. poly p /\ 0 < deg p /\ ~ipoly p ==>
-            ?x y. poly x /\ poly y /\ 0 < deg x /\ 0 < deg y /\ (p = x * y)``,
+Theorem poly_reducible_has_factors:
+    !r:'a field. Field r ==> !p. poly p /\ 0 < deg p /\ ~ipoly p ==>
+            ?x y. poly x /\ poly y /\ 0 < deg x /\ 0 < deg y /\ (p = x * y)
+Proof
   rpt strip_tac >>
   `!n. 0 < n <=> n <> 0` by decide_tac >>
   `p <> |0|` by metis_tac[poly_deg_zero] >>
-  metis_tac[poly_irreducible_def, poly_field_units, poly_mult_lzero, poly_mult_rzero]);
+  metis_tac[poly_irreducible_def, poly_field_units, poly_mult_lzero, poly_mult_rzero]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ 0 < deg p ==> ?q. ipoly q /\ q pdivides p *)
 (* Proof:
@@ -356,9 +372,9 @@ val poly_reducible_has_factors = store_thm(
       Hence ?q. ipoly q /\ q pdivides y                               by induction hypothesis
         and q pdivides y /\ y pdivides p ==> q pdivides p             by poly_divides_transitive
 *)
-val poly_irreducible_factor_exists = store_thm(
-  "poly_irreducible_factor_exists",
-  ``!r:'a field. Field r ==> !p. poly p /\ 0 < deg p ==> ?q. ipoly q /\ q pdivides p``,
+Theorem poly_irreducible_factor_exists:
+    !r:'a field. Field r ==> !p. poly p /\ 0 < deg p ==> ?q. ipoly q /\ q pdivides p
+Proof
   rpt strip_tac >>
   completeInduct_on `deg p` >>
   rw[] >>
@@ -372,7 +388,8 @@ val poly_irreducible_factor_exists = store_thm(
   `deg p = deg x + deg y` by rw[poly_deg_mult_nonzero] >>
   `deg y < deg p` by decide_tac >>
   `?q. ipoly q /\ q pdivides y` by rw[] >>
-  metis_tac[poly_divides_transitive, poly_irreducible_poly]);
+  metis_tac[poly_divides_transitive, poly_irreducible_poly]
+QED
 
 (* Theorem: Field r ==> !c p. c IN R /\ poly p /\ 0 < deg p /\ ipoly (c * p) ==> ipoly p *)
 (* Proof:
@@ -391,9 +408,9 @@ val poly_irreducible_factor_exists = store_thm(
    Thus ~upoly (c * x)          by poly_field_units
    which contradicts the fact ipoly (c * p).
 *)
-val poly_cmult_irreducible = store_thm(
-  "poly_cmult_irreducible",
-  ``!r:'a field. Field r ==> !c p. c IN R /\ poly p /\ 0 < deg p /\ ipoly (c * p) ==> ipoly p``,
+Theorem poly_cmult_irreducible:
+    !r:'a field. Field r ==> !c p. c IN R /\ poly p /\ 0 < deg p /\ ipoly (c * p) ==> ipoly p
+Proof
   spose_not_then strip_assume_tac >>
   `?x y. poly x /\ poly y /\ 0 < deg x /\ 0 < deg y /\ (p = x * y)` by rw[poly_reducible_has_factors] >>
   `c * p = c * x * y` by rw[poly_cmult_mult] >>
@@ -405,7 +422,8 @@ val poly_cmult_irreducible = store_thm(
   `deg (c * x) = deg x` by rw[poly_field_deg_cmult] >>
   `deg (c * x) <> 0` by decide_tac >>
   `~upoly (c * x)` by metis_tac[poly_field_units] >>
-  metis_tac[poly_irreducible_def]);
+  metis_tac[poly_irreducible_def]
+QED
 
 (* Theorem: ipoly p ==> ?c q. c IN R /\ monic q /\ ipoly q /\ (p = c * q) *)
 (* Proof:
@@ -420,9 +438,9 @@ val poly_cmult_irreducible = store_thm(
       so 0 < deg q                                by above
    Therefore ipoly (c * q) ==> ipoly q            by poly_cmult_irreducible
 *)
-val poly_irreducible_make_monic = store_thm(
-  "poly_irreducible_make_monic",
-  ``!r:'a field. Field r ==> !p. ipoly p ==> ?c q. c IN R /\ monic q /\ ipoly q /\ (p = c * q)``,
+Theorem poly_irreducible_make_monic:
+    !r:'a field. Field r ==> !p. ipoly p ==> ?c q. c IN R /\ monic q /\ ipoly q /\ (p = c * q)
+Proof
   rpt strip_tac >>
   `poly p` by rw[poly_irreducible_poly] >>
   `?c q. c IN R /\ monic q /\ (p = c * q)` by rw[poly_field_make_monic] >>
@@ -432,7 +450,8 @@ val poly_irreducible_make_monic = store_thm(
   `c <> #0` by metis_tac[poly_cmult_lzero, field_is_ring] >>
   `deg p = deg q` by rw[poly_field_deg_cmult] >>
   `0 < deg p` by rw[poly_irreducible_deg_nonzero] >>
-  metis_tac[poly_cmult_irreducible]);
+  metis_tac[poly_cmult_irreducible]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ 0 < deg p ==> ?q. monic q /\ ipoly q /\ q pdivides p *)
 (* Proof:
@@ -443,14 +462,15 @@ val poly_irreducible_make_monic = store_thm(
      With t pdivides p                  by above
      Thus q pdivides p                  by poly_divides_transitive
 *)
-val poly_monic_irreducible_factor_exists = store_thm(
-  "poly_monic_irreducible_factor_exists",
-  ``!r:'a field. Field r ==> !p. poly p /\ 0 < deg p ==> ?q. monic q /\ ipoly q /\ q pdivides p``,
+Theorem poly_monic_irreducible_factor_exists:
+    !r:'a field. Field r ==> !p. poly p /\ 0 < deg p ==> ?q. monic q /\ ipoly q /\ q pdivides p
+Proof
   rpt strip_tac >>
   `?t. ipoly t /\ t pdivides p` by rw[GSYM poly_irreducible_factor_exists] >>
   `?c q. c IN R /\ monic q /\ ipoly q /\ (t = c * q)` by rw[poly_irreducible_make_monic] >>
   `poly q /\ poly t` by rw[] >>
-  metis_tac[poly_divides_cmult_alt, poly_divides_transitive, field_is_ring]);
+  metis_tac[poly_divides_cmult_alt, poly_divides_transitive, field_is_ring]
+QED
 
 (* Theorem: Ring r ==> !p q. monic p /\ monic q /\ ipoly q ==>
                         (p pdivides q <=> ((p = |1|) \/ (p = q))) *)
@@ -478,10 +498,10 @@ val poly_monic_irreducible_factor_exists = store_thm(
       If p = |1|, true                   by poly_one_divides_all
       If p = q, true                     by poly_divides_reflexive
 *)
-val poly_monic_divides_monic_irreducible = store_thm(
-  "poly_monic_divides_monic_irreducible",
-  ``!r:'a ring. Ring r ==> !p q. monic p /\ monic q /\ ipoly q ==>
-               (p pdivides q <=> ((p = |1|) \/ (p = q)))``,
+Theorem poly_monic_divides_monic_irreducible:
+    !r:'a ring. Ring r ==> !p q. monic p /\ monic q /\ ipoly q ==>
+               (p pdivides q <=> ((p = |1|) \/ (p = q)))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     `?s. poly s /\ (q = s * p)` by rw[GSYM poly_divides_def] >>
     `poly p /\ poly q` by rw[] >>
@@ -496,7 +516,8 @@ val poly_monic_divides_monic_irreducible = store_thm(
     ],
     rw[poly_one_divides_all],
     rw[poly_divides_reflexive]
-  ]);
+  ]
+QED
 
 (* Theorem: ipoly p ==> ?q. ipoly q /\ (deg q = deg p) /\ unit (lead q) *)
 (* Proof:
@@ -526,9 +547,9 @@ val poly_monic_divides_monic_irreducible = store_thm(
 *)
 (* Example of Debugging *)
 fun print_tac s g = (print (s^"\n"); ALL_TAC g);
-val poly_irreducible_monic = store_thm(
-  "poly_irreducible_monic",
-  ``!r:'a field. Field r ==> !p. ipoly p ==> ?q. ipoly q /\ (deg q = deg p) /\ monic q``,
+Theorem poly_irreducible_monic:
+    !r:'a field. Field r ==> !p. ipoly p ==> ?q. ipoly q /\ (deg q = deg p) /\ monic q
+Proof
   print_tac "Start: poly_irreducible_monic" >>
   rpt strip_tac >>
   `poly p` by rw[poly_irreducible_poly] >>
@@ -551,7 +572,8 @@ val poly_irreducible_monic = store_thm(
     metis_tac[irreducible_associates, poly_ring_element],
     print_tac "Case 2" >> rw[poly_field_deg_cmult],
     print_tac "Case 3" >> rw[poly_monic_def]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ monic p /\ poly q /\ p * q = |1| ==> monic q *)
 (* Proof:
@@ -605,9 +627,9 @@ val poly_irreducible_monic = store_thm(
        Since roots (x * y) = roots x UNION roots y  by poly_roots_mult
        This is a contradiction                      by EMPTY_UNION
 *)
-val poly_deg_2_irreducible = store_thm(
-  "poly_deg_2_irreducible",
-  ``!r:'a field. Field r ==> !p. monic p /\ (deg p = 2) /\ (roots p = {}) ==> ipoly p``,
+Theorem poly_deg_2_irreducible:
+    !r:'a field. Field r ==> !p. monic p /\ (deg p = 2) /\ (roots p = {}) ==> ipoly p
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `poly p /\ (lead p = #1)` by rw[poly_monic_def] >>
@@ -638,7 +660,8 @@ val poly_deg_2_irreducible = store_thm(
     `root x xc` by metis_tac[poly_factor_root] >>
     `roots x <> {}` by metis_tac[poly_roots_member, MEMBER_NOT_EMPTY] >>
     metis_tac[poly_roots_mult, EMPTY_UNION]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Reducible Factors                                                         *)
@@ -678,10 +701,10 @@ val it = |- !z. ipoly z <=>
              and 0 < deg x /\ 0 < deg y            by deg x <> 0, deg y <> 0
        Thus take q = x, t = y, and the result follows.
 *)
-val poly_reducible_factors = store_thm(
-  "poly_reducible_factors",
-  ``!r:'a field. Field r ==> !p. poly p /\ 0 < deg p /\ ~(ipoly p) ==>
-   ?q t. poly q /\ poly t /\ (p = q * t) /\ 0 < deg q /\ 0 < deg t /\ deg q < deg p /\ deg t < deg p``,
+Theorem poly_reducible_factors:
+    !r:'a field. Field r ==> !p. poly p /\ 0 < deg p /\ ~(ipoly p) ==>
+   ?q t. poly q /\ poly t /\ (p = q * t) /\ 0 < deg q /\ 0 < deg t /\ deg q < deg p /\ deg t < deg p
+Proof
   rpt strip_tac >>
   `deg p <> 0` by decide_tac >>
   `p <> |0|` by metis_tac[poly_deg_zero] >>
@@ -695,7 +718,8 @@ val poly_reducible_factors = store_thm(
   `deg x < deg x + deg y` by decide_tac >>
   `deg y < deg x + deg y` by decide_tac >>
   `0 < deg x /\ 0 < deg y` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Field r ==> !p. monic p /\ 0 < deg p /\ ~(ipoly p) ==>
       ?q t. monic q /\ monic t /\ (p = q * t) /\ 0 < deg q /\ 0 < deg t /\ deg q < deg p /\ deg t < deg p *)
@@ -723,10 +747,10 @@ val poly_reducible_factors = store_thm(
             = u * v                           by poly_cmult_lone
     Take q = u, t = v, the result follows.
 *)
-val poly_monic_reducible_factors = store_thm(
-  "poly_monic_reducible_factors",
-  ``!r:'a field. Field r ==> !p. monic p /\ 0 < deg p /\ ~(ipoly p) ==>
-   ?q t. monic q /\ monic t /\ (p = q * t) /\ 0 < deg q /\ 0 < deg t /\ deg q < deg p /\ deg t < deg p``,
+Theorem poly_monic_reducible_factors:
+    !r:'a field. Field r ==> !p. monic p /\ 0 < deg p /\ ~(ipoly p) ==>
+   ?q t. monic q /\ monic t /\ (p = q * t) /\ 0 < deg q /\ 0 < deg t /\ deg q < deg p /\ deg t < deg p
+Proof
   rpt strip_tac >>
   `poly p /\ (lead p = #1)` by rw[] >>
   `?q t. poly q /\ poly t /\ (p = q * t) /\ 0 < deg q /\ 0 < deg t /\ deg q < deg p /\ deg t < deg p` by rw[poly_reducible_factors] >>
@@ -742,7 +766,8 @@ val poly_monic_reducible_factors = store_thm(
   `_ = k * h * u * v` by metis_tac[poly_cmult_cmult] >>
   `_ = #1 * u * v` by metis_tac[field_mult_comm] >>
   `_ = u * v` by metis_tac[poly_cmult_lone] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 
 (* Note:

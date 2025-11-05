@@ -247,7 +247,7 @@ Proof
   \\ rw [] \\ fs []
 QED
 
-Triviality fix_eval:
+Theorem fix_eval[local]:
   fix s (eval env x s) = eval env x s ∧
   fix s (evals env xs s) = evals env xs s
 Proof

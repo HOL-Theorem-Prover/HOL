@@ -723,16 +723,15 @@ Proof
   ]
 QED
 
-val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS2 =
- store_thm
-  ("IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS2",
+Theorem IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS2:
 
-    ``!A A' f. IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON A A' f ==>
+      !A A' f. IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON A A' f ==>
         !w i. ((IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A i w) =
                (PATH_SUBSET w (A'.S UNION IMAGE f (SEMI_AUTOMATON_USED_INPUT_VARS A')) /\
                 IS_SYMBOLIC_RUN_THROUGH_SEMI_AUTOMATON A' i (PATH_RESTRICT w A'.S) /\
                 (!i'. (i' IN SEMI_AUTOMATON_USED_INPUT_VARS A') ==>
-                      (!n. (i' IN i n) = (f i' IN w n)))))``,
+                      (!n. (i' IN i n) = (f i' IN w n)))))
+Proof
 
     rpt STRIP_TAC THEN EQ_TAC THENL [
       STRIP_TAC THEN LEFT_CONJ_TAC THENL [
@@ -786,7 +785,8 @@ val IS_SIMPLIFIED_SYMBOLIC_SEMI_AUTOMATON___RUNS2 =
       SIMP_ALL_TAC std_ss [PATH_SUBSET_def, PATH_RESTRICT_def, IN_UNION, IN_IMAGE,
         SUBSET_DEF, PATH_MAP_def, IN_INTER] THEN
       METIS_TAC[]
-  ]);
+  ]
+QED
 
 Theorem INPUT_RUN_PATH_UNION___SPLIT :
     !A p. INPUT_RUN_PATH_UNION A p (PATH_RESTRICT p A.S) = p

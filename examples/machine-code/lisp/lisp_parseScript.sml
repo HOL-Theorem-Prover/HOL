@@ -83,14 +83,18 @@ val str2num_dec2str = prove(
   \\ IMP_RES_TAC ORD_CHR
   \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC);
 
-val EXPLODE_STRCAT = store_thm("EXPLODE_STRCAT",
-  ``!s t. EXPLODE (STRCAT s t) = EXPLODE s ++ EXPLODE t``,
-  Induct THEN ASM_SIMP_TAC std_ss [STRCAT_def,EXPLODE_def,APPEND])
+Theorem EXPLODE_STRCAT:
+    !s t. EXPLODE (STRCAT s t) = EXPLODE s ++ EXPLODE t
+Proof
+  Induct THEN ASM_SIMP_TAC std_ss [STRCAT_def,EXPLODE_def,APPEND]
+QED
 
-val LENGTH_STRCAT = store_thm("LENGTH_STRCAT",
-  ``!x y. LENGTH (STRCAT x y) = LENGTH x + LENGTH y``,
+Theorem LENGTH_STRCAT:
+    !x y. LENGTH (STRCAT x y) = LENGTH x + LENGTH y
+Proof
   Induct THEN ASM_SIMP_TAC std_ss [LENGTH,STRCAT_def,ADD_ASSOC,
-     DECIDE ``SUC n = 1 + n``]);
+     DECIDE ``SUC n = 1 + n``]
+QED
 
 val str2num_STRCAT = prove(
   ``!s c. str2num (STRCAT s (STRING c "")) = str2num s * 10 + str2num (STRING c "")``,
@@ -420,12 +424,14 @@ val (th1,arm_symbol_insert_def,arm_symbol_insert_pre_def) = compile_all ``
      let (r4,r5,r6,r8,df,dg,f,g) = arm_strcopy (r4,r5,r8,df,dg,f,g) in
        (r3,r4,r5,r6,r7,r8,df,dg,dm,f,g,m))``
 
-val word_shift_right_n2w = store_thm("word_shift_right_n2w",
-  ``!n k. n < dimword (:'a) ==> (n2w n >>> k = n2w (n DIV 2 ** k) :'a word)``,
+Theorem word_shift_right_n2w:
+    !n k. n < dimword (:'a) ==> (n2w n >>> k = n2w (n DIV 2 ** k) :'a word)
+Proof
   SIMP_TAC std_ss [GSYM w2n_11,w2n_lsr,w2n_n2w] \\ REPEAT STRIP_TAC
   \\ `n DIV 2 ** k <= n` by (MATCH_MP_TAC DIV_LESS_EQ \\ SIMP_TAC std_ss [ZERO_LT_EXP])
   \\ IMP_RES_TAC LESS_EQ_LESS_TRANS
-  \\ ASM_SIMP_TAC std_ss []);
+  \\ ASM_SIMP_TAC std_ss []
+QED
 
 val symbol_table_dom_ALIGNED = prove(
   ``!xs a dm dg. symbol_table_dom xs (a,dm,dg) ==> ALIGNED a``,
@@ -1455,12 +1461,14 @@ val sexp_lex_sexp2str =
   (RW [string_nil_or_not_def,sexp_lex_def,APPEND_NIL,STRCAT_EQNS] o
    Q.SPECL [`exp`,`T`,`""`]) sexp2tokens_lemma;
 
-val string2sexp_sexp2string = store_thm("string2sexp_sexp2string",
-  ``!x. sexp_ok x ==> (string2sexp (sexp2string x) = x)``,
+Theorem string2sexp_sexp2string:
+    !x. sexp_ok x ==> (string2sexp (sexp2string x) = x)
+Proof
   REWRITE_TAC [string2sexp_def,sexp2string_def]
   \\ SIMP_TAC std_ss [sexp_lex_sexp2str,
        RW [APPEND_NIL] (Q.SPECL [`x`,`T`,`[]`] sexp_parse_lemma)]
-  \\ SIMP_TAC std_ss [sexp_parse_def,CAR_def]);
+  \\ SIMP_TAC std_ss [sexp_parse_def,CAR_def]
+QED
 
 
 (* PARSER IMPLEMENTATION *)
@@ -2642,15 +2650,17 @@ val set_lemma = prove(
   SIMP_TAC std_ss [EXTENSION,IN_UNION,IN_DIFF,SUBSET_DEF,
     DISJOINT_DEF,NOT_IN_EMPTY,IN_INTER] \\ METIS_TAC []);
 
-val fun2set_DIFF_IMP = store_thm("fun2set_DIFF_IMP",
-  ``!p x. (!y. p (fun2set (f,y)) ==> (x = y)) /\ (p * q) (fun2set (f,df)) ==>
-          q (fun2set (f,df DIFF x))``,
+Theorem fun2set_DIFF_IMP:
+    !p x. (!y. p (fun2set (f,y)) ==> (x = y)) /\ (p * q) (fun2set (f,df)) ==>
+          q (fun2set (f,df DIFF x))
+Proof
   SIMP_TAC std_ss [STAR_def,GSYM fun2set_DIFF] \\ REPEAT STRIP_TAC
   \\ FULL_SIMP_TAC std_ss [SPLIT_def]
   \\ IMP_RES_TAC set_lemma
   \\ IMP_RES_TAC SUBSET_fun2set
   \\ FULL_SIMP_TAC std_ss [] \\ RES_TAC
-  \\ FULL_SIMP_TAC std_ss []);
+  \\ FULL_SIMP_TAC std_ss []
+QED
 
 Definition ch_active_set2_def:
   ch_active_set2 (a,i,n) =
@@ -2791,8 +2801,8 @@ val SEP_EXPS_ok_data = prove(
   \\ FULL_SIMP_TAC std_ss [GSYM SEP_EXPS_def]
   \\ METIS_TAC [SUBSET_TRANS]);
 
-val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
-  ``32 <= w2n r5 /\ w2n r5 + 16 * l + 20 < 2 ** 32 /\ l <> 0 /\
+Theorem arm_string2sexp_lemma:
+    32 <= w2n r5 /\ w2n r5 + 16 * l + 20 < 2 ** 32 /\ l <> 0 /\
     sexp_lex_space (sexp2string s) <= l /\ sexp_ok s /\
     string_mem (STRCAT (sexp2string s) null_string) (r3,f,df) /\ ALIGNED r5 /\
     (token_slots (r5 - 32w) (l + l + 7)) (fun2set (h,dh)) /\
@@ -2803,7 +2813,8 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
       (arm_string2sexp' (r3,n2w l,r5,df,dg,dh,dm,f,g,h,m) =
         (r3i,3w,3w,3w,3w,3w,r5,df,dg,dh,dm,f,gi,hi,mi)) /\
       ?sym. lisp_inv (s,Sym "nil",Sym "nil",Sym "nil",Sym "nil",Sym "nil",l)
-              (r3i,3w,3w,3w,3w,3w,r5,dh,hi,sym,dm,mi,dg,gi)``,
+              (r3i,3w,3w,3w,3w,3w,r5,dh,hi,sym,dm,mi,dg,gi)
+Proof
   REWRITE_TAC [GSYM AND_IMP_INTRO]
   \\ SIMP_TAC std_ss [GSYM sexp_lex_sexp2str]
   \\ REWRITE_TAC [AND_IMP_INTRO,GSYM CONJ_ASSOC,GSYM sexp2string_def]
@@ -3115,7 +3126,8 @@ val arm_string2sexp_lemma = store_thm("arm_string2sexp_lemma",
     \\ ASM_SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,WORD_EQ_ADD_CANCEL]
     \\ `8 + (4 + 8 * (j - 1)) = 8 * j + 4`by DECIDE_TAC
     \\ ASM_SIMP_TAC std_ss [word_add_n2w,word_mul_n2w]
-    \\ DECIDE_TAC]);
+    \\ DECIDE_TAC]
+QED
 
 
 (* formulating the final theorem *)

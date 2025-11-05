@@ -52,14 +52,14 @@ val _ = hide "S";
 (******************************************************************************
 * ``: ('state,'prop)kripke_structure``
 ******************************************************************************)
-val kripke_structure_def =
- Hol_datatype
-  `kripke_structure =
+Datatype:
+   kripke_structure =
     <| S: 'state -> bool;
        S0:'state -> bool;
        R: 'state # 'state -> bool;
        P: 'prop -> bool;
-       L: 'state -> ('prop -> bool) |>`;
+       L: 'state -> ('prop -> bool) |>
+End
 
 (******************************************************************************
 * A useful special case (possibly the only one we'll need) is to identify

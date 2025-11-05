@@ -32,10 +32,11 @@ val _ = add_rule {term_name = "KS_TRANSITION", fixity = Infixl 2502,
      paren_style = OnlyIfNecessary,
      block_style = (AroundSamePrec, (PP.INCONSISTENT, 0))};
 
-val wfKS_UNIV = store_thm(
-  "wfKS_UNIV",
-  ``!ks. (ks.S0 SUBSET UNIV) /\ (ks.S = UNIV) ==> wfKS ks``,
-  PROVE_TAC [wfKS_def])
+Theorem wfKS_UNIV:
+    !ks. (ks.S0 SUBSET UNIV) /\ (ks.S = UNIV) ==> wfKS ks
+Proof
+  PROVE_TAC [wfKS_def]
+QED
 
 val DECIDE_AP_EQ_LEM = save_thm("DECIDE_AP_EQ_LEM",prove (``!x y. ~(x=y) = (((\s. x) = (\s. y))=F)``,metisLib.METIS_TAC []))
 

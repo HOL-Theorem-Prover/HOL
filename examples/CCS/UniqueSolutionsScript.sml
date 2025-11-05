@@ -539,12 +539,12 @@ QED
    an expression H such that G --a--> H, P' = H{P/X} and, for any Q, G{Q/X} --a-> H{Q/X}.
    Moreover H is sequential, and if a = tau then H is also guarded.
  *)
-val WEAK_UNIQUE_SOLUTION_LEMMA = store_thm (
-   "WEAK_UNIQUE_SOLUTION_LEMMA",
-  ``!G. SG G /\ GSEQ G ==>
+Theorem WEAK_UNIQUE_SOLUTION_LEMMA:
+    !G. SG G /\ GSEQ G ==>
         !P a P'. TRANS (G P) a P' ==>
                  ?H. GSEQ H /\ ((a = tau) ==> SG H) /\
-                     (P' = H P) /\ !Q. TRANS (G Q) a (H Q)``,
+                     (P' = H P) /\ !Q. TRANS (G Q) a (H Q)
+Proof
     HO_MATCH_MP_TAC SG_GSEQ_strong_induction
  >> BETA_TAC >> rpt STRIP_TAC (* 7 sub-goals here *)
  >| [ (* goal 1 (of 7) *)
@@ -620,16 +620,17 @@ val WEAK_UNIQUE_SOLUTION_LEMMA = store_thm (
         FULL_SIMP_TAC std_ss [Action_distinct_label] \\
         Q.EXISTS_TAC `e2` >> art [] \\
         GEN_TAC >> MATCH_MP_TAC SUM2 \\
-        REWRITE_TAC [PREFIX] ] ]);
+        REWRITE_TAC [PREFIX] ] ]
+QED
 
 (* The EPS version of WEAK_UNIQUE_SOLUTION_LEMMA.
    NOTE: the WEAK_TRANS version cannot be derived, because of the missing of SG in the middle.
  *)
-val WEAK_UNIQUE_SOLUTION_LEMMA_EPS = store_thm (
-   "WEAK_UNIQUE_SOLUTION_LEMMA_EPS",
-  ``!G. SG G /\ GSEQ G ==>
+Theorem WEAK_UNIQUE_SOLUTION_LEMMA_EPS:
+    !G. SG G /\ GSEQ G ==>
         !P P'. EPS (G P) P' ==>
-               ?H. SG H /\ GSEQ H /\ (P' = H P) /\ !Q. EPS (G Q) (H Q)``,
+               ?H. SG H /\ GSEQ H /\ (P' = H P) /\ !Q. EPS (G Q) (H Q)
+Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC `GP = G P`
  >> POP_ASSUM MP_TAC
@@ -651,7 +652,8 @@ val WEAK_UNIQUE_SOLUTION_LEMMA_EPS = store_thm (
  >> art [EQ_SYM]
  >> GEN_TAC
  >> `EPS (G Q) (H Q) /\ EPS (H Q) (H'' Q)` by PROVE_TAC [ONE_TAU]
- >> IMP_RES_TAC EPS_TRANS);
+ >> IMP_RES_TAC EPS_TRANS
+QED
 
 val GSEQ_EPS_lemma = Q.prove (
    `!E P Q R H. SG E /\ GSEQ E /\ WEAK_EQUIV P (E P) /\ WEAK_EQUIV Q (E Q) /\ GSEQ H /\
@@ -846,12 +848,12 @@ QED
 (*                                                                            *)
 (******************************************************************************)
 
-val OBS_UNIQUE_SOLUTION_LEMMA = store_thm (
-   "OBS_UNIQUE_SOLUTION_LEMMA",
-  ``!G. SG G /\ SEQ G ==>
+Theorem OBS_UNIQUE_SOLUTION_LEMMA:
+    !G. SG G /\ SEQ G ==>
         !P a P'. TRANS (G P) a P' ==>
                  ?H. SEQ H /\ ((a = tau) ==> SG H) /\
-                     (P' = H P) /\ !Q. TRANS (G Q) a (H Q)``,
+                     (P' = H P) /\ !Q. TRANS (G Q) a (H Q)
+Proof
     HO_MATCH_MP_TAC SG_SEQ_strong_induction
  >> BETA_TAC >> rpt STRIP_TAC (* 4 sub-goals here *)
  >| [ (* goal 1 (of 4) *)
@@ -879,16 +881,17 @@ val OBS_UNIQUE_SOLUTION_LEMMA = store_thm (
         GEN_TAC >> MATCH_MP_TAC SUM1 >> art [],
         (* goal 4.2 (of 2) *)
         RES_TAC >> Q.EXISTS_TAC `H` >> art [] \\
-        GEN_TAC >> MATCH_MP_TAC SUM2 >> art [] ] ]);
+        GEN_TAC >> MATCH_MP_TAC SUM2 >> art [] ] ]
+QED
 
 (* The EPS version of OBS_UNIQUE_SOLUTION_LEMMA.
    NOTE: the WEAK_TRANS version cannot be derived, because of the missing of SG in the middle.
  *)
-val OBS_UNIQUE_SOLUTION_LEMMA_EPS = store_thm (
-   "OBS_UNIQUE_SOLUTION_LEMMA_EPS",
-  ``!G. SG G /\ SEQ G ==>
+Theorem OBS_UNIQUE_SOLUTION_LEMMA_EPS:
+    !G. SG G /\ SEQ G ==>
         !P P'. EPS (G P) P' ==>
-               ?H. SG H /\ SEQ H /\ (P' = H P) /\ !Q. EPS (G Q) (H Q)``,
+               ?H. SG H /\ SEQ H /\ (P' = H P) /\ !Q. EPS (G Q) (H Q)
+Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC `GP = G P`
  >> POP_ASSUM MP_TAC
@@ -910,7 +913,8 @@ val OBS_UNIQUE_SOLUTION_LEMMA_EPS = store_thm (
  >> art [EQ_SYM]
  >> GEN_TAC
  >> `EPS (G Q) (H Q) /\ EPS (H Q) (H'' Q)` by PROVE_TAC [ONE_TAU]
- >> IMP_RES_TAC EPS_TRANS);
+ >> IMP_RES_TAC EPS_TRANS
+QED
 
 (* This lemma may apply at the final stage, it doesn't require (SG H), just (SEQ H) *)
 val SEQ_EPS_lemma = Q.prove (
@@ -1199,10 +1203,10 @@ QED
 (******************************************************************************)
 
 (* NOTE: the lemma works for any precongruence relation *)
-val unfolding_lemma1 = store_thm (
-   "unfolding_lemma1",
-  ``!E C P. GCONTEXT E /\ GCONTEXT C /\ P contracts (E P) ==>
-        !n. (C P) contracts (C o (FUNPOW E n)) P``,
+Theorem unfolding_lemma1:
+    !E C P. GCONTEXT E /\ GCONTEXT C /\ P contracts (E P) ==>
+        !n. (C P) contracts (C o (FUNPOW E n)) P
+Proof
     rpt STRIP_TAC
  >> REWRITE_TAC [o_DEF]
  >> BETA_TAC
@@ -1211,7 +1215,8 @@ val unfolding_lemma1 = store_thm (
  >> Induct >- REWRITE_TAC [FUNPOW, contracts_REFL]
  >> REWRITE_TAC [FUNPOW_SUC]
  >> Q.ABBREV_TAC `Q = FUNPOW E n P`
- >> PROVE_TAC [contracts_SUBST_GCONTEXT, contracts_TRANS]);
+ >> PROVE_TAC [contracts_SUBST_GCONTEXT, contracts_TRANS]
+QED
 
 (* These can be merged to HOL's arithmeticTheory (not used here any more).
    The word "LEFT" or "RIGHT" indicate the position of `FUNPOW` w.r.t `o`.
@@ -1233,10 +1238,10 @@ Proof
 QED
 
 (* A single transition from WGS E[P] will not touch the variable P *)
-val unfolding_lemma2 = store_thm (
-   "unfolding_lemma2",
-  ``!E. WGS E ==> !P u P'. TRANS (E P) u P' ==>
-        ?C'. GCONTEXT C' /\ (P' = C' P) /\ !Q. TRANS (E Q) u (C' Q)``,
+Theorem unfolding_lemma2:
+    !E. WGS E ==> !P u P'. TRANS (E P) u P' ==>
+        ?C'. GCONTEXT C' /\ (P' = C' P) /\ !Q. TRANS (E Q) u (C' Q)
+Proof
     HO_MATCH_MP_TAC WGS_strongind
  >> BETA_TAC >> REWRITE_TAC [ETA_AX]
  >> rpt STRIP_TAC (* 6 sub-goals here *)
@@ -1299,14 +1304,15 @@ val unfolding_lemma2 = store_thm (
       Q.EXISTS_TAC `\t. relab (C' t) rf` >> BETA_TAC \\
       CONJ_TAC >- ( MATCH_MP_TAC GCONTEXT7 >> art [] ) \\
       art [] \\
-      GEN_TAC >> MATCH_MP_TAC RELABELING >> art [] ]);
+      GEN_TAC >> MATCH_MP_TAC RELABELING >> art [] ]
+QED
 
 (* In this proof, we combine C and E into a single WGS and call previous lemma *)
-val unfolding_lemma3 = store_thm (
-   "unfolding_lemma3",
-  ``!C E. GCONTEXT C /\ WGS E ==>
+Theorem unfolding_lemma3:
+    !C E. GCONTEXT C /\ WGS E ==>
         !P x P'. TRANS (C (E P)) x P' ==>
-                 ?C'. GCONTEXT C' /\ (P' = C' P) /\ !Q. TRANS (C (E Q)) x (C' Q)``,
+                 ?C'. GCONTEXT C' /\ (P' = C' P) /\ !Q. TRANS (C (E Q)) x (C' Q)
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC GCONTEXT_WGS_combin
  >> Know `C (E P) = (C o E) P` >- SIMP_TAC std_ss [o_DEF]
@@ -1319,14 +1325,15 @@ val unfolding_lemma3 = store_thm (
  >> GEN_TAC >> POP_ASSUM MP_TAC
  >> KILL_TAC
  >> REWRITE_TAC [o_DEF] >> BETA_TAC
- >> RW_TAC std_ss []);
+ >> RW_TAC std_ss []
+QED
 
 (* NOTE: the lemma works for not only WGS but any weakly guarded expressions *)
-val unfolding_lemma4 = store_thm (
-   "unfolding_lemma4",
-  ``!C E n xs P' P. GCONTEXT C /\ WGS E /\
+Theorem unfolding_lemma4:
+    !C E n xs P' P. GCONTEXT C /\ WGS E /\
         TRACE ((C o FUNPOW E n) P) xs P' /\ (LENGTH xs <= n) ==>
-        ?C'. GCONTEXT C' /\ (P' = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs (C' Q)``,
+        ?C'. GCONTEXT C' /\ (P' = C' P) /\ !Q. TRACE ((C o FUNPOW E n) Q) xs (C' Q)
+Proof
     NTAC 2 GEN_TAC
  >> Induct_on `n`
  >- (RW_TAC std_ss [o_DEF, FUNPOW_0] \\
@@ -1365,12 +1372,12 @@ val unfolding_lemma4 = store_thm (
  >> REWRITE_TAC [NULL]
  >> Q.EXISTS_TAC `C' (E Q)`
  >> Q.UNABBREV_TAC `x` >> art []
- >> Q.UNABBREV_TAC `xs` >> art []);
+ >> Q.UNABBREV_TAC `xs` >> art []
+QED
 
 (* Lemma 3.9 of [2] *)
-val UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA = store_thm (
-   "UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA",
-  ``!(P :'a CCS) (Q :'a CCS).
+Theorem UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA:
+    !(P :'a CCS) (Q :'a CCS).
         (?E. WGS E /\ P contracts (E P) /\ Q contracts (E Q)) ==>
         !(C :'a context). GCONTEXT C ==>
             (!l R. WEAK_TRANS (C P) (label l) R ==>
@@ -1378,7 +1385,8 @@ val UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA = store_thm (
                      (WEAK_EQUIV O (\x y. WEAK_TRANS x (label l) y)) (C Q) (C' Q)) /\
             (!R. WEAK_TRANS (C P) tau R ==>
                 ?C'. GCONTEXT C' /\ R contracts (C' P) /\
-                     (WEAK_EQUIV O EPS) (C Q) (C' Q))``,
+                     (WEAK_EQUIV O EPS) (C Q) (C' Q))
+Proof
     NTAC 5 STRIP_TAC
  (* Part 1: construct C'' which is a GCONTEXT *)
  >> IMP_RES_TAC WGS_IMP_GCONTEXT
@@ -1438,7 +1446,8 @@ val UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA = store_thm (
            Q.EXISTS_TAC `xs'` >> art [] ) >> DISCH_TAC \\
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
       IMP_RES_TAC contracts_EPS' \\
-      Q.EXISTS_TAC `E1` >> art [] ]);
+      Q.EXISTS_TAC `E1` >> art [] ]
+QED
 
 (* Theorem 3.10 of [2], the proof relies on above lemma, and "contracts_IMP_WEAK_EQUIV",
    the definition of contraction is not used.
@@ -1556,10 +1565,10 @@ QED
 (******************************************************************************)
 
 (* NOTE: the lemma works for any precongruence relation *)
-val unfolding_lemma1' = store_thm (
-   "unfolding_lemma1'",
-  ``!E C P. GCONTEXT E /\ GCONTEXT C /\ P expands (E P) ==>
-        !n. (C P) expands (C o (FUNPOW E n)) P``,
+Theorem unfolding_lemma1':
+    !E C P. GCONTEXT E /\ GCONTEXT C /\ P expands (E P) ==>
+        !n. (C P) expands (C o (FUNPOW E n)) P
+Proof
     rpt STRIP_TAC
  >> REWRITE_TAC [o_DEF]
  >> BETA_TAC
@@ -1569,12 +1578,12 @@ val unfolding_lemma1' = store_thm (
  >> REWRITE_TAC [FUNPOW_SUC]
  >> Q.ABBREV_TAC `Q = FUNPOW E n P`
  >> `(E P) expands (E Q)` by PROVE_TAC [expands_SUBST_GCONTEXT]
- >> IMP_RES_TAC expands_TRANS);
+ >> IMP_RES_TAC expands_TRANS
+QED
 
 (* The proof has only minor differences with UNIQUE_SOLUTION_OF_CONTRACTIONS_LEMMA *)
-val UNIQUE_SOLUTION_OF_EXPANSIONS_LEMMA = store_thm (
-   "UNIQUE_SOLUTION_OF_EXPANSIONS_LEMMA",
-  ``!(P :'a CCS) (Q :'a CCS).
+Theorem UNIQUE_SOLUTION_OF_EXPANSIONS_LEMMA:
+    !(P :'a CCS) (Q :'a CCS).
         (?E. WGS E /\ P expands (E P) /\ Q expands (E Q)) ==>
         !(C :'a context). GCONTEXT C ==>
             (!l R. WEAK_TRANS (C P) (label l) R ==>
@@ -1582,7 +1591,8 @@ val UNIQUE_SOLUTION_OF_EXPANSIONS_LEMMA = store_thm (
                      (WEAK_EQUIV O (\x y. WEAK_TRANS x (label l) y)) (C Q) (C' Q)) /\
             (!R. WEAK_TRANS (C P) tau R ==>
                 ?C'. GCONTEXT C' /\ R expands (C' P) /\
-                     (WEAK_EQUIV O EPS) (C Q) (C' Q))``,
+                     (WEAK_EQUIV O EPS) (C Q) (C' Q))
+Proof
     NTAC 5 STRIP_TAC
  (* Part 1: construct C'' which is a GCONTEXT *)
  >> IMP_RES_TAC WGS_IMP_GCONTEXT
@@ -1644,7 +1654,8 @@ val UNIQUE_SOLUTION_OF_EXPANSIONS_LEMMA = store_thm (
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
       IMP_RES_TAC expands_EPS' \\
       Q.EXISTS_TAC `E1` >> art [] \\
-      MATCH_MP_TAC expands_IMP_WEAK_EQUIV >> art [] ]); (* extra steps *)
+      MATCH_MP_TAC expands_IMP_WEAK_EQUIV >> art [] ]  (* extra steps *)
+QED
 
 (* The proof is essentially the same with UNIQUE_SOLUTION_OF_CONTRACTIONS *)
 Theorem UNIQUE_SOLUTION_OF_EXPANSIONS :
@@ -1756,14 +1767,15 @@ QED
 (* Another way to prove above theorem using UNIQUE_SOLUTION_OF_CONTRACTIONS, this method
    works for any relation coarser than `contracts`, partial-ordering and precogruence of
   `expands` are not needed. *)
-val UNIQUE_SOLUTION_OF_EXPANSIONS' = store_thm (
-   "UNIQUE_SOLUTION_OF_EXPANSIONS'",
-  ``!E. WGS E ==>
-        !P Q. P expands (E P) /\ Q expands (E Q) ==> WEAK_EQUIV P Q``,
+Theorem UNIQUE_SOLUTION_OF_EXPANSIONS':
+    !E. WGS E ==>
+        !P Q. P expands (E P) /\ Q expands (E Q) ==> WEAK_EQUIV P Q
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC expands_IMP_contracts
  >> irule UNIQUE_SOLUTION_OF_CONTRACTIONS
- >> Q.EXISTS_TAC `E` >> art []);
+ >> Q.EXISTS_TAC `E` >> art []
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1942,9 +1954,8 @@ Proof
 QED
 
 (* Lemma 3.9 of [2] *)
-val UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS_LEMMA = store_thm (
-   "UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS_LEMMA",
-  ``!(P :'a CCS) (Q :'a CCS) E.
+Theorem UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS_LEMMA:
+    !(P :'a CCS) (Q :'a CCS) E.
         WG E /\ OBS_contracts P (E P) /\ OBS_contracts Q (E Q) ==>
         !(C :'a context). CONTEXT C ==>
             (!l R. WEAK_TRANS (C P) (label l) R ==>
@@ -1952,7 +1963,8 @@ val UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS_LEMMA = store_thm (
                      (WEAK_EQUIV O (\x y. WEAK_TRANS x (label l) y)) (C Q) (C' Q)) /\
             (!R. WEAK_TRANS (C P) tau R ==>
                 ?C'. CONTEXT C' /\ R contracts (C' P) /\
-                     (WEAK_EQUIV O EPS) (C Q) (C' Q))``,
+                     (WEAK_EQUIV O EPS) (C Q) (C' Q))
+Proof
     NTAC 6 STRIP_TAC
  (* Part 1: construct C'' which is a CONTEXT *)
  >> IMP_RES_TAC WG_IMP_CONTEXT
@@ -2012,7 +2024,8 @@ val UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS_LEMMA = store_thm (
           Q.EXISTS_TAC `xs'` >> art []) >> DISCH_TAC \\
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
       IMP_RES_TAC OBS_contracts_EPS' \\
-      Q.EXISTS_TAC `E1` >> art [] ]);
+      Q.EXISTS_TAC `E1` >> art [] ]
+QED
 
 (* Shared lemma for UNIQUE_SOLUTION_OF_OBS_CONTRACTIONS and
    UNIQUE_SOLUTION_OF_ROOTED_CONTRACTIONS *)
