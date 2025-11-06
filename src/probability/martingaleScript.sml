@@ -2,6 +2,7 @@
 (* The Theory of Martingales for Sigma-Finite Measure Spaces                 *)
 (* (Lebesgue Integration Extras, Product Measure and Fubini-Tonelli Theorem) *)
 (* ------------------------------------------------------------------------- *)
+
 Theory martingale
 Ancestors
   pair relation prim_rec arithmetic pred_set combin fcp real seq
@@ -10,7 +11,6 @@ Ancestors
   lebesgue
 Libs
   hurdUtils jrhUtils tautLib realLib
-
 
 val _ = hide "S";
 
@@ -784,14 +784,16 @@ Proof
  >> Q.EXISTS_TAC ‘\x. 2 * w x’ >> simp []
  >> CONJ_TAC (* pos_fn_integral m (\x. 2 * w x) < PosInf *)
  >- (REWRITE_TAC [extreal_of_num_def] \\
-     Know ‘pos_fn_integral m (\x. Normal 2 * w x) = Normal 2 * pos_fn_integral m w’
+     Know ‘pos_fn_integral m (\x. Normal 2 * w x) =
+           Normal 2 * pos_fn_integral m w’
      >- (MATCH_MP_TAC pos_fn_integral_cmul >> rw [le_02]) >> Rewr' \\
      Know ‘integral m w <> PosInf /\ integral m w <> NegInf’
      >- (MATCH_MP_TAC integrable_finite_integral >> art []) \\
      Know ‘integral m w = pos_fn_integral m w’
      >- (MATCH_MP_TAC integral_pos_fn >> rw []) >> Rewr' \\
      STRIP_TAC \\
-    ‘?r. pos_fn_integral m w = Normal r’ by METIS_TAC [extreal_cases] >> POP_ORW \\
+    ‘?r. pos_fn_integral m w = Normal r’
+       by METIS_TAC [extreal_cases] >> POP_ORW \\
      rw [GSYM lt_infty, extreal_mul_def])
  >> reverse CONJ_TAC >- FULL_SIMP_TAC std_ss [integrable_def]
  >> rw [Abbr ‘a’, abs_pos, GSYM lt_infty]
@@ -863,9 +865,11 @@ Proof
      Q.PAT_X_ASSUM ‘f IN measurable (m_space M,measurable_sets M) B’ MP_TAC \\
      rw [IN_MEASURABLE, IN_FUNSET]) >> Rewr'
  >> Know ‘pos_fn_integral M
-            (\x. sup (IMAGE (\n. fn_seq (space B,subsets B,distr M f) u n (f x)) UNIV)) =
+            (\x. sup (IMAGE (\n. fn_seq (space B,subsets B,distr M f) u n (f x))
+                            UNIV)) =
           sup (IMAGE (\n. pos_fn_integral M
-                            ((fn_seq (space B,subsets B,distr M f) u n) o f)) UNIV)’
+                            ((fn_seq (space B,subsets B,distr M f) u n) o f))
+                     UNIV)’
  >- (HO_MATCH_MP_TAC lebesgue_monotone_convergence >> simp [] \\
      CONJ_TAC
      >- (GEN_TAC \\
@@ -892,7 +896,8 @@ Proof
      rw [IN_MEASURABLE, IN_FUNSET]) >> Rewr'
  >> Suff ‘!n. pos_fn_integral (space B,subsets B,distr M f)
                                 (fn_seq (space B,subsets B,distr M f) u n) =
-              pos_fn_integral M (fn_seq (space B,subsets B,distr M f) u n o f)’ >- Rewr
+              pos_fn_integral M (fn_seq (space B,subsets B,distr M f) u n o f)’
+ >- Rewr
  >> POP_ASSUM K_TAC (* clean up *)
  (* stage work *)
  >> Q.X_GEN_TAC ‘N’
@@ -988,7 +993,8 @@ Proof
      >- (‘(\x. 2 pow N *
                indicator_fn {x | x IN space B /\ 2 pow N <= u x} (f x)) =
           (\x. 2 pow N *
-               indicator_fn {x | x IN space B /\ 2 pow N <= u x} x) o f’ by rw [o_DEF] >> POP_ORW \\
+               indicator_fn {x | x IN space B /\ 2 pow N <= u x} x) o f’
+            by rw [o_DEF] >> POP_ORW \\
          MATCH_MP_TAC MEASURABLE_COMP >> Q.EXISTS_TAC ‘B’ >> art [] \\
          HO_MATCH_MP_TAC IN_MEASURABLE_BOREL_MUL_INDICATOR \\
          rw [] >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST >> rw [] \\
@@ -1002,7 +1008,8 @@ Proof
      qexistsl_tac [‘\k x. &k / 2 pow N *
                           indicator_fn
                             {x | x IN space B /\ &k / 2 pow N <= u x /\
-                                 u x < (&k + 1) / 2 pow N} (f x)’, ‘count (4 ** N)’] \\
+                                 u x < (&k + 1) / 2 pow N} (f x)’,
+                   ‘count (4 ** N)’] \\
      SIMP_TAC std_ss [FINITE_COUNT] \\
      CONJ_TAC >- FULL_SIMP_TAC std_ss [measure_space_def] \\
      reverse CONJ_TAC
@@ -1055,7 +1062,8 @@ Proof
                   (\k. (\k x. &k / 2 pow N *
                               indicator_fn
                                 {x | x IN space B /\ &k / 2 pow N <= u x /\
-                                     u x < (&k + 1) / 2 pow N} (f x)) k x) (count (4 ** N))) =
+                                     u x < (&k + 1) / 2 pow N} (f x)) k x)
+                (count (4 ** N))) =
           SIGMA (\k. pos_fn_integral M
                       ((\k x. &k / 2 pow N *
                               indicator_fn
@@ -1087,43 +1095,54 @@ Proof
  (* LHS simplification *)
  >> Know ‘pos_fn_integral (space B,subsets B,distr M f)
             (\x. 2 pow N * indicator_fn {x | x IN space B /\ 2 pow N <= u x} x) =
-          2 pow N * pos_fn_integral (space B,subsets B,distr M f)
-                                    (indicator_fn {x | x IN space B /\ 2 pow N <= u x})’
- >- (‘2 pow N = Normal (2 pow N)’ by METIS_TAC [extreal_of_num_def, extreal_pow_def] >> POP_ORW \\
+          2 pow N *
+          pos_fn_integral (space B,subsets B,distr M f)
+                          (indicator_fn {x | x IN space B /\ 2 pow N <= u x})’
+ >- (‘2 pow N = Normal (2 pow N)’
+       by METIS_TAC [extreal_of_num_def, extreal_pow_def] >> POP_ORW \\
      MATCH_MP_TAC pos_fn_integral_cmul >> rw [INDICATOR_FN_POS]) >> Rewr'
  (* RHS simplification *)
  >> Know ‘pos_fn_integral M
-            (\x. 2 pow N * indicator_fn {x | x IN space B /\ 2 pow N <= u x} (f x)) =
-          2 pow N * pos_fn_integral M (\x. indicator_fn {x | x IN space B /\ 2 pow N <= u x} (f x))’
- >- (‘2 pow N = Normal (2 pow N)’ by METIS_TAC [extreal_of_num_def, extreal_pow_def] >> POP_ORW \\
+            (\x. 2 pow N *
+                 indicator_fn {x | x IN space B /\ 2 pow N <= u x} (f x)) =
+          2 pow N *
+          pos_fn_integral M (\x. indicator_fn {x | x IN space B /\ 2 pow N <= u x}
+                                 (f x))’
+ >- (‘2 pow N = Normal (2 pow N)’
+       by METIS_TAC [extreal_of_num_def, extreal_pow_def] >> POP_ORW \\
      HO_MATCH_MP_TAC pos_fn_integral_cmul >> rw [INDICATOR_FN_POS]) >> Rewr'
  (* LHS simplification *)
  >> Know ‘!k. pos_fn_integral (space B,subsets B,distr M f)
                 (\x. &k / 2 pow N *
                      indicator_fn {x | x IN space B /\ &k / 2 pow N <= u x /\
                                        u x < (&k + 1) / 2 pow N} x) =
-              &k / 2 pow N * pos_fn_integral (space B,subsets B,distr M f)
-                               (indicator_fn {x | x IN space B /\ &k / 2 pow N <= u x /\
-                                                  u x < (&k + 1) / 2 pow N})’
+              &k / 2 pow N *
+              pos_fn_integral (space B,subsets B,distr M f)
+                (indicator_fn {x | x IN space B /\ &k / 2 pow N <= u x /\
+                                   u x < (&k + 1) / 2 pow N})’
  >- (GEN_TAC \\
     ‘!n. 0:real < 2 pow n’ by RW_TAC real_ss [REAL_POW_LT] \\
     ‘!n. 0:real <> 2 pow n’ by RW_TAC real_ss [REAL_LT_IMP_NE] \\
     ‘!n k. &k / 2 pow n = Normal (&k / 2 pow n)’
-        by METIS_TAC [extreal_of_num_def, extreal_pow_def, extreal_div_eq] >> POP_ORW \\
+       by METIS_TAC [extreal_of_num_def, extreal_pow_def, extreal_div_eq] \\
+     POP_ORW \\
      MATCH_MP_TAC pos_fn_integral_cmul >> rw [INDICATOR_FN_POS] \\
      MATCH_MP_TAC REAL_LE_DIV >> rw []) >> Rewr'
  (* RHS simplification *)
  >> Know ‘!k. pos_fn_integral M
-                (\x. &k / 2 pow N * indicator_fn {x | x IN space B /\ &k / 2 pow N <= u x /\
-                                                      u x < (&k + 1) / 2 pow N} (f x)) =
-              &k / 2 pow N * pos_fn_integral M
-                               (\x. indicator_fn {x | x IN space B /\ &k / 2 pow N <= u x /\
-                                                      u x < (&k + 1) / 2 pow N} (f x))’
+                (\x. &k / 2 pow N *
+                     indicator_fn {x | x IN space B /\ &k / 2 pow N <= u x /\
+                                       u x < (&k + 1) / 2 pow N} (f x)) =
+              &k / 2 pow N *
+              pos_fn_integral M
+                (\x. indicator_fn {x | x IN space B /\ &k / 2 pow N <= u x /\
+                                       u x < (&k + 1) / 2 pow N} (f x))’
  >- (GEN_TAC \\
     ‘!n. 0:real < 2 pow n’ by RW_TAC real_ss [REAL_POW_LT] \\
     ‘!n. 0:real <> 2 pow n’ by RW_TAC real_ss [REAL_LT_IMP_NE] \\
     ‘!n k. &k / 2 pow n = Normal (&k / 2 pow n)’
-        by METIS_TAC [extreal_of_num_def, extreal_pow_def, extreal_div_eq] >> POP_ORW \\
+       by METIS_TAC [extreal_of_num_def, extreal_pow_def, extreal_div_eq] \\
+     POP_ORW \\
      HO_MATCH_MP_TAC pos_fn_integral_cmul >> rw [INDICATOR_FN_POS] \\
      MATCH_MP_TAC REAL_LE_DIV >> rw []) >> Rewr'
  (* stage work *)
@@ -1144,10 +1163,12 @@ Proof
          METIS_TAC [IN_MEASURABLE_BOREL_ALL]) >> Rewr' \\
      Know ‘!k. pos_fn_integral (space B,subsets B,distr M f)
                  (indicator_fn
-                    ({x | &k / 2 pow N <= u x /\ u x < (&k + 1) / 2 pow N} INTER space B)) =
+                    ({x | &k / 2 pow N <= u x /\ u x < (&k + 1) / 2 pow N} INTER
+                     space B)) =
                pos_fn_integral M
                  (\x. indicator_fn
-                        ({x | &k / 2 pow N <= u x /\ u x < (&k + 1) / 2 pow N} INTER space B) (f x))’
+                        ({x | &k / 2 pow N <= u x /\ u x < (&k + 1) / 2 pow N}
+                         INTER space B) (f x))’
      >- (GEN_TAC >> FIRST_X_ASSUM MATCH_MP_TAC \\
          METIS_TAC [IN_MEASURABLE_BOREL_ALL]) >> Rewr)
  (* core proof *)
@@ -8689,6 +8710,7 @@ Proof
  >> MATCH_MP_TAC le_mul >> rw [INDICATOR_FN_POS]
 QED
 
+(* NOTE: This is the recommended version for “pos_fn_integral” and “density” *)
 Theorem pos_fn_integral_density_reduce :
     !m f g. measure_space m /\
             f IN measurable (m_space m, measurable_sets m) Borel /\
@@ -8742,6 +8764,59 @@ Proof
  >- (MATCH_MP_TAC pos_fn_integral_density_of >> art [])
  >> Rewr'
  >> MATCH_MP_TAC pos_fn_integral_density_reduce >> art []
+QED
+
+Theorem measurable_space_density[simp] :
+    measurable_space (density m f) = measurable_space m
+Proof
+    simp [density_def]
+QED
+
+Theorem integral_density :
+    !m f g. measure_space m /\
+            f IN measurable (m_space m, measurable_sets m) Borel /\
+            g IN measurable (m_space m, measurable_sets m) Borel /\
+           (!x. x IN m_space m ==> 0 <= f x)
+       ==> (integrable (density m f) g <=> integrable m (\x. f x * g x)) /\
+            integral (density m f) g = integral m (\x. f x * g x)
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> simp [integrable_def, integral_def]
+ >> Know ‘(\x. f x * g x) IN Borel_measurable (measurable_space m)’
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_TIMES \\
+     qexistsl_tac [‘f’, ‘g’] >> simp [])
+ >> Rewr
+ >> Suff ‘pos_fn_integral (density m f) g^+ =
+          pos_fn_integral m (\x. f x * g x)^+ /\
+          pos_fn_integral (density m f) g^- =
+          pos_fn_integral m (\x. f x * g x)^-’ >- simp []
+ (* preparing for pos_fn_integral_density_reduce *)
+ >> Know ‘pos_fn_integral m (\x. f x * g x)^+ =
+          pos_fn_integral m (\x. f x * g^+ x)’
+ >- (MATCH_MP_TAC pos_fn_integral_cong >> simp [FN_PLUS_POS] \\
+     CONJ_TAC
+     >- (rpt STRIP_TAC >> MATCH_MP_TAC le_mul >> simp [FN_PLUS_POS]) \\
+     rpt STRIP_TAC \\
+     MATCH_MP_TAC fn_plus_fmul >> simp [])
+ >> Rewr'
+ >> Know ‘pos_fn_integral m (\x. f x * g x)^- =
+          pos_fn_integral m (\x. f x * g^- x)’
+ >- (MATCH_MP_TAC pos_fn_integral_cong >> simp [FN_MINUS_POS] \\
+     CONJ_TAC
+     >- (rpt STRIP_TAC >> MATCH_MP_TAC le_mul >> simp [FN_MINUS_POS]) \\
+     rpt STRIP_TAC \\
+     MATCH_MP_TAC fn_minus_fmul >> simp [])
+ >> Rewr'
+ (* applying pos_fn_integral_density_reduce *)
+ >> CONJ_TAC (* 2 subgoals *)
+ >| [ (* goal 1 (of 2) *)
+      MATCH_MP_TAC pos_fn_integral_density_reduce >> simp [FN_PLUS_POS] \\
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_PLUS \\
+      simp [MEASURE_SPACE_SIGMA_ALGEBRA],
+      (* goal 2 (of 2) *)
+      MATCH_MP_TAC pos_fn_integral_density_reduce >> simp [FN_MINUS_POS] \\
+      MATCH_MP_TAC IN_MEASURABLE_BOREL_FN_MINUS \\
+      simp [MEASURE_SPACE_SIGMA_ALGEBRA] ]
 QED
 
 (* NOTE: This is an easy corollary of TONELLI *)

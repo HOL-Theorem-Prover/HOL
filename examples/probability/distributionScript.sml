@@ -10,6 +10,7 @@
 (*                                                                           *)
 (*   Enriched by Chun Tian (Australian National University, 2024 - 2025)     *)
 (* ========================================================================= *)
+
 Theory distribution  (* was: "normal_rv" *)
 Ancestors
   combin arithmetic logroot pred_set topology pair cardinal real
@@ -18,8 +19,6 @@ Ancestors
   borel lebesgue martingale probability
 Libs
   numLib hurdUtils pred_setLib tautLib jrhUtils realLib
-
-
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 val T_TAC = rpt (Q.PAT_X_ASSUM ‘T’ K_TAC);
@@ -2984,6 +2983,86 @@ Proof
     rw [ext_normal_rv_def, o_DEF, real_normal, ETA_AX]
 QED
 
+Theorem integration_of_normal_rv :
+    !p X mu sig g.
+       prob_space p /\ normal_rv X p mu sig /\ g IN borel_measurable borel ==>
+      (integrable p (Normal o g o X) <=>
+       integrable lborel (\x. Normal (g x * normal_density mu sig x)) /\
+       integral p (Normal o g o X) =
+       integral lborel (\x. Normal (g x * normal_density mu sig x)))
+Proof
+    rpt GEN_TAC
+ >> simp [normal_rv_def, distribution_distr, random_variable_def,
+          p_space_def, events_def, prob_def, prob_space_def]
+ >> STRIP_TAC
+ >> Know ‘Normal o g IN Borel_measurable borel’
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ (* NOTE: To use “normal_rv X p mu sig” (distr p X s = normal_pmeasure mu sig s),
+    we have no choice but to use integral_distr.
+  *)
+ >> MP_TAC (Q.SPECL [‘p’, ‘borel’, ‘X’, ‘Normal o g’]
+                    (INST_TYPE [beta |-> “:real”] integral_distr))
+ >> simp [sigma_algebra_borel]
+ >> STRIP_TAC
+ >> NTAC 2 (POP_ASSUM (REWRITE_TAC o wrap o SYM))
+ >> qabbrev_tac ‘M = (space borel,subsets borel,distr p X)’
+ >> Know ‘measure_space M’
+ >- (qunabbrev_tac ‘M’ \\
+     MATCH_MP_TAC measure_space_distr >> simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ (* Now convert M to N, replacing “distr p X” by “normal_pmeasure mu sig” *)
+ >> qabbrev_tac ‘N = (space borel,subsets borel,normal_pmeasure mu sig)’
+ >> ‘measure_space N’ by PROVE_TAC [normal_measure_space]
+ >> ‘measure_space_eq M N’ by rw [measure_space_eq_def, Abbr ‘M’, Abbr ‘N’]
+ >> ‘integrable M (Normal o g) <=> integrable N (Normal o g)’
+      by simp [integrable_cong_measure']
+ >> ‘integral M (Normal o g) = integral N (Normal o g)’
+      by simp [integral_cong_measure']
+ >> NTAC 2 POP_ORW
+ (* cleanups *)
+ >> Q.PAT_X_ASSUM ‘measure_space p’              K_TAC
+ >> Q.PAT_X_ASSUM ‘measure p (m_space p) = 1’    K_TAC
+ >> Q.PAT_X_ASSUM ‘X IN borel_measurable _’      K_TAC
+ >> Q.PAT_X_ASSUM ‘!s. s IN subsets borel ==> _’ K_TAC
+ >> Q.PAT_X_ASSUM ‘measure_space M’              K_TAC
+ >> Q.PAT_X_ASSUM ‘measure_space_eq M N’         K_TAC
+ >> qunabbrev_tac ‘M’
+ (* NOTE: now converting “normal_pmeasure” to “normal_density” *)
+ >> qabbrev_tac ‘f = Normal_density mu sig’
+ >> qabbrev_tac ‘M = density lborel f’
+ >> Know ‘measure_space M’
+ >- (qunabbrev_tac ‘M’ \\
+     MATCH_MP_TAC measure_space_density >> simp [lborel_def, space_lborel] \\
+     simp [Abbr ‘f’, extreal_of_num_def, normal_density_nonneg,
+           IN_MEASURABLE_BOREL_normal_density'])
+ >> DISCH_TAC
+ >> Know ‘measure_space_eq N M’
+ >- (rw [measure_space_eq_def, Abbr ‘M’, Abbr ‘N’, density_def,
+         lborel_def, space_lborel, sets_lborel, space_borel] \\
+     simp [normal_pmeasure_def, density_measure_def, sets_lborel])
+ >> DISCH_TAC
+ >> ‘integrable N (Normal o g) <=> integrable M (Normal o g)’
+      by simp [integrable_cong_measure']
+ >> ‘integral N (Normal o g) = integral M (Normal o g)’
+      by simp [integral_cong_measure']
+ >> NTAC 2 POP_ORW
+ >> Q.PAT_X_ASSUM ‘measure_space M’      K_TAC
+ >> Q.PAT_X_ASSUM ‘measure_space N’      K_TAC
+ >> Q.PAT_X_ASSUM ‘measure_space_eq N M’ K_TAC
+ >> qunabbrevl_tac [‘M’, ‘N’]
+ (* applying integral_density *)
+ >> MP_TAC (Q.SPECL [‘lborel’, ‘f’, ‘Normal o g’]
+                    (INST_TYPE [alpha |-> “:real”] integral_density))
+ >> simp [lborel_def, IN_MEASURABLE_BOREL_NORMAL, space_lborel]
+ >> impl_tac
+ >- simp [Abbr ‘f’, extreal_of_num_def, normal_density_nonneg,
+          IN_MEASURABLE_BOREL_normal_density']
+ >> Rewr'
+ >> simp [Abbr ‘f’, extreal_mul_eq]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Weak convergence and its relation with convergence in distribution       *)
 (* ------------------------------------------------------------------------- *)
@@ -3455,7 +3534,7 @@ Proof
  >- (Q.X_GEN_TAC ‘n’ \\
      MATCH_MP_TAC neg_add >> simp [])
  >> Rewr'
- >> Know ‘--Y sp + -Y s0 = -(-Y sp + Y s0)’
+ >> Know ‘- -Y sp + -Y s0 = -(-Y sp + Y s0)’
  >- (SYM_TAC >> MATCH_MP_TAC neg_add >> simp [])
  >> simp [] >> DISCH_THEN K_TAC
  >> simp [le_neg]
@@ -3559,7 +3638,7 @@ Proof
  >- (Q.X_GEN_TAC ‘n’ \\
      MATCH_MP_TAC neg_add >> simp [])
  >> Rewr'
- >> Know ‘--Y sp + -Y s0 = -(-Y sp + Y s0)’
+ >> Know ‘- -Y sp + -Y s0 = -(-Y sp + Y s0)’
  >- (SYM_TAC \\
      MATCH_MP_TAC neg_add >> simp [])
  >> simp []

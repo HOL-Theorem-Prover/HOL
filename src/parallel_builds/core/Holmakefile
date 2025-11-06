@@ -60,7 +60,7 @@ EXDIRS = algebra/aat \
          logic/ncfolproofs logic/propositional_logic logic/relevant-logic \
          logic/temporal/src \
          misc \
-         padics parity \
+         padics parity probability \
          rings
 
 # selftest directories under src/quotient
@@ -106,7 +106,7 @@ EX2DIRS = AKS algebra algorithms/boyer_moore \
             logic/ltl-transformations \
             l3-machine-code/decompilers \
           probability/legacy miller \
-          probability vector \
+          vector \
           separationLogic/src separationLogic/src/holfoot simple_complexity
 
 ifdef POLY
