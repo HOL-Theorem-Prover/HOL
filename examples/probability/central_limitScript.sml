@@ -1869,11 +1869,43 @@ Proof
   >> impl_tac
   >- (rw [measure_space_lborel, Abbr ‘f’] \\
       MATCH_MP_TAC integrable_bounded \\
-      qexists ‘λ(x :real). Normal (exp (-(x pow 2) / 4))’ \\
+      qexists ‘λ(x :real). Normal (4 * inv (sqrt (2 * pi)) * exp (-(x pow 2) / 4))’ \\
       simp [measure_space_lborel, cj 2 lborel_def] \\
       CONJ_TAC
-      (* integrable lborel (λx. Normal (exp (-x² / 4))) *)
-      >- (cheat) \\
+      (* integrable lborel
+         (λx. Normal (4 * (exp (-x² / 4) * (sqrt (2 * pi))⁻¹))) *)
+      >- (simp [GSYM extreal_mul_eq] \\
+          HO_MATCH_MP_TAC integrable_cmul >> simp [measure_space_lborel, mul_comm] \\
+          HO_MATCH_MP_TAC integrable_cmul >> simp [measure_space_lborel] \\
+          MP_TAC (Q.SPECL [‘0’, ‘sqrt 2’] integrable_normal_density) \\
+          rw [SQRT_POS_LT, normal_density, SQRT_POW_2, GSYM extreal_mul_eq, mul_comm] \\
+          MP_TAC (Q.SPECL [‘lborel’, ‘λx. Normal (sqrt (4 * pi))⁻¹ * Normal (exp (-x² / 4))’,
+                           ‘sqrt (4 * pi)’] (INST_TYPE [“:'a” |-> “:real”] integrable_cmul)) \\
+          rw [measure_space_lborel, mul_comm, extreal_mul_eq] \\
+          ‘sqrt (4 * pi) ≠ 0’ by rw [SQRT_POS_NE, REAL_LT_MUL', PI_POS] \\
+          fs [nonzerop_def]) \\
+
+      rw [std_normal_density_def, extreal_abs_def] \\
+      Know ‘abs ((abs x)³ * exp (-x² / 2) * (sqrt (2 * pi))⁻¹) =
+            (abs x)³ * exp (-x² / 2) * (sqrt (2 * pi))⁻¹’
+      >- (MATCH_MP_TAC ABS_REDUCE \\
+          MATCH_MP_TAC REAL_LE_MUL >> rw [REAL_LE_MUL, ABS_POS, EXP_POS_LE] \\
+          rw [SQRT_POS_LE, REAL_LE_LT_MUL, PI_POS]) \\
+      Rewr \\
+      MP_TAC (Q.SPECL [‘(abs x)³ * exp (-x² / 2)’, ‘4 * exp (-x² / 4)’, ‘inv (sqrt (2 * pi))’] REAL_LE_RMUL) \\
+      rw [REAL_LT_INV_EQ, SQRT_POS_LT, REAL_LT_MUL', PI_POS] \\
+      Cases_on ‘x = 0’ >> gs [EXP_0] \\
+      MP_TAC (Q.SPECL [‘(abs x)³ * exp (-x² / 2)’, ‘4 * exp (-x² / 4)’,
+                       ‘inv (exp (-x² / 4))’] REAL_LE_RMUL) \\
+      ‘0 < (exp (-x² / 4))⁻¹’ by rw [GSYM REAL_LT_INV_EQ, EXP_POS_LT] \\
+      rw [] >> POP_ASSUM (rw o wrap o SYM) \\
+      ‘exp (-x² / 4) ≠ 0’ by fs [REAL_LT_INV_EQ, REAL_LT_IMP_NE] \\
+      simp [nonzerop_def] \\
+      Know ‘(abs x)³ * exp (-x² / 2) * (exp (-x² / 4))⁻¹ = (abs x)³ * exp (-x² / 4)’
+      >- (rw [] >> SIMP_TAC std_ss [REAL_POW_2, GSYM EXP_ADD] \\
+          AP_TERM_TAC >> REAL_ARITH_TAC) \\
+      Rewr \\
+      (* (abs x)³ * exp (-x² / 4) ≤ 4 *)
       cheat)
   >> Rewr
   >> rw [Abbr ‘f’, extreal_mul_eq]
@@ -5966,14 +5998,11 @@ Proof
 QED
 
 Theorem ne_imp_lt :
-    ∀x y. x ≠ y ⇒ x < y ∨ y < x
+    ∀(x :extreal) (y :extreal). x ≠ y ⇒ x < y ∨ y < x
 Proof
-  cheat
-    (*
   rw []
   >> CCONTR_TAC
   >> fs [DE_MORGAN_THM, extreal_not_lt, le_antisym]
-  *)
 QED
 
 Theorem EXTREAL_SUM_IMAGE_SQUARE :
