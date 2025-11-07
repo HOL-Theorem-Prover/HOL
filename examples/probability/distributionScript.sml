@@ -1110,6 +1110,8 @@ Definition normal_rv :
        measurable_distr p X = normal_pmeasure mu sig)
 End
 
+Overload std_normal_rv = “\X p. normal_rv X p 0 1”
+
 Theorem normal_rv_def :
     !p X mu sig. normal_rv (X :'a -> real) p mu sig <=>
                  random_variable X p borel /\
@@ -2987,8 +2989,8 @@ Theorem integration_of_normal_rv :
     !p X mu sig g.
        prob_space p /\ normal_rv X p mu sig /\ g IN borel_measurable borel ==>
       (integrable p (Normal o g o X) <=>
-       integrable lborel (\x. Normal (g x * normal_density mu sig x)) /\
-       integral p (Normal o g o X) =
+       integrable lborel (\x. Normal (g x * normal_density mu sig x))) /\
+      (integral p (Normal o g o X) =
        integral lborel (\x. Normal (g x * normal_density mu sig x)))
 Proof
     rpt GEN_TAC
@@ -3061,6 +3063,42 @@ Proof
           IN_MEASURABLE_BOREL_normal_density']
  >> Rewr'
  >> simp [Abbr ‘f’, extreal_mul_eq]
+QED
+
+(* NOTE: The the special integral of “exp (-1 / x pow 2)” is avoided here
+   because it's contained in “normal_rv X p mu sig”, which actually *assumed*
+   the existence of normal r.v.'s. What's really not proved (yet) and hard to
+   prove, is |- ?p X. prob_space p /\ normal_rv X p mu sig
+ *)
+Theorem integral_normal_density :
+    !p X mu sig.
+       prob_space p /\ normal_rv X p mu sig ==>
+       integrable lborel (\x. Normal (normal_density mu sig x)) /\
+       integral lborel (\x. Normal (normal_density mu sig x)) = 1
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘mu’, ‘sig’, ‘\x. 1’] integration_of_normal_rv)
+ >> simp [o_DEF]
+ >> impl_tac
+ >- (MATCH_MP_TAC in_borel_measurable_const \\
+     Q.EXISTS_TAC ‘1’ >> simp [sigma_algebra_borel])
+ >> STRIP_TAC
+ >> NTAC 2 (POP_ASSUM (REWRITE_TAC o wrap o SYM))
+ >> CONJ_TAC
+ >- (fs [prob_space_def, FORALL_AND_THM] \\
+     MATCH_MP_TAC integrable_const >> simp [GSYM lt_infty])
+ >> simp [GSYM expectation_def, expectation_const]
+QED
+
+(* NOTE: The antecedents “?p X. prob_space p /\ normal_rv X p mu sig” can be
+   removed only if the special integral of “exp (-1 / x pow 2)” is computed.
+ *)
+Theorem integral_normal_density' :
+    !mu sig. (?p X. prob_space p /\ normal_rv X p mu sig) ==>
+             integrable lborel (\x. Normal (normal_density mu sig x)) /\
+             integral lborel (\x. Normal (normal_density mu sig x)) = 1
+Proof
+    METIS_TAC [integral_normal_density]
 QED
 
 (* ------------------------------------------------------------------------- *)
