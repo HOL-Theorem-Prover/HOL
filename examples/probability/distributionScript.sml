@@ -10,6 +10,7 @@
 (*                                                                           *)
 (*   Enriched by Chun Tian (Australian National University, 2024 - 2025)     *)
 (* ========================================================================= *)
+
 Theory distribution  (* was: "normal_rv" *)
 Ancestors
   combin arithmetic logroot pred_set topology pair cardinal real
@@ -18,8 +19,6 @@ Ancestors
   borel lebesgue martingale probability
 Libs
   numLib hurdUtils pred_setLib tautLib jrhUtils realLib
-
-
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 val T_TAC = rpt (Q.PAT_X_ASSUM ‘T’ K_TAC);
@@ -2984,6 +2983,86 @@ Proof
     rw [ext_normal_rv_def, o_DEF, real_normal, ETA_AX]
 QED
 
+Theorem integration_of_normal_rv :
+    !p X mu sig g.
+       prob_space p /\ normal_rv X p mu sig /\ g IN borel_measurable borel ==>
+      (integrable p (Normal o g o X) <=>
+       integrable lborel (\x. Normal (g x * normal_density mu sig x)) /\
+       integral p (Normal o g o X) =
+       integral lborel (\x. Normal (g x * normal_density mu sig x)))
+Proof
+    rpt GEN_TAC
+ >> simp [normal_rv_def, distribution_distr, random_variable_def,
+          p_space_def, events_def, prob_def, prob_space_def]
+ >> STRIP_TAC
+ >> Know ‘Normal o g IN Borel_measurable borel’
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+     simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ (* NOTE: To use “normal_rv X p mu sig” (distr p X s = normal_pmeasure mu sig s),
+    we have no choice but to use integral_distr.
+  *)
+ >> MP_TAC (Q.SPECL [‘p’, ‘borel’, ‘X’, ‘Normal o g’]
+                    (INST_TYPE [beta |-> “:real”] integral_distr))
+ >> simp [sigma_algebra_borel]
+ >> STRIP_TAC
+ >> NTAC 2 (POP_ASSUM (REWRITE_TAC o wrap o SYM))
+ >> qabbrev_tac ‘M = (space borel,subsets borel,distr p X)’
+ >> Know ‘measure_space M’
+ >- (qunabbrev_tac ‘M’ \\
+     MATCH_MP_TAC measure_space_distr >> simp [sigma_algebra_borel])
+ >> DISCH_TAC
+ (* Now convert M to N, replacing “distr p X” by “normal_pmeasure mu sig” *)
+ >> qabbrev_tac ‘N = (space borel,subsets borel,normal_pmeasure mu sig)’
+ >> ‘measure_space N’ by PROVE_TAC [normal_measure_space]
+ >> ‘measure_space_eq M N’ by rw [measure_space_eq_def, Abbr ‘M’, Abbr ‘N’]
+ >> ‘integrable M (Normal o g) <=> integrable N (Normal o g)’
+      by simp [integrable_cong_measure']
+ >> ‘integral M (Normal o g) = integral N (Normal o g)’
+      by simp [integral_cong_measure']
+ >> NTAC 2 POP_ORW
+ (* cleanups *)
+ >> Q.PAT_X_ASSUM ‘measure_space p’              K_TAC
+ >> Q.PAT_X_ASSUM ‘measure p (m_space p) = 1’    K_TAC
+ >> Q.PAT_X_ASSUM ‘X IN borel_measurable _’      K_TAC
+ >> Q.PAT_X_ASSUM ‘!s. s IN subsets borel ==> _’ K_TAC
+ >> Q.PAT_X_ASSUM ‘measure_space M’              K_TAC
+ >> Q.PAT_X_ASSUM ‘measure_space_eq M N’         K_TAC
+ >> qunabbrev_tac ‘M’
+ (* NOTE: now converting “normal_pmeasure” to “normal_density” *)
+ >> qabbrev_tac ‘f = Normal_density mu sig’
+ >> qabbrev_tac ‘M = density lborel f’
+ >> Know ‘measure_space M’
+ >- (qunabbrev_tac ‘M’ \\
+     MATCH_MP_TAC measure_space_density >> simp [lborel_def, space_lborel] \\
+     simp [Abbr ‘f’, extreal_of_num_def, normal_density_nonneg,
+           IN_MEASURABLE_BOREL_normal_density'])
+ >> DISCH_TAC
+ >> Know ‘measure_space_eq N M’
+ >- (rw [measure_space_eq_def, Abbr ‘M’, Abbr ‘N’, density_def,
+         lborel_def, space_lborel, sets_lborel, space_borel] \\
+     simp [normal_pmeasure_def, density_measure_def, sets_lborel])
+ >> DISCH_TAC
+ >> ‘integrable N (Normal o g) <=> integrable M (Normal o g)’
+      by simp [integrable_cong_measure']
+ >> ‘integral N (Normal o g) = integral M (Normal o g)’
+      by simp [integral_cong_measure']
+ >> NTAC 2 POP_ORW
+ >> Q.PAT_X_ASSUM ‘measure_space M’      K_TAC
+ >> Q.PAT_X_ASSUM ‘measure_space N’      K_TAC
+ >> Q.PAT_X_ASSUM ‘measure_space_eq N M’ K_TAC
+ >> qunabbrevl_tac [‘M’, ‘N’]
+ (* applying integral_density *)
+ >> MP_TAC (Q.SPECL [‘lborel’, ‘f’, ‘Normal o g’]
+                    (INST_TYPE [alpha |-> “:real”] integral_density))
+ >> simp [lborel_def, IN_MEASURABLE_BOREL_NORMAL, space_lborel]
+ >> impl_tac
+ >- simp [Abbr ‘f’, extreal_of_num_def, normal_density_nonneg,
+          IN_MEASURABLE_BOREL_normal_density']
+ >> Rewr'
+ >> simp [Abbr ‘f’, extreal_mul_eq]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (*  Weak convergence and its relation with convergence in distribution       *)
 (* ------------------------------------------------------------------------- *)
@@ -3455,7 +3534,7 @@ Proof
  >- (Q.X_GEN_TAC ‘n’ \\
      MATCH_MP_TAC neg_add >> simp [])
  >> Rewr'
- >> Know ‘--Y sp + -Y s0 = -(-Y sp + Y s0)’
+ >> Know ‘- -Y sp + -Y s0 = -(-Y sp + Y s0)’
  >- (SYM_TAC >> MATCH_MP_TAC neg_add >> simp [])
  >> simp [] >> DISCH_THEN K_TAC
  >> simp [le_neg]
@@ -3559,7 +3638,7 @@ Proof
  >- (Q.X_GEN_TAC ‘n’ \\
      MATCH_MP_TAC neg_add >> simp [])
  >> Rewr'
- >> Know ‘--Y sp + -Y s0 = -(-Y sp + Y s0)’
+ >> Know ‘- -Y sp + -Y s0 = -(-Y sp + Y s0)’
  >- (SYM_TAC \\
      MATCH_MP_TAC neg_add >> simp [])
  >> simp []
@@ -5471,6 +5550,127 @@ Proof
          FORALL_AND_THM])
  >> Rewr'
  >> simp [Abbr ‘g’]
+QED
+
+
+(* ------------------------------------------------------------------------- *)
+(*  Moment generating function                                               *)
+(* ------------------------------------------------------------------------- *)
+
+Definition mgf_def :
+   mgf p X s =  expectation p (\x. exp (Normal s * X x))
+End
+
+Theorem mgf_0 :
+    !p X. prob_space p ==> mgf p X 0 = 1
+Proof
+    RW_TAC std_ss [mgf_def, mul_lzero, exp_0, normal_0]
+ >> MATCH_MP_TAC expectation_const >> art[]
+QED
+
+Theorem mgf_linear :
+    ∀p X a b s. prob_space p ∧ real_random_variable X p ∧
+                integrable p (λx. exp (Normal (a * s) * X x))  ⇒
+                mgf p (λx.( Normal a * X x) + Normal b) s =
+                (exp (Normal s * Normal b)) * mgf p X (a * s)
+Proof
+    rw [mgf_def, real_random_variable_def]
+ >> Know ‘ expectation p (λx. exp (Normal s * ((Normal a * X x) + Normal b)))
+         = expectation p (λx. exp ((Normal s * (Normal a * X x)) + Normal s * Normal b))’
+ >- (MATCH_MP_TAC expectation_cong  >> rw[] >> AP_TERM_TAC
+     >> ‘∃c. X x = Normal c’ by METIS_TAC [extreal_cases] >> rw[]
+     >> ‘∃d. Normal a * Normal c = Normal d’ by METIS_TAC [extreal_mul_eq]
+     >> rw[add_ldistrib_normal2]) >> Rewr'
+ >> Know ‘expectation p
+         (λx. exp (Normal s * (Normal a * X x) + Normal s * Normal b)) =
+          expectation p (λx. (exp (Normal s * (Normal a * X x))) * exp (Normal s * Normal b))’
+ >- (MATCH_MP_TAC expectation_cong
+     >> rw[exp_add]
+     >> ‘∃c. X x = Normal c’ by METIS_TAC [extreal_cases]>> rw[]
+     >> ‘∃d. Normal a * Normal c = Normal d’ by METIS_TAC [extreal_mul_eq] >> rw[]
+     >> ‘∃e. Normal s * Normal d = Normal e’ by METIS_TAC [extreal_mul_eq] >> rw[]
+     >> ‘∃f. Normal s * Normal b = Normal f’ by METIS_TAC [extreal_mul_eq] >> rw[exp_add])
+ >> Rewr'
+ >> ‘∃g. exp (Normal s * Normal b) = Normal g’ by  METIS_TAC [extreal_mul_eq, normal_exp]
+ >> rw[]
+ >> GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [mul_comm]
+ >> rw [mul_assoc, extreal_mul_eq]
+ >> HO_MATCH_MP_TAC expectation_cmul
+ >> ASM_REWRITE_TAC []
+QED
+
+Theorem mgf_sum :
+    !p X Y s . prob_space p ∧ real_random_variable X p  ∧
+               real_random_variable Y p  ∧
+               indep_vars p X Y Borel Borel ∧
+               mgf p (\x. X x + Y x) s ≠ PosInf ∧
+               mgf p X s ≠ PosInf ∧
+               mgf p Y s ≠ PosInf  ==>
+               mgf p (\x. X x + Y x) s = mgf p X s * mgf p Y s
+Proof
+    rw [mgf_def, real_random_variable_def]
+ >> Know ‘expectation p (\x. exp (Normal s * (X x + Y x))) =
+          expectation p (\x. exp ((Normal s * X x) + (Normal s * Y x)))’
+ >-(MATCH_MP_TAC expectation_cong >> rw[] >> AP_TERM_TAC
+    >> MATCH_MP_TAC add_ldistrib_normal >> rw[])
+    >> Rewr'
+ >> Know ‘expectation p (λx. exp (Normal s * X x + Normal s * Y x)) =
+          expectation p (λx. exp (Normal s * X x) * exp (Normal s * Y x))’
+ >- (MATCH_MP_TAC expectation_cong  >> rw[] >> MATCH_MP_TAC exp_add >> DISJ2_TAC
+     >> ‘∃a. X x = Normal a’ by METIS_TAC [extreal_cases]
+     >> ‘∃b. Y x = Normal b’ by METIS_TAC [extreal_cases]
+     >> rw[extreal_mul_eq]) >> Rewr'
+ >> HO_MATCH_MP_TAC indep_vars_expectation
+ >> simp[]
+ >> CONJ_TAC
+   (* real_random_variable (λx. exp (Normal s * X x)) p *)
+ >- (MATCH_MP_TAC real_random_variable_exp_normal
+     >> fs[real_random_variable, random_variable_def])
+ >> CONJ_TAC
+   (* real_random_variable (λx. exp (Normal s * X x)) p *)
+ >- (MATCH_MP_TAC real_random_variable_exp_normal
+     >> fs[real_random_variable, random_variable_def])
+ >> CONJ_TAC
+   (* indep_vars p (λx. exp (Normal s * X x)) (λx. exp (Normal s * Y x)) Borel Borel *)
+ >- (Q.ABBREV_TAC ‘f = λx. exp (Normal s * x)’
+     >> simp[]
+     >> MATCH_MP_TAC (REWRITE_RULE [o_DEF] indep_rv_cong) >> csimp[]
+     >> Q.UNABBREV_TAC ‘f’
+     >> MATCH_MP_TAC IN_MEASURABLE_BOREL_EXP
+     >> simp[] >> Q.EXISTS_TAC ‘λx. Normal s * x’ >> simp[SIGMA_ALGEBRA_BOREL]
+     >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
+     >> qexistsl [‘λx. x’, ‘s’]
+     >> simp[SIGMA_ALGEBRA_BOREL, IN_MEASURABLE_BOREL_BOREL_I])
+ >> Know ‘(λx. exp (Normal s * X x)) ∈ Borel_measurable (measurable_space p)’
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_EXP
+     >> Q.EXISTS_TAC ‘λx. Normal s * X x’
+     >> fs [prob_space_def, measure_space_def]
+     >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
+     >> qexistsl [‘X’, ‘s’] >> simp[random_variable_def]
+     >> fs [random_variable_def, p_space_def, events_def])
+ >> DISCH_TAC
+ >> Know ‘(λx. exp (Normal s * Y x)) ∈ Borel_measurable (measurable_space p)’
+ >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_EXP
+     >> Q.EXISTS_TAC ‘λx. Normal s * Y x’
+     >> fs [prob_space_def, measure_space_def]
+     >> MATCH_MP_TAC IN_MEASURABLE_BOREL_CMUL
+     >> qexistsl [‘Y’, ‘s’] >> simp[random_variable_def]
+     >> fs [random_variable_def, p_space_def, events_def])
+ >> DISCH_TAC
+ >> Q.ABBREV_TAC ‘f = λx. exp (Normal s * X x)’ >> simp[]
+ >> ‘∀x. x ∈ p_space p ⇒ 0 ≤  f x’ by METIS_TAC [exp_pos]
+ >> Q.ABBREV_TAC ‘g = λx. exp (Normal s * Y x)’ >> simp[]
+ >> ‘∀x. x ∈ p_space p ⇒ 0 ≤  g x’ by METIS_TAC [exp_pos]
+ >> CONJ_TAC (* integrable p f *)
+ >- (Suff ‘ pos_fn_integral p f <> PosInf’
+     >- FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, integrable_pos, expectation_def]
+     >> ‘∫ p f = ∫⁺ p f ’ by METIS_TAC[integral_pos_fn, prob_space_def, p_space_def]
+     >> METIS_TAC [expectation_def]
+     >> simp[])
+ >- (Suff ‘ pos_fn_integral p g <> PosInf’
+     >- FULL_SIMP_TAC std_ss [prob_space_def, p_space_def, integrable_pos, expectation_def]
+     >> ‘∫ p g = ∫⁺ p g ’ by METIS_TAC[integral_pos_fn, prob_space_def, p_space_def]
+     >> METIS_TAC [expectation_def])
 QED
 
 val _ = html_theory "distribution";

@@ -6,6 +6,7 @@
 (* ------------------------------------------------------------------------- *)
 (* Updated and further enriched by Chun Tian (2018 - 2025)                   *)
 (* ------------------------------------------------------------------------- *)
+
 Theory extreal
 Ancestors
   combin pred_set pair prim_rec arithmetic topology real
@@ -14,7 +15,6 @@ Ancestors
 Libs
   metisLib res_quanTools jrhUtils numLib tautLib pred_setLib
   hurdUtils realLib
-
 
 fun METIS ths tm = prove(tm, METIS_TAC ths);
 val set_ss = std_ss ++ PRED_SET_ss;
@@ -5983,7 +5983,7 @@ Proof
 QED
 
 Theorem fn_plus_fmul :
-    !f c x. (!x. 0 <= c x) ==> fn_plus (\x. c x * f x) x = c x * fn_plus f x
+    !f c x. 0 <= c x ==> fn_plus (\x. c x * f x) x = c x * fn_plus f x
 Proof
     rpt GEN_TAC >> DISCH_TAC
  >> simp [fn_plus_def]
@@ -6003,7 +6003,7 @@ Proof
 QED
 
 Theorem fn_minus_fmul :
-    !f c x. (!x. 0 <= c x) ==> fn_minus (\x. c x * f x) x = c x * fn_minus f x
+    !f c x. 0 <= c x ==> fn_minus (\x. c x * f x) x = c x * fn_minus f x
 Proof
     rpt GEN_TAC >> DISCH_TAC
  >> simp [fn_minus_def]
