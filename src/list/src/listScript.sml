@@ -2876,7 +2876,8 @@ Proof
   \\ Q.X_GEN_TAC`z`
   \\ rw[PULL_EXISTS]
   \\ res_tac
-  \\ Cases_on`x` \\ fs[]
+  \\ Cases_on`x`
+  \\ full_simp_tac(arith_ss) []
 QED
 
 (* ----------------------------------------------------------------------
