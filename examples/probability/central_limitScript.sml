@@ -1782,25 +1782,35 @@ QED
 Theorem std_normal_density_pos :
     ∀x. 0 < std_normal_density x
 Proof
-    RW_TAC std_ss [std_normal_density_def] THEN MATCH_MP_TAC REAL_LT_MUL' THEN
-    SIMP_TAC std_ss [EXP_POS_LT, GSYM REAL_INV_1OVER, REAL_LT_INV_EQ] THEN
-    MATCH_MP_TAC SQRT_POS_LT THEN
-    MATCH_MP_TAC REAL_LT_MUL' THEN SIMP_TAC real_ss [REAL_LE_LT, PI_POS]
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘0’, ‘1’] normal_density_pos) >> simp []
 QED
 
 Theorem in_borel_measurable_std_normal_density :
    (λx. std_normal_density x) ∈ borel_measurable borel
 Proof
-  METIS_TAC [in_measurable_borel_normal_density]
+    METIS_TAC [in_measurable_borel_normal_density]
 QED
 
 Theorem integrable_normal_density :
-    ∀mu sig. 0 < sig ⇒ integrable lborel (λx. Normal_density mu sig x)
+  ∀X p mu sig. prob_space p ∧ normal_rv X p mu sig ∧
+           0 < sig ⇒ integrable lborel (λx. Normal_density mu sig x)
 Proof
-  rpt STRIP_TAC
-  >> MP_TAC (measure_space_lborel)
-  >> rw [integrable_alt_def, IN_MEASURABLE_BOREL_normal_density]
-  >> cheat
+    rpt STRIP_TAC
+ >> MP_TAC (measure_space_lborel)
+ >> rw [integrable_alt_def, IN_MEASURABLE_BOREL_normal_density, o_DEF]
+ >> ‘∀x. abs (Normal_density mu sig x) = Normal_density mu sig x’
+   by rw [abs_refl, normal_density_nonneg] >> POP_ORW
+ >> MP_TAC (Q.SPECL [‘X’, ‘p’, ‘mu’, ‘sig’, ‘λx. 1’] integral_normal_pdf_eq_density')
+ >> simp [cj 2 lborel_def]
+ >> impl_tac >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_CONST \\
+                 qexists ‘1’ >> rw [sigma_algebra_borel])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘lborel’, ‘λx. Normal_density mu sig x’] (INST_TYPE [“:'a” |-> “:real”] integral_pos_fn))
+ >> simp [measure_space_lborel, normal_density_nonneg]
+ >> Rewr
+ >> MP_TAC (Q.SPECL [‘X’, ‘p’, ‘mu’, ‘sig’] normal_pdf_pos_fn_integral_eq_1)
+ >> simp [] >> METIS_TAC [cj 2 extreal_1_simps, lt_imp_ne, ETA_AX]
 QED
 
 Theorem ext_normal_rv_abs_third_moment :
@@ -1810,7 +1820,7 @@ Theorem ext_normal_rv_abs_third_moment :
               sqrt (8 / Normal pi) * Normal (sig pow 3)
 Proof
 
-  rpt STRIP_TAC
+(*  rpt STRIP_TAC
   >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘λx. abs x pow 3’] (cj 1 expectation_distribution))
   >> impl_tac
   >> fs [ext_normal_rv_def, normal_rv_def]
@@ -1877,7 +1887,8 @@ Proof
       >- (simp [GSYM extreal_mul_eq] \\
           HO_MATCH_MP_TAC integrable_cmul >> simp [measure_space_lborel, mul_comm] \\
           HO_MATCH_MP_TAC integrable_cmul >> simp [measure_space_lborel] \\
-          MP_TAC (Q.SPECL [‘0’, ‘sqrt 2’] integrable_normal_density) \\
+
+          MP_TAC (Q.SPECL [‘p’, ‘real o X’, ‘0’, ‘sqrt 2’] integrable_normal_density) \\
           rw [SQRT_POS_LT, normal_density, SQRT_POW_2, GSYM extreal_mul_eq, mul_comm] \\
           MP_TAC (Q.SPECL [‘lborel’, ‘λx. Normal (sqrt (4 * pi))⁻¹ * Normal (exp (-x² / 4))’,
                            ‘sqrt (4 * pi)’] (INST_TYPE [“:'a” |-> “:real”] integrable_cmul)) \\
@@ -1926,7 +1937,7 @@ Proof
       impl_tac >- (simp [REAL_LE_POW2, PI_POS, REAL_LT_IMP_LE]) \\
       Rewr \\
       rw [REAL_INV_MUL', POW_2_SQRT, PI_POS, REAL_LT_IMP_LE])
-  >> Rewr
+  >> Rewr *)
   >> cheat
 QED
 
