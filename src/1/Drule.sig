@@ -6,8 +6,6 @@ sig
   val RIGHT_ETA        : thm -> thm
   val EXT              : thm -> thm
   val MK_ABS           : thm -> thm
-  val MK_EXISTS        : thm -> thm
-  val LIST_MK_EXISTS   : term list -> thm -> thm
   val SIMPLE_EXISTS    : term -> thm -> thm
   val SIMPLE_CHOOSE    : term -> thm -> thm
   val EXISTS_LEFT      : term list -> thm -> thm
@@ -31,7 +29,8 @@ sig
   val SPEC_VAR         : thm -> term * thm
   val SPEC_UNDISCH_EXL : thm -> thm
   val FORALL_EQ        : term -> thm -> thm
-  val EXISTS_EQ        : term -> thm -> thm
+  val MK_EXISTS        : thm -> thm
+  val LIST_MK_EXISTS   : term list -> thm -> thm
   val SELECT_EQ        : term -> thm -> thm
   val SUBS             : thm list -> thm -> thm
   val SUBS_OCCS        : (int list * thm) list -> thm -> thm
