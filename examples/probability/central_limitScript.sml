@@ -1698,22 +1698,23 @@ Proof
 QED
 
 Theorem integral_substitution_pos :
-    ∀c f. 0 < c ⇒ ∫ lborel (λx. f (c * x)) = Normal (inv c) * ∫ lborel f
+    ∀c f. 0 < c ∧ integrable lborel f ⇒
+          ∫ lborel (λx. f (c * x)) = Normal (inv c) * ∫ lborel f
 Proof
-  cheat
+  rpt STRIP_TAC
+  >> cheat
 QED
 
 Theorem integrable_real_affine :
-  ∀f c t.
-      c ≠ 0 ∧ integrable lborel f ⇒
-      integrable lborel (λx. f (t + c * x))
+    ∀f c t. c ≠ 0 ∧ integrable lborel f ⇒
+            integrable lborel (λx. f (t + c * x))
 Proof
   cheat
 QED
 
 Theorem standard_normal_abs_third_moment :
-  ∫ lborel (λx. Normal ((abs x) pow 3 * std_normal_density x)) =
-  sqrt (8 / Normal pi)
+    ∫ lborel (λx. Normal ((abs x) pow 3 * std_normal_density x)) =
+    sqrt (8 / Normal pi)
 Proof
   cheat
 QED
@@ -1746,6 +1747,42 @@ Proof
   >> rw [mul_comm, extreal_mul_eq, extreal_pow_def]
   >> POP_ASSUM K_TAC
   >> Q.ABBREV_TAC ‘f = λx. Normal ((abs x)³ * std_normal_density x)’
+  >> Know ‘integrable lborel f’
+
+  >- (rw [Abbr ‘f’, std_normal_density_def] \\
+      ‘∀(x :real). (abs x)³ * exp (-x² / 2) * (sqrt (2 * pi))⁻¹ = (sqrt (2 * pi))⁻¹ * ((abs x)³ * exp (-x² / 2))’
+        by REAL_ARITH_TAC >> POP_ORW \\
+      rw [GSYM extreal_mul_eq] \\
+      HO_MATCH_MP_TAC integrable_cmul \\
+      simp [cj 3 lborel_def] \\
+      HO_MATCH_MP_TAC integrable_bounded \\
+      qexists ‘λx. Normal (4 * exp (-x² / 4))’ \\
+      simp [cj 3 lborel_def] \\
+      CONJ_TAC
+      (* integrable lborel (λx. Normal (4 * exp (-x² / 4))) *)
+      >- (simp [GSYM extreal_mul_eq] \\
+          HO_MATCH_MP_TAC integrable_cmul >> simp [measure_space_lborel] \\
+          simp [integrable_alt_def, cj 3 lborel_def] \\
+          CONJ_TAC
+          (* (λx. Normal (exp (-x² / 4))) ∈ Borel_measurable (measurable_space lborel)*)
+          >- (simp [GSYM o_DEF] \\
+              MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' \\
+              simp [cj 2 lborel_def, sigma_algebra_borel, o_DEF] \\
+              MATCH_MP_TAC in_borel_measurable_continuous_on \\
+              simp [GSYM o_DEF] \\
+              MATCH_MP_TAC CONTINUOUS_ON_COMPOSE >> simp [CONTINUOUS_ON_EXP] \\
+              ‘∀(x :real). -x² / 4 = inv 4 * -x²’ by REAL_ARITH_TAC \\
+              POP_ORW \\
+              rw [CONTINUOUS_ON_CMUL, CONTINUOUS_ON_NEG, CONTINUOUS_ON_POW, CONTINUOUS_ON_ID]) \\
+          simp [o_DEF, extreal_abs_def] \\
+          MP_TAC (Q.SPECL [‘λx. abs (exp (-x² / 4))’] lebesgue_eq_gauge_integral_full) \\
+          impl_tac >- (DISJ2_TAC \\
+                       simp [integrationTheory.absolutely_integrable_on] \\
+                       HO_MATCH_MP_TAC integrationTheory.ABSOLUTELY_INTEGRABLE_IMP_ABS_INTEGRABLE \\
+                       cheat) \\
+          rw [o_DEF]) \\
+      cheat)
+  >> DISCH_TAC
   >> MP_TAC (Q.SPECL [‘inv sig’, ‘f’] integral_substitution_pos)
   >> rw [REAL_INV_INV]
   >> POP_ASSUM (rw o wrap o SYM)
@@ -1762,116 +1799,11 @@ Proof
   >> POP_ASSUM K_TAC
   >> MP_TAC (Q.SPECL [‘lborel’, ‘λx. f (sig⁻¹ * x)’, ‘sig pow 2’] (INST_TYPE [“:'a” |-> “:real”] integral_cmul))
   >> impl_tac
-
   >- (simp [cj 3 lborel_def, Abbr ‘f’] \\
       MP_TAC (Q.SPECL [‘λx. Normal ((abs x)³ * std_normal_density x)’,
                        ‘inv sig’, ‘0’] (INST_TYPE [“:'a” |-> “:real”] integrable_real_affine)) \\
-      impl_tac
-      >- (fs [REAL_LT_IMP_NE, REAL_INV_POS] \\
-          (*  integrable lborel (λx. Normal ((abs x)³ * std_normal_density x)) *)
-          MP_TAC (Q.SPECL [‘p’, ‘real o X’, ‘0’, ‘sig’, ‘λx. (abs x) pow 3’] (cj 1 integration_of_normal_rv)) \\
-          impl_tac >- (simp [] \\
-                       MATCH_MP_TAC in_borel_measurable_pow \\
-                       qexistsl [‘3’, ‘\x. (abs x)’] \\
-                       simp [sigma_algebra_borel] \\
-                       METIS_TAC [in_measurable_borel_borel_abs, in_borel_measurable_I]) \\
-          DISCH_TAC \\
-          Know ‘integrable p (Normal ∘ (λx. (abs x)³) ∘ real ∘ X)’
-          >- (cheat) \\
-          STRIP_TAC >> gs [] \\
-          MP_TAC (Q.SPECL [‘λx. Normal ((abs x)³ * normal_density 0 sig x)’, ‘inv sig’, ‘0’]
-                   integrable_real_affine) \\
-          impl_tac >- (fs [REAL_LT_IMP_NE, REAL_INV_POS]) \\
-          DISCH_TAC \\
-          MP_TAC (Q.SPECL [‘0’, ‘sig’] normal_density_affine) \\
-          rw [mul_comm, extreal_mul_eq, extreal_pow_def] >> gs [cj 3 lborel_def] \\
-          MATCH_MP_TAC integrable_bounded \\
-          qexists ‘λ(x :real). Normal (4 * inv (sqrt (2 * pi)) * exp (-(x pow 2) / 4))’ \\
-          simp [measure_space_lborel, cj 2 lborel_def] \\
-          CONJ_TAC
-          (* integrable lborel (λx. Normal (4 * exp (-x² / 4))) *)
-          >- (simp [GSYM extreal_mul_eq] \\
-              HO_MATCH_MP_TAC integrable_cmul >> simp [measure_space_lborel, mul_comm] \\
-              HO_MATCH_MP_TAC integrable_cmul >> simp [measure_space_lborel] \\
-              cheat) \\
-          CONJ_TAC
-          (* (λx. Normal ((abs x)³ * std_normal_density x)) ∈ Borel_measurable borel *)
-          >- (rw [GSYM o_DEF] \\
-              MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL' >> fs [sigma_algebra_borel] \\
-              MATCH_MP_TAC in_borel_measurable_mul \\
-              qexistsl [‘λx. (abs x)³’, ‘λx. std_normal_density x’] \\
-              rw [sigma_algebra_borel]
-              >- (MATCH_MP_TAC in_borel_measurable_pow \\
-                  qexistsl [‘3’, ‘\x. (abs x)’] \\
-                  simp [sigma_algebra_borel] \\
-                  METIS_TAC [in_measurable_borel_borel_abs, in_borel_measurable_I]) \\
-              simp [in_borel_measurable_std_normal_density]) \\
-          rw [std_normal_density_def, extreal_abs_def] \\
-          Know ‘abs ((abs x)³ * exp (-x² / 2) * (sqrt (2 * pi))⁻¹) =
-                (abs x)³ * exp (-x² / 2) * (sqrt (2 * pi))⁻¹’
-          >- (MATCH_MP_TAC ABS_REDUCE \\
-              MATCH_MP_TAC REAL_LE_MUL >> rw [REAL_LE_MUL, ABS_POS, EXP_POS_LE] \\
-              rw [SQRT_POS_LE, REAL_LE_LT_MUL, PI_POS]) \\
-          Rewr \\
-          MP_TAC (Q.SPECL [‘(abs x)³ * exp (-x² / 2)’, ‘4 * exp (-x² / 4)’, ‘inv (sqrt (2 * pi))’] REAL_LE_RMUL) \\
-          rw [REAL_LT_INV_EQ, SQRT_POS_LT, REAL_LT_MUL', PI_POS] \\
-          Cases_on ‘x = 0’ >> gs [EXP_0] \\
-          MP_TAC (Q.SPECL [‘(abs x)³ * exp (-x² / 2)’, ‘4 * exp (-x² / 4)’,
-                           ‘inv (exp (-x² / 4))’] REAL_LE_RMUL) \\
-          ‘0 < (exp (-x² / 4))⁻¹’ by rw [GSYM REAL_LT_INV_EQ, EXP_POS_LT] \\
-          rw [] >> POP_ASSUM (rw o wrap o SYM) \\
-          ‘exp (-x² / 4) ≠ 0’ by fs [REAL_LT_INV_EQ, REAL_LT_IMP_NE] \\
-          simp [nonzerop_def] \\
-          Know ‘(abs x)³ * exp (-x² / 2) * (exp (-x² / 4))⁻¹ = (abs x)³ * exp (-x² / 4)’
-          >- (rw [] >> SIMP_TAC std_ss [REAL_POW_2, GSYM EXP_ADD] \\
-              AP_TERM_TAC >> REAL_ARITH_TAC) \\
-          Rewr \\
-          Q.ABBREV_TAC ‘y = abs x’ \\
-          ‘y pow 2 = x pow 2’ by rw [Abbr ‘y’, ABS_POW2] >> POP_ASSUM (rw o wrap o SYM) \\
-          Q.ABBREV_TAC ‘f = λ(y :real). y³ * exp (-y² / 4)’ \\
-          ‘∀y. f y = y³ * exp (-y² / 4)’ by rw [Abbr ‘f’] \\
-          POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘y’) >> POP_ASSUM (rw o wrap o SYM) \\
-          Know ‘∀y. f y ≤ f (sqrt 6)’
-          >- (rw [] \\
-              Cases_on ‘y' = sqrt 6’ >- (gs []) \\
-              Cases_on ‘y' < sqrt 6’
-              >- (MP_TAC (Q.SPECL [‘f’, ‘{x | x ≤ sqrt 6}’] DIFF_POS_MONO_LT_INTERVAL) \\
-                  impl_tac >- (cheat) \\
-                  rw [] \\
-                  POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘y'’, ‘sqrt 6’]) \\
-                  ‘y' ≤ sqrt 6 ∧ sqrt 6 ≤ sqrt 6 ∧ y' < sqrt 6 ’ by fs [REAL_LT_IMP_LE] \\
-                  gs [REAL_LT_IMP_LE]) \\
-              fs [REAL_NOT_LT] \\
-              MP_TAC (Q.SPECL [‘f’, ‘{x | sqrt 6 ≤ x}’] DIFF_NEG_ANTIMONO_LT_INTERVAL) \\
-              impl_tac >- (cheat) \\
-              rw [] \\
-              POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘sqrt 6’, ‘y'’]) \\
-              ‘sqrt 6 ≤ sqrt 6 ∧ sqrt 6 ≤ y' ∧ sqrt 6 < y' ’ by fs [REAL_LT_LE] \\
-              gs [REAL_LT_IMP_LE]) \\
-          DISCH_TAC \\
-          MATCH_MP_TAC REAL_LE_TRANS \\
-          qexists ‘f (sqrt 6)’ >> gs [Abbr ‘f’] \\
-          ‘0 :real ≤ 6’ by REAL_ARITH_TAC \\
-          ‘exp (-(sqrt 6)² / 4) = exp (- 3 / 2) :real’ by (rw [EXP_INJ, SQRT_POW2]) >> POP_ORW \\
-          MP_TAC (Q.SPECL [‘exp (-3 / 2) * (sqrt 6)³’, ‘4’, ‘inv (sqrt 6)’] REAL_LE_RMUL) \\
-          ‘0 < 6 :real’ by REAL_ARITH_TAC \\
-          ASM_SIMP_TAC std_ss [SQRT_POS_LT, REAL_LT_INV_EQ] \\
-          DISCH_TAC >> POP_ASSUM (rw o wrap o SYM) \\
-          ‘(sqrt 6)² = 6 :real’ by rw [SQRT_POW2] >> POP_ORW \\
-          MP_TAC (Q.SPECL [‘exp (-3 / 2) * 6’, ‘4 * (sqrt 6)⁻¹’, ‘inv 6’] REAL_LE_RMUL) \\
-          ASM_SIMP_TAC std_ss [SQRT_POS_LT, REAL_LT_INV_EQ] \\
-          DISCH_TAC >> POP_ASSUM (rw o wrap o SYM) \\
-          Know ‘0 :real < 2 * (sqrt 6)⁻¹ * inv 3’
-          >- (HO_MATCH_MP_TAC REAL_LT_MUL' \\
-              ‘0 < 3 :real’ by REAL_ARITH_TAC \\
-              ASM_SIMP_TAC std_ss [REAL_LT_INV_EQ] \\
-              HO_MATCH_MP_TAC REAL_LT_MUL' \\
-              ASM_SIMP_TAC std_ss [SQRT_POS_LT, REAL_LT_INV_EQ] \\
-              REAL_ARITH_TAC) \\
-          DISCH_TAC \\
-          ‘exp (ln (2 * (sqrt 6)⁻¹ * 3⁻¹)) = (2 :real) * (sqrt 6)⁻¹ * 3⁻¹’ by METIS_TAC [GSYM EXP_LN] \\
-          cheat) \\
-       rw [])
+      impl_tac >- (fs [REAL_LT_IMP_NE, REAL_INV_POS]) \\
+      rw [])
   >> rw [ETA_AX]
   >> MP_TAC (Q.SPECL [‘inv sig’, ‘f’] integral_substitution_pos)
   >> rw [REAL_INV_INV, mul_assoc, extreal_mul_eq]
