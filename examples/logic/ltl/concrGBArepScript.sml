@@ -8,21 +8,24 @@ val _ = diminish_srw_ss ["ABBREV"]
 val _ = monadsyntax.temp_add_monadsyntax();
 val _ = overload_on("monad_bind",``OPTION_BIND``);
 
-val _ = Datatype`
+Datatype:
   edgeLabelGBA = <| pos_lab : (α list) ;
                     neg_lab : (α list) ;
                     acc_set : (α ltl_frml) list
-                  |>` ;
+                  |>
+End
 
-val _ = Datatype`
-  nodeLabelGBA = <| frmls : (α ltl_frml) list |>` ;
+Datatype:
+  nodeLabelGBA = <| frmls : (α ltl_frml) list |>
+End
 
-val _ = Datatype`
+Datatype:
   concrGBA = <| graph : (α nodeLabelGBA, α edgeLabelGBA) gfg ;
                 init : (num list) ;
                 all_acc_frmls : (α ltl_frml) list;
                 atomicProp : α list
-             |>`;
+             |>
+End
 
 Definition gba_trans_concr_def:
   gba_trans_concr ts_lists =
@@ -162,9 +165,8 @@ Proof
       fs[d_conj_concr_def] >> fs[FOLDR_LEMM4] >> fs[all_distinct_nub] ]
 QED
 
-val GBA_TRANS_LEMM2 = store_thm
-  ("GBA_TRANS_LEMM2",
-   ``!s f. (!q i. ((q = EL i s) ∧ i < LENGTH s)
+Theorem GBA_TRANS_LEMM2:
+     !s f. (!q i. ((q = EL i s) ∧ i < LENGTH s)
                       ==> MEM (f i) q)
          ==> ?x. cE_equiv x
             (FOLDR
@@ -172,7 +174,8 @@ val GBA_TRANS_LEMM2 = store_thm
                      <|pos := sF.pos ⧺ e.pos; neg := sF.neg ⧺ e.neg;
                  sucs := sF.sucs ⧺ e.sucs|>)
                 (concrEdge [] [] []) (MAP f (COUNT_LIST (LENGTH s))))
-            ∧ MEM x(gba_trans_concr s)``,
+            ∧ MEM x(gba_trans_concr s)
+Proof
    Induct_on `s` >> fs[gba_trans_concr_def]
    >> rw[FOLDR_CONCR_EDGE]
    >- fs[cE_equiv_def,MEM_EQUAL_def,MEM_SUBSET_def,COUNT_LIST_def]
@@ -214,16 +217,16 @@ val GBA_TRANS_LEMM2 = store_thm
            >> fs[EL,TL]
           )
       )
-  );
+QED
 
-val GBA_TRANS_LEMM3 = store_thm
-  ("GBA_TRANS_LEMM3",
-   ``(!s x t. MEM x (gba_trans_concr t) ∧ MEM s x.sucs
+Theorem GBA_TRANS_LEMM3:
+     (!s x t. MEM x (gba_trans_concr t) ∧ MEM s x.sucs
              ==> (?l ce. MEM l t ∧ MEM ce l ∧ MEM s ce.sucs))
    ∧ (!s x t. MEM x (gba_trans_concr t) ∧ MEM s x.pos
          ==> (?l ce. MEM l t ∧ MEM ce l ∧ MEM s ce.pos))
    ∧ (!s x t. MEM x (gba_trans_concr t) ∧ MEM s x.neg
-         ==> (?l ce. MEM l t ∧ MEM ce l ∧ MEM s ce.neg))``,
+         ==> (?l ce. MEM l t ∧ MEM ce l ∧ MEM s ce.neg))
+Proof
    rpt conj_tac
    >> Induct_on `t` >> rpt strip_tac >> fs[gba_trans_concr_def]
    >- (fs[concrEdge_component_equality] >> metis_tac[MEMBER_NOT_EMPTY,MEM])
@@ -250,18 +253,18 @@ val GBA_TRANS_LEMM3 = store_thm
             \/ MEM s (nub e2.neg)` by metis_tac[MEM_APPEND]
          >> metis_tac[]
       )
-  );
+QED
 
-val GBA_TRANS_LEMM = store_thm
-  ("GBA_TRANS_LEMM",
-   ``!aP trns_concr_list.
+Theorem GBA_TRANS_LEMM:
+     !aP trns_concr_list.
       ALL_DISTINCT (MAP FST trns_concr_list)
    ==>
      let concr_edgs_list = MAP SND trns_concr_list
      in let to_abstr l = MAP (concr2AbstractEdge aP) l
      in set (to_abstr (gba_trans_concr concr_edgs_list))
         = d_conj_set (set (MAP (λ(q,d). (q,set (to_abstr d)))
-                               trns_concr_list)) (POW aP)``,
+                               trns_concr_list)) (POW aP)
+Proof
    rpt strip_tac >> fs[] >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
    >> fs[MEM_MAP]
    >- (Q.HO_MATCH_ABBREV_TAC `concr2AbstractEdge aP y ∈ d_conj_set s A`
@@ -793,16 +796,16 @@ val GBA_TRANS_LEMM = store_thm
         )
     )
    )
-  );
+QED
 
 Definition trns_is_empty_def:
   trns_is_empty cE = EXISTS (λp. MEM p cE.neg) cE.pos
 End
 
-val TRNS_IS_EMPTY_LEMM = store_thm
-  ("TRNS_IS_EMPTY_LEMM",
-   ``!cE ap. ((set cE.pos ⊆ ap) ∧ (set cE.neg ⊆ ap))
-  ==> trns_is_empty cE = (transformLabel ap cE.pos cE.neg = {})``,
+Theorem TRNS_IS_EMPTY_LEMM:
+     !cE ap. ((set cE.pos ⊆ ap) ∧ (set cE.neg ⊆ ap))
+  ==> trns_is_empty cE = (transformLabel ap cE.pos cE.neg = {})
+Proof
    rpt strip_tac >> fs[trns_is_empty_def]
    >> `(EXISTS (λp. MEM p cE.neg) cE.pos) = ~(set cE.neg ∩ set cE.pos = {})`
       by (
@@ -815,16 +818,16 @@ val TRNS_IS_EMPTY_LEMM = store_thm
           )
    )
    >> metis_tac[TRANSFORMLABEL_EMPTY,INTER_COMM]
-  );
+QED
 
-val TRANSFORMLABEL_LEMM = store_thm
-  ("TRANSFORMLABEL_LEMM",
-   ``!ce1 ce2 aP. (((~trns_is_empty ce1 ∧ ~trns_is_empty ce2)
+Theorem TRANSFORMLABEL_LEMM:
+     !ce1 ce2 aP. (((~trns_is_empty ce1 ∧ ~trns_is_empty ce2)
                ∧ ~(MEM_EQUAL ce1.pos ce2.pos ∧ MEM_EQUAL ce1.neg ce2.neg)
                ∧ !x. ((MEM x ce1.pos \/ MEM x ce1.neg \/ MEM x ce2.pos
                     \/ MEM x ce2.neg) ==> MEM x aP))
                     ==> ~(transformLabel (set aP) ce1.pos ce1.neg =
-                          transformLabel (set aP) ce2.pos ce2.neg))``,
+                          transformLabel (set aP) ce2.pos ce2.neg))
+Proof
    rpt gen_tac >> strip_tac
    >> `(set ce1.pos ⊆ set aP) ∧ (set ce2.pos ⊆ set aP)
      ∧ (set ce1.neg ⊆ set aP) ∧ (set ce2.neg ⊆ set aP)` by fs[SUBSET_DEF]
@@ -836,7 +839,7 @@ val TRANSFORMLABEL_LEMM = store_thm
    >> fs[MEM_EQUAL_SET]
    >> IMP_RES_TAC TRANSFORMLABEL_SUBSET2
    >> metis_tac[SET_EQ_SUBSET,MEM_SUBSET_SET_TO_LIST]
-  );
+QED
 
 Definition tlg_concr_def:
   tlg_concr (t1,acc_t1) (t2,acc_t2) =
@@ -896,13 +899,13 @@ Definition concr_extrTrans_def:
                    od
 End
 
-val CONCR_EXTRTRANS_NODES = store_thm
-  ("CONCR_EXTRTRANS_NODES",
-   ``!g_AA x l.
+Theorem CONCR_EXTRTRANS_NODES:
+     !g_AA x l.
        (concr_extrTrans g_AA x = SOME l)
        ==> (!ce q. MEM ce l ∧ MEM q ce.sucs
               ==> (MEM q (graphStates g_AA)
-                  ∧ ALL_DISTINCT ce.sucs))``,
+                  ∧ ALL_DISTINCT ce.sucs))
+Proof
    rpt strip_tac >> fs[concr_extrTrans_def]
    >> Cases_on `lookup x g_AA.followers` >> fs[]
    >> rw[] >> fs[MEM_APPEND,CAT_OPTIONS_MEM,MEM_MAP]
@@ -940,11 +943,10 @@ val CONCR_EXTRTRANS_NODES = store_thm
    >- (Cases_on `grp` >> fs[] >> Cases_on `h` >> fs[]
        >> fs[all_distinct_nub]
       )
-  );
+QED
 
-val CONCR_EXTRTRANS_LEMM = store_thm
-  ("CONCR_EXTRTRANS_LEMM",
-   ``!g_AA id aP.
+Theorem CONCR_EXTRTRANS_LEMM:
+     !g_AA id aP.
     wfg g_AA ∧ flws_sorted g_AA ∧ unique_node_formula g_AA
     ==> case lookup id g_AA.followers of
       | NONE => T
@@ -952,7 +954,8 @@ val CONCR_EXTRTRANS_LEMM = store_thm
     ?n cT. (concr_extrTrans g_AA id = SOME cT)
        ∧ (lookup id g_AA.nodeInfo = SOME n)
        ∧ (set (MAP (concr2AbstractEdge aP) cT) =
-              concrTrans g_AA aP n.frml)``,
+              concrTrans g_AA aP n.frml)
+Proof
    rpt strip_tac >> fs[] >> Cases_on `lookup id g_AA.followers` >> fs[]
    >> `?n.lookup id g_AA.nodeInfo = SOME n` by (
        fs[wfg_def] >> metis_tac[domain_lookup]
@@ -1454,17 +1457,17 @@ val CONCR_EXTRTRANS_LEMM = store_thm
        >> simp[concr2AbstractEdge_def,CAT_OPTIONS_MEM,MEM_MAP] >> disj2_tac
        >> metis_tac[]
       )
-  );
+QED
 
 Definition suff_wfg_def:
  suff_wfg g = !n. (g.next <= n) ==> ~(n ∈ domain g.nodeInfo)
 End
 
-val WF_IMP_SUFFWFG = store_thm
-  ("WF_IMP_SUFFWFG",
-   ``!g. wfg g ==> suff_wfg g``,
+Theorem WF_IMP_SUFFWFG:
+     !g. wfg g ==> suff_wfg g
+Proof
        rpt strip_tac >> fs[suff_wfg_def,wfg_def]
-  )
+QED
 
 Definition inGBA_def:
   inGBA g qs =
@@ -1472,9 +1475,9 @@ Definition inGBA_def:
     in EXISTS (λn. MEM_EQUAL n.frmls qs) gbaNodes
 End
 
-val IN_GBA_MEM_EQUAL = store_thm
-  ("IN_GBA_MEM_EQUAL",
-  ``!G x y. MEM_EQUAL x y ==> (inGBA G x = inGBA G y)``,
+Theorem IN_GBA_MEM_EQUAL:
+    !G x y. MEM_EQUAL x y ==> (inGBA G x = inGBA G y)
+Proof
   gen_tac
   >> `!x y. MEM_EQUAL x y ==> (inGBA G x ==> inGBA G y)`
           suffices_by metis_tac[MEM_EQUAL_SET]
@@ -1488,7 +1491,7 @@ val IN_GBA_MEM_EQUAL = store_thm
       >> fs[MEM_EQUAL_SET]
   )
   >> fs[]
-  );
+QED
 
 Definition addNodeToGBA_def:
   addNodeToGBA g qs =
@@ -1498,32 +1501,31 @@ Definition addNodeToGBA_def:
 End
 
 
-val ADDNODE_GBA_WFG = store_thm
-  ("ADDNODE_GBA_WFG",
-   ``!g qs. wfg g ==> wfg (addNodeToGBA g qs)``,
+Theorem ADDNODE_GBA_WFG:
+     !g qs. wfg g ==> wfg (addNodeToGBA g qs)
+Proof
    rpt strip_tac >> simp[addNodeToGBA_def] >> Cases_on `inGBA g qs` >> fs[]
-  );
+QED
 
-val ADDNODE_GBA_WFG_FOLDR = store_thm
-  ("ADDNODE_GBA_WFG_FOLDR",
-  ``!G l. wfg G ==>
+Theorem ADDNODE_GBA_WFG_FOLDR:
+    !G l. wfg G ==>
   (let G_WITH_IDS =
        FOLDR
            (λn (ids,g).
                if inGBA g n then (ids,g)
                else (g.next::ids,addNodeToGBA g n)) ([],G) l
-   in wfg (SND G_WITH_IDS))``,
+   in wfg (SND G_WITH_IDS))
+Proof
    gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
    >> Cases_on `FOLDR
                  (λn (ids,g).
                      if inGBA g n then (ids,g)
                      else (g.next::ids,addNodeToGBA g n)) ([],G) l`
    >> fs[] >> Cases_on `inGBA r h` >> fs[ADDNODE_GBA_WFG]
-  );
+QED
 
-val ADDNODE_GBA_DOM_FOLDR = store_thm
-  ("ADDNODE_GBA_DOM_FOLDR",
-   ``!G l. wfg G ==>
+Theorem ADDNODE_GBA_DOM_FOLDR:
+     !G l. wfg G ==>
   (let G_WITH_IDS =
        FOLDR
            (λn (ids,g).
@@ -1531,7 +1533,8 @@ val ADDNODE_GBA_DOM_FOLDR = store_thm
                else (g.next::ids,addNodeToGBA g n)) ([],G) l
    in ((set (FST (G_WITH_IDS))) ∪ domain G.nodeInfo =
         domain (SND G_WITH_IDS).nodeInfo)
-      ∧ (G.next <= (SND G_WITH_IDS).next))``,
+      ∧ (G.next <= (SND G_WITH_IDS).next))
+Proof
    gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
    >> Cases_on `FOLDR
   (λn (ids,g).
@@ -1542,7 +1545,7 @@ val ADDNODE_GBA_DOM_FOLDR = store_thm
    >> simp[addNodeToGBA_def,addNode_def]
    >> fs[SUBSET_DEF,INSERT_UNION] >> Cases_on `r.next ∈ domain G.nodeInfo`
    >> fs[wfg_def] >> metis_tac[]
-  );
+QED
 
 (* val ADDNODE_GBA_DOM_FOLDR2 = store_thm *)
 (*   ("ADDNODE_GBA_DOM_FOLDR2", *)
@@ -1550,11 +1553,11 @@ val ADDNODE_GBA_DOM_FOLDR = store_thm
 (* ) *)
 
 
-val ADDNODE_GBA_LEMM = store_thm
-  ("ADDNODE_GBA_LEMM",
-   ``!g qs. suff_wfg g ==>
+Theorem ADDNODE_GBA_LEMM:
+     !g qs. suff_wfg g ==>
           ({ set x | inGBA (addNodeToGBA g qs) x } =
-             { set x | inGBA g x } ∪ {set qs})``,
+             { set x | inGBA g x } ∪ {set qs})
+Proof
    rpt strip_tac
    >> `{set x | inGBA (addNodeToGBA g qs) x} ⊆ {set x | inGBA g x} ∪ {set qs}
      ∧ {set x | inGBA g x} ∪ {set qs} ⊆ {set x | inGBA (addNodeToGBA g qs) x}`
@@ -1591,7 +1594,7 @@ val ADDNODE_GBA_LEMM = store_thm
        >> fs[MEM_EQUAL_SET,MEM_MAP] >> qexists_tac `(g.next,nodeLabelGBA qs)`
        >> fs[] >> simp[MEM_toAList] >> simp[addNode_def,lookup_insert]
       )
-  );
+QED
 
 Definition frml_ad_def:
   frml_ad g =
@@ -1599,15 +1602,14 @@ Definition frml_ad_def:
           ==> ALL_DISTINCT n.frmls
 End
 
-val FRML_AD_NODEINFO = store_thm
-  ("FRML_AD_NODEINFO",
-   ``!g1 g2. (g1.nodeInfo = g2.nodeInfo) ==> (frml_ad g1 = frml_ad g2)``,
+Theorem FRML_AD_NODEINFO:
+     !g1 g2. (g1.nodeInfo = g2.nodeInfo) ==> (frml_ad g1 = frml_ad g2)
+Proof
    rpt strip_tac >> simp[frml_ad_def]
-  );
+QED
 
-val ADDNODE_GBA_FOLDR = store_thm
-  ("ADDNODE_GBA_FOLDR",
-   ``!G l. suff_wfg G ==>
+Theorem ADDNODE_GBA_FOLDR:
+     !G l. suff_wfg G ==>
        (let G_WITH_IDS =
          FOLDR
            (λn (ids,g).
@@ -1631,7 +1633,8 @@ val ADDNODE_GBA_FOLDR = store_thm
         )
       ∧ (frml_ad G ∧ (!x. MEM x l ==> ALL_DISTINCT x)
                  ==> frml_ad (SND G_WITH_IDS))
-       ))``,
+       ))
+Proof
    gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
    >> Q.HO_MATCH_ABBREV_TAC `suff_wfg G2 ∧ A = B
                           ∧ (!i. i ∈ domain G.nodeInfo
@@ -1767,7 +1770,7 @@ val ADDNODE_GBA_FOLDR = store_thm
               )
           )
       )
-  );
+QED
 
 Definition addEdgeToGBA_def:
   addEdgeToGBA g id eL suc =
@@ -1776,13 +1779,13 @@ Definition addEdgeToGBA_def:
       | NONE => NONE
 End
 
-val ADDEDGE_GBA_LEMM = store_thm
-  ("ADDEDGE_GBA_LEMM",
-   ``!g id eL suc.
+Theorem ADDEDGE_GBA_LEMM:
+     !g id eL suc.
      wfg g ∧ (id ∈ domain g.nodeInfo) ∧ (inGBA g suc)
      ==> (?g2. (addEdgeToGBA g id eL suc = SOME g2)
              ∧ (g.nodeInfo = g2.nodeInfo)
-             ∧ wfg g2)``,
+             ∧ wfg g2)
+Proof
    rpt strip_tac >> simp[addEdgeToGBA_def]
    >> Cases_on `findNode (λ(i,q). MEM_EQUAL q.frmls suc) g` >> fs[]
    >- (
@@ -1798,11 +1801,10 @@ val ADDEDGE_GBA_LEMM = store_thm
     drule_then strip_assume_tac FIND_LEMM2 >>
     metis_tac[wfg_def,domain_lookup, MEM_toAList]
   )
-);
+QED
 
-val ADDEDGE_GBA_FOLDR_LEMM = store_thm
-  ("ADDEDGE_GBA_FOLDR_LEMM",
-   ``!g id ls.
+Theorem ADDEDGE_GBA_FOLDR_LEMM:
+     !g id ls.
      wfg g ∧ (id ∈ domain g.nodeInfo) ∧ (!x. MEM x (MAP SND ls) ==> inGBA g x)
      ==>
      ?g2.
@@ -1810,7 +1812,8 @@ val ADDEDGE_GBA_FOLDR_LEMM = store_thm
        (λ(eL,suc) g_opt.
          do g <- g_opt; addEdgeToGBA g id eL suc od)
        (SOME g) ls = SOME g2)
-      ∧ (g.nodeInfo = g2.nodeInfo) ∧ wfg g2``,
+      ∧ (g.nodeInfo = g2.nodeInfo) ∧ wfg g2
+Proof
    gen_tac >> gen_tac >> Induct_on `ls` >> fs[] >> rpt strip_tac >> fs[]
    >> Cases_on `h` >> fs[] >> HO_MATCH_MP_TAC ADDEDGE_GBA_LEMM
    >> fs[] >> rw[]
@@ -1818,7 +1821,7 @@ val ADDEDGE_GBA_FOLDR_LEMM = store_thm
    >- (`inGBA g r` by fs[]
        >> fs[inGBA_def] >> metis_tac[]
       )
-  );
+QED
 
 Definition extractGBATrans_def:
   extractGBATrans aP g q =

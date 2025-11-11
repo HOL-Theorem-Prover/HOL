@@ -4,6 +4,6 @@ Ancestors
 Libs
   HolKernel Parse boolLib github130Lib
 
-val _ = save_thm("gh130b", boolTheory.AND_CLAUSES);
+Theorem gh130b = boolTheory.AND_CLAUSES;
 
 

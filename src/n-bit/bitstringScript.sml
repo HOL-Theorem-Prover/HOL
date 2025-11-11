@@ -206,9 +206,9 @@ Proof
   lrw [fixwidth_def]
 QED
 
-val fixwidth_id_imp = Theory.save_thm ("fixwidth_id_imp",
+Theorem fixwidth_id_imp =
   metisLib.METIS_PROVE [fixwidth_id]
-    ``!n w. (n = LENGTH w) ==> (fixwidth n w = w)``)
+    ``!n w. (n = LENGTH w) ==> (fixwidth n w = w)``
 
 Theorem boolify_reverse_map:
     !v a. boolify a v = REVERSE (MAP (\n. n <> 0) v) ++ a
@@ -315,11 +315,13 @@ Proof
   Induct \\ lrw [rev_count_list_def]
 QED
 
-val el_bitify = Q.prove(
-   `!v i a. i < LENGTH v ==>
-            (EL (LENGTH v - (i + 1)) v = (EL i (bitify a v) = 1))`,
+Theorem el_bitify[local]:
+    !v i a. i < LENGTH v ==>
+            (EL (LENGTH v - (i + 1)) v = (EL i (bitify a v) = 1))
+Proof
    lrw [bitify_def, bitify_reverse_map, rich_listTheory.EL_APPEND1,
-        listTheory.EL_REVERSE, listTheory.EL_MAP, arithmeticTheory.PRE_SUB1])
+        listTheory.EL_REVERSE, listTheory.EL_MAP, arithmeticTheory.PRE_SUB1]
+QED
 
 Theorem el_zero_extend:
   !n i v. EL i (zero_extend n v) <=>
@@ -363,12 +365,14 @@ Proof
   \\ lrw [rich_listTheory.EL_TAKE]
 QED
 
-val shiftr_field = Q.prove(
-   `!n l v. LENGTH l <> 0 ==> (shiftr l n = field (LENGTH l - 1) n l)`,
+Theorem shiftr_field[local]:
+    !n l v. LENGTH l <> 0 ==> (shiftr l n = field (LENGTH l - 1) n l)
+Proof
    rpt strip_tac
    \\ `SUC (LENGTH l - 1) - n = LENGTH (shiftr l n)`
    by (rw [length_shiftr] \\ decide_tac)
-   \\ lrw [field_def, fixwidth_id])
+   \\ lrw [field_def, fixwidth_id]
+QED
 
 Theorem el_w2v:
     !w: 'a word n.
@@ -544,17 +548,19 @@ Proof
   \\ rw [markerTheory.Abbrev_def, length_fixwidth, v2w_fixwidth]
 QED
 
-val BACKWARD_LIST_EQ_REWRITE = Q.prove(
-  `!l1 l2. (l1 = l2) <=>
+Theorem BACKWARD_LIST_EQ_REWRITE[local]:
+   !l1 l2. (l1 = l2) <=>
            (LENGTH l1 = LENGTH l2) /\
            !x. x < LENGTH l1 ==>
-               (EL (LENGTH l1 - 1 - x) l1 = EL (LENGTH l1 - 1 - x) l2)`,
+               (EL (LENGTH l1 - 1 - x) l1 = EL (LENGTH l1 - 1 - x) l2)
+Proof
   lrw [listTheory.LIST_EQ_REWRITE]
   \\ eq_tac \\ lrw []
   \\ `LENGTH l1 - 1 - x < LENGTH l1` by decide_tac
   \\ res_tac
   \\ `x < LENGTH l1` by decide_tac
-  \\ lfs []);
+  \\ lfs []
+QED
 
 Theorem fixwidth_eq:
   !n v w. (fixwidth n v = fixwidth n w) =
@@ -690,10 +696,12 @@ Proof
   ]
 QED
 
-val v2n_n2v_lem = Q.prove(
-  `!l. EVERY ($> 2) l ==>
-       (MAP ((\b. if b then 1 else 0) o (\n. n <> 0)) l = l)`,
-  Induct \\ lrw [])
+Theorem v2n_n2v_lem[local]:
+   !l. EVERY ($> 2) l ==>
+       (MAP ((\b. if b then 1 else 0) o (\n. n <> 0)) l = l)
+Proof
+  Induct \\ lrw []
+QED
 
 Theorem v2n_n2v:
    !n. v2n (n2v n) = n
@@ -916,9 +924,10 @@ Proof
   rw [wordsTheory.WORD_SLICE_THM, word_bits_v2w, word_lsl_v2w]
 QED
 
-val pad_left_T_or_F = Q.prove(
-   `(v2w (PAD_LEFT F (dimindex (:'a)) [F]) = 0w : 'a word) /\
-    (v2w (PAD_LEFT T (dimindex (:'a)) [T]) = -1w : 'a word)`,
+Theorem pad_left_T_or_F[local]:
+    (v2w (PAD_LEFT F (dimindex (:'a)) [F]) = 0w : 'a word) /\
+    (v2w (PAD_LEFT T (dimindex (:'a)) [T]) = -1w : 'a word)
+Proof
    wrw [wordsTheory.WORD_NEG_1_T]
    \\ wrw [wordsTheory.word_bit, bit_v2w, testbit, listTheory.PAD_LEFT]
    \\ (Cases_on `dimindex (:'a) - (i + 1) <
@@ -931,7 +940,8 @@ val pad_left_T_or_F = Q.prove(
       fs [arithmeticTheory.NOT_LESS, rich_listTheory.EL_APPEND2]
       \\ `i = 0` by decide_tac
       \\ lrw []
-   ]))
+   ])
+QED
 
 val hd_shiftr =
   el_shiftr
@@ -1090,14 +1100,16 @@ Proof
   rw [word_concat_v2w, combinTheory.FAIL_THM]
 QED
 
-val genlist_fixwidth = Q.prove(
-   `!d v. 0 < d ==>
+Theorem genlist_fixwidth[local]:
+    !d v. 0 < d ==>
           (GENLIST (\i. (d < i + (LENGTH v + 1) /\ 0 < LENGTH v) /\
                         EL (LENGTH v - 1 - (d - (i + 1))) v) d =
-          fixwidth d v)`,
+          fixwidth d v)
+Proof
    lrw [listTheory.LIST_EQ_REWRITE, length_fixwidth, el_fixwidth]
    \\ Cases_on `LENGTH v = 0`
-   \\ lrw [DECIDE ``0 < d ==> (d <= x + v <=> d < x + (v + 1))``]);
+   \\ lrw [DECIDE ``0 < d ==> (d <= x + v <=> d < x + (v + 1))``]
+QED
 
 Theorem word_reduce_v2w:
    !f v. word_reduce f (v2w v : 'a word) =
@@ -1110,19 +1122,17 @@ Proof
   \\ lrw [genlist_fixwidth]
 QED
 
-val reduce_and_v2w =
+Theorem reduce_and_v2w =
    wordsTheory.reduce_and_def
      |> Rewrite.REWRITE_RULE [boolTheory.FUN_EQ_THM]
      |> Q.SPEC `v2w v`
      |> Drule.GEN_ALL
-     |> Lib.curry Theory.save_thm "reduce_and_v2w"
 
-val reduce_or_v2w =
+Theorem reduce_or_v2w =
    wordsTheory.reduce_or_def
      |> Rewrite.REWRITE_RULE [boolTheory.FUN_EQ_THM]
      |> Q.SPEC `v2w v`
      |> Drule.GEN_ALL
-     |> Lib.curry Theory.save_thm "reduce_or_v2w"
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1145,12 +1155,14 @@ Proof
   \\ lrw []
 QED
 
-val DROP_LAST = Q.prove(
-   `!l. ~NULL l ==> (DROP (LENGTH l - 1) l = [LAST l])`,
+Theorem DROP_LAST[local]:
+    !l. ~NULL l ==> (DROP (LENGTH l - 1) l = [LAST l])
+Proof
    rw[rich_listTheory.DROP_LASTN,arithmeticTheory.SUB_LEFT_SUB,
       rich_listTheory.LASTN_1,rich_listTheory.NULL_EQ_NIL]
    \\ `(LENGTH l = 0) \/ (LENGTH l = 1)` by decide_tac
-   \\ fs[listTheory.LENGTH_EQ_NUM_compute,rich_listTheory.LASTN_1]);
+   \\ fs[listTheory.LENGTH_EQ_NUM_compute,rich_listTheory.LASTN_1]
+QED
 
 Theorem word_bit_last_shiftr:
   !i v. i < dimindex(:'a) ==>
@@ -1379,4 +1391,3 @@ time (List.map EVAL)
 *)
 
 (* ------------------------------------------------------------------------- *)
-

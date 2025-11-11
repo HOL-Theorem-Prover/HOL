@@ -29,15 +29,8 @@ val ERR    = mk_HOL_ERR "TotalDefn";
 val ERRloc = mk_HOL_ERRloc "TotalDefn";
 val WARN   = HOL_WARNING "TotalDefn";
 
-fun render_exn srcfn e =
-    if !Globals.interactive then
-      (Feedback.output_ERR (Feedback.exn_to_string e);
-       raise ERR srcfn "Exception raised")
-    else
-      raise e
-
 (*---------------------------------------------------------------------------*)
-(* Set up trace stuff                                                        *)
+(* Set up traces                                                             *)
 (*---------------------------------------------------------------------------*)
 
 local
@@ -343,7 +336,7 @@ fun list_mk_prod_tyl L =
  let val (front,(b,last)) = front_last L
      val tysize = TypeBasePure.type_size (TypeBase.theTypeBase())
      val last' = (if b then tysize else K0) last
-                 handle e => render_exn "last'" e
+                 handle e => raise wrap_exn "TotalDefn" "last'" e
   in
   itlist (fn (b,ty1) => fn M =>
      let val x = mk_var("x",ty1)
@@ -354,6 +347,7 @@ fun list_mk_prod_tyl L =
                numSyntax.mk_plus(mk_comb(blagga,x),mk_comb(M,y)))
      end) front last'
  end
+ handle e => raise wrap_exn "TotalDefn" "list_mk_prod" e;
 
 (*---------------------------------------------------------------------------*)
 (* Construct all lex combos corresponding to permutations of list            *)
@@ -689,7 +683,7 @@ local open Defn
                  else ()
      in
        if not (!Globals.interactive) then
-          raise ERR "defnDefine" (msg1 defName loc ^ goalstring)
+          raise ERR "defnDefine" (msg1 defName loc ^ "\n" ^ goalstring ^ "\n")
        else
           raise ERR "defnDefine" (msg1 defName loc ^ msg2 defName goalstring)
      end
@@ -709,23 +703,23 @@ local open Defn
        val V = params_of defn
        val _ = if not (null V) then fvs_on_rhs V else ()  (* can fail *)
        val (defn',opt) =
-          if should_try_to_prove_termination defn V then
-             let val tprover = proveTotal (mk_term_tac())
-                 fun try_proof Rcand = tprover (set_reln defn Rcand)
-             in
-              (if reln_is_not_set defn then  (* look for suitable term. reln *)
+           if not (should_try_to_prove_termination defn V) then
+             (defn,NONE)
+           else
+           let val tprover = proveTotal (mk_term_tac())
+               fun try_proof Rcand = tprover (set_reln defn Rcand)
+           in
+             (if reln_is_not_set defn then  (* look for suitable term. reln *)
                  let val candidates = guessR defn
                      val (cand,result) = trylist try_proof candidates
                      val () = report_successful_candidate cand candidates
                  in result end
-               else (* one is already installed, try to prove TCs *)
+              else (* one is already installed, try to prove TCs *)
                  tprover defn
-              ) handle HOL_ERR _ =>
+             ) handle HOL_ERR _ =>
                   (report_failure_of_candidates();
                    termination_proof_failed loc defn)
-             end
-          else
-            (defn,NONE)
+           end
     in
        save_defn_at loc defn'
        ; (LIST_CONJ (map GEN_ALL (eqns_of defn')), ind_of defn', opt)
@@ -749,7 +743,7 @@ fun located_xDefine loc stem q =
  Parse.try_grammar_extension
    (Theory.try_theory_extension
        (def_n_ind o located_primDefine loc o Defn.Hol_defn stem)) q
-  handle e => render_exn "xDefine" e;
+  handle e => render_exn (wrap_exn "TotalDefn" "xDefine" e);
 
 val xDefine = located_xDefine DB.Unknown
 
@@ -810,7 +804,7 @@ fun located_tDefine loc stem q tac =
  in
   Parse.try_grammar_extension
     (Theory.try_theory_extension thunk) ()
-  handle e => render_exn "tDefine" e
+  handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)
  end
 
 val tDefine = located_tDefine DB.Unknown
@@ -913,7 +907,7 @@ fun multidefine q = List.map (#1 o primDefine) (Defn.Hol_multi_defns q)
 
 fun multiDefine q =
   Parse.try_grammar_extension (Theory.try_theory_extension multidefine) q
-  handle e => render_exn "multiDefine" e;
+  handle e => render_exn (wrap_exn "TotalDefn" "multiDefine" e);
 
 (*---------------------------------------------------------------------------*)
 (* API for Define                                                            *)

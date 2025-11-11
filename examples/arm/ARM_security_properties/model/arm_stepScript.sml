@@ -27,15 +27,18 @@ val op << = op THENL;
 (* Access functions for ARM model                                            *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype`
+Datatype:
   arm_bit = psrN | psrZ | psrC | psrV | psrQ | psrJ
-          | psrE | psrA | psrI | psrF | psrT`;
+          | psrE | psrA | psrI | psrF | psrT
+End
 
-val _ = Hol_datatype
-  `arm_sctlr_bit = sctlrV | sctlrU | sctlrA | sctlrEE | sctlrTE | sctlrNMFI`;
+Datatype:
+   arm_sctlr_bit = sctlrV | sctlrU | sctlrA | sctlrEE | sctlrTE | sctlrNMFI
+End
 
-val _ = Hol_datatype
-  `arm_scr_bit = scrnET | scrAW | scrFW | scrEA | scrFIQ | scrIRQ | scrNS`;
+Datatype:
+   arm_scr_bit = scrnET | scrAW | scrFW | scrEA | scrFIQ | scrIRQ | scrNS
+End
 
 Definition ARM_ARCH_def:
   ARM_ARCH s = s.information.arch

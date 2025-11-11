@@ -214,6 +214,44 @@ struct
   (* auxiliary functions                                                     *)
   (***************************************************************************)
 
+  (* Convert a term to a string, in such a way that terms with exponentially
+     large term sizes can still be printed very quickly.
+
+     This function is needed because Z3 can create terms which cause a
+     combinatorial explosion in both the running time and the output size if
+     they were to be printed out fully, and in fact the default HOL
+     pretty-printers do suffer from apparent hangs when printing such terms.
+
+     To prevent this from happening, this function temporarily sets
+     `max_print_depth` so that sub-terms deeper than some value get abbreviated
+     with the string "...", therefore preventing the full gigantic term tree
+     from being traversed. It also removes non-trivial overloads, since some of
+     them are also causing the pretty-printer to appear to hang when printing
+     terms. *)
+  fun term_to_string tm =
+  let
+    val grammar = Parse.term_grammar ()
+    val simpler_grammar = term_grammar.clear_overloads grammar
+  in
+    Lib.with_flag(Globals.max_print_depth, 15)
+      (Parse.term_to_string_by_grammar (Parse.type_grammar (), simpler_grammar))
+        tm
+  end
+
+  (* the same as above, but print a theorem instead *)
+  fun thm_to_string thm =
+  let
+    fun hyps_to_string hyps =
+      String.concatWith ", " (List.map term_to_string hyps)
+    val hyps_contents =
+      if !Globals.show_assums then
+        hyps_to_string (Thm.hyp thm)
+      else
+        "."
+  in
+    " [" ^ hyps_contents ^ "] |- " ^ term_to_string (Thm.concl thm)
+  end
+
   (* `is_def_oriented` must return false when:
      1. `lhs` is not a variable in `var_set` but `rhs` is, or
      2. `lhs` and `rhs` are both variables in `var_set` but `rhs` is smaller

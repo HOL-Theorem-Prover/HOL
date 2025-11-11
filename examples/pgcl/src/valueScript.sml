@@ -49,10 +49,11 @@ val lemma = I prove;
 (* The HOL type we use to model values                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype `value =
+Datatype: value =
                 Null
               | Int of int
-              | Array of value list`;
+              | Array of value list
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Useful Functions for Turning Values into nums or ints                     *)
@@ -75,23 +76,25 @@ Definition update_nth_def:
   (update_nth l (SUC n) v = HD l :: update_nth (TL l) n v)
 End
 
-val update_nth_length = store_thm
- ("update_nth_length",
-  ``!l n v.
-      n < LENGTH l ==> (LENGTH (update_nth l n v) = LENGTH l)``,
+Theorem update_nth_length:
+    !l n v.
+      n < LENGTH l ==> (LENGTH (update_nth l n v) = LENGTH l)
+Proof
   Induct_on `n`
   ++ Cases_on `l`
-  ++ RW_TAC arith_ss [update_nth_def, HD, TL, LENGTH]);
+  ++ RW_TAC arith_ss [update_nth_def, HD, TL, LENGTH]
+QED
 
-val update_nth_el = store_thm
- ("update_nth_el",
-  ``!n v l k.
+Theorem update_nth_el:
+    !n v l k.
       n < LENGTH l /\ k < LENGTH l ==>
-      (EL k (update_nth l n v) = if k = n then v else EL k l)``,
+      (EL k (update_nth l n v) = if k = n then v else EL k l)
+Proof
   Induct_on `n`
   ++ Cases_on `l`
   ++ Cases_on `k`
-  ++ RW_TAC arith_ss [EL, update_nth_def, HD, TL, LENGTH]);
+  ++ RW_TAC arith_ss [EL, update_nth_def, HD, TL, LENGTH]
+QED
 
 (* use EL n l instead of get_nth *)
 
@@ -109,42 +112,46 @@ Definition Array_length_def:
     Array_length (Array l) = LENGTH l
 End
 
-val update_Array_i_length = store_thm
- ("update_Array_i_length",
-  ``!a i v.
+Theorem update_Array_i_length:
+    !a i v.
       (?l. (a = Array l)) /\ i < Array_length a ==>
-          (Array_length (update_Array_i a i v) = Array_length a)``,
+          (Array_length (update_Array_i a i v) = Array_length a)
+Proof
   RW_TAC arith_ss []
   ++ FULL_SIMP_TAC arith_ss [Array_length_def, update_Array_i_def, update_nth_length]
-  ++ MATCH_MP_TAC update_nth_length);
+  ++ MATCH_MP_TAC update_nth_length
+QED
 
-val update_Array_i_el = store_thm
- ("update_Array_i_el",
-  ``!i v a k. (?l. (a = Array l)) /\
+Theorem update_Array_i_el:
+    !i v a k. (?l. (a = Array l)) /\
       i < Array_length a /\ k < Array_length a ==>
-      (get_Array_i (update_Array_i a i v) k = if k = i then v else get_Array_i a k)``,
+      (get_Array_i (update_Array_i a i v) k = if k = i then v else get_Array_i a k)
+Proof
   RW_TAC arith_ss []
    ++ FULL_SIMP_TAC arith_ss [update_Array_i_def, get_Array_i_def, Array_length_def]
-   ++ RW_TAC arith_ss [update_nth_el]);
+   ++ RW_TAC arith_ss [update_nth_el]
+QED
 
 Definition extend_Array_def:
    extend_Array (Array l) v = Array (SNOC v l)
 End
 
-val extend_Array_length = store_thm
- ("extend_Array_length",
-  ``!a v. (?l. (a = Array l)) ==> ((Array_length (extend_Array a v)) = ((Array_length a) + 1))``,
+Theorem extend_Array_length:
+    !a v. (?l. (a = Array l)) ==> ((Array_length (extend_Array a v)) = ((Array_length a) + 1))
+Proof
   RW_TAC arith_ss []
-  ++ RW_TAC arith_ss [extend_Array_def, Array_length_def, LENGTH_SNOC]);
+  ++ RW_TAC arith_ss [extend_Array_def, Array_length_def, LENGTH_SNOC]
+QED
 
-val extend_Array_el = store_thm
-  ("extend_Array_el",
-   ``!a v i. (?l. (a = Array l)) /\
+Theorem extend_Array_el:
+     !a v i. (?l. (a = Array l)) /\
              i < SUC(Array_length a) ==>
                (get_Array_i (extend_Array a v) i =
-                  if (i = (Array_length a)) then v else get_Array_i a i)``,
+                  if (i = (Array_length a)) then v else get_Array_i a i)
+Proof
   RW_TAC arith_ss []
-  ++ FULL_SIMP_TAC arith_ss [get_Array_i_def, extend_Array_def, Array_length_def, EL_SNOC, EL_LENGTH_SNOC]);
+  ++ FULL_SIMP_TAC arith_ss [get_Array_i_def, extend_Array_def, Array_length_def, EL_SNOC, EL_LENGTH_SNOC]
+QED
 
 Definition Assign_Array_num_i:
     Assign_Array_num_i v i (e:value state -> value) = Assign v (\s. update_Array_i (s v) i (e s))
@@ -168,12 +175,13 @@ Definition n_list_def:
     (n_list (SUC n) x = x::(n_list (n) x))
 End
 
-val length_of_n_list = store_thm
-  ("length_of_n_list",
-   ``!n x. LENGTH (n_list n x) = n``,
+Theorem length_of_n_list:
+     !n x. LENGTH (n_list n x) = n
+Proof
    REPEAT STRIP_TAC
    ++ Induct_on `n`
-   ++ RW_TAC arith_ss [LENGTH, n_list_def]);
+   ++ RW_TAC arith_ss [LENGTH, n_list_def]
+QED
 
 Definition New_Array:
     New_Array a n = Assign a (\s. Array (n_list (num_of_value (s n)) Null))
@@ -217,12 +225,13 @@ End
 (* Showing the need for SUB-linearity for value states.                      *)
 (* ------------------------------------------------------------------------- *)
 
-val sublinear_necessary_value = store_thm
-  ("sublinear_necessary_value",
-   ``?p : value command. ?r1 r2 s.
-       wp p r1 s + wp p r2 s < wp p (\s'. r1 s' + r2 s') s``,
+Theorem sublinear_necessary_value:
+     ?p : value command. ?r1 r2 s.
+       wp p r1 s + wp p r2 s < wp p (\s'. r1 s' + r2 s') s
+Proof
    MATCH_MP_TAC sublinear_necessary
    ++ Q.EXISTS_TAC `Null`
    ++ Q.EXISTS_TAC `Int 0`
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 

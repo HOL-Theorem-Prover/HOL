@@ -277,17 +277,17 @@ in fn {relation,solver,depther,freevars} =>
     if allunch then
       (* note critical link between this exception and traversal code in
          Traverse.FIRSTCQC_CONV *)
-      raise mk_HOL_ERR "Opening" "CONGPROC" "Congruence gives no change"
-    else (trace(3,PRODUCE(tm0,"congruence rule",final_thm));
+      raise UNCHANGED
+    else (trace(3,PRODUCE(tm,"congruence rule",final_thm));
           trans th0 final_thm
-            handle e => (trace(7, LZ_TEXT (fn () =>
-                                              "opening trans fails on " ^
-                                              thm_to_string th0 ^ " and " ^
-                                              thm_to_string final_thm ^
-                                              " with relation' = " ^
-                                              term_to_string relation')
-                              );
-                         raise e)
+          handle e => (trace(7, LZ_TEXT (fn () =>
+                                            "opening trans fails on " ^
+                                            thm_to_string th0 ^ " and " ^
+                                            thm_to_string final_thm ^
+                                            " with relation' = " ^
+                                            term_to_string relation')
+                            );
+                       raise e)
          )
   end
 end;
@@ -343,8 +343,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} th =
             in
               mk_abs_fn (depther ([],equality) (randc bodyth0))
             end
-        | _ => failwith "unchanged"
+        | _ => raise UNCHANGED
     end
-
 
 end (* struct *)

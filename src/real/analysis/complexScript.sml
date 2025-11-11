@@ -29,7 +29,7 @@ val _ = ParseExtras.temp_loose_equality()
 (* Definition of complex number type.                                 *)
 (* ------------------------------------------------------------------ *)
 
-val _ = type_abbrev ("complex", ``: real # real``);
+Type complex = ``: real # real``
 
 (*--------------------------------------------------------------------*)
 (* Now prove 2 lemmas.                                                *)
@@ -58,9 +58,11 @@ QED
 (* Now define real part and imaginary part of complex number.         *)
 (*--------------------------------------------------------------------*)
 
-val RE = new_definition("RE",``RE (z:complex) = FST z``);
+Definition RE[nocompute]:RE (z:complex) = FST z
+End
 
-val IM = new_definition("IM",``IM (z:complex) = SND z``);
+Definition IM[nocompute]:IM (z:complex) = SND z
+End
 
 Theorem COMPLEX:
     !z:complex. (RE z,IM z) = z
@@ -81,8 +83,9 @@ QED
 (*                                      : num->complex                *)
 (*--------------------------------------------------------------------*)
 
-val complex_of_real = new_definition("complex_of_real",
-  ``complex_of_real (x:real) = (x,&0)``);
+Definition complex_of_real[nocompute]:
+  complex_of_real (x:real) = (x,&0)
+End
 
 Theorem RE_COMPLEX_OF_REAL:
     !x:real. RE (complex_of_real x) = x
@@ -96,9 +99,9 @@ Proof
   REWRITE_TAC [complex_of_real, IM]
 QED
 
-val complex_of_num = new_definition
-             ( "complex_of_num",
- ``complex_of_num (n:num) = complex_of_real (real_of_num n)``);
+Definition complex_of_num[nocompute]:
+ complex_of_num (n:num) = complex_of_real (real_of_num n)
+End
 
 val _ = add_numeral_form(#"c", SOME "complex_of_num");
 
@@ -132,50 +135,51 @@ QED
 (* Imaginary unit                                                     *)
 (* ------------------------------------------------------------------ *)
 
-val i = new_definition ("i", ``i = (0r,1r)``);
+Definition i[nocompute]: i = (0r,1r)
+End
 
 (* ------------------------------------------------------------------ *)
 (* Arithmetic operations.                                             *)
 (* ------------------------------------------------------------------ *)
 
-val complex_add = new_definition
-("complex_add",
-``complex_add (z:complex) (w:complex) = (RE z + RE w,IM z + IM w)``);
+Definition complex_add[nocompute]:
+complex_add (z:complex) (w:complex) = (RE z + RE w,IM z + IM w)
+End
 
-val complex_neg = new_definition
-("complex_neg",
-    ``complex_neg (z:complex) = (-RE z, -IM z)``);
+Definition complex_neg[nocompute]:
+    complex_neg (z:complex) = (-RE z, -IM z)
+End
 
-val complex_mul = new_definition
-("complex_mul",
-    ``complex_mul (z:complex) (w:complex) =
-              (RE z * RE w - IM z * IM w, RE z * IM w + IM z * RE w)``);
+Definition complex_mul[nocompute]:
+    complex_mul (z:complex) (w:complex) =
+              (RE z * RE w - IM z * IM w, RE z * IM w + IM z * RE w)
+End
 
-val complex_inv = new_definition
- ("complex_inv",
-   ``complex_inv (z:complex) =
+Definition complex_inv[nocompute]:
+   complex_inv (z:complex) =
          (RE z / ((RE z) pow 2 + (IM z) pow 2),
-                              -IM z / ((RE z) pow 2 + (IM z) pow 2))``);
+                              -IM z / ((RE z) pow 2 + (IM z) pow 2))
+End
 
-val _ = overload_on ("+",  Term`$complex_add`);
-val _ = overload_on ("~",  Term`$complex_neg`);
-val _ = overload_on ("*",  Term`$complex_mul`);
-val _ = overload_on ("inv",  Term`$complex_inv`);
-val _ = overload_on ("numeric_negate", ``$~ : complex->complex``);
+Overload "+" = Term`$complex_add`
+Overload "~" = Term`$complex_neg`
+Overload "*" = Term`$complex_mul`
+Overload inv = Term`$complex_inv`
+Overload numeric_negate = ``$~ : complex->complex``
 Overload "~" = “$~ : bool -> bool”
 Overload "¬" = “$~ : bool -> bool”
 
-val complex_sub = new_definition
-("complex_sub",
- ``complex_sub (z:complex) (w:complex) = z + ~w``);
+Definition complex_sub[nocompute]:
+ complex_sub (z:complex) (w:complex) = z + ~w
+End
 
-val complex_div = new_definition
-("complex_div",
- ``complex_div (z:complex) (w:complex) = z * inv w``);
+Definition complex_div[nocompute]:
+ complex_div (z:complex) (w:complex) = z * inv w
+End
 
-val _ = overload_on ("-",  Term`$complex_sub`);
+Overload "-" = Term`$complex_sub`
 val _ = overload_on (GrammarSpecials.decimal_fraction_special, ``complex_div``)
-val _ = overload_on ("/",  Term`complex_div`);
+Overload "/" = Term`complex_div`
 
 val _ = add_ML_dependency "complexPP"
 val _ =
@@ -446,21 +450,27 @@ Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [complex_sub, COMPLEX_NEGNEG]
 QED
 
-val COMPLEX_SUB_ADD = store_thm ("COMPLEX_SUB_ADD",
-  (``!z:complex w:complex. (z - w) + w = z``),
+Theorem COMPLEX_SUB_ADD:
+    !z:complex w:complex. (z - w) + w = z
+Proof
   REWRITE_TAC [complex_sub, GSYM COMPLEX_ADD_ASSOC, COMPLEX_ADD_LINV,
-               COMPLEX_ADD_RID]);
+               COMPLEX_ADD_RID]
+QED
 
-val COMPLEX_SUB_ADD2 = store_thm("COMPLEX_SUB_ADD2",
-  (``!z:complex w:complex. w + (z - w) = z``),
+Theorem COMPLEX_SUB_ADD2:
+    !z:complex w:complex. w + (z - w) = z
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[COMPLEX_ADD_COMM] THEN
-  MATCH_ACCEPT_TAC COMPLEX_SUB_ADD);
+  MATCH_ACCEPT_TAC COMPLEX_SUB_ADD
+QED
 
-val COMPLEX_ADD_SUB = store_thm ("COMPLEX_ADD_SUB",
-  (``!z:complex w:complex. (z + w) - z = w``),
+Theorem COMPLEX_ADD_SUB:
+    !z:complex w:complex. (z + w) - z = w
+Proof
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[COMPLEX_ADD_COMM] THEN
   REWRITE_TAC[complex_sub, GSYM COMPLEX_ADD_ASSOC, COMPLEX_ADD_RINV,
-              COMPLEX_ADD_RID]);
+              COMPLEX_ADD_RID]
+QED
 
 Theorem COMPLEX_SUB_SUB:
     !z:complex w:complex. (z - w) - z = -w
@@ -979,16 +989,16 @@ val SIMPLE_COMPLEX_ARITH_TAC =
 (* and right scalar multiplication                                    *)
 (*--------------------------------------------------------------------*)
 
-val complex_scalar_lmul = new_definition
-("complex_scalar_lmul",
-``complex_scalar_lmul (k:real) (z:complex) = (k * RE z,k * IM z)``);
+Definition complex_scalar_lmul[nocompute]:
+complex_scalar_lmul (k:real) (z:complex) = (k * RE z,k * IM z)
+End
 
-val complex_scalar_rmul = new_definition
-("complex_scalar_rmul",
-``complex_scalar_rmul (z:complex) (k:real) = (RE z * k,IM z * k)``);
+Definition complex_scalar_rmul[nocompute]:
+complex_scalar_rmul (z:complex) (k:real) = (RE z * k,IM z * k)
+End
 
-val _ = overload_on ("*",  Term`$complex_scalar_lmul`);
-val _ = overload_on ("*",  Term`$complex_scalar_rmul`);
+Overload "*" = Term`$complex_scalar_lmul`
+Overload "*" = Term`$complex_scalar_rmul`
 
 (*--------------------------------------------------------------------*)
 (* The properities of R-module                                        *)
@@ -1229,8 +1239,8 @@ QED
 (* Complex conjugate                                                  *)
 (*--------------------------------------------------------------------*)
 
-val conj = new_definition
-     ("conj", ``conj (z:complex) = (RE z, -IM z)``);
+Definition conj[nocompute]: conj (z:complex) = (RE z, -IM z)
+End
 
 Theorem CONJ_REAL_REFL:
     !x:real. conj (complex_of_real x) = complex_of_real x
@@ -1331,13 +1341,15 @@ QED
 (* Define modulus and  argument principal value of complex            *)
 (*--------------------------------------------------------------------*)
 
-val modu = new_definition("modu",
-  ``modu (z:complex) = sqrt( RE z pow 2 + IM z pow 2)``);
+Definition modu[nocompute]:
+  modu (z:complex) = sqrt( RE z pow 2 + IM z pow 2)
+End
 
-val arg = new_definition("arg",
-  ``arg z =
+Definition arg[nocompute]:
+  arg z =
        if 0 <= IM z then acs (RE z / modu z)
-       else -acs (RE z / modu z) + 2 * pi``);
+       else -acs (RE z / modu z) + 2 * pi
+End
 
 (*--------------------------------------------------------------------*)
 (* The properities of  modulus and  argument principal value          *)
@@ -1701,7 +1713,7 @@ Definition complex_pow:
       (complex_pow (z:complex) (SUC n) = z * (complex_pow z n))
 End
 
-val _ = overload_on ("pow",  Term`$complex_pow`);
+Overload pow = Term`$complex_pow`
 
 Theorem COMPLEX_POW_0:
     !n:num. 0 pow (SUC n) = 0
@@ -1846,10 +1858,11 @@ QED
 (*Exponential form of complex numbers                                 *)
 (*--------------------------------------------------------------------*)
 
-val complex_exp = new_definition("complex_exp",
-  ``complex_exp (z:complex) = exp(RE z) * (cos (IM z),sin (IM z))``);
+Definition complex_exp[nocompute]:
+  complex_exp (z:complex) = exp(RE z) * (cos (IM z),sin (IM z))
+End
 
-val _ = overload_on ("exp",  Term`$complex_exp`);
+Overload exp = Term`$complex_exp`
 
 Theorem EXP_IMAGINARY:
     !x:real. exp (i * x) = (cos x,sin x)

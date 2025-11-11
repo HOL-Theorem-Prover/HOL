@@ -53,10 +53,11 @@ val _ = overload_on ("FPROD", ``field_prod_set r``);
    = f*.id               by GPROD_SET_EMPTY
    = #1                  by field_nonzero_mult_property
 *)
-val field_prod_set_empty = store_thm(
-  "field_prod_set_empty",
-  ``!r:'a field. Field r ==> (FPROD {} = #1)``,
-  rw[field_prod_set_def, GPROD_SET_EMPTY, field_nonzero_mult_property]);
+Theorem field_prod_set_empty:
+    !r:'a field. Field r ==> (FPROD {} = #1)
+Proof
+  rw[field_prod_set_def, GPROD_SET_EMPTY, field_nonzero_mult_property]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ s SUBSET R+ ==> FPROD s IN R+ *)
 (* Proof:
@@ -68,21 +69,23 @@ val field_prod_set_empty = store_thm(
    Hence FPROD s IN F*                by GPROD_SET_PROPERTY
       or FPROD s IN R+                by above, field_mult_carrier
 *)
-val field_prod_set_nonzero = store_thm(
-  "field_prod_set_nonzero",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R+ ==> FPROD s IN R+``,
+Theorem field_prod_set_nonzero:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R+ ==> FPROD s IN R+
+Proof
   rw[field_prod_set_def] >>
   `AbelianGroup f*` by rw[field_nonzero_mult_is_abelian_group] >>
   `AbelianMonoid f*` by rw[abelian_group_is_abelian_monoid] >>
   `F* = R+` by rw[field_mult_carrier] >>
-  metis_tac[GPROD_SET_PROPERTY]);
+  metis_tac[GPROD_SET_PROPERTY]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ s SUBSET R+ ==> FPROD s IN R *)
 (* Proof: by field_prod_set_nonzero, field_nonzero_element *)
-val field_prod_set_element = store_thm(
-  "field_prod_set_element",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R+ ==> FPROD s IN R``,
-  rw[field_prod_set_nonzero, field_nonzero_element]);
+Theorem field_prod_set_element:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R+ ==> FPROD s IN R
+Proof
+  rw[field_prod_set_nonzero, field_nonzero_element]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ s SUBSET R+ ==>
             !x. x IN R+ ==> (FPROD (x INSERT s) = x * FPROD (s DELETE x)) *)
@@ -97,15 +100,16 @@ val field_prod_set_element = store_thm(
        = x * (GPROD_SET f* (s DELETE x)))      by field_nonzero_mult_property
        = x * FPROD (s DELETE x)                by field_prod_set_def
 *)
-val field_prod_set_thm = store_thm(
-  "field_prod_set_thm",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R+ ==>
-   !x. x IN R+ ==> (FPROD (x INSERT s) = x * FPROD (s DELETE x))``,
+Theorem field_prod_set_thm:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R+ ==>
+   !x. x IN R+ ==> (FPROD (x INSERT s) = x * FPROD (s DELETE x))
+Proof
   rw[field_prod_set_def] >>
   `AbelianGroup f*` by rw[field_nonzero_mult_is_abelian_group] >>
   `AbelianMonoid f*` by rw[abelian_group_is_abelian_monoid] >>
   `(F* = R+) /\ (f*.op = $* )` by rw[field_nonzero_mult_property] >>
-  metis_tac[GPROD_SET_THM]);
+  metis_tac[GPROD_SET_THM]
+QED
 
 (* Theorem: Field r ==> !s. FINITE s /\ s SUBSET R+ ==>
             !x. x IN R+ /\ x NOTIN s ==> (FPROD (x INSERT s) = x * FPROD s) *)
@@ -114,11 +118,12 @@ val field_prod_set_thm = store_thm(
     = x * FPROD (s DELETE x)     by field_prod_set_thm
     = x * FPROD s                by DELETE_NON_ELEMENT
 *)
-val field_prod_set_insert = store_thm(
-  "field_prod_set_insert",
-  ``!r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R+ ==>
-   !x. x IN R+ /\ x NOTIN s ==> (FPROD (x INSERT s) = x * FPROD s)``,
-  rw[field_prod_set_thm, DELETE_NON_ELEMENT]);
+Theorem field_prod_set_insert:
+    !r:'a field. Field r ==> !s. FINITE s /\ s SUBSET R+ ==>
+   !x. x IN R+ /\ x NOTIN s ==> (FPROD (x INSERT s) = x * FPROD s)
+Proof
+  rw[field_prod_set_thm, DELETE_NON_ELEMENT]
+QED
 
 (* Theorem: Field r ==> !x. x IN R+ ==> (FPROD {x} = x) *)
 (* Proof:
@@ -133,10 +138,11 @@ val field_prod_set_insert = store_thm(
    = x * #1                   by field_prod_set_empty
    = x                        by field_mult_rone
 *)
-val field_prod_set_sing = store_thm(
-  "field_prod_set_sing",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> (FPROD {x} = x)``,
-  rw[field_prod_set_insert, field_prod_set_empty, field_nonzero_element]);
+Theorem field_prod_set_sing:
+    !r:'a field. Field r ==> !x. x IN R+ ==> (FPROD {x} = x)
+Proof
+  rw[field_prod_set_insert, field_prod_set_empty, field_nonzero_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

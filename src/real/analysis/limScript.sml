@@ -26,7 +26,7 @@ Definition tends_real_real :
 End
 
 val _ = add_infix("->", 250, HOLgrammars.RIGHT)
-val _ = overload_on ("->", ``tends_real_real``);
+Overload "->" = ``tends_real_real``
 
 Theorem LIM:
    !f y0 x0. (f -> y0)(x0) =
@@ -1630,18 +1630,20 @@ Proof
 QED
 
 
-val DIFF_INVERSE_LT = store_thm("DIFF_INVERSE_LT",
-  Term`!f g l x d. &0 < d /\
+Theorem DIFF_INVERSE_LT:
+  !f g l x d. &0 < d /\
                (!z. abs(z - x) < d ==> (g(f(z)) = z)) /\
                (!z. abs(z - x) < d ==> f contl z) /\
                (f diffl l)(x) /\
                ~(l = &0)
-        ==> (g diffl (inv l))(f x)`,
+        ==> (g diffl (inv l))(f x)
+Proof
   REPEAT STRIP_TAC THEN MATCH_MP_TAC DIFF_INVERSE THEN
   EXISTS_TAC (Term `d / &2`) THEN ASM_REWRITE_TAC[REAL_LT_HALF1] THEN
   REPEAT STRIP_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
   MATCH_MP_TAC REAL_LET_TRANS THEN EXISTS_TAC (Term `d / &2`) THEN
-  ASM_REWRITE_TAC[REAL_LT_HALF2]);;
+  ASM_REWRITE_TAC[REAL_LT_HALF2]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Lemma about introducing a closed ball in an open interval                 *)

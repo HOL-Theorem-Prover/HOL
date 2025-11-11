@@ -195,7 +195,6 @@ Theorem B1_FT_lemma3 :
              [ [E1; E21]; [E2; E21];
               [E6; E21]; [E7; E21]] t))))
 Proof
-
 RW_TAC list_ss[list_fail_event_list_def,fail_event_list_def,fail_event_def,list_prod_rel_def,one_minus_list_def,list_prob_def,list_prod_def]
 >> RW_TAC real_ss[REAL_MUL_ASSOC]
 >> RW_TAC std_ss[REAL_MUL_ASSOC]

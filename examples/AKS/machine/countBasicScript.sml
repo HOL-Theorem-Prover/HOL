@@ -207,12 +207,13 @@ EVAL ``MAP size [0 .. 10]``;
       = SUC (size (HALF n))               by ADD1
       = size n                            by size_half_SUC
 *)
-val sizeM_value = store_thm(
-  "sizeM_value[simp]",
-  ``!n. valueOf (sizeM n) = size n``,
+Theorem sizeM_value[simp]:
+    !n. valueOf (sizeM n) = size n
+Proof
   completeInduct_on `n` >>
   (rw [Once sizeM_def] >> simp[]) >>
-  rw[GSYM size_half_SUC, ADD1]);
+  rw[GSYM size_half_SUC, ADD1]
+QED
 
 (* Theorem: stepsOf (sizeM n) = 2 * size n + if n <= 1 then 0 else
                                 2 * size n + size (size n - 1) + stepsOf (sizeM (HALF n)) *)
@@ -226,29 +227,32 @@ val sizeM_value = store_thm(
   = 2 * size n + if n <= 1 then 0 else
     2 * size n + size (size n - 1) + stepsOf (sizeM (HALF n))     by size_half
 *)
-val sizeM_steps_thm = store_thm(
-  "sizeM_steps_thm",
-  ``!n. stepsOf (sizeM n) = 2 * size n + if n <= 1 then 0 else
-                           2 * size n + size (size n - 1) + stepsOf (sizeM (HALF n))``,
+Theorem sizeM_steps_thm:
+    !n. stepsOf (sizeM n) = 2 * size n + if n <= 1 then 0 else
+                           2 * size n + size (size n - 1) + stepsOf (sizeM (HALF n))
+Proof
   rpt strip_tac >>
   Cases_on `(n = 0) \/ (n = 1)` >-
   simp[Once sizeM_def] >>
   simp[Once sizeM_def, sizeM_value] >>
-  rw[size_half]);
+  rw[size_half]
+QED
 
 (* Theorem: stepsOf (sizeM 0) = 2 *)
 (* Proof: by sizeM_steps_thm *)
-val sizeM_steps_0 = store_thm(
-  "sizeM_steps_0",
-  ``stepsOf (sizeM 0) = 2``,
-  rw[Once sizeM_steps_thm]);
+Theorem sizeM_steps_0:
+    stepsOf (sizeM 0) = 2
+Proof
+  rw[Once sizeM_steps_thm]
+QED
 
 (* Theorem: stepsOf (sizeM 1) = 2 *)
 (* Proof: by sizeM_steps_thm *)
-val sizeM_steps_1 = store_thm(
-  "sizeM_steps_1",
-  ``stepsOf (sizeM 1) = 2``,
-  rw[Once sizeM_steps_thm]);
+Theorem sizeM_steps_1:
+    stepsOf (sizeM 1) = 2
+Proof
+  rw[Once sizeM_steps_thm]
+QED
 
 
 (* Theorem: let body n = if n <= 1 then 2 else 4 * size n + size (size n - 1);
@@ -268,15 +272,16 @@ val sizeM_steps_1 = store_thm(
           if n = 1 then 0 else stepsOf (sizeM (HALF n))
    Modify first n = 1 to n <= 1 for body to be covered.
 *)
-val sizeM_steps_by_div_loop = store_thm(
-  "sizeM_steps_by_div_loop",
-  ``let body n = if n <= 1 then 2 else 4 * size n + size (size n - 1);
+Theorem sizeM_steps_by_div_loop:
+    let body n = if n <= 1 then 2 else 4 * size n + size (size n - 1);
        exit n = (n = 1)
     in !n. stepsOf (sizeM n) = if n = 0 then 2
-           else body n + if exit n then 0 else stepsOf (sizeM (HALF n))``,
+           else body n + if exit n then 0 else stepsOf (sizeM (HALF n))
+Proof
   rw[Once sizeM_steps_thm] >>
   (Cases_on `n <= 1` >> simp[]) >>
-  fs[LE_ONE]);
+  fs[LE_ONE]
+QED
 
 (*
 This puts sizeM_steps in the category: dividing loop with body cover and exit.
@@ -313,9 +318,9 @@ suitable for: loop_div_count_cover_exit_le
       = 2 + size n * (5 * size n)            by notation
       = 2 + 5 * size n ** 2                  by EXP_2
 *)
-val sizeM_steps_upper = store_thm(
-  "sizeM_steps_upper",
-  ``!n. stepsOf (sizeM n) <= 2 + 5 * (size n) ** 2``,
+Theorem sizeM_steps_upper:
+    !n. stepsOf (sizeM n) <= 2 + 5 * (size n) ** 2
+Proof
   rpt strip_tac >>
   assume_tac sizeM_steps_by_div_loop >>
   qabbrev_tac `loop = \n. stepsOf (sizeM n)` >>
@@ -342,7 +347,8 @@ val sizeM_steps_upper = store_thm(
   `pop 2 n <= size n` by rw[pop_size] >>
   `pop 2 n * cover n <= size n * cover n` by rw[] >>
   `size n * cover n = 5 * size n ** 2` by rw[Abbr`cover`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: stepsOf (sizeM n) <= 7 * (size n) ** 2 *)
 (* Proof:
@@ -351,13 +357,14 @@ val sizeM_steps_upper = store_thm(
    <= (2 + 5) * (size n ** 2)        by dominant term
     = 7 * size n ** 2                by arithmetic
 *)
-val sizeM_steps_bound = store_thm(
-  "sizeM_steps_bound",
-  ``!n. stepsOf (sizeM n) <= 7 * (size n) ** 2``,
+Theorem sizeM_steps_bound:
+    !n. stepsOf (sizeM n) <= 7 * (size n) ** 2
+Proof
   rpt strip_tac >>
   `stepsOf (sizeM n) <= 2 + 5 * (size n) ** 2` by rw[sizeM_steps_upper] >>
   `0 < size n ** 2` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o sizeM) IN O_poly 2 *)
 (* Proof:
@@ -366,11 +373,12 @@ val sizeM_steps_bound = store_thm(
    Note stepsOf (sizeM n) <= 7 * (size n) ** 2   by sizeM_steps_bound
    Take any h, k = 7.
 *)
-val sizeM_steps_O_poly = store_thm(
-  "sizeM_steps_O_poly",
-  ``(stepsOf o sizeM) IN O_poly 2``,
+Theorem sizeM_steps_O_poly:
+    (stepsOf o sizeM) IN O_poly 2
+Proof
   rw[O_poly_thm] >>
-  metis_tac[sizeM_steps_bound]);
+  metis_tac[sizeM_steps_bound]
+QED
 
 (* Theorem: (stepsOf o sizeM) IN big_O (\n. (ulog n) ** 2) *)
 (* Proof:
@@ -380,22 +388,24 @@ val sizeM_steps_O_poly = store_thm(
       = (\n. ulog n ** 2)                 by POLY_def, FUN_EQ_THM
    The result follows.
 *)
-val sizeM_steps_big_O = store_thm(
-  "sizeM_steps_big_O",
-  ``(stepsOf o sizeM) IN big_O (\n. (ulog n) ** 2)``,
+Theorem sizeM_steps_big_O:
+    (stepsOf o sizeM) IN big_O (\n. (ulog n) ** 2)
+Proof
   assume_tac sizeM_steps_O_poly >>
   `O_poly 2 = big_O (POLY 2 o ulog)` by rw[O_poly_eq_O_poly_ulog] >>
   `POLY 2 o ulog = \n. ulog n ** 2` by rw[FUN_EQ_THM, POLY_def] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (valueOf (sizeM n) = size n) /\
             (stepsOf o sizeM) IN big_O (\n. (ulog n) ** 2) *)
 (* Proof: by sizeM_value, sizeM_steps_big_O *)
-val sizeM_thm = store_thm(
-  "sizeM_thm",
-  ``!n. (valueOf (sizeM n) = size n) /\
-       (stepsOf o sizeM) IN big_O (\n. (ulog n) ** 2)``,
-  metis_tac[sizeM_value, sizeM_steps_big_O]);
+Theorem sizeM_thm:
+    !n. (valueOf (sizeM n) = size n) /\
+       (stepsOf o sizeM) IN big_O (\n. (ulog n) ** 2)
+Proof
+  metis_tac[sizeM_value, sizeM_steps_big_O]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Perfect-power in Monadic Style (by recursion)                             *)
@@ -454,13 +464,14 @@ End
    By induction based on power_ofM_def,
       matching perfect_power_test.
 *)
-val power_ofM_value = store_thm(
-  "power_ofM_value[simp]",
-  ``!b n. valueOf (power_ofM b n) = perfect_power n b``,
+Theorem power_ofM_value[simp]:
+    !b n. valueOf (power_ofM b n) = perfect_power n b
+Proof
   ho_match_mp_tac (theorem "power_ofM_ind") >>
   rw[] >>
   rw[Once power_ofM_def, Once perfect_power_test] >>
-  (Cases_on `n MOD b = 0` >> simp[]));
+  (Cases_on `n MOD b = 0` >> simp[])
+QED
 
 (* Theorem: stepsOf (power_ofM b n) = 2 * size n + 2 * size b +
      if (n = 0 \/ n = 1 \/ b = 0 \/ b = 1) then 0
@@ -479,36 +490,39 @@ val power_ofM_value = store_thm(
           if (n MOD b <> 0) then 0
           else (size n) * (size b) + stepsOf (power_ofM b (n DIV b))
 *)
-val power_ofM_steps_thm = store_thm(
-  "power_ofM_steps_thm",
-  ``!b n. stepsOf (power_ofM b n) = 2 * size n + 2 * size b +
+Theorem power_ofM_steps_thm:
+    !b n. stepsOf (power_ofM b n) = 2 * size n + 2 * size b +
      if (n = 0 \/ n = 1 \/ b = 0 \/ b = 1) then 0
      else (size n) * (size b) + size (n MOD b) + if (n MOD b <> 0) then 0
-          else (size n) * (size b) + stepsOf (power_ofM b (n DIV b))``,
+          else (size n) * (size b) + stepsOf (power_ofM b (n DIV b))
+Proof
   ho_match_mp_tac (theorem "power_ofM_ind") >>
   rpt strip_tac >>
   Cases_on `n = 0 \/ n = 1 \/ b = 0 \/ b = 1` >>
-  rw[Once power_ofM_def]);
+  rw[Once power_ofM_def]
+QED
 
 (* Theorem: 2 * (size n + size b) <= stepsOf (power_ofM b n) *)
 (* Proof: by power_ofM_steps_thm *)
-val power_ofM_steps_le = store_thm(
-  "power_ofM_steps_le",
-  ``!b n. 2 * (size n + size b) <= stepsOf (power_ofM b n)``,
-  rw[Once power_ofM_steps_thm]);
+Theorem power_ofM_steps_le:
+    !b n. 2 * (size n + size b) <= stepsOf (power_ofM b n)
+Proof
+  rw[Once power_ofM_steps_thm]
+QED
 
 (* Theorem: (stepsOf (power_ofM b 0) = 2 * (1 + size b)) /\
             (stepsOf (power_ofM b 1) = 2 * (1 + size b)) /\
             (stepsOf (power_ofM 0 n) = 2 * (1 + size n)) /\
             (stepsOf (power_ofM 1 n) = 2 * (1 + size n)) *)
 (* Proof: by power_ofM_steps_thm *)
-val power_ofM_steps_base = store_thm(
-  "power_ofM_steps_base",
-  ``!b n. (stepsOf (power_ofM b 0) = 2 * (1 + size b)) /\
+Theorem power_ofM_steps_base:
+    !b n. (stepsOf (power_ofM b 0) = 2 * (1 + size b)) /\
          (stepsOf (power_ofM b 1) = 2 * (1 + size b)) /\
          (stepsOf (power_ofM 0 n) = 2 * (1 + size n)) /\
-         (stepsOf (power_ofM 1 n) = 2 * (1 + size n))``,
-  (rpt strip_tac >> rw[Once power_ofM_steps_thm]));
+         (stepsOf (power_ofM 1 n) = 2 * (1 + size n))
+Proof
+  (rpt strip_tac >> rw[Once power_ofM_steps_thm])
+QED
 
 (* Theorem: let body n = 2 * size n + 2 * size b + if n <= 1 \/ b <= 1 then 0
                     else size n * size b + size (n MOD b) +
@@ -540,16 +554,17 @@ val power_ofM_steps_base = store_thm(
           if n = 1 \/ b = 0 \/ b = 1 \/ n MOD b <> 0 then 0
           else stepsOf (power_ofM b (n DIV b))
 *)
-val power_ofM_steps_by_div_loop = store_thm(
-  "power_ofM_steps_by_div_loop",
-  ``!b. let body n = 2 * size n + 2 * size b + if n <= 1 \/ b <= 1 then 0
+Theorem power_ofM_steps_by_div_loop:
+    !b. let body n = 2 * size n + 2 * size b + if n <= 1 \/ b <= 1 then 0
                     else size n * size b + size (n MOD b) +
                          if n MOD b <> 0 then 0 else size n * size b;
            exit n = (n = 1 \/ b = 0 \/ b = 1 \/ n MOD b <> 0)
         in !n. 1 < b ==> (stepsOf (power_ofM b n) = if n = 0 then (2 + 2 * size b)
-                        else body n + if exit n then 0 else stepsOf (power_ofM b (n DIV b)))``,
+                        else body n + if exit n then 0 else stepsOf (power_ofM b (n DIV b)))
+Proof
   rw[Once power_ofM_steps_thm] >>
-  (Cases_on `n = 0` >> simp[]));
+  (Cases_on `n = 0` >> simp[])
+QED
 
 (*
 This puts power_ofM_steps in the category: dividing loop with body cover and exit.
@@ -598,10 +613,10 @@ suitable for: loop_div_count_cover_exit_le
       = 2 + 2 * size b + size n * (3 * size b + 2 * size n + 2 * size n * size b)
       = 2 + 2 * size b + 3 * size b * size n + 2 * size n ** 2 + 2 * size b * size n ** 2
 *)
-val power_ofM_steps_upper = store_thm(
-  "power_ofM_steps_upper",
-  ``!b n. stepsOf (power_ofM b n) <=
-         2 + 2 * size b + 3 * size b * size n + 2 * size n ** 2 + 2 * size b * size n ** 2``,
+Theorem power_ofM_steps_upper:
+    !b n. stepsOf (power_ofM b n) <=
+         2 + 2 * size b + 3 * size b * size n + 2 * size n ** 2 + 2 * size b * size n ** 2
+Proof
   rpt strip_tac >>
   Cases_on `b <= 1` >| [
     `size b = 1` by metis_tac[LE_ONE, size_0, size_1] >>
@@ -642,7 +657,8 @@ val power_ofM_steps_upper = store_thm(
     `size n * cover n <= t` by rw[LEFT_ADD_DISTRIB, Abbr`cover`, Abbr`t`] >>
     decide_tac) >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: stepsOf (power_ofM b n) <= 11 * size b * (size n) ** 2 *)
 (* Proof:
@@ -652,9 +668,9 @@ val power_ofM_steps_upper = store_thm(
    <= (2 + 2 + 3 + 2 + 2) * size b * size n ** 2    by dominant term
     = 11 * size b * size n ** 2
 *)
-val power_ofM_steps_bound = store_thm(
-  "power_ofM_steps_bound",
-  ``!b n. stepsOf (power_ofM b n) <= 11 * size b * (size n) ** 2``,
+Theorem power_ofM_steps_bound:
+    !b n. stepsOf (power_ofM b n) <= 11 * size b * (size n) ** 2
+Proof
   rpt strip_tac >>
   assume_tac power_ofM_steps_upper >>
   last_x_assum (qspecl_then [`b`, `n`] strip_assume_tac) >>
@@ -675,7 +691,8 @@ val power_ofM_steps_bound = store_thm(
   `size n ** 2 * size b = t` by rw[Abbr`t`] >>
   decide_tac) >>
   `(size b) * size n ** 2 = t` by rw[Abbr`t`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o power_twoM) IN O_poly 2 *)
 (* Proof:
@@ -685,11 +702,12 @@ val power_ofM_steps_bound = store_thm(
    Take any h, and k = 11 * size b.
    The result follows.
 *)
-val power_ofM_steps_O_poly = store_thm(
-  "power_ofM_steps_O_poly",
-  ``!b. (stepsOf o power_ofM b) IN O_poly 2``,
+Theorem power_ofM_steps_O_poly:
+    !b. (stepsOf o power_ofM b) IN O_poly 2
+Proof
   rw[O_poly_thm] >>
-  metis_tac[power_ofM_steps_bound]);
+  metis_tac[power_ofM_steps_bound]
+QED
 
 (* Theorem: (stepsOf o power_ofM b) IN big_O (\n. (ulog n) ** 2) *)
 (* Proof:
@@ -699,22 +717,24 @@ val power_ofM_steps_O_poly = store_thm(
       = (\n. ulog n ** 2)                       by POLY_def, FUN_EQ_THM
    The result follows.
 *)
-val power_ofM_steps_big_O = store_thm(
-  "power_ofM_steps_big_O",
-  ``!b. (stepsOf o power_ofM b) IN big_O (\n. (ulog n) ** 2)``,
+Theorem power_ofM_steps_big_O:
+    !b. (stepsOf o power_ofM b) IN big_O (\n. (ulog n) ** 2)
+Proof
   assume_tac power_ofM_steps_O_poly >>
   `O_poly 2 = big_O (POLY 2 o ulog)` by rw[O_poly_eq_O_poly_ulog] >>
   `POLY 2 o ulog = \n. ulog n ** 2` by rw[FUN_EQ_THM, POLY_def] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (valueOf (power_ofM b n) <=> n power_of b) /\
             (stepsOf o power_ofM b) IN big_O (\n. size n) *)
 (* Proof: by power_ofM_value, power_ofM_steps_big_O *)
-val power_ofM_thm = store_thm(
-  "power_ofM_thm",
-  ``!b n. (valueOf (power_ofM b n) <=> n power_of b) /\
-         (stepsOf o power_ofM b) IN big_O (\n. (ulog n) ** 2)``,
-  metis_tac[power_ofM_value, power_ofM_steps_big_O]);
+Theorem power_ofM_thm:
+    !b n. (valueOf (power_ofM b n) <=> n power_of b) /\
+         (stepsOf o power_ofM b) IN big_O (\n. (ulog n) ** 2)
+Proof
+  metis_tac[power_ofM_value, power_ofM_steps_big_O]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -730,10 +750,11 @@ End
 
 (* Theorem: valueOf (power_twoM n) = (perfect_power n 2) *)
 (* Proof: by power_twoM_def, power_ofM_value *)
-val power_twoM_value = store_thm(
-  "power_twoM_value[simp]",
-  ``!n. valueOf (power_twoM n) = (perfect_power n 2)``,
-  rw[power_twoM_def]);
+Theorem power_twoM_value[simp]:
+    !n. valueOf (power_twoM n) = (perfect_power n 2)
+Proof
+  rw[power_twoM_def]
+QED
 
 (* Obtain a theorem *)
 val power_twoM_steps_thm = save_thm("power_twoM_steps_thm",
@@ -747,17 +768,19 @@ val power_twoM_steps_thm = save_thm("power_twoM_steps_thm",
 
 (* Theorem: stepsOf (power_twoM 0) = 6 *)
 (* Proof: by power_twoM_steps_thm *)
-val power_twoM_steps_0 = store_thm(
-  "power_twoM_steps_0",
-  ``stepsOf (power_twoM 0) = 6``,
-  rw[Once power_twoM_steps_thm]);
+Theorem power_twoM_steps_0:
+    stepsOf (power_twoM 0) = 6
+Proof
+  rw[Once power_twoM_steps_thm]
+QED
 
 (* Theorem: stepsOf (power_twoM 1) = 6 *)
 (* Proof: by power_twoM_steps_thm *)
-val power_twoM_steps_1 = store_thm(
-  "power_twoM_steps_1",
-  ``stepsOf (power_twoM 1) = 6``,
-  rw[Once power_twoM_steps_thm]);
+Theorem power_twoM_steps_1:
+    stepsOf (power_twoM 1) = 6
+Proof
+  rw[Once power_twoM_steps_thm]
+QED
 
 (* Derive theorems *)
 val power_twoM_steps_O_poly = save_thm("power_twoM_steps_O_poly",
@@ -779,13 +802,14 @@ val power_twoM_thm = |- !n. (valueOf (power_twoM n) <=> n power_of 2) /\
 
 (* Theorem: stepsOf (power_twoM n) <= 6 + 6 * size n + 6 * size n ** 2 *)
 (* Proof: by power_twoM_steps_thm, power_twoM_def *)
-val power_twoM_steps_upper = store_thm(
-  "power_twoM_steps_upper",
-  ``!n. stepsOf (power_twoM n) <= 6 + 6 * size n + 6 * size n ** 2``,
+Theorem power_twoM_steps_upper:
+    !n. stepsOf (power_twoM n) <= 6 + 6 * size n + 6 * size n ** 2
+Proof
   rw[power_twoM_def] >>
   assume_tac power_ofM_steps_upper >>
   first_x_assum (qspecl_then [`2`, `n`] strip_assume_tac) >>
-  fs[size_2]);
+  fs[size_2]
+QED
 
 (* Note: power_twoM_steps_bound can therefore improve to:
         !n. stepsOf (power_twoM n) <= 18 * size n ** 2
@@ -798,16 +822,17 @@ val power_twoM_steps_upper = store_thm(
    <= (6 + 6 + 6) * size n ** 2         by dominant term
     = 18 * size b * size n ** 2
 *)
-val power_twoM_steps_bound = store_thm(
-  "power_twoM_steps_bound",
-  ``!b n. stepsOf (power_twoM n) <= 18 * (size n) ** 2``,
+Theorem power_twoM_steps_bound:
+    !b n. stepsOf (power_twoM n) <= 18 * (size n) ** 2
+Proof
   rpt strip_tac >>
   assume_tac power_twoM_steps_upper >>
   first_x_assum (qspec_then `n` strip_assume_tac) >>
   `0 < (size n) ** 2` by rw[] >>
   `size n <= (size n) * (size n)` by rw[] >>
   `(size n) * (size n) = size n ** 2` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Ulog in Monadic Style                                                     *)
@@ -850,11 +875,12 @@ End
            to show: size n - 1 = ulog n, true   by ulog_by_size
        Otherwise, show: size n = ulog n, true   by ulog_by_size
 *)
-val ulogM_value = store_thm(
-  "ulogM_value[simp]",
-  ``!n. valueOf (ulogM n) = ulog n``,
+Theorem ulogM_value[simp]:
+    !n. valueOf (ulogM n) = ulog n
+Proof
   rw[ulogM_def] >>
-  (Cases_on `perfect_power n 2` >> rw[ulog_by_size]));
+  (Cases_on `perfect_power n 2` >> rw[ulog_by_size])
+QED
 
 (* Theorem: stepsOf (ulogM n) =
             if n = 0 then 1
@@ -878,14 +904,15 @@ val ulogM_value = store_thm(
    with (stepsOf o sizeM) IN O_poly 2        by sizeM_steps_O_poly
     and (stepsOf o power_twoM) IN O_poly 2   by power_twoM_steps_O_poly
 *)
-val ulogM_steps_thm = store_thm(
-  "ulogM_steps_thm",
-  ``!n. stepsOf (ulogM n) =
+Theorem ulogM_steps_thm:
+    !n. stepsOf (ulogM n) =
        if n = 0 then 1
-       else 1 + size n + size (size n) + stepsOf (sizeM n) + stepsOf (power_twoM n)``,
+       else 1 + size n + size (size n) + stepsOf (sizeM n) + stepsOf (power_twoM n)
+Proof
   rw[ulogM_def] >>
   `MAX (size (size n)) 1 = size (size n)` by metis_tac[max_1_size_n, MAX_COMM] >>
-  (Cases_on `perfect_power n 2` >> simp[]));
+  (Cases_on `perfect_power n 2` >> simp[])
+QED
 
 (* Obtain theorems *)
 val ulogM_steps_0 = save_thm("ulogM_steps_0",
@@ -907,9 +934,9 @@ val ulogM_steps_1 = save_thm("ulogM_steps_1",
      (6 + 6 * size n + 6 * size n ** 2)   by power_twoM_steps_upper
    = 9 + 8 * size n + 11 * size n ** 2    by arithmetic
 *)
-val ulogM_steps_upper = store_thm(
-  "ulogM_steps_upper",
-  ``!n. stepsOf (ulogM n) <= 9 + 8 * size n + 11 * (size n) ** 2``,
+Theorem ulogM_steps_upper:
+    !n. stepsOf (ulogM n) <= 9 + 8 * size n + 11 * (size n) ** 2
+Proof
   rpt strip_tac >>
   assume_tac ulogM_steps_thm >>
   last_x_assum (qspec_then `n` strip_assume_tac) >>
@@ -918,7 +945,8 @@ val ulogM_steps_upper = store_thm(
   `stepsOf (ulogM n) <= 1 + 2 * s + stepsOf (sizeM n) + stepsOf (power_twoM n)` by rw[] >>
   `stepsOf (sizeM n) <= 2 + 5 * s ** 2` by rw[sizeM_steps_upper, Abbr`s`] >>
   `stepsOf (power_twoM n) <= 6 + 6 * s + 6 * s ** 2` by rw[power_twoM_steps_upper, Abbr`s`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: stepsOf (ulogM n) <= 29 * (size n) ** 2 *)
 (* Proof:
@@ -927,9 +955,9 @@ val ulogM_steps_upper = store_thm(
    <= (9 + 8 + 11) * size n ** 2            by size_pos, MULT_POS
     = 28 * size n ** 2
 *)
-val ulogM_steps_bound = store_thm(
-  "ulogM_steps_bound",
-  ``!n. stepsOf (ulogM n) <= 28 * (size n) ** 2``,
+Theorem ulogM_steps_bound:
+    !n. stepsOf (ulogM n) <= 28 * (size n) ** 2
+Proof
   rpt strip_tac >>
   assume_tac ulogM_steps_upper >>
   last_x_assum (qspec_then `n` strip_assume_tac) >>
@@ -937,7 +965,8 @@ val ulogM_steps_bound = store_thm(
   `0 < s * s` by rw[MULT_POS, Abbr`s`] >>
   `s <= s * s` by rw[Abbr`s`] >>
   `s * s = s ** 2` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: (stepsOf o ulogM) IN O_poly 2 *)
 (* Proof:
@@ -946,11 +975,12 @@ val ulogM_steps_bound = store_thm(
    Note stepsOf (ulogM n) <= 28 * (size n) ** 2        by ulogM_steps_bound
    Take any h, set k = 28, the result follows.
 *)
-val ulogM_steps_O_poly = store_thm(
-  "ulogM_steps_O_poly",
-  ``(stepsOf o ulogM) IN O_poly 2``,
+Theorem ulogM_steps_O_poly:
+    (stepsOf o ulogM) IN O_poly 2
+Proof
   rw[O_poly_thm] >>
-  metis_tac[ulogM_steps_bound]);
+  metis_tac[ulogM_steps_bound]
+QED
 
 (* Theorem: (stepsOf o ulogM) IN big_O (\n. (ulog n) ** 2) *)
 (* Proof:
@@ -960,22 +990,24 @@ val ulogM_steps_O_poly = store_thm(
       = (\n. ulog n ** 2)                 by POLY_def, FUN_EQ_THM
    The result follows.
 *)
-val ulogM_steps_big_O = store_thm(
-  "ulogM_steps_big_O",
-  ``(stepsOf o ulogM) IN big_O (\n. (ulog n) ** 2)``,
+Theorem ulogM_steps_big_O:
+    (stepsOf o ulogM) IN big_O (\n. (ulog n) ** 2)
+Proof
   assume_tac ulogM_steps_O_poly >>
   `O_poly 2 = big_O (POLY 2 o ulog)` by rw[O_poly_eq_O_poly_ulog] >>
   `POLY 2 o ulog = \n. ulog n ** 2` by rw[FUN_EQ_THM, POLY_def] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (valueOf (ulogM n) = ulog n) /\
             (stepsOf o ulogM) IN big_O (\n. (ulog n) ** 2) *)
 (* Proof: by ulogM_value, ulogM_steps_big_O *)
-val ulogM_thm = store_thm(
-  "ulogM_thm",
-  ``!n. (valueOf (ulogM n) = ulog n) /\
-       (stepsOf o ulogM) IN big_O (\n. (ulog n) ** 2)``,
-  metis_tac[ulogM_value, ulogM_steps_big_O]);
+Theorem ulogM_thm:
+    !n. (valueOf (ulogM n) = ulog n) /\
+       (stepsOf o ulogM) IN big_O (\n. (ulog n) ** 2)
+Proof
+  metis_tac[ulogM_value, ulogM_steps_big_O]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

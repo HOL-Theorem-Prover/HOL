@@ -75,13 +75,12 @@ Definition S_SEM_def[nocompute]:
 End
 
 (* Lemma for deriving theorem S_SEM below *)
-val S_SEM_REPEAT =
- store_thm
-  ("S_SEM_REPEAT",
-   ``S_SEM v c (S_REPEAT r) =
+Theorem S_SEM_REPEAT:
+     S_SEM v c (S_REPEAT r) =
       S_SEM v c S_EMPTY \/
       ?v1 v2.
-       ~(v=[]) /\ (v = v1 <> v2) /\ S_SEM v1 c r /\ S_SEM v2 c (S_REPEAT r)``,
+       ~(v=[]) /\ (v = v1 <> v2) /\ S_SEM v1 c r /\ S_SEM v2 c (S_REPEAT r)
+Proof
     Induct_on `v`
      THEN RW_TAC std_ss [S_SEM_def]
      THENL
@@ -95,7 +94,8 @@ val S_SEM_REPEAT =
            THEN Q.EXISTS_TAC `h'` THEN Q.EXISTS_TAC `CONCAT t`
            THEN PROVE_TAC[],
           Q.EXISTS_TAC `v1::vlist`
-           THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def]]]);
+           THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def]]]
+QED
 
 
 (******************************************************************************
@@ -106,10 +106,8 @@ val S_SEM_REPEAT =
 * (see clause for ``S_SEM v (S_REPEAT r)``).
 * Theorem S_SEM gives LRM v1.1 version.
 ******************************************************************************)
-val S_SEM =
- store_thm
-  ("S_SEM",
-   ``(S_SEM v c (S_BOOL b) = CLOCK_TICK v c /\ B_SEM (ELEM v (LENGTH v - 1)) b)
+Theorem S_SEM:
+     (S_SEM v c (S_BOOL b) = CLOCK_TICK v c /\ B_SEM (ELEM v (LENGTH v - 1)) b)
      /\
      (S_SEM v c (S_CAT(r1,r2)) =
        ?v1 v2. (v = v1 <> v2) /\ S_SEM v1 c r1 /\ S_SEM v2 c r2)
@@ -133,8 +131,10 @@ val S_SEM =
          ~(v=[]) /\ (v = v1 <> v2) /\ S_SEM v1 c r /\ S_SEM v2 c (S_REPEAT r))
      /\
      (S_SEM v c (S_CLOCK(r,c1)) =
-         S_SEM v c1 r)``,
-   RW_TAC std_ss [S_SEM_def, GSYM S_SEM_REPEAT]);
+         S_SEM v c1 r)
+Proof
+   RW_TAC std_ss [S_SEM_def, GSYM S_SEM_REPEAT]
+QED
 
 
 (******************************************************************************
@@ -214,10 +214,8 @@ End
 * F_SEM_def is unfolded version for easy definition.
 * Theorem F_SEM gives version corresponding to LRM v1.1
 ******************************************************************************)
-val F_SEM =
- store_thm
-  ("F_SEM",
-   ``(F_SEM v c (F_NOT f) =
+Theorem F_SEM:
+     (F_SEM v c (F_NOT f) =
        ~(F_SEM (COMPLEMENT v) c f))
      /\
      (F_SEM v c (F_AND(f1,f2)) =
@@ -278,5 +276,7 @@ val F_SEM =
      /\
      (F_SEM v c (F_SUFFIX_IMP(r,f)) =
        !j :: LESS(LENGTH v).
-         S_SEM (SEL (COMPLEMENT v) (0,j)) c r ==> F_SEM (RESTN v j) c f)``,
-   RW_TAC std_ss [F_SEM_def]);
+         S_SEM (SEL (COMPLEMENT v) (0,j)) c r ==> F_SEM (RESTN v j) c f)
+Proof
+   RW_TAC std_ss [F_SEM_def]
+QED

@@ -481,7 +481,7 @@ End
    NaNs
    ------------------------------------------------------------------------ *)
 
-val () = Datatype`
+Datatype:
    fp_op =
      FP_Sqrt rounding (('t, 'w) float)
    | FP_Add rounding (('t, 'w) float) (('t, 'w) float)
@@ -489,7 +489,8 @@ val () = Datatype`
    | FP_Mul rounding (('t, 'w) float) (('t, 'w) float)
    | FP_Div rounding (('t, 'w) float) (('t, 'w) float)
    | FP_MulAdd rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)
-   | FP_MulSub rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)`
+   | FP_MulSub rounding (('t, 'w) float) (('t, 'w) float) (('t, 'w) float)
+End
 
 Definition float_some_qnan_def[nocompute]:
    float_some_qnan (fp_op : ('t, 'w) fp_op) =
@@ -751,7 +752,8 @@ End
    Some comparison operations
    ------------------------------------------------------------------------ *)
 
-val () = Datatype `float_compare = LT | EQ | GT | UN`
+Datatype:  float_compare = LT | EQ | GT | UN
+End
 
 Definition float_compare_def[nocompute]:
    float_compare (x: ('t, 'w) float) (y: ('t, 'w) float) =
@@ -876,11 +878,12 @@ val div_twopow =
    |> SIMP_RULE (srw_ss()) []
    |> Q.GENL [`n`, `x`, `u`]
 
-val div_le = Q.prove(
-   `!a b c. 0r < a ==> (b / a <= c / a <=> b <= c)`,
+Theorem div_le[local]:
+    !a b c. 0r < a ==> (b / a <= c / a <=> b <= c)
+Proof
    metis_tac [REAL_LE_LMUL, REAL_DIV_RMUL,
               REAL_POS_NZ, REAL_MUL_COMM]
-   )
+QED
 
 val tac =
    NTAC 2 strip_tac
@@ -889,13 +892,16 @@ val tac =
    \\ `2 < n` by decide_tac
    \\ lrw []
 
-val two_mod_not_one = Q.prove(
-   `!n. 0 < n ==> 2 MOD n <> 1`, tac)
+Theorem two_mod_not_one[local]:
+    !n. 0 < n ==> 2 MOD n <> 1
+Proof tac
+QED
 
-val two_mod_eq_zero = Q.prove(
-   `!n. 0 < n ==> (2 MOD n = 0 <=> n = 1 \/ n = 2)`,
+Theorem two_mod_eq_zero[local]:
+    !n. 0 < n ==> (2 MOD n = 0 <=> n = 1 \/ n = 2)
+Proof
    tac
-   )
+QED
 
 (* |- !c a. c <> 0 ==> (c * a / c = a) *)
 val mul_cancel =
@@ -905,25 +911,31 @@ val mul_cancel =
    |> SIMP_RULE (srw_ss()) []
    |> Q.GENL [`a`, `c`]
 
-val ge2 = Q.prove(
-   `dimindex(:'a) <> 1 ==> 2 <= dimindex (:'a)`,
-   rw [DECIDE ``0 < a /\ a <> 1 ==> 2n <= a``])
+Theorem ge2[local]:
+    dimindex(:'a) <> 1 ==> 2 <= dimindex (:'a)
+Proof
+   rw [DECIDE ``0 < a /\ a <> 1 ==> 2n <= a``]
+QED
 
-val ge2b = Q.prove(
-   `!n. 2n <= n ==> 1 <= 2n ** (n - 1) - 1`,
+Theorem ge2b[local]:
+    !n. 2n <= n ==> 1 <= 2n ** (n - 1) - 1
+Proof
    REPEAT strip_tac
    \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD
-   \\ simp [arithmeticTheory.EXP_ADD, DECIDE ``0 < n ==> 1n <= 2 * n - 1``])
+   \\ simp [arithmeticTheory.EXP_ADD, DECIDE ``0 < n ==> 1n <= 2 * n - 1``]
+QED
 
-val ge2c = Q.prove(
-   `!n m. 1r <= n /\ 2 < m ==> 2 < n * m`,
+Theorem ge2c[local]:
+    !n m. 1r <= n /\ 2 < m ==> 2 < n * m
+Proof
    rrw [GSYM REAL_LT_LDIV_EQ]
    \\ `2r / m < 1` by (match_mp_tac REAL_LT_1 \\ simp [])
    \\ METIS_TAC [REAL_LTE_TRANS]
-   )
+QED
 
-val ge1_pow = Q.prove(
-   `!a b. 1 <= a /\ 1n <= b ==> a <= a pow b`,
+Theorem ge1_pow[local]:
+    !a b. 1 <= a /\ 1n <= b ==> a <= a pow b
+Proof
    Induct_on `b`
    \\ rw [pow]
    \\ once_rewrite_tac [REAL_MUL_COMM]
@@ -935,7 +947,7 @@ val ge1_pow = Q.prove(
    \\ simp []
    \\ `1 <= b` by decide_tac
    \\ metis_tac [REAL_LE_TRANS]
-   )
+QED
 
 (* |- !n x. 1 < x /\ 1 < n ==> x < x pow n *)
 val gt1_pow =
@@ -950,34 +962,37 @@ val prod_ge2 =
    |> SIMP_RULE (srw_ss()) []
    |> Q.GENL [`a`, `b`]
 
-val le1 = Q.prove(
-   `!x y. 0 < y /\ x <= y ==> x / y <= 1r`,
+Theorem le1[local]:
+    !x y. 0 < y /\ x <= y ==> x / y <= 1r
+Proof
    REPEAT STRIP_TAC
    \\ Cases_on `x = y`
    \\ ASM_SIMP_TAC bool_ss
         [REAL_LE_REFL, REAL_DIV_REFL,
          REAL_POS_NZ]
    \\ ASM_SIMP_TAC bool_ss [REAL_LE_LDIV_EQ, REAL_MUL_LID]
-   )
+QED
 
 Theorem le2: !n m. 2r <= n /\ 2 <= m ==> 2 <= n * m
 Proof rrw [prod_ge2]
 QED
 
-val ge4 = Q.prove(
-   `!n. n <> 0 ==> 4n <= 2 EXP n * 2`,
+Theorem ge4[local]:
+    !n. n <> 0 ==> 4n <= 2 EXP n * 2
+Proof
    Cases
    \\ simp [arithmeticTheory.EXP]
-   )
+QED
 
-val ge2d = Q.prove(
-   `!n m. 2r <= n /\ 2 <= m ==> 2 < n * m`,
+Theorem ge2d[local]:
+    !n m. 2r <= n /\ 2 <= m ==> 2 < n * m
+Proof
    rrw [GSYM REAL_LT_LDIV_EQ]
    \\ `2r / m <= 1`
    by (match_mp_tac le1 \\ ASM_SIMP_TAC (srw_ss()++realSimps.REAL_ARITH_ss) [])
    \\ imp_res_tac (REAL_ARITH ``a <= 1 ==> a < 2r``)
    \\ METIS_TAC [REAL_LTE_TRANS]
-   )
+QED
 
 (* |- !b. 0 < w2n b <=> b <> 0w *)
 val word_lt0 =
@@ -986,17 +1001,19 @@ val word_lt0 =
    |> REWRITE_RULE [wordsTheory.word_0_n2w, wordsTheory.WORD_LO_word_0]
    |> GSYM
 
-val word_ge1 = Q.prove(
-   `!x. x <> 0w ==> 1 <= w2n x`,
+Theorem word_ge1[local]:
+    !x. x <> 0w ==> 1 <= w2n x
+Proof
    simp [GSYM word_lt0]
-   )
+QED
 
-val not_max_suc_lt_dimword = Q.prove(
-   `!a:'a word. a <> -1w ==> w2n a + 1 < 2 ** dimindex(:'a)`,
+Theorem not_max_suc_lt_dimword[local]:
+    !a:'a word. a <> -1w ==> w2n a + 1 < 2 ** dimindex(:'a)
+Proof
    Cases
    \\ lrw [wordsTheory.word_eq_n2w, bitTheory.MOD_2EXP_MAX_def,
            bitTheory.MOD_2EXP_def, GSYM wordsTheory.dimword_def]
-   )
+QED
 
 (* |- !a. a <> 0w ==> 2 <= 2 pow w2n a *)
 val pow_ge2 =
@@ -1005,11 +1022,12 @@ val pow_ge2 =
    |> SIMP_RULE (srw_ss()) [DECIDE ``1n <= n <=> 0 < n``, word_lt0]
    |> GEN_ALL
 
-val mult_id = Q.prove(
-  `!a b. 1 < a ==> ((a * b = a) = (b = 1n))`,
+Theorem mult_id[local]:
+   !a b. 1 < a ==> ((a * b = a) = (b = 1n))
+Proof
   Induct_on `b`
   \\ lrw [arithmeticTheory.MULT_CLAUSES]
-  )
+QED
 
 (* |- !x y. 1 <= y /\ 0 < x ==> x <= x * y *)
 val le_mult =
@@ -1040,8 +1058,9 @@ val gt_mult =
                          REAL_DIV_REFL]
    |> Q.GENL [`x`, `y`]
 
-val exp_id = Q.prove(
-  `!a b. 1 < a ==> ((a EXP b = a) = (b = 1))`,
+Theorem exp_id[local]:
+   !a b. 1 < a ==> ((a EXP b = a) = (b = 1))
+Proof
   REPEAT strip_tac
   \\ Cases_on `b = 0`
   >- lrw [arithmeticTheory.EXP]
@@ -1051,13 +1070,15 @@ val exp_id = Q.prove(
   \\ imp_res_tac arithmeticTheory.LESS_ADD
   \\ pop_assum kall_tac
   \\ pop_assum (SUBST1_TAC o REWRITE_RULE [GSYM arithmeticTheory.ADD1] o SYM)
-  \\ lrw [arithmeticTheory.EXP, mult_id])
+  \\ lrw [arithmeticTheory.EXP, mult_id]
+QED
 
-val sub_rat_same_base = Q.prove(
-   `!a b d. 0r < d ==> (a / d - b / d = (a - b) / d)`,
+Theorem sub_rat_same_base[local]:
+    !a b d. 0r < d ==> (a / d - b / d = (a - b) / d)
+Proof
    rrw [REAL_EQ_RDIV_EQ, REAL_SUB_RDISTRIB,
         REAL_DIV_RMUL]
-   )
+QED
 
 (* |- !x. 0 <= x ==> (abs x = x) *)
 val gt0_abs =
@@ -1093,19 +1114,21 @@ val sign_inconsistent =
                                          ~(x <> 1w /\ x <> 0w)”
 
 
-val sign_neq = Q.prove(
-   `!x. ~x <> x: word1`,
+Theorem sign_neq[local]:
+    !x. ~x <> x: word1
+Proof
    wordsLib.Cases_word_value
    \\ simp []
-   )
+QED
 
-val lem = Q.prove(
-  `(1w #>> 1 <> 0w : 'a word) /\ word_msb (1w : 'a word #>> 1)`,
+Theorem lem[local]:
+   (1w #>> 1 <> 0w : 'a word) /\ word_msb (1w : 'a word #>> 1)
+Proof
   simp_tac (srw_ss()++wordsLib.WORD_BIT_EQ_ss) []
   \\ conj_tac
   >| [qexists_tac `dimindex(:'a) - 1`, all_tac]
   \\ simp [DECIDE ``0n < n ==> (n - 1 + 1 = n)``, wordsTheory.word_index]
-  )
+QED
 
 Theorem some_nan_components[local]:
    !fp_op.
@@ -1364,15 +1387,17 @@ Proof
    simp[DECIDE “x <= 1n <=> (x = 1) \/ (x = 0)”]
 QED
 
-val lem1 = Q.prove(
-   `0w <+ (-2w:'a word) <=> (dimindex(:'a) <> 1)`,
+Theorem lem1[local]:
+    0w <+ (-2w:'a word) <=> (dimindex(:'a) <> 1)
+Proof
    once_rewrite_tac [wordsTheory.WORD_LESS_NEG_RIGHT]
    \\ simp [two_mod_eq_zero, wordsTheory.dimword_def, exp_id,
             DECIDE ``0 < n ==> n <> 0n``]
-   )
+QED
 
-val lem2 = Q.prove(
-   `dimindex(:'a) <> 1 ==> -2w <+ (-1w:'a word)`,
+Theorem lem2[local]:
+    dimindex(:'a) <> 1 ==> -2w <+ (-1w:'a word)
+Proof
    once_rewrite_tac [wordsTheory.WORD_LESS_NEG_RIGHT]
    \\ simp [two_mod_eq_zero, wordsTheory.dimword_def, exp_id,
             DECIDE ``0 < n ==> n <> 0n``, wordsTheory.word_lo_n2w]
@@ -1383,7 +1408,7 @@ val lem2 = Q.prove(
          |> Q.SPECL [`1`, `dimindex(:'a)`]
          |> numLib.REDUCE_RULE)
    \\ lrw []
-   )
+QED
 
 val tac =
    tac
@@ -1584,9 +1609,11 @@ Theorem neg_ulp:
 Proof simp [float_to_real_negate, ulp]
 QED
 
-val ULP_gt0 = Q.prove(
-   `!e. 0 < ULP (e:'w word, (:'t))`,
-   rw [ULP_def, REAL_LT_RDIV_0])
+Theorem ULP_gt0[local]:
+    !e. 0 < ULP (e:'w word, (:'t))
+Proof
+   rw [ULP_def, REAL_LT_RDIV_0]
+QED
 
 val ulp_gt0 = (REWRITE_RULE [GSYM ulp_def] o Q.SPEC `0w`) ULP_gt0
 
@@ -1738,17 +1765,19 @@ Theorem pos_subnormal[local]:
 Proof rrw [REAL_LE_MUL]
 QED
 
-val pos_normal = Q.prove(
-   `!a b c n. 0 <= 2 pow a / 2 pow b * (1 + &n / 2 pow c)`,
+Theorem pos_normal[local]:
+    !a b c n. 0 <= 2 pow a / 2 pow b * (1 + &n / 2 pow c)
+Proof
    rw [REAL_LE_DIV, REAL_LE_MUL,
        REAL_ARITH ``0r <= n ==> 0 <= 1 + n``]
-   )
+QED
 
-val pos_normal2 = Q.prove(
-   `!a b c n. 0 <= 2 pow a / 2 pow b * (&n / 2 pow c)`,
+Theorem pos_normal2[local]:
+    !a b c n. 0 <= 2 pow a / 2 pow b * (&n / 2 pow c)
+Proof
    rw [REAL_LE_DIV, REAL_LE_MUL,
        REAL_ARITH ``0r <= n ==> 0 <= 1 + n``]
-   )
+QED
 
 val thms =
    List.map REAL_ARITH
@@ -1758,10 +1787,11 @@ val thms =
        ``a <= b /\ 0 <= c /\ 0 <= d ==> a <= b + c + d: real``,
        ``a <= b /\ 0 <= c /\ 0 <= d /\ 0 <= e ==> a <= b + c + (d + e): real``]
 
-val diff_sign_ULP = Q.prove(
-   `!x: ('t, 'w) float y: ('t, 'w) float.
+Theorem diff_sign_ULP[local]:
+    !x: ('t, 'w) float y: ('t, 'w) float.
         ~(float_is_zero x /\ float_is_zero y) /\ x.Sign <> y.Sign ==>
-        ULP (x.Exponent,(:'t)) <= abs (float_to_real x - float_to_real y)`,
+        ULP (x.Exponent,(:'t)) <= abs (float_to_real x - float_to_real y)
+Proof
    NTAC 2 strip_tac
    \\ wordsLib.Cases_on_word_value `x.Sign`
    \\ wordsLib.Cases_on_word_value `y.Sign`
@@ -1777,7 +1807,7 @@ val diff_sign_ULP = Q.prove(
           fcpTheory.DIMINDEX_GE_1, REAL_LE_DIV, POW_2_LE1,
           cancel_rwts, DECIDE ``n <> 0n ==> 1 <= 2 * n``,
           REAL_ARITH ``2 <= a ==> 1r <= a``]
-   )
+QED
 
 Theorem diff_sign_ULP_gt[local]:
    !x: ('t, 'w) float y: ('t, 'w) float.
@@ -1880,10 +1910,12 @@ Proof
    wordsLib.Cases_word_value \\ rrw []
 QED
 
-val abs_diff2 = Q.prove(
-   `!s:word1 a b.
-       b < a ==> (abs (-1 pow w2n s * a - -1 pow w2n s * b) = (a - b))`,
-   wordsLib.Cases_word_value \\ rrw [])
+Theorem abs_diff2[local]:
+    !s:word1 a b.
+       b < a ==> (abs (-1 pow w2n s * a - -1 pow w2n s * b) = (a - b))
+Proof
+   wordsLib.Cases_word_value \\ rrw []
+QED
 
 Theorem abs_diff1a[local] =
    abs_diff1
@@ -2245,12 +2277,13 @@ Proof
    \\ tac7
 QED
 
-val lem = Q.prove(
-   `!a b m. 2n <= a /\ 2 <= b /\ 1 <= m ==> a * b + b < 2 * (m * a * b)`,
+Theorem lem[local]:
+    !a b m. 2n <= a /\ 2 <= b /\ 1 <= m ==> a * b + b < 2 * (m * a * b)
+Proof
    REPEAT strip_tac
    \\ imp_res_tac arithmeticTheory.LESS_EQUAL_ADD
    \\ simp [arithmeticTheory.LEFT_ADD_DISTRIB]
-   )
+QED
 
 Theorem diff_exponent_ULP_gt0[local]:
   !x: ('t, 'w) float y: ('t, 'w) float.
@@ -2280,10 +2313,11 @@ Proof
             word_ge1]
 QED
 
-val lem = Q.prove(
-   `!a b. 2 <= a /\ 4n <= b ==> 2 * a + 2 < a * b`,
+Theorem lem[local]:
+    !a b. 2 <= a /\ 4n <= b ==> 2 * a + 2 < a * b
+Proof
    not_next_tac
-   )
+QED
 
 Theorem diff_exponent_ULP_gt01[local]:
   !x: ('t, 'w) float y: ('t, 'w) float.
@@ -2321,15 +2355,17 @@ Proof
             fcpTheory.DIMINDEX_GE_1, exp_ge4]
 QED
 
-val lem = Q.prove(
-   `!a b c. a < b /\ 2n <= c ==> 2 * a < b * c`,
+Theorem lem[local]:
+    !a b c. a < b /\ 2n <= c ==> 2 * a < b * c
+Proof
    not_next_tac
-   )
+QED
 
-val lem2 = Q.prove(
-   `!a b c. a < b /\ 1n <= c ==> a + b < 2 * (c * b)`,
+Theorem lem2[local]:
+    !a b c. a < b /\ 1n <= c ==> a + b < 2 * (c * b)
+Proof
    not_next_tac
-   )
+QED
 
 Theorem float_to_real_lt_exponent_mono[local]:
   !x: ('t, 'w) float y: ('t, 'w) float.
@@ -2425,10 +2461,11 @@ Proof
    \\ tac2 abs_diff2d
 QED
 
-val diff_ge1 = Q.prove(
-   `!a b. 1 <= abs (&a - &b) <=> &a <> (&b: real)`,
+Theorem diff_ge1[local]:
+    !a b. 1 <= abs (&a - &b) <=> &a <> (&b: real)
+Proof
    lrw [REAL_SUB, ABS_NEG, ABS_N]
-   )
+QED
 
 Theorem diff_significand_ULP[local]:
     !x: ('t, 'w) float y: ('t, 'w) float.
@@ -2442,30 +2479,34 @@ QED
 
 (* - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  *)
 
-val ULP_same = Q.prove(
-   `!x y.
+Theorem ULP_same[local]:
+    !x y.
       (x = y) ==>
-      ~(ULP (x.Exponent, (:'t)) <= abs (float_to_real x - float_to_real y))`,
-   rrw [ULP_gt0, REAL_NOT_LE])
+      ~(ULP (x.Exponent, (:'t)) <= abs (float_to_real x - float_to_real y))
+Proof
+   rrw [ULP_gt0, REAL_NOT_LE]
+QED
 
-val diff_sign_neq = Q.prove(
-   `!x: ('t, 'w) float y: ('t, 'w) float.
+Theorem diff_sign_neq[local]:
+    !x: ('t, 'w) float y: ('t, 'w) float.
         ~(float_is_zero x /\ float_is_zero y) /\ x.Sign <> y.Sign ==>
-        float_to_real x <> float_to_real y`,
+        float_to_real x <> float_to_real y
+Proof
    metis_tac [diff_sign_ULP, ULP_same]
-   )
+QED
 
-val diff_exponent_neq = Q.prove(
-   `!x: ('t, 'w) float y: ('t, 'w) float.
+Theorem diff_exponent_neq[local]:
+    !x: ('t, 'w) float y: ('t, 'w) float.
         (x.Sign = y.Sign) /\ x.Exponent <> y.Exponent ==>
-        float_to_real x <> float_to_real y`,
+        float_to_real x <> float_to_real y
+Proof
    REPEAT strip_tac
    \\ Cases_on `exponent_boundary y x`
    >- (fs []
        \\ imp_res_tac diff_exponent_boundary
        \\ rfs [ULP_gt0, REAL_POS_NZ])
    \\metis_tac [diff_exponent_ULP, ULP_same]
-   )
+QED
 
 Theorem float_to_real_eq:
     !x: ('t, 'w) float y: ('t, 'w) float.
@@ -2787,23 +2828,25 @@ Proof
             nobias_denormal_lt_1]
 QED
 
-val exponent_boundary_not_float_zero = Q.prove(
-   `!x y. exponent_boundary x y ==> ~float_is_zero y`,
+Theorem exponent_boundary_not_float_zero[local]:
+    !x y. exponent_boundary x y ==> ~float_is_zero y
+Proof
    rw [exponent_boundary_def, float_is_zero]
    \\ strip_tac
    \\ fs []
-   )
+QED
 
-val ULP_lt_float_to_real = Q.prove(
-   `!y:('t,'w) float.
-       ~float_is_zero y ==> ULP (y.Exponent,(:'t)) <= abs (float_to_real y)`,
+Theorem ULP_lt_float_to_real[local]:
+    !y:('t,'w) float.
+       ~float_is_zero y ==> ULP (y.Exponent,(:'t)) <= abs (float_to_real y)
+Proof
    rw [ULP_def, float_to_real_def, abs_float_value, abs_significand,
        ABS_MUL, ABS_DIV, ABS_N,
        gt0_abs, REAL_LE_LDIV_EQ, float_is_zero, GSYM word_lt0]
    \\ simp [POW_ADD, cancel_rwt, cancel_rwts]
    \\ simp [GSYM REAL_LDISTRIB, POW_2_LE1,
             le_mult, REAL_ARITH ``1r <= x /\ 0 <= n ==> 1 <= x + n``]
-   )
+QED
 
 (* |- !y. ~float_is_zero y ==> ulp (:'t # 'w) <= abs (float_to_real y) *)
 val ulp_lt_float_to_real =
@@ -2919,20 +2962,22 @@ val exponent_boundary_exp_gt1 = Q.prove(
    )
 *)
 
-val word_lsb_plus_1 = Q.prove(
-   `!a. word_lsb (a + 1w) = ~word_lsb a`,
+Theorem word_lsb_plus_1[local]:
+    !a. word_lsb (a + 1w) = ~word_lsb a
+Proof
    Cases
    \\ simp [wordsTheory.word_add_n2w, arithmeticTheory.ODD,
             GSYM arithmeticTheory.ADD1]
-   )
+QED
 
-val word_lsb_minus_1 = Q.prove(
-   `!a. word_lsb (a - 1w) = ~word_lsb a`,
+Theorem word_lsb_minus_1[local]:
+    !a. word_lsb (a - 1w) = ~word_lsb a
+Proof
    Cases
    \\ Cases_on `n`
    \\ simp [GSYM wordsTheory.word_add_n2w, arithmeticTheory.ODD,
             arithmeticTheory.ADD1]
-   )
+QED
 
 val tac =
    qpat_x_assum `!a. q \/ t` (qspec_then `y` strip_assume_tac)
@@ -3076,12 +3121,13 @@ QED
 val not_one_lem = wordsLib.WORD_DECIDE ``(x:'a word) <> 1w ==> w2n x <> 1``
 val pow_add1 = REWRITE_RULE [arithmeticTheory.ADD1] pow
 
-val exponent_boundary_ULPs = Q.prove(
-   `!x y. exponent_boundary x y ==>
-          (ULP (y.Exponent, (:'t)) = 2 * ULP (x.Exponent, (:'t)))`,
+Theorem exponent_boundary_ULPs[local]:
+    !x y. exponent_boundary x y ==>
+          (ULP (y.Exponent, (:'t)) = 2 * ULP (x.Exponent, (:'t)))
+Proof
    srw_tac [] [exponent_boundary_def, ULP_def, pow_add1, mult_ratr]
    \\ fs [not_one_lem]
-   )
+QED
 
 Theorem round_roundTiesToEven0:
     !y: ('t, 'w) float x r.
@@ -3299,11 +3345,12 @@ Proof
   first_x_assum $ qspec_then ‘POS0’ mp_tac >> gs[REAL_ABS_LE0]
 QED
 
-val float_to_real_min_pos = Q.prove(
-   `!r: ('t, 'w) float.
+Theorem float_to_real_min_pos[local]:
+    !r: ('t, 'w) float.
        (abs (float_to_real r) = ulp (:'t # 'w)) <=>
        r IN {float_plus_min (:'t # 'w);
-             float_negate (float_plus_min (:'t # 'w))}`,
+             float_negate (float_plus_min (:'t # 'w))}
+Proof
    rw [float_plus_min_def, float_negate_def, ulp_def, ULP_def,
        float_to_real_def, float_component_equality, abs_float_value,
        abs_significand, ABS_MUL, ABS_DIV,
@@ -3326,7 +3373,8 @@ val float_to_real_min_pos = Q.prove(
       \\ simp [REAL_OF_NUM_POW, pow_ge2, exp_ge2,
                DECIDE ``2n <= a ==> 2 <= b + a``,
                fcpTheory.DIMINDEX_GE_1 ]
-   ])
+   ]
+QED
 
 val compare_with_zero_tac =
    qpat_x_assum `!b. float_is_finite b  ==> p`
@@ -3696,8 +3744,9 @@ Proof
    tac [REAL_INV_1OVER, mult_ratl, arithmeticTheory.EXP]
 QED
 
-val largest_top_lem = Q.prove(
-  `w2n (n2w (UINT_MAX (:'w)) + -1w : 'w word) = UINT_MAX (:'w) - 1`,
+Theorem largest_top_lem[local]:
+   w2n (n2w (UINT_MAX (:'w)) + -1w : 'w word) = UINT_MAX (:'w) - 1
+Proof
   simp_tac arith_ss
      [wordsTheory.WORD_LITERAL_ADD
       |> CONJUNCT2
@@ -3706,11 +3755,13 @@ val largest_top_lem = Q.prove(
                            DECIDE ``0n < x ==> 1 <= x``],
       wordsTheory.w2n_n2w, wordsTheory.BOUND_ORDER,
       DECIDE ``a < b ==> (a - 1n < b)``]
-  )
+QED
 
-val largest_top_lem2 = Q.prove(
-  `&UINT_MAX (:'t) + 1 = &dimword (:'t) : real`,
-  simp [wordsTheory.UINT_MAX_def, DECIDE ``1n < n ==> (n - 1 + 1 = n)``])
+Theorem largest_top_lem2[local]:
+   &UINT_MAX (:'t) + 1 = &dimword (:'t) : real
+Proof
+  simp [wordsTheory.UINT_MAX_def, DECIDE ``1n < n ==> (n - 1 + 1 = n)``]
+QED
 
 Theorem largest_is_top:
    1 < dimindex(:'w) ==>

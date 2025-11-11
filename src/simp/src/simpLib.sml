@@ -404,7 +404,7 @@ fun getlimit (SS ss) = #limit ss
      val rel = rel_of_congrule th
      val PREORDER(_,trans,refl) = find_relation rel rels
    in
-     CONGPROC refl trans th
+     QCHANGED_CONV o CONGPROC refl trans th
    end
  in
    TRAVRULES {relations = rels,

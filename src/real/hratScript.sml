@@ -41,11 +41,13 @@ val UNSUCK_TAC =
 (* Definitions of operations on representatives                              *)
 (*---------------------------------------------------------------------------*)
 
-val trat_1 = new_definition("trat_1",
-  “trat_1 = (0,0)”);
+Definition trat_1[nocompute]:
+  trat_1 = (0,0)
+End
 
-val trat_inv = new_definition("trat_inv",
-  “trat_inv (x:num,(y:num)) = (y,x)”);
+Definition trat_inv[nocompute]:
+  trat_inv (x:num,(y:num)) = (y,x)
+End
 
 val trat_add = new_infixl_definition("trat_add",
   “trat_add (x,y) (x',y') =
@@ -58,19 +60,19 @@ val trat_mul = new_infixl_definition("trat_mul",
     (PRE((SUC x)*(SUC x')),
      PRE((SUC y)*(SUC y')))”, 600);
 
-val trat_sucint = new_recursive_definition
-  {name = "trat_sucint",
-   def = “(trat_sucint 0 = trat_1) /\
-              (trat_sucint (SUC n) = (trat_sucint n) trat_add trat_1)”,
-   rec_axiom = num_Axiom}
+Definition trat_sucint[nocompute]:
+  (trat_sucint 0 = trat_1) /\
+  (trat_sucint (SUC n) = (trat_sucint n) trat_add trat_1)
+End
 
 (*---------------------------------------------------------------------------*)
 (* Definition of the equivalence relation, and proof that it *is* one        *)
 (*---------------------------------------------------------------------------*)
 
-val trat_eq = new_definition("trat_eq",
-  “trat_eq (x,y) (x',y') =
-    (SUC x * SUC y' = SUC x' * SUC y)”);
+Definition trat_eq[nocompute]:
+  trat_eq (x,y) (x',y') =
+    (SUC x * SUC y' = SUC x' * SUC y)
+End
 val _ = temp_set_fixity "trat_eq" (Infix(NONASSOC, 450))
 
 Theorem TRAT_EQ_REFL:
@@ -425,4 +427,3 @@ Theorem HRAT_SUCINT:
 Proof
   MATCH_ACCEPT_TAC HRAT_SUCINT
 QED
-

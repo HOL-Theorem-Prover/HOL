@@ -170,16 +170,18 @@ Proof
                             STRONG_EQUIV_equivalence]
 QED
 
-val STRONG_BISIM_SUBSET_STRONG_EQUIV = store_thm (
-   "STRONG_BISIM_SUBSET_STRONG_EQUIV",
-  ``!Bsm. STRONG_BISIM Bsm ==> Bsm RSUBSET STRONG_EQUIV``,
-    PROVE_TAC [RSUBSET, STRONG_EQUIV]);
+Theorem STRONG_BISIM_SUBSET_STRONG_EQUIV:
+    !Bsm. STRONG_BISIM Bsm ==> Bsm RSUBSET STRONG_EQUIV
+Proof
+    PROVE_TAC [RSUBSET, STRONG_EQUIV]
+QED
 
 (* Syntactic equivalence implies strong equivalence. *)
-val EQUAL_IMP_STRONG_EQUIV = store_thm (
-   "EQUAL_IMP_STRONG_EQUIV", ``!E E'. (E = E') ==> STRONG_EQUIV E E'``,
+Theorem EQUAL_IMP_STRONG_EQUIV:   !E E'. (E = E') ==> STRONG_EQUIV E E'
+Proof
     REPEAT STRIP_TAC
- >> PURE_ASM_REWRITE_TAC [STRONG_EQUIV_REFL]);
+ >> PURE_ASM_REWRITE_TAC [STRONG_EQUIV_REFL]
+QED
 
 (* Prop. 4, page 91: strong equivalence satisfies property [*] *)
 Theorem PROPERTY_STAR :
@@ -191,23 +193,25 @@ Proof
 QED
 
 (* Half versions of PROPERTY_STAR *)
-val PROPERTY_STAR_LEFT = store_thm (
-   "PROPERTY_STAR_LEFT",
-  ``!E E'. STRONG_EQUIV E E' ==>
-        !u E1. TRANS E u E1 ==> ?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2``,
-    PROVE_TAC [PROPERTY_STAR]);
+Theorem PROPERTY_STAR_LEFT:
+    !E E'. STRONG_EQUIV E E' ==>
+        !u E1. TRANS E u E1 ==> ?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2
+Proof
+    PROVE_TAC [PROPERTY_STAR]
+QED
 
-val PROPERTY_STAR_RIGHT = store_thm (
-   "PROPERTY_STAR_RIGHT",
-  ``!E E'. STRONG_EQUIV E E' ==>
-        !u E2. TRANS E' u E2 ==> ?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2``,
-    PROVE_TAC [PROPERTY_STAR]);
+Theorem PROPERTY_STAR_RIGHT:
+    !E E'. STRONG_EQUIV E E' ==>
+        !u E2. TRANS E' u E2 ==> ?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2
+Proof
+    PROVE_TAC [PROPERTY_STAR]
+QED
 
 (* Strong equivalence is substitutive under prefix operator. *)
-val STRONG_EQUIV_SUBST_PREFIX = store_thm (
-   "STRONG_EQUIV_SUBST_PREFIX",
-      ``!E E'.
-         STRONG_EQUIV E E' ==> !u. STRONG_EQUIV (prefix u E) (prefix u E')``,
+Theorem STRONG_EQUIV_SUBST_PREFIX:
+        !E E'.
+         STRONG_EQUIV E E' ==> !u. STRONG_EQUIV (prefix u E) (prefix u E')
+Proof
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC
       [SPECL [``prefix (u :'a Action) E``, ``prefix (u :'a Action) E'``] PROPERTY_STAR]
@@ -215,14 +219,15 @@ val STRONG_EQUIV_SUBST_PREFIX = store_thm (
  >| [ EXISTS_TAC ``E' :'a CCS``,
       EXISTS_TAC ``E :'a CCS``]
  >> IMP_RES_TAC TRANS_PREFIX
- >> ASM_REWRITE_TAC [PREFIX]);
+ >> ASM_REWRITE_TAC [PREFIX]
+QED
 
 (* Strong equivalence is preserved by binary summation. *)
-val STRONG_EQUIV_PRESD_BY_SUM = store_thm (
-   "STRONG_EQUIV_PRESD_BY_SUM",
-      ``!E1 E1' E2 E2'.
+Theorem STRONG_EQUIV_PRESD_BY_SUM:
+        !E1 E1' E2 E2'.
          STRONG_EQUIV E1 E1' /\ STRONG_EQUIV E2 E2' ==>
-         STRONG_EQUIV (sum E1 E2) (sum E1' E2')``,
+         STRONG_EQUIV (sum E1 E2) (sum E1' E2')
+Proof
     REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [PROPERTY_STAR]
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
@@ -239,7 +244,8 @@ val STRONG_EQUIV_PRESD_BY_SUM = store_thm (
       EXISTS_TAC ``E1'' :'a CCS`` \\
       ASM_REWRITE_TAC []
       >| [ MATCH_MP_TAC SUM1, MATCH_MP_TAC SUM2] \\
-      ASM_REWRITE_TAC [] ]);
+      ASM_REWRITE_TAC [] ]
+QED
 
 (* Strong equivalence is substitutive under summation operator on the right.
    |- !E E'. STRONG_EQUIV E E' ==> (!E''. STRONG_EQUIV (sum E E'') (sum E' E''))
@@ -272,11 +278,11 @@ val STRONG_EQUIV_SUBST_SUM_L = save_thm (
                        (ASSUME ``STRONG_EQUIV E E'``))));
 
 (* Strong equivalence is preserved by parallel composition. *)
-val STRONG_EQUIV_PRESD_BY_PAR = store_thm (
-   "STRONG_EQUIV_PRESD_BY_PAR",
-      ``!E1 E1' E2 E2'.
+Theorem STRONG_EQUIV_PRESD_BY_PAR:
+        !E1 E1' E2 E2'.
          STRONG_EQUIV E1 E1' /\ STRONG_EQUIV E2 E2' ==>
-         STRONG_EQUIV (par E1 E2) (par E1' E2')``,
+         STRONG_EQUIV (par E1 E2) (par E1' E2')
+Proof
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC
@@ -378,7 +384,8 @@ val STRONG_EQUIV_PRESD_BY_PAR = store_thm (
              ASM_REWRITE_TAC [],
              (* goal 2.2.3.2 (of 2) *)
              take [`E1'''`, `E1''`, `E1''''`, `E2'''`] \\
-             ASM_REWRITE_TAC [] ] ] ] ]);
+             ASM_REWRITE_TAC [] ] ] ] ]
+QED
 
 (* Strong equivalence is substitutive under parallel operator on the right:
    |- !E E'. STRONG_EQUIV E E' ==> (!E''. STRONG_EQUIV (par E E'') (par E' E''))
@@ -411,11 +418,11 @@ val STRONG_EQUIV_SUBST_PAR_L = save_thm (
                    (ASSUME ``STRONG_EQUIV E E'``)))))))));
 
 (* Strong equivalence is substitutive under restriction operator. *)
-val STRONG_EQUIV_SUBST_RESTR = store_thm (
-   "STRONG_EQUIV_SUBST_RESTR",
-      ``!E E'.
+Theorem STRONG_EQUIV_SUBST_RESTR:
+        !E E'.
          STRONG_EQUIV E E' ==>
-         (!L. STRONG_EQUIV (restr L E) (restr L E'))``,
+         (!L. STRONG_EQUIV (restr L E) (restr L E'))
+Proof
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC ``\x y. ?E1 E2 L'. (x = restr L' E1) /\ (y = restr L' E2) /\
@@ -490,14 +497,15 @@ val STRONG_EQUIV_SUBST_RESTR = store_thm (
                                            (ASSUME ``TRANS E1 u E1'``)],
              (* goal 2.2.2.2 (of 2) *)
              take [`E1'`, `E''''`, `L'`] \\
-             ASM_REWRITE_TAC [] ] ] ] ]);
+             ASM_REWRITE_TAC [] ] ] ] ]
+QED
 
 (* Strong equivalence is substitutive under relabelling operator. *)
-val STRONG_EQUIV_SUBST_RELAB = store_thm (
-   "STRONG_EQUIV_SUBST_RELAB",
-      ``!E E'.
+Theorem STRONG_EQUIV_SUBST_RELAB:
+        !E E'.
          STRONG_EQUIV E E' ==>
-         (!rf. STRONG_EQUIV (relab E rf) (relab E' rf))``,
+         (!rf. STRONG_EQUIV (relab E rf) (relab E' rf))
+Proof
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC ``\x y. ?E1 E2 rf'. (x = relab E1 rf') /\ (y = relab E2 rf') /\
@@ -540,7 +548,8 @@ val STRONG_EQUIV_SUBST_RELAB = store_thm (
           PURE_ONCE_ASM_REWRITE_TAC [],
           (* goal 2.2.2 (of 2) *)
           take [`E1'`, `E''''`, `rf'`] \\
-          ASM_REWRITE_TAC [] ] ] ]);
+          ASM_REWRITE_TAC [] ] ] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -587,9 +596,9 @@ val STRONG_EQUIV' = new_definition (
                (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``);
 
 (* Strong equivalence implies the new relation. *)
-val STRONG_EQUIV_IMP_STRONG_EQUIV' = store_thm (
-   "STRONG_EQUIV_IMP_STRONG_EQUIV'",
-      ``!E E'. STRONG_EQUIV E E' ==> STRONG_EQUIV' E E'``,
+Theorem STRONG_EQUIV_IMP_STRONG_EQUIV':
+        !E E'. STRONG_EQUIV E E' ==> STRONG_EQUIV' E E'
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [STRONG_EQUIV', STRONG_EQUIV]
  >> rpt STRIP_TAC (* 2 sub-goals *)
@@ -600,11 +609,12 @@ val STRONG_EQUIV_IMP_STRONG_EQUIV' = store_thm (
       Q.EXISTS_TAC `E1` ]
  >> ASM_REWRITE_TAC []
  >> Q.EXISTS_TAC `Bsm`
- >> ASM_REWRITE_TAC [] );
+ >> ASM_REWRITE_TAC []
+QED
 
-val STRONG_EQUIV'_IS_STRONG_BISIM = store_thm (
-   "STRONG_EQUIV'_IS_STRONG_BISIM",
-  ``STRONG_BISIM STRONG_EQUIV'``,
+Theorem STRONG_EQUIV'_IS_STRONG_BISIM:
+    STRONG_BISIM STRONG_EQUIV'
+Proof
     PURE_ONCE_REWRITE_TAC [STRONG_BISIM]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
  >> IMP_RES_TAC
@@ -613,32 +623,35 @@ val STRONG_EQUIV'_IS_STRONG_BISIM = store_thm (
  >| [ Q.EXISTS_TAC `E2`,
       Q.EXISTS_TAC `E1` ]
  >> IMP_RES_TAC STRONG_EQUIV_IMP_STRONG_EQUIV'
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
 (* The new relation implies strong equivalence. *)
-val STRONG_EQUIV'_IMP_STRONG_EQUIV = store_thm (
-   "STRONG_EQUIV'_IMP_STRONG_EQUIV",
-      ``!E E'. STRONG_EQUIV' E E' ==> STRONG_EQUIV E E'``,
+Theorem STRONG_EQUIV'_IMP_STRONG_EQUIV:
+        !E E'. STRONG_EQUIV' E E' ==> STRONG_EQUIV E E'
+Proof
     rpt STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [STRONG_EQUIV]
  >> EXISTS_TAC ``STRONG_EQUIV'``
- >> ASM_REWRITE_TAC [STRONG_EQUIV'_IS_STRONG_BISIM]);
+ >> ASM_REWRITE_TAC [STRONG_EQUIV'_IS_STRONG_BISIM]
+QED
 
 (* Prop. 4, page 91: strong equivalence satisfies property [*] *)
-val PROPERTY_STAR' = store_thm (
-   "PROPERTY_STAR'",
-      ``!E E'. STRONG_EQUIV E E' =
+Theorem PROPERTY_STAR':
+        !E E'. STRONG_EQUIV E E' =
          (!u.
            (!E1. TRANS E u E1 ==>
                  (?E2. TRANS E' u E2 /\ STRONG_EQUIV E1 E2)) /\
            (!E2. TRANS E' u E2 ==>
-                 (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))``,
+                 (?E1. TRANS E u E1 /\ STRONG_EQUIV E1 E2)))
+Proof
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ PURE_ONCE_REWRITE_TAC
         [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV_IMP_STRONG_EQUIV'],
       PURE_ONCE_REWRITE_TAC
-        [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV'_IMP_STRONG_EQUIV] ]);
+        [ONCE_REWRITE_RULE [STRONG_EQUIV'] STRONG_EQUIV'_IMP_STRONG_EQUIV] ]
+QED
 
 val _ = html_theory "StrongEQ";
 

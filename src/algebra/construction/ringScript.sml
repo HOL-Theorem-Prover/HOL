@@ -338,19 +338,19 @@ val _ = intLib.deprecate_int ();
    . a sum group (with sum as its binary operation )
    . a product monoid (with multiplication as its binary operation)
 *)
-val _ = Hol_datatype`
+Datatype:
   ring = <| carrier: 'a -> bool;
                 sum: 'a group;
                prod: 'a monoid (* monoid and group share the same type *)
           |>
-`;
+End
 
 (* overloading  *)
-val _ = overload_on ("+", ``r.sum.op``);
-val _ = overload_on ("*", ``r.prod.op``);
-val _ = overload_on ("R", ``r.carrier``); (* just use this, also for field later. *)
-val _ = overload_on ("#0", ``r.sum.id``); (* define zero *)
-val _ = overload_on ("#1", ``r.prod.id``); (* define one *)
+Overload "+" = ``r.sum.op``
+Overload "*" = ``r.prod.op``
+Overload R = ``r.carrier``(* just use this, also for field later. *)
+Overload "#0" = ``r.sum.id``(* define zero *)
+Overload "#1" = ``r.prod.id``(* define one *)
 
 (* Ring Definition:
    A Ring is a record r with elements of type 'a ring, such that
@@ -381,14 +381,12 @@ End
 
 (* Theorem: Ring r ==> (r.sum.carrier = R) /\ (r.prod.carrier = R) *)
 (* Proof: by Ring_def. *)
-Theorem ring_carriers:
+Theorem ring_carriers[simp]:
     !r:'a ring. Ring r ==> (r.sum.carrier = R) /\ (r.prod.carrier = R)
 Proof
   rw_tac std_ss[Ring_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["ring_carriers"];
 
 (* Theorem: Ring additions form an Abelian group. *)
 (* Proof: by definition. *)
@@ -402,22 +400,19 @@ QED
 (* val _ = export_rewrites ["ring_add_group"]; *)
 
 (* Use Michael's version for export_rewrites, stripping commutativity. *)
-val ring_add_group_rwt = save_thm(
-  "ring_add_group_rwt",
+Theorem ring_add_group_rwt[simp] =
   ring_add_group |> SPEC_ALL |> UNDISCH |> CONJUNCTS
                  |> (fn l => LIST_CONJ (List.take(l,2)))
-                 |> DISCH_ALL |> GEN_ALL);
+                 |> DISCH_ALL |> GEN_ALL;
 (* > val ring_add_group_rwt = |- !r. Ring r ==> Group r.sum /\ (r.sum.carrier = R) : thm *)
-val _ = export_rewrites ["ring_add_group_rwt"];
 
 (* Theorem: Ring r ==> AbelianGroup r.sum *)
 (* Proof: By AbelianGroup_def, ring_add_group. *)
-Theorem ring_add_abelian_group:
+Theorem ring_add_abelian_group[simp]:
     !r:'a ring. Ring r ==> AbelianGroup r.sum
 Proof
   rw[AbelianGroup_def, ring_add_group]
 QED
-val _ = export_rewrites ["ring_add_abelian_group"];
 
 (* Theorem: Ring multiplications form an Abelian monoid. *)
 (* Proof: by definition. *)
@@ -431,13 +426,11 @@ QED
 (* val _ = export_rewrites ["ring_mult_monoid"]; *)
 
 (* Copy Michael's version for export_rewrites, stripping commutativity. *)
-val ring_mult_monoid_rwt = save_thm(
-  "ring_mult_monoid_rwt",
+Theorem ring_mult_monoid_rwt[simp] =
   ring_mult_monoid |> SPEC_ALL |> UNDISCH |> CONJUNCTS
                    |> (fn l => LIST_CONJ (List.take(l,2)))
-                   |> DISCH_ALL |> GEN_ALL);
+                   |> DISCH_ALL |> GEN_ALL;
 (* > val ring_mult_monoid_rwt = |- !r. Ring r ==> Monoid r.prod /\ (r.prod.carrier = R) : thm *)
-val _ = export_rewrites ["ring_mult_monoid_rwt"];
 
 (* Theorem: Ring r ==> AbelianMonoid r.prod *)
 (* Proof: By AbelianMonoid_def, ring_mult_monoid. *)
@@ -690,7 +683,7 @@ QED
    = x * #0 + x * #0     by distribution in Ring_def
    hence x * #0 = #0     by group_id_fix
 *)
-Theorem ring_mult_rzero:
+Theorem ring_mult_rzero[simp]:
     !r:'a ring. Ring r ==> !x. x IN R ==> (x * #0 = #0)
 Proof
   rpt strip_tac >>
@@ -698,29 +691,26 @@ Proof
   metis_tac[ring_add_zero_zero, ring_add_group, group_id_fix, Ring_def]
 QED
 
-val _ = export_rewrites ["ring_mult_rzero"];
 
 (* Theorem: #0 * x = #0 *)
 (* Proof: by ring_mult_rzero and Ring_def implicit x * y = y * x.
    or by ring_mult_lzero and ring_mult_comm.
 *)
-Theorem ring_mult_lzero:
+Theorem ring_mult_lzero[simp]:
     !r:'a ring. Ring r ==> !x. x IN R ==> (#0 * x = #0)
 Proof
   rw[ring_mult_comm]
 QED
 
-val _ = export_rewrites ["ring_mult_lzero"];
 
 (* Theorem: #0 * #0 = #0 *)
 (* Proof: by ring_mult_lzero, ring_zero_element. *)
-Theorem ring_mult_zero_zero:
+Theorem ring_mult_zero_zero[simp]:
     !r:'a ring. Ring r ==> (#0 * #0 = #0)
 Proof
   rw[]
 QED
 
-val _ = export_rewrites ["ring_mult_zero_zero"];
 
 (* Theorem: #1 * #1 = #1 *)
 (* Proof: by monoid_id_id. *)
@@ -781,8 +771,8 @@ QED
 (* ##0 = #0, ##1 = #1, ##2 = #1+#1, ##3 = #1+#1+#1, etc.                     *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = overload_on ("ring_numr", ``r.sum.exp #1``); (* for fallback *)
-val _ = overload_on ("##", ``r.sum.exp #1``);        (* current use *)
+Overload ring_numr = ``r.sum.exp #1``(* for fallback *)
+Overload "##" = ``r.sum.exp #1``(* current use *)
 
 val _ = remove_termtok { tok = "##", term_name = "##" };
 
@@ -806,7 +796,7 @@ val ring_exp_def = Define`
 (* val _ = overload_on ("**", ``ring_exp r``); *)
 (* val _ = export_rewrites ["ring_exp_def"]; *)
 
-val _ = overload_on ("**", ``r.prod.exp``);
+Overload "**" = ``r.prod.exp``
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Numerical Theorems (from group_exp of ring_add_group).               *)
@@ -895,13 +885,12 @@ val _ = export_rewrites ["ring_num_element"];
 
 (* Theorem: ##n * x IN R *)
 (* Proof: by ring_num_element and ring_mult_element. *)
-Theorem ring_num_mult_element:
+Theorem ring_num_mult_element[simp]:
     !r:'a ring. Ring r ==> !x. x IN R ==> !n. ##n * x IN R
 Proof
   rw[]
 QED
 
-val _ = export_rewrites ["ring_num_mult_element"];
 
 (* Theorem: ##(SUC n) = #1 + ##n *)
 (* Proof: by group_exp_SUC. *)
@@ -1059,13 +1048,12 @@ val ring_exp_comm = lift_monoid_thm "exp_comm" "exp_comm";
 
 (* Theorem: (x * y) ** n = x ** n * y ** n *)
 (* Proof: by monoid_comm_op_exp. *)
-Theorem ring_mult_exp:
+Theorem ring_mult_exp[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> !n. (x * y) ** n = x ** n * y ** n
 Proof
   rw_tac std_ss[monoid_comm_op_exp, ring_mult_monoid]
 QED
 
-val _ = export_rewrites ["ring_mult_exp"];
 
 (* Theorem: computation of small values of ring_exp *)
 (* Proof: apply ring_exp_SUC. *)
@@ -1094,21 +1082,19 @@ QED
 
 (* Theorem: x * (y + z) = x * y + x * z *)
 (* Proof: by definition. *)
-val ring_mult_radd = save_thm("ring_mult_radd",
-  Ring_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL);
+Theorem ring_mult_radd[simp] =
+  Ring_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL;
 (* > val ring_mult_radd = |- !r. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> (x * (y + z) = x * y + x * z) : thm *)
 
-val _ = export_rewrites ["ring_mult_radd"];
 
 (* Theorem: (y + z) * x = y * x + z * x *)
 (* Proof: by ring_mult_radd and ring_mult_comm. *)
-Theorem ring_mult_ladd:
+Theorem ring_mult_ladd[simp]:
     !r:'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((y + z) * x = y * x + z * x)
 Proof
   rw[ring_mult_comm]
 QED
 
-val _ = export_rewrites ["ring_mult_ladd"];
 
 (*
 - ring_mult_radd |> SPEC_ALL |> UNDISCH |> SPEC_ALL |> UNDISCH;
@@ -1133,11 +1119,11 @@ val _ = export_rewrites ["ring_mult_ladd"];
 
 (* Theorem: x * (y + z) = x * y + x * z /\ (y + z) * x = y * x + z * x *)
 (* Proof: by ring_mult_ladd and ring_mult_radd. *)
-val ring_mult_add = save_thm("ring_mult_add",
+Theorem ring_mult_add =
     CONJ (ring_mult_radd |> SPEC_ALL |> UNDISCH |> SPEC_ALL |> UNDISCH)
          (ring_mult_ladd |> SPEC_ALL |> UNDISCH |> SPEC_ALL |> UNDISCH)
          |> DISCH ``x IN R /\ y IN R /\ z IN R`` |> GEN_ALL
-         |> DISCH_ALL |> GEN_ALL);
+         |> DISCH_ALL |> GEN_ALL;
 (* > val ring_mult_add =
     |- !r. Ring r ==> !z y x. x IN R /\ y IN R /\ z IN R ==>
            (x * (y + z) = x * y + x * z) /\ ((y + z) * x = y * x + z * x) : thm *)
@@ -1179,7 +1165,7 @@ QED
 val ring_neg_def = Define `ring_neg (r:'a ring) = r.sum.inv`;
 val _ = overload_on ("numeric_negate", ``ring_neg r``); (* unary negation *)
 *)
-val _ = overload_on ("numeric_negate", ``r.sum.inv``); (* unary negation *)
+Overload numeric_negate = ``r.sum.inv``(* unary negation *)
 
 (* Theorem: Ring negatives in carrier. *)
 (* Proof: by group_inv_element. *)
@@ -1266,13 +1252,12 @@ val ring_neg_add_comm = lift_group_thm "inv_op" "neg_add_comm";
 
 (* Theorem: For ring, - (x + y) = -x + -y *)
 (* Proof: by ring_neg_add_comm and ring_add_comm. *)
-Theorem ring_neg_add:
+Theorem ring_neg_add[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- (x + y) = -x + -y)
 Proof
   rw[ring_neg_add_comm, ring_add_comm]
 QED
 
-val _ = export_rewrites ["ring_neg_add"];
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Distribution Theorems with Negation.                                 *)
@@ -1286,7 +1271,7 @@ val _ = export_rewrites ["ring_neg_add"];
    = #0                     by ring_mult_lzero
    Hence -x * y = - (x*y)   by ring_add_eq_zero
 *)
-Theorem ring_mult_lneg:
+Theorem ring_mult_lneg[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x * y = - (x * y))
 Proof
   rpt strip_tac >>
@@ -1297,17 +1282,15 @@ QED
 
 (* Theorem: x * - y = - (x * y) *)
 (* Proof: by ring_mult_lneg and ring_mult_comm. *)
-Theorem ring_mult_rneg:
+Theorem ring_mult_rneg[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x * - y = - (x * y))
 Proof
   metis_tac[ring_mult_lneg, ring_mult_comm, ring_neg_element]
 QED
 
-val _ = export_rewrites ["ring_mult_lneg", "ring_mult_rneg"];
-
 (* Theorem: -(x * y) = -x * y  and -(x * y) = x * -y *)
 (* Proof: by ring_mult_lneg and ring_mult_rneg. *)
-Theorem ring_neg_mult:
+Theorem ring_neg_mult[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- (x * y) = - x * y) /\ (- (x * y) = x * - y)
 Proof
   rw[]
@@ -1320,13 +1303,11 @@ QED
    = - (- (x * y))   by ring_mult_rneg
    = x * y           by ring_mult_neg_neg
 *)
-Theorem ring_mult_neg_neg:
+Theorem ring_mult_neg_neg[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (- x * - y = x * y)
 Proof
   metis_tac[ring_mult_lneg, ring_mult_rneg, ring_neg_neg, ring_neg_element]
 QED
-
-val _ = export_rewrites ["ring_neg_mult", "ring_mult_neg_neg" ];
 
 (* ------------------------------------------------------------------------- *)
 (* More Ring Numeral Theorems (involving distribution eventually).           *)
@@ -1914,10 +1895,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 (* Ring Subtraction Theorems.                                                *)
 (* ------------------------------------------------------------------------- *)
-Definition ring_sub_def:   ring_sub (r:'a ring) x y = x + (- y)
+Definition ring_sub_def[simp]:   ring_sub (r:'a ring) x y = x + (- y)
 End
-val _ = overload_on ("-", ``ring_sub r``);
-val _ = export_rewrites ["ring_sub_def"];
+Overload "-" = ``ring_sub r``
 
 (* Theorem: Ring r ==> x - #0 = x *)
 (* Proof:
@@ -1955,13 +1935,12 @@ QED
 
 (* Theorem: x - y IN R *)
 (* Proof: by definition, and ring_add_element, ring_neg_element. *)
-Theorem ring_sub_element:
+Theorem ring_sub_element[simp]:
     !r:'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> x - y IN R
 Proof
   rw[]
 QED
 
-val _ = export_rewrites ["ring_sub_element"];
 
 (* Theorem: Ring r ==> !x. x IN R ==> (#0 - x = -x) *)
 (* Proof:
@@ -2490,15 +2469,15 @@ QED
 (* Define the Ring nonzero elements *)
 Definition ring_nonzero_def:   ring_nonzero (r:'a ring) = R DIFF {#0}
 End
-val _ = overload_on ("R+", ``ring_nonzero r``); (* instead of R_plus *)
+Overload "R+" = ``ring_nonzero r``(* instead of R_plus *)
 
 (* use overloading for the multiplicative group *)
-val _ = overload_on("f*", ``r.prod excluding #0``);
-val _ = overload_on("F*", ``f*.carrier``);
+Overload "f*" = ``r.prod excluding #0``
+Overload "F*" = ``f*.carrier``
 
 (* Overload on subfield multiplicative group *)
-val _ = overload_on("s*", ``s.prod excluding s.sum.id``);
-val _ = overload_on("B*", ``s*.carrier``);
+Overload "s*" = ``s.prod excluding s.sum.id``
+Overload "B*" = ``s*.carrier``
 
 (* No export of conversion. *)
 (* val _ = export_rewrites ["ring_nonzero_def"]; *)
@@ -3097,8 +3076,8 @@ val Units_def = Define`
   Units (r:'a ring) = Invertibles (r.prod)
 `;
 *)
-val _ = overload_on ("r*", ``Invertibles (r.prod)``); (* instead of r_star *)
-val _ = overload_on ("R*", ``r*.carrier``); (* instead of R_star *)
+Overload "r*" = ``Invertibles (r.prod)``(* instead of r_star *)
+Overload "R*" = ``r*.carrier``(* instead of R_star *)
 
 (* Theorem: r*.op = r.prod.op /\ r*.id = #1 *)
 (* Proof: by ring_of_units, and Invertibles_def *)
@@ -3186,18 +3165,16 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* define unit by overloading *)
-val _ = overload_on ("unit", ``\x. x IN R*``);
+Overload unit = ``\x. x IN R*``
 
 (* Theorem: #1 IN R* *)
 (* Proof: by monoid_id_invertible. *)
-Theorem ring_unit_one:
+Theorem ring_unit_one[simp]:
     !r:'a ring. Ring r ==> unit #1
 Proof
   rw[ring_mult_monoid, Invertibles_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["ring_unit_one"];
 
 (* Theorem: #0 IN R* ==> #1 = #0 *)
 (* Proof:
@@ -3256,7 +3233,7 @@ end
 end; (* local *)
 
 (* overloading for inverse *)
-val _ = overload_on ("|/", ``r*.inv``);
+Overload "|/" = ``r*.inv``
 
 (* Theorem: x IN R* ==> |/ x IN R* *)
 (* Proof: by group_inv_element, ring_units_group. *)
@@ -3274,11 +3251,9 @@ val ring_unit_rinv = lift_group_inv_thm "rinv" "unit_rinv";
 (* val ring_unit_rinv = |- !r. Ring r ==> !x. unit x ==> (x * |/ x = #1) : thm *)
 
 (* Theorem: x IN R* ==> x IN R *)
-val ring_unit_element = save_thm("ring_unit_element", ring_units_element);
+Theorem ring_unit_element[simp] = ring_units_element;
 (* > val ring_unit_element = |- !r. Ring r ==> !x. unit x ==> x IN R : thm *)
 
-(* export simple result *)
-val _ = export_rewrites ["ring_unit_element"];
 
 (* Theorem: x IN R* ==> |/ x IN R *)
 (* Proof: by ring_unit_has_inv, ring_unit_element. *)
@@ -3485,7 +3460,7 @@ QED
    Thus r*.inv r*.id = r*.id    by group_inv_id
      or        |/ #1 = #1       by notation
 *)
-Theorem ring_inv_one:
+Theorem ring_inv_one[simp]:
     !r:'a ring. Ring r ==> ( |/ #1 = #1)
 Proof
   rpt strip_tac >>
@@ -3494,8 +3469,6 @@ Proof
   metis_tac[group_inv_id]
 QED
 
-(* export simple theorem *)
-val _ = export_rewrites ["ring_inv_one"];
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Unit Equivalence                                                     *)
@@ -3506,7 +3479,7 @@ Definition unit_eq_def:
    unit_eq (r:'a ring) (x:'a) (y:'a) = ?(u:'a). unit u /\ (x = u * y)
 End
 (* overload on unit equivalence *)
-val _ = overload_on("=~", ``unit_eq r``);
+Overload "=~" = ``unit_eq r``
 val _ = set_fixity "=~" (Infix(NONASSOC, 450)); (* same as relation *)
 (*
 > unit_eq_def;
@@ -3820,27 +3793,27 @@ Definition subring_def:   subring s r <=> RingHomo I s r
 End
 
 (* Overloads for Homomorphism and Isomorphisms with map *)
-val _ = overload_on("~r~", ``\(r:'a ring) (r_:'b ring) f. Ring r /\ Ring r_ /\ RingHomo f r r_``);
-val _ = overload_on("=r=", ``\(r:'a ring) (r_:'b ring) f. Ring r /\ Ring r_ /\ RingIso f r r_``);
+Overload "~r~" = ``\(r:'a ring) (r_:'b ring) f. Ring r /\ Ring r_ /\ RingHomo f r r_``
+Overload "=r=" = ``\(r:'a ring) (r_:'b ring) f. Ring r /\ Ring r_ /\ RingIso f r r_``
 (* make infix operators *)
 val _ = set_fixity "~r~" (Infix(NONASSOC, 450)); (* same as relation *)
 val _ = set_fixity "=r=" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Overloads for Ring of type 'b *)
-val _ = overload_on("R_", ``(r_:'b ring).carrier``);
-val _ = overload_on("R+_", ``ring_nonzero (r_:'b ring)``);
-val _ = overload_on("#0_", ``(r_:'b ring).sum.id``);
-val _ = overload_on("#1_", ``(r_:'b ring).prod.id``);
-val _ = overload_on("+_", ``(r_:'b ring).sum.op``);
-val _ = overload_on("*_", ``(r_:'b ring).prod.op``);
-val _ = overload_on("-_", ``ring_sub (r_:'b ring)``);
-val _ = overload_on("neg_", ``(r_:'b ring).sum.inv``); (* unary negation *)
-val _ = overload_on("##_", ``(r_:'b ring).sum.exp``);
-val _ = overload_on("**_", ``(r_:'b ring).prod.exp``);
-val _ = overload_on("unit_", ``\x. x IN (Invertibles (r_:'b ring).prod).carrier``);
-val _ = overload_on("|/_", ``(Invertibles (r_:'b ring).prod).inv``);
-val _ = overload_on("Unit", ``\r x. x IN (Invertibles r.prod).carrier``); (* for any type *)
-val _ = overload_on("Inv", ``\r. (Invertibles r.prod).inv``); (* for any type *)
+Overload R_ = ``(r_:'b ring).carrier``
+Overload "R+_" = ``ring_nonzero (r_:'b ring)``
+Overload "#0_" = ``(r_:'b ring).sum.id``
+Overload "#1_" = ``(r_:'b ring).prod.id``
+Overload "+_" = ``(r_:'b ring).sum.op``
+Overload "*_" = ``(r_:'b ring).prod.op``
+Overload "-_" = ``ring_sub (r_:'b ring)``
+Overload neg_ = ``(r_:'b ring).sum.inv``(* unary negation *)
+Overload "##_" = ``(r_:'b ring).sum.exp``
+Overload "**_" = ``(r_:'b ring).prod.exp``
+Overload unit_ = ``\x. x IN (Invertibles (r_:'b ring).prod).carrier``
+Overload "|/_" = ``(Invertibles (r_:'b ring).prod).inv``
+Overload Unit = ``\r x. x IN (Invertibles r.prod).carrier``(* for any type *)
+Overload Inv = ``\r. (Invertibles r.prod).inv``(* for any type *)
 (* make infix operators *)
 val _ = set_fixity "+_" (Infixl 500); (* same as + in arithmeticScript.sml *)
 val _ = set_fixity "-_" (Infixl 500); (* same as - in arithmeticScript.sml *)
@@ -3848,7 +3821,7 @@ val _ = set_fixity "*_" (Infixl 600); (* same as * in arithmeticScript.sml *)
 val _ = set_fixity "**_" (Infixr 700); (* same as EXP in arithmeticScript.sml, infix right *)
 (* 900 for numeric_negate *)
 (* make unary symbolic *)
-val _ = overload_on("-_", ``neg_``); (* becomes $-_ *)
+Overload "-_" = ``neg_``(* becomes $-_ *)
 
 (* ------------------------------------------------------------------------- *)
 (* Ring Homomorphisms.                                                       *)
@@ -3882,14 +3855,12 @@ QED
 
 (* Theorem: (r ~r~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by ring_homo_zero, ring_homo_one *)
-Theorem ring_homo_ids:
+Theorem ring_homo_ids[simp]:
     !(r:'a ring) (r_:'b ring) f. (r ~r~ r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)
 Proof
   rw_tac std_ss[ring_homo_zero, ring_homo_one]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["ring_homo_ids"];
 
 (* Theorem: RingHomo f r r_ ==> !x. x IN R ==> f x IN R_ *)
 (* Proof: by RingHomo_def *)
@@ -4390,14 +4361,12 @@ QED
 
 (* Theorem: (r =r= r_) f ==> (f #0 = #0_) /\ (f #1 = #1_) *)
 (* Proof: by ring_iso_zero, ring_iso_one. *)
-Theorem ring_iso_ids:
+Theorem ring_iso_ids[simp]:
     !(r:'a ring) (r_:'b ring) f. (r =r= r_) f ==> (f #0 = #0_) /\ (f #1 = #1_)
 Proof
   rw_tac std_ss[ring_iso_zero, ring_iso_one]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["ring_iso_ids"];
 
 (* Theorem: RingIso f r r_ ==> !x. x IN R ==> f x IN R_ *)
 (* Proof: by RingIso_def, ring_homo_element *)
@@ -4807,10 +4776,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload on s.carrier, base carrier *)
-val _ = overload_on("B", ``(s:'a ring).carrier``);
+Overload B = ``(s:'a ring).carrier``
 
 (* Overload on subring situation *)
-val _ = overload_on("<=", ``\(s r):'a ring. Ring r /\ Ring s /\ subring s r``);
+Overload "<=" = ``\(s r):'a ring. Ring r /\ Ring s /\ subring s r``
 
 (* Theorem: subring s r ==> !x. x IN B ==> x IN R *)
 (* Proof: by subring_def, RingHomo_def *)
@@ -4995,7 +4964,7 @@ val o_thm = combinTheory.o_THM;
 
 (* Theorem: s <= r ==> s.sum.id = #0 *)
 (* Proof: by subring_def, ring_homo_zero. *)
-Theorem subring_zero:
+Theorem subring_zero[simp]:
     !(r s):'a ring. s <= r ==> (s.sum.id = #0)
 Proof
   metis_tac[subring_def, ring_homo_zero, i_thm]
@@ -5003,14 +4972,11 @@ QED
 
 (* Theorem: s <= r ==> s.prod.id = #1 *)
 (* Proof: by subring_def, ring_homo_one. *)
-Theorem subring_one:
+Theorem subring_one[simp]:
     !(r s):'a ring. s <= r ==> (s.prod.id = #1)
 Proof
   metis_tac[subring_def, ring_homo_one, i_thm]
 QED
-
-(* export simple results *)
-val _ = export_rewrites["subring_zero", "subring_one"];
 
 (* Theorem: s <= r ==> s.sum.id = #0 /\ s.prod.id = #1 *)
 (* Proof: by subring_zero, subring_one. *)
@@ -5229,7 +5195,7 @@ Definition homo_ring_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("fR", ``(homo_ring (r:'a ring) (f:'a -> 'b)).carrier``);
+Overload fR = ``(homo_ring (r:'a ring) (f:'a -> 'b)).carrier``
 
 (* Theorem: Properties of homo_ring. *)
 (* Proof: by homo_ring_def. *)
@@ -5629,7 +5595,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val ring_homo_ring_homo_subring = save_thm("ring_homo_ring_homo_subring", ring_homo_image_is_subring);
+Theorem ring_homo_ring_homo_subring = ring_homo_image_is_subring;
 (*
 val ring_homo_ring_homo_subring = |- !r r_ f. (r ~r~ r_) f ==> subring (ring_homo_image f r r_) r_: thm
 *)
@@ -6194,9 +6160,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* The carrier of Ideal = carrier of group i.sum *)
-val _ = temp_overload_on ("I", ``i.carrier``);
+Overload I[local] = ``i.carrier``
 (* The carrier of Ideal = carrier of group j.sum *)
-val _ = temp_overload_on ("J", ``j.carrier``);
+Overload J[local] = ``j.carrier``
 
 (* An Ideal i (structurally a ring: carrier, sum, prod) of a ring r satisfies 2 conditions:
    (1) sum part is subgroup: i.sum is a subgroup of r.sum
@@ -6220,24 +6186,24 @@ End
          !x y. x IN I /\ y IN R ==> x * y IN I /\ y * x IN I : thm
 *)
 (* set overloading *)
-val _ = overload_on ("<<", ``ideal``);
+Overload "<<" = ``ideal``
 val _ = set_fixity "<<" (Infixl 650); (* higher than * or / *)
 
 (* Theorem: Ideal add_group is a subgroup. *)
-val ideal_has_subgroup = save_thm("ideal_has_subgroup",
-    ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem ideal_has_subgroup =
+    ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val ideal_has_subgroup = |- !r i. i << r ==> i.sum <= r.sum : thm *)
 
 (* Theorem: Ideal carriers are I. *)
-val ideal_carriers = save_thm("ideal_carriers",
+Theorem ideal_carriers =
     CONJ (ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT1)
          (ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT2 |> CONJUNCT1)
-         |> DISCH_ALL |> GEN_ALL);
+         |> DISCH_ALL |> GEN_ALL;
 (* > val ideal_carriers = |- !r i. i << r ==> (i.sum.carrier = I) /\ (i.prod.carrier = I) : thm *)
 
 (* Theorem: Ideal is multiplicative closed with all elements. *)
-val ideal_product_property = save_thm("ideal_product_property",
-    ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL);
+Theorem ideal_product_property =
+    ideal_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL;
 (* > val ideal_product_property = |- !r i. i << r ==> !x y. x IN I /\ y IN R ==> x * y IN I /\ y * x IN I : thm *)
 
 (* Theorem: i << r ==> !x. x IN I ==> x IN r.sum.carrier *)
@@ -6536,7 +6502,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define (left) coset of ideal with an element a in R by overloading *)
-val _ = overload_on ("o", ``coset r.sum``);
+Overload o = ``coset r.sum``
 
 (* Theorem: i << r ==> !x. x IN I ==> x o I = I *)
 (* Proof: by coset_def, this is to show:
@@ -6609,16 +6575,13 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define congruence by ideal in Ring *)
-Definition ideal_congruence_def:
+Definition ideal_congruence_def[simp]:
   ideal_congruence (r:'a ring) (i:'a ring) (x:'a) (y:'a) <=> x - y IN i.carrier
 End
 
 (* set overloading *)
-val _ = overload_on ("===", ``ideal_congruence r i``);
+Overload "===" = ``ideal_congruence r i``
 val _ = set_fixity "===" (Infix(NONASSOC, 450));
-
-(* export definiton *)
-val _ = export_rewrites ["ideal_congruence_def"];
 
 (* Theorem: x === x *)
 (* Proof:
@@ -6755,7 +6718,7 @@ QED
 (* val element_multiple_def = Define `element_multiple (r:'a ring) (p:'a) = {p * x | x IN R}`; *)
 
 (* use overloading *)
-val _ = overload_on ("*", ``coset r.prod``);
+Overload "*" = ``coset r.prod``
 
 (* Integer Ring Ideals are multiples *)
 Definition principal_ideal_def:
@@ -6768,8 +6731,8 @@ End
 (* Note: <p>.prod is only type-compatible with monoid, it is not a monoid: prod.id may not be in carrier. *)
 
 (* set overloading *)
-val _ = overload_on ("<p>", ``principal_ideal r p``);
-val _ = overload_on ("<q>", ``principal_ideal r q``);
+Overload "<p>" = ``principal_ideal r p``
+Overload "<q>" = ``principal_ideal r q``
 
 (*
 - principal_ideal_def;
@@ -7078,7 +7041,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* use overloading for ring ideal zero *)
-val _ = overload_on ("<#0>", ``principal_ideal r #0``);
+Overload "<#0>" = ``principal_ideal r #0``
 
 (* Theorem: <#0>.carrier = {#0} *)
 (* Proof: by definitions, this is to show:
@@ -7139,7 +7102,7 @@ Definition ideal_sum_def:
             prod := <| carrier := {x + y | x IN I /\ y IN J}; op := r.prod.op; id := r.prod.id |>
        |>
 End
-val _ = overload_on ("+", ``ideal_sum r``);
+Overload "+" = ``ideal_sum r``
 
 (* Theorem: x IN (i + j).carrier <=> ?y z. y IN I /\ z IN J /\ (x = y + z) *)
 (* Proof: by definition. *)
@@ -7442,7 +7405,7 @@ Definition ideal_maximal_def:
 End
 
 (* use overloading *)
-val _ = overload_on ("maxi", ``ideal_maximal r``);
+Overload maxi = ``ideal_maximal r``
 
 (* ------------------------------------------------------------------------- *)
 (* Irreduicables in Ring                                                     *)
@@ -7456,7 +7419,7 @@ Definition irreducible_def:
 End
 
 (* use overloading *)
-val _ = overload_on ("atom", ``irreducible r``);
+Overload atom = ``irreducible r``
 
 (*
 - irreducible_def;
@@ -7537,15 +7500,15 @@ Definition EuclideanRing_def:
 End
 
 (* Theorem: EuclideanRing r ==> Ring r *)
-val euclid_ring_ring = save_thm("euclid_ring_ring",
+Theorem euclid_ring_ring =
     EuclideanRing_def |> SPEC_ALL |> #1 o EQ_IMP_RULE
-                   |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+                   |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val euclid_ring_ring = |- !r f. EuclideanRing r f ==> Ring r : thm *)
 
 (* Theorem: EuclideanRing r ==> !x. (f x = 0) <=> (x = #0) *)
-val euclid_ring_map = save_thm("euclid_ring_map",
+Theorem euclid_ring_map =
     EuclideanRing_def |> SPEC_ALL |> #1 o EQ_IMP_RULE
-                   |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+                   |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val euclid_ring_map = |- !r f. EuclideanRing r f ==> !x. (f x = 0) <=> (x = #0) : thm *)
 
 (* Theorem: EuclideanRing property:
@@ -7558,9 +7521,9 @@ val euclid_ring_property = store_thm(
    !x y. x IN R /\ y IN R /\ y <> #0 ==> ?q t. q IN R /\ t IN R /\ (x = y * q + t) /\ f t < f y``,
   rw[EuclideanRing_def]); -- Note: not by metis_tac!
 *)
-val euclid_ring_property = save_thm("euclid_ring_property",
+Theorem euclid_ring_property =
     EuclideanRing_def |> SPEC_ALL |> #1 o EQ_IMP_RULE
-                      |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL);
+                      |> UNDISCH_ALL |> CONJUNCTS |> last |> DISCH_ALL |> GEN_ALL;
 (* > val euclid_ring_property = |- !r f.  EuclideanRing r f ==> !x y. x IN R /\ y IN R /\ y <> #0 ==>
                                 ?q t. q IN R /\ t IN R /\ (x = q * y + t) /\ f t < f y : thm *)
 
@@ -7599,10 +7562,12 @@ Proof
 QED
 
 (* Apply Skolemization *)
-val lemma = prove(
-  ``!r i f. ?p. Ring r /\ i << r /\ i <> <#0> /\ (!x. (f x = 0) <=> (x = #0))
-       ==> p IN I /\ p <> #0 /\ !z. z IN I /\ z <> #0 ==> f p <= f z``,
-  metis_tac[ideal_gen_exists]);
+Theorem lemma[local]:
+    !r i f. ?p. Ring r /\ i << r /\ i <> <#0> /\ (!x. (f x = 0) <=> (x = #0))
+       ==> p IN I /\ p <> #0 /\ !z. z IN I /\ z <> #0 ==> f p <= f z
+Proof
+  metis_tac[ideal_gen_exists]
+QED
 (*
 - SKOLEM_THM;
 > val it = |- !P. (!x. ?y. P x y) <=> ?f. !x. P x (f x) : thm
@@ -7998,21 +7963,18 @@ binomial_thm:
 (* ------------------------------------------------------------------------- *)
 
 (* Ring element list. *)
-Definition ring_list_def:
+Definition ring_list_def[simp]:
   (ring_list (r:'a ring) [] <=> T) /\
   (ring_list (r:'a ring) ((h:'a)::(t:'a list)) <=> h IN R /\ (ring_list r t))
 End
-val _ = overload_on ("rlist", ``ring_list r``);
-
-(* export simple definition. *)
-val _ = export_rewrites ["ring_list_def"];
+Overload rlist = ``ring_list r``
 
 (* Theorem: rlist [] <=> T *)
-val ring_list_nil = save_thm("ring_list_nil", ring_list_def |> CONJUNCT1);
+Theorem ring_list_nil = ring_list_def |> CONJUNCT1;
 (* > val ring_list_nil = |- !r. rlist [] <=> T : thm *)
 
 (* Theorem: rlist (h::t) <=> h IN R /\ rlist t *)
-val ring_list_cons = save_thm("ring_list_cons", ring_list_def |> CONJUNCT2);
+Theorem ring_list_cons = ring_list_def |> CONJUNCT2;
 (* > val ring_list_cons = |- !r h t. rlist (h::t) <=> h IN R /\ rlist t : thm *)
 
 
@@ -8071,21 +8033,18 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Summation in a Ring. *)
-Definition ring_sum_def:
+Definition ring_sum_def[simp]:
   (ring_sum (r:'a ring) [] = #0) /\
   (ring_sum (r:'a ring) ((h:'a)::(t:'a list)) = h + (ring_sum r t))
 End
-val _ = overload_on ("rsum", ``ring_sum r``);
-
-(* export simple definition. *)
-val _ = export_rewrites ["ring_sum_def"];
+Overload rsum = ``ring_sum r``
 
 (* Theorem: rsum [] = #0 *)
-val ring_sum_nil = save_thm("ring_sum_nil", ring_sum_def |> CONJUNCT1);
+Theorem ring_sum_nil = ring_sum_def |> CONJUNCT1;
 (* > val ring_sum_nil = |- !r. rsum [] = #0 : thm *)
 
 (* Theorem: rsum (h::t)= h + rsum t *)
-val ring_sum_cons = save_thm("ring_sum_cons", ring_sum_def |> CONJUNCT2);
+Theorem ring_sum_cons = ring_sum_def |> CONJUNCT2;
 (* > val ring_sum_cons = |- !r h t. rsum (h::t) = h + rsum t : thm *)
 
 (* Theorem: rsum s IN R *)
@@ -8098,7 +8057,7 @@ val ring_sum_cons = save_thm("ring_sum_cons", ring_sum_def |> CONJUNCT2);
       with h IN R and rlist s ==> rsum s IN R by induction hypothesis
       true by ring_add_element
 *)
-Theorem ring_sum_element:
+Theorem ring_sum_element[simp]:
     !r:'a ring. Ring r ==> !s. rlist s ==> rsum s IN R
 Proof
   rpt strip_tac >>
@@ -8106,7 +8065,6 @@ Proof
   rw[]
 QED
 
-val _ = export_rewrites ["ring_sum_element"];
 
 (* Theorem: rsum [x] = x *)
 (* Proof:
@@ -8262,13 +8220,10 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Ring element function. *)
-Definition ring_fun_def:
+Definition ring_fun_def[simp]:
   ring_fun (r:'a ring) f <=> !x. f x IN R
 End
-val _ = overload_on ("rfun", ``ring_fun r``);
-
-(* export simple definition. *)
-val _ = export_rewrites ["ring_fun_def"];
+Overload rfun = ``ring_fun r``
 
 (* Theorem: rfun a /\ rfun b ==> rfun (\k. a k + b k) *)
 (* Proof: by ring_add_element. *)
@@ -9353,9 +9308,9 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* The carrier of Ideal = carrier of group i.sum *)
-val _ = temp_overload_on ("I", ``i.carrier``);
+Overload I[local] = ``i.carrier``
 (* The carrier of Ideal = carrier of group j.sum *)
-val _ = temp_overload_on ("J", ``j.carrier``);
+Overload J[local] = ``j.carrier``
 
 (* Divides relation in ring *)
 Definition ring_divides_def:
@@ -9364,7 +9319,7 @@ Definition ring_divides_def:
 End
 
 (* Overload ring divides *)
-val _ = overload_on ("rdivides", ``ring_divides r``);
+Overload rdivides = ``ring_divides r``
 val _ = set_fixity "rdivides" (Infix(NONASSOC, 450)); (* same as relation *)
 (*
 ring_divides_def;
@@ -9377,7 +9332,7 @@ Definition ring_associates_def:
   ?s:'a. unit s /\ (p = s * q)
 End
 (* Overload ring associates *)
-val _ = overload_on ("rassoc", ``ring_associates r``);
+Overload rassoc = ``ring_associates r``
 (*
 - ring_associates_def;
 > val it = |- !r p q. rassoc p q <=> ?s. unit s /\ (p = s * q) : thm
@@ -9389,7 +9344,7 @@ Definition ring_prime_def:
   !a b. a IN R /\ b IN R /\ p rdivides a * b ==> (p rdivides a) \/ (p rdivides b)
 End
 (* Overload prime in ring *)
-val _ = overload_on ("rprime", ``ring_prime r``);
+Overload rprime = ``ring_prime r``
 (*
 - ring_prime_def;
 > val it = |- !r p. rprime p <=> !a b. a IN R /\ b IN R /\ p rdivides a * b ==> p rdivides a \/ p rdivides b : thm
@@ -9856,7 +9811,7 @@ Definition ring_gcd_def:
 End
 
 (* Overload ring gcd *)
-val _ = overload_on ("rgcd", ``ring_gcd r f``);
+Overload rgcd = ``ring_gcd r f``
 (*
 - ring_gcd_def;
 > val it = |- !r f p q. rgcd p q = if p = #0 then q else if q = #0 then p else
@@ -10067,17 +10022,17 @@ Proof
 QED
 
 (* Theorem: rgcd p q rdivides p /\ rgcd p q rdivides q *)
-val ring_gcd_divides = save_thm("ring_gcd_divides",
+Theorem ring_gcd_divides =
   (CONJ (ring_gcd_is_gcd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1)
         (ring_gcd_is_gcd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT2 |> CONJUNCT1))
-        |> DISCH ``p IN R /\ q IN R`` |> GEN ``q`` |> GEN ``p`` |> DISCH_ALL |> GEN_ALL);
+        |> DISCH ``p IN R /\ q IN R`` |> GEN ``q`` |> GEN ``p`` |> DISCH_ALL |> GEN_ALL;
 (* > val ring_gcd_divides = |- !r f. EuclideanRing r f ==>
          !p q. p IN R /\ q IN R ==> rgcd p q rdivides p /\ rgcd p q rdivides q : thm *)
 
 (* Theorem: d rdivides p /\ d rdivides q ==> d rdivides (rgcd p q) *)
-val ring_gcd_property = save_thm("ring_gcd_property",
+Theorem ring_gcd_property =
   ring_gcd_is_gcd |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCTS |> last
-        |> DISCH ``p IN R /\ q IN R`` |> GEN ``q`` |> GEN ``p`` |> DISCH_ALL |> GEN_ALL);
+        |> DISCH ``p IN R /\ q IN R`` |> GEN ``q`` |> GEN ``p`` |> DISCH_ALL |> GEN_ALL;
 (* > val ring_gcd_property = |- !r f. EuclideanRing r f ==>
          !p q. p IN R /\ q IN R ==> !d. d IN R /\ d rdivides p /\ d rdivides q ==> d rdivides rgcd p q : thm *)
 
@@ -10298,9 +10253,9 @@ Proof
 QED
 
 (* Introduce temporary overlaods *)
-val _ = temp_overload_on ("<a>", ``principal_ideal r a``);
-val _ = temp_overload_on ("<b>", ``principal_ideal r b``);
-val _ = temp_overload_on ("<u>", ``principal_ideal r u``);
+Overload "<a>"[local] = ``principal_ideal r a``
+Overload "<b>"[local] = ``principal_ideal r b``
+Overload "<u>"[local] = ``principal_ideal r u``
 
 (* Theorem: PrincipalIdealRing r ==> !p. atom p ==> rprime p *)
 (* Proof:
@@ -10560,32 +10515,29 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* The carrier of Ideal = carrier of group i.sum *)
-val _ = temp_overload_on ("I", ``i.carrier``);
+Overload I[local] = ``i.carrier``
 (* The carrier of Ideal = carrier of group j.sum *)
-val _ = temp_overload_on ("J", ``j.carrier``);
+Overload J[local] = ``j.carrier``
 
 (* Define carrier set of Quotient Ring (R/I) by overloading *)
-val _ = overload_on ("R/I", ``CosetPartition r.sum i.sum``);
+Overload "R/I" = ``CosetPartition r.sum i.sum``
 
 (* Define cogen operation of Quotient Ring (R/I) by overloading *)
-val _ = overload_on ("gen", ``cogen r.sum i.sum``);
+Overload gen = ``cogen r.sum i.sum``
 
 (* Define addition of ideal cosets *)
-Definition ideal_coset_add_def:
+Definition ideal_coset_add_def[simp]:
   ideal_coset_add (r:'a ring) (i:'a ring) x y = (gen x + gen y) o I
 End
 
 (* Define multiplication of ideal cosets *)
-Definition ideal_coset_mult_def:
+Definition ideal_coset_mult_def[simp]:
   ideal_coset_mult (r:'a ring) (i:'a ring) x y = (gen x * gen y) o I
 End
 
 (* Overload operations *)
-val _ = overload_on ("+", ``ideal_coset_add r i``);
-val _ = overload_on ("*", ``ideal_coset_mult r i``);
-
-(* Export simple definitions *)
-val _ = export_rewrites ["ideal_coset_add_def", "ideal_coset_mult_def"];
+Overload "+" = ``ideal_coset_add r i``
+Overload "*" = ``ideal_coset_mult r i``
 
 (*
 > in_coset |> ISPEC ``r.sum`` |> ISPEC ``i.sum.carrier`` |> ISPEC ``x``;
@@ -10639,7 +10591,7 @@ Definition quotient_ring_def:
 End
 
 (* set overloading for Quotient Ring. *)
-val _ = overload_on ("/", ``quotient_ring``);
+Overload "/" = ``quotient_ring``
 
 (* Theorem: Properties of quotient ring (r / i). *)
 (* Proof: by quotient_ring_def *)
@@ -10711,7 +10663,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val quotient_ring_has_ideal = save_thm("quotient_ring_has_ideal", ideal_in_quotient_ring);
+Theorem quotient_ring_has_ideal = ideal_in_quotient_ring;
 
 
 (*
@@ -12329,20 +12281,24 @@ QED
          = (m + 1) MOD n    since m < n
          = SUC m MOD n      by ADD1
 *)
-val ZN_lemma1 = prove(
-  ``!m n. 0 < n /\ m <= n ==> (FUNPOW (\j. (j + 1) MOD n) m 0 = m MOD n)``,
+Theorem ZN_lemma1[local]:
+    !m n. 0 < n /\ m <= n ==> (FUNPOW (\j. (j + 1) MOD n) m 0 = m MOD n)
+Proof
   Induct_on `m`  >-
   srw_tac[ARITH_ss][] >>
-  srw_tac[ARITH_ss][FUNPOW_SUC, ADD1]);
+  srw_tac[ARITH_ss][FUNPOW_SUC, ADD1]
+QED
 
 (* Theorem: 0 < n ==> FUNPOW (\j. (j + 1) MOD n) n 0 = 0 *)
 (* Proof:
    Put m = n in ZN_lemma1:
    FUNPOW (\j. (j + 1) MOD n) n 0 = n MOD n = 0  by DIVMOD_ID.
 *)
-val ZN_lemma2 = prove(
-  ``!n. 0 < n ==> (FUNPOW (\j. (j + 1) MOD n) n 0 = 0)``,
-  rw_tac std_ss[ZN_lemma1]);
+Theorem ZN_lemma2[local]:
+    !n. 0 < n ==> (FUNPOW (\j. (j + 1) MOD n) n 0 = 0)
+Proof
+  rw_tac std_ss[ZN_lemma1]
+QED
 
 (* Theorem: 0 < n ==> char (ZN n) = n *)
 (* Proof:
@@ -12715,7 +12671,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload for order of m in (ZN n).prod *)
-val _ = overload_on("ordz", ``\n m. order (ZN n).prod m``);
+Overload ordz = ``\n m. order (ZN n).prod m``
 
 (* Order for MOD 1:
 
@@ -14083,15 +14039,17 @@ val it = |- 1 < m /\ coprime m n ==>
      or !j. 0 < j /\ j <= ordz m n ==>
         (WHILE (\i. (n ** i) MOD m <> 1) SUC j = ordz m n)
 *)
-val compute_ordz_by_while = prove(
-  ``!m n. 1 < m /\ coprime m n ==>
-   !j. 0 < j /\ j <= ordz m n ==> (WHILE (\i. (n ** i) MOD m <> 1) SUC j = ordz m n)``,
+Theorem compute_ordz_by_while[local]:
+    !m n. 1 < m /\ coprime m n ==>
+   !j. 0 < j /\ j <= ordz m n ==> (WHILE (\i. (n ** i) MOD m <> 1) SUC j = ordz m n)
+Proof
   rpt strip_tac >>
   `HOARE_SPEC
       (\i. 0 < i /\ i <= ordz m n)
       (WHILE (\i. (n ** i) MOD m <> 1) SUC)
       (\i. i = ordz m n)` by rw[compute_ordz_hoare] >>
-  fs[HOARE_SPEC_DEF]);
+  fs[HOARE_SPEC_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of computing ordz m n.                                        *)
@@ -14335,7 +14293,7 @@ Definition Z_ideal_def:
 End
 
 (* set overloading *)
-val _ = overload_on ("Z*", ``Z_ideal``);
+Overload "Z*" = ``Z_ideal``
 
 (* Theorem: Group (Z* n).sum *)
 (* Proof: check group axioms:
@@ -15103,27 +15061,26 @@ End
 
 (* Theorem: Integral Domain is Ring. *)
 (* Proof: by definition. *)
-val integral_domain_is_ring = save_thm("integral_domain_is_ring",
-  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem integral_domain_is_ring =
+  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val integral_domain_is_ring = |- !r. IntegralDomain r ==> Ring r : thm *)
 
 (* Theorem: Integral Domain has #1 <> #0 *)
 (* Proof: by definition *)
-val integral_domain_one_ne_zero = save_thm("integral_domain_one_ne_zero",
-  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL);
+Theorem integral_domain_one_ne_zero[simp] =
+  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val integral_domain_one_ne_zero = |- !r. IntegralDomain r ==> #1 <> #0 : thm *)
 
-val _ = export_rewrites ["integral_domain_one_ne_zero"];
 
 (* Theorem: No zero divisor in integral domain. *)
 (* Proof: by definition. *)
-val integral_domain_mult_eq_zero = save_thm("integral_domain_mult_eq_zero",
-  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT2 |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL);
+Theorem integral_domain_mult_eq_zero =
+  IntegralDomain_def |> SPEC_ALL |> EQ_IMP_RULE |> #1 |> UNDISCH |> CONJUNCT2 |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* > val integral_domain_mult_eq_zero =
      |- !r. IntegralDomain r ==> !x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0)) : thm *)
 
 (* Alternative name for export *)
-val integral_domain_zero_product = save_thm("integral_domain_zero_product", integral_domain_mult_eq_zero);
+Theorem integral_domain_zero_product = integral_domain_mult_eq_zero;
 (* > val integral_domain_zero_product =
     |- !r. IntegralDomain r ==> !x y. x IN R /\ y IN R ==> ((x * y = #0) <=> (x = #0) \/ (y = #0)) : thm *)
 

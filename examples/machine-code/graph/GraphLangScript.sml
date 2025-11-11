@@ -13,14 +13,15 @@ val op by = BasicProvers.byA
 val RW1 = ONCE_REWRITE_RULE;
 val RW = REWRITE_RULE;
 
-val _ = Datatype `variable =
+Datatype:  variable =
     VarNone
   | VarNat num
   | VarWord8 word8
   | VarWord ('a word)
   | VarMem ('a word -> word8)
   | VarDom ('a word set)
-  | VarBool bool`;
+  | VarBool bool
+End
 
 (* States are a mapping from names to the variable type, which is
    a union of the available names. *)
@@ -68,12 +69,14 @@ val _ = zDefine `
 
 (* The type of nodes. *)
 
-val _ = Datatype `next_node = NextNode num | Ret | Err`;
+Datatype:  next_node = NextNode num | Ret | Err
+End
 
-val _ = Datatype `node =
+Datatype:  node =
     Basic next_node ((string # ('a state -> 'a variable)) list)
   | Cond next_node next_node ('a state -> bool)
-  | Call next_node string (('a state -> 'a variable) list) (string list)`;
+  | Call next_node string (('a state -> 'a variable) list) (string list)
+End
 
 val _ = zDefine `
   Skip nn = Cond nn nn (\x. T)`;
@@ -81,8 +84,9 @@ val _ = zDefine `
 (* The type for a total graph function, including list of inputs, list
    of outputs, graph, and entry point. *)
 
-val _ = Datatype `graph_function =
-  GraphFunction (string list) (string list) (num -> 'a node option) num`;
+Datatype:  graph_function =
+  GraphFunction (string list) (string list) (num -> 'a node option) num
+End
 
 (* The definition of execution of a single node. *)
 
@@ -173,19 +177,23 @@ End
 val _ = type_abbrev("update",``:(string # ('a state -> 'a variable)) list``)
 val _ = type_abbrev("assert",``:'a state->bool``)
 
-val _ = Datatype `
-  jump = Jump ('a word) | Return`
+Datatype:
+  jump = Jump ('a word) | Return
+End
 
-val _ = Datatype `
+Datatype:
   next = IF ('a assert) next next (* if ... then ... else ... *)
        | ASM ('a assert option) ('a update) ('a jump)
-       | CALL ('a assert option) ('a update) string ('a jump)`;
+       | CALL ('a assert option) ('a update) string ('a jump)
+End
 
-val _ = Datatype `
-  inst = Inst ('a word) ('a assert) ('a next) (* name, inv, what happens *)`
+Datatype:
+  inst = Inst ('a word) ('a assert) ('a next) (* name, inv, what happens *)
+End
 
-val _ = Datatype `
-  func = Func string ('a word) ('a inst list) (* name, entry point, insts *)`;
+Datatype:
+  func = Func string ('a word) ('a inst list) (* name, entry point, insts *)
+End
 
 (* execution *)
 
@@ -374,8 +382,8 @@ val riscv_STATE_thm = save_thm("riscv_STATE_thm",
 
 (* misc *)
 
-val var_update_thm = store_thm("var_update_thm",
-  ``(var_dom n ((n1 =+ x) s) =
+Theorem var_update_thm:
+    (var_dom n ((n1 =+ x) s) =
       if n = n1 then (case x of VarDom y => y | _ => EMPTY) else
         var_dom n s) /\
     (var_nat n ((n1 =+ x) s) =
@@ -392,9 +400,11 @@ val var_update_thm = store_thm("var_update_thm",
         var_mem n s) /\
     (var_bool n ((n1 =+ x) s) =
       if n = n1 then (case x of VarBool y => y | _ => F) else
-        var_bool n s)``,
+        var_bool n s)
+Proof
   SRW_TAC [] [var_dom_def,var_mem_def,var_bool_def,var_nat_def,
-     var_word8_def,var_word_def,var_acc_def,APPLY_UPDATE_THM]);
+     var_word8_def,var_word_def,var_acc_def,APPLY_UPDATE_THM]
+QED
 
 Definition all_names_def:
   all_names =
@@ -462,71 +472,88 @@ val _ = ``IMPL_INST (ARM _)``;
 val _ = ``IMPL_INST (M0 _)``;
 val _ = ``IMPL_INST (RISCV _)``;
 
-val IMPL_INST_IF = store_thm("IMPL_INST_IF",
-  ``IMPL_INST code locs (Inst pc1 assert1 next1) /\
+Theorem IMPL_INST_IF:
+    IMPL_INST code locs (Inst pc1 assert1 next1) /\
     IMPL_INST code locs (Inst pc1 assert2 next2) ==>
     (!s. assert1 s ==> assert2 s) ==>
-    !guard. IMPL_INST code locs (Inst pc1 assert1 (IF guard next1 next2))``,
-  SIMP_TAC std_ss [IMPL_INST_def,exec_next_def,next_ok_def] \\ METIS_TAC []);
+    !guard. IMPL_INST code locs (Inst pc1 assert1 (IF guard next1 next2))
+Proof
+  SIMP_TAC std_ss [IMPL_INST_def,exec_next_def,next_ok_def] \\ METIS_TAC []
+QED
 
-val IMPL_INST_IF_ALT = store_thm("IMPL_INST_IF_ALT",
-  ``IMPL_INST code locs (Inst pc1 assert1 next1) /\
+Theorem IMPL_INST_IF_ALT:
+    IMPL_INST code locs (Inst pc1 assert1 next1) /\
     IMPL_INST code locs (Inst pc1 assert2 next2) ==>
     !guard. IMPL_INST code locs
        (Inst pc1 (\s. if guard s then assert1 s else assert2 s)
-          (IF guard next1 next2))``,
-  SIMP_TAC std_ss [IMPL_INST_def,exec_next_def,next_ok_def] \\ METIS_TAC []);
+          (IF guard next1 next2))
+Proof
+  SIMP_TAC std_ss [IMPL_INST_def,exec_next_def,next_ok_def] \\ METIS_TAC []
+QED
 
-val IMPL_INST_SIMP_IF = store_thm("IMPL_INST_SIMP_IF",
-  ``IMPL_INST code locs
+Theorem IMPL_INST_SIMP_IF:
+    IMPL_INST code locs
       (Inst pc assert (IF guard (ASM (SOME s1) up1 j1)
                                 (ASM (SOME s2) up2 j2))) <=>
     IMPL_INST code locs
       (Inst pc assert (IF guard (ASM (SOME (\s. guard s ==> s1 s)) up1 j1)
-                                (ASM (SOME (\s. ~guard s ==> s2 s)) up2 j2)))``,
-  SIMP_TAC std_ss [IMPL_INST_def,exec_next_def,get_assert_def,next_ok_def]);
+                                (ASM (SOME (\s. ~guard s ==> s2 s)) up2 j2)))
+Proof
+  SIMP_TAC std_ss [IMPL_INST_def,exec_next_def,get_assert_def,next_ok_def]
+QED
 
-val IMPL_INST_IF_RW = store_thm("IMPL_INST_IF_RW",
-  ``(IMPL_INST code locs
+Theorem IMPL_INST_IF_RW:
+    (IMPL_INST code locs
       (Inst pc assert (IF guard (ASM (SOME (\s. T)) up1 j1) next)) <=>
      IMPL_INST code locs
       (Inst pc assert (IF guard (ASM NONE up1 j1) next))) /\
     (IMPL_INST code locs
       (Inst pc assert (IF guard next (ASM (SOME (\s. T)) up1 j1))) <=>
      IMPL_INST code locs
-      (Inst pc assert (IF guard next (ASM NONE up1 j1))))``,
-  SIMP_TAC std_ss [IMPL_INST_def,exec_next_def,get_assert_def,next_ok_def]);
+      (Inst pc assert (IF guard next (ASM NONE up1 j1))))
+Proof
+  SIMP_TAC std_ss [IMPL_INST_def,exec_next_def,get_assert_def,next_ok_def]
+QED
 
-val IMPL_INST_IF_SPLIT = store_thm("IMPL_INST_IF_SPLIT",
-  ``IMPL_INST c locs (Inst n b (IF g (ASM x u (Jump j)) next)) <=>
+Theorem IMPL_INST_IF_SPLIT:
+    IMPL_INST c locs (Inst n b (IF g (ASM x u (Jump j)) next)) <=>
     IMPL_INST c locs (Inst n (\s. b s /\ g s) (ASM x u (Jump j))) /\
-    IMPL_INST c locs (Inst n (\s. b s /\ ~(g s)) next)``,
+    IMPL_INST c locs (Inst n (\s. b s /\ ~(g s)) next)
+Proof
   SIMP_TAC std_ss [IMPL_INST_def,check_jump_def,exec_next_def,next_ok_def]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
-val IMPL_INST_IF_SIMP1 = store_thm("IMPL_INST_IF_SIMP1",
-  ``IMPL_INST c locs (Inst n (K T) (IF g next1 next2)) ==>
-    !a. (!s. a s ==> g s) ==> IMPL_INST c locs (Inst n a next1)``,
+Theorem IMPL_INST_IF_SIMP1:
+    IMPL_INST c locs (Inst n (K T) (IF g next1 next2)) ==>
+    !a. (!s. a s ==> g s) ==> IMPL_INST c locs (Inst n a next1)
+Proof
   SIMP_TAC std_ss [IMPL_INST_def,check_jump_def,exec_next_def,next_ok_def]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
-val IMPL_INST_IF_SIMP2 = store_thm("IMPL_INST_IF_SIMP2",
-  ``IMPL_INST c locs (Inst n (K T) (IF g next1 next2)) ==>
-    !a. (!s. a s ==> ($~ o g) s) ==> IMPL_INST c locs (Inst n a next2)``,
+Theorem IMPL_INST_IF_SIMP2:
+    IMPL_INST c locs (Inst n (K T) (IF g next1 next2)) ==>
+    !a. (!s. a s ==> ($~ o g) s) ==> IMPL_INST c locs (Inst n a next2)
+Proof
   SIMP_TAC std_ss [IMPL_INST_def,check_jump_def,exec_next_def,next_ok_def]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
-val IMPL_INST_SET_ASSUM = store_thm("IMPL_INST_SET_ASSUM",
-  ``IMPL_INST c locs (Inst n (K T) next) ==>
-    !a. IMPL_INST c locs (Inst n a next)``,
+Theorem IMPL_INST_SET_ASSUM:
+    IMPL_INST c locs (Inst n (K T) next) ==>
+    !a. IMPL_INST c locs (Inst n a next)
+Proof
   SIMP_TAC std_ss [IMPL_INST_def,check_jump_def,exec_next_def]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
-val IMPL_INST_IF_COMPOSE1 = store_thm("IMPL_INST_IF_COMPOSE1",
-  ``IMPL_INST c locs (Inst n b (IF g (ASM pre u1 (Jump w)) next)) /\
+Theorem IMPL_INST_IF_COMPOSE1:
+    IMPL_INST c locs (Inst n b (IF g (ASM pre u1 (Jump w)) next)) /\
     IMPL_INST c locs (Inst w g (ASM NONE [] (Jump j))) ==>
     (!s. g s ==> g (apply_update u1 s)) ==>
-    IMPL_INST c locs (Inst n b (IF g (ASM pre u1 (Jump j)) next))``,
+    IMPL_INST c locs (Inst n b (IF g (ASM pre u1 (Jump j)) next))
+Proof
   PairCases_on `c`
   \\ rename [`(c,m,c6,c7)`]
   \\ SIMP_TAC (srw_ss()) [IMPL_INST_def,check_jump_def,exec_next_def,next_ok_def]
@@ -541,13 +568,15 @@ val IMPL_INST_IF_COMPOSE1 = store_thm("IMPL_INST_IF_COMPOSE1",
   \\ fs []
   \\ first_x_assum (qspecl_then [`s`,`apply_update u1 s`] mp_tac)
   \\ fs [] \\ strip_tac
-  \\ FULL_SIMP_TAC std_ss [get_assert_def,apply_update_def] \\ METIS_TAC []);
+  \\ FULL_SIMP_TAC std_ss [get_assert_def,apply_update_def] \\ METIS_TAC []
+QED
 
-val IMPL_INST_IF_COMPOSE2 = store_thm("IMPL_INST_IF_COMPOSE2",
-  ``IMPL_INST c locs (Inst n b (IF g next (ASM pre u1 (Jump w)))) /\
+Theorem IMPL_INST_IF_COMPOSE2:
+    IMPL_INST c locs (Inst n b (IF g next (ASM pre u1 (Jump w)))) /\
     IMPL_INST c locs (Inst w ($~ o g) (ASM NONE [] (Jump j))) ==>
     (!s. g (apply_update u1 s) <=> g s) ==>
-    IMPL_INST c locs (Inst n b (IF g next (ASM pre u1 (Jump j))))``,
+    IMPL_INST c locs (Inst n b (IF g next (ASM pre u1 (Jump j))))
+Proof
   PairCases_on `c`
   \\ rename [`(c,m,c6,c7)`]
   \\ SIMP_TAC (srw_ss()) [IMPL_INST_def,check_jump_def,exec_next_def,next_ok_def]
@@ -562,54 +591,71 @@ val IMPL_INST_IF_COMPOSE2 = store_thm("IMPL_INST_IF_COMPOSE2",
   \\ fs []
   \\ first_x_assum (qspecl_then [`s`,`apply_update u1 s`] mp_tac)
   \\ fs [] \\ strip_tac
-  \\ FULL_SIMP_TAC std_ss [get_assert_def,apply_update_def] \\ METIS_TAC []);
+  \\ FULL_SIMP_TAC std_ss [get_assert_def,apply_update_def] \\ METIS_TAC []
+QED
 
-val LESS_EQ_APPEND = store_thm("LESS_EQ_APPEND",
-  ``!xs n. n <= LENGTH xs ==> ?ys zs. (xs = ys ++ zs) /\ (LENGTH ys = n)``,
+Theorem LESS_EQ_APPEND:
+    !xs n. n <= LENGTH xs ==> ?ys zs. (xs = ys ++ zs) /\ (LENGTH ys = n)
+Proof
   Induct \\ Cases_on `n` \\ FULL_SIMP_TAC (srw_ss()) [LENGTH_NIL]
-  \\ REPEAT STRIP_TAC \\ RES_TAC \\ METIS_TAC [LENGTH,APPEND]);
+  \\ REPEAT STRIP_TAC \\ RES_TAC \\ METIS_TAC [LENGTH,APPEND]
+QED
 
-val EL_LENGTH_APPEND = store_thm("EL_LENGTH_APPEND",
-  ``!n xs ys. (EL (LENGTH xs) (xs ++ ys) = EL 0 ys) /\
-              (EL (LENGTH xs + n) (xs ++ ys) = EL n ys)``,
+Theorem EL_LENGTH_APPEND:
+    !n xs ys. (EL (LENGTH xs) (xs ++ ys) = EL 0 ys) /\
+              (EL (LENGTH xs + n) (xs ++ ys) = EL n ys)
+Proof
   REPEAT STRIP_TAC \\ `LENGTH xs <= LENGTH xs + n` by DECIDE_TAC
-  \\ FULL_SIMP_TAC std_ss [rich_listTheory.EL_APPEND2]);
+  \\ FULL_SIMP_TAC std_ss [rich_listTheory.EL_APPEND2]
+QED
 
-val DROP_LENGTH_ADD_APPEND = store_thm("DROP_LENGTH_ADD_APPEND",
-  ``!xs n ys. DROP (LENGTH xs + n) (xs ++ ys) = DROP n ys``,
-  Induct \\ ASM_SIMP_TAC (srw_ss()) [LENGTH,ADD_CLAUSES]);
+Theorem DROP_LENGTH_ADD_APPEND:
+    !xs n ys. DROP (LENGTH xs + n) (xs ++ ys) = DROP n ys
+Proof
+  Induct \\ ASM_SIMP_TAC (srw_ss()) [LENGTH,ADD_CLAUSES]
+QED
 
-val LUPDATE_LENGTH_ADD_APPEND = store_thm("LUPDATE_LENGTH_ADD_APPEND",
-  ``!xs x n ys. (LUPDATE x (LENGTH xs) (xs ++ ys) = xs ++ LUPDATE x 0 ys) /\
-                (LUPDATE x (LENGTH xs + n) (xs ++ ys) = xs ++ LUPDATE x n ys)``,
-  Induct \\ ASM_SIMP_TAC (srw_ss()) [LENGTH,ADD_CLAUSES,LUPDATE_def]);
+Theorem LUPDATE_LENGTH_ADD_APPEND:
+    !xs x n ys. (LUPDATE x (LENGTH xs) (xs ++ ys) = xs ++ LUPDATE x 0 ys) /\
+                (LUPDATE x (LENGTH xs + n) (xs ++ ys) = xs ++ LUPDATE x n ys)
+Proof
+  Induct \\ ASM_SIMP_TAC (srw_ss()) [LENGTH,ADD_CLAUSES,LUPDATE_def]
+QED
 
-val EL_LENGTH_REVERSE_APPEND = store_thm("EL_LENGTH_REVERSE_APPEND",
-  ``(EL (LENGTH xs + n) (REVERSE xs ++ ys) = EL n ys) /\
-    (EL (LENGTH xs) (REVERSE xs ++ ys) = EL 0 ys)``,
+Theorem EL_LENGTH_REVERSE_APPEND:
+    (EL (LENGTH xs + n) (REVERSE xs ++ ys) = EL n ys) /\
+    (EL (LENGTH xs) (REVERSE xs ++ ys) = EL 0 ys)
+Proof
   ONCE_REWRITE_TAC [GSYM LENGTH_REVERSE]
-  \\ SIMP_TAC std_ss [EL_LENGTH_APPEND]);
+  \\ SIMP_TAC std_ss [EL_LENGTH_APPEND]
+QED
 
-val arm_STATE_all_names = store_thm("arm_STATE_all_names",
-  ``EVERY (\n. s1 n = s2 n) all_names ==>
-    (arm_STATE s1 = arm_STATE s2)``,
+Theorem arm_STATE_all_names:
+    EVERY (\n. s1 n = s2 n) all_names ==>
+    (arm_STATE s1 = arm_STATE s2)
+Proof
   SIMP_TAC std_ss [arm_STATE_thm,EVERY_DEF,all_names_def,
     var_word8_def,var_dom_def,var_mem_def,var_nat_def,
-    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]);
+    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]
+QED
 
-val m0_STATE_all_names = store_thm("m0_STATE_all_names",
-  ``EVERY (\n. s1 n = s2 n) all_names ==>
-    (m0_STATE s1 = m0_STATE s2)``,
+Theorem m0_STATE_all_names:
+    EVERY (\n. s1 n = s2 n) all_names ==>
+    (m0_STATE s1 = m0_STATE s2)
+Proof
   SIMP_TAC std_ss [m0_STATE_thm,EVERY_DEF,all_names_def,
     var_word8_def,var_dom_def,var_mem_def,var_nat_def,
-    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]);
+    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]
+QED
 
-val riscv_STATE_all_names = store_thm("riscv_STATE_all_names",
-  ``EVERY (\n. s1 n = s2 n) all_names ==>
-    (riscv_STATE s1 = riscv_STATE s2)``,
+Theorem riscv_STATE_all_names:
+    EVERY (\n. s1 n = s2 n) all_names ==>
+    (riscv_STATE s1 = riscv_STATE s2)
+Proof
   SIMP_TAC std_ss [riscv_STATE_thm,EVERY_DEF,all_names_def,
     var_word8_def,var_dom_def,var_mem_def,var_nat_def,
-    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]);
+    var_word_def,STAR_ASSOC,var_acc_def,var_bool_def]
+QED
 
 (* translation from my graph lang to Tom's *)
 
@@ -1150,18 +1196,20 @@ val good_stack_tail_return_vars = prove(
   \\ FULL_SIMP_TAC std_ss [var_word_def,var_acc_def,return_vars_def,
            save_vals_def,fold_def,var_upd_def] \\ EVAL_TAC)
 
-val func_ok_EXPEND_CODE = store_thm("func_ok_EXPEND_CODE",
-  ``func_ok code locs f ==>
+Theorem func_ok_EXPEND_CODE:
+    func_ok code locs f ==>
     !c. (case (code,c) of
          | ((c1,x1), (c2,x2)) => (c1 SUBSET c2 /\ (x1 = x2))) ==>
-        func_ok c locs f``,
+        func_ok c locs f
+Proof
   Cases_on `f` \\ SIMP_TAC std_ss [func_ok_def,IMPL_INST_def]
   \\ PairCases_on `code` \\ FULL_SIMP_TAC (srw_ss()) []
   \\ REPEAT STRIP_TAC \\ PairCases_on `c'` \\ FULL_SIMP_TAC (srw_ss()) []
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss []
   \\ IMP_RES_TAC SPEC_SUBSET_CODE
   \\ every_case_tac \\ fs []
-  \\ metis_tac [SPEC_SUBSET_CODE]);
+  \\ metis_tac [SPEC_SUBSET_CODE]
+QED
 
 val return_vars_SAME = prove(
   ``!n. MEM n all_names ==>
@@ -1603,27 +1651,33 @@ Definition LIST_IMPL_INST_def:
      LIST_IMPL_INST code names xs)
 End
 
-val IMP_LIST_IMPL_INST = store_thm("IMP_LIST_IMPL_INST",
-  ``IMPL_INST code names (Inst i (K T) next) /\
+Theorem IMP_LIST_IMPL_INST:
+    IMPL_INST code names (Inst i (K T) next) /\
     LIST_IMPL_INST code names xs ==>
-    LIST_IMPL_INST code names ((Inst i (K T) next)::xs)``,
-  SIMP_TAC std_ss [LIST_IMPL_INST_def]);
+    LIST_IMPL_INST code names ((Inst i (K T) next)::xs)
+Proof
+  SIMP_TAC std_ss [LIST_IMPL_INST_def]
+QED
 
-val IMP_func_ok = store_thm("IMP_func_ok",
-  ``!insts. LIST_IMPL_INST code names insts ==>
+Theorem IMP_func_ok:
+    !insts. LIST_IMPL_INST code names insts ==>
             ALL_DISTINCT (MAP inst_loc insts) /\ EVEN (w2n entry) ==>
-            func_ok code names (Func name entry insts)``,
+            func_ok code names (Func name entry insts)
+Proof
   SIMP_TAC std_ss [func_ok_def] \\ Induct
   \\ FULL_SIMP_TAC std_ss [LIST_IMPL_INST_def,MAP,ALL_DISTINCT,MEM] \\ Cases
   \\ FULL_SIMP_TAC std_ss [LIST_IMPL_INST_def,MAP,ALL_DISTINCT,MEM,inst_loc_def]
   \\ REPEAT STRIP_TAC
-  \\ RES_TAC \\ FULL_SIMP_TAC (srw_ss()) []);
+  \\ RES_TAC \\ FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val IMP_EVERY_func_ok = store_thm("IMP_EVERY_func_ok",
-  ``func_ok code locs f /\
+Theorem IMP_EVERY_func_ok:
+    func_ok code locs f /\
     EVERY (func_ok code locs) fs ==>
-    EVERY (func_ok code locs) (f::fs)``,
-  FULL_SIMP_TAC std_ss [EVERY_DEF]);
+    EVERY (func_ok code locs) (f::fs)
+Proof
+  FULL_SIMP_TAC std_ss [EVERY_DEF]
+QED
 
 val _ = wordsLib.guess_lengths ()
 
@@ -1676,13 +1730,15 @@ Definition WRITE8_def[nocompute]:
   WRITE8 (a:'a word) (w:word8) (mem:'a word->word8) = (a =+ w) mem
 End
 
-val READ32_expand64 = store_thm("READ32_expand64",
-  ``READ32 (a:word64) m =
+Theorem READ32_expand64:
+    READ32 (a:word64) m =
     w2w (READ8 a m) ||
     (w2w (READ8 (a+1w) m) << 8) ||
     (w2w (READ8 (a+2w) m) << 16) ||
-    (w2w (READ8 (a+3w) m) << 24)``,
-  fs [READ32_def,READ8_def,word32_def] \\ blastLib.BBLAST_TAC);
+    (w2w (READ8 (a+3w) m) << 24)
+Proof
+  fs [READ32_def,READ8_def,word32_def] \\ blastLib.BBLAST_TAC
+QED
 
 Definition func_name_def:
   func_name (Func name entry l) = name
@@ -1692,21 +1748,25 @@ Definition func_body_trans_def[nocompute]:
   func_body_trans f = SND (func_trans f)
 End
 
-val list_func_trans_thm = store_thm("list_func_trans_thm",
-  ``list_func_trans fs =
-      graph (MAP (\f. (func_name f, func_body_trans f)) fs)``,
+Theorem list_func_trans_thm:
+    list_func_trans fs =
+      graph (MAP (\f. (func_name f, func_body_trans f)) fs)
+Proof
   SIMP_TAC std_ss [list_func_trans_def] \\ AP_TERM_TAC
   \\ Induct_on `fs` \\ FULL_SIMP_TAC std_ss [MAP] \\ Cases
-  \\ FULL_SIMP_TAC std_ss [func_name_def,func_trans_def,func_body_trans_def]);
+  \\ FULL_SIMP_TAC std_ss [func_name_def,func_trans_def,func_body_trans_def]
+QED
 
-val word_extract_thm = store_thm("word_extract_thm",
-  ``((7 >< 0) (w:word32) = (w2w w):word8) /\
+Theorem word_extract_thm:
+    ((7 >< 0) (w:word32) = (w2w w):word8) /\
     ((15 >< 8) (w:word32) = (w2w (w >>> 8)):word8) /\
     ((23 >< 16) (w:word32) = (w2w (w >>> 16)):word8) /\
     ((31 >< 24) (w:word32) = (w2w (w >>> 24)):word8) /\
     ((31 >< 0) (v:word64) = ((w2w v):word32)) /\
-    ((63 >< 32) (v:word64) = ((w2w (v >>> 32)):word32))``,
-  blastLib.BBLAST_TAC);
+    ((63 >< 32) (v:word64) = ((w2w (v >>> 32)):word32))
+Proof
+  blastLib.BBLAST_TAC
+QED
 
 val n2w_lsr =
   ``n2w (w2n ((w:'a word) >>> m)):'a word``
@@ -1720,11 +1780,13 @@ val Align_lemma = prove(
   Cases \\ SIMP_TAC std_ss [n2w_lsr,armTheory.Align_def,
     m0Theory.Align_def,w2n_n2w,WORD_MUL_LSL,word_mul_n2w]);
 
-val REMOVE_Align = store_thm("REMOVE_Align",
-  ``!w. ALIGNED w ==>
+Theorem REMOVE_Align:
+    !w. ALIGNED w ==>
         (arm$Align (w,2) = w) /\ (arm$Align (w,4) = w) /\
-        (m0$Align (w,2) = w) /\ (m0$Align (w,4) = w)``,
-  SIMP_TAC std_ss [Align_lemma,ALIGNED_def] \\ blastLib.BBLAST_TAC);
+        (m0$Align (w,2) = w) /\ (m0$Align (w,4) = w)
+Proof
+  SIMP_TAC std_ss [Align_lemma,ALIGNED_def] \\ blastLib.BBLAST_TAC
+QED
 
 val byte_lemma = prove(
   ``(((b1:word8) @@ (b2:word8)):word16 = w2w b1 << 8 || w2w b2) /\
@@ -1783,14 +1845,18 @@ val decomp_simp1 = save_thm("decomp_simp1",
         decomp_simp1,word_extract_thm,word_bits_mask,word_extract_w2w_mask,
         ALIGNED_INTRO,w2n_eq,byte_lemma])
 
-val decomp_simp2 = store_thm("decomp_simp2",
-  ``(K x = \y. x) /\ (SUC = \n. n + 1)``,
-  SIMP_TAC std_ss [FUN_EQ_THM,ADD1]);
+Theorem decomp_simp2:
+    (K x = \y. x) /\ (SUC = \n. n + 1)
+Proof
+  SIMP_TAC std_ss [FUN_EQ_THM,ADD1]
+QED
 
-val decomp_simp3 = store_thm("decomp_simp3",
-  ``(K = \x y. x) /\ (ALIGNED x = (x && 3w = 0w)) /\
-    (REV xs [] = REVERSE xs)``,
-  SIMP_TAC std_ss [FUN_EQ_THM,ALIGNED_def] \\ EVAL_TAC);
+Theorem decomp_simp3:
+    (K = \x y. x) /\ (ALIGNED x = (x && 3w = 0w)) /\
+    (REV xs [] = REVERSE xs)
+Proof
+  SIMP_TAC std_ss [FUN_EQ_THM,ALIGNED_def] \\ EVAL_TAC
+QED
 
 Definition CALL_TAG_def:
   CALL_TAG (s:string) (is_tail_call:bool) = T
@@ -1803,33 +1869,42 @@ Definition SKIP_TAG_def[nocompute]:
   SKIP_TAG (s:string) = unspecified_pre
 End
 
-val SKIP_SPEC_ARM = store_thm("SKIP_SPEC_ARM",
-  ``!asm n.
-      SPEC ARM_MODEL (arm_PC p * cond (SKIP_TAG asm)) {} (arm_PC (p + n2w n))``,
-  SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]);
+Theorem SKIP_SPEC_ARM:
+    !asm n.
+      SPEC ARM_MODEL (arm_PC p * cond (SKIP_TAG asm)) {} (arm_PC (p + n2w n))
+Proof
+  SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]
+QED
 
-val SKIP_SPEC_M0 = store_thm("SKIP_SPEC_M0",
-  ``!asm n.
-      SPEC ARM_MODEL (arm_PC p * cond (SKIP_TAG asm)) {} (arm_PC (p + n2w n))``,
-  SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]);
+Theorem SKIP_SPEC_M0:
+    !asm n.
+      SPEC ARM_MODEL (arm_PC p * cond (SKIP_TAG asm)) {} (arm_PC (p + n2w n))
+Proof
+  SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]
+QED
 
-val SKIP_SPEC_RISCV = store_thm("SKIP_SPEC_RISCV",
-  ``!asm n.
-      SPEC RISCV_MODEL (riscv_PC p * cond (SKIP_TAG asm)) {} (riscv_PC (p + n2w n))``,
-  SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]);
+Theorem SKIP_SPEC_RISCV:
+    !asm n.
+      SPEC RISCV_MODEL (riscv_PC p * cond (SKIP_TAG asm)) {} (riscv_PC (p + n2w n))
+Proof
+  SIMP_TAC std_ss [SKIP_TAG_def,SPEC_MOVE_COND,unspecified_pre_def]
+QED
 
-val fake_spec = store_thm("fake_spec",
-  ``SPEC ARM_MODEL (aPC p * aR 0w r0 * cond (unspecified_pre)) {}
-                   (aR 0w ARB * aPC (p + 4w))``,
-  SIMP_TAC std_ss [unspecified_pre_def,SPEC_MOVE_COND]);
+Theorem fake_spec:
+    SPEC ARM_MODEL (aPC p * aR 0w r0 * cond (unspecified_pre)) {}
+                   (aR 0w ARB * aPC (p + 4w))
+Proof
+  SIMP_TAC std_ss [unspecified_pre_def,SPEC_MOVE_COND]
+QED
 
 val WORD_LEMMA = prove(
   ``(a - l = w) = (l = a - w:word32)``,
   blastLib.BBLAST_TAC);
 
-val SP_LEMMA = store_thm("SP_LEMMA",
-  ``((a - n2w (l + n) * 4w = r13 - 4w * n2w l) ==> b) ==>
-    ALIGNED a /\ ALIGNED r13 /\ (n = w2n (a - r13:word32) DIV 4) ==> b``,
+Theorem SP_LEMMA:
+    ((a - n2w (l + n) * 4w = r13 - 4w * n2w l) ==> b) ==>
+    ALIGNED a /\ ALIGNED r13 /\ (n = w2n (a - r13:word32) DIV 4) ==> b
+Proof
   Cases_on `b` \\ FULL_SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss []
   \\ FULL_SIMP_TAC std_ss [Once ADD_COMM]
@@ -1844,57 +1919,69 @@ val SP_LEMMA = store_thm("SP_LEMMA",
   \\ MP_TAC (MATCH_MP DIVISION (DECIDE ``0<4:num``) |> Q.SPEC `n'`)
   \\ FULL_SIMP_TAC std_ss [AC MULT_COMM MULT_ASSOC]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ] \\ REPEAT STRIP_TAC
-  \\ FULL_SIMP_TAC std_ss []);
+  \\ FULL_SIMP_TAC std_ss []
+QED
 
-val ALIGNED_IMP_BITS_01 = store_thm("ALIGNED_IMP_BITS_01",
-  ``ALIGNED w ==> ~(w ' 0) /\ ~(w ' 1)``,
-  SIMP_TAC std_ss [ALIGNED_def] \\ blastLib.BBLAST_TAC);
+Theorem ALIGNED_IMP_BITS_01:
+    ALIGNED w ==> ~(w ' 0) /\ ~(w ' 1)
+Proof
+  SIMP_TAC std_ss [ALIGNED_def] \\ blastLib.BBLAST_TAC
+QED
 
-val BITS_01_IMP_ALIGNED = store_thm("BITS_01_IMP_ALIGNED",
-  ``~(w ' 0) /\ ~(w ' 1) ==> ((b ==> ALIGNED w) <=> ALIGNED w)``,
-  SIMP_TAC std_ss [ALIGNED_def] \\ blastLib.BBLAST_TAC);
+Theorem BITS_01_IMP_ALIGNED:
+    ~(w ' 0) /\ ~(w ' 1) ==> ((b ==> ALIGNED w) <=> ALIGNED w)
+Proof
+  SIMP_TAC std_ss [ALIGNED_def] \\ blastLib.BBLAST_TAC
+QED
 
-val ALIGNED_Align = store_thm("ALIGNED_Align",
-  ``(ALIGNED (arm$Align (w,2)) = ~(w ' 1)) /\
+Theorem ALIGNED_Align:
+    (ALIGNED (arm$Align (w,2)) = ~(w ' 1)) /\
     (ALIGNED (arm$Align (w,4)) = T) /\
     (ALIGNED (m0$Align (w,2)) = ~(w ' 1)) /\
-    (ALIGNED (m0$Align (w,4)) = T)``,
-  SIMP_TAC std_ss [Align_lemma,ALIGNED_def] \\ blastLib.BBLAST_TAC);
+    (ALIGNED (m0$Align (w,4)) = T)
+Proof
+  SIMP_TAC std_ss [Align_lemma,ALIGNED_def] \\ blastLib.BBLAST_TAC
+QED
 
 Definition carry_out_def[nocompute]:
   carry_out w1 w2 c = CARRY_OUT w1 w2 c
 End
 
-val OVERFLOW_EQ = store_thm("OVERFLOW_EQ",
-  ``OVERFLOW x y c =
+Theorem OVERFLOW_EQ:
+    OVERFLOW x y c =
       (word_msb x = word_msb y) /\
-      (word_msb x <> word_msb (if c then x - ~y else x + y))``,
+      (word_msb x <> word_msb (if c then x - ~y else x + y))
+Proof
   SIMP_TAC std_ss [add_with_carry_def,LET_DEF]
   \\ Cases_on `x` \\ Cases_on `y` \\ FULL_SIMP_TAC std_ss []
   \\ Cases_on `c` \\ FULL_SIMP_TAC std_ss [w2n_n2w,word_add_n2w]
   \\ FULL_SIMP_TAC std_ss [word_sub_def,WORD_NEG,WORD_NOT_NOT]
-  \\ FULL_SIMP_TAC std_ss [ADD_ASSOC,word_add_n2w]);
+  \\ FULL_SIMP_TAC std_ss [ADD_ASSOC,word_add_n2w]
+QED
 
 val BIT_31 = prove(
   ``BIT 31 m = ((m DIV 2**31) MOD 2 = 1)``,
   SIMP_TAC std_ss [bitTheory.BIT_def,bitTheory.BITS_THM]);
 
-val word32_msb_n2w = store_thm("word32_msb_n2w",
-  ``word_msb ((n2w n):word32) = ((n DIV 2**31) MOD 2 = 1)``,
-  SIMP_TAC (srw_ss()) [word_msb_n2w,BIT_31]);
+Theorem word32_msb_n2w:
+    word_msb ((n2w n):word32) = ((n DIV 2**31) MOD 2 = 1)
+Proof
+  SIMP_TAC (srw_ss()) [word_msb_n2w,BIT_31]
+QED
 
 Definition count_leading_zero_bits_def[nocompute]:
   count_leading_zero_bits (w:'a word) =
     (n2w (arm$CountLeadingZeroBits w)):'a word
 End
 
-val count_leading_zero_bits_thm =
-  store_thm("count_leading_zero_bits_thm",
-  ``(n2w (arm$CountLeadingZeroBits w) = count_leading_zero_bits w) /\
-    (n2w (m0$CountLeadingZeroBits w) = count_leading_zero_bits w)``,
+Theorem count_leading_zero_bits_thm:
+    (n2w (arm$CountLeadingZeroBits w) = count_leading_zero_bits w) /\
+    (n2w (m0$CountLeadingZeroBits w) = count_leading_zero_bits w)
+Proof
   FULL_SIMP_TAC std_ss [m0Theory.CountLeadingZeroBits_def,
     armTheory.CountLeadingZeroBits_def,count_leading_zero_bits_def,
-    armTheory.HighestSetBit_def,m0Theory.HighestSetBit_def]);
+    armTheory.HighestSetBit_def,m0Theory.HighestSetBit_def]
+QED
 
 Definition word_add_with_carry_def[nocompute]:
   word_add_with_carry (w1:'a word) w2 c =
@@ -2142,70 +2229,98 @@ val graph_format_preprocessing = save_thm("graph_format_preprocessing",
 
 (* misc *)
 
-val STAR_IF = store_thm("STAR_IF",
-  ``(if b then x else y) * (q:'a set set) = (if b then x * q else STAR y q)``,
-  Cases_on `b` \\ FULL_SIMP_TAC std_ss [])
+Theorem STAR_IF:
+    (if b then x else y) * (q:'a set set) = (if b then x * q else STAR y q)
+Proof
+  Cases_on `b` \\ FULL_SIMP_TAC std_ss []
+QED
 
-val emp_STAR = store_thm("emp_STAR",
-  ``(emp * p = p) /\ (p * emp = p:'a set set)``,
-  SIMP_TAC std_ss [SEP_CLAUSES])
+Theorem emp_STAR:
+    (emp * p = p) /\ (p * emp = p:'a set set)
+Proof
+  SIMP_TAC std_ss [SEP_CLAUSES]
+QED
 
-val T_IMP = store_thm("T_IMP",``(T ==> b) ==> b``,SIMP_TAC std_ss [])
+Theorem T_IMP:  (T ==> b) ==> b
+ProofSIMP_TAC std_ss []
+QED
 
-val EQ_T = store_thm("EQ_T",``(x = T) ==> x``,SIMP_TAC std_ss [])
+Theorem EQ_T:  (x = T) ==> x
+ProofSIMP_TAC std_ss []
+QED
 
-val ret_lemma = store_thm("ret_lemma",
-  ``(s "ret" = VarWord w) ==> (w = var_word "ret" s)``,
-  SRW_TAC [] [var_word_def,var_acc_def]);
+Theorem ret_lemma:
+    (s "ret" = VarWord w) ==> (w = var_word "ret" s)
+Proof
+  SRW_TAC [] [var_word_def,var_acc_def]
+QED
 
-val apply_update_NIL = store_thm("apply_update_NIL",
-  ``apply_update [] s = (s:'a->'b)``,
-  SIMP_TAC std_ss [apply_update_def]);
+Theorem apply_update_NIL:
+    apply_update [] s = (s:'a->'b)
+Proof
+  SIMP_TAC std_ss [apply_update_def]
+QED
 
-val var_word_apply_update = store_thm("var_word_apply_update",
-  ``var_word n (apply_update ((x,y)::xs) s) =
+Theorem var_word_apply_update:
+    var_word n (apply_update ((x,y)::xs) s) =
       if n = x then (case y s of VarWord w => w | _ => 0w) else
-        var_word n (apply_update xs s)``,
-  SRW_TAC [] [var_word_def,var_acc_def,apply_update_def,APPLY_UPDATE_THM]);
+        var_word n (apply_update xs s)
+Proof
+  SRW_TAC [] [var_word_def,var_acc_def,apply_update_def,APPLY_UPDATE_THM]
+QED
 
-val I_LEMMA = store_thm("I_LEMMA",
-  ``(\x.x:'a) = I``,
-  SIMP_TAC std_ss [FUN_EQ_THM]);
+Theorem I_LEMMA:
+    (\x.x:'a) = I
+Proof
+  SIMP_TAC std_ss [FUN_EQ_THM]
+QED
 
-val Aligned_Align = store_thm("Aligned_Align",
-  ``arm$Aligned (w,n) ==> (arm$Align (w:'a word,n) = w)``,
-  SIMP_TAC std_ss [armTheory.Aligned_def,armTheory.Align_def]);
+Theorem Aligned_Align:
+    arm$Aligned (w,n) ==> (arm$Align (w:'a word,n) = w)
+Proof
+  SIMP_TAC std_ss [armTheory.Aligned_def,armTheory.Align_def]
+QED
 
-val SWITCH_LEMMA = store_thm("SWITCH_LEMMA",
-  ``SPEC m (p * f x) c (q * f x) <=>
-    !v. (v = x) ==> SPEC m (p * f v) c (q * f v)``,
-  SIMP_TAC std_ss []);
+Theorem SWITCH_LEMMA:
+    SPEC m (p * f x) c (q * f x) <=>
+    !v. (v = x) ==> SPEC m (p * f v) c (q * f v)
+Proof
+  SIMP_TAC std_ss []
+QED
 
-val SWITCH_COMBINE = store_thm("SWITCH_COMBINE",
-  ``(b1 ==> SPEC m p c1 q1) /\ (b2 ==> SPEC m p c2 q2) ==>
-    (~b1 ==> b2) ==> SPEC m p (c1 UNION c2) (if b1 then q1 else q2)``,
+Theorem SWITCH_COMBINE:
+    (b1 ==> SPEC m p c1 q1) /\ (b2 ==> SPEC m p c2 q2) ==>
+    (~b1 ==> b2) ==> SPEC m p (c1 UNION c2) (if b1 then q1 else q2)
+Proof
   Cases_on `b1` \\ FULL_SIMP_TAC std_ss []
   \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC (SPEC_SUBSET_CODE |> SIMP_RULE std_ss [PULL_FORALL,AND_IMP_INTRO])
   \\ TRY (Q.EXISTS_TAC `c1` \\ FULL_SIMP_TAC (srw_ss()) [] \\ NO_TAC)
-  \\ TRY (Q.EXISTS_TAC `c2` \\ FULL_SIMP_TAC (srw_ss()) [] \\ NO_TAC));
+  \\ TRY (Q.EXISTS_TAC `c2` \\ FULL_SIMP_TAC (srw_ss()) [] \\ NO_TAC)
+QED
 
-val SPEC_PC_LEMMA = store_thm("SPEC_PC_LEMMA",
-  ``SPEC m (p * r x) c q ==>
-    !pc. (pc = x) ==> SPEC m (p * r pc) c q``,
-  SIMP_TAC std_ss []);
+Theorem SPEC_PC_LEMMA:
+    SPEC m (p * r x) c q ==>
+    !pc. (pc = x) ==> SPEC m (p * r pc) c q
+Proof
+  SIMP_TAC std_ss []
+QED
 
-val ABBBREV_CODE_LEMMA = store_thm("ABBBREV_CODE_LEMMA",
-  ``!a (x :('a, 'b, 'c) processor) p c q.
-      (a ==> SPEC x p c q) ==> !d. c SUBSET d ==> a ==> SPEC x p d q``,
-  REPEAT STRIP_TAC THEN RES_TAC THEN IMP_RES_TAC SPEC_SUBSET_CODE);
+Theorem ABBBREV_CODE_LEMMA:
+    !a (x :('a, 'b, 'c) processor) p c q.
+      (a ==> SPEC x p c q) ==> !d. c SUBSET d ==> a ==> SPEC x p d q
+Proof
+  REPEAT STRIP_TAC THEN RES_TAC THEN IMP_RES_TAC SPEC_SUBSET_CODE
+QED
 
-val NEQ_SYM = store_thm("NEQ_SYM",
-  ``~(x = y) <=> ~(y = x)``,
-  METIS_TAC []);
+Theorem NEQ_SYM:
+    ~(x = y) <=> ~(y = x)
+Proof
+  METIS_TAC []
+QED
 
-val SKIP_TAG_IMP_CALL_ARM = store_thm("SKIP_TAG_IMP_CALL_ARM",
-  ``IMPL_INST (ARM code) locs
+Theorem SKIP_TAG_IMP_CALL_ARM:
+    IMPL_INST (ARM code) locs
      (Inst entry (K T)
         (ASM (SOME (\s. SKIP_TAG str)) []
            (Jump exit))) ==>
@@ -2254,7 +2369,8 @@ val SKIP_TAG_IMP_CALL_ARM = store_thm("SKIP_TAG_IMP_CALL_ARM",
             ("stack",var_acc "stack");
             ("dom_stack",var_acc "dom_stack");
             ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r0")]
-          name (Jump exit)))``,
+          name (Jump exit)))
+Proof
   fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
       check_jump_def,get_assert_def,LET_THM]
   \\ fs [ARM_def] \\ rpt BasicProvers.TOP_CASE_TAC \\ fs []
@@ -2268,10 +2384,11 @@ val SKIP_TAG_IMP_CALL_ARM = store_thm("SKIP_TAG_IMP_CALL_ARM",
          var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
          var_dom_def,var_word_def,var_mem_def,var_word8_def]
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
-      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]);
+      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]
+QED
 
-val SKIP_TAG_IMP_CALL_M0 = store_thm("SKIP_TAG_IMP_CALL_M0",
-  ``IMPL_INST (M0 code) locs
+Theorem SKIP_TAG_IMP_CALL_M0:
+    IMPL_INST (M0 code) locs
      (Inst entry (K T)
         (ASM (SOME (\s. SKIP_TAG str)) []
            (Jump exit))) ==>
@@ -2320,7 +2437,8 @@ val SKIP_TAG_IMP_CALL_M0 = store_thm("SKIP_TAG_IMP_CALL_M0",
             ("stack",var_acc "stack");
             ("dom_stack",var_acc "dom_stack");
             ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r0")]
-          name (Jump exit)))``,
+          name (Jump exit)))
+Proof
   fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
       check_jump_def,get_assert_def,LET_THM]
   \\ fs [M0_def] \\ rpt BasicProvers.TOP_CASE_TAC \\ fs []
@@ -2334,10 +2452,11 @@ val SKIP_TAG_IMP_CALL_M0 = store_thm("SKIP_TAG_IMP_CALL_M0",
          var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
          var_dom_def,var_word_def,var_mem_def,var_word8_def]
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
-      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]);
+      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]
+QED
 
-val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
-  ``IMPL_INST (RISCV c) locs
+Theorem SKIP_TAG_IMP_CALL_RISCV:
+    IMPL_INST (RISCV c) locs
      (Inst entry (K T)
         (ASM (SOME (\s. SKIP_TAG str)) []
            (Jump exit))) ==>
@@ -2386,7 +2505,8 @@ val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
             ("stack",var_acc "stack");
             ("dom_stack",var_acc "dom_stack");
             ("clock",var_acc "clock"); ("ret_addr_input",var_acc "r10")]
-          name (Jump exit)))``,
+          name (Jump exit)))
+Proof
   fs [IMPL_INST_def,next_ok_def,check_ret_def,exec_next_def,
       check_jump_def,get_assert_def,LET_THM]
   \\ fs [RISCV_def] \\ rpt BasicProvers.TOP_CASE_TAC \\ fs []
@@ -2401,18 +2521,21 @@ val SKIP_TAG_IMP_CALL_RISCV = store_thm("SKIP_TAG_IMP_CALL_RISCV",
          var_word_def,var_acc_def,ret_and_all_names_def,all_names_def,
          var_dom_def,var_word_def,var_mem_def,var_word8_def]
   \\ fs [apply_update_def,APPLY_UPDATE_THM,arm_STATE_def,m0_STATE_def,
-      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]);
+      arm_STATE_REGS_def,STAR_ASSOC,SPEC_REFL]
+QED
 
 val fixwidth_w2v = prove(
   ``fixwidth (dimindex (:'a)) (w2v (w:'a word)) = w2v w``,
   EVAL_TAC \\ fs []);
 
-val bit_field_insert_31_16 = store_thm("bit_field_insert_31_16",
-  ``(bit_field_insert 31 16 v (w:word32) =
+Theorem bit_field_insert_31_16:
+    (bit_field_insert 31 16 v (w:word32) =
      (v << 16 || (w << 16) >>> 16):word32) /\
     (bit_field_insert 31 16 (x:word16) (w:word32) =
-     (w2w x << 16 || (w << 16) >>> 16):word32)``,
-  blastLib.BBLAST_TAC);
+     (w2w x << 16 || (w << 16) >>> 16):word32)
+Proof
+  blastLib.BBLAST_TAC
+QED
 
 val v2w_field_insert_31_16 = prove(
   ``(v2w (field_insert 31 16
@@ -2427,11 +2550,13 @@ val v2w_field_insert_31_16 = prove(
   \\ EVAL_TAC \\ Cases_on `i` \\ fs []
   \\ rpt (Cases_on `n` \\ fs [] \\ Cases_on `n'` \\ fs []));
 
-val word_cancel_extra = store_thm("word_cancel_extra",
-  ``(w + x − w = x:'a word) /\
+Theorem word_cancel_extra:
+    (w + x − w = x:'a word) /\
     (w + x − (w + y) = x - y:'a word) /\
-    (w + x − (w - y) = x + y:'a word)``,
-  fs [WORD_LEFT_ADD_DISTRIB]);
+    (w + x − (w - y) = x + y:'a word)
+Proof
+  fs [WORD_LEFT_ADD_DISTRIB]
+QED
 
 val export_init_rw = save_thm("export_init_rw",
   CONJ bit_field_insert_31_16 v2w_field_insert_31_16);
@@ -2439,17 +2564,21 @@ val export_init_rw = save_thm("export_init_rw",
 val m0_preprocessing = save_thm("m0_preprocessing",
   CONJ (EVAL ``RName_LR = RName_PC``) (EVAL ``RName_PC = RName_LR``));
 
-val WRITE64_intro = store_thm("WRITE64_intro",
-  ``m⦇a ↦ (7 >< 0) w; a + 1w ↦ (15 >< 8) w;
+Theorem WRITE64_intro:
+    m⦇a ↦ (7 >< 0) w; a + 1w ↦ (15 >< 8) w;
         a + 3w ↦ (31 >< 24) w; a + 7w ↦ (63 >< 56) w;
         a + 5w ↦ (47 >< 40) w; a + 2w ↦ (23 >< 16) w;
         a + 4w ↦ (39 >< 32) w; a + 6w ↦ (55 >< 48) w⦈ =
-    WRITE64 (a:word64) (w:word64) (m:word64->word8)``,
+    WRITE64 (a:word64) (w:word64) (m:word64->word8)
+Proof
   fs [WRITE64_def,FUN_EQ_THM,combinTheory.APPLY_UPDATE_THM]
   \\ rw [] \\ fs [] \\ fs [WORD_EQ_ADD_CANCEL]
-  \\ blastLib.BBLAST_TAC);
+  \\ blastLib.BBLAST_TAC
+QED
 
-val v2w_sing = store_thm("v2w_sing",
-  ``v2w [x] = if x then 1w else 0w``,
-  Cases_on `x` \\ EVAL_TAC);
+Theorem v2w_sing:
+    v2w [x] = if x then 1w else 0w
+Proof
+  Cases_on `x` \\ EVAL_TAC
+QED
 

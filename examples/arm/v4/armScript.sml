@@ -6,9 +6,6 @@
 (* DATE          : 2001 - 2007                                               *)
 (* ========================================================================= *)
 
-(* interactive use:
-  app load ["wordsLib", "wordsSyntax", "rich_listTheory", "updateTheory"];
-*)
 Theory arm
 Ancestors
   words rich_list update
@@ -21,64 +18,80 @@ val _ = ParseExtras.temp_loose_equality()
 (*  The ARM State Space                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `state_inp = <| state : 'a; inp : num -> 'b |>`;
-val _ = Hol_datatype `state_out = <| state : 'a; out : 'b |>`;
+Datatype: state_inp = <| state : 'a; inp : num -> 'b |>
+End
+Datatype: state_out = <| state : 'a; out : 'b |>
+End
 
-val _ = Hol_datatype `register =
+Datatype: register =
  r0     | r1     | r2      | r3      | r4      | r5      | r6      | r7  |
  r8     | r9     | r10     | r11     | r12     | r13     | r14     | r15 |
  r8_fiq | r9_fiq | r10_fiq | r11_fiq | r12_fiq | r13_fiq | r14_fiq |
                                                  r13_irq | r14_irq |
                                                  r13_svc | r14_svc |
                                                  r13_abt | r14_abt |
-                                                 r13_und | r14_und`;
+                                                 r13_und | r14_und
+End
 
-val _ = Hol_datatype
-  `psr = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und`;
+Datatype:
+   psr = CPSR | SPSR_fiq | SPSR_irq | SPSR_svc | SPSR_abt | SPSR_und
+End
 
-val _ = Hol_datatype
-  `exceptions = reset | undefined | software | pabort |
-                dabort | address |interrupt | fast`;
+Datatype:
+   exceptions = reset | undefined | software | pabort |
+                dabort | address |interrupt | fast
+End
 
 val _ = type_abbrev("registers", ``:register->word32``);
 val _ = type_abbrev("psrs",      ``:psr->word32``);
 
-val _ = Hol_datatype `regs = <| reg : registers; psr : psrs |>`;
+Datatype: regs = <| reg : registers; psr : psrs |>
+End
 
-val _ = Hol_datatype
-  `arm_state = <| regs : regs; ireg : word32; exception : exceptions |>`;
+Datatype:
+   arm_state = <| regs : regs; ireg : word32; exception : exceptions |>
+End
 
 (* ......................................................................... *)
 
-val _ = Hol_datatype
-  `formats = SignedByte | UnsignedByte | SignedHalfWord |
-             UnsignedHalfWord | UnsignedWord`;
+Datatype:
+   formats = SignedByte | UnsignedByte | SignedHalfWord |
+             UnsignedHalfWord | UnsignedWord
+End
 
-val _ = Hol_datatype `data = Byte of word8 | Half of word16 | Word of word32`;
+Datatype: data = Byte word8 | Half word16 | Word word32
+End
 
-val _ = Hol_datatype`
-  memop = MemRead of word32 | MemWrite of word32=>data | CPWrite of word32`;
+Datatype:
+  memop = MemRead word32 | MemWrite word32 data | CPWrite word32
+End
 
-val _ = Hol_datatype`
-  interrupt = Reset of regs | Undef | Prefetch | Dabort of num | Fiq | Irq`;
+Datatype:
+  interrupt = Reset regs | Undef | Prefetch | Dabort num | Fiq | Irq
+End
 
-val _ = Hol_datatype`
+Datatype:
   arm_input = <| ireg : word32; data : word32 list;
-                 interrupt : interrupt option; no_cp : bool |>`;
+                 interrupt : interrupt option; no_cp : bool |>
+End
 
-val _ = Hol_datatype `mode = usr | fiq | irq | svc | abt | und | sys | safe`;
+Datatype: mode = usr | fiq | irq | svc | abt | und | sys | safe
+End
 
-val _ = Hol_datatype
-  `condition = EQ | CS | MI | VS | HI | GE | GT | AL |
-               NE | CC | PL | VC | LS | LT | LE | NV`;
+Datatype:
+   condition = EQ | CS | MI | VS | HI | GE | GT | AL |
+               NE | CC | PL | VC | LS | LT | LE | NV
+End
 
-val _ = Hol_datatype
-  `iclass = swp | mrs | msr | data_proc | mla_mul |
+Datatype:
+   iclass = swp | mrs | msr | data_proc | mla_mul |
             ldr_str | ldrh_strh | ldm_stm | br | swi_ex | cdp_und |
-            mcr | mrc | ldc_stc | unexec`;
+            mcr | mrc | ldc_stc | unexec
+End
 
-val _ = Hol_datatype`
-  arm_output = <| transfers : memop list; cpi : bool; user : bool |>`;
+Datatype:
+  arm_output = <| transfers : memop list; cpi : bool; user : bool |>
+End
 
 (* ------------------------------------------------------------------------- *)
 (*  Memory operations                                                        *)
@@ -1021,4 +1034,3 @@ val _ = computeLib.add_persistent_funs
    "mode2num_thm", "psr_EQ_psr", "psr2num_thm", "iclass_EQ_iclass",
    "iclass2num_thm", "num2condition_thm", "condition2num_thm",
    "exceptions_EQ_exceptions", "num2exceptions_thm", "exceptions2num_thm"])
-

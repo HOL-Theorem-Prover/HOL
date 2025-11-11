@@ -5,9 +5,8 @@ Libs
   NEWLib
 
 (* prove a cofinite version of the induction principle *)
-val hastype_cofin_ind = store_thm(
-  "hastype_cofin_ind",
-  ``!P.
+Theorem hastype_cofin_ind:
+    !P.
        (!G s A. valid_ctxt G /\ MEM (s,A) G ==> P G (VAR s) A) /\
        (!G m n A B.
             P G m (A --> B) /\ P G n A ==>
@@ -16,7 +15,8 @@ val hastype_cofin_ind = store_thm(
             FINITE X /\
             (!y. ~(y IN X) ==> P ((y,A)::G) ([VAR y/v]m) B) ==>
             P G (LAM v m) (A --> B)) ==>
-       !G m A. G |- m -: A ==> P G m A``,
+       !G m A. G |- m -: A ==> P G m A
+Proof
   GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!G m A. G |- m -: A ==> !pi. P (ctxtswap pi G) (tpm pi m) A`
         THEN1 METIS_TAC [pmact_nil] THEN
@@ -48,20 +48,22 @@ val hastype_cofin_ind = store_thm(
        by SRW_TAC [][Once (GSYM pmact_sing_to_back)] THEN
   `_ = tpm [(y,lswapstr pi x)] (tpm pi m)`
        by SRW_TAC [][tpm_fresh, nomsetTheory.supp_apart] THEN
-  SRW_TAC [][GSYM pmact_decompose]);
+  SRW_TAC [][GSYM pmact_decompose]
+QED
 
 (* and a "cofinite" introduction rule for the abstraction case *)
-val cofin_hastype_abs_I = store_thm(
-  "cofin_hastype_abs_I",
-  ``!X v M A B G.
+Theorem cofin_hastype_abs_I:
+    !X v M A B G.
          FINITE X /\
          (!u. ~(u IN X) ==> (u,A)::G |- [VAR u/v]M -: B)
        ==>
-         G |- LAM v M -: (A --> B)``,
+         G |- LAM v M -: (A --> B)
+Proof
   REPEAT STRIP_TAC THEN
   Q_TAC (NEW_TAC "z") `X UNION FV M` THEN
   `LAM v M = LAM z ([VAR z/v] M)` by SRW_TAC [][SIMPLE_ALPHA] THEN
-  SRW_TAC [][hastype_rules]);
+  SRW_TAC [][hastype_rules]
+QED
 
 (* this then allows a nice, renaming free proof of weakening *)
 val weakening_cofin = prove(
@@ -105,16 +107,17 @@ val (hastype2_rules, hastype2_ind, hastype2_cases) = Hol_reln`
                    Gamma ||- LAM x m -: A --> B)
 `;
 
-val hastype2_swap = store_thm(
-  "hastype2_swap",
-  ``!G m A. G ||- m -: A ==> !pi. ctxtswap pi G ||- tpm pi m -: A``,
+Theorem hastype2_swap:
+    !G m A. G ||- m -: A ==> !pi. ctxtswap pi G ||- tpm pi m -: A
+Proof
   HO_MATCH_MP_TAC hastype2_ind THEN SRW_TAC [][] THENL [
     METIS_TAC [hastype2_rules, MEM_ctxtswap, valid_ctxt_swap],
     METIS_TAC [hastype2_rules],
     MATCH_MP_TAC (last (CONJUNCTS hastype2_rules)) THEN
     SRW_TAC [][tpm_subst_out] THEN
     METIS_TAC [pmact_inverse]
-  ]);
+  ]
+QED
 
 Theorem hastype2_bvc_ind:
   ∀P fv.
@@ -168,15 +171,17 @@ val hastype2_bvc_ind0 = save_thm(
    SIMP_RULE bool_ss [] o
    Q.SPECL [`\G m ty x. P G m ty`, `\x. X`]) hastype2_bvc_ind)
 
-val hastype2_valid_ctxt = store_thm(
-  "hastype2_valid_ctxt",
-  ``!G m A. G ||- m -: A ==> valid_ctxt G``,
-  HO_MATCH_MP_TAC hastype2_ind THEN SRW_TAC [][] THEN METIS_TAC []);
+Theorem hastype2_valid_ctxt:
+    !G m A. G ||- m -: A ==> valid_ctxt G
+Proof
+  HO_MATCH_MP_TAC hastype2_ind THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 
-val hastype2_swap_eqn = store_thm(
-  "hastype2_swap_eqn",
-  ``G ||- tpm pi m -: A <=> ctxtswap (REVERSE pi) G ||- m -: A``,
-  METIS_TAC [hastype2_swap, pmact_inverse]);
+Theorem hastype2_swap_eqn:
+    G ||- tpm pi m -: A <=> ctxtswap (REVERSE pi) G ||- m -: A
+Proof
+  METIS_TAC [hastype2_swap, pmact_inverse]
+QED
 
 val hastype2_hastype = prove(
   ``!G m A. G ||- m -: A ==> G |- m -: A``,
@@ -202,8 +207,9 @@ val hastype_hastype2 = prove(
     SRW_TAC [][hastype2_swap_eqn, ctxtswap_fresh]
   ]);
 
-val hastype_hastype2_eqn = store_thm(
-  "hastype_hastype2_eqn",
-  ``G |- m -: A <=> G ||- m -: A``,
-  METIS_TAC [hastype2_hastype, hastype_hastype2]);
+Theorem hastype_hastype2_eqn:
+    G |- m -: A <=> G ||- m -: A
+Proof
+  METIS_TAC [hastype2_hastype, hastype_hastype2]
+QED
 

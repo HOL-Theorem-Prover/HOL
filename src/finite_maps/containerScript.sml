@@ -20,41 +20,40 @@ Libs
      decided to allow bag to move back in the build order.  Alternatively,
      the bag-related theorems could just go into bagTheory... *)
 
-val SET_TO_LIST_THM = save_thm("SET_TO_LIST_THM", listTheory.SET_TO_LIST_THM)
-val SET_TO_LIST_IND = save_thm("SET_TO_LIST_IND", listTheory.SET_TO_LIST_IND);
+Theorem SET_TO_LIST_THM = listTheory.SET_TO_LIST_THM
+Theorem SET_TO_LIST_IND = listTheory.SET_TO_LIST_IND;
 
 (*---------------------------------------------------------------------------
       Map a list into a set.
  ---------------------------------------------------------------------------*)
 
-val LIST_TO_SET_THM = save_thm("LIST_TO_SET_THM", listTheory.LIST_TO_SET_THM)
+Theorem LIST_TO_SET_THM = listTheory.LIST_TO_SET_THM
 
 (*---------------------------------------------------------------------------
             Some consequences
  ---------------------------------------------------------------------------*)
 
-val SET_TO_LIST_INV = save_thm("SET_TO_LIST_INV", listTheory.SET_TO_LIST_INV)
-val SET_TO_LIST_CARD = save_thm("SET_TO_LIST_CARD", listTheory.SET_TO_LIST_CARD)
-val SET_TO_LIST_IN_MEM = save_thm("SET_TO_LIST_IN_MEM",
-                                  listTheory.SET_TO_LIST_IN_MEM)
-val MEM_SET_TO_LIST = save_thm("MEM_SET_TO_LIST", listTheory.MEM_SET_TO_LIST)
-val SET_TO_LIST_SING = save_thm("SET_TO_LIST_SING", listTheory.SET_TO_LIST_SING)
-val UNION_APPEND = save_thm("UNION_APPEND", listTheory.UNION_APPEND);
-val LIST_TO_SET_APPEND = save_thm("LIST_TO_SET_APPEND",
-                                  listTheory.LIST_TO_SET_APPEND)
-val FINITE_LIST_TO_SET = save_thm("FINITE_LIST_TO_SET",
-                                  listTheory.FINITE_LIST_TO_SET)
+Theorem SET_TO_LIST_INV = listTheory.SET_TO_LIST_INV
+Theorem SET_TO_LIST_CARD = listTheory.SET_TO_LIST_CARD
+Theorem SET_TO_LIST_IN_MEM =
+                                  listTheory.SET_TO_LIST_IN_MEM
+Theorem MEM_SET_TO_LIST = listTheory.MEM_SET_TO_LIST
+Theorem SET_TO_LIST_SING = listTheory.SET_TO_LIST_SING
+Theorem UNION_APPEND = listTheory.UNION_APPEND;
+Theorem LIST_TO_SET_APPEND =
+                                  listTheory.LIST_TO_SET_APPEND
+Theorem FINITE_LIST_TO_SET =
+                                  listTheory.FINITE_LIST_TO_SET
 
 (*---------------------------------------------------------------------------
     Lists and bags. Note that we also have SET_OF_BAG and BAG_OF_SET
     in bagTheory.
  ---------------------------------------------------------------------------*)
 
-Definition LIST_TO_BAG_def:
+Definition LIST_TO_BAG_def[simp]:
      (LIST_TO_BAG [] = {||})
  /\  (LIST_TO_BAG (h::t) = BAG_INSERT h (LIST_TO_BAG t))
 End
-val _ = export_rewrites ["LIST_TO_BAG_def"]
 
 Theorem LIST_TO_BAG_alt:
     !l x. LIST_TO_BAG l x = LENGTH (FILTER ($= x) l)
@@ -78,10 +77,10 @@ Defn.tprove
   WF_REL_TAC `measure BAG_CARD`
    THEN PROVE_TAC [PSUB_BAG_CARD, PSUB_BAG_REST]);
 
-val BAG_TO_LIST_THM = save_thm("BAG_TO_LIST_THM",
- DISCH_ALL (ASM_REWRITE_RULE [ASSUME ``FINITE_BAG bag``] BAG_TO_LIST_EQN));
+Theorem BAG_TO_LIST_THM =
+ DISCH_ALL (ASM_REWRITE_RULE [ASSUME ``FINITE_BAG bag``] BAG_TO_LIST_EQN);
 
-val BAG_TO_LIST_IND = save_thm("BAG_TO_LIST_IND",BAG_TO_LIST_IND);
+Theorem BAG_TO_LIST_IND = BAG_TO_LIST_IND;
 
 (*---------------------------------------------------------------------------
        Some consequences.
@@ -109,20 +108,18 @@ Proof
 QED
 
 (* version with the equation the "rewrite" way round *)
-Theorem MEM_BAG_TO_LIST:
+Theorem MEM_BAG_TO_LIST[simp]:
   !b. FINITE_BAG b ==> !x. MEM x (BAG_TO_LIST b) = BAG_IN x b
 Proof
   PROVE_TAC [BAG_IN_MEM]
 QED
 
-val _ = export_rewrites ["MEM_BAG_TO_LIST"];
 
-Theorem FINITE_LIST_TO_BAG:
+Theorem FINITE_LIST_TO_BAG[simp]:
  FINITE_BAG (LIST_TO_BAG ls)
 Proof
 Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]
 QED
-val _ = export_rewrites["FINITE_LIST_TO_BAG"];
 
 
 Theorem EVERY_LIST_TO_BAG:
@@ -207,11 +204,11 @@ Proof
     DISCH_TAC THEN irule EQ_EXT THEN ASM_SIMP_TAC std_ss [LIST_TO_BAG_alt] ]
 QED
 
-val CARD_LIST_TO_BAG = Q.store_thm(
-"CARD_LIST_TO_BAG",
-`BAG_CARD (LIST_TO_BAG ls) = LENGTH ls`,
-Induct_on `ls` THEN SRW_TAC [][BAG_CARD_THM,arithmeticTheory.ADD1])
-before export_rewrites ["CARD_LIST_TO_BAG"];
+Theorem CARD_LIST_TO_BAG[simp]:
+  BAG_CARD (LIST_TO_BAG ls) = LENGTH ls
+Proof
+  Induct_on `ls` THEN SRW_TAC [][BAG_CARD_THM,arithmeticTheory.ADD1]
+QED
 
 val EQ_TRANS' = REWRITE_RULE [GSYM AND_IMP_INTRO] EQ_TRANS ;
 val th = MATCH_MP EQ_TRANS' (SYM CARD_LIST_TO_BAG) ;
@@ -223,21 +220,22 @@ Proof
     ASM_SIMP_TAC bool_ss [BAG_TO_LIST_INV] ]
 QED
 
-val BAG_TO_LIST_EQ_NIL = Q.store_thm(
-"BAG_TO_LIST_EQ_NIL",
-`FINITE_BAG b ==>
+Theorem BAG_TO_LIST_EQ_NIL[simp]:
+FINITE_BAG b ==>
  (([] = BAG_TO_LIST b) <=> (b = {||})) /\
- ((BAG_TO_LIST b = []) <=> (b = {||}))`,
+ ((BAG_TO_LIST b = []) <=> (b = {||}))
+Proof
 Q.SPEC_THEN `b` STRUCT_CASES_TAC BAG_cases THEN
-SRW_TAC [][BAG_TO_LIST_THM])
-before export_rewrites ["BAG_TO_LIST_EQ_NIL"];
+SRW_TAC [][BAG_TO_LIST_THM]
+QED
 
 local open rich_listTheory arithmeticTheory in
-  val LIST_ELEM_COUNT_LIST_TO_BAG = Q.store_thm(
-    "LIST_ELEM_COUNT_LIST_TO_BAG",
-    `LIST_ELEM_COUNT e ls = LIST_TO_BAG ls e`,
+Theorem LIST_ELEM_COUNT_LIST_TO_BAG:
+     LIST_ELEM_COUNT e ls = LIST_TO_BAG ls e
+Proof
     Induct_on `ls` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,EMPTY_BAG] THEN
-    Cases_on `h = e` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,BAG_INSERT,ADD1]);
+    Cases_on `h = e` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,BAG_INSERT,ADD1]
+QED
 end
 
 Theorem LIST_TO_BAG_SUB_BAG_FLAT_suff:
@@ -391,6 +389,3 @@ GEN_TAC THEN HO_MATCH_MP_TAC fmap_INDUCT THEN
 SIMP_TAC std_ss [BAG_OF_FMAP_THM, FINITE_EMPTY_BAG,
                  DOMSUB_NOT_IN_DOM, FINITE_BAG_INSERT]
 QED
-
-
-

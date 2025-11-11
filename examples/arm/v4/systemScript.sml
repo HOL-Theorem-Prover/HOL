@@ -27,27 +27,30 @@ Libs
 
 val _ = type_abbrev("mem", ``:word30->word32``);
 
-val _ = Hol_datatype`
-  cp_output = <| data : word32 option list; absent : bool |>`;
+Datatype:
+  cp_output = <| data : word32 option list; absent : bool |>
+End
 
-val _ = Hol_datatype `bus =
+Datatype: bus =
    <| data     : word32 list;
       memory   : mem;
       abort    : num option;
       cp_state : 'a
-   |>`;
+   |>
+End
 
 (* -------------------------------------------------------------------------- *)
 (* The system state                                                           *)
 (* -------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `arm_sys_state =
+Datatype: arm_sys_state =
    <| registers : registers;
       psrs      : psrs;
       memory    : mem;
       undefined : bool;
       cp_state  : 'a
-   |>`;
+   |>
+End
 
 (* -------------------------------------------------------------------------- *)
 (* The model is paramaterised by a collection of coprocessor operations       *)
@@ -72,7 +75,7 @@ val _ = Hol_datatype `arm_sys_state =
 (*                                                                            *)
 (* -------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `coproc =
+Datatype: coproc =
   <| absent : bool -> word32 -> bool;
      f_cdp  : 'a -> bool -> word32 -> 'a;
      f_mrc  : 'a -> bool -> word32 -> word32;
@@ -80,7 +83,8 @@ val _ = Hol_datatype `coproc =
      f_stc  : 'a -> bool -> word32 -> word32 option list;
      f_ldc  : 'a -> bool -> word32 -> word32 list -> 'a;
      n_ldc  : 'a -> bool -> word32 -> num
-  |>`;
+  |>
+End
 
 (* -------------------------------------------------------------------------- *)
 (* ADD_COPROC                                                                 *)
@@ -360,8 +364,8 @@ val TRANSFERS = prove(
         (TRANSFERS arm_out cp_state data mem).cp_state = cp_state)`,
   SRW_TAC [] [TRANSFERS_def] \\ FULL_SIMP_TAC (srw_ss()) []);
 
-val NEXT_ARM_MMU = store_thm("NEXT_ARM_MMU",
- `NEXT_ARM_MMU cp state =
+Theorem NEXT_ARM_MMU:
+  NEXT_ARM_MMU cp state =
     let ireg = state.memory (addr30 (FETCH_PC state.registers)) in
     let s = <| regs := <| reg := state.registers; psr := state.psrs |>;
                ireg := ireg;
@@ -378,8 +382,10 @@ val NEXT_ARM_MMU = store_thm("NEXT_ARM_MMU",
     in
       <| registers := r.reg; psrs := r.psr; memory := b.memory;
          undefined := (~state.undefined /\ arm_out.cpi /\ cp_out.absent);
-         cp_state := p |>`,
-  SRW_TAC [boolSimps.LET_ss] [NEXT_ARM_SYS_def,NEXT_ARM_MMU_def,TRANSFERS]);
+         cp_state := p |>
+Proof
+  SRW_TAC [boolSimps.LET_ss] [NEXT_ARM_SYS_def,NEXT_ARM_MMU_def,TRANSFERS]
+QED
 
 Definition STATE_ARM_MMU_def:
   (STATE_ARM_MMU cp 0 s = s) /\
@@ -406,8 +412,8 @@ End
 Definition STATE_ARM_MEM_def:   STATE_ARM_MEM = STATE_ARM_MMU NO_CP
 End
 
-val NEXT_ARM_MEM = store_thm("NEXT_ARM_MEM",
-  `NEXT_ARM_MEM state =
+Theorem NEXT_ARM_MEM:
+   NEXT_ARM_MEM state =
      let ireg = state.memory (addr30 (FETCH_PC state.registers)) in
      let s = <| regs := <| reg := state.registers; psr := state.psrs |>;
                 ireg := ireg;
@@ -420,9 +426,11 @@ val NEXT_ARM_MEM = store_thm("NEXT_ARM_MEM",
      in
        <| registers := r.reg; psrs := r.psr; memory := mmu_out.memory;
           undefined := (~state.undefined /\ arm_out.cpi);
-          cp_state := state.cp_state |>`,
+          cp_state := state.cp_state |>
+Proof
   SRW_TAC [boolSimps.LET_ss]
-          [NEXT_ARM_MEM_def,NEXT_ARM_MMU,RUN_CP_NO_CPS,OUT_CP_NO_CPS]);
+          [NEXT_ARM_MEM_def,NEXT_ARM_MMU,RUN_CP_NO_CPS,OUT_CP_NO_CPS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Export ML versions of functions                                           *)
@@ -465,47 +473,57 @@ val DECODE_TAC = SIMP_TAC std_ss [DECODE_PSR_def,DECODE_BRANCH_def,
       NZCV_def,REGISTER_LIST_def,rich_listTheory.SNOC,word_extract_def]
  \\ SIMP_TAC word_ss [];
 
-val DECODE_PSR_THM = store_thm("DECODE_PSR_THM",
-  `!n.  DECODE_PSR (n2w n) =
+Theorem DECODE_PSR_THM:
+   !n.  DECODE_PSR (n2w n) =
      let (q0,m) = DIVMOD_2EXP 5 n in
      let (q1,i) = DIVMOD_2EXP 1 (DIV2 q0) in
      let (q2,f) = DIVMOD_2EXP 1 q1 in
      let (q3,V) = DIVMOD_2EXP 1 (DIV_2EXP 20 q2) in
      let (q4,C) = DIVMOD_2EXP 1 q3 in
      let (q5,Z) = DIVMOD_2EXP 1 q4 in
-       ((ODD q5,Z=1,C=1,V=1),f = 1,i = 1,n2w m)`, DECODE_TAC);
+       ((ODD q5,Z=1,C=1,V=1),f = 1,i = 1,n2w m)
+Proof DECODE_TAC
+QED
 
-val DECODE_BRANCH_THM = store_thm("DECODE_BRANCH_THM",
-  `!n. DECODE_BRANCH (n2w n) =
-         let (L,offset) = DIVMOD_2EXP 24 n in (ODD L,n2w offset)`, DECODE_TAC);
+Theorem DECODE_BRANCH_THM:
+   !n. DECODE_BRANCH (n2w n) =
+         let (L,offset) = DIVMOD_2EXP 24 n in (ODD L,n2w offset)
+Proof DECODE_TAC
+QED
 
-val DECODE_DATAP_THM = store_thm("DECODE_DATAP_THM",
-  `!n. DECODE_DATAP (n2w n) =
+Theorem DECODE_DATAP_THM:
+   !n. DECODE_DATAP (n2w n) =
      let (q0,opnd2) = DIVMOD_2EXP 12 n in
      let (q1,Rd) = DIVMOD_2EXP 4 q0 in
      let (q2,Rn) = DIVMOD_2EXP 4 q1 in
      let (q3,S) = DIVMOD_2EXP 1 q2 in
      let (q4,opcode) = DIVMOD_2EXP 4 q3 in
-       (ODD q4,n2w opcode,S = 1,n2w Rn,n2w Rd,n2w opnd2)`, DECODE_TAC);
+       (ODD q4,n2w opcode,S = 1,n2w Rn,n2w Rd,n2w opnd2)
+Proof DECODE_TAC
+QED
 
-val DECODE_MRS_THM = store_thm("DECODE_MRS_THM",
-  `!n. DECODE_MRS (n2w n) =
+Theorem DECODE_MRS_THM:
+   !n. DECODE_MRS (n2w n) =
      let (q,Rd) = DIVMOD_2EXP 4 (DIV_2EXP 12 n) in
-      (ODD (DIV_2EXP 6 q),n2w Rd)`, DECODE_TAC);
+      (ODD (DIV_2EXP 6 q),n2w Rd)
+Proof DECODE_TAC
+QED
 
-val DECODE_MSR_THM = store_thm("DECODE_MSR_THM",
-  `!n. DECODE_MSR (n2w n) =
+Theorem DECODE_MSR_THM:
+   !n. DECODE_MSR (n2w n) =
      let (q0,opnd) = DIVMOD_2EXP 12 n in
      let (q1,bit16) = DIVMOD_2EXP 1 (DIV_2EXP 4 q0) in
      let (q2,bit19) = DIVMOD_2EXP 1 (DIV_2EXP 2 q1) in
      let (q3,R) = DIVMOD_2EXP 1 (DIV_2EXP 2 q2) in
        (ODD (DIV_2EXP 2 q3),R = 1,bit19 = 1,bit16 = 1,
-        n2w (MOD_2EXP 4 opnd),n2w opnd)`,
+        n2w (MOD_2EXP 4 opnd),n2w opnd)
+Proof
   DECODE_TAC \\ `4096 = 16 * 256n` by numLib.ARITH_TAC
-    \\ ASM_REWRITE_TAC [] \\ SIMP_TAC arith_ss [MOD_MULT_MOD]);
+    \\ ASM_REWRITE_TAC [] \\ SIMP_TAC arith_ss [MOD_MULT_MOD]
+QED
 
-val DECODE_LDR_STR_THM = store_thm("DECODE_LDR_STR_THM",
-  `!n. DECODE_LDR_STR (n2w n) =
+Theorem DECODE_LDR_STR_THM:
+   !n. DECODE_LDR_STR (n2w n) =
     let (q0,offset) = DIVMOD_2EXP 12 n in
     let (q1,Rd) = DIVMOD_2EXP 4 q0 in
     let (q2,Rn) = DIVMOD_2EXP 4 q1 in
@@ -514,11 +532,13 @@ val DECODE_LDR_STR_THM = store_thm("DECODE_LDR_STR_THM",
     let (q5,B) = DIVMOD_2EXP 1 q4 in
     let (q6,U) = DIVMOD_2EXP 1 q5 in
     let (q7,P) = DIVMOD_2EXP 1 q6 in
-      (ODD q7,P = 1,U = 1,B = 1,W = 1,L = 1,n2w Rn,n2w Rd,n2w offset)`,
-   DECODE_TAC);
+      (ODD q7,P = 1,U = 1,B = 1,W = 1,L = 1,n2w Rn,n2w Rd,n2w offset)
+Proof
+   DECODE_TAC
+QED
 
-val DECODE_LDRH_STRH_THM = store_thm("DECODE_LDRH_STRH_THM",
-  `!n. DECODE_LDRH_STRH (n2w n) =
+Theorem DECODE_LDRH_STRH_THM:
+   !n. DECODE_LDRH_STRH (n2w n) =
     let (q0,offsetL) = DIVMOD_2EXP 4 n in
     let (q1,H) = DIVMOD_2EXP 1 (DIV2 q0) in
     let (q2,S) = DIVMOD_2EXP 1 q1 in
@@ -530,11 +550,13 @@ val DECODE_LDRH_STRH_THM = store_thm("DECODE_LDRH_STRH_THM",
     let (q8,I) = DIVMOD_2EXP 1 q7 in
     let (q9,U) = DIVMOD_2EXP 1 q8 in
       (ODD q9,U = 1,I = 1,W = 1,L = 1,n2w Rn,n2w Rd,
-       n2w offsetH,S = 1,H = 1,n2w offsetL)`,
-   DECODE_TAC);
+       n2w offsetH,S = 1,H = 1,n2w offsetL)
+Proof
+   DECODE_TAC
+QED
 
-val DECODE_MLA_MUL_THM = store_thm("DECODE_MLA_MUL_THM",
-  `!n. DECODE_MLA_MUL (n2w n) =
+Theorem DECODE_MLA_MUL_THM:
+   !n. DECODE_MLA_MUL (n2w n) =
     let (q0,Rm) = DIVMOD_2EXP 4 n in
     let (q1,Rs) = DIVMOD_2EXP 4 (DIV_2EXP 4 q0) in
     let (q2,Rn) = DIVMOD_2EXP 4 q1 in
@@ -542,27 +564,33 @@ val DECODE_MLA_MUL_THM = store_thm("DECODE_MLA_MUL_THM",
     let (q4,S) = DIVMOD_2EXP 1 q3 in
     let (q5,A) = DIVMOD_2EXP 1 q4 in
     let (q6,Sgn) = DIVMOD_2EXP 1 q5 in
-      (ODD q6,Sgn = 1,A = 1,S = 1,n2w Rd,n2w Rn,n2w Rs,n2w Rm)`, DECODE_TAC);
+      (ODD q6,Sgn = 1,A = 1,S = 1,n2w Rd,n2w Rn,n2w Rs,n2w Rm)
+Proof DECODE_TAC
+QED
 
-val DECODE_LDM_STM_THM = store_thm("DECODE_LDM_STM_THM",
-  `!n. DECODE_LDM_STM (n2w n) =
+Theorem DECODE_LDM_STM_THM:
+   !n. DECODE_LDM_STM (n2w n) =
     let (q0,list) = DIVMOD_2EXP 16 n in
     let (q1,Rn) = DIVMOD_2EXP 4 q0 in
     let (q2,L) = DIVMOD_2EXP 1 q1 in
     let (q3,W) = DIVMOD_2EXP 1 q2 in
     let (q4,S) = DIVMOD_2EXP 1 q3 in
     let (q5,U) = DIVMOD_2EXP 1 q4 in
-      (ODD q5, U = 1, S = 1, W = 1, L = 1,n2w Rn,n2w list)`, DECODE_TAC);
+      (ODD q5, U = 1, S = 1, W = 1, L = 1,n2w Rn,n2w list)
+Proof DECODE_TAC
+QED
 
-val DECODE_SWP_THM = store_thm("DECODE_SWP_THM",
-  `!n. DECODE_SWP (n2w n) =
+Theorem DECODE_SWP_THM:
+   !n. DECODE_SWP (n2w n) =
     let (q0,Rm) = DIVMOD_2EXP 4 n in
     let (q1,Rd) = DIVMOD_2EXP 4 (DIV_2EXP 8 q0) in
     let (q2,Rn) = DIVMOD_2EXP 4 q1 in
-      (ODD (DIV_2EXP 2 q2),n2w Rn,n2w Rd,n2w Rm)`, DECODE_TAC);
+      (ODD (DIV_2EXP 2 q2),n2w Rn,n2w Rd,n2w Rm)
+Proof DECODE_TAC
+QED
 
-val DECODE_LDC_STC_THM = store_thm("DECODE_LDC_STC_THM",
-  `!n. DECODE_LDC_STC (n2w n) =
+Theorem DECODE_LDC_STC_THM:
+   !n. DECODE_LDC_STC (n2w n) =
     let (q0,offset) = DIVMOD_2EXP 8 n in
     let (q1,CPN) = DIVMOD_2EXP 4 q0 in
     let (q2,CRd) = DIVMOD_2EXP 4 q1 in
@@ -571,54 +599,63 @@ val DECODE_LDC_STC_THM = store_thm("DECODE_LDC_STC_THM",
     let (q5,W) = DIVMOD_2EXP 1 q4 in
     let (q6,N) = DIVMOD_2EXP 1 q5 in
     let (q7,U) = DIVMOD_2EXP 1 q6 in
-      (ODD q7,U = 1,N = 1,W = 1,L = 1,n2w Rn,n2w CRd,n2w CPN,n2w offset)`,
-  DECODE_TAC);
+      (ODD q7,U = 1,N = 1,W = 1,L = 1,n2w Rn,n2w CRd,n2w CPN,n2w offset)
+Proof
+  DECODE_TAC
+QED
 
-val DECODE_CDP_THM = store_thm("DECODE_CDP_THM",
-  `!n. DECODE_CDP (n2w n) =
+Theorem DECODE_CDP_THM:
+   !n. DECODE_CDP (n2w n) =
     let (q0,CRm) = DIVMOD_2EXP 4 n in
     let (q1,Cop2) = DIVMOD_2EXP 3 (DIV2 q0) in
     let (q2,CPN) = DIVMOD_2EXP 4 q1 in
     let (q3,CRd) = DIVMOD_2EXP 4 q2 in
     let (q4,CRn) = DIVMOD_2EXP 4 q3 in
-      (n2w (MOD_2EXP 4 q4),n2w CRn,n2w CRd,n2w CPN,n2w Cop2,n2w CRm)`,
-  DECODE_TAC);
+      (n2w (MOD_2EXP 4 q4),n2w CRn,n2w CRd,n2w CPN,n2w Cop2,n2w CRm)
+Proof
+  DECODE_TAC
+QED
 
-val DECODE_MRC_MCR_THM = store_thm("DECODE_MRC_MCR_THM",
-  `!n. DECODE_MRC_MCR (n2w n) =
+Theorem DECODE_MRC_MCR_THM:
+   !n. DECODE_MRC_MCR (n2w n) =
     let (q0,CRm) = DIVMOD_2EXP 4 n in
     let (q1,Cop2) = DIVMOD_2EXP 3 (DIV2 q0) in
     let (q2,CPN) = DIVMOD_2EXP 4 q1 in
     let (q3,CRd) = DIVMOD_2EXP 4 q2 in
     let (q4,CRn) = DIVMOD_2EXP 4 q3 in
-      (n2w (MOD_2EXP 3 (DIV2 q4)),n2w CRn,n2w CRd,n2w CPN,n2w Cop2,n2w CRm)`,
-  DECODE_TAC);
+      (n2w (MOD_2EXP 3 (DIV2 q4)),n2w CRn,n2w CRd,n2w CPN,n2w Cop2,n2w CRm)
+Proof
+  DECODE_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 
 fun w2w_n2w_sizes a b = (GSYM o SIMP_RULE (std_ss++wordsLib.SIZES_ss) [] o
   Thm.INST_TYPE [alpha |-> a, beta |-> b]) w2w_n2w;
 
-val SHIFT_IMMEDIATE_THM = store_thm("SHIFT_IMMEDIATE_THM",
-  `!reg mode C opnd2.
+Theorem SHIFT_IMMEDIATE_THM:
+   !reg mode C opnd2.
      SHIFT_IMMEDIATE reg mode C (n2w opnd2) =
        let (q0,Rm) = DIVMOD_2EXP 4 opnd2 in
        let (q1,Sh) = DIVMOD_2EXP 2 (DIV2 q0) in
        let shift = MOD_2EXP 5 q1 in
        let rm = REG_READ reg mode (n2w Rm) in
-         SHIFT_IMMEDIATE2 (n2w shift) (n2w Sh) rm C`,
+         SHIFT_IMMEDIATE2 (n2w shift) (n2w Sh) rm C
+Proof
   ONCE_REWRITE_TAC (map (w2w_n2w_sizes ``:12``) [``:8``, ``:4``, ``:2``])
-    \\ DECODE_TAC);
+    \\ DECODE_TAC
+QED
 
-val SHIFT_REGISTER_THM = store_thm("SHIFT_REGISTER_THM",
-  `!reg mode C opnd2.
+Theorem SHIFT_REGISTER_THM:
+   !reg mode C opnd2.
      SHIFT_REGISTER reg mode C (n2w opnd2) =
        let (q0,Rm) = DIVMOD_2EXP 4 opnd2 in
        let (q1,Sh) = DIVMOD_2EXP 2 (DIV2 q0) in
        let Rs = MOD_2EXP 4 (DIV2 q1) in
        let shift = MOD_2EXP 8 (w2n (REG_READ reg mode (n2w Rs)))
        and rm = REG_READ (INC_PC reg) mode (n2w Rm) in
-         SHIFT_REGISTER2 (n2w shift) (n2w Sh) rm C`,
+         SHIFT_REGISTER2 (n2w shift) (n2w Sh) rm C
+Proof
   ONCE_REWRITE_TAC [w2w_n2w_sizes ``:32`` ``:8``]
     \\ ONCE_REWRITE_TAC (map (w2w_n2w_sizes ``:12``) [``:8``, ``:4``, ``:2``])
     \\ SIMP_TAC std_ss [SHIFT_REGISTER_def,word_extract_def,
@@ -626,12 +663,13 @@ val SHIFT_REGISTER_THM = store_thm("SHIFT_REGISTER_THM",
             (GSYM o SIMP_RULE std_ss [] o SPEC `8`) MOD_2EXP_def] o
           SPECL [`7`,`0`,`w2n (a:word32)`] o
           Thm.INST_TYPE [alpha |-> ``:32``]) word_bits_n2w]
-    \\ SIMP_TAC word_ss []);
+    \\ SIMP_TAC word_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val REGISTER_LIST_THM = store_thm("REGISTER_LIST_THM",
-  `!n. REGISTER_LIST (n2w n) =
+Theorem REGISTER_LIST_THM:
+   !n. REGISTER_LIST (n2w n) =
        let (q0,b0) = DIVMOD_2EXP 1 n in
        let (q1,b1) = DIVMOD_2EXP 1 q0 in
        let (q2,b2) = DIVMOD_2EXP 1 q1 in
@@ -651,13 +689,15 @@ val REGISTER_LIST_THM = store_thm("REGISTER_LIST_THM",
          [(b0 = 1,0w); (b1 = 1,1w); (b2 = 1,2w); (b3 = 1,3w);
           (b4 = 1,4w); (b5 = 1,5w); (b6 = 1,6w); (b7 = 1,7w);
           (b8 = 1,8w); (b9 = 1,9w); (b10 = 1,10w); (b11 = 1,11w);
-          (b12 = 1,12w); (b13 = 1,13w); (b14 = 1,14w); (ODD q14,15w)])`,
-  DECODE_TAC);
+          (b12 = 1,12w); (b13 = 1,13w); (b14 = 1,14w); (ODD q14,15w)])
+Proof
+  DECODE_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val DECODE_ARM_THM = store_thm("DECODE_ARM_THM",
-  `!ireg. DECODE_ARM (ireg : word32) =
+Theorem DECODE_ARM_THM:
+   !ireg. DECODE_ARM (ireg : word32) =
     let b n = ireg ' n in
       if b 27 then
         if b 26 then
@@ -737,9 +777,11 @@ val DECODE_ARM_THM = store_thm("DECODE_ARM_THM",
                  else
                    data_proc
                else
-                 if b 4 then data_proc else data_proc`,
+                 if b 4 then data_proc else data_proc
+Proof
   SRW_TAC [boolSimps.LET_ss] [DECODE_ARM_def]
-    \\ FULL_SIMP_TAC (srw_ss()) []);
+    \\ FULL_SIMP_TAC (srw_ss()) []
+QED
 
 (* -------------------------------------------------------------------------- *)
 

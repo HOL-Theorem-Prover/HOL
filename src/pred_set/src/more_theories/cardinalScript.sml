@@ -52,7 +52,7 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x2248, tmnm = "=~"};
 val _ = TeX_notation {hol = "=~",            TeX = ("\\ensuremath{\\approx}", 1)};
 val _ = TeX_notation {hol = UTF8.chr 0x2248, TeX = ("\\ensuremath{\\approx}", 1)};
 
-val _ = overload_on("=~", ``cardeq``)
+Overload "=~" = ``cardeq``
 
 Overload "≉" = “λa b. ¬(a ≈ b)”
 val _ = set_fixity "≉" (Infix(NONASSOC, 450))
@@ -64,9 +64,11 @@ Proof
   qexists_tac `\x. x` >> simp[]
 QED
 
-val cardeq_SYMlemma = prove(
-  ``!s t. s =~ t ==> t =~ s``,
-  rw[cardeq_def] >> metis_tac [BIJ_LINV_BIJ]);
+Theorem cardeq_SYMlemma[local]:
+    !s t. s =~ t ==> t =~ s
+Proof
+  rw[cardeq_def] >> metis_tac [BIJ_LINV_BIJ]
+QED
 
 
 Theorem cardeq_SYM:
@@ -86,14 +88,13 @@ Definition cardleq_def:
   cardleq s1 s2 <=> ?f. INJ f s1 s2
 End
 
-val _ = overload_on ("<<=", ``cardleq``)
+Overload "<<=" = ``cardleq``
 
-Theorem cardleq_REFL:
+Theorem cardleq_REFL[simp]:
     !s:'a set. s <<= s
 Proof
   rw[cardleq_def] >> qexists_tac `\x. x` >> rw[INJ_ID]
 QED
-val _ = export_rewrites ["cardleq_REFL"]
 
 Theorem cardleq_TRANS:
     !s:'a set t:'b set u:'c set. s <<= t /\ t <<= u ==> s <<= u
@@ -159,18 +160,16 @@ QED
 
    more useful then CARDEQ_INSERT as a (conditional) "rewrite", when
    working with the =~ congruence (rather than equality) *)
-val CARDEQ_INSERT_RWT = save_thm(
-  "CARDEQ_INSERT_RWT",
+Theorem CARDEQ_INSERT_RWT =
   ``INFINITE (s:'a set)`` |> ASSUME |> DISJ2 ``(x:'a) IN s``
                           |> EQ_MP (SYM cardeq_INSERT) |> DISCH_ALL
-                          |> Q.GEN `s`)
+                          |> Q.GEN `s`
 
-Theorem EMPTY_CARDLEQ:
+Theorem EMPTY_CARDLEQ[simp]:
     {} <<= t
 Proof
   simp[cardleq_def, INJ_EMPTY]
-QED(* export_rewrites for pred_set *)
-val _ = export_rewrites ["EMPTY_CARDLEQ"]
+QED
 
 Theorem FINITE_CLE_INFINITE:
     FINITE s /\ INFINITE t ==> s <<= t
@@ -228,22 +227,20 @@ Proof
   metis_tac[cardleq_def,FINITE_INJ]
 QED
 
-val _ = type_abbrev ("inf", ``:num + 'a``)
+Type inf = ``:num + 'a``
 
-Theorem INFINITE_UNIV_INF:
+Theorem INFINITE_UNIV_INF[simp]:
     INFINITE univ(:'a inf)
 Proof
   simp[INFINITE_UNIV] >> qexists_tac `SUM_MAP SUC I` >>
   simp[sumTheory.FORALL_SUM] >> qexists_tac `INL 0` >> simp[]
 QED
-val _ = export_rewrites ["INFINITE_UNIV_INF"]
 
-Theorem IMAGE_cardleq:
+Theorem IMAGE_cardleq[simp]:
     !f s. IMAGE f s <<= s
 Proof
   simp[cardleq_def] >> metis_tac [SURJ_IMAGE, SURJ_INJ_INV]
 QED
-val _ = export_rewrites ["IMAGE_cardleq"]
 
 Theorem CARDLEQ_CROSS_CONG:
     !x1 x2 y1 y2. x1 <<= x2 /\ y1 <<= y2 ==> x1 CROSS y1 <<= x2 CROSS y2
@@ -320,8 +317,8 @@ val _ = Unicode.unicode_version {u = UTF8.chr 0x227A, tmnm = "<</="};
 val _ = TeX_notation {hol = "<</=",          TeX = ("\\ensuremath{\\prec}", 1)};
 val _ = TeX_notation {hol = UTF8.chr 0x227A, TeX = ("\\ensuremath{\\prec}", 1)};
 
-val _ = overload_on ("cardlt", ``\s1 s2. ~(cardleq s2 s1)``); (* cardlt *)
-val _ = overload_on ("<</=", ``cardlt``);
+Overload cardlt = ``\s1 s2. ~(cardleq s2 s1)``(* cardlt *)
+Overload "<</=" = ``cardlt``
 
 Theorem cardleq_lteq:
     !s1 s2. s1 <<= s2 <=> s1 <</= s2 \/ (s1 =~ s2)
@@ -396,10 +393,11 @@ Proof
   simp_tac (srw_ss() ++ DNF_ss) [DISJ_ASSOC]
 QED
 
-val lemma1 = prove(
-  ``INFINITE M /\ M =~ M CROSS M ==>
+Theorem lemma1[local]:
+    INFINITE M /\ M =~ M CROSS M ==>
     M =~ {T;F} CROSS M /\
-    !A B. DISJOINT A B /\ A =~ M /\ B =~ M ==> A UNION B =~ M``,
+    !A B. DISJOINT A B /\ A =~ M /\ B =~ M ==> A UNION B =~ M
+Proof
   strip_tac >> CONJ_ASM1_TAC
   >- (match_mp_tac cardleq_ANTISYM >> conj_tac
       >- (simp[cardleq_def] >> qexists_tac `\x. (T,x)` >> simp[INJ_DEF]) >>
@@ -421,7 +419,8 @@ val lemma1 = prove(
   >- (`?a. a IN A /\ (f1 a = m)` by metis_tac [BIJ_DEF, SURJ_DEF] >>
       qexists_tac `a` >> simp[]) >>
   `?b. b IN B /\ (f2 b = m)` by metis_tac [BIJ_DEF, SURJ_DEF] >>
-  qexists_tac `b` >> simp[] >> metis_tac[]);
+  qexists_tac `b` >> simp[] >> metis_tac[]
+QED
 
 fun PRINT_TAC s gl = (print ("** " ^ s ^ "\n"); ALL_TAC gl)
 
@@ -1685,10 +1684,12 @@ Proof
     METIS_TAC [AND_IMP_INTRO]
 QED
 
-val lemma = prove (
-  ``(!x. x IN s ==> (g(f(x)) = x)) <=>
-    (!y x. x IN s /\ (y = f x) ==> (g y = x))``,
- MESON_TAC []);
+Theorem lemma[local]:
+    (!x. x IN s ==> (g(f(x)) = x)) <=>
+    (!y x. x IN s /\ (y = f x) ==> (g y = x))
+Proof
+ MESON_TAC []
+QED
 
 Theorem INJECTIVE_ON_LEFT_INVERSE:
    !f s. (!x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)) <=>
@@ -2084,12 +2085,12 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 val _ = set_fixity "<=_c" (Infix(NONASSOC, 450)); (* for cardleq *)
-val _ = overload_on("<=_c", ``cardleq``);
-val _ = overload_on("<<=",  ``$<=_c``);           (* defined in pred_setTheory *)
+Overload "<=_c" = ``cardleq``
+Overload "<<=" = ``$<=_c``(* defined in pred_setTheory *)
 
 val _ = set_fixity "<_c" (Infix(NONASSOC, 450));  (* for cardlt *)
-val _ = overload_on("<_c", ``cardlt``);
-val _ = overload_on("<</=", ``$<_c``);
+Overload "<_c" = ``cardlt``
+Overload "<</=" = ``$<_c``
 
 val _ = set_fixity ">=_c" (Infix(NONASSOC, 450)); (* for cardgeq *)
 val _ = Unicode.unicode_version {u = UTF8.chr 0x227D, tmnm = ">=_c"};
@@ -2102,8 +2103,8 @@ val _ = TeX_notation {hol = ">_c",           TeX = ("\\ensuremath{\\succ}", 1)};
 val _ = TeX_notation {hol = UTF8.chr 0x227B, TeX = ("\\ensuremath{\\succ}", 1)};
 
 val _ = set_fixity "=_c" (Infix(NONASSOC, 450));  (* for cardeq *)
-val _ = overload_on("=_c", ``cardeq``);
-val _ = overload_on("=~",  ``$=_c``);
+Overload "=_c" = ``cardeq``
+Overload "=~" = ``$=_c``
 
 Theorem le_c:
     !s t. s <=_c t <=> ?f. (!x. x IN s ==> f(x) IN t) /\
@@ -2136,15 +2137,15 @@ Definition cardgeq_def:
     cardgeq s t = cardleq t s
 End
 
-val _ = overload_on (">=_c", ``cardgeq``);
-val ge_c = save_thm ("ge_c",   cardgeq_def);
+Overload ">=_c" = ``cardgeq``
+Theorem ge_c = cardgeq_def;
 
 Definition cardgt_def:
     cardgt s t = cardlt t s
 End
 
-val _ = overload_on (">_c",  ``cardgt``);
-val gt_c = save_thm ("gt_c",   cardgt_def);
+Overload ">_c" = ``cardgt``
+Theorem gt_c = cardgt_def;
 
 Theorem LE_C:
    !s t. s <=_c t <=> ?g. !x. x IN s ==> ?y. y IN t /\ (g y = x)
@@ -2321,7 +2322,7 @@ QED
 (* Totality (cardinal comparability).                                        *)
 (* ------------------------------------------------------------------------- *)
 
-val CARD_LE_TOTAL = save_thm ("CARD_LE_TOTAL", cardleq_dichotomy);
+Theorem CARD_LE_TOTAL = cardleq_dichotomy;
 
 (* ------------------------------------------------------------------------- *)
 (* Other variants like "trichotomy of cardinals" now follow easily.          *)
@@ -2759,8 +2760,7 @@ QED
 (* The key to arithmetic on infinite cardinals: k^2 = k.                     *)
 (* ------------------------------------------------------------------------- *)
 
-val CARD_SQUARE_INFINITE = save_thm
-  ("CARD_SQUARE_INFINITE", SET_SQUARED_CARDEQ_SET);
+Theorem CARD_SQUARE_INFINITE = SET_SQUARED_CARDEQ_SET;
 
 (* ------------------------------------------------------------------------- *)
 (* Preservation of finiteness.                                               *)
@@ -3597,4 +3597,3 @@ Theorem INJECTIVE_ALT :
 Proof
   MESON_TAC[]
 QED
-

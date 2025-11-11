@@ -14,14 +14,15 @@ val RW1 = ONCE_REWRITE_RULE;
 (* The LPC set                                                                   *)
 (* ----------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `
-  lpc_el =  tReg of word4 => word32
-          | tStatus of arm_bit => bool
-          | tRom of word32 => word8 option
-          | tRam of word32 => word8 option
-          | tTime of num
-          | tUart0 of (word8 list # num # word8 list # num)
-          | tUndef of bool`;
+Datatype:
+  lpc_el =  tReg word4 word32
+          | tStatus arm_bit bool
+          | tRom word32 (word8 option)
+          | tRam word32 (word8 option)
+          | tTime num
+          | tUart0 (word8 list # num # word8 list # num)
+          | tUndef bool
+End
 
 val lpc_el_11 = DB.fetch "-" "lpc_el_11";
 val lpc_el_distinct = DB.fetch "-" "lpc_el_distinct";
@@ -330,14 +331,15 @@ Proof
   SIMP_TAC std_ss [EXTENSION,SUBSET_DEF,IN_INSERT,NOT_IN_EMPTY,IN_DIFF] \\ METIS_TAC []
 QED
 
-val CODE_POOL_lpc2set = store_thm("CODE_POOL_lpc2set",
-  ``CODE_POOL LPC_ROM {(p,c)} (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=>
+Theorem CODE_POOL_lpc2set:
+    CODE_POOL LPC_ROM {(p,c)} (lpc2set' (rs,st,is,ms,tt,ua,ud) s) <=>
       ({p+3w;p+2w;p+1w;p} = is) /\ (rs = {}) /\ (st = {}) /\ (ms = {}) /\
       (tt = {}) /\ (ua = {}) /\ (ud = {}) /\
       (LPC_READ_ROM (p + 0w) s = SOME (( 7 ><  0) c)) /\
       (LPC_READ_ROM (p + 1w) s = SOME ((15 ><  8) c)) /\
       (LPC_READ_ROM (p + 2w) s = SOME ((23 >< 16) c)) /\
-      (LPC_READ_ROM (p + 3w) s = SOME ((31 >< 24) c))``,
+      (LPC_READ_ROM (p + 3w) s = SOME ((31 >< 24) c))
+Proof
   SIMP_TAC bool_ss [CODE_POOL_def,IMAGE_INSERT,IMAGE_EMPTY,BIGUNION_INSERT,
     BIGUNION_EMPTY,UNION_EMPTY,LPC_ROM_def,CODE_POOL_lpc2set_LEMMA,
     GSYM DELETE_DEF, INSERT_SUBSET, EMPTY_SUBSET,IN_lpc2set]
@@ -345,7 +347,8 @@ val CODE_POOL_lpc2set = store_thm("CODE_POOL_lpc2set",
   \\ ASM_SIMP_TAC std_ss [DELETE_lpc2set,EMPTY_lpc2set,DIFF_INSERT,WORD_ADD_0]
   \\ ASM_SIMP_TAC std_ss [GSYM AND_IMP_INTRO,DELETE_lpc2set,EMPTY_lpc2set,DIFF_EMPTY]
   \\ ONCE_REWRITE_TAC [EQ_SYM_EQ]
-  \\ ASM_SIMP_TAC std_ss [DELETE_lpc2set,EMPTY_lpc2set]);
+  \\ ASM_SIMP_TAC std_ss [DELETE_lpc2set,EMPTY_lpc2set]
+QED
 
 val LPC_SPEC_CODE = (RW [GSYM LPC_MODEL_def] o SIMP_RULE std_ss [LPC_MODEL_def] o prove)
   (``SPEC LPC_MODEL (CODE_POOL (FST (SND (SND LPC_MODEL))) c * p) {}
@@ -398,5 +401,3 @@ Proof
   THEN1 (Q.PAT_ASSUM `!x.bb` (ASSUME_TAC o Q.SPEC `tUndef (LPC_READ_UNDEF s1)`)
          \\ FULL_SIMP_TAC std_ss [IN_lpc2set,oneTheory.one] \\ METIS_TAC [])
 QED
-
-

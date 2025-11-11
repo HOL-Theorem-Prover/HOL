@@ -360,8 +360,9 @@ val MOVE_RM2 = (GEN_ALL o INST [`b` |-> `x * 3w`] o SPEC_ALL) WORD_ADD_COMM_ASSO
 
 (* -------------------------------------------------------- *)
 
-val INVARIANT_CORRECT = store_thm("INVARIANT_CORRECT",
-  `!t a rm rs rn. 2 * t <= WL ==> (STATE t a rm rs rn = INVARIANT a rm rs rn t)`,
+Theorem INVARIANT_CORRECT:
+   !t a rm rs rn. 2 * t <= WL ==> (STATE t a rm rs rn = INVARIANT a rm rs rn t)
+Proof
   REWRITE_TAC [WL_def]
     THEN Induct
     THEN1 SIMP_TAC arith_ss [WORD_BITS_COMP_THM2,MIN_HB_1,WORD_MULT_CLAUSES,
@@ -382,7 +383,7 @@ val INVARIANT_CORRECT = store_thm("INVARIANT_CORRECT",
     THEN ASM_SIMP_TAC word_ss [LSL_CONST,WORD_MULT_CLAUSES,MULT_TWO_LSL2a_0,
            MULT_TWO_LSL2b_0,MULT_THREE_LSL_0,MULT_THREE_LSL_0b,
            (numLib.REDUCE_RULE o SPEC `0`) MUST_BE_THREE]
-);
+QED
 
 (* -------------------------------------------------------- *)
 
@@ -515,12 +516,13 @@ val SPEC_LSL_LIMIT = (GEN_ALL o REWRITE_RULE [GSYM WL_def] o
 
 (* -------------------------------------------------------- *)
 
-val CORRECT = store_thm("CORRECT",
-  `!a rm rs rn. BOOTHMULTIPLY a rm rs rn =
-                rm * rs + (if a then rn else 0w)`,
+Theorem CORRECT:
+   !a rm rs rn. BOOTHMULTIPLY a rm rs rn =
+                rm * rs + (if a then rn else 0w)
+Proof
   SIMP_TAC bool_ss [DUR_LT_EQ_HWL,BOOTHMULTIPLY_def,INVARIANT_CORRECT,INVARIANT,PROJ_RD_def,BORROW_IMP_WL,
                     DUR_IMP_ZERO_MSBS,w2n_ELIM,SPEC_LSL_LIMIT,WORD_SUB_RZERO]
-);
+QED
 
 (* -------------------------------------------------------- *)
 

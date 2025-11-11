@@ -45,16 +45,19 @@ Proof
   THEN SRW_TAC [] []
 QED
 
-val FILTER_OVERRIDE_lem = Q.prove(
-  `(((\y. x <> y) o FST) = (\y. x <> FST y)) /\
-   (((\y. x <> y /\ P y) o FST) = (\y. x <> FST y /\ P (FST y)))`,
+Theorem FILTER_OVERRIDE_lem[local]:
+   (((\y. x <> y) o FST) = (\y. x <> FST y)) /\
+   (((\y. x <> y /\ P y) o FST) = (\y. x <> FST y /\ P (FST y)))
+Proof
   SRW_TAC [] [FUN_EQ_THM]
-  THEN METIS_TAC []);
+  THEN METIS_TAC []
+QED
 
-val FILTER_OVERRIDE = Q.prove(
-  `!P l.
+Theorem FILTER_OVERRIDE[local]:
+   !P l.
      OVERRIDE (FILTER (P o FST) l) =
-     FILTER (P o FST) (OVERRIDE l)`,
+     FILTER (P o FST) (OVERRIDE l)
+Proof
   Induct_on `l` THEN SRW_TAC [] [OVERRIDE_def]
   THEN Q.PAT_ASSUM `!P. x`
          (fn thm =>
@@ -63,26 +66,31 @@ val FILTER_OVERRIDE = Q.prove(
   THEN FULL_SIMP_TAC (srw_ss())
          [FILTER_OVERRIDE_lem, rich_listTheory.FILTER_FILTER]
   THEN SRW_TAC [] [FILTER_EQ]
-  THEN METIS_TAC []);
+  THEN METIS_TAC []
+QED
 
-val FIND_FILTER = Q.prove(
-  `!l i j.
+Theorem FIND_FILTER[local]:
+   !l i j.
      i <> j ==>
      (FIND (\x. FST x = i) (FILTER (\y. j <> FST y) l) =
-      FIND (\x. FST x = i) l)`,
-  Induct_on `l` THEN SRW_TAC [] [FIND_def]);
+      FIND (\x. FST x = i) l)
+Proof
+  Induct_on `l` THEN SRW_TAC [] [FIND_def]
+QED
 
-val FIND_OVERRIDE = Q.prove(
-  `!l i j.
+Theorem FIND_OVERRIDE[local]:
+   !l i j.
      i <> j ==>
      (FIND (\x. FST x = i) (OVERRIDE (FILTER (\y. j <> FST y) l)) =
-      FIND (\x. FST x = i) (OVERRIDE l))`,
+      FIND (\x. FST x = i) (OVERRIDE l))
+Proof
   Induct
   THEN SRW_TAC [] [OVERRIDE_def, FIND_def]
   THEN Q.SPEC_THEN `\y. FST h <> y`
          (ASSUME_TAC o REWRITE_RULE [FILTER_OVERRIDE_lem])
          FILTER_OVERRIDE
-  THEN ASM_SIMP_TAC std_ss [FIND_FILTER]);
+  THEN ASM_SIMP_TAC std_ss [FIND_FILTER]
+QED
 
 Theorem LIST_UPDATE_OVERRIDE:
    !l. LIST_UPDATE l = LIST_UPDATE (OVERRIDE l)
@@ -95,23 +103,28 @@ QED
 
 (* ------------------------------------------------------------------------ *)
 
-val FIND_APPEND_lem = Q.prove(
-  `!h l1 l2.
+Theorem FIND_APPEND_lem[local]:
+   !h l1 l2.
      ~MEM (FST h) (MAP FST l1) ==>
-     (FIND (\x. FST x = FST h) (l1 ++ l2) = FIND (\x. FST x = FST h) l2)`,
-  Induct_on `l1` THEN SRW_TAC [] [FIND_def]);
+     (FIND (\x. FST x = FST h) (l1 ++ l2) = FIND (\x. FST x = FST h) l2)
+Proof
+  Induct_on `l1` THEN SRW_TAC [] [FIND_def]
+QED
 
-val FIND_APPEND_lem2 = Q.prove(
-  `!y l1 l2.
+Theorem FIND_APPEND_lem2[local]:
+   !y l1 l2.
      FST h <> y ==>
      (FIND (\x. FST x = y) (l1 ++ h::l2) =
-      FIND (\x. FST x = y) (l1 ++ l2))`,
-  Induct_on `l1` THEN SRW_TAC [] [FIND_def]);
+      FIND (\x. FST x = y) (l1 ++ l2))
+Proof
+  Induct_on `l1` THEN SRW_TAC [] [FIND_def]
+QED
 
-val FIND_ALL_DISTINCT = Q.prove(
-  `!l1 l2 y.
+Theorem FIND_ALL_DISTINCT[local]:
+   !l1 l2 y.
       ALL_DISTINCT (MAP FST l1) /\ PERM l1 l2 ==>
-      (FIND (\x. FST x = y) l1 = FIND (\x. FST x = y) l2)`,
+      (FIND (\x. FST x = y) l1 = FIND (\x. FST x = y) l2)
+Proof
   Induct
   THEN SRW_TAC [] [FIND_def]
   THENL [
@@ -124,7 +137,8 @@ val FIND_ALL_DISTINCT = Q.prove(
     THEN SRW_TAC [] [FIND_APPEND_lem, FIND_def],
     FULL_SIMP_TAC std_ss [sortingTheory.PERM_CONS_EQ_APPEND]
     THEN SRW_TAC [] [FIND_APPEND_lem2]
-  ]);
+  ]
+QED
 
 Theorem LIST_UPDATE_ALL_DISTINCT:
    !l1 l2.
@@ -135,20 +149,24 @@ Proof
   THEN METIS_TAC [FIND_ALL_DISTINCT, sortingTheory.PERM_SYM]
 QED
 
-val ALL_DISTINCT_OVERRIDE = Q.prove(
-  `!l. ALL_DISTINCT (MAP FST (OVERRIDE l))`,
+Theorem ALL_DISTINCT_OVERRIDE[local]:
+   !l. ALL_DISTINCT (MAP FST (OVERRIDE l))
+Proof
   Induct
   THEN SRW_TAC [] [OVERRIDE_def, listTheory.MEM_FILTER,
          listTheory.FILTER_ALL_DISTINCT,
          FILTER_OVERRIDE |> Q.SPEC `\y. FST h <> y`
                          |> REWRITE_RULE [FILTER_OVERRIDE_lem],
          FILTER_MAP |> Q.ISPECL [`\y. FST h <> y`,`FST`]
-                    |> REWRITE_RULE [FILTER_OVERRIDE_lem] |> GSYM]);
+                    |> REWRITE_RULE [FILTER_OVERRIDE_lem] |> GSYM]
+QED
 
-val ALL_DISTINCT_QSORT = Q.prove(
-  `!l R. ALL_DISTINCT (MAP FST l) ==> ALL_DISTINCT (MAP FST (QSORT R l))`,
+Theorem ALL_DISTINCT_QSORT[local]:
+   !l R. ALL_DISTINCT (MAP FST l) ==> ALL_DISTINCT (MAP FST (QSORT R l))
+Proof
   METIS_TAC [sortingTheory.QSORT_PERM, sortingTheory.PERM_MAP,
-    sortingTheory.ALL_DISTINCT_PERM]);
+    sortingTheory.ALL_DISTINCT_PERM]
+QED
 
 Theorem LIST_UPDATE_SORT_OVERRIDE:
    !R l. LIST_UPDATE l = LIST_UPDATE (QSORT R (OVERRIDE l))
@@ -159,42 +177,42 @@ QED
 
 (* ------------------------------------------------------------------------ *)
 
-val LIST_UPDATE1 = Q.prove(
-  `(!l1 l2 r1 r2.
+Theorem LIST_UPDATE1[local]:
+   (!l1 l2 r1 r2.
      (l1 =+ r1) o (l2 =+ r2) = LIST_UPDATE [(l1,r1); (l2,r2)]) /\
    (!l r t. (l =+ r) o LIST_UPDATE t = LIST_UPDATE ((l,r)::t)) /\
    (!l1 l2 r1 r2 f.
       (l1 =+ r1) ((l2 =+ r2) f) = LIST_UPDATE [(l1,r1); (l2,r2)] f) /\
-   (!l r t f. (l =+ r) (LIST_UPDATE t f) = LIST_UPDATE ((l,r)::t) f)`,
-  SRW_TAC [] [LIST_UPDATE_def]);
+   (!l r t f. (l =+ r) (LIST_UPDATE t f) = LIST_UPDATE ((l,r)::t) f)
+Proof
+  SRW_TAC [] [LIST_UPDATE_def]
+QED
 
-val LIST_UPDATE2 = Q.prove(
-  `(!l1 l2. LIST_UPDATE l1 o LIST_UPDATE l2 = LIST_UPDATE (l1 ++ l2)) /\
+Theorem LIST_UPDATE2[local]:
+   (!l1 l2. LIST_UPDATE l1 o LIST_UPDATE l2 = LIST_UPDATE (l1 ++ l2)) /\
    (!l1 l2 r. LIST_UPDATE l1 o (l2 =+ r) = LIST_UPDATE (SNOC (l2,r) l1)) /\
    (!l1 l2 f.
       LIST_UPDATE l1 (LIST_UPDATE l2 f) = LIST_UPDATE (l1 ++ l2) f) /\
-   (!l1 l2 r f. LIST_UPDATE l1 ((l2 =+ r) f) = LIST_UPDATE (SNOC (l2,r) l1) f)`,
+   (!l1 l2 r f. LIST_UPDATE l1 ((l2 =+ r) f) = LIST_UPDATE (SNOC (l2,r) l1) f)
+Proof
   REPEAT CONJ_TAC
-  THEN Induct THEN SRW_TAC [] [LIST_UPDATE_def]);
+  THEN Induct THEN SRW_TAC [] [LIST_UPDATE_def]
+QED
 
-val LIST_UPDATE_THMS = Theory.save_thm("LIST_UPDATE_THMS",
-   CONJ LIST_UPDATE1 LIST_UPDATE2);
+Theorem LIST_UPDATE_THMS =
+   CONJ LIST_UPDATE1 LIST_UPDATE2;
 
 (* ------------------------------------------------------------------------
    Duplicate theorems about update from combinTheory
    ------------------------------------------------------------------------ *)
 
-val _ = List.map Theory.save_thm
-  (let open combinTheory in
-    [("APPLY_UPDATE_ID", APPLY_UPDATE_ID),
-     ("APPLY_UPDATE_THM", APPLY_UPDATE_THM),
-     ("SAME_KEY_UPDATE_DIFFER", SAME_KEY_UPDATE_DIFFER),
-     ("UPDATE_APPLY_ID", UPDATE_APPLY_ID),
-     ("UPDATE_APPLY_IMP_ID", UPDATE_APPLY_IMP_ID),
-     ("UPDATE_COMMUTES", UPDATE_COMMUTES),
-     ("UPDATE_EQ", UPDATE_EQ),
-     ("UPDATE_def", UPDATE_def)]
-   end)
+Theorem APPLY_UPDATE_ID = combinTheory.APPLY_UPDATE_ID
+Theorem APPLY_UPDATE_THM = combinTheory.APPLY_UPDATE_THM
+Theorem SAME_KEY_UPDATE_DIFFER = combinTheory.SAME_KEY_UPDATE_DIFFER
+Theorem UPDATE_APPLY_ID = combinTheory.UPDATE_APPLY_ID
+Theorem UPDATE_APPLY_IMP_ID = combinTheory.UPDATE_APPLY_IMP_ID
+Theorem UPDATE_COMMUTES = combinTheory.UPDATE_COMMUTES
+Theorem UPDATE_EQ = combinTheory.UPDATE_EQ
+Theorem UPDATE_def = combinTheory.UPDATE_def
 
 (* ------------------------------------------------------------------------ *)
-

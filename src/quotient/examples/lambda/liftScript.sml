@@ -57,8 +57,8 @@ QED
 val ALPHA_SYM' = GEN_ALL (CONJUNCT2 (SPEC_ALL
                    (REWRITE_RULE[EQ_IMP_THM] ALPHA_SYM)));
 
-val ALPHA_EQUIV = save_thm("ALPHA_EQUIV",
-    refl_sym_trans_equiv ALPHA_REFL ALPHA_SYM' ALPHA_TRANS);
+Theorem ALPHA_EQUIV =
+    refl_sym_trans_equiv ALPHA_REFL ALPHA_SYM' ALPHA_TRANS;
 
 Theorem ALPHA_PEQUIV:
      (?t:^term. ALPHA t t) /\
@@ -1178,8 +1178,7 @@ val term = ty_antiq (==`:'a term`==);
 val subs = ty_antiq (==`:(var # 'a term) list`==);
 
 
-val _ = map (fn t => overload_on("<[", t))
-            [“$SUBt:'a term -> ^subs -> 'a term”];
+Overload "<[" = “$SUBt:'a term -> ^subs -> 'a term”
 
 
 
@@ -1187,17 +1186,17 @@ val _ = map (fn t => overload_on("<[", t))
 (* Save the (important) theorems lifted by the quotient operations. *)
 (* ---------------------------------------------------------------- *)
 
-val HEIGHT = save_thm ("HEIGHT", HEIGHT); (* was 12 lines *)
+Theorem HEIGHT = HEIGHT; (* was 12 lines *)
 
-val HEIGHT_LESS_EQ_ZERO = save_thm("HEIGHT_LESS_EQ_ZERO", HEIGHT_LESS_EQ_ZERO);
+Theorem HEIGHT_LESS_EQ_ZERO = HEIGHT_LESS_EQ_ZERO;
 (* was 12 lines *)
 
 (* AXIOM 1 of Gordon and Melham *)
-val FV_term = save_thm ("FV_term", FV_term); (* was 11 lines *)
+Theorem FV_term = FV_term; (* was 11 lines *)
 
-val FINITE_FV = save_thm ("FINITE_FV", FINITE_FV); (* was 10 lines *)
+Theorem FINITE_FV = FINITE_FV; (* was 10 lines *)
 
-val SUB = save_thm ("SUB", SUB); (* was 12 lines *)
+Theorem SUB = SUB; (* was 12 lines *)
 
 (* val SUB_def = save_thm ("SUB_def",SUB_def); (* was not lifted *) *)
 
@@ -1213,7 +1212,7 @@ val SUB = save_thm ("SUB", SUB); (* was 12 lines *)
 (* val SUB_FREE_vsubst = save_thm ("SUB_FREE_vsubst", SUB_FREE_vsubst); *)
 (* was 21 lines *)
 
-val FV_subst = save_thm ("FV_subst", FV_subst);
+Theorem FV_subst = FV_subst;
 (* was 7 lines *)
 
 (* val FINITE_FV_subst = save_thm ("FINITE_FV_subst", FINITE_FV_subst); *)
@@ -1229,26 +1228,26 @@ val FV_subst = save_thm ("FV_subst", FV_subst);
 (* val FV_subst_NIL = save_thm ("FV_subst_NIL", FV_subst_NIL); *)
 (* was 7 lines *)
 
-val SUB_term    = save_thm ("SUB_term", SUB_term);
+Theorem SUB_term = SUB_term;
 (* was 19 lines *)
 (* Glory to God!  Soli Deo Gloria! *)
 
-val Lam_EQ = save_thm ("Lam_EQ", Lam_EQ);
+Theorem Lam_EQ = Lam_EQ;
 (* was not lifted *)
 
-val subst_SAME_ONE = save_thm ("subst_SAME_ONE", subst_SAME_ONE);
+Theorem subst_SAME_ONE = subst_SAME_ONE;
 (* was 10 lines *)
 
-val subst_SAME_TWO = save_thm ("subst_SAME_TWO", subst_SAME_TWO);
+Theorem subst_SAME_TWO = subst_SAME_TWO;
 (* was not lifted *)
 
-val subst_EQ = save_thm ("subst_EQ", subst_EQ);
+Theorem subst_EQ = subst_EQ;
 (* was 31 lines *)
 
 (* val FREE_SUB = save_thm ("FREE_SUB", FREE_SUB); *)
 (* was not lifted *)
 
-val BV_subst_IDENT = save_thm ("BV_subst_IDENT", BV_subst_IDENT);
+Theorem BV_subst_IDENT = BV_subst_IDENT;
 (* was 11 lines *)
 
 (* val BV_vsubst = save_thm ("BV_vsubst", BV_vsubst); *)
@@ -1261,57 +1260,57 @@ val BV_subst_IDENT = save_thm ("BV_subst_IDENT", BV_subst_IDENT);
 (* val FREE_IDENT_SUBST = save_thm ("FREE_IDENT_SUBST", FREE_IDENT_SUBST); *)
 (* was not lifted *)
 
-val subst_IDENT = save_thm ("subst_IDENT", subst_IDENT);
+Theorem subst_IDENT = subst_IDENT;
 (* was 32 lines *)
 
 (* val subst_NIL = save_thm ("subst_NIL", subst_NIL); *)
 (* was 7 lines *)
 
 
-val HEIGHT_SUB_var = save_thm ("HEIGHT_SUB_var", HEIGHT_SUB_var);
+Theorem HEIGHT_SUB_var = HEIGHT_SUB_var;
 
-val HEIGHT_var_list_subst = save_thm ("HEIGHT_var_list_subst",
-                                       HEIGHT_var_list_subst);
+Theorem HEIGHT_var_list_subst =
+                                       HEIGHT_var_list_subst;
 
-val HEIGHT_var_subst = save_thm ("HEIGHT_var_subst", HEIGHT_var_subst);
+Theorem HEIGHT_var_subst = HEIGHT_var_subst;
 
-val term_distinct = save_thm("term_distinct", term_distinct);
+Theorem term_distinct = term_distinct;
 (* was 12 lines (now 11) *)
 
 (* val term_cases = save_thm("term_cases", term_cases); *)
 (* was 36 lines (now 25 lines) *)
 
-val term_one_one = save_thm("term_one_one", term_one_one);
+Theorem term_one_one = term_one_one;
 (* was 38 lines, now 9 lines *)
 
 (* val vsubst_def = save_thm("vsubst_def", vsubst_def); *)
 (* was not lifted *)
 
-val vsubst = save_thm("vsubst", vsubst);
+Theorem vsubst = vsubst;
 (* was not lifted *)
 
 (* val SUB_APPEND_FREE_vsubst = save_thm("SUB_APPEND_FREE_vsubst",
                                        SUB_APPEND_FREE_vsubst);    *)
 (* was 24 lines *)
 
-val EQ_SUBST = save_thm("EQ_SUBST", EQ_SUBST);
+Theorem EQ_SUBST = EQ_SUBST;
 
-val EQ_SUBST_CONTEXT = save_thm("EQ_SUBST_CONTEXT", EQ_SUBST_CONTEXT);
+Theorem EQ_SUBST_CONTEXT = EQ_SUBST_CONTEXT;
 
-val LAMBDA_CHANGE_VAR = save_thm("LAMBDA_CHANGE_VAR", LAMBDA_CHANGE_VAR);
+Theorem LAMBDA_CHANGE_VAR = LAMBDA_CHANGE_VAR;
 (* was 22 lines *)
 
-val LAMBDA_CHANGE_ONE_VAR = save_thm("LAMBDA_CHANGE_ONE_VAR",
-                                      LAMBDA_CHANGE_ONE_VAR);
+Theorem LAMBDA_CHANGE_ONE_VAR =
+                                      LAMBDA_CHANGE_ONE_VAR;
 
 (* AXIOM 3 of Gordon and Melham. *)
-val CHANGE_ONE_VAR = save_thm("CHANGE_ONE_VAR", CHANGE_ONE_VAR);
+Theorem CHANGE_ONE_VAR = CHANGE_ONE_VAR;
 
 (* val Lam_subst = save_thm("Lam_subst", Lam_subst); *)
 (* was not lifted *)
 
 (* AXIOM 5 of Gordon and Melham. *)
-val Lam_Abs = save_thm("Lam_Abs", Lam_Abs);
+Theorem Lam_Abs = Lam_Abs;
 (* was not lifted *)
 
 
@@ -1324,12 +1323,12 @@ term1_induction;
          !t. P t
 *)
 
-val term_induct = save_thm("term_induct", term_induct);
+Theorem term_induct = term_induct;
 (* was 17 lines *)
 (* Glory to God!  Soli Deo Gloria! *)
 
 (* AXIOM 4 for Gordon and Melham. *)
-val term_Axiom = save_thm("term_Axiom", term_Axiom);
+Theorem term_Axiom = term_Axiom;
 (* was not lifted *)
 
 (* ---------------------------------------------------------------- *)
@@ -1866,12 +1865,11 @@ QED
 
 
 
-val EQ_subst =
-    new_definition
-    ("EQ_subst",
-     “EQ_subst t (s1:^subs) s2 =
+Definition EQ_subst[nocompute]:
+     EQ_subst t (s1:^subs) s2 =
         (!x. (x IN t) ==>
-             (SUB s1 x = SUB s2 x))”);
+             (SUB s1 x = SUB s2 x))
+End
 
 
 Theorem SUB_CONTEXT:

@@ -117,10 +117,17 @@ Definition gauge :
    gauge(E) (g:real->real) = !x. E x ==> &0 < g(x)
 End
 
+Theorem gauge' :
+    !E g. gauge E g <=> !x. x IN E ==> 0 < g x
+Proof
+    rw [IN_APP, gauge]
+QED
+
 (* connection to integrationTheory, thus the function g (as the gauge) will be
    used as the radius of each division as open intervals. *)
 Theorem gauge_alt :
-    !c E g. 0 < c ==> (gauge E g <=> Gauge (\x. ball(x, if E x then c * g(x) else 1)))
+    !c E g. 0 < c ==>
+           (gauge E g <=> Gauge (\x. ball(x, if E x then c * g(x) else 1)))
 Proof
     rw [gauge, gauge_def, CENTRE_IN_BALL, OPEN_BALL]
  >> EQ_TAC >> rw []
@@ -1348,10 +1355,11 @@ Proof
       REWRITE_TAC[REAL_LT, TWO, LESS_0]]]
 QED
 
-val FTC1 = store_thm("FTC1",
- Term `!f f' a b.
+Theorem FTC1:
+ !f f' a b.
        a <= b /\ (!x. a <= x /\ x <= b ==> (f diffl f'(x))(x))
-        ==> Dint(a,b) f' (f(b) - f(a))`,
+        ==> Dint(a,b) f' (f(b) - f(a))
+Proof
   REPEAT STRIP_TAC THEN
   UNDISCH_TAC (Term`a <= b`) THEN REWRITE_TAC[REAL_LE_LT] THEN
   DISCH_THEN DISJ_CASES_TAC THENL
@@ -1410,7 +1418,8 @@ val FTC1 = store_thm("FTC1",
    [IMP_RES_THEN (fn th => REWRITE_TAC[th]) DIVISION_LBOUND,
     IMP_RES_THEN (fn th => REWRITE_TAC[th]) DIVISION_UBOUND,
     UNDISCH_TAC (Term`fine(g)(D,p)`) THEN REWRITE_TAC[fine] THEN
-    DISCH_THEN MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
+    DISCH_THEN MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Integration by parts.                                                     *)

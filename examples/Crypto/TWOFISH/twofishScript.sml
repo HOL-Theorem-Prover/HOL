@@ -47,15 +47,17 @@ val _ = type_abbrev("keysched",
 (* Case analysis on a block and a pair of keys.                              *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_BLOCK = Q.store_thm
-  ("FORALL_BLOCK",
-    `(!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)`,
-    SIMP_TAC std_ss [FORALL_PROD]);
+Theorem FORALL_BLOCK:
+     (!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)
+Proof
+    SIMP_TAC std_ss [FORALL_PROD]
+QED
 
-val FORALL_KEY = Q.store_thm
-  ("FORALL_KEY",
-    `(!b:key. P b) = !k0 k1. P (k0,k1)`,
-    SIMP_TAC std_ss [FORALL_PROD]);
+Theorem FORALL_KEY:
+     (!b:key. P b) = !k0 k1. P (k0,k1)
+Proof
+    SIMP_TAC std_ss [FORALL_PROD]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Operations on word8, word32 and word4.                                    *)
@@ -492,19 +494,23 @@ val PBETA_ss = simpLib.conv_ss
   {name="PBETA",trace = 3,conv=K (K PairRules.PBETA_CONV),
    key = SOME([],``(\(x:'a,y:'b). s1) s2:'c``)};
 
-val Round_Inversion = Q.store_thm("Round_Inversion",
-  `!b k s. InvRound_Op(Round_Op(b,k,s),k,s) = b`,
+Theorem Round_Inversion:
+   !b k s. InvRound_Op(Round_Op(b,k,s),k,s) = b
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEY]
-    THEN SRW_TAC [boolSimps.LET_ss,PBETA_ss] [Round_Op_def,InvRound_Op_def]);
+    THEN SRW_TAC [boolSimps.LET_ss,PBETA_ss] [Round_Op_def,InvRound_Op_def]
+QED
 
 val [Round_Op] = decls "Round_Op";
 val [InvRound_Op] = decls "InvRound_Op";
 
-val Round_Inversion_LEMMA = Q.store_thm("Round_Inversion_LEMMA",
-  `!b k s. bwd(fwd(b,k,s),k,s) = b`,
+Theorem Round_Inversion_LEMMA:
+   !b k s. bwd(fwd(b,k,s),k,s) = b
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK]
     THEN computeLib.RESTR_EVAL_TAC [Round_Op, InvRound_Op]
-    THEN RW_TAC std_ss [Round_Inversion]);
+    THEN RW_TAC std_ss [Round_Inversion]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Input whitening and output whitening                                      *)
@@ -526,10 +532,12 @@ Definition Out_Whiten_def:
      R3 ?? SND(GETKEYS(ROTKEYS(ROTKEYS(ROTKEYS(k))))))
 End
 
-val WHITENING_LEMMA = Q.store_thm("WHITENING_LEMMA",
-  `!(b:block) (k:keysched).
-    (Out_Whiten(Out_Whiten(b,k),k) = b) /\ (In_Whiten(In_Whiten(b,k),k) = b)`,
-  SRW_TAC [] [Out_Whiten_def, In_Whiten_def]);
+Theorem WHITENING_LEMMA:
+   !(b:block) (k:keysched).
+    (Out_Whiten(Out_Whiten(b,k),k) = b) /\ (In_Whiten(In_Whiten(b,k),k) = b)
+Proof
+  SRW_TAC [] [Out_Whiten_def, In_Whiten_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Encrypt and Decrypt                                                       *)
@@ -555,12 +563,14 @@ End
 (* Main Lemma                                                                *)
 (*---------------------------------------------------------------------------*)
 
-val TWOFISH_LEMMA = Q.store_thm("TWOFISH_LEMMA",
-  `!(plaintext:block) (keys:initkeys).
-     TwofishDecrypt keys (TwofishEncrypt keys plaintext) = plaintext`,
+Theorem TWOFISH_LEMMA:
+   !(plaintext:block) (keys:initkeys).
+     TwofishDecrypt keys (TwofishEncrypt keys plaintext) = plaintext
+Proof
   RW_TAC std_ss [TwofishEncrypt_def]
     THEN RW_TAC std_ss [TwofishDecrypt_def]
-    THEN RW_TAC std_ss [WHITENING_LEMMA, Round_Inversion_LEMMA]);
+    THEN RW_TAC std_ss [WHITENING_LEMMA, Round_Inversion_LEMMA]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Basic theorem about encryption/decryption                                 *)
@@ -571,9 +581,11 @@ Definition TWOFISH_def:
   (TwofishEncrypt keys,  TwofishDecrypt keys)
 End
 
-val TWOFISH_CORRECT = Q.store_thm("TWOFISH_CORRECT",
-   `!key plaintext.
+Theorem TWOFISH_CORRECT:
+    !key plaintext.
        ((encrypt,decrypt) = TWOFISH key)
        ==>
-       (decrypt (encrypt plaintext) = plaintext)`,
-         RW_TAC std_ss [TWOFISH_def,LET_THM,TWOFISH_LEMMA]);
+       (decrypt (encrypt plaintext) = plaintext)
+Proof
+         RW_TAC std_ss [TWOFISH_def,LET_THM,TWOFISH_LEMMA]
+QED

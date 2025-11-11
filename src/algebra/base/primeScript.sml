@@ -13,9 +13,9 @@ Ancestors
   listRange gcdset option number combinatorics prim_rec
 
 
-val _ = temp_overload_on("SQ", ``\n. n * n``);
-val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+Overload SQ[local] = ``\n. n * n``
+Overload HALF[local] = ``\n. n DIV 2``
+Overload TWICE[local] = ``\n. 2 * n``
 
 (* ------------------------------------------------------------------------- *)
 (* Integer Functions Computation Documentation                               *)
@@ -606,11 +606,11 @@ Proof
 QED
 
 (* Extract theorems from definition *)
-val halves_0 = save_thm("halves_0[simp]", halves_def |> SPEC ``0`` |> SIMP_RULE arith_ss[]);
+Theorem halves_0[simp] = halves_def |> SPEC ``0`` |> SIMP_RULE arith_ss[];
 (* val halves_0 = |- halves 0 = 0: thm *)
-val halves_1 = save_thm("halves_1[simp]", halves_def |> SPEC ``1`` |> SIMP_RULE arith_ss[]);
+Theorem halves_1[simp] = halves_def |> SPEC ``1`` |> SIMP_RULE arith_ss[];
 (* val halves_1 = |- halves 1 = 1: thm *)
-val halves_2 = save_thm("halves_2[simp]", halves_def |> SPEC ``2`` |> SIMP_RULE arith_ss[halves_1]);
+Theorem halves_2[simp] = halves_def |> SPEC ``2`` |> SIMP_RULE arith_ss[halves_1];
 (* val halves_2 = |- halves 2 = 2: thm *)
 
 (* Theorem: 0 < n ==> 0 < halves n *)
@@ -814,7 +814,7 @@ Definition perfect_power_def:
 End
 
 (* Overload perfect_power *)
-val _ = overload_on("power_of", ``perfect_power``);
+Overload power_of = ``perfect_power``
 val _ = set_fixity "power_of" (Infix(NONASSOC, 450)); (* same as relation *)
 (* from pretty-printing, a good idea. *)
 
@@ -3315,9 +3315,11 @@ Proof
 QED
 
 (* Apply Skolemization *)
-val lemma = prove(
-  ``!p n. ?m. 0 < n /\ prime p ==> (p ** m) divides n /\ coprime p (n DIV (p ** m))``,
-  metis_tac[prime_power_index_exists]);
+Theorem lemma[local]:
+    !p n. ?m. 0 < n /\ prime p ==> (p ** m) divides n /\ coprime p (n DIV (p ** m))
+Proof
+  metis_tac[prime_power_index_exists]
+QED
 (* Note !p n, for first parameter p, second parameter n. *)
 (*
 - SKOLEM_THM;
@@ -3338,7 +3340,7 @@ val prime_power_index_def = new_specification(
 *)
 
 (* Overload on prime_power_index of prime p *)
-val _ = overload_on("ppidx", ``prime_power_index p``);
+Overload ppidx = ``prime_power_index p``
 
 (*
 > prime_power_index_def;
@@ -4483,7 +4485,7 @@ Definition primes_upto_def:
 End
 
 (* Overload the counts of primes up to n *)
-val _ = overload_on("primes_count", ``\n. CARD (primes_upto n)``);
+Overload primes_count = ``\n. CARD (primes_upto n)``
 
 (* Define the prime powers up to n *)
 Definition prime_powers_upto_def:
@@ -5169,16 +5171,16 @@ This separation of prime factors keep coprime P Q, but P * Q = lcm m n.
 *)
 
 (* Overload the park sets *)
-val _ = overload_on ("common_prime_divisors",
-        ``\m n. (prime_divisors m) INTER (prime_divisors n)``);
-val _ = overload_on ("total_prime_divisors",
-        ``\m n. (prime_divisors m) UNION (prime_divisors n)``);
-val _ = overload_on ("park_on",
-        ``\m n. {p | p IN common_prime_divisors m n /\ ppidx m <= ppidx n}``);
-val _ = overload_on ("park_off",
-        ``\m n. {p | p IN common_prime_divisors m n /\ ppidx n < ppidx m}``);
+Overload common_prime_divisors =
+        ``\m n. (prime_divisors m) INTER (prime_divisors n)``
+Overload total_prime_divisors =
+        ``\m n. (prime_divisors m) UNION (prime_divisors n)``
+Overload park_on =
+        ``\m n. {p | p IN common_prime_divisors m n /\ ppidx m <= ppidx n}``
+Overload park_off =
+        ``\m n. {p | p IN common_prime_divisors m n /\ ppidx n < ppidx m}``
 (* Overload the parking divisor of GCD *)
-val _ = overload_on("park", ``\m n. PROD_SET (IMAGE (\p. p ** ppidx m) (park_on m n))``);
+Overload park = ``\m n. PROD_SET (IMAGE (\p. p ** ppidx m) (park_on m n))``
 
 (* Note:
 The basic one is park_on m n, defined only for 0 < m and 0 < n.
@@ -5997,9 +5999,9 @@ By prime_powers_eq, when SOME, such (p, k) exists uniquely, or NONE.
 *)
 
 (* Get components of definition *)
-val lcm_fun_0 = save_thm("lcm_fun_0", lcm_fun_def |> CONJUNCT1);
+Theorem lcm_fun_0 = lcm_fun_def |> CONJUNCT1;
 (* val lcm_fun_0 = |- lcm_fun 0 = 1: thm *)
-val lcm_fun_SUC = save_thm("lcm_fun_SUC", lcm_fun_def |> CONJUNCT2);
+Theorem lcm_fun_SUC = lcm_fun_def |> CONJUNCT2;
 (* val lcm_fun_SUC = |- !n. lcm_fun (SUC n) = if n = 0 then 1 else
                             case some p. ?k. SUC n = p ** k of
                             NONE => lcm_fun n | SOME p => p * lcm_fun n: thm *)
@@ -10274,10 +10276,10 @@ Proof
 QED
 
 (* Overload square-free filter of a set *)
-val _ = overload_on("sq_free", ``\s. {n | n IN s /\ square_free n}``);
+Overload sq_free = ``\s. {n | n IN s /\ square_free n}``
 
 (* Overload non-square-free filter of a set *)
-val _ = overload_on("non_sq_free", ``\s. {n | n IN s /\ ~(square_free n)}``);
+Overload non_sq_free = ``\s. {n | n IN s /\ ~(square_free n)}``
 
 (* Theorem: n IN sq_free s <=> n IN s /\ square_free n *)
 (* Proof: by notation. *)
@@ -10343,12 +10345,12 @@ QED
 
 (* Theorem: s = (sq_free s) UNION (non_sq_free s) *)
 (* Proof: extract from sq_free_split. *)
-val sq_free_union = save_thm("sq_free_union", sq_free_split |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL);
+Theorem sq_free_union = sq_free_split |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL;
 (* val sq_free_union = |- !s. s = sq_free s UNION non_sq_free s: thm *)
 
 (* Theorem: (sq_free s) INTER (non_sq_free s) = {} *)
 (* Proof: extract from sq_free_split. *)
-val sq_free_inter = save_thm("sq_free_inter", sq_free_split |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL);
+Theorem sq_free_inter = sq_free_split |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL;
 (* val sq_free_inter = |- !s. sq_free s INTER non_sq_free s = {}: thm *)
 
 (* Theorem: DISJOINT (sq_free s) (non_sq_free s) *)
@@ -10409,10 +10411,10 @@ Proof
 QED
 
 (* Overload even square-free filter of a set *)
-val _ = overload_on("even_sq_free", ``\s. {n | n IN (sq_free s) /\ EVEN (CARD (prime_factors n))}``);
+Overload even_sq_free = ``\s. {n | n IN (sq_free s) /\ EVEN (CARD (prime_factors n))}``
 
 (* Overload odd square-free filter of a set *)
-val _ = overload_on("odd_sq_free", ``\s. {n | n IN (sq_free s) /\ ODD (CARD (prime_factors n))}``);
+Overload odd_sq_free = ``\s. {n | n IN (sq_free s) /\ ODD (CARD (prime_factors n))}``
 
 (* Theorem: n IN even_sq_free s <=> n IN s /\ square_free n /\ EVEN (CARD (prime_factors n)) *)
 (* Proof: by notation. *)
@@ -10480,15 +10482,13 @@ QED
 
 (* Theorem: sq_free s = (even_sq_free s) UNION (odd_sq_free s) *)
 (* Proof: extract from sq_free_split_even_odd. *)
-val sq_free_union_even_odd =
-    save_thm("sq_free_union_even_odd", sq_free_split_even_odd |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL);
+Theorem sq_free_union_even_odd = sq_free_split_even_odd |> SPEC_ALL |> CONJUNCT1 |> GEN_ALL;
 (* val sq_free_union_even_odd =
    |- !s. sq_free s = even_sq_free s UNION odd_sq_free s: thm *)
 
 (* Theorem: (even_sq_free s) INTER (odd_sq_free s) = {} *)
 (* Proof: extract from sq_free_split_even_odd. *)
-val sq_free_inter_even_odd =
-    save_thm("sq_free_inter_even_odd", sq_free_split_even_odd |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL);
+Theorem sq_free_inter_even_odd = sq_free_split_even_odd |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL;
 (* val sq_free_inter_even_odd =
    |- !s. even_sq_free s INTER odd_sq_free s = {}: thm *)
 
@@ -10505,7 +10505,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload the set of divisors less than n *)
-val _ = overload_on("less_divisors", ``\n. {x | x IN (divisors n) /\ x <> n}``);
+Overload less_divisors = ``\n. {x | x IN (divisors n) /\ x <> n}``
 
 (* Theorem: x IN (less_divisors n) <=> (0 < x /\ x < n /\ x divides n) *)
 (* Proof: by divisors_element. *)
@@ -10612,7 +10612,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload the set of proper divisors of n *)
-val _ = overload_on("proper_divisors", ``\n. {x | x IN (divisors n) /\ x <> 1 /\ x <> n}``);
+Overload proper_divisors = ``\n. {x | x IN (divisors n) /\ x <> 1 /\ x <> n}``
 
 (* Theorem: x IN (proper_divisors n) <=> (1 < x /\ x < n /\ x divides n) *)
 (* Proof:
@@ -10995,10 +10995,11 @@ QED
        and 2 * q <= q * q           by MULT_RIGHT_CANCEL, q <> 0.
      Hence 2 * q <= p ** n          by LESS_EQ_TRANS
 *)
-val perfect_power_half_inequality_lemma = prove(
-  ``!p n. 1 < p /\ 1 < n ==>
+Theorem perfect_power_half_inequality_lemma[local]:
+    !p n. 1 < p /\ 1 < n ==>
          p ** (n DIV 2) * p ** (n DIV 2) <= p ** n /\
-         2 * p ** (n DIV 2) <= p ** (n DIV 2) * p ** (n DIV 2)``,
+         2 * p ** (n DIV 2) <= p ** (n DIV 2) * p ** (n DIV 2)
+Proof
   ntac 3 strip_tac >>
   qabbrev_tac `m = n DIV 2` >>
   qabbrev_tac `q = p ** m` >>
@@ -11015,7 +11016,8 @@ val perfect_power_half_inequality_lemma = prove(
     `0 < m` by decide_tac >>
     `1 < q` by rw[ONE_LT_EXP, Abbr`q`] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < p /\ 0 < n ==> 2 * p ** (n DIV 2) <= p ** n *)
 (* Proof:

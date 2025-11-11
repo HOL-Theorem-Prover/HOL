@@ -52,37 +52,45 @@ Proof
        \\ METIS_TAC [FUNPOW,DECIDE “SUC m < SUC n ⇔ m < n”]]]
 QED
 
-val TAILREC_PRE_INDUCT = store_thm("TAILREC_PRE_INDUCT",
-  ``!P. (!x. TAILREC_PRE f1 g p x /\ p x /\ g x /\ P (f1 x) ==> P x) /\
+Theorem TAILREC_PRE_INDUCT:
+    !P. (!x. TAILREC_PRE f1 g p x /\ p x /\ g x /\ P (f1 x) ==> P x) /\
         (!x. TAILREC_PRE f1 g p x /\ p x /\ ~g x ==> P x) ==>
-        (!x. TAILREC_PRE f1 g p x ==> P (x:'a))``,
+        (!x. TAILREC_PRE f1 g p x ==> P (x:'a))
+Proof
   NTAC 4 STRIP_TAC \\ `?n. ~g (FUNPOW f1 n x)` by METIS_TAC [TAILREC_PRE_def]
   \\ Q.PAT_X_ASSUM `~g (FUNPOW f1 n x)` MP_TAC
   \\ Q.PAT_X_ASSUM `TAILREC_PRE f1 g p x` MP_TAC
   \\ Q.SPEC_TAC (`x`,`x`) \\ Induct_on `n`
   THEN1 (REWRITE_TAC [FUNPOW] \\ REPEAT STRIP_TAC \\ METIS_TAC [TAILREC_PRE_THM])
-  \\ FULL_SIMP_TAC std_ss [FUNPOW] \\ REPEAT STRIP_TAC \\ METIS_TAC [TAILREC_PRE_THM]);
+  \\ FULL_SIMP_TAC std_ss [FUNPOW] \\ REPEAT STRIP_TAC \\ METIS_TAC [TAILREC_PRE_THM]
+QED
 
-val TAILREC_THM = store_thm("TAILREC_THM",
-  ``!f1 (f2:'a->'b) g x. TAILREC f1 f2 g x = if g x then TAILREC f1 f2 g (f1 x) else f2 x``,
+Theorem TAILREC_THM:
+    !f1 (f2:'a->'b) g x. TAILREC f1 f2 g x = if g x then TAILREC f1 f2 g (f1 x) else f2 x
+Proof
   REPEAT STRIP_TAC \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [TAILREC_def]))
-  \\ ONCE_REWRITE_TAC [WHILE] \\ REWRITE_TAC [TAILREC_def] \\ METIS_TAC []);
+  \\ ONCE_REWRITE_TAC [WHILE] \\ REWRITE_TAC [TAILREC_def] \\ METIS_TAC []
+QED
 
-val TAILREC_PRE_IMP = store_thm("TAILREC_PRE_IMP",
-  ``!step guard side.
+Theorem TAILREC_PRE_IMP:
+    !step guard side.
       (?R. WF R /\ !x. guard x ==> R (step x) x) /\ (!x. side x) ==>
-      !x. TAILREC_PRE step guard side x = T``,
+      !x. TAILREC_PRE step guard side x = T
+Proof
   REPEAT STRIP_TAC \\ ASM_SIMP_TAC std_ss [TAILREC_PRE_def]
   \\ FULL_SIMP_TAC std_ss [prim_recTheory.WF_IFF_WELLFOUNDED,prim_recTheory.wellfounded_def]
   \\ Q.PAT_X_ASSUM `!x. ?n. bbb` (STRIP_ASSUME_TAC o Q.SPEC `\n. FUNPOW step n x`)
   \\ FULL_SIMP_TAC std_ss [FUNPOW_SUC]
-  \\ Q.EXISTS_TAC `n` \\ METIS_TAC []);
+  \\ Q.EXISTS_TAC `n` \\ METIS_TAC []
+QED
 
-val TAILREC_EQ_THM = store_thm("TAILREC_EQ_THM",
-  ``(f1 = f1') /\ (f2 = (f2':'a->'b)) /\ (g = g') /\ (s = s') ==>
+Theorem TAILREC_EQ_THM:
+    (f1 = f1') /\ (f2 = (f2':'a->'b)) /\ (g = g') /\ (s = s') ==>
     (TAILREC f1 f2 g = TAILREC f1' f2' g') /\
-    (TAILREC_PRE f1 g s = TAILREC_PRE f1' g' s')``,
-  SIMP_TAC std_ss []);
+    (TAILREC_PRE f1 g s = TAILREC_PRE f1' g' s')
+Proof
+  SIMP_TAC std_ss []
+QED
 
 Theorem SHORT_TAILREC_THM:
   !(f:'a -> ('a + 'b) # bool) x.
@@ -98,18 +106,20 @@ Proof
   \\ SIMP_TAC std_ss []
 QED
 
-val SHORT_TAILREC_PRE_INDUCT = store_thm("SHORT_TAILREC_PRE_INDUCT",
-  ``∀P.
+Theorem SHORT_TAILREC_PRE_INDUCT:
+    ∀P.
      (!x. SHORT_TAILREC_PRE f x /\
           SND (f x) /\ (!y. (FST (f x) = INL y) ==> P y) ==>
           P x) ==>
-     (∀x. SHORT_TAILREC_PRE f x ⇒ P x)``,
+     (∀x. SHORT_TAILREC_PRE f x ⇒ P x)
+Proof
   rewrite_tac [SHORT_TAILREC_PRE_def] \\ ntac 2 strip_tac
   \\ ho_match_mp_tac TAILREC_PRE_INDUCT \\ rw []
-  \\ res_tac \\ Cases_on `f x` \\ fs [] \\ Cases_on `q` \\ fs []);
+  \\ res_tac \\ Cases_on `f x` \\ fs [] \\ Cases_on `q` \\ fs []
+QED
 
-val SHORT_TAILREC_SIM = store_thm("SHORT_TAILREC_SIM",
-  ``!f g R P.
+Theorem SHORT_TAILREC_SIM:
+    !f g R P.
       (!x s q r.
          R x s /\ (f x = (q,T)) ==>
          (!y. (q = INL y) ==> ?y1. (g s = (INL y1,T)) /\ R y y1) /\
@@ -117,7 +127,8 @@ val SHORT_TAILREC_SIM = store_thm("SHORT_TAILREC_SIM",
       !x. SHORT_TAILREC_PRE f x ==>
           !s. R x s ==>
               P (SHORT_TAILREC f x) (SHORT_TAILREC g s) /\
-              SHORT_TAILREC_PRE g s``,
+              SHORT_TAILREC_PRE g s
+Proof
   rpt gen_tac \\ strip_tac
   \\ ho_match_mp_tac SHORT_TAILREC_PRE_INDUCT \\ rw []
   \\ Cases_on `f x` \\ fs [] \\ rw []
@@ -127,5 +138,6 @@ val SHORT_TAILREC_SIM = store_thm("SHORT_TAILREC_SIM",
    \\ rewrite_tac [SHORT_TAILREC_def]
   \\ once_rewrite_tac [TAILREC_THM] \\ fs []
   \\ Cases_on `q` \\ fs [SHORT_TAILREC_def,SHORT_TAILREC_PRE_def]
-  \\ once_rewrite_tac [TAILREC_PRE_THM] \\ fs []);
+  \\ once_rewrite_tac [TAILREC_PRE_THM] \\ fs []
+QED
 

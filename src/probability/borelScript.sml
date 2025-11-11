@@ -2081,15 +2081,18 @@ QED
 
 (*****************************************************)
 
-val BOREL_MEASURABLE_SETS_RO_r = prove (
-  ``!c. {x | x < Normal c} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_RO_r[local]:
+    !c. {x | x < Normal c} IN subsets Borel
+Proof
     RW_TAC std_ss [Borel_def]
  >> MATCH_MP_TAC IN_SIGMA
  >> RW_TAC std_ss [IN_IMAGE, IN_UNIV]
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
-val BOREL_MEASURABLE_SETS_NEGINF = prove ((* new *)
-  ``{x | x = NegInf} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_NEGINF[local]:  (* new *)
+    {x | x = NegInf} IN subsets Borel
+Proof
  (* proof *)
     Know `{x | x = NegInf} = BIGINTER (IMAGE (\n. {x | x < -(&n)}) UNIV)`
  >- (RW_TAC std_ss [EXTENSION, IN_BIGINTER_IMAGE, IN_UNIV, GSPECIFICATION] \\
@@ -2103,16 +2106,20 @@ val BOREL_MEASURABLE_SETS_NEGINF = prove ((* new *)
  >> POP_ASSUM MATCH_MP_TAC
  >> RW_TAC std_ss [IN_FUNSET, IN_UNIV]
  >> `-&n = Normal (- &n)` by PROVE_TAC [extreal_ainv_def, extreal_of_num_def] >> POP_ORW
- >> REWRITE_TAC [BOREL_MEASURABLE_SETS_RO_r]);
+ >> REWRITE_TAC [BOREL_MEASURABLE_SETS_RO_r]
+QED
 
-val BOREL_MEASURABLE_SETS_NEGINF' = prove ((* new *)
-  ``{NegInf} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_NEGINF'[local]:  (* new *)
+    {NegInf} IN subsets Borel
+Proof
     Know `{NegInf} = {x | x = NegInf}`
  >- RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_SING]
- >> Rewr' >> REWRITE_TAC [BOREL_MEASURABLE_SETS_NEGINF]);
+ >> Rewr' >> REWRITE_TAC [BOREL_MEASURABLE_SETS_NEGINF]
+QED
 
-val BOREL_MEASURABLE_SETS_NOT_POSINF = prove ((* new *)
-  ``{x | x <> PosInf} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_NOT_POSINF[local]:  (* new *)
+    {x | x <> PosInf} IN subsets Borel
+Proof
     Know `{x | x <> PosInf} = BIGUNION (IMAGE (\n. {x | x < &n}) UNIV)`
  >- (RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_UNIV, GSPECIFICATION] \\
      EQ_TAC
@@ -2128,7 +2135,8 @@ val BOREL_MEASURABLE_SETS_NOT_POSINF = prove ((* new *)
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> RW_TAC std_ss [IN_FUNSET, IN_UNIV]
  >> `&n = Normal (&n)` by PROVE_TAC [extreal_of_num_def] >> POP_ORW
- >> REWRITE_TAC [BOREL_MEASURABLE_SETS_RO_r]);
+ >> REWRITE_TAC [BOREL_MEASURABLE_SETS_RO_r]
+QED
 
 Theorem BOREL_MEASURABLE_SETS_RO:   !c. {x | x < c} IN subsets Borel
 Proof
@@ -2139,16 +2147,19 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_RO_r]
 QED
 
-val BOREL_MEASURABLE_SETS_CR_r = prove (
-  ``!c. {x | Normal c <= x} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_CR_r[local]:
+    !c. {x | Normal c <= x} IN subsets Borel
+Proof
     RW_TAC std_ss []
  >> `{x | Normal c <= x} = UNIV DIFF {x | x < Normal c}`
       by RW_TAC std_ss [extreal_lt_def, EXTENSION, GSPECIFICATION, DIFF_DEF, IN_UNIV, real_lte]
  >> METIS_TAC [SPACE_BOREL, SIGMA_ALGEBRA_BOREL, sigma_algebra_def, algebra_def,
-               BOREL_MEASURABLE_SETS_RO]);
+               BOREL_MEASURABLE_SETS_RO]
+QED
 
-val BOREL_MEASURABLE_SETS_RC_r = prove (
-  ``!c. {x | x <= Normal c} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_RC_r[local]:
+    !c. {x | x <= Normal c} IN subsets Borel
+Proof
     RW_TAC std_ss []
  >> `!c. {x | x <= Normal c} = BIGINTER (IMAGE (\n:num. {x | x < Normal (c + (1/2) pow n)}) UNIV)`
          by (RW_TAC std_ss [EXTENSION, IN_BIGINTER_IMAGE, IN_UNIV,IN_INTER]
@@ -2182,7 +2193,8 @@ val BOREL_MEASURABLE_SETS_RC_r = prove (
  >> Q.PAT_X_ASSUM `!f. P f ==> Q f` (MP_TAC o Q.SPEC `(\n. {x | x < Normal (c + (1 / 2) pow n)})`)
  >> `(\n. {x | x < Normal (c + (1 / 2) pow n)}) IN (UNIV -> subsets Borel)`
         by RW_TAC std_ss [IN_FUNSET,BOREL_MEASURABLE_SETS_RO]
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 Theorem BOREL_MEASURABLE_SETS_RC:   !c. {x | x <= c} IN subsets Borel
 Proof
@@ -2193,16 +2205,19 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_RC_r]
 QED
 
-val BOREL_MEASURABLE_SETS_OR_r = prove (
-  ``!c. {x | Normal c < x} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_OR_r[local]:
+    !c. {x | Normal c < x} IN subsets Borel
+Proof
     GEN_TAC
  >> `{x | Normal c < x} = UNIV DIFF {x | x <= Normal c}`
      by RW_TAC std_ss [extreal_lt_def, EXTENSION, GSPECIFICATION, DIFF_DEF, IN_UNIV, real_lte]
  >> METIS_TAC [SPACE_BOREL, SIGMA_ALGEBRA_BOREL, sigma_algebra_def, algebra_def,
-               BOREL_MEASURABLE_SETS_RC]);
+               BOREL_MEASURABLE_SETS_RC]
+QED
 
-val BOREL_MEASURABLE_SETS_NOT_NEGINF = prove ((* new *)
-  ``{x | x <> NegInf} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_NOT_NEGINF[local]:  (* new *)
+    {x | x <> NegInf} IN subsets Borel
+Proof
     Know `{x | x <> NegInf} = BIGUNION (IMAGE (\n. {x | -(&n) < x}) UNIV)`
  >- (RW_TAC std_ss [EXTENSION, IN_BIGUNION_IMAGE, IN_UNIV, GSPECIFICATION] \\
      EQ_TAC
@@ -2217,7 +2232,8 @@ val BOREL_MEASURABLE_SETS_NOT_NEGINF = prove ((* new *)
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> RW_TAC std_ss [IN_FUNSET, IN_UNIV]
  >> `-&n = Normal (-&n)` by PROVE_TAC [extreal_ainv_def, extreal_of_num_def] >> POP_ORW
- >> REWRITE_TAC [BOREL_MEASURABLE_SETS_OR_r]);
+ >> REWRITE_TAC [BOREL_MEASURABLE_SETS_OR_r]
+QED
 
 Theorem BOREL_MEASURABLE_SETS_OR:   !c. {x | c < x} IN subsets Borel
 Proof
@@ -2228,8 +2244,9 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_OR_r]
 QED
 
-val BOREL_MEASURABLE_SETS_POSINF = prove ((* new *)
-  ``{x | x = PosInf} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_POSINF[local]:  (* new *)
+    {x | x = PosInf} IN subsets Borel
+Proof
     Know `{x | x = PosInf} = BIGINTER (IMAGE (\n. {x | &n < x}) UNIV)`
  >- (RW_TAC std_ss [EXTENSION, IN_BIGINTER_IMAGE, IN_UNIV, GSPECIFICATION] \\
      EQ_TAC >- METIS_TAC [num_not_infty, lt_infty, extreal_ainv_def, extreal_of_num_def] \\
@@ -2242,13 +2259,16 @@ val BOREL_MEASURABLE_SETS_POSINF = prove ((* new *)
  >> POP_ASSUM MATCH_MP_TAC
  >> RW_TAC std_ss [IN_FUNSET, IN_UNIV]
  >> `&n = Normal (&n)` by PROVE_TAC [extreal_of_num_def] >> POP_ORW
- >> REWRITE_TAC [BOREL_MEASURABLE_SETS_OR]);
+ >> REWRITE_TAC [BOREL_MEASURABLE_SETS_OR]
+QED
 
-val BOREL_MEASURABLE_SETS_POSINF' = prove ((* new *)
-  ``{PosInf} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_POSINF'[local]:  (* new *)
+    {PosInf} IN subsets Borel
+Proof
     Know `{PosInf} = {x | x = PosInf}`
  >- RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_SING]
- >> Rewr' >> REWRITE_TAC [BOREL_MEASURABLE_SETS_POSINF]);
+ >> Rewr' >> REWRITE_TAC [BOREL_MEASURABLE_SETS_POSINF]
+QED
 
 (* for compatibility with lebesgue_measure_hvgTheory *)
 Theorem BOREL_MEASURABLE_INFINITY :
@@ -2268,17 +2288,20 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_CR_r]
 QED
 
-val BOREL_MEASURABLE_SETS_CO_r = prove (
-  ``!c d. {x | Normal c <= x /\ x < Normal d} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_CO_r[local]:
+    !c d. {x | Normal c <= x /\ x < Normal d} IN subsets Borel
+Proof
     rpt GEN_TAC
  >> `!d. {x | x < Normal d} IN subsets Borel` by METIS_TAC [BOREL_MEASURABLE_SETS_RO]
  >> `!c. {x | Normal c <= x} IN subsets Borel` by METIS_TAC [BOREL_MEASURABLE_SETS_CR]
  >> `{x | Normal c <= x /\ x < Normal d} = {x | Normal c <= x} INTER {x | x < Normal d}`
         by  RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER]
- >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]);
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]
+QED
 
-val BOREL_MEASURABLE_SETS_CO_p = prove ((* new *)
-  ``!c d. {x | Normal c <= x /\ x < PosInf} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_CO_p[local]:  (* new *)
+    !c d. {x | Normal c <= x /\ x < PosInf} IN subsets Borel
+Proof
     rpt GEN_TAC
  >> Know `{x | x < PosInf} IN subsets Borel`
  >- (REWRITE_TAC [GSYM lt_infty] \\
@@ -2289,7 +2312,8 @@ val BOREL_MEASURABLE_SETS_CO_p = prove ((* new *)
     by METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]
  >> `{x | Normal c <= x /\ x < PosInf} = {x | Normal c <= x} INTER {x | x < PosInf}`
     by RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] >> POP_ORW
- >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]);
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]
+QED
 
 Theorem BOREL_MEASURABLE_SETS_CO:
     !c d. {x | c <= x /\ x < d} IN subsets Borel
@@ -2326,17 +2350,20 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_CO_r]
 QED
 
-val BOREL_MEASURABLE_SETS_OC_r = prove (
-  ``!c d. {x | Normal c < x /\ x <= Normal d} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_OC_r[local]:
+    !c d. {x | Normal c < x /\ x <= Normal d} IN subsets Borel
+Proof
     rpt GEN_TAC
  >> `!d. {x | x <= Normal d} IN subsets Borel` by METIS_TAC [BOREL_MEASURABLE_SETS_RC]
  >> `!c. {x | Normal c < x} IN subsets Borel` by METIS_TAC [BOREL_MEASURABLE_SETS_OR]
  >> `{x | Normal c < x /\ x <= Normal d} = {x | Normal c < x} INTER {x | x <= Normal d}`
         by  RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER]
- >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]);
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]
+QED
 
-val BOREL_MEASURABLE_SETS_OC_n = prove ((* new *)
-  ``!d. {x | NegInf < x /\ x <= Normal d} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_OC_n[local]:  (* new *)
+    !d. {x | NegInf < x /\ x <= Normal d} IN subsets Borel
+Proof
     GEN_TAC
  >> `!d. {x | x <= Normal d} IN subsets Borel` by REWRITE_TAC [BOREL_MEASURABLE_SETS_RC]
  >> Know `{x | NegInf < x} IN subsets Borel`
@@ -2347,7 +2374,8 @@ val BOREL_MEASURABLE_SETS_OC_n = prove ((* new *)
     by METIS_TAC [sigma_algebra_def, ALGEBRA_INTER]
  >> `{x | NegInf < x /\ x <= Normal d} = {x | NegInf < x} INTER {x | x <= Normal d}`
     by RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER] >> POP_ORW
- >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]);
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]
+QED
 
 Theorem BOREL_MEASURABLE_SETS_OC:
     !c d. {x | c < x /\ x <= d} IN subsets Borel
@@ -2386,14 +2414,16 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_OC_r]
 QED
 
-val BOREL_MEASURABLE_SETS_CC_r = prove (
-  ``!c d. {x | Normal c <= x /\ x <= Normal d} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_CC_r[local]:
+    !c d. {x | Normal c <= x /\ x <= Normal d} IN subsets Borel
+Proof
     rpt GEN_TAC
  >> `!d. {x | x <= Normal d} IN subsets Borel` by METIS_TAC [BOREL_MEASURABLE_SETS_RC]
  >> `!c. {x | Normal c <= x} IN subsets Borel` by METIS_TAC [BOREL_MEASURABLE_SETS_CR]
  >> `{x | Normal c <= x /\ x <= Normal d} = {x | Normal c <= x} INTER {x | x <= Normal d}`
         by  RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER]
- >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]);
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]
+QED
 
 Theorem BOREL_MEASURABLE_SETS_CC:   !c d. {x | c <= x /\ x <= d} IN subsets Borel
 Proof
@@ -2434,17 +2464,20 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_CC_r]
 QED
 
-val BOREL_MEASURABLE_SETS_OO_r = prove ((* not "00_r" *)
-  ``!c d. {x | Normal c < x /\ x < Normal d} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_OO_r[local]:  (* not "00_r" *)
+    !c d. {x | Normal c < x /\ x < Normal d} IN subsets Borel
+Proof
     rpt GEN_TAC
  >> `!d. {x | x < Normal d} IN subsets Borel` by METIS_TAC [BOREL_MEASURABLE_SETS_RO]
  >> `!c. {x | Normal c < x} IN subsets Borel` by METIS_TAC [BOREL_MEASURABLE_SETS_OR]
  >> `{x | Normal c < x /\ x < Normal d} = {x | Normal c < x} INTER {x | x < Normal d}`
        by RW_TAC std_ss [EXTENSION, GSPECIFICATION, IN_INTER]
- >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]);
+ >> METIS_TAC [sigma_algebra_def, ALGEBRA_INTER, SIGMA_ALGEBRA_BOREL]
+QED
 
-val BOREL_MEASURABLE_SETS_OO_np = prove ((* new, not "00_np" *)
-  ``{x | NegInf < x /\ x < PosInf} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_OO_np[local]:  (* new, not "00_np" *)
+    {x | NegInf < x /\ x < PosInf} IN subsets Borel
+Proof
     ASSUME_TAC SIGMA_ALGEBRA_BOREL
  >> Know `{x | NegInf < x /\ x < PosInf} =
           BIGUNION (IMAGE (\n. {x | -&n < x /\ x < &n}) UNIV)`
@@ -2471,10 +2504,12 @@ val BOREL_MEASURABLE_SETS_OO_np = prove ((* new, not "00_np" *)
  >> RW_TAC std_ss [IN_FUNSET, IN_UNIV]
  >> `&n = Normal (&n)` by PROVE_TAC [extreal_of_num_def]
  >> `-&n = Normal (-&n)` by PROVE_TAC [extreal_ainv_def, extreal_of_num_def]
- >> ASM_REWRITE_TAC [BOREL_MEASURABLE_SETS_OO_r]);
+ >> ASM_REWRITE_TAC [BOREL_MEASURABLE_SETS_OO_r]
+QED
 
-val BOREL_MEASURABLE_SETS_OO_n = prove ((* new, not "00_n" *)
-  ``!d. {x | NegInf < x /\ x < Normal d} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_OO_n[local]:  (* new, not "00_n" *)
+    !d. {x | NegInf < x /\ x < Normal d} IN subsets Borel
+Proof
     GEN_TAC
  >> ASSUME_TAC SIGMA_ALGEBRA_BOREL
  >> Know `{x | NegInf < x /\ x < Normal d} =
@@ -2494,10 +2529,12 @@ val BOREL_MEASURABLE_SETS_OO_n = prove ((* new, not "00_n" *)
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> RW_TAC std_ss [IN_FUNSET, IN_UNIV]
  >> `-&n = Normal (-&n)` by PROVE_TAC [extreal_ainv_def, extreal_of_num_def]
- >> ASM_REWRITE_TAC [BOREL_MEASURABLE_SETS_OO_r]);
+ >> ASM_REWRITE_TAC [BOREL_MEASURABLE_SETS_OO_r]
+QED
 
-val BOREL_MEASURABLE_SETS_OO_p = prove ((* new, not "00_p" *)
-  ``!c. {x | Normal c < x /\ x < PosInf} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_OO_p[local]:  (* new, not "00_p" *)
+    !c. {x | Normal c < x /\ x < PosInf} IN subsets Borel
+Proof
     GEN_TAC
  >> ASSUME_TAC SIGMA_ALGEBRA_BOREL
  >> Know `{x | Normal c < x /\ x < PosInf} =
@@ -2517,7 +2554,8 @@ val BOREL_MEASURABLE_SETS_OO_p = prove ((* new, not "00_p" *)
  >> FIRST_X_ASSUM MATCH_MP_TAC
  >> RW_TAC std_ss [IN_FUNSET, IN_UNIV]
  >> `&n = Normal (&n)` by PROVE_TAC [extreal_of_num_def]
- >> ASM_REWRITE_TAC [BOREL_MEASURABLE_SETS_OO_r]);
+ >> ASM_REWRITE_TAC [BOREL_MEASURABLE_SETS_OO_r]
+QED
 
 Theorem BOREL_MEASURABLE_SETS_OO:   !c d. {x | c < x /\ x < d} IN subsets Borel
 Proof
@@ -2549,8 +2587,9 @@ Proof
  >> REWRITE_TAC [BOREL_MEASURABLE_SETS_OO_r]
 QED
 
-val BOREL_MEASURABLE_SETS_SING_r = prove (
-  ``!c. {Normal c} IN subsets Borel``,
+Theorem BOREL_MEASURABLE_SETS_SING_r[local]:
+    !c. {Normal c} IN subsets Borel
+Proof
     RW_TAC std_ss []
  >> Know `!c. {Normal c} = BIGINTER (IMAGE (\n. {x | Normal (c - ((1/2) pow n)) <= x /\
                                                      x < Normal (c + ((1/2) pow n))}) UNIV)`
@@ -2589,7 +2628,8 @@ val BOREL_MEASURABLE_SETS_SING_r = prove (
  >> `(\n. {x | Normal (c - ((1/2) pow n)) <= x /\
                x < Normal (c + ((1/2) pow n))}) IN (UNIV -> subsets Borel)`
      by RW_TAC std_ss [IN_FUNSET, BOREL_MEASURABLE_SETS_CO]
- >> METIS_TAC []);
+ >> METIS_TAC []
+QED
 
 Theorem BOREL_MEASURABLE_SETS_SING[simp] : (* was: BOREL_MEASURABLE_SING *)
     !c. {c} IN subsets Borel
@@ -2635,26 +2675,16 @@ Proof
 QED
 
 (* For backwards compatibilities *)
-val BOREL_MEASURABLE_SETS1 = save_thm
-  ("BOREL_MEASURABLE_SETS1", BOREL_MEASURABLE_SETS_RO);
-val BOREL_MEASURABLE_SETS2 = save_thm
-  ("BOREL_MEASURABLE_SETS2", BOREL_MEASURABLE_SETS_CR);
-val BOREL_MEASURABLE_SETS3 = save_thm
-  ("BOREL_MEASURABLE_SETS3", BOREL_MEASURABLE_SETS_RC);
-val BOREL_MEASURABLE_SETS4 = save_thm
-  ("BOREL_MEASURABLE_SETS4", BOREL_MEASURABLE_SETS_OR);
-val BOREL_MEASURABLE_SETS5 = save_thm
-  ("BOREL_MEASURABLE_SETS5", BOREL_MEASURABLE_SETS_CO);
-val BOREL_MEASURABLE_SETS6 = save_thm
-  ("BOREL_MEASURABLE_SETS6", BOREL_MEASURABLE_SETS_OC);
-val BOREL_MEASURABLE_SETS7 = save_thm
-  ("BOREL_MEASURABLE_SETS7", BOREL_MEASURABLE_SETS_CC);
-val BOREL_MEASURABLE_SETS8 = save_thm
-  ("BOREL_MEASURABLE_SETS8", BOREL_MEASURABLE_SETS_OO);
-val BOREL_MEASURABLE_SETS9 = save_thm
-  ("BOREL_MEASURABLE_SETS9", BOREL_MEASURABLE_SETS_SING);
-val BOREL_MEASURABLE_SETS10 = save_thm
-  ("BOREL_MEASURABLE_SETS10", BOREL_MEASURABLE_SETS_NOT_SING);
+Theorem BOREL_MEASURABLE_SETS1 = BOREL_MEASURABLE_SETS_RO;
+Theorem BOREL_MEASURABLE_SETS2 = BOREL_MEASURABLE_SETS_CR;
+Theorem BOREL_MEASURABLE_SETS3 = BOREL_MEASURABLE_SETS_RC;
+Theorem BOREL_MEASURABLE_SETS4 = BOREL_MEASURABLE_SETS_OR;
+Theorem BOREL_MEASURABLE_SETS5 = BOREL_MEASURABLE_SETS_CO;
+Theorem BOREL_MEASURABLE_SETS6 = BOREL_MEASURABLE_SETS_OC;
+Theorem BOREL_MEASURABLE_SETS7 = BOREL_MEASURABLE_SETS_CC;
+Theorem BOREL_MEASURABLE_SETS8 = BOREL_MEASURABLE_SETS_OO;
+Theorem BOREL_MEASURABLE_SETS9 = BOREL_MEASURABLE_SETS_SING;
+Theorem BOREL_MEASURABLE_SETS10 = BOREL_MEASURABLE_SETS_NOT_SING;
 
 (* A summary of all Borel-measurable sets *)
 Theorem BOREL_MEASURABLE_SETS:
@@ -2669,18 +2699,17 @@ Theorem BOREL_MEASURABLE_SETS:
     (!c. {c} IN subsets Borel) /\
     (!c. {x | x <> c} IN subsets Borel)
 Proof
- (* proof *)
-    RW_TAC std_ss [BOREL_MEASURABLE_SETS_RO, (*         x < c *)
-                   BOREL_MEASURABLE_SETS_OR, (* c < x         *)
-                   BOREL_MEASURABLE_SETS_RC, (*         x <= c *)
-                   BOREL_MEASURABLE_SETS_CR, (* c <= x         *)
-                   BOREL_MEASURABLE_SETS_CO, (* c <= x /\ x < d *)
-                   BOREL_MEASURABLE_SETS_OC, (* c < x /\ x <= d *)
+    RW_TAC std_ss [BOREL_MEASURABLE_SETS_RO, (*           x < c  *)
+                   BOREL_MEASURABLE_SETS_OR, (* c < x            *)
+                   BOREL_MEASURABLE_SETS_RC, (*           x <= c *)
+                   BOREL_MEASURABLE_SETS_CR, (* c <= x           *)
+                   BOREL_MEASURABLE_SETS_CO, (* c <= x /\ x < d  *)
+                   BOREL_MEASURABLE_SETS_OC, (* c < x  /\ x <= d *)
                    BOREL_MEASURABLE_SETS_CC, (* c <= x /\ x <= d *)
-                   BOREL_MEASURABLE_SETS_OO, (* c < x /\ x < d *)
-                   BOREL_MEASURABLE_SETS_SING,       (* x = c *)
-                   BOREL_MEASURABLE_SETS_NOT_SING]
-QED(* x <> c *)
+                   BOREL_MEASURABLE_SETS_OO, (* c < x  /\ x < d  *)
+                   BOREL_MEASURABLE_SETS_SING,         (* x = c  *)
+                   BOREL_MEASURABLE_SETS_NOT_SING]     (* x <> c *)
+QED
 
 (* NOTE: This is similar with Borel_eq_le but this generator contains exhausting
    sequences, which is needed when generating product sigma-algebras.
@@ -4949,7 +4978,7 @@ Proof
 QED
 
 (* give `measure lebesgue` a special symbol (cf. `lambda0`) *)
-val _ = overload_on ("lambda", ``measure lborel``);
+Overload lambda = ``measure lborel``
 
 Theorem lambda_empty :
     lambda {} = 0
@@ -4983,8 +5012,7 @@ Proof
 QED
 
 (* |- measure_space lborel *)
-val measure_space_lborel = save_thm
-  ("measure_space_lborel", List.nth (CONJUNCTS lborel_def, 2));
+Theorem measure_space_lborel = List.nth (CONJUNCTS lborel_def, 2);
 
 (* first step beyond right-open_intervals *)
 Theorem lambda_sing :

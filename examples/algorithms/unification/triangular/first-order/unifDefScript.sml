@@ -39,10 +39,10 @@ Proof
   ]
 QED
 
-val wfs_extend = Q.store_thm(
-  "wfs_extend",
-  `wfs s /\ v NOTIN FDOM s /\ v NOTIN vars (walkstar s t) ==>
-   wfs (s |+ (v, t))`,
+Theorem wfs_extend:
+   wfs s /\ v NOTIN FDOM s /\ v NOTIN vars (walkstar s t) ==>
+   wfs (s |+ (v, t))
+Proof
   SRW_TAC [boolSimps.CONJ_ss][oc_eq_vars_walkstar, wfs_no_cycles] THEN
   STRIP_TAC THEN
   `!u. u IN vars t ==> ~(vR s)^+ v u`
@@ -51,14 +51,14 @@ val wfs_extend = Q.store_thm(
      by METIS_TAC [TC_vR_update] THEN
   FULL_SIMP_TAC (srw_ss()) [RTC_CASES_TC] THEN
   METIS_TAC [NOT_FDOM_walkstar,wfs_no_cycles,TC_RULES]
-);
+QED
 
-val vwalk_FDOM = Q.store_thm(
-"vwalk_FDOM",
-`wfs s ==> (vwalk s v = t) ==>
+Theorem vwalk_FDOM:
+ wfs s ==> (vwalk s v = t) ==>
   (v NOTIN FDOM s /\ (t = Var v)) \/
   (v IN FDOM s /\ (t <> Var v) /\
-   ?u.(vwalk s v = vwalk s u) /\ (FLOOKUP s u = SOME t))`,
+   ?u.(vwalk s v = vwalk s u) /\ (FLOOKUP s u = SOME t))
+Proof
 REVERSE (Cases_on `v IN FDOM s`)
 THEN1 METIS_TAC [NOT_FDOM_vwalk] THEN
 REPEAT STRIP_TAC THEN
@@ -91,7 +91,8 @@ Cases_on `s ' v` THENL [
   ],
   `vwalk s v = x` by SRW_TAC [][Once vwalk_def,FLOOKUP_DEF] THEN METIS_TAC [],
   `vwalk s v = x` by SRW_TAC [][Once vwalk_def,FLOOKUP_DEF] THEN METIS_TAC []
-]);
+]
+QED
 
 Definition allvars_def:
   allvars s (t1:'a term) (t2:'a term) = vars t1 ∪ vars t2 ∪ substvars s
@@ -102,10 +103,11 @@ val FINITE_allvars = RWstore_thm(
 `FINITE (allvars s t1 t2)`,
 SRW_TAC [][allvars_def]);
 
-val allvars_sym = Q.store_thm(
-"allvars_sym",
-`allvars s t1 t2 = allvars s t2 t1`,
-SRW_TAC [][allvars_def,UNION_COMM]);
+Theorem allvars_sym:
+ allvars s t1 t2 = allvars s t2 t1
+Proof
+SRW_TAC [][allvars_def,UNION_COMM]
+QED
 
 Definition uR_def:
   uR (sx,c1,c2) (s,t1,t2) <=>
@@ -157,9 +159,9 @@ Proof
   srw_tac [][]
 QED
 
-val WF_uR = Q.store_thm(
-"WF_uR",
-`WF uR`,
+Theorem WF_uR:
+ WF uR
+Proof
 SRW_TAC [][WF_IFF_WELLFOUNDED,wellfounded_def,uR_lambda,UNCURRY,
            EXISTS_OR_THM] THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
@@ -229,7 +231,8 @@ FULL_SIMP_TAC bool_ss [WF_IFF_WELLFOUNDED,wellfounded_def] THEN
 POP_ASSUM (Q.SPEC_THEN `\n. f2 (z+n+1)` MP_TAC) THEN
 SRW_TAC [][] THEN
 Q.PAT_X_ASSUM `!n.z < n ==> measure X Y Z` (Q.SPEC_THEN `z+n+1` MP_TAC) THEN
-SRW_TAC [ARITH_ss][ADD1]);
+SRW_TAC [ARITH_ss][ADD1]
+QED
 
 val tunify_defn_q =`
   tunify s t1 t2 =
@@ -253,55 +256,59 @@ val _ = store_term_thm("tunify_tcd", tc0);
 val _ = store_term_thm("tunify_tca", tc1);
 val _ = store_term_thm("tunify_tc_WF", tc2);
 
-val vwalk_to_Pair_SUBSET_rangevars = Q.store_thm(
-"vwalk_to_Pair_SUBSET_rangevars",
-`wfs s /\ (vwalk s v = Pair t1 t2)
+Theorem vwalk_to_Pair_SUBSET_rangevars:
+ wfs s /\ (vwalk s v = Pair t1 t2)
   ==> (vars t1 SUBSET (rangevars s)) /\
-      (vars t2 SUBSET (rangevars s))`,
+      (vars t2 SUBSET (rangevars s))
+Proof
 STRIP_TAC THEN
 `v ∈ FDOM s` by METIS_TAC [NOT_FDOM_vwalk,term_distinct] THEN
 IMP_RES_TAC vwalk_IN_FRANGE THEN
 IMP_RES_TAC IN_FRANGE_rangevars THEN
-POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (srw_ss()) []);
+POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val allvars_SUBSET = Q.store_thm(
-"allvars_SUBSET",
-`wfs s /\
+Theorem allvars_SUBSET:
+ wfs s /\
  (walk s t1 = Pair t1a t1d) /\
  (walk s t2 = Pair t2a t2d) ==>
  allvars s t1a t2a SUBSET allvars s t1 t2 /\
- allvars s t1d t2d SUBSET allvars s t1 t2`,
+ allvars s t1d t2d SUBSET allvars s t1 t2
+Proof
 SRW_TAC [][walk_def,allvars_def] THEN
 Cases_on `t1` THEN Cases_on `t2` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 METIS_TAC [vwalk_to_Pair_SUBSET_rangevars,substvars_def,SUBSET_TRANS,
-           SUBSET_UNION]);
+           SUBSET_UNION]
+QED
 
-val walkstar_subterm_smaller = Q.store_thm(
-"walkstar_subterm_smaller",
-`wfs s /\ (walk s t1 = Pair t1a t1d) ==>
+Theorem walkstar_subterm_smaller:
+ wfs s /\ (walk s t1 = Pair t1a t1d) ==>
   pair_count (walkstar s t1a) < pair_count (walkstar s t1) /\
-  pair_count (walkstar s t1d) < pair_count (walkstar s t1)`,
+  pair_count (walkstar s t1d) < pair_count (walkstar s t1)
+Proof
 SRW_TAC [][walk_def] THEN
 Cases_on `t1` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []);
+FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+QED
 
-val tca_thm = Q.store_thm(
-"tca_thm",
-`wfs s /\
+Theorem tca_thm:
+ wfs s /\
  (walk s t1 = Pair t1a t1d) /\
  (walk s t2 = Pair t2a t2d) ==>
- uR (s,t1a,t2a) (s,t1,t2)`,
+ uR (s,t1a,t2a) (s,t1,t2)
+Proof
 SRW_TAC [][uR_def,SUBMAP_REFL] THEN
-METIS_TAC [allvars_SUBSET,walkstar_subterm_smaller]);
+METIS_TAC [allvars_SUBSET,walkstar_subterm_smaller]
+QED
 
 val met = METIS_TAC [SUBSET_UNION,SUBSET_TRANS];
 
-val allvars_SUBSET_FUPDATE = Q.store_thm(
-"allvars_SUBSET_FUPDATE",
-`(walk s t1 = Pair t1a t1d) /\ (walk s t2 = Pair t2a t2d) /\
+Theorem allvars_SUBSET_FUPDATE:
+ (walk s t1 = Pair t1a t1d) /\ (walk s t2 = Pair t2a t2d) /\
  (walk s t1a = Var v) /\ wfs s ==>
- allvars (s |+ (v,walk s t2a)) t1d t2d SUBSET allvars s t1 t2`,
+ allvars (s |+ (v,walk s t2a)) t1d t2d SUBSET allvars s t1 t2
+Proof
 SRW_TAC [][allvars_def] THEN1 (
   Cases_on `walk s t1 = t1` THEN1 (
     FULL_SIMP_TAC (srw_ss()) [] THEN met) THEN
@@ -343,14 +350,15 @@ FULL_SIMP_TAC (srw_ss()) [] THEN1 (
   Q.PAT_X_ASSUM `walk s t2 = X` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN met ) THEN
 IMP_RES_TAC walk_IN_FRANGE THEN
-IMP_RES_TAC IN_FRANGE_rangevars THEN met );
+IMP_RES_TAC IN_FRANGE_rangevars THEN met
+QED
 
-val walkstar_subterm_FUPDATE = Q.store_thm(
-"walkstar_subterm_FUPDATE",
-`wfs s /\ v NOTIN FDOM s /\ v NOTIN vars (walkstar s t) /\
+Theorem walkstar_subterm_FUPDATE:
+ wfs s /\ v NOTIN FDOM s /\ v NOTIN vars (walkstar s t) /\
  (walk s t1 = Pair t1a t1d) ==>
   pair_count (walkstar (s |+ (v,t)) t1d) <
-  pair_count (walkstar (s |+ (v,t)) t1)`,
+  pair_count (walkstar (s |+ (v,t)) t1)
+Proof
 SRW_TAC [][] THEN
 `wfs (s |+ (v,t))` by METIS_TAC [wfs_extend] THEN
 `s SUBMAP (s |+ (v,t))` by METIS_TAC [SUBMAP_FUPDATE_EQN] THEN
@@ -362,7 +370,7 @@ SRW_TAC [][] THEN
       SRW_TAC [][]) THEN
 Cases_on `t1` THEN FULL_SIMP_TAC (srw_ss()) [walk_def] THEN
 SRW_TAC [ARITH_ss][measure_thm,walkstar_thm]
-);
+QED
 
 val SOME tunify_aux_defn = Defn.aux_defn tunify_defn;
 
@@ -373,34 +381,34 @@ SIMP_RULE std_ss []
   (Q.SPEC`uR`(definition"tunify_tupled_AUX_def")))
  WF_uR);
 
-val uR_subterm = Q.store_thm(
-"uR_subterm",
-`wfs s /\
+Theorem uR_subterm:
+ wfs s /\
  (walk s t1 = Pair t1a t1d) /\
  (walk s t2 = Pair t2a t2d) ==>
   uR (s,t1a,t2a) (s,t1,t2) /\
-  uR (s,t1d,t2d) (s,t1,t2)`,
+  uR (s,t1d,t2d) (s,t1,t2)
+Proof
 REPEAT STRIP_TAC THEN
 SRW_TAC [][uR_def,SUBMAP_REFL] THEN
 METIS_TAC [allvars_SUBSET,walkstar_subterm_smaller]
-);
+QED
 
-val uR_subterm_FUPDATE = Q.store_thm(
-"uR_subterm_FUPDATE",
-`(walk s t1 = Pair t1a t1d) /\
+Theorem uR_subterm_FUPDATE:
+ (walk s t1 = Pair t1a t1d) /\
  (walk s t2 = Pair t2a t2d) /\
  ((walk s t1a = Var v) /\ (walk s t2a = t) ∨
   (walk s t2a = Var v) ∧ (walk s t1a = t)) ∧
  wfs s /\
  v NOTIN FDOM s /\
  v NOTIN vars (walk* s t) ==>
- uR (s |+ (v,t), t1d, t2d) (s,t1,t2)`,
+ uR (s |+ (v,t), t1d, t2d) (s,t1,t2)
+Proof
 STRIP_TAC THEN
 `wfs (s |+ (v,t))` by METIS_TAC [wfs_extend] THEN
 `s SUBMAP (s|+(v,t))` by METIS_TAC [SUBMAP_FUPDATE_EQN] THEN
 (SRW_TAC [][uR_def] THEN1 METIS_TAC [allvars_SUBSET_FUPDATE,allvars_sym] THEN
 METIS_TAC [walkstar_subterm_FUPDATE])
-);
+QED
 
 Theorem uR_ind =
   WF_INDUCTION_THM |> Q.ISPEC `uR` |> SIMP_RULE (srw_ss()) [WF_uR]
@@ -411,18 +419,19 @@ Definition uP_def:
   uP sx s t1 t2 <=> wfs sx ∧ s SUBMAP sx ∧ substvars sx ⊆ allvars s t1 t2
 End
 
-val uP_sym = Q.store_thm(
-"uP_sym",
-`uP sx s t1 t2 ⇔ uP sx s t2 t1`,
-SRW_TAC [][uP_def,allvars_sym]);
+Theorem uP_sym:
+ uP sx s t1 t2 ⇔ uP sx s t2 t1
+Proof
+SRW_TAC [][uP_def,allvars_sym]
+QED
 
-val uP_FUPDATE = Q.store_thm(
-"uP_FUPDATE",
-`wfs s /\
+Theorem uP_FUPDATE:
+ wfs s /\
  v NOTIN FDOM s /\
  v NOTIN vars (walkstar s t2) /\
  (walk s t1 = Var v) ==>
- uP (s |+ (v,walk s t2)) s t1 t2`,
+ uP (s |+ (v,walk s t2)) s t1 t2
+Proof
 STRIP_TAC THEN
 `wfs (s |+ (v,walk s t2))` by METIS_TAC [wfs_extend,walkstar_walk] THEN
 `s SUBMAP (s|+(v,walk s t2))` by METIS_TAC [SUBMAP_FUPDATE_EQN] THEN
@@ -435,30 +444,33 @@ FULL_SIMP_TAC (srw_ss()) [] THEN1 met THEN
 IMP_RES_TAC walk_IN_FRANGE THEN
 IMP_RES_TAC IN_FRANGE_rangevars THEN
 Q.PAT_X_ASSUM `walk s t1 = X` ASSUME_TAC THEN
-FULL_SIMP_TAC (srw_ss()) [] THEN met);
+FULL_SIMP_TAC (srw_ss()) [] THEN met
+QED
 
-val walk_SUBMAP = Q.store_thm(
-"walk_SUBMAP",
-`wfs sx /\ s SUBMAP sx ==>
+Theorem walk_SUBMAP:
+ wfs sx /\ s SUBMAP sx ==>
   case walk s t of
      Var u => walk sx t = walk sx (Var u)
-   | u => walk sx t = u`,
+   | u => walk sx t = u
+Proof
 Cases_on `t` THEN SRW_TAC [][walk_def] THEN
 MP_TAC (Q.SPECL [`n`,`s`] (UNDISCH vwalk_SUBMAP)) THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val uR_IMP_uP = Q.store_thm(
-"uR_IMP_uP",
-`uR (sx,c1,c2) (s,t1,t2) ==> uP sx s t1 t2`,
-SRW_TAC [][uR_def,uP_def,allvars_def])
+Theorem uR_IMP_uP:
+ uR (sx,c1,c2) (s,t1,t2) ==> uP sx s t1 t2
+Proof
+SRW_TAC [][uR_def,uP_def,allvars_def]
+QED
 
-val uP_IMP_subterm_uR = Q.store_thm(
-"uP_IMP_subterm_uR",
-`wfs s /\
+Theorem uP_IMP_subterm_uR:
+ wfs s /\
  (walk s t1 = Pair t1a t1d) /\
  (walk s t2 = Pair t2a t2d) /\
  (uP sx s t1a t2a \/ uP sx s t1d t2d) ==>
- uR (sx,t1d,t2d) (s,t1,t2)`,
+ uR (sx,t1d,t2d) (s,t1,t2)
+Proof
 SRW_TAC [][] THEN (
 `allvars s t1a t2a SUBSET allvars s t1 t2 /\
  allvars s t1d t2d SUBSET allvars s t1 t2`
@@ -473,13 +485,14 @@ SRW_TAC [][] THENL [
         SRW_TAC [][]) THEN
   Cases_on `t1` THEN
   FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [measure_thm,walk_def]
-]))
+])
+QED
 
-val aux_uP = Q.store_thm(
-"aux_uP",
-`!s t1 t2 sx.
+Theorem aux_uP:
+ !s t1 t2 sx.
    wfs s /\ (tunify_tupled_aux uR (s,t1,t2) = SOME sx) ==>
-     uP sx s t1 t2`,
+     uP sx s t1 t2
+Proof
 HO_MATCH_MP_TAC uR_ind THEN
 REPEAT (GEN_TAC ORELSE (DISCH_THEN STRIP_ASSUME_TAC)) THEN
 POP_ASSUM MP_TAC THEN
@@ -554,16 +567,18 @@ THEN ASM_SIMP_TAC (srw_ss()) [] THENL [
   METIS_TAC [uP_FUPDATE,walkstar_walk,uP_sym],
   SRW_TAC [][uP_def,allvars_def,SUBMAP_REFL] THEN
   METIS_TAC [SUBSET_UNION,SUBSET_TRANS]
-])
+]
+QED
 
-val tcd_thm = Q.store_thm(
-"tcd_thm",
-`wfs s /\
+Theorem tcd_thm:
+ wfs s /\
  (walk s t1 = Pair t1a t1d) /\
  (walk s t2 = Pair t2a t2d) /\
  (tunify_tupled_aux uR (s,t1a,t2a) = SOME sx) ==>
- uR (sx,t1d,t2d) (s,t1,t2)`,
-METIS_TAC [aux_uP, uP_IMP_subterm_uR])
+ uR (sx,t1d,t2d) (s,t1,t2)
+Proof
+METIS_TAC [aux_uP, uP_IMP_subterm_uR]
+QED
 
 val (tunify_def,tunify_ind) = Defn.tprove (
 tunify_defn,
@@ -578,9 +593,9 @@ val aux_eqn = aux_eqn0 |> Q.INST[`R`|->`uR`] |>
               (fn th => PROVE_HYP
                (prove(hd(hyp th),SRW_TAC[][tca_thm])) th)
 
-val aux_eq_tunify = Q.store_thm(
-"aux_eq_tunify",
-`!s t1 t2. tunify_tupled_aux uR (s,t1,t2) = tunify s t1 t2`,
+Theorem aux_eq_tunify:
+ !s t1 t2. tunify_tupled_aux uR (s,t1,t2) = tunify s t1 t2
+Proof
 HO_MATCH_MP_TAC tunify_ind THEN
 REPEAT STRIP_TAC THEN
 SRW_TAC [][Once aux_eqn] THEN
@@ -588,7 +603,7 @@ SRW_TAC [][Once tunify_def,SimpRHS] THEN
 Cases_on `walk s t1` THEN Cases_on `walk s t2` THEN
 SRW_TAC [][] THEN
 Cases_on `tunify s t t'` THEN SRW_TAC [][]
-)
+QED
 
 Definition ext_s_check_def[simp]:
   ext_s_check s v t = if oc s t v then NONE else SOME (s |+ (v,t))
@@ -613,9 +628,9 @@ val unify_def = new_specification("unify_def",["unify"],unify_exists)
 
 val _ = store_type_thm("unify_type",type_of``unify``)
 
-val unify_eq_tunify = Q.store_thm(
-"unify_eq_tunify",
-`!s t1 t2. wfs s ==> (unify s t1 t2 = tunify s t1 t2)`,
+Theorem unify_eq_tunify:
+ !s t1 t2. wfs s ==> (unify s t1 t2 = tunify s t1 t2)
+Proof
 HO_MATCH_MP_TAC tunify_ind THEN
 REPEAT STRIP_TAC THEN
 SRW_TAC [][Once tunify_def,SimpRHS] THEN
@@ -624,12 +639,12 @@ Cases_on `walk s t1` THEN Cases_on `walk s t2` THEN
 SRW_TAC [][] THEN
 Cases_on `tunify s t t'` THEN SRW_TAC [][] THEN
 `wfs x` by METIS_TAC [aux_eq_tunify,uP_def,aux_uP] THEN
-METIS_TAC [])
+METIS_TAC []
+QED
 
 val _ = metisTools.limit :=  { time = NONE, infs = NONE }
-val unify_ind = Q.store_thm(
-"unify_ind",
-`!P.
+Theorem unify_ind:
+ !P.
      (!s t1 t2.
         (!t1a t1d t2a t2d sx.
            wfs s /\
@@ -643,12 +658,15 @@ val unify_ind = Q.store_thm(
            (walk s t2 = Pair t2a t2d) ==>
            P s t1a t2a) ==>
         P s t1 t2) ==>
-     !v v1 v2. P v v1 v2`,
-METIS_TAC [unify_eq_tunify,tunify_ind])
+     !v v1 v2. P v v1 v2
+Proof
+METIS_TAC [unify_eq_tunify,tunify_ind]
+QED
 
-val unify_uP = Q.store_thm(
-"unify_uP",
-`wfs s /\ (unify s t1 t2 = SOME sx) ==>
-   uP sx s t1 t2`,
-METIS_TAC [unify_eq_tunify,aux_eq_tunify,aux_uP])
+Theorem unify_uP:
+ wfs s /\ (unify s t1 t2 = SOME sx) ==>
+   uP sx s t1 t2
+Proof
+METIS_TAC [unify_eq_tunify,aux_eq_tunify,aux_uP]
+QED
 

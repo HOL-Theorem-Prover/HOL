@@ -64,17 +64,17 @@ val EmptySet_ax =
 val Empty_def =
  new_specification("Empty_def", ["Empty"], EmptySet_ax);
 
-val EmptyEq =
- store_thm
-  ("EmptyEq",
-   ``!s. (!x. ~(x In s)) = (s = Empty)``,
-   PROVE_TAC [Empty_def,Extension_ax]);
+Theorem EmptyEq:
+     !s. (!x. ~(x In s)) = (s = Empty)
+Proof
+   PROVE_TAC [Empty_def,Extension_ax]
+QED
 
-val NotEmpty =
- store_thm
-  ("NotEmpty",
-   ``!s. (?x. x In s) = ~(s = Empty)``,
-   PROVE_TAC [Empty_def,Extension_ax]);
+Theorem NotEmpty:
+     !s. (?x. x In s) = ~(s = Empty)
+Proof
+   PROVE_TAC [Empty_def,Extension_ax]
+QED
 
 (*****************************************************************************)
 (* Axiom of union.                                                           *)
@@ -117,29 +117,29 @@ val Pow_def =
     (``?f. !s x. x In f s = !y. y In x ==> y In s``,
      REWRITE_TAC[CONV_RULE SKOLEM_CONV PowerSet_ax,GSYM Subset_def]));
 
-val PowEmpty =
- store_thm
-  ("PowEmpty",
-   ``!x. x In Pow Empty = (x = Empty)``,
-   PROVE_TAC[Pow_def,EmptyEq]);
+Theorem PowEmpty:
+     !x. x In Pow Empty = (x = Empty)
+Proof
+   PROVE_TAC[Pow_def,EmptyEq]
+QED
 
-val PowEmptyEq =
- store_thm
-  ("PowEmptyEq",
-   ``!s. (!x. x In s ==> (x = Empty)) /\ ~(s = Empty) = (s = Pow Empty)``,
-   METIS_TAC[Pow_def,NotEmpty,Extension_ax]);
+Theorem PowEmptyEq:
+     !s. (!x. x In s ==> (x = Empty)) /\ ~(s = Empty) = (s = Pow Empty)
+Proof
+   METIS_TAC[Pow_def,NotEmpty,Extension_ax]
+QED
 
-val EmptyPowEmpty =
- store_thm
-  ("EmptyPowEmpty",
-   ``~(Empty = Pow Empty) /\ ~(Pow Empty = Empty)``,
-   METIS_TAC[Pow_def,NotEmpty,Extension_ax]);
+Theorem EmptyPowEmpty:
+     ~(Empty = Pow Empty) /\ ~(Pow Empty = Empty)
+Proof
+   METIS_TAC[Pow_def,NotEmpty,Extension_ax]
+QED
 
-val PowPowEmpty =
- store_thm
- ("PowPowEmpty",
-  ``!x. x In Pow(Pow Empty) = (x = Empty) \/ (x = Pow Empty)``,
-  METIS_TAC[Pow_def,EmptyEq,PowEmptyEq]);
+Theorem PowPowEmpty:
+    !x. x In Pow(Pow Empty) = (x = Empty) \/ (x = Pow Empty)
+Proof
+  METIS_TAC[Pow_def,EmptyEq,PowEmptyEq]
+QED
 
 (*****************************************************************************)
 (* Axiom of replacement.                                                     *)
@@ -176,13 +176,15 @@ val Singleton_def =
 (*****************************************************************************)
 (* Axiom of separation.                                                      *)
 (*****************************************************************************)
-val Separation_ax = store_thm("Separation_ax",
-  ``!p s. ?t. !x. x In t = x In s /\ p x``,
+Theorem Separation_ax:
+    !p s. ?t. !x. x In t = x In s /\ p x
+Proof
 NTAC 2 GEN_TAC THEN
 EXISTS_TAC ``if (!x. x In s ==> ~(p x)) then Empty
              else Image (\x. if p x then x else (@x. x In s /\ p x)) s`` THEN
 SRW_TAC [][Empty_def,Image_def] THEN
-METIS_TAC []);
+METIS_TAC []
+QED
 
 (*****************************************************************************)
 (* Definition of Spec s p = set of x in s satisfying predicate p.            *)
@@ -222,10 +224,9 @@ val Foundation_ax =
 (*****************************************************************************)
 (* Pairing.                                                                  *)
 (*****************************************************************************)
-val Pairing =
- store_thm
-  ("Pairing",
-   ``!x y. ?u. x In u /\ y In u``,
+Theorem Pairing:
+     !x y. ?u. x In u /\ y In u
+Proof
    REPEAT GEN_TAC
     THEN EXISTS_TAC
           ``Image
@@ -233,7 +234,8 @@ val Pairing =
                  if (a = Pow Empty) then y else ARB)
             (Pow(Pow Empty))``
    THEN RW_TAC std_ss [Image_def,PowPowEmpty]
-   THEN PROVE_TAC[EmptyPowEmpty]);
+   THEN PROVE_TAC[EmptyPowEmpty]
+QED
 
 (*****************************************************************************)
 (* PairingFun_def = |- !x y. x In (PairingFun x y) /\ y In (PairingFun x y)  *)
@@ -248,12 +250,12 @@ Definition Upair_def:
   Upair x y = Spec (PairingFun x y) (\z. (z = x) \/ (z = y))
 End
 
-val InUpair =
- store_thm
-  ("InUpair",
-   ``!x y z. z In (Upair x y) = (z = x) \/ (z = y)``,
+Theorem InUpair:
+     !x y z. z In (Upair x y) = (z = x) \/ (z = y)
+Proof
    RW_TAC std_ss [Upair_def,Spec_def]
-    THEN PROVE_TAC[PairingFun_def]);
+    THEN PROVE_TAC[PairingFun_def]
+QED
 
 (*****************************************************************************)
 (* Infixed binary union of sets.                                             *)

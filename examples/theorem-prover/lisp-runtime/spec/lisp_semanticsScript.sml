@@ -9,24 +9,26 @@ val op \\ = op THEN;
 
 (* abstract syntax of well-formed Lisp prorams *)
 
-val _ = Hol_datatype `
-  func = PrimitiveFun of lisp_primitive_op
-       | Define | Print | Error | Funcall | Fun of string`;
+Datatype:
+  func = PrimitiveFun lisp_primitive_op
+       | Define | Print | Error | Funcall | Fun string
+End
 
-val _ = Hol_datatype `
-  term = Const of SExp
-       | Var of string
-       | App of func => term list
-       | If of term => term => term
-       | LamApp of string list => term => term list
+Datatype:
+  term = Const SExp
+       | Var string
+       | App func (term list)
+       | If term term term
+       | LamApp (string list) term (term list)
        (* only macros below *)
-       | Let of (string # term) list => term
-       | LetStar of (string # term) list => term
-       | Cond of (term # term) list
-       | Or of term list | And of term list
-       | First of term | Second of term | Third of term
-       | Fourth of term | Fifth of term | List of term list
-       | Defun of string => string list => SExp`;
+       | Let ((string # term) list) term
+       | LetStar ((string # term) list) term
+       | Cond ((term # term) list)
+       | Or (term list) | And (term list)
+       | First term | Second term | Third term
+       | Fourth term | Fifth term | List (term list)
+       | Defun string (string list) SExp
+End
 
 val term_11 = fetch "-" "term_11";
 val term_distinct = fetch "-" "term_distinct";
@@ -375,20 +377,26 @@ val R_ev_T_11_lemma = prove(
   \\ RES_TAC \\ FULL_SIMP_TAC std_ss [])
   |> SIMP_RULE std_ss [pairTheory.FORALL_PROD,PULL_FORALL_IMP];
 
-val R_ev_T_11 = store_thm("R_ev_T_11",
-  ``!x y. R_ev x (res,k,io,T) /\ R_ev x y ==> (y = (res,k,io,T))``,
+Theorem R_ev_T_11:
+    !x y. R_ev x (res,k,io,T) /\ R_ev x y ==> (y = (res,k,io,T))
+Proof
   FULL_SIMP_TAC std_ss [pairTheory.FORALL_PROD] \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []
+QED
 
-val R_ap_T_11 = store_thm("R_ap_T_11",
-  ``!x y. R_ap x (res,k,io,T) /\ R_ap x y ==> (y = (res,k,io,T))``,
+Theorem R_ap_T_11:
+    !x y. R_ap x (res,k,io,T) /\ R_ap x y ==> (y = (res,k,io,T))
+Proof
   FULL_SIMP_TAC std_ss [pairTheory.FORALL_PROD] \\ REPEAT STRIP_TAC
-  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC R_ev_T_11_lemma \\ FULL_SIMP_TAC std_ss []
+QED
 
-val R_ap_F_11 = store_thm("R_ap_F_11",
-  ``R_ap x (res,k,io,F) /\ R_ap x (res2,k2,io2,b) ==> ~b``,
+Theorem R_ap_F_11:
+    R_ap x (res,k,io,F) /\ R_ap x (res2,k2,io2,b) ==> ~b
+Proof
   REPEAT STRIP_TAC \\ FULL_SIMP_TAC std_ss []
-  \\ IMP_RES_TAC R_ap_T_11 \\ FULL_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC R_ap_T_11 \\ FULL_SIMP_TAC std_ss []
+QED
 
 Theorem R_ev_T_cases:
   (R_ev (x,env,k,io,ok) (r,k',io',T) ⇔
@@ -400,5 +408,3 @@ Theorem R_ev_T_cases:
 Proof REPEAT STRIP_TAC \\ EQ_TAC \\ REPEAT STRIP_TAC
       \\ IMP_RES_TAC R_ev_OK \\ FULL_SIMP_TAC std_ss []
 QED
-
-

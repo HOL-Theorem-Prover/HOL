@@ -18,20 +18,23 @@ val op>> = op THEN1;
 (* Auxiliary theorems.                                                       *)
 (* ------------------------------------------------------------------------- *)
 
-val EQ_T_IMP = store_thm
-  ("EQ_T_IMP",
-   ``!x. x = T ==> x``,
-   PROVE_TAC []);
+Theorem EQ_T_IMP:
+     !x. x = T ==> x
+Proof
+   PROVE_TAC []
+QED
 
-val EQ_SUBSET_SUBSET = store_thm
-  ("EQ_SUBSET_SUBSET",
-   ``!(s : 'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s``,
-   RW_TAC std_ss [SUBSET_DEF, EXTENSION]);
+Theorem EQ_SUBSET_SUBSET:
+     !(s : 'a -> bool) t. (s = t) ==> s SUBSET t /\ t SUBSET s
+Proof
+   RW_TAC std_ss [SUBSET_DEF, EXTENSION]
+QED
 
-val IN_EQ_UNIV_IMP = store_thm
-  ("IN_EQ_UNIV_IMP",
-   ``!s. (s = UNIV) ==> !v. (v : 'a) IN s``,
-   RW_TAC std_ss [IN_UNIV]);
+Theorem IN_EQ_UNIV_IMP:
+     !s. (s = UNIV) ==> !v. (v : 'a) IN s
+Proof
+   RW_TAC std_ss [IN_UNIV]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* bool theory subtypes.                                                     *)
@@ -51,61 +54,69 @@ Definition pair_def:
    pair (X : 'a -> bool) (Y : 'b -> bool) = \ (x, y). x IN X /\ y IN Y
 End
 
-val IN_PAIR = store_thm
-  ("IN_PAIR",
-   ``!(x : 'a # 'b) X Y. x IN pair X Y = FST x IN X /\ SND x IN Y``,
+Theorem IN_PAIR:
+     !(x : 'a # 'b) X Y. x IN pair X Y = FST x IN X /\ SND x IN Y
+Proof
    Cases
-   ++ RW_TAC std_ss [pair_def, SPECIFICATION]);
+   ++ RW_TAC std_ss [pair_def, SPECIFICATION]
+QED
 
 (* Simplifications *)
 
-val PAIR_UNIV = store_thm
-  ("PAIR_UNIV",
-   ``pair UNIV UNIV = (UNIV : 'a # 'b -> bool)``,
-   RW_TAC std_ss [SET_EQ, IN_PAIR, IN_UNIV]);
+Theorem PAIR_UNIV:
+     pair UNIV UNIV = (UNIV : 'a # 'b -> bool)
+Proof
+   RW_TAC std_ss [SET_EQ, IN_PAIR, IN_UNIV]
+QED
 
 (* Subtypes *)
 
-val DEFAULT_SUBTYPE = store_thm
-  ("DEFAULT_SUBTYPE",
-   ``!x. x IN UNIV``,
-   RW_TAC std_ss [IN_UNIV]);
+Theorem DEFAULT_SUBTYPE:
+     !x. x IN UNIV
+Proof
+   RW_TAC std_ss [IN_UNIV]
+QED
 
-val COMB_SUBTYPE = store_thm
-  ("COMB_SUBTYPE",
-   ``!(f : 'a -> 'b) a x y. f IN (x --> y) /\ a IN x ==> f a IN y a``,
+Theorem COMB_SUBTYPE:
+     !(f : 'a -> 'b) a x y. f IN (x --> y) /\ a IN x ==> f a IN y a
+Proof
    RW_TAC std_ss [IN_DFUNSET]
-   ++ PROVE_TAC []);
+   ++ PROVE_TAC []
+QED
 
-val ABS_SUBTYPE = store_thm
-  ("ABS_SUBTYPE",
-   ``!(f : 'a -> 'b) p. (!x. f x IN p x) ==> (\x. f x) IN (UNIV --> p)``,
+Theorem ABS_SUBTYPE:
+     !(f : 'a -> 'b) p. (!x. f x IN p x) ==> (\x. f x) IN (UNIV --> p)
+Proof
    CONV_TAC (DEPTH_CONV FUN_EQ_CONV)
-   ++ RW_TAC std_ss [IN_DFUNSET]);
+   ++ RW_TAC std_ss [IN_DFUNSET]
+QED
 
-val COND_SUBTYPE = store_thm
-  ("COND_SUBTYPE",
-   ``!c (a:'a) b x.
+Theorem COND_SUBTYPE:
+     !c (a:'a) b x.
        (c ==> a IN x) /\
        (~c ==> b IN x) ==>
-       COND c a b IN x``,
-   RW_TAC std_ss []);
+       COND c a b IN x
+Proof
+   RW_TAC std_ss []
+QED
 
-val RES_ABSTRACT_SUBTYPE = store_thm
-  ("RES_ABSTRACT_SUBTYPE",
-   ``!p (f : 'a -> 'b) q.
+Theorem RES_ABSTRACT_SUBTYPE:
+     !p (f : 'a -> 'b) q.
        (!x. x IN p ==> (f x IN q x)) ==>
-       RES_ABSTRACT p f IN (p --> q)``,
-   RW_TAC std_ss [RES_FORALL, RES_ABSTRACT, IN_DFUNSET]);
+       RES_ABSTRACT p f IN (p --> q)
+Proof
+   RW_TAC std_ss [RES_FORALL, RES_ABSTRACT, IN_DFUNSET]
+QED
 
-val UNCURRY_SUBTYPE = store_thm
-  ("UNCURRY_SUBTYPE",
-   ``!(f : 'a -> 'b -> 'c) p.
+Theorem UNCURRY_SUBTYPE:
+     !(f : 'a -> 'b -> 'c) p.
        (!x y. f x y IN p x y) ==>
-       (UNCURRY f IN (UNIV --> UNCURRY p))``,
+       (UNCURRY f IN (UNIV --> UNCURRY p))
+Proof
     RW_TAC std_ss [IN_DFUNSET]
     ++ Cases_on `x`
-    ++ RW_TAC std_ss []);
+    ++ RW_TAC std_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The bool theory simplifier module.                                        *)
@@ -113,106 +124,118 @@ val UNCURRY_SUBTYPE = store_thm
 
 (* Congruences *)
 
-val comb_cong = store_thm
-  ("comb_cong",
-   ``!(f : 'a -> 'b) f' a a'. (f = f') /\ (a = a') ==> (f a = f' a')``,
-   RW_TAC std_ss []);
+Theorem comb_cong:
+     !(f : 'a -> 'b) f' a a'. (f = f') /\ (a = a') ==> (f a = f' a')
+Proof
+   RW_TAC std_ss []
+QED
 
-val abs_cong = store_thm
-  ("abs_cong",
-   ``!(f : 'a -> 'b) f'. (!x. f x = f' x) ==> ((\x. f x) = f')``,
+Theorem abs_cong:
+     !(f : 'a -> 'b) f'. (!x. f x = f' x) ==> ((\x. f x) = f')
+Proof
    CONV_TAC (DEPTH_CONV FUN_EQ_CONV)
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
-val conj_cong = store_thm
-  ("conj_cong",
-   ``!a a' b b'.
+Theorem conj_cong:
+     !a a' b b'.
        (b ==> (a = a')) /\
        (a' ==> (b = b')) ==>
-       (a /\ b = a' /\ b')``,
+       (a /\ b = a' /\ b')
+Proof
    RW_TAC std_ss []
-   ++ ho_PROVE_TAC []);
+   ++ ho_PROVE_TAC []
+QED
 
-val disj_cong = store_thm
-  ("disj_cong",
-   ``!a a' b b'.
+Theorem disj_cong:
+     !a a' b b'.
        (~b ==> (a = a')) /\
        (~a' ==> (b = b')) ==>
-       (a \/ b = a' \/ b')``,
+       (a \/ b = a' \/ b')
+Proof
    RW_TAC std_ss []
-   ++ ho_PROVE_TAC []);
+   ++ ho_PROVE_TAC []
+QED
 
-val imp_cong = store_thm
-  ("imp_cong",
-   ``!a a' b b'.
+Theorem imp_cong:
+     !a a' b b'.
        (a = a') /\
        (a' ==> (b = b')) ==>
-       (a ==> b = a' ==> b')``,
+       (a ==> b = a' ==> b')
+Proof
    RW_TAC std_ss []
-   ++ ho_PROVE_TAC []);
+   ++ ho_PROVE_TAC []
+QED
 
-val cond_cong = store_thm
-  ("cond_cong",
-   ``!c c' (a:'a) a' b b'.
+Theorem cond_cong:
+     !c c' (a:'a) a' b b'.
        (c = c') /\
        (c' ==> (a = a')) /\
        (~c' ==> (b = b')) ==>
-       (COND c a b = COND c' a' b')``,
-   RW_TAC std_ss []);
+       (COND c a b = COND c' a' b')
+Proof
+   RW_TAC std_ss []
+QED
 
-val res_forall_cong = store_thm
-  ("res_forall_cong",
-   ``!(p : 'a -> bool) p' f f'.
+Theorem res_forall_cong:
+     !(p : 'a -> bool) p' f f'.
        (p = p') /\
        (!x. x IN p' ==> (f x = f' x)) ==>
-       (RES_FORALL p f = RES_FORALL p' f')``,
-   RW_TAC std_ss [RES_FORALL]);
+       (RES_FORALL p f = RES_FORALL p' f')
+Proof
+   RW_TAC std_ss [RES_FORALL]
+QED
 
-val res_exists_cong = store_thm
-  ("res_exists_cong",
-   ``!(p : 'a -> bool) p' f f'.
+Theorem res_exists_cong:
+     !(p : 'a -> bool) p' f f'.
        (p = p') /\
        (!x. x IN p' ==> (f x = f' x)) ==>
-       (RES_EXISTS p f = RES_EXISTS p' f')``,
+       (RES_EXISTS p f = RES_EXISTS p' f')
+Proof
    RW_TAC std_ss [RES_EXISTS]
-   ++ ho_PROVE_TAC []);
+   ++ ho_PROVE_TAC []
+QED
 
-val res_select_cong = store_thm
-  ("res_select_cong",
-   ``!(p : 'a -> bool) p' f f'.
+Theorem res_select_cong:
+     !(p : 'a -> bool) p' f f'.
        (p = p') /\
        (!x. x IN p' ==> (f x = f' x)) ==>
-       (RES_SELECT p f = RES_SELECT p' f')``,
+       (RES_SELECT p f = RES_SELECT p' f')
+Proof
    RW_TAC std_ss [RES_SELECT]
    ++ Q_TAC SUFF_TAC `!x. x IN p /\ f x = x IN p /\ f' x` >> RW_TAC std_ss []
-   ++ ho_PROVE_TAC []);
+   ++ ho_PROVE_TAC []
+QED
 
-val res_abstract_cong = store_thm
-  ("res_abstract_cong",
-   ``!(p : 'a -> bool) p' f f'.
+Theorem res_abstract_cong:
+     !(p : 'a -> bool) p' f f'.
        (p = p') /\
        (!x. x IN p' ==> (f x = f' x)) ==>
-       (RES_ABSTRACT p f = RES_ABSTRACT p' f')``,
-   RW_TAC std_ss [RES_ABSTRACT_EQUAL]);
+       (RES_ABSTRACT p f = RES_ABSTRACT p' f')
+Proof
+   RW_TAC std_ss [RES_ABSTRACT_EQUAL]
+QED
 
-val uncurry_cong = store_thm
-  ("uncurry_cong",
-   ``!(f : 'a -> 'b -> 'c) f'.
+Theorem uncurry_cong:
+     !(f : 'a -> 'b -> 'c) f'.
         (!x y. f x y = f' x y) ==>
-        (UNCURRY f = UNCURRY f')``,
+        (UNCURRY f = UNCURRY f')
+Proof
    FUN_EQ_TAC
    ++ RW_TAC std_ss []
    ++ Cases_on `x`
-   ++ RW_TAC std_ss [UNCURRY_DEF]);
+   ++ RW_TAC std_ss [UNCURRY_DEF]
+QED
 
 (* Rewrites *)
 
-val PAIRED_BETA_THM = store_thm
-  ("PAIRED_BETA_THM",
-   ``!f z. UNCURRY f z = f (FST z) (SND z)``,
+Theorem PAIRED_BETA_THM:
+     !f z. UNCURRY f z = f (FST z) (SND z)
+Proof
    STRIP_TAC
    ++ Cases
-   ++ RW_TAC std_ss []);
+   ++ RW_TAC std_ss []
+QED
 
 (* non-interactive mode
 *)

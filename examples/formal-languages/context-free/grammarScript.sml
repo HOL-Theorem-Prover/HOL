@@ -81,17 +81,19 @@ Theorem MAP_TKI_11[simp]:
 Proof simp[listTheory.INJ_MAP_EQ_IFF, pred_setTheory.INJ_DEF, pairTheory.FORALL_PROD]
 QED
 
-val ptree_fringe_real_fringe = Q.store_thm(
-  "ptree_fringe_real_fringe",
-  ‘∀pt. ptree_fringe pt = MAP FST (real_fringe pt)’,
+Theorem ptree_fringe_real_fringe:
+   ∀pt. ptree_fringe pt = MAP FST (real_fringe pt)
+Proof
   ho_match_mp_tac real_fringe_ind >>
   simp[pairTheory.FORALL_PROD, MAP_FLAT, MAP_MAP_o, combinTheory.o_ABS_R] >>
-  rpt strip_tac >> AP_TERM_TAC >> simp[MAP_EQ_f]);
+  rpt strip_tac >> AP_TERM_TAC >> simp[MAP_EQ_f]
+QED
 
-val LENGTH_real_fringe = Q.store_thm(
-  "LENGTH_real_fringe",
-  ‘∀pt. LENGTH (real_fringe pt) = LENGTH (ptree_fringe pt)’,
-  simp[ptree_fringe_real_fringe]);
+Theorem LENGTH_real_fringe:
+   ∀pt. LENGTH (real_fringe pt) = LENGTH (ptree_fringe pt)
+Proof
+  simp[ptree_fringe_real_fringe]
+QED
 
 val real_fringe_NIL_ptree_fringe = Q.prove(
   `∀pt. real_fringe pt = [] ⇔ ptree_fringe pt = []`,
@@ -139,14 +141,16 @@ val qxch = Q.X_CHOOSE_THEN
 fun qxchl [] ttac = ttac
   | qxchl (q::qs) ttac = qxch q (qxchl qs ttac)
 
-val derive_common_prefix = store_thm(
-  "derive_common_prefix",
-  ``derive G sf1 sf2 ⇒ derive G (p ++ sf1) (p ++ sf2)``,
-  rw[derive_def] >> metis_tac [APPEND_ASSOC]);
-val derive_common_suffix = store_thm(
-  "derive_common_suffix",
-  ``derive G sf1 sf2 ⇒ derive G (sf1 ++ s) (sf2 ++ s)``,
-  rw[derive_def] >> metis_tac [APPEND_ASSOC]);
+Theorem derive_common_prefix:
+    derive G sf1 sf2 ⇒ derive G (p ++ sf1) (p ++ sf2)
+Proof
+  rw[derive_def] >> metis_tac [APPEND_ASSOC]
+QED
+Theorem derive_common_suffix:
+    derive G sf1 sf2 ⇒ derive G (sf1 ++ s) (sf2 ++ s)
+Proof
+  rw[derive_def] >> metis_tac [APPEND_ASSOC]
+QED
 
 Overload derives = “λG. RTC (derive G)”
 Theorem derive_paste_horizontally:
@@ -236,16 +240,16 @@ Proof
   simp_tac (srw_ss() ++ DNF_ss) [] >> metis_tac[]
 QED
 
-val fringe_element = store_thm(
-  "fringe_element",
-  ``∀pt:(α,β)lfptree p x s.
+Theorem fringe_element:
+    ∀pt:(α,β)lfptree p x s.
       ptree_fringe pt = p ++ [x] ++ s ⇒
       pt = Lf (x,()) ∧ p = [] ∧ s = [] ∨
       ∃nt ip is ts1 xpt ts2.
         pt = Nd (nt,()) (ts1 ++ [xpt] ++ ts2) ∧
         p = FLAT (MAP ptree_fringe ts1) ++ ip ∧
         s = is ++ FLAT (MAP ptree_fringe ts2) ∧
-        ptree_fringe xpt = ip ++ [x] ++ is``,
+        ptree_fringe xpt = ip ++ [x] ++ is
+Proof
   gen_tac >>
   `(∃tok. pt = Lf (tok,())) ∨ (∃sym ptl. pt = Nd sym ptl)`
     by (Cases_on `pt` >> Cases_on `p` >> simp[])
@@ -319,15 +323,16 @@ val fringe_element = store_thm(
     Cases_on `sym` >> simp[] >>
     map_every qexists_tac [`fp`, `fs`, `pt1`, `ptx`, `pt2`] >>
     simp[] >> rw[] >> fs[]
-  ]);
+  ]
+QED
 
-val derive_fringe = store_thm(
-  "derive_fringe",
-  ``∀pt:(α,β)lfptree sf.
+Theorem derive_fringe:
+    ∀pt:(α,β)lfptree sf.
       derive G (ptree_fringe pt) sf ∧ valid_ptree G pt ⇒
       ∃pt' : (α,β)lfptree.
          ptree_head pt' = ptree_head pt ∧ valid_ptree G pt' ∧
-         ptree_fringe pt' = sf``,
+         ptree_fringe pt' = sf
+Proof
   ho_match_mp_tac ptree_ind>> rw[]
   >- (
       Cases_on `pt` >>
@@ -355,15 +360,16 @@ val derive_fringe = store_thm(
                 (fn impth => mp_tac (MATCH_MP impth th))) >>
   disch_then (qxch `pt'` strip_assume_tac) >>
   qexists_tac `Nd (rootnt, ()) (ts1 ++ [pt'] ++ ts2)` >>
-  simp[FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM]);
+  simp[FLAT_APPEND, DISJ_IMP_THM, FORALL_AND_THM]
+QED
 
-val ptrees_derive_extensible = store_thm(
-  "ptrees_derive_extensible",
-  ``∀pt:(α,β)lfptree sf.
+Theorem ptrees_derive_extensible:
+    ∀pt:(α,β)lfptree sf.
       valid_ptree G pt ∧ derives G (ptree_fringe pt) sf ⇒
       ∃pt':(α,β)lfptree.
          valid_ptree G pt' ∧ ptree_head pt' = ptree_head pt ∧
-         ptree_fringe pt' = sf``,
+         ptree_fringe pt' = sf
+Proof
   qsuff_tac
     `∀sf1 sf2.
        derives G sf1 sf2 ⇒
@@ -374,30 +380,33 @@ val ptrees_derive_extensible = store_thm(
              ptree_fringe pt' = sf2`
     >- metis_tac[] >>
   ho_match_mp_tac RTC_STRONG_INDUCT >> rw[] >>
-  metis_tac [derive_fringe])
+  metis_tac [derive_fringe]
+QED
 
-val singleton_derives_ptree = store_thm(
-  "singleton_derives_ptree",
-  ``derives G [h] sf ⇒
+Theorem singleton_derives_ptree:
+    derives G [h] sf ⇒
     ∃pt:(α,β)lfptree.
-      valid_ptree G pt ∧ ptree_head pt = h ∧ ptree_fringe pt = sf``,
-  strip_tac >> qspec_then `Lf (h,l)` mp_tac ptrees_derive_extensible >> simp[]);
+      valid_ptree G pt ∧ ptree_head pt = h ∧ ptree_fringe pt = sf
+Proof
+  strip_tac >> qspec_then `Lf (h,l)` mp_tac ptrees_derive_extensible >> simp[]
+QED
 
-val derives_language = store_thm(
-  "derives_language",
-  ``language G = { ts | derives G [NT G.start] (MAP TOK ts) }``,
+Theorem derives_language:
+    language G = { ts | derives G [NT G.start] (MAP TOK ts) }
+Proof
   rw[language_def, EXTENSION, complete_ptree_def] >> eq_tac
   >- metis_tac[valid_ptree_derive] >>
   strip_tac >>
   qspecl_then [`Lf (NT G.start, ())`, `MAP TOK x`] mp_tac
     ptrees_derive_extensible >> simp[] >>
   disch_then (qxch `pt` strip_assume_tac) >> qexists_tac `pt` >>
-  simp[] >> dsimp[MEM_MAP]);
+  simp[] >> dsimp[MEM_MAP]
+QED
 
-val derives_leading_nonNT_E = store_thm(
-  "derives_leading_nonNT_E",
-  ``N ∉ FDOM G.rules ∧ derives G (NT N :: rest) Y ⇒
-    ∃rest'. Y = NT N :: rest' ∧ derives G rest rest'``,
+Theorem derives_leading_nonNT_E:
+    N ∉ FDOM G.rules ∧ derives G (NT N :: rest) Y ⇒
+    ∃rest'. Y = NT N :: rest' ∧ derives G rest rest'
+Proof
   `∀X Y. derives G X Y ⇒
          ∀N rest. N ∉ FDOM G.rules ∧ X = NT N :: rest ⇒
                   ∃rest'. Y = NT N :: rest' ∧ derives G rest rest'`
@@ -405,23 +414,25 @@ val derives_leading_nonNT_E = store_thm(
   ho_match_mp_tac RTC_INDUCT >> simp[] >> rw[] >>
   fs[derive_def, Once APPEND_EQ_CONS] >>
   fs[APPEND_EQ_CONS] >> rw[] >> fs[] >>
-  match_mp_tac RTC1 >> metis_tac [derive_def]);
+  match_mp_tac RTC1 >> metis_tac [derive_def]
+QED
 
-val derives_leading_nonNT = store_thm(
-  "derives_leading_nonNT",
-  ``N ∉ FDOM G.rules ⇒
+Theorem derives_leading_nonNT:
+    N ∉ FDOM G.rules ⇒
     (derives G (NT N :: rest) Y ⇔
-     ∃rest'. Y = NT N :: rest' ∧ derives G rest rest')``,
+     ∃rest'. Y = NT N :: rest' ∧ derives G rest rest')
+Proof
   strip_tac >> eq_tac >- metis_tac [derives_leading_nonNT_E] >>
   rw[] >>
   metis_tac [APPEND, derives_paste_horizontally,
-             RTC_REFL]);
+             RTC_REFL]
+QED
 
 val RTC_R_I = RTC_RULES |> SPEC_ALL |> CONJUNCT2 |> GEN_ALL
-val derives_split_horizontally = store_thm(
-  "derives_split_horizontally",
-  ``∀p s sf. derives G (p ++ s) sf ⇔
-             ∃sf1 sf2. sf = sf1 ++ sf2 ∧ derives G p sf1 ∧ derives G s sf2``,
+Theorem derives_split_horizontally:
+    ∀p s sf. derives G (p ++ s) sf ⇔
+             ∃sf1 sf2. sf = sf1 ++ sf2 ∧ derives G p sf1 ∧ derives G s sf2
+Proof
   rpt gen_tac >> REVERSE eq_tac >- metis_tac [derives_paste_horizontally] >>
   `∃sf0. p ++ s = sf0` by simp[] >> simp[] >>
   pop_assum
@@ -441,5 +452,6 @@ val derives_split_horizontally = store_thm(
     first_x_assum (qspecl_then [`p`, `l ++ r ++ sfx`] mp_tac)
   ] >> simp[] >> disch_then (qxchl [`sf1`, `sf2`] strip_assume_tac) >> rw[] >>
   map_every qexists_tac [`sf1`, `sf2`] >> simp[] >> match_mp_tac RTC_R_I >>
-  metis_tac[derive_def]);
+  metis_tac[derive_def]
+QED
 

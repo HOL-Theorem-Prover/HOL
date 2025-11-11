@@ -36,7 +36,7 @@ End
 
 val dsimp = asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss)
 
-Theorem nrange_IN_Uinf:
+Theorem nrange_IN_Uinf[simp]:
     { f n | n:num | T} <<= univ(:'a inf)
 Proof
   qsuff_tac `countable { f n | n | T }`
@@ -44,7 +44,6 @@ Proof
   simp[countable_surj] >> disj2_tac >> qexists_tac `f` >>
   simp[SURJ_DEF] >> metis_tac[]
 QED
-val _ = export_rewrites ["nrange_IN_Uinf"]
 
 Theorem increasing:
     !f x. strict_mono f /\ continuous f ==> x <= f x

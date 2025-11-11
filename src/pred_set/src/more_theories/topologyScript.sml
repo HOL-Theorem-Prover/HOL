@@ -96,9 +96,12 @@ Definition istopology :
        (!k. k SUBSET L ==> (BIGUNION k) IN L))
 End
 
-val EXISTS_istopology = prove (``?t. istopology t``,
+Theorem EXISTS_istopology[local]:
+    ?t. istopology t
+Proof
     EXISTS_TAC ``univ(:'a set)``
- >> REWRITE_TAC [istopology, IN_UNIV]);
+ >> REWRITE_TAC [istopology, IN_UNIV]
+QED
 
 val topology_tydef = new_type_definition
   ("topology", EXISTS_istopology);
@@ -120,15 +123,16 @@ Proof
 QED
 
 (* global (abstract) notion of open sets *)
-val open_DEF = new_definition
-  ("open_DEF", ``open (s :'a topology) = (open_in s) UNIV``);
+Definition open_DEF[nocompute]: open (s :'a topology) = (open_in s) UNIV
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Infer the "universe" from union of all sets in the topology.              *)
 (* ------------------------------------------------------------------------- *)
 
-val topspace = new_definition ("topspace",
-  ``topspace top = BIGUNION {s | (open_in top) s}``);
+Definition topspace[nocompute]:
+  topspace top = BIGUNION {s | (open_in top) s}
+End
 
 (* the "universe" of global topology is the universe itself *)
 Theorem open_topspace:   !top. open top ==> (topspace top = UNIV)
@@ -515,8 +519,9 @@ QED
 (* HOL-Light: parse_as_infix("hull",(21,"left"));; *)
 val _ = set_fixity "hull" (Infix(NONASSOC, 499));
 
-val hull = new_definition ("hull",
-  ``P hull s = BIGINTER {t | P t /\ s SUBSET t}``);
+Definition hull[nocompute]:
+  P hull s = BIGINTER {t | P t /\ s SUBSET t}
+End
 
 Theorem HULL_P:
    !P s. P s ==> (P hull s = s)
@@ -1191,8 +1196,9 @@ QED
 val _ = hide "pairwise"; (* pred_setTheory *)
 
 (* NOTE: this definition is HOL-Light compatible, originally from "sets.ml". *)
-val pairwise = new_definition ("pairwise",
-  ``pairwise r s <=> !x y. x IN s /\ y IN s /\ ~(x = y) ==> r x y``);
+Definition pairwise[nocompute]:
+  pairwise r s <=> !x y. x IN s /\ y IN s /\ ~(x = y) ==> r x y
+End
 
 Overload pairwiseD        = “topology$pairwise”
 Overload pairwiseN[local] = “pred_set$pairwise”

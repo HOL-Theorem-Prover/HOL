@@ -44,11 +44,12 @@ Definition inv_transform_def:
       (y02,y11,y22,y31))
 End
 
-val transform_THM = Q.store_thm (
-"transform_THM",
-`!v. inv_transform (transform v) = v`,
+Theorem transform_THM:
+ !v. inv_transform (transform v) = v
+Proof
  SIMP_TAC std_ss [FORALL_PROD,transform_def,inv_transform_def,LET_THM] THEN
- SRW_TAC [] []);
+ SRW_TAC [] []
+QED
 
 (********************************APPLYING KEYING**************************)
 Definition keying_def:
@@ -57,11 +58,12 @@ Definition keying_def:
  = (x0 ?? subkey0, x1 ?? subkey1, x2 ?? subkey2,x3 ?? subkey3)
 End
 
-val keying_THM = Q.store_thm (
-"keying_THM",
-`!d sk.
-    keying (keying d sk) sk = d`,
-  SIMP_TAC std_ss [FORALL_PROD,keying_def] THEN SRW_TAC [] []);
+Theorem keying_THM:
+ !d sk.
+    keying (keying d sk) sk = d
+Proof
+  SIMP_TAC std_ss [FORALL_PROD,keying_def] THEN SRW_TAC [] []
+QED
 
 (**************************BLOCK ENCRYPTION******************************)
 Definition f_def:   f a (op,sk) = op a sk
@@ -308,12 +310,12 @@ End
 
 (*********************FUNCTIONAL CORRECTNESS********************)
 
-val serpent_THM = Q.store_thm(
-"serpent_THM",
-`!pt sk.
+Theorem serpent_THM:
+ !pt sk.
     (LENGTH sk = 33)
     ==>
-    (serpent_decrypt (serpent_encrypt pt sk) sk = pt)`,
+    (serpent_decrypt (serpent_encrypt pt sk) sk = pt)
+Proof
  RW_TAC list_ss [serpent_decrypt_def,serpent_encrypt_def,LET_THM] THEN
   `?v_0 v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 v_9 v_10 v_11
     v_12 v_13 v_14 v_15 v_16 v_17 v_18 v_19 v_20 v_21 v_22
@@ -350,5 +352,6 @@ val serpent_THM = Q.store_thm(
     RND20_THM,RND21_THM,RND22_THM,RND23_THM,
     RND24_THM,RND25_THM,RND26_THM,RND27_THM,
     RND28_THM,RND29_THM,RND30_THM,RND31_THM,
-    keying_THM,transform_THM]);
+    keying_THM,transform_THM]
+QED
 

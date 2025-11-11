@@ -154,9 +154,8 @@ Proof
    DISCH_THEN SUBST1_TAC THEN REFL_TAC]
 QED
 
-val INR_INL_11 = save_thm("INR_INL_11",
-                          CONJ (GEN_ALL INL_11) (GEN_ALL INR_11));
-val _ = export_rewrites ["INR_INL_11"]
+Theorem INR_INL_11[simp] =
+                          CONJ (GEN_ALL INL_11) (GEN_ALL INR_11);
 
 (* Prove that left injections and right injections are not equal.       *)
 Theorem INR_neq_INL:
@@ -204,19 +203,21 @@ QED
 (* use with the recursive type definition tools.                        *)
 (* ---------------------------------------------------------------------*)
 
-val sum_Axiom0 = prove(
-   “!f:'a->'c.
+Theorem sum_Axiom0[local]:
+    !f:'a->'c.
       !g:'b->'c.
       ?!h. (!x. h(INL x) = f x) /\
-           (!y. h(INR y) = g y)”,
+           (!y. h(INR y) = g y)
+Proof
    let val cnv = CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) sum_axiom
        val rew = SPEC_ALL (REWRITE_RULE [o_THM] cnv)
    in
    MATCH_ACCEPT_TAC rew
-   end);
+   end
+QED
 
-val sum_INDUCT = save_thm("sum_INDUCT",
-                          Prim_rec.prove_induction_thm sum_Axiom0);
+Theorem sum_INDUCT =
+                          Prim_rec.prove_induction_thm sum_Axiom0;
 
 Theorem sum_Axiom:
   !(f:'a -> 'c) (g:'b -> 'c).
@@ -232,7 +233,7 @@ QED
 
 val [sum_case_def] = Prim_rec.define_case_constant sum_Axiom
 val _ = export_rewrites ["sum_case_def"]
-val _ = overload_on("case", ``sum_CASE``)
+Overload case = ``sum_CASE``
 
 
 val _ = TypeBase.export $ TypeBasePure.gen_datatype_info
@@ -246,26 +247,26 @@ Proof
 QED
 
 (* !P. (?s. P s) <=> (?x. P (INL x)) \/ (?y. P (INR y)) *)
-val EXISTS_SUM = save_thm(
-  "EXISTS_SUM",
+Theorem EXISTS_SUM =
   FORALL_SUM |> Q.INST [`P` |-> `\x. ~P x`] |> AP_TERM ``$~``
              |> CONV_RULE (BINOP_CONV (SIMP_CONV bool_ss []))
-             |> Q.GEN `P`)
+             |> Q.GEN `P`
 
 
-val sum_CASES = save_thm("sum_CASES",
-                         hd (Prim_rec.prove_cases_thm sum_INDUCT));
+Theorem sum_CASES =
+                         hd (Prim_rec.prove_cases_thm sum_INDUCT);
 
-val sum_distinct = store_thm("sum_distinct",
-  Term`!x:'a y:'b. ~(INL x = INR y)`,
+Theorem sum_distinct[simp]:
+  !x:'a y:'b. ~(INL x = INR y)
+Proof
   REPEAT STRIP_TAC THEN
   STRIP_ASSUME_TAC ((BETA_RULE o REWRITE_RULE [EXISTS_UNIQUE_DEF] o
                      Q.ISPECL [`\x:'a. T`, `\y:'b. F`]) sum_Axiom) THEN
   FIRST_X_ASSUM (MP_TAC o AP_TERM (Term`h:'a + 'b -> bool`)) THEN
-  ASM_REWRITE_TAC []);
-val _ = export_rewrites ["sum_distinct"]
+  ASM_REWRITE_TAC []
+QED
 
-val sum_distinct_rev = save_thm("sum_distinct1", GSYM sum_distinct);
+Theorem sum_distinct1 = GSYM sum_distinct;
 
 (* ---------------------------------------------------------------------*)
 (* The definitions of ISL, ISR, OUTL, OUTR follow.                      *)
@@ -341,27 +342,25 @@ Proof
 QED
 
 (* Prove that: |- !x. ISL(x) ==> INL (OUTL x) = x                       *)
-Theorem INL:
+Theorem INL[simp]:
      !x:('a,'b)sum. ISL(x) ==> (INL (OUTL x) = x)
 Proof
     STRIP_TAC THEN
     STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
     ASM_REWRITE_TAC [ISL,OUTL]
 QED
-val _ = export_rewrites ["INL"]
 
 (* Prove that: |- !x. ISR(x) ==> INR (OUTR x) = x                       *)
-Theorem INR:
+Theorem INR[simp]:
      !x:('a,'b)sum. ISR(x) ==> (INR (OUTR x) = x)
 Proof
     STRIP_TAC THEN
     STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
     ASM_REWRITE_TAC [ISR,OUTR]
 QED
-val _ = export_rewrites ["INR"]
 
-val sum_case_cong = save_thm("sum_case_cong",
-                             Prim_rec.case_cong_thm sum_CASES sum_case_def);
+Theorem sum_case_cong =
+                             Prim_rec.case_cong_thm sum_CASES sum_case_def;
 
 
 (* ----------------------------------------------------------------------
@@ -403,7 +402,7 @@ Proof
   SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]
 QED
 
-Theorem cond_sum_expand:
+Theorem cond_sum_expand[simp]:
   (!x y z. ((if P then INR x else INL y) = INR z) = (P /\ (z = x))) /\
   (!x y z. ((if P then INR x else INL y) = INL z) = (~P /\ (z = y))) /\
   (!x y z. ((if P then INL x else INR y) = INL z) = (P /\ (z = x))) /\
@@ -411,21 +410,18 @@ Theorem cond_sum_expand:
 Proof
 Cases_on `P` THEN FULL_SIMP_TAC(srw_ss())[] THEN SRW_TAC[][EQ_IMP_THM]
 QED
-val _ = export_rewrites["cond_sum_expand"]
 
-Theorem NOT_ISL_ISR:
+Theorem NOT_ISL_ISR[simp]:
     !x. ~ISL x = ISR x
 Proof
   GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][]
 QED
-val _ = export_rewrites["NOT_ISL_ISR"]
 
-Theorem NOT_ISR_ISL:
+Theorem NOT_ISR_ISL[simp]:
     !x. ~ISR x = ISL x
 Proof
   GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][]
 QED
-val _ = export_rewrites["NOT_ISR_ISL"]
 
 (* ----------------------------------------------------------------------
     SUM_ALL

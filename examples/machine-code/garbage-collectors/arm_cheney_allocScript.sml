@@ -360,26 +360,29 @@ val ch_word_alloc = prove(
           (Cases_on `u'` \\ FULL_SIMP_TAC bool_ss [ok_state_def,LET_DEF] \\ DECIDE_TAC)
     \\ METIS_TAC []]);
 
-val ch_word_cheney_alloc = store_thm("ch_word_cheney_alloc",
-  ``!s t. ch_word s t ==> ch_word (cheney_alloc s 0w) (arm_alloc t) /\ arm_alloc_pre t``,
+Theorem ch_word_cheney_alloc:
+    !s t. ch_word s t ==> ch_word (cheney_alloc s 0w) (arm_alloc t) /\ arm_alloc_pre t
+Proof
   Cases \\ REPEAT (Cases_on `r` \\ REPEAT (Cases_on `r'`))
   \\ Cases \\ REPEAT (Cases_on `r'` \\ REPEAT (Cases_on `r''`))
   \\ `?a1 a2 a3 a4 a5 a6. cheney_alloc (q,q',q'',q''',q'''',r) 0w = (a1,a2,a3,a4,a5,a6)` by METIS_TAC [PAIR]
   \\ `?r3 r4 r5 r6 r7 r8 r9 df f. arm_alloc (q''''',q'''''',q''''''',q'''''''',q''''''''',q'''''''''',
           q''''''''''',q'''''''''''',r'') =
           (r3,r4,r5,r6,r7,r8,r9,df,f)` by METIS_TAC [PAIR]
-  \\ ASM_REWRITE_TAC [] \\ METIS_TAC [ch_word_alloc]);
+  \\ ASM_REWRITE_TAC [] \\ METIS_TAC [ch_word_alloc]
+QED
 
 Definition ch_rel_def:
   ch_rel s t = ?u. ch_inv s u /\ ch_word u t
 End
 
-val ch_arm_alloc = store_thm("ch_arm_alloc",
-  ``(arm_alloc (v1,v2,v3,v4,v5,v6,a,x,xs) = (w1,w2,w3,w4,w5,w6,a',x',xs')) ==>
+Theorem ch_arm_alloc:
+    (arm_alloc (v1,v2,v3,v4,v5,v6,a,x,xs) = (w1,w2,w3,w4,w5,w6,a',x',xs')) ==>
     CARD (reachables (t1::t2::ts) (ch_set h)) < l ==>
     ch_rel (t1::t2::ts,h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
     ch_rel (fresh h::t2::ts,h |+ (fresh h,t1,t2,0w),l) (w1,w2,w3,w4,w5,w6,a',x,xs') /\
-    (a' = a) /\ (x' = x) /\ arm_alloc_pre (v1,v2,v3,v4,v5,v6,a,x,xs)``,
+    (a' = a) /\ (x' = x) /\ arm_alloc_pre (v1,v2,v3,v4,v5,v6,a,x,xs)
+Proof
   REWRITE_TAC [ch_rel_def] \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
   \\ `?i e rs l u' m. u = (i,e,rs,l,u',m)` by METIS_TAC [PAIR]
   \\ `?i' e' rs' l'' u'' m'. cheney_alloc (i,e,rs,l,u',m) 0w = (i',e',rs',l'',u'',m')` by METIS_TAC [PAIR]
@@ -390,7 +393,8 @@ val ch_arm_alloc = store_thm("ch_arm_alloc",
   \\ Q.EXISTS_TAC `(i',e',rs',l'',u'',m')`
   \\ ASM_SIMP_TAC bool_ss [cheney_alloc_spec,FST]
   \\ MATCH_MP_TAC (GEN_ALL (RW [AND_IMP_INTRO] cheney_alloc_spec))
-  \\ FULL_SIMP_TAC bool_ss [] \\ METIS_TAC []);
+  \\ FULL_SIMP_TAC bool_ss [] \\ METIS_TAC []
+QED
 
 Definition aHEAP_def:
   aHEAP (a,l) (v1,v2,v3,v4,v5,v6,h) =

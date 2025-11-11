@@ -29,39 +29,46 @@ fun rfs l = REV_FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) l;
 
 (* ----------------------------------------------------------------------- *)
 
-val lt_mult2 = Q.prove(
-   `a < c /\ b < d  ==> a * b < c * d:num`,
+Theorem lt_mult2[local]:
+    a < c /\ b < d  ==> a * b < c * d:num
+Proof
    STRIP_TAC
    THEN `0 < d` by DECIDE_TAC
    THEN METIS_TAC [LE_MULT_LCANCEL, LT_MULT_RCANCEL, LESS_EQ_LESS_TRANS,
-                   LESS_OR_EQ]);
+                   LESS_OR_EQ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Exponential Theorems                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val exp_lemma2 = Q.prove(
-   `!a b r. 0 < r ==> a < b ==> a ** r < b ** r`,
+Theorem exp_lemma2[local]:
+    !a b r. 0 < r ==> a < b ==> a ** r < b ** r
+Proof
    REPEAT STRIP_TAC
    THEN Induct_on `r`
    THEN RW_TAC arith_ss [EXP]
    THEN Cases_on `r = 0`
    THEN RW_TAC arith_ss [EXP]
    THEN MATCH_MP_TAC lt_mult2
-   THEN RW_TAC arith_ss []);
+   THEN RW_TAC arith_ss []
+QED
 
 val exp_lemma3 =
   METIS_PROVE [LESS_OR_EQ, exp_lemma2]
     ``!a b r. 0 < r ==> a <= b ==> a ** r <= b ** r``;
 
-val lem = Q.prove(
-   `1 < a /\ 0 < b ==> 1n < a * b`,
+Theorem lem[local]:
+    1 < a /\ 0 < b ==> 1n < a * b
+Proof
    Induct_on `b`
    THEN REWRITE_TAC [ADD1, LEFT_ADD_DISTRIB]
-   THEN DECIDE_TAC);
+   THEN DECIDE_TAC
+QED
 
-val exp_lemma4 = Q.prove(
-   `!e a b. 1n < e ==> a < b ==> e ** a < e ** b`,
+Theorem exp_lemma4[local]:
+    !e a b. 1n < e ==> a < b ==> e ** a < e ** b
+Proof
    REPEAT STRIP_TAC
    THEN `?p. b = SUC p + a`
      by (IMP_RES_TAC LESS_ADD_1
@@ -74,7 +81,8 @@ val exp_lemma4 = Q.prove(
    THENL [ALL_TAC, MATCH_MP_TAC lem]
    THEN Cases_on `e`
    THEN REWRITE_TAC [ZERO_LESS_EXP]
-   THEN DECIDE_TAC);
+   THEN DECIDE_TAC
+QED
 
 val exp_lemma5 =
    METIS_PROVE [LESS_OR_EQ, exp_lemma4]
@@ -135,7 +143,7 @@ Proof
 QED
 
 (* Obtain a theorem *)
-val EXP_LE = save_thm("EXP_LE", X_LE_X_EXP |> GEN ``x:num`` |> SPEC ``b:num`` |> GEN_ALL);
+Theorem EXP_LE = X_LE_X_EXP |> GEN ``x:num`` |> SPEC ``b:num`` |> GEN_ALL;
 (* val EXP_LE = |- !n b. 0 < n ==> b <= b ** n: thm *)
 
 (* Theorem: 1 < b /\ 1 < n ==> b < b ** n *)
@@ -247,8 +255,9 @@ Proof
  >> RW_TAC arith_ss []
 QED
 
-val log_exists = Q.prove(
-   `!a n. 1 < a /\ 0 < n ==> ?log. a ** log <= n /\ n < a ** SUC log`,
+Theorem log_exists[local]:
+    !a n. 1 < a /\ 0 < n ==> ?log. a ** log <= n /\ n < a ** SUC log
+Proof
    REPEAT STRIP_TAC
    THEN Q.EXISTS_TAC `LEAST x. n < a ** SUC x`
    THEN CONV_TAC (UNBETA_CONV ``LEAST x. n < a ** SUC x``)
@@ -271,10 +280,11 @@ val log_exists = Q.prove(
       THEN1 RW_TAC arith_ss [EXP]
       THEN FIRST_X_ASSUM (Q.SPEC_THEN `k` MP_TAC)
       THEN SRW_TAC [][EXP, NOT_LESS]
-   ]);
+   ]
+QED
 
-val LOG_exists = save_thm( "LOG_exists",
-   SIMP_RULE bool_ss [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] log_exists);
+Theorem LOG_exists =
+   SIMP_RULE bool_ss [SKOLEM_THM, GSYM RIGHT_EXISTS_IMP_THM] log_exists;
 
 val LOG = new_specification("LOG", ["LOG"], LOG_exists);
 
@@ -320,7 +330,10 @@ Proof
    THEN ASM_SIMP_TAC arith_ss [DECIDE ``0 < x <=> ~(x = 0)``, EXP_EQ_0]
 QED
 
-val square = Q.prove(`a:num ** 2 = a * a`, REWRITE_TAC [EXP, EXP_1, TWO]);
+Theorem square[local]:
+  a:num ** 2 = a * a
+Proof REWRITE_TAC [EXP, EXP_1, TWO]
+QED
 
 Theorem LOG_BASE:
     !a. 1n < a ==> (LOG a a = 1)
@@ -510,16 +523,19 @@ Theorem EXP_LT_LOG_SIMP[simp] =
           |> ONCE_REWRITE_RULE [tautLib.TAUT_PROVE “(x <=> y) <=> (~x <=> ~y)”]
           |> REWRITE_RULE [NOT_LESS, DE_MORGAN_THM, NOT_LESS_EQUAL]
 
-val less_lemma1 = Q.prove(
-   `a <= c /\ b <= d ==> a * b <= c * d:num`,
+Theorem less_lemma1[local]:
+    a <= c /\ b <= d ==> a * b <= c * d:num
+Proof
    REPEAT STRIP_TAC
    THEN MATCH_MP_TAC LESS_EQ_TRANS
    THEN Q.EXISTS_TAC `c * b`
    THEN REWRITE_TAC [LE_MULT_LCANCEL, LE_MULT_RCANCEL]
-   THEN DECIDE_TAC);
+   THEN DECIDE_TAC
+QED
 
-val div_lemma1 = Q.prove(
-   `!a b c. 0 < b /\ 0 < c ==> (a DIV b) ** c <= a ** c DIV b ** c`,
+Theorem div_lemma1[local]:
+    !a b c. 0 < b /\ 0 < c ==> (a DIV b) ** c <= a ** c DIV b ** c
+Proof
    REPEAT STRIP_TAC
    THEN Induct_on `c`
    THEN1 DECIDE_TAC
@@ -540,13 +556,16 @@ val div_lemma1 = Q.prove(
             X_LE_DIV]
    THEN ONCE_REWRITE_TAC [AC_THM ``a * b * c * d = (a * c) * (b * d:num)``]
    THEN MATCH_MP_TAC less_lemma1
-   THEN METIS_TAC [DIVISION, DECIDE ``(a = b + c) ==> b <= a:num``]);
+   THEN METIS_TAC [DIVISION, DECIDE ``(a = b + c) ==> b <= a:num``]
+QED
 
-val square_add_lemma = Q.prove(
-   `a ** e * b ** e = (a * b:num) ** e`,
+Theorem square_add_lemma[local]:
+    a ** e * b ** e = (a * b:num) ** e
+Proof
    Induct_on `e`
    THEN RW_TAC arith_ss [EXP]
-   THEN METIS_TAC [MULT_COMM, MULT_ASSOC]);
+   THEN METIS_TAC [MULT_COMM, MULT_ASSOC]
+QED
 
 Theorem ROOT_DIV:
     !r x y. 0 < r /\ 0 < y ==> (ROOT r x DIV y = ROOT r (x DIV (y ** r)))
@@ -626,12 +645,14 @@ Proof
    THEN METIS_TAC [DIVISION, DECIDE ``(a = b + c) ==> (b <= a:num)``]
 QED
 
-val zero_lt_twoexp = Q.prove(
-   `!n. 0 < 2 ** n`,
+Theorem zero_lt_twoexp[local]:
+    !n. 0 < 2 ** n
+Proof
    Induct
    THEN REWRITE_TAC [EXP]
    THEN TRY (MATCH_MP_TAC LESS_MULT2)
-   THEN DECIDE_TAC);
+   THEN DECIDE_TAC
+QED
 
 Theorem LOG_MOD:
     !n. 0 < n ==> (n = 2 ** LOG 2 n + n MOD 2 ** LOG 2 n)
@@ -682,7 +703,10 @@ Theorem LOG_NUMERAL[compute,simp] =
 end (* local *)
 
 
-val lem = prove(``0 < r ==> (0 ** r = 0)``, RW_TAC arith_ss [EXP_EQ_0])
+Theorem lem[local]:
+   0 < r ==> (0 ** r = 0)
+Proof RW_TAC arith_ss [EXP_EQ_0]
+QED
 
 Theorem ROOT_COMPUTE:
     !r n.
@@ -737,15 +761,19 @@ Definition iSQRTd_def[nocompute]:
         else (2 * FST p + 1,next - ndiff)
 End
 
-val sqrt_zero = Q.prove(`ROOT 2 0 = 0`, RW_TAC arith_ss [ROOT_COMPUTE]);
+Theorem sqrt_zero[local]:
+  ROOT 2 0 = 0
+Proof RW_TAC arith_ss [ROOT_COMPUTE]
+QED
 val sqrt_compute = SIMP_RULE arith_ss [] (SPEC ``2n`` ROOT_COMPUTE);
 
 val mult_eq_lemma =
   METIS_PROVE [MULT_COMM, MULT_ASSOC, DECIDE ``2 * 2 = 4n``]
      ``2 * a * (2 * a) = 4n * (a * a)``
 
-val iSQRT_lemma = Q.prove(
-   `SQRTd m = iSQRTd (m MOD 4,m DIV 4)`,
+Theorem iSQRT_lemma[local]:
+    SQRTd m = iSQRTd (m MOD 4,m DIV 4)
+Proof
    REWRITE_TAC [SQRTd_def]
    THEN REWRITE_TAC [iSQRTd_def, FST, SND]
    THEN REWRITE_TAC [SQRTd_def]
@@ -777,7 +805,8 @@ val iSQRT_lemma = Q.prove(
    THEN FULL_SIMP_TAC arith_ss
            [ADD1, LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB, mult_eq_lemma,
             METIS_PROVE [DECIDE ``SUC 1 = 2``, EXP, EXP_1]
-               ``a ** 2 = a * a:num``]));
+               ``a ** 2 = a * a:num``])
+QED
 
 SIMP_CONV std_ss [] “(7 * x) MOD 4 ”
 
@@ -1116,7 +1145,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Use overload for SQRT *)
-val _ = overload_on ("SQRT", ``\n. ROOT 2 n``);
+Overload SQRT = ``\n. ROOT 2 n``
 
 (* Theorem: 0 < n ==> (SQRT n) ** 2 <= n /\ n < SUC (SQRT n) ** 2 *)
 (* Proof: by ROOT:
@@ -1133,8 +1162,8 @@ Theorem SQRT_UNIQUE = ROOT_UNIQUE |> SPEC ``2``;
 (* val SQRT_UNIQUE = |- !n p. p ** 2 <= n /\ n < SUC p ** 2 ==> SQRT n = p: thm *)
 
 (* Obtain a theorem *)
-val SQRT_THM = save_thm("SQRT_THM",
-    ROOT_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[]);
+Theorem SQRT_THM =
+    ROOT_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[];
 (* val SQRT_THM = |- !n p. (SQRT n = p) <=> p ** 2 <= n /\ n < SUC p ** 2: thm *)
 
 (* Theorem: n <= m ==> SQRT n <= SQRT m *)
@@ -1242,7 +1271,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val SQRT_OF_SQ = save_thm("SQRT_OF_SQ", SQRT_EXP_2);
+Theorem SQRT_OF_SQ = SQRT_EXP_2;
 (* val SQRT_OF_SQ = |- !n. SQRT (n ** 2) = n: thm *)
 
 (* Theorem: (n <= SQRT n) <=> ((n = 0) \/ (n = 1)) *)
@@ -1561,7 +1590,7 @@ time (CBV_CONV compset1) ``ROOT 2 123456789123456789123456789``;
 
 
 (* Overload LOG base 2 *)
-val _ = overload_on ("LOG2", ``\n. LOG 2 n``);
+Overload LOG2 = ``\n. LOG 2 n``
 
 (* Theorem: LOG2 1 = 0 *)
 (* Proof:
@@ -1586,8 +1615,8 @@ Proof
 QED
 
 (* Obtain a theorem *)
-val LOG2_THM = save_thm("LOG2_THM",
-    LOG_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[]);
+Theorem LOG2_THM =
+    LOG_THM |> SPEC ``2`` |> SIMP_RULE (srw_ss())[];
 (* val LOG2_THM = |- !n. 0 < n ==> !p. (LOG2 n = p) <=> 2 ** p <= n /\ n < 2 ** SUC p: thm *)
 
 (* Obtain a theorem *)
@@ -1603,8 +1632,8 @@ Proof
 QED
 
 (* Obtain a theorem *)
-val LOG2_UNIQUE = save_thm("LOG2_UNIQUE",
-    LOG_UNIQUE |> SPEC ``2`` |> SPEC ``n:num`` |> SPEC ``m:num`` |> GEN_ALL);
+Theorem LOG2_UNIQUE =
+    LOG_UNIQUE |> SPEC ``2`` |> SPEC ``n:num`` |> SPEC ``m:num`` |> GEN_ALL;
 (* val LOG2_UNIQUE = |- !n m. 2 ** m <= n /\ n < 2 ** SUC m ==> LOG2 n = m: thm *)
 
 (* Theorem: 0 < n ==> ((LOG2 n = 0) <=> (n = 1)) *)
@@ -1642,9 +1671,9 @@ Proof
 QED
 
 (* Obtain theorem *)
-val LOG2_LE_MONO = save_thm("LOG2_LE_MONO",
+Theorem LOG2_LE_MONO =
     LOG_LE_MONO |> SPEC ``2`` |> SPEC ``n:num`` |> SPEC ``m:num``
-                |> SIMP_RULE (srw_ss())[] |> GEN_ALL);
+                |> SIMP_RULE (srw_ss())[] |> GEN_ALL;
 (* val LOG2_LE_MONO = |- !n m. 0 < n ==> n <= m ==> LOG2 n <= LOG2 m: thm *)
 
 (* Theorem: 0 < n /\ n <= m ==> LOG2 n <= LOG2 m *)

@@ -1010,8 +1010,9 @@ QED
 (* Generic iteration of operation over set with finite support.              *)
 (* ------------------------------------------------------------------------- *)
 
-val neutral = new_definition ("neutral",
-  ``neutral op = @x. !y. (op x y = y) /\ (op y x = y)``);
+Definition neutral[nocompute]:
+  neutral op = @x. !y. (op x y = y) /\ (op y x = y)
+End
 
 (* NOTE: The set of all numbers of the involved type, ‘op’ and ‘neutral op’
    actually form an Abelian Monoid (also called Commutative Monoid), i.e.
@@ -1021,10 +1022,11 @@ val neutral = new_definition ("neutral",
 
    (see also AbelianMonoid_def in examples/algebra/monoid/monoidScript.sml)
  *)
-val monoidal = new_definition ("monoidal",
-  ``monoidal op <=> (!x y. op x y = op y x) /\
+Definition monoidal[nocompute]:
+  monoidal op <=> (!x y. op x y = op y x) /\
                     (!x y z. op x (op y z) = op (op x y) z) /\
-                    (!x:'a. op (neutral op) x = x)``);
+                    (!x:'a. op (neutral op) x = x)
+End
 
 Theorem MONOIDAL_AC:
     !op. monoidal op
@@ -1037,14 +1039,16 @@ Proof
   REWRITE_TAC[monoidal] THEN MESON_TAC[]
 QED
 
-val support = new_definition ("support",
-  ``support op (f:'a->'b) s = {x | x IN s /\ ~(f x = neutral op)}``);
+Definition support[nocompute]:
+  support op (f:'a->'b) s = {x | x IN s /\ ~(f x = neutral op)}
+End
 
-val iterate = new_definition ("iterate",
-  ``iterate op (s:'a->bool) f =
+Definition iterate[nocompute]:
+  iterate op (s:'a->bool) f =
          if FINITE(support op f s)
          then ITSET (\x a. op (f x) a) (support op f s) (neutral op)
-         else neutral op``);
+         else neutral op
+End
 
 Theorem IN_SUPPORT:
     !op f x s. x IN (support op f s) <=> x IN s /\ ~(f x = neutral op)
@@ -1198,8 +1202,9 @@ Proof
   SIMP_TAC std_ss [SUPPORT_CLAUSES, ITERATE_UNION]
 QED
 
-val lemma = prove (
- ``!t s. t SUBSET s ==> (s = (s DIFF t) UNION t) /\ DISJOINT (s DIFF t) t``,
+Theorem lemma[local]:
+   !t s. t SUBSET s ==> (s = (s DIFF t) UNION t) /\ DISJOINT (s DIFF t) t
+Proof
     rpt STRIP_TAC
  >| [ (* goal 1 (of 2) *)
       SIMP_TAC std_ss [UNION_DEF, DIFF_DEF, EXTENSION, GSPECIFICATION] \\
@@ -1209,7 +1214,8 @@ val lemma = prove (
       FULL_SIMP_TAC std_ss [SUBSET_DEF],
       (* goal 2 (of 2) *)
       SIMP_TAC std_ss [DISJOINT_DEF, INTER_DEF, DIFF_DEF,
-                       EXTENSION, GSPECIFICATION, NOT_IN_EMPTY] ]);
+                       EXTENSION, GSPECIFICATION, NOT_IN_EMPTY] ]
+QED
 
 Theorem ITERATE_DIFF:
    !op. monoidal op
@@ -1232,16 +1238,19 @@ Proof
 QED
 
 
-val lemma1 = prove (
- ``!a b. a UNION b = ((a DIFF b) UNION (b DIFF a)) UNION (a INTER b)``,
+Theorem lemma1[local]:
+   !a b. a UNION b = ((a DIFF b) UNION (b DIFF a)) UNION (a INTER b)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC [UNION_DEF, DIFF_DEF, INTER_DEF]
   THEN SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN GEN_TAC THEN
-  EQ_TAC THEN STRIP_TAC THEN RW_TAC std_ss []);
+  EQ_TAC THEN STRIP_TAC THEN RW_TAC std_ss []
+QED
 
-val lemma2 = prove (
- ``!s t f. op (iterate op s f) (iterate op t f) =
+Theorem lemma2[local]:
+   !s t f. op (iterate op s f) (iterate op t f) =
            op (iterate op (s DIFF t UNION s INTER t) f)
-              (iterate op (t DIFF s UNION s INTER t) f)``,
+              (iterate op (t DIFF s UNION s INTER t) f)
+Proof
   REPEAT GEN_TAC THEN
   KNOW_TAC ``((s:'a->bool) = s DIFF t UNION s INTER t) /\
              ((t:'a->bool)= t DIFF s UNION s INTER t)`` THENL
@@ -1249,13 +1258,15 @@ val lemma2 = prove (
   SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN CONJ_TAC THENL
   [GEN_TAC THEN EQ_TAC THENL [RW_TAC std_ss [], RW_TAC std_ss []],
   GEN_TAC THEN EQ_TAC THENL [RW_TAC std_ss [], RW_TAC std_ss []]],
-  DISCH_TAC THEN METIS_TAC []]);
+  DISCH_TAC THEN METIS_TAC []]
+QED
 
-val lemma3 = prove (
-  ``!s t. DISJOINT (s DIFF t UNION t DIFF s) (s INTER s') /\
+Theorem lemma3[local]:
+    !s t. DISJOINT (s DIFF t UNION t DIFF s) (s INTER s') /\
             DISJOINT (s DIFF t) (t DIFF s) /\
             DISJOINT (s DIFF t) (t INTER s) /\
-            DISJOINT (s DIFF t) (s INTER t)``,
+            DISJOINT (s DIFF t) (s INTER t)
+Proof
   REPEAT GEN_TAC THEN
   REWRITE_TAC [DISJOINT_DEF, DIFF_DEF, UNION_DEF, INTER_DEF] THEN
   SIMP_TAC std_ss [EXTENSION, GSPECIFICATION] THEN
@@ -1263,7 +1274,8 @@ val lemma3 = prove (
   [EQ_TAC THENL [RW_TAC std_ss [], RW_TAC std_ss [NOT_IN_EMPTY]], CONJ_TAC THENL
   [EQ_TAC THENL [RW_TAC std_ss [], RW_TAC std_ss [NOT_IN_EMPTY]], CONJ_TAC THENL
   [EQ_TAC THENL [RW_TAC std_ss [], RW_TAC std_ss [NOT_IN_EMPTY]],
-  EQ_TAC THENL [RW_TAC std_ss [], RW_TAC std_ss [NOT_IN_EMPTY]]]]]);
+  EQ_TAC THENL [RW_TAC std_ss [], RW_TAC std_ss [NOT_IN_EMPTY]]]]]
+QED
 
 Theorem ITERATE_INCL_EXCL:
    !op. monoidal op
@@ -1361,10 +1373,12 @@ Proof
   COND_CASES_TAC THEN ASM_SIMP_TAC std_ss [ITERATE_CLAUSES, ITERATE_SING]
 QED
 
-val lemma = prove (
- ``(a <=> a') /\ (a' ==> (b = b'))
-      ==> ((if a then b else c) = (if a' then b' else c))``,
-  METIS_TAC []);
+Theorem lemma[local]:
+   (a <=> a') /\ (a' ==> (b = b'))
+      ==> ((if a then b else c) = (if a' then b' else c))
+Proof
+  METIS_TAC []
+QED
 
 Theorem ITERATE_IMAGE:
    !op. monoidal op
@@ -1417,14 +1431,18 @@ Proof
  >> FIRST_X_ASSUM MATCH_MP_TAC >> art []
 QED
 
-val lemma1 = prove (
- ``{a,b | F} = {}``,
-  SRW_TAC [][EXTENSION]);
+Theorem lemma1[local]:
+   {a,b | F} = {}
+Proof
+  SRW_TAC [][EXTENSION]
+QED
 
-val lemma2 = prove (
- ``{i,j | i IN a INSERT s /\ j IN t i} =
-            IMAGE (\j. a,j) (t a) UNION {i,j | i IN s /\ j IN t i}``,
-  SRW_TAC [][EXTENSION] THEN SET_TAC []);
+Theorem lemma2[local]:
+   {i,j | i IN a INSERT s /\ j IN t i} =
+            IMAGE (\j. a,j) (t a) UNION {i,j | i IN s /\ j IN t i}
+Proof
+  SRW_TAC [][EXTENSION] THEN SET_TAC []
+QED
 
 Theorem ITERATE_ITERATE_PRODUCT:
    !op. monoidal op
@@ -1613,11 +1631,13 @@ Proof
   ASM_MESON_TAC[MONOIDAL_AC]]
 QED
 
-val lemma = prove (
-  ``!s. DISJOINT {x | x IN s /\ P x} {x | x IN s /\ ~P x}``,
+Theorem lemma[local]:
+    !s. DISJOINT {x | x IN s /\ P x} {x | x IN s /\ ~P x}
+Proof
   GEN_TAC THEN SIMP_TAC std_ss [DISJOINT_DEF, INTER_DEF, EXTENSION, GSPECIFICATION]
   THEN GEN_TAC THEN EQ_TAC THENL
-  [RW_TAC std_ss [], RW_TAC std_ss [NOT_IN_EMPTY]]);
+  [RW_TAC std_ss [], RW_TAC std_ss [NOT_IN_EMPTY]]
+QED
 
 Theorem ITERATE_CASES:
     !op. monoidal op

@@ -76,18 +76,18 @@ QED
  * code equation:
  *)
 
-Triviality factc_test =
+Theorem factc_test[local] =
   time (cv_compute [factc_def]) ``factc (Num 123)``;
 
 (* Same computation using EVAL:
  *)
 
-Triviality fact_test = time EVAL ``FACT 123``;
+Theorem fact_test[local] = time EVAL ``FACT 123``;
 
 (* Using cv_compute as a tactic:
  *)
 
-Triviality fact_12:
+Theorem fact_12[local]:
   factc (Num 12) = Num 479001600
 Proof
   CONV_TAC (TOP_DEPTH_CONV (UNCHANGED_CONV (cv_compute [factc_def])))
@@ -163,7 +163,7 @@ Definition isprime_def:
     else isprime_aux 3 n
 End
 
-Triviality EVEN_divides:
+Theorem EVEN_divides[local]:
   EVEN n /\ divides n m ==> EVEN m
 Proof
   `divides 2 n /\ divides n m ==> divides 2 m`
@@ -171,7 +171,7 @@ Proof
   \\ simp [dividesTheory.DIVIDES_TRANS, SF SFY_ss]
 QED
 
-Triviality isprime_aux_thm:
+Theorem isprime_aux_thm[local]:
   !dvs n.
     1 < dvs /\ dvs < n /\
     ~EVEN n /\
@@ -247,7 +247,7 @@ Definition primes_upto_def:
       []
 End
 
-Triviality isprimec_aux_isprime_aux:
+Theorem isprimec_aux_isprime_aux[local]:
   !m n. isprimec_aux (Num m) (Num n) = b2c (isprime_aux m n)
 Proof
   ho_match_mp_tac isprime_aux_ind \\ rw []
@@ -256,7 +256,7 @@ Proof
   \\ Cases_on `n MOD m` \\ gs []
 QED
 
-Triviality isprimec_is_isprime:
+Theorem isprimec_is_isprime[local]:
   !n. isprimec (Num n) = b2c (isprime n)
 Proof
   rw [isprimec_def, isprime_def, c2b_def]
@@ -288,11 +288,11 @@ Definition c2ns_def:
   c2ns (Pair (Num n) c) = n :: c2ns c
 End
 
-Triviality primes_test1 =
+Theorem primes_test1[local] =
   time (RAND_CONV $ RAND_CONV $
           cv_compute [primes_uptoc_def, isprimec_def, isprimec_aux_def] THENC
         EVAL)
        “REVERSE $ c2ns $ primes_uptoc (Num 123)”;
 
-Triviality primes_test2 = time EVAL “REVERSE (primes_upto 123)”
+Theorem primes_test2[local] = time EVAL “REVERSE (primes_upto 123)”
 

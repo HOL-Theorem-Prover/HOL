@@ -1,17 +1,20 @@
 \documentclass{article}
 
+\usepackage{bold-extra}
+\usepackage[T1]{fontenc}
+\usepackage[english]{babel}
 \usepackage{listings}
 \usepackage{holtexbasic}
 \usepackage{proof}
 \usepackage{alltt}
 \usepackage{xcolor}
-\include{macros.tex}
+\usepackage{macros}
+\usepackage{amssymb}
+\usepackage{lstlinebgrd}
 
 \definecolor{keycolor}{RGB}{172, 42, 42}
 \definecolor{vimvert}{RGB}{46, 139, 87}
 \definecolor{mutedkey}{RGB}{120, 42, 42}
-
-\renewcommand{\HOLConst}[1]{\textsf{#1}}
 
 \title{Writing \LaTeX{} with Embedded HOL}
 \author{HOL Developers}
@@ -22,16 +25,16 @@
 \maketitle
 \begin{abstract}
 This document attempts to provide a tutorial-like introduction to the process of generating \LaTeX{} files (and ultimately, PDFs) that include pretty-printed material from \HOL{} theories.
-While the \textsc{Description} manual includes a fairly careful description of \HOL{}'s solution to this problem (the ``munger''), it can be hard to get started using just that documentation.
-This document provides a simple, sample document that covers a number of standard features, and does so in a style that we hope is easy to understand.
+While the \DESCRIPTION{} manual includes a fairly careful description of \HOL{}'s solution to this problem (the ``munger''), it can be hard to get started using just that documentation.
+This document is a simple sample that covers a number of standard features, and does so in a style that we hope is easy to understand.
 \end{abstract}
 
 \section{Introduction}
 
 The premise is that this document will simultaneously explain \LaTeX-munging while illustrating the use of the technology with respect to a miniature HOL formalisation (on binary trees).
 Under \texttt{HOL/examples/latex-generation}, we find a somewhat plausible picture:
-in the directory \texttt{theories}, there is a HOL development consisting of two theory files: \texttt{sampleTreeScript.sml} and \texttt{bstScript.sml}, with the latter building on the former.
-This represents the \HOL{} development that is to be documented for publication in this paper.
+in the directory \texttt{theories}, there is a HOL development consisting of two script files generating the theories \texttt{sampleTree} and \texttt{bst}, with the latter building on the former.
+These theories make up the \HOL{} development that is to be documented for ``publication'' in this paper.
 The second directory, \texttt{paper}, contains the sources for this PDF.
 
 There is no requirement for the two directories to be siblings of each other in this way, but it is convenient in this context.
@@ -40,13 +43,16 @@ In practice, the theory files will be in one repository (possibly quite public),
 The basic flow is that as authors we will write a special \texttt{paper.htex} file,\footnote{The \texttt{.htex} suffix is arbitrary but probably now conventional.} pretending that we are writing a normal \LaTeX{} document, but with access to special extra commands (\texttt{\bs{}HOLthm\lb\dots\rb} and others) for inserting HOL material.
 Our source \texttt{paper.htex} file will be built into the PDF by first being translated into genuine \LaTeX{} file \texttt{paper.tex}, which can then be turned into a PDF with the usual technology (here we will assume use of \texttt{latexmk}).
 
+This technology is detailed in a more detailed, reference-like way in \HOL{}'s \DESCRIPTION{} manual.
+This document omits some details and options, but is hopefully enough to get a new user started.
+
 \subsection{Manifest}
 
-The following summarises the contents of the \texttt{papers} directory, with more details to come later in this document:
+The following summarises the contents of the \texttt{papers} directory, with more details to come later:
 \begin{description}
 \item[\texttt{.gitignore}] Specification of names of generated files that \texttt{git} should ignore so that generated files don't end up being committed to repositories.
 \item[\hmfile{}] This file specifies the standard build instructions, and includes a pointer to the directory where the \HOL{} sources are to be found in the \texttt{INCLUDES =} line.
-\item[\texttt{macros.tex}] A file of macros supporting our paper; this file can be (and is) perfectly standard \LaTeX, and is \texttt{\bs{}include}-d into the \texttt{paper.htex} file as one might do normally.
+\item[\texttt{macros.sty}] A file of macros supporting our paper; this file can be (and is) perfectly standard \LaTeX, and is \texttt{\bs{}usepackage}-d into the \texttt{paper.htex} file as one might do normally.
 \item[\texttt{overrides}] This files includes custom replacements for \HOL{} symbols (ours, or from the core libraries) to give them prettier \LaTeX{} renderings.
 \item[\texttt{paper.htex}] The sources for this paper.
 \item[\texttt{ppLib.sml}] A small \HOL{} ``library'' that refers to the \HOL{} theories where the desired results are present, or which have ancestors where those results are present.
@@ -71,7 +77,10 @@ The macros are \texttt{\bs{}HOLthm}, \texttt{\bs{}HOLtm} and \verb|\HOLty|.
 Each takes a single argument: something HOL-ish that should be inserted at this point in the file (a theorem, a term, or a type).  Theorems are specified in the form $\langle\mathit{thy}\rangle.\langle\mathit{name}\rangle$; terms and types are given as one would write them in a script-file for consumption by the parser.
 
 Figure~\ref{fig:simple-usage} has a simple illustration of these macros in action.
-There the \verb|\HOLty| command is used in two different ``modes'': the first invocation uses the optional \texttt{of} directive to get the type \emph{of} a particular term to be printed; the second just prints the type directly.
+There the \verb|\HOLty| and \verb|\HOLthm| command are each used in two different ``modes'' by specifying optional arguments between square brackets. \verb|\HOLty|'s first invocation uses the optional \texttt{of} directive to get the type \emph{of} a particular term to be printed; the second just prints the type directly.
+The tweaked version of \verb|\HOLthm| uses the \texttt{def} directive to print an equation with a special equality, and to drop the usual turnstile.
+This definition-usage does not require the theorem to actually be a \HOL{} definition; the author gets to control their presentation of the material!
+
 One other aspect is important to note: the \verb|\HOLtm| and \verb|\HOLty| forms expect to be ``inline'', within usual flowing, paragraphed text.
 In contrast, the \verb|\HOLthm| form should appear in an \texttt{alltt} environment.
 This will keep the output looking reasonable when the output spans multiple lines.
@@ -80,7 +89,7 @@ This will keep the output looking reasonable when the output spans multiple line
 \newcommand{\holtm}{\textbf{\color{keycolor}HOLtm}}
 \newcommand{\holty}{\textbf{\color{keycolor}HOLty}}
 \newcommand{\com}[2]{\textbf{\bs\color{mutedkey}#1}\args{#2}}
-\newcommand{\args}[1]{{\lb{}\slshape\color{vimvert}#1\rb{}}}
+\newcommand{\args}[1]{{\slshape\color{vimvert}\lb{}#1\rb{}}}
 \begin{figure}
 \begin{center}
 \begin{minipage}[t]{0.35\textwidth}
@@ -88,7 +97,7 @@ This will keep the output looking reasonable when the output spans multiple line
 Lead-in text:
 \com{begin}{alltt}
 Alltt text:
-\com{\holthm}{bst.keys_elems}
+\bs{}\holthm{}[def]\args{bst.keys_elems}
 \com{\holthm}{sampleTree.elems_flip}
 \com{end}{alltt}
 The constant \com{\holtm}{keys}
@@ -106,14 +115,18 @@ type like \com{\holty}{:num}.
 Lead-in text:
 \begin{alltt}
 Alltt text:
-\HOLthm{bst.keys_elems}
+\HOLthm[def]{bst.keys_elems}
 \HOLthm{sampleTree.elems_flip}
 \end{alltt}
 The constant \HOLtm{keys} returns the set of a binary search tree's keys.
 This constant has type \HOLty[of]{keys}; one might imagine instantiating the type variables with a built-in type like \HOLty{:num}.
 \end{minipage}
 \end{center}
-\caption{Simple examples of the three ``munging'' macros in action. \LaTeX{} in the left column; output on the right.}
+\caption{%
+  Simple examples of the three ``munging'' macros in action.
+  \LaTeX{} in the left column; output on the right.
+  The \texttt{overrides} file (see below) has adjusted the appearance of some elements.
+}
 \label{fig:simple-usage}
 \end{figure}
 
@@ -156,7 +169,7 @@ There is no need of a rule for the latter as the built-in behaviours of \holmake
 
 
 \lstset{basicstyle=\small\ttfamily,
-  numbers=left,numberstyle=\tiny,showtabs=true,morecomment=[n]{$(}{)},
+  numbers=left,numberstyle=\tiny,showtabs=true,morecomment=[n]{\$(}{)},
   commentstyle={\color{vimvert}\slshape},
   morekeywords=[1]{INCLUDES,EXTRA_CLEANS,LATEXMK_EXISTS},
   morekeywords=[2]{ifeq,endif},
@@ -164,28 +177,7 @@ There is no need of a rule for the latter as the built-in behaviours of \holmake
   keywordstyle={[2]\color{blue}}
 }
 \begin{figure}
-\begin{lstlisting}
-INCLUDES = ../theories
-
-LATEXMK_EXISTS = $(if $(which latexmk),yes,no)
-
-ifeq($(LATEXMK_EXISTS), yes)
-paper.pdf: paper.tex holtexbasic.sty
-	latexmk -pdf paper
-endif
-
-paper.tex: paper.htex overrides munge
-	./munge overrides < $< > $@
-
-munge: ppLib.uo
-	$(HOLDIR)/bin/mkmunge.exe -o $@ $<
-
-holtexbasic.sty: $(HOLDIR)/src/TeX/holtexbasic.sty
-	$(CP) $< $@
-
-EXTRA_CLEANS = holtexbasic.sty paper.pdf paper.tex paper.fls \
-               paper.aux paper.fdb_latexmk paper.log munge
-\end{lstlisting}
+\lstinputlisting{Holmakefile}
 \caption{%
 The \hmfile{} in the \texttt{papers} directory.
 The ``dance'' with \texttt{LATEXMK\_EXISTS} (lines 3, 5, and the \texttt{endif} on 8) is specific to this file's position in the \HOL{} repository; all those lines could be omitted in normal usage, where \texttt{latexmk} is presumably sure to be installed.
@@ -193,7 +185,244 @@ Lines 7, 11, 14 and 17 begin with TAB characters (indicated by the long underlin
 \label{fig:holmakefile}
 \end{figure}
 
-
 \subsection{The \texttt{overrides} File}
+\label{sec:overrides}
+
+The \texttt{overrides} file (see Figure~\ref{fig:overrides}) contains a list of token-mappings, with each line consisting of
+\newcommand{\meta}[1]{\langle\mathit{#1}\rangle}
+\[
+\meta{token}\;\meta{replacement\mbox{-}width}\;\meta{replacement}
+\]
+The simple renamings in lines 3--5 are self-explanatory (and their effect can be seen in Figure~\ref{fig:simple-usage}).
+The stranger lines (1--2) are explained below in Section~\ref{sec:fancy-syntax}.
+The widths provided in the middle of the line are always approximate, but do help the \HOL{} pretty-printer generate reasonable linebreaks.
+
+\begin{figure}
+\begin{center}
+\lstinputlisting{overrides}
+\end{center}
+\caption{%
+The \texttt{overrides} file for this PDF.
+\HOL's built-in names (\texttt{IMAGE}, \texttt{FST},\dots) can be overridden just as readily as those from the authors' theories.
+Overrides to mathematical symbols should use \texttt{\bs{}ensuremath\lb{}\dots\rb{}} to protect them.
+}
+\label{fig:overrides}
+\end{figure}
+
+\subsection{The \texttt{paper.htex} File}
+
+The \LaTeX{} file that generates a PDF needs to include a standard set of packages, as described in Figure~\ref{fig:paper-htex}.
+In addition, the prelude to this file can redefine commands such as \verb|\HOLConst| to alter the style in which these are presented.
+
+\begin{figure}[htbp]
+\lstinputlisting[lastline=20,linebackgroundcolor={%
+    \ifnum\value{lstnumber}=4
+            \color{blue!10}
+    \fi
+    \ifnum\value{lstnumber}=5
+            \color{blue!10}
+    \fi
+    \ifnum\value{lstnumber}=7
+            \color{blue!10}
+    \fi
+    \ifnum\value{lstnumber}=8
+            \color{blue!10}
+    \fi
+    \ifnum\value{lstnumber}=9
+            \color{blue!10}
+    \fi
+    }
+]{paper.htex}
+\caption{The first 20 lines of the \texttt{.htex} file that generates this PDF. The critical lines are 4 (stops underscore characters in \texttt{alltt} environments from rendering strangely); 5 (allows underscores in \LaTeX{} \texttt{\bs{}label}'s); 7 (enables all of the \HOL{} macros); 8 (enables the natural deduction style presentation of implications (see Section~\ref{sec:inference-rules} below)) and 9 (importing the environment in which \texttt{\bs{}HOLthm}'s expect to be rendered).}
+\label{fig:paper-htex}
+\end{figure}
+
+\subsection{The \texttt{ppLib.sml} File}
+
+The \texttt{ppLib.sml} file is presented in full in Figure~\ref{fig:pplib}.
+The only necessary part of the file is the reference to the theory or theories that are to be referred to in the PDF.
+If the theories required are cousins/siblings of each other, each will require its own \texttt{open} declaration.
+
+\begin{figure}[htbp]
+\lstinputlisting{ppLib.sml}
+\caption{The \texttt{ppLib.sml} file. The \texttt{open~bstTheory} declaration is mandatory. The \texttt{add_rule} invocation in lines 7--13 achieves the effect discussed below in Section~\ref{sec:fancy-syntax}.}
+\label{fig:pplib}
+\end{figure}
+\section{Tips and Tricks}
+
+This final section documents some standard ways and options that allow for nicer control of what \HOL{} munging produces.
+
+\subsection{Fiddling with Width}
+
+Large, multi-line theorems can be laid out quite differently depending on the number of columns the \HOL{} pretty-printer uses.
+For example, the default width turns
+\begin{alltt}
+  \bs{}HOLthm[def,>>]\lb{}list.SHORTLEX_def\rb{}
+\end{alltt}
+into
+\begin{alltt}
+\HOLthm[def,>>]{list.SHORTLEX_def}
+\end{alltt}
+If we boost the width of the lines with
+\begin{alltt}
+  \bs{}HOLthm[def,width=80]\lb{}list.SHORTLEX_def\rb{}
+\end{alltt}
+we get
+\begin{alltt}
+\HOLthm[def,width=80]{list.SHORTLEX_def}
+\end{alltt}
+This is a very tight fit (which is why the \verb|>>| option hasn't been used), but it does save some horizontal space.
+
+The default width for an entire paper is controlled by the \texttt{-w} option to the \texttt{munge} command-line tool.
+If a number is not given on the command-line, then the (default) default width is 65 columns.
+
+\subsection{Substitutions}
+\label{sec:substitutions}
+
+All three special commands allow for substitutions to be specified as part of the options passed to the commands between square brackets.
+The more common form of substitution allows adjustment of variables.
+This form is written $\mathit{new}\texttt{/}\mathit{old}$, and multiple substitutions can be used (separated by commas, as with all options).
+Term variables can be substituted for term variables, and this is done for both free and bound variables.
+When substituting types (remembering the leading colons), type variables can be instantiated with arbitrary other types.
+
+The occasionally useful token substitution uses the $\mathit{new}\texttt{//}\mathit{old}$ syntax.
+This allows simple \emph{ad hoc} forms of what might otherwise be achieved with the \texttt{overrides} file (see Section~\ref{sec:overrides}).
+
+All forms are illustrated in Figure~\ref{fig:substitutions}.
+
+
+\begin{figure}
+\begin{center}
+\begin{minipage}[t]{0.5\textwidth}
+\small
+\begin{alltt}
+Lead-in text:
+\com{begin}{alltt}
+\bs{}\holthm{}[conj1]\args{arithmetic.ADD_CLAUSES}
+(Free) Variable subst:
+\bs{}\holthm{}[conj1,n1/m]\args{arithmetic.ADD_CLAUSES}
+(Bound) Variable subst:
+\bs{}\holthm{}[v/x]\args{bool.FORALL_SIMP}
+Token substitution:
+\bs{}\holthm{}[conj1,++//+]\args{arithmetic.ADD_CLAUSES}
+\com{end}{alltt}
+The type \bs{}\holty[:'b/:'a,of]\args{LENGTH} is
+polymorphic. The term
+\bs{}\holtm[:num->bool/:'a]\args{univ(:'a)} is not.
+
+\end{alltt}
+\end{minipage}\hfill{}
+\begin{minipage}[t]{0.35\textwidth}
+Lead-in text:
+\begin{alltt}
+\HOLthm[conj1]{arithmetic.ADD_CLAUSES}
+(Free) Variable subst:
+\HOLthm[conj1,n1/m]{arithmetic.ADD_CLAUSES}
+(Bound) Variable subst:
+\HOLthm[v/x]{bool.FORALL_SIMP}
+Token substitution:
+\HOLthm[conj1,++//+]{arithmetic.ADD_CLAUSES}
+\end{alltt}
+The type \HOLty[:'b/:'a,of]{LENGTH} is polymorphic.
+The term \HOLtm[:num->bool/:'a]{univ(:'a)} is not.
+\end{minipage}
+\end{center}
+\caption{%
+  The substitution options in action.
+  \LaTeX{} in the left column; output on the right.
+  The \texttt{conj1} option selects the first conjunct of a theorem (\texttt{ADD_CLAUSES} has four to choose from).
+}
+\label{fig:substitutions}
+\end{figure}
+
+
+\subsection{Inference Rules}
+\label{sec:inference-rules}
+
+One can present implicational theorems as natural deduction style rules, using the \texttt{rule} and \texttt{stackedrule} directives.
+This feature relies on the \texttt{proof.sty} package, which is part of standard \TeX{} distributions.
+As an exception to the general rule, theorems using the \texttt{rule} modifier must be presented inside a ``display-math'' environment, not \texttt{alltt}.
+The following
+
+\begin{alltt}
+   \bs{}frenchspacing
+   \bs{}[
+     \bs{}\holthm{}[stackedrule]\args{bst.sorted_dict_Nd}
+   \bs{}]
+   \bs{}nonfrenchspacing
+\end{alltt}
+generates
+\frenchspacing
+\[
+  \HOLthm[stackedrule]{bst.sorted_dict_Nd}
+\]
+\nonfrenchspacing
+The use of \texttt{stackedrule} stacks the premises above each other.
+The use of the toggle in and out of ``French spacing'' reduces the width of the spacing after the quantifier (strictly, after the full-stop).
+Without it, one would get:
+\[
+\HOLthm[stackedrule]{bst.sorted_dict_Nd}
+\]
+Of course, if there are no quantifiers, this is not required.
+
+When the premises are not so voluminous, the \texttt{rule} modifier can be used instead.
+In addition, rules can be given names; the argument to \texttt{rulename=} is passed to the \texttt{\bs{}HOLRuleName} macro, which is an alias for \texttt{\bs{}textsf} by default.
+Thus,
+\begin{alltt}
+   \bs{}[
+     \bs{}\holthm{}[rule,rulename=exists_atLeft]\args{sampleTree.exists_atLeft}
+   \bs{}]
+\end{alltt}
+generates
+\[
+  \HOLthm[rule,rulename=exists_atLeft]{sampleTree.exists_atLeft}
+\]
+and (to illustrate multiple (short) premises):
+\begin{alltt}
+   \bs{}[
+     \bs{}\holthm{}[rule,rulename=conjL,P/t1,Q/t2]\args{bool.AND2_THM}
+   \bs{}]
+\end{alltt}
+generates
+\[
+  \HOLthm[rule,rulename=conjR,P/t1,Q/t2]{bool.AND2_THM}
+\]
+
+\subsection{Fancy Syntax \emph{via} \texttt{add\_rule} and \texttt{overrides}}
+\label{sec:fancy-syntax}
+
+The constant \HOLtm{elemcount} counts the number of elements in a tree; for this sort of thing one might like vertical bars on either side of the tree argument to indicate size: $|t|$.
+This is impossible to have in \HOL{} directly because it's ambiguous in the eyes of the simplistic precedence parser.
+Nonetheless, we can achieve it with the munger.
+
+First, we add a grammar rule in \texttt{ppLib.sml} to get the basic ``syntax with delimiters'' working:
+\begin{alltt}
+   val _ = add_rule \lb{}
+     term_name = "elemcount",
+     fixity = Closefix,
+     pp_elements = [TOK "(ec1)", TM, TOK "(ec2)"],
+     block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
+     paren_style = OnlyIfNecessary
+   \rb{}
+\end{alltt}
+The interesting part of the above is that the concrete syntax is targeting the name \texttt{elemcount}, that it is ``close-fix'', and that the tokens wrapping the argument are \texttt{(ec1)} and \texttt{(ec2)}.
+The latter names are arbitrary but
+\begin{itemize}
+\item they should feature the enclosing parentheses to stop token-merging analysis from inserting unnecessary extra spaces; and
+\item they should be different both from each other, and all other magic names chosen for similar purposes with other terms.
+\end{itemize}
+
+With only this done, \texttt{\HOLConst{elemcount}~$t$} would be printed as \texttt{(ec1)$t$(ec2)}.
+The substitution of the tokens \texttt{(ec1)} and \texttt{(ec2)} is handled in the \texttt{overrides} file, with lines
+\begin{verbatim}
+   (ec1) 1 \ensuremath{|}
+   (ec2) 1 \ensuremath{|}
+\end{verbatim}
+
+We can now see a theorem about the connection between the size of a tree and the length of its in-order traversal:
+
+\begin{alltt}
+\HOLthm{sampleTree.elemcount_LENGTH_inorder}
+\end{alltt}
 
 \end{document}

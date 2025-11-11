@@ -7,9 +7,6 @@
 (* DATE         : 90.12.03                                              *)
 (* =====================================================================*)
 
-(*
-  app load ["IndDefLib", "clTheory"] ;
-*)
 Theory mil
 Ancestors
   cl
@@ -25,9 +22,9 @@ Libs
 (* Combinatory logic types and type judgements.                          *)
 (* ===================================================================== *)
 
-val _ =
- Hol_datatype `ty = G  of 'a
-                  | -> of ty => ty`;
+Datatype:
+  ty = G 'a | -> ty ty
+End
 
 val _ = set_fixity "->" (Infixr 800);
 val _ = set_MLname "->" "ARROW_DEF";
@@ -89,12 +86,12 @@ val ISO_THM2 = Q.prove
 (* The final result.                                                     *)
 (* --------------------------------------------------------------------- *)
 
-val CURRY_HOWARD = Q.store_thm
-("CURRY_HOWARD",
- `!P:'a ty. THM P = ?M:cl. M IN P`,
- METIS_TAC [ISO_THM1,ISO_THM2]);
+Theorem CURRY_HOWARD:
+  !P:'a ty. THM P = ?M:cl. M IN P
+Proof
+ METIS_TAC [ISO_THM1,ISO_THM2]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* End of example.                                                       *)
 (* --------------------------------------------------------------------- *)
-

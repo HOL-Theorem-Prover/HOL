@@ -10,24 +10,24 @@ Ancestors
 
 
 (* Overload non-decreasing functions with different arity. *)
-val _ = overload_on("MONO", ``\f:num -> num. !x y. x <= y ==> f x <= f y``);
-val _ = overload_on("MONO2",
+Overload MONO = ``\f:num -> num. !x y. x <= y ==> f x <= f y``
+Overload MONO2 =
       ``\f:num -> num -> num.
-           !x1 y1 x2 y2. x1 <= x2 /\ y1 <= y2 ==> f x1 y1 <= f x2 y2``);
-val _ = overload_on("MONO3",
+           !x1 y1 x2 y2. x1 <= x2 /\ y1 <= y2 ==> f x1 y1 <= f x2 y2``
+Overload MONO3 =
       ``\f:num -> num -> num -> num.
            !x1 y1 z1 x2 y2 z2. x1 <= x2 /\ y1 <= y2 /\ z1 <= z2 ==>
-                               f x1 y1 z1 <= f x2 y2 z2``);
+                               f x1 y1 z1 <= f x2 y2 z2``
 
 (* Overload non-increasing functions with different arity. *)
-val _ = overload_on("RMONO", ``\f:num -> num. !x y. x <= y ==> f y <= f x``);
-val _ = overload_on("RMONO2",
+Overload RMONO = ``\f:num -> num. !x y. x <= y ==> f y <= f x``
+Overload RMONO2 =
       ``\f:num -> num -> num.
-           !x1 y1 x2 y2. x1 <= x2 /\ y1 <= y2 ==> f x2 y2 <= f x1 y1``);
-val _ = overload_on("RMONO3",
+           !x1 y1 x2 y2. x1 <= x2 /\ y1 <= y2 ==> f x2 y2 <= f x1 y1``
+Overload RMONO3 =
       ``\f:num -> num -> num -> num.
            !x1 y1 z1 x2 y2 z2. x1 <= x2 /\ y1 <= y2 /\ z1 <= z2 ==>
-                               f x2 y2 z2 <= f x1 y1 z1``);
+                               f x2 y2 z2 <= f x1 y1 z1``
 
 (* ------------------------------------------------------------------------- *)
 (* More Set Theorems                                                         *)
@@ -401,7 +401,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Define the set of all proper subsets of a set *)
-val _ = overload_on ("PPOW", ``\s. (POW s) DIFF {s}``);
+Overload PPOW = ``\s. (POW s) DIFF {s}``
 
 (* Theorem: !s e. e IN PPOW s ==> e PSUBSET s *)
 (* Proof:
@@ -470,7 +470,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload partition by split *)
-val _ = overload_on("split", ``\s u v. (s = u UNION v) /\ (DISJOINT u v)``);
+Overload split = ``\s u v. (s = u UNION v) /\ (DISJOINT u v)``
 
 (* Pretty printing of partition by split *)
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 2)),
@@ -574,13 +574,13 @@ Proof
 QED
 
 (* Overload squaring (temporalized by Chun Tian) *)
-val _ = temp_overload_on("SQ", ``\n. n * n``); (* not n ** 2 *)
+Overload SQ[local] = ``\n. n * n``(* not n ** 2 *)
 
 (* Overload half of a number (temporalized by Chun Tian) *)
-val _ = temp_overload_on("HALF", ``\n. n DIV 2``);
+Overload HALF[local] = ``\n. n DIV 2``
 
 (* Overload twice of a number (temporalized by Chun Tian) *)
-val _ = temp_overload_on("TWICE", ``\n. 2 * n``);
+Overload TWICE[local] = ``\n. 2 * n``
 
 (* make divides infix *)
 val _ = set_fixity "divides" (Infixl 480); (* relation is 450, +/- is 500, * is 600. *)
@@ -847,9 +847,9 @@ Proof
 QED
 
 (* Reverse theorems *)
-val MAX_SUC = save_thm("MAX_SUC", GSYM SUC_MAX);
+Theorem MAX_SUC = GSYM SUC_MAX;
 (* val MAX_SUC = |- !m n. MAX (SUC m) (SUC n) = SUC (MAX m n): thm *)
-val MIN_SUC = save_thm("MIN_SUC", GSYM SUC_MIN);
+Theorem MIN_SUC = GSYM SUC_MIN;
 (* val MIN_SUC = |- !m n. MIN (SUC m) (SUC n) = SUC (MIN m n): thm *)
 
 (* Theorem: x < n /\ y < n ==> MAX x y < n *)
@@ -1259,11 +1259,11 @@ ODD_MULT  |- !m n. ODD (m * n) <=> ODD m /\ ODD n
 *)
 
 (* Derive theorems. *)
-val EVEN_SQ = save_thm("EVEN_SQ",
-    EVEN_MULT |> SPEC ``n:num`` |> SPEC ``n:num`` |> SIMP_RULE arith_ss[] |> GEN_ALL);
+Theorem EVEN_SQ =
+    EVEN_MULT |> SPEC ``n:num`` |> SPEC ``n:num`` |> SIMP_RULE arith_ss[] |> GEN_ALL;
 (* val EVEN_SQ = |- !n. EVEN (n ** 2) <=> EVEN n: thm *)
-val ODD_SQ = save_thm("ODD_SQ",
-    ODD_MULT |> SPEC ``n:num`` |> SPEC ``n:num`` |> SIMP_RULE arith_ss[] |> GEN_ALL);
+Theorem ODD_SQ =
+    ODD_MULT |> SPEC ``n:num`` |> SPEC ``n:num`` |> SIMP_RULE arith_ss[] |> GEN_ALL;
 (* val ODD_SQ = |- !n. ODD (n ** 2) <=> ODD n: thm *)
 
 (* Theorem: EVEN (2 * a + b) <=> EVEN b *)
@@ -1596,11 +1596,11 @@ Proof
 QED
 
 (* Obtain theorems *)
-val HALF_LE = save_thm("HALF_LE",
-    DIV_LESS_EQ |> SPEC ``2`` |> SIMP_RULE (arith_ss) [] |> SPEC ``n:num`` |> GEN_ALL);
+Theorem HALF_LE =
+    DIV_LESS_EQ |> SPEC ``2`` |> SIMP_RULE (arith_ss) [] |> SPEC ``n:num`` |> GEN_ALL;
 (* val HALF_LE = |- !n. HALF n <= n: thm *)
-val HALF_LE_MONO = save_thm("HALF_LE_MONO",
-    DIV_LE_MONOTONE |> SPEC ``2`` |> SIMP_RULE (arith_ss) []);
+Theorem HALF_LE_MONO =
+    DIV_LE_MONOTONE |> SPEC ``2`` |> SIMP_RULE (arith_ss) [];
 (* val HALF_LE_MONO = |- !x y. x <= y ==> HALF x <= HALF y: thm *)
 
 (* Theorem: HALF (SUC n) <= n *)
@@ -3014,9 +3014,11 @@ QED
 (* Convert this theorem into MUL_INV_DEF *)
 
 (* Step 1: move ?y forward by collecting quantifiers *)
-val lemma = prove(
-  ``!p x. ?y. prime p /\ 0 < x /\ x < p ==> 0 < y /\ y < p /\ ((y * x) MOD p = 1)``,
-  metis_tac[MOD_MULT_INV_EXISTS]);
+Theorem lemma[local]:
+    !p x. ?y. prime p /\ 0 < x /\ x < p ==> 0 < y /\ y < p /\ ((y * x) MOD p = 1)
+Proof
+  metis_tac[MOD_MULT_INV_EXISTS]
+QED
 
 (* Step 2: apply SKOLEM_THM *)
 (*
@@ -3292,8 +3294,8 @@ Proof
 QED
 
 (* Obtain a corollary *)
-val SUC_SQ = save_thm("SUC_SQ",
-    binomial_2 |> SPEC ``1`` |> SIMP_RULE (srw_ss()) [GSYM SUC_ONE_ADD]);
+Theorem SUC_SQ =
+    binomial_2 |> SPEC ``1`` |> SIMP_RULE (srw_ss()) [GSYM SUC_ONE_ADD];
 (* val SUC_SQ = |- !n. SUC n ** 2 = SUC (n ** 2) + TWICE n: thm *)
 
 (* Theorem: m <= n ==> SQ m <= SQ n *)
@@ -4149,10 +4151,12 @@ Proof
 QED
 
 (* Convert this into an existence definition *)
-val lemma = prove(
-  ``!n x. ?y. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
-              0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)``,
-  metis_tac[GCD_MOD_MULT_INV]);
+Theorem lemma[local]:
+    !n x. ?y. 1 < n /\ 0 < x /\ x < n /\ coprime n x ==>
+              0 < y /\ y < n /\ coprime n y /\ ((y * x) MOD n = 1)
+Proof
+  metis_tac[GCD_MOD_MULT_INV]
+QED
 
 val GEN_MULT_INV_DEF = new_specification(
   "GEN_MULT_INV_DEF",
@@ -5086,22 +5090,22 @@ Overload tops = “\b:num n. b ** n - 1”
 *)
 
 (* Overload power predecessor base 10 *)
-val _ = overload_on("nines", ``\n. tops 10 n``);
+Overload nines = ``\n. tops 10 n``
 
 (* Obtain corollaries *)
 
-val nines_division_eqn = save_thm("nines_division_eqn",
-    power_predecessor_division_eqn |> ISPEC ``10`` |> SIMP_RULE (srw_ss()) []);
-val nines_division_alt = save_thm("nines_division_alt",
-    power_predecessor_division_alt |> ISPEC ``10`` |> SIMP_RULE (srw_ss()) []);
-val nines_gcd_reduction = save_thm("nines_gcd_reduction",
-    power_predecessor_gcd_reduction |> ISPEC ``10``);
-val nines_gcd_identity = save_thm("nines_gcd_identity",
-    power_predecessor_gcd_identity |> ISPEC ``10``);
-val nines_divisibility = save_thm("nines_divisibility",
-    power_predecessor_divisibility |> ISPEC ``10`` |> SIMP_RULE (srw_ss()) []);
-val nines_divisor = save_thm("nines_divisor",
-    power_predecessor_divisor |> ISPEC ``10`` |> SIMP_RULE (srw_ss()) []);
+Theorem nines_division_eqn =
+    power_predecessor_division_eqn |> ISPEC ``10`` |> SIMP_RULE (srw_ss()) [];
+Theorem nines_division_alt =
+    power_predecessor_division_alt |> ISPEC ``10`` |> SIMP_RULE (srw_ss()) [];
+Theorem nines_gcd_reduction =
+    power_predecessor_gcd_reduction |> ISPEC ``10``;
+Theorem nines_gcd_identity =
+    power_predecessor_gcd_identity |> ISPEC ``10``;
+Theorem nines_divisibility =
+    power_predecessor_divisibility |> ISPEC ``10`` |> SIMP_RULE (srw_ss()) [];
+Theorem nines_divisor =
+    power_predecessor_divisor |> ISPEC ``10`` |> SIMP_RULE (srw_ss()) [];
 (*
 val nines_division_eqn =
    |- !m n. m <= n ==> nines n = 10 ** (n - m) * nines m + nines (n - m): thm
@@ -5834,7 +5838,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload pairwise coprime set *)
-val _ = overload_on("PAIRWISE_COPRIME", ``\s. !x y. x IN s /\ y IN s /\ x <> y ==> coprime x y``);
+Overload PAIRWISE_COPRIME = ``\s. !x y. x IN s /\ y IN s /\ x <> y ==> coprime x y``
 
 (* Theorem: e NOTIN s /\ PAIRWISE_COPRIME (e INSERT s) ==>
             (!x. x IN s ==> coprime e x) /\ PAIRWISE_COPRIME s *)
@@ -6127,7 +6131,7 @@ QED
 
 (* Theorem: count 1 = {0} *)
 (* Proof: rename COUNT_ZERO *)
-val COUNT_0 = save_thm("COUNT_0", COUNT_ZERO);
+Theorem COUNT_0 = COUNT_ZERO;
 (* val COUNT_0 = |- count 0 = {}: thm *)
 
 (* Theorem: count 1 = {0} *)
@@ -6216,7 +6220,7 @@ Proof
 QED
 
 (* Introduce countFrom m n, the set {m, m + 1, m + 2, ...., m + n - 1} *)
-val _ = overload_on("countFrom", ``\m n. IMAGE ($+ m) (count n)``);
+Overload countFrom = ``\m n. IMAGE ($+ m) (count n)``
 
 (* Theorem: countFrom m 0 = {} *)
 (* Proof:
@@ -6929,11 +6933,11 @@ Proof
 QED
 
 (* Theorem alias *)
-val SPLIT_BY_SUBSET = save_thm("SPLIT_BY_SUBSET", partition_by_subset);
+Theorem SPLIT_BY_SUBSET = partition_by_subset;
 (* val SPLIT_BY_SUBSET = |- !s u. u SUBSET s ==> (let v = s DIFF u in s =|= u # v): thm *)
 
 (* Theorem alias *)
-val SUBSET_DIFF_DIFF = save_thm("SUBSET_DIFF_DIFF", DIFF_DIFF_SUBSET);
+Theorem SUBSET_DIFF_DIFF = DIFF_DIFF_SUBSET;
 (* val SUBSET_DIFF_DIFF = |- !s t. t SUBSET s ==> (s DIFF (s DIFF t) = t) *)
 
 (* Theorem: s1 SUBSET t /\ s2 SUBSET t /\ (t DIFF s1 = t DIFF s2) ==> (s1 = s2) *)
@@ -7500,7 +7504,7 @@ Proof
 QED
 
 (* Theorem alias *)
-val partition_as_image = save_thm("partition_as_image", partition_elements);
+Theorem partition_as_image = partition_elements;
 (* val partition_as_image =
    |- !R s. partition R s = IMAGE (\x. equiv_class R s x) s: thm *)
 
@@ -7603,7 +7607,7 @@ Sort of yes, but have to use BIGUNION, and for a set_additive function f.
 *)
 
 (* Overload every element finite of a superset *)
-val _ = overload_on("EVERY_FINITE", ``\P. (!s. s IN P ==> FINITE s)``);
+Overload EVERY_FINITE = ``\P. (!s. s IN P ==> FINITE s)``
 
 (*
 > FINITE_BIGUNION;
@@ -7611,7 +7615,7 @@ val it = |- !P. FINITE P /\ EVERY_FINITE P ==> FINITE (BIGUNION P): thm
 *)
 
 (* Overload pairwise disjoint of a superset *)
-val _ = overload_on("PAIR_DISJOINT", ``\P. (!s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t)``);
+Overload PAIR_DISJOINT = ``\P. (!s t. s IN P /\ t IN P /\ ~(s = t) ==> DISJOINT s t)``
 
 (*
 > partition_elements_disjoint;
@@ -7627,8 +7631,8 @@ Proof
 QED
 
 (* Overload an additive set function *)
-val _ = overload_on("SET_ADDITIVE",
-   ``\f. (f {} = 0) /\ (!s t. FINITE s /\ FINITE t ==> (f (s UNION t) + f (s INTER t) = f s + f t))``);
+Overload SET_ADDITIVE =
+   ``\f. (f {} = 0) /\ (!s t. FINITE s /\ FINITE t ==> (f (s UNION t) + f (s INTER t) = f s + f t))``
 
 (* Theorem: FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
             !f. SET_ADDITIVE f ==> (f (BIGUNION P) = SIGMA f P) *)
@@ -7776,8 +7780,8 @@ Proof
 QED
 
 (* Overload a multiplicative set function *)
-val _ = overload_on("SET_MULTIPLICATIVE",
-   ``\f. (f {} = 1) /\ (!s t. FINITE s /\ FINITE t ==> (f (s UNION t) * f (s INTER t) = f s * f t))``);
+Overload SET_MULTIPLICATIVE =
+   ``\f. (f {} = 1) /\ (!s t. FINITE s /\ FINITE t ==> (f (s UNION t) * f (s INTER t) = f s * f t))``
 
 (* Theorem: FINITE P /\ EVERY_FINITE P /\ PAIR_DISJOINT P ==>
             !f. SET_MULTIPLICATIVE f ==> (f (BIGUNION P) = PI f P) *)
@@ -7882,7 +7886,7 @@ Proof
 QED
 
 (* Overload on permutation *)
-val _ = overload_on("PERMUTES", ``\f s. BIJ f s s``);
+Overload PERMUTES = ``\f s. BIJ f s s``
 val _ = set_fixity "PERMUTES" (Infix(NONASSOC, 450)); (* same as relation *)
 
 (* Theorem: FINITE s ==> !g. g PERMUTES s ==> !f. SIGMA (f o g) s = SIGMA f s *)
@@ -8580,10 +8584,10 @@ Proof
 QED
 
 (* Overload a RISING function (temporalizaed by Chun Tian) *)
-val _ = temp_overload_on ("RISING", ``\f. !x:num. x <= f x``);
+Overload RISING[local] = ``\f. !x:num. x <= f x``
 
 (* Overload a FALLING function (temporalizaed by Chun Tian) *)
-val _ = temp_overload_on ("FALLING", ``\f. !x:num. f x <= x``);
+Overload FALLING[local] = ``\f. !x:num. f x <= x``
 
 (* Theorem: RISING f /\ m <= n ==> !x. FUNPOW f m x <= FUNPOW f n x *)
 (* Proof:
@@ -9454,7 +9458,7 @@ Proof
 QED
 
 (* Theorem alias: rename *)
-val residue_suc = save_thm("residue_suc", residue_insert);
+Theorem residue_suc = residue_insert;
 (* val residue_suc = |- !n. 0 < n ==> (residue (SUC n) = n INSERT residue n): thm *)
 
 (* Theorem: count n = 0 INSERT (residue n) *)
@@ -9592,7 +9596,7 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 (* Overload on another count-related set *)
-val _ = overload_on("upto", ``\n. count (SUC n)``);
+Overload upto = ``\n. count (SUC n)``
 
 (* Theorem: FINITE (upto n) *)
 (* Proof: by FINITE_COUNT *)
@@ -10289,7 +10293,7 @@ Proof
 QED
 
 (* Overload sublist by infix operator *)
-val _ = temp_overload_on ("<=", ``sublist``);
+Overload "<="[local] = ``sublist``
 
 (* Theorem: m < n ==> [m; n] <= [m .. n] *)
 (* Proof:

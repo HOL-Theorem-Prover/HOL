@@ -12,11 +12,6 @@
 (* DATE          : August 7, 1997                                        *)
 (* ===================================================================== *)
 
-(*  interactive use:
- app load ["Q", "relationTheory", "mesonLib", "OpenTheoryMap", "BasicProvers"];
- open Parse relationTheory mesonLib;
-*)
-
 Theory pair[bare]
 Ancestors
   relation
@@ -33,13 +28,15 @@ fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths (* don't eta-reduce *)
 
 val pairfn = Term `\a b. (a=x) /\ (b=y)`;
 
-val PAIR_EXISTS = Q.prove
-(`?p:'a -> 'b -> bool. (\p. ?x y. p = ^pairfn) p`,
+Theorem PAIR_EXISTS[local]:
+  ?p:'a -> 'b -> bool. (\p. ?x y. p = ^pairfn) p
+Proof
  BETA_TAC
   THEN Ho_Rewrite.ONCE_REWRITE_TAC [SWAP_EXISTS_THM] THEN Q.EXISTS_TAC `x`
   THEN Ho_Rewrite.ONCE_REWRITE_TAC [SWAP_EXISTS_THM] THEN Q.EXISTS_TAC `y`
   THEN EXISTS_TAC pairfn
-  THEN REFL_TAC);
+  THEN REFL_TAC
+QED
 
 val ABS_REP_prod =
  let val tydef = new_type_definition("prod", PAIR_EXISTS)
@@ -62,13 +59,15 @@ in
   fun ot x = ot0 x x
 end
 
-val REP_ABS_PAIR = Q.prove
-(`!x y. REP_prod (ABS_prod ^pairfn) = ^pairfn`,
+Theorem REP_ABS_PAIR[local]:
+  !x y. REP_prod (ABS_prod ^pairfn) = ^pairfn
+Proof
  REPEAT GEN_TAC
   THEN REWRITE_TAC [SYM (SPEC pairfn (CONJUNCT2 ABS_REP_prod))]
   THEN BETA_TAC
   THEN MAP_EVERY Q.EXISTS_TAC [`x`, `y`]
-  THEN REFL_TAC);
+  THEN REFL_TAC
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -125,7 +124,7 @@ Proof
   THEN REFL_TAC
 QED
 
-val pair_CASES = save_thm("pair_CASES", ABS_PAIR_THM)
+Theorem pair_CASES = ABS_PAIR_THM
 
 
 (*---------------------------------------------------------------------------*
@@ -207,15 +206,14 @@ QED
 (* CURRY and UNCURRY. UNCURRY is needed for terms of the form `\(x,y).t`     *)
 (*---------------------------------------------------------------------------*)
 
-val CURRY_DEF = Q.new_definition ("CURRY_DEF", `CURRY f x y :'c = f (x,y)`);
-val _ = BasicProvers.export_rewrites ["CURRY_DEF"]
+val CURRY_DEF = Q.new_definition ("CURRY_DEF[simp]", `CURRY f x y :'c = f (x,y)`);
 
 val UNCURRY = Q.new_definition
   ("UNCURRY",
    `UNCURRY f (v:'a#'b) = f (FST v) (SND v)`);
 val _ = ot0 "UNCURRY" "uncurry"
 
-val UNCURRY_VAR = save_thm("UNCURRY_VAR", UNCURRY);  (* compatibility *)
+Theorem UNCURRY_VAR = UNCURRY;  (* compatibility *)
 
 Theorem ELIM_UNCURRY:
    !f:'a -> 'b -> 'c. UNCURRY f = \x. f (FST x) (SND x)
@@ -613,9 +611,11 @@ Proof
   SRW_TAC [][FUN_EQ_THM, UNCURRY, PAIR]
 QED
 
-val UNCURRY' = prove(
-  ``UNCURRY f = \p. f (FST p) (SND p)``,
-  SRW_TAC [][FUN_EQ_THM, UNCURRY]);
+Theorem UNCURRY'[local]:
+    UNCURRY f = \p. f (FST p) (SND p)
+Proof
+  SRW_TAC [][FUN_EQ_THM, UNCURRY]
+QED
 
 Theorem FORALL_UNCURRY:
     (!) (UNCURRY f) = (!) ((!) o f)
@@ -677,7 +677,7 @@ Theorem pair_case_thm =
   pair_CASE_def |> Q.SPEC ‘(x,y)’ |> REWRITE_RULE [FST, SND] |> SPEC_ALL
 
 (* and, to be consistent with what would be generated if we could use
-   Hol_datatype to generate the pair type: *)
+   Datatype to generate the pair type: *)
 Theorem pair_case_def = pair_case_thm
 Overload case = “pair_CASE”
 
@@ -695,8 +695,8 @@ Proof
 QED
 
 
-val pair_case_cong = save_thm("pair_case_cong",
-  Prim_rec.case_cong_thm pair_CASES pair_case_thm);
+Theorem pair_case_cong =
+  Prim_rec.case_cong_thm pair_CASES pair_case_thm;
 val pair_rws = [PAIR, FST, SND];
 
 Theorem pair_case_eq:
@@ -864,37 +864,33 @@ REPEAT STRIP_TAC THEN MATCH_MP_TAC relationTheory.WF_SUBSET
 QED
 
 (* more relational properties of LEX *)
-Theorem total_LEX:
+Theorem total_LEX[simp]:
     total R1 /\ total R2 ==> total (R1 LEX R2)
 Proof
   ASM_SIMP_TAC (srw_ss()) [total_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["total_LEX"]
 
-Theorem transitive_LEX:
+Theorem transitive_LEX[simp]:
     transitive R1 /\ transitive R2 ==> transitive (R1 LEX R2)
 Proof
   SIMP_TAC (srw_ss()) [transitive_def, FORALL_PROD, LEX_DEF, UNCURRY_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["transitive_LEX"]
 
-Theorem reflexive_LEX:
+Theorem reflexive_LEX[simp]:
     reflexive (R1 LEX R2) <=> reflexive R1 \/ reflexive R2
 Proof
   SIMP_TAC (srw_ss()) [reflexive_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["reflexive_LEX"]
 
-Theorem symmetric_LEX:
+Theorem symmetric_LEX[simp]:
     symmetric R1 /\ symmetric R2 ==> symmetric (R1 LEX R2)
 Proof
   SIMP_TAC (srw_ss()) [symmetric_def, LEX_DEF, FORALL_PROD, UNCURRY_DEF] THEN
   METIS_TAC[]
 QED
-val _ = export_rewrites ["symmetric_LEX"]
 
 Theorem LEX_CONG:
   !R1 R2 v1 v2 R1' R2' v1' v2'.

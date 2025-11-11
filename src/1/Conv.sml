@@ -13,7 +13,6 @@
 (* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
 (* DATE          : September 11, 1991                                    *)
 (* Many micro-optimizations added, February 24, 1992, KLS                *)
-
 (* ===================================================================== *)
 
 structure Conv :> Conv =
@@ -27,10 +26,13 @@ fun QCONV c tm = c tm handle UNCHANGED => REFL tm
 
 val ERR = mk_HOL_ERR "Conv"
 val ERRloc = mk_HOL_ERRloc "Conv"
+
+(*
 fun w nm c t = c t handle UNCHANGED => raise UNCHANGED
                    | e as HOL_ERR _ => Portable.reraise e
                    | Fail s => raise Fail (s ^ " --> " ^ nm)
                    | e => raise Fail (nm ^ ": " ^ General.exnMessage e)
+*)
 
 (*----------------------------------------------------------------------*
  * Conversion for rewrite rules of the form |- !x1 ... xn. t == u       *
@@ -47,17 +49,16 @@ fun w nm c t = c t handle UNCHANGED => raise UNCHANGED
  *         (PART_MATCH (fst o dest_eq));;                               *
  *----------------------------------------------------------------------*)
 
-
 fun REWR_CONV0 (part_matcher, fn_name) th =
    let
       val instth = part_matcher lhs th
-                   handle e =>
-                     raise (wrap_exn "Conv"
-                              (fn_name ^ ": bad theorem argument: " ^
-                               trace ("PP.avoid_unicode", 1)
-                                     term_to_string (concl th)) e)
-   in
-      fn tm =>
+                   handle e => raise
+                   wrap_exn "Conv"
+                      (String.concat
+                         [fn_name, ": bad theorem argument: ",
+                          trace ("PP.avoid_unicode", 1)
+                                term_to_string (concl th)]) e
+   in fn tm =>
          let
             val eqn = instth tm
             val l = lhs (concl eqn)
@@ -69,7 +70,7 @@ fun REWR_CONV0 (part_matcher, fn_name) th =
 
 val REWR_CONV    = REWR_CONV0 (PART_MATCH,    "REWR_CONV")
 val HO_REWR_CONV = REWR_CONV0 (HO_PART_MATCH, "HO_REWR_CONV")
-val REWR_CONV_A  = REWR_CONV0 (PART_MATCH_A,    "REWR_CONV_A")
+val REWR_CONV_A  = REWR_CONV0 (PART_MATCH_A,  "REWR_CONV_A")
 
 (*----------------------------------------------------------------------*
  * RAND_CONV conv "t1 t2" applies conv to t2                            *
@@ -81,25 +82,27 @@ val REWR_CONV_A  = REWR_CONV0 (PART_MATCH_A,    "REWR_CONV_A")
  *    now passes on information about nested failure                    *
  *----------------------------------------------------------------------*)
 
-fun set_origin fnm
-    {origin_function, origin_structure, source_location, message} =
-  if Lib.mem origin_function ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
-      andalso origin_structure = "Conv"
-      then ERRloc fnm source_location message
-  else ERRloc fnm source_location (origin_function ^ ": " ^ message)
+fun set_origin fnm holerr =
+    if Lib.mem (top_function_of holerr)
+               ["RAND_CONV", "RATOR_CONV", "ABS_CONV"]
+       andalso top_structure_of holerr = "Conv"
+     then set_top_function fnm holerr
+     else wrap_hol_error "Conv" fnm (top_location_of holerr) holerr
 
 fun RAND_CONV conv tm =
    let
       val (Rator, Rand) =
          dest_comb tm handle HOL_ERR _ => raise ERR "RAND_CONV" "not a comb"
       val newrand =
-         conv Rand
-         handle HOL_ERR e => raise set_origin "RAND_CONV" e
+          conv Rand
+          handle HOL_ERR e => raise HOL_ERR (set_origin "RAND_CONV" e)
    in
       AP_TERM Rator newrand
-      handle HOL_ERR {message, ...} =>
-        raise ERR "RAND_CONV" ("Application of AP_TERM failed: " ^ message)
+      handle HOL_ERR e =>
+      raise ERR "RAND_CONV"
+             ("Application of AP_TERM failed: " ^ message_of e)
    end
+
 
 (*----------------------------------------------------------------------*
  * RATOR_CONV conv "t1 t2" applies conv to t1                           *
@@ -117,11 +120,11 @@ fun RATOR_CONV conv tm =
          dest_comb tm handle HOL_ERR _ => raise ERR "RATOR_CONV" "not a comb"
       val newrator =
          conv Rator
-         handle HOL_ERR e => raise set_origin "RATOR_CONV" e
+         handle HOL_ERR e => raise HOL_ERR (set_origin "RATOR_CONV" e)
    in
       AP_THM newrator Rand
-      handle HOL_ERR {message, ...} =>
-        raise ERR "RATOR_CONV" ("Application of AP_THM failed: " ^ message)
+      handle HOL_ERR e =>
+      raise ERR "RATOR_CONV" ("Application of AP_THM failed: " ^ message_of e)
    end
 
 (* remember this as "left-hand conv", where RAND_CONV is "right-hand conv". *)
@@ -140,8 +143,8 @@ fun LAND_CONV c = RATOR_CONV (RAND_CONV c)
 
 fun ABS_CONV conv tm =
    let
-      val (Bvar,Body) =
-         dest_abs tm handle HOL_ERR _ => raise ERR "ABS_CONV" "Term not an abstraction"
+      val (Bvar,Body) = dest_abs tm
+          handle HOL_ERR _ => raise ERR "ABS_CONV" "Term not an abstraction"
       val newbody = conv Body
    in
       ABS Bvar newbody
@@ -158,7 +161,7 @@ fun ABS_CONV conv tm =
         in
            TRANS (TRANS th1 eq_thm') th2
         end
-        handle HOL_ERR e => raise set_origin "ABS_CONV" e
+        handle HOL_ERR e => raise HOL_ERR (set_origin "ABS_CONV" e)
    end
 
 (*----------------------------------------------------------------------*
@@ -373,8 +376,9 @@ fun BINDER_CONV conv = ABS_CONV conv ORELSEC QUANT_CONV conv
 fun STRIP_BINDER_CONV opt conv tm =
    let
       val (vlist, M) = strip_binder opt tm
+      val newbody = conv M
    in
-      GEN_ABS opt vlist (conv M)
+      GEN_ABS opt vlist newbody
       handle HOL_ERR _ =>
             let
                val gvs = map (genvar o type_of) vlist
@@ -921,10 +925,12 @@ in
               IMP_ANTISYM_RULE imp1 (DISCH otm thm2)
            end
       end
-      handle e as HOL_ERR {origin_structure = "Conv",
-                           origin_function = "EXISTS_AND_CONV", ...} => raise e
-           | HOL_ERR _ => raise ERR "EXISTS_AND_CONV" ""
+      handle e as HOL_ERR herr =>
+        if top_structure_of herr = "Conv" andalso
+           top_function_of herr = "EXISTS_AND_CONV" then raise e
+        else raise ERR "EXISTS_AND_CONV" ""
 end
+
 
 (*----------------------------------------------------------------------*
  * AND_EXISTS_CONV : move existential quantifier out of conjunction.    *
@@ -941,21 +947,21 @@ in
       let
          val (conj1, conj2) = dest_conj tm handle HOL_ERR _ => raise AE_ERR
          val (x, P) = dest_exists conj1
-                                    handle HOL_ERR _ => raise AE_ERR
+                      handle HOL_ERR _ => raise AE_ERR
          val (y, Q) = dest_exists conj2
-                                    handle HOL_ERR_ => raise AE_ERR
+                      handle HOL_ERR_ => raise AE_ERR
       in
          if not (aconv x y) then raise AE_ERR
          else if free_in x P orelse free_in x Q
             then raise ERR "AND_EXISTS_CONV"
                           ("`" ^ (#1 (dest_var x)) ^ "` free in conjunct(s)")
          else SYM (EXISTS_AND_CONV
-                     (mk_exists (x,
-                                 mk_conj (P, Q))))
+                     (mk_exists (x, mk_conj (P, Q))))
       end
-      handle e as HOL_ERR {origin_structure = "Conv",
-                           origin_function = "AND_EXISTS_CONV", ...} => raise e
-           | HOL_ERR _ => raise ERR "AND_EXISTS_CONV" ""
+      handle e as HOL_ERR herr =>
+        if top_structure_of herr = "Conv" andalso
+           top_function_of herr = "AND_EXISTS_CONV" then raise e
+        else raise ERR "AND_EXISTS_CONV" ""
 end
 
 (*----------------------------------------------------------------------*
@@ -1093,9 +1099,10 @@ in
                IMP_ANTISYM_RULE imp1 (DISCH otm imp2)
             end
       end
-      handle e as HOL_ERR {origin_structure = "Conv",
-                           origin_function = "FORALL_OR_CONV", ...} => raise e
-           | HOL_ERR _ => raise ERR "FORALL_OR_CONV" ""
+      handle e as HOL_ERR herr =>
+         if top_structure_of herr = "Conv" andalso
+            top_function_of herr = "FORALL_OR_CONV" then raise e
+         else raise ERR "FORALL_OR_CONV" ""
 end
 
 (*----------------------------------------------------------------------*
@@ -1124,9 +1131,10 @@ in
       else SYM (FORALL_OR_CONV
                   (mk_forall (x,mk_disj (P, Q))))
    end
-   handle e as HOL_ERR {origin_structure = "Conv",
-                        origin_function = "OR_FORALL_CONV", ...} => raise e
-        | HOL_ERR _ => raise ERR "OR_FORALL_CONV" ""
+   handle e as HOL_ERR herr =>
+         if top_structure_of herr = "Conv" andalso
+            top_function_of herr = "OR_FORALL_CONV" then raise e
+         else raise ERR "OR_FORALL_CONV" ""
 end
 
 (*----------------------------------------------------------------------*
@@ -1251,9 +1259,10 @@ in
                  IMP_ANTISYM_RULE imp1 imp2
               end
       end
-      handle e as HOL_ERR {origin_structure = "Conv",
-                           origin_function = "FORALL_IMP_CONV", ...} => raise e
-           | HOL_ERR _ => raise ERR "FORALL_IMP_CONV" ""
+      handle e as HOL_ERR herr =>
+         if top_structure_of herr = "Conv" andalso
+            top_function_of herr = "FORALL_IMP_CONV" then raise e
+         else raise ERR "FORALL_IMP_CONV" ""
 end
 
 (*----------------------------------------------------------------------*
@@ -1379,9 +1388,10 @@ in
               IMP_ANTISYM_RULE imp1 imp2
            end
     end
-    handle e as HOL_ERR {origin_structure = "Conv",
-                         origin_function = "EXISTS_IMP_CONV", ...} => raise e
-             | HOL_ERR _ => raise ERR "EXISTS_IMP_CONV" ""
+    handle e as HOL_ERR herr =>
+      if top_structure_of herr = "Conv" andalso
+          top_function_of herr = "EXISTS_IMP_CONV" then raise e
+         else raise ERR "EXISTS_IMP_CONV" ""
 end
 
 (*----------------------------------------------------------------------*
@@ -1493,11 +1503,10 @@ in
                       IMP_ANTISYM_RULE imp1 imp2
                    end
            end
-           handle e as HOL_ERR
-                         {origin_structure = "Conv",
-                          origin_function = "X_SKOLEM_CONV", ...} => raise e
-                 | HOL_ERR _ => err ""
-   (* val X_SKOLEM_CONV = w "X_SKOLEM_CONV" X_SKOLEM_CONV *)
+           handle e as HOL_ERR herr =>
+             if top_structure_of herr = "Conv" andalso
+                top_function_of herr = "X_SKOLEM_CONV" then raise e
+             else raise ERR "X_SKOLEM_CONV" ""
 end
 
 (*----------------------------------------------------------------------*
@@ -1523,7 +1532,6 @@ in
          X_SKOLEM_CONV (variant (free_vars tm) fv) tm
       end
       handle HOL_ERR _ => raise ERR "SKOLEM_CONV" ""
-   (* val SKOLEM_CONV = w "SKOLEM_CONV" SKOLEM_CONV *)
 end
 
 (*----------------------------------------------------------------------*
@@ -1616,7 +1624,7 @@ in
                       end
               else err (#1 (dest_var x) ^ " has the wrong type")
            end
-           handle e => raise (wrap_exn "Conv" "X_FUN_EQ_CONV" e)
+           handle e => raise wrap_exn "Conv" "X_FUN_EQ_CONV" e
 end
 
 (*----------------------------------------------------------------------*
@@ -1694,6 +1702,7 @@ end
  *                                                                      *
  * Fails if the term is not a conjunction.                              *
  *----------------------------------------------------------------------*)
+
 local
   val conv = REWR_CONV (GSYM CONJ_ASSOC)
 in
@@ -1704,7 +1713,7 @@ fun SPLICE_CONJ_CONV t =
     if is_conj t then
       recurse t
     else
-      raise mk_HOL_ERR "Conv" "SPLICE_CONJ_CONV" "Not a conjunction"
+      raise ERR "SPLICE_CONJ_CONV" "Not a conjunction"
   end
 end (* local *)
 
@@ -2231,7 +2240,7 @@ in
          else if aconv rhs T then SPEC lhs bT
          else raise ERR "bool_EQ_CONV" "inapplicable"
       end
-      handle e => raise (wrap_exn "Conv" "bool_EQ_CONV" e)
+      handle e => raise wrap_exn "Conv" "bool_EQ_CONV" e
 end
 
 (*----------------------------------------------------------------------*
@@ -2317,7 +2326,7 @@ in
          if aconv cond T then SPEC rarm (SPEC larm (INST_TYPE' CT))
          else if aconv cond F then SPEC rarm (SPEC larm (INST_TYPE' CF))
          else if aconv larm rarm then SPEC larm (SPEC cond (INST_TYPE' COND_ID))
-         else raise ERR "" ""
+         else raise HOL_ERR empty_hol_error
       end
       handle HOL_ERR _ => raise ERR "COND_CONV" ""
 end
@@ -2436,7 +2445,7 @@ fun AC_CONV (associative, commutative) =
             EQT_INTRO (EQ_MP (SYM init) (asce (dest_eq gl)))
          end
    end
-   handle e => raise (wrap_exn "Conv" "AC_CONV" e)
+   handle e => raise wrap_exn "Conv" "AC_CONV" e
 
 (*--------------------------------------------------------------------------*
  * Conversions for messing with bound variables.                            *

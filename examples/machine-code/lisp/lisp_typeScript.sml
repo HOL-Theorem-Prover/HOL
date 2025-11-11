@@ -11,7 +11,8 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* type *)
 
-val _ = Hol_datatype `SExp = Dot of SExp => SExp | Val of num | Sym of string`;
+Datatype: SExp = Dot SExp SExp | Val num | Sym string
+End
 val SExp_11 = fetch "-" "SExp_11";
 val SExp_distinct = fetch "-" "SExp_distinct";
 
@@ -103,27 +104,35 @@ End
 
 (* theorems *)
 
-val SExp_expand = store_thm("SExp_expand",
-  ``!x. (?exp1 exp2. x = Dot exp1 exp2) \/ (?n. x = Val n) \/ (?s. x = Sym s)``,
-  Cases \\ SRW_TAC [] []);
+Theorem SExp_expand:
+    !x. (?exp1 exp2. x = Dot exp1 exp2) \/ (?n. x = Val n) \/ (?s. x = Sym s)
+Proof
+  Cases \\ SRW_TAC [] []
+QED
 
-val isDot_thm = store_thm("isDot_thm",
-  ``!z. isDot z = ?a b. z = Dot a b``,
-  Cases \\ SIMP_TAC std_ss [SExp_11,SExp_distinct,isDot_def]);
+Theorem isDot_thm:
+    !z. isDot z = ?a b. z = Dot a b
+Proof
+  Cases \\ SIMP_TAC std_ss [SExp_11,SExp_distinct,isDot_def]
+QED
 
-val isVal_thm = store_thm("isVal_thm",
-  ``!z. isVal z = ?a. z = Val a``,
-  Cases \\ SIMP_TAC std_ss [SExp_11,SExp_distinct,isVal_def]);
+Theorem isVal_thm:
+    !z. isVal z = ?a. z = Val a
+Proof
+  Cases \\ SIMP_TAC std_ss [SExp_11,SExp_distinct,isVal_def]
+QED
 
-val isSym_thm = store_thm("isSym_thm",
-  ``!z. isSym z = ?a. z = Sym a``,
-  Cases \\ SIMP_TAC std_ss [SExp_11,SExp_distinct,isSym_def]);
+Theorem isSym_thm:
+    !z. isSym z = ?a. z = Sym a
+Proof
+  Cases \\ SIMP_TAC std_ss [SExp_11,SExp_distinct,isSym_def]
+QED
 
-val isQuote_thm = store_thm("isQuote_thm",
-  ``!x. isQuote x = ?y. x = Dot (Sym "quote") (Dot y (Sym "nil"))``,
+Theorem isQuote_thm:
+    !x. isQuote x = ?y. x = Dot (Sym "quote") (Dot y (Sym "nil"))
+Proof
   Cases \\ REWRITE_TAC [isQuote_def,isDot_def,CAR_def,CDR_def,SExp_11]
   \\ SIMP_TAC std_ss [SExp_distinct] \\ Cases_on `S0`
   \\ REWRITE_TAC [isQuote_def,isDot_def,CAR_def,CDR_def,SExp_11]
-  \\ METIS_TAC [SExp_distinct]);
-
-
+  \\ METIS_TAC [SExp_distinct]
+QED

@@ -308,10 +308,24 @@ fun EQT_ELIM th =
  *      |- !x1 ... xn. t[xi]                                                 *
  *    --------------------------    SPECL [t1, ..., tn]                      *
  *          |-  t[ti]                                                        *
+ *                                                                           *
+ * OLD CODE: Slow due to SPEC repeatedly traversing the whole term           *
+ * NOTE: Does not speed up expknl due to it not supporting                   *
+ * explicit substitutions                                                    *
+ *                                                                           *
+ * fun SPECL tml th =                                                        *
+ *    rev_itlist SPEC tml th handle HOL_ERR _ => raise ERR "SPECL" ""        *
  *---------------------------------------------------------------------------*)
 
 fun SPECL tml th =
-   rev_itlist SPEC tml th handle HOL_ERR _ => raise ERR "SPECL" ""
+   let
+   fun loop [] tm = tm
+     | loop [x] tm = SPEC x tm
+     | loop (x::xs) tm = loop xs (Specialize x tm)
+   in
+     loop tml th
+     handle HOL_ERR _ => raise ERR "SPECL" ""
+   end
 
 (*---------------------------------------------------------------------------*
  * SELECT introduction                                                       *
@@ -789,7 +803,7 @@ in
       if is_forall (concl th) then
          let
             val (hvs, con) = (HOLset.listItems ## I) (hyp_frees th, concl th)
-            val fvs = free_vars con
+            val fvs = HOLset.listItems (FVL [con] empty_tmset)
             val vars = fst (strip_forall con)
          in
             SPECL (snd (itlist varyAcc vars (hvs @ fvs, []))) th

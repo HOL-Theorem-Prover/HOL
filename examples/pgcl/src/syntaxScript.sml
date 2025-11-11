@@ -55,25 +55,27 @@ Definition assign_def:
    assign v (e : 'a state -> 'a) (s:'a state) w = if v = w then e s else s w
 End
 
-val assign_eta = store_thm
-  ("assign_eta",
-   ``!v e s. assign v e s = \w. if w = v then e s else s w``,
+Theorem assign_eta:
+     !v e s. assign v e s = \w. if w = v then e s else s w
+Proof
    CONV_TAC (DEPTH_CONV FUN_EQ_CONV)
-   ++ RW_TAC std_ss [assign_def]);
+   ++ RW_TAC std_ss [assign_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Probabilisitic programs: syntax                                           *)
 (* ------------------------------------------------------------------------- *)
 
-val () = Hol_datatype
-  `command =
+Datatype:
+   command =
        Abort
      | Consume of ('a state -> posreal)
      | Assign of string => ('a state -> 'a)
      | Seq of command => command
      | Nondet of command => command
      | Prob of ('a state -> posreal) => command => command
-     | While of ('a state -> bool) => command`;
+     | While of ('a state -> bool) => command
+End
 
 Definition Assert_def:
    Assert (x : 'a state -> posreal) (c : 'a command) = c

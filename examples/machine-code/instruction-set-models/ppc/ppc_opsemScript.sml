@@ -419,7 +419,9 @@ Definition ppc_exec_instr_def:
 End
 
 
-val ppc_assertT_lemma = store_thm("ppc_assertT_lemma",
-  ``!b f. b ==> (assertT b (f:'a ppc_M) = f)``,
-  SIMP_TAC std_ss [assertT_def,seqT_def,constT_def,seq_monad_thm,FUN_EQ_THM]);
+Theorem ppc_assertT_lemma:
+    !b f. b ==> (assertT b (f:'a ppc_M) = f)
+Proof
+  SIMP_TAC std_ss [assertT_def,seqT_def,constT_def,seq_monad_thm,FUN_EQ_THM]
+QED
 

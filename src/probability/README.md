@@ -13,6 +13,7 @@ This directory contains HOL4's Measure, Lebesgue Integration and Probability the
      measureScript.sml            * Measure Theory defined on extended reals
      borelScript.sml              * Borel sets and Borel measurable functions
      lebesgueScript.sml           * Lebesgue integration based on extended reals
+     lebesgue_measureScript.sml   * Equivalence of Lebesgue and Gauge integrals
      martingaleScript.sml         * Martingales based on σ-finite filtered measure space
      probabilityScript.sml        * Probability Theory based on extended reals
 

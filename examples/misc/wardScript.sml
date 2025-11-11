@@ -9,7 +9,8 @@ End
 
 
 
-val _ = Hol_datatype `alphabet = a | b | I`
+Datatype: alphabet = a | b | I
+End
 
 val (thm_rules, thm_ind, thm_cases) = Hol_reln`
   thm [I] ∧
@@ -33,12 +34,13 @@ val div3_lemma = prove(
     METIS_TAC [DIVIDES_REFL, DIVIDES_ADD_1]
   ])
 
-val ab_DIV3 = store_thm(
-  "ab_DIV3",
-  ``∀l. thm l ⇒ divides 3 (LENGTH (FILTER ((=) a) l)) ∧
-                divides 3 (LENGTH (FILTER ((=) b) l))``,
+Theorem ab_DIV3:
+    ∀l. thm l ⇒ divides 3 (LENGTH (FILTER ((=) a) l)) ∧
+                divides 3 (LENGTH (FILTER ((=) b) l))
+Proof
   Induct_on `thm` THEN SRW_TAC [][listTheory.FILTER_APPEND_DISTRIB,
-                                  div3_lemma]);
+                                  div3_lemma]
+QED
 
 val (thmrwt_rules, thmrwt_ind, thmrwt_cases) = Hol_reln`
   (∀x y. (x ++ y ≠ []) ⇒ thmrwt (x ++ [I] ++ y) (x ++ y)) ∧

@@ -252,10 +252,11 @@ QED
 (* Theorem3: The transition and maximal trace semantics "agree".         *)
 (* ===================================================================== *)
 
-val Theorem3 = Q.store_thm
-("Theorem3",
- `!P A. MTRACE P A = ?Q. TRANSIT P A Q /\ TERMINAL Q`,
- METIS_TAC [Theorem1,Theorem2]);
+Theorem Theorem3:
+  !P A. MTRACE P A = ?Q. TRANSIT P A Q /\ TERMINAL Q
+Proof
+ METIS_TAC [Theorem1,Theorem2]
+QED
 
 
 (* ===================================================================== *)

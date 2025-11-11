@@ -152,8 +152,9 @@ QED
 (* Define formal differentiation of power series                             *)
 (*---------------------------------------------------------------------------*)
 
-val diffs = new_definition("diffs",
-  “diffs c = (\n. &(SUC n) * c(SUC n))”);
+Definition diffs[nocompute]:
+  diffs c = (\n. &(SUC n) * c(SUC n))
+End
 
 (*---------------------------------------------------------------------------*)
 (* Lemma about distributing negation over it                                 *)

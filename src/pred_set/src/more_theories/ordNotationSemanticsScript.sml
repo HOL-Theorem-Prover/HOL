@@ -8,11 +8,10 @@ val _ = export_rewrites ["ordinalNotation.finp_def", "ordinalNotation.tail_def",
                          "ordinalNotation.oless_equations",
                          "ordinalNotation.expt_def"]
 
-Definition ordModel_def:
+Definition ordModel_def[simp]:
   (ordModel (End n) = &n) /\
   (ordModel (Plus e c t) = omega ** ordModel e * &c + ordModel t)
 End
-val _ = export_rewrites ["ordModel_def"]
 
 val _ = add_rule {fixity = Closefix, term_name = "ordModel",
                   block_style = (AroundEachPhrase, (PP.CONSISTENT,2)),
@@ -30,19 +29,17 @@ Proof
   `k <> 0` by DECIDE_TAC THEN SRW_TAC [][ordEXP_EQ_0]
 QED
 
-Theorem oless_0:
+Theorem oless_0[simp]:
     !n. oless n (End 0) = F
 Proof
   Cases_on `n` >> simp[]
 QED
-val _ = export_rewrites ["oless_0"]
 
-Theorem oless_0a:
+Theorem oless_0a[simp]:
     oless (End 0) n <=> n <> End 0
 Proof
   Cases_on `n` >> simp[]
 QED
-val _ = export_rewrites ["oless_0a"]
 
 Theorem oless_x_End:
     oless x (End n) <=> ?m. (x = End m) /\ m < n
@@ -159,19 +156,20 @@ Proof
 QED
 
 (* |- <[expt t]> < <[e]> /\ is_ord e /\ is_ord t ==> <[t]> < omega ** <[e]> *)
-val neqend0_lemma = prove(
-  ``x < <[e]> ==> e <> End 0``,
-  rpt strip_tac >> fs[]);
+Theorem neqend0_lemma[local]:
+    x < <[e]> ==> e <> End 0
+Proof
+  rpt strip_tac >> fs[]
+QED
 
-val tail_dominated = save_thm(
-  "tail_dominated",
+Theorem tail_dominated =
   ord_less_models_ordlt
     |> Q.SPEC `Plus e 1 t`
     |> SIMP_RULE (srw_ss() ++ boolSimps.CONJ_ss)
                  [oless_modelled, is_ord_expt]
     |> REWRITE_RULE [neqend0_lemma |> Q.INST [`x` |-> `<[expt t]>`] |> UNDISCH]
     |> REWRITE_RULE [ASSUME ``<[expt t]> < <[e]> :'a ordinal``]
-    |> DISCH_ALL |> REWRITE_RULE [AND_IMP_INTRO]);
+    |> DISCH_ALL |> REWRITE_RULE [AND_IMP_INTRO];
 
 Theorem addL_disappears:
     !e a. a < omega ** e ==> (a + omega ** e = omega ** e)
@@ -266,7 +264,7 @@ Proof
 QED
 
 (* |- e1 < e2 ==> &k * omega ** e1 < omega ** e2 *)
-val kexp_lt = let
+Theorem kexp_lt = (let
   val zero_ltk_or_eqzero = DECIDE ``0n < k \/ (k = 0)``
   val zero_ltk =
     is_polyform_head_dominates_tail
@@ -277,9 +275,8 @@ val kexp_lt = let
                      simp[ASSUME ``k = 0n``] >> spose_not_then assume_tac >>
                      fs[ordEXP_EQ_0])
 in
-  save_thm("kexp_lt",
-           DISJ_CASES zero_ltk_or_eqzero zero_ltk eqzero |> DISCH_ALL)
-end
+  DISJ_CASES zero_ltk_or_eqzero zero_ltk eqzero |> DISCH_ALL
+end)
 
 Theorem ord_add_correct:
     !x y. is_ord x /\ is_ord y ==> (<[ord_add x y]> = <[x]> + <[y]>)
@@ -637,4 +634,3 @@ Proof
   simp[Abbr`LHS`, Once better_ord_mult_def, ord_add_correct] >>
   simp[ord_mult_correct, ord_add_correct, is_ord_expt]
 QED
-

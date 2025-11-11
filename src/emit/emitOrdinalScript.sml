@@ -8,7 +8,7 @@ Libs
 (* Generate an ML file for the executable functions of the theory.           *)
 (*---------------------------------------------------------------------------*)
 
-Triviality tail_End:
+Theorem tail_End[local]:
   tail (End n) = FAIL tail ^(mk_var("(End n)",bool)) (End n)
 Proof
   REWRITE_TAC [combinTheory.FAIL_THM]

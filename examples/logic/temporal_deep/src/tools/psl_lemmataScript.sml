@@ -59,11 +59,10 @@ Definition IS_INFINITE_TOP_BOTTOM_FREE_PATH_def:
 End
 
 
-val IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT =
-  store_thm
-   ("IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT",
-    ``!f. IS_INFINITE_TOP_BOTTOM_FREE_PATH f ==>
-          (COMPLEMENT f = f)``,
+Theorem IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT:
+      !f. IS_INFINITE_TOP_BOTTOM_FREE_PATH f ==>
+          (COMPLEMENT f = f)
+Proof
 
     REWRITE_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH_def] THEN
     REPEAT STRIP_TAC THEN
@@ -71,18 +70,19 @@ val IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT =
     ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
     BETA_TAC THEN GEN_TAC THEN
     `?s. p x = STATE s` by PROVE_TAC[] THEN
-    ASM_REWRITE_TAC[COMPLEMENT_LETTER_def]);
+    ASM_REWRITE_TAC[COMPLEMENT_LETTER_def]
+QED
 
 
-val IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN =
-  store_thm
-   ("IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN",
-    ``!f. IS_INFINITE_TOP_BOTTOM_FREE_PATH f ==>
-          !n. IS_INFINITE_TOP_BOTTOM_FREE_PATH (RESTN f n)``,
+Theorem IS_INFINITE_TOP_BOTTOM_FREE_PATH___RESTN:
+      !f. IS_INFINITE_TOP_BOTTOM_FREE_PATH f ==>
+          !n. IS_INFINITE_TOP_BOTTOM_FREE_PATH (RESTN f n)
+Proof
 
     REWRITE_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH_def] THEN
     REPEAT STRIP_TAC THEN
-    ASM_SIMP_TAC std_ss [RESTN_INFINITE, path_11]);
+    ASM_SIMP_TAC std_ss [RESTN_INFINITE, path_11]
+QED
 
 
 Definition IS_PROPER_PATH_def:
@@ -93,25 +93,24 @@ Definition BOTTOM_OMEGA_def:
   BOTTOM_OMEGA = INFINITE(\n. BOTTOM)
 End
 
-val COMPLEMENT_LETTER_Cases =
- store_thm
-  ("COMPLEMENT_LETTER_Cases",
-   ``!l s. ((COMPLEMENT_LETTER l = STATE s) = (l = STATE s)) /\
+Theorem COMPLEMENT_LETTER_Cases:
+     !l s. ((COMPLEMENT_LETTER l = STATE s) = (l = STATE s)) /\
             ((COMPLEMENT_LETTER l = TOP) = (l = BOTTOM)) /\
-           ((COMPLEMENT_LETTER l = BOTTOM) = (l = TOP))``,
-   Cases_on `l` THEN EVAL_TAC THEN PROVE_TAC[]);
+           ((COMPLEMENT_LETTER l = BOTTOM) = (l = TOP))
+Proof
+   Cases_on `l` THEN EVAL_TAC THEN PROVE_TAC[]
+QED
 
-val HEAD_ELEM =
- store_thm
-  ("HEAD_ELEM",
-    ``!p. HEAD p = ELEM p 0``,
-    REWRITE_TAC[ELEM_def, RESTN_def]);
+Theorem HEAD_ELEM:
+      !p. HEAD p = ELEM p 0
+Proof
+    REWRITE_TAC[ELEM_def, RESTN_def]
+QED
 
 
-val RESTN_MAP =
- store_thm
-  ("RESTN_MAP",
-  ``!f v t. t < LENGTH v ==> (RESTN (MAP f v) t = MAP f (RESTN v t))``,
+Theorem RESTN_MAP:
+    !f v t. t < LENGTH v ==> (RESTN (MAP f v) t = MAP f (RESTN v t))
+Proof
    Induct_on `v` THENL [
       EVAL_TAC THEN PROVE_TAC[],
 
@@ -123,32 +122,32 @@ val RESTN_MAP =
          `t < LENGTH v` by DECIDE_TAC THEN
          PROVE_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
-val REST_RESTN =
- store_thm
-  ("REST_RESTN",
-   ``(!l:'a list. (REST l) = (RESTN l 1)) /\
-     (!p:'a path. (REST p) = (RESTN p 1))``,
+Theorem REST_RESTN:
+     (!l:'a list. (REST l) = (RESTN l 1)) /\
+     (!p:'a path. (REST p) = (RESTN p 1))
+Proof
 
    `1 = SUC 0` by DECIDE_TAC THEN
-    ASM_REWRITE_TAC [RESTN_def, FinitePSLPathTheory.RESTN_def]);
+    ASM_REWRITE_TAC [RESTN_def, FinitePSLPathTheory.RESTN_def]
+QED
 
 
-val RESTN_REST =
- store_thm
-  ("RESTN_REST",
-   ``(!l:'a list n. (RESTN (REST l) n) = (REST (RESTN l n))) /\
-     (!p:'a path n. (RESTN (REST p) n) = (REST (RESTN p n)))``,
+Theorem RESTN_REST:
+     (!l:'a list n. (RESTN (REST l) n) = (REST (RESTN l n))) /\
+     (!p:'a path n. (RESTN (REST p) n) = (REST (RESTN p n)))
+Proof
 
-   SIMP_TAC arith_ss [FinitePSLPathTheory.RESTN_RESTN, RESTN_RESTN, REST_RESTN]);
+   SIMP_TAC arith_ss [FinitePSLPathTheory.RESTN_RESTN, RESTN_RESTN, REST_RESTN]
+QED
 
 
-val ELEM_CAT___LESS =
- store_thm
-  ("ELEM_CAT___LESS",
-   ``!l l' p. l < LENGTH l' ==> (ELEM (CAT (l',p)) l = EL l l')``,
+Theorem ELEM_CAT___LESS:
+     !l l' p. l < LENGTH l' ==> (ELEM (CAT (l',p)) l = EL l l')
+Proof
 
    Induct_on `l` THENL [
       Cases_on `l'` THENL [
@@ -160,15 +159,15 @@ val ELEM_CAT___LESS =
          SIMP_TAC list_ss [],
          SIMP_TAC list_ss [CAT_def, ELEM_def, RESTN_def, REST_CONS] THEN PROVE_TAC [ELEM_def]
       ]
-   ]);
+   ]
+QED
 
 
 
-val EL_SEL_REC =
- store_thm
-  ("EL_SEL_REC",
-  ``!j k l p. (j < k) ==>
-    (EL j (SEL_REC k l p) = ELEM p (j+l))``,
+Theorem EL_SEL_REC:
+    !j k l p. (j < k) ==>
+    (EL j (SEL_REC k l p) = ELEM p (j+l))
+Proof
 
 Induct_on `l` THENL [
   SIMP_TAC std_ss [] THEN
@@ -190,23 +189,23 @@ Induct_on `l` THENL [
   PROVE_CONDITION_NO_ASSUM 0 THEN1 ASM_REWRITE_TAC[] THEN
   ASM_SIMP_TAC std_ss [prove (``j+SUC l = SUC(j+l)``, DECIDE_TAC)] THEN
   SIMP_TAC std_ss [ELEM_def, RESTN_def]
-]);
+]
+QED
 
 
-val ELEM_CAT_SEL___LESS_EQ =
- store_thm
-  ("ELEM_CAT_SEL___LESS_EQ",
-   ``!v l u p. l <= u ==> (ELEM (CAT (SEL v (0, u),p)) l = ELEM v l)``,
+Theorem ELEM_CAT_SEL___LESS_EQ:
+     !v l u p. l <= u ==> (ELEM (CAT (SEL v (0, u),p)) l = ELEM v l)
+Proof
 
    REPEAT STRIP_TAC THEN
    `LENGTH (SEL v (0, u)) = u -0 + 1` by PROVE_TAC[LENGTH_SEL] THEN
-   ASM_SIMP_TAC arith_ss [ELEM_CAT___LESS, EL_SEL0]);
+   ASM_SIMP_TAC arith_ss [ELEM_CAT___LESS, EL_SEL0]
+QED
 
 
-val ELEM_CAT___GREATER_EQ =
- store_thm
-  ("ELEM_CAT___GREATER_EQ",
-   ``!l l' p. l >= LENGTH l' ==> (ELEM (CAT (l',p)) l = ELEM p (l - (LENGTH l')))``,
+Theorem ELEM_CAT___GREATER_EQ:
+     !l l' p. l >= LENGTH l' ==> (ELEM (CAT (l',p)) l = ELEM p (l - (LENGTH l')))
+Proof
 
    Induct_on `l` THENL [
       Cases_on `l'` THENL [
@@ -222,25 +221,25 @@ val ELEM_CAT___GREATER_EQ =
          `l >= LENGTH t` by DECIDE_TAC THEN
          PROVE_TAC[ELEM_def]
       ]
-   ]);
+   ]
+QED
 
 
-val ELEM_CAT_SEL___GREATER =
- store_thm
-  ("ELEM_CAT_SEL___GREATER",
-   ``!v l u p. l > u ==> (ELEM (CAT (SEL v (0, u),p)) l = ELEM p (l - SUC u))``,
+Theorem ELEM_CAT_SEL___GREATER:
+     !v l u p. l > u ==> (ELEM (CAT (SEL v (0, u),p)) l = ELEM p (l - SUC u))
+Proof
 
    REPEAT STRIP_TAC THEN
    `LENGTH (SEL v (0, u)) = u -0 + 1` by PROVE_TAC[LENGTH_SEL] THEN
-   ASM_SIMP_TAC arith_ss [ELEM_CAT___GREATER_EQ, SUC_ONE_ADD]);
+   ASM_SIMP_TAC arith_ss [ELEM_CAT___GREATER_EQ, SUC_ONE_ADD]
+QED
 
 
-val MAP_EQ_CONCAT =
- store_thm
-  ("MAP_EQ_CONCAT",
+Theorem MAP_EQ_CONCAT:
 
-   ``!f l L. (MAP f l = CONCAT L) =
-            (?L'. (l = CONCAT L') /\ (L = MAP (\l. MAP f l) L'))``,
+     !f l L. (MAP f l = CONCAT L) =
+            (?L'. (l = CONCAT L') /\ (L = MAP (\l. MAP f l) L'))
+Proof
 
 Induct_on `L` THENL [
   SIMP_TAC list_ss [CONCAT_def],
@@ -258,44 +257,44 @@ Induct_on `L` THENL [
     Q_TAC EXISTS_TAC `t` THEN
     ASM_SIMP_TAC list_ss []
   ]
-])
+]
+QED
 
-val CONCAT_APPEND =
- store_thm
-  ("CONCAT_APPEND",
-   ``!l1 l2. CONCAT (l1 <> l2) = (CONCAT l1 <> CONCAT l2)``,
+Theorem CONCAT_APPEND:
+     !l1 l2. CONCAT (l1 <> l2) = (CONCAT l1 <> CONCAT l2)
+Proof
 
    Induct_on `l1` THENL [
       SIMP_TAC list_ss [CONCAT_def],
       ASM_SIMP_TAC list_ss [CONCAT_def]
-   ]);
+   ]
+QED
 
-val IS_FINITE_EXISTS =
- store_thm
-  ("IS_FINITE_EXISTS",
-   ``!w. IS_FINITE w = ?p. w = FINITE p``,
+Theorem IS_FINITE_EXISTS:
+     !w. IS_FINITE w = ?p. w = FINITE p
+Proof
 
      Cases_on `w` THEN
      REWRITE_TAC[IS_FINITE_def] THEN
-     METIS_TAC[path_distinct]);
+     METIS_TAC[path_distinct]
+QED
 
 
-val REST_REPLICATE =
- store_thm
-  ("REST_REPLICATE",
+Theorem REST_REPLICATE:
 
-   ``!n e. n > 0 ==> ((REST (REPLICATE n e)) = (REPLICATE (PRE n) e))``,
+     !n e. n > 0 ==> ((REST (REPLICATE n e)) = (REPLICATE (PRE n) e))
+Proof
 
    Induct_on `n` THENL [
       SIMP_TAC arith_ss [],
       SIMP_TAC list_ss [REPLICATE, FinitePSLPathTheory.REST_def]
-   ]);
+   ]
+QED
 
 
-val RESTN_REPLICATE =
- store_thm
-  ("RESTN_REPLICATE",
-   ``!m n e. m <= n ==> ((RESTN (REPLICATE n e)) m = (REPLICATE (n-m) e))``,
+Theorem RESTN_REPLICATE:
+     !m n e. m <= n ==> ((RESTN (REPLICATE n e)) m = (REPLICATE (n-m) e))
+Proof
 
    Induct_on `m` THENL [
       SIMP_TAC arith_ss [FinitePSLPathTheory.RESTN_def],
@@ -305,13 +304,13 @@ val RESTN_REPLICATE =
       `n - m > 0` by DECIDE_TAC THEN
       `PRE (n - m) = (n - SUC m)` by DECIDE_TAC THEN
       ASM_SIMP_TAC std_ss [REST_REPLICATE]
-   ]);
+   ]
+QED
 
 
-val FIRSTN_REPLICATE =
- store_thm
-  ("FIRSTN_REPLICATE",
-   ``!m n e. m <= n ==> ((FIRSTN m (REPLICATE n e)) = (REPLICATE m e))``,
+Theorem FIRSTN_REPLICATE:
+     !m n e. m <= n ==> ((FIRSTN m (REPLICATE n e)) = (REPLICATE m e))
+Proof
 
    Induct_on `m` THENL [
       SIMP_TAC list_ss [FIRSTN, REPLICATE],
@@ -320,26 +319,25 @@ val FIRSTN_REPLICATE =
       `~(n = 0)` by DECIDE_TAC THEN
       `?n'. n = SUC n'` by PROVE_TAC[num_CASES] THEN
       ASM_SIMP_TAC list_ss [FIRSTN, REPLICATE]
-   ]);
+   ]
+QED
 
 
-val ELEM_REPLICATE =
- store_thm
-  ("ELEM_REPLICATE",
-   ``!m n e. m < n ==> ((ELEM (REPLICATE n e)) m = e)``,
+Theorem ELEM_REPLICATE:
+     !m n e. m < n ==> ((ELEM (REPLICATE n e)) m = e)
+Proof
 
    SIMP_TAC list_ss [FinitePSLPathTheory.ELEM_def, RESTN_REPLICATE] THEN
    REPEAT STRIP_TAC THEN
    `~(n - m = 0)` by DECIDE_TAC THEN
    `?n':num. (n - m) = SUC n'` by PROVE_TAC[num_CASES] THEN
    ASM_SIMP_TAC list_ss [REPLICATE, FinitePSLPathTheory.HEAD_def]
-);
+QED
 
 
-val REPLICATE_CONCAT =
- store_thm
-  ("REPLICATE_CONCAT",
-   ``!n e v1 v2. (REPLICATE n e = (v1 <> v2)) = (?n1 n2. (v1 = REPLICATE n1 e) /\ (v2 = REPLICATE n2 e) /\ (n = n1 + n2))``,
+Theorem REPLICATE_CONCAT:
+     !n e v1 v2. (REPLICATE n e = (v1 <> v2)) = (?n1 n2. (v1 = REPLICATE n1 e) /\ (v2 = REPLICATE n2 e) /\ (n = n1 + n2))
+Proof
 
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       EXISTS_TAC ``LENGTH (v1:'a list)`` THEN
@@ -367,13 +365,13 @@ val REPLICATE_CONCAT =
          SIMP_TAC list_ss [REPLICATE],
          ASM_SIMP_TAC list_ss [GSYM ADD_SUC, REPLICATE]
       ]
-   ]);
+   ]
+QED
 
-val REPLICATE_11 =
- store_thm
-  ("REPLICATE_11",
+Theorem REPLICATE_11:
 
-   ``!n e n' e'. (REPLICATE n e = REPLICATE n' e') = ((n = n') /\ ((n = 0) \/ (e = e')))``,
+     !n e n' e'. (REPLICATE n e = REPLICATE n' e') = ((n = n') /\ ((n = 0) \/ (e = e')))
+Proof
 
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       PROVE_TAC[LENGTH_REPLICATE],
@@ -387,14 +385,14 @@ val REPLICATE_11 =
       PROVE_TAC[REPLICATE],
 
       ASM_REWRITE_TAC[]
-   ]);
+   ]
+QED
 
 
-val REPLICATE_SING_LIST =
- store_thm
-  ("REPLICATE_SING_LIST",
+Theorem REPLICATE_SING_LIST:
 
-   ``!n e l. ([l] = REPLICATE n e) = ((n = 1) /\ (e = l))``,
+     !n e l. ([l] = REPLICATE n e) = ((n = 1) /\ (e = l))
+Proof
 
    REPEAT STRIP_TAC THEN EQ_TAC THENL [
       DISCH_TAC THEN
@@ -409,13 +407,13 @@ val REPLICATE_SING_LIST =
       REPEAT STRIP_TAC THEN
       `n = SUC 0` by DECIDE_TAC THEN
       ASM_REWRITE_TAC [REPLICATE]
-   ]);
+   ]
+QED
 
 
-val SEL_x_OMEGA___REPLICATE =
- store_thm
-  ("SEL_x_OMEGA___REPLICATE",
-   ``!n m x. (SEL (INFINITE (\n. x)) (n,m)) = REPLICATE (m-n+1) x``,
+Theorem SEL_x_OMEGA___REPLICATE:
+     !n m x. (SEL (INFINITE (\n. x)) (n,m)) = REPLICATE (m-n+1) x
+Proof
 
    REPEAT STRIP_TAC THEN
    `?t:num. (m-n+1) = t` by PROVE_TAC[] THEN
@@ -429,24 +427,24 @@ val SEL_x_OMEGA___REPLICATE =
          SIMP_TAC list_ss [SEL_REC_def, REPLICATE],
          ASM_SIMP_TAC list_ss [SEL_REC_def, REST_INFINITE]
       ]
-   ]);
+   ]
+QED
 
 
-val SEL_TOP_BOTTOM_OMEGA___REPLICATE =
- store_thm
-  ("SEL_TOP_BOTTOM_OMEGA___REPLICATE",
+Theorem SEL_TOP_BOTTOM_OMEGA___REPLICATE:
 
-   ``(!n m. (SEL TOP_OMEGA (n,m)) = REPLICATE (m-n+1) TOP) /\
-     (!n m. (SEL BOTTOM_OMEGA (n,m)) = REPLICATE (m-n+1) BOTTOM)``,
+     (!n m. (SEL TOP_OMEGA (n,m)) = REPLICATE (m-n+1) TOP) /\
+     (!n m. (SEL BOTTOM_OMEGA (n,m)) = REPLICATE (m-n+1) BOTTOM)
+Proof
 
-   REWRITE_TAC[TOP_OMEGA_def, BOTTOM_OMEGA_def, SEL_x_OMEGA___REPLICATE]);
+   REWRITE_TAC[TOP_OMEGA_def, BOTTOM_OMEGA_def, SEL_x_OMEGA___REPLICATE]
+QED
 
 
-val CAT_SEL_x_OMEGA_x_OMEGA =
- store_thm
-  ("CAT_SEL_x_OMEGA_x_OMEGA",
+Theorem CAT_SEL_x_OMEGA_x_OMEGA:
 
-   ``!m x. (CAT (SEL (INFINITE (\n. x)) (0,m),INFINITE (\n. x))) = INFINITE (\n. x)``,
+     !m x. (CAT (SEL (INFINITE (\n. x)) (0,m),INFINITE (\n. x))) = INFINITE (\n. x)
+Proof
 
    REPEAT STRIP_TAC THEN
    `IS_INFINITE (CAT (SEL (INFINITE (\n. x)) (0,m),INFINITE (\n. x)))` by PROVE_TAC[CAT_INFINITE] THEN
@@ -461,68 +459,66 @@ val CAT_SEL_x_OMEGA_x_OMEGA =
       `x' <= m` by DECIDE_TAC THEN
       `ELEM (INFINITE q) x' = ELEM (INFINITE (\n. x)) x'` by PROVE_TAC[ELEM_CAT_SEL___LESS_EQ] THEN
       ASM_SIMP_TAC std_ss [ELEM_INFINITE]
-   ]);
+   ]
+QED
 
 
-val SEL_NOT_EMPTY_LIST =
- store_thm
-  ("SEL_NOT_EMPTY_LIST",
-   ``!v m n. ~(SEL v (n, m) = [])``,
+Theorem SEL_NOT_EMPTY_LIST:
+     !v m n. ~(SEL v (n, m) = [])
+Proof
 
    REPEAT GEN_TAC THEN
    REWRITE_TAC[SEL_def] THEN
    `(m - n) + 1 = SUC (m - n)` by DECIDE_TAC THEN
    ASM_REWRITE_TAC[SEL_REC_SUC] THEN
-   SIMP_TAC list_ss []);
+   SIMP_TAC list_ss []
+QED
 
 
-val TOP_ITER___EQ___REPLICATE_TOP =
- store_thm
-  ("TOP_ITER___EQ___REPLICATE_TOP",
-   ``!n. TOP_ITER n = REPLICATE n TOP``,
+Theorem TOP_ITER___EQ___REPLICATE_TOP:
+     !n. TOP_ITER n = REPLICATE n TOP
+Proof
 
    Induct_on `n` THENL [
       REWRITE_TAC[TOP_ITER_def, REPLICATE],
       ASM_SIMP_TAC list_ss [TOP_ITER_def, REPLICATE]
-   ]);
+   ]
+QED
 
 
-val IS_INFINITE_COMPLEMENT =
- store_thm
-  ("IS_INFINITE_COMPLEMENT",
-   ``!v. IS_INFINITE v ==> IS_INFINITE (COMPLEMENT v)``,
+Theorem IS_INFINITE_COMPLEMENT:
+     !v. IS_INFINITE v ==> IS_INFINITE (COMPLEMENT v)
+Proof
 
 
    Cases_on `v` THEN REWRITE_TAC [IS_INFINITE_def] THEN
    REWRITE_TAC[COMPLEMENT_def, IS_INFINITE_def]
-);
+QED
 
 
-val IS_FINITE_COMPLEMENT =
- store_thm
-  ("IS_FINITE_COMPLEMENT",
-   ``!v. IS_FINITE v ==> IS_FINITE (COMPLEMENT v)``,
+Theorem IS_FINITE_COMPLEMENT:
+     !v. IS_FINITE v ==> IS_FINITE (COMPLEMENT v)
+Proof
 
 
    Cases_on `v` THEN REWRITE_TAC [IS_FINITE_def] THEN
    REWRITE_TAC[COMPLEMENT_def, IS_FINITE_def]
-);
+QED
 
 
-val IN_LESSX_REWRITE =
- store_thm
-  ("IN_LESSX_REWRITE",
-   ``!(m:num) (x:xnum). (m IN LESS x) = (m < x)``,
+Theorem IN_LESSX_REWRITE:
+     !(m:num) (x:xnum). (m IN LESS x) = (m < x)
+Proof
 
    Cases_on `x` THEN
-   REWRITE_TAC[IN_LESSX, LS]);
+   REWRITE_TAC[IN_LESSX, LS]
+QED
 
 
-val LENGTH_RESTN_LE =
- store_thm
-  ("LENGTH_RESTN_LE",
-   ``!n p. IS_FINITE p /\ n <= LENGTH p
-           ==> (LENGTH(RESTN p n) = LENGTH p - n)``,
+Theorem LENGTH_RESTN_LE:
+     !n p. IS_FINITE p /\ n <= LENGTH p
+           ==> (LENGTH(RESTN p n) = LENGTH p - n)
+Proof
 
    Induct_on `n` THENL [
       REWRITE_TAC [RESTN_def] THEN
@@ -538,71 +534,71 @@ val LENGTH_RESTN_LE =
       Cases_on `p` THEN
       FULL_SIMP_TAC arith_ss [REST_def, LENGTH_def, LE_num_xnum_def, LENGTH_TL,
          xnum_11, SUB_xnum_num_def]
-   ]);
+   ]
+QED
 
 
-val LENGTH_RESTN_THM_LE =
- store_thm
-  ("LENGTH_RESTN_THM_LE",
-   ``!n p. (n <= LENGTH p)
-           ==> (LENGTH(RESTN p n) = LENGTH p - n)``,
+Theorem LENGTH_RESTN_THM_LE:
+     !n p. (n <= LENGTH p)
+           ==> (LENGTH(RESTN p n) = LENGTH p - n)
+Proof
 
    Cases_on `p` THENL [
       METIS_TAC[LENGTH_RESTN_LE, IS_FINITE_def],
       SIMP_TAC arith_ss [LENGTH_def, RESTN_INFINITE, SUB_xnum_num_def]
-   ]);
+   ]
+QED
 
 
-val FINITE_INFINITE_PROPER_PATH_DISTINCT =
- store_thm
-  ("FINITE_INFINITE_PROPER_PATH_DISTINCT",
-   ``!v. ~(IS_INFINITE_PROPER_PATH v /\ IS_FINITE_PROPER_PATH v)``,
+Theorem FINITE_INFINITE_PROPER_PATH_DISTINCT:
+     !v. ~(IS_INFINITE_PROPER_PATH v /\ IS_FINITE_PROPER_PATH v)
+Proof
 
    SIMP_TAC std_ss [IS_INFINITE_PROPER_PATH_def, IS_FINITE_PROPER_PATH_def] THEN
    Cases_on `v` THEN
-   SIMP_TAC std_ss [path_distinct]);
+   SIMP_TAC std_ss [path_distinct]
+QED
 
 
-val COMPLEMENT_CONS =
- store_thm
-  ("COMPLEMENT_CONS",
-   ``!h v. COMPLEMENT (CONS (h, v)) = CONS (COMPLEMENT_LETTER h, COMPLEMENT v)``,
+Theorem COMPLEMENT_CONS:
+     !h v. COMPLEMENT (CONS (h, v)) = CONS (COMPLEMENT_LETTER h, COMPLEMENT v)
+Proof
 
    Cases_on `v` THENL [
       REWRITE_TAC[PSLPathTheory.CONS_def, COMPLEMENT_def, GSYM MAP],
 
       SIMP_TAC std_ss [PSLPathTheory.CONS_def, COMPLEMENT_def, FUN_EQ_THM, path_11] THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
-val COMPLEMENT_CAT =
- store_thm
-  ("COMPLEMENT_CAT",
-   ``!p v. COMPLEMENT (CAT (p, v)) = CAT (MAP COMPLEMENT_LETTER p, COMPLEMENT v)``,
+Theorem COMPLEMENT_CAT:
+     !p v. COMPLEMENT (CAT (p, v)) = CAT (MAP COMPLEMENT_LETTER p, COMPLEMENT v)
+Proof
 
    Induct_on `p` THENL [
       REWRITE_TAC [CAT_def, MAP],
       REWRITE_TAC [CAT_def, MAP, COMPLEMENT_CONS] THEN PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
 
 
-val TOP_BOTTOM_OMEGA___COMPLEMENT =
- store_thm
-  ("TOP_BOTTOM_OMEGA___COMPLEMENT",
-   ``(COMPLEMENT TOP_OMEGA = BOTTOM_OMEGA) /\
-     (COMPLEMENT BOTTOM_OMEGA = TOP_OMEGA)``,
+Theorem TOP_BOTTOM_OMEGA___COMPLEMENT:
+     (COMPLEMENT TOP_OMEGA = BOTTOM_OMEGA) /\
+     (COMPLEMENT BOTTOM_OMEGA = TOP_OMEGA)
+Proof
 
    SIMP_TAC std_ss [COMPLEMENT_def, TOP_OMEGA_def,
-                    BOTTOM_OMEGA_def, path_11, o_DEF, COMPLEMENT_LETTER_def]);
+                    BOTTOM_OMEGA_def, path_11, o_DEF, COMPLEMENT_LETTER_def]
+QED
 
 
-val SEL_REC_CAT___LESS_EQ =
- store_thm
-  ("SEL_REC_CAT___LESS_EQ",
-   ``!v p n m. (n + m <= LENGTH p) ==> (SEL_REC m n (CAT (p, v)) = SEL_REC m n (FINITE p))``,
+Theorem SEL_REC_CAT___LESS_EQ:
+     !v p n m. (n + m <= LENGTH p) ==> (SEL_REC m n (CAT (p, v)) = SEL_REC m n (FINITE p))
+Proof
 
    Induct_on `m` THENL [
       SIMP_TAC arith_ss [SEL_REC_def],
@@ -615,25 +611,25 @@ val SEL_REC_CAT___LESS_EQ =
          `SUC n + m <= LENGTH p` by DECIDE_TAC THEN
          PROVE_TAC[]
       ]
-   ]);
+   ]
+QED
 
 
-val SEL_CAT___LESS =
- store_thm
-  ("SEL_CAT___LESS",
-   ``!p v m n. (n + m < LENGTH p) ==> (SEL (CAT (p,v)) (m,n) = SEL (FINITE p) (m, n))``,
+Theorem SEL_CAT___LESS:
+     !p v m n. (n + m < LENGTH p) ==> (SEL (CAT (p,v)) (m,n) = SEL (FINITE p) (m, n))
+Proof
 
    REWRITE_TAC[SEL_def] THEN
    REPEAT STRIP_TAC THEN
    `?n':num. n - m + 1 = n'` by PROVE_TAC[] THEN
    ASM_REWRITE_TAC[] THEN
    `m + n' <= LENGTH p` by DECIDE_TAC THEN
-   METIS_TAC[SEL_REC_CAT___LESS_EQ]);
+   METIS_TAC[SEL_REC_CAT___LESS_EQ]
+QED
 
-val PATH_EQ_ELEM_THM =
- store_thm
-  ("PATH_EQ_ELEM_THM",
-   ``!v w. (v = w) = ((LENGTH v = LENGTH w) /\ (!j. j < LENGTH v ==> (ELEM v j = ELEM w j)))``,
+Theorem PATH_EQ_ELEM_THM:
+     !v w. (v = w) = ((LENGTH v = LENGTH w) /\ (!j. j < LENGTH v ==> (ELEM v j = ELEM w j)))
+Proof
 
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
       ASM_REWRITE_TAC[],
@@ -647,16 +643,16 @@ val PATH_EQ_ELEM_THM =
          PROVE_TAC[LIST_EQ_REWRITE],
          PROVE_TAC[FUN_EQ_THM]
       ]
-   ]);
+   ]
+QED
 
 
 
 
 
-val RESTN_CAT___LESS =
- store_thm
-  ("RESTN_CAT___LESS",
-   ``!p v l. (l < LENGTH p) ==> ((RESTN (CAT (p, v)) l) = CAT (RESTN p l, v))``,
+Theorem RESTN_CAT___LESS:
+     !p v l. (l < LENGTH p) ==> ((RESTN (CAT (p, v)) l) = CAT (RESTN p l, v))
+Proof
 
    Induct_on `l` THENL [
       SIMP_TAC std_ss [RESTN_def, FinitePSLPathTheory.RESTN_def],
@@ -665,13 +661,13 @@ val RESTN_CAT___LESS =
       SIMP_TAC list_ss [RESTN_def, CAT_def, FinitePSLPathTheory.RESTN_def,
                         FinitePSLPathTheory.REST_def, REST_CONS] THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
-val RESTN_CAT___EQ =
- store_thm
-  ("RESTN_CAT___EQ",
-   ``!p v. (RESTN (CAT (p, v)) (LENGTH p)) = v``,
+Theorem RESTN_CAT___EQ:
+     !p v. (RESTN (CAT (p, v)) (LENGTH p)) = v
+Proof
 
    Induct_on `LENGTH (p:'a list)` THENL [
       REPEAT STRIP_TAC THEN
@@ -683,13 +679,13 @@ val RESTN_CAT___EQ =
       REPEAT STRIP_TAC THEN
       SIMP_TAC std_ss [RESTN_def, CAT_def, REST_CONS] THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
-val RESTN_CAT___GREATER_EQ =
- store_thm
-  ("RESTN_CAT___GREATER_EQ",
-   ``!p v l. (l >= LENGTH p) ==> ((RESTN (CAT (p, v)) l) = RESTN v (l- LENGTH p))``,
+Theorem RESTN_CAT___GREATER_EQ:
+     !p v l. (l >= LENGTH p) ==> ((RESTN (CAT (p, v)) l) = RESTN v (l- LENGTH p))
+Proof
 
    Induct_on `l:num - (LENGTH (p:'a list))` THENL [
       REPEAT STRIP_TAC THEN
@@ -705,21 +701,21 @@ val RESTN_CAT___GREATER_EQ =
       `RESTN (CAT (p,v')) l' = RESTN v' (l' - LENGTH p)` by PROVE_TAC[] THEN
       ASM_REWRITE_TAC[] THEN
       REWRITE_TAC[RESTN_RESTN, REST_RESTN]
-   ]);
+   ]
+QED
 
 
-val SEG_EL =
- store_thm
-  ("SEG_EL",
-   ``!n' n m l. (n + m <= LENGTH l /\ n' < n) ==> (EL n' (SEG n m l) = EL (n'+m) l)``,
+Theorem SEG_EL:
+     !n' n m l. (n + m <= LENGTH l /\ n' < n) ==> (EL n' (SEG n m l) = EL (n'+m) l)
+Proof
 
-   SIMP_TAC list_ss [EL_SEG, LENGTH_SEG, SEG_SEG]);
+   SIMP_TAC list_ss [EL_SEG, LENGTH_SEG, SEG_SEG]
+QED
 
 
-val SEG_SUC =
- store_thm
-  ("SEG_SUC",
-   ``!n m l. (LENGTH l > m) ==> (SEG (SUC n) m l = (EL m l)::SEG n (SUC m) l)``,
+Theorem SEG_SUC:
+     !n m l. (LENGTH l > m) ==> (SEG (SUC n) m l = (EL m l)::SEG n (SUC m) l)
+Proof
 
    Induct_on `m` THENL [
       Cases_on `l` THEN
@@ -736,13 +732,13 @@ val SEG_SUC =
       ASM_SIMP_TAC list_ss [] THEN
       Cases_on `n` THEN
       ASM_REWRITE_TAC[SEG]
-   ]);
+   ]
+QED
 
 
-val SEG_SING_LIST =
- store_thm
-  ("SEG_SING_LIST",
-   ``!n m l. ((m < LENGTH l) /\ (n > 0)) ==> ([HD (SEG n m l)] = SEG 1 m l)``,
+Theorem SEG_SING_LIST:
+     !n m l. ((m < LENGTH l) /\ (n > 0)) ==> ([HD (SEG n m l)] = SEG 1 m l)
+Proof
 
    Induct_on `m` THENL [
       Cases_on `l` THEN Cases_on `n` THEN
@@ -755,13 +751,13 @@ val SEG_SING_LIST =
       `1 = SUC 0` by DECIDE_TAC THEN
       ONCE_ASM_REWRITE_TAC[] THEN
       REWRITE_TAC[SEG]
-   ]);
+   ]
+QED
 
 
-val SEG_SPLIT =
- store_thm
-  ("SEG_SPLIT",
-   ``!n1 n2 m l. (n1+n2+m <= LENGTH l) ==> (SEG (n1+n2) m l = (SEG n1 m l ++ SEG n2 (n1+m) l))``,
+Theorem SEG_SPLIT:
+     !n1 n2 m l. (n1+n2+m <= LENGTH l) ==> (SEG (n1+n2) m l = (SEG n1 m l ++ SEG n2 (n1+m) l))
+Proof
 
    Induct_on `n1` THEN
    SIMP_TAC list_ss [SEG] THEN
@@ -782,22 +778,22 @@ val SEG_SPLIT =
    ASM_SIMP_TAC list_ss [SEG_SUC] THEN
    ONCE_ASM_REWRITE_TAC[] THEN
    SIMP_TAC list_ss [SUC_ONE_ADD] THEN
-   PROVE_TAC[EL_SEG]);
+   PROVE_TAC[EL_SEG]
+QED
 
-val LENGTH_CAT_SEL_TOP_OMEGA =
- store_thm
-  ("LENGTH_CAT_SEL_TOP_OMEGA",
-   ``!l v. LENGTH (CAT (SEL v (0,l),TOP_OMEGA)) = INFINITY``,
+Theorem LENGTH_CAT_SEL_TOP_OMEGA:
+     !l v. LENGTH (CAT (SEL v (0,l),TOP_OMEGA)) = INFINITY
+Proof
 
    REPEAT STRIP_TAC THEN
-   REWRITE_TAC[TOP_OMEGA_def, LENGTH_CAT]);
+   REWRITE_TAC[TOP_OMEGA_def, LENGTH_CAT]
+QED
 
 
-val MEM_SEL_REC =
- store_thm
-  ("MEM_SEL_REC",
-    ``!x m n p. MEM x (SEL_REC m n p) =
-              ?n':num. (x = ELEM p n') /\ (n' >= n) /\ (n' < n + m)``,
+Theorem MEM_SEL_REC:
+      !x m n p. MEM x (SEL_REC m n p) =
+              ?n':num. (x = ELEM p n') /\ (n' >= n) /\ (n' < n + m)
+Proof
 
 
     Induct_on `m` THENL [
@@ -832,17 +828,17 @@ val MEM_SEL_REC =
           ASM_SIMP_TAC arith_ss [REST_RESTN, ELEM_RESTN, SUC_ONE_ADD]
         ]
       ]
-    ]);
+    ]
+QED
 
 
 
-val MEM_SEL =
- store_thm
-  ("MEM_SEL",
-    ``!x m n p. MEM x (SEL p (m, n)) =
+Theorem MEM_SEL:
+      !x m n p. MEM x (SEL p (m, n)) =
               if (n < m) then x = ELEM p m else
               ?n':num. (x = ELEM p n') /\ (n' >= m) /\
-                  (n' <= n)``,
+                  (n' <= n)
+Proof
 
     SIMP_TAC std_ss [SEL_def, MEM_SEL_REC] THEN
     REPEAT STRIP_TAC THEN
@@ -855,7 +851,8 @@ val MEM_SEL =
       `!x:num y:num. (x < SUC y) = (x <= y)` by DECIDE_TAC THEN
       `m + (n - m + 1) = (SUC n)` by DECIDE_TAC THEN
       ASM_SIMP_TAC std_ss []
-    ]);
+    ]
+QED
 
 
 
@@ -888,14 +885,14 @@ Definition INSERT_PROP_def:
 End
 
 
-val INSERT_PROP_CASES =
- store_thm
-  ("INSERT_PROP_CASES",
+Theorem INSERT_PROP_CASES:
 
-   ``!c l. ((INSERT_PROP c l = TOP) = (l = TOP)) /\
-           ((INSERT_PROP c l = BOTTOM) = (l = BOTTOM))``,
+     !c l. ((INSERT_PROP c l = TOP) = (l = TOP)) /\
+           ((INSERT_PROP c l = BOTTOM) = (l = BOTTOM))
+Proof
 
-   Cases_on `l` THEN SIMP_TAC std_ss [INSERT_PROP_def, letter_distinct]);
+   Cases_on `l` THEN SIMP_TAC std_ss [INSERT_PROP_def, letter_distinct]
+QED
 
 
 Definition F_SERE_FREE_def:
@@ -954,15 +951,15 @@ Definition LETTER_RESTRICT_def:
 End
 
 
-val LETTER_RESTRICT_Cases =
- store_thm
-  ("LETTER_RESTRICT_Cases",
-   ``!l s S. ((LETTER_RESTRICT S l = STATE s) = (?s'. (l = STATE s') /\ (s = s' INTER S))) /\
+Theorem LETTER_RESTRICT_Cases:
+     !l s S. ((LETTER_RESTRICT S l = STATE s) = (?s'. (l = STATE s') /\ (s = s' INTER S))) /\
             ((LETTER_RESTRICT S l = TOP) = (l = TOP)) /\
-            ((LETTER_RESTRICT S l = BOTTOM) = (l = BOTTOM))``,
+            ((LETTER_RESTRICT S l = BOTTOM) = (l = BOTTOM))
+Proof
    Cases_on `l` THEN
    SIMP_TAC std_ss [LETTER_RESTRICT_def, letter_distinct, letter_11] THEN
-   PROVE_TAC[]);
+   PROVE_TAC[]
+QED
 
 
 Definition PATH_MAP_def:
@@ -971,33 +968,32 @@ Definition PATH_MAP_def:
 End
 
 
-val LENGTH_PATH_MAP =
- store_thm
-  ("LENGTH_PATH_MAP",
-   ``!f p. LENGTH (PATH_MAP f p) = LENGTH p``,
+Theorem LENGTH_PATH_MAP:
+     !f p. LENGTH (PATH_MAP f p) = LENGTH p
+Proof
 
     Cases_on `p` THEN
-    SIMP_TAC std_ss [PATH_MAP_def, LENGTH_def, LENGTH_MAP]);
+    SIMP_TAC std_ss [PATH_MAP_def, LENGTH_def, LENGTH_MAP]
+QED
 
 
-val ELEM_PATH_MAP =
- store_thm
-  ("ELEM_PATH_MAP",
-   ``!f p n. (LENGTH p > n) ==>
-             ((ELEM (PATH_MAP f p) n) = (f (ELEM p n)))``,
+Theorem ELEM_PATH_MAP:
+     !f p n. (LENGTH p > n) ==>
+             ((ELEM (PATH_MAP f p) n) = (f (ELEM p n)))
+Proof
 
     Cases_on `p` THENL [
       SIMP_TAC list_ss [PATH_MAP_def, LENGTH_def, ELEM_FINITE,
         EL_MAP, GT_xnum_num_def],
 
       SIMP_TAC std_ss [PATH_MAP_def, LENGTH_def, GT, ELEM_INFINITE]
-    ]);
+    ]
+QED
 
 
-val REST_PATH_MAP =
- store_thm
-  ("REST_PATH_MAP",
-   ``!f p. LENGTH p > 0 ==> ((REST (PATH_MAP f p)) = (PATH_MAP f (REST p)))``,
+Theorem REST_PATH_MAP:
+     !f p. LENGTH p > 0 ==> ((REST (PATH_MAP f p)) = (PATH_MAP f (REST p)))
+Proof
 
     Cases_on `p` THENL [
       REWRITE_TAC [REST_def, PATH_MAP_def, TL_MAP, LENGTH_def, GT] THEN
@@ -1009,13 +1005,13 @@ val REST_PATH_MAP =
       PROVE_TAC[TL_MAP],
 
       SIMP_TAC std_ss [REST_def, PATH_MAP_def]
-    ]);
+    ]
+QED
 
 
-val RESTN_PATH_MAP =
- store_thm
-  ("RESTN_PATH_MAP",
-   ``!f p n. LENGTH p >= n ==> (((RESTN (PATH_MAP f p) n) = (PATH_MAP f (RESTN p n))))``,
+Theorem RESTN_PATH_MAP:
+     !f p n. LENGTH p >= n ==> (((RESTN (PATH_MAP f p) n) = (PATH_MAP f (RESTN p n))))
+Proof
 
     Cases_on `p` THENL [
       SIMP_TAC std_ss [LENGTH_def, GE] THEN
@@ -1036,15 +1032,15 @@ val RESTN_PATH_MAP =
 
       SIMP_TAC std_ss [PATH_MAP_def, LENGTH_def, GE, ELEM_INFINITE,
         RESTN_INFINITE]
-    ]);
+    ]
+QED
 
 
 
-val SEL_REC_PATH_MAP =
- store_thm
-  ("SEL_REC_PATH_MAP",
-   ``!m n f p. LENGTH p >= m + n ==>
-             ((SEL_REC m n (PATH_MAP f p)) = (MAP f (SEL_REC m n p)))``,
+Theorem SEL_REC_PATH_MAP:
+     !m n f p. LENGTH p >= m + n ==>
+             ((SEL_REC m n (PATH_MAP f p)) = (MAP f (SEL_REC m n p)))
+Proof
 
     Induct_on `m` THENL [
       SIMP_TAC list_ss [SEL_REC_def],
@@ -1082,14 +1078,14 @@ val SEL_REC_PATH_MAP =
         ) THEN
         FULL_SIMP_TAC std_ss [REST_PATH_MAP]
       ]
-    ]);
+    ]
+QED
 
 
-val SEL_PATH_MAP =
- store_thm
-  ("SEL_PATH_MAP",
-   ``!m n f p. (LENGTH p > n /\ n >= m) ==>
-             ((SEL (PATH_MAP f p) (m, n)) = (MAP f (SEL p (m, n))))``,
+Theorem SEL_PATH_MAP:
+     !m n f p. (LENGTH p > n /\ n >= m) ==>
+             ((SEL (PATH_MAP f p) (m, n)) = (MAP f (SEL p (m, n))))
+Proof
 
      REWRITE_TAC[SEL_def] THEN
      REPEAT STRIP_TAC THEN
@@ -1097,39 +1093,39 @@ val SEL_PATH_MAP =
      Cases_on `p` THENL [
         FULL_SIMP_TAC arith_ss [LENGTH_def, GT, GE],
         REWRITE_TAC[LENGTH_def, GE]
-      ]);
+      ]
+QED
 
 Definition PATH_LETTER_RESTRICT_def:
    PATH_LETTER_RESTRICT S p = PATH_MAP (LETTER_RESTRICT S) p
 End
 
 
-val LENGTH_PATH_LETTER_RESTRICT =
- store_thm
-  ("LENGTH_PATH_LETTER_RESTRICT",
-   ``!S p. LENGTH (PATH_LETTER_RESTRICT S p) = LENGTH p``,
-    REWRITE_TAC[PATH_LETTER_RESTRICT_def, LENGTH_PATH_MAP]);
+Theorem LENGTH_PATH_LETTER_RESTRICT:
+     !S p. LENGTH (PATH_LETTER_RESTRICT S p) = LENGTH p
+Proof
+    REWRITE_TAC[PATH_LETTER_RESTRICT_def, LENGTH_PATH_MAP]
+QED
 
 
-val ELEM_PATH_LETTER_RESTRICT =
- store_thm
-  ("ELEM_PATH_LETTER_RESTRICT",
-   ``!S p n. (LENGTH p > n) ==>
-             ((ELEM (PATH_LETTER_RESTRICT S p) n) = (LETTER_RESTRICT S (ELEM p n)))``,
-    REWRITE_TAC[PATH_LETTER_RESTRICT_def, ELEM_PATH_MAP]);
+Theorem ELEM_PATH_LETTER_RESTRICT:
+     !S p n. (LENGTH p > n) ==>
+             ((ELEM (PATH_LETTER_RESTRICT S p) n) = (LETTER_RESTRICT S (ELEM p n)))
+Proof
+    REWRITE_TAC[PATH_LETTER_RESTRICT_def, ELEM_PATH_MAP]
+QED
 
 
-val RESTN_PATH_LETTER_RESTRICT =
- store_thm
-  ("RESTN_PATH_LETTER_RESTRICT",
-   ``!S p n. LENGTH p >= n ==> (((RESTN (PATH_LETTER_RESTRICT S p) n) = (PATH_LETTER_RESTRICT S (RESTN p n))))``,
-    REWRITE_TAC[PATH_LETTER_RESTRICT_def, RESTN_PATH_MAP]);
+Theorem RESTN_PATH_LETTER_RESTRICT:
+     !S p n. LENGTH p >= n ==> (((RESTN (PATH_LETTER_RESTRICT S p) n) = (PATH_LETTER_RESTRICT S (RESTN p n))))
+Proof
+    REWRITE_TAC[PATH_LETTER_RESTRICT_def, RESTN_PATH_MAP]
+QED
 
 
-val COMPLEMENT_PATH_LETTER_RESTRICT =
- store_thm
-  ("COMPLEMENT_PATH_LETTER_RESTRICT",
-   ``!S p. COMPLEMENT (PATH_LETTER_RESTRICT S p) = PATH_LETTER_RESTRICT S (COMPLEMENT p)``,
+Theorem COMPLEMENT_PATH_LETTER_RESTRICT:
+     !S p. COMPLEMENT (PATH_LETTER_RESTRICT S p) = PATH_LETTER_RESTRICT S (COMPLEMENT p)
+Proof
 
     SUBGOAL_TAC `!S x. COMPLEMENT_LETTER (LETTER_RESTRICT S x) =
                        LETTER_RESTRICT S (COMPLEMENT_LETTER x)` THEN1 (
@@ -1142,7 +1138,8 @@ val COMPLEMENT_PATH_LETTER_RESTRICT =
 
       ASM_SIMP_TAC std_ss [PATH_LETTER_RESTRICT_def, PATH_MAP_def, COMPLEMENT_def,
         o_DEF]
-    ]);
+    ]
+QED
 
 
 Definition LETTER_USED_VARS_def:
@@ -1200,65 +1197,64 @@ Definition F_PROP_FREE_def:   F_PROP_FREE c f = ~(c IN F_USED_VARS f)
 End
 
 
-val FINITE___B_USED_VARS =
- store_thm
-  ("FINITE___B_USED_VARS",
+Theorem FINITE___B_USED_VARS:
 
-  ``!b. FINITE(B_USED_VARS b)``,
+    !b. FINITE(B_USED_VARS b)
+Proof
 
   INDUCT_THEN bexp_induct ASSUME_TAC THEN (
       ASM_SIMP_TAC std_ss [B_USED_VARS_def, FINITE_SING, FINITE_UNION,
         FINITE_EMPTY]
-  ));
+  )
+QED
 
 
-val FINITE___S_USED_VARS =
- store_thm
-  ("FINITE___S_USED_VARS",
+Theorem FINITE___S_USED_VARS:
 
-  ``!r. FINITE(S_USED_VARS r)``,
+    !r. FINITE(S_USED_VARS r)
+Proof
 
   INDUCT_THEN sere_induct ASSUME_TAC THEN (
       ASM_SIMP_TAC std_ss [S_USED_VARS_def, FINITE_UNION,
         FINITE_EMPTY, FINITE___B_USED_VARS]
-  ));
+  )
+QED
 
 
-val FINITE___F_USED_VARS =
- store_thm
-  ("FINITE___F_USED_VARS",
+Theorem FINITE___F_USED_VARS:
 
-  ``!f. FINITE(F_USED_VARS f)``,
+    !f. FINITE(F_USED_VARS f)
+Proof
 
   INDUCT_THEN fl_induct ASSUME_TAC THEN (
       ASM_SIMP_TAC std_ss [F_USED_VARS_def, FINITE_UNION,
         FINITE_EMPTY, FINITE___B_USED_VARS, FINITE___S_USED_VARS]
-  ));
+  )
+QED
 
 
-val LETTER_USED_VARS_COMPLEMENT =
- store_thm
-  ("LETTER_USED_VARS_COMPLEMENT",
-    ``!l. LETTER_USED_VARS (COMPLEMENT_LETTER l) =
-          LETTER_USED_VARS l``,
+Theorem LETTER_USED_VARS_COMPLEMENT:
+      !l. LETTER_USED_VARS (COMPLEMENT_LETTER l) =
+          LETTER_USED_VARS l
+Proof
 
     Cases_on `l` THEN
-    REWRITE_TAC[COMPLEMENT_LETTER_def, LETTER_USED_VARS_def]);
+    REWRITE_TAC[COMPLEMENT_LETTER_def, LETTER_USED_VARS_def]
+QED
 
-val PATH_USED_VARS_COMPLEMENT =
- store_thm
-  ("PATH_USED_VARS_COMPLEMENT",
-   ``!v. PATH_USED_VARS (COMPLEMENT v) = PATH_USED_VARS v``,
+Theorem PATH_USED_VARS_COMPLEMENT:
+     !v. PATH_USED_VARS (COMPLEMENT v) = PATH_USED_VARS v
+Proof
 
     SIMP_TAC std_ss [PATH_USED_VARS_def, FUN_EQ_THM, LENGTH_COMPLEMENT] THEN
     METIS_TAC[LETTER_USED_VARS_COMPLEMENT, GT_LS, ELEM_COMPLEMENT,
-      LENGTH_COMPLEMENT]);
+      LENGTH_COMPLEMENT]
+QED
 
 
-val RESTN_PATH_USED_VARS =
- store_thm
-  ("RESTN_PATH_USED_VARS",
-   ``!n p. LENGTH p > n ==> (PATH_USED_VARS (RESTN p n) SUBSET PATH_USED_VARS p)``,
+Theorem RESTN_PATH_USED_VARS:
+     !n p. LENGTH p > n ==> (PATH_USED_VARS (RESTN p n) SUBSET PATH_USED_VARS p)
+Proof
      SIMP_TAC std_ss [PATH_USED_VARS_def, SUBSET_DEF, IN_ABS] THEN
      REPEAT STRIP_TAC THEN
      Q_TAC EXISTS_TAC `n' + n` THEN
@@ -1270,23 +1266,23 @@ val RESTN_PATH_USED_VARS =
         SIMP_TAC arith_ss [LENGTH_def, GT, SUB_xnum_num_def],
 
         REWRITE_TAC[LENGTH_def, GT]
-     ]);
+     ]
+QED
 
 
-val PATH_USED_VARS___TOP_OMEGA =
- store_thm
-  ("PATH_USED_VARS___TOP_OMEGA",
-   ``PATH_USED_VARS TOP_OMEGA = EMPTY``,
+Theorem PATH_USED_VARS___TOP_OMEGA:
+     PATH_USED_VARS TOP_OMEGA = EMPTY
+Proof
 
     SIMP_TAC std_ss [PATH_USED_VARS_def, EXTENSION, NOT_IN_EMPTY,
-      IN_ABS, TOP_OMEGA_def, ELEM_INFINITE, LETTER_USED_VARS_def]);
+      IN_ABS, TOP_OMEGA_def, ELEM_INFINITE, LETTER_USED_VARS_def]
+QED
 
 
-val SEL_REC_PATH_USED_VARS =
- store_thm
-  ("SEL_REC_PATH_USED_VARS",
-   ``!m n p. (LENGTH p >= m + n) ==>
-             (LIST_BIGUNION (MAP LETTER_USED_VARS (SEL_REC m n p)) SUBSET (PATH_USED_VARS p))``,
+Theorem SEL_REC_PATH_USED_VARS:
+     !m n p. (LENGTH p >= m + n) ==>
+             (LIST_BIGUNION (MAP LETTER_USED_VARS (SEL_REC m n p)) SUBSET (PATH_USED_VARS p))
+Proof
 
     Induct_on `m` THENL [
       SIMP_TAC list_ss [SEL_REC_def, LIST_BIGUNION_def, EMPTY_SUBSET],
@@ -1329,14 +1325,14 @@ val SEL_REC_PATH_USED_VARS =
           by PROVE_TAC[RESTN_PATH_USED_VARS] THEN
         PROVE_TAC [SUBSET_TRANS]
       ]
-    ]);
+    ]
+QED
 
 
-val SEL_PATH_USED_VARS =
- store_thm
-  ("SEL_PATH_USED_VARS",
-   ``!m n p. (LENGTH p > n /\ n >= m) ==>
-             (LIST_BIGUNION (MAP LETTER_USED_VARS (SEL p (m, n))) SUBSET (PATH_USED_VARS p))``,
+Theorem SEL_PATH_USED_VARS:
+     !m n p. (LENGTH p > n /\ n >= m) ==>
+             (LIST_BIGUNION (MAP LETTER_USED_VARS (SEL p (m, n))) SUBSET (PATH_USED_VARS p))
+Proof
 
      REWRITE_TAC[SEL_def] THEN
      REPEAT STRIP_TAC THEN
@@ -1344,15 +1340,15 @@ val SEL_PATH_USED_VARS =
      Cases_on `p` THENL [
         FULL_SIMP_TAC arith_ss [LENGTH_def, GT, GE],
         REWRITE_TAC[LENGTH_def, GE]
-     ]);
+     ]
+QED
 
 
 
-val CONS_PATH_USED_VARS =
- store_thm
-  ("CONS_PATH_USED_VARS",
-   ``!h p. PATH_USED_VARS (CONS (h, p)) =
-           (LETTER_USED_VARS h) UNION PATH_USED_VARS p``,
+Theorem CONS_PATH_USED_VARS:
+     !h p. PATH_USED_VARS (CONS (h, p)) =
+           (LETTER_USED_VARS h) UNION PATH_USED_VARS p
+Proof
 
     Cases_on `p` THENL [
       SIMP_TAC list_ss [PATH_USED_VARS_def, CONS_def, EXTENSION, IN_ABS,
@@ -1390,14 +1386,14 @@ val CONS_PATH_USED_VARS =
         EXISTS_TAC ``SUC n`` THEN
         FULL_SIMP_TAC arith_ss []
       ]
-    ]);
+    ]
+QED
 
 
-val CAT_PATH_USED_VARS =
- store_thm
-  ("CAT_PATH_USED_VARS",
-   ``!l p. PATH_USED_VARS (CAT (l, p)) =
-           (LIST_BIGUNION (MAP LETTER_USED_VARS l)) UNION PATH_USED_VARS p``,
+Theorem CAT_PATH_USED_VARS:
+     !l p. PATH_USED_VARS (CAT (l, p)) =
+           (LIST_BIGUNION (MAP LETTER_USED_VARS l)) UNION PATH_USED_VARS p
+Proof
 
     Induct_on `l` THENL [
       SIMP_TAC std_ss [CAT_def, MAP, LIST_BIGUNION_def, UNION_EMPTY],
@@ -1405,13 +1401,13 @@ val CAT_PATH_USED_VARS =
       ASM_SIMP_TAC list_ss [CAT_def, CONS_PATH_USED_VARS, EXTENSION, IN_UNION,
         LIST_BIGUNION_def] THEN
       PROVE_TAC[]
-    ])
+    ]
+QED
 
 
-val B_USED_VARS_INTER_SUBSET_THM =
- store_thm
-  ("B_USED_VARS_INTER_SUBSET_THM",
-   ``!l b S. (B_USED_VARS b) SUBSET S ==> (B_SEM l b = B_SEM (LETTER_RESTRICT S l) b)``,
+Theorem B_USED_VARS_INTER_SUBSET_THM:
+     !l b S. (B_USED_VARS b) SUBSET S ==> (B_SEM l b = B_SEM (LETTER_RESTRICT S l) b)
+Proof
 
    Cases_on `l` THEN REWRITE_TAC[B_SEM_def, LETTER_RESTRICT_def] THEN
    INDUCT_THEN bexp_induct ASSUME_TAC THENL [
@@ -1426,18 +1422,18 @@ val B_USED_VARS_INTER_SUBSET_THM =
 
       REWRITE_TAC[B_SEM_def, B_USED_VARS_def, UNION_SUBSET] THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
 
 
 
 
-val S_USED_VARS_INTER_SUBSET_THM =
- store_thm
-  ("S_USED_VARS_INTER_SUBSET_THM",
-   ``!r l S.  (S_CLOCK_FREE r) ==>
-      (S_USED_VARS r) SUBSET S ==> (US_SEM l r = US_SEM (MAP (LETTER_RESTRICT S) l) r)``,
+Theorem S_USED_VARS_INTER_SUBSET_THM:
+     !r l S.  (S_CLOCK_FREE r) ==>
+      (S_USED_VARS r) SUBSET S ==> (US_SEM l r = US_SEM (MAP (LETTER_RESTRICT S) l) r)
+Proof
 
    INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
       SIMP_TAC list_ss [S_USED_VARS_def, US_SEM_def, ELEM_EL,
@@ -1493,16 +1489,16 @@ val S_USED_VARS_INTER_SUBSET_THM =
 
 
       SIMP_TAC list_ss [S_CLOCK_FREE_def]
-   ]);
+   ]
+QED
 
 
 
-val F_USED_VARS_INTER_SUBSET_THM =
- store_thm
-  ("F_USED_VARS_INTER_SUBSET_THM",
-   ``!f p S.  (F_CLOCK_FREE f) ==>
+Theorem F_USED_VARS_INTER_SUBSET_THM:
+     !f p S.  (F_CLOCK_FREE f) ==>
               (F_USED_VARS f) SUBSET S ==>
-              (UF_SEM p f = UF_SEM (PATH_LETTER_RESTRICT S p) f)``,
+              (UF_SEM p f = UF_SEM (PATH_LETTER_RESTRICT S p) f)
+Proof
 
   INDUCT_THEN fl_induct ASSUME_TAC THENL [ (* 11 subgoals *)
     SIMP_TAC std_ss [UF_SEM_def, LENGTH_PATH_LETTER_RESTRICT,
@@ -1677,7 +1673,8 @@ val F_USED_VARS_INTER_SUBSET_THM =
       ) THEN
       PROVE_TAC[RESTN_PATH_LETTER_RESTRICT]
     ]
-  ]);
+  ]
+QED
 
 
 Definition LETTER_VAR_RENAMING_def:
@@ -1691,40 +1688,39 @@ Definition PATH_VAR_RENAMING_def:
 End
 
 
-val LENGTH_PATH_VAR_RENAMING =
- store_thm
-  ("LENGTH_PATH_VAR_RENAMING",
-   ``!f p. LENGTH (PATH_VAR_RENAMING f p) = LENGTH p``,
-    REWRITE_TAC[PATH_VAR_RENAMING_def, LENGTH_PATH_MAP]);
+Theorem LENGTH_PATH_VAR_RENAMING:
+     !f p. LENGTH (PATH_VAR_RENAMING f p) = LENGTH p
+Proof
+    REWRITE_TAC[PATH_VAR_RENAMING_def, LENGTH_PATH_MAP]
+QED
 
-val SEL_PATH_VAR_RENAMING =
- store_thm
-  ("SEL_PATH_VAR_RENAMING",
-   ``!m n f p. (LENGTH p > n /\ n >= m) ==>
-             ((SEL (PATH_VAR_RENAMING f p) (m, n)) = (MAP (LETTER_VAR_RENAMING f) (SEL p (m, n))))``,
+Theorem SEL_PATH_VAR_RENAMING:
+     !m n f p. (LENGTH p > n /\ n >= m) ==>
+             ((SEL (PATH_VAR_RENAMING f p) (m, n)) = (MAP (LETTER_VAR_RENAMING f) (SEL p (m, n))))
+Proof
 
-     REWRITE_TAC[PATH_VAR_RENAMING_def, SEL_PATH_MAP]);
-
-
-val ELEM_PATH_VAR_RENAMING =
- store_thm
-  ("ELEM_PATH_VAR_RENAMING",
-   ``!f p n. (LENGTH p > n) ==>
-             ((ELEM (PATH_VAR_RENAMING f p) n) = (LETTER_VAR_RENAMING f (ELEM p n)))``,
-    REWRITE_TAC[PATH_VAR_RENAMING_def, ELEM_PATH_MAP]);
+     REWRITE_TAC[PATH_VAR_RENAMING_def, SEL_PATH_MAP]
+QED
 
 
-val RESTN_PATH_VAR_RENAMING =
- store_thm
-  ("RESTN_PATH_VAR_RENAMING",
-   ``!f p n. LENGTH p >= n ==> (((RESTN (PATH_VAR_RENAMING f p) n) = (PATH_VAR_RENAMING f (RESTN p n))))``,
-    REWRITE_TAC[PATH_VAR_RENAMING_def, RESTN_PATH_MAP]);
+Theorem ELEM_PATH_VAR_RENAMING:
+     !f p n. (LENGTH p > n) ==>
+             ((ELEM (PATH_VAR_RENAMING f p) n) = (LETTER_VAR_RENAMING f (ELEM p n)))
+Proof
+    REWRITE_TAC[PATH_VAR_RENAMING_def, ELEM_PATH_MAP]
+QED
 
 
-val COMPLEMENT_PATH_VAR_RENAMING =
- store_thm
-  ("COMPLEMENT_PATH_VAR_RENAMING",
-   ``!f p. COMPLEMENT (PATH_VAR_RENAMING f p) = PATH_VAR_RENAMING f (COMPLEMENT p)``,
+Theorem RESTN_PATH_VAR_RENAMING:
+     !f p n. LENGTH p >= n ==> (((RESTN (PATH_VAR_RENAMING f p) n) = (PATH_VAR_RENAMING f (RESTN p n))))
+Proof
+    REWRITE_TAC[PATH_VAR_RENAMING_def, RESTN_PATH_MAP]
+QED
+
+
+Theorem COMPLEMENT_PATH_VAR_RENAMING:
+     !f p. COMPLEMENT (PATH_VAR_RENAMING f p) = PATH_VAR_RENAMING f (COMPLEMENT p)
+Proof
 
     SUBGOAL_TAC `!f x. COMPLEMENT_LETTER (LETTER_VAR_RENAMING f x) =
                        LETTER_VAR_RENAMING f (COMPLEMENT_LETTER x)` THEN1 (
@@ -1737,50 +1733,51 @@ val COMPLEMENT_PATH_VAR_RENAMING =
 
       ASM_SIMP_TAC std_ss [PATH_VAR_RENAMING_def, PATH_MAP_def, COMPLEMENT_def,
         o_DEF]
-    ]);
+    ]
+QED
 
 
-val PATH_VAR_RENAMING___CONS =
- store_thm
-  ("PATH_VAR_RENAMING___CONS",
+Theorem PATH_VAR_RENAMING___CONS:
 
-    ``!l v f.
+      !l v f.
     PATH_VAR_RENAMING f (CONS (l, v)) =
-    CONS (LETTER_VAR_RENAMING f l, PATH_VAR_RENAMING f v)``,
+    CONS (LETTER_VAR_RENAMING f l, PATH_VAR_RENAMING f v)
+Proof
 
     Cases_on `v` THENL [
       SIMP_TAC std_ss [CONS_def, PATH_VAR_RENAMING_def, PATH_MAP_def, MAP],
       SIMP_TAC std_ss [CONS_def, PATH_VAR_RENAMING_def, PATH_MAP_def, COND_RAND]
-    ]);
+    ]
+QED
 
 
-val PATH_VAR_RENAMING___CAT =
- store_thm
-  ("PATH_VAR_RENAMING___CAT",
-  ``!f l p.
+Theorem PATH_VAR_RENAMING___CAT:
+    !f l p.
     PATH_VAR_RENAMING f (CAT(l, p)) =
-    CAT (MAP (LETTER_VAR_RENAMING f) l, PATH_VAR_RENAMING f p)``,
+    CAT (MAP (LETTER_VAR_RENAMING f) l, PATH_VAR_RENAMING f p)
+Proof
 
   Induct_on `l` THENL [
     SIMP_TAC std_ss [CAT_def, MAP],
     ASM_SIMP_TAC std_ss [CAT_def, PATH_VAR_RENAMING___CONS, MAP]
-  ]);
+  ]
+QED
 
 
-val PATH_VAR_RENAMING___TOP_OMEGA =
- store_thm
-  ("PATH_VAR_RENAMING___TOP_OMEGA",
+Theorem PATH_VAR_RENAMING___TOP_OMEGA:
 
-    ``!f. PATH_VAR_RENAMING f TOP_OMEGA = TOP_OMEGA``,
-    REWRITE_TAC[PATH_VAR_RENAMING_def, TOP_OMEGA_def, PATH_MAP_def, LETTER_VAR_RENAMING_def]);
+      !f. PATH_VAR_RENAMING f TOP_OMEGA = TOP_OMEGA
+Proof
+    REWRITE_TAC[PATH_VAR_RENAMING_def, TOP_OMEGA_def, PATH_MAP_def, LETTER_VAR_RENAMING_def]
+QED
 
 
-val PATH_VAR_RENAMING___BOTTOM_OMEGA =
- store_thm
-  ("PATH_VAR_RENAMING___BOTTOM_OMEGA",
+Theorem PATH_VAR_RENAMING___BOTTOM_OMEGA:
 
-    ``!f. PATH_VAR_RENAMING f BOTTOM_OMEGA = BOTTOM_OMEGA``,
-    REWRITE_TAC[PATH_VAR_RENAMING_def, BOTTOM_OMEGA_def, PATH_MAP_def, LETTER_VAR_RENAMING_def]);
+      !f. PATH_VAR_RENAMING f BOTTOM_OMEGA = BOTTOM_OMEGA
+Proof
+    REWRITE_TAC[PATH_VAR_RENAMING_def, BOTTOM_OMEGA_def, PATH_MAP_def, LETTER_VAR_RENAMING_def]
+QED
 
 
 Definition B_VAR_RENAMING_def:
@@ -1819,10 +1816,9 @@ Definition F_VAR_RENAMING_def:
 End
 
 
-val B_SEM___VAR_RENAMING =
- store_thm
-  ("B_SEM___VAR_RENAMING",
-   ``!p l f. (INJ f (LETTER_USED_VARS l UNION B_USED_VARS p) UNIV) ==> ((B_SEM l p) = (B_SEM (LETTER_VAR_RENAMING f l) (B_VAR_RENAMING f p)))``,
+Theorem B_SEM___VAR_RENAMING:
+     !p l f. (INJ f (LETTER_USED_VARS l UNION B_USED_VARS p) UNIV) ==> ((B_SEM l p) = (B_SEM (LETTER_VAR_RENAMING f l) (B_VAR_RENAMING f p)))
+Proof
 
    Cases_on `l` THEN (
       REWRITE_TAC[B_SEM_def, LETTER_VAR_RENAMING_def]
@@ -1846,16 +1842,16 @@ val B_SEM___VAR_RENAMING =
       UNDISCH_HD_TAC THEN
       SIMP_TAC std_ss [INJ_DEF, IN_UNION, IN_UNIV] THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
 
-val US_SEM___VAR_RENAMING =
- store_thm
-  ("US_SEM___VAR_RENAMING",
-    ``!r l f. ((S_CLOCK_FREE r) /\
+Theorem US_SEM___VAR_RENAMING:
+      !r l f. ((S_CLOCK_FREE r) /\
     (INJ f ((LIST_BIGUNION (MAP LETTER_USED_VARS l)) UNION S_USED_VARS r) UNIV)) ==>
-    (US_SEM l r = US_SEM ((MAP (LETTER_VAR_RENAMING f)) l) (S_VAR_RENAMING f r))``,
+    (US_SEM l r = US_SEM ((MAP (LETTER_VAR_RENAMING f)) l) (S_VAR_RENAMING f r))
+Proof
 
 INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
   Cases_on `l` THEN
@@ -1976,16 +1972,16 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
 
 
   REWRITE_TAC[S_CLOCK_FREE_def]
-]);
+]
+QED
 
 
 
-val UF_SEM___VAR_RENAMING =
- store_thm
-  ("UF_SEM___VAR_RENAMING",
-    ``!f v f'. ((F_CLOCK_FREE f) /\
+Theorem UF_SEM___VAR_RENAMING:
+      !f v f'. ((F_CLOCK_FREE f) /\
     (INJ f' (PATH_USED_VARS v UNION F_USED_VARS f) UNIV)) ==>
-      (UF_SEM v f = UF_SEM (PATH_VAR_RENAMING f' v) (F_VAR_RENAMING f' f))``,
+      (UF_SEM v f = UF_SEM (PATH_VAR_RENAMING f' v) (F_VAR_RENAMING f' f))
+Proof
 
     INDUCT_THEN fl_induct ASSUME_TAC THENL [ (* 11 subgoals *)
       SIMP_TAC std_ss [F_CLOCK_FREE_def, F_USED_VARS_def,
@@ -2261,39 +2257,40 @@ val UF_SEM___VAR_RENAMING =
             SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
             PROVE_TAC[RESTN_PATH_USED_VARS, GT_LS, SUBSET_DEF]
       ]
-   ]);
+   ]
+QED
 
 
 
-val S_VAR_RENAMING___S_CLOCK_FREE =
- store_thm
-  ("S_VAR_RENAMING___S_CLOCK_FREE",
+Theorem S_VAR_RENAMING___S_CLOCK_FREE:
 
-    ``!r g.  S_CLOCK_FREE (S_VAR_RENAMING g r) =
-                S_CLOCK_FREE r``,
+      !r g.  S_CLOCK_FREE (S_VAR_RENAMING g r) =
+                S_CLOCK_FREE r
+Proof
 
     INDUCT_THEN sere_induct ASSUME_TAC THEN (
         ASM_SIMP_TAC std_ss [S_VAR_RENAMING_def,
                                            S_CLOCK_FREE_def]
-    ));
+    )
+QED
 
 
-val F_VAR_RENAMING___F_CLOCK_SERE_FREE =
- store_thm
-  ("F_VAR_RENAMING___F_CLOCK_SERE_FREE",
+Theorem F_VAR_RENAMING___F_CLOCK_SERE_FREE:
 
-    ``!f g.  (F_CLOCK_SERE_FREE (F_VAR_RENAMING g f) =
+      !f g.  (F_CLOCK_SERE_FREE (F_VAR_RENAMING g f) =
                 F_CLOCK_SERE_FREE f) /\
                 (F_CLOCK_FREE (F_VAR_RENAMING g f) =
                 F_CLOCK_FREE f) /\
                 (F_SERE_FREE (F_VAR_RENAMING g f) =
-                F_SERE_FREE f)``,
+                F_SERE_FREE f)
+Proof
 
     INDUCT_THEN fl_induct ASSUME_TAC THEN (
         ASM_SIMP_TAC std_ss [F_VAR_RENAMING_def,
                                     F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def,
                                     F_SERE_FREE_def, S_VAR_RENAMING___S_CLOCK_FREE]
-    ));
+    )
+QED
 
 
 Definition WEAK_UF_SEM_def:
@@ -2424,21 +2421,20 @@ val IS_PSL_THM = save_thm("IS_PSL_THM",
 = General lemmata about PSL
 ============================================================================*)
 
-val IS_INFINITE_TOP_BOTTOM_FREE_PATH___IMPLIES___IS_INFINITE_PROPER_PATH =
- store_thm
-  ("IS_INFINITE_TOP_BOTTOM_FREE_PATH___IMPLIES___IS_INFINITE_PROPER_PATH",
-   ``!f. IS_INFINITE_TOP_BOTTOM_FREE_PATH f ==> IS_INFINITE_PROPER_PATH f``,
+Theorem IS_INFINITE_TOP_BOTTOM_FREE_PATH___IMPLIES___IS_INFINITE_PROPER_PATH:
+     !f. IS_INFINITE_TOP_BOTTOM_FREE_PATH f ==> IS_INFINITE_PROPER_PATH f
+Proof
 
    REWRITE_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH_def, IS_INFINITE_PROPER_PATH_def] THEN
-   PROVE_TAC[letter_distinct]);
+   PROVE_TAC[letter_distinct]
+QED
 
 
 
-val BEXP_PROP_FREE___B_SEM =
- store_thm
-  ("BEXP_PROP_FREE___B_SEM",
+Theorem BEXP_PROP_FREE___B_SEM:
 
-   ``!b s c. BEXP_PROP_FREE c b ==> (B_SEM s b = B_SEM (INSERT_PROP c s) b)``,
+     !b s c. BEXP_PROP_FREE c b ==> (B_SEM s b = B_SEM (INSERT_PROP c s) b)
+Proof
 
    REPEAT STRIP_TAC THEN
    REMAINS_TAC `LETTER_RESTRICT (B_USED_VARS b) s =
@@ -2451,22 +2447,22 @@ val BEXP_PROP_FREE___B_SEM =
    REPEAT STRIP_TAC THEN
    BOOL_EQ_STRIP_TAC THEN
    `~(x = c)` by PROVE_TAC [BEXP_PROP_FREE_def] THEN
-   ASM_SIMP_TAC std_ss [IN_DEF]);
+   ASM_SIMP_TAC std_ss [IN_DEF]
+QED
 
 
-val S_CLOCK_FREE___S_CLOCK_COMP =
- store_thm
-  ("S_CLOCK_FREE___S_CLOCK_COMP",
-   ``!r c. (S_CLOCK_FREE (S_CLOCK_COMP c r))``,
+Theorem S_CLOCK_FREE___S_CLOCK_COMP:
+     !r c. (S_CLOCK_FREE (S_CLOCK_COMP c r))
+Proof
 
    INDUCT_THEN sere_induct ASSUME_TAC THEN
-   ASM_SIMP_TAC std_ss [S_CLOCK_COMP_def, S_CLOCK_FREE_def]);
+   ASM_SIMP_TAC std_ss [S_CLOCK_COMP_def, S_CLOCK_FREE_def]
+QED
 
 
-val F_CLOCK_FREE___F_CLOCK_COMP =
- store_thm
-  ("F_CLOCK_FREE___F_CLOCK_COMP",
-   ``!f c. (F_CLOCK_FREE (F_CLOCK_COMP c f))``,
+Theorem F_CLOCK_FREE___F_CLOCK_COMP:
+     !f c. (F_CLOCK_FREE (F_CLOCK_COMP c f))
+Proof
 
    INDUCT_THEN fl_induct ASSUME_TAC THEN
    ASM_SIMP_TAC std_ss [F_CLOCK_COMP_def,
@@ -2478,13 +2474,13 @@ val F_CLOCK_FREE___F_CLOCK_COMP =
                         F_G_def,
                         F_F_def,
                         F_IMPLIES_def,
-                        S_CLOCK_FREE___S_CLOCK_COMP]);
+                        S_CLOCK_FREE___S_CLOCK_COMP]
+QED
 
 
-val F_SERE_FREE___IMPLIES___F_SERE_FREE_F_CLOCK_COMP =
- store_thm
-  ("F_SERE_FREE___IMPLIES___F_SERE_FREE_F_CLOCK_COMP",
-   ``!f c. F_SERE_FREE f ==> (F_SERE_FREE (F_CLOCK_COMP c f))``,
+Theorem F_SERE_FREE___IMPLIES___F_SERE_FREE_F_CLOCK_COMP:
+     !f c. F_SERE_FREE f ==> (F_SERE_FREE (F_CLOCK_COMP c f))
+Proof
 
    INDUCT_THEN fl_induct ASSUME_TAC THEN
    ASM_SIMP_TAC std_ss [F_CLOCK_COMP_def,
@@ -2495,13 +2491,13 @@ val F_SERE_FREE___IMPLIES___F_SERE_FREE_F_CLOCK_COMP =
                         F_OR_def,
                         F_G_def,
                         F_F_def,
-                        F_IMPLIES_def]);
+                        F_IMPLIES_def]
+QED
 
 
-val S_USED_VARS___CLOCK_COMP =
- store_thm
-  ("S_USED_VARS___CLOCK_COMP",
-   ``!s c. S_USED_VARS (S_CLOCK_COMP c s) SUBSET S_USED_VARS s UNION B_USED_VARS c``,
+Theorem S_USED_VARS___CLOCK_COMP:
+     !s c. S_USED_VARS (S_CLOCK_COMP c s) SUBSET S_USED_VARS s UNION B_USED_VARS c
+Proof
 
    REWRITE_TAC[SUBSET_DEF, IN_UNION] THEN
    INDUCT_THEN sere_induct ASSUME_TAC THEN
@@ -2511,12 +2507,12 @@ val S_USED_VARS___CLOCK_COMP =
    REPEAT STRIP_TAC THEN
    REPEAT BOOL_EQ_STRIP_TAC THEN
    ASM_SIMP_TAC std_ss [] THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
-val F_USED_VARS___CLOCK_COMP =
- store_thm
-  ("F_USED_VARS___CLOCK_COMP",
-   ``!f c. F_USED_VARS (F_CLOCK_COMP c f) SUBSET (F_USED_VARS f UNION B_USED_VARS c)``,
+Theorem F_USED_VARS___CLOCK_COMP:
+     !f c. F_USED_VARS (F_CLOCK_COMP c f) SUBSET (F_USED_VARS f UNION B_USED_VARS c)
+Proof
 
    ASSUME_TAC S_USED_VARS___CLOCK_COMP THEN
    FULL_SIMP_TAC std_ss [SUBSET_DEF, IN_UNION] THEN
@@ -2536,17 +2532,17 @@ val F_USED_VARS___CLOCK_COMP =
    REPEAT STRIP_TAC THEN
    REPEAT BOOL_EQ_STRIP_TAC THEN
    ASM_REWRITE_TAC [] THEN
-   METIS_TAC[]);
+   METIS_TAC[]
+QED
 
 
 
-val INFINITE_PROPER_PATH___RESTN_TOP_BOTTOM_OMEGA =
- store_thm
-  ("INFINITE_PROPER_PATH___RESTN_TOP_BOTTOM_OMEGA",
-   ``(!v t t'. ((IS_INFINITE_PROPER_PATH v) /\ (ELEM v t = TOP) /\ (t <= t')) ==>
+Theorem INFINITE_PROPER_PATH___RESTN_TOP_BOTTOM_OMEGA:
+     (!v t t'. ((IS_INFINITE_PROPER_PATH v) /\ (ELEM v t = TOP) /\ (t <= t')) ==>
    (RESTN v t' = TOP_OMEGA)) /\
      (!v t t'. ((IS_INFINITE_PROPER_PATH v) /\ (ELEM v t = BOTTOM) /\ (t <= t')) ==>
-   (RESTN v t' = BOTTOM_OMEGA))``,
+   (RESTN v t' = BOTTOM_OMEGA))
+Proof
 
    REWRITE_TAC[IS_INFINITE_PROPER_PATH_def, TOP_OMEGA_def, BOTTOM_OMEGA_def] THEN
    REPEAT STRIP_TAC THEN
@@ -2560,38 +2556,37 @@ val INFINITE_PROPER_PATH___RESTN_TOP_BOTTOM_OMEGA =
          EVAL_TAC THEN ASM_SIMP_TAC arith_ss [] THEN PROVE_TAC[ELEM_INFINITE],
          ASM_SIMP_TAC arith_ss [GSYM ADD_SUC]
       ]
-   ));
+   )
+QED
 
 
-val PROPER_PATH___IS_INFINITE_TOP_BOTTOM =
- store_thm
-  ("PROPER_PATH___IS_INFINITE_TOP_BOTTOM",
-   ``(!v t. ((IS_PROPER_PATH v) /\ (t < LENGTH v) /\ ((ELEM v t = TOP) \/ (ELEM v t = BOTTOM))) ==>
-      IS_INFINITE_PROPER_PATH v)``,
+Theorem PROPER_PATH___IS_INFINITE_TOP_BOTTOM:
+     (!v t. ((IS_PROPER_PATH v) /\ (t < LENGTH v) /\ ((ELEM v t = TOP) \/ (ELEM v t = BOTTOM))) ==>
+      IS_INFINITE_PROPER_PATH v)
+Proof
 
    SIMP_TAC std_ss [IS_PROPER_PATH_def, IS_FINITE_PROPER_PATH_def] THEN
    REPEAT STRIP_TAC THEN
-   PROVE_TAC[PATH_TOP_FREE_ELEM, PATH_BOTTOM_FREE_ELEM]);
+   PROVE_TAC[PATH_TOP_FREE_ELEM, PATH_BOTTOM_FREE_ELEM]
+QED
 
 
 
 
 
-val PATH_PROP_FREE_SEM =
- store_thm
-  ("PATH_PROP_FREE_SEM",
-     ``!s t f p. (PATH_PROP_FREE p (INFINITE f)) ==> ((f t = STATE s) ==> (~ s p))``,
+Theorem PATH_PROP_FREE_SEM:
+       !s t f p. (PATH_PROP_FREE p (INFINITE f)) ==> ((f t = STATE s) ==> (~ s p))
+Proof
 
    REWRITE_TAC [PATH_PROP_FREE_def, ELEM_INFINITE, IN_DEF] THEN
    EVAL_TAC THEN
    PROVE_TAC[]
-);
+QED
 
 
-val PATH_PROP_FREE_RESTN =
- store_thm
-  ("PATH_PROP_FREE_RESTN",
-   ``!v t p. t < LENGTH v ==> PATH_PROP_FREE p v ==> PATH_PROP_FREE p (RESTN v t)``,
+Theorem PATH_PROP_FREE_RESTN:
+     !v t p. t < LENGTH v ==> PATH_PROP_FREE p v ==> PATH_PROP_FREE p (RESTN v t)
+Proof
 
    REWRITE_TAC [LENGTH_def, LS, PATH_PROP_FREE_def, ELEM_RESTN] THEN
    Cases_on `v` THEN REPEAT STRIP_TAC THENL [
@@ -2604,22 +2599,21 @@ val PATH_PROP_FREE_RESTN =
 
      FULL_SIMP_TAC list_ss [LENGTH_def, LS] THEN
      PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
-val PATH_PROP_FREE_COMPLEMENT =
- store_thm
-  ("PATH_PROP_FREE_COMPLEMENT",
-   ``!t f. PATH_PROP_FREE t f = PATH_PROP_FREE t (COMPLEMENT f)``,
+Theorem PATH_PROP_FREE_COMPLEMENT:
+     !t f. PATH_PROP_FREE t f = PATH_PROP_FREE t (COMPLEMENT f)
+Proof
 
    SIMP_TAC list_ss [PATH_PROP_FREE_def, LENGTH_COMPLEMENT, ELEM_COMPLEMENT, COMPLEMENT_LETTER_Cases]
-);
+QED
 
 
-val IS_INFINITE_PROPER_PATH___COMPLEMENT =
- store_thm
-  ("IS_INFINITE_PROPER_PATH___COMPLEMENT",
-   ``!v. IS_INFINITE_PROPER_PATH v = IS_INFINITE_PROPER_PATH (COMPLEMENT v)``,
+Theorem IS_INFINITE_PROPER_PATH___COMPLEMENT:
+     !v. IS_INFINITE_PROPER_PATH v = IS_INFINITE_PROPER_PATH (COMPLEMENT v)
+Proof
    STRIP_TAC THEN
    REWRITE_TAC [IS_INFINITE_PROPER_PATH_def] THEN
    EQ_TAC THEN
@@ -2629,26 +2623,26 @@ val IS_INFINITE_PROPER_PATH___COMPLEMENT =
       ALL_TAC,
       `v = COMPLEMENT (INFINITE p)` by PROVE_TAC[COMPLEMENT_COMPLEMENT]
    ] THEN
-   FULL_SIMP_TAC list_ss [COMPLEMENT_def, COMPLEMENT_LETTER_Cases]);
+   FULL_SIMP_TAC list_ss [COMPLEMENT_def, COMPLEMENT_LETTER_Cases]
+QED
 
 
-val IS_INFINITE_PROPER_PATH_RESTN =
- store_thm
-  ("IS_INFINITE_PROPER_PATH_RESTN",
-   ``!v t. IS_INFINITE_PROPER_PATH v ==> IS_INFINITE_PROPER_PATH (RESTN v t)``,
+Theorem IS_INFINITE_PROPER_PATH_RESTN:
+     !v t. IS_INFINITE_PROPER_PATH v ==> IS_INFINITE_PROPER_PATH (RESTN v t)
+Proof
 
    REWRITE_TAC [IS_INFINITE_PROPER_PATH_def] THEN
    REPEAT STRIP_TAC THEN
    EXISTS_TAC ``(\n. p (n + t)):num -> 'a letter`` THEN
-   ASM_SIMP_TAC arith_ss [RESTN_INFINITE, GSYM ADD_SUC]);
+   ASM_SIMP_TAC arith_ss [RESTN_INFINITE, GSYM ADD_SUC]
+QED
 
 
 
 
-val IS_INFINITE_PROPER_PATH___CAT_SEL_TOP_OMEGA =
- store_thm
-  ("IS_INFINITE_PROPER_PATH___CAT_SEL_TOP_OMEGA",
-   ``!v j. (IS_INFINITE_PROPER_PATH v /\ ~(ELEM v j = BOTTOM)) ==> IS_INFINITE_PROPER_PATH (CAT (SEL v (0,j - 1),TOP_OMEGA))``,
+Theorem IS_INFINITE_PROPER_PATH___CAT_SEL_TOP_OMEGA:
+     !v j. (IS_INFINITE_PROPER_PATH v /\ ~(ELEM v j = BOTTOM)) ==> IS_INFINITE_PROPER_PATH (CAT (SEL v (0,j - 1),TOP_OMEGA))
+Proof
 
    REPEAT GEN_TAC THEN
    `? v'. (CAT (SEL v (0,j - 1),TOP_OMEGA)) = v'` by PROVE_TAC[] THEN
@@ -2705,14 +2699,14 @@ val IS_INFINITE_PROPER_PATH___CAT_SEL_TOP_OMEGA =
             PROVE_TAC [ELEM_INFINITE]
          ]
       ]
-   ]);
+   ]
+QED
 
 
 
-val PATH_PROP_FREE___CAT_SEL_INFINITE___IMPLIES =
- store_thm
-  ("PATH_PROP_FREE___CAT_SEL_INFINITE___IMPLIES",
-   ``!p a j. PATH_PROP_FREE a (INFINITE p) ==> PATH_PROP_FREE a (CAT (SEL (INFINITE p) (0,j - 1),TOP_OMEGA))``,
+Theorem PATH_PROP_FREE___CAT_SEL_INFINITE___IMPLIES:
+     !p a j. PATH_PROP_FREE a (INFINITE p) ==> PATH_PROP_FREE a (CAT (SEL (INFINITE p) (0,j - 1),TOP_OMEGA))
+Proof
 
    REWRITE_TAC [PATH_PROP_FREE_def, IN_DEF] THEN
    ASM_REWRITE_TAC [LENGTH_def, LS, ELEM_INFINITE] THEN
@@ -2725,14 +2719,14 @@ val PATH_PROP_FREE___CAT_SEL_INFINITE___IMPLIES =
       `~(STATE s = TOP)` by EVAL_TAC THEN
       `ELEM (CAT (SEL (INFINITE p) (0,j - 1),TOP_OMEGA)) n = ELEM TOP_OMEGA (n-SUC (j-1))` by PROVE_TAC[ELEM_CAT_SEL___GREATER] THEN
       FULL_SIMP_TAC arith_ss [TOP_OMEGA_def, ELEM_INFINITE]
-   ]);
+   ]
+QED
 
 
-val IS_FINITE_PROPER_PATH___COMPLEMENT =
- store_thm
-  ("IS_FINITE_PROPER_PATH___COMPLEMENT",
+Theorem IS_FINITE_PROPER_PATH___COMPLEMENT:
 
-   ``!v. IS_FINITE_PROPER_PATH v ==> ((COMPLEMENT v) = v)``,
+     !v. IS_FINITE_PROPER_PATH v ==> ((COMPLEMENT v) = v)
+Proof
 
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [IS_FINITE_PROPER_PATH_def] THEN
@@ -2745,14 +2739,14 @@ val IS_FINITE_PROPER_PATH___COMPLEMENT =
    Induct_on `q` THENL [
       SIMP_TAC list_ss [],
       Cases_on `h` THEN ASM_SIMP_TAC list_ss [TOP_FREE_def, BOTTOM_FREE_def, COMPLEMENT_LETTER_def]
-   ]);
+   ]
+QED
 
 
-val IS_FINITE_PROPER_PATH___RESTN =
- store_thm
-  ("IS_FINITE_PROPER_PATH___RESTN",
+Theorem IS_FINITE_PROPER_PATH___RESTN:
 
-   ``!v k. (IS_FINITE_PROPER_PATH v  /\ k < LENGTH v) ==> IS_FINITE_PROPER_PATH (RESTN v k)``,
+     !v k. (IS_FINITE_PROPER_PATH v  /\ k < LENGTH v) ==> IS_FINITE_PROPER_PATH (RESTN v k)
+Proof
 
    Induct_on `k` THENL [
       SIMP_TAC list_ss [IS_FINITE_PROPER_PATH_def, PSLPathTheory.RESTN_def, FinitePSLPathTheory.RESTN_def],
@@ -2785,7 +2779,8 @@ val IS_FINITE_PROPER_PATH___RESTN =
       ) THEN
       `k < LENGTH v'` by ASM_SIMP_TAC arith_ss [LENGTH_def, SUB_xnum_num_def, LS] THEN
       METIS_TAC[]
-   ]);
+   ]
+QED
 
 
 
@@ -2801,13 +2796,12 @@ val IS_FINITE_PROPER_PATH___RESTN =
 
 
 
-val INFINITE_PROPER_PATH___TOP_BOTTOM_FOLLOWING =
- store_thm
-  ("INFINITE_PROPER_PATH___TOP_BOTTOM_FOLLOWING",
+Theorem INFINITE_PROPER_PATH___TOP_BOTTOM_FOLLOWING:
 
-   ``!v k l. (IS_INFINITE_PROPER_PATH v /\ l >= k) ==> (
+     !v k l. (IS_INFINITE_PROPER_PATH v /\ l >= k) ==> (
          ((ELEM v k = TOP) ==> (ELEM v l = TOP)) /\
-         ((ELEM v k = BOTTOM) ==> (ELEM v l = BOTTOM)))``,
+         ((ELEM v k = BOTTOM) ==> (ELEM v l = BOTTOM)))
+Proof
 
    Induct_on `(l-k):num` THENL [
       SIMP_TAC arith_ss [] THEN
@@ -2824,13 +2818,13 @@ val INFINITE_PROPER_PATH___TOP_BOTTOM_FOLLOWING =
          `ELEM v' l' = BOTTOM` by METIS_TAC[]
       ] THEN
       METIS_TAC[ELEM_INFINITE, IS_INFINITE_PROPER_PATH_def]
-   ]);
+   ]
+QED
 
 
-val IS_PROPER_PATH___COMPLEMENT =
- store_thm
-  ("IS_PROPER_PATH___COMPLEMENT",
-   ``!v. (IS_PROPER_PATH v) = (IS_PROPER_PATH (COMPLEMENT v))``,
+Theorem IS_PROPER_PATH___COMPLEMENT:
+     !v. (IS_PROPER_PATH v) = (IS_PROPER_PATH (COMPLEMENT v))
+Proof
 
    REWRITE_TAC[IS_PROPER_PATH_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -2838,13 +2832,13 @@ val IS_PROPER_PATH___COMPLEMENT =
       PROVE_TAC[IS_FINITE_PROPER_PATH___COMPLEMENT],
       PROVE_TAC[IS_INFINITE_PROPER_PATH___COMPLEMENT],
       PROVE_TAC[IS_FINITE_PROPER_PATH___COMPLEMENT, COMPLEMENT_COMPLEMENT]
-   ]);
+   ]
+QED
 
 
-val IS_PATH_WITH_REPLACEMENTS___COMPLEMENT =
- store_thm
-  ("IS_PATH_WITH_REPLACEMENTS___COMPLEMENT",
-   ``!v w x. (IS_PATH_WITH_REPLACEMENTS v w x = IS_PATH_WITH_REPLACEMENTS (COMPLEMENT v) (COMPLEMENT w) (COMPLEMENT_LETTER x))``,
+Theorem IS_PATH_WITH_REPLACEMENTS___COMPLEMENT:
+     !v w x. (IS_PATH_WITH_REPLACEMENTS v w x = IS_PATH_WITH_REPLACEMENTS (COMPLEMENT v) (COMPLEMENT w) (COMPLEMENT_LETTER x))
+Proof
 
    REWRITE_TAC [IS_PATH_WITH_REPLACEMENTS_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -2860,13 +2854,13 @@ val IS_PATH_WITH_REPLACEMENTS___COMPLEMENT =
       FULL_SIMP_TAC std_ss [LENGTH_COMPLEMENT] THEN
       `n < LENGTH w` by PROVE_TAC[] THEN
       METIS_TAC[ELEM_COMPLEMENT, COMPLEMENT_LETTER_COMPLEMENT_LETTER]
-   ]);
+   ]
+QED
 
-val IS_PATH_WITH_REPLACEMENTS___CAT_SEL =
- store_thm
-  ("IS_PATH_WITH_REPLACEMENTS___CAT_SEL",
-   ``!v w j x p. (IS_PATH_WITH_REPLACEMENTS v w x /\ j < LENGTH v) ==>
-              IS_PATH_WITH_REPLACEMENTS (CAT (SEL v (0, j), p)) (CAT (SEL w (0, j), p)) x``,
+Theorem IS_PATH_WITH_REPLACEMENTS___CAT_SEL:
+     !v w j x p. (IS_PATH_WITH_REPLACEMENTS v w x /\ j < LENGTH v) ==>
+              IS_PATH_WITH_REPLACEMENTS (CAT (SEL v (0, j), p)) (CAT (SEL w (0, j), p)) x
+Proof
 
    SIMP_TAC std_ss [IS_PATH_WITH_REPLACEMENTS_def] THEN
    REPEAT STRIP_TAC THENL [
@@ -2881,13 +2875,13 @@ val IS_PATH_WITH_REPLACEMENTS___CAT_SEL =
 
          ASM_SIMP_TAC arith_ss [ELEM_CAT_SEL___GREATER]
       ]
-   ]);
+   ]
+QED
 
 
-val IS_PATH_WITH_REPLACEMENTS___RESTN =
- store_thm
-  ("IS_PATH_WITH_REPLACEMENTS___RESTN",
-   ``!v w x n. (n <= LENGTH v /\ IS_PATH_WITH_REPLACEMENTS v w x) ==> IS_PATH_WITH_REPLACEMENTS (RESTN v n) (RESTN w n) x``,
+Theorem IS_PATH_WITH_REPLACEMENTS___RESTN:
+     !v w x n. (n <= LENGTH v /\ IS_PATH_WITH_REPLACEMENTS v w x) ==> IS_PATH_WITH_REPLACEMENTS (RESTN v n) (RESTN w n) x
+Proof
 
    SIMP_TAC std_ss [IS_PATH_WITH_REPLACEMENTS_def, LENGTH_RESTN_THM_LE] THEN
    REPEAT STRIP_TAC THENL [
@@ -2899,15 +2893,15 @@ val IS_PATH_WITH_REPLACEMENTS___RESTN =
         FULL_SIMP_TAC arith_ss [LENGTH_def, LS, xnum_11, LE_num_xnum_def, SUB_xnum_num_def]
       ) THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
-val SEL_IS_PATH_WITH_REPLACEMENTS =
- store_thm
-  ("SEL_IS_PATH_WITH_REPLACEMENTS",
+Theorem SEL_IS_PATH_WITH_REPLACEMENTS:
 
-   ``!v w x n m. (IS_PATH_WITH_REPLACEMENTS v w x /\ n < LENGTH v /\ m < LENGTH v) ==>
-      IS_LIST_WITH_REPLACEMENTS (SEL v (n, m)) (SEL w (n, m)) x``,
+     !v w x n m. (IS_PATH_WITH_REPLACEMENTS v w x /\ n < LENGTH v /\ m < LENGTH v) ==>
+      IS_LIST_WITH_REPLACEMENTS (SEL v (n, m)) (SEL w (n, m)) x
+Proof
 
    SIMP_TAC list_ss [LENGTH_SEL, IS_PATH_WITH_REPLACEMENTS_def, IS_LIST_WITH_REPLACEMENTS_def] THEN
    REPEAT GEN_TAC THEN DISCH_TAC THEN GEN_TAC THEN DISCH_TAC THEN
@@ -2925,15 +2919,15 @@ val SEL_IS_PATH_WITH_REPLACEMENTS =
          FULL_SIMP_TAC arith_ss [LENGTH_def, LS, xnum_11, xnum_distinct]
       ) THEN
       PROVE_TAC[]
-   ]);
+   ]
+QED
 
 
-val IS_LIST_WITH_REPLACEMENTS___SUC =
- store_thm
-  ("IS_LIST_WITH_REPLACEMENTS___SUC",
+Theorem IS_LIST_WITH_REPLACEMENTS___SUC:
 
-   ``!l1 l2 x1 x2 x. IS_LIST_WITH_REPLACEMENTS (x1::l1) (x2::l2) x =
-      (IS_LIST_WITH_REPLACEMENTS l1 l2 x /\ ((x1 = x2) \/ (x1 = x)))``,
+     !l1 l2 x1 x2 x. IS_LIST_WITH_REPLACEMENTS (x1::l1) (x2::l2) x =
+      (IS_LIST_WITH_REPLACEMENTS l1 l2 x /\ ((x1 = x2) \/ (x1 = x)))
+Proof
 
    SIMP_TAC list_ss [IS_LIST_WITH_REPLACEMENTS_def] THEN
    REPEAT GEN_TAC THEN
@@ -2949,18 +2943,18 @@ val IS_LIST_WITH_REPLACEMENTS___SUC =
 
       Cases_on `n` THEN ASM_SIMP_TAC list_ss [],
       Cases_on `n` THEN ASM_SIMP_TAC list_ss []
-   ]);
+   ]
+QED
 
 
 
 
-val IS_LIST_WITH_REPLACEMENTS___APPEND =
- store_thm
-  ("IS_LIST_WITH_REPLACEMENTS___APPEND",
+Theorem IS_LIST_WITH_REPLACEMENTS___APPEND:
 
-   ``!l l1 l2 l' l1' l2' x. ((l = l1 <> l2) /\ (l' = l1' <> l2') /\ (LENGTH l1 = LENGTH l1')) ==>
+     !l l1 l2 l' l1' l2' x. ((l = l1 <> l2) /\ (l' = l1' <> l2') /\ (LENGTH l1 = LENGTH l1')) ==>
       (IS_LIST_WITH_REPLACEMENTS l l' x =
-      (IS_LIST_WITH_REPLACEMENTS l1 l1' x /\ IS_LIST_WITH_REPLACEMENTS l2 l2' x))``,
+      (IS_LIST_WITH_REPLACEMENTS l1 l1' x /\ IS_LIST_WITH_REPLACEMENTS l2 l2' x))
+Proof
 
    REWRITE_TAC[IS_LIST_WITH_REPLACEMENTS_def] THEN
    REPEAT STRIP_TAC THEN
@@ -2981,47 +2975,47 @@ val IS_LIST_WITH_REPLACEMENTS___APPEND =
          `(LENGTH l1' <= n) /\ (k < LENGTH l2')` by DECIDE_TAC THEN
          METIS_TAC[EL_APPEND2]
       ]
-   ]);
+   ]
+QED
 
 
-val IS_LIST_WITH_REPLACEMENTS___SEG =
- store_thm
-  ("IS_LIST_WITH_REPLACEMENTS___SEG",
+Theorem IS_LIST_WITH_REPLACEMENTS___SEG:
 
-   ``!x l l' n m. (n + m <= LENGTH l /\ IS_LIST_WITH_REPLACEMENTS l l' x) ==>
-      (IS_LIST_WITH_REPLACEMENTS (SEG n m l) (SEG n m l') x)``,
+     !x l l' n m. (n + m <= LENGTH l /\ IS_LIST_WITH_REPLACEMENTS l l' x) ==>
+      (IS_LIST_WITH_REPLACEMENTS (SEG n m l) (SEG n m l') x)
+Proof
 
    REWRITE_TAC[IS_LIST_WITH_REPLACEMENTS_def] THEN
-   SIMP_TAC list_ss [LENGTH_SEG, SEG_EL]);
+   SIMP_TAC list_ss [LENGTH_SEG, SEG_EL]
+QED
 
 
-val F_CLOCK_SERE_FREE___IS_TOP_BOTTOM_WELL_BEHAVED =
- store_thm
-  ("F_CLOCK_SERE_FREE___IS_TOP_BOTTOM_WELL_BEHAVED",
-   ``!f. (F_CLOCK_SERE_FREE f) ==> (IS_TOP_BOTTOM_WELL_BEHAVED f)``,
+Theorem F_CLOCK_SERE_FREE___IS_TOP_BOTTOM_WELL_BEHAVED:
+     !f. (F_CLOCK_SERE_FREE f) ==> (IS_TOP_BOTTOM_WELL_BEHAVED f)
+Proof
 
    INDUCT_THEN fl_induct ASSUME_TAC THEN
-   FULL_SIMP_TAC std_ss [F_CLOCK_SERE_FREE_def, IS_TOP_BOTTOM_WELL_BEHAVED_def, F_CLOCK_FREE_def, F_SERE_FREE_def]);
+   FULL_SIMP_TAC std_ss [F_CLOCK_SERE_FREE_def, IS_TOP_BOTTOM_WELL_BEHAVED_def, F_CLOCK_FREE_def, F_SERE_FREE_def]
+QED
 
 
 (***********************************************************
  * Important Lemmata
  ***********************************************************)
 
-val UF_SEM___F_CLOCK_SERE_FREE___OMEGA_TOP_BOTTOM =
- store_thm
-  ("UF_SEM___F_CLOCK_SERE_FREE___OMEGA_TOP_BOTTOM",
-   ``!f. (F_CLOCK_SERE_FREE f) ==> (UF_SEM TOP_OMEGA f /\ ~UF_SEM BOTTOM_OMEGA f)``,
+Theorem UF_SEM___F_CLOCK_SERE_FREE___OMEGA_TOP_BOTTOM:
+     !f. (F_CLOCK_SERE_FREE f) ==> (UF_SEM TOP_OMEGA f /\ ~UF_SEM BOTTOM_OMEGA f)
+Proof
    REWRITE_TAC[TOP_OMEGA_def, BOTTOM_OMEGA_def] THEN
    INDUCT_THEN fl_induct ASSUME_TAC THEN
    ASM_SIMP_TAC (arith_ss++res_quanTools.resq_SS) [F_CLOCK_SERE_FREE_def, UF_SEM_def, COMPLEMENT_def, F_CLOCK_FREE_def, F_SERE_FREE_def,
-     B_SEM_def, ELEM_INFINITE, LENGTH_def, GT, xnum_distinct, o_DEF, COMPLEMENT_LETTER_def, RESTN_INFINITE, IN_LESSX]);
+     B_SEM_def, ELEM_INFINITE, LENGTH_def, GT, xnum_distinct, o_DEF, COMPLEMENT_LETTER_def, RESTN_INFINITE, IN_LESSX]
+QED
 
 
-val UF_SEM___DIRECT___F_F =
- store_thm
-  ("UF_SEM___DIRECT___F_F",
-   ``!v f. (IS_PROPER_PATH v) ==> (UF_SEM v (F_F f) = ?k. k IN LESS (LENGTH v) /\ UF_SEM (RESTN v k) f)``,
+Theorem UF_SEM___DIRECT___F_F:
+     !v f. (IS_PROPER_PATH v) ==> (UF_SEM v (F_F f) = ?k. k IN LESS (LENGTH v) /\ UF_SEM (RESTN v k) f)
+Proof
 
    SIMP_TAC (std_ss++resq_SS) [F_F_def, UF_SEM_def] THEN
    REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
@@ -3060,29 +3054,29 @@ val UF_SEM___DIRECT___F_F =
          `k >= j` by DECIDE_TAC THEN
          PROVE_TAC[INFINITE_PROPER_PATH___TOP_BOTTOM_FOLLOWING]
       ]
-   ]);
+   ]
+QED
 
 
-val UF_SEM___DIRECT___F_G =
- store_thm
-  ("UF_SEM___DIRECT___F_G",
-   ``!v f. (IS_PROPER_PATH v) ==> (UF_SEM v (F_G f) = !k. k IN LESS (LENGTH v) ==> UF_SEM (RESTN v k) f)``,
+Theorem UF_SEM___DIRECT___F_G:
+     !v f. (IS_PROPER_PATH v) ==> (UF_SEM v (F_G f) = !k. k IN LESS (LENGTH v) ==> UF_SEM (RESTN v k) f)
+Proof
 
    REWRITE_TAC[F_G_def, UF_SEM_def] THEN
    REPEAT STRIP_TAC THEN
    `IS_PROPER_PATH (COMPLEMENT v)` by PROVE_TAC[IS_PROPER_PATH___COMPLEMENT] THEN
    ASM_SIMP_TAC std_ss [LENGTH_COMPLEMENT, UF_SEM___DIRECT___F_F, IN_LESSX_REWRITE,
      UF_SEM_def, IMP_DISJ_THM] THEN
-   METIS_TAC [RESTN_COMPLEMENT, COMPLEMENT_COMPLEMENT]);
+   METIS_TAC [RESTN_COMPLEMENT, COMPLEMENT_COMPLEMENT]
+QED
 
 
 
-val PSL_WEAK_UNTIL___ALTERNATIVE_DEF =
- store_thm
-  ("PSL_WEAK_UNTIL___ALTERNATIVE_DEF",
-   ``!v f1 f2. IS_PROPER_PATH v ==>
+Theorem PSL_WEAK_UNTIL___ALTERNATIVE_DEF:
+     !v f1 f2. IS_PROPER_PATH v ==>
       (UF_SEM v (F_WEAK_UNTIL(f1,f2)) =
-       UF_SEM v (F_NOT (F_UNTIL(F_NOT f2, F_AND(F_NOT f1, F_NOT f2)))))``,
+       UF_SEM v (F_NOT (F_UNTIL(F_NOT f2, F_AND(F_NOT f1, F_NOT f2)))))
+Proof
 
 
    SIMP_TAC (std_ss++resq_SS) [F_WEAK_UNTIL_def, F_W_def, UF_SEM_F_OR, IN_LESS,
@@ -3117,15 +3111,15 @@ val PSL_WEAK_UNTIL___ALTERNATIVE_DEF =
       `?j. j < k' /\ UF_SEM (RESTN v j) f2` by METIS_TAC[RESTN_COMPLEMENT, COMPLEMENT_COMPLEMENT] THEN
       EXISTS_TAC ``j:num`` THEN
       ASM_SIMP_TAC arith_ss []
-   ]);
+   ]
+QED
 
 
 
-val US_SEM___S_CLOCK_FREE___OMEGA_BOTTOM =
- store_thm
-  ("US_SEM___S_CLOCK_FREE___OMEGA_BOTTOM",
-   ``!r l ls. (S_CLOCK_FREE r /\ IS_LIST_WITH_REPLACEMENTS ls l BOTTOM) ==> (
-      (US_SEM ls r ==> US_SEM l r))``,
+Theorem US_SEM___S_CLOCK_FREE___OMEGA_BOTTOM:
+     !r l ls. (S_CLOCK_FREE r /\ IS_LIST_WITH_REPLACEMENTS ls l BOTTOM) ==> (
+      (US_SEM ls r ==> US_SEM l r))
+Proof
 
    REPEAT STRIP_TAC THEN
    Tactical.REVERSE (SUBGOAL_THEN ``l:'a letter list = ls`` ASSUME_TAC) THEN1 (
@@ -3134,14 +3128,13 @@ val US_SEM___S_CLOCK_FREE___OMEGA_BOTTOM =
    `BOTTOM_FREE ls` by PROVE_TAC[Lemma5] THEN
    FULL_SIMP_TAC std_ss [IS_LIST_WITH_REPLACEMENTS_def, LIST_EQ_REWRITE] THEN
    PROVE_TAC[BOTTOM_FREE_EL]
-  );
+QED
 
 
-val US_SEM___S_CLOCK_FREE___OMEGA_TOP =
- store_thm
-  ("US_SEM___S_CLOCK_FREE___OMEGA_TOP",
-   ``!r l lw. (S_CLOCK_FREE r /\ IS_LIST_WITH_REPLACEMENTS lw l TOP) ==> (
-      (US_SEM l r ==> US_SEM lw r))``,
+Theorem US_SEM___S_CLOCK_FREE___OMEGA_TOP:
+     !r l lw. (S_CLOCK_FREE r /\ IS_LIST_WITH_REPLACEMENTS lw l TOP) ==> (
+      (US_SEM l r ==> US_SEM lw r))
+Proof
 
    INDUCT_THEN sere_induct ASSUME_TAC THENL [ (* 8 subgoals *)
       SIMP_TAC std_ss [IS_LIST_WITH_REPLACEMENTS_def, S_CLOCK_FREE_def, US_SEM_def] THEN
@@ -3247,15 +3240,15 @@ val US_SEM___S_CLOCK_FREE___OMEGA_TOP =
       ],
 
       REWRITE_TAC[S_CLOCK_FREE_def]
-   ]);
+   ]
+QED
 
 
-val UF_SEM___F_CLOCK_FREE___OMEGA_TOP_BOTTOM =
- store_thm
-  ("UF_SEM___F_CLOCK_FREE___OMEGA_TOP_BOTTOM",
-   ``!f v vw vs.
+Theorem UF_SEM___F_CLOCK_FREE___OMEGA_TOP_BOTTOM:
+     !f v vw vs.
       ((F_CLOCK_FREE f /\ IS_PATH_WITH_REPLACEMENTS vw v TOP /\ UF_SEM v f) ==> UF_SEM vw f) /\
-      ((F_CLOCK_FREE f /\ IS_PATH_WITH_REPLACEMENTS vs v BOTTOM /\ UF_SEM vs f) ==> UF_SEM v f)``,
+      ((F_CLOCK_FREE f /\ IS_PATH_WITH_REPLACEMENTS vs v BOTTOM /\ UF_SEM vs f) ==> UF_SEM v f)
+Proof
 
    INDUCT_THEN fl_induct ASSUME_TAC THENL [
 
@@ -3470,14 +3463,13 @@ val UF_SEM___F_CLOCK_FREE___OMEGA_TOP_BOTTOM =
         `j <= LENGTH v` by (Cases_on `v` THEN FULL_SIMP_TAC arith_ss [LENGTH_def, LS, LE_num_xnum_def]) THEN
         PROVE_TAC[IS_PATH_WITH_REPLACEMENTS___RESTN]
       ]
-   ]);
+   ]
+QED
 
 
 
-val PSL_WITH_SERES___STRICTLY_MORE_EXPRESSIVE_THAN___LTL___EXAMPLE =
- store_thm
-  ("PSL_WITH_SERES___STRICTLY_MORE_EXPRESSIVE_THAN___LTL___EXAMPLE",
-   ``!v p q.  (!n:num. (n < LENGTH v) ==> (?s. (ELEM v n) = STATE s)) ==>
+Theorem PSL_WITH_SERES___STRICTLY_MORE_EXPRESSIVE_THAN___LTL___EXAMPLE:
+     !v p q.  (!n:num. (n < LENGTH v) ==> (?s. (ELEM v n) = STATE s)) ==>
 
        ((UF_SEM v (F_AND(F_SUFFIX_IMP (S_REPEAT(S_CAT(S_BOOL p, S_BOOL q)),
                  F_NEXT(F_AND(F_STRONG_BOOL p, F_NEXT (F_STRONG_BOOL q)))),
@@ -3485,7 +3477,8 @@ val PSL_WITH_SERES___STRICTLY_MORE_EXPRESSIVE_THAN___LTL___EXAMPLE =
                F_AND(F_STRONG_BOOL p, F_NEXT (F_STRONG_BOOL q))))) =
        (!n:num. (LENGTH v > 2*n+1 /\ US_SEM (SEL v (0, 2*n+1)) (S_REPEAT
             (S_CAT (S_BOOL p,S_BOOL q)))) /\
-            B_SEM (ELEM v (n+n)) p /\ B_SEM (ELEM v (n+n+1)) q))``,
+            B_SEM (ELEM v (n+n)) p /\ B_SEM (ELEM v (n+n+1)) q))
+Proof
 
    REPEAT STRIP_TAC THEN
    SUBGOAL_THEN ``COMPLEMENT v = v`` ASSUME_TAC THEN1 (
@@ -3637,15 +3630,15 @@ val PSL_WITH_SERES___STRICTLY_MORE_EXPRESSIVE_THAN___LTL___EXAMPLE =
       REWRITE_TAC [ODD_EXISTS] THEN
       EXISTS_TAC ``PRE (m:num)`` THEN
       ASM_SIMP_TAC arith_ss []
-   ]);
+   ]
+QED
 
 
 
-val IS_TOP_BOTTOM_WELL_BEHAVED_THM =
- store_thm
-  ("IS_TOP_BOTTOM_WELL_BEHAVED_THM",
-   ``!f. (IS_TOP_BOTTOM_WELL_BEHAVED f /\ F_CLOCK_FREE f) ==>
-         ((UF_SEM TOP_OMEGA f) /\ ~(UF_SEM BOTTOM_OMEGA f))``,
+Theorem IS_TOP_BOTTOM_WELL_BEHAVED_THM:
+     !f. (IS_TOP_BOTTOM_WELL_BEHAVED f /\ F_CLOCK_FREE f) ==>
+         ((UF_SEM TOP_OMEGA f) /\ ~(UF_SEM BOTTOM_OMEGA f))
+Proof
 
      INDUCT_THEN fl_induct ASSUME_TAC THENL [
         SIMP_TAC std_ss [TOP_OMEGA_def, BOTTOM_OMEGA_def, UF_SEM_def, ELEM_INFINITE, B_SEM_def, LENGTH_def, GT],
@@ -3666,31 +3659,31 @@ val IS_TOP_BOTTOM_WELL_BEHAVED_THM =
         SIMP_TAC std_ss [F_CLOCK_FREE_def],
 
         SIMP_TAC std_ss [IS_TOP_BOTTOM_WELL_BEHAVED_def]
-     ]);
+     ]
+QED
 
 
 
 
 
-val WEAK_STRONG_UF_SEM___INFINITE_PATHS =
- store_thm
-  ("WEAK_STRONG_UF_SEM___INFINITE_PATHS",
+Theorem WEAK_STRONG_UF_SEM___INFINITE_PATHS:
 
-   ``!v f. (IS_INFINITE v) ==> ((WEAK_UF_SEM v f = UF_SEM v f) /\
-                                (STRONG_UF_SEM v f = UF_SEM v f))``,
+     !v f. (IS_INFINITE v) ==> ((WEAK_UF_SEM v f = UF_SEM v f) /\
+                                (STRONG_UF_SEM v f = UF_SEM v f))
+Proof
 
    Cases_on `v` THEN
-   REWRITE_TAC[IS_INFINITE_def, WEAK_UF_SEM_def, STRONG_UF_SEM_def, PATH_APPEND_def]);
+   REWRITE_TAC[IS_INFINITE_def, WEAK_UF_SEM_def, STRONG_UF_SEM_def, PATH_APPEND_def]
+QED
 
 
 
-val WEAK_STRONG_UF_SEM___FINITE_PROPER_PATHS =
- store_thm
-  ("WEAK_STRONG_UF_SEM___FINITE_PROPER_PATHS",
+Theorem WEAK_STRONG_UF_SEM___FINITE_PROPER_PATHS:
 
-   ``!f p. (F_CLOCK_FREE f /\ IS_FINITE_PROPER_PATH (FINITE p) /\ IS_TOP_BOTTOM_WELL_BEHAVED f) ==> (
+     !f p. (F_CLOCK_FREE f /\ IS_FINITE_PROPER_PATH (FINITE p) /\ IS_TOP_BOTTOM_WELL_BEHAVED f) ==> (
       (STRONG_UF_SEM (FINITE p) f ==> UF_SEM (FINITE p) f) /\
-      (UF_SEM (FINITE p) f ==> WEAK_UF_SEM (FINITE p) f))``,
+      (UF_SEM (FINITE p) f ==> WEAK_UF_SEM (FINITE p) f))
+Proof
 
 
    REWRITE_TAC [WEAK_UF_SEM_def, STRONG_UF_SEM_def, PATH_APPEND_def, TOP_OMEGA_def, BOTTOM_OMEGA_def] THEN
@@ -3928,17 +3921,17 @@ val WEAK_STRONG_UF_SEM___FINITE_PROPER_PATHS =
             PROVE_TAC[IS_FINITE_PROPER_PATH___RESTN, LS, LENGTH_def, RESTN_FINITE] THEN
          PROVE_TAC[TOP_OMEGA_def]
       ]
-   ]);
+   ]
+QED
 
 
 
 
-val WEAK_STRONG_UF_SEM_THM =
- store_thm
-  ("WEAK_STRONG_UF_SEM_THM",
+Theorem WEAK_STRONG_UF_SEM_THM:
 
-   ``!f v. (F_CLOCK_FREE f /\ IS_PROPER_PATH v /\ IS_TOP_BOTTOM_WELL_BEHAVED f) ==> (
-      (STRONG_UF_SEM v f ==> UF_SEM v f) /\ (UF_SEM v f ==> WEAK_UF_SEM v f))``,
+     !f v. (F_CLOCK_FREE f /\ IS_PROPER_PATH v /\ IS_TOP_BOTTOM_WELL_BEHAVED f) ==> (
+      (STRONG_UF_SEM v f ==> UF_SEM v f) /\ (UF_SEM v f ==> WEAK_UF_SEM v f))
+Proof
 
    REWRITE_TAC [IS_PROPER_PATH_def] THEN
    REPEAT GEN_TAC THEN STRIP_TAC THENL [
@@ -3947,7 +3940,8 @@ val WEAK_STRONG_UF_SEM_THM =
 
       `?p. v = FINITE p` by PROVE_TAC[IS_FINITE_PROPER_PATH_def] THEN
       PROVE_TAC[WEAK_STRONG_UF_SEM___FINITE_PROPER_PATHS]
-   ]);
+   ]
+QED
 
 
 Definition UF_EQUIVALENT_def:
@@ -3988,85 +3982,84 @@ End
 
 
 
-val UF_IS_TAUTOLOGY_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE___DUAL =
- store_thm
-  ("UF_IS_TAUTOLOGY_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE___DUAL",
+Theorem UF_IS_TAUTOLOGY_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE___DUAL:
 
-  ``(!f. UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE (F_NOT f) = UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f) /\
-    (!f. UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE (F_NOT f) = UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f)``,
+    (!f. UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE (F_NOT f) = UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f) /\
+    (!f. UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE (F_NOT f) = UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f)
+Proof
 
     REWRITE_TAC[UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE_def,
                 UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def,
                 UF_SEM_def] THEN
-    PROVE_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT, COMPLEMENT_COMPLEMENT]);
+    PROVE_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT, COMPLEMENT_COMPLEMENT]
+QED
 
 
 
-val F_IS_TAUTOLOGY_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE___DUAL =
- store_thm
-  ("F_IS_TAUTOLOGY_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE___DUAL",
+Theorem F_IS_TAUTOLOGY_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE___DUAL:
 
-  ``(!f. F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE (F_NOT f) = F_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f) /\
-    (!f. F_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE (F_NOT f) = F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f)``,
+    (!f. F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE (F_NOT f) = F_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f) /\
+    (!f. F_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE (F_NOT f) = F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f)
+Proof
 
     REWRITE_TAC[F_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE_def,
                 F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def,
                 F_SEM_def] THEN
-    PROVE_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT, COMPLEMENT_COMPLEMENT]);
+    PROVE_TAC[IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT, COMPLEMENT_COMPLEMENT]
+QED
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TO___CONTRADICTION =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TO___CONTRADICTION",
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TO___CONTRADICTION:
 
-  ``!f1 f2. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
-            UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE (F_NOT(F_IFF(f1, f2)))``,
+    !f1 f2. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
+            UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE (F_NOT(F_IFF(f1, f2)))
+Proof
 
     SIMP_TAC std_ss [UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def,
                 UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def,
                 UF_SEM_def, F_IFF_def, F_IMPLIES_def, F_OR_def,
                 COMPLEMENT_COMPLEMENT,
                 IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 
 
-val F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TO___CONTRADICTION =
- store_thm
-  ("F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TO___CONTRADICTION",
+Theorem F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TO___CONTRADICTION:
 
-  ``!f1 f2. F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
-            F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE (F_NOT(F_IFF(f1, f2)))``,
+    !f1 f2. F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
+            F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE (F_NOT(F_IFF(f1, f2)))
+Proof
 
     SIMP_TAC std_ss [F_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def,
                 F_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def,
                 F_SEM_def, F_IFF_def, F_IMPLIES_def, F_OR_def,
                 COMPLEMENT_COMPLEMENT,
                 IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT] THEN
-    PROVE_TAC[]);
+    PROVE_TAC[]
+QED
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___REFL =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___REFL",
-   ``!f. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f f``,
-   SIMP_TAC std_ss [UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def]);
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___REFL:
+     !f. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f f
+Proof
+   SIMP_TAC std_ss [UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def]
+QED
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TRANS =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TRANS",
-   ``!f1 f2 f3. (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 /\
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TRANS:
+     !f1 f2 f3. (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 /\
                  UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f2 f3) ==>
-                 UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f3``,
-   SIMP_TAC std_ss [UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def]);
+                 UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f3
+Proof
+   SIMP_TAC std_ss [UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def]
+QED
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___TRUE =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___TRUE",
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___TRUE:
 
-``!f. (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_SUFFIX_IMP (S_BOOL B_TRUE, f)) f)``,
+  !f. (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_SUFFIX_IMP (S_BOOL B_TRUE, f)) f)
+Proof
 
 SIMP_TAC (std_ss++resq_SS) [UF_SEM_def, IN_LESSX_REWRITE, UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def,
 IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT, US_SEM_def] THEN
@@ -4076,16 +4069,16 @@ ELEM_def, LS, GT, LENGTH_SEL, SEL_def, RESTN_def] THEN
 REWRITE_TAC[prove (``1 = SUC 0``, DECIDE_TAC), SEL_REC_def, HEAD_def] THEN
 SIMP_TAC list_ss [FinitePSLPathTheory.ELEM_def, FinitePSLPathTheory.RESTN_def, FinitePSLPathTheory.HEAD_def, ETA_THM] THEN
 `?s. p 0 = STATE s` by METIS_TAC[] THEN
-ASM_REWRITE_TAC[B_SEM_def]);
+ASM_REWRITE_TAC[B_SEM_def]
+QED
 
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL",
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL:
 
-``!b f. (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_SUFFIX_IMP ((S_BOOL b), f))
-                                                (F_IMPLIES((F_STRONG_BOOL b), f)))``,
+  !b f. (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE (F_SUFFIX_IMP ((S_BOOL b), f))
+                                                (F_IMPLIES((F_STRONG_BOOL b), f)))
+Proof
 
 SIMP_TAC (std_ss++resq_SS) [UF_SEM_def, IN_LESSX_REWRITE, UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def,
 IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT, F_IMPLIES_def, F_OR_def] THEN
@@ -4094,17 +4087,17 @@ FULL_SIMP_TAC std_ss [IS_INFINITE_TOP_BOTTOM_FREE_PATH_def, LENGTH_def, US_SEM_d
 ELEM_def, LS, GT, LENGTH_SEL, SEL_def] THEN
 REWRITE_TAC[prove (``1 = SUC 0``, DECIDE_TAC), SEL_REC_def, HEAD_def] THEN
 SIMP_TAC list_ss [RESTN_INFINITE, HEAD_def, FinitePSLPathTheory.ELEM_def, FinitePSLPathTheory.RESTN_def, FinitePSLPathTheory.HEAD_def, ETA_THM] THEN
-METIS_TAC[]);
+METIS_TAC[]
+QED
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CAT =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CAT",
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CAT:
 
-``!s1 s2 f. (~(US_SEM [] s1) /\ ~(US_SEM [] s2)) ==>
+  !s1 s2 f. (~(US_SEM [] s1) /\ ~(US_SEM [] s2)) ==>
    UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
     (F_SUFFIX_IMP (S_CAT(s1, s2), f))
-    (F_SUFFIX_IMP (s1, (F_NEXT (F_SUFFIX_IMP (s2, f)))))``,
+    (F_SUFFIX_IMP (s1, (F_NEXT (F_SUFFIX_IMP (s2, f)))))
+Proof
 
 SIMP_TAC (std_ss++resq_SS) [UF_SEM_def, IN_LESSX_REWRITE, UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def,
 IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT] THEN
@@ -4214,7 +4207,8 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
   AP_THM_TAC THEN AP_TERM_TAC THEN
   SIMP_TAC std_ss [path_11, FUN_EQ_THM] THEN
   GEN_TAC THEN AP_TERM_TAC THEN DECIDE_TAC
-]);
+]
+QED
 
 
 Definition S_BOOL_BIGCAT_def:
@@ -4224,16 +4218,15 @@ End
 
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL_BIGCAT =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL_BIGCAT",
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL_BIGCAT:
 
-``(!f:'a fl b.
+  (!f:'a fl b.
    UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
     (F_SUFFIX_IMP (S_BOOL_BIGCAT [b], f)) (F_IMPLIES((F_STRONG_BOOL b), f))) /\
   (!f:'a fl b1 b2 l. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
     (F_SUFFIX_IMP (S_BOOL_BIGCAT (b1::b2::l), f))
-    (F_IMPLIES((F_STRONG_BOOL b1), F_NEXT (F_SUFFIX_IMP (S_BOOL_BIGCAT (b2::l), f)))))``,
+    (F_IMPLIES((F_STRONG_BOOL b1), F_NEXT (F_SUFFIX_IMP (S_BOOL_BIGCAT (b2::l), f)))))
+Proof
 
   REPEAT STRIP_TAC THENL [
     SIMP_TAC std_ss [S_BOOL_BIGCAT_def,
@@ -4247,7 +4240,8 @@ val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL_BIGCAT =
     ) THEN
     ASSUME_TAC UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL THEN
     FULL_SIMP_TAC std_ss [UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def]
-  ]);
+  ]
+QED
 
 
 
@@ -4272,13 +4266,12 @@ val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___BOOL_BIGCAT =
 
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL",
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL:
 
-``!b f c. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
+  !b f c. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
           (F_CLOCK_COMP c (F_SUFFIX_IMP ((S_BOOL b), f)))
-          (F_W_CLOCK c (F_IMPLIES((F_STRONG_BOOL b), F_CLOCK_COMP c f)))``,
+          (F_W_CLOCK c (F_IMPLIES((F_STRONG_BOOL b), F_CLOCK_COMP c f)))
+Proof
 
 
 SIMP_TAC (std_ss++resq_SS) [UF_SEM_def, IN_LESSX_REWRITE, UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def,
@@ -4458,16 +4451,16 @@ EQ_TAC THENL [
 
     METIS_TAC[B_SEM_def]
   ]
-]);
+]
+QED
 
 
 
-val S_SEM___CLOCK_OCCURRENCE =
- store_thm
-  ("S_SEM___CLOCK_OCCURRENCE",
+Theorem S_SEM___CLOCK_OCCURRENCE:
 
-  ``!s v c. S_SEM v c s /\ ~(v = []) /\ S_CLOCK_FREE s ==>
-            B_SEM (EL (LENGTH v - 1) v) c``,
+    !s v c. S_SEM v c s /\ ~(v = []) /\ S_CLOCK_FREE s ==>
+            B_SEM (EL (LENGTH v - 1) v) c
+Proof
 
 INDUCT_THEN sere_induct ASSUME_TAC THENL [
   SIMP_TAC (list_ss++resq_SS) [S_SEM_def, CLOCK_TICK_def, IN_LESS,
@@ -4523,22 +4516,22 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [
 
 
   SIMP_TAC std_ss [S_CLOCK_FREE_def]
-]);
+]
+QED
 
 
 
 
 
-val S_SEM___EXTEND_NO_CLOCK_CYCLES =
- store_thm
-  ("S_SEM___EXTEND_NO_CLOCK_CYCLES",
+Theorem S_SEM___EXTEND_NO_CLOCK_CYCLES:
 
-``!s k m n0 c p.
+  !s k m n0 c p.
 ((!l. (l < k) ==> B_SEM (ELEM p (n0 + l)) (B_NOT c)) /\
  (S_SEM (SEL_REC m (n0+k) p) c s) /\
  (m > 0) /\
  (S_CLOCK_FREE s)) ==>
- (S_SEM (SEL_REC (m+k) n0 p) c s)``,
+ (S_SEM (SEL_REC (m+k) n0 p) c s)
+Proof
 
 
 INDUCT_THEN sere_induct ASSUME_TAC THENL [
@@ -4715,22 +4708,22 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [
 
 
   SIMP_TAC std_ss [S_CLOCK_FREE_def]
-]);
+]
+QED
 
 
 
 
 
-val S_SEM___RESTRICT_NO_CLOCK_CYCLES =
- store_thm
-  ("S_SEM___RESTRICT_NO_CLOCK_CYCLES",
+Theorem S_SEM___RESTRICT_NO_CLOCK_CYCLES:
 
-``!s k m n0 c p.
+  !s k m n0 c p.
 ((!l. (l < k) ==> ((B_SEM (ELEM p (n0 + l)) (B_NOT c)) /\ ?s'. (ELEM p (n0 + l) = STATE s'))) /\
  (S_SEM (SEL_REC (m+k) n0 p) c s) /\
  (m > 0) /\
  (S_CLOCK_FREE s)) ==>
- (S_SEM (SEL_REC m (n0+k) p) c s)``,
+ (S_SEM (SEL_REC m (n0+k) p) c s)
+Proof
 
 
 INDUCT_THEN sere_induct ASSUME_TAC THENL [
@@ -4970,35 +4963,35 @@ INDUCT_THEN sere_induct ASSUME_TAC THENL [
 
 
   SIMP_TAC std_ss [S_CLOCK_FREE_def]
-]);
+]
+QED
 
 
 
-val S_SEM___EXTEND_RESTRICT_NO_CLOCK_CYCLES =
- store_thm
-  ("S_SEM___EXTEND_RESTRICT_NO_CLOCK_CYCLES",
+Theorem S_SEM___EXTEND_RESTRICT_NO_CLOCK_CYCLES:
 
-``!s k m n0 c p.
+  !s k m n0 c p.
 ((!l. (l < k) ==> ((B_SEM (ELEM p (n0 + l)) (B_NOT c)) /\ ?s'. (ELEM p (n0 + l) = STATE s'))) /\
  (m > 0) /\
  (S_CLOCK_FREE s)) ==>
- ((S_SEM (SEL_REC m (n0+k) p) c s) = (S_SEM (SEL_REC (m+k) n0 p) c s))``,
+ ((S_SEM (SEL_REC m (n0+k) p) c s) = (S_SEM (SEL_REC (m+k) n0 p) c s))
+Proof
 
  METIS_TAC[S_SEM___RESTRICT_NO_CLOCK_CYCLES,
-           S_SEM___EXTEND_NO_CLOCK_CYCLES]);
+           S_SEM___EXTEND_NO_CLOCK_CYCLES]
+QED
 
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_CAT =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_CAT",
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_CAT:
 
-``!s1 s2 f c. (S_CLOCK_FREE s1 /\ S_CLOCK_FREE s2 /\
+  !s1 s2 f c. (S_CLOCK_FREE s1 /\ S_CLOCK_FREE s2 /\
               (~(S_SEM [] c s1) /\ ~(S_SEM [] c s2))) ==>
 
    UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
     (F_CLOCK_COMP c (F_SUFFIX_IMP (S_CAT(s1, s2), f)))
-    (F_CLOCK_COMP c (F_SUFFIX_IMP (s1, (F_WEAK_X (F_SUFFIX_IMP (s2, f))))))``,
+    (F_CLOCK_COMP c (F_SUFFIX_IMP (s1, (F_WEAK_X (F_SUFFIX_IMP (s2, f))))))
+Proof
 
 SIMP_TAC (std_ss++resq_SS) [UF_SEM_def, IN_LESSX_REWRITE, UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def,
 IS_INFINITE_TOP_BOTTOM_FREE_PATH___COMPLEMENT,
@@ -5196,22 +5189,22 @@ EQ_TAC THEN REPEAT STRIP_TAC THENL [
   NTAC 2 (UNDISCH_NO_TAC 1) THEN
   `j' + (m + 1) = l'` by DECIDE_TAC THEN
   ASM_SIMP_TAC arith_ss []
-]);
+]
+QED
 
 
 
-val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL_BIGCAT =
- store_thm
-  ("UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL_BIGCAT",
+Theorem UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL_BIGCAT:
 
-``(!f:'a fl b c .
+  (!f:'a fl b c .
    UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
     (F_CLOCK_COMP c (F_SUFFIX_IMP (S_BOOL_BIGCAT [b], f)))
     (F_W_CLOCK c (F_IMPLIES (F_STRONG_BOOL b,F_CLOCK_COMP c f)))
   ) /\
   (!f:'a fl b1 b2 l c. UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE
     (F_CLOCK_COMP c (F_SUFFIX_IMP (S_BOOL_BIGCAT (b1::b2::l), f)))
-    (F_CLOCK_COMP c (F_SUFFIX_IMP (S_BOOL b1, F_WEAK_X (F_SUFFIX_IMP (S_BOOL_BIGCAT (b2::l), f))))))``,
+    (F_CLOCK_COMP c (F_SUFFIX_IMP (S_BOOL b1, F_WEAK_X (F_SUFFIX_IMP (S_BOOL_BIGCAT (b2::l), f))))))
+Proof
 
   REPEAT STRIP_TAC THENL [
     SIMP_TAC std_ss [S_BOOL_BIGCAT_def,
@@ -5233,7 +5226,8 @@ val UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL_BIGCAT 
     ) THEN
     ASSUME_TAC UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___F_SUFFIX_IMP___CLOCK_BOOL THEN
     FULL_SIMP_TAC std_ss [UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE_def]
-  ]);
+  ]
+QED
 
 
 

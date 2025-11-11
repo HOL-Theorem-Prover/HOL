@@ -43,11 +43,13 @@ val SND_COND_RAND = ISPEC `SND` COND_RAND;
 
 (* ------------------------------------------------------------------------- *)
 
-val MULT_ALU6_ZERO = store_thm("MULT_ALU6_ZERO",
-  `!ireg borrow2 mul dataabt alua alub c.
+Theorem MULT_ALU6_ZERO:
+   !ireg borrow2 mul dataabt alua alub c.
      SND (ALU6 mla_mul t3 ireg borrow2 mul dataabt alua alub c) =
-       if ireg %% 21 then alub else 0w`,
-  RW_TAC std_ss [ALUOUT_ALU_logic,ALU6_def]);
+       if ireg %% 21 then alub else 0w
+Proof
+  RW_TAC std_ss [ALUOUT_ALU_logic,ALU6_def]
+QED
 
 val COMM_MULT_DIV = ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV;
 val COMM_DIV_MULT = ONCE_REWRITE_RULE [MULT_COMM] DIV_MULT;
@@ -245,9 +247,11 @@ val BIT_VAR = prove(
 
 (* ------------------------------------------------------------------------- *)
 
-val CARRY_LEM = store_thm("CARRY_LEM",
-  `!cpsr. NZCV cpsr = FST (DECODE_PSR cpsr)`,
-  SIMP_TAC std_ss [DECODE_PSR_def]);
+Theorem CARRY_LEM:
+   !cpsr. NZCV cpsr = FST (DECODE_PSR cpsr)
+Proof
+  SIMP_TAC std_ss [DECODE_PSR_def]
+QED
 
 val LSL_CARRY_SUBST = prove(
   `!n C x c. ~(n = 0w) ==> (LSL x n c = LSL x n C)`,
@@ -358,12 +362,14 @@ val RD_INVARIANT_ONE = (GEN_ALL o
      n2w_w2n,GSYM word_bits_n2w] o
    INST [`n` |-> `1`] o SPEC_ALL) RD_INVARIANT_def;
 
-val RD_INVARIANT_LAST = store_thm("RD_INVARIANT_LAST",
-  `!a rm rs rn.
+Theorem RD_INVARIANT_LAST:
+   !a rm rs rn.
      RD_INVARIANT a rm rs rn (MLA_MUL_DUR rs) =
-       rm * rs + (if a then rn else 0w)`,
+       rm * rs + (if a then rn else 0w)
+Proof
    RW_TAC bool_ss [RD_INVARIANT_def,BORROW_IMP_WL,DUR_IMP_ZERO_MSBS,
-     SPEC_LSL_LIMIT,n2w_w2n,WORD_ADD_0,WORD_SUB_RZERO]);
+     SPEC_LSL_LIMIT,n2w_w2n,WORD_ADD_0,WORD_SUB_RZERO]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -521,14 +527,15 @@ val word_add_n2w_mod = prove(
 
 val _ = computeLib.add_thms [word_add_n2w_mod] computeLib.the_compset;
 
-val RD_INVARIANT_THM = store_thm("RD_INVARIANT_THM",
-  `!n a rm rs rn. 2 * (n + 1) <= 32 ==>
+Theorem RD_INVARIANT_THM:
+   !n a rm rs rn. 2 * (n + 1) <= 32 ==>
      (RD_INVARIANT a rm rs rn (n + 1) =
         let borrow2 = BORROW2 rs n
         and mul = ((2 * n + 1) >< (2 * n)) rs
         in
           ALU6_MUL borrow2 mul (RD_INVARIANT a rm rs rn n)
-            (rm << w2n (MSHIFT2 borrow2 mul (n2w n))))`,
+            (rm << w2n (MSHIFT2 borrow2 mul (n2w n))))
+Proof
   RW_TAC std_ss [BORROW_LEM2,MSHIFT2_def,RD_INVARIANT_def,ALU6_MUL_def]
     \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [BORROW_LEM2,n2w_11]
     \\ MAP_EVERY MUST_BE_TAC [MUST_BE_TWO, MUST_BE_THREE]
@@ -542,7 +549,8 @@ val RD_INVARIANT_THM = store_thm("RD_INVARIANT_THM",
          AC WORD_ADD_ASSOC WORD_ADD_COMM,WORD_EQ_ADD_LCANCEL,
          WORD_NEG_RMUL,GSYM WORD_LEFT_ADD_DISTRIB,WORD_LEFT_ADD_DISTRIB_1]
     \\ REWRITE_TAC [WORD_NEG_RMUL_1,GSYM WORD_LEFT_ADD_DISTRIB]
-    \\ EVAL_TAC \\ REWRITE_TAC [WORD_MULT_CLAUSES]);
+    \\ EVAL_TAC \\ REWRITE_TAC [WORD_MULT_CLAUSES]
+QED
 
 val RD_INVARIANT_SUC = prove(
   `!n a rs.

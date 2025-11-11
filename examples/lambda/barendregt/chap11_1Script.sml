@@ -18,15 +18,16 @@ val (phi_thm, _) =
        (phi (LAMi n v M N) = [phi N/v] (phi M))`
 val _ = export_rewrites ["phi_thm"]
 
-val FV_phi = store_thm(
-  "FV_phi",
-  ``!M. v IN FV (phi M) ==> v IN FV M``,
+Theorem FV_phi:
+    !M. v IN FV (phi M) ==> v IN FV M
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN
   Q.EXISTS_TAC `{v}` THEN SRW_TAC [][] THENL [
     METIS_TAC [],
     METIS_TAC [],
     FULL_SIMP_TAC (srw_ss()) [FV_SUB] THEN METIS_TAC [IN_UNION, IN_DELETE]
-  ]);
+  ]
+QED
 
 Theorem NOT_IN_lSUB_I[simp] :
     ∀M:lterm. v ∉ FV N ∧ v ≠ u ∧ v ∉ FV M ==> v ∉ FV ([N/u]M)
@@ -35,12 +36,13 @@ Proof
   SRW_TAC [][lSUB_VAR]
 QED
 
-val phi_vsubst_commutes = store_thm(
-  "phi_vsubst_commutes",
-  ``!M. phi ([VAR v/u] M) = [VAR v/u] (phi M)``,
+Theorem phi_vsubst_commutes:
+    !M. phi ([VAR v/u] M) = [VAR v/u] (phi M)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `{u;v}` THEN
   SRW_TAC [][SUB_THM, SUB_VAR] THEN
-  SRW_TAC [][chap2Theory.substitution_lemma]);
+  SRW_TAC [][chap2Theory.substitution_lemma]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -64,29 +66,31 @@ Proof
   HO_MATCH_MP_TAC simple_lterm_induction THEN SRW_TAC [][]
 QED
 
-val strip_label_vsubst_commutes = store_thm(
-  "strip_label_vsubst_commutes",
-  ``!M. [VAR u/v] (strip_label M) = strip_label ([VAR u/v] M)``,
+Theorem strip_label_vsubst_commutes:
+    !M. [VAR u/v] (strip_label M) = strip_label ([VAR u/v] M)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN
-  Q.EXISTS_TAC `{u;v}` THEN SRW_TAC [][SUB_THM, SUB_VAR]);
+  Q.EXISTS_TAC `{u;v}` THEN SRW_TAC [][SUB_THM, SUB_VAR]
+QED
 
-val strip_label_eq_lam = store_thm(
-  "strip_label_eq_lam",
-  ``(strip_label M = LAM v t) =
-        ?t'. (M = LAM v t') /\ (strip_label t' = t)``,
+Theorem strip_label_eq_lam:
+    (strip_label M = LAM v t) =
+        ?t'. (M = LAM v t') /\ (strip_label t' = t)
+Proof
   Q.SPEC_THEN `M` STRUCT_CASES_TAC lterm_CASES THEN
   SRW_TAC [][LAM_eq_thm, lLAM_eq_thm, EQ_IMP_THM,
              tpm_eqr, ltpm_eqr] THEN
-  FULL_SIMP_TAC (srw_ss()) [tpm_eqr, ltpm_eqr]);
+  FULL_SIMP_TAC (srw_ss()) [tpm_eqr, ltpm_eqr]
+QED
 
-val strip_label_eq_redex = store_thm(
-  "strip_label_eq_redex",
-  ``(strip_label M = LAM v t @@ u) <=>
+Theorem strip_label_eq_redex:
+    (strip_label M = LAM v t @@ u) <=>
          (?t' u'. (M = LAM v t' @@ u') /\ (strip_label t' = t) /\
                   (strip_label u' = u)) \/
          (?n t' u'. (M = LAMi n v t' u') /\
                     (strip_label t' = t) /\
-                    (strip_label u' = u))``,
+                    (strip_label u' = u))
+Proof
   Q.SPEC_THEN `M` STRUCT_CASES_TAC lterm_CASES THEN
   SRW_TAC [][strip_label_eq_lam] THENL [
     METIS_TAC [],
@@ -95,13 +99,15 @@ val strip_label_eq_redex = store_thm(
       SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [],
       SRW_TAC [][tpm_eqr]
     ]
-  ]);
+  ]
+QED
 
-val strip_label_subst = store_thm(
-  "strip_label_subst",
-  ``!M. strip_label ([N/v] M) = [strip_label N/v] (strip_label M)``,
+Theorem strip_label_subst:
+    !M. strip_label ([N/v] M) = [strip_label N/v] (strip_label M)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `v INSERT FV N` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR]);
+  SRW_TAC [][SUB_THM, SUB_VAR]
+QED
 
 (* ----------------------------------------------------------------------
     null_labelling, from :term  to  :lterm
@@ -121,11 +127,12 @@ Proof
   HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][]
 QED
 
-val null_labelling_subst = store_thm(
-  "null_labelling_subst",
-  ``!M. null_labelling ([N/v] M) = [null_labelling N/v] (null_labelling M)``,
+Theorem null_labelling_subst:
+    !M. null_labelling ([N/v] M) = [null_labelling N/v] (null_labelling M)
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV N` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR]);
+  SRW_TAC [][SUB_THM, SUB_VAR]
+QED
 
 Theorem strip_null_labelling[simp] :
     !M. strip_label (null_labelling M) = M
@@ -150,23 +157,25 @@ val christians_lemma = prove(
   SRW_TAC [][lSUB_VAR]);
 
 
-val lSUBSTITUTION_LEMMA = store_thm(
-  "lSUBSTITUTION_LEMMA",
-  ``!M:lterm. ~(v = x) /\ ~(v IN FV L) ==>
-              ([L/x] ([N/v] M) = [[L/x] N/v] ([L/x] M))``,
+Theorem lSUBSTITUTION_LEMMA:
+    !M:lterm. ~(v = x) /\ ~(v IN FV L) ==>
+              ([L/x] ([N/v] M) = [[L/x] N/v] ([L/x] M))
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN
   Q.EXISTS_TAC `{v;x} UNION FV L UNION FV N` THEN
-  SRW_TAC [][lSUB_VAR, l14b, FV_SUB, christians_lemma]);
+  SRW_TAC [][lSUB_VAR, l14b, FV_SUB, christians_lemma]
+QED
 
-val ltpm_subst = store_thm(
-  "ltpm_subst",
-  ``!M. ltpm p ([N/v]M) = [ltpm p N/lswapstr p v] (ltpm p M)``,
+Theorem ltpm_subst:
+    !M. ltpm p ([N/v]M) = [ltpm p N/lswapstr p v] (ltpm p M)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `v INSERT FV N` THEN
-  SRW_TAC [][lSUB_VAR]);
+  SRW_TAC [][lSUB_VAR]
+QED
 
-val l14c = store_thm(
-  "l14c",
-  ``!M:lterm. x IN FV M ==> (FV ([N/x]M) = FV N UNION (FV M DELETE x))``,
+Theorem l14c:
+    !M:lterm. x IN FV M ==> (FV ([N/x]M) = FV N UNION (FV M DELETE x))
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `x INSERT FV N` THEN
   SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
     Cases_on `x IN FV M'` THEN SRW_TAC [][l14b, EXTENSION, EQ_IMP_THM] THEN
@@ -178,13 +187,15 @@ val l14c = store_thm(
     SRW_TAC [][] THEN METIS_TAC [],
     Cases_on `x IN FV M` THEN SRW_TAC [][l14b, EXTENSION, EQ_IMP_THM] THEN
     SRW_TAC [][] THEN METIS_TAC []
-  ]);
+  ]
+QED
 
-val lFV_SUB = store_thm(
-  "lFV_SUB",
-  ``FV ([N/v]M:lterm) = if v IN FV M then FV N UNION (FV M DELETE v)
-                        else FV M``,
-  METIS_TAC [l14c, l14b]);
+Theorem lFV_SUB:
+    FV ([N/v]M:lterm) = if v IN FV M then FV N UNION (FV M DELETE v)
+                        else FV M
+Proof
+  METIS_TAC [l14c, l14b]
+QED
 
 
 (* ----------------------------------------------------------------------
@@ -216,9 +227,8 @@ Definition beta1_def:
               ?v t u. (M = (LAM v t) @@ u) /\ (N = [u/v]t)
 End
 
-val lcc_beta_bvc_ind = store_thm(
-  "lcc_beta_bvc_ind",
-  ``!P X. FINITE X /\
+Theorem lcc_beta_bvc_ind:
+    !P X. FINITE X /\
           (!v M N. ~(v IN FV N) /\ ~(v IN X) ==>
                    P (LAM v M @@ N) ([N/v]M)) /\
           (!n v M N. ~(v IN FV N) /\ ~(v IN X) ==>
@@ -232,7 +242,8 @@ val lcc_beta_bvc_ind = store_thm(
                ~(v IN X) /\ ~(v IN FV N) /\ ~(v IN FV N') /\ P N N' ==>
                P (LAMi n v M N) (LAMi n v M N'))
        ==>
-          !M N. lcompat_closure (beta0 RUNION beta1) M N ==> P M N``,
+          !M N. lcompat_closure (beta0 RUNION beta1) M N ==> P M N
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!M N. lcompat_closure(beta0 RUNION beta1) M N ==>
                         !p. P (ltpm p M) (ltpm p N)`
@@ -283,12 +294,13 @@ val lcc_beta_bvc_ind = store_thm(
          LAMi n w (ltpm [(w,lswapstr p v)] (ltpm p z)) N`
       by SRW_TAC [][ltpm_ALPHAi] THEN
     SRW_TAC [][GSYM pmact_decompose]
-  ]);
+  ]
+QED
 
-val beta_matched = store_thm(
-  "beta_matched",
-  ``!M' N. beta (strip_label M') N ==>
-           ?N'. (beta0 RUNION beta1) M' N' /\ (N = strip_label N')``,
+Theorem beta_matched:
+    !M' N. beta (strip_label M') N ==>
+           ?N'. (beta0 RUNION beta1) M' N' /\ (N = strip_label N')
+Proof
   SIMP_TAC (srw_ss()) [beta_def] THEN
   REPEAT GEN_TAC THEN
   Q.SPEC_THEN `M'` STRUCT_CASES_TAC lterm_CASES THEN
@@ -300,22 +312,24 @@ val beta_matched = store_thm(
                               beta1_def] THEN
     SRW_TAC [DNF_ss][lLAMi_eq_thm, strip_label_subst,
                      fresh_tpm_subst, lemma15a]
-  ]);
+  ]
+QED
 
-val lcc_beta_FV = store_thm(
-  "lcc_beta_FV",
-  ``!M N. lcompat_closure (beta0 RUNION beta1) M N ==>
-          !x. x IN FV N ==> x IN FV M``,
+Theorem lcc_beta_FV:
+    !M N. lcompat_closure (beta0 RUNION beta1) M N ==>
+          !x. x IN FV N ==> x IN FV M
+Proof
   HO_MATCH_MP_TAC lcompat_closure_ind THEN
   SRW_TAC [][relationTheory.RUNION, beta0_def, beta1_def] THEN
   TRY (PROVE_TAC []) THEN
   FULL_SIMP_TAC (srw_ss() ++ boolSimps.COND_elim_ss) [lFV_SUB] THEN
-  PROVE_TAC []);
+  PROVE_TAC []
+QED
 
-val lcc_beta_subst = store_thm(
-  "lcc_beta_subst",
-  ``!M N P v. lcompat_closure (beta0 RUNION beta1) M N ==>
-              lcompat_closure (beta0 RUNION beta1) ([P/v]M) ([P/v]N)``,
+Theorem lcc_beta_subst:
+    !M N P v. lcompat_closure (beta0 RUNION beta1) M N ==>
+              lcompat_closure (beta0 RUNION beta1) ([P/v]M) ([P/v]N)
+Proof
   REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`N`, `M`] THEN
   HO_MATCH_MP_TAC lcc_beta_bvc_ind THEN
   Q.EXISTS_TAC `v INSERT FV P` THEN SRW_TAC [][lcompat_closure_rules] THENL [
@@ -329,30 +343,33 @@ val lcc_beta_subst = store_thm(
     SRW_TAC [][beta0_def] THEN
     MAP_EVERY Q.EXISTS_TAC [`n`,`v'`, `[P/v]M`, `[P/v]N`] THEN
     SRW_TAC [][lSUBSTITUTION_LEMMA]
-  ]);
+  ]
+QED
 
-val lcc_beta_ltpm_imp = store_thm(
-  "lcc_beta_ltpm_imp",
-  ``!M N. lcompat_closure (beta0 RUNION beta1) M N ==>
-          !pi. lcompat_closure (beta0 RUNION beta1) (ltpm pi M) (ltpm pi N)``,
+Theorem lcc_beta_ltpm_imp:
+    !M N. lcompat_closure (beta0 RUNION beta1) M N ==>
+          !pi. lcompat_closure (beta0 RUNION beta1) (ltpm pi M) (ltpm pi N)
+Proof
   HO_MATCH_MP_TAC lcompat_closure_ind THEN
   SRW_TAC [][lcompat_closure_rules] THEN
   FULL_SIMP_TAC (srw_ss()) [beta0_def, beta1_def, relationTheory.RUNION] THEN
   SRW_TAC [][ltpm_subst] THEN
   METIS_TAC [relationTheory.RUNION, beta0_def, beta1_def,
-             lcompat_closure_rules]);
+             lcompat_closure_rules]
+QED
 
-val lcc_beta_ltpm_eqn = store_thm(
-  "lcc_beta_ltpm_eqn",
-  ``lcompat_closure (beta0 RUNION beta1) (ltpm pi M) N =
-    lcompat_closure (beta0 RUNION beta1) M (ltpm (REVERSE pi) N)``,
-  METIS_TAC [lcc_beta_ltpm_imp, pmact_inverse]);
+Theorem lcc_beta_ltpm_eqn:
+    lcompat_closure (beta0 RUNION beta1) (ltpm pi M) N =
+    lcompat_closure (beta0 RUNION beta1) M (ltpm (REVERSE pi) N)
+Proof
+  METIS_TAC [lcc_beta_ltpm_imp, pmact_inverse]
+QED
 
-val lcc_beta_LAM = store_thm(
-  "lcc_beta_LAM",
-  ``!v t N. lcompat_closure (beta0 RUNION beta1) (LAM v t) N =
+Theorem lcc_beta_LAM:
+    !v t N. lcompat_closure (beta0 RUNION beta1) (LAM v t) N =
             ?N0. (N = LAM v N0) /\
-                 lcompat_closure (beta0 RUNION beta1) t N0``,
+                 lcompat_closure (beta0 RUNION beta1) t N0
+Proof
   REPEAT GEN_TAC THEN
   CONV_TAC (LAND_CONV (REWR_CONV lcompat_closure_cases)) THEN
   SRW_TAC [][beta0_def, beta1_def, relationTheory.RUNION] THEN EQ_TAC THEN
@@ -361,14 +378,15 @@ val lcc_beta_LAM = store_thm(
     SRW_TAC [][ltpm_eqr, lcc_beta_ltpm_eqn, pmact_flip_args] THEN
     METIS_TAC [lcc_beta_FV],
     METIS_TAC []
-  ]);
+  ]
+QED
 
-val cc_beta_matched = store_thm(
-  "cc_beta_matched",
-  ``!M N. compat_closure beta M N ==>
+Theorem cc_beta_matched:
+    !M N. compat_closure beta M N ==>
           !M'. (M = strip_label M') ==>
                ?N'. lcompat_closure (beta0 RUNION beta1) M' N' /\
-                    (N = strip_label N')``,
+                    (N = strip_label N')
+Proof
   HO_MATCH_MP_TAC compat_closure_ind THEN REPEAT CONJ_TAC THENL [
     SIMP_TAC (srw_ss() ++ boolSimps.DNF_ss)
              [beta_def, strip_label_eq_redex] THEN
@@ -404,13 +422,14 @@ val cc_beta_matched = store_thm(
     FIRST_X_ASSUM (Q.SPEC_THEN `t'` MP_TAC) THEN SRW_TAC [][] THEN
     Q.EXISTS_TAC `LAM v N'` THEN SRW_TAC [][lcompat_closure_rules] THEN
     METIS_TAC []
-  ]);
+  ]
+QED
 
-val lemma11_1_6i = store_thm(
-  "lemma11_1_6i",
-  ``!M' N. reduction beta (strip_label M') N ==>
+Theorem lemma11_1_6i:
+    !M' N. reduction beta (strip_label M') N ==>
            ?N'. RTC (lcompat_closure (beta0 RUNION beta1)) M' N' /\
-                (N = strip_label N')``,
+                (N = strip_label N')
+Proof
   SIMP_TAC (srw_ss()) [] THEN
   Q_TAC SUFF_TAC
         `!M N. RTC (compat_closure beta) M N ==>
@@ -418,12 +437,13 @@ val lemma11_1_6i = store_thm(
                     ?N'. RTC (lcompat_closure (beta0 RUNION beta1)) M' N' /\
                          (N = strip_label N')` THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN CONJ_TAC THEN
-  PROVE_TAC [relationTheory.RTC_RULES, cc_beta_matched]);
+  PROVE_TAC [relationTheory.RTC_RULES, cc_beta_matched]
+QED
 
-val lcc_beta_matching_beta = store_thm(
-  "lcc_beta_matching_beta",
-  ``!M' N'. lcompat_closure (beta0 RUNION beta1) M' N' ==>
-            compat_closure beta (strip_label M') (strip_label N')``,
+Theorem lcc_beta_matching_beta:
+    !M' N'. lcompat_closure (beta0 RUNION beta1) M' N' ==>
+            compat_closure beta (strip_label M') (strip_label N')
+Proof
   HO_MATCH_MP_TAC lcompat_closure_ind THEN
   SRW_TAC [][strip_label_thm] THEN1
     (Q_TAC SUFF_TAC `beta (strip_label M') (strip_label N')` THEN1
@@ -431,31 +451,34 @@ val lcc_beta_matching_beta = store_thm(
      FULL_SIMP_TAC (srw_ss()) [beta0_def, beta1_def, relationTheory.RUNION,
                                strip_label_thm, beta_def,
                                strip_label_subst] THEN PROVE_TAC []) THEN
-  PROVE_TAC [compat_closure_rules]);
+  PROVE_TAC [compat_closure_rules]
+QED
 
-val lemma11_1_6ii = store_thm(
-  "lemma11_1_6ii",
-  ``!M' N'.
+Theorem lemma11_1_6ii:
+    !M' N'.
       RTC (lcompat_closure (beta0 RUNION beta1)) M' N' ==>
-      reduction beta (strip_label M') (strip_label N')``,
+      reduction beta (strip_label M') (strip_label N')
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  PROVE_TAC [reduction_rules, lcc_beta_matching_beta]);
+  PROVE_TAC [reduction_rules, lcc_beta_matching_beta]
+QED
 
 val coFV_phi = prove(
   ``~(v IN FV M) ==> ~(v IN FV (phi M))``,
   METIS_TAC [FV_phi]);
 
-val lemma11_1_7i = store_thm(
-  "lemma11_1_7i",
-  ``!M. phi ([N/x]M) = [phi N/x] (phi M)``,
+Theorem lemma11_1_7i:
+    !M. phi ([N/x]M) = [phi N/x] (phi M)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `x INSERT FV N` THEN
   SRW_TAC [][SUB_THM, coFV_phi, lSUB_VAR, SUB_VAR] THEN
-  SRW_TAC [][chap2Theory.substitution_lemma, coFV_phi]);
+  SRW_TAC [][chap2Theory.substitution_lemma, coFV_phi]
+QED
 
-val lcc_beta_phi_matched = store_thm(
-  "lcc_beta_phi_matched",
-  ``!M N. lcompat_closure (beta0 RUNION beta1) M N ==>
-          reduction beta (phi M) (phi N)``,
+Theorem lcc_beta_phi_matched:
+    !M N. lcompat_closure (beta0 RUNION beta1) M N ==>
+          reduction beta (phi M) (phi N)
+Proof
   HO_MATCH_MP_TAC lcompat_closure_ind THEN
   SRW_TAC [][] THENL [
     FULL_SIMP_TAC (srw_ss()) [beta0_def, beta1_def, relationTheory.RUNION]
@@ -470,18 +493,20 @@ val lcc_beta_phi_matched = store_thm(
     PROVE_TAC [reduction_rules],
     PROVE_TAC [reduction_beta_subst],
     PROVE_TAC [lemma3_8]
-  ]);
+  ]
+QED
 
-val lemma11_1_7ii = store_thm(
-  "lemma11_1_7ii",
-  ``!M N. RTC (lcompat_closure (beta0 RUNION beta1)) M N ==>
-          reduction beta (phi M) (phi N)``,
+Theorem lemma11_1_7ii:
+    !M N. RTC (lcompat_closure (beta0 RUNION beta1)) M N ==>
+          reduction beta (phi M) (phi N)
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  PROVE_TAC [reduction_rules, lcc_beta_phi_matched]);
+  PROVE_TAC [reduction_rules, lcc_beta_phi_matched]
+QED
 
-val lemma11_1_8 = store_thm(
-  "lemma11_1_8",
-  ``!M. reduction beta (strip_label M) (phi M)``,
+Theorem lemma11_1_8:
+    !M. reduction beta (strip_label M) (phi M)
+Proof
   HO_MATCH_MP_TAC lterm_bvc_induction THEN Q.EXISTS_TAC `{}` THEN
   SIMP_TAC (srw_ss()) [strip_label_thm, reduction_rules] THEN CONJ_TAC THENL [
     PROVE_TAC [reduction_rules],
@@ -494,12 +519,13 @@ val lemma11_1_8 = store_thm(
                     ([phi M'/s] (phi M))` by
         PROVE_TAC [reduction_beta_subst, l14a] THEN
     PROVE_TAC [reduction_rules]
-  ]);
+  ]
+QED
 
-val can_index_redex = store_thm(
-  "can_index_redex",
-  ``!M N. compat_closure beta M N ==>
-          ?M'. (strip_label M' = M) /\ (phi M' = N)``,
+Theorem can_index_redex:
+    !M N. compat_closure beta M N ==>
+          ?M'. (strip_label M' = M) /\ (phi M' = N)
+Proof
   HO_MATCH_MP_TAC compat_closure_ind THEN REPEAT CONJ_TAC THENL [
     MAP_EVERY Q.X_GEN_TAC [`M`,`N`] THEN
     SIMP_TAC (srw_ss()) [beta_def, GSYM LEFT_FORALL_IMP_THM] THEN
@@ -513,13 +539,14 @@ val can_index_redex = store_thm(
     MAP_EVERY Q.X_GEN_TAC [`M`,`N`,`v`] THEN SRW_TAC [][] THEN
     Q.EXISTS_TAC `LAM v M'` THEN
     ASM_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
-val strip_lemma = store_thm(
-  "strip_lemma",
-  ``!M M' N. compat_closure beta M M' /\
+Theorem strip_lemma:
+    !M M' N. compat_closure beta M M' /\
              reduction beta M N ==>
-             ?N'. reduction beta M' N' /\ reduction beta N N'``,
+             ?N'. reduction beta M' N' /\ reduction beta N N'
+Proof
   REPEAT STRIP_TAC THEN
   `?Mtilde. (strip_label Mtilde = M) /\ (phi Mtilde = M')` by
      PROVE_TAC [can_index_redex] THEN
@@ -528,7 +555,8 @@ val strip_lemma = store_thm(
      PROVE_TAC [lemma11_1_6i] THEN
   `reduction beta M' (phi Ntilde)` by PROVE_TAC [lemma11_1_7ii] THEN
   `reduction beta N (phi Ntilde)` by PROVE_TAC [lemma11_1_8] THEN
-  PROVE_TAC []);
+  PROVE_TAC []
+QED
 
 (* Theorem 11.1.10 [1, p. 282] (the 2nd version)
 

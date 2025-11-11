@@ -5,50 +5,104 @@
 (* AUTHOR        : (c) Konrad Slind, University of Cambridge             *)
 (* DATE          : October 1, 2000 Konrad Slind                          *)
 (* HISTORY       : Derived from Exception module, plus generalized       *)
-(*                 tracing stuff from Michael Norrish.                   *)
+(*                 tracing facility from Michael Norrish.                *)
 (* ===================================================================== *)
 
 structure Feedback :> Feedback =
 struct
 
-type error_record = {origin_structure : string,
-                     origin_function  : string,
-                     source_location  : locn.locn,
-                     message          : string}
+open Feedback_dtype
+local open HOLPP in end
 
-exception HOL_ERR of error_record
+fun mk_origin s1 s2 loc =
+  {origin_structure = s1,
+   origin_function = s2,
+   source_location = loc}
 
-(*---------------------------------------------------------------------------
-     Curried version of HOL_ERR; can be more comfortable to use.
- ---------------------------------------------------------------------------*)
+fun origins_of (HOL_ERROR {origins,...}) = origins
+fun message_of (HOL_ERROR {message,...}) = message
 
-fun mk_HOL_ERR s1 s2 s3 =
-   HOL_ERR {origin_structure = s1,
-            origin_function = s2,
-            source_location = locn.Loc_Unknown,
-            message = s3}
+fun mk_hol_error s1 s2 loc mesg =
+  HOL_ERROR
+    {origins = [mk_origin s1 s2 loc],
+     message = mesg}
 
-(* Errors with a known location. *)
+fun wrap_hol_error s f l (HOL_ERROR {origins,message}) =
+  HOL_ERROR
+     {origins = mk_origin s f l::origins,
+      message = message}
 
-fun mk_HOL_ERRloc s1 s2 locn s3 =
-   HOL_ERR {origin_structure = s1,
-            origin_function = s2,
-            source_location = locn,
-            message = s3}
+val empty_hol_error =
+  HOL_ERROR
+    {origins = [], message = ""}
 
-fun set_origin_function fnm
-    ({origin_structure, source_location, message, ...}:error_record) =
-   {origin_structure = origin_structure,
-    source_location = source_location,
-    origin_function = fnm,
-    message = message}
+fun empty_origins_error sfn =
+  HOL_ERROR
+   {origins = [mk_origin "Feedback" sfn locn.Loc_Unknown],
+    message = "no origin"}
 
-fun set_message msg
-    ({origin_structure, source_location, origin_function, ...}:error_record) =
-   {origin_structure = origin_structure,
-    source_location = source_location,
-    origin_function = origin_function,
-    message = msg}
+val pp_hol_error =
+  let open HOLPP
+      fun pp_origin {origin_structure,origin_function,source_location} =
+        block INCONSISTENT 2
+          ([add_string "at ",
+            add_string (origin_structure^"."^origin_function),add_string ":"]
+           @
+           (case source_location
+            of locn.Loc_Unknown => []
+             | _ => [add_break(1,0),
+                     add_string (locn.toString source_location ^":")]))
+  in
+  fn (err as HOL_ERROR{origins,message}) =>
+    if err = empty_hol_error then
+        add_string "<empty-hol-error>"
+     else
+        block INCONSISTENT 0
+          (pr_list pp_origin [NL] origins @
+           (if message = "" then
+               []
+            else [add_break(1,2), add_string message]))
+  end
+
+fun format_hol_error holerr =
+  HOLPP.pp_to_string (!Globals.linewidth) pp_hol_error holerr
+
+(*-------------------------------------------------------------------------*)
+(* Exceptions used in HOL code.                                              *)
+(*---------------------------------------------------------------------------*)
+
+exception HOL_ERR of hol_error;
+
+fun top_structure_of herr =
+  case origins_of herr
+   of [] => raise HOL_ERR (empty_origins_error "top_structure_of")
+    | h::_ => #origin_structure h
+
+fun top_function_of herr =
+  case origins_of herr
+   of [] => raise HOL_ERR (empty_origins_error "top_function_of")
+    | h::_ => #origin_function h
+
+fun top_location_of herr =
+  case origins_of herr
+   of [] => raise HOL_ERR (empty_origins_error "top_location_of")
+    | h::_ => #source_location h
+
+fun mk_HOL_ERRloc s1 s2 locn s3 = HOL_ERR (mk_hol_error s1 s2 locn s3)
+
+fun mk_HOL_ERR s1 s2 s3 = HOL_ERR (mk_hol_error s1 s2 locn.Loc_Unknown s3)
+
+fun set_top_function fnm (HOL_ERROR {origins,message}) =
+  case origins
+   of [] => raise HOL_ERR (empty_origins_error "set_top_function")
+    | h::t => HOL_ERROR
+      {origins = {origin_structure = #origin_structure h,
+                  source_location = #source_location h,
+                  origin_function = fnm} :: t,
+       message = message}
+
+fun set_message msg (HOL_ERROR {origins,message}) =
+    HOL_ERROR {origins = origins, message = msg}
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
 
@@ -89,16 +143,8 @@ fun quiet_messages f = Portable.with_flag (emit_MESG, false) f
  * Formatting and output for exceptions, messages, and warnings.             *
  *---------------------------------------------------------------------------*)
 
-fun format_err_rec {message, origin_function, origin_structure, source_location} =
-   String.concat
-      ["at ", origin_structure, ".", origin_function, ":\n",
-       case source_location of
-           locn.Loc_Unknown => ""
-         | _ => locn.toString source_location ^ ":\n",
-       message]
-
-fun format_ERR err_rec =
-   String.concat ["\nException raised ", format_err_rec err_rec, "\n"]
+fun format_ERR holerr =
+   String.concat ["\nException raised ", format_hol_error holerr, "\n"]
 
 fun format_MESG s = String.concat ["<<HOL message: ", s, ">>\n"]
 
@@ -117,9 +163,21 @@ fun output_ERR s = if !emit_ERR then !ERR_outstream s else ()
     that the exception is an Interrupt, we raise it.
  ---------------------------------------------------------------------------*)
 
-fun exn_to_string (HOL_ERR sss) = !ERR_to_string sss
+fun exn_to_string (HOL_ERR herr) = !ERR_to_string herr
   | exn_to_string Portable.Interrupt = raise Portable.Interrupt
   | exn_to_string e = General.exnMessage e
+
+(*---------------------------------------------------------------------------*)
+(* Either raise the exception in the REPL (it gets printed by the installed  *)
+(* prettyprinter) or print the error and exit to the OS.                     *)
+(*---------------------------------------------------------------------------*)
+
+fun render_exn e =
+    if !Globals.interactive then
+       raise e
+    else
+      (output_ERR (exn_to_string e);
+       OS.Process.exit OS.Process.failure)
 
 fun Raise e = (output_ERR (exn_to_string e); raise e)
 
@@ -132,32 +190,29 @@ in
 end
 
 (*---------------------------------------------------------------------------
-    Takes an exception, grabs its message as best as possible, then
-    make a HOL exception out of it. Subtlety: if we see that the
-    exception is an Interrupt, we raise it.
+    Support for backtracing exceptions, treating HOL_ERR specially.
+    If we see that the exception is an Interrupt, we raise it.
  ---------------------------------------------------------------------------*)
 
-fun wrap_exn s f Portable.Interrupt = raise Portable.Interrupt
-  | wrap_exn s f (HOL_ERR err_rec) = mk_HOL_ERR s f (format_err_rec err_rec)
-  | wrap_exn s f exn = mk_HOL_ERR s f (General.exnMessage exn)
+fun wrap_exn_loc s f l e =
+    case e
+     of Portable.Interrupt => raise Portable.Interrupt
+      | HOL_ERR holerr => HOL_ERR (wrap_hol_error s f l holerr)
+      | exn => mk_HOL_ERRloc s f l (General.exnMessage exn)
 
-fun wrap_exn_loc s f l Portable.Interrupt = raise Portable.Interrupt
-  | wrap_exn_loc s f l (HOL_ERR err_rec) =
-      mk_HOL_ERRloc s f l (format_err_rec err_rec)
-  | wrap_exn_loc s f l exn = mk_HOL_ERRloc s f l (General.exnMessage exn)
+fun wrap_exn s f = wrap_exn_loc s f locn.Loc_Unknown
 
 fun HOL_MESG s =
   if !emit_MESG then !MESG_outstream (!MESG_to_string s) else ()
 
 fun HOL_PROGRESS_MESG (start, finish) f x =
-   if !emit_MESG then
-     let
-     in
+  if !emit_MESG then
+    let in
        !MESG_outstream ("<<HOL message: " ^ start);
        f x before
        !MESG_outstream (finish ^ ">>\n")
      end
-   else f x
+  else f x
 
 fun HOL_WARNING s1 s2 s3 =
     if !WARNINGs_as_ERRs then raise mk_HOL_ERR s1 s2 s3
@@ -171,8 +226,6 @@ fun HOL_WARNINGloc s1 s2 locn s3 =
 (*---------------------------------------------------------------------------*
  * Traces, numeric flags; the higher setting, the more verbose the output.   *
  *---------------------------------------------------------------------------*)
-
-local open HOLPP in end
 
 datatype tracefns = TRFP of {get: unit -> int, set: int -> unit}
 fun trfp_set (TRFP {set, ...}) = set
@@ -223,7 +276,7 @@ fun register_trace0 fnm (nm, r, max) =
       then raise ERR fnm "Can't have trace values less than zero."
    else
      let
-       val trfns as TRFP rcd = ref2trfp r
+       val trfns as TRFP recd = ref2trfp r
      in
        case Binarymap.peek (!trace_map, nm) of
            NONE => ()
@@ -232,7 +285,7 @@ fun register_trace0 fnm (nm, r, max) =
        trace_map := Binarymap.insert
                       (!trace_map, nm, TR {value = trfns, default = !r,
                                            aliases = [], maximum = max});
-       rcd
+       recd
      end
 val register_trace = ignore o register_trace0 "register_trace"
 
@@ -254,9 +307,9 @@ fun register_alias_trace {original, alias} =
           val aliases' =
               if List.exists (fn s => s = alias) aliases then aliases
               else alias::aliases
-          val rcd = {aliases = aliases', maximum = maximum, default = default,
+          val recd = {aliases = aliases', maximum = maximum, default = default,
                      value = value}
-          val record_alias = Binarymap.insert(!trace_map, original, TR rcd)
+          val record_alias = Binarymap.insert(!trace_map, original, TR recd)
           val mk_alias = Binarymap.insert(record_alias, alias, ALIAS original)
         in
           case Binarymap.peek (record_alias, alias) of
@@ -336,7 +389,7 @@ fun pp_trace_elt (TraceElt{name,aliases,trace_level,default,max}) =
     in block INCONSISTENT 2
          [name_plus_aliases, add_string ":", add_break(1,0),
           add_string (Int.toString trace_level), add_break(1,0),
-          block CONSISTENT 0 (interval default max)]
+          block CONSISTENT 0 (interval 0 max)]
     end
 
 fun traces () =

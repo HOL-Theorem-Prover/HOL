@@ -32,15 +32,18 @@ End
 
 (* theorems *)
 
-val X64_ICACHE_REFL = store_thm("X64_ICACHE_REFL",
-  ``!s. X64_ICACHE s s``,
+Theorem X64_ICACHE_REFL:
+    !s. X64_ICACHE s s
+Proof
   STRIP_TAC THEN `?r e t m i. s = (r,e,t,m,i)` by METIS_TAC [PAIR]
   THEN ASM_SIMP_TAC std_ss [X64_ICACHE_def]
   THEN Q.EXISTS_TAC `{}` THEN Q.EXISTS_TAC `{}`
-  THEN ASM_SIMP_TAC std_ss [NOT_IN_EMPTY,FUN_EQ_THM]);
+  THEN ASM_SIMP_TAC std_ss [NOT_IN_EMPTY,FUN_EQ_THM]
+QED
 
-val X64_ICACHE_TRANS = store_thm("X64_ICACHE_TRANS",
-  ``!s t u. X64_ICACHE s t /\ X64_ICACHE t u ==> X64_ICACHE s u``,
+Theorem X64_ICACHE_TRANS:
+    !s t u. X64_ICACHE s t /\ X64_ICACHE t u ==> X64_ICACHE s u
+Proof
   REPEAT STRIP_TAC
   THEN `?r1 e1 t1 m1 i1. s = (r1,e1,t1,m1,i1)` by METIS_TAC [PAIR]
   THEN `?r2 e2 t2 m2 i2. t = (r2,e2,t2,m2,i2)` by METIS_TAC [PAIR]
@@ -49,17 +52,20 @@ val X64_ICACHE_TRANS = store_thm("X64_ICACHE_TRANS",
   THEN REPEAT (POP_ASSUM (K ALL_TAC))
   THEN Q.EXISTS_TAC `insert' UNION (insert DIFF delete')`
   THEN Q.EXISTS_TAC `delete UNION delete'`
-  THEN SIMP_TAC std_ss [IN_DIFF,IN_INSERT,IN_UNION] THEN METIS_TAC []);
+  THEN SIMP_TAC std_ss [IN_DIFF,IN_INSERT,IN_UNION] THEN METIS_TAC []
+QED
 
-val X64_ICACHE_THM = store_thm("X64_ICACHE_THM",
-  ``X64_ICACHE (r,e,s,m,i) (r2,e2,s2,m2,i2) =
+Theorem X64_ICACHE_THM:
+    X64_ICACHE (r,e,s,m,i) (r2,e2,s2,m2,i2) =
     ?update.
-      (r2,e2,s2,m2,i2) = (r,e,s,m,icache update m i)``,
+      (r2,e2,s2,m2,i2) = (r,e,s,m,icache update m i)
+Proof
   SIMP_TAC std_ss [EXISTS_PROD,X64_ICACHE_def,icache_def,FUN_EQ_THM]
-  THEN METIS_TAC []);
+  THEN METIS_TAC []
+QED
 
-val ZREAD_CLAUSES = store_thm("ZREAD_CLAUSES",
-  ``!s. (ZREAD_REG r (ZWRITE_REG r2 w s) = if r2 = r then w else ZREAD_REG r s) /\
+Theorem ZREAD_CLAUSES:
+    !s. (ZREAD_REG r (ZWRITE_REG r2 w s) = if r2 = r then w else ZREAD_REG r s) /\
         (ZREAD_REG r (ZWRITE_RIP e s) = ZREAD_REG r s) /\
         (ZREAD_REG r (ZWRITE_EFLAG f b s) = ZREAD_REG r s) /\
         (ZREAD_REG r (ZCLEAR_ICACHE s) = ZREAD_REG r s) /\
@@ -82,13 +88,15 @@ val ZREAD_CLAUSES = store_thm("ZREAD_CLAUSES",
         (ZREAD_MEM2 a (ZWRITE_EFLAG f b s) = ZREAD_MEM2 a s) /\
         (ZREAD_MEM2 a (ZCLEAR_ICACHE s) = ZREAD_MEM2 a s) /\
         (ZREAD_MEM2 a (X64_ICACHE_UPDATE u s) = ZREAD_MEM2 a s) /\
-        (ZREAD_MEM2 a (ZWRITE_MEM2 c x s) = if a = c then x else ZREAD_MEM2 a s)``,
+        (ZREAD_MEM2 a (ZWRITE_MEM2 c x s) = if a = c then x else ZREAD_MEM2 a s)
+Proof
   STRIP_TAC THEN `?r2 e2 s2 m2 i2. s = (r2,e2,s2,m2,i2)` by METIS_TAC [pairTheory.PAIR]
   THEN Cases_on `u`
   THEN ASM_SIMP_TAC std_ss [ZREAD_REG_def,ZREAD_RIP_def,
          ZREAD_EFLAG_def, ZWRITE_REG_def, ZWRITE_MEM2_def, ZREAD_MEM2_def,
          combinTheory.APPLY_UPDATE_THM, ZWRITE_RIP_def,CAN_ZREAD_MEM,
          ZWRITE_EFLAG_def,ZCLEAR_ICACHE_def,CAN_ZWRITE_MEM,X64_ICACHE_UPDATE_def]
-  THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []);
+  THEN Cases_on `c = a` THEN ASM_SIMP_TAC std_ss []
+QED
 
 

@@ -816,7 +816,7 @@ local
     in
       (e,a ^ w,b)
     end handle HOL_ERR e =>
-          (HOL_WARNING (#origin_structure e) (#origin_function e)
+          (HOL_WARNING (top_structure_of e) (top_function_of e)
              (String.concat
                 [Hol_pp.term_to_string enc, ": ",
                  Hol_pp.term_to_string tm, "\n"]);

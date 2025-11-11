@@ -23,19 +23,22 @@ Definition construct_def:
                 else NONE
 End
 
-val (wf_rules, wf_ind, wf_cases) = Hol_reln`
+Inductive wf:
   !a fm. (!k. k IN FDOM fm ==> wf (fm ' k)) ==> wf (construct a fm)
-`;
+End
 
-val wf_NIL_SOME = prove(
-  ``wf f ==> ?a. f [] = SOME a``,
+Theorem wf_NIL_SOME[local]:
+  wf f ==> ?a. f [] = SOME a
+Proof
   ONCE_REWRITE_TAC [wf_cases] THEN SRW_TAC [][] THEN
-  SRW_TAC [][construct_def]);
+  SRW_TAC [][construct_def]
+QED
 
-val construct_11 = prove(
-  ``(!k. k IN FDOM f ==> wf (f ' k)) /\
-    (!k. k IN FDOM g ==> wf (g ' k)) ==>
-    ((construct a f = construct b g) <=> (a = b) /\ (f = g))``,
+Theorem construct_11[local]:
+  (!k. k IN FDOM f ==> wf (f ' k)) /\
+  (!k. k IN FDOM g ==> wf (g ' k)) ==>
+  ((construct a f = construct b g) <=> (a = b) /\ (f = g))
+Proof
   SRW_TAC [] [EQ_IMP_THM, FUN_EQ_THM, construct_def] THENL [
     FIRST_X_ASSUM (Q.SPEC_THEN `[]` MP_TAC) THEN SRW_TAC [][],
     SIMP_TAC (srw_ss()) [fmap_EXT, pred_setTheory.EXTENSION] THEN
@@ -49,7 +52,8 @@ val construct_11 = prove(
     SRW_TAC [][] THEN
     FIRST_X_ASSUM (MP_TAC o Q.GEN `t` o SPEC ``x::t``) THEN
     SRW_TAC [][FUN_EQ_THM]
-  ]);
+  ]
+QED
 
 val fmaptrees_exist = new_type_definition(
   "fmaptree",
@@ -63,31 +67,40 @@ val fmap_bij_thm = define_new_type_bijections {ABS = "fromF", REP = "toF",
                                                name = "fmap_bij_thm",
                                                tyax = fmaptrees_exist}
 
-val bij_nchotomy = prove(
-  ``!a. ?c. wf c /\ (a = fromF c)``,
-  METIS_TAC [fmap_bij_thm])
+Theorem bij_nchotomy[local]: !a. ?c. wf c /\ (a = fromF c)
+Proof METIS_TAC [fmap_bij_thm]
+QED
 
 Definition FTNode_def:
   FTNode i fm = fromF (construct i (toF o_f fm))
 End
 
-val toF_composed_wf = prove(
-  ``!k. k IN FDOM f1 ==> wf ((toF o_f f1) ' k)``,
-  SRW_TAC [][o_f_FAPPLY, fmap_bij_thm]);
+Theorem toF_composed_wf[local]:
+  !k. k IN FDOM f1 ==> wf ((toF o_f f1) ' k)
+Proof
+  SRW_TAC [][o_f_FAPPLY, fmap_bij_thm]
+QED
 
-val fromF_11 = prove(
-  ``wf x /\ wf y ==> ((fromF x = fromF y) = (x = y))``,
-  METIS_TAC [fmap_bij_thm]);
+Theorem fromF_11[local]:
+    wf x /\ wf y ==> ((fromF x = fromF y) = (x = y))
+Proof
+  METIS_TAC [fmap_bij_thm]
+QED
 
-val toF_11 = prove(``(toF f = toF g) = (f = g)``, METIS_TAC [fmap_bij_thm]);
+Theorem toF_11[local]:
+   (toF f = toF g) = (f = g)
+Proof METIS_TAC [fmap_bij_thm]
+QED
 
-val toF_o_f_11 = prove(
-  ``((toF o_f f) = (toF o_f g)) = (f = g)``,
+Theorem toF_o_f_11[local]:
+    ((toF o_f f) = (toF o_f g)) = (f = g)
+Proof
   SRW_TAC [][EQ_IMP_THM] THEN
   FULL_SIMP_TAC (srw_ss()) [fmap_EXT, o_f_FAPPLY] THEN
   `!x. x IN FDOM g ==> (toF (f ' x) = toF (g ' x))`
       by METIS_TAC [o_f_FAPPLY] THEN
-  FULL_SIMP_TAC (srw_ss()) [toF_11]);
+  FULL_SIMP_TAC (srw_ss()) [toF_11]
+QED
 
 Theorem FTNode_11[simp]:
   (FTNode i1 f1 = FTNode i2 f2) <=> (i1 = i2) /\ (f1 = f2)
@@ -114,9 +127,9 @@ val item_map_def = new_specification("item_map_def",
 val (item_thm, map_thm) =
     CONJ_PAIR (GSYM (SIMP_RULE (srw_ss()) [FORALL_AND_THM]
                                (ISPEC ``FTNode i fm`` item_map_def)))
+Theorem item_thm[simp] = item_thm
+Theorem map_thm[simp] = map_thm
 
-val _ = (save_thm("item_thm", item_thm); export_rewrites ["item_thm"])
-val _ = (save_thm("map_thm", map_thm); export_rewrites ["map_thm"])
 
 Definition apply_path_def:
   (apply_path [] ft = SOME ft) /\
@@ -144,9 +157,11 @@ Definition fupd_at_path_def:
      else NONE)
 End
 
-val forall_ft = prove(
-  ``(!ft. P ft) = (!f. wf f ==> P (fromF f))``,
-  METIS_TAC [fmap_bij_thm])
+Theorem forall_ft[local]:
+    (!ft. P ft) = (!f. wf f ==> P (fromF f))
+Proof
+  METIS_TAC [fmap_bij_thm]
+QED
 
 val wf_strong_ind = IndDefLib.derive_strong_induction(wf_rules, wf_ind)
 
@@ -163,11 +178,13 @@ Proof
   SRW_TAC [][fmap_EXT, o_f_FAPPLY] THEN METIS_TAC [fmap_bij_thm]
 QED
 
-val list_GSPEC_cases = prove(
-  ``{ l | P l } = (if P [] then {[]} else {}) UNION
-                  { h :: t | P (h :: t) }``,
+Theorem list_GSPEC_cases[local]:
+    { l | P l } = (if P [] then {[]} else {}) UNION
+                  { h :: t | P (h :: t) }
+Proof
   SRW_TAC [][EXTENSION, EQ_IMP_THM] THEN SRW_TAC [][] THEN
-  Cases_on `x` THEN SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []);
+  Cases_on `x` THEN SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 Theorem applicable_paths_FINITE:
     !ft. FINITE { p | ?ft'. apply_path p ft = SOME ft' }
@@ -206,21 +223,25 @@ val (relrec_rules, relrec_ind, relrec_cases) = Hol_reln`
              relrec h (FTNode i fm) (h i rfm fm)
 `;
 
-val relrec_fn = prove(
-  ``!ft r1. relrec h ft r1 ==> !r2. relrec h ft r2 ==> (r1 = r2)``,
+Theorem relrec_fn[local]:
+    !ft r1. relrec h ft r1 ==> !r2. relrec h ft r2 ==> (r1 = r2)
+Proof
   HO_MATCH_MP_TAC relrec_ind THEN REPEAT GEN_TAC THEN STRIP_TAC THEN
   ONCE_REWRITE_TAC [relrec_cases] THEN SRW_TAC [][] THEN
   Q_TAC SUFF_TAC `rfm = rfm'` THEN1 SRW_TAC [][] THEN
-  SRW_TAC [][fmap_EXT]);
+  SRW_TAC [][fmap_EXT]
+QED
 
-val relrec_total = prove(
-  ``!ft. ?r. relrec h ft r``,
+Theorem relrec_total[local]:
+    !ft. ?r. relrec h ft r
+Proof
   HO_MATCH_MP_TAC ft_ind THEN REPEAT STRIP_TAC THEN
   ONCE_REWRITE_TAC [relrec_cases] THEN SRW_TAC [][] THEN
   `?f. !k. k IN FDOM fm ==> relrec h (fm ' k) (f k)`
      by METIS_TAC [] THEN
   Q.EXISTS_TAC `FUN_FMAP f (FDOM fm)` THEN
-  SRW_TAC [][FUN_FMAP_DEF]);
+  SRW_TAC [][FUN_FMAP_DEF]
+QED
 
 Definition fmtreerec_def:
   fmtreerec h ft = @r. relrec h ft r

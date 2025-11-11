@@ -341,11 +341,12 @@ QED
 
 (*-------------------------------------------------------*)
 
-val FLOAT_FIRSTCROSS = Q.prove (
-  `!m n p.
+Theorem FLOAT_FIRSTCROSS[local]:
+   !m n p.
       {a: num # num # num | FST a < m /\ FST (SND a) < n /\ SND (SND a) < p} =
       IMAGE (\(x,(y,z)). (x,y,z))
-        ({x | x < m} CROSS ({y | y < n} CROSS {z | z < p}))`,
+        ({x | x < m} CROSS ({y | y < n} CROSS {z | z < p}))
+Proof
   rw [EXTENSION]
   \\ pairLib.PairCases_on `x`
   \\ simp []
@@ -354,21 +355,27 @@ val FLOAT_FIRSTCROSS = Q.prove (
   >- (qexists_tac `(x0, x1, x2)` \\ fs [])
   \\ pairLib.PairCases_on `x'`
   \\ fs []
-  )
+QED
 
-val FLOAT_COUNTINDUCT = Q.prove (
-  `!n. ({x | x < 0n} = EMPTY) /\ ({x | x < SUC n} = n INSERT {x | x < n})`,
-  rw [EXTENSION])
+Theorem FLOAT_COUNTINDUCT[local]:
+   !n. ({x | x < 0n} = EMPTY) /\ ({x | x < SUC n} = n INSERT {x | x < n})
+Proof
+  rw [EXTENSION]
+QED
 
-val FLOAT_FINITECOUNT = Q.prove (
-  `!n:num. FINITE {x | x < n}`,
-  Induct \\ rw [FLOAT_COUNTINDUCT])
+Theorem FLOAT_FINITECOUNT[local]:
+   !n:num. FINITE {x | x < n}
+Proof
+  Induct \\ rw [FLOAT_COUNTINDUCT]
+QED
 
-val FINITE_R3 = Q.prove (
-  `!m n p.
+Theorem FINITE_R3[local]:
+   !m n p.
     FINITE {a: num # num # num |
-            FST a < m /\ FST (SND a) < n /\ SND (SND a) < p}`,
-  rw [FLOAT_FIRSTCROSS, IMAGE_FINITE, FLOAT_FIRSTCROSS, FLOAT_FINITECOUNT])
+            FST a < m /\ FST (SND a) < n /\ SND (SND a) < p}
+Proof
+  rw [FLOAT_FIRSTCROSS, IMAGE_FINITE, FLOAT_FIRSTCROSS, FLOAT_FINITECOUNT]
+QED
 
 Theorem IS_VALID_FINITE:
    FINITE {a:num#num#num | is_valid (X:num#num) a}
@@ -378,14 +385,18 @@ QED
 
 (*-------------------------------------------------------*)
 
-val FLOAT_IS_FINITE_SUBSET = Q.prove (
-  `!X. {a | is_finite X a} SUBSET {a | is_valid X a}`,
-  rw [is_finite, SUBSET_DEF])
+Theorem FLOAT_IS_FINITE_SUBSET[local]:
+   !X. {a | is_finite X a} SUBSET {a | is_valid X a}
+Proof
+  rw [is_finite, SUBSET_DEF]
+QED
 
-val MATCH_FLOAT_FINITE = Q.prove (
-  `!X. {a | is_finite X a} SUBSET {a | is_valid X a} ==>
-       FINITE {a | is_finite X a}`,
-  metis_tac [SUBSET_FINITE, IS_VALID_FINITE])
+Theorem MATCH_FLOAT_FINITE[local]:
+   !X. {a | is_finite X a} SUBSET {a | is_valid X a} ==>
+       FINITE {a | is_finite X a}
+Proof
+  metis_tac [SUBSET_FINITE, IS_VALID_FINITE]
+QED
 
 Theorem IS_FINITE_FINITE:
    !X. FINITE {a | is_finite X a}
@@ -536,13 +547,13 @@ QED
 (* Explicit numeric value for threshold, to save repeated recalculation.     *)
 (* ------------------------------------------------------------------------- *)
 
-val FLOAT_THRESHOLD_EXPLICIT = save_thm ("FLOAT_THRESHOLD_EXPLICIT",
+Theorem FLOAT_THRESHOLD_EXPLICIT =
   EVAL' [threshold, float_format, emax, bias, fracwidth, expwidth]
-    ``threshold float_format``)
+    ``threshold float_format``
 
-val FLOAT_LARGEST_EXPLICIT = save_thm ("FLOAT_LARGEST_EXPLICIT",
+Theorem FLOAT_LARGEST_EXPLICIT =
   EVAL' [largest, float_format, emax, bias, fracwidth, expwidth]
-    ``largest float_format``)
+    ``largest float_format``
 
 Theorem VAL_THRESHOLD:
    !a. Finite a ==> abs (Val a) < threshold float_format
@@ -563,10 +574,11 @@ End
 
 (*-----------------------*)
 
-val BOUND_AT_WORST_LEMMA = Q.prove (
-  `!a x. abs x < threshold float_format /\ is_finite float_format a ==>
+Theorem BOUND_AT_WORST_LEMMA[local]:
+   !a x. abs x < threshold float_format /\ is_finite float_format a ==>
          abs (valof float_format (round float_format To_nearest x) - x) <=
-         abs (valof float_format a - x)`,
+         abs (valof float_format a - x)
+Proof
   rw [round_def, REAL_ARITH ``abs x < y = ~(x <= ~y) /\ ~(x >= y)``]
   \\ match_mp_tac
       (IS_FINITE_FINITE
@@ -576,12 +588,14 @@ val BOUND_AT_WORST_LEMMA = Q.prove (
        |> REWRITE_RULE [IS_FINITE_NONEMPTY, is_closest]
        |> CONJUNCT2)
   \\ simp []
-  )
+QED
 
-val ERROR_AT_WORST_LEMMA = Q.prove (
-  `!a x. abs x < threshold float_format /\ Finite a ==>
-         abs (error x) <= abs (Val a - x)`,
-  rewrite_tac [ISFINITE, Val, error, BOUND_AT_WORST_LEMMA, DEFLOAT_FLOAT_ROUND])
+Theorem ERROR_AT_WORST_LEMMA[local]:
+   !a x. abs x < threshold float_format /\ Finite a ==>
+         abs (error x) <= abs (Val a - x)
+Proof
+  rewrite_tac [ISFINITE, Val, error, BOUND_AT_WORST_LEMMA, DEFLOAT_FLOAT_ROUND]
+QED
 
 Theorem ERROR_IS_ZERO:
    !a x. Finite a /\ (Val a = x) ==> (error x = 0)
@@ -597,10 +611,11 @@ QED
 
 (*--------------------------------------------------------------*)
 
-val ERROR_BOUND_LEMMA1 = Q.prove (
-  `!x. 0r <= x /\ x < 1 ==>
+Theorem ERROR_BOUND_LEMMA1[local]:
+   !x. 0r <= x /\ x < 1 ==>
        ?n. n < 2n EXP ^fracw_tm /\ &n / 2 pow ^fracw_tm <= x /\
-           x < &(SUC n) / 2 pow ^fracw_tm`,
+           x < &(SUC n) / 2 pow ^fracw_tm
+Proof
   REPEAT strip_tac
   \\ qspec_then `\n. &n / 2 pow ^fracw_tm <= x` mp_tac EXISTS_GREATEST
   \\ simp []
@@ -620,14 +635,15 @@ val ERROR_BOUND_LEMMA1 = Q.prove (
   by metis_tac
        [REAL_ARITH ``!n. x < 1 /\ n <= x * &^frac_tm ==> n < &^frac_tm``]
   \\ fs []
-  )
+QED
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA2 = Q.prove (
-  `!x. 0r <= x /\ x < 1 ==>
+Theorem ERROR_BOUND_LEMMA2[local]:
+   !x. 0r <= x /\ x < 1 ==>
        ?n. n <= 2 EXP ^fracw_tm /\
-           abs (x - &n / 2 pow ^fracw_tm) <= inv (2 pow ^sfracw_tm)`,
+           abs (x - &n / 2 pow ^fracw_tm) <= inv (2 pow ^sfracw_tm)
+Proof
   gen_tac
   \\ disch_then
        (fn th => Q.X_CHOOSE_THEN `n` (CONJUNCTS_THEN2 ASSUME_TAC MP_TAC)
@@ -643,30 +659,32 @@ val ERROR_BOUND_LEMMA2 = Q.prove (
   >- (qexists_tac `n` \\ fs [])
   \\ qexists_tac `SUC n`
   \\ fs []
-  )
+QED
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA3 = Q.prove (
-  `!x. 1r <= x /\ x < 2 ==>
+Theorem ERROR_BOUND_LEMMA3[local]:
+   !x. 1r <= x /\ x < 2 ==>
        ?n. n <= 2 EXP ^fracw_tm /\
-           abs ((1 + &n / 2 pow ^fracw_tm) - x) <= inv (2 pow ^sfracw_tm)`,
+           abs ((1 + &n / 2 pow ^fracw_tm) - x) <= inv (2 pow ^sfracw_tm)
+Proof
   REPEAT strip_tac
   \\ Q.SUBGOAL_THEN `0r <= x - 1 /\ x - 1 < 1`
        (assume_tac o MATCH_MP ERROR_BOUND_LEMMA2)
   >- (NTAC 2 (POP_ASSUM mp_tac) \\ REAL_ARITH_TAC)
   \\ metis_tac
        [ABS_NEG, REAL_NEG_SUB, REAL_ARITH ``a - (b - c) = (c + a:real) - b``]
-  )
+QED
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA4 = Q.prove (
-  `!x. 1r <= x /\ x < 2 ==>
+Theorem ERROR_BOUND_LEMMA4[local]:
+   !x. 1r <= x /\ x < 2 ==>
        ?e f. abs (Val (float (0,e,f)) - x) <= inv (2 pow ^sfracw_tm) /\
              f < 2 EXP ^fracw_tm /\
              ((e = bias float_format) \/
-              (e = SUC (bias float_format)) /\ (f = 0))`,
+              (e = SUC (bias float_format)) /\ (f = 0))
+Proof
   gen_tac
   \\ DISCH_TAC
   \\ first_assum (Q.X_CHOOSE_THEN `n` (MP_TAC o REWRITE_RULE [LESS_OR_EQ]) o
@@ -684,16 +702,17 @@ val ERROR_BOUND_LEMMA4 = Q.prove (
       (0,SUC (bias float_format),0)`
   by fs [GSYM float_tybij, is_valid, float_format, bias, expwidth, fracwidth]
   \\ rfs [Val, valof, bias, expwidth, fracwidth, float_format]
-  )
+QED
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA5 = Q.prove (
-  `!x. 1r <= abs x /\ abs x < 2 ==>
+Theorem ERROR_BOUND_LEMMA5[local]:
+   !x. 1r <= abs x /\ abs x < 2 ==>
        ?s e f. abs (Val (float (s,e,f)) - x) <= inv (2 pow ^sfracw_tm) /\
                s < 2 /\ f < 2 EXP ^fracw_tm /\
                ((e = bias float_format) \/
-                (e = SUC (bias float_format)) /\ (f = 0))`,
+                (e = SUC (bias float_format)) /\ (f = 0))
+Proof
   gen_tac
   \\ DISCH_TAC
   \\ SUBGOAL_THEN ``1 <= x /\ x < 2 \/ 1 <= ~x /\ ~x < 2``
@@ -717,18 +736,19 @@ val ERROR_BOUND_LEMMA5 = Q.prove (
   \\ ntac 2 (fs [Val, valof, bias, expwidth, fracwidth, float_format,
                  REAL_ARITH ``abs (-2 - x) = abs (2 - -x)``,
                  REAL_ARITH ``abs (-1 * y - x) = abs (y - -x)``])
-  )
+QED
 
 (*---------------------------*)
 
 val REAL_LE_LCANCEL_IMP =
   METIS_PROVE [REAL_LE_LMUL] ``!x y z. 0r < x /\ x * y <= x * z ==> y <= z``
 
-val ERROR_BOUND_LEMMA6 = Q.prove (
-  `!x. 0 <= x /\ x < inv (2 pow ^pbias_tm) ==>
+Theorem ERROR_BOUND_LEMMA6[local]:
+   !x. 0 <= x /\ x < inv (2 pow ^pbias_tm) ==>
        ?n. n <= 2 EXP ^fracw_tm /\
            abs (x - 2 / 2 pow ^bias_tm * &n / 2 pow ^fracw_tm) <=
-           inv (2 pow ^bias_frac_tm)`,
+           inv (2 pow ^bias_frac_tm)
+Proof
   REPEAT strip_tac
   \\ Q.SPEC_THEN `2 pow ^pbias_tm * x` mp_tac ERROR_BOUND_LEMMA2
   \\ Lib.W (Lib.C SUBGOAL_THEN MP_TAC o lhand o lhand o snd)
@@ -752,14 +772,15 @@ val ERROR_BOUND_LEMMA6 = Q.prove (
   \\ pop_assum mp_tac
   \\ EVAL_TAC
   \\ simp []
-  )
+QED
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA7 = Q.prove (
-  `!x. 0 <= x /\ x < inv (2 pow ^pbias_tm) ==>
+Theorem ERROR_BOUND_LEMMA7[local]:
+   !x. 0 <= x /\ x < inv (2 pow ^pbias_tm) ==>
        ?e f. abs (Val (float (0,e,f)) - x) <= inv (2 pow ^bias_frac_tm) /\
-             f < 2 EXP ^fracw_tm /\ ((e = 0) \/ (e = 1) /\ (f = 0))`,
+             f < 2 EXP ^fracw_tm /\ ((e = 0) \/ (e = 1) /\ (f = 0))
+Proof
   gen_tac
   \\ DISCH_TAC
   \\ FIRST_ASSUM (Q.X_CHOOSE_THEN `n` MP_TAC o MATCH_MP ERROR_BOUND_LEMMA6)
@@ -781,14 +802,15 @@ val ERROR_BOUND_LEMMA7 = Q.prove (
   \\ fs [Val, valof, bias, expwidth, fracwidth, float_format]
   \\ simp [Once realTheory.ABS_SUB]
   \\ rfs [realTheory.mult_rat, realTheory.mult_ratl, Once realTheory.div_ratl]
-  )
+QED
 
 (*---------------------------*)
 
-val ERROR_BOUND_LEMMA8 = Q.prove (
-  `!x. abs x < inv (2 pow ^pbias_tm) ==>
+Theorem ERROR_BOUND_LEMMA8[local]:
+   !x. abs x < inv (2 pow ^pbias_tm) ==>
        ?s e f. abs (Val (float(s,e,f)) - x) <= inv (2 pow ^bias_frac_tm) /\
-               s < 2 /\ f < 2 EXP ^fracw_tm /\ ((e = 0) \/ (e = 1) /\ (f = 0))`,
+               s < 2 /\ f < 2 EXP ^fracw_tm /\ ((e = 0) \/ (e = 1) /\ (f = 0))
+Proof
   gen_tac
   \\ DISCH_TAC
   \\ SUBGOAL_THEN ``0 <= x /\ x < inv (2 pow ^pbias_tm) \/
@@ -809,42 +831,47 @@ val ERROR_BOUND_LEMMA8 = Q.prove (
   \\ ntac 2
        (fs [Val, valof, bias, expwidth, fracwidth, float_format,
             REAL_MUL_ASSOC, REAL_ARITH ``abs (y - -x) = abs (-1 * y - x)``])
-  )
+QED
 
 (*---------------------------*)
 
-val VALOF_SCALE_UP = Q.prove (
-  `!s e k f.
+Theorem VALOF_SCALE_UP[local]:
+   !s e k f.
       e <> 0 ==>
-      (valof float_format (s,e + k,f) = 2 pow k * valof float_format (s,e,f))`,
-  simp [valof, REAL_POW_ADD, real_div, AC REAL_MUL_ASSOC REAL_MUL_COMM])
+      (valof float_format (s,e + k,f) = 2 pow k * valof float_format (s,e,f))
+Proof
+  simp [valof, REAL_POW_ADD, real_div, AC REAL_MUL_ASSOC REAL_MUL_COMM]
+QED
 
-val VALOF_SCALE_DOWN = Q.prove(
-  `!s e k f.
+Theorem VALOF_SCALE_DOWN[local]:
+   !s e k f.
       k < e ==> (valof float_format (s,e - k,f) =
-                 inv (2 pow k) * valof float_format (s,e,f))`,
+                 inv (2 pow k) * valof float_format (s,e,f))
+Proof
   REPEAT strip_tac
   \\ `e - k <> 0 /\ (e = (e - k) + k)` by decide_tac
   \\ pop_assum (fn th => CONV_TAC (RAND_CONV (ONCE_REWRITE_CONV [th])))
   \\ simp [VALOF_SCALE_UP, REAL_MUL_ASSOC, REAL_MUL_LINV, POW_NZ]
-  )
+QED
 
 (*---------------------------*)
 
-val ISFINITE_LEMMA = Q.prove (
-  `!s e f. s < 2 /\ e < ^emax_tm /\ f < 2 EXP ^fracw_tm ==>
-           Finite (float (s,e,f)) /\ is_valid float_format (s,e,f)`,
+Theorem ISFINITE_LEMMA[local]:
+   !s e f. s < 2 /\ e < ^emax_tm /\ f < 2 EXP ^fracw_tm ==>
+           Finite (float (s,e,f)) /\ is_valid float_format (s,e,f)
+Proof
   NTAC 4 strip_tac
   \\ `defloat (float (s,e,f)) = (s,e,f)`
   by fs [GSYM float_tybij, is_valid, float_format, expwidth, fracwidth]
   \\ fs [ISFINITE, IS_FINITE_EXPLICIT, is_valid, fraction, exponent, sign,
          float_format, expwidth, fracwidth]
-  )
+QED
 
-val ERROR_BOUND_BIG1 = Q.prove (
-  `!x k. 2 pow k <= abs x /\ abs x < 2 pow SUC k /\
+Theorem ERROR_BOUND_BIG1[local]:
+   !x k. 2 pow k <= abs x /\ abs x < 2 pow SUC k /\
          abs x < threshold float_format ==>
-         ?a. Finite a /\ abs (Val a - x) <= 2 pow k / 2 pow ^sfracw_tm`,
+         ?a. Finite a /\ abs (Val a - x) <= 2 pow k / 2 pow ^sfracw_tm
+Proof
   REPEAT strip_tac
   \\ qspec_then `x / 2 pow k` mp_tac ERROR_BOUND_LEMMA5
   \\ Lib.W (Lib.C SUBGOAL_THEN mp_tac o lhand o lhand o snd)
@@ -904,21 +931,24 @@ val ERROR_BOUND_BIG1 = Q.prove (
                REAL_MUL_LINV, Val]
       \\ simp [AC REAL_MUL_COMM REAL_MUL_ASSOC]
      )
-  )
+QED
 
-val ERROR_BOUND_BIG = Q.prove (
-  `!k x. 2 pow k <= abs x /\ abs x < 2 pow (SUC k) /\
+Theorem ERROR_BOUND_BIG[local]:
+   !k x. 2 pow k <= abs x /\ abs x < 2 pow (SUC k) /\
          abs x < threshold float_format ==>
-         abs (error x) <= 2 pow k / 2 pow ^sfracw_tm`,
-  prove_tac [ERROR_BOUND_BIG1, ERROR_AT_WORST_LEMMA, REAL_LE_TRANS])
+         abs (error x) <= 2 pow k / 2 pow ^sfracw_tm
+Proof
+  prove_tac [ERROR_BOUND_BIG1, ERROR_AT_WORST_LEMMA, REAL_LE_TRANS]
+QED
 
 (*-----------------------------------------------*)
 
-val ERROR_BOUND_SMALL1 = Q.prove (
-  `!x k. inv (2 pow SUC k) <= abs x /\ abs x < inv (2 pow k) /\
+Theorem ERROR_BOUND_SMALL1[local]:
+   !x k. inv (2 pow SUC k) <= abs x /\ abs x < inv (2 pow k) /\
          k < ^pbias_tm ==>
          ?a. Finite a /\
-             abs (Val a - x) <= inv (2 pow SUC k * 2 pow ^sfracw_tm)`,
+             abs (Val a - x) <= inv (2 pow SUC k * 2 pow ^sfracw_tm)
+Proof
   REPEAT strip_tac
   \\ qspec_then `x * 2 pow (SUC k)` mp_tac ERROR_BOUND_LEMMA5
   \\ Lib.W (Lib.C SUBGOAL_THEN mp_tac o lhand o lhand o snd)
@@ -946,12 +976,13 @@ val ERROR_BOUND_SMALL1 = Q.prove (
   by simp [REAL_MUL_ASSOC, REAL_MUL_RINV, REAL_POS_NZ]
   \\ simp [REAL_POW_LT, REAL_SUB_LDISTRIB, REAL_POS_NZ, REAL_INV_MUL]
   \\ NO_STRIP_FULL_SIMP_TAC (srw_ss()) [AC REAL_MUL_ASSOC REAL_MUL_COMM]
-  )
+QED
 
-val ERROR_BOUND_SMALL = Q.prove (
-  `!k x. inv (2 pow (SUC k)) <= abs x /\ abs x < inv (2 pow k) /\
+Theorem ERROR_BOUND_SMALL[local]:
+   !k x. inv (2 pow (SUC k)) <= abs x /\ abs x < inv (2 pow k) /\
          k < ^pbias_tm ==>
-         abs (error x) <= inv (2 pow (SUC k) * 2 pow ^sfracw_tm)`,
+         abs (error x) <= inv (2 pow (SUC k) * 2 pow ^sfracw_tm)
+Proof
   REPEAT strip_tac
   \\ `?a. Finite a /\
           abs (Val a - x) <= inv (2 pow (SUC k) * 2 pow ^sfracw_tm)`
@@ -970,13 +1001,14 @@ val ERROR_BOUND_SMALL = Q.prove (
   >- (match_mp_tac REAL_LE_INV2 \\ simp [REAL_POW_LE_1])
   \\ simp [threshold, float_format, bias, fracwidth, expwidth, emax]
   \\ EVAL_TAC
-  )
+QED
 
 (*-----------------------------------------------*)
 
-val ERROR_BOUND_TINY = Q.prove (
-  `!x. abs x < inv (2 pow ^pbias_tm) ==>
-       abs (error x) <= inv (2 pow ^bias_frac_tm)`,
+Theorem ERROR_BOUND_TINY[local]:
+   !x. abs x < inv (2 pow ^pbias_tm) ==>
+       abs (error x) <= inv (2 pow ^bias_frac_tm)
+Proof
   REPEAT strip_tac
   \\ `?a. Finite a /\ abs (Val a - x) <= inv (2 pow ^bias_frac_tm)`
   by metis_tac [ERROR_BOUND_LEMMA8, ISFINITE_LEMMA, Val,
@@ -991,7 +1023,7 @@ val ERROR_BOUND_TINY = Q.prove (
   \\ asm_rewrite_tac []
   \\ simp [threshold, float_format, bias, emax, expwidth, fracwidth]
   \\ EVAL_TAC
-  )
+QED
 
 (* -------------------------------------------------------------------------
    Stronger versions not requiring exact location of the interval.
@@ -1092,8 +1124,9 @@ End
 (* ------------------------------------------------------------------------- *)
 
 (* 2 pow (2 EXP ^pbias_tm) is too big to EVAL directly *)
-val THRESHOLD_MUL_LT = Q.prove (
-  `threshold float_format * 2 pow ^pbias_tm < 2 pow (2 EXP ^pbias_tm)`,
+Theorem THRESHOLD_MUL_LT[local]:
+   threshold float_format * 2 pow ^pbias_tm < 2 pow (2 EXP ^pbias_tm)
+Proof
   `2 pow ^pemax_tm * inv (2 pow ^bias_tm) = 2 pow ^bias_tm`
   by simp_tac bool_ss
        [GSYM (EVAL ``^bias_tm + ^bias_tm``), REAL_POW_ADD, REAL_MUL_RINV,
@@ -1115,23 +1148,25 @@ val THRESHOLD_MUL_LT = Q.prove (
   \\ conj_tac >- EVAL_TAC
   \\ match_mp_tac REAL_POW_MONO_LT
   \\ EVAL_TAC
-  )
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val LT_THRESHOLD_LT_POW_INV = Q.prove (
-  `!x. x < threshold (^expw_tm,^fracw_tm) ==>
-       x < 2 pow (emax (^expw_tm,^fracw_tm) - 1) / 2 pow ^pbias_tm`,
+Theorem LT_THRESHOLD_LT_POW_INV[local]:
+   !x. x < threshold (^expw_tm,^fracw_tm) ==>
+       x < 2 pow (emax (^expw_tm,^fracw_tm) - 1) / 2 pow ^pbias_tm
+Proof
   simp [FLOAT_THRESHOLD_EXPLICIT, emax, expwidth, GSYM float_format]
   \\ gen_tac
   \\ match_mp_tac (REAL_ARITH ``b < c ==> (a < b ==> a < c : real)``)
   \\ EVAL_TAC
-  )
+QED
 
-val REAL_POS_IN_BINADE = Q.prove (
-  `!x. normalizes x /\ 0 <= x ==>
+Theorem REAL_POS_IN_BINADE[local]:
+   !x. normalizes x /\ 0 <= x ==>
        ?j. j <= emax float_format - 2 /\ 2 pow j / 2 pow ^pbias_tm <= x /\
-           x < 2 pow (SUC j) / 2 pow ^pbias_tm`,
+           x < 2 pow (SUC j) / 2 pow ^pbias_tm
+Proof
   rw_tac arith_ss [normalizes, bias, expwidth, float_format, abs]
   \\ qspec_then `\n. 2 pow n / 2 pow ^pbias_tm <= x` mp_tac EXISTS_GREATEST
   \\ Lib.W (Lib.C SUBGOAL_THEN mp_tac o lhs o lhand o snd)
@@ -1168,13 +1203,15 @@ val REAL_POS_IN_BINADE = Q.prove (
   \\ full_simp_tac std_ss
        [REAL_LT_RDIV, REAL_POW_LT, REAL_ARITH ``0 < 2r``, real_lte,
         emax, expwidth]
-  )
+QED
 
-val REAL_NEG_IN_BINADE = Q.prove (
-  `!x. normalizes x /\ 0 <= ~x ==>
+Theorem REAL_NEG_IN_BINADE[local]:
+   !x. normalizes x /\ 0 <= ~x ==>
        ?j. j <= emax float_format - 2 /\ 2 pow j / 2 pow ^pbias_tm <= ~x /\
-           ~x < 2 pow (SUC j) / 2 pow ^pbias_tm`,
-  metis_tac [normalizes, ABS_NEG, REAL_POS_IN_BINADE])
+           ~x < 2 pow (SUC j) / 2 pow ^pbias_tm
+Proof
+  metis_tac [normalizes, ABS_NEG, REAL_POS_IN_BINADE]
+QED
 
 Theorem REAL_IN_BINADE:
    !x. normalizes x ==>
@@ -1197,34 +1234,38 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val inv_le = Q.prove(
-  `!a b. 0 < a /\ 0 < b ==> (inv a <= inv b = b <= a)`,
+Theorem inv_le[local]:
+   !a b. 0 < a /\ 0 < b ==> (inv a <= inv b = b <= a)
+Proof
   rw [realTheory.REAL_INV_1OVER, realTheory.REAL_LE_LDIV_EQ,
       realTheory.mult_ratl, realTheory.REAL_LE_RDIV_EQ]
-  )
+QED
 
-val relative_bound_lem = Q.prove(
-  `!x j. x <> 0 ==>
+Theorem relative_bound_lem[local]:
+   !x j. x <> 0 ==>
          (2 pow j * inv (2 pow ^pbias_tm) <= abs x =
-          inv (abs x) <= inv (2 pow j * inv (2 pow ^pbias_tm)))`,
+          inv (abs x) <= inv (2 pow j * inv (2 pow ^pbias_tm)))
+Proof
   REPEAT strip_tac
   \\ match_mp_tac (GSYM inv_le)
   \\ asm_simp_tac std_ss [REAL_ARITH ``x <> 0 ==> 0 < abs x``]
   \\ match_mp_tac realTheory.REAL_LT_MUL
   \\ simp_tac std_ss [realTheory.REAL_POW_LT, realTheory.REAL_LT_INV_EQ,
                       REAL_ARITH ``0 < 2r``]
-  )
+QED
 
-val inv_mul = Q.prove(
-  `!a b. a <> 0 /\ b <> 0 ==> (inv (a * inv b) = b / a)`,
+Theorem inv_mul[local]:
+   !a b. a <> 0 /\ b <> 0 ==> (inv (a * inv b) = b / a)
+Proof
   rw [realTheory.REAL_INV_MUL, realTheory.REAL_INV_NZ, realTheory.REAL_INV_INV]
   \\ simp [realTheory.REAL_INV_1OVER, realTheory.mult_ratl]
-  )
+QED
 
-val RELATIVE_ERROR_ZERO = Q.prove(
-  `!x. normalizes  x /\ (x = 0) ==>
+Theorem RELATIVE_ERROR_ZERO[local]:
+   !x. normalizes  x /\ (x = 0) ==>
        ?e. abs e <= 1 / 2 pow ^sfracw_tm /\
-           (Val (float (round float_format To_nearest x)) = x * (1 + e))`,
+           (Val (float (round float_format To_nearest x)) = x * (1 + e))
+Proof
   rw []
   \\ qexists_tac `0`
   \\ qspec_then `0`
@@ -1235,7 +1276,7 @@ val RELATIVE_ERROR_ZERO = Q.prove(
   \\ `defloat (float (0, 0, 0)) = (0, 0, 0)`
   by simp [GSYM float_tybij, is_valid, float_format, expwidth, fracwidth]
   \\ simp [Finite, Iszero, is_zero, exponent, fraction, Val, valof]
-  )
+QED
 
 Theorem RELATIVE_ERROR:
    !x. normalizes x ==>
@@ -1307,10 +1348,12 @@ QED
    Lifting of arithmetic operations.
    ------------------------------------------------------------------------- *)
 
-val Val_FLOAT_ROUND_VALOF = Q.prove (
-  `!x. Val (float (round float_format To_nearest x)) =
-       valof float_format (round float_format To_nearest x)`,
-  simp [Val, DEFLOAT_FLOAT_ROUND])
+Theorem Val_FLOAT_ROUND_VALOF[local]:
+   !x. Val (float (round float_format To_nearest x)) =
+       valof float_format (round float_format To_nearest x)
+Proof
+  simp [Val, DEFLOAT_FLOAT_ROUND]
+QED
 
 val lift_arith_tac =
   REPEAT gen_tac \\ strip_tac
@@ -1364,9 +1407,9 @@ val finite_rule =
    MATCH_MP (DECIDE ``(a /\ b /\ c ==> d /\ e) ==> (a /\ b /\ c ==> d)``) o
    Drule.SPEC_ALL
 
-val FLOAT_ADD_FINITE = save_thm ("FLOAT_ADD_FINITE", finite_rule FLOAT_ADD)
-val FLOAT_SUB_FINITE = save_thm ("FLOAT_SUB_FINITE", finite_rule FLOAT_SUB)
-val FLOAT_MUL_FINITE = save_thm ("FLOAT_MUL_FINITE", finite_rule FLOAT_MUL)
+Theorem FLOAT_ADD_FINITE = finite_rule FLOAT_ADD
+Theorem FLOAT_SUB_FINITE = finite_rule FLOAT_SUB
+Theorem FLOAT_MUL_FINITE = finite_rule FLOAT_MUL
 
 (*-----------------------*)
 

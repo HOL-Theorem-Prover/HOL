@@ -22,19 +22,23 @@ val _ = ParseExtras.temp_loose_equality()
 (* The State Space --------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype `iseq = t3 | t4 | t5 | t6 | tn | tm`;
+Datatype: iseq = t3 | t4 | t5 | t6 | tn | tm
+End
 
-val _ = Hol_datatype
-  `dp = DP of reg=>psr=>word32=>word32=>word32=>word32=>word32`;
+Datatype:
+   dp = DP reg psr word32 word32 word32 word32 word32
+End
 
-val _ = Hol_datatype
-  `ctrl = CTRL of word32=>bool=>word32=>bool=>word32=>bool=>bool=>bool=>
-                  bool=>bool=>bool=>iclass=>iseq=>bool=>bool=>bool=>bool=>
-                  bool=>bool=>bool=>bool=>bool=>bool=>bool=>word3=>bool=>
-                  bool=>bool=>word32=>word32=>word2=>word16=>word4=>word4=>
-                  word2=>word32=>bool=>word5`;
+Datatype:
+   ctrl = CTRL word32 bool word32 bool word32 bool bool bool
+                  bool bool bool iclass iseq bool bool bool bool
+                  bool bool bool bool bool bool bool word3 bool
+                  bool bool word32 word32 word2 word16 word4 word4
+                  word2 word32 bool word5
+End
 
-val _ = Hol_datatype `state_arm6 = ARM6 of dp=>ctrl`;
+Datatype: state_arm6 = ARM6 dp ctrl
+End
 
 val arm6state = ``ARM6 (DP reg psr areg din alua alub dout)
   (CTRL pipea pipeaval pipeb pipebval ireg iregval ointstart onewinst endinst
@@ -1250,16 +1254,22 @@ End
 (* Basic Theorems ---------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val STATE_ARM6_THM = store_thm("STATE_ARM6_THM",
-  `IMAP ARM6_SPEC INIT_ARM6 NEXT_ARM6 OUT_ARM6`,
-  RW_TAC (std_ss++boolSimps.LET_ss) [ARM6_SPEC_def,STATE_ARM6_def,IMAP_def]);
+Theorem STATE_ARM6_THM:
+   IMAP ARM6_SPEC INIT_ARM6 NEXT_ARM6 OUT_ARM6
+Proof
+  RW_TAC (std_ss++boolSimps.LET_ss) [ARM6_SPEC_def,STATE_ARM6_def,IMAP_def]
+QED
 
-val STATE_ARM6_IMAP_INIT = store_thm("STATE_ARM6_IMAP_INIT",
-  `IS_IMAP_INIT ARM6_SPEC INIT_ARM6`,
-  PROVE_TAC [STATE_ARM6_THM,IS_IMAP_INIT_def]);
+Theorem STATE_ARM6_IMAP_INIT:
+   IS_IMAP_INIT ARM6_SPEC INIT_ARM6
+Proof
+  PROVE_TAC [STATE_ARM6_THM,IS_IMAP_INIT_def]
+QED
 
-val STATE_ARM6_IMAP = store_thm("STATE_ARM6_IMAP",
-  `IS_IMAP ARM6_SPEC`, PROVE_TAC [STATE_ARM6_THM,IS_IMAP_def]);
+Theorem STATE_ARM6_IMAP:
+   IS_IMAP ARM6_SPEC
+Proof PROVE_TAC [STATE_ARM6_THM,IS_IMAP_def]
+QED
 
 val ARM6_SPEC_STATE = save_thm("ARM6_SPEC_STATE",
   (SIMP_CONV (srw_ss()++boolSimps.LET_ss) [ARM6_SPEC_def])
@@ -1285,4 +1295,3 @@ val DUR_X = save_thm("DUR_X",
      SPEC `<|state := (^arm6state); inp := i|>`) DUR_X_def);
 
 (* ------------------------------------------------------------------------- *)
-

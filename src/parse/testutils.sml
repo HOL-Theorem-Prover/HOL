@@ -229,20 +229,25 @@ fun convtest (nm,conv,tm,expected) =
     timed conv (exncheck c) tm
   end handle InternalDie p => pretty_die p
 
+fun in_batch_mode f x =
+    Lib.with_flag (Globals.interactive, false) f x
+
+fun in_repl_mode f x =
+    Lib.with_flag (Globals.interactive, true) f x
+
 fun check_HOL_ERRexn P e =
-    case e of
-        HOL_ERR{origin_structure,origin_function,message,...} =>
-          P (origin_structure, origin_function, message)
-      | _ => false
+  case e of
+    HOL_ERR holerr =>
+       P (top_structure_of holerr, top_function_of holerr, message_of holerr)
+  | other_exn => false
 
 fun check_HOL_ERR P (Res _) = false
   | check_HOL_ERR P (Exn e) = check_HOL_ERRexn P e
 
 fun is_struct_HOL_ERR st1 = check_HOL_ERRexn (fn (st2,_,_) => st1 = st2)
+
 fun check_result P (Res r) = P r
   | check_result P _ = false
-
-
 
 fun require_msgk P pr f k x =
     let

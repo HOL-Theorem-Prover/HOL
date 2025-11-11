@@ -27,8 +27,8 @@ Definition PPC_NEXT_def:
       else SOME (SND (THE s'))
 End
 
-val PPC_NEXT_THM = store_thm("PPC_NEXT_THM",
-  ``(ppc_decode xs = SOME i) ==>
+Theorem PPC_NEXT_THM:
+    (ppc_decode xs = SOME i) ==>
     !w0 w1 w2 w3.
       (w2bits w3 ++ w2bits w2 ++ w2bits w1 ++ w2bits w0 = xs) ==>
       (ppc_exec_instr iiid_dummy i s = SOME (tt,s')) ==>
@@ -37,7 +37,9 @@ val PPC_NEXT_THM = store_thm("PPC_NEXT_THM",
       (PREAD_M (PREAD_R PPC_PC s + 1w) s = SOME w1) ==>
       (PREAD_M (PREAD_R PPC_PC s + 2w) s = SOME w2) ==>
       (PREAD_M (PREAD_R PPC_PC s + 3w) s = SOME w3) ==>
-      (PPC_NEXT s = SOME s')``,
-  SIMP_TAC std_ss [PPC_NEXT_def,LET_DEF,listTheory.MEM]);
+      (PPC_NEXT s = SOME s')
+Proof
+  SIMP_TAC std_ss [PPC_NEXT_def,LET_DEF,listTheory.MEM]
+QED
 
 

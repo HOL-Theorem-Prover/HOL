@@ -923,16 +923,17 @@ Proof
     ASM_SIMP_TAC bool_ss[GSYM MATRIX_COMPOSE, MATRIX_I]]
 QED
 
-(* NOTE: the following theorem(s) cannot be parsed in the modern syntax *)
-val INVERTIBLE_LEFT_INVERSE = store_thm
-  ("INVERTIBLE_LEFT_INVERSE",
-   “!A:real['N]['N]. invertible(A) <=> ?B:real['N]['N]. B ** A = mat 1”,
- PROVE_TAC[invertible_def, MATRIX_LEFT_RIGHT_INVERSE]);
+Theorem INVERTIBLE_LEFT_INVERSE:
+    !A:real['N]['N]. invertible(A) <=> ?B:real['N]['N]. B ** A = mat 1
+Proof
+ PROVE_TAC[invertible_def, MATRIX_LEFT_RIGHT_INVERSE]
+QED
 
-val INVERTIBLE_RIGHT_INVERSE = store_thm
-  ("INVERTIBLE_RIGHT_INVERSE",
-   “!A:real['N]['N]. invertible(A) <=> ?B:real['N]['N]. A ** B = mat 1”,
- PROVE_TAC[invertible_def, MATRIX_LEFT_RIGHT_INVERSE]);
+Theorem INVERTIBLE_RIGHT_INVERSE:
+    !A:real['N]['N]. invertible(A) <=> ?B:real['N]['N]. A ** B = mat 1
+Proof
+ PROVE_TAC[invertible_def, MATRIX_LEFT_RIGHT_INVERSE]
+QED
 
 Theorem MATRIX_INVERTIBLE :
    !f:real['N]->real['N].

@@ -169,7 +169,7 @@ val thms =
    ‘(env,[If test xs y z],s1)’,
    ‘(env,[Call fname xs],s1)’]
 
-Triviality Call_eq:
+Theorem Call_eq[local]:
   (env,[Call fname xs],s1) ---> a1 ⇔
   ∃vs s2 v s3.
     (env,xs,s1) ---> (vs,s2) ∧

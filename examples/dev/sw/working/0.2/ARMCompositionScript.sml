@@ -19,18 +19,18 @@ Libs
 (*------------------------------------------------------------------------------------------------------*)
 
 (* Sort in ascending order *)
-val FUPDATE_LT_COMMUTES = Q.store_thm (
-  "FUPDATE_LT_COMMUTES",
-  ` !f a b c d. c < a ==> (f |+ (a:num, b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+Theorem FUPDATE_LT_COMMUTES:
+    !f a b c d. c < a ==> (f |+ (a:num, b) |+ (c,d) = f |+ (c,d) |+ (a,b))
+Proof
     RW_TAC arith_ss [FUPDATE_COMMUTES]
-    );
+QED
 
 (* Sort in descending order                                                                             *)
-val FUPDATE_GT_COMMUTES = Q.store_thm (
-  "FUPDATE_GT_COMMUTES",
-  ` !f a b c d. c > a ==> (f |+ (a:ADDR,b) |+ (c,d) = f |+ (c,d) |+ (a,b))`,
+Theorem FUPDATE_GT_COMMUTES:
+    !f a b c d. c > a ==> (f |+ (a:ADDR,b) |+ (c,d) = f |+ (c,d) |+ (a,b))
+Proof
     RW_TAC arith_ss [FUPDATE_COMMUTES]
-    );
+QED
 
 
 val fupdate_normalizer =
@@ -71,14 +71,14 @@ val terminated = Define `
      !(s:STATEPCS) iB.
            stopAt (\s':STATEPCS. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s`;
 
-val TERMINATED_THM = Q.store_thm (
-   "TERMINATED_THM",
-   `!arm. terminated arm ==>
-        !s iB. FST (FST (runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)) = FST (FST s) + LENGTH arm`,
+Theorem TERMINATED_THM:
+    !arm. terminated arm ==>
+        !s iB. FST (FST (runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)) = FST (FST s) + LENGTH arm
+Proof
    RW_TAC std_ss [terminated, UNROLL_RUNTO] THEN
    METIS_TAC [Q.SPECL [`s:STATEPCS`, `\s':STATEPCS. FST (FST s') = FST (FST (s:STATEPCS)) + LENGTH arm`,
                        `step (upload arm iB (FST (FST (s:STATEPCS))))`] (INST_TYPE [alpha |-> Type `:STATEPCS`] SHORTEST_STOP)]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Closed segment of codes                                                    *)
@@ -88,15 +88,14 @@ val closed = Define `
     closed arm =
         !s iB. (!x. x IN SND (runTo (upload arm iB (FST s)) (FST s + LENGTH arm) (s,({}))) ==> FST s <= x /\ x < FST s + LENGTH arm)`;
 
-val CLOSED_THM = Q.store_thm (
-   "CLOSED_THM",
-   `!m arm s iB pos. closed arm ==>
+Theorem CLOSED_THM:
+    !m arm s iB pos. closed arm ==>
           stopAt  (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s /\
           m < shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s
           ==>
           FST (FST s) <= FST (FST (FUNPOW (step (upload arm iB (FST (FST s)))) m s)) /\
           FST (FST (FUNPOW (step (upload arm iB (FST (FST s)))) m s)) < FST (FST s) + LENGTH arm
-   `,
+Proof
    REPEAT GEN_TAC THEN
    `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
    ASM_REWRITE_TAC [] THEN
@@ -113,18 +112,18 @@ val CLOSED_THM = Q.store_thm (
         by METIS_TAC [SIMP_RULE std_ss [] (Q.SPECL [`(s0,pcS0)`,`(s0,({}))`] SHORTEST_INDEPENDENT_OF_PCS)] THEN
    STRIP_TAC THEN
    METIS_TAC []
-   );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
 (*      Running of closed codes                                                    *)
 (*---------------------------------------------------------------------------------*)
 
-val CLOSED_MIDDLE_STEP_LEM = Q.store_thm (
-   "CLOSED_MIDDLE_STEP_LEM",
-   `!arm arm' arm'' pos iB pos (s:STATEPCS).
+Theorem CLOSED_MIDDLE_STEP_LEM:
+    !arm arm' arm'' pos iB pos (s:STATEPCS).
        (pos + LENGTH arm' <= FST (FST s)) /\ (FST (FST s) < pos + LENGTH arm' + LENGTH arm) ==>
-           (step (upload (arm' ++ arm ++ arm'') iB pos) s = step (upload arm iB (pos + LENGTH arm')) s)`,
+           (step (upload (arm' ++ arm ++ arm'') iB pos) s = step (upload arm iB (pos + LENGTH arm')) s)
+Proof
    RW_TAC std_ss [] THEN
    `?s0 pcS0. s = (s0,pcS0)` by METIS_TAC [ABS_PAIR_THM] THEN
    FULL_SIMP_TAC std_ss [step_def] THEN
@@ -149,18 +148,17 @@ val CLOSED_MIDDLE_STEP_LEM = Q.store_thm (
     RW_TAC std_ss [] THEN
     METIS_TAC [ADD_ASSOC, ADD_SYM]
     ]
-   );
+QED
 
 
-val CLOSED_MIDDLE_LEM = Q.store_thm (
-   "CLOSED_MIDDLE_LEM",
-   `!arm arm' arm'' pos iB (s:STATEPCS) s'.
+Theorem CLOSED_MIDDLE_LEM:
+    !arm arm' arm'' pos iB (s:STATEPCS) s'.
            closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) /\ (instB = upload arm iB (FST (FST s))) /\
            (?m. (s' = FUNPOW (step instB) m (s)) /\ m <= shortest (\s1:STATEPCS. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s)
             ==>
                (runTo (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s' =
-                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s')`,
-
+                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s')
+Proof
    RW_TAC std_ss [] THEN
    Q.ABBREV_TAC `instB = upload arm iB (FST (FST s))` THEN
    Cases_on `m = shortest (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s` THENL [
@@ -210,15 +208,15 @@ val CLOSED_MIDDLE_LEM = Q.store_thm (
                ]
         ]
    ]
-  );
+QED
 
 
-val CLOSED_MIDDLE = Q.store_thm (
-   "CLOSED_MIDDLE",
-   `!arm arm' arm'' pos iB (s:STATEPCS).
+Theorem CLOSED_MIDDLE:
+    !arm arm' arm'' pos iB (s:STATEPCS).
            closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
                (runTo (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s =
-                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
+                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)
+Proof
    REPEAT STRIP_TAC THEN
    `(?m. (FUNPOW (step (upload arm iB (FST (FST s)))) 0 s = FUNPOW (step (upload arm iB (FST (FST s)))) m s) /\
           m <= shortest (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s) ==>
@@ -229,44 +227,43 @@ val CLOSED_MIDDLE = Q.store_thm (
     `0 <= shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s` by RW_TAC arith_ss [] THEN
    RES_TAC THEN
    METIS_TAC [FUNPOW]
-  );
+QED
 
 
-val CLOSED_PREFIX = Q.store_thm (
-   "CLOSED_PREFIX",
-   `!arm arm' pos iB (s:STATEPCS).
+Theorem CLOSED_PREFIX:
+    !arm arm' pos iB (s:STATEPCS).
            closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
                (runTo (upload (arm' ++ arm) iB pos) (FST (FST s) + LENGTH arm) s =
-                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
+                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)
+Proof
    REPEAT STRIP_TAC THEN
    IMP_RES_TAC (Q.SPECL [`arm`,`arm'`,`[]`] CLOSED_MIDDLE) THEN
    FULL_SIMP_TAC list_ss []
-  );
+QED
 
 
-val CLOSED_SUFFIX = Q.store_thm (
-   "CLOSED_SUFFIX",
-   `!arm arm' iB instB (s:STATEPCS).
+Theorem CLOSED_SUFFIX:
+    !arm arm' iB instB (s:STATEPCS).
            closed arm /\ terminated arm  ==>
                (runTo (upload (arm ++ arm') iB (FST (FST s))) (FST (FST s) + LENGTH arm) s =
-                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
+                    runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s)
+Proof
    REPEAT STRIP_TAC THEN
    IMP_RES_TAC (Q.SPECL [`arm`,`[]`,`arm'`] CLOSED_MIDDLE) THEN
    FULL_SIMP_TAC list_ss []
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Terimination information of closed codes                                   *)
 (*---------------------------------------------------------------------------------*)
 
-val TERMINATED_MIDDLE_LEM = Q.store_thm (
-   "TERMINATED_MIDDLE_LEM",
-    `!arm arm' arm'' pos iB (s:STATEPCS) s'.
+Theorem TERMINATED_MIDDLE_LEM:
+     !arm arm' arm'' pos iB (s:STATEPCS) s'.
            closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) /\ (instB = upload arm iB (FST (FST s))) /\
            (?m. (s' = FUNPOW (step instB) m (s)) /\ m <= shortest (\s1:STATEPCS. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s)
          ==>
-         terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s'`,
-
+         terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s'
+Proof
    RW_TAC std_ss [terd_def] THEN
    Q.ABBREV_TAC `instB = upload arm iB (FST (FST s))` THEN
    Cases_on `m = shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step instB) s` THENL [
@@ -317,14 +314,13 @@ val TERMINATED_MIDDLE_LEM = Q.store_thm (
                ]
         ]
    ]
-  );
+QED
 
-val TERMINATED_MIDDLE = Q.store_thm (
-   "TERMINATED_MIDDLE",
-   `!arm arm' arm'' pos iB instB (s:STATEPCS).
+Theorem TERMINATED_MIDDLE:
+    !arm arm' arm'' pos iB instB (s:STATEPCS).
            closed arm /\ terminated arm /\ (pos + LENGTH arm' = FST (FST s)) ==>
-               terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s`,
-
+               terd (upload (arm' ++ arm ++ arm'') iB pos) (FST (FST s) + LENGTH arm) s
+Proof
     REPEAT STRIP_TAC THEN
     `(?m. (FUNPOW (step (upload arm iB (FST (FST s)))) 0 s = FUNPOW (step (upload arm iB (FST (FST s)))) m s) /\
           m <= shortest (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s) ==>
@@ -334,24 +330,23 @@ val TERMINATED_MIDDLE = Q.store_thm (
    `0 <= shortest (\s'. FST (FST s') = FST (FST s) + LENGTH arm) (step (upload arm iB (FST (FST s)))) s` by RW_TAC arith_ss [] THEN
    RES_TAC THEN
    METIS_TAC [FUNPOW]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Sequential Composition witin a context                                     *)
 (*      arm' and arm'' represent the context                                       *)
 (*---------------------------------------------------------------------------------*)
 
-val CLOSED_SEQUENTIAL_COMPOSITION = Q.store_thm (
-   "CLOSED_SEQUENTIAL_COMPOSITION",
-   `!arm1 arm2 arm' arm'' pos iB (s:STATEPCS).
+Theorem CLOSED_SEQUENTIAL_COMPOSITION:
+    !arm1 arm2 arm' arm'' pos iB (s:STATEPCS).
          closed arm1 /\ terminated arm1 /\ closed arm2 /\ terminated arm2 /\
          (pos + LENGTH arm' = FST (FST s)) /\ ~(FST (FST s) + LENGTH arm1 + LENGTH arm2 IN SND s) ==>
           stopAt (\s'. FST (FST s') = FST (FST s) + LENGTH arm1 + LENGTH arm2) (step (upload (arm' ++ arm1 ++ arm2 ++ arm'') iB pos)) s
           /\
          (runTo (upload (arm' ++ arm1 ++ arm2 ++ arm'') iB pos) (FST (FST s) + LENGTH arm1 + LENGTH arm2) s =
           runTo (upload arm2 iB (FST (FST s) + LENGTH arm1)) (FST (FST s) + LENGTH arm1 + LENGTH arm2)
-                       (runTo (upload arm1 iB (FST (FST s))) (FST (FST s) + LENGTH arm1) s))`,
-
+                       (runTo (upload arm1 iB (FST (FST s))) (FST (FST s) + LENGTH arm1) s))
+Proof
     NTAC 8 STRIP_TAC THEN
     Cases_on `LENGTH arm2 = 0` THENL [
         IMP_RES_TAC LENGTH_NIL THEN
@@ -420,7 +415,7 @@ val CLOSED_SEQUENTIAL_COMPOSITION = Q.store_thm (
            ]
         ]
     ]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      pc- and cpsr-independent codes                                             *)
@@ -441,30 +436,29 @@ val status_independent = Define `
 val _ = type_abbrev("DSTATE", Type`:(REGISTER |-> DATA) # (ADDR |-> DATA)`);
 
 
-val DSTATE_IRRELEVANT_PCS = Q.store_thm
-  ("DSTATE_IRRELEVANT_PCS",
-  `!arm pcS0 pcS1 iB s.
+Theorem DSTATE_IRRELEVANT_PCS:
+   !arm pcS0 pcS1 iB s.
             terminated arm ==>
             (get_st (runTo (upload arm iB (FST s)) (FST s + LENGTH arm) (s,pcS0)) =
-             get_st (runTo (upload arm iB (FST s)) (FST s + LENGTH arm) (s,pcS1)))`,
+             get_st (runTo (upload arm iB (FST s)) (FST s + LENGTH arm) (s,pcS1)))
+Proof
   RW_TAC std_ss [terminated, get_st] THEN
   Cases_on `LENGTH arm` THENL [
        RW_TAC std_ss [Once RUNTO_EXPAND_ONCE] THEN
            RW_TAC std_ss [Once RUNTO_EXPAND_ONCE],
         METIS_TAC [FST, RUNTO_STATE_PCS_SEPERATE]
   ]
-  );
+QED
 
-val DSTATE_COMPOSITION = Q.store_thm (
-   "DSTATE_COMPOSITION",
-   `!arm arm' pos0 pos1 pos2 cpsr0 cpsr1 cpsr2 iB (st:DSTATE).
+Theorem DSTATE_COMPOSITION:
+    !arm arm' pos0 pos1 pos2 cpsr0 cpsr1 cpsr2 iB (st:DSTATE).
        closed arm /\ terminated arm /\ status_independent arm /\
        closed arm' /\ terminated arm' /\ status_independent arm'
        ==>
            (get_st (runTo (upload (arm ++ arm') iB pos0) (pos0 + LENGTH arm + LENGTH arm') ((pos0,cpsr0,st),({}))) =
                 get_st (runTo (upload arm' iB pos2) (pos2 + LENGTH arm')
-                     ((pos2,cpsr2, get_st (runTo (upload arm iB pos1) (pos1 + LENGTH arm) ((pos1,cpsr1,st),({})))), ({}))))`,
-
+                     ((pos2,cpsr2, get_st (runTo (upload arm iB pos1) (pos1 + LENGTH arm) ((pos1,cpsr1,st),({})))), ({}))))
+Proof
    RW_TAC std_ss [get_st] THEN
    RW_TAC std_ss [(SIMP_RULE set_ss [ADD_ASSOC] o SIMP_RULE list_ss [] o
                Q.SPECL [`arm`,`arm'`,`[]`,`[]`,`pos0`,`iB`,`((pos0,cpsr0,st),{}):STATEPCS`]) CLOSED_SEQUENTIAL_COMPOSITION] THEN
@@ -477,7 +471,7 @@ val DSTATE_COMPOSITION = Q.store_thm (
     `SND (SND (FST (runTo (upload arm iB pos0) (pos0 + LENGTH arm) (((pos0,cpsr0,st),({})):STATEPCS)))) =
        SND (SND (FST (runTo (upload arm iB pos1) (pos1 + LENGTH arm) (((pos1,cpsr1,st),({})):STATEPCS))))` by METIS_TAC [status_independent,get_st] THEN
     METIS_TAC [status_independent, FST, get_st, DSTATE_IRRELEVANT_PCS, SND]
-  );
+QED
 
 (*
 val BASIC_CLOSED_POSIND_COMPOSITION =
@@ -502,15 +496,15 @@ val eval_fl = Define `
          get_st (runTo (uploadCode arm (\i.ARB)) (LENGTH arm) ((0,0w,st),({})))`;
 
 
-val SEQ_COMPOSITION_FLAT = Q.store_thm (
-   "SEQ_COMPOSITION_FLAT",
-   `!arm arm'.
+Theorem SEQ_COMPOSITION_FLAT:
+    !arm arm'.
        well_formed arm /\ well_formed arm'
        ==>
-           (eval_fl (arm ++ arm') = eval_fl arm' o eval_fl arm)`,
+           (eval_fl (arm ++ arm') = eval_fl arm' o eval_fl arm)
+Proof
    RW_TAC std_ss [uploadCode_def, eval_fl, well_formed, FUN_EQ_THM] THEN
    RW_TAC list_ss [SIMP_RULE arith_ss [] (Q.SPECL [`arm`,`arm'`,`0`,`0`,`0`,`0w`,`0w`,`0w`,`(\i. ARB)`,`x`] DSTATE_COMPOSITION)]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (* flat coce composition                                                           *)
@@ -540,11 +534,10 @@ val mk_TR = Define `
 (*      Well-formed Composition                                                    *)
 (*---------------------------------------------------------------------------------*)
 
-val SC_IS_WELL_FORMED = Q.store_thm (
-   "SC_IS_WELL_FORMED",
-   `!arm1 arm2. well_formed arm1 /\ well_formed arm2
-           ==> well_formed (mk_SC arm1 arm2)`,
-
+Theorem SC_IS_WELL_FORMED:
+    !arm1 arm2. well_formed arm1 /\ well_formed arm2
+           ==> well_formed (mk_SC arm1 arm2)
+Proof
    REPEAT STRIP_TAC THEN
    FULL_SIMP_TAC std_ss [well_formed, mk_SC] THEN
    ASSUME_TAC ((GEN (Term `s:STATE`) o GEN (Term `iB:num->INST`) o SIMP_RULE set_ss [] o SIMP_RULE list_ss [] o
@@ -591,14 +584,13 @@ val SC_IS_WELL_FORMED = Q.store_thm (
            NTAC 5 (POP_ASSUM (K ALL_TAC)) THEN
            METIS_TAC [RUNTO_STATE_PCS_SEPERATE, terminated, FST]
        ]
-  );
+QED
 
-val UNCOND_JUMP_OVER_THM = Q.store_thm (
-   "UNCOND_JUMP_OVER_THM",
-   `!arm. well_formed ([((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))] ++ arm) /\
+Theorem UNCOND_JUMP_OVER_THM:
+    !arm. well_formed ([((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))] ++ arm) /\
           !iB pos cpsr st pcS. get_st (runTo (upload ([((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))] ++ arm) iB pos)
-                                        (pos + LENGTH arm + 1) ((pos,cpsr,st),pcS)) = st`,
-
+                                        (pos + LENGTH arm + 1) ((pos,cpsr,st),pcS)) = st
+Proof
    STRIP_TAC THEN
    `!s pcS iB. step (upload (((B,SOME AL,F),NONE,[],SOME (POS (LENGTH arm + 1)))::arm) iB (FST s)) (s,pcS) =
                                          ((FST s + LENGTH arm + 1, SND s), FST s INSERT pcS)` by ALL_TAC THENL [
@@ -634,7 +626,7 @@ val UNCOND_JUMP_OVER_THM = Q.store_thm (
                 RW_TAC list_ss [Once RUNTO_EXPAND_ONCE]
             ]
    ]
-  );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
@@ -643,15 +635,15 @@ val UNCOND_JUMP_OVER_THM = Q.store_thm (
 
 val _ = type_abbrev("P_DSTATE", Type`:DSTATE->bool`);
 
-val HOARE_SC_FLAT = Q.store_thm (
-   "HOARE_SC_FLAT",
-   `!arm1 arm2 (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE) (T:P_DSTATE).
+Theorem HOARE_SC_FLAT:
+    !arm1 arm2 (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE) (T:P_DSTATE).
            well_formed arm1 /\ well_formed arm2 /\
            (!st. P st ==> Q (eval_fl arm1 st)) /\ (!st. R st ==> T (eval_fl arm2 st)) /\ (!st. Q st ==> R st)
            ==>
-           (!st. P st ==> T (eval_fl (mk_SC arm1 arm2) st))`,
+           (!st. P st ==> T (eval_fl (mk_SC arm1 arm2) st))
+Proof
        RW_TAC std_ss [mk_SC, SEQ_COMPOSITION_FLAT]
-   );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
@@ -701,9 +693,8 @@ val WORD_SUB_EQ_ZERO = prove (
         METIS_TAC[WORD_SUB_ADD, WORD_ADD_0, WORD_SUB_REFL]);
 
 
-val ENUMERATE_CJ = Q.store_thm (
-   "ENUMERATE_CJ",
-    `!cond pc cpsr st offset.
+Theorem ENUMERATE_CJ:
+     !cond pc cpsr st offset.
             (eval_cond cond st ==>
              ?cpsr'. decode_cond (pc + 1, decode_op (pc,cpsr,st) (CMP,(NONE :EXP option),[FST cond; SND (SND cond)],(NONE:OFFSET option)))
                                  ((B,SOME (FST (SND cond)),F),NONE,[],SOME offset) =
@@ -711,8 +702,8 @@ val ENUMERATE_CJ = Q.store_thm (
             (~(eval_cond cond) st ==>
               ?cpsr'. decode_cond (pc + 1, decode_op (pc,cpsr,st) (CMP,(NONE :EXP option),[FST cond; SND (SND cond)],(NONE:OFFSET option)))
                                  ((B,SOME (FST (SND cond)),F),NONE,[],SOME offset) =
-                     (pc+2,cpsr',st))`,
-
+                     (pc+2,cpsr',st))
+Proof
          REPEAT GEN_TAC THEN
          `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
          ASM_SIMP_TAC list_ss [decode_op_def, OPERATOR_case_def, decode_cond_def, LET_THM] THEN
@@ -758,7 +749,7 @@ val ENUMERATE_CJ = Q.store_thm (
                 SIMP_TAC std_ss [word_le_def, nzcv_def, LET_THM, GSYM word_add_def,
                         GSYM word_sub_def, WORD_SUB_EQ_ZERO] THEN METIS_TAC[]
         ]
-)
+QED
 
 (*---------------------------------------------------------------------------------*)
 (* Cnditional-jump compositions of flat codes                                      *)
@@ -766,16 +757,15 @@ val ENUMERATE_CJ = Q.store_thm (
 
 (* The condition is true, execute the true block *)
 
-val CJ_COMPOSITION_LEM_1 = Q.store_thm (
-   "CJ_COMPOSITION_LEM_1",
-   `!cond arm_t arm_f arm' s iB.
+Theorem CJ_COMPOSITION_LEM_1:
+    !cond arm_t arm_f arm' s iB.
           well_formed arm_t /\ well_formed arm_f /\ eval_cond cond (SND (SND s)) /\ (arm' = mk_CJ cond arm_t arm_f)
           ==> ?cpsr' cpsr''.
           (runTo (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,{}) =
             ((FST s + LENGTH arm', cpsr', get_st (runTo (uploadCode arm_t iB) (LENGTH arm_t) ((0,SND s),{}))),
               SND (runTo (upload arm_t iB (FST s+ LENGTH arm_f + 3)) (FST s + LENGTH arm_f + 3 + LENGTH arm_t)
-                   ((FST s + LENGTH arm_f + 3,cpsr'', SND (SND s)),{FST s + 1;FST s}))))`,
-
+                   ((FST s + LENGTH arm_f + 3,cpsr'', SND (SND s)),{FST s + 1;FST s}))))
+Proof
     RW_TAC std_ss [well_formed] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, SUC_ONE_ADD] THEN REWRITE_TAC [ADD_ASSOC, uploadCode_def] THEN
@@ -815,15 +805,14 @@ val CJ_COMPOSITION_LEM_1 = Q.store_thm (
     ONCE_REWRITE_TAC [METIS_PROVE [ADD_SYM, ADD_ASSOC] (Term `pc + LENGTH arm_t + LENGTH insts = pc + LENGTH insts + LENGTH arm_t`)] THEN
     FULL_SIMP_TAC std_ss [] THEN
     METIS_TAC [ABS_PAIR_THM, ADD_SYM, FST, SND]
-   );
+QED
 
 
-val CJ_TERMINATED_LEM_1 = Q.store_thm (
-   "CJ_TERMINATED_LEM_1",
-   `!cond arm_t arm_f arm' s pcS iB.
+Theorem CJ_TERMINATED_LEM_1:
+    !cond arm_t arm_f arm' s pcS iB.
           well_formed arm_t /\ well_formed arm_f /\ eval_cond cond (SND (SND s)) /\ (arm' = mk_CJ cond arm_t arm_f)
-          ==> terd (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,pcS)`,
-
+          ==> terd (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,pcS)
+Proof
     RW_TAC std_ss [well_formed, terd_def, stopAt_def] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, SUC_ONE_ADD] THEN REWRITE_TAC [ADD_ASSOC] THEN
@@ -863,21 +852,20 @@ val CJ_TERMINATED_LEM_1 = Q.store_thm (
            pc + LENGTH insts + LENGTH arm_t` by METIS_TAC [TERMINATED_THM, FST, ADD_ASSOC] THEN
         FULL_SIMP_TAC arith_ss []
     ]
-   );
+QED
 
 
 (* The condition is false, execute the false block *)
 
-val CJ_COMPOSITION_LEM_2 = Q.store_thm (
-   "CJ_COMPOSITION_LEM_2",
-   `!cond arm_t arm_f arm' s iB.
+Theorem CJ_COMPOSITION_LEM_2:
+    !cond arm_t arm_f arm' s iB.
         well_formed arm_t /\ well_formed arm_f /\ ~(eval_cond cond (SND (SND s))) /\ (arm' = mk_CJ cond arm_t arm_f)
         ==> ?cpsr' cpsr''.
          (runTo (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,{}) =
              ((FST s+LENGTH arm', cpsr', get_st (runTo (uploadCode arm_f iB) (LENGTH arm_f) ((0,SND s),{}))),
                FST s + 2 + LENGTH arm_f INSERT SND (runTo (upload arm_f iB (FST s + 2)) (FST s + 2 + LENGTH arm_f)
-                                                    ((FST s + 2,cpsr'',SND (SND s)),{FST s + 1;FST s}))))`,
-
+                                                    ((FST s + 2,cpsr'',SND (SND s)),{FST s + 1;FST s}))))
+Proof
     RW_TAC std_ss [well_formed] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, SUC_ONE_ADD] THEN REWRITE_TAC [ADD_ASSOC, uploadCode_def] THEN
@@ -960,15 +948,14 @@ val CJ_COMPOSITION_LEM_2 = Q.store_thm (
                ]
              ]
         ]
-   );
+QED
 
 
-val CJ_TERMINATED_LEM_2 = Q.store_thm (
-   "CJ_TERMINATED_LEM_2",
-   `!cond arm_t arm_f arm' s pcS iB.
+Theorem CJ_TERMINATED_LEM_2:
+    !cond arm_t arm_f arm' s pcS iB.
         well_formed arm_t /\ well_formed arm_f /\ ~(eval_cond cond (SND (SND s))) /\ (arm' = mk_CJ cond arm_t arm_f)
-          ==> terd (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,pcS)`,
-
+          ==> terd (upload arm' iB (FST s)) (FST s + LENGTH arm') (s,pcS)
+Proof
     RW_TAC std_ss [well_formed, terd_def, stopAt_def] THEN
     `(?v1 rop v2. cond = (v1,rop,v2)) /\ (?pc cpsr st. s = (pc,cpsr,st))` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, SUC_ONE_ADD] THEN REWRITE_TAC [ADD_ASSOC] THEN
@@ -1025,23 +1012,22 @@ val CJ_TERMINATED_LEM_2 = Q.store_thm (
                 RW_TAC list_ss [step_def, decode_cond_thm, goto_def]
             ]
         ]
-   );
+QED
 
 
-val LENGTH_CJ = Q.store_thm (
-   "LENGTH_CJ",
-   `!cond arm_t arm_f. LENGTH (mk_CJ cond arm_t arm_f) =  LENGTH arm_f + 3 + LENGTH arm_t`,
+Theorem LENGTH_CJ:
+    !cond arm_t arm_f. LENGTH (mk_CJ cond arm_t arm_f) =  LENGTH arm_f + 3 + LENGTH arm_t
+Proof
    REPEAT STRIP_TAC THEN
    `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
    RW_TAC list_ss [mk_CJ]
-  );
+QED
 
 
-val CJ_IS_WELL_FORMED = Q.store_thm (
-   "CJ_IS_WELL_FORMED",
-   `!cond arm_t arm_f. well_formed arm_t /\ well_formed arm_f
-           ==> well_formed (mk_CJ cond arm_t arm_f)`,
-
+Theorem CJ_IS_WELL_FORMED:
+    !cond arm_t arm_f. well_formed arm_t /\ well_formed arm_f
+           ==> well_formed (mk_CJ cond arm_t arm_f)
+Proof
    REPEAT STRIP_TAC THEN
    RW_TAC std_ss [well_formed, terminated, status_independent] THENL [
 
@@ -1093,17 +1079,16 @@ val CJ_IS_WELL_FORMED = Q.store_thm (
                 METIS_TAC [get_st,FST,SND,well_formed,status_independent, uploadCode_def, DECIDE (Term`!x.0+x=x`)]
             ]
        ]
-  );
+QED
 
 
-val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
-   "HOARE_CJ_FLAT_LEM_1",
-   `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
+Theorem HOARE_CJ_FLAT_LEM_1:
+    !cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
           (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
           ==>
-          !st. (P st /\ eval_cond cond st ==> Q (eval_fl (mk_CJ cond arm_t arm_f) st))`,
-
+          !st. (P st /\ eval_cond cond st ==> Q (eval_fl (mk_CJ cond arm_t arm_f) st))
+Proof
     RW_TAC std_ss [well_formed] THEN
     `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, eval_fl, SUC_ONE_ADD] THEN
@@ -1129,17 +1114,16 @@ val HOARE_CJ_FLAT_LEM_1 = Q.store_thm (
             FULL_SIMP_TAC std_ss [eval_fl, uploadCode_def] THEN
             `LENGTH insts = FST (LENGTH insts,cpsr',st)` by RW_TAC std_ss [] THEN
             METIS_TAC [status_independent, DECIDE (Term `!x.0 + x = x`), ADD_SYM, DSTATE_IRRELEVANT_PCS]
-   );
+QED
 
 
-val HOARE_CJ_FLAT_LEM_2 = Q.store_thm (
-   "HOARE_CJ_FLAT_LEM_2",
-   `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
+Theorem HOARE_CJ_FLAT_LEM_2:
+    !cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
           (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
           ==>
-          !st. (P st /\ ~(eval_cond cond st) ==> R (eval_fl (mk_CJ cond arm_t arm_f) st))`,
-
+          !st. (P st /\ ~(eval_cond cond st) ==> R (eval_fl (mk_CJ cond arm_t arm_f) st))
+Proof
     RW_TAC std_ss [well_formed] THEN
     `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
     RW_TAC list_ss [mk_CJ, eval_fl, SUC_ONE_ADD] THEN
@@ -1198,31 +1182,31 @@ val HOARE_CJ_FLAT_LEM_2 = Q.store_thm (
              FULL_SIMP_TAC arith_ss [SUC_ONE_ADD, eval_fl, uploadCode_def, get_st] THEN
              METIS_TAC [get_st, status_independent, DECIDE (Term `!x.0 + x = x`), DSTATE_IRRELEVANT_PCS, FST, SND, ADD_SYM]
         ]
-   );
+QED
 
-val HOARE_CJ_FLAT_1 = Q.store_thm (
-   "HOARE_CJ_FLAT_1",
-   `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
+Theorem HOARE_CJ_FLAT_1:
+    !cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
           (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
           ==>
           !st. (P st /\ eval_cond cond st ==> Q (eval_fl (mk_CJ cond arm_t arm_f) st)) /\
-               (P st /\ ~(eval_cond cond st) ==> R (eval_fl (mk_CJ cond arm_t arm_f) st))`,
+               (P st /\ ~(eval_cond cond st) ==> R (eval_fl (mk_CJ cond arm_t arm_f) st))
+Proof
    RW_TAC std_ss [] THEN
    METIS_TAC [HOARE_CJ_FLAT_LEM_1,HOARE_CJ_FLAT_LEM_2]
-   );
+QED
 
-val HOARE_CJ_FLAT = Q.store_thm (
-   "HOARE_CJ_FLAT",
-   `!cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
+Theorem HOARE_CJ_FLAT:
+    !cond arm_t arm_f (P:P_DSTATE) (Q:P_DSTATE) (R:P_DSTATE).
           well_formed arm_t /\ well_formed arm_f /\
           (!st. P st ==> Q (eval_fl arm_t st)) /\ (!st. P st ==> R (eval_fl arm_f st))
           ==>
           !st. (P st ==> if eval_cond cond st then Q (eval_fl (mk_CJ cond arm_t arm_f) st)
-                                              else R (eval_fl (mk_CJ cond arm_t arm_f) st))`,
+                                              else R (eval_fl (mk_CJ cond arm_t arm_f) st))
+Proof
    RW_TAC std_ss [] THEN
    METIS_TAC [HOARE_CJ_FLAT_LEM_1,HOARE_CJ_FLAT_LEM_2]
-   );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
@@ -1242,10 +1226,10 @@ val WF_Loop = Define `
     WF_Loop (cond_f,g) =
         ?R. WF R /\ (!s. ~(cond_f s) ==> R (g s) s)`;
 
-val WF_LOOP_IMP_TER = Q.store_thm (
-    "WF_LOOP_IMP_TER",
-    `!g cond_f. WF_Loop (cond_f,g) ==>
-              !s. ?k. cond_f (FUNPOW g k s)`,
+Theorem WF_LOOP_IMP_TER:
+     !g cond_f. WF_Loop (cond_f,g) ==>
+              !s. ?k. cond_f (FUNPOW g k s)
+Proof
     RW_TAC std_ss [WF_Loop] THEN
     IMP_RES_TAC WHILE_INDUCTION THEN
     POP_ASSUM (ASSUME_TAC o Q.SPECL [`g`,`$~ o cond_f`]) THEN
@@ -1264,50 +1248,50 @@ val WF_LOOP_IMP_TER = Q.store_thm (
          POP_ASSUM (ASSUME_TAC o Q.SPEC `\v.?k.cond_f (FUNPOW g k v)`) THEN
          METIS_TAC []
     ]
- );
+QED
 
-val WF_LOOP_IMP_STOPAT = Q.store_thm (
-    "WF_LOOP_IMP_STOPAT",
-    `!g cond_f s. WF_Loop (cond_f,g) ==>
-              stopAt cond_f g x`,
+Theorem WF_LOOP_IMP_STOPAT:
+     !g cond_f s. WF_Loop (cond_f,g) ==>
+              stopAt cond_f g x
+Proof
     RW_TAC std_ss [stopAt_def] THEN
     METIS_TAC [WF_LOOP_IMP_TER]
- );
+QED
 
-val LOOP_SHORTEST_LESS_LEAST = Q.store_thm (
-    "LOOP_SHORTEST_LESS_LEAST",
-    `!i s g cond_f.
-        (i < shortest cond_f g s ==> ~cond_f (FUNPOW g i s))`,
+Theorem LOOP_SHORTEST_LESS_LEAST:
+     !i s g cond_f.
+        (i < shortest cond_f g s ==> ~cond_f (FUNPOW g i s))
+Proof
     RW_TAC list_ss [shortest_def] THEN
     METIS_TAC [Q.SPEC `\k. cond_f (FUNPOW f k s)` LESS_LEAST]
-  );
+QED
 
-val LOOP_SHORTEST_THM = Q.store_thm (
-    "LOOP_SHORTEST_THM",
-    `!i s g cond_f. WF_Loop (cond_f,g) ==>
-        (i <= shortest cond_f g s ==> (shortest cond_f g s  = shortest cond_f g (FUNPOW g i s) + i))`,
+Theorem LOOP_SHORTEST_THM:
+     !i s g cond_f. WF_Loop (cond_f,g) ==>
+        (i <= shortest cond_f g s ==> (shortest cond_f g s  = shortest cond_f g (FUNPOW g i s) + i))
+Proof
     RW_TAC list_ss [] THEN
     IMP_RES_TAC WF_LOOP_IMP_TER THEN
     POP_ASSUM (ASSUME_TAC o (Q.SPEC `s`)) THEN
     FULL_SIMP_TAC list_ss [shortest_def] THEN
     IMP_RES_TAC (SIMP_RULE std_ss  [] (Q.SPEC `\n.cond_f (FUNPOW g n s)` LEAST_ADD_LEM)) THEN
     RW_TAC arith_ss [SIMP_RULE std_ss [FUN_EQ_THM] FUNPOW_FUNPOW, ADD_SYM]
-  );
+QED
 
-val WF_LOOP_IMP_LEAST = Q.store_thm (
-    "WF_LOOP_IMP_LEAST",
-    `!cond_f g. WF_Loop (cond_f,g) ==>
-                   !s. cond_f (FUNPOW g (shortest cond_f g s) s)`,
+Theorem WF_LOOP_IMP_LEAST:
+     !cond_f g. WF_Loop (cond_f,g) ==>
+                   !s. cond_f (FUNPOW g (shortest cond_f g s) s)
+Proof
     RW_TAC list_ss [shortest_def] THEN
     IMP_RES_TAC WF_LOOP_IMP_TER THEN
     POP_ASSUM (ASSUME_TAC o Q.SPEC `s`) THEN
     METIS_TAC [Q.SPEC `\k. cond_f (FUNPOW g k s)` LEAST_INTRO]
-   );
+QED
 
-val UNROLL_LOOP = Q.store_thm (
-   "UNROLL_LOOP",
-   `!P g x. WF_Loop (P,g) ==>
-       (WHILE ($~ o P) g x = (FUNPOW g (shortest P g x) x))`,
+Theorem UNROLL_LOOP:
+    !P g x. WF_Loop (P,g) ==>
+       (WHILE ($~ o P) g x = (FUNPOW g (shortest P g x) x))
+Proof
       Induct_on `shortest P g x` THENL [
            RW_TAC list_ss [] THEN
                IMP_RES_TAC WF_LOOP_IMP_LEAST THEN
@@ -1329,19 +1313,19 @@ val UNROLL_LOOP = Q.store_thm (
                FULL_SIMP_TAC arith_ss [FUNPOW] THEN
                METIS_TAC [FUNPOW, DECIDE (Term`shortest P g (g x) + 1 = SUC (shortest P g (g x))`)]
        ]
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Induction on the number of rounds,                                         *)
 (*---------------------------------------------------------------------------------*)
 
-val LENGTH_TR = Q.store_thm (
-   "LENGTH_TR",
-   `!cond arm. LENGTH (mk_TR cond arm) =  LENGTH arm + 3`,
+Theorem LENGTH_TR:
+    !cond arm. LENGTH (mk_TR cond arm) =  LENGTH arm + 3
+Proof
    REPEAT STRIP_TAC THEN
    `?v1 rop v2. cond = (v1,rop,v2)` by METIS_TAC [ABS_PAIR_THM] THEN
    RW_TAC list_ss [mk_TR]
-  );
+QED
 
 
 val WF_TR = Define `
@@ -1352,36 +1336,36 @@ val WF_TR = Define `
 val loopNum = Define `
     loopNum cond arm iB = shortest (\s'.eval_cond cond (get_st s')) (\s'.runTo (upload arm iB (FST (FST s'))) (FST (FST s') + LENGTH arm) s')`;
 
-val LOOPNUM_BASIC = Q.store_thm (
-    "LOOPNUM_BASIC",
-    `!n cond arm. WF_TR (cond,arm) /\ (loopNum cond arm iB s = 0) ==>
-         eval_cond cond (get_st s)`,
+Theorem LOOPNUM_BASIC:
+     !n cond arm. WF_TR (cond,arm) /\ (loopNum cond arm iB s = 0) ==>
+         eval_cond cond (get_st s)
+Proof
      RW_TAC std_ss [WF_TR, loopNum] THEN
      Q.PAT_ASSUM `!iB.x` (ASSUME_TAC o Q.SPEC `iB`) THEN IMP_RES_TAC WF_LOOP_IMP_STOPAT THEN
      POP_ASSUM (ASSUME_TAC o Q.SPEC `s:STATEPCS`) THEN
      FULL_SIMP_TAC std_ss [GSYM get_st] THEN
      METIS_TAC [Q.SPECL [`s:STATEPCS`,`(\s. eval_cond cond (get_st s))`, `(\s'. runTo (upload arm iB (FST (FST s'))) (FST (FST s') + LENGTH arm) s')`]
          (INST_TYPE [alpha|->Type `:STATEPCS`] SHORTEST_LEM)]
-  );
+QED
 
-val LOOPNUM_INDUCTIVE = Q.store_thm (
-    "LOOPNUM_INDUCTIVE",
-    `!n cond arm. WF_TR (cond,arm) /\ (loopNum cond arm iB s = SUC n) ==>
-        ~eval_cond cond (get_st s) /\ (n = loopNum cond arm iB (runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s))`,
+Theorem LOOPNUM_INDUCTIVE:
+     !n cond arm. WF_TR (cond,arm) /\ (loopNum cond arm iB s = SUC n) ==>
+        ~eval_cond cond (get_st s) /\ (n = loopNum cond arm iB (runTo (upload arm iB (FST (FST s))) (FST (FST s) + LENGTH arm) s))
+Proof
      REWRITE_TAC [WF_TR, loopNum] THEN NTAC 4 STRIP_TAC THEN
      Q.PAT_ASSUM `!iB.x` (ASSUME_TAC o Q.SPEC `iB`) THEN IMP_RES_TAC WF_LOOP_IMP_STOPAT THEN
      POP_ASSUM (ASSUME_TAC o Q.SPEC `s:STATEPCS`) THEN
      FULL_SIMP_TAC std_ss [GSYM get_st] THEN
      METIS_TAC [Q.SPECL [`(\s. eval_cond cond (get_st s))`, `(\s'. runTo (upload arm iB (FST (FST s'))) (FST (FST s') + LENGTH arm) s')`,`s:STATEPCS`]
          (INST_TYPE [alpha|->Type `:STATEPCS`] SHORTEST_INDUCTIVE)]
-  );
+QED
 
 
-val LOOPNUM_INDEPENDENT_OF_CPSR_PCS = Q.store_thm (
-    "LOOPNUM_INDEPENDENT_OF_CPSR_PCS",
-    `!cond arm iB pc0 pc1 cpsr0 cpsr1 st pcS0 pcS1.
+Theorem LOOPNUM_INDEPENDENT_OF_CPSR_PCS:
+     !cond arm iB pc0 pc1 cpsr0 cpsr1 st pcS0 pcS1.
         well_formed arm /\ WF_TR (cond,arm) ==>
-            (loopNum cond arm iB ((pc0,cpsr0,st),pcS0) = loopNum cond arm iB ((pc1,cpsr1,st),pcS1))`,
+            (loopNum cond arm iB ((pc0,cpsr0,st),pcS0) = loopNum cond arm iB ((pc1,cpsr1,st),pcS1))
+Proof
     Induct_on `loopNum cond arm iB ((pc0,cpsr0,st),pcS0)` THENL [
         RW_TAC std_ss [WF_TR] THEN
             POP_ASSUM (ASSUME_TAC o Q.SPEC `iB`) THEN IMP_RES_TAC WF_LOOP_IMP_STOPAT THEN
@@ -1418,14 +1402,14 @@ val LOOPNUM_INDEPENDENT_OF_CPSR_PCS = Q.store_thm (
                   FULL_SIMP_TAC std_ss [] THEN RES_TAC
             ]
         ]
-   );
+QED
 
 
-val TR_TERMINATED_LEM = Q.store_thm (
-   "TR_TERMINATED_LEM",
-   `!cond arm s iB.
+Theorem TR_TERMINATED_LEM:
+    !cond arm s iB.
         well_formed arm /\ WF_TR (cond,arm)
-          ==> terd (upload (mk_TR cond arm) iB (FST (FST s))) (FST(FST s) + LENGTH (mk_TR cond arm)) s`,
+          ==> terd (upload (mk_TR cond arm) iB (FST (FST s))) (FST(FST s) + LENGTH (mk_TR cond arm)) s
+Proof
     REPEAT GEN_TAC THEN
     Induct_on `loopNum cond arm iB s` THENL [
         REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [terd_def, stopAt_def, LENGTH_TR] THEN
@@ -1512,14 +1496,14 @@ val TR_TERMINATED_LEM = Q.store_thm (
               RW_TAC arith_ss [GSYM FUNPOW_FUNPOW]
           ]
         ]
-   );
+QED
 
-val FUNPOW_DSTATE = Q.store_thm (
-   "FUNPOW_DSTATE",
-  `!n arm iB pc0 pc1 cpsr0 cpsr1 st pcS0 pcS1.
+Theorem FUNPOW_DSTATE:
+   !n arm iB pc0 pc1 cpsr0 cpsr1 st pcS0 pcS1.
      well_formed arm ==>
      (get_st (FUNPOW (\s'. runTo (upload arm iB (FST (FST s'))) (FST (FST s') + LENGTH arm) s') n ((pc0,cpsr0,st),pcS0)) =
-      get_st (FUNPOW (\s'. runTo (upload arm iB (FST (FST s'))) (FST (FST s') + LENGTH arm) s') n ((pc1,cpsr1,st),pcS1)))`,
+      get_st (FUNPOW (\s'. runTo (upload arm iB (FST (FST s'))) (FST (FST s') + LENGTH arm) s') n ((pc1,cpsr1,st),pcS1)))
+Proof
    Induct_on `n` THENL [
        RW_TAC std_ss [get_st, FUNPOW],
        RW_TAC std_ss [FUNPOW] THEN
@@ -1527,17 +1511,16 @@ val FUNPOW_DSTATE = Q.store_thm (
             ((pc1,cpsr1,st),pcS1))` by METIS_TAC [DSTATE_IRRELEVANT_PCS, status_independent, well_formed, FST, get_st] THEN
        METIS_TAC [ABS_PAIR_THM, FST, SND, get_st]
    ]
-   );
+QED
 
-val UNROLL_TR_LEM = Q.store_thm (
-   "UNROLL_TR_LEM",
-   `!cond arm iB s pcS.
+Theorem UNROLL_TR_LEM:
+    !cond arm iB s pcS.
         well_formed arm /\ WF_TR (cond,arm) /\ ~(FST s + LENGTH (mk_TR cond arm) IN pcS) ==>
         ?cpsr' pcS' cpsr''. (runTo (upload (mk_TR cond arm) iB (FST s)) (FST s + LENGTH (mk_TR cond arm)) (s,pcS) =
             ((FST s + LENGTH (mk_TR cond arm), cpsr', get_st (FUNPOW (\s'.runTo (upload arm iB (FST (FST s')))
                 (FST (FST s')+LENGTH arm) s') (loopNum cond arm iB (s,pcS)) (s,pcS))), pcS')) /\
-            !x. x IN pcS' DIFF pcS ==> FST s <= x /\ x < FST s + LENGTH (mk_TR cond arm)`,
-
+            !x. x IN pcS' DIFF pcS ==> FST s <= x /\ x < FST s + LENGTH (mk_TR cond arm)
+Proof
     REPEAT GEN_TAC THEN
     Induct_on `loopNum cond arm iB (s,pcS)` THENL [
         REWRITE_TAC [Once EQ_SYM_EQ] THEN RW_TAC std_ss [LENGTH_TR, FUNPOW] THEN
@@ -1664,13 +1647,13 @@ val UNROLL_TR_LEM = Q.store_thm (
                ]
           ]
      ]
-  );
+QED
 
 
-val TR_IS_WELL_FORMED = Q.store_thm (
-   "TR_IS_WELL_FORMED",
-   `!cond arm. well_formed arm /\ WF_TR (cond,arm)
-           ==> well_formed (mk_TR cond arm)`,
+Theorem TR_IS_WELL_FORMED:
+    !cond arm. well_formed arm /\ WF_TR (cond,arm)
+           ==> well_formed (mk_TR cond arm)
+Proof
    REPEAT STRIP_TAC THEN
    RW_TAC std_ss [well_formed, terminated, status_independent] THENL [
        SIMP_TAC std_ss [closed] THEN REPEAT GEN_TAC THEN
@@ -1679,15 +1662,15 @@ val TR_IS_WELL_FORMED = Q.store_thm (
        IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`cond`,`arm`,`iB`,`(pos0,cpsr0,st):STATE`,`{}`] UNROLL_TR_LEM)) THEN
            METIS_TAC [SND,FST,get_st,FUNPOW_DSTATE, LOOPNUM_INDEPENDENT_OF_CPSR_PCS]
    ]
-  );
+QED
 
 
-val HOARE_TR_FLAT = Q.store_thm (
-   "HOARE_TR_FLAT",
-   `!cond arm_t (P:P_DSTATE).
+Theorem HOARE_TR_FLAT:
+    !cond arm_t (P:P_DSTATE).
           well_formed arm /\ WF_TR (cond,arm) /\
           (!st. P st ==> P (eval_fl arm st)) ==>
-          !st. P st ==> P (eval_fl (mk_TR cond arm) st) /\ (eval_cond cond (eval_fl (mk_TR cond arm) st))`,
+          !st. P st ==> P (eval_fl (mk_TR cond arm) st) /\ (eval_cond cond (eval_fl (mk_TR cond arm) st))
+Proof
     REPEAT GEN_TAC THEN SIMP_TAC std_ss [LENGTH_TR, eval_fl] THEN STRIP_TAC THEN GEN_TAC THEN
     IMP_RES_TAC (SIMP_RULE set_ss [] (Q.SPECL [`cond`,`arm`,`iB`,`s:STATE`,`{}`] UNROLL_TR_LEM)) THEN
     POP_ASSUM (ASSUME_TAC o Q.SPECL [`(0,0w,st):STATE`,`\i.ARB`]) THEN
@@ -1706,21 +1689,20 @@ val HOARE_TR_FLAT = Q.store_thm (
             RES_TAC THEN
             METIS_TAC [SND,FST,get_st,FUNPOW_DSTATE, ABS_PAIR_THM]
       ]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Well-formed program upon any instB                                         *)
 (*---------------------------------------------------------------------------------*)
 
-val WELL_FORMED_INSTB_LEM = Q.store_thm (
-   "WELL_FORMED_INSTB_LEM",
-   `!arm iB0 iB1 (s:STATEPCS) s'.
+Theorem WELL_FORMED_INSTB_LEM:
+    !arm iB0 iB1 (s:STATEPCS) s'.
            closed arm /\ terminated arm /\ (instB = upload arm iB0 (FST (FST s))) /\
            (?m. (s' = FUNPOW (step instB) m s) /\ m <= shortest (\s1:STATEPCS. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s)
             ==>
                (runTo (upload arm iB0 (FST (FST s))) (FST (FST s) + LENGTH arm) s' =
-                runTo (upload arm iB1 (FST (FST s))) (FST (FST s) + LENGTH arm) s')`,
-
+                runTo (upload arm iB1 (FST (FST s))) (FST (FST s) + LENGTH arm) s')
+Proof
    RW_TAC std_ss [] THEN
    Q.ABBREV_TAC `instB = upload arm iB0 (FST (FST s))` THEN
    Cases_on `m = shortest (\s1. FST (FST s1) = FST (FST s) + LENGTH arm) (step instB) s` THENL [
@@ -1777,20 +1759,20 @@ val WELL_FORMED_INSTB_LEM = Q.store_thm (
                ]
         ]
    ]
-  );
+QED
 
-val WELL_FORMED_INSTB = Q.store_thm (
-   "WELL_FORMED_INSTB",
-   `!arm iB0 iB1 (s:STATEPCS).
+Theorem WELL_FORMED_INSTB:
+    !arm iB0 iB1 (s:STATEPCS).
            well_formed arm ==>
                (runTo (upload arm iB0 (FST (FST s))) (FST (FST s) + LENGTH arm) s =
-                runTo (upload arm iB1 (FST (FST s))) (FST (FST s) + LENGTH arm) s)`,
+                runTo (upload arm iB1 (FST (FST s))) (FST (FST s) + LENGTH arm) s)
+Proof
    RW_TAC std_ss [well_formed] THEN
    IMP_RES_TAC (SIMP_RULE arith_ss [GSYM RIGHT_EXISTS_IMP_THM]
         (Q.SPECL [`arm`,`iB0`,`iB1`, `s:STATEPCS`, `FUNPOW (step instB) 0 s`] WELL_FORMED_INSTB_LEM)) THEN
    NTAC 11 (POP_ASSUM (K ALL_TAC)) THEN FULL_SIMP_TAC std_ss [] THEN
    POP_ASSUM (ASSUME_TAC o Q.SPECL [`s`,`iB0`,`0`]) THEN
    FULL_SIMP_TAC arith_ss [FUNPOW]
-  );
+QED
 
 

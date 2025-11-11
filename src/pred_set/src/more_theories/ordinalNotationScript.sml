@@ -31,9 +31,9 @@ val meter = Count.mk_meter();
 (*---------------------------------------------------------------------------*)
 
 val _ = set_fixity "=" (Infix(NONASSOC, 100))
-val _ = Hol_datatype
-  `osyntax = End of num
-           | Plus of osyntax => num => osyntax`;
+Datatype:
+   osyntax = End num | Plus osyntax num osyntax
+End
 
 val osyntax_11       = TypeBase.one_one_of ``:osyntax``;
 val osyntax_distinct = TypeBase.distinct_of ``:osyntax``;
@@ -83,8 +83,7 @@ val (oless_rules, oless_ind, oless_cases) =
   (!e1 k1 t1 e2 k2 t2. (e1=e2) /\ (k1=k2) /\ oless t1 t2
                         ==> oless (Plus e1 k1 t1) (Plus e2 k2 t2))`;
 
-val oless_strong_ind =
-    save_thm ("oless_strong_ind",theorem "oless_strongind");
+Theorem oless_strong_ind = theorem "oless_strongind";
 
 Theorem oless_End_End:
   !k1 k2. oless (End k1) (End k2) ==> k1 < k2
@@ -125,8 +124,7 @@ val (is_ord_rules, is_ord_ind, is_ord_cases) =
    (!e k t. is_ord e /\ ~(e = End 0) /\ 0 < k /\ is_ord t /\ oless (expt t) e
             ==> is_ord (Plus e k t))`;
 
-val is_ord_strong_ind =
-    save_thm("is_ord_strong_ind", theorem "is_ord_strongind")
+Theorem is_ord_strong_ind = theorem "is_ord_strongind"
 
 Theorem decompose_plus:
   !e k t. is_ord (Plus e k t) ==>
@@ -189,10 +187,12 @@ QED
 (* oless is antireflexive                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val oless_antirefl_lem = Q.prove
-(`!x y. oless x y ==> (x=y) /\ is_ord x ==> F`,
+Theorem oless_antirefl_lem[local]:
+  !x y. oless x y ==> (x=y) /\ is_ord x ==> F
+Proof
  HO_MATCH_MP_TAC oless_ind
-   THEN RW_TAC ord_ss [] THEN METIS_TAC[decompose_plus]);
+   THEN RW_TAC ord_ss [] THEN METIS_TAC[decompose_plus]
+QED
 
 Theorem oless_antirefl:
   !x. is_ord x ==> ~oless x x
@@ -204,12 +204,14 @@ QED
 (* oless is antisymmetric                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val oless_antisym_lem = Q.prove
-(`!x y. oless x y ==> is_ord x /\ is_ord y ==> ~oless y x`,
+Theorem oless_antisym_lem[local]:
+  !x y. oless x y ==> is_ord x /\ is_ord y ==> ~oless y x
+Proof
  HO_MATCH_MP_TAC oless_strong_ind THEN RW_TAC std_ss []
    THEN ONCE_REWRITE_TAC [oless_cases]
    THEN RW_TAC ord_ss []
-   THEN METIS_TAC [oless_antirefl,decompose_plus]);
+   THEN METIS_TAC [oless_antirefl,decompose_plus]
+QED
 
 Theorem oless_antisym:
   !x y. is_ord x /\ is_ord y /\ oless x y ==> ~oless y x
@@ -302,12 +304,14 @@ Proof
  METIS_TAC [is_ord_downclosed]
 QED
 
-val oless_tail_lem = Q.prove
-(`!x. is_ord x ==> ~finp x ==> oless (tail x) x`,
+Theorem oless_tail_lem[local]:
+  !x. is_ord x ==> ~finp x ==> oless (tail x) x
+Proof
  HO_MATCH_MP_TAC is_ord_ind THEN
  RW_TAC ord_ss [tail_def,finp_def] THEN
  Cases_on `x'` THEN FULL_SIMP_TAC ord_ss [finp_def,tail_def,expt_def] THEN
- METIS_TAC [oless_rules]);;
+ METIS_TAC [oless_rules]
+QED
 
 Theorem oless_tail:
   !x. is_ord x /\ ~finp x ==> oless (tail x) x
@@ -321,14 +325,16 @@ QED
 (* one element of rank <= n or all are of rank = n+1.                        *)
 (*---------------------------------------------------------------------------*)
 
-val split_lem = Q.prove
-(`!P n. (?x. P x) /\ (!x. P x ==> rank x <= SUC n) ==>
-        (?x. P x /\ rank x <= n) \/ (!x. P x ==> (rank x = SUC n))`,
+Theorem split_lem[local]:
+  !P n. (?x. P x) /\ (!x. P x ==> rank x <= SUC n) ==>
+        (?x. P x /\ rank x <= n) \/ (!x. P x ==> (rank x = SUC n))
+Proof
  RW_TAC ord_ss [] THEN SPOSE_NOT_THEN ASSUME_TAC THEN RW_TAC arith_ss [] THEN
  STRIP_ASSUME_TAC
    (Q.SPECL [`rank x'`, `n`]
          (DECIDE ``!x y. x <= y \/ (x = SUC y) \/ (x > SUC y)``)) THENL
- [METIS_TAC [], RES_TAC THEN DECIDE_TAC]);
+ [METIS_TAC [], RES_TAC THEN DECIDE_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Every n.e. set of ordinals of rank <= n has an oless-minimal element      *)
@@ -336,8 +342,8 @@ val split_lem = Q.prove
 (* oless-minimal element.                                                    *)
 (*---------------------------------------------------------------------------*)
 
-val stronger = Q.prove
-(`(!n. !P:osyntax->bool. !x.
+Theorem stronger[local]:
+  (!n. !P:osyntax->bool. !x.
      P x /\ (!x. P x ==> is_ord(x) /\ rank(x) <= n) ==>
      ?m. is_ord m /\ P m /\ rank m <= n /\
          !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)
@@ -345,11 +351,13 @@ val stronger = Q.prove
    (!n. !P:osyntax->bool.
      (?x. is_ord x /\ P x /\ rank x <= n) ==>
       ?m. is_ord m /\ P m /\ rank m <= n /\
-       !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)`,
+       !y. is_ord y /\ rank y <= n /\ oless y m ==> ~P y)
+Proof
  RW_TAC std_ss [] THEN
  Q.PAT_X_ASSUM `$!M`
     (MP_TAC o Q.SPEC `\a. P a /\ is_ord a /\ rank a <= n` o Q.ID_SPEC) THEN
- DISCH_THEN (MP_TAC o Q.ID_SPEC) THEN RW_TAC std_ss [] THEN METIS_TAC []);
+ DISCH_THEN (MP_TAC o Q.ID_SPEC) THEN RW_TAC std_ss [] THEN METIS_TAC []
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -741,13 +749,12 @@ QED
 val WF_ord_measure =
  SPEC_ALL (MATCH_MP relationTheory.WF_inv_image WF_ord_less);
 
-val e0_induction = save_thm
-("e0_INDUCTION",
+Theorem e0_INDUCTION =
  GEN ``P:'a->bool``
   (GEN ``f:'a->osyntax``
     (SPEC_ALL
        (SIMP_RULE std_ss [relationTheory.inv_image_def]
-          (MATCH_MP relationTheory.WF_INDUCTION_THM WF_ord_measure)))));
+          (MATCH_MP relationTheory.WF_INDUCTION_THM WF_ord_measure))));
 
 Theorem e0_RECURSION:
   !f. ?!g. !x. g x = M (RESTRICT g (\x y. ord_less (f x) (f y)) x) x
@@ -811,12 +818,11 @@ Definition restn_def:
   (restn a (SUC n) = restn (tail a) n)
 End
 
-Definition cf1_def:
+Definition cf1_def[simp]:
   (cf1 (End _) b = 0) /\
   (cf1 (Plus e1 c1 k1) b = if ord_less (expt b) e1 then 1 + cf1 k1 b
                            else 0)
 End
-val _ = export_rewrites ["cf1_def"]
 
 Definition cf2_def:  cf2 a b n = n + cf1 (restn a n) b
 End
@@ -838,4 +844,3 @@ val pmult_def = tDefine "pmult" `
           in
             Plus (padd (expt a) e2 m) c2 (pmult a k2 m)
 ` (WF_REL_TAC `measure (osyntax_size o FST o SND)`)
-

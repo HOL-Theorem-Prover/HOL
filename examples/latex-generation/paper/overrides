@@ -1,0 +1,5 @@
+(ec1) 1 \ensuremath{|}
+(ec2) 1 \ensuremath{|}
+IMAGE 5 image
+FST 3 fst
+flip 1 \ensuremath{\circlearrowleft}

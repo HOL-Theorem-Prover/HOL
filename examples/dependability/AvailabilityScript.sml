@@ -800,7 +800,6 @@ Theorem steady_state_parallel_series_ABD :
                                                 (list_union_avail_event_list L (&t))))) =
                   1 - list_prod (one_minus_list (MAP (\a. steady_state_avail_prod a) M)))
 Proof
-
 RW_TAC std_ss[]
 >> (`!t. prob p
          (rbd_struct p ((parallel of (λa. series (rbd_list a)))

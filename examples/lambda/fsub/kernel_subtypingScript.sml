@@ -35,11 +35,11 @@ val (fsubtyping_rules, fsubtyping_ind, fsubtyping_cases) = Hol_reln`
 `;
 
 (* prove that sub-typing relation "respects" permutation *)
-val fsubtyping_swap = store_thm(
-  "fsubtyping_swap",
-  ``!Gamma ty1 ty2.
+Theorem fsubtyping_swap:
+    !Gamma ty1 ty2.
         Gamma |- ty1 <: ty2 ==>
-        ctxtswap x y Gamma |- fswap x y ty1 <: fswap x y ty2``,
+        ctxtswap x y Gamma |- fswap x y ty1 <: fswap x y ty2
+Proof
   HO_MATCH_MP_TAC fsubtyping_ind THEN
   REPEAT CONJ_TAC THENL [
     (* refl *)  SRW_TAC [][SUBSET_DEF, fsubtyping_rules],
@@ -48,26 +48,29 @@ val fsubtyping_swap = store_thm(
     (* tvar *)  SRW_TAC [][fsubtyping_rules],
     (* fun *)   SRW_TAC [][fsubtyping_rules],
     (* forall *)SRW_TAC [][fsubtyping_rules, SUBSET_DEF]
-  ]);
+  ]
+QED
 
-val fsubtyping_wfctxt = store_thm(
-  "fsubtyping_wfctxt",
-  ``!G ty1 ty2. G |- ty1 <: ty2 ==> wfctxt G``,
-  HO_MATCH_MP_TAC fsubtyping_ind THEN SRW_TAC [][]);
+Theorem fsubtyping_wfctxt:
+    !G ty1 ty2. G |- ty1 <: ty2 ==> wfctxt G
+Proof
+  HO_MATCH_MP_TAC fsubtyping_ind THEN SRW_TAC [][]
+QED
 
 val strong_fsubtyping_ind =
     IndDefRules.derive_strong_induction (CONJUNCTS fsubtyping_rules,
                                          fsubtyping_ind)
 
-val fsubtyping_fv_constraint = store_thm(
-  "fsubtyping_fv_constraint",
-  ``!G ty1 ty2. G |- ty1 <: ty2 ==>
+Theorem fsubtyping_fv_constraint:
+    !G ty1 ty2. G |- ty1 <: ty2 ==>
                 ftyFV ty1 SUBSET cdom G /\
-                ftyFV ty2 SUBSET cdom G``,
+                ftyFV ty2 SUBSET cdom G
+Proof
   HO_MATCH_MP_TAC strong_fsubtyping_ind THEN
   SRW_TAC [][SUBSET_DEF] THEN
   TRY (IMP_RES_TAC fsubtyping_wfctxt) THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [wfctxt_MEM, SUBSET_DEF]);
+  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [wfctxt_MEM, SUBSET_DEF]
+QED
 
 (* define algorithmic sub-typing, with a depth of derivation parameter *)
 val (algn_subtyping_rules, algn_subtyping_ind, algn_subtyping_cases) =
@@ -89,29 +92,32 @@ val (algn_subtyping_rules, algn_subtyping_ind, algn_subtyping_cases) =
 `;
 
 (* algorithmic sub-typing also respects permutation *)
-val algn_subtyping_fswap = store_thm(
-  "algn_subtyping_fswap",
-  ``!n G ty1 ty2. algn_subtyping n G ty1 ty2 ==>
+Theorem algn_subtyping_fswap:
+    !n G ty1 ty2. algn_subtyping n G ty1 ty2 ==>
                   !x y. algn_subtyping n (ctxtswap x y G)
                                          (fswap x y ty1)
-                                         (fswap x y ty2)``,
+                                         (fswap x y ty2)
+Proof
   HO_MATCH_MP_TAC algn_subtyping_ind THEN REPEAT CONJ_TAC THEN
   SRW_TAC [][algn_subtyping_rules] THEN
   METIS_TAC [algn_subtyping_rules, MEM_ctxtswap, fswap_inv,
-             swapTheory.swapstr_inverse]);
+             swapTheory.swapstr_inverse]
+QED
 
 (* this equivalence applies more often than the one above; it removes
    any permutations that might have appeared on the first argument *)
-val algn_subtyping_fswap1_eq = store_thm(
-  "algn_subtyping_fswap1_eq",
-  ``algn_subtyping n G (fswap x y ty1) ty2 =
-    algn_subtyping n (ctxtswap x y G) ty1 (fswap x y ty2)``,
-  METIS_TAC [algn_subtyping_fswap, fswap_inv, ctxtswap_inv]);
+Theorem algn_subtyping_fswap1_eq:
+    algn_subtyping n G (fswap x y ty1) ty2 =
+    algn_subtyping n (ctxtswap x y G) ty1 (fswap x y ty2)
+Proof
+  METIS_TAC [algn_subtyping_fswap, fswap_inv, ctxtswap_inv]
+QED
 
-val algn_subtyping_wfctxt = store_thm(
-  "algn_subtyping_wfctxt",
-  ``!n G ty1 ty2. algn_subtyping n G ty1 ty2 ==> wfctxt G``,
-  HO_MATCH_MP_TAC algn_subtyping_ind THEN SRW_TAC [][]);
+Theorem algn_subtyping_wfctxt:
+    !n G ty1 ty2. algn_subtyping n G ty1 ty2 ==> wfctxt G
+Proof
+  HO_MATCH_MP_TAC algn_subtyping_ind THEN SRW_TAC [][]
+QED
 
 
 (* set up syntax for algorithmic sub-typing relation without the depth
@@ -130,11 +136,12 @@ Definition alg_subtyping_def:
   Gamma |-> s <: t = ?n. algn_subtyping n Gamma s t
 End
 
-val alg_subtyping_fswap1_eq = store_thm(
-  "alg_subtyping_fswap1_eq",
-  ``Gamma |-> fswap x y ty1 <: ty2 =
-    ctxtswap x y Gamma |-> ty1 <: fswap x y ty2``,
-  METIS_TAC [alg_subtyping_def, algn_subtyping_fswap1_eq]);
+Theorem alg_subtyping_fswap1_eq:
+    Gamma |-> fswap x y ty1 <: ty2 =
+    ctxtswap x y Gamma |-> ty1 <: fswap x y ty2
+Proof
+  METIS_TAC [alg_subtyping_def, algn_subtyping_fswap1_eq]
+QED
 
 fun derive_rule th0 = let
   val (vs, base) = strip_forall (concl th0)
@@ -180,9 +187,10 @@ val alg_subtyping_cases =
      REWRITE_CONV [GSYM alg_subtyping_def])
       ``Gamma |-> ty1 <: ty2``
 
-val alg_subtyping_refl (* lemma 28.3.1 *) = store_thm(
-  "alg_subtyping_refl",
-  ``!ty G. wfctxt G /\ ftyFV ty SUBSET cdom G ==> G |-> ty <: ty``,
+(* lemma 28.3.1 *)
+Theorem alg_subtyping_refl:
+    !ty G. wfctxt G /\ ftyFV ty SUBSET cdom G ==> G |-> ty <: ty
+Proof
   HO_MATCH_MP_TAC fsubty_ind THEN
   SRW_TAC [][alg_subtyping_rules] THEN
   Q_TAC (NEW_TAC "z") `cdom G UNION ftyFV ty UNION ftyFV ty'` THEN
@@ -193,15 +201,17 @@ val alg_subtyping_refl (* lemma 28.3.1 *) = store_thm(
   SRW_TAC [][alg_subtyping_fswap1_eq] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
-  METIS_TAC [swapTheory.swapstr_def]);
+  METIS_TAC [swapTheory.swapstr_def]
+QED
 val _ = export_rewrites ["alg_subtyping_refl"]
 
-val alg_subtyping_top_left = store_thm(
-  "alg_subtyping_top_left",
-  ``!Gamma t. wfctxt Gamma ==> (Gamma |-> Top <: t = (t = Top))``,
+Theorem alg_subtyping_top_left:
+    !Gamma t. wfctxt Gamma ==> (Gamma |-> Top <: t = (t = Top))
+Proof
   SIMP_TAC (srw_ss() ++ DNF_ss) [EQ_IMP_THM, alg_subtyping_rules] THEN
   ONCE_REWRITE_TAC [alg_subtyping_cases] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 val _ = export_rewrites ["alg_subtyping_top_left"]
 
 val alg_subtyping_tyvar_right0 = prove(
@@ -217,29 +227,32 @@ val strong_algn_subtyping_ind =
     IndDefRules.derive_strong_induction (CONJUNCTS algn_subtyping_rules,
                                          algn_subtyping_ind)
 
-val algn_subtyping_ftyFVs_in_ctxt = store_thm(
-  "algn_subtyping_ftyFVs_in_ctxt",
-  ``!n G ty1 ty2. algn_subtyping n G ty1 ty2 ==>
-                  ftyFV ty1 SUBSET cdom G /\ ftyFV ty2 SUBSET cdom G``,
+Theorem algn_subtyping_ftyFVs_in_ctxt:
+    !n G ty1 ty2. algn_subtyping n G ty1 ty2 ==>
+                  ftyFV ty1 SUBSET cdom G /\ ftyFV ty2 SUBSET cdom G
+Proof
   HO_MATCH_MP_TAC strong_algn_subtyping_ind THEN
   SRW_TAC [][SUBSET_DEF] THEN
   TRY (IMP_RES_TAC algn_subtyping_wfctxt) THEN
-  FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN METIS_TAC [cdom_MEM])
+  FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN METIS_TAC [cdom_MEM]
+QED
 
-val algn_subtyping_swap = store_thm(
-  "algn_subtyping_swap",
-  ``!n G ty1 ty2.
+Theorem algn_subtyping_swap:
+    !n G ty1 ty2.
      algn_subtyping n G ty1 ty2 ==>
-     !x y. algn_subtyping n (ctxtswap x y G) (fswap x y ty1) (fswap x y ty2)``,
+     !x y. algn_subtyping n (ctxtswap x y G) (fswap x y ty1) (fswap x y ty2)
+Proof
   HO_MATCH_MP_TAC algn_subtyping_ind THEN
   SRW_TAC [][algn_subtyping_rules] THEN
   MATCH_MP_TAC (List.nth(CONJUNCTS algn_subtyping_rules, 2)) THEN
-  Q.EXISTS_TAC `fswap x' y ty1` THEN SRW_TAC [][]);
-val algn_subtyping_swap1_eqn = store_thm(
-  "algn_subtyping_swap1_eqn",
-  ``algn_subtyping n G (fswap x y ty1) ty2 =
-    algn_subtyping n (ctxtswap x y G) ty1 (fswap x y ty2)``,
-  METIS_TAC [algn_subtyping_swap, ctxtswap_inv, fswap_inv]);
+  Q.EXISTS_TAC `fswap x' y ty1` THEN SRW_TAC [][]
+QED
+Theorem algn_subtyping_swap1_eqn:
+    algn_subtyping n G (fswap x y ty1) ty2 =
+    algn_subtyping n (ctxtswap x y G) ty1 (fswap x y ty2)
+Proof
+  METIS_TAC [algn_subtyping_swap, ctxtswap_inv, fswap_inv]
+QED
 
 
 (* important to have this sort of inversion theorem, where you get the
@@ -253,14 +266,14 @@ val algn_subtyping_swap1_eqn = store_thm(
    has to do with the fact that beta reduction doesn't produce extra
    free variables).  In F<:, your x has to satisfy certain constraints.
 *)
-val algn_subtyping_ForallTy_eqn = store_thm(
-  "algn_subtyping_ForallTy_eqn",
-  ``~(x IN ftyFV bnd) /\ ~(x IN cdom G) ==>
+Theorem algn_subtyping_ForallTy_eqn:
+    ~(x IN ftyFV bnd) /\ ~(x IN cdom G) ==>
     (algn_subtyping p G (ForallTy x bnd ty) t =
        wfctxt G /\
        ((t = Top) /\ (p = 0) /\ ftyFV (ForallTy x bnd ty) SUBSET cdom G \/
         (?ty' p0. (t = ForallTy x bnd ty') /\ (p = p0 + 1) /\
-                  algn_subtyping p0 ((x,bnd)::G) ty ty')))``,
+                  algn_subtyping p0 ((x,bnd)::G) ty ty')))
+Proof
   SIMP_TAC (srw_ss() ++ DNF_ss ++ SatisfySimps.SATISFY_ss)
            [EQ_IMP_THM, algn_subtyping_rules, algn_subtyping_wfctxt] THEN
   STRIP_TAC THEN
@@ -274,7 +287,8 @@ val algn_subtyping_ForallTy_eqn = store_thm(
   Cases_on `x = x'` THEN1 SRW_TAC [][] THEN
   `~(x' IN ftyFV u1) /\ ~(x IN ftyFV t2)`
      by METIS_TAC [SUBSET_DEF, cdom_def, pairTheory.FST, IN_INSERT] THEN
-  SRW_TAC [][ctxtswap_fresh, fswap_fresh, wfctxt_ctxtFV_cdom]);
+  SRW_TAC [][ctxtswap_fresh, fswap_fresh, wfctxt_ctxtFV_cdom]
+QED
 
 val algn_subtyping_trans = prove(
   ``!n m p Gamma s q t.
@@ -323,15 +337,18 @@ val algn_subtyping_trans = prove(
     METIS_TAC [DECIDE ``n + p0 < n + 1 + (p0 + 1)``]
   ]);
 
-val alg_subtyping_trans (* lemma 28.3.2 *) = store_thm(
-  "alg_subtyping_trans",
-  ``!Gamma s q. Gamma |-> s <: q /\ Gamma |-> q <: t ==>
-                Gamma |-> s <: t``,
-  METIS_TAC [alg_subtyping_def, algn_subtyping_trans]);
+(* lemma 28.3.2 *)
+Theorem alg_subtyping_trans:
+    !Gamma s q. Gamma |-> s <: q /\ Gamma |-> q <: t ==>
+                Gamma |-> s <: t
+Proof
+  METIS_TAC [alg_subtyping_def, algn_subtyping_trans]
+QED
 
-val alg_soundcomplete (* theorem 28.3.3 *) = store_thm(
-  "alg_soundcomplete",
-  ``G |- ty1 <: ty2 = G |-> ty1 <: ty2``,
+(* theorem 28.3.3 *)
+Theorem alg_soundcomplete:
+    G |- ty1 <: ty2 = G |-> ty1 <: ty2
+Proof
   EQ_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`ty2`, `ty1`, `G`] THENL [
     HO_MATCH_MP_TAC fsubtyping_ind THEN SRW_TAC [][alg_subtyping_rules] THENL [
       METIS_TAC [alg_subtyping_trans],
@@ -342,4 +359,5 @@ val alg_soundcomplete (* theorem 28.3.3 *) = store_thm(
     HO_MATCH_MP_TAC alg_subtyping_ind THEN SRW_TAC [][fsubtyping_rules] THEN
     METIS_TAC [fsubtyping_rules, wfctxt_MEM, SUBSET_DEF,
                fsubtyping_wfctxt]
-  ]);
+  ]
+QED

@@ -2088,29 +2088,36 @@ val DUR_IC_WELL = prove(
   `!ic ireg rs iflags inp. 0 < DUR_IC ic ireg rs iflags inp`,
   RW_TAC arith_ss [DUR_IC_def]);
 
-val DUR_ARM6_WELL = store_thm("DUR_ARM6_WELL",
-  `!x. 0 < DUR_ARM6 x`,
+Theorem DUR_ARM6_WELL:
+   !x. 0 < DUR_ARM6 x
+Proof
   Cases \\ Cases_on_arm6 `a`
-    \\ RW_TAC arith_ss [DECODE_PSR_def,DUR_ARM6_def,DUR_X_def,DUR_IC_WELL]);
+    \\ RW_TAC arith_ss [DECODE_PSR_def,DUR_ARM6_def,DUR_X_def,DUR_IC_WELL]
+QED
 
-val IMM_ARM6_THM = store_thm("IMM_ARM6_THM",
-  `UIMMERSION IMM_ARM6 ARM6_SPEC DUR_ARM6`,
-  RW_TAC stdi_ss [UIMMERSION_def,DUR_ARM6_WELL,IMM_ARM6_def,ARM6_SPEC_def]);
+Theorem IMM_ARM6_THM:
+   UIMMERSION IMM_ARM6 ARM6_SPEC DUR_ARM6
+Proof
+  RW_TAC stdi_ss [UIMMERSION_def,DUR_ARM6_WELL,IMM_ARM6_def,ARM6_SPEC_def]
+QED
 
-val IMM_ARM6_UNIFORM = store_thm("IMM_ARM6_UNIFORM",
-  `UNIFORM IMM_ARM6 ARM6_SPEC`,
+Theorem IMM_ARM6_UNIFORM:
+   UNIFORM IMM_ARM6 ARM6_SPEC
+Proof
   REWRITE_TAC [UNIFORM_def]
     \\ EXISTS_TAC `DUR_ARM6`
-    \\ REWRITE_TAC [IMM_ARM6_THM]);
+    \\ REWRITE_TAC [IMM_ARM6_THM]
+QED
 
 val IMM_ARM6_ONE =
   MATCH_MP UIMMERSION_ONE (CONJ STATE_ARM6_IMAP_INIT IMM_ARM6_THM);
 
 (* ------------------------------------------------------------------------- *)
 
-val ARM6_DATA_ABSTRACTION = store_thm("ARM6_DATA_ABSTRACTION",
-  `DATA_ABSTRACTION ABS_ARM6
-    (state_out_state o ARM6_SPEC 0) (state_out_state o ARM_SPEC 0)`,
+Theorem ARM6_DATA_ABSTRACTION:
+   DATA_ABSTRACTION ABS_ARM6
+    (state_out_state o ARM6_SPEC 0) (state_out_state o ARM_SPEC 0)
+Proof
   RW_TAC bool_ss [MATCH_MP DATA_ABSTRACTION_I
            (CONJ STATE_ARM_THM3 STATE_ARM6_IMAP_INIT)]
     \\ Cases_on `a`
@@ -2123,7 +2130,8 @@ val ARM6_DATA_ABSTRACTION = store_thm("ARM6_DATA_ABSTRACTION",
        mrq2 nbw nrw sctrlreg psrfb oareg mask orp oorp mul mul2 borrow2 mshift)`
     \\ SIMP_TAC std_ss [ABS_ARM6_def,SUB8_INV,INIT_ARM6_def]
     \\ Cases_on `e` \\ SIMP_TAC (std_ss++SIZES_ss)
-         [exception2num_thm,num2exception_thm,w2n_n2w]);
+         [exception2num_thm,num2exception_thm,w2n_n2w]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -2154,8 +2162,9 @@ val STRM_ARM6_LEMb = prove(
   Cases \\ Cases_on_arm6 `a` \\ SIMP_TAC (std_ss++STATE_INP_ss)
     [lem,IS_RESET_def,GEN_ALL (SIMP_RULE bool_ss [] STRM_ARM6_LEM)]);
 
-val STRM_ARM6_THM = store_thm("STRM_ARM6_THM",
-  `!x t. x.inp IN STRM_ARM6 ==> (ADVANCE (IMM_ARM6 x 1) x.inp) IN STRM_ARM6`,
+Theorem STRM_ARM6_THM:
+   !x t. x.inp IN STRM_ARM6 ==> (ADVANCE (IMM_ARM6 x 1) x.inp) IN STRM_ARM6
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC STRM_ARM6_LEMb
     \\ FULL_SIMP_TAC bool_ss [IN_DEF,STRM_ARM6_def,ADVANCE_def,IS_RESET_def,
          IS_BUSY_def,IS_ABSENT_def]
@@ -2172,37 +2181,44 @@ val STRM_ARM6_THM = store_thm("STRM_ARM6_THM",
       PAT_X_ASSUM `!t. ~PROJ_CPB (x.inp t) ==> p`
         (SPEC_THEN `IMM_ARM6 x 1 + t` IMP_RES_TAC)]
     \\ EXISTS_TAC `t2 - IMM_ARM6 x 1`
-        \\ ASM_SIMP_TAC arith_ss []);
+        \\ ASM_SIMP_TAC arith_ss []
+QED
 
-val ARM6_STREAM_ABSTRACTION = store_thm("ARM6_STREAM_ABSTRACTION",
-  `STREAM_ABSTRACTION SMPL_ARM6 UNIV STRM_ARM6`,
+Theorem ARM6_STREAM_ABSTRACTION:
+   STREAM_ABSTRACTION SMPL_ARM6 UNIV STRM_ARM6
+Proof
   RW_TAC std_ss [STREAM_ABSTRACTION_def,pred_setTheory.IN_UNIV]
     \\ EXISTS_TAC `\t. (T,T,F,F,word_0,T,T)`
     \\ SIMP_TAC std_ss [IN_DEF,STRM_ARM6_def,IS_RESET_def,IS_ABSENT_def,
            IS_BUSY_def,PROJ_NRESET_def,PROJ_CPA_def,PROJ_CPB_def]
-    \\ STRIP_TAC \\ EXISTS_TAC `t + 1` \\ DECIDE_TAC);
+    \\ STRIP_TAC \\ EXISTS_TAC `t + 1` \\ DECIDE_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 
-val ARM6_TCON_LEM0 = store_thm("ARM6_TCON_LEM0",
-  `!x. (x = ^arm6state_inp) ==>
-   (INIT_ARM6 (STATE_ARM6 (IMM_ARM6 x 0) x) = STATE_ARM6 (IMM_ARM6 x 0) x)`,
+Theorem ARM6_TCON_LEM0:
+   !x. (x = ^arm6state_inp) ==>
+   (INIT_ARM6 (STATE_ARM6 (IMM_ARM6 x 0) x) = STATE_ARM6 (IMM_ARM6 x 0) x)
+Proof
    RW_TAC bool_ss []
      \\ SIMP_TAC (std_ss++STATE_INP_ss)
-          [STATE_ARM6_def,IMM_ARM6_def,INIT_ARM6_def,NXTIC_def,MASK_def]);
+          [STATE_ARM6_def,IMM_ARM6_def,INIT_ARM6_def,NXTIC_def,MASK_def]
+QED
 
 val ARM6_TCON_ZERO = GEN_ALL (SIMP_RULE bool_ss [] ARM6_TCON_LEM0);
 
 val INIT = REWRITE_RULE [GSYM FUN_EQ_THM] (CONJUNCT1 STATE_ARM6_def);
 
-val ARM6_TIME_CON_IMM = store_thm("ARM6_TIME_CON_IMM",
-  `TCON_IMMERSION ARM6_SPEC IMM_ARM6 STRM_ARM6`,
+Theorem ARM6_TIME_CON_IMM:
+   TCON_IMMERSION ARM6_SPEC IMM_ARM6 STRM_ARM6
+Proof
   SIMP_TAC bool_ss [STRM_ARM6_THM,MATCH_MP TCON_IMMERSION_ONE_STEP_THM
     (CONJ STATE_ARM6_IMAP_INIT IMM_ARM6_UNIFORM)]
     \\ REPEAT STRIP_TAC
     \\ Cases_on `x` \\ Cases_on_arm6 `a`
     \\ FULL_SIMP_TAC (std_ss++STATE_INP_ss) [lem,ARM6_SPEC_STATE,INIT,
-         ARM6_TCON_ZERO,ARM6_TCON_ONE]);
+         ARM6_TCON_ZERO,ARM6_TCON_ONE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -2237,21 +2253,24 @@ val TCON_SMPL_ARM6 = prove(
 
 (* ------------------------------------------------------------------------- *)
 
-val ARM6_COR_LEM0 = store_thm("ARM6_COR_LEM0",
-  `!x. (x = ^arm6state_inp) ==>
+Theorem ARM6_COR_LEM0:
+   !x. (x = ^arm6state_inp) ==>
    (STATE_ARM 0 <|state := ABS_ARM6 x.state; inp := SMPL_ARM6 x|> =
-    ABS_ARM6 (STATE_ARM6 (IMM_ARM6 x 0) x))`,
+    ABS_ARM6 (STATE_ARM6 (IMM_ARM6 x 0) x))
+Proof
   RW_TAC bool_ss []
     \\ SIMP_TAC (std_ss++STATE_INP_ss) [STATE_ARM_def,STATE_ARM6_def,
-         IMM_ARM6_def,INIT_ARM6_def,ABS_ARM6_def]);
+         IMM_ARM6_def,INIT_ARM6_def,ABS_ARM6_def]
+QED
 
 val ARM6_COR_ZERO = GEN_ALL (SIMP_RULE (srw_ss()) [] ARM6_COR_LEM0);
 
 (* ------------------------------------------------------------------------- *)
 
-val CORRECT_ARM6 = store_thm("CORRECT_ARM6",
-  `CORRECT ARM_SPEC ARM6_SPEC IMM_ARM6 ABS_ARM6
-     (OSMPL OSMPL_ARM6 ARM6_SPEC IMM_ARM6) SMPL_ARM6 UNIV STRM_ARM6`,
+Theorem CORRECT_ARM6:
+   CORRECT ARM_SPEC ARM6_SPEC IMM_ARM6 ABS_ARM6
+     (OSMPL OSMPL_ARM6 ARM6_SPEC IMM_ARM6) SMPL_ARM6 UNIV STRM_ARM6
+Proof
   MATCH_MP_TAC ONE_STEP_THM
     \\ EXISTS_TAC `OSMPL_ARM6`
     \\ SIMP_TAC std_ss [STATE_ARM_THM2,STATE_ARM6_IMAP,IMM_ARM6_UNIFORM,
@@ -2262,7 +2281,8 @@ val CORRECT_ARM6 = store_thm("CORRECT_ARM6",
     \\ Cases_on `x` \\ Cases_on_arm6 `a`
     \\ FULL_SIMP_TAC (std_ss++STATE_INP_ss)
          [lem,ARM6_SPEC_STATE,ARM_SPEC_STATE,ARM6_COR_ZERO,ARM6_COR_ONE,
-          ARM6_OUT_THM]);
+          ARM6_OUT_THM]
+QED
 
 (* ------------------------------------------------------------------------- *)
 

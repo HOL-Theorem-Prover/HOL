@@ -140,7 +140,7 @@ All keywords beginning with capital letters (`Theory`, `Ancestors`, `Libs`, ...)
 ⟨*thm-proof*⟩      ::=   ⟨*thm-keyword*⟩ ⟨*ident*⟩⟨*thm-attrs*⟩ `:` ⟨*thm-stmt*⟩
                          `Proof`⟨*proof-attrs*⟩ ⟨*tactic*⟩
                          `QED`
-⟨*thm-keyword*⟩    ::=   `Theorem`    |    `Triviality`
+⟨*thm-keyword*⟩    ::=   `Theorem`
 ⟨*defn-decl*⟩      ::=   ⟨*datatype-decl*⟩    |    ⟨*function-decl*⟩    |    ⟨*relation-decl*⟩
 ⟨*datatype-decl*⟩  ::=   `Datatype:`⟨*datatype-spec*⟩ `End`
 ⟨*relation-decl*⟩  ::=   (`Inductive`|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩ `End`
@@ -187,13 +187,13 @@ The following describes the attributes listed above:
 
 `compute`
 
-:   Used with `Theorem` and `Triviality` forms.
+:   Used with `Theorem` forms.
     This causes the theorem value to be added to the global "computation set" that is used by `EVAL`.
 \index{theorem attributes!compute@\ml{compute}}
 
 `cong`
 
-:   Used with `Theorem` and `Triviality` forms.
+:   Used with `Theorem` forms.
     This adds the corresponding theorem to the set of congruence rules used by the termination analysis behind function definition.
 \index{theorem attributes!cong@\ml{cong}}
 
@@ -233,7 +233,7 @@ The following describes the attributes listed above:
 
 `mono`
 
-:   Used with `Theorem` and `Triviality`.
+:   Used with `Theorem`.
     Adds the theorem to the list of monotonicity results used by the inductive/coinductive definitions package.
     \index{theorem attributes!mono@\ml{mono}}
 
@@ -253,7 +253,7 @@ The following describes the attributes listed above:
 
 `rule_induction`
 
-:   Used with `Theorem` and `Triviality`.
+:   Used with `Theorem`.
     Makes the provided theorem available for use as a rule induction principle when using the `Induct_on` tactic.
     \index{theorem attributes!rule_induction@\ml{rule_induction}}
 
@@ -271,8 +271,8 @@ The following describes the attributes listed above:
 
 `simp`
 
-:   Used with `Theorem`, `Triviality` and `Definition`.
-    Adds the corresponding theorem to the global simpset. This effect will not persist beyond the current script file where it occurs if used with `Triviality` or a `local` attribute.
+:   Used with `Theorem` and `Definition`.
+    Adds the corresponding theorem to the global simpset. This effect will not persist beyond the current script file where it occurs if used with a `local` attribute.
     \index{theorem attributes!simp@\ml{simp}}
 
     ```{=latex}

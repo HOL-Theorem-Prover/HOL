@@ -103,18 +103,20 @@ QED
 
 
 
-val ST_form_functions_EMPTY = store_thm(
-  "ST_form_functions_EMPTY",
-  ``!f x. form_functions (ST x f) = {}``,
+Theorem ST_form_functions_EMPTY:
+    !f x. form_functions (ST x f) = {}
+Proof
   Induct_on `f` >>
- rw[ST_def,form_functions_def,fNOT_def,fAND_def,fDISJ_def,Exists_def]);
+ rw[ST_def,form_functions_def,fNOT_def,fAND_def,fDISJ_def,Exists_def]
+QED
 
 
-val ST_FV_singleton = store_thm(
-  "ST_FV_singleton",
-  ``!f x. (FV (ST x f)) SUBSET {x}``,
+Theorem ST_FV_singleton:
+    !f x. (FV (ST x f)) SUBSET {x}
+Proof
   Induct_on `f` >> rw[ST_def,FV_def,fNOT_def,fAND_def,fDISJ_def] >>
-  fs[SUBSET_DEF] >> metis_tac[]);
+  fs[SUBSET_DEF] >> metis_tac[]
+QED
 
 Theorem term_functions_EMPTY_termval:
 !t. term_functions t = {} ==>
@@ -392,13 +394,14 @@ Proof
           metis_tac[prop_2_47_i]))
 QED
 
-val thm_2_65_corollary = store_thm(
-  "thm_2_65_corollary",
-  ``∀M M' w:'b w':'c.
+Theorem thm_2_65_corollary:
+    ∀M M' w:'b w':'c.
        countably_saturated (mm2folm M) /\ countably_saturated (mm2folm M') ∧ w ∈ M.frame.world ∧ w' ∈ M'.frame.world ⇒
        modal_eq M M' w w' ⇒
-       bisim_world M M' w w'``,
-   rw[] >> `M_sat M /\ M_sat M'` by metis_tac[thm_2_65] >> metis_tac[prop_2_54_DIST_TYPE]);
+       bisim_world M M' w w'
+Proof
+   rw[] >> `M_sat M /\ M_sat M'` by metis_tac[thm_2_65] >> metis_tac[prop_2_54_DIST_TYPE]
+QED
 
 
 

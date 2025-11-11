@@ -31,11 +31,11 @@ fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
     numbers as indexes.
    ---------------------------------------------------------------------- *)
 
-val HP_selfapp = store_thm(
-  "HP_selfapp",
-  ``¬∃M.
+Theorem HP_selfapp:
+    ¬∃M.
          ∀t. M @@ cDB (fromTerm t) -n->*
-             cB (has_bnf (t @@ cDB (fromTerm t)))``,
+             cB (has_bnf (t @@ cDB (fromTerm t)))
+Proof
   STRIP_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   Q_TAC (NEW_TAC "z") `FV M` THEN
@@ -62,14 +62,15 @@ val HP_selfapp = store_thm(
                      relationTheory.RTC_RULES] THEN
     `has_bnf (G @@ cDB (fromTerm G))`
        by METIS_TAC [chap3Theory.has_bnf_thm, bnf_cB]
-  ]);
+  ]
+QED
 
 
 val _ = temp_overload_on ("φ", ``λn. toTerm (numdB n)``)
 
-val HP_nselfapp = store_thm(
-  "HP_nselfapp",
-  ``¬∃M. ∀n. M @@ church n -n->* cB (has_bnf (φ n @@ church n))``,
+Theorem HP_nselfapp:
+    ¬∃M. ∀n. M @@ church n -n->* cB (has_bnf (φ n @@ church n))
+Proof
   STRIP_TAC THEN
   Q_TAC (NEW_TAC "z") `FV M` THEN
   Q.ABBREV_TAC `G = LAM z (M @@ VAR z @@ Ω @@ cB T)` THEN
@@ -87,13 +88,14 @@ val HP_nselfapp = store_thm(
     `G @@ church Gi -β->* cB T`
        by METIS_TAC [betastar_lameq_bnf, bnf_cB] THEN
     METIS_TAC [has_bnf_thm, bnf_cB]
-  ]);
+  ]
+QED
 
 (* Impossibility of determining whether or not arbitrary function applied
    to arbitrary argument will terminate. *)
-val HP_fx = store_thm(
-  "HP_fx",
-  ``¬∃M. ∀f x. M @@ cDB (fromTerm f) @@ x -n->* cB (has_bnf (f @@ x))``,
+Theorem HP_fx:
+    ¬∃M. ∀f x. M @@ cDB (fromTerm f) @@ x -n->* cB (has_bnf (f @@ x))
+Proof
   STRIP_TAC THEN Q_TAC (NEW_TAC "z") `FV M` THEN
   Q.ABBREV_TAC `G = LAM z (M @@ VAR z @@ VAR z)` THEN
   `∀t. G @@ cDB (fromTerm t) -n-> M @@ cDB (fromTerm t) @@ cDB (fromTerm t)`
@@ -104,13 +106,14 @@ val HP_fx = store_thm(
       by SRW_TAC [][] THEN
   `∀t. G @@ cDB (fromTerm t) -n->* cB (has_bnf (t @@ cDB (fromTerm t)))`
      by METIS_TAC [relationTheory.RTC_RULES] THEN
-  METIS_TAC [HP_selfapp]);
+  METIS_TAC [HP_selfapp]
+QED
 
 (* Impossibility of deciding whether or not an arbitrary term has a β-nf.
    Needs the computability of the encoding function cDB. *)
-val HP_bnf = store_thm(
-  "HP_bnf",
-   ``¬∃M. ∀t. M @@ cDB (fromTerm t) -n->* cB (has_bnf t)``,
+Theorem HP_bnf:
+     ¬∃M. ∀t. M @@ cDB (fromTerm t) -n->* cB (has_bnf t)
+Proof
   STRIP_TAC THEN Q_TAC (NEW_TAC "z") `FV M` THEN
   Q.ABBREV_TAC `G = LAM z (M @@ (cdAPP @@ VAR z @@ (ccDB @@ VAR z)))` THEN
   `∀t. G @@ cDB (fromTerm t) -n->* cB (has_bnf (t @@ cDB (fromTerm t)))`
@@ -121,5 +124,6 @@ val HP_bnf = store_thm(
            by SRW_TAC [][] THEN
         ASM_SIMP_TAC (betafy bool_ss) [] THEN
         MATCH_MP_TAC nstar_betastar THEN ASM_SIMP_TAC (srw_ss()) []) THEN
-  METIS_TAC [HP_selfapp]);
+  METIS_TAC [HP_selfapp]
+QED
 

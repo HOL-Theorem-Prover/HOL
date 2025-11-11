@@ -37,9 +37,8 @@ Proof
 QED
 
 
-val PERM_trans1 = save_thm
-("PERM_trans1",
- REWRITE_RULE [relationTheory.transitive_def] PERM_trans);
+Theorem PERM_trans1 =
+ REWRITE_RULE [relationTheory.transitive_def] PERM_trans;
 
 
 Theorem PERM_sym:
@@ -48,9 +47,11 @@ Proof
 PROVE_TAC [PERM_def]
 QED
 
-val FILTER_APPEND_distrib = Q.prove(
-`!P L M. FILTER P (APPEND L M) = APPEND (FILTER P L) (FILTER P M)`,
-Induct_on `L` THEN RW_TAC list_ss [FILTER]);
+Theorem FILTER_APPEND_distrib[local]:
+ !P L M. FILTER P (APPEND L M) = APPEND (FILTER P L) (FILTER P M)
+Proof
+Induct_on `L` THEN RW_TAC list_ss [FILTER]
+QED
 
 Theorem PERM_cong:
  !(L1:'a list) L2 L3 L4.
@@ -70,16 +71,15 @@ PROVE_TAC [CONS_APPEND,PERM_cong, PERM_refl]
 QED
 
 
-val PERM_CONS_iff =
+Theorem PERM_CONS_iff = (
 let val lem =
 Q.prove(`PERM (x::l1) (x::l2) ==> PERM l1 l2`,
 RW_TAC list_ss [PERM_def,FILTER]
    THEN POP_ASSUM (MP_TAC o Q.SPEC`x'`)
    THEN RW_TAC list_ss [])
 in
-  save_thm ("PERM_CONS_iff",
-            GEN_ALL(IMP_ANTISYM_RULE lem (SPEC_ALL PERM_mono)))
-end;
+  GEN_ALL(IMP_ANTISYM_RULE lem (SPEC_ALL PERM_mono))
+end)
 
 Theorem PERM_nil:
   !L. (PERM L [] = (L=[])) /\
@@ -91,12 +91,14 @@ Cases THEN RW_TAC list_ss [PERM_def,FILTER]
 QED
 
 
-val lem = Q.prove(
- `!h l1 l2. APPEND (FILTER ($=h) l1) (h::l2)
-            = h::APPEND (FILTER ($=h) l1) l2`,
+Theorem lem[local]:
+  !h l1 l2. APPEND (FILTER ($=h) l1) (h::l2)
+            = h::APPEND (FILTER ($=h) l1) l2
+Proof
 Induct_on `l1`
    THEN RW_TAC list_ss [FILTER]
-   THEN PROVE_TAC[]);
+   THEN PROVE_TAC[]
+QED
 
 
 Theorem PERM_APPEND:
@@ -141,28 +143,34 @@ QED
     are permutations of each other.
  *---------------------------------------------------------------------------*)
 
-val PERM_sort_step = Q.prove
-(`!l h t. PERM (h::t) l ==> ?rst. h::rst = FILTER ($=h) l`,
+Theorem PERM_sort_step[local]:
+  !l h t. PERM (h::t) l ==> ?rst. h::rst = FILTER ($=h) l
+Proof
 RW_TAC list_ss [PERM_def,FILTER]
   THEN POP_ASSUM (MP_TAC o Q.SPEC`h`)
   THEN RW_TAC bool_ss []
-  THEN PROVE_TAC[]);
+  THEN PROVE_TAC[]
+QED
 
 
-val LENGTH_APPEND_FILTER = Q.prove
-(`!L. LENGTH L = LENGTH (APPEND (FILTER P L) (FILTER ($~ o P) L))`,
+Theorem LENGTH_APPEND_FILTER[local]:
+  !L. LENGTH L = LENGTH (APPEND (FILTER P L) (FILTER ($~ o P) L))
+Proof
 Induct
  THEN RW_TAC list_ss [FILTER, combinTheory.o_DEF]
- THEN PROVE_TAC []);
+ THEN PROVE_TAC []
+QED
 
-val PERM_step = Q.prove
-(`!l h t. PERM (h::t) l
+Theorem PERM_step[local]:
+  !l h t. PERM (h::t) l
             ==>
-          ?u. PERM l (h::u) /\ (LENGTH l = LENGTH (h::u))`,
+          ?u. PERM l (h::u) /\ (LENGTH l = LENGTH (h::u))
+Proof
 RW_TAC bool_ss []
   THEN IMP_RES_TAC PERM_sort_step
   THEN Q.EXISTS_TAC `APPEND rst (FILTER ($~ o $= h) l)`
-  THEN PROVE_TAC [APPEND, LENGTH_APPEND_FILTER,PERM_split]);
+  THEN PROVE_TAC [APPEND, LENGTH_APPEND_FILTER,PERM_split]
+QED
 
 
 Theorem PERM_LENGTH:
@@ -174,4 +182,3 @@ Induct
   THEN `PERM l1 u` by PROVE_TAC [PERM_trans1,PERM_CONS_iff]
   THEN RW_TAC list_ss []
 QED
-

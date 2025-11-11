@@ -63,8 +63,8 @@ structure HolSmtLib :> HolSmtLib = struct
         )
       fun provoke_err prove_fn =
         ignore (prove_fn boolSyntax.T)  (* should fail *)
-          handle Feedback.HOL_ERR {message, ...} =>
-            Feedback.HOL_MESG ("HolSmtLib: " ^ message)
+          handle Feedback.HOL_ERR herr =>
+            Feedback.HOL_MESG ("HolSmtLib: " ^ Feedback.message_of herr)
     in
       Feedback.set_trace "HolSmtLib" 0;
       if CVC.is_configured () then

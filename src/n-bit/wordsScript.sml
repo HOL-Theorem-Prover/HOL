@@ -183,9 +183,9 @@ Overload "¬" = “words$word_1comp”
 val _ = send_to_back_overload "~" {Name = "word_1comp", Thy = "words"}
 val _ = send_to_back_overload "¬" {Name = "word_1comp", Thy = "words"}
 
-val _ = overload_on ("UINT_MAXw", ``words$word_T``)
-val _ = overload_on ("INT_MAXw",  ``words$word_H``)
-val _ = overload_on ("INT_MINw",  ``words$word_L``)
+Overload UINT_MAXw = ``words$word_T``
+Overload INT_MAXw = ``words$word_H``
+Overload INT_MINw = ``words$word_L``
 
 val _ = Unicode.unicode_version {u = Unicode.UChar.xor, tmnm = "??"}
 val _ = Unicode.unicode_version {u = Unicode.UChar.or, tmnm = "||"}
@@ -384,14 +384,14 @@ End
 Definition word_L2_def:   word_L2 = word_mul word_L word_L
 End
 
-val () = List.app (fn (s, t) => Parse.overload_on (s, Parse.Term t))
-  [("+", `$word_add`),
-   ("-", `$word_sub`),
-   ("numeric_negate", `$word_2comp`),
-   ("*", `$word_mul`),
-   ("**", `$word_exp`),
-   ("CARRY_OUT", `\a b c. FST (SND (add_with_carry (a,b,c)))`),
-   ("OVERFLOW",  `\a b c. SND (SND (add_with_carry (a,b,c)))`)]
+Overload "+" = “$word_add”
+Overload "-" = “$word_sub”
+Overload numeric_negate = “$word_2comp”
+Overload "*" = “$word_mul”
+Overload "**" = “$word_exp”
+Overload CARRY_OUT = “λa b c. FST (SND (add_with_carry (a,b,c)))”
+Overload OVERFLOW =  “λa b c. SND (SND (add_with_carry (a,b,c)))”
+
 
 val () = add_infixes 600 HOLgrammars.LEFT
   [("//", `$word_div`),
@@ -660,8 +660,8 @@ val DIMINDEX_LT =
   (GEN_ALL o CONJUNCT2 o SPEC_ALL o SIMP_RULE bool_ss [DIMINDEX_GT_0] o
    Q.SPEC `^WL`) DIVISION
 
-val EXISTS_HB = save_thm("EXISTS_HB",
-  PROVE [DIMINDEX_GT_0,LESS_ADD_1,ADD1,ADD] ``?m. ^WL = SUC m``)
+Theorem EXISTS_HB =
+  PROVE [DIMINDEX_GT_0,LESS_ADD_1,ADD1,ADD] ``?m. ^WL = SUC m``
 
 Theorem MOD_DIMINDEX:
    !n. n MOD dimword (:'a) = BITS (^WL - 1) 0 n
@@ -679,9 +679,9 @@ val SUB1_SUC = DECIDE (Term `!n. 0 < n ==> (SUC (n - 1) = n)`)
 val SUB_SUC1 = DECIDE (Term `!n. ~(n = 0) ==> (SUC (n - 1) = n)`)
 val SUC_SUB2 = DECIDE (Term `!n. ~(n = 0) ==> (SUC n - 2 = n - 1)`)
 
-val MOD_2EXP_DIMINDEX = save_thm("MOD_2EXP_DIMINDEX",
+Theorem MOD_2EXP_DIMINDEX =
   SIMP_RULE std_ss [SUB1_SUC,BITS_ZERO3,DIMINDEX_GT_0,GSYM MOD_2EXP_def]
-     MOD_DIMINDEX)
+     MOD_DIMINDEX
 
 Theorem INT_MIN_SUM:
    INT_MIN (:('a+'b)) =
@@ -842,24 +842,30 @@ QED
 
 val WORD_ss = rewrites [w2n_def,n2w_def]
 
-val SUM_SLICE = Q.prove(
-  `!n x. SUM n (\i. SLICE i i x) = x MOD 2 ** n`,
+Theorem SUM_SLICE[local]:
+   !n x. SUM n (\i. SLICE i i x) = x MOD 2 ** n
+Proof
   Induct \\ ASM_SIMP_TAC arith_ss [SUM_def]
     \\ Cases_on `n`
     \\ SIMP_TAC arith_ss [GSYM BITS_ZERO3,GSYM SLICE_ZERO_THM,
-         ONCE_REWRITE_RULE [ADD_COMM] SLICE_COMP_THM])
+         ONCE_REWRITE_RULE [ADD_COMM] SLICE_COMP_THM]
+QED
 
-val SUM_SBIT_LT = Q.prove(
-  `!n f. SUM n (\i. SBIT (f i) i) < 2 ** n`,
+Theorem SUM_SBIT_LT[local]:
+   !n f. SUM n (\i. SBIT (f i) i) < 2 ** n
+Proof
   Induct \\ ASM_SIMP_TAC arith_ss [SUM_def,ZERO_LT_TWOEXP]
     \\ STRIP_TAC \\ `SBIT (f n) n <= 2 ** n` by RW_TAC arith_ss [SBIT_def]
-    \\ METIS_TAC [EXP,DECIDE ``!a b c. a <= b /\ c < b ==> a + c < 2 * b``])
+    \\ METIS_TAC [EXP,DECIDE ``!a b c. a <= b /\ c < b ==> a + c < 2 * b``]
+QED
 
-val w2n_n2w_lem = Q.prove(
-  `!n. SUM ^WL (\i. SBIT (((FCP i. BIT i n):'a word) ' i) i) =
-       SUM ^WL (\i. SLICE i i n)`,
+Theorem w2n_n2w_lem[local]:
+   !n. SUM ^WL (\i. SBIT (((FCP i. BIT i n):'a word) ' i) i) =
+       SUM ^WL (\i. SLICE i i n)
+Proof
   STRIP_TAC \\ REWRITE_TAC [SUM] \\ MATCH_MP_TAC GSUM_FUN_EQUAL
-    \\ RW_TAC (fcp_ss++ARITH_ss) [BIT_SLICE_THM])
+    \\ RW_TAC (fcp_ss++ARITH_ss) [BIT_SLICE_THM]
+QED
 
 Theorem w2n_n2w[simp]:
    !n. w2n (n2w:num->('a word) n) = n MOD (dimword(:'a))
@@ -867,8 +873,9 @@ Proof
   SIMP_TAC (fcp_ss++WORD_ss) [w2n_n2w_lem,SUM_SLICE, dimword_def]
 QED
 
-val n2w_w2n_lem = Q.prove(
-  `!n f i. BIT i (SUM n (\j. SBIT (f j) j)) <=> f i /\ i < n`,
+Theorem n2w_w2n_lem[local]:
+   !n f i. BIT i (SUM n (\j. SBIT (f j) j)) <=> f i /\ i < n
+Proof
   Induct \\ ASM_SIMP_TAC arith_ss [SUM_def,BIT_ZERO]
     \\ REPEAT STRIP_TAC \\ Cases_on `i < n`
     \\ FULL_SIMP_TAC arith_ss [NOT_LESS,prim_recTheory.LESS_THM]
@@ -887,7 +894,8 @@ val n2w_w2n_lem = Q.prove(
               Q.SPECL [`p`,`n + p`,`n`]) BIT_OF_BITS_THM]
         \\ FULL_SIMP_TAC std_ss [BIT_def,BITS_COMP_THM2]
         \\ Cases_on `p = 0` \\ RW_TAC std_ss [BITS_ZERO2]
-        \\ ASM_SIMP_TAC arith_ss [GSYM BIT_def,BIT_B,BIT_B_NEQ]]);
+        \\ ASM_SIMP_TAC arith_ss [GSYM BIT_def,BIT_B,BIT_B_NEQ]]
+QED
 
 Theorem n2w_w2n[simp]:
    !w. n2w (w2n (w:'a word)) = w
@@ -1026,18 +1034,22 @@ QED
 
 val top = ``2 ** wl``
 
-val BITWISE_ONE_COMP_THM = Q.prove(
-  `!wl a b. 0 < wl ==>
-     (BITWISE wl (\x y. ~x) a b = ^top - 1 - a MOD ^top)`,
+Theorem BITWISE_ONE_COMP_THM[local]:
+   !wl a b. 0 < wl ==>
+     (BITWISE wl (\x y. ~x) a b = ^top - 1 - a MOD ^top)
+Proof
   REPEAT STRIP_TAC
     \\ `?b. wl = SUC b` by PROVE_TAC [LESS_ADD_1,ADD1,ADD]
-    \\ ASM_SIMP_TAC bool_ss [BITWISE_ONE_COMP_LEM,BITS_ZERO3])
+    \\ ASM_SIMP_TAC bool_ss [BITWISE_ONE_COMP_LEM,BITS_ZERO3]
+QED
 
-val ONE_COMP_THM = Q.prove(
-  `!wl a x. 0 < wl /\ x < wl ==> (BIT x (^top - 1 - a MOD ^top) = ~BIT x a)`,
+Theorem ONE_COMP_THM[local]:
+   !wl a x. 0 < wl /\ x < wl ==> (BIT x (^top - 1 - a MOD ^top) = ~BIT x a)
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC (GSYM BITWISE_ONE_COMP_THM)
     \\ ASM_REWRITE_TAC []
-    \\ ASM_SIMP_TAC bool_ss [BITWISE_THM])
+    \\ ASM_SIMP_TAC bool_ss [BITWISE_THM]
+QED
 
 Theorem word_1comp_n2w:
    !n. ~(n2w n):'a word  = n2w (dimword(:'a) - 1 - n MOD dimword(:'a))
@@ -1171,8 +1183,8 @@ Proof
   SRW_TAC [] [s2w_def, w2s_def]
 QED
 
-val NUMERAL_LESS_THM = save_thm("NUMERAL_LESS_THM",
-  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM)
+Theorem NUMERAL_LESS_THM =
+  CONV_RULE numLib.SUC_TO_NUMERAL_DEFN_CONV prim_recTheory.LESS_THM
 
 val rwts = [FUN_EQ_THM, UNHEX_HEX, l2n_n2l, s2n_n2s, l2w_w2l, s2w_w2s,
   word_from_bin_list_def,word_from_oct_list_def,word_from_dec_list_def,
@@ -1220,7 +1232,7 @@ QED
     The Boolean operations : theorems
    ------------------------------------------------------------------------- *)
 
-val _ = temp_overload_on ("Tw",``words$word_T``)
+Overload Tw[local] = ``words$word_T``
 
 val ONE_COMP_0_THM =
   (SIMP_RULE arith_ss [BIT_ZERO,ZERO_MOD,ZERO_LT_TWOEXP] o
@@ -1293,8 +1305,8 @@ Proof
          LESS_MOD,ZERO_LT_TWOEXP,dimword_def]
 QED
 
-val WORD_NEG_1_T = save_thm("WORD_NEG_1_T",
-  REWRITE_RULE [GSYM WORD_NEG_1] word_T)
+Theorem WORD_NEG_1_T =
+  REWRITE_RULE [GSYM WORD_NEG_1] word_T
 
 Theorem WORD_MSB_1COMP:
    !w. word_msb ~w = ~word_msb w
@@ -1480,18 +1492,22 @@ Theorem WORD_XNOR_NOT_XOR[simp]:
 Proof BOOL_WORD_TAC
 QED
 
-val ADD_OR_lem_ = Q.prove(
-  `!a b n. ~BIT n a \/ ~BIT n b ==>
-      (SBIT (BIT n a \/ BIT n b) n = SBIT (BIT n a) n + SBIT (BIT n b) n)`,
-  SRW_TAC [] [SBIT_def] \\ FULL_SIMP_TAC std_ss [])
+Theorem ADD_OR_lem_[local]:
+   !a b n. ~BIT n a \/ ~BIT n b ==>
+      (SBIT (BIT n a \/ BIT n b) n = SBIT (BIT n a) n + SBIT (BIT n b) n)
+Proof
+  SRW_TAC [] [SBIT_def] \\ FULL_SIMP_TAC std_ss []
+QED
 
-val ADD_OR_lem = Q.prove(
-  `!n a b. (!i. i < n ==> ~BIT i a \/ ~BIT i b) ==>
+Theorem ADD_OR_lem[local]:
+   !n a b. (!i. i < n ==> ~BIT i a \/ ~BIT i b) ==>
       (SUM n (\i. SBIT (BIT i a) i) + SUM n (\i. SBIT (BIT i b) i) =
-       BITWISE n $\/ a b)`,
+       BITWISE n $\/ a b)
+Proof
   Induct \\ SRW_TAC [ARITH_ss] [BITWISE_def, sum_numTheory.SUM_def]
     \\ REWRITE_TAC [ADD_ASSOC]
-    \\ METIS_TAC [ADD_OR_lem_, DECIDE ``n < SUC n``])
+    \\ METIS_TAC [ADD_OR_lem_, DECIDE ``n < SUC n``]
+QED
 
 Theorem WORD_ADD_OR:
    !a b. (a && b = 0w) ==> (a + b = a || b)
@@ -1602,25 +1618,29 @@ Proof
          DIMINDEX_GT_0]
 QED
 
-val sw2sw_sw2sw_lem = Q.prove(
-  `!w:'a word. ~(dimindex(:'b) < dimindex(:'a) /\
+Theorem sw2sw_sw2sw_lem[local]:
+   !w:'a word. ~(dimindex(:'b) < dimindex(:'a) /\
                  dimindex(:'b) < dimindex(:'c)) ==>
-       (sw2sw ((sw2sw w):'b word) :'c word = sw2sw w)`,
+       (sw2sw ((sw2sw w):'b word) :'c word = sw2sw w)
+Proof
   FIELD_WORD_TAC
     \\ FIELD_WORD_TAC
     \\ FULL_SIMP_TAC arith_ss [sw2sw,DIMINDEX_GT_0,NOT_LESS]
     \\ FIELD_WORD_TAC
     \\ `dimindex (:'b) = dimindex (:'a)` by DECIDE_TAC
-    \\ ASM_REWRITE_TAC [])
+    \\ ASM_REWRITE_TAC []
+QED
 
-val sw2sw_sw2sw_lem2 = Q.prove(
-  `!w:'a word. dimindex(:'b) < dimindex(:'a) /\
+Theorem sw2sw_sw2sw_lem2[local]:
+   !w:'a word. dimindex(:'b) < dimindex(:'a) /\
                dimindex(:'b) < dimindex(:'c) ==>
        (sw2sw ((sw2sw w):'b word) :'c word =
-        sw2sw (w2w w :'b word))`,
+        sw2sw (w2w w :'b word))
+Proof
   FIELD_WORD_TAC
     \\ ASM_SIMP_TAC arith_ss [sw2sw,w2w,DIMINDEX_GT_0,
-         DECIDE ``0 < b ==> (1 + (b - 1) = b) /\ (i <= b - 1 <=> i < b)``]);
+         DECIDE ``0 < b ==> (1 + (b - 1) = b) /\ (i <= b - 1 <=> i < b)``]
+QED
 
 Theorem sw2sw_sw2sw:
    !w:'a word. (sw2sw ((sw2sw w):'b word)):'c word =
@@ -1715,9 +1735,11 @@ Proof
                   [SIGN_EXTEND_def, BIT_ZERO, BITS_ZERO]]]
 QED
 
-val MIN_lem = Q.prove(
-  `!h t. MIN (MIN h t) (t + l) = MIN h t`,
-  SRW_TAC [ARITH_ss] [MIN_DEF])
+Theorem MIN_lem[local]:
+   !h t. MIN (MIN h t) (t + l) = MIN h t
+Proof
+  SRW_TAC [ARITH_ss] [MIN_DEF]
+QED
 
 Theorem word_sign_extend_bits:
    !h l w:'a word.
@@ -1740,23 +1762,29 @@ Proof
   RW_TAC arith_ss [word_bit,word_bit_n2w,combinTheory.FAIL_THM]
 QED
 
-val word_index = save_thm("word_index",
+Theorem word_index =
   word_index_n2w
     |> SPEC_ALL
     |> Q.DISCH `i < dimindex (:'a)`
     |> SIMP_RULE bool_ss []
-    |> GEN_ALL)
+    |> GEN_ALL
 
-val MIN_lem = Q.prove(
- `(!m n. MIN m (m + n) = m) /\ !m n. MIN (m + n) m = m`,
-  RW_TAC arith_ss [MIN_DEF])
+Theorem MIN_lem[local]:
+  (!m n. MIN m (m + n) = m) /\ !m n. MIN (m + n) m = m
+Proof
+  RW_TAC arith_ss [MIN_DEF]
+QED
 
-val MIN_lem2 = Q.prove(
-  `MIN a (MIN b (MIN (c + a) (c + b))) = MIN a b`,
-  RW_TAC arith_ss [MIN_DEF])
+Theorem MIN_lem2[local]:
+   MIN a (MIN b (MIN (c + a) (c + b))) = MIN a b
+Proof
+  RW_TAC arith_ss [MIN_DEF]
+QED
 
-val MIN_FST = Q.prove(
-  `!x y. x <= y ==> (MIN x y = x)`, RW_TAC arith_ss [MIN_DEF])
+Theorem MIN_FST[local]:
+   !x y. x <= y ==> (MIN x y = x)
+Proof RW_TAC arith_ss [MIN_DEF]
+QED
 
 Theorem word_bits_w2w:
    !w h l. (h -- l) (w2w (w:'a word)):'b word =
@@ -1854,9 +1882,9 @@ Proof
        [dimindex_dimword_le_iso, w2n_n2w, w2w_n2w, BITS_ZEROL_DIMINDEX]
 QED
 
-val word_extract_n2w = save_thm("word_extract_n2w",
+Theorem word_extract_n2w =
   (SIMP_RULE std_ss [BITS_COMP_THM2, word_bits_n2w, w2w_n2w] o
-   Q.SPECL [`h`,`l`,`n2w n`] o SIMP_RULE std_ss [FUN_EQ_THM]) word_extract_def)
+   Q.SPECL [`h`,`l`,`n2w n`] o SIMP_RULE std_ss [FUN_EQ_THM]) word_extract_def
 
 (* |- !h l n. h < dimindex (:'a) ==> (n2w (BITS h l n) = (h -- l) (n2w n)) *)
 Theorem n2w_BITS =
@@ -1907,9 +1935,11 @@ Proof
   SRW_TAC [fcpLib.FCP_ss] [word_modify_def]
 QED
 
-val TWO_EXP_DIMINDEX = Q.prove(
-  `2 <= 2 ** ^WL`,
-  METIS_TAC [EXP_BASE_LE_MONO, DECIDE ``1 < 2``, EXP_1, DIMINDEX_GE_1])
+Theorem TWO_EXP_DIMINDEX[local]:
+   2 <= 2 ** ^WL
+Proof
+  METIS_TAC [EXP_BASE_LE_MONO, DECIDE ``1 < 2``, EXP_1, DIMINDEX_GE_1]
+QED
 
 val lem = GEN_ALL (MATCH_MP LESS_LESS_EQ_TRANS (CONJ
   ((REWRITE_RULE [SUC_SUB,EXP_1] o Q.SPECL [`b`,`b`,`n`]) BITSLT_THM)
@@ -1930,8 +1960,11 @@ Proof
   \\ Cases_on `m = b` \\ ASM_SIMP_TAC arith_ss [BITS_ZERO]
 QED
 
-val lem = Q.prove(`MIN d (l1 + MIN h2 d) = MIN (h2 + l1) d`,
-  RW_TAC arith_ss [MIN_DEF])
+Theorem lem[local]:
+  MIN d (l1 + MIN h2 d) = MIN (h2 + l1) d
+Proof
+  RW_TAC arith_ss [MIN_DEF]
+QED
 
 Theorem WORD_BITS_COMP_THM:
    !h1 l1 h2 l2 w. (h2 -- l2) ((h1 -- l1) w) =
@@ -2026,8 +2059,8 @@ Proof
     \\ RW_TAC arith_ss [word_slice_n2w,SLICE_ZERO,MIN_DEF]
 QED
 
-val WORD_SLICE_ZERO2 = save_thm("WORD_SLICE_ZERO2",
-  GEN_ALL (SIMP_CONV std_ss [word_slice_n2w, SLICE_ZERO2] ``(h '' l) 0w``))
+Theorem WORD_SLICE_ZERO2 =
+  GEN_ALL (SIMP_CONV std_ss [word_slice_n2w, SLICE_ZERO2] ``(h '' l) 0w``)
 
 Theorem WORD_SLICE_BITS_THM:
    !h w. (h '' 0) w = (h -- 0) w
@@ -2074,10 +2107,10 @@ QED
 val word_extract = (GSYM o SIMP_RULE std_ss [] o
   REWRITE_RULE [FUN_EQ_THM]) word_extract_def
 
-val WORD_EXTRACT_BITS_COMP = save_thm("WORD_EXTRACT_BITS_COMP",
+Theorem WORD_EXTRACT_BITS_COMP =
  (GEN_ALL o SIMP_RULE std_ss [word_extract] o
   SIMP_CONV std_ss [word_extract_def,WORD_BITS_COMP_THM])
-  ``(j >< k) ((h -- l) n)``)
+  ``(j >< k) ((h -- l) n)``
 
 Theorem WORD_ALL_BITS:
    !w:'a word h. (dimindex (:'a) - 1 <= h) ==> ((h -- 0) w = w)
@@ -2262,21 +2295,25 @@ Proof
     [word_extract_def, GSYM WORD_BITS_OVER_BITWISE, WORD_w2w_OVER_BITWISE]
 QED
 
-val EXTRACT_OVER_ADD_lem = Q.prove(
-   `!h1 h2 a b.
+Theorem EXTRACT_OVER_ADD_lem[local]:
+    !h1 h2 a b.
        h1 <= h2 ==>
-       (BITS h1 0 (BITS h2 0 a + BITS h2 0 b) = BITS h1 0 (a + b))`,
+       (BITS h1 0 (BITS h2 0 a + BITS h2 0 b) = BITS h1 0 (a + b))
+Proof
   REPEAT STRIP_TAC
     \\ Q.SPEC_THEN `h1` (fn thm => ONCE_REWRITE_TAC [GSYM thm]) BITS_SUM3
-    \\ SRW_TAC [ARITH_ss] [BITS_COMP_THM2, MIN_DEF])
+    \\ SRW_TAC [ARITH_ss] [BITS_COMP_THM2, MIN_DEF]
+QED
 
-val EXTRACT_OVER_MUL_lem = Q.prove(
-   `!h1 h2 a b.
+Theorem EXTRACT_OVER_MUL_lem[local]:
+    !h1 h2 a b.
        h1 <= h2 ==>
-       (BITS h1 0 (BITS h2 0 a * BITS h2 0 b) = BITS h1 0 (a * b))`,
+       (BITS h1 0 (BITS h2 0 a * BITS h2 0 b) = BITS h1 0 (a * b))
+Proof
   REPEAT STRIP_TAC
     \\ Q.SPEC_THEN `h1` (fn thm => ONCE_REWRITE_TAC [GSYM thm]) BITS_MUL
-    \\ SRW_TAC [ARITH_ss] [BITS_COMP_THM2, MIN_DEF])
+    \\ SRW_TAC [ARITH_ss] [BITS_COMP_THM2, MIN_DEF]
+QED
 
 val tac =
   REPEAT STRIP_TAC
@@ -2349,34 +2386,43 @@ Proof
        [prim_recTheory.LESS_SUC_REFL, TWOEXP_MONO, LESS_TRANS, BITS_ZEROL]
 QED
 
-val BIT_SET_lem_ = Q.prove(
-  `!i j n. i < j ==> ~(i IN BIT_SET j n)`,
+Theorem BIT_SET_lem_[local]:
+   !i j n. i < j ==> ~(i IN BIT_SET j n)
+Proof
   completeInduct_on `n` \\ ONCE_REWRITE_TAC [BIT_SET_def]
-    \\ SRW_TAC [ARITH_ss] []);
+    \\ SRW_TAC [ARITH_ss] []
+QED
 
-val BIT_SET_lem = Q.prove(
-  `!k i n. BIT i n <=> i + k IN BIT_SET k n`,
+Theorem BIT_SET_lem[local]:
+   !k i n. BIT i n <=> i + k IN BIT_SET k n
+Proof
   Induct_on `i` \\ ONCE_REWRITE_TAC [BIT_SET_def]
     \\ SRW_TAC [] [BIT_ZERO, BIT0_ODD, BIT_SET_lem_]
     \\ REWRITE_TAC [DECIDE ``SUC a + b = a + SUC b``]
     \\ Q.PAT_X_ASSUM `!k n. BIT i n <=> i + k IN BIT_SET k n`
-         (fn th => REWRITE_TAC [GSYM th, BIT_DIV2]));
+         (fn th => REWRITE_TAC [GSYM th, BIT_DIV2])
+QED
 
-val BIT_SET = save_thm("BIT_SET",
-  (REWRITE_RULE [ADD_0] o Q.SPEC `0`) BIT_SET_lem)
+Theorem BIT_SET =
+  (REWRITE_RULE [ADD_0] o Q.SPEC `0`) BIT_SET_lem
 
-val lem = Q.prove(
-  `!i a b. MAX (LOG2 a) (LOG2 b) < i ==> ~BIT i a /\ ~BIT i b`,
-  SRW_TAC [ARITH_ss] [NOT_BIT_GT_LOG2])
+Theorem lem[local]:
+   !i a b. MAX (LOG2 a) (LOG2 b) < i ==> ~BIT i a /\ ~BIT i b
+Proof
+  SRW_TAC [ARITH_ss] [NOT_BIT_GT_LOG2]
+QED
 
-val lem2 = Q.prove(
-  `!i a b. MIN (LOG2 a) (LOG2 b) < i ==> ~BIT i a \/ ~BIT i b`,
-  NTAC 2 (SRW_TAC [ARITH_ss] [NOT_BIT_GT_LOG2]))
+Theorem lem2[local]:
+   !i a b. MIN (LOG2 a) (LOG2 b) < i ==> ~BIT i a \/ ~BIT i b
+Proof
+  NTAC 2 (SRW_TAC [ARITH_ss] [NOT_BIT_GT_LOG2])
+QED
 
-val bitwise_log_max = Q.prove(
-  `!op i l a b. ~(op F F) /\ i < l ==>
+Theorem bitwise_log_max[local]:
+   !op i l a b. ~(op F F) /\ i < l ==>
        (BIT i (BITWISE l op a b) =
-        BIT i (BITWISE (SUC (MAX (LOG2 a) (LOG2 b))) op a b))`,
+        BIT i (BITWISE (SUC (MAX (LOG2 a) (LOG2 b))) op a b))
+Proof
   REPEAT STRIP_TAC
     \\ Cases_on `l <= SUC (MAX (LOG2 a) (LOG2 b))`
     \\ SRW_TAC [ARITH_ss] [BITWISE_THM]
@@ -2384,12 +2430,14 @@ val bitwise_log_max = Q.prove(
     >- ASM_SIMP_TAC std_ss [BITWISE_THM]
     \\ FULL_SIMP_TAC pure_ss [NOT_LESS_EQUAL,NOT_LESS,NOT_BIT_GT_BITWISE]
     \\ `MAX (LOG2 a) (LOG2 b) < i` by DECIDE_TAC
-    \\ IMP_RES_TAC lem \\ ASM_SIMP_TAC std_ss [])
+    \\ IMP_RES_TAC lem \\ ASM_SIMP_TAC std_ss []
+QED
 
-val bitwise_log_min = Q.prove(
-  `!op i l a b. (!x. ~(op x F) /\ ~(op F x)) /\ i < l ==>
+Theorem bitwise_log_min[local]:
+   !op i l a b. (!x. ~(op x F) /\ ~(op F x)) /\ i < l ==>
        (BIT i (BITWISE l op a b) =
-        BIT i (BITWISE (SUC (MIN (LOG2 a) (LOG2 b))) op a b))`,
+        BIT i (BITWISE (SUC (MIN (LOG2 a) (LOG2 b))) op a b))
+Proof
   REPEAT STRIP_TAC
     \\ Cases_on `l <= SUC (MIN (LOG2 a) (LOG2 b))`
     \\ SRW_TAC [ARITH_ss] [BITWISE_THM]
@@ -2397,12 +2445,14 @@ val bitwise_log_min = Q.prove(
     >- ASM_SIMP_TAC std_ss [BITWISE_THM]
     \\ FULL_SIMP_TAC pure_ss [NOT_LESS_EQUAL,NOT_LESS,NOT_BIT_GT_BITWISE]
     \\ `MIN (LOG2 a) (LOG2 b) < i` by DECIDE_TAC
-    \\ IMP_RES_TAC lem2 \\ ASM_SIMP_TAC std_ss [])
+    \\ IMP_RES_TAC lem2 \\ ASM_SIMP_TAC std_ss []
+QED
 
-val bitwise_log_left = Q.prove(
-  `!op i l a b. (!x. ~(op F x)) /\ i < l ==>
+Theorem bitwise_log_left[local]:
+   !op i l a b. (!x. ~(op F x)) /\ i < l ==>
        (BIT i (BITWISE l op a b) =
-        BIT i (BITWISE (SUC (LOG2 a)) op a b))`,
+        BIT i (BITWISE (SUC (LOG2 a)) op a b))
+Proof
   REPEAT STRIP_TAC
     \\ Cases_on `l <= SUC (LOG2 a)`
     \\ SRW_TAC [ARITH_ss] [BITWISE_THM]
@@ -2410,54 +2460,69 @@ val bitwise_log_left = Q.prove(
     >- ASM_SIMP_TAC std_ss [BITWISE_THM]
     \\ FULL_SIMP_TAC pure_ss [NOT_LESS_EQUAL,NOT_LESS,NOT_BIT_GT_BITWISE]
     \\ `LOG2 a < i` by DECIDE_TAC
-    \\ IMP_RES_TAC NOT_BIT_GT_LOG2 \\ ASM_SIMP_TAC std_ss [])
+    \\ IMP_RES_TAC NOT_BIT_GT_LOG2 \\ ASM_SIMP_TAC std_ss []
+QED
 
-val word_or_n2w_alpha = Q.prove(
-  `!n m. n2w n || n2w m = n2w (BITWISE (SUC (MAX (LOG2 n) (LOG2 m))) $\/ n m)`,
-  RW_TAC arith_ss [word_or_n2w, GSYM WORD_EQ, word_bit_n2w, bitwise_log_max])
+Theorem word_or_n2w_alpha[local]:
+   !n m. n2w n || n2w m = n2w (BITWISE (SUC (MAX (LOG2 n) (LOG2 m))) $\/ n m)
+Proof
+  RW_TAC arith_ss [word_or_n2w, GSYM WORD_EQ, word_bit_n2w, bitwise_log_max]
+QED
 
-val word_and_n2w_alpha = Q.prove(
-  `!n m. n2w n && n2w m = n2w (BITWISE (SUC (MIN (LOG2 n) (LOG2 m))) $/\ n m)`,
-  RW_TAC arith_ss [word_and_n2w, GSYM WORD_EQ, word_bit_n2w, bitwise_log_min])
+Theorem word_and_n2w_alpha[local]:
+   !n m. n2w n && n2w m = n2w (BITWISE (SUC (MIN (LOG2 n) (LOG2 m))) $/\ n m)
+Proof
+  RW_TAC arith_ss [word_and_n2w, GSYM WORD_EQ, word_bit_n2w, bitwise_log_min]
+QED
 
-val lem = Q.prove(
-  `!n m. n2w n && ~(n2w m) : 'a word =
-      n2w (BITWISE (dimindex(:'a)) (\x y. x /\ ~y) n m)`,
-  SRW_TAC [fcpLib.FCP_ss] [word_and_def, word_1comp_def, n2w_def, BITWISE_THM])
+Theorem lem[local]:
+   !n m. n2w n && ~(n2w m) : 'a word =
+      n2w (BITWISE (dimindex(:'a)) (\x y. x /\ ~y) n m)
+Proof
+  SRW_TAC [fcpLib.FCP_ss] [word_and_def, word_1comp_def, n2w_def, BITWISE_THM]
+QED
 
-val word_and_1comp_n2w_alpha = Q.prove(
-  `!n m. n2w n && ~(n2w m) =
-      n2w (BITWISE (SUC (LOG2 n)) (\a b. a /\ ~b) n m)`,
-  RW_TAC arith_ss [lem, GSYM WORD_EQ, word_bit_n2w, bitwise_log_left])
+Theorem word_and_1comp_n2w_alpha[local]:
+   !n m. n2w n && ~(n2w m) =
+      n2w (BITWISE (SUC (LOG2 n)) (\a b. a /\ ~b) n m)
+Proof
+  RW_TAC arith_ss [lem, GSYM WORD_EQ, word_bit_n2w, bitwise_log_left]
+QED
 
-val word_and_1comp_n2w_alpha2 = Q.prove(
-  `!n m. ~(n2w n) && ~(n2w m) =
-      ~(n2w (BITWISE (SUC (MAX (LOG2 n) (LOG2 m))) $\/ n m))`,
-  RW_TAC std_ss [GSYM WORD_DE_MORGAN_THM, word_or_n2w_alpha])
+Theorem word_and_1comp_n2w_alpha2[local]:
+   !n m. ~(n2w n) && ~(n2w m) =
+      ~(n2w (BITWISE (SUC (MAX (LOG2 n) (LOG2 m))) $\/ n m))
+Proof
+  RW_TAC std_ss [GSYM WORD_DE_MORGAN_THM, word_or_n2w_alpha]
+QED
 
-val word_or_1comp_n2w_alpha = Q.prove(
-  `!n m. n2w n || ~(n2w m) =
-      ~(n2w (BITWISE (SUC (LOG2 m)) (\a b. a /\ ~b) m n))`,
+Theorem word_or_1comp_n2w_alpha[local]:
+   !n m. n2w n || ~(n2w m) =
+      ~(n2w (BITWISE (SUC (LOG2 m)) (\a b. a /\ ~b) m n))
+Proof
   RW_TAC std_ss [word_and_1comp_n2w_alpha,
     PROVE [WORD_NOT_NOT, WORD_DE_MORGAN_THM, WORD_AND_COMM]
-      ``a || ~b = ~(b && ~a)``])
+      ``a || ~b = ~(b && ~a)``]
+QED
 
-val word_or_1comp_n2w_alpha2 = Q.prove(
-  `!n m. ~(n2w n) || ~(n2w m) =
-      ~(n2w (BITWISE (SUC (MIN (LOG2 n) (LOG2 m))) $/\ n m))`,
-  RW_TAC std_ss [GSYM WORD_DE_MORGAN_THM, word_and_n2w_alpha])
+Theorem word_or_1comp_n2w_alpha2[local]:
+   !n m. ~(n2w n) || ~(n2w m) =
+      ~(n2w (BITWISE (SUC (MIN (LOG2 n) (LOG2 m))) $/\ n m))
+Proof
+  RW_TAC std_ss [GSYM WORD_DE_MORGAN_THM, word_and_n2w_alpha]
+QED
 
-val WORD_LITERAL_AND = save_thm("WORD_LITERAL_AND",
+Theorem WORD_LITERAL_AND =
   LIST_CONJ
     [word_and_n2w_alpha, word_and_1comp_n2w_alpha,
      ONCE_REWRITE_RULE [WORD_AND_COMM] word_and_1comp_n2w_alpha,
-     word_and_1comp_n2w_alpha2])
+     word_and_1comp_n2w_alpha2]
 
-val WORD_LITERAL_OR = save_thm("WORD_LITERAL_OR",
+Theorem WORD_LITERAL_OR =
   LIST_CONJ
     [word_or_n2w_alpha, word_or_1comp_n2w_alpha,
      ONCE_REWRITE_RULE [WORD_OR_COMM] word_or_1comp_n2w_alpha,
-     word_or_1comp_n2w_alpha2])
+     word_or_1comp_n2w_alpha2]
 
 Theorem WORD_LITERAL_XOR:
    !n m. n2w n ?? n2w m =
@@ -2466,10 +2531,11 @@ Proof
   RW_TAC arith_ss [word_xor_n2w, GSYM WORD_EQ, word_bit_n2w, bitwise_log_max]
 QED
 
-val SNOC_GENLIST_K = Q.prove(
-  `!n c. SNOC c (GENLIST (K c) n) = c::(GENLIST (K c) n)`,
+Theorem SNOC_GENLIST_K[local]:
+   !n c. SNOC c (GENLIST (K c) n) = c::(GENLIST (K c) n)
+Proof
   Induct \\ FULL_SIMP_TAC (srw_ss())  [rich_listTheory.GENLIST, listTheory.SNOC]
-)
+QED
 
 Theorem word_replicate_concat_word_list:
    !n w. word_replicate n w = concat_word_list (GENLIST (K w) n)
@@ -2590,13 +2656,13 @@ val mk_word_reduce_thms =
 (* ......................................................................... *)
 
 (* |- !w. w <> 0w ==> LOG2 (w2n w) < dimindex (:'a) *)
-val LOG2_w2n_lt = save_thm("LOG2_w2n_lt",
+Theorem LOG2_w2n_lt =
    bitTheory.LT_TWOEXP
    |> Q.SPECL [`w2n (w : 'a word)`, `dimindex(:'a)`]
    |> SIMP_RULE std_ss [GSYM dimword_def, w2n_lt, w2n_eq_0]
    |> Q.DISCH `w <> 0w`
    |> SIMP_RULE std_ss []
-   |> Q.GEN `w`)
+   |> Q.GEN `w`
 
 Theorem LOG2_w2n:
    !w:'a word.
@@ -2646,9 +2712,10 @@ QED
     Word reduction: theorems
    ------------------------------------------------------------------------- *)
 
-val BOOLIFY = Q.prove(
-  `!n m a. GENLIST (\i. BIT (n - 1 - i) (BITS (n - 1) 0 m)) n ++ a =
-           BOOLIFY n m a`,
+Theorem BOOLIFY[local]:
+   !n m a. GENLIST (\i. BIT (n - 1 - i) (BITS (n - 1) 0 m)) n ++ a =
+           BOOLIFY n m a
+Proof
   Induct
     \\ SRW_TAC []
          [BOOLIFY_def, DIV2_def, rich_listTheory.GENLIST,
@@ -2656,46 +2723,56 @@ val BOOLIFY = Q.prove(
     \\ POP_ASSUM (fn thm => REWRITE_TAC [GSYM thm])
     \\ SRW_TAC [ARITH_ss] [BIT0_ODD, BIT_OF_BITS_THM,
           rich_listTheory.GENLIST_FUN_EQ, BIT_DIV2,
-          DECIDE ``x < n ==> (n - x = SUC (n - 1 - x))``])
+          DECIDE ``x < n ==> (n - x = SUC (n - 1 - x))``]
+QED
 
-val GENLIST_FCP_INDEX = Q.prove(
-  `!n.
+Theorem GENLIST_FCP_INDEX[local]:
+   !n.
      GENLIST (\i. (n2w n : 'a word) ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) =
      GENLIST (\i. BIT (dimindex(:'a) - 1 - i) (n MOD dimword(:'a)))
-             (dimindex(:'a))`,
+             (dimindex(:'a))
+Proof
   SRW_TAC [ARITH_ss]
     [rich_listTheory.GENLIST_FUN_EQ, BIT_OF_BITS_THM,
-     MOD_DIMINDEX, word_index])
+     MOD_DIMINDEX, word_index]
+QED
 
-val word_reduce_n2w = save_thm("word_reduce_n2w",
+Theorem word_reduce_n2w =
   word_reduce_def
     |> Q.SPECL [`f`,`n2w n`]
     |> REWRITE_RULE
          [BOOLIFY |> Q.SPECL [`dimindex(:'a)`,`n`,`[]`]
                   |> SIMP_RULE (srw_ss()) [GSYM MOD_DIMINDEX,
                         GSYM GENLIST_FCP_INDEX]]
-    |> GEN_ALL)
+    |> GEN_ALL
 
-val GENLIST_UINT_MAXw = Q.prove(
-  `GENLIST (\i. (UINT_MAXw:'a word) ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) =
-   GENLIST (K T) (dimindex(:'a))`,
-   SRW_TAC [ARITH_ss] [rich_listTheory.GENLIST_FUN_EQ, word_T])
+Theorem GENLIST_UINT_MAXw[local]:
+   GENLIST (\i. (UINT_MAXw:'a word) ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) =
+   GENLIST (K T) (dimindex(:'a))
+Proof
+   SRW_TAC [ARITH_ss] [rich_listTheory.GENLIST_FUN_EQ, word_T]
+QED
 
-val GENLIST_0w = Q.prove(
-  `GENLIST (\i. (0w:'a word) ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) =
-   GENLIST (K F) (dimindex(:'a))`,
-   SRW_TAC [ARITH_ss] [rich_listTheory.GENLIST_FUN_EQ, word_0]);
+Theorem GENLIST_0w[local]:
+   GENLIST (\i. (0w:'a word) ' (dimindex(:'a) - 1 - i)) (dimindex(:'a)) =
+   GENLIST (K F) (dimindex(:'a))
+Proof
+   SRW_TAC [ARITH_ss] [rich_listTheory.GENLIST_FUN_EQ, word_0]
+QED
 
-val WORD_REDUCE_LIFT = Q.prove(
-  `(!b. ($FCP (K b) = 1w: 1 word) = b) /\
-    !b. ($FCP (K b) = 0w: 1 word) = ~b`,
+Theorem WORD_REDUCE_LIFT[local]:
+   (!b. ($FCP (K b) = 1w: 1 word) = b) /\
+    !b. ($FCP (K b) = 0w: 1 word) = ~b
+Proof
   STRIP_TAC \\ Cases
     \\ SRW_TAC [fcpLib.FCP_ss]
          [DECIDE ``i < 1 <=> (i = 0)``, n2w_def, BIT_ZERO, fcpTheory.index_one,
-          BIT0_ODD]);
+          BIT0_ODD]
+QED
 
-val TL_GENLIST_K = Q.prove(
-  `!c n. TL (GENLIST (K c) (SUC n)) = GENLIST (K c) n`,
+Theorem TL_GENLIST_K[local]:
+   !c n. TL (GENLIST (K c) (SUC n)) = GENLIST (K c) n
+Proof
   REPEAT STRIP_TAC \\ MATCH_MP_TAC listTheory.LIST_EQ
     \\ SRW_TAC [listSimps.LIST_ss]
          [rich_listTheory.EL_GENLIST, rich_listTheory.LENGTH_GENLIST,
@@ -2703,13 +2780,18 @@ val TL_GENLIST_K = Q.prove(
     \\ ONCE_REWRITE_TAC [rich_listTheory.EL |> CONJUNCT2 |> GSYM]
     \\ `SUC x < SUC n` by DECIDE_TAC
     \\ IMP_RES_TAC rich_listTheory.EL_GENLIST
-    \\ ASM_SIMP_TAC std_ss [])
+    \\ ASM_SIMP_TAC std_ss []
+QED
 
-val NOT_EVERY_HD_F = Q.prove(
-  `!l. ~(FOLDL (/\) F l)`, Induct \\ SRW_TAC [listSimps.LIST_ss] [])
+Theorem NOT_EVERY_HD_F[local]:
+   !l. ~(FOLDL (/\) F l)
+Proof Induct \\ SRW_TAC [listSimps.LIST_ss] []
+QED
 
-val EXISTS_HD_T = Q.prove(
-  `!l. (FOLDL (\/) T l)`, Induct \\ SRW_TAC [listSimps.LIST_ss] [])
+Theorem EXISTS_HD_T[local]:
+   !l. (FOLDL (\/) T l)
+Proof Induct \\ SRW_TAC [listSimps.LIST_ss] []
+QED
 
 Theorem NOT_UINTMAXw:
    !w:'a word. w <> UINT_MAXw ==> ?i. i < dimindex(:'a) /\ ~(w ' i)
@@ -2852,10 +2934,12 @@ val WORD_NEG_mod = LET_RULE (Q.prove(
          (SIMP_RULE bool_ss [GSYM SUC_ONE_ADD,GSYM PRE_SUC_EQ,ZERO_LT_TWOEXP])
     \\ ASM_SIMP_TAC arith_ss [PRE_SUB1]))
 
-val n2w_dimword = Q.prove(
-  `n2w (2 ** ^WL) = 0w:'a word`,
+Theorem n2w_dimword[local]:
+   n2w (2 ** ^WL) = 0w:'a word
+Proof
   ONCE_REWRITE_TAC [GSYM n2w_mod]
-    \\ SIMP_TAC std_ss [DIVMOD_ID,ZERO_MOD,ZERO_LT_TWOEXP,dimword_def])
+    \\ SIMP_TAC std_ss [DIVMOD_ID,ZERO_MOD,ZERO_LT_TWOEXP,dimword_def]
+QED
 
 val WORD_ss = rewrites [word_add_n2w,word_mul_n2w,word_sub_def,word_2comp_def,
   w2n_n2w,n2w_w2n,word_0,n2w_dimword,ZERO_LT_TWOEXP,dimword_def,
@@ -2961,8 +3045,8 @@ Proof
   REWRITE_TAC [WORD_ADD_SUB_ASSOC,WORD_SUB_REFL,WORD_ADD_0]
 QED
 
-val WORD_SUB_ADD = save_thm("WORD_SUB_ADD",
-  REWRITE_RULE [WORD_ADD_SUB_SYM] WORD_ADD_SUB)
+Theorem WORD_SUB_ADD =
+  REWRITE_RULE [WORD_ADD_SUB_SYM] WORD_ADD_SUB
 
 Theorem WORD_ADD_EQ_SUB:
    !v:'a word w x. (v + w = x) = (v = (x - w))
@@ -3030,12 +3114,12 @@ Proof
     \\ METIS_TAC [WORD_EQ_ADD_RCANCEL]
 QED
 
-val WORD_SUB_LNEG = save_thm("WORD_SUB_LNEG",
-  (REWRITE_RULE [GSYM word_sub_def] o GSYM) WORD_NEG_ADD)
+Theorem WORD_SUB_LNEG =
+  (REWRITE_RULE [GSYM word_sub_def] o GSYM) WORD_NEG_ADD
 
-val WORD_SUB_RNEG = save_thm("WORD_SUB_RNEG",
+Theorem WORD_SUB_RNEG =
   (Q.GEN `v` o Q.GEN `w` o REWRITE_RULE [WORD_NEG_NEG] o
-   Q.SPECL [`v`,`- w`]) word_sub_def)
+   Q.SPECL [`v`,`- w`]) word_sub_def
 
 Theorem WORD_SUB_SUB:
    !v:'a word w x. v - (w - x) = v + x - w
@@ -3044,10 +3128,10 @@ Proof
     word_sub_def,WORD_NEG_ADD,WORD_NEG_NEG]
 QED
 
-val WORD_SUB_SUB2 = save_thm("WORD_SUB_SUB2",
+Theorem WORD_SUB_SUB2 =
  (Q.GEN `v` o Q.GEN `w` o
   REWRITE_RULE [WORD_ADD_SUB_SYM,WORD_SUB_REFL,WORD_ADD_0] o
-  Q.SPECL [`v`,`v`,`w`]) WORD_SUB_SUB)
+  Q.SPECL [`v`,`v`,`w`]) WORD_SUB_SUB
 
 Theorem WORD_EQ_SUB_LADD:
    !v:'a word w x. (v = w - x) = (v + x = w)
@@ -3062,9 +3146,9 @@ Proof
   METIS_TAC [WORD_EQ_SUB_LADD]
 QED
 
-val WORD_EQ_SUB_ZERO = save_thm("WORD_EQ_SUB_ZERO",
+Theorem WORD_EQ_SUB_ZERO =
   (GEN_ALL o REWRITE_RULE [WORD_ADD_0] o
-   Q.SPECL [`v`,`w`,`0w`]) WORD_EQ_SUB_RADD)
+   Q.SPECL [`v`,`w`,`0w`]) WORD_EQ_SUB_RADD
 
 Theorem WORD_LCANCEL_SUB[simp]:
   !v:'a word w x. (v - w = x - w) = (v = x)
@@ -3109,16 +3193,16 @@ Proof
   METIS_TAC [WORD_SUB_LZERO, WORD_LCANCEL_SUB, WORD_ADD_SUB]
 QED
 
-val WORD_ADD_SUB2 = save_thm("WORD_ADD_SUB2",
-  ONCE_REWRITE_RULE [WORD_ADD_COMM] WORD_ADD_SUB)
+Theorem WORD_ADD_SUB2 =
+  ONCE_REWRITE_RULE [WORD_ADD_COMM] WORD_ADD_SUB
 
-val WORD_ADD_SUB3 = save_thm("WORD_ADD_SUB3",
+Theorem WORD_ADD_SUB3 =
   (GEN_ALL o REWRITE_RULE [WORD_SUB_REFL,WORD_SUB_LZERO] o
-   Q.SPECL [`v`,`v`]) WORD_SUB_PLUS)
+   Q.SPECL [`v`,`v`]) WORD_SUB_PLUS
 
-val WORD_SUB_SUB3 = save_thm("WORD_SUB_SUB3",
+Theorem WORD_SUB_SUB3 =
   (GEN_ALL o REWRITE_RULE [WORD_ADD_SUB3] o ONCE_REWRITE_RULE [WORD_ADD_COMM] o
-   Q.SPECL [`v`,`w`,`v`] o GSYM) WORD_SUB_PLUS)
+   Q.SPECL [`v`,`w`,`v`] o GSYM) WORD_SUB_PLUS
 
 Theorem WORD_EQ_NEG[simp]:
   !v:'a word w. (- v = - w) = (v = w)
@@ -3126,21 +3210,21 @@ Proof
   REWRITE_TAC [GSYM WORD_SUB_LZERO,WORD_RCANCEL_SUB]
 QED
 
-val WORD_NEG_EQ = save_thm("WORD_NEG_EQ",
-  (GEN_ALL o REWRITE_RULE [WORD_NEG_NEG] o Q.SPECL [`v`,`- w`]) WORD_EQ_NEG)
+Theorem WORD_NEG_EQ =
+  (GEN_ALL o REWRITE_RULE [WORD_NEG_NEG] o Q.SPECL [`v`,`- w`]) WORD_EQ_NEG
 
 Theorem WORD_NEG_EQ_0[simp] =
   (REWRITE_RULE [WORD_NEG_0] o Q.SPECL [`v`,`0w`]) WORD_EQ_NEG;
 
-val WORD_SUB = save_thm("WORD_SUB",
-  (ONCE_REWRITE_RULE [WORD_ADD_COMM] o GSYM) word_sub_def)
+Theorem WORD_SUB =
+  (ONCE_REWRITE_RULE [WORD_ADD_COMM] o GSYM) word_sub_def
 
-val WORD_SUB_NEG = save_thm("WORD_SUB_NEG",
-  (GEN_ALL o REWRITE_RULE [WORD_SUB] o Q.SPEC `- v`) WORD_SUB_RNEG)
+Theorem WORD_SUB_NEG =
+  (GEN_ALL o REWRITE_RULE [WORD_SUB] o Q.SPEC `- v`) WORD_SUB_RNEG
 
-val WORD_NEG_SUB = save_thm("WORD_NEG_SUB",
+Theorem WORD_NEG_SUB =
   (GEN_ALL o REWRITE_RULE [WORD_SUB_NEG,GSYM word_sub_def] o
-   Q.SPECL [`v`,`- w`] o GSYM) WORD_SUB_LNEG)
+   Q.SPECL [`v`,`- w`] o GSYM) WORD_SUB_LNEG
 
 Theorem WORD_SUB_TRIANGLE:
    !v:'a word w x. v - w + (w - x) = v - x
@@ -3149,9 +3233,9 @@ Proof
     \\ REWRITE_TAC [word_sub_def]
 QED
 
-val WORD_NOT_0 = save_thm("WORD_NOT_0",
+Theorem WORD_NOT_0 =
   (GEN_ALL o REWRITE_RULE [WORD_NEG_1,WORD_NEG_0,WORD_SUB_LZERO] o
-   Q.SPEC `0w`) WORD_NOT)
+   Q.SPEC `0w`) WORD_NOT
 
 Theorem WORD_NOT_T:
    ~Tw = 0w
@@ -3178,9 +3262,9 @@ Proof
     \\ ASM_REWRITE_TAC [WORD_NEG_ADD,ADD1,WORD_MULT_SUC,GSYM word_mul_n2w]
 QED
 
-val WORD_NEG_RMUL = save_thm("WORD_NEG_RMUL",
+Theorem WORD_NEG_RMUL =
   (Q.GEN `v` o Q.GEN `w` o ONCE_REWRITE_RULE [WORD_MULT_COMM] o
-    Q.SPECL [`w`,`v`]) WORD_NEG_LMUL)
+    Q.SPECL [`w`,`v`]) WORD_NEG_LMUL
 
 Theorem WORD_NEG_MUL:
    !w. - w = - 1w * w
@@ -3246,8 +3330,8 @@ Proof
   REWRITE_TAC [word_sub_def,WORD_LEFT_ADD_DISTRIB,WORD_NEG_RMUL]
 QED
 
-val WORD_RIGHT_SUB_DISTRIB = save_thm("WORD_RIGHT_SUB_DISTRIB",
-  ONCE_REWRITE_RULE [WORD_MULT_COMM] WORD_LEFT_SUB_DISTRIB)
+Theorem WORD_RIGHT_SUB_DISTRIB =
+  ONCE_REWRITE_RULE [WORD_MULT_COMM] WORD_LEFT_SUB_DISTRIB
 
 Theorem WORD_LITERAL_MULT:
    (!m n. n2w m * - (n2w n) = - (n2w (m * n))) /\
@@ -3291,9 +3375,9 @@ Proof
 QED
 
 (* n2w_SUC |- !n. n2w (SUC n) = n2w n + 1w *)
-val n2w_SUC = save_thm ("n2w_SUC",
+Theorem n2w_SUC =
   SIMP_RULE std_ss [WORD_MULT_CLAUSES,GSYM ADD1]
-          (Q.ISPEC `1w` WORD_MULT_SUC))
+          (Q.ISPEC `1w` WORD_MULT_SUC)
 
 Theorem n2w_sub:
    !a b. b <= a ==> (n2w (a - b) = n2w a - n2w b)
@@ -3450,15 +3534,18 @@ QED
 val MOD_MULT_ = SIMP_RULE arith_ss [] MOD_MULT
 val MOD_EQ_0_ = ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0
 
-val lem = Q.prove(
-  `!a b. 0 < a /\ 1n < b ==> 2 * a <= a * b`,
+Theorem lem[local]:
+   !a b. 0 < a /\ 1n < b ==> 2 * a <= a * b
+Proof
   SRW_TAC [] []
     \\ POP_ASSUM (fn th => STRIP_ASSUME_TAC (MATCH_MP LESS_ADD_1 th))
-    \\ ASM_SIMP_TAC arith_ss [])
+    \\ ASM_SIMP_TAC arith_ss []
+QED
 
-val MOD_SUM_N = Q.prove(
-  `!n a b. 0 < n /\ ~(a MOD n + b MOD n = 0)  /\ ((a + b) MOD n = 0) ==>
-           (a MOD n + b MOD n = n)`,
+Theorem MOD_SUM_N[local]:
+   !n a b. 0 < n /\ ~(a MOD n + b MOD n = 0)  /\ ((a + b) MOD n = 0) ==>
+           (a MOD n + b MOD n = n)
+Proof
   NTAC 3 STRIP_TAC \\ Cases_on `0 < n` \\ ASM_REWRITE_TAC []
     \\ IMP_RES_TAC DA
     \\ POP_ASSUM (fn th => MAP_EVERY (fn v => (STRIP_ASSUME_TAC o Q.SPEC v) th)
@@ -3470,15 +3557,18 @@ val MOD_SUM_N = Q.prove(
     >- FULL_SIMP_TAC arith_ss [MOD_MULT_,
          DECIDE ``n + (r + n * (a + b)) = r + n * (a + b + 1n)``]
     \\ `1 < q''` by DECIDE_TAC \\ IMP_RES_TAC lem
-    \\ FULL_SIMP_TAC arith_ss [])
+    \\ FULL_SIMP_TAC arith_ss []
+QED
 
-val lem = Q.prove(
-  `!a b. 0 < b /\ (a MOD b = 0) ==> ?k. a = k * b`,
+Theorem lem[local]:
+   !a b. 0 < b /\ (a MOD b = 0) ==> ?k. a = k * b
+Proof
   REPEAT STRIP_TAC
     \\ IMP_RES_TAC DA
     \\ POP_ASSUM (Q.SPEC_THEN `a` STRIP_ASSUME_TAC)
     \\ Q.EXISTS_TAC `q`
-    \\ FULL_SIMP_TAC arith_ss [MOD_MULT_])
+    \\ FULL_SIMP_TAC arith_ss [MOD_MULT_]
+QED
 
 Theorem MOD_COMPLEMENT:
    !n q a. 0 < n /\ 0 < q /\ a < q * n ==>
@@ -3522,10 +3612,12 @@ Proof
     \\ ASM_SIMP_TAC fcp_ss []
 QED
 
-val ROL_ZERO = Q.prove(
-  `!w:'a word. w #<< 0 = w`,
+Theorem ROL_ZERO[local]:
+   !w:'a word. w #<< 0 = w
+Proof
   SRW_TAC [ARITH_ss] [DIMINDEX_GT_0, word_rol_def,
-    (REWRITE_RULE [MULT_LEFT_1] o Q.SPECL [`w`,`1`]) ROR_CYCLE])
+    (REWRITE_RULE [MULT_LEFT_1] o Q.SPECL [`w`,`1`]) ROR_CYCLE]
+QED
 
 Theorem SHIFT_ZERO:
    (!a. a << 0 = a) /\ (!a. a >> 0 = a) /\
@@ -3565,16 +3657,18 @@ Proof
     DECIDE ``0 < m ==> (a <= m - 1 <=> a < m)``]
 QED
 
-val word_asr_n2w = Q.prove(
-  `!n w. w:'a word >> n =
+Theorem word_asr_n2w[local]:
+   !n w. w:'a word >> n =
      if word_msb w then
        Tw << (^WL - MIN n ^WL) || w >>> n
      else
-       w >>> n`,
+       w >>> n
+Proof
   NTAC 2 STRIP_TAC \\ Cases_on `^WL < n`
     >- RW_TAC arith_ss [MIN_DEF,SHIFT_ZERO,LSR_LIMIT,ASR_LIMIT,WORD_OR_CLAUSES]
     \\ SHIFT_WORD_TAC \\ Cases_on `^WL <= i + n`
-    \\ FULL_SIMP_TAC arith_ss [MIN_DEF])
+    \\ FULL_SIMP_TAC arith_ss [MIN_DEF]
+QED
 
 val lem = (GEN_ALL o REWRITE_RULE [MATCH_MP (DECIDE ``0 < n ==> 1 <= n``)
   (SPEC_ALL ZERO_LT_TWOEXP),MULT_LEFT_1] o Q.SPECL [`1`,`2 ** n`])
@@ -3595,8 +3689,8 @@ Proof
     \\ ASM_SIMP_TAC std_ss [MOD_TIMES,ZERO_LT_TWOEXP]
 QED
 
-val word_asr_n2w = save_thm("word_asr_n2w",
-  REWRITE_RULE [LSL_UINT_MAX] word_asr_n2w)
+Theorem word_asr_n2w =
+  REWRITE_RULE [LSL_UINT_MAX] word_asr_n2w
 
 val BITS_SUM1 =
   (GEN_ALL o REWRITE_RULE [MULT_LEFT_1] o
@@ -3910,10 +4004,11 @@ Proof
     \\ ASM_SIMP_TAC std_ss [EXTRACT_JOIN_ADD]
 QED
 
-val word_extract_mask1 = Q.prove(
-   `!h l a.
+Theorem word_extract_mask1[local]:
+    !h l a.
         (h >< l) a =
-        if l <= h then a >>> l && (1w << (1 + (h - l)) - 1w) else 0w`,
+        if l <= h then a >>> l && (1w << (1 + (h - l)) - 1w) else 0w
+Proof
    rw_tac (arith_ss++fcpLib.FCP_ss)
       [SHIFT_1_SUB_1, word_and_def, word_extract_def, word_lsr_def,
        word_bits_def, w2w, word_0,
@@ -3921,25 +4016,27 @@ val word_extract_mask1 = Q.prove(
    \\ Cases_on `i + l < dimindex (:'a)`
    \\ lrw []
    \\ decide_tac
-   )
+QED
 
 val word_bits_mask1 = SIMP_RULE std_ss [GSYM WORD_BITS_EXTRACT]
     word_extract_mask1
 
-val word_extract_w2w_mask1 = Q.prove(
-   `!h l a.
+Theorem word_extract_w2w_mask1[local]:
+    !h l a.
         (h >< l) a =
-        w2w (if l <= h then a >>> l && (1w << (1 + (h - l)) - 1w) else 0w)`,
-  SRW_TAC [] [word_extract_def, word_bits_mask1])
+        w2w (if l <= h then a >>> l && (1w << (1 + (h - l)) - 1w) else 0w)
+Proof
+  SRW_TAC [] [word_extract_def, word_bits_mask1]
+QED
 
-val word_extract_mask = save_thm("word_extract_mask",
-  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_mask1)
+Theorem word_extract_mask =
+  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_mask1
 
-val word_bits_mask = save_thm("word_bits_mask",
-  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_bits_mask1)
+Theorem word_bits_mask =
+  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_bits_mask1
 
-val word_extract_w2w_mask = save_thm("word_extract_w2w_mask",
-  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_w2w_mask1)
+Theorem word_extract_w2w_mask =
+  SIMP_RULE std_ss [word_add_n2w, GSYM LSL_ADD, LSL_ONE] word_extract_w2w_mask1
 
 Theorem word_shift_bv:
    (!w:'a word n. n < dimword (:'a) ==> (w << n = w <<~ n2w n)) /\
@@ -3994,14 +4091,18 @@ val word_hi = order_rule word_hi_def
 val word_lo = order_rule word_lo_def
 val word_hs = order_rule word_hs_def
 
-val SPEC_LESS_EXP_SUC_MONO = Q.prove(
-  `2 ** ^HB < 2 ** dimindex (:'a)`,
-  SRW_TAC [][DIMINDEX_GT_0])
+Theorem SPEC_LESS_EXP_SUC_MONO[local]:
+   2 ** ^HB < 2 ** dimindex (:'a)
+Proof
+  SRW_TAC [][DIMINDEX_GT_0]
+QED
 
-val SPLIT_2_EXP_WL = Q.prove(
-  `^dimword_ML = ^INT_MIN_ML + ^INT_MIN_ML`,
+Theorem SPLIT_2_EXP_WL[local]:
+   ^dimword_ML = ^INT_MIN_ML + ^INT_MIN_ML
+Proof
   STRIP_ASSUME_TAC EXISTS_HB
-    \\ ASM_SIMP_TAC arith_ss [EXP])
+    \\ ASM_SIMP_TAC arith_ss [EXP]
+QED
 
 Theorem WORD_NEG_L:
    - word_L = word_L
@@ -4034,24 +4135,29 @@ QED
 val BITS_COMP_MSB = (SIMP_RULE arith_ss [] o
   Q.SPECL [`m`,`0`,`m - 1`,`0`]) BITS_COMP_THM
 
-val SLICE_COMP_MSB = Q.prove(
-  `!b n. ~(b = 0) ==> (SLICE b b n + SLICE (b - 1) 0 n = SLICE b 0 n)`,
+Theorem SLICE_COMP_MSB[local]:
+   !b n. ~(b = 0) ==> (SLICE b b n + SLICE (b - 1) 0 n = SLICE b 0 n)
+Proof
    REPEAT STRIP_TAC
      \\ POP_ASSUM (fn th => REWRITE_TAC [(SIMP_RULE arith_ss [SUB_SUC1,th] o
-          Q.SPECL [`b`,`b - 1`,`0`,`n`]) SLICE_COMP_THM]))
+          Q.SPECL [`b`,`b - 1`,`0`,`n`]) SLICE_COMP_THM])
+QED
 
-val MSB_THM1 = Q.prove(
-  `!a:'a word. ~(^HB = 0) /\ word_msb a ==>
-        (w2n a = ^INT_MIN_ML + BITS (^HB - 1) 0 (w2n a))`,
+Theorem MSB_THM1[local]:
+   !a:'a word. ~(^HB = 0) /\ word_msb a ==>
+        (w2n a = ^INT_MIN_ML + BITS (^HB - 1) 0 (w2n a))
+Proof
   Cases \\ POP_ASSUM (K ALL_TAC) \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC arith_ss [word_msb_n2w,w2n_n2w,GSYM BITS_ZERO3,BITS_COMP_MSB,
                         dimword_def]
     \\ IMP_RES_TAC BIT_SLICE_THM2 \\ POP_ASSUM (SUBST1_TAC o SYM)
-    \\ ASM_SIMP_TAC arith_ss [SLICE_COMP_MSB,GSYM SLICE_ZERO_THM])
+    \\ ASM_SIMP_TAC arith_ss [SLICE_COMP_MSB,GSYM SLICE_ZERO_THM]
+QED
 
-val MSB_THM2 = Q.prove(
-  `!a:'a word. ~(^HB = 0) /\ word_msb a ==>
-        (w2n (- a) = ^INT_MIN_ML - BITS (^HB - 1) 0 (w2n a))`,
+Theorem MSB_THM2[local]:
+   !a:'a word. ~(^HB = 0) /\ word_msb a ==>
+        (w2n (- a) = ^INT_MIN_ML - BITS (^HB - 1) 0 (w2n a))
+Proof
   Cases \\ POP_ASSUM (K ALL_TAC) \\ REPEAT STRIP_TAC \\ IMP_RES_TAC MSB_THM1
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [word_msb_n2w,word_2comp_n2w,w2n_n2w,
@@ -4061,11 +4167,13 @@ val MSB_THM2 = Q.prove(
     \\ REWRITE_TAC [EXP,TIMES2,SUB_PLUS,ADD_SUB]
     \\ `2 ** m - n MOD 2 ** m < 2 ** SUC m` by METIS_TAC
          [DECIDE ``a - b <= a /\ a < SUC a``,TWOEXP_MONO,LESS_EQ_LESS_TRANS]
-    \\ ASM_SIMP_TAC arith_ss [GSYM EXP,LESS_MOD])
+    \\ ASM_SIMP_TAC arith_ss [GSYM EXP,LESS_MOD]
+QED
 
-val MSB_THM3 = Q.prove(
-  `!a:'a word. ~(^HB = 0) /\ ~word_msb a ==>
-        (w2n a = BITS (^HB - 1) 0 (w2n a))`,
+Theorem MSB_THM3[local]:
+   !a:'a word. ~(^HB = 0) /\ ~word_msb a ==>
+        (w2n a = BITS (^HB - 1) 0 (w2n a))
+Proof
   Cases \\ POP_ASSUM (K ALL_TAC) \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC arith_ss [word_msb_n2w,w2n_n2w,GSYM BITS_ZERO3,BITS_COMP_MSB,
                         dimword_def]
@@ -4073,12 +4181,14 @@ val MSB_THM3 = Q.prove(
     \\ MAP_EVERY IMP_RES_TAC [BIT_SLICE_THM3,SLICE_COMP_MSB]
     \\ POP_ASSUM (Q.SPEC_THEN `n` ASSUME_TAC)
     \\ Q.PAT_X_ASSUM `SLICE m m n = 0` (fn th =>
-         FULL_SIMP_TAC arith_ss [th,GSYM SLICE_ZERO_THM]))
+         FULL_SIMP_TAC arith_ss [th,GSYM SLICE_ZERO_THM])
+QED
 
-val MSB_THM4 = Q.prove(
-  `!a:'a word. ~(^HB = 0) /\ ~(a = 0w) /\ ~word_msb a ==>
+Theorem MSB_THM4[local]:
+   !a:'a word. ~(^HB = 0) /\ ~(a = 0w) /\ ~word_msb a ==>
        (w2n (- a) = ^dimword_ML - BITS (^HB - 1) 0 (w2n a)) /\
-       ~(BITS (^HB - 1) 0 (w2n a) = 0)`,
+       ~(BITS (^HB - 1) 0 (w2n a) = 0)
+Proof
   Cases \\ POP_ASSUM (K ALL_TAC) \\ REPEAT STRIP_TAC \\ IMP_RES_TAC MSB_THM3
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [word_msb_n2w,word_2comp_n2w,w2n_n2w,n2w_11,
@@ -4086,44 +4196,59 @@ val MSB_THM4 = Q.prove(
     \\ FULL_SIMP_TAC arith_ss [BITS_COMP_THM2,MIN_DEF]
     \\ `2 ** SUC m - BITS (m - 1) 0 n < 2 ** SUC m`
     by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
-    \\ ASM_SIMP_TAC bool_ss [BITS_ZEROL])
+    \\ ASM_SIMP_TAC bool_ss [BITS_ZEROL]
+QED
 
-val HB_0_MSB = Q.prove(
-  `!a:'a word. (^HB = 0) /\ word_msb a ==> (a = 1w)`,
+Theorem HB_0_MSB[local]:
+   !a:'a word. (^HB = 0) /\ word_msb a ==> (a = 1w)
+Proof
   Cases \\ POP_ASSUM (K ALL_TAC) \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC bool_ss [word_msb_n2w,w2n_n2w,n2w_11,BIT_def,SUC_SUB1,dimword_def]
-    \\ FULL_SIMP_TAC arith_ss [BITS_ZERO3]);
+    \\ FULL_SIMP_TAC arith_ss [BITS_ZERO3]
+QED
 
-val HB_0_NOT_MSB = Q.prove(
-  `!a:'a word. (^HB = 0) /\ ~word_msb a ==> (a = 0w)`,
+Theorem HB_0_NOT_MSB[local]:
+   !a:'a word. (^HB = 0) /\ ~word_msb a ==> (a = 0w)
+Proof
   Cases \\ POP_ASSUM (K ALL_TAC) \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC fcp_ss [word_msb_n2w,n2w_11,ZERO_MOD,ZERO_LT_TWOEXP,
          GSYM BITS_ZERO3,dimword_def]
-    \\ METIS_TAC [DECIDE ``SUC m <= 1 <=> (m = 0)``,BIT_def,NOT_BITS2]);
+    \\ METIS_TAC [DECIDE ``SUC m <= 1 <=> (m = 0)``,BIT_def,NOT_BITS2]
+QED
 
-val DIMINDEX_1 = Q.prove(
-  `(^WL - 1 = 0) ==> (^WL = 1)`,
-  STRIP_ASSUME_TAC EXISTS_HB \\ ASM_SIMP_TAC arith_ss [])
+Theorem DIMINDEX_1[local]:
+   (^WL - 1 = 0) ==> (^WL = 1)
+Proof
+  STRIP_ASSUME_TAC EXISTS_HB \\ ASM_SIMP_TAC arith_ss []
+QED
 
-val MSB_THM1b = Q.prove(
-  `!a:'a word. (^HB = 0) /\ word_msb a ==> (w2n a = 1)`,
+Theorem MSB_THM1b[local]:
+   !a:'a word. (^HB = 0) /\ word_msb a ==> (w2n a = 1)
+Proof
   METIS_TAC [HB_0_MSB,DIMINDEX_1,EXP_1,LESS_MOD,DECIDE ``1 < 2``,w2n_n2w,
-             dimword_def])
+             dimword_def]
+QED
 
-val MSB_THM2b = Q.prove(
-  `!a:'a word. (^HB = 0) /\ word_msb a ==> (w2n (word_2comp a) = 1)`,
+Theorem MSB_THM2b[local]:
+   !a:'a word. (^HB = 0) /\ word_msb a ==> (w2n (word_2comp a) = 1)
+Proof
   REPEAT STRIP_TAC \\ MAP_EVERY IMP_RES_TAC [HB_0_MSB,DIMINDEX_1]
-    \\ ASM_SIMP_TAC arith_ss [w2n_n2w,word_2comp_n2w,dimword_def])
+    \\ ASM_SIMP_TAC arith_ss [w2n_n2w,word_2comp_n2w,dimword_def]
+QED
 
-val MSB_THM3b = Q.prove(
-  `!a:'a word. (^HB = 0) /\ ~word_msb a ==> (w2n a = 0)`,
+Theorem MSB_THM3b[local]:
+   !a:'a word. (^HB = 0) /\ ~word_msb a ==> (w2n a = 0)
+Proof
   REPEAT STRIP_TAC \\ MAP_EVERY IMP_RES_TAC [HB_0_NOT_MSB,DIMINDEX_1]
-    \\ ASM_SIMP_TAC arith_ss [w2n_n2w,dimword_def])
+    \\ ASM_SIMP_TAC arith_ss [w2n_n2w,dimword_def]
+QED
 
-val MSB_THM4b = Q.prove(
-  `!a:'a word. (^HB = 0) /\ ~word_msb a ==> (w2n (word_2comp a) = 0)`,
+Theorem MSB_THM4b[local]:
+   !a:'a word. (^HB = 0) /\ ~word_msb a ==> (w2n (word_2comp a) = 0)
+Proof
   REPEAT STRIP_TAC \\ MAP_EVERY IMP_RES_TAC [HB_0_NOT_MSB,DIMINDEX_1]
-    \\ ASM_SIMP_TAC arith_ss [w2n_n2w,WORD_NEG_0,dimword_def])
+    \\ ASM_SIMP_TAC arith_ss [w2n_n2w,WORD_NEG_0,dimword_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -4135,13 +4260,16 @@ val BITS_MSB_LT = (GEN_ALL o SIMP_RULE arith_ss [SUB_SUC1] o
 
 val SLICE_MSB_LT = REWRITE_RULE [GSYM SLICE_ZERO_THM] BITS_MSB_LT
 
-val BITS_MSB_LTEQ = Q.prove(
-  `!b a. ~(b = 0) ==> BITS (b - 1) 0 a <= 2 ** b`,
-  PROVE_TAC [LESS_IMP_LESS_OR_EQ,BITS_MSB_LT])
+Theorem BITS_MSB_LTEQ[local]:
+   !b a. ~(b = 0) ==> BITS (b - 1) 0 a <= 2 ** b
+Proof
+  PROVE_TAC [LESS_IMP_LESS_OR_EQ,BITS_MSB_LT]
+QED
 
-val TWO_COMP_POS = Q.prove(
-  `!a:'a word. ~word_msb a ==>
-          (if a = 0w then ~word_msb (- a) else word_msb (- a))`,
+Theorem TWO_COMP_POS[local]:
+   !a:'a word. ~word_msb a ==>
+          (if a = 0w then ~word_msb (- a) else word_msb (- a))
+Proof
   Cases
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ RW_TAC bool_ss [WORD_NEG_0]
@@ -4155,12 +4283,14 @@ val TWO_COMP_POS = Q.prove(
     by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
     \\ ASM_SIMP_TAC std_ss [LESS_MOD] \\ IMP_RES_TAC BITS_MSB_LTEQ
     \\ ASM_SIMP_TAC bool_ss [Q.SPECL [`m`,`m`] BITS_THM,SUC_SUB,EXP_1,EXP,
-         TIMES2,LESS_EQ_ADD_SUB,DIV_MULT_1] \\ numLib.REDUCE_TAC)
+         TIMES2,LESS_EQ_ADD_SUB,DIV_MULT_1] \\ numLib.REDUCE_TAC
+QED
 
-val TWO_COMP_NEG_lem = Q.prove(
-  `!n. ~(^HB = 0) /\ ~((n2w n):'a word = word_L) /\
+Theorem TWO_COMP_NEG_lem[local]:
+   !n. ~(^HB = 0) /\ ~((n2w n):'a word = word_L) /\
        word_msb ((n2w n):'a word) ==>
-       ~(BITS (^WL - 2) 0 (w2n ((n2w n):'a word)) = 0)`,
+       ~(BITS (^WL - 2) 0 (w2n ((n2w n):'a word)) = 0)
+Proof
   REPEAT STRIP_TAC \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC arith_ss [BITS_COMP_THM2,MIN_DEF,GSYM BITS_ZERO3,
          word_msb_n2w,w2n_n2w,dimword_def]
@@ -4171,7 +4301,8 @@ val TWO_COMP_NEG_lem = Q.prove(
     \\ FULL_SIMP_TAC arith_ss [word_L_def,n2w_11,LESS_MOD,
          SUC_SUB1,SUC_SUB2,TWOEXP_MONO,dimword_def,INT_MIN_def]
     \\ FULL_SIMP_TAC bool_ss [GSYM BITS_ZERO3,GSYM SLICE_ZERO_THM]
-    \\ PROVE_TAC [ADD_0])
+    \\ PROVE_TAC [ADD_0]
+QED
 
 Theorem TWO_COMP_NEG:
    !a:'a word. word_msb a ==>
@@ -4217,9 +4348,9 @@ Theorem WORD_0_POS:
 Proof REWRITE_TAC [word_msb_n2w,BIT_ZERO]
 QED
 
-val TWO_COMP_POS = save_thm("TWO_COMP_POS",
+Theorem TWO_COMP_POS =
   METIS_PROVE [TWO_COMP_POS, WORD_NEG_0, WORD_0_POS]
-  ``!a. ~word_msb a ==> (a = 0w) \/ word_msb (- a)``)
+  ``!a. ~word_msb a ==> (a = 0w) \/ word_msb (- a)``
 
 Theorem WORD_H_POS:
    ~word_msb word_H
@@ -4241,9 +4372,10 @@ QED
 val NOT_EQUAL_THEN_NOT =
   PROVE [EQUAL_THEN_SUB_ZERO] ``!a b. ~(a = b) = ~(b - a = 0w)``
 
-val SUB_EQUAL_WORD_L_INT_MIN = Q.prove(
-  `!a:'a word b:'a word. ~(^HB = 0) /\ (a - b = word_L) ==>
-      ~(word_msb a = word_msb b)`,
+Theorem SUB_EQUAL_WORD_L_INT_MIN[local]:
+   !a:'a word b:'a word. ~(^HB = 0) /\ (a - b = word_L) ==>
+      ~(word_msb a = word_msb b)
+Proof
   RW_TAC bool_ss [WORD_EQ_SUB_RADD] \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ `~(m = 0)` by DECIDE_TAC \\ Cases_on `b`
     \\ ASM_REWRITE_TAC [word_msb_n2w,word_L_def,SUC_SUB1,INT_MIN_def]
@@ -4255,7 +4387,8 @@ val SUB_EQUAL_WORD_L_INT_MIN = Q.prove(
     \\ Cases_on `BIT m n`
     >| [IMP_RES_TAC BIT_SLICE_THM2,IMP_RES_TAC BIT_SLICE_THM3]
     \\ ASM_SIMP_TAC arith_ss [BIT_def,BITS_THM,SUC_SUB,EXP_1,SLICE_MSB_LT,
-         DIV_MULT,DIV_MULT_1])
+         DIV_MULT,DIV_MULT_1]
+QED
 
 val LEM1_TAC =
   REPEAT STRIP_TAC
@@ -4309,9 +4442,10 @@ val start_tac =
     \\ FULL_SIMP_TAC bool_ss [NOT_LESS,GSYM LESS_EQ_ADD_SUB,BITS_MSB_LT,
          DECIDE (Term `!a b. a + b + a = 2 * a + b`)]
 
-val WORD_LT_lem = Q.prove(
-  `!a:'a word b. ~(^HB = 0) /\ word_msb a /\
-         word_msb b /\ word_msb (a - b) ==> w2n a < w2n b`,
+Theorem WORD_LT_lem[local]:
+   !a:'a word b. ~(^HB = 0) /\ word_msb a /\
+         word_msb b /\ word_msb (a - b) ==> w2n a < w2n b
+Proof
   start_tac \\ IMP_RES_TAC LESS_EQ_ADD2
     \\ ASM_SIMP_TAC bool_ss [Abbr`x`,Abbr`y`,LESS_EQ_ADD_SUB2,BIT_def,
          BITS_THM,SUC_SUB,EXP_1,DIV_1,SUB_0,CONJUNCT1 EXP,LESS_EQ_ADD_SUB,
@@ -4321,11 +4455,13 @@ val WORD_LT_lem = Q.prove(
     \\ Q.PAT_X_ASSUM `~(x = 0)` ASSUME_TAC \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC bool_ss [SUC_SUB1,BITS_ZERO3,LESS_EQ_ADD_SUB,SUB_SUC1,
          DECIDE ``a < c /\ b < c ==> (a - b) < c:num``,MOD_2EXP_LT,DIV_MULT,
-         DIVMOD_ID,DECIDE ``0 < 2``])
+         DIVMOD_ID,DECIDE ``0 < 2``]
+QED
 
-val WORD_LT_lem2 = Q.prove(
-  `!a:'a word b. ~(^HB = 0) /\ word_msb a /\ word_msb b /\
-         ~word_msb (a - b) ==> ~(w2n a < w2n b)`,
+Theorem WORD_LT_lem2[local]:
+   !a:'a word b. ~(^HB = 0) /\ word_msb a /\ word_msb b /\
+         ~word_msb (a - b) ==> ~(w2n a < w2n b)
+Proof
   start_tac
     \\ ONCE_REWRITE_TAC [DECIDE (Term `!a b c. (a:num) + b + c = a + c + b`)]
     \\ Q.PAT_X_ASSUM `2 ** N + _ < 2 ** N + _`
@@ -4338,7 +4474,8 @@ val WORD_LT_lem2 = Q.prove(
          DECIDE ``a + b + c - (c + b) = a:num``]
     \\ `p' < p + 1 + p'` by DECIDE_TAC
     \\ ASM_SIMP_TAC bool_ss [BIT_def,BITS_THM,SUC_SUB,EXP_1,DIV_MULT_1]
-    \\ numLib.REDUCE_TAC)
+    \\ numLib.REDUCE_TAC
+QED
 
 val w2n_0 =
   SIMP_CONV arith_ss [w2n_n2w,ZERO_MOD,ZERO_LT_TWOEXP,dimword_def] ``w2n 0w``
@@ -4362,19 +4499,22 @@ val start_tac = REWRITE_TAC [word_sub_def,word_add_def]
     \\ FULL_SIMP_TAC bool_ss [NOT_LESS,GSYM LESS_EQ_ADD_SUB]
     \\ ONCE_REWRITE_TAC [ADD_COMM]
 
-val WORD_LT_lem3 = Q.prove(
-  `!a:'a word b. ~(^HB = 0) /\ ~word_msb a /\ ~word_msb b /\
-         word_msb (a - b) ==> w2n a < w2n b`,
+Theorem WORD_LT_lem3[local]:
+   !a:'a word b. ~(^HB = 0) /\ ~word_msb a /\ ~word_msb b /\
+         word_msb (a - b) ==> w2n a < w2n b
+Proof
   start_tac \\ `x < ^INT_MIN_ML` by METIS_TAC [BITS_MSB_LT]
     \\ `x - y < ^INT_MIN_ML` by DECIDE_TAC
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC bool_ss [BIT_def,BITS_THM,SUC_SUB,EXP_1,
          LESS_EQ_ADD_SUB,EXP,DIV_MULT,SUC_SUB1]
-    \\ numLib.REDUCE_TAC)
+    \\ numLib.REDUCE_TAC
+QED
 
-val WORD_LT_lem4 = Q.prove(
-  `!a:'a word b. ~(^HB = 0) /\ ~word_msb a /\ ~word_msb b /\
-        ~word_msb (a - b) ==> ~(w2n a < w2n b)`,
+Theorem WORD_LT_lem4[local]:
+   !a:'a word b. ~(^HB = 0) /\ ~word_msb a /\ ~word_msb b /\
+        ~word_msb (a - b) ==> ~(w2n a < w2n b)
+Proof
   start_tac
     \\ `y <= ^INT_MIN_ML + x` by DECIDE_TAC
     \\ ASM_SIMP_TAC bool_ss [SPLIT_2_EXP_WL,GSYM ADD_ASSOC,LESS_EQ_ADD_SUB]
@@ -4383,7 +4523,8 @@ val WORD_LT_lem4 = Q.prove(
     \\ STRIP_ASSUME_TAC EXISTS_HB
     \\ FULL_SIMP_TAC bool_ss [LESS_EQ_ADD_SUB2,DIV_MULT_1,BIT_def,
          BITS_THM,SUC_SUB,EXP_1]
-    \\ numLib.REDUCE_TAC)
+    \\ numLib.REDUCE_TAC
+QED
 
 Theorem WORD_LT:
   !a b. word_lt a b <=> (word_msb a = word_msb b) /\ w2n a < w2n b \/
@@ -4400,9 +4541,9 @@ Proof
     \\ ASM_SIMP_TAC arith_ss [BIT_def,BITS_THM]
 QED
 
-val WORD_GT = save_thm("WORD_GT",
+Theorem WORD_GT =
   (Q.GEN `a` o Q.GEN `b` o REWRITE_CONV [WORD_GREATER,WORD_LT,GSYM GREATER_DEF])
-  ``a:'a word > b``)
+  ``a:'a word > b``
 
 Theorem WORD_LE:
   !a:'a word b. a <= b <=> (word_msb a = word_msb b) /\ (w2n a <= w2n b) \/
@@ -4411,18 +4552,20 @@ Proof
   SIMP_TAC bool_ss [WORD_LT,GSYM WORD_NOT_LESS,NOT_LESS] \\ DECIDE_TAC
 QED
 
-val WORD_GE = save_thm("WORD_GE",
+Theorem WORD_GE =
   (Q.GEN `a` o Q.GEN `b` o
-   REWRITE_CONV [WORD_GREATER_EQ,WORD_LE,GSYM GREATER_EQ]) ``a:'a word >= b``)
+   REWRITE_CONV [WORD_GREATER_EQ,WORD_LE,GSYM GREATER_EQ]) ``a:'a word >= b``
 
-val w2n_2comp = Q.prove(
-  `!a:'a word. w2n (- a) = if a = 0w then 0 else ^dimword_ML - w2n a`,
+Theorem w2n_2comp[local]:
+   !a:'a word. w2n (- a) = if a = 0w then 0 else ^dimword_ML - w2n a
+Proof
   RW_TAC bool_ss [WORD_NEG_0,w2n_0] \\ Cases_on `a` \\ POP_ASSUM (K ALL_TAC)
     \\ FULL_SIMP_TAC bool_ss
          [GSYM w2n_11,w2n_0,w2n_n2w,word_2comp_n2w,dimword_def]
     \\ `^dimword_ML - n MOD ^dimword_ML < ^dimword_ML`
           by ASM_SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
-    \\ ASM_SIMP_TAC bool_ss [LESS_MOD])
+    \\ ASM_SIMP_TAC bool_ss [LESS_MOD]
+QED
 
 Theorem WORD_LO:
   !a b. a <+ b <=> w2n a < w2n b
@@ -4710,12 +4853,14 @@ QED
 val w2n_word_L = SIMP_CONV arith_ss [word_L_def,w2n_n2w,LESS_MOD,
   SPEC_LESS_EXP_SUC_MONO,INT_MIN_def,dimword_def] ``w2n word_L``
 
-val w2n_word_H = Q.prove(
-  `w2n (word_H:'a word) = ^INT_MIN_ML - 1`,
+Theorem w2n_word_H[local]:
+   w2n (word_H:'a word) = ^INT_MIN_ML - 1
+Proof
   `^INT_MIN_ML - 1 < ^INT_MIN_ML` by SIMP_TAC arith_ss [ZERO_LT_TWOEXP]
     \\ ASSUME_TAC SPEC_LESS_EXP_SUC_MONO \\ IMP_RES_TAC LESS_TRANS
     \\ ASM_SIMP_TAC arith_ss [word_H_def,w2n_n2w,LESS_MOD,
-         INT_MAX_def,INT_MIN_def,dimword_def])
+         INT_MAX_def,INT_MIN_def,dimword_def]
+QED
 
 Theorem WORD_L_PLUS_H:
    word_L + word_H = word_T
@@ -4751,10 +4896,12 @@ Proof
     \\ METIS_TAC [SUB_LESS_OR,SLICE_MSB_LT,ADD]
 QED
 
-val WORD_NOT_L_EQ_H = Q.prove(
-  `~(word_L = word_H)`,
+Theorem WORD_NOT_L_EQ_H[local]:
+   ~(word_L = word_H)
+Proof
   SIMP_TAC arith_ss [GSYM w2n_11,w2n_word_L,w2n_word_H,
-    GSYM ADD_EQ_SUB,ONE_LT_EQ_TWOEXP])
+    GSYM ADD_EQ_SUB,ONE_LT_EQ_TWOEXP]
+QED
 
 Theorem WORD_L_LESS_H:
    word_L < word_H
@@ -4763,13 +4910,13 @@ Proof
     WORD_NOT_L_EQ_H,WORD_LESS_OR_EQ]
 QED
 
-val NOT_INT_MIN_ZERO = save_thm("NOT_INT_MIN_ZERO",
-  METIS_PROVE [WORD_L_NEG, WORD_0_POS] ``~(INT_MINw = 0w)``)
+Theorem NOT_INT_MIN_ZERO =
+  METIS_PROVE [WORD_L_NEG, WORD_0_POS] ``~(INT_MINw = 0w)``
 
-val ZERO_LO_INT_MIN = save_thm("ZERO_LO_INT_MIN",
+Theorem ZERO_LO_INT_MIN =
   EQT_ELIM (SIMP_CONV arith_ss [WORD_LO, word_0_n2w,
     REWRITE_RULE [GSYM w2n_11] NOT_INT_MIN_ZERO]
-  ``0w <+ INT_MINw``))
+  ``0w <+ INT_MINw``)
 
 Theorem WORD_0_LS:
    !w. 0w <=+ w
@@ -4819,37 +4966,43 @@ Theorem WORD_ADD_LEFT_LS:
 Proof tac
 QED
 
-val WORD_ADD_RIGHT_LS = save_thm("WORD_ADD_RIGHT_LS",
+Theorem WORD_ADD_RIGHT_LS =
   (Q.GEN `c` o Q.GEN `a` o Q.GEN `b`)
   ((SIMP_CONV std_ss [COND_RAND, LET_RAND, WORD_ADD_LEFT_LO,
      GSYM WORD_NOT_LOWER] THENC SIMP_CONV std_ss [WORD_NOT_LOWER])
-  ``a <=+ b + c``))
+  ``a <=+ b + c``)
 
-val WORD_ADD_RIGHT_LO = save_thm("WORD_ADD_RIGHT_LO",
+Theorem WORD_ADD_RIGHT_LO =
   (Q.GEN `c` o Q.GEN `a` o Q.GEN `b`)
   ((SIMP_CONV std_ss [GSYM WORD_NOT_LOWER_EQUAL, COND_RAND, LET_RAND,
       Once WORD_ADD_LEFT_LS] THENC SIMP_CONV std_ss [WORD_NOT_LOWER_EQUAL])
-  ``a <+ b + c``));
+  ``a <+ b + c``);
 
-val WORD_LT_LO = Q.prove(
-  `!a b. a < b <=>
+Theorem WORD_LT_LO[local]:
+   !a b. a < b <=>
         word_msb a /\ (~word_msb b \/ a <+ b) \/
-        ~word_msb a /\ ~word_msb b /\ a <+ b`,
+        ~word_msb a /\ ~word_msb b /\ a <+ b
+Proof
   NTAC 2 STRIP_TAC \\ SIMP_TAC std_ss [WORD_LT, WORD_LO]
     \\ Cases_on `word_msb a` \\ Cases_on `word_msb b`
-    \\ ASM_SIMP_TAC std_ss []);
+    \\ ASM_SIMP_TAC std_ss []
+QED
 
-val WORD_LE_LS = Q.prove(
-  `!a b. a <= b <=>
+Theorem WORD_LE_LS[local]:
+   !a b. a <= b <=>
         word_msb a /\ (~word_msb b \/ a <=+ b) \/
-        ~word_msb a /\ ~word_msb b /\ a <=+ b`,
+        ~word_msb a /\ ~word_msb b /\ a <=+ b
+Proof
   NTAC 2 STRIP_TAC \\ SIMP_TAC std_ss [WORD_LE, WORD_LS]
     \\ Cases_on `word_msb a` \\ Cases_on `word_msb b`
-    \\ ASM_SIMP_TAC std_ss []);
+    \\ ASM_SIMP_TAC std_ss []
+QED
 
-val INT_MIN_LT_dimword = Q.prove(
-  `INT_MIN (:'a) < dimword (:'a)`,
-  SRW_TAC [] [INT_MIN_def, dimword_def, DIMINDEX_GT_0])
+Theorem INT_MIN_LT_dimword[local]:
+   INT_MIN (:'a) < dimword (:'a)
+Proof
+  SRW_TAC [] [INT_MIN_def, dimword_def, DIMINDEX_GT_0]
+QED
 
 Theorem WORD_MSB_INT_MIN_LS:
   !a. word_msb a <=> INT_MINw <=+ a
@@ -4859,11 +5012,11 @@ Proof
          INT_MIN_LT_dimword]
 QED
 
-val WORD_LT_LO = save_thm("WORD_LT_LO",
-  SIMP_RULE std_ss [WORD_MSB_INT_MIN_LS, WORD_NOT_LOWER_EQUAL] WORD_LT_LO)
+Theorem WORD_LT_LO =
+  SIMP_RULE std_ss [WORD_MSB_INT_MIN_LS, WORD_NOT_LOWER_EQUAL] WORD_LT_LO
 
-val WORD_LE_LS = save_thm("WORD_LE_LS",
-  SIMP_RULE std_ss [WORD_MSB_INT_MIN_LS, WORD_NOT_LOWER_EQUAL] WORD_LE_LS)
+Theorem WORD_LE_LS =
+  SIMP_RULE std_ss [WORD_MSB_INT_MIN_LS, WORD_NOT_LOWER_EQUAL] WORD_LE_LS
 
 Theorem WORD_LESS_NEG_LEFT:
   !a b. - a <+ b <=> ~(b = 0w) /\ ((a = 0w) \/ - b <+ a)
@@ -4899,11 +5052,11 @@ QED
 
 Theorem WORD_LO_word_0R[simp] = CONJUNCT2 WORD_LO_word_0
 
-val WORD_ADD_LEFT_LO2 = save_thm("WORD_ADD_LEFT_LO2",
+Theorem WORD_ADD_LEFT_LO2 =
   (GEN_ALL o SIMP_RULE (arith_ss++boolSimps.CONJ_ss++boolSimps.LET_ss)
      [WORD_LOWER_EQ_REFL, WORD_ADD_0, WORD_LO_word_0,
       WORD_LOWER_OR_EQ, WORD_NEG_EQ, Once WORD_LESS_NEG_LEFT] o
-   Q.SPECL [`a`, `a`, `c`]) WORD_ADD_LEFT_LO)
+   Q.SPECL [`a`, `a`, `c`]) WORD_ADD_LEFT_LO
 
 Theorem WORD_ADD_LEFT_LS2 =
   (GEN_ALL o REWRITE_RULE [GSYM WORD_LOWER_OR_EQ] o
@@ -4979,24 +5132,26 @@ QED
 
 (*---------------------------------------------------------------------------*)
 
-val FST_ADD_WITH_CARRY = Q.prove(
-  `(!a b. FST (add_with_carry (a,b,F)) = a + b) /\
+Theorem FST_ADD_WITH_CARRY[local]:
+   (!a b. FST (add_with_carry (a,b,F)) = a + b) /\
    (!a b. FST (add_with_carry (a,~b,T)) = a - b) /\
-   (!a b. FST (add_with_carry (~a,b,T)) = b - a)`,
+   (!a b. FST (add_with_carry (~a,b,T)) = b - a)
+Proof
   SRW_TAC [boolSimps.LET_ss]
     [GSYM word_add_def, add_with_carry_def,
      GSYM word_add_n2w, word_sub_def, WORD_NOT]
     \\ METIS_TAC [WORD_ADD_LINV, WORD_ADD_RINV, WORD_ADD_0,
-                  WORD_ADD_ASSOC, WORD_ADD_COMM])
+                  WORD_ADD_ASSOC, WORD_ADD_COMM]
+QED
 
-val FST_ADD_WITH_CARRY = save_thm("FST_ADD_WITH_CARRY",
+Theorem FST_ADD_WITH_CARRY =
   CONJ FST_ADD_WITH_CARRY
    (case CONJUNCTS (CONJUNCT2 FST_ADD_WITH_CARRY) of
       [thm1,thm2] =>
         (CONJ (thm1 |> Q.SPECL [`a`,`~(n2w n)`] |> GEN_ALL)
               (thm2 |> Q.SPEC `~(n2w n)` |> GEN_ALL))
           |> REWRITE_RULE [WORD_NOT_NOT]
-    | _ => raise ERR "" ""))
+    | _ => raise ERR "" "")
 
 Theorem ADD_WITH_CARRY_SUB:
   !x y.
@@ -5102,9 +5257,11 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-val lem = Q.prove(
-  `!n a b. a < 2 ** n /\ b < 2 ** n ==> a + b < 2 ** (n + 1)`,
-  SRW_TAC [ARITH_ss] [EXP, GSYM ADD1])
+Theorem lem[local]:
+   !n a b. a < 2 ** n /\ b < 2 ** n ==> a + b < 2 ** (n + 1)
+Proof
+  SRW_TAC [ARITH_ss] [EXP, GSYM ADD1]
+QED
 
 Theorem w2n_add:
    !a b. ~word_msb a /\ ~word_msb b ==> (w2n (a + b) = w2n a + w2n b)
@@ -5189,13 +5346,17 @@ Proof
        [word_T_def, UINT_MAX_def, GSYM n2w_sub]
 QED
 
-val dimindex_dub = Q.prove(
-  `FINITE (univ(:'a)) ==> dimindex(:'a) <= dimindex(:'a + 'a)`,
-  SRW_TAC [] [fcpTheory.index_sum])
+Theorem dimindex_dub[local]:
+   FINITE (univ(:'a)) ==> dimindex(:'a) <= dimindex(:'a + 'a)
+Proof
+  SRW_TAC [] [fcpTheory.index_sum]
+QED
 
-val dimword_dub = Q.prove(
-  `FINITE (univ(:'a)) ==> (dimword(:'a + 'a) = dimword(:'a) * dimword(:'a))`,
-  SRW_TAC [] [dimword_def, fcpTheory.index_sum, EXP_ADD])
+Theorem dimword_dub[local]:
+   FINITE (univ(:'a)) ==> (dimword(:'a + 'a) = dimword(:'a) * dimword(:'a))
+Proof
+  SRW_TAC [] [dimword_def, fcpTheory.index_sum, EXP_ADD]
+QED
 
 Theorem NOT_FINITE_IMP_dimword_2:
    ~FINITE (univ(:'a)) ==> (dimword(:'a) = 2)
@@ -5203,9 +5364,11 @@ Proof
   SRW_TAC [] [dimword_def, fcpTheory.NOT_FINITE_IMP_dimindex_1]
 QED
 
-val lt_2_mul = Q.prove(
-  `!a b. a < 2n /\ b < 2n ==> ~(2 <= a * b)`,
-  SRW_TAC [] [NOT_LESS_EQUAL, DECIDE ``a < 2n <=> (a = 0) \/ (a = 1)``]);
+Theorem lt_2_mul[local]:
+   !a b. a < 2n /\ b < 2n ==> ~(2 <= a * b)
+Proof
+  SRW_TAC [] [NOT_LESS_EQUAL, DECIDE ``a < 2n <=> (a = 0) \/ (a = 1)``]
+QED
 
 Theorem saturate_mul:
    !a b.
@@ -5262,9 +5425,9 @@ Proof
   SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [word_T, WORD_NEG_1, word_reverse_def]
 QED
 
-val sw2sw_0 = save_thm("sw2sw_0",
+Theorem sw2sw_0 =
   SIMP_CONV (arith_ss++boolSimps.LET_ss)
-  [word_0_n2w, sw2sw_def, BIT_ZERO, SIGN_EXTEND_def] ``sw2sw 0w``)
+  [word_0_n2w, sw2sw_def, BIT_ZERO, SIGN_EXTEND_def] ``sw2sw 0w``
 
 Theorem sw2sw_word_T:
    sw2sw (- 1w) = - 1w
@@ -5272,12 +5435,12 @@ Proof
   SRW_TAC [fcpLib.FCP_ss, ARITH_ss] [sw2sw, word_T, word_msb_def, WORD_NEG_1]
 QED
 
-val word_div_1 = save_thm("word_div_1",
-  GEN_ALL (SIMP_CONV std_ss [word_1_n2w, word_div_def, n2w_w2n] ``v // 1w``))
+Theorem word_div_1 =
+  GEN_ALL (SIMP_CONV std_ss [word_1_n2w, word_div_def, n2w_w2n] ``v // 1w``)
 
-val word_bit_0 = save_thm("word_bit_0",
+Theorem word_bit_0 =
   GEN_ALL (EQF_ELIM
-    (SIMP_CONV std_ss [word_bit_n2w, BIT_ZERO] ``word_bit h 0w``)))
+    (SIMP_CONV std_ss [word_bit_n2w, BIT_ZERO] ``word_bit h 0w``))
 
 Theorem word_lsb_word_T:
    word_lsb (- 1w)
@@ -5313,8 +5476,8 @@ Proof
     [word_join_def, w2w_0, ZERO_SHIFT, WORD_OR_CLAUSES]
 QED
 
-val word_concat_0_0 = save_thm("word_concat_0_0",
-  SIMP_CONV std_ss [word_join_0, w2w_0, word_concat_def] ``0w @@ 0w``)
+Theorem word_concat_0_0 =
+  SIMP_CONV std_ss [word_join_0, w2w_0, word_concat_def] ``0w @@ 0w``
 
 Theorem w2w_eq_n2w:
    !x:'a word y.
@@ -5402,15 +5565,16 @@ Proof
     \\ FULL_SIMP_TAC std_ss [DECIDE ``i < 1 <=> (i = 0)``, DIMINDEX_GT_0]
 QED
 
-val word_concat_word_T = save_thm("word_concat_word_T",
-  (REWRITE_RULE [word_join_word_T] o Q.SPECL [`- 1w`,`- 1w`]) word_concat_def)
+Theorem word_concat_word_T =
+  (REWRITE_RULE [word_join_word_T] o Q.SPECL [`- 1w`,`- 1w`]) word_concat_def
 
 val BIT0_CONV = SIMP_CONV std_ss [BIT0_ODD]
 
-val extract_00 = Q.prove(
-  `(!a:'a word. (0 -- 0) a = if word_lsb a then 1w else 0w) /\
+Theorem extract_00[local]:
+   (!a:'a word. (0 -- 0) a = if word_lsb a then 1w else 0w) /\
    (!a:'a word. (0 '' 0) a = if word_lsb a then 1w else 0w) /\
-   (!a:'a word. (0 >< 0) a = if word_lsb a then 1w else 0w:'b word)`,
+   (!a:'a word. (0 >< 0) a = if word_lsb a then 1w else 0w:'b word)
+Proof
   SRW_TAC [fcpLib.FCP_ss]
        [n2w_def, w2w, word_bits_def, word_slice_def, word_extract_def,
         word_lsb_def, DIMINDEX_GT_0]
@@ -5419,7 +5583,8 @@ val extract_00 = Q.prove(
          [DIMINDEX_GT_0, BIT0_CONV ``BIT 0 1``, BIT0_CONV ``BIT 0 0``,
           (SIMP_RULE std_ss [] o Q.SPECL [`i`,`0`]) BIT_B_NEQ, BIT_ZERO]
     \\ Cases_on `i < dimindex (:'a)`
-    \\ SRW_TAC [fcpLib.FCP_ss] [])
+    \\ SRW_TAC [fcpLib.FCP_ss] []
+QED
 
 Theorem lsr_1_word_T:
    - 1w >>> 1 = INT_MAXw
@@ -5482,44 +5647,54 @@ QED
 
 (* word_reverse *)
 
-val word_reverse_reverse = Q.prove(
-  `!w. word_reverse (word_reverse w) = w:'a word`,
+Theorem word_reverse_reverse[local]:
+   !w. word_reverse (word_reverse w) = w:'a word
+Proof
   FULL_SIMP_TAC std_ss [word_reverse_def,fcpTheory.CART_EQ,fcpTheory.FCP_BETA]
   THEN REPEAT STRIP_TAC
   THEN `(dimindex (:'a) - 1 - i) < dimindex (:'a)` by DECIDE_TAC
   THEN FULL_SIMP_TAC std_ss [word_reverse_def,fcpTheory.CART_EQ,fcpTheory.FCP_BETA]
-  THEN AP_TERM_TAC THEN DECIDE_TAC);
+  THEN AP_TERM_TAC THEN DECIDE_TAC
+QED
 
-val word_reverse_lsl = Q.prove(
-  `!w n. word_reverse (w << n) = (word_reverse w >>> n):'a word`,
+Theorem word_reverse_lsl[local]:
+   !w n. word_reverse (w << n) = (word_reverse w >>> n):'a word
+Proof
   FULL_SIMP_TAC std_ss [word_reverse_def,word_lsl_def,word_lsr_def,
     fcpTheory.CART_EQ,fcpTheory.FCP_BETA] THEN REPEAT STRIP_TAC
   THEN `(dimindex (:'a) - 1 - i) < dimindex (:'a)` by DECIDE_TAC
   THEN Cases_on `i + n < dimindex (:'a)`
   THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA]
   THEN `i + n < dimindex (:'a) <=> n <= dimindex (:'a) - 1 - i` by DECIDE_TAC
-  THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA,SUB_PLUS]);
+  THEN FULL_SIMP_TAC std_ss [fcpTheory.FCP_BETA,SUB_PLUS]
+QED
 
-val word_reverse_lsr = Q.prove(
-  `!w n. word_reverse (w >>> n) = (word_reverse w << n):'a word`,
-  METIS_TAC [word_reverse_lsl,word_reverse_reverse])
+Theorem word_reverse_lsr[local]:
+   !w n. word_reverse (w >>> n) = (word_reverse w << n):'a word
+Proof
+  METIS_TAC [word_reverse_lsl,word_reverse_reverse]
+QED
 
-val word_reverse_EQ_ZERO = Q.prove(
-  `!w:'a word. (word_reverse w = 0w) = (w = 0w)`,
+Theorem word_reverse_EQ_ZERO[local]:
+   !w:'a word. (word_reverse w = 0w) = (w = 0w)
+Proof
   FULL_SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_reverse_def,word_0]
   THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
   THEN `dimindex (:'a) - 1 - i < dimindex (:'a)` by DECIDE_TAC THEN RES_TAC
   THEN `dimindex (:'a) - 1 - (dimindex (:'a) - 1 - i) = i` by DECIDE_TAC
-  THEN FULL_SIMP_TAC std_ss [])
+  THEN FULL_SIMP_TAC std_ss []
+QED
 
-val word_reverse_EQ_ONE = Q.prove(
-  `!w:'a word. (word_reverse w = - 1w) = (w = - 1w)`,
+Theorem word_reverse_EQ_ONE[local]:
+   !w:'a word. (word_reverse w = - 1w) = (w = - 1w)
+Proof
   FULL_SIMP_TAC std_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,
     word_reverse_def,WORD_NEG_1_T]
   THEN REPEAT STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC
   THEN `dimindex (:'a) - 1 - i < dimindex (:'a)` by DECIDE_TAC THEN RES_TAC
   THEN `dimindex (:'a) - 1 - (dimindex (:'a) - 1 - i) = i` by DECIDE_TAC
-  THEN FULL_SIMP_TAC std_ss [])
+  THEN FULL_SIMP_TAC std_ss []
+QED
 
 Theorem word_reverse_thm:
    !w (v:'a word) n.
@@ -5609,9 +5784,9 @@ Proof
   \\ METIS_TAC []
 QED
 
-val WORD_SET_INDUCT = save_thm("WORD_SET_INDUCT",
+Theorem WORD_SET_INDUCT =
   REWRITE_RULE [WORD_FINITE]
-  (Q.INST_TYPE [`:'a`|->`:'a word`] FINITE_INDUCT))
+  (Q.INST_TYPE [`:'a`|->`:'a word`] FINITE_INDUCT)
 
 (* -------------------------------------------------------------------------
     Support for termination proofs
@@ -5633,14 +5808,18 @@ Theorem WORD_PRED_THM[tfl_termsimp]:
 Proof REPEAT STRIP_TAC \\ IMP_RES_TAC SUC_WORD_PRED \\ DECIDE_TAC
 QED
 
-val triv_exp = Q.prove
-(`!m. 0 < 2 **  m`,
-  Induct THEN RW_TAC arith_ss [EXP])
+Theorem triv_exp[local]:
+  !m. 0 < 2 **  m
+Proof
+  Induct THEN RW_TAC arith_ss [EXP]
+QED
 
-val ONE_LESS_TWO_EXP = Q.prove
-(`!m. 0<m ==> 1 < 2 ** m`,
+Theorem ONE_LESS_TWO_EXP[local]:
+  !m. 0<m ==> 1 < 2 ** m
+Proof
 Cases THEN RW_TAC arith_ss [EXP] THEN
- `0 < 2 ** n` by METIS_TAC [triv_exp] THEN DECIDE_TAC)
+ `0 < 2 ** n` by METIS_TAC [triv_exp] THEN DECIDE_TAC
+QED
 
 Theorem LSR_LESS[tfl_termsimp]:
    !m y. ~(y = 0w) /\ 0<m ==> w2n (y >>> m) < w2n y
@@ -5661,12 +5840,14 @@ Proof
   \\ ASM_SIMP_TAC std_ss [GSYM word_add_n2w,ADD_SUB,WORD_ADD_SUB,w2n_n2w]
 QED
 
-val ZERO_LE_TOP_FALSE = Q.prove(
-  `!n. (0w <= n2w n:'a word) = (BIT (dimindex (:'a) - 1) n = F)`,
+Theorem ZERO_LE_TOP_FALSE[local]:
+   !n. (0w <= n2w n:'a word) = (BIT (dimindex (:'a) - 1) n = F)
+Proof
   SRW_TAC [] [word_le_n2w,LET_DEF]
   \\ FULL_SIMP_TAC std_ss
        [BIT_def,BITS_def,MOD_2EXP_def,DIV_2EXP_def,ZERO_DIV,ZERO_MOD,
-        ZERO_LT_EXP,EVAL ``0 < 2``])
+        ZERO_LT_EXP,EVAL ``0 < 2``]
+QED
 
 Theorem WORD_LE_EQ_LS:
   !x y. 0w <= x /\ 0w <= y ==> (x <= y <=> x <=+ y)
@@ -5691,26 +5872,32 @@ Proof
                         word_msb_n2w_numeric,w2n_n2w,NOT_LESS_EQUAL]
 QED
 
-val WORD_ZERO_LE_SUB_LEMMA = Q.prove(
-  `!x:'a word y. 0w <= x /\ y <=+ x ==> 0w <= x - y`,
+Theorem WORD_ZERO_LE_SUB_LEMMA[local]:
+   !x:'a word y. 0w <= x /\ y <=+ x ==> 0w <= x - y
+Proof
   `!m n k. m < n ==> m - k < n:num` by DECIDE_TAC
   \\ ASM_SIMP_TAC bool_ss [WORD_ZERO_LE,WORD_LS,
-       REWRITE_RULE [WORD_LS] word_sub_w2n])
+       REWRITE_RULE [WORD_LS] word_sub_w2n]
+QED
 
-val WORD_ZERO_LE_SUB = Q.prove(
-  `!x:'a word y. 0w <= y /\ y <= x ==> 0w <= x - y`,
+Theorem WORD_ZERO_LE_SUB[local]:
+   !x:'a word y. 0w <= y /\ y <= x ==> 0w <= x - y
+Proof
   REPEAT STRIP_TAC
   \\ IMP_RES_TAC WORD_LESS_EQ_TRANS
   \\ MATCH_MP_TAC WORD_ZERO_LE_SUB_LEMMA
-  \\ ASM_SIMP_TAC std_ss [GSYM WORD_LE_EQ_LS])
+  \\ ASM_SIMP_TAC std_ss [GSYM WORD_LE_EQ_LS]
+QED
 
-val WORD_ZERO_LT_SUB = Q.prove(
-  `!x:'a word y. 0w < y /\ y < x ==> 0w < x - y`,
+Theorem WORD_ZERO_LT_SUB[local]:
+   !x:'a word y. 0w < y /\ y < x ==> 0w < x - y
+Proof
   REPEAT STRIP_TAC
   \\ IMP_RES_TAC WORD_LESS_IMP_LESS_OR_EQ
   \\ IMP_RES_TAC WORD_ZERO_LE_SUB
   \\ `(0w < x - y) \/ (0w = x - y)` by ASM_REWRITE_TAC [GSYM WORD_LESS_OR_EQ]
-  \\ METIS_TAC [WORD_EQ_SUB_ZERO,WORD_LESS_NOT_EQ])
+  \\ METIS_TAC [WORD_EQ_SUB_ZERO,WORD_LESS_NOT_EQ]
+QED
 
 Theorem WORD_LT_SUB_UPPER:
    !x:'a word y. 0w < y /\ y < x ==> x - y < x
@@ -5727,14 +5914,16 @@ Proof
   \\ ASM_SIMP_TAC bool_ss [w2n_eq_0]
 QED
 
-val WORD_LE_SUB_UPPER = Q.prove(
-  `!x:'a word y. 0w <= y /\ y <= x ==> x - y <= x`,
+Theorem WORD_LE_SUB_UPPER[local]:
+   !x:'a word y. 0w <= y /\ y <= x ==> x - y <= x
+Proof
   REPEAT STRIP_TAC
   \\ REWRITE_TAC [WORD_LESS_OR_EQ]
   \\ `(0w < y) \/ (0w = y)` by ASM_REWRITE_TAC [GSYM WORD_LESS_OR_EQ]
   \\ `(y < x) \/ (y = x)` by ASM_REWRITE_TAC [GSYM WORD_LESS_OR_EQ]
   \\ ASM_SIMP_TAC bool_ss [WORD_LT_SUB_UPPER,WORD_SUB_REFL]
-  \\ METIS_TAC [WORD_SUB_RZERO])
+  \\ METIS_TAC [WORD_SUB_RZERO]
+QED
 
 Theorem WORD_SUB_LT:
    !x:'a word y. 0w < y /\ y < x ==> 0w < x - y /\ x - y < x

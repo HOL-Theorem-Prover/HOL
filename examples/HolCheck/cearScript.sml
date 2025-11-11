@@ -704,11 +704,12 @@ val SCC_REL = save_thm("SCC_REL",prove(``!R s si. R_EQR R ==> (s IN SCC R si = R
 val SCC_REL_IMP = save_thm("SCC_REL_IMP",prove(``!R s1 s2 si. R_EQR R ==> (s1 IN SCC R si /\ s2 IN SCC R si) ==> R(s1,s2)``,
 PROVE_TAC [SCC_REL,R_EQR_def,R_SYM_def,R_TRANS_def]));
 
-val BIGOR_OVER_AND = store_thm(
-  "BIGOR_OVER_AND",
-  ``!P Q k. (?i. i<=k /\ P i) /\ (?i. i<=k /\ Q i)
-         =  ?i j. i<=k /\ j<=k /\ (P i /\ Q j)``,
-  PROVE_TAC []);
+Theorem BIGOR_OVER_AND:
+    !P Q k. (?i. i<=k /\ P i) /\ (?i. i<=k /\ Q i)
+         =  ?i j. i<=k /\ j<=k /\ (P i /\ Q j)
+Proof
+  PROVE_TAC []
+QED
 
 val abst_lem1 = save_thm("abst_lem1",prove(``!f sh k i j. ((!i. i<=k /\ f i sh ==> !j. j<=k /\ f j sh ==> (i=j)) ==> i<=k /\ j<=k /\ f i sh /\ f j sh ==> (i=j))``,
 REPEAT STRIP_TAC THEN RES_TAC));

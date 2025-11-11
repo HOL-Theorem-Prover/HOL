@@ -44,15 +44,16 @@ End
 (*      if k = (F, F) then 0 else 1 / 3                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val INDEP_FN_PROB_TRICHOTOMY_ITER = store_thm
-  ("INDEP_FN_PROB_TRICHOTOMY_ITER",
-   ``prob_trichotomy_iter IN indep_fn``,
+Theorem INDEP_FN_PROB_TRICHOTOMY_ITER:
+     prob_trichotomy_iter IN indep_fn
+Proof
    RW_TAC std_ss [prob_trichotomy_iter_def, INDEP_FN_BIND, INDEP_FN_UNIT,
-                  INDEP_FN_SDEST]);
+                  INDEP_FN_SDEST]
+QED
 
-val PROB_BERN_TRICHOTOMY_ITER = store_thm
-  ("PROB_BERN_TRICHOTOMY_ITER",
-   ``!s. prob bern (s o FST o prob_trichotomy_iter) = & (CARD s) / 4``,
+Theorem PROB_BERN_TRICHOTOMY_ITER:
+     !s. prob bern (s o FST o prob_trichotomy_iter) = & (CARD s) / 4
+Proof
    STRIP_TAC
    >> MATCH_MP_TAC REAL_EQ_LMUL_IMP
    >> Q.EXISTS_TAC `4`
@@ -220,36 +221,40 @@ val PROB_BERN_TRICHOTOMY_ITER = store_thm
    >> RW_TAC std_ss [IN_INSERT, prefix_set_def, IN_HALFSPACE, SHD_SCONS,
                      STL_SCONS, sdest_def, prob_trichotomy_iter_def, BIND_DEF,
                      UNCURRY, o_THM, UNIT_DEF, NOT_IN_EMPTY, IN_INTER,
-                     IN_UNIV, IN_o] ));
+                     IN_UNIV, IN_o] )
+QED
 
-val PROB_TRICHOTOMY_SET = store_thm
-  ("PROB_TRICHOTOMY_SET",
-   ``{a | (\(x,y). x \/ y) a} = {(T, T); (T, F); (F, T)}``,
+Theorem PROB_TRICHOTOMY_SET:
+     {a | (\(x,y). x \/ y) a} = {(T, T); (T, F); (F, T)}
+Proof
    ONCE_REWRITE_TAC [SET_PAIR_BOOL]
    >> RW_TAC arith_ss [GSPECIFICATION, INSERT_UNION, IN_INSERT, NOT_IN_EMPTY,
-                       UNION_EMPTY]);
+                       UNION_EMPTY]
+QED
 
-val PROB_TERMINATES_TRICHOTOMY = store_thm
-  ("PROB_TERMINATES_TRICHOTOMY",
-   ``?*s. (\(x,y). x \/ y) (FST (prob_trichotomy_iter s))``,
+Theorem PROB_TERMINATES_TRICHOTOMY:
+     ?*s. (\(x,y). x \/ y) (FST (prob_trichotomy_iter s))
+Proof
    RW_TAC arith_ss [possibly_bern_def, possibly_def, EVENT_TRANSITION,
                     INDEP_FN_FST_EVENTS, INDEP_FN_PROB_TRICHOTOMY_ITER,
                     PROB_BERN_TRICHOTOMY_ITER, PROB_TRICHOTOMY_SET, CARD_INSERT,
                     FINITE_PAIR_BOOL, CARD_EMPTY, NOT_IN_EMPTY, IN_INSERT, ADD1]
    >> Suff `(0 :real) < 3 / 4` >- REAL_ARITH_TAC
-   >> RW_TAC arith_ss [REAL_LT_DIV, REAL_LT]);
+   >> RW_TAC arith_ss [REAL_LT_DIV, REAL_LT]
+QED
 
-val INDEP_FN_PROB_TRICHOTOMY = store_thm
-  ("INDEP_FN_PROB_TRICHOTOMY",
-   ``prob_trichotomy IN indep_fn``,
+Theorem INDEP_FN_PROB_TRICHOTOMY:
+     prob_trichotomy IN indep_fn
+Proof
    RW_TAC std_ss [prob_trichotomy_def, INDEP_FN_PROB_UNTIL,
-                  INDEP_FN_PROB_TRICHOTOMY_ITER, PROB_TERMINATES_TRICHOTOMY]);
+                  INDEP_FN_PROB_TRICHOTOMY_ITER, PROB_TERMINATES_TRICHOTOMY]
+QED
 
-val PROB_TRICHOTOMY = store_thm
-  ("PROB_TRICHOTOMY",
-   ``!k.
+Theorem PROB_TRICHOTOMY:
+     !k.
        prob bern {s | FST (prob_trichotomy s) = k} =
-       if k = (F, F) then 0 else 1 / 3``,
+       if k = (F, F) then 0 else 1 / 3
+Proof
    Know `!k. {s | FST (prob_trichotomy s) = k} = {k} o FST o prob_trichotomy`
    >- (SET_EQ_TAC
        >> RW_TAC std_ss [GSPECIFICATION, IN_o, o_THM, IN_INSERT, NOT_IN_EMPTY])
@@ -264,20 +269,22 @@ val PROB_TRICHOTOMY = store_thm
    >> Cases_on `r`
    >> RW_TAC arith_ss [CARD_INSERT, FINITE_PAIR_BOOL, CARD_EMPTY, NOT_IN_EMPTY,
                        IN_INSERT, ADD1, REAL_DIV_LZERO]
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val PROB_TRICHOTOMY_COMPUTE = store_thm
-  ("PROB_TRICHOTOMY_COMPUTE",
-   ``!s.
+Theorem PROB_TRICHOTOMY_COMPUTE:
+     !s.
        prob_trichotomy s =
        BIND sdest
        (\x. BIND sdest (\y. if x \/ y then UNIT (x,y) else prob_trichotomy))
-       s``,
+       s
+Proof
    STRIP_TAC
    >> CONV_TAC (LAND_CONV (REWRITE_CONV [prob_trichotomy_def]))
    >> RW_TAC std_ss [CONV_RULE (ONCE_DEPTH_CONV FUN_EQ_CONV) PROB_UNTIL_ADVANCE,
                      INDEP_FN_PROB_TRICHOTOMY_ITER, PROB_TERMINATES_TRICHOTOMY]
    >> RW_TAC std_ss [GSYM prob_trichotomy_def]
    >> RW_TAC std_ss [prob_trichotomy_iter_def, GSYM BIND_ASSOC,
-                     BIND_LEFT_UNIT]);
+                     BIND_LEFT_UNIT]
+QED
 

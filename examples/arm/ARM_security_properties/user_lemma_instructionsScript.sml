@@ -111,8 +111,8 @@ val _ = go_on 1;
 val store_return_state_instr_help_let_thm = save_thm ("store_return_state_instr_help_let_thm", top_thm());
 
 
-val store_return_state_instr_help_let_comb_thm = store_thm ("store_return_state_instr_help_let_comb_thm",
-    ``preserve_relation_mmu
+Theorem store_return_state_instr_help_let_comb_thm:
+      preserve_relation_mmu
      ((current_mode_is_user_or_system <|proc := 0|>
       ||| current_instr_set <|proc := 0|>) >>=
    (λ(is_user_or_system,iset).
@@ -146,14 +146,16 @@ val store_return_state_instr_help_let_comb_thm = store_thm ("store_return_state_
                         else
                           base + 0xFFFFFFF8w))) >>=
            (λ(u1,u2,u3,u4). return ()))))
-      (assert_mode 16w) (comb_mode 16w 27w) priv_mode_constraints priv_mode_similar``,
+      (assert_mode 16w) (comb_mode 16w 27w) priv_mode_constraints priv_mode_similar
+Proof
      ASSUME_TAC store_return_state_instr_help_let_thm
         THEN ASSUME_TAC (SPECL [``16w:word5``, ``27w:word5``] comb_mode_thm)
         THEN ASSUME_TAC (SPECL [``(assert_mode 16w):(arm_state->bool)``,
                      ``(assert_mode 27w):(arm_state->bool)``,
                      ``(comb_mode 16w 27w):(arm_state->bool)``,
                      ``(assert_mode 16w):(arm_state->bool)``] (INST_TYPE [alpha |-> type_of(``()``)] preserve_relation_comb_v2_thm))
-        THEN RES_TAC);
+        THEN RES_TAC
+QED
 val _ =  add_to_simplist store_return_state_instr_help_let_comb_thm;
 
 
@@ -200,9 +202,8 @@ val store_multiple_part = ``(λ(base,cpsr).
                       (λ(u1,u2,u3). return ())))):bool[32] # ARMpsr -> unit M``;
 
 
-val store_multiple_part_simp = store_thm(
-    "store_multiple_part_simp",
-    `` (preserve_relation_mmu(
+Theorem store_multiple_part_simp:
+       (preserve_relation_mmu(
          (read_reg <|proc:=0|> n ||| read_cpsr <|proc:=0|>) >>=
              (λ(base,cpsr).
                 (let mode = if system then 16w else cpsr.M and
@@ -284,7 +285,8 @@ val store_multiple_part_simp = store_thm(
                                   write_reg <|proc:=0|> n (base + length)
                                 else
                                   write_reg <|proc:=0|> n (base − length))) >>=
-                      (λ(u1,u2,u3). return ()))))) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar)``,
+                      (λ(u1,u2,u3). return ()))))) (assert_mode 16w) (assert_mode 16w) priv_mode_constraints priv_mode_similar)
+Proof
     FULL_SIMP_TAC (srw_ss()) [preserve_relation_mmu_def, assert_mode_def, ARM_MODE_def, ARM_READ_CPSR_def]
        THEN EQ_TAC
        THEN (REPEAT STRIP_TAC)
@@ -292,7 +294,8 @@ val store_multiple_part_simp = store_thm(
        THEN ASSUME_TAC (SPECL [``s2:arm_state``, ``n:word4``, store_multiple_part] (INST_TYPE [alpha |-> type_of(``()``)] read_reg_read_cpsr_par_effect_lem))
        THEN RES_TAC
        THEN UNDISCH_ALL_TAC
-       THEN RW_TAC (srw_ss()) []);
+       THEN RW_TAC (srw_ss()) []
+QED
 
 
 
@@ -603,9 +606,8 @@ val _ = add_to_simplist data_processing_help_thm;
 
 (* multiply long - write flags - part *)
 
-val multiply_long_instr_part_thm = store_thm(
-    "multiply_long_instr_part_thm",
-    ``preserve_relation_mmu
+Theorem multiply_long_instr_part_thm:
+      preserve_relation_mmu
       ((λ(C_flag,V_flag).
       write_flags <|proc := 0|>
         (word_msb
@@ -616,8 +618,10 @@ val multiply_long_instr_part_thm = store_thm(
          0w,C_flag,V_flag))
       (if (version:num) = 4 then (UNKNOWN,UNKNOWN) else (C,V)))
       (assert_mode 16w) (assert_mode 16w) priv_mode_constraints
-     priv_mode_similar``,
-    RW_TAC (srw_ss()) [(GEN_ALL write_flags_thm)]);
+     priv_mode_similar
+Proof
+    RW_TAC (srw_ss()) [(GEN_ALL write_flags_thm)]
+QED
 val _ = add_to_simplist multiply_long_instr_part_thm;
 
 (* instructions *)
@@ -724,10 +728,11 @@ val data_processing_instruction_comb_thm = save_comb_thm("data_processing_instru
 
 
 
-val read_info_constlem = store_thm(
-    "read_info_constlem",
-    ``!s. ?x. ((read_info <|proc:=0|>) s) = ValueState x s``,
-    RW_TAC (srw_ss()) [read_info_def, readT_def]);
+Theorem read_info_constlem:
+      !s. ?x. ((read_info <|proc:=0|>) s) = ValueState x s
+Proof
+    RW_TAC (srw_ss()) [read_info_def, readT_def]
+QED
 
 
 val read_info_thm = prove_and_save_s(``read_info <|proc:=0|>``, "read_info_thm");
@@ -833,18 +838,20 @@ Proof
   simp[ARMpsr_component_equality] >> simp[ITAdvance_def]
 QED
 
-val condition_passed_constlem = store_thm(
-    "condition_passed_constlem",
-    ``!s cond. ?x. (condition_passed <|proc:=0|> cond) s = ValueState x s``,
-    EVAL_TAC THEN RW_TAC (srw_ss()) [] THEN RW_TAC (srw_ss()) []);
+Theorem condition_passed_constlem:
+      !s cond. ?x. (condition_passed <|proc:=0|> cond) s = ValueState x s
+Proof
+    EVAL_TAC THEN RW_TAC (srw_ss()) [] THEN RW_TAC (srw_ss()) []
+QED
 
-val condition_passed_similar_lem = store_thm(
-    "condition_passed_similar_lem",
-    ``!s1 s2 cond. (similar g s1 s2) ==> (?pass. (((condition_passed <|proc:=0|> cond) s1 = ValueState pass s1) /\ ((condition_passed <|proc:=0|> cond) s2 = ValueState pass s2)))``,
+Theorem condition_passed_similar_lem:
+      !s1 s2 cond. (similar g s1 s2) ==> (?pass. (((condition_passed <|proc:=0|> cond) s1 = ValueState pass s1) /\ ((condition_passed <|proc:=0|> cond) s2 = ValueState pass s2)))
+Proof
     RW_TAC (srw_ss()) []
       THEN IMP_RES_TAC  similarity_implies_equal_av_thm
       THEN UNDISCH_TAC ``similar g s1 s2``
-      THEN EVAL_TAC THEN RW_TAC (srw_ss()) [] THEN RW_TAC (srw_ss()) []);
+      THEN EVAL_TAC THEN RW_TAC (srw_ss()) [] THEN RW_TAC (srw_ss()) []
+QED
 
 
 Definition arm_instr_core_def:   arm_instr_core ii (pass:bool) (enc:Encoding) (cond:word4) (inst:ARMinstruction) =
@@ -897,9 +904,8 @@ val _ = e(FULL_SIMP_TAC (srw_ss()) [increment_pc_thm]);
 val arm_instr_core_comb_thm = save_comb_thm("arm_instr_core_comb_thm", top_thm(), ``arm_instr_core``);
 
 
-val arm_instr_alternative_def = store_thm(
-    "arm_instr_alternative_def",
-    ``arm_instr ii (enc,cond,inst) =
+Theorem arm_instr_alternative_def:
+      arm_instr ii (enc,cond,inst) =
     (condition_passed ii cond >>=
       (λpass.
          arm_instr_core ii pass enc cond inst)) >>=
@@ -926,12 +932,15 @@ val arm_instr_alternative_def = store_thm(
            | Miscellaneous (Enterx_Leavex v51) => T
            | Miscellaneous Clear_Exclusive => T
            | Miscellaneous (If_Then v52 v53) => F
-           | Coprocessor v11 => T) (IT_advance ii))``,
-     RW_TAC (srw_ss()) [arm_instr_core_def, arm_instr_def]);
+           | Coprocessor v11 => T) (IT_advance ii))
+Proof
+     RW_TAC (srw_ss()) [arm_instr_core_def, arm_instr_def]
+QED
 
 
-val arm_instr_comb_thm = store_thm("arm_instr_comb_thm",
-    ``preserve_relation_mmu (arm_instr <|proc:=0|> (enc, cond, inst)) (assert_mode 16w) mode_mix priv_mode_constraints_v2a priv_mode_similar``,
+Theorem arm_instr_comb_thm:
+      preserve_relation_mmu (arm_instr <|proc:=0|> (enc, cond, inst)) (assert_mode 16w) mode_mix priv_mode_constraints_v2a priv_mode_similar
+Proof
     RW_TAC (srw_ss()) [arm_instr_alternative_def, preserve_relation_mmu_def, seqT_def, condT_def]
        THEN (ASSUME_TAC (SPECL [``s1:arm_state``, ``s2:arm_state``, ``cond:word4``] condition_passed_similar_lem)
                 THEN NTAC 2 (UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) [untouched_refl])
@@ -970,7 +979,8 @@ val arm_instr_comb_thm = store_thm("arm_instr_comb_thm",
                 THEN METIS_TAC [untouched_trans, trans_priv_mode_constraints_thm, trans_fun_def, mode_mix_def],
               `((s1'.psrs (0,CPSR)).IT = 0w) /\ ((b.psrs (0,CPSR)).IT = 0w)` by FULL_SIMP_TAC (srw_ss())  [priv_mode_constraints_v2a_def, priv_mode_constraints_v1_def, LET_DEF]
                 THEN IMP_RES_TAC IT_advance_constlem
-                THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []]);
+                THEN UNDISCH_ALL_TAC THEN RW_TAC (srw_ss()) []]
+QED
 
 
 

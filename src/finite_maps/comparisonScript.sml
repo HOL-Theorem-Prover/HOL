@@ -10,9 +10,9 @@ val every_case_tac = BasicProvers.EVERY_CASE_TAC;
 val comparison_distinct = TypeBase.distinct_of ``:ordering``
 val comparison_case_def = TypeBase.case_def_of ``:ordering``
 val comparison_nchotomy = TypeBase.nchotomy_of ``:ordering``
-val _ = Parse.overload_on("Less",``LESS``)
-val _ = Parse.overload_on("Equal",``EQUAL``)
-val _ = Parse.overload_on("Greater",``GREATER``)
+Overload Less = ``LESS``
+Overload Equal = ``EQUAL``
+Overload Greater = ``GREATER``
 
 Definition good_cmp_def:
 good_cmp cmp <=>
@@ -38,11 +38,11 @@ Proof
  metis_tac [comparison_distinct, comparison_nchotomy]
 QED
 
-val cmp_thms = save_thm ("cmp_thms", LIST_CONJ [comparison_distinct, comparison_case_def, comparison_nchotomy, good_cmp_def])
+Theorem cmp_thms = LIST_CONJ [comparison_distinct, comparison_case_def, comparison_nchotomy, good_cmp_def]
 
-val _ = overload_on ("option_cmp", ``option_compare``);
-val option_cmp_def = save_thm("option_cmp_def",
-  ternaryComparisonsTheory.option_compare_def)
+Overload option_cmp = ``option_compare``
+Theorem option_cmp_def =
+  ternaryComparisonsTheory.option_compare_def
 
 Definition option_cmp2_def:
   (option_cmp2 cmp NONE NONE = Equal) /\
@@ -51,26 +51,23 @@ Definition option_cmp2_def:
   (option_cmp2 cmp (SOME x) (SOME y) = cmp x y)
 End
 
-val _ = overload_on ("list_cmp", ``list_compare``)
+Overload list_cmp = ``list_compare``
 val list_cmp_def = ternaryComparisonsTheory.list_compare_def
 val list_cmp_ind = ternaryComparisonsTheory.list_compare_ind
 
-val _ = overload_on ("pair_cmp", ``pair_compare``)
-val pair_cmp_def = save_thm(
-  "pair_cmp_def",
+Overload pair_cmp = ``pair_compare``
+Theorem pair_cmp_def =
   PART_MATCH lhs ternaryComparisonsTheory.pair_compare_def
      ``pair_cmp c1 c2 (FST x, SND x) (FST y, SND y)``
-     |> REWRITE_RULE [pairTheory.PAIR]);
+     |> REWRITE_RULE [pairTheory.PAIR];
 
-val _ = overload_on ("bool_cmp", ``bool_compare``)
-val bool_cmp_def = save_thm(
-  "bool_cmp_def",
-  ternaryComparisonsTheory.bool_compare_def)
+Overload bool_cmp = ``bool_compare``
+Theorem bool_cmp_def =
+  ternaryComparisonsTheory.bool_compare_def
 
-val _ = overload_on ("num_cmp", ``num_compare``)
-val num_cmp_def = save_thm(
-  "num_cmp_def",
-  ternaryComparisonsTheory.num_compare_def)
+Overload num_cmp = ``num_compare``
+Theorem num_cmp_def =
+  ternaryComparisonsTheory.num_compare_def
 
 Overload char_cmp = “char_compare”
 Theorem char_cmp_def = stringTheory.char_compare_def
@@ -85,7 +82,7 @@ Proof
   rw[TotOrd,good_cmp_thm] >> metis_tac[]
 QED
 
-val _ = temp_overload_on ("invert", ``ternaryComparisons$invert_comparison``)
+Overload invert[local] = ``ternaryComparisons$invert_comparison``
 
 Theorem TO_inv_invert:
     !c. TotOrd c ==> TO_inv c = CURRY (invert o UNCURRY c)

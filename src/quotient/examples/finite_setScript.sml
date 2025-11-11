@@ -87,13 +87,13 @@ val fsequiv_inv_thms = prove_inversion_theorems
 val fsequiv_strong_ind = prove_strong_induction
     fsequiv_rules_sat fsequiv_ind_thm;
 
-val _ = overload_on("==", ``fsequiv:'a list -> 'a list -> bool``);
+Overload "==" = ``fsequiv:'a list -> 'a list -> bool``
 val _ = add_infix ("==", 425, HOLgrammars.NONASSOC);
 
-val _ = save_thm ("fsequiv_rules_sat", fsequiv_rules_sat);
-val _ = save_thm ("fsequiv_ind_thm", fsequiv_ind_thm);
-val _ = save_thm ("fsequiv_inv_thms", LIST_CONJ fsequiv_inv_thms);
-val _ = save_thm ("fsequiv_strong_ind", fsequiv_strong_ind);
+Theorem fsequiv_rules_sat = fsequiv_rules_sat;
+Theorem fsequiv_ind_thm = fsequiv_ind_thm;
+Theorem fsequiv_inv_thms = LIST_CONJ fsequiv_inv_thms;
+Theorem fsequiv_strong_ind = fsequiv_strong_ind;
 
 
 val [CONS_LEFT_COMM, CONS_LEFT_IDEM, NIL_RSP, CONS_RSP, fset_SYM', fset_TRANS']
@@ -159,7 +159,7 @@ QED
 (*       (!x h t. MEM x (h::t) = (x = h) \/ MEM x t)                     *)
 (* --------------------------------------------------------------------- *)
 
-val _ = overload_on("MEM", ``MEM :'a -> 'a list -> bool``);
+Overload MEM = ``MEM :'a -> 'a list -> bool``
 
 Theorem MEM_RSP1:
       !X Y. X == Y ==> (!x:'a. MEM x X = MEM x Y)
@@ -466,7 +466,7 @@ QED
 (* --------------------------------------------------------------------- *)
 
 (* Respectfulness theorem for the list2set function. *)
-val _ = temp_overload_on("list2set", ``LIST_TO_SET``)
+Overload list2set[local] = ``LIST_TO_SET``
 Theorem list2set_RSP:
       !X Y:'a list. X == Y ==>
           (list2set X = list2set Y)
@@ -486,8 +486,8 @@ QED
 (* --------------------------------------------------------------------- *)
 
 
-val fset_EQUIV = save_thm("fset_EQUIV",
-    refl_sym_trans_equiv fset_REFL fset_SYM fset_TRANS);
+Theorem fset_EQUIV =
+    refl_sym_trans_equiv fset_REFL fset_SYM fset_TRANS;
 
 val equivs = [fset_EQUIV];
 
@@ -586,34 +586,32 @@ val  [finite_set_cases, Insert_LEFT_COMM, Insert_LEFT_IDEM,
 (* Save the theorems lifted by the quotient operations.             *)
 (* ---------------------------------------------------------------- *)
 
-val _ = map save_thm
-    [("finite_set_cases",finite_set_cases),
-     ("Insert_LEFT_COMM",Insert_LEFT_COMM),
-     ("Insert_LEFT_IDEM",Insert_LEFT_IDEM),
-     ("In",In),
-     ("NONE_In_Empty",NONE_In_Empty),
-     ("In_Insert",In_Insert),
-     ("finite_set_strong_cases",finite_set_strong_cases),
-     ("Card",Card),
-     ("NOT_In_Card",NOT_In_Card),
-     ("Card_SUC",Card_SUC),
-     ("Card_Insert_GT_0",Card_Insert_GT_0),
-     ("In_Card_NOT_0",In_Card_NOT_0),
-     ("NOT_Empty_Insert",NOT_Empty_Insert),
-     ("In_Delete",In_Delete),
-     ("Card_Delete",Card_Delete),
-     ("Insert_Delete",Insert_Delete),
-     ("In_Insert_Delete",In_Insert_Delete),
-     ("finite_set_Delete_cases",finite_set_Delete_cases),
-     ("Union",Union),
-     ("In_Union",In_Union),
-     ("Inter",Inter),
-     ("In_Inter",In_Inter),
-     ("Fold",Fold),
-     ("fset2set",fset2set),
-     ("finite_set_EXTENSION",finite_set_EXTENSION),
-     ("finite_set_INDUCT",finite_set_INDUCT)
-    ];
+Theorem finite_set_cases = finite_set_cases
+Theorem Insert_LEFT_COMM = Insert_LEFT_COMM
+Theorem Insert_LEFT_IDEM = Insert_LEFT_IDEM
+Theorem In = In
+Theorem NONE_In_Empty = NONE_In_Empty
+Theorem In_Insert = In_Insert
+Theorem finite_set_strong_cases = finite_set_strong_cases
+Theorem Card = Card
+Theorem NOT_In_Card = NOT_In_Card
+Theorem Card_SUC = Card_SUC
+Theorem Card_Insert_GT_0 = Card_Insert_GT_0
+Theorem In_Card_NOT_0 = In_Card_NOT_0
+Theorem NOT_Empty_Insert = NOT_Empty_Insert
+Theorem In_Delete = In_Delete
+Theorem Card_Delete = Card_Delete
+Theorem Insert_Delete = Insert_Delete
+Theorem In_Insert_Delete = In_Insert_Delete
+Theorem finite_set_Delete_cases = finite_set_Delete_cases
+Theorem Union = Union
+Theorem In_Union = In_Union
+Theorem Inter = Inter
+Theorem In_Inter = In_Inter
+Theorem Fold = Fold
+Theorem fset2set = fset2set
+Theorem finite_set_EXTENSION = finite_set_EXTENSION
+Theorem finite_set_INDUCT = finite_set_INDUCT
 
 (* Notice the important induction theorem for the quotient type:
 
@@ -650,7 +648,7 @@ Proof
     THEN RW_TAC arith_ss [Fold,Card]
 QED
 
-val _ = overload_on("In", ``\e s. e IN fset2set s``);
+Overload In = ``\e s. e IN fset2set s``
 val _ = set_fixity "In" (Infix(NONASSOC, 425))
 
 (* --------------------------------------------------------------------- *)

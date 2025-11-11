@@ -79,25 +79,24 @@ val _ = add_rule {term_name = "HSPEC",
 (*      Sequential Composition                                                     *)
 (*---------------------------------------------------------------------------------*)
 
-val SC_RULE = Q.store_thm (
-   "SC_RULE",
-   `!P Q R ir1 ir2. WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
+Theorem SC_RULE:
+    !P Q R ir1 ir2. WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
       HSPEC P ir1 Q /\ HSPEC Q ir2 R ==>
-      HSPEC P (SC ir1 ir2) R`,
+      HSPEC P (SC ir1 ir2) R
+Proof
     RW_TAC std_ss [HSPEC_def] THEN
     METIS_TAC [IR_SEMANTICS_SC]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Block Rule                                                                 *)
 (*      Block of assigment                                                         *)
 (*---------------------------------------------------------------------------------*)
 
-val BLK_EQ_SC = Q.store_thm (
-   "BLK_EQ_SC",
-   `!stm stmL st. (run_ir (BLK (stm::stmL)) st = run_ir (SC (BLK [stm]) (BLK stmL)) st) /\
-                  (run_ir (BLK (SNOC stm stmL)) st = run_ir (SC (BLK stmL) (BLK [stm])) st)`,
-
+Theorem BLK_EQ_SC:
+    !stm stmL st. (run_ir (BLK (stm::stmL)) st = run_ir (SC (BLK [stm]) (BLK stmL)) st) /\
+                  (run_ir (BLK (SNOC stm stmL)) st = run_ir (SC (BLK stmL) (BLK [stm])) st)
+Proof
    REPEAT GEN_TAC THEN
    `WELL_FORMED (BLK [stm]) /\ WELL_FORMED (BLK stmL)` by
                METIS_TAC [BLOCK_IS_WELL_FORMED] THEN
@@ -119,78 +118,77 @@ val BLK_EQ_SC = Q.store_thm (
                ]) THEN
             METIS_TAC []
        ]
-   );
+QED
 
-val EMPTY_BLK_AXIOM = Q.store_thm (
-   "EMPTY_BLK_AXIOM",
-   `!P Q. (!st. P st ==> Q st) ==>
-        HSPEC P (BLK []) Q`,
+Theorem EMPTY_BLK_AXIOM:
+    !P Q. (!st. P st ==> Q st) ==>
+        HSPEC P (BLK []) Q
+Proof
     RW_TAC std_ss [HSPEC_def, IR_SEMANTICS_BLK]
-  );
+QED
 
-val BLK_RULE = Q.store_thm (
-   "BLK_RULE",
-   `!P Q R stm stmL. HSPEC Q (BLK [stm]) R /\
+Theorem BLK_RULE:
+    !P Q R stm stmL. HSPEC Q (BLK [stm]) R /\
               HSPEC P (BLK stmL) Q ==>
-                HSPEC P (BLK (SNOC stm stmL)) R`,
+                HSPEC P (BLK (SNOC stm stmL)) R
+Proof
     RW_TAC std_ss [HSPEC_def] THEN
     RW_TAC std_ss [BLK_EQ_SC] THEN
     METIS_TAC [HSPEC_def, SC_RULE, BLOCK_IS_WELL_FORMED]
-  );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
 (*      Conditional Jumps                                                          *)
 (*---------------------------------------------------------------------------------*)
 
-val CJ_RULE = Q.store_thm (
-   "CJ_RULE",
-   `!P Q cond ir1 ir2 st. WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
+Theorem CJ_RULE:
+    !P Q cond ir1 ir2 st. WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
       HSPEC (\st.eval_il_cond cond st /\ P st) ir1 Q /\ HSPEC (\st.~eval_il_cond cond st /\ P st) ir2 Q ==>
-      HSPEC P (CJ cond ir1 ir2) Q`,
+      HSPEC P (CJ cond ir1 ir2) Q
+Proof
     RW_TAC std_ss [HSPEC_def] THEN
     METIS_TAC [IR_SEMANTICS_CJ]
-   );
+QED
 
 
-val CJ_RULE_2 = Q.store_thm (
-   "CJ_RULE_2",
-   `!P Q cond ir1 ir2 st. WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
+Theorem CJ_RULE_2:
+    !P Q cond ir1 ir2 st. WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
       HSPEC P ir1 Q /\ HSPEC P ir2 Q ==>
-      HSPEC P (CJ cond ir1 ir2) Q`,
+      HSPEC P (CJ cond ir1 ir2) Q
+Proof
     RW_TAC std_ss [HSPEC_def] THEN
     METIS_TAC [IR_SEMANTICS_CJ]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Tail Recursion                                                             *)
 (*---------------------------------------------------------------------------------*)
 
-val TR_RULE = Q.store_thm (
-   "TR_RULE",
-   `!cond ir P Q.
+Theorem TR_RULE:
+    !cond ir P Q.
         WELL_FORMED ir /\  WF_TR (translate_condition cond, translate ir) /\
-           HSPEC P ir P ==> HSPEC P (TR cond ir) P`,
+           HSPEC P ir P ==> HSPEC P (TR cond ir) P
+Proof
    RW_TAC std_ss [HSPEC_def] THEN
    METIS_TAC [HOARE_TR_IR]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Well-founded Tail Recursion                                                *)
 (*---------------------------------------------------------------------------------*)
 
-val WF_DEF_2 = Q.store_thm (
-   "WF_DEF_2",
-   `WF R = !P. (?w. P w) ==> ?min. P min /\ !b. R b min ==> ~P b`,
+Theorem WF_DEF_2:
+    WF R = !P. (?w. P w) ==> ?min. P min /\ !b. R b min ==> ~P b
+Proof
    RW_TAC std_ss [relationTheory.WF_DEF]
-  );
+QED
 
-val WF_TR_LEM_1 = Q.store_thm (
-   "WF_TR_LEM_1",
-   `!cond ir st. WELL_FORMED ir /\
+Theorem WF_TR_LEM_1:
+    !cond ir st. WELL_FORMED ir /\
            WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0)) ==>
-           WF_TR (translate_condition cond,translate ir)`,
-
+           WF_TR (translate_condition cond,translate ir)
+Proof
    RW_TAC std_ss [WELL_FORMED_SUB_thm, WF_TR_def, WF_Loop_def, run_ir_def, run_arm_def] THEN
    POP_ASSUM MP_TAC THEN Q.ABBREV_TAC `arm = translate ir` THEN STRIP_TAC THEN
    Q.EXISTS_TAC `\s1 s0. if eval_il_cond cond (get_st s0) then F else (get_st s1 = get_st (runTo (upload arm (\i. ARB) (FST (FST s0)))
@@ -213,15 +211,14 @@ val WF_TR_LEM_1 = Q.store_thm (
       RW_TAC std_ss [get_st_def, eval_il_cond_def] THEN
           METIS_TAC [WELL_FORMED_INSTB]
       ]
-   );
+QED
 
-val WF_TR_LEM_2 = Q.store_thm (
-   "WF_TR_LEM_2",
-    `!cond ir prj_f f cond_f.
+Theorem WF_TR_LEM_2:
+     !cond ir prj_f f cond_f.
         (!st. cond_f (prj_f st) = eval_il_cond cond st) /\ (!st. prj_f (run_ir ir st) = f (prj_f st)) /\
         WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0)) ==>
-           WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0))`,
-
+           WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0))
+Proof
    RW_TAC std_ss [WF_DEF_2] THEN
    Q.PAT_ASSUM `!P.p` (ASSUME_TAC o Q.SPEC `\t:'a. ?y:DSTATE. (prj_f y = t) /\ P y`) THEN
    FULL_SIMP_TAC std_ss [GSYM RIGHT_EXISTS_IMP_THM] THEN
@@ -232,26 +229,25 @@ val WF_TR_LEM_2 = Q.store_thm (
    RES_TAC THEN
    Q.PAT_ASSUM `!t1.p` (ASSUME_TAC o Q.SPEC `prj_f (st1:DSTATE)`) THEN
    METIS_TAC []
-  );
+QED
 
-val WF_TR_LEM_3 = Q.store_thm (
-   "WF_TR_LEM_3",
-   `!cond_f f. (?R. WF R /\ !t0 t1. ~cond_f t0 ==> R (f t0) t0) ==>
-            WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0))`,
+Theorem WF_TR_LEM_3:
+    !cond_f f. (?R. WF R /\ !t0 t1. ~cond_f t0 ==> R (f t0) t0) ==>
+            WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0))
+Proof
    RW_TAC std_ss [] THEN
    MATCH_MP_TAC WF_SUBSET THEN
    Q.EXISTS_TAC `R` THEN
    RW_TAC std_ss []
-   );
+QED
 
-val WF_TR_THM_1 = Q.store_thm (
-   "WF_TR_THM_1",
-    `!cond ir prj_f f cond_f pre_p.
+Theorem WF_TR_THM_1:
+     !cond ir prj_f f cond_f pre_p.
         (!st. cond_f (prj_f st) = eval_il_cond cond st) /\
         (!st. pre_p st ==> (prj_f (run_ir ir st) = f (prj_f st))) /\
         WF (\t1 t0. ~cond_f t0 /\ (t1 = f t0)) ==>
-           WF (\st1 st0. (pre_p st0) /\ ~(eval_il_cond cond st0) /\ (st1 = run_ir ir st0))`,
-
+           WF (\st1 st0. (pre_p st0) /\ ~(eval_il_cond cond st0) /\ (st1 = run_ir ir st0))
+Proof
    RW_TAC std_ss [WF_DEF_2] THEN
    Q.PAT_ASSUM `!P.p` (ASSUME_TAC o Q.SPEC `\t:'a. ?y:DSTATE. (prj_f y = t) /\ P y`) THEN
    FULL_SIMP_TAC std_ss [GSYM RIGHT_EXISTS_IMP_THM] THEN
@@ -262,7 +258,7 @@ val WF_TR_THM_1 = Q.store_thm (
    RES_TAC THEN
    Q.PAT_ASSUM `!y1.p` (ASSUME_TAC o Q.SPEC `prj_f (run_ir ir y)`) THEN
    METIS_TAC []
-  );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Hoare Rules on Projection on Inputs and Ouputs (represented                *)
@@ -278,76 +274,73 @@ val PSPEC_def = Define `
 
 val _ = type_abbrev("PSPEC_TYPE", type_of (Term `PSPEC`));
 
-val PSPEC_STACK = Q.store_thm (
-   "PSPEC_STACK",
-   `!ir pre_p post_p stk_f in_f f out_f x.
+Theorem PSPEC_STACK:
+    !ir pre_p post_p stk_f in_f f out_f x.
      PSPEC ir (pre_p,post_p) stk_f (in_f,f,out_f)
        ==>
-       HSPEC (\st. pre_p st /\ (stk_f st = x)) ir (\st. post_p st /\ (stk_f st = x))`,
+       HSPEC (\st. pre_p st /\ (stk_f st = x)) ir (\st. post_p st /\ (stk_f st = x))
+Proof
      RW_TAC std_ss [PSPEC_def, HSPEC_def]
-   );
+QED
 
-val PSPEC_CHARACTERISTIC = Q.store_thm (
-   "PSPEC_CHARACTERISTIC",
-   `!ir pre_p post_p stk_f in_f f out_f.
+Theorem PSPEC_CHARACTERISTIC:
+    !ir pre_p post_p stk_f in_f f out_f.
      PSPEC ir (pre_p,post_p) stk_f (in_f,f,out_f)
        ==>
-       HSPEC (\st. pre_p st /\ (in_f st = v)) ir (\st. post_p st /\ (out_f st = f v))`,
+       HSPEC (\st. pre_p st /\ (in_f st = v)) ir (\st. post_p st /\ (out_f st = f v))
+Proof
      RW_TAC std_ss [PSPEC_def, HSPEC_def]
-   );
+QED
 
-val PRJ_SHUFFLE_RULE = Q.store_thm (
-   "PRJ_SHUFFLE_RULE",
-   `!ir pre_p post_p stk_f in_f f out_f shuffle_f.
+Theorem PRJ_SHUFFLE_RULE:
+    !ir pre_p post_p stk_f in_f f out_f shuffle_f.
      PSPEC ir (pre_p,post_p) stk_f (in_f,f,out_f)
        ==>
-       PSPEC ir (pre_p, post_p) stk_f (in_f, shuffle_f o f, shuffle_f o out_f)`,
+       PSPEC ir (pre_p, post_p) stk_f (in_f, shuffle_f o f, shuffle_f o out_f)
+Proof
      RW_TAC std_ss [PSPEC_def, HSPEC_def]
-   );
+QED
 
-val PRJ_SHUFFLE_RULE2 = Q.store_thm (
-   "PRJ_SHUFFLE_RULE2",
-   `!ir pre_p post_p stk_f in_f f out_f g in_f'.
+Theorem PRJ_SHUFFLE_RULE2:
+    !ir pre_p post_p stk_f in_f f out_f g in_f'.
      PSPEC ir (pre_p, post_p) stk_f (in_f, f, out_f) /\ (g o in_f' = f o in_f)
        ==>
-       PSPEC ir (pre_p,post_p) stk_f (in_f', g, out_f)`,
+       PSPEC ir (pre_p,post_p) stk_f (in_f', g, out_f)
+Proof
      RW_TAC std_ss [PSPEC_def, HSPEC_def] THEN
      METIS_TAC [FUN_EQ_THM, combinTheory.o_THM]
-   );
+QED
 
-val PRJ_SC_RULE = Q.store_thm (
-   "PRJ_SC_RULE",
-   `!ir1 ir2 pre_p1 post_p1 post_p2 stk_f in_f1 f1 f2 out_f1 out_f2.
+Theorem PRJ_SC_RULE:
+    !ir1 ir2 pre_p1 post_p1 post_p2 stk_f in_f1 f1 f2 out_f1 out_f2.
      WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
      PSPEC ir1 (pre_p1,post_p1) stk_f (in_f1,f1,out_f1) /\ PSPEC ir2 (post_p1,post_p2) stk_f (out_f1,f2,out_f2)
        ==>
-       PSPEC (SC ir1 ir2) (pre_p1,post_p2) stk_f (in_f1,f2 o f1,out_f2)`,
-
+       PSPEC (SC ir1 ir2) (pre_p1,post_p2) stk_f (in_f1,f2 o f1,out_f2)
+Proof
      RW_TAC std_ss [PSPEC_def] THEN
      METIS_TAC [SC_RULE]
-   );
+QED
 
-val PRJ_CJ_RULE = Q.store_thm (
-   "PRJ_CJ_RULE",
-   `!cond ir_t ir_f pre_p post_p stk_f cond_f in_f f1 f2 out_f.
+Theorem PRJ_CJ_RULE:
+    !cond ir_t ir_f pre_p post_p stk_f cond_f in_f f1 f2 out_f.
      WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
      PSPEC ir_t (pre_p,post_p) stk_f (in_f,f1,out_f) /\
      PSPEC ir_f (pre_p, post_p) stk_f (in_f,f2,out_f) /\ (!st. cond_f (in_f st) = eval_il_cond cond st)
         ==>
-       PSPEC (CJ cond ir_t ir_f) (pre_p,post_p) stk_f (in_f, (\v.if cond_f v then f1 v else f2 v), out_f)`,
-
+       PSPEC (CJ cond ir_t ir_f) (pre_p,post_p) stk_f (in_f, (\v.if cond_f v then f1 v else f2 v), out_f)
+Proof
      RW_TAC std_ss [PSPEC_def, HSPEC_def] THEN
      METIS_TAC [IR_SEMANTICS_CJ]
-   );
+QED
 
 (* Need the theorems in ARMCompositionTheory to prove the PROJ_TR_RULE *)
-val PRJ_TR_RULE = Q.store_thm (
-   "PRJ_TR_RULE",
-   `!cond ir pre_p stk_f cond_f prj_f f.
+Theorem PRJ_TR_RULE:
+    !cond ir pre_p stk_f cond_f prj_f f.
         WELL_FORMED ir /\  WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0)) /\
         (!st. cond_f (prj_f st) = eval_il_cond cond st) /\ PSPEC ir (pre_p,pre_p) stk_f (prj_f,f,prj_f) ==>
-          PSPEC (TR cond ir) (pre_p,pre_p) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)`,
-
+          PSPEC (TR cond ir) (pre_p,pre_p) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)
+Proof
     RW_TAC std_ss [PSPEC_def] THEN
     RW_TAC std_ss [HSPEC_def] THENL [
         FULL_SIMP_TAC std_ss [HSPEC_def] THEN
@@ -394,44 +387,43 @@ val PRJ_TR_RULE = Q.store_thm (
               METIS_TAC [SND,FST,ARMCompositionTheory.get_st_def,ARMCompositionTheory.FUNPOW_DSTATE, ABS_PAIR_THM]
             ]
      ]
-   );
+QED
 
-val PRJ_TR_RULE_2 = Q.store_thm (
-   "PRJ_TR_RULE_2",
-   `!cond ir stk_f cond_f prj_f f.
+Theorem PRJ_TR_RULE_2:
+    !cond ir stk_f cond_f prj_f f.
         WELL_FORMED ir /\ (!st. cond_f (prj_f st) = eval_il_cond cond st) /\
         (?R. WF R /\ !t0 t1. ~cond_f t0 ==> R (f t0) t0) /\
            PSPEC ir ((\st.T),(\st.T)) stk_f (prj_f,f,prj_f) ==>
-                    PSPEC (TR cond ir) ((\st.T),(\st.T)) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)`,
-
+                    PSPEC (TR cond ir) ((\st.T),(\st.T)) stk_f (prj_f, WHILE ($~ o cond_f) f, prj_f)
+Proof
     SIMP_TAC std_ss [PSPEC_def, HSPEC_def] THEN
     REPEAT GEN_TAC THEN NTAC 2 STRIP_TAC THEN
     `WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0))` by METIS_TAC [WF_TR_LEM_2, WF_TR_LEM_3] THEN
     METIS_TAC [SIMP_RULE std_ss [PSPEC_def, HSPEC_def] (Q.SPECL [`cond`,`ir`,`\st.T`] PRJ_TR_RULE)]
-  );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
 (*      Rules for Conditions (projective function version)                         *)
 (*---------------------------------------------------------------------------------*)
 
-val PRJ_STRENGTHEN_RULE = Q.store_thm (
-   "PRJ_STRENGTHEN_RULE",
-   `!ir pre_p pre_p' post_p stk_f in_f f out_f.
+Theorem PRJ_STRENGTHEN_RULE:
+    !ir pre_p pre_p' post_p stk_f in_f f out_f.
      WELL_FORMED ir /\
      PSPEC ir (pre_p,post_p) stk_f (in_f,f,out_f) /\ (!st. pre_p' st ==> pre_p st) ==>
-       PSPEC ir (pre_p',post_p) stk_f (in_f,f,out_f)`,
+       PSPEC ir (pre_p',post_p) stk_f (in_f,f,out_f)
+Proof
      RW_TAC std_ss [PSPEC_def, HSPEC_def]
-   );
+QED
 
-val PRJ_WEAKEN_RULE = Q.store_thm (
-   "PRJ_WEAKEN_RULE",
-   `!ir pre_p post_p post_p' stk_f in_f f out_f.
+Theorem PRJ_WEAKEN_RULE:
+    !ir pre_p post_p post_p' stk_f in_f f out_f.
      WELL_FORMED ir /\
      PSPEC ir (pre_p,post_p) stk_f (in_f,f,out_f) /\ (!st. post_p st ==> post_p' st) ==>
-       PSPEC ir (pre_p,post_p') stk_f (in_f,f,out_f)`,
+       PSPEC ir (pre_p,post_p') stk_f (in_f,f,out_f)
+Proof
      RW_TAC std_ss [PSPEC_def, HSPEC_def]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Rules for Stack (projective function version)                              *)
@@ -442,29 +434,29 @@ val valid_push_def = Define `
       !st st'. (stk_f st' = stk_f st) /\ (out_f st' = f (in_f st)) ==>
          (stk_f' st' = stk_f' st) /\ (out_f' st' = g (in_f' st))`;
 
-val PRJ_POP_RULE = Q.store_thm (
-   "PRJ_POP_RULE",
-   `!ir pre_p post_p stk_f in_f f out_f stk_f' in_f' g out_f'.
+Theorem PRJ_POP_RULE:
+    !ir pre_p post_p stk_f in_f f out_f stk_f' in_f' g out_f'.
       PSPEC ir (pre_p,post_p) stk_f (in_f,f,out_f) /\
         valid_push (stk_f,in_f,f,out_f) (stk_f',in_f',g,out_f')
        ==>
-        PSPEC ir (pre_p,post_p) stk_f' (in_f', g, out_f')`,
+        PSPEC ir (pre_p,post_p) stk_f' (in_f', g, out_f')
+Proof
     RW_TAC list_ss [PSPEC_def, HSPEC_def, valid_push_def]
-   );
+QED
 
 val P_intact_def = Define `
     P_intact (P,Q) (stk_f,stk_g) =
      !st st'. (stk_f st' = stk_f st) /\ P st /\ Q st'
            ==> (stk_g st' = stk_g st)`;
 
-val PRJ_PUSH_RULE = Q.store_thm (
-   "PRJ_PUSH_RULE",
-   `!ir pre_p post_p stk_f in_f f out_f e_f stk_g.
+Theorem PRJ_PUSH_RULE:
+    !ir pre_p post_p stk_f in_f f out_f e_f stk_g.
       PSPEC ir (pre_p,post_p) stk_f (in_f,f,out_f) /\
         P_intact (pre_p,post_p) (stk_f,stk_g)
-      ==> PSPEC ir (pre_p,post_p) stk_g (in_f, f, out_f)`,
+      ==> PSPEC ir (pre_p,post_p) stk_g (in_f, f, out_f)
+Proof
     RW_TAC list_ss [PSPEC_def, HSPEC_def, P_intact_def]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Hoare Rules on Projection on Inputs and Ouputs (represented by vectors)    *)
@@ -503,149 +495,152 @@ val VSPEC_def = Define `
 
 val _ = type_abbrev("VSPEC_TYPE", type_of (Term `VSPEC`));
 
-val V_SHUFFLE_RULE = Q.store_thm (
-   "V_SHUFFLE_RULE",
-   `!ir stk iv f ov g iv'.
+Theorem V_SHUFFLE_RULE:
+    !ir stk iv f ov g iv'.
      VSPEC ir (pre_p,post_p) stk (iv,f,ov) /\ (!st. g (readv st iv') = f (readv st iv))
        ==>
-       VSPEC ir (pre_p,post_p) stk (iv', g, ov)`,
+       VSPEC ir (pre_p,post_p) stk (iv', g, ov)
+Proof
      RW_TAC std_ss [VSPEC_def, PSPEC_def, HSPEC_def]
-   );
+QED
 
-val V_SC_RULE = Q.store_thm (
-   "V_SC_RULE",
-   `!ir1 ir2 pre_p1 post_p1 post_p2 stk vi1 f1 vo1 f2 vo2.
+Theorem V_SC_RULE:
+    !ir1 ir2 pre_p1 post_p1 post_p2 stk vi1 f1 vo1 f2 vo2.
      WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
      VSPEC ir1 (pre_p1,post_p1) stk (vi1,f1,vo1) /\ VSPEC ir2 (post_p1,post_p2) stk (vo1,f2,vo2)
        ==>
-       VSPEC (SC ir1 ir2) (pre_p1,post_p2) stk (vi1,f2 o f1,vo2)`,
+       VSPEC (SC ir1 ir2) (pre_p1,post_p2) stk (vi1,f2 o f1,vo2)
+Proof
      RW_TAC std_ss [VSPEC_def] THEN
      METIS_TAC [PRJ_SC_RULE]
-   );
+QED
 
-val V_CJ_RULE = Q.store_thm (
-   "V_CJ_RULE",
-   `!cond ir_t ir_f pre_p post_p stk cond_f iv f1 f2 ov.
+Theorem V_CJ_RULE:
+    !cond ir_t ir_f pre_p post_p stk cond_f iv f1 f2 ov.
      WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
      VSPEC ir_t (pre_p,post_p) stk (iv,f1,ov) /\
      VSPEC ir_f (pre_p, post_p) stk (iv,f2,ov) /\ (!st. cond_f (readv st iv) = eval_il_cond cond st)
         ==>
-       VSPEC (CJ cond ir_t ir_f) (pre_p,post_p) stk (iv, (\v.if cond_f v then f1 v else f2 v), ov)`,
+       VSPEC (CJ cond ir_t ir_f) (pre_p,post_p) stk (iv, (\v.if cond_f v then f1 v else f2 v), ov)
+Proof
      RW_TAC std_ss [VSPEC_def] THEN
      FULL_SIMP_TAC std_ss [PRJ_CJ_RULE]
-   );
+QED
 
 (* Need the theorems in ARMCompositionTheory to prove the PROJ_TR_RULE *)
 
-val V_TR_RULE = Q.store_thm (
-   "V_TR_RULE",
-   `!cond ir pre_p stk cond_f iv f.
+Theorem V_TR_RULE:
+    !cond ir pre_p stk cond_f iv f.
         WELL_FORMED ir /\  WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0)) /\
         (!st. cond_f (readv st iv) = eval_il_cond cond st) /\ VSPEC ir (pre_p,pre_p) stk (iv,f,iv) ==>
-          VSPEC (TR cond ir) (pre_p,pre_p) stk (iv, WHILE ($~ o cond_f) f, iv)`,
-
+          VSPEC (TR cond ir) (pre_p,pre_p) stk (iv, WHILE ($~ o cond_f) f, iv)
+Proof
     RW_TAC std_ss [VSPEC_def] THEN
     FULL_SIMP_TAC std_ss [PRJ_TR_RULE]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Rules for Conditions (vector version)                                      *)
 (*---------------------------------------------------------------------------------*)
 
-val V_STRENGTHEN_RULE = Q.store_thm (
-   "V_STRENGTHEN_RULE",
-   `!ir pre_p pre_p' post_p stk iv f ov.
+Theorem V_STRENGTHEN_RULE:
+    !ir pre_p pre_p' post_p stk iv f ov.
      WELL_FORMED ir /\
      VSPEC ir (pre_p,post_p) stk (iv,f,ov) /\ (!st. pre_p' st ==> pre_p st) ==>
-       VSPEC ir (pre_p',post_p) stk (iv,f,ov)`,
+       VSPEC ir (pre_p',post_p) stk (iv,f,ov)
+Proof
      RW_TAC std_ss [VSPEC_def] THEN
      METIS_TAC [PRJ_STRENGTHEN_RULE]
-   );
+QED
 
-val V_WEAKEN_RULE = Q.store_thm (
-   "V_WEAKEN_RULE",
-   `!ir pre_p post_p post_p' stk iv f ov.
+Theorem V_WEAKEN_RULE:
+    !ir pre_p post_p post_p' stk iv f ov.
      WELL_FORMED ir /\
      PSPEC ir (pre_p,post_p) stk (iv,f,ov) /\ (!st. post_p st ==> post_p' st) ==>
-       PSPEC ir (pre_p,post_p') stk (iv,f,ov)`,
+       PSPEC ir (pre_p,post_p') stk (iv,f,ov)
+Proof
      RW_TAC std_ss [VSPEC_def] THEN
      METIS_TAC [PRJ_WEAKEN_RULE]
-   );
+QED
 
 (*---------------------------------------------------------------------------------*)
 (*      Rules for Stack (vector version)                                           *)
 (*---------------------------------------------------------------------------------*)
 
-val V_POP_RULE = Q.store_thm (
-   "V_POP_RULE",
-   `!ir pre_p post_p stk iv f ov e g.
+Theorem V_POP_RULE:
+    !ir pre_p post_p stk iv f ov e g.
       VSPEC ir (pre_p,post_p) (e::stk) (iv,f,ov) /\
        (!st. g (readv st (PR(iv,e))) = VT (f (readv st iv), readv st e)) ==>
-         VSPEC ir (pre_p,post_p) stk (PR(iv,e), g, PR(ov,e))`,
+         VSPEC ir (pre_p,post_p) stk (PR(iv,e), g, PR(ov,e))
+Proof
     RW_TAC list_ss [VSPEC_def, PSPEC_def, HSPEC_def, readv_def]
-   );
+QED
 
 val V_intact_def = Define `
     V_intact (P,Q,e) =
       ?x. (!st.P st ==> (readv st e = x)) /\ (!st.Q st ==> (readv st e = x))`;
 
 
-val V_PUSH_RULE = Q.store_thm (
-   "V_PUSH_RULE",
-   `!ir pre_p post_p stk iv f ov e.
+Theorem V_PUSH_RULE:
+    !ir pre_p post_p stk iv f ov e.
       VSPEC ir (pre_p,post_p) stk (iv,f,ov) /\ V_intact(pre_p, post_p, e)
       ==>
-         VSPEC ir (pre_p,post_p) (e::stk) (iv, f, ov)`,
+         VSPEC ir (pre_p,post_p) (e::stk) (iv, f, ov)
+Proof
     RW_TAC list_ss [VSPEC_def, PSPEC_def, HSPEC_def, V_intact_def, readv_def] THEN
     METIS_TAC []
-   );
+QED
 
 
 (*---------------------------------------------------------------------------------*)
 (*      Rules for Well-formedness                                                  *)
 (*---------------------------------------------------------------------------------*)
 
-val WELL_FORMED_TR_RULE = Q.store_thm (
-   "WELL_FORMED_TR_RULE",
-   `!cond ir context_f.
+Theorem WELL_FORMED_TR_RULE:
+    !cond ir context_f.
         WELL_FORMED ir /\  WF (\st1 st0. ~eval_il_cond cond st0 /\ (st1 = run_ir ir st0)) ==>
-           WELL_FORMED (TR cond ir)`,
-
+           WELL_FORMED (TR cond ir)
+Proof
     RW_TAC std_ss [] THEN
     METIS_TAC [IR_TR_IS_WELL_FORMED, WF_TR_LEM_1]
-   );
+QED
 
 
 
-val IR_CJ_UNCHANGED = store_thm ("IR_CJ_UNCHANGED",
-``!cond ir_t ir_f s.
+Theorem IR_CJ_UNCHANGED:
+  !cond ir_t ir_f s.
         (WELL_FORMED ir_t /\ WELL_FORMED ir_f /\
         UNCHANGED s ir_t /\ UNCHANGED s ir_f)  ==>
-        UNCHANGED s (CJ cond ir_t ir_f)``,
+        UNCHANGED s (CJ cond ir_t ir_f)
+Proof
 
 
 REWRITE_TAC[UNCHANGED_def] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [SEMANTICS_OF_IR]  THEN
-PROVE_TAC[]);
+PROVE_TAC[]
+QED
 
 
-val IR_SC_UNCHANGED = store_thm ("IR_SC_UNCHANGED",
-``!ir1 ir2 s.
+Theorem IR_SC_UNCHANGED:
+  !ir1 ir2 s.
         (WELL_FORMED ir1 /\ WELL_FORMED ir2 /\
         UNCHANGED s ir1 /\ UNCHANGED s ir2)  ==>
-        UNCHANGED s (SC ir1 ir2)``,
+        UNCHANGED s (SC ir1 ir2)
+Proof
 
 
 REWRITE_TAC[UNCHANGED_def] THEN
 REPEAT STRIP_TAC THEN
 ASM_SIMP_TAC std_ss [SEMANTICS_OF_IR]  THEN
-PROVE_TAC[])
+PROVE_TAC[]
+QED
 
-val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
-``!c ir s.
+Theorem UNCHANGED_TR_RULE:
+  !c ir s.
         (WELL_FORMED (TR c ir) /\ UNCHANGED s ir) ==>
-        UNCHANGED s (TR c ir)``,
+        UNCHANGED s (TR c ir)
+Proof
 
   REWRITE_TAC [UNCHANGED_def, WELL_FORMED_def] THEN
   REPEAT STRIP_TAC THEN
@@ -655,6 +650,7 @@ val UNCHANGED_TR_RULE = store_thm ("UNCHANGED_TR_RULE",
   Induct_on `n` THENL [
          REWRITE_TAC[FUNPOW],
          REWRITE_TAC[FUNPOW_SUC] THEN PROVE_TAC[]
-  ]);
+  ]
+QED
 
 

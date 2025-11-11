@@ -25,7 +25,8 @@ val _ = set_fixity "|+"  (Infixl 600);
 val _ = set_fixity "|++" (Infixl 500);
 val _ = set_fixity "\\\\" (Infixl 600);
 
-val _ = Datatype `ptree = Empty | Leaf num 'a | Branch num num ptree ptree`;
+Datatype:  ptree = Empty | Leaf num 'a | Branch num num ptree ptree
+End
 
 Definition BRANCHING_BIT_def[nocompute]:
   BRANCHING_BIT p0 p1 =
@@ -46,7 +47,7 @@ Definition PEEK_def[nocompute]:
   (PEEK (Branch p m l r) k = PEEK (if BIT m k then l else r) k)
 End
 
-val _ = overload_on ("'", Term`$PEEK`);
+Overload "'" = Term`$PEEK`
 
 Definition JOIN_def[nocompute]:
   JOIN (p0,t0,p1,t1) =
@@ -71,7 +72,7 @@ Definition ADD_def[nocompute]:
            JOIN (k, Leaf k e, p, Branch p m l r))
 End
 
-val _ = overload_on ("|+", Term`$ADD`);
+Overload "|+" = Term`$ADD`
 
 Definition BRANCH_def[nocompute]:
   (BRANCH (p,m,Empty,t) = t) /\
@@ -92,7 +93,7 @@ Definition REMOVE_def[nocompute]:
            Branch p m l r)
 End
 
-val _ = overload_on ("\\\\", Term`$REMOVE`);
+Overload "\\\\" = Term`$REMOVE`
 
 Definition TRAVERSE_AUX_def:
     (TRAVERSE_AUX Empty a = a) /\
@@ -150,13 +151,13 @@ End
 (* ------------------------------------------------------------------------- *)
 
 val _ = hide "set";
-val _ = overload_on("LIST_TO_SET", ``list$LIST_TO_SET``);
+Overload LIST_TO_SET = ``list$LIST_TO_SET``
 
 val _ = set_fixity "IN_PTREE" (Infix (NONASSOC, 425));
 val _ = set_fixity "INSERT_PTREE" (Infixr 490);
 val _ = set_fixity "UNION_PTREE" (Infixl 500);
 
-val _ = type_abbrev("ptreeset", ``:unit ptree``);
+Type ptreeset = ``:unit ptree``
 
 Definition IN_PTREE_def[nocompute]:   $IN_PTREE n t = IS_SOME (PEEK (t:unit ptree) n)
 End
@@ -173,7 +174,7 @@ Definition PTREE_OF_NUMSET_def[nocompute]:
   FOLDL (combin$C $INSERT_PTREE) t (SET_TO_LIST s)
 End
 
-val _ = overload_on ("|++", Term`$PTREE_OF_NUMSET`);
+Overload "|++" = Term`$PTREE_OF_NUMSET`
 
 Definition NUMSET_OF_PTREE_def:
   NUMSET_OF_PTREE (t:unit ptree) = LIST_TO_SET (TRAVERSE t)
@@ -192,71 +193,93 @@ End
 Definition ADD_LIST_def:   ADD_LIST = FOLDL ADD
 End
 
-val _ = overload_on ("|++", Term`$ADD_LIST`);
+Overload "|++" = Term`$ADD_LIST`
 
 (* ------------------------------------------------------------------------- *)
 
-val lem = prove(
-  `!n a b. n < BRANCHING_BIT a b ==> (BIT n a = BIT n b)`,
+Theorem lem[local]:
+   !n a b. n < BRANCHING_BIT a b ==> (BIT n a = BIT n b)
+Proof
   Induct
     \\ SRW_TAC [] [Once BRANCHING_BIT_def, bitTheory.BIT0_ODD, GSYM BIT_DIV2,
                    DIV2_def]
     \\ SPOSE_NOT_THEN STRIP_ASSUME_TAC
     \\ `ODD a = EVEN b` by METIS_TAC [EVEN_ODD]
-    \\ FULL_SIMP_TAC arith_ss [Once BRANCHING_BIT_def]);
+    \\ FULL_SIMP_TAC arith_ss [Once BRANCHING_BIT_def]
+QED
 
-val MOD_2EXP_EQ_BRANCHING_BIT = prove(
-  `!a b. MOD_2EXP_EQ (BRANCHING_BIT a b) a b`,
+Theorem MOD_2EXP_EQ_BRANCHING_BIT[local]:
+   !a b. MOD_2EXP_EQ (BRANCHING_BIT a b) a b
+Proof
   NTAC 2 STRIP_TAC \\ Cases_on `BRANCHING_BIT a b`
     \\ SRW_TAC [ARITH_ss] [GSYM BIT_BITS_THM, GSYM BITS_ZERO3,
-          MOD_2EXP_EQ_def, MOD_2EXP_def, lem]);
+          MOD_2EXP_EQ_def, MOD_2EXP_def, lem]
+QED
 
-val NOT_MOD_2EXP_EQ_IMP_BRANCHING_BIT_LT = prove(
-  `!n a b. ~MOD_2EXP_EQ n a b ==> BRANCHING_BIT a b < n`,
+Theorem NOT_MOD_2EXP_EQ_IMP_BRANCHING_BIT_LT[local]:
+   !n a b. ~MOD_2EXP_EQ n a b ==> BRANCHING_BIT a b < n
+Proof
   Cases \\ SRW_TAC [] [GSYM BIT_BITS_THM, MOD_2EXP_EQ_def, MOD_2EXP_def,
                        GSYM BITS_ZERO3]
     \\ SPOSE_NOT_THEN (STRIP_ASSUME_TAC o REWRITE_RULE [NOT_LESS])
     \\ `x < BRANCHING_BIT a b` by DECIDE_TAC
-    \\ IMP_RES_TAC lem);
+    \\ IMP_RES_TAC lem
+QED
 
-val MOD_2EXP_EQ_BIT_EQ = prove(
-  `!n a b. MOD_2EXP_EQ n a b ==> (!x. x < n ==> (BIT x a = BIT x b))`,
+Theorem MOD_2EXP_EQ_BIT_EQ[local]:
+   !n a b. MOD_2EXP_EQ n a b ==> (!x. x < n ==> (BIT x a = BIT x b))
+Proof
   Cases \\ SRW_TAC [ARITH_ss]
-    [MOD_2EXP_EQ_def, MOD_2EXP_def, GSYM BIT_BITS_THM, GSYM BITS_ZERO3]);
+    [MOD_2EXP_EQ_def, MOD_2EXP_def, GSYM BIT_BITS_THM, GSYM BITS_ZERO3]
+QED
 
-val MOD_2EXP_EQ_REFL = prove(
-  `!n a. MOD_2EXP_EQ n a a`, METIS_TAC [MOD_2EXP_EQ_def]);
+Theorem MOD_2EXP_EQ_REFL[local]:
+   !n a. MOD_2EXP_EQ n a a
+Proof METIS_TAC [MOD_2EXP_EQ_def]
+QED
 
-val MOD_2EXP_EQ_SYM = prove(
-  `!n a b. MOD_2EXP_EQ n a b = MOD_2EXP_EQ n b a`,
-  METIS_TAC [MOD_2EXP_EQ_def]);
+Theorem MOD_2EXP_EQ_SYM[local]:
+   !n a b. MOD_2EXP_EQ n a b = MOD_2EXP_EQ n b a
+Proof
+  METIS_TAC [MOD_2EXP_EQ_def]
+QED
 
-val MOD_2EXP_EQ_TRANS = prove(
-  `!n a b c. MOD_2EXP_EQ n a b /\ MOD_2EXP_EQ n b c ==> MOD_2EXP_EQ n a c`,
-  METIS_TAC [MOD_2EXP_EQ_def]);
+Theorem MOD_2EXP_EQ_TRANS[local]:
+   !n a b c. MOD_2EXP_EQ n a b /\ MOD_2EXP_EQ n b c ==> MOD_2EXP_EQ n a c
+Proof
+  METIS_TAC [MOD_2EXP_EQ_def]
+QED
 
-val NOT_MOD_2EXP_EQ = prove(
-  `!n a b. ~MOD_2EXP_EQ n a b ==> ~(a = b)`,
-  METIS_TAC [MOD_2EXP_EQ_def]);
+Theorem NOT_MOD_2EXP_EQ[local]:
+   !n a b. ~MOD_2EXP_EQ n a b ==> ~(a = b)
+Proof
+  METIS_TAC [MOD_2EXP_EQ_def]
+QED
 
-val MOD_2EXP_EQ_MOD_2EXP = prove(
-  `(!n a b. MOD_2EXP_EQ n a (MOD_2EXP n b) = MOD_2EXP_EQ n a b) /\
-   (!n a b. MOD_2EXP_EQ n (MOD_2EXP n a) b = MOD_2EXP_EQ n a b)`,
-  SRW_TAC [ARITH_ss] [MOD_2EXP_EQ_def, MOD_2EXP_def]);
+Theorem MOD_2EXP_EQ_MOD_2EXP[local]:
+   (!n a b. MOD_2EXP_EQ n a (MOD_2EXP n b) = MOD_2EXP_EQ n a b) /\
+   (!n a b. MOD_2EXP_EQ n (MOD_2EXP n a) b = MOD_2EXP_EQ n a b)
+Proof
+  SRW_TAC [ARITH_ss] [MOD_2EXP_EQ_def, MOD_2EXP_def]
+QED
 
-val MONO_MOD_2EXP_EQ = prove(
-  `!m n a b. n <= m /\ MOD_2EXP_EQ m a b ==> MOD_2EXP_EQ n a b`,
+Theorem MONO_MOD_2EXP_EQ[local]:
+   !m n a b. n <= m /\ MOD_2EXP_EQ m a b ==> MOD_2EXP_EQ n a b
+Proof
   Cases \\ Cases \\ SRW_TAC [ARITH_ss] [MOD_2EXP_EQ_def, MOD_2EXP_def,
-    GSYM BIT_BITS_THM, GSYM BITS_ZERO3]);
+    GSYM BIT_BITS_THM, GSYM BITS_ZERO3]
+QED
 
-val lem = prove(
-  `!a b. ~(a = b) /\ ~(ODD a = EVEN b) ==> ~(a DIV 2 = b DIV 2)`,
+Theorem lem[local]:
+   !a b. ~(a = b) /\ ~(ODD a = EVEN b) ==> ~(a DIV 2 = b DIV 2)
+Proof
   SRW_TAC [] [METIS_PROVE [EVEN_MOD2,ODD_MOD2_LEM,NOT_MOD2_LEM2]
                 ``~(ODD a = EVEN b) = (a MOD 2 = b MOD 2)``]
     \\ STRIP_TAC
     \\ PAT_ASSUM `~(a = b)` MATCH_MP_TAC
     \\ ONCE_REWRITE_TAC [(SIMP_RULE std_ss [] o SPEC `2`) DIVISION]
-    \\ SRW_TAC [] []);
+    \\ SRW_TAC [] []
+QED
 
 Theorem BRANCHING_BIT:
    !a b. ~(a = b) ==> ~(BIT (BRANCHING_BIT a b) a = BIT (BRANCHING_BIT a b) b)
@@ -326,10 +349,10 @@ QED
 val MOD_2EXP_LT_COR =
   METIS_PROVE [MOD_2EXP_LT, MOD_2EXP_def] ``MOD_2EXP x n < 2 ** x``;
 
-val EMPTY_IS_PTREE = save_thm("EMPTY_IS_PTREE",
-  EQT_ELIM (CONJUNCT1 IS_PTREE_def));
+Theorem EMPTY_IS_PTREE[simp] =
+  EQT_ELIM (CONJUNCT1 IS_PTREE_def);
 
-Theorem ADD_IS_PTREE:
+Theorem ADD_IS_PTREE[simp]:
    !t x. IS_PTREE t ==> IS_PTREE (ADD t x)
 Proof
   Cases_on `x` \\ Induct
@@ -363,8 +386,6 @@ Proof
                   MOD_2EXP_EQ_SYM, MOD_2EXP_EQ_TRANS, MOD_2EXP_EQ_BIT_EQ]
 QED
 
-val _ = export_rewrites ["EMPTY_IS_PTREE", "ADD_IS_PTREE"];
-
 Theorem EVERY_LEAF_BRANCH:
    !P p m l r. EVERY_LEAF P (BRANCH (p, m, l, r)) =
              EVERY_LEAF P l /\ EVERY_LEAF P r
@@ -389,14 +410,13 @@ Proof
     \\ SRW_TAC [] [BRANCH_def, IS_PTREE_def, EVERY_LEAF_def]
 QED
 
-Theorem REMOVE_IS_PTREE:
+Theorem REMOVE_IS_PTREE[simp]:
    !t k. IS_PTREE t ==> IS_PTREE (REMOVE t k)
 Proof
   Induct \\ SRW_TAC [] [REMOVE_def, IS_PTREE_def]
     \\ METIS_TAC [IS_PTREE_BRANCH, EVERY_LEAF_REMOVE]
 QED
 
-val _ = export_rewrites ["REMOVE_IS_PTREE"];
 
 Theorem PEEK_NONE:
    !P t k. (!d. ~P k d) /\ EVERY_LEAF P t ==> (PEEK t k = NONE)
@@ -459,14 +479,13 @@ Proof
   Cases_on `t` \\ SRW_TAC [] [TRANSFORM_def]
 QED
 
-Theorem TRANSFORM_IS_PTREE:
+Theorem TRANSFORM_IS_PTREE[simp]:
    !f t. IS_PTREE t ==> IS_PTREE (TRANSFORM f t)
 Proof
   Induct_on `t` \\ SRW_TAC [] [TRANSFORM_def, IS_PTREE_def, TRANSFORM_EMPTY]
     \\ METIS_TAC [EVERY_LEAF_TRANSFORM_LEFT, EVERY_LEAF_TRANSFORM_RIGHT]
 QED
 
-val _ = export_rewrites ["TRANSFORM_IS_PTREE"];
 
 Theorem PEEK_TRANSFORM:
    !f t k. PEEK (TRANSFORM f t) k =
@@ -497,7 +516,7 @@ Proof
   Induct_on `t` \\ SRW_TAC [] [TRANSFORM_def, REMOVE_def, TRANSFORM_BRANCH]
 QED
 
-Theorem REMOVE_ADD_EQ:
+Theorem REMOVE_ADD_EQ[simp]:
    !t k d. REMOVE (ADD t (k,d)) k = REMOVE t k
 Proof
   Induct
@@ -506,14 +525,12 @@ Proof
           REMOVE_def, ADD_def, JOIN_def, BRANCH_def]
 QED
 
-Theorem ADD_ADD:
+Theorem ADD_ADD[simp]:
    !t k d e. ADD (ADD t (k,d)) (k,e) = ADD t (k,e)
 Proof
   Induct \\ SRW_TAC [boolSimps.LET_ss]
     [MOD_2EXP_EQ_MOD_2EXP, MOD_2EXP_EQ_REFL, ADD_def, JOIN_def]
 QED
-
-val _ = export_rewrites ["REMOVE_ADD_EQ", "ADD_ADD"];
 
 Theorem EVERY_LEAF_PEEK:
    !P t k. EVERY_LEAF P t /\ IS_SOME (PEEK t k) ==> P k (THE (PEEK t k))
@@ -566,15 +583,19 @@ val IS_NONE_SOME =
   METIS_PROVE [optionTheory.IS_NONE_EQ_NONE, optionTheory.NOT_IS_SOME_EQ_NONE]
   ``~IS_NONE x = IS_SOME x``;
 
-val OPTION_EQ = prove(
-  `!a b. (a = b) = (~IS_SOME a /\ ~IS_SOME b) \/
-                   (IS_SOME a /\ IS_SOME b) /\ (THE a = THE b)`,
-  Cases \\ Cases \\ SRW_TAC [] []);
+Theorem OPTION_EQ[local]:
+   !a b. (a = b) = (~IS_SOME a /\ ~IS_SOME b) \/
+                   (IS_SOME a /\ IS_SOME b) /\ (THE a = THE b)
+Proof
+  Cases \\ Cases \\ SRW_TAC [] []
+QED
 
-val LT_MOD_2EXP_EQ = prove(
-  `!n a b. a < 2 ** n /\ b < 2 ** n /\ MOD_2EXP_EQ n a b ==> (a = b)`,
+Theorem LT_MOD_2EXP_EQ[local]:
+   !n a b. a < 2 ** n /\ b < 2 ** n /\ MOD_2EXP_EQ n a b ==> (a = b)
+Proof
   SIMP_TAC (arith_ss++boolSimps.CONJ_ss)
-    [MOD_2EXP_EQ_def, MOD_2EXP_def, ZERO_LT_TWOEXP]);
+    [MOD_2EXP_EQ_def, MOD_2EXP_def, ZERO_LT_TWOEXP]
+QED
 
 val PEEK_NONE_LEFT = SPEC `\k d. MOD_2EXP_EQ n' k n0' /\ BIT n' k` PEEK_NONE;
 val PEEK_NONE_RIGHT = SPEC `\k d. MOD_2EXP_EQ n' k n0' /\ ~BIT n' k` PEEK_NONE;
@@ -616,13 +637,12 @@ Proof
         \\ METIS_TAC [PEEK_NONE_LEFT, PEEK_NONE_RIGHT]]
 QED
 
-Theorem REMOVE_REMOVE:
+Theorem REMOVE_REMOVE[simp]:
    !t k. IS_PTREE t ==> (REMOVE (REMOVE t k) k = REMOVE t k)
 Proof
   SRW_TAC [] [GSYM PTREE_EQ, PEEK_REMOVE]
 QED
 
-val _ = export_rewrites ["REMOVE_REMOVE"];
 
 Theorem REMOVE_ADD:
    !t k d j. IS_PTREE t ==>
@@ -674,11 +694,13 @@ Proof
   SRW_TAC [] [NUMSET_OF_PTREE_def, IN_PTREE_def, MEM_TRAVERSE_PEEK]
 QED
 
-val FOLD_INDUCT = prove(
-  `!P f e l. P e /\ (!x y. P x ==> P (f x y)) ==>  P (FOLDL f e l)`,
-  Induct_on `l` \\ SRW_TAC [] []);
+Theorem FOLD_INDUCT[local]:
+   !P f e l. P e /\ (!x y. P x ==> P (f x y)) ==>  P (FOLDL f e l)
+Proof
+  Induct_on `l` \\ SRW_TAC [] []
+QED
 
-Theorem ADD_LIST_IS_PTREE:
+Theorem ADD_LIST_IS_PTREE[simp]:
    !t l. IS_PTREE t ==> IS_PTREE (ADD_LIST t l)
 Proof
   SRW_TAC [] [ADD_LIST_def]
@@ -694,7 +716,7 @@ Proof
    METIS_TAC [ADD_LIST_IS_PTREE, EMPTY_IS_PTREE]
 QED
 
-Theorem PTREE_OF_NUMSET_IS_PTREE:
+Theorem PTREE_OF_NUMSET_IS_PTREE[simp]:
    !t s. IS_PTREE t ==> IS_PTREE (PTREE_OF_NUMSET t s)
 Proof
   SRW_TAC [] [PTREE_OF_NUMSET_def]
@@ -702,11 +724,9 @@ Proof
     \\ SRW_TAC [] [INSERT_PTREE_def]
 QED
 
-val PTREE_OF_NUMSET_IS_PTREE_EMPTY = save_thm("PTREE_OF_NUMSET_IS_PTREE_EMPTY",
-  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_IS_PTREE);
+Theorem PTREE_OF_NUMSET_IS_PTREE_EMPTY[simp] =
+  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_IS_PTREE;
 
-val _ = export_rewrites ["ADD_LIST_IS_PTREE", "PTREE_OF_NUMSET_IS_PTREE",
-                         "PTREE_OF_NUMSET_IS_PTREE_EMPTY"];
 
 val EVERY_LEAF_PEEK_LEFT = (SIMP_RULE (srw_ss()) [] o
   SPEC `\k d. MOD_2EXP_EQ m k p /\ BIT m k`) EVERY_LEAF_PEEK;
@@ -723,7 +743,7 @@ Proof
     \\ METIS_TAC [EVERY_LEAF_PEEK_LEFT, EVERY_LEAF_PEEK_RIGHT]
 QED
 
-Theorem ALL_DISTINCT_TRAVERSE:
+Theorem ALL_DISTINCT_TRAVERSE[simp]:
    !t. IS_PTREE t ==> ALL_DISTINCT (TRAVERSE t)
 Proof
   Induct \\ SRW_TAC [] [ALL_DISTINCT, TRAVERSE_def, ALL_DISTINCT_APPEND]
@@ -731,7 +751,6 @@ Proof
     \\ METIS_TAC [MEM_TRAVERSE_PEEK, NOT_KEY_LEFT_AND_RIGHT]
 QED
 
-val _ = export_rewrites ["ALL_DISTINCT_TRAVERSE"];
 
 Theorem MEM_ALL_DISTINCT_IMP_PERM:
    !l1 l2. ALL_DISTINCT l1 /\ ALL_DISTINCT l2 /\ (!x. MEM x l1 = MEM x l2) ==>
@@ -750,32 +769,32 @@ Proof
   SRW_TAC [] [IN_NUMSET_OF_PTREE, IN_PTREE_def, MEM_TRAVERSE_PEEK]
 QED
 
-Theorem INSERT_PTREE_IS_PTREE:
+Theorem INSERT_PTREE_IS_PTREE[simp]:
    !t x. IS_PTREE t ==> IS_PTREE (x INSERT_PTREE t)
 Proof
   SRW_TAC [] [INSERT_PTREE_def]
 QED
 
-Theorem FINITE_NUMSET_OF_PTREE:
+Theorem FINITE_NUMSET_OF_PTREE[simp]:
    !t. FINITE (NUMSET_OF_PTREE t)
 Proof
   SRW_TAC [] [NUMSET_OF_PTREE_def, FINITE_LIST_TO_SET]
 QED
 
-val ADD_INSERT = save_thm("ADD_INSERT",
+Theorem ADD_INSERT[simp] =
   (GEN_ALL o SIMP_CONV (srw_ss()) [GSYM INSERT_PTREE_def, oneTheory.one])
-  ``ADD t (n,v:unit)``);
+  ``ADD t (n,v:unit)``;
 
-val _ = export_rewrites ["INSERT_PTREE_IS_PTREE", "FINITE_NUMSET_OF_PTREE",
-                         "ADD_INSERT"];
 
-val IS_PTREE_FOLDR_INSERT_PTREE = prove(
-  `!l t. IS_PTREE t ==> IS_PTREE (FOLDR (\x y. x INSERT_PTREE y) t l)`,
-  Induct_on `l` \\ SRW_TAC [] []);
+Theorem IS_PTREE_FOLDR_INSERT_PTREE[local]:
+   !l t. IS_PTREE t ==> IS_PTREE (FOLDR (\x y. x INSERT_PTREE y) t l)
+Proof
+  Induct_on `l` \\ SRW_TAC [] []
+QED
 
-val PEEK_INSERT_PTREE = save_thm("PEEK_INSERT_PTREE",
+Theorem PEEK_INSERT_PTREE =
    (GEN_ALL o SPEC_ALL o ONCE_REWRITE_RULE [oneTheory.one] o
-    REWRITE_RULE [ADD_INSERT] o ISPEC `t:ptreeset`) PEEK_ADD);
+    REWRITE_RULE [ADD_INSERT] o ISPEC `t:ptreeset`) PEEK_ADD;
 
 Theorem MEM_TRAVERSE_INSERT_PTREE:
    !t x h. IS_PTREE t ==>
@@ -785,19 +804,22 @@ Proof
   SRW_TAC [] [MEM_TRAVERSE_PEEK, PEEK_INSERT_PTREE]
 QED
 
-val MEM_TRAVERSE_FOLDR = prove(
-  `!l t x. IS_PTREE t ==>
+Theorem MEM_TRAVERSE_FOLDR[local]:
+   !l t x. IS_PTREE t ==>
       (MEM x (TRAVERSE (FOLDR (\x y. x INSERT_PTREE y) (h INSERT_PTREE t) l)) =
        (x = h) \/
-      ~(x = h) /\ MEM x (TRAVERSE (FOLDR (\x y. x INSERT_PTREE y) t l)))`,
+      ~(x = h) /\ MEM x (TRAVERSE (FOLDR (\x y. x INSERT_PTREE y) t l)))
+Proof
    Induct
      \\ SRW_TAC [] [IS_PTREE_FOLDR_INSERT_PTREE, MEM_TRAVERSE_INSERT_PTREE]
-     \\ METIS_TAC []);
+     \\ METIS_TAC []
+QED
 
-val PERM_INSERT_PTREE = prove(
-  `!t l. IS_PTREE t /\ ALL_DISTINCT l ==>
+Theorem PERM_INSERT_PTREE[local]:
+   !t l. IS_PTREE t /\ ALL_DISTINCT l ==>
            (PERM (TRAVERSE (FOLDL (combin$C $INSERT_PTREE) t l))
-              (SET_TO_LIST (NUMSET_OF_PTREE t UNION LIST_TO_SET l)))`,
+              (SET_TO_LIST (NUMSET_OF_PTREE t UNION LIST_TO_SET l)))
+Proof
   REWRITE_TAC [FOLDL_FOLDR_REVERSE]
     \\ Induct_on `l`
     \\ SRW_TAC [] [TRAVERSE_def, FOLDR_APPEND, NUMSET_OF_PTREE_def]
@@ -806,11 +828,12 @@ val PERM_INSERT_PTREE = prove(
                    IS_PTREE_FOLDR_INSERT_PTREE]
     \\ RES_TAC \\ IMP_RES_TAC PERM_MEM_EQ \\ NTAC 2 (POP_ASSUM (K ALL_TAC))
     \\ FULL_SIMP_TAC (srw_ss()) [MEM_SET_TO_LIST, MEM_TRAVERSE]
-     \\ METIS_TAC []);
+     \\ METIS_TAC []
+QED
 
-val PERM_INSERT_PTREE = save_thm("PERM_INSERT_PTREE",
+Theorem PERM_INSERT_PTREE =
   (GEN_ALL o SIMP_RULE (srw_ss()) [SET_TO_LIST_INV] o
-   DISCH `FINITE s` o SPECL [`t`, `SET_TO_LIST s`]) PERM_INSERT_PTREE);
+   DISCH `FINITE s` o SPECL [`t`, `SET_TO_LIST s`]) PERM_INSERT_PTREE;
 
 Theorem IN_PTREE_OF_NUMSET:
    !t s n. IS_PTREE t /\ FINITE s ==>
@@ -827,17 +850,18 @@ Proof
     \\ SRW_TAC [] [PTREE_OF_NUMSET_def, PERM_INSERT_PTREE]
 QED
 
-val IN_PTREE_EMPTY = save_thm("IN_PTREE_EMPTY", (GEN_ALL o EQF_ELIM o
-  SIMP_CONV (srw_ss()) [IN_PTREE_def, PEEK_def]) ``n IN_PTREE <{}>``);
+Theorem IN_PTREE_EMPTY[simp] = (GEN_ALL o EQF_ELIM o
+  SIMP_CONV (srw_ss()) [IN_PTREE_def, PEEK_def]) ``n IN_PTREE <{}>``;
 
-val _ = export_rewrites ["IN_PTREE_EMPTY"];
 
-val IN_PTREE_OF_NUMSET_EMPTY = save_thm("IN_PTREE_OF_NUMSET_EMPTY",
-  (GSYM o SIMP_RULE (srw_ss()) [] o SPEC `Empty`) IN_PTREE_OF_NUMSET);
+Theorem IN_PTREE_OF_NUMSET_EMPTY =
+  (GSYM o SIMP_RULE (srw_ss()) [] o SPEC `Empty`) IN_PTREE_OF_NUMSET;
 
-val IS_SOME_EQ_UNIT = prove(
-  `!a b:unit option. (IS_SOME a = IS_SOME b) = (a = b)`,
-  Cases \\ Cases \\ SRW_TAC [] [oneTheory.one]);
+Theorem IS_SOME_EQ_UNIT[local]:
+   !a b:unit option. (IS_SOME a = IS_SOME b) = (a = b)
+Proof
+  Cases \\ Cases \\ SRW_TAC [] [oneTheory.one]
+QED
 
 Theorem PTREE_EXTENSION:
    !t1 t2. IS_PTREE t1 /\ IS_PTREE t2 ==>
@@ -864,23 +888,21 @@ Proof
     [pred_setTheory.EXTENSION, IN_NUMSET_OF_PTREE, IN_PTREE_OF_NUMSET]
 QED
 
-Theorem NUMSET_OF_PTREE_EMPTY:
+Theorem NUMSET_OF_PTREE_EMPTY[simp]:
    NUMSET_OF_PTREE Empty = {}
 Proof
   SRW_TAC [] [NUMSET_OF_PTREE_def, TRAVERSE_def, LIST_TO_SET_THM]
 QED
 
-Theorem PTREE_OF_NUMSET_EMPTY:
+Theorem PTREE_OF_NUMSET_EMPTY[simp]:
    !t. PTREE_OF_NUMSET t {} = t
 Proof
   SRW_TAC [] [PTREE_OF_NUMSET_def, SET_TO_LIST_THM]
 QED
 
-val _ = export_rewrites ["NUMSET_OF_PTREE_EMPTY", "PTREE_OF_NUMSET_EMPTY"];
 
-val NUMSET_OF_PTREE_PTREE_OF_NUMSET_EMPTY = save_thm(
-  "NUMSET_OF_PTREE_PTREE_OF_NUMSET_EMPTY",
-  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) NUMSET_OF_PTREE_PTREE_OF_NUMSET);
+Theorem NUMSET_OF_PTREE_PTREE_OF_NUMSET_EMPTY =
+  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) NUMSET_OF_PTREE_PTREE_OF_NUMSET;
 
 Theorem IN_PTREE_INSERT_PTREE:
    !t m n. IS_PTREE t ==>
@@ -904,14 +926,13 @@ Proof
     \\ SRW_TAC [] [IN_NUMSET_OF_PTREE]
 QED
 
-Theorem UNION_PTREE_IS_PTREE:
+Theorem UNION_PTREE_IS_PTREE[simp]:
    !t1 t2. IS_PTREE t1 /\ IS_PTREE t2 ==>
            IS_PTREE (t1 UNION_PTREE t2)
 Proof
   SRW_TAC [] [UNION_PTREE_def]
 QED
 
-val _ = export_rewrites ["UNION_PTREE_IS_PTREE"];
 
 Theorem UNION_PTREE_COMM:
    !t1 t2. IS_PTREE t1 /\ IS_PTREE t2 ==>
@@ -920,8 +941,8 @@ Proof
   SRW_TAC [] [PTREE_EXTENSION] \\ METIS_TAC [IN_PTREE_UNION_PTREE]
 QED
 
-val UNION_PTREE_COMM_EMPTY = save_thm("UNION_PTREE_COMM_EMPTY",
-  (GEN_ALL o SIMP_RULE (srw_ss()) [] o SPECL [`Empty`,`t`]) UNION_PTREE_COMM);
+Theorem UNION_PTREE_COMM_EMPTY =
+  (GEN_ALL o SIMP_RULE (srw_ss()) [] o SPECL [`Empty`,`t`]) UNION_PTREE_COMM;
 
 Theorem UNION_PTREE_EMPTY:
     (!t. t UNION_PTREE Empty = t) /\
@@ -955,8 +976,8 @@ Proof
     \\ METIS_TAC []
 QED
 
-val PTREE_OF_NUMSET_INSERT_EMPTY = save_thm("PTREE_OF_NUMSET_INSERT_EMPTY",
-  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_INSERT);
+Theorem PTREE_OF_NUMSET_INSERT_EMPTY =
+  (SIMP_RULE (srw_ss()) [] o SPEC `Empty`) PTREE_OF_NUMSET_INSERT;
 
 Theorem PTREE_OF_NUMSET_DELETE:
   !t s x. IS_PTREE t /\ FINITE s ==>
@@ -975,13 +996,15 @@ Theorem PTREE_OF_NUMSET_DELETE[allow_rebind] =
 
 (* ------------------------------------------------------------------------- *)
 
-val TRAVERSE_AUX_lem = prove(
-  `!t l. TRAVERSE_AUX t l = TRAVERSE_AUX t [] ++ l`,
+Theorem TRAVERSE_AUX_lem[local]:
+   !t l. TRAVERSE_AUX t l = TRAVERSE_AUX t [] ++ l
+Proof
   Induct
     >- SRW_TAC [] [TRAVERSE_AUX_def]
     >- SRW_TAC [] [TRAVERSE_AUX_def]
     \\ ONCE_REWRITE_TAC [TRAVERSE_AUX_def]
-    \\ METIS_TAC [listTheory.APPEND_ASSOC]);
+    \\ METIS_TAC [listTheory.APPEND_ASSOC]
+QED
 
 Theorem TRAVERSE_AUX:
    !t. TRAVERSE t = TRAVERSE_AUX t []
@@ -1010,8 +1033,8 @@ val QSORT_EQ =
   METIS_PROVE [QSORT_PERM, PERM_TRANS, PERM_SYM, PERM_REFL]
   ``!R l1 l2. (QSORT R l1 = QSORT R l2) ==> PERM l1 l2``;
 
-val QSORT_MEM_EQ = save_thm("QSORT_MEM_EQ",
-  GEN_ALL (IMP_TRANS (SPEC_ALL QSORT_EQ) (SPEC_ALL PERM_MEM_EQ)));
+Theorem QSORT_MEM_EQ =
+  GEN_ALL (IMP_TRANS (SPEC_ALL QSORT_EQ) (SPEC_ALL PERM_MEM_EQ));
 
 Theorem KEYS_PEEK:
    !t1 t2. IS_PTREE t1 /\ IS_PTREE t2 ==>
@@ -1023,14 +1046,16 @@ Proof
     \\ METIS_TAC [PTREE_TRAVERSE_EQ]
 QED
 
-val lem1 = prove(
-  `!t k. IS_PTREE t /\ ~MEM k (TRAVERSE t) ==>
+Theorem lem1[local]:
+   !t k. IS_PTREE t /\ ~MEM k (TRAVERSE t) ==>
           PERM (SET_TO_LIST (NUMSET_OF_PTREE (k INSERT_PTREE t)))
-               (k::TRAVERSE t)`,
+               (k::TRAVERSE t)
+Proof
   REPEAT STRIP_TAC
     \\ MATCH_MP_TAC MEM_ALL_DISTINCT_IMP_PERM
     \\ SRW_TAC [] [MEM_TRAVERSE, IN_NUMSET_OF_PTREE, IN_PTREE_INSERT_PTREE]
-    \\ METIS_TAC []);
+    \\ METIS_TAC []
+QED
 
 val lem2 = (SIMP_RULE (srw_ss()) [PTREE_OF_NUMSET_INSERT,
       GSYM NUMSET_OF_PTREE_PTREE_OF_NUMSET] o
@@ -1050,11 +1075,13 @@ Proof
     \\ METIS_TAC [lem1, lem2, PERM_SYM, PERM_TRANS, TRANSFORM_IS_PTREE]
 QED
 
-val TRAVERSE_ADD_MEM = prove(
-  `!t k d. IS_PTREE t ==>
+Theorem TRAVERSE_ADD_MEM[local]:
+   !t k d. IS_PTREE t ==>
           (MEM j (TRAVERSE (ADD t (k,d))) =
-             (j = k) \/ MEM j (TRAVERSE t))`,
-  SRW_TAC [] [MEM_TRAVERSE_PEEK, PEEK_ADD]);
+             (j = k) \/ MEM j (TRAVERSE t))
+Proof
+  SRW_TAC [] [MEM_TRAVERSE_PEEK, PEEK_ADD]
+QED
 
 Theorem PERM_NOT_ADD:
    !t k d. IS_PTREE t /\ MEM k (TRAVERSE t) ==>
@@ -1064,11 +1091,13 @@ Proof
     \\ METIS_TAC []
 QED
 
-val TRAVERSE_REMOVE_MEM = prove(
-  `!t k. IS_PTREE t ==>
+Theorem TRAVERSE_REMOVE_MEM[local]:
+   !t k. IS_PTREE t ==>
         (MEM j (TRAVERSE (REMOVE t k)) =
-           ~(j = k) /\ MEM j (TRAVERSE t))`,
-  SRW_TAC [] [MEM_TRAVERSE_PEEK, PEEK_REMOVE]);
+           ~(j = k) /\ MEM j (TRAVERSE t))
+Proof
+  SRW_TAC [] [MEM_TRAVERSE_PEEK, PEEK_REMOVE]
+QED
 
 Theorem PERM_NOT_REMOVE:
    !t k. IS_PTREE t /\ ~MEM k (TRAVERSE t) ==>
@@ -1104,19 +1133,23 @@ Proof
     \\ POP_ASSUM (STRIP_ASSUME_TAC o SIMP_RULE (srw_ss()) [] o SPEC `0`)
 QED
 
-val MEM_NOT_NULL = prove(
-  `!l x. MEM x l ==> 0 < LENGTH l`,
-  Cases \\ SRW_TAC [] []);
+Theorem MEM_NOT_NULL[local]:
+   !l x. MEM x l ==> 0 < LENGTH l
+Proof
+  Cases \\ SRW_TAC [] []
+QED
 
-val LENGTH_FILTER_ONE_ALL_DISTINCT = prove(
-  `!l k. ALL_DISTINCT l /\ MEM k l ==>
-        (LENGTH (FILTER (\x. ~(x = k)) l) = LENGTH l - 1)`,
+Theorem LENGTH_FILTER_ONE_ALL_DISTINCT[local]:
+   !l k. ALL_DISTINCT l /\ MEM k l ==>
+        (LENGTH (FILTER (\x. ~(x = k)) l) = LENGTH l - 1)
+Proof
   Induct \\ SRW_TAC [] []
     \\ FULL_SIMP_TAC (srw_ss()) []
     >- METIS_TAC [DECIDE ``0 < n ==> (SUC (n - 1) = n)``, MEM_NOT_NULL]
     \\ MATCH_MP_TAC (METIS_PROVE [] ``(a = b) ==> (LENGTH a = LENGTH b)``)
     \\ MATCH_MP_TAC FILTER_NONE
-    \\ METIS_TAC [MEM_EL]);
+    \\ METIS_TAC [MEM_EL]
+QED
 
 Theorem PERM_REMOVE:
    !t k. IS_PTREE t /\ MEM k (TRAVERSE t) ==>
@@ -1169,24 +1202,26 @@ Proof
 QED
 val _ = computeLib.add_persistent_funs ["SIZE"];
 
-val LENGTH_FOLDL_ADD = prove(
-  `!l t. IS_PTREE t /\ ALL_DISTINCT (TRAVERSE t ++ l) ==>
-        (SIZE (FOLDL (combin$C $INSERT_PTREE) t l) = SIZE t + LENGTH l)`,
+Theorem LENGTH_FOLDL_ADD[local]:
+   !l t. IS_PTREE t /\ ALL_DISTINCT (TRAVERSE t ++ l) ==>
+        (SIZE (FOLDL (combin$C $INSERT_PTREE) t l) = SIZE t + LENGTH l)
+Proof
   Induct \\ SRW_TAC [] [SIZE]
     \\ `ALL_DISTINCT (TRAVERSE (h INSERT_PTREE t) ++ l) /\ ~MEM h (TRAVERSE t)`
     by (FULL_SIMP_TAC (srw_ss()) [ALL_DISTINCT_APPEND,
               MEM_TRAVERSE_INSERT_PTREE] \\ METIS_TAC [])
     \\ `SIZE (h INSERT_PTREE t) = SIZE t + 1`
     by RW_TAC std_ss [SIZE_ADD, INSERT_PTREE_def]
-    \\ METIS_TAC [INSERT_PTREE_IS_PTREE, DECIDE ``a + 1 + b = a + SUC b``]);
+    \\ METIS_TAC [INSERT_PTREE_IS_PTREE, DECIDE ``a + 1 + b = a + SUC b``]
+QED
 
-val SIZE_PTREE_OF_NUMSET = save_thm("SIZE_PTREE_OF_NUMSET",
+Theorem SIZE_PTREE_OF_NUMSET =
   (GEN_ALL o SIMP_RULE (srw_ss()) [GSYM PTREE_OF_NUMSET_def, SET_TO_LIST_CARD] o
-   DISCH `FINITE s` o SPECL [`SET_TO_LIST s`,`t`]) LENGTH_FOLDL_ADD);
+   DISCH `FINITE s` o SPECL [`SET_TO_LIST s`,`t`]) LENGTH_FOLDL_ADD;
 
-val SIZE_PTREE_OF_NUMSET_EMPTY = save_thm("SIZE_PTREE_OF_NUMSET_EMPTY",
+Theorem SIZE_PTREE_OF_NUMSET_EMPTY =
   (SIMP_RULE (srw_ss()) [TRAVERSE_def, SIZE] o
-   SPEC `Empty`) SIZE_PTREE_OF_NUMSET);
+   SPEC `Empty`) SIZE_PTREE_OF_NUMSET;
 
 Theorem CARD_LIST_TO_SET:
    !l. ALL_DISTINCT l ==> (CARD (LIST_TO_SET l) = LENGTH l)

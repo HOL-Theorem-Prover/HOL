@@ -10,7 +10,7 @@ val RW1 = ONCE_REWRITE_RULE;
 
 (* abstract syntax *)
 
-val _ = Hol_datatype `
+Datatype:
   input_type =
   (* no arguments, i.e. arguments are on the stack *)
     iSUB
@@ -18,11 +18,12 @@ val _ = Hol_datatype `
   | iSTOP
   | iPOP
   (* one argument = immediate constant *)
-  | iPUSH of word7
+  | iPUSH word7
   (* one argument = jump target as offset from start of code *)
-  | iJUMP of word7
-  | iJEQ of word7    (* JEQ = jump if equal *)
-  | iJLT of word7    (* JEQ = jump if less than *)`;
+  | iJUMP word7
+  | iJEQ word7    (* JEQ = jump if equal *)
+  | iJLT word7    (* JEQ = jump if less than *)
+End
 
 (* semantics *)
 

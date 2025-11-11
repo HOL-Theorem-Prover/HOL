@@ -133,57 +133,57 @@ fun define_pfc_goal_abs a expr =
 Definition const_comp_def:   const_comp G = (!s s' x. ((G s = ValueState x s') ==> (s=s')))
 End
 
-val read_reg_constlem =
-    store_thm(
-    "read_reg_constlem",
-    ``!n. const_comp (read_reg <|proc:=0|> n)``,
+Theorem read_reg_constlem:
+      !n. const_comp (read_reg <|proc:=0|> n)
+Proof
     FULL_SIMP_TAC (srw_ss()) [const_comp_def]
                   THEN EVAL_TAC THEN (REPEAT (RW_TAC (srw_ss()) []
                                                      THEN FULL_SIMP_TAC (srw_ss()) []
                                                      THEN UNDISCH_ALL_TAC
 
-                                                     THEN RW_TAC (srw_ss()) [])));
+                                                     THEN RW_TAC (srw_ss()) []))
+QED
 
-val read_sctlr_constlem =
-    store_thm(
-    "read_sctlr_constlem",
-    ``const_comp (read_sctlr <|proc:=0|> )``,
+Theorem read_sctlr_constlem:
+      const_comp (read_sctlr <|proc:=0|> )
+Proof
     FULL_SIMP_TAC (srw_ss()) [const_comp_def]
                   THEN EVAL_TAC
                   THEN (REPEAT (RW_TAC (srw_ss()) []
                                        THEN FULL_SIMP_TAC (srw_ss()) []
                                        THEN UNDISCH_ALL_TAC
-                                       THEN RW_TAC (srw_ss()) [])));
+                                       THEN RW_TAC (srw_ss()) []))
+QED
 
 
-val read_scr_constlem =
-    store_thm(
-    "read_scr_constlem",
-    ``const_comp (read_scr <|proc:=0|> )``,
+Theorem read_scr_constlem:
+      const_comp (read_scr <|proc:=0|> )
+Proof
     FULL_SIMP_TAC (srw_ss()) [const_comp_def]
                   THEN EVAL_TAC
                   THEN (REPEAT
                             (RW_TAC (srw_ss()) []
                                     THEN FULL_SIMP_TAC (srw_ss()) []
                                     THEN UNDISCH_ALL_TAC
-                                    THEN RW_TAC (srw_ss()) [])));
+                                    THEN RW_TAC (srw_ss()) []))
+QED
 
-val exc_vector_base_constlem =
-    store_thm(
-    "exc_vector_base_constlem",
-    ``const_comp (exc_vector_base <|proc:=0|> )``,
+Theorem exc_vector_base_constlem:
+      const_comp (exc_vector_base <|proc:=0|> )
+Proof
     FULL_SIMP_TAC (srw_ss()) [const_comp_def]
                   THEN EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
                   THEN NTAC 2 (UNDISCH_ALL_TAC
-                  THEN RW_TAC (srw_ss()) []));
+                  THEN RW_TAC (srw_ss()) [])
+QED
 
 
-val read_cpsr_quintuple_par_effect_lem = store_thm(
-    "read_cpsr_quintuple_par_effect_lem",
-    ``!s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
+Theorem read_cpsr_quintuple_par_effect_lem:
+      !s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
                      ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, cpsr, d))) s)
-                    = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (s.psrs (0, CPSR)), d))) s))``,
+                    = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (s.psrs (0, CPSR)), d))) s))
+Proof
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
        THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -194,23 +194,25 @@ val read_cpsr_quintuple_par_effect_lem = store_thm(
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, arm_seq_monadTheory.readT_def]
        THEN Cases_on `D b`
-       THEN RW_TAC (srw_ss()) []);
+       THEN RW_TAC (srw_ss()) []
+QED
 
-val cpsr_quintuple_simp_lem = store_thm(
-    "cpsr_quintuple_simp_lem",
-    ``!s a n m H . (assert_mode 16w s) ==>
+Theorem cpsr_quintuple_simp_lem:
+      !s a n m H . (assert_mode 16w s) ==>
        ((((read_reg <|proc:=0|> a ||| read_reg <|proc:=0|> n ||| read_reg <|proc:=0|> m ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (a, b, c, cpsr, d). H (a, b, c, cpsr, d))) s)
-      = (((read_reg <|proc:=0|> a ||| read_reg <|proc:=0|> n ||| read_reg <|proc:=0|> m ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (a, b, c, cpsr, d). H (a, b, c, ((s.psrs (0, CPSR)) with M := 16w), d))) s))``,
+      = (((read_reg <|proc:=0|> a ||| read_reg <|proc:=0|> n ||| read_reg <|proc:=0|> m ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (a, b, c, cpsr, d). H (a, b, c, ((s.psrs (0, CPSR)) with M := 16w), d))) s))
+Proof
     RW_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, read_reg_constlem, read_cpsr_quintuple_par_effect_lem, ARM_READ_CPSR_def]
        THEN `((s.psrs (0,CPSR)).M = 16w) ==> ((s.psrs (0,CPSR)) = ((s.psrs (0,CPSR)) with M:= 16w))` by RW_TAC (srw_ss()) [arm_coretypesTheory.ARMpsr_component_equality]
-       THEN METIS_TAC []);
+       THEN METIS_TAC []
+QED
 
 
-val read_cpsr_quintuple_par_effect_with_16_lem = store_thm(
-    "read_cpsr_quintuple_par_effect_with_16_lem",
-    ``!s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
+Theorem read_cpsr_quintuple_par_effect_with_16_lem:
+      !s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
                      ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, (cpsr with M := 16w), d))) s)
-                    = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, ((s.psrs (0, CPSR)) with M := 16w), d))) s))``,
+                    = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D) >>= (\ (a, b, c, cpsr, d). H (a, b, c, ((s.psrs (0, CPSR)) with M := 16w), d))) s))
+Proof
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
        THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -221,22 +223,24 @@ val read_cpsr_quintuple_par_effect_with_16_lem = store_thm(
        THEN RES_TAC
        THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, arm_seq_monadTheory.readT_def]
        THEN Cases_on `D b`
-       THEN RW_TAC (srw_ss()) []);
+       THEN RW_TAC (srw_ss()) []
+QED
 
 
-val cpsr_quintuple_simp_rel_lem = store_thm(
-    "cpsr_quintuple_simp_rel_lem",
-    ``!a n m H inv2 uf uy.
+Theorem cpsr_quintuple_simp_rel_lem:
+      !a n m H inv2 uf uy.
        (preserve_relation_mmu ((read_reg <|proc:=0|> a ||| read_reg <|proc:=0|> n ||| read_reg <|proc:=0|> m ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (pc, b, c, cpsr, d). H (pc, b, c, cpsr, d))) (assert_mode 16w) (inv2) uf uy)
-      = (preserve_relation_mmu ((read_reg <|proc:=0|> a ||| read_reg <|proc:=0|> n ||| read_reg <|proc:=0|> m ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (pc, b, c, cpsr, d). H (pc, b, c, (cpsr with M := 16w), d))) (assert_mode 16w) (inv2) uf uy)``,
-    RW_TAC (srw_ss()) [cpsr_quintuple_simp_lem, preserve_relation_mmu_def, read_reg_constlem, read_cpsr_quintuple_par_effect_with_16_lem]);
+      = (preserve_relation_mmu ((read_reg <|proc:=0|> a ||| read_reg <|proc:=0|> n ||| read_reg <|proc:=0|> m ||| read_cpsr <|proc:=0|> ||| read_teehbr <|proc:=0|>) >>= (\ (pc, b, c, cpsr, d). H (pc, b, c, (cpsr with M := 16w), d))) (assert_mode 16w) (inv2) uf uy)
+Proof
+    RW_TAC (srw_ss()) [cpsr_quintuple_simp_lem, preserve_relation_mmu_def, read_reg_constlem, read_cpsr_quintuple_par_effect_with_16_lem]
+QED
 
 
-val read_cpsr_quintuple_par_effect_lem2 = store_thm(
-    "read_cpsr_quintuple_par_effect_lem2",
-    ``!s A B D E H . (const_comp A) ==>  (const_comp B) ==>
+Theorem read_cpsr_quintuple_par_effect_lem2:
+      !s A B D E H . (const_comp A) ==>  (const_comp B) ==>
                      ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, cpsr, d, e))) s)
-                    = (((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (s.psrs (0, CPSR)), d, e))) s))``,
+                    = (((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (s.psrs (0, CPSR)), d, e))) s))
+Proof
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
        THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -247,13 +251,14 @@ val read_cpsr_quintuple_par_effect_lem2 = store_thm(
        THEN Cases_on `D b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `E b'`
-       THEN RW_TAC (srw_ss()) []);
+       THEN RW_TAC (srw_ss()) []
+QED
 
-val read_cpsr_quintuple_par_effect_with_16_lem2 = store_thm(
-    "read_cpsr_quintuple_par_effect_with_16_lem2",
-    ``!s A B D E H . (const_comp A) ==>  (const_comp B) ==>
+Theorem read_cpsr_quintuple_par_effect_with_16_lem2:
+      !s A B D E H . (const_comp A) ==>  (const_comp B) ==>
                      ((((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, (cpsr with M := 16w), d, e))) s)
-                    = (((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, ((s.psrs (0, CPSR)) with M := 16w), d, e))) s))``,
+                    = (((A ||| B ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, cpsr, d, e). H (a, b, ((s.psrs (0, CPSR)) with M := 16w), d, e))) s))
+Proof
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
        THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -264,73 +269,77 @@ val read_cpsr_quintuple_par_effect_with_16_lem2 = store_thm(
        THEN Cases_on `D b`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
        THEN Cases_on `E b'`
-       THEN RW_TAC (srw_ss()) []);
+       THEN RW_TAC (srw_ss()) []
+QED
 
 
-val cpsr_quintuple_simp_lem2 = store_thm(
-    "cpsr_quintuple_simp_lem2",
-    ``!s x H . (assert_mode 16w s) ==>
+Theorem cpsr_quintuple_simp_lem2:
+      !s x H . (assert_mode 16w s) ==>
        ((((read_reg <|proc:=0|> x ||| exc_vector_base <|proc:=0|> ||| read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) >>= (\ (a, b, cpsr, d, e). H (a, b, cpsr, d, e))) s)
-      = (((read_reg <|proc:=0|> x ||| exc_vector_base <|proc:=0|> ||| read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) >>= (\ (a, b, cpsr, d, e). H (a, b, ((s.psrs (0, CPSR)) with M := 16w), d, e))) s))``,
+      = (((read_reg <|proc:=0|> x ||| exc_vector_base <|proc:=0|> ||| read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) >>= (\ (a, b, cpsr, d, e). H (a, b, ((s.psrs (0, CPSR)) with M := 16w), d, e))) s))
+Proof
     RW_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, read_reg_constlem, exc_vector_base_constlem, read_cpsr_quintuple_par_effect_lem2, ARM_READ_CPSR_def]
        THEN `((s.psrs (0,CPSR)).M = 16w) ==> ((s.psrs (0,CPSR)) = ((s.psrs (0,CPSR)) with M:= 16w))` by RW_TAC (srw_ss()) [arm_coretypesTheory.ARMpsr_component_equality]
-       THEN METIS_TAC []);
+       THEN METIS_TAC []
+QED
 
 
-val cpsr_quintuple_simp_rel_lem2 = store_thm(
-    "cpsr_quintuple_simp_rel_lem2",
-    ``!x H inv2 uf uy.
+Theorem cpsr_quintuple_simp_rel_lem2:
+      !x H inv2 uf uy.
        (preserve_relation_mmu (((read_reg <|proc:=0|> x ||| exc_vector_base <|proc:=0|> ||| read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) >>= (\ (pc, ExcVectorBase, cpsr, scr, sctlr). H (pc, ExcVectorBase, cpsr, scr, sctlr)))) (assert_mode 16w) (inv2) uf uy)
-      = (preserve_relation_mmu (((read_reg <|proc:=0|> x ||| exc_vector_base <|proc:=0|> ||| read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) >>= (\ (pc, ExcVectorBase, cpsr, scr, sctlr). H (pc, ExcVectorBase, (cpsr with M := 16w), scr, sctlr))))(assert_mode 16w) (inv2) uf uy)``,
-    RW_TAC (srw_ss()) [cpsr_quintuple_simp_lem2, preserve_relation_mmu_def, read_reg_constlem, exc_vector_base_constlem, read_cpsr_quintuple_par_effect_with_16_lem2]);
+      = (preserve_relation_mmu (((read_reg <|proc:=0|> x ||| exc_vector_base <|proc:=0|> ||| read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) >>= (\ (pc, ExcVectorBase, cpsr, scr, sctlr). H (pc, ExcVectorBase, (cpsr with M := 16w), scr, sctlr))))(assert_mode 16w) (inv2) uf uy)
+Proof
+    RW_TAC (srw_ss()) [cpsr_quintuple_simp_lem2, preserve_relation_mmu_def, read_reg_constlem, exc_vector_base_constlem, read_cpsr_quintuple_par_effect_with_16_lem2]
+QED
 
 
-val read_cpsr_effect_lem = store_thm(
-    "read_cpsr_effect_lem",
-    ``!s H .  ((read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr))) s = (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (s.psrs (0, CPSR)))) s)``,
+Theorem read_cpsr_effect_lem:
+      !s H .  ((read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr))) s = (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (s.psrs (0, CPSR)))) s)
+Proof
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
        THEN FULL_SIMP_TAC (srw_ss()) []
        THEN RES_TAC
-       THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, arm_seq_monadTheory.readT_def]);
+       THEN RW_TAC (srw_ss()) [read_cpsr_def, read__psr_def, constT_def, arm_seq_monadTheory.readT_def]
+QED
 
 
-val cpsr_simp_lem = store_thm(
-    "cpsr_simp_lem",
-    ``!s H u. (assert_mode u s) ==>
+Theorem cpsr_simp_lem:
+      !s H u. (assert_mode u s) ==>
        (((read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr))) s)
-      = ((read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr with M := u))) s))``,
+      = ((read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr with M := u))) s))
+Proof
     RW_TAC (srw_ss()) [assert_mode_def, ARM_MODE_def, read_cpsr_effect_lem, ARM_READ_CPSR_def]
        THEN `s.psrs (0,CPSR) = s.psrs (0,CPSR) with M := (s.psrs (0,CPSR)).M` by RW_TAC (srw_ss()) [arm_coretypesTheory.ARMpsr_component_equality]
-       THEN METIS_TAC []);
+       THEN METIS_TAC []
+QED
 
-val cpsr_simp_rel_lem = store_thm(
-    "cpsr_simp_rel_lem",
-    ``!H inv2 uf uy u.
+Theorem cpsr_simp_rel_lem:
+      !H inv2 uf uy u.
        (preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr))) (assert_mode u) (inv2) uf uy)
-      = (preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr with M := u)))(assert_mode u) (inv2) uf uy)``,
+      = (preserve_relation_mmu (read_cpsr <|proc:=0|> >>= (\ (cpsr). H (cpsr with M := u)))(assert_mode u) (inv2) uf uy)
+Proof
      RW_TAC (srw_ss()) [preserve_relation_mmu_def]
-            THEN  METIS_TAC [cpsr_simp_lem]);
+            THEN  METIS_TAC [cpsr_simp_lem]
+QED
 
 (* End of borrowed theorems *)
 
-val read_cpsr_constlem =
-    store_thm(
-    "read_cpsr_constlem",
-    ``const_comp (read_cpsr <|proc:=0|> )``,
+Theorem read_cpsr_constlem:
+      const_comp (read_cpsr <|proc:=0|> )
+Proof
     FULL_SIMP_TAC (srw_ss()) [const_comp_def]
                   THEN EVAL_TAC
                   THEN (REPEAT (RW_TAC (srw_ss()) []
                                        THEN FULL_SIMP_TAC (srw_ss()) []
                                        THEN UNDISCH_ALL_TAC
-                                       THEN RW_TAC (srw_ss()) [])));
+                                       THEN RW_TAC (srw_ss()) []))
+QED
 
-val  parT_const_comp_thm =
-     store_thm(
-     "parT_const_comp_thm",
-     ``! f h. const_comp f ==>
+Theorem parT_const_comp_thm:
+       ! f h. const_comp f ==>
               const_comp h ==>
-              const_comp (f ||| h)``
-   ,
+              const_comp (f ||| h)
+Proof
    RW_TAC (srw_ss()) [parT_def,seqT_def,const_comp_def,constT_def] THEN
           Cases_on ` f s ` THEN
           RES_TAC THEN
@@ -340,13 +349,12 @@ val  parT_const_comp_thm =
           FULL_SIMP_TAC (srw_ss()) [] THEN
           RW_TAC (srw_ss()) [] THEN
           Cases_on ` access_violation b` THEN
-          FULL_SIMP_TAC (srw_ss()) []);
+          FULL_SIMP_TAC (srw_ss()) []
+QED
 
 
-val  fixed_sctrl_undef_svc_thm1 =
-     store_thm(
-     "fixed_sctrl_undef_svc_thm1",
-     ``!s A B C D H .
+Theorem fixed_sctrl_undef_svc_thm1:
+       !s A B C D H .
               (const_comp A) ==>
               (const_comp B) ==>
               (const_comp C) ==>
@@ -357,7 +365,7 @@ val  fixed_sctrl_undef_svc_thm1 =
                = (((A ||| B ||| C ||| D |||
                       read_sctlr <|proc:=0|>) >>=
                                  (\ (a, b, c, d, e). H (a, b, c, d, s.coprocessors.state.cp15.SCTLR))) s))
-``,
+Proof
      RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
             THEN Cases_on `A s`
             THEN FULL_SIMP_TAC (srw_ss())  [const_comp_def]
@@ -373,19 +381,17 @@ val  fixed_sctrl_undef_svc_thm1 =
             THEN RES_TAC
             THEN FULL_SIMP_TAC (srw_ss()) [read_sctlr_def,arm_seq_monadTheory.readT_def]
             THEN RW_TAC (srw_ss())  []
-     );
+QED
 
-val  fixed_cpsr_undef_svc_thm1 =
-     store_thm(
-     "fixed_cpsr_undef_svc_thm1",
-     ``!s A B C D H .
+Theorem fixed_cpsr_undef_svc_thm1:
+       !s A B C D H .
               (const_comp A) ==>
               (const_comp B) ==>
               ((((A ||| B ||| read_cpsr <|proc := 0|> ||| C ||| D) >>=
                                            (\ (a, b, c, d, e). H (a, b, c, d, e))) s)
                = (((A ||| B ||| read_cpsr <|proc := 0|> ||| C ||| D) >>=
                                  (\ (a, b, c, d, e). H (a, b, s.psrs (0,CPSR), d, e))) s))
-``,
+Proof
      RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
             THEN Cases_on `A s`
             THEN FULL_SIMP_TAC (srw_ss())  [const_comp_def]
@@ -402,12 +408,10 @@ val  fixed_cpsr_undef_svc_thm1 =
             THEN Cases_on ` access_violation b''`
             THEN FULL_SIMP_TAC (srw_ss())  []
 
-     );
+QED
 
-val  fixed_sctrl_abt_irq_thm1 =
-     store_thm(
-     "fixed_sctrl_abt_irq_thm1",
-     ``!s A B C D E H .
+Theorem fixed_sctrl_abt_irq_thm1:
+       !s A B C D E H .
               (const_comp A) ==>
               (const_comp B) ==>
               (const_comp C) ==>
@@ -419,7 +423,7 @@ val  fixed_sctrl_abt_irq_thm1 =
                = (((A ||| B ||| C ||| D ||| E |||
                       read_sctlr <|proc:=0|>) >>=
                                  (\ (a, b, c, d, e,f). H (a, b, c, d, e, s.coprocessors.state.cp15.SCTLR))) s))
-``,
+Proof
      RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
             THEN Cases_on `A s`
             THEN FULL_SIMP_TAC (srw_ss())  [const_comp_def]
@@ -438,12 +442,11 @@ val  fixed_sctrl_abt_irq_thm1 =
             THEN RES_TAC
             THEN FULL_SIMP_TAC (srw_ss()) [read_sctlr_def,arm_seq_monadTheory.readT_def]
             THEN RW_TAC (srw_ss())  []
-     );
+QED
 
 
-val  fixed_undef_svc_exception_rp_thm2 = store_thm(
-    "fixed_undef_svc_exception_rp_thm2",
-    ``!s e d c b a.
+Theorem fixed_undef_svc_exception_rp_thm2:
+      !s e d c b a.
           (~access_violation s) ==>
           (((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> |||
            read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> |||
@@ -457,15 +460,15 @@ val  fixed_undef_svc_exception_rp_thm2 = store_thm(
            /\
                 (d=s.coprocessors.state.cp15.SCR)
            /\
-                (e=s.coprocessors.state.cp15.SCTLR))``,
+                (e=s.coprocessors.state.cp15.SCTLR))
+Proof
     EVAL_TAC
         THEN RW_TAC (srw_ss())  []
-                                       );
+QED
 
 
-val  fixed_abort_irq_exception_rp_thm2 = store_thm(
-    "fixed_abort_irq_exception_rp_thm2",
-    ``!s f e d c b a .
+Theorem fixed_abort_irq_exception_rp_thm2:
+      !s f e d c b a .
           (~access_violation s) ==>
           (* (Extension_Security ∉ s.information.extensions) ==> *)
           (((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> ||| have_security_ext <|proc:=0|>
@@ -483,28 +486,29 @@ val  fixed_abort_irq_exception_rp_thm2 = store_thm(
            /\
                 (e=s.coprocessors.state.cp15.SCR)
            /\
-                (f=s.coprocessors.state.cp15.SCTLR))``,
+                (f=s.coprocessors.state.cp15.SCTLR))
+Proof
     EVAL_TAC
-        THEN RW_TAC (srw_ss())  []);
+        THEN RW_TAC (srw_ss())  []
+QED
 
-val have_security_ext_constlem =
-    store_thm(
-    "have_security_ext_constlem",
-    ``const_comp (have_security_ext <|proc := 0|>)``,
+Theorem have_security_ext_constlem:
+      const_comp (have_security_ext <|proc := 0|>)
+Proof
     FULL_SIMP_TAC (srw_ss()) [const_comp_def]
                   THEN EVAL_TAC THEN (REPEAT (RW_TAC (srw_ss()) []
                                                      THEN FULL_SIMP_TAC (srw_ss()) []
                                                      THEN UNDISCH_ALL_TAC
 
-                                                     THEN RW_TAC (srw_ss()) [])));
+                                                     THEN RW_TAC (srw_ss()) []))
+QED
 
-val const_comp_take_undef_svc_exception_rp_thm =
-    store_thm(
-    "const_comp_take_undef_svc_exception_rp_thm",
-    ``const_comp (read_reg <|proc := 0|> 15w
+Theorem const_comp_take_undef_svc_exception_rp_thm:
+      const_comp (read_reg <|proc := 0|> 15w
                   ||| exc_vector_base <|proc := 0|>
                   ||| read_cpsr <|proc := 0|> ||| read_scr <|proc := 0|>
-                  ||| read_sctlr <|proc := 0|>)``,
+                  ||| read_sctlr <|proc := 0|>)
+Proof
     ASSUME_TAC (SPEC ``15w:bool[4]`` read_reg_constlem)
                THEN ASSUME_TAC read_cpsr_constlem
                THEN ASSUME_TAC exc_vector_base_constlem
@@ -528,18 +532,18 @@ val const_comp_take_undef_svc_exception_rp_thm =
                         ||| exc_vector_base <|proc := 0|>
                             ||| read_cpsr <|proc := 0|> ||| read_scr <|proc := 0|>
                                                                                                                                    ||| read_sctlr <|proc := 0|>)`
-               by IMP_RES_TAC parT_const_comp_thm);
+               by IMP_RES_TAC parT_const_comp_thm
+QED
 
 
 
 
-val const_comp_take_abort_irq_exception_rp_thm =
-    store_thm(
-    "const_comp_take_abort_irq_exception_rp_thm",
-    ``const_comp (read_reg <|proc := 0|> 15w ||| exc_vector_base <|proc := 0|>
+Theorem const_comp_take_abort_irq_exception_rp_thm:
+      const_comp (read_reg <|proc := 0|> 15w ||| exc_vector_base <|proc := 0|>
           ||| have_security_ext <|proc := 0|>
           ||| read_cpsr <|proc := 0|> ||| read_scr <|proc := 0|>
-          ||| read_sctlr <|proc := 0|>)``,
+          ||| read_sctlr <|proc := 0|>)
+Proof
     ASSUME_TAC (SPEC ``15w:bool[4]`` read_reg_constlem)
                THEN ASSUME_TAC read_cpsr_constlem
                THEN ASSUME_TAC exc_vector_base_constlem
@@ -564,14 +568,14 @@ val const_comp_take_abort_irq_exception_rp_thm =
                           read_cpsr <|proc := 0|>
                           ||| read_scr <|proc := 0|> ||| read_sctlr <|proc := 0|>)`
                by IMP_RES_TAC parT_const_comp_thm
-               THEN METIS_TAC [parT_const_comp_thm]);
+               THEN METIS_TAC [parT_const_comp_thm]
+QED
 
 
 
 
-val  fixed_undef_svc_exception_rp_thm3 = store_thm(
-    "fixed_undef_svc_exception_rp_thm3",
-    ``!s H.
+Theorem fixed_undef_svc_exception_rp_thm3:
+      !s H.
           ((s.psrs (0,CPSR)).M = 16w:bool[5] ) ==>
           (~access_violation s) ==>
           ((((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> |||
@@ -587,17 +591,17 @@ val  fixed_undef_svc_exception_rp_thm3 = store_thm(
                                     get_base_vector_table s,
                                     s.psrs (0,CPSR ) with M := 16w ,
                                     s.coprocessors.state.cp15.SCR,
-                                    s.coprocessors.state.cp15.SCTLR))) s))``,
+                                    s.coprocessors.state.cp15.SCTLR))) s))
+Proof
     EVAL_TAC
         THEN RW_TAC (srw_ss())  []
         THEN `((s.psrs (0,CPSR)).M = 16w) ==> ((s.psrs (0,CPSR)) = ((s.psrs (0,CPSR)) with M:= 16w))` by RW_TAC (srw_ss()) [arm_coretypesTheory.ARMpsr_component_equality]
        THEN METIS_TAC []
- );
+QED
 
 
-val  fixed_abt_irq_exception_rp_thm3 = store_thm(
-    "fixed_abt_irq_exception_rp_thm3",
-    ``!s H.
+Theorem fixed_abt_irq_exception_rp_thm3:
+      !s H.
           ((s.psrs (0,CPSR)).M = 16w:bool[5] ) ==>
           (~access_violation s) ==>
           ((((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> ||| have_security_ext <|proc := 0|> |||
@@ -614,32 +618,32 @@ val  fixed_abt_irq_exception_rp_thm3 = store_thm(
                                     get_security_ext s,
                                     s.psrs (0,CPSR ) with M := 16w ,
                                     s.coprocessors.state.cp15.SCR,
-                                    s.coprocessors.state.cp15.SCTLR))) s))``,
+                                    s.coprocessors.state.cp15.SCTLR))) s))
+Proof
     EVAL_TAC
         THEN RW_TAC (srw_ss())  []
                                 THEN `((s.psrs (0,CPSR)).M = 16w) ==> ((s.psrs (0,CPSR)) = ((s.psrs (0,CPSR)) with M:= 16w))` by RW_TAC (srw_ss()) [arm_coretypesTheory.ARMpsr_component_equality]
        THEN METIS_TAC []
- );
+QED
 
 
 
-val  fixed_VectorBase_undef_instr_exception_thm1 = store_thm(
-    "fixed_VectorBase_undef_instr_exception_thm1",
-    ``! e d c b a s.
+Theorem fixed_VectorBase_undef_instr_exception_thm1:
+      ! e d c b a s.
           (~access_violation s) ==>
           (* (Extension_Security ∉ s.information.extensions) ==> *)
           (((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> |||
            read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> |||
            read_sctlr <|proc:=0|>) s)
         = ValueState (a, b, c, d, e) s) ==>
-          (b=get_base_vector_table s)``,
+          (b=get_base_vector_table s)
+Proof
     EVAL_TAC
         THEN RW_TAC (srw_ss())  []
-                                               );
+QED
 
-val  fixed_VectorBase_undef_instr_exception_thm2 = store_thm(
-    "fixed_VectorBase_undef_instr_exception_thm2",
-    ``!s H.
+Theorem fixed_VectorBase_undef_instr_exception_thm2:
+      !s H.
           (~access_violation s) ==>
           ((((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> |||
            read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> |||
@@ -654,15 +658,15 @@ val  fixed_VectorBase_undef_instr_exception_thm2 = store_thm(
                                   ,
                                     c,
                                     d,
-                                    e))) s))``,
+                                    e))) s))
+Proof
     EVAL_TAC
         THEN RW_TAC (srw_ss())  []
 
- );
+QED
 
-val  fixed_VectorBase_abort_irq_exception_thm1 = store_thm(
-    "fixed_VectorBase_abort_irq_exception_thm1",
-    ``! f e d c b a s.
+Theorem fixed_VectorBase_abort_irq_exception_thm1:
+      ! f e d c b a s.
           (~access_violation s) ==>
           (((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> |||
               have_security_ext <|proc:=0|> |||
@@ -670,14 +674,14 @@ val  fixed_VectorBase_abort_irq_exception_thm1 = store_thm(
            read_sctlr <|proc:=0|>) s)
         = ValueState (a, b, c, d, e,f) s) ==>
           (b=get_base_vector_table s
-          )``,
+          )
+Proof
     EVAL_TAC
         THEN RW_TAC (srw_ss())  []
-                                               );
+QED
 
-val  fixed_VectorBase_abort_irq_exception_thm2 = store_thm(
-    "fixed_VectorBase_abort_irq_exception_thm2",
-    ``!s H.
+Theorem fixed_VectorBase_abort_irq_exception_thm2:
+      !s H.
           (~access_violation s) ==>
           ((((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> |||
               have_security_ext <|proc:=0|> |||
@@ -694,23 +698,23 @@ val  fixed_VectorBase_abort_irq_exception_thm2 = store_thm(
                                   ,
                                     c,
                                     d,
-                                    e, f))) s))``,
+                                    e, f))) s))
+Proof
     EVAL_TAC
         THEN RW_TAC (srw_ss())  []
 
- );
+QED
 
 
-val  fixed_sctrl_undef_svc_thm2 =
-     store_thm(
-     "fixed_sctrl_undef_svc_thm2",
-     ``!s e d c b a.
+Theorem fixed_sctrl_undef_svc_thm2:
+       !s e d c b a.
               (~access_violation s) ==>
               (((read_reg <|proc:=0|> 15w |||
                                    exc_vector_base <|proc:=0|> |||
                                                             read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) s)
                = ValueState (a, b, c, d, e) s) ==>
-              (e = s.coprocessors.state.cp15.SCTLR) ``,
+              (e = s.coprocessors.state.cp15.SCTLR)
+Proof
      RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def] THEN
             ASSUME_TAC (SPEC ``15w:bool[4]`` read_reg_constlem) THEN
             ASSUME_TAC exc_vector_base_constlem THEN
@@ -734,21 +738,21 @@ val  fixed_sctrl_undef_svc_thm2 =
             THEN RW_TAC (srw_ss())  []
             THEN Cases_on `access_violation b'`
             THEN FULL_SIMP_TAC (srw_ss()) [read_sctlr_def,readT_def]
-            THEN RW_TAC (srw_ss())  []);
+            THEN RW_TAC (srw_ss())  []
+QED
 
 
 
-val  fixed_sctrl_abt_irq_thm2 =
-     store_thm(
-     "fixed_sctrl_abt_irq_thm2",
-     ``!s f e d c b a.
+Theorem fixed_sctrl_abt_irq_thm2:
+       !s f e d c b a.
               (~access_violation s) ==>
               (((read_reg <|proc:=0|> 15w |||
                  exc_vector_base <|proc:=0|>
                  ||| have_security_ext <|proc:=0|> |||
               read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) s)
                = ValueState (a, b, c, d, e,f) s) ==>
-              (f = s.coprocessors.state.cp15.SCTLR) ``,
+              (f = s.coprocessors.state.cp15.SCTLR)
+Proof
      RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def] THEN
             ASSUME_TAC (SPEC ``15w:bool[4]`` read_reg_constlem) THEN
             ASSUME_TAC exc_vector_base_constlem THEN
@@ -776,13 +780,13 @@ val  fixed_sctrl_abt_irq_thm2 =
             THEN RW_TAC (srw_ss())  []
             THEN Cases_on `access_violation b'`
             THEN FULL_SIMP_TAC (srw_ss()) [read_sctlr_def,readT_def]
-            THEN RW_TAC (srw_ss())  []);
+            THEN RW_TAC (srw_ss())  []
+QED
 
 
 
-val  fixed_sctrl_undef_svc_thm = store_thm(
-                       "fixed_sctrl_undef_svc_thm",
-                       ``!s H .
+Theorem fixed_sctrl_undef_svc_thm:
+                         !s H .
                                 ((((read_reg <|proc:=0|> 15w |||
                                    exc_vector_base <|proc:=0|> |||
                                    read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> |||
@@ -790,17 +794,17 @@ val  fixed_sctrl_undef_svc_thm = store_thm(
                                  =
                                  (((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> |||
                                    read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) >>=
-                                   (\(pc,ExcVectorBase,cpsr,scr,sctlr). H (pc,ExcVectorBase,cpsr,scr, s.coprocessors.state.cp15.SCTLR))) s))``,
+                                   (\(pc,ExcVectorBase,cpsr,scr,sctlr). H (pc,ExcVectorBase,cpsr,scr, s.coprocessors.state.cp15.SCTLR))) s))
+Proof
                        MP_TAC (SPEC ``15w:bool[4]`` read_reg_constlem)
                               THEN MP_TAC read_cpsr_constlem
                               THEN MP_TAC exc_vector_base_constlem
                               THEN MP_TAC read_scr_constlem
                               THEN RW_TAC (srw_ss()) [fixed_sctrl_undef_svc_thm1]
-                       );
+QED
 
-val fixed_cpsr_undef_svc_thm =
-    store_thm ("fixed_cpsr_undef_svc_thm",
-               ``!s H .
+Theorem fixed_cpsr_undef_svc_thm:
+                 !s H .
                                 ((((read_reg <|proc:=0|> 15w |||
                                     exc_vector_base <|proc:=0|> |||
                                     read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> |||
@@ -811,18 +815,18 @@ val fixed_cpsr_undef_svc_thm =
                                      read_cpsr <|proc:=0|> |||
                                      read_scr <|proc:=0|> |||
                                      read_sctlr <|proc:=0|>) >>=
-                (\ (pc,ExcVectorBase,cpsr,scr,sctlr). H (pc,ExcVectorBase,s.psrs (0,CPSR),scr,sctlr))) s))``,
+                (\ (pc,ExcVectorBase,cpsr,scr,sctlr). H (pc,ExcVectorBase,s.psrs (0,CPSR),scr,sctlr))) s))
+Proof
                MP_TAC (SPEC ``15w:bool[4]`` read_reg_constlem)
                       THEN MP_TAC read_cpsr_constlem
                       THEN MP_TAC exc_vector_base_constlem
                       THEN MP_TAC read_scr_constlem
                       THEN RW_TAC (srw_ss()) [fixed_cpsr_undef_svc_thm1]
-                      );
+QED
 
 
-val  fixed_sctrl_abt_irq_thm = store_thm(
-                       "fixed_sctrl_abt_irq_thm",
-                       ``!s H .
+Theorem fixed_sctrl_abt_irq_thm:
+                         !s H .
                                 ((((read_reg <|proc:=0|> 15w |||
                                    exc_vector_base <|proc:=0|> |||
                                    have_security_ext <|proc := 0|> |||
@@ -832,20 +836,21 @@ val  fixed_sctrl_abt_irq_thm = store_thm(
                                  (((read_reg <|proc:=0|> 15w ||| exc_vector_base <|proc:=0|> |||
                                    have_security_ext <|proc := 0|> |||
                                    read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) >>=
-                                   (\(pc,ExcVectorBase,have_security_ext1,cpsr,scr,sctlr). H (pc,ExcVectorBase,have_security_ext1,cpsr,scr, s.coprocessors.state.cp15.SCTLR))) s))``,
+                                   (\(pc,ExcVectorBase,have_security_ext1,cpsr,scr,sctlr). H (pc,ExcVectorBase,have_security_ext1,cpsr,scr, s.coprocessors.state.cp15.SCTLR))) s))
+Proof
                        MP_TAC (SPEC ``15w:bool[4]`` read_reg_constlem)
                               THEN MP_TAC read_cpsr_constlem
                               THEN MP_TAC exc_vector_base_constlem
                               THEN MP_TAC read_scr_constlem
                               THEN MP_TAC have_security_ext_constlem
                               THEN RW_TAC (srw_ss()) [fixed_sctrl_abt_irq_thm1]
-                       );
+QED
 
-val read_cpsr_quintuple_par_effect_lem1 = store_thm(
-    "read_cpsr_quintuple_par_effect_lem1",
-    ``!s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
+Theorem read_cpsr_quintuple_par_effect_lem1:
+      !s A B C D H . (const_comp A) ==>  (const_comp B) ==>  (const_comp C) ==>
                      ((((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, c, cpsr, d,e). H (a, b, c, cpsr, d,e))) s)
-                    = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, c, cpsr, d,e). H (a, b, c, (s.psrs (0, CPSR)), d,e))) s))``,
+                    = (((A ||| B ||| C ||| read_cpsr <|proc:=0|> ||| D ||| E) >>= (\ (a, b, c, cpsr, d,e). H (a, b, c, (s.psrs (0, CPSR)), d,e))) s))
+Proof
     RW_TAC (srw_ss()) [parT_def, seqT_def, constT_def]
        THEN Cases_on `A s`
        THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def]
@@ -859,12 +864,11 @@ val read_cpsr_quintuple_par_effect_lem1 = store_thm(
        THEN RW_TAC (srw_ss()) []
        THEN Cases_on `E b'`
        THEN RW_TAC (srw_ss()) []
-);
+QED
 
 
-val  fixed_cpsr_abt_irq_thm = store_thm(
-                       "fixed_cpsr_abt_irq_thm",
-                       ``!s H .
+Theorem fixed_cpsr_abt_irq_thm:
+                         !s H .
                                 ((((read_reg <|proc:=0|> 15w |||
                                     exc_vector_base <|proc:=0|> |||
                                     have_security_ext <|proc := 0|> |||
@@ -879,155 +883,153 @@ val  fixed_cpsr_abt_irq_thm = store_thm(
                                      read_scr <|proc:=0|> |||
                                      read_sctlr <|proc:=0|>) >>=
                 (\ (pc,ExcVectorBase,have_security_ext1,cpsr,scr,sctlr).
-                 H (pc,ExcVectorBase,have_security_ext1,s.psrs (0,CPSR),scr,sctlr))) s))``,
+                 H (pc,ExcVectorBase,have_security_ext1,s.psrs (0,CPSR),scr,sctlr))) s))
+Proof
 RW_TAC (srw_ss()) [read_reg_constlem, exc_vector_base_constlem, have_security_ext_constlem, read_cpsr_quintuple_par_effect_lem1, ARM_READ_CPSR_def]
-);
+QED
 
 
-val  fixed_cpsr_undef_svc_thm2 =
-     store_thm("fixed_cpsr_undef_svc_thm2",
-                        ``!s a b c d e.
+Theorem fixed_cpsr_undef_svc_thm2:
+                          !s a b c d e.
                                  (~access_violation s) ==>
                                  (((read_reg <|proc:=0|> 15w |||
                                     exc_vector_base <|proc:=0|> |||
                                     read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) s)
                                   = ValueState (a, b, c, d, e) s) ==>
-                                 (c = s.psrs (0,CPSR)) ``,
-RW_TAC (srw_ss()) [fixed_undef_svc_exception_rp_thm2]);
+                                 (c = s.psrs (0,CPSR))
+Proof
+RW_TAC (srw_ss()) [fixed_undef_svc_exception_rp_thm2]
+QED
 
 
-val  fixed_cpsr_abt_irq_thm2 =
-     store_thm("fixed_cpsr_abt_irq_thm2",
-               ``!s a b c d e f.
+Theorem fixed_cpsr_abt_irq_thm2:
+                 !s a b c d e f.
               (~access_violation s) ==>
               (((read_reg <|proc := 0|> 15w ||| exc_vector_base <|proc := 0|>
                 ||| have_security_ext <|proc := 0|> ||| read_cpsr <|proc := 0|>
                 ||| read_scr <|proc := 0|> ||| read_sctlr <|proc := 0|>) s)
                                   = ValueState (a, b, c, d, e ,f) s) ==>
-                                 (d = s.psrs (0,CPSR)) ``
-,
-RW_TAC (srw_ss()) [fixed_abort_irq_exception_rp_thm2]);
+                                 (d = s.psrs (0,CPSR))
+Proof
+RW_TAC (srw_ss()) [fixed_abort_irq_exception_rp_thm2]
+QED
 
 
-val  fixed_pc_undef_svc_thm2 =
-     store_thm("fixed_pc_undef_svc_thm2",
-               ``!s a b c d e.
+Theorem fixed_pc_undef_svc_thm2:
+                 !s a b c d e.
               (~access_violation s) ==>
               (((read_reg <|proc:=0|> 15w |||
                                    exc_vector_base <|proc:=0|> |||
                                     read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) s)
                                   = ValueState (a, b, c, d, e) s) ==>
-                                 (a = get_pc_value s)``,
-RW_TAC (srw_ss()) [fixed_undef_svc_exception_rp_thm2]);
+                                 (a = get_pc_value s)
+Proof
+RW_TAC (srw_ss()) [fixed_undef_svc_exception_rp_thm2]
+QED
 
-val  fixed_pc_abt_irq_thm2 =
-     store_thm("fixed_pc_abt_irq_thm2",
-               ``!s a b c d e f.
+Theorem fixed_pc_abt_irq_thm2:
+                 !s a b c d e f.
               (~access_violation s) ==>
               (((read_reg <|proc:=0|> 15w |||
                                    exc_vector_base <|proc:=0|>
 ||| have_security_ext <|proc := 0|> |||
                                     read_cpsr <|proc:=0|> ||| read_scr <|proc:=0|> ||| read_sctlr <|proc:=0|>) s)
                                   = ValueState (a, b, c, d, e,f) s) ==>
-                                 (a = get_pc_value s)``
-,
-RW_TAC (srw_ss()) [fixed_abort_irq_exception_rp_thm2]);
+                                 (a = get_pc_value s)
+Proof
+RW_TAC (srw_ss()) [fixed_abort_irq_exception_rp_thm2]
+QED
 
 
 (******************************************************)
 (*******************GENERAL THEOREMS ******************)
 (******************************************************)
 
-val hlp_seqT_thm =
-store_thm ("hlp_seqT_thm",
-                              ``!f g s a s' a'. ((f >>= g) s = ValueState a s') ⇒
+Theorem hlp_seqT_thm:
+                                !f g s a s' a'. ((f >>= g) s = ValueState a s') ⇒
                              (f s = ValueState a' s) ⇒
                              ¬access_violation s ⇒
-                             (g a' s = ValueState a s')``,
+                             (g a' s = ValueState a s')
+Proof
                               RW_TAC (srw_ss()) [seqT_def]
                                      THEN FULL_SIMP_TAC (srw_ss()) []
-                             );
+QED
 
-val hlp_errorT_thm =
-store_thm ("hlp_errorT_thm",
-                                ``! g f s e.
+Theorem hlp_errorT_thm:
+                                  ! g f s e.
                                (f s = Error e) ⇒
-                               ((f >>= g) s = Error e)``,
+                               ((f >>= g) s = Error e)
+Proof
                                 RW_TAC (srw_ss()) [seqT_def]
                                        THEN FULL_SIMP_TAC (srw_ss()) []
-                               );
+QED
 
-val seqT_access_violation_thm =
-store_thm ("seqT_access_violation_thm",
-           ``! g f s a s' s'' a'.
+Theorem seqT_access_violation_thm:
+             ! g f s a s' s'' a'.
           ((g >>= f) s = ValueState a s') ⇒
           (g s = ValueState a' s'') ==>
           ¬access_violation s' ⇒
-          (¬access_violation s'')``,
+          (¬access_violation s'')
+Proof
            RW_TAC (srw_ss()) [seqT_def]
                   THEN FULL_SIMP_TAC (srw_ss()) []
                   THEN Cases_on `access_violation s''`
                   THEN UNDISCH_ALL_TAC
                   THEN RW_TAC (srw_ss()) [seqT_def]
                   THEN FULL_SIMP_TAC (srw_ss()) []
-          );
+QED
 
-val parT_access_violation_thm =
-store_thm ("parT_access_violation_thm",
-           ``! g f s a s' s'' a'.
+Theorem parT_access_violation_thm:
+             ! g f s a s' s'' a'.
           ((g ||| f) s = ValueState a s') ⇒
           (g s = ValueState a' s'') ==>
           ¬access_violation s' ⇒
           (¬access_violation s'')
-          ``,
+Proof
            RW_TAC (srw_ss()) [seqT_def,parT_def,constT_def]
                   THEN FULL_SIMP_TAC (srw_ss()) []
                   THEN Cases_on `access_violation s''`
                   THEN UNDISCH_ALL_TAC
                   THEN RW_TAC (srw_ss()) [seqT_def]
                   THEN FULL_SIMP_TAC (srw_ss()) []
-          );
+QED
 
 
-val const_comp_hlp_thm =
-    store_thm("const_comp_hlp_thm",
-``! f s s' a g.
+Theorem const_comp_hlp_thm:
+  ! f s s' a g.
          (const_comp f) ==>
          (f s = ValueState a s') ==>
      (~access_violation s) ==>
-((f >>= g) s = g a s)``
-            ,
+((f >>= g) s = g a s)
+Proof
             RW_TAC (srw_ss()) [const_comp_def,seqT_def]
 THEN RES_TAC
 THEN FULL_SIMP_TAC (srw_ss()) [const_comp_def,seqT_def]
-);
+QED
 
-val hlp_seqT2_thm =
-    store_thm ("hlp_seqT2_thm",
-    ``!f g s a s' b s1 e. ((f >>= g) s = ValueState a s') ==>
+Theorem hlp_seqT2_thm:
+      !f g s a s' b s1 e. ((f >>= g) s = ValueState a s') ==>
               ((f s = ValueState b s1) ==>
               (~access_violation s1) ==>
               (g b s1 = ValueState a s'))
     /\ ~(f s = Error e)
-``,
+Proof
 RW_TAC (srw_ss()) [seqT_def]
 THEN Cases_on `f s`
 THEN FULL_SIMP_TAC (srw_ss()) [seqT_def]
-);
+QED
 
-val hlp_seqT3_thm =
-    store_thm ("hlp_seqT3_thm",
-    ``!g f s e.
+Theorem hlp_seqT3_thm:
+      !g f s e.
               (f s = Error e) ==>
               ((f >>= g) s = Error e)
-``,
+Proof
 RW_TAC (srw_ss()) [seqT_def]
-);
+QED
 
 
-val hlp_seqT4_thm =
-    store_thm ("hlp_seqT4_thm",
-               ``!f H s1 s2 s1' s2' a1 g invr1 invr2 uf uy.
+Theorem hlp_seqT4_thm:
+                 !f H s1 s2 s1' s2' a1 g invr1 invr2 uf uy.
               (~access_violation s1') ==>
               (~access_violation s2') ==>
               (f s1 = ValueState a1 s1') ==>
@@ -1047,42 +1049,41 @@ val hlp_seqT4_thm =
                /\
                     ((f >>= H) s2 = Error e)))
 
-              ``,
+Proof
                RW_TAC (srw_ss()) [preserve_relation_mmu_abs_def,seqT_def]
                       THEN RES_TAC
                       THEN PAT_X_ASSUM ``!c. X`` (fn thm => ASSUME_TAC (SPEC ``a1:'a`` thm))
                       THEN FULL_SIMP_TAC (srw_ss()) [seqT_def]
-              );
+QED
 
-val similar_states_have_same_pc_thm =
-    store_thm ("similar_states_have_same_pc_thm",
-               ``! s1 s2 g.
+Theorem similar_states_have_same_pc_thm:
+                 ! s1 s2 g.
               similar g s1 s2 ==>
               (s2.registers (0,RName_PC)=
-               s1.registers (0,RName_PC))``,
+               s1.registers (0,RName_PC))
+Proof
                RW_TAC (srw_ss()) [similar_def,equal_user_register_def]
-              );
+QED
 
-val similar_states_have_same_cpsr_thm =
-    store_thm ("similar_states_have_same_cpsr_thm",
-               ``! s1 s2 g.
+Theorem similar_states_have_same_cpsr_thm:
+                 ! s1 s2 g.
               similar g s1 s2 ==>
               (s2.psrs (0,CPSR)=
-               s1.psrs (0,CPSR))``,
+               s1.psrs (0,CPSR))
+Proof
                RW_TAC (srw_ss()) [similar_def,equal_user_register_def]
-              );
-val similar_states_have_same_mode_thm =
-    store_thm ("similar_states_have_same_mode_thm",
-               ``! u s1 s2 g.
+QED
+Theorem similar_states_have_same_mode_thm:
+                 ! u s1 s2 g.
               similar g s1 s2 ==>
               ((s2.psrs (0,CPSR)).M = u) ⇒
-       ((s1.psrs (0,CPSR)).M = u)``,
+       ((s1.psrs (0,CPSR)).M = u)
+Proof
                RW_TAC (srw_ss()) [similar_def]
-              );
+QED
 
-val similar_states_have_same_av_thm1 =
-    store_thm ("similar_states_have_same_av_thm1",
-               ``! s1 s2 g.
+Theorem similar_states_have_same_av_thm1:
+                 ! s1 s2 g.
               similar g s1 s2 ==>
               (
                ((~access_violation s2) ==>
@@ -1090,72 +1091,69 @@ val similar_states_have_same_av_thm1 =
                /\
                     ((~access_violation s1) ==>
                     (~access_violation s2)))
-              ``,
+Proof
                RW_TAC (srw_ss()) [similar_def]
-              );
+QED
 
-val similar_states_have_same_vec_tab_thm =
-    store_thm ("similar_states_have_same_vec_tab_thm",
-               ``! s1 s2 g.
+Theorem similar_states_have_same_vec_tab_thm:
+                 ! s1 s2 g.
               similar g s1 s2 ==>
               (
                get_base_vector_table s1 =
                get_base_vector_table s2)
-              ``,
+Proof
                RW_TAC (srw_ss()) [similar_def, get_base_vector_table_def]
-              );
+QED
 
 
-val similar_states_have_same_security_ext_thm =
-    store_thm ("similar_states_have_same_security_ext_thm",
-               ``! s1 s2 g.
+Theorem similar_states_have_same_security_ext_thm:
+                 ! s1 s2 g.
               similar g s1 s2 ==>
               (
                get_security_ext s1 =
                get_security_ext s2)
-              ``,
+Proof
                RW_TAC (srw_ss()) [similar_def, get_security_ext_def]
-              );
+QED
 
-val similar_states_have_same_read_pc_thm =
-    store_thm ("similar_states_have_same_read_pc_thm",
-               ``! s1 s2 g.
+Theorem similar_states_have_same_read_pc_thm:
+                 ! s1 s2 g.
               similar g s1 s2 ==>
               (
                get_pc_value s1 =
                get_pc_value s2)
-              ``,
+Proof
                RW_TAC (srw_ss()) [similar_def, get_pc_value_def,equal_user_register_def]
                              THEN UNABBREV_ALL_TAC
                              THEN EVAL_TAC
                              THEN RW_TAC (srw_ss()) []
-              );
+QED
 
-val similar_states_have_same_av_thm2 =
-    store_thm ("similar_states_have_same_av_thm2",
-               ``! s1 s2 g.
+Theorem similar_states_have_same_av_thm2:
+                 ! s1 s2 g.
                 similar g s1 s2 ==>
               (
                ((access_violation s2) ==>
               (access_violation s1))
                /\
                     ((access_violation s1) ==>
-                    (access_violation s2)))``,
+                    (access_violation s2)))
+Proof
                RW_TAC (srw_ss()) [similar_def]
-              );
+QED
 
-val untouched_states_implies_mmu_setup_thm =
-    store_thm ("untouched_states_implies_mmu_setup_thm",
-               ``! s1 t g.
+Theorem untouched_states_implies_mmu_setup_thm:
+                 ! s1 t g.
               untouched g s1 t ==>
               ((s1.coprocessors.state.cp15.C1 =
           t.coprocessors.state.cp15.C1) /\
          (s1.coprocessors.state.cp15.C2 =
           t.coprocessors.state.cp15.C2) /\
          (s1.coprocessors.state.cp15.C3 =
-          t.coprocessors.state.cp15.C3))``,
+          t.coprocessors.state.cp15.C3))
+Proof
                RW_TAC (srw_ss()) [untouched_def]
-              );
+QED
 
 
 (* only for arm_next: no svc constraints *)
@@ -1338,31 +1336,28 @@ Definition satisfy_priv_constraints_v2a_def:
 End
 
 
-val IT_advance_untouch_mmu_setup_thm =
-    store_thm ("IT_advance_untouch_mmu_setup_thm",
-               ``!s a s'.
+Theorem IT_advance_untouch_mmu_setup_thm:
+                 !s a s'.
               (IT_advance <|proc := 0|> s = ValueState a s') ==>
               ((s.coprocessors = s'.coprocessors)
                /\
             (s.memory = s'.memory)
                /\
                     (s.accesses = s'.accesses))
-              ``
-             ,
+Proof
              EVAL_TAC
                  THEN RW_TAC (srw_ss()) []
                  THEN UNDISCH_ALL_TAC
                  THEN (NTAC 2 (RW_TAC (srw_ss()) []))
-);
+QED
 
 
-val IT_advance_keep_access_violation_thm =
-    store_thm ("IT_advance_keep_access_violation_thm",
-               ``!s a s' g. mmu_requirements s g ==>
+Theorem IT_advance_keep_access_violation_thm:
+                 !s a s' g. mmu_requirements s g ==>
               ¬access_violation s ==>
               (IT_advance <|proc := 0|> s = ValueState a s') ==>
-              ¬access_violation s'``
-             ,
+              ¬access_violation s'
+Proof
              RW_TAC (srw_ss()) [seqT_def]
                     THEN IMP_RES_TAC IT_advance_untouch_mmu_setup_thm
                     THEN IMP_RES_TAC (SPECL [``s:arm_state``,
@@ -1371,21 +1366,19 @@ val IT_advance_keep_access_violation_thm =
                                             trivially_untouched_av_lem2)
                     THEN UNDISCH_ALL_TAC
                     THEN RW_TAC (srw_ss()) []
-              );
+QED
 
-val IT_advance_untouch_security_ex_thm =
-    store_thm ("IT_advance_untouch_security_ex_thm",
-               ``!y s.
+Theorem IT_advance_untouch_security_ex_thm:
+                 !y s.
               Extension_Security ∉ s.information.extensions ==>
                 (IT_advance <|proc := 0|> s = ValueState a s') ==>
             Extension_Security ∉ s'.information.extensions
 
-              ``
-             ,
+Proof
             EVAL_TAC
                  THEN RW_TAC (srw_ss()) []
                  THEN UNDISCH_ALL_TAC
                  THEN (NTAC 2 (RW_TAC (srw_ss()) []))
-);
+QED
 
 

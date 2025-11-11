@@ -38,33 +38,41 @@ End
 
 (* Verification of phase 1 *)
 
-val sem_e_break = store_thm("sem_e_break[simp]",
-  ``!b1 s. ~(sem_e s b1 = (Rbreak,r)) /\ ~(sem_e s b1 = (Rtimeout,r))``,
+Theorem sem_e_break[simp]:
+    !b1 s. ~(sem_e s b1 = (Rbreak,r)) /\ ~(sem_e s b1 = (Rtimeout,r))
+Proof
   Induct \\ rpt strip_tac
   \\ fs [sem_e_def]
-  \\ every_case_tac \\ fs [] \\ rfs []);
+  \\ every_case_tac \\ fs [] \\ rfs []
+QED
 
-val phase1_correct = store_thm("phase1_correct",
-  ``!s t. sem_t s (phase1 t) = sem_t s t``,
+Theorem phase1_correct:
+    !s t. sem_t s (phase1 t) = sem_t s t
+Proof
   once_rewrite_tac [EQ_SYM_EQ]
   \\ recInduct sem_t_ind
   \\ rw [phase1_def,Loop_def]
   \\ simp [sem_t_def_with_stop,sem_e_def]
   \\ rpt (BasicProvers.TOP_CASE_TAC \\ simp [sem_t_def_with_stop])
-  \\ fs [STOP_def]);
+  \\ fs [STOP_def]
+QED
 
-val phase1_pres = store_thm("phase1_pres",
-  ``!t. semantics (phase1 t) = semantics t``,
-  fs [semantics_def,phase1_correct]);
+Theorem phase1_pres:
+    !t. semantics (phase1 t) = semantics t
+Proof
+  fs [semantics_def,phase1_correct]
+QED
 
 (* End of phase 1 verification -- 18 lines *)
 
 (* the rest is old redundant stuff *)
 
-val sem_t_Dec = store_thm("sem_t_Dec",
-  ``sem_t s (Dec v t) =
-    sem_t s (Seq (Exp (Assign v (Num 0))) t)``,
-  fs [sem_t_def,sem_e_def]);
+Theorem sem_t_Dec:
+    sem_t s (Dec v t) =
+    sem_t s (Seq (Exp (Assign v (Num 0))) t)
+Proof
+  fs [sem_t_def,sem_e_def]
+QED
 
 val sem_t_pull_if = prove(
   ``sem_t s1 (if b then t1 else t2) =
@@ -93,9 +101,10 @@ val sem_t_For_swap_body = prove(
   \\ imp_res_tac sem_t_clock
   \\ decide_tac);
 
-val sem_t_For = store_thm("sem_t_For",
-  ``!s b1 b2 t. sem_t s (For b1 b2 t) =
-                sem_t s (Loop (If b1 (Seq t (Exp b2)) Break))``,
+Theorem sem_t_For:
+    !s b1 b2 t. sem_t s (For b1 b2 t) =
+                sem_t s (Loop (If b1 (Seq t (Exp b2)) Break))
+Proof
   REPEAT STRIP_TAC
   \\ completeInduct_on `s.clock`
   \\ rw [sem_t_def_with_stop,sem_e_def,Once sem_t_Loop]
@@ -113,7 +122,8 @@ val sem_t_For = store_thm("sem_t_For",
   \\ fs [dec_clock_def]
   \\ imp_res_tac sem_e_clock
   \\ imp_res_tac sem_t_clock
-  \\ decide_tac);
+  \\ decide_tac
+QED
 
 
 (* === PHASE 2 : compiles expressions into very simple assignments === *)
@@ -214,10 +224,11 @@ val option_cases_eq = Q.prove(
      opt = NONE ∧ n = v ∨ ∃sv. opt = SOME sv ∧ s sv = v’,
   Cases_on ‘opt’ >> simp[]);
 
-val store_var_clock = Q.store_thm(
-  "store_var_clock[simp]",
-  ‘(store_var v n s).clock = s.clock’,
-  simp[store_var_def]);
+Theorem store_var_clock[simp]:
+   (store_var v n s).clock = s.clock
+Proof
+  simp[store_var_def]
+QED
 
 local val fs = fsrw_tac[] in
 val comp_exp_correct = prove(
@@ -452,32 +463,37 @@ val lemma = prove(
    of the compiler program fits with phase2_subset (i.e. syntax
    produced by phase1) *)
 
-val phase2_pres = store_thm("phase2_pres",
-  ``!t. semantics t <> Crash /\ phase2_subset t ==>
-        semantics (phase2 t) = semantics t``,
+Theorem phase2_pres:
+    !t. semantics t <> Crash /\ phase2_subset t ==>
+        semantics (phase2 t) = semantics t
+Proof
   REPEAT STRIP_TAC \\ fs [semantics_thm]
   \\ REVERSE (SRW_TAC [] []) \\ fs [lemma] \\ fs [pair_eq]
   \\ REPEAT (FIRST_X_ASSUM (MP_TAC o Q.SPEC `c:num`))
   \\ REPEAT STRIP_TAC \\ fs []
-  \\ MP_TAC phase2_correct_FST \\ fs []);
+  \\ MP_TAC phase2_correct_FST \\ fs []
+QED
 
 
 (* === PHASE 3 : maps the FOR language into assmembly code === *)
 
 (* We define the tagert assembly language *)
 
-val _ = Datatype `
-reg = Reg string`
+Datatype:
+reg = Reg string
+End
 
-val _ = Datatype `
+Datatype:
 instr =
     Add reg reg reg
   | Int reg int
   | Jmp num
-  | JmpIf reg num`;
+  | JmpIf reg num
+End
 
-val _ = Datatype `
-state_a = <| store : state; pc : num; instrs : instr list |>`;
+Datatype:
+state_a = <| store : state; pc : num; instrs : instr list |>
+End
 
 Definition do_jump_def:
 do_jump s n =
@@ -840,8 +856,8 @@ val _ = save_thm("phase3_lemma",
 val phase3_thm = phase3_lemma
   |> REWRITE_RULE [state_rel_def,OMIT_def];
 
-val phase3_correct = store_thm("phase3_correct",
-  ``!s1 t res s2 x xs ys b.
+Theorem phase3_correct:
+    !s1 t res s2 x xs ys b.
       (sem_t s1 t = (res,s2)) /\ phase3_subset t /\
       (x.store = s1) /\
       (x.pc = 0) /\
@@ -852,22 +868,25 @@ val phase3_correct = store_thm("phase3_correct",
         (x'.store = s2) /\
         (case res of
          | Rval v => (res' = Rval 0)
-         | _ => (res' = res))``,
+         | _ => (res' = res))
+Proof
   REPEAT STRIP_TAC
   \\ MP_TAC (SPEC_ALL phase3_thm
        |> Q.INST [`xs`|->`[]`,`ys`|->`[]`,`b`|->`0`])
   \\ fs [phase3_def] \\ REPEAT STRIP_TAC \\ fs []
   \\ Cases_on `res` \\ fs [rich_listTheory.EL_LENGTH_APPEND]
   \\ SIMP_TAC std_ss [Once sem_a_def]
-  \\ fs [rich_listTheory.EL_LENGTH_APPEND]);
+  \\ fs [rich_listTheory.EL_LENGTH_APPEND]
+QED
 
 (* We prove that phase3 preserves semantics if the source does not
    crash and if the syntax fits within the subset defined by
    phase3_subset. *)
 
-val phase3_pres = store_thm("phase3_pres",
-  ``!t. semantics t <> Crash /\ phase3_subset t ==>
-        asm_semantics (phase3 0 0 t) = semantics t``,
+Theorem phase3_pres:
+    !t. semantics t <> Crash /\ phase3_subset t ==>
+        asm_semantics (phase3 0 0 t) = semantics t
+Proof
   REPEAT STRIP_TAC \\ fs [semantics_thm]
   \\ REVERSE (SRW_TAC [] [])
   THEN1 METIS_TAC []
@@ -888,7 +907,8 @@ val phase3_pres = store_thm("phase3_pres",
   \\ MP_TAC (Q.SPECL [`s_with_clock c`,`t`] phase3_correct) \\ fs []
   \\ REPEAT STRIP_TAC
   \\ POP_ASSUM (MP_TAC o Q.SPEC `a_state (phase3 0 0 t) c`)
-  \\ fs [a_state_def] \\ REPEAT STRIP_TAC \\ fs []);
+  \\ fs [a_state_def] \\ REPEAT STRIP_TAC \\ fs []
+QED
 
 
 (* === The end-to-end compiler === *)
@@ -922,9 +942,10 @@ val phase3_subset_phase2_phase1 = prove(
    that is identical to the source program, if the course program does
    not Crash. *)
 
-val compile_pres = store_thm("compile_pres",
-  ``!t. semantics t <> Crash ==>
-        (asm_semantics (compile t) = semantics t)``,
+Theorem compile_pres:
+    !t. semantics t <> Crash ==>
+        (asm_semantics (compile t) = semantics t)
+Proof
   fs [compile_def]
   \\ ONCE_REWRITE_TAC [GSYM phase1_pres]
   \\ REPEAT STRIP_TAC
@@ -932,7 +953,8 @@ val compile_pres = store_thm("compile_pres",
   \\ fs [phase2_subset_phase1]
   \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
   \\ MATCH_MP_TAC phase3_pres
-  \\ fs [phase2_pres,phase2_subset_phase1,phase3_subset_phase2_phase1]);
+  \\ fs [phase2_pres,phase2_subset_phase1,phase3_subset_phase2_phase1]
+QED
 
 (* The simple type checker (defined in forScript.sml) ensures that the
    source program cannot Crash. This leads to a cleaner top-level
@@ -942,10 +964,12 @@ Definition syntax_ok_def:
   syntax_ok t = type_t F {} t
 End
 
-val compile_correct = store_thm("compile_correct",
-  ``!t. syntax_ok t ==>
-        (asm_semantics (compile t) = semantics t)``,
-  METIS_TAC [type_soundness,syntax_ok_def,compile_pres]);
+Theorem compile_correct:
+    !t. syntax_ok t ==>
+        (asm_semantics (compile t) = semantics t)
+Proof
+  METIS_TAC [type_soundness,syntax_ok_def,compile_pres]
+QED
 
 val _ = set_trace "Goalstack.print_goal_at_top" 0;
 
@@ -959,14 +983,16 @@ val semttac = simp[Once simple_sem_t_reln_cases,is_rval_def]
 val semetac = simp[Once sem_e_reln_cases]
 val sdtac = simp[Once simple_sem_t_div_cases]
 
-val phase1_correct_reln = store_thm("phase1_correct_reln",
-``∀s t res. simple_sem_t_reln s t res ⇒ simple_sem_t_reln s (phase1 t) res``,
+Theorem phase1_correct_reln:
+  ∀s t res. simple_sem_t_reln s t res ⇒ simple_sem_t_reln s (phase1 t) res
+Proof
   ho_match_mp_tac simple_sem_t_reln_strongind>>fs[phase1_def]>>rw[]>>
   TRY(semttac>>metis_tac[])
   >- metis_tac[simple_sem_t_reln_cases,sem_e_reln_cases]>>
   simp[Loop_def]>>semttac>>
   ntac 8 semetac>>
-  metis_tac[simple_sem_t_reln_cases,is_rval_def,sem_e_reln_not,FST,sem_e_reln_cases,Loop_def])
+  metis_tac[simple_sem_t_reln_cases,is_rval_def,sem_e_reln_not,FST,sem_e_reln_cases,Loop_def]
+QED
 
 val phase1_correct_div_lemma = Q.prove (
 `∀s t'. (∃t. phase1 t = t' ∧ simple_sem_t_div s t) ⇒ simple_sem_t_div s t'`,
@@ -986,9 +1012,11 @@ val phase1_correct_div_lemma = Q.prove (
     CONJ_TAC>- metis_tac[phase1_correct_reln,simple_sem_t_reln_cases]>>
     fs[phase1_def,Loop_def])
 
-val phase1_correct_div = store_thm("phase1_correct_div",
-``∀s t. simple_sem_t_div s t ⇒ simple_sem_t_div s (phase1 t)``,
-  metis_tac[phase1_correct_div_lemma])
+Theorem phase1_correct_div:
+  ∀s t. simple_sem_t_div s t ⇒ simple_sem_t_div s (phase1 t)
+Proof
+  metis_tac[phase1_correct_div_lemma]
+QED
 
 Theorem phase1_pres_rel:
   ∀t. rel_semantics t ≠ Crash ⇒ rel_semantics (phase1 t) = rel_semantics t
@@ -1004,9 +1032,11 @@ QED
 val pb_sem_t_reln_Exp = ``pb_sem_t_reln s1' (Trm (Exp e)) r3'``
   |> SIMP_CONV (srw_ss()) [Once pb_sem_t_reln_cases,abort_def];
 
-val sem_e_reln_Num = store_thm("sem_e_reln_Num[simp]",
-  ``sem_e_reln s (Num n) r1 <=> r1 = (Rval n,s)``,
-  fs [Once sem_e_reln_cases]);
+Theorem sem_e_reln_Num[simp]:
+    sem_e_reln s (Num n) r1 <=> r1 = (Rval n,s)
+Proof
+  fs [Once sem_e_reln_cases]
+QED
 
 val pb_sem_t_reln_Forn2 = ``pb_sem_t_reln s (Forn 2 r3 n1 n1 t) (Ter r)``
   |> SIMP_CONV (srw_ss()) [Once pb_sem_t_reln_cases,abort_def];
@@ -1019,10 +1049,11 @@ local
     val bp_step_tac = simp [Once pb_sem_t_reln_cases] \\ fs [];
     val bp_size_step_tac = simp [Once pb_sem_t_size_reln_cases] \\ fs [];
 in
-val pb_sem_t_reln_IMP_phase1 = Q.store_thm("pb_sem_t_reln_IMP_phase1",
-  `!s t r.
+Theorem pb_sem_t_reln_IMP_phase1:
+   !s t r.
      pb_sem_t_reln s (Trm t) (Ter r) ⇒
-     pb_sem_t_reln s (Trm (phase1 t)) (Ter r)`,
+     pb_sem_t_reln s (Trm (phase1 t)) (Ter r)
+Proof
   simp [Once pb_sem_t_size_reln_equiv,PULL_EXISTS]
   \\ completeInduct_on `n` \\ fs [PULL_FORALL]
   \\ Cases_on `t` \\ fs [phase1_def]
@@ -1086,7 +1117,8 @@ val pb_sem_t_reln_IMP_phase1 = Q.store_thm("pb_sem_t_reln_IMP_phase1",
     rename [‘sem_e_reln s0 e0 (r,s)’] >>
     qexists_tac `Ter (r,s)` \\ fs []
     \\ fs [pb_sem_t_reln_Forn2,abort_def]
-    \\ imp_res_tac sem_e_reln_not\\ fs []));
+    \\ imp_res_tac sem_e_reln_not\\ fs [])
+QED
 end
 
 (* End verification in Pretty-Big-Step -- 81 lines
@@ -1094,8 +1126,10 @@ end
 
 (* for presentation purposes: *)
 
-val phase1_abbrev = store_thm("phase1_abbrev",
-  ``(phase1 (For g e t) = Loop (If g (Seq (phase1 t) (Exp e)) Break))/\
-    (phase1 (Dec x t) = Seq (Exp (Assign x (Num 0))) (phase1 t))``,
-  fs [phase1_def]);
+Theorem phase1_abbrev:
+    (phase1 (For g e t) = Loop (If g (Seq (phase1 t) (Exp e)) Break))/\
+    (phase1 (Dec x t) = Seq (Exp (Assign x (Num 0))) (phase1 t))
+Proof
+  fs [phase1_def]
+QED
 

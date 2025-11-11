@@ -284,15 +284,17 @@ val MR_ev_CTXT = store_thm("MR_ev_CTXT",
 
 end
 
-val add_def_lemma = store_thm("add_def_lemma",
-  ``(FDOM (add_def k x) = FDOM k UNION {FST x}) /\
+Theorem add_def_lemma:
+    (FDOM (add_def k x) = FDOM k UNION {FST x}) /\
     (add_def k x ' n = if n IN FDOM k then k ' n else
-                       if n = FST x then SND x else FEMPTY ' n)``,
+                       if n = FST x then SND x else FEMPTY ' n)
+Proof
   Cases_on `x`
   \\ ASM_SIMP_TAC std_ss [SUBMAP_DEF,add_def_def,
     FUNION_DEF,FAPPLY_FUPDATE_THM,
     FDOM_FUPDATE,IN_UNION,FDOM_FUPDATE,
-    FDOM_FEMPTY]);
+    FDOM_FEMPTY]
+QED
 
 local
 
@@ -927,15 +929,17 @@ val funcs_ok_def = tDefine "funcs_ok" `
   \\ FULL_SIMP_TAC std_ss [term_cost_def,LENGTH_MAP,LENGTH,MAP,SUM_def]
   \\ FULL_SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_CLAUSES] \\ REPEAT DECIDE_TAC);
 
-val funcs_ok_sexp2term = store_thm("funcs_ok_sexp2term",
-  ``!x. funcs_ok (sexp2term x)``,
+Theorem funcs_ok_sexp2term:
+    !x. funcs_ok (sexp2term x)
+Proof
   HO_MATCH_MP_TAC sexp2term_ind \\ SIMP_TAC std_ss [] \\ REPEAT STRIP_TAC
   \\ ONCE_REWRITE_TAC [sexp2term_def] \\ SIMP_TAC std_ss [LET_DEF]
   \\ SRW_TAC [] [] \\ SIMP_TAC std_ss [funcs_ok_def]
   \\ FULL_SIMP_TAC std_ss [EVERY_MEM,MEM_MAP,PULL_IMP]
   \\ ASM_SIMP_TAC (srw_ss()) [func_name_ok_def,MEM]
   \\ Cases_on `CAR x` \\ FULL_SIMP_TAC std_ss [getSym_def]
-  \\ FULL_SIMP_TAC (srw_ss()) []);
+  \\ FULL_SIMP_TAC (srw_ss()) []
+QED
 
 val MR_ev_CAR = prove(
   ``MR_ev (App (PrimitiveFun opCAR) [x],a,ctxt,fns,ok) (s,ok2) =
@@ -1312,11 +1316,12 @@ val term2term_Or = prove(
   \\ FULL_SIMP_TAC std_ss [MEM_MAP,EVERY_MEM,PULL_IMP]
   \\ METIS_TAC [free_vars_term_vars,MEM]);
 
-val MR_ev_term2term = store_thm("MR_ev_term2term",
-  ``!x res ok2 ok a.
+Theorem MR_ev_term2term:
+    !x res ok2 ok a.
       funcs_ok x /\ term_ok ctxt5 (term2t x) /\
       MR_ev (term2term x,a,ctxt,fns,ok) (res,ok2) ==>
-      MR_ev (x,a,ctxt,fns,ok) (res,ok2)``,
+      MR_ev (x,a,ctxt,fns,ok) (res,ok2)
+Proof
   HO_MATCH_MP_TAC (fetch "-" "term2t_ind") \\ REPEAT STRIP_TAC
   THEN1 (FULL_SIMP_TAC (srw_ss()) [term2term_def,t2term_def,term2t_def,LENGTH])
   THEN1 (FULL_SIMP_TAC (srw_ss()) [term2term_def,t2term_def,term2t_def,LENGTH])
@@ -1425,7 +1430,8 @@ val MR_ev_term2term = store_thm("MR_ev_term2term",
          \\ FULL_SIMP_TAC std_ss [term2term_def,term2t_def,funcs_ok_def,EVERY_DEF])
   THEN1 (SIMP_TAC (srw_ss()) [Once MR_ev_cases] \\ POP_ASSUM MP_TAC
          \\ FULL_SIMP_TAC (srw_ss()) [term2term_def,term2t_def,t2term_def,
-               funcs_ok_def,EVERY_DEF,f2func_def]));
+               funcs_ok_def,EVERY_DEF,f2func_def])
+QED
 
 (* M_ev ==> MR_ev *)
 
@@ -1447,18 +1453,20 @@ val VarBind_CONS = prove(
   \\ REPEAT STRIP_TAC \\ MATCH_MP_TAC VarBindAux_lemma
   \\ FULL_SIMP_TAC std_ss [LENGTH_REVERSE,LENGTH,MEM_REVERSE]);
 
-val params_lemma = store_thm("params_lemma",
-  ``!params args (v:string).
+Theorem params_lemma:
+    !params args (v:string).
        MEM v params /\ (LENGTH args = LENGTH params) /\ ALL_DISTINCT params ==>
        v IN FDOM (VarBind params args) /\
-       (VarBind params args ' v = FunVarBind params args v)``,
+       (VarBind params args ' v = FunVarBind params args v)
+Proof
   Induct \\ SIMP_TAC std_ss [MEM]
   \\ Cases_on `args` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1]
   \\ FULL_SIMP_TAC std_ss [FunVarBind_def,APPLY_UPDATE_THM]
   \\ ASM_SIMP_TAC std_ss [VarBind_CONS,ALL_DISTINCT]
   \\ FULL_SIMP_TAC std_ss [FAPPLY_FUPDATE_THM,
         FDOM_FUPDATE,IN_INSERT]
-  \\ METIS_TAC []);
+  \\ METIS_TAC []
+QED
 
 val LENGTH_EQ_1 = prove(
   ``(1 = LENGTH xs) = ?x1. xs = [x1]``,
@@ -1980,27 +1988,31 @@ val MEM_ZIP_IMP = prove(
   Induct \\ Cases_on `ys` \\ FULL_SIMP_TAC std_ss [LENGTH,ADD1,ZIP,MAP,MEM]
   \\ METIS_TAC []);
 
-val MAP_LOOKUP_LEMMA = store_thm("MAP_LOOKUP_LEMMA",
-  ``!args params.
+Theorem MAP_LOOKUP_LEMMA:
+    !args params.
       (LENGTH args = LENGTH params) /\ ALL_DISTINCT params ==>
       (MAP mConst args =
-       MAP (\x. LOOKUP x (ZIP (params,MAP mConst args)) (mVar x)) params)``,
+       MAP (\x. LOOKUP x (ZIP (params,MAP mConst args)) (mVar x)) params)
+Proof
   Induct \\ Cases_on `params` \\ SIMP_TAC (srw_ss()) [LENGTH,ADD1,LOOKUP_def]
   \\ REPEAT STRIP_TAC \\ RES_TAC
   \\ POP_ASSUM (fn th => CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [th])))
   \\ SIMP_TAC std_ss [MAP_EQ,EVERY_MEM] \\ REPEAT STRIP_TAC
-  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss []);
+  \\ SRW_TAC [] [] \\ FULL_SIMP_TAC std_ss []
+QED
 
-val MAP_FunVarBind_LEMMA = store_thm("MAP_FunVarBind_LEMMA",
-  ``!params args.
+Theorem MAP_FunVarBind_LEMMA:
+    !params args.
       (LENGTH params = LENGTH args) /\ ALL_DISTINCT params ==>
       (MAP (\v. (v,mConst (FunVarBind params args v))) params =
-       ZIP (params,MAP mConst args))``,
+       ZIP (params,MAP mConst args))
+Proof
   Induct \\ Cases_on `args` \\ SIMP_TAC (srw_ss()) [LENGTH,ADD1,FunVarBind_def]
   \\ SIMP_TAC std_ss [APPLY_UPDATE_THM] \\ REPEAT STRIP_TAC
   \\ sg `MAP (\v. (v,mConst (if h' = v then h else FunVarBind params t v)))
       params = MAP (\v. (v,mConst (FunVarBind params t v))) params`
-  \\ SIMP_TAC std_ss [MAP_EQ,EVERY_MEM] \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [MAP_EQ,EVERY_MEM] \\ FULL_SIMP_TAC std_ss [] \\ METIS_TAC []
+QED
 
 Theorem inst_term_EQ_term_sub:
   !xs sl.

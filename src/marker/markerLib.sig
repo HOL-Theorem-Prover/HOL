@@ -71,8 +71,14 @@ sig
   val find_labelled_assumption : thm -> term list -> thm
 
   val ASSUME_NAMED_TAC : string -> thm -> tactic
+  val assume_named_tac : string -> thm -> tactic
+  val mk_asm           : string -> thm -> tactic
   val LABEL_ASSUM      : string -> thm_tactic -> tactic
+  val label_assum      : string -> thm_tactic -> tactic
+  val asm              : string -> thm_tactic -> tactic
   val LABEL_X_ASSUM    : string -> thm_tactic -> tactic
+  val label_x_assum    : string -> thm_tactic -> tactic
+  val asm_x            : string -> thm_tactic -> tactic
   val LLABEL_RESOLVE   : thm list -> term list -> thm list
   val LLABEL_RES_THEN  : (thm list -> tactic) -> thm list -> tactic
 
@@ -101,7 +107,11 @@ sig
 
   val process_taclist_then : {arg: thm list} -> (thm list -> tactic) -> tactic
 
-end
+  val suspend : string -> tactic
+  val resume : (thm * string * tactic) -> {main: thm, subresult:thm, label:string}
+  val extract_suspended_goal : thm -> string -> (term list * term)
+
+end (* sig *)
 
 (*
    [stmark_term t] wraps term t in a "short term marker".

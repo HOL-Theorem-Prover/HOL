@@ -27,20 +27,20 @@ val comparison_distinct = TypeBase.distinct_of ``:ordering``
 (* Trivial lemmas                                                            *)
 (*---------------------------------------------------------------------------*)
 
-Triviality INTER_DELETE :
+Theorem INTER_DELETE[local] :
   !A a. A INTER (A DELETE a) = A DELETE a
 Proof
   SET_TAC []
 QED
 
-Triviality IN_SET_UNION :
+Theorem IN_SET_UNION[local] :
  !x s t.
    x IN s ==> (s UNION t = s UNION (x INSERT t))
 Proof
  SET_TAC []
 QED
 
-Triviality leq_thm :
+Theorem leq_thm[local] :
   transitive (<=) /\ total (<=) /\ antisymmetric (<=)
 Proof
    srw_tac [ARITH_ss] [transitive_def, total_def, antisymmetric_def]
@@ -58,13 +58,13 @@ Proof
   Cases THEN METIS_TAC [optionTheory.IS_SOME_DEF]
 QED
 
-Triviality length_mergesort :
+Theorem length_mergesort[local] :
   !l R. LENGTH (mergesort R l) = LENGTH l
 Proof
   metis_tac[mergesort_perm,PERM_LENGTH]
 QED
 
-Triviality LENGTH_NIL_SYM =
+Theorem LENGTH_NIL_SYM[local] =
    GEN_ALL (CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL LENGTH_NIL));
 
 Theorem string_to_numlist[local] :
@@ -97,7 +97,8 @@ QED
 (* Output of the compiler is in terms of vectors.                            *)
 (*---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `vector = Vector of 'a list`;
+Datatype: vector = Vector ('a list)
+End
 
 Definition fromList_def : fromList l = Vector l
 End
