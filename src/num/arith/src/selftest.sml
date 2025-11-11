@@ -115,8 +115,8 @@ in
   else die "FAILED!\n"
 end
 
-val ss = boolSimps.bool_ss ++ numSimps.REDUCE_ss ++ numSimps.MOD_ss ++
-         numSimps.ARITH_RWTS_ss
+val ss = boolSimps.bool_ss ++ combinSimps.COMBIN_ss ++
+         numSimps.REDUCE_ss ++ numSimps.MOD_ss ++ numSimps.ARITH_RWTS_ss
 val _ = pr "Testing MOD_ss with constant denominator"
 val _ = let
   val t = ``(6 * x + 7 + 10 * y) MOD 6``

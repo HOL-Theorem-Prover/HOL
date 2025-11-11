@@ -258,9 +258,8 @@ fun CHANGED_CONV conv tm =
  *  be raised.  Doesn't "waste time" doing an equality check.           *
  *  Mnemonic: "quick changed_conv".                                     *
  *----------------------------------------------------------------------*)
-
-fun QCHANGED_CONV conv tm =
-   conv tm handle UNCHANGED => raise ERR "QCHANGED_CONV" "Input term unchanged"
+val QCHANGED_exn = ERR "QCHANGED_CONV" "Input term unchanged"
+fun QCHANGED_CONV conv tm = conv tm handle UNCHANGED => raise QCHANGED_exn
 
 fun testconv (f:conv) x =
   SOME (SOME (f x))

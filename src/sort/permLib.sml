@@ -659,7 +659,7 @@ val PERM_REDUCER =
     initial = perm_reducer_context [],
     addcontext = perm_reducer_add_context2,
     apply = fn args =>
-               QCHANGED_CONV
+               BBConv.QCHANGED_BBCONV $ BBConv.c2bbc $
                  (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
   };
 
@@ -669,7 +669,7 @@ val PERM_REDUCER_SIMPLE =
     initial = perm_reducer_context [],
     addcontext = perm_reducer_add_context_simple,
     apply = fn args =>
-               QCHANGED_CONV
+               BBConv.QCHANGED_BBCONV $ BBConv.c2bbc $
                  (PERM_SIMP_CONV (perm_reducer_get_context (#context args)))
   };
 

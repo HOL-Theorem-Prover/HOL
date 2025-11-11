@@ -36,9 +36,9 @@ val list_ss  =
 fun make_gen_conv_ss c name ssl = let
    exception genconv_reducer_exn
    fun addcontext (context,thms) = context
-   fun apply {solver,conv,context,stack,relation} tm = (
-     QCHANGED_CONV (c (ssl, SOME (conv stack))) tm
-   )
+   fun apply {solver,conv,context,stack,relation} =
+     BBConv.QCHANGED_BBCONV $ BBConv.c2bbc $
+       c (ssl, SOME (BBConv.bbc2c (conv stack)))
    in simpLib.dproc_ss (REDUCER {name=SOME name,
                addcontext=addcontext, apply=apply,
                initial=genconv_reducer_exn})
@@ -2867,7 +2867,9 @@ fun PMATCH_REMOVE_REDUNDANT_CONV t = PMATCH_REMOVE_REDUNDANT_CONV_GEN
   (!thePmatchCompileDB) colHeu_default [] t;
 
 fun PMATCH_REMOVE_REDUNDANT_GEN_ss db col_heu ssl =
-  make_gen_conv_ss (PMATCH_REMOVE_REDUNDANT_CONV_GENCALL db col_heu)  "PMATCH_REMOVE_REDUNDANT_REDUCER" ssl
+  make_gen_conv_ss
+    (PMATCH_REMOVE_REDUNDANT_CONV_GENCALL db col_heu)
+    "PMATCH_REMOVE_REDUNDANT_REDUCER" ssl
 
 fun PMATCH_REMOVE_REDUNDANT_ss () =
   PMATCH_REMOVE_REDUNDANT_GEN_ss (!thePmatchCompileDB) colHeu_default []

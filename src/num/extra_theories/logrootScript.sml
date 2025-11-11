@@ -808,8 +808,6 @@ Proof
                ``a ** 2 = a * a:num``])
 QED
 
-SIMP_CONV std_ss [] “(7 * x) MOD 4 ”
-
 Theorem numeral_sqrt0[local]:
   (SQRTd ZERO = (0,0)) /\
   (SQRTd (BIT1 ZERO)= (1,0)) /\

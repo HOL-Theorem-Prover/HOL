@@ -3025,12 +3025,15 @@ fun QUANT_INSTANTIATE_REDUCER cache_ref_opt re min_occs expand_eq bqp qpL =
   in Traverse.REDUCER
     {name=SOME"QUANT_INSTANTIATE",
      initial = FACTDB [],
-     apply=(fn r => fn t =>
+     apply=(fn r => fn th0 =>
        let
-         val thms = get_db (#context r);
-         val res = EXTENSIBLE_QUANT_INSTANTIATE_CONV cache_ref_opt re min_occs expand_eq thms bqp qpL t;
+         val thms = get_db (#context r)
+         val t = rhs (concl th0)
+         val res = EXTENSIBLE_QUANT_INSTANTIATE_CONV
+                     cache_ref_opt re min_occs
+                     expand_eq thms bqp qpL t
        in
-         res
+         TRANS th0 res
        end handle UNCHANGED => fail()),
      addcontext=(fn (ctxt,thms) => (FACTDB (thms @ (get_db ctxt))))}
   end;

@@ -132,7 +132,8 @@ in
   Traverse.REDUCER
   {name=SOME"SBAG_SOLVER",
    addcontext = add_ctxt,
-   apply = fn args => CACHED_SBAG_SOLVE (get_ctxt (#context args)),
+   apply = fn args =>
+              BBConv.c2bbc $ CACHED_SBAG_SOLVE (get_ctxt (#context args)),
    initial = CTXT []}
 end;
 

@@ -278,7 +278,7 @@ in fn {relation,solver,depther,freevars} =>
       (* note critical link between this exception and traversal code in
          Traverse.FIRSTCQC_CONV *)
       raise UNCHANGED
-    else (trace(3,PRODUCE(tm,"congruence rule",final_thm));
+    else (trace(3,PRODUCE(tm0,"congruence rule",final_thm));
           trans th0 final_thm
           handle e => (trace(7, LZ_TEXT (fn () =>
                                             "opening trans fails on " ^

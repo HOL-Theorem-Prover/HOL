@@ -36,6 +36,7 @@ sig
    val REPEATC               : conv -> conv
    val CHANGED_CONV          : conv -> conv
    val QCHANGED_CONV         : conv -> conv
+   val QCHANGED_exn          : exn
    val UNCHANGED_CONV        : conv -> conv
    val TRY_CONV              : conv -> conv
    val SUB_CONV              : conv -> conv

@@ -5186,20 +5186,20 @@ QED
 Theorem MODEQ_NUMERAL:
    (NUMERAL n < NUMERAL m ==>
      MODEQ (NUMERAL (BIT1 n)) (NUMERAL (BIT1 m))
-           (NUMERAL (BIT1 m) MOD NUMERAL (BIT1 n))) /\
+           (I (NUMERAL (BIT1 m) MOD NUMERAL (BIT1 n)))) /\
     (NUMERAL n <= NUMERAL m ==>
      MODEQ (NUMERAL (BIT1 n)) (NUMERAL (BIT2 m))
-           (NUMERAL (BIT2 m) MOD NUMERAL (BIT1 n))) /\
+           (I (NUMERAL (BIT2 m) MOD NUMERAL (BIT1 n)))) /\
     (NUMERAL n < NUMERAL m ==>
      MODEQ (NUMERAL (BIT2 n)) (NUMERAL (BIT2 m))
-           (NUMERAL (BIT2 m) MOD NUMERAL (BIT2 n))) /\
+           (I (NUMERAL (BIT2 m) MOD NUMERAL (BIT2 n)))) /\
     (NUMERAL n < NUMERAL m ==>
      MODEQ (NUMERAL (BIT2 n)) (NUMERAL (BIT1 m))
-           (NUMERAL (BIT1 m) MOD NUMERAL (BIT2 n)))
+           (I (NUMERAL (BIT1 m) MOD NUMERAL (BIT2 n))))
 Proof
   SIMP_TAC (srw_ss())
            [MODEQ_NONZERO_MODEQUALITY, BIT1, BIT2, ADD_CLAUSES, ALT_ZERO,
-            NUMERAL_DEF, MOD_MOD, LESS_0]
+            NUMERAL_DEF, MOD_MOD, LESS_0, combinTheory.I_THM]
 QED
 
 Theorem MODEQ_MOD:

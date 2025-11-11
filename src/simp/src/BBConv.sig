@@ -8,7 +8,9 @@ val NO_BBCONV : bbconv
 val FIRST_BBCONV : bbconv list -> bbconv
 val BBCONV_RULE : bbconv -> bbconv
 val ORELSEBBC : bbconv * bbconv -> bbconv
+val QCHANGED_BBCONV : bbconv -> bbconv
 
 val c2bbc : conv -> bbconv
+val bbc2c : bbconv -> conv
 
 end
