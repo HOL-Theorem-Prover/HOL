@@ -16,7 +16,7 @@ Ancestors
   combin arithmetic logroot pred_set topology pair cardinal real
   seq transc real_sigma iterate real_topology derivative metric
   nets sigma_algebra extreal_base extreal real_borel measure
-  borel lebesgue martingale probability integration
+  borel lebesgue lebesgue_measure martingale probability integration
 Libs
   numLib hurdUtils pred_setLib tautLib jrhUtils realLib Diff
 
