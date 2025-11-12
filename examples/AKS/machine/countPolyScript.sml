@@ -1800,7 +1800,7 @@ Definition poly_eqM_def:
              od
       od
 Termination
-  WF_REL_TAC `measure (λ(p,q). LENGTH q)` >> simp[LENGTH_TL_LT]
+  WF_REL_TAC `measure (λ(p,q). LENGTH q)` >> simp[NOT_NIL_EQ_LENGTH_NOT_0]
 End
 
 (*
@@ -2040,7 +2040,7 @@ Definition poly_cmultM_def:
                consM k q;
              od
       od
-Termination WF_REL_TAC `measure (λ(n,c,p). LENGTH p)` >> simp[LENGTH_TL_LT]
+Termination WF_REL_TAC `measure (λ(n,c,p). LENGTH p)` >> simp[NOT_NIL_EQ_LENGTH_NOT_0]
 End
 
 (*
@@ -2322,7 +2322,7 @@ Definition poly_addM_def:
              od
       od
 Termination
-  WF_REL_TAC `measure (λ(n,p,q). LENGTH q)` >> simp[LENGTH_TL_LT]
+  WF_REL_TAC `measure (λ(n,p,q). LENGTH q)` >> simp[NOT_NIL_EQ_LENGTH_NOT_0]
 End
 
 (*
@@ -2611,7 +2611,7 @@ Definition poly_lastM_def:
                 else poly_lastM t;
              od
       od
-Termination WF_REL_TAC `measure LENGTH` >> simp[LENGTH_TL_LT]
+Termination WF_REL_TAC `measure LENGTH` >> simp[NOT_NIL_EQ_LENGTH_NOT_0]
 End
 
 (* > FRONT_DEF;
@@ -2645,7 +2645,7 @@ Definition poly_frontM_def:
                      od
              od
       od
-Termination WF_REL_TAC `measure LENGTH` >> simp[LENGTH_TL_LT]
+Termination WF_REL_TAC `measure LENGTH` >> simp[NOT_NIL_EQ_LENGTH_NOT_0]
 End
 
 (* Pseudocode:
@@ -3051,7 +3051,7 @@ Definition poly_multM_def:
                poly_addM n p1 p2;
              od
       od
-Termination WF_REL_TAC `measure (λ(n,p,q). LENGTH q)` >> simp[LENGTH_TL_LT]
+Termination WF_REL_TAC `measure (λ(n,p,q). LENGTH q)` >> simp[NOT_NIL_EQ_LENGTH_NOT_0]
 End
 (* Note: the final poly_addM n p1 p2 can also be poly_addM n p2 p1, as addition is commutative.
    However, the commutative property depends on Ring (ZN n) and weak polynomials.

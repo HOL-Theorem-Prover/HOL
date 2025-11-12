@@ -114,11 +114,9 @@ Proof
     THEN RW_TAC list_ss [ELEM_def,HEAD_def,RESTN_def]
     THEN FULL_SIMP_TAC list_ss [NULL_EQ_NIL,RESTN_def,LAST_DEF]
     THEN FULL_SIMP_TAC list_ss [GSYM NULL_EQ_NIL]
-    THEN IMP_RES_TAC CONS
-    THEN `LENGTH v = SUC(LENGTH(TL v))` by PROVE_TAC[LENGTH]
-    THEN RW_TAC list_ss [RESTN_def,REST_def]
-    THEN `0 < LENGTH v` by DECIDE_TAC
-    THEN PROVE_TAC [LENGTH_TL,ELEM_def,HEAD_def]
+    THEN namedCases_on `v` ["","v' vs"]
+      THEN1 FULL_SIMP_TAC list_ss []
+    THEN FULL_SIMP_TAC list_ss [RESTN_def,REST_def,ELEM_def,HEAD_def]
 QED
 
 Theorem TOP_ITER_LENGTH:
@@ -132,16 +130,17 @@ Proof
     THEN RW_TAC list_ss [ELEM_def,HEAD_def,RESTN_def]
     THEN FULL_SIMP_TAC list_ss [NULL_EQ_NIL,RESTN_def,FRONT_DEF,LAST_DEF,TOP_ITER_def]
     THEN FULL_SIMP_TAC list_ss [GSYM NULL_EQ_NIL]
-    THEN IMP_RES_TAC CONS
-    THEN `LENGTH v = SUC(LENGTH(TL v))` by PROVE_TAC[LENGTH]
-    THEN RW_TAC list_ss [RESTN_def,REST_def]
-    THEN `0 < LENGTH v` by DECIDE_TAC
+    THEN namedCases_on `v` ["","v' vs"]
+      THEN1 FULL_SIMP_TAC list_ss []
     THEN RW_TAC list_ss [TOP_ITER_def]
     THENL
-     [PROVE_TAC [ELEM_def,HEAD_def,RESTN_def,HD],
-      `!i. SUC i < LENGTH v ==> (ELEM (h::v) (SUC i) = TOP)` by PROVE_TAC[]
-      THEN `SUC i < LENGTH v = i < LENGTH v - 1` by DECIDE_TAC
-      THEN FULL_SIMP_TAC list_ss [ELEM_def,HEAD_def,RESTN_def,REST_def,HD,TL]]
+     [first_x_assum (Q.SPEC_THEN `0` MP_TAC)
+      THEN SIMP_TAC list_ss [ELEM_def,RESTN_def,HEAD_def],
+      FULL_SIMP_TAC list_ss []
+      THEN first_x_assum irule
+      THEN Q.X_GEN_TAC `i`
+      THEN first_x_assum (Q.SPEC_THEN `SUC i` MP_TAC)
+      THEN SIMP_TAC list_ss [ELEM_def,RESTN_def,REST_def]]
 QED
 
 Theorem EL_TOP_ITER:

@@ -2815,7 +2815,7 @@ Proof
             THEN `(HD(TL l)::TL(TL l)) = TL l`
                   by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``n>(p:num) ==> ~(n=0)``,CONS]
             THEN `BUTFIRSTN (SUC(SUC 0)) l = TL(TL l)` by PROVE_TAC[BUTFIRSTN]
-            THEN RW_TAC list_ss [],
+            THEN RW_TAC list_ss [DROP_FUNPOW_TL,numeralTheory.numeral_funpow],
           `0 < LENGTH l` by DECIDE_TAC
             THEN `LENGTH (TL l) = LENGTH l - 1` by PROVE_TAC[LENGTH_TL]
             THEN `LENGTH (TL l) > m + n` by DECIDE_TAC
@@ -2907,19 +2907,19 @@ Proof
     THEN `(HD(TL l)::TL(TL l)) = TL l` by PROVE_TAC[NULL_EQ_NIL,LENGTH_NIL,DECIDE``p:num<n ==> ~(n=0)``,CONS]
     THEN ASSUM_LIST(fn thl => ONCE_REWRITE_TAC[GSYM(el 5 thl)])
     THEN ASSUM_LIST(fn thl => ONCE_REWRITE_TAC[GSYM(el 1 thl)])
+    THEN RW_TAC list_ss [DROP_FUNPOW_TL,numeralTheory.numeral_funpow]
+    THEN FULL_SIMP_TAC list_ss
+          [FIRSTN,FinitePSLPathTheory.SEL_def,FinitePSLPathTheory.SEL_REC_def,
+           FinitePSLPathTheory.HEAD_def,FinitePSLPathTheory.REST_def]
+    THEN FULL_SIMP_TAC list_ss [GSYM ADD1]
+    THEN first_x_assum (Q.SPEC_THEN `TL l` MP_TAC)
+    THEN namedCases_on `l` ["","l' ls"] THEN FULL_SIMP_TAC list_ss []
+    THEN namedCases_on `ls` ["","l'' lss"] THEN FULL_SIMP_TAC list_ss []
     THEN REWRITE_TAC
           [FIRSTN,FinitePSLPathTheory.SEL_def,FinitePSLPathTheory.SEL_REC_def,
            FinitePSLPathTheory.HEAD_def,FinitePSLPathTheory.REST_def]
-    THEN RW_TAC list_ss []
-    THEN `n < LENGTH(TL l)` by DECIDE_TAC
-    THEN FULL_SIMP_TAC list_ss
-          [FIRSTN,FinitePSLPathTheory.SEL_def,FinitePSLPathTheory.SEL_REC_def,
-           FinitePSLPathTheory.HEAD_def,FinitePSLPathTheory.REST_def]
-    THEN `FIRSTN (SUC n) (HD (TL l)::TL (TL l)) = SEL_REC (SUC n) 0 (HD (TL l)::TL (TL l))`
-          by PROVE_TAC[ADD1]
-    THEN FULL_SIMP_TAC list_ss
-          [FIRSTN,ADD1,FinitePSLPathTheory.SEL_def,FinitePSLPathTheory.SEL_REC_def,
-           FinitePSLPathTheory.HEAD_def,FinitePSLPathTheory.REST_def]
+    THEN RW_TAC list_ss [FinitePSLPathTheory.SEL_REC_def,
+                        FinitePSLPathTheory.REST_def]
 QED
 
 Theorem FILTER_SEL:

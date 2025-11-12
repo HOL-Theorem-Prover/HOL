@@ -828,6 +828,7 @@ val next_trans_IMP = prove(
   \\ FULL_SIMP_TAC std_ss [sortingTheory.PERM_CONS_IFF,MAP,TL]
   THEN1 DECIDE_TAC
   \\ FULL_SIMP_TAC std_ss [ADD_CLAUSES,odd_nums_def]
+  \\ FULL_SIMP_TAC std_ss [sortingTheory.PERM_CONS_IFF]
   \\ MATCH_MP_TAC sortingTheory.APPEND_PERM_SYM
   \\ FULL_SIMP_TAC std_ss [sortingTheory.PERM_CONS_IFF,MAP,TL,APPEND]
   \\ FULL_SIMP_TAC std_ss [GSYM ADD_ASSOC]
