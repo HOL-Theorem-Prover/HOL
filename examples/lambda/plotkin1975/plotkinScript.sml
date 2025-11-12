@@ -735,7 +735,7 @@ Proof
       drule_all Real_EQ_LAM >> simp[PULL_EXISTS] >>
       simp[dumpTrans_cases, PULL_EXISTS] >> rw[] >>
       irule_at Any EQ_REFL >>
-      drule_at (Pat ‘Real _ = LAM _ _’) lemma1 >>
+      drule_at (Pat ‘Real _ = LAM _ _’) lemma3_1 >>
       simp[isVClosure_wf_Closure, Excl "wf_Closure_thm"] >>
       ‘wf_Closure ⟨ M₂' ∶ E₂'⟩’
         by simp[isVClosure_wf_Closure, Excl "wf_Closure_thm"] >>
