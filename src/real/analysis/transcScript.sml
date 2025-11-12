@@ -17,13 +17,13 @@
        National University of Sciences and Technology (NUST)
        Ialamabad,Pakistan
     ---------------------------------------------------------------------- *)
+
 Theory transc
 Ancestors
   pair num prim_rec arithmetic real metric nets real_sigma
   pred_set iterate real_topology derivative seq lim powser
 Libs
   reduceLib realLib numLib jrhUtils Diff mesonLib hurdUtils
-
 
 val _ = Parse.reveal "B";
 
@@ -328,6 +328,24 @@ GEN_TAC THEN DISCH_THEN(DISJ_CASES_TAC o REWRITE_RULE[REAL_LE_LT]) THENL
       REAL_MUL_LID, ADD_CLAUSES,REAL_MUL_RID, SYM(ONE)]],
     POP_ASSUM(SUBST1_TAC o SYM) THEN
     REWRITE_TAC[EXP_0, REAL_ADD_RID, REAL_LE_REFL]]
+QED
+
+Theorem EXP_LT_X :
+    !x. 0 < x ==> 1 + x < exp x
+Proof
+    rpt STRIP_TAC
+ >> ASSUME_TAC (Q.SPEC ‘x’ (SRULE [] exp))
+ >> ASSUME_TAC (MATCH_MP SUM_SUMMABLE (SRULE [] (Q.SPEC ‘x’ EXP_CONVERGES)))
+ >> qabbrev_tac ‘f = \n. inv (&FACT n) * x pow n’
+ >> MP_TAC (Q.SPECL [‘f’, ‘2’] SER_POS_LT)
+ >> Q.PAT_X_ASSUM ‘exp x = suminf f’ (REWRITE_TAC o wrap o SYM)
+ >> simp [] >> EVAL_TAC
+ >> impl_tac
+ >- (rw [Abbr ‘f’] \\
+     MATCH_MP_TAC REAL_LT_MUL >> simp [REAL_POW_LT, FACT_LESS])
+ >> qabbrev_tac ‘e = suminf f’
+ >> simp [Abbr ‘f’]
+ >> EVAL_TAC >> simp []
 QED
 
 (* also known REAL_EXP_LT_1 *)
@@ -771,6 +789,42 @@ Proof
   EXISTS_TAC (Term`&1`) THEN MATCH_ACCEPT_TAC REAL_LT_01
 QED
 
+Theorem LN_LT_HALF_X :
+    !x. 2 <= x ==> ln x < x / 2
+Proof
+    RW_TAC std_ss [Once (GSYM REAL_SUB_LT)]
+ >> MP_TAC (DIFF_CONV “\x. x / 2 - ln x”)
+ >> simp [REAL_INV_1OVER] >> DISCH_TAC
+ >> qabbrev_tac ‘f = \x. x / 2 - ln x’ >> simp []
+ >> Cases_on ‘x = 2’
+ >- (simp [Abbr ‘f’, REAL_SUB_LT] \\
+    ‘1 = ln (exp 1)’ by simp [LN_EXP] >> POP_ORW \\
+     irule (iffRL LN_MONO_LT) >> simp [EXP_POS_LT] \\
+     MP_TAC (Q.SPEC ‘1’ EXP_LT_X) >> simp [])
+ >> ‘2 < x’ by PROVE_TAC [REAL_LE_LT]
+ >> Q_TAC (TRANS_TAC REAL_LET_TRANS) ‘f 2’
+ >> CONJ_TAC
+ >- (simp [Abbr ‘f’, REAL_SUB_LE] \\
+    ‘1 = ln (exp 1)’ by simp [LN_EXP] >> POP_ORW \\
+     irule (iffRL LN_MONO_LE) >> simp [EXP_POS_LT] \\
+     MP_TAC (Q.SPEC ‘1’ EXP_LE_X) >> simp [])
+ >> irule DIFF_POS_MONO_LT_CU >> art []
+ >> Q.EXISTS_TAC ‘2’ >> simp []
+ >> reverse CONJ_TAC
+ >- (MATCH_MP_TAC DIFF_CONT \\
+     Q.EXISTS_TAC ‘1 / 2 - 1 / 2’ \\
+     FIRST_X_ASSUM MATCH_MP_TAC >> simp [])
+ >> rpt STRIP_TAC
+ >> Q.EXISTS_TAC ‘1 / 2 - 1 / z’
+ >> Know ‘0 < z’
+ >- (Q_TAC (TRANS_TAC REAL_LT_TRANS) ‘2’ >> simp [])
+ >> DISCH_TAC
+ >> reverse CONJ_TAC
+ >- (FIRST_X_ASSUM MATCH_MP_TAC >> art [])
+ >> REWRITE_TAC [REAL_SUB_LT, GSYM REAL_INV_1OVER]
+ >> irule (iffRL REAL_INV_LT_ANTIMONO) >> simp []
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Some properties of roots (easier via logarithms)                          *)
 (*---------------------------------------------------------------------------*)
@@ -819,6 +873,16 @@ Proof
       REWRITE_TAC[REAL_EQ_RMUL, REAL_INJ, NOT_SUC]],
     DISCH_THEN SUBST1_TAC THEN REWRITE_TAC[EXP_POS_LT] THEN
     MATCH_MP_TAC ROOT_LT_LEMMA THEN ASM_REWRITE_TAC[]]
+QED
+
+Theorem EXP_DIV :
+    !n x. 1 < n ==> exp (x / &n) = root n (exp x)
+Proof
+    rw [Once EQ_SYM_EQ]
+ >> Cases_on ‘n’ >> fs []
+ >> rename1 ‘1 < SUC n’
+ >> MP_TAC (Q.SPECL [‘n’, ‘exp x’] ROOT_LN)
+ >> simp [EXP_POS_LT, LN_EXP]
 QED
 
 Theorem ROOT_0:
@@ -979,6 +1043,15 @@ Proof
  >> METIS_TAC [ROOT_11, REAL_LT_LE]
 QED
 
+Theorem ROOT_MONO_LT :
+    !n x y. &0 <= x /\ x < y ==> root(SUC n) x < root(SUC n) y
+Proof
+    rw [REAL_LT_LE]
+ >- (MATCH_MP_TAC ROOT_MONO_LE >> art [])
+ >> ‘0 <= y’ by PROVE_TAC [REAL_LE_TRANS]
+ >> PROVE_TAC [ROOT_11]
+QED
+
 Theorem lem[local]:
   0<2:num
 Proof REWRITE_TAC[TWO,LESS_0]
@@ -1031,6 +1104,24 @@ Proof
      IMP_RES_TAC REAL_LT_REFL,
    PAT_X_ASSUM (Term `& 0 = _`) (SUBST_ALL_TAC o SYM)
    THEN REWRITE_TAC [POW_0, TWO, REAL_MUL_LZERO]]]
+QED
+
+Theorem REAL_POW_LT_EQ :
+    !n x y. 0 < n /\ 0 <= x /\ 0 <= y ==> (x pow n < y pow n <=> x < y)
+Proof
+    rpt STRIP_TAC
+ >> reverse EQ_TAC
+ >- (DISCH_TAC \\
+     MATCH_MP_TAC REAL_POW_LT2 >> simp [])
+ >> Cases_on ‘n’ >> fs []
+ >> rename1 ‘x pow SUC n < _ ==> _’
+ >> qmatch_abbrev_tac ‘a < b ==> _’
+ >> DISCH_TAC
+ >> Know ‘root (SUC n) a < root (SUC n) b’
+ >- (MATCH_MP_TAC ROOT_MONO_LT >> art [] \\
+     simp [Abbr ‘a’, POW_POS])
+ >> MP_TAC (Q.SPECL [‘n’, ‘x’] POW_ROOT_POS) >> simp [Abbr ‘a’]
+ >> MP_TAC (Q.SPECL [‘n’, ‘y’] POW_ROOT_POS) >> simp [Abbr ‘b’]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -2703,6 +2794,52 @@ Proof
       ASM_REWRITE_TAC[]]]
 QED
 
+Theorem MCLAURIN_ALT_lemma[local] :
+    !f h n. 0 < h /\ 0 < n /\
+           (!m t. m < n /\ 0 <= t /\ t <= h ==> higher_differentiable (SUC m) f t) ==>
+      ?t. 0 < t /\ t < h /\
+          f h =
+          SIGMA (λm. diffn m f 0 / &FACT m * h pow m) (count n) +
+          diffn n f t / &FACT n * h pow n
+Proof
+    rpt STRIP_TAC
+ >> Q.ABBREV_TAC ‘diff' = (λm x. diffn m f x)’
+ >> MP_TAC (Q.SPECL [‘f’, ‘diff'’, ‘h’, ‘n’] MCLAURIN)
+ >> impl_tac
+ >- (simp [] \\
+     CONJ_TAC >- (rw [Abbr ‘diff'’] >> METIS_TAC []) \\
+     Q.UNABBREV_TAC ‘diff'’ \\
+     BETA_TAC \\
+     qx_genl_tac [‘m’, ‘t’] \\
+     STRIP_TAC \\
+     Q.PAT_X_ASSUM ‘!m x. _’ (MP_TAC o Q.SPECL [‘m’, ‘t’]) \\
+     DISCH_TAC \\
+     gs [LT_IMP_LE] \\
+     MP_TAC (Q.SPEC ‘f’ higher_differentiable_thm) >> rw [] \\
+     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘m’, ‘t’]) \\
+     METIS_TAC [ETA_AX])
+ >> STRIP_TAC
+ >> qexists ‘t’ >> fs []
+ >> MP_TAC (Q.SPECL [‘λm. inv (&FACT m) * diff' m (0:real) * h pow m’, ‘n’]
+                    (INST_TYPE [“:'a” |-> “:num”] REAL_SUM_IMAGE_COUNT))
+ >> fs []
+QED
+
+(* NOTE: This is modern form of MCLAURIN with SIGMA and higher_differentiable *)
+Theorem MCLAURIN_ALT :
+    !f h n. 0 < h /\ 0 < n /\
+           (!t. 0 <= t /\ t <= h ==> higher_differentiable n f t) ==>
+      ?t. 0 < t /\ t < h /\
+          f h =
+          SIGMA (λm. diffn m f 0 / &FACT m * h pow m) (count n) +
+          diffn n f t / &FACT n * h pow n
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC MCLAURIN_ALT_lemma >> rw []
+ >> MATCH_MP_TAC higher_differentiable_mono
+ >> Q.EXISTS_TAC ‘n’ >> rw []
+QED
+
 (* By Kai Phan. This proof is based on the above MCLAURIN *)
 Theorem TAYLOR_lemma[local] :
     !f a x n. a < x /\ 0 < n /\
@@ -2825,7 +2962,7 @@ Proof
  >> Q.ABBREV_TAC ‘g = λx. f (x + a)’
  >> ‘!x. g x = f (x + a)’ by rw [Abbr ‘g’]
  >> POP_ASSUM (MP_TAC o Q.SPEC ‘x - a’)
- >> ‘f (x - a + a) = f x’ by REAL_ARITH_TAC >> POP_ORW
+ >> ‘x - a + a = x’ by REAL_ARITH_TAC >> POP_ORW
  >> DISCH_TAC
  >> Q.ABBREV_TAC ‘diff' = \n x. diffn n f (x + a)’
  >> MP_TAC (Q.SPECL [‘g’, ‘diff'’, ‘x - a’, ‘n’] MCLAURIN_NEG)
@@ -2871,7 +3008,8 @@ QED
 
 Theorem TAYLOR_ALL_LT :
     !f a x n.
-       0 < n /\ a <> x /\ (!t. min a x <= t /\ t <= max a x ==> higher_differentiable n f t) ==>
+       0 < n /\ a <> x /\
+      (!t. min a x <= t /\ t <= max a x ==> higher_differentiable n f t) ==>
       (?t. min a x < t /\ t < max a x /\
           f x =
           SIGMA (λm. diffn m f a / &FACT m * (x - a) pow m) (count n) +
@@ -3112,7 +3250,7 @@ Proof
 QED
 
 Theorem RPOW_SUC_N:
-          !(a:real) (n:num). 0 < a ==>(a rpow (&n+1)= a pow SUC n)
+    !(a:real) (n:num). 0 < a ==>(a rpow (&n+1)= a pow SUC n)
 Proof
  RW_TAC std_ss [] THEN
  KNOW_TAC``&n + (1:real)= & SUC n`` THEN1
@@ -3143,9 +3281,9 @@ Proof
 QED
 
 Theorem RPOW_POS_LT:
-          ! a b. (0 < a)==> (0 < a rpow b)
+    !a b. (0 < a)==> (0 < a rpow b)
 Proof
-              RW_TAC std_ss [rpow, EXP_POS_LT]
+    RW_TAC std_ss [rpow, EXP_POS_LT]
 QED
 
 (* NOTE: the antecedent has changed from ‘0 <> a’ to ‘0 < a’ *)
@@ -3156,9 +3294,9 @@ Proof
 QED
 
 Theorem LN_RPOW:
-          ! a b. (0 < a)==> (ln (a rpow b)= (b*ln a))
+    !a b. (0 < a)==> (ln (a rpow b)= (b*ln a))
 Proof
- RW_TAC std_ss [rpow,LN_EXP]
+    RW_TAC std_ss [rpow, LN_EXP]
 QED
 
 (* NOTE: added antecedent ‘0 < a’ under the new definition *)
@@ -3197,10 +3335,9 @@ Proof
 QED
 
 Theorem RPOW_INV:
-          ! a b .  (0 < a)==>((inv a) rpow b= inv (a rpow b))
+    !a b. 0 < a ==> (inv a) rpow b = inv (a rpow b)
 Proof
-
-RW_TAC real_ss [rpow, REAL_INV_1OVER, LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB, LN_1, EXP_0]
+    RW_TAC real_ss [rpow, REAL_INV_1OVER, LN_DIV, REAL_SUB_LDISTRIB, EXP_SUB, LN_1, EXP_0]
 QED
 
 Theorem RPOW_MUL :
@@ -5579,3 +5716,5 @@ Theorem ACOTH_ANTIMONO_LE:
 Proof
     rw[] >> Cases_on ‘x = y’ >> gs[REAL_LE_LT,ACOTH_ANTIMONO_LT]
 QED
+
+(* END *)
