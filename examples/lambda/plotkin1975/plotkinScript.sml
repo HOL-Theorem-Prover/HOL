@@ -160,7 +160,7 @@ Inductive dumpTrans:
             (([],E' |+ (x,Cl),[Tm M])::(S,E,C)::D)
 [~Capconst:]
   constapply a b = SOME t ⇒
-  dumpTrans ((mkClos (CONST a) E' :: mkClos (CONST b) E' :: S, E, Ap::C)::D)
+  dumpTrans ((mkClos (CONST a) E' :: mkClos (CONST b) E'' :: S, E, Ap::C)::D)
             ((mkClos t FEMPTY::S,E,C)::D)
 [~CAPP:]
   dumpTrans ((S,E,Tm (APP M N)::C)::D) ((S,E,Tm N::Tm M::Ap::C)::D)
@@ -433,6 +433,12 @@ Proof
   ASM_SET_TAC[]
 QED
 
+Theorem FUN_FMAP_ssub_cFV:
+  cFV M ⊆ D ∧ FINITE D ⇒ FUN_FMAP f D ' M = FUN_FMAP f (cFV M) ' M
+Proof
+  strip_tac >> irule FUN_FMAP_ssub_subset >> simp[]
+QED
+
 Theorem wf_Closure_Real_ground_lemma:
   ∀t fm D.
     (∀k. k ∈ FDOM fm ⇒ wf_Closure (fm ' k) ∧ closed (Real (fm ' k))) ∧
@@ -543,7 +549,7 @@ QED
 (* p131 *)
 (* Plotkin has isVClosure for both terms rather than wf_Closure, but
    the "value" nature of these don't contribute *)
-Theorem lemma1:
+Theorem lemma3_1:
   wf_Closure (mkClos (LAM y M) E) ∧ wf_Closure (mkClos N E') ∧
   Real (mkClos (LAM y M) E) = LAM x M' ∧ Real (mkClos N E') = N' ⇒
   Real (mkClos M (E |+ (y,mkClos N E'))) = [N'/x] M'
@@ -582,4 +588,208 @@ Proof
   simp[GSYM ssub_def] >>
   simp[GSYM o_f_DOMSUB, Excl "o_f_DOMSUB"] >>
   irule ssub_domsub >> rw[cFV_SUB]
+QED
+
+Theorem Real_EQ_LAM:
+  isVClosure cl ∧ Real cl = LAM v M ⇒
+  ∃v0 M0 E. cl = ⟨ LAM v0 M0 ∶ E ⟩
+Proof
+  Cases_on ‘cl’ using fmaptree_nchotomy >>
+  simp[Real_thm, isVClosure_thm, SF CONJ_ss] >>
+  rename [‘ssub _ ct’] >> Cases_on ‘ct’ using cterm_CASES >>
+  rw[ssub_thm] >> irule_at Any EQ_REFL
+QED
+
+Theorem Real_EQ_CONST:
+  isVClosure cl ∧ Real cl = CONST c ⇒
+  ∃E. cl = ⟨ CONST c ∶ E ⟩
+Proof
+  Cases_on ‘cl’ using fmaptree_nchotomy >>
+  simp[Real_thm, isVClosure_thm, SF CONJ_ss] >>
+  rename [‘ssub _ ct’] >> Cases_on ‘ct’ using cterm_CASES >>
+  rw[ssub_thm] >> CCONTR_TAC >> gvs[] >> qpat_x_assum ‘ssub _ _ = _’ mp_tac >>
+  rename [‘ssub _ (LAM v t)’, ‘Real (E ' _)’] >>
+  Q_TAC (NEW_TAC "z") ‘{v} ∪ cFV t ∪ eFV E’ >>
+  ‘LAM v t = LAM z (ctpm [(z,v)] t)’ by simp[ctpm_ALPHA] >>
+  qmatch_abbrev_tac ‘Epm ' (LAM v t) = CONST c ⇒ _’ >>
+  ‘z ∉ FDOM Epm’ by simp[Abbr‘Epm’] >>
+  ‘∀y. y ∈ FDOM Epm ⇒ z ∉ cFV (Epm ' y)’
+    by (simp[Abbr‘Epm’, FUN_FMAP_DEF] >> qx_gen_tac ‘y’ >> rw[] >>
+        ‘closed (Real (E ' y))’ suffices_by simp[] >>
+        irule wf_Closure_Real_ground >> metis_tac[SUBSET_DEF, IN_DELETE]) >>
+  simp[ssub_thm]
+QED
+
+Theorem isVEnv_Real:
+  ∀E v. isVEnv E ∧ v ∈ FDOM E ⇒
+        (∃c. Real (E ' (v:string)) = CONST c) ∨
+        (∃u M. Real (E ' v) = LAM u M)
+Proof
+  ONCE_REWRITE_TAC [isVClosure_cases] >> rw[] >>
+  first_x_assum $ drule_then assume_tac >>
+  rename [‘isVClosure (E ' v)’] >>
+  Cases_on ‘E ' v’ using fmaptree_nchotomy >>
+  gvs[isVClosure_thm, is_abs_def, is_const_def] >>
+  simp[Real_thm] >>
+  qmatch_goalsub_abbrev_tac ‘Efm ' _ = LAM _ _’ >>
+  rename [‘Efm ' (LAM u N) = LAM _ _’] >> disj2_tac >>
+  Q_TAC (NEW_TAC "z") ‘eFV fm ∪ {u} ∪ cFV N’ >>
+  ‘LAM u N = LAM z (ctpm [(z,u)] N)’ by simp[ctpm_ALPHA] >>
+  ‘z ∉ FDOM Efm’ by simp[Abbr‘Efm’] >>
+  ‘∀y. y ∈ FDOM Efm ⇒ z ∉ cFV (Efm ' y)’
+    by (simp[Abbr‘Efm’, FUN_FMAP_DEF] >> qx_gen_tac ‘y’ >>
+        strip_tac >> ‘y ∈ FDOM fm’ by ASM_SET_TAC[] >>
+        ‘wf_Closure (fm ' y)’ by simp[] >>
+        ‘cFV (Real (fm ' y)) = ∅’ suffices_by simp[] >>
+        simp[wf_Closure_Real_ground]) >>
+  simp[ssub_thm] >> irule_at Any EQ_REFL
+QED
+
+(* p131–2 *)
+(* statement is
+    “Suppose E is a value environment and ⟨M,E⟩ is a closure and M'' is the
+     value of Real (⟨M,E⟩) at time t. Then for all S, E, C and D, with
+     FV(C) ⊆ Dom(E) and some t' ≥ t, ⟨S,E,M:C,D⟩ ⇒^{t'} (⟨M',E'⟩:S,E,C,D⟩
+     where ⟨M',E'⟩ is a value closure and Real (⟨M',E'⟩) = M''.”
+   Assume that the shadowing of E in the universal quantification is
+   unintended and that the qualified E and the outermost E are the same.
+*)
+Theorem lemma3_2:
+  ∀t M M'' S E C D.
+    isVEnv E ∧ wf_Closure ⟨M ∶ E⟩ ∧ timed_eval t (Real ⟨M ∶ E⟩) M'' ⇒
+    isDump ((S,E,C)::D) ∧ cstrsFV C ⊆ FDOM E ⇒
+    ∃t' M' E'.
+      t ≤ t' ∧ NRC dumpTrans t' ((S,E,Tm M::C)::D) ((⟨M'∶E'⟩::S,E,C)::D) ∧
+      isVClosure ⟨M'∶E'⟩ ∧ Real ⟨M'∶E'⟩ = M''
+Proof
+  gen_tac >> completeInduct_on ‘t’ >> Cases_on ‘M’ using cterm_CASES >~
+  [‘CONST c’] (* Case 1 *)
+  >- (simp[Real_thm, SF CONJ_ss, ssub_thm] >> rw[] >>
+      qexists ‘1’ >> simp[Once dumpTrans_cases] >>
+      simp[Real_thm, isVClosure_thm]) >~
+  [‘LAM v M’] (* Case 2 *)
+  >- (simp[Real_thm, SF CONJ_ss] >> rw[] >>
+      Q_TAC (NEW_TAC "z") ‘cFV M ∪ {v} ∪ eFV E’ >>
+      ‘LAM v M = LAM z (ctpm [(z,v)] M)’ by simp[ctpm_ALPHA] >>
+      qabbrev_tac ‘Efm = FUN_FMAP (λx. Real (E ' x)) (cFV M DELETE v)’ >>
+      ‘z ∉ FDOM Efm’ by simp[Abbr‘Efm’] >>
+      ‘∀y. y ∈ FDOM Efm ⇒ z ∉ cFV (Efm ' y)’
+        by (simp[Abbr‘Efm’, FUN_FMAP_DEF] >> qx_gen_tac ‘y’ >>
+            strip_tac >> ‘y ∈ FDOM E’ by ASM_SET_TAC[] >>
+            ‘wf_Closure (E ' y)’ by simp[] >>
+            ‘cFV (Real (E ' y)) = ∅’ suffices_by simp[] >>
+            simp[wf_Closure_Real_ground]) >>
+      gvs[ssub_thm] >> qexists ‘1’>>
+      simp[Once dumpTrans_cases, PULL_EXISTS] >>
+      irule_at Any EQ_REFL >>
+      ‘wf_Closure ⟨LAM z (ctpm [(z,v)] M) ∶ E⟩’
+        by (simp[wf_Closure_thm, SUBSET_DEF] >>
+            rw[basic_swapTheory.swapstr_def] >> ASM_SET_TAC[]) >>
+      ‘cFV (ctpm [(z,v)] M) DELETE z = cFV M DELETE v’
+        by (simp[EXTENSION] >> rw[basic_swapTheory.swapstr_def] >> simp[]) >>
+      simp[Real_thm, ssub_thm] >>
+      simp[isVClosure_thm]) >~
+  [‘VAR v’] (* Case 3, p132 *)
+  >- (simp[Real_thm, SF CONJ_ss, FUN_FMAP_DEF] >> rw[] >>
+      ‘M'' = Real (E ' v) ∧ t = 1’
+        by (drule_then (drule_then strip_assume_tac) isVEnv_Real >>
+            gvs[]) >> gvs[] >>
+      qexists ‘1’ >> simp[] >>
+      simp[Once dumpTrans_cases] >>
+      Cases_on ‘E ' v’ using fmaptree_nchotomy >>
+      irule_at Any EQ_REFL >> simp[] >>
+      RULE_ASSUM_TAC (ONCE_REWRITE_RULE[isVClosure_cases]) >> metis_tac[]) >~
+  [‘M₁ @@ M₂’] (* Case 4, p132 *) >>
+  simp[Real_thm, SF CONJ_ss, FUN_FMAP_ssub_cFV] >>
+  rw[] >>
+  ‘wf_Closure ⟨M₁ ∶ E⟩ ∧ wf_Closure ⟨M₂ ∶ E⟩’
+    by simp[wf_Closure_thm] >>
+  gvs[GSYM Real_thm] >>
+  qabbrev_tac ‘N₁ = Real ⟨M₁ ∶ E⟩’ >>
+  qabbrev_tac ‘N₂ = Real ⟨M₂ ∶ E⟩’ >>
+  qpat_x_assum ‘timed_eval t _ _’ mp_tac >>
+  simp[Once timed_eval_cases] >> strip_tac >~
+  (* Subcase 1, p132 *)
+  [‘timed_eval t1 N₁ (LAM x N₃)’, ‘timed_eval t2 N₂ N₄’,
+   ‘timed_eval t3 ([N₄/x]N₃) M''’, ‘t = t1 + (t2 + (t3 + 1))’]
+  >- (irule_at Any (iffRL $ cj 2 arithmeticTheory.NRC) >>
+      simp[dumpTrans_cases] >>
+      Q.UNABBREV_TAC ‘N₂’ >>
+      first_assum (qpat_x_assum ‘timed_eval _ (Real _) _’ o
+                   mp_then Any mp_tac) >> simp[] >>
+      disch_then (qspecl_then [‘S’, ‘Tm M₁::Ap::C’, ‘D’] mp_tac) >>
+      simp[] >> impl_tac >- metis_tac[] >>
+      disch_then (qx_choosel_then [‘t2'’, ‘M₂'’, ‘E₂'’] strip_assume_tac) >>
+      irule_at Any arithmeticTheory.NRC_ADD_I >>
+      first_x_assum $ irule_at (Pat ‘NRC _ _ _ _’) >>
+      Q.UNABBREV_TAC ‘N₁’ >>
+      first_assum (qpat_x_assum ‘timed_eval _ (Real _) _’ o
+                   mp_then Any mp_tac) >> simp[] >>
+      disch_then (qspecl_then [‘⟨ M₂' ∶ E₂'⟩ :: S’, ‘Ap::C’, ‘D’] mp_tac) >>
+      impl_tac
+      >- (gvs[DISJ_IMP_THM, FORALL_AND_THM, isVClosure_thm] >> metis_tac[]) >>
+      disch_then (qx_choosel_then [‘t1'’, ‘M₁'’, ‘E₁'’] strip_assume_tac) >>
+      irule_at Any arithmeticTheory.NRC_ADD_I >>
+      first_x_assum $ irule_at (Pat ‘NRC _ _ _ _’) >>
+      irule_at Any (iffRL $ cj 2 arithmeticTheory.NRC) >>
+      drule_all Real_EQ_LAM >> simp[PULL_EXISTS] >>
+      simp[dumpTrans_cases, PULL_EXISTS] >> rw[] >>
+      irule_at Any EQ_REFL >>
+      drule_at (Pat ‘Real _ = LAM _ _’) lemma1 >>
+      simp[isVClosure_wf_Closure, Excl "wf_Closure_thm"] >>
+      ‘wf_Closure ⟨ M₂' ∶ E₂'⟩’
+        by simp[isVClosure_wf_Closure, Excl "wf_Closure_thm"] >>
+      disch_then $ drule_then (assume_tac o SYM) >> gvs[] >>
+      first_x_assum (qpat_assum ‘timed_eval _ _ _’ o mp_then Any mp_tac) >>
+      simp[Excl "wf_Closure_thm"] >>
+      disch_then (qspecl_then [‘[]’, ‘[]’, ‘(S,E,C)::D’] mp_tac)>> simp[] >>
+      impl_tac
+      >- (gvs[isVClosure_thm, DISJ_IMP_THM, FORALL_AND_THM, SF SFY_ss] >>
+          rpt conj_tac >> rw[FAPPLY_FUPDATE_THM] >>~-
+          ([‘isVEnv _ (* g *)’],
+           gvs[cj 2 isVClosure_cases, DOMSUB_FAPPLY_THM]) >>~-
+          ([‘_ ⊆ _ (* g *)’], ASM_SET_TAC[]) >>
+          gvs[FLOOKUP_SIMP, AllCaseEqs()] >> gvs[flookup_thm]) >>
+      disch_then (qx_choosel_then [‘t3'’, ‘M₃'’, ‘E'’] strip_assume_tac) >>
+      irule_at Any arithmeticTheory.NRC_ADD_I >>
+      first_assum $ irule_at (Pat ‘NRC _ _ _ _ ’) >>
+      irule_at Any (iffRL $ cj 2 arithmeticTheory.NRC) >>
+      simp[dumpTrans_cases] >>
+      irule_at Any (iffRL $ cj 1 arithmeticTheory.NRC) >>
+      irule_at Any EQ_REFL >> simp[]) >>
+  (* Subcase 2, p132 *)
+  rename [‘timed_eval t1 N₁ (CONST a)’, ‘timed_eval t2 N₂ (CONST b)’,
+          ‘t = t1 + (t2 + 1)’] >>
+  irule_at Any (iffRL $ cj 2 arithmeticTheory.NRC) >>
+  simp[dumpTrans_cases] >>
+  Q.UNABBREV_TAC ‘N₂’ >>
+  first_assum (qpat_x_assum ‘timed_eval _ (Real _) _’ o
+                            mp_then Any mp_tac) >> simp[] >>
+  disch_then (qspecl_then [‘S’, ‘Tm M₁::Ap::C’, ‘D’] mp_tac) >>
+  simp[SF SFY_ss] >>
+  disch_then (qx_choosel_then [‘t2'’, ‘M₂'’, ‘E₂'’] strip_assume_tac) >>
+  irule_at Any arithmeticTheory.NRC_ADD_I >>
+  first_x_assum $ irule_at (Pat ‘NRC _ _ _ _ ’) >> gvs[] >>
+  drule_all_then strip_assume_tac Real_EQ_CONST >>
+  gvs[Real_thm, isVClosure_wf_Closure, ssub_thm, Excl "wf_Closure_thm"] >>
+  rename [‘isVClosure ⟨ CONST b ∶ E₂'⟩’] >>
+  Q.UNABBREV_TAC ‘N₁’ >>
+  first_assum (qpat_x_assum ‘timed_eval _ (Real _) _’ o
+                            mp_then Any mp_tac) >> simp[] >>
+  disch_then (qspecl_then [‘⟨CONST b ∶ E₂'⟩::S’, ‘Ap::C’, ‘D’] mp_tac) >>
+  simp[SF SFY_ss, DISJ_IMP_THM, FORALL_AND_THM, Excl "wf_Closure_thm",
+       isVClosure_wf_Closure] >>
+  disch_then (qx_choosel_then [‘t1'’, ‘M₁'’, ‘E₁'’] strip_assume_tac) >>
+  drule_all_then strip_assume_tac Real_EQ_CONST >>
+  gvs[Real_thm, isVClosure_wf_Closure, ssub_thm, Excl "wf_Closure_thm"] >>
+  irule_at Any arithmeticTheory.NRC_ADD_I >>
+  first_x_assum $ irule_at (Pat ‘NRC _ _ _ _ ’) >> gvs[] >>
+  irule_at Any (iffRL $ cj 2 arithmeticTheory.NRC) >>
+  simp[dumpTrans_cases] >>
+  irule_at Any (iffRL $ cj 1 arithmeticTheory.NRC) >> irule_at Any EQ_REFL >>
+  simp[isVClosure_thm, Excl "wf_Closure_thm", SF CONJ_ss,
+       Real_thm] >>
+  simp[SF CONJ_ss] >>
+  map_every Cases_on [‘a’, ‘b’] >> gvs[constapply_def, AllCaseEqs()] >>
+  simp[EXTENSION, EQ_IMP_THM]
 QED
