@@ -266,7 +266,7 @@ fun mkSS DPname DP = let
   in
     REDUCER {name = SOME DPname,
              addcontext = add_ctxt,
-             apply = fn args => CDP (get_ctxt (#context args)),
+             apply = fn args => BBConv.c2bbc $ CDP (get_ctxt (#context args)),
              initial = CTXT []}
   end
 in

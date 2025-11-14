@@ -611,10 +611,12 @@ val ARITH_REDUCER = let
     CTXT (addthese @ get_ctxt ctxt)
   end
 in
-  REDUCER {name = SOME"REAL_ARITH_DP",
-           addcontext = add_ctxt,
-           apply = fn args => CACHED_ARITH (get_ctxt (#context args)),
-           initial = CTXT []}
+  REDUCER {
+    name = SOME"REAL_ARITH_DP",
+    addcontext = add_ctxt,
+    apply = fn args => BBConv.c2bbc $ CACHED_ARITH (get_ctxt (#context args)),
+    initial = CTXT []
+  }
 end;
 
 val REAL_ARITH_ss =
