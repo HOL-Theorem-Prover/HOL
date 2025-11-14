@@ -1559,33 +1559,28 @@ End
 
 (* ------------------------------------------------------------------------- *)
 
-Theorem expectation_of_normal_rv :
-    !p X mu sig. prob_space p /\ normal_rv X p mu sig ==>
-                 integrable p (Normal o X) /\ expectation p (Normal o X) = Normal mu
-Proof
-  rw [normal_rv_def]
-  >> cheat
-QED
-
 Theorem expectation_of_normal_rv' :
-    !p X mu sig. prob_space p /\ ext_normal_rv X p mu sig ==>
+    !p X mu sig. prob_space p /\ ext_normal_rv X p mu sig ∧ 0 < sig ==>
                  integrable p X /\ expectation p X = Normal mu
 Proof
-  cheat
-QED
-
-Theorem variance_of_normal_rv :
-  !p X mu sig. prob_space p /\ normal_rv X p mu sig ∧ 0 < sig ==>
-               variance p (Normal o X) = Normal (sig pow 2)
-Proof
-    cheat
+    NTAC 5 STRIP_TAC
+ >> fs [ext_normal_rv_def]
+ >> MP_TAC (Q.SPECL [‘p’, ‘real o X’, ‘mu’, ‘sig’] expectation_of_normal_rv) >> rw []
+ >> fs [p_space_def, prob_space_def]
+ >- (METIS_TAC [integrable_cong, normal_real, o_DEF])
+ >> POP_ASSUM (rw o wrap o SYM)
+ >> MATCH_MP_TAC expectation_cong >> rw [prob_space_def, p_space_def, o_DEF, normal_real]
 QED
 
 Theorem variance_of_normal_rv' :
     !p X mu sig. prob_space p /\ ext_normal_rv X p mu sig ∧ 0 < sig ==>
                  variance p X = Normal (sig pow 2)
 Proof
-  cheat
+  NTAC 5 STRIP_TAC
+  >> fs [ext_normal_rv_def]
+  >> MP_TAC (Q.SPECL [‘p’, ‘real o X’, ‘mu’, ‘sig’] variance_of_normal_rv) >> rw []
+  >> POP_ASSUM (rw o wrap o SYM)
+  >> MATCH_MP_TAC variance_cong >> rw [prob_space_def, p_space_def, o_DEF, normal_real]
 QED
 
 Theorem in_measurable_borel_borel_abs :
@@ -1594,7 +1589,6 @@ Proof
     MATCH_MP_TAC in_borel_measurable_continuous_on
  >> rw [continuous_on_def, CONTINUOUS_AT_ABS, netsTheory.WITHIN_UNIV]
 QED
-
 
 Theorem in_measurable_borel_borel_aniv :
   numeric_negate ∈ borel_measurable borel
@@ -1636,14 +1630,6 @@ QED
 
 (*******************************DELETE*****************************************)
 
-Theorem lebesgue_eq_gauge_integral :
-  ∀f. integrable lborel (Normal ∘ f) ⇒
-      f absolutely_integrable_on 𝕌(:real) ∧
-      ∫ lborel (Normal ∘ f) = Normal (integral 𝕌(:real) f)
-Proof
-  cheat
-QED
-
 Theorem lebesgue_eq_gauge_integral_full :
   ∀f. integrable lborel (Normal ∘ f) \/
       f absolutely_integrable_on 𝕌(:real)
@@ -1654,81 +1640,6 @@ Theorem lebesgue_eq_gauge_integral_full :
 Proof
   cheat
 QED
-
-Theorem integration_of_normal_rv :
-  ∀p X mu sig g.
-    prob_space p ∧ normal_rv X p mu sig ∧ g ∈ borel_measurable borel ⇒
-    (integrable p (Normal ∘ g ∘ X) ⇔
-       integrable lborel (λx. Normal (g x * normal_density mu sig x))) ∧
-    ∫ p (Normal ∘ g ∘ X) =
-    ∫ lborel (λx. Normal (g x * normal_density mu sig x))
-Proof
-  cheat
-QED
-
-Theorem integral_normal_density :
-  ∀p X mu sig.
-    prob_space p ∧ normal_rv X p mu sig ⇒
-    integrable lborel (λx. Normal_density mu sig x) ∧
-    ∫ lborel (λx. Normal_density mu sig x) = 1
-Proof
-  cheat
-QED
-
-Theorem integral_normal_density' :
-   ∀mu sig.
-     (∃p X. prob_space p ∧ normal_rv X p mu sig) ⇒
-     integrable lborel (λx. Normal_density mu sig x) ∧
-     ∫ lborel (λx. Normal_density mu sig x) = 1
-Proof
-  cheat
-QED
-
-Theorem integral_x_std_normal_density :
-  integrable lborel (\x. Normal (x * std_normal_density x)) /\
-  integral lborel (\x. Normal (x * std_normal_density x)) = 0
-Proof
-  cheat
-QED
-
-Theorem HAS_INTEGRAL_MUL_INDICATOR :
-  !f s l. ((\x. f x * indicator s x) has_integral l) UNIV <=>
-          (f has_integral l) s
-Proof
-  cheat
-QED
-
-Theorem has_integral_x_std_normal_density :
-  !a b. a <= b ==>
-        ((\x. x * std_normal_density x) has_integral
-                                        (std_normal_density a - std_normal_density b)) (interval [a,b])
-Proof
-  cheat
-QED
-
-Theorem lebesgue_eq_gauge_integral_positive_alt :
-  ∀f. f ∈ borel_measurable borel ∧ (∀x. 0 ≤ f x) ∧
-      f integrable_on 𝕌(:real) ⇒
-      ∫⁺ lborel (Normal ∘ f) = Normal (integral 𝕌(:real) f)
-Proof
-  cheat
-QED
-
-Theorem std_normal_density_decreasing :
-  !x y. 0 <= x /\ x <= y ==> std_normal_density y <= std_normal_density x
-Proof
-  cheat
-QED
-
-Theorem integral_real_affine :
-  !f c t. c <> 0 /\ integrable lborel f ==>
-          integrable lborel (\x. f (t + c * x)) /\
-          integral lborel f =
-          Normal (abs c) * integral lborel (\x. f (t + c * x))
-Proof
-  cheat
-QED
-
 
 (*******************************DELETE*****************************************)
 
