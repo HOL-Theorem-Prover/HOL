@@ -517,7 +517,8 @@ Proof
   qabbrev_tac `guard = \x y. y = []` >>
   qabbrev_tac `R = measure (\(x,y). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (f x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`,Abbr`R`] >>
+  `!x y. ~guard x y ==> R (f x,TL y) (x,y)`
+     by rw[NOT_NIL_EQ_LENGTH_NOT_0,Abbr`guard`,Abbr`R`] >>
   Induct_on `y` >-
   metis_tac[LENGTH, loop2_count_0] >>
   rpt strip_tac >>
@@ -558,7 +559,8 @@ Proof
   qabbrev_tac `guard = \x y. x = [] \/ y = []` >>
   qabbrev_tac `R = measure (\(x:'a list,y). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`,Abbr`R`] >>
+  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)`
+     by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`,Abbr`R`] >>
   Induct_on `y` >| [
     simp[] >>
     metis_tac[loop2_count_0],
@@ -1153,7 +1155,8 @@ Proof
   qabbrev_tac `guard = \x y. y = []` >>
   qabbrev_tac `R = measure (\(x,y). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (f x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (f x,TL y) (x,y)`
+     by rw[NOT_NIL_EQ_LENGTH_NOT_0,LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
   qabbrev_tac `quit2 = \x y:'b list. quit x` >>
   `!x y. loop x y = if guard x y then quit2 x y else body x y + loop (f x) (TL y)` by metis_tac[] >>
   imp_res_tac loop2_modify_count_eqn >>
@@ -1200,7 +1203,8 @@ Proof
   qabbrev_tac `guard = \x y. y = []` >>
   qabbrev_tac `R = measure (\(x,y). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (f x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (f x,TL y) (x,y)`
+    by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   qabbrev_tac `quit2 = \x y:'b list. quit x` >>
   `!x y. loop x y = if guard x y then quit2 x y else body x y + if exit x y then 0 else loop (f x) (TL y)` by metis_tac[] >>
   imp_res_tac loop2_modify_count_exit_le >>
@@ -1252,7 +1256,8 @@ Proof
   qabbrev_tac `guard = \x y. x = [] \/ y = []` >>
   qabbrev_tac `R = measure (\(x:'a list,y:'b list). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)`
+     by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   `!x y. loop x y = if guard x y then quit x y else body x y + loop (TL x) (TL y)` by metis_tac[] >>
   imp_res_tac loop2_modify_count_eqn >>
   last_x_assum (qspecl_then [`y`, `x`] strip_assume_tac) >>
@@ -1301,7 +1306,8 @@ Proof
   qabbrev_tac `guard = \x y. x = [] \/ y = []` >>
   qabbrev_tac `R = measure (\(x:'a list,y:'b list). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)`
+    by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   `!x y. loop x y = if guard x y then quit x y else body x y + if exit x y then 0 else loop (TL x) (TL y)` by metis_tac[] >>
   imp_res_tac loop2_modify_count_exit_le >>
   last_x_assum (qspecl_then [`y`, `x`] strip_assume_tac) >>
@@ -2093,7 +2099,8 @@ Proof
   qabbrev_tac `guard = \x y. y = []` >>
   qabbrev_tac `R = measure (\(x,y). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (f x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (f x,TL y) (x,y)`
+     by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   Cases_on `guard x y` >| [
     `y = []` by metis_tac[] >>
     rw[iterating_nil, diminishing_nil] >>
@@ -2154,7 +2161,8 @@ Proof
   qabbrev_tac `guard = \x y. x = [] \/ y = []` >>
   qabbrev_tac `R = measure (\(x:'a list,y:'b list). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)`
+    by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   Cases_on `guard x y` >| [
     `x = [] \/ y = []` by metis_tac[] >-
     (rw[diminishing_nil] >> metis_tac[loop2_arg_nil]) >>
@@ -2248,7 +2256,8 @@ Proof
   qabbrev_tac `guard = \x. x = []` >>
   qabbrev_tac `R = measure (\x. LENGTH x)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x. ~guard x ==> (R (TL x) x)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x. ~guard x ==> (R (TL x) x)`
+    by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   `!x. loop x = if guard x then c else body x + if exit x then 0 else loop (TL x)` by metis_tac[] >>
   `loop x <= c + SUM (MAP body (loop_arg guard TL x))` by metis_tac[loop_modify_count_exit_by_sum] >>
   `diminishing x = loop_arg guard TL x` by rw[diminishing_eq_loop_arg, Abbr`guard`] >>
@@ -2280,7 +2289,8 @@ Proof
   qabbrev_tac `guard = \x y. y = []` >>
   qabbrev_tac `R = measure (\(x,y). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (f x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (f x,TL y) (x,y)`
+    by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + loop (f x) (TL y)` by metis_tac[] >>
   `loop x y = c + SUM (MAP (UNCURRY body) (loop2_arg guard TL f x y))` by metis_tac[loop2_modify_count_by_sum] >>
   `MAP (UNCURRY body) (loop2_arg guard TL f x y) =
@@ -2310,7 +2320,8 @@ Proof
   qabbrev_tac `guard = \x y. y = []` >>
   qabbrev_tac `R = measure (\(x,y). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (f x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (f x,TL y) (x,y)`
+    by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (f x) (TL y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_exit_by_sum |> ISPEC ``loop:'a -> 'b list -> num``) >>
   last_x_assum (qspecl_then [`guard`, `body`, `c`, `exit`, `TL`, `f`, `R`] strip_assume_tac) >>
@@ -2347,7 +2358,8 @@ Proof
   qabbrev_tac `guard = \x y. y = []` >>
   qabbrev_tac `R = measure (\(x,y). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (f x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (f x,TL y) (x,y)`
+    by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   `!x1 x2 y1 y2. R (x1,y1) (x2,y2) ==> cover x1 y1 <= cover x2 y2` by rw[Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (f x) (TL y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_bcover_exit_upper |> ISPEC ``loop:'a -> 'b list -> num``) >>
@@ -2430,7 +2442,8 @@ Proof
   qabbrev_tac `guard = \x y. x = [] \/ y = []` >>
   qabbrev_tac `R = measure (\(x:'a list,y:'b list). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)`
+    by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + loop (TL x) (TL y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_by_sum |> ISPEC ``loop:'a list -> 'b list -> num``) >>
   last_x_assum (qspecl_then [`guard`, `body`, `c`, `TL`, `TL`, `R`] strip_assume_tac) >>
@@ -2466,7 +2479,8 @@ Proof
   qabbrev_tac `guard = \x y. x = [] \/ y = []` >>
   qabbrev_tac `R = measure (\(x:'a list,y:'b list). LENGTH y)` >>
   `WF R` by rw[Abbr`R`] >>
-  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)` by rw[LENGTH_TL_LT, Abbr`guard`, Abbr`R`] >>
+  `!x y. ~guard x y ==> R (TL x,TL y) (x,y)`
+    by rw[NOT_NIL_EQ_LENGTH_NOT_0, Abbr`guard`, Abbr`R`] >>
   `!x y. loop x y = if guard x y then c else body x y + if exit x y then 0 else loop (TL x) (TL y)` by metis_tac[] >>
   assume_tac (loop2_modify_count_exit_by_sum |> ISPEC ``loop:'a list -> 'b list -> num``) >>
   last_x_assum (qspecl_then [`guard`, `body`, `c`, `exit`, `TL`, `TL`, `R`] strip_assume_tac) >>

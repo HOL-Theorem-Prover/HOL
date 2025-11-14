@@ -306,7 +306,7 @@ Termination
   WF_REL_TAC `measure (LENGTH o SND)`
     THEN SRW_TAC [] [NULL_EQ_NIL, SPLITP]
     THEN METIS_TAC [SPLITP_MONO, TAIL_MONO, arithmeticTheory.LESS_TRANS,
-           DECIDE ``a <= b ==> a < SUC b``]
+           DECIDE ``a <= b ==> a < 1 + SUC b``]
 End
 
 Definition IMPLODE_def[simp]:

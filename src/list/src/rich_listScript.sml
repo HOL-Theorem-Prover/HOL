@@ -205,7 +205,7 @@ Proof
   THEN simp[DROP, FUNPOW]
 QED
 
-Theorem NOT_NULL_SNOC:
+Theorem NOT_NULL_SNOC[simp]:
     !x l. ~NULL (SNOC x l)
 Proof
    BasicProvers.Induct_on `l`

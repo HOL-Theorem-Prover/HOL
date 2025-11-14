@@ -1654,7 +1654,7 @@ Definition appendM_def:
               od
       od
 Termination
-  WF_REL_TAC `measure (λ(l1, l2). LENGTH l1)` >> simp[LENGTH_TL_LT]
+  WF_REL_TAC `measure (λ(l1, l2). LENGTH l1)` >> simp[NOT_NIL_EQ_LENGTH_NOT_0]
 End
 
 
@@ -1684,7 +1684,7 @@ Definition snocM_def:
               od
        od
 Termination
-  WF_REL_TAC `measure (λ(x,ls). LENGTH ls)` >> simp[LENGTH_TL_LT]
+  WF_REL_TAC `measure (λ(x,ls). LENGTH ls)` >> simp[NOT_NIL_EQ_LENGTH_NOT_0]
 End
 
 (* Theorem: valueOf (snocM x ls) = SNOC x ls *)

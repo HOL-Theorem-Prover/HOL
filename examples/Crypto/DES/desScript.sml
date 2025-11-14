@@ -470,10 +470,6 @@ Theorem LENGTH_KS :
     !k n. LENGTH (KS k n) = n
 Proof
     rw [KS_def, RoundKey_def]
- >> Know ‘LENGTH (TL (REVERSE (RoundKey n k))) =
-          LENGTH (REVERSE (RoundKey n k)) - 1’
- >- (MATCH_MP_TAC LENGTH_TL \\
-     rw [LENGTH_REVERSE, LENGTH_RoundKey])
  >> rw [LENGTH_REVERSE, LENGTH_RoundKey]
 QED
 
