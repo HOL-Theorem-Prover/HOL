@@ -33,7 +33,7 @@ Ancestors
 Libs
   sexp intLib translateLib
 
-
+val _ = ParseExtras.temp_loose_equality();
 (*****************************************************************************)
 (* Start new theory "translate"                                              *)
 (*****************************************************************************)
@@ -76,7 +76,8 @@ Theorem sexp_list_ind:
 Proof
         REPEAT STRIP_TAC THEN Induct_on `x` THEN
         TRY (METIS_TAC [sexpTheory.ACL2_TRUE,sexpTheory.consp_def]) THEN
-        PAT_ASSUM ``!x. ~p ==> q`` (K ALL_TAC) THEN
+        (* PAT_ASSUM ``!x. ~(|= consp x) ==> q x`` (K ALL_TAC) THEN *)
+        PRED_ASSUM (is_forall) (K ALL_TAC) THEN
         REPEAT (FIRST_ASSUM MATCH_MP_TAC) THEN
         ASM_REWRITE_TAC [consp_def,cdr_def,EVAL ``|= t``] THEN
         METIS_TAC []
@@ -177,12 +178,12 @@ val pair_thm = save_thm("pair_thm",
                 (Q.SPECL [`f`,`g`,`(a,b)`] pair_def)));
 
 Definition pairp_def:
-  !f g. pairp f g x =
+  pairp f g x =
     if (|= consp x) then f (car x) /\ g (cdr x) else F
 End
 
 Definition sexp_to_pair_def:
-  !f g x. sexp_to_pair f g x =
+  sexp_to_pair f g x =
     if (|= consp x) then (f (car x),g (cdr x)) else (f nil,g nil)
 End
 
@@ -347,9 +348,9 @@ val IS_INT_select = prove(
     RAT_CONG_TAC THEN
     PAT_ASSUM ``0i < d`` (fn th => (RULE_ASSUM_TAC
                     (SIMP_RULE std_ss [th,NMR,DNM]))) THEN
-    PAT_ASSUM ``frac_nmr a = b * c:int`` SUBST_ALL_TAC THEN
+    PAT_ASSUM ``frac_nmr a = b * c':int`` SUBST_ALL_TAC THEN
     RULE_ASSUM_TAC (ONCE_REWRITE_RULE [
-            CONV_RULE bool_EQ_CONV (AC_CONV(INT_MUL_ASSOC,INT_MUL_COMM)
+            EQT_ELIM (AC_CONV(INT_MUL_ASSOC,INT_MUL_COMM)
                       ``a * b * c = (a * c) * b:int``)]) THEN
     IMP_RES_TAC (fst (EQ_IMP_RULE (SPEC_ALL INT_EQ_RMUL))) THEN
     MP_TAC (SPEC ``x:frac`` FRAC_DNMPOS) THEN ASM_REWRITE_TAC [INT_LT_REFL]);
@@ -398,9 +399,9 @@ QED
 (* Make sure all 'p' functions operate on |= instead of nil or t             *)
 (*****************************************************************************)
 
-val nil_t = CONV_RULE bool_EQ_CONV (EVAL ``~(nil = t)``);
-val true_t = CONV_RULE bool_EQ_CONV (EVAL ``|= t``);
-val false_f = CONV_RULE bool_EQ_CONV (EVAL ``~(|= nil)``);
+val nil_t = EQT_ELIM (EVAL ``~(nil = t)``);
+val true_t = EQT_ELIM (EVAL ``|= t``);
+val false_f = EQT_ELIM (EVAL ``~(|= nil)``);
 val nil_nil = prove(``(x = nil) = ~|= x``,
     EQ_TAC THEN RW_TAC std_ss [false_f] THEN
     REPEAT (POP_ASSUM MP_TAC THEN
@@ -644,9 +645,9 @@ Proof
     RW_TAC int_ss [ACL2_TRUE] THEN RES_TAC THEN
     POP_ASSUM (K ALL_TAC) THEN POP_ASSUM MP_TAC THEN
     RW_TAC int_ss [andl_def,ite_def,GSYM ACL2_TRUE,TRUTH_REWRITES] THEN
-    `?c. x = int c` by Q.EXISTS_TAC `sexp_to_int x` THEN
+    `?c. x = int c` by (Q.EXISTS_TAC `sexp_to_int x` THEN
     ASM_REWRITE_TAC [REWRITE_RULE [o_THM,FUN_EQ_THM] DECENCFIX_INT,ifix_def,
-                     ite_def,TRUTH_REWRITES] THEN
+                     ite_def,TRUTH_REWRITES]) THEN
     POP_ASSUM SUBST_ALL_TAC THEN
     FULL_SIMP_TAC int_ss [REWRITE_RULE [o_THM,FUN_EQ_THM] ENCDECMAP_INT] THEN
     POP_ASSUM MP_TAC THEN
@@ -1407,7 +1408,7 @@ Proof
 QED
 
 Theorem PAIR_CASE:
-      f (pair_case g x) = f ((\(a,b). g a b) x)
+      f (pair_CASE x g) = f ((\(a,b). g a b) x)
 Proof
     Cases_on `x` THEN REWRITE_TAC [TypeBase.case_def_of ``:'a # 'b``] THEN
     pairLib.GEN_BETA_TAC THEN REWRITE_TAC []
@@ -1488,7 +1489,7 @@ Proof
 QED
 
 Theorem NUM_CASE:
-      !X a b. f (num_case a b X) =
+      !X a b. f (num_CASE X a b) =
                                f (if X = 0 then a else b (PRE X))
 Proof
     Cases THEN REWRITE_TAC [TypeBase.case_def_of ``:num``] THEN
@@ -1496,7 +1497,7 @@ Proof
 QED
 
 Theorem LIST_CASE:
-      !l. f (list_case n c l) =
+      !l. f (list_CASE l n c) =
                          f (if (l = []) then n else c (HD l) (TL l))
 Proof
     Cases THEN RW_TAC arith_ss [NULL,HD,TL]
@@ -1609,6 +1610,7 @@ Proof
                   integerTheory.INT_SUB,INT_LE_SUB_LADD,INT_LT_SUB_RADD]
 QED
 
+(* DUPES
 Theorem RAT_SUB:  rat (a - b) = add (rat a) (unary_minus (rat b))
 Proof
         RW_TAC std_ss [rat_sub_def,frac_sub_def,GSYM RAT_ADD,GSYM RAT_UNARY_MINUS,rat_ainv_def,rat_add_def,frac_ainv_def,RAT_ADD_CONG]
@@ -1618,7 +1620,7 @@ Proof
         Cases_on `a` THEN Cases_on `b` THEN RW_TAC std_ss [COMPLEX_SUB_def,GSYM COM_UNARY_MINUS,GSYM COM_ADD,
                 COMPLEX_NEG_def,COMPLEX_ADD_def,com_0_def,RAT_SUB_LID,rat_0_def,GSYM rat_0,RAT_SUB_ADDAINV]
 QED
-
+*)
 Theorem NAT_SUB_COND:  !a b. b <= a ==> (nat (a - b) = add (nat a) (unary_minus (nat b)))
 Proof
         RW_TAC int_ss [nat_def,GSYM INT_SUB,nfix_def,ite_def,TRUTH_REWRITES,natp_def,INTEGERP_INT,GSYM INT_EQUAL,GSYM INT_LT,INT_CONG] THEN

@@ -21,11 +21,11 @@ quietdec := false;
 
 Theory acl2_package
 Ancestors
-  list
+  list string
 Libs
   listSyntax pairSyntax stringLib
 
-
+val _ = ParseExtras.temp_loose_equality();
 (*****************************************************************************)
 (* ACL2_PACKAGE_ALIST contains a list of triples                             *)
 (*                                                                           *)

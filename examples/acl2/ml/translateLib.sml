@@ -10,7 +10,9 @@ structure translateLib :> translateLib =
 struct
 
 open Feedback Lib Type Term boolSyntax Thm Drule Tactical Thm_cont Tactic Conv;
-
+(*TODO remove*)
+open boolLib
+local open ratTheory in end
 (*****************************************************************************)
 (* DOUBLE_MATCH: Like PART_MATCH but matches variables in the term as well   *)
 (*****************************************************************************)
@@ -200,7 +202,7 @@ val RAT_CONG_TAC =
 fun EQUAL_EXISTS_TAC (a,g) =
 let val (v,body) = dest_exists g
     val eq_thms = filter is_eq (strip_conj body)
-    val term = first (curry op= v o lhs) eq_thms
+    val term = first (aconv v o lhs) eq_thms
 in
     EXISTS_TAC (rhs term) (a,g)
 end;

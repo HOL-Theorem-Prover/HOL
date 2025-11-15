@@ -67,6 +67,7 @@ open intSyntax pairSyntax listSyntax stringLib numLib;
 (* ppstream based pretty-printer Parse.pp_term.  So a complete solution      *)
 (* for outputting a single term to a given file would be                     *)
 (*****************************************************************************)
+(* FIXME
 fun mk_pp_from_out outstream =
    PP.mk_ppstream { consumer = (fn s => TextIO.output(outstream,s)),
                     linewidth = 80,
@@ -80,7 +81,7 @@ in
   PP.flush_ppstream pps;
   TextIO.closeOut outstr
 end;
-
+*)
 
 (*****************************************************************************)
 (* Swich off warning messages when defining types and constants with         *)
@@ -730,22 +731,22 @@ fun dest_mlencap (mlpair(_, mlpair(acl2sig,events))) =
 (*****************************************************************************)
 fun is_nat tm =
  is_comb tm           andalso
- (rator tm = ``nat``) andalso
- is_numeral(rand tm);
+ (aconv (rator tm) ``nat``) andalso
+ numSyntax.is_numeral(rand tm);
 
 (*****************************************************************************)
 (* Convert ``nat n`` to "n"                                                  *)
 (*****************************************************************************)
-fun dest_nat tm = Arbnum.toString(dest_numeral(rand tm));
+fun dest_nat tm = Arbnum.toString(numSyntax.dest_numeral(rand tm));
 
 (*****************************************************************************)
 (* Test for ``n`` where n is an integer numeral                              *)
 (*****************************************************************************)
 fun is_integer tm =
  is_comb tm andalso
- (if rator tm = ``int_of_num:num->int``       (* $& overloaded on int_of_num *)
+ (if aconv (rator tm) ``int_of_num:num->int``       (* $& overloaded on int_of_num *)
    then is_numeral(rand tm) else
-  if rator tm = ``int_neg:int->int``          (* $~ overloaded on int_neg    *)
+  if aconv (rator tm) ``int_neg:int->int``          (* $~ overloaded on int_neg    *)
    then is_integer(rand tm) else
   false);
 
@@ -754,7 +755,7 @@ fun is_integer tm =
 (*****************************************************************************)
 fun is_int tm =
  is_comb tm           andalso
- (rator tm = ``int``) andalso
+ (aconv (rator tm) ``int``) andalso
  is_integer(rand tm);
 
 (*****************************************************************************)
@@ -766,13 +767,13 @@ fun is_int tm =
 fun dest_integer tm =
  let val (opr,args) = strip_comb tm
  in
-  if opr = ``int_of_num:num->int`` andalso (tl args = [])
+  if aconv opr ``int_of_num:num->int`` andalso (null (tl args))
    then (if is_numeral(hd args)
           then Arbnum.toString(dest_numeral(hd args))
           else (print_term tm;
                 print " is not a non-negative integer numeral\n";
                 err "dest_integer" "not a non-negative integer numeral"))
-   else (if opr = ``int_neg:int->int`` andalso (tl args = [])
+   else (if aconv opr ``int_neg:int->int`` andalso (null (tl args))
           then ("-" ^ dest_integer(hd args))
           else (print_term tm;
                 print " is not an integer numeral\n";
@@ -819,7 +820,7 @@ fun is_int_string s =
 fun is_cpx tm =
  let val (opr,args) = strip_comb tm
  in
-  (opr = ``cpx``)
+  (aconv opr ``cpx``)
     andalso (length args = 4)
     andalso is_int_string(dest_integer(el 1 args))
     andalso is_num_string(dest_integer(el 2 args))
@@ -932,7 +933,7 @@ fun abbrevMLstring s =
 (* Version of fromHOLstring that looks up in string_abbrevs.                 *)
 (*****************************************************************************)
 fun abbrevHOLstring c =
- rev_assoc c (!string_abbrevs)
+ op_rev_assoc aconv c (!string_abbrevs)
   handle HOL_ERR _ => fromHOLstring c;
 
 (*****************************************************************************)
@@ -1138,7 +1139,7 @@ fun deftm_to_mlsexp_defun tm =
 (*****************************************************************************)
 fun def_to_mlsexp_defun th =
  let val (asl, concl) = dest_thm(SPEC_ALL th)
-     val _ = if not(asl = [])
+     val _ = if not(null asl)
                then(print_thm th;
                     print "\n"; print"should not have any assumptions\n";
                     err "mk_mlsexp_defthm" "assumptions not allowed")
@@ -1677,7 +1678,7 @@ exception fail_for_mapfilter
 in
 fun dest_acl2_thm th =
  let val (asl, conc) = dest_thm(SPEC_ALL th)
-     val _ = if not(asl = [])
+     val _ = if not(null asl)
                then(print_thm th;
                     print "\n"; print"should not have any assumptions\n";
                     err "dest_acl2_thm" "assumptions not allowed")
@@ -1820,7 +1821,7 @@ fun mk_sexp_fun_ty n =
 (*                                                                           *)
 (* where v1,...,vn are the free variables in tm not in vl                    *)
 (*****************************************************************************)
-fun mk_closed_event vl tm = list_mk_forall(subtract(free_vars tm)vl, tm);
+fun mk_closed_event vl tm = list_mk_forall(op_set_diff aconv (free_vars tm)vl, tm);
 
 (*****************************************************************************)
 (* mk_acl2def converts an ML representation of an ACL2 event into an         *)
@@ -1861,7 +1862,7 @@ fun mk_acl2def d =
        val tm = list_mk_fun(param_vars, bdy_tm)
        val ty = type_of tm
        val unbound_vars =
-            subtract (free_vars bdy_tm) (name_to_var nam ty :: param_vars)
+            op_set_diff aconv (free_vars bdy_tm) (name_to_var nam ty :: param_vars)
        val _ = if null unbound_vars
                 then ()
                 else print("Warning: "
@@ -1889,7 +1890,7 @@ fun mk_acl2def d =
        val tm = list_mk_fun(param_vars, ``bool_to_sexp ^quant_tm``)
        val ty = type_of tm
        val unbound_vars =
-            subtract (free_vars quant_tm) (name_to_var nam ty :: param_vars)
+            op_set_diff aconv (free_vars quant_tm) (name_to_var nam ty :: param_vars)
        val _ = if null unbound_vars
                 then ()
                 else print("Warning: "
@@ -1939,7 +1940,7 @@ fun mk_acl2def d =
              sigll
        val eventl = map mk_acl2def dl
        val defunl = mapfilter get_defun_fun eventl
-       val extended_sig_vars = union sig_vars defunl
+       val extended_sig_vars = op_union aconv sig_vars defunl
        val names = map defname eventl
        val event_tms =
             map (mk_closed_event extended_sig_vars o spec_all o deftm) eventl
@@ -2359,6 +2360,7 @@ fun print_thms_to_defthms name_thm_list file_name =
 (*****************************************************************************)
 (* Add theory load time code to restore binding of acl2_simps in theory      *)
 (*****************************************************************************)
+(* FIXME
 fun save_acl2_simps () =
  adjoin_to_theory
  {sig_ps = NONE,
@@ -2368,10 +2370,12 @@ fun save_acl2_simps () =
            ("val _ = (sexp.acl2_simps :="
             ^"  (!sexp.acl2_simps)@(Drule.CONJUNCTS ACL2_SIMPS));"))
  };
+*)
 
 (*****************************************************************************)
 (* Add theory load time code to restore binding of current_package in theory *)
 (*****************************************************************************)
+(* FIXME
 fun save_current_package() =
  adjoin_to_theory
  {sig_ps = NONE,
@@ -2381,10 +2385,12 @@ fun save_current_package() =
            ("val _ = sexp.set_current_package \""
             ^ (!current_package) ^ "\";"))
  };
+*)
 
 (*****************************************************************************)
 (* Add theory load time code to restore binding of acl2_names in theory.     *)
 (*****************************************************************************)
+(* FIXME
 fun save_acl2_names () =
  adjoin_to_theory
  {sig_ps = NONE,
@@ -2395,11 +2401,13 @@ fun save_acl2_names () =
             string_pair_list_to_string(!acl2_names) ^
             ";"))
  };
+*)
 
 
 (*****************************************************************************)
 (* Add theory load time code to restore binding of string_abbrevs in theory  *)
 (*****************************************************************************)
+(* FIXME
 fun save_string_abbrevs () =
  adjoin_to_theory
  {sig_ps = NONE,
@@ -2410,11 +2418,13 @@ fun save_string_abbrevs () =
             string_abbrevs_to_string(!string_abbrevs) ^
             ";\n\n"))
  };
+*)
 
 (*****************************************************************************)
 (* Save the acl2_simps, current_package, acl2_names, acl2_hol_names,         *)
 (* string_abbrevs then export theory.                                        *)
 (*****************************************************************************)
+(* FIXME
 fun export_acl2_theory () =
  (save_thm("ACL2_SIMPS", LIST_CONJ(!acl2_simps));
   save_acl2_simps();
@@ -2422,6 +2432,7 @@ fun export_acl2_theory () =
   save_acl2_names();
   save_string_abbrevs();
   export_theory());
+*)
 
 (*****************************************************************************)
 (* List of events processed. If two events with the same name occur,then the *)
