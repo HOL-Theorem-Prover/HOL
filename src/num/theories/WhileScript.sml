@@ -46,7 +46,7 @@ Proof
         ASM_REWRITE_TAC [FUNPOW, NOT_LESS_0],
         Q.X_GEN_TAC `m` THEN REPEAT STRIP_TAC THEN
         Q.SUBGOAL_THEN `m = 0` (fn th => REWRITE_TAC [th, FUNPOW]) THEN
-        Q.SPEC_THEN `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+        Q.SPEC_THEN `m` (STRIP_ALL_THEN SUBST_ALL_TAC)
                     num_CASES THEN
         REWRITE_TAC [] THEN
         FIRST_X_ASSUM (Q.SPEC_THEN `0` MP_TAC) THEN
@@ -58,7 +58,7 @@ Proof
         METIS_TAC [],
         Q.X_GEN_TAC `m` THEN REPEAT STRIP_TAC THEN
         Q.SUBGOAL_THEN `?p. m = SUC p` (CHOOSE_THEN SUBST_ALL_TAC) THENL [
-          Q.SPEC_THEN `m` (REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC)
+          Q.SPEC_THEN `m` (STRIP_ALL_THEN SUBST_ALL_TAC)
                       num_CASES THEN
           FULL_SIMP_TAC bool_ss [FUNPOW] THEN METIS_TAC [],
           ALL_TAC

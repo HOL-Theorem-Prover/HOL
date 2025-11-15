@@ -852,7 +852,7 @@ local
    val caa_tac =
        caa_tac0 false {elimvars = false, droptrues = false, strip = false,
                        oldestfirst = true}
-   val STRIP_ASSUME_TAC' = REPEAT_TCL STRIP_THM_THEN caa_tac
+   val STRIP_ASSUME_TAC' = STRIP_ALL_THEN caa_tac
    fun drop r =
       fn n =>
          POP_ASSUM_LIST
@@ -886,7 +886,7 @@ end
 fun stdcon (c : simptac_config) th =
     if #elimvars c andalso eliminable (concl th) then VSUBST_TAC th
     else
-      (if #strip c then REPEAT_TCL STRIP_THM_THEN else I)
+      (if #strip c then STRIP_ALL_THEN else I)
         (caa_tac0 (not (#oldestfirst c)) c)
         th
 
