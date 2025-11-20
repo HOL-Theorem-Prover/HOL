@@ -4063,8 +4063,7 @@ End
 
 (* the "return" or "pure" constant for lists isn't an existing one, unlike
    the situation with 'a option, where SOME fits the bill. *)
-Overload SINGL = “\x:'a. [x]”
-Overload "" = “\x:'a. [x]”
+Overload SINGL[inferior] = “\x:'a. [x]”
 
 Theorem SINGL_LIST_APPLY_L[simp]:
    LIST_BIND (SINGL x) f = f x
