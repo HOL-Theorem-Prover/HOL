@@ -477,3 +477,38 @@ val _ = shouldfail {
       printresult = goals_toString o #1,
       testfn = CONG_TAC NONE
     } ([], “x < 10n”);
+
+fun goalhc t (sgs, vf) =
+    case sgs of
+        [(asl, c)] => t ~~ c andalso null asl
+      | _ => false
+fun prgl (sgs, vf) =
+    case sgs of
+        [] => "[]"
+      | [sg] => PP.pp_to_string 70 goalStack.pp_goal sg
+      | _ => "Too many subgoals"
+
+val _ = tprint "simp[] ?- “p ∧ T”"
+val _ = require_msg
+          (check_result (goalhc “p:bool”))
+          prgl
+          (fn g => simp [] g)
+          ([], “p ∧ T”)
+
+val _ = tprint "above w/simpset_updates removing"
+val _ = require_msg
+          (check_result (goalhc “p /\ T”)) prgl
+          (BasicProvers.with_simpset_updates
+             (simpLib.remove_simps ["AND_CLAUSES"])
+             (fn g => simp[] g))
+          ([], “p ∧ T”)
+
+val _ = tprint "Back to original"
+val _ = require_msg
+          (check_result (goalhc “p:bool”)) prgl
+          (fn g => simp[] g)
+          ([], “p ∧ T”)
+
+(*
+val _ = convtest("Original again", SIMP_CONV (srw_ss()) [], “p ∧ T”, “p:bool”)
+*)

@@ -1240,9 +1240,15 @@ fun srw_ss () =
     (update_global_value init_state;
      #1 (get_global_value()))
 
-fun with_simpset_updates f g x =
-    (notify();
-     AncestryData.with_temp_value adresult (f (srw_ss()), true, []) g x)
+fun with_simpset_updates f g x = (
+  (* tell clients that their derived values are stale because we're about
+     to update the base *)
+  notify();
+  AncestryData.with_temp_value adresult (f (srw_ss()), true, []) g x
+  (* clients may believe they're up-to-date but we've just flipped the
+     base value back, so we need to notify again *)
+  before notify()
+)
 
 val update_log =
     Sref.new (Symtab.empty : (simpset -> simpset) list Symtab.table)
