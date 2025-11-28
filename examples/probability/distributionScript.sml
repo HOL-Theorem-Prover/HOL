@@ -6662,6 +6662,60 @@ Proof
  >> simp [Abbr ‘g’]
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  Parameter-Dependent Integrals (Part of Chapter 12 of [5]) Gauge version  *)
+(* ------------------------------------------------------------------------- *)
+
+(* Theorem 12.4 [1, p.99] (generalized from open intervals to open sets) *)
+Theorem gauge_continuity_lemma :
+    !u. (!t. integrable lborel (Normal o u t)) /\
+        (!x. (\t. u t x) continuous_on univ(:real)) /\
+        (?w. integrable lborel w /\
+            (!x. 0 <= w x /\ w x <> PosInf) /\
+             !t x. Normal (abs (u t x)) <= w x) ==>
+        (\t. integral univ(:real) (u t)) continuous_on univ(:real)
+Proof
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘lborel’, ‘u’]
+                    (INST_TYPE [alpha |-> “:real”] continuity_univ_lemma))
+ >> simp [space_lborel, lborel_def]
+ >> impl_tac >- (Q.EXISTS_TAC ‘w’ >> art [])
+ >> DISCH_TAC
+ >> MATCH_MP_TAC CONTINUOUS_ON_EQ
+ >> Q.EXISTS_TAC ‘(\t. real (integral lborel (Normal o u t)))’ >> rw []
+ >> MP_TAC (Q.SPEC ‘u (x :real)’ (cj 2 lebesgue_eq_gauge_integral))
+ >> simp []
+QED
+
+Theorem gauge_differentiable_lemma :
+    !u. (!t. integrable lborel (Normal o u t)) /\
+        (!x. (\t. u t x) differentiable_on univ(:real)) /\
+        (?w. integrable lborel w /\
+            (!x. 0 <= w x /\ w x <> PosInf) /\
+             !t x. Normal (abs (diff1 (\t. u t x) t)) <= w x)
+     ==> !t. integrable lborel (\x. Normal (diff1 (\t. u t x) t)) /\
+             diff1 (\t. integral univ(:real) (u t)) t =
+             integral univ(:real) (\x. diff1 (\t. u t x) t)
+Proof
+    rpt GEN_TAC >> STRIP_TAC
+ >> Q.X_GEN_TAC ‘t’
+ >> MP_TAC (Q.SPECL [‘lborel’, ‘u’]
+                    (INST_TYPE [alpha |-> “:real”] differentiable_univ_lemma'))
+ >> simp [space_lborel, lborel_def]
+ >> impl_tac >- (Q.EXISTS_TAC ‘w’ >> art [])
+ >> DISCH_THEN (STRIP_ASSUME_TAC o SRULE [IMP_CONJ_THM, FORALL_AND_THM])
+ >> simp []
+ >> Know ‘integral univ(:real) (\x. diff1 (\t. u t x) t) =
+          real (integral lborel (\x. Normal (diff1 (\t. u t x) t)))’
+ >- (MP_TAC (Q.SPEC ‘\x. diff1 (\t. u t (x :real)) t’
+                    (cj 2 lebesgue_eq_gauge_integral)) \\
+     simp [o_DEF])
+ >> Rewr'
+ >> POP_ASSUM (REWRITE_TAC o wrap o GSYM)
+ >> MATCH_MP_TAC limTheory.diffn_cong >> rw []
+ >> MP_TAC (Q.SPEC ‘u (x :real)’ (cj 2 lebesgue_eq_gauge_integral))
+ >> simp [o_DEF]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Moment generating function                                               *)
