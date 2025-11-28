@@ -14,6 +14,7 @@
 (*    Note: This theory was ported from HOL Light                            *)
 (*                                                                           *)
 (* ========================================================================= *)
+
 Theory derivative
 Ancestors
   num prim_rec pair combin quotient arithmetic pred_set list
@@ -22,7 +23,6 @@ Ancestors
 Libs
   numLib unwindLib tautLib Arith hurdUtils jrhUtils mesonLib
   pred_setLib realLib
-
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 
@@ -74,14 +74,6 @@ Theorem IN_CONVEX_SET:
         ==> ((&1 - u) * a + u * b) IN s
 Proof
   MESON_TAC[CONVEX_ALT]
-QED
-
-Theorem LIMPT_APPROACHABLE:
-   !x s. x limit_point_of s <=>
-                !e. &0 < e ==> ?x'. x' IN s /\ ~(x' = x) /\ dist(x',x) < e
-Proof
-  REPEAT GEN_TAC THEN REWRITE_TAC[limit_point_of] THEN
-  MESON_TAC[open_def, DIST_SYM, OPEN_BALL, CENTRE_IN_BALL, IN_BALL]
 QED
 
 Theorem LIMPT_OF_CONVEX :
@@ -584,6 +576,73 @@ End
 Definition differentiable_on[nocompute]:
   f differentiable_on s <=> !x. x IN s ==> f differentiable (at x within s)
 End
+
+Theorem HAS_DERIVATIVE_IMP_DIFFERENTIABLE :
+    !f f' net. (f has_derivative f') net ==> f differentiable net
+Proof
+  REWRITE_TAC[differentiable] THEN MESON_TAC[]
+QED
+
+Theorem DIFFERENTIABLE_AT_WITHIN :
+    !f s x. f differentiable (at x)
+           ==> f differentiable (at x within s)
+Proof
+  REWRITE_TAC[differentiable] THEN MESON_TAC[HAS_DERIVATIVE_AT_WITHIN]
+QED
+
+Theorem DIFFERENTIABLE_WITHIN_OPEN :
+    !f a s.
+         a IN s /\ open s
+         ==> (f differentiable (at a within s) <=> (f differentiable (at a)))
+Proof
+  SIMP_TAC std_ss[differentiable, HAS_DERIVATIVE_WITHIN_OPEN]
+QED
+
+Theorem DIFFERENTIABLE_AT_IMP_DIFFERENTIABLE_ON :
+    !f s. (!x. x IN s ==> f differentiable at x) ==> f differentiable_on s
+Proof
+  REWRITE_TAC[differentiable_on] THEN MESON_TAC[DIFFERENTIABLE_AT_WITHIN]
+QED
+
+Theorem DIFFERENTIABLE_ON_EQ_DIFFERENTIABLE_AT :
+    !f s. open s ==> (f differentiable_on s <=>
+                     !x. x IN s ==> f differentiable at x)
+Proof
+  SIMP_TAC std_ss[differentiable_on, DIFFERENTIABLE_WITHIN_OPEN]
+QED
+
+Theorem DIFFERENTIABLE_TRANSFORM_WITHIN :
+    !f g x s d.
+       &0 < d /\ x IN s /\
+       (!x'. x' IN s /\ dist (x',x) < d ==> f x' = g x') /\
+       f differentiable (at x within s)
+       ==> g differentiable (at x within s)
+Proof
+  REWRITE_TAC[differentiable] THEN
+  MESON_TAC[HAS_DERIVATIVE_TRANSFORM_WITHIN]
+QED
+
+Theorem DIFFERENTIABLE_TRANSFORM_AT :
+    !f g x d.
+       &0 < d /\
+       (!x'. dist (x',x) < d ==> f x' = g x') /\
+       f differentiable at x
+       ==> g differentiable at x
+Proof
+  REWRITE_TAC[differentiable] THEN
+  MESON_TAC[HAS_DERIVATIVE_TRANSFORM_AT]
+QED
+
+Theorem DIFFERENTIABLE_ON_EQ :
+    !f g s.
+        (!x. x IN s ==> f x = g x) /\ f differentiable_on s
+        ==> g differentiable_on s
+Proof
+  REPEAT GEN_TAC THEN
+  DISCH_THEN(CONJUNCTS_THEN2 ASSUME_TAC MP_TAC) THEN
+  REWRITE_TAC[differentiable_on] THEN
+  ASM_MESON_TAC[DIFFERENTIABLE_TRANSFORM_WITHIN, REAL_LT_01]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Frechet derivative and Jacobian matrix.                                   *)
@@ -1770,6 +1829,78 @@ Definition vector_derivative[nocompute]:
         @f'. (f has_vector_derivative f') net
 End
 
+(* NOTE: This theorem is NOT from HOL-Light, as it's only possible under one
+   dimensional case, showing ‘has_derivative’ and ‘has_vector_derivative’ is
+   inter-changable in HOL4.
+ *)
+Theorem has_derivative_iff_has_vector_derivative :
+    !f net. (?f'. (f has_derivative f') net) <=>
+            (?l. (f has_vector_derivative l) net)
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC
+ >- (rw [has_vector_derivative] \\
+     Q.EXISTS_TAC ‘\x. l * x’ >> art [])
+ >> rw [has_derivative, has_vector_derivative]
+ >> gs [linear_repr]
+ >> Q.EXISTS_TAC ‘l’ >> art []
+ >> Q.EXISTS_TAC ‘l’ >> rw [FUN_EQ_THM]
+QED
+
+(* |- !f net. f differentiable net <=> ?f'. (f has_vector_derivative f') net *)
+Theorem differentiable_alt_has_vector_derivative =
+        REWRITE_RULE [has_derivative_iff_has_vector_derivative] differentiable
+
+Theorem has_vector_derivative_within :
+   !f l x s.
+     (f has_vector_derivative l) (at x within s) <=>
+      ((\y. inv(abs(y - x)) * (f(y) - (f(x) + l * (y - x)))) --> 0)
+       (at x within s)
+Proof
+    rw [has_vector_derivative, has_derivative_within, LINEAR_SCALING]
+QED
+
+(* |- !c. linear (\x. x * c) *)
+Theorem LINEAR_SCALING'[local] =
+        ONCE_REWRITE_RULE [REAL_MUL_COMM] LINEAR_SCALING
+
+(* |- !f f' x s.
+        (f has_vector_derivative f') (at x within s) <=>
+        !e. 0 < e ==>
+            ?d. 0 < d /\
+                !x'.
+                  x' IN s /\ 0 < abs (x' - x) /\ abs (x' - x) < d ==>
+                  abs (f x' - f x - (x' - x) * f') / abs (x' - x) < e
+ *)
+Theorem HAS_VECTOR_DERIVATIVE_WITHIN =
+        HAS_DERIVATIVE_WITHIN
+     |> Q.SPECL [‘f’, ‘\x. x * f'’, ‘x’, ‘s’]
+     |> SIMP_RULE std_ss [GSYM has_vector_derivative, LINEAR_SCALING']
+     |> Q.GENL [‘f’, ‘f'’, ‘x’, ‘s’]
+
+(* |- !f f' x s.
+        (f has_vector_derivative f') (at s within x) <=>
+        !e. 0 < e ==>
+            ?d. 0 < d /\
+                !y. y IN x /\ abs (y - s) < d ==>
+                    abs (f y - f s - (y - s) * f') <= e * abs (y - s)
+ *)
+Theorem HAS_VECTOR_DERIVATIVE_WITHIN_ALT =
+        HAS_DERIVATIVE_WITHIN_ALT
+     |> Q.SPECL [‘f’, ‘\x. x * f'’, ‘x’, ‘s’]
+     |> SIMP_RULE std_ss [GSYM has_vector_derivative, LINEAR_SCALING']
+     |> Q.GENL [‘f’, ‘f'’, ‘x’, ‘s’]
+
+Theorem HAS_VECTOR_DERIVATIVE_WITHIN_OPEN :
+   !f f' a s.
+         a IN s /\ open s
+         ==> ((f has_vector_derivative f') (at a within s) <=>
+              (f has_vector_derivative f') (at a))
+Proof
+    RW_TAC std_ss [has_vector_derivative]
+ >> MATCH_MP_TAC HAS_DERIVATIVE_WITHIN_OPEN >> art []
+QED
+
 Theorem HAS_VECTOR_DERIVATIVE_WITHIN_SUBSET :
     !f f' s t x. (f has_vector_derivative f') (at x within s) /\ t SUBSET s
              ==> (f has_vector_derivative f') (at x within t)
@@ -1812,6 +1943,34 @@ Theorem HAS_VECTOR_DERIVATIVE_AT_WITHIN :
            ==> (f has_vector_derivative f') (at x within s)
 Proof
     SIMP_TAC std_ss [has_vector_derivative, HAS_DERIVATIVE_AT_WITHIN]
+QED
+
+Theorem MVT_ALT :
+    !f f' a b.
+        a < b /\ f continuous_on interval[a,b] /\
+        (!x. x IN interval(a,b) ==> (f has_vector_derivative f' x) (at x))
+        ==> ?x. x IN interval(a,b) /\ (f(b) - f(a) = f' x * (b - a))
+Proof
+    rw [has_vector_derivative]
+ >> qabbrev_tac ‘g = (\x t. t * f' x)’ >> fs []
+ >> ‘!x. (\t. g x t) = g x’ by rw [FUN_EQ_THM]
+ >> POP_ASSUM (fs o wrap)
+ >> ‘!x. f' x * (b - a) = g x (b - a)’ by rw [Abbr ‘g’]  >> POP_ORW
+ >> MATCH_MP_TAC MVT >> art []
+QED
+
+Theorem MVT_GENERAL_ALT :
+    !f f' a b.
+        a < b /\ f continuous_on interval[a,b] /\
+        (!x. x IN interval(a,b) ==> (f has_vector_derivative f' x) (at x))
+        ==> ?x. x IN interval(a,b) /\ abs (f b - f a) <= abs (f' x * (b - a))
+Proof
+    rw [has_vector_derivative]
+ >> qabbrev_tac ‘g = (\x t. t * f' x)’ >> fs []
+ >> ‘!x. (\t. g x t) = g x’ by rw [FUN_EQ_THM]
+ >> POP_ASSUM (fs o wrap)
+ >> ‘!x. f' x * (b - a) = g x (b - a)’ by rw [Abbr ‘g’]  >> POP_ORW
+ >> MATCH_MP_TAC MVT_GENERAL >> art []
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -2050,7 +2209,8 @@ Proof
   DISCH_THEN(MP_TAC o Q.SPEC `e / &2`) THEN ASM_REWRITE_TAC[REAL_HALF] THEN
   DISCH_THEN(X_CHOOSE_THEN ``M:num`` (MP_TAC o Q.SPEC `n + M + 1`)) THEN
   FIRST_X_ASSUM(MP_TAC o Q.SPECL [`n + 1`, `n + M + 1`, `z`]) THEN
-  ASM_SIMP_TAC std_ss [ARITH_PROVE ``(n >= N ==> n + 1 >= N) /\ M <= n + M + 1:num``] THEN
+  ASM_SIMP_TAC std_ss
+   [ARITH_PROVE ``(n >= N ==> n + 1 >= N) /\ M <= n + M + 1:num``] THEN
   ASM_SIMP_TAC std_ss [REAL_LT_IMP_LE, LE_0] THEN
   Q.ABBREV_TAC `f = (\i. z pow i / &FACT i)` THEN
   `0 <= n + 1` by ASM_SIMP_TAC arith_ss [] THEN
@@ -2149,7 +2309,8 @@ Proof
   POP_ASSUM (MP_TAC o MATCH_MP SUM_CONST) THEN
   DISCH_THEN (MP_TAC o Q.SPEC `x pow (n - 1)`) THEN SIMP_TAC arith_ss [CARD_NUMSEG] THEN
   DISCH_THEN (ASSUME_TAC o ONCE_REWRITE_RULE [EQ_SYM_EQ]) THEN
-  ASM_REWRITE_TAC [] THEN ONCE_REWRITE_TAC [REAL_ARITH ``a * b * c = (a * c) * b:real``] THEN
+  ASM_REWRITE_TAC [] THEN
+  ONCE_REWRITE_TAC [REAL_ARITH ``a * b * c = (a * c) * b:real``] THEN
   ABS_TAC THEN SIMP_TAC std_ss [SUM_RMUL] THEN AP_THM_TAC THEN AP_TERM_TAC THEN
   MATCH_MP_TAC SUM_EQ' THEN SIMP_TAC arith_ss [GSYM POW_ADD, IN_NUMSEG]
 QED
@@ -2179,3 +2340,4 @@ Proof
   METIS_TAC[CONTINUOUS_AT_IMP_CONTINUOUS_ON, CONTINUOUS_AT_EXP]
 QED
 
+(* END *)

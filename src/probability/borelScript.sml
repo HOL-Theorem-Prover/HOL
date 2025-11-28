@@ -11,6 +11,7 @@
 (* Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2019 - 2021)          *)
 (* Fondazione Bruno Kessler and University of Trento, Italy                  *)
 (* ------------------------------------------------------------------------- *)
+
 Theory borel
 Ancestors
   prim_rec arithmetic combin res_quan pair pred_set relation real
@@ -18,7 +19,6 @@ Ancestors
   sigma_algebra iterate real_borel measure
 Libs
   numLib res_quanTools pred_setLib realLib RealArith hurdUtils
-
 
 val ASM_ARITH_TAC = rpt (POP_ASSUM MP_TAC) >> ARITH_TAC; (* numLib *)
 val DISC_RW_KILL = DISCH_TAC >> ONCE_ASM_REWRITE_TAC [] >> POP_ASSUM K_TAC;
@@ -3531,7 +3531,8 @@ QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
 Theorem IN_MEASURABLE_BOREL_FN_PLUS :
-    !a f. sigma_algebra a /\ f IN measurable a Borel ==> fn_plus f IN measurable a Borel
+    !a f. sigma_algebra a /\ f IN measurable a Borel ==>
+          fn_plus f IN measurable a Borel
 Proof
     rpt STRIP_TAC
  >> rfs [IN_MEASURABLE_BOREL, IN_FUNSET, fn_plus_def]
@@ -3539,7 +3540,8 @@ Proof
  >> Cases_on `c <= 0`
  >- (`{x | (if 0 < f x then f x else 0) < Normal c} = {}`
        by (RW_TAC std_ss [EXTENSION, GSPECIFICATION, NOT_IN_EMPTY] \\
-          `!x. 0 <= (if 0 < f x then f x else 0)` by RW_TAC real_ss [lt_imp_le, le_refl] \\
+          `!x. 0 <= (if 0 < f x then f x else 0)`
+             by RW_TAC real_ss [lt_imp_le, le_refl] \\
            METIS_TAC [le_trans, extreal_lt_def, extreal_of_num_def, extreal_le_def]) \\
      METIS_TAC [sigma_algebra_def, algebra_def, INTER_EMPTY])
  >> `{x | (if 0 < f x then f x else 0) < Normal c} = {x | f x < Normal c}`
@@ -3553,7 +3555,8 @@ QED
 
 (* NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’ *)
 Theorem IN_MEASURABLE_BOREL_FN_MINUS :
-    !a f. sigma_algebra a /\ f IN measurable a Borel ==> fn_minus f IN measurable a Borel
+    !a f. sigma_algebra a /\ f IN measurable a Borel ==>
+          fn_minus f IN measurable a Borel
 Proof
     RW_TAC std_ss [fn_minus_def]
  >> rw [IN_MEASURABLE_BOREL, IN_FUNSET]
@@ -3591,7 +3594,8 @@ Proof
  >> rpt STRIP_TAC
  >> MATCH_MP_TAC IN_MEASURABLE_BOREL_SUB
  >> qexistsl_tac [`fn_plus f`, `fn_minus f`]
- >> RW_TAC std_ss [fn_plus_def, fn_minus_def, sub_rzero, lt_antisym, sub_rzero, add_lzero]
+ >> RW_TAC std_ss [fn_plus_def, fn_minus_def, sub_rzero, lt_antisym, sub_rzero,
+                   add_lzero]
  >| [ (* goal 2 (of 8) *)
       METIS_TAC [lt_antisym],
       (* goal 3 (of 8) *)
@@ -3613,12 +3617,43 @@ Proof
       METIS_TAC [le_antisym, extreal_lt_def] ]
 QED
 
+Theorem IN_MEASURABLE_BOREL_LIMSUP :
+    !a fi f. sigma_algebra a /\ (!n. fi n IN measurable a Borel) /\
+            (!x. x IN space a ==> f x = limsup (\i. fi i x)) ==>
+             f IN measurable a Borel
+Proof
+    rw [ext_limsup_def]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_INF
+ >> qexistsl_tac [‘\m x. sup {fi i x | m <= i}’, ‘UNIV’] >> rw []
+ >> ‘!x. {fi i x | n <= i} = IMAGE (\i. fi i x) (from n)’
+      by rw [Once EXTENSION, from_def] >> POP_ORW
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_SUP
+ >> qexistsl_tac [‘fi’, ‘from n’]
+ >> simp [FROM_NOT_EMPTY]
+QED
+
+Theorem IN_MEASURABLE_BOREL_LIMINF :
+    !a fi f. sigma_algebra a /\ (!n. fi n IN measurable a Borel) /\
+            (!x. x IN space a ==> f x = liminf (\i. fi i x)) ==>
+             f IN measurable a Borel
+Proof
+    rw [ext_liminf_def]
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_SUP
+ >> qexistsl_tac [‘\m x. inf {fi i x | m <= i}’, ‘UNIV’] >> rw []
+ >> ‘!x. {fi i x | n <= i} = IMAGE (\i. fi i x) (from n)’
+      by rw [Once EXTENSION, from_def] >> POP_ORW
+ >> MATCH_MP_TAC IN_MEASURABLE_BOREL_INF
+ >> qexistsl_tac [‘fi’, ‘from n’]
+ >> simp [FROM_NOT_EMPTY]
+QED
+
 (* The reverse version of IN_MEASURABLE_BOREL_IMP_BOREL
 
    NOTE: added ‘sigma_algebra a’ into antecedents due to changes of ‘measurable’
  *)
 Theorem in_borel_measurable_from_Borel :
-    !a f. sigma_algebra a /\ f IN measurable a Borel ==> (real o f) IN measurable a borel
+    !a f. sigma_algebra a /\ f IN measurable a Borel ==>
+         (real o f) IN measurable a borel
 Proof
     rpt GEN_TAC >> STRIP_TAC
  >> simp [IN_MEASURABLE, sigma_algebra_borel, IN_FUNSET, space_borel]

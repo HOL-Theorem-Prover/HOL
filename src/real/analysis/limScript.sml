@@ -1,6 +1,7 @@
 (*===========================================================================*)
 (* Theory of limits, continuity and differentiation of real->real functions  *)
 (*===========================================================================*)
+
 Theory lim
 Ancestors
   pair arithmetic num prim_rec real metric nets combin pred_set
@@ -8,12 +9,11 @@ Ancestors
 Libs
   numLib reduceLib pairLib jrhUtils realLib mesonLib hurdUtils
 
-
 val _ = ParseExtras.temp_loose_equality()
 
 val _ = Parse.reveal "B";
 
-val tendsto = netsTheory.tendsto;   (* conflict with real_topologyTheory.tendsto *)
+val tendsto = netsTheory.tendsto; (* conflict with real_topologyTheory.tendsto *)
 val EXACT_CONV = jrhUtils.EXACT_CONV; (* there's one also in hurdUtils *)
 
 (*---------------------------------------------------------------------------*)
@@ -171,9 +171,11 @@ Proof
  >> ASSUME_TAC (Q.SPEC ‘l’ (ONCE_REWRITE_RULE [REAL_MUL_COMM] LINEAR_SCALING))
  >> EQ_TAC >> RW_TAC real_ss [LIM] (* 2 subgoals *)
  >| [ (* goal 1 (of 2) *)
-      Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e’)) >> RW_TAC std_ss [] \\
+      Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e’)) \\
+      RW_TAC std_ss [] \\
       Q.EXISTS_TAC ‘d’ >> RW_TAC std_ss [] \\
-      Q.PAT_X_ASSUM ‘!h. 0 < abs h /\ abs h < d ==> P’ (MP_TAC o (Q.SPEC ‘y - x’)) \\
+      Q.PAT_X_ASSUM ‘!h. 0 < abs h /\ abs h < d ==> P’
+       (MP_TAC o (Q.SPEC ‘y - x’)) \\
       RW_TAC real_ss [] \\
      ‘y - x <> 0’ by (CCONTR_TAC >> fs []) \\
      ‘inv (abs (y - x)) = abs (inv (y - x))’ by PROVE_TAC [ABS_INV] >> POP_ORW \\
@@ -185,10 +187,11 @@ Proof
       ONCE_REWRITE_TAC [REAL_MUL_COMM] \\
      ‘f y - (f x + (y - x) * l) = (f y - f x) - l * (y - x)’ by REAL_ARITH_TAC \\
       POP_ORW >> REWRITE_TAC [real_div] \\
-      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites [REAL_SUB_RDISTRIB] \\
-      rw [],
+      GEN_REWRITE_TAC (RATOR_CONV o ONCE_DEPTH_CONV) empty_rewrites
+                      [REAL_SUB_RDISTRIB] >> rw [],
       (* goal 2 (of 2) *)
-      Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e’)) >> RW_TAC std_ss [] \\
+      Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e’)) \\
+      RW_TAC std_ss [] \\
       Q.EXISTS_TAC ‘d’ >> RW_TAC std_ss [] \\
       Q.PAT_X_ASSUM ‘!y. 0 < abs (y - x) /\ abs (y - x) < d ==> P’
         (MP_TAC o (Q.SPEC ‘x + h’)) >> RW_TAC real_ss [] \\
@@ -204,9 +207,16 @@ Proof
       ONCE_REWRITE_TAC [REAL_MUL_COMM] \\
      ‘f (x + h) - (f x + h * l) = f (x + h) - f x - l * h’ by REAL_ARITH_TAC \\
       POP_ORW >> REWRITE_TAC [real_div] \\
-      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites [REAL_SUB_RDISTRIB] \\
-      rw [] ]
+      GEN_REWRITE_TAC (RAND_CONV o ONCE_DEPTH_CONV) empty_rewrites
+                      [REAL_SUB_RDISTRIB] >> rw [] ]
 QED
+
+(* |- !f l x.
+        (f has_vector_derivative l) (at x) <=>
+        ((\h. (f (x + h) - f x) / h) --> l) (at 0)
+ *)
+Theorem HAS_VECTOR_DERIVATIVE_ALT =
+    REWRITE_RULE [diffl, GSYM LIM_AT_LIM] (GSYM diffl_has_vector_derivative)
 
 (* |- !f l x. (f diffl l) x <=> (f has_derivative (\x. x * l)) (at x) *)
 Theorem diffl_has_derivative =
@@ -233,7 +243,8 @@ Proof
       Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e’)) \\
       RW_TAC std_ss [] \\
       Q.EXISTS_TAC ‘d’ >> RW_TAC std_ss [] \\
-      Q.PAT_X_ASSUM ‘!h. 0 < abs h /\ abs h < d ==> P’ (MP_TAC o (Q.SPEC ‘x' - x’)) \\
+      Q.PAT_X_ASSUM ‘!h. 0 < abs h /\ abs h < d ==> P’
+        (MP_TAC o (Q.SPEC ‘x' - x’)) \\
       RW_TAC real_ss [],
       (* goal 2 (of 2) *)
       Q.PAT_X_ASSUM ‘!e. 0 < e ==> P’ (MP_TAC o (Q.SPEC ‘e’)) \\
@@ -2087,6 +2098,7 @@ End
 (* NOTE: It's recommended for users to copy this overload to their theories:
 Overload D[local] = “diffn”
  *)
+Overload diff1 = “diffn 1”
 
 Theorem diffn_thm :
     !f. (!m t. ?x. (diffn m f diffl x) t) ==>
@@ -2103,11 +2115,32 @@ Proof
     rw [FUN_EQ_THM, diffn_def]
 QED
 
-Theorem diffn_1 : (* was: diff1_def *)
+Theorem diffn_1 :
     !f x. diffn 1 f x = @y. (f diffl y) x
 Proof
     EVAL_TAC >> simp []
 QED
+
+(* |- !f x. diff1 f x = @y. (f diffl y) x *)
+Theorem diff1_def = diffn_1
+
+(* |- !f x. diff1 f x = @y. (f has_vector_derivative y) (at x) *)
+Theorem diff1_alt =
+        diffn_1 |> REWRITE_RULE [diffl_has_vector_derivative]
+
+Theorem diffl_imp_diff1 :
+    !f x y. (f diffl y) x ==> (diff1 f x = y)
+Proof
+    RW_TAC std_ss [diff1_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC >- (Q.EXISTS_TAC ‘y’ >> art [])
+ >> Q.X_GEN_TAC ‘z’ >> DISCH_TAC
+ >> PROVE_TAC [DIFF_UNIQ]
+QED
+
+(* |- !f x y. (f has_vector_derivative y) (at x) ==> diff1 f x = y *)
+Theorem has_vector_derivative_imp_diff1 =
+        REWRITE_RULE [diffl_has_vector_derivative] diffl_imp_diff1
 
 Theorem SELECT_EQ_THM[local] :
     !P Q. (!x. P x <=> Q x) ==> ((@x. P x) = (@x. Q x))
@@ -2828,7 +2861,13 @@ Proof
          rw [] >> METIS_TAC [LIM_CONST]) \\
      MP_TAC (Q.SPECL [‘a’, ‘SUC n’] higher_differentiable_sub_linear) >> rw [] \\
      fs [higher_differentiable_def, FORALL_AND_THM] \\
-     Q.PAT_X_ASSUM ‘!x. ?y. (diffn n (λx. a - x) diffl y) x’ (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
+     Q.PAT_X_ASSUM ‘!x. ?y. (diffn n (λx. a - x) diffl y) x’
+       (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
      qexists ‘y’ >> METIS_TAC [])
  >> METIS_TAC [higher_differentiable_sub_linear]
 QED
+
+(* Temporarily re-enable printing of numeral bits for help documents *)
+val _ = temp_remove_user_printer "num.numeral_computations";
+
+(* END *)
