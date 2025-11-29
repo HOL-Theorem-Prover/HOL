@@ -2010,17 +2010,28 @@ Theorem differentiable_lemma' :
           (!x. x IN m_space m ==> 0 <= w x /\ w x <> PosInf) /\
            !t x. t IN s /\ x IN m_space m ==>
                  Normal (abs (diff1 (\t. u t x) t)) <= w x)
-     ==> !t. t IN s ==>
+     ==> (\t. real (integral m (Normal o u t))) differentiable_on s /\
+         !t. t IN s ==>
              integrable m (\x. Normal (diff1 (\t. u t x) t)) /\
              diff1 (\t. real (integral m (Normal o u t))) t =
              real (integral m (\x. (Normal (diff1 (\t. u t x) t))))
 Proof
     rpt GEN_TAC >> STRIP_TAC
- >> Q.X_GEN_TAC ‘t’ >> DISCH_TAC
  >> MP_TAC (Q.SPECL [‘s’, ‘m’, ‘u’] differentiable_lemma) >> simp []
  >> impl_tac >- (Q.EXISTS_TAC ‘w’ >> art [])
- >> DISCH_THEN (MP_TAC o Q.SPEC ‘t’) >> simp []
- >> STRIP_TAC
+ >> DISCH_TAC
+ >> CONJ_TAC
+ >- (rw [differentiable_on, differentiable_alt_has_vector_derivative] \\
+     Q.PAT_X_ASSUM ‘!t. t IN s ==>
+                        integrable m (\x. Normal (diff1 (\t. u t x) t)) /\ _’
+                   (MP_TAC o Q.SPEC ‘x’) >> simp [] \\
+     qmatch_abbrev_tac ‘_ /\ (_ has_vector_derivative l) (at x within s) ==> _’ \\
+     STRIP_TAC \\
+     Q.EXISTS_TAC ‘l’ >> art [])
+ >> Q.X_GEN_TAC ‘t’ >> DISCH_TAC
+ >> Q.PAT_X_ASSUM ‘!t. t IN s ==>
+                       integrable m (\x. Normal (diff1 (\t. u t x) t)) /\ _’
+                  (MP_TAC o Q.SPEC ‘t’) >> rw []
  >> MATCH_MP_TAC has_vector_derivative_imp_diff1
  >> irule (iffLR HAS_VECTOR_DERIVATIVE_WITHIN_OPEN)
  >> Q.EXISTS_TAC ‘s’ >> art []
@@ -2048,6 +2059,7 @@ Theorem differentiable_univ_lemma =
              (!x. x IN m_space m ==> 0 <= w x /\ w x <> PosInf) /\
              !t x.
                x IN m_space m ==> Normal (abs (diff1 (\t. u t x) t)) <= w x) ==>
+        (\t. real (integral m (Normal o u t))) differentiable_on univ(:real) /\
         !t. integrable m (\x. Normal (diff1 (\t. u t x) t)) /\
             diff1 (\t. real (integral m (Normal o u t))) t =
             real (integral m (\x. Normal (diff1 (\t. u t x) t)))
