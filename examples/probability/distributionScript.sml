@@ -6693,28 +6693,100 @@ Theorem gauge_differentiable_lemma :
         (?w. integrable lborel w /\
             (!x. 0 <= w x /\ w x <> PosInf) /\
              !t x. Normal (abs (diff1 (\t. u t x) t)) <= w x)
-     ==> !t. integrable lborel (\x. Normal (diff1 (\t. u t x) t)) /\
+     ==> (\t. integral univ(:real) (u t)) differentiable_on univ(:real) /\
+         !t. integrable lborel (\x. Normal (diff1 (\t. u t x) t)) /\
              diff1 (\t. integral univ(:real) (u t)) t =
              integral univ(:real) (\x. diff1 (\t. u t x) t)
 Proof
-    rpt GEN_TAC >> STRIP_TAC
- >> Q.X_GEN_TAC ‘t’
+    Q.X_GEN_TAC ‘u’ >> STRIP_TAC
  >> MP_TAC (Q.SPECL [‘lborel’, ‘u’]
                     (INST_TYPE [alpha |-> “:real”] differentiable_univ_lemma'))
  >> simp [space_lborel, lborel_def]
  >> impl_tac >- (Q.EXISTS_TAC ‘w’ >> art [])
- >> DISCH_THEN (STRIP_ASSUME_TAC o SRULE [IMP_CONJ_THM, FORALL_AND_THM])
- >> simp []
+ >> DISCH_THEN (STRIP_ASSUME_TAC o
+                SRULE [IMP_CONJ_THM, FORALL_AND_THM]) >> simp []
+ >> Know ‘!t. integral univ(:real) (u t) =
+              real (integral lborel (Normal o u t))’
+ >- (Q.X_GEN_TAC ‘t’ \\
+     MP_TAC (Q.SPEC ‘u (t :real)’ (cj 2 lebesgue_eq_gauge_integral)) \\
+     simp [])
+ >> DISCH_THEN (art o wrap)
+ >> Q.X_GEN_TAC ‘t’
  >> Know ‘integral univ(:real) (\x. diff1 (\t. u t x) t) =
           real (integral lborel (\x. Normal (diff1 (\t. u t x) t)))’
  >- (MP_TAC (Q.SPEC ‘\x. diff1 (\t. u t (x :real)) t’
-                    (cj 2 lebesgue_eq_gauge_integral)) \\
-     simp [o_DEF])
+                    (cj 2 lebesgue_eq_gauge_integral)) >> simp [o_DEF])
+ >> Rewr
+QED
+
+Theorem gauge_higher_differentiable_lemma :
+    !u. (!t. integrable lborel (Normal o u t)) /\
+        (!n t x. higher_differentiable n (\t. u t x) t) /\
+        (?w. integrable lborel w /\
+            (!x. 0 <= w x /\ w x <> PosInf) /\
+             !n t x. Normal (abs (diffn n (\t. u t x) t)) <= w x)
+     ==> !n t. higher_differentiable n (\t. integral univ(:real) (u t)) t /\
+               integrable lborel (\x. Normal (diffn n (\t. u t x) t)) /\
+               diffn n (\t. integral univ(:real) (u t)) t =
+               integral univ(:real) (\x. diffn n (\t. u t x) t)
+Proof
+    Q.X_GEN_TAC ‘u’ >> STRIP_TAC
+ >> Induct_on ‘n’
+ >- (Q.X_GEN_TAC ‘t’ >> simp [limTheory.diffn_0] \\
+    ‘(\x. u t x) = u t’ by rw [FUN_EQ_THM] \\
+     fs [o_DEF, limTheory.higher_differentiable_def])
+ >> Q.X_GEN_TAC ‘t’
+ >> POP_ASSUM MP_TAC
+ >> qabbrev_tac ‘f = \t x. diffn n (\t. u t x) t’
+ >> ‘!t x. diffn n (\t. u t x) t = f t x’ by rw [Abbr ‘f’, FUN_EQ_THM]
+ >> POP_ORW
+ >> ‘!t. (\x. f t x) = f t’ by rw [FUN_EQ_THM] >> POP_ORW
+ >> DISCH_THEN (STRIP_ASSUME_TAC o SRULE [FORALL_AND_THM])
+ (* applying limTheory.diffn_SUC' *)
+ >> Know ‘!x. diffn (SUC n) (\t. u t x) = diff1 (\t. f t x)’
+ >- (rw [Abbr ‘f’, Once EQ_SYM_EQ] \\
+    ‘(\t. diffn n (\t. u t x) t) = diffn n (\t. u t x)’ by rw [FUN_EQ_THM] \\
+     POP_ORW \\
+     MATCH_MP_TAC limTheory.diffn_SUC' >> art [])
+ >> DISCH_TAC
+ (* applying gauge_differentiable_lemma on f *)
+ >> MP_TAC (Q.SPEC ‘f’ gauge_differentiable_lemma) >> simp [o_DEF]
+ >> impl_tac
+ >- (CONJ_TAC (* !x. (\t. f t x) differentiable_on univ(:real) *)
+     >- (Q.X_GEN_TAC ‘x’ \\
+         simp [differentiable_on, NET_WITHIN_UNIV] \\
+         Q.X_GEN_TAC ‘t’ \\
+         simp [GSYM limTheory.higher_differentiable_1_eq_differentiable] \\
+         Q.PAT_X_ASSUM ‘!n t x. higher_differentiable n (\t. u t x) t’
+           (MP_TAC o Q.GEN ‘t’ o Q.SPECL [‘SUC n’, ‘t’, ‘x’]) \\
+         DISCH_THEN (MP_TAC o Q.SPEC ‘t’ o
+                     MATCH_MP limTheory.higher_differentiable_imp_1n) \\
+        ‘diffn n (\t. u t x) = (\t. f t x)’ by rw [Abbr ‘f’, FUN_EQ_THM] \\
+         simp []) \\
+     Q.EXISTS_TAC ‘w’ >> rw [] \\
+     POP_ASSUM (REWRITE_TAC o wrap o Q.SPEC ‘x’ o GSYM) >> art [])
+ >> simp []
+ >> DISCH_THEN (STRIP_ASSUME_TAC o SRULE [FORALL_AND_THM])
+ >> qabbrev_tac ‘g = \t. integral univ(:real) (u t)’
+ >> Q.PAT_X_ASSUM ‘!t. diffn n g t = integral univ(:real) (f t)’
+      (fs o wrap o GSYM)
+ >> ‘(\t. diffn n g t) = diffn n g’ by rw [FUN_EQ_THM]
+ >> POP_ASSUM (fs o wrap)
+ (* stage work *)
+ >> Know ‘!t. higher_differentiable (SUC n) g t’
+ >- (rw [limTheory.higher_differentiable_def] \\
+     qabbrev_tac ‘h = diffn n g’ \\
+    ‘(\t. h t) = h’ by rw [FUN_EQ_THM] >> POP_ASSUM (fs o wrap) \\
+     REWRITE_TAC [GSYM limTheory.higher_differentiable_1] \\
+     REWRITE_TAC [limTheory.higher_differentiable_1_eq_differentiable] \\
+     Q.PAT_X_ASSUM ‘h differentiable_on univ(:real)’ MP_TAC \\
+     simp [differentiable_on, NET_WITHIN_UNIV])
+ >> DISCH_TAC
+ >> simp []
+ >> Know ‘diffn (SUC n) g = diff1 (diffn n g)’
+ >- (SYM_TAC >> MATCH_MP_TAC limTheory.diffn_SUC' >> art [])
  >> Rewr'
- >> POP_ASSUM (REWRITE_TAC o wrap o GSYM)
- >> MATCH_MP_TAC limTheory.diffn_cong >> rw []
- >> MP_TAC (Q.SPEC ‘u (x :real)’ (cj 2 lebesgue_eq_gauge_integral))
- >> simp [o_DEF]
+ >> simp []
 QED
 
 (* ------------------------------------------------------------------------- *)
