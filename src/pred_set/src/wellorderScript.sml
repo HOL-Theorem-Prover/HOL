@@ -34,6 +34,7 @@ val gs = bossify (global_simp_tac {droptrues = true, elimvars = false,
 val rw = srw_tac[numSimps.ARITH_ss]
 val metis_tac = METIS_TAC
 
+Type inf = ``:num + 'a``
 
 Theorem let_thm[simp,local] = LET_THM
 

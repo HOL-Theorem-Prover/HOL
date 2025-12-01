@@ -227,8 +227,6 @@ Proof
   metis_tac[cardleq_def,FINITE_INJ]
 QED
 
-Type inf = ``:num + 'a``
-
 Theorem INFINITE_UNIV_INF[simp]:
     INFINITE univ(:'a inf)
 Proof
