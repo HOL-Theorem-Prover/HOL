@@ -1923,71 +1923,81 @@ Proof
   REAL_ARITH_TAC
 QED
 
-Theorem standard_normal_abs_third_moment :
-    ∫ lborel (λx. Normal ((abs x) pow 3 * std_normal_density x)) =
-    Normal (sqrt (8 / pi))
+Theorem in_measurable_borel_not_sing :
+  !f a. sigma_algebra a /\ f IN measurable a borel ==>
+        !c. ({x | f x <> c} INTER space a) IN subsets a
 Proof
- cheat
+  cheat
 QED
 
 Theorem standard_normal_abs_third_moment_pos :
     0 < ∫ lborel (λx. Normal ((abs x) pow 3 * std_normal_density x))
 Proof
-
-  MP_TAC (cj 3 lborel_def) >> DISCH_TAC
-  >> MP_TAC integrable_std_normal_abs_cubic >> DISCH_TAC
-  >>  qabbrev_tac ‘f = \x. (abs x)³ * std_normal_density x’ >> gs []
-  >> Know ‘!x. 0 <= f x’
-  >- (rw [Abbr ‘f’] \\
-      MATCH_MP_TAC REAL_LE_MUL \\
-      simp [normal_density_nonneg, ABS_POS, REAL_POW_LE])
-  >> DISCH_TAC
-  >> ‘∀x. x ≠ 0 ⇒ 0 ≠ f x’ by rw [Abbr ‘f’, normal_density_pos, REAL_LT_01, REAL_LT_IMP_NE]
-
-  >> Know ‘f IN borel_measurable borel’
-  >- (qunabbrev_tac ‘f’ \\
-      MATCH_MP_TAC in_borel_measurable_mul \\
-      qexistsl_tac [‘\x. (abs x)³’, ‘std_normal_density’] \\
-      simp [space_borel, sigma_algebra_borel] \\
-      REWRITE_TAC [in_measurable_borel_normal_density] \\
-      MATCH_MP_TAC in_borel_measurable_pow \\
-      qexistsl [‘3’, ‘λx. abs x’] \\
-      simp [space_borel, sigma_algebra_borel] \\
-      (* (λx. abs x) ∈ borel_measurable borel *)
-      MATCH_MP_TAC in_measurable_borel_comp_borel \\
-      qexistsl [‘abs’, ‘λx. x’] \\
-      simp [in_borel_measurable_I, in_measurable_borel_borel_abs])
-  >> DISCH_TAC
-  >> ‘∀x. 0 ≤ Normal (f x)’ by rw [GSYM (cj 13 extreal_0_simps)]
-  >> ‘0 ≤ ∫ lborel (λx. Normal (f x))’
-    by (MATCH_MP_TAC integral_pos >> rw [])
-  >> ‘∃r. ∫ lborel (λx. Normal (f x)) = Normal r’ by METIS_TAC [integrable_normal_integral]
-  >> gs []
-  >> CCONTR_TAC
-  >> fs [REAL_NOT_LT]
-  >> ‘r = (0 :real)’ by METIS_TAC [REAL_LE_ANTISYM] >> gs [normal_0]
-  >> MP_TAC (Q.SPECL [‘lborel’, ‘λx. Normal (f x)’]
-              (INST_TYPE [“:'a” |-> “:real”] integral_eq_0))
-  >> impl_tac >- (rw [AE_T, GSYM o_DEF] >> MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL \\
-                  simp [lborel_def])
-  >> STRIP_TAC >> gs []
-  >> Suff ‘0 < lambda {x | x ∈ m_space lborel ∧ f x ≠ 0}’ >- (fs [lt_imp_ne])
-
-
-
-
-
-
-
-
+    MP_TAC (cj 3 lborel_def) >> DISCH_TAC
+ >> MP_TAC integrable_std_normal_abs_cubic >> DISCH_TAC
+ >>  qabbrev_tac ‘f = \x. (abs x)³ * std_normal_density x’ >> gs []
+ >> Know ‘!x. 0 <= f x’
+ >- (rw [Abbr ‘f’] \\
+     MATCH_MP_TAC REAL_LE_MUL \\
+     simp [normal_density_nonneg, ABS_POS, REAL_POW_LE])
+ >> DISCH_TAC
+ >> ‘∀x. x ≠ 0 ⇒ 0 ≠ f x’ by rw [Abbr ‘f’, normal_density_pos, REAL_LT_01, REAL_LT_IMP_NE]
+ >> Know ‘f IN borel_measurable borel’
+ >- (qunabbrev_tac ‘f’ \\
+     MATCH_MP_TAC in_borel_measurable_mul \\
+     qexistsl_tac [‘\x. (abs x)³’, ‘std_normal_density’] \\
+     simp [space_borel, sigma_algebra_borel] \\
+     REWRITE_TAC [in_measurable_borel_normal_density] \\
+     MATCH_MP_TAC in_borel_measurable_pow \\
+     qexistsl [‘3’, ‘λx. abs x’] \\
+     simp [space_borel, sigma_algebra_borel] \\
+     MATCH_MP_TAC in_measurable_borel_comp_borel \\
+     qexistsl [‘abs’, ‘λx. x’] \\
+     simp [in_borel_measurable_I, in_measurable_borel_borel_abs])
+ >> DISCH_TAC
+ >> ‘∀x. 0 ≤ Normal (f x)’ by rw [GSYM (cj 13 extreal_0_simps)]
+ >> ‘0 ≤ ∫ lborel (λx. Normal (f x))’
+   by (MATCH_MP_TAC integral_pos >> rw [])
+ >> ‘∃r. ∫ lborel (λx. Normal (f x)) = Normal r’ by METIS_TAC [integrable_normal_integral]
+ >> gs []
+ >> CCONTR_TAC
+ >> fs [REAL_NOT_LT]
+ >> ‘r = (0 :real)’ by METIS_TAC [REAL_LE_ANTISYM] >> gs [normal_0]
+ >> MP_TAC (Q.SPECL [‘lborel’, ‘λx. Normal (f x)’]
+             (INST_TYPE [“:'a” |-> “:real”] integral_eq_0))
+ >> impl_tac >- (rw [AE_T, GSYM o_DEF] >> MATCH_MP_TAC IN_MEASURABLE_BOREL_IMP_BOREL \\
+                 simp [lborel_def])
+ >> STRIP_TAC >> gs []
+ >> Know ‘{x | x ∈ m_space lborel ∧ f x ≠ 0} ∈ subsets borel’
+    >- (MP_TAC (Q.SPECL [‘(f :real -> real)’, ‘borel’]
+                 (INST_TYPE [“:'a” |-> “:real”] in_measurable_borel_not_sing)) \\
+        rw [sigma_algebra_borel] \\
+        POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘0’) \\
+        Suff ‘{x | x ∈ m_space lborel ∧ f x ≠ 0} = {x | f x ≠ 0} ∩ space borel’ >> rw [] \\
+        rw [EXTENSION, space_lborel, space_borel])
+ >> DISCH_TAC
+ >> Suff ‘0 < lambda {x | x ∈ m_space lborel ∧ f x ≠ 0}’ >- (fs [lt_imp_ne])
+ >> MP_TAC (Q.SPECL [‘{x |  x ∈ m_space lborel ∧ (f :real -> real) x ≠ 0}’] (GSYM lebesgue_eq_lambda))
+ >> rw []
+ >> ‘{x | x ∈ m_space lborel ∧ f x ≠ 0} = {x | f x ≠ 0}’ by rw [Once EXTENSION, space_lborel] >> gs []
+ >> POP_ASSUM K_TAC
+ >> Suff ‘0 < lmeasure (interval (0,1)) ∧ lmeasure (interval (0,1)) ≤ lmeasure {x | f x ≠ 0}’
+ >- (METIS_TAC [lte_trans, lt_imp_ne])
+ >> CONJ_TAC >- (simp [lebesgue_open_interval, normal_1])
+ >> MATCH_MP_TAC MEASURE_INCREASING
+ >> simp [measure_space_lebesgue]
+ >> CONJ_TAC >- (rw [SUBSET_DEF, Once EXTENSION] >> fs [cj 1 IN_INTERVAL, REAL_LT_IMP_NE])
+ >> CONJ_TAC >- (MATCH_MP_TAC borel_imp_lebesgue_sets \\
+                 gvs [OPEN_interval, borel_measurable_sets_gr_less])
+ >> MP_TAC lborel_subset_lebesgue >> DISCH_TAC
+ >> fs [GSYM sets_lborel] >> METIS_TAC [SUBSET_DEF]
 QED
 
-
-Theorem ext_normal_rv_abs_third_moment :
+Theorem ext_normal_rv_abs_third_moment[local] :
     ∀p X sig. prob_space p ∧ 0 < sig ∧
               ext_normal_rv X p 0 sig ⇒
-              ∃r. 0 < r ∧
-                  (expectation p (λx. abs (X x) pow 3) = Normal r * Normal (sig pow 3))
+              (expectation p (λx. abs (X x) pow 3) =
+               ∫ lborel (λx. Normal ((abs x) pow 3 * std_normal_density x)) * Normal (sig pow 3))
 Proof
   rw [expectation_def]
   >> MP_TAC (cj 3 lborel_def) >> DISCH_TAC
@@ -1996,9 +2006,18 @@ Proof
     by METIS_TAC [integrable_normal_integral]
   >> qexists ‘r’
   >> cheat
-
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  Calculation of third moment of standard normal distribution              *)
+(* ------------------------------------------------------------------------- *)
+
+Theorem standard_normal_abs_third_moment :
+  ∫ lborel (λx. Normal ((abs x) pow 3 * std_normal_density x)) =
+  Normal (sqrt (8 / pi))
+Proof
+  cheat
+QED
 
 Theorem ext_normal_rv_abs_third_moment' :
     ∀p X sig. prob_space p ∧ 0 < sig ∧
@@ -7012,15 +7031,13 @@ Proof
  >> ‘0 ≤ A’ by rw [Abbr ‘A’, sup_abs_diff3_nonneg]
  >> ‘A ≠ NegInf’ by METIS_TAC [extreal_0_simps, lt_trans]
  >> ‘A ≠ PosInf’ by METIS_TAC [lt_le]
-    >> ‘∃m. A = Normal m’ by METIS_TAC [extreal_cases] >> gs [Abbr ‘A’]
-    >> MP_TAC (cj 3 lborel_def) >> DISCH_TAC
-    >> MP_TAC (integrable_std_normal_abs_cubic) >> DISCH_TAC
-    >> Q.ABBREV_TAC ‘fu = λx. Normal ((abs x)³ * std_normal_density x)’
-    >> ‘∃c0. ∫ lborel fu = Normal c0’ by METIS_TAC [integrable_normal_integral]
+ >> ‘∃m. A = Normal m’ by METIS_TAC [extreal_cases] >> gs [Abbr ‘A’]
+ >> MP_TAC (cj 3 lborel_def) >> DISCH_TAC
+ >> MP_TAC (integrable_std_normal_abs_cubic) >> DISCH_TAC
 
-
-
-
+ >> Q.ABBREV_TAC ‘fu = λx. Normal ((abs x)³ * std_normal_density x)’
+ >> ‘0 < ∫ lborel fu’ by rw [Abbr ‘fu’, standard_normal_abs_third_moment_pos]
+ >> ‘∃c0. ∫ lborel fu = Normal c0’ by METIS_TAC [integrable_normal_integral] >> gs []
  >> Q.ABBREV_TAC ‘U = m / 6 * (1 + c0)’
  >> Cases_on ‘m = 0’
  >- (‘U = 0’ by gs [mul_lzero, normal_0, extreal_pow_def] \\
@@ -7032,8 +7049,6 @@ Proof
      ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> gs [lt_imp_ne, zero_div, mul_lzero])
  >> Know ‘0 < U’
  >- (rw [Abbr ‘U’] \\
-     ‘0 < 8:real’ by EVAL_TAC \\
-     ‘0 < sqrt (8 / pi)’ by METIS_TAC [SQRT_POS_LT, REAL_LT_DIV, PI_POS] \\
      MATCH_MP_TAC REAL_LT_MUL' >> rw []
      >- (METIS_TAC [GSYM REAL_LT_LE]) \\
      METIS_TAC [REAL_LT_ADD, REAL_LT_01])
@@ -7070,6 +7085,7 @@ Proof
      >> MATCH_MP_TAC (cj 2 expectation_finite) >> simp [GSYM o_DEF, GSYM pow_abs] \\
      MATCH_MP_TAC integrable_abs \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
+
  >> Know ‘Normal m / (6 * (Normal c)³) * ∑ (λj. expectation r (λx. (abs (X' j x))³ + (abs (Y' j x))³)) (count n) =
           Normal m / 6 *
           SIGMA (λj. expectation r (λx. (abs (X' j x)) pow 3) / (Normal c) pow 3 +
@@ -7230,11 +7246,14 @@ Proof
      fs [nonzerop_def] \\
      MATCH_MP_TAC REAL_LET_TRANS \\
      qexists ‘U * abs (real (b n / (Normal c)³))’ >> gs [ABS_LE])
- >> Know ‘∀i. i < n ⇒ B i = Normal (sqrt (8 / pi)) * (Normal ((sig i) pow 3))’
+
+
+ >> Know ‘∀i. i < n ⇒ B i = Normal c0 * (Normal ((sig i) pow 3))’
     >- (rw [] >> gs [] \\
         irule ext_normal_rv_abs_third_moment >> gs [])
- >> DISCH_TAC
- >> Know ‘∀i. i < n ⇒ B i ≤ Normal (sqrt (8 / pi)) * A i’
+    >> DISCH_TAC
+
+ >> Know ‘∀i. i < n ⇒ B i ≤ Normal (c0) * A i’
  >- (rw [] \\
         ‘0 ≤ 8:real’ by REAL_ARITH_TAC \\
      HO_MATCH_MP_TAC le_lmul_imp >> gs [PI_POS, SQRT_POS_LE, REAL_LE_DIV, REAL_LT_IMP_LE] \\
@@ -7361,9 +7380,8 @@ Proof
          rw [mul_assoc, mul_linv_pos]) \\
      Rewr)
  >> DISCH_TAC
- >> Q.ABBREV_TAC ‘c0 = sqrt (8 / pi)’
- >> ‘0 ≤ c0’ by ( ‘0 ≤ 8 :real’ by REAL_ARITH_TAC \\
-                  simp [extreal_0_simps, REAL_LE_DIV, SQRT_POS_LE, PI_POS, REAL_LT_IMP_LE, Abbr ‘c0’])
+    >> ‘0 ≤ c0’ by rw [REAL_LT_IMP_LE]
+
  >> Know ‘∑ (λj. A j + B j) (count n) ≤ (1 + Normal c0) * ∑ A (count n)’
  >- (simp [extreal_add_eq, GSYM normal_1] \\
      MP_TAC (Q.SPEC ‘count (n :num)’ (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_CMUL)) \\
@@ -7395,10 +7413,10 @@ Proof
      POP_ORW >> rw [extreal_mul_eq] \\
      MATCH_MP_TAC le_div >> gs [])
  >> DISCH_TAC
- >> Know ‘Normal (1 / 6 * (m * (1 + sqrt (8 / pi)))) * (b n / (Normal c)³) =
+ >> Know ‘Normal (1 / 6 * (m * (1 + c0))) * (b n / (Normal c)³) =
           Normal m / (6 * Normal c³) * ((1 + Normal c0) * b n)’
  >- (rw [extreal_pow_def, Abbr ‘c0’] \\
-     Q.ABBREV_TAC ‘l = 1 + sqrt (8 / pi)’ >> gs [] \\
+     Q.ABBREV_TAC ‘l = 1 + c0’ >> gs [] \\
      Know ‘b n ≠ PosInf ∧ b n ≠ NegInf’
      >- (bn_not_infty_tactic) \\
      DISCH_TAC \\
@@ -7419,10 +7437,11 @@ Proof
      POP_ORW \\
      ‘inv (6 :extreal) = Normal (inv (6 :real))’ by rw [extreal_inv_def, extreal_of_num_def] \\
      POP_ORW \\
-     ‘Normal l = 1 + Normal (sqrt (8 / pi))’
+     ‘Normal l = 1 + Normal c0’
        by (rw [Abbr ‘l’, GSYM extreal_add_eq, GSYM extreal_sqrt_def, normal_1]) \\
      POP_ASSUM (rw o wrap o SYM) \\
      METIS_TAC [mul_comm, mul_assoc])
+
  >> rw [Abbr ‘c0’]
 QED
 
