@@ -1,8 +1,9 @@
-Theory wellorder
+Theory wellorder[bare]
 Ancestors
   relation set_relation pred_set pair arithmetic option
 Libs
-  boolSimps mesonLib numLib InductiveDefinition tautLib
+  HolKernel Parse boolLib boolSimps mesonLib numLib InductiveDefinition tautLib
+  BasicProvers metisLib Lib simpLib pred_setLib QLib TotalDefn
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
@@ -21,6 +22,20 @@ val FORALL_PROD = pairTheory.FORALL_PROD
 val EXISTS_PROD = pairTheory.EXISTS_PROD
 val EXISTS_SUM = sumTheory.EXISTS_SUM
 val FORALL_SUM = sumTheory.FORALL_SUM
+val ARITH_ss = numSimps.ARITH_ss
+
+fun bossify stac ths = stac (srw_ss() ++ numSimps.ARITH_ss) ths
+val simp = bossify asm_simp_tac
+val fs = bossify full_simp_tac
+val gvs = bossify (global_simp_tac {droptrues = true, elimvars = true,
+                                    oldestfirst = true, strip = true})
+val gs = bossify (global_simp_tac {droptrues = true, elimvars = false,
+                                   oldestfirst = true, strip = true})
+val rw = srw_tac[numSimps.ARITH_ss]
+val metis_tac = METIS_TAC
+
+
+Theorem let_thm[simp,local] = LET_THM
 
 (* there's another ``wellfounded`` in prim_recTheory with different type *)
 val _ = hide "wellfounded";
@@ -599,7 +614,7 @@ Theorem wo2wo_thm =
   wo2wo_def |> concl |> strip_forall |> #2 |> rhs |> strip_comb |> #2
             |> C ISPECL WFREC_THM
             |> C MATCH_MP WIN_WF2
-            |> SIMP_RULE (srw_ss()) []
+            |> SIMP_RULE (srw_ss()) [Excl "let_thm"]
             |> REWRITE_RULE [GSYM wo2wo_def, restrict_away]
 
 val WO_INDUCTION =
