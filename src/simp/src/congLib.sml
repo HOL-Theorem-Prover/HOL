@@ -326,7 +326,7 @@ fun FULL_CONGRUENCE_SIMP_TAC cs ss l =
 
            (* differs only in that it doesn't call DISCARD_TAC *)
            val STRIP_ASSUME_TAC' =
-         REPEAT_TCL STRIP_THM_THEN
+         STRIP_ALL_THEN
                     (fn th => FIRST [CONTR_TAC th, ACCEPT_TAC th,
                                            ASSUME_TAC th])
      fun simp_asm (t,l') = CONGRUENCE_SIMP_RULE cs ss (l'@l) t::l'

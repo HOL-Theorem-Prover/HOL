@@ -261,6 +261,61 @@ val CHOOSE_THEN: thm_tactical =
       end
       handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
 
+(* same as REPEAT_TCL CHOOSE_THEN but faster *)
+local
+   fun varyAcc v (V, l) = let val v' = gen_variant Parse.is_constname "" V v in (v'::V, v'::l) end
+   (* There are actual cases where strip_exists differ from this function *)
+   fun strip_exists1 tm =
+   let fun dest_exist_opt tm = SOME (dest_exists tm) handle HOL_ERR _ => NONE
+       fun strip A tm =
+           case dest_exist_opt tm of
+               NONE => (List.rev A, tm)
+             | SOME (x,tm') => strip (x::A) tm'
+   in
+      strip [] tm
+   end
+in
+val CHOOSE_ALL_THEN: thm_tactical =
+   fn ttac => fn xth =>
+      let
+         val (hyp,conc) = dest_thm xth
+         val _ = if is_exists conc then () else raise ERR "CHOOSE_THEN" "not a exists"
+         val (vars,_) = strip_exists1 conc
+         val len = List.length vars
+         val arr = Array.array (len,false)
+         fun name_eq x y = (fst (dest_var x) = fst (dest_var y))
+         fun check_for_dupes i [] = ([],[])
+           | check_for_dupes i (x::xs) = (if op_mem name_eq x xs
+                                          then
+                                          let val _ = Array.update (arr,i,true)
+                                              val (dupl,notdup) = check_for_dupes (i + 1) xs
+                                          in
+                                            (x::dupl,notdup)
+                                          end
+                                          else
+                                          let val (dupl,notdup) = check_for_dupes (i + 1) xs
+                                          in (dupl,x::notdup)
+                                          end)
+         val (dups,vars) = check_for_dupes 0 vars
+         val vec = Array.vector arr
+
+      in
+         fn (g as (asl,w)) =>
+         let
+            val fvs = (free_varsl ((conc::hyp)@(w::asl)))
+            val vars = List.rev (snd (rev_itlist varyAcc vars (fvs,[])))
+            fun merge i dups vars = if i < Vector.length vec
+                                    then if Vector.sub (vec,i)
+                                         then (hd dups :: merge (i + 1) (tl dups) vars)
+                                         else (hd vars :: merge (i + 1) dups (tl vars))
+                                    else []
+            val vars = merge 0 dups vars
+         in
+            EVERY_TCL (map X_CHOOSE_THEN vars) ttac xth g
+         end
+         handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
+      end
+end
 (*----------  Cases tactics   -------------*)
 
 (*---------------------------------------------------------------------------
@@ -290,13 +345,16 @@ fun X_CASES_THEN varsl ttac =
  * Version that chooses the y's as variants of the x's.                      *
  *---------------------------------------------------------------------------*)
 
-fun CASES_THENL ttacl = DISJ_CASES_THENL (map (REPEAT_TCL CHOOSE_THEN) ttacl)
+fun CASES_THENL ttacl = DISJ_CASES_THENL (map (CHOOSE_ALL_THEN) ttacl)
 
 (*---------------------------------------------------------------------------*
  * Tactical to strip off ONE disjunction, conjunction, or existential.       *
  *---------------------------------------------------------------------------*)
 
 val STRIP_THM_THEN = FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_THEN]
+
+(* Same as STRIP_ALL_THEN but slightly faster *)
+val STRIP_ALL_THEN = REPEAT_TCL (FIRST_TCL [CONJUNCTS_THEN, DISJ_CASES_THEN, CHOOSE_ALL_THEN])
 
 
 (* ---------------------------------------------------------------------*)

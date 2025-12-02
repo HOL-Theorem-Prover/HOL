@@ -3537,7 +3537,7 @@ Proof
         IMP_RES_TAC CARD_DELETE THEN
         ASM_REWRITE_TAC [] THEN COND_CASES_TAC THENL
         [let val th = SPEC (“CARD (t:'a set)”) num_CASES
-         in REPEAT_TCL STRIP_THM_THEN SUBST_ALL_TAC th
+         in STRIP_ALL_THEN SUBST_ALL_TAC th
          end THENL
           [REWRITE_TAC [LESS_OR_EQ,LESS_0],
            REWRITE_TAC [SUC_SUB1,LESS_OR_EQ,LESS_MONO_EQ,INV_SUC_EQ]],
