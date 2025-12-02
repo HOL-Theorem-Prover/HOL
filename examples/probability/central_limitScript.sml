@@ -1625,21 +1625,6 @@ Proof
     METIS_TAC [in_measurable_borel_normal_density]
 QED
 
-(*******************************DELETE*****************************************)
-
-Theorem lebesgue_eq_gauge_integral_full :
-  ∀f. integrable lborel (Normal ∘ f) \/
-      f absolutely_integrable_on 𝕌(:real)
-      ⇒
-      integrable lborel (Normal ∘ f) /\
-      f absolutely_integrable_on 𝕌(:real) ∧
-      ∫ lborel (Normal ∘ f) = Normal (integral 𝕌(:real) f)
-Proof
-  cheat
-QED
-
-(*******************************DELETE*****************************************)
-
 Theorem normal_density_affine :
     ∀mu sig x. 0 < sig ⇒
                normal_density mu sig x = inv sig * std_normal_density ((x - mu) * inv sig)
@@ -1924,10 +1909,13 @@ Proof
 QED
 
 Theorem in_measurable_borel_not_sing :
-  !f a. sigma_algebra a /\ f IN measurable a borel ==>
-        !c. ({x | f x <> c} INTER space a) IN subsets a
+    !f a. sigma_algebra a /\ f IN measurable a borel ==>
+          !c. ({x | f x <> c} INTER space a) IN subsets a
 Proof
-  cheat
+    rpt STRIP_TAC
+ >> MP_TAC (Q.SPECL [‘f’, ‘a’] in_borel_measurable_borel) >> rw []
+ >> POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘{x | x ≠ (c :real)}’)
+ >> fs [borel_measurable_sets_not_sing, PREIMAGE_def]
 QED
 
 Theorem standard_normal_abs_third_moment_pos :
@@ -1993,7 +1981,7 @@ Proof
  >> fs [GSYM sets_lborel] >> METIS_TAC [SUBSET_DEF]
 QED
 
-Theorem ext_normal_rv_abs_third_moment[local] :
+Theorem ext_normal_rv_abs_third_moment'[local] :
     ∀p X sig. prob_space p ∧ 0 < sig ∧
               ext_normal_rv X p 0 sig ⇒
               (expectation p (λx. abs (X x) pow 3) =
@@ -2038,101 +2026,25 @@ Proof
  >> rw [REAL_INV_INV, mul_assoc, extreal_mul_eq]
 QED
 
-(* ------------------------------------------------------------------------- *)
-(*  Calculation of third moment of standard normal distribution              *)
-(* ------------------------------------------------------------------------- *)
-
-Theorem standard_normal_abs_third_moment :
-  ∫ lborel (λx. Normal ((abs x) pow 3 * std_normal_density x)) =
-  Normal (sqrt (8 / pi))
-Proof
-  cheat
-QED
-
-Theorem ext_normal_rv_abs_third_moment' :
-    ∀p X sig. prob_space p ∧ 0 < sig ∧
-              ext_normal_rv X p 0 sig ⇒
-              expectation p (λx. abs (X x) pow 3) =
-              Normal (sqrt (8 / pi)) * Normal (sig pow 3)
-Proof
-    rw [expectation_def, ext_normal_rv_def]
- >> MP_TAC (Q.SPECL [‘p’, ‘real o X’, ‘0’, ‘sig’, ‘λx. (abs x)³’] (cj 2 integration_of_normal_rv))
- >> impl_tac >- (simp [] \\
-                 MATCH_MP_TAC in_borel_measurable_pow \\
-                 qexistsl [‘3’, ‘λx. abs x’] >> fs [sigma_algebra_borel] \\
-                 METIS_TAC [in_measurable_borel_borel_abs])
- >> rw [o_DEF]
- >> Know ‘∫ p (λx. Normal (abs (real (X x)))³) = ∫ p (λx. (abs (X x))³)’
- >- (MATCH_MP_TAC integral_cong \\
-     fs [prob_space_def, p_space_def] \\
-     rw [GSYM extreal_abs_def, GSYM extreal_pow_def, normal_real])
- >> rw [] >> gs []
- >> POP_ASSUM (rw o wrap o SYM)
- >> POP_ASSUM K_TAC
- >> MP_TAC (standard_normal_abs_third_moment) >> rw [mul_comm]
- >> POP_ASSUM (rw o wrap o SYM)
- >> MP_TAC (Q.SPECL [‘0’, ‘sig’] normal_density_affine)
- >> rw [mul_comm, extreal_mul_eq, extreal_pow_def]
- >> POP_ASSUM K_TAC
- >> Q.ABBREV_TAC ‘f = λx. Normal ((abs x)³ * std_normal_density x)’
- >> ‘integrable lborel f’ by rw [Abbr ‘f’, integrable_std_normal_abs_cubic]
- >> Know ‘∀x. Normal (sig⁻¹ * (abs x)³ * std_normal_density (sig⁻¹ * x)) =
-              Normal (sig²) * f (sig⁻¹ * x)’
- >- (rw [Abbr ‘f’, extreal_mul_eq] >> rpt DISJ2_TAC \\
-     rw [ABS_MUL, POW_MUL] >> DISJ2_TAC \\
-     fs [ABS_REDUCE, REAL_LE_INV_EQ, REAL_LT_IMP_LE] \\
-     ‘sig ≠ 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
-     rw [nonzerop_def])
- >> Rewr
- >> MP_TAC (Q.SPECL [‘lborel’, ‘λx. f (sig⁻¹ * x)’, ‘sig pow 2’] (INST_TYPE [“:'a” |-> “:real”] integral_cmul))
- >> impl_tac
- >- (simp [cj 3 lborel_def, Abbr ‘f’] \\
-     MP_TAC (Q.SPECL [‘λx. Normal ((abs x)³ * std_normal_density x)’,‘inv sig’, ‘0’]
-              (cj 1 integral_real_affine)) \\
-     impl_tac >- (fs [REAL_LT_IMP_NE, REAL_INV_POS, o_DEF]) >> rw [])
- >> rw [ETA_AX]
- >> MP_TAC (Q.SPECL [‘f’, ‘inv sig’, ‘0’] (cj 2 integral_real_affine))
- >> rw [REAL_INV_INV, REAL_LT_IMP_NE]
- >> ‘Normal sig³ * (Normal (abs sig⁻¹) * ∫ lborel (λx. f (sig⁻¹ * x))) =
-     Normal sig³ * Normal (abs sig⁻¹) * ∫ lborel (λx. f (sig⁻¹ * x))’ by rw [mul_assoc] >> POP_ORW
- >> Suff ‘Normal sig² = Normal sig³ * Normal (abs sig⁻¹)’ >> rw [ABS_INV, REAL_LT_IMP_NE]
- >> ‘abs sig = sig’ by rw [ABS_REFL, REAL_LT_IMP_LE] >> POP_ORW
- >> rw [REAL_INV_INV, mul_assoc, extreal_mul_eq]
-QED
-
 Theorem ext_normal_rv_moment_integrable :
-    ∀p X mu sig k.
-      prob_space p ∧ 0 < sig ∧
-      ext_normal_rv X p 0 sig ⇒
-      integrable p (λx. abs (X x) pow 3)
-Proof
-    rw [GSYM pow_abs, GSYM o_DEF]
- >> MATCH_MP_TAC integrable_abs
- >> fs [prob_space_def, integrable_alt_def, GSYM expectation_def]
- >> CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_POW  \\
-                 fs [ext_normal_rv_def, normal_rv_def, random_variable_def, p_space_def, events_def] \\
-                 METIS_TAC [in_measurable_borel_imp_Borel, p_space_def, prob_space_def])
- >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘sig’] ext_normal_rv_abs_third_moment)
- >> rw [o_DEF, pow_abs, prob_space_def] >> POP_ORW
- >> Q.ABBREV_TAC ‘f = λx. Normal ((abs x)³ * std_normal_density x)’
- >> ‘integrable lborel f’ by rw [Abbr ‘f’, integrable_std_normal_abs_cubic]
- >> MP_TAC (Q.SPECL [‘lborel’, ‘f’] (INST_TYPE [“:'a” |-> “:real”] integrable_normal_integral))
- >> rw [measure_space_lborel] >> rw [extreal_not_infty, extreal_mul_eq]
-QED
-
-Theorem ext_normal_rv_moment_integrable_full :
   ∀p X mu sig k.
     prob_space p ∧ 0 < sig ∧
-    ext_normal_rv X p mu sig ⇒
-    integrable p (λx. abs (X x) pow n)
+    ext_normal_rv X p 0 sig ⇒
+    integrable p (λx. abs (X x) pow 3)
 Proof
-  cheat
+  rw [GSYM pow_abs, GSYM o_DEF]
+  >> MATCH_MP_TAC integrable_abs
+  >> fs [prob_space_def, integrable_alt_def, GSYM expectation_def]
+  >> CONJ_TAC >- (MATCH_MP_TAC IN_MEASURABLE_BOREL_POW  \\
+                  fs [ext_normal_rv_def, normal_rv_def, random_variable_def, p_space_def, events_def] \\
+                  METIS_TAC [in_measurable_borel_imp_Borel, p_space_def, prob_space_def])
+  >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘sig’] ext_normal_rv_abs_third_moment')
+  >> rw [o_DEF, pow_abs, prob_space_def] >> POP_ORW
+  >> Q.ABBREV_TAC ‘f = λx. Normal ((abs x)³ * std_normal_density x)’
+  >> ‘integrable lborel f’ by rw [Abbr ‘f’, integrable_std_normal_abs_cubic]
+  >> MP_TAC (Q.SPECL [‘lborel’, ‘f’] (INST_TYPE [“:'a” |-> “:real”] integrable_normal_integral))
+  >> rw [measure_space_lborel] >> rw [extreal_not_infty, extreal_mul_eq]
 QED
-
-
-(* ------------------------------------------------------------------------- *)
-
-
 
 (***********************************************************************)
 
@@ -6195,101 +6107,6 @@ Proof
   >> fs [DE_MORGAN_THM, extreal_not_lt, le_antisym]
 QED
 
-Theorem EXTREAL_SUM_IMAGE_SQUARE :
-    ∀f s.
-      FINITE s ⇒
-      (∀x. x ∈ s ⇒ f x ≠ −∞) ∧ (∀x. x ∈ s ⇒ f x ≠ +∞) ⇒
-      (∑ f s) pow 2 = ∑ (λ(i :num). (f i) pow 2) s +
-                      2 * ∑ (λ(i,j). f i * f j) {(i,j) | i ∈ s ∧ j ∈ s ∧ i < j}
-Proof
-    rpt STRIP_TAC
- >> MP_TAC (Q.SPECL [‘f’, ‘s’] (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_POW))
- >> rw []
- >> Q.ABBREV_TAC ‘t = {(i,i) | i ∈ s}’
- >> Q.ABBREV_TAC ‘u = {(i,j) | i ∈ s ∧ j ∈ s ∧ i ≠ j}’
- >> Q.ABBREV_TAC ‘r = s CROSS s’
- >> Suff ‘r = t UNION u’
- >- (STRIP_TAC \\
-     ‘FINITE r’ by METIS_TAC [FINITE_CROSS] \\
-     ‘t UNION u SUBSET r’ by METIS_TAC [GSYM SUBSET_ANTISYM_EQ] \\
-     ‘t SUBSET r ∧ u SUBSET r’ by METIS_TAC [UNION_SUBSET] \\
-     MP_TAC (Q.SPECL [‘t’, ‘u’] (INST_TYPE [“:'a” |-> “:num # num”] EXTREAL_SUM_IMAGE_DISJOINT_UNION)) \\
-     impl_tac >- (Suff ‘DISJOINT t u’ >- (METIS_TAC [FINITE_SUBSET]) \\
-                  rw [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY] \\
-                  CCONTR_TAC \\
-                  fs [cj 1 DE_MORGAN_THM, Abbr ‘t’, Abbr ‘u’] \\
-                  fs [CLOSED_PAIR_EQ] \\
-                  ‘i' = j’ by METIS_TAC [EQ_TRANS]) \\
-     simp [] >> STRIP_TAC \\
-     Q.ABBREV_TAC ‘g = λ(i,j). f i * f j’ \\
-     Q.PAT_X_ASSUM ‘∀f. (∀x. x ∈ t ∨ x ∈ u ⇒ f x ≠ −∞) ∨ _ ⇒ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘g’) \\
-     Know ‘∀x. x ∈ t ∨ x ∈ u ⇒ g x ≠ +∞’
-     >- (rw [Abbr ‘g’, Abbr ‘u’, Abbr ‘t’]
-         >- (Q.PAT_X_ASSUM ‘∀x. x ∈ s ⇒ f x ≠ +∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
-             Q.PAT_X_ASSUM ‘∀x. x ∈ s ⇒ f x ≠ −∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-             gs [mul_not_infty2]) \\
-         gs [] \\
-         ‘f i ≠ PosInf ∧ f i ≠ NegInf’
-           by (Q.PAT_X_ASSUM ‘∀x. x ∈ s ⇒ f x ≠ +∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-               Q.PAT_X_ASSUM ‘∀x. x ∈ s ⇒ f x ≠ −∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs []) \\
-         ‘f j ≠ PosInf ∧ f j ≠ NegInf’
-           by (Q.PAT_X_ASSUM ‘∀x. x ∈ s ⇒ f x ≠ +∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) \\
-               Q.PAT_X_ASSUM ‘∀x. x ∈ s ⇒ f x ≠ −∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs []) \\
-         gs [mul_not_infty2]) \\
-     DISCH_TAC \\
-     ‘∑ g (t ∪ u) = ∑ g t + ∑ g u’ by METIS_TAC [] \\
-     POP_ORW \\
-     Know ‘∑ g t = ∑ (λi. (f i)²) s’
-     >- (rw [Abbr ‘g’, Abbr ‘t’] \\
-         (*EXTREAL_SUM_IMAGE_IMAGE*)
-         Know ‘ {(i,i) | i ∈ s} = IMAGE (λi. (i, i)) s’
-         >- (rw [EXTENSION]) \\
-         Rewr \\
-
-         (*no idea*)
-         cheat) \\
-     Rewr \\
-     Suff ‘∑ g u =  2 * ∑ g {(i,j) | i ∈ s ∧ j ∈ s ∧ i < j}’
-     >- (Rewr) \\
-     rw [Abbr ‘g’, Abbr ‘u’] \\
-     Q.ABBREV_TAC ‘a = {(i,j) | i ∈ s ∧ j ∈ s ∧ i ≠ j}’ \\
-     Q.ABBREV_TAC ‘b = {(i,j) | i ∈ s ∧ j ∈ s ∧ i < j}’ \\
-     Q.ABBREV_TAC ‘c = {(i,j) | i ∈ s ∧ j ∈ s ∧ j < i}’ \\
-     Know ‘a = b UNION c’
-     >- (rw [Abbr ‘a’, Abbr ‘b’, Abbr ‘c’, Once EXTENSION] \\
-         EQ_TAC >> rw [ne_imp_lt, lt_imp_ne]) \\
-     simp [] >> DISCH_TAC \\
-     MP_TAC (Q.SPECL [‘b’, ‘c’] (INST_TYPE [“:'a” |-> “:num # num”] EXTREAL_SUM_IMAGE_DISJOINT_UNION)) \\
-     ‘FINITE a’ by METIS_TAC [FINITE_SUBSET] \\
-     ‘b UNION c SUBSET a’ by METIS_TAC [GSYM SUBSET_ANTISYM_EQ] \\
-     ‘b SUBSET a ∧ c SUBSET a’ by METIS_TAC [UNION_SUBSET] \\
-     impl_tac >- (Suff ‘DISJOINT b c’ >- (METIS_TAC [FINITE_SUBSET]) \\
-                  rw [DISJOINT_DEF, EXTENSION, IN_INTER, NOT_IN_EMPTY] \\
-                  CCONTR_TAC \\
-                  fs [cj 1 DE_MORGAN_THM, Abbr ‘b’, Abbr ‘c’] \\
-                  fs [CLOSED_PAIR_EQ] \\
-                  ‘i' < j'’ by METIS_TAC [] >> METIS_TAC [lt_antisym]) \\
-     simp [] >> STRIP_TAC \\
-     Suff ‘∑ (λ(i,j). f i * f j) c = ∑ (λ(i,j). f i * f j) b’
-     >- (rw [extreal_double]) \\
-     Know ‘∑ (λ(i,j). f i * f j) b = ∑ (λ(j,i). f j * f i) b’
-     >- (MATCH_MP_TAC EXTREAL_SUM_IMAGE_EQ' \\
-         CONJ_TAC >- (METIS_TAC [FINITE_SUBSET]) \\
-         rw [Once EXTENSION, mul_comm]) \\
-     STRIP_TAC >> POP_ORW \\
-     (*c = IMAGE ... b *)
-     (*no idea*)
-     cheat)
- >> rw [Abbr ‘r’, CROSS_DEF, Abbr ‘t’, Abbr ‘u’, UNION_DEF, Once EXTENSION]
- >> EQ_TAC >> rw [FST, SND] >> gs []
- >> Cases_on ‘FST x = SND x’
- >- (DISJ1_TAC \\
-     qexists ‘FST x’ >> gs [] \\
-     ‘x = (FST x, SND x)’ by fs [] >> METIS_TAC [])
- >> DISJ2_TAC
- >> qexistsl [‘FST x’, ‘SND x’] >> gs []
-QED
-
 Theorem variance_fst :
     ∀p q f.
       prob_space p ∧ prob_space q ∧
@@ -7279,7 +7096,7 @@ Proof
  >> Know ‘∀i. i < n ⇒ B i = Normal c0 * (Normal ((sig i) pow 3))’
  >- (rw [] >> gs [] \\
      MP_TAC (Q.SPECL [‘p'’, ‘Y (i :num)’, ‘sig (i :num)’]
-              (INST_TYPE [“:'a” |-> “:'a list”] ext_normal_rv_abs_third_moment)) \\
+              (INST_TYPE [“:'a” |-> “:'a list”] ext_normal_rv_abs_third_moment')) \\
      rw [mul_comm])
  >> DISCH_TAC
  >> Know ‘∀i. i < n ⇒ B i ≤ Normal c0 * A i’
