@@ -1,1 +1,1 @@
-INCLUDES = $(dprot $(HOLDIR)/src/string)
+INCLUDES = $(dprot $(HOLDIR)/src/string) ../abstract_consequence
