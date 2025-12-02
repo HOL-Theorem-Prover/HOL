@@ -438,7 +438,7 @@ val symbol_table_dom_ALIGNED = prove(
   Induct \\ SIMP_TAC std_ss [symbol_table_dom_def] \\ REPEAT STRIP_TAC \\ RES_TAC
   \\ Q.PAT_X_ASSUM `ALIGNED b` MP_TAC
   \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4] \\ SIMP_TAC std_ss [WORD_ADD_0]
-  \\ ONCE_REWRITE_TAC [GSYM (MATCH_MP MOD_PLUS (DECIDE ``0<4:num``))]
+  \\ ONCE_REWRITE_TAC [GSYM MOD_PLUS]
   \\ REWRITE_TAC [EVAL ``8 MOD 4``]
   \\ SIMP_TAC std_ss [SIMP_RULE std_ss [] (Q.SPECL [`4`,`0`] MOD_MULT),WORD_ADD_0]);
 
@@ -598,7 +598,7 @@ val arm_symbol_add_lemma = prove(
      (IMP_RES_TAC symbol_table_dom_ALIGNED
       \\ Q.PAT_X_ASSUM `ALIGNED xxx` MP_TAC
       \\ ONCE_REWRITE_TAC [ALIGNED_MOD_4] \\ ASM_SIMP_TAC std_ss [WORD_ADD_0]
-      \\ ONCE_REWRITE_TAC [MATCH_MP(GSYM MOD_PLUS) (DECIDE ``0<4:num``)]
+      \\ ONCE_REWRITE_TAC [GSYM MOD_PLUS]
       \\ REWRITE_TAC [ADD,EVAL ``8 MOD 4``]
       \\ SIMP_TAC std_ss [MOD_EQ_0,WORD_ADD_0])
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [n2w_11]

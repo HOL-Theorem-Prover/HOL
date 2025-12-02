@@ -132,7 +132,7 @@ val ref_mem_def = tDefine "ref_mem" `
      if e <= a then cond (a = e) else
        ref_aux (ref_addr a) (m a) * ref_mem m (a + MAX 1 (getLENGTH (m a))) e)`
   (WF_REL_TAC `measure (\(m,a,e). e - a)`
-   \\ SIMP_TAC std_ss [MAX_DEF] \\ DECIDE_TAC)
+   \\ SIMP_TAC std_ss [MAX_DEF] \\ DECIDE_TAC);
 
 val ALIGNED_ref_addr = prove(
   ``!n. ALIGNED (ref_addr n)``,
@@ -141,7 +141,7 @@ val ALIGNED_ref_addr = prove(
 val ref_addr_and_3 = prove(
   ``!n m. ref_addr m + n2w n && 3w = n2w (n MOD 4)``,
   SIMP_TAC std_ss [ref_addr_def,word_add_n2w,n2w_and_3,
-    MATCH_MP (RW1[MULT_COMM]MOD_TIMES) (DECIDE``0<4:num``)]);
+    (RW1[MULT_COMM]MOD_TIMES)]);
 
 val ref_addr_NEQ = prove(
   ``!i j. ~(ref_addr i = ref_addr j + 1w) /\

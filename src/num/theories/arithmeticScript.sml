@@ -2594,11 +2594,14 @@ Proof
 QED
 
 Theorem MOD_TIMES:
-  !n. 0<n ==> !q r. (((q * n) + r) MOD n) = (r MOD n)
+  !n q r. (((q * n) + r) MOD n) = (r MOD n)
 Proof
    let fun SUBS th = SUBST_OCCS_TAC [([1],th)]
    in
    REPEAT STRIP_TAC THEN
+   Cases_on `n = 0`
+   THEN1 (ASM_REWRITE_TAC [MOD_0,MULT_CLAUSES,ADD_CLAUSES]) THEN
+   dxrule_then assume_tac $ iffLR NOT_ZERO_LT_ZERO THEN
    IMP_RES_THEN (TRY o SUBS o SPEC (“r:num”)) DIVISION THEN
    REWRITE_TAC [ADD_ASSOC,SYM(SPEC_ALL RIGHT_ADD_DISTRIB)] THEN
    IMP_RES_THEN (ASSUME_TAC o SPEC (“r:num”)) DIVISION THEN
@@ -2618,24 +2621,29 @@ Proof
 QED
 
 Theorem MOD_PLUS:
-  !n. 0<n ==> !j k. (((j MOD n) + (k MOD n)) MOD n) = ((j+k) MOD n)
+  !n j k. (((j MOD n) + (k MOD n)) MOD n) = ((j+k) MOD n)
 Proof
    let fun SUBS th = SUBST_OCCS_TAC [([2],th)]
    in
    REPEAT STRIP_TAC THEN
-   IMP_RES_TAC MOD_TIMES THEN
+   Cases_on `n = 0`
+   THEN1 (ASM_REWRITE_TAC [MOD_0]) THEN
+   dxrule_then assume_tac $ iffLR NOT_ZERO_LT_ZERO THEN
    IMP_RES_THEN (TRY o SUBS o SPEC (“j:num”)) DIVISION THEN
-   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)] THEN
+   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC),MOD_TIMES] THEN
    PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
    IMP_RES_THEN (TRY o SUBS o SPEC (“k:num”)) DIVISION THEN
-   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)]
+   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC),MOD_TIMES]
    end
 QED
 
 Theorem MOD_MOD:
-  !n. 0<n ==> (!k. (k MOD n) MOD n = (k MOD n))
+  !n k. (k MOD n) MOD n = (k MOD n)
 Proof
    REPEAT STRIP_TAC THEN
+   Cases_on `n = 0`
+   THEN1 (ASM_REWRITE_TAC [MOD_0,MULT_CLAUSES,ADD_CLAUSES]) THEN
+   dxrule_then assume_tac $ iffLR NOT_ZERO_LT_ZERO THEN
    MATCH_MP_TAC LESS_MOD THEN
    IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (“k:num”)) DIVISION
 QED
@@ -2725,15 +2733,31 @@ Theorem DIV_ONE =
 
 Theorem DIV_1 = REWRITE_RULE [SYM ONE] DIV_ONE;
 
+Theorem DIV_ID[simp]:
+  !n. 0 < n ==> (n DIV n = 1)
+Proof
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `0` THEN
+  ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES]
+QED
+
+Theorem MOD_ID[simp]:
+   !n. (n MOD n = 0)
+Proof
+  REPEAT STRIP_TAC THEN
+  Cases_on `n` THENL
+  [
+    ASM_REWRITE_TAC [MOD_0],
+    MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `1` THEN
+    ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES,LESS_0]
+  ]
+QED
+
+(*for backwards compatibility*)
 Theorem DIVMOD_ID:
    !n. 0 < n ==> (n DIV n = 1) /\ (n MOD n = 0)
 Proof
-  REPEAT STRIP_TAC THENL [
-    MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `0` THEN
-    ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES],
-    MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `1` THEN
-    ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES]
-  ]
+   fs[ DIV_ID,MOD_ID]
 QED
 
 Theorem Less_lemma[local]:
@@ -2859,10 +2883,10 @@ Proof
 QED
 
 Theorem ADD_MODULUS:
- (!n x. 0 < n ==> ((x + n) MOD n = x MOD n)) /\
- (!n x. 0 < n ==> ((n + x) MOD n = x MOD n))
+ (!n x.(x + n) MOD n = x MOD n) /\
+ (!n x.(n + x) MOD n = x MOD n)
 Proof
- METIS_TAC [ADD_SYM,MOD_PLUS,DIVMOD_ID,MOD_MOD,ADD_CLAUSES]
+ METIS_TAC [ADD_SYM,MOD_PLUS,MOD_ID,MOD_MOD,ADD_CLAUSES]
 QED
 
 Theorem ADD_MODULUS_LEFT = CONJUNCT1 ADD_MODULUS;
@@ -2949,10 +2973,12 @@ in
 end
 
 Theorem MOD_TIMES2:
-   !n. 0 < n ==>
-        !j k. (j MOD n * k MOD n) MOD n = (j * k) MOD n
+   !n j k. (j MOD n * k MOD n) MOD n = (j * k) MOD n
 Proof
   REPEAT STRIP_TAC THEN
+  Cases_on `n = 0`
+  THEN1 (ASM_REWRITE_TAC [MOD_0,MULT_CLAUSES,ADD_CLAUSES]) THEN
+  dxrule_then assume_tac $ iffLR NOT_ZERO_LT_ZERO THEN
   IMP_RES_THEN (Q.SPEC_THEN `j` STRIP_ASSUME_TAC) DIVISION THEN
   IMP_RES_THEN (Q.SPEC_THEN `k` STRIP_ASSUME_TAC) DIVISION THEN
   Q.ABBREV_TAC `q = j DIV n` THEN POP_ASSUM (K ALL_TAC) THEN
@@ -2963,7 +2989,7 @@ Proof
   REWRITE_TAC [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB, ADD_ASSOC] THEN
   move_var_left "n" THEN REWRITE_TAC [GSYM LEFT_ADD_DISTRIB] THEN
   ONCE_REWRITE_TAC [MULT_COMM] THEN
-  IMP_RES_THEN (fn th => REWRITE_TAC [th]) MOD_TIMES
+  REWRITE_TAC [MOD_TIMES]
 QED
 
 Theorem MOD_COMMON_FACTOR:
@@ -5163,13 +5189,40 @@ Proof
   irule MODEQ_MULT_CONG >> SRW_TAC[][]
 QED
 
-Theorem EXP_MOD =
-  MODEQ_EXP_CONG |> SIMP_RULE bool_ss [GSYM NOT_LT_ZERO_EQ_ZERO,
-                                       ASSUME “0 < n”, MODEQ_THM]
-                 |> INST [“y:num” |-> “x MOD n”, “e1:num” |-> “e:num”,
-                          “e2:num” |-> “e:num”]
-                 |> SIMP_RULE bool_ss [MATCH_MP MOD_MOD (ASSUME “0 < n”)]
-                 |> SYM |> DISCH_ALL
+(* Theorem: ((a MOD n) ** m) MOD n = (a ** m) MOD n  *)
+(* Proof: by induction on m.
+   Base case: (a MOD n) ** 0 MOD n = a ** 0 MOD n
+       (a MOD n) ** 0 MOD n
+     = 1 MOD n              by EXP
+     = a ** 0 MOD n         by EXP
+   Step case: (a MOD n) ** m MOD n = a ** m MOD n ==> (a MOD n) ** SUC m MOD n = a ** SUC m MOD n
+       (a MOD n) ** SUC m MOD n
+     = ((a MOD n) * (a MOD n) ** m) MOD n             by EXP
+     = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n   by MOD_TIMES2, MOD_MOD
+     = ((a MOD n) * (a ** m MOD n)) MOD n             by induction hypothesis
+     = (a * a ** m) MOD n                             by MOD_TIMES2
+     = a ** SUC m MOD n                               by EXP
+*)
+Theorem MOD_EXP:
+    !n a m. ((a MOD n) ** m) MOD n = (a ** m) MOD n
+Proof
+  rpt strip_tac >>
+  Cases_on `n = 0` >-
+  fs[] >>
+  Induct_on `m` >-
+  rw[EXP] >>
+  `(a MOD n) ** SUC m MOD n = ((a MOD n) * (a MOD n) ** m) MOD n` by rw[EXP] >>
+  `_ = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n` by metis_tac[MOD_TIMES2, MOD_MOD] >>
+  `_ = ((a MOD n) * (a ** m MOD n)) MOD n` by rw[] >>
+  `_ = (a * a ** m) MOD n` by rw[MOD_TIMES2] >>
+  rw[EXP]
+QED
+
+Theorem EXP_MOD:
+  (x MOD n) ** e MOD n = x ** e MOD n
+Proof
+  MATCH_ACCEPT_TAC MOD_EXP
+QED
 
 Theorem MODEQ_SYM:
    MODEQ n x y <=> MODEQ n y x
@@ -5664,33 +5717,6 @@ Theorem MOD_EQ_0_IFF:
     !m n. n < m ==> ((n MOD m = 0) <=> (n = 0))
 Proof
   rw_tac bool_ss[LESS_MOD]
-QED
-
-(* Theorem: ((a MOD n) ** m) MOD n = (a ** m) MOD n  *)
-(* Proof: by induction on m.
-   Base case: (a MOD n) ** 0 MOD n = a ** 0 MOD n
-       (a MOD n) ** 0 MOD n
-     = 1 MOD n              by EXP
-     = a ** 0 MOD n         by EXP
-   Step case: (a MOD n) ** m MOD n = a ** m MOD n ==> (a MOD n) ** SUC m MOD n = a ** SUC m MOD n
-       (a MOD n) ** SUC m MOD n
-     = ((a MOD n) * (a MOD n) ** m) MOD n             by EXP
-     = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n   by MOD_TIMES2, MOD_MOD
-     = ((a MOD n) * (a ** m MOD n)) MOD n             by induction hypothesis
-     = (a * a ** m) MOD n                             by MOD_TIMES2
-     = a ** SUC m MOD n                               by EXP
-*)
-Theorem MOD_EXP:
-    !n. 0 < n ==> !a m. ((a MOD n) ** m) MOD n = (a ** m) MOD n
-Proof
-  rpt strip_tac >>
-  Induct_on `m` >-
-  rw[EXP] >>
-  `(a MOD n) ** SUC m MOD n = ((a MOD n) * (a MOD n) ** m) MOD n` by rw[EXP] >>
-  `_ = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n` by metis_tac[MOD_TIMES2, MOD_MOD] >>
-  `_ = ((a MOD n) * (a ** m MOD n)) MOD n` by rw[] >>
-  `_ = (a * a ** m) MOD n` by rw[MOD_TIMES2] >>
-  rw[EXP]
 QED
 
 Theorem ODD_bool_to_bit[simp]:
