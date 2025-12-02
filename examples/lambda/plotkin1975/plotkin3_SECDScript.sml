@@ -1,8 +1,11 @@
-Theory plotkin
+Theory plotkin3_SECD
 
 (* A translation of “Call-by-name, Call-by-value and the λ-Calculus” by
    Gordon Plotkin, Theoretical Computer Science 1 (1975), pp125–159.
    North Holland
+
+   Section 3 on the SECD machine and its equivalence to an inductively
+   given evaluation relation on λ-terms with constant symbols.
 *)
 
 Ancestors
