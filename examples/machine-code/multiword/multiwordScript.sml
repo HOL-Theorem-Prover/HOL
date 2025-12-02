@@ -215,7 +215,7 @@ val EXISTS_k2mw = prove(
   \\ Q.EXISTS_TAC `n * dimword (:'a) + w2n h`
   \\ ASM_SIMP_TAC std_ss [MATCH_MP DIV_MULT (SPEC_ALL w2n_lt)]
   \\ ONCE_REWRITE_TAC [GSYM n2w_mod]
-  \\ SIMP_TAC std_ss [MATCH_MP MOD_TIMES ZERO_LT_dimword]
+  \\ SIMP_TAC std_ss [MOD_TIMES]
   \\ SIMP_TAC std_ss [n2w_mod,n2w_w2n,dimwords_thm]
   \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [MULT_COMM]))
   \\ ONCE_REWRITE_TAC [MULT_COMM] \\ MATCH_MP_TAC MULT_ADD_LESS_MULT
