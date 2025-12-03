@@ -10,26 +10,10 @@ Theory plotkin3_SECD
 
 Ancestors
   cterm fmaptree nomset finite_map nominalFmapTree
-  pred_set
+  pred_set plotkin2_TechPrelims
 Libs NEWLib
 
 val _ = hide "S"
-
-(* p127: “A term is a *value* iff it is not a combination” *)
-Definition is_value_def:
-  is_value ct ⇔ ∀M N. ct ≠ M @@ N
-End
-
-Theorem is_value_thm[simp]:
-  is_value (VAR s) ∧
-  is_value (LAM v M) ∧
-  is_value (CONST c) ∧
-  ¬is_value (M @@ N)
-Proof
-  simp[is_value_def]
-QED
-
-Overload closed = “λct. cFV ct = {}”
 
 (* §3 ISWIM, p128 *)
 Datatype:
