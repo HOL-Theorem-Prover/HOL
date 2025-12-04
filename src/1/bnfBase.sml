@@ -3,7 +3,7 @@ struct
 
 open bnfBase_dtype
 
-type t = info TypeNet.typenet
+type t = thm info TypeNet.typenet
 
 fun pure_lookup db ty = TypeNet.peek (db,ty)
 
