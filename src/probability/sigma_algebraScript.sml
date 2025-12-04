@@ -6075,6 +6075,48 @@ Proof
  >> rw [IN_APP]
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  Pi-Lambda Theorem                                                        *)
+(* ------------------------------------------------------------------------- *)
+
+(*
+These are the results for algebras from my own accumulated library
+that I believe stand on their own as something useful for future users.
+In this case, mostly just the Pi-Lambda Theorem.
+- Jared Yeager
+*)
+
+(* This weaker version of SIGMA_PROPERTY has helped me when going forward (drule)
+   in proofs before *)
+Theorem SIGMA_PROPERTY_WEAK:
+    ∀sp sts P. sts ⊆ P ∧ sigma_algebra (sp,P) ⇒ subsets (sigma sp sts) ⊆ P
+Proof
+    rw[sigma_def] >> simp[Once SUBSET_DEF]
+QED
+
+(* There are further potential results around pi-systems for probability theory,
+   so perhaps it is worth it to have the definition.
+   It also makes the name "PI_LAMBDA_THM" make more sense. *)
+Definition pi_system_def:
+    pi_system p ⇔ subset_class (space p) (subsets p) ∧ (subsets p ≠ ∅) ∧
+        ∀s t. s ∈ subsets p ∧ t ∈ subsets p ⇒ s ∩ t ∈ subsets p
+End
+
+(* Effectively a reskinned DYNKIN_LEMMA *)
+Theorem SIGMA_PI_LAMBDA:
+    ∀a. sigma_algebra a ⇔ pi_system a ∧ dynkin_system a
+Proof
+    rw[pi_system_def,dynkin_system_def,GSYM DYNKIN_LEMMA] >> eq_tac >> rw[] >>
+    simp[GSYM MEMBER_NOT_EMPTY] >> qexists_tac `space a` >> simp[]
+QED
+
+Theorem PI_LAMBDA_THM:
+    ∀sp sts P. pi_system (sp,sts) ∧ sts ⊆ P ∧ dynkin_system (sp,P) ⇒ subsets (sigma sp sts) ⊆ P
+Proof
+    rw[pi_system_def] >> dxrule_all_then SUBST1_TAC $ GSYM DYNKIN_THM >>
+    dxrule_then (qspec_then `sp` mp_tac) DYNKIN_MONOTONE >> dxrule DYNKIN_STABLE >> simp[]
+QED
+
 (* References:
 
   [1] Hurd, J.: Formal verification of probabilistic algorithms. University of
