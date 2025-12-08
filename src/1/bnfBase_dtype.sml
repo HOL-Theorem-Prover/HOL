@@ -33,4 +33,11 @@ set functions are of of form
 
 *)
 
+datatype bnftor =
+         ftor of (kname * bnftor list)
+       | the_arg
+       | constty of hol_type
+       | mutrec_var of string
+       | previous_op of string
+
 end
