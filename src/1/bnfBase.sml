@@ -9,6 +9,15 @@ fun pure_lookup db ty = TypeNet.peek (db,ty)
 
 fun pure_insert db ty info = TypeNet.insert(db,ty,info)
 
+fun kname_to_thm_info (bI {siblings,map,set,relator,bnd}:kname info) =
+   let
+     fun convert (tm,kname) = (tm,fetch_knm kname)
+   in
+     bI {siblings = siblings, map = convert map,
+     set = List.map convert set, relator = convert relator,
+     bnd = bnd}
+   end
+
 local
   open ThyDataSexp
   exception OptionExn = Option.Option
@@ -25,6 +34,7 @@ in
           List[String "bnd", Term bnd]
           ]
   fun toSEXP (ty,b_info) = List[Type ty, toSEXP0 b_info]
+
 
   fun fromSEXP0 s =
      let
@@ -76,13 +86,21 @@ val SOME test2 = fromSEXP test
 (*test2 should be equal to list_bi *)
 *)
 
-(* WIP
 local
   val empty_t = TypeNet.empty : t
-  val apply_delta =
-  val ad_info = {tag = "BnfBase", initial_values = [("min", empty_t)],
-                apply_delta = apply_delta}
-*)
+  fun apply_delta (ty,info) db = pure_insert db ty (kname_to_thm_info info)
+  val adinfo = {tag = "BnfBase", initial_values = [("min", empty_t)],
+                apply_delta = apply_delta} : (hol_type * kname info ,
+                                              thm info TypeNet.typenet) AncestryData.adata_info
+in
+val full_result = AncestryData.fullmake
+                              {adinfo = adinfo,
+                               uptodate_delta = K true,
+                               sexps = { dec = fromSEXP, enc = toSEXP},
+                               globinfo = {apply_to_global = apply_delta,
+                                           thy_finaliser = NONE,
+                                           initial_value = empty_t}}
+end
 
 
 
