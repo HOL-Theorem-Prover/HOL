@@ -35,7 +35,7 @@ rest to be taken by "current encodings" for qux and raz.  At this point,
 the "current encodings" are:
 
    foo |->  ('a, ('a,'d,'qux,'raz) bar0) foo0
-   bar |->  ('a,'d,'qux,'raz) bar0.
+   bar |->  ('a,'d,'qux,'raz) bar0
 
 Next, we have to do
 
@@ -47,6 +47,16 @@ This makes qux0 a ternary operator, and we get
    bar |->  ('a,'d,('a,'d,'raz)qux0,'raz) bar0
    qux |->  ('a,'d,'raz) qux0
 
-TBC
+So the last equation to solve is
+
+   raz0 = ('a,'d,('a,'d,raz0)qux0,raz0) bar0 + ('a,'d,raz0)qux0
+
+making raz a binary operator, and giving final instantiations:
+
+  foo |-> ('a, ('a,'d,('a,'d,('a,'d)raz0) qux0, ('a,'d) raz0) bar) foo0
+  bar |-> ('a, 'd, ('a,'d,('a,'d)raz0)qux0, ('a,'d)raz0) bar0
+  qux |-> ('a,'d,('a,'d)raz0) qux0
+  raz |-> ('a,'d)raz0
+
 
 *)
