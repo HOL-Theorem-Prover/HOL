@@ -1,8 +1,3 @@
-val _ = use "../../src/portableML/DString.sig";
-val _ = use "../../src/portableML/DString.sml";
-val _ = use "../../src/portableML/DArray.sig";
-val _ = use "../../src/portableML/DArray.sml";
-val _ = use "../../tools/Holmake/HOLAst.sml";
 structure HOLParser = struct
 open HOLAst
 
