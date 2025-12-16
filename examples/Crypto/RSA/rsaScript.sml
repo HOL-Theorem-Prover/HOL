@@ -3,20 +3,19 @@ app load ["bossLib","gcdTheory","powerTheory","summationTheory",
           "binomialTheory","congruentTheory","fermatTheory"];
 quietdec := true;
 *)
+Theory rsa
+Ancestors
+  arithmetic prim_rec gcd divides binomial congruent summation
+  power fermat
+Libs
+  numLib
 
-open HolKernel Parse boolLib bossLib numLib
-     arithmeticTheory prim_recTheory
-     gcdTheory dividesTheory
-     binomialTheory congruentTheory summationTheory powerTheory fermatTheory;
 
 (*
 quietdec := false;
 *)
 
 val ARW = RW_TAC arith_ss;
-
-val _ = new_theory "rsa";
-
 
 val GCD_PQ = prove(Term `!p q. prime p /\ prime q /\ ~(p = q)
                                 ==>
@@ -102,4 +101,3 @@ val RSA_CORRECT = store_thm("RSA_CORRECT",
                   );
 
 
-val _ = export_theory();

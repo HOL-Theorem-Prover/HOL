@@ -19,13 +19,13 @@
 (* TRANSLATOR    : Konrad Slind, University of Calgary                   *)
 (* DATE          : September 15, 1991                                    *)
 (* ===================================================================== *)
+Theory one[bare]
+Ancestors[qualified]
+  sat
+Libs
+  Lib HolKernel Parse boolLib BasicProvers
 
 
-open Lib HolKernel Parse boolLib BasicProvers
-
-local open satTheory in end
-
-val _ = new_theory "one";
 
 local open OpenTheoryMap in
 val ns = ["Data","Unit"]
@@ -41,9 +41,11 @@ end
 (* prove the (trivial) theorem: ?b.(\b.b)b.                             *)
 (*----------------------------------------------------------------------*)
 
-val EXISTS_ONE_REP = prove
-(“?b:bool. (\b.b) b”,
- EXISTS_TAC “T” THEN CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH);
+Theorem EXISTS_ONE_REP[local]:
+  ?b:bool. (\b.b) b
+Proof
+ EXISTS_TAC “T” THEN CONV_TAC BETA_CONV THEN ACCEPT_TAC TRUTH
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Use the type definition mechanism to introduce the new type.              *)
@@ -58,8 +60,9 @@ val one_TY_DEF =
 (* The proof of the `axiom` for type :one follows.                      *)
 (* ---------------------------------------------------------------------*)
 
-val one_axiom = store_thm("one_axiom",
-  Term`!f g:'a -> one. f = g`,
+Theorem one_axiom:
+  !f g:'a -> one. f = g
+Proof
     CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
     REPEAT GEN_TAC THEN
     STRIP_ASSUME_TAC (CONV_RULE (DEPTH_CONV BETA_CONV) one_TY_DEF) THEN
@@ -67,32 +70,36 @@ val one_axiom = store_thm("one_axiom",
     EQ_TAC THEN DISCH_THEN (K ALL_TAC) THEN
     POP_ASSUM (CONV_TAC o REWR_CONV) THENL
     [EXISTS_TAC (Term`g (x:'a):one`), EXISTS_TAC (Term`f (x:'a):one`)]
-    THEN REFL_TAC);
+    THEN REFL_TAC
+QED
 
 (*---------------------------------------------------------------------------
     Define the constant `one` of type one.
  ---------------------------------------------------------------------------*)
 
-val one_DEF = new_definition ("one_DEF", Term`one = @x:one.T`);
+val one_DEF = new_definition ("one_DEF", “one = @x:one.T”);
 
 (*---------------------------------------------------------------------------
   The following theorem shows that there is only one value of type :one
  ---------------------------------------------------------------------------*)
 
-val one = store_thm("one[simp]",
- Term`!v:one. v = one`,
+Theorem one[simp]:
+ !v:one. v = one
+Proof
  GEN_TAC THEN
  ACCEPT_TAC (CONV_RULE (DEPTH_CONV BETA_CONV)
    (AP_THM
      (SPECL [Term`\x:'a.(v:one)`,
-             Term`\x:'a.one`] one_axiom) (Term`x:'a`))));
+             Term`\x:'a.one`] one_axiom) (Term`x:'a`)))
+QED
 
 (*---------------------------------------------------------------------------
     Prove also the following theorem:
  ---------------------------------------------------------------------------*)
 
-val one_Axiom = store_thm("one_Axiom",
-    “!e:'a. ?!fn. fn one = e”,
+Theorem one_Axiom:
+     !e:'a. ?!fn. fn one = e
+Proof
     STRIP_TAC THEN
     CONV_TAC EXISTS_UNIQUE_CONV THEN
     STRIP_TAC THENL
@@ -101,14 +108,16 @@ val one_Axiom = store_thm("one_Axiom",
      REPEAT STRIP_TAC THEN
      CONV_TAC FUN_EQ_CONV THEN
      ONCE_REWRITE_TAC [one] THEN
-     ASM_REWRITE_TAC[]]);
+     ASM_REWRITE_TAC[]]
+QED
 
-val one_prim_rec = store_thm
- ("one_prim_rec",
-  Term`!e:'a. ?fn. fn one = e`,
+Theorem one_prim_rec:
+  !e:'a. ?fn. fn one = e
+Proof
   ACCEPT_TAC
     (GEN_ALL (CONJUNCT1 (SPEC_ALL
-      (CONV_RULE (DEPTH_CONV EXISTS_UNIQUE_CONV) one_Axiom)))));
+      (CONV_RULE (DEPTH_CONV EXISTS_UNIQUE_CONV) one_Axiom))))
+QED
 
 (* ----------------------------------------------------------------------
     Set up the one value to print as (), by analogy with SML's unit
@@ -131,18 +140,20 @@ val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT,0)),
      wouldn't matter if it did.
  ---------------------------------------------------------------------------*)
 
-val _ = overload_on ("()", ``one``);
-val _ = type_abbrev_pp("unit",``:one``);
+Overload "()" = “one”
+Type unit[pp] = ``:one``
 
-val one_induction = Q.store_thm
-("one_induction",
- `!P:one->bool. P one ==> !x. P x`,
- REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [one] THEN ASM_REWRITE_TAC[]);
+Theorem one_induction:
+  !P:one->bool. P one ==> !x. P x
+Proof
+ REPEAT STRIP_TAC THEN ONCE_REWRITE_TAC [one] THEN ASM_REWRITE_TAC[]
+QED
 
-val FORALL_ONE = store_thm(
-  "FORALL_ONE[simp]",
-  ``(!x:unit. P x) <=> P ()``,
-  simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]);
+Theorem FORALL_ONE[simp]:
+    (!x:unit. P x) <=> P ()
+Proof
+  simpLib.SIMP_TAC boolSimps.bool_ss [EQ_IMP_THM, one_induction]
+QED
 
 (* This (and the next) was in examples/lambda/basics/termSceipt.sml, etc. *)
 Theorem FORALL_ONE_FN :
@@ -171,12 +182,13 @@ QED
 
 val one_case_def = new_definition (
   "one_case_def",
-  Term`one_CASE (u:unit) (x:'a) = x`);
+  “one_CASE (u:unit) (x:'a) = x”);
 
-val one_case_thm = Q.store_thm
- ("one_case_thm",
-  `!x:'a. one_CASE () x = x`,
-  ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_def]);
+Theorem one_case_thm:
+   !x:'a. one_CASE () x = x
+Proof
+  ONCE_REWRITE_TAC [GSYM one] THEN REWRITE_TAC [one_case_def]
+QED
 
 
 val _ = TypeBase.export (
@@ -187,7 +199,3 @@ val _ = TypeBase.export (
     )
 
 val _ = computeLib.add_persistent_funs ["one_case_def"]
-
-
-
-val _ = export_theory();

@@ -1,10 +1,10 @@
-open HolKernel Parse boolLib
+Theory SGAUnicodeMergeB[bare]
+Ancestors
+  SGAUnicodeMergeA1 SGAUnicodeMergeA2
+Libs
+  HolKernel Parse boolLib
 
-open SGAUnicodeMergeA1Theory SGAUnicodeMergeA2Theory
-
-val _ = new_theory "SGAUnicodeMergeB";
 val _ = set_grammar_ancestry ["SGAUnicodeMergeA1", "SGAUnicodeMergeA2"]
-
 
 val numfails = ref 0
 
@@ -22,5 +22,3 @@ val _ = if !numfails > 0 then
           raise mk_HOL_ERR "SGA Unicode Test" ""
                 (Int.toString (!numfails) ^ " failures")
         else ()
-
-val _ = export_theory();

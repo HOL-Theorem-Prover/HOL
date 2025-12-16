@@ -37,6 +37,7 @@ sig
   val MV : string
   val CP : string
   val DEFAULT_STATE : string
+  val haveWord64 : bool
 
   val isUnix : bool
   val pointer_eq : 'a * 'a -> bool

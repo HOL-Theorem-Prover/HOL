@@ -108,19 +108,11 @@ Take LENGTH l = 4, e.g. l = [2;3;2;3]
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "pattern";
+Theory pattern
+Ancestors
+  arithmetic pred_set list number divides combinatorics cycle
 
 (* ------------------------------------------------------------------------- *)
-
-(* open dependent theories *)
-open arithmeticTheory pred_setTheory listTheory numberTheory dividesTheory
-     combinatoricsTheory;
-
-open cycleTheory;
 
 (* ------------------------------------------------------------------------- *)
 (* Pattern Theory Documentation                                              *)
@@ -583,7 +575,7 @@ Theorem cycle_order_period:
   !ls. ls <> [] ==> period ls (order ls)
 Proof
   rw[order_def] >>
-  metis_tac[cycle_period_exists, whileTheory.LEAST_INTRO]
+  metis_tac[cycle_period_exists, WhileTheory.LEAST_INTRO]
 QED
 
 (* Idea: if k < list order, k is not a period. *)
@@ -600,7 +592,7 @@ Theorem cycle_order_minimal:
   !k ls. ls <> [] /\ k < order ls ==> ~(period ls k)
 Proof
   rw[order_def] >>
-  metis_tac[cycle_period_exists, whileTheory.LESS_LEAST]
+  metis_tac[cycle_period_exists, WhileTheory.LESS_LEAST]
 QED
 
 (* Idea: the list order is positive and a period. *)
@@ -1024,8 +1016,4 @@ QED
 
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

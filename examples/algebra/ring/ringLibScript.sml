@@ -7,16 +7,14 @@
 (* ------------------------------------------------------------------------- *)
 (* Ported by Chun Tian. The Australian National University (ANU), 2024       *)
 (* ========================================================================= *)
+Theory ringLib
+Ancestors
+  combin pred_set arithmetic integer cardinal one normalizer
+  monoid group ring
+Libs
+  pred_setLib numLib intLib mesonLib hurdUtils newtypeTools
+  tautLib metisLib liteLib Ho_Rewrite
 
-open HolKernel boolLib bossLib Parse;
-
-open combinTheory pred_setTheory pred_setLib arithmeticTheory integerTheory
-     numLib intLib mesonLib hurdUtils cardinalTheory oneTheory newtypeTools
-     tautLib metisLib liteLib Ho_Rewrite normalizerTheory;
-
-open monoidTheory groupTheory ringTheory;
-
-val _ = new_theory "ringLib";
 
 val _ = deprecate_int ();
 val INT_ARITH = intLib.ARITH_PROVE;
@@ -1834,7 +1832,7 @@ Theorem LEFT_AND_EXISTS_THM = GSYM LEFT_EXISTS_AND_THM;
 (* |- p ==> q ==> r <=> p /\ q ==> r *)
 Theorem IMP_IMP = Q.SPECL [‘p’, ‘q’, ‘r’] AND_IMP_INTRO;
 
-Triviality RING_POLY_UNIVERSAL_CONV_pth:
+Theorem RING_POLY_UNIVERSAL_CONV_pth[local]:
   !r. ring_carrier r = univ(:'a) ==>
     (!x y z. ring_add r x (ring_add r y z) =
              ring_add r (ring_add r x y) z) /\
@@ -1858,7 +1856,7 @@ QED
 Theorem RING_POLY_UNIVERSAL_CONV_pth =
   MATCH_MP SEMIRING_PTHS $ UNDISCH $ SPEC_ALL RING_POLY_UNIVERSAL_CONV_pth;
 
-Triviality RING_POLY_UNIVERSAL_CONV_sth:
+Theorem RING_POLY_UNIVERSAL_CONV_sth[local]:
   !r. ring_carrier r = univ(:'a) ==>
     (!x. ring_neg r x = ring_mul r (ring_of_int r (- &1)) x) /\
     (!x y. ring_sub r x y =
@@ -1886,7 +1884,7 @@ Proof
   REWRITE_TAC[]
 QED
 
-Triviality RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_l:
+Theorem RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_l[local]:
   integral_domain (r :'a Ring)
   ==> ((ring_of_int r (&1) = ring_of_int r (&0)) <=> F)
 Proof
@@ -1896,7 +1894,7 @@ QED
 Theorem RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_l =
   UNDISCH RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_l;
 
-Triviality RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_r:
+Theorem RING_INTEGRAL_DOMAIN_UNIVERSAL_neth_r[local]:
   integral_domain (r :'a Ring)
   ==> (ring_of_int r (&0) = ring_of_int r (&1) <=> F)
 Proof
@@ -1927,7 +1925,7 @@ Proof
   REWRITE_TAC[RING_OF_INT_OF_NUM, RING_OF_NUM_0, RING_OF_NUM_1]
 QED
 
-Triviality RING_WORD_UNIVERSAL_pth:
+Theorem RING_WORD_UNIVERSAL_pth[local]:
   ring_carrier r = univ(:'a) ==>
   (x = y <=> ring_sub r x y = ring_of_int r (&0))
 Proof
@@ -1935,7 +1933,7 @@ Proof
 QED
 Theorem RING_WORD_UNIVERSAL_pth = UNDISCH RING_WORD_UNIVERSAL_pth;
 
-Triviality RING_WORD_UNIVERSAL_mth:
+Theorem RING_WORD_UNIVERSAL_mth[local]:
   ring_carrier r = univ(:'a) ==>
   p = ring_of_int r (&0) ==> !c. ring_mul r c p = ring_of_int r (&0)
 Proof
@@ -1943,7 +1941,7 @@ Proof
 QED
 Theorem RING_WORD_UNIVERSAL_mth = UNDISCH RING_WORD_UNIVERSAL_mth;
 
-Triviality RING_WORD_UNIVERSAL_dth:
+Theorem RING_WORD_UNIVERSAL_dth[local]:
   ring_carrier r = univ(:'a) ==>
   p = ring_of_int r (&0) /\ q = ring_of_int r (&0) ==>
   ring_add r p q = ring_of_int r (&0)
@@ -1957,5 +1955,4 @@ Theorem RING_RING_HORN_pth1 = TAUT ‘~p \/ ~q <=> ~(p /\ q)’;
 Theorem RING_RING_HORN_pth2 = TAUT ‘p \/ ~q <=> q ==> p’;
 Theorem RING_RING_CORE_pth = TAUT ‘p ==> q <=> (p \/ q <=> q)’
 
-val _ = export_theory();
 val _ = html_theory "ringLib";

@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib stringTheory;
-
-open GoldblattRLTheory RLRulesTheory;
-
-val _ = new_theory "NaturalDeduction";
+Theory NaturalDeduction
+Ancestors
+  string GoldblattRL RLRules
 
 val _ = set_fixity "-->" (Infixr 490);
 val _ = overload_on ("-->", “g_IMP”);
@@ -452,4 +450,3 @@ Proof
       metis_tac[IMP_Elimination, identity_lr, REPLACE_def])
 QED
 
-val _ = export_theory();

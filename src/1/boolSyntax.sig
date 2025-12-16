@@ -217,6 +217,4 @@ sig
   val sep_type_unify : hol_type -> hol_type ->
               (hol_type, hol_type) Lib.subst * (hol_type, hol_type) Lib.subst
 
-
-
 end

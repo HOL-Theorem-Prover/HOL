@@ -1,8 +1,8 @@
-open HolKernel bossLib boolTheory pred_setTheory;
-
-open Tactic Tactical;
-
-val _ = new_theory "countable_types";
+Theory countable_types
+Ancestors
+  bool pred_set
+Libs
+  Tactic Tactical
 
 Theorem unit_countable:
   countable (UNIV : unit set)
@@ -74,6 +74,3 @@ Proof
     \\ metis_tac [prim_recTheory.LESS_SUC_REFL]
   )
 QED
-
-val _ = export_theory ();
-

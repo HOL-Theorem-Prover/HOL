@@ -1,34 +1,41 @@
-open HolKernel Parse boolLib bossLib SatisfySimps pred_setTheory categoryTheory functorTheory nat_transTheory hom_functorTheory ens_catTheory;
+Theory Yoneda
+Ancestors
+  pred_set category category_functor nat_trans hom_functor ens_cat
+Libs
+  SatisfySimps
 
-val _ = new_theory "Yoneda";
-
-val YfunctorNT_def = Define`
+Definition YfunctorNT_def:
   YfunctorNT c f = mk_nt <|
     dom := c|_→f.dom|; cod := c|_→f.cod|;
-    map := λx. (c|x→_|##f) |>`
+    map := λx. (c|x→_|##f) |>
+End
 
-val YfunctorNT_dom_cod = Q.store_thm(
-"YfunctorNT_dom_cod",
-`∀c f. ((YfunctorNT c f).dom = c|_→f.dom|) ∧
-       ((YfunctorNT c f).cod = c|_→f.cod|)`,
-srw_tac [][YfunctorNT_def]);
+Theorem YfunctorNT_dom_cod:
+ ∀c f. ((YfunctorNT c f).dom = c|_→f.dom|) ∧
+       ((YfunctorNT c f).cod = c|_→f.cod|)
+Proof
+srw_tac [][YfunctorNT_def]
+QED
 val _ = export_rewrites["YfunctorNT_dom_cod"];
 
-val ntdom_YfunctorNT = Q.store_thm(
-"ntdom_YfunctorNT",
-`∀c f. ntdom (YfunctorNT c f) = c°`,
-srw_tac [][YfunctorNT_def,mk_nt_def]);
+Theorem ntdom_YfunctorNT:
+ ∀c f. ntdom (YfunctorNT c f) = c°
+Proof
+srw_tac [][YfunctorNT_def,mk_nt_def]
+QED
 
-val ntcod_YfunctorNT = Q.store_thm(
-"ntcod_YfunctorNT",
-`∀c f. ntcod (YfunctorNT c f) = (ens_cat (homs c))`,
-srw_tac [][YfunctorNT_def,mk_nt_def]);
+Theorem ntcod_YfunctorNT:
+ ∀c f. ntcod (YfunctorNT c f) = (ens_cat (homs c))
+Proof
+srw_tac [][YfunctorNT_def,mk_nt_def]
+QED
 
-val YfunctorNT_at = Q.store_thm(
-"YfunctorNT_at",
-`∀c f x. x ∈ c.obj ⇒
-  ((YfunctorNT c f)@+x = (c|x→_|##f))`,
-srw_tac [][YfunctorNT_def,mk_nt_def,restrict_def]);
+Theorem YfunctorNT_at:
+ ∀c f x. x ∈ c.obj ⇒
+  ((YfunctorNT c f)@+x = (c|x→_|##f))
+Proof
+srw_tac [][YfunctorNT_def,mk_nt_def,restrict_def]
+QED
 
 val _ = export_rewrites ["ntdom_YfunctorNT","ntcod_YfunctorNT","YfunctorNT_at"];
 
@@ -44,9 +51,9 @@ It is extensional on the union over all z of c|y→z|
 but depending on which element of the union you came from, the result type can be constrained
 *)
 
-val is_nat_trans_YfunctorNT = Q.store_thm(
-"is_nat_trans_YfunctorNT",
-`∀c f. is_category c ∧ f ∈ c.mor ⇒ is_nat_trans (YfunctorNT c f)`,
+Theorem is_nat_trans_YfunctorNT:
+ ∀c f. is_category c ∧ f ∈ c.mor ⇒ is_nat_trans (YfunctorNT c f)
+Proof
 srw_tac [][YfunctorNT_def] >>
 srw_tac [][nat_trans_axioms_def] >- (
   imp_res_tac mor_obj >>
@@ -91,51 +98,58 @@ match_mp_tac (GSYM comp_assoc) >>
 qunabbrev_tac `t1` >>
 fsrw_tac [][hom_def] >>
 imp_res_tac maps_to_composable >>
-srw_tac [][]);
+srw_tac [][]
+QED
 val _ = export_rewrites["is_nat_trans_YfunctorNT"];
 
-val YfunctorNT_maps_to = Q.store_thm(
-"YfunctorNT_maps_to",
-`∀c f. is_category c ∧ f ∈ c.mor ⇒
-    (YfunctorNT c f) :- (c|_→f.dom|) → (c|_→f.cod|) -:[(c°)→ens_cat (homs c)]`,
-srw_tac [][maps_to_in_def]);
+Theorem YfunctorNT_maps_to:
+ ∀c f. is_category c ∧ f ∈ c.mor ⇒
+    (YfunctorNT c f) :- (c|_→f.dom|) → (c|_→f.cod|) -:[(c°)→ens_cat (homs c)]
+Proof
+srw_tac [][maps_to_in_def]
+QED
 val _ = export_rewrites["YfunctorNT_maps_to"];
 
-val YfunctorNT_composable = Q.store_thm(
-"YfunctorNT_composable",
-`∀c f g. is_category c ∧ f ≈> g -:c ⇒
-  (YfunctorNT c f) ≈> (YfunctorNT c g) -:[(c°)→ens_cat (homs c)]`,
-srw_tac [][composable_nts_def] >> fsrw_tac [][composable_in_def]);
+Theorem YfunctorNT_composable:
+ ∀c f g. is_category c ∧ f ≈> g -:c ⇒
+  (YfunctorNT c f) ≈> (YfunctorNT c g) -:[(c°)→ens_cat (homs c)]
+Proof
+srw_tac [][composable_nts_def] >> fsrw_tac [][composable_in_def]
+QED
 val _ = export_rewrites["YfunctorNT_composable"];
 
-val YfunctorNT_id = Q.store_thm(
-"YfunctorNT_id",
-`∀c x. is_category c ∧ x ∈ c.obj ⇒ (YfunctorNT c (id x -:c) = id_nt (c|_→x|))`,
+Theorem YfunctorNT_id:
+ ∀c x. is_category c ∧ x ∈ c.obj ⇒ (YfunctorNT c (id x -:c) = id_nt (c|_→x|))
+Proof
 srw_tac [][] >> match_mp_tac nt_eq_thm >>
 srw_tac [][id_mor] >>
 srw_tac [][TypedGraphFun_def,restrict_def] >>
 srw_tac [][FUN_EQ_THM] >> srw_tac [][] >>
-fsrw_tac [][hom_def,maps_to_in_def]);
+fsrw_tac [][hom_def,maps_to_in_def]
+QED
 val _ = export_rewrites["YfunctorNT_id"];
 
-val is_category_presheaf_cat = Q.store_thm(
-"is_category_presheaf_cat",
-`∀c. is_category c ⇒ is_category [(c°)→ens_cat (homs c)]`,
-metis_tac [is_category_functor_cat,is_category_ens_cat,is_category_op_cat])
+Theorem is_category_presheaf_cat:
+ ∀c. is_category c ⇒ is_category [(c°)→ens_cat (homs c)]
+Proof
+metis_tac [is_category_functor_cat,is_category_ens_cat,is_category_op_cat]
+QED
 val _ = export_rewrites["is_category_presheaf_cat"];
 
-val pre_Yfunctor_def = Define`
+Definition pre_Yfunctor_def:
   pre_Yfunctor c = <|
     dom := c; cod := [(c°)→ens_cat (homs c)];
-    map := λf. YfunctorNT c f |>`;
+    map := λf. YfunctorNT c f |>
+End
 
-val pre_Yfunctor_components = Q.store_thm(
-"pre_Yfunctor_components",
-`∀c. ((pre_Yfunctor c).dom = c) ∧
+Theorem pre_Yfunctor_components:
+ ∀c. ((pre_Yfunctor c).dom = c) ∧
      ((pre_Yfunctor c).cod = [(c°)→ens_cat (homs c)]) ∧
      ((pre_Yfunctor c).map = λf. YfunctorNT c f) ∧
-     (∀f. (pre_Yfunctor c)##f = YfunctorNT c f)`,
-srw_tac [][pre_Yfunctor_def,morf_def]);
+     (∀f. (pre_Yfunctor c)##f = YfunctorNT c f)
+Proof
+srw_tac [][pre_Yfunctor_def,morf_def]
+QED
 val _ = export_rewrites["pre_Yfunctor_components"];
 
 Theorem pre_Yfunctor_objf[simp]:
@@ -205,39 +219,44 @@ Proof
   srw_tac [][]
 QED
 
-val Yfunctor_dom = Q.store_thm(
-"Yfunctor_dom",
-`∀c. (Yfunctor c).dom = c`,
-srw_tac [][Yfunctor_def]);
+Theorem Yfunctor_dom:
+ ∀c. (Yfunctor c).dom = c
+Proof
+srw_tac [][Yfunctor_def]
+QED
 
-val Yfunctor_cod = Q.store_thm(
-"Yfunctor_cod",
-`∀c. (Yfunctor c).cod = [(c°)→ens_cat (homs c)]`,
-srw_tac [][Yfunctor_def]);
+Theorem Yfunctor_cod:
+ ∀c. (Yfunctor c).cod = [(c°)→ens_cat (homs c)]
+Proof
+srw_tac [][Yfunctor_def]
+QED
 
-val Yfunctor_objf = Q.store_thm(
-"Yfunctor_objf",
-`∀c x. is_category c ∧ x ∈ c.obj ⇒
- ((Yfunctor c)@@x = c|_→x|)`,
-srw_tac [][Yfunctor_def,mk_functor_objf]);
+Theorem Yfunctor_objf:
+ ∀c x. is_category c ∧ x ∈ c.obj ⇒
+ ((Yfunctor c)@@x = c|_→x|)
+Proof
+srw_tac [][Yfunctor_def,mk_functor_objf]
+QED
 
-val Yfunctor_morf = Q.store_thm(
-"Yfunctor_morf",
-`∀c f. is_category c ∧ f ∈ c.mor ⇒
-  ((Yfunctor c)##f = YfunctorNT c f)`,
-srw_tac [][Yfunctor_def,morf_def]);
+Theorem Yfunctor_morf:
+ ∀c f. is_category c ∧ f ∈ c.mor ⇒
+  ((Yfunctor c)##f = YfunctorNT c f)
+Proof
+srw_tac [][Yfunctor_def,morf_def]
+QED
 
 val _ = export_rewrites["Yfunctor_dom","Yfunctor_cod","Yfunctor_objf","Yfunctor_morf"];
 
-val YMap_def = Define`
-  YMap c x n = (n@+x).map (id x-:c)`;
+Definition YMap_def:
+  YMap c x n = (n@+x).map (id x-:c)
+End
 
-val YMapImage = Q.store_thm(
-"YMapImage",
-`∀c x n f. is_category c ∧ is_functor f ∧ is_nat_trans n ∧
+Theorem YMapImage:
+ ∀c x n f. is_category c ∧ is_functor f ∧ is_nat_trans n ∧
            (f :- c° → ens_cat (homs c)) ∧ x ∈ c.obj ∧
            (n :- ((Yfunctor c)@@x) → f) ⇒
-             (YMap c x n) ∈ (f@@x)`,
+             (YMap c x n) ∈ (f@@x)
+Proof
 srw_tac [][YMap_def] >>
 `(n @+ x) :- (n.dom @@ x) → (n.cod @@ x) -: n.dom.cod` by (
   fsrw_tac [][is_nat_trans_def,nat_trans_axioms_def] ) >>
@@ -246,29 +265,32 @@ ntac 4 (pop_assum mp_tac) >> srw_tac [][] >>
 fsrw_tac [][IsTypedFun_def] >>
 fsrw_tac [][HasFunType_def] >>
 first_x_assum match_mp_tac >>
-srw_tac [][hom_def,id_maps_to]);
+srw_tac [][hom_def,id_maps_to]
+QED
 
-val YMapInv_def = Define`
+Definition YMapInv_def:
   YMapInv c x f y = mk_nt <|
     dom := (Yfunctor c)@@x;
     cod := f;
     map := λz. TypedGraphFun ((c|z→x|), f@@z)
-               (λg. (f##(g°)).map y) |>`;
+               (λg. (f##(g°)).map y) |>
+End
 
-val YMapInv_at = Q.store_thm(
-"YMapInv_at",
-`∀c x f y z. is_category c ∧ x ∈ c.obj ∧ z ∈ c.obj ⇒
+Theorem YMapInv_at:
+ ∀c x f y z. is_category c ∧ x ∈ c.obj ∧ z ∈ c.obj ⇒
     ((YMapInv c x f y) @+ z =
      TypedGraphFun ((c|z→x|), f@@z)
-       (λg. (f##g°).map y))`,
-srw_tac [][YMapInv_def,mk_nt_def,restrict_def]);
+       (λg. (f##g°).map y))
+Proof
+srw_tac [][YMapInv_def,mk_nt_def,restrict_def]
+QED
 val _ = export_rewrites["YMapInv_at"];
 
-val is_nat_trans_YMapInv = Q.store_thm(
-"is_nat_trans_YMapInv",
-`∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat (homs c)) ∧
+Theorem is_nat_trans_YMapInv:
+ ∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat (homs c)) ∧
            x ∈ c.obj ∧ y ∈ (f@@x)
- ⇒ is_nat_trans (YMapInv c x f y)`,
+ ⇒ is_nat_trans (YMapInv c x f y)
+Proof
 srw_tac [][YMapInv_def] >>
 srw_tac [][nat_trans_axioms_def]
 >- metis_tac [objf_in_obj,op_cat_obj,ens_cat_obj]
@@ -337,22 +359,24 @@ srw_tac [][ComposeFun_def,restrict_def] >- (
   fsrw_tac [][hom_def] >> metis_tac [] ) >>
 Q.ISPECL_THEN [`f`,`f.dom`,`f.cod`,`e°`,`e.cod`,`e.dom`] mp_tac morf_maps_to >>
 fsrw_tac [][maps_to_in_def] >> srw_tac [][] >>
-fsrw_tac [][]);
+fsrw_tac [][]
+QED
 val _ = export_rewrites["is_nat_trans_YMapInv"];
 
-val YMapInvImage = Q.store_thm(
-"YMapInvImage",
-`∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat (homs c)) ∧
+Theorem YMapInvImage:
+ ∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat (homs c)) ∧
            x ∈ c.obj ∧ y ∈ (f@@x) ⇒
            is_nat_trans (YMapInv c x f y) ∧
-           ((YMapInv c x f y) :- (Yfunctor c)@@x → f)`,
-srw_tac [][YMapInv_def]);
+           ((YMapInv c x f y) :- (Yfunctor c)@@x → f)
+Proof
+srw_tac [][YMapInv_def]
+QED
 
-val YMap1 = Q.store_thm(
-"YMap1",
-`∀c f x n. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat (homs c)) ∧
+Theorem YMap1:
+ ∀c f x n. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat (homs c)) ∧
            x ∈ c.obj ∧ is_nat_trans n ∧ (n :- ((Yfunctor c)@@x) → f) ⇒
-             (YMapInv c x f (YMap c x n) = n)`,
+             (YMapInv c x f (YMap c x n) = n)
+Proof
 rpt strip_tac >>
 match_mp_tac nt_eq_thm >>
 imp_res_tac YMapImage >>
@@ -429,25 +453,27 @@ imp_res_tac maps_to_in_def >>
 fsrw_tac [][ComposeTypedFun_def,compose_def,restrict_def,ComposeFun_def] >>
 srw_tac [][FUN_EQ_THM] >>
 pop_assum (qspec_then `id f.cod -:c` mp_tac) >>
-fsrw_tac [][id_maps_to]);
+fsrw_tac [][id_maps_to]
+QED
 
-val YMap2 = Q.store_thm(
-"YMap2",
-`∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat (homs c)) ∧
+Theorem YMap2:
+ ∀c x f y. is_category c ∧ is_functor f ∧ (f :- c° → ens_cat (homs c)) ∧
            x ∈ c.obj ∧ y ∈ (f@@x) ⇒
-             (YMap c x (YMapInv c x f y) = y)`,
+             (YMap c x (YMapInv c x f y) = y)
+Proof
 srw_tac [][YMap_def] >>
 srw_tac [][restrict_def,hom_def] >>
 `f##(id x -:(c°)) = id (f@@x) -: ens_cat (homs c)` by srw_tac [][morf_id] >>
 fsrw_tac [][] >>
 `f@@x ∈ homs c` by (
   metis_tac [objf_in_obj,op_cat_obj,ens_cat_obj] ) >>
-srw_tac [][restrict_def]);
+srw_tac [][restrict_def]
+QED
 
-val YfunctorNT_YMapInv = Q.store_thm(
-"YfunctorNT_YMapInv",
-`∀c f x y. is_category c ∧ f :- x → y -:c ⇒
-    (YfunctorNT c f = YMapInv c x (c|_→y|) f)`,
+Theorem YfunctorNT_YMapInv:
+ ∀c f x y. is_category c ∧ f :- x → y -:c ⇒
+    (YfunctorNT c f = YMapInv c x (c|_→y|) f)
+Proof
 srw_tac [][] >>
 match_mp_tac nt_eq_thm >>
 imp_res_tac maps_to_in_def >>
@@ -465,20 +491,22 @@ srw_tac [][hom_def] >>
 imp_res_tac maps_to_in_def >>
 srw_tac [][restrict_def] >>
 fsrw_tac [][hom_def,maps_to_in_def] >>
-fsrw_tac [][]);
+fsrw_tac [][]
+QED
 
-val YMapYoneda = Q.store_thm(
-"YMapYoneda",
-`∀c f x y. is_category c ∧ f :- x → y -:c ⇒
-  ((Yfunctor c)##f = YMapInv c x ((Yfunctor c)@@y) f)`,
+Theorem YMapYoneda:
+ ∀c f x y. is_category c ∧ f :- x → y -:c ⇒
+  ((Yfunctor c)##f = YMapInv c x ((Yfunctor c)@@y) f)
+Proof
 srw_tac [][] >>
 imp_res_tac maps_to_in_def >>
 imp_res_tac maps_to_obj >>
-srw_tac [][YfunctorNT_YMapInv]);
+srw_tac [][YfunctorNT_YMapInv]
+QED
 
-val YonedaFull = Q.store_thm(
-"YonedaFull",
-`∀c. is_category c ⇒ full (Yfunctor c)`,
+Theorem YonedaFull:
+ ∀c. is_category c ⇒ full (Yfunctor c)
+Proof
 srw_tac [][full_def] >>
 qexists_tac `YMap c a h` >>
 `YMap c a h ∈ (c|_→b|)@@a` by (
@@ -490,11 +518,12 @@ match_mp_tac EQ_TRANS >>
 qexists_tac `YMapInv c a (Yfunctor c@@b) (YMap c a h)` >>
 conj_tac >- srw_tac [][YMapYoneda] >>
 match_mp_tac YMap1 >>
-fsrw_tac [][]);
+fsrw_tac [][]
+QED
 
-val YonedaFaithful = Q.store_thm(
-"YonedaFaithful",
-`∀c. is_category c ⇒ faithful (Yfunctor c)`,
+Theorem YonedaFaithful:
+ ∀c. is_category c ⇒ faithful (Yfunctor c)
+Proof
 srw_tac [][faithful_def] >>
 `YMap c a (YMapInv c a (c|_→b|) g) =
  YMap c a (YMapInv c a (c|_→b|) h)`
@@ -509,16 +538,18 @@ conj_tac >- (
 srw_tac [][] >>
 match_mp_tac YMap2 >>
 imp_res_tac maps_to_obj >>
-fsrw_tac [][hom_def]);
+fsrw_tac [][hom_def]
+QED
 
-val YonedaEmbedding = Q.store_thm(
-"YonedaEmbedding",
-`∀c. is_category c ⇒ embedding (Yfunctor c)`,
-srw_tac [][embedding_def,YonedaFaithful,YonedaFull]);
+Theorem YonedaEmbedding:
+ ∀c. is_category c ⇒ embedding (Yfunctor c)
+Proof
+srw_tac [][embedding_def,YonedaFaithful,YonedaFull]
+QED
 
-val YonedaInjObj = Q.store_thm(
-"YonedaInjObj",
-`∀c. is_category c ⇒ inj_obj (Yfunctor c)`,
+Theorem YonedaInjObj:
+ ∀c. is_category c ⇒ inj_obj (Yfunctor c)
+Proof
 srw_tac [][inj_obj_def] >>
 srw_tac [][] >> pop_assum mp_tac >> srw_tac [][] >>
 `(c|_→a|)@@a = (c|_→b|)@@a` by asm_simp_tac std_ss [] >>
@@ -529,6 +560,5 @@ pop_assum (qspec_then `id a -:c` mp_tac) >>
 srw_tac [][hom_def,id_maps_to] >>
 fsrw_tac [][maps_to_in_def] >>
 imp_res_tac id_maps_to >>
-fsrw_tac [][maps_to_in_def]);
-
-val _ = export_theory ();
+fsrw_tac [][maps_to_in_def]
+QED

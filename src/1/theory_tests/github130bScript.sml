@@ -1,9 +1,9 @@
-open HolKernel Parse boolLib
+Theory github130b[bare]
+Ancestors
+  github130a
+Libs
+  HolKernel Parse boolLib github130Lib
 
-open github130Lib github130aTheory
-val _ = new_theory "github130b";
-
-val _ = save_thm("gh130b", boolTheory.AND_CLAUSES);
+Theorem gh130b = boolTheory.AND_CLAUSES;
 
 
-val _ = export_theory();

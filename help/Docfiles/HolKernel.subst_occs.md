@@ -1,0 +1,43 @@
+## `subst_occs`
+
+``` hol4
+HolKernel.subst_occs : int list list -> (term,term) subst -> term -> term
+```
+
+------------------------------------------------------------------------
+
+Substitutes for particular occurrences of subterms of a given term.
+
+For each `{redex,residue}` in the second argument, there should be a
+corresponding integer list `l_i` in the first argument that specifies
+which free occurrences of `redex_i` in the third argument should be
+substituted by `residue_i`.
+
+### Failure
+
+Failure occurs if any substitution fails, or if the length of the first
+argument is not equal to the length of the substitution. In other words,
+every substitution pair should be accompanied by a list specifying when
+the substitution is applicable.
+
+### Example
+
+``` hol4
+- subst_occs [[1,3]] [Term `SUC 0` |-> Term `1`]
+             (Term `SUC 0 + SUC 0 = SUC(SUC 0)`);
+> val it = `1 + SUC 0 = SUC 1` : term
+
+- subst_occs [[1],[1]] [Term `SUC 0` |-> Term `1`,
+                        Term `SUC 1` |-> Term `2`]
+             (Term `SUC(SUC 0) = SUC 1`);
+> val it = `SUC 1 = 2` : term
+
+- subst_occs [[1],[1]] [Term`SUC(SUC 0)` |-> Term `2`,
+                        Term`SUC 0`      |-> Term `1`]
+             (Term`SUC(SUC 0) = SUC 0`);
+> val it = `2 = 1` : term
+```
+
+### See also
+
+[`Term.subst`](#Term.subst), [`Lib.|->`](#Lib..GZKQ4)

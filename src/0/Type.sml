@@ -288,13 +288,21 @@ fun match_type pat ob = match_type_in_context pat ob []
         An order on types
  ---------------------------------------------------------------------------*)
 
-fun compare (Tyv s1, Tyv s2) = String.compare (s1,s2)
-  | compare (Tyv _, _) = LESS
-  | compare (Tyapp _, Tyv _) = GREATER
-  | compare (Tyapp((c1,_),A1), Tyapp((c2,_),A2)) =
-      case KernelSig.id_compare (c1, c2)
-       of EQUAL => Lib.list_compare compare (A1,A2)
-        |   x   => x;
+fun fast_ty_eq (ty1:hol_type) (ty2:hol_type) = Portable.pointer_eq (ty1,ty2);
+
+fun compare (ty1,ty2) =
+    if fast_ty_eq ty1 ty2 then
+       EQUAL
+    else
+    case (ty1,ty2)
+     of (Tyv s1, Tyv s2) => String.compare (s1,s2)
+      | (Tyv _, _) => LESS
+      | (Tyapp _, Tyv _) => GREATER
+      | (Tyapp((c1,_),A1), Tyapp((c2,_),A2)) =>
+          (case KernelSig.id_compare (c1, c2)
+           of EQUAL => Lib.list_compare compare (A1,A2)
+            | other => other);
+
 
 (*---------------------------------------------------------------------------
      Automatically generated type variables. The unusual names make

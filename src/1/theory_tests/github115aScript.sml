@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "github115a"
+Theory github115a[bare]
+Libs
+  HolKernel Parse boolLib
 
 val v1 = mk_var("v", bool --> bool)
 val v2 = mk_var("v", bool)
@@ -15,6 +15,5 @@ val _ = assert
                    HOLset.member(atoms, v2))
           t
 
-val th = save_thm("th", DISCH_ALL (ASSUME t))
+Theorem th = DISCH_ALL (ASSUME t)
 
-val _ = export_theory()

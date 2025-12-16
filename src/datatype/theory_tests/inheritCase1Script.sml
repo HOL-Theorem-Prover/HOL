@@ -1,9 +1,6 @@
-open HolKernel Parse boolLib
-
-open Datatype
-
-val _ = new_theory "inheritCase1";
+Theory inheritCase1[bare]
+Libs
+  HolKernel Parse boolLib Datatype
 
 val _ = Datatype`list = Nil | Cons 'a list`;
 
-val _ = export_theory();

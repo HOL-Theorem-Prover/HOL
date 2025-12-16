@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "addDB";
+Theory addDB[bare]
+Libs
+  HolKernel Parse boolLib
 
 val _ = set_trace "Theory.allow_rebinds" 1
 
@@ -34,4 +34,3 @@ val _ = delete_const "bar"
 val _ = length (DB.definitions "-") = 1 orelse raise Fail "bad DB.definitions"
 
 
-val _ = export_theory();

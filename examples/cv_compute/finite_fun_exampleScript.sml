@@ -1,10 +1,13 @@
-open HolKernel Parse boolLib bossLib;
-open wordsTheory wordsLib cv_stdTheory cv_transLib;
-open cv_typeTheory sptreeTheory;
-
-val _ = new_theory "finite_fun_example";
+Theory finite_fun_example
+Ancestors
+  words cv_std cv_type sptree
+Libs
+  wordsLib cv_transLib
 
 (* --- setup --- *)
+
+Overload Num[local] = “cv$Num”
+Overload Pair[local] = “cv$Pair”
 
 Type mem = “:256 word -> num”;
 
@@ -26,13 +29,13 @@ Definition from_mem_def:
     from_sptree_sptree_spt Num (build_spt (dimword (:256)) m)
 End
 
-Triviality wf_build_spt[simp]:
+Theorem wf_build_spt[local,simp]:
   ∀n m. wf (build_spt n m)
 Proof
   Induct \\ gvs [build_spt_def] \\ rw [] \\ gvs [wf_insert]
 QED
 
-Triviality lookup_build_spt_lemma1:
+Theorem lookup_build_spt_lemma1[local]:
   ∀k n. n < k ⇒ lookup n (build_spt k x) = lookup n (build_spt (SUC n) x)
 Proof
   Induct \\ gvs []
@@ -42,13 +45,13 @@ Proof
   \\ rw [] \\ gvs [lookup_insert]
 QED
 
-Triviality lookup_build_spt_lemma2:
+Theorem lookup_build_spt_lemma2[local]:
   ∀k n. k ≤ n ⇒ lookup n (build_spt k x) = NONE
 Proof
   Induct \\ gvs [build_spt_def] \\ rw [lookup_insert]
 QED
 
-Triviality to_mem_eq:
+Theorem to_mem_eq[local]:
   (∀n. n ∈ domain t ⇒ n < dimword (:'a)) ⇒
   FOLDR (λ(a,v) f. f⦇n2w a ↦ v⦈) (λ(a:'a word). 0) (toSortedAList t) =
     (λa. case lookup (w2n a) t of
@@ -171,4 +174,3 @@ val def = fetch "-" "cv_mem_test_def";
 
 val res = cv_eval “mem_test mem_empty mem_empty 3w”;
 
-val _ = export_theory();

@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory "location";
+Theory location
 
 Datatype: locn = UNKNOWNpt | EOFpt | POSN num num
 End
@@ -156,14 +154,15 @@ Proof
   Induct_on ‘t1’ >> simp[merge_list_locs_def]
 QED
 
-val merge_list_locs_sing = Q.store_thm(
-  "merge_list_locs_sing[simp]",
-  ‘merge_list_locs [h] = h’,
-  simp[merge_list_locs_def]);
+Theorem merge_list_locs_sing[simp]:
+   merge_list_locs [h] = h
+Proof
+  simp[merge_list_locs_def]
+QED
 
-val merge_locs_idem = Q.store_thm(
-  "merge_locs_idem[simp]",
-  ‘merge_locs l l = l’,
-  Cases_on ‘l’ >> simp[merge_locs_def]);
+Theorem merge_locs_idem[simp]:
+   merge_locs l l = l
+Proof
+  Cases_on ‘l’ >> simp[merge_locs_def]
+QED
 
-val _ = export_theory();

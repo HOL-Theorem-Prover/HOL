@@ -1,7 +1,6 @@
-open HolKernel boolLib bossLib
-open relation_extraTheory
-
-val () = new_theory "mm"
+Theory mm
+Ancestors
+  relation_extra
 
 (* -------------------------------------------------------------------------
    Graph events and labels
@@ -410,4 +409,3 @@ End
    End
    ------------------------------------------------------------------------- *)
 
-val () = export_theory()

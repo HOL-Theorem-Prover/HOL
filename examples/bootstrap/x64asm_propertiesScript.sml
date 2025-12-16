@@ -164,7 +164,7 @@ Proof
   \\ imp_res_tac step_determ \\ rw [] \\ res_tac
 QED
 
-Triviality steps_NRC:
+Theorem steps_NRC[local]:
   ∀s1 n1 s2 n2.
     steps (s1,n1) (s2,n2) ⇒ ∃k. NRC step (n1 - n2 + k) s1 s2 ∧ n2 ≤ n1
 Proof

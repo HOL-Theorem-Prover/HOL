@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib;
-
-open transferTheory finite_mapTheory pred_setTheory
-
-val _ = new_theory "fsets";
+Theory fsets
+Ancestors
+  transfer finite_map pred_set
 
 Type fset[pp] = “:'a |-> unit”
 
@@ -156,4 +154,3 @@ Proof
   rw[FSET_def, EXTENSION] >> metis_tac[]
 QED
 
-val _ = export_theory();

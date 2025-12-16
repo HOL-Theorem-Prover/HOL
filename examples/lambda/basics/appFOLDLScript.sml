@@ -5,15 +5,13 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory appFOLDL
+Ancestors
+  arithmetic list rich_list pred_set finite_map pair term
+  basic_swap
+Libs
+  hurdUtils listLib binderLib NEWLib
 
-open HolKernel Parse boolLib bossLib;
-
-open arithmeticTheory listTheory rich_listTheory pred_setTheory finite_mapTheory
-     hurdUtils listLib pairTheory;
-
-open termTheory binderLib basic_swapTheory NEWLib;
-
-val _ = new_theory "appFOLDL"
 
 val _ = set_fixity "@*" (Infixl 901)
 val _ = Unicode.unicode_version { u = "··", tmnm = "@*"}
@@ -40,14 +38,15 @@ Proof
   Cases_on `args` using SNOC_CASES >> simp[FOLDL_SNOC] >> metis_tac[]
 QED
 
-val app_eq_appstar = store_thm(
-  "app_eq_appstar",
-  ``∀args f M N.
+Theorem app_eq_appstar:
+    ∀args f M N.
        (M @@ N = f ·· args) ⇔
        (args = []) ∧ (f = M @@ N) ∨
-       (args ≠ []) ∧ (M = f ·· FRONT args) ∧ (N = LAST args)``,
+       (args ≠ []) ∧ (M = f ·· FRONT args) ∧ (N = LAST args)
+Proof
   Induct THEN SRW_TAC [][] THEN1 METIS_TAC [] THEN
-  Cases_on `args` THEN SRW_TAC [][] THEN1 METIS_TAC []);
+  Cases_on `args` THEN SRW_TAC [][] THEN1 METIS_TAC []
+QED
 
 Theorem lam_eq_appstar[simp]:
   ∀args f. (LAM v t = f ·· args) ⇔ (args = []) ∧ (f = LAM v t)
@@ -55,12 +54,13 @@ Proof
   Induct THEN SRW_TAC [][] THEN METIS_TAC []
 QED
 
-val app_eq_varappstar = store_thm(
-  "app_eq_varappstar",
-  ``∀M N args.
+Theorem app_eq_varappstar:
+    ∀M N args.
        (M @@ N = VAR v ·· args) ⇔ args ≠ [] ∧ (M = VAR v ·· FRONT args) ∧
-                                  (N = LAST args)``,
-  SRW_TAC [][app_eq_appstar]);
+                                  (N = LAST args)
+Proof
+  SRW_TAC [][app_eq_appstar]
+QED
 
 val take_lemma = prove(
   ``∀l n. 0 < n ∧ n ≤ LENGTH l ⇒ TAKE n l ≠ []``,
@@ -68,9 +68,8 @@ val take_lemma = prove(
 
 val _ = augment_srw_ss[rewrites[TAKE_def, DROP_def]];
 
-val appstar_eq_appstar = store_thm(
-  "appstar_eq_appstar",
-  ``∀a₁ f₁ f₂ a₂.
+Theorem appstar_eq_appstar:
+    ∀a₁ f₁ f₂ a₂.
        (f₁ ·· a₁ = f₂ ·· a₂) ⇔
          (a₁ = a₂) ∧ (f₁ = f₂) ∨
          (LENGTH a₁ < LENGTH a₂ ∧
@@ -78,7 +77,8 @@ val appstar_eq_appstar = store_thm(
           (a₁ = DROP (LENGTH a₂ - LENGTH a₁) a₂)) ∨
          (LENGTH a₂ < LENGTH a₁ ∧
           (f₂ = f₁ ·· TAKE (LENGTH a₁ - LENGTH a₂) a₁) ∧
-          (a₂ = DROP (LENGTH a₁ - LENGTH a₂) a₁))``,
+          (a₂ = DROP (LENGTH a₁ - LENGTH a₂) a₁))
+Proof
   Induct THEN SRW_TAC [][] THENL [
     Cases_on `a₂` THEN SRW_TAC [][rich_listTheory.BUTFIRSTN_LENGTH_NIL],
     Cases_on `a₂` THEN SRW_TAC [][] THEN
@@ -132,7 +132,8 @@ val appstar_eq_appstar = store_thm(
         FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
       ]
     ]
-  ]);
+  ]
+QED
 
 Theorem varappstar_11[simp]:
   (VAR v₁ ·· a₁ = VAR v₂ ·· a₂) ⇔ (v₁ = v₂) ∧ (a₁ = a₂)
@@ -480,5 +481,4 @@ Proof
   SRW_TAC [ARITH_ss][FUNPOW_SUC, LEFT_ADD_DISTRIB, MULT_CLAUSES]
 QED
 
-val _ = export_theory ()
 val _ = html_theory "appFOLDL";

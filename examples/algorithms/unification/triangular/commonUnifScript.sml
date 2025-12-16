@@ -1,12 +1,13 @@
-open HolKernel boolLib bossLib stringTheory arithmeticTheory pred_setTheory
-     finite_mapTheory prim_recTheory
-val _ = new_theory "commonUnif";
+Theory commonUnif
+Ancestors
+  string arithmetic pred_set finite_map prim_rec
 
-val _ = Hol_datatype `
+Datatype:
   const = Null
-        | Bool of bool
-        | Num of num
-        | String of string`;
+        | Bool bool
+        | Num num
+        | String string
+End
 
 Theorem extension_chain:
   !subst source z.
@@ -50,5 +51,3 @@ Q.EXISTS_TAC `n` THEN
    by METIS_TAC [CARD_PSUBSET,FDOM_FINITE]
 THEN DECIDE_TAC
 QED
-
-val _ = export_theory ();

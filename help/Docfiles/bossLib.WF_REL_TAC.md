@@ -1,0 +1,370 @@
+## `WF_REL_TAC`
+
+``` hol4
+bossLib.WF_REL_TAC : term quotation -> tactic
+```
+
+------------------------------------------------------------------------
+
+Start termination proof.
+
+`WF_REL_TAC` builds a tactic that starts a termination proof. An
+invocation `WF_REL_TAC q`, where `q` should parse into a term that
+denotes a well-founded relation, builds a tactic `tac` that is intended
+to be applied to a goal arising from an application of `tgoal` or
+`tprove`. Such a goal has the form
+
+``` hol4
+   ?R. WF R /\ ...
+```
+
+The tactic `tac` will instantiate `R` with the relation denoted by `q`
+and will attempt various simplifications of the goal. For example, it
+will try to automatically prove the well-foundedness of the relation
+denoted by `q`, and will also attempt to simplify the goal using some
+basic facts about well-founded relations. Often this can result in a
+much simpler goal.
+
+### Failure
+
+`WF_REL_TAC q` fails if `q` does not parse into a term whose type is an
+instance of `'a -> 'a -> bool`.
+
+### Example
+
+Suppose that a version of Quicksort had been defined as follows:
+
+``` hol4
+   val qsort_defn =
+        Hol_defn "qsort"
+           `(qsort ___ [] = []) /\
+            (qsort ord (x::rst) =
+                APPEND (qsort ord (FILTER ($~ o ord x) rst))
+                  (x :: qsort ord (FILTER (ord x) rst)))`;
+```
+
+Then one can start a termination proof as follows: set up a goalstack
+with `tgoal` and then apply `WF_REL_TAC` with a quotation denoting a
+suitable well-founded relation.
+
+``` hol4
+   - tgoal qsort_defn;
+   > val it =
+       Proof manager status: 1 proof.
+       1. Incomplete:
+          Initial goal:
+           ?R. WF R /\
+            (!rst x ord. R (ord,FILTER ($~ o ord x) rst) (ord,x::rst)) /\
+             !rst x ord. R (ord,FILTER (ord x) rst) (ord,x::rst)
+
+   - e (WF_REL_TAC `measure (LENGTH o SND)`);
+
+   OK..
+   2 subgoals:
+   > val it =
+      !rst x ord. LENGTH (FILTER (ord x) rst) < LENGTH (x::rst)
+
+      !rst x ord. LENGTH (FILTER (\x'. ~ord x x') rst) < LENGTH (x::rst)
+```
+
+Execution of `WF_REL_TAC` has automatically proved the well-foundedness
+of
+
+``` hol4
+   measure (LENGTH o SND)
+```
+
+and the remainder of the goal has been simplified into a pair of easy
+goals.
+
+### Comments
+
+There are two problems to deal with when trying to prove termination.
+First, one has to understand, intuitively and then mathematically, why
+the function under consideration terminates. Second, one must be able to
+phrase this in HOL. In the following, we shall give a few examples of
+how this is done.
+
+There are a number of basic and advanced means of specifying
+well-founded relations. The most common starting point for dealing with
+termination problems for recursive functions is to find some function,
+known as a 'measure' under which the arguments of a function call are
+larger than the arguments to any recursive calls that result.
+
+For a very simple starter example, consider the following definition of
+a function that computes the greatest common divisor of two numbers:
+
+``` hol4
+   - val gcd_defn = Hol_defn "gcd"
+        `(gcd (0,n) = n) /\
+         (gcd (m,n) = gcd (n MOD m, m))`;
+
+   - Defn.tgoal gcd_defn;
+
+   > val it =
+       Proof manager status: 1 proof.
+       1. Incomplete:
+            Initial goal:
+            ?R. WF R /\ !v2 n. R (n MOD SUC v2,SUC v2) (SUC v2,n)
+```
+
+The recursion happens in the first argument, and the recursive call in
+that position is a smaller number. The way to phrase the termination of
+`gcd` in HOL is to use a 'measure' function to map from the domain of
+`gcd`---a pair of numbers---to a number. The definition of `measure` is
+equivalent to
+
+``` hol4
+   measure f x y = (f x < f y).
+```
+
+(The actual definition of `measure` in `prim_recTheory` is more
+primitive.) Now we must pick out the argument position to measure and
+invoke `WF_REL_TAC`:
+
+``` hol4
+   - e (WF_REL_TAC `measure FST`);
+   OK..
+
+   1 subgoal:
+   > val it =
+    !v2 n. n MOD SUC v2 < SUC v2
+```
+
+This goal is easy to prove with a few simple arithmetic facts:
+
+``` hol4
+   - e (PROVE_TAC [arithmeticTheory.DIVISION, prim_recTheory.LESS_0]);
+   OK..
+
+   Goal proved. ...
+```
+
+Sometimes one needs a measure function that is itself recursive. For
+example, consider a type of binary trees and a function that
+'unbalances' trees. The algorithm works by rotating the tree until it
+gets a `Leaf` in the left branch, then it recurses into the right
+branch. At the end of execution the tree has been linearized.
+
+``` hol4
+   - Hol_datatype
+      `btree = Leaf
+             | Brh of btree => btree`;
+
+   - val Unbal_defn =
+      Hol_defn "Unbal"
+      `(Unbal Leaf = Leaf)
+   /\  (Unbal (Brh Leaf bt) = Brh Leaf (Unbal bt))
+   /\  (Unbal (Brh (Brh bt1 bt2) bt) = Unbal (Brh bt1 (Brh bt2 bt)))`;
+
+   - Defn.tgoal Unbal_defn;
+
+   > val it =
+       Proof manager status: 1 proof.
+       1. Incomplete:
+          Initial goal:
+           ?R. WF R /\
+               (!bt. R bt (Brh Leaf bt)) /\
+               !bt bt2 bt1. R (Brh bt1 (Brh bt2 bt)) (Brh (Brh bt1 bt2) bt)
+```
+
+Since the size of the tree is unchanged in the last clause in the
+definition of `Unbal`, a simple size measure will not work. Instead, we
+can assign weights to nodes in the tree such that the recursive calls of
+`Unbal` decrease the total weight in every case. One such assignment is
+
+``` hol4
+   Weight (Leaf) = 0
+   Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1
+```
+
+It is easiest to use `Define` to define `Weight`, but if one is worried
+about "polluting" the signature, one can also use `prove_rec_fn_exists`
+from the `Prim_rec` structure:
+
+``` hol4
+   val Weight =
+     Prim_rec.prove_rec_fn_exists (TypeBase.axiom_of ("", "btree"))
+      (Term`(Weight (Leaf) = 0) /\
+            (Weight (Brh x y) = (2 * Weight x) + (Weight y) + 1)`);
+
+   > val Weight =
+      |- ?Weight.
+            (Weight Leaf = 0) /\
+            !x y. Weight (Brh x y) = 2 * Weight x + Weight y + 1 : thm
+
+   - e (STRIP_ASSUME_TAC Weight);
+   OK..
+
+   1 subgoal:
+   > val it =
+       ?R.
+         WF R /\ (!bt. R bt (Brh Leaf bt)) /\
+         !bt bt2 bt1. R (Brh bt1 (Brh bt2 bt)) (Brh (Brh bt1 bt2) bt)
+       ------------------------------------
+         0.  Weight Leaf = 0
+         1.  !x y. Weight (Brh x y) = 2 * Weight x + Weight y + 1
+```
+
+Now we can invoke `WF_REL_TAC`:
+
+``` hol4
+   e (WF_REL_TAC `measure Weight`);
+   OK..
+
+   2 subgoals:
+   > val it =
+    !bt bt2 bt1.
+      Weight (Brh bt1 (Brh bt2 bt)) < Weight (Brh (Brh bt1 bt2) bt)
+    ------------------------------------
+      0.  Weight Leaf = 0
+      1.  !x y. Weight (Brh x y) = 2 * Weight x + Weight y + 1
+
+    !bt. Weight bt < Weight (Brh Leaf bt)
+    ------------------------------------
+      0.  Weight Leaf = 0
+      1.  !x y. Weight (Brh x y) = 2 * Weight x + Weight y + 1
+```
+
+Both of these subgoals are quite easy to prove.
+
+The technique of 'weighting' nodes in a tree in order to prove
+termination also goes by the name of 'polynomial interpretation'. It
+must be admitted that finding the correct weighting for a termination
+proof is more an art than a science. Typically, one makes a guess and
+then tries the termination proof to see if it works.
+
+Occasionally, there's a combination of factors that complicate the
+termination argument. For example, the following specification describes
+a naive pattern matching algorithm on strings (represented as lists
+here). The function takes four arguments: the first is the remainder of
+the pattern being matched. The second is the remainder of the string
+being searched. The third argument holds the original pattern to be
+matched. The fourth argument is the string being searched. If the
+pattern (first argument) becomes exhausted, then a match has been found
+and the function returns `T`. Otherwise, if the string being searched
+becomes exhausted, the function returns `F`.
+
+``` hol4
+   val match0_defn =
+     Hol_defn "match0"
+          `(match0 [] __ __ __ = T)
+      /\   (match0 __ [] __ __ = F)
+      /\   (match0 (p::pp) (s::ss) p0 rs =
+             if p=s then match0 pp ss p0 rs else
+             if NULL rs then F
+                else match0 p0 (TL rs) p0 (TL rs))`;
+
+   - val match = Define `match pat str = match0 pat str pat str`;
+```
+
+The remaining case is when there's more searching to do; the function
+checks if the head of the pattern is the same as the head of the string
+being searched. If yes, then we recursively search, using the tail of
+the pattern and the tail of the string being searched. If no, that means
+that we have failed to match the pattern, so we should move one
+character ahead in the string being searched and try again. If the
+string being searched is empty, however, then we return `F`. The second
+and third arguments both represent the string being searched. The second
+argument is a kind of 'local' version of the string being searched; we
+recurse into it as long as there are matches with the pattern. However,
+if the search eventually fails, then the fourth argument, which
+'remembers' where the search started from, is used to restart the
+search.
+
+So much for the behaviour of the function. Why does it terminate? There
+are two recursive calls. The first call reduces the size of the first
+and second arguments, and leaves the other arguments unchanged. The
+second call can increase the size of the first and second arguments, but
+reduces the size of the fourth.
+
+This is a classic situation in which to use a lexicographic ordering:
+some arguments to the function are reduced in some recursive calls, and
+some others are reduced in other recursive calls. Recall that `LEX` is
+an infix operator, defined in `pairTheory` as follows:
+
+``` hol4
+   LEX R1 R2 = \(x,y) (p,q). R1 x p \/ ((x=p) /\ R2 y q)
+```
+
+In the second recursive call, the length of `rs` is reduced, and in the
+first it stays the same. This motivates having the length of the fourth
+argument be the first component of the lexicographic combination, and
+the length of the second argument as the second component.
+
+What we need now is to formalize this. We want to map from the
+four-tuple of arguments into a lexicographic combination of relations.
+This is enabled by `inv_image` from `relationTheory`:
+
+``` hol4
+   inv_image R f = \x y. R (f x) (f y)
+```
+
+The actual relation maps from the four-tuple of arguments into a pair of
+numbers `(m,n)`, where `m` is the length of the fourth argument, and `n`
+is the length of the second argument. These lengths are then compared
+lexicographically with respect to less-than (`<`).
+
+``` hol4
+   - Defn.tgoal match0_defn;
+
+   - e (WF_REL_TAC `inv_image ($< LEX $<)
+                     (\(w,x,y,z). (LENGTH z, LENGTH x))`);
+
+   OK..
+   2 subgoals:
+   > val it =
+    !rs ss s p.
+      (p=s) ==> LENGTH rs < LENGTH rs \/ LENGTH ss < LENGTH (s::ss)
+
+
+    !ss rs s p.
+      ~(p = s) /\ ~NULL rs ==>
+      LENGTH (TL rs) < LENGTH rs \/
+      (LENGTH (TL rs) = LENGTH rs) /\ LENGTH (TL rs) < LENGTH (s::ss)
+```
+
+The first subgoal needs a case-split on `rs` before it is proved by
+rewriting, and the seconds is also easy to prove by rewriting.
+
+As a final example, one occasionally needs to recurse over non-concrete
+data, such as finite sets or multisets. We can define a 'fold' function
+(of questionable utility) for finite sets as follows:
+
+``` hol4
+   load "pred_setTheory"; open pred_setTheory;
+
+   val FOLD_SET_defn =
+     Defn.Hol_defn "FOLD_SET"
+     `FOLD_SET (s:'a->bool) (b:'b) =
+        if FINITE s then
+           if s={} then b
+           else FOLD_SET (REST s) (f (CHOICE s) b)
+        else ARB`;
+```
+
+Typically, such functions terminate because the cardinality of the set
+(or multiset) is reduced in the recursive call, and this is another
+application of `measure`:
+
+``` hol4
+   val (FOLD_SET_0, FOLD_SET_IND) =
+    Defn.tprove (FOLD_SET_defn,
+      WF_REL_TAC `measure (CARD o FST)`
+       THEN PROVE_TAC [CARD_PSUBSET, REST_PSUBSET]);
+```
+
+The desired recursion equation
+
+``` hol4
+   |- FINITE s ==> (FOLD_SET f s b =
+                      if s = {} then b
+                      else FOLD_SET f (REST s) (f (CHOICE s) b))
+```
+
+is easy to obtain from `FOLD_SET_0`.
+
+### See also
+
+[`Defn.tgoal`](#Defn.tgoal), [`Defn.tprove`](#Defn.tprove),
+[`bossLib.Hol_defn`](#bossLib.Hol_defn)

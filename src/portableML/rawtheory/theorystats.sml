@@ -63,7 +63,7 @@ fun readThy p (g,links) =
       val hash = HFS_NameMunge.toFSfn false getHash p
       val key = ({thy=name, hash=hash},dir)
     in
-      SOME (g |> TheoryGraph.new_node(key, {exports = exports, parents = parents}),
+      SOME (g |> TheoryGraph.new_node(key, {exports=exports, parents=parents}),
             (key, parents)::links)
     end handle Fail s => (warn s; NONE)
              | e => die ("readThy \"" ^ String.toString p ^ "\": " ^
@@ -87,18 +87,20 @@ fun recurse_toDirs action A worklist =
 fun find_theory_action dir A =
     let
       open OS.FileSys
-      val objsdirname = dir ++ ".holobjs"
+      val objsdirname = dir ++ ".hol/objs"
     in
       if access (objsdirname, [A_READ, A_EXEC]) andalso isDir objsdirname then
-        let val thys = Portable.listDir objsdirname
-                                        |> List.filter (String.isSuffix "Theory.dat")
-                                        |> List.map (fn thy => dir ++ thy)
+        let val thys =
+                Portable.listDir objsdirname
+                                 |> List.filter (String.isSuffix "Theory.dat")
+                                 |> List.map (fn thy => dir ++ thy)
             fun foldthis (thydat,A) =
                 let val f = #file (OS.Path.splitDirFile thydat)
                     val b = #base (OS.Path.splitBaseExt f)
                 in
-                  if access(dir ++ (b ^ ".sig"), [A_READ]) then
-                    if access (dir ++ (String.substring(b, 0, size b - 6) ^ "Script.sml"),
+                  if access(objsdirname ++ (b ^ ".sig"), [A_READ]) then
+                    if access (dir ++ (String.substring(b, 0, size b - 6) ^
+                                       "Script.sml"),
                                [A_READ])
                     then
                       case readThy thydat A of SOME A' => A' | NONE => A

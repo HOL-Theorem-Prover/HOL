@@ -1,17 +1,16 @@
-open HolKernel Parse boolLib bossLib
+Theory ward
+Ancestors
+  divides list
 
-open dividesTheory
-
-val _ = new_theory "ward"
-
-val list_exp_def = Define`
+Definition list_exp_def:
   (list_exp l 0 = []) ∧
   (list_exp l (SUC n) = l ++ list_exp l n)
-`;
+End
 
 
 
-val _ = Hol_datatype `alphabet = a | b | I`
+Datatype: alphabet = a | b | I
+End
 
 val (thm_rules, thm_ind, thm_cases) = Hol_reln`
   thm [I] ∧
@@ -35,12 +34,13 @@ val div3_lemma = prove(
     METIS_TAC [DIVIDES_REFL, DIVIDES_ADD_1]
   ])
 
-val ab_DIV3 = store_thm(
-  "ab_DIV3",
-  ``∀l. thm l ⇒ divides 3 (LENGTH (FILTER ((=) a) l)) ∧
-                divides 3 (LENGTH (FILTER ((=) b) l))``,
+Theorem ab_DIV3:
+    ∀l. thm l ⇒ divides 3 (LENGTH (FILTER ((=) a) l)) ∧
+                divides 3 (LENGTH (FILTER ((=) b) l))
+Proof
   Induct_on `thm` THEN SRW_TAC [][listTheory.FILTER_APPEND_DISTRIB,
-                                  div3_lemma]);
+                                  div3_lemma]
+QED
 
 val (thmrwt_rules, thmrwt_ind, thmrwt_cases) = Hol_reln`
   (∀x y. (x ++ y ≠ []) ⇒ thmrwt (x ++ [I] ++ y) (x ++ y)) ∧
@@ -191,8 +191,6 @@ in
   recurse [] [] app_list
 end
 
-open listTheory
-
 fun solver (asl, t) = let
   val nonnil_asms = map ASSUME (filter is_neg asl)
   fun munge extras p s th =
@@ -294,4 +292,3 @@ val thmrwt_weak_confluent = store_thm(
        match_mp_tac (hd (CONJUNCTS thmrwt_rules)) >> srw_tac [][],
        pop_assum (MP_TAC o AP_TERM ``MEM I``) >> srw_tac [][],
 *)
-val _ = export_theory()

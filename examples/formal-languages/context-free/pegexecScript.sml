@@ -1,12 +1,8 @@
-open HolKernel Parse boolLib bossLib
-
-open boolSimps
-
-open pegTheory locationTheory
-
-open rich_listTheory;
-
-val _ = new_theory "pegexec"
+Theory pegexec
+Ancestors
+  peg location rich_list
+Libs
+  boolSimps
 
 Datatype:
   kont =
@@ -27,17 +23,17 @@ Datatype:
   | failed
 End
 
-val poplist_aux_def = Define`
+Definition poplist_aux_def:
   poplist_aux acc (SOME h::t) = poplist_aux (h::acc) t ∧
   poplist_aux acc (NONE::t) = (acc,t) ∧
   poplist_aux acc [] = (acc,[]) (* should never happen *)
-`;
+End
 
-val poplistval_def = Define`
+Definition poplistval_def:
   poplistval f l = let (values,rest) = poplist_aux [] l
                    in
                      SOME(f values) :: rest
-`;
+End
 
 Datatype:
   evalcase = EV (('atok,'bnt,'cvalue,'err) pegsym)
@@ -165,13 +161,13 @@ End
 Theorem coreloop_result[simp]:
   coreloop G (Result x) = SOME (Result x)
 Proof
-  simp[coreloop_def, Once whileTheory.OWHILE_THM]
+  simp[coreloop_def, Once WhileTheory.OWHILE_THM]
 QED
 
 Theorem coreloop_Looped[simp]:
   coreloop G Looped = NONE
 Proof
-  simp[coreloop_def, whileTheory.OWHILE_EQ_NONE] >> Induct >>
+  simp[coreloop_def, WhileTheory.OWHILE_EQ_NONE] >> Induct >>
   simp[arithmeticTheory.FUNPOW]
 QED
 
@@ -196,7 +192,7 @@ Proof
 QED
 
 fun inst_thm def (qs,ths) =
-    def |> SIMP_RULE (srw_ss()) [Once whileTheory.OWHILE_THM, coreloop_def]
+    def |> SIMP_RULE (srw_ss()) [Once WhileTheory.OWHILE_THM, coreloop_def]
         |> SPEC_ALL
         |> Q.INST qs
         |> SIMP_RULE (srw_ss()) []
@@ -431,4 +427,3 @@ QED
 Theorem coreloop_total =
   peg_exec_total |> SIMP_RULE (srw_ss()) [peg_exec_def, AllCaseEqs()]
 
-val _ = export_theory()

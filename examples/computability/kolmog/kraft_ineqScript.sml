@@ -1,24 +1,9 @@
 
-open HolKernel Parse boolLib bossLib finite_mapTheory;
-open recursivefnsTheory;
-open prnlistTheory;
-open primrecfnsTheory;
-open listTheory;
-open arithmeticTheory;
-open numpairTheory;
-open pred_setTheory;
-open recfunsTheory;
-open extNatTheory;
-open prtermTheory;
-open pred_setTheory;
-open realTheory;
-open real_sigmaTheory;
-open transcTheory;
-open boolListsTheory;
-local open numposrepTheory in end
-val _ = new_theory "kraft_ineq";
-
-val _ = intLib.deprecate_int()
+Theory kraft_ineq
+Ancestors
+  finite_map recursivefns prnlist primrecfns list arithmetic
+  numpair pred_set recfuns extNat prterm pred_set real real_sigma
+  transc boolLists numposrep[qualified]
 
 val _ = hide "lg" (* transc$lg is now log base 2 *)
 
@@ -344,7 +329,7 @@ Proof
       simp[Abbr‘jd’,RPOW_POS_LT])
 QED
 
-Triviality max_rs_lemma:
+Theorem max_rs_lemma[local]:
   !s. FINITE s ==> s<>{} ==> ?x:real. x IN s /\ !y. y IN s ==> y<=x
 Proof
   Induct_on‘FINITE’ >>rw[] >> Cases_on‘s={}’ >> fs[] >> qexists_tac‘max e x’ >>
@@ -352,7 +337,7 @@ Proof
   >- metis_tac[] >> Cases_on‘y=e’>> fsr[] >> RES_TAC >> fsr[]
 QED
 
-Triviality min_rs_lemma:
+Theorem min_rs_lemma[local]:
   !s. FINITE s ==> s<>{} ==> ?x:real. x IN s /\ !y. y IN s ==> x<=y
 Proof
   Induct_on‘FINITE’ >>rw[] >> Cases_on‘s={}’ >> fs[] >> qexists_tac‘min e x’ >>
@@ -484,9 +469,11 @@ Proof
   (TBL2N_ub |> Q.INST [‘l’|->‘x’] |> assume_tac) >> simp[TBL2N_ub]
 QED
 
-val rpow_len_lb = Q.store_thm("rpow_len_lb",
-‘0<  2 rpow -&LENGTH x’,
-fs[RPOW_POS_LT]);
+Theorem rpow_len_lb:
+ 0<  2 rpow -&LENGTH x
+Proof
+fs[RPOW_POS_LT]
+QED
 
 Theorem TBL2N_lb:
   0 <= &TBL2N x * 2 rpow -&LENGTH x
@@ -2030,5 +2017,3 @@ QED
 
 Theorem kraft_finite_converse =
   kraft_finite_ineq2 |> SIMP_RULE (srw_ss()) [REAL_SUM_FOLDR, GSYM powr_negexp]
-
-val _ = export_theory();

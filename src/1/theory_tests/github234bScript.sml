@@ -1,10 +1,9 @@
-open HolKernel Parse boolLib
+Theory github234b[bare]
+Ancestors
+  github234a
+Libs
+  HolKernel Parse boolLib
 
-open github234aTheory
-
-val _ = new_theory "github234b";
-
-val _ = save_thm("T", TRUTH)
+Theorem T = TRUTH
 
 
-val _ = export_theory();

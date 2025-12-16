@@ -16,6 +16,7 @@ signature Parse = sig
   type grammarDB_info = type_grammar.grammar * term_grammar.grammar
   val grammarDB : {thyname:string} -> grammarDB_info option
   val set_grammar_ancestry : string list -> unit
+  val grammar_ancestry : {thyname:string} -> string list
 
   (* Parsing Types *)
 
@@ -77,6 +78,8 @@ signature Parse = sig
       (hol_type pprinter * term pprinter)
   val print_term_by_grammar :
         (type_grammar.grammar * term_grammar.grammar) -> term -> unit
+  val term_to_string_by_grammar :
+        (type_grammar.grammar * term_grammar.grammar) -> term -> string
   val print_without_macros : term -> unit
 
   val term_grammar : unit -> term_grammar.grammar

@@ -1,0 +1,326 @@
+## `Datatype`
+
+``` hol4
+bossLib.Datatype : hol_type quotation -> unit
+```
+
+------------------------------------------------------------------------
+
+Define a concrete datatype.
+
+Many formalizations require the definition of new types. For example,
+ML-style datatypes are commonly used to model the abstract syntax of
+programming languages and the state-space of elaborate transition
+systems. In HOL, such datatypes (at least, those that are inductive, or,
+alternatively, have a model in an initial algebra) may be specified
+using the invocation `` Datatype `<spec>` ``, where `<spec>` should
+conform to the following grammar:
+
+``` hol4
+   spec    ::= [ <binding> ; ]* <binding>
+
+   binding ::= <ident> = [ <clause> | ]* <clause>
+            |  <ident> = <| [ <ident> : <type> ; ]* <ident> : <type> |>
+
+   clause  ::= <ident> <tyspec>*
+
+   tyspec  ::= ( <type> )
+            |  <atomic-type>
+```
+
+where `<atomic-type>` is a single token denoting a type. For example,
+`num`, `bool` and `'a`.
+
+When a datatype is successfully defined, a number of standard theorems
+are automatically proved about the new type: the constructors of the
+type are proved to be injective and disjoint, induction and case
+analysis theorems are proved, and each type also has a 'size' function
+defined for it. All these theorems are stored in the current theory and
+added to a database accessed via the functions in `TypeBase`.
+
+The notation used to declare datatypes is, unfortunately, not the same
+as that of ML. If anything, the syntax is rather more like Haskell's.
+For example, an ML declaration
+
+``` hol4
+   datatype ('a,'b) btree = Leaf of 'a
+                          | Node of ('a,'b) btree * 'b * ('a,'b) btree
+```
+
+would most likely be declared in HOL as
+
+``` hol4
+   Datatype `btree = Leaf 'a
+                   | Node btree 'b btree`
+```
+
+Note that any type parameters for the new type are not allowed; they are
+inferred from the right hand side of the binding. The type variables in
+the specification become arguments to the new type operator in
+alphabetic order.
+
+When a record type is defined, the parser is adjusted to allow new
+syntax (appropriate for records), and a number of useful simplification
+theorems are also proved. The most useful of the latter are
+automatically stored in the `TypeBase` and can be inspected using the
+`simpls_of` function. For further details on record types, see the
+DESCRIPTION.
+
+### Example
+
+In the following, we shall give an overview of the kinds of types that
+may be defined by `Datatype`.
+
+To start, enumerated types can be defined as in the following example:
+
+``` hol4
+   Datatype `enum = A1  | A2  | A3  | A4  | A5
+                  | A6  | A7  | A8  | A9  | A10
+                  | A11 | A12 | A13 | A14 | A15
+                  | A16 | A17 | A18 | A19 | A20
+                  | A21 | A22 | A23 | A24 | A25
+                  | A26 | A27 | A28 | A29 | A30`
+```
+
+Other non-recursive types may be defined as well:
+
+``` hol4
+   Datatype `foo = N num
+                 | B bool
+                 | Fn ('a -> 'b)
+                 | Pr ('a # 'b`)
+```
+
+Turning to recursive types, we can define a type of binary trees where
+the leaves are numbers.
+
+``` hol4
+   Datatype `tree = Leaf num | Node tree tree`
+```
+
+We have already seen a type of binary trees having polymorphic values at
+internal nodes. This time, we will declare it in "paired" format.
+
+``` hol4
+    Datatype `tree = Leaf 'a
+                   | Node (tree # 'b # tree)`
+```
+
+This specification seems closer to the declaration that one might make
+in ML, but is more difficult to deal with in proof than the curried
+format used above.
+
+The basic syntax of the named lambda calculus is easy to describe:
+
+``` hol4
+    - load "stringTheory";
+    > val it = () : unit
+
+    - Datatype `lambda = Var string
+                       | Const 'a
+                       | Comb lambda lambda
+                       | Abs lambda lambda`
+```
+
+The syntax for 'de Bruijn' terms is roughly similar:
+
+``` hol4
+   Datatype `dB = Var string
+                | Const 'a
+                | Bound num
+                | Comb dB dB
+                | Abs dB`
+```
+
+Arbitrarily branching trees may be defined by allowing a node to hold
+the list of its subtrees. In such a case, leaf nodes do not need to be
+explicitly declared.
+
+``` hol4
+   Datatype `ntree = Node of 'a (ntree list)`
+```
+
+A (tupled) type of 'first order terms' can be declared as follows:
+
+``` hol4
+   Datatype `term = Var string
+                  | Fnapp (string # term list)`
+```
+
+Mutally recursive types may also be defined. The following, extracted by
+Elsa Gunter from the Definition of Standard ML, captures a subset of
+Core ML.
+
+``` hol4
+   Datatype
+    `atexp = var_exp string
+           | let_exp dec exp ;
+
+       exp = aexp    atexp
+           | app_exp exp atexp
+           | fn_exp  match ;
+
+     match = match  rule
+           | matchl rule match ;
+
+      rule = rule pat exp ;
+
+       dec = val_dec   valbind
+           | local_dec dec dec
+           | seq_dec   dec dec ;
+
+   valbind = bind  pat exp
+           | bindl pat exp valbind
+           | rec_bind valbind ;
+
+       pat = wild_pat
+           | var_pat string`
+```
+
+Simple record types may be introduced using the `<| ... |>` notation.
+
+``` hol4
+    Datatype `state = <| Reg1 : num; Reg2 : num; Waiting : bool |>`
+```
+
+The use of record types may be recursive. For example, the following
+declaration could be used to formalize a simple file system.
+
+``` hol4
+   Datatype
+     `file = Text string
+           | Dir directory
+       ;
+      directory = <| owner : string ;
+                     files : (string # file) list |>`
+```
+
+### Failure
+
+Now we address some types that cannot be declared with `Datatype`. In
+some cases they cannot exist in HOL at all; in others, the type can be
+built in the HOL logic, but `Datatype` is not able to make the
+definition.
+
+First, an empty type is not allowed in HOL, so the following attempt is
+doomed to fail.
+
+``` hol4
+   Datatype `foo = A foo`
+```
+
+So called 'nested types', which are occasionally quite useful, cannot at
+present be built with `Datatype`:
+
+``` hol4
+   Datatype `btree = Leaf 'a
+                   | Node (('a # 'a) btree)`
+```
+
+Co-algebraic types may not currently be built with `Datatype`, not even
+by attempting to encode the remainder of the list as a function:
+
+``` hol4
+   Datatype `lazylist = Nil
+                      | Cons ('a # (one -> lazylist))`
+```
+
+Indeed, this specification corresponds to an algebraic type isomorphic
+to "standard" lists, but `Datatype` rejects it because it cannot handle
+recursion to the right of a function arrow. The type of co-algebraic
+lists can be built in HOL: see `llistTheory`.
+
+Finally, for cardinality reasons, HOL does not allow the following
+attempt to model the untyped lambda calculus as a set (note the `->` in
+the clause for the `Abs` constructor):
+
+``` hol4
+    Datatype `lambda = Var string
+                     | Const 'a
+                     | Comb lambda lambda
+                     | Abs (lambda -> lambda)`
+```
+
+Instead, one would have to build a theory of complete partial orders (or
+something similar) with which to model the untyped lambda calculus.
+
+### Comments
+
+The consequences of an invocation of `Datatype` are stored in the
+current theory segment and in `TypeBase`. The principal consequences of
+a datatype definition are the primitive recursion and induction
+theorems. These provide the ability to define simple functions over the
+type, and an induction principle for the type. For a type named `ty`,
+the primitive recursion theorem is stored under `ty_Axiom` and the
+induction theorem is put under `ty_induction`. Other consequences
+include the distinctness of constructors (`ty_distinct`), and the
+injectivity of constructors (`ty_11`). A 'degenerate' version of
+`ty_induction` is also stored under `ty_nchotomy`: it provides for
+reasoning by cases on the construction of elements of `ty`. Finally,
+some special-purpose theorems are stored: `ty_case_cong` gives a
+congruence theorem for "case" statements on elements of `ty`. These case
+statements are introduced by `ty_case_def`. Also, a definition of the
+"size" of the type is added to the current theory, under the name
+`ty_size_def`.
+
+For example, invoking
+
+``` hol4
+   Datatype `tree = Leaf num | Node tree tree`;
+```
+
+results in the definitions
+
+``` hol4
+   tree_case_def =
+     |- (!a f f1. tree_CASE (Leaf a) f f1 = f a) /\
+        !a0 a1 f f1. tree_CASE (Node a0 a1) f f1 = f1 a0 a1
+
+   tree_size_def
+     |- (!a. tree_size (Leaf a) = 1 + a) /\
+         !a0 a1. tree_size (Node a0 a1) = 1 + (tree_size a0 + tree_size a1)
+```
+
+being added to the current theory. The following theorems about the
+datatype are also stored in the current theory.
+
+``` hol4
+   tree_Axiom
+     |- !f0 f1.
+          ?fn. (!a. fn (Leaf a) = f0 a) /\
+               !a0 a1. fn (Node a0 a1) = f1 a0 a1 (fn a0) (fn a1)
+
+   tree_induction
+     |- !P. (!n. P (Leaf n)) /\
+            (!t t0. P t /\ P t0 ==> P (Node t t0))
+            ==>
+            !t. P t
+
+   tree_nchotomy  |- !t. (?n. t = Leaf n) \/ ?t' t0. t = Node t' t0
+
+   tree_11
+     |- (!a a'. (Leaf a = Leaf a') = (a = a')) /\
+         !a0 a1 a0' a1'. (Node a0 a1 = Node a0' a1') = (a0=a0') /\ (a1=a1')
+
+   tree_distinct  |- !a1 a0 a. Leaf a <> Node a0 a1
+
+   tree_case_cong
+     |- !M M' f f1.
+          (M = M') /\
+          (!a. (M' = Leaf a) ==> (f a = f' a)) /\
+          (!a0 a1. (M' = Node a0 a1) ==> (f1 a0 a1 = f1' a0 a1))
+          ==>
+          (tree_CASE M f f1 = tree_CASE M' f' f1')
+```
+
+When a type involving records is defined, many more definitions are made
+and added to the current theory.
+
+A definition of mutually recursives types results in the above theorems
+and definitions being added for each of the defined types.
+
+### See also
+
+[`Definition.new_type_definition`](#Definition.new_type_definition),
+[`TotalDefn.Define`](#TotalDefn.Define),
+[`IndDefLib.Hol_reln`](#IndDefLib.Hol_reln), [`TypeBase`](#TypeBase)

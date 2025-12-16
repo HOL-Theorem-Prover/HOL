@@ -1,10 +1,10 @@
 (*---------------------------------------------------------------------------
  * Pattern matching extensions.
  *---------------------------------------------------------------------------*)
+Theory pattern_matching
+Libs
+  Defn
 
-open HolKernel boolLib Parse Defn bossLib
-
-val _ = new_theory "pattern_matching"
 
 val def = Hol_defn;
 
@@ -127,4 +127,3 @@ val _ = def "h2"
    (h2 (0,0) = 3) /\
    (h2 (x,y) = 4)`;
 
-val _ = export_theory()

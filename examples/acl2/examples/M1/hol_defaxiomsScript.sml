@@ -6,17 +6,6 @@
 (* Some functions are axiomatically defined using acl2AxiomDefine            *)
 (*****************************************************************************)
 
-(*****************************************************************************)
-(* Ignore everything up to "END BOILERPLATE"                                 *)
-(*****************************************************************************)
-
-(*****************************************************************************)
-(* START BOILERPLATE NEEDED FOR COMPILATION                                  *)
-(*****************************************************************************)
-
-(******************************************************************************
-* Load theories
-******************************************************************************)
 (* The commented out stuff below should be loaded in interactive sessions
 quietdec := true;
 map
@@ -29,21 +18,11 @@ Globals.checking_const_names := false;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation: open HOL4 systems modules.
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories (including ratTheory from Jens Brandt).
-******************************************************************************)
-open stringLib complex_rationalTheory gcdTheory sexp sexpTheory;
-
-(*****************************************************************************)
-(* END BOILERPLATE                                                           *)
-(*****************************************************************************)
-
-val _ = new_theory "hol_defaxioms";
+Theory hol_defaxioms
+Ancestors
+  complex_rational gcd sexp
+Libs
+  stringLib sexp
 
 (*
      [oracles: DEFUN ACL2::IFF, DISK_THM] [axioms: ] []
@@ -54,11 +33,11 @@ val iff_def =
  acl2Define "ACL2::IFF"
   `iff p q = itel [(p,andl [q; t]); (q,nil)] t`;
 
-val iff_thm =
- store_thm
-  ("iff_thm",
-   ``iff p q = ite p (ite q t nil) (ite q nil t)``,
-   RW_TAC std_ss [iff_def,ite_def,itel_def,andl_def]);
+Theorem iff_thm:
+     iff p q = ite p (ite q t nil) (ite q nil t)
+Proof
+   RW_TAC std_ss [iff_def,ite_def,itel_def,andl_def]
+QED
 
 (*
      [oracles: DEFUN ACL2::BOOLEANP, DISK_THM] [axioms: ] []
@@ -316,10 +295,8 @@ val (eqlable_listp_def,eqlable_listp_ind) =
    WF_REL_TAC `measure sexp_size`
     THEN ACL2_SIMP_TAC []);
 
-val eqlable_listp =
- store_thm
-  ("eqlable_listp",
-   ``(eqlable_listp (cons s s0) =
+Theorem eqlable_listp:
+     (eqlable_listp (cons s s0) =
        if itel
            [(acl2_numberp s,acl2_numberp s);
             (symbolp s,symbolp s)] (characterp s) = nil
@@ -332,10 +309,12 @@ val eqlable_listp =
      /\
      (eqlable_listp (str st) = nil)
      /\
-     (eqlable_listp (sym st st0) = if sym st st0 = nil then t else nil)``,
+     (eqlable_listp (sym st st0) = if sym st st0 = nil then t else nil)
+Proof
    REPEAT CONJ_TAC
     THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[eqlable_listp_def]))
-    THEN ACL2_SIMP_TAC[]);
+    THEN ACL2_SIMP_TAC[]
+QED
 
 val _ = add_acl2_simps[eqlable_listp];
 
@@ -370,10 +349,8 @@ val (acl2_make_character_list_def,acl2_make_character_list_ind) =
    WF_REL_TAC `measure sexp_size`
     THEN ACL2_SIMP_TAC []);
 
-val acl2_make_character_list =
- store_thm
-  ("acl2_make_character_list",
-   ``(acl2_make_character_list (cons s s0) =
+Theorem acl2_make_character_list:
+     (acl2_make_character_list (cons s s0) =
        if characterp s = nil
         then cons (code_char (nat 0)) (acl2_make_character_list s0)
         else cons s (acl2_make_character_list s0))
@@ -384,10 +361,12 @@ val acl2_make_character_list =
      /\
      (acl2_make_character_list (str st) = nil)
      /\
-     (acl2_make_character_list (sym st st0) = nil)``,
+     (acl2_make_character_list (sym st st0) = nil)
+Proof
    REPEAT CONJ_TAC
     THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[acl2_make_character_list_def]))
-    THEN ACL2_SIMP_TAC[itel_def]);
+    THEN ACL2_SIMP_TAC[itel_def]
+QED
 
 val _ = add_acl2_simps[acl2_make_character_list];
 
@@ -582,11 +561,11 @@ val zp_def =
  acl2Define "ACL2::ZP"
   `zp x = ite (integerp x) (not (less (cpx 0 1 0 1) x)) t`;
 
-val zp =
- store_thm
-  ("zp",
-   ``zp x = ite (integerp x) (not (less (nat 0) x)) t``,
-   RW_TAC std_ss [zp_def,nat_def,int_def]);
+Theorem zp:
+     zp x = ite (integerp x) (not (less (nat 0) x)) t
+Proof
+   RW_TAC std_ss [zp_def,nat_def,int_def]
+QED
 
 (*
      [oracles: DEFUN ACL2::ZIP, DISK_THM] [axioms: ] []
@@ -597,11 +576,11 @@ val zip_def =
  acl2Define "ACL2::ZIP"
   `zip x = ite (integerp x) (equal x (cpx 0 1 0 1)) t`;
 
-val zip =
- store_thm
-  ("zip",
-   ``zip x = ite (integerp x) (common_lisp_equal x (nat 0)) t``,
-   RW_TAC std_ss [common_lisp_equal_def,zip_def,nat_def,int_def]);
+Theorem zip:
+     zip x = ite (integerp x) (common_lisp_equal x (nat 0)) t
+Proof
+   RW_TAC std_ss [common_lisp_equal_def,zip_def,nat_def,int_def]
+QED
 
 (*
      [oracles: DEFUN COMMON-LISP::NTH, DISK_THM] [axioms: ] []
@@ -648,18 +627,19 @@ val fix_def =
  acl2Define "ACL2::FIX"
   `fix x = ite (acl2_numberp x) x (cpx 0 1 0 1)`;
 
-val fix =
- store_thm
-  ("fix",
-   ``fix x = ite (acl2_numberp x) x (nat 0)``,
-   RW_TAC std_ss [fix_def,nat_def,int_def]);
+Theorem fix:
+     fix x = ite (acl2_numberp x) x (nat 0)
+Proof
+   RW_TAC std_ss [fix_def,nat_def,int_def]
+QED
 
 (*
      [oracles: DEFUN ACL2::FORCE] [axioms: ] [] |- force x = x,
 *)
 
-val force_def =
- Define `force(s:sexp) = s`;
+Definition force_def:
+  force(s:sexp) = s
+End
 
 (*
      [oracles: DEFUN ACL2::IMMEDIATE-FORCE-MODEP] [axioms: ] []
@@ -867,10 +847,8 @@ val (character_listp_def,character_listp_ind) =
     THEN Cases
     THEN ACL2_FULL_SIMP_TAC[]);
 
-val character_listp =
- store_thm
-  ("character_listp",
-   ``(character_listp (cons s s0) =
+Theorem character_listp:
+     (character_listp (cons s s0) =
        if characterp s = nil then nil else character_listp s0)
      /\
      (character_listp (num n) = nil)
@@ -879,10 +857,12 @@ val character_listp =
      /\
      (character_listp (str st) = nil)
      /\
-     (character_listp (sym st st0) = if sym st st0 = nil then t else nil)``,
+     (character_listp (sym st st0) = if sym st st0 = nil then t else nil)
+Proof
    REPEAT CONJ_TAC
     THEN CONV_TAC(LHS_CONV(ONCE_REWRITE_CONV[character_listp_def]))
-    THEN ACL2_SIMP_TAC[]);
+    THEN ACL2_SIMP_TAC[]
+QED
 
 val _ = add_acl2_simps[character_listp];
 
@@ -1392,16 +1372,16 @@ val o_first_expt_def =
 (*****************************************************************************)
 (* Tell system that o_first_expt decreases size                              *)
 (*****************************************************************************)
-val sexp_size_o_first_expt =
- store_thm
-  ("sexp_size_o_first_expt",
-   ``!x. ~(consp x = nil) /\ ~(consp(car x) = nil)
+Theorem sexp_size_o_first_expt:
+     !x. ~(consp x = nil) /\ ~(consp(car x) = nil)
          ==>
-         (sexp_size (o_first_expt x) < sexp_size x)``,
+         (sexp_size (o_first_expt x) < sexp_size x)
+Proof
    Cases
     THEN ACL2_SIMP_TAC[sexp_size_def]
     THEN FULL_SIMP_TAC arith_ss [GSYM nil_def]
-    THEN METIS_TAC[sexp_size_car,DECIDE``m:num < n ==> !p. m < n+p``]);
+    THEN METIS_TAC[sexp_size_car,DECIDE``m:num < n ==> !p. m < n+p``]
+QED
 
 val _ = add_acl2_simps [sexp_size_o_first_expt];
 
@@ -1417,16 +1397,16 @@ val o_first_coeff_def =
 (*****************************************************************************)
 (* Tell system that o_first_coeff decreases size                             *)
 (*****************************************************************************)
-val sexp_size_o_first_coeff =
- store_thm
-  ("sexp_size_o_first_coeff",
-   ``!x. ~(consp x = nil) /\ ~(consp(car x) = nil)
+Theorem sexp_size_o_first_coeff:
+     !x. ~(consp x = nil) /\ ~(consp(car x) = nil)
          ==>
-         (sexp_size (o_first_coeff x) < sexp_size x)``,
+         (sexp_size (o_first_coeff x) < sexp_size x)
+Proof
    Cases
     THEN ACL2_SIMP_TAC[sexp_size_def]
     THEN FULL_SIMP_TAC arith_ss [GSYM nil_def]
-    THEN METIS_TAC[sexp_size_cdr,DECIDE``m:num < n ==> !p. m < n+p``]);
+    THEN METIS_TAC[sexp_size_cdr,DECIDE``m:num < n ==> !p. m < n+p``]
+QED
 
 val _ = add_acl2_simps [sexp_size_o_first_coeff];
 
@@ -1441,11 +1421,11 @@ val o_rst_def =
 (*****************************************************************************)
 (* Tell system that o_rest decreases size                                    *)
 (*****************************************************************************)
-val sexp_size_o_rst =
- store_thm
-  ("sexp_size_o_rst",
-   ``!x. ~(consp x = nil) ==> (sexp_size (o_rst x) < sexp_size x)``,
-   ACL2_SIMP_TAC[]);
+Theorem sexp_size_o_rst:
+     !x. ~(consp x = nil) ==> (sexp_size (o_rst x) < sexp_size x)
+Proof
+   ACL2_SIMP_TAC[]
+QED
 
 val _ = add_acl2_simps [sexp_size_o_rst];
 

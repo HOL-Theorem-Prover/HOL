@@ -1,16 +1,13 @@
 
-open HolKernel Parse boolLib bossLib;
-val _ = new_theory "x64_multiword";
+Theory x64_multiword
+Ancestors
+  multiword prog words address arithmetic list address pair
+  set_sep rich_list integer prog_x64_extra
+Libs
+  decompilerLib x64_codegenLib prog_x64Lib x64_compilerLib
+  wordsLib pairSyntax x64_encodeLib
 
 infix \\ val op \\ = op THEN;
-open multiwordTheory;
-
-open progTheory;
-open decompilerLib x64_codegenLib prog_x64Lib x64_compilerLib;
-open wordsTheory wordsLib addressTheory arithmeticTheory listTheory pairSyntax;
-open addressTheory pairTheory set_sepTheory rich_listTheory integerTheory;
-open prog_x64_extraTheory x64_encodeLib
-
 val REV = Tactical.REVERSE;
 
 fun x64_decompile name asm =
@@ -54,23 +51,26 @@ fun x64_decompile_no_status name asm =
 
 *)
 
-val array64_def = Define `
+Definition array64_def:
   (array64 a [] = emp) /\
-  (array64 a (x::xs) = one (a:word64,x:word64) * array64 (a+8w) xs)`;
+  (array64 a (x::xs) = one (a:word64,x:word64) * array64 (a+8w) xs)
+End
 
-val bignum_mem_def = Define `
+Definition bignum_mem_def:
   bignum_mem p dm m xa xs ya ys za zs =
     (xa && 7w = 0w) /\ (ya && 7w = 0w) /\ (za && 7w = 0w) /\
     if xa = ya then
       (xs = ys) /\ (array64 xa xs * array64 za zs * p) (fun2set (m,dm))
     else
-      (array64 xa xs * array64 ya ys * array64 za zs * p) (fun2set (m,dm))`
+      (array64 xa xs * array64 ya ys * array64 za zs * p) (fun2set (m,dm))
+End
 
-val zBIGNUMS_def = Define `
+Definition zBIGNUMS_def:
   zBIGNUMS (xa,xs,ya,ys,za,zs,p) =
     SEP_EXISTS dm m.
       zMEMORY64 dm m * zR 13w xa * zR 14w ya * zR 15w za *
-      cond (bignum_mem p dm m xa xs ya ys za zs)`;
+      cond (bignum_mem p dm m xa xs ya ys za zs)
+End
 
 (* read xs, ys, zs *)
 
@@ -383,8 +383,9 @@ val (res,x64_compare_def,x64_compare_pre_def) = x64_compile `
       let (r10,xs,ys) = x64_cmp (r10,xs,ys) in
         (r10,xs,ys)`
 
-val x64_header_def = Define `
-  x64_header (s,xs:word64 list) = n2w (LENGTH xs * 2) + if s then 1w else 0w:word64`;
+Definition x64_header_def:
+  x64_header (s,xs:word64 list) = n2w (LENGTH xs * 2) + if s then 1w else 0w:word64
+End
 
 val (x64_icompare_res,x64_icompare_def,x64_icompare_pre_def) = x64_compile `
   x64_icompare (r10:word64,r11,xs:word64 list,ys:word64 list) =
@@ -402,10 +403,11 @@ val (x64_icompare_res,x64_icompare_def,x64_icompare_pre_def) = x64_compile `
           if r10 = 0w then (r10,xs,ys) else
             let r10 = r10 ?? 3w in (r10,xs,ys)`
 
-val cmp2w_def = Define `
+Definition cmp2w_def:
   (cmp2w NONE = 0w:word64) /\
   (cmp2w (SOME T) = 1w) /\
-  (cmp2w (SOME F) = 2w)`;
+  (cmp2w (SOME F) = 2w)
+End
 
 val x64_cmp_thm = prove(
   ``!xs ys xs1 ys1.
@@ -2580,9 +2582,11 @@ val (res,x64_div_def,x64_div_pre_def) = x64_compile `
           let r0 = r9 in
             (r0,r3,r6,xs,ys,zs,ss)`
 
-val mw_fix_SNOC = store_thm("mw_fix_SNOC",
- ``mw_fix (SNOC 0w xs) = mw_fix xs``,
-  SIMP_TAC std_ss [Once mw_fix_def,FRONT_SNOC,LAST_SNOC] \\ SRW_TAC [] []);
+Theorem mw_fix_SNOC:
+   mw_fix (SNOC 0w xs) = mw_fix xs
+Proof
+  SIMP_TAC std_ss [Once mw_fix_def,FRONT_SNOC,LAST_SNOC] \\ SRW_TAC [] []
+QED
 
 val mw_fix_REPLICATE = prove(
   ``!n. mw_fix (xs ++ REPLICATE n 0w) = mw_fix xs``,
@@ -3017,9 +3021,10 @@ val b2w_EQ_0w = prove(
   ``!b. (b2w b = 0w:word64) = ~b``,
   Cases \\ EVAL_TAC);
 
-val mwi_divmod_alt_def = Define `
+Definition mwi_divmod_alt_def:
   mwi_divmod_alt w s_xs t_ys =
-    if w = 0w then mwi_div s_xs t_ys else mwi_mod s_xs t_ys`;
+    if w = 0w then mwi_div s_xs t_ys else mwi_mod s_xs t_ys
+End
 
 val x64_idiv_thm = prove(
   ``LENGTH xs + LENGTH ys <= LENGTH zs /\ LENGTH zs < dimword (:63) /\
@@ -3246,7 +3251,7 @@ val x64_int_to_dec_thm = prove(
 
 (* top-level entry point *)
 
-val int_op_rep_def = Define `
+Definition int_op_rep_def:
   (int_op_rep Add = 0w) /\
   (int_op_rep Sub = 1w) /\
   (int_op_rep Lt  = 2w) /\
@@ -3254,7 +3259,8 @@ val int_op_rep_def = Define `
   (int_op_rep Mul = 4w) /\
   (int_op_rep Div = 5w) /\
   (int_op_rep Mod = 6w) /\
-  (int_op_rep Dec = 7w:'a word)`;
+  (int_op_rep Dec = 7w:'a word)
+End
 
 val (res,x64_isub_flip_def,x64_isub_flip_pre_def) = x64_compile `
   x64_isub_flip (r1:word64,r3:word64) =
@@ -3375,8 +3381,8 @@ val x64_header_XOR_1 = prove(
   Cases_on `s` \\ SIMP_TAC std_ss [x64_header_def,GSYM word_mul_n2w]
   \\ blastLib.BBLAST_TAC);
 
-val x64_iop_thm = store_thm("x64_iop_thm",
-  ``((x64_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
+Theorem x64_iop_thm:
+    ((x64_header (s,xs) = 0x0w) <=> (xs = [])) /\ mw_ok xs /\
     ((x64_header (t,ys) = 0x0w) <=> (ys = [])) /\ mw_ok ys /\
     LENGTH xs + LENGTH ys < LENGTH zs /\ LENGTH zs < dimword (:63) /\
     (((iop = Div) \/ (iop = Mod)) ==> ys <> []) ==>
@@ -3389,7 +3395,8 @@ val x64_iop_thm = store_thm("x64_iop_thm",
         SND (mwi_op iop (s,xs) (t,ys)) ++ zs1,xa,ya,
         if iop = Dec then MAP (n2w o ORD) (int_to_str (mw2i (s,xs))) ++ ss
         else ss)) /\
-      (LENGTH (SND (mwi_op iop (s,xs) (t,ys)) ++ zs1) = LENGTH zs)``,
+      (LENGTH (SND (mwi_op iop (s,xs) (t,ys)) ++ zs1) = LENGTH zs)
+Proof
   Cases_on `iop` \\ SIMP_TAC std_ss [int_op_rep_def] \\ REPEAT STRIP_TAC
   \\ `LENGTH xs < dimword (:63) /\ LENGTH ys < dimword (:63)` by DECIDE_TAC
   \\ `LENGTH xs + LENGTH ys <= LENGTH zs` by DECIDE_TAC
@@ -3432,6 +3439,6 @@ val x64_iop_thm = store_thm("x64_iop_thm",
   \\ FULL_SIMP_TAC std_ss [] \\ STRIP_TAC
   \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC `ss`)
   \\ FULL_SIMP_TAC std_ss []
-  \\ EVAL_TAC);
+  \\ EVAL_TAC
+QED
 
-val _ = export_theory();

@@ -556,10 +556,10 @@ fn qb => let
 end
 
 fun user_split_ident keywords = let
-  val kwd_is = map (fn s => (s, UTF8.explodei s)) keywords
-  fun test (s, is) = mixed is orelse cpts_have_nonagg_char is
-  val mixedkws = List.filter test kwd_is
-  val mixedset = UTF8Set.addList(UTF8Set.empty, map #1 mixedkws)
+  fun test s = let val is = UTF8.explodei s
+               in mixed is orelse cpts_have_nonagg_char is end
+  val mixedkws = List.filter test keywords
+  val mixedset = UTF8Set.addList(UTF8Set.empty, mixedkws)
   val split = split_ident mixedset (!base_tokens.allow_octal_input)
 in
   fn s => let

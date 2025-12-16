@@ -1,0 +1,121 @@
+Theory for_nd
+Ancestors
+  pred_set option string llist integer
+
+(*
+
+This file defines a FOR language that's very similar to the language
+used by Arthur Charguéraud in his ESOP'13 paper:
+
+  Pretty-Big-Step Semantics
+  http://www.chargueraud.org/research/2012/pretty/
+
+In this non-deterministic (nd) version of Charguéraud's FOR language,
+we add basic I/O and non-deterministic evaluation order.
+
+A simpler version of this language can be found in forScript.sml.
+
+*)
+
+val _ = temp_tight_equality ();
+val ect = BasicProvers.EVERY_CASE_TAC;
+
+
+(* === Syntax === *)
+
+(* Expressions:
+   - Evaluation order of Add is unspecified, but one subexpression
+     must be completely evaluated before the other.
+   - Getchar returns -1 to signal the end of file. *)
+
+Datatype:
+e = Var string
+  | Num int
+  | Add e e
+  | Assign string e
+  | Getchar
+  | Putchar e
+End
+
+(* Statements: *)
+Datatype:
+t =
+  | Dec string t
+  | Exp e
+  | Break
+  | Seq t t
+  | If e t t
+  | For e e t
+End
+
+
+(* === Types used in semantics (given in for_nd_semScript.sml) === *)
+
+(* What is observable about program behaviour. A program can terminate
+   after doing a finite amount of I/O; it can diverge doing a
+   potentially infinite amount of IO (llist is the lazy list type
+   constructor of lists that can be either finite or infinite); or it
+   can crash. We don't bother with the pre-crash IO because well-typed
+   programs won't crash. *)
+
+Datatype:
+  io_tag = Itag int | Otag int
+End
+
+Datatype:
+  observation = Terminate ((io_tag + bool) list) | Diverge ((io_tag + bool) llist) | Crash
+End
+
+Definition getchar_def:
+getchar stream =
+  case LTL stream of
+     | NONE => (-1, stream)
+     | SOME rest =>
+         let v = &(ORD (THE (LHD stream))) in
+           (v, rest)
+End
+
+
+(* === A simple type system === *)
+
+(* This type system checks for Break statements and variable accesses. *)
+Definition type_e_def:
+(type_e s (Var x) ⇔ x ∈ s) ∧
+(type_e s (Num num) ⇔ T) ∧
+(type_e s (Add e1 e2) ⇔ type_e s e1 ∧ type_e s e2) ∧
+(type_e s (Assign x e) ⇔ x ∈ s ∧ type_e s e) ∧
+(type_e s Getchar ⇔ T) ∧
+(type_e s (Putchar e) ⇔ type_e s e)
+End
+
+Definition type_t_def:
+(type_t in_for s (Exp e) ⇔ type_e s e) ∧
+(type_t in_for s (Dec x t) ⇔ type_t in_for (x INSERT s) t) ∧
+(type_t in_for s Break ⇔ in_for) ∧
+(type_t in_for s (Seq t1 t2) ⇔ type_t in_for s t1 ∧ type_t in_for s t2) ∧
+(type_t in_for s (If e t1 t2) ⇔ type_e s e ∧ type_t in_for s t1 ∧ type_t in_for s t2) ∧
+(type_t in_for s (For e1 e2 t) ⇔ type_e s e1 ∧ type_e s e2 ∧ type_t T s t)
+End
+
+Theorem type_weakening_e:
+ !s e s' s1. type_e s e ∧ s ⊆ s1 ⇒ type_e s1 e
+Proof
+ Induct_on `e` >>
+ rw [type_e_def, SUBSET_DEF] >>
+ ect >>
+ fs [] >>
+ rw [EXTENSION] >>
+ metis_tac [SUBSET_DEF, NOT_SOME_NONE, SOME_11]
+QED
+
+Theorem type_weakening_t:
+ !in_for s t s' s1. type_t in_for s t ∧ s ⊆ s1 ⇒ type_t in_for s1 t
+Proof
+ Induct_on `t` >>
+ rw [type_t_def, SUBSET_DEF] >>
+ ect >>
+ fs [] >>
+ rw [EXTENSION] >>
+ metis_tac [SUBSET_DEF, NOT_SOME_NONE, SOME_11, type_weakening_e, INSERT_SUBSET]
+QED
+

@@ -1,11 +1,11 @@
 (*---------------------------------------------------------------------------
      CTL as a concrete datatype, and valuations. From Daryl Stewart.
  ---------------------------------------------------------------------------*)
+Theory ctl
+Ancestors
+  pred_set string
 
-open HolKernel Parse boolLib bossLib
-open pred_setTheory stringTheory
 
-val _ = new_theory "ctl"
 val _ = ParseExtras.temp_loose_equality()
 
 fun mkMySuffix s prec = add_rule
@@ -40,27 +40,28 @@ fun mkMyInfix s prec = mkMyInfixAlias s s prec;
  * and also [2] Model Checking (Clarke, Grumberg & Peled)                    *
  *---------------------------------------------------------------------------*)
 
-val _ = bossLib.Hol_datatype
-    `state_formula
+Datatype:
+     state_formula
           = TRUE
           | FALSE
-          | REG of 'a
-          | NOT of state_formula
-          | SDISJ of state_formula => state_formula
-          | SCONJ of state_formula => state_formula
-          | E of path_formula
-          | A of path_formula;
+          | REG 'a
+          | NOT state_formula
+          | SDISJ state_formula state_formula
+          | SCONJ state_formula state_formula
+          | E path_formula
+          | A path_formula;
 
      path_formula
-          = STATE of state_formula
-          | FAILS of path_formula
-          | PDISJ of path_formula => path_formula
-          | PCONJ of path_formula => path_formula
-          | X of path_formula
-          | FU of path_formula
-          | G of path_formula
-          | U of path_formula => path_formula
-          | R of path_formula => path_formula`;
+          = STATE state_formula
+          | FAILS path_formula
+          | PDISJ path_formula path_formula
+          | PCONJ path_formula path_formula
+          | X path_formula
+          | FU path_formula
+          | G path_formula
+          | U path_formula path_formula
+          | R path_formula path_formula
+End
 
 (*---------------------------------------------------------------------------
     Set-up special parsing for constructors, and inform the system
@@ -86,11 +87,13 @@ val _ = mkMyPrefix "X"     255;
        Term`A ((X (STATE TRUE)) FAILS)`
  ---------------------------------------------------------------------------*)
 
-let val overloading = app o curry overload_on
-in overloading "~"   [boolSyntax.negation, Term`NOT`];
-   overloading "/\\" [boolSyntax.conjunction, Term`PCONJ`, Term`SCONJ`];
-   overloading "\\/" [boolSyntax.disjunction, Term`PDISJ`, Term`SDISJ`]
-end;
+Overload "~" = “NOT”
+
+Overload "/\\" = “PCONJ”
+Overload "/\\" = “SCONJ”
+
+Overload "\\/" = “PDISJ”
+Overload "\\/" = “SDISJ”
 
 (*---------------------------------------------------------------------------*
  * The branching time logic CTL (Computation Tree Logic) [2:p30]
@@ -100,8 +103,8 @@ end;
  * All CTL formulae are of type 'a state_formula
  *---------------------------------------------------------------------------*)
 
-val IS_CTL_def = Define
-      `(IS_CTL (E X STATE f)                 = IS_CTL f)
+Definition IS_CTL_def:
+       (IS_CTL (E X STATE f)                 = IS_CTL f)
   /\   (IS_CTL (E FU STATE f)                = IS_CTL f)
   /\   (IS_CTL (E G STATE f)                 = IS_CTL f)
   /\   (IS_CTL (E ((STATE f1) U (STATE f2))) = IS_CTL f1 /\ IS_CTL f2)
@@ -118,7 +121,8 @@ val IS_CTL_def = Define
   /\   (IS_CTL (f1 \/ f2)                    = IS_CTL f1 /\ IS_CTL f2)
   /\   (IS_CTL (f1 /\ f2)                    = IS_CTL f1 /\ IS_CTL f2)
   /\   (IS_CTL (E _)                         = F)
-  /\   (IS_CTL (A _)                         = F)`;
+  /\   (IS_CTL (A _)                         = F)
+End
 
 (*---------------------------------------------------------------------------*
  * Restrictions to Universally Quantified formulae (ACTL* and ACTL)
@@ -128,8 +132,8 @@ val IS_CTL_def = Define
  * ACTL* formulae may be of type 'a state_formula or 'a path_formula
  *---------------------------------------------------------------------------*)
 
-val ACTLSTAR_FORMULA_def = Define
-      `(ACTLSTAR_STATE  TRUE      = T)
+Definition ACTLSTAR_FORMULA_def:
+       (ACTLSTAR_STATE  TRUE      = T)
   /\   (ACTLSTAR_STATE  FALSE     = T)
   /\   (ACTLSTAR_STATE ~TRUE      = T)
   /\   (ACTLSTAR_STATE ~FALSE     = T)
@@ -148,14 +152,16 @@ val ACTLSTAR_FORMULA_def = Define
   /\   (ACTLSTAR_PATH  (FU g)     = ACTLSTAR_PATH g)
   /\   (ACTLSTAR_PATH  (G g)      = ACTLSTAR_PATH g)
   /\   (ACTLSTAR_PATH  (g1 U g2)  = ACTLSTAR_PATH g1 /\ ACTLSTAR_PATH g2)
-  /\   (ACTLSTAR_PATH  (g1 R g2)  = ACTLSTAR_PATH g1 /\ ACTLSTAR_PATH g2)`;
+  /\   (ACTLSTAR_PATH  (g1 R g2)  = ACTLSTAR_PATH g1 /\ ACTLSTAR_PATH g2)
+End
 
 (*---------------------------------------------------------------------------*
  * ACTL is CTL with restrictions A1 and A2
  * ACTL formulae ore of type 'a state_formula
  *---------------------------------------------------------------------------*)
 
-val IS_ACTL_def = Define `IS_ACTL f = ACTLSTAR_STATE f /\ IS_CTL f`;
+Definition IS_ACTL_def:   IS_ACTL f = ACTLSTAR_STATE f /\ IS_CTL f
+End
 
 
 (*---------------------------------------------------------------------------*
@@ -171,21 +177,23 @@ val IS_ACTL_def = Define `IS_ACTL f = ACTLSTAR_STATE f /\ IS_CTL f`;
  *     >
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype
-  `STRUCTURE = <| states      : 'state -> bool;
+Datatype:
+   STRUCTURE = <| states      : 'state -> bool;
                   states0     : 'state -> bool;
                   atoms       : 'varatom  -> bool;
                   valids      : 'state -> 'varatom -> bool;
                   transitions : 'state # 'state -> bool;
                   fairSets    : ('state -> bool) # ('state -> bool) -> bool
-                |>`;
+                |>
+End
 
 
-val wfSTRUCTURE_def = Define
-`wfSTRUCTURE (M: ('state,'atom) STRUCTURE)
+Definition wfSTRUCTURE_def:
+ wfSTRUCTURE (M: ('state,'atom) STRUCTURE)
  = (M.states0 SUBSET M.states) /\
    (!P Q. (P,Q) IN M.fairSets ==> P SUBSET M.states /\ Q SUBSET M.states) /\
-   (!s. s IN M.states ==> (M.valids s) SUBSET M.atoms)`;
+   (!s. s IN M.states ==> (M.valids s) SUBSET M.atoms)
+End
 
 (*---------------------------------------------------------------------------*
  * Definition 3: of paths PI:
@@ -193,19 +201,22 @@ val wfSTRUCTURE_def = Define
  * PI is infinite sequence of states s0,s1,s2... s.t. !i. R(si, si+1)
  *---------------------------------------------------------------------------*)
 
-val _ = Hol_datatype `Path = PATH of num -> 'state`;
+Datatype: Path = PATH (num -> 'state)
+End
 
 val _ = mkMyInfix "STATE_NO" 140;
 val _ = mkMyInfix "IS_PATH_IN" 140;
 val _ = mkMyInfix "IS_FAIR_PATH_IN" 140;
 val _ = mkMyInfix "FROM" 140;
 
-val STATE_NO_def = Define `PATH(Sn) STATE_NO n = Sn n`;
+Definition STATE_NO_def:   PATH(Sn) STATE_NO n = Sn n
+End
 
-val IS_PATH_IN_def = Define
-    `(PI:'state Path) IS_PATH_IN  (M:('state,'atom)STRUCTURE)
+Definition IS_PATH_IN_def:
+     (PI:'state Path) IS_PATH_IN  (M:('state,'atom)STRUCTURE)
        = (PI STATE_NO 0) IN M.states /\
-         !n. ((PI STATE_NO n), (PI STATE_NO (n+1))) IN M.transitions`;
+         !n. ((PI STATE_NO n), (PI STATE_NO (n+1))) IN M.transitions
+End
 
 
 (*---------------------------------------------------------------------------*
@@ -219,21 +230,24 @@ val IS_PATH_IN_def = Define
  * where * is set intersection
  *---------------------------------------------------------------------------*)
 
-val INF_def = Define `INF PI = {s | !m. ?n. n > m /\ (PI STATE_NO m = s)}`;
+Definition INF_def:   INF PI = {s | !m. ?n. n > m /\ (PI STATE_NO m = s)}
+End
 
-val IS_FAIR_PATH_IN_def = Define
-    `(PI:'state Path) IS_FAIR_PATH_IN  (M:('state,'atom)STRUCTURE)
+Definition IS_FAIR_PATH_IN_def:
+     (PI:'state Path) IS_FAIR_PATH_IN  (M:('state,'atom)STRUCTURE)
       = (PI IS_PATH_IN M) /\
         !P Q. (P,Q) IN M.fairSets
               ==> ~(((INF PI) INTER P) = {})
-              ==> ~(((INF PI) INTER Q) = {})`;
+              ==> ~(((INF PI) INTER Q) = {})
+End
 
 (*---------------------------------------------------------------------------*
  * PISn denotes sn in PI
  * PIn denotes the Path sn,sn+1,sn+2...
  *---------------------------------------------------------------------------*)
 
-val FROM_def = Define `PI FROM n = PATH(\x. PI STATE_NO (n+x))`;
+Definition FROM_def:   PI FROM n = PATH(\x. PI STATE_NO (n+x))
+End
 
 
 (*---------------------------------------------------------------------------*)
@@ -275,5 +289,3 @@ Termination
                                INL (x,y) => state_formula_size (\v.0) y
                              | INR (x,y) => path_formula_size (\v.0) y)`
 End
-
-val _ = export_theory()

@@ -6,23 +6,16 @@
 (*                 2016-2017 University of Bologna, Italy (Chun Tian)         *)
 (*                 2018-2019 Fondazione Bruno Kessler, Italy (Chun Tian)      *)
 (******************************************************************************)
+Theory Example
+Ancestors
+  combin pred_set relation pair sum list arithmetic string CCS
+  StrongEQ StrongLaws WeakEQ WeakLaws ObsCongr ObsCongrLaws
+  Congruence CoarsestCongr Trace Expansion Contraction
+  BisimulationUpto UniqueSolutions Multivariate
+Libs
+  EmitTeX CCSLib CCSSyntax CCSConv StrongEQLib WeakEQLib
+  ObsCongrLib
 
-open HolKernel Parse boolLib bossLib;
-
-open combinTheory pred_setTheory relationTheory pairTheory sumTheory listTheory
-     arithmeticTheory stringTheory EmitTeX;
-
-(* local theories *)
-open CCSLib CCSTheory CCSSyntax CCSConv;
-open StrongEQTheory StrongEQLib StrongLawsTheory;
-open WeakEQTheory WeakEQLib WeakLawsTheory;
-open ObsCongrTheory ObsCongrLib ObsCongrLawsTheory;
-open CongruenceTheory CoarsestCongrTheory;
-open TraceTheory ExpansionTheory ContractionTheory;
-open BisimulationUptoTheory UniqueSolutionsTheory;
-open MultivariateTheory;
-
-val _ = new_theory "Example";
 
 (* For paper generating purposes, some type abbreviations are disabled *)
 val _ = disable_tyabbrev_printing "transition";
@@ -75,13 +68,14 @@ val (coList_rules, coList_coind, coList_cases) = Hol_coreln
    `(!l. (l = []) ==> coList l) /\
     (!l h t. (l = h::t) /\ coList t ==> coList l)`;
 
-val List_imp_coList = store_thm (
-   "List_imp_coList", ``!l. List l ==> coList l``,
+Theorem List_imp_coList:   !l. List l ==> coList l
+Proof
     HO_MATCH_MP_TAC List_ind
- >> RW_TAC bool_ss [coList_rules]);
+ >> RW_TAC bool_ss [coList_rules]
+QED
 
-val coList_imp_List = store_thm (
-   "coList_imp_List", ``!l. coList l ==> List l``,
+Theorem coList_imp_List:   !l. coList l ==> List l
+Proof
     Induct_on `l`
  >| [ RW_TAC bool_ss [List_rules, coList_rules],
       STRIP_TAC
@@ -91,11 +85,13 @@ val coList_imp_List = store_thm (
    >| [ ASM_REWRITE_TAC [],
         SIMP_TAC list_ss []
      >> `t = l` by PROVE_TAC [CONS_11]
-     >> PROVE_TAC [] ] ]);
+     >> PROVE_TAC [] ] ]
+QED
 
-val List_eq_coList = store_thm (
-   "List_eq_coList", ``!l. coList l = List l``,
-    PROVE_TAC [List_imp_coList, coList_imp_List]);
+Theorem List_eq_coList:   !l. coList l = List l
+Proof
+    PROVE_TAC [List_imp_coList, coList_imp_List]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -131,7 +127,6 @@ Proof
  >> REWRITE_TAC [WG2]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "Example";
 
 (* Emit theory books in TeX *)

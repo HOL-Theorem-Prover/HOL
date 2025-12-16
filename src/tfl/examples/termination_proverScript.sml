@@ -1,14 +1,13 @@
 (*===========================================================================*)
 (* Exercise the automatic termination prover                                 *)
 (*===========================================================================*)
+Theory termination_prover
+Ancestors
+  words list arithmetic numpair[qualified] nlist[qualified]
+  bit[qualified] comparison[qualified]
+Libs
+  Defn TotalDefn stringLib[qualified] wordsLib[qualified]
 
-open HolKernel boolLib bossLib listTheory Defn TotalDefn;
-
-open arithmeticTheory;
-
-local open stringLib in end
-
-val _ = new_theory "termination_prover";
 
 (* get a view of what's happening
 val _ = set_trace "Definition.TC extraction" 3;
@@ -25,8 +24,6 @@ End
 Definition n2l_def:
   n2l b n = if n < b \/ b < 2 then [n MOD b] else n MOD b :: n2l b (n DIV b)
 End
-
-local open numpairTheory nlistTheory in end
 
 Definition nlistrec_def:
   nlistrec n f l = if l = 0 then n
@@ -82,8 +79,6 @@ End
 (*---------------------------------------------------------------------------*)
 (* Illustrates need for case splitting on if-then-else in termination prover *)
 (*---------------------------------------------------------------------------*)
-
-local open bitTheory in end
 
 Definition PEEK_def:
   PEEK Empty k = NONE /\
@@ -186,8 +181,6 @@ Definition subst_def:
                @t. t ∈ bindings)
 End
 
-local open comparisonTheory in end
-
 Definition term_cmp_def:
   term_cmp (Var x1) (Var x2) = num_cmp x1 x2 ∧
   term_cmp (Var _) (App _ _) = Less ∧
@@ -258,8 +251,6 @@ End
   Use of higher order constructs means that the definition no longer has to be
   mutually recursive
 *)
-
-local open wordsLib in end
 
 Datatype:
   abi_type
@@ -339,5 +330,3 @@ Definition sh_based_set_def:
   sh_based_set (StructB sbs) b' =
      StructB $ MAP2 sh_based_set sbs (REPLICATE (LENGTH sbs) b')
 End
-
-val _ = export_theory();

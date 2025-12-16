@@ -1,10 +1,9 @@
-open HolKernel Parse bossLib boolLib
-
-open primrecfnsTheory numpairTheory nlistTheory arithmeticTheory
+(* "primitive recursive number lists" *)
+Theory prnlist
+Ancestors
+  primrecfns numpair nlist arithmetic rich_list
 
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
-
-val _ = new_theory "prnlist" (* "primitive recursive number lists" *)
 
 val primrec_ncons = Store_thm(
   "primrec_ncons",
@@ -35,10 +34,11 @@ val primrec_ndrop = Store_thm(
   SRW_TAC [][primrec_rules] THEN
   Induct_on `m` THEN SRW_TAC [][]);
 
-val ndrop_FUNPOW_ntl = store_thm(
-  "ndrop_FUNPOW_ntl",
-  ``∀n ms. ndrop n ms = FUNPOW ntl n ms``,
-  Induct THEN SRW_TAC [][FUNPOW_SUC]);
+Theorem ndrop_FUNPOW_ntl:
+    ∀n ms. ndrop n ms = FUNPOW ntl n ms
+Proof
+  Induct THEN SRW_TAC [][FUNPOW_SUC]
+QED
 
 val primrec_nel = Store_thm(
   "primrec_nel",
@@ -49,8 +49,6 @@ val primrec_nel = Store_thm(
 
 val primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
 
-
-open rich_listTheory
 
 val primrec_napp = Store_thm(
   "primrec_napp",
@@ -125,7 +123,7 @@ Proof
   simp[]
 QED
 
-val WFM_def = Define‘
+Definition WFM_def:
   WFM M = Cn (pr2 nel) [
                 proj 0;
                 Pr1 (ncons (M (K 0) 0) 0)
@@ -138,29 +136,32 @@ val WFM_def = Define‘
                         ]
                       ])
               ]
-’;
+End
 
 
-val restr_def = Define‘restr n r i = if i ≤ n then nel i r else 0’
+Definition restr_def:  restr n r i = if i ≤ n then nel i r else 0
+End
 
-val primrec_WFM = Q.store_thm(
-  "primrec_WFM",
-  ‘primrec (pr2 (λn r. M (restr n r) (n + 1))) 2 ⇒ primrec (WFM M) 1’,
+Theorem primrec_WFM:
+   primrec (pr2 (λn r. M (restr n r) (n + 1))) 2 ⇒ primrec (WFM M) 1
+Proof
   strip_tac >> simp[WFM_def] >> irule primrec_Cn >> simp[primrec_rules] >>
   irule primrec_Pr1 >> irule primrec_Cn >> simp[primrec_rules] >>
   irule primrec_Cn >> simp[primrec_rules, GSYM restr_def] >>
-  asm_simp_tac (bool_ss ++ boolSimps.ETA_ss) []);
+  asm_simp_tac (bool_ss ++ boolSimps.ETA_ss) []
+QED
 
-val primrec_FACT = Q.store_thm(
-  "primrec_FACT",
-  ‘primrec (WFM (λf n. if n = 0 then 1 else n * f(n - 1))) 1’,
+Theorem primrec_FACT:
+   primrec (WFM (λf n. if n = 0 then 1 else n * f(n - 1))) 1
+Proof
   irule primrec_WFM >> simp[restr_def] >> irule primrec_pr2 >> simp[] >>
   qexists_tac ‘Cn (pr2 $*) [Cn succ [proj 0]; pr2 nel]’ >> simp[] >>
-  irule primrec_Cn >> simp[primrec_rules]);
+  irule primrec_Cn >> simp[primrec_rules]
+QED
 
-val WFM_correct = Q.store_thm(
-  "WFM_correct",
-  ‘WFM M [n] = M (λi. if i < n then WFM M [i] else 0) n’,
+Theorem WFM_correct:
+   WFM M [n] = M (λi. if i < n then WFM M [i] else 0) n
+Proof
   simp[SimpLHS, WFM_def] >>
   qho_match_abbrev_tac ‘nel n (prt n) = M (ff n) n’ >>
   ‘prt 0 = nlist_of [M (K 0) 0]’ by simp[Abbr`prt`] >>
@@ -206,6 +207,5 @@ val WFM_correct = Q.store_thm(
     (fn th => CONV_TAC (RAND_CONV (REWRITE_CONV [th]))) >>
   simp_tac (srw_ss()) [FUN_EQ_THM] >> gen_tac >> COND_CASES_TAC >>
   first_assum (fn th => simp_tac (srw_ss() ++ ARITH_ss) [th]) >>
-  simp[WFM_def, nel_correct]);
-
-val _ = export_theory ()
+  simp[WFM_def, nel_correct]
+QED

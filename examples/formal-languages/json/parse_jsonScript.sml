@@ -6,14 +6,13 @@
  * "e" vs. "E" in exponential representation is not kept track of: "E" is always used in serialisation. Also, serialisation never prints an explicit "+" for positive exponents.
  * Leading zeroes in the exponent are not kept track of.
 *)
+Theory parse_json
+Ancestors
+  option list rich_list string ASCIInumbers arithmetic integer
+  rat
+Libs
+  BasicProvers boolSimps markerLib
 
-open HolKernel boolLib Parse bossLib ;
-open BasicProvers boolSimps markerLib optionTheory ;
-open listTheory rich_listTheory ;
-open stringTheory ASCIInumbersTheory arithmeticTheory ;
-open integerTheory ratTheory;
-
-val _ = new_theory "parse_json";
 
 (* JSON numbers are arbitrary-precision numbers in the format s * 10 ^ e,
    where s is a rational number with finite decimal expansion and e is an integer.
@@ -772,4 +771,3 @@ EVAL ``json_to_string $ Object [("a",Array [])]``
 EVAL ``json_to_string $ String "\u0022"``
 *)
 
-val _ = export_theory();

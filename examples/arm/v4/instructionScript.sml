@@ -6,156 +6,172 @@
 (* DATE          : 2006 - 2007                                               *)
 (* ========================================================================= *)
 
-(* interactive use:
-  app load ["wordsTheory", "armTheory"];
-*)
+Theory instruction
+Ancestors
+  words arm
+Libs
+  Q
 
-open HolKernel boolLib Parse bossLib;
-open Q wordsTheory armTheory;
-
-val _ = new_theory "instruction";
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = Hol_datatype`
+Datatype:
   shift =
-    LSL of word4
-  | LSR of word4
-  | ASR of word4
-  | ROR of word4`;
+    LSL word4
+  | LSR word4
+  | ASR word4
+  | ROR word4
+End
 
-val _ = Hol_datatype
-  `addr_mode1 =
-     Dp_immediate of word4=>word8
-   | Dp_shift_immediate of shift=>word5
-   | Dp_shift_register of shift=>word4`;
+Datatype:
+   addr_mode1 =
+     Dp_immediate word4 word8
+   | Dp_shift_immediate shift word5
+   | Dp_shift_register shift word4
+End
 
-val _ = Hol_datatype
-  `addr_mode2 =
-     Dt_immediate of word12
-   | Dt_shift_immediate of shift=>word5`;
+Datatype:
+   addr_mode2 =
+     Dt_immediate word12
+   | Dt_shift_immediate shift word5
+End
 
-val _ = Hol_datatype
-  `addr_mode3 =
-     Dth_immediate of word8
-   | Dth_register of word4`;
+Datatype:
+   addr_mode3 =
+     Dth_immediate word8
+   | Dth_register word4
+End
 
-val _ = Hol_datatype
-  `msr_mode =
-     Msr_immediate of word4=>word8
-   | Msr_register of word4`;
+Datatype:
+   msr_mode =
+     Msr_immediate word4 word8
+   | Msr_register word4
+End
 
-val _ = Hol_datatype
-  `msr_psr = CPSR_c | CPSR_f | CPSR_a | SPSR_c | SPSR_f | SPSR_a`;
+Datatype:
+   msr_psr = CPSR_c | CPSR_f | CPSR_a | SPSR_c | SPSR_f | SPSR_a
+End
 
-val _ = Hol_datatype
-  `transfer_options = <| Pre : bool; Up : bool; Wb : bool |>`;
+Datatype:
+   transfer_options = <| Pre : bool; Up : bool; Wb : bool |>
+End
 
-val _ = Hol_datatype
- `arm_instruction =
-    B of condition=>word24
-  | BL of condition=>word24
-  | SWI of condition
-  | AND of condition=>bool=>word4=>word4=>addr_mode1
-  | EOR of condition=>bool=>word4=>word4=>addr_mode1
-  | SUB of condition=>bool=>word4=>word4=>addr_mode1
-  | RSB of condition=>bool=>word4=>word4=>addr_mode1
-  | ADD of condition=>bool=>word4=>word4=>addr_mode1
-  | ADC of condition=>bool=>word4=>word4=>addr_mode1
-  | SBC of condition=>bool=>word4=>word4=>addr_mode1
-  | RSC of condition=>bool=>word4=>word4=>addr_mode1
-  | TST of condition=>word4=>addr_mode1
-  | TEQ of condition=>word4=>addr_mode1
-  | CMP of condition=>word4=>addr_mode1
-  | CMN of condition=>word4=>addr_mode1
-  | ORR of condition=>bool=>word4=>word4=>addr_mode1
-  | MOV of condition=>bool=>word4=>addr_mode1
-  | BIC of condition=>bool=>word4=>word4=>addr_mode1
-  | MVN of condition=>bool=>word4=>addr_mode1
-  | MUL of condition=>bool=>word4=>word4=>word4
-  | MLA of condition=>bool=>word4=>word4=>word4=>word4
-  | UMULL of condition=>bool=>word4=>word4=>word4=>word4
-  | UMLAL of condition=>bool=>word4=>word4=>word4=>word4
-  | SMULL of condition=>bool=>word4=>word4=>word4=>word4
-  | SMLAL of condition=>bool=>word4=>word4=>word4=>word4
-  | LDRH of condition=>bool=>bool=>transfer_options=>word4=>word4=>addr_mode3
-  | STRH of condition=>transfer_options=>word4=>word4=>addr_mode3
-  | LDR of condition=>bool=>transfer_options=>word4=>word4=>addr_mode2
-  | STR of condition=>bool=>transfer_options=>word4=>word4=>addr_mode2
-  | LDM of condition=>bool=>transfer_options=>word4=>word16
-  | STM of condition=>bool=>transfer_options=>word4=>word16
-  | SWP of condition=>bool=>word4=>word4=>word4
-  | MRS of condition=>bool=>word4
-  | MSR of condition=>msr_psr=>msr_mode
-  | CDP of condition=>word4=>word4=>word4=>word4=>word4=>word3
-  | LDC of condition=>bool=>transfer_options=>word4=>word4=>word4=>word8
-  | STC of condition=>bool=>transfer_options=>word4=>word4=>word4=>word8
-  | MRC of condition=>word4=>word3=>word4=>word4=>word4=>word3
-  | MCR of condition=>word4=>word3=>word4=>word4=>word4=>word3
-  | UND of condition`;
+Datatype:
+  arm_instruction =
+    B condition word24
+  | BL condition word24
+  | SWI condition
+  | AND condition bool word4 word4 addr_mode1
+  | EOR condition bool word4 word4 addr_mode1
+  | SUB condition bool word4 word4 addr_mode1
+  | RSB condition bool word4 word4 addr_mode1
+  | ADD condition bool word4 word4 addr_mode1
+  | ADC condition bool word4 word4 addr_mode1
+  | SBC condition bool word4 word4 addr_mode1
+  | RSC condition bool word4 word4 addr_mode1
+  | TST condition word4 addr_mode1
+  | TEQ condition word4 addr_mode1
+  | CMP condition word4 addr_mode1
+  | CMN condition word4 addr_mode1
+  | ORR condition bool word4 word4 addr_mode1
+  | MOV condition bool word4 addr_mode1
+  | BIC condition bool word4 word4 addr_mode1
+  | MVN condition bool word4 addr_mode1
+  | MUL condition bool word4 word4 word4
+  | MLA condition bool word4 word4 word4 word4
+  | UMULL condition bool word4 word4 word4 word4
+  | UMLAL condition bool word4 word4 word4 word4
+  | SMULL condition bool word4 word4 word4 word4
+  | SMLAL condition bool word4 word4 word4 word4
+  | LDRH condition bool bool transfer_options word4 word4 addr_mode3
+  | STRH condition transfer_options word4 word4 addr_mode3
+  | LDR condition bool transfer_options word4 word4 addr_mode2
+  | STR condition bool transfer_options word4 word4 addr_mode2
+  | LDM condition bool transfer_options word4 word16
+  | STM condition bool transfer_options word4 word16
+  | SWP condition bool word4 word4 word4
+  | MRS condition bool word4
+  | MSR condition msr_psr msr_mode
+  | CDP condition word4 word4 word4 word4 word4 word3
+  | LDC condition bool transfer_options word4 word4 word4 word8
+  | STC condition bool transfer_options word4 word4 word4 word8
+  | MRC condition word4 word3 word4 word4 word4 word3
+  | MCR condition word4 word3 word4 word4 word4 word3
+  | UND condition
+End
 
 (* ------------------------------------------------------------------------- *)
 
-val condition_encode_def = Define`
+Definition condition_encode_def:
   condition_encode cond =
-    (w2w (n2w (condition2num cond):word4 #<< 1) << 28):word32`;
+    (w2w (n2w (condition2num cond):word4 #<< 1) << 28):word32
+End
 
-val shift_encode_def = Define`
+Definition shift_encode_def:
   (shift_encode (LSL Rm) = (w2w Rm):word32) /\
   (shift_encode (LSR Rm) = 0x20w || w2w Rm) /\
   (shift_encode (ASR Rm) = 0x40w || w2w Rm) /\
-  (shift_encode (ROR Rm) = 0x60w || w2w Rm)`;
+  (shift_encode (ROR Rm) = 0x60w || w2w Rm)
+End
 
-val addr_mode1_encode_def = Define`
+Definition addr_mode1_encode_def:
   addr_mode1_encode op2 =
    case op2 of
      Dp_immediate rot imm => (0x2000000w || w2w rot << 8 || w2w imm):word32
    | Dp_shift_immediate shift amount => w2w amount << 7 || shift_encode shift
-   | Dp_shift_register shift Rs => 0x10w || w2w Rs << 8 || shift_encode shift`;
+   | Dp_shift_register shift Rs => 0x10w || w2w Rs << 8 || shift_encode shift
+End
 
-val addr_mode2_encode_def = Define`
+Definition addr_mode2_encode_def:
   addr_mode2_encode op2 =
    case op2 of
      Dt_immediate imm => (w2w imm):word32
    | Dt_shift_immediate shift amount =>
-        0x2000000w || w2w amount << 7 || shift_encode shift`;
+        0x2000000w || w2w amount << 7 || shift_encode shift
+End
 
-val addr_mode3_encode_def = Define`
+Definition addr_mode3_encode_def:
   addr_mode3_encode op2 =
    case op2 of
      Dth_immediate imm => 0x400000w || ((7 >< 4) imm) << 8 || ((3 >< 0) imm)
-   | Dth_register Rm => (w2w Rm):word32`;
+   | Dth_register Rm => (w2w Rm):word32
+End
 
-val msr_mode_encode_def = Define`
+Definition msr_mode_encode_def:
   msr_mode_encode op =
    case op of
      Msr_immediate rot imm => (0x2000000w || w2w rot << 8 || w2w imm):word32
-   | Msr_register Rm => w2w Rm`;
+   | Msr_register Rm => w2w Rm
+End
 
-val msr_psr_encode_def = Define`
+Definition msr_psr_encode_def:
   (msr_psr_encode CPSR_c = 0x10000w:word32) /\
   (msr_psr_encode CPSR_f = 0x80000w) /\
   (msr_psr_encode CPSR_a = 0x90000w) /\
   (msr_psr_encode SPSR_c = 0x410000w) /\
   (msr_psr_encode SPSR_f = 0x480000w) /\
-  (msr_psr_encode SPSR_a = 0x490000w)`;
+  (msr_psr_encode SPSR_a = 0x490000w)
+End
 
-val options_encode_def = Define`
+Definition options_encode_def:
   options_encode x opt =
     word_modify (\i b. (i = 24) /\ opt.Pre \/ (i = 23) /\ opt.Up \/
-                       (i = 22) /\ x \/ (i = 21) /\ opt.Wb) (0w:word32)`;
+                       (i = 22) /\ x \/ (i = 21) /\ opt.Wb) (0w:word32)
+End
 
-val options_encode2_def = Define`
+Definition options_encode2_def:
   options_encode2 h opt =
     word_modify (\i b. (i = 24) /\ opt.Pre \/ (i = 23) /\ opt.Up \/
-                       (i = 21) /\ opt.Wb \/ (i = 5) /\ h) (0w:word32)`;
+                       (i = 21) /\ opt.Wb \/ (i = 5) /\ h) (0w:word32)
+End
 
-val data_proc_encode_def = Define`
+Definition data_proc_encode_def:
   data_proc_encode cond (op:word4) s (Rn:word4) (Rd:word4) Op2 =
     condition_encode cond || w2w op << 21 || (if s then 0x100000w else 0w) ||
-       w2w Rn << 16 || w2w Rd << 12 || addr_mode1_encode Op2`;
+       w2w Rn << 16 || w2w Rd << 12 || addr_mode1_encode Op2
+End
 
-val instruction_encode_def = Define`
+Definition instruction_encode_def:
   instruction_encode i =
     case i of
       B  cond offset24 => condition_encode cond || 0xA000000w || w2w offset24
@@ -241,10 +257,9 @@ val instruction_encode_def = Define`
          condition_encode cond || 0xE000010w || w2w Cop1b << 21 ||
          w2w CRn << 16 || w2w Rd << 12 || w2w CPn << 8 ||
          w2w Cop2 << 5 || w2w CRm
-    | UND cond => condition_encode cond || 0x6000010w`;
+    | UND cond => condition_encode cond || 0x6000010w
+End
 
 val _ = overload_on("enc", ``instruction_encode``);
 
 (* ------------------------------------------------------------------------- *)
-
-val _ = export_theory();

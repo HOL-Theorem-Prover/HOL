@@ -1,61 +1,70 @@
-open HolKernel Parse boolLib bossLib
-open arithmeticTheory whileTheory pairTheory pred_setTheory progTheory;
-
-val _ = new_theory "triple";
+Theory triple
+Ancestors
+  arithmetic While pair pred_set prog
 
 val _ = ParseExtras.temp_loose_equality()
 (* we define a total-correctness machine-code Hoare triple *)
 
-val TRIPLE_def = Define`
+Definition TRIPLE_def:
    TRIPLE (assert,model) pre code post =
      FST post ==> FST pre /\
-     SPEC model (assert (SND pre)) code (assert (SND post))`
+     SPEC model (assert (SND pre)) code (assert (SND post))
+End
 
-val TERM_TAILREC_def = zDefine`
+Definition TERM_TAILREC_def[nocompute]:
    TERM_TAILREC f g (d:'a -> bool # 'b) x =
     let (cond,y) = d (WHILE g f x) in
-      (cond /\ (?n. ~g (FUNPOW f n x)),y)`
+      (cond /\ (?n. ~g (FUNPOW f n x)),y)
+End
 
-val SHORT_TERM_TAILREC_def = Define`
+Definition SHORT_TERM_TAILREC_def:
    SHORT_TERM_TAILREC (f:'a -> 'a + (bool # 'b)) =
-    TERM_TAILREC (OUTL o f) (ISL o f) (OUTR o f)`
+    TERM_TAILREC (OUTL o f) (ISL o f) (OUTR o f)
+End
 
-val case_sum_def = Define`
-   case_sum f1 f2 x = case x of INL y => f1 y | INR y => f2 y`
+Definition case_sum_def:
+   case_sum f1 f2 x = case x of INL y => f1 y | INR y => f2 y
+End
 
 (* theorems about this Hoare triple *)
 
-val TRIPLE_COMPOSE = Q.store_thm("TRIPLE_COMPOSE",
-   `!i p c m q. TRIPLE i p c m /\ TRIPLE i m c q ==> TRIPLE i p c q`,
+Theorem TRIPLE_COMPOSE:
+    !i p c m q. TRIPLE i p c m /\ TRIPLE i m c q ==> TRIPLE i p c q
+Proof
    simp [TRIPLE_def, FORALL_PROD]
    \\ REPEAT strip_tac
    \\ metis_tac [SPEC_COMPOSE, UNION_IDEMPOT]
-   )
+QED
 
-val TRIPLE_EXTEND = Q.store_thm("TRIPLE_EXTEND",
-   `!i p c q c'. TRIPLE i p c q ==> c SUBSET c' ==> TRIPLE i p c' q`,
+Theorem TRIPLE_EXTEND:
+    !i p c q c'. TRIPLE i p c q ==> c SUBSET c' ==> TRIPLE i p c' q
+Proof
    simp [TRIPLE_def, FORALL_PROD]
    \\ REPEAT strip_tac
    \\ metis_tac [SPEC_SUBSET_CODE]
-   )
+QED
 
-val TRIPLE_REFL = Q.store_thm("TRIPLE_REFL",
-   `!i c p. TRIPLE i p c p`,
+Theorem TRIPLE_REFL:
+    !i c p. TRIPLE i p c p
+Proof
    simp [FORALL_PROD, TRIPLE_def, SPEC_REFL]
-   )
+QED
 
-val TRIPLE_COMPOSE_ALT = Q.store_thm("TRIPLE_COMPOSE_ALT",
-   `!i p c m q. TRIPLE i m c q ==> TRIPLE i p c m ==> TRIPLE i p c q`,
+Theorem TRIPLE_COMPOSE_ALT:
+    !i p c m q. TRIPLE i m c q ==> TRIPLE i p c m ==> TRIPLE i p c q
+Proof
    metis_tac [TRIPLE_COMPOSE]
-   )
+QED
 
-val COND_MERGE = Q.store_thm("COND_MERGE",
-   `(x1 ==> f (g x2)) /\ (~x1 ==> f (g y2)) ==> f (g (if x1 then x2 else y2))`,
+Theorem COND_MERGE:
+    (x1 ==> f (g x2)) /\ (~x1 ==> f (g y2)) ==> f (g (if x1 then x2 else y2))
+Proof
    Cases_on `x1` \\ fs []
-   )
+QED
 
-val TERM_TAILREC_THM = Q.store_thm("TERM_TAILREC_THM",
-   `TERM_TAILREC f g d x = if g x then TERM_TAILREC f g d (f x) else d x`,
+Theorem TERM_TAILREC_THM:
+    TERM_TAILREC f g d x = if g x then TERM_TAILREC f g d (f x) else d x
+Proof
    REVERSE (Cases_on `g x`)
    \\ fs [TERM_TAILREC_def, LET_DEF]
    \\ simp [Once WHILE]
@@ -74,7 +83,7 @@ val TERM_TAILREC_THM = Q.store_thm("TERM_TAILREC_THM",
    >- (Cases_on `n` \\ fs [FUNPOW] \\ metis_tac [])
    \\ qexists_tac `SUC n`
    \\ fs [FUNPOW]
-   )
+QED
 
 val () = computeLib.add_persistent_funs ["TERM_TAILREC_THM"]
 
@@ -148,29 +157,31 @@ val case_sum_thm = Q.prove(
    `!x. case_sum pre post x = if ISL x then pre (OUTL x) else post (OUTR x)`,
    Cases \\ SRW_TAC [] [case_sum_def])
 
-val SHORT_TERM_TAILREC = Q.store_thm("SHORT_TERM_TAILREC",
-   `(!x. TRIPLE i (pre x) c (case_sum pre post (f x))) ==>
+Theorem SHORT_TERM_TAILREC:
+    (!x. TRIPLE i (pre x) c (case_sum pre post (f x))) ==>
     (!c x state. ~(FST (post (F,x)))) ==>
-    (!x. TRIPLE i (pre x) c (post (SHORT_TERM_TAILREC f x)))`,
+    (!x. TRIPLE i (pre x) c (post (SHORT_TERM_TAILREC f x)))
+Proof
    simp [SHORT_TERM_TAILREC_def, LET_DEF]
    \\ REPEAT strip_tac
    \\ match_mp_tac (REWRITE_RULE [AND_IMP_INTRO] TRIPLE_TERM_TAILREC)
    \\ fs [case_sum_thm]
-   )
+QED
 
-val TRIPLE_FRAME_BOOL = Q.store_thm("TRIPLE_FRAME_BOOL",
-   `!i. TRIPLE i (c1,pre) code (c2,post) ==>
-        !c. TRIPLE i (c /\ c1,pre) code (c /\ c2,post)`,
+Theorem TRIPLE_FRAME_BOOL:
+    !i. TRIPLE i (c1,pre) code (c2,post) ==>
+        !c. TRIPLE i (c /\ c1,pre) code (c /\ c2,post)
+Proof
    simp [TRIPLE_def, FORALL_PROD]
    \\ REPEAT strip_tac
    \\ Cases_on `c`
    \\ fs []
-   )
+QED
 
-val INTRO_TRIPLE = Q.store_thm("INTRO_TRIPLE",
-   `!M. (side ==> SPEC (SND M) (FST M pre) code (FST M post)) ==>
-        !c. TRIPLE M (c, pre) code (c /\ side, post)`,
+Theorem INTRO_TRIPLE:
+    !M. (side ==> SPEC (SND M) (FST M pre) code (FST M post)) ==>
+        !c. TRIPLE M (c, pre) code (c /\ side, post)
+Proof
    Cases \\ SIMP_TAC std_ss [TRIPLE_def]
-   )
+QED
 
-val _ = export_theory()

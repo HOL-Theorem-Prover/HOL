@@ -4,17 +4,13 @@
 (*                                                                            *)
 (* Copyright 2025  Michael Norrish and Chun Tian                              *)
 (* ========================================================================== *)
+Theory pi_agent
+Ancestors
+  pair pred_set list basic_swap generic_terms nomset
+  term[qualified]  (* only for its syntax of SUB *)
+Libs
+  listLib hurdUtils binderLib nomdatatype
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory listTheory listLib alistTheory;
-
-open basic_swapTheory generic_termsTheory binderLib nomsetTheory nomdatatype;
-
-(* only for its syntax of SUB *)
-local open termTheory in end;
-
-val _ = new_theory "pi_agent";
 
 (* ----------------------------------------------------------------------
    Pi-calculus as a nominal datatype in HOL4
@@ -1363,5 +1359,24 @@ val th2s = map (underAIs (SRULE [GSYM residual_sub_def, GSYM pi_sub_def] o
 Theorem pi_sub_thm[simp]       = LIST_CONJ th1s
 Theorem residual_sub_thm[simp] = LIST_CONJ th2s
 
-val _ = export_theory ();
+Theorem tpm_subst :
+    !pi E u t. tpm pi ([E/u] t) = [lswapstr pi E/lswapstr pi u] (tpm pi t)
+Proof
+    Induct_on ‘pi’
+ >> simp [FORALL_PROD, Once tpm_CONS]
+ >> rpt STRIP_TAC
+ >> Suff ‘tpm ((p_1,p_2)::pi) t = tpm [(p_1,p_2)] (tpm pi t)’ >- rw []
+ >> simp [Once tpm_CONS]
+QED
+
+Theorem rpm_subst :
+    !pi E u t. rpm pi ([E/u] t) = [lswapstr pi E/lswapstr pi u] (rpm pi t)
+Proof
+    Induct_on ‘pi’
+ >> simp [FORALL_PROD, Once rpm_CONS]
+ >> rpt STRIP_TAC
+ >> Suff ‘rpm ((p_1,p_2)::pi) t = rpm [(p_1,p_2)] (rpm pi t)’ >- rw []
+ >> simp [Once rpm_CONS]
+QED
+
 val _ = html_theory "pi_agent";

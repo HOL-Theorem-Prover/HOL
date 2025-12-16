@@ -30,13 +30,14 @@ UOK    to the domains represented by T.
 UOK
 UOK  We prove their result as a corollary.
 *)
+Theory finite_test_set
+Ancestors
+  combin list rich_list pred_set divides
+Libs
+  boolSimps mp_then
 
-open HolKernel boolLib boolSimps bossLib Parse mp_then
-     combinTheory listTheory rich_listTheory pred_setTheory
 
 val _ = temp_tight_equality();
-
-val _ = new_theory "finite_test_set";
 
 (*
   Since we only care about prenex normal formulae, we design our datatypes to
@@ -45,12 +46,14 @@ val _ = new_theory "finite_test_set";
 *)
 
 (* Function "symbols" carry their semantics to avoid pointless naming. *)
-val _ = Datatype`
-  term = Var num | Fun (num list -> num) (term list)`;
+Datatype:
+  term = Var num | Fun (num list -> num) (term list)
+End
 
 (* Similarly predicate symbols carry their semantics *)
-val _ = Datatype`
-  prop = Pred (num list -> bool) (term list) | Nand prop prop`;
+Datatype:
+  prop = Pred (num list -> bool) (term list) | Nand prop prop
+End
 
 (* Note: this makes the language rather more expressive than desired.
    We usually want f in (Fun f) and (Pred f) to be decidable.
@@ -66,15 +69,17 @@ val val_term_def = tDefine"val_term"`
  \\ rw[] \\ res_tac \\ rw[]);
 val _ = export_rewrites["val_term_def"];
 
-val val_prop_def = Define`
+Definition val_prop_def:
   val_prop env (Pred f ts) = f (MAP (val_term env) ts) ∧
-  val_prop env (Nand p1 p2) = ¬(val_prop env p1 ∧ val_prop env p2)`;
+  val_prop env (Nand p1 p2) = ¬(val_prop env p1 ∧ val_prop env p2)
+End
 val _ = export_rewrites["val_prop_def"];
 
 (* Now we add quantifiers *)
 
-val _ = Datatype`
-  quan = Forall | Exists`;
+Datatype:
+  quan = Forall | Exists
+End
 
 val _ = type_abbrev("form",``:quan list # prop``);
 
@@ -85,28 +90,30 @@ val val_form_aux_def = tDefine"val_form_aux"`
 (WF_REL_TAC`measure (LENGTH o FST o FST)` \\ rw[]);
 val _ = export_rewrites["val_form_aux_def"];
 
-val val_form_def = Define`
-  val_form (qs,p) = val_form_aux (qs,p) []`;
+Definition val_form_def:
+  val_form (qs,p) = val_form_aux (qs,p) []
+End
 
 (* A test of expressiveness: Goldbach's conjecture can be represented *)
-open dividesTheory
-
-val Goldbach_statement_def = Define`
+Definition Goldbach_statement_def:
   Goldbach_statement ⇔
-    ∀n. 2 < n ∧ EVEN n ⇒ ∃p1 p2. prime p1 ∧ prime p2 ∧ n = p1 + p2`;
+    ∀n. 2 < n ∧ EVEN n ⇒ ∃p1 p2. prime p1 ∧ prime p2 ∧ n = p1 + p2
+End
 
 (* This is unnecessary: everything could be built into the predicates themselves *)
 val _ = overload_on("Or",``λp1 p2. Nand (Nand p1 p1) (Nand p2 p2)``);
 
-val Goldbach_Pi1 = Q.store_thm("Goldbach_Pi1",
-  `∃p. (* it would be nice to also say that p is decidable: this is true,
+Theorem Goldbach_Pi1:
+   ∃p. (* it would be nice to also say that p is decidable: this is true,
           but the theory to express this fact isn't around to my knowledge *)
-       val_form ([Forall],p) ⇔ Goldbach_statement`,
+       val_form ([Forall],p) ⇔ Goldbach_statement
+Proof
   qexists_tac`
     Or (Pred ((λn. ¬(2 < n ∧ EVEN n)) o HD) [Var 0])
        (Pred ((λn. ∃p1 p2. prime p1 ∧ prime p2 ∧ n = p1 + p2) o HD) [Var 0])`
   \\ rw[val_form_def,Goldbach_statement_def]
-  \\ metis_tac[]);
+  \\ metis_tac[]
+QED
 
 (* Solvability by a single instance *)
 
@@ -114,44 +121,53 @@ val Goldbach_Pi1 = Q.store_thm("Goldbach_Pi1",
   env is a test instance for f [= (qs,p)] if
   f is true ⇔ p[env] is true
 *)
-val test_inst_def = Define`
+Definition test_inst_def:
   test_inst env (qs,p) ⇔
     (LENGTH env = LENGTH qs) ∧
-    (val_form (qs,p) ⇔ val_prop env p)`;
+    (val_form (qs,p) ⇔ val_prop env p)
+End
 
-val solvable_def = Define`
-  solvable f ⇔ ∃env. test_inst env f`;
+Definition solvable_def:
+  solvable f ⇔ ∃env. test_inst env f
+End
 
 (* Non-constructive definition of test instances *)
 
-val nu_def = Define`
+Definition nu_def:
   nu env Forall qs p =
     (if val_form_aux (Forall::qs,p) env then 0
      else LEAST m. ¬val_form_aux (qs,p) (m::env)) ∧
   nu env Exists qs p =
     (if ¬val_form_aux (Exists::qs,p) env then 0
-     else LEAST m. val_form_aux (qs,p) (m::env))`;
+     else LEAST m. val_form_aux (qs,p) (m::env))
+End
 
-val mk_test_inst_def = Define`
+Definition mk_test_inst_def:
   mk_test_inst env [] p = env ∧
   mk_test_inst env (q::qs) p =
-    mk_test_inst ((nu env q qs p)::env) qs p`;
+    mk_test_inst ((nu env q qs p)::env) qs p
+End
 
-val LENGTH_mk_test_inst = Q.store_thm("LENGTH_mk_test_inst[simp]",
-  `∀qs env p. LENGTH (mk_test_inst env qs p) = LENGTH env + LENGTH qs`,
-  Induct \\ rw[mk_test_inst_def] \\ rw[]);
+Theorem LENGTH_mk_test_inst[simp]:
+   ∀qs env p. LENGTH (mk_test_inst env qs p) = LENGTH env + LENGTH qs
+Proof
+  Induct \\ rw[mk_test_inst_def] \\ rw[]
+QED
 
-val mk_test_inst_acc = Q.store_thm("mk_test_inst_acc",
-  `∀qs env. ∃env'. mk_test_inst env qs p = env'++env`,
+Theorem mk_test_inst_acc:
+   ∀qs env. ∃env'. mk_test_inst env qs p = env'++env
+Proof
   Induct
   \\ rw[mk_test_inst_def]
-  \\ metis_tac[CONS_APPEND,APPEND_ASSOC]);
+  \\ metis_tac[CONS_APPEND,APPEND_ASSOC]
+QED
 
-val val_mk_test_inst = Q.store_thm("val_mk_test_inst",
-  `∀qs0 env qs1 p.
+Theorem val_mk_test_inst:
+   ∀qs0 env qs1 p.
      (val_form_aux (qs1,p) (DROP (LENGTH qs1) (mk_test_inst env (qs0 ++ qs1) p))
       ⇔
-      val_form_aux (qs0 ++ qs1,p) env)`,
+      val_form_aux (qs0 ++ qs1,p) env)
+Proof
   Induct \\ rw[mk_test_inst_def]
   >- (
     qspecl_then[`qs1`,`env`]strip_assume_tac mk_test_inst_acc
@@ -162,61 +178,71 @@ val val_mk_test_inst = Q.store_thm("val_mk_test_inst",
   \\ Cases_on`q` \\ rw[]
   \\ rw[nu_def]
   \\ numLib.LEAST_ELIM_TAC
-  \\ metis_tac[] );
+  \\ metis_tac[]
+QED
 
 (* The main result *)
 
-val all_solvable = Q.store_thm("all_solvable",
-  `∀f. solvable f`,
+Theorem all_solvable:
+   ∀f. solvable f
+Proof
   rw[solvable_def]
   \\ Cases_on`f`
   \\ qmatch_goalsub_rename_tac`(qs,p)`
   \\ qexists_tac`mk_test_inst [] qs p`
   \\ rw[test_inst_def]
   \\ qspecl_then[`qs`,`[]`,`[]`,`p`]mp_tac val_mk_test_inst
-  \\ rw[val_form_def]);
+  \\ rw[val_form_def]
+QED
 
 (* Solvability by test sets (as in the paper) *)
 
 (* relativising a formula *)
 
-val val_form_rel_def = Define`
+Definition val_form_rel_def:
   val_form_rel [] ([],p) env = val_prop env p ∧
   val_form_rel (d::ds) (Forall::qs,p) env = (∀n::d. val_form_rel ds (qs,p) (n::env)) ∧
-  val_form_rel (d::ds) (Exists::qs,p) env = (∃n::d. val_form_rel ds (qs,p) (n::env))`
+  val_form_rel (d::ds) (Exists::qs,p) env = (∃n::d. val_form_rel ds (qs,p) (n::env))
+End
 val _ = export_rewrites["val_form_rel_def"];
 
-val val_form_iff_val_form_rel = Q.store_thm("val_form_iff_val_form_rel",
-  `val_form (qs,p) ⇔ val_form_rel (REPLICATE (LENGTH qs) UNIV) (qs,p) []`,
+Theorem val_form_iff_val_form_rel:
+   val_form (qs,p) ⇔ val_form_rel (REPLICATE (LENGTH qs) UNIV) (qs,p) []
+Proof
   rw[val_form_def]
   \\ qspec_tac(`[]:num list`,`env`)
   \\ qid_spec_tac`qs`
   \\ Induct \\ rw[]
   \\ qmatch_goalsub_rename_tac`q::qs`
-  \\ Cases_on`q` \\ fs[RES_FORALL_THM,RES_EXISTS_THM]);
+  \\ Cases_on`q` \\ fs[RES_FORALL_THM,RES_EXISTS_THM]
+QED
 
 (* A test set is a domain relativised to which a formula's truth is preserved *)
 
-val test_set_def = Define`
+Definition test_set_def:
   test_set ds (qs,p) ⇔
     (LENGTH ds = LENGTH qs) ∧
-    (val_form (qs,p) ⇔ val_form_rel ds (qs,p) [])`;
+    (val_form (qs,p) ⇔ val_form_rel ds (qs,p) [])
+End
 
 (*
   We are representing test sets as a list of domains for the quantifiers.
   Here is how to retrieve the corresponding subset of the Cartesian product
   N^(LENGTH qs) (represented as a list rather than actual tuples)
 *)
-val domains_to_set_def = Define
-  `domains_to_set ds = { ms | LIST_REL (IN) ms ds }`;
+Definition domains_to_set_def:
+   domains_to_set ds = { ms | LIST_REL (IN) ms ds }
+End
 
 (* Finitely solvable = has a finite test set *)
-val finitely_solvable_def = Define`
+Definition finitely_solvable_def:
   finitely_solvable q ⇔
-  ∃ds. test_set ds q ∧ FINITE (domains_to_set ds)`;
+  ∃ds. test_set ds q ∧ FINITE (domains_to_set ds)
+End
 
-val FINITE_domains_to_set = Q.store_thm("FINITE_domains_to_set",
-  `FINITE (domains_to_set ds) ⇔ (EVERY FINITE ds ∨ EXISTS ((=){}) ds)`,
+Theorem FINITE_domains_to_set:
+   FINITE (domains_to_set ds) ⇔ (EVERY FINITE ds ∨ EXISTS ((=){}) ds)
+Proof
   rw[domains_to_set_def]
   \\ Induct_on`ds` \\ rw[]
   \\ qmatch_abbrev_tac`FINITE s ⇔ _`
@@ -236,10 +262,12 @@ val FINITE_domains_to_set = Q.store_thm("FINITE_domains_to_set",
     \\ simp[EXTENSION]
     \\ simp[EXISTS_MEM,LIST_REL_EL_EQN,MEM_EL]
     \\ metis_tac[NOT_IN_EMPTY,CHOICE_DEF,EL_MAP,LENGTH_MAP] )
-  \\ metis_tac[FINITE_BIJ,FINITE_CROSS_EQ,BIJ_INV] );
+  \\ metis_tac[FINITE_BIJ,FINITE_CROSS_EQ,BIJ_INV]
+QED
 
-val test_inst_test_set = Q.store_thm("test_inst_test_set",
-  `test_inst env f ⇔ test_set (MAP (λm. {m}) (REVERSE env)) f`,
+Theorem test_inst_test_set:
+   test_inst env f ⇔ test_set (MAP (λm. {m}) (REVERSE env)) f
+Proof
   Cases_on`f` \\ rw[test_inst_def,test_set_def]
   \\ qmatch_goalsub_rename_tac`val_form (qs,p)`
   \\ Cases_on`LENGTH env = LENGTH qs` \\ fs[]
@@ -256,15 +284,17 @@ val test_inst_test_set = Q.store_thm("test_inst_test_set",
   \\ qmatch_goalsub_rename_tac`q::qs,p`
   \\ qmatch_goalsub_rename_tac`{m}`
   \\ first_x_assum(qspecl_then[`qs`,`[m] ++ env0`]mp_tac)
-  \\ Cases_on`q` \\ fs[RES_FORALL_THM,RES_EXISTS_THM]);
+  \\ Cases_on`q` \\ fs[RES_FORALL_THM,RES_EXISTS_THM]
+QED
 
-val all_finitely_solvable = Q.store_thm("all_finitely_solvable",
-  `∀f. finitely_solvable f`,
+Theorem all_finitely_solvable:
+   ∀f. finitely_solvable f
+Proof
   rw[finitely_solvable_def]
   \\ qspec_then`f`mp_tac all_solvable
   \\ rw[solvable_def]
   \\ fs[test_inst_test_set]
   \\ goal_assum(first_assum o mp_then Any mp_tac)
-  \\ simp[FINITE_domains_to_set,EVERY_MEM,MEM_MAP,PULL_EXISTS]);
+  \\ simp[FINITE_domains_to_set,EVERY_MEM,MEM_MAP,PULL_EXISTS]
+QED
 
-val _ = export_theory ();

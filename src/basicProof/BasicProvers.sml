@@ -612,7 +612,7 @@ fun by0 k (q, tac) (g as (asl,w)) = let
 in
   (SUBGOAL_THEN tm finisher gTHEN1 (tac THEN k)) g
    handle HOL_ERR _ =>
-    raise ERR "by" ("by's tactic failed to prove subgoal"^mk_errmsg())
+   raise ERR "by" ("by's tactic failed to prove subgoal"^mk_errmsg())
 end
 
 val op by = by0 NO_TAC
@@ -620,8 +620,8 @@ val byA = by0 ALL_TAC
 
 fun (q suffices_by tac) g =
   (Q_TAC SUFF_TAC q gTHEN1 (tac THEN NO_TAC)) g
-  handle e as HOL_ERR {origin_function,...} =>
-         if origin_function = "Q_TAC" then raise e
+  handle e as HOL_ERR herr =>
+         if top_function_of herr = "Q_TAC" then raise e
          else
            case qlinenum q of
                SOME l => raise ERR "suffices_by"
@@ -630,11 +630,8 @@ fun (q suffices_by tac) g =
              | NONE => raise ERR "suffices_by"
                              "suffices_by's tactic failed to prove goal"
 
-
-
 fun subgoal q = Q.SUBGOAL_THEN q STRIP_ASSUME_TAC
 val sg = subgoal
-
 
 infix on
 fun ((ttac:thm->tactic) on (q:term frag list, tac:tactic)) : tactic =
@@ -696,17 +693,29 @@ fun PURE_FULL_CASE_TAC (g as (asl,w)) =
  in Cases_on `^t` end g;
 
 local
-  fun tot f x = f x handle HOL_ERR _ => NONE
-in
+
+fun tot f x = f x handle HOL_ERR _ => NONE
+
 fun case_rws tyi =
     List.mapPartial I
        [Lib.total TypeBasePure.case_def_of tyi,
         tot TypeBasePure.distinct_of tyi,
         tot TypeBasePure.one_one_of tyi]
+    |> map BODY_CONJUNCTS
+    |> List.concat
 
-fun case_rwlist () =
- itlist (fn tyi => fn rws => case_rws tyi @ rws)
-        (TypeBase.elts()) [];
+val cache = ref (List.concat (map case_rws (TypeBase.elts ())))
+
+fun update_cache tyinfo =
+   let val thms = (case_rws tyinfo)
+   in
+     cache := List.revAppend (thms,!cache)
+   end
+in
+
+val _ = TypeBase.register_update_fn (fn tyinfo => (update_cache tyinfo;tyinfo))
+
+fun case_rwlist () = !cache
 
 (* Add the rewrites into a simpset to avoid re-processing them when
  * (PURE_CASE_SIMP_CONV rws) is called multiple times by EVERY_CASE_TAC.  This
@@ -1243,9 +1252,15 @@ fun srw_ss () =
     (update_global_value init_state;
      #1 (get_global_value()))
 
-fun with_simpset_updates f g x =
-    (notify();
-     AncestryData.with_temp_value adresult (f (srw_ss()), true, []) g x)
+fun with_simpset_updates f g x = (
+  (* tell clients that their derived values are stale because we're about
+     to update the base *)
+  notify();
+  AncestryData.with_temp_value adresult (f (srw_ss()), true, []) g x
+  (* clients may believe they're up-to-date but we've just flipped the
+     base value back, so we need to notify again *)
+  before notify()
+)
 
 val update_log =
     Sref.new (Symtab.empty : (simpset -> simpset) list Symtab.table)

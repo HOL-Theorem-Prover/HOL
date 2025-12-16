@@ -1,11 +1,9 @@
 
-open HolKernel boolLib bossLib Parse;
-
-open codegen_x86Lib;
-
-open compilerLib codegen_x86Lib;
-
-val _ = new_theory "compiler_demo";
+Theory compiler_demo
+Ancestors
+  prog_x64 prog_x86 prog_ppc prog_arm
+Libs
+  codegen_x86Lib compilerLib codegen_x86Lib
 
 (* basic loop: mod 10 *)
 
@@ -118,6 +116,3 @@ val (thms,arm_str_rev_def,arm_str_rev_pre_def) = compile_all ``
       let r7 = r7 + 1w in
       let r3 = r3 - 1w in
         arm_string_rev(r3,r6,r7,df,f)``
-
-val _ = export_theory();
-

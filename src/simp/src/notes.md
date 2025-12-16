@@ -60,6 +60,8 @@
     The travrules is a static piece of information for guiding simplification.
     The dynamic data that is maintained during simplification (containing context values, the relation currently being used and the context’s free variables) is a `trav_state`, which is private to module `Traverse`.
 
+    Each simpset contains a list of `travrules` values.
+
 **congproc**
 
 :   (From `Opening`.)
@@ -71,6 +73,8 @@
     -   `solver`: used to handle side-conditions in congruence rules
     -   `relation`: identifies the relation we’re using
     -   `freevars`: the free variables of the context, which may be relevant if descending under a binder
+
+    `congproc` values are stored in `travrules`.
 
 ## Important Functions
 

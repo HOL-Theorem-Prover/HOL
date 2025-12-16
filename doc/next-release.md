@@ -14,120 +14,73 @@ Contents
 -   [Bugs fixed](#bugs-fixed)
 -   [New theories](#new-theories)
 -   [New tools](#new-tools)
--   [New Examples](#new-examples)
+-   [New examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
+-   [Deprecations](#deprecations)
 
-New features:
--------------
+New features
+------------
+- `Theory` syntax now supports disabling the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
+Files that use this feature do not need to mention `Feedback.set_trace "TheoryPP.include_docs" 0` anymore.
 
--   The simplifier now supports `NoAsms` and `IgnAsm` special forms that allow all assumptions (or those matching the provided pattern, in the case of `IgnAsm`) to be excluded.
-    See the DESCRIPTION and REFERENCE manuals for details.
-    ([GitHub issue](https://github.com/HOL-Theorem-Prover/HOL/issues/1220))
-
--   The automatic termination-finding technology behind `Definition`
-    (and lower-level APIs) is now rather stronger, especially when
-    dealing with higher order recursions using list operators.  This
-    should reduce the number of times you need to introduce explicit
-    `Termination`-argument blocks to accompany your
-    definitions. Termination condition extraction and termination
-    relation guessing now have traces ("Definition.TC extraction" and
-    "Definition.termination candidates") that can be examined for illumination.
-    See `src/tfl/examples/termination_proverScript.sml` for examples.
-
--   All of HOL’s internal files are now stored in/under one sub-directory of the source directory where user `*Script.sml` files are found.
-    Previously, HOL used `.HOLMK`, `.holobjs`, and `.hollogs`.
-    Now everything is stored in/under the sub-directory `.hol`.
-
-    To get rid of old directories, which are now just going to be useless clutter, shell command-lines such as
-
-           find . -path '*/.hollogs/*' -delete
-           find . -name '.hollogs' -delete
-
-    might be used from the root of your HOL development.
-    Alternatively, use `Holmake -r cleanAll` with your old HOL version, and then switch.
-
--   Under Poly/ML, the `hol` and `hol.bare` executables can be passed the `–-noconfig` command-line flag to stop them consulting user config files in the user’s home directory (these have names like `hol-config.sml`).
-    Under both Moscow ML and Poly/ML, configuration files are also ignored if there is a  `HOL_NOCONFIG` environment variable set.
-
-Bugs fixed:
------------
-
-- EVERY_CASE_TAC would loop if the "split-upon" subterm was already an assumption, but no longer.
-
-
-New theories:
--------------
-
-- `number`, `combinatorics` and `prime`: These theories combine material
-   from `examples/algebra/lib`, etc.
-   They contain some more advanced results from number theory (in particular properties of prime numbers) and combinatorics.
-
-- `monoid`, `group`, `ring` and `real_algebra`: These theories combine
-   material previously held in `examples/algebra`.
-   A monoid is an algebraic structure: with a carrier set, a binary operation and an identity element.
-   A group is an algebraic structure: a monoid with all its elements invertible.
-   A ring takes into account the interplay between its additive group and multiplicative monoid.
-
-New tools:
+Bugs fixed
 ----------
 
-- `Tactic.TRANS_TAC` (ported from HOL-Light) applies transitivity theorem to goal
-  with chosen intermediate term. See its DOC for more details.
+New theories
+------------
 
-- `intLib.INTEGER_TAC` and `intLib.INTEGER_RULE` (ported from HOL-Light): simple
-  decision procedures for equations of multivariate polynomials of integers, and
-  simple equations about divisibility of integers.
+New tools
+---------
 
-New examples:
--------------
+New examples
+------------
 
-- Dijkstra's algorithm for computing shortest paths: `examples/algorithms/dijkstraScript.sml`
+Incompatibilities
+-----------------
 
-Incompatibilities:
-------------------
+-   The return types of `parse_term.mk_prec_matrix`, `type_grammar.parse_map`, `type_grammar.privileged_abbrevs`
+    have been changed to return maps of type HOLdict instead of Binarymap.
 
--   `numLib.prefer_num` has been renamed to `numLib.temp_prefer_num`, which name better describes its semantics.
-    The `prefer_num` entry-point is now used to make a change “permanent” (again following the naming convention used by many parsing-related entry-points), which is to say that the overloads made by this function will be exported to child theories.
+-   `Preterm.eq` has been replaced with `Preterm.veq` which returns `true` if and only if the two arguments are variables with the same names and types.
 
--   Editor mode implementations have moved in the HOL sources to `tools/editor-modes/{editor-name}`.
-    This may affect editor initialisations/configurations, particularly if they hard-code a reference to a particular path.
-    For example, in the recommended setup for `emacs`, users will need to change
+-   We have implemented a new policy forbidding theory names from being SML or HOL keywords (*e.g.,* `case`, `while`, `of`, …, `Theorem`, `Theory`, `Definition`, …).
+    The theories `while` and `functor` have been renamed to `While` and `category_functor`, respectively, in accordance with this.
 
-           (load "<path>/HOL/tools/hol-mode")
-           (load "<path>/HOL/tools/hol-unicode")
+-   The `examples/fun-op-sem` directory has been renamed `examples/pl-semantics`.
 
-    to
+-   The `examples/balanced_bst` directory has been renamed `examples/data-structures/balanced_bst`;
+    the script file `examples/zipper/zipperScript.sml` has been moved to `examples/data-structures`;
+    the script file `examples/balanced_bst/AVL_treeScript.sml` has been moved to a directory of its own at `examples/data-structures/AVL_tree`.
 
-           (load "<path>/HOL/tools/editor-modes/emacs/hol-mode")
-           (load "<path>/HOL/tools/editor-modes/emacs/hol-unicode")
+-   The left-hand side of `LIST_REL_MAP2` has been changed from `LIST_REL (\a b. R a b) l1 (MAP f l2)` to
+    `LIST_REL R l1 (MAP f l2)`. We do not expect this to break proof scripts, but document this change here just in case.
 
--   The types of `DB.find` and `DB.match` have changed so that instead of returning
+-   A few theorems (ended with `'`) in `real_sigmaTheory` are renamed to avoid naming conflicts
+    with `realaxTheory`, or to better reflect their nature (see the table below for details.)
+    In particular, users are recommended to *not* directly opening `realaxTheory` (an intermediate
+    theory for constructing real numbers), in which all useful theorems should be also covered by
+   `realTheory` (under same or different theorem names).
+  
+|  Old name       | New name           | Statements                                    |
+| --------------- | ------------------ | --------------------------------------------- |
+| `REAL_LE_SUP'`  | `REAL_LE_SUP2`     | `!s a b y. y IN s /\ a <= y /\ (!x. x IN s ==> x <= b) ==> a <= sup s` |
+| `REAL_LE_MUL'`  | `REAL_LE_MUL_NEG`  | `!x y. x <= 0 /\ y <= 0 ==> 0 <= x * y`       |
+| `REAL_LT_MUL'`  | `REAL_LT_MUL_NEG`  | `!x y. x < 0 /\ y < 0 ==> 0 < x * y`          |
+| `REAL_LT_LMUL'` | `REAL_LT_LMUL_NEG` | `!x y z. x < 0 ==> (x * y < x * z <=> z < y)` | 
+| `REAL_LT_RMUL'` | `REAL_LT_RMUL_NEG` | `!x y z. z < 0 ==> (x * z < y * z <=> y < x)` |
 
-           (string * string) * (thm * class)
+Deprecations
+------------
 
-    they now return
-
-           (string * string) * (thm * class * thm_src_location)
-
-    Using the `#1 o #2` selector should be future-proof here.
-
--   `util_probTheory` has been merged into `sigma_algebraTheory`.
-
--   In `set_relationTheory`, the constant `tc` has been renamed to `transitive_closure`.
-
--   Various `adjoin_to…` entry-points in `Theory` have been removed.
-    The biggest incompatibility this causes is the removal of the `<thy>_grammars` binding from all `<thy>Theory` structures.
-    To access the grammars specific to a particular theory (`foo`, say), one must now write
-
-           valOf $ Parse.grammarDB {thyname="foo"}
-
-    where the call may fail if the theory is not present in the hierarchy.
+-   `Triviality` has been deprecated and may be removed in the future.
+    Please update theorems of the form `Triviality foo` and `Triviality foo[..]` to
+    `Theorem foo[local]` and `Theorem foo[local,..]` respectively to avoid future breakage.
 
 * * * * *
 
 <div class="footer">
 *[HOL4, ?????](http://hol-theorem-prover.org)*
 
-[Release notes for the previous version](trindemossen-1.release.html)
+[Release notes for the previous version](trindemossen-2.release.html)
 
 </div>

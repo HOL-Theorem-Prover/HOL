@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "caseEqAbbrev";
+Theory caseEqAbbrev
 
 Type foo = “:'a list”
 
@@ -10,4 +8,3 @@ Proof
   simp[CaseEq"foo"]
 QED
 
-val _ = export_theory();

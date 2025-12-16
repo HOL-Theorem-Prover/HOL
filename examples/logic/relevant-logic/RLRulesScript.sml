@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib stringTheory;
-
-open GoldblattRLTheory;
-
-val _ = new_theory "RLRules";
+Theory RLRules
+Ancestors
+  string GoldblattRL
 
 val _ = set_fixity "-->" (Infixr 490);
 val _ = overload_on ("-->", “g_IMP”);
@@ -298,4 +296,3 @@ Proof
   metis_tac[goldblatt_provable_rules]
 QED
 
-val _ = export_theory();

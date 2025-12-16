@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib;
-
-val _ = new_theory "normalForms";
+Theory normalForms[bare]
+Libs
+  HolKernel Parse boolLib
 
 (* ------------------------------------------------------------------------- *)
 (* EXT_POINT                                                                 *)
@@ -54,21 +54,23 @@ val EXT_POINT_DEF =
 
 val _ = add_const "EXT_POINT";
 
-val EXT_POINT = store_thm
-  ("EXT_POINT",
-   ``!(f : 'a -> 'b) g. (f (EXT_POINT f g) = g (EXT_POINT f g)) = (f = g)``,
+Theorem EXT_POINT:
+     !(f : 'a -> 'b) g. (f (EXT_POINT f g) = g (EXT_POINT f g)) = (f = g)
+Proof
    REPEAT GEN_TAC THEN
    EQ_TAC THENL
    [MATCH_ACCEPT_TAC EXT_POINT_DEF,
-    DISCH_THEN (fn th => REWRITE_TAC [th])]);
+    DISCH_THEN (fn th => REWRITE_TAC [th])]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* UNIV_POINT                                                                *)
 (* If a predicate P is true on its UNIV_POINT, it is true everywhere.        *)
 (* ------------------------------------------------------------------------- *)
 
-val UNIV_POINT_EXISTS = prove
-  (``?f. !p. p (f p) ==> !x : 'a. p x``,
+Theorem UNIV_POINT_EXISTS[local]:
+     ?f. !p. p (f p) ==> !x : 'a. p x
+Proof
    EXISTS_TAC ``\p. @x : 'a. ~p x`` THEN
    GEN_TAC THEN
    BETA_TAC THEN
@@ -77,7 +79,8 @@ val UNIV_POINT_EXISTS = prove
    CONV_TAC (RAND_CONV NOT_FORALL_CONV) THEN
    REWRITE_TAC [EXISTS_DEF] THEN
    BETA_TAC THEN
-   ASM_REWRITE_TAC []);
+   ASM_REWRITE_TAC []
+QED
 
 val UNIV_POINT_DEF =
   Definition.new_specification
@@ -85,12 +88,12 @@ val UNIV_POINT_DEF =
 
 val _ = add_const "UNIV_POINT";
 
-val UNIV_POINT = store_thm
-  ("UNIV_POINT",
-   ``!p. p (UNIV_POINT p) = !x : 'a. p x``,
+Theorem UNIV_POINT:
+     !p. p (UNIV_POINT p) = !x : 'a. p x
+Proof
    GEN_TAC THEN
    EQ_TAC THENL
    [MATCH_ACCEPT_TAC UNIV_POINT_DEF,
-    DISCH_THEN MATCH_ACCEPT_TAC]);
+    DISCH_THEN MATCH_ACCEPT_TAC]
+QED
 
-val _ = export_theory ();

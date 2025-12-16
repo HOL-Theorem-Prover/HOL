@@ -87,18 +87,18 @@ val complained_already = ref false;
 structure Polyhash =
 struct
    open Uref
-   fun peek (dict) k = Binarymap.peek(!dict,k)
+   fun peek (dict) k = HOLdict.peek(!dict,k)
    fun peekInsert r (k,v) =
        let val dict = !r in
-         case Binarymap.peek(dict,k) of
-           NONE => (r := Binarymap.insert(dict,k,v); NONE)
+         case HOLdict.peek(dict,k) of
+           NONE => (r := HOLdict.insert(dict,k,v); NONE)
          | x => x
        end
    fun insert r (k,v) =
-       r := Binarymap.insert(!r,k,v)
-   fun listItems dict = Binarymap.listItems (!dict)
+       r := HOLdict.insert(!r,k,v)
+   fun listItems dict = HOLdict.listItems (!dict)
    fun mkDict cmp = let
-     val newref = Uref.new (Binarymap.mkDict cmp)
+     val newref = Uref.new (HOLdict.mkDict cmp)
    in
      newref
    end
@@ -191,10 +191,10 @@ fun STtoString (G:grammar) x =
   | ResquanOpTok => #res_quanop (specials G)^" (res quan operator)"
 
 fun mk_prec_matrix G = let
-  exception NotFound = Binarymap.NotFound
+  exception NotFound = HOLdict.NotFound
   exception BadTokList
   type dict = ((stack_terminal * bool) * stack_terminal,
-               mx_order) Binarymap.dict Uref.t
+               mx_order) HOLdict.dict Uref.t
   val {lambda, endbinding, type_intro, restr_binders, ...} = specials G
   val specs = grammar_tokens G
   val Grules = term_grammar.grammar_rules G
@@ -557,7 +557,7 @@ fun suffix_rule (rels,nm) =
 
 fun mk_ruledb (G:grammar) = let
   val Grules = term_grammar.grammar_rules G
-  val table:(rule_element list, rule_summary)Binarymap.dict Uref.t =
+  val table:(rule_element list, rule_summary)HOLdict.dict Uref.t =
        Polyhash.mkDict (Lib.list_compare RE_compare)
   fun insert_rule mkfix (rr:rule_record) =
     let
@@ -685,17 +685,17 @@ fun get_case_info (G : grammar) = let
   fun extract_toks ppels = List.rev (List.foldl extract_tok [] ppels)
   fun rr_foldthis ({term_name,elements,...}, acc) =
     if GrammarSpecials.is_case_special term_name then
-      case Binarymap.peek(acc, term_name) of
-          NONE => Binarymap.insert(acc, term_name, [extract_toks elements])
+      case HOLdict.peek(acc, term_name) of
+          NONE => HOLdict.insert(acc, term_name, [extract_toks elements])
         | SOME els =>
-            Binarymap.insert(acc, term_name, extract_toks elements :: els)
+            HOLdict.insert(acc, term_name, extract_toks elements :: els)
     else acc
   fun foldthis (gr, acc) =
       case gr of
         PREFIX (STD_prefix rrs) => List.foldl rr_foldthis acc rrs
       | _ => acc
   val candidates =
-      List.foldl foldthis (Binarymap.mkDict String.compare) (grammar_rules G)
+      List.foldl foldthis (HOLdict.mkDict String.compare) (grammar_rules G)
   val error_case = {casebar = NONE, casecase = NONE, caseof = NONE}
   fun mapthis (cspecial, candidates) =
     case Listsort.sort (flip_cmp (measure_cmp length)) candidates of
@@ -708,20 +708,20 @@ fun get_case_info (G : grammar) = let
           else {casebar = SOME (last toks), casecase = SOME (hd toks),
                 caseof = SOME (hd (tl toks))}
         end
-  val specials_to_toks = Binarymap.map mapthis candidates
+  val specials_to_toks = HOLdict.map mapthis candidates
   val toks_to_specials = let
     fun foldthis (k,r,acc) =
       case #casecase r of
           NONE => acc
         | SOME tok =>
-          (case Binarymap.peek(acc,tok) of
-               NONE => Binarymap.insert(acc,tok,k)
+          (case HOLdict.peek(acc,tok) of
+               NONE => HOLdict.insert(acc,tok,k)
              | SOME k' => raise Fail ("Tok \"" ^ tok ^
                                       "\" maps to case specials " ^
                                       valOf (dest_case_special k) ^ " and " ^
                                       valOf (dest_case_special k')))
   in
-    Binarymap.foldl foldthis (Binarymap.mkDict String.compare) specials_to_toks
+    HOLdict.foldl foldthis (HOLdict.mkDict String.compare) specials_to_toks
   end
 in
   (specials_to_toks, toks_to_specials)
@@ -751,15 +751,15 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
                 case b of
                   LAMBDA => acc
                 | BinderString {term_name, tok, ...} =>
-                    Binarymap.insert(acc,tok,term_name)
+                    HOLdict.insert(acc,tok,term_name)
           in
             List.foldl irec acc blist
           end
         | _ => acc
   in
-    List.foldl recurse (Binarymap.mkDict String.compare) Grules
+    List.foldl recurse (HOLdict.mkDict String.compare) Grules
   end
-  fun term_name_for_binder s = Binarymap.find(binder_table,s)
+  fun term_name_for_binder s = HOLdict.find(binder_table,s)
   val grammar_tokens = term_grammar.grammar_tokens G
   val lex  = let
     val specials = endbinding::grammar_tokens @ term_grammar.known_constants G
@@ -889,11 +889,11 @@ fun parse_term (G : grammar) (typeparser : term qbuf -> Pretype.pretype) = let
       fun tokstring x = case x of TOK s => SOME s | _ => NONE
       val poss_left = case hd pattern of TOK x => x | _ => fail()
     in
-      case Binarymap.peek(casetok_to_spec, poss_left) of
+      case HOLdict.peek(casetok_to_spec, poss_left) of
           SOME cspec =>
           let
             val {casecase,casebar,caseof} =
-                Binarymap.find(casespec_to_tok,cspec)
+                HOLdict.find(casespec_to_tok,cspec)
             fun bars_ok l =
               case l of
                   [TM] => true

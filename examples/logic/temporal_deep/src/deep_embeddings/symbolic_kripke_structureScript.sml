@@ -3,20 +3,17 @@
 (*   Symbolic Kripke Structure (with external fair conditions)                *)
 (*                                                                            *)
 (******************************************************************************)
+Theory symbolic_kripke_structure
+Ancestors
+  infinite_path pred_set list pair xprop_logic container
+  prop_logic set_lemmata prim_rec temporal_deep_mixed arithmetic
+Libs
+  tuerk_tacticsLib Sanity
 
-open HolKernel Parse boolLib bossLib;
-
-open infinite_pathTheory pred_setTheory listTheory pairTheory xprop_logicTheory
-     containerTheory prop_logicTheory set_lemmataTheory prim_recTheory
-     tuerk_tacticsLib temporal_deep_mixedTheory arithmeticTheory;
-
-open Sanity;
 
 val _ = hide "S";
 val _ = hide "I";
 val _ = hide "K";
-
-val _ = new_theory "symbolic_kripke_structure";
 
 (* NOTE: `symbolic_semi_automaton` has concepts of input vars, used as the translation
    results of LTL, etc., while `symbolic_kripke_structure` has only state variables,
@@ -33,14 +30,16 @@ Theorem symbolic_kripke_structure_REWRITES =
                    TypeBase.accessors_of “:α symbolic_kripke_structure”)
 
 
-val IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
-   `IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p = !n. XP_SEM K.R (p n, p (SUC n))`;
+Definition IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def:
+    IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p = !n. XP_SEM K.R (p n, p (SUC n))
+End
 
 (* key concept: p is a fair path of K w.r.t fair condition FC *)
-val IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
-   `IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
+Definition IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def:
+    IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
      (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p /\
-      !b. MEM b FC ==> !t0. ?t. t >= t0 /\ P_SEM (p t) b)`;
+      !b. MEM b FC ==> !t0. ?t. t >= t0 /\ P_SEM (p t) b)
+End
 
 (* added toplevel quantifiers *)
 Theorem IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___ALTERNATIVE_DEF :
@@ -68,13 +67,15 @@ Proof
       ASM_SIMP_TAC arith_ss [] ]
 QED
 
-val IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
-   `IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p =
-     (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p /\ P_SEM (p 0) K.S0)`;
+Definition IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def:
+    IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p =
+     (IS_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p /\ P_SEM (p 0) K.S0)
+End
 
-val IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
-   `IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
-     (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p /\ P_SEM (p 0) K.S0)`;
+Definition IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def:
+    IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p =
+     (IS_FAIR_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p /\ P_SEM (p 0) K.S0)
+End
 
 Theorem PATHS_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE___REWRITES =
    LIST_CONJ [IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def,
@@ -93,26 +94,31 @@ Proof
                       IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE_def]
 QED
 
-val IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
-   `IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE K FC =
-    !p. ~(IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p)`;
+Definition IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE_def:
+    IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE K FC =
+    !p. ~(IS_FAIR_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K FC p)
+End
 
-val IS_EMPTY_SYMBOLIC_KRIPKE_STRUCTURE_def = Define
-   `IS_EMPTY_SYMBOLIC_KRIPKE_STRUCTURE K =
-    !p. ~(IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p)`;
+Definition IS_EMPTY_SYMBOLIC_KRIPKE_STRUCTURE_def:
+    IS_EMPTY_SYMBOLIC_KRIPKE_STRUCTURE K =
+    !p. ~(IS_INITIAL_PATH_THROUGH_SYMBOLIC_KRIPKE_STRUCTURE K p)
+End
 
-val SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT_def = Define
-   `SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT (K1:'a symbolic_kripke_structure)
+Definition SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT_def:
+    SYMBOLIC_KRIPKE_STRUCTURE_PRODUCT (K1:'a symbolic_kripke_structure)
                                       (K2:'a symbolic_kripke_structure) =
-    symbolic_kripke_structure (P_AND(K1.S0, K2.S0)) (XP_AND(K1.R, K2.R))`;
+    symbolic_kripke_structure (P_AND(K1.S0, K2.S0)) (XP_AND(K1.R, K2.R))
+End
 
-val SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def = Define
-   `SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS (K:'a symbolic_kripke_structure) =
-    (P_USED_VARS K.S0) UNION (XP_USED_VARS K.R)`;
+Definition SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS_def:
+    SYMBOLIC_KRIPKE_STRUCTURE_USED_VARS (K:'a symbolic_kripke_structure) =
+    (P_USED_VARS K.S0) UNION (XP_USED_VARS K.R)
+End
 
-val SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING_def = Define
-   `SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f (K:'a symbolic_kripke_structure) =
-    symbolic_kripke_structure (P_VAR_RENAMING f K.S0) (XP_VAR_RENAMING f K.R)`;
+Definition SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING_def:
+    SYMBOLIC_KRIPKE_STRUCTURE_VAR_RENAMING f (K:'a symbolic_kripke_structure) =
+    symbolic_kripke_structure (P_VAR_RENAMING f K.S0) (XP_VAR_RENAMING f K.R)
+End
 
 Theorem IS_EMPTY_FAIR_SYMBOLIC_KRIPKE_STRUCTURE___IDENTIFY_VARIABLES :
     !f K fc.
@@ -223,4 +229,3 @@ Proof
       ]
 QED
 
-val _ = export_theory();

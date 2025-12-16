@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "errorMonad";
+Theory errorMonad
 
 Datatype: error = return 'a | error 'e
 End
@@ -61,4 +59,3 @@ val _ = monadsyntax.declare_monad("error",
    guard = SOME “guard”, ignorebind = NONE, unit = “return”})
 
 
-val _ = export_theory();

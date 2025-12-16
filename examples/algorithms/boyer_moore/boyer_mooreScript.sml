@@ -1,55 +1,37 @@
-open HolKernel boolLib bossLib Parse;
-
-open boolTheory;
-open pred_setTheory;
-open pairTheory;
-
-open arithmeticTheory;
-open numTheory;
-
-open prim_recTheory;
-
-open listTheory;
-open rich_listTheory;
-
-open stringTheory;
-
-open set_lemmasTheory;
-open helper_funcsTheory;
-open boyer_moore_specTheory;
-
-val _ = new_theory"boyer_moore";
+Theory boyer_moore
+Ancestors
+  bool pred_set pair arithmetic num prim_rec list rich_list
+  string set_lemmas helper_funcs boyer_moore_spec
 
 (* -- IMPLICIT CHARACTER MISMATCH TABLE CONSTRUCTION -- *)
 (* Assess potential shift based on character mismatch rule *)
-val checkDeltaC_def =
-    Define
-    `
+Definition checkDeltaC_def:
+
     checkDeltaC pat all_chars j a d =
         ((d = j+1) \/ (EL (j-d) pat = EL a all_chars))
-    `;
+End
 
 (* Relationship between checkDeltaC function
    and valid_cha_shift specification *)
-val CHECK_DELTAC_THM = store_thm(
-    "CHECK_DELTAC_THM",
-    ``!pat all_chars j a d . d IN valid_cha_shifts pat all_chars j a
-                 <=> (1 <= d /\ d <= j+1 /\ checkDeltaC pat all_chars j a d)``,
+Theorem CHECK_DELTAC_THM:
+      !pat all_chars j a d . d IN valid_cha_shifts pat all_chars j a
+                 <=> (1 <= d /\ d <= j+1 /\ checkDeltaC pat all_chars j a d)
+Proof
     rw[valid_cha_shifts_def,checkDeltaC_def]
     >> Cases_on `d=j+1`
     >- simp[]
     >- (`(d <= j) <=> (d <= j + 1)`
             suffices_by metis_tac[]
         >> simp[])
-    );
+QED
 
 (* Check Delta C in terms of set comprehensions *)
-val CHECK_DELTAC_SET = store_thm(
-    "CHECK_DELTAC_SET",
-    ``valid_cha_shifts pat all_chars j a = {d | 1 <= d /\ d <= j+1
-                        /\ checkDeltaC pat all_chars j a d}``,
+Theorem CHECK_DELTAC_SET:
+      valid_cha_shifts pat all_chars j a = {d | 1 <= d /\ d <= j+1
+                        /\ checkDeltaC pat all_chars j a d}
+Proof
     rw [CHECK_DELTAC_THM, EXTENSION]
-    );
+QED
 
 (* Find minimum valid character mismatch based shift *)
 Definition cmRecur_def:
@@ -63,9 +45,9 @@ Termination
 End
 
 (* Intermediate lemmas to reason about recursive function bounds *)
-val CMRECUR_LEM = store_thm(
-    "CMRECUR_LEM",
-    ``!pat all_chars j a d. d <= cmRecur pat all_chars j a d``,
+Theorem CMRECUR_LEM:
+      !pat all_chars j a d. d <= cmRecur pat all_chars j a d
+Proof
     Induct_on `j + 2 - d`
     >> rpt STRIP_TAC
     >> ONCE_REWRITE_TAC[cmRecur_def]
@@ -73,12 +55,13 @@ val CMRECUR_LEM = store_thm(
     >> `v = j + 2 - (d+1)` by fs[ADD_CLAUSES]
     >> `(d+1) <= cmRecur pat all_chars j a (d+1)` by metis_tac[]
     >> Cases_on `checkDeltaC pat all_chars j a d`
-    >> fs[]);
+    >> fs[]
+QED
 
-val CMRECUR_BND_THM = store_thm(
-    "CMRECUR_BND_THM",
-    ``!pat all_chars j a d . d IN valid_cha_shifts pat all_chars j a
-        ==> (!x. x <= d ==> cmRecur pat all_chars j a x <= d)``,
+Theorem CMRECUR_BND_THM:
+      !pat all_chars j a d . d IN valid_cha_shifts pat all_chars j a
+        ==> (!x. x <= d ==> cmRecur pat all_chars j a x <= d)
+Proof
     rpt STRIP_TAC
     >> Induct_on `d - x`
     >- (fs[]
@@ -103,15 +86,15 @@ val CMRECUR_BND_THM = store_thm(
             >> `(x + 1) <= cmRecur pat all_chars j a (x + 1)` by metis_tac[CMRECUR_LEM]
             >> fs[])
         )
-    );
+QED
 
 (* Confirming we only get valid values *)
-val CMRECUR_COR_THM = store_thm(
-    "CMRECUR_COR_THM",
-    ``! pat all_chars j a d . 1 <= cmRecur pat all_chars j a d
+Theorem CMRECUR_COR_THM:
+      ! pat all_chars j a d . 1 <= cmRecur pat all_chars j a d
                              /\ cmRecur pat all_chars j a d <= j + 1
                                 ==> cmRecur pat all_chars j a d
-                                        IN valid_cha_shifts pat all_chars j a``,
+                                        IN valid_cha_shifts pat all_chars j a
+Proof
     rpt STRIP_TAC
     >> `d <= j + 1`
         by (CCONTR_TAC
@@ -143,19 +126,18 @@ val CMRECUR_COR_THM = store_thm(
         >> `cmRecur pat all_chars j a d = d`
                 by (ONCE_REWRITE_TAC[cmRecur_def] >> fs[])
         >> fs[])
-    );
+QED
 
 (* initiate recursion *)
-val cmVal_def =
-    Define
-    `
+Definition cmVal_def:
+
     cmVal pat all_chars j a = cmRecur pat all_chars j a 1
-    `;
+End
 
 (* Relationship between cmVal function and valid_cha_shift specification *)
-val CMVAL_THM = store_thm(
-    "CMVAL_THM",
-    ``cmVal pat all_chars j a = MIN_SET (valid_cha_shifts pat all_chars j a)``,
+Theorem CMVAL_THM:
+      cmVal pat all_chars j a = MIN_SET (valid_cha_shifts pat all_chars j a)
+Proof
     simp[cmVal_def]
     >> `! d. d IN valid_cha_shifts pat all_chars j a ==> cmRecur pat all_chars j a 1 <= d`
             by (rpt STRIP_TAC
@@ -166,14 +148,14 @@ val CMVAL_THM = store_thm(
                 >> `cmRecur pat all_chars j a 1 <= j + 1` by fs[valid_cha_shifts_def]
                 >> simp[CMRECUR_COR_THM])
     >> fs[LOWER_BOUND_IS_MIN_SET]
-    );
+QED
 
 (* Proving bounds on cmVal function with valid input *)
-val CMVAL_BND = store_thm(
-    "CMVAL_BND",
-    ``!j a. j < LENGTH pat ∧ a < LENGTH all_chars
+Theorem CMVAL_BND:
+      !j a. j < LENGTH pat ∧ a < LENGTH all_chars
            ==> 0 < cmVal pat all_char j a
-               /\ cmVal pat all_char j a <= LENGTH pat``,
+               /\ cmVal pat all_char j a <= LENGTH pat
+Proof
     simp[CMVAL_THM]
     >> REPEAT strip_tac
     >- (`0 <> MIN_SET (valid_cha_shifts pat all_char j a)`
@@ -186,18 +168,17 @@ val CMVAL_BND = store_thm(
         >> simp[valid_cha_shifts_def]
         >> qexists_tac `j+1`
         >> simp[])
-    );
+QED
 
 (* -- IMPLICIT SUFFIX MATCH TABLE CONSTRUCTION -- *)
 (* Assess potential shift based on suffix mismatch rule *)
-val checkDeltaS_def =
-    Define
-    `
+Definition checkDeltaS_def:
+
     checkDeltaS pat j d <=>
         ((d >= SUC j) \/ ~(EL (j-d) pat = EL j pat)) /\
         (extract (MAX (SUC j) d,LENGTH pat) pat
             = extract ((MAX (SUC j) d) - d,LENGTH pat - d) pat)
-    `;
+End
 
 (* Relationship between checkDeltaS function
    and valid_suf_shift specification *)
@@ -243,13 +224,13 @@ Proof
 QED
 
 (* Check Delta S in terms of set comprehensions *)
-val CHECK_DELTAS_SET = store_thm(
-    "CHECK_DELTAS_SET",
-    ``valid_suf_shifts pat j = { d | 1 <= d
+Theorem CHECK_DELTAS_SET:
+      valid_suf_shifts pat j = { d | 1 <= d
                                     /\ d <= LENGTH pat
-                                    /\ checkDeltaS pat j d}``,
+                                    /\ checkDeltaS pat j d}
+Proof
     rw [CHECK_DELTAS_THM, EXTENSION]
-    );
+QED
 
 Definition smRecur_def:
     smRecur pat j d =
@@ -261,16 +242,15 @@ Termination
 End
 
 (* Find minimum valid suffix mismatch based shift *)
-val smVal_def =
-    Define
-    `
+Definition smVal_def:
+
     smVal pat j = smRecur pat j 1
-    `;
+End
 
 (* Intermediate lemmas to reason about recursive function bounds *)
-val SMRECUR_LEM = store_thm(
-    "SMRECUR_LEM",
-    ``!pat j d. d <= smRecur pat j d``,
+Theorem SMRECUR_LEM:
+      !pat j d. d <= smRecur pat j d
+Proof
     Induct_on `LENGTH pat + 1 - d`
     >> rpt STRIP_TAC
     >> ONCE_REWRITE_TAC[smRecur_def]
@@ -278,12 +258,13 @@ val SMRECUR_LEM = store_thm(
     >> `v = LENGTH pat + 1 - (d+1)` by fs[ADD_CLAUSES]
     >> `(d+1) <= smRecur pat j (d+1)` by metis_tac[]
     >> Cases_on `checkDeltaS pat j d`
-    >> fs[]);
+    >> fs[]
+QED
 
-val SMRECUR_BND_THM = store_thm(
-    "SMRECUR_BND_THM",
-    ``!pat j d . d IN valid_suf_shifts pat j
-        ==> (!x. x <= d ==> smRecur pat j x <= d)``,
+Theorem SMRECUR_BND_THM:
+      !pat j d . d IN valid_suf_shifts pat j
+        ==> (!x. x <= d ==> smRecur pat j x <= d)
+Proof
     rpt STRIP_TAC
     >> Induct_on `d - x`
     >- (fs[]
@@ -307,17 +288,17 @@ val SMRECUR_BND_THM = store_thm(
             >> `(x + 1) <= smRecur pat j (x + 1)` by metis_tac[SMRECUR_LEM]
             >> fs[])
         )
-    );
+QED
 
 (* Confirming we only get valid values *)
-val SMRECUR_COR_THM = store_thm(
-    "SMRECUR_COR_THM",
-    ``! pat all_chars j a d . pat <> []
+Theorem SMRECUR_COR_THM:
+      ! pat all_chars j a d . pat <> []
                              /\ j < LENGTH pat
                              /\ 1 <= smRecur pat j d
                              /\ smRecur pat j d <= LENGTH pat
                                 ==> smRecur pat j d
-                                        IN valid_suf_shifts pat j``,
+                                        IN valid_suf_shifts pat j
+Proof
     rpt STRIP_TAC
     >> `d <= LENGTH pat`
         by (CCONTR_TAC
@@ -362,13 +343,13 @@ val SMRECUR_COR_THM = store_thm(
         >> `smRecur pat j d = d`
                 by (ONCE_REWRITE_TAC[smRecur_def] >> fs[])
         >> fs[])
-    );
+QED
 
 (* Relationship between smVal function and valid_suf_shift specification *)
-val SMVAL_THM = store_thm(
-    "SMVAL_THM",
-    ``(pat <> []) /\ (j < LENGTH pat)
-     ==> (smVal pat j = MIN_SET (valid_suf_shifts pat j))``,
+Theorem SMVAL_THM:
+      (pat <> []) /\ (j < LENGTH pat)
+     ==> (smVal pat j = MIN_SET (valid_suf_shifts pat j))
+Proof
     STRIP_TAC
     >> simp[smVal_def]
     >> `! d. d IN valid_suf_shifts pat j ==> smRecur pat j 1 <= d`
@@ -383,14 +364,14 @@ val SMVAL_THM = store_thm(
                 >> `smRecur pat j 1 <= LENGTH pat` by fs[valid_suf_shifts_def]
                 >> simp[SMRECUR_COR_THM])
     >> fs[LOWER_BOUND_IS_MIN_SET]
-    );
+QED
 
 (* Proving bounds on smVal function with valid input *)
-val SMVAL_BND = store_thm(
-    "SMVAL_BND",
-    ``!j . j < LENGTH pat
+Theorem SMVAL_BND:
+      !j . j < LENGTH pat
             ==> 0 < smVal pat j
-                /\ smVal pat j <= LENGTH pat``,
+                /\ smVal pat j <= LENGTH pat
+Proof
     Cases_on `pat = []`
     >- simp[LENGTH]
     >- (simp[SMVAL_THM]
@@ -407,55 +388,52 @@ val SMVAL_BND = store_thm(
             >> qexists_tac `LENGTH pat`
             >> simp[])
         )
-    );
+QED
 
 
 (* -- ACTUAL MISMATCH TABLE CONSTRUCTION --  *)
 (* Find mismatch table value at particular point based
    on best shift available between suffix mismatch table
    and character mismatch table *)
-val mVal_def =
-    Define
-    `
+Definition mVal_def:
+
     mVal calc_smVal pat all_chars j a =
         MAX calc_smVal (cmVal pat all_chars j a)
-    `;
+End
 
 (* Generate a row of mismatch table *)
-val mSubTab_def =
-    Define
-    `
+Definition mSubTab_def:
+
     mSubTab pat all_chars j =
         GENLIST (mVal (smVal pat j) pat all_chars j) (LENGTH all_chars)
-    `;
+End
 
 (* Generate mismatch table *)
-val mTab_def =
-    Define
-    `
+Definition mTab_def:
+
     mTab pat all_chars =
         GENLIST (mSubTab pat all_chars) (LENGTH pat)
-    `;
+End
 
 (* Dimensional properties of mTab *)
-val MTAB_DIM = store_thm(
-    "MTAB_DIM",
-    ``(LENGTH (mTab pat all_chars) = LENGTH pat)
+Theorem MTAB_DIM:
+      (LENGTH (mTab pat all_chars) = LENGTH pat)
      /\ (!j. j < LENGTH pat
              ==> (LENGTH (EL j (mTab pat all_chars))
-                  = LENGTH all_chars))``,
+                  = LENGTH all_chars))
+Proof
     simp[mTab_def,mSubTab_def]
-    );
+QED
 
 (* Bounds on mTab values for valid inputs *)
-val MTAB_BND = store_thm(
-    "MTAB_BND",
-    ``!a j.  (j < LENGTH pat) /\ (a < LENGTH all_chars)
+Theorem MTAB_BND:
+      !a j.  (j < LENGTH pat) /\ (a < LENGTH all_chars)
             ==> 0 < EL a (EL j (mTab pat all_chars))
-                /\ EL a (EL j (mTab pat all_chars)) <= LENGTH pat``,
+                /\ EL a (EL j (mTab pat all_chars)) <= LENGTH pat
+Proof
     simp[mTab_def,mSubTab_def,mVal_def]
     >> metis_tac[SMVAL_BND,CMVAL_BND]
-    );
+QED
 
 (* Important solution skipping capacity of mTab *)
 Theorem MTAB_THM:
@@ -542,9 +520,8 @@ End
 
 (* Simple theorem for cleaness enforcing one definition
    of bmRecur for non-null lists *)
-val BMRECUR_NON_EMPTY_DEF = store_thm(
-    "BMRECUR_NON_EMPTY_DEF",
-    ``(pat <> []) /\ (search <> [])
+Theorem BMRECUR_NON_EMPTY_DEF:
+      (pat <> []) /\ (search <> [])
     ==>
     (bmRecur pat patTab all_chars search =
      if ¬(LENGTH pat ≤ LENGTH search) then LENGTH search
@@ -567,17 +544,17 @@ val BMRECUR_NON_EMPTY_DEF = store_thm(
                       d +
                       bmRecur pat patTab all_chars
                         (DROP d search))))
-    )``,
+    )
+Proof
     Cases_on `pat`
     >> Cases_on `search`
     >> fs[bmRecur_def]
-    );
+QED
 
 (* Proves that bmRecur returns correct solutions with valid inputs
    for patTab and all_chars *)
-val BMRECUR_THM = store_thm(
-    "BMRECUR_THM",
-    ``(LENGTH patTab = LENGTH pat)
+Theorem BMRECUR_THM:
+      (LENGTH patTab = LENGTH pat)
      /\ (!j. j < LENGTH pat
              ==> (LENGTH (EL j patTab) = LENGTH all_chars))
      /\ (!a j. j < LENGTH pat /\ a < LENGTH all_chars
@@ -594,7 +571,8 @@ val BMRECUR_THM = store_thm(
                          ==> !d. d < EL a (EL j patTab)
                                  ==> ~((k+d) IN solutions pat search))
      ==> (!j. j < LENGTH search ==> MEM (EL j search) all_chars)
-         ==> (bmRecur pat patTab all_chars search = solution pat search)``,
+         ==> (bmRecur pat patTab all_chars search = solution pat search)
+Proof
     strip_tac
     >> completeInduct_on `LENGTH search`
     >> fs[PULL_FORALL]
@@ -658,26 +636,25 @@ val BMRECUR_THM = store_thm(
                 )
             )
         )
-    );
+QED
 
 (* Calculates lookup table and all_chars to call bmRecur for the first time.
    That is: this implements the boyer-moore substring search algorithm to look
    for the first appearance of a substring in a string *)
-val bmSearch_def =
-    Define
-    `
+Definition bmSearch_def:
+
     bmSearch pat search =
         let
             all_chars = uniqueElems search
         in
             bmRecur pat (mTab pat all_chars) all_chars search
-    `;
+End
 
 (* Final proof that the bmSearch function correctly searches
    for the first substring *)
-val BMSEARCH_THM = store_thm(
-    "BMSEARCH_THM",
-    ``bmSearch pat search = solution pat search``,
+Theorem BMSEARCH_THM:
+      bmSearch pat search = solution pat search
+Proof
     simp[bmSearch_def]
     >> irule BMRECUR_THM
     >> rpt conj_tac
@@ -686,20 +663,19 @@ val BMSEARCH_THM = store_thm(
     >- rw [MTAB_DIM]
     >- rw [UNIQUE_ELEMS_THM]
     >- rw [MTAB_DIM]
-    );
+QED
 
 (* STRING SPECIALISATION *)
 
 (* Generate an alphabet with all the characters *)
-val alphabet_def =
-    Define
-    `
-    alphabet = GENLIST CHR 256
-    `;
+Definition alphabet_def:
 
-val ALPHABET_THM = store_thm(
-    "ALPHABET_THM",
-    ``! c:char. MEM c alphabet``,
+    alphabet = GENLIST CHR 256
+End
+
+Theorem ALPHABET_THM:
+      ! c:char. MEM c alphabet
+Proof
     STRIP_TAC
     >> `? n. (c = CHR n) /\ (n < 256)`
             by rw[ranged_char_nchotomy]
@@ -707,11 +683,12 @@ val ALPHABET_THM = store_thm(
     >> ONCE_REWRITE_TAC[alphabet_def]
     >> rw[MEM_GENLIST]
     >> qexists_tac `n`
-    >> simp[]);
+    >> simp[]
+QED
 
-val ALPHABET_FIND_THM = store_thm(
-    "ALPHABET_FIND_THM",
-    ``!c. findElem alphabet c = ORD c``,
+Theorem ALPHABET_FIND_THM:
+      !c. findElem alphabet c = ORD c
+Proof
     STRIP_TAC
     >> `? n. (c = CHR n) /\ (n < 256)`
             by rw[ranged_char_nchotomy]
@@ -751,7 +728,8 @@ val ALPHABET_FIND_THM = store_thm(
             suffices_by rw[]
     >> `CHR (findElem alphabet c) = c`
             suffices_by EVAL_TAC
-    >> fs[]);
+    >> fs[]
+QED
 
 (* Build up a bmRecur specialised to strings *)
 Definition bmRecurString_def:
@@ -793,9 +771,9 @@ Termination
   WF_REL_TAC `measure (λ(p, t, s). LENGTH s)` >> rw[DROP]
 End
 
-val BMRECUR_STRING_THM = store_thm(
-    "BMRECUR_STRING_THM",
-    ``bmRecur pat patTab alphabet search = bmRecurString pat patTab search``,
+Theorem BMRECUR_STRING_THM:
+      bmRecur pat patTab alphabet search = bmRecurString pat patTab search
+Proof
     Cases_on `pat`
     >> ONCE_REWRITE_TAC[bmRecur_def, bmRecurString_def]
     >> simp[]
@@ -803,24 +781,24 @@ val BMRECUR_STRING_THM = store_thm(
     >> rpt STRIP_TAC
     >> Cases_on `search`
     >> ONCE_REWRITE_TAC[bmRecur_def, bmRecurString_def]
-    >> simp[ALPHABET_FIND_THM]);
+    >> simp[ALPHABET_FIND_THM]
+QED
 
 (* Calls bmRecurString instead of bmRecur.
    That is: this implements the boyer-moore substring search algorithm to look
    for the first appearance of a substring in a string - but in ACTUAL string
    types *)
-val bmSearchString_def =
-    Define
-    `
+Definition bmSearchString_def:
+
     bmSearchString (pat : string) (search : string) =
         bmRecurString pat (mTab pat alphabet) search
-    `;
+End
 
 (* Final proof that the bmSearchString function correctly searches
    for the first substring *)
-val BMSEARCH_STRING_THM = store_thm(
-    "BMSEARCH_STRING_THM",
-    ``bmSearchString pat search = solution pat search``,
+Theorem BMSEARCH_STRING_THM:
+      bmSearchString pat search = solution pat search
+Proof
     simp[bmSearchString_def]
     >> `bmRecur pat (mTab pat alphabet) alphabet search = solution pat search`
             suffices_by rw[BMRECUR_STRING_THM]
@@ -831,6 +809,5 @@ val BMSEARCH_STRING_THM = store_thm(
     >- rw[MTAB_DIM]
     >- rw[ALPHABET_THM]
     >- rw[MTAB_DIM]
-    );
+QED
 
-val _ = export_theory();

@@ -41,6 +41,7 @@ sig
   val const_eq_ref : Abbrev.conv ref
   val elim_triv_literal_CONV : Abbrev.conv
   val one_line_ify : PmatchHeuristics.pmatch_heuristic option -> thm -> thm
+  val one_line_ify_mutrec : PmatchHeuristics.pmatch_heuristic option -> thm -> thm list
   val LIST_HALF_MK_ABS : thm -> thm
 
 end

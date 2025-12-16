@@ -1,14 +1,16 @@
-open HolKernel Parse boolLib bossLib dep_rewrite blastLib
-     bitLib reduceLib combinLib optionLib sptreeLib wordsLib computeLib;
-open optionTheory pairTheory arithmeticTheory combinTheory listTheory
-     rich_listTheory whileTheory bitTheory dividesTheory wordsTheory
-     indexedListsTheory numposrepTheory numeral_bitTheory
-     bitstringTheory logrootTheory byteTheory sptreeTheory;
-open cv_transLib cvTheory cv_stdTheory;
+Theory keccak
+Ancestors
+  option pair arithmetic combin list rich_list While bit divides
+  words indexedLists numposrep numeral_bit bitstring logroot byte
+  sptree cv cv_std
+Libs
+  dep_rewrite blastLib bitLib reduceLib combinLib optionLib
+  sptreeLib wordsLib computeLib cv_transLib
 
 (* The SHA-3 Standard: https://doi.org/10.6028/NIST.FIPS.202 *)
 
-val _ = new_theory "keccak";
+Overload Num[local] = “cv$Num”
+Overload Pair[local] = “cv$Pair”
 
 val _ = numLib.temp_prefer_num();
 
@@ -235,7 +237,7 @@ Proof
   rw[state_array_to_string_def]
 QED
 
-Triviality GENLIST_AND_LENGTH:
+Theorem GENLIST_AND_LENGTH[local]:
   GENLIST (λx. x < n ∧ P x) n = GENLIST P n
 Proof
   qid_spec_tac`P` \\
@@ -592,7 +594,7 @@ End
 
 (* compute-friendly versions and tests *)
 
-Triviality iota_some_elim:
+Theorem iota_some_elim[local]:
   (some j. j ≤ l ∧ z = 2 ** j - 1)
   = if z = 2 ** LOG2 (SUC z) - 1 ∧ LOG2 (SUC z) ≤ l
     then SOME (LOG2 (SUC z))
@@ -602,7 +604,7 @@ Proof
   rw[ADD1, SUB_ADD, LOG_POW, LOG2_def]
 QED
 
-Triviality iota_case_cond:
+Theorem iota_case_cond[local]:
   (case (if b then SOME x else NONE) of NONE => y | SOME z => f z) =
   if b then f x else y
 Proof
@@ -3693,7 +3695,8 @@ val () = cv_trans_deep_embedding EVAL eight_zeros_w64_def;
 val () = cv_auto_trans chunks_tr_aux_def;
 val () = cv_auto_trans chunks_tr_def;
 
-val pad_pre_def = cv_auto_trans_pre (REWRITE_RULE[GSYM chunks_tr_thm]pad10s1_136_w64_def);
+val pad_pre_def = cv_auto_trans_pre "pad10s1_136_w64_pre"
+                    (REWRITE_RULE[GSYM chunks_tr_thm]pad10s1_136_w64_def);
 
 Theorem pad10s1_136_w64_pre[cv_pre]:
   !zs m a. pad10s1_136_w64_pre zs m a
@@ -3743,7 +3746,7 @@ Proof
   \\ gvs[Abbr`t`]
 QED
 
-val theta_w64_pre_def = cv_auto_trans_pre (UNDISCH theta_w64_inlined);
+val theta_w64_pre_def = cv_auto_trans_pre "theta_w64_pre" (UNDISCH theta_w64_inlined);
 
 Theorem theta_w64_pre:
   LENGTH s = 25 ==> theta_w64_pre s
@@ -3752,7 +3755,7 @@ Proof
   \\ strip_tac \\ fs[]
 QED
 
-val rho_w64_pre_def = cv_auto_trans_pre (UNDISCH rho_w64_MAP2);
+val rho_w64_pre_def = cv_auto_trans_pre "rho_w64_pre" (UNDISCH rho_w64_MAP2);
 
 Theorem rho_w64_pre:
   LENGTH s = 25 ==> rho_w64_pre s
@@ -3762,7 +3765,7 @@ QED
 
 Theorem pi_w64_inlined = SIMP_RULE std_ss [pi_w64_indices_eq, MAP] pi_w64_def;
 
-val pi_w64_pre_def = cv_auto_trans_pre pi_w64_inlined;
+val pi_w64_pre_def = cv_auto_trans_pre "pi_w64_pre" pi_w64_inlined;
 
 Theorem pi_w64_pre:
   LENGTH s = 25 ==> pi_w64_pre s
@@ -3796,7 +3799,7 @@ Proof
   \\ rw[]
 QED
 
-val chi_w64_pre_def = cv_auto_trans_pre (UNDISCH chi_w64_inlined);
+val chi_w64_pre_def = cv_auto_trans_pre "chi_w64_pre" (UNDISCH chi_w64_inlined);
 
 Theorem chi_w64_pre:
   LENGTH s = 25 ==> chi_w64_pre s
@@ -3807,7 +3810,7 @@ QED
 
 val () = cv_auto_trans iota_w64_def;
 
-val Rnd_w64_pre_def = cv_auto_trans_pre Rnd_w64_def;
+val Rnd_w64_pre_def = cv_auto_trans_pre "Rnd_w64_pre" Rnd_w64_def;
 
 Theorem Rnd_w64_pre:
   LENGTH s = 25 ==> Rnd_w64_pre s w
@@ -3827,7 +3830,7 @@ QED
 Theorem Keccak_p_24_w64_inlined =
   Keccak_p_24_w64_def |> SIMP_RULE std_ss [iota_w64_RCz_def, MAP, FOLDL];
 
-val Keccak_p_24_w64_pre_def = cv_auto_trans_pre Keccak_p_24_w64_inlined;
+val Keccak_p_24_w64_pre_def = cv_auto_trans_pre "" Keccak_p_24_w64_inlined;
 
 Definition absorb_w64_rec_def:
   absorb_w64_rec s [] = s ∧
@@ -3845,7 +3848,7 @@ Proof
   \\ rw[absorb_w64_rec_def]
 QED
 
-val absorb_w64_rec_pre_def = cv_auto_trans_pre absorb_w64_rec_def;
+val absorb_w64_rec_pre_def = cv_auto_trans_pre "" absorb_w64_rec_def;
 
 Theorem LENGTH_Rnd_w64:
   LENGTH s = 25 ==>
@@ -3886,7 +3889,7 @@ Proof
   \\ simp[]
 QED
 
-val Keccak_256_w64_pre_def = cv_auto_trans_pre $
+val Keccak_256_w64_pre_def = cv_auto_trans_pre "Keccak_256_w64_pre" $
   (Keccak_256_w64_def |> SIMP_RULE std_ss [C_DEF, absorb_w64_rec_thm]);
 
 Theorem Keccak_256_w64_pre[cv_pre]:
@@ -3935,7 +3938,7 @@ Termination
   WF_REL_TAC ‘measure $ λ(a,tt,ww,x,y,w,z,a'). w - z’
 End
 
-Triviality while1_thm:
+Theorem while1_thm[local]:
   ∀a tt ww x y w z a'.
     SND (WHILE (λ(z,a'). z < w)
                (λ(z,a').
@@ -3947,7 +3950,7 @@ Triviality while1_thm:
     while1 a tt ww x y w z a'
 Proof
   ho_match_mp_tac while1_ind \\ rw []
-  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once WHILE]
   \\ simp [Once while1_def]
   \\ IF_CASES_TAC \\ gvs []
 QED
@@ -3976,7 +3979,7 @@ Theorem while2_thm:
     while2 a w ww x y t a'
 Proof
   ho_match_mp_tac while2_ind \\ rw []
-  \\ simp [Once whileTheory.WHILE]
+  \\ simp [Once WHILE]
   \\ simp [Once while2_def]
   \\ IF_CASES_TAC \\ gvs []
 QED
@@ -4003,7 +4006,7 @@ val _ = cv_trans spt_to_string_def;
 
 val _ = cv_trans b2w_def;
 
-val pre = rc_step_def |> SRULE [LET_THM] |> cv_trans_pre;
+val pre = rc_step_def |> SRULE [LET_THM] |> cv_trans_pre "rc_step_pre";
 Theorem rc_step_pre[cv_pre]:
   ∀r. rc_step_pre r ⇔ 8 ≤ LENGTH r
 Proof
@@ -4016,7 +4019,7 @@ Definition rc_steps_def:
       rc_steps (n-1) (rc_step r)
 End
 
-val pre = cv_trans_pre rc_steps_def;
+val pre = cv_trans_pre "rc_steps_pre" rc_steps_def;
 Theorem rc_steps_pre[cv_pre]:
   ∀n r. rc_steps_pre n r = if n = 0 then r ≠ [] else 8 ≤ LENGTH r
 Proof
@@ -4024,7 +4027,7 @@ Proof
   \\ Cases_on ‘r’ \\ gvs [rc_step_def]
 QED
 
-Triviality rc_eq:
+Theorem rc_eq[local]:
   rc t = rc_steps (t MOD 255) [T;F;F;F;F;F;F;F]
 Proof
   rewrite_tac [rc_def,EVAL “REPLICATE 7 x”]
@@ -4039,7 +4042,7 @@ Proof
   \\ gvs []
 QED
 
-val pre = cv_trans_pre rc_eq;
+val pre = cv_trans_pre "rc_pre" rc_eq;
 Theorem rc_pre[cv_pre]:
   ∀t. rc_pre t
 Proof
@@ -4117,7 +4120,7 @@ Proof
   rewrite_tac [GSYM sptreeTheory.LENGTH_toSortedAList] \\ rw []
 QED
 
-Triviality size_while1_neq_0:
+Theorem size_while1_neq_0[local]:
   ∀a tt ww x y w z s.
     size s ≠ 0 ⇒
     size (while1 a tt ww x y w z s) ≠ 0
@@ -4130,7 +4133,7 @@ Proof
   \\ gvs [size_insert] \\ rw []
 QED
 
-Triviality size_while2_neq_0:
+Theorem size_while2_neq_0[local]:
   ∀a w ww x y t s.
     size s ≠ 0 ⇒
     size (while2 a w ww x y t s) ≠ 0
@@ -4144,7 +4147,7 @@ Proof
   \\ irule size_while1_neq_0 \\ fs []
 QED
 
-Triviality Keccak_p_spt_NOT_NIL:
+Theorem Keccak_p_spt_NOT_NIL[local]:
   xs ≠ [] ⇒ Keccak_p_spt n xs ≠ []
 Proof
   gvs [Keccak_p_spt_def,spt_to_string_def]
@@ -4202,9 +4205,9 @@ Definition Keccak_spt_def:
       Z = while3 1600 (1600 − c) x' [] S
     in
       TAKE x' Z
-End;
+End
 
-Triviality sponge_foldl_NOT_NIL:
+Theorem sponge_foldl_NOT_NIL[local]:
   ∀xs S0 Pis.
     S0 ≠ [] ∧ xs ≠ [] ⇒
     sponge_foldl xs S0 Pis ≠ []
@@ -4267,7 +4270,7 @@ Proof
        \\ Cases_on ‘n'’ \\ gvs [ASCIInumbersTheory.HEX_def,ADD1])
 QED
 
-val pre = cv_trans_pre HEX_eq
+val pre = cv_trans_pre "HEX_pre" HEX_eq
 Theorem HEX_pre[cv_pre]:
   ∀n. HEX_pre n ⇔ n < 16
 Proof
@@ -4280,7 +4283,7 @@ Definition hex_string_def:
       hex_string (n DIV 16) (HEX (n MOD 16) :: acc)
 End
 
-val pre = cv_trans_pre hex_string_def;
+val pre = cv_trans_pre "hex_string_pre" hex_string_def;
 Theorem hex_string_pre[cv_pre]:
   ∀n acc. hex_string_pre n acc
 Proof
@@ -4560,4 +4563,3 @@ CBV_CONV cs ``bools_to_hex_string
 
 *)
 
-val _ = export_theory();

@@ -9,12 +9,13 @@
 (* interactive use:
   app load ["systemTheory", "wordsLib", "armLib", "arm_evalTheory"];
 *)
+Theory arm_rules
+Ancestors
+  arithmetic bit words update arm system arm_eval
+Libs
+  Q wordsLib
 
-open HolKernel boolLib Parse bossLib;
-open Q arithmeticTheory bitTheory wordsTheory wordsLib;
-open updateTheory armTheory systemTheory arm_evalTheory;
 
-val _ = new_theory "arm_rules";
 val _ = ParseExtras.temp_loose_equality()
 
 (* ------------------------------------------------------------------------- *)
@@ -160,17 +161,21 @@ val smul32 = prove(
     \\ SIMP_TAC (arith_ss++fcpLib.FCP_ss++SIZES_ss)
          [word_bits_def,word_bits_n2w_32,GSYM word_mul_def]);
 
-val WORD_UMULL = store_thm("WORD_UMULL",
-  `!a:word32 b:word32.
+Theorem WORD_UMULL:
+   !a:word32 b:word32.
      ((63 >< 32) ((w2w a * w2w b):word64)):word32 @@ (a * b) =
-     (w2w a * w2w b):word64`,
-  METIS_TAC [concat32,mul32]);
+     (w2w a * w2w b):word64
+Proof
+  METIS_TAC [concat32,mul32]
+QED
 
-val WORD_SMULL = store_thm("WORD_SMULL",
-  `!a:word32 b:word32.
+Theorem WORD_SMULL:
+   !a:word32 b:word32.
      ((63 >< 32) ((sw2sw a * sw2sw b):word64)):word32 @@ (a * b) =
-     (sw2sw a * sw2sw b):word64`,
-  METIS_TAC [concat32,smul32]);
+     (sw2sw a * sw2sw b):word64
+Proof
+  METIS_TAC [concat32,smul32]
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -821,4 +826,3 @@ val _ = save_thm("ARM_MCR", ARM_MCR);
 
 (* ------------------------------------------------------------------------- *)
 
-val _ = export_theory();

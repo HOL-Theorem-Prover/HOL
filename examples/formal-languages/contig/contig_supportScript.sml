@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib BasicProvers pred_setLib stringLib;
-
-open pairTheory arithmeticTheory listTheory rich_listTheory pred_setTheory
-     stringTheory combinTheory optionTheory;
-
-val _ = new_theory "contig_support";
+Theory contig_support
+Ancestors
+ combin option pair arithmetic list rich_list pred_set string
+Libs
+  BasicProvers pred_setLib stringLib
 
 Theorem SKOLEM_SUBSET :
   !P Q.
@@ -183,5 +182,3 @@ Theorem concatPartial_nil :
 Proof
  EVAL_TAC
 QED
-
-val _ = export_theory();

@@ -2,17 +2,17 @@
   app load ["bossLib", "numLib", "pairTheory",
             "schneiderUtils", "Temporal_LogicTheory"];
 *)
+Theory Past_Temporal_Logic
+Ancestors
+  num prim_rec arithmetic pair Temporal_Logic
+Libs
+  Rsyntax numLib schneiderUtils tautLib
 
-open HolKernel Parse boolLib Rsyntax
-     numLib numTheory prim_recTheory arithmeticTheory pairTheory
-     schneiderUtils Temporal_LogicTheory;
-open tautLib bossLib
 
 val _ = Rewrite.add_implicit_rewrites pairLib.pair_rws;
 val ZERO_LEMMA = ARITH_PROVE“~(x<x) /\ (0<SUC x) /\ ~(SUC x=0)”;
 
 
-val _ = new_theory "Past_Temporal_Logic";
 val _ = ParseExtras.temp_loose_equality()
 
 
@@ -3679,4 +3679,3 @@ val _ = save_thm("SEPARATE_BEFORE_THM",SEPARATE_BEFORE_THM);
 val _ = save_thm("SEPARATE_PNEXT_THM",SEPARATE_PNEXT_THM);
 val _ = save_thm("SEPARATE_PSUNTIL_THM",SEPARATE_PSUNTIL_THM);
 
-val _ = export_theory();

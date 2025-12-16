@@ -134,8 +134,10 @@ val mips_frame =
 local
    fun dest_const tm =
      Term.dest_const tm
-     handle e as HOL_ERR {message = "not a const", ...} =>
+     handle e as HOL_ERR herr =>
+       if message_of herr = "not a const" then
             (Parse.print_term tm; print "\n"; raise e)
+       else raise e
    val l =
       [
        "cond", "mips_exception", "mips_exceptionSignalled",

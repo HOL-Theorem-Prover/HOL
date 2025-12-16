@@ -1,7 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open m0_decompLib
-
-val () = new_theory "m0_decomp_demo";
+Theory m0_decomp_demo
+Ancestors
+  m0_prog
+Libs
+  m0_decompLib
 
 (* test program *)
 val q =
@@ -38,5 +39,3 @@ val run1 = Theory.save_thm("run1",
 
 val run2 = Theory.save_thm("run2",
   EVAL ``test2 (12w, 0, dmem, \a. if a && 3w = 0w then 4w else 0w)``)
-
-val () = export_theory()

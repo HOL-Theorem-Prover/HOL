@@ -1,0 +1,33 @@
+## `BITS_INTRO_CONV`
+
+``` hol4
+wordsLib.BITS_INTRO_CONV : conv
+```
+
+------------------------------------------------------------------------
+
+Tries to convert terms of the form `n MOD p`, `n MOD p DIV q` and
+`(n DIV q) MOD p` into a terms of the form `BITS h l n`. This will
+succeed when `p` and `q` are powers of two.
+
+### Example
+
+``` hol4
+> wordsLib.BITS_INTRO_CONV “(n DIV 16) MOD 4”;
+val it = |- (n DIV 16) MOD 4 = BITS 5 4 n: thm
+
+> wordsLib.BITS_INTRO_CONV “n MOD 16 DIV 4”;
+val it = |- n MOD 16 DIV 4 = BITS 3 2 n: thm
+
+> wordsLib.BITS_INTRO_CONV “n MOD 16”;
+val it = |- n MOD 16 = BITS 3 0 n: thm
+
+> wordsLib.BITS_INTRO_CONV “n MOD dimword(:'a)”;
+val it =
+   |- n MOD dimword (:'a) = BITS (dimindex (:'a) - 1) 0 n:
+   thm
+```
+
+### See also
+
+[`wordsLib.BITS_INTRO_ss`](#wordsLib.BITS_INTRO_ss)

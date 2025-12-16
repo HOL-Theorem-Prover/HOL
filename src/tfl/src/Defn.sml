@@ -1131,8 +1131,12 @@ fun pairf (stem, eqs0) =
        (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)
      end
  end
- handle e as HOL_ERR {message = "incompatible types", ...} =>
-   case move_arg eqs0 of SOME tm => pairf (stem, tm) | NONE => raise e
+ handle e as HOL_ERR herr =>
+   if message_of herr = "incompatible types" then
+      (case move_arg eqs0
+        of SOME tm => pairf (stem, tm)
+         | NONE => raise e)
+   else raise e
 
 (*---------------------------------------------------------------------------*)
 (* Abbreviation or prim. rec. definitions.                                   *)
@@ -1233,11 +1237,6 @@ fun stdrec_defn (facts,(stem,stem'),wfrec_res,untuple) =
     in TotalDefn.
  ---------------------------------------------------------------------------*)
 
-fun holexnMessage (HOL_ERR {origin_structure,origin_function,source_location,message}) =
-      origin_structure ^ "." ^ origin_function ^
-      ":" ^ locn.toShortString source_location ^ ": " ^ message
-  | holexnMessage e = General.exnMessage e
-
 fun is_simple_arg t =
   is_var t orelse
   (case Lib.total dest_pair t of
@@ -1264,8 +1263,7 @@ fun prim_mk_defn stem eqns =
                List.all is_simple_arg args
             then
               (* not recursive, yet failed *)
-              raise err ("Simple definition failed with message: "^
-                         holexnMessage e)
+              raise wrap_exn "Defn" "prim_mk_defn (simple definition)" e
             else
              let
                 val (tup_eqs, stem', untuple) = pairf (stem, eqns)
@@ -1714,12 +1712,12 @@ fun ptdefn_freevars pt = let
                              "Couldn't see preterm as equality"
   val (f0, args) = strip_pcomb l
   val f = head_var f0
-  val lfs = op_U eq (map ptfvs args)
+  val lfs = op_U veq (map ptfvs args)
   val rfs = ptfvs r
   infix \\
-  fun s1 \\ s2 = op_set_diff eq s1 s2
+  fun s1 \\ s2 = op_set_diff veq s1 s2
 in
-  op_union eq (rfs \\ lfs \\ uvars) [f]
+  op_union veq (rfs \\ lfs \\ uvars) [f]
 end
 
 fun defn_absyn_to_term a = let
@@ -1756,7 +1754,7 @@ fun defn_absyn_to_term a = let
     ptsM >-
     (fn pts =>
       let
-        val all_frees = op_U Preterm.eq (map ptdefn_freevars pts)
+        val all_frees = op_U Preterm.veq (map ptdefn_freevars pts)
       in
         foldlM foldthis (Binarymap.mkDict String.compare) all_frees >>
         construct_final_term pts

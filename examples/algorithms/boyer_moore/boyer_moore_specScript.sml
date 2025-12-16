@@ -1,15 +1,7 @@
-open HolKernel boolLib bossLib Parse;
-
-open listTheory;
-open rich_listTheory;
-open prim_recTheory;
-open arithmeticTheory;
-open pred_setTheory;
-open pairTheory;
-open boolTheory;
-open set_lemmasTheory;
-
-val _ = new_theory"boyer_moore_spec";
+Theory boyer_moore_spec
+Ancestors
+  list rich_list prim_rec arithmetic pred_set pair bool
+  set_lemmas
 
 (*
     SOLUTION DEFINITION AND BEHAVIOUR
@@ -152,13 +144,13 @@ Definition solution_def:
 End
 
 (* Shifting capacity of the solution*)
-val SOL_SHF_THM = store_thm(
-    "SOL_SHF_THM",
-    ``(LENGTH pat <= LENGTH search) /\
+Theorem SOL_SHF_THM:
+      (LENGTH pat <= LENGTH search) /\
      (m <= LENGTH search) /\
      (!d. d < m ==> ~(d IN solutions pat search))
      ==> (m + solution pat (DROP m search)
-          = solution pat search)``,
+          = solution pat search)
+Proof
     rw[solution_def]
     >> Cases_on `solutions pat search = {}`
     >- (`solutions pat (DROP m search) = {}`
@@ -178,27 +170,26 @@ val SOL_SHF_THM = store_thm(
                  by rw[Abbr `sols`, Abbr `L`, solutions_def,
                        MIN_SET_UPPER_BOUND, DECIDE ``a <= b - c ==> a <= b``]
          >> fs[MIN_DEF,SOLS_MIN_SHF, Abbr `sols_d`, Abbr `sols`])
-    );
+QED
 
 
 
 
 (* -- CHARACTER MISMATCH SHIFTS -- *)
 (* Formal Definition of Valid Character Shifts *)
-val valid_cha_shifts_def =
-   Define
-   `
+Definition valid_cha_shifts_def:
+
    valid_cha_shifts pat all_chars j a =
         (j+1) INSERT {d | 1 <= d /\ d <= j
                           /\ (EL (j-d) pat = EL a all_chars)}
-   `;
+End
 
 (* Confirmation that a valid character shift exists *)
-val CHA_SHIFT_EXISTS_THM = store_thm(
-    "CHA_SHIFT_EXISTS_THM",
-    ``valid_cha_shifts pat all_chars j a <> {}``,
+Theorem CHA_SHIFT_EXISTS_THM:
+      valid_cha_shifts pat all_chars j a <> {}
+Proof
     rw[valid_cha_shifts_def]
-    );
+QED
 
 (* Confirmation that skipped shifts not in valid_cha_shifts give
    invalid alignments *)
@@ -229,21 +220,20 @@ QED
 
 (* -- SUFFIX MATCH SHIFTS -- *)
 (* Formal Definition of Valid Suffix Shifts *)
-val valid_suf_shifts_def =
-    Define
-    `
+Definition valid_suf_shifts_def:
+
     valid_suf_shifts pat j  =
         {d | 1 <= d /\ d <= LENGTH pat
             /\ (!i. (MAX (j+1) d <= i) /\ (i <= LENGTH pat - 1)
                     ==> (EL (i-d) pat = EL i pat))
             /\ ((d >= j+1) \/ (EL (j-d) pat <> EL j pat))
         }
-    `;
+End
 
 (* Confirmation that a valid suffix shift exists in correct circumstances *)
-val SUF_SHIFT_EXISTS_THM = store_thm(
-    "SUF_SHIFT_EXISTS_THM",
-    ``j < LENGTH pat ==> valid_suf_shifts pat j <> {}``,
+Theorem SUF_SHIFT_EXISTS_THM:
+      j < LENGTH pat ==> valid_suf_shifts pat j <> {}
+Proof
     rw[valid_suf_shifts_def]
     >> Cases_on `pat`
     >- fs[]
@@ -251,13 +241,12 @@ val SUF_SHIFT_EXISTS_THM = store_thm(
        >> qexists_tac `SUC (LENGTH t)`
        >> simp[]
        >> fs[])
-    );
+QED
 
 (* Confirmation that skipped shifts not in valid_suf_shifts give
    invalid alignments *)
-val SUF_SKIP_NOT_SOL = store_thm(
-    "SUF_SKIP_NOT_SOL",
-    ``((k <= LENGTH search - LENGTH pat) /\
+Theorem SUF_SKIP_NOT_SOL:
+      ((k <= LENGTH search - LENGTH pat) /\
       (j < LENGTH pat)
     /\ (!i. (j<i /\ i < LENGTH pat)
            ==> (EL i pat = EL (k+i) search))
@@ -266,7 +255,7 @@ val SUF_SKIP_NOT_SOL = store_thm(
     ==> (!d. d < MIN_SET (valid_suf_shifts pat j)
            ==> ~((k+d) IN solutions pat search)
         )
-    ``,
+Proof
     rw[solutions_def]
     >> Cases_on `d = 0`
     >- (simp[] >> metis_tac[])
@@ -308,6 +297,5 @@ val SUF_SKIP_NOT_SOL = store_thm(
                 >- simp[SUF_SHIFT_EXISTS_THM])
             )
         )
-    );
+QED
 
-val _ = export_theory();

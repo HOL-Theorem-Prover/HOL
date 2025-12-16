@@ -1,14 +1,11 @@
-open HolKernel boolLib bossLib Parse BasicProvers dep_rewrite
-open armv86aTheory armv86a_terminationTheory armv86a_typesTheory
-open arm8Theory arm8Lib arm8_stepTheory arm8_stepLib
-open wordsTheory bitstringTheory listTheory rich_listTheory
-open integerTheory int_arithTheory arithmeticTheory
-open wordsLib bitstringLib intLib
-open l3_equivalence_miscTheory
-
-
-val _ = new_theory "l3_equivalence_lemmas";
-val _ = set_grammar_ancestry ["arm8_step", "arm8", "armv86a_termination"];
+Theory l3_equivalence_lemmas
+Ancestors
+  armv86a armv86a_termination armv86a_types arm8_step arm8 words
+  bitstring list rich_list integer int_arith arithmetic
+  l3_equivalence_misc
+Libs
+  BasicProvers dep_rewrite arm8Lib arm8_stepLib wordsLib
+  bitstringLib intLib
 
 val _ = wordsLib.output_words_as_bin();
 val _ = wordsLib.guess_lengths();
@@ -845,6 +842,8 @@ Definition create_wmask_def[nocompute]:
   in wmask
 End
 
+val _ = monadsyntax.enable_monad "sail2_state_monad"
+
 Theorem DecodeBitMasks_64_lemma[local]:
   armv86a$DecodeBitMasks 64 immN imms immr immediate : (word64 # word64) M =
   do
@@ -1143,7 +1142,7 @@ Proof
 QED
 *)
 
-Triviality Replicate_64_word_and:
+Theorem Replicate_64_word_and[local]:
   LENGTH l1 = LENGTH l2 ⇒
   Replicate l1 && Replicate l2 = Replicate (band l1 l2) :word64
 Proof
@@ -1151,7 +1150,7 @@ Proof
   simp[band_def, bitwise_replicate]
 QED
 
-Triviality Replicate_64_word_or:
+Theorem Replicate_64_word_or[local]:
   LENGTH l1 = LENGTH l2 ⇒
   Replicate l1 || Replicate l2 = Replicate (bor l1 l2) :word64
 Proof
@@ -1159,7 +1158,7 @@ Proof
   simp[bor_def, bitwise_replicate]
 QED
 
-Triviality word_neg_6:
+Theorem word_neg_6[local]:
   w2n (-a : word6) = (64 - w2n a) MOD 64
 Proof
   Cases_on_word_value `a` >> simp[]
@@ -1351,6 +1350,19 @@ Proof
   DEP_REWRITE_TAC[ADD_DIV_RWT] >> simp[]
 QED
 
+Theorem w2v_reverse_endianness0_16:
+  w2v (reverse_endianness0 (w : word16)) = BigEndianReverse (w2v w)
+Proof
+  rw[reverse_endianness0_def, BigEndianReverse_def] >>
+  simp[
+    sail2_operators_mwordsTheory.subrange_vec_dec_def,
+    sail2_operators_mwordsTheory.concat_vec_def
+    ] >>
+  qspec_then `w` assume_tac length_w2v >> gvs[SimpRHS] >>
+  gvs[LENGTH_EQ_NUM_compute] >> simp[ByteList_def] >>
+  pop_assum mp_tac >> EVAL_TAC >> blastLib.BBLAST_TAC
+QED
+
 Theorem w2v_reverse_endianness0_32:
   w2v (reverse_endianness0 (w : word32)) = BigEndianReverse (w2v w)
 Proof
@@ -1411,6 +1423,19 @@ Proof
   blastLib.BBLAST_TAC
 QED
 
+Theorem extract_bits_reverse_endianness0_16:
+  ∀v:word16.
+    (7  >< 0)  (reverse_endianness0 v) = (15 >< 8) v ∧
+    (15 >< 8)  (reverse_endianness0 v) = (7 >< 0) v
+Proof
+  rw[] >> simp[reverse_endianness0_def] >>
+  simp[
+    sail2_operators_mwordsTheory.subrange_vec_dec_def,
+    sail2_operators_mwordsTheory.concat_vec_def
+    ] >>
+  blastLib.BBLAST_TAC
+QED
+
 Theorem list_combine:
   ∀l1 l2.
     list_combine l1 l2 =
@@ -1423,4 +1448,3 @@ QED
 
 (****************************************)
 
-val _ = export_theory ();

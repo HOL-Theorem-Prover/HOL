@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open injected_strlit2Theory
-open testutils
-
-val _ = new_theory "injected_strlit3";
+Theory injected_strlit3
+Ancestors
+  injected_strlit2
+Libs
+  testutils
 
 (* check that the string injections from the base theory really have been
    removed; the SINJ2 form will print to itself if this has been done *)
@@ -18,4 +17,3 @@ val _ = require_msg
 val _ = testutils.tpp "«bar foo»"
 
 
-val _ = export_theory();

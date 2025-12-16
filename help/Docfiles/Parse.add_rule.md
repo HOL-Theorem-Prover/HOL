@@ -1,0 +1,273 @@
+## `add_rule`
+
+``` hol4
+Parse.add_rule :
+  {term_name : string, fixity : fixity,
+   pp_elements: term_grammar.pp_element list,
+   paren_style : term_grammar.ParenStyle,
+   block_style : term_grammar.PhraseBlockStyle *
+                 term_grammar.block_info}  -> unit
+```
+
+------------------------------------------------------------------------
+
+Adds a parsing/printing rule to the global grammar.
+
+The function `add_rule` is a fundamental method for adding parsing (and
+thus printing) rules to the global term grammar that sits behind the
+term-parsing function `Parse.Term`, and the pretty-printer installed for
+terms. It is used for everything except the addition of list-forms, for
+which refer to the entry for `add_listform`.
+
+There are five components in the record argument to `add_rule`. The
+`term_name` component is the name of the term (whether a constant or a
+variable) that will be generated at the head of the function
+application. Thus, the `term_name` component when specifying parsing for
+conditional expressions is `COND`.
+
+The following values (all in structure `Parse`) are useful for
+constructing fixity values:
+
+``` hol4
+   val LEFT       : HOLgrammars.associativity
+   val RIGHT      : HOLgrammars.associativity
+   val NONASSOC   : HOLgrammars.associativity
+
+   val Binder     : fixity
+   val Closefix   : fixity
+   val Infixl     : int -> fixity
+   val Infixr     : int -> fixity
+   val Infix      : HOLgrammars.associativity * int -> fixity
+   val Prefix     : int -> fixity
+   val Suffix     : int -> fixity
+```
+
+The `Binder` fixity is for binders such as universal and existential
+quantifiers (`!` and `?`). Binders can actually be seen as (true)
+prefixes (should `` `!x. p /\ q` `` be parsed as `` `(!x. p) /\ q` `` or
+as `` `!x. (p /\ q)` ``?), but the `add_rule` interface only allows
+binders to be added at the one level (the weakest in the grammar).
+Further, when binders are added using this interface, all elements of
+the record apart from the `term_name` are ignored, so the name of the
+binder must be the same as the string that is parsed and printed (but
+see also restricted quantifiers: `associate_restriction`).
+
+The remaining fixities all cause `add_rule` to pay due heed to the
+`pp_elements` ("parsing/printing elements") component of the record. As
+far as parsing is concerned, the only important elements are `TOK` and
+`TM` values, of the following types:
+
+``` hol4
+   val TM  : term_grammar.pp_element
+   val TOK : string -> term_grammar.pp_element
+```
+
+The `TM` value corresponds to a "hole" where a sub-term is possible. The
+`TOK` value corresponds to a piece of concrete syntax, a string that is
+required when parsing, and which will appear when printing. The sequence
+of `pp_elements` specified in the record passed to `add_rule` specifies
+the "kernel" syntax of an operator in the grammar. The "kernel" of a
+rule is extended (or not) by additional sub-terms depending on the
+fixity type, thus:
+
+``` hol4
+   Closefix    :      [Kernel]     (* no external arguments *)
+   Prefix      :      [Kernel] _   (* an argument to the right *)
+   Suffix      :    _ [Kernel]     (* an argument to the left *)
+   Infix       :    _ [Kernel] _   (* arguments on both sides *)
+```
+
+Thus simple infixes, suffixes and prefixes would have singleton
+`pp_element` lists, consisting of just the symbol desired. More
+complicated mix-fix syntax can be constructed by identifying whether or
+not sub-term arguments exist beyond the kernel of concrete syntax. For
+example, syntax for the evaluation relation of an operational semantics
+(`_ |- _ --> _`) is an infix with a kernel delimited by `|-` and `-->`
+tokens. Syntax for denotation brackets `[| _ |]` is a closefix with one
+internal argument in the kernel.
+
+The remaining sorts of possible `pp_element` values are concerned with
+pretty-printing. (The basic scheme is implemented on top of a standard
+Oppen-style pretty-printing package.) They are
+
+``` hol4
+   (* where
+        type term_grammar.block_info = PP.break_style * int
+   *)
+   val BreakSpace : (int * int) -> term_grammar.pp_element
+   val HardSpace : int -> term_grammar.pp_element
+
+   val BeginFinalBlock : term_grammar.block_info -> term_grammar.pp_element
+   val EndInitialBlock : term_grammar.block_info -> term_grammar.pp_element
+   val PPBlock : term_grammar.pp_element list * term_grammar.block_info
+                 -> term_grammar.pp_element
+
+   val OnlyIfNecessary : term_grammar.ParenStyle
+   val ParoundName : term_grammar.ParenStyle
+   val ParoundPrec : term_grammar.ParenStyle
+   val Always : term_grammar.ParenStyle
+   val IfNotTop : {realonly:bool} -> term_grammar.ParenStyle
+
+   val AroundEachPhrase : term_grammar.PhraseBlockStyle
+   val AroundSamePrec   : term_grammar.PhraseBlockStyle
+   val AroundSameName   : term_grammar.PhraseBlockStyle
+   val NoPhrasing       : term_grammar.PhraseBlockStyle
+```
+
+The two spacing values provide ways of specifying white-space should be
+added when terms are printed. Use of `HardSpace n` results in `n` spaces
+being added to the term whatever the context. On the other hand,
+`BreakSpace(m,n)` results in a break of width `m` spaces unless this
+makes the current line too wide, in which case a line-break will occur,
+and the next line will be indented an extra `n` spaces.
+
+For example, the `add_infix` function (q.v.) is implemented in terms of
+`add_rule` in such a way that a single token infix `s`, has a
+`pp_element` list of
+
+``` hol4
+   [HardSpace 1, TOK s, BreakSpace(1,0)]
+```
+
+This results in chains of infixes (such as those that occur with
+conjunctions) that break so as to leave the infix on the right hand side
+of the line. Under this constraint, printing can't break so as to put
+the infix symbol on the start of a line, because that would imply that
+the `HardSpace` had in fact been broken. (Consequently, if a change to
+this behaviour is desired, there is no global way of effecting it, but
+one can do it on an infix-by-infix basis by deleting the given rule
+(see, for example, `remove_termtok`) and then "putting it back" with
+different pretty-printing constraints.)
+
+The `PPBlock` function allows the specification of nested blocks (blocks
+in the Oppen pretty-printing sense) within the list of `pp_element`s.
+Because there are sub-terms in all but the `Closefix` fixities that
+occur beyond the scope of the `pp_element` list, the `BeginFinalBlock`
+and `EndInitialBlock` functions can also be used to indicate the
+boundary of blocks whose outer extent is the term beyond the kernel
+represented by the `pp_element` list. There is an example of this below.
+
+The possible `ParenStyle` values describe when parentheses should be
+added to terms. The `OnlyIfNecessary` value will cause parentheses to be
+added only when required to disambiguate syntax. The `ParoundName` will
+cause parentheses to be added if necessary, or where the head symbol has
+the given `term_name` and where this term is not the argument of a
+function with the same head name. This style of parenthesisation is used
+with tuples, for example. The `ParoundPrec` value is similar, but causes
+parentheses to be added when the term is the argument to a function with
+a different precedence level. The `IfNotTop` value will cause
+parentheses to appear whenever the term is not being printed as the
+"top" term. A term is considered to be "top" if it is the whole term
+being printed (and this is known as the "real top"), or if it occurs
+between two tokens that always delimit complete terms. For example, the
+semi-colons in a list-like form are such delimiters, as are the
+list-form's left and right brackets, as are the "if" and "then" tokens
+in an if-then-else form. Having the `realonly` parameter set to true
+will cause parentheses whenever the context is anything not the real
+top, while having it set to false will cause parentheses if in neither
+sort of "top". Finally, the `Always` value causes parentheses always to
+be added.
+
+The `PhraseBlockStyle` values describe when pretty-printing blocks
+involving this term should be entered. The `AroundEachPhrase` style
+causes a pretty-printing block to be created around each term. This is
+not appropriate for operators such as conjunction however, where all of
+the arguments to the conjunctions in a list are more pleasingly thought
+of as being at the same level. This effect is gained by specifying
+either `AroundSamePrec` or `AroundSameName`. The former will cause the
+creation of a new block for the phrase if it is at a different
+precedence level from its parent, while the latter creates the block if
+the parent name is not the same. The former is appropriate for `+` and
+`-` which are at the same precedence level, while the latter is
+appropriate for `/\`. Finally, the `NoPhrasing` style causes there to be
+no block at all around terms controlled by this rule. The intention in
+using such a style is to have block structure controlled by the level
+above.
+
+### Failure
+
+This function will fail if the `pp_element` list does not have `TOK`
+values at the beginning and the end of the list, or if there are two
+adjacent `TM` values in the list. It will fail if the rule specifies a
+fixity with a precedence, and if that precedence level in the grammar is
+already taken by rules with a different sort of fixity.
+
+### Example
+
+The traditional (now discontinued) HOL88/90 syntax for conditionals is
+`b => t | e`. With "dangling" terms (the `b` and the `e`) to the left
+and right, it is an infix (and one of very weak precedence at that).
+
+``` hol4
+   val _ = add_rule{term_name = "COND",
+                    fixity = Infix (HOLgrammars.RIGHT, 3),
+                    pp_elements = [HardSpace 1, TOK "=>",
+                                   BreakSpace(1,0), TM,
+                                   BreakSpace(1,0), TOK "|",
+                                   HardSpace 1],
+                    paren_style = OnlyIfNecessary,
+                    block_style = (AroundEachPhrase,
+                                   (PP.INCONSISTENT, 0))};
+```
+
+The more familiar `if-then-else` syntax has a "dangling" term only to
+the right of the construction, so this rule's fixity is of type
+`Prefix`. (If the rule was made a `Closefix`, strings such as
+`` `if P then Q else R` `` would still parse, but so too would
+`` `if P then Q else` ``.) This example also illustrates the use of
+blocks within rules to improve pretty-printing.
+
+``` hol4
+   val _ = add_rule{term_name = "COND", fixity = Prefix 70,
+                    pp_elements = [PPBlock([TOK "if", BreakSpace(1,2),
+                                            TM, BreakSpace(1,0),
+                                            TOK "then"], (PP.CONSISTENT, 0)),
+                                   BreakSpace(1,2), TM, BreakSpace(1,0),
+                                   BeginFinalBlock(PP.CONSISTENT, 2),
+                                   TOK "else", BreakSpace(1,0)],
+                    paren_style = OnlyIfNecessary,
+                    block_style = (AroundEachPhrase,
+                                   (PP.INCONSISTENT, 0))};
+```
+
+Note that the above form is not that actually used in the system. As
+written, it allows for pretty-printing some expressions as:
+
+``` hol4
+   if P then
+      <very long term> else Q
+```
+
+because the `block_style` is `INCONSISTENT`. The actual pretty-printer
+for if-then-else is a custom piece of code installed with
+`add_user_printer`. This handles nice printing of chained conditionals.
+
+The pretty-printer prefers later rules over earlier rules by default
+(though this choice can be changed with `prefer_form_with_tok` (q.v.)),
+so if both of these calls were made, conditional expressions would print
+using the `if-then-else` syntax rather than the `_ => _ | _` syntax.
+
+For making pretty concrete syntax possible.
+
+### Comments
+
+Because adding new rules to the grammar may result in precedence
+conflicts in the operator-precedence matrix, it is as well with
+interactive use to test the `Term` parser immediately after adding a new
+rule, as it is only with this call that the precedence matrix is built.
+
+As with other functions in the `Parse` structure, there is a companion
+`temp_add_rule` function, which has the same effect on the global
+grammar, but which does not cause this effect to persist when the
+current theory is exported.
+
+An Isabelle-style concrete syntax for specifying rules would probably be
+desirable as it would conceal the complexity of the above from most
+users.
+
+### See also
+
+[`Parse.add_listform`](#Parse.add_listform),
+[`Parse.add_infix`](#Parse.add_infix),
+[`Parse.prefer_form_with_tok`](#Parse.prefer_form_with_tok),
+[`Parse.remove_rules_for_term`](#Parse.remove_rules_for_term)

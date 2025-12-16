@@ -50,30 +50,32 @@ loadPath := "/NOBACKUP/workspaces/nargeskh/hol4.k.7/examples/ARM/v7/eval" :: !lo
 load "armLib";
 open armLib;
 *)
+Theory MMU
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm
+Libs
+  parmonadsyntax
 
-open HolKernel boolLib bossLib Parse;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory armTheory;
-open parmonadsyntax;
-
-val _ =  new_theory("MMU");
 
 val _ = overload_on("UNKNOWN", ``ARB:bool``);
 val _ = overload_on("UNKNOWN", ``ARB:word32``);
 
 val _ = temp_delsimps ["NORMEQ_CONV"]
 
-val read_mem32_def  = Define ` read_mem32 add mem =
-    word32 ([mem (add);mem (add+1w);mem (add+2w);mem (add+3w)])`;
+Definition read_mem32_def:     read_mem32 add mem =
+    word32 ([mem (add);mem (add+1w);mem (add+2w);mem (add+3w)])
+End
 
 
-val enabled_MMU_def = Define `enabled_MMU (c1:word32) =
+Definition enabled_MMU_def:   enabled_MMU (c1:word32) =
                                      let bit0 = BIT 0 (w2n(c1)) in
-                                         bit0`;
+                                         bit0
+End
 
 
 (* checking MMU support only for one section descriptor *)
 (* further changes in version 2: expr3 = 0 and expr7 may be 01 as well *)
-val sd_supports_MMU_def = Define `sd_supports_MMU content_of_sd si =
+Definition sd_supports_MMU_def:   sd_supports_MMU content_of_sd si =
                 let expr1 = (content_of_sd && 0x00000003w) in
                 let expr2 = (content_of_sd && 0x0000000Cw) >>> 2 in
                 let expr3 = (content_of_sd && 0x00000010w) >>> 4 in
@@ -87,13 +89,14 @@ val sd_supports_MMU_def = Define `sd_supports_MMU content_of_sd si =
                                (expr4 = 0b0w:word32) /\
                                    ((expr7 = 0b11w:word32) \/ (expr7 = 0b01w:word32)) /\
                                         (expr5 = 0b0w:word32) /\
-                                             (expr6 = si)`;
+                                             (expr6 = si)
+End
 
 
 
 (* permitted_byte *)
 (* returns (understood, permitted, message) *)
-val permitted_byte_def = Define `permitted_byte adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
+Definition permitted_byte_def:   permitted_byte adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
                     if (~(enabled_MMU c1)) then
                         (T, T, "MMU is disabled")
                     else
@@ -129,7 +132,7 @@ val permitted_byte_def = Define `permitted_byte adr is_write (c1:word32) c2 (c3:
                             )
                             else
                                 (F, UNKNOWN, "no support")
-                        `;
+End
 
 
 (* permitted_byte_pure                       *)
@@ -137,7 +140,7 @@ val permitted_byte_def = Define `permitted_byte adr is_write (c1:word32) c2 (c3:
 (* similar to permitted_byte when assuming   *)
 (*   that we always understand the MMU setup *)
 
-val permitted_byte_pure_def = Define `permitted_byte_pure adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
+Definition permitted_byte_pure_def:   permitted_byte_pure adr is_write (c1:word32) c2 (c3:bool[32]) priv mem =
                     if (~(enabled_MMU c1)) then
                         T
                     else
@@ -166,29 +169,29 @@ val permitted_byte_pure_def = Define `permitted_byte_pure adr is_write (c1:word3
                                                      )
                                            |0b11w => T
                                           )
-                        `;
+End
 
 
 (* relate permitted_byte with permitted_byte_pure *)
 
-val permitted_byte_simp = store_thm (
-    "permitted_byte_simp",
-    ``!u p m adr is_write c1 c2 c3 priv mem.
+Theorem permitted_byte_simp:
+      !u p m adr is_write c1 c2 c3 priv mem.
       ((u,p,m) = permitted_byte adr is_write c1 c2 c3 priv mem) /\ u
-       ==> (permitted_byte_pure adr is_write c1 c2 c3 priv mem = p)``,
+       ==> (permitted_byte_pure adr is_write c1 c2 c3 priv mem = p)
+Proof
     REPEAT STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) [permitted_byte_def, permitted_byte_pure_def]
     THEN Cases_on `~enabled_MMU c1` THEN FULL_SIMP_TAC (srw_ss()) []
     THEN RW_TAC (srw_ss()) []
     THEN FULL_SIMP_TAC (srw_ss()) [LET_DEF]
     THEN Cases_on `sd_supports_MMU content_of_sd si` THEN Cases_on `bit2_c3` THEN Cases_on `bit1_c3` THEN Cases_on `AP=0w` THEN Cases_on `AP=1w` THEN Cases_on `priv` THEN Cases_on `AP=2w` THEN Cases_on `AP=3w` THEN FULL_SIMP_TAC (srw_ss()) []
-);
+QED
 
 
 (* check_accesses                            *)
 (*   returns (understood, abort, address)    *);
 
 
-val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
+Definition check_accesses_def:   check_accesses accesses c1 c2 c3 priv memory =
                          case accesses of
                          x::tl =>
                          ( let (adr, is_write) =
@@ -216,7 +219,8 @@ val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
                                )
                             )
                           )
-                          |   _ => (T, F, UNKNOWN)`;
+                          |   _ => (T, F, UNKNOWN)
+End
 
 
 
@@ -225,7 +229,7 @@ val check_accesses_def = Define `check_accesses accesses c1 c2 c3 priv memory =
 (*   returns boolean "abort"                       *)
 (* similar to check_accesses when assuming that we *)
 (*   always understand the MMU setup               *)
-val check_accesses_pure_def = Define `check_accesses_pure accesses c1 c2 c3 priv memory =
+Definition check_accesses_pure_def:   check_accesses_pure accesses c1 c2 c3 priv memory =
                        case accesses of
                          x::tl =>
                          ( let (adr, is_write) =
@@ -235,7 +239,8 @@ val check_accesses_pure_def = Define `check_accesses_pure accesses c1 c2 c3 priv
                                ) in
                             (~permitted_byte_pure adr is_write c1 c2 c3 priv memory) \/  (check_accesses_pure tl c1 c2 c3 priv memory)
                           )
-                          | _ => F`;
+                          | _ => F
+End
 
 
 
@@ -271,11 +276,11 @@ val check_accesses_TAC  = (fn IS_WRITE =>
     THEN (NO_TAC ORELSE METIS_TAC []));
 
 
-val check_accesses_simp = store_thm (
-    "check_accesses_simp",
-    ``!u a add acc c1 c2 c3 priv mem.
+Theorem check_accesses_simp:
+      !u a add acc c1 c2 c3 priv mem.
       ((u,a,add) = check_accesses acc c1 c2 c3 priv mem) /\ u
-       ==> (check_accesses_pure acc c1 c2 c3 priv mem = a)``,
+       ==> (check_accesses_pure acc c1 c2 c3 priv mem = a)
+Proof
     Induct_on `acc`
     THENL [RW_TAC (srw_ss()) [check_accesses_def, check_accesses_pure_def],
            ONCE_REWRITE_TAC [check_accesses_def, check_accesses_pure_def]
@@ -283,18 +288,19 @@ val check_accesses_simp = store_thm (
              THEN NTAC 8 STRIP_TAC
              THEN CASE_TAC
              THENL [check_accesses_TAC ("F"), check_accesses_TAC ("T")]
-        ]);
+        ]
+QED
 
 
 
 
 (* conclude the understandability of check_accesses from the understandability of permitted_byte *)
 
-val check_accesses_understand = store_thm (
-    "check_accesses_understand",
-    ``!acc c1 c2 c3 priv mem.
+Theorem check_accesses_understand:
+      !acc c1 c2 c3 priv mem.
        (!add is_write. FST (permitted_byte add is_write c1 c2 c3 priv mem))
-     ==>  (FST (check_accesses acc c1 c2 c3 priv mem))``,
+     ==>  (FST (check_accesses acc c1 c2 c3 priv mem))
+Proof
     Induct_on `acc`
     THENL [RW_TAC (srw_ss()) [check_accesses_def],
              ONCE_REWRITE_TAC [check_accesses_def]
@@ -303,50 +309,55 @@ val check_accesses_understand = store_thm (
              THEN CASE_TAC
              THEN PairRules.PBETA_TAC
              THEN RW_TAC (srw_ss()) []
-        ]);
+        ]
+QED
 
 
 
 (* access_violation_full *)
 
 
-val access_violation_full_def = Define `access_violation_full s = check_accesses s.accesses
+Definition access_violation_full_def:   access_violation_full s = check_accesses s.accesses
                                                            s.coprocessors.state.cp15.C1
                                                            s.coprocessors.state.cp15.C2
                                                            s.coprocessors.state.cp15.C3
                                                            F
-                                                           s.memory`;
+                                                           s.memory
+End
 
 (* empty access list, no violation *)
 
-val empty_accesses_full_lem = store_thm(
-    "empty_accesses_full_lem",
-    ``(s.accesses = []) ==> ((access_violation_full s) = (T,F, ARB))``,
+Theorem empty_accesses_full_lem:
+      (s.accesses = []) ==> ((access_violation_full s) = (T,F, ARB))
+Proof
     NTAC 2 (PURE_ONCE_REWRITE_TAC [access_violation_full_def, check_accesses_def])
-      THEN RW_TAC (srw_ss()) []);
+      THEN RW_TAC (srw_ss()) []
+QED
 
 
 
 (* access_violation_pure *)
 
 
-val access_violation_pure_def = Define `access_violation_pure s = check_accesses_pure s.accesses
+Definition access_violation_pure_def:   access_violation_pure s = check_accesses_pure s.accesses
                                                            s.coprocessors.state.cp15.C1
                                                            s.coprocessors.state.cp15.C2
                                                            s.coprocessors.state.cp15.C3
                                                            F
 
-                                               s.memory`;
+                                               s.memory
+End
 
 (* relate access_violation_pure and access_violation_full *)
 
-val access_violation_simp_pure= store_thm(
-    "access_violation_simp_pure",
-    ``!u a add s.
+Theorem access_violation_simp_pure:
+      !u a add s.
       ((u,a,add) = access_violation_full s) /\ u
-       ==> (access_violation_pure s = a)``,
+       ==> (access_violation_pure s = a)
+Proof
       FULL_SIMP_TAC (srw_ss()) [access_violation_full_def, access_violation_pure_def]
-        THEN METIS_TAC [check_accesses_simp]);
+        THEN METIS_TAC [check_accesses_simp]
+QED
 
 
 (* partially specified access_violation *)
@@ -360,31 +371,34 @@ val access_violation_def = new_axiom("access_violation_axiom", ``!state u x add.
 
 (* if full version is understood, access_violation is equal to pure version *)
 
-val access_violation_simp = store_thm (
-    "access_violation_simp",
-    ``!s x add.
+Theorem access_violation_simp:
+      !s x add.
       ((T,x,add) = access_violation_full s)
-       ==> (access_violation s = access_violation_pure s)``,
-      METIS_TAC [access_violation_simp_pure, access_violation_def]);
+       ==> (access_violation s = access_violation_pure s)
+Proof
+      METIS_TAC [access_violation_simp_pure, access_violation_def]
+QED
 
-val access_violation_simp_FST = store_thm (
-    "access_violation_simp_FST",
-    ``!s. (FST (access_violation_full s))
-       ==> (access_violation s = access_violation_pure s)``,
+Theorem access_violation_simp_FST:
+      !s. (FST (access_violation_full s))
+       ==> (access_violation s = access_violation_pure s)
+Proof
      REPEAT STRIP_TAC
        THEN Cases_on `access_violation_full s`
        THEN Cases_on `r`
-       THEN FULL_SIMP_TAC (srw_ss()) [access_violation_simp]);
+       THEN FULL_SIMP_TAC (srw_ss()) [access_violation_simp]
+QED
 
 (* empty access list, no violation *)
 
-val empty_accesses_lem = store_thm(
-    "empty_accesses_lem",
-    ``(s.accesses = []) ==> (~access_violation s)``,
+Theorem empty_accesses_lem:
+      (s.accesses = []) ==> (~access_violation s)
+Proof
     STRIP_TAC
       THEN IMP_RES_TAC empty_accesses_full_lem
       THEN ASSUME_TAC (SPECL [``s:arm_state``, ``T``, ``F``, ``ARB:word32``] access_violation_def)
-      THEN FULL_SIMP_TAC (srw_ss()) []);
+      THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 (* take data abort exception *)
 
@@ -402,7 +416,7 @@ val _ = temp_overload_on ("return", ``constT``);
 val _ = temp_overload_on ("PAD0", ``list$PAD_LEFT #"0"``);
 
 
-val mmu_arm_next_def = Define `mmu_arm_next irpt state  =
+Definition mmu_arm_next_def:   mmu_arm_next irpt state  =
     if irpt = NoInterrupt then
     (
        case (waiting_for_interrupt  <|proc:=0|> (state with accesses := [])) of
@@ -442,9 +456,7 @@ val mmu_arm_next_def = Define `mmu_arm_next irpt state  =
           take_fiq_exception <|proc:=0|>
         else (* irpt = HW_Irq *)
           take_irq_exception <|proc:=0|>) >>=
-      (\u:unit. clear_wait_for_interrupt <|proc:=0|>)) (state with accesses := []))`;
-
-
-val _ = export_theory();
+      (\u:unit. clear_wait_for_interrupt <|proc:=0|>)) (state with accesses := []))
+End
 
 

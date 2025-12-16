@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "oneline";
+Theory oneline
 
 fun is_oneline th = is_eq (concl th)
 
@@ -156,4 +154,3 @@ Definition nested_nums_in_pairs:
 End
 val _ = stdcheck nested_nums_in_pairs
 
-val _ = export_theory();

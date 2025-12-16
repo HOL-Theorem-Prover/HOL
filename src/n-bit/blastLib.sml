@@ -2,6 +2,7 @@ structure blastLib :> blastLib =
 struct
 
 open HolKernel boolLib bossLib;
+open BasicProvers
 open bitTheory wordsTheory bitstringTheory blastTheory;
 open listLib wordsLib bitSyntax bitstringSyntax;
 
@@ -14,7 +15,7 @@ structure Parse = struct
 end
 
 open Parse
-
+fun SRW_TAC xs ys = PRIM_SRW_TAC (arith_ss ++ WORD_ss) xs ys
 (* ------------------------------------------------------------------------ *)
 
 val ERR = Feedback.mk_HOL_ERR "blastLib"

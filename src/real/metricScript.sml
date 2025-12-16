@@ -8,15 +8,13 @@
 (*             (c) Copyright, Andrea Gabrielli  2016-2017                    *)
 (* ========================================================================= *)
 
-open HolKernel Parse bossLib boolLib;
-
-open arithmeticTheory numTheory boolSimps simpLib mesonLib metisLib jrhUtils
-     pairTheory pairLib quotientTheory pred_setTheory pred_setLib RealArith
-     tautLib realSimps;
-
-open realTheory real_sigmaTheory cardinalTheory topologyTheory hurdUtils;
-
-val _ = new_theory "metric";
+Theory metric
+Ancestors
+  arithmetic num pair quotient pred_set real real_sigma cardinal
+  topology
+Libs
+  boolSimps simpLib mesonLib metisLib jrhUtils pairLib
+  pred_setLib RealArith tautLib realSimps hurdUtils
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
@@ -101,21 +99,28 @@ val metric_tybij = define_new_type_bijections
 (* Derive the metric properties                                              *)
 (*---------------------------------------------------------------------------*)
 
-val METRIC_ISMET = store_thm("METRIC_ISMET",
-  “!m:('a)metric. ismet (dist m)”,
-  GEN_TAC THEN REWRITE_TAC[metric_tybij]);
+Theorem METRIC_ISMET:
+   !m:('a)metric. ismet (dist m)
+Proof
+  GEN_TAC THEN REWRITE_TAC[metric_tybij]
+QED
 
-val METRIC_ZERO = store_thm("METRIC_ZERO",
-  “!m:('a)metric. !x y. ((dist m)(x,y) = &0) = (x = y)”,
+Theorem METRIC_ZERO:
+   !m:('a)metric. !x y. ((dist m)(x,y) = &0) = (x = y)
+Proof
   REPEAT GEN_TAC THEN ASSUME_TAC(SPEC “m:('a)metric” METRIC_ISMET) THEN
-  RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN ASM_REWRITE_TAC[]);
+  RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN ASM_REWRITE_TAC[]
+QED
 
-val METRIC_SAME = store_thm("METRIC_SAME",
-  “!m:('a)metric. !x. (dist m)(x,x) = &0”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[METRIC_ZERO]);
+Theorem METRIC_SAME:
+   !m:('a)metric. !x. (dist m)(x,x) = &0
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[METRIC_ZERO]
+QED
 
-val METRIC_POS = store_thm("METRIC_POS",
-  “!m:('a)metric. !x y. &0 <= (dist m)(x,y)”,
+Theorem METRIC_POS:
+   !m:('a)metric. !x y. &0 <= (dist m)(x,y)
+Proof
   REPEAT GEN_TAC THEN ASSUME_TAC(SPEC “m:('a)metric” METRIC_ISMET) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN
   FIRST_ASSUM(MP_TAC o
@@ -125,30 +130,37 @@ val METRIC_POS = store_thm("METRIC_POS",
                     METRIC_ZERO)]
   THEN CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[REAL_NOT_LE] THEN
   DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_ADD2 o W CONJ) THEN
-  REWRITE_TAC[REAL_ADD_LID]);
+  REWRITE_TAC[REAL_ADD_LID]
+QED
 
-val METRIC_SYM = store_thm("METRIC_SYM",
-  “!m:('a)metric. !x y. (dist m)(x,y) = (dist m)(y,x)”,
+Theorem METRIC_SYM:
+   !m:('a)metric. !x y. (dist m)(x,y) = (dist m)(y,x)
+Proof
   REPEAT GEN_TAC THEN ASSUME_TAC(SPEC “m:('a)metric” METRIC_ISMET) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN FIRST_ASSUM
    (MP_TAC o GENL [“y:'a”, “z:'a”] o SPECL [“z:'a”, “y:'a”, “z:'a”] o CONJUNCT2)
   THEN REWRITE_TAC[METRIC_SAME, REAL_ADD_RID] THEN
-  DISCH_TAC THEN ASM_REWRITE_TAC[GSYM REAL_LE_ANTISYM]);
+  DISCH_TAC THEN ASM_REWRITE_TAC[GSYM REAL_LE_ANTISYM]
+QED
 
-val METRIC_TRIANGLE = store_thm("METRIC_TRIANGLE",
-  “!m:('a)metric. !x y z. (dist m)(x,z) <= (dist m)(x,y) + (dist m)(y,z)”,
+Theorem METRIC_TRIANGLE:
+   !m:('a)metric. !x y z. (dist m)(x,z) <= (dist m)(x,y) + (dist m)(y,z)
+Proof
   REPEAT GEN_TAC THEN ASSUME_TAC(SPEC “m:('a)metric” METRIC_ISMET) THEN
   RULE_ASSUM_TAC(REWRITE_RULE[ismet]) THEN
   GEN_REWR_TAC (RAND_CONV o LAND_CONV)  [METRIC_SYM] THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val METRIC_NZ = store_thm("METRIC_NZ",
-  “!m:('a)metric. !x y. ~(x = y) ==> &0 < (dist m)(x,y)”,
+Theorem METRIC_NZ:
+   !m:('a)metric. !x y. ~(x = y) ==> &0 < (dist m)(x,y)
+Proof
   REPEAT GEN_TAC THEN
   SUBST1_TAC(SYM(SPECL [“m:('a)metric”, “x:'a”, “y:'a”] METRIC_ZERO)) THEN
   ONCE_REWRITE_TAC[TAUT ‘~a ==> b <=> b \/ a’] THEN
   CONV_TAC(RAND_CONV SYM_CONV) THEN
-  REWRITE_TAC[GSYM REAL_LE_LT, METRIC_POS]);
+  REWRITE_TAC[GSYM REAL_LE_LT, METRIC_POS]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Get a bounded metric (<1) from any metric                                 *)
@@ -320,12 +332,21 @@ Proof
       >> PROVE_TAC [] ] ]
 QED
 
-val MTOP_OPEN = store_thm("MTOP_OPEN",
-  “!S' (m:('a)metric). open_in(mtop m) S' =
-      (!x. S' x ==> ?e. &0 < e /\ (!y. (dist m(x,y)) < e ==> S' y))”,
+Theorem MTOP_OPEN:
+   !S' (m:('a)metric). open_in(mtop m) S' =
+      (!x. S' x ==> ?e. &0 < e /\ (!y. (dist m(x,y)) < e ==> S' y))
+Proof
   GEN_TAC THEN REWRITE_TAC[mtop] THEN
   REWRITE_TAC[REWRITE_RULE[topology_tybij] mtop_istopology] THEN
-  BETA_TAC THEN REWRITE_TAC[]);
+  BETA_TAC THEN REWRITE_TAC[]
+QED
+
+Theorem MTOP_OPEN' :
+    !m s. open_in(mtop m) s <=>
+          !x. x IN s ==> ?e. 0 < e /\ !y. dist m (x,y) < e ==> y IN s
+Proof
+    RW_TAC std_ss [IN_APP, MTOP_OPEN]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Define open ball in metric space + prove basic properties                 *)
@@ -357,8 +378,10 @@ QED
 
    However, HOL4 users can construct a subtopology generated by ‘mtop m’ but is
    restricted to ‘sp = mspace m’ from HOL-Light, i.e. ‘subtopology (mtop m) sp’.
+
+   Adding this theorem into [simp] is not a good idea.
  *)
-Theorem TOPSPACE_MTOP[simp]:
+Theorem TOPSPACE_MTOP :
   topspace (mtop m) = UNIV
 Proof
   simp[topspace, EXTENSION] >> csimp[IN_DEF] >> qx_gen_tac ‘x’ >>
@@ -366,14 +389,22 @@ Proof
   simp[ball, METRIC_SAME]
 QED
 
-val BALL_NEIGH = store_thm("BALL_NEIGH",
-  “!m:('a)metric. !x e. &0 < e ==> neigh(mtop(m))(B(m)(x,e),x)”,
+Theorem MSPACE :
+    !m. mspace m = UNIV
+Proof
+    REWRITE_TAC [mspace, TOPSPACE_MTOP]
+QED
+
+Theorem BALL_NEIGH:
+   !m:('a)metric. !x e. &0 < e ==> neigh(mtop(m))(B(m)(x,e),x)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[neigh] THEN EXISTS_TAC “B(m)(x:'a,e)” THEN
   REWRITE_TAC[SUBSET_REFL, TOPSPACE_MTOP, SUBSET_UNIV] THEN CONJ_TAC THENL
    [MATCH_MP_TAC BALL_OPEN,
     REWRITE_TAC[ball] THEN BETA_TAC THEN REWRITE_TAC[METRIC_SAME]] THEN
-  POP_ASSUM ACCEPT_TAC);
+  POP_ASSUM ACCEPT_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* HOL-Light compatibile theorems (MDIST_)                                   *)
@@ -392,14 +423,21 @@ Proof
 QED
 
 Theorem MDIST_POS_LE = METRIC_POS
+Theorem MDIST_POS_LT = METRIC_NZ
 Theorem MDIST_EQ_0   = METRIC_ZERO
+
+Theorem MDIST_POS_EQ :
+    !m x y. 0 < dist m (x,y) <=> x <> y
+Proof
+    METIS_TAC [MDIST_POS_LT, MDIST_REFL, REAL_LT_REFL]
+QED
 
 Theorem mtopology :
    !m. mtopology (m:'a metric) =
        topology {u | u SUBSET mspace m /\
                      !x:'a. x IN u ==> ?r. &0 < r /\ mball m (x,r) SUBSET u}
 Proof
-    rw [mtop, mspace, ball]
+    rw [mtop, MSPACE, ball]
  >> AP_TERM_TAC
  >> rw [Once EXTENSION, IN_APP, SUBSET_DEF]
 QED
@@ -408,7 +446,7 @@ Theorem mball :
    !m x r. mball m (x:'a,r) =
           {y | x IN mspace m /\ y IN mspace m /\ mdist m (x,y) < r}
 Proof
-   rw [mspace, ball, Once EXTENSION]
+   rw [MSPACE, ball, Once EXTENSION]
 QED
 
 Theorem IS_TOPOLOGY_METRIC_TOPOLOGY :
@@ -422,7 +460,7 @@ Proof
      (\S'. !x. S' x ==> ?e. 0 < e /\ !y. dist m (x,y) < e ==> S' y)’
  >- (DISCH_THEN (ONCE_REWRITE_TAC o wrap) \\
      REWRITE_TAC [mtop_istopology])
- >> rw [mspace, ball, SUBSET_DEF, IN_APP, Once EXTENSION]
+ >> rw [MSPACE, ball, SUBSET_DEF, IN_APP, Once EXTENSION]
 QED
 
 Theorem OPEN_IN_MTOPOLOGY :
@@ -431,7 +469,7 @@ Theorem OPEN_IN_MTOPOLOGY :
      u SUBSET mspace m /\
      (!x. x IN u ==> ?r. &0 < r /\ mball m (x,r) SUBSET u)
 Proof
-    rw [MTOP_OPEN, mspace, ball, SUBSET_DEF, IN_APP]
+    rw [MTOP_OPEN, MSPACE, ball, SUBSET_DEF, IN_APP]
 QED
 
 Theorem IN_MBALL :
@@ -520,12 +558,20 @@ Proof
    ]
 QED
 
+Theorem MTOP_LIMPT' :
+    !m x s. limpt(mtop m) x s <=>
+            !e. 0 < e ==> ?y. x <> y /\ y IN s /\ dist m (x,y) < e
+Proof
+    RW_TAC std_ss [IN_APP, MTOP_LIMPT]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Define the usual metric on the real line                                  *)
 (*---------------------------------------------------------------------------*)
 
-val ISMET_R1 = store_thm("ISMET_R1",
-  “ismet (\(x,y). abs(y - x:real))”,
+Theorem ISMET_R1:
+   ismet (\(x,y). abs(y - x:real))
+Proof
   REWRITE_TAC[ismet] THEN CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN
   CONJ_TAC THEN REPEAT GEN_TAC THENL
    [REWRITE_TAC[ABS_ZERO, REAL_SUB_0] THEN
@@ -537,46 +583,63 @@ val ISMET_R1 = store_thm("ISMET_R1",
     REWRITE_TAC[real_sub] THEN
     ONCE_REWRITE_TAC[AC(REAL_ADD_ASSOC,REAL_ADD_SYM)
       “(a + b) + (c + d) = (d + a) + (c + b):real”] THEN
-    REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]]);
+    REWRITE_TAC[REAL_ADD_LINV, REAL_ADD_LID]]
+QED
 
 Definition mr1 :
     mr1 = metric(\(x,y). abs(y - x))
 End
 
-val MR1_DEF = store_thm("MR1_DEF",
-  “!x y. (dist mr1)(x,y) = abs(y - x)”,
+Theorem MR1_DEF:
+   !x y. (dist mr1)(x,y) = abs(y - x)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[mr1, REWRITE_RULE[metric_tybij] ISMET_R1]
-  THEN CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN REFL_TAC);
+  THEN CONV_TAC(ONCE_DEPTH_CONV PAIRED_BETA_CONV) THEN REFL_TAC
+QED
 
-val MR1_ADD = store_thm("MR1_ADD",
-  “!x d. (dist mr1)(x,x + d) = abs(d)”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, REAL_ADD_SUB]);
+Theorem MR1_ADD:
+   !x d. (dist mr1)(x,x + d) = abs(d)
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, REAL_ADD_SUB]
+QED
 
-val MR1_SUB = store_thm("MR1_SUB",
-  “!x d. (dist mr1)(x,x - d) = abs(d)”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, REAL_SUB_SUB, ABS_NEG]);
+Theorem MR1_SUB:
+   !x d. (dist mr1)(x,x - d) = abs(d)
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, REAL_SUB_SUB, ABS_NEG]
+QED
 
-val MR1_ADD_LE = store_thm("MR1_ADD_POS",
-  “!x d. &0 <= d ==> ((dist mr1)(x,x + d) = d)”,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[MR1_ADD, abs]);
+Theorem MR1_ADD_POS:
+   !x d. &0 <= d ==> ((dist mr1)(x,x + d) = d)
+Proof
+  REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[MR1_ADD, abs]
+QED
 
-val MR1_SUB_LE = store_thm("MR1_SUB_LE",
-  “!x d. &0 <= d ==> ((dist mr1)(x,x - d) = d)”,
-  REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[MR1_SUB, abs]);
+Theorem MR1_SUB_LE:
+   !x d. &0 <= d ==> ((dist mr1)(x,x - d) = d)
+Proof
+  REPEAT GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[MR1_SUB, abs]
+QED
 
-val MR1_ADD_LT = store_thm("MR1_ADD_LT",
-  “!x d. &0 < d ==> ((dist mr1)(x,x + d) = d)”,
+Theorem MR1_ADD_LT:
+   !x d. &0 < d ==> ((dist mr1)(x,x + d) = d)
+Proof
   REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_IMP_LE) THEN
-  MATCH_ACCEPT_TAC MR1_ADD_LE);
+  MATCH_ACCEPT_TAC MR1_ADD_POS
+QED
 
-val MR1_SUB_LT = store_thm("MR1_SUB_LT",
-  “!x d. &0 < d ==> ((dist mr1)(x,x - d) = d)”,
+Theorem MR1_SUB_LT:
+   !x d. &0 < d ==> ((dist mr1)(x,x - d) = d)
+Proof
    REPEAT GEN_TAC THEN DISCH_THEN(MP_TAC o MATCH_MP REAL_LT_IMP_LE) THEN
-  MATCH_ACCEPT_TAC MR1_SUB_LE);
+  MATCH_ACCEPT_TAC MR1_SUB_LE
+QED
 
-val MR1_BETWEEN1 = store_thm("MR1_BETWEEN1",
-  “!x y z. x < z /\ (dist mr1)(x,y) < (z - x) ==> y < z”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, ABS_BETWEEN1]);
+Theorem MR1_BETWEEN1:
+   !x y z. x < z /\ (dist mr1)(x,y) < (z - x) ==> y < z
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[MR1_DEF, ABS_BETWEEN1]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Every real is a limit point of the real line                              *)
@@ -619,97 +682,141 @@ QED
 
 Overload dist = “real_dist”;
 
-val DIST_REFL = store_thm ("DIST_REFL",
- ``!x. dist(x,x) = &0``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_REFL:
+   !x. dist(x,x) = &0
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_SYM = store_thm ("DIST_SYM",
- ``!x y. dist(x,y) = dist(y,x)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_SYM:
+   !x y. dist(x,y) = dist(y,x)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE = store_thm ("DIST_TRIANGLE",
- ``!x:real y z. dist(x,z) <= dist(x,y) + dist(y,z)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE:
+   !x:real y z. dist(x,z) <= dist(x,y) + dist(y,z)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_ALT = store_thm ("DIST_TRIANGLE_ALT",
- ``!x y z. dist(y,z) <= dist(x,y) + dist(x,z)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE_ALT:
+   !x y z. dist(y,z) <= dist(x,y) + dist(x,z)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_EQ_0 = store_thm ("DIST_EQ_0",
- ``!x y. (dist(x,y) = 0:real) <=> (x = y)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_EQ_0:
+   !x y. (dist(x,y) = 0:real) <=> (x = y)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_POS_LT = store_thm ("DIST_POS_LT",
- ``!x y. ~(x = y) ==> &0 < dist(x,y)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_POS_LT:
+   !x y. ~(x = y) ==> &0 < dist(x,y)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_NZ = store_thm ("DIST_NZ",
- ``!x y. ~(x = y) <=> &0 < dist(x,y)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_NZ:
+   !x y. ~(x = y) <=> &0 < dist(x,y)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_LE = store_thm ("DIST_TRIANGLE_LE",
- ``!x y z e. dist(x,z) + dist(y,z) <= e ==> dist(x,y) <= e``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE_LE:
+   !x y z e. dist(x,z) + dist(y,z) <= e ==> dist(x,y) <= e
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_LT = store_thm ("DIST_TRIANGLE_LT",
- ``!x y z e. dist(x,z) + dist(y,z) < e ==> dist(x,y) < e``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE_LT:
+   !x y z e. dist(x,z) + dist(y,z) < e ==> dist(x,y) < e
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_HALF_L = store_thm ("DIST_TRIANGLE_HALF_L",
- ``!x1 x2 y. dist(x1,y) < e / &2 /\ dist(x2,y) < e / &2 ==> dist(x1,x2) < e``,
+Theorem DIST_TRIANGLE_HALF_L:
+   !x1 x2 y. dist(x1,y) < e / &2 /\ dist(x2,y) < e / &2 ==> dist(x1,x2) < e
+Proof
   REPEAT STRIP_TAC THEN KNOW_TAC `` dist (x1,y) + dist (x2,y) < e`` THENL
   [METIS_TAC [REAL_LT_ADD2, REAL_HALF_DOUBLE],
    DISCH_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
    EXISTS_TAC ``dist (x1,y) + dist (x2,y)`` THEN
-   METIS_TAC [DIST_TRIANGLE, DIST_SYM]]);
+   METIS_TAC [DIST_TRIANGLE, DIST_SYM]]
+QED
 
-val DIST_TRIANGLE_HALF_R = store_thm ("DIST_TRIANGLE_HALF_R",
- ``!x1 x2 y. dist(y,x1) < e / &2 /\ dist(y,x2) < e / &2 ==> dist(x1,x2) < e``,
+Theorem DIST_TRIANGLE_HALF_R:
+   !x1 x2 y. dist(y,x1) < e / &2 /\ dist(y,x2) < e / &2 ==> dist(x1,x2) < e
+Proof
   REPEAT STRIP_TAC THEN KNOW_TAC `` dist (y, x1) + dist (y, x2) < e`` THENL
   [METIS_TAC [REAL_LT_ADD2, REAL_HALF_DOUBLE],
    DISCH_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
    EXISTS_TAC ``dist (y, x1) + dist (y, x2)`` THEN
-   METIS_TAC [DIST_TRIANGLE, DIST_SYM]]);
+   METIS_TAC [DIST_TRIANGLE, DIST_SYM]]
+QED
 
-val DIST_TRIANGLE_ADD = store_thm ("DIST_TRIANGLE_ADD",
- ``!x x' y y'. dist(x + y,x' + y') <= dist(x,x') + dist(y,y')``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_TRIANGLE_ADD:
+   !x x' y y'. dist(x + y,x' + y') <= dist(x,x') + dist(y,y')
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_MUL = store_thm ("DIST_MUL",
- ``!x y c. dist(c * x,c * y) = abs(c) * dist(x,y)``,
-  REWRITE_TAC[dist, GSYM ABS_MUL] THEN REAL_ARITH_TAC);
+Theorem DIST_ADD :
+    !x y c. dist (x + c,y + c) = dist (x,y)
+Proof
+    RW_TAC std_ss [dist] >> REAL_ARITH_TAC
+QED
 
-val DIST_TRIANGLE_ADD_HALF = store_thm ("DIST_TRIANGLE_ADD_HALF",
- ``!x x' y y':real.
-    dist(x,x') < e / &2 /\ dist(y,y') < e / &2 ==> dist(x + y,x' + y') < e``,
+Theorem DIST_MUL:
+   !x y c. dist(c * x,c * y) = abs(c) * dist(x,y)
+Proof
+  REWRITE_TAC[dist, GSYM ABS_MUL] THEN REAL_ARITH_TAC
+QED
+
+Theorem DIST_TRIANGLE_ADD_HALF:
+   !x x' y y':real.
+    dist(x,x') < e / &2 /\ dist(y,y') < e / &2 ==> dist(x + y,x' + y') < e
+Proof
   REPEAT STRIP_TAC THEN KNOW_TAC `` dist (x, x') + dist (y, y') < e`` THENL
   [METIS_TAC [REAL_LT_ADD2, REAL_HALF_DOUBLE],
    DISCH_TAC THEN MATCH_MP_TAC REAL_LET_TRANS THEN
    EXISTS_TAC ``dist (x, x') + dist (y, y')`` THEN
-   METIS_TAC [DIST_TRIANGLE_ADD, DIST_SYM]]);
+   METIS_TAC [DIST_TRIANGLE_ADD, DIST_SYM]]
+QED
 
-val DIST_LE_0 = store_thm ("DIST_LE_0",
- ``!x y. dist(x,y) <= &0 <=> (x = y)``,
-  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC);
+Theorem DIST_LE_0:
+   !x y. dist(x,y) <= &0 <=> (x = y)
+Proof
+  SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
 
-val DIST_POS_LE = store_thm ("DIST_POS_LE",
- ``!x y. &0 <= dist(x,y)``,
-  METIS_TAC [DIST_EQ_0, DIST_NZ, REAL_LE_LT]);
+Theorem DIST_POS_LE:
+   !x y. &0 <= dist(x,y)
+Proof
+  METIS_TAC [DIST_EQ_0, DIST_NZ, REAL_LE_LT]
+QED
 
-val DIST_EQ = store_thm ("DIST_EQ",
- ``!w x y z. (dist(w,x) = dist(y,z)) <=> (dist(w,x) pow 2 = dist(y,z) pow 2)``,
+Theorem DIST_EQ:
+   !w x y z. (dist(w,x) = dist(y,z)) <=> (dist(w,x) pow 2 = dist(y,z) pow 2)
+Proof
   REPEAT GEN_TAC THEN EQ_TAC THENL [RW_TAC std_ss [],
   DISCH_TAC THEN MATCH_MP_TAC POW_EQ THEN EXISTS_TAC ``1:num`` THEN
-  RW_TAC arith_ss [DIST_POS_LE]]);
+  RW_TAC arith_ss [DIST_POS_LE]]
+QED
 
-val DIST_0 = store_thm ("DIST_0",
- ``!x. (dist(x,0) = abs(x)) /\ (dist(0,x) = abs(x))``,
-  RW_TAC arith_ss [dist, REAL_SUB_RZERO, REAL_SUB_LZERO, ABS_NEG]);
+Theorem DIST_0:
+   !x. (dist(x,0) = abs(x)) /\ (dist(0,x) = abs(x))
+Proof
+  RW_TAC arith_ss [dist, REAL_SUB_RZERO, REAL_SUB_LZERO, ABS_NEG]
+QED
 
-val REAL_CHOOSE_DIST = store_thm ("REAL_CHOOSE_DIST",
- ``!x e. &0 <= e ==> (?y. dist (x,y) = e)``,
+Theorem REAL_CHOOSE_DIST:
+   !x e. &0 <= e ==> (?y. dist (x,y) = e)
+Proof
   REPEAT STRIP_TAC THEN EXISTS_TAC ``x - e:real`` THEN
-  ASM_REWRITE_TAC [dist, REAL_SUB_SUB2, ABS_REFL]);
+  ASM_REWRITE_TAC [dist, REAL_SUB_SUB2, ABS_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* F_sigma and G_delta sets in a topological space (ported from HOL Light)   *)
@@ -1301,7 +1408,7 @@ Proof
    simp [OPEN_IN_MTOPOLOGY, SUBSET_DEF, IN_MBALL] THEN
    DISCH_THEN (MP_TAC o SPEC “a:'a”) THEN ASM_SIMP_TAC std_ss[MDIST_REFL],
    (* goal 2 (of 2) *)
-   rw [OPEN_IN_MTOPOLOGY, SUBSET_DEF, IN_MBALL, mspace] THEN
+   rw [OPEN_IN_MTOPOLOGY, SUBSET_DEF, IN_MBALL, MSPACE] THEN
    ASM_MESON_TAC[] ]
 QED
 
@@ -1322,7 +1429,7 @@ Proof
      Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘x’) >> rw [] \\
      POP_ASSUM MATCH_MP_TAC \\
      ASM_SIMP_TAC std_ss[OPEN_IN_MBALL, CENTRE_IN_MBALL])
- >> rw [] >- rw [mspace] (* A shortcut *)
+ >> rw [] >- rw [MSPACE] (* A shortcut *)
  >> Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘x’) >> rw []
  >> fs [OPEN_IN_MTOPOLOGY]
  >> Q.PAT_X_ASSUM ‘!x. x IN v ==> _’ (MP_TAC o Q.SPEC ‘f x’) >> rw []
@@ -1475,6 +1582,30 @@ Proof
  >> Rewr'
  >> Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘dist m (x,z)’ >> art []
  >> rw [MDIST_TRIANGLE_SUB]
+QED
+
+Theorem MDIST_LE_0 :
+    !m x y. dist m (x,y) <= 0 <=> dist m (x,y) = 0
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC >- rw []
+ >> rw [REAL_LE_LT]
+ >> PROVE_TAC [REAL_LET_ANTISYM, METRIC_POS]
+QED
+
+Theorem MCBALL_TRIVIAL :
+    !m x. mcball m (x,0) = {x}
+Proof
+    rw [Once EXTENSION, IN_MCBALL, MSPACE]
+ >> rename1 ‘_ <=> y = x’
+ >> simp [MDIST_LE_0, METRIC_ZERO]
+ >> PROVE_TAC []
+QED
+
+Theorem MCBALL_SING :
+    !m x e. e = 0 ==> mcball m (x,e) = {x}
+Proof
+    rw [MCBALL_TRIVIAL]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -1654,7 +1785,7 @@ Proof
 QED
 
 Theorem SET_DIST_LIPSCHITZ :
-   !s t x y:'a. abs(set_dist m({x},s) - set_dist m({y},s)) <= dist m(x,y)
+   !s x (y :'a). abs(set_dist m({x},s) - set_dist m({y},s)) <= dist m(x,y)
 Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC[GSYM SET_DIST_SINGS] THEN
   REWRITE_TAC[REAL_ARITH
@@ -1743,11 +1874,11 @@ Proof
      rw [DISJOINT_ALT])
  >> DISCH_TAC
  >> Cases_on ‘s = {}’ >> rw []
- >> fs [CLOSED_IN_METRIC, mspace]
+ >> fs [CLOSED_IN_METRIC, MSPACE]
  >> CCONTR_TAC
  >> Q.PAT_X_ASSUM ‘!x. x NOTIN s ==> _’ (MP_TAC o Q.SPEC ‘x’) >> rw []
  >> STRONG_DISJ_TAC
- >> rw [DISJOINT_ALT, IN_MBALL, mspace]
+ >> rw [DISJOINT_ALT, IN_MBALL, MSPACE]
  >> fs [set_dist_def]
  >> qabbrev_tac ‘p = {dist m (x',y) | x' = x /\ y IN s}’
  (* applying INF_CLOSE *)
@@ -1762,6 +1893,47 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
+(*  closed ball based on a set                                               *)
+(* ------------------------------------------------------------------------- *)
+
+(* Unlike the usual closed ball (cball) generated from a single point, this
+   version generates it from a set of points.
+ *)
+Definition set_mcball_def :
+    set_mcball m s e = {x | set_dist m({x},s) <= e}
+End
+
+(* NOTE: Usually ‘0 < e’ is assumed, but the lemma also holds when ‘e <= 0’. *)
+Theorem closed_in_set_mcball :
+    !m s e. closed_in (mtop m) (set_mcball m s e)
+Proof
+    rw [CLOSED_IN_METRIC, MSPACE, set_mcball_def, GSYM real_lt]
+ >> qabbrev_tac ‘d = set_dist m ({x},s)’
+ >> qabbrev_tac ‘r = d - e’
+ >> ‘0 < r’ by simp [Abbr ‘r’, REAL_SUB_LT]
+ >> Q.EXISTS_TAC ‘r’ >> art []
+ >> simp [DISJOINT_ALT, IN_MBALL]
+ >> Q.X_GEN_TAC ‘y’ >> rw [MSPACE, real_lt]
+ (* applying SET_DIST_LIPSCHITZ *)
+ >> MP_TAC (Q.SPECL [‘s’, ‘x’, ‘y’] SET_DIST_LIPSCHITZ)
+ >> qabbrev_tac ‘r' = dist m (x,y)’
+ >> qabbrev_tac ‘d' = set_dist m ({y},s)’
+ >> simp []
+ >> Cases_on ‘0 <= d - d'’
+ >- (‘abs (d - d') = d - d'’ by rw [ABS_REFL] \\
+     rw [Abbr ‘r’] \\
+     Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘d - d'’ >> simp [] \\
+     simp [REAL_LE_SUB_CANCEL1])
+ >> fs [GSYM real_lt]
+ >> ‘abs (d - d') = -(d - d')’ by rw [ABS_EQ_NEG]
+ >> POP_ORW
+ >> rw [REAL_NEG_SUB]
+ >> fs [REAL_ARITH “a - b < 0 <=> a < (b :real)”, Abbr ‘r’, REAL_SUB_LT]
+ >> ‘d < e’ by PROVE_TAC [REAL_LTE_TRANS]
+ >> PROVE_TAC [REAL_LT_ANTISYM]
+QED
+
+(* ------------------------------------------------------------------------- *)
 (*  Lipschitz continuous functions                                           *)
 (* ------------------------------------------------------------------------- *)
 
@@ -1770,7 +1942,7 @@ Definition Lipschitz_condition_def :
       !x y. dist E2 (f x,f y) <= k * dist E1 (x,y)
 End
 
-(* Definition 13.8 [1, p.249], cf. topologyTheory.continuous_map *)
+(* Definition 13.8 [1, p.249] (or [2]), cf. topologyTheory.continuous_map *)
 Definition Lipschitz_continuous_map :
     Lipschitz_continuous_map (E1,E2) f <=>
       ?k. 0 < k /\ Lipschitz_condition (E1,E2) k f
@@ -1787,10 +1959,25 @@ Theorem Lipschitz_continuous_map_imp_continuous_map :
     !E1 E2 f. Lipschitz_continuous_map (E1,E2) f ==>
               continuous_map (mtop E1,mtop E2) f
 Proof
-    rw [Lipschitz_continuous_map_def, METRIC_CONTINUOUS_MAP, mspace]
+    rw [Lipschitz_continuous_map_def, METRIC_CONTINUOUS_MAP, MSPACE]
  >> ‘k <> 0’ by rw [REAL_LT_IMP_NE]
  >> Q.EXISTS_TAC ‘e / k’ >> rw [REAL_LT_DIV]
  >> Q_TAC (TRANS_TAC REAL_LET_TRANS) ‘k * dist E1 (a,x)’ >> art []
+QED
+
+(* cf. CONTINUOUS_MAP_COMPOSE *)
+Theorem Lipschitz_continuous_map_compose :
+    !top1 top2 top3 f g. Lipschitz_continuous_map (top1,top2) f /\
+                         Lipschitz_continuous_map (top2,top3) g ==>
+                         Lipschitz_continuous_map (top1,top3) (g o f)
+Proof
+    rw [Lipschitz_continuous_map_def]
+ >> Q.EXISTS_TAC ‘k * k'’
+ >> rw [REAL_LT_MUL]
+ >> ‘k * k' * dist top1 (x,y) = k' * (k * dist top1 (x,y))’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘k' * dist top2 (f x,f y)’
+ >> simp []
 QED
 
 (* Another form of SET_DIST_LIPSCHITZ *)
@@ -1802,15 +1989,13 @@ Proof
  >> rw [GSYM dist_def, dist, SET_DIST_LIPSCHITZ]
 QED
 
-(* Lemma 13.10 [1, p.249]
-   NOTE: The original antecedent “closed_in (mtop E) A” is not needed.
- *)
+(* Lemma 13.10 [1, p.249] *)
 Theorem Lipschitz_continuous_map_exists :
     !E A e. 0 < e ==>
-            ?f. Lipschitz_continuous_map (E,mr1) f /\
-               (!x. 0 <= f x /\ f x <= 1) /\
-               (!x. x IN A ==> f x = 1) /\
-                !x. e <= set_dist E ({x},A) ==> f x = 0
+        ?f. Lipschitz_continuous_map (E,mr1) f /\
+           (!x. 0 <= f x /\ f x <= 1) /\
+           (!x. x IN A ==> f x = 1) /\
+           (!x. e <= set_dist E ({x},A) ==> f x = 0)
 Proof
     rw [Lipschitz_continuous_map, IN_FUNSET]
  >> qabbrev_tac ‘g :real -> real = \x. max 0 (min 1 x)’
@@ -1837,11 +2022,12 @@ Proof
  >> DISCH_TAC
  >> ‘!x. x IN A ==> f x = 1’ by rw [Abbr ‘f’, SET_DIST_SING_IN_SET]
  >> simp []
- >> reverse CONJ_TAC (* !x. e <= set_dist E ({x},A) ==> f x = 0 *)
+ >> Know ‘!x. e <= set_dist E ({x},A) ==> f x = 0’
  >- (rw [Abbr ‘f’] \\
      FIRST_X_ASSUM MATCH_MP_TAC \\
      qmatch_abbrev_tac ‘1 <= z / e’ \\
      MATCH_MP_TAC REAL_LE_RDIV >> rw [])
+ >> simp [] >> DISCH_TAC
  (* ?k. Lipschitz_condition (E,mr1) k f *)
  >> simp [Lipschitz_condition_def, GSYM dist_def, dist, mspace]
  >> ‘e <> 0’ by rw [REAL_LT_IMP_NE]
@@ -1943,10 +2129,12 @@ Proof
 QED
 
 val _ = remove_ovl_mapping "B" {Name = "B", Thy = "metric"};
-val _ = export_theory();
+
+(* END *)
 
 (* References:
 
   [1] Klenke, A.: Probability Theory: A Comprehensive Course. Second Edition.
       Springer Science & Business Media, London (2013).
+  [2] https://en.wikipedia.org/wiki/Lipschitz_continuity
  *)

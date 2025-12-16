@@ -1,8 +1,10 @@
-open HolKernel boolLib bossLib OpenTheoryMap OpenTheoryBoolTheory
-open OpenTheoryReader
+Theory HOL4bool
+Ancestors
+  OpenTheoryBool
+Libs
+  OpenTheoryMap OpenTheoryReader
 
 val Thy = "HOL4bool"
-val _ = new_theory Thy
 
 val n = ref 0;
 fun export (tm,tac) =
@@ -347,5 +349,3 @@ val res = export(``
   (* DB.match["OpenTheoryBool"]``~F`` *)
   (* DB.match["OpenTheoryBool"]``if T then x else y`` *)
   (* DB.match["OpenTheoryBool"]``if F then x else y`` *)
-
-val _ = export_theory()

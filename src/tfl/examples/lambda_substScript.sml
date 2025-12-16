@@ -1,12 +1,12 @@
 (*===========================================================================*)
 (*       Substitution in the name-carrying lambda calculus                   *)
 (*===========================================================================*)
+Theory lambda_subst
+Ancestors
+  string prim_rec arithmetic pred_set
+Libs
+  stringLib pred_setLib pairLib
 
-open HolKernel Parse boolLib bossLib
-     stringLib pred_setLib pairLib
-     prim_recTheory arithmeticTheory pred_setTheory;
-
-val _ = new_theory "lambda_subst";
 
 (*---------------------------------------------------------------------------
     Type of lambda terms
@@ -185,5 +185,3 @@ Theorem subst_ind = ind;
 val th =
   EVAL “["z" |-> Var"a"]
         (Abs "a'" (Abs "a" (Comb (Var "a'") (Var "z"))))”;
-
-val _ = export_theory();

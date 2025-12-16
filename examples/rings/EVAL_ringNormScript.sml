@@ -5,13 +5,12 @@ load "prelimTheory";
 load "canonicalTheory";
 load "ringTheory";
 *)
+Theory EVAL_ringNorm
+Ancestors
+  EVAL_ring EVAL_canonical
+Libs
+  abs_tools BasicProvers Datatype
 
-open HolKernel Parse boolLib abs_tools;
-open BasicProvers Datatype;
-
-val _ = new_theory "EVAL_ringNorm";
-
-open EVAL_ringTheory EVAL_canonicalTheory;
 
 val r = “r:'a ring”;
 val sr = “semi_ring_of r”;
@@ -97,13 +96,14 @@ fun ARW_TAC l = RW_TAC bool_ss
 
 (* ring normalization *)
 
-val _ = Hol_datatype
- ` polynom =
-     Pvar of index
-   | Pconst of 'a
-   | Pplus of polynom => polynom
-   | Pmult of polynom => polynom
-   | Popp of polynom `;
+Datatype:
+   polynom =
+     Pvar index
+   | Pconst 'a
+   | Pplus polynom polynom
+   | Pmult polynom polynom
+   | Popp polynom
+End
 
 val polynom_normalize_def = Define `
    (polynom_normalize (Pvar i) = (Cons_varlist [i] Nil_monom))
@@ -161,5 +161,3 @@ val _ = record_terms (
     “r_spolynom_simplify”, “r_interp_sp”
   ]
 )
-
-val _ = export_theory();

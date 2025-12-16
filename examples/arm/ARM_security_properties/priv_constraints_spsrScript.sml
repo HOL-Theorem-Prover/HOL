@@ -1,8 +1,9 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory tacticsLib ARM_prover_extLib;
-
-val _ =  new_theory("priv_constraints_spsr");
+Theory priv_constraints_spsr
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper
+Libs
+  proofManagerLib tacticsLib ARM_prover_extLib
 
 val _ = diminish_srw_ss ["one"]
 val _ = augment_srw_ss [rewrites [oneTheory.FORALL_ONE]]
@@ -66,8 +67,8 @@ val prove_abs_spsr_flags_const_action =
 
 
 
-val untouched_spsr_flags_abs_def =
-    Define `untouched_spsr_flags_abs f (mode:bool[5]) =
+Definition untouched_spsr_flags_abs_def:
+     untouched_spsr_flags_abs f (mode:bool[5]) =
            !s a c s'. (f a s = ValueState c s') ==>
                 let spsr =
                case mode of
@@ -85,10 +86,10 @@ val untouched_spsr_flags_abs_def =
                            ((s'.psrs(0,spsr)).F = (s.psrs(0,spsr)).F) /\
                            ((s'.psrs (0,spsr)).M=(s.psrs (0,spsr)).M) /\
                            ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)) ))
-                           `;
+End
 
-val untouched_spsr_flags_def =
-    Define `untouched_spsr_flags f (mode:bool[5]) =
+Definition untouched_spsr_flags_def:
+     untouched_spsr_flags f (mode:bool[5]) =
            !s c s'. (f s = ValueState c s') ==>
            let spsr =
                case mode of
@@ -105,11 +106,11 @@ val untouched_spsr_flags_def =
                            ((s'.psrs(0,spsr)).F = (s.psrs(0,spsr)).F) /\
                            ((s'.psrs (0,spsr)).M=(s.psrs (0,spsr)).M)/\
                            ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)) )
-                           `;
+End
 
 
-val priv_spsr_flags_constraints_def =
-    Define `priv_spsr_flags_constraints f cpsr mode =
+Definition priv_spsr_flags_constraints_def:
+     priv_spsr_flags_constraints f cpsr mode =
             ! s s' a . (f s = ValueState a s') ==>
                 (~access_violation s') ==>
                 ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -127,11 +128,12 @@ val priv_spsr_flags_constraints_def =
                            ((s'.psrs(0,spsr)).F = cpsr.F)/\
                            ((s'.psrs (0,spsr)).M=cpsr.M))
 
-              )`;
+              )
+End
 
 
-val priv_spsr_flags_constraints_abs_def =
-    Define `priv_spsr_flags_constraints_abs f cpsr mode =
+Definition priv_spsr_flags_constraints_abs_def:
+     priv_spsr_flags_constraints_abs f cpsr mode =
                              ! s s' a c. (f c s = ValueState a s') ==>
                                (~access_violation s') ==>
                               ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -151,15 +153,15 @@ val priv_spsr_flags_constraints_abs_def =
                                (((s'.psrs(0,spsr)).I = cpsr.I) /\
                            ((s'.psrs(0,spsr)).F = cpsr.F)/\
                            ((s'.psrs (0,spsr)).M=cpsr.M)))
-                               `;
+End
 
 
 (*********************   proof rules *******************************)
 
-val seqT_priv_spsr_flags_constraints_before_thm =
-    store_thm("seqT_priv_spsr_flags_constraints_before_thm",
-              `` ! g f cpsr spsr. priv_spsr_flags_constraints_abs f cpsr spsr ==>
-             priv_spsr_flags_constraints (g >>= f) cpsr spsr ``,
+Theorem seqT_priv_spsr_flags_constraints_before_thm:
+                 ! g f cpsr spsr. priv_spsr_flags_constraints_abs f cpsr spsr ==>
+             priv_spsr_flags_constraints (g >>= f) cpsr spsr
+Proof
               (RW_TAC (srw_ss()) [seqT_def,
                                   priv_spsr_flags_constraints_def,
                                   priv_spsr_flags_constraints_abs_def])
@@ -182,14 +184,14 @@ val seqT_priv_spsr_flags_constraints_before_thm =
                   THEN FULL_SIMP_TAC (srw_ss()) []
                   THEN RES_TAC
                   THEN FULL_SIMP_TAC (srw_ss()) [seqT_def]
-             );
+QED
 
 
 
-val parT_priv_spsr_flags_constraints_before_thm =
-    store_thm("parT_priv_spsr_flags_constraints_before_thm",
-              `` !f g cpsr spsr . priv_spsr_flags_constraints f cpsr spsr ==>
-             priv_spsr_flags_constraints (g ||| f) cpsr spsr ``,
+Theorem parT_priv_spsr_flags_constraints_before_thm:
+                 !f g cpsr spsr . priv_spsr_flags_constraints f cpsr spsr ==>
+             priv_spsr_flags_constraints (g ||| f) cpsr spsr
+Proof
               RW_TAC (srw_ss())
                       [parT_def,seqT_def,
                        priv_spsr_flags_constraints_def,
@@ -217,15 +219,16 @@ val parT_priv_spsr_flags_constraints_before_thm =
                                                    THEN RW_TAC (srw_ss()) [] ,
                                      (UNDISCH_ALL_TAC
                                           THEN  RW_TAC (srw_ss()) []
-                                          THEN FULL_SIMP_TAC (srw_ss()) [])]);
+                                          THEN FULL_SIMP_TAC (srw_ss()) [])]
+QED
 
 
 
-val seqT_priv_spsr_flags_constraints_after_thm =
-    store_thm("seqT_priv_spsr_flags_constraints_after_thm",
-              `` !f g cpsr mode. priv_spsr_flags_constraints g cpsr mode ==>
+Theorem seqT_priv_spsr_flags_constraints_after_thm:
+                 !f g cpsr mode. priv_spsr_flags_constraints g cpsr mode ==>
              (  untouched_spsr_flags_abs f mode) ==>
-             priv_spsr_flags_constraints (g >>= f) cpsr mode``,
+             priv_spsr_flags_constraints (g >>= f) cpsr mode
+Proof
               (RW_TAC (srw_ss()) [seqT_def,
                                   priv_spsr_flags_constraints_def,
                                   priv_spsr_flags_constraints_abs_def,
@@ -249,13 +252,14 @@ untouched_spsr_flags_abs_def]) THEN
                         THEN UNDISCH_ALL_TAC
                         THEN RW_TAC (srw_ss()) []
                         THEN FULL_SIMP_TAC (srw_ss()) []
-                        THEN FULL_SIMP_TAC (srw_ss()) []);
+                        THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val parT_priv_spsr_flags_constraints_after_thm =
-    store_thm("parT_priv_spsr_flags_constraints_after_thm",
-`` !f g cpsr spsr. priv_spsr_flags_constraints g cpsr spsr ==>
+Theorem parT_priv_spsr_flags_constraints_after_thm:
+   !f g cpsr spsr. priv_spsr_flags_constraints g cpsr spsr ==>
              (untouched_spsr_flags f spsr) ==>
-             priv_spsr_flags_constraints (g ||| f) cpsr spsr``,
+             priv_spsr_flags_constraints (g ||| f) cpsr spsr
+Proof
               (RW_TAC (srw_ss())
                       [parT_def,seqT_def,
                        priv_spsr_flags_constraints_def,
@@ -276,15 +280,15 @@ val parT_priv_spsr_flags_constraints_after_thm =
                   THEN UNDISCH_ALL_TAC
                   THEN  RW_TAC (srw_ss()) []
                   THEN  FULL_SIMP_TAC (srw_ss()) []
-                );
+QED
 
 
-val seqT_trans_untouched_thm =
-    store_thm("seqT_trans_untouched_thm",
-              `` !f g mode.
+Theorem seqT_trans_untouched_thm:
+                 !f g mode.
              (untouched_spsr_flags f mode) ==>
              (untouched_spsr_flags_abs g mode) ==>
-             (untouched_spsr_flags (f>>=g) mode)``,
+             (untouched_spsr_flags (f>>=g) mode)
+Proof
               (RW_TAC (srw_ss()) [seqT_def,untouched_spsr_flags_abs_def,
                                   untouched_spsr_flags_def])
 THEN Cases_on `f s`
@@ -302,14 +306,15 @@ THEN Cases_on `f s`
                                          ``c:'b``,``s':arm_state``] thm))
                   THEN RES_TAC
                   THEN FULL_SIMP_TAC (srw_ss()) []
-                  THEN RW_TAC (srw_ss()) []);
+                  THEN RW_TAC (srw_ss()) []
+QED
 
-val parT_trans_untouched_thm =
-    store_thm("parT_trans_untouched_thm",
-              `` !f g spsr.
+Theorem parT_trans_untouched_thm:
+                 !f g spsr.
              (untouched_spsr_flags f spsr) ==>
              (untouched_spsr_flags g spsr) ==>
-             (untouched_spsr_flags (f ||| g) spsr)``,
+             (untouched_spsr_flags (f ||| g) spsr)
+Proof
               (RW_TAC (srw_ss()) [seqT_def,parT_def,constT_def,
                                   untouched_spsr_flags_def])
                   THEN Cases_on `f s`
@@ -327,38 +332,41 @@ val parT_trans_untouched_thm =
                   THEN RES_TAC
                   THEN FULL_SIMP_TAC (srw_ss()) []
                   THEN RW_TAC (srw_ss()) []
-                  );
+QED
 
 
-val spfc_first_abs_lemma =
-    store_thm ("spfc_first_abs_lemma",
-               ``!f g x y. (f=g) ==> ((priv_spsr_flags_constraints f x y) =
-                                    (priv_spsr_flags_constraints g x y))``,
-               RW_TAC (srw_ss()) []);
+Theorem spfc_first_abs_lemma:
+                 !f g x y. (f=g) ==> ((priv_spsr_flags_constraints f x y) =
+                                    (priv_spsr_flags_constraints g x y))
+Proof
+               RW_TAC (srw_ss()) []
+QED
 
 
-val spfc_second_abs_lemma =
-    store_thm ("spfc_second_abs_lemma",
-               ``! f x z. (! y. priv_spsr_flags_constraints (f y) x z) =
-    priv_spsr_flags_constraints_abs f x z``,
+Theorem spfc_second_abs_lemma:
+                 ! f x z. (! y. priv_spsr_flags_constraints (f y) x z) =
+    priv_spsr_flags_constraints_abs f x z
+Proof
                RW_TAC (srw_ss()) [priv_spsr_flags_constraints_def,priv_spsr_flags_constraints_abs_def]
-                      THEN METIS_TAC []);
+                      THEN METIS_TAC []
+QED
 
 
 (********************* end of proof rules *******************************)
 (******************* basic lemmas **************************************)
 
-val read_cpsr_fixed_lem =
-    store_thm("read_cpsr_fixed_lem",
-              ``!s. read_cpsr <|proc := 0|> s = ValueState (s.psrs (0,CPSR)) s``,
+Theorem read_cpsr_fixed_lem:
+                !s. read_cpsr <|proc := 0|> s = ValueState (s.psrs (0,CPSR)) s
+Proof
               EVAL_TAC
-                  THEN RW_TAC (srw_ss()) []);
+                  THEN RW_TAC (srw_ss()) []
+QED
 
 (* if possible, try to optimize it *)
-val write_spsr_sfc_thm =
-    store_thm("write_spsr_sfc_thm",
-              ``! cpsr mode. priv_spsr_flags_constraints (write_spsr <|proc := 0|> cpsr)
-             cpsr mode ``,
+Theorem write_spsr_sfc_thm:
+                ! cpsr mode. priv_spsr_flags_constraints (write_spsr <|proc := 0|> cpsr)
+             cpsr mode
+Proof
 
               RW_TAC (bool_ss) [write_spsr_def,seqT_def,priv_spsr_flags_constraints_def]
                      THEN Cases_on `read_cpsr <|proc := 0|> s`
@@ -397,59 +405,65 @@ val write_spsr_sfc_thm =
                                                                                THEN RW_TAC (srw_ss()) [] THEN
                                                                                FULL_SIMP_TAC (srw_ss()) []]],
                                       FULL_SIMP_TAC (srw_ss()) []]],
-              FULL_SIMP_TAC (srw_ss()) []]);
+              FULL_SIMP_TAC (srw_ss()) []]
+QED
 
 
-val write_lr_reg_sfc_ut_thm =
-    store_thm("write_lr_reg_sfc_ut_thm",
-              ``! value mode.
-             (untouched_spsr_flags (write_reg <|proc:=0|> 14w value) mode)``,
+Theorem write_lr_reg_sfc_ut_thm:
+                ! value mode.
+             (untouched_spsr_flags (write_reg <|proc:=0|> 14w value) mode)
+Proof
               EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
                   THEN UNDISCH_ALL_TAC
                   THEN EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
-                  THEN FULL_SIMP_TAC (srw_ss()) []);
+                  THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val read_cpsr_sfc_ut_thm =
-    store_thm("read_cpsr_sfc_ut_thm",
-              `` !mode.
-             (untouched_spsr_flags (read_cpsr <|proc:=0|> ) mode )``,
+Theorem read_cpsr_sfc_ut_thm:
+                 !mode.
+             (untouched_spsr_flags (read_cpsr <|proc:=0|> ) mode )
+Proof
               EVAL_TAC
-                  THEN RW_TAC (srw_ss()) [] );
+                  THEN RW_TAC (srw_ss()) []
+QED
 
-val branch_to_sfc_ut_thm =
-    store_thm("branch_to_sfc_ut_thm",
-              ``!adr mode. untouched_spsr_flags (
-    branch_to <|proc:=0|> adr) mode``,
+Theorem branch_to_sfc_ut_thm:
+                !adr mode. untouched_spsr_flags (
+    branch_to <|proc:=0|> adr) mode
+Proof
               EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
                   THEN UNDISCH_ALL_TAC
                   THEN EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
-                  THEN FULL_SIMP_TAC (srw_ss()) []);
+                  THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val constT_sfc_ut_thm =
-    store_thm("constT_sfc_ut_thm",
-              ``! mode. untouched_spsr_flags_abs (λ(u1:unit,u2:unit,u3:unit,u4:unit). constT ()) mode``,
+Theorem constT_sfc_ut_thm:
+                ! mode. untouched_spsr_flags_abs (λ(u1:unit,u2:unit,u3:unit,u4:unit). constT ()) mode
+Proof
               EVAL_TAC
-                  THEN RW_TAC (srw_ss()) [] );
+                  THEN RW_TAC (srw_ss()) []
+QED
 
-val write_cpsr_sfc_ut_thm =
-    store_thm("write_cpsr_sfc_ut_thm",
-              ``untouched_spsr_flags (
+Theorem write_cpsr_sfc_ut_thm:
+                untouched_spsr_flags (
     read_cpsr <|proc:=0|> >>=
                        (λcpsr.
                             write_cpsr <|proc:=0|>
                                                 (cpsr with
 <|I := T; IT := 0w; J := F; T := sctlr.TE;
-E := sctlr.EE|>))) 27w``,
+E := sctlr.EE|>))) 27w
+Proof
               EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
                   THEN UNDISCH_ALL_TAC
                   THEN EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
-                  THEN FULL_SIMP_TAC (srw_ss()) []);
+                  THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 val take_undef_writing_part_spf_thm =
     save_thm ("take_undef_writing_part_spf_thm",
@@ -597,4 +611,3 @@ val take_undef_instr_exception_spsr_flags_thm =
     end);
 *)
 
-val _ = export_theory();

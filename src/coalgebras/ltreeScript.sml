@@ -8,17 +8,15 @@
   Note that this tree data structure allows for both infinite depth
   and infinite breadth.
 *)
-open HolKernel Parse boolLib bossLib;
+Theory ltree
+Ancestors
+  arithmetic list rich_list llist alist option pred_set relation
+  pair combin set_relation iterate
+Libs
+  hurdUtils tautLib monadsyntax
 
-open arithmeticTheory listTheory rich_listTheory llistTheory alistTheory optionTheory
-     pred_setTheory relationTheory pairTheory combinTheory set_relationTheory
-     hurdUtils iterateTheory tautLib;
-
-open monadsyntax;
 val _ = enable_monadsyntax ();
 val _ = enable_monad "option";
-
-val _ = new_theory "ltree";
 
 (* make type definition *)
 Type ltree_rep[local] = ``:num list -> 'a # num option``;
@@ -585,7 +583,7 @@ Proof
   \\ rw [] \\ Cases_on `LNTH h ts` \\ fs []
 QED
 
-Triviality ltree_lookup_map:
+Theorem ltree_lookup_map[local]:
   ltree_lookup (ltree_map f t) path =
   case ltree_lookup t path of
   | NONE => NONE
@@ -2622,4 +2620,3 @@ val _ = List.app Theory.delete_binding
    "gen_ltree_def", "ltree_rep_ok_def", "Branch",
    "from_rose_def_primitive", "ltree_finite_def"];
 
-val _ = export_theory();

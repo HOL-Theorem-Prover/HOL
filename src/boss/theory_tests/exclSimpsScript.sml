@@ -1,8 +1,6 @@
-open HolKernel Parse boolLib bossLib
-
-open logrootTheory
-
-val _ = new_theory "exclSimps";
+Theory exclSimps
+Ancestors
+  logroot
 
 Theorem foo:
   (!x. f x = x) ==> f 2 = (\x. if x < 1 then x else x + 1) (10 - 9)
@@ -45,4 +43,3 @@ QED
 
 
 
-val _ = export_theory();

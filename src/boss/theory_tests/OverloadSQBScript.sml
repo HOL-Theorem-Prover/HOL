@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "OverloadSQB";
+Theory OverloadSQB
 
 Overload "[.]" = “(+)”
 
@@ -13,4 +11,3 @@ Proof
 QED
 
 
-val _ = export_theory();

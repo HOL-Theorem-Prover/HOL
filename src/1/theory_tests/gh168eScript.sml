@@ -1,14 +1,14 @@
-open HolKernel Parse boolLib
-
-open gh294aTheory gh294bTheory testutils
-
-val _ = new_theory "gh168e";
+Theory gh168e[bare]
+Ancestors
+  gh294a gh294b
+Libs
+  HolKernel Parse boolLib testutils
 
 val b2b = bool --> bool
 val b2b2b = bool --> b2b
 
 val tyg0 = type_grammar()
-val privthy = Binarymap.find(type_grammar.privileged_abbrevs tyg0, "foo")
+val privthy = HOLdict.find(type_grammar.privileged_abbrevs tyg0, "foo")
 val unprivthy = if privthy = "gh294a" then "gh294b" else "gh294a"
 
 val (privty, unprivty) = if privthy = "gh294a" then (b2b, b2b2b)
@@ -22,4 +22,3 @@ val _ = temp_thytype_abbrev ({Name = "foo", Thy = unprivthy}, unprivty, true)
 val ty = ``:foo``
 val _ = assert (equal unprivty) ty
 
-val _ = export_theory();

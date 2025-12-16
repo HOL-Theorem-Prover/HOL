@@ -1,18 +1,18 @@
 (*********************************************************)
 (*                         SBox                          *)
 (*********************************************************)
-
-open HolKernel Parse boolLib bossLib wordsTheory wordsLib
-     Serpent_Reference_UtilityTheory listTheory rich_listTheory bitTheory
-     markerTheory pairTheory arithmeticTheory;
-
-val _ = new_theory "Serpent_Reference_SBox";
+Theory Serpent_Reference_SBox
+Ancestors
+  words Serpent_Reference_Utility list rich_list bit marker pair
+  arithmetic
+Libs
+  wordsLib
 
 
 (*sbox table used in encrytion
 *)
-val SBox_def=Define
-`SBox=MAP (MAP (n2w:num->word4))
+Definition SBox_def:
+ SBox=MAP (MAP (n2w:num->word4))
 [[ 3; 8;15; 1;10; 6; 5;11;14;13; 4; 2; 7; 0; 9;12];
  [15;12; 2; 7; 9; 0; 5;10; 1;11;14; 8; 6;13; 3; 4];
  [ 8; 6; 7; 9; 3;12;10;15;13; 1;14; 4; 0;11; 5; 2];
@@ -20,13 +20,14 @@ val SBox_def=Define
  [ 1;15; 8; 3;12; 0;11; 6; 2; 5; 4;10; 9;14; 7;13];
  [15; 5; 2;11; 4;10; 9;12; 0; 3;14; 8;13; 6; 7; 1];
  [ 7; 2;12; 5; 8; 4; 6;11;14; 9; 1;15;13; 3;10; 0];
- [ 1;13;15; 0;14; 8; 2;11; 7; 4;12;10; 9; 3; 5; 6]]`;
+ [ 1;13;15; 0;14; 8; 2;11; 7; 4;12;10; 9; 3; 5; 6]]
+End
 
 
 (*inverse sbox table used in decrytion
 *)
-val invSBox_def=Define
-`invSBox= MAP (MAP (n2w:num->word4))
+Definition invSBox_def:
+ invSBox= MAP (MAP (n2w:num->word4))
 [[13; 3;11; 0;10; 6; 5;12; 1;14; 4; 7;15; 9; 8; 2];
  [ 5; 8; 2;14;15; 6;12; 3;11; 4; 7; 9; 1;13;10; 0];
  [12; 9;15; 4;11;14; 1; 2; 0; 3; 6;13; 5; 8;10; 7];
@@ -34,19 +35,20 @@ val invSBox_def=Define
  [ 5; 0; 8; 3;10; 9; 7;14; 2;12;11; 6; 4;15;13; 1];
  [ 8;15; 2; 9; 4; 1;13;14;11; 6; 5; 3; 7;12;10; 0];
  [15;10; 1;13; 5; 3; 6; 0; 4; 9;14; 7; 2;12; 8;11];
- [ 3; 0; 6;13; 9;14;15; 8; 5;12;11; 7;10; 1; 4; 2]]`;
+ [ 3; 0; 6;13; 9;14;15; 8; 5;12;11; 7;10; 1; 4; 2]]
+End
 
-val S_def = Define
-`(S:num->num->word4) x y= EL y (EL x SBox)`;
+Definition S_def:
+ (S:num->num->word4) x y= EL y (EL x SBox)
+End
 
-val invS_def = Define
-`(invS:num->num->word4) x y= EL y (EL x invSBox)`;
+Definition invS_def:
+ (invS:num->num->word4) x y= EL y (EL x invSBox)
+End
 
 (*preevaluated to speed things up
 *)
-val SBoxVal=Q.store_thm(
-"SBoxVal",
-`
+Theorem SBoxVal:
   (S 0  0= 3w) /\ (S 0  1= 8w) /\ (S 0  2=15w) /\ (S 0  3= 1w) /\
   (S 0  4=10w) /\ (S 0  5= 6w) /\ (S 0  6= 5w) /\ (S 0  7=11w) /\
   (S 0  8=14w) /\ (S 0  9=13w) /\ (S 0 10= 4w) /\ (S 0 11= 2w) /\
@@ -78,16 +80,15 @@ val SBoxVal=Q.store_thm(
   (S 7  0= 1w) /\ (S 7  1=13w) /\ (S 7  2=15w) /\ (S 7  3= 0w) /\
   (S 7  4=14w) /\ (S 7  5= 8w) /\ (S 7  6= 2w) /\ (S 7  7=11w) /\
   (S 7  8= 7w) /\ (S 7  9= 4w) /\ (S 7 10=12w) /\ (S 7 11=10w) /\
-  (S 7 12= 9w) /\ (S 7 13= 3w) /\ (S 7 14= 5w) /\ (S 7 15= 6w)`,
-
-EVAL_TAC);
+  (S 7 12= 9w) /\ (S 7 13= 3w) /\ (S 7 14= 5w) /\ (S 7 15= 6w)
+Proof
+EVAL_TAC
+QED
 
 
 (*inverse sbox table used in decrytion
 *)
-val invSBoxVal=Q.store_thm(
-"invSBoxVal",
-`
+Theorem invSBoxVal:
   (invS 0  0=13w) /\ (invS 0  1= 3w) /\ (invS 0  2=11w) /\ (invS 0  3= 0w) /\
   (invS 0  4=10w) /\ (invS 0  5= 6w) /\ (invS 0  6= 5w) /\ (invS 0  7=12w) /\
   (invS 0  8= 1w) /\ (invS 0  9=14w) /\ (invS 0 10= 4w) /\ (invS 0 11= 7w) /\
@@ -119,73 +120,77 @@ val invSBoxVal=Q.store_thm(
   (invS 7  0= 3w) /\ (invS 7  1= 0w) /\ (invS 7  2= 6w) /\ (invS 7  3=13w) /\
   (invS 7  4= 9w) /\ (invS 7  5=14w) /\ (invS 7  6=15w) /\ (invS 7  7= 8w) /\
   (invS 7  8= 5w) /\ (invS 7  9=12w) /\ (invS 7 10=11w) /\ (invS 7 11= 7w) /\
-  (invS 7 12=10w) /\ (invS 7 13= 1w) /\ (invS 7 14= 4w) /\ (invS 7 15= 2w)`,
-
-EVAL_TAC);
+  (invS 7 12=10w) /\ (invS 7 13= 1w) /\ (invS 7 14= 4w) /\ (invS 7 15= 2w)
+Proof
+EVAL_TAC
+QED
 
 
 (*apply SBox on a nibble (word4)*)
-val sNibble_def = Define
-`sNibble round (w4:word4) = S (round MOD 8) (w2n w4)`;
+Definition sNibble_def:
+ sNibble round (w4:word4) = S (round MOD 8) (w2n w4)
+End
 
 (*apply invSBox on a nibble (word4)*)
-val invSNibble_def = Define
-`invSNibble round (w4:word4) = invS (round MOD 8) (w2n w4)`;
+Definition invSNibble_def:
+ invSNibble round (w4:word4) = invS (round MOD 8) (w2n w4)
+End
 
 (*SBox and invSBox cancels *)
-val invS_S_cancel=Q.store_thm(
-"invS_S_cancel",
-`!round.
+Theorem invS_S_cancel:
+ !round.
         round<8
         ==>
-        (!n. n<16==> (invS  round (w2n (S round n))=n2w n))`,
-
+        (!n. n<16==> (invS  round (w2n (S round n))=n2w n))
+Proof
 SIMP_TAC arith_ss [BOUNDED_FORALL_THM] THEN
-  SRW_TAC [] [SBoxVal, invSBoxVal]);
+  SRW_TAC [] [SBoxVal, invSBoxVal]
+QED
 
-val invSNibble_sNibble_cancel=Q.store_thm(
-"invSNibble_sNibble_cancel",
-`!round w.
+Theorem invSNibble_sNibble_cancel:
+ !round w.
         round<32
         ==>
-        (invSNibble round (sNibble round w)=w)`,
-
+        (invSNibble round (sNibble round w)=w)
+Proof
 SRW_TAC [] [invSNibble_def,sNibble_def,invS_S_cancel,
-            WORD_DECIDE ``w2n (w:word4) < 16``]);
+            WORD_DECIDE ``w2n (w:word4) < 16``]
+QED
 
-val w4l_fact=Q.store_thm(
-"w4l_fact",
-`!wl round.
+Theorem w4l_fact:
+ !wl round.
         round<32
         ==>
-        ALL_EL (\x. (invSNibble round o sNibble round) x =x) wl`,
-
+        ALL_EL (\x. (invSNibble round o sNibble round) x =x) wl
+Proof
 Induct_on `wl` THENL [
          RW_TAC list_ss [],
-         RW_TAC list_ss [invSNibble_sNibble_cancel]]);
+         RW_TAC list_ss [invSNibble_sNibble_cancel]]
+QED
 
 
 
 
 (*apply SBox and invSBox on a word128*)
-val sBlock_def=Define
-`sBlock round w128=word4ltow128 (MAP (sNibble round) (word128tow4l w128))`;
+Definition sBlock_def:
+ sBlock round w128=word4ltow128 (MAP (sNibble round) (word128tow4l w128))
+End
 
-val invSBlock_def=Define
-`invSBlock round w128=word4ltow128 (MAP (invSNibble round) (word128tow4l w128))`;
+Definition invSBlock_def:
+ invSBlock round w128=word4ltow128 (MAP (invSNibble round) (word128tow4l w128))
+End
 
 (*invSBlock and sBlock cancel*)
-val invSBlock_sBlock_cancel=Q.store_thm(
-"invSBlock_sBlock_cancel",
-`!w128 round.
+Theorem invSBlock_sBlock_cancel:
+ !w128 round.
         round <32
         ==>
-        (invSBlock round (sBlock round w128)=w128)`,
-
+        (invSBlock round (sBlock round w128)=w128)
+Proof
 RW_TAC std_ss [invSBlock_def,sBlock_def] THEN
 `LENGTH  (MAP (sNibble round) (word128tow4l w128))=32` by METIS_TAC [LENGTH_MAP,LENGTH_word128tow4l] THEN
 RW_TAC std_ss [word128tow4l_conversion,MAP_MAP_o,w4l_fact,
-               Serpent_Reference_UtilityTheory.MAP_ID,word4ltow128_conversion]);
+               Serpent_Reference_UtilityTheory.MAP_ID,word4ltow128_conversion]
+QED
 
 
-val _ = export_theory();

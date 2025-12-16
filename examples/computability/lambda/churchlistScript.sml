@@ -1,25 +1,23 @@
-open HolKernel boolLib bossLib Parse binderLib
-
-open churchnumTheory churchboolTheory
-open reductionEval pred_setTheory termTheory chap3Theory
-open normal_orderTheory
-open head_reductionTheory
-open unary_recfnsTheory
-
-val _ = new_theory "churchlist"
+Theory churchlist
+Ancestors
+  churchnum churchbool pred_set term chap3 normal_order
+  head_reduction unary_recfns
+Libs
+  binderLib reductionEval
 
 val lSYM = MATCH_MP chap2Theory.lameq_SYM
 
 val _ = set_trace "Unicode" 1
 fun Store_thm (trip as (n,t,tac)) = store_thm trip before export_rewrites [n]
 
-val ccons_def = Define`
+Definition ccons_def:
   ccons =
   LAM "h" (LAM "t" (LAM "n" (LAM "c"
     (VAR "c" @@ VAR "h" @@ (VAR "t" @@ VAR "n" @@ VAR "c")))))
-`;
+End
 
-val cnil_def = Define`cnil = K`;
+Definition cnil_def:  cnil = K
+End
 val FV_cnil = Store_thm(
   "FV_cnil",
   ``FV cnil = {}``,
@@ -29,13 +27,13 @@ Theorem FV_ccons[simp]: FV ccons = {}
 Proof csimp[EXTENSION, ccons_def]
 QED
 
-val cvcons_def = Define`
+Definition cvcons_def:
   cvcons h t =
     let n = NEW (FV h ∪ FV t) in
     let c = NEW (FV h ∪ FV t ∪ {n})
     in
         LAM n (LAM c (VAR c @@ h @@ (t @@ VAR n @@ VAR c)))
-`;
+End
 
 val FV_cvcons = Store_thm(
   "FV_cvcons",
@@ -44,15 +42,16 @@ val FV_cvcons = Store_thm(
   SRW_TAC [][] THEN NEW_ELIM_TAC THEN SRW_TAC [][] THEN
   SRW_TAC [][EXTENSION] THEN METIS_TAC []);
 
-val cvcons_fresh = store_thm(
-  "cvcons_fresh",
-  ``n ∉ FV h ∧ n ∉ FV t ∧ c ∉ FV h ∧ c ∉ FV t ∧ c ≠ n ⇒
-    (cvcons h t = LAM n (LAM c (VAR c @@ h @@ (t @@ VAR n @@ VAR c))))``,
+Theorem cvcons_fresh:
+    n ∉ FV h ∧ n ∉ FV t ∧ c ∉ FV h ∧ c ∉ FV t ∧ c ≠ n ⇒
+    (cvcons h t = LAM n (LAM c (VAR c @@ h @@ (t @@ VAR n @@ VAR c))))
+Proof
   SRW_TAC [][cvcons_def, LET_THM] THEN NEW_ELIM_TAC THEN SRW_TAC [][] THEN
   NEW_ELIM_TAC THEN SRW_TAC [][] THEN
   SRW_TAC [boolSimps.CONJ_ss][LAM_eq_thm, tpm_fresh] THEN
   Cases_on `v = n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  Cases_on `v = c` THEN FULL_SIMP_TAC (srw_ss()) [tpm_fresh]);
+  Cases_on `v = c` THEN FULL_SIMP_TAC (srw_ss()) [tpm_fresh]
+QED
 
 val whnf_cvcons = Store_thm(
   "whnf_cvcons",
@@ -71,27 +70,29 @@ val SUB_cvcons = Store_thm(
     by SRW_TAC [][cvcons_fresh, chap2Theory.NOT_IN_FV_SUB] THEN
   SRW_TAC [][]);
 
-val wh_ccons = store_thm(
-  "wh_ccons",
-  ``ccons @@ h @@ t -w->* cvcons h t``,
+Theorem wh_ccons:
+    ccons @@ h @@ t -w->* cvcons h t
+Proof
   SRW_TAC [][ccons_def] THEN FRESH_TAC THEN
   `cvcons h t = LAM n (LAM c (VAR c @@ h @@ (t @@ VAR n @@ VAR c)))`
     by SRW_TAC [][cvcons_fresh] THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) []);
+  ASM_SIMP_TAC (whfy(srw_ss())) []
+QED
 
-val wh_cvcons = store_thm(
-  "wh_cvcons",
-  ``cvcons h t @@ n @@ c -w->* c @@ h @@ (t @@ n @@ c)``,
+Theorem wh_cvcons:
+    cvcons h t @@ n @@ c -w->* c @@ h @@ (t @@ n @@ c)
+Proof
   unvarify_tac whstar_substitutive THEN
   `cvcons (VAR hs) (VAR ts) =
      LAM ns (LAM cs (VAR cs @@ VAR hs @@ (VAR ts @@ VAR ns @@ VAR cs)))`
     by SRW_TAC [][cvcons_fresh] THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) []);
+  ASM_SIMP_TAC (whfy(srw_ss())) []
+QED
 
 (* cvlist allows terms to contain HOL lists of terms *)
-val cvlist_def = Define`
+Definition cvlist_def:
   cvlist l = FOLDR cvcons cnil l
-`;
+End
 
 Theorem cvlist_thm[simp]:
   cvlist [] = cnil ∧
@@ -102,30 +103,32 @@ QED
 val cvcons_eq_ccons =
     wh_ccons |> MATCH_MP (GEN_ALL head_reductionTheory.whstar_lameq)
              |> MATCH_MP chap2Theory.lameq_SYM
-val cvcons_cong = store_thm(
-  "cvcons_cong",
-  ``M1 == M2 ⇒ N1 == N2 ⇒ cvcons M1 N1 == cvcons M2 N2``,
-  SIMP_TAC (bsrw_ss()) [cvcons_eq_ccons]);
+Theorem cvcons_cong:
+    M1 == M2 ⇒ N1 == N2 ⇒ cvcons M1 N1 == cvcons M2 N2
+Proof
+  SIMP_TAC (bsrw_ss()) [cvcons_eq_ccons]
+QED
 
-val chd_def = Define`
+Definition chd_def:
   chd = LAM "l" (VAR "l" @@ church 0 @@ K)
-`;
+End
 
 val FV_chd = Store_thm(
   "FV_chd",
   ``FV chd = {}``,
   SRW_TAC [][EXTENSION, chd_def]);
 
-val wh_chd = store_thm(
-  "wh_chd",
-  ``chd @@ (ccons @@ h @@ t) -w->* h ∧
-    chd @@ (cvcons h t) -w->* h``,
+Theorem wh_chd:
+    chd @@ (ccons @@ h @@ t) -w->* h ∧
+    chd @@ (cvcons h t) -w->* h
+Proof
   SRW_TAC [][chd_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) [wh_ccons, wh_K, wh_cvcons]);
+  ASM_SIMP_TAC (whfy(srw_ss())) [wh_ccons, wh_K, wh_cvcons]
+QED
 
-val cappend_def = Define`
+Definition cappend_def:
   cappend = LAM "l1" (LAM "l2" (VAR "l1" @@ VAR "l2" @@ ccons))
-`
+End
 
 val cappend_equiv = brackabs.brackabs_equiv [] cappend_def
 
@@ -133,13 +136,14 @@ Theorem FV_cappend[simp]:   FV cappend = {}
 Proof SRW_TAC [][EXTENSION, cappend_def] >> metis_tac[]
 QED
 
-val wh_cappend = store_thm(
-  "wh_cappend",
-  ``cappend @@ (ccons @@ h @@ t) @@ l2 -w->* cvcons h (t @@ l2 @@ ccons) ∧
+Theorem wh_cappend:
+    cappend @@ (ccons @@ h @@ t) @@ l2 -w->* cvcons h (t @@ l2 @@ ccons) ∧
     cappend @@ (cvcons h t) @@ l2 -w->* cvcons h (t @@ l2 @@ ccons) ∧
-    cappend @@ cnil @@ l2 -w->* l2``,
+    cappend @@ cnil @@ l2 -w->* l2
+Proof
   SRW_TAC [][cappend_def,cnil_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) [wh_ccons, wh_cvcons, wh_K]);
+  ASM_SIMP_TAC (whfy(srw_ss())) [wh_ccons, wh_cvcons, wh_K]
+QED
 
 Theorem cappend_behaviour :
   cappend @@ cvcons h t @@ l2 == cvcons h (cappend @@ t @@ l2)
@@ -147,21 +151,21 @@ Proof
   simp_tac (bsrw_ss()) [cappend_equiv, Cong cvcons_cong, wh_cvcons, wh_ccons]
 QED
 
-val celbody_def = Define`
+Definition celbody_def:
   celbody =
   LAM "a" (LAM "r" (LAM "m"
      (cis_zero @@ VAR "m"
                @@ VAR "a"
                @@ (VAR "r" @@ (cpred @@ VAR "m")))))
-`;
+End
 Theorem FV_celbody[simp]:  FV celbody = {}
 Proof
   SRW_TAC [][celbody_def, EXTENSION] >> metis_tac[]
 QED
 
-val wh_narg_cis_zero = store_thm(
-  "wh_narg_cis_zero",
-  ``N -n->* church n ⇒ cis_zero @@ N -w->* cB (n = 0)``,
+Theorem wh_narg_cis_zero:
+    N -n->* church n ⇒ cis_zero @@ N -w->* cB (n = 0)
+Proof
   SRW_TAC [][cis_zero_def] THEN ASM_SIMP_TAC (whfy(srw_ss())) [] THEN
   FULL_SIMP_TAC (srw_ss()) [church_def] THEN
   Q_TAC (NEW_TAC "z") `FV N ∪ {"z"; "s"}` THEN
@@ -187,13 +191,14 @@ val wh_narg_cis_zero = store_thm(
 
     IMP_RES_TAC normstar_to_vheadunary_wstar THEN
     ASM_SIMP_TAC (whfy(srw_ss())) []
-  ]);
+  ]
+QED
 
-val wh_celbody = store_thm(
-  "wh_celbody",
-  ``(N -n->* church 0 ⇒ celbody @@ a @@ r @@ N -w->* a) ∧
+Theorem wh_celbody:
+    (N -n->* church 0 ⇒ celbody @@ a @@ r @@ N -w->* a) ∧
     ((∃n. N -n->* church n ∧ 0 < n) ⇒
-          celbody @@ a @@ r @@ N -w->* r @@ (cpred @@ N))``,
+          celbody @@ a @@ r @@ N -w->* r @@ (cpred @@ N))
+Proof
   SRW_TAC [][celbody_def] THENL [
     unvarify_tac whstar_substitutive THEN FRESH_TAC THEN
     IMP_RES_TAC wh_narg_cis_zero THEN
@@ -209,35 +214,38 @@ val wh_celbody = store_thm(
     MATCH_MP_TAC whstar_substitutive THEN
     markerLib.UNABBREV_ALL_TAC THEN FRESH_TAC THEN
     ASM_SIMP_TAC (whfy(srw_ss()) ++ ARITH_ss) [tpm_fresh, wh_cB]
-  ]);
+  ]
+QED
 
-val cel_def = Define`
+Definition cel_def:
   cel =
   LAM "n" (LAM "l"
     (VAR "l" @@ (K @@ church 0) @@ celbody @@ VAR "n"))
-`;
+End
 
 Theorem FV_cel[simp]:   FV cel = ∅
 Proof SRW_TAC [][cel_def, EXTENSION] >> metis_tac[]
 QED
 
-val wh_cel_grnd = store_thm(
-  "wh_cel_grnd",
-  ``cel @@ church 0 @@ (ccons @@ h @@ t) -w->* h ∧
+Theorem wh_cel_grnd:
+    cel @@ church 0 @@ (ccons @@ h @@ t) -w->* h ∧
     cel @@ church 0 @@ cvcons h t -w->* h ∧
     (0 < n ⇒
        cel @@ church n @@ (ccons @@ h @@ t) -w->*
        t @@ (K @@ church 0) @@ celbody @@ (cpred @@ church n) ∧
        cel @@ church n @@ cvcons h t -w->*
-       t @@ (K @@ church 0) @@ celbody @@ (cpred @@ church n))``,
+       t @@ (K @@ church 0) @@ celbody @@ (cpred @@ church n))
+Proof
   SRW_TAC [][cel_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy(bsrw_ss())) [wh_ccons, wh_cvcons, wh_celbody]);
+  ASM_SIMP_TAC (whfy(bsrw_ss())) [wh_ccons, wh_cvcons, wh_celbody]
+QED
 
-val wh_cel = store_thm(
-  "wh_cel",
-  ``cel @@ n @@ l -w->* l @@ (K @@ church 0) @@ celbody @@ n``,
+Theorem wh_cel:
+    cel @@ n @@ l -w->* l @@ (K @@ church 0) @@ celbody @@ n
+Proof
   SRW_TAC [][cel_def] THEN unvarify_tac whstar_substitutive THEN
-  ASM_SIMP_TAC (whfy(srw_ss())) []);
+  ASM_SIMP_TAC (whfy(srw_ss())) []
+QED
 
 
 val cel_example = prove(
@@ -260,12 +268,12 @@ Proof
   strip_tac >> asm_simp_tac (bsrw_ss()) [lSYM cel_def']
 QED
 
-val cmap_def = Define`
+Definition cmap_def:
   cmap =
   LAM "f" (LAM "l"
     (VAR "l" @@ cnil
              @@ LAM "h" (LAM "r" (ccons @@ (VAR "f" @@ VAR "h") @@ (VAR "r")))))
-`;
+End
 
 Theorem FV_cmap[simp]:  FV cmap = ∅
 Proof SRW_TAC [][cmap_def, pred_setTheory.EXTENSION] >> metis_tac[]
@@ -273,21 +281,22 @@ QED
 
 val cmap_eqn = brackabs.brackabs_equiv [] cmap_def
 
-val cmap_behaviour = store_thm(
-  "cmap_behaviour",
-  ``cmap @@ f @@ cnil == cnil ∧
-    cmap @@ f @@ cvcons h t == cvcons (f @@ h) (cmap @@ f @@ t)``,
+Theorem cmap_behaviour:
+    cmap @@ f @@ cnil == cnil ∧
+    cmap @@ f @@ cvcons h t == cvcons (f @@ h) (cmap @@ f @@ t)
+Proof
   SIMP_TAC (bsrw_ss()) [cmap_eqn, Cong cvcons_cong, cnil_def, wh_cvcons,
-                        wh_ccons]);
+                        wh_ccons]
+QED
 
-val cfilter_def = Define`
+Definition cfilter_def:
   cfilter =
   LAM "P" (LAM "l"
     (VAR "l" @@ cnil
              @@ LAM "h" (LAM "r" (VAR "P" @@ VAR "h"
                                           @@ (ccons @@ VAR "h" @@ VAR "r")
                                           @@ VAR "r"))))
-`;
+End
 
 Theorem FV_cfilter[simp]:   FV cfilter = ∅
 Proof SRW_TAC [][pred_setTheory.EXTENSION, cfilter_def] >> metis_tac[]
@@ -295,16 +304,17 @@ QED
 
 val cfilter_eqn = brackabs.brackabs_equiv [] cfilter_def
 
-val cfilter_behaviour = store_thm(
-  "cfilter_behaviour",
-  ``cfilter @@ P @@ cnil == cnil ∧
+Theorem cfilter_behaviour:
+    cfilter @@ P @@ cnil == cnil ∧
     cfilter @@ P @@ cvcons h t ==
        P @@ h @@ (cvcons h (cfilter @@ P @@ t))
-              @@ (cfilter @@ P @@ t)``,
+              @@ (cfilter @@ P @@ t)
+Proof
   SIMP_TAC (bsrw_ss()) [cfilter_eqn, cnil_def, wh_cvcons, wh_ccons,
-                        Cong cvcons_cong]);
+                        Cong cvcons_cong]
+QED
 
-val ctabulate_def = Define`
+Definition ctabulate_def:
   ctabulate =
   LAM "n" (LAM "g"
     (VAR "n" @@ (LAM "f" cnil)
@@ -312,7 +322,7 @@ val ctabulate_def = Define`
                    (ccons @@ (VAR "f" @@ church 0)
                           @@ (VAR "r" @@ (B @@ VAR "f" @@ csuc)))))
              @@ VAR "g"))
-`;
+End
 
 val FV_ctabulate = Store_thm(
   "FV_ctabulate",
@@ -321,22 +331,23 @@ val FV_ctabulate = Store_thm(
 
 val ctabulate_eqn = brackabs.brackabs_equiv [] ctabulate_def
 
-val ctabulate_behaviour = store_thm(
-  "ctabulate_behaviour",
-  ``ctabulate @@ church 0 @@ f == cnil ∧
+Theorem ctabulate_behaviour:
+    ctabulate @@ church 0 @@ f == cnil ∧
     ctabulate @@ (church (SUC n)) @@ f ==
-      cvcons (f @@ church 0) (ctabulate @@ church n @@ (B @@ f @@ csuc))``,
+      cvcons (f @@ church 0) (ctabulate @@ church n @@ (B @@ f @@ csuc))
+Proof
   SIMP_TAC (bsrw_ss()) [ctabulate_eqn, cnil_def, Cong cvcons_cong,
-                        church_thm, wh_ccons])
+                        church_thm, wh_ccons]
+QED
 
-val cmem_def = Define`
+Definition cmem_def:
   cmem =
   LAM "n" (LAM "L"
     (VAR "L"
          @@ cB F
          @@ (LAM "h" (LAM "r" (cor @@ (ceqnat @@ VAR "h" @@ VAR "n")
                                    @@ VAR "r")))))
-`;
+End
 
 val FV_cmem = Store_thm(
   "FV_cmem",
@@ -345,52 +356,56 @@ val FV_cmem = Store_thm(
 
 val cmem_eqn = brackabs.brackabs_equiv [] cmem_def
 
-val cmem_behaviour = store_thm(
-  "cmem_behaviour",
-  ``cmem @@ N @@ cnil == cB F ∧
+Theorem cmem_behaviour:
+    cmem @@ N @@ cnil == cB F ∧
     cmem @@ church n @@ cvcons (church m) t ==
       if n = m then cB T
-      else cmem @@ church n @@ t``,
+      else cmem @@ church n @@ t
+Proof
   SIMP_TAC (bsrw_ss()) [cmem_eqn, Cong cvcons_cong, cnil_def,
                         wh_cvcons, ceqnat_behaviour] THEN
   SRW_TAC [][] THEN1 SIMP_TAC (bsrw_ss()) [cor_T1] THEN
-  SIMP_TAC (bsrw_ss()) [cmem_eqn, cor_F1]);
+  SIMP_TAC (bsrw_ss()) [cmem_eqn, cor_F1]
+QED
 
-val cappend_snoc = store_thm(
-  "cappend_snoc",
-  ``cappend @@ cvlist l @@ cvcons h cnil == cvlist (l ++ [h])``,
+Theorem cappend_snoc:
+    cappend @@ cvlist l @@ cvcons h cnil == cvlist (l ++ [h])
+Proof
   SIMP_TAC (bsrw_ss()) [cappend_equiv, cnil_def] THEN
   Induct_on `l` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cnil_def, wh_cvcons, wh_ccons]);
+  ASM_SIMP_TAC (bsrw_ss()) [cnil_def, wh_cvcons, wh_ccons]
+QED
 
 val GENLIST_CONS = rich_listTheory.GENLIST_CONS
 
-val cvlist_genlist_cong = store_thm(
-  "cvlist_genlist_cong",
-  ``(∀x. f x == g x) ⇒
-    cvlist (GENLIST f n) == cvlist (GENLIST g n)``,
+Theorem cvlist_genlist_cong:
+    (∀x. f x == g x) ⇒
+    cvlist (GENLIST f n) == cvlist (GENLIST g n)
+Proof
   MAP_EVERY Q.ID_SPEC_TAC [`g`, `f`] THEN
   Induct_on `n` THEN1 SRW_TAC [][rich_listTheory.GENLIST] THEN
   SRW_TAC [][GENLIST_CONS] THEN
   ASM_SIMP_TAC (bsrw_ss()) [Cong cvcons_cong, combinTheory.o_DEF] THEN
   FIRST_X_ASSUM (Q.SPECL_THEN [`f o SUC`, `g o SUC`] MP_TAC) THEN
-  ASM_SIMP_TAC (bsrw_ss()) [Cong cvcons_cong, combinTheory.o_DEF]);
+  ASM_SIMP_TAC (bsrw_ss()) [Cong cvcons_cong, combinTheory.o_DEF]
+QED
 
-val ctabulate_cvlist = store_thm(
-  "ctabulate_cvlist",
-  ``∀f. ctabulate @@ church n @@ f == cvlist (GENLIST (λm. f @@ church m) n)``,
+Theorem ctabulate_cvlist:
+    ∀f. ctabulate @@ church n @@ f == cvlist (GENLIST (λm. f @@ church m) n)
+Proof
   Induct_on `n` THEN
   ASM_SIMP_TAC (bsrw_ss()) [ctabulate_behaviour, GENLIST_CONS,
                             Cong cvcons_cong, cnil_def] THEN
   GEN_TAC THEN MATCH_MP_TAC (REWRITE_RULE [AND_IMP_INTRO] cvcons_cong) THEN
   SRW_TAC [][] THEN
   HO_MATCH_MP_TAC cvlist_genlist_cong THEN
-  SIMP_TAC (bsrw_ss()) [churchnumTheory.csuc_behaviour]);
+  SIMP_TAC (bsrw_ss()) [churchnumTheory.csuc_behaviour]
+QED
 
-val cfilter_cvlist = store_thm(
-  "cfilter_cvlist",
-  ``(∀e. MEM e l ⇒ ∃b. P @@ e == cB b) ⇒
-      cfilter @@ P @@ cvlist l == cvlist (FILTER (λt. P @@ t == cB T) l)``,
+Theorem cfilter_cvlist:
+    (∀e. MEM e l ⇒ ∃b. P @@ e == cB b) ⇒
+      cfilter @@ P @@ cvlist l == cvlist (FILTER (λt. P @@ t == cB T) l)
+Proof
   Induct_on `l` THEN ASM_SIMP_TAC (bsrw_ss()) [cfilter_behaviour] THEN
   SRW_TAC [][] THENL [
     ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour] THEN
@@ -400,26 +415,29 @@ val cfilter_cvlist = store_thm(
     `b ≠ T` by (STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) []) THEN
     FULL_SIMP_TAC (srw_ss()) [] THEN
     ASM_SIMP_TAC (bsrw_ss()) [churchboolTheory.cB_behaviour]
-  ]);
+  ]
+QED
 
-val cmap_cvlist = store_thm(
-  "cmap_cvlist",
-  ``cmap @@ f @@ cvlist l == cvlist (MAP (APP f) l)``,
+Theorem cmap_cvlist:
+    cmap @@ f @@ cvlist l == cvlist (MAP (APP f) l)
+Proof
   Induct_on `l` THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cmap_behaviour, Cong cvcons_cong]);
+  ASM_SIMP_TAC (bsrw_ss()) [cmap_behaviour, Cong cvcons_cong]
+QED
 
-val cmem_cvlist = store_thm(
-  "cmem_cvlist",
-  ``(∀e. MEM e l ⇒ ∃n. e == church n) ⇒
+Theorem cmem_cvlist:
+    (∀e. MEM e l ⇒ ∃n. e == church n) ⇒
     cmem @@ church m @@ cvlist l ==
-    cB (EXISTS (λt. ceqnat @@ church m @@ t == cB T) l)``,
+    cB (EXISTS (λt. ceqnat @@ church m @@ t == cB T) l)
+Proof
   Induct_on `l` THEN
   ASM_SIMP_TAC (bsrw_ss()) [cmem_behaviour] THEN REPEAT STRIP_TAC THEN
   FIRST_ASSUM (Q.SPEC_THEN `h`
                            (STRIP_ASSUME_TAC o SIMP_RULE (srw_ss()) [])) THEN
   ASM_SIMP_TAC (bsrw_ss()) [cmem_behaviour, Cong cvcons_cong,
                             churchnumTheory.ceqnat_behaviour] THEN
-  Cases_on `m = n` THEN SRW_TAC [][]);
+  Cases_on `m = n` THEN SRW_TAC [][]
+QED
 
 Theorem cappend_cvlist:
   cappend @@ cvlist l1 @@ cvlist l2 == cvlist (l1 ++ l2)
@@ -436,7 +454,8 @@ Proof
   irule cvcons_cong >> simp[]
 QED
 
-val sing_def = Define‘sing = LAM "x" (ccons @@ VAR "x" @@ cnil)’;
+Definition sing_def:  sing = LAM "x" (ccons @@ VAR "x" @@ cnil)
+End
 Theorem FV_sing[simp]: FV sing = ∅
 Proof rw[sing_def, pred_setTheory.EXTENSION]
 QED
@@ -448,7 +467,7 @@ Proof
   SIMP_TAC (bsrw_ss())[sing_eqn, wh_ccons]
 QED
 
-val cogenlist_def = Define‘
+Definition cogenlist_def:
   cogenlist =
   LAM "f" (LAM "n" (
      natrec @@ cnil
@@ -458,7 +477,7 @@ val cogenlist_def = Define‘
                        (VAR "f" @@ VAR "m" @@ cnil @@ sing))))
             @@ VAR "n"
   ))
-’;
+End
 
 Theorem FV_cogenlist[simp]:
   FV cogenlist = ∅
@@ -638,4 +657,3 @@ Proof
   asm_simp_tac (bsrw_ss()) [cnfst_behaviour, Cong cvcons_cong]
 QED
 
-val _ = export_theory()

@@ -3,19 +3,18 @@ load "ringLib";
 load "numeralTheory";
 load "bossLib";
 *)
-open HolKernel Parse boolLib bossLib
-     arithmeticTheory EVAL_semiringTheory;
-
-
-val _ = new_theory "EVAL_numRing";
+Theory EVAL_numRing
+Ancestors
+  arithmetic EVAL_semiring
 
 (* num is a semi-ring: *)
-val num_semi_ring = store_thm
-    ("num_semi_ring",
-     “ is_semi_ring (semi_ring 0 1 $+ $* : num semi_ring) ”,
+Theorem num_semi_ring:
+       is_semi_ring (semi_ring 0 1 $+ $* : num semi_ring)
+Proof
 RW_TAC arith_ss [ is_semi_ring_def, semi_ring_accessors,
                   RIGHT_ADD_DISTRIB, MULT_ASSOC ] THEN
-MATCH_ACCEPT_TAC MULT_SYM);
+MATCH_ACCEPT_TAC MULT_SYM
+QED
 
 
 val num_ring_thms =
@@ -30,4 +29,3 @@ val num_rewrites = save_thm("num_rewrites", LIST_CONJ
 end;
 
 
-val _ = export_theory();

@@ -2,15 +2,13 @@
  * Copyright 1991-1995  University of Cambridge (Author: Monica Nesi)
  * Copyright 2016-2017  University of Bologna   (Author: Chun Tian)
  *)
+Theory WeakLaws
+Ancestors
+  pred_set prim_rec arithmetic relation CCS StrongEQ StrongLaws
+  WeakEQ
+Libs
+  CCSLib WeakEQLib
 
-open HolKernel Parse boolLib bossLib;
-
-open pred_setTheory prim_recTheory arithmeticTheory relationTheory;
-
-open CCSLib CCSTheory StrongEQTheory StrongLawsTheory
-     WeakEQTheory WeakEQLib;
-
-val _ = new_theory "WeakLaws";
 
 (******************************************************************************)
 (*                                                                            *)
@@ -302,8 +300,9 @@ val WEAK_PREF_REC_EQUIV = save_thm (
 (******************************************************************************)
 
 (* Prove TAU_WEAK:  |- !E. WEAK_EQUIV (prefix tau E) E *)
-val TAU_WEAK = store_thm ("TAU_WEAK",
-  ``!E. WEAK_EQUIV (prefix tau E) E``,
+Theorem TAU_WEAK:
+    !E. WEAK_EQUIV (prefix tau E) E
+Proof
     GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [WEAK_PROPERTY_STAR]
  >> REPEAT STRIP_TAC (* 4 sub-goals here *)
@@ -328,9 +327,9 @@ val TAU_WEAK = store_thm ("TAU_WEAK",
       Q.EXISTS_TAC `E` \\
       IMP_RES_TAC ONE_TAU >> ASM_REWRITE_TAC [] \\
       MATCH_MP_TAC ONE_TAU \\
-      REWRITE_TAC [PREFIX] ]);
+      REWRITE_TAC [PREFIX] ]
+QED
 
-val _ = export_theory ();
 val _ = html_theory "WeakLaws";
 
 (* last updated: Jun 20, 2017 *)

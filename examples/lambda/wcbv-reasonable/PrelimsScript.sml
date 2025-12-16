@@ -3,11 +3,9 @@
      "The Weak Call-by-Value 𝜆-Calculus Is Reasonable for Both Time and Space", POPL 2020
    for inspiration
  *)
-open HolKernel Parse boolLib bossLib;
-open arithmeticTheory;
-open listTheory relationTheory;
-
-val _ = new_theory "Prelims";
+Theory Prelims
+Ancestors
+  arithmetic list relation
 
 (* ------------------
          Natural numbers
@@ -340,4 +338,3 @@ Proof
   rw[MAX_ASSOC]
 QED
 
-val _ = export_theory ()

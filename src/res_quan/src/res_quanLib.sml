@@ -362,8 +362,8 @@ fun RESQ_IMP_RES_THEN ttac resth =
     let val th = check_res resth
     in IMP_RES_THEN ttac th
     end
-    handle HOL_ERR{message = s,...} =>
-        raise ERR "RESQ_IMP_RES_THEN" s
+    handle HOL_ERR herr =>
+        raise ERR "RESQ_IMP_RES_THEN" (message_of herr)
 
 (* --------------------------------------------------------------------- *)
 (* RESQ_RES_THEN : Resolve all restricted universally quantified         *)
@@ -573,8 +573,8 @@ fun RESQ_DEF_EXISTS_RULE tm =
        else defthm
       end
     end
-     handle HOL_ERR {message = s,...} =>
-        raise ERR "RESQ_DEF_EXISTS_RULE" s;
+     handle HOL_ERR herr =>
+        raise ERR "RESQ_DEF_EXISTS_RULE" (message_of herr);
 
 (* --------------------------------------------------------------------- *)
 (* new_gen_resq_definition flag (name, (--`!x1::P1. ... !xn::Pn.         *)

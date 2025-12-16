@@ -1,12 +1,12 @@
 (*
   Prove theorems cv_transLib uses for its operation
 *)
-open HolKernel Parse boolLib bossLib dep_rewrite;
-open cv_typeTheory cvTheory cv_typeLib cv_repLib;
-open arithmeticTheory wordsTheory cv_repTheory integerTheory ratTheory
-     listTheory rich_listTheory bitstringTheory integer_wordTheory;
-
-val _ = new_theory "cv_prim";
+Theory cv_prim
+Ancestors
+  cv_type cv arithmetic words cv_rep integer rat list rich_list
+  bitstring integer_word
+Libs
+  dep_rewrite cv_typeLib cv_repLib
 
 Overload c2n[local] = “cv$c2n”
 Overload c2b[local] = “cv$c2b”
@@ -894,8 +894,7 @@ Proof
   \\ Cases_on ‘w’ \\ gvs [word_lsl_n2w]
   \\ rw [] \\ gvs [dimword_def]
   \\ ‘0n < 2 ** dimindex (:'a)’ by gvs []
-  \\ drule MOD_TIMES2
-  \\ disch_then (fn th => once_rewrite_tac [GSYM th])
+  \\ once_rewrite_tac [GSYM MOD_TIMES2]
   \\ qsuff_tac ‘2 ** n MOD 2 ** dimindex (:'a) = 0’ \\ gvs []
   \\ ‘dimindex (:'a) <= n’ by fs []
   \\ gvs [LESS_EQ_EXISTS,EXP_ADD]
@@ -1050,7 +1049,7 @@ Proof
   irule LESS_LESS_EQ_TRANS >> goal_assum drule >> simp[]
 QED
 
-Triviality MIN_lemma:
+Theorem MIN_lemma[local]:
   l <> 0 ==> MIN k (l - 1) + 1 = MIN (k+1) l
 Proof
   rw [MIN_DEF] \\ gvs []
@@ -1096,7 +1095,7 @@ Theorem cv_word_extract[cv_rep] =
   “from_word (word_extract h l (w:'a word) : 'b word)”
   |> SIMP_CONV std_ss [word_extract_def,cv_rep_word_w2w,cv_word_bits_thm];
 
-Triviality word_join_add:
+Theorem word_join_add[local]:
   FINITE univ(:'a) /\ FINITE univ(:'b) ==>
   word_join (v:'a word) (w:'b word) =
   (w2w v << dimindex (:'b)) + w2w w
@@ -1335,8 +1334,7 @@ Proof
   >- (gvs [] \\ irule_at Any arithmeticTheory.DIV_LE_MONOTONE \\ gvs [])
   \\ strip_tac \\ gvs [bitTheory.BITWISE_LT_2EXP,wordsTheory.dimword_def]
   \\ ‘0 < 2:num’ by fs []
-  \\ drule arithmeticTheory.MOD_PLUS
-  \\ disch_then (fn th => simp_tac std_ss [Once (GSYM th)])
+  \\ simp_tac std_ss [Once (GSYM arithmeticTheory.MOD_PLUS)]
   \\ Cases_on ‘ODD m’
   \\ Cases_on ‘ODD n’
   \\ imp_res_tac bitTheory.ODD_MOD2_LEM
@@ -1411,4 +1409,3 @@ Proof
   \\ asm_rewrite_tac [cv_rep_word_xor, cv_rep_word_uint_max]
 QED
 
-val _ = export_theory();

@@ -27,9 +27,13 @@
 (* for example regexp_compare.                                               *)
 (*---------------------------------------------------------------------------*)
 
-open HolKernel Parse boolLib bossLib BasicProvers;
-open optionTheory listTheory pred_setTheory comparisonTheory
-     balanced_mapTheory osetTheory finite_mapTheory regexpTheory;
+Theory regexp_map
+Ancestors
+option list pred_set finite_map
+   comparison ternaryComparisons
+   balanced_map oset regexp
+Libs
+  BasicProvers
 
 fun pat_elim q = Q.PAT_X_ASSUM q (K ALL_TAC);
 
@@ -38,26 +42,25 @@ val simp_rule = SIMP_RULE;
 val comparison_distinct = TypeBase.distinct_of ``:ordering``
 val comparison_nchotomy = TypeBase.nchotomy_of ``:ordering``
 
-Triviality SET_EQ_THM :
+Theorem SET_EQ_THM[local] :
  !s1 s2. (s1 = s2) = !x. s1 x = s2 x
 Proof
  METIS_TAC [EXTENSION,IN_DEF]
 QED
 
-Triviality INTER_DELETE :
+Theorem INTER_DELETE[local] :
   !A a. A INTER (A DELETE a) = A DELETE a
 Proof
   SET_TAC []
 QED
 
-Triviality LENGTH_NIL_SYM =
+Theorem LENGTH_NIL_SYM[local] =
    GEN_ALL (CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL LENGTH_NIL));
 
 val list_ss = list_ss ++ rewrites [LENGTH_NIL, LENGTH_NIL_SYM];
 
 val set_ss = list_ss ++ pred_setLib.PRED_SET_ss ++ rewrites [SET_EQ_THM,IN_DEF]
 
-val _ = new_theory "regexp_map";
 
 Definition eq_cmp_def :
    eq_cmp cmp <=> good_cmp cmp /\ !x y. (cmp x y = Equal) <=> (x=y)
@@ -700,5 +703,3 @@ Proof
   >> rw_tac list_ss [eq_cmp_regexp_compare,member_insert]
   >> metis_tac[]
 QED
-
-val _ = export_theory();

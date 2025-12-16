@@ -1,8 +1,8 @@
-open HolKernel boolLib bossLib OpenTheoryMap OpenTheoryFunctionTheory
-open OpenTheoryReader
-
-val Thy = "HOL4combin"
-val _ = new_theory Thy
+Theory HOL4combin
+Ancestors
+  OpenTheoryFunction
+Libs
+  OpenTheoryMap OpenTheoryReader
 
 val n = ref 0;
 fun export (tm,tac) =
@@ -17,5 +17,3 @@ val res1 = export(``$o f g = \x. f ( g x)``,
   CONV_TAC (DEPTH_CONV BETA_CONV) >>
   REFL_TAC)
   (* DB.match["OpenTheoryFunction"]``$o`` *)
-
-val _ = export_theory()

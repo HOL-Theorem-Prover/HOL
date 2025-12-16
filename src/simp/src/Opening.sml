@@ -252,7 +252,7 @@ in fn {relation,solver,depther,freevars} =>
     if allunch then
       (* note critical link between this exception and traversal code in
          Traverse.FIRSTCQC_CONV *)
-      raise mk_HOL_ERR "Opening" "CONGPROC" "Congruence gives no change"
+      raise UNCHANGED
     else (trace(3,PRODUCE(tm,"congruence rule",final_thm)); final_thm)
   end
 end;
@@ -292,7 +292,7 @@ fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
               val Bth = depther ([],equality) Body
           in ABS Bvar Bth
           end
-   | _ => failwith "unchanged";
+   | _ => raise UNCHANGED
 
 
 end (* struct *)

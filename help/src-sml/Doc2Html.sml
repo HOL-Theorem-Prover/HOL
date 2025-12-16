@@ -8,195 +8,224 @@
 (*---------------------------------------------------------------------------*)
 structure Doc2Html = struct
 
-(* app load ["Substring", "TextIO", "Char", "FileSys"]; *)
-open Substring;
+open Systeml
+infix ++
+val  op++ = OS.Path.concat
 
-fun curry f x y = f (x,y)
-fun equal x y = (x=y)
-infix ##;
-fun (f##g) (x,y) = (f x, g y);
+fun warn s = TextIO.output(TextIO.stdErr, s ^ "\n")
+fun die s = (warn s; OS.Process.exit OS.Process.failure)
 
-infixr 4 \/
-infixr 5 /\
-fun (f \/ g) x = f x orelse g x
-fun (f /\ g) x = f x andalso g x;
+(* with GNU parallel available at shell level, better to do
 
-open ParseDoc
+ ls *.md | parallel --eta pandoc {} -s -o ../Docfiles/HTML/{/.}.html --lua-filter=HOLDIR ++ "/help/src-sml/internal-to-external.lua"
 
-fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n");
-             OS.Process.exit OS.Process.failure)
+*)
 
-fun txt_helper #"<" = SOME "&lt;"
-  | txt_helper #">" = SOME "&gt;"
-  | txt_helper #"&" = SOME "&amp;"
-  | txt_helper c = NONE
+fun get_first f [] = NONE
+  | get_first f (h::t) = case f h of NONE => get_first f t | x => x
 
-fun encode c = Option.getOpt(txt_helper c, String.str c)
-fun brkt_encode #" " = "&nbsp;"
-  | brkt_encode c = encode c
-
-fun text_encode ss = let
-  (* passes over a substring, replacing single apostrophes with &rsquo;
-     backquotes with &lsquo; and the "latex" encodings of nice double-quotes:
-     `` with &ldquo; and '' with &rdquo;
-     Also encodes the < > and & characters into HTML appropriate forms. *)
-  open Substring
-  datatype state = backquote | apostrophe | normal of int * substring
-  fun recurse acc s ss =
-      case (s, getc ss) of
-        (backquote, NONE) => ("&lsquo;" :: acc)
-      | (apostrophe, NONE) => ("&rsquo;" :: acc)
-      | (normal(n,ss0), NONE) => (string ss0 :: acc)
-      | (normal (n,ss0), SOME(#"'", ss')) =>
-          recurse (string (slice(ss0,0,SOME n)) :: acc) apostrophe ss'
-      | (normal(n,ss0), SOME(#"`", ss')) =>
-          recurse (string (slice(ss0,0,SOME n))::acc) backquote ss'
-      | (normal(n,ss0), SOME(c, ss')) => let
+fun which arg =
+  let
+    open OS.FileSys Systeml
+    val sepc = if isUnix then #":" else #";"
+    fun check p =
+      let
+        val fname = OS.Path.concat(p, arg)
+      in
+        if access (fname, [A_READ, A_EXEC]) then SOME fname else NONE
+      end
+    fun smash NONE = "" | smash (SOME s) = s
+  in
+    case OS.Process.getEnv "PATH" of
+        SOME path =>
+        let
+          val paths = (if isUnix then [] else ["."]) @
+                      String.fields (fn c => c = sepc) path
         in
-          case txt_helper c of
-            SOME s => recurse (s :: string (slice(ss0,0,SOME n)) :: acc)
-                              (normal(0,ss'))
-                              ss'
-          | NONE => recurse acc (normal(n + 1, ss0)) ss'
+          smash (get_first check paths)
         end
-      | (apostrophe, SOME(#"'", ss')) =>
-          recurse ("&rdquo;" :: acc) (normal(0,ss')) ss'
-      | (apostrophe, SOME(#"`", ss')) =>
-          recurse ("&rsquo;" :: acc) backquote ss'
-      | (apostrophe, SOME _) =>
-          recurse ("&rsquo;" :: acc) (normal(0,ss)) ss
-      | (backquote, SOME(#"`", ss')) =>
-          recurse ("&ldquo;" :: acc) (normal(0,ss')) ss'
-      | (backquote, SOME(#"'", ss')) =>
-          recurse ("&lsquo;" :: acc) apostrophe ss'
-      | (backquote, SOME _) =>
-          recurse ("&lsquo;" :: acc) (normal(0,ss)) ss
+    | NONE => if isUnix then "" else smash (check ".")
+  end
+
+
+fun transHTML pdexe htmldir docdir docfile = let
+  val docbase = OS.Path.base docfile
+  val docpath = docdir ++ docfile
+  val outfile =
+      OS.Path.joinBaseExt{base = htmldir ++ docbase, ext = SOME "html"}
+  val filter = HOLDIR ++ "help/src-sml/internal-to-external.lua"
+  val res =
+      Systeml.systeml [pdexe, docpath, "-s", "-c", "doc.css", "-o", outfile,
+                       "--lua-filter="^filter]
 in
-  String.concat (List.rev (recurse [] (normal(0,ss)) ss))
+  if OS.Process.isSuccess res then ()
+  else die "pandoc call failed"
+end handle e => die ("Exception raised: " ^ General.exnMessage e)
+
+fun transTXT pdexe docdir docfile = let
+  val docbase = OS.Path.base docfile
+  val docpath = docdir ++ docfile
+  val outfile = OS.Path.joinBaseExt{base = docdir ++ docbase, ext = SOME "txt"}
+  val res = Systeml.systeml [pdexe, docpath, "-t", "plain", "-o", outfile]
+in
+  if OS.Process.isSuccess res then ()
+  else die "pandoc call failed"
+end handle e => die ("Exception raised: " ^ General.exnMessage e)
+
+fun transBOTH pdexe htmldir docdir docfile = (
+  transHTML pdexe htmldir docdir docfile;
+  transTXT pdexe docdir docfile
+)
+
+fun find_mdfiles dirname = let
+  val dirstrm = OS.FileSys.openDir dirname
+  fun loop A =
+      case OS.FileSys.readDir dirstrm of
+          NONE => (OS.FileSys.closeDir dirstrm;
+                   Listsort.sort String.compare A)
+        | SOME s => (
+          case OS.Path.ext s of
+              SOME "md" => loop (s::A)
+            | SOME "smd" => loop (s::A)
+            | _ => loop A
+        )
+in
+  loop []
+end
+
+fun do_commands cmds =
+    case cmds of
+        [] => OS.Process.success
+      | c::cs =>
+        let
+          val _ = print (c ^ "\n")
+          val res = OS.Process.system c
+        in
+          if OS.Process.isSuccess res then do_commands cs
+          else res
+        end
+
+
+fun docdir_to_htmldir pdexe docdir docfiles htmldir = let
+  open OS.FileSys
+  val docfiles = find_mdfiles docdir
+in
+  case which "parallel" of
+      "" =>
+      let
+        val (tick, finish) = Flash.initialise ("Directory "^docdir^": ",
+                                               length docfiles)
+      in
+        List.app (fn fname => (transBOTH pdexe htmldir docdir fname; tick()))
+                 docfiles;
+        finish();
+        OS.Process.success
+      end
+    | s =>
+      let
+        val tmp = OS.FileSys.tmpName ()
+        val ostrm = TextIO.openOut tmp
+        fun loop lines =
+            case lines of
+                [] => TextIO.closeOut ostrm
+              | h::t => (TextIO.output(ostrm, (docdir ++ h) ^ "\n"); loop t)
+        val _ = loop docfiles
+        val command1 =
+          "parallel --halt now,fail=1 --eta --arg-file " ^ tmp ^
+          " pandoc {} -s -c doc.css -o " ^ htmldir ^ "/{/.}.html --lua-filter=" ^
+          (HOLDIR ++ "help/src-sml/internal-to-external.lua")
+        val command2 =
+          "parallel --halt now,fail=1 --eta --arg-file " ^ tmp ^
+          " pandoc {} -t plain -o " ^ docdir ^ "/{/.}.txt"
+      in
+        do_commands [command1, command2]
+      end
 end
 
 
-fun del_bslash #"\\" = ""
-  | del_bslash c     = String.str c;
-
-(* Location of style sheet *)
-val cssURL = "doc.css";
-
-fun html (name,sectionl) ostrm =
- let fun outss ss = TextIO.output(ostrm, Substring.translate encode ss)
-     fun out s = TextIO.output(ostrm,s)
-     val bracket_trans = Substring.translate brkt_encode
-     fun markout PARA = out "\n<P>\n"
-       | markout (TEXT ss) =
-            (out "<SPAN class = \"TEXT\">";
-             out  (text_encode ss);
-             out "</SPAN>")
-       | markout (EMPH ss) =
-            out ("<em>" ^ text_encode ss ^ "</em>")
-       | markout (BRKT ss) =
-           (out "<SPAN class = \"BRKT\">";
-            out (bracket_trans ss);
-            out "</SPAN>")
-       | markout (XMPL ss) =
-           (out "<DIV class = \"XMPL\"><pre>";
-            outss ss;
-            out "</pre></DIV>\n")
-
-     fun markout_section (FIELD ("KEYWORDS", _)) = ()
-       | markout_section (FIELD ("DOC", _)) = ()
-       | markout_section (FIELD ("STRUCTURE", [TEXT s]))
-           = (out "<DT><SPAN class = \"FIELD-NAME\">STRUCTURE</SPAN></DT>\n";
-              out "<DD><DIV class = \"FIELD-BODY\">";
-              out "<A HREF = \"../../src-sml/htmlsigs/";
-              out (string s); out ".html\">";
-              out (string s);
-              out "</A></DIV></DD>\n")
-       | markout_section (FIELD (tag, ss))
-           = (out "<DT><SPAN class = \"FIELD-NAME\">";
-              out (if tag = "DESCRIBE" then "DESCRIPTION" else tag);
-              out "</SPAN></DT>\n";
-              out "<DD><DIV class = \"FIELD-BODY\">";
-              List.app markout ss;
-              out "</DIV></DD>\n")
-       | markout_section (SEEALSO sslist)
-           = let fun drop_qual ss =
-                 case tokens (equal #".") ss
-                  of [strName,fnName] => translate del_bslash fnName
-                   | [Name] => string Name
-                   | other => raise Fail (string ss)
-                 fun link s =
-                    (out "<A HREF = \"";
-                     out (encode_stem(string s)); out ".html\">";
-                     out (drop_qual s); out "</A>")
-                 fun outlinks [] = ()
-                   | outlinks [s] = link s
-                   | outlinks (h::t) = (link h; out",\n"; outlinks t)
-             in
-               (out "<dt><span class = \"FIELD-NAME\">SEEALSO</span></dt>\n";
-                out "<dd><div class = \"FIELD-BODY\">";
-                outlinks sslist;
-                out "</div></dd>\n")
-             end
-       | markout_section (TYPE _) = raise Fail "markout_section: TYPE"
-
-     fun front_matter name (TYPE ss) =
-           (out "<!DOCTYPE html>\n";
-            out "<HTML>\n";
-            out "<HEAD>\n";
-            out "<META CHARSET=\"utf-8\">\n";
-            out "<TITLE>"; out name; out "</TITLE>\n";
-            out "<LINK REL = \"STYLESHEET\" HREF = \"../";
-            out cssURL;
-            out "\" TYPE = \"text/css\">";
-            out "</HEAD>\n";
-            out "<BODY>\n\n";
-            out "<DIV class = \"TYPE\"><PRE>";
-            outss ss;
-            out "</PRE></DIV>\n\n")
-       | front_matter _ _ = raise Fail "front_matter: expected TYPE"
-
-     fun back_matter (www,release) =
-      (out "<div class = \"HOL\"><A HREF=\""; out www;
-       out"\">HOL</A>&nbsp;&nbsp;";
-       out release;
-       out "</div></BODY></HTML>\n")
-
-     val sectionl = tl sectionl
-
-  in
-     front_matter name (hd sectionl);
-     out "<DL>\n";
-     List.app markout_section (tl sectionl);
-     out "</DL>\n\n";
-     back_matter ("http://hol.sourceforge.net",
-                  Systeml.release ^ "-" ^ Int.toString Systeml.version)
-  end;
-
-fun trans htmldir docdir ((str,nm), docfile) = let
-  val docbase = OS.Path.base docfile
-  val docpath = OS.Path.concat (docdir, docfile)
-  val outfile = OS.Path.joinBaseExt{base = OS.Path.concat(htmldir, docbase),
-                                    ext = SOME "html"}
-  val ostrm = TextIO.openOut outfile
+fun hash_files dir flist = let
+  val old = OS.FileSys.getDir()
+  val _ = OS.FileSys.chDir dir
+  val temp = OS.FileSys.tmpName()
+  val ostrm = TextIO.openOut temp
+  fun recurse flist =
+    case flist of
+        [] => (TextIO.closeOut ostrm;
+               OS.FileSys.chDir old;
+               SHA1_ML.sha1_file{filename=temp})
+      | f::fs =>
+        let
+          val h = SHA1_ML.sha1_file {filename=f}
+        in
+          TextIO.output(ostrm, f ^ " " ^ h ^ "\n");
+          recurse fs
+        end
 in
-    html ((if str <> "" then str ^ "." else "")^nm, parse_file docpath) ostrm
-  ; TextIO.closeOut ostrm
-end handle e => die ("Exception raised: " ^ General.exnMessage e)
+  recurse flist
+end
 
-fun docdir_to_htmldir docdir htmldir =
- let open OS.FileSys
-     val docfiles = ParseDoc.find_docfiles docdir
-     val (tick, finish) = Flash.initialise ("Directory "^docdir^": ",
-                                            Binarymap.numItems docfiles)
- in
-   Binarymap.app (fn d => (trans htmldir docdir d; tick())) docfiles;
-   finish();
-   OS.Process.exit OS.Process.success
- end
+fun mkhash_fname dir = dir ++ "mdhash"
 
-fun main () =
-  case CommandLine.arguments ()
-     of [docdir,htmldir] => docdir_to_htmldir docdir htmldir
-      | otherwise => print "Usage: Doc2Html <docdir> <htmldir>\n"
+fun recorded_hash dir = let
+  val hashfname = mkhash_fname dir
+in
+  if OS.FileSys.access(hashfname, [OS.FileSys.A_READ]) then
+      let val strm = TextIO.openIn hashfname
+          val line1 = TextIO.inputLine strm
+          val _ = TextIO.closeIn strm
+          open Substring
+      in
+        case line1 of
+            NONE => NONE
+          | SOME s => SOME (string (dropr Char.isSpace (full s)))
+      end
+  else NONE
+end
+
+fun record_hash h dir = let
+  val hashfname = mkhash_fname dir
+  val ostrm = TextIO.openOut hashfname
+in
+  TextIO.output(ostrm, h);
+  TextIO.closeOut ostrm
+end
+
+
+
+fun maybe_dogeneration pdexe docdir htmldir = let
+  val docfiles = find_mdfiles docdir
+  val actual_hash = hash_files docdir docfiles
+  val genresult =
+      case recorded_hash docdir of
+          NONE => docdir_to_htmldir pdexe docdir docfiles htmldir
+        | SOME s =>
+          if s = actual_hash then
+            (warn ("Derived file generation skipped because of presence of\n\
+                   \matching hash in " ^ mkhash_fname docdir);
+             OS.Process.exit OS.Process.success)
+          else
+            docdir_to_htmldir pdexe docdir docfiles htmldir;
+in
+  if OS.Process.isSuccess genresult then
+    record_hash actual_hash docdir
+  else die "Generation of derived files failed"
+end
+
+fun main () = let
+  val pdexe =
+      case which "pandoc" of
+          "" => (TextIO.output(TextIO.stdErr,
+                               "Can't find pandoc in PATH; doing nothing\n");
+                 OS.Process.exit OS.Process.success)
+        | s => s
+in
+  case CommandLine.arguments () of
+      [docdir,htmldir] =>
+        (maybe_dogeneration pdexe docdir htmldir
+          handle e => die ("docdir exception: " ^ General.exnMessage e))
+    | otherwise =>
+      print ("Usage:\n  " ^
+             CommandLine.name() ^ " <docdir> <htmldir>\n")
+end
 
 end;

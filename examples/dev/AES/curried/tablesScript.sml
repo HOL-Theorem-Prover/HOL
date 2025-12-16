@@ -1,6 +1,6 @@
-open HolKernel bossLib word8Theory;
-
-val _ = new_theory "tables";
+Theory tables
+Ancestors
+  word8
 
 val Sbox_def = Count.apply Define
  `(Sbox (BYTE F F F F F F F F) = BYTE F T T F F F T T) /\
@@ -2066,9 +2066,9 @@ val GF256_by_14_def = Count.apply Define
   (GF256_by_14 (BYTE T T T T T T T F) = BYTE T F F F F F T T) /\
   (GF256_by_14 (BYTE T T T T T T T T) = BYTE T F F F T T F T)`;
 
-val Sbox_Inversion = Q.store_thm
-("Sbox_Inversion",
- `!w:word8. InvSbox (Sbox w) = w`,
- SIMP_TAC std_ss [FORALL_BYTE_BITS, Sbox_def, InvSbox_def]);
+Theorem Sbox_Inversion:
+  !w:word8. InvSbox (Sbox w) = w
+Proof
+ SIMP_TAC std_ss [FORALL_BYTE_BITS, Sbox_def, InvSbox_def]
+QED
 
-val _ = export_theory();

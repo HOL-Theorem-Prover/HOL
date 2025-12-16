@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open pure_dBTheory transferTheory transferLib
-open head_reductionTheory
-
-val _ = new_theory "pdbTransfer";
+Theory pdbTransfer
+Ancestors
+  pure_dB transfer head_reduction
+Libs
+  transferLib
 
 Definition TPDB_def:
   TPDB (t : term) (d : pdb) ⇔ d = fromTerm t
@@ -212,4 +211,3 @@ val th7 = fpow F 11 th
 
 *)
 
-val _ = export_theory();

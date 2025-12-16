@@ -29,13 +29,9 @@ Proof:
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-open arithmeticTheory dividesTheory numberTheory combinatoricsTheory;
-
-(* declare new theory at start *)
-val _ = new_theory "FLTbinomial";
+Theory FLTbinomial
+Ancestors
+  arithmetic divides number combinatorics
 
 (* ------------------------------------------------------------------------- *)
 (* Fermat's Little Theorem by Binomial Documentation                         *)
@@ -130,8 +126,4 @@ QED
 (* Part 4: End ------------------------------------------------------------- *)
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

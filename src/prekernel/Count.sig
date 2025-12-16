@@ -97,6 +97,8 @@ sig
      meter -> {axioms: int, defns: int, oracles: int, disk: int, prims: int}
   val report:
      {axioms: int, defns: int, oracles: int, disk: int, prims: int} -> unit
+
   val apply: ('a -> 'b) -> 'a -> 'b
+  val inferences: ('a -> 'b) -> 'a -> 'b
 
 end

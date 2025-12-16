@@ -17,7 +17,7 @@ use (Globals.HOLDIR ^ "/examples/separationLogic/src/holfoot/hfheader.sml")
 
 val _ = HOL_Interactive.toggle_quietdec();
 
-open listTheory rich_listTheory arithmeticTheory whileTheory
+open listTheory rich_listTheory arithmeticTheory WhileTheory
 
 val _ = HOL_Interactive.toggle_quietdec();
 

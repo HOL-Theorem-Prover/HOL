@@ -1,19 +1,19 @@
 (*
-app load ["relationTheory", "pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory", "listSyntax", 
+app load ["relationTheory", "pred_setSimps","pred_setTheory","WhileTheory","finite_mapTheory","rich_listTheory", "listSyntax", 
           "ILTheory", "rulesTheory", "preARMSyntax", "annotatedIL", "funCall"];
 
 quietdec := true;
 open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
-     pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory annotatedIL ILTheory rulesTheory;
+     pred_setSimps pred_setTheory listTheory rich_listTheory WhileTheory finite_mapTheory annotatedIL ILTheory rulesTheory;
 quietdec := false;
 *)
 
-app load ["relationTheory", "pred_setSimps","pred_setTheory","whileTheory","finite_mapTheory","rich_listTheory", "listSyntax",
+app load ["relationTheory", "pred_setSimps","pred_setTheory","WhileTheory","finite_mapTheory","rich_listTheory", "listSyntax",
           "ILTheory", "rulesTheory", "preARMSyntax", "annotatedIL", "funCall"];
 
 quietdec := true;
 open HolKernel Parse boolLib bossLib numLib pairLib relationTheory pairTheory arithmeticTheory listSyntax preARMTheory
-     pred_setSimps pred_setTheory listTheory rich_listTheory whileTheory finite_mapTheory annotatedIL ILTheory rulesTheory;
+     pred_setSimps pred_setTheory listTheory rich_listTheory WhileTheory finite_mapTheory annotatedIL ILTheory rulesTheory;
 quietdec := false;
 
 (*---------------------------------------------------------------------------------*)

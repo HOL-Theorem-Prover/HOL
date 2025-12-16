@@ -1,14 +1,11 @@
-open HolKernel Parse boolLib bossLib
-
-open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory
-open reductionEval;
-open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
-     kolmogorov_complexityTheory invarianceResultsTheory boolListsTheory
-open churchDBTheory
-open recursivefnsTheory primrecfnsTheory prtermTheory
-open unary_recfnsTheory
-
-val _ = new_theory "kolmog_incomputable"
+Theory kolmog_incomputable
+Ancestors
+  arithmetic While logroot pred_set list churchoption churchlist
+  recfuns numsAsCompStates kolmogorov_complexity
+  invarianceResults boolLists churchDB recursivefns primrecfns
+  prterm unary_recfns
+Libs
+  reductionEval
 
 (*  Proving kolmog is not computable  *)
 
@@ -22,11 +19,11 @@ Proof
   simp[Once num_to_bool_list_def] >> rw[]
 QED
 
-Triviality BIT1_smaller: x ≠ 0 ⇒ (x - 1) DIV 2 < x
+Theorem BIT1_smaller[local]: x ≠ 0 ⇒ (x - 1) DIV 2 < x
 Proof Cases_on ‘x’ >> simp[ADD1, DIV_LT_X]
 QED
 
-Triviality BIT2_smaller:
+Theorem BIT2_smaller[local]:
   x ≠ 0 ∧ EVEN x ⇒ (x - 2) DIV 2 < x
 Proof
   Cases_on ‘x’ >> simp[EVEN] >> rename [‘EVEN m’] >> Cases_on ‘m’ >>
@@ -525,4 +522,3 @@ Proof
   metis_tac[part_hutter_UKC]
 QED
 
-val _ = export_theory()

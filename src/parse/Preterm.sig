@@ -18,7 +18,7 @@ sig
   val locn : preterm -> locn.locn
   val term_to_preterm : string list -> term -> preterm in_env
 
-  val eq : preterm -> preterm -> bool
+  val veq : preterm -> preterm -> bool (* true only for equal variables *)
   val pdest_eq : preterm -> preterm * preterm
   val lhs : preterm -> preterm
   val head_var : preterm -> preterm

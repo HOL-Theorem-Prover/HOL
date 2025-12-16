@@ -5005,11 +5005,11 @@ It is a curious fact that higher order logic, although a logic of
 total functions, allows the definition of functions that don't
 seem total, at least from a computational perspective. An example
 is \holtxt{WHILE}-loops. The following equation is derived in theory
-\theoryimp{while}:
+\theoryimp{While}:
 %
 \begin{hol}
 \begin{alltt}
->>__ open whileTheory
+>>__ open WhileTheory
 ##thm WHILE
 \end{alltt}
 \end{hol}
@@ -5104,7 +5104,7 @@ If one wants a specified result even when the predicate is everywhere false, the
 \end{alltt}
 \end{hol}
 
-More theorems for reasoning about \holtxt{LEAST}, \holtxt{OLEAST} and \holtxt{WHILE} may be found in theory \theoryimp{while}.
+More theorems for reasoning about \holtxt{LEAST}, \holtxt{OLEAST} and \holtxt{WHILE} may be found in theory \theoryimp{While}.
 
 
 %\section{Partial orders}

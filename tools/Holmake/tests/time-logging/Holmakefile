@@ -3,7 +3,7 @@ HM = $(protect $(HOLDIR)/bin/Holmake)
 
 ifdef POLY
 CMD = $(HM) --holstate=$(HOLDIR)/bin/hol.state0 --logging
-SMLCMD = poly -q
+SMLCMD = $(POLY) -q
 else
 CMD = $(HM) --logging
 SMLCMD = mosml -quietdec -P full

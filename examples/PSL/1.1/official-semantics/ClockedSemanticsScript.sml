@@ -20,40 +20,25 @@ open SyntaxTheory PSLPathTheory ModelTheory UnclockedSemanticsTheory;
 quietdec := false;
 *)
 
-(******************************************************************************
-* Boilerplate needed for compilation
-******************************************************************************)
-open HolKernel Parse boolLib bossLib;
-
-(******************************************************************************
-* Open theories of sequences and lists
-******************************************************************************)
-open SyntaxTheory PSLPathTheory ModelTheory UnclockedSemanticsTheory;
+Theory ClockedSemantics
+Ancestors
+  Syntax PSLPath Model UnclockedSemantics
 
 (*****************************************************************************)
 (* END BOILERPLATE                                                           *)
 (*****************************************************************************)
 
-(******************************************************************************
-* Start a new theory called ClockedSemantics
-******************************************************************************)
-val _ = new_theory "ClockedSemantics";
 val _ = ParseExtras.temp_loose_equality()
-
-(******************************************************************************
-* pureDefine doesn't export definitions to theCompset (for EVAL).
-******************************************************************************)
-val pureDefine = with_flag (computeLib.auto_import_definitions, false) Define;
 
 (******************************************************************************
 * CLOCK_TICK v c formalises "v is a clock tick of c"
 ******************************************************************************)
-val CLOCK_TICK_def =
- Define
-  `CLOCK_TICK v c =
+Definition CLOCK_TICK_def:
+   CLOCK_TICK v c =
     LENGTH v > 0                    /\
     B_SEM (ELEM v (LENGTH v - 1)) c /\
-    !i :: LESS(LENGTH v - 1). B_SEM (ELEM v i) (B_NOT c)`;
+    !i :: LESS(LENGTH v - 1). B_SEM (ELEM v i) (B_NOT c)
+End
 
 (******************************************************************************
 * Clocked semantics of SEREs.
@@ -63,9 +48,8 @@ val CLOCK_TICK_def =
 * (see clause for ``S_SEM v (S_REPEAT r)``).
 * Theorem S_SEM gives LRM v1.1 version.
 ******************************************************************************)
-val S_SEM_def =
- pureDefine
-  `(S_SEM v c (S_BOOL b) = CLOCK_TICK v c /\ B_SEM (ELEM v (LENGTH v - 1)) b)
+Definition S_SEM_def[nocompute]:
+   (S_SEM v c (S_BOOL b) = CLOCK_TICK v c /\ B_SEM (ELEM v (LENGTH v - 1)) b)
    /\
    (S_SEM v c (S_CAT(r1,r2)) =
      ?v1 v2. (v = v1 <> v2) /\ S_SEM v1 c r1 /\ S_SEM v2 c r2)
@@ -87,16 +71,16 @@ val S_SEM_def =
      ?vlist. (v = CONCAT vlist) /\ EVERY (\v. S_SEM v c r) vlist)
    /\
    (S_SEM v c (S_CLOCK(r,c1)) =
-       S_SEM v c1 r)`;
+       S_SEM v c1 r)
+End
 
 (* Lemma for deriving theorem S_SEM below *)
-val S_SEM_REPEAT =
- store_thm
-  ("S_SEM_REPEAT",
-   ``S_SEM v c (S_REPEAT r) =
+Theorem S_SEM_REPEAT:
+     S_SEM v c (S_REPEAT r) =
       S_SEM v c S_EMPTY \/
       ?v1 v2.
-       ~(v=[]) /\ (v = v1 <> v2) /\ S_SEM v1 c r /\ S_SEM v2 c (S_REPEAT r)``,
+       ~(v=[]) /\ (v = v1 <> v2) /\ S_SEM v1 c r /\ S_SEM v2 c (S_REPEAT r)
+Proof
     Induct_on `v`
      THEN RW_TAC std_ss [S_SEM_def]
      THENL
@@ -110,7 +94,8 @@ val S_SEM_REPEAT =
            THEN Q.EXISTS_TAC `h'` THEN Q.EXISTS_TAC `CONCAT t`
            THEN PROVE_TAC[],
           Q.EXISTS_TAC `v1::vlist`
-           THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def]]]);
+           THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def]]]
+QED
 
 
 (******************************************************************************
@@ -121,10 +106,8 @@ val S_SEM_REPEAT =
 * (see clause for ``S_SEM v (S_REPEAT r)``).
 * Theorem S_SEM gives LRM v1.1 version.
 ******************************************************************************)
-val S_SEM =
- store_thm
-  ("S_SEM",
-   ``(S_SEM v c (S_BOOL b) = CLOCK_TICK v c /\ B_SEM (ELEM v (LENGTH v - 1)) b)
+Theorem S_SEM:
+     (S_SEM v c (S_BOOL b) = CLOCK_TICK v c /\ B_SEM (ELEM v (LENGTH v - 1)) b)
      /\
      (S_SEM v c (S_CAT(r1,r2)) =
        ?v1 v2. (v = v1 <> v2) /\ S_SEM v1 c r1 /\ S_SEM v2 c r2)
@@ -148,8 +131,10 @@ val S_SEM =
          ~(v=[]) /\ (v = v1 <> v2) /\ S_SEM v1 c r /\ S_SEM v2 c (S_REPEAT r))
      /\
      (S_SEM v c (S_CLOCK(r,c1)) =
-         S_SEM v c1 r)``,
-   RW_TAC std_ss [S_SEM_def, GSYM S_SEM_REPEAT]);
+         S_SEM v c1 r)
+Proof
+   RW_TAC std_ss [S_SEM_def, GSYM S_SEM_REPEAT]
+QED
 
 
 (******************************************************************************
@@ -158,9 +143,8 @@ val S_SEM =
 * F_SEM_def is unfolded version for easy definition.
 * Theorem F_SEM gives version corresponding to LRM v1.1
 ******************************************************************************)
-val F_SEM_def =
- Define
-   `(F_SEM v c (F_NOT f) =
+Definition F_SEM_def:
+    (F_SEM v c (F_NOT f) =
       ~(F_SEM (COMPLEMENT v) c f))
     /\
     (F_SEM v c (F_AND(f1,f2)) =
@@ -221,7 +205,8 @@ val F_SEM_def =
     /\
     (F_SEM v c (F_SUFFIX_IMP(r,f)) =
       !j :: LESS(LENGTH v).
-        S_SEM (SEL (COMPLEMENT v) (0,j)) c r ==> F_SEM (RESTN v j) c f)`;
+        S_SEM (SEL (COMPLEMENT v) (0,j)) c r ==> F_SEM (RESTN v j) c f)
+End
 
 (******************************************************************************
 * F_SEM v c f means "v |=c f"  in the clocked semantics
@@ -229,10 +214,8 @@ val F_SEM_def =
 * F_SEM_def is unfolded version for easy definition.
 * Theorem F_SEM gives version corresponding to LRM v1.1
 ******************************************************************************)
-val F_SEM =
- store_thm
-  ("F_SEM",
-   ``(F_SEM v c (F_NOT f) =
+Theorem F_SEM:
+     (F_SEM v c (F_NOT f) =
        ~(F_SEM (COMPLEMENT v) c f))
      /\
      (F_SEM v c (F_AND(f1,f2)) =
@@ -293,7 +276,7 @@ val F_SEM =
      /\
      (F_SEM v c (F_SUFFIX_IMP(r,f)) =
        !j :: LESS(LENGTH v).
-         S_SEM (SEL (COMPLEMENT v) (0,j)) c r ==> F_SEM (RESTN v j) c f)``,
-   RW_TAC std_ss [F_SEM_def]);
-
-val _ = export_theory();
+         S_SEM (SEL (COMPLEMENT v) (0,j)) c r ==> F_SEM (RESTN v j) c f)
+Proof
+   RW_TAC std_ss [F_SEM_def]
+QED

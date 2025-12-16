@@ -4,22 +4,15 @@
 
 (*===========================================================================*)
 
-(* add all dependent libraries for script *)
-open HolKernel boolLib bossLib Parse;
-
-(* declare new theory at start *)
-val _ = new_theory "polynomial";
+Theory polynomial
+Ancestors
+  pred_set list arithmetic monoid group ring
+Libs
+  jcLib
 
 (* ------------------------------------------------------------------------- *)
 
 (* val _ = load "jcLib"; *)
-open jcLib;
-
-(* open dependent theories *)
-open pred_setTheory listTheory arithmeticTheory;
-
-open monoidTheory groupTheory ringTheory;
-
 (* ------------------------------------------------------------------------- *)
 (* Basic Polynomials Documentation                                           *)
 (* ------------------------------------------------------------------------- *)
@@ -308,17 +301,19 @@ Overload poly_exp = “\r. (PolyRing r).prod.exp”
 
 (* Theorem: poly_ring sum.id = |0| and prod.id = |1|. *)
 (* Proof: by definition. *)
-val poly_ring_ids = store_thm(
-  "poly_ring_ids",
-  ``!r:'a ring. ( |0| = []) /\ ( |1| = chop [#1])``,
-  rw_tac std_ss[poly_ring_def]);
+Theorem poly_ring_ids:
+    !r:'a ring. ( |0| = []) /\ ( |1| = chop [#1])
+Proof
+  rw_tac std_ss[poly_ring_def]
+QED
 
 (* Theorem: Definition of p + q. *)
 (* Proof: by poly_ring_def. *)
-val poly_add_def = store_thm(
-  "poly_add_def",
-  ``!(p q):'a poly. p + q = chop (p || q)``,
-  rw_tac std_ss[poly_ring_def]);
+Theorem poly_add_def:
+    !(p q):'a poly. p + q = chop (p || q)
+Proof
+  rw_tac std_ss[poly_ring_def]
+QED
 
 (* Theorem: Definition of p * q. *)
 (* Proof: by poly_ring_def. *)
@@ -534,8 +529,4 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
-
-(* export theory at end *)
-val _ = export_theory();
-
 (*===========================================================================*)

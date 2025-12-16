@@ -2,9 +2,8 @@
 fun inc r = (r := !r + 1)
 fun dec r = (r := !r - 1)
 
-datatype header_elem
-  = Ancestors of {tok: int, thys: (int * string) list, stop: int}
-  | Libs of {tok: int, thys: (int * string) list, stop: int}
+type header_elem =
+  {isThy: bool, head: int * string, thys: (int * string) list, stop: int}
 
 datatype decl
   = TheoryDecl of {head: int * string, elems: header_elem list, stop: int}
@@ -234,7 +233,8 @@ attr_symname = {nonspecial_symbol}+ ;
 defn_attribute =
   ({alphaMLid}|{attr_symname}){optallws} ("="{optallws}{attributeEqnRHS}{optallws})?;
 defn_attribute_list = {defn_attribute} (","({ws}|{newline})*{defn_attribute})*;
-id_with_attributes = {alphaMLid}({ws}*"["{optallws}{defn_attribute_list}"]")?;
+attributes = "["{optallws}{defn_attribute_list}"]";
+id_with_attributes = {alphaMLid}({ws}*{attributes})?;
 MLid =  {alphaMLid} | {symbolident};
 QUALMLid = {MLid} ("." {MLid})*;
 QUALalphaMLid = {alphaMLid} ("." {alphaMLid})*;
@@ -248,8 +248,10 @@ Theorempfx = ("Theorem"|"Triviality"){ws}+{id_with_attributes};
 Quote_eqnpfx = "Quote"{ws}+{alphaMLid}{ws}*"="{ws}*{QUALalphaMLid}{ws}*":";
 Quote_pfx = "Quote"{ws}+{QUALalphaMLid}{ws}*":";
 HOLconjunction = "/\092" | "\226\136\167";
-DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+ | {HOLconjunction};
-DefinitionLabel = "["{ws}*{DefinitionLabelID}?("["{alphaMLid_list}"]")?{ws}*":"?{ws}*"]";
+DefinitionLabelID = {letter}{alphaMLid_tailchar}* | "~"{alphaMLid_tailchar}+ ;
+DefinitionLabel1 = "["{ws}*{DefinitionLabelID}("["{alphaMLid_list}"]")?{ws}*":"{ws}*"]";
+DefinitionLabel2 = "["{ws}*{HOLconjunction}?{ws}*"]";
+DefinitionLabel = {DefinitionLabel1} | {DefinitionLabel2};
 Definitionpfx = "Definition"{ws}+{id_with_attributes}{ws}*":";
 holstartkeyword = "Datatype"|"Type"|"Overload"|"Definition"|"Theorem"|"Triviality"|"Quote"|("Co")?"Inductive"|"Ancestors"|"Libs"|"Theory";
 declforms = "val"|"fun"|"structure"|"signature"|"functor"|"type"|"abstype"|"datatype"|"exception"|"open"|"infix"[lr]?|"local"|"in";
@@ -360,7 +362,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 <INITIAL>"#(LINE)" => (Decl (LinePragma yypos, NONE));
 <INITIAL>"#(LINE="[0-9]+(,[0-9]+)?")" => (Decl (LinePragmaWith (yypos, yytext), NONE));
 <INITIAL>"#(FILE)" => (Decl (FilePragma yypos, NONE));
-<INITIAL>"#(FILE="([-A-Za-z0-9/$_.|]|"\\ "|"\\\\"|"\\("|"\\)")+")" => (
+<INITIAL>"#(FILE="([^\"() ]|"\""|"\\ "|"\\\\"|"\\("|"\\)")+")" => (
   Decl (FilePragmaWith (yypos, yytext), NONE)
 );
 <INITIAL>"\"" => (
@@ -472,7 +474,7 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 <opens>"(*" => (startComment yyarg YYBEGIN comment opens continue yypos);
 <headerthy>"(*" => (startComment yyarg YYBEGIN comment headerthy continue yypos);
 <opens,headerthy>({ws}|{newline})+ => (continue());
-<opens,headerthy>^{holstartkeyword} => (
+<opens,headerthy>^{holstartkeyword}({ws}*{attributes})? => (
   yybufpos := !yybufpos - (yyend - yypos); (* unread token *)
   OpenEnd yypos
 );
@@ -489,16 +491,16 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
 
 <header>"(*" => (startComment yyarg YYBEGIN comment header continue yypos);
 <header>({ws}|{newline})+ => (continue());
-<header>^"Ancestors" => (let
+<header>^"Ancestors"({ws}*{attributes})? => (let
   val _ = YYBEGIN headerthy
   val (thys, stop) = parseHeaderThy continue
   val _ = YYBEGIN header
-  in Header (Ancestors {tok = yypos, thys = thys, stop = stop}) end);
-<header>^"Libs" => (let
+  in Header {isThy = true, head = (yypos, yytext), thys = thys, stop = stop} end);
+<header>^"Libs"({ws}*{attributes})? => (let
   val _ = YYBEGIN headerthy
   val (thys, stop) = parseHeaderThy continue
   val _ = YYBEGIN header
-  in Header (Libs {tok = yypos, thys = thys, stop = stop}) end);
+  in Header {isThy = false, head = (yypos, yytext), thys = thys, stop = stop} end);
 <header>. => (
   yybufpos := !yybufpos - 1; (* unread token *)
   OpenEnd yypos

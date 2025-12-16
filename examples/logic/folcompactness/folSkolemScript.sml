@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps pred_setTheory listTheory nlistTheory
-open folPrenexTheory folModelsTheory folLangTheory
-open mp_then
-
-val _ = new_theory "folSkolem";
+Theory folSkolem
+Ancestors
+  pred_set list nlist folPrenex folModels folLang
+Libs
+  boolSimps mp_then
 
 Theorem holds_exists_lemma:
   ∀p t x M v (preds : (num # num) set).
@@ -905,4 +903,3 @@ Proof
 QED
 
 
-val _ = export_theory();

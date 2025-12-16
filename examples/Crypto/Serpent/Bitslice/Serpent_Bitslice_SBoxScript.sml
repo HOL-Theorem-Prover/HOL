@@ -1,12 +1,12 @@
-open HolKernel Parse boolLib bossLib bitTheory
-     markerTheory pairTheory arithmeticTheory wordsTheory wordsLib
-     Serpent_Bitslice_UtilityTheory;
-
-val _ = new_theory "Serpent_Bitslice_SBox";
+Theory Serpent_Bitslice_SBox
+Ancestors
+  bit marker pair arithmetic words Serpent_Bitslice_Utility
+Libs
+  wordsLib
 
 (* RNDxxx is the SBox in xxx round, invRNDxxx is the invSBox in xxx round *)
 
-val RND00_def = Define`
+Definition RND00_def:
   RND00  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = b ?? c in
     let t02 = a || d in
@@ -26,9 +26,10 @@ val RND00_def = Define`
     let w = ~t15 in
     let t17 = w ?? t14 in
     let x = t12 ?? t17 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND00_def = Define`
+Definition InvRND00_def:
   InvRND00  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = c ?? d in
     let t02 = a || b in
@@ -49,9 +50,10 @@ val InvRND00_def = Define`
     let t17 = t05 && t13 in
     let t18 = t14 || t17 in
     let w = t15 ?? t18 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val RND01_def = Define`
+Definition RND01_def:
   RND01  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a || d in
     let t02 = c ?? d in
@@ -71,9 +73,10 @@ val RND01_def = Define`
     let t16 = t10 || x in
     let t17 = t05 && t16 in
     let w = c ?? t17 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND01_def = Define`
+Definition InvRND01_def:
   InvRND01  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a ?? b in
     let t02 = b || d in
@@ -93,9 +96,10 @@ val InvRND01_def = Define`
     let z = t01 ?? t04 in
     let t17 = c ?? t15 in
     let w = t14 ?? t17 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND02_def = Define`
+Definition  RND02_def:
     RND02  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a || c in
     let t02 = a ?? b in
@@ -113,9 +117,10 @@ val  RND02_def = Define`
     let t14 = b ?? t13 in
     let z = ~t09 in
     let y = t12 ?? t14 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND02_def = Define`
+Definition InvRND02_def:
   InvRND02  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a ?? d in
     let t02 = c ?? d in
@@ -135,9 +140,10 @@ val InvRND02_def = Define`
     let t16 = w ?? x in
     let t17 = t10 ?? t15 in
     let y = t16 ?? t17 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND03_def = Define`
+Definition  RND03_def:
   RND03  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a ?? c in
     let t02 = a || d in
@@ -157,9 +163,10 @@ val  RND03_def = Define`
     let y = t08 ?? t11 in
     let w = t14 ?? t15 in
     let x = t05 ?? t04 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  InvRND03_def = Define`
+Definition  InvRND03_def:
   InvRND03  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = c || d in
     let t02 = a || d in
@@ -178,9 +185,10 @@ val  InvRND03_def = Define`
     let x = b ?? t12 in
     let t16 = b || t13 in
     let z = t14 ?? t16 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND04_def = Define`
+Definition  RND04_def:
   RND04  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a || b in
     let t02 = b || c in
@@ -201,9 +209,10 @@ val  RND04_def = Define`
     let y = t13 ?? t08 in
     let x = t15 ?? t16 in
     let w = ~t14 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  InvRND04_def = Define`
+Definition  InvRND04_def:
   InvRND04  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = b || d in
     let t02 = c || d in
@@ -222,9 +231,10 @@ val  InvRND04_def = Define`
     let t15 = a ?? t04 in
     let y = t11 ?? t13 in
     let w = t15 ?? t09 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND05_def = Define`
+Definition  RND05_def:
   RND05  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = b ?? d in
     let t02 = b || d in
@@ -243,9 +253,10 @@ val  RND05_def = Define`
     let y = t09 ?? t13 in
     let x = t07 ?? t08 in
     let z = t12 ?? t14 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  InvRND05_def = Define`
+Definition  InvRND05_def:
   InvRND05  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a && d in
     let t02 = c ?? t01 in
@@ -264,9 +275,10 @@ val  InvRND05_def = Define`
     let t15 = t02 ?? t13 in
     let t16 = b ?? d in
     let y = t16 ?? t15 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val  RND06_def = Define`
+Definition  RND06_def:
   RND06  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a && d in
     let t02 = b ?? c in
@@ -287,9 +299,10 @@ val  RND06_def = Define`
     let t17 = a ?? b in
     let t18 = y ?? t15 in
     let w = t17 ?? t18 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND06_def = Define`
+Definition InvRND06_def:
   InvRND06  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a ?? c in
     let t02 = ~c in
@@ -310,9 +323,10 @@ val InvRND06_def = Define`
     let t17 = a ?? x in
     let z = t17 ?? t15 in
     let y = t16 ?? t14 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val RND07_def = Define`
+Definition RND07_def:
   RND07  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a && c in
     let t02 = ~d in
@@ -333,9 +347,10 @@ val RND07_def = Define`
     let t17 = t02 || t14 in
     let w = t15 ?? t17 in
     let y = a ?? t16 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val InvRND07_def = Define`
+Definition InvRND07_def:
   InvRND07  (a:word32,b:word32,c:word32,d:word32) =
    (let t01 = a && b in
     let t02 = a || b in
@@ -355,57 +370,106 @@ val InvRND07_def = Define`
     let t16 = t01 || t10 in
     let w = t13 ?? t15 in
     let y = t14 ?? t16 in
-      (w,x,y,z))`;
+      (w,x,y,z))
+End
 
-val RND08_def = Define `RND08 b128 = RND00 b128`;
-val RND09_def = Define `RND09 b128 = RND01 b128`;
-val RND10_def = Define `RND10 b128 = RND02 b128`;
-val RND11_def = Define `RND11 b128 = RND03 b128`;
-val RND12_def = Define `RND12 b128 = RND04 b128`;
-val RND13_def = Define `RND13 b128 = RND05 b128`;
-val RND14_def = Define `RND14 b128 = RND06 b128`;
-val RND15_def = Define `RND15 b128 = RND07 b128`;
-val RND16_def = Define `RND16 b128 = RND00 b128`;
-val RND17_def = Define `RND17 b128 = RND01 b128`;
-val RND18_def = Define `RND18 b128 = RND02 b128`;
-val RND19_def = Define `RND19 b128 = RND03 b128`;
-val RND20_def = Define `RND20 b128 = RND04 b128`;
-val RND21_def = Define `RND21 b128 = RND05 b128`;
-val RND22_def = Define `RND22 b128 = RND06 b128`;
-val RND23_def = Define `RND23 b128 = RND07 b128`;
-val RND24_def = Define `RND24 b128 = RND00 b128`;
-val RND25_def = Define `RND25 b128 = RND01 b128`;
-val RND26_def = Define `RND26 b128 = RND02 b128`;
-val RND27_def = Define `RND27 b128 = RND03 b128`;
-val RND28_def = Define `RND28 b128 = RND04 b128`;
-val RND29_def = Define `RND29 b128 = RND05 b128`;
-val RND30_def = Define `RND30 b128 = RND06 b128`;
-val RND31_def = Define `RND31 b128 = RND07 b128`;
+Definition RND08_def:   RND08 b128 = RND00 b128
+End
+Definition RND09_def:   RND09 b128 = RND01 b128
+End
+Definition RND10_def:   RND10 b128 = RND02 b128
+End
+Definition RND11_def:   RND11 b128 = RND03 b128
+End
+Definition RND12_def:   RND12 b128 = RND04 b128
+End
+Definition RND13_def:   RND13 b128 = RND05 b128
+End
+Definition RND14_def:   RND14 b128 = RND06 b128
+End
+Definition RND15_def:   RND15 b128 = RND07 b128
+End
+Definition RND16_def:   RND16 b128 = RND00 b128
+End
+Definition RND17_def:   RND17 b128 = RND01 b128
+End
+Definition RND18_def:   RND18 b128 = RND02 b128
+End
+Definition RND19_def:   RND19 b128 = RND03 b128
+End
+Definition RND20_def:   RND20 b128 = RND04 b128
+End
+Definition RND21_def:   RND21 b128 = RND05 b128
+End
+Definition RND22_def:   RND22 b128 = RND06 b128
+End
+Definition RND23_def:   RND23 b128 = RND07 b128
+End
+Definition RND24_def:   RND24 b128 = RND00 b128
+End
+Definition RND25_def:   RND25 b128 = RND01 b128
+End
+Definition RND26_def:   RND26 b128 = RND02 b128
+End
+Definition RND27_def:   RND27 b128 = RND03 b128
+End
+Definition RND28_def:   RND28 b128 = RND04 b128
+End
+Definition RND29_def:   RND29 b128 = RND05 b128
+End
+Definition RND30_def:   RND30 b128 = RND06 b128
+End
+Definition RND31_def:   RND31 b128 = RND07 b128
+End
 
-val InvRND08_def = Define `InvRND08 b128 = InvRND00 b128`;
-val InvRND09_def = Define `InvRND09 b128 = InvRND01 b128`;
-val InvRND10_def = Define `InvRND10 b128 = InvRND02 b128`;
-val InvRND11_def = Define `InvRND11 b128 = InvRND03 b128`;
-val InvRND12_def = Define `InvRND12 b128 = InvRND04 b128`;
-val InvRND13_def = Define `InvRND13 b128 = InvRND05 b128`;
-val InvRND14_def = Define `InvRND14 b128 = InvRND06 b128`;
-val InvRND15_def = Define `InvRND15 b128 = InvRND07 b128`;
-val InvRND16_def = Define `InvRND16 b128 = InvRND00 b128`;
-val InvRND17_def = Define `InvRND17 b128 = InvRND01 b128`;
-val InvRND18_def = Define `InvRND18 b128 = InvRND02 b128`;
-val InvRND19_def = Define `InvRND19 b128 = InvRND03 b128`;
-val InvRND20_def = Define `InvRND20 b128 = InvRND04 b128`;
-val InvRND21_def = Define `InvRND21 b128 = InvRND05 b128`;
-val InvRND22_def = Define `InvRND22 b128 = InvRND06 b128`;
-val InvRND23_def = Define `InvRND23 b128 = InvRND07 b128`;
-val InvRND24_def = Define `InvRND24 b128 = InvRND00 b128`;
-val InvRND25_def = Define `InvRND25 b128 = InvRND01 b128`;
-val InvRND26_def = Define `InvRND26 b128 = InvRND02 b128`;
-val InvRND27_def = Define `InvRND27 b128 = InvRND03 b128`;
-val InvRND28_def = Define `InvRND28 b128 = InvRND04 b128`;
-val InvRND29_def = Define `InvRND29 b128 = InvRND05 b128`;
-val InvRND30_def = Define `InvRND30 b128 = InvRND06 b128`;
-val InvRND31_def = Define `InvRND31 b128 = InvRND07 b128`;
+Definition InvRND08_def:   InvRND08 b128 = InvRND00 b128
+End
+Definition InvRND09_def:   InvRND09 b128 = InvRND01 b128
+End
+Definition InvRND10_def:   InvRND10 b128 = InvRND02 b128
+End
+Definition InvRND11_def:   InvRND11 b128 = InvRND03 b128
+End
+Definition InvRND12_def:   InvRND12 b128 = InvRND04 b128
+End
+Definition InvRND13_def:   InvRND13 b128 = InvRND05 b128
+End
+Definition InvRND14_def:   InvRND14 b128 = InvRND06 b128
+End
+Definition InvRND15_def:   InvRND15 b128 = InvRND07 b128
+End
+Definition InvRND16_def:   InvRND16 b128 = InvRND00 b128
+End
+Definition InvRND17_def:   InvRND17 b128 = InvRND01 b128
+End
+Definition InvRND18_def:   InvRND18 b128 = InvRND02 b128
+End
+Definition InvRND19_def:   InvRND19 b128 = InvRND03 b128
+End
+Definition InvRND20_def:   InvRND20 b128 = InvRND04 b128
+End
+Definition InvRND21_def:   InvRND21 b128 = InvRND05 b128
+End
+Definition InvRND22_def:   InvRND22 b128 = InvRND06 b128
+End
+Definition InvRND23_def:   InvRND23 b128 = InvRND07 b128
+End
+Definition InvRND24_def:   InvRND24 b128 = InvRND00 b128
+End
+Definition InvRND25_def:   InvRND25 b128 = InvRND01 b128
+End
+Definition InvRND26_def:   InvRND26 b128 = InvRND02 b128
+End
+Definition InvRND27_def:   InvRND27 b128 = InvRND03 b128
+End
+Definition InvRND28_def:   InvRND28 b128 = InvRND04 b128
+End
+Definition InvRND29_def:   InvRND29 b128 = InvRND05 b128
+End
+Definition InvRND30_def:   InvRND30 b128 = InvRND06 b128
+End
+Definition InvRND31_def:   InvRND31 b128 = InvRND07 b128
+End
 
 val tac =
   SIMP_TAC std_ss [FORALL_PROD,LET_THM,
@@ -414,14 +478,30 @@ val tac =
     RND06_def,InvRND06_def,RND07_def,InvRND07_def] THEN
   SRW_TAC [] [] THEN WORD_DECIDE_TAC;
 
-val RND00_THM = Q.store_thm("RND00_THM", `!v. InvRND00 (RND00 v) = v`, tac);
-val RND01_THM = Q.store_thm("RND01_THM", `!v. InvRND01 (RND01 v) = v`, tac);
-val RND02_THM = Q.store_thm("RND02_THM", `!v. InvRND02 (RND02 v) = v`, tac);
-val RND03_THM = Q.store_thm("RND03_THM", `!v. InvRND03 (RND03 v) = v`, tac);
-val RND04_THM = Q.store_thm("RND04_THM", `!v. InvRND04 (RND04 v) = v`, tac);
-val RND05_THM = Q.store_thm("RND05_THM", `!v. InvRND05 (RND05 v) = v`, tac);
-val RND06_THM = Q.store_thm("RND06_THM", `!v. InvRND06 (RND06 v) = v`, tac);
-val RND07_THM = Q.store_thm("RND07_THM", `!v. InvRND07 (RND07 v) = v`, tac);
+Theorem RND00_THM:  !v. InvRND00 (RND00 v) = v
+Proof tac
+QED
+Theorem RND01_THM:  !v. InvRND01 (RND01 v) = v
+Proof tac
+QED
+Theorem RND02_THM:  !v. InvRND02 (RND02 v) = v
+Proof tac
+QED
+Theorem RND03_THM:  !v. InvRND03 (RND03 v) = v
+Proof tac
+QED
+Theorem RND04_THM:  !v. InvRND04 (RND04 v) = v
+Proof tac
+QED
+Theorem RND05_THM:  !v. InvRND05 (RND05 v) = v
+Proof tac
+QED
+Theorem RND06_THM:  !v. InvRND06 (RND06 v) = v
+Proof tac
+QED
+Theorem RND07_THM:  !v. InvRND07 (RND07 v) = v
+Proof tac
+QED
 
 val tac = METIS_TAC
   [RND08_def,InvRND08_def,RND09_def,InvRND09_def,RND10_def,InvRND10_def,
@@ -435,29 +515,76 @@ val tac = METIS_TAC
    RND00_THM,RND01_THM,RND02_THM,RND03_THM,RND04_THM,RND05_THM,RND06_THM,
    RND07_THM];
 
-val RND08_THM = Q.store_thm ("RND08_THM", `!v. InvRND08 (RND08 v) = v`, tac);
-val RND09_THM = Q.store_thm ("RND09_THM", `!v. InvRND09 (RND09 v) = v`, tac);
-val RND10_THM = Q.store_thm ("RND10_THM", `!v. InvRND10 (RND10 v) = v`, tac);
-val RND11_THM = Q.store_thm ("RND11_THM", `!v. InvRND11 (RND11 v) = v`, tac);
-val RND12_THM = Q.store_thm ("RND12_THM", `!v. InvRND12 (RND12 v) = v`, tac);
-val RND13_THM = Q.store_thm ("RND13_THM", `!v. InvRND13 (RND13 v) = v`, tac);
-val RND14_THM = Q.store_thm ("RND14_THM", `!v. InvRND14 (RND14 v) = v`, tac);
-val RND15_THM = Q.store_thm ("RND15_THM", `!v. InvRND15 (RND15 v) = v`, tac);
-val RND16_THM = Q.store_thm ("RND16_THM", `!v. InvRND16 (RND16 v) = v`, tac);
-val RND17_THM = Q.store_thm ("RND17_THM", `!v. InvRND17 (RND17 v) = v`, tac);
-val RND18_THM = Q.store_thm ("RND18_THM", `!v. InvRND18 (RND18 v) = v`, tac);
-val RND19_THM = Q.store_thm ("RND19_THM", `!v. InvRND19 (RND19 v) = v`, tac);
-val RND20_THM = Q.store_thm ("RND20_THM", `!v. InvRND20 (RND20 v) = v`, tac);
-val RND21_THM = Q.store_thm ("RND21_THM", `!v. InvRND21 (RND21 v) = v`, tac);
-val RND22_THM = Q.store_thm ("RND22_THM", `!v. InvRND22 (RND22 v) = v`, tac);
-val RND23_THM = Q.store_thm ("RND23_THM", `!v. InvRND23 (RND23 v) = v`, tac);
-val RND24_THM = Q.store_thm ("RND24_THM", `!v. InvRND24 (RND24 v) = v`, tac);
-val RND25_THM = Q.store_thm ("RND25_THM", `!v. InvRND25 (RND25 v) = v`, tac);
-val RND26_THM = Q.store_thm ("RND26_THM", `!v. InvRND26 (RND26 v) = v`, tac);
-val RND27_THM = Q.store_thm ("RND27_THM", `!v. InvRND27 (RND27 v) = v`, tac);
-val RND28_THM = Q.store_thm ("RND28_THM", `!v. InvRND28 (RND28 v) = v`, tac);
-val RND29_THM = Q.store_thm ("RND29_THM", `!v. InvRND29 (RND29 v) = v`, tac);
-val RND30_THM = Q.store_thm ("RND30_THM", `!v. InvRND30 (RND30 v) = v`, tac);
-val RND31_THM = Q.store_thm ("RND31_THM", `!v. InvRND31 (RND31 v) = v`, tac);
+Theorem RND08_THM:  !v. InvRND08 (RND08 v) = v
+Proof tac
+QED
+Theorem RND09_THM:  !v. InvRND09 (RND09 v) = v
+Proof tac
+QED
+Theorem RND10_THM:  !v. InvRND10 (RND10 v) = v
+Proof tac
+QED
+Theorem RND11_THM:  !v. InvRND11 (RND11 v) = v
+Proof tac
+QED
+Theorem RND12_THM:  !v. InvRND12 (RND12 v) = v
+Proof tac
+QED
+Theorem RND13_THM:  !v. InvRND13 (RND13 v) = v
+Proof tac
+QED
+Theorem RND14_THM:  !v. InvRND14 (RND14 v) = v
+Proof tac
+QED
+Theorem RND15_THM:  !v. InvRND15 (RND15 v) = v
+Proof tac
+QED
+Theorem RND16_THM:  !v. InvRND16 (RND16 v) = v
+Proof tac
+QED
+Theorem RND17_THM:  !v. InvRND17 (RND17 v) = v
+Proof tac
+QED
+Theorem RND18_THM:  !v. InvRND18 (RND18 v) = v
+Proof tac
+QED
+Theorem RND19_THM:  !v. InvRND19 (RND19 v) = v
+Proof tac
+QED
+Theorem RND20_THM:  !v. InvRND20 (RND20 v) = v
+Proof tac
+QED
+Theorem RND21_THM:  !v. InvRND21 (RND21 v) = v
+Proof tac
+QED
+Theorem RND22_THM:  !v. InvRND22 (RND22 v) = v
+Proof tac
+QED
+Theorem RND23_THM:  !v. InvRND23 (RND23 v) = v
+Proof tac
+QED
+Theorem RND24_THM:  !v. InvRND24 (RND24 v) = v
+Proof tac
+QED
+Theorem RND25_THM:  !v. InvRND25 (RND25 v) = v
+Proof tac
+QED
+Theorem RND26_THM:  !v. InvRND26 (RND26 v) = v
+Proof tac
+QED
+Theorem RND27_THM:  !v. InvRND27 (RND27 v) = v
+Proof tac
+QED
+Theorem RND28_THM:  !v. InvRND28 (RND28 v) = v
+Proof tac
+QED
+Theorem RND29_THM:  !v. InvRND29 (RND29 v) = v
+Proof tac
+QED
+Theorem RND30_THM:  !v. InvRND30 (RND30 v) = v
+Proof tac
+QED
+Theorem RND31_THM:  !v. InvRND31 (RND31 v) = v
+Proof tac
+QED
 
-val _ = export_theory();

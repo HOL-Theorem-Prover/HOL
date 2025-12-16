@@ -5,21 +5,21 @@
 (* AUTHORS : 2005-2011 Michael Norrish                                        *)
 (*         : 2023-2024 Michael Norrish and Chun Tian                          *)
 (* ========================================================================== *)
+Theory basic_swap
+Ancestors
+  arithmetic string pred_set list rich_list pair numpair
+  string_num
+Libs
+  boolSimps numLib hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open boolSimps arithmeticTheory stringTheory pred_setTheory numLib hurdUtils
-     listTheory rich_listTheory pairTheory numpairTheory string_numTheory;
-
-val _ = new_theory "basic_swap";
 
 (* ----------------------------------------------------------------------
     swapping over strings
    ---------------------------------------------------------------------- *)
 
-val swapstr_def = Define`
+Definition swapstr_def:
   swapstr x y (s:string) = if x = s then y else if y = s then x else s
-`;
+End
 
 Theorem swapstr_id[simp] :
     swapstr x x s = s
@@ -77,57 +77,64 @@ QED
     swapping lists of pairs over strings (a foldr)
    ---------------------------------------------------------------------- *)
 
-val raw_lswapstr_def = Define`
+Definition raw_lswapstr_def:
   (raw_lswapstr [] s = s) /\
   (raw_lswapstr (h::t) s = swapstr (FST h) (SND h) (raw_lswapstr t s))
-`;
+End
 val _ = export_rewrites ["raw_lswapstr_def"]
 
-val raw_lswapstr_APPEND = store_thm(
-  "raw_lswapstr_APPEND",
-  ``raw_lswapstr (p1 ++ p2) s = raw_lswapstr p1 (raw_lswapstr p2 s)``,
-  Induct_on `p1` THEN SRW_TAC [][raw_lswapstr_def]);
+Theorem raw_lswapstr_APPEND:
+    raw_lswapstr (p1 ++ p2) s = raw_lswapstr p1 (raw_lswapstr p2 s)
+Proof
+  Induct_on `p1` THEN SRW_TAC [][raw_lswapstr_def]
+QED
 
-val raw_lswapstr_inverse = store_thm(
-  "raw_lswapstr_inverse",
-  ``!p s. (raw_lswapstr (REVERSE p) (raw_lswapstr p s) = s) /\
-          (raw_lswapstr p (raw_lswapstr (REVERSE p) s) = s)``,
-  Induct THEN SRW_TAC [][raw_lswapstr_def, raw_lswapstr_APPEND]);
+Theorem raw_lswapstr_inverse:
+    !p s. (raw_lswapstr (REVERSE p) (raw_lswapstr p s) = s) /\
+          (raw_lswapstr p (raw_lswapstr (REVERSE p) s) = s)
+Proof
+  Induct THEN SRW_TAC [][raw_lswapstr_def, raw_lswapstr_APPEND]
+QED
 val _ = export_rewrites ["raw_lswapstr_inverse"]
 
-val raw_lswapstr_11 = store_thm(
-  "raw_lswapstr_11",
-  ``(raw_lswapstr p s = raw_lswapstr p t) = (s = t)``,
-  METIS_TAC [raw_lswapstr_inverse]);
+Theorem raw_lswapstr_11:
+    (raw_lswapstr p s = raw_lswapstr p t) = (s = t)
+Proof
+  METIS_TAC [raw_lswapstr_inverse]
+QED
 val _ = export_rewrites ["raw_lswapstr_11"]
 
-val raw_lswapstr_eql = store_thm(
-  "raw_lswapstr_eql",
-  ``(raw_lswapstr p s = t) = (s = raw_lswapstr (REVERSE p) t)``,
-  METIS_TAC [raw_lswapstr_inverse]);
+Theorem raw_lswapstr_eql:
+    (raw_lswapstr p s = t) = (s = raw_lswapstr (REVERSE p) t)
+Proof
+  METIS_TAC [raw_lswapstr_inverse]
+QED
 
-val raw_lswapstr_eqr = store_thm(
-  "raw_lswapstr_eqr",
-  ``(s = raw_lswapstr p t) = (raw_lswapstr (REVERSE p) s =  t)``,
-  METIS_TAC [raw_lswapstr_inverse]);
+Theorem raw_lswapstr_eqr:
+    (s = raw_lswapstr p t) = (raw_lswapstr (REVERSE p) s =  t)
+Proof
+  METIS_TAC [raw_lswapstr_inverse]
+QED
 
-val raw_lswapstr_sing_to_back = store_thm(
-  "raw_lswapstr_sing_to_back",
-  ``!p u v s. swapstr (raw_lswapstr p u) (raw_lswapstr p v) (raw_lswapstr p s) =
-              raw_lswapstr p (swapstr u v s)``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD]);
+Theorem raw_lswapstr_sing_to_back:
+    !p u v s. swapstr (raw_lswapstr p u) (raw_lswapstr p v) (raw_lswapstr p s) =
+              raw_lswapstr p (swapstr u v s)
+Proof
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [FORALL_PROD]
+QED
 
 (* ----------------------------------------------------------------------
     NEW constant
    ---------------------------------------------------------------------- *)
 
-val new_exists = store_thm(
-  "new_exists",
-  ``!s : string set. FINITE s ==> ?x. ~(x IN s)``,
+Theorem new_exists:
+    !s : string set. FINITE s ==> ?x. ~(x IN s)
+Proof
   Q_TAC SUFF_TAC `INFINITE (UNIV : string set)`
         THEN1 METIS_TAC [pred_setTheory.IN_UNIV,
                          pred_setTheory.IN_INFINITE_NOT_FINITE] THEN
-  SRW_TAC [][INFINITE_STR_UNIV]);
+  SRW_TAC [][INFINITE_STR_UNIV]
+QED
 
 (* |- !s. FINITE s ==> NEW s NOTIN s *)
 val NEW_def =
@@ -135,11 +142,12 @@ val NEW_def =
       ("NEW_def", ["NEW"],
        SIMP_RULE (srw_ss()) [GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] new_exists)
 
-val NEW_ELIM_RULE = store_thm(
-  "NEW_ELIM_RULE",
-  ``!P X. FINITE X /\ (!v:string. ~(v IN X) ==> P v) ==>
-          P (NEW X)``,
-  PROVE_TAC [NEW_def]);
+Theorem NEW_ELIM_RULE:
+    !P X. FINITE X /\ (!v:string. ~(v IN X) ==> P v) ==>
+          P (NEW X)
+Proof
+  PROVE_TAC [NEW_def]
+QED
 
 (* ----------------------------------------------------------------------
     Primitive definitions on string/name allocations
@@ -423,5 +431,4 @@ Proof
  >> qexistsl_tac [‘r1’, ‘j’] >> rw []
 QED
 
-val _ = export_theory ();
 val _ = html_theory "basic_swap";

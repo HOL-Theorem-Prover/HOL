@@ -1,9 +1,10 @@
-open HolKernel Parse boolLib bossLib pairTools word8Theory;
+Theory sbox
+Ancestors
+  word8
+Libs
+  pairTools
 
 infix THEN
-
-val _ = new_theory "sbox";
-
 
 (*---------------------------------------------------------------------------
             Sbox and its inverse.
@@ -647,9 +648,9 @@ val InvSbox_def =
 
 
 
-val Sbox_Inversion = Q.store_thm
-("Sbox_Inversion",
- `!w:word8. InvSbox (Sbox w) = w`,
- SIMP_TAC std_ss [FORALL_BYTE_BITS,Sbox_def, InvSbox_def]);
+Theorem Sbox_Inversion:
+  !w:word8. InvSbox (Sbox w) = w
+Proof
+ SIMP_TAC std_ss [FORALL_BYTE_BITS,Sbox_def, InvSbox_def]
+QED
 
-val _ = export_theory();

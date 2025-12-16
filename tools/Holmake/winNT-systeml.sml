@@ -100,6 +100,7 @@ val DOT_PATH = ""
 val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
 
 val isUnix = false
+val haveWord64 = false
 local val cast : 'a -> int = Obj.magic
 in
   fun pointer_eq (x:'a, y:'a) = (cast x = cast y)

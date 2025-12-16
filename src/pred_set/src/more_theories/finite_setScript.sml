@@ -1,10 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-open quotient
-
-open arithmeticTheory
-open listTheory liftingTheory transferTheory transferLib
-
-val _ = new_theory "finite_set";
+Theory finite_set
+Ancestors
+  arithmetic list lifting transfer
+Libs
+  quotient transferLib
 
 Theorem psEXTENSION[local] = pred_setTheory.EXTENSION
 
@@ -1271,5 +1269,3 @@ Theorem fBIGUNION_fset_ABS_FOLDL:
 Proof
   rw[fBIGUNION_fset_ABS_FOLDL_aux]
 QED
-
-val _ = export_theory();

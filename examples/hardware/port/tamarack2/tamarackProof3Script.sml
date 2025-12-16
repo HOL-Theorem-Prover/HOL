@@ -9,19 +9,14 @@
 (*                                                                      *)
 (* Combine results for each machine instructions to prove top-level     *)
 (* correctness theorem.                                                 *)
+Theory tamarackProof3
+Ancestors
+  arithmetic string pair prim_rec tamarack[qualified]
+  tamarackProof1[qualified] tamarackProof2[qualified]
+Libs
+  proofManagerLib
 
 
-open HolKernel boolLib bossLib Parse
-open proofManagerLib
-
-val _ = new_theory "tamarackProof3";
-
-open arithmeticTheory stringTheory pairTheory prim_recTheory
-
-local
-  open tamarackTheory tamarackProof1Theory tamarackProof2Theory
-in
-end
 
 fun definition x y = SPEC_ALL (DB.fetch x y);
 fun theorem x y = DB.fetch x y;

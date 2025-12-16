@@ -1,12 +1,10 @@
-open HolKernel boolLib bossLib Parse
+Theory tfl_examples
 
 fun function s q = Count.apply (bossLib.xDefine s) q; (* tries termination *)
 
 val nested_function = LIST_CONJ o map #1 o #extracta o
                       Defn.wfrec_eqns (TypeBase.theTypeBase())
                       o Parse.Term;
-
-val _ = new_theory "tfl_examples"
 
 val _ = set_trace "Theory.allow_rebinds" 1
 
@@ -52,8 +50,8 @@ val sorted_def = function "sorted"
     (sorted (R, CONS x (CONS y rst)) <=> R x y /\ sorted(R, CONS y rst))`;
 
 val fin_def = function "fin" `(fin(R:^order,[x:'a]) = T)`;
-val _ = overload_on("filter", ``FILTER``)
-val _ = overload_on ("mem", ``MEM``)
+Overload filter = ``FILTER``
+Overload mem = ``MEM``
 
 val qsort_defn = Hol_defn "qsort"
    `(qsort(ord:^order,[]) = []) /\
@@ -127,9 +125,11 @@ val nested_if_def = function "nested_if"
 val vary_defn = Hol_defn "vary"
     `vary(x, L) = if mem x L then let x = SUC x in vary(x,L) else x`;
 
-val vary_lemma = prove(
-  ``LENGTH (filter (\y. SUC x <= y) L) <= LENGTH (filter (\y. x <= y) L)``,
-  Induct_on `L` THEN SRW_TAC [ARITH_ss][] THEN DECIDE_TAC);
+Theorem vary_lemma[local]:
+    LENGTH (filter (\y. SUC x <= y) L) <= LENGTH (filter (\y. x <= y) L)
+Proof
+  Induct_on `L` THEN SRW_TAC [ARITH_ss][] THEN DECIDE_TAC
+QED
 
 val (vary_def, vary_ind) = Defn.tprove(
   vary_defn,
@@ -169,4 +169,3 @@ val _ = tDefine "foo"
 `foo x = if (\x. x) x then foo F else ()`
 (WF_REL_TAC `measure (\x. if x then 1 else 0)`);
 
-val _ = export_theory()

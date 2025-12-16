@@ -47,7 +47,7 @@ val CC:string       = "cc";       (* C compiler                       *)
           END user-settable parameters
  ---------------------------------------------------------------------------*)
 
-val version_number = 1
+val version_number = 2
 val release_string = "Trindemossen"
 
 

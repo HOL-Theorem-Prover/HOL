@@ -3,15 +3,17 @@ load "abs_tools";
 load "RecordType";
 load "semi_ringTheory";
 *)
+Theory EVAL_ring
+Ancestors
+  EVAL_semiring
+Libs
+  BasicProvers Datatype
+  abs_tools  (* Rebinds Term and Define *)
 
-open HolKernel Parse boolLib;
-open BasicProvers Datatype;
-open  abs_tools; (* Rebinds Term and Define *)
+
 
 fun EQ_TRANS_TAC t = MATCH_MP_TAC EQ_TRANS THEN EXISTS_TAC t THEN CONJ_TAC;
 
-
-val _ = new_theory "EVAL_ring";
 
 Datatype: ring = <| R0 : 'a;
                    R1 : 'a;
@@ -135,5 +137,3 @@ EQ_TRANS_TAC(Term` RP (RM (RP a (RN a)) b) (RN (RM a b)) `) THENL
     REWRITE_TAC[opp_def,TAB "mult_zero_left",TAB "plus_zero_left"] ] THEN
 ONCE_REWRITE_TAC[TAB "plus_permute"] THEN
 REWRITE_TAC[opp_def, TAB "plus_zero_left"]);
-
-val _ = export_theory();

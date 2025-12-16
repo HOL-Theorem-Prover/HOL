@@ -3,19 +3,14 @@
 (*                                                                           *)
 (* Author: Chun Tian (binghe) <binghe.lisp@gmail.com> (2021 - 2025)          *)
 (* ========================================================================= *)
+Theory stochastic_process
+Ancestors
+  combin arithmetic pred_set poset list fcp topology real iterate
+  real_sigma real_topology extreal_base extreal sigma_algebra
+  real_borel borel measure lebesgue martingale probability
+Libs
+  pred_setLib numLib hurdUtils fcpLib realLib
 
-open HolKernel Parse boolLib bossLib;
-
-open combinTheory arithmeticTheory pred_setTheory pred_setLib numLib hurdUtils
-     posetTheory listTheory fcpTheory fcpLib topologyTheory;
-
-open realTheory realLib iterateTheory real_sigmaTheory real_topologyTheory
-     extreal_baseTheory extrealTheory;
-
-open sigma_algebraTheory real_borelTheory borelTheory measureTheory
-     lebesgueTheory martingaleTheory probabilityTheory;
-
-val _ = new_theory "stochastic_process";
 
 (* "The theory of probability, as a mathematical discipline, can and should
     be developed from axioms in exactly the same way as Geometry and Algebra.
@@ -1914,7 +1909,6 @@ Theorem IN_MEASURABLE_BOREL_TL :
     !N. 0 < N ==> TL IN measurable (Borel_lists (SUC N)) (Borel_lists N)
 Proof
     rw [IN_MEASURABLE, IN_FUNSET, space_Borel_lists]
- >- (Cases_on ‘x’ >> fs [])
  >> POP_ASSUM MP_TAC
  >> qabbrev_tac ‘P = \s. s IN subsets (Borel_lists N) /\
                          PREIMAGE TL s INTER {v :extreal list | LENGTH v = SUC N} IN
@@ -1938,13 +1932,11 @@ Proof
      Q.EXISTS_TAC ‘\i. if i = 0 then UNIV else h (i - 1)’ \\
      CONJ_TAC
      >- (rw [Once EXTENSION] \\
-         EQ_TAC >> rw [IN_list_rectangle] >| (* 3 subgoals *)
-         [ (* goal 1 (of 3) *)
+         EQ_TAC >> rw [IN_list_rectangle] >| (* 2 subgoals *)
+         [ (* goal 1 (of 2) *)
            Cases_on ‘i’ >> fs [] \\
            Cases_on ‘x’ >> fs [],
-           (* goal 2 (of 3) *)
-           Cases_on ‘x’ >> fs [],
-           (* goal 3 (of 3) *)
+           (* goal 2 (of 2) *)
            Cases_on ‘x’ >> fs [] \\
            Q.PAT_X_ASSUM ‘!i. i < SUC N ==> P’ (MP_TAC o Q.SPEC ‘SUC i’) \\
            simp [] ]) \\
@@ -3166,7 +3158,6 @@ Proof
                  Borel_inf_eq_Borel_inf2]
 QED
 
-val _ = export_theory ();
 val _ = html_theory "stochastic_process";
 
 (* References:

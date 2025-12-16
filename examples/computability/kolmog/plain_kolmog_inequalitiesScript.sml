@@ -1,17 +1,12 @@
-open HolKernel Parse boolLib bossLib
+Theory plain_kolmog_inequalities
+Ancestors
+  arithmetic While logroot pred_set list churchoption churchlist
+  recfuns numsAsCompStates kolmogorov_complexity
+  invarianceResults boolLists churchDB recursivefns primrecfns
+  prterm unary_recfns numsAsCompStates kolmog_incomputable
+Libs
+  reductionEval
 
-open arithmeticTheory whileTheory logrootTheory pred_setTheory listTheory
-open reductionEval;
-open churchoptionTheory churchlistTheory recfunsTheory numsAsCompStatesTheory
-     kolmogorov_complexityTheory invarianceResultsTheory boolListsTheory
-open churchDBTheory
-open recursivefnsTheory primrecfnsTheory prtermTheory
-open unary_recfnsTheory
-open numsAsCompStatesTheory
-open kolmog_incomputableTheory
-
-val _ = new_theory "plain_kolmog_inequalities"
-val _ = intLib.deprecate_int()
 
 Definition univ_plmach_def:
   univ_plmach U <=>
@@ -181,7 +176,7 @@ Proof
   simp[comp_machine_t_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
-Triviality comp_machine_equiv = brackabs.brackabs_equiv [] comp_machine_t_def
+Theorem comp_machine_equiv[local] = brackabs.brackabs_equiv [] comp_machine_t_def
 
 Theorem comp_machine_t_behaviour_good:
   Phi j x = SOME n ∧ Phi i n = SOME r ⇒
@@ -818,5 +813,3 @@ Proof
 QED
 
 *)
-
-val _ = export_theory()

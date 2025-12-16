@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "map2term";
+Theory map2term
 
 Datatype:
   tree = Lf num | Nd num (tree list)
@@ -14,4 +12,3 @@ Definition plus_def:
      else Lf 0
 End
 
-val _ = export_theory();

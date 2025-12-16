@@ -1,6 +1,8 @@
-open preamble while_langTheory while_lang_lemmasTheory std_logicTheory;
-
-val _ = new_theory "std_logic_completeness";
+Theory std_logic_completeness
+Ancestors
+  while_lang while_lang_lemmas std_logic
+Libs
+  preamble
 
 Theorem Hoare_strengthen:
   ∀P P' p Q. (∀s. P s ⇒ P' s) ∧ Hoare P' p Q ⇒ Hoare P p Q
@@ -22,7 +24,7 @@ Proof
   \\ disj1_tac \\ qexists_tac ‘measure m’ \\ fs []
 QED
 
-Triviality NRC_lemma:
+Theorem NRC_lemma[local]:
   ∀k0 k1 m t0 t1.
     NRC (λs t. guard f s ∧ terminates s c t) k0 m t0 ∧
     NRC (λs t. guard f s ∧ terminates s c t) k1 m t1 ∧
@@ -109,4 +111,3 @@ Proof
   \\ fs [Hoare_terminates]
 QED
 
-val _ = export_theory();

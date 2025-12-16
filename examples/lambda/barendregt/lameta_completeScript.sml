@@ -4,28 +4,24 @@
 (*                                                                            *)
 (* AUTHORS : 2024 - 2025 The Australian National University (Chun Tian)       *)
 (* ========================================================================== *)
+Theory lameta_complete
+Ancestors
+  combin arithmetic pred_set list rich_list llist ltree relation
+  topology iterate option nomset basic_swap term appFOLDL chap2
+  chap3 horeduction solvable takahashiS3 head_reduction
+  standardisation boehm chap4
+Libs
+  hurdUtils tautLib numLib listLib NEWLib reductionEval
+  head_reductionLib monadsyntax
 
-open HolKernel Parse boolLib bossLib;
-
-open hurdUtils combinTheory tautLib arithmeticTheory pred_setTheory listTheory
-     rich_listTheory llistTheory ltreeTheory relationTheory topologyTheory
-     iterateTheory optionTheory numLib listLib;
-
-open nomsetTheory basic_swapTheory NEWLib termTheory appFOLDLTheory chap2Theory
-     chap3Theory horeductionTheory reductionEval solvableTheory takahashiS3Theory
-     head_reductionTheory head_reductionLib standardisationTheory boehmTheory
-     chap4Theory;
 
 (* enable basic monad support *)
-open monadsyntax;
 val _ = enable_monadsyntax ();
 val _ = enable_monad "option";
 
 local open set_relationTheory in
    val rel_to_reln_IS_UNCURRY = rel_to_reln_IS_UNCURRY;
 end
-
-val _ = new_theory "lameta_complete";
 
 (* These theorems usually give unexpected results, should be applied manually *)
 val _ = temp_delsimps [
@@ -6845,7 +6841,6 @@ Proof
  >> MATCH_MP_TAC lameta_complete >> art []
 QED
 
-val _ = export_theory ();
 val _ = html_theory "lameta_complete";
 
 (* References:

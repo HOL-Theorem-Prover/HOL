@@ -1,7 +1,6 @@
-open HolKernel Parse boolLib Datatype
-
-val _ = new_theory "foo"
+Theory foo[bare]
+Libs
+  HolKernel Parse boolLib Datatype
 
 val _ = Hol_datatype`foo = Success | Failure`
 
-val _ = export_theory()

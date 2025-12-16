@@ -1,7 +1,6 @@
-open HolKernel boolLib
-open integerTheory int_arithTheory
-
-val _ = new_theory "cooper";
+Theory cooper
+Ancestors
+  integer int_arith
 
 Theorem elim_le[unlisted] = GSYM INT_NOT_LT;
 
@@ -73,7 +72,7 @@ QED
 Theorem INT_DIVIDES_NEG'[unlisted] =
   CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG;
 
-Triviality INT_NEG_FLIP_LTL:
+Theorem INT_NEG_FLIP_LTL[local]:
   !x y. ~x < y <=> ~y < x
 Proof
   REPEAT GEN_TAC THEN
@@ -81,7 +80,7 @@ Proof
   REWRITE_TAC [INT_LT_NEG]
 QED
 
-Triviality INT_NEG_FLIP_LTR:
+Theorem INT_NEG_FLIP_LTR[local]:
   !x y. x < ~y <=> y < ~x
 Proof
   REPEAT GEN_TAC THEN
@@ -135,5 +134,3 @@ Theorem NOT_NOT[unlisted] = tautLib.TAUT_PROVE ``~~p:bool = p``;
 
 Theorem K_THM'[unlisted] =
   INST_TYPE [(alpha |-> bool), (beta |-> ``:int``)] combinTheory.K_THM;
-
-val _ = export_theory ();

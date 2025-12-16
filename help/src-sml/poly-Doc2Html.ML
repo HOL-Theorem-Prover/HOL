@@ -8,8 +8,8 @@ fun useB f =
    use (f ^ ".sml"));
 
 val _ = useB "Flash";
-val _ = useB "ParseDoc";
 val _ = useB "../../sigobj/Systeml";
+val _ = useB "../../src/portableML/poly/SHA1_ML";
 val _ = use "Doc2Html.sml";
 
 val main = Doc2Html.main

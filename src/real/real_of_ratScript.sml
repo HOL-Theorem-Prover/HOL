@@ -1,15 +1,14 @@
 (*---------------------------------------------------------------------------*)
 (* real_of_ratTheory, mapping between rationals and a subset of reals        *)
 (*---------------------------------------------------------------------------*)
+Theory real_of_rat
+Ancestors
+  realax rat integer real intreal pred_set gcd
+Libs
+  hurdUtils
 
-open HolKernel Parse boolLib bossLib;
-
-open realaxTheory ratTheory integerTheory realTheory intrealTheory hurdUtils;
-open pred_setTheory gcdTheory;
 
 val _ = augment_srw_ss [intSimps.INT_ARITH_ss]
-
-val _ = new_theory "real_of_rat";
 
 Theorem NUM_OPP_SIGNS_COMPARE:
     !i1 i2. i1 <= 0 /\ 0 <= i2 ==>
@@ -519,4 +518,3 @@ QED
 
 Theorem REAL_RAT_DENSE = Q_DENSE_IN_REAL
 
-val _ = export_theory();

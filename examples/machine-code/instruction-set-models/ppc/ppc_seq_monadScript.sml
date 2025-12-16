@@ -1,11 +1,7 @@
 
-open HolKernel boolLib bossLib Parse;
-open wordsTheory bit_listTheory listTheory opmonTheory;
-
-open ppc_coretypesTheory;
-
-val _ = new_theory "ppc_seq_monad";
-
+Theory ppc_seq_monad
+Ancestors
+  words bit_list list opmon ppc_coretypes
 
 (* state *)
 
@@ -15,13 +11,19 @@ val _ = type_abbrev("ppc_state",
 
 (* functions for reading/writing state *)
 
-val PREAD_R_def = Define `PREAD_R rd ((r,s,m):ppc_state) = r rd`;
-val PREAD_S_def = Define `PREAD_S rd ((r,s,m):ppc_state) = s rd`;
-val PREAD_M_def = Define `PREAD_M rd ((r,s,m):ppc_state) = m rd`;
+Definition PREAD_R_def:   PREAD_R rd ((r,s,m):ppc_state) = r rd
+End
+Definition PREAD_S_def:   PREAD_S rd ((r,s,m):ppc_state) = s rd
+End
+Definition PREAD_M_def:   PREAD_M rd ((r,s,m):ppc_state) = m rd
+End
 
-val PWRITE_R_def = Define `PWRITE_R rd x (r,s,m) = ((rd =+ x) r,s,m):ppc_state`;
-val PWRITE_S_def = Define `PWRITE_S rd x (r,s,m) = (r,(rd =+ x) s,m):ppc_state`;
-val PWRITE_M_def = Define `PWRITE_M rd x (r,s,m) = (r,s,(rd =+ x) m):ppc_state`;
+Definition PWRITE_R_def:   PWRITE_R rd x (r,s,m) = ((rd =+ x) r,s,m):ppc_state
+End
+Definition PWRITE_S_def:   PWRITE_S rd x (r,s,m) = (r,(rd =+ x) s,m):ppc_state
+End
+Definition PWRITE_M_def:   PWRITE_M rd x (r,s,m) = (r,s,(rd =+ x) m):ppc_state
+End
 
 
 
@@ -36,58 +38,71 @@ val _ = type_abbrev("ppc_M",``:ppc_state -> ('a # ppc_state) option``);
 
 (* sequential monads for an option state *)
 
-val constT_seq_def = Define `
-  (constT_seq: 'a -> 'a ppc_M) x = \y. SOME (x,y)`;
+Definition constT_seq_def:
+  (constT_seq: 'a -> 'a ppc_M) x = \y. SOME (x,y)
+End
 
-val addT_seq_def = Define `
+Definition addT_seq_def:
   (addT_seq: 'a -> 'b ppc_M -> ('a # 'b) ppc_M) x s =
-    \y. case s y of NONE => NONE | SOME (z,t) => SOME ((x,z),t)`;
+    \y. case s y of NONE => NONE | SOME (z,t) => SOME ((x,z),t)
+End
 
-val lockT_seq_def = Define `
-  (lockT_seq: 'a ppc_M -> 'a ppc_M) s = s`;
+Definition lockT_seq_def:
+  (lockT_seq: 'a ppc_M -> 'a ppc_M) s = s
+End
 
-val failureT_seq_def = Define `
-  (failureT_seq: 'a ppc_M) = \y. NONE`;
+Definition failureT_seq_def:
+  (failureT_seq: 'a ppc_M) = \y. NONE
+End
 
-val seqT_seq_def = Define `
+Definition seqT_seq_def:
   (seqT_seq: 'a ppc_M -> ('a -> 'b ppc_M) -> 'b ppc_M) s f =
-    \y. case s y of NONE => NONE | SOME (z,t) => f z t`;
+    \y. case s y of NONE => NONE | SOME (z,t) => f z t
+End
 
-val parT_seq_def = Define `
+Definition parT_seq_def:
   (parT_seq: 'a ppc_M -> 'b ppc_M -> ('a # 'b) ppc_M) s t =
     \y. case s y of NONE => NONE | SOME (a,z) =>
-        case t z of NONE => NONE | SOME (b,x) => SOME ((a,b),x)`;
+        case t z of NONE => NONE | SOME (b,x) => SOME ((a,b),x)
+End
 
-val parT_unit_seq_def = Define `
+Definition parT_unit_seq_def:
   (parT_unit_seq: unit ppc_M -> unit ppc_M -> unit ppc_M) s t =
     \y. case s y of NONE => NONE | SOME (a,z) =>
-        case t z of NONE => NONE | SOME (b,x) => SOME ((),x)`;
+        case t z of NONE => NONE | SOME (b,x) => SOME ((),x)
+End
 
 (* register reads/writes always succeed. *)
 
-val write_reg_seq_def = Define `(write_reg_seq ii r x):unit ppc_M =
-  \s. SOME ((),PWRITE_R r x s)`;
+Definition write_reg_seq_def:   (write_reg_seq ii r x):unit ppc_M =
+  \s. SOME ((),PWRITE_R r x s)
+End
 
-val read_reg_seq_def = Define `(read_reg_seq ii r):word32 ppc_M =
-  \s. SOME (PREAD_R r s,s)`;
+Definition read_reg_seq_def:   (read_reg_seq ii r):word32 ppc_M =
+  \s. SOME (PREAD_R r s,s)
+End
 
 (* eflags can always be written, but reading a NONE status bit causes a failure *)
 
-val write_status_seq_def = Define `(write_status_seq ii f x):unit ppc_M =
-  (\s. SOME ((),PWRITE_S f x s))`;
+Definition write_status_seq_def:   (write_status_seq ii f x):unit ppc_M =
+  (\s. SOME ((),PWRITE_S f x s))
+End
 
-val read_status_seq_def  = Define `(read_status_seq ii f):bool ppc_M =
-  (\s. case PREAD_S f s of NONE => NONE | SOME b => SOME (b,s))`;
+Definition read_status_seq_def:    (read_status_seq ii f):bool ppc_M =
+  (\s. case PREAD_S f s of NONE => NONE | SOME b => SOME (b,s))
+End
 
 (* memory writes are only allowed to modelled memory, i.e. locations containing SOME ... *)
 
-val write_mem_seq_def   = Define `(write_mem_seq ii a x):unit ppc_M =
-  (\s. case PREAD_M a s of NONE => NONE | SOME y => SOME ((),PWRITE_M a (SOME x) s))`;
+Definition write_mem_seq_def:     (write_mem_seq ii a x):unit ppc_M =
+  (\s. case PREAD_M a s of NONE => NONE | SOME y => SOME ((),PWRITE_M a (SOME x) s))
+End
 
 (* a memory read to an unmodelled memory location causes a failure *)
 
-val read_mem_seq_def  = Define `(read_mem_seq ii a):word8 ppc_M =
-  (\s. case PREAD_M a s of NONE => NONE | SOME x => SOME (x,s))`;
+Definition read_mem_seq_def:    (read_mem_seq ii a):word8 ppc_M =
+  (\s. case PREAD_M a s of NONE => NONE | SOME x => SOME (x,s))
+End
 
 
 (* export *)
@@ -149,8 +164,8 @@ val seq_monad_thm = save_thm("seq_monad_thm",let
            parT_unit_seq_lemma :: (CONJUNCTS monad_simp_lemma)
   in LIST_CONJ (map GEN_ALL xs) end);
 
-val PREAD_CLAUSES = store_thm("PREAD_CLAUSES",
-  ``!s. (PREAD_R r (PWRITE_M a x s) = PREAD_R r s) /\
+Theorem PREAD_CLAUSES:
+    !s. (PREAD_R r (PWRITE_M a x s) = PREAD_R r s) /\
         (PREAD_R r (PWRITE_S f b s) = PREAD_R r s) /\
         (PREAD_M a (PWRITE_R r w s) = PREAD_M a s) /\
         (PREAD_M a (PWRITE_S f b s) = PREAD_M a s) /\
@@ -158,18 +173,23 @@ val PREAD_CLAUSES = store_thm("PREAD_CLAUSES",
         (PREAD_S f (PWRITE_M a x s) = PREAD_S f s) /\
         (PREAD_R r (PWRITE_R r2 w s) = if r = r2 then w else PREAD_R r s) /\
         (PREAD_M a (PWRITE_M a2 x s) = if a = a2 then x else PREAD_M a s) /\
-        (PREAD_S f (PWRITE_S f2 b s) = if f = f2 then b else PREAD_S f s)``,
+        (PREAD_S f (PWRITE_S f2 b s) = if f = f2 then b else PREAD_S f s)
+Proof
   Cases THEN Cases_on `r'` THEN SRW_TAC [] [PREAD_R_def,PREAD_M_def,PREAD_S_def,
-    PWRITE_M_def,PWRITE_R_def,PWRITE_S_def, combinTheory.APPLY_UPDATE_THM]);
+    PWRITE_M_def,PWRITE_R_def,PWRITE_S_def, combinTheory.APPLY_UPDATE_THM]
+QED
 
-val ppc_else_none_mem_lemma = store_thm("ppc_else_none_mem_lemma",
-  ``!m a f. ~(m a = NONE) ==>
-            (option_apply ((m:ppc_state->word8 option) a) (f:word8->'a option) = f (THE (m a)))``,
-  SIMP_TAC std_ss [option_apply_def]);
+Theorem ppc_else_none_mem_lemma:
+    !m a f. ~(m a = NONE) ==>
+            (option_apply ((m:ppc_state->word8 option) a) (f:word8->'a option) = f (THE (m a)))
+Proof
+  SIMP_TAC std_ss [option_apply_def]
+QED
 
-val ppc_else_none_status_lemma = store_thm("ppc_else_none_status_lemma",
-  ``!m a f. ~(m a = NONE) ==>
-            (option_apply ((m:ppc_state->bool option) a) (f:bool->'a option) = f (THE (m a)))``,
-  SIMP_TAC std_ss [option_apply_def]);
+Theorem ppc_else_none_status_lemma:
+    !m a f. ~(m a = NONE) ==>
+            (option_apply ((m:ppc_state->bool option) a) (f:bool->'a option) = f (THE (m a)))
+Proof
+  SIMP_TAC std_ss [option_apply_def]
+QED
 
-val _ = export_theory ();

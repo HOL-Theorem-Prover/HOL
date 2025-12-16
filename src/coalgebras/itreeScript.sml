@@ -28,12 +28,11 @@
   up to deletion of finite runs of Tau actions, ugh. We model an
   infinite run of Taus using Div.
 *)
-open HolKernel Parse boolLib bossLib dep_rewrite;
-open listTheory combinTheory;
-
-val _ = new_theory "itree";
-
-val _ = set_grammar_ancestry ["list"];
+Theory itree
+Ancestors
+  list combin
+Libs
+  dep_rewrite
 
 (* make type definition *)
 
@@ -940,4 +939,3 @@ Theorem iexists_set = not_ievery_exists |> SYM |> Q.INST [‘P’ |-> ‘λx. ~ 
                                                |> SRULE[SF ETA_ss,ievery_set]
 
 
-val _ = export_theory();

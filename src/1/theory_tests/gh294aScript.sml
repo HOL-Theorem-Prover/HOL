@@ -1,8 +1,7 @@
-open HolKernel Parse boolLib
+Theory gh294a[bare]
+Libs
+  HolKernel Parse boolLib
 
-val _ = new_theory "gh294a";
-
-val _ = type_abbrev_pp("foo", ``:bool -> bool``)
+Type foo[pp] = ``:bool -> bool``
 
 
-val _ = export_theory();

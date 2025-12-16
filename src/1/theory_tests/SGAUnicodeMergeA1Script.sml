@@ -1,9 +1,8 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "SGAUnicodeMergeA1";
+Theory SGAUnicodeMergeA1[bare]
+Libs
+  HolKernel Parse boolLib
 
 val UNION_def = new_definition(
   "UNION_def",
   ``UNION P Q x <=> P x \/ Q x``);
 
-val _ = export_theory();

@@ -1,7 +1,9 @@
 
-open HolKernel Parse boolLib bossLib; val _ = new_theory "lisp_synthesis_demo";
-
-open arithmeticTheory listTheory pairTheory lisp_sexpTheory lisp_synthesisLib;
+Theory lisp_synthesis_demo
+Ancestors
+  arithmetic list pair lisp_sexp lisp_extract lisp_compiler
+Libs
+  lisp_synthesisLib
 
 (* we start by proving a lemma which helps with termination proofs *)
 
@@ -65,5 +67,3 @@ val qsort_def = lisp_tDefine "qsort" `
 (* we use our tool to derive corresponding deep embeddings *)
 
 val thms = synthesise_deep_embeddings ()
-
-val _ = export_theory();

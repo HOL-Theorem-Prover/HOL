@@ -2,13 +2,13 @@
 (* Theory of Moore-Smith convergence nets, and special cases like sequences  *)
 (*===========================================================================*)
 
-open HolKernel Parse boolLib bossLib;
-
-open numLib reduceLib pairLib pred_setTheory mesonLib RealArith hurdUtils
-     pairTheory arithmeticTheory numTheory prim_recTheory relationTheory
-     jrhUtils realTheory topologyTheory metricTheory tautLib;
-
-val _ = new_theory "nets";
+Theory nets
+Ancestors
+  pred_set pair arithmetic num prim_rec relation real topology
+  metric
+Libs
+  numLib reduceLib pairLib mesonLib RealArith hurdUtils jrhUtils
+  tautLib
 
 val _ = Parse.reveal "B";
 
@@ -53,12 +53,13 @@ Definition tendsto :
       (&0 < (dist m)(x,y) /\ (dist m)(x,y) <= (dist m)(x,z))
 End
 
-val DORDER_LEMMA = store_thm("DORDER_LEMMA",
-  “!g:'a->'a->bool.
+Theorem DORDER_LEMMA:
+   !g:'a->'a->bool.
       dorder g ==>
         !P Q. (?n. g n n /\ (!m. g m n ==> P m)) /\
               (?n. g n n /\ (!m. g m n ==> Q m))
-                  ==> (?n. g n n /\ (!m. g m n ==> P m /\ Q m))”,
+                  ==> (?n. g n n /\ (!m. g m n ==> P m /\ Q m))
+Proof
   GEN_TAC THEN REWRITE_TAC[dorder] THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   DISCH_THEN(CONJUNCTS_THEN2 (X_CHOOSE_THEN “N1:'a” STRIP_ASSUME_TAC)
                              (X_CHOOSE_THEN “N2:'a” STRIP_ASSUME_TAC)) THEN
@@ -71,7 +72,8 @@ val DORDER_LEMMA = store_thm("DORDER_LEMMA",
   FIRST_ASSUM(UNDISCH_TAC o
     assert(is_conj o snd o dest_imp o snd o dest_forall) o concl) THEN
   DISCH_THEN(MP_TAC o SPEC “m:'a”) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_TAC THEN ASM_REWRITE_TAC[]);
+  DISCH_TAC THEN ASM_REWRITE_TAC[]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Following tactic is useful in the following proofs                        *)
@@ -95,8 +97,9 @@ fun DORDER_THEN tac th =
 (* Show that sequences and pointwise limits in a metric space are directed   *)
 (*---------------------------------------------------------------------------*)
 
-val DORDER_NGE = store_thm("DORDER_NGE",
-  “dorder ($>= :num->num->bool)”,
+Theorem DORDER_NGE:
+   dorder ($>= :num->num->bool)
+Proof
   REWRITE_TAC[dorder, GREATER_EQ, LESS_EQ_REFL] THEN
   REPEAT GEN_TAC THEN
   DISJ_CASES_TAC(SPECL [“x:num”, “y:num”] LESS_EQ_CASES) THENL
@@ -104,10 +107,12 @@ val DORDER_NGE = store_thm("DORDER_NGE",
   GEN_TAC THEN DISCH_TAC THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC LESS_EQ_TRANS THENL
     [EXISTS_TAC “y:num”, EXISTS_TAC “x:num”] THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val DORDER_TENDSTO = store_thm("DORDER_TENDSTO",
-  “!m:('a)metric. !x. dorder(tendsto(m,x))”,
+Theorem DORDER_TENDSTO:
+   !m:('a)metric. !x. dorder(tendsto(m,x))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[dorder, tendsto] THEN
   MAP_EVERY X_GEN_TAC [“u:'a”, “v:'a”] THEN
   REWRITE_TAC[REAL_LE_REFL] THEN
@@ -116,7 +121,8 @@ val DORDER_TENDSTO = store_thm("DORDER_TENDSTO",
   THENL [EXISTS_TAC “v:'a”, EXISTS_TAC “u:'a”] THEN ASM_REWRITE_TAC[] THEN
   GEN_TAC THEN DISCH_THEN STRIP_ASSUME_TAC THEN ASM_REWRITE_TAC[] THEN
   MATCH_MP_TAC REAL_LE_TRANS THEN FIRST_ASSUM
-    (fn th => (EXISTS_TAC o rand o concl) th THEN ASM_REWRITE_TAC[] THEN NO_TAC));
+    (fn th => (EXISTS_TAC o rand o concl) th THEN ASM_REWRITE_TAC[] THEN NO_TAC)
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Simpler characterization of limit in a metric topology                    *)
@@ -185,22 +191,25 @@ QED
 
 val geq = Term`$>= : num->num->bool`;
 
-val SEQ_TENDS = store_thm("SEQ_TENDS",
-  “!d:('a)metric. !x x0. (x tends x0)(mtop(d), ^geq) =
-     !e. &0 < e ==> ?N. !n. ^geq n N ==> dist(d)(x(n),x0) < e”,
-  REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, GREATER_EQ, LESS_EQ_REFL]);
+Theorem SEQ_TENDS:
+   !d:('a)metric. !x x0. (x tends x0)(mtop(d), ^geq) =
+     !e. &0 < e ==> ?N. !n. ^geq n N ==> dist(d)(x(n),x0) < e
+Proof
+  REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, GREATER_EQ, LESS_EQ_REFL]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* And of limit of function between metric spaces                            *)
 (*---------------------------------------------------------------------------*)
 
-val LIM_TENDS = store_thm("LIM_TENDS",
-  “!m1:('a)metric. !m2:('b)metric. !f x0 y0.
+Theorem LIM_TENDS:
+   !m1:('a)metric. !m2:('b)metric. !f x0 y0.
       limpt(mtop m1) x0 UNIV ==>
         ((f tends y0)(mtop(m2),tendsto(m1,x0)) =
           !e. &0 < e ==>
             ?d. &0 < d /\ !x. &0 < (dist m1)(x,x0) /\ (dist m1)(x,x0) <= d ==>
-              (dist m2)(f(x),y0) < e)”,
+              (dist m2)(f(x),y0) < e)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[MTOP_TENDS, tendsto] THEN
   AP_TERM_TAC THEN ABS_TAC THEN
@@ -224,19 +233,21 @@ val LIM_TENDS = store_thm("LIM_TENDS",
     ONCE_REWRITE_TAC[METRIC_SYM] THEN ASM_REWRITE_TAC[] THEN
     MATCH_MP_TAC REAL_LE_TRANS THEN EXISTS_TAC “(dist m1)(x0:'a,y)” THEN
     ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LT_IMP_LE THEN
-    FIRST_ASSUM ACCEPT_TAC]);
+    FIRST_ASSUM ACCEPT_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Similar, more conventional version, is also true at a limit point         *)
 (*---------------------------------------------------------------------------*)
 
-val LIM_TENDS2 = store_thm("LIM_TENDS2",
-  “!m1:('a)metric. !m2:('b)metric. !f x0 y0.
+Theorem LIM_TENDS2:
+   !m1:('a)metric. !m2:('b)metric. !f x0 y0.
       limpt(mtop m1) x0 UNIV ==>
         ((f tends y0)(mtop(m2),tendsto(m1,x0)) =
           !e. &0 < e ==>
             ?d. &0 < d /\ !x. &0 < (dist m1)(x,x0) /\ (dist m1)(x,x0) < d ==>
-              (dist m2)(f(x),y0) < e)”,
+              (dist m2)(f(x),y0) < e)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   FIRST_ASSUM(fn th => REWRITE_TAC[MATCH_MP LIM_TENDS th]) THEN
   AP_TERM_TAC THEN ABS_TAC THEN AP_TERM_TAC THEN
@@ -247,15 +258,17 @@ val LIM_TENDS2 = store_thm("LIM_TENDS2",
     EXISTS_TAC “d / &2” THEN ASM_REWRITE_TAC[REAL_LT_HALF1] THEN
     GEN_TAC THEN DISCH_TAC THEN FIRST_ASSUM MATCH_MP_TAC THEN
     ASM_REWRITE_TAC[] THEN MATCH_MP_TAC REAL_LET_TRANS THEN
-    EXISTS_TAC “d / &2” THEN ASM_REWRITE_TAC[REAL_LT_HALF2]]);
+    EXISTS_TAC “d / &2” THEN ASM_REWRITE_TAC[REAL_LT_HALF2]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Simpler characterization of boundedness for the real line                 *)
 (*---------------------------------------------------------------------------*)
 
-val MR1_BOUNDED = store_thm("MR1_BOUNDED",
-  “!(g:'a->'a->bool) f. bounded(mr1,g) f =
-        ?k N. g N N /\ (!n. g n N ==> abs(f n) < k)”,
+Theorem MR1_BOUNDED:
+   !(g:'a->'a->bool) f. bounded(mr1,g) f =
+        ?k N. g N N /\ (!n. g n N ==> abs(f n) < k)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[bounded, MR1_DEF] THEN
   (CONV_TAC o LAND_CONV o RAND_CONV o ABS_CONV) SWAP_EXISTS_CONV
   THEN CONV_TAC(ONCE_DEPTH_CONV SWAP_EXISTS_CONV) THEN
@@ -275,34 +288,40 @@ val MR1_BOUNDED = store_thm("MR1_BOUNDED",
     ONCE_REWRITE_TAC[ABS_SUB] THEN
     FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC,
     DISCH_TAC THEN MAP_EVERY EXISTS_TAC [“k:real”, “&0”] THEN
-    ASM_REWRITE_TAC[REAL_SUB_LZERO, ABS_NEG]]);
+    ASM_REWRITE_TAC[REAL_SUB_LZERO, ABS_NEG]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Firstly, prove useful forms of null and bounded nets                      *)
 (*---------------------------------------------------------------------------*)
 
-val NET_NULL = store_thm("NET_NULL",
-  “!g:'a->'a->bool. !x x0.
-      (x tends x0)(mtop(mr1),g) = ((\n. x(n) - x0) tends &0)(mtop(mr1),g)”,
+Theorem NET_NULL:
+   !g:'a->'a->bool. !x x0.
+      (x tends x0)(mtop(mr1),g) = ((\n. x(n) - x0) tends &0)(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS] THEN BETA_TAC THEN
   REWRITE_TAC[MR1_DEF, REAL_SUB_LZERO] THEN EQUAL_TAC THEN
-  REWRITE_TAC[REAL_NEG_SUB]);
+  REWRITE_TAC[REAL_NEG_SUB]
+QED
 
-val NET_CONV_BOUNDED = store_thm("NET_CONV_BOUNDED",
-  “!g:'a->'a->bool. !x x0.
-      (x tends x0)(mtop(mr1),g) ==> bounded(mr1,g) x”,
+Theorem NET_CONV_BOUNDED:
+   !g:'a->'a->bool. !x x0.
+      (x tends x0)(mtop(mr1),g) ==> bounded(mr1,g) x
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, bounded] THEN
   DISCH_THEN(MP_TAC o SPEC “&1”) THEN
   REWRITE_TAC[REAL_LT, ONE, LESS_0] THEN
   REWRITE_TAC[GSYM(ONE)] THEN
   DISCH_THEN(X_CHOOSE_THEN “N:'a” STRIP_ASSUME_TAC) THEN
   MAP_EVERY EXISTS_TAC [“&1”, “x0:real”, “N:'a”] THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val NET_CONV_NZ = store_thm("NET_CONV_NZ",
-  “!g:'a->'a->bool. !x x0.
+Theorem NET_CONV_NZ:
+   !g:'a->'a->bool. !x x0.
       (x tends x0)(mtop(mr1),g) /\ ~(x0 = &0) ==>
-        ?N. g N N /\ (!n. g n N ==> ~(x n = &0))”,
+        ?N. g N N /\ (!n. g n N ==> ~(x n = &0))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, bounded] THEN
   DISCH_THEN(CONJUNCTS_THEN2 (MP_TAC o SPEC “abs(x0)”) ASSUME_TAC) THEN
   ASM_REWRITE_TAC[GSYM ABS_NZ] THEN
@@ -311,12 +330,14 @@ val NET_CONV_NZ = store_thm("NET_CONV_NZ",
   GEN_TAC THEN DISCH_THEN(ANTE_RES_THEN MP_TAC) THEN
   CONV_TAC CONTRAPOS_CONV THEN REWRITE_TAC[] THEN
   DISCH_THEN SUBST1_TAC THEN
-  REWRITE_TAC[MR1_DEF, REAL_SUB_RZERO, REAL_LT_REFL]);
+  REWRITE_TAC[MR1_DEF, REAL_SUB_RZERO, REAL_LT_REFL]
+QED
 
-val NET_CONV_IBOUNDED = store_thm("NET_CONV_IBOUNDED",
-  “!g:'a->'a->bool. !x x0.
+Theorem NET_CONV_IBOUNDED:
+   !g:'a->'a->bool. !x x0.
       (x tends x0)(mtop(mr1),g) /\ ~(x0 = &0) ==>
-        bounded(mr1,g) (\n. inv(x n))”,
+        bounded(mr1,g) (\n. inv(x n))
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, MR1_BOUNDED, MR1_DEF] THEN
   BETA_TAC THEN REWRITE_TAC[ABS_NZ] THEN
   DISCH_THEN(CONJUNCTS_THEN2 MP_TAC ASSUME_TAC) THEN
@@ -352,16 +373,18 @@ val NET_CONV_IBOUNDED = store_thm("NET_CONV_IBOUNDED",
       REWRITE_TAC[]], ALL_TAC] THEN
   SUBGOAL_THEN “~(x(n:'a) = &0)” (SUBST1_TAC o MATCH_MP ABS_INV) THENL
    [ASM_REWRITE_TAC[ABS_NZ], ALL_TAC] THEN
-  MATCH_MP_TAC REAL_LT_INV THEN ASM_REWRITE_TAC[REAL_LT_HALF1]);
+  MATCH_MP_TAC REAL_LT_INV THEN ASM_REWRITE_TAC[REAL_LT_HALF1]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now combining theorems for null nets                                      *)
 (*---------------------------------------------------------------------------*)
 
-val NET_NULL_ADD = store_thm("NET_NULL_ADD",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_NULL_ADD:
+   !g:'a->'a->bool. dorder g ==>
         !x y. (x tends &0)(mtop(mr1),g) /\ (y tends &0)(mtop(mr1),g) ==>
-                ((\n. x(n) + y(n)) tends &0)(mtop(mr1),g)”,
+                ((\n. x(n) + y(n)) tends &0)(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[MTOP_TENDS, MR1_DEF, REAL_SUB_LZERO, ABS_NEG] THEN
   DISCH_THEN(curry op THEN (X_GEN_TAC “e:real” THEN DISCH_TAC) o
@@ -374,12 +397,14 @@ val NET_NULL_ADD = store_thm("NET_NULL_ADD",
   EXISTS_TAC “abs(x(m:'a)) + abs(y(m:'a))” THEN
   REWRITE_TAC[ABS_TRIANGLE] THEN RULE_ASSUM_TAC BETA_RULE THEN
   GEN_REWR_TAC RAND_CONV [GSYM REAL_HALF_DOUBLE] THEN
-  MATCH_MP_TAC REAL_LT_ADD2 THEN ASM_REWRITE_TAC[]);
+  MATCH_MP_TAC REAL_LT_ADD2 THEN ASM_REWRITE_TAC[]
+QED
 
-val NET_NULL_MUL = store_thm("NET_NULL_MUL",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_NULL_MUL:
+   !g:'a->'a->bool. dorder g ==>
       !x y. bounded(mr1,g) x /\ (y tends &0)(mtop(mr1),g) ==>
-              ((\n. x(n) * y(n)) tends &0)(mtop(mr1),g)”,
+              ((\n. x(n) * y(n)) tends &0)(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN
   REPEAT GEN_TAC THEN REWRITE_TAC[MR1_BOUNDED] THEN
   REWRITE_TAC[MTOP_TENDS, MR1_DEF, REAL_SUB_LZERO, ABS_NEG] THEN
@@ -405,11 +430,13 @@ val NET_NULL_MUL = store_thm("NET_NULL_MUL",
     DISCH_THEN SUBST_ALL_TAC THEN UNDISCH_TAC “&0 < &0” THEN
     REWRITE_TAC[REAL_LT_REFL], ALL_TAC] THEN BETA_TAC THEN
   REWRITE_TAC[ABS_MUL] THEN MATCH_MP_TAC REAL_LT_MUL2 THEN
-  ASM_REWRITE_TAC[ABS_POS]);
+  ASM_REWRITE_TAC[ABS_POS]
+QED
 
-val NET_NULL_CMUL = store_thm("NET_NULL_CMUL",
-  “!g:'a->'a->bool. !k x.
-      (x tends &0)(mtop(mr1),g) ==> ((\n. k * x(n)) tends &0)(mtop(mr1),g)”,
+Theorem NET_NULL_CMUL:
+   !g:'a->'a->bool. !k x.
+      (x tends &0)(mtop(mr1),g) ==> ((\n. k * x(n)) tends &0)(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS, MR1_DEF] THEN
   BETA_TAC THEN REWRITE_TAC[REAL_SUB_LZERO, ABS_NEG] THEN
   DISCH_THEN(curry op THEN (X_GEN_TAC “e:real” THEN DISCH_TAC) o MP_TAC) THEN
@@ -433,49 +460,57 @@ val NET_NULL_CMUL = store_thm("NET_NULL_CMUL",
       ASM_REWRITE_TAC[ABS_ZERO], ALL_TAC] THEN
     REWRITE_TAC[ABS_MUL] THEN
     SUBGOAL_THEN “&0 < abs k” (fn th => REWRITE_TAC[MATCH_MP REAL_LT_LMUL th])
-    THEN ASM_REWRITE_TAC[GSYM ABS_NZ]]);
+    THEN ASM_REWRITE_TAC[GSYM ABS_NZ]]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Now real arithmetic theorems for convergent nets                          *)
 (*---------------------------------------------------------------------------*)
 
-val NET_ADD = store_thm("NET_ADD",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_ADD:
+   !g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\ (y tends y0)(mtop(mr1),g) ==>
-                      ((\n. x(n) + y(n)) tends (x0 + y0))(mtop(mr1),g)”,
+                      ((\n. x(n) + y(n)) tends (x0 + y0))(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   ONCE_REWRITE_TAC[NET_NULL] THEN
   DISCH_THEN(fn th => FIRST_ASSUM(MP_TAC o C MATCH_MP th o MATCH_MP NET_NULL_ADD))
   THEN MATCH_MP_TAC(TAUT ‘(a = b) ==> a ==> b’) THEN EQUAL_TAC THEN
   BETA_TAC THEN REWRITE_TAC[real_sub, REAL_NEG_ADD] THEN
-  CONV_TAC(AC_CONV(REAL_ADD_ASSOC,REAL_ADD_SYM)));
+  CONV_TAC(AC_CONV(REAL_ADD_ASSOC,REAL_ADD_SYM))
+QED
 
-val NET_NEG = store_thm("NET_NEG",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_NEG:
+   !g:'a->'a->bool. dorder g ==>
         (!x x0. (x tends x0)(mtop(mr1),g) =
-                  ((\n. ~(x n)) tends ~x0)(mtop(mr1),g))”,
+                  ((\n. ~(x n)) tends ~x0)(mtop(mr1),g))
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   REWRITE_TAC[MTOP_TENDS, MR1_DEF] THEN BETA_TAC THEN
   REWRITE_TAC[REAL_SUB_NEG2] THEN
   GEN_REWR_TAC (RAND_CONV o ONCE_DEPTH_CONV) [ABS_SUB]
-  THEN REFL_TAC);
+  THEN REFL_TAC
+QED
 
-val NET_SUB = store_thm("NET_SUB",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_SUB:
+   !g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\ (y tends y0)(mtop(mr1),g) ==>
-                      ((\n. x(n) - y(n)) tends (x0 - y0))(mtop(mr1),g)”,
+                      ((\n. x(n) - y(n)) tends (x0 - y0))(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[real_sub] THEN
   CONV_TAC(EXACT_CONV[X_BETA_CONV “n:'a” “-(y (n:'a))”]) THEN
   FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP NET_ADD) THEN
   ASM_REWRITE_TAC[] THEN
   FIRST_ASSUM(fn th => ONCE_REWRITE_TAC[GSYM(MATCH_MP NET_NEG th)]) THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val NET_MUL = store_thm("NET_MUL",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_MUL:
+   !g:'a->'a->bool. dorder g ==>
         !x y x0 y0. (x tends x0)(mtop(mr1),g) /\ (y tends y0)(mtop(mr1),g) ==>
-              ((\n. x(n) * y(n)) tends (x0 * y0))(mtop(mr1),g)”,
+              ((\n. x(n) * y(n)) tends (x0 * y0))(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN DISCH_TAC THEN
   REPEAT GEN_TAC THEN ONCE_REWRITE_TAC[NET_NULL] THEN
   DISCH_TAC THEN BETA_TAC THEN
@@ -498,12 +533,14 @@ val NET_MUL = store_thm("NET_MUL",
     ASM_REWRITE_TAC[] THEN MATCH_MP_TAC NET_CONV_BOUNDED THEN
     EXISTS_TAC “x0:real” THEN ONCE_REWRITE_TAC[NET_NULL] THEN
     ASM_REWRITE_TAC[],
-    MATCH_MP_TAC NET_NULL_CMUL THEN ASM_REWRITE_TAC[]]);
+    MATCH_MP_TAC NET_NULL_CMUL THEN ASM_REWRITE_TAC[]]
+QED
 
-val NET_INV = store_thm("NET_INV",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_INV:
+   !g:'a->'a->bool. dorder g ==>
         !x x0. (x tends x0)(mtop(mr1),g) /\ ~(x0 = &0) ==>
-                   ((\n. inv(x(n))) tends inv x0)(mtop(mr1),g)”,
+                   ((\n. inv(x(n))) tends inv x0)(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN
   DISCH_THEN(fn th => STRIP_ASSUME_TAC th THEN
     MP_TAC(CONJ (MATCH_MP NET_CONV_IBOUNDED th)
@@ -560,24 +597,28 @@ val NET_INV = store_thm("NET_INV",
   REWRITE_TAC[ABS_MUL] THEN SUBGOAL_THEN “&0 < abs(inv x0)”
     (fn th => ASM_REWRITE_TAC[MATCH_MP REAL_LT_LMUL th]) THEN
   REWRITE_TAC[GSYM ABS_NZ] THEN
-  MATCH_MP_TAC REAL_INV_NZ THEN ASM_REWRITE_TAC[]);
+  MATCH_MP_TAC REAL_INV_NZ THEN ASM_REWRITE_TAC[]
+QED
 
-val NET_DIV = store_thm("NET_DIV",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_DIV:
+   !g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\
                   (y tends y0)(mtop(mr1),g) /\ ~(y0 = &0) ==>
-                      ((\n. x(n) / y(n)) tends (x0 / y0))(mtop(mr1),g)”,
+                      ((\n. x(n) / y(n)) tends (x0 / y0))(mtop(mr1),g)
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
   REWRITE_TAC[real_div] THEN
   CONV_TAC(EXACT_CONV[X_BETA_CONV “n:'a” “inv(y(n:'a))”]) THEN
   FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP NET_MUL) THEN
   ASM_REWRITE_TAC[] THEN
   FIRST_ASSUM(MATCH_MP_TAC o MATCH_MP NET_INV) THEN
-  ASM_REWRITE_TAC[]);
+  ASM_REWRITE_TAC[]
+QED
 
-val NET_ABS = store_thm("NET_ABS",
-  “!g x x0. (x tends x0)(mtop(mr1),g) ==>
-               ((\n:'a. abs(x n)) tends abs(x0))(mtop(mr1),g)”,
+Theorem NET_ABS:
+   !g x x0. (x tends x0)(mtop(mr1),g) ==>
+               ((\n:'a. abs(x n)) tends abs(x0))(mtop(mr1),g)
+Proof
   REPEAT GEN_TAC THEN REWRITE_TAC[MTOP_TENDS] THEN
   DISCH_TAC THEN X_GEN_TAC “e:real” THEN
   DISCH_THEN(fn th => POP_ASSUM(MP_TAC o C MATCH_MP th)) THEN
@@ -587,18 +628,20 @@ val NET_ABS = store_thm("NET_ABS",
   MATCH_MP_TAC REAL_LET_TRANS THEN
   EXISTS_TAC “dist(mr1)(x(n:'a),x0)” THEN CONJ_TAC THENL
    [REWRITE_TAC[MR1_DEF, ABS_SUB_ABS],
-    FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]);
+    FIRST_ASSUM MATCH_MP_TAC THEN FIRST_ASSUM ACCEPT_TAC]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Comparison between limits                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val NET_LE = store_thm("NET_LE",
-  “!g:'a->'a->bool. dorder g ==>
+Theorem NET_LE:
+   !g:'a->'a->bool. dorder g ==>
       !x x0 y y0. (x tends x0)(mtop(mr1),g) /\
                   (y tends y0)(mtop(mr1),g) /\
                   (?N. g N N /\ !n. g n N ==> x(n) <= y(n))
-                        ==> x0 <= y0”,
+                        ==> x0 <= y0
+Proof
   GEN_TAC THEN DISCH_TAC THEN REPEAT GEN_TAC THEN DISCH_TAC THEN
   GEN_REWR_TAC I [TAUT ‘a = ~~a:bool’] THEN
   PURE_ONCE_REWRITE_TAC[REAL_NOT_LE] THEN
@@ -621,7 +664,8 @@ val NET_LE = store_thm("NET_LE",
   REWRITE_TAC[REAL_NOT_LE] THEN MATCH_MP_TAC ABS_BETWEEN2 THEN
   MAP_EVERY EXISTS_TAC [“y0:real”, “x0:real”] THEN
   ASM_REWRITE_TAC[] THEN ONCE_REWRITE_TAC[GSYM REAL_SUB_LT] THEN
-  FIRST_ASSUM ACCEPT_TAC);
+  FIRST_ASSUM ACCEPT_TAC
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*  Net As Type                                                              *)
@@ -671,8 +715,11 @@ Proof
   MESON_TAC[NET]
 QED
 
+(* NOTE: It seems that purpose of “g x x” in dorder for “at a”, is to make
+   sure ‘x <> a’, or 0 < mdist m (x,a).
+ *)
 Theorem DORDER_NET :
-    !n. dorder (netord n)
+    !net. dorder (netord net)
 Proof
     RW_TAC std_ss [dorder, OLDNET]
 QED
@@ -684,38 +731,69 @@ QED
 val _ = set_fixity "within" (Infix(NONASSOC, 450));
 val _ = set_fixity "in_direction" (Infix(NONASSOC, 450));
 
-(* new definition, making connection to netsTheory *)
-Definition at_def :
-    at z = mk_net (tendsto (mr1,z))
+(* HOL-Light: (atpointof top a) = mk_net({u | open_in top u /\ a IN u},{a})
+
+   NOTE: HOL-Light's “atpointof” takes a (general) topology, while here HOL4
+   takes a metric (therefore only works for metrizable topology).
+ *)
+Definition atpointof_def[nocompute]:
+    atpointof m a = mk_net (tendsto (m,a))
 End
 
-(* old definition, now becomes an equivalent theorem *)
-Theorem at :
-    !a. at a = mk_net(\x y. &0 < dist(x,a) /\ dist(x,a) <= dist(y,a))
+(* HOL-Light: at a = atpointof euclidean a *)
+Definition at_DEF :
+    at z = atpointof mr1 z
+End
+
+(* The previous "definition" now (again) becomes a theorem. *)
+Theorem at_def :
+    !z. at z = mk_net (tendsto (mr1,z))
 Proof
-    RW_TAC std_ss [at_def]
+    RW_TAC std_ss [at_DEF, atpointof_def]
+QED
+
+Theorem atpointof :
+    !m a. atpointof m a =
+          mk_net (\x y. 0 < mdist m (x,a) /\ mdist m (x,a) <= mdist m (y,a))
+Proof
+    RW_TAC std_ss [atpointof_def]
  >> AP_TERM_TAC
- >> RW_TAC std_ss [FUN_EQ_THM, tendsto, dist_def]
+ >> RW_TAC std_ss [FUN_EQ_THM, tendsto]
  >> PROVE_TAC [METRIC_SYM]
 QED
 
-val at_infinity = new_definition ("at_infinity",
-  ``at_infinity = mk_net(\x y. abs(x) >= abs(y))``);
+(* |- !a. at a = mk_net (\x y. 0 < dist (x,a) /\ dist (x,a) <= dist (y,a)) *)
+Theorem at = atpointof |> ISPEC “mr1”
+                       |> REWRITE_RULE [GSYM at_DEF, GSYM dist_def]
 
-val at_posinfinity = new_definition ("at_posinfinity",
-  ``at_posinfinity = mk_net(\x y:real. x >= y)``);
+(* HOL-Light: at_infinity = mk_net({{x | b <= norm x} | b IN (:real)},{}) *)
+Definition at_infinity[nocompute]:
+  at_infinity = mk_net(\x y. abs(x) >= abs(y))
+End
 
-val at_neginfinity = new_definition ("at_neginfinity",
-  ``at_neginfinity = mk_net(\x y:real. x <= y)``);
+(* HOL-Light: at_posinfinity = mk_net({{x | a <= x} | a IN (:real)},{}) *)
+Definition at_posinfinity[nocompute]:
+  at_posinfinity = mk_net(\x y:real. x >= y)
+End
 
-val sequentially = new_definition ("sequentially",
-  ``sequentially = mk_net(\m:num n. m >= n)``);
+(* HOL-Light: at_neginfinity = mk_net({{x | x <= a} | a IN (:real)},{}) *)
+Definition at_neginfinity[nocompute]:
+  at_neginfinity = mk_net(\x y:real. x <= y)
+End
 
-val within = new_definition ("within",
-  ``(net within s) = mk_net(\x y. netord net x y /\ x IN s)``);
+(* HOL-Light: sequentially = mk_net({from n | n IN (:num)},{}) *)
+Definition sequentially[nocompute]:
+  sequentially = mk_net(\m:num n. m >= n)
+End
 
-val in_direction = new_definition ("in_direction",
-  ``(a in_direction v) = ((at a) within {b | ?c. &0 <= c /\ (b - a = c * v)})``);
+(* NOTE: “within” only requires “x IN s” (next step) but not for “y” *)
+Definition within[nocompute]:
+  (net within s) = mk_net(\x y. netord net x y /\ x IN s)
+End
+
+Definition in_direction[nocompute]:
+  (a in_direction v) = ((at a) within {b | ?c. &0 <= c /\ (b - a = c * v)})
+End
 
 (* ------------------------------------------------------------------------- *)
 (* Prove that they are all nets.                                             *)
@@ -726,84 +804,292 @@ fun NET_PROVE_TAC [def] =
   REWRITE_TAC [ETA_AX] THEN
   ASM_SIMP_TAC std_ss [GSYM(CONJUNCT2 net_tybij)];
 
-val AT = store_thm ("AT",
- ``!a:real x y.
-        netord(at a) x y <=> &0 < dist(x,a) /\ dist(x,a) <= dist(y,a)``,
-  GEN_TAC THEN NET_PROVE_TAC[at] THEN
-  METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS, REAL_LET_TRANS]);
-
-(* Connection between HOL4's “tendsto” and HOL-Light's “at”, cf. [at_def] *)
-Theorem tendsto_mr1 :
-    !m a. tendsto (mr1,a) = netord (at a)
+(* NOTE: Most of the time, user only need to use this theorem instead of the
+   definition(s) of “atpointof”.
+ *)
+Theorem ATPOINTOF :
+   !m a x y.
+      netord(atpointof m a) x y <=>
+      0 < mdist m (x,a) /\ mdist m (x,a) <= mdist m (y,a)
 Proof
-    rw [FUN_EQ_THM, tendsto, AT, GSYM dist_def]
- >> METIS_TAC [DIST_SYM]
+  NTAC 2 GEN_TAC THEN NET_PROVE_TAC[atpointof] THEN
+  METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS, REAL_LET_TRANS]
 QED
 
-val AT_INFINITY = store_thm ("AT_INFINITY",
- ``!x y. netord at_infinity x y <=> abs(x) >= abs(y)``,
+(* |- !a x y.
+        netord (at a) x y <=> 0 < dist (x,a) /\ dist (x,a) <= dist (y,a)
+ *)
+Theorem AT = ATPOINTOF |> ISPEC “mr1”
+                       |> REWRITE_RULE [GSYM at_DEF, GSYM dist_def]
+
+Theorem tendsto_alt_atpointof :
+    !m a. tendsto (m,a) = netord (atpointof m a)
+Proof
+    rw [FUN_EQ_THM, tendsto, ATPOINTOF]
+ >> METIS_TAC [MDIST_SYM]
+QED
+
+(* Connection between HOL4's “tendsto” and HOL-Light's “at”, cf. [at_def]
+
+   |- !a. tendsto (mr1,a) = netord (at a)
+ *)
+Theorem tendsto_mr1 = tendsto_alt_atpointof |> ISPEC “mr1”
+                                            |> REWRITE_RULE [GSYM at_DEF]
+
+Theorem AT_INFINITY:
+   !x y. netord at_infinity x y <=> abs(x) >= abs(y)
+Proof
   NET_PROVE_TAC[at_infinity] THEN
   REWRITE_TAC[real_ge, REAL_LE_REFL] THEN
-  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]
+QED
 
-val AT_POSINFINITY = store_thm ("AT_POSINFINITY",
- ``!x y. netord at_posinfinity x y <=> x >= y``,
+Theorem AT_POSINFINITY:
+   !x y. netord at_posinfinity x y <=> x >= y
+Proof
   NET_PROVE_TAC[at_posinfinity] THEN
   REWRITE_TAC[real_ge, REAL_LE_REFL] THEN
-  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]
+QED
 
-val AT_NEGINFINITY = store_thm ("AT_NEGINFINITY",
- ``!x y. netord at_neginfinity x y <=> x <= y``,
+Theorem AT_NEGINFINITY:
+   !x y. netord at_neginfinity x y <=> x <= y
+Proof
   NET_PROVE_TAC[at_neginfinity] THEN
   REWRITE_TAC[real_ge, REAL_LE_REFL] THEN
-  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]);
+  MESON_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS]
+QED
 
-val SEQUENTIALLY = store_thm ("SEQUENTIALLY",
- ``!m n. netord sequentially m n <=> m >= n``,
+Theorem SEQUENTIALLY:
+   !m n. netord sequentially m n <=> m >= n
+Proof
   NET_PROVE_TAC[sequentially] THEN REWRITE_TAC[GREATER_EQ, LESS_EQ_REFL] THEN
-  MESON_TAC[LESS_EQ_CASES, LESS_EQ_REFL, LESS_EQ_TRANS]);
+  MESON_TAC[LESS_EQ_CASES, LESS_EQ_REFL, LESS_EQ_TRANS]
+QED
 
-val WITHIN = store_thm ("WITHIN",
- ``!n s x y. netord(n within s) x y <=> netord n x y /\ x IN s``,
+Theorem WITHIN:
+   !n s x y. netord(n within s) x y <=> netord n x y /\ x IN s
+Proof
   GEN_TAC THEN GEN_TAC THEN SIMP_TAC std_ss [within, GSYM FUN_EQ_THM] THEN
   REWRITE_TAC[GSYM(CONJUNCT2 net_tybij), ETA_AX] THEN
-  METIS_TAC[NET]);
+  METIS_TAC[NET]
+QED
 
-val IN_DIRECTION = store_thm ("IN_DIRECTION",
- ``!a v x y. netord(a in_direction v) x y <=>
+Theorem IN_DIRECTION:
+   !a v x y. netord(a in_direction v) x y <=>
                 &0 < dist(x,a) /\ dist(x,a) <= dist(y,a) /\
-                 ?c. &0 <= c /\ (x - a = c * v)``,
-  SIMP_TAC std_ss [WITHIN, AT, in_direction, GSPECIFICATION] THEN METIS_TAC []);
+                 ?c. &0 <= c /\ (x - a = c * v)
+Proof
+  SIMP_TAC std_ss [WITHIN, AT, in_direction, GSPECIFICATION] THEN METIS_TAC []
+QED
 
-val WITHIN_UNIV = store_thm ("WITHIN_UNIV",
- ``!x:real. (at x within UNIV) = at x``,
-  REWRITE_TAC[within, at, IN_UNIV] THEN REWRITE_TAC[ETA_AX, net_tybij]);
+Theorem NET_WITHIN_UNIV :
+    !net. (net within UNIV) = net
+Proof
+    rw [within]
+ >> ‘(\x y. netord net x y) = netord net’ by rw [FUN_EQ_THM]
+ >> simp [net_tybij]
+QED
 
-val WITHIN_WITHIN = store_thm ("WITHIN_WITHIN",
- ``!net s t. ((net within s) within t) = (net within (s INTER t))``,
+Theorem WITHIN_UNIV :
+    !x. (at x within UNIV) = at x
+Proof
+    REWRITE_TAC [NET_WITHIN_UNIV]
+QED
+
+Theorem WITHIN_WITHIN:
+   !net s t. ((net within s) within t) = (net within (s INTER t))
+Proof
   ONCE_REWRITE_TAC[within] THEN
-  REWRITE_TAC[WITHIN, IN_INTER, GSYM CONJ_ASSOC]);
+  REWRITE_TAC[WITHIN, IN_INTER, GSYM CONJ_ASSOC]
+QED
 
+(* ------------------------------------------------------------------------- *)
+(* netfilter (compatible with HOL-Light)                                     *)
+(* ------------------------------------------------------------------------- *)
+
+Definition netfilter_def :
+    netfilter net = {{y | netord net y x} | x | T}
+End
+
+Theorem NETFILTER_AT_POSINFINITY :
+    netfilter at_posinfinity = {{x | a <= x} | a IN univ(:real)}
+Proof
+    simp [netfilter_def, AT_POSINFINITY, real_ge]
+QED
+
+Theorem NETFILTER_AT_NEGINFINITY :
+    netfilter at_neginfinity = {{x | x <= a} | a IN univ(:real)}
+Proof
+    simp [netfilter_def, AT_NEGINFINITY]
+QED
+
+Theorem NETFILTER_AT_INFINITY :
+    netfilter at_infinity = {{x | b <= abs x} | b IN univ(:real)}
+Proof
+    simp [netfilter_def, AT_INFINITY, real_ge]
+ >> rw [Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘abs x'’ >> REFL_TAC)
+ >> Cases_on ‘0 <= b’
+ >- (Q.EXISTS_TAC ‘abs b’ >> simp [ABS_REDUCE])
+ >> fs [REAL_NOT_LE]
+ >> Know ‘!x. b <= abs x <=> 0 <= abs x’
+ >- (Q.X_GEN_TAC ‘x’ \\
+     EQ_TAC >> rw [] \\
+     Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘0’ >> simp [ABS_POS, REAL_LT_IMP_LE])
+ >> Rewr'
+ >> Q.EXISTS_TAC ‘0’ >> simp [ABS_0]
+QED
+
+Theorem NETFILTER_SEQUENTIALLY :
+    netfilter sequentially = {from n | n IN univ(:num)}
+Proof
+    simp [netfilter_def, SEQUENTIALLY, GREATER_EQ, from_def]
+QED
+
+Theorem NETFILTER_ATPOINTOF :
+    !m a. netfilter (atpointof m a) =
+            {{y | y <> a /\ dist m (y,a) <= dist m (x,a)} | x | T}
+Proof
+    simp [netfilter_def, ATPOINTOF, MDIST_POS_EQ]
+QED
+
+(* |- !a. netfilter (at a) =
+          {{y | y <> a /\ dist (y,a) <= dist (x,a)} | x | T}
+ *)
+Theorem NETFILTER_AT =
+        NETFILTER_ATPOINTOF |> ISPEC “mr1”
+                            |> REWRITE_RULE [GSYM dist_def, GSYM at_DEF]
+
+(* NOTE: This theorem is HOL-Light's WITHIN *)
+Theorem NETFILTER_WITHIN :
+    !net s. netfilter (net within s) = netfilter net relative_to s
+Proof
+    rw [netfilter_def, WITHIN, RELATIVE_TO]
+ >> rw [Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘{y | netord net y x'}’ \\
+     reverse CONJ_TAC >- (Q.EXISTS_TAC ‘x'’ >> REFL_TAC) \\
+     rw [Once EXTENSION] >> PROVE_TAC [])
+ >> Q.EXISTS_TAC ‘x'’
+ >> rw [Once EXTENSION]
+ >> PROVE_TAC []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* It's also sometimes useful to extract the limit point from the net.       *)
+(* ------------------------------------------------------------------------- *)
+
+Definition netlimit :
+    netlimit net = @a. !x. ~(netord net x a)
+End
+
+Theorem NETLIMIT_ATPOINTOF :
+    !m a. netlimit(atpointof m a) = a
+Proof
+    RW_TAC std_ss [netlimit, ATPOINTOF]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (Q.EXISTS_TAC ‘a’ \\
+     rw [MDIST_REFL, REAL_NOT_LE])
+ >> rw [REAL_NOT_LE, REAL_NOT_LT]
+ >> CCONTR_TAC
+ >> Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘x’)
+ >> simp [REAL_NOT_LE]
+ >> rw [REAL_LT_LE, METRIC_NZ]
+QED
+
+(* |- !a. netlimit (at a) = a *)
+Theorem NETLIMIT_AT = NETLIMIT_ATPOINTOF |> ISPEC “mr1”
+                   |> REWRITE_RULE [GSYM at_DEF]
+
+(* NOTE: This definition is compatible with HOL-Light *)
+Definition netlimits_def :
+    netlimits net = {a | !x. ~(netord net x a)}
+End
+
+Theorem NETLIMITS_ATPOINTOF :
+    !m a. netlimits (atpointof m a) = {a}
+Proof
+    rw [netlimits_def, ATPOINTOF, MDIST_POS_EQ, REAL_NOT_LE]
+ >> rw [Once EXTENSION]
+ >> reverse EQ_TAC >- rw [MDIST_REFL, MDIST_POS_EQ]
+ >> rpt STRIP_TAC
+ >> CCONTR_TAC
+ >> Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘x’) >> simp []
+QED
+
+(* |- !a. netlimits (at a) = {a} *)
+Theorem NETLIMITS_AT = NETLIMITS_ATPOINTOF |> ISPEC “mr1”
+                    |> REWRITE_RULE [GSYM at_DEF]
+
+Theorem NETLIMITS_SEQUENTIALLY :
+    netlimits sequentially = {}
+Proof
+    rw [Once EXTENSION, NOT_IN_EMPTY, netlimits_def, SEQUENTIALLY, GREATER_EQ]
+ >> Q.EXISTS_TAC ‘x’ >> simp []
+QED
+
+Theorem NETLIMITS_AT_POSINFINITY :
+    netlimits at_posinfinity = {}
+Proof
+    rw [Once EXTENSION, NOT_IN_EMPTY, netlimits_def, AT_POSINFINITY, real_ge]
+ >> Q.EXISTS_TAC ‘x’ >> simp []
+QED
+
+Theorem NETLIMITS_AT_NEGINFINITY :
+    netlimits at_neginfinity = {}
+Proof
+    rw [Once EXTENSION, NOT_IN_EMPTY, netlimits_def, AT_NEGINFINITY]
+ >> Q.EXISTS_TAC ‘x’ >> simp []
+QED
+
+Theorem NETLIMITS_AT_INFINITY :
+    netlimits at_infinity = {}
+Proof
+    rw [Once EXTENSION, NOT_IN_EMPTY, netlimits_def, AT_INFINITY, real_ge]
+ >> Q.EXISTS_TAC ‘x’ >> simp []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Some property holds "sufficiently close" to the limit point.              *)
 (* ------------------------------------------------------------------------- *)
 (* Identify trivial limits, where we can't approach arbitrarily closely.     *)
 (* ------------------------------------------------------------------------- *)
 
+(* old (existing) definitions diverged from HOL-Light *)
 Definition trivial_limit :
     trivial_limit net <=>
       (!(a:'a) b. a = b) \/
       ?(a:'a) b. ~(a = b) /\ !x. ~(netord(net) x a) /\ ~(netord(net) x b)
 End
 
+Definition eventually :
+    eventually p net <=>
+      trivial_limit net \/
+      ?y. (?x. netord net x y) /\ (!x. netord net x y ==> p x)
+End
+
+(* new definitions (compatible with HOL-Light)
+Definition eventually_def :
+    eventually (P :'a -> bool) net <=>
+      netfilter net = {} \/
+      ?u. u IN netfilter net /\
+            !x. x IN u DIFF netlimits net ==> P x
+End
+
+Definition trivial_limit_def :
+    trivial_limit net = eventually (\x. F) net
+End
+ *)
+
+(* ------------------------------------------------------------------------- *)
+
 Theorem NONTRIVIAL_LIMIT_WITHIN :
     !net s. trivial_limit net ==> trivial_limit(net within s)
 Proof
     REWRITE_TAC[trivial_limit, WITHIN] THEN MESON_TAC[]
-QED
-
-Theorem REAL_CHOOSE_SIZE :
-   !c. &0 <= c ==> (?x. abs x = c:real)
-Proof
-  METIS_TAC [ABS_REFL]
 QED
 
 Theorem TRIVIAL_LIMIT_AT_INFINITY :
@@ -818,7 +1104,8 @@ Theorem TRIVIAL_LIMIT_AT_POSINFINITY :
 Proof
   REWRITE_TAC[trivial_limit, AT_POSINFINITY, DE_MORGAN_THM] THEN
   CONJ_TAC THENL
-   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC, ALL_TAC] THEN
+   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC,
+    ALL_TAC] THEN
   REWRITE_TAC[DE_MORGAN_THM, NOT_EXISTS_THM, real_ge, REAL_NOT_LE] THEN
   MESON_TAC[REAL_LT_TOTAL, REAL_LT_ANTISYM]
 QED
@@ -828,7 +1115,8 @@ Theorem TRIVIAL_LIMIT_AT_NEGINFINITY :
 Proof
   REWRITE_TAC[trivial_limit, AT_NEGINFINITY, DE_MORGAN_THM] THEN
   CONJ_TAC THENL
-   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC, ALL_TAC] THEN
+   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC,
+    ALL_TAC] THEN
   REWRITE_TAC[DE_MORGAN_THM, NOT_EXISTS_THM, real_ge, REAL_NOT_LE] THEN
   MESON_TAC[REAL_LT_TOTAL, REAL_LT_ANTISYM]
 QED
@@ -839,16 +1127,6 @@ Proof
   REWRITE_TAC[trivial_limit, SEQUENTIALLY] THEN
   MESON_TAC[GREATER_EQ, LESS_EQ_REFL, SUC_NOT]
 QED
-
-(* ------------------------------------------------------------------------- *)
-(* Some property holds "sufficiently close" to the limit point.              *)
-(* ------------------------------------------------------------------------- *)
-
-Definition eventually :
-    eventually p net <=>
-      trivial_limit net \/
-      ?y. (?x. netord net x y) /\ (!x. netord net x y ==> p x)
-End
 
 Theorem EVENTUALLY_FALSE :
     !net. eventually (\x. F) net <=> trivial_limit net
@@ -861,11 +1139,6 @@ Theorem EVENTUALLY_TRUE :
 Proof
   REWRITE_TAC[eventually, trivial_limit] THEN MESON_TAC[]
 QED
-
-(* This is HOL-Light's definition of ‘trivial_limit’
-   |- !net. trivial_limit net <=> eventually (\x. F) net
- *)
-Theorem trivial_limit_def = GSYM EVENTUALLY_FALSE
 
 Theorem EVENTUALLY_HAPPENS :
     !net p. eventually p net ==> trivial_limit net \/ ?x. p x
@@ -987,13 +1260,16 @@ Proof
   SIMP_TAC std_ss [EVENTUALLY_FORALL]
 QED
 
-(* ------------------------------------------------------------------------- *)
-(* It's also sometimes useful to extract the limit point from the net.       *)
-(* ------------------------------------------------------------------------- *)
+(* NOTE: This theorem is trivial (by NET_WITHIN_UNIV and MSPACE) in HOL4.
+   The original HOL-Light version is:
 
-Definition netlimit :
-    netlimit net = @a. !x. ~(netord net x a)
-End
+   |- !top a:A. (atpointof top a) within (topspace top) = atpointof top a
+ *)
+Theorem ATPOINTOF_WITHIN_TOPSPACE :
+    !m a. ((atpointof m a) within (mspace m)) = atpointof m a
+Proof
+    rw [NET_WITHIN_UNIV, MSPACE]
+QED
 
 Theorem NETLIMIT_WITHIN :
    !a:real s. ~(trivial_limit (at a within s))
@@ -1058,10 +1334,12 @@ Proof
  >> ‘f m IN N’ by PROVE_TAC [SUBSET_DEF] >> fs [IN_APP]
 QED
 
-val _ = export_theory ();
-
 (* References:
 
  [1] Moore, E.H., Smith, H.L.: A General Theory of Limits. American Journal of
      Mathematics. 44, 102-121 (1922).
+ [2] Kelley, J.L.: General Topology. Springer Science & Business Media (1975).
+ [3] https://en.wikipedia.org/wiki/Net_(mathematics)
+ [4] Schilling, R.L.: Measures, Integrals and Martingales (2nd Edition).
+     Cambridge University Press (2017).
  *)

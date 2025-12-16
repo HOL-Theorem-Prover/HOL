@@ -5,31 +5,14 @@ app load ["bossLib","stringTheory","stringLib","HolBddLib","pairTheory","pred_se
           "optionSimps", "numSimps", "listSimps","pairTools","pairLib","pairSyntax","pred_setTheory","sumTheory","ksTheory","numLib",
           "setLemmasTheory"];
 *)
+Theory mu
+Ancestors
+  pair pred_set list string sum ks setLemmas reach muSyntax env
+Libs
+  pairLib pairTools pairSyntax pred_setLib simpLib stringLib
+  numLib metisLib
 
 
-open HolKernel Parse boolLib bossLib
-
-val _ = new_theory("mu")
-
-
-open pairTheory
-open pairLib
-open pairTools
-open pairSyntax
-open pred_setTheory
-open pred_setLib
-open listTheory
-open stringTheory
-open sumTheory
-open simpLib
-open stringLib
-open numLib
-open metisLib
-open ksTheory
-open setLemmasTheory
-open reachTheory
-open muSyntaxTheory
-open envTheory
 
 infix &&; infix 8 by;
 
@@ -60,7 +43,8 @@ val _ = save_thm("STATES_def",STATES_def)
 
 val MU_SAT_def = save_thm("MU_SAT_def",Define `MU_SAT f ks e s = s IN STATES f ks e`)
 
-val MU_MODEL_SAT_def = Define `MU_MODEL_SAT f ks e = (!s. s IN ks.S0 ==> MU_SAT f ks e s)`
+Definition MU_MODEL_SAT_def:   MU_MODEL_SAT f ks e = (!s. s IN ks.S0 ==> MU_SAT f ks e s)
+End
 
 (* thms about state sets *)
 
@@ -1238,16 +1222,16 @@ metisLib.METIS_TAC [lm4,MU_MODEL_SAT_def]))
 
 (*----------- bisimilarity preserves mu properties (used to eliminate data independent vars of any type) ---------------*)
 
-val MU_BISIM_STATES = store_thm(
-  "MU_BISIM_STATES",
-  ``!f M1 M2 e1 e2 s1 s2 BS.
+Theorem MU_BISIM_STATES:
+    !f M1 M2 e1 e2 s1 s2 BS.
       wfKS M1 ==> wfKS M2 ==>
       (!p s1 s2. AP p SUBF f ==> (M1.L s1 p = M2.L s2 p)) ==>
       BISIM M1 M2 BS ==>
       (!(Q:string) s1 s2. BS(s1,s2) ==> (s1 IN e1 Q = s2 IN e2 Q)) ==>
       BS(s1,s2)
     ==>
-      (MU_SAT f M1 e1 s1 = MU_SAT f M2 e2 s2)``,
+      (MU_SAT f M1 e1 s1 = MU_SAT f M2 e2 s2)
+Proof
   Induct_on `f` THENL [
     SIMP_TAC std_ss [MU_SAT_T],(* T *)
     SIMP_TAC std_ss [MU_SAT_F],(* F *)
@@ -1391,18 +1375,19 @@ val MU_BISIM_STATES = store_thm(
        ],
       METIS_TAC []
      ] (* nu *)
-    ])
+    ]
+QED
 
-val MU_BISIM = store_thm(
-  "MU_BISIM",
-   ``!f M1 M2 e1 e2 BS.
+Theorem MU_BISIM:
+     !f M1 M2 e1 e2 BS.
         wfKS M1 ==> wfKS M2 ==>
         (!p s1 s2. AP p SUBF f ==> (M1.L s1 p = M2.L s2 p)) ==>
         (!s1 s2. BS(s1,s2) ==> (s1 IN M1.S0 = s2 IN M2.S0)) ==>
         BISIM M1 M2 BS ==>
         (!(Q:string) s1 s2. BS(s1,s2) ==> (s1 IN e1 Q = s2 IN e2 Q)) ==>
         (!s1. ?s2. BS(s1,s2)) ==> (!s2. ?s1. BS(s1,s2)) ==>
-        (MU_MODEL_SAT f M1 e1 = MU_MODEL_SAT f M2 e2)``,
+        (MU_MODEL_SAT f M1 e1 = MU_MODEL_SAT f M2 e2)
+Proof
 REPEAT STRIP_TAC
 THEN FULL_SIMP_TAC std_ss [MU_MODEL_SAT_def]
 THEN REPEAT STRIP_TAC
@@ -1431,13 +1416,6 @@ THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
   NTAC 5 (POP_ASSUM (K ALL_TAC)) THEN
   POP_ASSUM (fn t => NTAC 3 (POP_ASSUM (K ALL_TAC)) THEN ASSUME_TAC t) THEN
   FULL_SIMP_TAC std_ss []
-])
-
-val _ = export_theory()
-
-
-
-
-
-
+]
+QED
 

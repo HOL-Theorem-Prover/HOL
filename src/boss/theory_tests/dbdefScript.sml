@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "dbdef";
+Theory dbdef
 
 Definition variant_def:
   variant x xs = if MEM x xs then variant (x + 1) xs else x
@@ -36,4 +34,3 @@ End
 
 
 
-val _ = export_theory();

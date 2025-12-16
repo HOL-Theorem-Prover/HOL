@@ -1,7 +1,8 @@
-open HolKernel boolLib gh403aTheory
+Theory gh403b[bare]
+Ancestors
+  gh403a
+Libs
+  HolKernel boolLib
 
-val _ = new_theory "gh403b";
+Theorem foo = TRUTH
 
-val _ = save_thm("foo", TRUTH)
-
-val _ = export_theory();

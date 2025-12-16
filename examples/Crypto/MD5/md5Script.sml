@@ -1,13 +1,11 @@
 (*
    Functional definition of md5 hash based on HOL/src/portableML/poly/MD5.sml
 *)
-open HolKernel Parse boolLib bossLib;
-open wordsLib
-open listTheory wordsTheory stringSyntax;
-
-val _ = new_theory "md5";
-
-val _ = set_grammar_ancestry ["list", "words"];
+Theory md5
+Ancestors
+  list words
+Libs
+  wordsLib stringSyntax
 
 (*
     type word64  = {hi:W32.word,lo:W32.word}
@@ -602,4 +600,3 @@ val _ = run_test ("Mun mummoni mun mammani. Mun mammani muni mut." ^
                   "Mun mummoni mun mammani. Mun mammani muni mut." ^
                   "Mun mummoni mun mammani. Mun mammani muni mut.");
 
-val _ = export_theory();

@@ -32,7 +32,6 @@ val add_rich_list_compset =
       rich_listTheory.SPLITP_AUX_def,
       rich_listTheory.SPLITR_def,
       rich_listTheory.SUFFIX_DEF,
-      rich_listTheory.TL_T_def,
       rich_listTheory.UNZIP_FST_DEF,
       rich_listTheory.UNZIP_SND_DEF
      ]

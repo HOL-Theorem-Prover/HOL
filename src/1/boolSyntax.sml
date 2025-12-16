@@ -14,8 +14,9 @@ struct
 
 open Feedback Lib HolKernel boolTheory;
 
+type goal = term list * term
+
 val ERR = mk_HOL_ERR "boolSyntax"
-type goal     = term list * term
 
 (*---------------------------------------------------------------------------
        Basic constants
@@ -170,10 +171,10 @@ end (* local *)
 val is_eq           = can dest_eq
 val is_imp          = can dest_imp
 val is_imp_only     = can dest_imp_only
-val is_select       = can dest_select
-val is_forall       = can dest_forall
-val is_exists       = can dest_exists
-val is_exists1      = can dest_exists1
+val is_select       = is_binder select
+val is_forall       = is_binder universal
+val is_exists       = is_binder existential
+val is_exists1      = is_binder exists1
 val is_conj         = can dest_conj
 val is_disj         = can dest_disj
 val is_neg          = can dest_neg
@@ -321,6 +322,7 @@ fun remove_junk cstr cnm junkas attrs0 =
     end
 
 val _ = List.app ThmAttribute.reserve_word ["notuserdef"]
+
 fun new_thm_with_attributes {call_str, call_f} genth (s, arg) =
     let open ThmAttribute
         val {thmname=s0,reserved=R,unknown=U,attrs=attrs} =
@@ -330,7 +332,7 @@ fun new_thm_with_attributes {call_str, call_f} genth (s, arg) =
                             ["local", "schematic", "nocompute", "unlisted"]
                             R
         val _ = null R orelse
-                raise mk_HOL_ERR "boolSyntax" call_str
+                raise mk_HOL_ERR "boolSyntax" call_f
                       ("Unhandled reserved attribute(s): " ^
                        String.concatWith ", " (map #1 R))
         val attrs = if notuserdefp orelse not (is_attribute "userdef") orelse
@@ -645,7 +647,6 @@ in
   fun gen_tyvarify tm =
       Term.inst (gen_tyvar_sigma (type_vars_in_term tm)) tm
 
-
 end
 
 (* ----------------------------------------------------------------------
@@ -672,6 +673,5 @@ fun tassoc t l = Lib.op_assoc Term.aconv t l
 fun tmx_eq (tm1,x1) (tm2,x2) = x1 = x2 andalso Term.aconv tm1 tm2
 fun xtm_eq (x1,tm1) (x2,tm2) = x1 = x2 andalso Term.aconv tm1 tm2
 end
-
 
 end

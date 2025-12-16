@@ -1,6 +1,4 @@
-open HolKernel Parse boolLib bossLib;
-
-val _ = new_theory "transfer";
+Theory transfer
 
 Overload flip[local] = “combin$C”
 
@@ -607,4 +605,3 @@ Proof
   metis_tac[listTheory.LIST_REL_MEM_IMP_R, listTheory.LIST_REL_MEM_IMP]
 QED
 
-val _ = export_theory();

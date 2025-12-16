@@ -14,8 +14,6 @@ val goal_toString =
     pairp (listp term_to_string, term_to_string)
 val goals_toString = listp goal_toString
 
-
-
 fun test_CONV (c,nm) (t, expected) = let
   val _ = tprint (nm^" on `"^term_to_string t^"`")
   val th = Conv.QCONV c t
@@ -43,10 +41,11 @@ val tydef_th = prove(
 val _ = tprint "new_type_definition error message"
 val _ =
     ignore (new_type_definition("mytydef", tydef_th))
-    handle HOL_ERR {origin_function, message, origin_structure, ...} =>
-           if origin_function <> "new_type_definition" orelse
-              origin_structure <> "Theory.Definition" orelse
-              message <> "at Thm.prim_type_definition:\nexpected a theorem of the form \"?x. P x\""
+    handle HOL_ERR herr =>
+           if top_function_of herr <> "new_type_definition" orelse
+              top_structure_of herr <> "Theory.Definition" orelse
+              message_of herr <>
+              "expected a theorem of the form \"?x. P x\""
            then
              die "FAILED"
            else OK()
@@ -393,7 +392,7 @@ val _ = test_tac_Case "list ind" (K true)
 val _ = test_tac_Case "OLEAST deep intro" (K true)
   `THE (OLEAST n. n > SUC 3) < 8`
   (DEEP_INTRO_TAC
-      (name_ind_cases [] whileTheory.OLEAST_INTRO)
+      (name_ind_cases [] WhileTheory.OLEAST_INTRO)
     \\ rpt strip_tac)
 
 val (is_rev_rules, is_rev_ind, is_rev_cases) = Hol_reln`
@@ -478,3 +477,38 @@ val _ = shouldfail {
       printresult = goals_toString o #1,
       testfn = CONG_TAC NONE
     } ([], “x < 10n”);
+
+fun goalhc t (sgs, vf) =
+    case sgs of
+        [(asl, c)] => t ~~ c andalso null asl
+      | _ => false
+fun prgl (sgs, vf) =
+    case sgs of
+        [] => "[]"
+      | [sg] => PP.pp_to_string 70 goalStack.pp_goal sg
+      | _ => "Too many subgoals"
+
+val _ = tprint "simp[] ?- “p ∧ T”"
+val _ = require_msg
+          (check_result (goalhc “p:bool”))
+          prgl
+          (fn g => simp [] g)
+          ([], “p ∧ T”)
+
+val _ = tprint "above w/simpset_updates removing"
+val _ = require_msg
+          (check_result (goalhc “p /\ T”)) prgl
+          (BasicProvers.with_simpset_updates
+             (simpLib.remove_simps ["AND_CLAUSES"])
+             (fn g => simp[] g))
+          ([], “p ∧ T”)
+
+val _ = tprint "Back to original"
+val _ = require_msg
+          (check_result (goalhc “p:bool”)) prgl
+          (fn g => simp[] g)
+          ([], “p ∧ T”)
+
+(*
+val _ = convtest("Original again", SIMP_CONV (srw_ss()) [], “p ∧ T”, “p:bool”)
+*)

@@ -1,8 +1,8 @@
-open HolKernel Parse boolLib bossLib;
-
-open simpleSexpTheory pegTheory pegLib
-
-val _ = new_theory "simpleSexpPEG";
+Theory simpleSexpPEG
+Ancestors
+  simpleSexp peg
+Libs
+  pegLib
 
 Definition tokeq_def: tokeq t = tok ((=) t) (K (SX_SYM [t]))
 End
@@ -158,7 +158,7 @@ Theorem sexpPEG_exec_thm[compute] =
 Theorem FDOM_sexpPEG = fdom_thm
 Theorem sexpPEG_applied = LIST_CONJ applieds
 
-Triviality frange_image:
+Theorem frange_image[local]:
   FRANGE fm = IMAGE (FAPPLY fm) (FDOM fm)
 Proof
   simp[finite_mapTheory.FRANGE_DEF, pred_setTheory.EXTENSION] >> metis_tac[]
@@ -321,4 +321,3 @@ Proof
   simp(wfpeg_thm :: wfpeg_rwts @ npeg0_rwts)
 QED
 
-val _ = export_theory();

@@ -1,15 +1,15 @@
-open HolKernel boolLib bossLib Parse proofManagerLib;
-open arm_coretypesTheory arm_seq_monadTheory arm_opsemTheory arm_stepTheory;
-open MMUTheory MMU_SetupTheory inference_rulesTheory switching_lemma_helperTheory;
-open priv_constraints_lrTheory priv_constraints_spsrTheory;
-open tacticsLib ARM_prover_extLib;
+Theory priv_constraints_bisim
+Ancestors
+  arm_coretypes arm_seq_monad arm_opsem arm_step MMU MMU_Setup
+  inference_rules switching_lemma_helper priv_constraints_lr
+  priv_constraints_spsr
+Libs
+  proofManagerLib tacticsLib ARM_prover_extLib
 
 (*********************************************************************************)
 (*         checking bisimulation for take exceptions in privileged mode          *)
 (*                    Narges                                                     *)
 (*********************************************************************************)
-
-val _ =  new_theory("priv_constraints_bisim");
 
 val let_ss = simpLib.mk_simpset [boolSimps.LET_ss] ;
 val _ = diminish_srw_ss ["one"]
@@ -67,28 +67,28 @@ val prove_abs_spsr_const_action =
     end
 
 
-val untouched_spsr_abs_def =
-    Define `untouched_spsr_abs f (mode:bool[5]) =
+Definition untouched_spsr_abs_def:
+     untouched_spsr_abs f (mode:bool[5]) =
            !s a c s'. (f a s = ValueState c s') ==>
                 let spsr = get_spsr_by_mode mode
                  in
                     ((s'.psrs (0,spsr))=(s.psrs (0,spsr)))
                     /\
                     ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)
-                           `;
+End
 
-val untouched_spsr_def =
-    Define `untouched_spsr f (mode:bool[5]) =
+Definition untouched_spsr_def:
+     untouched_spsr f (mode:bool[5]) =
            !s c s'. (f s = ValueState c s') ==>
            let spsr = get_spsr_by_mode mode
            in (*(spsr<>CPSR) ==>*)
                     ((s'.psrs (0,spsr))=(s.psrs (0,spsr)))
                     /\
                     ((s'.psrs (0,CPSR)).M=(s.psrs (0,CPSR)).M)
-                           `;
+End
 
-val priv_spsr_constraints_def =
-    Define `priv_spsr_constraints f cpsr mode =
+Definition priv_spsr_constraints_def:
+     priv_spsr_constraints f cpsr mode =
             ! s s' a . (f s = ValueState a s') ==>
                 (~access_violation s') ==>
                 ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -96,11 +96,12 @@ val priv_spsr_constraints_def =
             in (*(spsr<>CPSR) ==>*)
                            ((s'.psrs(0,spsr)) = cpsr )
 
-              )`;
+              )
+End
 
 
-val priv_spsr_constraints_abs_def =
-    Define `priv_spsr_constraints_abs f cpsr mode =
+Definition priv_spsr_constraints_abs_def:
+     priv_spsr_constraints_abs f cpsr mode =
             ! s s' a c . (f c s = ValueState a s') ==>
                 (~access_violation s') ==>
                 ((s'.psrs(0,CPSR)).M = mode) ==>
@@ -108,14 +109,15 @@ val priv_spsr_constraints_abs_def =
             in (*(spsr<>CPSR) ==>*)
                            ((s'.psrs(0,spsr)) = cpsr )
 
-              )`;
+              )
+End
 
 (*********************   proof rules *******************************)
 
-val seqT_priv_spsr_constraints_before_thm =
-    store_thm("seqT_priv_spsr_constraints_before_thm",
-              `` ! g f cpsr spsr. priv_spsr_constraints_abs f cpsr spsr ==>
-             priv_spsr_constraints (g >>= f) cpsr spsr ``,
+Theorem seqT_priv_spsr_constraints_before_thm:
+                 ! g f cpsr spsr. priv_spsr_constraints_abs f cpsr spsr ==>
+             priv_spsr_constraints (g >>= f) cpsr spsr
+Proof
               (RW_TAC (srw_ss()) [seqT_def,
                                   priv_spsr_constraints_def,
                                   priv_spsr_constraints_abs_def])
@@ -138,12 +140,12 @@ val seqT_priv_spsr_constraints_before_thm =
                   THEN FULL_SIMP_TAC (srw_ss()) []
                   THEN RES_TAC
                   THEN FULL_SIMP_TAC (srw_ss()) [seqT_def]
-             );
+QED
 
-val parT_priv_spsr_constraints_before_thm =
-    store_thm("parT_priv_spsr_constraints_before_thm",
-              `` !f g cpsr spsr . priv_spsr_constraints f cpsr spsr ==>
-             priv_spsr_constraints (g ||| f) cpsr spsr ``,
+Theorem parT_priv_spsr_constraints_before_thm:
+                 !f g cpsr spsr . priv_spsr_constraints f cpsr spsr ==>
+             priv_spsr_constraints (g ||| f) cpsr spsr
+Proof
               RW_TAC (srw_ss())
                       [parT_def,seqT_def,
                        priv_spsr_constraints_def,
@@ -171,14 +173,15 @@ val parT_priv_spsr_constraints_before_thm =
                                                    THEN RW_TAC (srw_ss()) [] ,
                                      (UNDISCH_ALL_TAC
                                           THEN  RW_TAC (srw_ss()) []
-                                          THEN FULL_SIMP_TAC (srw_ss()) [])]);
+                                          THEN FULL_SIMP_TAC (srw_ss()) [])]
+QED
 
-val seqT_priv_spsr_constraints_after_thm =
-    store_thm("seqT_priv_spsr_constraints_after_thm",
-              `` !f g cpsr mode.
+Theorem seqT_priv_spsr_constraints_after_thm:
+                 !f g cpsr mode.
              priv_spsr_constraints g cpsr mode ==>
              (untouched_spsr_abs f mode) ==>
-             priv_spsr_constraints (g >>= f) cpsr mode``,
+             priv_spsr_constraints (g >>= f) cpsr mode
+Proof
               (RW_TAC (srw_ss()) [seqT_def,
                                   priv_spsr_constraints_def,
                                   priv_spsr_constraints_abs_def,
@@ -202,13 +205,14 @@ val seqT_priv_spsr_constraints_after_thm =
                         THEN UNDISCH_ALL_TAC
                         THEN RW_TAC (srw_ss()) []
                         THEN FULL_SIMP_TAC (srw_ss()) []
-                        THEN FULL_SIMP_TAC (srw_ss()) []);
+                        THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val parT_priv_spsr_constraints_after_thm =
-    store_thm("parT_priv_spsr_constraints_after_thm",
-`` !f g cpsr spsr. priv_spsr_constraints g cpsr spsr ==>
+Theorem parT_priv_spsr_constraints_after_thm:
+   !f g cpsr spsr. priv_spsr_constraints g cpsr spsr ==>
              (untouched_spsr f spsr) ==>
-             priv_spsr_constraints (g ||| f) cpsr spsr``,
+             priv_spsr_constraints (g ||| f) cpsr spsr
+Proof
               (RW_TAC (srw_ss())
                       [parT_def,seqT_def,
                        priv_spsr_constraints_def,
@@ -230,15 +234,15 @@ val parT_priv_spsr_constraints_after_thm =
                   THEN UNDISCH_ALL_TAC
                   THEN  RW_TAC (srw_ss()) []
                   THEN  FULL_SIMP_TAC (srw_ss()) []
-                );
+QED
 
 
-val seqT_trans_untouched_thm =
-    store_thm("seqT_trans_untouched_thm",
-              `` !f g mode.
+Theorem seqT_trans_untouched_thm:
+                 !f g mode.
              (untouched_spsr f mode) ==>
              (untouched_spsr_abs g mode) ==>
-             (untouched_spsr (f>>=g) mode)``,
+             (untouched_spsr (f>>=g) mode)
+Proof
               (RW_TAC (srw_ss()) [seqT_def,untouched_spsr_abs_def,
                                   untouched_spsr_def])
 THEN Cases_on `f s`
@@ -256,14 +260,15 @@ THEN Cases_on `f s`
                                          ``c:'b``,``s':arm_state``] thm))
                   THEN RES_TAC
                   THEN FULL_SIMP_TAC (srw_ss()) []
-                  THEN RW_TAC (srw_ss()) []);
+                  THEN RW_TAC (srw_ss()) []
+QED
 
-val parT_trans_untouched_thm =
-    store_thm("parT_trans_untouched_thm",
-              `` !f g spsr.
+Theorem parT_trans_untouched_thm:
+                 !f g spsr.
              (untouched_spsr f spsr) ==>
              (untouched_spsr g spsr) ==>
-             (untouched_spsr (f ||| g) spsr)``,
+             (untouched_spsr (f ||| g) spsr)
+Proof
               (RW_TAC (srw_ss()) [seqT_def,parT_def,constT_def,
                                   untouched_spsr_def])
                   THEN Cases_on `f s`
@@ -281,37 +286,40 @@ val parT_trans_untouched_thm =
                   THEN RES_TAC
                   THEN FULL_SIMP_TAC (srw_ss()) []
                   THEN RW_TAC (srw_ss()) []
-                  );
+QED
 
-val spfc_first_abs_lemma =
-    store_thm ("spfc_first_abs_lemma",
-               ``!f g x y. (f=g) ==> ((priv_spsr_constraints f x y) =
-                                    (priv_spsr_constraints g x y))``,
-               RW_TAC (srw_ss()) []);
+Theorem spfc_first_abs_lemma:
+                 !f g x y. (f=g) ==> ((priv_spsr_constraints f x y) =
+                                    (priv_spsr_constraints g x y))
+Proof
+               RW_TAC (srw_ss()) []
+QED
 
 
-val spfc_second_abs_lemma =
-    store_thm ("spfc_second_abs_lemma",
-               ``! f x z. (! y. priv_spsr_constraints (f y) x z) =
-    priv_spsr_constraints_abs f x z``,
+Theorem spfc_second_abs_lemma:
+                 ! f x z. (! y. priv_spsr_constraints (f y) x z) =
+    priv_spsr_constraints_abs f x z
+Proof
                RW_TAC (srw_ss()) [priv_spsr_constraints_def,priv_spsr_constraints_abs_def]
-                      THEN METIS_TAC []);
+                      THEN METIS_TAC []
+QED
 
 
 (********************* end of proof rules *******************************)
 (******************* basic lemmas **************************************)
 
-val read_cpsr_fixed_lem =
-    store_thm("read_cpsr_fixed_lem",
-``!s. read_cpsr <|proc := 0|> s = ValueState (s.psrs (0,CPSR)) s``,
+Theorem read_cpsr_fixed_lem:
+  !s. read_cpsr <|proc := 0|> s = ValueState (s.psrs (0,CPSR)) s
+Proof
               EVAL_TAC
-                  THEN RW_TAC (srw_ss()) []);
+                  THEN RW_TAC (srw_ss()) []
+QED
 
 (* if possible, try to optimize it *)
-val write_spsr_sfc_thm =
-    store_thm("write_spsr_sfc_thm",
-              ``! cpsr mode. priv_spsr_constraints (write_spsr <|proc := 0|> cpsr)
-             cpsr mode ``,
+Theorem write_spsr_sfc_thm:
+                ! cpsr mode. priv_spsr_constraints (write_spsr <|proc := 0|> cpsr)
+             cpsr mode
+Proof
 
               RW_TAC (bool_ss) [write_spsr_def,seqT_def,priv_spsr_constraints_def]
                      THEN Cases_on `read_cpsr <|proc := 0|> s`
@@ -350,80 +358,86 @@ val write_spsr_sfc_thm =
                                                                                THEN RW_TAC (srw_ss()) [] THEN
                                                                                FULL_SIMP_TAC (srw_ss()) []]],
                                       FULL_SIMP_TAC (srw_ss()) []]],
-              FULL_SIMP_TAC (srw_ss()) []]);
+              FULL_SIMP_TAC (srw_ss()) []]
+QED
 
 
-val write_lr_reg_sfc_ut_thm =
-    store_thm("write_lr_reg_sfc_ut_thm",
-              ``! value mode.
-             (untouched_spsr (write_reg <|proc:=0|> 14w value) mode)``,
+Theorem write_lr_reg_sfc_ut_thm:
+                ! value mode.
+             (untouched_spsr (write_reg <|proc:=0|> 14w value) mode)
+Proof
               EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
                   THEN UNDISCH_ALL_TAC
                   THEN EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
-                  THEN FULL_SIMP_TAC (srw_ss()) []);
+                  THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val read_cpsr_sfc_ut_thm =
-    store_thm("read_cpsr_sfc_ut_thm",
-              `` !mode.
-             (untouched_spsr (read_cpsr <|proc:=0|> ) mode )``,
+Theorem read_cpsr_sfc_ut_thm:
+                 !mode.
+             (untouched_spsr (read_cpsr <|proc:=0|> ) mode )
+Proof
               EVAL_TAC
-                  THEN RW_TAC (srw_ss()) [] );
+                  THEN RW_TAC (srw_ss()) []
+QED
 
-val branch_to_sfc_ut_thm =
-    store_thm("branch_to_sfc_ut_thm",
-              ``!adr mode. untouched_spsr (
-    branch_to <|proc:=0|> adr) mode``,
+Theorem branch_to_sfc_ut_thm:
+                !adr mode. untouched_spsr (
+    branch_to <|proc:=0|> adr) mode
+Proof
               EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
                   THEN UNDISCH_ALL_TAC
                   THEN EVAL_TAC
                   THEN RW_TAC (srw_ss()) []
-                  THEN FULL_SIMP_TAC (srw_ss()) []);
+                  THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val constT_sfc_ut_thm =
-    store_thm("constT_sfc_ut_thm",
-              ``! mode. untouched_spsr_abs (λ(u1:unit,u2:unit,u3:unit,u4:unit).
-                                             constT ()) mode``,
+Theorem constT_sfc_ut_thm:
+                ! mode. untouched_spsr_abs (λ(u1:unit,u2:unit,u3:unit,u4:unit).
+                                             constT ()) mode
+Proof
               EVAL_TAC
-                  THEN RW_TAC (srw_ss()) [] );
+                  THEN RW_TAC (srw_ss()) []
+QED
 
-val ui_write_cpsr_spsr_ut_thm =
-    store_thm("ui_write_cpsr_spsr_ut_thm",
-``untouched_spsr (
+Theorem ui_write_cpsr_spsr_ut_thm:
+  untouched_spsr (
            read_cpsr <|proc:=0|> >>=
                 (λcpsr.
                 write_cpsr <|proc:=0|>
                  (cpsr with
                   <|I := T; IT := 0w; J := F; T := sctlr.TE;
-                    E := sctlr.EE|>))) 27w``,
+                    E := sctlr.EE|>))) 27w
+Proof
 EVAL_TAC
 THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
 THEN RW_TAC (srw_ss()) []
-THEN FULL_SIMP_TAC (srw_ss()) []);
+THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val svc_write_cpsr_spsr_ut_thm =
-    store_thm("svc_write_cpsr_spsr_ut_thm",
-``untouched_spsr (
+Theorem svc_write_cpsr_spsr_ut_thm:
+  untouched_spsr (
            read_cpsr <|proc:=0|> >>=
                 (λcpsr.
                 write_cpsr <|proc:=0|>
                  (cpsr with
                   <|I := T; IT := 0w; J := F; T := sctlr.TE;
-                    E := sctlr.EE|>))) 19w``,
+                    E := sctlr.EE|>))) 19w
+Proof
 EVAL_TAC
 THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
 THEN RW_TAC (srw_ss()) []
-THEN FULL_SIMP_TAC (srw_ss()) []);
+THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val irq_write_cpsr_spsr_ut_thm =
-    store_thm("irq_write_cpsr_spsr_ut_thm",
-``untouched_spsr (
+Theorem irq_write_cpsr_spsr_ut_thm:
+  untouched_spsr (
            read_cpsr <|proc:=0|> >>=
               (λcpsr.
                      write_cpsr <|proc:=0|>
@@ -432,18 +446,19 @@ val irq_write_cpsr_spsr_ut_thm =
                           A :=
                             ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
-                          E := sctlr.EE|>))) 18w``,
+                          E := sctlr.EE|>))) 18w
+Proof
 EVAL_TAC
 THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
 THEN RW_TAC (srw_ss()) []
-THEN FULL_SIMP_TAC (srw_ss()) []);
+THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 
-val ab_write_cpsr_spsr_ut_thm =
-    store_thm("ab_write_cpsr_spsr_ut_thm",
-``untouched_spsr (
+Theorem ab_write_cpsr_spsr_ut_thm:
+  untouched_spsr (
            read_cpsr <|proc:=0|> >>=
                   (λcpsr.
                      write_cpsr <|proc:=0|>
@@ -452,18 +467,19 @@ val ab_write_cpsr_spsr_ut_thm =
                           A :=
                             ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
-                          E := sctlr.EE|>))) 23w``,
+                          E := sctlr.EE|>))) 23w
+Proof
 EVAL_TAC
 THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
 THEN RW_TAC (srw_ss()) []
-THEN FULL_SIMP_TAC (srw_ss()) []);
+THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 
-val fiq_write_cpsr_spsr_ut_thm =
-    store_thm("fiq_write_cpsr_spsr_ut_thm",
-``untouched_spsr (
+Theorem fiq_write_cpsr_spsr_ut_thm:
+  untouched_spsr (
            read_cpsr <|proc:=0|> >>=
                  (λcpsr.
                      write_cpsr <|proc:=0|>
@@ -475,14 +491,16 @@ val fiq_write_cpsr_spsr_ut_thm =
                           A :=
                             ((¬have_security_exta ∨ ¬scr.NS ∨ scr.AW) ∨
                              cpsr.A); IT := 0w; J := F; T := sctlr.TE;
-                          E := sctlr.EE|>))) 17w``,
+                          E := sctlr.EE|>))) 17w
+Proof
 
 EVAL_TAC
 THEN RW_TAC (srw_ss()) []
 THEN UNDISCH_ALL_TAC
 THEN EVAL_TAC
 THEN RW_TAC (srw_ss()) []
-THEN FULL_SIMP_TAC (srw_ss()) []);
+THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
 
 fun get_take_undef_writing_part_spsr_thm a' wr_sfc_ut_thm lr vt_index mode =
@@ -625,13 +643,14 @@ val take_svc_writing_part_spf_thm =
 );
 
 
-val satisfy_SPSR_constraints_def =
-    Define ` satisfy_SPSR_constraints f m =
+Definition satisfy_SPSR_constraints_def:
+      satisfy_SPSR_constraints f m =
                 ! s s' a.
                   (f s = ValueState a s') ==>
                  (~access_violation s') ==>
                  ((s'.psrs(0,CPSR)).M = m) ==>
-                 ((s'.psrs (0,get_spsr_by_mode(m))) = (s.psrs(0,CPSR)))`;
+                 ((s'.psrs (0,get_spsr_by_mode(m))) = (s.psrs(0,CPSR)))
+End
 
 
 fun prove_take_exception_spsr_constraints te te_def fixed_cpsr_thm fixed_cpsr_thm2
@@ -726,10 +745,10 @@ val take_svc_exception_spsr_thm =
                                           ltype
     end);
 
-val take_undef_instr_exception_spsr_thm =
-    store_thm ("take_undef_instr_exception_spsr_thm",
-      `` satisfy_SPSR_constraints
-              (take_undef_instr_exception <|proc:=0|>)  27w``,
+Theorem take_undef_instr_exception_spsr_thm:
+         satisfy_SPSR_constraints
+              (take_undef_instr_exception <|proc:=0|>)  27w
+Proof
     let
         val athm = SIMP_CONV (bool_ss) [take_undef_instr_exception_def]
                           ``take_undef_instr_exception <|proc:=0|> ``
@@ -749,13 +768,14 @@ val take_undef_instr_exception_spsr_thm =
  prove_take_exception_spsr_constraints te te_def fixed_cpsr_thm fixed_cpsr_thm2
                                           wp_thm const_comp_rp_thm sl_elm2 spec_lists
                                           ltype
-    end);
+    end
+QED
 
 
-val take_data_abort_exception_spsr_thm =
-    store_thm ("take_data_abort_exception_spsr_thm",
-      `` satisfy_SPSR_constraints
-              (take_data_abort_exception <|proc:=0|>)  23w``,
+Theorem take_data_abort_exception_spsr_thm:
+         satisfy_SPSR_constraints
+              (take_data_abort_exception <|proc:=0|>)  23w
+Proof
     let
         val athm = SIMP_CONV (bool_ss) [take_data_abort_exception_def]
                           ``take_data_abort_exception <|proc:=0|> ``
@@ -775,13 +795,14 @@ val take_data_abort_exception_spsr_thm =
  prove_take_exception_spsr_constraints te te_def fixed_cpsr_thm fixed_cpsr_thm2
                                           wp_thm const_comp_rp_thm sl_elm2 spec_lists
                                           ltype
-    end);
+    end
+QED
 
 
-val take_prefetch_abort_exception_spsr_thm =
-    store_thm ("take_prefetch_abort_exception_spsr_thm",
-      `` satisfy_SPSR_constraints
-              (take_prefetch_abort_exception <|proc:=0|>)  23w``,
+Theorem take_prefetch_abort_exception_spsr_thm:
+         satisfy_SPSR_constraints
+              (take_prefetch_abort_exception <|proc:=0|>)  23w
+Proof
     let
         val athm = SIMP_CONV (bool_ss) [take_prefetch_abort_exception_def]
                           ``take_prefetch_abort_exception <|proc:=0|> ``
@@ -801,13 +822,14 @@ val take_prefetch_abort_exception_spsr_thm =
  prove_take_exception_spsr_constraints te te_def fixed_cpsr_thm fixed_cpsr_thm2
                                           wp_thm const_comp_rp_thm sl_elm2 spec_lists
                                           ltype
-    end);
+    end
+QED
 
 
-val take_irq_exception_spsr_thm =
-    store_thm ("take_irq_exception_spsr_thm",
-      `` satisfy_SPSR_constraints
-              (take_irq_exception <|proc:=0|>)  18w``,
+Theorem take_irq_exception_spsr_thm:
+         satisfy_SPSR_constraints
+              (take_irq_exception <|proc:=0|>)  18w
+Proof
     let
         val athm = SIMP_CONV (bool_ss) [take_irq_exception_def]
                           ``take_irq_exception <|proc:=0|> ``
@@ -827,12 +849,13 @@ val take_irq_exception_spsr_thm =
  prove_take_exception_spsr_constraints te te_def fixed_cpsr_thm fixed_cpsr_thm2
                                           wp_thm const_comp_rp_thm sl_elm2 spec_lists
                                           ltype
-    end);
+    end
+QED
 
 
 
-val preserve_priv_bisimilarity_def =
-Define `preserve_priv_bisimilarity f m =
+Definition preserve_priv_bisimilarity_def:
+ preserve_priv_bisimilarity f m =
            ! s1 s1' a1 s2 s2' a2 g.
              (f s1 = ValueState a1 s1') ==>
              (f s2 = ValueState a2 s2') ==>
@@ -843,7 +866,8 @@ Define `preserve_priv_bisimilarity f m =
              ((s1'.psrs(0,CPSR)) = (s2'.psrs(0,CPSR))) ==>
              ((s1'.psrs(0,CPSR)).M = m) ==>
              ((s2'.psrs(0,CPSR)).M = m) ==>
-             (priv_mode_similar  (g:bool[32]) s2' s1')`;
+             (priv_mode_similar  (g:bool[32]) s2' s1')
+End
 
 
 (*
@@ -857,15 +881,14 @@ val LR_SPSR_equality_implies_priv_bisimilarity_thm =
              preserve_priv_bisimilarity f m
            ``);
 *)
-val LR_SPSR_equality_implies_priv_bisimilarity_thm =
-    store_thm ("LR_SPSR_equality_implies_priv_bisimilarity_thm",
- ``! f m v.
+Theorem LR_SPSR_equality_implies_priv_bisimilarity_thm:
+   ! f m v.
               satisfy_SPSR_constraints f m
               ==>
               satisfy_LR_constraints f m v
               ==>
              preserve_priv_bisimilarity f m
-           ``,
+Proof
                RW_TAC (srw_ss()) [satisfy_SPSR_constraints_def,
                                   satisfy_LR_constraints_def,
                                   preserve_priv_bisimilarity_def,
@@ -874,40 +897,41 @@ val LR_SPSR_equality_implies_priv_bisimilarity_thm =
                     THEN UNABBREV_ALL_TAC
                     THEN NTAC 2 ( RES_TAC
                    THEN FULL_SIMP_TAC (srw_ss()) [get_pc_value_def]
-                   THEN RW_TAC (srw_ss()) []));
+                   THEN RW_TAC (srw_ss()) [])
+QED
 
-val take_undef_instr_exception_priv_mode_similar_thm =
-    store_thm ("take_undef_instr_exception_priv_mode_similar_thm",
-``preserve_priv_bisimilarity (take_undef_instr_exception <|proc:=0|>) 27w``
-             ,
+Theorem take_undef_instr_exception_priv_mode_similar_thm:
+  preserve_priv_bisimilarity (take_undef_instr_exception <|proc:=0|>) 27w
+Proof
              MP_TAC (SPEC ``27w:bool[5]`` take_undef_instr_exception_LR_thm)
                     THEN MP_TAC take_undef_instr_exception_spsr_thm
-                    THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm] );
+                    THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm]
+QED
 
 
-val take_data_abort_exception_priv_mode_similar_thm =
-    store_thm ("take_data_abort_exception_priv_mode_similar_thm",
-``preserve_priv_bisimilarity (take_data_abort_exception <|proc:=0|>) 23w``
-             ,
+Theorem take_data_abort_exception_priv_mode_similar_thm:
+  preserve_priv_bisimilarity (take_data_abort_exception <|proc:=0|>) 23w
+Proof
              MP_TAC (SPEC ``23w:bool[5]`` take_data_abort_exception_LR_thm)
                     THEN MP_TAC take_data_abort_exception_spsr_thm
-                    THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm] );
+                    THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm]
+QED
 
-val take_prefetch_abort_exception_priv_mode_similar_thm =
-    store_thm ("take_prefetch_abort_exception_priv_mode_similar_thm",
-``preserve_priv_bisimilarity (take_prefetch_abort_exception <|proc:=0|>) 23w``
-             ,
+Theorem take_prefetch_abort_exception_priv_mode_similar_thm:
+  preserve_priv_bisimilarity (take_prefetch_abort_exception <|proc:=0|>) 23w
+Proof
              MP_TAC (SPEC ``23w:bool[5]`` take_prefetch_abort_exception_LR_thm)
                     THEN MP_TAC take_prefetch_abort_exception_spsr_thm
-                    THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm] );
+                    THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm]
+QED
 
-val take_irq_exception_priv_mode_similar_thm =
-    store_thm ("take_irq_exception_priv_mode_similar_thm",
-``preserve_priv_bisimilarity (take_irq_exception <|proc:=0|>) 18w``
-             ,
+Theorem take_irq_exception_priv_mode_similar_thm:
+  preserve_priv_bisimilarity (take_irq_exception <|proc:=0|>) 18w
+Proof
              MP_TAC (SPEC ``18w:bool[5]`` take_irq_exception_LR_thm)
                     THEN MP_TAC take_irq_exception_spsr_thm
-                    THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm] );
+                    THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm]
+QED
 
 val take_svc_exception_priv_mode_similar_thm =
     store_thm ("take_svc_exception_priv_mode_similar_thm",
@@ -925,4 +949,3 @@ val take_svc_exception_priv_mode_similar_thm =
                     THEN METIS_TAC [LR_SPSR_equality_implies_priv_bisimilarity_thm] );
 
 
-val _ = export_theory();

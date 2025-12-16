@@ -18,7 +18,7 @@
 
 structure Sub_and_cond :> Sub_and_cond =
 struct
-  open Arbint HolKernel Parse boolLib RJBConv Thm_convs
+  open Arbint HolKernel Parse boolLib Thm_convs
 
 val COND_ABS       = boolTheory.COND_ABS;
 val TOP_DEPTH_CONV = Conv.TOP_DEPTH_CONV;
@@ -34,13 +34,13 @@ fun COND_ABS_CONV tm =
  (let val (v,bdy) = dest_abs tm
       val (cond,x,y) = dest_cond bdy
       val _ = assert (not o equal Type.bool o type_of) x
-      val b = assert (not o Lib.op_mem aconv v o free_vars) cond
+      val b = assert (not o var_occurs v) cond
       val xf = mk_abs(v,x)
       and yf = mk_abs(v,y)
       val th1 = INST_TYPE [alpha |-> type_of v, beta |-> type_of x] COND_ABS
       val th2 = SPECL [b,xf,yf] th1
   in  CONV_RULE (RATOR_CONV (RAND_CONV (ABS_CONV
-         (RATOR_CONV (RAND_CONV BETA_CONV) THENC RAND_CONV BETA_CONV) THENC
+         (BINOP_CONV BETA_CONV) THENC
          ALPHA_CONV v))) th2
   end
  ) handle (HOL_ERR _) => failwith "COND_ABS_CONV";
@@ -112,10 +112,20 @@ fun SUBEQC_CONV t =
     else NO_CONV
   end t
 
-
+local open arithmeticTheory
+val GREATER_CONV = REWR_CONV GREATER_DEF
+val GREATER_EQ_CONV = REWR_CONV GREATER_EQ
+val LESS_EQ_CONV1 = FIRST_CONV [REWR_CONV SUB_RIGHT_LESS_EQ,
+                            REWR_CONV SUB_LEFT_LESS_EQ', ALL_CONV]
+val LESS_EQ_CONV2 = TRY_CONV (REWR_CONV SUB_RIGHT_LESS_EQ)
+val LESS_CONV1 = FIRST_CONV [REWR_CONV SUB_LEFT_LESS,
+                            REWR_CONV SUB_RIGHT_LESS, ALL_CONV]
+val LESS_CONV2 = TRY_CONV (REWR_CONV SUB_LEFT_LESS)
+val EQ_CONV = FIRST_CONV [REWR_CONV SUB_LEFT_EQ0, REWR_CONV SUB_RIGHT_EQ0,
+                    SUBEQC_CONV, ALL_CONV]
+in
 fun SUB_NORM_CONV' topp t =
   let
-    open arithmeticTheory
     val (f, args) = strip_comb t
   in
     case (termsig f, length args) of
@@ -124,30 +134,28 @@ fun SUB_NORM_CONV' topp t =
       | (SOME("bool", "~"), 1) => RAND_CONV (SUB_NORM_CONV' (pneg topp))
       | (SOME("min", "==>"), 2) =>
         FORK_CONV (SUB_NORM_CONV' (pneg topp), SUB_NORM_CONV' topp)
-      | (SOME("bool", "!"), 1) => RAND_CONV (ABS_CONV (SUB_NORM_CONV' topp))
-      | (SOME("bool", "?"), 1) => RAND_CONV (ABS_CONV (SUB_NORM_CONV' topp))
+      | (SOME("bool", "!"), 1) => QUANT_CONV (SUB_NORM_CONV' topp)
+      | (SOME("bool", "?"), 1) => QUANT_CONV (SUB_NORM_CONV' topp)
       | (SOME("bool", "COND"), 3) =>
          BINOP_CONV (SUB_NORM_CONV' topp) THENC
          RATOR_CONV (RATOR_CONV (RAND_CONV (SUB_NORM_CONV' Both)))
       | (SOME("arithmetic", ">"), 2) =>
-          REWR_CONV GREATER_DEF THENC SUB_NORM_CONV' topp
+          GREATER_CONV THENC SUB_NORM_CONV' topp
       | (SOME("arithmetic", ">="), 2) =>
-          REWR_CONV GREATER_EQ THENC SUB_NORM_CONV' topp
+          GREATER_EQ_CONV THENC SUB_NORM_CONV' topp
       | (SOME("arithmetic", "<="), 2) =>
         (case topp of
-             Positive => FIRST_CONV [REWR_CONV SUB_RIGHT_LESS_EQ,
-                                     REWR_CONV SUB_LEFT_LESS_EQ', ALL_CONV]
-           | _ => TRY_CONV (REWR_CONV SUB_RIGHT_LESS_EQ))
+             Positive => LESS_EQ_CONV1
+           | _ => LESS_EQ_CONV2)
       | (SOME("prim_rec", "<"), 2) =>
         (case topp of
-             Negative => FIRST_CONV [REWR_CONV SUB_LEFT_LESS,
-                                     REWR_CONV SUB_RIGHT_LESS, ALL_CONV]
-           | _ => TRY_CONV (REWR_CONV SUB_LEFT_LESS))
+             Negative => LESS_CONV1
+           | _ => LESS_CONV2)
       | (SOME("min", "="), 2) =>
-        FIRST_CONV [REWR_CONV SUB_LEFT_EQ0, REWR_CONV SUB_RIGHT_EQ0,
-                    SUBEQC_CONV, ALL_CONV]
+          EQ_CONV
       | _ => ALL_CONV
   end t
+end
 
 val TRY_SUB_NORM = let
   open arithmeticTheory
@@ -157,23 +165,25 @@ in
   SUB_NORM_CONV' Positive
 end
 
+local
+val posc = REWR_CONV arithmeticTheory.SUB_ELIM_THM THENC
+           QUANT_CONV (BINOP_CONV (RAND_CONV BETA_CONV))
+val negc = REWR_CONV arithmeticTheory.SUB_ELIM_THM_EXISTS THENC
+           BINOP_CONV (QUANT_CONV (RAND_CONV BETA_CONV))
+val simplify = PURE_REWRITE_CONV [arithmeticTheory.ADD_CLAUSES,
+                arithmeticTheory.SUB_EQUAL_0,arithmeticTheory.SUB_0]
+in
 fun find_elim sense p t m = let
-  val posc = REWR_CONV arithmeticTheory.SUB_ELIM_THM THENC
-             BINDER_CONV (BINOP_CONV (RAND_CONV BETA_CONV))
-  val negc = REWR_CONV arithmeticTheory.SUB_ELIM_THM_EXISTS THENC
-             BINOP_CONV (BINDER_CONV (RAND_CONV BETA_CONV))
   fun doit t =
     if numSyntax.is_minus t then
       UNBETA_CONV t THENC (if sense then posc else negc) THENC
-      PURE_REWRITE_CONV [arithmeticTheory.ADD_CLAUSES,
-                         arithmeticTheory.SUB_EQUAL_0,
-                         arithmeticTheory.SUB_0]
+      simplify
     else NO_CONV
 in
   if is_exists t then
-    p (BINDER_CONV (find_elim false I (#2 (dest_exists t))))
+    p (QUANT_CONV (find_elim false I (#2 (dest_exists t))))
   else if is_forall t then
-    p (BINDER_CONV (find_elim true I (#2 (dest_forall t))))
+    p (QUANT_CONV (find_elim true I (#2 (dest_forall t))))
   else
     let
       val (f,x) = dest_comb t
@@ -182,6 +192,7 @@ in
       find_elim sense (p o RAND_CONV) x ORELSEC doit t
     end
 end m
+end
 
 fun ELIM_SUB1 t = find_elim true I t t
 
@@ -221,7 +232,11 @@ in
               mk_conj(mk_imp(p,mk_comb(P,T)), mk_imp(mk_neg p,mk_comb(P,F)))),
         ASM_CASES_TAC p THEN ASM_REWRITE_TAC[])
 end
-
+local
+val simplify = REWR_CONV CASES_ELIM THENC
+               BINOP_CONV (RAND_CONV BETA_CONV) THENC
+               PURE_REWRITE_CONV [COND_CLAUSES]
+in
 fun find_celim p t m = let
   fun isboolnum ty =
     Type.compare(ty, numSyntax.num) = EQUAL orelse
@@ -229,9 +244,7 @@ fun find_celim p t m = let
   fun doit t =
     if is_cond t andalso isboolnum (type_of t) then
       UNBETA_CONV (t |> rator |> rator |> rand) THENC
-      REWR_CONV CASES_ELIM THENC
-      BINOP_CONV (RAND_CONV BETA_CONV) THENC
-      PURE_REWRITE_CONV [COND_CLAUSES]
+      simplify
     else NO_CONV
 in
   case dest_term t of
@@ -242,6 +255,7 @@ in
                        else NO_CONV
     | _ => NO_CONV
 end m
+end
 
 fun ELIM_COND1 t = find_celim I t t
 

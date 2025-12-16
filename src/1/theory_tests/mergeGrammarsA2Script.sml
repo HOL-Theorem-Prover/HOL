@@ -1,6 +1,6 @@
-open HolKernel Parse boolLib
-
-val _ = new_theory "mergeGrammarsA2";
+Theory mergeGrammarsA2[bare]
+Libs
+  HolKernel Parse boolLib
 
 (* see comment at head of mergeGrammarsA1Script for description of what is
    being tested
@@ -12,4 +12,3 @@ val a_theorem = store_thm(
   REWRITE_TAC[]);
 
 
-val _ = export_theory();

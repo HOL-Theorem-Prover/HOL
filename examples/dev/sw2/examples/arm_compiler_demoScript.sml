@@ -5,15 +5,15 @@
   load_path_add "/tools/mlyacc/mlyacclib";
   app load ["arm_compilerLib", "wordsTheory"]
 *)
+Theory arm_compiler_demo
+Ancestors
+  words
+Libs
+  arm_compilerLib
 
-open HolKernel boolLib bossLib Parse;
-open arm_compilerLib;
-open wordsTheory;
 
 val _ = optimise_code := true;
 val _ = abbrev_code := false;
-
-val _ = new_theory "arm_compiler_demo";
 
 (*
 
@@ -1008,6 +1008,4 @@ the code flattened to one sequence with concrete procedure calls.
 Warning: this function is at present rather slow.
 
 *)
-
-val _ = export_theory();
 
