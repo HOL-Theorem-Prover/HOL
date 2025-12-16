@@ -1,5 +1,17 @@
 structure HOLAst = struct
 
+(* Defines an AST for Standard ML and the HOL-specific extensions such as
+   Definition, Theorem, Inductive, and so on.
+
+   The AST is capable of representing ill-formed files. For example, Lists
+   contain a record that holds `right: int option` and `stop: int`. If the
+   closing bracket is missing, `right` will be `None`, and `stop` will indicate
+   where the parser guesses the list should have ended.
+
+   The basic shape of the AST is based on Sam Westrick's excellent smlfmt, which
+   is released under the MIT license. *)
+
+
 (* (start, content) *)
 type ident = int * string
 
