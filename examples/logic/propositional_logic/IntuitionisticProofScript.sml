@@ -50,23 +50,33 @@ Theorem N_FINITE:
 Proof Induct_on ‘N’ >> rw[]
 QED
 
-val (Nd_rules, Nd_ind, Nd_cases) = Hol_reln ‘
-  (∀ A. Nd {A} A) (* Base case *)
-∧ (∀A B D1 D2. (Nd D1 A) ∧ (Nd D2 B)
-    ==> (Nd (D1 UNION D2) (A ∧ⁱ B))) (* ∧ⁱ Intro *)
-∧ (∀A B D. (Nd D (A ∧ⁱ B)) ==> Nd D A) (* ∧ⁱ Elimination Left Conjunct *)
-∧ (∀A B D. (Nd D (A ∧ⁱ B)) ==> Nd D B) (* ∧ⁱ Elim Right Conjunct *)
-∧ (∀A B D. (Nd D B) ==> Nd (D DELETE A) (A ⇒ⁱ B)) (* ⇒ⁱ Intro *)
-∧ (∀A B D1 D2. (Nd D1 (A ⇒ⁱ B)) ∧ (Nd D2 A)
-    ==> Nd (D1 UNION D2) B) (* ⇒ⁱ Elim *)
-∧ (∀A B D. Nd D A ==> Nd D (A ∨ⁱ B)) (* ∨ⁱ Intro right *)
-∧ (∀A B D. Nd D B ==> Nd D (A ∨ⁱ B)) (* ∨ⁱ Intro left *)
-∧ (∀A B C D D1 D2. (Nd D (A ∨ⁱ B)) ∧ (Nd D1 C) ∧ (Nd D2 C)
-    ==> Nd (D ∪ (D1 DELETE A) ∪ (D2 DELETE B)) C) (* ∨ⁱ Elim *)
-∧ (∀A D. (Nd D ⊥ⁱ) ==> (Nd D A))’; (* Intuitionistic Absurdity Rule *)
-
-val [Nd_ax, Nd_andi, Nd_andel, Nd_ander,
-     Nd_impi, Nd_impe, Nd_orir, Nd_oril, Nd_ore, Nd_bot] = CONJUNCTS Nd_rules;
+(* Natural deduction with a slightly different ∨-elimination rule *)
+Inductive Nd:
+[~ax:]
+  ∀ A. Nd {A} A
+[~andi:]
+  ∀A B D1 D2. Nd D1 A ∧ Nd D2 B
+              ==> Nd (D1 UNION D2) (A ∧ⁱ B)
+[~andel:]
+  ∀A B D. (Nd D (A ∧ⁱ B)) ==> Nd D A
+[~ander:]
+  ∀A B D. (Nd D (A ∧ⁱ B)) ==> Nd D B
+[~impi:]
+  ∀A B D. (Nd D B) ==> Nd (D DELETE A) (A ⇒ⁱ B)
+[~impe:]
+  ∀A B D1 D2. (Nd D1 (A ⇒ⁱ B)) ∧ (Nd D2 A)
+              ==> Nd (D1 UNION D2) B
+[~oril:]
+  ∀A B D. Nd D A ==> Nd D (A ∨ⁱ B)
+[~orir:]
+  ∀A B D. Nd D B ==> Nd D (A ∨ⁱ B)
+[~ore:]
+  ∀A B C D D1 D2.
+    Nd D (A ∨ⁱ B) ∧ Nd D1 C ∧ Nd D2 C
+    ==> Nd (D ∪ (D1 DELETE A) ∪ (D2 DELETE B)) C
+[~bot:]
+  ∀A D. (Nd D ⊥ⁱ) ==> (Nd D A)
+End
 
 Theorem N_lw:
   ∀D A. N D A ==> ∀B. N (B INSERT D) A
@@ -127,6 +137,13 @@ Proof
       rw[] >>
       fs[] >>
       metis_tac[Nd_lw])
+QED
+
+Theorem N_ax':
+  FINITE D ∧ A ∈ D ⇒ N D A
+Proof
+  strip_tac >> irule N_lw_SUBSET >> simp[] >>
+  irule_at Any N_ax >> simp[]
 QED
 
 Theorem N_impi_DELETE:
@@ -194,22 +211,27 @@ Definition NThm:   NThm A = N EMPTY A
 End
 
 (* Example deductions *)
-val N_example = Q.prove(‘NThm (A ⇒ⁱ (B ⇒ⁱ A))’,
-‘N {A} A’ by rw[N_ax] >>
-‘N {B} B’ by rw[N_ax] >>
-‘{A} UNION {B} = {A;B}’ by simp[UNION_DEF,INSERT_DEF] >>
-‘N {A;B} (A ∧ⁱ B)’ by metis_tac[N_andi] >>
-‘N {A;B} (A)’ by metis_tac[N_andel] >>
-‘N {A} (B ⇒ⁱ A)’ by (irule N_impi >> simp[INSERT_COMM]) >>
-‘N {} (A ⇒ⁱ (B ⇒ⁱ A))’ by metis_tac[N_impi] >>
- rw[NThm]);
+Theorem N_example1: NThm (A ⇒ⁱ (B ⇒ⁱ A))
+Proof
+  ‘N {A} A’ by rw[N_ax] >>
+  ‘N {B} B’ by rw[N_ax] >>
+  ‘{A} UNION {B} = {A;B}’ by simp[UNION_DEF,INSERT_DEF] >>
+  ‘N {A;B} (A ∧ⁱ B)’ by metis_tac[N_andi] >>
+  ‘N {A;B} (A)’ by metis_tac[N_andel] >>
+  ‘N {A} (B ⇒ⁱ A)’ by (irule N_impi >> simp[INSERT_COMM]) >>
+  ‘N {} (A ⇒ⁱ (B ⇒ⁱ A))’ by metis_tac[N_impi] >>
+  rw[NThm]
+QED
 
-val N_example = Q.prove(‘NThm (⊥ⁱ ⇒ⁱ A)’,
+Theorem N_example2:
+  NThm (⊥ⁱ ⇒ⁱ A)
+Proof
   ‘N {⊥ⁱ} ⊥ⁱ’ by rw[N_rules] >>
   ‘N {⊥ⁱ} A’ by rw[N_rules] >>
   ‘{} = ({⊥ⁱ} DIFF {⊥ⁱ})’ by rw[DIFF_DEF] >>
   ‘N EMPTY (⊥ⁱ ⇒ⁱ A)’ by metis_tac[N_rules] >>
-  rw[NThm]);
+  rw[NThm]
+QED
 
 
 (* Sequent Calculus (Gentzen System) for intuitionistic logic        *)
@@ -268,27 +290,30 @@ QED
 
 Theorem G_example2: GThm ((A ⇒ⁱ (A ⇒ⁱ B)) ⇒ⁱ (A ⇒ⁱ B))
 Proof
-rw[GThm] >>
-‘G {|(A ⇒ⁱ A ⇒ⁱ B)|} (A ⇒ⁱ B)’ suffices_by metis_tac[G_rules] >>
-‘G {|A;(A ⇒ⁱ A ⇒ⁱ B)|} (B)’ suffices_by metis_tac[G_rules] >>
-‘G {|A|} (A)’ by metis_tac[G_ax,BAG_IN_BAG_INSERT,FINITE_BAG] >>
-‘G {|B;A|} (B)’ by metis_tac[G_ax,BAG_IN_BAG_INSERT,FINITE_BAG] >>
-(* `G {|A;B|} (B)` by simp[G_lw] >> *)
-(* `G {|B;A|} (B)` by simp[BAG_INSERT_commutes] >> *)
-‘G {|(A ⇒ⁱ B);A|} (B)’ by metis_tac[G_rules] >>
-‘G {|(A ⇒ⁱ A ⇒ⁱ B);A|} (B)’ suffices_by metis_tac[BAG_INSERT_commutes] >>
-metis_tac[G_rules]
+  rw[GThm] >>
+  ‘G {|(A ⇒ⁱ A ⇒ⁱ B)|} (A ⇒ⁱ B)’ suffices_by metis_tac[G_rules] >>
+  ‘G {|A;(A ⇒ⁱ A ⇒ⁱ B)|} (B)’ suffices_by metis_tac[G_rules] >>
+  ‘G {|A|} (A)’ by metis_tac[G_ax,BAG_IN_BAG_INSERT,FINITE_BAG] >>
+  ‘G {|B;A|} (B)’ by metis_tac[G_ax,BAG_IN_BAG_INSERT,FINITE_BAG] >>
+  (* `G {|A;B|} (B)` by simp[G_lw] >> *)
+  (* `G {|B;A|} (B)` by simp[BAG_INSERT_commutes] >> *)
+  ‘G {|(A ⇒ⁱ B);A|} (B)’ by metis_tac[G_rules] >>
+  ‘G {|(A ⇒ⁱ A ⇒ⁱ B);A|} (B)’ suffices_by metis_tac[BAG_INSERT_commutes] >>
+  metis_tac[G_rules]
 QED
 
-val G_land_commutes = Q.prove(‘G {| A ∧ⁱ B |} Δ ==> G {| B ∧ⁱ A |} Δ’,
-rw[] >>
-‘G {|B|} B’ by metis_tac[G_ax,BAG_IN_BAG_INSERT,FINITE_BAG] >>
-‘G {|B ∧ⁱ A|} B’ by metis_tac[G_landl] >>
-‘G {|A|} A’ by metis_tac[G_ax,BAG_IN_BAG_INSERT,FINITE_BAG] >>
-‘G {|B ∧ⁱ A|} A’ by metis_tac[G_landr] >>
-‘G {|B ∧ⁱ A|} (A ∧ⁱ B)’ by metis_tac[G_rand] >>
-‘G ({|B ∧ⁱ A|} ⊎ {||}) Δ’ by metis_tac[G_cut] >>
-metis_tac[BAG_UNION_EMPTY]);
+Theorem G_land_commutes:
+  G {| A ∧ⁱ B |} Δ ==> G {| B ∧ⁱ A |} Δ
+Proof
+  rw[] >>
+  ‘G {|B|} B’ by metis_tac[G_ax,BAG_IN_BAG_INSERT,FINITE_BAG] >>
+  ‘G {|B ∧ⁱ A|} B’ by metis_tac[G_landl] >>
+  ‘G {|A|} A’ by metis_tac[G_ax,BAG_IN_BAG_INSERT,FINITE_BAG] >>
+  ‘G {|B ∧ⁱ A|} A’ by metis_tac[G_landr] >>
+  ‘G {|B ∧ⁱ A|} (A ∧ⁱ B)’ by metis_tac[G_rand] >>
+  ‘G ({|B ∧ⁱ A|} ⊎ {||}) Δ’ by metis_tac[G_cut] >>
+  metis_tac[BAG_UNION_EMPTY]
+QED
 
 Theorem G_FINITE:
   ∀Γ A. G Γ A ==> FINITE_BAG Γ
@@ -368,26 +393,29 @@ Proof
   simp[SUB_BAG_INSERT_I]
 QED
 
-val G_lc_AeA =
-    Q.prove(‘∀A e Γ'. G (BAG_INSERT A (BAG_INSERT e (BAG_INSERT A Γ'))) B
-            ==> G (BAG_INSERT e (BAG_INSERT A Γ')) B’,
-            rw[] >>
-            ‘G ({|A;A|} ⊎ ({|e|} ⊎ Γ')) B’
-              by (fs[BAG_UNION_INSERT,ASSOC_BAG_UNION,BAG_INSERT_UNION] >>
-                  simp[COMM_BAG_UNION] >>
-                  fs[EL_BAG,BAG_UNION]) >>
-            ‘G ({|A|} ⊎ ({|e|} ⊎ Γ')) B’
-              by metis_tac[G_lc] >>
-            ‘G (({|A|} ⊎ {|e|}) ⊎ Γ') B’
-              by fs[ASSOC_BAG_UNION] >>
-            ‘G (({|e|} ⊎ {|A|}) ⊎ Γ') B’
-              by fs[COMM_BAG_UNION] >>
-            fs[BAG_INSERT_UNION] >>
-            fs[EL_BAG] >>
-            simp[ASSOC_BAG_UNION]);
+Theorem G_lc_AeA[local]:
+  ∀A e Γ'. G (BAG_INSERT A (BAG_INSERT e (BAG_INSERT A Γ'))) B
+           ==> G (BAG_INSERT e (BAG_INSERT A Γ')) B
+Proof
+  rw[] >>
+  ‘G ({|A;A|} ⊎ ({|e|} ⊎ Γ')) B’
+    by (fs[BAG_UNION_INSERT,ASSOC_BAG_UNION,BAG_INSERT_UNION] >>
+        simp[COMM_BAG_UNION] >>
+        fs[EL_BAG,BAG_UNION]) >>
+  ‘G ({|A|} ⊎ ({|e|} ⊎ Γ')) B’
+    by metis_tac[G_lc] >>
+  ‘G (({|A|} ⊎ {|e|}) ⊎ Γ') B’
+    by fs[ASSOC_BAG_UNION] >>
+  ‘G (({|e|} ⊎ {|A|}) ⊎ Γ') B’
+    by fs[COMM_BAG_UNION] >>
+  fs[BAG_INSERT_UNION] >>
+  fs[EL_BAG] >>
+  simp[ASSOC_BAG_UNION]
+QED
 
-val unibag_AA_A = Q.prove(‘unibag ({|A;A|} ⊎ Γ) = unibag ({|A|} ⊎ Γ)’,
-  simp[unibag_thm]);
+Theorem unibag_AA_A[local]: unibag ({|A;A|} ⊎ Γ) = unibag ({|A|} ⊎ Γ)
+Proof simp[unibag_thm]
+QED
 
 Theorem G_unibag:
   ∀Γ A. G Γ A <=> G (unibag Γ) A
