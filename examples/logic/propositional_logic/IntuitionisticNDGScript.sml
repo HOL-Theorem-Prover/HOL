@@ -5,7 +5,7 @@
 (* Written by Alexander Cox, ANU, u6060697@anu.edu.au                         *)
 (* Supervised by Michael Norrish, ANU; Data61                                 *)
 (* ========================================================================== *)
-Theory IntuitionisticProof
+Theory IntuitionisticNDG
 Ancestors
   bag pred_set ipropSyntax
 
