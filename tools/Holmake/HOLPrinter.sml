@@ -268,6 +268,7 @@ and printDecCore (DecSemi _) pr = token ";" pr
     in delimited (token "functor") args f (token "and") (K ()) pr end
   | printDecCore (DecExp _)           _ = raise Fail "unexpended top-level expression"
   | printDecCore (HOLTheory _)        _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLTheoryEnd _)     _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLDefinition _)    _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLDatatype _)      _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLQuoteDecl _)     _ = raise Fail "unexpanded HOL syntax"

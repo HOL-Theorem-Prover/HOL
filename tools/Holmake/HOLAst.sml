@@ -201,6 +201,7 @@ and dec =
 
 | HOLTheory of {theory_: int, id: ident, attrs: kvals attrs, elems: header list}
   (** Theory foo[attrs] [elems ...] *)
+| HOLTheoryEnd of {theory_: int, stop: int} (** phantom EndTheory at EOF *)
 | HOLDefinition of {
     definition_: int, id: ident, attrs: kvals attrs, colon: int option,
     quote: qdecl list, termination: {termination_: int, tac: exp} option,
@@ -536,6 +537,7 @@ fun decSpan (DecSemi p) = (p, p + 1)
   | decSpan (HOLTheory {theory_, id, attrs, elems}) =
     (theory_, headerStop (List.last elems) handle List.Empty =>
       case attrs of NONE => idStop id | SOME {stop, ...} => stop)
+  | decSpan (HOLTheoryEnd {stop, ...}) = (stop, stop)
   | decSpan (HOLDefinition {definition_, stop, ...}) = (definition_, stop)
   | decSpan (HOLDatatype {datatype_, stop, ...}) = (datatype_, stop)
   | decSpan (HOLQuoteDecl {quote_, stop, ...}) = (quote_, stop)

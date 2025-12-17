@@ -75,6 +75,7 @@ fun run read write = let
     | doDec (DecFunctor {elems, ...}) = app (Option.app (doStrExp o #strexp) o #bind) (#args elems)
     | doDec (DecExp e) = doExp e
     | doDec (HOLTheory _) = ()
+    | doDec (HOLTheoryEnd _) = ()
     | doDec (HOLDefinition {quote, termination, ...}) =
       (app doQDecl quote; Option.app (doExp o #tac) termination)
     | doDec (HOLDatatype {quote, ...}) = app doQDecl quote

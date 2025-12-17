@@ -343,6 +343,10 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       valWild theory_ (App (mkIdent (theory_, "Parse.set_grammar_ancestry"),
         mkList (theory_, rev (!grammar)))) :: acc
     in DecExpansion {orig = dec, result = rev acc} end
+  | expandDec _ (dec as HOLTheoryEnd {theory_, stop}) = let
+    val unit = Unit {left = theory_, right = theory_}
+    val e = App (mkIdent (theory_, "Theory.export_theory"), unit)
+    in DecExpansion {orig = dec, result = [valWild theory_ e]} end
   | expandDec _ (dec as HOLDefinition {
       definition_, id as (_, name), attrs, colon = _, quote, termination, end_ = _, stop}) = let
     val indThm = ref NONE
