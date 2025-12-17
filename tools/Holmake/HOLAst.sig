@@ -122,13 +122,15 @@ datatype exp =
     hash_: int, left: int, file_: int, eq_: int,
     file: int * string option, right: int option, stop: int} (* #(FILE=foo.sml) this is BS *)
 
-| EmptyExp of int
-| BadExp of {start: int, stop: int}
+| ExpExpansion of {orig: exp, result: exp}
+| ExpEmpty of int
+| ExpBad of {start: int, stop: int}
 
 and row =
   DotDotDot of int (** can only appear at end of record pattern *)
 | LabEq of {lab: ident, eq: int, exp: exp}
 | LabAs of {id: ident, ty: {colon: int, ty: ty} option, aspat: {as_: int, exp: exp} option}
+| LabExpansion of {orig: row, result: row}
 
 and dec =
   DecSemi of int (** ; *)
@@ -213,6 +215,8 @@ and dec =
     tac: exp, qed_: int option, stop: int}
   (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
 
+| DecExpansion of {orig: dec, result: dec list}
+
 and funarg =
   ArgIdent of {strid: ident, ty: {colon: int, sigexp: sigexp} option}
 | ArgSpec of dec list
@@ -261,6 +265,8 @@ val mkInt: int * int -> exp
 val mkList: int * exp list -> exp
 val mkTuple: int * exp list -> exp
 
+val idStop: ident -> int
+val idSpan: ident -> int * int
 val tyStart: ty -> int
 val tyStop: ty -> int
 val tySpan: ty -> int * int
@@ -268,8 +274,13 @@ val expStart: exp -> int
 val expStop: exp -> int
 val expSpan: exp -> int * int
 val exbindStop: exbind -> int
+val sigexpStart: sigexp -> int
 val sigexpStop: sigexp -> int
+val sigexpSpan: sigexp -> int * int
+val strexpSpan: strexp -> int * int
 val headerStop: header -> int
+val decStart: dec -> int
+val decStop: dec -> int
 val decSpan: dec -> int * int
 
 val isOnlyComments: substring -> bool

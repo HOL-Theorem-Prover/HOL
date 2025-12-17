@@ -481,11 +481,11 @@ fun parseSML file read parseError: scope -> result = let
               end)
           | s => (
             parseError (kw, !pos) ("unknown pragma '"^s^"'");
-            BadExp {start = start, stop = !pos}))
+            ExpBad {start = start, stop = !pos}))
         | tk => (
           parseError (#1 tk, #1 tk) "expected pragma";
           unread tk;
-          BadExp {start = start, stop = #1 tk})
+          ExpBad {start = start, stop = #1 tk})
         in res end
       | NONE => Select {hash = start, label = parseRecordLabel ()})
     | "let" => let
@@ -521,7 +521,7 @@ fun parseSML file read parseError: scope -> result = let
     | _ => (
       unread (start, IdentTk);
       case parseIdentifierOrEq force of
-        (start, "") => EmptyExp start
+        (start, "") => ExpEmpty start
       | id => Ident {op_ = NONE, id = id}))
   | (start, OpenQuoteTk) => let
     val open_ = ident start
@@ -550,7 +550,7 @@ fun parseSML file read parseError: scope -> result = let
     in r end
   | tk => (
     if force then parseError (#1 tk, #1 tk) "expected an expression" else ();
-    unread tk; EmptyExp (#1 tk))
+    unread tk; ExpEmpty (#1 tk))
 
   and parseExp (sc:scope) pat = parseExp' sc pat true
   and parseExp' (sc:scope) pat force: exp = let
@@ -569,7 +569,7 @@ fun parseSML file read parseError: scope -> result = let
         case peekInfix () of
           (_, SOME _) => lhs
         | (_, NONE) => case parseAtomic sc pat false of
-            EmptyExp _ => lhs
+            ExpEmpty _ => lhs
           | rhs => parseApp (App (lhs, rhs))
       val parseApp = fn force => parseApp (parseAtomic sc pat force)
 
@@ -762,7 +762,7 @@ fun parseSML file read parseError: scope -> result = let
         val acc = push i p acc
         val exp = case identKind (p + 1) of
           (s, Regular) => Ident {op_ = NONE, id = (p+1, s)}
-        | _ => (parseError (p+1, !pos) "expected identifier"; BadExp {start = p+1, stop = !pos})
+        | _ => (parseError (p+1, !pos) "expected identifier"; ExpBad {start = p+1, stop = !pos})
         in go (!pos) (QuoteAntiq {caret_ = p, exp = exp} :: acc) end
       | (p, AntiqParen) => let
         val acc = push i p acc
@@ -1070,7 +1070,7 @@ fun parseSML file read parseError: scope -> result = let
     | tk => (unread tk; NONE)
     in
       case dec of SOME dec => SOME dec | _ =>
-      case parseExp' sc false false of EmptyExp _ => NONE | e => SOME (sc, DecExp e)
+      case parseExp' sc false false of ExpEmpty _ => NONE | e => SOME (sc, DecExp e)
     end
 
   and parseDecs (inSig: bool) sc (acc: dec list): scope * dec list =

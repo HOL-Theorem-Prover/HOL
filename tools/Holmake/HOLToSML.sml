@@ -22,15 +22,17 @@ fun expandRecord f pat {left, elems = {args, delims, stop = stop1}, right, stop}
     | reord (DotDotDot p :: ls) _ acc = reord ls (SOME p) acc
     | reord (LabEq {lab, eq, exp} :: ls) dot acc =
       reord ls dot (LabEq {lab = lab, eq = eq, exp = f exp} :: acc)
-    | reord (LabAs {id, ty, aspat} :: ls) dot acc = let
+    | reord ((lab as LabAs {id, ty, aspat}) :: ls) dot acc = let
       val aspat = Option.map (fn {as_, exp} => {as_ = as_, exp = f exp}) aspat
       fun typed exp NONE = exp
         | typed exp (SOME {colon, ty}) = Typed {exp = exp, colon = colon, ty = ty}
-      val lab = if pat then LabAs {id = id, ty = ty, aspat = aspat} else
-        case aspat of
+      val lab = if pat then LabAs {id = id, ty = ty, aspat = aspat} else let
+        val pat' = case aspat of
           NONE => LabEq {lab = id, eq = #1 id, exp = typed (mkIdent id) ty}
         | SOME {as_, exp} => LabEq {lab = id, eq = as_, exp = typed exp ty}
+        in LabExpansion {orig = lab, result = pat'} end
       in reord ls dot (lab :: acc) end
+    | reord (LabExpansion _ :: _) _ _ = raise Fail "double row expansion"
   val elems = {args = reord args NONE [], delims = delims, stop = stop1}
   in {left = left, elems = elems, right = right, stop = stop} end
 
@@ -46,7 +48,7 @@ val canBindStr = true (* TODO: make false on mosml *)
 
 fun valPat pos pat e = let
   val s = {rec_ = NONE, pat = pat, eq = SOME {eq = pos, exp = e}}
-  in DecVal {val_ = pos, tyvars = Empty, elems = {args = [s], delims = [], stop = pos}} end
+  in DecVal {val_ = pos, tyvars = Empty, elems = {args = [s], delims = [], stop = expStop e}} end
 
 fun valWild pos = valPat pos (Wild pos)
 
@@ -100,6 +102,7 @@ fun mapArms g f1 f2 elems = let
   in arms elems [] end
 
 fun mkFail (p, err) = Raise {raise_ = p, exp = App (mkIdent (p, "Fail"), mkString (p, err))}
+fun mkSemi acc = DecSemi (case acc of [] => 0 | d::_ => decStop d) :: acc
 
 fun withLocalAttrs _ false attrs = attrs
   | withLocalAttrs p true attrs = let
@@ -146,7 +149,7 @@ fun expandExp true (e as Wild _) = e
   | expandExp pat (Sequence {left, elems, right, stop}) =
     Sequence {left = left, elems = mapDelim (expandExp pat) elems, right = right, stop = stop}
   | expandExp _ (LetInEnd {let_, dec, in_, exps, end_, stop}) =
-    LetInEnd {let_ = let_, dec = expandDecs false dec [], in_ = in_,
+    LetInEnd {let_ = let_, dec = map (expandDec false) dec, in_ = in_,
       exps = mapDelim (expandExp false) exps, end_ = end_, stop = stop}
   | expandExp pat (App (e1, e2)) = App (expandExp pat e1, expandExp pat e2)
   | expandExp _ (AndAlso {left, andalso_, right}) =
@@ -157,13 +160,14 @@ fun expandExp true (e as Wild _) = e
     val exp = expandExp false exp
     in Handle {exp = exp, handle_ = handle_, elems = expandArms handle_ elems, stop = stop} end
   | expandExp _ (Raise {raise_, exp}) = Raise {raise_ = raise_, exp = expandExp false exp}
-  | expandExp _ (IfThenElse {if_, exp1, then_, exp2, else_}) = let
+  | expandExp _ (e as IfThenElse {if_, exp1, then_, exp2, else_}) = let
     val exp1 = expandExp false exp1
     val exp2 = expandExp false exp2
-    val else_ = case else_ of
+    val exp3 = case else_ of
       NONE => SOME {else_ = if_, exp3 = Unit {left = if_, right = if_}}
     | SOME {else_, exp3} => SOME {else_ = else_, exp3 = expandExp false exp3}
-    in IfThenElse {if_ = if_, exp1 = exp1, then_ = then_, exp2 = exp2, else_ = else_} end
+    val e' = IfThenElse {if_ = if_, exp1 = exp1, then_ = then_, exp2 = exp2, else_ = exp3}
+    in case else_ of NONE => ExpExpansion {orig = e, result = e'} | _ => e' end
   | expandExp _ (While {while_, exp1, do_, exp2}) =
     While {while_ = while_, exp1 = expandExp false exp1, do_ = do_, exp2 = expandExp false exp2}
   | expandExp _ (Case {case_, exp, of_, elems, stop}) = let
@@ -172,17 +176,26 @@ fun expandExp true (e as Wild _) = e
     in Case {case_ = case_, exp = exp, of_ = of_, elems = expandArms p elems, stop = stop} end
   | expandExp _ (Fn {fn_, elems, stop}) = Fn {fn_ = fn_, elems = expandArms fn_ elems, stop = stop}
 
-  | expandExp _ (HOLFullQuote {head, type_q, quote, stop, ...}) = let
+  | expandExp _ (e as HOLFullQuote {head, type_q, quote, stop, ...}) = let
     val id = (#1 head, case type_q of NONE => "Parse.Term" | SOME _ => "Parse.Type")
-    in App (mkIdent id, expandQuote (#1 head) stop quote) end
-  | expandExp _ (HOLQuote {head, quote, stop, ...}) = expandQuote (#1 head) stop quote
-  | expandExp _ (HOLLinePragma {hash_, ...}) =
-    IntegerConstant (hash_, Int.toString (#line (fileline hash_) + 1))
-  | expandExp _ (HOLFilePragma {hash_, ...}) = mkString (hash_, #file (fileline hash_))
-  | expandExp _ (HOLLinePragmaWith {hash_, ...}) = Unit {left = hash_, right = hash_}
-  | expandExp _ (HOLFilePragmaWith {hash_, ...}) = Unit {left = hash_, right = hash_}
-  | expandExp _ (EmptyExp p) = Unit {left = p, right = p}
-  | expandExp _ (BadExp {start = p, ...}) = mkFail (p, "malformed")
+    val e' = App (mkIdent id, expandQuote (#1 head) stop quote)
+    in ExpExpansion {orig = e, result = e'} end
+  | expandExp _ (e as HOLQuote {head, quote, stop, ...}) =
+    ExpExpansion {orig = e, result = expandQuote (#1 head) stop quote}
+  | expandExp _ (e as HOLLinePragma {hash_, ...}) = let
+    val e' = IntegerConstant (hash_, Int.toString (#line (fileline hash_) + 1))
+    in ExpExpansion {orig = e, result = e'} end
+  | expandExp _ (e as HOLFilePragma {hash_, ...}) =
+    ExpExpansion {orig = e, result = mkString (hash_, #file (fileline hash_))}
+  | expandExp _ (e as HOLLinePragmaWith {hash_, ...}) =
+    ExpExpansion {orig = e, result = Unit {left = hash_, right = hash_}}
+  | expandExp _ (e as HOLFilePragmaWith {hash_, ...}) =
+    ExpExpansion {orig = e, result = Unit {left = hash_, right = hash_}}
+  | expandExp _ (e as ExpEmpty p) = ExpExpansion {orig = e, result = Unit {left = p, right = p}}
+  | expandExp _ (e as ExpBad {start = p, ...}) =
+    ExpExpansion {orig = e, result = mkFail (p, "malformed")}
+  | expandExp pat (ExpExpansion {orig, result}) =
+    ExpExpansion {orig = orig, result = expandExp pat result}
 
 and expandArms p [] =
     [{bar = NONE, pat = Wild p, arrow = NONE, exp = Raise {raise_ = p, exp = mkIdent (p, "Bind")}}]
@@ -219,58 +232,56 @@ and expandQuote start stop toks = let
   val elems = {args = expandQuoteCore start toks, delims = [], stop = stop}
   in List {left = start, elems = elems, right = NONE, stop = stop} end
 
-and expandDecs _ [] acc = rev acc
-  | expandDecs top (dec :: rest) acc = expandDecs top rest (expandDec top dec acc)
-
-and expandDec _ (DecSemi _) acc = acc
-  | expandDec _ (DecVal {val_, tyvars, elems}) acc = let
+and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
+  | expandDec _ (DecVal {val_, tyvars, elems}) = let
     fun f {rec_, pat, eq} = let
       val pat = expandExp true pat handle HasOrPat => let
         val (start, stop) = expSpan pat
         val _ = parseError (start, stop) "or patterns not supported here"
-        in BadExp {start = start, stop = stop} end
+        in ExpBad {start = start, stop = stop} end
       val eq = Option.map (fn {eq, exp} => {eq = eq, exp = expandExp false exp}) eq
       in {rec_ = rec_, pat = pat, eq = eq} end
-    in DecVal {val_ = val_, tyvars = tyvars, elems = mapDelim f elems} :: acc end
-  | expandDec _ (DecFun {fun_, tyvars, fvalbind}) acc = let
+    in DecVal {val_ = val_, tyvars = tyvars, elems = mapDelim f elems} end
+  | expandDec _ (DecFun {fun_, tyvars, fvalbind}) = let
     val fvalbind = mapDelim (expandFunBranches fun_) fvalbind
-    in DecFun {fun_ = fun_, tyvars = tyvars, fvalbind = fvalbind} :: acc end
-  | expandDec _ (dec as DecType _) acc = dec :: acc
-  | expandDec _ (dec as DecEqtype _) acc = dec :: acc
-  | expandDec _ (dec as DecDatatype _) acc = dec :: acc
-  | expandDec _ (dec as DecAbstype _) acc = dec :: acc
-  | expandDec _ (dec as DecException _) acc = dec :: acc
-  | expandDec top (DecLocal {local_, dec1, in_, dec2, end_, stop}) acc =
-    DecLocal {local_ = local_, dec1 = expandDecs false dec1 [], in_ = in_,
-      dec2 = expandDecs top dec2 [], end_ = end_, stop = stop} :: acc
-  | expandDec _ (dec as DecOpen _) acc = dec :: acc
-  | expandDec _ (dec as DecInfix _) acc = dec :: acc
-  | expandDec _ (dec as DecInfixr _) acc = dec :: acc
-  | expandDec _ (dec as DecNonfix _) acc = dec :: acc
-  | expandDec _ (DecStructure {structure_, elems}) acc = let
+    in DecFun {fun_ = fun_, tyvars = tyvars, fvalbind = fvalbind} end
+  | expandDec _ (dec as DecType _) = dec
+  | expandDec _ (dec as DecEqtype _) = dec
+  | expandDec _ (dec as DecDatatype _) = dec
+  | expandDec _ (dec as DecAbstype _) = dec
+  | expandDec _ (dec as DecException _) = dec
+  | expandDec top (DecLocal {local_, dec1, in_, dec2, end_, stop}) =
+    DecLocal {local_ = local_, dec1 = map (expandDec false) dec1, in_ = in_,
+      dec2 = map (expandDec top) dec2, end_ = end_, stop = stop}
+  | expandDec _ (dec as DecOpen _) = dec
+  | expandDec _ (dec as DecInfix _) = dec
+  | expandDec _ (dec as DecInfixr _) = dec
+  | expandDec _ (dec as DecNonfix _) = dec
+  | expandDec _ (DecStructure {structure_, elems}) = let
     fun f {id, constraint, bind} = let
       val bind = Option.map (fn {eq, strexp} => {eq = eq, strexp = expandStrExp strexp}) bind
       in {id = id, constraint = constraint, bind = bind} end
-    in DecStructure {structure_ = structure_, elems = mapDelim f elems} :: acc end
-  | expandDec _ (DecSignature {signature_, elems}) acc = let
+    in DecStructure {structure_ = structure_, elems = mapDelim f elems} end
+  | expandDec _ (DecSignature {signature_, elems}) = let
     fun f {eq, sigexp} = {eq = eq, sigexp = expandSigExp sigexp}
     fun g {id, bind} = {id = id, bind = Option.map f bind}
-    in DecSignature {signature_ = signature_, elems = mapDelim g elems} :: acc end
-  | expandDec _ (DecInclude {include_, sigexps}) acc =
-    DecInclude {include_ = include_, sigexps = map expandSigExp sigexps} :: acc
-  | expandDec _ (dec as Sharing _) acc = dec :: acc
-  | expandDec _ (DecFunctor {functor_, elems}) acc = let
+    in DecSignature {signature_ = signature_, elems = mapDelim g elems} end
+  | expandDec _ (DecInclude {include_, sigexps}) =
+    DecInclude {include_ = include_, sigexps = map expandSigExp sigexps}
+  | expandDec _ (dec as Sharing _) = dec
+  | expandDec _ (DecFunctor {functor_, elems}) = let
     fun f {id, lparen, funarg, rparen, constraint, bind} = let
       val funarg = expandFunArg funarg
       val bind = Option.map (fn {eq, strexp} => {eq = eq, strexp = expandStrExp strexp}) bind
       in {id = id, lparen = lparen, funarg = funarg,
           rparen = rparen, constraint = constraint, bind = bind} end
-    in DecFunctor {functor_ = functor_, elems = mapDelim f elems} :: acc end
-  | expandDec top (DecExp e) acc = let
+    in DecFunctor {functor_ = functor_, elems = mapDelim f elems} end
+  | expandDec top (dec as DecExp e) = let
     val p = expStart e
-    in valPat p (if top then mkIdent (p, "it") else Wild p) (expandExp false e) :: acc end
+    val dec' = valPat p (if top then mkIdent (p, "it") else Wild p) (expandExp false e)
+    in DecExpansion {orig = dec, result = [dec']} end
 
-  | expandDec _ (HOLTheory {theory_, id, attrs, elems, ...}) acc = let
+  | expandDec _ (dec as HOLTheory {theory_, id, attrs, elems, ...}) = let
     val bare = ref false
     val _ = app (fn
         {key = (_, "bare"), bind = NONE} => bare := true
@@ -278,11 +289,15 @@ and expandDec _ (DecSemi _) acc = acc
       ) (case attrs of NONE => [] | SOME v => #args (#attrs v))
     val grammar = ref []
     fun finish (NONE, acc) = acc
-      | finish (SOME (false, ns), acc) =
-        DecSemi theory_ :: DecOpen {open_ = theory_, elems = rev ns} :: acc
-      | finish (SOME (true, ns), acc) = DecSemi theory_ :: DecLocal {
-        local_ = theory_, dec1 = [DecOpen {open_ = theory_, elems = rev ns}],
-        in_ = SOME theory_, dec2 = [], end_ = SOME theory_, stop = theory_} :: acc
+      | finish (SOME (false, ns), acc) = mkSemi (DecOpen {open_ = theory_, elems = rev ns} :: acc)
+      | finish (SOME (true, ns), acc) = let
+        val dec = DecOpen {open_ = theory_, elems = rev ns}
+        val stop = decStop dec
+        in
+          mkSemi (DecLocal {
+            local_ = theory_, dec1 = [dec],
+            in_ = SOME stop, dec2 = [], end_ = SOME stop, stop = stop} :: acc)
+        end
     fun push b x (NONE, acc) = (SOME (b, [x]), acc)
       | push b x (p as (SOME (b2, ns), acc)) =
         if b = b2 then (SOME (b2, x :: ns), acc) else (SOME (b, [x]), finish p)
@@ -305,29 +320,31 @@ and expandDec _ (DecSemi _) acc = acc
         val _ =
           if isThy andalso not (!ignoreGrammar) then grammar := mkString id :: !grammar else ()
         val acc = foldl (fn (tgt, acc) => let
-          val s = {id = tgt, constraint = NONE, bind = SOME {eq = #1 tgt, strexp = StrIdent id'}}
-          val elems = {args = [s], delims = [], stop = #1 tgt}
+          val stop = idStop tgt
+          val s = {id = tgt, constraint = NONE, bind = SOME {eq = stop, strexp = StrIdent id'}}
+          val elems = {args = [s], delims = [], stop = stop}
           val d = DecStructure {structure_ = #1 tgt, elems = elems}
           in (NONE, d :: finish acc) end) acc (rev (!aliases))
         in processList isThy thys ls acc end
     val lhs = if !bare then NONE else SOME (false,
       map (fn s => (theory_, s)) ["Parse", "bossLib", "boolLib", "HolKernel"])
+    val acc = []
     val acc = if quietOpen then
       case process elems (lhs, []) of
         [] => acc
       | decs => let
         val unit = Unit {left = theory_, right = theory_}
-        fun f x acc = DecSemi theory_ :: valWild theory_ (App (mkIdent (theory_, x), unit)) :: acc
-        val acc = DecSemi theory_ :: decs @ f "HOL_Interactive.start_open" acc
+        fun f x acc = mkSemi (valWild theory_ (App (mkIdent (theory_, x), unit)) :: acc)
+        val acc = mkSemi (decs @ f "HOL_Interactive.start_open" acc)
         in f "HOL_Interactive.end_open" acc end
     else process elems (lhs, acc)
     val acc = valWild theory_ (App (mkIdent (theory_, "Theory.new_theory"), mkString id)) :: acc
     val acc = if !bare then acc else
       valWild theory_ (App (mkIdent (theory_, "Parse.set_grammar_ancestry"),
         mkList (theory_, rev (!grammar)))) :: acc
-    in acc end
-  | expandDec _ (HOLDefinition {
-      definition_, id as (_, name), attrs, colon = _, quote, termination, end_ = _, stop}) acc = let
+    in DecExpansion {orig = dec, result = rev acc} end
+  | expandDec _ (dec as HOLDefinition {
+      definition_, id as (_, name), attrs, colon = _, quote, termination, end_ = _, stop}) = let
     val indThm = ref NONE
     val _ = app (fn
         {key = (p, s as "induction"), bind} =>
@@ -351,16 +368,18 @@ and expandDec _ (DecSemi _) acc = acc
     val e = App (e, case termination of
       NONE => mkIdent (definition_, "NONE")
     | SOME {tac, ...} => App (mkIdent (definition_, "SOME"), expandExp false tac))
-    in magicBind indThm (valPat definition_ (mkIdent id) e :: acc) end
-  | expandDec _ (HOLDatatype {datatype_, quote, stop, ...}) acc = let
+    val dec' = magicBind indThm [valPat definition_ (mkIdent id) e]
+    in DecExpansion {orig = dec, result = rev dec'} end
+  | expandDec _ (dec as HOLDatatype {datatype_, quote, stop, ...}) = let
     val e = App (mkIdent (datatype_, "bossLib.Datatype"), expandQuote datatype_ stop quote)
-    in valWild datatype_ e :: acc end
-  | expandDec _ (HOLQuoteDecl {quote_, id, bind, colon = _, quote, end_ = _, stop}) acc = let
+    in DecExpansion {orig = dec, result = [valWild datatype_ e]} end
+  | expandDec _ (dec as HOLQuoteDecl {quote_, id, bind, colon = _, quote, end_ = _, stop}) = let
     val (pat, e) = case bind of
       NONE => (Wild (#1 id), mkIdent id)
     | SOME {exp, ...} => (mkIdent id, expandExp false exp)
-    in valPat quote_ pat (App (e, expandQuote quote_ stop quote)) :: acc end
-  | expandDec _ (HOLInductiveDecl {co, inductive_, id = (id, stem), quote, ...}) acc = let
+    val dec' = valPat quote_ pat (App (e, expandQuote quote_ stop quote))
+    in DecExpansion {orig = dec, result = [dec']} end
+  | expandDec _ (dec as HOLInductiveDecl {co, inductive_, id = (id, stem), quote, ...}) = let
     val (entryPoint, indSuffix) =
       if co then ("CoIndDefLib.xHol_coreln", "_coind") else ("IndDefLib.xHol_reln", "_ind")
     fun mkQ s = App (mkIdent (inductive_, "QUOTE"), mkString (inductive_, s))
@@ -380,7 +399,7 @@ and expandDec _ (DecSemi _) acc = acc
     fun mkStem x = (id, stem ^ x)
     val pat = mkTuple (inductive_, map (mkIdent o mkStem) ["_rules", indSuffix, "_cases"])
     val e = App (App (mkIdent (inductive_, entryPoint), mkString (id, stem)), quote)
-    val acc = magicBind (mkStem "_strongind") (valPat inductive_ pat e :: acc)
+    val acc = magicBind (mkStem "_strongind") [valPat inductive_ pat e]
     fun mkExtra _ [] acc = acc
       | mkExtra i (SOME {label = SOME (HOLLabel {tilde_, id}), attrs, ...} :: conjs) acc = let
         val name = case tilde_ of NONE => id | SOME p => (p, stem ^ "_" ^ #2 id)
@@ -392,8 +411,8 @@ and expandDec _ (DecSemi _) acc = acc
         val e = mkLocString (inductive_, "boolLib.save_thm", "boolLib.save_thm_at") fileline
         in mkExtra (i+1) conjs (valPat inductive_ (mkIdent name) (App (e, args)) :: acc) end
       | mkExtra i (_ :: conjs) acc = mkExtra (i+1) conjs acc
-    in mkExtra 1 conjs acc end
-  | expandDec _ (HOLType {overload, type_, id, attrs, bind}) acc = let
+    in DecExpansion {orig = dec, result = rev (mkExtra 1 conjs acc)} end
+  | expandDec _ (dec as HOLType {overload, type_, id, attrs, bind}) = let
     val inferior = ref false
     val local_ = ref false
     val pp = ref false
@@ -415,18 +434,20 @@ and expandDec _ (DecSemi _) acc = acc
     val rhs = case bind of
       NONE => mkFail (type_, "Type/Overload missing body")
     | SOME {exp, ...} => expandExp false exp
-    in valWild type_ (App (mkIdent (type_, name), mkTuple (type_, [id, rhs]))) :: acc end
-  | expandDec _ (HOLSimpleThm {triv, theorem_, id, attrs, bind}) acc = let
+    val dec' = valWild type_ (App (mkIdent (type_, name), mkTuple (type_, [id, rhs])))
+    in DecExpansion {orig = dec, result = [dec']} end
+  | expandDec _ (dec as HOLSimpleThm {triv, theorem_, id, attrs, bind}) = let
     val fileline = fileline (#1 id)
     val e = mkLocString (theorem_, "boolLib.save_thm", "boolLib.save_thm_at") fileline
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val rhs = case bind of
       NONE => mkFail (theorem_, "Theorem missing body")
     | SOME {exp, ...} => expandExp false exp
-    in valPat theorem_ (mkIdent id) (App (e, mkTuple (theorem_, [nameAttrs, rhs]))) :: acc end
-  | expandDec _ (HOLTheoremDecl {
+    val dec' = valPat theorem_ (mkIdent id) (App (e, mkTuple (theorem_, [nameAttrs, rhs])))
+    in DecExpansion {orig = dec, result = [dec']} end
+  | expandDec _ (dec as HOLTheoremDecl {
       triv, theorem_, id,
-      attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) acc = let
+      attrs, colon = _, quote, proof_, tac, qed_ = _, stop}) = let
     val fileline = fileline (#1 id)
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val quote = expandQuote theorem_ stop quote
@@ -449,22 +470,25 @@ and expandDec _ (DecSemi _) acc = acc
       {bar = NONE, pat = dummy, arrow = NONE, exp = App (tac, dummy)}], stop = expStop tac}
     val e = mkLocString (theorem_, "Q.store_thm", "Q.store_thm_at") fileline
     val e = App (e, mkTuple (theorem_, [nameAttrs, quote, tac]))
-    in valPat theorem_ (mkIdent id) e :: acc end
+    in DecExpansion {orig = dec, result = [valPat theorem_ (mkIdent id) e]} end
+
+  | expandDec top (DecExpansion {orig, result}) =
+    DecExpansion {orig = orig, result = map (expandDec top) result}
 
 and expandFunArg (ArgIdent {strid, ty}) = let
     val ty = Option.map (fn {colon, sigexp} => {colon = colon, sigexp = expandSigExp sigexp}) ty
     in ArgIdent {strid = strid, ty = ty} end
-  | expandFunArg (ArgSpec spec) = ArgSpec (expandDecs false spec [])
+  | expandFunArg (ArgSpec spec) = ArgSpec (map (expandDec false) spec)
 
 and expandSigExp (s as SigIdent _) = s
   | expandSigExp (Spec {sig_, spec, end_, stop}) =
-    Spec {sig_ = sig_, spec = expandDecs false spec [], end_ = end_, stop = stop}
+    Spec {sig_ = sig_, spec = map (expandDec false) spec, end_ = end_, stop = stop}
   | expandSigExp (WhereType {sigexp, where_, elems}) =
     WhereType {sigexp = expandSigExp sigexp, where_ = where_, elems = elems}
 
 and expandStrExp (s as StrIdent _) = s
   | expandStrExp (StrStruct {struct_, strdec, end_, stop}) =
-    StrStruct {struct_ = struct_, strdec = expandDecs false strdec [], end_ = end_, stop = stop}
+    StrStruct {struct_ = struct_, strdec = map (expandDec false) strdec, end_ = end_, stop = stop}
   | expandStrExp (StrConstraint {strexp, kind}) =
     StrConstraint {strexp = expandStrExp strexp, kind = kind}
   | expandStrExp (FunAppExp {funid, lparen, strexp, rparen, stop}) =
@@ -472,9 +496,9 @@ and expandStrExp (s as StrIdent _) = s
       strexp = expandStrExp strexp, rparen = rparen, stop = stop}
   | expandStrExp (FunAppDec {funid, lparen, strdec, rparen, stop}) =
     FunAppDec {funid = funid, lparen = lparen,
-      strdec = expandDecs false strdec [], rparen = rparen, stop = stop}
+      strdec = map (expandDec false) strdec, rparen = rparen, stop = stop}
   | expandStrExp (StrLetInEnd {let_, strdec, in_, strexp, end_, stop}) =
-    StrLetInEnd {let_ = let_, strdec = expandDecs false strdec [], in_ = in_,
+    StrLetInEnd {let_ = let_, strdec = map (expandDec false) strdec, in_ = in_,
       strexp = expandStrExp strexp, end_ = end_, stop = stop}
 
 in expandDec true end

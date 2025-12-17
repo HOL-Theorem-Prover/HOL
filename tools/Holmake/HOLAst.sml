@@ -136,13 +136,15 @@ datatype exp =
     hash_: int, left: int, file_: int, eq_: int,
     file: int * string option, right: int option, stop: int} (* #(FILE=foo.sml) this is BS *)
 
-| EmptyExp of int
-| BadExp of {start: int, stop: int}
+| ExpExpansion of {orig: exp, result: exp}
+| ExpEmpty of int
+| ExpBad of {start: int, stop: int}
 
 and row =
   DotDotDot of int (** can only appear at end of record pattern *)
 | LabEq of {lab: ident, eq: int, exp: exp}
 | LabAs of {id: ident, ty: {colon: int, ty: ty} option, aspat: {as_: int, exp: exp} option}
+| LabExpansion of {orig: row, result: row}
 
 and dec =
   DecSemi of int (** ; *)
@@ -226,6 +228,8 @@ and dec =
     quote: qdecl list, proof_: {proof_: int, attrs: kvals attrs} option,
     tac: exp, qed_: int option, stop: int}
   (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
+
+| DecExpansion of {orig: dec, result: dec list}
 
 and funarg =
   ArgIdent of {strid: ident, ty: {colon: int, sigexp: sigexp} option}
@@ -353,15 +357,16 @@ fun mkList (p, ls) =
 fun mkTuple (p, ls) =
   Tuple {left = p, elems = {args = ls, delims = [], stop = p}, right = NONE, stop = p}
 
-fun seqStart _ Empty = NONE
+(* fun seqStart _ Empty = NONE
   | seqStart f (One p) = SOME (f p)
-  | seqStart _ (Many {left, ...}) = SOME left
+  | seqStart _ (Many {left, ...}) = SOME left *)
 
 fun seqStop _ Empty = NONE
   | seqStop f (One p) = SOME (f p)
   | seqStop _ (Many {stop, ...}) = SOME stop
 
 fun idStop (p, s) = p + size s
+fun idSpan (p, s) = (p, p + size s)
 
 fun tyStart (TyVar (p, _)) = p
   | tyStart (TyRecord {left, ...}) = left
@@ -418,8 +423,9 @@ fun expStart (Wild p) = p
   | expStart (HOLLinePragmaWith {hash_, ...}) = hash_
   | expStart (HOLFilePragma {hash_, ...}) = hash_
   | expStart (HOLFilePragmaWith {hash_, ...}) = hash_
-  | expStart (EmptyExp p) = p
-  | expStart (BadExp {start, ...}) = start
+  | expStart (ExpEmpty p) = p
+  | expStart (ExpBad {start, ...}) = start
+  | expStart (ExpExpansion {orig, ...}) = expStart orig
 
 fun expStop (Wild p) = p + 1
   | expStop (IntegerConstant id) = idStop id
@@ -456,8 +462,9 @@ fun expStop (Wild p) = p + 1
   | expStop (HOLLinePragmaWith {stop, ...}) = stop
   | expStop (HOLFilePragma {stop, ...}) = stop
   | expStop (HOLFilePragmaWith {stop, ...}) = stop
-  | expStop (EmptyExp p) = p
-  | expStop (BadExp {stop, ...}) = stop
+  | expStop (ExpEmpty p) = p
+  | expStop (ExpBad {stop, ...}) = stop
+  | expStop (ExpExpansion {orig, ...}) = expStop orig
 
 fun expSpan e = (expStart e, expStop e)
 
@@ -465,9 +472,23 @@ fun exbindStop (ExnNew {arg = SOME {ty, ...}, ...}) = tyStop ty
   | exbindStop (ExnNew {arg = NONE, id, ...}) = idStop id
   | exbindStop (ExnReplicate {tgt, ...}) = idStop tgt
 
+fun sigexpStart (SigIdent (p, _)) = p
+  | sigexpStart (Spec {sig_, ...}) = sig_
+  | sigexpStart (WhereType {sigexp, ...}) = sigexpStart sigexp
+
 fun sigexpStop (SigIdent id) = idStop id
   | sigexpStop (Spec {stop, ...}) = stop
   | sigexpStop (WhereType {elems = {stop, ...}, ...}) = stop
+
+fun sigexpSpan s = (sigexpStart s, sigexpStop s)
+
+fun strexpSpan (StrIdent id) = idSpan id
+  | strexpSpan (StrStruct {struct_, stop, ...}) = (struct_, stop)
+  | strexpSpan (StrConstraint {strexp, kind = {sigexp, ...}, ...}) =
+    (#1 (strexpSpan strexp), sigexpStop sigexp)
+  | strexpSpan (FunAppExp {funid = (p, _), stop, ...}) = (p, stop)
+  | strexpSpan (FunAppDec {funid = (p, _), stop, ...}) = (p, stop)
+  | strexpSpan (StrLetInEnd {let_, stop, ...}) = (let_, stop)
 
 fun headerElemStop {id, attrs = NONE} = idStop id
   | headerElemStop {attrs = SOME {stop, ...}, ...} = stop
@@ -511,7 +532,7 @@ fun decSpan (DecSemi p) = (p, p + 1)
     (include_, sigexpStop (List.last sigexps) handle List.Empty => include_ + 7)
   | decSpan (Sharing {sharing_, elems = {stop, ...}, ...}) = (sharing_, stop)
   | decSpan (DecFunctor {functor_, elems = {stop, ...}, ...}) = (functor_, stop)
-  | decSpan (DecExp e)           = expSpan e
+  | decSpan (DecExp e) = expSpan e
   | decSpan (HOLTheory {theory_, id, attrs, elems}) =
     (theory_, headerStop (List.last elems) handle List.Empty =>
       case attrs of NONE => idStop id | SOME {stop, ...} => stop)
@@ -526,6 +547,10 @@ fun decSpan (DecSemi p) = (p, p + 1)
     (theorem_, case bind of SOME {exp, ...} => expStop exp | NONE =>
       case attrs of SOME {stop, ...} => stop | NONE => idStop id)
   | decSpan (HOLTheoremDecl {theorem_, stop, ...}) = (theorem_, stop)
+  | decSpan (DecExpansion {orig, ...}) = decSpan orig
+
+val decStart = #1 o decSpan
+val decStop = #2 o decSpan
 
 fun isOnlyComments s = let
   val (base, start, len) = Substring.base s

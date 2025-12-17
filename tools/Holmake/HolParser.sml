@@ -26,10 +26,10 @@ structure ToSML = struct
     fun push () =
       case parseDec () of
         NONE => true
-      | SOME dec => case expandDec dec [] of
-          [] => false
-        | decs => (
-          HOLPrinter.printDecs parseError (rev (HOLAst.DecSemi 0 :: decs)) pr';
+      | SOME dec => case expandDec dec of
+          HOLAst.DecExpansion {result = [], ...} => false
+        | dec => (
+          HOLPrinter.printDecs parseError (rev (HOLToSML.mkSemi [dec])) pr';
           #str pr "\n"; false)
     in {fileline = fileline, push = push} end
 
