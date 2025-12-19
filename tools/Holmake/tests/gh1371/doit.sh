@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 ulimit -t 2
 unquote=$1
