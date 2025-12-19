@@ -77,7 +77,7 @@ Proof
 REWRITE_TAC [trichotomous, IMP_DISJ_THM, DE_MORGAN_THM, GSYM DISJ_ASSOC]
 QED
 
-Theorem TotOrd_TO_of_LO:!r:'a->'a->bool.
+Theorem TotOrd_TO_of_LO: !r:'a->'a->bool.
                  LinearOrder r ==> TotOrd (TO_of_LinearOrder r)
 Proof
 SRW_TAC [] [LinearOrder, Order, antisymmetric_def,
