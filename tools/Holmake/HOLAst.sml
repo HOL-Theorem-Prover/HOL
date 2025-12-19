@@ -231,6 +231,7 @@ and dec =
     tac: exp, qed_: int option, stop: int}
   (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
 
+| DecBad of {start: int, stop: int}
 | DecExpansion of {orig: dec, result: dec list}
 
 and funarg =
@@ -552,6 +553,7 @@ fun decSpan (DecSemi p) = (p, p + 1)
     (theorem_, case bind of SOME {exp, ...} => expStop exp | NONE =>
       case attrs of SOME {stop, ...} => stop | NONE => idStop id)
   | decSpan (HOLTheoremDecl {theorem_, stop, ...}) = (theorem_, stop)
+  | decSpan (DecBad {start, stop}) = (start, stop)
   | decSpan (DecExpansion {orig, ...}) = decSpan orig
 
 val decStart = #1 o decSpan

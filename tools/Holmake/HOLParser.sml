@@ -1069,8 +1069,21 @@ fun parseSML file read parseError: scope -> result = let
       | _ => (unread (start, IdentTk); NONE))
     | tk => (unread tk; NONE)
     in
-      case dec of SOME dec => SOME dec | _ =>
-      case parseExp' sc false false of ExpEmpty _ => NONE | e => SOME (sc, DecExp e)
+      case dec of SOME dec => SOME dec | NONE => (
+        case parseExp' sc false false of
+          ExpEmpty _ => (case token () of
+              tk as (start, IdentTk) => let
+                val s = ident start
+                in if s = "in" orelse s = "end" then (unread tk; NONE)
+                   else (
+                     parseError (start, !pos) "bad declaration";
+                     SOME (sc, DecBad {start = start, stop = !pos})) end
+            | tk as (start, Symbol #")") => (unread tk; NONE)
+            | tk as (start, EOF) => (unread tk; NONE)
+            | (start, _) => (
+                parseError (start, !pos) "bad declaration";
+                SOME (sc, DecBad {start = start, stop = !pos})))
+        | e => SOME (sc, DecExp e))
     end
 
   and parseDecs (inSig: bool) sc (acc: dec list): scope * dec list =
@@ -1159,26 +1172,32 @@ fun parseSML file read parseError: scope -> result = let
     val sc = ref sc
     val isThy = ref NONE
     val noSigDocs = ref false
+    (* At the end of a theory we need to generate the declaration corresponding
+       to an export_theory call. Using parseDecRef, we ensure this only happens
+       once. *)
     val parseDecRef = ref (fn () => NONE)
+    fun finishTheory () = case !isThy of
+        NONE => NONE
+      | SOME theory_ => (
+        parseDecRef := (fn () => NONE);
+        SOME (HOLTheoryEnd {
+          theory_ = theory_,
+          stop = DString.size body,
+          noSigDocs = !noSigDocs}))
     val _ = parseDecRef := (fn () =>
       case parseDec false (!sc) of
-        NONE => (case !isThy of
-          NONE => NONE
-        | SOME theory_ => (
-          parseDecRef := (fn () => NONE);
-          SOME (HOLTheoryEnd {
-            theory_ = theory_,
-            stop = DString.size body,
-            noSigDocs = !noSigDocs})))
+        NONE => (case token () of
+            tk as (start, EOF) => (unread tk; finishTheory ())
+          | (start, _) => (
+              parseError (start, !pos) "bad declaration";
+              SOME (DecBad {start = start, stop = !pos})))
       | SOME (sc', d) => (
         sc := sc';
         case d of
           HOLTheory {theory_, attrs, ...} => (
             isThy := SOME theory_;
-            app (fn
-                {key = (_, "no_sig_docs"), bind = NONE} => noSigDocs := true
-              | _ => ()
-              ) (case attrs of NONE => [] | SOME v => #args (#attrs v)))
+            app (fn {key = (_, "no_sig_docs"), bind = NONE} => noSigDocs := true | _ => ())
+              (case attrs of NONE => [] | SOME v => #args (#attrs v)))
         | _ => ();
         SOME d))
     in {parseDec = fn () => !parseDecRef (), getScope = fn () => !sc, body = body, events = events} end

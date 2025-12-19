@@ -483,6 +483,8 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val e = App (e, mkTuple (theorem_, [nameAttrs, quote, tac]))
     in DecExpansion {orig = dec, result = [valPat theorem_ (mkIdent id) e]} end
 
+  | expandDec _ (dec as DecBad {start, ...}) =
+    DecExpansion {orig = dec, result = [valWild start (mkFail (start, "malformed"))]}
   | expandDec top (DecExpansion {orig, result}) =
     DecExpansion {orig = orig, result = map (expandDec top) result}
 

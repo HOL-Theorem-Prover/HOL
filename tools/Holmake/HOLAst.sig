@@ -217,6 +217,7 @@ and dec =
     tac: exp, qed_: int option, stop: int}
   (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
 
+| DecBad of {start: int, stop: int}
 | DecExpansion of {orig: dec, result: dec list}
 
 and funarg =

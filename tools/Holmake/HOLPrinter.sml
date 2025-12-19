@@ -266,7 +266,7 @@ and printDecCore (DecSemi _) pr = token ";" pr
       token ")" pr; printConstraint constraint pr;
       Option.app (fn {strexp, ...} => (token "=" pr; printStrExp strexp pr)) bind)
     in delimited (token "functor") args f (token "and") (K ()) pr end
-  | printDecCore (DecExp _)           _ = raise Fail "unexpended top-level expression"
+  | printDecCore (DecExp _)           _ = raise Fail "unexpanded top-level expression"
   | printDecCore (HOLTheory _)        _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLTheoryEnd _)     _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLDefinition _)    _ = raise Fail "unexpanded HOL syntax"
@@ -276,6 +276,7 @@ and printDecCore (DecSemi _) pr = token ";" pr
   | printDecCore (HOLType _)          _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLSimpleThm _)     _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLTheoremDecl _)   _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (DecBad _)           _ = raise Fail "unexpanded bad declaration"
   | printDecCore (DecExpansion {orig, result}) pr = spanned (decSpan orig) (printDecs result) pr
 
   and printConstraint NONE _ = ()

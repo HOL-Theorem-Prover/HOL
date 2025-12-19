@@ -84,6 +84,7 @@ fun run read write = let
     | doDec (HOLType {bind, ...}) = Option.app (doExp o #exp) bind
     | doDec (HOLSimpleThm {bind, ...}) = Option.app (doExp o #exp) bind
     | doDec (HOLTheoremDecl {quote, tac, ...}) = (app doQDecl quote; doExp tac)
+    | doDec (DecBad _) = ()
     | doDec (DecExpansion {orig, ...}) = doDec orig
   and doValBind {pat, eq, ...} = (doExp pat; Option.app (doExp o #exp) eq)
   and doFValArm {pat, exp, ...} = (doExp pat; doExp exp)
