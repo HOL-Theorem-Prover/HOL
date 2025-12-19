@@ -6240,34 +6240,34 @@ val clt_tactic3_p1 =
     ‘∀i. 0 ≤ variance p (X i)’ by METIS_TAC [variance_pos] \\
     ‘∀i. variance p (X i) ≠ NegInf /\ variance p (X i) ≠ PosInf’
       by METIS_TAC [extreal_0_simps, lt_trans, lt_le] >> rw [] \\
-    Know ‘∀i. i < n ⇒ sqrt (real (variance p (X i))) ≠ 0’
+    Know ‘∀i. i < SUC n ⇒ sqrt (real (variance p (X i))) ≠ 0’
     >- (rw [] >> Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
         Q.PAT_X_ASSUM ‘∀i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
         ‘∃a. variance p (X i) = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
         METIS_TAC [SQRT_POS_NE, REAL_LT_LE]) \\
     DISCH_TAC \\
-    Know ‘∀i. i < n ⇒ 0 < real (variance p (X i))’
+    Know ‘∀i. i < SUC n ⇒ 0 < real (variance p (X i))’
     >- (rw [] >> Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
         Q.PAT_X_ASSUM ‘∀i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
         ‘∃a. variance p (X i) = Normal a’ by METIS_TAC [extreal_cases] >> gs [real_normal] \\
         METIS_TAC [REAL_LT_LE]) \\
     DISCH_TAC \\
-    Know ‘∀i. i < n ⇒ 0 < variance p (X i)’
+    Know ‘∀i. i < SUC n ⇒ 0 < variance p (X i)’
     >- (rw [] >> Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
         Q.PAT_X_ASSUM ‘∀i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> rw [lt_le]) \\
     Rewr \\
     rw [metricTheory.DIST_0, GSYM sub_real] \\
     Q.ABBREV_TAC ‘sig = λi. sqrt (real (variance p (X i)))’ >> fs [] \\
-    ‘∀i. i < n ⇒ real (variance p (X i)) = (sig i) pow 2’ by rw [Abbr ‘sig’, SQRT_POW2, REAL_LT_IMP_LE] \\
+    ‘∀i. i < SUC n ⇒ real (variance p (X i)) = (sig i) pow 2’ by rw [Abbr ‘sig’, SQRT_POW2, REAL_LT_IMP_LE] \\
     gs [] \\
-    Know ‘∀i. i < n ⇒ 0 < sig i’
+    Know ‘∀i. i < SUC n ⇒ 0 < sig i’
     >- (rw [Abbr ‘sig’] \\
         MATCH_MP_TAC SQRT_POS_LT \\
         Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
         Q.PAT_X_ASSUM ‘∀i. 0 ≤ variance p (X i)’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
         Q.PAT_X_ASSUM ‘∀i. variance p (X i) ≠ −∞ ∧ _’ (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
         ‘∃a. variance p (X i) = Normal a’ by METIS_TAC [extreal_cases] >> gs [REAL_LT_LE]) \\
-    rw [];
+   rw [];
 
 (* -------------------------------------------------------------------------- *)
 (* Part 2: Construct auxiliary independent sequence Y_i                       *)
@@ -6277,28 +6277,28 @@ val clt_tactic3_p1 =
  *)
 
 val clt_tactic3_p2 =
-MP_TAC (Q.SPECL [‘p’, ‘N’, ‘λi. sig i’, ‘n’] existence_of_indep_vars)
->> simp [] >> STRIP_TAC
->> (MP_TAC o (Q.SPECL [‘p’, ‘p'’, ‘X’, ‘Y’, ‘n’]) o
-           (INST_TYPE [beta |-> “:'a”])) construct_auxiliary_seq
->> simp []
->> Know ‘∀i. i < n ⇒ real_random_variable (Y i) p'’
->- (rw [] \\
-    Q.PAT_X_ASSUM ‘∀i. i < n ⇒ ext_normal_rv (Y i) p' 0 (sig i)’
-     (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
-    gs [ext_normal_rv_def, normal_rv_def, real_random_variable_def] \\
-    irule random_variable_borel_imp_Borel >> fs [])
->> DISCH_TAC >> simp []
->> rw [Abbr ‘M’, Abbr ‘Q’];
+    MP_TAC (Q.SPECL [‘p’, ‘N’, ‘λi. sig i’, ‘SUC n’] existence_of_indep_vars)
+ >> simp [] >> STRIP_TAC
+ >> (MP_TAC o (Q.SPECL [‘p’, ‘p'’, ‘X’, ‘Y’, ‘SUC n’]) o
+            (INST_TYPE [beta |-> “:'a”])) construct_auxiliary_seq
+ >> simp []
+ >> Know ‘∀i. i < (SUC n) ⇒ real_random_variable (Y i) p'’
+ >- (rw [] \\
+     Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ ext_normal_rv (Y i) p' 0 (sig i)’
+      (STRIP_ASSUME_TAC o Q.SPEC ‘i’) \\
+     gs [ext_normal_rv_def, normal_rv_def, real_random_variable_def] \\
+     irule random_variable_borel_imp_Borel >> fs [])
+ >> DISCH_TAC >> simp []
+ >> rw [Abbr ‘M’, Abbr ‘Q’];
 
 (* -------------------------------------------------------------------------- *)
 (* Part 3: Setup for Eq.15[1] and expectation equivalences                    *)
 (* -------------------------------------------------------------------------- *)
 
 val clt_tactic3_p3 =
- Q.ABBREV_TAC ‘(Y' :num -> 'a # α list -> extreal) = λi. Y i o SND’ >> fs []
+    Q.ABBREV_TAC ‘(Y' :num -> 'a # α list -> extreal) = λi. Y i o SND’ >> fs []
  >> Q.ABBREV_TAC ‘(X' :num -> 'a # α list -> extreal) = λi. X i o FST’ >> fs []
- >> ‘∀x. (R n ∘ FST) x = ∑ (λi. X' i x) (count n) / s n’ by rw [Abbr ‘X'’, Abbr ‘R’]
+ >> ‘∀x. (R n ∘ FST) x = ∑ (λi. X' i x) (count (SUC n)) / s (SUC n)’ by rw [Abbr ‘X'’, Abbr ‘R’]
  >> Q.ABBREV_TAC ‘r = p CROSS p'’
  >> Know ‘expectation p (Normal ∘ f ∘ real ∘ R n) =
           expectation r (Normal ∘ f ∘ real ∘ R n o FST)’
@@ -6308,57 +6308,56 @@ val clt_tactic3_p3 =
      irule expectation_multidimentional_compose_fst >> simp [] \\
      fs [Abbr ‘h’] >> METIS_TAC [integrable_CnR_comp, real_random_variable_CnR_comp]) >> Rewr'
  >> Q.ABBREV_TAC ‘g = R n ∘ (FST :α # α list -> α)’
- >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. X' i x) (count n) / s n’
+ >> Q.ABBREV_TAC ‘h = λx. ∑ (λi. X' i x) (count (SUC n)) / s (SUC n)’
  >> (MP_TAC o (Q.SPECL [‘r’, ‘g’, ‘h’]) o
             (INST_TYPE [alpha |-> ``: ('a # 'a list)``])) expectation_cong  >> rw []
  >> ‘expectation r (Normal ∘ f ∘ real ∘ g) = expectation r (Normal ∘ f ∘ real ∘ h)’
    by METIS_TAC [expectation_cong] >> POP_ORW
  >> rw [Abbr ‘h’]
- >> Know ‘∃c. s n = Normal c’
- >- (Q.PAT_X_ASSUM ‘∀n. s n ≠ −∞ ∧ s n ≠ +∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
+ >> Know ‘∃c. s (SUC n) = Normal c’
+ >- (Q.PAT_X_ASSUM ‘∀n. s n ≠ −∞ ∧ s n ≠ +∞’ (STRIP_ASSUME_TAC o Q.SPEC ‘SUC n’) \\
      METIS_TAC [extreal_cases])
  >> DISCH_THEN (Q.X_CHOOSE_THEN ‘c’ ASSUME_TAC)
  >> Know ‘c ≠ 0 ∧ 0 < c’
- >- (Q.PAT_X_ASSUM ‘∀n. s n ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) \\
-     Q.PAT_X_ASSUM ‘∀n. 0 < s n’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs [])
+ >- (Q.PAT_X_ASSUM ‘∀n. 0 < s (SUC n)’ (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs [REAL_LT_IMP_NE])
  >> STRIP_TAC
- >> ‘∀i. i < n ⇒ integrable p' (Y i)’ by METIS_TAC [expectation_of_normal_rv']
- >> ‘∀i. i < n ⇒ integrable p' (λx. (abs (Y i x)) pow 3)’ by METIS_TAC [ext_normal_rv_moment_integrable]
- >> Know ‘∀i. i < n ⇒ integrable p' (λx. (Y i x) pow 3)’
+ >> ‘∀i. i < (SUC n) ⇒ integrable p' (Y i)’ by METIS_TAC [expectation_of_normal_rv']
+ >> ‘∀i. i < (SUC n) ⇒ integrable p' (λx. (abs (Y i x)) pow 3)’ by METIS_TAC [ext_normal_rv_moment_integrable]
+ >> Know ‘∀i. i < (SUC n) ⇒ integrable p' (λx. (Y i x) pow 3)’
  >- (fs [GSYM pow_abs, GSYM o_DEF] >> rw [] \\
      irule integrable_from_abs >> fs [prob_space_def] \\
      irule IN_MEASURABLE_BOREL_POW  >> METIS_TAC [real_random_variable, p_space_def, events_def])
  >> STRIP_TAC
- >> Know ‘∀i. i < n ⇒ integrable p' (λx. (Y i x) pow 2)’
->- (rw [] >> gs [expectation_finite_eq_integrable] \\
-    irule integrable_absolute_moments_mono >> fs [] \\
-    qexists ‘3’ >> fs [] >> METIS_TAC [expectation_finite_eq_integrable])
->> STRIP_TAC;
+ >> Know ‘∀i. i < (SUC n) ⇒ integrable p' (λx. (Y i x) pow 2)’
+ >- (rw [] >> gs [expectation_finite_eq_integrable] \\
+     irule integrable_absolute_moments_mono >> fs [] \\
+     qexists ‘3’ >> fs [] >> METIS_TAC [expectation_finite_eq_integrable])
+ >> STRIP_TAC;
 
 (* -------------------------------------------------------------------------- *)
 (* Part 4: Sum of independent normals and distribution equivalence            *)
 (* -------------------------------------------------------------------------- *)
 
 val clt_tactic3_p4 =
- Know ‘expectation p (Normal ∘ f ∘ real ∘ N) =
-          expectation r (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. Y' i x) (count n) / Normal c))’
+    Know ‘expectation p (Normal ∘ f ∘ real ∘ N) =
+          expectation r (Normal ∘ f ∘ real ∘ (λx. ∑ (λi. Y' i x) (count (SUC n)) / Normal c))’
  >- (rw [Abbr ‘Y'’] \\
-     Know ‘∀i. i < n ⇒ ext_normal_rv (Y i o SND) r 0 (sig i)’
+     Know ‘∀i. i < (SUC n) ⇒ ext_normal_rv (Y i o SND) r 0 (sig i)’
      >- (rw [] \\
          MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘Y (i :num)’, ‘0’, ‘sig (i :num)’]
                   (INST_TYPE [“:'b” |-> “:'a list”] ext_normal_rv_snd)) \\
          rw [Abbr ‘r’]) \\
      DISCH_TAC \\
-     MP_TAC (Q.SPECL [‘r’, ‘λi. Y i ∘ SND’, ‘λi. 0’, ‘(λi. sig (i :num))’, ‘n’]
+     MP_TAC (Q.SPECL [‘r’, ‘λi. Y i ∘ SND’, ‘λi. 0’, ‘(λi. sig (i :num))’, ‘SUC n’]
               (INST_TYPE [“:'a” |-> “:'a # 'a list”] sum_indep_ext_normal')) \\
      impl_tac >- (simp [] >> rw [o_DEF, Abbr ‘r’] \\
                   MATCH_MP_TAC indep_vars_snd >> rw [] \\
                   fs [p_space_def, events_def, real_random_variable]) \\
      rw [REAL_SUM_IMAGE_0] \\
-     Q.ABBREV_TAC ‘sig_sum = sqrt (∑ (λi. (sig i)²) (count n))’ \\
+     Q.ABBREV_TAC ‘sig_sum = sqrt (∑ (λi. (sig i)²) (count (SUC n)))’ \\
      qmatch_abbrev_tac ‘expectation p (Normal ∘ f ∘ real ∘ N) =
                         expectation r (Normal ∘ f ∘ real ∘ G)’ \\
-     ‘G  = (λx. ∑ (λi. Y i x) (count n) / Normal c) ∘ SND’ by rw [Abbr ‘G’, o_DEF] \\
+     ‘G  = (λx. ∑ (λi. Y i x) (count (SUC n)) / Normal c) ∘ SND’ by rw [Abbr ‘G’, o_DEF] \\
      POP_ASSUM (fs o wrap) >> rw [Abbr ‘G’] \\
      qmatch_abbrev_tac ‘expectation p (Normal ∘ f ∘ real ∘ N) =
                         expectation r (Normal ∘ f ∘ real ∘ G ∘ SND)’ \\
@@ -6366,7 +6365,7 @@ val clt_tactic3_p4 =
      >- (rw [Abbr ‘G’] \\
          HO_MATCH_MP_TAC real_random_variable_cdiv >> simp [] \\
          HO_MATCH_MP_TAC real_random_variable_sum >> fs []) \\
-      DISCH_TAC \\
+     DISCH_TAC \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘G’] (INST_TYPE [“:'b” |-> “:'a list”] expectation_snd)) \\
      impl_tac
      >- (fs [real_random_variable, p_space_def, events_def, Abbr ‘G’] \\
@@ -6386,23 +6385,23 @@ val clt_tactic3_p4 =
              Know ‘∫ (p × p') (abs ∘ h ∘ SND) ≠ +∞’
              >- (qmatch_abbrev_tac ‘∫ (p × p') (abs ∘ H) ≠ +∞’ \\
                  Know ‘real_random_variable H (p CROSS p')’
-                    >- (rw [Abbr ‘H’] \\
-                        MATCH_MP_TAC real_random_variable_snd \\
-                        simp [Abbr ‘h’] \\
-                        METIS_TAC [real_random_variable_CnR_comp]) \\
-                    DISCH_TAC \\
-                   Suff ‘integrable (p CROSS p') H’
-                   >- (METIS_TAC [prob_space_def, integrable_alt_def]) \\
-                      simp [Abbr ‘H’] \\
-                   MATCH_MP_TAC integrable_snd \\
-                   simp [Abbr ‘h’] \\
-                   METIS_TAC [integrable_bounded_continuous, C3_subset_C_b, SUBSET_DEF]) \\
+                 >- (rw [Abbr ‘H’] \\
+                     MATCH_MP_TAC real_random_variable_snd \\
+                     simp [Abbr ‘h’] \\
+                     METIS_TAC [real_random_variable_CnR_comp]) \\
+                 DISCH_TAC \\
+                 Suff ‘integrable (p CROSS p') H’
+                 >- (METIS_TAC [prob_space_def, integrable_alt_def]) \\
+                 simp [Abbr ‘H’] \\
+                 MATCH_MP_TAC integrable_snd \\
+                 simp [Abbr ‘h’] \\
+                 METIS_TAC [integrable_bounded_continuous, C3_subset_C_b, SUBSET_DEF]) \\
              rw [] \\
              MATCH_MP_TAC IN_MEASURABLE_BOREL_SND \\
              fs [MEASURE_SPACE_SIGMA_ALGEBRA, prob_space_def] \\
              MP_TAC (Q.SPECL [‘p'’, ‘G’, ‘f’]
                       (INST_TYPE [“:'a” |-> “:'a list”] clt_real_random_variable_compose)) \\
-              fs [real_random_variable, Abbr ‘h’, p_space_def, events_def, prob_space_def]) \\
+             fs [real_random_variable, Abbr ‘h’, p_space_def, events_def, prob_space_def]) \\
          rw [Abbr ‘h’, o_DEF] \\
          MATCH_MP_TAC integral_cong \\
          fs [prob_space_def, real_random_variable, p_space_def] >> rw [] \\
@@ -6414,11 +6413,11 @@ val clt_tactic3_p4 =
      Know ‘ext_normal_rv G p' 0 1’
      >- (rw [Abbr ‘G’] \\
          MP_TAC (Q.SPECL [‘p'’, ‘λi. Y i’, ‘λi. 0’,
-                          ‘λi. sig (i :num)’, ‘n’]
+                          ‘λi. sig (i :num)’, ‘SUC n’]
                   (INST_TYPE [“:'a” |-> “:'a list”] sum_indep_ext_normal')) \\
          impl_tac >- (fs [ETA_AX, ext_normal_rv_def, normal_rv_def]) \\
          rw [REAL_SUM_IMAGE_0] \\
-         Q.ABBREV_TAC ‘G = λx. ∑ (λi. Y i x) (count n)’ >> gs [] \\
+         Q.ABBREV_TAC ‘G = λx. ∑ (λi. Y i x) (count (SUC n))’ >> gs [] \\
          MP_TAC (Q.SPECL [‘p'’, ‘G’, ‘c’, ‘0’, ‘sig_sum’]
                   (INST_TYPE [“:'a” |-> “:'a list”] ext_normal_rv_cdiv)) \\
          impl_tac >- (simp [Abbr ‘s’, Abbr ‘sig’, Abbr ‘sig_sum’] \\
@@ -6428,14 +6427,14 @@ val clt_tactic3_p4 =
          Suff ‘sig_sum = abs c’ >> rw [REAL_DIV_REFL] \\
          ‘abs c = c’ by METIS_TAC [GSYM ABS_REFL , REAL_LT_IMP_LE] >> POP_ORW \\
          ASM_SIMP_TAC std_ss [Abbr ‘sig_sum’] \\
-         ‘∑ (λi. (sig i)²) (count n) = ∑ (λi. real (variance p (X i))) (count n)’
+         ‘∑ (λi. (sig i)²) (count (SUC n)) = ∑ (λi. real (variance p (X i))) (count (SUC n))’
            by (MATCH_MP_TAC REAL_SUM_IMAGE_EQ >> rw []) >> POP_ORW \\
-         ‘real ((λn. sqrt (second_moments p X n)) n) = c’
+         ‘real ((λn. sqrt (second_moments p X n)) (SUC n)) = c’
            by fs [GSYM real_11, real_normal, extreal_not_infty] \\
          rw [Abbr ‘sig’, Abbr ‘s’] \\
          Q.ABBREV_TAC ‘E = λi. expectation p (λx. (X i x)²)’ \\
-         Know ‘∑ (λi. real (variance p (X i))) (count n) =
-               ∑ (λi. real (expectation p (λx. (X i x)²))) (count n)’
+         Know ‘∑ (λi. real (variance p (X i))) (count (SUC n)) =
+               ∑ (λi. real (expectation p (λx. (X i x)²))) (count (SUC n))’
          >- (MATCH_MP_TAC REAL_SUM_IMAGE_EQ >> rw [Abbr ‘E’] \\
              MP_TAC (Q.SPECL [‘p’, ‘λi. X (x :num) i’] variance_eq) \\
              impl_tac >- (fs [real_random_variable_def] \\
@@ -6446,9 +6445,9 @@ val clt_tactic3_p4 =
              rw [SF ETA_ss, sub_rzero, zero_pow]) \\
          STRIP_TAC \\
          rw [second_moments_def, central_moment_def, moment_def] \\
-         Suff ‘real (sqrt (∑ (λi. E i) (count n))) = sqrt (real (∑ (λi. E i) (count n)))’
+         Suff ‘real (sqrt (∑ (λi. E i) (count (SUC n)))) = sqrt (real (∑ (λi. E i) (count (SUC n))))’
          >- (Rewr >> AP_TERM_TAC \\
-             MP_TAC (Q.SPECL [‘count n’, ‘λi. (E (i :num))’]
+             MP_TAC (Q.SPECL [‘count (SUC n)’, ‘λi. (E (i :num))’]
                       (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_REAL)) \\
              simp [] >> impl_tac
              >- (rw [Abbr ‘E’]
@@ -6478,9 +6477,9 @@ val clt_tactic3_p4 =
      rw [real_random_variable_def, random_variable_borel_imp_Borel] \\
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘t’) >> gs [] \\
      Q.PAT_X_ASSUM ‘∀s. s ∈ subsets borel ⇒ distribution p' (real ∘ G) s = _’
-                   (STRIP_ASSUME_TAC o Q.SPEC ‘real_set t’) \\
+      (STRIP_ASSUME_TAC o Q.SPEC ‘real_set t’) \\
      gs [borel_measurable_real_set])
->> DISCH_THEN (fs o wrap);
+ >> DISCH_THEN (fs o wrap);
 
 (* -------------------------------------------------------------------------- *)
 (* Part 5: Lindeberg replacement and Taylor expansion error bound             *)
@@ -6488,34 +6487,34 @@ val clt_tactic3_p4 =
 
 val clt_tactic3_p5 =
     Q.ABBREV_TAC ‘Z = (λj x. if x IN p_space r then
-                               (∑ (λi. Y' i x) (count j) + ∑ (λi. X' i x) (count n DIFF count1 j))
+                               (∑ (λi. Y' i x) (count j) + ∑ (λi. X' i x) (count (SUC n) DIFF count1 j))
                              else 0)’
- >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘f’, ‘s’, ‘n’]) o
+ >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘f’, ‘s’, ‘SUC n’]) o
             (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_Lindeberg_replacement_trick_bounded
  >> simp []
- >> Know ‘∀i. i < n ⇒ integrable r (X' i) ∧ integrable r (Y' i)’
+ >> Know ‘∀i. i < (SUC n) ⇒ integrable r (X' i) ∧ integrable r (Y' i)’
  >- (METIS_TAC [Abbr ‘X'’, Abbr ‘r’, Abbr ‘Y'’, integrable_fst, integrable_snd])
  >> DISCH_TAC >> simp []
  >> DISCH_TAC
- >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘f’ ,‘n’]) o
+ >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘f’ ,‘SUC n’]) o
             (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_real_random_variable_partial_sum2
  >> simp [] >> DISCH_TAC
  >> Q.ABBREV_TAC ‘(M :extreal) = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV)’
  >> ‘M ≠ PosInf’ by METIS_TAC [clt_sup_finite]
- >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘Z’, ‘f’, ‘M’, ‘s’, ‘n’]) o
+ >> (MP_TAC o (Q.SPECL [‘r’, ‘X'’, ‘Y'’, ‘Z’, ‘f’, ‘M’, ‘s’, ‘SUC n’]) o
             (INST_TYPE [alpha |-> “:('a # 'a list)”])) clt_lindeberg_taylor_error_bound
  >> impl_tac
  >- (simp [] >> GEN_TAC >> STRIP_TAC \\
      STRONG_CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘∀j. j < n ⇒ real_random_variable (λx. Z j x) r ∧ _’
+     >- (Q.PAT_X_ASSUM ‘∀j. j < (SUC n) ⇒ real_random_variable (λx. Z j x) r ∧ _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> METIS_TAC []) \\
      DISCH_TAC \\
      STRONG_CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ integrable r (X' i) ∧  _’
+     >- (Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ integrable r (X' i) ∧  _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> METIS_TAC []) \\
      DISCH_TAC \\
      STRONG_CONJ_TAC
-     >- (Q.PAT_X_ASSUM ‘∀i. i < n ⇒ integrable r (X' i) ∧  _’
+     >- (Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ integrable r (X' i) ∧  _’
           (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> METIS_TAC []) \\
      DISCH_TAC \\
      (*integrable r (λx. (abs (X' j x))³)*)
@@ -6544,7 +6543,7 @@ val clt_tactic3_p5 =
                   (INST_TYPE [“:'b” |-> “:'a list”] expectation_snd)) \\
          impl_tac >- (fs [real_random_variable]) \\
          rw [o_DEF] >> POP_ASSUM (rw o wrap o SYM) \\
-         Q.PAT_X_ASSUM ‘∀i. i < n ⇒ ext_normal_rv (Y i) p' 0 (sig i)’
+         Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ ext_normal_rv (Y i) p' 0 (sig i)’
           (STRIP_ASSUME_TAC o Q.SPEC ‘j’) >> gs [] \\
          MP_TAC (Q.SPECL [‘p'’, ‘Y (j: num)’, ‘0’, ‘sig (j: num)’]
                   (INST_TYPE [“:'a” |-> “:'a list”] (cj 2 expectation_of_normal_rv'))) \\
@@ -6574,18 +6573,18 @@ val clt_tactic3_p5 =
      DISCH_TAC \\
      simp [indep_rv_def] \\
      Q.ABBREV_TAC ‘Z0 = λj x. ∑ (λi. Y' i x) (count j) +
-                              ∑ (λi. X' i x) (count n DIFF count1 j)’ \\
+                              ∑ (λi. X' i x) (count (SUC n) DIFF count1 j)’ \\
      ‘∀x. x ∈ p_space r ⇒ Z j x = Z0 j x’ by rw [Abbr ‘Z’, Abbr ‘Z0’] \\
      ‘∀A. PREIMAGE (Z j) A ∩ p_space r = PREIMAGE (Z0 j) A ∩ p_space r’
        by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
            EQ_TAC >> rw [] >> METIS_TAC []) \\
      POP_ORW \\
      fs [GSYM indep_rv_def] \\
-     Q.PAT_X_ASSUM ‘indep_vars r _ (λi. Borel) (count (2 * n))’ (ASSUME_TAC) \\
-     Q.ABBREV_TAC ‘W0 = (λi x. if i < n then X i (FST x) else Y (i − n) (SND x))’ \\
-     Q.ABBREV_TAC ‘t = (count n DIFF count1 j) ∪ IMAGE (λi. n + i) (count j)’ \\
+     Q.PAT_X_ASSUM ‘indep_vars r _ (λi. Borel) (count (2 * (SUC n)))’ (ASSUME_TAC) \\
+     Q.ABBREV_TAC ‘W0 = (λi x. if i < (SUC n) then X i (FST x) else Y (i − (SUC n)) (SND x))’ \\
+     Q.ABBREV_TAC ‘t = (count (SUC n) DIFF count1 j) ∪ IMAGE (λi. (SUC n) + i) (count j)’ \\
      ‘∀x. X' j x = W0 j x’ by rw [Abbr ‘W0’, Abbr ‘X'’] \\
-     ‘∀x. Y' j x = W0 (j + n) x’ by rw [Abbr ‘W0’, Abbr ‘Y'’] \\
+     ‘∀x. Y' j x = W0 (j + (SUC n)) x’ by rw [Abbr ‘W0’, Abbr ‘Y'’] \\
      Know ‘∀x. x IN p_space r ⇒ Z0 j x = sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))’
      >- (rw [] \\
          MP_TAC (Q.SPECL [‘λ(n :num). W0 n (x : α # α list)’, ‘t’]
@@ -6594,24 +6593,24 @@ val clt_tactic3_p5 =
                       rw [Abbr ‘t’, Abbr ‘W0’]) \\
          STRIP_TAC >> POP_ASSUM (rw o wrap o SYM) \\
          rw [Abbr ‘t’] \\
-         Know ‘∑ (λn. W0 n x) (count n DIFF count1 j ∪ IMAGE (λi. i + n) (count j)) =
-               ∑ (λn. W0 n x) (count n DIFF count1 j) +
-               ∑ (λn. W0 n x) (IMAGE (λi. i + n) (count j))’
+         Know ‘∑ (λn. W0 n x) (count (SUC n) DIFF count1 j ∪ IMAGE (λi. i + (SUC n)) (count j)) =
+               ∑ (λn. W0 n x) (count (SUC n) DIFF count1 j) +
+               ∑ (λn. W0 n x) (IMAGE (λi. i + (SUC n)) (count j))’
          >- (irule EXTREAL_SUM_IMAGE_DISJOINT_UNION \\
              simp [DISJOINT_DEF, DIFF_DEF, IMAGE_DEF, Once EXTENSION] \\
              DISJ2_TAC >> rw [Abbr ‘W0’] \\
              fs [real_random_variable, Abbr ‘X'’, Abbr ‘Y'’, o_DEF]) \\
          Rewr \\
          rw [Abbr ‘W0’, Abbr ‘Z0’] \\
-         Know ‘∑ (λi. X' i x) (count n DIFF count1 j) =
-               ∑ (λn'. if n' < n then X n' (FST x) else Y (n' − n) (SND x))
-                 (count n DIFF count1 j)’
+         Know ‘∑ (λi. X' i x) (count (SUC n) DIFF count1 j) =
+               ∑ (λn'. if n' < (SUC n) then X n' (FST x) else Y (n' − (SUC n)) (SND x))
+                 (count (SUC n) DIFF count1 j)’
          >- (irule EXTREAL_SUM_IMAGE_EQ' >> rw [Abbr ‘X'’]) \\
          STRIP_TAC >> POP_ASSUM (rw o wrap o SYM) \\
-         Know ‘∑ (λi. Y' i x) (count j) = ∑ (λn'. if n' < n then X n' (FST x) else Y (n' − n) (SND x))
-                                            (IMAGE (λi. i + n) (count j))’
-         >- (Q.ABBREV_TAC ‘W0 = λn'. if n' < n then X n' (FST x) else Y (n' − n) (SND x)’ \\
-             Q.ABBREV_TAC ‘W1 = λi. i + n’ >> gs [] \\
+         Know ‘∑ (λi. Y' i x) (count j) = ∑ (λn'. if n' < SUC n then X n' (FST x) else Y (n' − SUC n) (SND x))
+                                            (IMAGE (λi. i + SUC n) (count j))’
+         >- (Q.ABBREV_TAC ‘W0 = λn'. if n' < (SUC n) then X n' (FST x) else Y (n' − (SUC n)) (SND x)’ \\
+             Q.ABBREV_TAC ‘W1 = λi. i + (SUC n)’ >> gs [] \\
              MATCH_MP_TAC EQ_TRANS \\
              qexists ‘∑ (W0 o W1) (count j)’ \\
              CONJ_TAC >- (irule EXTREAL_SUM_IMAGE_EQ' \\
@@ -6629,9 +6628,6 @@ val clt_tactic3_p5 =
      STRIP_TAC \\
      ‘measurable_space (p × p') = measurable_space p × measurable_space p'’
        by (irule MEASURABLE_SPACE_PROD >> fs [prob_space_def]) \\
-     Cases_on ‘n = 1’
-     >- (gs [Abbr ‘t’, UNION_EMPTY, Abbr ‘Z0’] \\
-         METIS_TAC [indep_rv_const, real_random_variable_def]) \\
      CONJ_TAC
      >- (simp [indep_rv_def, indep_def] \\
          Q.X_GEN_TAC ‘a1’ >> Q.X_GEN_TAC ‘a2’ >> STRIP_TAC \\
@@ -6652,13 +6648,13 @@ val clt_tactic3_p5 =
          DISCH_TAC \\
          Q.ABBREV_TAC ‘u = {j}’ \\
          ‘u INTER t = {}’ by rw [Abbr ‘u’, Abbr ‘t’, INTER_DEF, UNION_DEF, Once EXTENSION] \\
-         ‘u UNION t SUBSET count (2 * n)’
+         ‘u UNION t SUBSET count (2 * (SUC n))’
            by simp [Abbr ‘u’, Abbr ‘t’, INTER_DEF, UNION_DEF, Once EXTENSION, SUBSET_DEF] \\
          MP_TAC (Q.SPECL [‘r’, ‘W0’, ‘λi. Borel’, ‘u UNION t’]
                   (INST_TYPE [“:'a” |-> “:(α # α list)”, “:'b” |-> “:extreal”,
                               “:'index”  |-> “:num”] indep_vars_subset)) \\
          STRIP_TAC \\
-         POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘count (2 * n)’) >> gs [] \\
+         POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘count (2 * (SUC n))’) >> gs [] \\
          MP_TAC (Q.SPECL [‘r’, ‘W0’, ‘[j]’, ‘SET_TO_LIST t’, ‘1’, ‘LENGTH (SET_TO_LIST (t :num -> bool))’]
                   (INST_TYPE [“:'a” |-> “:(α # α list)”, “:'b” |-> “:extreal”,
                               “:'index”  |-> “:num”] indep_sum_list_of_vars)) \\
@@ -6671,11 +6667,11 @@ val clt_tactic3_p5 =
                       STRONG_CONJ_TAC
                       >- (rw [MEM_APPEND, Abbr ‘W0’, Abbr ‘X'’, Abbr ‘Y'’] \\
                           fs [random_variable_def, real_random_variable, p_space_def, events_def, o_DEF] \\
-                          Cases_on ‘n' < n’ >- (gs []) \\
+                          Cases_on ‘n' < (SUC n)’ >- (gs []) \\
                           gs [NOT_LT] \\
-                          Q.PAT_X_ASSUM ‘∀i. i < n ⇒
+                          Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒
                                              (λx. Y i (SND x)) ∈ Borel_measurable _ ∧ ∀x. x ∈ m_space r ⇒ _’
-                           (STRIP_ASSUME_TAC o Q.SPEC ‘n' - n’) \\
+                           (STRIP_ASSUME_TAC o Q.SPEC ‘n' - (SUC n)’) \\
                           fs [Abbr ‘t’, MEM_SET_TO_LIST, UNION_DEF, DIFF_DEF, IMAGE_DEF, Once EXTENSION]) \\
                       STRIP_TAC >> simp [] \\
                       ‘FINITE t’ by rw [Abbr ‘t’] \\
@@ -6719,16 +6715,16 @@ val clt_tactic3_p5 =
          MATCH_MP_TAC IN_MEASURABLE_BOREL_EQ \\
          qexists ‘Z j’ >> fs []) \\
      DISCH_TAC \\
-     Q.ABBREV_TAC ‘u = {j + n}’ \\
+     Q.ABBREV_TAC ‘u = {j + (SUC n)}’ \\
      ‘u INTER t = {}’ by rw [Abbr ‘u’, Abbr ‘t’, INTER_DEF, UNION_DEF, Once EXTENSION] \\
-     ‘u UNION t SUBSET count (2 * n)’
+     ‘u UNION t SUBSET count (2 * (SUC n))’
        by simp [Abbr ‘u’, Abbr ‘t’, INTER_DEF, UNION_DEF, Once EXTENSION, SUBSET_DEF] \\
      MP_TAC (Q.SPECL [‘r’, ‘W0’, ‘λi. Borel’, ‘u UNION t’]
               (INST_TYPE [“:'a” |-> “:(α # α list)”, “:'b” |-> “:extreal”,
                           “:'index”  |-> “:num”] indep_vars_subset)) \\
      STRIP_TAC \\
-     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘count (2 * n)’) >> gs [] \\
-     MP_TAC (Q.SPECL [‘r’, ‘W0’, ‘[j + n]’, ‘SET_TO_LIST t’, ‘1’, ‘LENGTH (SET_TO_LIST (t :num -> bool))’]
+     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘count (2 * (SUC n))’) >> gs [] \\
+     MP_TAC (Q.SPECL [‘r’, ‘W0’, ‘[j + (SUC n)]’, ‘SET_TO_LIST t’, ‘1’, ‘LENGTH (SET_TO_LIST (t :num -> bool))’]
               (INST_TYPE [“:'a” |-> “:(α # α list)”, “:'b” |-> “:extreal”,
                           “:'index”  |-> “:num”] indep_sum_list_of_vars)) \\
      impl_tac >- (ASM_SIMP_TAC std_ss [] \\
@@ -6740,11 +6736,11 @@ val clt_tactic3_p5 =
                   STRONG_CONJ_TAC
                   >- (rw [MEM_APPEND, Abbr ‘W0’, Abbr ‘X'’, Abbr ‘Y'’] \\
                       fs [random_variable_def, real_random_variable, p_space_def, events_def, o_DEF] \\
-                      Cases_on ‘n' < n’ >- (gs []) \\
+                      Cases_on ‘n' < (SUC n)’ >- (gs []) \\
                       gs [NOT_LT] \\
-                      Q.PAT_X_ASSUM ‘∀i. i < n ⇒
+                      Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒
                                          (λx. Y i (SND x)) ∈ Borel_measurable _ ∧ ∀x. x ∈ m_space r ⇒ _’
-                       (STRIP_ASSUME_TAC o Q.SPEC ‘n' - n’) \\
+                       (STRIP_ASSUME_TAC o Q.SPEC ‘n' - (SUC n)’) \\
                       fs [Abbr ‘t’, MEM_SET_TO_LIST, UNION_DEF, DIFF_DEF, IMAGE_DEF, Once EXTENSION]) \\
                   STRIP_TAC >> simp [] \\
                   ‘FINITE t’ by rw [Abbr ‘t’] \\
@@ -6757,14 +6753,14 @@ val clt_tactic3_p5 =
      rw [] >> fs [indep_rv_def, indep_def] \\
      Q.PAT_X_ASSUM ‘∀a b. a ∈ subsets Borel ∧ b ∈ subsets Borel ⇒ _’
       (STRIP_ASSUME_TAC o Q.SPECL [‘a1’, ‘a2’]) >> gs [] \\
-     ‘∀x. PREIMAGE (λx. W0 (j + n) x) a1 ∩ p_space r = PREIMAGE (Y' j) a1 ∩ p_space r’
+     ‘∀x. PREIMAGE (λx. W0 (j + (SUC n)) x) a1 ∩ p_space r = PREIMAGE (Y' j) a1 ∩ p_space r’
        by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
            EQ_TAC >> rw [] >> METIS_TAC []) \\
      ‘∀x. PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r =
           PREIMAGE (Z0 j) a2 ∩ p_space r’
        by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION] \\
            EQ_TAC >> rw [] >> METIS_TAC []) \\
-     ‘∀x. PREIMAGE (λx. W0 (j + n) x) a1 ∩ p_space r ∩
+     ‘∀x. PREIMAGE (λx. W0 (j + (SUC n)) x) a1 ∩ p_space r ∩
                    (PREIMAGE (λx. sum_list (MAP (λn. W0 n x) (SET_TO_LIST t))) a2 ∩ p_space r) =
           PREIMAGE (Y' j) a1 ∩ p_space r ∩ (PREIMAGE (Z0 j) a2 ∩ p_space r)’
        by (rw [PREIMAGE_def, INTER_DEF, Once EXTENSION, UNION_DEF] \\
@@ -6777,10 +6773,10 @@ val clt_tactic3_p5 =
 (* -------------------------------------------------------------------------- *)
 
 val clt_tactic3_p6 =
-    Q.PAT_X_ASSUM ‘∀j. j < n ⇒ expectation r (_) − expectation r (_) =
-                               ∑ (λj'. _) (count n)’
-    (STRIP_ASSUME_TAC o Q.SPEC ‘n - 1’)
->> ‘n - 1 < n’ by fs [SUB_LESS] >> gs []
+    Q.PAT_X_ASSUM ‘∀j. j < (SUC n) ⇒ expectation r (_) − expectation r (_) =
+                                     ∑ (λj'. _) (count (SUC n))’
+    (STRIP_ASSUME_TAC o Q.SPEC ‘(SUC n) - 1’)
+>> ‘(SUC n) - 1 < SUC n’ by fs [SUB_LESS] >> gs []
 >> qmatch_abbrev_tac ‘abs (real G) < e’
 >> ASM_SIMP_TAC std_ss [GSYM extreal_lt_eq]
 >> Know ‘G ≠ PosInf ∧ G ≠ NegInf’
@@ -6789,9 +6785,9 @@ val clt_tactic3_p6 =
     clt_g 1 2) >> DISCH_TAC
 >> ASM_SIMP_TAC std_ss [abs_real, abs_not_infty, normal_real]
 >> MATCH_MP_TAC let_trans
->> qexists ‘M / (6 * (s n)³) *
+>> qexists ‘M / (6 * (s (SUC n))³) *
             ∑ (λj. expectation r (λx. (abs (X' j x))³ + (abs (Y' j x))³))
-              (count n)’
+              (count (SUC n))’
 >> simp [];
 
 val clt_tactic3 =
@@ -6801,6 +6797,27 @@ val clt_tactic3 =
     clt_tactic3_p4 \\
     clt_tactic3_p5 \\
     clt_tactic3_p6;
+
+Theorem clt_expectation_sum_not_infty1[local] :
+  ∀p X s R f n.
+    prob_space p ∧
+    (∀i. real_random_variable (X i) p) ∧
+    (∀i. integrable p (X i)) ∧
+    (∀i. variance p (X i) < +∞) ∧
+    (∀i. expectation p (X i) = 0) ∧
+    0 < s (SUC n) ∧ s (SUC n) ≠ +∞ ∧ s (SUC n) ≠ −∞ ∧
+    R = (λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)) ∧
+    f ∈ CnR 3 ⇒
+    expectation p (Normal ∘ f ∘ real ∘ R n) ≠ +∞ ∧
+    expectation p (Normal ∘ f ∘ real ∘ R n) ≠ −∞
+Proof
+    NTAC 7 STRIP_TAC
+ >> MATCH_MP_TAC expectation_finite >> simp []
+ >> irule integrable_bounded_continuous  >> simp []
+ >> CONJ_TAC  >- (MP_TAC (C3_subset_C_b) >> rw [SUBSET_DEF])
+ >> MP_TAC (Q.SPECL [‘p’, ‘X’, ‘s’] real_random_variable_sum_cdiv)
+ >> simp []
+QED
 
 Theorem central_limit_theorem :
     ∀p X N.
@@ -6812,18 +6829,34 @@ Theorem central_limit_theorem :
       (∀i. expectation p (λx. (abs (X i x))³) < +∞) ∧
       (∀i. variance p (X i) < PosInf) ∧
       (∀i. variance p (X i) ≠ 0) ∧
-      (∀n. (sqrt (second_moments p X n)) ≠ 0) ∧
-      ((\n. absolute_third_moments p X n /
-            sqrt (second_moments p X n) pow 3) --> 0) sequentially ⇒
-      ((\n x. SIGMA (λi. X i x) (count n) /
-              sqrt (second_moments p X n)) --> N) (in_distribution p)
+      ((\n. absolute_third_moments p X (SUC n) /
+            sqrt (second_moments p X (SUC n)) pow 3) --> 0) sequentially ⇒
+      ((\n x. SIGMA (λi. X i x) (count (SUC n)) /
+              sqrt (second_moments p X (SUC n))) --> N) (in_distribution p)
 Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
  >> Q.ABBREV_TAC ‘b = λn. absolute_third_moments p X n’ >> fs []
- >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count n) / s n’
- >> clt_tactic1
- >> Q.PAT_X_ASSUM ‘∀n. 0 ≤ s n’ (K_TAC)
+ >> Q.ABBREV_TAC ‘R = λn x. ∑ (λi. X i x) (count (SUC n)) / s (SUC n)’
+ >> Know ‘∀n. 0 < s (SUC n)’
+ >- (rw [Abbr ‘s’] \\
+     MATCH_MP_TAC sqrt_pos_lt >> rw [second_moments_def] \\
+     MATCH_MP_TAC EXTREAL_SUM_IMAGE_SPOS >> rw [GSYM variance_def] \\
+     MP_TAC (Q.SPECL [‘p’, ‘X (x :num)’] variance_pos) >>  rw [lt_le])
+ >> DISCH_TAC
+ >> Know ‘∀n. s n ≠ NegInf ∧ s n ≠ PosInf’
+ >- (simp [Abbr ‘s’] \\
+     qx_gen_tac ‘n’ \\
+     CONJ_TAC >- (Suff ‘0 ≤ sqrt (second_moments p X n)’
+                  >- (STRIP_TAC >> METIS_TAC [extreal_0_simps, lt_trans]) \\
+                  MATCH_MP_TAC sqrt_pos_le >> rw [second_moments_variance_def] \\
+                  irule EXTREAL_SUM_IMAGE_POS >> simp [variance_pos]) \\
+     irule sqrt_infty \\
+     CONJ_TAC >- (Suff ‘second_moments p X n < +∞’
+                  >- (METIS_TAC [lt_imp_ne]) \\
+                  irule finite_variance_imp_second_moments >> simp []) \\
+     METIS_TAC [second_moments_pos])
+ >> DISCH_TAC
  >> ‘∀i. integrable p (X i) ∧ integrable p (λx. (X i x) pow 2) ∧
          integrable p (λx. (X i x)³)’ by METIS_TAC [clt_integrable_lemma]
  >> ‘∀i. integrable p (λx. (abs (X i x))³)’
@@ -6832,13 +6865,13 @@ Proof
  >> Know ‘∀i. real_random_variable (R i) p’
  >- (Q.X_GEN_TAC ‘n’ \\
      drule real_random_variable_sum_cdiv >> STRIP_TAC \\
-     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘X’, ‘s’, ‘n’]) \\
+     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘X’, ‘s’, ‘SUC n’]) \\
      gs [] >> fs [Abbr ‘R’])
  >> DISCH_TAC
  >> Know ‘∀i. integrable p (R i)’
  >- (Q.X_GEN_TAC ‘n’ \\
      drule integrable_sum_cdiv >> STRIP_TAC \\
-     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘X’, ‘s’, ‘n’]) \\
+     POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘X’, ‘s’, ‘SUC n’]) \\
      gs [] >> fs [Abbr ‘R’])
  >> DISCH_TAC
  >> MP_TAC (Q.SPECL [‘p’, ‘R’, ‘N’, ‘N’] converge_in_dist_alt_C3)
@@ -6847,17 +6880,20 @@ Proof
      METIS_TAC [random_variable_borel_imp_Borel])
  >> Rewr
  >> rw []
- >> Q.PAT_X_ASSUM ‘(R ⟶ N) (in_distribution p) ⇔ _’ K_TAC
+    >> Q.PAT_X_ASSUM ‘(R ⟶ N) (in_distribution p) ⇔ _’ K_TAC
+
  >> Q.ABBREV_TAC ‘M = λn. expectation p (Normal ∘ f ∘ real ∘ R n)’
  >> Q.ABBREV_TAC ‘Q = expectation p (Normal ∘ f ∘ real o N)’
  >> Know ‘Q ≠ +∞ ∧ Q ≠ −∞’
  >- (simp [Abbr ‘Q’] \\
      MATCH_MP_TAC clt_expectation_sum_not_infty_normal_rv \\
      rw [ext_normal_rv_def]) >> DISCH_TAC
+
  >> Know ‘∀n. 0 ≤ n ⇒ M n ≠ +∞ ∧ M n ≠ −∞’
  >- (Q.UNABBREV_TAC ‘M’ >> BETA_TAC \\
-     MP_TAC (Q.SPECL [‘p’, ‘X’, ‘s’, ‘R’, ‘f’] clt_expectation_sum_not_infty) \\
+     MP_TAC (Q.SPECL [‘p’, ‘X’, ‘s’, ‘R’, ‘f’] clt_expectation_sum_not_infty1) \\
      simp []) >> DISCH_TAC
+
  >> Suff ‘((λx. M x - Q) --> 0) sequentially’
  >- (MP_TAC (Q.SPECL [‘M’, ‘Q’] lim_null) \\
      simp [] >> DISCH_THEN (fs o wrap) \\
@@ -6867,19 +6903,21 @@ Proof
  >> fs [LIM_SEQUENTIALLY]
  >> Q.PAT_X_ASSUM ‘((λx. M x − Q) ⟶ 0) sequentially ⇔ _’ K_TAC
  (*To rewrite b n / s n pow 3 *)
- >> MP_TAC (Q.SPECL [‘λn. b n / (s n)³’, ‘0’] lim_null_equiv_extreal_real)
+    >> MP_TAC (Q.SPECL [‘λn. b (SUC n) / (s (SUC n))³’, ‘0’] lim_null_equiv_extreal_real)
+
  >> impl_tac >> simp []
  >- (qexists ‘1’ >> gs [] \\
      Q.X_GEN_TAC ‘z’ >> STRIP_TAC \\
-     Suff ‘b z ≠ PosInf ∧ b z ≠ NegInf’
+     Suff ‘b (SUC z) ≠ PosInf ∧ b (SUC z) ≠ NegInf’
      >- (STRIP_TAC \\
-         ‘∃a. b z = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
+         ‘∃a. b (SUC z) = Normal a’ by METIS_TAC [extreal_cases] >> gs [] \\
          MATCH_MP_TAC div_not_infty \\
-          CCONTR_TAC >> fs [] \\
-         MP_TAC (Q.SPECL [‘3’, ‘s (z :num)’] pow_zero_imp) >> STRIP_TAC \\
-         Q.PAT_X_ASSUM ‘∀n. s n ≠ 0’ (STRIP_ASSUME_TAC o Q.SPEC ‘z’) >> fs []) \\
+         CCONTR_TAC >> fs [] \\
+         MP_TAC (Q.SPECL [‘3’, ‘s ((SUC z) :num)’] pow_zero_imp) >> STRIP_TAC \\
+         Q.PAT_X_ASSUM ‘∀n. 0 < s (SUC n)’ (STRIP_ASSUME_TAC o Q.SPEC ‘z’) >> fs [lt_imp_ne]) \\
      bn_not_infty_tactic)
- >> STRIP_TAC
+    >> STRIP_TAC
+
  >> fs [LIM_SEQUENTIALLY, metricTheory.dist] >> rw []
  >> Q.ABBREV_TAC ‘(A :extreal) = sup (IMAGE (λt. abs (Normal (diffn 3 f t))) UNIV)’
  >> ‘A ≠ PosInf’ by METIS_TAC [clt_sup_finite]
@@ -6892,15 +6930,17 @@ Proof
  >> Q.ABBREV_TAC ‘fu = λx. Normal ((abs x)³ * std_normal_density x)’
  >> ‘0 < ∫ lborel fu’ by rw [Abbr ‘fu’, standard_normal_abs_third_moment_pos]
  >> ‘∃c0. ∫ lborel fu = Normal c0’ by METIS_TAC [integrable_normal_integral] >> gs []
- >> Q.ABBREV_TAC ‘U = m / 6 * (1 + c0)’
+    >> Q.ABBREV_TAC ‘U = m / 6 * (1 + c0)’
+
  >> Cases_on ‘m = 0’
- >- (‘U = 0’ by gs [mul_lzero, normal_0, extreal_pow_def] \\
-     clt_tactic3 \\
-     gs [mul_lzero, normal_0, extreal_pow_def] \\
-     ‘0 < Normal 6’ by EVAL_TAC \\
-     ‘0 < Normal (c pow 3)’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt, extreal_pow_def] \\
-     ‘0 < (Normal 6 * Normal c³)’ by METIS_TAC [lt_mul] \\
-     ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> gs [lt_imp_ne, zero_div, mul_lzero])
+    >- (‘U = 0’ by gs [mul_lzero, normal_0, extreal_pow_def] \\
+        clt_tactic3 \\
+        gs [mul_lzero, normal_0, extreal_pow_def] \\
+        ‘0 < Normal 6’ by EVAL_TAC \\
+        ‘0 < Normal (c pow 3)’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt, extreal_pow_def] \\
+        ‘0 < (Normal 6 * Normal c³)’ by METIS_TAC [lt_mul] \\
+        ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> gs [lt_imp_ne, zero_div, mul_lzero])
+
  >> Know ‘0 < U’
  >- (rw [Abbr ‘U’] \\
      MATCH_MP_TAC REAL_LT_MUL >> rw []
@@ -6908,22 +6948,23 @@ Proof
      METIS_TAC [REAL_LT_ADD, REAL_LT_01])
  >> DISCH_TAC
  >> ‘0 < e / U’ by METIS_TAC [REAL_LT_DIV, REAL_LT_LE]
- >> Q.PAT_X_ASSUM ‘∀e. 0 < e ⇒ ∃N. ∀n. N ≤ n ⇒ abs (real (b n / (s n)³)) < e’
+ >> Q.PAT_X_ASSUM ‘∀e. 0 < e ⇒ ∃N. ∀n. N ≤ n ⇒ _< e’
      (STRIP_ASSUME_TAC o Q.SPEC ‘e / U’) >> gs []
  >> ‘0 < (2 :real)’ by simp []
  >> ‘0 < e / 2’ by METIS_TAC [REAL_LT_DIV]
- >> clt_tactic3
- >> Know ‘∀i. i < n ⇒ integrable r (λx. (Y' i x)³)’
+    >> clt_tactic3
+
+ >> Know ‘∀i. i < (SUC n) ⇒ integrable r (λx. (Y' i x)³)’
  >- (rw [Abbr ‘Y'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (Y (i :num) x)³’]
               (INST_TYPE [beta |-> “:('a list)”] integrable_snd)) \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
- >> Know ‘∀i. i < n ⇒ integrable r (λx. (X' i x)³)’
+ >> Know ‘∀i. i < (SUC n) ⇒ integrable r (λx. (X' i x)³)’
  >- (rw [Abbr ‘X'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (X (i :num) x )³’]
               (INST_TYPE [beta |-> “:('a list)”] integrable_fst)) \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
- >> Know ‘∀i. i < n ⇒ expectation r (λx. (abs (X' i x))) ≠ PosInf ∧
+ >> Know ‘∀i. i < (SUC n) ⇒ expectation r (λx. (abs (X' i x))) ≠ PosInf ∧
                       expectation r (λx. (abs (Y' i x))) ≠ PosInf ∧
                       expectation r (λx. (abs (X' i x)) pow 3) ≠ PosInf ∧
                       expectation r (λx. (abs (Y' i x)) pow 3) ≠ PosInf’
@@ -6931,7 +6972,8 @@ Proof
      >> MATCH_MP_TAC (cj 1 expectation_finite) >> simp [GSYM o_DEF, GSYM pow_abs] \\
      MATCH_MP_TAC integrable_abs \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
- >> Know ‘∀i. i < n ⇒ expectation r (λx. (abs (X' i x))) ≠ NegInf ∧
+
+ >> Know ‘∀i. i < (SUC n) ⇒ expectation r (λx. (abs (X' i x))) ≠ NegInf ∧
                       expectation r (λx. (abs (Y' i x))) ≠ NegInf ∧
                       expectation r (λx. (abs (X' i x)) pow 3) ≠ NegInf ∧
                       expectation r (λx. (abs (Y' i x)) pow 3) ≠ NegInf’
@@ -6939,10 +6981,15 @@ Proof
      >> MATCH_MP_TAC (cj 2 expectation_finite) >> simp [GSYM o_DEF, GSYM pow_abs] \\
      MATCH_MP_TAC integrable_abs \\
      fs [prob_space_def, o_DEF]) >> DISCH_TAC
- >> Know ‘Normal m / (6 * (Normal c)³) * ∑ (λj. expectation r (λx. (abs (X' j x))³ + (abs (Y' j x))³)) (count n) =
+
+
+
+
+    >> Know ‘Normal m / (6 * (Normal c)³) *
+             ∑ (λj. expectation r (λx. (abs (X' j x))³ + (abs (Y' j x))³)) (count (SUC n)) =
           Normal m / 6 *
           SIGMA (λj. expectation r (λx. (abs (X' j x)) pow 3) / (Normal c) pow 3 +
-                     expectation r (λx. (abs (Y' j x)) pow 3) / (Normal c) pow 3) (count n)’
+                     expectation r (λx. (abs (Y' j x)) pow 3) / (Normal c) pow 3) (count (SUC n))’
  >- (‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC >> POP_ORW \\
      qmatch_abbrev_tac ‘Normal m / (Normal 6 * (Normal c)³) * B = _’ \\
      Know ‘B ≠ PosInf ∧ B ≠ NegInf’
@@ -6954,8 +7001,10 @@ Proof
          irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> rw [] \\
          MATCH_MP_TAC (cj 2 expectation_finite) >> simp [] \\
          clt_tactic2) >> DISCH_TAC \\
+
      ‘∃d. B = Normal d’ by METIS_TAC [extreal_cases] >> gs [extreal_mul_eq] \\
      ‘0 < (Normal c) pow 3’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, pow_pos_lt] \\
+
      Know ‘Normal m / (Normal 6 * (Normal c)³) * Normal d =
            Normal m / Normal 6 * Normal d / (Normal c) pow 3’
      >- (‘0 < Normal 6’ by EVAL_TAC \\
@@ -6967,13 +7016,15 @@ Proof
          ‘Normal (c pow 3) ≠ 0’ by METIS_TAC [GSYM extreal_lt_eq, normal_0, lt_imp_ne] \\
          ASM_SIMP_TAC std_ss [inv_mul, lt_imp_ne, mul_assoc] \\
          simp [GSYM mul_assoc, mul_linv_pos]) >> Rewr \\
+
      ‘0 ≠ (6 :real)’ by EVAL_TAC \\
      ASM_SIMP_TAC std_ss [extreal_div_eq, mul_div_assoc, extreal_not_infty, pow_not_infty] \\
      simp [mul_lcancel] \\
      Q.PAT_X_ASSUM ‘B = Normal d’ (rw o wrap o SYM) \\
      rw [Abbr ‘B’, extreal_pow_def] \\
      Q.ABBREV_TAC ‘h = λj. expectation r (λx. (abs (X' j x))³ + (abs (Y' j x))³)’ \\
-     Know ‘∑ h (count n) / (Normal (c pow 3)) = ∑ (λx. h x / (Normal (c pow 3))) (count n)’
+
+     Know ‘∑ h (count (SUC n)) / (Normal (c pow 3)) = ∑ (λx. h x / (Normal (c pow 3))) (count (SUC n))’
      >- (irule (GSYM EXTREAL_SUM_IMAGE_CDIV) \\
          fs [REAL_POW_LT, REAL_LT_IMP_NE] \\
          DISJ2_TAC >> rw [Abbr ‘h’] \\
@@ -6982,15 +7033,16 @@ Proof
      rw [Abbr ‘h’] \\
      irule EXTREAL_SUM_IMAGE_EQ >> fs [] \\
      rpt (Q.PAT_X_ASSUM ‘T’ K_TAC) \\
+
      CONJ_TAC
      >- (rw [] \\
          Suff ‘expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) =
                expectation r (λx'. (abs (X' x x'))³) + expectation r (λx'. (abs (Y' x x'))³)’
          >- (Rewr >> irule (GSYM div_add) \\
              fs [extreal_pow_def, lt_imp_ne] >> gs [] \\
-             Q.PAT_X_ASSUM ‘∀i. i < n ⇒ expectation r (λx. abs (X' i x)) ≠ +∞ ∧ _’
+             Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ +∞ ∧ _’
               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
-             Q.PAT_X_ASSUM ‘∀i. i < n ⇒ expectation r (λx. abs (X' i x)) ≠ NegInf ∧ _’
+             Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ NegInf ∧ _’
               (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs []) \\
          HO_MATCH_MP_TAC expectation_add \\
          fs [GSYM pow_abs, GSYM o_DEF] \\
@@ -7003,9 +7055,10 @@ Proof
         ‘∃a. expectation r (λx'. (abs (X' x x'))³ + (abs (Y' x x'))³) = Normal a’ by METIS_TAC [extreal_cases] \\
         gs [extreal_div_eq, extreal_not_infty]) \\
      irule (cj 2 add_not_infty) \\
-     Q.PAT_X_ASSUM ‘∀i. i < n ⇒ expectation r (λx. abs (X' i x)) ≠ +∞ ∧ _’
+
+     Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠ +∞ ∧ _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘x’) \\
-     Q.PAT_X_ASSUM ‘∀i. i < n ⇒ expectation r (λx. abs (X' i x)) ≠  −∞ ∧ _’
+     Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ expectation r (λx. abs (X' i x)) ≠  −∞ ∧ _’
       (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
      ‘∃a. expectation r (λx'. (abs (X' x x'))³) = Normal a’ by METIS_TAC [extreal_cases] \\
      ‘∃z. expectation r (λx'. (abs (Y' x x'))³) = Normal z’ by METIS_TAC [extreal_cases] \\
@@ -7013,8 +7066,16 @@ Proof
  >> Rewr
  >> Q.ABBREV_TAC ‘A = λj. expectation r (λx. (abs (X' j x))³)’
  >> Q.ABBREV_TAC ‘B = λj. expectation r (λx. (abs (Y' j x))³)’
- >> gs []
- >> Know ‘∀i. i < n ⇒ ext_normal_rv (Y' i) r 0 (sig i)’
+    >> gs []
+
+
+
+
+
+
+
+
+ >> Know ‘∀i. i < (SUC n) ⇒ ext_normal_rv (Y' i) r 0 (sig i)’
  >- (rw [Abbr ‘Y'’, Abbr ‘r’] \\
      MATCH_MP_TAC ext_normal_rv_snd >> fs [])
  >> DISCH_TAC
@@ -7031,39 +7092,41 @@ Proof
                   ‘∃a. X i x = Normal a’ by METIS_TAC [extreal_cases] \\
                   METIS_TAC [extreal_abs_def, extreal_pow_def, extreal_not_infty]) \\
      rw [o_DEF]) >> rw []
- >> Know ‘∀i. i < n ⇒ B i = expectation p' (λx. (abs (Y i x)) pow 3)’
+
+ >> Know ‘∀i. i < (SUC n) ⇒ B i = expectation p' (λx. (abs (Y i x)) pow 3)’
  >- (rw [Abbr ‘B’, Abbr ‘r’, Abbr ‘Y'’] \\
      MP_TAC (Q.SPECL [‘p’, ‘p'’, ‘λx. (abs (Y (i :num) x)) pow 3’]
               (INST_TYPE [“:'b” |-> “:'a list”] expectation_snd)) \\
      impl_tac >- (fs [real_random_variable, GSYM pow_abs] \\
                   NTAC 2 STRIP_TAC \\
-                  Q.PAT_X_ASSUM ‘∀i. i < n ⇒ Y i ∈ Borel_measurable (p_space p',events p') ∧ _’
+                  Q.PAT_X_ASSUM ‘∀i. i < (SUC n) ⇒ Y i ∈ Borel_measurable (p_space p',events p') ∧ _’
                    (STRIP_ASSUME_TAC o Q.SPEC ‘i’) >> gs [] \\
                   POP_ASSUM (STRIP_ASSUME_TAC o Q.SPEC ‘x’) >> gs [] \\
                   ‘∃a. Y i x = Normal a’ by METIS_TAC [extreal_cases] \\
                    METIS_TAC [extreal_abs_def, extreal_pow_def, extreal_not_infty]) \\
      rw [o_DEF]) >> rw []
+
  >> Know ‘Normal m / 6 *
           ∑ (λj. expectation p (λx. (abs (X j x))³) / (Normal c)³ +
-                 B j / (Normal c)³) (count n) =
-          Normal m / (6 * Normal c³) * ∑ (λj. expectation p (λx. (abs (X j x))³) + B j) (count n)’
+                 B j / (Normal c)³) (count (SUC n)) =
+          Normal m / (6 * Normal c³) * ∑ (λj. expectation p (λx. (abs (X j x))³) + B j) (count (SUC n))’
  >- (Q.ABBREV_TAC ‘L = λj. expectation p (λx. (abs (X j x))³)’ >> gs [] \\
-     Know ‘∑ (λj. L j / (Normal c)³ + B j / (Normal c)³) (count n) =
-           ∑ (λj. (L j + B j) / (Normal c)³) (count n)’
+     Know ‘∑ (λj. L j / (Normal c)³ + B j / (Normal c)³) (count (SUC n)) =
+           ∑ (λj. (L j + B j) / (Normal c)³) (count (SUC n))’
      >- (irule EXTREAL_SUM_IMAGE_EQ' >> rw [FUN_EQ_THM] \\
          MATCH_MP_TAC div_add \\
          simp [extreal_pow_def, extreal_not_infty]) \\
      Rewr \\
-     Know ‘∑ (λj. (L j + B j) / (Normal c)³) (count n) = ∑ (λj. (L j + B j)) (count n) / (Normal c)³’
-     >- (MP_TAC (Q.SPEC ‘count (n :num)’ (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_CDIV)) \\
+     Know ‘∑ (λj. (L j + B j) / (Normal c)³) (count (SUC n)) = ∑ (λj. (L j + B j)) (count (SUC n)) / (Normal c)³’
+     >- (MP_TAC (Q.SPEC ‘count (SUC (n :num))’ (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_CDIV)) \\
          rw [] \\
          POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘λj. (L j + B j)’, ‘c pow 3’]) \\
          gs [add_not_infty, extreal_pow_def]) \\
      Rewr >> rw [extreal_pow_def] \\
      ‘6 = Normal 6’ by EVAL_TAC \\
-     Suff ‘∑ (λj. L j + B j) (count n) ≠ PosInf /\ ∑ (λj. L j + B j) (count n) ≠ NegInf’
+     Suff ‘∑ (λj. L j + B j) (count (SUC n)) ≠ PosInf /\ ∑ (λj. L j + B j) (count (SUC n)) ≠ NegInf’
      >- (rw [] \\
-         ‘∃l. ∑ (λj. L j + B j) (count n) = Normal l’ by METIS_TAC [extreal_cases] \\
+         ‘∃l. ∑ (λj. L j + B j) (count (SUC n)) = Normal l’ by METIS_TAC [extreal_cases] \\
          gs [div_eq_mul_rinv, extreal_not_infty] \\
          ‘Normal l * inv (Normal (c pow 3)) = inv (Normal (c pow 3)) * Normal l’ by rw [mul_comm] \\
          POP_ORW \\
@@ -7076,36 +7139,45 @@ Proof
      rw [Abbr ‘L’, Abbr ‘B’]
      >- (irule EXTREAL_SUM_IMAGE_NOT_POSINF >> gs [add_not_infty]) \\
      irule EXTREAL_SUM_IMAGE_NOT_NEGINF >> gs [add_not_infty])
- >> Rewr
+    >> Rewr
+
+
+
+
+
+
  >> MATCH_MP_TAC let_trans
- >> qexists ‘Normal U * (b n / (s n) pow 3)’
+ >> qexists ‘Normal U * (b (SUC n) / (s (SUC n)) pow 3)’
  >> reverse CONJ_TAC
- >- (Q.PAT_X_ASSUM ‘∀n. k ≤ n ⇒ U * abs (real (b n / (s n)³)) < e * NZ U’
+ >- (Q.PAT_X_ASSUM ‘∀n. k ≤ n ⇒ _ < e * NZ U’
       (STRIP_ASSUME_TAC o Q.SPEC ‘n’) >> gs [] \\
-     MP_TAC (Q.SPECL [‘Normal U * (b (n :num) / (Normal c)³)’, ‘Normal e’] real_lt_eq) \\
-     impl_tac >- (Suff ‘b n ≠ PosInf ∧ b n ≠ NegInf’
-                  >- (rw [] >> ‘∃y. b n = Normal y’ by METIS_TAC [extreal_cases] \\
+     MP_TAC (Q.SPECL [‘Normal U * (b (SUC (n :num)) / (Normal c)³)’, ‘Normal e’] real_lt_eq) \\
+     impl_tac >- (Suff ‘b (SUC n) ≠ PosInf ∧ b (SUC n) ≠ NegInf’
+                  >- (rw [] >> ‘∃y. b (SUC n) = Normal y’ by METIS_TAC [extreal_cases] \\
                       gs [extreal_pow_def, extreal_div_eq, extreal_mul_eq]) \\
                   bn_not_infty_tactic) \\
      rw [] >> POP_ASSUM (rw o wrap o SYM) \\
-     MP_TAC (Q.SPECL [‘Normal U’, ‘b (n :num) / (Normal c)³’] mul_real) \\
+     MP_TAC (Q.SPECL [‘Normal U’, ‘b (SUC (n :num)) / (Normal c)³’] mul_real) \\
      gs [] \\
-     impl_tac >- (Suff ‘b n ≠ PosInf ∧ b n ≠ NegInf’
-                  >- (rw [] >> ‘∃y. b n = Normal y’ by METIS_TAC [extreal_cases] \\
+     impl_tac >- (Suff ‘b (SUC n) ≠ PosInf ∧ b (SUC n) ≠ NegInf’
+                  >- (rw [] >> ‘∃y. b (SUC n) = Normal y’ by METIS_TAC [extreal_cases] \\
                       gs [extreal_pow_def, extreal_div_eq, extreal_mul_eq]) \\
                   bn_not_infty_tactic) \\
      Rewr \\
      ‘U ≠ 0’ by METIS_TAC [REAL_LT_IMP_NE] \\
      fs [nonzerop_def] \\
      MATCH_MP_TAC REAL_LET_TRANS \\
-     qexists ‘U * abs (real (b n / (Normal c)³))’ >> gs [ABS_LE])
- >> Know ‘∀i. i < n ⇒ B i = Normal c0 * (Normal ((sig i) pow 3))’
+     qexists ‘U * abs (real (b (SUC n) / (Normal c)³))’ >> gs [ABS_LE])
+
+
+ >> Know ‘∀i. i < (SUC n) ⇒ B i = Normal c0 * (Normal ((sig i) pow 3))’
  >- (rw [] >> gs [] \\
      MP_TAC (Q.SPECL [‘p'’, ‘Y (i :num)’, ‘sig (i :num)’]
               (INST_TYPE [“:'a” |-> “:'a list”] ext_normal_rv_abs_third_moment')) \\
      rw [mul_comm])
- >> DISCH_TAC
- >> Know ‘∀i. i < n ⇒ B i ≤ Normal c0 * A i’
+    >> DISCH_TAC
+
+ >> Know ‘∀i. i < (SUC n) ⇒ B i ≤ Normal c0 * A i’
  >- (rw [] \\
      HO_MATCH_MP_TAC le_lmul_imp >> gs [REAL_LT_IMP_LE] \\
      MATCH_MP_TAC eqle_trans \\
@@ -7138,6 +7210,7 @@ Proof
      ‘expectation p (λx. (abs (X i x))²) powr (3 * 2⁻¹) = expectation p (λx. (u x) pow 2) powr (3 * 2⁻¹)’
        by rw [Abbr ‘u’] >> POP_ORW \\
      simp [] \\
+
      Know ‘u IN lp_space 2 p’
      >- (simp [Abbr ‘u’, lp_space_def, GSYM o_DEF] \\
          CONJ_TAC >- (irule IN_MEASURABLE_BOREL_ABS' \\
@@ -7164,6 +7237,7 @@ Proof
              METIS_TAC [ETA_AX]) \\
          rw [o_DEF, pow_abs]) \\
      DISCH_TAC \\
+
      Know ‘u IN lp_space 3 p’
      >- (simp [Abbr ‘u’, lp_space_def, GSYM o_DEF] \\
          CONJ_TAC >- (irule IN_MEASURABLE_BOREL_ABS' \\
@@ -7192,6 +7266,7 @@ Proof
          MP_TAC (Q.SPECL [‘p’, ‘λx. (X (i :num) x) pow 3’] (INST_TYPE [“:'b” |-> “:'a”] integrable_abs)) \\
          fs [prob_space_def, o_DEF, pow_abs]) \\
      DISCH_TAC \\
+
      MP_TAC (Q.SPECL [‘p’, ‘u’, ‘2’, ‘3’] liapounov_ineq_rv) >> rw [seminorm_def, expectation_def] \\
      fs [integral_abs_pos_fn, prob_space_def, GSYM o_DEF, GSYM pow_abs] \\
      ‘∀x. abs (u x) = u x’ by rw [Abbr ‘u’, abs_abs] >> gs [] \\
@@ -7231,10 +7306,12 @@ Proof
          rw [mul_assoc, mul_linv_pos]) \\
      Rewr)
  >> DISCH_TAC
- >> ‘0 ≤ c0’ by rw [REAL_LT_IMP_LE]
- >> Know ‘∑ (λj. A j + B j) (count n) ≤ (1 + Normal c0) * ∑ A (count n)’
+    >> ‘0 ≤ c0’ by rw [REAL_LT_IMP_LE]
+
+
+ >> Know ‘∑ (λj. A j + B j) (count (SUC n)) ≤ (1 + Normal c0) * ∑ A (count (SUC n))’
  >- (simp [extreal_add_eq, GSYM normal_1] \\
-     MP_TAC (Q.SPEC ‘count (n :num)’ (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_CMUL)) \\
+     MP_TAC (Q.SPEC ‘count (SUC (n :num))’ (INST_TYPE [“:'a” |-> “:num”] EXTREAL_SUM_IMAGE_CMUL)) \\
      rw [] \\
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘A’, ‘1 + c0’]) >> gs [] \\
      POP_ASSUM (rw o wrap o SYM) \\
@@ -7246,14 +7323,16 @@ Proof
                   Rewr' >> rw [add_rdistrib, mul_lone, le_01] \\
                   METIS_TAC [GSYM le_ladd_imp]) \\
      DISJ2_TAC >> rw [add_not_infty, mul_not_infty2, extreal_not_infty])
- >> rw []
- >> Know ‘∑ A (count n) = b n’
+    >> rw []
+
+ >> Know ‘∑ A (count (SUC n)) = b (SUC n)’
  >- (rw [Abbr ‘A’,Abbr ‘b’, absolute_third_moments_def, absolute_third_moment_def, absolute_moment_def] \\
         irule EXTREAL_SUM_IMAGE_EQ' >> rw [])
  >> rw [] >> gs [Abbr ‘U’] >> gs []
- >> POP_ORW
- >> MP_TAC (Q.SPECL [‘∑ (λj. expectation p (λx. (abs (X j x))³) + B j) (count n)’,
-                    ‘(1 + Normal c0) * b (n :num)’, ‘Normal m / (6 * Normal c³)’] le_lmul_imp)
+    >> POP_ORW
+
+ >> MP_TAC (Q.SPECL [‘∑ (λj. expectation p (λx. (abs (X j x))³) + B j) (count (SUC n))’,
+                    ‘(1 + Normal c0) * b (SUC (n :num))’, ‘Normal m / (6 * Normal c³)’] le_lmul_imp)
  >> impl_tac
  >- (gs [] \\
      ‘0 < Normal 6’ by EVAL_TAC \\
@@ -7262,15 +7341,14 @@ Proof
      ‘(6 :extreal) = Normal (6 :real)’ by EVAL_TAC \\
      POP_ORW >> rw [extreal_mul_eq] \\
      MATCH_MP_TAC le_div >> gs [])
- >> DISCH_TAC
- >> Know ‘Normal (1 / 6 * (m * (1 + c0))) * (b n / (Normal c)³) =
-          Normal m / (6 * Normal c³) * ((1 + Normal c0) * b n)’
+    >> DISCH_TAC
+
+ >> Know ‘Normal (1 / 6 * (m * (1 + c0))) * (b (SUC n) / (Normal c)³) =
+          Normal m / (6 * Normal c³) * ((1 + Normal c0) * b (SUC n))’
  >- (rw [extreal_pow_def] \\
      Q.ABBREV_TAC ‘l = 1 + c0’ >> gs [] \\
-     Know ‘b n ≠ PosInf ∧ b n ≠ NegInf’
-     >- (bn_not_infty_tactic) \\
-     DISCH_TAC \\
-     ‘∃b0. b n = Normal b0’ by METIS_TAC [extreal_cases] >> gs [] \\
+     ‘b (SUC n) ≠ PosInf ∧ b (SUC n) ≠ NegInf’ by bn_not_infty_tactic \\
+     ‘∃b0. b (SUC n) = Normal b0’ by METIS_TAC [extreal_cases] >> gs [] \\
      ‘Normal b0 / Normal c³ = Normal b0 * inv (Normal (c pow 3))’
        by METIS_TAC [div_eq_mul_rinv, extreal_not_infty, extreal_pow_def, pow_pos_lt] \\
      POP_ORW \\
