@@ -149,7 +149,7 @@ createdir $texlogs
 archive=/tmp/hol-$releasename
 rm -rf $archive                     # final directory to be tarred
 
-if /bin/ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
+if ls -1 $localholdir | grep std.prelude > /dev/null 2>&1
 then
     :
 else
@@ -251,7 +251,7 @@ then
     (cd help/src-sml ; ../../bin/Holmake cleanAll)
     cd bin
     echo "Cleaning bin/"
-    /bin/ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs rm
+    ls -A1 | egrep -v '(hol.ML|noninterhol.ML|README)' | xargs rm
 fi
 
 cd /tmp
