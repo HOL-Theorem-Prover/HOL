@@ -24,4 +24,4 @@ ifdef HOLSELFTESTLEVEL
 endif
 
 arm-prog-selftest.log: test.sml arm_tests.sml arm_progLib.uo
-	$(tee $(HOLDIR)/bin/hol < test.sml,$@) || ( /bin/rm -f $@ && exit 1 )
+	$(tee $(HOLDIR)/bin/hol < test.sml,$@) || ( rm -f $@ && exit 1 )

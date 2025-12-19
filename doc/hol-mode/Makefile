@@ -1,7 +1,7 @@
 all: hol-mode.ps hol-mode.pdf hol-mode.dvi
 
 clean:
-	/bin/rm -f hol-mode.dvi hol-mode.ps hol-mode.pdf hol-mode.aux hol-mode.log
+	rm -f hol-mode.dvi hol-mode.ps hol-mode.pdf hol-mode.aux hol-mode.log
 
 hol-mode.ps: hol-mode.dvi
 	dvips $< -o

@@ -7,4 +7,4 @@ all:
 	cat fact-out.lisp
 clean:
 	Holmake cleanAll
-	/bin/rm fact.lisp fact-out.* untranslate-file.* 
+	rm fact.lisp fact-out.* untranslate-file.* 
