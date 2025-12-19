@@ -201,7 +201,8 @@ and dec =
 
 | HOLTheory of {theory_: int, id: ident, attrs: kvals attrs, elems: header list}
   (** Theory foo[attrs] [elems ...] *)
-| HOLTheoryEnd of {theory_: int, stop: int} (** phantom EndTheory at EOF *)
+| HOLTheoryEnd of {theory_: int, stop: int, noSigDocs: bool}
+  (** phantom EndTheory at EOF *)
 | HOLDefinition of {
     definition_: int, id: ident, attrs: kvals attrs, colon: int option,
     quote: qdecl list, termination: {termination_: int, tac: exp} option,
@@ -357,6 +358,8 @@ fun mkList (p, ls) =
   List {left = p, elems = {args = ls, delims = [], stop = p}, right = NONE, stop = p}
 fun mkTuple (p, ls) =
   Tuple {left = p, elems = {args = ls, delims = [], stop = p}, right = NONE, stop = p}
+
+fun mkApp f args = foldl (fn (arg, acc) => App (acc, arg)) f args
 
 (* fun seqStart _ Empty = NONE
   | seqStart f (One p) = SOME (f p)

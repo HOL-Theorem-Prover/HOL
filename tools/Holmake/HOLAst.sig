@@ -187,7 +187,8 @@ and dec =
 
 | HOLTheory of {theory_: int, id: ident, attrs: kvals attrs, elems: header list}
   (** Theory foo[attrs] [elems ...] *)
-| HOLTheoryEnd of {theory_: int, stop: int} (** phantom EndTheory at EOF *)
+| HOLTheoryEnd of {theory_: int, stop: int, noSigDocs: bool}
+  (** phantom EndTheory at EOF *)
 | HOLDefinition of {
     definition_: int, id: ident, attrs: kvals attrs, colon: int option,
     quote: qdecl list, termination: {termination_: int, tac: exp} option,
@@ -265,6 +266,7 @@ val mkString: int * string -> exp
 val mkInt: int * int -> exp
 val mkList: int * exp list -> exp
 val mkTuple: int * exp list -> exp
+val mkApp: exp -> exp list -> exp
 
 val idStop: ident -> int
 val idSpan: ident -> int * int

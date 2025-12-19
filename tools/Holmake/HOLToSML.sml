@@ -285,9 +285,10 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val bare = ref false
     val _ = app (fn
         {key = (_, "bare"), bind = NONE} => bare := true
+      | {key = (_, "no_sig_docs"), bind = NONE} => ()  (* considered in HOLTheoryEnd *)
       | {key = (p, s), ...} => parseError (p, p + size s) "unknown theory attribute"
       ) (case attrs of NONE => [] | SOME v => #args (#attrs v))
-    val grammar = ref []
+    val grammar = ref (if !bare then [] else [mkString (theory_, "hol")])
     fun finish (NONE, acc) = acc
       | finish (SOME (false, ns), acc) = mkSemi (DecOpen {open_ = theory_, elems = rev ns} :: acc)
       | finish (SOME (true, ns), acc) = let
@@ -327,7 +328,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
           in (NONE, d :: finish acc) end) acc (rev (!aliases))
         in processList isThy thys ls acc end
     val lhs = if !bare then NONE else SOME (false,
-      map (fn s => (theory_, s)) ["Parse", "bossLib", "boolLib", "HolKernel"])
+      map (fn s => (theory_, s)) ["Parse", "bossLib", "boolLib", "HolKernel", "holTheory"])
     val acc = []
     val acc = if quietOpen then
       case process elems (lhs, []) of
@@ -343,9 +344,15 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
       valWild theory_ (App (mkIdent (theory_, "Parse.set_grammar_ancestry"),
         mkList (theory_, rev (!grammar)))) :: acc
     in DecExpansion {orig = dec, result = rev acc} end
-  | expandDec _ (dec as HOLTheoryEnd {theory_, stop}) = let
+  | expandDec _ (dec as HOLTheoryEnd {theory_, stop, noSigDocs}) = let
     val unit = Unit {left = theory_, right = theory_}
     val e = App (mkIdent (theory_, "Theory.export_theory"), unit)
+    val e = if not noSigDocs then e else let
+      val set_trace = mkIdent (theory_, "Feedback.set_trace")
+      val include_docs = mkString (theory_, "TheoryPP.include_docs")
+      val zero = mkInt (theory_, 0)
+      val exclude_docs = mkApp set_trace [include_docs, zero]
+      in Infix {left = exclude_docs, id = (theory_, "before"), right = e} end
     in DecExpansion {orig = dec, result = [valWild theory_ e]} end
   | expandDec _ (dec as HOLDefinition {
       definition_, id as (_, name), attrs, colon = _, quote, termination, end_ = _, stop}) = let

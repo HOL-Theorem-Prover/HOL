@@ -1158,6 +1158,7 @@ fun parseSML file read parseError: scope -> result = let
   fun go (sc: scope) = let
     val sc = ref sc
     val isThy = ref NONE
+    val noSigDocs = ref false
     val parseDecRef = ref (fn () => NONE)
     val _ = parseDecRef := (fn () =>
       case parseDec false (!sc) of
@@ -1165,10 +1166,20 @@ fun parseSML file read parseError: scope -> result = let
           NONE => NONE
         | SOME theory_ => (
           parseDecRef := (fn () => NONE);
-          SOME (HOLTheoryEnd {theory_ = theory_, stop = DString.size body})))
+          SOME (HOLTheoryEnd {
+            theory_ = theory_,
+            stop = DString.size body,
+            noSigDocs = !noSigDocs})))
       | SOME (sc', d) => (
         sc := sc';
-        case d of HOLTheory {theory_, ...} => isThy := SOME theory_ | _ => ();
+        case d of
+          HOLTheory {theory_, attrs, ...} => (
+            isThy := SOME theory_;
+            app (fn
+                {key = (_, "no_sig_docs"), bind = NONE} => noSigDocs := true
+              | _ => ()
+              ) (case attrs of NONE => [] | SOME v => #args (#attrs v)))
+        | _ => ();
         SOME d))
     in {parseDec = fn () => !parseDecRef (), getScope = fn () => !sc, body = body, events = events} end
   in go end
