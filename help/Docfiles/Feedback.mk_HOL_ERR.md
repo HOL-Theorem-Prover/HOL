@@ -1,15 +1,15 @@
 ## `mk_HOL_ERR`
 
 ``` hol4
-Feedback.mk_HOL_ERR : string -> string -> string -> exn
+   Feedback.mk_HOL_ERR : string -> string -> string -> exn
 ```
 
 ------------------------------------------------------------------------
 
 Creates an application of `HOL_ERR`.
 
-`mk_HOL_ERR` provides a curried interface to the standard `HOL_ERR`
-exception; experience has shown that this is often more convenient.
+`mk_HOL_ERR` provides a curried version of the `HOL_ERR`
+exception.
 
 ### Failure
 
@@ -18,18 +18,12 @@ Never fails.
 ### Example
 
 ``` hol4
-- mk_HOL_ERR "Module" "function" "message"
-
-> val it = HOL_ERR : exn
-
-- print(exn_to_string it);
-
-Exception raised at Module.function:
-message
-> val it = () : unit
+   > mk_HOL_ERR "<Module>" "<function>" "<message>";
+   val it = HOL_ERR (at <Module>.<function>: <message>): exn
 ```
 
 ### See also
 
-[`Feedback`](#Feedback), [`Feedback.HOL_ERR`](#Feedback.HOL_ERR),
-[`Feedback.error_record`](#Feedback.error_record)
+[`Feedback`](#Feedback),
+[`Feedback.HOL_ERR`](#Feedback.HOL_ERR),
+[`Feedback.mk_HOL_ERRloc`](#Feedback.mk_HOL_ERRloc)

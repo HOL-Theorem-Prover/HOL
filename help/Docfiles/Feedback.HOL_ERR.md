@@ -1,7 +1,7 @@
 ## `HOL_ERR`
 
 ``` hol4
-   Feedback.HOL_ERR : hol_error -> exn
+   HOL_ERR : hol_error -> exn
 ```
 
 ------------------------------------------------------------------------
@@ -13,7 +13,8 @@ when they encounter an anomalous situation.
 
 ### Example
 
-A `HOL_ERR` value is built from a `hol_error` value.
+A `HOL_ERR` value is built from a `hol_error` value, which is
+typically created with `mk_hol_error`.
 
 ``` hol4
    > val test_exn =
@@ -24,14 +25,22 @@ A `HOL_ERR` value is built from a `hol_error` value.
    Exception- HOL_ERR (at Foo.Bar: unexpected input) raised
 ```
 
-One typically invokes `mk_HOL_ERR` or `mk_HOL_ERRloc` in order to
-create a `HOL_ERR` value.
+`HOL_ERR` values can also be directly constructed by `mk_HOL_ERR` or
+`mk_HOL_ERRloc`.
+
+``` hol4
+   > val test_exn_again =
+       mk_HOL_ERR "Foo" "bar" "unexpected input"
+
+   > raise test_exn_again;
+   Exception- HOL_ERR (at Foo.Bar: unexpected input) raised
+```
 
 ### Usage patterns
 
 #### Constructing backtraces
 
-One can add information to a `HOL_ERR` with `wrap_exn`:
+Information can be added to a `HOL_ERR` with `wrap_exn`:
 
 ``` hol4
    > raise wrap_exn "structA" "fnB" test_exn;
@@ -43,8 +52,8 @@ One can add information to a `HOL_ERR` with `wrap_exn`:
 
 Location information can be included with `wrap_exn_loc`.
 
-A common idiom has the following pattern (assume function `bar` is
-being defined in structure `Foo`):
+A common HOL programming idiom using `wrap_exn` has the following
+pattern (assume function `bar` is being defined in structure `Foo`):
 
 ``` hol4
    fun bar x y =
@@ -55,9 +64,9 @@ being defined in structure `Foo`):
      handle e as HOL_ERR _ => raise wrap_exn "Foo" "bar" e
 ```
 
-If `HOL_ERR` happens to be raised inside an invocation of `bar`, the
-handler will extend the `origins` of `e` with `Foo` and `bar` and
-raise the augmented `HOL_ERR`.
+If `HOL_ERR <holerr>` happens to be raised inside an invocation of
+`bar`, the handler will extend the `origins` of `holerr` with `Foo`
+and `bar` and raise the augmented `HOL_ERR`.
 
 #### Scrutinizing and setting the payload
 
@@ -82,7 +91,7 @@ Portions of the payload can also be set by `set_top_function` and
 #### Branching on the interaction mode
 
 The variable `Globals.interactive` is used by programs to tell whether
-the HOL4 system is running interactively (ie. is in the
+the HOL4 system is running interactively (i.e. is in the
 Read-Eval-Print loop) or not (is running in batch mode under
 `Holmake`). In the REPL, an uncaught `HOL_ERR` propagates to the top
 level and gets prettyprinted. In batch mode, in contrast, uncaught
@@ -94,18 +103,15 @@ displays `HOL_ERR` properly in either mode.
 ### See also
 
 [`Feedback`](#Feedback),
-[`Feedback_dtype.hol_error`](#Feedback_dtype.hol_error),
 [`Feedback.mk_hol_error`](#Feedback.mk_hol_error),
 [`Feedback.mk_HOL_ERR`](#Feedback.mk_HOL_ERR),
 [`Feedback.mk_HOL_ERRloc`](#Feedback.mk_HOL_ERRloc),
 [`Feedback.wrap_exn`](#Feedback.wrap_exn),
-[`Feedback.render_exn`](#Feedback.render_exn),
-[`Feedback.Raise`](#Feedback.Raise),
 [`Feedback.top_structure_of`](#Feedback.top_structure_of),
 [`Feedback.top_function_of`](#Feedback.top_function_of),
 [`Feedback.top_location_of`](#Feedback.top_location_of),
-[`Feedback.origins_of`](#Feedback.origins_of),
 [`Feedback.message_of`](#Feedback.message_of),
-[`Feedback.set_message`](#Feedback.set_message),
 [`Feedback.set_top_function`](#Feedback.set_top_function),
-[`Globals.interactive`](#Globals.interactive)
+[`Feedback.set_message`](#Feedback.set_message),
+[`Globals.interactive`](#Globals.interactive),
+[`Feedback.render_exn`](#Feedback.render_exn)

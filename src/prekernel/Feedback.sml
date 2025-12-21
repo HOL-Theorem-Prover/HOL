@@ -12,6 +12,7 @@ structure Feedback :> Feedback =
 struct
 
 open Feedback_dtype
+
 local open HOLPP in end
 
 fun mk_origin s1 s2 loc =
@@ -105,21 +106,6 @@ fun set_message msg (HOL_ERROR {origins,message}) =
     HOL_ERROR {origins = origins, message = msg}
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
-
-(*---------------------------------------------------------------------------
-     Misc. utilities
- ---------------------------------------------------------------------------*)
-
-fun quote s = String.concat ["\"", s, "\""]
-
-fun assoc1 item =
-   let
-      fun assc ((e as (key, _)) :: rst) =
-            if item = key then SOME e else assc rst
-        | assc [] = NONE
-   in
-      assc
-   end
 
 (*---------------------------------------------------------------------------*
  * Controlling the display of exceptions, messages, and warnings.            *
@@ -252,6 +238,8 @@ fun find_record n =
     | SOME (ALIAS a) => find_record a
 
 val WARN = HOL_WARNING "Feedback"
+
+fun quote s = String.concat ["\"", s, "\""]
 
 local
    fun err f l = raise ERR f (String.concat l)
