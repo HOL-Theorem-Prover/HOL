@@ -204,6 +204,31 @@ Proof
   REWRITE_TAC[REAL_LT, ONE, LESS_0]
 QED
 
+Theorem diffn_exp :
+    !n x. diffn n exp = exp
+Proof
+    Induct_on ‘n’ >- rw [diffn_0]
+ >> rw [FUN_EQ_THM, diffn_def]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (Q.EXISTS_TAC ‘exp x’ \\
+     REWRITE_TAC [DIFF_EXP])
+ >> Q.X_GEN_TAC ‘y’ >> STRIP_TAC
+ >> MATCH_MP_TAC DIFF_UNIQ
+ >> qexistsl_tac [‘exp’, ‘x’]
+ >> simp [DIFF_EXP]
+QED
+
+Theorem higher_differentiable_exp :
+    !n x. higher_differentiable n exp x
+Proof
+    Induct_on ‘n’
+ >- simp [higher_differentiable_def]
+ >> rw [higher_differentiable_def, diffn_exp]
+ >> Q.EXISTS_TAC ‘exp x’
+ >> REWRITE_TAC [DIFF_EXP]
+QED
+
 Theorem DIFF_SIN[difftool]:
   !x. (sin diffl cos(x))(x)
 Proof

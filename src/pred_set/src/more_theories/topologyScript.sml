@@ -3884,6 +3884,20 @@ Proof
  >> Q.EXISTS_TAC ‘y’ >> fs [IN_APP]
 QED
 
+Theorem limpt_alt :
+    !top x s. limpt top x s <=> x IN top derived_set_of s
+Proof
+    simp [derived_set_of_alt_limpt]
+QED
+
+Theorem limpt_mono :
+    !top x s t. limpt top x s /\ s SUBSET t ==> limpt top x t
+Proof
+    rw [limpt_alt]
+ >> Suff ‘top derived_set_of s SUBSET top derived_set_of t’ >- rw [SUBSET_DEF]
+ >> MATCH_MP_TAC DERIVED_SET_OF_MONO >> art []
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Compact sets and compact topological spaces (from HOL-Light's metric.ml)  *)
 (* ------------------------------------------------------------------------- *)
