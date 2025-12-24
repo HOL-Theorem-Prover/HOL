@@ -5,8 +5,8 @@ See http://hol-theorem-prover.org for online resources.
 
 ## Installation
 
-See the [HOL homepage](http://hol-theorem-prover.org) for more detailed
-installation instructions, including for Windows.
+See the [HOL homepage](http://hol-theorem-prover.org#get) for more
+detailed installation instructions, including for Windows.
 
 ### Prerequisites
 
