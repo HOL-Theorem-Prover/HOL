@@ -60,13 +60,17 @@ the [GitHub issues page](https://github.com/HOL-Theorem-Prover/HOL/issues).
 
 The following is a brief listing of what's available in the distribution.
 
+     README.md      * This file
+     CONTRIBUTORS   * List of contributors
      COPYRIGHT      * Copyright notice
-     std.prelude    * File loaded at the beginning of each HOL session
-
      bin/           * Executables
-     doc/           * Some documentation, including release notes
-     examples/      * Some examples
-     help/          * Help support
-     src/           * The system sources
-     tools/         * Support for building the system
+     developers/    * Resources for developers
+     doc/           * Release notes
+     examples/      * Example formal developments, from small to large
+     help/          * Sources for online help
+     Manual/        * System manuals
      sigobj/        * Collection of all signatures and compiled code
+     src/           * System sources
+     std.prelude    * File loaded at the beginning of each HOL session
+     tools/         * Support for building the system
+     tools-poly/    * Poly/ML-specific support for building the system
