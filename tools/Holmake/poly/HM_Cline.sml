@@ -119,13 +119,13 @@ fun mt_optint sopt =
 fun set_maxheap s =
   resfn (fn (wn, t : t) =>
             case Int.fromString s of
-                NONE => (wn ("Bad maxheap value: \""^s^"\"; ignored"); t)
+                NONE => (wn ("Bad heap-size value: \""^s^"\"; ignored"); t)
               | SOME i =>
                 if i <= 0 then
-                  (wn ("maxheap must be positive; ignoring"); t)
+                  (wn ("heap-size must be positive; ignoring"); t)
                 else
                   (if isSome (#maxheap t) then
-                     wn ("maxheap already set; ignoring earlier value")
+                     wn ("heap-size already set; ignoring earlier value")
                    else ();
                    updateT t (U #maxheap (SOME i)) $$))
 
