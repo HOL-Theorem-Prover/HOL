@@ -332,12 +332,12 @@ val _ =
     compile [] "Holmake_tools_dtype.sml";
     compile [] "HolParser.sig";
     compile [] "HolParser.sml";
-    compile ["-I", "mosml"] "deps/Holdep.sig";
-    compile ["-I", "mosml"] "deps/Holdep.sml";
-    compile [] "Holmake_tools.sig";
-    compile [] "Holmake_tools.sml";
-    compile [] "internal_functions.sig";
-    compile [] "internal_functions.sml";
+    compile ["-I", "mosml", "-I", "deps"] "deps/Holdep.sig";
+    compile ["-I", "mosml", "-I", "deps"] "deps/Holdep.sml";
+    compile ["-I", "deps"] "Holmake_tools.sig";
+    compile ["-I", "deps"] "Holmake_tools.sml";
+    compile ["-I", "deps"] "internal_functions.sig";
+    compile ["-I", "deps"] "internal_functions.sml";
     compile [] "Holmake_types.sig";
     compile [] "Holmake_types.sml";
     compile [] "deps/ReadHMF.sig";
@@ -347,14 +347,14 @@ val _ =
     compile [] "FunctionalRecordUpdate.sml";
     compile [] "HM_Core_Cline.sig";
     compile [] "HM_Core_Cline.sml";
-    compile [] "holdeptool.sml";
-    compile [] "mosml_holdeptool.sml";
-    link{extras = ["-I", "mosml"], srcobj = "mosml_holdeptool.uo",
+    compile ["-I", "deps"] "holdeptool.sml";
+    compile ["-I", "deps"] "mosml_holdeptool.sml";
+    link{extras = ["-I", "mosml", "-I", "deps"], srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
     compile [] "deps/HM_DepGraph.sig";
     compile [] "deps/HM_DepGraph.sml";
-    compile [] "HM_GraphBuildJ1.sig";
-    compile [] "HM_GraphBuildJ1.sml";
+    compile ["-I", "deps"] "HM_GraphBuildJ1.sig";
+    compile ["-I", "deps"] "HM_GraphBuildJ1.sml";
     FileSys.chDir "mosml";
     compile ["-I", ".."] "HM_Cline.sig";
     compile ["-I", ".."] "HM_Cline.sml";
@@ -367,9 +367,9 @@ val _ =
     FileSys.chDir "mosml";
     compile ["-I", ".."] "BuildCommand.sml";
     FileSys.chDir "..";
-    compile ["-I", "mosml"] "Holmake.sml";
+    compile ["-I", "mosml", "-I", "deps"] "Holmake.sml";
     compile [] "mosml_Holmake.sml";
-    link{extras = ["-I", "mosml"], tgt = bin, srcobj = "mosml_Holmake.uo"};
+    link{extras = ["-I", "mosml", "-I", "deps"], tgt = bin, srcobj = "mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end
