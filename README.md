@@ -10,8 +10,14 @@ detailed installation instructions, including for Windows.
 
 ### Prerequisites
 
-Install [Poly/ML](http://www.polyml.org) (recommended) or
-[Moscow ML](http://mosml.org) (version 2.10).
+HOL4 supports multiple SML compilers:
+
+- **[Poly/ML](http://www.polyml.org)** (recommended) — The primary
+  backend for building and running HOL4.
+- **[Moscow ML](http://mosml.org)** (version 2.10) — An alternative
+  backend, ensuring HOL sources remain portable across SML implementations.
+- **[MLton](http://mlton.org)** (optional) — If installed, automatically
+  used to build tool executables (Holmake, etc.) which may run faster.
 
 For Poly/ML, ensure that your dynamic library loading can find
 `libpolyml.so` and `libpolymain.so`. If these are not in `/usr/lib`,
