@@ -3,8 +3,8 @@ $(SML_LIB)/basis/basis.mlb
 ../hmcore.mlb
 ../HM_Core_Cline.sig
 ../HM_Core_Cline.sml
-../HM_DepGraph.sig
-../HM_DepGraph.sml
+../deps/HM_DepGraph.sig
+../deps/HM_DepGraph.sml
 ../HM_GraphBuildJ1.sig
 ../HM_GraphBuildJ1.sml
 ../poly/HM_Cline.sig
