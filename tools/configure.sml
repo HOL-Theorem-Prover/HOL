@@ -308,8 +308,8 @@ val _ =
     compile [] "holpathdb.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
-    compile [] "parse_glob.sig";
-    compile [] "parse_glob.sml";
+    compile [] "deps/parse_glob.sig";
+    compile [] "deps/parse_glob.sml";
     compile [] "HOLFS_dtype.sml";
     compile [] "HFS_NameMunge.sig";
     FileSys.chDir "mosml";
@@ -322,8 +322,8 @@ val _ =
           tgt = fullPath [holdir, "bin", "linkToSigobj"]};
     compile [] "HOLFileSys.sig";
     compile [] "HOLFileSys.sml";
-    compile [] "Holdep_tokens.sig";
-    compile [] "Holdep_tokens.sml";
+    compile [] "deps/Holdep_tokens.sig";
+    compile [] "deps/Holdep_tokens.sml";
     compile [] "AttributeSyntax.sig";
     compile [] "AttributeSyntax.sml";
     compile [] "HolLex.sml";
@@ -332,16 +332,16 @@ val _ =
     compile [] "Holmake_tools_dtype.sml";
     compile [] "HolParser.sig";
     compile [] "HolParser.sml";
-    compile ["-I", "mosml"] "Holdep.sig";
-    compile ["-I", "mosml"] "Holdep.sml";
+    compile ["-I", "mosml"] "deps/Holdep.sig";
+    compile ["-I", "mosml"] "deps/Holdep.sml";
     compile [] "Holmake_tools.sig";
     compile [] "Holmake_tools.sml";
     compile [] "internal_functions.sig";
     compile [] "internal_functions.sml";
     compile [] "Holmake_types.sig";
     compile [] "Holmake_types.sml";
-    compile [] "ReadHMF.sig";
-    compile [] "ReadHMF.sml";
+    compile [] "deps/ReadHMF.sig";
+    compile [] "deps/ReadHMF.sml";
     compile [] "GetOpt.sig";
     compile [] "GetOpt.sml";
     compile [] "FunctionalRecordUpdate.sml";
@@ -351,8 +351,8 @@ val _ =
     compile [] "mosml_holdeptool.sml";
     link{extras = ["-I", "mosml"], srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
-    compile [] "HM_DepGraph.sig";
-    compile [] "HM_DepGraph.sml";
+    compile [] "deps/HM_DepGraph.sig";
+    compile [] "deps/HM_DepGraph.sml";
     compile [] "HM_GraphBuildJ1.sig";
     compile [] "HM_GraphBuildJ1.sml";
     FileSys.chDir "mosml";
