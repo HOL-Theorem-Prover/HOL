@@ -75,12 +75,6 @@ Definition SPLITP[nocompute]:
          (CONS x (FST (SPLITP P l)), SND (SPLITP P l)))
 End
 
-Definition SPLITP_AUX_def:
-   (SPLITP_AUX acc P [] = (acc,[])) /\
-   (SPLITP_AUX acc P (h::t) =
-      if P h then (acc, h::t) else SPLITP_AUX (acc ++ [h]) P t)
-End
-
 Theorem SPLITP_splitAtPki:
   SPLITP P = splitAtPki (K P) $,
 Proof
@@ -4461,29 +4455,31 @@ Proof
    THEN FULL_SIMP_TAC (srw_ss()) [COUNT_LIST_GENLIST, COUNT_LIST_AUX]
 QED
 
-Theorem SPLITP_AUX_lem1[local]:
-    !P acc l h.
-     ~P h ==> (h::FST (SPLITP_AUX acc P l) = FST (SPLITP_AUX (h::acc) P l))
+Definition SPLITP_TAILREC_def:
+  SPLITP_TAILREC acc P [] = (REVERSE acc,[]) /\
+  SPLITP_TAILREC acc P (h::t) =
+     (if P h then
+        (REVERSE acc, h::t)
+      else
+        SPLITP_TAILREC (h::acc) P t)
+End
+
+Theorem SPLITP_TAILREC_LEM[local]:
+ ∀list l1 l2 acc.
+    SPLITP_TAILREC acc P list
+    =
+    let (l1,l2) = SPLITP P list
+    in (REVERSE acc ++ l1, l2)
 Proof
-   Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]
+  Induct >> rw[SPLITP, SPLITP_TAILREC_def]
 QED
 
-Theorem SPLITP_AUX_lem2[local]:
-    !P acc1 acc2 l. SND (SPLITP_AUX acc1 P l) = SND (SPLITP_AUX acc2 P l)
+Theorem SPLITP_compute:
+  SPLITP = SPLITP_TAILREC []
 Proof
-   Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]
+  simp[FUN_EQ_THM, SPLITP_TAILREC_LEM, LET_THM] >>
+  CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) >> simp[]
 QED
-
-Theorem SPLITP_AUX[local]:
-    !P l. SPLITP P l = SPLITP_AUX [] P l
-Proof
-   Induct_on `l`
-   THEN SRW_TAC [] [SPLITP_AUX_def, SPLITP, SPLITP_AUX_lem1]
-   THEN metisLib.METIS_TAC [SPLITP_AUX_lem2, pairTheory.PAIR]
-QED
-
-Theorem SPLITP_compute =
-   REWRITE_RULE [GSYM FUN_EQ_THM] SPLITP_AUX;
 
 Theorem IS_SUFFIX_compute = GSYM IS_PREFIX_REVERSE;
 
