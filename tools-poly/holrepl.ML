@@ -2,11 +2,16 @@ signature HOL_REPL =
 sig
   val sigint_handler : unit -> unit
   val topLevel : {diag: string -> unit, zeroTerm : bool} -> unit
+  val resetOpenHook : (unit -> unit) ref
 end;
 
 
 structure HOL_REPL :> HOL_REPL =
 struct
+
+(* Hook for resetting HOL_Interactive state after compile failure.
+   Set by prelude.ML to HOL_Interactive.reset_open once it's available. *)
+val resetOpenHook = ref (fn () => ())
 
 fun printOut s =
   (TextIO.output(TextIO.stdOut, s); TextIO.flushOut TextIO.stdOut)
@@ -164,7 +169,7 @@ fun topLevel {diag, zeroTerm} =
             fun readEvalPrint compileAcc runAcc =
               let
                 val {compileTime, runTime, result} =
-                  readEvalPrint1 read' (fn () => ());
+                  readEvalPrint1 read' (!resetOpenHook);
                 val () = reportResult result;
               in
                 if !endOfBlock then
