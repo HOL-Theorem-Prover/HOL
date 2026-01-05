@@ -33,6 +33,7 @@ ifdef POLY
 DIRNAMES += cheatspotting \
             depchain_heap/ \
             depchain_heap/dir2 \
+            heap-size \
             ignore_errors/j4 \
             hollogs
 endif
