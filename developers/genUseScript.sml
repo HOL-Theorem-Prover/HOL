@@ -44,8 +44,8 @@ end;
 val _ = use "../tools/Holmake/HolLex.sml";
 val _ = use "../tools/Holmake/HolParser.sig";
 val _ = use "../tools/Holmake/HolParser.sml";
-val _ = use "../tools/Holmake/Holdep_tokens.sig"
-val _ = use "../tools/Holmake/Holdep_tokens.sml";
+val _ = use "../tools/Holmake/deps/Holdep_tokens.sig"
+val _ = use "../tools/Holmake/deps/Holdep_tokens.sml";
 
 
 infix ^^
