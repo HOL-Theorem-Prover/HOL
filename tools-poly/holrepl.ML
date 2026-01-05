@@ -147,10 +147,11 @@ fun topLevel {diag, zeroTerm} =
 
           (* Moves to the next state if another statement is ready. *)
           fun finishCommand () =
-            case !state of
-              Next s => state := Current s
-            | _ => () (* this can only happen if endOfFile is true *)
-
+            if input 1024 = "" then
+              case !state of
+                Next s => state := Current s
+              | _ => () (* this can only happen if endOfFile is true *)
+            else finishCommand () (* consume the rest of the block *)
         in fn () =>
           let
             (* Create a new lexer for each command block. *)
@@ -167,11 +168,14 @@ fun topLevel {diag, zeroTerm} =
                 val () = reportResult result;
               in
                 if !endOfBlock then
-                  (finishCommand (); reportTiming compileTime runTime)
+                  reportTiming compileTime runTime
                 else
                   readEvalPrint (compileAcc + compileTime) (runAcc + runTime)
               end;
-          in readEvalPrint Time.zeroTime Time.zeroTime end
+          in
+            (readEvalPrint Time.zeroTime Time.zeroTime; finishCommand ())
+            handle exn => (finishCommand (); PolyML.Exception.reraise exn)
+          end
         end
       else (* not zeroTerm *)
         let
