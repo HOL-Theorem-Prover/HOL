@@ -363,9 +363,9 @@ val _ =
     compile ["-I", ".."] "HM_BaseEnv.sig";
     compile ["-I", ".."] "HM_BaseEnv.sml";
     FileSys.chDir "..";
-    compile ["-I", "mosml"] "BuildCommand.sig";
+    compile ["-I", "mosml", "-I", "deps"] "BuildCommand.sig";
     FileSys.chDir "mosml";
-    compile ["-I", ".."] "BuildCommand.sml";
+    compile ["-I", "..", "-I", "../deps"] "BuildCommand.sml";
     FileSys.chDir "..";
     compile ["-I", "mosml", "-I", "deps"] "Holmake.sml";
     compile [] "mosml_Holmake.sml";
