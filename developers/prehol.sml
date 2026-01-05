@@ -178,7 +178,7 @@ TextIO.output(TextIO.stdOut,
 local
   open Path
 in
-  val _ = loadPath := concat (HOLDIR, concat ("tools", "Holmake")) :: !loadPath
+  val _ = loadPath := concat (HOLDIR, concat ("tools", concat ("Holmake", "deps"))) :: !loadPath
   val _ = load "ReadHMF.uo"
   val _ = loadPath := tl (!loadPath)
 end;
