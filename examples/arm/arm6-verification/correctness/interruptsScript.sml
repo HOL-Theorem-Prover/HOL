@@ -125,12 +125,7 @@ val IS_RESET_EXISTS = prove(
     \\ FULL_SIMP_TAC std_ss [PROJ_NRESET_def]);
 
 fun add_rws f rws =
-  let val cmp_set = f()
-      val _ = computeLib.add_thms rws cmp_set
-    (*  val _ = computeLib.set_skip cmp_set ``COND`` NONE *)
-  in
-    cmp_set
-  end;
+    computeLib.add_thms rws (f());
 
 fun reset_rws() =
   add_rws computeLib.bool_compset

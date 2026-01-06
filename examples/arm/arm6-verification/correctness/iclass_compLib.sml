@@ -22,12 +22,7 @@ val ERR = mk_HOL_ERR "iclass_compLib"
 
 (* ------------------------------------------------------------------------- *)
 
-fun add_rws f rws =
-  let val cmp_set = f()
-      val _ = add_thms rws cmp_set
-  in
-    cmp_set
-end;
+fun add_rws f rws = add_thms rws (f());
 
 fun conv_rec nm cnv tm =
   {name = nm, trace = 3, key = SOME([], tm), conv = K (K cnv)};

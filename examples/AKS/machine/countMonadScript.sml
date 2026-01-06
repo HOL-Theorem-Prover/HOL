@@ -308,7 +308,7 @@ Definition ifM_def:
   ifM (gM : bool ecm) (tM : 'a ecm) eM = bind gM (\b. if b then tM else eM)
 End
 (* for EVAL ifM *)
-val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
+val _ = computeLib.set_EVAL_skip ``ifM`` (SOME 1);
 
 (* Theorem: valueOf (ifM gM tM eM) = if valueOf gM then valueOf tM else valueOf eM *)
 (* Proof: by ifM_def *)
@@ -329,7 +329,7 @@ Proof
 QED
 
 (* for EVAL IFm *)
-val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
+val _ = computeLib.set_EVAL_skip ``ifM`` (SOME 1);
 (* This EVAL IFm is not stored in the theory file! *)
 
 (* ------------------------------------------------------------------------- *)
