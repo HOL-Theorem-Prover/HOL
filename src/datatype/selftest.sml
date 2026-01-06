@@ -412,7 +412,7 @@ val _ = with_flag (Globals.linewidth, 40) pptest
                    \    fld4 := also a long expression|>")
 
 val _ = app convtest [
-      ("EVAL field K-composition", computeLib.CBV_CONV computeLib.the_compset,
+      ("EVAL field K-composition", computeLib.CBV_CONV (!computeLib.the_compset),
        ``<| fld1 updated_by K t1 o K t2 |>``,
        ``<| fld1 := t1 |>``)
     ]
