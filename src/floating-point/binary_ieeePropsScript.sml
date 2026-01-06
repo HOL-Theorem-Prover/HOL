@@ -56,11 +56,11 @@ Proof
   gvs[real_div, REAL_LDISTRIB, REAL_OF_NUM_POW]
 QED
 
-Triviality realsub_lemma: x ≤ y ⇒ (real_of_num (y - x) = &y - &x)
+Theorem realsub_lemma[local]: x ≤ y ⇒ (real_of_num (y - x) = &y - &x)
 Proof simp[REAL_SUB] >> rw[]
 QED
 
-Triviality ABS_REFL' = iffRL ABS_REFL
+Theorem ABS_REFL'[local] = iffRL ABS_REFL
 
 Theorem positive_representable:
   r = (2r pow k * &(x:num)) / (2 pow (bias (:χ) + precision(:τ))) ∧

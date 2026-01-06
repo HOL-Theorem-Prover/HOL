@@ -355,11 +355,12 @@ End
 (* Theorem: k IN (prime_candidates n m) <=>
            prime k /\ ~(k divides n) /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1)) *)
 (* Proof: by prime_candidates_def *)
-val prime_candidates_element = store_thm(
-  "prime_candidates_element",
-  ``!n m k. k IN (prime_candidates n m) <=>
-           prime k /\ ~(k divides n) /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1))``,
-  rw[prime_candidates_def]);
+Theorem prime_candidates_element:
+    !n m k. k IN (prime_candidates n m) <=>
+           prime k /\ ~(k divides n) /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1))
+Proof
+  rw[prime_candidates_def]
+QED
 
 (* Theorem: k IN prime_candidates n m ==> prime k /\ coprime k n /\ m <= ordz k n *)
 (* Proof:
@@ -378,9 +379,9 @@ val prime_candidates_element = store_thm(
    or   0 < h /\ h < m /\ k divides (n ** h - 1)    by DIVIDES_MOD_0, 0 < k
    This is a contradiction with the implication when j = h.
 *)
-val prime_candidates_property = store_thm(
-  "prime_candidates_property",
-  ``!n m k. k IN prime_candidates n m ==> prime k /\ coprime k n /\ m <= ordz k n``,
+Theorem prime_candidates_property:
+    !n m k. k IN prime_candidates n m ==> prime k /\ coprime k n /\ m <= ordz k n
+Proof
   rw[prime_candidates_def] >-
   rw[prime_not_divides_coprime] >>
   qabbrev_tac `h = ordz k n` >>
@@ -389,7 +390,8 @@ val prime_candidates_property = store_thm(
   `1 < k` by rw[ONE_LT_PRIME] >>
   `0 < h /\ (n ** h MOD k = 1)` by rw[ZN_coprime_order_alt, Abbr`h`] >>
   `0 < k /\ h < m` by decide_tac >>
-  metis_tac[MOD_EQ_DIFF, DIVIDES_MOD_0, ONE_MOD]);
+  metis_tac[MOD_EQ_DIFF, DIVIDES_MOD_0, ONE_MOD]
+QED
 
 (* Theorem: 1 < n /\ 0 < m ==> prime_candidates n m <> {} *)
 (* Proof:
@@ -413,9 +415,9 @@ val prime_candidates_property = store_thm(
          or n ** j = 1
       Therefore j = 0                 by EXP_EQ_1, n <> 1
 *)
-val prime_candidates_not_empty = store_thm(
-  "prime_candidates_not_empty",
-  ``!n m. 1 < n /\ 0 < m ==> prime_candidates n m <> {}``,
+Theorem prime_candidates_not_empty:
+    !n m. 1 < n /\ 0 < m ==> prime_candidates n m <> {}
+Proof
   rw[prime_candidates_def, EXTENSION] >>
   `?x. prime x /\ ~(x divides n) /\ !j. j < m /\ x divides (n ** j - 1) ==> (j = 0)` suffices_by metis_tac[] >>
   qabbrev_tac `z = n ** m` >>
@@ -432,7 +434,8 @@ val prime_candidates_not_empty = store_thm(
     `~(0 < n ** j - 1)` by metis_tac[DIVIDES_LE] >>
     `n ** j = 1` by decide_tac >>
     metis_tac[EXP_EQ_1]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n /\ 0 < m ==> ?k. prime k /\ coprime k n /\ m <= ordz k n *)
 (* Proof:
@@ -441,15 +444,16 @@ val prime_candidates_not_empty = store_thm(
      so MIN_SET s IN s              by MIN_SET_LEM
    Hence true with k = MIN_SET s    by prime_candidates_property
 *)
-val ZN_order_big_enough = store_thm(
-  "ZN_order_big_enough",
-  ``!n m. 1 < n /\ 0 < m ==> ?k. prime k /\ coprime k n /\ m <= ordz k n``,
+Theorem ZN_order_big_enough:
+    !n m. 1 < n /\ 0 < m ==> ?k. prime k /\ coprime k n /\ m <= ordz k n
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = prime_candidates n m` >>
   `s <> {}` by rw[prime_candidates_not_empty, Abbr`s`] >>
   `MIN_SET s IN s` by rw[MIN_SET_LEM] >>
   qexists_tac `MIN_SET s` >>
-  metis_tac[prime_candidates_property]);
+  metis_tac[prime_candidates_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Coprime Candidates                                                        *)
@@ -463,10 +467,11 @@ End
 
 (* Theorem: k IN (coprime_candidates n m) <=> coprime k n /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1)) *)
 (* Proof: by coprime_candidates_def *)
-val coprime_candidates_element = store_thm(
-  "coprime_candidates_element",
-  ``!n m k. k IN (coprime_candidates n m) <=> coprime k n /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1))``,
-  rw[coprime_candidates_def]);
+Theorem coprime_candidates_element:
+    !n m k. k IN (coprime_candidates n m) <=> coprime k n /\ !j. 0 < j /\ j < m ==> ~(k divides (n ** j - 1))
+Proof
+  rw[coprime_candidates_def]
+QED
 
 (* Theorem: 1 < n /\ 1 < m ==>
    !k. k IN coprime_candidates n m ==> coprime k n /\ m <= ordz k n *)
@@ -483,10 +488,10 @@ val coprime_candidates_element = store_thm(
    meaning k divides (n ** h - 1)      by DIVIDES_MOD_0
    which contradicts the implication when j = h.
 *)
-val coprime_candidates_property = store_thm(
-  "coprime_candidates_property",
-  ``!n m. 1 < n /\ 1 < m ==>
-   !k. k IN coprime_candidates n m ==> coprime k n /\ m <= ordz k n``,
+Theorem coprime_candidates_property:
+    !n m. 1 < n /\ 1 < m ==>
+   !k. k IN coprime_candidates n m ==> coprime k n /\ m <= ordz k n
+Proof
   rw[coprime_candidates_def] >>
   qabbrev_tac `h = ordz k n` >>
   spose_not_then strip_assume_tac >>
@@ -496,7 +501,8 @@ val coprime_candidates_property = store_thm(
   `0 < k /\ 1 < k` by decide_tac >>
   `0 < h /\ (n ** h MOD k = 1)` by rw[ZN_coprime_order_alt, Abbr`h`] >>
   `(n ** h - 1) MOD k = 0` by rw[MOD_EQ_DIFF] >>
-  metis_tac[DIVIDES_MOD_0]);
+  metis_tac[DIVIDES_MOD_0]
+QED
 
 (* Theorem: 1 < n /\ 1 < m ==> coprime_candidates n m <> {} *)
 (* Proof:
@@ -520,9 +526,9 @@ val coprime_candidates_property = store_thm(
          or n ** j = 1
       Therefore j = 0                 by EXP_EQ_1, n <> 1
 *)
-val coprime_candidates_not_empty = store_thm(
-  "coprime_candidates_not_empty",
-  ``!n m. 1 < n /\ 0 < m ==> coprime_candidates n m <> {}``,
+Theorem coprime_candidates_not_empty:
+    !n m. 1 < n /\ 0 < m ==> coprime_candidates n m <> {}
+Proof
   rw[coprime_candidates_def, EXTENSION] >>
   `?x. coprime x n /\ !j. j < m /\ x divides (n ** j - 1) ==> (j = 0)` suffices_by metis_tac[] >>
   qabbrev_tac `z = n ** m` >>
@@ -539,7 +545,8 @@ val coprime_candidates_not_empty = store_thm(
     `~(0 < n ** j - 1)` by metis_tac[DIVIDES_LE] >>
     `n ** j = 1` by decide_tac >>
     metis_tac[EXP_EQ_1]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n /\ 1 < m ==> 0 NOTIN coprime_candidates n m *)
 (* Proof:
@@ -548,12 +555,13 @@ val coprime_candidates_not_empty = store_thm(
    But  gcd 0 n = n     by GCD_0L
    and  1 < n means n <> 1, so this is a contradiction.
 *)
-val coprime_candidates_ne_0 = store_thm(
-  "coprime_candidates_ne_0",
-  ``!n m. 1 < n ==> 0 NOTIN coprime_candidates n m``,
+Theorem coprime_candidates_ne_0:
+    !n m. 1 < n ==> 0 NOTIN coprime_candidates n m
+Proof
   spose_not_then strip_assume_tac >>
   `n <> 1` by decide_tac >>
-  metis_tac[coprime_candidates_element, GCD_0L]);
+  metis_tac[coprime_candidates_element, GCD_0L]
+QED
 
 (* Theorem: 1 < m ==> 1 NOTIN coprime_candidates n m *)
 (* Proof:
@@ -563,10 +571,11 @@ val coprime_candidates_ne_0 = store_thm(
    and 1 divides (n ** j - 1)   by ONE_DIVIDES_ALL
    This is a contradiction.
 *)
-val coprime_candidates_ne_1 = store_thm(
-  "coprime_candidates_ne_1",
-  ``!n m. 1 < m ==> 1 NOTIN coprime_candidates n m``,
-  metis_tac[coprime_candidates_element, ONE_DIVIDES_ALL, DECIDE``0 < 1``]);
+Theorem coprime_candidates_ne_1:
+    !n m. 1 < m ==> 1 NOTIN coprime_candidates n m
+Proof
+  metis_tac[coprime_candidates_element, ONE_DIVIDES_ALL, DECIDE``0 < 1``]
+QED
 
 (* Theorem: 1 < n /\ 1 < m ==> ?k. 1 < k /\ coprime k n /\ m <= ordz k n *)
 (* Proof:
@@ -579,9 +588,9 @@ val coprime_candidates_ne_1 = store_thm(
      so 1 < MIN_SET s               by arithmetic
    Hence true with k = MIN_SET s    by coprime_candidates_property, 1 < n, 1 < m
 *)
-val ZN_order_good_enough = store_thm(
-  "ZN_order_good_enough",
-  ``!n m. 1 < n /\ 1 < m ==> ?k. 1 < k /\ coprime k n /\ m <= ordz k n``,
+Theorem ZN_order_good_enough:
+    !n m. 1 < n /\ 1 < m ==> ?k. 1 < k /\ coprime k n /\ m <= ordz k n
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = coprime_candidates n m` >>
   `s <> {}` by rw[coprime_candidates_not_empty, Abbr`s`] >>
@@ -589,7 +598,8 @@ val ZN_order_good_enough = store_thm(
   `MIN_SET s <> 0` by metis_tac[coprime_candidates_ne_0] >>
   `MIN_SET s <> 1` by metis_tac[coprime_candidates_ne_1] >>
   `1 < MIN_SET s` by decide_tac >>
-  metis_tac[coprime_candidates_property]);
+  metis_tac[coprime_candidates_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Smallest Candidate                                                        *)
@@ -608,11 +618,11 @@ val ZN_order_good_enough = store_thm(
    Hence h IN (prime_candidates n m)                  by prime_candidates_def
    The implication gives k <= h, which contradicts h < k.
 *)
-val least_prime_candidates_property = store_thm(
-  "least_prime_candidates_property",
-  ``!n m.  1 < n /\ 0 < m ==>
+Theorem least_prime_candidates_property:
+    !n m.  1 < n /\ 0 < m ==>
    !h. prime h /\ coprime h n /\ h < MIN_SET (prime_candidates n m) ==>
-    ?j. 0 < j /\ j < m /\ h divides (n ** j - 1)``,
+    ?j. 0 < j /\ j < m /\ h divides (n ** j - 1)
+Proof
   rpt strip_tac >>
   qabbrev_tac `k = MIN_SET (prime_candidates n m)` >>
   `k IN (prime_candidates n m) /\ !x. x IN (prime_candidates n m) ==> k <= x` by rw[MIN_SET_LEM, prime_candidates_not_empty, Abbr`k`] >>
@@ -622,7 +632,8 @@ val least_prime_candidates_property = store_thm(
   `~(h divides n)` by rw[coprime_not_divides] >>
   `h IN (prime_candidates n m)` by rw[prime_candidates_def] >>
   `k <= h` by metis_tac[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < h /\ coprime h n /\ h < MIN_SET (coprime_candidates n m) ==>
             ?j. 0 < j /\ j < m /\ h divides (n ** j - 1) *)
@@ -637,11 +648,11 @@ val least_prime_candidates_property = store_thm(
    Hence h IN (coprime_candidates n m)                  by coprime_candidates_def
    The implication gives k <= h, which contradicts h < k.
 *)
-val least_coprime_candidates_property = store_thm(
-  "least_coprime_candidates_property",
-  ``!n m.  1 < n /\ 1 < m ==>
+Theorem least_coprime_candidates_property:
+    !n m.  1 < n /\ 1 < m ==>
    !h. 1 < h /\ coprime h n /\ h < MIN_SET (coprime_candidates n m) ==>
-    ?j. 0 < j /\ j < m /\ h divides (n ** j - 1)``,
+    ?j. 0 < j /\ j < m /\ h divides (n ** j - 1)
+Proof
   rpt strip_tac >>
   qabbrev_tac `k = MIN_SET (coprime_candidates n m)` >>
   `0 < m` by decide_tac >>
@@ -651,7 +662,8 @@ val least_coprime_candidates_property = store_thm(
   `~(h divides n)` by rw[coprime_not_divides] >>
   `h IN (coprime_candidates n m)` by rw[coprime_candidates_def] >>
   `k <= h` by metis_tac[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Power Factors and Product                                                 *)
@@ -664,10 +676,11 @@ End
 
 (* Theorem: x IN power_factors n m <=> ?j. (x = n ** j - 1) /\ 0 < j /\ j < m *)
 (* Proof: by power_factors_def. *)
-val power_factors_element = store_thm(
-  "power_factors_element",
-  ``!n m x. x IN power_factors n m <=> ?j. (x = n ** j - 1) /\ 0 < j /\ j < m``,
-  rw[power_factors_def]);
+Theorem power_factors_element:
+    !n m x. x IN power_factors n m <=> ?j. (x = n ** j - 1) /\ 0 < j /\ j < m
+Proof
+  rw[power_factors_def]
+QED
 
 (* Theorem: power_factors n m = IMAGE (\k. n ** k - 1) (residue m) *)
 (* Proof:
@@ -675,10 +688,11 @@ val power_factors_element = store_thm(
    {n ** j - 1 | 0 < j /\ j < m} = IMAGE (\k. n ** k - 1) {i | 0 < i /\ i < m}
    which is true by IMAGE_DEF.
 *)
-val power_factors_alt = store_thm(
-  "power_factors_alt",
-  ``!n m. power_factors n m = IMAGE (\k. n ** k - 1) (residue m)``,
-  rw[power_factors_def, residue_def, IMAGE_DEF]);
+Theorem power_factors_alt:
+    !n m. power_factors n m = IMAGE (\k. n ** k - 1) (residue m)
+Proof
+  rw[power_factors_def, residue_def, IMAGE_DEF]
+QED
 
 (* Theorem: FINITE (power_factors n m) *)
 (* Proof:
@@ -687,32 +701,35 @@ val power_factors_alt = store_thm(
      and FINITE (residue m)                   by residue_finite
    Hence FINITE (power_factors n m)           by IMAGE_FINITE
 *)
-val power_factors_finite = store_thm(
-  "power_factors_finite",
-  ``!n m. FINITE (power_factors n m)``,
-  rw[power_factors_alt, residue_finite, IMAGE_FINITE]);
+Theorem power_factors_finite:
+    !n m. FINITE (power_factors n m)
+Proof
+  rw[power_factors_alt, residue_finite, IMAGE_FINITE]
+QED
 
 (* Theorem: 1 < m ==> (power_factors n m) <> {} *)
 (* Proof:
    By power_factors_alt, this is to show: 1 < m ==> residue m <> {}
    This is true by residue_nonempty.
 *)
-val power_factors_nonempty = store_thm(
-  "power_factors_nonempty",
-  ``!n m. 1 < m ==> (power_factors n m) <> {}``,
+Theorem power_factors_nonempty:
+    !n m. 1 < m ==> (power_factors n m) <> {}
+Proof
   rw[power_factors_alt] >>
-  rw[residue_nonempty]);
+  rw[residue_nonempty]
+QED
 
 (* Theorem: 1 < m ==> (power_factors 1 m = {0}) *)
 (* Proof:
    By power_factors_def and residue_def, this is to show: 1 < m ==> ?j. 0 < j /\ j < m
    Take j = 1, this is true.
 *)
-val power_factors_sing = store_thm(
-  "power_factors_sing",
-  ``!m. 1 < m ==> (power_factors 1 m = {0})``,
+Theorem power_factors_sing:
+    !m. 1 < m ==> (power_factors 1 m = {0})
+Proof
   rw[power_factors_def, residue_def, EXTENSION, SPECIFICATION, EQ_IMP_THM] >>
-  metis_tac[DECIDE ``0 < 1``]);
+  metis_tac[DECIDE ``0 < 1``]
+QED
 
 (* Theorem: 1 < n ==> 0 NOTIN power_factors n m *)
 (* Proof:
@@ -722,13 +739,14 @@ val power_factors_sing = store_thm(
    Since 1 < n ** j       by ONE_LT_EXP, 1 < n, 0 < m
    This contradicts n * j <= 1.
 *)
-val power_factors_element_nonzero = store_thm(
-  "power_factors_element_nonzero",
-  ``!n m. 1 < n ==> 0 NOTIN power_factors n m``,
+Theorem power_factors_element_nonzero:
+    !n m. 1 < n ==> 0 NOTIN power_factors n m
+Proof
   rw[power_factors_def] >>
   spose_not_then strip_assume_tac >>
   `1 < n ** j` by rw[ONE_LT_EXP] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < n ==> !m. IMAGE SUC (power_factors n m) = IMAGE (\j. n ** j) (residue m) *)
 (* Proof:
@@ -746,9 +764,9 @@ val power_factors_element_nonzero = store_thm(
        Take k = j, to show: PRE (n ** j) = n ** j - 1
           which is true                   by PRE_SUB1
 *)
-val power_factors_image_suc = store_thm(
-  "power_factors_image_suc",
-  ``!n. 0 < n ==> !m. IMAGE SUC (power_factors n m) = IMAGE (\j. n ** j) (residue m)``,
+Theorem power_factors_image_suc:
+    !n. 0 < n ==> !m. IMAGE SUC (power_factors n m) = IMAGE (\j. n ** j) (residue m)
+Proof
   rw[power_factors_alt, residue_def, IMAGE_DEF, EXTENSION, EQ_IMP_THM] >| [
     qexists_tac `k` >>
     rw[] >>
@@ -759,7 +777,8 @@ val power_factors_image_suc = store_thm(
     rw[GSYM SUC_PRE] >>
     qexists_tac `j` >>
     rw[PRE_SUB1]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Product of Power Factors                                                  *)
@@ -778,10 +797,11 @@ End
    = PROD_SET {0}                  by power_factors_sing
    = 0                             by PROD_SET_SING
 *)
-val product_factors_zero = store_thm(
-  "product_factors_zero",
-  ``!m. 1 < m ==> (product_factors 1 m = 0)``,
-  rw[product_factors_def, power_factors_sing, PROD_SET_SING]);
+Theorem product_factors_zero:
+    !m. 1 < m ==> (product_factors 1 m = 0)
+Proof
+  rw[product_factors_def, power_factors_sing, PROD_SET_SING]
+QED
 
 (* Theorem: 0 < n /\ prime p ==> !m. p divides (product_factors n m) ==> (ordz p n) < m *)
 (* Proof:
@@ -800,9 +820,9 @@ val product_factors_zero = store_thm(
        or  (ordz p n) <= j                        by DIVIDES_LE
        or  (ordz p n) < m                         by j < m
 *)
-val proudct_factors_prime_divisor_property = store_thm(
-  "proudct_factors_prime_divisor_property",
-  ``!n p. 0 < n /\ prime p ==> !m. p divides (product_factors n m) ==> (ordz p n) < m``,
+Theorem proudct_factors_prime_divisor_property:
+    !n p. 0 < n /\ prime p ==> !m. p divides (product_factors n m) ==> (ordz p n) < m
+Proof
   rw[product_factors_def] >>
   qabbrev_tac `s = power_factors n m` >>
   `FINITE s` by rw[power_factors_finite, Abbr`s`] >>
@@ -824,7 +844,8 @@ val proudct_factors_prime_divisor_property = store_thm(
   `(ZN p).prod.id = 1` by rw[ZN_property] >>
   `(ordz p x) divides j` by metis_tac[monoid_order_condition, ZN_exp] >>
   `ordz p n <= j` by metis_tac[DIVIDES_LE] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < p /\ coprime p n ==> !m. (ordz p n) < m ==> p divides (product_factors n m) *)
 (* Proof:
@@ -842,9 +863,9 @@ val proudct_factors_prime_divisor_property = store_thm(
    So   b divides (PROD_SET s)           by divides_def
    or   p divides (PROD_SET s)           by DIVIDES_TRANS
 *)
-val proudct_factors_coprime_divisor_property = store_thm(
-  "proudct_factors_coprime_divisor_property",
-  ``!n p. 1 < p /\ coprime p n ==> !m. (ordz p n) < m ==> p divides (product_factors n m)``,
+Theorem proudct_factors_coprime_divisor_property:
+    !n p. 1 < p /\ coprime p n ==> !m. (ordz p n) < m ==> p divides (product_factors n m)
+Proof
   rw[product_factors_def] >>
   qabbrev_tac `s = power_factors n m` >>
   `FINITE s` by rw[power_factors_finite, Abbr`s`] >>
@@ -858,7 +879,8 @@ val proudct_factors_coprime_divisor_property = store_thm(
   `b INSERT s = s` by rw[GSYM ABSORPTION] >>
   `PROD_SET s = b * PROD_SET (s DELETE b)` by rw[GSYM PROD_SET_THM] >>
   `b divides (PROD_SET s)` by metis_tac[divides_def, MULT_COMM] >>
-  metis_tac[DIVIDES_TRANS]);
+  metis_tac[DIVIDES_TRANS]
+QED
 
 (* Theorem: 1 < k /\ coprime k n /\ ordz k n < m ==> k divides (product_factors n m) *)
 (* Proof:
@@ -872,15 +894,16 @@ val proudct_factors_coprime_divisor_property = store_thm(
      and (n ** j - 1) IN (power_factors n m)  by power_factors_element
    Hence  k divides (product_factors n m)     by PROD_SET_DIVISORS
 *)
-val product_factors_divisors = store_thm(
-  "product_factors_divisors",
-  ``!n m k. 1 < k /\ coprime k n /\ ordz k n < m ==> k divides (product_factors n m)``,
+Theorem product_factors_divisors:
+    !n m k. 1 < k /\ coprime k n /\ ordz k n < m ==> k divides (product_factors n m)
+Proof
   rw[product_factors_def] >>
   qabbrev_tac `j = ordz k n` >>
   `0 < j /\ (n ** j MOD k = 1)` by rw[ZN_coprime_order_alt, Abbr`j`] >>
   `(n ** j - 1) MOD k = 0` by rw[MOD_EQ_DIFF, MOD_LESS] >>
   `k divides (n ** j - 1)` by rw[DIVIDES_MOD_0] >>
-  metis_tac[PROD_SET_DIVISORS, power_factors_element, power_factors_finite]);
+  metis_tac[PROD_SET_DIVISORS, power_factors_element, power_factors_finite]
+QED
 
 (* Theorem: 1 < n ==> 0 < product_factors n m *)
 (* Proof:
@@ -889,13 +912,14 @@ val product_factors_divisors = store_thm(
      and 0 NOTIN power_factors n m              by power_factors_element_nonzero
    Hence 0 < PROD_SET (power_factors n m)       by PROD_SET_NONZERO
 *)
-val product_factors_pos = store_thm(
-  "product_factors_pos",
-  ``!n m. 1 < n ==> 0 < product_factors n m``,
+Theorem product_factors_pos:
+    !n m. 1 < n ==> 0 < product_factors n m
+Proof
   rw[product_factors_def] >>
   `FINITE (power_factors n m)` by rw[power_factors_finite] >>
   `0 NOTIN power_factors n m` by metis_tac[power_factors_element_nonzero] >>
-  rw[PROD_SET_NONZERO]);
+  rw[PROD_SET_NONZERO]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Upper Bound of Product of Power Factors                                   *)
@@ -925,9 +949,9 @@ val product_factors_pos = store_thm(
                  <= n ** ((m ** 2) DIV 2)
    or PROD_SET s < n ** ((m ** 2) DIV 2)        by LESS_LESS_EQ_TRANS
 *)
-val product_factors_upper = store_thm(
-  "product_factors_upper",
-  ``!n m. 1 < n /\ 1 < m ==> product_factors n m < n ** ((m ** 2) DIV 2)``,
+Theorem product_factors_upper:
+    !n m. 1 < n /\ 1 < m ==> product_factors n m < n ** ((m ** 2) DIV 2)
+Proof
   rw[product_factors_def] >>
   qabbrev_tac `s = power_factors n m` >>
   `FINITE s` by rw[power_factors_finite, Abbr`s`] >>
@@ -942,7 +966,8 @@ val product_factors_upper = store_thm(
   `m * (m - 1) < m ** 2` by rw_tac std_ss[EXP_2] >>
   `(m * (m - 1)) DIV 2 <= (m ** 2) DIV 2` by rw[DIV_LE_MONOTONE, LESS_IMP_LESS_OR_EQ] >>
   `n ** ((m * (m - 1)) DIV 2) <= n ** ((m ** 2) DIV 2)` by rw[EXP_BASE_LE_MONO] >>
-  metis_tac[LESS_LESS_EQ_TRANS]);
+  metis_tac[LESS_LESS_EQ_TRANS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Non-dividing coprimes of Product of Power Factors                         *)
@@ -956,11 +981,12 @@ End
 (* Theorem: x IN power_factors_coprime_nondivisor n m <=>
             coprime x n /\ ~(x divides (product_factors n m)) *)
 (* Proof: by power_factors_coprime_nondivisor_def. *)
-val power_factors_coprime_nondivisor_element = store_thm(
-  "power_factors_coprime_nondivisor_element",
-  ``!n m x. x IN power_factors_coprime_nondivisor n m <=>
-           coprime x n /\ ~(x divides (product_factors n m))``,
-  rw[power_factors_coprime_nondivisor_def]);
+Theorem power_factors_coprime_nondivisor_element:
+    !n m x. x IN power_factors_coprime_nondivisor n m <=>
+           coprime x n /\ ~(x divides (product_factors n m))
+Proof
+  rw[power_factors_coprime_nondivisor_def]
+QED
 
 (* Theorem: 1 < m ==> !x. x IN power_factors_coprime_nondivisor n m ==> 1 < x *)
 (* Proof:
@@ -971,13 +997,14 @@ val power_factors_coprime_nondivisor_element = store_thm(
     making x divides (product_factors 1 m)   by ALL_DIVIDES_0
     Hence x <> 0. Overall, 1 < x.
 *)
-val power_factors_coprime_nondivisor_property = store_thm(
-  "power_factors_coprime_nondivisor_property",
-  ``!n m. 1 < m ==> !x. x IN power_factors_coprime_nondivisor n m ==> 1 < x``,
+Theorem power_factors_coprime_nondivisor_property:
+    !n m. 1 < m ==> !x. x IN power_factors_coprime_nondivisor n m ==> 1 < x
+Proof
   rw[power_factors_coprime_nondivisor_element] >>
   `x <> 1` by metis_tac[ONE_DIVIDES_ALL] >>
   `x <> 0` by metis_tac[product_factors_zero, coprime_0L, ALL_DIVIDES_0] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < n /\ 1 < m ==> power_factors_coprime_nondivisor n m <> {} *)
 (* Proof
@@ -999,9 +1026,9 @@ val power_factors_coprime_nondivisor_property = store_thm(
       or ~(p ** k <= z)
       or ~(divides (p ** k) z)    by DIVIDES_LE
 *)
-val power_factors_coprime_nondivisor_nonempty = store_thm(
-  "power_factors_coprime_nondivisor_nonempty",
-  ``!n m. 1 < n /\ 1 < m ==> power_factors_coprime_nondivisor n m <> {}``,
+Theorem power_factors_coprime_nondivisor_nonempty:
+    !n m. 1 < n /\ 1 < m ==> power_factors_coprime_nondivisor n m <> {}
+Proof
   rw[power_factors_coprime_nondivisor_def, EXTENSION] >>
   qabbrev_tac `z = product_factors n m` >>
   qabbrev_tac `k = (m ** 2) DIV 2` >>
@@ -1014,7 +1041,8 @@ val power_factors_coprime_nondivisor_nonempty = store_thm(
   `coprime (p ** k) n` by rw[coprime_exp] >>
   `n ** k < p ** k` by rw_tac std_ss[EXP_EXP_LT_MONO] >>
   `~(p ** k <= z)` by decide_tac >>
-  metis_tac[DIVIDES_LE]);
+  metis_tac[DIVIDES_LE]
+QED
 
 (* Theorem: Any power_factors_coprime_nondivisor has order at least m.
    1 < m ==> !k. k IN (power_factors_coprime_nondivisor n m) ==> m <= ordz k n *)
@@ -1025,14 +1053,15 @@ val power_factors_coprime_nondivisor_nonempty = store_thm(
       so ~(ordz k n < m)                   by proudct_factors_coprime_divisor_property
       or m <= ordz k n
 *)
-val power_factors_coprime_nondivisor_order = store_thm(
-  "power_factors_coprime_nondivisor_order",
-  ``!n m. 1 < m ==> !k. k IN (power_factors_coprime_nondivisor n m) ==> m <= ordz k n``,
+Theorem power_factors_coprime_nondivisor_order:
+    !n m. 1 < m ==> !k. k IN (power_factors_coprime_nondivisor n m) ==> m <= ordz k n
+Proof
   rpt strip_tac >>
   `coprime k n /\ ~(k divides (product_factors n m))` by metis_tac[power_factors_coprime_nondivisor_element] >>
   `1 < k` by metis_tac[power_factors_coprime_nondivisor_property] >>
   `~(ordz k n < m)` by metis_tac[proudct_factors_coprime_divisor_property] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* LCM of coprimes divides Product of Power Factors                          *)
@@ -1049,10 +1078,11 @@ End
 
 (* Theorem: m IN residue_common_multiple n <=> 0 < m /\ !j. 0 < j /\ j < n ==> j divides m *)
 (* Proof: by residue_common_multiple_def. *)
-val residue_common_multiple_element = store_thm(
-  "residue_common_multiple_element",
-  ``!n m. m IN residue_common_multiple n <=> 0 < m /\ !j. 0 < j /\ j < n ==> j divides m``,
-  rw[residue_common_multiple_def, residue_def]);
+Theorem residue_common_multiple_element:
+    !n m. m IN residue_common_multiple n <=> 0 < m /\ !j. 0 < j /\ j < n ==> j divides m
+Proof
+  rw[residue_common_multiple_def, residue_def]
+QED
 
 (* Theorem: residue_common_multiple n <> {} *)
 (* Proof:
@@ -1065,9 +1095,9 @@ val residue_common_multiple_element = store_thm(
        But  0 < j /\ j <= n ==> j divides (FACT n)  by LEQ_DIVIDES_FACT
        Hence true by contradiction.
 *)
-val residue_common_multiple_nonempty = store_thm(
-  "residue_common_multiple_nonempty",
-  ``!n. residue_common_multiple n <> {}``,
+Theorem residue_common_multiple_nonempty:
+    !n. residue_common_multiple n <> {}
+Proof
   rw[residue_common_multiple_def, residue_def, EXTENSION] >>
   qexists_tac `FACT n` >>
   rpt strip_tac >| [
@@ -1076,14 +1106,16 @@ val residue_common_multiple_nonempty = store_thm(
     spose_not_then strip_assume_tac >>
     `0 < j /\ j <= n` by decide_tac >>
     metis_tac[LEQ_DIVIDES_FACT]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 NOTIN residue_common_multiple n *)
 (* Proof: by residue_common_multiple_def *)
-val residue_common_multiple_nonzero = store_thm(
-  "residue_common_multiple_nonzero",
-  ``!n. 0 NOTIN residue_common_multiple n``,
-  rw[residue_common_multiple_def]);
+Theorem residue_common_multiple_nonzero:
+    !n. 0 NOTIN residue_common_multiple n
+Proof
+  rw[residue_common_multiple_def]
+QED
 
 (* Theorem: m IN residue_common_multiple n ==>
             !k. 0 < k ==> k * m IN residue_common_multiple n *)
@@ -1111,11 +1143,12 @@ QED
                          (!j. j IN residue n ==> j divides b) ==> j divides (a - b)
        Condition implies j divides a /\ j divides b, hence true by DIVIDES_SUB.
 *)
-val residue_common_multiple_has_sub = store_thm(
-  "residue_common_multiple_has_sub",
-  ``!n a b. b < a /\ a IN residue_common_multiple n /\ b IN residue_common_multiple n ==>
-           (a - b) IN residue_common_multiple n``,
-  rw[residue_common_multiple_def, DIVIDES_SUB]);
+Theorem residue_common_multiple_has_sub:
+    !n a b. b < a /\ a IN residue_common_multiple n /\ b IN residue_common_multiple n ==>
+           (a - b) IN residue_common_multiple n
+Proof
+  rw[residue_common_multiple_def, DIVIDES_SUB]
+QED
 
 (* Theorem: m IN residue_common_multiple n <=> 0 < m /\ !j. 1 < j /\ j < n ==> j divides m *)
 (* Proof:
@@ -1127,12 +1160,13 @@ val residue_common_multiple_has_sub = store_thm(
    by putting j = 1, and 1 divides m is true       by ONE_DIVIDES_ALL, 1 < n.
    Thus m IN residue_common_multiple n.
 *)
-val residue_common_multiple_element_1 = store_thm(
-  "residue_common_multiple_element_1",
-  ``!n m. 1 < n ==> (m IN residue_common_multiple n <=> 0 < m /\ !j. 1 < j /\ j < n ==> j divides m)``,
+Theorem residue_common_multiple_element_1:
+    !n m. 1 < n ==> (m IN residue_common_multiple n <=> 0 < m /\ !j. 1 < j /\ j < n ==> j divides m)
+Proof
   rw[residue_common_multiple_def, residue_def] >>
   rw[EQ_IMP_THM] >>
-  Cases_on `j = 1` >> rw[]);
+  Cases_on `j = 1` >> rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Least Common Multiple of Residue n                                        *)
@@ -1168,9 +1202,9 @@ End
         or k <= r
         This contradicts r < k.
 *)
-val residue_lcm_divides_common_multiple = store_thm(
-  "residue_lcm_divides_common_multiple",
-  ``!n m. m IN residue_common_multiple n ==> (residue_lcm n) divides m``,
+Theorem residue_lcm_divides_common_multiple:
+    !n m. m IN residue_common_multiple n ==> (residue_lcm n) divides m
+Proof
   rw[residue_lcm_def] >>
   qabbrev_tac `s = residue_common_multiple n` >>
   qabbrev_tac `k = MIN_SET s` >>
@@ -1191,7 +1225,8 @@ val residue_lcm_divides_common_multiple = store_thm(
       `k <= r` by metis_tac[] >>
       decide_tac
     ]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Relate Residue LCM to List LCM of Leibniz Triangle                        *)
@@ -1242,11 +1277,11 @@ Then prove that c = list_lcm (leibniz_vertical (n-1)).
        hence c <= z                          by DIVIDES_LE
        Therefore c = z                       by EQ_LESS_EQ
 *)
-val residue_lcm_property = store_thm(
-  "residue_lcm_property",
-  ``!n c. (c = residue_lcm n) <=>
+Theorem residue_lcm_property:
+    !n c. (c = residue_lcm n) <=>
       c IN (residue_common_multiple n) /\
-      !m. m IN (residue_common_multiple n) ==> c divides m``,
+      !m. m IN (residue_common_multiple n) ==> c divides m
+Proof
   rpt strip_tac >>
   `residue_common_multiple n <> {}` by rw[residue_common_multiple_nonempty] >>
   rw[residue_lcm_def, EQ_IMP_THM] >| [
@@ -1278,7 +1313,8 @@ val residue_lcm_property = store_thm(
     `0 < z` by metis_tac[residue_common_multiple_element] >>
     `c <= z` by rw[DIVIDES_LE] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (*
 > |- !n. residue_lcm n = MIN_SET (residue_common_multiple n)
@@ -1303,23 +1339,25 @@ so residue_lcm n = list_lcm (leibniz_vertical (n-2)) >= 2 ** (n-2) = (2 ** n)/4
      and !m. m IN (residue_common_multiple n) ==> c divides m      by list_lcm_is_least_common_multiple
    Therefore c = residue_lcm n                                     by residue_lcm_property
 *)
-val residue_lcm_alt = store_thm(
-  "residue_lcm_alt",
-  ``!n. 1 < n ==> (residue_lcm n = list_lcm (leibniz_vertical (n-2)))``,
+Theorem residue_lcm_alt:
+    !n. 1 < n ==> (residue_lcm n = list_lcm (leibniz_vertical (n-2)))
+Proof
   rpt strip_tac >>
   qabbrev_tac `c = list_lcm (leibniz_vertical (n-2))` >>
   `0 < c` by rw[list_lcm_pos, leibniz_vertical_pos, Abbr`c`] >>
   `!j. j < n <=> j <= SUC (n-2)` by decide_tac >>
   `!j. 0 < j /\ j < n <=> MEM j (leibniz_vertical (n-2))` by rw[GSYM leibniz_vertical_mem] >>
   `!j. 0 < j /\ j < n ==> j divides c` by rw[list_lcm_is_common_multiple, Abbr`c`] >>
-  metis_tac[residue_common_multiple_element, list_lcm_is_least_common_multiple, residue_lcm_property]);
+  metis_tac[residue_common_multiple_element, list_lcm_is_least_common_multiple, residue_lcm_property]
+QED
 
 (* Theorem: 1 < n ==> (residue_lcm n = lcm_run (n - 1)) *)
 (* Proof: by residue_lcm_alt *)
-val residue_lcm_eq_list_lcm = store_thm(
-  "residue_lcm_eq_list_lcm",
-  ``!n. 1 < n ==> (residue_lcm n = list_lcm [1 .. (n - 1)])``,
-  rw[residue_lcm_alt]);
+Theorem residue_lcm_eq_list_lcm:
+    !n. 1 < n ==> (residue_lcm n = list_lcm [1 .. (n - 1)])
+Proof
+  rw[residue_lcm_alt]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Bounds for Residue LCM                                                    *)
@@ -1336,16 +1374,17 @@ val residue_lcm_eq_list_lcm = store_thm(
    Hence (residue_lcm k) divides (product_factors n m)   by residue_lcm_divides_common_multiple
       or (residue_lcm k) <= (product_factors n m)        by DIVIDES_LE, 0 < product_factors n m
 *)
-val product_factors_lower = store_thm(
-  "product_factors_lower",
-  ``!n m k. 1 < n /\ 1 < m /\ 1 < k /\
-   (!j. 1 < j /\ j < k ==> coprime j n /\ ordz j n < m) ==> residue_lcm k <= (product_factors n m)``,
+Theorem product_factors_lower:
+    !n m k. 1 < n /\ 1 < m /\ 1 < k /\
+   (!j. 1 < j /\ j < k ==> coprime j n /\ ordz j n < m) ==> residue_lcm k <= (product_factors n m)
+Proof
   rpt strip_tac >>
   `!j. 1 < j /\ j < k /\ coprime j n /\ ordz j n < m ==> j divides (product_factors n m)` by rw[product_factors_divisors] >>
   `0 < product_factors n m` by rw[product_factors_pos] >>
   `(product_factors n m) IN residue_common_multiple k` by rw[residue_common_multiple_element_1] >>
   `(residue_lcm k) divides (product_factors n m)` by rw[residue_lcm_divides_common_multiple] >>
-  rw[DIVIDES_LE]);
+  rw[DIVIDES_LE]
+QED
 
 (* Theorem: 1 < n /\ 1 < m /\ 1 < k /\
             (!j. 1 < j /\ j < k ==> coprime j n /\ ordz j n < m) ==>
@@ -1355,12 +1394,13 @@ val product_factors_lower = store_thm(
      and product_factors n m < n ** ((m ** 2) DIV 2)     by product_factors_upper
    Therefore (residue_lcm k) < n ** ((m ** 2) DIV 2)     by LESS_EQ_LESS_TRANS
 *)
-val residue_lcm_upper = store_thm(
-  "residue_lcm_upper",
-  ``!n m k. 1 < n /\ 1 < m /\ 1 < k /\
+Theorem residue_lcm_upper:
+    !n m k. 1 < n /\ 1 < m /\ 1 < k /\
    (!j. 1 < j /\ j < k ==> coprime j n /\ ordz j n < m) ==>
-   residue_lcm k < n ** ((m ** 2) DIV 2)``,
-  metis_tac[product_factors_upper, product_factors_lower, LESS_EQ_LESS_TRANS]);
+   residue_lcm k < n ** ((m ** 2) DIV 2)
+Proof
+  metis_tac[product_factors_upper, product_factors_lower, LESS_EQ_LESS_TRANS]
+QED
 
 (* Theorem: 1 < n ==> 2 ** (n - 2) <= residue_lcm n *)
 (* Proof:
@@ -1368,12 +1408,13 @@ val residue_lcm_upper = store_thm(
    = list_lcm (leibniz_vertical (n-2))   by residue_lcm_alt, 1 < n.
    >= 2 ** (n-2)                         by leibniz_vertical_lcm_lower
 *)
-val residue_lcm_lower = store_thm(
-  "residue_lcm_lower",
-  ``!n. 1 < n ==> 2 ** (n - 2) <= residue_lcm n``,
+Theorem residue_lcm_lower:
+    !n. 1 < n ==> 2 ** (n - 2) <= residue_lcm n
+Proof
   rpt strip_tac >>
   `residue_lcm n = list_lcm (leibniz_vertical (n-2))` by rw[residue_lcm_alt] >>
-  metis_tac[leibniz_vertical_lcm_lower]);
+  metis_tac[leibniz_vertical_lcm_lower]
+QED
 
 (* Question: How big must k be in order that m <= ordz k n ?
    Searching from k = 1, k = 2, etc.
@@ -1410,11 +1451,11 @@ val residue_lcm_lower = store_thm(
       or k - 2 < SUC (LOG2 n) * (m ** 2 DIV 2)      by EXP_BASE_LT_MONO, 1 < 2
       or k < 2 + SUC (LOG2 n) * (m ** 2 DIV 2)      by arithmetic
 *)
-val ZN_order_modulus_upper = store_thm(
-  "ZN_order_modulus_upper",
-  ``!n m k. 1 < n /\ 1 < m /\ 1 < k /\
+Theorem ZN_order_modulus_upper:
+    !n m k. 1 < n /\ 1 < m /\ 1 < k /\
     (!j. 1 < j /\ j < k ==> coprime j n /\ ordz j n < m) ==>
-    k < 2 + SUC (LOG2 n) * (m ** 2 DIV 2)``,
+    k < 2 + SUC (LOG2 n) * (m ** 2 DIV 2)
+Proof
   rpt strip_tac >>
   `residue_lcm k < n ** ((m ** 2) DIV 2)` by rw[residue_lcm_upper] >>
   `2 ** (k-2) <= residue_lcm k` by rw[residue_lcm_lower] >>
@@ -1425,7 +1466,8 @@ val ZN_order_modulus_upper = store_thm(
   `(2 ** SUC (LOG2 n)) ** ((m ** 2) DIV 2) = 2 ** ((SUC (LOG2 n)) * ((m ** 2) DIV 2))` by rw[EXP_EXP_MULT] >>
   `2 ** (k - 2) < 2 ** (SUC (LOG2 n) * (m ** 2 DIV 2))` by decide_tac >>
   `k - 2 < SUC (LOG2 n) * (m ** 2 DIV 2)` by metis_tac[EXP_BASE_LT_MONO, DECIDE``1 < 2``] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: ZN modulus for order of n to be at least m exists.
             1 < n /\ 1 < m ==>
@@ -1441,34 +1483,37 @@ val ZN_order_modulus_upper = store_thm(
    giving  h < h       by ZN_order_modulus_upper, 1 < h.
    which is false      by prim_recTheory.LESS_REFL
 *)
-val ZN_order_modulus_exists = store_thm(
-  "ZN_order_modulus_exists",
-  ``!n m. 1 < n /\ 1 < m ==>
-    ?k. 1 < k /\ k < 2 + SUC (LOG2 n) * (m ** 2 DIV 2) /\ (coprime k n ==> m <= ordz k n)``,
+Theorem ZN_order_modulus_exists:
+    !n m. 1 < n /\ 1 < m ==>
+    ?k. 1 < k /\ k < 2 + SUC (LOG2 n) * (m ** 2 DIV 2) /\ (coprime k n ==> m <= ordz k n)
+Proof
   rpt strip_tac >>
   `1 < 2 + SUC (LOG2 n) * (m ** 2 DIV 2)` by decide_tac >>
-  metis_tac[ZN_order_modulus_upper, NOT_LESS_EQUAL, DECIDE``!n. ~(n < n)``]);
+  metis_tac[ZN_order_modulus_upper, NOT_LESS_EQUAL, DECIDE``!n. ~(n < n)``]
+QED
 
 (* Theorem: ZN modulus for order of n to be at least m exists.
             1 < n /\ 1 < m ==>
             ?k. 1 < k /\ k < 2 + SUC (LOG2 n) * (m ** 2 DIV 2) /\
             (~ coprime k n \/ m <= ordz k n) *)
 (* Proof: by ZN_order_modulus_exists, and p ==> q == ~p or q. *)
-val ZN_order_modulus_exists_alt = store_thm(
-  "ZN_order_modulus_exists_alt",
-  ``!n m. 1 < n /\ 1 < m ==>
-    ?k. 1 < k /\ k < 2 + SUC (LOG2 n) * (m ** 2 DIV 2) /\ (~ coprime k n \/ m <= ordz k n)``,
-  metis_tac[ZN_order_modulus_exists]);
+Theorem ZN_order_modulus_exists_alt:
+    !n m. 1 < n /\ 1 < m ==>
+    ?k. 1 < k /\ k < 2 + SUC (LOG2 n) * (m ** 2 DIV 2) /\ (~ coprime k n \/ m <= ordz k n)
+Proof
+  metis_tac[ZN_order_modulus_exists]
+QED
 
 (* Theorem: 0 < n /\ prime k /\ m <= ordz k n ==> ~(k divides (product_factors n m)) *)
 (* Proof:
    Since p divides (product_factors n m) ==> ordz p n < m   by proudct_factors_prime_divisor_property
    So given m <= ordz k n, p divides (product_factors n m) is false.
 *)
-val ZN_order_modulus_when_prime = store_thm(
-  "ZN_order_modulus_when_prime",
-  ``!n m k. 0 < n /\ prime k /\ m <= ordz k n ==> ~(k divides (product_factors n m))``,
-  metis_tac[proudct_factors_prime_divisor_property, DECIDE``!n m. ~(n < m) <=> m <= n``]);
+Theorem ZN_order_modulus_when_prime:
+    !n m k. 0 < n /\ prime k /\ m <= ordz k n ==> ~(k divides (product_factors n m))
+Proof
+  metis_tac[proudct_factors_prime_divisor_property, DECIDE``!n m. ~(n < m) <=> m <= n``]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ZN bounds based on upper logarithm                                        *)
@@ -1492,11 +1537,11 @@ val ZN_order_modulus_when_prime = store_thm(
       or        k - 2 < (ulog n) * h         by EXP_BASE_LT_MONO, 1 < 2
       or            k < 2 + (ulog n) * h     by arithmetic
 *)
-val ZN_order_modulus_upper_1 = store_thm(
-  "ZN_order_modulus_upper_1",
-  ``!n m k. 1 < n /\ 1 < m /\ 1 < k /\
+Theorem ZN_order_modulus_upper_1:
+    !n m k. 1 < n /\ 1 < m /\ 1 < k /\
     (!j. 1 < j /\ j < k ==> coprime j n /\ ordz j n < m) ==>
-    k < 2 + (ulog n) * HALF (m ** 2)``,
+    k < 2 + (ulog n) * HALF (m ** 2)
+Proof
   rpt strip_tac >>
   qabbrev_tac `h = HALF (m ** 2)` >>
   `residue_lcm k < n ** h` by rw[residue_lcm_upper, Abbr`h`] >>
@@ -1506,7 +1551,8 @@ val ZN_order_modulus_upper_1 = store_thm(
   `(2 ** ulog n) ** h = 2 ** ((ulog n) * h)` by rw[EXP_EXP_MULT] >>
   `2 ** (k - 2) < 2 ** ((ulog n) * h)` by decide_tac >>
   `k - 2 < (ulog n) * h` by metis_tac[EXP_BASE_LT_MONO, DECIDE``1 < 2``] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: ZN modulus for order of n to be at least m exists if coprime.
             1 < n /\ 1 < m ==>
@@ -1521,26 +1567,28 @@ val ZN_order_modulus_upper_1 = store_thm(
    giving  h < h             by ZN_order_modulus_upper_1, 1 < h.
    which is false            by prim_recTheory.LESS_REFL
 *)
-val ZN_order_modulus_exists_1 = store_thm(
-  "ZN_order_modulus_exists_1",
-  ``!n m. 1 < n /\ 1 < m ==>
-    ?k. 1 < k /\ k < 2 + (ulog n) * HALF (m ** 2) /\ (~ coprime k n \/ m <= ordz k n)``,
+Theorem ZN_order_modulus_exists_1:
+    !n m. 1 < n /\ 1 < m ==>
+    ?k. 1 < k /\ k < 2 + (ulog n) * HALF (m ** 2) /\ (~ coprime k n \/ m <= ordz k n)
+Proof
   rpt strip_tac >>
   `1 < 2 + (ulog n) * HALF (m ** 2)` by decide_tac >>
-  metis_tac[ZN_order_modulus_upper_1, NOT_LESS_EQUAL, DECIDE``!n. ~(n < n)``]);
+  metis_tac[ZN_order_modulus_upper_1, NOT_LESS_EQUAL, DECIDE``!n. ~(n < n)``]
+QED
 
 (* Theorem: 1 < n /\ 1 < m /\ 1 < k /\
             (!j. 1 < j /\ j < k ==> ~(j divides n) /\ ordz j n < m) ==>
             k < 2 + HALF (m ** 2) * (ulog n) *)
 (* Proof: by coprime_by_le_not_divides, ZN_order_modulus_upper_1 *)
-val ZN_order_modulus_upper_2 = store_thm(
-  "ZN_order_modulus_upper_2",
-  ``!n m k. 1 < n /\ 1 < m /\ 1 < k /\
+Theorem ZN_order_modulus_upper_2:
+    !n m k. 1 < n /\ 1 < m /\ 1 < k /\
     (!j. 1 < j /\ j < k ==> ~(j divides n) /\ ordz j n < m) ==>
-    k < 2 + HALF (m ** 2) * (ulog n)``,
+    k < 2 + HALF (m ** 2) * (ulog n)
+Proof
   rpt strip_tac >>
   `!j. 1 < j /\ j < k ==> coprime j n /\ ordz j n < m` by rw[coprime_by_le_not_divides] >>
-  metis_tac[ZN_order_modulus_upper_1, MULT_COMM]);
+  metis_tac[ZN_order_modulus_upper_1, MULT_COMM]
+QED
 
 (* Theorem: ZN modulus for order of n to be at least m exists if coprime.
             1 < n /\ 1 < m ==>
@@ -1554,47 +1602,51 @@ val ZN_order_modulus_upper_2 = store_thm(
    giving  h < h             by ZN_order_modulus_upper_2, 1 < h.
    which is false            by prim_recTheory.LESS_REFL
 *)
-val ZN_order_modulus_exists_2 = store_thm(
-  "ZN_order_modulus_exists_2",
-  ``!n m. 1 < n /\ 1 < m ==>
-    ?k. 1 < k /\ k < 2 + HALF (m ** 2) * (ulog n) /\ (k divides n \/ m <= ordz k n)``,
+Theorem ZN_order_modulus_exists_2:
+    !n m. 1 < n /\ 1 < m ==>
+    ?k. 1 < k /\ k < 2 + HALF (m ** 2) * (ulog n) /\ (k divides n \/ m <= ordz k n)
+Proof
   rpt strip_tac >>
   `1 < 2 + HALF (m ** 2) * (ulog n)` by decide_tac >>
-  metis_tac[ZN_order_modulus_upper_2, NOT_LESS_EQUAL, DECIDE``!n. ~(n < n)``]);
+  metis_tac[ZN_order_modulus_upper_2, NOT_LESS_EQUAL, DECIDE``!n. ~(n < n)``]
+QED
 
 (* Theorem: 1 < n /\ 1 < m /\
             (!k. 1 < k /\ k <= c ==> ~(k divides n) /\ ordz k n < m) ==> c < 1 + HALF (m ** 2) * (ulog n) *)
 (* Proof: by ZN_order_modulus_upper_2 *)
-val ZN_order_modulus_upper_3 = store_thm(
-  "ZN_order_modulus_upper_3",
-  ``!n m k c. 1 < n /\ 1 < m /\
-    (!k. 1 < k /\ k <= c ==> ~(k divides n) /\ ordz k n < m) ==> c < 1 + HALF (m ** 2) * (ulog n)``,
+Theorem ZN_order_modulus_upper_3:
+    !n m k c. 1 < n /\ 1 < m /\
+    (!k. 1 < k /\ k <= c ==> ~(k divides n) /\ ordz k n < m) ==> c < 1 + HALF (m ** 2) * (ulog n)
+Proof
   rpt strip_tac >>
   `!j. 1 < j /\ j < c + 1 ==> ~(j divides n) /\ ordz j n < m` by rw[] >>
   (Cases_on `c = 0` >> simp[]) >>
   `1 < c + 1` by rw[] >>
   `c + 1 < 2 + HALF (m ** 2) * ulog n` by rw[ZN_order_modulus_upper_2] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < n /\ 1 < m /\ 1 + HALF (m ** 2) * (ulog n) <= c ==>
             ?k. 1 < k /\ k <= c /\ (k divides n \/ m <= ordz k n) *)
 (* Proof: by ZN_order_modulus_upper_3 *)
-val ZN_order_modulus_exists_3 = store_thm(
-  "ZN_order_modulus_exists_3",
-  ``!n m c. 1 < n /\ 1 < m /\ 1 + HALF (m ** 2) * (ulog n) <= c ==>
-    ?k. 1 < k /\ k <= c /\ (k divides n \/ m <= ordz k n)``,
+Theorem ZN_order_modulus_exists_3:
+    !n m c. 1 < n /\ 1 < m /\ 1 + HALF (m ** 2) * (ulog n) <= c ==>
+    ?k. 1 < k /\ k <= c /\ (k divides n \/ m <= ordz k n)
+Proof
   spose_not_then strip_assume_tac >>
   `c < 1 + HALF (m ** 2) * ulog n` by metis_tac[ZN_order_modulus_upper_3, NOT_LESS_EQUAL] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < n /\ 1 < m /\ (c = 1 + HALF (m ** 2) * (ulog n)) ==>
             ?k. 1 < k /\ k <= c /\ (k divides n \/ m <= ordz k n) *)
 (* Proof: by ZN_order_modulus_exists_3 *)
-val ZN_order_modulus_exists_4 = store_thm(
-  "ZN_order_modulus_exists_4",
-  ``!n m c. 1 < n /\ 1 < m /\ (c = 1 + HALF (m ** 2) * (ulog n)) ==>
-    ?k. 1 < k /\ k <= c /\ (k divides n \/ m <= ordz k n)``,
-  rw[ZN_order_modulus_exists_3]);
+Theorem ZN_order_modulus_exists_4:
+    !n m c. 1 < n /\ 1 < m /\ (c = 1 + HALF (m ** 2) * (ulog n)) ==>
+    ?k. 1 < k /\ k <= c /\ (k divides n \/ m <= ordz k n)
+Proof
+  rw[ZN_order_modulus_exists_3]
+QED
 
 (* The following is the generic form -- cannot move to ringInstances due to SQRT_LE, SQRT_OF_SQ, etc. *)
 
@@ -1625,10 +1677,10 @@ val ZN_order_modulus_exists_4 = store_thm(
    Since SQ (SQRT (phi k) <= phi k           by SQ_SQRT_LE
    Hence s <= phi k                          from Step 2
 *)
-val ZN_order_condition_property = store_thm(
-  "ZN_order_condition_property",
-  ``!n k. 1 < n /\ coprime k n /\ (2 * SUC (LOG2 n)) ** 2 <= ordz k n ==>
-         2 * (SQRT (phi k)) * SUC (LOG2 n) <= phi k``,
+Theorem ZN_order_condition_property:
+    !n k. 1 < n /\ coprime k n /\ (2 * SUC (LOG2 n)) ** 2 <= ordz k n ==>
+         2 * (SQRT (phi k)) * SUC (LOG2 n) <= phi k
+Proof
   rpt strip_tac >>
   qabbrev_tac `j = ordz k n` >>
   qabbrev_tac `s = 2 * (SQRT (phi k)) * SUC (LOG2 n)` >>
@@ -1646,7 +1698,8 @@ val ZN_order_condition_property = store_thm(
   `s = 2 * SUC (LOG2 n) * SQRT (phi k)` by rw_tac arith_ss[Abbr`s`] >>
   rw[LESS_MONO_MULT]) >>
   `SQ (SQRT (phi k)) <= phi k` by rw[SQ_SQRT_LE] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < n /\ coprime k n ==>
             !h. 0 < h /\ h ** 2 <= ordz k n ==> (SQRT (phi k)) * h <= phi k *)
@@ -1670,10 +1723,10 @@ val ZN_order_condition_property = store_thm(
     ==>     SQRT t * h <= SQRT t * SQRT t    by LESS_MONO_MULT
      or              s <= t        by SQ_SQRT_LE, notation
 *)
-val ZN_order_condition_property_0 = store_thm(
-  "ZN_order_condition_property_0",
-  ``!n k. 1 < n /\ coprime k n ==>
-   !h. 0 < h /\ h ** 2 <= ordz k n ==> (SQRT (phi k)) * h <= phi k``,
+Theorem ZN_order_condition_property_0:
+    !n k. 1 < n /\ coprime k n ==>
+   !h. 0 < h /\ h ** 2 <= ordz k n ==> (SQRT (phi k)) * h <= phi k
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = phi k` >>
   qabbrev_tac `s = SQRT t * h` >>
@@ -1686,18 +1739,20 @@ val ZN_order_condition_property_0 = store_thm(
   `h <= SQRT t` by metis_tac[GSYM SQRT_LE, SQRT_OF_SQ] >>
   `s <= SQRT t * SQRT t` by rw[LESS_MONO_MULT, Abbr`s`] >>
   `SQ (SQRT t) <= t` by rw[SQ_SQRT_LE] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < n /\ coprime k n /\ (SUC (LOG2 n)) ** 2 <= ordz k n ==>
          SQRT (phi k) * SUC (LOG2 n) <= phi k *)
 (* Proof: by ZN_order_condition_property_0 *)
-val ZN_order_condition_property_1 = store_thm(
-  "ZN_order_condition_property_1",
-  ``!n k. 1 < n /\ coprime k n /\ (SUC (LOG2 n)) ** 2 <= ordz k n ==>
-         SQRT (phi k) * SUC (LOG2 n) <= phi k``,
+Theorem ZN_order_condition_property_1:
+    !n k. 1 < n /\ coprime k n /\ (SUC (LOG2 n)) ** 2 <= ordz k n ==>
+         SQRT (phi k) * SUC (LOG2 n) <= phi k
+Proof
   rpt strip_tac >>
   `0 < SUC (LOG2 n)` by decide_tac >>
-  metis_tac[ZN_order_condition_property_0]);
+  metis_tac[ZN_order_condition_property_0]
+QED
 
 (* Theorem: 1 < n /\ coprime k n /\ (ulog n) ** 2 <= ordz k n ==>
             SQRT (phi k) * (ulog n) <= phi k *)
@@ -1705,11 +1760,12 @@ val ZN_order_condition_property_1 = store_thm(
    Note 0 < ulog n                         by ulog_pos, 1 < n
    Thus SQRT (phi k) * (ulog n) <= phi k   by ZN_order_condition_property_0
 *)
-val ZN_order_condition_property_2 = store_thm(
-  "ZN_order_condition_property_2",
-  ``!n k. 1 < n /\ coprime k n /\ (ulog n) ** 2 <= ordz k n ==>
-         SQRT (phi k) * (ulog n) <= phi k``,
-  metis_tac[ZN_order_condition_property_0, ulog_pos]);
+Theorem ZN_order_condition_property_2:
+    !n k. 1 < n /\ coprime k n /\ (ulog n) ** 2 <= ordz k n ==>
+         SQRT (phi k) * (ulog n) <= phi k
+Proof
+  metis_tac[ZN_order_condition_property_0, ulog_pos]
+QED
 
 (* Theorem: 1 < n /\ coprime k n /\ (2 * ulog n) ** 2 <= ordz k n ==>
             2 * SQRT (phi k) * (ulog n) <= phi k *)
@@ -1719,15 +1775,16 @@ val ZN_order_condition_property_2 = store_thm(
    Thus SQRT (phi k) * (2 * ulog n) <= phi k   by ZN_order_condition_property_0
      or   2 * SQRT (phi k) * ulog n <= phi k
 *)
-val ZN_order_condition_property_3 = store_thm(
-  "ZN_order_condition_property_3",
-  ``!n k. 1 < n /\ coprime k n /\ (2 * ulog n) ** 2 <= ordz k n ==>
-             2 * SQRT (phi k) * ulog n <= phi k``,
+Theorem ZN_order_condition_property_3:
+    !n k. 1 < n /\ coprime k n /\ (2 * ulog n) ** 2 <= ordz k n ==>
+             2 * SQRT (phi k) * ulog n <= phi k
+Proof
   rpt strip_tac >>
   `0 < ulog n` by rw[ulog_pos] >>
   `0 < 2 * ulog n` by decide_tac >>
   `2 * SQRT (phi k) * ulog n = SQRT (phi k) * (2 * ulog n)` by decide_tac >>
-  metis_tac[ZN_order_condition_property_0]);
+  metis_tac[ZN_order_condition_property_0]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Parameter Search                                                      *)
@@ -1852,13 +1909,14 @@ val it = |- MAP aks_param [0; 1; 2] = [nice 0; nice 1; nice 2]: thm
                 c = 1 + HALF (m ** 5)
              in if m <= 1 then nice n else aks_param_search n (SQ m) 2 c *)
 (* Proof: by aks_param_def, ulog_le_1 *)
-val aks_param_alt = store_thm(
-  "aks_param_alt",
-  ``!n. aks_param n =
+Theorem aks_param_alt:
+    !n. aks_param n =
        let m = ulog n;
            c = 1 + HALF (m ** 5)
-        in if m <= 1 then nice n else aks_param_search n (SQ m) 2 c``,
-  rw[aks_param_def, ulog_le_1]);
+        in if m <= 1 then nice n else aks_param_search n (SQ m) 2 c
+Proof
+  rw[aks_param_def, ulog_le_1]
+QED
 
 (* Theorem: aks_param_search n m k c =
             if c < k then bad
@@ -1866,35 +1924,39 @@ val aks_param_alt = store_thm(
             else if m <= k /\ m <= ordz k n then good k
             else aks_param_search n m (k + 1) c *)
 (* Proof: by aks_param_search_def, ordz_compute_eqn *)
-val aks_param_search_alt = store_thm(
-  "aks_param_search_alt",
-  ``!n m k c. aks_param_search n m k c =
+Theorem aks_param_search_alt:
+    !n m k c. aks_param_search n m k c =
              if c < k then bad
              else if k divides n then nice k
              else if m <= k /\ m <= ordz k n then good k
-             else aks_param_search n m (k + 1) c``,
-  rw[Once aks_param_search_def, ordz_compute_eqn]);
+             else aks_param_search n m (k + 1) c
+Proof
+  rw[Once aks_param_search_def, ordz_compute_eqn]
+QED
 
 (* Theorem: aks_param 0 = nice 0 *)
 (* Proof: by aks_param_def, 0 <= 2. *)
-val aks_param_0 = store_thm(
-  "aks_param_0",
-  ``aks_param 0 = nice 0``,
-  rw[aks_param_def]);
+Theorem aks_param_0:
+    aks_param 0 = nice 0
+Proof
+  rw[aks_param_def]
+QED
 
 (* Theorem: aks_param 1 = nice 1 *)
 (* Proof: by aks_param_def, 1 <= 2. *)
-val aks_param_1 = store_thm(
-  "aks_param_1",
-  ``aks_param 1 = nice 1``,
-  rw[aks_param_def]);
+Theorem aks_param_1:
+    aks_param 1 = nice 1
+Proof
+  rw[aks_param_def]
+QED
 
 (* Theorem: aks_param 2 = nice 2 *)
 (* Proof: by aks_param_def, 2 <= 2. *)
-val aks_param_2 = store_thm(
-  "aks_param_2",
-  ``aks_param 2 = nice 2``,
-  rw[aks_param_def]);
+Theorem aks_param_2:
+    aks_param 2 = nice 2
+Proof
+  rw[aks_param_def]
+QED
 
 (* Theorem: 0 < k /\ (aks_param_search n m k c = bad) ==>
             !j. k <= j /\ j <= c ==> ~(j divides n) /\ (ordz j n < m) *)
@@ -1912,10 +1974,10 @@ val aks_param_2 = store_thm(
              Hence there is a contradiction.
        If k <> j, then k < j, true by induction hypothesis, k + 1 <= j
 *)
-val aks_param_search_bad = store_thm(
-  "aks_param_search_bad",
-  ``!n m k c. 0 < k /\ (aks_param_search n m k c = bad) ==>
-             !j. k <= j /\ j <= c ==> ~(j divides n) /\ (ordz j n < m)``,
+Theorem aks_param_search_bad:
+    !n m k c. 0 < k /\ (aks_param_search n m k c = bad) ==>
+             !j. k <= j /\ j <= c ==> ~(j divides n) /\ (ordz j n < m)
+Proof
   ho_match_mp_tac (theorem "aks_param_search_ind") >>
   (rpt gen_tac >> strip_tac) >>
   simp[Once aks_param_search_alt] >>
@@ -1931,16 +1993,18 @@ val aks_param_search_bad = store_thm(
       rw[],
       fs[ordz_compute_eqn]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: k <= j /\ j <= c /\ (j divides n \/ m <= ordz j n) ==>
             (k = 0) \/ (aks_param_search n m k c <> bad) *)
 (* Proof: by aks_param_search_bad *)
-val aks_param_search_not_bad = store_thm(
-  "aks_param_search_not_bad",
-  ``!n m k j c. k <= j /\ j <= c /\ (j divides n \/ m <= ordz j n) ==>
-    (k = 0) \/ (aks_param_search n m k c <> bad)``,
-  metis_tac[aks_param_search_bad, NOT_ZERO_LT_ZERO, NOT_LESS_EQUAL]);
+Theorem aks_param_search_not_bad:
+    !n m k j c. k <= j /\ j <= c /\ (j divides n \/ m <= ordz j n) ==>
+    (k = 0) \/ (aks_param_search n m k c <> bad)
+Proof
+  metis_tac[aks_param_search_bad, NOT_ZERO_LT_ZERO, NOT_LESS_EQUAL]
+QED
 
 (* Theorem: 1 < n /\ 1 < m /\ 1 + HALF (m ** 2) * (ulog n) <= c ==> aks_param_search n m 2 c <> bad *)
 (* Proof:
@@ -1950,30 +2014,32 @@ val aks_param_search_not_bad = store_thm(
     and k divides n ==> nice k <> bad     by aks_param_search_not_bad
      or m <= ordz k n ==> good k <> bad   by aks_param_search_not_bad
 *)
-val aks_param_search_success = store_thm(
-  "aks_param_search_success",
-  ``!n m c. 1 < n /\ 1 < m /\ 1 + HALF (m ** 2) * (ulog n) <= c ==>
-           aks_param_search n m 2 c <> bad``,
+Theorem aks_param_search_success:
+    !n m c. 1 < n /\ 1 < m /\ 1 + HALF (m ** 2) * (ulog n) <= c ==>
+           aks_param_search n m 2 c <> bad
+Proof
   rpt strip_tac >>
   `?k. 1 < k /\ k <= c /\ (k divides n \/ m <= ordz k n)` by rw[ZN_order_modulus_exists_3] >| [
     `2 <= k /\ 2 <> 0` by decide_tac >>
     metis_tac[aks_param_search_not_bad],
     `2 <= k /\ 2 <> 0` by decide_tac >>
     metis_tac[aks_param_search_not_bad]
-  ]);
+  ]
+QED
 
 (* Theorem: (aks_param_search n m k c = bad) /\ d <= c ==> (aks_param_search n m k d = bad) *)
 (* Proof: by aks_param_search_def and its induction *)
-val aks_param_search_bad_le = store_thm(
-  "aks_param_search_bad_le",
-  ``!n m k c d. (aks_param_search n m k c = bad) /\ d <= c ==>
-                (aks_param_search n m k d = bad)``,
+Theorem aks_param_search_bad_le:
+    !n m k c d. (aks_param_search n m k c = bad) /\ d <= c ==>
+                (aks_param_search n m k d = bad)
+Proof
   ho_match_mp_tac (theorem "aks_param_search_ind") >>
   (rpt gen_tac >> strip_tac) >>
   simp[Once aks_param_search_def] >>
   rw[] >-
   rw[Once aks_param_search_def] >>
-  rw[Once aks_param_search_def]);
+  rw[Once aks_param_search_def]
+QED
 
 (* Theorem: aks_param n <> bad *)
 (* Proof:
@@ -1994,9 +2060,9 @@ val aks_param_search_bad_le = store_thm(
 
    The result follows             by aks_param_search_success
 *)
-val aks_param_exists = store_thm(
-  "aks_param_exists",
-  ``!n. aks_param n <> bad``,
+Theorem aks_param_exists:
+    !n. aks_param n <> bad
+Proof
   rw_tac std_ss[aks_param_def] >>
   qabbrev_tac `m = SQ (ulog n)` >>
   qabbrev_tac `k = 1 + HALF (m ** 2) * ulog n` >>
@@ -2007,7 +2073,8 @@ val aks_param_exists = store_thm(
   (rw[Abbr`k`, Abbr`c`, Abbr`m`] >>
   `(ulog n ** 2) ** 2 = (ulog n) ** 4` by rw[GSYM EXP_EXP_MULT] >>
   metis_tac[HALF_MULT, EXP, DECIDE``SUC 4 = 5``]) >>
-  metis_tac[aks_param_search_success]);
+  metis_tac[aks_param_search_success]
+QED
 
 (* Theorem: (aks_param_search n m k_ c = nice k) ==>
             (h <= k /\ k divides n /\ (!j. h <= j /\ j < k ==> ~(j divides n))) *)
@@ -2022,17 +2089,18 @@ val aks_param_exists = store_thm(
        If h = j, this is trivially true.
        If h <> j, then h < j, true by induction hypothesis, h + 1 <= j
 *)
-val aks_param_search_nice = store_thm(
-  "aks_param_search_nice",
-  ``!n m h c k. (aks_param_search n m h c = nice k) ==>
-        (h <= k /\ k divides n /\ (!j. h <= j /\ j < k ==> ~(j divides n)))``,
+Theorem aks_param_search_nice:
+    !n m h c k. (aks_param_search n m h c = nice k) ==>
+        (h <= k /\ k divides n /\ (!j. h <= j /\ j < k ==> ~(j divides n)))
+Proof
   ho_match_mp_tac (theorem "aks_param_search_ind") >>
   (rpt gen_tac >> strip_tac) >>
   simp[Once aks_param_search_def] >>
   rw[] >-
   rw[] >-
   fs[] >>
-  (Cases_on `h = j` >> fs[]));
+  (Cases_on `h = j` >> fs[])
+QED
 
 (* Theorem: 0 < n /\ (aks_param_search n m 2 c = nice k) ==> k <= n *)
 (* Proof:
@@ -2041,10 +2109,11 @@ val aks_param_search_nice = store_thm(
    But k divides n ==> k <= n      by DIVIDES_LE, 0 < n
    This is a contradiction.
 *)
-val aks_param_search_nice_le = store_thm(
-  "aks_param_search_nice_le",
-  ``!n m k c. 0 < n /\ (aks_param_search n m 2 c = nice k) ==> k <= n``,
-  metis_tac[aks_param_search_nice, DIVIDES_LE]);
+Theorem aks_param_search_nice_le:
+    !n m k c. 0 < n /\ (aks_param_search n m 2 c = nice k) ==> k <= n
+Proof
+  metis_tac[aks_param_search_nice, DIVIDES_LE]
+QED
 
 (* Theorem: (aks_param_search n m k c = nice j) ==> j <= c *)
 (* Proof:
@@ -2057,9 +2126,9 @@ val aks_param_search_nice_le = store_thm(
        <=> aks_param_search n m (k + 1) c = nice j  by aks_param_search_def
        ==> j <= c                                   by induction hypothesis
 *)
-val aks_param_search_nice_bound = store_thm(
-  "aks_param_search_nice_bound",
-  ``!n m k c j. (aks_param_search n m k c = nice j) ==> j <= c``,
+Theorem aks_param_search_nice_bound:
+    !n m k c j. (aks_param_search n m k c = nice j) ==> j <= c
+Proof
   ho_match_mp_tac (theorem "aks_param_search_ind") >>
   rw[] >>
   Cases_on `c < k` >-
@@ -2068,14 +2137,16 @@ val aks_param_search_nice_bound = store_thm(
   fs[Once aks_param_search_def] >>
   Cases_on `m <= k /\ m <= ordz_compute k n` >-
   fs[Once aks_param_search_def] >>
-  fs[Once aks_param_search_def]);
+  fs[Once aks_param_search_def]
+QED
 
 (* Theorem: (aks_param_search n m k c = nice j) ==> j divides n *)
 (* Proof: by aks_param_search_nice *)
-val aks_param_search_nice_factor = store_thm(
-  "aks_param_search_nice_factor",
-  ``!n m k c j. (aks_param_search n m k c = nice j) ==> j divides n``,
-  metis_tac[aks_param_search_nice, NOT_LESS]);
+Theorem aks_param_search_nice_factor:
+    !n m k c j. (aks_param_search n m k c = nice j) ==> j divides n
+Proof
+  metis_tac[aks_param_search_nice, NOT_LESS]
+QED
 
 (* Theorem: (aks_param_search n m 2 c = nice k) ==> !j. 1 < j /\ j < k ==> coprime j n *)
 (* Proof:
@@ -2093,9 +2164,9 @@ val aks_param_search_nice_factor = store_thm(
     ==> ~(d divides n)               by implication
     This contradicts d divides n.
 *)
-val aks_param_search_nice_coprime_all = store_thm(
-  "aks_param_search_nice_coprime_all",
-  ``!n m k c. (aks_param_search n m 2 c = nice k) ==> !j. 1 < j /\ j < k ==> coprime j n``,
+Theorem aks_param_search_nice_coprime_all:
+    !n m k c. (aks_param_search n m 2 c = nice k) ==> !j. 1 < j /\ j < k ==> coprime j n
+Proof
   spose_not_then strip_assume_tac >>
   `2 <= k /\ k divides n /\ !j. 2 <= j /\ j < k ==> ~(j divides n)` by metis_tac[aks_param_search_nice] >>
   `2 <= j` by decide_tac >>
@@ -2105,7 +2176,8 @@ val aks_param_search_nice_coprime_all = store_thm(
   `2 <= d` by decide_tac >>
   `d divides j /\ d divides n` by metis_tac[GCD_PROPERTY] >>
   `d <= j` by rw[DIVIDES_LE] >>
-  metis_tac[LESS_EQ_LESS_TRANS]);
+  metis_tac[LESS_EQ_LESS_TRANS]
+QED
 
 (* Theorem: (aks_param_search n m h c = good k) ==>
             h <= k /\ m <= ordz k n /\ !j. h <= j /\ j <= k ==> ~(j divides n) *)
@@ -2122,10 +2194,10 @@ val aks_param_search_nice_coprime_all = store_thm(
        If h = j, this is trivially true.
        If h <> j, then h < j, true by induction hypothesis, h + 1 <= j, ordz_compute_eqn
 *)
-val aks_param_search_good = store_thm(
-  "aks_param_search_good",
-  ``!n m h c k. (aks_param_search n m h c = good k) ==>
-    h <= k /\ m <= ordz k n /\ !j. h <= j /\ j <= k ==> ~(j divides n)``,
+Theorem aks_param_search_good:
+    !n m h c k. (aks_param_search n m h c = good k) ==>
+    h <= k /\ m <= ordz k n /\ !j. h <= j /\ j <= k ==> ~(j divides n)
+Proof
   ho_match_mp_tac (theorem "aks_param_search_ind") >>
   (rpt gen_tac >> strip_tac) >>
   simp[Once aks_param_search_alt] >>
@@ -2135,7 +2207,8 @@ val aks_param_search_good = store_thm(
     fs[ordz_compute_eqn],
     fs[ordz_compute_eqn],
     (Cases_on `h = j` >> fs[ordz_compute_eqn])
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n /\ (aks_param_search n m 2 c = good k) ==> k < n *)
 (* Proof:
@@ -2145,12 +2218,13 @@ val aks_param_search_good = store_thm(
    Putting j = n, this gives  ~(n divides n)      by implication
    This contradicts n divides n                   by DIVIDES_REFL
 *)
-val aks_param_search_good_lt = store_thm(
-  "aks_param_search_good_lt",
-  ``!n m k c. 1 < n /\ (aks_param_search n m 2 c = good k) ==> k < n``,
+Theorem aks_param_search_good_lt:
+    !n m k c. 1 < n /\ (aks_param_search n m 2 c = good k) ==> k < n
+Proof
   spose_not_then strip_assume_tac >>
   `n <> 1 /\ 2 <= n /\ n <= k` by decide_tac >>
-  metis_tac[aks_param_search_good, DIVIDES_REFL]);
+  metis_tac[aks_param_search_good, DIVIDES_REFL]
+QED
 
 (* Theorem: (aks_param_search n m k c = good j) ==> j <= c *)
 (* Proof:
@@ -2163,9 +2237,9 @@ val aks_param_search_good_lt = store_thm(
        <=> aks_param_search n m (k + 1) c = good j  by aks_param_search_def
        ==> j <= c                                   by induction hypothesis
 *)
-val aks_param_search_good_bound = store_thm(
-  "aks_param_search_good_bound",
-  ``!n m k c j. (aks_param_search n m k c = good j) ==> j <= c``,
+Theorem aks_param_search_good_bound:
+    !n m k c j. (aks_param_search n m k c = good j) ==> j <= c
+Proof
   ho_match_mp_tac (theorem "aks_param_search_ind") >>
   rw[] >>
   Cases_on `c < k` >-
@@ -2174,7 +2248,8 @@ val aks_param_search_good_bound = store_thm(
   fs[Once aks_param_search_def] >>
   Cases_on `m <= k /\ m <= ordz_compute k n` >-
   fs[Once aks_param_search_def] >>
-  fs[Once aks_param_search_def]);
+  fs[Once aks_param_search_def]
+QED
 
 (* Theorem: (aks_param_search n m 2 c = good k) ==>
             1 < k /\ m <= ordz k n /\ !j. 1 < j /\ j <= k ==> coprime j n *)
@@ -2194,10 +2269,10 @@ val aks_param_search_good_bound = store_thm(
         ==> ~(d divides n)               by implication
        This contradicts d divides n.
 *)
-val aks_param_search_good_coprime_all = store_thm(
-  "aks_param_search_good_coprime_all",
-  ``!n m k c. (aks_param_search n m 2 c = good k) ==>
-    1 < k /\ m <= ordz k n /\ !j. 1 < j /\ j <= k ==> coprime j n``,
+Theorem aks_param_search_good_coprime_all:
+    !n m k c. (aks_param_search n m 2 c = good k) ==>
+    1 < k /\ m <= ordz k n /\ !j. 1 < j /\ j <= k ==> coprime j n
+Proof
   rpt strip_tac >-
   metis_tac[aks_param_search_good, DECIDE``!n. 1 < n <=> 2 <= n``] >-
   metis_tac[aks_param_search_good] >>
@@ -2209,7 +2284,8 @@ val aks_param_search_good_coprime_all = store_thm(
   `2 <= d` by decide_tac >>
   `d divides j /\ d divides n` by metis_tac[GCD_PROPERTY] >>
   `d <= j` by rw[DIVIDES_LE] >>
-  metis_tac[LESS_EQ_TRANS]);
+  metis_tac[LESS_EQ_TRANS]
+QED
 
 (* Theorem: 1 < n /\ (aks_param n = nice k) ==> 1 < k /\ k divides n /\ !j. 1 < j /\ j < k ==> ~(j divides n) *)
 (* Proof:
@@ -2229,10 +2305,10 @@ val aks_param_search_good_coprime_all = store_thm(
         or 1 < k /\ k divides n /\ !j. 1 < j /\ j < k ==> ~(j divides n)
                                     by arithmetic
 *)
-val aks_param_nice = store_thm(
-  "aks_param_nice",
-  ``!n k. 1 < n /\ (aks_param n = nice k) ==>
-         1 < k /\ k divides n /\ !j. 1 < j /\ j < k ==> ~(j divides n)``,
+Theorem aks_param_nice:
+    !n k. 1 < n /\ (aks_param n = nice k) ==>
+         1 < k /\ k divides n /\ !j. 1 < j /\ j < k ==> ~(j divides n)
+Proof
   ntac 3 strip_tac >>
   Cases_on `n = 2` >| [
     `nice 2 = nice k` by metis_tac[aks_param_2] >>
@@ -2244,7 +2320,8 @@ val aks_param_nice = store_thm(
     `aks_param_search n m 2 c = nice k` by metis_tac[aks_param_def] >>
     `2 <= k /\ k divides n /\ !j. 2 <= j /\ j < k ==> ~(j divides n)` by metis_tac[aks_param_search_nice] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: (aks_param n = nice k) ==>
             (if n <= 1 then (k = n) else 1 < k) /\
@@ -2258,18 +2335,19 @@ val aks_param_nice = store_thm(
        and 1 divides 1, hence true.
    Otherwise 1 < n, true            by aks_param_nice
 *)
-val aks_param_nice_alt = store_thm(
-  "aks_param_nice_alt",
-  ``!n k. (aks_param n = nice k) ==>
+Theorem aks_param_nice_alt:
+    !n k. (aks_param n = nice k) ==>
          (if n <= 1 then (k = n) else 1 < k) /\
-         k divides n /\ !j. 1 < j /\ j < k ==> ~(j divides n)``,
+         k divides n /\ !j. 1 < j /\ j < k ==> ~(j divides n)
+Proof
   ntac 3 strip_tac >>
   (Cases_on `n <= 1` >> simp[]) >| [
     `(n = 0) \/ (n = 1)` by decide_tac >-
     fs[aks_param_0] >>
     fs[aks_param_1],
     metis_tac[aks_param_nice, NOT_LESS_EQUAL]
-  ]);
+  ]
+QED
 
 (* Theorem: (aks_param n = nice k) ==> k <= n *)
 (* Proof:
@@ -2283,12 +2361,13 @@ val aks_param_nice_alt = store_thm(
       = nice k                   by given
    Thus k <= n                   by aks_param_search_nice_le, 0 < n
 *)
-val aks_param_nice_le = store_thm(
-  "aks_param_nice_le",
-  ``!n k. (aks_param n = nice k) ==> k <= n``,
+Theorem aks_param_nice_le:
+    !n k. (aks_param n = nice k) ==> k <= n
+Proof
   rw[aks_param_def] >>
   `0 < n` by decide_tac >>
-  metis_tac[aks_param_search_nice_le]);
+  metis_tac[aks_param_search_nice_le]
+QED
 
 (* Theorem: 2 < n /\ (aks_param n = nice k) ==> k <= 1 + HALF (ulog n ** 5) *)
 (* Proof:
@@ -2297,10 +2376,11 @@ val aks_param_nice_le = store_thm(
     <=> aks_param_search n (SQ (ulog n)) 2 c = nice k    by aks_param_def, 2 < n
     ==> k <= c                                           by aks_param_search_nice_bound
 *)
-val aks_param_nice_bound = store_thm(
-  "aks_param_nice_bound",
-  ``!n k. 2 < n /\ (aks_param n = nice k) ==> k <= 1 + HALF (ulog n ** 5)``,
-  metis_tac[aks_param_def, aks_param_search_nice_bound, NOT_LESS]);
+Theorem aks_param_nice_bound:
+    !n k. 2 < n /\ (aks_param n = nice k) ==> k <= 1 + HALF (ulog n ** 5)
+Proof
+  metis_tac[aks_param_def, aks_param_search_nice_bound, NOT_LESS]
+QED
 
 (* Theorem: (aks_param n = nice k) ==> !j. 1 < j /\ j < k ==> coprime j n *)
 (* Proof:
@@ -2317,12 +2397,13 @@ val aks_param_nice_bound = store_thm(
                                         by aks_param_def, 2 < n
       The result follows                by aks_param_search_nice_coprime_all
 *)
-val aks_param_nice_coprime_all = store_thm(
-  "aks_param_nice_coprime_all",
-  ``!n k. (aks_param n = nice k) ==> !j. 1 < j /\ j < k ==> coprime j n``,
+Theorem aks_param_nice_coprime_all:
+    !n k. (aks_param n = nice k) ==> !j. 1 < j /\ j < k ==> coprime j n
+Proof
   rw_tac std_ss[aks_param_def] >-
   decide_tac >>
-  metis_tac[aks_param_search_nice_coprime_all]);
+  metis_tac[aks_param_search_nice_coprime_all]
+QED
 
 (* Theorem: 1 < n /\ (aks_param n = nice k) ==> (prime n <=> (k = n)) *)
 (* Proof:
@@ -2334,12 +2415,13 @@ val aks_param_nice_coprime_all = store_thm(
       Note !j. 1 < j /\ j < n ==> ~(j divides n)  by aks_param_nice, k = n
        ==> prime n                                by prime_iff_no_proper_factor
 *)
-val aks_param_nice_for_prime = store_thm(
-  "aks_param_nice_for_prime",
-  ``!n k. 1 < n /\ (aks_param n = nice k) ==> (prime n <=> (k = n))``,
+Theorem aks_param_nice_for_prime:
+    !n k. 1 < n /\ (aks_param n = nice k) ==> (prime n <=> (k = n))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >-
   metis_tac[aks_param_nice, prime_def, LESS_NOT_EQ] >>
-  rw[aks_param_nice, prime_iff_no_proper_factor]);
+  rw[aks_param_nice, prime_iff_no_proper_factor]
+QED
 
 (* Theorem: (aks_param n = good k) ==>
             1 < k /\ SQ (ulog n) <= ordz k n /\ !j. 1 < j /\ j <= k ==> ~(j divides n) *)
@@ -2355,10 +2437,10 @@ val aks_param_nice_for_prime = store_thm(
      or 1 < k /\ m <= ordz k n /\ !j. 1 < j /\ j <= k ==> ~(j divides n)
                                  by arithmetic
 *)
-val aks_param_good = store_thm(
-  "aks_param_good",
-  ``!n k. (aks_param n = good k) ==>
-         1 < k /\ SQ (ulog n) <= ordz k n /\ !j. 1 < j /\ j <= k ==> ~(j divides n)``,
+Theorem aks_param_good:
+    !n k. (aks_param n = good k) ==>
+         1 < k /\ SQ (ulog n) <= ordz k n /\ !j. 1 < j /\ j <= k ==> ~(j divides n)
+Proof
   ntac 3 strip_tac >>
   qabbrev_tac `m = SQ (ulog n)` >>
   qabbrev_tac `c = 1 + HALF ((ulog n) ** 5)` >>
@@ -2366,16 +2448,18 @@ val aks_param_good = store_thm(
   fs[aks_param_def] >>
   `aks_param_search n m 2 c = good k` by metis_tac[aks_param_def] >>
   `2 <= k /\ m <= ordz k n /\ !j. 2 <= j /\ j <= k ==> ~(j divides n)` by metis_tac[aks_param_search_good] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (aks_param n = good k) ==> k < n *)
 (* Proof: by aks_param_def, aks_param_search_good_lt *)
-val aks_param_good_lt = store_thm(
-  "aks_param_good_lt",
-  ``!n k. (aks_param n = good k) ==> k < n``,
+Theorem aks_param_good_lt:
+    !n k. (aks_param n = good k) ==> k < n
+Proof
   rw[aks_param_def] >>
   `1 < n` by decide_tac >>
-  metis_tac[aks_param_search_good_lt]);
+  metis_tac[aks_param_search_good_lt]
+QED
 
 (* Theorem: (aks_param n = good k) ==> k <= 1 + HALF (ulog n ** 5) *)
 (* Proof:
@@ -2386,19 +2470,21 @@ val aks_param_good_lt = store_thm(
    <=> aks_param_search n (SQ (ulog n)) 2 c = good k    by aks_param_def, 2 < n
    ==> k <= c                                           by aks_param_search_good_bound
 *)
-val aks_param_good_bound = store_thm(
-  "aks_param_good_bound",
-  ``!n k. (aks_param n = good k) ==> k <= 1 + HALF (ulog n ** 5)``,
+Theorem aks_param_good_bound:
+    !n k. (aks_param n = good k) ==> k <= 1 + HALF (ulog n ** 5)
+Proof
   rw_tac std_ss[aks_param_def] >>
-  metis_tac[aks_param_search_good_bound]);
+  metis_tac[aks_param_search_good_bound]
+QED
 
 (* Theorem: (aks_param n = good k) ==> 1 < k /\ SQ (ulog n) <= ordz k n /\ !j. 1 < j /\ j <= k ==> coprime j n *)
 (* Proof: by aks_param_def, aks_param_search_good_coprime_all *)
-val aks_param_good_coprime_all = store_thm(
-  "aks_param_good_coprime_all",
-  ``!n k. (aks_param n = good k) ==> !j. 1 < j /\ j <= k ==> coprime j n``,
+Theorem aks_param_good_coprime_all:
+    !n k. (aks_param n = good k) ==> !j. 1 < j /\ j <= k ==> coprime j n
+Proof
   rw_tac std_ss[aks_param_def] >>
-  metis_tac[aks_param_search_good_coprime_all]);
+  metis_tac[aks_param_search_good_coprime_all]
+QED
 
 (* Theorem: (aks_param n = good k) ==> 1 < n /\ 1 < k /\ k < n *)
 (* Proof:
@@ -2411,23 +2497,25 @@ val aks_param_good_coprime_all = store_thm(
      so 1 < k                           by aks_param_good
     and k < n                           by aks_param_good_lt, 1 < n
 *)
-val aks_param_good_range = store_thm(
-  "aks_param_good_range",
-  ``!n k. (aks_param n = good k) ==> 1 < n /\ 1 < k /\ k < n``,
+Theorem aks_param_good_range:
+    !n k. (aks_param n = good k) ==> 1 < n /\ 1 < k /\ k < n
+Proof
   ntac 3 strip_tac >>
   `1 < n` by
   (spose_not_then strip_assume_tac >>
   `aks_param n = nice n` by metis_tac[aks_param_0, aks_param_1, DECIDE``~(1 < n) <=> (n = 0) \/ (n = 1)``] >>
   `!n k. good n <> nice k` by rw[] >>
   metis_tac[]) >>
-  metis_tac[aks_param_good, aks_param_good_lt]);
+  metis_tac[aks_param_good, aks_param_good_lt]
+QED
 
 (* Theorem: (aks_param n = good k) ==> 1 < k /\ k < n /\ coprime k n /\ (ulog n) ** 2 <= ordz k n *)
 (* Proof: by aks_param_good, aks_param_good_range, aks_param_good_coprime_all *)
-val aks_param_good_coprime_order = store_thm(
-  "aks_param_good_coprime_order",
-  ``!n k. (aks_param n = good k) ==> 1 < k /\ k < n /\ coprime k n /\ (ulog n) ** 2 <= ordz k n``,
-  metis_tac[aks_param_good_range, aks_param_good, EXP_2, aks_param_good_coprime_all, LESS_EQ_REFL]);
+Theorem aks_param_good_coprime_order:
+    !n k. (aks_param n = good k) ==> 1 < k /\ k < n /\ coprime k n /\ (ulog n) ** 2 <= ordz k n
+Proof
+  metis_tac[aks_param_good_range, aks_param_good, EXP_2, aks_param_good_coprime_all, LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* AKS parameter search simplified                                           *)
@@ -2487,13 +2575,14 @@ val it = |- param 31 = good 29: thm
                              c = 2 + HALF (m ** 5)
                           in if m <= 1 then nice n else param_seek (SQ m) c n 2 *)
 (* Proof: by param_def, ulog_le_1 *)
-val param_alt = store_thm(
-  "param_alt",
-  ``!n. param n =
+Theorem param_alt:
+    !n. param n =
           let m = ulog n;
               c = 2 + HALF (m ** 5)
-           in if m <= 1 then nice n else param_seek (SQ m) c n 2``,
-  rw[param_def, ulog_le_1]);
+           in if m <= 1 then nice n else param_seek (SQ m) c n 2
+Proof
+  rw[param_def, ulog_le_1]
+QED
 
 (* Theorem: 0 < k /\ k <= c ==> (param_seek m c n k = aks_param_search n m k c) *)
 (* Proof:
@@ -2523,9 +2612,9 @@ val param_alt = store_thm(
        = aks_param_search n m (k + 1) (c - 1)  by induction hypothesis
        = aks_param_search n m k (c - 1)        by aks_param_search_alt, ~(c - 1 < k)
 *)
-val param_seek_thm = store_thm(
-  "param_seek_thm",
-  ``!m c n k. 0 < k /\ k <= c ==> (param_seek m c n k = aks_param_search n m k (c - 1))``,
+Theorem param_seek_thm:
+    !m c n k. 0 < k /\ k <= c ==> (param_seek m c n k = aks_param_search n m k (c - 1))
+Proof
   ho_match_mp_tac (theorem "param_seek_ind") >>
   rw[] >>
   `k divides n <=> (n MOD k = 0)` by rw[DIVIDES_MOD_0] >>
@@ -2536,7 +2625,8 @@ val param_seek_thm = store_thm(
   `m <= k` by decide_tac >>
   rw[Once aks_param_search_alt]) >>
   `~(c - 1 < k)` by decide_tac >>
-  metis_tac[aks_param_search_alt]);
+  metis_tac[aks_param_search_alt]
+QED
 
 (* Theorem: param n = aks_param n *)
 (* Proof:
@@ -2547,10 +2637,11 @@ val param_seek_thm = store_thm(
    = aks_param_search n m 2 (1 + HALF (ulog n ** 5)           by param_seek_thm, 0 < 2
    = aks_param n                                              by aks_param_def
 *)
-val param_eqn = store_thm(
-  "param_eqn",
-  ``!n. param n = aks_param n``,
-  rw[param_def, param_seek_thm, aks_param_def]);
+Theorem param_eqn:
+    !n. param n = aks_param n
+Proof
+  rw[param_def, param_seek_thm, aks_param_def]
+QED
 
 (* Obtain theorems *)
 

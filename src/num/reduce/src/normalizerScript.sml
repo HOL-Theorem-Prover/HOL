@@ -108,7 +108,7 @@ Proof
   ID_SPEC_TAC “q:num” THEN INDUCT_TAC THEN ASM_SIMP_TAC bool_ss[MULT_CLAUSES]
 QED
 
-Triviality NUM_NORMALIZE_CONV_sth:
+Theorem NUM_NORMALIZE_CONV_sth[local]:
   (!x y z:num. x + (y + z) = (x + y) + z) /\
   (!x y:num. x + y = y + x) /\
   (!x:num. 0 + x = x) /\

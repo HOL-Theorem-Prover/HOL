@@ -24,13 +24,13 @@ Definition get_acc_set_def:
             )
 End
 
-val GET_ACC_SET_LEMM = store_thm
-  ("GET_ACC_SET_LEMM",
-   ``!acc ce1 ce2.
+Theorem GET_ACC_SET_LEMM:
+     !acc ce1 ce2.
         (MEM_EQUAL ce1.pos ce2.pos)
         ∧ (MEM_EQUAL ce1.neg ce2.neg)
         ∧ (MEM_EQUAL ce1.sucs ce2.sucs)
-        ==> (get_acc_set acc ce1 = get_acc_set acc ce2)``,
+        ==> (get_acc_set acc ce1 = get_acc_set acc ce2)
+Proof
    rpt strip_tac >> fs[get_acc_set_def]
    >> `!f f_tr. acc_cond_concr ce1 f f_tr = acc_cond_concr ce2 f f_tr`
        suffices_by metis_tac[]
@@ -39,7 +39,7 @@ val GET_ACC_SET_LEMM = store_thm
    >> fs[concrEdge_component_equality]
    >> simp[MEM_SUBSET_SET_TO_LIST,MEM_EQUAL_SET,EXISTS_MEM]
    >> fs[MEM_EQUAL_SET] >> rw[]
-  );
+QED
 
 val _ = diminish_srw_ss ["ABBREV"]
 Definition valid_acc_def:
@@ -56,10 +56,10 @@ Definition valid_acc_def:
            ==> ?f_trns. MEM (f,f_trns) acc))
 End
 
-val VALID_ACC_LEMM = store_thm
-  ("VALID_ACC_LEMM",
-   ``!aP acc g_AA. valid_acc aP g_AA acc ∧ until_iff_final g_AA
-        ==> !f. MEM f (MAP FST acc) ⇔ f ∈ concr2Abstr_final g_AA``,
+Theorem VALID_ACC_LEMM:
+     !aP acc g_AA. valid_acc aP g_AA acc ∧ until_iff_final g_AA
+        ==> !f. MEM f (MAP FST acc) ⇔ f ∈ concr2Abstr_final g_AA
+Proof
    simp[EQ_IMP_THM] >> fs[valid_acc_def,concr2Abstr_final_def] >> rpt strip_tac
    >> fs[MEM_MAP]
    >- (Cases_on `y` >> fs[] >> rw[] >> rename[`MEM (f,f_trns) acc`]
@@ -93,11 +93,10 @@ val VALID_ACC_LEMM = store_thm
       >> first_x_assum (qspec_then `f` mp_tac) >> simp[] >> strip_tac
       >> metis_tac[FST]
       )
-  );
+QED
 
-val CONCR_ACC_SETS = store_thm
-  ("CONCR_ACC_SETS",
-   ``!h g_AA init acc aP abstrAA.
+Theorem CONCR_ACC_SETS:
+     !h g_AA init acc aP abstrAA.
     (abstrAA = concr2AbstrAA (concrAA g_AA init aP))
     ∧ (abstrAA = removeStatesSimpl (ltl2vwaa h))
     ∧ valid_acc aP g_AA acc
@@ -111,7 +110,8 @@ val CONCR_ACC_SETS = store_thm
        ==>
        (!qs2. qs2 ∈ POW abstrAA.states
          ==> (MEM u (get_acc_set acc ce) =
-              ((qs2,FST aE,SND aE) ∈ acc_cond abstrAA u)))``,
+              ((qs2,FST aE,SND aE) ∈ acc_cond abstrAA u)))
+Proof
    fs[] >> rpt strip_tac >> simp[EQ_IMP_THM] >> rpt strip_tac
    >> fs[CAT_OPTIONS_MEM,MEM_MAP]
    >> qabbrev_tac `aa_red = removeStatesSimpl (ltl2vwaa h)`
@@ -273,11 +273,10 @@ val CONCR_ACC_SETS = store_thm
            >> rpt strip_tac >> metis_tac[SUBSET_DEF,MEM]
           )
       )
-  );
+QED
 
-val TLG_CONCR_LEMM = store_thm
-  ("TLG_CONCR_LEMM",
-   ``!h g_AA init aP acc qs ce1 ce2 abstrAA.
+Theorem TLG_CONCR_LEMM:
+     !h g_AA init aP acc qs ce1 ce2 abstrAA.
   (abstrAA = concr2AbstrAA (concrAA g_AA init aP))
   ∧ (abstrAA = removeStatesSimpl (ltl2vwaa h))
   ∧ valid_acc aP g_AA acc
@@ -297,7 +296,8 @@ val TLG_CONCR_LEMM = store_thm
      ==>
      ((((e1_lab,e1_sucs),e2_lab,e2_sucs) ∈
           tr_less_general { acc_cond abstrAA f | MEM f (MAP FST acc) } qs) =
-             (tlg_concr (ce1,get_acc_set acc ce1) (ce2,get_acc_set acc ce2)))``,
+             (tlg_concr (ce1,get_acc_set acc ce1) (ce2,get_acc_set acc ce2)))
+Proof
    rpt strip_tac >> fs[]
    >> simp[EQ_IMP_THM] >> rpt strip_tac
    >- (fs[tlg_concr_def,tr_less_general_def]
@@ -464,7 +464,7 @@ val TLG_CONCR_LEMM = store_thm
             >> fs[]
           )
       )
-  );
+QED
 
 Definition possibleGBA_states_def:
   possibleGBA_states g_AA =
@@ -481,9 +481,9 @@ Definition decr_expGBA_rel_def:
           (possibleGBA_states g_AA1) m (G1,ids1) (G2,ids2))
 End
 
-val DECR_EXPGBA_REL_WF = store_thm
-  ("DECR_EXPGBA_REL_WF",
-   ``WF decr_expGBA_rel``,
+Theorem DECR_EXPGBA_REL_WF:
+     WF decr_expGBA_rel
+Proof
    qabbrev_tac `
       lifted_NNPT =
          λB:((α ltl_frml -> bool) -> bool)
@@ -541,7 +541,7 @@ val DECR_EXPGBA_REL_WF = store_thm
    >> Cases_on `x` >> Cases_on `y` >> qunabbrev_tac `lifted_NNPT` >> fs[]
    >> Cases_on `r` >> Cases_on `r'` >> fs[] >> Cases_on `r` >> Cases_on `r''`
    >> fs[] >> fs[decr_expGBA_rel_def]
-  );
+QED
 
 Definition towards_suff_wfg_def:
    towards_suff_wfg (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2) =
@@ -552,10 +552,10 @@ Definition towards_suff_wfg_def:
           (G1.next = G2.next ∧ (LENGTH ids1 < LENGTH ids2))))
 End
 
-val TWDRS_SUFFWFG_WF = store_thm
-  ("TWDRS_SUFFWFG_WF",
-  ``let P = λ(g_AA,acc,ids,G). suff_wfg G
-    in WF (λx y. ~P x ∧ ~P y ∧ towards_suff_wfg x y)``,
+Theorem TWDRS_SUFFWFG_WF:
+    let P = λ(g_AA,acc,ids,G). suff_wfg G
+    in WF (λx y. ~P x ∧ ~P y ∧ towards_suff_wfg x y)
+Proof
   fs[] >> simp[WF_IFF_WELLFOUNDED,wellfounded_def] >> rpt strip_tac
   >> CCONTR_TAC >> fs[towards_suff_wfg_def]
   >> qabbrev_tac `get_next =
@@ -662,7 +662,7 @@ val TWDRS_SUFFWFG_WF = store_thm
    )
   >> fs[]
   )
-  );
+QED
 
 Definition decr_expGBA_strong_def:
   decr_expGBA_strong (g_AA1,acc1,ids1,G1) (g_AA2,acc2,ids2,G2) =
@@ -670,16 +670,16 @@ Definition decr_expGBA_strong_def:
  ∧ (suff_wfg G2 ==> suff_wfg G1))
 End
 
-val DECR_EXPGBA_STRONG_WF = store_thm
-  ("DECR_EXPGBA_STRONG_WF",
-   ``WF decr_expGBA_strong``,
+Theorem DECR_EXPGBA_STRONG_WF:
+     WF decr_expGBA_strong
+Proof
    HO_MATCH_MP_TAC WF_SUBSET
    >> qexists_tac `decr_expGBA_rel` >> rpt strip_tac
    >- metis_tac[DECR_EXPGBA_REL_WF]
    >- (Cases_on `x` >> Cases_on `y` >> Cases_on `r` >> Cases_on `r'`
        >> Cases_on `r` >> Cases_on `r''` >> fs[decr_expGBA_strong_def]
       )
-  );
+QED
 
 Definition concr_min_rel_def:
   concr_min_rel (t1,acc1) (t2,acc2) =
@@ -1000,9 +1000,8 @@ Definition expandGBA_init_def:
 End
 
 
-val EXPGBA_SOME_WFG = store_thm
-  ("EXPGBA_SOME_WFG",
-   ``!g_AA acc ids G.
+Theorem EXPGBA_SOME_WFG:
+     !g_AA acc ids G.
         wfg G
         ∧ (!i. MEM i ids ==> i ∈ (domain G.nodeInfo))
         ==> (?gba. (expandGBA g_AA acc ids G = SOME gba)
@@ -1010,7 +1009,8 @@ val EXPGBA_SOME_WFG = store_thm
               ∧ (!i. i ∈ domain G.nodeInfo
                      ==> lookup i G.nodeInfo = lookup i gba.nodeInfo
                 )
-              ∧ (frml_ad G ==> frml_ad gba))``,
+              ∧ (frml_ad G ==> frml_ad gba))
+Proof
    HO_MATCH_MP_TAC (theorem "expandGBA_ind")
    >> rpt strip_tac >> fs[expandGBA_def]
    >> Q.HO_MATCH_ABBREV_TAC
@@ -1140,7 +1140,7 @@ val EXPGBA_SOME_WFG = store_thm
        )
        >> metis_tac[GBA_TRANS_LEMM1]
       )
-  );
+QED
 
 Definition trns_correct_def:
   trns_correct l abstrAA gba aP =
@@ -1191,9 +1191,8 @@ Definition aP_correct_def:
    )
 End
 
-val EXPGBA_GRAPH_REACHABLE = store_thm
-  ("EXPGBA_GRAPH_REACHABLE",
-   ``!abstrAA f init aP g_AA acc ids g g2.
+Theorem EXPGBA_GRAPH_REACHABLE:
+     !abstrAA f init aP g_AA acc ids g g2.
       (abstrAA = concr2AbstrAA (concrAA g_AA init aP))
       ∧ (abstrAA = removeStatesSimpl (ltl2vwaa f))
       ∧ (wfg g_AA)
@@ -1216,7 +1215,8 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
                 ==> ((set x ∈ reachableFromSetGBA (vwaa2gba abstrAA)
                         (vwaa2gba abstrAA).initial)
                          ∧ (set x ∈ (vwaa2gba abstrAA).states)))
-                )``,
+                )
+Proof
     gen_tac >> gen_tac >> gen_tac >> gen_tac
     >> HO_MATCH_MP_TAC (theorem "expandGBA_ind") >> strip_tac
     >- (fs[] >> rpt strip_tac >> fs[expandGBA_def]
@@ -1955,7 +1955,7 @@ val EXPGBA_GRAPH_REACHABLE = store_thm
             >- metis_tac[]
            )
        )
-  );
+QED
 
 Definition one_step_closed_apart_l_def:
   one_step_closed_apart_l abstrAA g l =
@@ -1975,9 +1975,8 @@ Definition one_step_closed_def:
         )
 End
 
-val EXPGBA_ALL_REACHABLE = store_thm
-  ("EXPGBA_ALL_REACHABLE",
-   ``!abstrAA f init aP g_AA acc ids g g2.
+Theorem EXPGBA_ALL_REACHABLE:
+     !abstrAA f init aP g_AA acc ids g g2.
       (abstrAA = concr2AbstrAA (concrAA g_AA init aP))
       ∧ (abstrAA = removeStatesSimpl (ltl2vwaa f))
       ∧ (wfg g_AA)
@@ -1993,7 +1992,8 @@ val EXPGBA_ALL_REACHABLE = store_thm
       ∧ (wfg g)
       ∧ frml_ad g
       ∧ (one_step_closed_apart_l abstrAA g ids)
-      ==> (one_step_closed abstrAA g2)``,
+      ==> (one_step_closed abstrAA g2)
+Proof
    gen_tac >> gen_tac >> gen_tac >> gen_tac
    >> HO_MATCH_MP_TAC (theorem "expandGBA_ind") >> strip_tac
    >- (fs[one_step_closed_def] >> rpt strip_tac >> fs[expandGBA_def] >> rw[]
@@ -2663,11 +2663,10 @@ val EXPGBA_ALL_REACHABLE = store_thm
                 )
             )
       )
-  );
+QED
 
-val EXPGBA_TRANS_AND_FINAL = store_thm
-  ("EXPGBA_TRANS_AND_FINAL",
-   ``!abstrAA f init aP g_AA acc ids g g2.
+Theorem EXPGBA_TRANS_AND_FINAL:
+     !abstrAA f init aP g_AA acc ids g g2.
      (abstrAA = concr2AbstrAA (concrAA g_AA init aP))
      ∧ (abstrAA = removeStatesSimpl (ltl2vwaa f))
      ∧ (wfg g_AA)
@@ -2695,7 +2694,8 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
   ==> ((aP_correct abstrAA g2 aP)
         ∧ (final_correct abstrAA g2 acc)
         ∧ (trns_correct [] abstrAA g2 (set aP))
-      )``,
+      )
+Proof
    gen_tac >> gen_tac >> gen_tac >> gen_tac
    >> HO_MATCH_MP_TAC (theorem "expandGBA_ind") >> strip_tac
    >- (rpt strip_tac >> fs[expandGBA_def] >> metis_tac[])
@@ -3770,11 +3770,10 @@ val EXPGBA_TRANS_AND_FINAL = store_thm
            )
        )
    )
-  );
+QED
 
-val EXPGBA_CORRECT_LEMM = store_thm
-  ("EXPGBA_CORRECT_LEMM",
-   ``!f init aP g_AA abstrAA.
+Theorem EXPGBA_CORRECT_LEMM:
+     !f init aP g_AA abstrAA.
     (expandAuto_init f = SOME (concrAA g_AA init aP))
     ∧ (abstrAA = concr2AbstrAA (concrAA g_AA init aP))
     ==>
@@ -3782,7 +3781,8 @@ val EXPGBA_CORRECT_LEMM = store_thm
         | NONE => F
         | SOME c_gba =>
           (concr2AbstrGBA c_gba =
-             removeStatesSimpl (vwaa2gba abstrAA))``,
+             removeStatesSimpl (vwaa2gba abstrAA))
+Proof
    fs[] >> rpt strip_tac >> simp[expandGBA_init_def]
    >> `(wfg g_AA) ∧ (until_iff_final g_AA) ∧ (unique_node_formula g_AA)
      ∧ (flws_sorted g_AA)` by (
@@ -5143,17 +5143,17 @@ val EXPGBA_CORRECT_LEMM = store_thm
           )
       )
    >- (qunabbrev_tac `ALPH` >> fs[] >> simp[concr2AbstrAA_def])
-  );
+QED
 
-val EXPGBA_CORRECT = store_thm
-  ("EXPGBA_CORRECT",
-  ``!f concr_AA abstrAA.
+Theorem EXPGBA_CORRECT:
+    !f concr_AA abstrAA.
   (expandAuto_init f = SOME concr_AA)
   ∧ (abstrAA = concr2AbstrAA concr_AA)
   ==> ?c_gba.
        (expandGBA_init concr_AA = SOME c_gba)
        ∧ (concr2AbstrGBA c_gba =
-          removeStatesSimpl (vwaa2gba abstrAA))``,
+          removeStatesSimpl (vwaa2gba abstrAA))
+Proof
   rpt gen_tac >> strip_tac
   >> `case expandGBA_init concr_AA of
         NONE => F
@@ -5161,5 +5161,5 @@ val EXPGBA_CORRECT = store_thm
          concr2AbstrGBA c_gba = removeStatesSimpl (vwaa2gba abstrAA)`
      by (Cases_on `concr_AA` >> fs[] >> metis_tac[EXPGBA_CORRECT_LEMM])
   >> Cases_on `expandGBA_init concr_AA` >> fs[]
-  );
+QED
 

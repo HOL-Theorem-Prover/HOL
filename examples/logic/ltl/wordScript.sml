@@ -14,32 +14,34 @@ End
 Definition word_range_def:   word_range w = {x | ?i. at w i = x }
 End
 
-val AT_SUFF_LEMM = store_thm
-  ("AT_SUFF_LEMM",
-   ``!w n i. at (suff w n) i = at w (i + n)``,
+Theorem AT_SUFF_LEMM:
+     !w n i. at (suff w n) i = at w (i + n)
+Proof
    rw[] >> Cases_on `w`
    >> fs[at_def, suff_def]
-  );
+QED
 
-val SUFF_SUFF_LEMM = store_thm
-  ("SUFF_SUFF_LEMM",
-   ``!w t1 t2. suff (suff w t1) t2 = suff w (t1+t2)``,
-  Cases_on `w` >> SIMP_TAC arith_ss [suff_def]);
+Theorem SUFF_SUFF_LEMM:
+     !w t1 t2. suff (suff w t1) t2 = suff w (t1+t2)
+Proof
+  Cases_on `w` >> SIMP_TAC arith_ss [suff_def]
+QED
 
-val SUFF_0_LEMM = store_thm
-  ("SUFF_0_LEMM",
-   ``!w. suff w 0 = w``,
-  Cases_on `w` >> SIMP_TAC arith_ss [suff_def, ETA_THM]);
+Theorem SUFF_0_LEMM:
+     !w. suff w 0 = w
+Proof
+  Cases_on `w` >> SIMP_TAC arith_ss [suff_def, ETA_THM]
+QED
 
-val WORD_RANGE_SUFF_LEMM = store_thm
-  ("WORD_RANGE_SUFF_LEMM",
-   ``!w n. word_range (suff w n) ⊆ word_range w``,
+Theorem WORD_RANGE_SUFF_LEMM:
+     !w n. word_range (suff w n) ⊆ word_range w
+Proof
    fs[word_range_def, SUBSET_DEF] >> metis_tac[AT_SUFF_LEMM]
-  );
+QED
 
-val AT_WORD_RANGE = store_thm
-  ("AT_WORD_RANGE",
-  ``!w i. at w i ∈ word_range w``,
+Theorem AT_WORD_RANGE:
+    !w i. at w i ∈ word_range w
+Proof
   rw[word_range_def] >> metis_tac[word_range_def]
-  );
+QED
 

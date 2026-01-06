@@ -126,54 +126,54 @@ End
 (******************************************************************************
 * Simple properties
 ******************************************************************************)
-val NOT_IS_INFINITE =
- store_thm
-  ("NOT_IS_INFINITE",
-   ``IS_INFINITE p = ~(IS_FINITE p)``,
+Theorem NOT_IS_INFINITE:
+     IS_INFINITE p = ~(IS_FINITE p)
+Proof
    Cases_on `p`
-    THEN RW_TAC std_ss [IS_INFINITE_def,IS_FINITE_def]);
+    THEN RW_TAC std_ss [IS_INFINITE_def,IS_FINITE_def]
+QED
 
-val NOT_IS_FINITE =
- store_thm
-  ("NOT_IS_FINITE",
-   ``IS_FINITE p = ~(IS_INFINITE p)``,
+Theorem NOT_IS_FINITE:
+     IS_FINITE p = ~(IS_INFINITE p)
+Proof
    Cases_on `p`
-    THEN RW_TAC std_ss [IS_INFINITE_def,IS_FINITE_def]);
+    THEN RW_TAC std_ss [IS_INFINITE_def,IS_FINITE_def]
+QED
 
-val IS_INFINITE_REST =
- store_thm
-  ("IS_INFINITE_REST",
-   ``!p. IS_INFINITE(REST p) = IS_INFINITE p``,
+Theorem IS_INFINITE_REST:
+     !p. IS_INFINITE(REST p) = IS_INFINITE p
+Proof
    Induct
-    THEN RW_TAC list_ss [REST_def,IS_INFINITE_def,IS_FINITE_def]);
+    THEN RW_TAC list_ss [REST_def,IS_INFINITE_def,IS_FINITE_def]
+QED
 
-val IS_INFINITE_RESTN =
- store_thm
-  ("IS_INFINITE_RESTN",
-   ``!n p. IS_INFINITE(RESTN p n) = IS_INFINITE p``,
+Theorem IS_INFINITE_RESTN:
+     !n p. IS_INFINITE(RESTN p n) = IS_INFINITE p
+Proof
    Induct
-    THEN RW_TAC list_ss [RESTN_def,IS_INFINITE_REST]);
+    THEN RW_TAC list_ss [RESTN_def,IS_INFINITE_REST]
+QED
 
-val IS_FINITE_REST =
- store_thm
-  ("IS_FINITE_REST",
-   ``!p. IS_FINITE(REST p) = IS_FINITE p``,
+Theorem IS_FINITE_REST:
+     !p. IS_FINITE(REST p) = IS_FINITE p
+Proof
    Induct
-    THEN RW_TAC list_ss [REST_def,IS_INFINITE_def,IS_FINITE_def]);
+    THEN RW_TAC list_ss [REST_def,IS_INFINITE_def,IS_FINITE_def]
+QED
 
-val IS_FINITE_RESTN =
- store_thm
-  ("IS_FINITE_RESTN",
-   ``!n p. IS_FINITE(RESTN p n) = IS_FINITE p``,
+Theorem IS_FINITE_RESTN:
+     !n p. IS_FINITE(RESTN p n) = IS_FINITE p
+Proof
    Induct
-    THEN RW_TAC list_ss [RESTN_def,IS_FINITE_REST]);
+    THEN RW_TAC list_ss [RESTN_def,IS_FINITE_REST]
+QED
 
-val FINITE_TL =
- store_thm
-  ("FINITE_TL",
-   ``!l. 0 < LENGTH l ==> (FINITE(TL l) = REST(FINITE l))``,
+Theorem FINITE_TL:
+     !l. 0 < LENGTH l ==> (FINITE(TL l) = REST(FINITE l))
+Proof
    Induct
-    THEN RW_TAC list_ss [REST_def]);
+    THEN RW_TAC list_ss [REST_def]
+QED
 
 (******************************************************************************
 * LENGTH(FINITE l) = LENGTH l
@@ -501,27 +501,27 @@ THEN REWRITE_TAC [FUN_EQ_THM,B_FALSE_def,B_OR_def] THEN SIMP_TAC std_ss [B_SEM_d
 (******************************************************************************
 * REST(INFINITE f) = INFINITE(\n. f(n+1))
 ******************************************************************************)
-val REST_INFINITE =
- store_thm
-  ("REST_INFINITE",
-   ``!f. REST (INFINITE f) = INFINITE(\n. f(n+1))``,
-   RW_TAC list_ss [REST_def]);
+Theorem REST_INFINITE:
+     !f. REST (INFINITE f) = INFINITE(\n. f(n+1))
+Proof
+   RW_TAC list_ss [REST_def]
+QED
 
 (******************************************************************************
 * RESTN (INFINITE f) i = INFINITE(\n. f(n+i))
 ******************************************************************************)
-val RESTN_INFINITE =
- store_thm
-  ("RESTN_INFINITE",
-   ``!f i. RESTN (INFINITE f) i = INFINITE(\n. f(n+i))``,
+Theorem RESTN_INFINITE:
+     !f i. RESTN (INFINITE f) i = INFINITE(\n. f(n+i))
+Proof
    Induct_on `i`
     THEN RW_TAC list_ss
           [REST_INFINITE,ETA_AX,RESTN_def,
-           DECIDE``i + (n + 1) = n + SUC i``]);
+           DECIDE``i + (n + 1) = n + SUC i``]
+QED
 
-val REST_FINITE =
- store_thm
-  ("REST_FINITE",
-   ``!l. REST (FINITE l) = FINITE(TL l)``,
-   RW_TAC list_ss [REST_def]);
+Theorem REST_FINITE:
+     !l. REST (FINITE l) = FINITE(TL l)
+Proof
+   RW_TAC list_ss [REST_def]
+QED
 

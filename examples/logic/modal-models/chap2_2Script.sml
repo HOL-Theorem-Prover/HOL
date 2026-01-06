@@ -30,9 +30,9 @@ End
 
 
 
-val prop_2_19_i = store_thm(
-"prop_2_19_i",
-``!M M' f. iso f M M' ==> bisim_model M M'``,
+Theorem prop_2_19_i:
+  !M M' f. iso f M M' ==> bisim_model M M'
+Proof
 rw[bisim_model_def,bisim_def] >>
 qexists_tac `λn1 n2. (n2 = f n1)` >>
 rpt strip_tac
@@ -43,21 +43,22 @@ rpt strip_tac
 >- (fs[iso_def] >>
     `∃x. x ∈ M.frame.world /\ f x = v'` by metis_tac[BIJ_DEF,SURJ_DEF] >>
     qexists_tac `x` >> rw[] >> metis_tac[strong_hom_def])
-);
+QED
 
 
 
-val prop_2_19_ii = store_thm(
-"prop_2_19_ii",
-``!i w f dom. i IN dom /\ w IN (f i).frame.world ==>
-              bisim_world (f i) (DU (f,dom)) w (i,w)``,
+Theorem prop_2_19_ii:
+  !i w f dom. i IN dom /\ w IN (f i).frame.world ==>
+              bisim_world (f i) (DU (f,dom)) w (i,w)
+Proof
 rpt strip_tac >> rw[bisim_world_def] >> qexists_tac `λa b. (b = (i, a))` >> rw[]
 >- (fs[bisim_def] >> rw[]
     >- fs[satis_def,DU_def,FST,SND,IN_DEF]
     >- fs[DU_def,FST,SND,IN_DEF]
     >- fs[DU_def,FST,SND,IN_DEF]
     >- (qexists_tac `SND b'` >> rw[] >> fs[DU_def,FST,SND,IN_DEF]))
->- fs[DU_def,FST,SND,IN_DEF]);
+>- fs[DU_def,FST,SND,IN_DEF]
+QED
 
 
 
@@ -137,13 +138,14 @@ QED
 
 
 
-val thm_2_20 = store_thm(
-"thm_2_20",
-``!M M' w w'. bisim_world M M' w w' ==> modal_eq M M' w w'``,
+Theorem thm_2_20:
+  !M M' w w'. bisim_world M M' w w' ==> modal_eq M M' w w'
+Proof
 fs[modal_eq_def,tau_theory_def]
 >> rpt strip_tac
 >> `!form. satis M w form <=> satis M' w' form`
-      suffices_by fs[SET_EQ_SUBSET,SUBSET_DEF] >> metis_tac[thm_2_20_lemma]);
+      suffices_by fs[SET_EQ_SUBSET,SUBSET_DEF] >> metis_tac[thm_2_20_lemma]
+QED
 
 
 
@@ -151,10 +153,10 @@ fs[modal_eq_def,tau_theory_def]
 
 
 
-val BIGCONJ_EXISTS = store_thm(
-"BIGCONJ_EXISTS",
-``!s: form set. FINITE s ==> !w M. w IN M.frame.world ==>
-                (?ff. satis M w ff <=> (!f. f IN s ==> satis M w f))``,
+Theorem BIGCONJ_EXISTS:
+  !s: form set. FINITE s ==> !w M. w IN M.frame.world ==>
+                (?ff. satis M w ff <=> (!f. f IN s ==> satis M w f))
+Proof
 Induct_on `FINITE s`
 >> rpt strip_tac
 >- (qexists_tac `TRUE` >> eq_tac
@@ -172,7 +174,7 @@ Induct_on `FINITE s`
         ‘!f. f IN s ==> satis M w f’ by metis_tac[] >>
         ‘satis M w BIGCONJ’  by metis_tac[] >>
         ‘satis M w e’  by metis_tac[] >> rw[satis_def,AND_def]))
-);
+QED
 
 
 
@@ -192,27 +194,30 @@ QED
 
 
 
-val diam_exist_true = store_thm(
-"diam_exist_true",
-``!M w. w IN M.frame.world /\ (?w'. w' IN M.frame.world /\ M.frame.rel w w') ==>
-        satis M w (DIAM TRUE)``,
-rw[satis_def,TRUE_def,IN_DEF] >> qexists_tac `w'` >> metis_tac[]);
+Theorem diam_exist_true:
+  !M w. w IN M.frame.world /\ (?w'. w' IN M.frame.world /\ M.frame.rel w w') ==>
+        satis M w (DIAM TRUE)
+Proof
+rw[satis_def,TRUE_def,IN_DEF] >> qexists_tac `w'` >> metis_tac[]
+QED
 
 
 
-val satis_in_world = store_thm(
-"satis_in_world",
-``!M w f. satis M w f ==> w IN M.frame.world``,
-Induct_on `f` >> metis_tac[satis_def]);
+Theorem satis_in_world:
+  !M w f. satis M w f ==> w IN M.frame.world
+Proof
+Induct_on `f` >> metis_tac[satis_def]
+QED
 
 
 
-val satis_AND = store_thm(
-"satis_AND",
-``!M w f1 f2. satis M w (AND f1 f2) <=> (satis M w f1 /\ satis M w f2)``,
+Theorem satis_AND:
+  !M w f1 f2. satis M w (AND f1 f2) <=> (satis M w f1 /\ satis M w f2)
+Proof
 rpt strip_tac >> eq_tac
 >- (rpt strip_tac >> fs[satis_def,AND_def] >> metis_tac[])
->- (rpt strip_tac >> fs[satis_def,AND_def] >> metis_tac[satis_in_world]));
+>- (rpt strip_tac >> fs[satis_def,AND_def] >> metis_tac[satis_in_world])
+QED
 
 
 
@@ -241,12 +246,12 @@ Cases_on `s <> {}`
         >- metis_tac[] >- metis_tac[NOT_IN_EMPTY]))
 QED
 
-val thm_2_24_lemma = store_thm(
-"thm_2_24_lemma",
-``!M model M' model w w'.
+Theorem thm_2_24_lemma:
+  !M model M' model w w'.
     image_finite M /\ image_finite M' /\ w IN M.frame.world /\
     w' IN M'.frame.world ==>
-    (!form. satis M w form <=> satis M' w' form) ==> bisim_world M M' w w'``,
+    (!form. satis M w form <=> satis M' w' form) ==> bisim_world M M' w w'
+Proof
 rpt strip_tac
 >> rw[bisim_world_def]
 >> qexists_tac `λn1 n2. (!form. satis M n1 form <=> satis M' n2 form)`
@@ -349,15 +354,16 @@ rpt strip_tac
    >> metis_tac[])
 )
 >- simp[]
-);
+QED
 
 
 
-val thm_2_24_lemma2 = store_thm(
-"thm_2_24_lemma2",
-``!M M' w w'.
-    modal_eq M M' w w' <=> (!form. satis M w form <=> satis M' w' form)``,
-fs[modal_eq_def,tau_theory_def] >> simp[pred_setTheory.EXTENSION]);
+Theorem thm_2_24_lemma2:
+  !M M' w w'.
+    modal_eq M M' w w' <=> (!form. satis M w form <=> satis M' w' form)
+Proof
+fs[modal_eq_def,tau_theory_def] >> simp[pred_setTheory.EXTENSION]
+QED
 
 
 

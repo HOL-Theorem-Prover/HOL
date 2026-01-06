@@ -60,26 +60,29 @@ fun concat_tac l =
   \\ REPEAT (once_rewrite_tac [bitstringTheory.word_concat_v2w_rwt]
   \\ simp [bitstringTheory.w2v_v2w, bitstringTheory.fixwidth_id_imp])
 
-val concat16 = Q.store_thm("concat16",
-   `!w1:word8 w2:word8. w2v w1 ++ w2v w2 = w2v (w1 @@ w2)`,
+Theorem concat16:
+    !w1:word8 w2:word8. w2v w1 ++ w2v w2 = w2v (w1 @@ w2)
+Proof
    concat_tac [`w1`,`w2`]
-   )
+QED
 
-val concat32 = Q.store_thm("concat32",
-   `!w1:word8 w2:word8 w3:word16.
-      w2v w1 ++ (w2v w2 ++ w2v w3) = w2v (w1 @@ w2 @@ w3)`,
+Theorem concat32:
+    !w1:word8 w2:word8 w3:word16.
+      w2v w1 ++ (w2v w2 ++ w2v w3) = w2v (w1 @@ w2 @@ w3)
+Proof
    concat_tac [`w1`,`w2`,`w3`]
-   )
+QED
 
-val concat64 = Q.store_thm("concat64",
-   `!w1:word8 w2:word8 w3:word8 w4:word8 w5:word32.
+Theorem concat64:
+    !w1:word8 w2:word8 w3:word8 w4:word8 w5:word32.
       w2v w1 ++ (w2v w2 ++ (w2v w3 ++ (w2v w4 ++ w2v w5))) =
-      w2v (w1 @@ w2 @@ w3 @@ w4 @@ w5)`,
+      w2v (w1 @@ w2 @@ w3 @@ w4 @@ w5)
+Proof
    concat_tac [`w1`,`w2`,`w3`,`w4`,`w5`]
-   )
+QED
 
-val fields = Q.store_thm("fields",
-  `(!w:word8.  v2w (field  7  0 (w2v w)) = w) /\
+Theorem fields:
+   (!w:word8.  v2w (field  7  0 (w2v w)) = w) /\
    (!w:word16. v2w (field 15  8 (w2v w)) = (15 ><  8) w : word8) /\
    (!w:word16. v2w (field  7  0 (w2v w)) = ( 7 ><  0) w : word8) /\
    (!w:word32. v2w (field 31 24 (w2v w)) = (31 >< 24) w : word8) /\
@@ -93,16 +96,17 @@ val fields = Q.store_thm("fields",
    (!w:word64. v2w (field 31 24 (w2v w)) = (31 >< 24) w : word8) /\
    (!w:word64. v2w (field 23 16 (w2v w)) = (23 >< 16) w : word8) /\
    (!w:word64. v2w (field 15  8 (w2v w)) = (15 ><  8) w : word8) /\
-   (!w:word64. v2w (field  7  0 (w2v w)) = ( 7 ><  0) w : word8)`,
+   (!w:word64. v2w (field  7  0 (w2v w)) = ( 7 ><  0) w : word8)
+Proof
   REPEAT strip_tac
   \\ bitstringLib.Cases_on_v2w `w`
   \\ simp [bitstringTheory.w2v_v2w, bitstringTheory.word_extract_v2w,
            bitstringTheory.word_bits_v2w, bitstringTheory.w2w_v2w]
   \\ fs [markerTheory.Abbrev_def, bitstringTheory.field_id_imp]
-  )
+QED
 
-val get_bytes = Q.store_thm("get_bytes",
-   `((31 >< 24)
+Theorem get_bytes:
+    ((31 >< 24)
        (v2w [b31; b30; b29; b28; b27; b26; b25; b24;
              b23; b22; b21; b20; b19; b18; b17; b16;
              b15; b14; b13; b12; b11; b10; b9;  b8;
@@ -125,9 +129,10 @@ val get_bytes = Q.store_thm("get_bytes",
              b23; b22; b21; b20; b19; b18; b17; b16;
              b15; b14; b13; b12; b11; b10; b9;  b8;
              b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word32) =
-     v2w [b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word8)`,
+     v2w [b7;  b6;  b5;  b4;  b3;  b2;  b1;  b0]: word8)
+Proof
    blastLib.BBLAST_TAC
-   )
+QED
 
 val bit_field_insert_thms = Theory.save_thm("bit_field_insert_thms",
    utilsLib.map_conv blastLib.BBLAST_PROVE
@@ -147,17 +152,18 @@ val bit_field_insert_thms = Theory.save_thm("bit_field_insert_thms",
       ]
    )
 
-val concat_bytes = Q.store_thm("concat_bytes",
-   `(!w: word32.
+Theorem concat_bytes:
+    (!w: word32.
        (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w) /\
     (!w: word32 v: word32.
        (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w @@ v =
           w @@ v) /\
     (!w: word64.
        (63 >< 56) w @@ (55 >< 48) w @@ (47 >< 40) w @@ (39 >< 32) w @@
-       (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w)`,
+       (31 >< 24) w @@ (23 >< 16) w @@ (15 >< 8) w @@ (7 >< 0) w = w)
+Proof
    blastLib.BBLAST_TAC
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -231,11 +237,12 @@ val word_msb_sum1c = Q.prove(
    \\ lfs [arithmeticTheory.ADD_MODULUS_LEFT]
    )
 
-val AddWithCarry = Q.store_thm("AddWithCarry",
-   `!x y carry_in.
+Theorem AddWithCarry:
+    !x y carry_in.
       AddWithCarry (x,y,carry_in) =
          let (r, c, v) = add_with_carry (x,y,carry_in) in
-            (r, word_msb r, r = 0w, c, v)`,
+            (r, word_msb r, r = 0w, c, v)
+Proof
    REPEAT strip_tac
    \\ simp [AddWithCarry_def, wordsTheory.add_with_carry_def]
    \\ simp [GSYM wordsTheory.word_add_n2w]
@@ -291,7 +298,7 @@ val AddWithCarry = Q.store_thm("AddWithCarry",
        \\ metis_tac [integer_wordTheory.overflow, integer_wordTheory.w2i_1])
    \\ `word_msb (x + y) <=> word_msb (x + y + 1w)` by imp_res_tac word_msb_sum1b
    \\ simp [notoverflow, integer_wordTheory.w2i_1]
-   )
+QED
 
 val nzcv = Term.mk_var ("nzcv", ``:bool # bool # bool # bool``)
 
@@ -304,11 +311,12 @@ val SetTheFlags = Theory.save_thm("SetTheFlags",
 
 (* ------------------------------------------------------------------------ *)
 
-val Replicate_32_64 = Q.store_thm("Replicate_32_64",
-   `(!b. Replicate [b] = if b then 0xFFFFFFFFw else 0w: word32) /\
-    (!b. Replicate [b] = if b then 0xFFFFFFFFFFFFFFFFw else 0w: word64)`,
+Theorem Replicate_32_64:
+    (!b. Replicate [b] = if b then 0xFFFFFFFFw else 0w: word32) /\
+    (!b. Replicate [b] = if b then 0xFFFFFFFFFFFFFFFFw else 0w: word64)
+Proof
    rw [Replicate_def] \\ EVAL_TAC
-   )
+QED
 
 val ConditionTest = Theory.save_thm("ConditionTest",
    utilsLib.map_conv
@@ -323,9 +331,10 @@ val ExtendWord = Theory.save_thm("ExtendWord",
       [``ExtendWord (w, T)``, ``ExtendWord (w, F)``]
    )
 
-val ExtendValue_0 = Q.store_thm("ExtendValue_0",
-   `(!v: word64. ExtendValue (v, ExtendType_UXTX, 0) = v) /\
-    (!v: word32. ExtendValue (w2w v, ExtendType_UXTW, 0) = w2w v: word64)`,
+Theorem ExtendValue_0:
+    (!v: word64. ExtendValue (v, ExtendType_UXTX, 0) = v) /\
+    (!v: word32. ExtendValue (w2w v, ExtendType_UXTW, 0) = w2w v: word64)
+Proof
    simp [ExtendValue_def, Extend_def, bitstringTheory.field_id_imp,
          bitstringTheory.shiftl_replicate_F, bitstringTheory.replicate_def]
    \\ blastLib.BBLAST_TAC
@@ -333,7 +342,7 @@ val ExtendValue_0 = Q.store_thm("ExtendValue_0",
             bitstringTheory.length_field, bitstringTheory.el_field,
             bitstringTheory.el_w2v]
    \\ blastLib.BBLAST_TAC
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -363,43 +372,47 @@ val CountLeadingZeroBits32 = Q.store_thm("CountLeadingZeroBits32",
 
 (* ------------------------------------------------------------------------ *)
 
-val Align = Q.store_thm("Align",
-   `(!w. Align (w, 1) = align 0 w) /\
+Theorem Align:
+    (!w. Align (w, 1) = align 0 w) /\
     (!w. Align (w, 2) = align 1 w) /\
     (!w. Align (w, 4) = align 2 w) /\
     (!w. Align (w, 8) = align 3 w) /\
-    (!w. Align (w, 16) = align 4 w)`,
+    (!w. Align (w, 16) = align 4 w)
+Proof
     simp [arm8Theory.Align_def, alignmentTheory.align_w2n]
-    )
+QED
 
-val Aligned = Q.store_thm("Aligned",
-   `(!w. Aligned (w, 1) = aligned 0 w) /\
+Theorem Aligned:
+    (!w. Aligned (w, 1) = aligned 0 w) /\
     (!w. Aligned (w, 2) = aligned 1 w) /\
     (!w. Aligned (w, 4) = aligned 2 w) /\
     (!w. Aligned (w, 8) = aligned 3 w) /\
-    (!w. Aligned (w, 16) = aligned 4 w)`,
+    (!w. Aligned (w, 16) = aligned 4 w)
+Proof
     simp [arm8Theory.Aligned_def, Align, alignmentTheory.aligned_def,
           boolTheory.EQ_SYM_EQ]
-    )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
-val DecodeLogicalOp = Q.store_thm("DecodeLogicalOp",
-   `!b1 b0. DecodeLogicalOp (v2w [b1; b0]) =
+Theorem DecodeLogicalOp:
+    !b1 b0. DecodeLogicalOp (v2w [b1; b0]) =
             (if b1 /\ b0 \/ ~(b1 \/ b0) then LogicalOp_AND
              else if b0 then LogicalOp_ORR
              else LogicalOp_EOR,
-             b1 /\ b0)`,
+             b1 /\ b0)
+Proof
    REWRITE_TAC [DecodeLogicalOp_def] \\ Cases \\ Cases \\ EVAL_TAC
-   )
+QED
 
-val DecodeRevOp = Q.store_thm("DecodeRevOp",
-   `!b1 b0. num2RevOp (w2n (v2w [b1; b0] : word2)) =
+Theorem DecodeRevOp:
+    !b1 b0. num2RevOp (w2n (v2w [b1; b0] : word2)) =
             if b1 then if b0 then RevOp_REV64 else RevOp_REV32
             else if b0 then RevOp_REV16
-            else RevOp_RBIT`,
+            else RevOp_RBIT
+Proof
    Cases \\ Cases \\ EVAL_TAC \\ REWRITE_TAC [arm8Theory.num2RevOp_thm]
-   )
+QED
 
 val DecodeInzeroExtend = utilsLib.ustore_thm("DecodeInzeroExtend",
    `~(x0 /\ x1) ==>
@@ -412,20 +425,22 @@ val DecodeInzeroExtend = utilsLib.ustore_thm("DecodeInzeroExtend",
    \\ EVAL_TAC
    )
 
-val DecodeLem = Q.store_thm("DecodeLem",
-   `(!a b c d e f g h i.
+Theorem DecodeLem:
+    (!a b c d e f g h i.
         (if a then (if b then c else d, e, f) else (g, h, i)) =
         (if a then if b then c else d else g,
          if a then e else h,
          if a then f else i)) /\
-    (!a b. (a \/ b) /\ ~b = a /\ ~b)`,
+    (!a b. (a \/ b) /\ ~b = a /\ ~b)
+Proof
    rw [] \\ decide_tac
-   )
+QED
 
-val LoadCheck = Q.store_thm("LoadCheck",
-   `!b. ((if b then MemOp_LOAD else MemOp_STORE) <> MemOp_LOAD) = ~b`,
+Theorem LoadCheck:
+    !b. ((if b then MemOp_LOAD else MemOp_STORE) <> MemOp_LOAD) = ~b
+Proof
    rw []
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 

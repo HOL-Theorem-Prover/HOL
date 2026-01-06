@@ -36,8 +36,8 @@ val CONTRACTION = new_definition ("CONTRACTION",
        (!E2. TRANS E' tau E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2)``);
 
 (* The identity relation is a CONTRACTION. *)
-val IDENTITY_CONTRACTION = store_thm (
-   "IDENTITY_CONTRACTION", ``CONTRACTION Id``,
+Theorem IDENTITY_CONTRACTION:   CONTRACTION Id
+Proof
     PURE_ONCE_REWRITE_TAC [CONTRACTION]
  >> rpt STRIP_TAC >> rfs [] (* 2 sub-goals *)
  >| [ (* goal 1 (of 2) *)
@@ -45,13 +45,14 @@ val IDENTITY_CONTRACTION = store_thm (
       IMP_RES_TAC TRANS_IMP_WEAK_TRANS,
       (* goal 2 (of 2) *)
       Q.EXISTS_TAC `E2` >> REWRITE_TAC [WEAK_EQUIV_REFL] \\
-      IMP_RES_TAC ONE_TAU ]);
+      IMP_RES_TAC ONE_TAU ]
+QED
 
 (* the proof is the same with EXPANSION_EPS *)
-val CONTRACTION_EPS = store_thm (
-   "CONTRACTION_EPS",
-  ``!(Con :'a simulation). CONTRACTION Con ==>
-     !E E'. Con E E' ==> !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ Con E1 E2``,
+Theorem CONTRACTION_EPS:
+    !(Con :'a simulation). CONTRACTION Con ==>
+     !E E'. Con E E' ==> !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ Con E1 E2
+Proof
     REPEAT STRIP_TAC
  >> qpat_x_assum `Con E E'` MP_TAC
  >> POP_ASSUM MP_TAC
@@ -69,13 +70,14 @@ val CONTRACTION_EPS = store_thm (
       >- ( Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] ) \\
       Q.EXISTS_TAC `E2'` >> ASM_REWRITE_TAC [] \\
       IMP_RES_TAC ONE_TAU \\
-      IMP_RES_TAC EPS_TRANS ]);
+      IMP_RES_TAC EPS_TRANS ]
+QED
 
-val CONTRACTION_WEAK_TRANS_label' = store_thm (
-   "CONTRACTION_WEAK_TRANS_label'",
-  ``!(Con :'a simulation). CONTRACTION Con ==>
+Theorem CONTRACTION_WEAK_TRANS_label':
+    !(Con :'a simulation). CONTRACTION Con ==>
      !E E'. Con E E' ==>
-        !l E2. WEAK_TRANS E' (label l) E2 ==> ?E1. WEAK_TRANS E (label l) E1 /\ WEAK_EQUIV E1 E2``,
+        !l E2. WEAK_TRANS E' (label l) E2 ==> ?E1. WEAK_TRANS E (label l) E1 /\ WEAK_EQUIV E1 E2
+Proof
     REPEAT STRIP_TAC
  >> IMP_RES_TAC WEAK_TRANS_cases2 (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -95,11 +97,12 @@ val CONTRACTION_WEAK_TRANS_label' = store_thm (
         (MATCH_MP WEAK_EQUIV_EPS' (ASSUME ``WEAK_EQUIV E1 E''``)) \\
       Q.EXISTS_TAC `E1'` >> ASM_REWRITE_TAC [] \\
       MATCH_MP_TAC WEAK_TRANS_AND_EPS \\
-      Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] ]);
+      Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] ]
+QED
 
-val EXPANSION_IMP_CONTRACTION = store_thm (
-   "EXPANSION_IMP_CONTRACTION",
-  ``!Con. EXPANSION Con ==> CONTRACTION Con``,
+Theorem EXPANSION_IMP_CONTRACTION:
+    !Con. EXPANSION Con ==> CONTRACTION Con
+Proof
     REPEAT STRIP_TAC
  >> REWRITE_TAC [CONTRACTION]
  >> rpt STRIP_TAC (* 4 sub-goals here *)
@@ -131,7 +134,8 @@ val EXPANSION_IMP_CONTRACTION = store_thm (
       Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] \\
       REWRITE_TAC [WEAK_EQUIV] \\
       Q.EXISTS_TAC `Con` >> ASM_REWRITE_TAC [] \\
-      IMP_RES_TAC EXPANSION_IMP_WEAK_BISIM ]);
+      IMP_RES_TAC EXPANSION_IMP_WEAK_BISIM ]
+QED
 
 (* Bisimilarity contraction, written `P contracts (to) Q`, is the union of all
    bisimulation contractions. Here we define it as a co-inductive relation.
@@ -160,18 +164,19 @@ val _ = Unicode.unicode_version { u = UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D47, tmnm = 
 val _ = TeX_notation { hol = UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D47,
                        TeX = ("\\HOLTokenContracts{}", 1) };
 
-val contracts_is_CONTRACTION = store_thm (
-   "contracts_is_CONTRACTION", ``CONTRACTION $contracts``,
+Theorem contracts_is_CONTRACTION:   CONTRACTION $contracts
+Proof
     PURE_ONCE_REWRITE_TAC [CONTRACTION]
  >> REPEAT GEN_TAC
  >> DISCH_TAC
  >> PURE_ONCE_REWRITE_TAC [GSYM contracts_cases]
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
 (* the original definition now becomes a theorem *)
-val contracts_thm = store_thm (
-   "contracts_thm",
-  ``!P Q. P contracts Q = ?Con. Con P Q /\ CONTRACTION Con``,
+Theorem contracts_thm:
+    !P Q. P contracts Q = ?Con. Con P Q /\ CONTRACTION Con
+Proof
     NTAC 2 GEN_TAC >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
       DISCH_TAC \\
@@ -181,69 +186,77 @@ val contracts_thm = store_thm (
       Q.SPEC_TAC (`Q`, `Q`) \\
       Q.SPEC_TAC (`P`, `P`) \\
       HO_MATCH_MP_TAC contracts_coind \\ (* co-induction used here! *)
-      METIS_TAC [CONTRACTION] ]);
+      METIS_TAC [CONTRACTION] ]
+QED
 
-val CONTRACTION_SUBSET_contracts = store_thm ((* NEW *)
-   "CONTRACTION_SUBSET_contracts",
-  ``!Con. CONTRACTION Con ==> Con RSUBSET $contracts``,
-    PROVE_TAC [RSUBSET, contracts_thm]);
+Theorem CONTRACTION_SUBSET_contracts:
+    !Con. CONTRACTION Con ==> Con RSUBSET $contracts
+Proof
+    PROVE_TAC [RSUBSET, contracts_thm]
+QED
 
 (* "Half" theorems for `contracts` relation *)
-val contracts_TRANS_label = store_thm (
-   "contracts_TRANS_label",
-  ``!E E'. E contracts E' ==>
-           !l E1. TRANS E (label l) E1 ==> ?E2. TRANS E' (label l) E2 /\ E1 contracts E2``,
-    PROVE_TAC [contracts_cases]);
+Theorem contracts_TRANS_label:
+    !E E'. E contracts E' ==>
+           !l E1. TRANS E (label l) E1 ==> ?E2. TRANS E' (label l) E2 /\ E1 contracts E2
+Proof
+    PROVE_TAC [contracts_cases]
+QED
 
-val contracts_TRANS_label' = store_thm (
-   "contracts_TRANS_label'",
-  ``!E E'. E contracts E' ==>
-           !l E2. TRANS E' (label l) E2 ==> ?E1. WEAK_TRANS E (label l) E1 /\ WEAK_EQUIV E1 E2``,
-    PROVE_TAC [contracts_cases]);
+Theorem contracts_TRANS_label':
+    !E E'. E contracts E' ==>
+           !l E2. TRANS E' (label l) E2 ==> ?E1. WEAK_TRANS E (label l) E1 /\ WEAK_EQUIV E1 E2
+Proof
+    PROVE_TAC [contracts_cases]
+QED
 
-val contracts_TRANS_tau = store_thm (
-   "contracts_TRANS_tau",
-  ``!E E'. E contracts E' ==>
-           !E1. TRANS E tau E1 ==> E1 contracts E' \/ ?E2. TRANS E' tau E2 /\ E1 contracts E2``,
-    PROVE_TAC [contracts_cases]);
+Theorem contracts_TRANS_tau:
+    !E E'. E contracts E' ==>
+           !E1. TRANS E tau E1 ==> E1 contracts E' \/ ?E2. TRANS E' tau E2 /\ E1 contracts E2
+Proof
+    PROVE_TAC [contracts_cases]
+QED
 
-val contracts_TRANS_tau' = store_thm (
-   "contracts_TRANS_tau'",
-  ``!E E'. E contracts E' ==>
-           !E2. TRANS E' tau E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2``,
-    PROVE_TAC [contracts_cases]);
+Theorem contracts_TRANS_tau':
+    !E E'. E contracts E' ==>
+           !E2. TRANS E' tau E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2
+Proof
+    PROVE_TAC [contracts_cases]
+QED
 
 (* The `contracts` relation is reflexive *)
-val contracts_reflexive = store_thm (
-   "contracts_reflexive", ``reflexive $contracts``,
+Theorem contracts_reflexive:   reflexive $contracts
+Proof
     REWRITE_TAC [reflexive_def]
  >> GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [contracts_thm]
  >> Q.EXISTS_TAC `Id`
- >> REWRITE_TAC [IDENTITY_CONTRACTION]);
+ >> REWRITE_TAC [IDENTITY_CONTRACTION]
+QED
 
 (* the version for easier use *)
 val contracts_REFL = save_thm (
    "contracts_REFL", REWRITE_RULE [reflexive_def] contracts_reflexive);
 
 (* `expands` implies `contracts` *)
-val expands_IMP_contracts = store_thm (
-   "expands_IMP_contracts", ``!P Q. P expands Q ==> P contracts Q``,
+Theorem expands_IMP_contracts:   !P Q. P expands Q ==> P contracts Q
+Proof
     REPEAT GEN_TAC
  >> REWRITE_TAC [contracts_thm, expands_thm]
  >> rpt STRIP_TAC
  >> Q.EXISTS_TAC `Exp`
  >> ASM_REWRITE_TAC []
- >> IMP_RES_TAC EXPANSION_IMP_CONTRACTION);
+ >> IMP_RES_TAC EXPANSION_IMP_CONTRACTION
+QED
 
 (* NOTE: unlike in the EXPANSION cases, CONTRACTION_IMP_WEAK_BISIM doesn't hold,
    To finish the proof, prof. Sangiorgi said "You do not prove Con itself is a weak
    bisimulation, but rather that Con "union" weak bisimilarity is a weak bisimulation."
    that is amazing ...
  *)
-val contracts_IMP_WEAK_EQUIV = store_thm (
-   "contracts_IMP_WEAK_EQUIV",
-  ``!P Q. P contracts Q ==> WEAK_EQUIV P Q``,
+Theorem contracts_IMP_WEAK_EQUIV:
+    !P Q. P contracts Q ==> WEAK_EQUIV P Q
+Proof
     REPEAT GEN_TAC
  >> REWRITE_TAC [WEAK_EQUIV, contracts_thm]
  >> rpt STRIP_TAC
@@ -287,14 +300,15 @@ val contracts_IMP_WEAK_EQUIV = store_thm (
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [],
       (* goal 8 (of 8) *)
       IMP_RES_TAC WEAK_EQUIV_TRANS_tau' \\
-      Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] ]);
+      Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC [] ]
+QED
 
 (* This proof depends on `contracts_IMP_WEAK_EQUIV`, that's why it's here *)
-val CONTRACTION_EPS' = store_thm (
-   "CONTRACTION_EPS'",
-  ``!(Con :'a simulation). CONTRACTION Con ==>
+Theorem CONTRACTION_EPS':
+    !(Con :'a simulation). CONTRACTION Con ==>
      !E E'. Con E E' ==>
-        !u E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2``,
+        !u E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2
+Proof
     REPEAT STRIP_TAC
  >> qpat_x_assum `Con E E'` MP_TAC
  >> POP_ASSUM MP_TAC
@@ -312,12 +326,13 @@ val CONTRACTION_EPS' = store_thm (
       IMP_RES_TAC
         (MATCH_MP WEAK_EQUIV_TRANS_tau' (ASSUME ``WEAK_EQUIV E1 E2``)) \\
       Q.EXISTS_TAC `E1'` >> ASM_REWRITE_TAC [] \\
-      IMP_RES_TAC EPS_TRANS ]);
+      IMP_RES_TAC EPS_TRANS ]
+QED
 
 (* The composition of two CONTRACTIONs is still an CONTRACTION. *)
-val COMP_CONTRACTION = store_thm (
-   "COMP_CONTRACTION",
-  ``!Con1 Con2. CONTRACTION Con1 /\ CONTRACTION Con2 ==> CONTRACTION (Con2 O Con1)``,
+Theorem COMP_CONTRACTION:
+    !Con1 Con2. CONTRACTION Con1 /\ CONTRACTION Con2 ==> CONTRACTION (Con2 O Con1)
+Proof
     REPEAT STRIP_TAC
  >> REWRITE_TAC [CONTRACTION, O_DEF]
  >> BETA_TAC
@@ -360,12 +375,13 @@ val COMP_CONTRACTION = store_thm (
         (MATCH_MP (MATCH_MP CONTRACTION_EPS' (ASSUME ``CONTRACTION Con1``))
                   (ASSUME ``(Con1 :'a simulation) E y``)) \\
       Q.EXISTS_TAC `E1'` >> ASM_REWRITE_TAC [] \\
-      IMP_RES_TAC WEAK_EQUIV_TRANS ]);
+      IMP_RES_TAC WEAK_EQUIV_TRANS ]
+QED
 
 (* The `contracts` relation is transitive
    NOTE: it's not symmetric, because otherwise it becomes equivalence relation *)
-val contracts_transitive = store_thm (
-   "contracts_transitive", ``transitive $contracts``,
+Theorem contracts_transitive:   transitive $contracts
+Proof
     REWRITE_TAC [transitive_def]
  >> REPEAT GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [contracts_thm]
@@ -376,30 +392,33 @@ val contracts_transitive = store_thm (
       REWRITE_TAC [O_DEF] >> BETA_TAC \\
       Q.EXISTS_TAC `y` >> ASM_REWRITE_TAC [],
       (* goal 2 (of 2) *)
-      IMP_RES_TAC COMP_CONTRACTION ]);
+      IMP_RES_TAC COMP_CONTRACTION ]
+QED
 
 (* the version for easier use *)
 val contracts_TRANS = save_thm (
    "contracts_TRANS", REWRITE_RULE [transitive_def] contracts_transitive);
 
 (* `contracts` is a pre-order *)
-val contracts_PreOrder = store_thm (
-   "contracts_PreOrder", ``PreOrder $contracts``,
-    REWRITE_TAC [PreOrder, contracts_reflexive, contracts_transitive]);
+Theorem contracts_PreOrder:   PreOrder $contracts
+Proof
+    REWRITE_TAC [PreOrder, contracts_reflexive, contracts_transitive]
+QED
 
-val contracts_WEAK_TRANS_label' = store_thm (
-   "contracts_WEAK_TRANS_label'",
-  ``!E E'. E contracts E' ==>
-        !l E2. WEAK_TRANS E' (label l) E2 ==> ?E1. WEAK_TRANS E (label l) E1 /\ WEAK_EQUIV E1 E2``,
+Theorem contracts_WEAK_TRANS_label':
+    !E E'. E contracts E' ==>
+        !l E2. WEAK_TRANS E' (label l) E2 ==> ?E1. WEAK_TRANS E (label l) E1 /\ WEAK_EQUIV E1 E2
+Proof
     REWRITE_TAC [contracts_thm]
  >> REPEAT STRIP_TAC
  >> IMP_RES_TAC CONTRACTION_WEAK_TRANS_label'
- >> Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC []);
+ >> Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC []
+QED
 
-val contracts_WEAK_TRANS_tau' = store_thm (
-   "contracts_WEAK_TRANS_tau'",
-  ``!E E'. E contracts E' ==>
-        !l E2. WEAK_TRANS E' tau E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2``,
+Theorem contracts_WEAK_TRANS_tau':
+    !E E'. E contracts E' ==>
+        !l E2. WEAK_TRANS E' tau E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2
+Proof
     REPEAT STRIP_TAC
  >> IMP_RES_TAC WEAK_TRANS_TAU
  >> IMP_RES_TAC contracts_TRANS_tau'
@@ -407,29 +426,32 @@ val contracts_WEAK_TRANS_tau' = store_thm (
         (MATCH_MP WEAK_EQUIV_EPS' (ASSUME ``WEAK_EQUIV E1 E''``))
  >> Q.EXISTS_TAC `E1'`
  >> ASM_REWRITE_TAC []
- >> IMP_RES_TAC EPS_TRANS);
+ >> IMP_RES_TAC EPS_TRANS
+QED
 
-val contracts_EPS = store_thm (
-   "contracts_EPS",
-  ``!E E'. E contracts E' ==> !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ E1 contracts E2``,
+Theorem contracts_EPS:
+    !E E'. E contracts E' ==> !E1. EPS E E1 ==> ?E2. EPS E' E2 /\ E1 contracts E2
+Proof
     REWRITE_TAC [contracts_thm]
  >> rpt STRIP_TAC
  >> IMP_RES_TAC CONTRACTION_EPS
  >> Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC []
- >> Q.EXISTS_TAC `Con` >> ASM_REWRITE_TAC []);
+ >> Q.EXISTS_TAC `Con` >> ASM_REWRITE_TAC []
+QED
 
-val contracts_EPS' = store_thm (
-   "contracts_EPS'",
-  ``!E E'. E contracts E' ==> !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2``,
+Theorem contracts_EPS':
+    !E E'. E contracts E' ==> !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2
+Proof
     REWRITE_TAC [contracts_thm]
  >> rpt STRIP_TAC
  >> IMP_RES_TAC CONTRACTION_EPS'
- >> Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC []);
+ >> Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC []
+QED
 
-val contracts_WEAK_TRANS_label = store_thm (
-   "contracts_WEAK_TRANS_label",
-  ``!E E'. E contracts E' ==>
-        !l E1. WEAK_TRANS E (label l) E1 ==> ?E2. WEAK_TRANS E' (label l) E2 /\ E1 contracts E2``,
+Theorem contracts_WEAK_TRANS_label:
+    !E E'. E contracts E' ==>
+        !l E1. WEAK_TRANS E (label l) E1 ==> ?E2. WEAK_TRANS E' (label l) E2 /\ E1 contracts E2
+Proof
     REPEAT STRIP_TAC
  >> IMP_RES_TAC WEAK_TRANS
  >> IMP_RES_TAC (MATCH_MP contracts_EPS (ASSUME ``E contracts E'``))
@@ -437,12 +459,13 @@ val contracts_WEAK_TRANS_label = store_thm (
  >> IMP_RES_TAC (MATCH_MP contracts_EPS (ASSUME ``E2 contracts E2''``))
  >> Q.EXISTS_TAC `E2'''` >> ASM_REWRITE_TAC []
  >> REWRITE_TAC [WEAK_TRANS]
- >> take [`E2'`, `E2''`] >> ASM_REWRITE_TAC []);
+ >> take [`E2'`, `E2''`] >> ASM_REWRITE_TAC []
+QED
 
-val contracts_WEAK_TRANS_tau = store_thm (
-   "contracts_WEAK_TRANS_tau",
-  ``!E E'. E contracts E' ==>
-        !E1. WEAK_TRANS E tau E1 ==> ?E2. EPS E' E2 /\ E1 contracts E2``,
+Theorem contracts_WEAK_TRANS_tau:
+    !E E'. E contracts E' ==>
+        !E1. WEAK_TRANS E tau E1 ==> ?E2. EPS E' E2 /\ E1 contracts E2
+Proof
     REPEAT STRIP_TAC
  >> IMP_RES_TAC WEAK_TRANS
  >> IMP_RES_TAC (MATCH_MP contracts_EPS (ASSUME ``E contracts E'``))
@@ -456,7 +479,8 @@ val contracts_WEAK_TRANS_tau = store_thm (
       IMP_RES_TAC (MATCH_MP contracts_EPS (ASSUME ``E2 contracts E2''``)) \\
       Q.EXISTS_TAC `E2'''` >> ASM_REWRITE_TAC [] \\
       IMP_RES_TAC ONE_TAU \\
-      IMP_RES_TAC EPS_TRANS ]);
+      IMP_RES_TAC EPS_TRANS ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -464,9 +488,9 @@ val contracts_WEAK_TRANS_tau = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val contracts_SUBST_PREFIX = store_thm (
-   "contracts_SUBST_PREFIX",
-  ``!E E'. E contracts E' ==> !u. (prefix u E) contracts (prefix u E')``,
+Theorem contracts_SUBST_PREFIX:
+    !E E'. E contracts E' ==> !u. (prefix u E) contracts (prefix u E')
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [Q.SPECL [`prefix u E`, `prefix u E'`] contracts_cases]
  >> rpt STRIP_TAC (* 4 sub-goals here *)
@@ -486,14 +510,15 @@ val contracts_SUBST_PREFIX = store_thm (
       Q.EXISTS_TAC `E` \\
       qpat_x_assum `tau = u` (REWRITE_TAC o wrap o SYM) \\
       CONJ_TAC >- ( MATCH_MP_TAC ONE_TAU >> REWRITE_TAC [PREFIX] ) \\
-      IMP_RES_TAC contracts_IMP_WEAK_EQUIV ]);
+      IMP_RES_TAC contracts_IMP_WEAK_EQUIV ]
+QED
 
-val contracts_PRESD_BY_GUARDED_SUM = store_thm (
-   "contracts_PRESD_BY_GUARDED_SUM",
-  ``!E1 E1' E2 E2' a1 a2.
+Theorem contracts_PRESD_BY_GUARDED_SUM:
+    !E1 E1' E2 E2' a1 a2.
         E1 contracts E1' /\ E2 contracts E2' ==>
         (sum (prefix a1 E1) (prefix a2 E2)) contracts
-        (sum (prefix a1 E1') (prefix a2 E2'))``,
+        (sum (prefix a1 E1') (prefix a2 E2'))
+Proof
     REPEAT STRIP_TAC
  >> ONCE_REWRITE_TAC [contracts_cases]
  >> rpt STRIP_TAC (* 4 sub-goals here *)
@@ -544,12 +569,13 @@ val contracts_PRESD_BY_GUARDED_SUM = store_thm (
         Q.EXISTS_TAC `E2` \\
         reverse CONJ_TAC >- IMP_RES_TAC contracts_IMP_WEAK_EQUIV \\
         MATCH_MP_TAC ONE_TAU \\
-        MATCH_MP_TAC SUM2 >> REWRITE_TAC [PREFIX] ] ]);
+        MATCH_MP_TAC SUM2 >> REWRITE_TAC [PREFIX] ] ]
+QED
 
-val contracts_PRESD_BY_PAR = store_thm (
-   "contracts_PRESD_BY_PAR",
-  ``!E1 E1' E2 E2'.
-        E1 contracts E1' /\ E2 contracts E2' ==> (par E1 E2) contracts (par E1' E2')``,
+Theorem contracts_PRESD_BY_PAR:
+    !E1 E1' E2 E2'.
+        E1 contracts E1' /\ E2 contracts E2' ==> (par E1 E2) contracts (par E1' E2')
+Proof
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [contracts_thm]
  >> Q.EXISTS_TAC `\x y.
@@ -710,7 +736,8 @@ val contracts_PRESD_BY_PAR = store_thm (
                               (CONJ (ASSUME ``EPS E2'''' E1'''``)
                                     (ASSUME ``EPS E2''''' E1''''``))] \\
         MATCH_MP_TAC PAR3 \\
-        Q.EXISTS_TAC `l` >> ASM_REWRITE_TAC [] ] ]);
+        Q.EXISTS_TAC `l` >> ASM_REWRITE_TAC [] ] ]
+QED
 
 (* |- ∀E E'. E contracts E' ⇒ ∀E''. (E || E'') contracts (E' || E'') *)
 val contracts_SUBST_PAR_R = save_thm (
@@ -732,9 +759,9 @@ val contracts_SUBST_PAR_L = save_thm (
                      (CONJ (Q.SPEC `E''` contracts_REFL)
                            (ASSUME ``E contracts E'``))))));
 
-val contracts_SUBST_RESTR = store_thm (
-   "contracts_SUBST_RESTR",
-  ``!E E'. E contracts E' ==> !L. (restr L E) contracts (restr L E')``,
+Theorem contracts_SUBST_RESTR:
+    !E E'. E contracts E' ==> !L. (restr L E) contracts (restr L E')
+Proof
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [contracts_thm]
  >> Q.EXISTS_TAC `\x y. ?E1 E2 L'. (x = restr L' E1) /\ (y = restr L' E2) /\ E1 contracts E2`
@@ -791,11 +818,12 @@ val contracts_SUBST_RESTR = store_thm (
       >- ( ASM_REWRITE_TAC [] \\
            MATCH_MP_TAC WEAK_EQUIV_SUBST_RESTR >> ASM_REWRITE_TAC [] ) \\
       ONCE_ASM_REWRITE_TAC [] \\
-      IMP_RES_TAC EPS_RESTR >> ASM_REWRITE_TAC [] ]);
+      IMP_RES_TAC EPS_RESTR >> ASM_REWRITE_TAC [] ]
+QED
 
-val contracts_SUBST_RELAB = store_thm (
-   "contracts_SUBST_RELAB",
-  ``!E E'. E contracts E' ==> !rf. (relab E rf) contracts (relab E' rf)``,
+Theorem contracts_SUBST_RELAB:
+    !E E'. E contracts E' ==> !rf. (relab E rf) contracts (relab E' rf)
+Proof
     REPEAT STRIP_TAC
  >> PURE_ONCE_REWRITE_TAC [contracts_thm]
  >> Q.EXISTS_TAC
@@ -866,11 +894,12 @@ val contracts_SUBST_RELAB = store_thm (
            MATCH_MP_TAC WEAK_EQUIV_SUBST_RELAB >> ASM_REWRITE_TAC [] ) \\
       ASM_REWRITE_TAC [] \\
       qpat_x_assum `relabel rf' u' = tau` (REWRITE_TAC o wrap o SYM) \\
-      IMP_RES_TAC EPS_RELAB_rf >> ASM_REWRITE_TAC [] ]);
+      IMP_RES_TAC EPS_RELAB_rf >> ASM_REWRITE_TAC [] ]
+QED
 
-val contracts_SUBST_GCONTEXT = store_thm (
-   "contracts_SUBST_GCONTEXT",
-  ``!P Q. P contracts Q ==> !E. GCONTEXT E ==> (E P) contracts (E Q)``,
+Theorem contracts_SUBST_GCONTEXT:
+    !P Q. P contracts Q ==> !E. GCONTEXT E ==> (E P) contracts (E Q)
+Proof
     rpt GEN_TAC >> DISCH_TAC
  >> Induct_on `GCONTEXT`
  >> BETA_TAC >> rpt STRIP_TAC (* 7 sub-goals here *)
@@ -886,11 +915,13 @@ val contracts_SUBST_GCONTEXT = store_thm (
       (* goal 4 (of 5) *)
       MATCH_MP_TAC contracts_SUBST_RESTR >> ASM_REWRITE_TAC [],
       (* goal 5 (of 5) *)
-      MATCH_MP_TAC contracts_SUBST_RELAB >> ASM_REWRITE_TAC [] ]);
+      MATCH_MP_TAC contracts_SUBST_RELAB >> ASM_REWRITE_TAC [] ]
+QED
 
-val contracts_precongruence = store_thm (
-   "contracts_precongruence", ``precongruence' $contracts``,
-    PROVE_TAC [precongruence', contracts_PreOrder, contracts_SUBST_GCONTEXT]);
+Theorem contracts_precongruence:   precongruence' $contracts
+Proof
+    PROVE_TAC [precongruence', contracts_PreOrder, contracts_SUBST_GCONTEXT]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -919,13 +950,14 @@ val contracts_AND_TRACE1_lemma = Q.prove (
       MATCH_MP_TAC TRACE2 \\
       Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC [] ]);
 
-val contracts_AND_TRACE1 = store_thm (
-   "contracts_AND_TRACE1",
-  ``!E E'. E contracts E' ==>
-        !xs E1. TRACE E xs E1 ==> ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2``,
+Theorem contracts_AND_TRACE1:
+    !E E'. E contracts E' ==>
+        !xs E1. TRACE E xs E1 ==> ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2
+Proof
     NTAC 2 (rpt GEN_TAC >> DISCH_TAC)
  >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE1_lemma)
- >> RW_TAC std_ss []);
+ >> RW_TAC std_ss []
+QED
 
 val contracts_AND_TRACE2_lemma = Q.prove (
    `!E xs E1. TRACE E xs E1 ==>
@@ -960,14 +992,15 @@ val contracts_AND_TRACE2_lemma = Q.prove (
         (* goal 2.2 (of 2) *)
         REWRITE_TAC [LENGTH] >> RW_TAC arith_ss [] ] ]);
 
-val contracts_AND_TRACE2 = store_thm (
-   "contracts_AND_TRACE2",
-  ``!E E'. E contracts E' ==>
+Theorem contracts_AND_TRACE2:
+    !E E'. E contracts E' ==>
         !xs E1. TRACE E xs E1 ==>
-            ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\ (LENGTH xs' <= LENGTH xs)``,
+            ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\ (LENGTH xs' <= LENGTH xs)
+Proof
     NTAC 2 (rpt GEN_TAC >> DISCH_TAC)
  >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE2_lemma)
- >> RW_TAC std_ss []);
+ >> RW_TAC std_ss []
+QED
 
 val contracts_AND_TRACE_tau_lemma = Q.prove (
    `!E xs E1. TRACE E xs E1 ==> NO_LABEL xs ==>
@@ -996,24 +1029,26 @@ val contracts_AND_TRACE_tau_lemma = Q.prove (
       REWRITE_TAC [LENGTH] \\
       FULL_SIMP_TAC arith_ss [] ]);
 
-val contracts_AND_TRACE_tau = store_thm (
-   "contracts_AND_TRACE_tau",
-  ``!E E'. E contracts E' ==>
+Theorem contracts_AND_TRACE_tau:
+    !E E'. E contracts E' ==>
         !xs E1. TRACE E xs E1 /\ NO_LABEL xs ==>
             ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\
-                (LENGTH xs' <= LENGTH xs) /\ NO_LABEL xs'``,
+                (LENGTH xs' <= LENGTH xs) /\ NO_LABEL xs'
+Proof
     NTAC 2 (rpt GEN_TAC >> STRIP_TAC)
  >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE_tau_lemma)
- >> RW_TAC std_ss []);
+ >> RW_TAC std_ss []
+QED
 
 (* the version shown in the paper using P and Q *)
-val contracts_AND_TRACE_tau' = store_thm (
-   "contracts_AND_TRACE_tau'",
-  ``!P Q. P contracts Q ==>
+Theorem contracts_AND_TRACE_tau':
+    !P Q. P contracts Q ==>
         !xs P'. TRACE P xs P' /\ NO_LABEL xs ==>
             ?xs' Q'. TRACE Q xs' Q' /\ P' contracts Q' /\
-                (LENGTH xs' <= LENGTH xs) /\ NO_LABEL xs'``,
-    METIS_TAC [contracts_AND_TRACE_tau]);
+                (LENGTH xs' <= LENGTH xs) /\ NO_LABEL xs'
+Proof
+    METIS_TAC [contracts_AND_TRACE_tau]
+QED
 
 val contracts_AND_TRACE_label_lemma = Q.prove (
    `!E xs E1. TRACE E xs E1 ==> !l. UNIQUE_LABEL (label l) xs ==>
@@ -1050,24 +1085,26 @@ val contracts_AND_TRACE_label_lemma = Q.prove (
       CONJ_TAC >- ( FULL_SIMP_TAC arith_ss [LENGTH] ) \\
       REWRITE_TAC [UNIQUE_LABEL_cases2] >> ASM_REWRITE_TAC [] ]);
 
-val contracts_AND_TRACE_label = store_thm (
-   "contracts_AND_TRACE_label",
-  ``!E E'. E contracts E' ==>
+Theorem contracts_AND_TRACE_label:
+    !E E'. E contracts E' ==>
         !xs l E1. TRACE E xs E1 /\ UNIQUE_LABEL (label l) xs ==>
             ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\
-                (LENGTH xs' <= LENGTH xs) /\ UNIQUE_LABEL (label l) xs'``,
+                (LENGTH xs' <= LENGTH xs) /\ UNIQUE_LABEL (label l) xs'
+Proof
     NTAC 2 (rpt GEN_TAC >> STRIP_TAC)
  >> MP_TAC (Q.SPECL [`E`, `xs`, `E1`] contracts_AND_TRACE_label_lemma)
- >> RW_TAC std_ss []);
+ >> RW_TAC std_ss []
+QED
 
 (* the version shown in the paper using P and Q *)
-val contracts_AND_TRACE_label' = store_thm (
-   "contracts_AND_TRACE_label'",
-  ``!P Q. P contracts Q ==>
+Theorem contracts_AND_TRACE_label':
+    !P Q. P contracts Q ==>
         !xs l P'. TRACE P xs P' /\ UNIQUE_LABEL (label l) xs ==>
             ?xs' Q'. TRACE Q xs' Q' /\ P contracts Q /\
-                (LENGTH xs' <= LENGTH xs) /\ UNIQUE_LABEL (label l) xs'``,
-    METIS_TAC [contracts_AND_TRACE_label]);
+                (LENGTH xs' <= LENGTH xs) /\ UNIQUE_LABEL (label l) xs'
+Proof
+    METIS_TAC [contracts_AND_TRACE_label]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1119,15 +1156,15 @@ val _ = TeX_notation { hol = (UTF8.chr 0x2AB0 ^ UTF8.chr 0x1D9C),
                        TeX = ("\\HOLTokenObsContracts", 1) };
 
 (* This one is difficult because `standard technique` doesn't work *)
-val OBS_contracts_BY_CONTRACTION = store_thm (
-   "OBS_contracts_BY_CONTRACTION",
-  ``!Con. CONTRACTION Con ==>
+Theorem OBS_contracts_BY_CONTRACTION:
+    !Con. CONTRACTION Con ==>
       !E E'.
         (!u.
          (!E1. TRANS E u E1 ==>
                (?E2. TRANS E' u E2 /\ Con E1 E2)) /\
          (!E2. TRANS E' u E2 ==>
-               (?E1. WEAK_TRANS E  u E1 /\ Con E1 E2))) ==> OBS_contracts E E'``,
+               (?E1. WEAK_TRANS E  u E1 /\ Con E1 E2))) ==> OBS_contracts E E'
+Proof
     rpt STRIP_TAC
  >> REWRITE_TAC [OBS_contracts]
  >> REWRITE_TAC [contracts_thm]
@@ -1178,22 +1215,25 @@ val OBS_contracts_BY_CONTRACTION = store_thm (
       Q.EXISTS_TAC `E2'` >> art [],
       (* goal 8 (of 8) *)
       IMP_RES_TAC WEAK_EQUIV_TRANS_tau' \\
-      Q.EXISTS_TAC `E1'` >> art [] ]);
+      Q.EXISTS_TAC `E1'` >> art [] ]
+QED
 
-val OBS_contracts_TRANS_LEFT = store_thm (
-   "OBS_contracts_TRANS_LEFT",
-  ``!E E'. OBS_contracts (E :'a CCS) (E' :'a CCS) ==>
-           !u E1. TRANS E  u E1 ==> ?E2. TRANS E' u E2 /\ E1 contracts E2``,
-    PROVE_TAC [OBS_contracts]);
+Theorem OBS_contracts_TRANS_LEFT:
+    !E E'. OBS_contracts (E :'a CCS) (E' :'a CCS) ==>
+           !u E1. TRANS E  u E1 ==> ?E2. TRANS E' u E2 /\ E1 contracts E2
+Proof
+    PROVE_TAC [OBS_contracts]
+QED
 
-val OBS_contracts_TRANS_RIGHT = store_thm (
-   "OBS_contracts_TRANS_RIGHT",
-  ``!E E'. OBS_contracts (E :'a CCS) (E' :'a CCS) ==>
-           !u E2. TRANS E' u E2 ==> ?E1. WEAK_TRANS E u E1 /\ WEAK_EQUIV E1 E2``,
-    PROVE_TAC [OBS_contracts]);
+Theorem OBS_contracts_TRANS_RIGHT:
+    !E E'. OBS_contracts (E :'a CCS) (E' :'a CCS) ==>
+           !u E2. TRANS E' u E2 ==> ?E1. WEAK_TRANS E u E1 /\ WEAK_EQUIV E1 E2
+Proof
+    PROVE_TAC [OBS_contracts]
+QED
 
-val OBS_contracts_IMP_contracts = store_thm (
-   "OBS_contracts_IMP_contracts", ``!E E'. OBS_contracts E E' ==> E contracts E'``,
+Theorem OBS_contracts_IMP_contracts:   !E E'. OBS_contracts E E' ==> E contracts E'
+Proof
     rpt STRIP_TAC
  >> ONCE_REWRITE_TAC [contracts_cases]
  >> rpt STRIP_TAC (* 4 sub-goals here *)
@@ -1209,20 +1249,22 @@ val OBS_contracts_IMP_contracts = store_thm (
       (* goal 2 (of 4) *)
       IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
       Q.EXISTS_TAC `E1` >> art [] \\
-      MATCH_MP_TAC WEAK_TRANS_IMP_EPS >> art [] ]);
+      MATCH_MP_TAC WEAK_TRANS_IMP_EPS >> art [] ]
+QED
 
-val OBS_contracts_IMP_WEAK_EQUIV = store_thm (
-   "OBS_contracts_IMP_WEAK_EQUIV", ``!E E'. OBS_contracts E E' ==> WEAK_EQUIV E E'``,
+Theorem OBS_contracts_IMP_WEAK_EQUIV:   !E E'. OBS_contracts E E' ==> WEAK_EQUIV E E'
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC OBS_contracts_IMP_contracts
- >> IMP_RES_TAC contracts_IMP_WEAK_EQUIV);
+ >> IMP_RES_TAC contracts_IMP_WEAK_EQUIV
+QED
 
 (* Know relations:
    1.       `expands` << `contracts`      << WEAK_EQUIV
    2. `OBS_contracts` << `contracts`
    3. `OBS_contracts`        << OBS_CONGR << WEAK_EQUIV *)
-val OBS_contracts_IMP_OBS_CONGR = store_thm (
-   "OBS_contracts_IMP_OBS_CONGR", ``!E E'. OBS_contracts E E' ==> OBS_CONGR E E'``,
+Theorem OBS_contracts_IMP_OBS_CONGR:   !E E'. OBS_contracts E E' ==> OBS_CONGR E E'
+Proof
     rpt STRIP_TAC
  >> REWRITE_TAC [OBS_CONGR]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -1233,19 +1275,21 @@ val OBS_contracts_IMP_OBS_CONGR = store_thm (
       IMP_RES_TAC contracts_IMP_WEAK_EQUIV,
       (* goal 2 (of 2) *)
       IMP_RES_TAC OBS_contracts_TRANS_RIGHT \\
-      Q.EXISTS_TAC `E1` >> art [] ]);
+      Q.EXISTS_TAC `E1` >> art [] ]
+QED
 
 (* another way to prove this *)
-val OBS_contracts_IMP_WEAK_EQUIV' = store_thm (
-   "OBS_contracts_IMP_WEAK_EQUIV'", ``!E E'. OBS_contracts E E' ==> WEAK_EQUIV E E'``,
+Theorem OBS_contracts_IMP_WEAK_EQUIV':   !E E'. OBS_contracts E E' ==> WEAK_EQUIV E E'
+Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC OBS_CONGR_IMP_WEAK_EQUIV
- >> IMP_RES_TAC OBS_contracts_IMP_OBS_CONGR);
+ >> IMP_RES_TAC OBS_contracts_IMP_OBS_CONGR
+QED
 
-val OBS_contracts_EPS' = store_thm (
-   "OBS_contracts_EPS'",
-  ``!E E'. OBS_contracts (E :'a CCS) (E' :'a CCS) ==>
-           !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2``,
+Theorem OBS_contracts_EPS':
+    !E E'. OBS_contracts (E :'a CCS) (E' :'a CCS) ==>
+           !E2. EPS E' E2 ==> ?E1. EPS E E1 /\ WEAK_EQUIV E1 E2
+Proof
     rpt STRIP_TAC
  >> PAT_X_ASSUM ``OBS_contracts E E'`` MP_TAC
  >> POP_ASSUM MP_TAC
@@ -1260,12 +1304,13 @@ val OBS_contracts_EPS' = store_thm (
       RES_TAC \\
       IMP_RES_TAC WEAK_EQUIV_TRANS_tau' \\
       Q.EXISTS_TAC `E1'` >> art [] \\
-      IMP_RES_TAC EPS_TRANS ]);
+      IMP_RES_TAC EPS_TRANS ]
+QED
 
-val OBS_contracts_WEAK_TRANS' = store_thm (
-   "OBS_contracts_WEAK_TRANS'",
-  ``!E E'. OBS_contracts (E :'a CCS) (E' :'a CCS) ==>
-           !u E2. WEAK_TRANS E' u E2 ==> ?E1. WEAK_TRANS E u E1 /\ WEAK_EQUIV E1 E2``,
+Theorem OBS_contracts_WEAK_TRANS':
+    !E E'. OBS_contracts (E :'a CCS) (E' :'a CCS) ==>
+           !u E2. WEAK_TRANS E' u E2 ==> ?E1. WEAK_TRANS E u E1 /\ WEAK_EQUIV E1 E2
+Proof
     rpt STRIP_TAC
  >> Cases_on `u` (* 2 sub-goals here *)
  >| [ (* case 1 (of 2): u = tau *)
@@ -1281,7 +1326,8 @@ val OBS_contracts_WEAK_TRANS' = store_thm (
       IMP_RES_TAC WEAK_EQUIV_TRANS_label' \\
       IMP_RES_TAC WEAK_EQUIV_EPS' \\
       Q.EXISTS_TAC `E1'''` >> art [] \\
-      IMP_RES_TAC EPS_WEAK_EPS ]);
+      IMP_RES_TAC EPS_WEAK_EPS ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1289,9 +1335,9 @@ val OBS_contracts_WEAK_TRANS' = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val OBS_contracts_TRANS = store_thm (
-   "OBS_contracts_TRANS",
-  ``!E E' E''. OBS_contracts E E' /\ OBS_contracts E' E'' ==> OBS_contracts E E''``,
+Theorem OBS_contracts_TRANS:
+    !E E' E''. OBS_contracts E E' /\ OBS_contracts E' E'' ==> OBS_contracts E E''
+Proof
     rpt STRIP_TAC
  >> REWRITE_TAC [OBS_contracts]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -1304,24 +1350,27 @@ val OBS_contracts_TRANS = store_thm (
       IMP_RES_TAC (REWRITE_RULE [OBS_contracts] (ASSUME ``OBS_contracts E' E''``)) \\
       IMP_RES_TAC OBS_contracts_WEAK_TRANS' \\
       Q.EXISTS_TAC `E1'` >> art [] \\
-      IMP_RES_TAC WEAK_EQUIV_TRANS ]);
+      IMP_RES_TAC WEAK_EQUIV_TRANS ]
+QED
 
-val OBS_contracts_REFL = store_thm (
-   "OBS_contracts_REFL", ``!E. OBS_contracts E E``,
+Theorem OBS_contracts_REFL:   !E. OBS_contracts E E
+Proof
     GEN_TAC
  >> REWRITE_TAC [OBS_contracts]
  >> rpt STRIP_TAC
  >- ( Q.EXISTS_TAC `E1` >> art [contracts_REFL] )
  >> Q.EXISTS_TAC `E2` >> REWRITE_TAC [WEAK_EQUIV_REFL]
- >> IMP_RES_TAC TRANS_IMP_WEAK_TRANS);
+ >> IMP_RES_TAC TRANS_IMP_WEAK_TRANS
+QED
 
-val OBS_contracts_PreOrder = store_thm (
-   "OBS_contracts_PreOrder", ``PreOrder OBS_contracts``,
+Theorem OBS_contracts_PreOrder:   PreOrder OBS_contracts
+Proof
     REWRITE_TAC [PreOrder, reflexive_def, transitive_def]
  >> CONJ_TAC >- REWRITE_TAC [OBS_contracts_REFL]
  >> rpt STRIP_TAC
  >> MATCH_MP_TAC OBS_contracts_TRANS
- >> Q.EXISTS_TAC `y` >> art []);
+ >> Q.EXISTS_TAC `y` >> art []
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1330,9 +1379,9 @@ val OBS_contracts_PreOrder = store_thm (
 (******************************************************************************)
 
 (* Proposition 6 (Milner's book, page 154), the version for `contracts` *)
-val contracts_PROP6 = store_thm (
-   "contracts_PROP6",
-  ``!E E'. E contracts E' ==> !u. OBS_contracts (prefix u E) (prefix u E')``,
+Theorem contracts_PROP6:
+    !E E'. E contracts E' ==> !u. OBS_contracts (prefix u E) (prefix u E')
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [OBS_contracts]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -1344,19 +1393,21 @@ val contracts_PROP6 = store_thm (
       IMP_RES_TAC TRANS_PREFIX \\
       Q.EXISTS_TAC `E` >> art [] \\
       CONJ_TAC >- REWRITE_TAC [WEAK_PREFIX] \\
-      IMP_RES_TAC contracts_IMP_WEAK_EQUIV ]);
+      IMP_RES_TAC contracts_IMP_WEAK_EQUIV ]
+QED
 
-val OBS_contracts_SUBST_PREFIX = store_thm (
-   "OBS_contracts_SUBST_PREFIX",
-  ``!E E'. OBS_contracts E E' ==> !u. OBS_contracts (prefix u E) (prefix u E')``,
+Theorem OBS_contracts_SUBST_PREFIX:
+    !E E'. OBS_contracts E E' ==> !u. OBS_contracts (prefix u E) (prefix u E')
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC OBS_contracts_IMP_contracts
- >> MATCH_MP_TAC contracts_PROP6 >> art []);
+ >> MATCH_MP_TAC contracts_PROP6 >> art []
+QED
 
-val OBS_contracts_PRESD_BY_SUM = store_thm (
-   "OBS_contracts_PRESD_BY_SUM",
-  ``!E1 E1' E2 E2'. OBS_contracts E1 E1' /\ OBS_contracts E2 E2' ==>
-                    OBS_contracts (sum E1 E2) (sum E1' E2')``,
+Theorem OBS_contracts_PRESD_BY_SUM:
+    !E1 E1' E2 E2'. OBS_contracts E1 E1' /\ OBS_contracts E2 E2' ==>
+                    OBS_contracts (sum E1 E2) (sum E1' E2')
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [OBS_contracts]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -1375,7 +1426,8 @@ val OBS_contracts_PRESD_BY_SUM = store_thm (
         MATCH_MP_TAC WEAK_SUM1 >> art [],
         (* goal 2.2 (of 2) *)
         RES_TAC >> Q.EXISTS_TAC `E1''` >> art [] \\
-        MATCH_MP_TAC WEAK_SUM2 >> art [] ] ]);
+        MATCH_MP_TAC WEAK_SUM2 >> art [] ] ]
+QED
 
 (* |- !E E'. OBS_contracts E E' ==> !E''. OBS_contracts (sum E'' E) (sum E'' E') *)
 val OBS_contracts_SUBST_SUM_L = save_thm (
@@ -1405,10 +1457,10 @@ fun C_TRANS thm1 thm2 =
         failwith "transitivity of contraction not applicable";
 
 (* Observation contracts is preserved by parallel composition. *)
-val OBS_contracts_PRESD_BY_PAR = store_thm (
-   "OBS_contracts_PRESD_BY_PAR",
-  ``!E1 E1' E2 E2'. OBS_contracts E1 E1' /\ OBS_contracts E2 E2' ==>
-                    OBS_contracts (par E1 E2) (par E1' E2')``,
+Theorem OBS_contracts_PRESD_BY_PAR:
+    !E1 E1' E2 E2'. OBS_contracts E1 E1' /\ OBS_contracts E2 E2' ==>
+                    OBS_contracts (par E1 E2) (par E1' E2')
+Proof
     rpt STRIP_TAC
  >> REWRITE_TAC [OBS_contracts]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -1511,7 +1563,8 @@ val OBS_contracts_PRESD_BY_PAR = store_thm (
                     (CONJ (ASSUME ``EPS E2'''' E1'''``)
                           (ASSUME ``EPS E2''''' E1''''``))] \\
         MATCH_MP_TAC PAR3 \\
-        Q.EXISTS_TAC `l` >> art [] ] ]);
+        Q.EXISTS_TAC `l` >> art [] ] ]
+QED
 
 (* |- !E E'. OBS_contracts E E' ==> !E''. OBS_contracts (par E'' E) (par E'' E') *)
 val OBS_contracts_SUBST_PAR_L = save_thm (
@@ -1533,9 +1586,9 @@ val OBS_contracts_SUBST_PAR_R = save_thm (
                    (CONJ (ASSUME ``OBS_contracts E E'``)
                          (Q.SPEC `E''` OBS_contracts_REFL))))));
 
-val OBS_contracts_SUBST_RESTR = store_thm (
-   "OBS_contracts_SUBST_RESTR",
-  ``!E E'. OBS_contracts E E' ==> !L. OBS_contracts (restr L E) (restr L E')``,
+Theorem OBS_contracts_SUBST_RESTR:
+    !E E'. OBS_contracts E E' ==> !L. OBS_contracts (restr L E) (restr L E')
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [OBS_contracts]
  >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -1570,12 +1623,13 @@ val OBS_contracts_SUBST_RESTR = store_thm (
                                 REWRITE_RULE [ASSUME ``(u :'a Action) = label l``]
                                              (ASSUME ``WEAK_TRANS E u E1``)])) \\
         Q.EXISTS_TAC `restr L E1` \\
-        IMP_RES_TAC WEAK_EQUIV_SUBST_RESTR >> art [] ] ]);
+        IMP_RES_TAC WEAK_EQUIV_SUBST_RESTR >> art [] ] ]
+QED
 
 (* Observation congruence is substitutive under the relabelling operator. *)
-val OBS_contracts_SUBST_RELAB = store_thm (
-   "OBS_contracts_SUBST_RELAB",
-  ``!E E'. OBS_contracts E E' ==> !rf. OBS_contracts (relab E rf) (relab E' rf)``,
+Theorem OBS_contracts_SUBST_RELAB:
+    !E E'. OBS_contracts E E' ==> !rf. OBS_contracts (relab E rf) (relab E' rf)
+Proof
     rpt GEN_TAC
  >> PURE_ONCE_REWRITE_TAC [OBS_contracts]
  >> rpt STRIP_TAC (* 2 sub-goals here, sharing start&end tacticals *)
@@ -1589,11 +1643,12 @@ val OBS_contracts_SUBST_RELAB = store_thm (
       ASSUME_TAC (MATCH_MP WEAK_RELAB_rf
                            (ASSUME ``WEAK_TRANS E u' E1``)) \\
       Q.EXISTS_TAC `relab E1 rf` >> art [] \\
-      IMP_RES_TAC WEAK_EQUIV_SUBST_RELAB >> art [] ]);
+      IMP_RES_TAC WEAK_EQUIV_SUBST_RELAB >> art [] ]
+QED
 
-val OBS_contracts_SUBST_CONTEXT = store_thm (
-   "OBS_contracts_SUBST_CONTEXT",
-  ``!P Q. OBS_contracts P Q ==> !E. CONTEXT E ==> OBS_contracts (E P) (E Q)``,
+Theorem OBS_contracts_SUBST_CONTEXT:
+    !P Q. OBS_contracts P Q ==> !E. CONTEXT E ==> OBS_contracts (E P) (E Q)
+Proof
     rpt GEN_TAC >> DISCH_TAC
  >> Induct_on `CONTEXT`
  >> BETA_TAC >> rpt STRIP_TAC (* 7 sub-goals here *)
@@ -1608,12 +1663,14 @@ val OBS_contracts_SUBST_CONTEXT = store_thm (
       (* goal 4 (of 5) *)
       MATCH_MP_TAC OBS_contracts_SUBST_RESTR >> art [],
       (* goal 5 (of 5) *)
-      MATCH_MP_TAC OBS_contracts_SUBST_RELAB >> art [] ]);
+      MATCH_MP_TAC OBS_contracts_SUBST_RELAB >> art [] ]
+QED
 
-val OBS_contracts_precongruence = store_thm (
-   "OBS_contracts_precongruence", ``precongruence OBS_contracts``,
+Theorem OBS_contracts_precongruence:   precongruence OBS_contracts
+Proof
     PROVE_TAC [precongruence, OBS_contracts_PreOrder,
-               OBS_contracts_SUBST_CONTEXT]);
+               OBS_contracts_SUBST_CONTEXT]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1621,12 +1678,12 @@ val OBS_contracts_precongruence = store_thm (
 (*                                                                            *)
 (******************************************************************************)
 
-val OBS_contracts_AND_TRACE_tau = store_thm (
-   "OBS_contracts_AND_TRACE_tau",
-  ``!E E'. OBS_contracts E E' ==>
+Theorem OBS_contracts_AND_TRACE_tau:
+    !E E'. OBS_contracts E E' ==>
         !xs E1. TRACE E xs E1 /\ NO_LABEL xs ==>
             ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\
-                     (LENGTH xs' <= LENGTH xs) /\ NO_LABEL xs'``,
+                     (LENGTH xs' <= LENGTH xs) /\ NO_LABEL xs'
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRACE_cases1
  >> Cases_on `xs` (* 2 sub-goals here *)
@@ -1642,14 +1699,15 @@ val OBS_contracts_AND_TRACE_tau = store_thm (
  >> take [`tau :: xs'`, `E2'`] >> art []
  >> CONJ_TAC >- (MATCH_MP_TAC TRACE_rule1 >> Q.EXISTS_TAC `E2` >> art [])
  >> RW_TAC arith_ss [LENGTH]
- >> REWRITE_TAC [NO_LABEL_cases] >> art []);
+ >> REWRITE_TAC [NO_LABEL_cases] >> art []
+QED
 
-val OBS_contracts_AND_TRACE_label = store_thm (
-   "OBS_contracts_AND_TRACE_label",
-  ``!E E'. OBS_contracts E E' ==>
+Theorem OBS_contracts_AND_TRACE_label:
+    !E E'. OBS_contracts E E' ==>
         !xs l E1. TRACE E xs E1 /\ UNIQUE_LABEL (label l) xs ==>
             ?xs' E2. TRACE E' xs' E2 /\ E1 contracts E2 /\
-                (LENGTH xs' <= LENGTH xs) /\ UNIQUE_LABEL (label l) xs'``,
+                (LENGTH xs' <= LENGTH xs) /\ UNIQUE_LABEL (label l) xs'
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRACE_cases1
  >> Cases_on `xs` (* 2 sub-goals here *)
@@ -1677,12 +1735,13 @@ val OBS_contracts_AND_TRACE_label = store_thm (
       take [`label l :: xs'`, `E2'`] >> art [] \\
       CONJ_TAC >- ( MATCH_MP_TAC TRACE_rule1 >> Q.EXISTS_TAC `E2` >> art [] ) \\
       RW_TAC arith_ss [LENGTH] \\
-      REWRITE_TAC [UNIQUE_LABEL_cases2] >> art [] ]);
+      REWRITE_TAC [UNIQUE_LABEL_cases2] >> art [] ]
+QED
 
-val OBS_contracts_WEAK_TRANS_label' = store_thm (
-   "OBS_contracts_WEAK_TRANS_label'",
-  ``!E E'. OBS_contracts E E' ==>
-        !l E2. WEAK_TRANS E' (label l) E2 ==> ?E1. WEAK_TRANS E (label l) E1 /\ WEAK_EQUIV E1 E2``,
+Theorem OBS_contracts_WEAK_TRANS_label':
+    !E E'. OBS_contracts E E' ==>
+        !l E2. WEAK_TRANS E' (label l) E2 ==> ?E1. WEAK_TRANS E (label l) E1 /\ WEAK_EQUIV E1 E2
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC WEAK_TRANS_cases1 (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -1697,7 +1756,8 @@ val OBS_contracts_WEAK_TRANS_label' = store_thm (
       IMP_RES_TAC WEAK_EQUIV_EPS' \\
       Q.EXISTS_TAC `E1'` >> art [] \\
       MATCH_MP_TAC WEAK_TRANS_AND_EPS \\
-      Q.EXISTS_TAC `E1` >> art [] ]);
+      Q.EXISTS_TAC `E1` >> art [] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -1713,17 +1773,19 @@ val C_contracts = new_definition (
 val C_contracts_thm = save_thm (
    "C_contracts_thm", REWRITE_RULE [CC_def] C_contracts);
 
-val C_contracts_precongruence = store_thm (
-   "C_contracts_precongruence", ``precongruence $C_contracts``,
-    PROVE_TAC [C_contracts, CC_precongruence, contracts_PreOrder]);
+Theorem C_contracts_precongruence:   precongruence $C_contracts
+Proof
+    PROVE_TAC [C_contracts, CC_precongruence, contracts_PreOrder]
+QED
 
-val OBS_contracts_IMP_C_contracts = store_thm (
-   "OBS_contracts_IMP_C_contracts", ``!p q. OBS_contracts p q ==> C_contracts p q``,
+Theorem OBS_contracts_IMP_C_contracts:   !p q. OBS_contracts p q ==> C_contracts p q
+Proof
     REWRITE_TAC [C_contracts, GSYM RSUBSET]
  >> ASSUME_TAC OBS_contracts_precongruence
  >> `OBS_contracts RSUBSET $contracts`
         by PROVE_TAC [OBS_contracts_IMP_contracts, GSYM RSUBSET]
- >> MATCH_MP_TAC PCC_is_coarsest >> art []);
+ >> MATCH_MP_TAC PCC_is_coarsest >> art []
+QED
 
 Definition SUM_contracts :
     SUM_contracts = (\p q. !r. closed r ==> (sum p r) contracts (sum q r))
@@ -1742,12 +1804,13 @@ Proof
  >> POP_ASSUM (MP_TAC o BETA_RULE) >> Rewr
 QED
 
-val OBS_contracts_IMP_SUM_contracts = store_thm (
-   "OBS_contracts_IMP_SUM_contracts",
-  ``!p q. OBS_contracts p q ==> SUM_contracts p q``,
+Theorem OBS_contracts_IMP_SUM_contracts:
+    !p q. OBS_contracts p q ==> SUM_contracts p q
+Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC C_contracts_IMP_SUM_contracts
- >> IMP_RES_TAC OBS_contracts_IMP_C_contracts);
+ >> IMP_RES_TAC OBS_contracts_IMP_C_contracts
+QED
 
 (* OBS_contracts ==> C_contracts (coarsest) ==> SUM_contracts
         /\                                          ||
@@ -1869,13 +1932,14 @@ val COARSEST_PRECONGR_RL = save_thm (
 
 (* Assuming p & q have free actions, OBS_contracts is the coarsest precongruence
    contained in `contracts`! *)
-val COARSEST_PRECONGR_THM = store_thm (
-   "COARSEST_PRECONGR_THM",
-  ``!p q. free_action p /\ free_action q ==> (OBS_contracts p q = SUM_contracts p q)``,
+Theorem COARSEST_PRECONGR_THM:
+    !p q. free_action p /\ free_action q ==> (OBS_contracts p q = SUM_contracts p q)
+Proof
     rpt STRIP_TAC
  >> EQ_TAC
  >- REWRITE_TAC [OBS_contracts_IMP_SUM_contracts]
- >> MATCH_MP_TAC SUM_contracts_IMP_OBS_contracts >> art []);
+ >> MATCH_MP_TAC SUM_contracts_IMP_OBS_contracts >> art []
+QED
 
 (* |- !p q.
         free_action p /\ free_action q ==>
@@ -2026,25 +2090,27 @@ QED
 
 (* The finite-state version of COARSEST_PRECONGR_THM; i. e.
    The contraction version of COARSEST_CONGR_FINITE (van Glabbeek scenario) *)
-val COARSEST_PRECONGR_FINITE = store_thm ((* NEW *)
-   "COARSEST_PRECONGR_FINITE",
-  ``!p q. finite_state p /\ finite_state q ==>
-          (OBS_contracts p q = !r. closed r ==> (sum p r) contracts (sum q r))``,
+Theorem COARSEST_PRECONGR_FINITE:
+    !p q. finite_state p /\ finite_state q ==>
+          (OBS_contracts p q = !r. closed r ==> (sum p r) contracts (sum q r))
+Proof
     rpt STRIP_TAC
  >> EQ_TAC >- REWRITE_TAC [COARSEST_PRECONGR_LR]
  >> MP_TAC (Q.SPECL [`p`, `q`] KLOP_LEMMA_FINITE) (* in CoarsestCongrTheory *)
- >> RW_TAC std_ss [COARSEST_PRECONGR_LEMMA]);
+ >> RW_TAC std_ss [COARSEST_PRECONGR_LEMMA]
+QED
 
 (* Another version with SUM_contracts used *)
-val COARSEST_PRECONGR_FINITE' = store_thm (
-   "COARSEST_PRECONGR_FINITE'",
-  ``!p q. finite_state p /\ finite_state q ==> (OBS_contracts p q = SUM_contracts p q)``,
+Theorem COARSEST_PRECONGR_FINITE':
+    !p q. finite_state p /\ finite_state q ==> (OBS_contracts p q = SUM_contracts p q)
+Proof
     rpt STRIP_TAC
  >> EQ_TAC >- REWRITE_TAC [OBS_contracts_IMP_SUM_contracts]
  >> REWRITE_TAC [SUM_contracts]
  >> BETA_TAC >> rpt STRIP_TAC
  >> MP_TAC COARSEST_PRECONGR_FINITE
- >> RW_TAC std_ss []);
+ >> RW_TAC std_ss []
+QED
 
 (* Bibliography:
  *

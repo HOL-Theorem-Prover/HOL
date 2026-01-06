@@ -68,11 +68,13 @@ val shift_left_lemma = prove(
   THEN Q.EXISTS_TAC `SUC i`
   THEN FULL_SIMP_TAC std_ss [AC MULT_ASSOC MULT_COMM,EXP]);
 
-val word_LSR_n2w = store_thm("word_LSR_n2w",
-  ``!m n. m < dimword (:'a) ==>
-          (((n2w m):'a word) >>> n = n2w (m DIV (2 ** n)))``,
+Theorem word_LSR_n2w:
+    !m n. m < dimword (:'a) ==>
+          (((n2w m):'a word) >>> n = n2w (m DIV (2 ** n)))
+Proof
   ONCE_REWRITE_TAC [GSYM n2w_w2n] THEN REWRITE_TAC [w2n_lsr]
-  THEN REWRITE_TAC [n2w_w2n] THEN SIMP_TAC std_ss [w2n_n2w]);
+  THEN REWRITE_TAC [n2w_w2n] THEN SIMP_TAC std_ss [w2n_n2w]
+QED
 
 val MULT_IMP_LESS_EQ = prove(
   ``!m n t q. t < m /\ m * n <= m * q + t ==> n <= q:num``,
@@ -174,11 +176,12 @@ val sub_and_shift_lemma = prove(
     THEN DECIDE_TAC)
   THEN ASM_SIMP_TAC std_ss []);
 
-val arm_div_lemma = store_thm("arm_div_lemma",
-  ``!m n x.
+Theorem arm_div_lemma:
+    !m n x.
       m < 2 ** 31 /\ n < 2 ** 32 /\ n <> 0 ==>
       arm_div_pre(n2w m, n2w n) /\
-      (arm_div(n2w m, n2w n) = (n2w (m MOD n), n2w n, n2w (m DIV n)))``,
+      (arm_div(n2w m, n2w n) = (n2w (m MOD n), n2w n, n2w (m DIV n)))
+Proof
   SIMP_TAC bool_ss [arm_div_def,arm_div_pre_def,LET_DEF]
   THEN NTAC 3 STRIP_TAC
   THEN IMP_RES_TAC shift_left_lemma
@@ -197,7 +200,8 @@ val arm_div_lemma = store_thm("arm_div_lemma",
   THEN MP_TAC (Q.SPECL [`i`,`n`,`0`,`m DIV n`,`m MOD n`] sub_and_shift_lemma)
   THEN FULL_SIMP_TAC std_ss []
   THEN `m < 4294967296` by DECIDE_TAC
-  THEN FULL_SIMP_TAC std_ss []);
+  THEN FULL_SIMP_TAC std_ss []
+QED
 
 val arm_div_thm = prove(
   ``!w v.

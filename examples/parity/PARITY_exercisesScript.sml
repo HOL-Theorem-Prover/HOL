@@ -24,12 +24,13 @@ End
    PROVE_TAC is used to prove the final goal, which is of the form
       (p ∨ q) ∨ r ⇔ (q ∨ p) ∨ r
 *)
-val EX1_CORRECTNESS = store_thm(
-  "EX1_CORRECTNESS",
-  ``RESET_REG_IMP(reset,inp,out) ==>
-    RESET_REG(reset,inp,out)``,
+Theorem EX1_CORRECTNESS:
+    RESET_REG_IMP(reset,inp,out) ==>
+    RESET_REG(reset,inp,out)
+Proof
   SRW_TAC [][RESET_REG_IMP_def, RESET_REG_def, MUX_def, REG_def] THEN
-  SRW_TAC [][] THEN PROVE_TAC []);
+  SRW_TAC [][] THEN PROVE_TAC []
+QED
 
 (* Exercise 2 *)
 
@@ -63,9 +64,9 @@ End
 (* express out(t + 1) in terms of mo2, and then remove the rewrite for
    out(t) entirely.  This breaks the rewriting loop allowing for easy
    rewriting *)
-val RESET_PARITY_CORRECTNESS = store_thm(
-  "RESET_PARITY_CORRECTNESS",
-  ``RESET_PARITY_IMP(reset,inp,out) ==> RESET_PARITY(reset,inp,out)``,
+Theorem RESET_PARITY_CORRECTNESS:
+    RESET_PARITY_IMP(reset,inp,out) ==> RESET_PARITY(reset,inp,out)
+Proof
   SRW_TAC [][RESET_PARITY_IMP_def, RESET_PARITY_def, MUX_def, NOT_def,
              REG_def, ONE_def]
   THENL [
@@ -82,6 +83,7 @@ val RESET_PARITY_CORRECTNESS = store_thm(
     POP_ASSUM SUBST1_TAC THEN
     Q.PAT_X_ASSUM `!t. out t = P` (K ALL_TAC) THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
 

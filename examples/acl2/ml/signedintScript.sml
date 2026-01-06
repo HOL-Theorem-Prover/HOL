@@ -145,8 +145,9 @@ end     handle e => NO_TAC (a,g)
 (*                                                                           *)
 (*****************************************************************************)
 
-val BIT_MOD = store_thm("BIT_MOD",
-    ``!a b c. BIT a (b MOD 2 ** c) = a < c /\ BIT a b``,
+Theorem BIT_MOD:
+      !a b c. BIT a (b MOD 2 ** c) = a < c /\ BIT a b
+Proof
     REPEAT GEN_TAC THEN REWRITE_TAC [BIT_RWR] THEN
     `a < c \/ c < SUC a` by DECIDE_TAC THEN1
           (IMP_RES_TAC LESS_ADD_1 THEN
@@ -157,10 +158,12 @@ val BIT_MOD = store_thm("BIT_MOD",
     `b MOD 2 ** c < 2 ** a` by NLTLE_TRANS_TAC `2 ** c` THEN
     RW_TAC arith_ss [MOD_LESS] THEN
     `b MOD 2 ** c < 2 ** SUC a` by NLT_TRANS_TAC `2 ** a` THEN
-    RW_TAC arith_ss [MOD_LESS]);
+    RW_TAC arith_ss [MOD_LESS]
+QED
 
-val MOD_HIGH_MOD = store_thm("MOD_HIGH_MOD",
-    ``!a b. b <= a ==> ((2 ** a - 1) MOD 2 ** b = 2 ** b - 1)``,
+Theorem MOD_HIGH_MOD:
+      !a b. b <= a ==> ((2 ** a - 1) MOD 2 ** b = 2 ** b - 1)
+Proof
     Induct THEN RW_TAC arith_ss [EXP] THEN
     Cases_on `b = SUC a` THEN RW_TAC arith_ss [EXP] THEN
     `a = b + (a - b)` by DECIDE_TAC THEN
@@ -171,53 +174,70 @@ val MOD_HIGH_MOD = store_thm("MOD_HIGH_MOD",
                 (CONJ (SPEC_ALL ZERO_LT_TWOEXP) (Q.SPEC `m` ZERO_LT_TWOEXP)),
                 EXP_ADD,TIMES2,ONCE_REWRITE_RULE [MULT_COMM]
                         (MATCH_MP MOD_TIMES (SPEC_ALL ZERO_LT_TWOEXP))] THEN
-    RW_TAC arith_ss [GSYM EXP_ADD]);
+    RW_TAC arith_ss [GSYM EXP_ADD]
+QED
 
-val MOD_HIGH_SUM = store_thm("MOD_HIGH_SUM",
-    ``!a b. 2 ** b - 1 = (2 ** b - 2 ** a + (2 ** a - 1)) MOD 2 ** b``,
+Theorem MOD_HIGH_SUM:
+      !a b. 2 ** b - 1 = (2 ** b - 2 ** a + (2 ** a - 1)) MOD 2 ** b
+Proof
     REPEAT GEN_TAC THEN `a <= b \/ b <= a` by DECIDE_TAC THEN
     METIS_TAC [TWOEXP_MONO2,
         DECIDE ``a <= b /\ 0 < b /\ 0 < a ==> (b - a + (a - 1) = b - 1n)``,
         ZERO_LT_TWOEXP,DECIDE ``0 < b ==> (b - 1n < b)``,LESS_MOD,MOD_HIGH_MOD,
-        DECIDE ``b <= a ==> (b - a + c = c:num)``]);
+        DECIDE ``b <= a ==> (b - a + c = c:num)``]
+QED
 
-val MOD_HIGH_EQ_ADD = store_thm("MOD_HIGH_EQ_ADD",
-    ``!b c d. (2 ** b - 1 = c MOD 2 ** b + d MOD 2 ** b) =
-                      (2 ** b - 1 = (c + d) MOD 2 ** b)``,
+Theorem MOD_HIGH_EQ_ADD:
+      !b c d. (2 ** b - 1 = c MOD 2 ** b + d MOD 2 ** b) =
+                      (2 ** b - 1 = (c + d) MOD 2 ** b)
+Proof
     REPEAT GEN_TAC THEN
     ONCE_REWRITE_TAC [GSYM (MATCH_MP MOD_PLUS (SPEC_ALL ZERO_LT_TWOEXP))] THEN
     Q.ABBREV_TAC `A = c MOD 2 ** b` THEN Q.ABBREV_TAC `B = d MOD 2 ** b` THEN
     Q.ABBREV_TAC `D = 2n ** b` THEN
     `A < D /\ B < D /\ 0 < D` by METIS_TAC [MOD_LESS,ZERO_LT_TWOEXP] THEN
     `A + B < D \/ D <= A + B /\ A + B <= 2 * D - 2` by DECIDE_TAC THEN
-    IMP_RES_TAC (Q.SPECL [`A + B`,`D`] (GSYM SUB_MOD)) THEN RW_TAC arith_ss []);
+    IMP_RES_TAC (Q.SPECL [`A + B`,`D`] (GSYM SUB_MOD)) THEN RW_TAC arith_ss []
+QED
 
-val BIT_DIV = store_thm("BIT_DIV",
-    ``!x m. BIT (SUC m) x = BIT m (x DIV 2)``,
+Theorem BIT_DIV:
+      !x m. BIT (SUC m) x = BIT m (x DIV 2)
+Proof
     RW_TAC arith_ss [BIT_def,BITS_def,MOD_2EXP_def,DIV_2EXP_def,
-        DECIDE ``SUC a - a = 1``,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,EXP]);
+        DECIDE ``SUC a - a = 1``,DIV_DIV_DIV_MULT,ZERO_LT_TWOEXP,EXP]
+QED
 
-val BIT_ZERO_ODD = store_thm("BIT_ZERO_ODD",
-    ``!a. BIT 0 a = ODD a``,
-    RW_TAC arith_ss [BIT_def,BITS_THM,ODD_MOD2_LEM]);
+Theorem BIT_ZERO_ODD:
+      !a. BIT 0 a = ODD a
+Proof
+    RW_TAC arith_ss [BIT_def,BITS_THM,ODD_MOD2_LEM]
+QED
 
-val SBIT_DIV = store_thm("SBIT_DIV",
-    ``!x m. 2 * SBIT x m = SBIT x (SUC m)``,
-    RW_TAC arith_ss [SBIT_def,EXP]);
+Theorem SBIT_DIV:
+      !x m. 2 * SBIT x m = SBIT x (SUC m)
+Proof
+    RW_TAC arith_ss [SBIT_def,EXP]
+QED
 
-val SBIT_ZERO = store_thm("SBIT_ZERO",
-    ``!b. SBIT b 0 = if b then 1 else 0``,
-    RW_TAC arith_ss [SBIT_def]);
+Theorem SBIT_ZERO:
+      !b. SBIT b 0 = if b then 1 else 0
+Proof
+    RW_TAC arith_ss [SBIT_def]
+QED
 
-val BITWISE_DIV = store_thm("BITWISE_DIV",
-    ``!m op x y. BITWISE (SUC m) op x y =
+Theorem BITWISE_DIV:
+      !m op x y. BITWISE (SUC m) op x y =
               (if op (ODD x) (ODD y) then 1 else 0) +
-              2 * BITWISE m op (x DIV 2) (y DIV 2)``,
-    RW_TAC int_ss [BITWISE_EVAL,SBIT_def,LSB_def,BIT_ZERO_ODD]);
+              2 * BITWISE m op (x DIV 2) (y DIV 2)
+Proof
+    RW_TAC int_ss [BITWISE_EVAL,SBIT_def,LSB_def,BIT_ZERO_ODD]
+QED
 
-val BITWISE_ZERO = store_thm("BITWISE_ZERO",
-    ``!op x y. BITWISE 0 op x y = 0``,
-    RW_TAC arith_ss [BITWISE_def,SBIT_DIV,LEFT_ADD_DISTRIB,BIT_DIV]);
+Theorem BITWISE_ZERO:
+      !op x y. BITWISE 0 op x y = 0
+Proof
+    RW_TAC arith_ss [BITWISE_def,SBIT_DIV,LEFT_ADD_DISTRIB,BIT_DIV]
+QED
 
 (*****************************************************************************)
 (* Word support theorems:                                                    *)
@@ -227,14 +247,18 @@ val BITWISE_ZERO = store_thm("BITWISE_ZERO",
 (*                                        2 * 2 ** (dimindex (:'a) - 1)      *)
 (*                                                                           *)
 (*****************************************************************************)
-val TOP_BIT_LE = store_thm("TOP_BIT_LE",
-    ``!a. BIT (dimindex (:'a) - 1) (w2n (a:'a word)) =
-                        2 ** (dimindex (:'a) - 1) <= w2n a``,
-    RW_TAC int_ss [BIT_RWR,DIMINDEX_GT_0,SUC_SUB_INDEX,LESS_MOD,w2n_lt_full]);
+Theorem TOP_BIT_LE:
+      !a. BIT (dimindex (:'a) - 1) (w2n (a:'a word)) =
+                        2 ** (dimindex (:'a) - 1) <= w2n a
+Proof
+    RW_TAC int_ss [BIT_RWR,DIMINDEX_GT_0,SUC_SUB_INDEX,LESS_MOD,w2n_lt_full]
+QED
 
-val DIMINDEX_DOUBLE = store_thm("DIMINDEX_DOUBLE",
-    ``2n ** (dimindex (:'a)) = 2 * 2 ** (dimindex (:'a) - 1)``,
-    RW_TAC arith_ss [GSYM EXP,DIMINDEX_GT_0,SUC_SUB_INDEX]);
+Theorem DIMINDEX_DOUBLE:
+      2n ** (dimindex (:'a)) = 2 * 2 ** (dimindex (:'a) - 1)
+Proof
+    RW_TAC arith_ss [GSYM EXP,DIMINDEX_GT_0,SUC_SUB_INDEX]
+QED
 
 (*****************************************************************************)
 (* Other arithmetic theorems:                                                *)
@@ -251,45 +275,59 @@ val DIMINDEX_DOUBLE = store_thm("DIMINDEX_DOUBLE",
 (*                                                                           *)
 (*****************************************************************************)
 
-val ODD_TWOEXP = store_thm("ODD_TWOEXP",``!x. ODD (2 ** x) = (x = 0n)``,
-    Induct THEN RW_TAC arith_ss [EXP,EVEN_DOUBLE,GSYM EVEN_ODD]);
+Theorem ODD_TWOEXP:  !x. ODD (2 ** x) = (x = 0n)
+Proof
+    Induct THEN RW_TAC arith_ss [EXP,EVEN_DOUBLE,GSYM EVEN_ODD]
+QED
 
-val MOD2_ODD_EVEN = store_thm("MOD2_ODD_EVEN",
-    ``(!a. (a MOD 2 = 0) = EVEN a) /\ (!a. (a MOD 2 = 1) = ODD a)``,
+Theorem MOD2_ODD_EVEN:
+      (!a. (a MOD 2 = 0) = EVEN a) /\ (!a. (a MOD 2 = 1) = ODD a)
+Proof
     PROVE_TAC [ODD_MOD2_LEM,MOD_LESS,DECIDE ``0 < 2n``,
         DECIDE ``a < 2 = (a = 0n) \/ (a = 1n)``,
-        EVEN_ODD,DECIDE ``~(0 = 1n)``]);
+        EVEN_ODD,DECIDE ``~(0 = 1n)``]
+QED
 
-val EVEN_SUB = store_thm("EVEN_SUB",
-    ``!a b. EVEN (a - b) = a <= b \/ (EVEN a = EVEN b)``,
+Theorem EVEN_SUB:
+      !a b. EVEN (a - b) = a <= b \/ (EVEN a = EVEN b)
+Proof
     Induct THEN GEN_TAC THEN EQ_TAC THEN Cases_on `SUC a <= b` THEN
     RW_TAC arith_ss [EVEN,ADD1] THEN
     FULL_SIMP_TAC arith_ss [NOT_LESS_EQUAL,ADD1,
                   DECIDE ``(a + 1 <= b) ==> (a + 1 - b = 0n)``] THEN
     IMP_RES_TAC LESS_EQUAL_ADD THEN POP_ASSUM SUBST_ALL_TAC THEN
-    FULL_SIMP_TAC arith_ss [EVEN_ADD] THEN METIS_TAC []);
+    FULL_SIMP_TAC arith_ss [EVEN_ADD] THEN METIS_TAC []
+QED
 
-val ODD_SUB = store_thm("ODD_SUB",
-    ``!a b. ODD (a - b) = b < a /\ ~(ODD a = ODD b)``,
-    METIS_TAC [NOT_LESS_EQUAL,EVEN_ODD,EVEN_SUB]);
+Theorem ODD_SUB:
+      !a b. ODD (a - b) = b < a /\ ~(ODD a = ODD b)
+Proof
+    METIS_TAC [NOT_LESS_EQUAL,EVEN_ODD,EVEN_SUB]
+QED
 
-val DIV2_MULT_SUB1 = store_thm("DIV2_MULT_SUB1",
-    ``!a. 0 < a ==> ((2 * a - 1) DIV 2 = a - 1)``,
+Theorem DIV2_MULT_SUB1:
+      !a. 0 < a ==> ((2 * a - 1) DIV 2 = a - 1)
+Proof
     GEN_TAC THEN DISCH_TAC THEN `?b. a = SUC b` by Q.EXISTS_TAC `a - 1` THEN
     RW_TAC arith_ss [ADD1,LEFT_ADD_DISTRIB,
-           ONCE_REWRITE_RULE [MULT_COMM] DIV_MULT]);
+           ONCE_REWRITE_RULE [MULT_COMM] DIV_MULT]
+QED
 
-val NOT_MOD2 = store_thm("NOT_MOD2",
-    ``(!c. ~(c MOD 2 = 0) = (c MOD 2 = 1n)) /\
-      (!c. ~(c MOD 2 = 1n) = (c MOD 2 = 0n))``,
-    PROVE_TAC [MOD2_ODD_EVEN,EVEN_OR_ODD,EVEN_ODD]);
+Theorem NOT_MOD2:
+      (!c. ~(c MOD 2 = 0) = (c MOD 2 = 1n)) /\
+      (!c. ~(c MOD 2 = 1n) = (c MOD 2 = 0n))
+Proof
+    PROVE_TAC [MOD2_ODD_EVEN,EVEN_OR_ODD,EVEN_ODD]
+QED
 
-val BITWISE_TOP = store_thm("BITWISE_TOP",
-    ``!a b. b < 2 ** a ==> (BITWISE a $/\ (2 ** a - 1) b = b)``,
+Theorem BITWISE_TOP:
+      !a b. b < 2 ** a ==> (BITWISE a $/\ (2 ** a - 1) b = b)
+Proof
     Induct THEN GEN_TAC THEN TRY (POP_ASSUM (MP_TAC o Q.SPEC `b DIV 2`)) THEN
     RW_TAC int_ss [BITWISE_DIV,BITWISE_ZERO,ODD_SUB,GSYM EVEN_ODD,EVEN_EXP,
            DIV2_MULT_SUB1,EXP,EVEN_MULT,DIV_LT_X,DIV_MULT_THM2] THEN
-    Cases_on `b` THEN FULL_SIMP_TAC int_ss [GSYM MOD2_ODD_EVEN,NOT_MOD2]);
+    Cases_on `b` THEN FULL_SIMP_TAC int_ss [GSYM MOD2_ODD_EVEN,NOT_MOD2]
+QED
 
 (*****************************************************************************)
 (* Definitions                                                               *)
@@ -386,16 +424,19 @@ End
 (*                                                                           *)
 (*****************************************************************************)
 
-val I2N_NUM = store_thm("I2N_NUM",
-    ``!a b. i2n (& a) b = a MOD 2 ** b``,RW_TAC int_ss [i2n_def]);
+Theorem I2N_NUM:
+      !a b. i2n (& a) b = a MOD 2 ** b
+ProofRW_TAC int_ss [i2n_def]
+QED
 
 val mod_p1_eq =
     MATCH_MP (DISCH_ALL (MATCH_MP
              (DECIDE ``a < b ==> (a + 1 < b = ~(a = b - 1n))``)
              (UNDISCH (SPEC_ALL MOD_LESS)))) (SPEC_ALL ZERO_LT_TWOEXP);
 
-val EXTEND_LE_ZERO = store_thm("EXTEND_LE_ZERO",
-    ``!a b. extend a b < 0 = BIT (b - 1) (i2n a b)``,
+Theorem EXTEND_LE_ZERO:
+      !a b. extend a b < 0 = BIT (b - 1) (i2n a b)
+Proof
     RW_TAC (int_ss ++ boolSimps.LET_ss) [extend_def,i2n_def] THEN
     FULL_SIMP_TAC std_ss [] THENL [
                 `?c. a = & c` by Q.EXISTS_TAC `Num a`,
@@ -410,10 +451,12 @@ val EXTEND_LE_ZERO = store_thm("EXTEND_LE_ZERO",
     Cases_on `((c - 1) MOD 2 ** b = 2 ** b - 1)` THEN
     FULL_SIMP_TAC int_ss [MATCH_MP (DECIDE ``0 < b ==> (b - 1 + 1 - b = 0n)``)
                   (SPEC_ALL ZERO_LT_TWOEXP),
-                  DECIDE ``a <= a - b = (b = 0n) \/ (a = 0n)``]);
+                  DECIDE ``a <= a - b = (b = 0n) \/ (a = 0n)``]
+QED
 
-val EXTEND_ZERO = store_thm("EXTEND_ZERO",
-    ``!a b. (extend 0 a = 0) /\ (extend b 0 = 0)``,
+Theorem EXTEND_ZERO:
+      !a b. (extend 0 a = 0) /\ (extend b 0 = 0)
+Proof
     RW_TAC (int_ss ++ boolSimps.LET_ss) [extend_def,i2n_def,BIT_def,BITS_THM2,
            ZERO_DIV] THEN
     FULL_SIMP_TAC bint_ss [GSYM INT_OF_NUM] THEN
@@ -423,27 +466,34 @@ val EXTEND_ZERO = store_thm("EXTEND_ZERO",
     TRY (POP_ASSUM SUBST_ALL_TAC THEN Cases_on `c <= 1`) THEN
     FULL_SIMP_TAC int_ss [ARITH_PROVE ``(b = ~ & a) = (~b = & a)``,INT_OF_NUM,
                 ARITH_PROVE ``~(0 <= b) ==> b <= 0i``,INT_ADD_CALCULATE,
-                INT_SUB_CALCULATE]);
+                INT_SUB_CALCULATE]
+QED
 
-val EXTEND_POS_EQ = store_thm("EXTEND_POS_EQ",
-    ``!a b. a < 2 ** (b - 1) ==> (extend (& a) b = & a)``,
+Theorem EXTEND_POS_EQ:
+      !a b. a < 2 ** (b - 1) ==> (extend (& a) b = & a)
+Proof
     REPEAT GEN_TAC THEN Cases_on `b = 0n` THEN
     RW_TAC bint_ss [extend_def,i2n_def,BIT_RWR,MOD_MOD,
            DECIDE ``~(b = 0) ==> (SUC (b - 1) = b)``] THEN
     `a < 2 ** b` by PROVE_TAC [LESS_TRANS,TWOEXP_MONO,
            DECIDE ``~(b = 0) ==> b - 1n < b``] THEN
-    FULL_SIMP_TAC int_ss [MOD_LESS]);
+    FULL_SIMP_TAC int_ss [MOD_LESS]
+QED
 
-val EXTEND_POS_NE = store_thm("EXTEND_POS_NE",
-    ``2 ** (b - 1) < a /\ a < 2 ** b ==> (extend (& a) b = & a - 2 ** b)``,
+Theorem EXTEND_POS_NE:
+      2 ** (b - 1) < a /\ a < 2 ** b ==> (extend (& a) b = & a - 2 ** b)
+Proof
     Cases_on `b = 0n` THEN
     RW_TAC bint_ss [extend_def,i2n_def,BIT_RWR,MOD_MOD,
-        DECIDE ``~(b = 0) ==> (SUC (b - 1) = b)``] );
+        DECIDE ``~(b = 0) ==> (SUC (b - 1) = b)``]
+QED
 
-val EXTEND_POS_NEG = store_thm("EXTEND_POS_NEG",
-    ``0 < b ==> (extend (& (2 ** (b - 1))) b = ~ & (2 ** (b - 1)))``,
+Theorem EXTEND_POS_NEG:
+      0 < b ==> (extend (& (2 ** (b - 1))) b = ~ & (2 ** (b - 1)))
+Proof
     Cases_on `b` THEN RW_TAC bint_ss [extend_def,i2n_def,BIT_RWR,MOD_MOD] THEN
-    RW_TAC int_ss [EXP,int_sub_calc1]);
+    RW_TAC int_ss [EXP,int_sub_calc1]
+QED
 
 val thms = [BIT_MOD,DECIDE ``b - 1 < b = 0n < b``,int_sub_calc1,INT_EXP,
             DECIDE ``(a - b = 0n) = (a <= b)``,
@@ -451,27 +501,32 @@ val thms = [BIT_MOD,DECIDE ``b - 1 < b = 0n < b``,int_sub_calc1,INT_EXP,
                          (MATCH_MP MOD_LESS (SPEC_ALL ZERO_LT_TWOEXP)),
             extend_def,I2N_NUM,LET_DEF,INT_LE,INT_EQ_CALCULATE];
 
-val EXTEND_POS_REC = store_thm("EXTEND_POS_REC",
-    ``!a b. 2 ** b <= a ==> (extend (& a) b = extend (& (a - 2 ** b)) b)``,
+Theorem EXTEND_POS_REC:
+      !a b. 2 ** b <= a ==> (extend (& a) b = extend (& (a - 2 ** b)) b)
+Proof
     REPEAT GEN_TAC THEN Cases_on `0 < b` THEN
     TRY (`SUC (b - 1) = b` by DECIDE_TAC) THEN
     ASM_REWRITE_TAC thms THEN BETA_TAC THEN
     ASM_REWRITE_TAC (BIT_RWR::thms) THEN
     REPEAT STRIP_TAC THEN REPEAT IF_CASES_TAC THEN ASM_REWRITE_TAC thms THEN
-    PROVE_TAC [SUB_MOD,ZERO_LT_TWOEXP]);
+    PROVE_TAC [SUB_MOD,ZERO_LT_TWOEXP]
+QED
 
-val EXTEND_POS_CALCULATE = store_thm("EXTEND_POS_CALCULATE",
-    ``extend (& a) b =
+Theorem EXTEND_POS_CALCULATE:
+      extend (& a) b =
              if a < 2 ** (b - 1) then & a
              else if (a = 2 ** (b - 1)) /\ 0 < b then ~ & a
              else if 2 ** (b - 1) < a /\ a < 2 ** b then & a - 2 ** b
-             else extend (& (a - 2 ** b)) b``,
+             else extend (& (a - 2 ** b)) b
+Proof
     RW_TAC bint_ss [EXTEND_POS_NEG,EXTEND_POS_EQ,EXTEND_POS_NE] THEN
     MATCH_MP_TAC EXTEND_POS_REC THEN
-    REPEAT (FULL_SIMP_TAC arith_ss [NOT_LESS]));
+    REPEAT (FULL_SIMP_TAC arith_ss [NOT_LESS])
+QED
 
-val EXTEND_NEG_EQ = store_thm("EXTEND_NEG_EQ",
-    ``a < 2 ** (b - 1) ==> (extend (~ & a) b = ~ & a)``,
+Theorem EXTEND_NEG_EQ:
+      a < 2 ** (b - 1) ==> (extend (~ & a) b = ~ & a)
+Proof
     REWRITE_TAC [extend_def,i2n_def,BIT_RWR] THEN RW_TAC bint_ss [] THEN
     FULL_SIMP_TAC bint_ss [ARITH_PROVE ``~a + 1 = 1i - a``] THENL [
                 ALL_TAC,CCONTR_TAC] THEN
@@ -479,24 +534,29 @@ val EXTEND_NEG_EQ = store_thm("EXTEND_NEG_EQ",
     `1 - & a = ~& (a - 1)` by RW_TAC int_ss [int_sub_calc1] THEN
     FULL_SIMP_TAC int_ss [ARITH_PROVE ``~a - b + c = c - (a + b):int``,INT_ADD,
                           int_sub_calc1] THEN
-    Cases_on `b` THEN FULL_SIMP_TAC int_ss [NOT_LESS_EQUAL,EXP]);
+    Cases_on `b` THEN FULL_SIMP_TAC int_ss [NOT_LESS_EQUAL,EXP]
+QED
 
-val EXTEND_NEG_NEG = store_thm("EXTEND_NEG_NEG",
-    ``0 < b ==> (extend (~ & (2 ** (b - 1))) b = ~ & (2 ** (b - 1)))``,
+Theorem EXTEND_NEG_NEG:
+      0 < b ==> (extend (~ & (2 ** (b - 1))) b = ~ & (2 ** (b - 1)))
+Proof
     RW_TAC bint_ss [BIT_RWR,extend_def,i2n_def,INT_ADD_CALCULATE,
            INT_SUB_CALCULATE,INT_REM_CALCULATE,
            DECIDE ``(a <= 1) = ~(0n < a) \/ (a = 1n)``] THEN
     FULL_SIMP_TAC bint_ss [INT_ADD_CALCULATE,INT_SUB_CALCULATE,
            DECIDE ``a + 1n <= b = a < b``] THEN
     Cases_on `b` THEN FULL_SIMP_TAC int_ss [EXP] THEN
-    FULL_SIMP_TAC int_ss [GSYM EXP]);
+    FULL_SIMP_TAC int_ss [GSYM EXP]
+QED
 
-val EXTEND_NEG_NE = store_thm("EXTEND_NEG_NE",
-    ``2 ** (b - 1) < a  /\ a < 2 ** b ==> (extend (~ (& a)) b = 2 ** b - & a)``,
+Theorem EXTEND_NEG_NE:
+      2 ** (b - 1) < a  /\ a < 2 ** b ==> (extend (~ (& a)) b = 2 ** b - & a)
+Proof
     Cases_on `b` THEN RW_TAC bint_ss [extend_def,i2n_def,EXTEND_ZERO] THEN
     Cases_on `a <= 1n` THEN
     FULL_SIMP_TAC int_ss [INT_SUB_CALCULATE,INT_ADD_CALCULATE,BIT_RWR] THEN
-    FULL_SIMP_TAC int_ss [EXP]);
+    FULL_SIMP_TAC int_ss [EXP]
+QED
 
 val lem1 = prove(``2 ** SUC n < a ==>
                      ((~ & (a - 2 ** SUC n) + 1) rem & (2 ** SUC n) =
@@ -507,8 +567,9 @@ val lem1 = prove(``2 ** SUC n < a ==>
     ASM_REWRITE_TAC [] THEN TRY (MATCH_MP_TAC SUB_MOD) THEN
     RW_TAC arith_ss []);
 
-val EXTEND_NEG_REC = store_thm("EXTEND_NEG_REC",
-    ``2 ** b <= a ==> (extend (~ & a) b = extend (~ & (a - 2 ** b)) b)``,
+Theorem EXTEND_NEG_REC:
+      2 ** b <= a ==> (extend (~ & a) b = extend (~ & (a - 2 ** b)) b)
+Proof
     Cases_on `b` THEN RW_TAC bint_ss [EXTEND_ZERO] THEN
     `2 <= a /\ 1 <= a` by (Induct_on `n` THEN RW_TAC int_ss [EXP]) THEN
     `(~ & a + 1 = ~ & (a - 1)) /\ (~ & (a - 1) - 1 = ~ & a)` by
@@ -518,17 +579,20 @@ val EXTEND_NEG_REC = store_thm("EXTEND_NEG_REC",
     TRY (`a = 2 ** SUC n` by DECIDE_TAC) THEN
     FULL_SIMP_TAC int_ss [BIT_ZERO,BIT_RWR,
                   ARITH_PROVE ``~ & a - 1 + b = b - & (a + 1)``,
-                  DECIDE ``0 < a ==> (a - 1 + 1n = a)``,lem1]);
+                  DECIDE ``0 < a ==> (a - 1 + 1n = a)``,lem1]
+QED
 
-val EXTEND_NEG_CALCULATE = store_thm("EXTEND_NEG_CALCULATE",
-    ``extend (~ & a) b =
+Theorem EXTEND_NEG_CALCULATE:
+      extend (~ & a) b =
              if a < 2 ** (b - 1) then ~ & a
              else if (a = 2 ** (b - 1)) /\ 0 < b then ~ & a
              else if 2 ** (b - 1) < a /\ a < 2 ** b then 2 ** b - & a
-             else extend (~ & (a - 2 ** b)) b``,
+             else extend (~ & (a - 2 ** b)) b
+Proof
     RW_TAC int_ss [EXTEND_ZERO,EXTEND_NEG_NE,EXTEND_NEG_EQ,EXTEND_NEG_NEG] THEN
     Cases_on `a` THEN MATCH_MP_TAC EXTEND_NEG_REC THEN
-    FULL_SIMP_TAC int_ss [NOT_LESS]);
+    FULL_SIMP_TAC int_ss [NOT_LESS]
+QED
 
 val extend_eq_base = prove(``a < 2 ** SUC n ==>
        (!b. (extend (& a) (SUC n) = b) =
@@ -549,9 +613,10 @@ val extend_eq_base = prove(``a < 2 ** SUC n ==>
     Cases_on `n'` THEN
     FULL_SIMP_TAC int_ss [ADD1,LEFT_ADD_DISTRIB,RIGHT_ADD_DISTRIB]);
 
-val EXTEND_EQ = store_thm("EXTEND_EQ",
-    ``!n a b. (extend a (SUC n) = b) =
-                  ~ (2 ** n) <= b /\ b < 2 ** n /\ ?m. b = a + m * 2 ** SUC n``,
+Theorem EXTEND_EQ:
+      !n a b. (extend a (SUC n) = b) =
+                  ~ (2 ** n) <= b /\ b < 2 ** n /\ ?m. b = a + m * 2 ** SUC n
+Proof
     REPEAT GEN_TAC THEN INT_CASE_TAC `a` THEN completeInduct_on `c` THEN
     Cases_on `c < 2 ** SUC n` THEN
     FULL_SIMP_TAC int_ss [extend_eq_base,NOT_LESS,
@@ -568,14 +633,17 @@ val EXTEND_EQ = store_thm("EXTEND_EQ",
         (map Q.EXISTS_TAC [`m' + 1`,`m - 1`,`m' - 1`,`m + 1`]) THEN
     RW_TAC int_ss [INT_RDISTRIB,INT_SUB_RDISTRIB,GSYM INT_SUB] THEN
     RW_TAC int_ss [int_sub] THEN
-    FIRST [CONV_TAC (AC_CONV (INT_ADD_ASSOC,INT_ADD_COMM)),ARITH_TAC]);
+    FIRST [CONV_TAC (AC_CONV (INT_ADD_ASSOC,INT_ADD_COMM)),ARITH_TAC]
+QED
 
-val EXTEND_LIMIT = store_thm("EXTEND_LIMIT",
-    ``!n a. ~ (2 ** n) <= extend a (SUC n) /\ extend a (SUC n) < 2 ** n``,
+Theorem EXTEND_LIMIT:
+      !n a. ~ (2 ** n) <= extend a (SUC n) /\ extend a (SUC n) < 2 ** n
+Proof
     REPEAT GEN_TAC THEN INT_CASE_TAC `a` THEN completeInduct_on `c` THEN
     ONCE_REWRITE_TAC [EXTEND_POS_CALCULATE,EXTEND_NEG_CALCULATE] THEN
     RW_TAC int_ss [INT_SUB_CALCULATE,INT_ADD_CALCULATE] THEN
-    FULL_SIMP_TAC int_ss [NOT_LESS_EQUAL,NOT_LESS,EXP]);
+    FULL_SIMP_TAC int_ss [NOT_LESS_EQUAL,NOT_LESS,EXP]
+QED
 
 val lem = prove(``?m''. b + m * n + m' * n = b + m'' * n:int``,
     Q.EXISTS_TAC `m + m'` THEN RW_TAC int_ss [INT_RDISTRIB,INT_ADD_ASSOC]);
@@ -606,19 +674,22 @@ val lem2 = prove(``?m. ~ & (2 ** n) <= b + m * & (2 ** SUC n) /\
                   INT_ADD_ASSOC,INT_MUL_CALCULATE] THEN
     METIS_TAC [INT_ADD_ASSOC,INT_ADD_COMM]);
 
-val EXTEND_11 = store_thm("EXTEND_11",
-    ``!n a b. (extend a (SUC n) = extend b (SUC n)) =
-         ?m. a = b + m * 2 ** SUC n``,
+Theorem EXTEND_11:
+      !n a b. (extend a (SUC n) = extend b (SUC n)) =
+         ?m. a = b + m * 2 ** SUC n
+Proof
     REPEAT GEN_TAC THEN EQ_TAC THEN RW_TAC int_ss [EXTEND_EQ,EXTEND_LIMIT] THEN
     RW_TAC int_ss [lem] THEN1
         (Q.EXISTS_TAC `m' - m` THEN RW_TAC int_ss [INT_SUB_RDISTRIB] THEN
          ARITH_TAC) THEN
      STRIP_ASSUME_TAC lem2 THEN
-     Q.EXISTS_TAC `~m + m'` THEN ARITH_TAC);
+     Q.EXISTS_TAC `~m + m'` THEN ARITH_TAC
+QED
 
-val EXTEND_LINEAR = store_thm("EXTEND_LINEAR",
-    ``!n m x b. extend (m * (extend x (SUC n)) + b) (SUC n) =
-         extend (m * x + b) (SUC n)``,
+Theorem EXTEND_LINEAR:
+      !n m x b. extend (m * (extend x (SUC n)) + b) (SUC n) =
+         extend (m * x + b) (SUC n)
+Proof
     REPEAT GEN_TAC THEN
     REWRITE_TAC [EXTEND_11,
          ARITH_PROVE ``(a + b = c + b + d) = (a = c + d:int)``] THEN
@@ -626,12 +697,15 @@ val EXTEND_LINEAR = store_thm("EXTEND_LINEAR",
         STRIP_ASSUME_TAC THEN1
     RW_TAC int_ss [EXTEND_EQ,lem2,
            prove(``?m. y * b = m * b:int``,Q.EXISTS_TAC `y` THEN REFL_TAC)] THEN
-    Q.EXISTS_TAC `m * y` THEN RW_TAC int_ss [INT_LDISTRIB,INT_MUL_ASSOC]);
+    Q.EXISTS_TAC `m * y` THEN RW_TAC int_ss [INT_LDISTRIB,INT_MUL_ASSOC]
+QED
 
-val EXTEND_LINEAR_IMP = store_thm("EXTEND_LINEAR_IMP",
-    ``!n f x. (?m b. !x. f x = m * x + b) ==>
-         (extend (f (extend x (SUC n))) (SUC n) = extend (f x) (SUC n))``,
-    NTAC 2 (RW_TAC int_ss [EXTEND_LINEAR]));
+Theorem EXTEND_LINEAR_IMP:
+      !n f x. (?m b. !x. f x = m * x + b) ==>
+         (extend (f (extend x (SUC n))) (SUC n) = extend (f x) (SUC n))
+Proof
+    NTAC 2 (RW_TAC int_ss [EXTEND_LINEAR])
+QED
 
 (*****************************************************************************)
 (*    extend (f (extend a (dimindex (:'a)))) (dimindex (:'a))                *)
@@ -708,21 +782,24 @@ end;
 (* Signed integer theorems:                                                  *)
 (*****************************************************************************)
 
-val sw2i_thm = store_thm("sw2i_thm",
-    ``sw2i (x:'a word) = extend (& (w2n x)) (dimindex (:'a))``,
+Theorem sw2i_thm:
+      sw2i (x:'a word) = extend (& (w2n x)) (dimindex (:'a))
+Proof
     RW_TAC int_ss [eindex EXTEND_EQ,sw2i_def,BIT_RWR,SUC_SUB_INDEX,
         INT_SUB_CALCULATE,INT_ADD_CALCULATE,w2n_lt_full] THEN
     RW_TAC int_ss [DIMINDEX_DOUBLE] THENL [
                 Q.EXISTS_TAC `~1`,Q.EXISTS_TAC `0`] THEN
     RW_TAC int_ss [INT_MUL_CALCULATE,GSYM INT_SUB,GSYM DIMINDEX_DOUBLE,
-        w2n_lt_full,INT_SUB_CALCULATE,INT_ADD_CALCULATE]);
+        w2n_lt_full,INT_SUB_CALCULATE,INT_ADD_CALCULATE]
+QED
 
 val sw2i_LIMIT = Q.GEN `a`
     (REWRITE_RULE [GSYM sw2i_thm] (Q.SPEC `& (w2n (a:'a word))`
         (eindex EXTEND_LIMIT)));
 
-val I2N_LT = store_thm("I2N_LT",
-    ``!x b. i2n x b < 2 ** b``,
+Theorem I2N_LT:
+      !x b. i2n x b < 2 ** b
+Proof
     RW_TAC arith_ss [i2n_def] THENL [
         `?c. x = & c` by Q.EXISTS_TAC `Num x`,
         `?c. x = ~ & c` by Q.EXISTS_TAC `Num (~x)`] THEN
@@ -733,7 +810,8 @@ val I2N_LT = store_thm("I2N_LT",
         DECIDE ``a + 1 <= b = a < b:num``] THEN
     FULL_SIMP_TAC int_ss [] THEN `c = 1` by DECIDE_TAC THEN
     RW_TAC int_ss [ARITH_PROVE ``~1 + b = b - 1i``,int_sub_calc1,
-           DECIDE ``1 <= a = 0n < a``]);
+           DECIDE ``1 <= a = 0n < a``]
+QED
 
 (*****************************************************************************)
 (* i2sw_sw2i : |- !x. i2sw (sw2i x) = sw2sw x                                *)
@@ -763,8 +841,9 @@ val mod_add_lem = prove(``0 < a /\ 2 ** (a - 1) <= c /\ c < 2 ** a ==>
 
 val i2sw = SIMP_RULE (int_ss ++ boolSimps.LET_ss) [] i2sw_def;
 
-val i2sw_sw2i = store_thm("i2sw_sw2i",
-    ``!x. i2sw (sw2i x) = sw2sw (x:'a word) : 'b word``,
+Theorem i2sw_sw2i:
+      !x. i2sw (sw2i x) = sw2sw (x:'a word) : 'b word
+Proof
     RW_TAC (int_ss ++ boolSimps.LET_ss) [i2sw,sw2i_def,sw2sw_def,
            SIGN_EXTEND_def,rwr1,INT_ADD,DECIDE ``~(a - 1 < a) = ~(0n < a)``,
            EXTEND_LE_ZERO,I2N_NUM,BIT_MOD,DIMINDEX_GT_0,extend_def,n2w_11,
@@ -785,14 +864,17 @@ val i2sw_sw2i = store_thm("i2sw_sw2i",
                DECIDE ``a + 1n <= b = a < b``]] THEN
         MATCH_MP_TAC mod_add_lem THEN
         FULL_SIMP_TAC arith_ss [DIMINDEX_GT_0,w2n_lt_full,
-               BIT_RWR,SUC_SUB_INDEX]);
+               BIT_RWR,SUC_SUB_INDEX]
+QED
 
-val sw2i_i2sw = store_thm("sw2i_i2sw",
-    ``!x. sw2i ((i2sw x):'a word) = extend x (dimindex (:'a))``,
+Theorem sw2i_i2sw:
+      !x. sw2i ((i2sw x):'a word) = extend x (dimindex (:'a))
+Proof
     RW_TAC (int_ss ++ boolSimps.LET_ss) [i2sw,sw2i_def,sw2sw_def,
            SIGN_EXTEND_def,rwr1,INT_ADD,dimword_def,w2n_lt_full,
            EXTEND_LE_ZERO,I2N_NUM,BIT_MOD,DECIDE ``~(a - 1 < a) = ~(0n < a)``,
-           DIMINDEX_GT_0,extend_def,n2w_11,MOD_MOD,MOD_LESS,w2n_n2w,I2N_LT]);
+           DIMINDEX_GT_0,extend_def,n2w_11,MOD_MOD,MOD_LESS,w2n_n2w,I2N_LT]
+QED
 
 (*****************************************************************************)
 (* sw2i_twocomp : |- !a. sw2i (- a) = extend (~ (sw2i a)) (dimindex (:'a))   *)
@@ -817,27 +899,32 @@ val extend_mod = prove(``!b a. extend (& (a MOD 2 ** SUC b)) (SUC b) =
     RW_TAC int_ss [EXTEND_11,mod_lem] THEN
     Q.EXISTS_TAC `0` THEN ARITH_TAC);
 
-val sw2i_twocomp = store_thm("sw2i_twocomp",
-    ``!a. sw2i (- a:'a word) = extend (~ (sw2i a)) (dimindex (:'a))``,
+Theorem sw2i_twocomp:
+      !a. sw2i (- a:'a word) = extend (~ (sw2i a)) (dimindex (:'a))
+Proof
     REWRITE_TAC [sw2i_thm] THEN
     CONV_TAC (DEPTH_CONV EXTEND_CONV) THEN
     RW_TAC int_ss [mod_lem,eindex EXTEND_11,
                    word_2comp_def,w2n_n2w,dimword_def] THEN
     Q.EXISTS_TAC `1` THEN
     RW_TAC int_ss [INT_ADD_CALCULATE,GSYM NOT_LESS_EQUAL] THEN
-    PROVE_TAC [NOT_LESS_EQUAL,NOT_LESS,LESS_IMP_LESS_OR_EQ,w2n_lt_full]);
+    PROVE_TAC [NOT_LESS_EQUAL,NOT_LESS,LESS_IMP_LESS_OR_EQ,w2n_lt_full]
+QED
 
-val sw2i_add = store_thm("sw2i_add",
-    ``!a b. sw2i (a + (b:'a word)) =
-            extend (sw2i a + sw2i b) (dimindex (:'a))``,
+Theorem sw2i_add:
+      !a b. sw2i (a + (b:'a word)) =
+            extend (sw2i a + sw2i b) (dimindex (:'a))
+Proof
     REWRITE_TAC [sw2i_thm] THEN CONV_TAC (DEPTH_CONV EXTEND_CONV) THEN
     REWRITE_TAC [word_add_def,w2n_n2w,INT_ADD] THEN
     RW_TAC int_ss [eindex EXTEND_11,mod_lem,dimword_def] THEN
-    Q.EXISTS_TAC `0` THEN ARITH_TAC);
+    Q.EXISTS_TAC `0` THEN ARITH_TAC
+QED
 
-val sw2i_sub = store_thm("sw2i_sub",
-    ``!a b. sw2i (a - (b:'a word)) =
-                 extend (sw2i a - sw2i b) (dimindex (:'a))``,
+Theorem sw2i_sub:
+      !a b. sw2i (a - (b:'a word)) =
+                 extend (sw2i a - sw2i b) (dimindex (:'a))
+Proof
     REWRITE_TAC [sw2i_thm] THEN CONV_TAC (DEPTH_CONV EXTEND_CONV) THEN
     RW_TAC int_ss [word_sub_def,word_add_def,word_2comp_def,w2n_n2w,
            dimword_def,eindex EXTEND_11,mod_lem] THEN
@@ -847,16 +934,19 @@ val sw2i_sub = store_thm("sw2i_sub",
            INT_ADD_CALCULATE] THEN
     TRY (MATCH_MP_TAC (DECIDE ``c < b ==> (a + (b - c) = a + b - c:num)``)) THEN
     PROVE_TAC [w2n_lt_full,NOT_LESS_EQUAL,
-               DECIDE ``a < b ==> ~(c + b < a:num)``]);
+               DECIDE ``a < b ==> ~(c + b < a:num)``]
+QED
 
-val sw2i_mul = store_thm("sw2i_mul",
-    ``!a b. sw2i (a * b : 'a word) =
-                 extend (sw2i a * sw2i b) (dimindex (:'a))``,
+Theorem sw2i_mul:
+      !a b. sw2i (a * b : 'a word) =
+                 extend (sw2i a * sw2i b) (dimindex (:'a))
+Proof
     REWRITE_TAC [sw2i_thm,word_mul_def,w2n_n2w,dimword_def] THEN
     CONV_TAC (DEPTH_CONV EXTEND_CONV) THEN
     REWRITE_TAC [word_mul_def,w2n_n2w,dimword_def] THEN
     RW_TAC int_ss [eindex EXTEND_11,mod_lem] THEN
-    Q.EXISTS_TAC `0` THEN ARITH_TAC);
+    Q.EXISTS_TAC `0` THEN ARITH_TAC
+QED
 
 (*****************************************************************************)
 (* IAND_COMM : |- !a b. iand a b = iand b a                                  *)
@@ -894,7 +984,8 @@ val div2_lem = prove(``~ & a / 2 = if EVEN a then ~ & (a DIV 2) else
     REPEAT (RW_TAC int_ss [MOD2_ODD_EVEN,EVEN,int_div,INT_ADD_CALCULATE] THEN
     POP_ASSUM MP_TAC));
 
-val IAND_COMM = store_thm("IAND_COMM",``!a b. iand a b = iand b a``,
+Theorem IAND_COMM:  !a b. iand a b = iand b a
+Proof
     GEN_TAC THEN INT_CASE_TAC `a` THEN
     completeInduct_on `c` THEN ONCE_REWRITE_TAC [iand_def] THEN
     GEN_TAC THEN REPEAT IF_CASES_TAC THEN
@@ -907,16 +998,20 @@ val IAND_COMM = store_thm("IAND_COMM",``!a b. iand a b = iand b a``,
         DECIDE ``0 < b ==> (a + 1 < b = a < b - 1n)``,
         DECIDE ``c < 2 * (c - 1) = 2n < c``] THEN
     CCONTR_TAC THEN `c = 2` by DECIDE_TAC THEN POP_ASSUM SUBST_ALL_TAC THEN
-    FULL_SIMP_TAC int_ss [EVEN]);
+    FULL_SIMP_TAC int_ss [EVEN]
+QED
 
-val IAND_ZERO = store_thm("IAND_ZERO",
-    ``!a. (iand a 0 = 0) /\ (iand 0 a = 0)``,
-    ONCE_REWRITE_TAC [iand_def] THEN RW_TAC int_ss []);
+Theorem IAND_ZERO:
+      !a. (iand a 0 = 0) /\ (iand 0 a = 0)
+Proof
+    ONCE_REWRITE_TAC [iand_def] THEN RW_TAC int_ss []
+QED
 
 fun two_rule x = REWRITE_RULE [DECIDE ``~(0 = 2n)``,DECIDE ``0 < 2n``]
                  (Q.SPEC `2` x);
 
-val IAND_ID = store_thm("IAND_ID",``!a. iand a a = a``,
+Theorem IAND_ID:  !a. iand a a = a
+Proof
     GEN_TAC THEN INT_CASE_TAC `a` THEN completeInduct_on `c` THEN
     ONCE_REWRITE_TAC [iand_def] THEN
     NTAC 2 (RW_TAC bint_ss [DIV_MULT_THM2,INT_ADD_CALCULATE,
@@ -932,7 +1027,8 @@ val IAND_ID = store_thm("IAND_ID",``!a. iand a a = a``,
     DISJ_CASES_TAC (Q.SPEC `c` EVEN_OR_ODD) THEN
     IMP_RES_TAC EVEN_ODD_EXISTS THEN
     FULL_SIMP_TAC int_ss [ADD1,ONCE_REWRITE_RULE [MULT_COMM] MOD_MULT,
-                          ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]);
+                          ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
+QED
 
 (*****************************************************************************)
 (* sw2i_and : |- !a b. sw2i (a && b) = iand (sw2i a) (sw2i b)                *)
@@ -1064,8 +1160,9 @@ val iand_neg2 = prove(``!a b x. a <  2 ** x /\ b < 2 ** x ==>
     IAND_NEG_TAC THEN MATCH_MP_TAC iand_nbit THEN RW_TAC arith_ss [DIV_LT_X]);
 
 
-val sw2i_and = store_thm("sw2i_and",
-    ``!a b. sw2i (a && b) = iand (sw2i a) (sw2i b)``,
+Theorem sw2i_and:
+      !a b. sw2i (a && b) = iand (sw2i a) (sw2i b)
+Proof
     REWRITE_TAC [REWRITE_RULE [n2w_w2n]
           (Q.SPECL [`w2n a`,`w2n b`] word_and_n2w)] THEN
     RW_TAC int_ss [sw2i_def,w2n_n2w,BIT_MOD,BITWISE_THM,DIMINDEX_GT_0,
@@ -1076,13 +1173,15 @@ val sw2i_and = store_thm("sw2i_and",
           REWRITE_RULE [GSYM NOT_LESS_EQUAL,INT_EXP] iand_neg1,
           REWRITE_RULE [GSYM NOT_LESS_EQUAL,INT_EXP] iand_neg2,
           ONCE_REWRITE_RULE [IAND_COMM]
-              (REWRITE_RULE [GSYM NOT_LESS_EQUAL,INT_EXP] iand_neg2)]);
+              (REWRITE_RULE [GSYM NOT_LESS_EQUAL,INT_EXP] iand_neg2)]
+QED
 
 (*****************************************************************************)
 (* sw2i_not : |- !a. sw2i (~a) = inot (sw2i a)                               *)
 (*****************************************************************************)
 
-val sw2i_not = store_thm("sw2i_not",``!a. sw2i (~a) = inot (sw2i a)``,
+Theorem sw2i_not:  !a. sw2i (~a) = inot (sw2i a)
+Proof
     REWRITE_TAC [inot_def,WORD_NOT,sw2i_sub,sw2i_twocomp] THEN
     REWRITE_TAC [sw2i_thm] THEN CONV_TAC (DEPTH_CONV EXTEND_CONV) THEN
     RW_TAC int_ss [eindex EXTEND_EQ,eindex EXTEND_LIMIT,
@@ -1091,7 +1190,8 @@ val sw2i_not = store_thm("sw2i_not",``!a. sw2i (~a) = inot (sw2i a)``,
     RW_TAC int_ss [ARITH_PROVE ``(~(a + 1) = ~b - 1 + m) = (b = a + m)``] THEN
     Cases_on `w2n a < 2 ** (dimindex (:'a) - 1)` THENL
              (map Q.EXISTS_TAC [`0`,`1`]) THEN
-    RW_TAC int_ss [GSYM sw2i_thm,sw2i_def,BIT_RWR,SUC_SUB_INDEX,w2n_lt_full]);
+    RW_TAC int_ss [GSYM sw2i_thm,sw2i_def,BIT_RWR,SUC_SUB_INDEX,w2n_lt_full]
+QED
 
 (*****************************************************************************)
 (* sw2i_div : |- !a b. ~(b = 0w) ==> (sw2i (a / b) =                         *)
@@ -1265,10 +1365,12 @@ val sw2i_div_1 = prove(``!a b. ~(b = 0w) /\ ~(b = UINT_MAXw) ==>
                   UINT_MAX_def,dimword_def] THEN
     METIS_TAC [n2w_w2n]);
 
-val sw2i_word_T = store_thm("sw2i_word_T",``sw2i UINT_MAXw = ~1``,
+Theorem sw2i_word_T:  sw2i UINT_MAXw = ~1
+Proof
     RW_TAC int_ss [word_T_def,UINT_MAX_def,dimword_def,sw2i_def,w2n_n2w,BIT_RWR,
            SUC_SUB_INDEX,INT_SUB_CALCULATE,INT_ADD_CALCULATE] THEN
-    FULL_SIMP_TAC int_ss [DIMINDEX_DOUBLE,DECIDE ``a <= a - 1n = (a = 0n)``]);
+    FULL_SIMP_TAC int_ss [DIMINDEX_DOUBLE,DECIDE ``a <= a - 1n = (a = 0n)``]
+QED
 
 val lem1 = prove(``1 MOD 2 ** dimindex (:'a) = 1``,
     MATCH_MP_TAC LESS_MOD THEN
@@ -1290,15 +1392,17 @@ val sw2i_div_T = prove(``sw2i ((a:'a word) / UINT_MAXw) =
     FULL_SIMP_TAC int_ss [w2n_lt_full,NOT_LESS_EQUAL,
                   DECIDE ``a < b = a <= b /\ ~(a = b:num)``]);
 
-val sw2i_div = store_thm("sw2i_div",
-    ``!a b. ~(b = 0w) ==> (sw2i ((a:'a word) / b) =
-                           extend (sw2i a quot sw2i b) (dimindex (:'a)))``,
+Theorem sw2i_div:
+      !a b. ~(b = 0w) ==> (sw2i ((a:'a word) / b) =
+                           extend (sw2i a quot sw2i b) (dimindex (:'a)))
+Proof
     REPEAT GEN_TAC THEN Cases_on `b = UINT_MAXw` THEN
     RW_TAC int_ss [sw2i_div_1,sw2i_div_T] THEN
     RW_TAC int_ss [eindex EXTEND_EQ,GSYM sw2i_div_1,sw2i_def,BIT_RWR,
            w2n_lt_full,SUC_SUB_INDEX,
            INT_ADD_CALCULATE,INT_SUB_CALCULATE] THEN
-    TRY (Q.EXISTS_TAC `0`) THEN RW_TAC int_ss [DIMINDEX_DOUBLE]);
+    TRY (Q.EXISTS_TAC `0`) THEN RW_TAC int_ss [DIMINDEX_DOUBLE]
+QED
 
 val rwr3 = MATCH_MP LESS_MOD (SPEC_ALL BITWISE_LT_2EXP);
 
@@ -1388,13 +1492,16 @@ val both = prove(``!a b. a / & (2 ** SUC b) = (a / 2) / 2 ** b``,
     GEN_TAC THEN INT_CASE_TAC `a` THEN
     RW_TAC arith_ss [pos,neg]);
 
-val sw2i_asr = store_thm("sw2i_asr",``!b a. sw2i (a >> b) = sw2i a / 2 ** b``,
+Theorem sw2i_asr:  !b a. sw2i (a >> b) = sw2i a / 2 ** b
+Proof
     Induct THEN RW_TAC int_ss [SHIFT_ZERO,both,GSYM sw2i_asr_1] THEN
     REWRITE_TAC [ONCE_REWRITE_RULE [ADD_COMM] ADD1,GSYM ASR_ADD] THEN
-    POP_ASSUM (MP_TAC o Q.SPEC `a >> 1`) THEN RW_TAC int_ss []);
+    POP_ASSUM (MP_TAC o Q.SPEC `a >> 1`) THEN RW_TAC int_ss []
+QED
 
-val sw2i_lsl = store_thm("sw2i_lsl",
-    ``sw2i ((a:'a word) << b) = extend (sw2i a * 2 ** b) (dimindex (:'a))``,
+Theorem sw2i_lsl:
+      sw2i ((a:'a word) << b) = extend (sw2i a * 2 ** b) (dimindex (:'a))
+Proof
     RW_TAC int_ss [REWRITE_RULE [n2w_w2n] (Q.SPECL [`n`,`w2n m`] word_lsl_n2w),
            sw2i_thm,word_0_n2w,
            EXTEND_ZERO,w2n_n2w] THEN
@@ -1405,12 +1512,15 @@ val sw2i_lsl = store_thm("sw2i_lsl",
         Q.EXISTS_TAC `0`,Q.EXISTS_TAC `0`] THEN
     IMP_RES_TAC LESS_EQUAL_ADD THEN
     RW_TAC int_ss [EXP_ADD,INT_MUL_CALCULATE,INT_ADD_CALCULATE,
-           INT_SUB_CALCULATE]);
+           INT_SUB_CALCULATE]
+QED
 
-val sw2i_msb = store_thm("sw2i_msb",
-    ``word_msb a = sw2i a < 0``,
+Theorem sw2i_msb:
+      word_msb a = sw2i a < 0
+Proof
     RW_TAC int_ss [num_msb,sw2i_def,BIT_RWR,INT_SUB_CALCULATE,
-           INT_ADD_CALCULATE,w2n_lt_full]);
+           INT_ADD_CALCULATE,w2n_lt_full]
+QED
 
 (*****************************************************************************)
 (* sw2i_bit : |- !a b. b < dimindex (:'a) ==> (a ' b = ibit b (sw2i a))      *)
@@ -1432,13 +1542,15 @@ val lem3 = prove(``b < dimindex (:'a) ==>
                      (Q.SPEC `w2n a` word_index_n2w)] THEN
     RW_TAC int_ss [BIT_RWR]);
 
-val sw2i_bit = store_thm("sw2i_bit",
-    ``!a b. b < dimindex (:'a) ==> (a ' b = ibit b (sw2i (a:'a word)))``,
+Theorem sw2i_bit:
+      !a b. b < dimindex (:'a) ==> (a ' b = ibit b (sw2i (a:'a word)))
+Proof
     ONCE_REWRITE_TAC [SIMP_RULE arith_ss [n2w_w2n]
          (Q.SPEC `w2n a` word_index_n2w)] THEN
     RW_TAC int_ss [BIT_RWR,ibit_def,REWRITE_RULE [INT_EXP] (GSYM sw2i_asr)] THEN
     RW_TAC int_ss [sw2i_def,BIT_RWR,SUC_SUB_INDEX,w2n_lt_full,INT_SUB_CALCULATE,
-           INT_ADD_CALCULATE,INT_ABS_NEG,INT_ABS_NUM,ODD_SUB,ODD_TWOEXP,lem3]);
+           INT_ADD_CALCULATE,INT_ABS_NEG,INT_ABS_NUM,ODD_SUB,ODD_TWOEXP,lem3]
+QED
 
 
 (*****************************************************************************)
@@ -1448,19 +1560,25 @@ val sw2i_bit = store_thm("sw2i_bit",
 (*                                                                           *)
 (*****************************************************************************)
 
-val sw2i_eq = store_thm("sw2i_eq",``!a b. (a = b) = (sw2i a = sw2i b)``,
+Theorem sw2i_eq:  !a b. (a = b) = (sw2i a = sw2i b)
+Proof
     RW_TAC int_ss [sw2i_def,INT_SUB_CALCULATE,INT_ADD_CALCULATE,BIT_RWR,
            SUC_SUB_INDEX,w2n_lt_full,w2n_11,
            DECIDE ``b < a /\ c < a ==> ((a - b = a - c) = (b = c:num))``] THEN
-    METIS_TAC []);
+    METIS_TAC []
+QED
 
-val sw2i_lt = store_thm("sw2i_lt",``!a b. a < b = sw2i a < sw2i b``,
+Theorem sw2i_lt:  !a b. a < b = sw2i a < sw2i b
+Proof
     RW_TAC int_ss [WORD_LT,sw2i_def,num_msb,INT_SUB_CALCULATE,
            INT_ADD_CALCULATE,w2n_lt_full,DECIDE ``0n < a - b = b < a``,
-           DECIDE ``b < a /\ c < a ==> (a < b + (a - c) = c < b:num)``]);
+           DECIDE ``b < a /\ c < a ==> (a < b + (a - c) = c < b:num)``]
+QED
 
-val sw2i_le = store_thm("sw2i_le",``!a b. a <= b = sw2i a <= sw2i b``,
-    RW_TAC int_ss [WORD_LESS_OR_EQ,sw2i_lt,INT_LE_LT,sw2i_eq]);
+Theorem sw2i_le:  !a b. a <= b = sw2i a <= sw2i b
+Proof
+    RW_TAC int_ss [WORD_LESS_OR_EQ,sw2i_lt,INT_LE_LT,sw2i_eq]
+QED
 
 (*****************************************************************************)
 (* sw2i_n2w : |- !a. sw2i (n2w a : 'a word) = extend (& a) (dimindex (:'a))  *)
@@ -1472,13 +1590,15 @@ val mod_lem = prove(``!a b. 0 < b ==> (a MOD b = a - a DIV b * b)``,
     FIRST_ASSUM (CONV_TAC o RAND_CONV o LAND_CONV o REWR_CONV) THEN
     RW_TAC int_ss []);
 
-val sw2i_n2w = store_thm("sw2i_n2w",
-    ``!a. sw2i (n2w a : 'a word) = extend (& a) (dimindex (:'a))``,
+Theorem sw2i_n2w:
+      !a. sw2i (n2w a : 'a word) = extend (& a) (dimindex (:'a))
+Proof
     RW_TAC int_ss [sw2i_thm,w2n_n2w,dimword_def,mod_lem,
            eindex EXTEND_11] THEN
     Q.EXISTS_TAC `~ & (a DIV 2 ** dimindex (:'a))` THEN
     RW_TAC int_ss [INT_ADD_CALCULATE,INT_MUL_CALCULATE] THEN
-    METIS_TAC [ZERO_LT_TWOEXP,X_LE_DIV,LESS_EQ_REFL]);
+    METIS_TAC [ZERO_LT_TWOEXP,X_LE_DIV,LESS_EQ_REFL]
+QED
 
 (*****************************************************************************)
 (* Theorems relating word definitions to definitions using operators         *)
@@ -1489,17 +1609,22 @@ val sw2i_n2w = store_thm("sw2i_n2w",
 (* WORD_BITS_THM : |- !h l a. (h -- l) a =                                   *)
 (*                                   a >>> l && n2w (2 ** (h + 1 - l) - 1)   *)
 (*****************************************************************************)
-val BIT_SHIFT_THM4 = store_thm("BIT_SHIFT_THM4",
-    ``BIT i (a * 2 ** b) = BIT (i - b) a /\ b <= i``,
-    METIS_TAC [BIT_SHIFT_THM3,NOT_LESS_EQUAL,BIT_SHIFT_THM2]);
+Theorem BIT_SHIFT_THM4:
+      BIT i (a * 2 ** b) = BIT (i - b) a /\ b <= i
+Proof
+    METIS_TAC [BIT_SHIFT_THM3,NOT_LESS_EQUAL,BIT_SHIFT_THM2]
+QED
 
-val TOP_BIT_THM = store_thm("TOP_BIT_THM",``!a b. BIT a (2 ** b - 1) = a < b``,
+Theorem TOP_BIT_THM:  !a b. BIT a (2 ** b - 1) = a < b
+Proof
     Induct_on `a` THEN Cases THEN
     RW_TAC int_ss [BIT_ZERO_ODD,ODD_SUB,ODD_TWOEXP,EXP,
-           DECIDE ``1 < 2 * n = 0n < n``,BIT_ZERO,BIT_DIV,DIV2_MULT_SUB1]);
+           DECIDE ``1 < 2 * n = 0n < n``,BIT_ZERO,BIT_DIV,DIV2_MULT_SUB1]
+QED
 
-val BIT_RANGE = store_thm("BIT_RANGE",
-    ``!h l i. BIT i (2 ** h - 2 ** l) = l <= i /\ i < h``,
+Theorem BIT_RANGE:
+      !h l i. BIT i (2 ** h - 2 ** l) = l <= i /\ i < h
+Proof
     REPEAT GEN_TAC THEN Cases_on `l < h` THEN
     FULL_SIMP_TAC int_ss [NOT_LESS] THEN
     MAP_EVERY IMP_RES_TAC [LESS_ADD_1,LESS_EQUAL_ADD] THEN
@@ -1507,23 +1632,28 @@ val BIT_RANGE = store_thm("BIT_RANGE",
            DECIDE ``0 < a ==> (1 - a = 0n)``::
            map (GSYM o REWRITE_RULE [MULT_CLAUSES])
                [Q.SPECL [`p`,`1`,`l`] LEFT_SUB_DISTRIB,
-                Q.SPECL [`1`,`p`,`l`] LEFT_SUB_DISTRIB]));
+                Q.SPECL [`1`,`p`,`l`] LEFT_SUB_DISTRIB])
+QED
 
-val WORD_BITS_THM = store_thm("WORD_BITS_THM",
-    ``(h -- l) a = a >>> l && n2w (2 ** (h + 1 - l) - 1)``,
+Theorem WORD_BITS_THM:
+      (h -- l) a = a >>> l && n2w (2 ** (h + 1 - l) - 1)
+Proof
     RW_TAC int_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_bits_def,
            word_and_def,word_lsr_def,
            PROVE [word_index_n2w] ``i < dimindex (:'a) ==>
                  ((n2w n :'a word) ' i = BIT i n)``,word_asr_def,
            BIT_RANGE,TOP_BIT_THM] THEN EQ_TAC THEN
-    RW_TAC int_ss [DECIDE ``i < a + 1 - b = i + b <= a:num``]);
+    RW_TAC int_ss [DECIDE ``i < a + 1 - b = i + b <= a:num``]
+QED
 
-val WORD_SLICE_THM = store_thm("WORD_SLICE_THM",
-    ``(h '' l) a = a && n2w (2 ** SUC h - 2 ** l)``,
+Theorem WORD_SLICE_THM:
+      (h '' l) a = a && n2w (2 ** SUC h - 2 ** l)
+Proof
     RW_TAC int_ss [fcpTheory.CART_EQ,fcpTheory.FCP_BETA,word_bits_def,
            word_and_def,word_lsr_def,
            PROVE [word_index_n2w]
              ``i < dimindex (:'a) ==> ((n2w n :'a word) ' i = BIT i n)``,
             word_asr_def, BIT_RANGE,TOP_BIT_THM,word_slice_def] THEN
-    EQ_TAC THEN RW_TAC int_ss []);
+    EQ_TAC THEN RW_TAC int_ss []
+QED
 

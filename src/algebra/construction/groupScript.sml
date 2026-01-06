@@ -251,19 +251,17 @@ val group_clauses = Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> GEN_ALL;
 
 (* Theorem: A Group is a Monoid. *)
 (* Proof: by definition. *)
-Theorem group_is_monoid =
+Theorem group_is_monoid[simp] =
   Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val group_is_monoid = |- !g. Group g ==> Monoid g : thm *)
 
-val _ = export_rewrites ["group_is_monoid"];
 
 (* Theorem: Group Invertibles is the whole carrier set. *)
 (* Proof: by definition. *)
-Theorem group_all_invertible =
+Theorem group_all_invertible[simp] =
   Group_def |> SPEC_ALL |> #1 o EQ_IMP_RULE |> UNDISCH |> CONJUNCT2 |> DISCH_ALL |> GEN_ALL;
 (* > val group_all_invertible = |- !g. Group g ==> (G* = G) : thm *)
 
-val _ = export_rewrites ["group_all_invertible"];
 
 (* ------------------------------------------------------------------------ *)
 (* Simple Theorems                                                          *)
@@ -492,13 +490,10 @@ Theorem group_linv[simp] =
 
 (* Theorem: [Group right inverse] x * |/ x = #e *)
 (* Proof: by Group_def and monoid_inv_def. *)
-Theorem group_rinv =
+Theorem group_rinv[simp] =
   monoid_inv_def |> SPEC_ALL |> REWRITE_RULE [gim, ginv] |> SPEC_ALL |> UNDISCH_ALL
                  |> CONJUNCT2 |> CONJUNCT1 |> DISCH ``x IN G`` |> GEN ``x`` |> DISCH ``Group g`` |> GEN_ALL;
 (* > val group_rinv = |- !g. Group g ==> !x. x IN G ==> (x * |/ x = #e) : thm *)
-
-(* Maybe good to export ? *)
-val _ = export_rewrites ["group_inv_element", "group_linv", "group_rinv"];
 
 (* Theorem: [Group inverses] x * |/ x = #e /\ |/x * x = #e *)
 Theorem group_inv_thm =
@@ -719,13 +714,12 @@ QED
        x * |/x = #e      by group_rinv
    <=> x = |/x ( |/x)    by group_linv_unique
 *)
-Theorem group_inv_inv:
+Theorem group_inv_inv[simp]:
     !g:'a group. Group g ==> !x. x IN G ==> ( |/( |/x) = x)
 Proof
   metis_tac[group_rinv, group_linv_unique, group_inv_element]
 QED
 
-val _ = export_rewrites ["group_inv_inv"];
 
 (* Theorem: [Inverse equal] |/x = |/y <=> x = y *)
 (* Proof:
@@ -735,13 +729,12 @@ val _ = export_rewrites ["group_inv_inv"];
    ==> |/( |/x) = |/( |/y)
    ==>        x = y         by group_inv_inv
 *)
-Theorem group_inv_eq:
+Theorem group_inv_eq[simp]:
     !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/x = |/y) = (x = y))
 Proof
   metis_tac[group_inv_inv]
 QED
 
-val _ = export_rewrites ["group_inv_eq"];
 
 (* Theorem: [Inverse equality swap]: |/x = y <=> x = |/y *)
 (* Proof:
@@ -749,26 +742,24 @@ val _ = export_rewrites ["group_inv_eq"];
    <=> |/( |/x) = |/y
    <=>        x = |/y    by group_inv_inv
 *)
-Theorem group_inv_eq_swap:
+Theorem group_inv_eq_swap[simp]:
     !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> (( |/x = y) = (x = |/y))
 Proof
   metis_tac[group_inv_inv]
 QED
 
-val _ = export_rewrites ["group_inv_eq_swap"];
 
 (* Theorem: [Inverse of identity] |/#e = #e *)
 (* Proof:
        #e * #e = #e    by group_id_id
    <=>      #e = |/#e  by group_linv_unique
 *)
-Theorem group_inv_id:
+Theorem group_inv_id[simp]:
     !g:'a group. Group g ==> ( |/ #e = #e)
 Proof
   metis_tac[group_lid, group_linv_unique, group_id_element]
 QED
 
-val _ = export_rewrites ["group_inv_id"];
 
 (* Theorem: [Inverse equal identity] |/x = #e <=> x = #e *)
 (* Proof:
@@ -1172,13 +1163,12 @@ QED
 
 (* Theorem: (g excluding z).op = g.op *)
 (* Proof: by definition. *)
-Theorem group_excluding_op:
+Theorem group_excluding_op[simp]:
     !g:'a group. !z:'a. (g excluding z).op = g.op
 Proof
   rw_tac std_ss[excluding_def]
 QED
 
-val _ = export_rewrites ["group_excluding_op"];
 val _ = computeLib.add_persistent_funs ["group_excluding_op"];
 
 (* Theorem: (g excluding z).exp x n = x ** n *)
@@ -3127,8 +3117,6 @@ Definition coset_def:
   coset (g:'a group) a X = IMAGE (\z. a * z) X
 End
 
-(* val _ = export_rewrites ["coset_def"]; *)
-
 (* Define left coset of subgroup with an element a. *)
 Definition left_coset_def:
   left_coset (g:'a group) X a = coset g a X
@@ -4415,7 +4403,7 @@ QED
 (* Group element division.                                                   *)
 (* ------------------------------------------------------------------------- *)
 (* Define group division *)
-Definition group_div_def:
+Definition group_div_def[simp]:
   group_div (g:'a group) (x:'a) (y:'a)  = x * |/ y
 End
 
@@ -4423,35 +4411,30 @@ End
 Overload "/" = ``group_div g``
 val _ = set_fixity "/" (Infixl 600); (* same as "*" in arithmeticScript.sml *)
 
-(* export simple defintion *)
-val _ = export_rewrites ["group_div_def"];
-
 (* Theorem: x / y IN G *)
 (* Proof:
    x / y = x * |/y  by group_div_def
    and |/y IN G     by group_inv_element
    hence true       by group_op_element
 *)
-Theorem group_div_element:
+Theorem group_div_element[simp]:
     !g:'a group. Group g ==> !x y. x IN G /\ y IN G ==> x / y IN G
 Proof
   rw[group_div_def]
 QED
 
-val _ = export_rewrites ["group_div_element"];
 
 (* Theorem: x / x = #e *)
 (* Proof:
    x / x = x * |/x   by group_div_def
          = #e        by group_rinv
 *)
-Theorem group_div_cancel:
+Theorem group_div_cancel[simp]:
     !g:'a group. Group g ==> !x. x IN G ==> (x / x = #e)
 Proof
   rw[group_div_def]
 QED
 
-val _ = export_rewrites ["group_div_cancel"];
 
 (* Theorem: (x1 * y1) / (x2 * y2) = x1 * (y1 / y2) / x1 * (x1 / x2) *)
 (* Proof:
@@ -5190,15 +5173,13 @@ End
 
 (* Theorem: !x. x IN kernel f g h <=> x IN G /\ f x = h.id *)
 (* Proof: by definition. *)
-Theorem kernel_property:
+Theorem kernel_property[simp]:
     !(g:'a group) (h:'b group). !f x. x IN kernel f g h <=> x IN G /\ (f x = h.id)
 Proof
   simp_tac std_ss [kernel_def, preimage_def] >>
   rw[]
 QED
 
-(* export trivial truth. *)
-val _ = export_rewrites ["kernel_property"];
 
 (* Theorem alias *)
 Theorem kernel_element = kernel_property;
@@ -9170,7 +9151,7 @@ We define Zadd_eval and Zadd_inv below, and put them into computeLib.
 
 (* Theorem: Evaluation of Zadd for each record field. *)
 (* Proof: by Zadd_def. *)
-Theorem Zadd_eval:
+Theorem Zadd_eval[simp]:
     !n. ((Z n).carrier = count n) /\
        (!x y. (Z n).op x y = (x + y) MOD n) /\
        ((Z n).id = 0)
@@ -9309,7 +9290,7 @@ QED
 
 (* Theorem: (Z n).inv x = (n - x) MOD n *)
 (* Proof: by MOD_ADD_INV and group_linv_unique. *)
-Theorem Zadd_inv:
+Theorem Zadd_inv[simp]:
     !n x. 0 < n /\ x < n ==> ((Z n).inv x = (n - x) MOD n)
 Proof
   rpt strip_tac >>
@@ -9318,10 +9299,6 @@ Proof
   metis_tac[Zadd_group, group_linv_unique, Zadd_property]
 QED
 
-(* Due to zDefine before, now export the Define to computeLib. *)
-
-(* export simple result *)
-val _ = export_rewrites ["Zadd_eval", "Zadd_inv"];
 (*
 - SIMP_CONV (srw_ss()) [] ``(Z 5).op 3 4``;
 > val it = |- (Z 5).op 3 4 = 2 : thm
@@ -9386,7 +9363,7 @@ Overload "Z*"[local] = ``Zstar``
 
 (* Theorem: Evaluation of Zstar for each record field. *)
 (* Proof: by Zstar_def. *)
-Theorem Zstar_eval:
+Theorem Zstar_eval[simp]:
     !p. ((Z* p).carrier = residue p) /\
        (!x y. (Z* p).op x y = (x * y) MOD p) /\
        ((Z* p).id = 1)
@@ -9542,7 +9519,7 @@ QED
 
 (* Theorem: (Z* p).inv x = x ** (order (Z* p) x - 1) *)
 (* Proof: by group_order_property and group_rinv_unique. *)
-Theorem Zstar_inv:
+Theorem Zstar_inv[simp]:
     !p. prime p ==> !x. 0 < x /\ x < p ==> ((Z* p).inv x = (Z* p).exp x (order (Z* p) x - 1))
 Proof
   rpt strip_tac >>
@@ -9581,9 +9558,6 @@ val _ = computeLib.set_skip (computeLib.the_compset) ``combin$FAIL`` (SOME 0);
 - EVAL ``prime 5``;
 > val it = |- prime 5 <=> prime 5 : thm
 *)
-
-(* Export these for SIMP_CONV *)
-val _ = export_rewrites ["Zstar_eval", "Zstar_inv"];
 
 (*
 - SIMP_CONV (srw_ss()) [] ``(Z* 5).op 3 2``;
@@ -10248,7 +10222,7 @@ End
 
 (* Theorem: add_mod evaluation. *)
 (* Proof: by add_mod_def. *)
-Theorem add_mod_eval:
+Theorem add_mod_eval[simp]:
     !n. ((add_mod n).carrier = {i | i < n}) /\
        (!x y. (add_mod n).op x y = (x + y) MOD n) /\
        ((add_mod n).id = 0)
@@ -10410,7 +10384,7 @@ QED
 
 (* Theorem: (add_mod n).inv x = (n - x) MOD n *)
 (* Proof: by MOD_ADD_INV and group_linv_unique. *)
-Theorem add_mod_inv:
+Theorem add_mod_inv[simp]:
     !n x. 0 < n /\ x < n ==> ((add_mod n).inv x = (n - x) MOD n)
 Proof
   rpt strip_tac >>
@@ -10440,7 +10414,6 @@ val _ = computeLib.add_persistent_funs ["add_mod_inv_compute"];
 > val it = |- (add_mod 5).inv 7 = FAIL ((add_mod 5).inv 7) bad_element : thm
 *)
 
-val _ = export_rewrites ["add_mod_eval", "add_mod_inv"];
 (*
 - SIMP_CONV (srw_ss()) [] ``(add_mod 5).op 3 4``;
 > val it = |- (add_mod 5).op 3 4 = 2 : thm
@@ -10643,7 +10616,7 @@ QED
 
 (* Theorem: due to zDefine before, now export the Define to computeLib. *)
 (* Proof: by mult_mod_def. *)
-Theorem mult_mod_eval:
+Theorem mult_mod_eval[simp]:
     !p. ((mult_mod p).carrier = { i | i <> 0 /\ i < p }) /\
        (!x y. (mult_mod p).op x y = (x * y) MOD p) /\
        ((mult_mod p).id = 1)
@@ -10667,7 +10640,7 @@ QED
 
 (* Theorem: (mult_mod p).inv x = x ** (order (mult_mod p) x - 1) *)
 (* Proof: by group_order_property and group_rinv_unique. *)
-Theorem mult_mod_inv:
+Theorem mult_mod_inv[simp]:
     !p. prime p ==> !x. 0 < x /\ x < p ==> ((mult_mod p).inv x = (mult_mod p).exp x (order (mult_mod p) x - 1))
 Proof
   rpt strip_tac >>
@@ -10712,9 +10685,6 @@ val _ = computeLib.add_persistent_funs ["mult_mod_inv_compute"];
 - EVAL ``(Z* 5).inv 2``;
 > val it = |- (mult_mod 5).inv 2 = 3 : thm
 *)
-
-(* Export these for SIMP_CONV *)
-val _ = export_rewrites ["mult_mod_eval", "mult_mod_inv"];
 
 (*
 - SIMP_CONV (srw_ss()) [] ``(mult_mod 5).id``;
@@ -10796,7 +10766,7 @@ val it = |- symdiff_set.op {1; 2; 3; 4} {1; 4; 5; 6} = {2; 3; 5; 6}: thm
 
 (* Theorem: symdiff_set is a Group. *)
 (* Proof: check definitions. *)
-Theorem symdiff_set_group:
+Theorem symdiff_set_group[simp]:
     Group symdiff_set
 Proof
   rw[group_def_alt, symdiff_set_def] >| [
@@ -10806,11 +10776,10 @@ Proof
   ]
 QED
 
-val _ = export_rewrites ["symdiff_set_group"];
 
 (* Theorem: symdiff_set is an abelian Group. *)
 (* Proof: check definitions. *)
-Theorem symdiff_set_abelian_group:
+Theorem symdiff_set_abelian_group[simp]:
     AbelianGroup symdiff_set
 Proof
   rw[AbelianGroup_def, symdiff_set_def] >>
@@ -10818,7 +10787,6 @@ Proof
   metis_tac[]
 QED
 
-val _ = export_rewrites ["symdiff_set_abelian_group"];
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclic Group Documentation                                                *)
@@ -10974,14 +10942,12 @@ val cyclic_gen_def = new_specification(
 
 (* Theorem: cyclic g ==> Group g *)
 (* Proof: by cyclic_def *)
-Theorem cyclic_group:
+Theorem cyclic_group[simp]:
     !g:'a group. cyclic g ==> Group g
 Proof
   rw[cyclic_def]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["cyclic_group"];
 
 (* Theorem: cyclic g ==> !x. x IN G ==> ?n. x = (cyclic_gen g) ** n *)
 (* Proof: by cyclic_gen_def. *)

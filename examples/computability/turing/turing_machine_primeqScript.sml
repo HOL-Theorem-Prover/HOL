@@ -3,7 +3,7 @@ Ancestors
   finite_map recursivefns prnlist primrecfns list arithmetic
   numpair nlist pred_set turing_machine While logroot
 
-Triviality DISJ_IMP_EQ[simp]:
+Theorem DISJ_IMP_EQ[local,simp]:
   ((x = y) ∨ P ⇔ (x ≠ y ⇒ P)) ∧
   (P ∨ (x = y) ⇔ (x ≠ y ⇒ P)) ∧
   (x ≠ y ∨ P ⇔ ((x = y) ⇒ P)) ∧
@@ -177,19 +177,19 @@ Definition pr3_def:  (pr3 f [] = f 0 0 0 : num) ∧
   (pr3 f (x::y::z::t) = f x y z)
 End
 
-Triviality GENLIST1:
+Theorem GENLIST1[local]:
   GENLIST f 1 = [f 0]
 Proof
   SIMP_TAC bool_ss [ONE, GENLIST, SNOC]
 QED
 
-Triviality GENLIST2:
+Theorem GENLIST2[local]:
   GENLIST f 2 = [f 0; f 1]
 Proof
   SIMP_TAC bool_ss [TWO, ONE, GENLIST, SNOC]
 QED
 
-Triviality GENLIST3:
+Theorem GENLIST3[local]:
   GENLIST f 3 = [f 0; f 1; f 2]
 Proof
   EVAL_TAC
@@ -289,7 +289,7 @@ Overload "threef" = ``K 3 : num list -> num``
 
 Overload "fourf" = ``K 4 : num list -> num``
 
-Triviality nB_cond_elim:
+Theorem nB_cond_elim[local]:
   nB p * x + nB (~p) * y = if p then x else y
 Proof
   Cases_on `p` >> simp[]
@@ -399,9 +399,9 @@ Proof
      )
 QED
 
-Triviality primrec_cn = List.nth(CONJUNCTS primrec_rules, 3)
+Theorem primrec_cn[local] = List.nth(CONJUNCTS primrec_rules, 3)
 
-Triviality primrec_pr = List.nth(CONJUNCTS primrec_rules, 4)
+Theorem primrec_pr[local] = List.nth(CONJUNCTS primrec_rules, 4)
 
 Theorem primrec_mult2:
   primrec (pr1 MULT2) 1
@@ -464,7 +464,7 @@ SRW_TAC [][pr_pr_up_case6_def] >>
         rpt ( MATCH_MP_TAC primrec_cn >> SRW_TAC [][primrec_rules]) >> rw[primrec_mult2,primrec_div2]
 QED
 
-Triviality primrec_proj = List.nth(CONJUNCTS primrec_rules, 2)
+Theorem primrec_proj[local] = List.nth(CONJUNCTS primrec_rules, 2)
 
 Theorem primrec_pr_case7:
   primrec pr_pr_up_case7 6
@@ -599,7 +599,7 @@ Proof
 fs[ACT_TO_NUM_LESS_4,UPDATE_TM_NUM_thm]
 QED
 
-Triviality lemma_11 =
+Theorem lemma_11[local] =
     UPDATE_TM_ARB_Q |> Q.INST[`q` |-> `tm.prog` ]
                     |> SIMP_RULE(srw_ss())[tm_with_prog]
 
@@ -724,7 +724,7 @@ Proof
       metis_tac[nfst_npair,nsnd_npair,npair2_lt,CELL_NUM_def])
 QED
 
-Triviality FULL_ENCODE_IGNORES_PROGS' =
+Theorem FULL_ENCODE_IGNORES_PROGS'[local] =
     FULL_ENCODE_IGNORES_PROGS |> SYM  |> Q.INST[`p`|->`ARB` ]
 
 Theorem tmstepf_update_equiv:
@@ -1145,7 +1145,7 @@ Proof
  >- (strip_tac >> fs[nleng_def]  )
 QED
 
-Triviality Pr_eval:
+Theorem Pr_eval[local]:
   0 < m ==> (Pr b r (m :: t) = r (m - 1 :: Pr b r (m - 1 :: t) :: t))
 Proof
 STRIP_TAC THEN SIMP_TAC (srw_ss()) [Once Pr_def, SimpLHS] THEN

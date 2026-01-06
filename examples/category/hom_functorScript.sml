@@ -16,24 +16,27 @@ Definition homs_def:
   homs c = let ob = c.obj in {(c|x→y|)| x ∈ ob ∧ y ∈ ob}
 End
 
-val dom_homs_subset_homs = Q.store_thm(
-"dom_homs_subset_homs",
-`∀c x. x ∈ c.obj ⇒ dom_homs c x ⊆ homs c`,
+Theorem dom_homs_subset_homs:
+ ∀c x. x ∈ c.obj ⇒ dom_homs c x ⊆ homs c
+Proof
 srw_tac [][dom_homs_def,homs_def,SUBSET_DEF] >>
-srw_tac [][] >> metis_tac []);
+srw_tac [][] >> metis_tac []
+QED
 val _ = export_rewrites["dom_homs_subset_homs"];
 
-val hom_in_dom_homs = Q.store_thm(
-"hom_in_dom_homs",
-`∀c x y. y ∈ c.obj ⇒ (c|x→y|) ∈ dom_homs c x`,
-srw_tac [][dom_homs_def] >> metis_tac []);
+Theorem hom_in_dom_homs:
+ ∀c x y. y ∈ c.obj ⇒ (c|x→y|) ∈ dom_homs c x
+Proof
+srw_tac [][dom_homs_def] >> metis_tac []
+QED
 val _ = export_rewrites["hom_in_dom_homs"];
 
-val hom_in_homs = Q.store_thm(
-"hom_in_homs",
-`∀c x y. x ∈ c.obj ∧ y ∈ c.obj ⇒ (c|x→y|) ∈ homs c`,
+Theorem hom_in_homs:
+ ∀c x y. x ∈ c.obj ∧ y ∈ c.obj ⇒ (c|x→y|) ∈ homs c
+Proof
 srw_tac [][homs_def] >>
-srw_tac [][] >> metis_tac []);
+srw_tac [][] >> metis_tac []
+QED
 val _ = export_rewrites["hom_in_homs"];
 
 Definition pre_hom_functor_def:
@@ -43,36 +46,40 @@ Definition pre_hom_functor_def:
   |>
 End
 
-val pre_hom_functor_dom = Q.store_thm(
-"pre_hom_functor_dom",
-`∀c x. (pre_hom_functor c x).dom = c`,
-srw_tac [][pre_hom_functor_def]);
+Theorem pre_hom_functor_dom:
+ ∀c x. (pre_hom_functor c x).dom = c
+Proof
+srw_tac [][pre_hom_functor_def]
+QED
 
-val pre_hom_functor_cod = Q.store_thm(
-"pre_hom_functor_cod",
-`∀c x. (pre_hom_functor c x).cod = ens_cat (dom_homs c x)`,
-srw_tac [][pre_hom_functor_def]);
+Theorem pre_hom_functor_cod:
+ ∀c x. (pre_hom_functor c x).cod = ens_cat (dom_homs c x)
+Proof
+srw_tac [][pre_hom_functor_def]
+QED
 
 val _ = export_rewrites["pre_hom_functor_cod","pre_hom_functor_dom"];
 
-val pre_hom_functor_morf_dom_cod = Q.store_thm(
-"pre_hom_functor_morf_dom_cod",
-`∀c x f. (((pre_hom_functor c x)##f).dom = c|x→f.dom|) ∧
-         (((pre_hom_functor c x)##f).cod = c|x→f.cod|)`,
-srw_tac [][pre_hom_functor_def,morf_def,TypedGraphFun_def]);
+Theorem pre_hom_functor_morf_dom_cod:
+ ∀c x f. (((pre_hom_functor c x)##f).dom = c|x→f.dom|) ∧
+         (((pre_hom_functor c x)##f).cod = c|x→f.cod|)
+Proof
+srw_tac [][pre_hom_functor_def,morf_def,TypedGraphFun_def]
+QED
 val _ = export_rewrites ["pre_hom_functor_morf_dom_cod"];
 
-val pre_hom_functor_morf = Q.store_thm(
-"pre_hom_functor_morf",
-`∀c x f. (pre_hom_functor c x)##f =
-  TypedGraphFun ((c|x→f.dom|), c|x→f.cod|) (λg. f o g -:c)`,
-srw_tac [][pre_hom_functor_def,morf_def]);
+Theorem pre_hom_functor_morf:
+ ∀c x f. (pre_hom_functor c x)##f =
+  TypedGraphFun ((c|x→f.dom|), c|x→f.cod|) (λg. f o g -:c)
+Proof
+srw_tac [][pre_hom_functor_def,morf_def]
+QED
 val _ = export_rewrites["pre_hom_functor_morf"];
 
-val pre_hom_functor_objf = Q.store_thm(
-"pre_hom_functor_objf",
-`∀c x y. is_category c ∧ x ∈ c.obj ∧ y ∈ c.obj
-  ⇒ ((pre_hom_functor c x)@@y = c|x→y|)`,
+Theorem pre_hom_functor_objf:
+ ∀c x y. is_category c ∧ x ∈ c.obj ∧ y ∈ c.obj
+  ⇒ ((pre_hom_functor c x)@@y = c|x→y|)
+Proof
 srw_tac [][objf_def,pre_hom_functor_def] >>
 imp_res_tac id_dom_cod >>
 SELECT_ELIM_TAC >>
@@ -82,7 +89,8 @@ srw_tac [][] >- (
   srw_tac [][restrict_def,FUN_EQ_THM] >> srw_tac [][] >>
   fsrw_tac [][hom_def,maps_to_in_def] ) >>
 pop_assum mp_tac >>
-fsrw_tac [][TypedGraphFun_def]);
+fsrw_tac [][TypedGraphFun_def]
+QED
 val _ = export_rewrites ["pre_hom_functor_objf"];
 
 val _ = add_rule{
@@ -97,9 +105,9 @@ Definition hom_functor_def:
            mk_functor (pre_hom_functor c x)
 End
 
-val functor_axioms_pre_hom_functor = Q.store_thm(
-"functor_axioms_pre_hom_functor",
-`∀c x. is_category c ∧ x ∈ c.obj ⇒ functor_axioms (pre_hom_functor c x)`,
+Theorem functor_axioms_pre_hom_functor:
+ ∀c x. is_category c ∧ x ∈ c.obj ⇒ functor_axioms (pre_hom_functor c x)
+Proof
 srw_tac [][functor_axioms_def]
 >- (
   match_mp_tac hom_in_dom_homs >>
@@ -146,30 +154,33 @@ srw_tac [][] >- (
 qsuff_tac `F` >- srw_tac [][] >>
 qpat_x_assum `X ∉ Y` mp_tac >> srw_tac [][] >>
 fsrw_tac [][hom_def,comp_mor_dom_cod] >>
-pop_assum mp_tac >> srw_tac [][comp_mor_dom_cod]);
+pop_assum mp_tac >> srw_tac [][comp_mor_dom_cod]
+QED
 val _ = export_rewrites["functor_axioms_pre_hom_functor"];
 
-val is_functor_hom_functor = Q.store_thm(
-"is_functor_hom_functor",
-`∀c x. is_category c ∧ x ∈ c.obj ⇒ is_functor (c|x→_|)`,
-srw_tac [][hom_functor_def]);
+Theorem is_functor_hom_functor:
+ ∀c x. is_category c ∧ x ∈ c.obj ⇒ is_functor (c|x→_|)
+Proof
+srw_tac [][hom_functor_def]
+QED
 val _ = export_rewrites["is_functor_hom_functor"];
 
-val hom_functor_objf = Q.store_thm(
-"hom_functor_objf",
-`∀c x y. is_category c ∧ x ∈ c.obj ∧ y ∈ c.obj
-  ⇒ (objf (hom_functor c x) y = c|x→y|)`,
+Theorem hom_functor_objf:
+ ∀c x y. is_category c ∧ x ∈ c.obj ∧ y ∈ c.obj
+  ⇒ (objf (hom_functor c x) y = c|x→y|)
+Proof
 srw_tac [][hom_functor_def] >>
 `(c|x→y|) ∈ dom_homs c x` by (
   srw_tac [][dom_homs_def] ) >>
 imp_res_tac dom_homs_subset_homs >>
-fsrw_tac [][SUBSET_DEF]);
+fsrw_tac [][SUBSET_DEF]
+QED
 
-val hom_functor_morf = Q.store_thm(
-"hom_functor_morf",
-`∀c x f. is_category c ∧ f ∈ c.mor ⇒
+Theorem hom_functor_morf:
+ ∀c x f. is_category c ∧ f ∈ c.mor ⇒
 ((c|x→_|)##f =
-  TypedGraphFun ((c|x→f.dom|), c|x→f.cod|) (λg. f o g -:c))`,
+  TypedGraphFun ((c|x→f.dom|), c|x→f.cod|) (λg. f o g -:c))
+Proof
 srw_tac [][hom_functor_def] >>
 qmatch_abbrev_tac `inclusion_functor u1 u2##z = X` >>
 `z ∈ (ens_cat u1).mor` by (
@@ -178,27 +189,31 @@ qmatch_abbrev_tac `inclusion_functor u1 u2##z = X` >>
   fsrw_tac [][hom_def] >>
   match_mp_tac maps_to_comp >>
   metis_tac [maps_to_in_def,maps_to_def] ) >>
-srw_tac [][Abbr`X`]);
+srw_tac [][Abbr`X`]
+QED
 
 val _ = export_rewrites["hom_functor_objf","hom_functor_morf"];
 
-val hom_functor_dom = Q.store_thm(
-"hom_functor_dom",
-`∀c x. (hom_functor c x).dom = c`,
-srw_tac [][hom_functor_def]);
+Theorem hom_functor_dom:
+ ∀c x. (hom_functor c x).dom = c
+Proof
+srw_tac [][hom_functor_def]
+QED
 
-val hom_functor_cod = Q.store_thm(
-"hom_functor_cod",
-`∀c x. (hom_functor c x).cod = (ens_cat (homs c))`,
-srw_tac [][hom_functor_def]);
+Theorem hom_functor_cod:
+ ∀c x. (hom_functor c x).cod = (ens_cat (homs c))
+Proof
+srw_tac [][hom_functor_def]
+QED
 
 val _ = export_rewrites["hom_functor_cod","hom_functor_dom"];
 
-val hom_op_cat = Q.store_thm(
-"hom_op_cat",
-`∀c x y. (c° |x→y|) = IMAGE op_mor (c|y→x|)`,
+Theorem hom_op_cat:
+ ∀c x y. (c° |x→y|) = IMAGE op_mor (c|y→x|)
+Proof
 srw_tac [][hom_def,EXTENSION] >>
-metis_tac [op_cat_maps_to_in,op_mor_map,op_mor_idem]);
+metis_tac [op_cat_maps_to_in,op_mor_map,op_mor_idem]
+QED
 val _ = export_rewrites["hom_op_cat"];
 
 (*
@@ -259,27 +274,29 @@ Definition pre_op_mor_functor_def:
                 (op_mor o f.map o op_mor) |>
 End
 
-val pre_op_mor_functor_components = Q.store_thm(
-"pre_op_mor_functor_components",
-`∀u1 u2.
+Theorem pre_op_mor_functor_components:
+ ∀u1 u2.
      ((pre_op_mor_functor u1 u2).dom = ens_cat u1) ∧
      ((pre_op_mor_functor u1 u2).cod = ens_cat u2) ∧
      ((pre_op_mor_functor u1 u2).map = λf. TypedGraphFun
                 (IMAGE op_mor f.dom, IMAGE op_mor f.cod)
-                (op_mor o f.map o op_mor))`,
-srw_tac [][pre_op_mor_functor_def]);
+                (op_mor o f.map o op_mor))
+Proof
+srw_tac [][pre_op_mor_functor_def]
+QED
 val _ = export_rewrites["pre_op_mor_functor_components"];
 
-val pre_op_mor_functor_morf = Q.store_thm(
-"pre_op_mor_functor_morf",
-`∀u1 u2 f. (pre_op_mor_functor u1 u2)##f =
-  TypedGraphFun (IMAGE op_mor f.dom, IMAGE op_mor f.cod) (op_mor o f.map o op_mor)`,
-srw_tac [][morf_def]);
+Theorem pre_op_mor_functor_morf:
+ ∀u1 u2 f. (pre_op_mor_functor u1 u2)##f =
+  TypedGraphFun (IMAGE op_mor f.dom, IMAGE op_mor f.cod) (op_mor o f.map o op_mor)
+Proof
+srw_tac [][morf_def]
+QED
 val _ = export_rewrites["pre_op_mor_functor_morf"];
 
-val pre_op_mor_functor_objf = Q.store_thm(
-"pre_op_mor_functor_objf",
-`∀u1 u2 x. x ∈ u1 ∧ IMAGE op_mor x ∈ u2 ⇒ ((pre_op_mor_functor u1 u2)@@x = IMAGE op_mor x)`,
+Theorem pre_op_mor_functor_objf:
+ ∀u1 u2 x. x ∈ u1 ∧ IMAGE op_mor x ∈ u2 ⇒ ((pre_op_mor_functor u1 u2)@@x = IMAGE op_mor x)
+Proof
 srw_tac [][objf_def] >>
 SELECT_ELIM_TAC >>
 conj_tac >- (
@@ -289,16 +306,17 @@ conj_tac >- (
   srw_tac [][restrict_def,FUN_EQ_THM] >>
   srw_tac [][] >> fsrw_tac [][] ) >>
 srw_tac [][] >>
-fsrw_tac [][morphism_component_equality]);
+fsrw_tac [][morphism_component_equality]
+QED
 val _ = export_rewrites["pre_op_mor_functor_objf"];
 
 Definition op_mor_functor_def:
   op_mor_functor u1 u2 = mk_functor (pre_op_mor_functor u1 u2)
 End
 
-val is_functor_op_mor_functor = Q.store_thm(
-"is_functor_op_mor_functor",
-`∀u1 u2. (∀x. x ∈ u1 ⇒ IMAGE op_mor x ∈ u2) ⇒ is_functor (op_mor_functor u1 u2)`,
+Theorem is_functor_op_mor_functor:
+ ∀u1 u2. (∀x. x ∈ u1 ⇒ IMAGE op_mor x ∈ u2) ⇒ is_functor (op_mor_functor u1 u2)
+Proof
 srw_tac [][op_mor_functor_def] >>
 srw_tac [][functor_axioms_def] >>
 srw_tac [][] >- fsrw_tac [][IsTypedFun_def,HasFunType_def]
@@ -317,28 +335,32 @@ srw_tac [][ComposeFun_def] >>
 srw_tac [][restrict_def,FUN_EQ_THM] >>
 srw_tac [][] >>
 fsrw_tac [][IsTypedFun_def,HasFunType_def] >>
-metis_tac []);
+metis_tac []
+QED
 val _ = export_rewrites["is_functor_op_mor_functor"];
 
-val op_mor_functor_dom_cod = Q.store_thm(
-"op_mor_functor_dom_cod",
-`∀u1 u2. ((op_mor_functor u1 u2).dom = ens_cat u1) ∧
-         ((op_mor_functor u1 u2).cod = ens_cat u2)`,
-srw_tac [][op_mor_functor_def]);
+Theorem op_mor_functor_dom_cod:
+ ∀u1 u2. ((op_mor_functor u1 u2).dom = ens_cat u1) ∧
+         ((op_mor_functor u1 u2).cod = ens_cat u2)
+Proof
+srw_tac [][op_mor_functor_def]
+QED
 val _ = export_rewrites["op_mor_functor_dom_cod"];
 
-val op_mor_functor_morf = Q.store_thm(
-"op_mor_functor_morf",
-`∀u1 u2 f. IsTypedFunIn u1 f ⇒ ((op_mor_functor u1 u2)##f =
-  TypedGraphFun (IMAGE op_mor f.dom, IMAGE op_mor f.cod) (op_mor o f.map o op_mor))`,
+Theorem op_mor_functor_morf:
+ ∀u1 u2 f. IsTypedFunIn u1 f ⇒ ((op_mor_functor u1 u2)##f =
+  TypedGraphFun (IMAGE op_mor f.dom, IMAGE op_mor f.cod) (op_mor o f.map o op_mor))
+Proof
 srw_tac [][op_mor_functor_def,mk_functor_def,morphism_component_equality,morf_def,
-           restrict_def]);
+           restrict_def]
+QED
 val _ = export_rewrites["op_mor_functor_morf"];
 
-val op_mor_functor_objf = Q.store_thm(
-"op_mor_functor_objf",
-`∀u1 u2 x. x ∈ u1 ∧ IMAGE op_mor x ∈ u2 ⇒ ((op_mor_functor u1 u2)@@x = IMAGE op_mor x)`,
-srw_tac [][op_mor_functor_def]);
+Theorem op_mor_functor_objf:
+ ∀u1 u2 x. x ∈ u1 ∧ IMAGE op_mor x ∈ u2 ⇒ ((op_mor_functor u1 u2)@@x = IMAGE op_mor x)
+Proof
+srw_tac [][op_mor_functor_def]
+QED
 val _ = export_rewrites["op_mor_functor_objf"];
 
 val _ = add_rule{
@@ -350,24 +372,26 @@ val _ = add_rule{
 
 val _ = overload_on("contra_hom_functor",``λc x. (op_mor_functor (homs c°) (homs c)) ◎ (hom_functor c° x)``);
 
-val IMAGE_op_mor_idem = Q.store_thm(
-"IMAGE_op_mor_idem",
-`∀s. IMAGE op_mor (IMAGE op_mor s) = s`,
-srw_tac [DNF_ss][EXTENSION]);
+Theorem IMAGE_op_mor_idem:
+ ∀s. IMAGE op_mor (IMAGE op_mor s) = s
+Proof
+srw_tac [DNF_ss][EXTENSION]
+QED
 val _ = export_rewrites["IMAGE_op_mor_idem"];
 
-val is_functor_contra_hom_functor_lemma = Q.store_thm(
-"is_functor_contra_hom_functor_lemma",
-`∀c. is_functor (op_mor_functor (homs c°) (homs c))`,
+Theorem is_functor_contra_hom_functor_lemma:
+ ∀c. is_functor (op_mor_functor (homs c°) (homs c))
+Proof
 srw_tac [][] >>
 match_mp_tac is_functor_op_mor_functor >>
 srw_tac [DNF_ss][homs_def,LET_THM] >>
-metis_tac []);
+metis_tac []
+QED
 val _ = export_rewrites["is_functor_contra_hom_functor_lemma"];
 
-val contra_hom_functor_objf = Q.store_thm(
-"contra_hom_functor_objf",
-`∀c x y. is_category c ∧ x ∈ c.obj ∧ y ∈ c.obj ⇒ ((c|_→y|)@@x = (c|x→y|))`,
+Theorem contra_hom_functor_objf:
+ ∀c x y. is_category c ∧ x ∈ c.obj ∧ y ∈ c.obj ⇒ ((c|_→y|)@@x = (c|x→y|))
+Proof
 srw_tac [][] >>
 `IMAGE op_mor (c|x→y|) ∈ homs c°` by (
   srw_tac [][homs_def] >>
@@ -375,12 +399,13 @@ srw_tac [][] >>
 `IMAGE op_mor (IMAGE op_mor (c|x→y|)) ∈ (homs c)` by (
   srw_tac [DNF_ss][homs_def,EXTENSION] >>
   srw_tac [][] >> metis_tac [] ) >>
-srw_tac [][] >> srw_tac [DNF_ss][EXTENSION]);
+srw_tac [][] >> srw_tac [DNF_ss][EXTENSION]
+QED
 
-val contra_hom_functor_morf = Q.store_thm(
-"contra_hom_functor_morf",
-`∀c x f. is_category c ∧ f° ∈ c.mor ∧ x ∈ c.obj ⇒
-  ((c|_→x|)##f = TypedGraphFun ((c|f.dom→x|), (c|f.cod→x|)) (λg. g o f° -:c))`,
+Theorem contra_hom_functor_morf:
+ ∀c x f. is_category c ∧ f° ∈ c.mor ∧ x ∈ c.obj ⇒
+  ((c|_→x|)##f = TypedGraphFun ((c|f.dom→x|), (c|f.cod→x|)) (λg. g o f° -:c))
+Proof
 srw_tac [][] >>
 qabbrev_tac `ff = f° °` >>
 `f = ff` by srw_tac [][Abbr`ff`] >>
@@ -415,5 +440,6 @@ srw_tac [][] >> fsrw_tac [DNF_ss][] >- (
   srw_tac [][] >> pop_assum (match_mp_tac o GSYM) >>
   match_mp_tac maps_to_composable >>
   fsrw_tac [][hom_def,maps_to_in_def] ) >>
-metis_tac [op_mor_idem]);
+metis_tac [op_mor_idem]
+QED
 val _ = export_rewrites["contra_hom_functor_objf","contra_hom_functor_morf"];

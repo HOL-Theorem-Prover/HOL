@@ -65,9 +65,9 @@ val inter_recursive_I = Store_thm(
                             bnf_bnf_of] THEN
   Cases_on `n ∈ s₁` THEN SRW_TAC [][]);
 
-val compl_recursive_I = store_thm(
-  "compl_recursive_I",
-  ``recursive s ⇒ recursive (COMPL s)``,
+Theorem compl_recursive_I:
+    recursive s ⇒ recursive (COMPL s)
+Proof
   SRW_TAC [][recursive_def] THEN
   SIMP_TAC (srw_ss()) [Phi_def] THEN
   Q.EXISTS_TAC `
@@ -80,7 +80,8 @@ val compl_recursive_I = store_thm(
   ASM_SIMP_TAC (bsrw_ss()) [cnpair_behaviour,
                             cminus_behaviour,
                             bnf_bnf_of] THEN
-  Cases_on `n ∈ s` THEN SRW_TAC [][]);
+  Cases_on `n ∈ s` THEN SRW_TAC [][]
+QED
 
 val compl_recursive = Store_thm(
   "compl_recursive",
@@ -129,10 +130,11 @@ End
    evaluating [Mi 0, Mi 1, Mi 2, ... Mi n] for n steps.  For all the bnfs in
    this list, see if one of them is equal to e.  If so, terminate.
 *)
-val EXISTS_FILTER = store_thm(
-  "EXISTS_FILTER",
-  ``EXISTS P (FILTER Q l) = EXISTS (λe. Q e ∧ P e) l``,
-  Induct_on `l` THEN SRW_TAC [][]);
+Theorem EXISTS_FILTER:
+    EXISTS P (FILTER Q l) = EXISTS (λe. Q e ∧ P e) l
+Proof
+  Induct_on `l` THEN SRW_TAC [][]
+QED
 
 val re_semirecursive1 = prove(
   ``re s ⇒ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
@@ -252,10 +254,11 @@ val re_semirecursive2 = prove(
                chap2Theory.lameq_rules]
   ]);
 
-val re_semidp = store_thm(
-  "re_semidp",
-  ``re s ⇔ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m``,
-  METIS_TAC [re_semirecursive1, re_semirecursive2]);
+Theorem re_semidp:
+    re s ⇔ ∃N. ∀e. e ∈ s ⇔ ∃m. Phi N e = SOME m
+Proof
+  METIS_TAC [re_semirecursive1, re_semirecursive2]
+QED
 
 Theorem recursive_re:
   recursive s ⇒ re s
@@ -303,9 +306,9 @@ Definition K_def:
   K = { Mi | ∃z. Phi Mi Mi = SOME z }
 End
 
-val K_re = store_thm(
-  "K_re",
-  ``re K``,
+Theorem K_re:
+    re K
+Proof
   SRW_TAC [][K_def, re_semidp] THEN
   Q.EXISTS_TAC
     `dBnum (fromTerm (LAM "e" (UM @@ (cnpair @@ VAR "e" @@ VAR "e"))))` THEN
@@ -315,11 +318,12 @@ val K_re = store_thm(
   SIMP_TAC (bsrw_ss()) [cnpair_behaviour] THEN
   EQ_TAC THEN1
     (SRW_TAC [][PhiSOME_UM] THEN ASM_SIMP_TAC (bsrw_ss()) [bnf_bnf_of]) THEN
-  METIS_TAC [UM_bnf, bnf_of_SOME, nstar_lameq]);
+  METIS_TAC [UM_bnf, bnf_of_SOME, nstar_lameq]
+QED
 
-val K_not_recursive = store_thm(
-  "K_not_recursive",
-  ``¬recursive K``,
+Theorem K_not_recursive:
+    ¬recursive K
+Proof
   STRIP_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [recursive_def, K_def] THEN
   Q.ABBREV_TAC `
@@ -344,15 +348,16 @@ val K_not_recursive = store_thm(
     `UM @@ church (M ⊗ G) -n->* church 1`
        by FULL_SIMP_TAC (srw_ss()) [PhiSOME_UM] THEN
     ASM_SIMP_TAC (bsrw_ss()) [ceqnat_behaviour, cB_behaviour]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     r.e. closure properties
    ---------------------------------------------------------------------- *)
 
-val re_INTER_I = store_thm(
-  "re_INTER_I",
-  ``re s ∧ re t ⇒ re (s ∩ t)``,
+Theorem re_INTER_I:
+    re s ∧ re t ⇒ re (s ∩ t)
+Proof
   SRW_TAC [][re_semidp] THEN
   Q.EXISTS_TAC `
     dBnum (fromTerm (LAM "e" (
@@ -377,11 +382,12 @@ val re_INTER_I = store_thm(
 
     `Phi N e = NONE` by METIS_TAC [TypeBase.nchotomy_of ``:'a option``] THEN
     ASM_SIMP_TAC (srw_ss()) [PhiNONE_cbnf_ofk]
-  ]);
+  ]
+QED
 
-val re_UNION_I = store_thm(
-  "re_UNION_I",
-  ``re s ∧ re t ⇒ re (s ∪ t)``,
+Theorem re_UNION_I:
+    re s ∧ re t ⇒ re (s ∪ t)
+Proof
   SRW_TAC [][re_semidp] THEN
   Q.EXISTS_TAC `
     dBnum (fromTerm (LAM "e" (
@@ -430,11 +436,12 @@ val re_UNION_I = store_thm(
     Q.PAT_X_ASSUM `P @@ X == cB T` MP_TAC THEN
     ASM_SIMP_TAC (bsrw_ss()) [] THEN
     METIS_TAC [bnf_steps]
-  ]);
+  ]
+QED
 
-val re_compl_recursive = store_thm(
-  "re_compl_recursive",
-  ``re s ∧ re (COMPL s) ⇒ recursive s``,
+Theorem re_compl_recursive:
+    re s ∧ re (COMPL s) ⇒ recursive s
+Proof
   SRW_TAC [][re_semidp, recursive_def] THEN
   Q.EXISTS_TAC `dBnum (fromTerm
     (LAM "e"
@@ -500,12 +507,14 @@ val re_compl_recursive = store_thm(
     Q.UNABBREV_TAC `Test` THEN numLib.LEAST_ELIM_TAC THEN
     SRW_TAC [][] THEN1 METIS_TAC [] THEN
     METIS_TAC [bnf_steps]
-  ]);
+  ]
+QED
 
-val COMPL_K_NOT_RE = store_thm(
-  "COMPL_K_NOT_RE",
-  ``¬re (COMPL K)``,
-  METIS_TAC [re_compl_recursive, K_not_recursive, K_re]);
+Theorem COMPL_K_NOT_RE:
+    ¬re (COMPL K)
+Proof
+  METIS_TAC [re_compl_recursive, K_not_recursive, K_re]
+QED
 
 (* ----------------------------------------------------------------------
     Rice's Theorem
@@ -514,10 +523,11 @@ val COMPL_K_NOT_RE = store_thm(
 Definition indices_def:  indices P = { i | P (Phi i) }
 End
 
-val indices_COMPL = store_thm(
-  "indices_COMPL",
-  ``indices ((~) o P) = COMPL (indices P)``,
-  SRW_TAC [][EXTENSION, indices_def]);
+Theorem indices_COMPL:
+    indices ((~) o P) = COMPL (indices P)
+Proof
+  SRW_TAC [][EXTENSION, indices_def]
+QED
 
 
 val wlog_lemma = prove(
@@ -533,14 +543,15 @@ Definition looper_i_def:
   looper_i = dBnum (fromTerm (LAM "n" Ω))
 End
 
-val looper_loops = store_thm(
-  "looper_loops",
-  ``Phi looper_i n = NONE``,
-  SIMP_TAC (bsrw_ss()) [Phi_def, looper_i_def]);
+Theorem looper_loops:
+    Phi looper_i n = NONE
+Proof
+  SIMP_TAC (bsrw_ss()) [Phi_def, looper_i_def]
+QED
 
-val Rices_Theorem = store_thm(
-  "Rices_Theorem",
-  ``recursive (indices P) ⇒ (indices P = {}) ∨ (indices P = UNIV)``,
+Theorem Rices_Theorem:
+    recursive (indices P) ⇒ (indices P = {}) ∨ (indices P = UNIV)
+Proof
   STRIP_TAC THEN Cases_on `indices P = {}` THEN SRW_TAC [][] THEN
   Cases_on `indices P = UNIV` THEN SRW_TAC [][] THEN
   `∃Q. recursive (indices Q) ∧ indices Q ≠ {} ∧ indices Q ≠ UNIV ∧
@@ -593,5 +604,6 @@ val Rices_Theorem = store_thm(
            FULL_SIMP_TAC (srw_ss()) [K_def] THEN
            Cases_on `Phi e e` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
     FULL_SIMP_TAC (srw_ss()) [indices_def]
-  ]);
+  ]
+QED
 

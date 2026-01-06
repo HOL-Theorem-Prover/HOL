@@ -27,14 +27,14 @@ End
 (* evaluation, while the other is good for brute-force.                      *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_BYTE_VARS = Q.store_thm
-("FORALL_BYTE_VARS",
- `(!x:word8. P x) = !b7 b6 b5 b4 b3 b2 b1 b0. P(b7,b6,b5,b4,b3,b2,b1,b0)`,
- SIMP_TAC std_ss [FORALL_PROD]);
+Theorem FORALL_BYTE_VARS:
+  (!x:word8. P x) = !b7 b6 b5 b4 b3 b2 b1 b0. P(b7,b6,b5,b4,b3,b2,b1,b0)
+Proof
+ SIMP_TAC std_ss [FORALL_PROD]
+QED
 
-val FORALL_BYTE_BITS = Q.store_thm
-("FORALL_BYTE_BITS",
- `(!x:word8. P x) =
+Theorem FORALL_BYTE_BITS:
+  (!x:word8. P x) =
   P (F,F,F,F,F,F,F,F) /\ P (F,F,F,F,F,F,F,T) /\ P (F,F,F,F,F,F,T,F) /\
   P (F,F,F,F,F,F,T,T) /\ P (F,F,F,F,F,T,F,F) /\ P (F,F,F,F,F,T,F,T) /\
   P (F,F,F,F,F,T,T,F) /\ P (F,F,F,F,F,T,T,T) /\ P (F,F,F,F,T,F,F,F) /\
@@ -120,10 +120,12 @@ val FORALL_BYTE_BITS = Q.store_thm
   P (T,T,T,T,F,T,T,F) /\ P (T,T,T,T,F,T,T,T) /\ P (T,T,T,T,T,F,F,F) /\
   P (T,T,T,T,T,F,F,T) /\ P (T,T,T,T,T,F,T,F) /\ P (T,T,T,T,T,F,T,T) /\
   P (T,T,T,T,T,T,F,F) /\ P (T,T,T,T,T,T,F,T) /\ P (T,T,T,T,T,T,T,F) /\
-  P (T,T,T,T,T,T,T,T)`,
+  P (T,T,T,T,T,T,T,T)
+Proof
  EQ_TAC THENL
   [DISCH_TAC THEN ASM_REWRITE_TAC [],
-   SIMP_TAC std_ss [FORALL_PROD, FORALL_BOOL]]);
+   SIMP_TAC std_ss [FORALL_PROD, FORALL_BOOL]]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -154,15 +156,17 @@ Definition NUM_TO_BYTE:
 End
 
 
-val BYTE_TO_NUM_TO_BYTE = Q.store_thm
-("BYTE_TO_NUM_TO_BYTE",
- `!b. NUM_TO_BYTE(BYTE_TO_NUM b) = b`,
- SIMP_TAC std_ss [FORALL_BYTE_BITS] THEN EVAL_TAC);
+Theorem BYTE_TO_NUM_TO_BYTE:
+  !b. NUM_TO_BYTE(BYTE_TO_NUM b) = b
+Proof
+ SIMP_TAC std_ss [FORALL_BYTE_BITS] THEN EVAL_TAC
+QED
 
-val NUM_TO_BYTE_TO_NUM = Q.store_thm
-("NUM_TO_BYTE_TO_NUM",
- `!n. n < 256 ==> (BYTE_TO_NUM (NUM_TO_BYTE n) = n)`,
- CONV_TAC (REPEATC (numLib.BOUNDED_FORALL_CONV EVAL)) THEN PROVE_TAC []);
+Theorem NUM_TO_BYTE_TO_NUM:
+  !n. n < 256 ==> (BYTE_TO_NUM (NUM_TO_BYTE n) = n)
+Proof
+ CONV_TAC (REPEATC (numLib.BOUNDED_FORALL_CONV EVAL)) THEN PROVE_TAC []
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -266,20 +270,23 @@ val _ = set_fixity "&" (Infixl 650);
 (* Algebraic lemmas for XOR8                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val XOR8_ZERO = Q.store_thm
-("XOR8_ZERO",
- `!x. x # ZERO = x`,
- SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]);
+Theorem XOR8_ZERO:
+  !x. x # ZERO = x
+Proof
+ SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]
+QED
 
-val XOR8_INV = Q.store_thm
-("XOR8_INV",
- `!x. x # x = ZERO`,
- SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]);
+Theorem XOR8_INV:
+  !x. x # x = ZERO
+Proof
+ SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def,ZERO_def]
+QED
 
-val XOR8_AC = Q.store_thm
-("XOR8_AC",
- `(!x y z:word8. (x # y) # z = x # (y # z)) /\
-  (!x y:word8. (x # y) = (y # x))`,
+Theorem XOR8_AC:
+  (!x y z:word8. (x # y) # z = x # (y # z)) /\
+  (!x y:word8. (x # y) = (y # x))
+Proof
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR_def,XOR8_def]
  THEN REPEAT STRIP_TAC
- THEN DECIDE_TAC);
+ THEN DECIDE_TAC
+QED

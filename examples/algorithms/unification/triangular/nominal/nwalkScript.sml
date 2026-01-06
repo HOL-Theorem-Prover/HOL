@@ -37,17 +37,18 @@ end
 Theorem nvwalk_def = pre_nvwalk_def |> nvwalk_nwfs_hyp |> DISCH_ALL
 Theorem nvwalk_ind = nvwalk_nwfs_hyp (theorem "pre_nvwalk_ind")
 
-val NOT_FDOM_nvwalk = Q.store_thm(
-  "NOT_FDOM_nvwalk",
-  `nwfs s /\ v NOTIN FDOM s ==> (nvwalk s p v = Sus p v)`,
-  SRW_TAC [] [Once nvwalk_def, FLOOKUP_DEF,permeq_refl])
+Theorem NOT_FDOM_nvwalk:
+   nwfs s /\ v NOTIN FDOM s ==> (nvwalk s p v = Sus p v)
+Proof
+  SRW_TAC [] [Once nvwalk_def, FLOOKUP_DEF,permeq_refl]
+QED
 
 val pmact_permeq' = pmact_permeq |> UNDISCH |> REWRITE_RULE [FUN_EQ_THM]
                                  |> SPEC_ALL |> DISCH_ALL
 
-val nvwalk_Vf = Q.store_thm(
-"nvwalk_Vf",
-`nwfs s ⇒ ∀p1 u p2. p1 == p2 ⇒ (nvwalk s p1 u = nvwalk s p2 u)`,
+Theorem nvwalk_Vf:
+ nwfs s ⇒ ∀p1 u p2. p1 == p2 ⇒ (nvwalk s p1 u = nvwalk s p2 u)
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC nvwalk_ind THEN
 SRW_TAC [][] THEN
 Cases_on `FLOOKUP s u` THEN1
@@ -59,13 +60,14 @@ Cases_on `x` THEN SRW_TAC [][pmact_permeq'] THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `@p'.p'==l` MP_TAC) THEN
 `l == (@p'.p'==l)` by (SELECT_ELIM_TAC THEN METIS_TAC [permeq_refl,permeq_sym]) THEN
 SRW_TAC [][] THEN FIRST_X_ASSUM MATCH_MP_TAC THEN
-MATCH_MP_TAC app_permeq_monotone THEN SRW_TAC [][])
+MATCH_MP_TAC app_permeq_monotone THEN SRW_TAC [][]
+QED
 
 val nvwalk_case_thms = save_thm("nvwalk_case_thms",LIST_CONJ [Sus_case2,nvwalk_Vf,app_permeq_monotone])
 
-val nvwalk_to_var = Q.store_thm(
-  "nvwalk_to_var",
-  `nwfs s ==> !pv v p2 u. (nvwalk s pv v = Sus p2 u) ==> u NOTIN FDOM s`,
+Theorem nvwalk_to_var:
+   nwfs s ==> !pv v p2 u. (nvwalk s pv v = Sus p2 u) ==> u NOTIN FDOM s
+Proof
   DISCH_TAC THEN HO_MATCH_MP_TAC nvwalk_ind THEN
   SRW_TAC [][] THEN
   Cases_on `FLOOKUP s v` THEN1
@@ -78,12 +80,13 @@ val nvwalk_to_var = Q.store_thm(
   `nvwalk s (pv ++ pw) w = Sus p2 u`
   by (Q.PAT_X_ASSUM `nvwalk s pv v = X` MP_TAC THEN
       SRW_TAC [] [Once nvwalk_def,nvwalk_case_thms]) THEN
-FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC [])
+FIRST_X_ASSUM MATCH_MP_TAC THEN METIS_TAC []
+QED
 
-val nvwalk_nvR = Q.store_thm(
-"nvwalk_nvR",
-`nwfs s ==> !p v u. u IN nvars (nvwalk s p v) /\ nvwalk s p v ≠ Sus p v ==>
-           (nvR s)^+ u v`,
+Theorem nvwalk_nvR:
+ nwfs s ==> !p v u. u IN nvars (nvwalk s p v) /\ nvwalk s p v ≠ Sus p v ==>
+           (nvR s)^+ u v
+Proof
 DISCH_TAC THEN HO_MATCH_MP_TAC nvwalk_ind THEN SRW_TAC [][] THEN
 `(FLOOKUP s v = NONE) \/ ?t. FLOOKUP s v = SOME t`
    by (Cases_on `FLOOKUP s v` THEN SRW_TAC [][]) THEN1
@@ -115,7 +118,8 @@ Cases_on `t` THENL [
   Q.MATCH_ASSUM_RENAME_TAC `FLOOKUP s v = SOME (nConst c)` THEN
   `nvwalk s p v = nConst c` by (SRW_TAC [] [Once nvwalk_def]) THEN
   FULL_SIMP_TAC (srw_ss()) []
-]);
+]
+QED
 
 val nwalk_def_q = `nwalk s t = case t of Sus p v => nvwalk s p v | _ => t`
 
@@ -133,13 +137,14 @@ val nwalk_thm = RWstore_thm(
  (nwalk s (nConst c) = (nConst c))`,
 SRW_TAC [][nwalk_def,nvwalk_case_thms]);
 
-val nwalk_to_var = Q.store_thm(
-"nwalk_to_var",
-`(nwalk s t = Sus p v) ∧ nwfs s ==>
-   v NOTIN FDOM s /\ ?pu u.(t = Sus pu u)`,
+Theorem nwalk_to_var:
+ (nwalk s t = Sus p v) ∧ nwfs s ==>
+   v NOTIN FDOM s /\ ?pu u.(t = Sus pu u)
+Proof
 STRIP_TAC THEN Cases_on `t` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-METIS_TAC [nvwalk_to_var]);
+METIS_TAC [nvwalk_to_var]
+QED
 
 val nwalk_FEMPTY = RWstore_thm(
 "nwalk_FEMPTY",
@@ -147,9 +152,9 @@ val nwalk_FEMPTY = RWstore_thm(
  (nvwalk FEMPTY p v = Sus p v)`,
 Cases_on `t` THEN REPEAT (SRW_TAC [][Once(DISCH_ALL nvwalk_def),permeq_refl]))
 
-val nvwalk_modulo_pi = Q.store_thm(
-"nvwalk_modulo_pi",
-`∀s pi v. nwfs s ⇒ (nvwalk s pi v = apply_pi pi (nvwalk s [] v))`,
+Theorem nvwalk_modulo_pi:
+ ∀s pi v. nwfs s ⇒ (nvwalk s pi v = apply_pi pi (nvwalk s [] v))
+Proof
 REPEAT STRIP_TAC THEN Q_TAC SUFF_TAC
 `∀pi1 v pi2.
 ∃t. (nvwalk s pi1 v = apply_pi pi1 t) ∧
@@ -174,12 +179,13 @@ STRIP_TAC THEN Q.UNABBREV_TAC`X` THEN
 TRY (Q.EXISTS_TAC `aterm` THEN SRW_TAC [][Abbr`aterm`] THEN NO_TAC) THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `l` MP_TAC) THEN SRW_TAC [][] THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `(pi2++l)` MP_TAC) THEN SRW_TAC [][] THEN
-Q.EXISTS_TAC `apply_pi l t` THEN SRW_TAC [][apply_pi_decompose]);
+Q.EXISTS_TAC `apply_pi l t` THEN SRW_TAC [][apply_pi_decompose]
+QED
 
-val nvars_nvwalk_ignores_pi = Q.store_thm(
-"nvars_nvwalk_ignores_pi",
-`nwfs s ⇒
- ∀p1 v p2. nvars (nvwalk s p1 v) = nvars (nvwalk s p2 v)`,
+Theorem nvars_nvwalk_ignores_pi:
+ nwfs s ⇒
+ ∀p1 v p2. nvars (nvwalk s p1 v) = nvars (nvwalk s p2 v)
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC nvwalk_ind THEN
 SRW_TAC [][] THEN
 Cases_on `FLOOKUP s v` THEN FULL_SIMP_TAC (srw_ss()) [] THEN1 (
@@ -191,15 +197,16 @@ Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
   SRW_TAC [][Once nvwalk_def] THEN SRW_TAC [][Once nvwalk_def],
   SRW_TAC [][Once nvwalk_def] THEN SRW_TAC [][Once nvwalk_def],
   SRW_TAC [][Once nvwalk_def] THEN SRW_TAC [][Once nvwalk_def]
-])
+]
+QED
 
-val nvwalk_FDOM = Q.store_thm(
-"nvwalk_FDOM",
-`nwfs s ==> (nvwalk s p v = t) ==>
+Theorem nvwalk_FDOM:
+ nwfs s ==> (nvwalk s p v = t) ==>
   (v ∉ FDOM s /\ (t = Sus p v)) \/
   (v IN FDOM s /\ (!pv. t ≠ Sus pv v) /\
    ?u pu tu.(nvwalk s p v = nvwalk s pu u) ∧
-            (FLOOKUP s u = SOME tu) ∧ (t = apply_pi pu tu))`,
+            (FLOOKUP s u = SOME tu) ∧ (t = apply_pi pu tu))
+Proof
 REVERSE (Cases_on `v IN FDOM s`)
 THEN1 METIS_TAC [NOT_FDOM_nvwalk] THEN
 REPEAT STRIP_TAC THEN
@@ -248,19 +255,21 @@ Cases_on `s ' v` THENL [
   THEN FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
   MAP_EVERY Q.EXISTS_TAC [`v`,`p`] THEN SRW_TAC [][]
   THEN METIS_TAC []
-])
+]
+QED
 
-val nvars_nvwalk_SUBSET_FRANGE = Q.store_thm(
-"nvars_nvwalk_SUBSET_FRANGE",
-`nwfs s ∧ v IN FDOM s ⇒ nvars (nvwalk s p v) SUBSET BIGUNION (FRANGE (nvars o_f s))`,
+Theorem nvars_nvwalk_SUBSET_FRANGE:
+ nwfs s ∧ v IN FDOM s ⇒ nvars (nvwalk s p v) SUBSET BIGUNION (FRANGE (nvars o_f s))
+Proof
 STRIP_TAC THEN
 Q_TAC SUFF_TAC `∃pi t2. (nvwalk s p v = apply_pi pi t2) ∧ t2 IN FRANGE s`
 THEN1 METIS_TAC [o_f_FRANGE,nvars_apply_pi,SUBSET_BIGUNION_I] THEN
-METIS_TAC [FRANGE_FLOOKUP,nvwalk_FDOM]);
+METIS_TAC [FRANGE_FLOOKUP,nvwalk_FDOM]
+QED
 
-val nvwalk_eq_perms = Q.store_thm(
-"nvwalk_eq_perms",
-`nwfs s ⇒ p1 == p2 ⇒ (nvwalk s p1 v = nvwalk s p2 v)`,
+Theorem nvwalk_eq_perms:
+ nwfs s ⇒ p1 == p2 ⇒ (nvwalk s p1 v = nvwalk s p2 v)
+Proof
 Q_TAC SUFF_TAC
 `nwfs s ⇒ ∀p1 v p2. p1 == p2 ⇒ (nvwalk s p1 v = nvwalk s p2 v)`
 THEN1 METIS_TAC [] THEN
@@ -270,14 +279,15 @@ Cases_on `FLOOKUP s v` THEN FULL_SIMP_TAC (srw_ss()) [] THEN1 (
   SRW_TAC [][Once nvwalk_def] THEN
   SRW_TAC [][Once nvwalk_def] ) THEN
 Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-NTAC 2 (SRW_TAC [][Once nvwalk_def,nvwalk_case_thms]))
+NTAC 2 (SRW_TAC [][Once nvwalk_def,nvwalk_case_thms])
+QED
 val _ = export_permweakening "nvwalk_eq_perms"
 
-val nvwalk_SUBMAP = Q.store_thm(
-"nvwalk_SUBMAP",
-`nwfs sx ==> !p v s.s SUBMAP sx ==>
+Theorem nvwalk_SUBMAP:
+ nwfs sx ==> !p v s.s SUBMAP sx ==>
  ¬ is_Sus (nvwalk s p v) ⇒
- (nvwalk s p v = nvwalk sx p v)`,
+ (nvwalk s p v = nvwalk sx p v)
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC (Q.INST[`s`|->`sx`]nvwalk_ind) THEN
 SRW_TAC [][] THEN
 `nwfs s` by METIS_TAC [nwfs_SUBMAP] THEN
@@ -288,13 +298,14 @@ THEN1 METIS_TAC [permeq_refl] THEN
 IMP_RES_TAC FLOOKUP_SUBMAP THEN
 Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [nvwalk_case_thms] THEN
 TRY (SRW_TAC [][Once nvwalk_def] THEN NO_TAC) THEN
-SRW_TAC [][Once nvwalk_def,SimpRHS,nvwalk_case_thms]);
+SRW_TAC [][Once nvwalk_def,SimpRHS,nvwalk_case_thms]
+QED
 
-val nvwalk_SUBMAP_var = Q.store_thm(
-"nvwalk_SUBMAP_var",
-`nwfs sx ==> !p v s.s SUBMAP sx ==>
+Theorem nvwalk_SUBMAP_var:
+ nwfs sx ==> !p v s.s SUBMAP sx ==>
  (nvwalk s p v = Sus pu u) ⇒
- (nvwalk sx p v = nvwalk sx pu u)`,
+ (nvwalk sx p v = nvwalk sx pu u)
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC (Q.INST[`s`|->`sx`]nvwalk_ind) THEN
 SRW_TAC [][] THEN
 `nwfs s` by METIS_TAC [nwfs_SUBMAP] THEN
@@ -322,16 +333,18 @@ SRW_TAC [][] THEN
 Q.PAT_X_ASSUM `nvwalk s pi n = Sus pu u` MP_TAC THEN
 SELECT_ELIM_TAC THEN SRW_TAC [][] THEN
 FIRST_X_ASSUM (Q.SPEC_THEN `x` MP_TAC) THEN
-SRW_TAC [][] THEN METIS_TAC [permeq_sym]);
+SRW_TAC [][] THEN METIS_TAC [permeq_sym]
+QED
 
-val nwalk_SUBMAP = Q.store_thm(
-"nwalk_SUBMAP",
-`nwfs sx ∧ s SUBMAP sx ⇒
+Theorem nwalk_SUBMAP:
+ nwfs sx ∧ s SUBMAP sx ⇒
  (¬is_Sus (nwalk s t) ⇒ (nwalk sx t = nwalk s t)) ∧
- (∀p v. (nwalk s t = Sus p v) ⇒ (nwalk sx t = nvwalk sx p v))`,
+ (∀p v. (nwalk s t = Sus p v) ⇒ (nwalk sx t = nvwalk sx p v))
+Proof
 STRIP_TAC THEN
 IMP_RES_TAC nwfs_SUBMAP THEN
 Cases_on `t` THEN
 FULL_SIMP_TAC (srw_ss()) [nvwalk_SUBMAP] THEN
-METIS_TAC [nvwalk_SUBMAP_var])
+METIS_TAC [nvwalk_SUBMAP_var]
+QED
 

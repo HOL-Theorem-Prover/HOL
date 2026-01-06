@@ -67,10 +67,11 @@ End
 (* note how we could have defined this relation inductively too *)
 
 (* now we have to prove that this operator is monotone *)
-val mono_every = store_thm(
-  "mono_every",
-  ``(!x. P x ==> Q x) ==> (every l P ==> every l Q)``,
-  Induct_on `l` THEN SRW_TAC [][every_def])
+Theorem mono_every:
+    (!x. P x ==> Q x) ==> (every l P ==> every l Q)
+Proof
+  Induct_on `l` THEN SRW_TAC [][every_def]
+QED
 
 (* and export it, so that Hol_reln knows all about it *)
 val _ = export_mono "mono_every"

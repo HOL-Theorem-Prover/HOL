@@ -19,9 +19,11 @@ Definition assertT_def:
   assertT b = if b then constT () else failureT
 End
 
-val option_apply_assertT = store_thm("option_apply_assertT",
-  ``!b s f. b ==> (option_apply (assertT b s) f = f ((),s))``,
-  SIMP_TAC std_ss [assertT_def,constT_def,constT_seq_def,option_apply_def]);
+Theorem option_apply_assertT:
+    !b s f. b ==> (option_apply (assertT b s) f = f ((),s))
+Proof
+  SIMP_TAC std_ss [assertT_def,constT_def,constT_seq_def,option_apply_def]
+QED
 
 (* calculate effective address *)
 

@@ -118,13 +118,12 @@ Proof
   fs[elsOf_def, wellorder_def, strict_def, linear_order_def] >> metis_tac[]
 QED
 
-Theorem WIN_REFL:
+Theorem WIN_REFL[simp]:
     (x,x) WIN w <=> F
 Proof
   `wellorder (destWO w)` by metis_tac [termP_term_REP] >>
   fs[wellorder_def, strict_def]
 QED
-val _ = export_rewrites ["WIN_REFL"]
 
 Theorem WLE_TRANS:
     (x,y) WLE w /\ (y,z) WLE w ==> (x,z) WLE w
@@ -820,28 +819,25 @@ QED
 Definition wZERO_def:  wZERO = mkWO {}
 End
 
-Theorem elsOf_wZERO:
+Theorem elsOf_wZERO[simp]:
     elsOf wZERO = {}
 Proof
   simp[wZERO_def, elsOf_def, destWO_mkWO,
        wellorder_EMPTY, EXTENSION, in_domain, in_range]
 QED
-val _ = export_rewrites ["elsOf_wZERO"]
 
-Theorem WIN_wZERO:
+Theorem WIN_wZERO[simp]:
     (x,y) WIN wZERO <=> F
 Proof
   simp[wZERO_def, destWO_mkWO, wellorder_EMPTY,
        strict_def]
 QED
-val _ = export_rewrites ["WIN_wZERO"]
 
-Theorem WLE_wZERO:
+Theorem WLE_wZERO[simp]:
     (x,y) WLE wZERO <=> F
 Proof
   simp[wZERO_def, destWO_mkWO, wellorder_EMPTY]
 QED
-val _ = export_rewrites ["WLE_wZERO"]
 
 Theorem orderiso_wZERO:
     orderiso wZERO w <=> (w = wZERO)
@@ -854,14 +850,13 @@ Proof
        FORALL_PROD]
 QED
 
-Theorem elsOf_EQ_EMPTY:
+Theorem elsOf_EQ_EMPTY[simp]:
     (elsOf w = {}) <=> (w = wZERO)
 Proof
   simp[EQ_IMP_THM] >> strip_tac >>
   qsuff_tac `orderiso w wZERO` >- metis_tac [orderiso_wZERO, orderiso_SYM] >>
   simp[orderiso_thm, BIJ_EMPTY] >> metis_tac [WIN_elsOf, NOT_IN_EMPTY]
 QED
-val _ = export_rewrites ["elsOf_EQ_EMPTY"]
 
 Theorem LT_wZERO:
     orderlt w wZERO = F

@@ -194,10 +194,11 @@ val _ = set_fixity "<o>" (Infixl 500); (* same as + in arithmeticScript.sml *)
    = [x ** 0]                                         by application
    = [#1]                                             by ring_exp_0
 *)
-val element_powers_basis_0 = store_thm(
-  "element_powers_basis_0",
-  ``!r:'a field. !x. ebasis x 0 = [#1]``,
-  rw[element_powers_basis_def]);
+Theorem element_powers_basis_0:
+    !r:'a field. !x. ebasis x 0 = [#1]
+Proof
+  rw[element_powers_basis_def]
+QED
 
 (* Theorem: ebasis x (SUC n) = SNOC (x ** (SUC n)) (ebasis x n) *)
 (* Proof:
@@ -207,12 +208,13 @@ val element_powers_basis_0 = store_thm(
    = SNOC ((\j. x ** j) (SUC n)) (ebasis x n)          by element_powers_basis_def
    = SNOC (x ** (SUC n)) (ebasis x n)                  by application
 *)
-val element_powers_basis_suc = store_thm(
-  "element_powers_basis_suc",
-  ``!r:'a field. !x. ebasis x (SUC n) = SNOC (x ** (SUC n)) (ebasis x n)``,
+Theorem element_powers_basis_suc:
+    !r:'a field. !x. ebasis x (SUC n) = SNOC (x ** (SUC n)) (ebasis x n)
+Proof
   rpt strip_tac >>
   `!n. (\j. x ** j) n = x ** n` by rw[] >>
-  metis_tac[element_powers_basis_def, GENLIST]);
+  metis_tac[element_powers_basis_def, GENLIST]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !n. basis r.sum (ebasis x n) *)
 (* Proof:
@@ -224,11 +226,12 @@ val element_powers_basis_suc = store_thm(
    <=> !y. j < SUC n ==> x ** j IN R                         by application
    <=> T                                                     by ring_exp_element
 *)
-val element_powers_basis_is_basis= store_thm(
-  "element_powers_basis_is_basis",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !n. basis r.sum (ebasis x n)``,
+Theorem element_powers_basis_is_basis:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !n. basis r.sum (ebasis x n)
+Proof
   rw[element_powers_basis_def, basis_member, MEM_GENLIST] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: LENGTH (ebasis x n) = SUC n *)
 (* Proof:
@@ -236,10 +239,11 @@ val element_powers_basis_is_basis= store_thm(
    = LENGTH (GENLIST (\j. x ** j) (SUC n))  by element_powers_basis_def
    = SUC n                                  by LENGTH_GENLIST
 *)
-val element_powers_basis_length = store_thm(
-  "element_powers_basis_length",
-  ``!n. LENGTH (ebasis x n) = SUC n``,
-  rw[element_powers_basis_def]);
+Theorem element_powers_basis_length:
+    !n. LENGTH (ebasis x n) = SUC n
+Proof
+  rw[element_powers_basis_def]
+QED
 
 (* Theorem: FiniteField r ==> !s:'a field. s <<= r ==> !x. x IN R ==>
             ~LinearIndepBasis s r.sum $* (ebasis x (dim s r.sum $* ) *)
@@ -252,16 +256,17 @@ val element_powers_basis_length = store_thm(
    Hence ~LinearIndepBasis s r.sum $* (ebasis x n)
                                          by finite_vspace_basis_dep
 *)
-val element_powers_basis_dependent = store_thm(
-  "element_powers_basis_dependent",
-  ``!r:'a field. FiniteField r ==> !s:'a field. s <<= r ==> !x. x IN R ==>
-    ~LinearIndepBasis s r.sum $* (ebasis x (dim s r.sum $* ))``,
+Theorem element_powers_basis_dependent:
+    !r:'a field. FiniteField r ==> !s:'a field. s <<= r ==> !x. x IN R ==>
+    ~LinearIndepBasis s r.sum $* (ebasis x (dim s r.sum $* ))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `n = dim s r.sum $*` >>
   `FiniteVSpace s r.sum $*` by rw[finite_subfield_is_finite_vspace_scalar] >>
   `basis r.sum (ebasis x n)` by rw[element_powers_basis_is_basis] >>
   `n < LENGTH (ebasis x n)` by rw[element_powers_basis_length] >>
-  metis_tac[finite_vspace_basis_dep]);
+  metis_tac[finite_vspace_basis_dep]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==>
             ~LinearIndepBasis (PF r) r.sum $* (ebasis x (dim (PF r) r.sum $* )) *)
@@ -274,16 +279,17 @@ val element_powers_basis_dependent = store_thm(
    Hence ~LinearIndepBasis (PF r) r.sum $* (ebasis x n)
                                           by finite_vspace_basis_dep
 *)
-val element_powers_basis_dim_dep = store_thm(
-  "element_powers_basis_dim_dep",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==>
-    ~LinearIndepBasis (PF r) r.sum $* (ebasis x (dim (PF r) r.sum $* ))``,
+Theorem element_powers_basis_dim_dep:
+    !r:'a field. FiniteField r ==> !x. x IN R ==>
+    ~LinearIndepBasis (PF r) r.sum $* (ebasis x (dim (PF r) r.sum $* ))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `n = dim (PF r) r.sum $*` >>
   `FiniteVSpace (PF r) r.sum $*` by rw[finite_field_is_finite_vspace] >>
   `basis r.sum (ebasis x n)` by rw[element_powers_basis_is_basis] >>
   `n < LENGTH (ebasis x n)` by rw[element_powers_basis_length] >>
-  metis_tac[finite_vspace_basis_dep]);
+  metis_tac[finite_vspace_basis_dep]
+QED
 
 (* Theorem: !n. p IN sticks r n ==> weak p *)
 (* Proof:
@@ -300,13 +306,14 @@ val element_powers_basis_dim_dep = store_thm(
      ==> h IN R /\ weak t /\ (p = h::t)                  by induction hypothesis
      ==> weak p                                          by weak_cons
 *)
-val stick_is_weak = store_thm(
-  "stick_is_weak",
-  ``!(r:'a field) p  n. p IN sticks r n ==> weak p``,
+Theorem stick_is_weak:
+    !(r:'a field) p  n. p IN sticks r n ==> weak p
+Proof
   strip_tac >>
   Induct_on `n` >-
   rw[sticks_0] >>
-  metis_tac[stick_cons, weak_cons]);
+  metis_tac[stick_cons, weak_cons]
+QED
 
 (* Theorem: s <<= r ==> !p. Weak s p ==> weak p *)
 (* Proof:
@@ -320,14 +327,15 @@ val stick_is_weak = store_thm(
       ==> h IN R /\ weak s p           by subfield_element
       ==> weak (h::p)                  by weak_cons
 *)
-val subfield_poly_weak_is_weak = store_thm(
-  "subfield_poly_weak_is_weak",
-  ``!(r s):'a field. s <<= r ==> !p. Weak s p ==> weak p``,
+Theorem subfield_poly_weak_is_weak:
+    !(r s):'a field. s <<= r ==> !p. Weak s p ==> weak p
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   rw[] >>
-  metis_tac[subfield_element]);
+  metis_tac[subfield_element]
+QED
 
 (* Theorem: s <<= r ==> !p n. p IN sticks s n ==> weak p *)
 (* Proof:
@@ -335,10 +343,11 @@ val subfield_poly_weak_is_weak = store_thm(
      ==> Weak s p       by stick_is_weak
      ==> weak p         by subfield_poly_weak_is_weak
 *)
-val subfield_stick_is_weak = store_thm(
-  "subfield_stick_is_weak",
-  ``!(r s):'a field. s <<= r ==> !p n. p IN sticks s n ==> weak p``,
-  metis_tac[stick_is_weak, subfield_poly_weak_is_weak]);
+Theorem subfield_stick_is_weak:
+    !(r s):'a field. s <<= r ==> !p n. p IN sticks s n ==> weak p
+Proof
+  metis_tac[stick_is_weak, subfield_poly_weak_is_weak]
+QED
 
 (* Theorem: s <<= r ==> !p n. p IN sticks s (SUC n) ==>
             !x. x IN R ==> (p <o> (ebasis x n) = eval p x) *)
@@ -376,10 +385,10 @@ val subfield_stick_is_weak = store_thm(
        = eval (SNOC h t) x                         by weak_eval_snoc
        = eval p x                                  by p = SNOC h t
 *)
-val subfield_sticks_vsum_eq_eval = store_thm(
-  "subfield_sticks_vsum_eq_eval",
-  ``!(r s):'a field. s <<= r ==> !p n. p IN sticks s (SUC n) ==>
-   !x. x IN R ==> (p <o> (ebasis x n) = eval p x)``,
+Theorem subfield_sticks_vsum_eq_eval:
+    !(r s):'a field. s <<= r ==> !p n. p IN sticks s (SUC n) ==>
+   !x. x IN R ==> (p <o> (ebasis x n) = eval p x)
+Proof
   ntac 3 strip_tac >>
   Induct_on `n` >| [
     rw[] >>
@@ -401,7 +410,8 @@ val subfield_sticks_vsum_eq_eval = store_thm(
     `_ = eval t x + h * x ** LENGTH t` by rw[ring_add_comm] >>
     `_ = eval p x` by rw[weak_eval_snoc] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> ?p. Poly s p /\ 0 < deg p /\ root p x *)
 (* Proof:
@@ -433,9 +443,9 @@ val subfield_sticks_vsum_eq_eval = store_thm(
   Hence root p x                              by poly_root_def
    with 0 < deg p                             by poly_nonzero_with_root_deg_pos
 *)
-val subfield_poly_of_element = store_thm(
-  "subfield_poly_of_element",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> ?p. Poly s p /\ 0 < deg p /\ root p x``,
+Theorem subfield_poly_of_element:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> ?p. Poly s p /\ 0 < deg p /\ root p x
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `n = dim s r.sum $*` >>
   qabbrev_tac `b = ebasis x n` >>
@@ -459,7 +469,8 @@ val subfield_poly_of_element = store_thm(
   `(poly_chop s q) <> |0|` by metis_tac[zero_poly_eq_poly_zero, subring_poly_ids] >>
   `poly (poly_chop s q)` by metis_tac[subring_poly_poly] >>
   `0 < deg (poly_chop s q)` by metis_tac[poly_nonzero_with_root_deg_pos] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> ?p. poly_monic s p /\ 0 < deg p /\ root p x *)
 (* Proof:
@@ -480,10 +491,10 @@ val subfield_poly_of_element = store_thm(
      = #0                                      by poly_eval_element, field_mult_rzero
    Hence root p x                              by poly_root_def
 *)
-val subfield_monic_of_element = store_thm(
-  "subfield_monic_of_element",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> ?p. poly_monic s p /\ 0 < deg p /\ root p x``,
+Theorem subfield_monic_of_element:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> ?p. poly_monic s p /\ 0 < deg p /\ root p x
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `s <= r` by rw[subfield_is_subring] >>
   `?q. Poly s q /\ 0 < deg q /\ root q x` by rw_tac std_ss[subfield_poly_of_element] >>
@@ -497,7 +508,8 @@ val subfield_monic_of_element = store_thm(
   `eval p x = (eval u x) * (eval q x)` by rw[poly_eval_mult] >>
   `_ = (eval u x) * #0` by metis_tac[poly_root_def] >>
   `_ = #0` by rw[] >>
-  metis_tac[poly_root_def]);
+  metis_tac[poly_root_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Minimal Polynomial in Subfield                                            *)
@@ -541,28 +553,31 @@ val it = |- !r s x. minimal x = CHOICE (Minimals x): thm
 
 (* Theorem: p IN subfield_monics x <=> poly_monic s p /\ 0 < deg p /\ root p x *)
 (* Proof: by subfield_monics_of_element_def *)
-val subfield_monics_of_element_member = store_thm(
-  "subfield_monics_of_element_member",
-  ``!(r s):'a field x p:'a poly. p IN subfield_monics x <=> poly_monic s p /\ 0 < deg p /\ root p x``,
-  rw[subfield_monics_of_element_def]);
+Theorem subfield_monics_of_element_member:
+    !(r s):'a field x p:'a poly. p IN subfield_monics x <=> poly_monic s p /\ 0 < deg p /\ root p x
+Proof
+  rw[subfield_monics_of_element_def]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> subfield_monics x <> {} *)
 (* Proof: by subfield_monic_of_element *)
-val subfield_monics_of_element_nonempty = store_thm(
-  "subfield_monics_of_element_nonempty",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> subfield_monics x <> {}``,
-  metis_tac[subfield_monic_of_element, subfield_monics_of_element_member, MEMBER_NOT_EMPTY]);
+Theorem subfield_monics_of_element_nonempty:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> subfield_monics x <> {}
+Proof
+  metis_tac[subfield_monic_of_element, subfield_monics_of_element_member, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: p IN Minimals x <=> poly_monic s p /\ 0 < deg p /\ root p x /\
             (deg p = MIN_SET (IMAGE deg (subfield_monics x))) *)
 (* Proof: by preimage_def, poly_minimals_def, subfield_monics_of_element_member *)
-val poly_minimals_member = store_thm(
-  "poly_minimals_member",
-  ``!p. p IN Minimals x <=> poly_monic s p /\ 0 < deg p /\ root p x /\
-    (deg p = MIN_SET (IMAGE deg (subfield_monics x)))``,
+Theorem poly_minimals_member:
+    !p. p IN Minimals x <=> poly_monic s p /\ 0 < deg p /\ root p x /\
+    (deg p = MIN_SET (IMAGE deg (subfield_monics x)))
+Proof
   rw[preimage_def, poly_minimals_def] >>
-  metis_tac[subfield_monics_of_element_member]);
+  metis_tac[subfield_monics_of_element_member]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==>
             !x. x IN R ==> 0 < MIN_SET (IMAGE deg (subfield_monics x)) *)
@@ -579,12 +594,13 @@ val poly_minimals_member = store_thm(
        but p IN t ==> 0 < deg p                by subfield_monics_of_element_member
        which is a contradiction.
 *)
-val poly_minimals_deg_pos = store_thm(
-  "poly_minimals_deg_pos",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> 0 < MIN_SET (IMAGE deg (subfield_monics x))``,
+Theorem poly_minimals_deg_pos:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> 0 < MIN_SET (IMAGE deg (subfield_monics x))
+Proof
   metis_tac[subfield_monics_of_element_nonempty, IMAGE_EQ_EMPTY, IN_IMAGE,
-      subfield_monics_of_element_member, MIN_SET_LEM, NOT_ZERO_LT_ZERO]);
+      subfield_monics_of_element_member, MIN_SET_LEM, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==>
             !x. x IN R ==> !p. Monic s p /\ (deg p = 1) /\ root p x ==> p IN Minimals x *)
@@ -601,10 +617,10 @@ val poly_minimals_deg_pos = store_thm(
      But 0 < MIN_SET (IMAGE deg t)      by poly_minimals_deg_pos
     Thus MIN_SET (IMAGE deg t) = 1.
 *)
-val poly_minimals_has_monoimal_condition = store_thm(
-  "poly_minimals_has_monoimal_condition",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> !p. Monic s p /\ (deg p = 1) /\ root p x ==> p IN Minimals x``,
+Theorem poly_minimals_has_monoimal_condition:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> !p. Monic s p /\ (deg p = 1) /\ root p x ==> p IN Minimals x
+Proof
   rw[poly_minimals_member] >>
   qabbrev_tac `t = subfield_monics x` >>
   `t <> {}` by rw[subfield_monics_of_element_nonempty, Abbr`t`] >>
@@ -614,7 +630,8 @@ val poly_minimals_has_monoimal_condition = store_thm(
   `deg p IN IMAGE deg t` by rw[] >>
   `MIN_SET (IMAGE deg t) <= 1` by metis_tac[MIN_SET_LEM] >>
   `0 < MIN_SET (IMAGE deg t)` by metis_tac[poly_minimals_deg_pos] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> Minimals x <> {} *)
 (* Proof:
@@ -627,16 +644,17 @@ val poly_minimals_has_monoimal_condition = store_thm(
       or p IN Minimals x              by poly_minimals_def
    Hence Minimals x <> {}             by MEMBER_NOT_EMPTY
 *)
-val poly_minimals_nonempty = store_thm(
-  "poly_minimals_nonempty",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> Minimals x <> {}``,
+Theorem poly_minimals_nonempty:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> Minimals x <> {}
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = subfield_monics x` >>
   qabbrev_tac `y = MIN_SET (IMAGE deg t)` >>
   `t <> {}` by rw[subfield_monics_of_element_nonempty, Abbr`t`] >>
   `IMAGE deg t <> {}` by rw[IMAGE_EQ_EMPTY] >>
   `y IN (IMAGE deg t)` by rw[MIN_SET_LEM, Abbr`y`] >>
-  metis_tac[IN_IMAGE, in_preimage, poly_minimals_def, MEMBER_NOT_EMPTY]);
+  metis_tac[IN_IMAGE, in_preimage, poly_minimals_def, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==>
             (minimal x) IN (subfield_monics x) /\
@@ -649,11 +667,11 @@ val poly_minimals_nonempty = store_thm(
    Thus y IN (IMAGE deg t)              by MIN_SET_LEM, IMAGE deg t <> {}
    Hence the result                     by preimage_choice_property
 *)
-val poly_minimal_property = store_thm(
-  "poly_minimal_property",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
+Theorem poly_minimal_property:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
       (minimal x) IN (subfield_monics x) /\
-      (degree x = MIN_SET (IMAGE deg (subfield_monics x)))``,
+      (degree x = MIN_SET (IMAGE deg (subfield_monics x)))
+Proof
   ntac 6 (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = subfield_monics x` >>
   qabbrev_tac `y = MIN_SET (IMAGE deg t)` >>
@@ -662,7 +680,8 @@ val poly_minimal_property = store_thm(
   `t <> {}` by rw[subfield_monics_of_element_nonempty, Abbr`t`] >>
   `IMAGE deg t <> {}` by rw[IMAGE_EQ_EMPTY] >>
   `y IN (IMAGE deg t)` by rw[MIN_SET_LEM, Abbr`y`] >>
-  rw[preimage_choice_property]);
+  rw[preimage_choice_property]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==>
             !x. x IN R ==> poly_monic s (minimal x) /\ 0 < degree x /\ root (minimal x) x *)
@@ -671,11 +690,12 @@ val poly_minimal_property = store_thm(
    Then p IN t /\ (deg p = y)         by poly_minimal_property
     and result follows                by subfield_monics_of_element_member
 *)
-val poly_minimal_subfield_property = store_thm(
-  "poly_minimal_subfield_property",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-    !x. x IN R ==> poly_monic s (minimal x) /\ 0 < degree x /\ root (minimal x) x``,
-  metis_tac[poly_minimal_property, subfield_monics_of_element_member]);
+Theorem poly_minimal_subfield_property:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+    !x. x IN R ==> poly_monic s (minimal x) /\ 0 < degree x /\ root (minimal x) x
+Proof
+  metis_tac[poly_minimal_property, subfield_monics_of_element_member]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> Poly s (minimal x) *)
 (* Proof:
@@ -683,24 +703,27 @@ val poly_minimal_subfield_property = store_thm(
    Since poly_monic s p       by poly_minimal_subfield_property
      or Poly s p              by poly_monic_poly
 *)
-val poly_minimal_spoly = store_thm(
-  "poly_minimal_spoly",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> Poly s (minimal x)``,
-  rw[poly_minimal_subfield_property]);
+Theorem poly_minimal_spoly:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> Poly s (minimal x)
+Proof
+  rw[poly_minimal_subfield_property]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> poly (minimal x) *)
 (* Proof: by poly_minimal_spoly, subfield_is_subring, subring_poly_poly *)
-val poly_minimal_poly = store_thm(
-  "poly_minimal_poly",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> poly (minimal x)``,
-  metis_tac[poly_minimal_spoly, subfield_is_subring, subring_poly_poly]);
+Theorem poly_minimal_poly:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> poly (minimal x)
+Proof
+  metis_tac[poly_minimal_spoly, subfield_is_subring, subring_poly_poly]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> 0 < degree x *)
 (* Proof: by poly_minimal_subfield_property *)
-val poly_minimal_deg_pos = store_thm(
-  "poly_minimal_deg_pos",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> 0 < degree x``,
-  rw[poly_minimal_subfield_property]);
+Theorem poly_minimal_deg_pos:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> 0 < degree x
+Proof
+  rw[poly_minimal_subfield_property]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> ~upoly (minimal x) *)
 (* Proof:
@@ -708,10 +731,11 @@ val poly_minimal_deg_pos = store_thm(
      but !p. upoly p ==> deg p = 0    by poly_field_unit_deg, Field r
       so ~upoly (minimal x)
 *)
-val poly_minimal_not_unit = store_thm(
-  "poly_minimal_not_unit",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> ~upoly (minimal x)``,
-  metis_tac[poly_minimal_deg_pos, poly_field_unit_deg, finite_field_is_field, NOT_ZERO_LT_ZERO]);
+Theorem poly_minimal_not_unit:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> ~upoly (minimal x)
+Proof
+  metis_tac[poly_minimal_deg_pos, poly_field_unit_deg, finite_field_is_field, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x <> |1|) *)
 (* Proof:
@@ -719,12 +743,13 @@ val poly_minimal_not_unit = store_thm(
      but deg |1| = 0        by poly_deg_one
       so minimal x <> |1|
 *)
-val poly_minimal_ne_poly_one = store_thm(
-  "poly_minimal_ne_poly_one",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x <> |1|)``,
+Theorem poly_minimal_ne_poly_one:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x <> |1|)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `deg |1| = 0` by rw[] >>
-  metis_tac[poly_minimal_deg_pos, NOT_ZERO_LT_ZERO]);
+  metis_tac[poly_minimal_deg_pos, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x <> |0|) *)
 (* Proof:
@@ -732,33 +757,37 @@ val poly_minimal_ne_poly_one = store_thm(
      but deg |0| = 0        by poly_deg_zero
       so minimal x <> |0|
 *)
-val poly_minimal_ne_poly_zero = store_thm(
-  "poly_minimal_ne_poly_zero",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x <> |0|)``,
+Theorem poly_minimal_ne_poly_zero:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x <> |0|)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `deg |0| = 0` by rw[] >>
-  metis_tac[poly_minimal_deg_pos, NOT_ZERO_LT_ZERO]);
+  metis_tac[poly_minimal_deg_pos, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> root (minimal x) x *)
 (* Proof: by poly_minimal_subfield_property *)
-val poly_minimal_has_element_root = store_thm(
-  "poly_minimal_has_element_root",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> root (minimal x) x``,
-  rw[poly_minimal_subfield_property]);
+Theorem poly_minimal_has_element_root:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> root (minimal x) x
+Proof
+  rw[poly_minimal_subfield_property]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> monic (minimal x) *)
 (* Proof: by poly_minimal_subfield_property, subfield_is_subring, subring_poly_monic *)
-val poly_minimal_monic = store_thm(
-  "poly_minimal_monic",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> monic (minimal x)``,
-  metis_tac[poly_minimal_subfield_property, subfield_is_subring, subring_poly_monic]);
+Theorem poly_minimal_monic:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> monic (minimal x)
+Proof
+  metis_tac[poly_minimal_subfield_property, subfield_is_subring, subring_poly_monic]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> pmonic (minimal x) *)
 (* Proof: by poly_minimal_monic, poly_minimal_deg_pos, poly_monic_pmonic *)
-val poly_minimal_pmonic = store_thm(
-  "poly_minimal_pmonic",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> pmonic (minimal x)``,
-  rw[poly_minimal_monic, poly_minimal_deg_pos, poly_monic_pmonic]);
+Theorem poly_minimal_pmonic:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> pmonic (minimal x)
+Proof
+  rw[poly_minimal_monic, poly_minimal_deg_pos, poly_monic_pmonic]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==>
             !p. Poly s p /\ root p x ==> (minimal x) pdivides p *)
@@ -802,10 +831,10 @@ val poly_minimal_pmonic = store_thm(
      and deg z = deg v < deg q             by above
    This contradicts with deg q <= deg z.
 *)
-val poly_minimal_divides_subfield_poly = store_thm(
-  "poly_minimal_divides_subfield_poly",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
-   !p. Poly s p /\ root p x ==> (minimal x) pdivides p``,
+Theorem poly_minimal_divides_subfield_poly:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
+   !p. Poly s p /\ root p x ==> (minimal x) pdivides p
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `s <= r` by rw[subfield_is_subring] >>
   qabbrev_tac `q = minimal x` >>
@@ -834,16 +863,18 @@ val poly_minimal_divides_subfield_poly = store_thm(
   `IMAGE deg m <> {}` by metis_tac[MEMBER_NOT_EMPTY] >>
   `MIN_SET (IMAGE deg m) <= deg z` by rw[MIN_SET_LEM] >>
   `deg q = MIN_SET (IMAGE deg m)` by rw[poly_minimal_property, Abbr`q`, Abbr`m`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !p x. Poly s p /\ x IN (roots p) ==> minimal x pdivides p *)
 (* Proof: by poly_minimal_divides_subfield_poly, poly_roots_member *)
-val poly_minimal_divides_subfield_poly_alt = store_thm(
-  "poly_minimal_divides_subfield_poly_alt",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==>
-     !p x. Poly s p /\ x IN (roots p) ==> minimal x pdivides p``,
-  rw_tac std_ss[poly_minimal_divides_subfield_poly, poly_roots_member]);
+Theorem poly_minimal_divides_subfield_poly_alt:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==>
+     !p x. Poly s p /\ x IN (roots p) ==> minimal x pdivides p
+Proof
+  rw_tac std_ss[poly_minimal_divides_subfield_poly, poly_roots_member]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==>
             !p. Poly s p ==> (root p x <=> (minimal x) pdivides p) *)
@@ -858,10 +889,10 @@ val poly_minimal_divides_subfield_poly_alt = store_thm(
        and poly q              by poly_minimal_poly
        ==> root p x            by poly_divides_share_root
 *)
-val poly_minimal_divides_subfield_poly_iff = store_thm(
-  "poly_minimal_divides_subfield_poly_iff",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
-   !p. Poly s p ==> (root p x <=> (minimal x) pdivides p)``,
+Theorem poly_minimal_divides_subfield_poly_iff:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
+   !p. Poly s p ==> (root p x <=> (minimal x) pdivides p)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `q = minimal x` >>
   rw_tac std_ss[EQ_IMP_THM] >-
@@ -870,7 +901,8 @@ val poly_minimal_divides_subfield_poly_iff = store_thm(
   `s <= r` by rw[subfield_is_subring] >>
   `poly p` by metis_tac[subring_poly_poly] >>
   `poly q` by rw[poly_minimal_poly, Abbr`q`] >>
-  metis_tac[poly_divides_share_root]);
+  metis_tac[poly_divides_share_root]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -895,10 +927,10 @@ val poly_minimal_divides_subfield_poly_iff = store_thm(
     <=> h % m = |0|               by poly_divides_alt, ulead m
     <=> p % m = q % m             by poly_mod_eq, ulead m
 *)
-val poly_minimal_eval_congruence = store_thm(
-  "poly_minimal_eval_congruence",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
-   !p q. Poly s p /\ Poly s q ==> ((eval p x = eval q x) <=> (p % (minimal x) = q % (minimal x)))``,
+Theorem poly_minimal_eval_congruence:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
+   !p q. Poly s p /\ Poly s q ==> ((eval p x = eval q x) <=> (p % (minimal x) = q % (minimal x)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = minimal x` >>
   qabbrev_tac `h = poly_sub s p q` >>
@@ -913,7 +945,8 @@ val poly_minimal_eval_congruence = store_thm(
   `_ = (m pdivides h)` by rw[poly_minimal_divides_subfield_poly_iff, Abbr`m`] >>
   `_ = (h % m = |0|)` by rw[poly_divides_alt] >>
   `_ = (p % m = q % m)` by rw[poly_mod_eq, Abbr`h`] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem:  FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x) pdivides (unity (forder x)) *)
 (* Proof:
@@ -929,9 +962,9 @@ val poly_minimal_eval_congruence = store_thm(
       Also Poly s (unity ox)                 by poly_unity_spoly, subfield_is_subring
      Hence (minimal x) pdivides (unity ox)   by poly_minimal_divides_subfield_poly
 *)
-val poly_minimal_divides_unity_order = store_thm(
-  "poly_minimal_divides_unity_order",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x) pdivides (unity (forder x))``,
+Theorem poly_minimal_divides_unity_order:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x) pdivides (unity (forder x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `ox = forder x` >>
   Cases_on `x = #0` >-
@@ -940,7 +973,8 @@ val poly_minimal_divides_unity_order = store_thm(
   `x ** ox = #1` by rw[field_order_property, Abbr`ox`] >>
   `root (unity ox) x` by rw[poly_unity_root_property] >>
   `Poly s (unity ox)` by rw[poly_unity_spoly, subfield_is_subring] >>
-  rw[poly_minimal_divides_subfield_poly]);
+  rw[poly_minimal_divides_subfield_poly]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Minimal Polynomial is unique and irreducible                              *)
@@ -960,9 +994,9 @@ val poly_minimal_divides_unity_order = store_thm(
    so p = q                          by poly_monic_divides_eq_deg_eq
    or SING t                         by SING_ONE_ELEMENT
 *)
-val poly_minimals_sing = store_thm(
-  "poly_minimals_sing",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> SING (Minimals x)``,
+Theorem poly_minimals_sing:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> SING (Minimals x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = Minimals x` >>
   qabbrev_tac `p = minimal x` >>
@@ -975,7 +1009,8 @@ val poly_minimals_sing = store_thm(
   `p pdivides q` by rw[poly_minimal_divides_subfield_poly, Abbr`p`] >>
   `deg p = deg q` by metis_tac[poly_minimals_member] >>
   `monic p /\ monic q` by metis_tac[poly_minimals_member, subfield_is_subring, subring_poly_monic] >>
-  metis_tac[poly_monic_divides_eq_deg_eq]);
+  metis_tac[poly_monic_divides_eq_deg_eq]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> (minimal #0 = X) *)
 (* Proof:
@@ -1004,9 +1039,9 @@ val poly_minimals_sing = store_thm(
      But SING t                     by poly_minimals_sing
    Hence poly_minimal r s #0 = X    by SING_ONE_ELEMENT
 *)
-val poly_minimal_zero = store_thm(
-  "poly_minimal_zero",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> (minimal #0 = X)``,
+Theorem poly_minimal_zero:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> (minimal #0 = X)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `(lead X = #1) /\ (deg X = 1)` by rw[] >>
   `root X #0` by rw[poly_root_def] >>
@@ -1019,7 +1054,8 @@ val poly_minimal_zero = store_thm(
   `X IN t` by metis_tac[poly_minimals_has_monoimal_condition, Abbr`t`] >>
   `t <> {}` by metis_tac[MEMBER_NOT_EMPTY] >>
   `minimal #0 IN t` by rw[poly_minimal_def, CHOICE_DEF, Abbr`t`] >>
-  metis_tac[poly_minimals_sing, SING_ONE_ELEMENT]);
+  metis_tac[poly_minimals_sing, SING_ONE_ELEMENT]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> (minimal #1 = X - |1|) *)
 (* Proof:
@@ -1043,9 +1079,9 @@ val poly_minimal_zero = store_thm(
      But SING t                     by poly_minimals_sing
    Hence minimal #1 = p             by SING_ONE_ELEMENT
 *)
-val poly_minimal_one = store_thm(
-  "poly_minimal_one",
-  ``!(r s):'a ring. FiniteField r /\ s <<= r ==> (minimal #1 = X - |1|)``,
+Theorem poly_minimal_one:
+    !(r s):'a ring. FiniteField r /\ s <<= r ==> (minimal #1 = X - |1|)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = X - |1|` >>
   `p = unity 1` by rw[poly_unity_1, Abbr`p`] >>
@@ -1059,7 +1095,8 @@ val poly_minimal_one = store_thm(
   `minimal #1 IN t` by rw[poly_minimal_def, CHOICE_DEF, Abbr`t`] >>
   `#1 IN R` by rw[] >>
   `SING t` by rw[poly_minimals_sing, Abbr`t`] >>
-  metis_tac[SING_DEF, IN_SING]);
+  metis_tac[SING_DEF, IN_SING]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> ((minimal x = X) <=> (x = #0)) *)
 (* Proof:
@@ -1070,10 +1107,11 @@ val poly_minimal_one = store_thm(
         <=>        x = #0            by poly_eval_X
    Only-if part: x = #0 ==> minimal x = X, true by poly_minimal_zero
 *)
-val poly_minimal_eq_X = store_thm(
-  "poly_minimal_eq_X",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> ((minimal x = X) <=> (x = #0))``,
-  metis_tac[poly_minimal_has_element_root, poly_minimal_zero, poly_root_def, poly_eval_X, field_is_ring]);
+Theorem poly_minimal_eq_X:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> ((minimal x = X) <=> (x = #0))
+Proof
+  metis_tac[poly_minimal_has_element_root, poly_minimal_zero, poly_root_def, poly_eval_X, field_is_ring]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> IPoly s (minimal x *)
 (* Proof:
@@ -1105,9 +1143,9 @@ val poly_minimal_eq_X = store_thm(
         or MIN_SET (IMAGE deg t) <= deg v  by MIN_SET_LEM
        This contradicts deg v < deg p = MIN_SET (IMAGE deg t)
 *)
-val poly_minimal_subfield_irreducible = store_thm(
-  "poly_minimal_subfield_irreducible",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> IPoly s (minimal x)``,
+Theorem poly_minimal_subfield_irreducible:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> IPoly s (minimal x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `s <= r` by rw[subfield_is_subring] >>
   qabbrev_tac `p = minimal x` >>
@@ -1130,7 +1168,8 @@ val poly_minimal_subfield_irreducible = store_thm(
     `v IN t` by rw[subfield_monics_of_element_member, Abbr`t`] >>
     `MIN_SET (IMAGE deg t) <= deg v` by rw[MIN_SET_LEM] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -1151,13 +1190,14 @@ Proofs below to be revised.
      Now Weak (PF r) p       by stick_is_weak
    hence weak p              by subfield_poly_weak_is_weak
 *)
-val prime_field_stick_is_weak = store_thm(
-  "prime_field_stick_is_weak",
-  ``!r:'a field. FiniteField r ==> !p n. p IN sticks (PF r) n ==> weak p``,
+Theorem prime_field_stick_is_weak:
+    !r:'a field. FiniteField r ==> !p n. p IN sticks (PF r) n ==> weak p
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Field (PF r)` by rw[prime_field_field] >>
   `subfield (PF r) r` by rw[prime_field_subfield] >>
-  metis_tac[stick_is_weak, subfield_poly_weak_is_weak]);
+  metis_tac[stick_is_weak, subfield_poly_weak_is_weak]
+QED
 
 (* Theorem: FiniteField r ==> !p n. p IN sticks (PF r) (SUC n) ==>
             !x. x IN R ==> (p <o> (ebasis x n) = eval p x) *)
@@ -1195,10 +1235,10 @@ val prime_field_stick_is_weak = store_thm(
        = eval (SNOC h t) x                         by weak_eval_snoc
        = eval p x                                  by p = SNOC h t
 *)
-val vsum_element_powers_basis_eq_eval = store_thm(
-  "vsum_element_powers_basis_eq_eval",
-  ``!r:'a field. FiniteField r ==> !p n. p IN sticks (PF r) (SUC n) ==>
-   !x. x IN R ==> (p <o> (ebasis x n) = eval p x)``,
+Theorem vsum_element_powers_basis_eq_eval:
+    !r:'a field. FiniteField r ==> !p n. p IN sticks (PF r) (SUC n) ==>
+   !x. x IN R ==> (p <o> (ebasis x n) = eval p x)
+Proof
   ntac 2 (stripDup[FiniteField_def]) >>
   Induct_on `n` >| [
     rw[] >>
@@ -1220,7 +1260,8 @@ val vsum_element_powers_basis_eq_eval = store_thm(
     `_ = eval t x + h * x ** LENGTH t` by rw[ring_add_comm] >>
     `_ = eval p x` by rw[weak_eval_snoc] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> ?p. pfpoly p /\ 0 < deg p /\ root p x *)
 (* Proof:
@@ -1252,9 +1293,9 @@ val vsum_element_powers_basis_eq_eval = store_thm(
   Hence root p x                              by poly_root_def
    with 0 < deg p                             by poly_nonzero_with_root_deg_pos
 *)
-val poly_prime_field_with_root_exists = store_thm(
-  "poly_prime_field_with_root_exists",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> ?p. pfpoly p /\ 0 < deg p /\ root p x``,
+Theorem poly_prime_field_with_root_exists:
+    !r:'a field. FiniteField r ==> !x. x IN R ==> ?p. pfpoly p /\ 0 < deg p /\ root p x
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `n = dim (PF r) r.sum $*` >>
   qabbrev_tac `b = ebasis x n` >>
@@ -1277,7 +1318,8 @@ val poly_prime_field_with_root_exists = store_thm(
   `(pfchop q) <> |0|` by metis_tac[zero_poly_eq_poly_zero, poly_prime_field_ids] >>
   `poly (pfchop q)` by rw[poly_prime_field_element_poly] >>
   `0 < deg (pfchop q)` by metis_tac[poly_nonzero_with_root_deg_pos, field_is_ring] >>
-  rw[]);
+  rw[]
+QED
 
 (* overload on monic in (PF r) poly *)
 val _ = overload_on("pfmonic", ``poly_monic (PF r)``);
@@ -1301,9 +1343,9 @@ val _ = overload_on("pfipoly", ``irreducible (PolyRing (PF r))``);
      = #0                                      by poly_eval_element, field_mult_rzero
    Hence root p x                              by poly_root_def
 *)
-val poly_prime_field_monic_with_root_exists = store_thm(
-  "poly_prime_field_monic_with_root_exists",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> ?p. pfmonic p /\ 0 < deg p /\ root p x``,
+Theorem poly_prime_field_monic_with_root_exists:
+    !r:'a field. FiniteField r ==> !x. x IN R ==> ?p. pfmonic p /\ 0 < deg p /\ root p x
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `?q. pfpoly q /\ 0 < deg q /\ root q x` by rw_tac std_ss[poly_prime_field_with_root_exists] >>
   `(PolyRing (PF r)).sum.id = |0|` by rw[poly_prime_field_ids] >>
@@ -1316,7 +1358,8 @@ val poly_prime_field_monic_with_root_exists = store_thm(
   `eval p x = (eval u x) * (eval q x)` by rw_tac std_ss[poly_eval_mult] >>
   `_ = (eval u x) * #0` by metis_tac[poly_root_def] >>
   `_ = #0` by rw[] >>
-  metis_tac[poly_root_def]);
+  metis_tac[poly_root_def]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -1347,16 +1390,17 @@ val _ = overload_on("pfppideal", ``principal_ideal (PolyRing r)``);
    Only-if part: p = |0| ==> pfppideal p = pfppideal |0|
       This is trivial.
 *)
-val poly_ring_zero_ideal = store_thm(
-  "poly_ring_zero_ideal",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> ((pfppideal p = pfppideal |0|) <=> (p = |0|))``,
+Theorem poly_ring_zero_ideal:
+    !r:'a ring. Ring r ==> !p. poly p ==> ((pfppideal p = pfppideal |0|) <=> (p = |0|))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >>
   `poly |0|` by rw[] >>
   `Ring (PolyRing r)` by rw[poly_ring_ring] >>
   `p IN (pfppideal p).carrier` by metis_tac[principal_ideal_has_element, poly_ring_property] >>
   `(pfppideal p).carrier = (pfppideal |0|).carrier` by rw[principal_ideal_ideal, ideal_eq_ideal] >>
   `_ = { |0| }` by rw[zero_ideal_sing] >> (* avoid bag syntax *)
-  metis_tac[IN_SING]);
+  metis_tac[IN_SING]
+QED
 
 (* Theorem: Field r ==> !i. i << (PolyRing r) /\ i <> pfppideal |0| ==> ?p. monic p /\ (i = pfppideal p) *)
 (* Proof:
@@ -1371,10 +1415,10 @@ val poly_ring_zero_ideal = store_thm(
      Now q = p * u                        by poly_mult_comm
    Hence i = pfppideal p                  by principal_ideal_eq_principal_ideal, Ring (PolyRing r)
 *)
-val poly_ring_ideal_gen_monic = store_thm(
-  "poly_ring_ideal_gen_monic",
-  ``!r:'a field. Field r ==> !i. i << (PolyRing r) /\ i <> pfppideal |0| ==>
-   ?p. monic p /\ (i = pfppideal p)``,
+Theorem poly_ring_ideal_gen_monic:
+    !r:'a field. Field r ==> !i. i << (PolyRing r) /\ i <> pfppideal |0| ==>
+   ?p. monic p /\ (i = pfppideal p)
+Proof
   rpt strip_tac >>
   `Ring (PolyRing r)` by rw[poly_ring_ring] >>
   `PrincipalIdealRing (PolyRing r)` by rw[poly_ring_principal_ideal_ring] >>
@@ -1383,7 +1427,8 @@ val poly_ring_ideal_gen_monic = store_thm(
   `?u p. upoly u /\ monic p /\ (deg p = deg q) /\ (q = u * p)` by rw[poly_monic_mult_factor] >>
   `poly p /\ poly u` by rw[poly_unit_poly] >>
   `q = p * u` by rw[poly_mult_comm] >>
-  metis_tac[principal_ideal_eq_principal_ideal, poly_ring_property]);
+  metis_tac[principal_ideal_eq_principal_ideal, poly_ring_property]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q ==>
             ((pfppideal p = pfppideal q) <=> ?u. poly u /\ upoly u /\ (p = u * q)) *)
@@ -1417,10 +1462,10 @@ val poly_ring_ideal_gen_monic = store_thm(
       Since p = u * q = q * u          by poly_mult_comm
       Hence pfppideal p = pfppideal q  by principal_ideal_eq_principal_ideal
 *)
-val poly_field_principal_ideal_equal = store_thm(
-  "poly_field_principal_ideal_equal",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q ==>
-   ((pfppideal p = pfppideal q) <=> ?u. poly u /\ upoly u /\ (p = u * q))``,
+Theorem poly_field_principal_ideal_equal:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q ==>
+   ((pfppideal p = pfppideal q) <=> ?u. poly u /\ upoly u /\ (p = u * q))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   `Ring (PolyRing r)` by rw[poly_ring_ring] >>
@@ -1441,7 +1486,8 @@ val poly_field_principal_ideal_equal = store_thm(
       metis_tac[poly_ring_units, poly_mult_comm]
     ],
     metis_tac[principal_ideal_eq_principal_ideal, poly_mult_comm]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p q. monic p /\ monic q /\ (pfppideal p = pfppideal q) ==> (p = q) *)
 (* Proof:
@@ -1456,9 +1502,9 @@ val poly_field_principal_ideal_equal = store_thm(
      thus   u = [#1] = |1|                      by poly_one, field_one_ne_zero
    Hence p = u * q = |1| * q = q                by poly_mult_lone, poly_monic_poly
 *)
-val poly_ring_ideal_monic_gen_unique = store_thm(
-  "poly_ring_ideal_monic_gen_unique",
-  ``!r:'a field. Field r ==> !p q. monic p /\ monic q /\ (pfppideal p = pfppideal q) ==> (p = q)``,
+Theorem poly_ring_ideal_monic_gen_unique:
+    !r:'a field. Field r ==> !p q. monic p /\ monic q /\ (pfppideal p = pfppideal q) ==> (p = q)
+Proof
   rpt strip_tac >>
   `?u. poly u /\ upoly u /\ (p = u * q)` by rw[GSYM poly_field_principal_ideal_equal] >>
   `u <> |0| /\ (deg u = 0)` by metis_tac[poly_field_units] >>
@@ -1467,7 +1513,8 @@ val poly_ring_ideal_monic_gen_unique = store_thm(
   `#1 = c * #1` by metis_tac[poly_monic_lead, poly_lead_const] >>
   `c = #1` by metis_tac[field_mult_rone] >>
   `u = |1|` by metis_tac[poly_one, field_one_ne_zero] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The Ideal of Polynomials sharing a root.                                  *)
@@ -1510,10 +1557,10 @@ val _ = overload_on("sideal", ``set_to_ideal r``);
     or poly x /\ root p x /\ poly y ==> poly (x * y) /\ root (y * x) z
        This is true by poly_mult_poly, poly_root_mult_comm.
 *)
-val poly_root_poly_ideal = store_thm(
-  "poly_root_poly_ideal",
-  ``!r:'a ring. Ring r ==> !z. z IN R ==>
-    (set_to_ideal (PolyRing r) {p | poly p /\ root p z}) << (PolyRing r)``,
+Theorem poly_root_poly_ideal:
+    !r:'a ring. Ring r ==> !z. z IN R ==>
+    (set_to_ideal (PolyRing r) {p | poly p /\ root p z}) << (PolyRing r)
+Proof
   rw_tac std_ss[ideal_def, set_to_ideal_def, Subgroup_def, poly_ring_element, GSPECIFICATION] >| [
     rw_tac std_ss[group_def_alt, GSPECIFICATION] >-
     rw[] >-
@@ -1529,7 +1576,8 @@ val poly_root_poly_ideal = store_thm(
     rw[poly_root_mult],
     rw[],
     rw[poly_root_mult_comm]
-  ]);
+  ]
+QED
 
 (*
 Given an a which is algebraic over some subfield K of F, it can be checked (exercise!)

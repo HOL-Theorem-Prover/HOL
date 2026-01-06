@@ -122,10 +122,11 @@ val _ = overload_on("forder_", ``order ((r_:'b ring).prod excluding r_.sum.id)``
     = case OLEAST k. period r.prod x k of NONE => 0 | SOME k => k       by period_def
     = order r.prod x                                                    by order_def
 *)
-val field_nonzero_order = store_thm(
-  "field_nonzero_order",
-  ``!r:'a field. Field r ==> !x. order r.prod x = forder x``,
-  rw[order_def, period_def, field_nonzero_mult_property]);
+Theorem field_nonzero_order:
+    !r:'a field. Field r ==> !x. order r.prod x = forder x
+Proof
+  rw[order_def, period_def, field_nonzero_mult_property]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R+ ==> 0 < forder x /\ (x ** forder x = #1) *)
 (* Proof:
@@ -134,10 +135,11 @@ val field_nonzero_order = store_thm(
 val it = |- FiniteGroup f* ==> !x. x IN F* ==> 0 < forder x /\ (f*.exp x (forder x) = f*.id): thm
    Apply field_nonzero_mult_property.
 *)
-val field_order_property = store_thm(
-  "field_order_property",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> 0 < forder x /\ (x ** forder x = #1)``,
-  metis_tac[finite_field_is_field, finite_field_alt, group_order_property, field_nonzero_mult_property]);
+Theorem field_order_property:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> 0 < forder x /\ (x ** forder x = #1)
+Proof
+  metis_tac[finite_field_is_field, finite_field_alt, group_order_property, field_nonzero_mult_property]
+QED
 
 (* Theorem: Field r ==> !x. x ** forder x = #1 *)
 (* Proof:
@@ -145,10 +147,11 @@ val field_order_property = store_thm(
      val it = |- !x. f*.exp x (forder x) = f*.id: thm
    Apply field_nonzero_mult_property.
 *)
-val field_order_eqn = store_thm(
-  "field_order_eqn",
-  ``!r:'a field. Field r ==> !x. x ** forder x = #1``,
-  metis_tac[order_property, field_nonzero_mult_property]);
+Theorem field_order_eqn:
+    !r:'a field. Field r ==> !x. x ** forder x = #1
+Proof
+  metis_tac[order_property, field_nonzero_mult_property]
+QED
 
 (* Theorem: Field r ==> !x n. 0 < n /\ n < forder x ==> x ** n <> #1 *)
 (* Proof:
@@ -156,19 +159,21 @@ val field_order_eqn = store_thm(
      val it = |- !x n. 0 < n /\ n < forder x ==> f*.exp x n <> f*.id: thm
    Apply field_nonzero_mult_property.
 *)
-val field_order_minimal = store_thm(
-  "field_order_minimal",
-  ``!r:'a field. Field r ==> !x n. 0 < n /\ n < forder x ==> x ** n <> #1``,
-  metis_tac[order_minimal, field_nonzero_mult_property]);
+Theorem field_order_minimal:
+    !r:'a field. Field r ==> !x n. 0 < n /\ n < forder x ==> x ** n <> #1
+Proof
+  metis_tac[order_minimal, field_nonzero_mult_property]
+QED
 
 (* Theorem: Field r ==> !n. 0 < n ==>
             !x. (forder x = n) <=> ((x ** n = #1) /\ !m. 0 < m /\ m < n ==> x ** m <> #1) *)
 (* Proof: by order_thm, field_nonzero_mult_property *)
-val field_order_thm = store_thm(
-  "field_order_thm",
-  ``!r:'a field. Field r ==> !n. 0 < n ==>
-   !x. (forder x = n) <=> ((x ** n = #1) /\ !m. 0 < m /\ m < n ==> x ** m <> #1)``,
-  rw[order_thm, field_nonzero_mult_property]);
+Theorem field_order_thm:
+    !r:'a field. Field r ==> !n. 0 < n ==>
+   !x. (forder x = n) <=> ((x ** n = #1) /\ !m. 0 < m /\ m < n ==> x ** m <> #1)
+Proof
+  rw[order_thm, field_nonzero_mult_property]
+QED
 
 (* Theorem: Field r ==> !x. x IN R+ ==>
             !m n. m < forder x /\ n < forder x ==> ((x ** m = x ** n) <=> (m = n)) *)
@@ -184,10 +189,10 @@ val field_order_thm = store_thm(
    Only-if part: (m = n) ==> (x ** m = x ** n)
       This is trivially true.
 *)
-val field_nonzero_exp_eq = store_thm(
-  "field_nonzero_exp_eq",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==>
-   !m n. m < forder x /\ n < forder x ==> ((x ** m = x ** n) <=> (m = n))``,
+Theorem field_nonzero_exp_eq:
+    !r:'a field. Field r ==> !x. x IN R+ ==>
+   !m n. m < forder x /\ n < forder x ==> ((x ** m = x ** n) <=> (m = n))
+Proof
   rw[EQ_IMP_THM] >>
   `x IN R /\ x <> #0` by metis_tac[field_nonzero_eq] >>
   spose_not_then strip_assume_tac >>
@@ -196,7 +201,8 @@ val field_nonzero_exp_eq = store_thm(
     metis_tac[field_exp_eq, field_order_minimal],
     `n < m /\ 0 < m - n /\ m - n < forder x` by decide_tac >>
     metis_tac[field_exp_eq, field_order_minimal]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> (forder #0 = 0) *)
 (* Proof:
@@ -205,10 +211,11 @@ val field_nonzero_exp_eq = store_thm(
    <=> !n. 0 < n ==> #0 ** n <> #1            by field_nonzero_mult_property
    <=> true                                   by field_zero_exp
 *)
-val field_order_zero = store_thm(
-  "field_order_zero",
-  ``!r:'a field. Field r ==> (forder #0 = 0)``,
-  rw[order_eq_0, field_nonzero_mult_property, field_zero_exp]);
+Theorem field_order_zero:
+    !r:'a field. Field r ==> (forder #0 = 0)
+Proof
+  rw[order_eq_0, field_nonzero_mult_property, field_zero_exp]
+QED
 
 (* Theorem: Field r ==> !x. (forder x = 0) <=> (!n. 0 < n ==> x ** n <> #1) *)
 (* Proof:
@@ -220,21 +227,23 @@ val field_order_zero = store_thm(
 order_eq_0 |> ISPEC ``(r:'a field).prod excluding #0``;
 val it = |- !x. (forder x = 0) <=> !n. 0 < n ==> f*.exp x n <> f*.id: thm
 *)
-val field_order_0 = store_thm(
-  "field_order_0",
-  ``!r:'a field. Field r ==> !x. (forder x = 0) <=> (!n. 0 < n ==> x ** n <> #1)``,
+Theorem field_order_0:
+    !r:'a field. Field r ==> !x. (forder x = 0) <=> (!n. 0 < n ==> x ** n <> #1)
+Proof
   rpt strip_tac >>
   `Group f*` by rw[field_nonzero_mult_is_group] >>
   `f*.id = #1` by rw[group_excluding_property] >>
   `!n. f*.exp x n = x ** n` by rw[monoid_exp_def] >>
-  rw[order_eq_0]);
+  rw[order_eq_0]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R+ ==> (forder x <> 0) *)
 (* Proof: by finite_field_is_finite_integral_domain, integral_domain_order_nonzero *)
-val field_order_nonzero = store_thm(
-  "field_order_nonzero",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> (forder x <> 0)``,
-  rw_tac std_ss[finite_field_is_finite_integral_domain, integral_domain_order_nonzero]);
+Theorem field_order_nonzero:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> (forder x <> 0)
+Proof
+  rw_tac std_ss[finite_field_is_finite_integral_domain, integral_domain_order_nonzero]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> ((forder x = 0) <=> (x = #0)) *)
 (* Proof:
@@ -245,15 +254,16 @@ val field_order_nonzero = store_thm(
       This contradicts forder x = 0.
    Only-if part: x = #0 ==> forder x = 0, true    by field_order_zero
 *)
-val field_order_eq_0 = store_thm(
-  "field_order_eq_0",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> ((forder x = 0) <=> (x = #0))``,
+Theorem field_order_eq_0:
+    !r:'a field. FiniteField r ==> !x. x IN R ==> ((forder x = 0) <=> (x = #0))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[field_order_zero, EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   `x IN R+` by rw[field_nonzero_eq] >>
   `0 < forder x` by rw[field_order_property] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Field r ==> (forder #1 = 1) *)
 (* Proof:
@@ -263,10 +273,11 @@ val field_order_eq_0 = store_thm(
      and #1 = f*.id              by field_nonzero_mult_property
    Hence forder #1 = 1           by group_order_eq_1
 *)
-val field_order_one = store_thm(
-  "field_order_one",
-  ``!r:'a field. Field r ==> (forder #1 = 1)``,
-  rw[field_mult_group, group_order_eq_1, field_nonzero_mult_property]);
+Theorem field_order_one:
+    !r:'a field. Field r ==> (forder #1 = 1)
+Proof
+  rw[field_mult_group, group_order_eq_1, field_nonzero_mult_property]
+QED
 
 (* Theorem: Field r ==> !x. x IN R ==> ((forder x = 1) <=> (x = #1)) *)
 (* Proof:
@@ -282,16 +293,17 @@ val field_order_one = store_thm(
       Then x IN R+                        by field_nonzero_eq
      Hence (forder x = 1) <=> (x = #1)    by group_order_eq_1
 *)
-val field_order_eq_1 = store_thm(
-  "field_order_eq_1",
-  ``!r:'a field. Field r ==> !x. x IN R ==> ((forder x = 1) <=> (x = #1))``,
+Theorem field_order_eq_1:
+    !r:'a field. Field r ==> !x. x IN R ==> ((forder x = 1) <=> (x = #1))
+Proof
   rpt strip_tac >>
   `Group f* /\ (F* = R+)` by rw[field_mult_group] >>
   `#1 IN R+` by rw[] >>
   `#1 = f*.id` by rw[field_nonzero_mult_property] >>
   Cases_on `x = #0` >-
   rw[field_order_zero, EQ_IMP_THM] >>
-  rw[group_order_eq_1, field_nonzero_eq]);
+  rw[group_order_eq_1, field_nonzero_eq]
+QED
 
 (* Theorem: FiniteField r ==> (forder (-#1) = if char r = 2 then 1 else 2) *)
 (* Proof:
@@ -310,9 +322,9 @@ val field_order_eq_1 = store_thm(
          = #1                 by field_mult_one_one
      Hence forder #1 = 2      by field_order_thm
 *)
-val field_order_neg_one = store_thm(
-  "field_order_neg_one",
-  ``!r:'a field. Field r ==> (forder (-#1) = if char r = 2 then 1 else 2)``,
+Theorem field_order_neg_one:
+    !r:'a field. Field r ==> (forder (-#1) = if char r = 2 then 1 else 2)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   rw[] >-
@@ -321,7 +333,8 @@ val field_order_neg_one = store_thm(
   `-#1 IN R /\ -#1 IN R+` by rw[] >>
   `(-#1) ** 1 <> #1` by rw[] >>
   `(-#1) ** 2 = #1` by rw[field_exp_small] >>
-  rw[field_order_thm, DECIDE``!m. 0 < m /\ m < 2 ==> (m = 1)``]);
+  rw[field_order_thm, DECIDE``!m. 0 < m /\ m < 2 ==> (m = 1)``]
+QED
 
 (* Theorem: Field r ==> !x. x IN R /\ 0 < order r.prod x ==> !n. x ** n = x ** (n MOD (order r.prod x) *)
 (* Proof:
@@ -331,14 +344,15 @@ val field_order_neg_one = store_thm(
      ==> Group f* /\ (F* = R+)   by field_mult_group
    Hence result follows          by group_exp_mod_order, field_nonzero_mult_property
 *)
-val field_exp_mod_order = store_thm(
-  "field_exp_mod_order",
-  ``!r:'a field. Field r ==> !x. x IN R /\ 0 < forder x ==> !n. x ** n = x ** (n MOD (forder x))``,
+Theorem field_exp_mod_order:
+    !r:'a field. Field r ==> !x. x IN R /\ 0 < forder x ==> !n. x ** n = x ** (n MOD (forder x))
+Proof
   rpt strip_tac >>
   `forder x <> 0` by decide_tac >>
   `x IN R+` by metis_tac[field_order_zero, field_nonzero_eq] >>
   `Group f* /\ (F* = R+)` by rw[field_mult_group] >>
-  metis_tac[group_exp_mod_order, field_nonzero_mult_property]);
+  metis_tac[group_exp_mod_order, field_nonzero_mult_property]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R+ ==> !n. x ** n = x ** (n MOD (forder x)) *)
 (* Proof:
@@ -346,10 +360,11 @@ val field_exp_mod_order = store_thm(
      and 0 < forder x          by field_order_property
    Hence result follows        by field_exp_mod_order
 *)
-val finite_field_exp_mod_order = store_thm(
-  "finite_field_exp_mod_order",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> !n. x ** n = x ** (n MOD (forder x))``,
-  rw[finite_field_is_field, field_nonzero_element, field_order_property, GSYM field_exp_mod_order]);
+Theorem finite_field_exp_mod_order:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> !n. x ** n = x ** (n MOD (forder x))
+Proof
+  rw[finite_field_is_field, field_nonzero_element, field_order_property, GSYM field_exp_mod_order]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R+ ==> (forder x) divides (CARD R+)  *)
 (* Proof:
@@ -358,16 +373,17 @@ val finite_field_exp_mod_order = store_thm(
    Hence FiniteGroup f*                      by FiniteGroup_def
      and (forder x) divides (CARD R+)        by group_order_divides
 *)
-val field_order_divides = store_thm(
-  "field_order_divides",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> (forder x) divides (CARD R+)``,
+Theorem field_order_divides:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> (forder x) divides (CARD R+)
+Proof
   rpt strip_tac >>
   `Field r /\ FINITE R` by metis_tac[FiniteField_def] >>
   `Group f*` by rw[field_mult_group] >>
   `FINITE R+` by metis_tac[field_nonzero_eq, SUBSET_DEF, SUBSET_FINITE] >>
   `F* = R+` by rw[field_mult_carrier] >>
   `FiniteGroup f*` by metis_tac[FiniteGroup_def] >>
-  metis_tac[group_order_divides]);
+  metis_tac[group_order_divides]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> forder x < CARD R *)
 (* Proof:
@@ -382,9 +398,9 @@ val field_order_divides = store_thm(
        But CARD R = SUC (CARD R+)        by finite_field_carrier_card
      Hence (forder x) < CARD R           by LESS_EQ_IMP_LESS_SUC
 *)
-val field_order_upper = store_thm(
-  "field_order_upper",
-  ``!r:'a field. FiniteField r ==> !x. x IN R ==> forder x < CARD R``,
+Theorem field_order_upper:
+    !r:'a field. FiniteField r ==> !x. x IN R ==> forder x < CARD R
+Proof
   rpt (stripDup[FiniteField_def]) >>
   Cases_on `x = #0` >-
   rw[field_order_zero, finite_field_card_pos] >>
@@ -393,7 +409,8 @@ val field_order_upper = store_thm(
   `0 < (CARD R+)` by rw[field_nonzero_card_pos] >>
   `CARD R = SUC (CARD R+)` by rw[finite_field_carrier_card] >>
   `(forder x) <= (CARD R+)` by rw[DIVIDES_LE] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Field r ==> !x. x IN R+ ==> !n. (x ** n = #1) <=> (forder x) divides n *)
 (* Proof:
@@ -402,12 +419,13 @@ val field_order_upper = store_thm(
    val it = |- Group f* ==> !x. x IN F* ==> !n. (f*.exp x n = f*.id) <=> forder x divides n: thm
    and simplify by field_nonzero_mult_property.
 *)
-val field_order_divides_exp = store_thm(
-  "field_order_divides_exp",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> !n. (x ** n = #1) <=> (forder x) divides n``,
+Theorem field_order_divides_exp:
+    !r:'a field. Field r ==> !x. x IN R+ ==> !n. (x ** n = #1) <=> (forder x) divides n
+Proof
   rpt strip_tac >>
   `Group f*` by rw[field_mult_group] >>
-  rw[GSYM group_order_divides_exp, field_nonzero_mult_property]);
+  rw[GSYM group_order_divides_exp, field_nonzero_mult_property]
+QED
 
 (*
 In a FiniteField, can (forder x) divides the prime (char r) ?
@@ -436,10 +454,11 @@ so z divides 1, or z = 1, or x = #1.
      ==> coprime ox (SUC (CARD R+))     by divides_imp_coprime_with_successor
       or coprime ox (CARD R)            by finite_field_carrier_card
 *)
-val field_order_coprime_card = store_thm(
-  "field_order_coprime_card",
-  ``!r:'a field. FiniteField r ==> !x. x IN R+ ==> coprime (forder x) (CARD R)``,
-  rw[field_order_divides, divides_imp_coprime_with_successor, finite_field_carrier_card]);
+Theorem field_order_coprime_card:
+    !r:'a field. FiniteField r ==> !x. x IN R+ ==> coprime (forder x) (CARD R)
+Proof
+  rw[field_order_divides, divides_imp_coprime_with_successor, finite_field_carrier_card]
+QED
 
 (* Theorem: Field r ==> !x. x IN R ==> !n. forder (x ** n) * (gcd n (forder x)) = forder x *)
 (* Proof:
@@ -458,9 +477,9 @@ val field_order_coprime_card = store_thm(
    val it = |- Group f* ==> !x. x IN F* ==> !k. forder (f*.exp x k) * gcd (forder x) k = forder x: thm
    Apply field_nonzero_mult_property and GCD_SYM.
 *)
-val field_order_power = store_thm(
-  "field_order_power",
-  ``!r:'a field. Field r ==> !x. x IN R ==> !n. forder (x ** n) * (gcd n (forder x)) = forder x``,
+Theorem field_order_power:
+    !r:'a field. Field r ==> !x. x IN R ==> !n. forder (x ** n) * (gcd n (forder x)) = forder x
+Proof
   rpt strip_tac >>
   Cases_on `x = #0` >| [
     `forder #0 = 0` by rw[field_order_zero] >>
@@ -470,7 +489,8 @@ val field_order_power = store_thm(
     `x IN F*` by rw[field_nonzero_alt] >>
     `Group f*` by rw[field_mult_group] >>
     metis_tac[group_order_power, field_nonzero_mult_property, GCD_SYM]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !x. x IN R ==>
             !n. 0 < n ==> (forder (x ** n) = (forder x) DIV (gcd n (forder x))) *)
@@ -479,14 +499,15 @@ val field_order_power = store_thm(
     and gcd n (forder x) <> 0                                 by GCD_EQ_0, 0 < n
     ==> forder (x ** n) = (forder x) DIV (gcd n (forder x))   by DIV_SOLVE
 *)
-val field_order_power_eqn = store_thm(
-  "field_order_power_eqn",
-  ``!r:'a field. Field r ==> !x. x IN R ==>
-   !n. 0 < n ==> (forder (x ** n) = (forder x) DIV (gcd n (forder x)))``,
+Theorem field_order_power_eqn:
+    !r:'a field. Field r ==> !x. x IN R ==>
+   !n. 0 < n ==> (forder (x ** n) = (forder x) DIV (gcd n (forder x)))
+Proof
   rpt strip_tac >>
   `forder (x ** n) * gcd n (forder x) = forder x` by rw[field_order_power] >>
   `gcd n (forder x) <> 0` by rw[GCD_EQ_0] >>
-  rw[DIV_SOLVE]);
+  rw[DIV_SOLVE]
+QED
 
 (* Theorem: Field r ==> !x. x IN R ==> !n. coprime n (forder x) ==> (forder (x ** n) = forder x) *)
 (* Proof:
@@ -495,10 +516,11 @@ val field_order_power_eqn = store_thm(
    = forder (x ** n) * 1                 by given
    = forder (x ** n)                     by MULT_RIGHT_1
 *)
-val field_order_power_coprime = store_thm(
-  "field_order_power_coprime",
-  ``!r:'a field. Field r ==> !x. x IN R ==> !n. coprime n (forder x) ==> (forder (x ** n) = forder x)``,
-  metis_tac[field_order_power, MULT_RIGHT_1]);
+Theorem field_order_power_coprime:
+    !r:'a field. Field r ==> !x. x IN R ==> !n. coprime n (forder x) ==> (forder (x ** n) = forder x)
+Proof
+  metis_tac[field_order_power, MULT_RIGHT_1]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R /\ x <> #0 ==>
             !n. (forder (x ** n) = forder x) <=> coprime n (forder x) *)
@@ -517,15 +539,16 @@ val field_order_power_coprime = store_thm(
        and forder (x ** n) * (gcd n (forder x)) = forder x  by field_order_power
         so forder (x ** n) = forder x              by MULT_RIGHT_1
 *)
-val field_order_power_eq_order = store_thm(
-  "field_order_power_eq_order",
-  ``!r:'a field. FiniteField r ==> !x. x IN R /\ x <> #0 ==>
-   !n. (forder (x ** n) = forder x) <=> coprime n (forder x)``,
+Theorem field_order_power_eq_order:
+    !r:'a field. FiniteField r ==> !x. x IN R /\ x <> #0 ==>
+   !n. (forder (x ** n) = forder x) <=> coprime n (forder x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `forder (x ** n) * (gcd n (forder x)) = forder x` by rw[field_order_power] >>
   rw[EQ_IMP_THM] >-
   metis_tac[field_order_eq_0, EQ_MULT_LCANCEL, MULT_RIGHT_1] >>
-  metis_tac[MULT_RIGHT_1]);
+  metis_tac[MULT_RIGHT_1]
+QED
 
 (* Theorem: Field r ==>
             !n x. x IN R+ /\ 0 < forder x /\ n divides (forder x) ==> (forder (x ** (forder x DIV n)) = n) *)
@@ -539,14 +562,15 @@ group_order_exp_cofactor |> ISPEC ``f*``;
 val it = |- !x n. Group f* /\ x IN F* /\ 0 < forder x /\ n divides forder x ==>
                   (forder (f*.exp x (forder x DIV n)) = n): thm
 *)
-val field_order_exp_cofactor = store_thm(
-  "field_order_exp_cofactor",
-  ``!r:'a field. Field r ==>
-   !n x. x IN R+ /\ 0 < forder x /\ n divides (forder x) ==> (forder (x ** (forder x DIV n)) = n)``,
+Theorem field_order_exp_cofactor:
+    !r:'a field. Field r ==>
+   !n x. x IN R+ /\ 0 < forder x /\ n divides (forder x) ==> (forder (x ** (forder x DIV n)) = n)
+Proof
   rpt strip_tac >>
   `Group f*` by rw[field_mult_group] >>
   `F* = R+` by rw[field_mult_carrier] >>
-  metis_tac[group_order_exp_cofactor, group_excluding_exp]);
+  metis_tac[group_order_exp_cofactor, group_excluding_exp]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Orders Property                                                     *)
@@ -559,24 +583,27 @@ val field_orders_def =
 
 (* Theorem: x IN orders f* n <=> x IN F* /\ (forder x = n) *)
 (* Proof: by field_orders_def *)
-val field_orders_member = store_thm(
-  "field_orders_member",
-  ``!(r:'a field) x n. x IN orders f* n <=> x IN F* /\ (forder x = n)``,
-  rw[field_orders_def]);
+Theorem field_orders_member:
+    !(r:'a field) x n. x IN orders f* n <=> x IN F* /\ (forder x = n)
+Proof
+  rw[field_orders_def]
+QED
 
 (* Theorem: x IN orders f* (CARD F* ) <=> x IN F* /\ (forder x = CARD F* ) *)
 (* Proof: by field_orders_member *)
-val field_orders_primitive = store_thm(
-  "field_orders_primitive",
-  ``!(r:'a field) x. x IN orders f* (CARD F* ) <=> x IN F* /\ (forder x = CARD F* )``,
-  rw[field_orders_member]);
+Theorem field_orders_primitive:
+    !(r:'a field) x. x IN orders f* (CARD F* ) <=> x IN F* /\ (forder x = CARD F* )
+Proof
+  rw[field_orders_member]
+QED
 
 (* Theorem: Field r ==> (orders f* n) SUBSET R+ *)
 (* Proof: by field_orders_def, field_mult_carrier *)
-val field_orders_alt = store_thm(
-  "field_orders_alt",
-  ``!r:'a field. Field r ==> !n. orders f* n = {x | x IN R+ /\ (forder x = n)}``,
-  rw[field_orders_def, field_mult_carrier]);
+Theorem field_orders_alt:
+    !r:'a field. Field r ==> !n. orders f* n = {x | x IN R+ /\ (forder x = n)}
+Proof
+  rw[field_orders_def, field_mult_carrier]
+QED
 
 (* Theorem: Field r ==> (orders f* n) SUBSET R+ *)
 (* Proof:
@@ -584,10 +611,11 @@ val field_orders_alt = store_thm(
      and F* = R+                  by field_mult_carrier
       so (orders f* n) SUBSET R+
 *)
-val field_orders_subset = store_thm(
-  "field_orders_subset",
-  ``!r:'a field. Field r ==> !n. (orders f* n) SUBSET R+``,
-  metis_tac[orders_subset, field_mult_carrier]);
+Theorem field_orders_subset:
+    !r:'a field. Field r ==> !n. (orders f* n) SUBSET R+
+Proof
+  metis_tac[orders_subset, field_mult_carrier]
+QED
 
 (* Theorem: Field r ==> (orders f* n) SUBSET R *)
 (* Proof:
@@ -595,65 +623,73 @@ val field_orders_subset = store_thm(
      and R+ SUBSET R              by field_nonzero_subset
      ==> (orders f* n) SUBSET R   by SUBSET_TRANS
 *)
-val field_orders_subset_carrier = store_thm(
-  "field_orders_subset_carrier",
-  ``!r:'a field. Field r ==> !n. (orders f* n) SUBSET R``,
-  metis_tac[field_orders_subset, field_nonzero_subset, SUBSET_TRANS]);
+Theorem field_orders_subset_carrier:
+    !r:'a field. Field r ==> !n. (orders f* n) SUBSET R
+Proof
+  metis_tac[field_orders_subset, field_nonzero_subset, SUBSET_TRANS]
+QED
 
 (* Theorem: Field r ==> !x n. x IN (orders f* n) ==> x IN R+ *)
 (* Proof: by field_orders_subset, SUBSET_DEF *)
-val field_orders_nonzero_element = store_thm(
-  "field_orders_nonzero_element",
-  ``!r:'a field. Field r ==> !x n. x IN (orders f* n) ==> x IN R+``,
-  metis_tac[field_orders_subset, SUBSET_DEF]);
+Theorem field_orders_nonzero_element:
+    !r:'a field. Field r ==> !x n. x IN (orders f* n) ==> x IN R+
+Proof
+  metis_tac[field_orders_subset, SUBSET_DEF]
+QED
 
 (* Theorem: Field r ==> !x n. x IN (orders f* n) ==> x <> #0 *)
 (* Proof: field_orders_nonzero_element, field_nonzero_eq *)
-val field_orders_element_nonzero = store_thm(
-  "field_orders_element_nonzero",
-  ``!r:'a field. Field r ==> !x n. x IN (orders f* n) ==> x <> #0``,
-  metis_tac[field_orders_nonzero_element, field_nonzero_eq]);
+Theorem field_orders_element_nonzero:
+    !r:'a field. Field r ==> !x n. x IN (orders f* n) ==> x <> #0
+Proof
+  metis_tac[field_orders_nonzero_element, field_nonzero_eq]
+QED
 
 (* Theorem: Field r ==> !x n. x IN (orders f* n) ==> x IN R *)
 (* Proof: field_orders_subset_carrier, SUBSET_DEF *)
-val field_orders_element = store_thm(
-  "field_orders_element",
-  ``!r:'a field. Field r ==> !x n. x IN (orders f* n) ==> x IN R``,
-  metis_tac[field_orders_subset_carrier, SUBSET_DEF]);
+Theorem field_orders_element:
+    !r:'a field. Field r ==> !x n. x IN (orders f* n) ==> x IN R
+Proof
+  metis_tac[field_orders_subset_carrier, SUBSET_DEF]
+QED
 
 (* Theorem: Field r ==> !x n. x IN orders f* n <=> (x IN R+ /\ (forder x = n)) *)
 (* Proof:
    Note Group f* /\ (F* = R+)    by field_mult_group
    The result follows            by orders_element, Group f*
 *)
-val field_orders_element_property = store_thm(
-  "field_orders_element_property",
-  ``!r:'a field. Field r ==> !x n. x IN orders f* n <=> (x IN R+ /\ (forder x = n))``,
-  rw[field_mult_group, orders_element]);
+Theorem field_orders_element_property:
+    !r:'a field. Field r ==> !x n. x IN orders f* n <=> (x IN R+ /\ (forder x = n))
+Proof
+  rw[field_mult_group, orders_element]
+QED
 
 (* Theorem: Field r ==> !x n. x IN orders f* n ==> (forder x = n) *)
 (* Proof: by field_orders_element_property *)
-val field_orders_element_order = store_thm(
-  "field_orders_element_order",
-  ``!r:'a field. Field r ==> !x n. x IN orders f* n ==> (forder x = n)``,
-  rw[field_orders_element_property]);
+Theorem field_orders_element_order:
+    !r:'a field. Field r ==> !x n. x IN orders f* n ==> (forder x = n)
+Proof
+  rw[field_orders_element_property]
+QED
 
 (* Theorem: Field r ==> !x. x IN R+ ==> x IN orders f* (forder x) *)
 (* Proof: by field_orders_element_property *)
-val field_orders_element_self = store_thm(
-  "field_orders_element_self",
-  ``!r:'a field. Field r ==> !x. x IN R+ ==> x IN orders f* (forder x)``,
-  metis_tac[field_orders_element_property]);
+Theorem field_orders_element_self:
+    !r:'a field. Field r ==> !x. x IN R+ ==> x IN orders f* (forder x)
+Proof
+  metis_tac[field_orders_element_property]
+QED
 
 (* Theorem: FiniteField r ==> !n. FINITE (orders f* n) *)
 (* Proof:
    Note (orders f* n) SUBSET R   by field_orders_subset_carrier
     ==> FINITE (orders f* n)     by SUBSET_FINITE
 *)
-val field_orders_finite = store_thm(
-  "field_orders_finite",
-  ``!r:'a field. FiniteField r ==> !n. FINITE (orders f* n)``,
-  metis_tac[FiniteField_def, field_orders_subset_carrier, SUBSET_FINITE]);
+Theorem field_orders_finite:
+    !r:'a field. FiniteField r ==> !n. FINITE (orders f* n)
+Proof
+  metis_tac[FiniteField_def, field_orders_subset_carrier, SUBSET_FINITE]
+QED
 
 (* Theorem: FiniteField r ==> (orders f* 0 = {}) *)
 (* Proof:
@@ -663,15 +699,16 @@ val field_orders_finite = store_thm(
     but x <> #0                            by field_orders_element_nonzero
     ==> forder x <> 0, a contradiction     by field_order_eq_0
 *)
-val field_orders_0 = store_thm(
-  "field_orders_0",
-  ``!r:'a field. FiniteField r ==> (orders f* 0 = {})``,
+Theorem field_orders_0:
+    !r:'a field. FiniteField r ==> (orders f* 0 = {})
+Proof
   rpt (stripDup[FiniteField_def]) >>
   spose_not_then strip_assume_tac >>
   `?x. x IN R /\ x IN (orders f* 0)` by metis_tac[field_orders_element, MEMBER_NOT_EMPTY] >>
   `forder x = 0` by rw[field_orders_element_order] >>
   `x <> #0` by metis_tac[field_orders_element_nonzero] >>
-  metis_tac[field_order_eq_0]);
+  metis_tac[field_order_eq_0]
+QED
 
 (* Theorem: Field r ==> (orders f* 1 = {#1}) *)
 (* Proof:
@@ -691,11 +728,12 @@ val field_orders_0 = store_thm(
    <=> x IN R+ /\ (forder x = 1)   by field_orders_element_property
    <=> x = #1                      by field_order_eq_1, field_one_nonzero, field_nonzero_eq
 *)
-val field_orders_1 = store_thm(
-  "field_orders_1",
-  ``!r:'a field. Field r ==> (orders f* 1 = {#1})``,
+Theorem field_orders_1:
+    !r:'a field. Field r ==> (orders f* 1 = {#1})
+Proof
   rw[EXTENSION] >>
-  metis_tac[field_orders_element_property, field_order_eq_1, field_one_nonzero, field_nonzero_eq]);
+  metis_tac[field_orders_element_property, field_order_eq_1, field_one_nonzero, field_nonzero_eq]
+QED
 
 (* Theorem: Field r ==> !m n. m <> n ==> DISJOINT (orders f* m) (orders f* n) *)
 (* Proof:
@@ -704,10 +742,11 @@ val field_orders_1 = store_thm(
     ==> m = forder x = n                               by field_orders_element_order
    This contradicts m <> n.
 *)
-val field_orders_disjoint = store_thm(
-  "field_orders_disjoint",
-  ``!r:'a field. Field r ==> !m n. m <> n ==> DISJOINT (orders f* m) (orders f* n)``,
-  metis_tac[IN_DISJOINT, field_orders_element_order]);
+Theorem field_orders_disjoint:
+    !r:'a field. Field r ==> !m n. m <> n ==> DISJOINT (orders f* m) (orders f* n)
+Proof
+  metis_tac[IN_DISJOINT, field_orders_element_order]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Equality of Order                                                         *)
@@ -730,24 +769,27 @@ val it = |- !r n. forder_eq n = {x | x IN R /\ (forder x = n)}: thm
 
 (* Theorem: x IN forder_eq n <=> x IN R /\ (forder x = n) *)
 (* Proof: by field_order_equal_def *)
-val field_order_equal_element = store_thm(
-  "field_order_equal_element",
-  ``!(r:'a ring) x n. x IN forder_eq n <=> x IN R /\ (forder x = n)``,
-  rw[field_order_equal_def]);
+Theorem field_order_equal_element:
+    !(r:'a ring) x n. x IN forder_eq n <=> x IN R /\ (forder x = n)
+Proof
+  rw[field_order_equal_def]
+QED
 
 (* Theorem: (forder_eq n) SUBSET R *)
 (* Proof: by field_order_equal_def, SUBSET_DEF *)
-val field_order_equal_subset = store_thm(
-  "field_order_equal_subset",
-  ``!(r:'a field) n. (forder_eq n) SUBSET R``,
-  rw[field_order_equal_def, SUBSET_DEF]);
+Theorem field_order_equal_subset:
+    !(r:'a field) n. (forder_eq n) SUBSET R
+Proof
+  rw[field_order_equal_def, SUBSET_DEF]
+QED
 
 (* Theorem: FINITE R ==> !n. FINITE (forder_eq n) *)
 (* Proof: by field_order_equal_subset, SUBSET_FINITE *)
-val field_order_equal_finite = store_thm(
-  "field_order_equal_finite",
-  ``!r:'a ring. FINITE R ==> !n. FINITE (forder_eq n)``,
-  metis_tac[field_order_equal_subset, SUBSET_FINITE]);
+Theorem field_order_equal_finite:
+    !r:'a ring. FINITE R ==> !n. FINITE (forder_eq n)
+Proof
+  metis_tac[field_order_equal_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: FiniteField r ==> (forder_eq 0 = {#0}) *)
 (* Proof:
@@ -755,12 +797,13 @@ val field_order_equal_finite = store_thm(
       x IN R /\ (forder x = 0) <=> (x = #0)
    This is true by field_order_eq_0, and field_zero_element.
 *)
-val field_order_equal_of_0 = store_thm(
-  "field_order_equal_of_0",
-  ``!r:'a field. FiniteField r ==> (forder_eq 0 = {#0})``,
+Theorem field_order_equal_of_0:
+    !r:'a field. FiniteField r ==> (forder_eq 0 = {#0})
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[field_order_equal_def, EXTENSION] >>
-  metis_tac[field_order_eq_0, field_zero_element]);
+  metis_tac[field_order_eq_0, field_zero_element]
+QED
 
 (* Theorem: Field r ==> (forder_eq 1 = {#1}) *)
 (* Proof:
@@ -768,11 +811,12 @@ val field_order_equal_of_0 = store_thm(
       x IN R /\ (forder x = 1) <=> (x = #1)
    This is true by field_order_eq_1
 *)
-val field_order_equal_of_1 = store_thm(
-  "field_order_equal_of_1",
-  ``!r:'a field. Field r ==> (forder_eq 1 = {#1})``,
+Theorem field_order_equal_of_1:
+    !r:'a field. Field r ==> (forder_eq 1 = {#1})
+Proof
   rw[field_order_equal_def, EXTENSION] >>
-  metis_tac[field_order_eq_1, field_one_element]);
+  metis_tac[field_order_eq_1, field_one_element]
+QED
 
 (* Theorem: Field r ==> !n. #0 IN forder_eq n <=> (n = 0) *)
 (* Proof:
@@ -781,10 +825,11 @@ val field_order_equal_of_1 = store_thm(
    <=> T /\ (forder #0 = n)            by field_zero_element
    <=> 0 = n                           by field_order_zero
 *)
-val field_order_equal_has_zero = store_thm(
-  "field_order_equal_has_zero",
-  ``!r:'a field. Field r ==> !n. #0 IN forder_eq n <=> (n = 0)``,
-  metis_tac[field_order_equal_element, field_zero_element, field_order_zero]);
+Theorem field_order_equal_has_zero:
+    !r:'a field. Field r ==> !n. #0 IN forder_eq n <=> (n = 0)
+Proof
+  metis_tac[field_order_equal_element, field_zero_element, field_order_zero]
+QED
 
 (* Theorem: Field r ==> !n. 0 < n ==> (forder_eq n = orders f* n) *)
 (* Proof:
@@ -796,14 +841,15 @@ val field_order_equal_has_zero = store_thm(
    Only-if part: x IN F* ==> x IN R,
       True by field_mult_carrier, field_nonzero_element.
 *)
-val field_order_equal_eq_orders = store_thm(
-  "field_order_equal_eq_orders",
-  ``!r:'a field. Field r ==> !n. 0 < n ==> (forder_eq n = orders f* n)``,
+Theorem field_order_equal_eq_orders:
+    !r:'a field. Field r ==> !n. 0 < n ==> (forder_eq n = orders f* n)
+Proof
   rw[field_order_equal_def, orders_def, EXTENSION, EQ_IMP_THM] >| [
     `x <> #0` by metis_tac[field_order_zero, NOT_ZERO_LT_ZERO] >>
     metis_tac[field_nonzero_eq, field_mult_carrier],
     metis_tac[field_mult_carrier, field_nonzero_element]
-  ]);
+  ]
+QED
 
 (* Theorem: (forder_eq m) <> (forder_eq n) ==> DISJOINT (forder_eq m) (forder_eq n) *)
 (* Proof:
@@ -816,16 +862,17 @@ val field_order_equal_eq_orders = store_thm(
       Then x IN R /\ (forder x = m) /\ (forder x = n)   by field_order_equal_element
        ==> m = n, or s = t, which contradicts s <> t.
 *)
-val field_order_equal_disjoint = store_thm(
-  "field_order_equal_disjoint",
-  ``!m n. (forder_eq m) <> (forder_eq n) ==> DISJOINT (forder_eq m) (forder_eq n)``,
+Theorem field_order_equal_disjoint:
+    !m n. (forder_eq m) <> (forder_eq n) ==> DISJOINT (forder_eq m) (forder_eq n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = forder_eq m` >>
   qabbrev_tac `t = forder_eq n` >>
   Cases_on `(s = {}) \/ (t = {})` >-
   metis_tac[DISJOINT_EMPTY] >>
   rw[DISJOINT_DEF, EXTENSION] >>
-  metis_tac[field_order_equal_element]);
+  metis_tac[field_order_equal_element]
+QED
 
 (*
 Note: This is better than:
@@ -841,10 +888,11 @@ But the next is even better.
     ==> z IN R /\ (forder z = m) /\ (forder z = n)  by field_order_equal_element
     ==> m = n, this contradicts m <> n.
 *)
-val field_order_equal_ne_disjoint = store_thm(
-  "field_order_equal_ne_disjoint",
-  ``!r:'a field. !m n. m <> n ==> DISJOINT (forder_eq m) (forder_eq n)``,
-  metis_tac[DISJOINT_DEF, field_order_equal_element, MEMBER_NOT_EMPTY, IN_INTER]);
+Theorem field_order_equal_ne_disjoint:
+    !r:'a field. !m n. m <> n ==> DISJOINT (forder_eq m) (forder_eq n)
+Proof
+  metis_tac[DISJOINT_DEF, field_order_equal_element, MEMBER_NOT_EMPTY, IN_INTER]
+QED
 
 (* Theorem: Field r ==> !n. 0 < n ==> !x. x IN forder_eq n <=> x IN R+ /\ (forder x = n) *)
 (* Proof:
@@ -852,10 +900,11 @@ val field_order_equal_ne_disjoint = store_thm(
    <=> x IN orders f* n     by field_order_equal_eq_orders, 0 < n
    <=> x IN R+ /\ (forder x = n)   by field_orders_element_property
 *)
-val field_order_equal_element_nonzero = store_thm(
-  "field_order_equal_element_nonzero",
-  ``!r:'a field. Field r ==> !n. 0 < n ==> !x. x IN forder_eq n <=> x IN R+ /\ (forder x = n)``,
-  rw[field_order_equal_eq_orders, field_orders_element_property]);
+Theorem field_order_equal_element_nonzero:
+    !r:'a field. Field r ==> !n. 0 < n ==> !x. x IN forder_eq n <=> x IN R+ /\ (forder x = n)
+Proof
+  rw[field_order_equal_eq_orders, field_orders_element_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Field Equal Order Structure                                               *)
@@ -887,13 +936,14 @@ Gauss' proof is by an ingenious counting argument, based on Gauss_little_thm.
       = n                                   by above
    Thus z IN (forder_eq n)                  by field_order_equal_element
 *)
-val field_order_equal_contains = store_thm(
-  "field_order_equal_contains",
-  ``!r:'a field. Field r ==> !n. 0 < n ==>
-   !x. x IN (forder_eq n) ==> IMAGE (\j. x ** j) (coprimes n) SUBSET (forder_eq n)``,
+Theorem field_order_equal_contains:
+    !r:'a field. Field r ==> !n. 0 < n ==>
+   !x. x IN (forder_eq n) ==> IMAGE (\j. x ** j) (coprimes n) SUBSET (forder_eq n)
+Proof
   rw[field_order_equal_element, SUBSET_DEF] >-
   rw[] >>
-  metis_tac[field_order_power_coprime, coprimes_element]);
+  metis_tac[field_order_power_coprime, coprimes_element]
+QED
 
 (*
 Note: IMAGE (\j. x ** j) (coprimes n) = {x ** j | j | j IN coprimes n}
@@ -935,9 +985,9 @@ We really need ffUnity, for the following:
        Then x IN s               by field_order_equal_element
         and n <= m               by DIVIDES_LE
 *)
-val field_order_equal_bigunion = store_thm(
-  "field_order_equal_bigunion",
-  ``!r:'a field. FiniteField r ==> (BIGUNION (IMAGE forder_eq (divisors (CARD R+))) = R+)``,
+Theorem field_order_equal_bigunion:
+    !r:'a field. FiniteField r ==> (BIGUNION (IMAGE forder_eq (divisors (CARD R+))) = R+)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD R+` >>
   `0 < m` by rw[field_nonzero_card_pos, Abbr`m`] >>
@@ -947,7 +997,8 @@ val field_order_equal_bigunion = store_thm(
     metis_tac[field_nonzero_eq],
     `(forder x) divides m` by rw[field_order_divides, Abbr`m`] >>
     metis_tac[field_order_equal_element, DIVIDES_LE, field_nonzero_eq]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==> !n. SIGMA (CARD o forder_eq) (divisors (CARD R+)) = CARD R+ *)
 (* Proof:
@@ -973,9 +1024,9 @@ val field_order_equal_bigunion = store_thm(
     = CARD (BIGUNION t)                  by disjoint_bigunion_card
     = m                                  by field_order_equal_bigunion
 *)
-val field_order_equal_over_divisors_sigma_card = store_thm(
-  "field_order_equal_over_divisors_sigma_card",
-  ``!r:'a field. FiniteField r ==> !n. SIGMA (CARD o forder_eq) (divisors (CARD R+)) = CARD R+``,
+Theorem field_order_equal_over_divisors_sigma_card:
+    !r:'a field. FiniteField r ==> !n. SIGMA (CARD o forder_eq) (divisors (CARD R+)) = CARD R+
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD R+` >>
   qabbrev_tac `s = divisors m` >>
@@ -991,7 +1042,8 @@ val field_order_equal_over_divisors_sigma_card = store_thm(
   `?z. z IN forder_eq x` by metis_tac[MEMBER_NOT_EMPTY] >>
   metis_tac[field_order_equal_element]) >>
   `SIGMA (CARD o forder_eq) s = SIGMA CARD t` by rw[sum_image_by_composition_without_inj, Abbr`t`] >>
-  rw[GSYM disjoint_bigunion_card, field_order_equal_bigunion, Abbr`s`, Abbr`t`, Abbr`m`]);
+  rw[GSYM disjoint_bigunion_card, field_order_equal_bigunion, Abbr`s`, Abbr`t`, Abbr`m`]
+QED
 
 (* This is a statement that:
    Every nonzero element in FiniteField r must have some order that divides (CARD R+) *)

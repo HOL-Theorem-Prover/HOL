@@ -26,17 +26,19 @@ val Reach_defn = ``\E E'. ?u. TRANS E u E'``;
 Definition Reach_def:   Reach = RTC ^Reach_defn
 End
 
-val Reach_one = store_thm ((* NEW *)
-   "Reach_one", ``!E E'. (?u. TRANS E u E') ==> Reach E E'``,
+Theorem Reach_one:   !E E'. (?u. TRANS E u E') ==> Reach E E'
+Proof
     REWRITE_TAC [Reach_def]
  >> REPEAT STRIP_TAC
  >> MATCH_MP_TAC RTC_SINGLE
  >> BETA_TAC
- >> Q.EXISTS_TAC `u` >> art []);
+ >> Q.EXISTS_TAC `u` >> art []
+QED
 
-val Reach_self = store_thm ((* NEW *)
-   "Reach_self", ``!E. Reach E E``,
-    REWRITE_TAC [Reach_def, RTC_REFL]);
+Theorem Reach_self:   !E. Reach E E
+Proof
+    REWRITE_TAC [Reach_def, RTC_REFL]
+QED
 
 local
     val trans = (REWRITE_RULE [GSYM Reach_def]) o BETA_RULE o (ISPEC Reach_defn);
@@ -73,58 +75,66 @@ Definition finite_state_def:
     finite_state (p :'a CCS) = FINITE (NODES p)
 End
 
-val Reach_NODES = store_thm (
-   "Reach_NODES", ``!p q. Reach p q ==> q IN (NODES p)``,
-    REPEAT STRIP_TAC
- >> SRW_TAC [] [NODES_def]);
-
-val SELF_NODES = store_thm (
-   "SELF_NODES", ``!p. p IN (NODES p)``,
+Theorem Reach_NODES:   !p q. Reach p q ==> q IN (NODES p)
+Proof
     REPEAT STRIP_TAC
  >> SRW_TAC [] [NODES_def]
- >> REWRITE_TAC [Reach_self]);
+QED
 
-val MORE_NODES = store_thm (
-   "MORE_NODES", ``!p q q'. q IN (NODES p) /\ Reach q q' ==> q' IN (NODES p)``,
+Theorem SELF_NODES:   !p. p IN (NODES p)
+Proof
+    REPEAT STRIP_TAC
+ >> SRW_TAC [] [NODES_def]
+ >> REWRITE_TAC [Reach_self]
+QED
+
+Theorem MORE_NODES:   !p q q'. q IN (NODES p) /\ Reach q q' ==> q' IN (NODES p)
+Proof
     REPEAT GEN_TAC
  >> SRW_TAC [] [NODES_def]
- >> IMP_RES_TAC Reach_trans);
+ >> IMP_RES_TAC Reach_trans
+QED
 
-val TRANS_IN_NODES = store_thm (
-   "TRANS_IN_NODES", ``!p q u. TRANS p u q ==> q IN (NODES p)``,
+Theorem TRANS_IN_NODES:   !p q u. TRANS p u q ==> q IN (NODES p)
+Proof
     REPEAT STRIP_TAC
  >> REWRITE_TAC [NODES_def]
  >> SRW_TAC [] []
  >> MATCH_MP_TAC Reach_one
- >> Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC []);
+ >> Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC []
+QED
 
-val EPS_Reach = store_thm ((* NEW *)
-   "EPS_Reach", ``!p q. EPS p q ==> Reach p q``,
+Theorem EPS_Reach:   !p q. EPS p q ==> Reach p q
+Proof
     HO_MATCH_MP_TAC EPS_ind_right
  >> REPEAT STRIP_TAC (* 2 sub-goals here *)
  >- REWRITE_TAC [Reach_self]
  >> IMP_RES_TAC Reach_one
- >> IMP_RES_TAC Reach_trans);
+ >> IMP_RES_TAC Reach_trans
+QED
 
-val EPS_IN_NODES = store_thm ((* NEW *)
-   "EPS_IN_NODES", ``!p q. EPS p q ==> q IN (NODES p)``,
+Theorem EPS_IN_NODES:   !p q. EPS p q ==> q IN (NODES p)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC Reach_NODES
- >> IMP_RES_TAC EPS_Reach);
+ >> IMP_RES_TAC EPS_Reach
+QED
 
-val WEAK_TRANS_Reach = store_thm ((* NEW *)
-   "WEAK_TRANS_Reach", ``!p q u. WEAK_TRANS p u q ==> Reach p q``,
+Theorem WEAK_TRANS_Reach:   !p q u. WEAK_TRANS p u q ==> Reach p q
+Proof
     REWRITE_TAC [WEAK_TRANS]
  >> REPEAT STRIP_TAC
  >> IMP_RES_TAC EPS_Reach
  >> IMP_RES_TAC Reach_one
- >> IMP_RES_TAC Reach_trans);
+ >> IMP_RES_TAC Reach_trans
+QED
 
-val WEAK_TRANS_IN_NODES = store_thm ((* NEW *)
-   "WEAK_TRANS_IN_NODES", ``!p q u. WEAK_TRANS p u q ==> q IN (NODES p)``,
+Theorem WEAK_TRANS_IN_NODES:   !p q u. WEAK_TRANS p u q ==> q IN (NODES p)
+Proof
     REPEAT STRIP_TAC
  >> MATCH_MP_TAC Reach_NODES
- >> IMP_RES_TAC WEAK_TRANS_Reach);
+ >> IMP_RES_TAC WEAK_TRANS_Reach
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -137,25 +147,28 @@ val LRTC_DEF = new_definition ("LRTC_DEF",
       !P. (!x. P x [] x) /\
           (!x h y t z. R x h y /\ P y t z ==> P x (h :: t) z) ==> P a l b``);
 
-val LRTC_INDUCT = store_thm (
-   "LRTC_INDUCT",
-  ``!R P. (!x. P x [] x) /\ (!x h y t z. R x h y /\ P y t z ==> P x (h :: t) z) ==>
-          (!x l (y :'a). LRTC R x l y ==> P x l y)``,
-    REWRITE_TAC [LRTC_DEF] >> PROVE_TAC []);
+Theorem LRTC_INDUCT:
+    !R P. (!x. P x [] x) /\ (!x h y t z. R x h y /\ P y t z ==> P x (h :: t) z) ==>
+          (!x l (y :'a). LRTC R x l y ==> P x l y)
+Proof
+    REWRITE_TAC [LRTC_DEF] >> PROVE_TAC []
+QED
 
-val LRTC_RULES = store_thm (
-   "LRTC_RULES",
-  ``!R. (!x. LRTC R (x :'a) [] x) /\
-        (!x h y t z. R x h y /\ LRTC R y t z ==> LRTC R x (h :: t) z)``,
-    REWRITE_TAC [LRTC_DEF] >> PROVE_TAC []);
+Theorem LRTC_RULES:
+    !R. (!x. LRTC R (x :'a) [] x) /\
+        (!x h y t z. R x h y /\ LRTC R y t z ==> LRTC R x (h :: t) z)
+Proof
+    REWRITE_TAC [LRTC_DEF] >> PROVE_TAC []
+QED
 
-val LRTC_REFL = store_thm (
-   "LRTC_REFL", ``!R. LRTC R x [] x``,
-    REWRITE_TAC [LRTC_RULES]);
+Theorem LRTC_REFL:   !R. LRTC R x [] x
+Proof
+    REWRITE_TAC [LRTC_RULES]
+QED
 
-val LRTC_SINGLE = store_thm (
-   "LRTC_SINGLE",
-  ``!R x t y. R x t y ==> LRTC R x [t] y``,
+Theorem LRTC_SINGLE:
+    !R x t y. R x t y ==> LRTC R x [t] y
+Proof
     rpt STRIP_TAC
  >> `~NULL [t]` by PROVE_TAC [NULL_DEF]
  >> POP_ASSUM (ASSUME_TAC o SYM o (MATCH_MP (Q.SPEC `[t]` CONS)))
@@ -163,23 +176,25 @@ val LRTC_SINGLE = store_thm (
  >> MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES))
  >> PURE_ONCE_REWRITE_TAC [HD, TL]
  >> Q.EXISTS_TAC `y`
- >> ASM_REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)]);
+ >> ASM_REWRITE_TAC [CONJUNCT1 (Q.SPEC `R` LRTC_RULES)]
+QED
 
-val LRTC_STRONG_INDUCT = store_thm (
-   "LRTC_STRONG_INDUCT",
-  ``!R P. (!x. P x [] x) /\
+Theorem LRTC_STRONG_INDUCT:
+    !R P. (!x. P x [] x) /\
           (!x h y t z. R x h y /\ LRTC R y t z /\ P y t z ==> P x (h :: t) z) ==>
-          (!x l (y :'a). LRTC R x l y ==> P x l y)``,
+          (!x l (y :'a). LRTC R x l y ==> P x l y)
+Proof
     REPEAT GEN_TAC
  >> STRIP_TAC
  >> MATCH_MP_TAC ((CONV_RULE (SIMP_CONV list_ss [LRTC_RULES]) o
                    Q.SPECL [`R`, `\u l v. LRTC R u l v /\ P u l v`]) LRTC_INDUCT)
  >> rpt STRIP_TAC
- >> PROVE_TAC [LRTC_RULES]);
+ >> PROVE_TAC [LRTC_RULES]
+QED
 
-val LRTC_LRTC = store_thm (
-   "LRTC_LRTC",
-  ``!R (x :'a) m y. LRTC R x m y ==> !n z. LRTC R y n z ==> LRTC R x (m ++ n) z``,
+Theorem LRTC_LRTC:
+    !R (x :'a) m y. LRTC R x m y ==> !n z. LRTC R y n z ==> LRTC R x (m ++ n) z
+Proof
     GEN_TAC
  >> HO_MATCH_MP_TAC LRTC_STRONG_INDUCT
  >> FULL_SIMP_TAC list_ss []
@@ -187,19 +202,21 @@ val LRTC_LRTC = store_thm (
  >> RES_TAC
  >> MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES))
  >> Q.EXISTS_TAC `x'`
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
-val LRTC_TRANS = store_thm (
-   "LRTC_TRANS",
-  ``!R (x :'a) m y n z. LRTC R x m y /\ LRTC R y n z ==> LRTC R x (m ++ n) z``,
+Theorem LRTC_TRANS:
+    !R (x :'a) m y n z. LRTC R x m y /\ LRTC R y n z ==> LRTC R x (m ++ n) z
+Proof
     rpt STRIP_TAC
  >> irule LRTC_LRTC
- >> Q.EXISTS_TAC `y` >> ASM_REWRITE_TAC []);
+ >> Q.EXISTS_TAC `y` >> ASM_REWRITE_TAC []
+QED
 
-val LRTC_CASES1 = store_thm (
-   "LRTC_CASES1",
-  ``!R (x :'a) l y. LRTC R x l y = if NULL l then (x = y)
-                                             else ?u. R x (HD l) u /\ LRTC R u (TL l) y``,
+Theorem LRTC_CASES1:
+    !R (x :'a) l y. LRTC R x l y = if NULL l then (x = y)
+                                             else ?u. R x (HD l) u /\ LRTC R u (TL l) y
+Proof
     SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM]
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -224,17 +241,19 @@ val LRTC_CASES1 = store_thm (
         (* goal 2.2 (of 2) *)
         POP_ASSUM (ONCE_REWRITE_TAC o wrap o SYM o (MATCH_MP CONS)) \\
         MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
-        Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ] ]);
+        Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ] ]
+QED
 
-val LRTC_NIL = store_thm (
-   "LRTC_NIL", ``!R (x :'a) y. LRTC R x [] y = (x = y)``,
+Theorem LRTC_NIL:   !R (x :'a) y. LRTC R x [] y = (x = y)
+Proof
     rpt GEN_TAC
  >> ONCE_REWRITE_TAC [LRTC_CASES1]
- >> SIMP_TAC list_ss []);
+ >> SIMP_TAC list_ss []
+QED
 
-val LRTC_ONE = store_thm (
-   "LRTC_ONE",
-  ``!R x t y. LRTC R x [t] y = R x t y``,
+Theorem LRTC_ONE:
+    !R x t y. LRTC R x [t] y = R x t y
+Proof
     rpt GEN_TAC
  >> reverse EQ_TAC
  >- ( DISCH_TAC >> MATCH_MP_TAC LRTC_SINGLE >> ASM_REWRITE_TAC [] )
@@ -242,12 +261,13 @@ val LRTC_ONE = store_thm (
  >> SIMP_TAC list_ss []
  >> rpt STRIP_TAC
  >> IMP_RES_TAC LRTC_NIL
- >> FULL_SIMP_TAC std_ss []);
+ >> FULL_SIMP_TAC std_ss []
+QED
 
-val LRTC_CASES2 = store_thm (
-   "LRTC_CASES2",
-  ``!R (x :'a) l y. LRTC R x l y = if NULL l then (x = y)
-                                             else ?u. LRTC R x (FRONT l) u /\ R u (LAST l) y``,
+Theorem LRTC_CASES2:
+    !R (x :'a) l y. LRTC R x l y = if NULL l then (x = y)
+                                             else ?u. LRTC R x (FRONT l) u /\ R u (LAST l) y
+Proof
     SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM]
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -276,11 +296,12 @@ val LRTC_CASES2 = store_thm (
         Rewr \\
         MATCH_MP_TAC LRTC_TRANS \\
         Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] \\
-        MATCH_MP_TAC LRTC_SINGLE >> ASM_REWRITE_TAC [] ] ]);
+        MATCH_MP_TAC LRTC_SINGLE >> ASM_REWRITE_TAC [] ] ]
+QED
 
-val LRTC_CASES_LRTC_TWICE = store_thm (
-   "LRTC_CASES_LRTC_TWICE",
-  ``!R (x :'a) l y. LRTC R x l y = ?u l1 l2. LRTC R x l1 u /\ LRTC R u l2 y /\ (l = l1 ++ l2)``,
+Theorem LRTC_CASES_LRTC_TWICE:
+    !R (x :'a) l y. LRTC R x l y = ?u l1 l2. LRTC R x l1 u /\ LRTC R u l2 y /\ (l = l1 ++ l2)
+Proof
     SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM]
  >> CONJ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -296,11 +317,12 @@ val LRTC_CASES_LRTC_TWICE = store_thm (
       (* goal 2 (of 2) *)
       rpt STRIP_TAC >> ASM_REWRITE_TAC [] \\
       MATCH_MP_TAC LRTC_TRANS \\
-      Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ]);
+      Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ]
+QED
 
-val LRTC_APPEND_CASES = store_thm (
-   "LRTC_APPEND_CASES",
-  ``!R l1 l2 (x :'a) y. LRTC R x (l1 ++ l2) y = ?u. LRTC R x l1 u /\ LRTC R u l2 y``,
+Theorem LRTC_APPEND_CASES:
+    !R l1 l2 (x :'a) y. LRTC R x (l1 ++ l2) y = ?u. LRTC R x l1 u /\ LRTC R u l2 y
+Proof
     SIMP_TAC bool_ss [EQ_IMP_THM, FORALL_AND_THM]
  >> reverse CONJ_TAC
  >- ( rpt STRIP_TAC >> Q.ABBREV_TAC `l = l1 ++ l2` \\
@@ -318,7 +340,8 @@ val LRTC_APPEND_CASES = store_thm (
       RES_TAC \\
       Q.EXISTS_TAC `u'` >> ASM_REWRITE_TAC [] \\
       MATCH_MP_TAC (CONJUNCT2 (Q.SPEC `R` LRTC_RULES)) \\
-      Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ]);
+      Q.EXISTS_TAC `u` >> ASM_REWRITE_TAC [] ]
+QED
 
 (******************************************************************************)
 (*                                                                            *)
@@ -402,23 +425,28 @@ val [TRACE_rule0, TRACE_rule1] =
     map save_thm (combine (["TRACE_rule0", "TRACE_rule1"], CONJUNCTS TRACE_rules));
 
 (* The `transitivity` of TRACE relation *)
-val TRACE_trans_applied = store_thm (
-   "TRACE_trans_applied",
-  ``!xs ys E E1 E'. TRACE E xs E1 /\ TRACE E1 ys E' ==> TRACE E (xs ++ ys) E'``,
-    PROVE_TAC [TRACE_trans]);
+Theorem TRACE_trans_applied:
+    !xs ys E E1 E'. TRACE E xs E1 /\ TRACE E1 ys E' ==> TRACE E (xs ++ ys) E'
+Proof
+    PROVE_TAC [TRACE_trans]
+QED
 
-val TRACE_REFL = store_thm ("TRACE_REFL", ``!E. TRACE E [] E``,
-    PROVE_TAC [TRACE_def, LRTC_REFL]);
+Theorem TRACE_REFL:   !E. TRACE E [] E
+Proof
+    PROVE_TAC [TRACE_def, LRTC_REFL]
+QED
 
-val TRACE2 = store_thm ("TRACE2",
-  ``!E x E1 xs E'. TRANS E x E1 /\ TRACE E1 xs E' ==> TRACE E (x :: xs) E'``,
+Theorem TRACE2:
+    !E x E1 xs E'. TRANS E x E1 /\ TRACE E1 xs E' ==> TRACE E (x :: xs) E'
+Proof
     rpt STRIP_TAC
  >> MATCH_MP_TAC TRACE_rule1
  >> Q.EXISTS_TAC `E1`
- >> ASM_REWRITE_TAC []);
+ >> ASM_REWRITE_TAC []
+QED
 
-val EPS_TRACE = store_thm (
-   "EPS_TRACE", ``!E E'. EPS E E' ==> ?xs. TRACE E xs E'``,
+Theorem EPS_TRACE:   !E E'. EPS E E' ==> ?xs. TRACE E xs E'
+Proof
     HO_MATCH_MP_TAC EPS_ind
  >> rpt STRIP_TAC
  >| [ (* goal 1 (of 2) *)
@@ -426,10 +454,11 @@ val EPS_TRACE = store_thm (
       (* goal 2 (of 2) *)
       Q.EXISTS_TAC `tau :: xs` \\
       MATCH_MP_TAC TRACE2 \\
-      Q.EXISTS_TAC `E'` >> ASM_REWRITE_TAC [] ]);
+      Q.EXISTS_TAC `E'` >> ASM_REWRITE_TAC [] ]
+QED
 
-val WEAK_TRANS_TRACE = store_thm (
-   "WEAK_TRANS_TRACE", ``!E u E'. WEAK_TRANS E u E' ==> ?xs. TRACE E xs E'``,
+Theorem WEAK_TRANS_TRACE:   !E u E'. WEAK_TRANS E u E' ==> ?xs. TRACE E xs E'
+Proof
     REWRITE_TAC [WEAK_TRANS]
  >> rpt STRIP_TAC
  >> IMP_RES_TAC EPS_TRACE
@@ -438,15 +467,16 @@ val WEAK_TRANS_TRACE = store_thm (
  >> MATCH_MP_TAC TRACE_trans_applied
  >> Q.EXISTS_TAC `E2` >> ASM_REWRITE_TAC []
  >> MATCH_MP_TAC TRACE_trans_applied
- >> Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC []);
+ >> Q.EXISTS_TAC `E1` >> ASM_REWRITE_TAC []
+QED
 
 Definition NO_LABEL_def:
     NO_LABEL (L :'a Action list) = ~?l. MEM (label l) L
 End
 
-val NO_LABEL_cases = store_thm (
-   "NO_LABEL_cases",
-  ``!(x :'a Action) xs. NO_LABEL (x :: xs) = (x = tau) /\ NO_LABEL xs``,
+Theorem NO_LABEL_cases:
+    !(x :'a Action) xs. NO_LABEL (x :: xs) = (x = tau) /\ NO_LABEL xs
+Proof
     REWRITE_TAC [NO_LABEL_def]
  >> rpt GEN_TAC >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -457,7 +487,8 @@ val NO_LABEL_cases = store_thm (
       (* goal 2 (of 2) *)
       REWRITE_TAC [MEM] \\
       rpt STRIP_TAC >- rfs [Action_distinct_label] \\
-      METIS_TAC [] ]);
+      METIS_TAC [] ]
+QED
 
 val EPS_TRACE2 = Q.prove (
    `!E E'. EPS E E' ==> ?xs. TRACE E xs E' /\ NO_LABEL xs`,
@@ -477,8 +508,8 @@ val EPS_TRACE2 = Q.prove (
         REWRITE_TAC [MEM] \\
         ASM_REWRITE_TAC [Action_distinct_label] ] ]);
 
-val EPS_AND_TRACE = store_thm (
-   "EPS_AND_TRACE", ``!E E'. EPS E E' <=> ?xs. TRACE E xs E' /\ NO_LABEL xs``,
+Theorem EPS_AND_TRACE:   !E E'. EPS E E' <=> ?xs. TRACE E xs E' /\ NO_LABEL xs
+Proof
     rpt GEN_TAC >> EQ_TAC
  >- ( DISCH_TAC \\
       MATCH_MP_TAC EPS_TRACE2 >> ASM_REWRITE_TAC [] )
@@ -499,7 +530,8 @@ val EPS_AND_TRACE = store_thm (
       RES_TAC \\
       Cases_on `h` >- ( IMP_RES_TAC ONE_TAU >> IMP_RES_TAC EPS_TRANS ) \\
       FULL_SIMP_TAC std_ss [Action_11] \\
-      PROVE_TAC [] ]);
+      PROVE_TAC [] ]
+QED
 
 (* u is the unique Label in L, learnt from Robert Beers *)
 Definition UNIQUE_LABEL_def:
@@ -508,11 +540,11 @@ Definition UNIQUE_LABEL_def:
 End
 
 (* old equivalent definition without using NO_LABEL *)
-val UNIQUE_LABEL_DEF = store_thm (
-   "UNIQUE_LABEL_DEF",
-  ``!u (L :'a Action list).
+Theorem UNIQUE_LABEL_DEF:
+    !u (L :'a Action list).
       UNIQUE_LABEL u (L :'a Action list) =
-        ?L1 L2. (L1 ++ [u] ++ L2 = L) /\ ~?l. MEM (label l) L1 \/ MEM (label l) L2``,
+        ?L1 L2. (L1 ++ [u] ++ L2 = L) /\ ~?l. MEM (label l) L1 \/ MEM (label l) L2
+Proof
     Know `!L1 L2. (?l. MEM (label l) L1 \/ MEM (label l) L2) =
                   (?l. MEM (label l) L1) \/ (?l. MEM (label l) L2)`
  >- ( NTAC 2 GEN_TAC \\
@@ -529,30 +561,33 @@ val UNIQUE_LABEL_DEF = store_thm (
  >> STRIP_TAC
  >> Q.EXISTS_TAC `L1`
  >> Q.EXISTS_TAC `L2`
- >> fs []);
+ >> fs []
+QED
 
-val UNIQUE_LABEL_IMP_MEM = store_thm (
-   "UNIQUE_LABEL_IMP_MEM",
-  ``!u (L :'a Action list). UNIQUE_LABEL u L ==> MEM u L``,
+Theorem UNIQUE_LABEL_IMP_MEM:
+    !u (L :'a Action list). UNIQUE_LABEL u L ==> MEM u L
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [UNIQUE_LABEL_DEF]
  >> rpt STRIP_TAC
  >> POP_ASSUM K_TAC
  >> POP_ASSUM (REWRITE_TAC o wrap o SYM)
- >> SIMP_TAC list_ss []);
+ >> SIMP_TAC list_ss []
+QED
 
-val UNIQUE_LABEL_NOT_NULL = store_thm (
-   "UNIQUE_LABEL_NOT_NULL",
-  ``!u (L :'a Action list). UNIQUE_LABEL u L ==> ~NULL L``,
+Theorem UNIQUE_LABEL_NOT_NULL:
+    !u (L :'a Action list). UNIQUE_LABEL u L ==> ~NULL L
+Proof
     rpt GEN_TAC >> STRIP_TAC
  >> IMP_RES_TAC UNIQUE_LABEL_IMP_MEM
  >> POP_ASSUM MP_TAC
  >> KILL_TAC
- >> PROVE_TAC [NOT_NULL_MEM]);
+ >> PROVE_TAC [NOT_NULL_MEM]
+QED
 
-val UNIQUE_LABEL_cases1 = store_thm (
-   "UNIQUE_LABEL_cases1",
-  ``!(l :'a Label) xs. UNIQUE_LABEL (label l) (tau :: xs) = UNIQUE_LABEL (label l) xs``,
+Theorem UNIQUE_LABEL_cases1:
+    !(l :'a Label) xs. UNIQUE_LABEL (label l) (tau :: xs) = UNIQUE_LABEL (label l) xs
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [UNIQUE_LABEL_DEF]
  >> EQ_TAC >> rpt STRIP_TAC (* 2 sub-goals here *)
@@ -562,11 +597,12 @@ val UNIQUE_LABEL_cases1 = store_thm (
       take [`t`, `L2`] >> ASM_REWRITE_TAC [],
       (* goal 2 (of 2) *)
       take [`tau :: L1`, `L2`] \\
-      FULL_SIMP_TAC list_ss [Action_distinct_label] ]);
+      FULL_SIMP_TAC list_ss [Action_distinct_label] ]
+QED
 
-val UNIQUE_LABEL_cases2 = store_thm (
-   "UNIQUE_LABEL_cases2",
-  ``!(l :'a Label) l' xs. UNIQUE_LABEL (label l) (label l' :: xs) <=> (l = l') /\ NO_LABEL xs``,
+Theorem UNIQUE_LABEL_cases2:
+    !(l :'a Label) l' xs. UNIQUE_LABEL (label l) (label l' :: xs) <=> (l = l') /\ NO_LABEL xs
+Proof
     rpt GEN_TAC
  >> REWRITE_TAC [UNIQUE_LABEL_DEF]
  >> EQ_TAC >> rpt STRIP_TAC (* 3 sub-goals here *)
@@ -579,7 +615,8 @@ val UNIQUE_LABEL_cases2 = store_thm (
       FULL_SIMP_TAC list_ss [],
       (* goal 3 (of 3) *)
       take [`[]`, `xs`] \\
-      FULL_SIMP_TAC list_ss [Action_11, NO_LABEL_def] ]);
+      FULL_SIMP_TAC list_ss [Action_11, NO_LABEL_def] ]
+QED
 
 val WEAK_TRANS_TRACE2 = Q.prove (
    `!E u E'. WEAK_TRANS E u E' ==> ?us. TRACE E us E' /\ ~NULL us /\
@@ -601,10 +638,10 @@ val WEAK_TRANS_TRACE2 = Q.prove (
       REWRITE_TAC [UNIQUE_LABEL_DEF] \\
       take [`xs'`, `xs`] >> FULL_SIMP_TAC list_ss [] ]);
 
-val WEAK_TRANS_AND_TRACE = store_thm (
-   "WEAK_TRANS_AND_TRACE",
-  ``!E u E'. WEAK_TRANS E u E' <=> ?us. TRACE E us E' /\ ~NULL us /\
-                                        if (u = tau) then NO_LABEL us else UNIQUE_LABEL u us``,
+Theorem WEAK_TRANS_AND_TRACE:
+    !E u E'. WEAK_TRANS E u E' <=> ?us. TRACE E us E' /\ ~NULL us /\
+                                        if (u = tau) then NO_LABEL us else UNIQUE_LABEL u us
+Proof
     rpt GEN_TAC >> EQ_TAC (* 2 sub-goals here *)
  >- ( DISCH_TAC \\
       MATCH_MP_TAC WEAK_TRANS_TRACE2 >> ASM_REWRITE_TAC [] )
@@ -643,13 +680,14 @@ val WEAK_TRANS_AND_TRACE = store_thm (
       [ (* goal 2.1 (of 2) *)
         Q.EXISTS_TAC `L1` >> ASM_REWRITE_TAC [],
         (* goal 2.2 (of 2) *)
-        Q.EXISTS_TAC `L2` >> ASM_REWRITE_TAC [] ] ]);
+        Q.EXISTS_TAC `L2` >> ASM_REWRITE_TAC [] ] ]
+QED
 
 (* changed variables to P and P' *)
-val WEAK_TRANS_AND_TRACE' = store_thm (
-   "WEAK_TRANS_AND_TRACE'",
-  ``!P u P'. WEAK_TRANS P u P' <=> ?acts. TRACE P acts P' /\ ~NULL acts /\
-                                        if (u = tau) then NO_LABEL acts else UNIQUE_LABEL u acts``,
+Theorem WEAK_TRANS_AND_TRACE':
+    !P u P'. WEAK_TRANS P u P' <=> ?acts. TRACE P acts P' /\ ~NULL acts /\
+                                        if (u = tau) then NO_LABEL acts else UNIQUE_LABEL u acts
+Proof
     rpt GEN_TAC >> EQ_TAC (* 2 sub-goals here *)
  >- ( DISCH_TAC \\
       MATCH_MP_TAC WEAK_TRANS_TRACE2 >> ASM_REWRITE_TAC [] )
@@ -688,7 +726,8 @@ val WEAK_TRANS_AND_TRACE' = store_thm (
       [ (* goal 2.1 (of 2) *)
         Q.EXISTS_TAC `L1` >> ASM_REWRITE_TAC [],
         (* goal 2.2 (of 2) *)
-        Q.EXISTS_TAC `L2` >> ASM_REWRITE_TAC [] ] ]);
+        Q.EXISTS_TAC `L2` >> ASM_REWRITE_TAC [] ] ]
+QED
 
 val _ = html_theory "Trace";
 

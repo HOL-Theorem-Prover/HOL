@@ -160,15 +160,15 @@ End
 (* Proofs                                                                    *)
 (* ************************************************************************* *)
 
-val indicator_fn_split = store_thm
-  ("indicator_fn_split",
-  ``!(r:num->bool) s (b:num->('a->bool)).
+Theorem indicator_fn_split:
+    !(r:num->bool) s (b:num->('a->bool)).
         FINITE r /\
         (BIGUNION (IMAGE b r) = s) /\
              (!i j. i IN r /\ j IN r /\ (~(i=j)) ==> DISJOINT (b i) (b j)) ==>
              !a. a SUBSET s ==>
                  ((indicator_fn a) =
-                  (\x. SIGMA (\i. indicator_fn (a INTER (b i)) x) r))``,
+                  (\x. SIGMA (\i. indicator_fn (a INTER (b i)) x) r))
+Proof
    Suff `!r. FINITE r ==>
                 (\r. !s (b:num->('a->bool)).
         FINITE r /\
@@ -199,11 +199,11 @@ val indicator_fn_split = store_thm
                                 EXTENSION, GSPECIFICATION]
        >> RW_TAC real_ss [] >> METIS_TAC [])
    >> POP_ASSUM (fn thm => ONCE_REWRITE_TAC [GSYM thm])
-   >> RW_TAC real_ss [IN_DIFF, IN_INTER] >> METIS_TAC []);
+   >> RW_TAC real_ss [IN_DIFF, IN_INTER] >> METIS_TAC []
+QED
 
-val measure_split = store_thm
-  ("measure_split",
-  ``!(r:num->bool) (b:num->('a->bool)) m.
+Theorem measure_split:
+    !(r:num->bool) (b:num->('a->bool)) m.
         measure_space m /\
         FINITE r /\
         (BIGUNION (IMAGE b r) = m_space m) /\
@@ -211,7 +211,8 @@ val measure_split = store_thm
         (!i. i IN r ==> b i IN measurable_sets m) ==>
              !a. a IN measurable_sets m ==>
                  ((measure m) a =
-                  SIGMA (\i. (measure m) (a INTER (b i))) r)``,
+                  SIGMA (\i. (measure m) (a INTER (b i))) r)
+Proof
    Suff `!r. FINITE r ==>
                 (\r. !(b:num->('a->bool)) m.
         measure_space m /\
@@ -298,11 +299,11 @@ val measure_split = store_thm
    >> MATCH_MP_TAC (METIS_PROVE [] ``!f x y z. (x = y) ==> (f x z = f y z)``)
    >> RW_TAC std_ss [FUN_EQ_THM]
    >> RW_TAC std_ss []
-   >> FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT]);
+   >> FULL_SIMP_TAC std_ss [GSYM DELETE_NON_ELEMENT]
+QED
 
-val pos_simple_fn_integral_present = store_thm
-  ("pos_simple_fn_integral_present",
-  ``!m f (s:num->bool) a (x:num->real)
+Theorem pos_simple_fn_integral_present:
+    !m f (s:num->bool) a (x:num->real)
         g (s':num->bool) b (y:num->real).
         measure_space m /\
         pos_simple_fn m f s a x /\ pos_simple_fn m g s' b y ==>
@@ -315,7 +316,8 @@ val pos_simple_fn_integral_present = store_thm
                 (!i j. i IN k /\ j IN k /\ (~(i=j)) ==> DISJOINT (c i) (c j)) /\
                 (!i. i IN k ==> c i IN measurable_sets m) /\
                 (BIGUNION (IMAGE c k) = m_space m) /\
-                (!i. 0 <= z i) /\ (!i. 0 <= z' i))``,
+                (!i. 0 <= z i) /\ (!i. 0 <= z' i))
+Proof
    RW_TAC std_ss []
    >> `?p n. BIJ p (count n) (s CROSS s')`
         by FULL_SIMP_TAC std_ss [GSYM FINITE_BIJ_COUNT_EQ, pos_simple_fn_def, FINITE_CROSS]
@@ -649,11 +651,11 @@ val pos_simple_fn_integral_present = store_thm
        >> Q.PAT_X_ASSUM `BIGUNION (IMAGE a s) = m_space m` (K ALL_TAC)
        >> RW_TAC std_ss [IN_INTER, IN_BIGUNION, IN_IMAGE]
        >> METIS_TAC [])
-   >> FULL_SIMP_TAC std_ss [o_DEF, pos_simple_fn_def]);
+   >> FULL_SIMP_TAC std_ss [o_DEF, pos_simple_fn_def]
+QED
 
-val psfis_present = store_thm
-  ("psfis_present",
-  ``!m f g a b.
+Theorem psfis_present:
+    !m f g a b.
         measure_space m /\
         a IN psfis m f /\ b IN psfis m g ==>
         (?(z:num->real) (z':num->real) c (k:num->bool).
@@ -665,7 +667,8 @@ val psfis_present = store_thm
                 (!i j. i IN k /\ j IN k /\ i <> j ==> DISJOINT (c i) (c j)) /\
                 (!i. i IN k ==> c i IN measurable_sets m) /\
                 (BIGUNION (IMAGE c k) = m_space m) /\
-                (!i. 0 <= z i) /\ (!i. 0 <= z' i))``,
+                (!i. 0 <= z i) /\ (!i. 0 <= z' i))
+Proof
    RW_TAC std_ss [psfis_def, IN_IMAGE, psfs_def, GSPECIFICATION]
    >> (MP_TAC o Q.ISPEC `(x' :(num -> bool) # (num -> 'a -> bool) # (num -> real))`)
         pair_CASES
@@ -682,18 +685,19 @@ val psfis_present = store_thm
    >> RW_TAC std_ss []
    >> FULL_SIMP_TAC std_ss [PAIR_EQ]
    >> MATCH_MP_TAC pos_simple_fn_integral_present
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val pos_simple_fn_integral_add = store_thm
-  ("pos_simple_fn_integral_add",
-  ``!m f (s:num->bool) a (x:num->real)
+Theorem pos_simple_fn_integral_add:
+    !m f (s:num->bool) a (x:num->real)
         g (s':num->bool) b (y:num->real).
         measure_space m /\
         pos_simple_fn m f s a x /\ pos_simple_fn m g s' b y ==>
         ?s'' c z. pos_simple_fn m (\x. f x + g x) s'' c z /\
                 (pos_simple_fn_integral m s a x +
                  pos_simple_fn_integral m s' b y =
-                 pos_simple_fn_integral m s'' c z)``,
+                 pos_simple_fn_integral m s'' c z)
+Proof
    rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`,`f`,`s`,`a`,`x`,`g`,`s'`,`b`,`y`]) pos_simple_fn_integral_present
    >> RW_TAC std_ss [] >> ASM_SIMP_TAC std_ss []
@@ -719,14 +723,15 @@ val pos_simple_fn_integral_add = store_thm
    >> `!i. z i * indicator_fn (c i) x' + z' i * indicator_fn (c i) x' =
             (z i + z' i) * indicator_fn (c i) x'`
         by (rpt STRIP_TAC >> REAL_ARITH_TAC)
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val psfis_add = store_thm
-  ("psfis_add",
-  ``!m f g a b.
+Theorem psfis_add:
+    !m f g a b.
         measure_space m /\
         a IN psfis m f /\ b IN psfis m g ==>
-        a + b IN psfis m (\x. f x + g x)``,
+        a + b IN psfis m (\x. f x + g x)
+Proof
    RW_TAC std_ss [psfis_def, IN_IMAGE, psfs_def, GSPECIFICATION]
    >> (MP_TAC o Q.ISPEC `(x' :(num -> bool) # (num -> 'a -> bool) # (num -> real))`)
         pair_CASES
@@ -750,16 +755,17 @@ val psfis_add = store_thm
        >> RW_TAC std_ss [] >> Q.EXISTS_TAC `(s,a,x)`
        >> RW_TAC std_ss [PAIR_EQ])
    >> ONCE_REWRITE_TAC [CONJ_COMM]
-   >> MATCH_MP_TAC pos_simple_fn_integral_add >> RW_TAC std_ss []);
+   >> MATCH_MP_TAC pos_simple_fn_integral_add >> RW_TAC std_ss []
+QED
 
-val pos_simple_fn_integral_mono = store_thm
-  ("pos_simple_fn_integral_mono",
-  ``!m f (s:num->bool) a (x:num->real)
+Theorem pos_simple_fn_integral_mono:
+    !m f (s:num->bool) a (x:num->real)
         g (s':num->bool) b (y:num->real).
         measure_space m /\
         pos_simple_fn m f s a x /\ pos_simple_fn m g s' b y /\
         (!x. f x <= g x) ==>
-        pos_simple_fn_integral m s a x <= pos_simple_fn_integral m s' b y``,
+        pos_simple_fn_integral m s a x <= pos_simple_fn_integral m s' b y
+Proof
    rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`,`f`,`s`,`a`,`x`,`g`,`s'`,`b`,`y`]) pos_simple_fn_integral_present
    >> RW_TAC std_ss [] >> ASM_SIMP_TAC std_ss []
@@ -809,16 +815,17 @@ val pos_simple_fn_integral_mono = store_thm
    >> (MP_TAC o Q.SPECL [`(\x.0)`,`0`] o UNDISCH o Q.ISPEC `(k :num -> bool)DELETE x'`)
         REAL_SUM_IMAGE_FINITE_CONST
    >> RW_TAC real_ss [indicator_fn_def, IN_INSERT]
-   >> METIS_TAC [REAL_LE_MUL2, measure_space_def, positive_def, REAL_LE_REFL]);
+   >> METIS_TAC [REAL_LE_MUL2, measure_space_def, positive_def, REAL_LE_REFL]
+QED
 
-val pos_simple_fn_integral_mono_on_mspace = store_thm
-  ("pos_simple_fn_integral_mono_on_mspace",
-  ``!m f (s:num->bool) a (x:num->real)
+Theorem pos_simple_fn_integral_mono_on_mspace:
+    !m f (s:num->bool) a (x:num->real)
         g (s':num->bool) b (y:num->real).
         measure_space m /\
         pos_simple_fn m f s a x /\ pos_simple_fn m g s' b y /\
         (!x. x IN m_space m ==> f x <= g x) ==>
-        pos_simple_fn_integral m s a x <= pos_simple_fn_integral m s' b y``,
+        pos_simple_fn_integral m s a x <= pos_simple_fn_integral m s' b y
+Proof
    rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`,`f`,`s`,`a`,`x`,`g`,`s'`,`b`,`y`]) pos_simple_fn_integral_present
    >> RW_TAC std_ss [] >> ASM_SIMP_TAC std_ss []
@@ -868,15 +875,16 @@ val pos_simple_fn_integral_mono_on_mspace = store_thm
    >> (MP_TAC o Q.SPECL [`(\x.0)`,`0`] o UNDISCH o Q.ISPEC `(k :num -> bool)DELETE x'`)
         REAL_SUM_IMAGE_FINITE_CONST
    >> RW_TAC real_ss [indicator_fn_def, IN_INSERT]
-   >> METIS_TAC [REAL_LE_MUL2, measure_space_def, positive_def, REAL_LE_REFL]);
+   >> METIS_TAC [REAL_LE_MUL2, measure_space_def, positive_def, REAL_LE_REFL]
+QED
 
-val psfis_mono = store_thm
-  ("psfis_mono",
-  ``!m f g a b.
+Theorem psfis_mono:
+    !m f g a b.
         measure_space m /\
         a IN psfis m f /\ b IN psfis m g /\
         (!x. x IN m_space m ==> f x <= g x) ==>
-        a <= b``,
+        a <= b
+Proof
    RW_TAC std_ss [psfis_def, IN_IMAGE, psfs_def, GSPECIFICATION]
    >> (MP_TAC o Q.ISPEC `(x' :(num -> bool) # (num -> 'a -> bool) # (num -> real))`)
         pair_CASES
@@ -893,31 +901,34 @@ val psfis_mono = store_thm
    >> RW_TAC std_ss []
    >> FULL_SIMP_TAC std_ss [PAIR_EQ]
    >> MATCH_MP_TAC pos_simple_fn_integral_mono_on_mspace
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val pos_simple_fn_integral_unique = store_thm
-  ("pos_simple_fn_integral_unique",
-  ``!m f (s:num->bool) a (x:num->real)
+Theorem pos_simple_fn_integral_unique:
+    !m f (s:num->bool) a (x:num->real)
         (s':num->bool) b (y:num->real).
         measure_space m /\
         pos_simple_fn m f s a x /\ pos_simple_fn m f s' b y ==>
-        (pos_simple_fn_integral m s a x = pos_simple_fn_integral m s' b y)``,
-   METIS_TAC [REAL_LE_ANTISYM, REAL_LE_REFL, pos_simple_fn_integral_mono]);
+        (pos_simple_fn_integral m s a x = pos_simple_fn_integral m s' b y)
+Proof
+   METIS_TAC [REAL_LE_ANTISYM, REAL_LE_REFL, pos_simple_fn_integral_mono]
+QED
 
-val psfis_unique = store_thm
-  ("psfis_unique",
-  ``!m f a b.
+Theorem psfis_unique:
+    !m f a b.
         measure_space m /\
         a IN psfis m f /\ b IN psfis m f ==>
-        (a = b)``,
-   METIS_TAC [REAL_LE_ANTISYM, REAL_LE_REFL, psfis_mono]);
+        (a = b)
+Proof
+   METIS_TAC [REAL_LE_ANTISYM, REAL_LE_REFL, psfis_mono]
+QED
 
-val pos_simple_fn_integral_indicator = store_thm
-  ("pos_simple_fn_integral_indicator",
-  ``!m A.
+Theorem pos_simple_fn_integral_indicator:
+    !m A.
         measure_space m /\ A IN measurable_sets m ==>
         (?s a x. pos_simple_fn m (indicator_fn A) s a x /\
-                 (pos_simple_fn_integral m s a x = measure m A))``,
+                 (pos_simple_fn_integral m s a x = measure m A))
+Proof
    RW_TAC std_ss [pos_simple_fn_integral_def, pos_simple_fn_def]
    >> `!x. x IN A ==> x IN m_space m`
         by METIS_TAC [measure_space_def, sigma_algebra_def, algebra_def,
@@ -937,12 +948,13 @@ val pos_simple_fn_integral_indicator = store_thm
    >> RW_TAC real_ss [REAL_SUM_IMAGE_THM, IN_DISJOINT, IN_DIFF, FINITE_INSERT, FINITE_SING,
                       IN_INSERT, IN_SING, REAL_SUM_IMAGE_SING, BIGUNION_PAIR, EXTENSION,
                       IN_UNION, IN_DIFF, indicator_fn_def]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val psfis_indicator = store_thm
-  ("psfis_indicator",
-  ``!m A. measure_space m /\ A IN measurable_sets m ==>
-          measure m A IN psfis m (indicator_fn A)``,
+Theorem psfis_indicator:
+    !m A. measure_space m /\ A IN measurable_sets m ==>
+          measure m A IN psfis m (indicator_fn A)
+Proof
    RW_TAC std_ss [psfis_def, IN_IMAGE, psfs_def, GSPECIFICATION]
    >> (MP_TAC o Q.ISPEC `(x' :(num -> bool) # (num -> 'a -> bool) # (num -> real))`)
         pair_CASES
@@ -963,25 +975,27 @@ val psfis_indicator = store_thm
        >> RW_TAC std_ss [] >> Q.EXISTS_TAC `(s,a,x)`
        >> RW_TAC std_ss [PAIR_EQ])
    >> MATCH_MP_TAC pos_simple_fn_integral_indicator
-   >> ASM_REWRITE_TAC []);
+   >> ASM_REWRITE_TAC []
+QED
 
-val pos_simple_fn_integral_mult = store_thm
-  ("pos_simple_fn_integral_mult",
-  ``!m f s a x.
+Theorem pos_simple_fn_integral_mult:
+    !m f s a x.
         measure_space m /\ pos_simple_fn m f s a x ==>
         (!z. 0 <= z ==>
                 ?s' b y.
                     pos_simple_fn m (\x. z * f x) s' b y /\
                     (pos_simple_fn_integral m s' b y =
-                     z * pos_simple_fn_integral m s a x))``,
+                     z * pos_simple_fn_integral m s a x))
+Proof
    RW_TAC std_ss [pos_simple_fn_integral_def, pos_simple_fn_def]
    >> Q.EXISTS_TAC `s` >> Q.EXISTS_TAC `a` >> Q.EXISTS_TAC `(\i. z * x i)`
-   >> RW_TAC real_ss [GSYM REAL_SUM_IMAGE_CMUL, REAL_LE_MUL, REAL_MUL_ASSOC]);
+   >> RW_TAC real_ss [GSYM REAL_SUM_IMAGE_CMUL, REAL_LE_MUL, REAL_MUL_ASSOC]
+QED
 
-val psfis_mult = store_thm
-  ("psfis_mult",
-  ``!m f a. measure_space m /\ a IN psfis m f ==>
-           (!z. 0 <= z ==> z * a IN psfis m (\x. z * f x))``,
+Theorem psfis_mult:
+    !m f a. measure_space m /\ a IN psfis m f ==>
+           (!z. 0 <= z ==> z * a IN psfis m (\x. z * f x))
+Proof
    RW_TAC std_ss [psfis_def, IN_IMAGE, psfs_def, GSPECIFICATION]
    >> (MP_TAC o Q.ISPEC `(x' :(num -> bool) # (num -> 'a -> bool) # (num -> real))`)
         pair_CASES
@@ -1003,17 +1017,18 @@ val psfis_mult = store_thm
    >- (RW_TAC std_ss [] >> Q.EXISTS_TAC `(s,a,x)`
        >> RW_TAC std_ss [] >> Q.EXISTS_TAC `(s,a,x)`
        >> RW_TAC std_ss [PAIR_EQ])
-   >> METIS_TAC [pos_simple_fn_integral_mult]);
+   >> METIS_TAC [pos_simple_fn_integral_mult]
+QED
 
-val pos_simple_fn_integral_REAL_SUM_IMAGE = store_thm
-  ("pos_simple_fn_integral_REAL_SUM_IMAGE",
-  ``!m f s a x P.
+Theorem pos_simple_fn_integral_REAL_SUM_IMAGE:
+    !m f s a x P.
         measure_space m /\
         (!i. i IN P ==> pos_simple_fn m (f i) (s i) (a i) (x i)) /\
         FINITE P ==>
         (?s' a' x'. pos_simple_fn m (\t. SIGMA (\i. f i t) P) s' a' x' /\
                     (pos_simple_fn_integral m s' a' x' =
-                     SIGMA (\i. pos_simple_fn_integral m (s i) (a i) (x i)) P))``,
+                     SIGMA (\i. pos_simple_fn_integral m (s i) (a i) (x i)) P))
+Proof
    Suff `!P:'b->bool. FINITE P ==>
         (\P:'b->bool. !(m :('a -> bool) # (('a -> bool) -> bool) # (('a -> bool) -> real))
               (f :'b -> 'a -> real) (s :'b -> num -> bool)
@@ -1040,15 +1055,16 @@ val pos_simple_fn_integral_REAL_SUM_IMAGE = store_thm
         by METIS_TAC []
    >> POP_ORW
    >> MATCH_MP_TAC (GSYM pos_simple_fn_integral_add)
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val psfis_REAL_SUM_IMAGE = store_thm
-  ("psfis_REAL_SUM_IMAGE",
-  ``!m f a P.
+Theorem psfis_REAL_SUM_IMAGE:
+    !m f a P.
         measure_space m /\
         (!i. i IN P ==> a i IN psfis m (f i)) /\
         FINITE P ==>
-        (SIGMA a P) IN psfis m (\t. SIGMA (\i. f i t) P)``,
+        (SIGMA a P) IN psfis m (\t. SIGMA (\i. f i t) P)
+Proof
    Suff `!P:'b->bool. FINITE P ==>
         (\P:'b->bool. !(m :('a -> bool) # (('a -> bool) -> bool) # (('a -> bool) -> real))
                        (f :'b -> 'a -> real) (a :'b -> real).
@@ -1070,15 +1086,16 @@ val psfis_REAL_SUM_IMAGE = store_thm
         by METIS_TAC []
    >> POP_ORW
    >> MATCH_MP_TAC psfis_add
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val psfis_intro = store_thm
-  ("psfis_intro",
-  ``!m a x P.
+Theorem psfis_intro:
+    !m a x P.
         measure_space m /\ (!i. i IN P ==> a i IN measurable_sets m) /\
         (!i. 0 <= x i) /\ FINITE P ==>
         (SIGMA (\i. x i * measure m (a i)) P) IN
-        psfis m (\t. SIGMA (\i. x i * indicator_fn (a i) t) P)``,
+        psfis m (\t. SIGMA (\i. x i * indicator_fn (a i) t) P)
+Proof
    RW_TAC std_ss []
    >> `!t. (\i. x i * indicator_fn (a i) t) =
            (\i. (\i t. x i * indicator_fn (a i) t) i t)`
@@ -1086,11 +1103,12 @@ val psfis_intro = store_thm
    >> POP_ORW
    >> MATCH_MP_TAC psfis_REAL_SUM_IMAGE
    >> RW_TAC std_ss []
-   >> METIS_TAC [psfis_mult, psfis_indicator]);
+   >> METIS_TAC [psfis_mult, psfis_indicator]
+QED
 
-val psfis_nonneg = store_thm
-  ("psfis_nonneg",
-  ``!m f a. a IN psfis m f ==> nonneg f``,
+Theorem psfis_nonneg:
+    !m f a. a IN psfis m f ==> nonneg f
+Proof
    RW_TAC std_ss [nonneg_def, psfis_def, IN_IMAGE, psfs_def,
                   GSPECIFICATION]
    >> (MP_TAC o Q.ISPEC `(x' :(num -> bool) # (num -> 'a -> bool) # (num -> real))`)
@@ -1098,13 +1116,14 @@ val psfis_nonneg = store_thm
    >> RW_TAC std_ss []
    >> (MP_TAC o Q.ISPEC `(r :(num -> 'a -> bool) # (num -> real))`) pair_CASES
    >> RW_TAC std_ss []
-   >> FULL_SIMP_TAC std_ss [PAIR_EQ, pos_simple_fn_def]);
+   >> FULL_SIMP_TAC std_ss [PAIR_EQ, pos_simple_fn_def]
+QED
 
-val IN_psfis = store_thm
-  ("IN_psfis",
-  ``!m r f. r IN psfis m f ==>
+Theorem IN_psfis:
+    !m r f. r IN psfis m f ==>
                 ?s a x. pos_simple_fn m f s a x /\
-                        (r = pos_simple_fn_integral m s a x)``,
+                        (r = pos_simple_fn_integral m s a x)
+Proof
    RW_TAC std_ss [psfis_def, IN_IMAGE, psfs_def, GSPECIFICATION]
    >> (MP_TAC o Q.ISPEC `(x' :(num -> bool) # (num -> 'a -> bool) # (num -> real))`)
                 pair_CASES
@@ -1119,20 +1138,22 @@ val IN_psfis = store_thm
                 pair_CASES
    >> RW_TAC std_ss []
    >> FULL_SIMP_TAC std_ss [PAIR_EQ]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val pos_psfis = store_thm
-  ("pos_psfis",
-  ``!r m f. measure_space m /\
+Theorem pos_psfis:
+    !r m f. measure_space m /\
              r IN psfis m f ==>
-                0 <= r``,
+                0 <= r
+Proof
     rpt STRIP_TAC
     >> `positive m` by FULL_SIMP_TAC std_ss [measure_space_def]
     >> `?s a x. pos_simple_fn m f s a x /\
                         (r = pos_simple_fn_integral m s a x)`
         by METIS_TAC [IN_psfis]
     >> RW_TAC std_ss [pos_simple_fn_integral_def] >> MATCH_MP_TAC REAL_SUM_IMAGE_POS
-    >> FULL_SIMP_TAC std_ss [pos_simple_fn_def, positive_def, REAL_LE_MUL]);
+    >> FULL_SIMP_TAC std_ss [pos_simple_fn_def, positive_def, REAL_LE_MUL]
+QED
 
 val f_plus_minus = prove
   (``!f x. f x = fn_plus f x - fn_minus f x``,
@@ -1188,11 +1209,11 @@ val real_fn_plus_fn_minus_neg_times = prove
     >> FULL_SIMP_TAC std_ss [GSYM REAL_NEG_GT0, GSYM REAL_MUL_RNEG]
     >> METIS_TAC [REAL_LT_ANTISYM, REAL_LT_RMUL_0, REAL_NEG_GT0] ));
 
-val fn_plus_fn_minus_borel_measurable = store_thm
-  ("fn_plus_fn_minus_borel_measurable",
-  ``!f m. measure_space m /\ f IN borel_measurable (m_space m, measurable_sets m) ==>
+Theorem fn_plus_fn_minus_borel_measurable:
+    !f m. measure_space m /\ f IN borel_measurable (m_space m, measurable_sets m) ==>
          (fn_plus f) IN borel_measurable (m_space m, measurable_sets m) /\
-         (fn_minus f) IN borel_measurable (m_space m, measurable_sets m)``,
+         (fn_minus f) IN borel_measurable (m_space m, measurable_sets m)
+Proof
    (rpt STRIP_TAC >> RW_TAC std_ss [borel_measurable_le_iff])
    >- (Cases_on `0 <= a`
        >- (`!w. fn_plus f w <= a <=> f w <= a`
@@ -1213,24 +1234,26 @@ val fn_plus_fn_minus_borel_measurable = store_thm
             >> RW_TAC real_ss []
             >> METIS_TAC [REAL_LET_TRANS, REAL_LTE_TRANS, REAL_LT_IMP_LE, GSYM real_lt,
                           REAL_LE_NEGR, REAL_NEG_NEG, REAL_LE_NEG, REAL_NEG_GE0])
-   >> POP_ORW >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, space_def, subsets_def]);
+   >> POP_ORW >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, space_def, subsets_def]
+QED
 
-val fn_plus_fn_minus_borel_measurable_iff = store_thm
-  ("fn_plus_fn_minus_borel_measurable_iff",
-  ``!f m. measure_space m ==>
+Theorem fn_plus_fn_minus_borel_measurable_iff:
+    !f m. measure_space m ==>
          (f IN borel_measurable (m_space m, measurable_sets m) <=>
          (fn_plus f) IN borel_measurable (m_space m, measurable_sets m) /\
-         (fn_minus f) IN borel_measurable (m_space m, measurable_sets m))``,
+         (fn_minus f) IN borel_measurable (m_space m, measurable_sets m))
+Proof
    rpt STRIP_TAC >> EQ_TAC
    >- RW_TAC std_ss [fn_plus_fn_minus_borel_measurable]
    >> STRIP_TAC >> ONCE_REWRITE_TAC [f_plus_minus2]
    >> MATCH_MP_TAC borel_measurable_sub_borel_measurable
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val psfis_borel_measurable = store_thm
-  ("psfis_borel_measurable",
-  ``!m f a. measure_space m /\ a IN psfis m f ==>
-            f IN borel_measurable (m_space m, measurable_sets m)``,
+Theorem psfis_borel_measurable:
+    !m f a. measure_space m /\ a IN psfis m f ==>
+            f IN borel_measurable (m_space m, measurable_sets m)
+Proof
    rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`,`a`,`f`]) IN_psfis
    >> RW_TAC std_ss [pos_simple_fn_def]
@@ -1253,7 +1276,8 @@ val psfis_borel_measurable = store_thm
    >> Suff `indicator_fn (a' i) IN borel_measurable (m_space m, measurable_sets m)`
    >- METIS_TAC [affine_borel_measurable]
    >> MATCH_MP_TAC borel_measurable_indicator
-   >> FULL_SIMP_TAC std_ss [measure_space_def, subsets_def]);
+   >> FULL_SIMP_TAC std_ss [measure_space_def, subsets_def]
+QED
 
 val real_le_mult_sustain = prove
   (``!r y. (!z. 0 < z /\ z < 1 ==> z * r <= y) ==> r <= y``,
@@ -1300,15 +1324,15 @@ val mono_conv_outgrow = prove
    >> FULL_SIMP_TAC std_ss [REAL_LT_SUB_LADD, REAL_LT_SUB_RADD, REAL_LT_LADD]
    >> Q.EXISTS_TAC `n` >> RW_TAC std_ss []);
 
-val psfis_mono_conv_mono = store_thm
-  ("psfis_mono_conv_mono",
-  ``!m f u x y r s.
+Theorem psfis_mono_conv_mono:
+    !m f u x y r s.
         measure_space m /\
         mono_convergent u f (m_space m) /\
         (!n. x n IN psfis m (u n)) /\
         (!m n. m <= n ==> x m <= x n) /\
         x --> y /\ r IN psfis m s /\
-        (!a. a IN m_space m ==> s a <= f a) ==> r <= y``,
+        (!a. a IN m_space m ==> s a <= f a) ==> r <= y
+Proof
    rpt STRIP_TAC
    >> MATCH_MP_TAC real_le_mult_sustain
    >> rpt STRIP_TAC
@@ -1421,19 +1445,21 @@ val psfis_mono_conv_mono = store_thm
    >> (MP_TAC o Q.SPECL [`(\n. u n x''')`, `f x'''`, `z * s x'''`]) mono_conv_outgrow
    >> FULL_SIMP_TAC std_ss [mono_convergent_def]
    >> RW_TAC std_ss []
-   >> METIS_TAC [LESS_EQ_REFL, REAL_LT_IMP_LE]);
+   >> METIS_TAC [LESS_EQ_REFL, REAL_LT_IMP_LE]
+QED
 
-val psfis_nnfis = store_thm
-  ("psfis_nnfis",
-  ``!m f a. measure_space m /\ a IN psfis m f ==> a IN nnfis m f``,
+Theorem psfis_nnfis:
+    !m f a. measure_space m /\ a IN psfis m f ==> a IN nnfis m f
+Proof
    RW_TAC std_ss [nnfis_def, GSPECIFICATION]
    >> Q.EXISTS_TAC `(\n. f)` >> Q.EXISTS_TAC `(\n. a)`
-   >> RW_TAC real_ss [SEQ_CONST, mono_convergent_def]);
+   >> RW_TAC real_ss [SEQ_CONST, mono_convergent_def]
+QED
 
-val nnfis_times = store_thm
-  ("nnfis_times",
-  ``!f m a z. measure_space m /\ a IN nnfis m f /\ 0 <= z ==>
-             (z * a) IN nnfis m (\w. z * f w)``,
+Theorem nnfis_times:
+    !f m a z. measure_space m /\ a IN nnfis m f /\ 0 <= z ==>
+             (z * a) IN nnfis m (\w. z * f w)
+Proof
    RW_TAC std_ss [nnfis_def, GSPECIFICATION]
    >> Q.EXISTS_TAC `(\n w. z * u n w)` >> Q.EXISTS_TAC `(\n. z * x n)`
    >> CONJ_TAC
@@ -1451,12 +1477,13 @@ val nnfis_times = store_thm
         by RW_TAC std_ss []
    >> POP_ORW
    >> MATCH_MP_TAC SEQ_MUL
-   >> FULL_SIMP_TAC std_ss [SEQ_CONST, ETA_THM]);
+   >> FULL_SIMP_TAC std_ss [SEQ_CONST, ETA_THM]
+QED
 
-val nnfis_add = store_thm
-  ("nnfis_add",
-  ``!f g m a b. measure_space m /\ a IN nnfis m f /\ b IN nnfis m g ==>
-               (a + b) IN nnfis m (\w. f w + g w)``,
+Theorem nnfis_add:
+    !f g m a b. measure_space m /\ a IN nnfis m f /\ b IN nnfis m g ==>
+               (a + b) IN nnfis m (\w. f w + g w)
+Proof
    RW_TAC std_ss [nnfis_def, GSPECIFICATION]
    >> Q.EXISTS_TAC `(\n w. u n w + u' n w)` >> Q.EXISTS_TAC `(\n. x n + x' n)`
    >> CONJ_TAC
@@ -1470,12 +1497,13 @@ val nnfis_add = store_thm
        >> FULL_SIMP_TAC std_ss [mono_convergent_def])
    >> CONJ_TAC >- METIS_TAC [psfis_add]
    >> RW_TAC std_ss []
-   >> RW_TAC std_ss [SEQ_ADD]);
+   >> RW_TAC std_ss [SEQ_ADD]
+QED
 
-val nnfis_mono = store_thm
-  ("nnfis_mono",
-  ``!f g m a b. measure_space m /\ a IN nnfis m f /\ b IN nnfis m g /\
-               (!w. w IN m_space m ==> f w <= g w) ==> a <= b``,
+Theorem nnfis_mono:
+    !f g m a b. measure_space m /\ a IN nnfis m f /\ b IN nnfis m g /\
+               (!w. w IN m_space m ==> f w <= g w) ==> a <= b
+Proof
    RW_TAC std_ss [nnfis_def, GSPECIFICATION]
    >> `!n x. x IN m_space m ==> u n x <= f x`
         by (rpt STRIP_TAC >> FULL_SIMP_TAC std_ss [mono_convergent_def]
@@ -1494,22 +1522,24 @@ val nnfis_mono = store_thm
             >> Q.EXISTS_TAC `m` >> Q.EXISTS_TAC `u' m'` >> Q.EXISTS_TAC `u' n`
             >> RW_TAC std_ss [])
    >> MATCH_MP_TAC SEQ_LE_IMP_LIM_LE
-   >> Q.EXISTS_TAC `x` >> RW_TAC std_ss []);
+   >> Q.EXISTS_TAC `x` >> RW_TAC std_ss []
+QED
 
-val nnfis_unique = store_thm
-  ("nnfis_unique",
-  ``!f m a b. measure_space m /\ a IN nnfis m f /\ b IN nnfis m f ==> (a = b)``,
+Theorem nnfis_unique:
+    !f m a b. measure_space m /\ a IN nnfis m f /\ b IN nnfis m f ==> (a = b)
+Proof
    rpt STRIP_TAC
    >> ONCE_REWRITE_TAC [GSYM REAL_LE_ANTISYM]
    >> CONJ_TAC >> MATCH_MP_TAC nnfis_mono
    >> Q.EXISTS_TAC `f` >> Q.EXISTS_TAC `f` >> Q.EXISTS_TAC `m`
-   >> RW_TAC std_ss [REAL_LE_REFL]);
+   >> RW_TAC std_ss [REAL_LE_REFL]
+QED
 
-val psfis_equiv = store_thm
-  ("psfis_equiv",
-  ``!f g a m. measure_space m /\ a IN psfis m f /\
+Theorem psfis_equiv:
+    !f g a m. measure_space m /\ a IN psfis m f /\
                (!t. 0 <= g t) /\ (!t. t IN m_space m ==> (f t = g t)) ==>
-        a IN psfis m g``,
+        a IN psfis m g
+Proof
     rpt STRIP_TAC
     >> (MP_TAC o Q.SPECL [`m`, `a`, `f`]) IN_psfis
     >> RW_TAC std_ss []
@@ -1518,12 +1548,13 @@ val psfis_equiv = store_thm
     >> RW_TAC std_ss [psfs_def, GSPECIFICATION]
     >> Q.EXISTS_TAC `(s, a', x)`
     >> RW_TAC std_ss []
-    >> FULL_SIMP_TAC std_ss [pos_simple_fn_def]);
+    >> FULL_SIMP_TAC std_ss [pos_simple_fn_def]
+QED
 
-val upclose_psfis = store_thm
-  ("upclose_psfis",
-  ``!f g a b m. measure_space m /\ a IN psfis m f /\ b IN psfis m g ==>
-               (?c. c IN psfis m (upclose f g))``,
+Theorem upclose_psfis:
+    !f g a b m. measure_space m /\ a IN psfis m f /\ b IN psfis m g ==>
+               (?c. c IN psfis m (upclose f g))
+Proof
    rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`, `f`, `g`, `a`, `b`]) psfis_present
    >> RW_TAC std_ss [upclose_def]
@@ -1598,12 +1629,13 @@ val upclose_psfis = store_thm
             >> RW_TAC real_ss [indicator_fn_def, REAL_ENTIRE]
             >> METIS_TAC [IN_DISJOINT])
    >> POP_ORW >> POP_ASSUM (K ALL_TAC)
-   >> RW_TAC real_ss []]);
+   >> RW_TAC real_ss []]
+QED
 
-val mon_upclose_psfis = store_thm
-  ("mon_upclose_psfis",
-  ``!m u. measure_space m /\ (!(n:num) (n':num). ?a. a IN psfis m (u n n')) ==>
-         (?c. !(n:num). (c n) IN psfis m (mon_upclose u n))``,
+Theorem mon_upclose_psfis:
+    !m u. measure_space m /\ (!(n:num) (n':num). ?a. a IN psfis m (u n n')) ==>
+         (?c. !(n:num). (c n) IN psfis m (mon_upclose u n))
+Proof
    rpt STRIP_TAC
    >> `!(n':num) (n:num). ?c. c IN psfis m (mon_upclose_help n u n')`
         by (STRIP_TAC >> Induct
@@ -1618,7 +1650,8 @@ val mon_upclose_psfis = store_thm
    >> Q.ABBREV_TAC `P' = P n`
    >> RW_TAC std_ss [SELECT_THM]
    >> Q.UNABBREV_TAC `P'` >> Q.UNABBREV_TAC `P`
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
 val mon_upclose_help_lemma = prove
   (``!f u h s. (!n. mono_convergent (\m. u m n) (f n) s) /\
@@ -1702,11 +1735,11 @@ val mon_upclose_help_lemma = prove
     >> RW_TAC real_ss [mon_upclose_help_def, upclose_def]);
 
 (* Beppo-Levi monotone convergence theorem *)
-val nnfis_mon_conv = store_thm
-  ("nnfis_mon_conv",
-  ``!f m h x y. measure_space m /\ mono_convergent f h (m_space m) /\
+Theorem nnfis_mon_conv:
+    !f m h x y. measure_space m /\ mono_convergent f h (m_space m) /\
                 (!n. x n IN nnfis m (f n)) /\ x --> y ==>
-                y IN nnfis m h``,
+                y IN nnfis m h
+Proof
    rpt STRIP_TAC
    >> Q.ABBREV_TAC `u = (\n. @u. mono_convergent u (f n) (m_space m) /\
                              (!n'. ?a. a IN psfis m (u n')))`
@@ -1789,26 +1822,29 @@ val nnfis_mon_conv = store_thm
     >> RW_TAC std_ss []
     >> `f n w = (\n. f n w) n` by RW_TAC std_ss [] >> POP_ORW
     >> MATCH_MP_TAC SEQ_MONO_LE
-    >> FULL_SIMP_TAC std_ss [mono_convergent_def]);
+    >> FULL_SIMP_TAC std_ss [mono_convergent_def]
+QED
 
-val nnfis_pos_on_mspace = store_thm
-  ("nnfis_pos_on_mspace",
-  ``!f m a. measure_space m /\ a IN nnfis m f ==> (!x. x IN m_space m ==> 0 <= f x)``,
+Theorem nnfis_pos_on_mspace:
+    !f m a. measure_space m /\ a IN nnfis m f ==> (!x. x IN m_space m ==> 0 <= f x)
+Proof
    RW_TAC std_ss [nonneg_def, nnfis_def, GSPECIFICATION]
    >> `!n. nonneg (u n)` by METIS_TAC [psfis_nonneg]
    >> MATCH_MP_TAC LE_SEQ_IMP_LE_LIM
    >> Q.EXISTS_TAC `(\n. u n x')`
-   >> FULL_SIMP_TAC std_ss [nonneg_def, mono_convergent_def]);
+   >> FULL_SIMP_TAC std_ss [nonneg_def, mono_convergent_def]
+QED
 
-val nnfis_borel_measurable = store_thm
-  ("nnfis_borel_measurable",
-  ``!m f a. measure_space m /\ a IN nnfis m f ==>
-            f IN borel_measurable (m_space m, measurable_sets m)``,
+Theorem nnfis_borel_measurable:
+    !m f a. measure_space m /\ a IN nnfis m f ==>
+            f IN borel_measurable (m_space m, measurable_sets m)
+Proof
    RW_TAC std_ss [nnfis_def, GSPECIFICATION]
    >> MATCH_MP_TAC mono_convergent_borel_measurable
    >> Q.EXISTS_TAC `u` >> RW_TAC std_ss []
    >> MATCH_MP_TAC psfis_borel_measurable
-   >> Q.EXISTS_TAC `x n` >> RW_TAC std_ss []);
+   >> Q.EXISTS_TAC `x n` >> RW_TAC std_ss []
+QED
 
 val SEQ_OFFSET = prove
   (``!f l a. (f o (\n. n + a)) --> l ==> f --> l``,
@@ -1821,11 +1857,11 @@ val SEQ_OFFSET = prove
    >> POP_ORW
    >> RW_TAC std_ss []);
 
-val borel_measurable_mon_conv_psfis = store_thm
-  ("borel_measurable_mon_conv_psfis",
-  ``!m f. measure_space m /\ f IN borel_measurable (m_space m, measurable_sets m) /\
+Theorem borel_measurable_mon_conv_psfis:
+    !m f. measure_space m /\ f IN borel_measurable (m_space m, measurable_sets m) /\
          (!t. t IN m_space m ==> 0 <= f t) ==>
-         (?u x. mono_convergent u f (m_space m) /\ (!n. x n IN psfis m (u n)))``,
+         (?u x. mono_convergent u f (m_space m) /\ (!n. x n IN psfis m (u n)))
+Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC `A = (\n i. {w | w IN m_space m /\ & i / (2 pow n) <= f w} INTER
                              {w | w IN m_space m /\ f w < & (SUC i) / (2 pow n)})`
@@ -2070,15 +2106,16 @@ val borel_measurable_mon_conv_psfis = store_thm
  >- RW_TAC arith_ss [REAL_LE_REFL]
  >> MATCH_MP_TAC REAL_LT_IMP_LE
  >> MATCH_MP_TAC REAL_POW_MONO_LT
- >> RW_TAC arith_ss [] >> RW_TAC real_ss []);
+ >> RW_TAC arith_ss [] >> RW_TAC real_ss []
+QED
 
-val nnfis_dom_conv = store_thm
-  ("nnfis_dom_conv",
-  ``!m f g b. measure_space m /\
+Theorem nnfis_dom_conv:
+    !m f g b. measure_space m /\
               f IN borel_measurable (m_space m, measurable_sets m) /\
               b IN nnfis m g /\ (!t. t IN m_space m ==> f t <= g t) /\
               (!t. t IN m_space m ==> 0 <= f t) ==>
-                   (?a. a IN nnfis m f /\ a <= b)``,
+                   (?a. a IN nnfis m f /\ a <= b)
+Proof
    rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`, `f`]) borel_measurable_mon_conv_psfis
    >> RW_TAC std_ss []
@@ -2107,12 +2144,13 @@ val nnfis_dom_conv = store_thm
     >> Q.EXISTS_TAC `l` >> RW_TAC std_ss [nnfis_def, GSPECIFICATION]
     >- (Q.EXISTS_TAC `u` >> Q.EXISTS_TAC `x` >> RW_TAC std_ss [])
     >> MATCH_MP_TAC SEQ_LE_IMP_LIM_LE
-    >> Q.EXISTS_TAC `x` >> RW_TAC std_ss []);
+    >> Q.EXISTS_TAC `x` >> RW_TAC std_ss []
+QED
 
-val nnfis_integral = store_thm
-  ("nnfis_integral",
-  ``!m f a. measure_space m /\ a IN nnfis m f ==>
-                integrable m f /\ (integral m f = a)``,
+Theorem nnfis_integral:
+    !m f a. measure_space m /\ a IN nnfis m f ==>
+                integrable m f /\ (integral m f = a)
+Proof
    NTAC 4 STRIP_TAC
    >> `!t. t IN m_space m ==> 0 <= f t` by METIS_TAC [nnfis_pos_on_mspace]
    >> `a IN nnfis m (fn_plus f)`
@@ -2137,15 +2175,16 @@ val nnfis_integral = store_thm
        >- RW_TAC real_ss []
        >> CONJ_TAC
        >> MATCH_MP_TAC SELECT_UNIQUE
-       >> METIS_TAC [nnfis_unique]]);
+       >> METIS_TAC [nnfis_unique]]
+QED
 
-val nnfis_minus_nnfis_integral = store_thm
-  ("nnfis_minus_nnfis_integral",
-  ``!m f g a b. measure_space m /\
+Theorem nnfis_minus_nnfis_integral:
+    !m f g a b. measure_space m /\
                 a IN nnfis m f /\
                 b IN nnfis m g ==>
                 integrable m (\t. f t - g t) /\
-                (integral m (\t. f t - g t) = a - b)``,
+                (integral m (\t. f t - g t) = a - b)
+Proof
    NTAC 6 STRIP_TAC
    >> `(\t. f t - g t) IN borel_measurable (m_space m, measurable_sets m)`
         by (MATCH_MP_TAC borel_measurable_sub_borel_measurable
@@ -2204,27 +2243,30 @@ val nnfis_minus_nnfis_integral = store_thm
    >- RW_TAC std_ss []
    >> CONJ_TAC
    >> MATCH_MP_TAC SELECT_UNIQUE
-   >> METIS_TAC [nnfis_unique]);
+   >> METIS_TAC [nnfis_unique]
+QED
 
-val integral_borel_measurable = store_thm
-  ("integral_borel_measurable",
-  ``!m f. integrable m f ==> f IN borel_measurable (m_space m, measurable_sets m)``,
+Theorem integral_borel_measurable:
+    !m f. integrable m f ==> f IN borel_measurable (m_space m, measurable_sets m)
+Proof
     RW_TAC std_ss [integrable_def]
  >> ONCE_REWRITE_TAC [(UNDISCH o Q.SPECL [`f`, `m`]) fn_plus_fn_minus_borel_measurable_iff]
- >> METIS_TAC [nnfis_borel_measurable]);
+ >> METIS_TAC [nnfis_borel_measurable]
+QED
 
-val integral_indicator_fn = store_thm
-  ("integral_indicator_fn",
-  ``!m a. measure_space m /\ a IN measurable_sets m ==>
+Theorem integral_indicator_fn:
+    !m a. measure_space m /\ a IN measurable_sets m ==>
                 (integral m (indicator_fn a) = (measure m a)) /\
-                integrable m (indicator_fn a)``,
-   METIS_TAC [psfis_indicator, psfis_nnfis, nnfis_integral]);
+                integrable m (indicator_fn a)
+Proof
+   METIS_TAC [psfis_indicator, psfis_nnfis, nnfis_integral]
+QED
 
-val integral_add = store_thm
-  ("integral_add",
-  ``!m f g. integrable m f /\ integrable m g ==>
+Theorem integral_add:
+    !m f g. integrable m f /\ integrable m g ==>
                 integrable m (\t. f t + g t) /\
-                (integral m (\t. f t + g t) = integral m f + integral m g)``,
+                (integral m (\t. f t + g t) = integral m f + integral m g)
+Proof
    NTAC 4 STRIP_TAC
    >> NTAC 2 (POP_ASSUM (MP_TAC o REWRITE_RULE [integrable_def]))
    >> NTAC 2 STRIP_TAC
@@ -2255,13 +2297,14 @@ val integral_add = store_thm
    >> `x - y + (x' - y') = (x + x') - (y + y')` by REAL_ARITH_TAC
    >> POP_ORW
    >> MATCH_MP_TAC nnfis_minus_nnfis_integral
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val integral_mono = store_thm
-  ("integral_mono",
-  ``!m f g. integrable m f /\ integrable m g /\
+Theorem integral_mono:
+    !m f g. integrable m f /\ integrable m g /\
             (!t. t IN m_space m ==> f t <= g t) ==>
-            integral m f <= integral m g``,
+            integral m f <= integral m g
+Proof
    RW_TAC std_ss [integrable_def]
    >> `!f. (\t. fn_plus f t - fn_minus f t) = f`
         by (RW_TAC real_ss [fn_plus_def, fn_minus_def, Once FUN_EQ_THM]
@@ -2281,13 +2324,14 @@ val integral_mono = store_thm
        >> METIS_TAC [REAL_LE_TRANS])
    >> MATCH_MP_TAC nnfis_mono >> Q.EXISTS_TAC `fn_minus g` >> Q.EXISTS_TAC `fn_minus f` >> Q.EXISTS_TAC `m`
    >> RW_TAC real_ss [fn_minus_def]
-   >> METIS_TAC [REAL_LE_TRANS, REAL_LE_NEGTOTAL]);
+   >> METIS_TAC [REAL_LE_TRANS, REAL_LE_NEGTOTAL]
+QED
 
-val integral_times = store_thm
-  ("integral_times",
-  ``!m f a. integrable m f ==>
+Theorem integral_times:
+    !m f a. integrable m f ==>
             integrable m (\t. a * f t) /\
-           (integral m (\t. a * f t) = a * integral m f)``,
+           (integral m (\t. a * f t) = a * integral m f)
+Proof
    NTAC 4 STRIP_TAC >> POP_ASSUM (MP_TAC o REWRITE_RULE [integrable_def])
    >> STRIP_TAC
    >> Cases_on `0 <= a`
@@ -2350,13 +2394,14 @@ val integral_times = store_thm
    >> `(@j. j IN nnfis m (fn_minus f)) = y`
                 by (MATCH_MP_TAC SELECT_UNIQUE >> METIS_TAC [nnfis_unique])
    >> POP_ORW
-   >> RW_TAC real_ss [REAL_SUB_LDISTRIB, REAL_ADD_COMM, GSYM real_sub]);
+   >> RW_TAC real_ss [REAL_SUB_LDISTRIB, REAL_ADD_COMM, GSYM real_sub]
+QED
 
-val markov_ineq = store_thm
-  ("markov_ineq",
-  ``!m f a n. integrable m f /\ 0 < a /\ integrable m (\x. (abs (f x)) pow n) ==>
+Theorem markov_ineq:
+    !m f a n. integrable m f /\ 0 < a /\ integrable m (\x. (abs (f x)) pow n) ==>
               measure m ((PREIMAGE f {y | a <= y}) INTER m_space m) <=
-               (integral m (\x. (abs (f x)) pow n)) / (a pow n)``,
+               (integral m (\x. (abs (f x)) pow n)) / (a pow n)
+Proof
    rpt STRIP_TAC
    >> `0 < a pow n` by (Cases_on `n` >> RW_TAC real_ss [POW_POS_LT])
    >> RW_TAC real_ss [REAL_LE_RDIV_EQ]
@@ -2392,7 +2437,8 @@ val markov_ineq = store_thm
    >> RW_TAC real_ss [REAL_LT_IMP_LE, indicator_fn_def, GSPECIFICATION]
    >> MATCH_MP_TAC POW_LE
    >> `0 <= f t` by METIS_TAC [REAL_LE_TRANS, REAL_LT_IMP_LE]
-   >> RW_TAC real_ss [abs, REAL_LT_IMP_LE]);
+   >> RW_TAC real_ss [abs, REAL_LT_IMP_LE]
+QED
 
 Theorem finite_space_integral_reduce :
     !m f. measure_space m /\
@@ -2557,25 +2603,27 @@ Proof
    >> RW_TAC std_ss []
 QED
 
-val integral_cmul_indicator = store_thm
-  ("integral_cmul_indicator",
-  ``!m s c. measure_space m /\ s IN measurable_sets m ==>
-           (integral m (\x. c * indicator_fn s x) = c * (measure m s))``,
-   METIS_TAC [integral_times, integral_indicator_fn]);
+Theorem integral_cmul_indicator:
+    !m s c. measure_space m /\ s IN measurable_sets m ==>
+           (integral m (\x. c * indicator_fn s x) = c * (measure m s))
+Proof
+   METIS_TAC [integral_times, integral_indicator_fn]
+QED
 
-val integral_zero = store_thm
-  ("integral_zero",
-  ``!m. measure_space m ==> (integral m (\x. 0) = 0)``,
+Theorem integral_zero:
+    !m. measure_space m ==> (integral m (\x. 0) = 0)
+Proof
    rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`, `{}`, `0`]) integral_cmul_indicator
-   >> ASM_SIMP_TAC real_ss [] >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def]);
+   >> ASM_SIMP_TAC real_ss [] >> FULL_SIMP_TAC std_ss [measure_space_def, SIGMA_ALGEBRA, subsets_def]
+QED
 
-val finite_integral_on_set = store_thm
-  ("finite_integral_on_set",
-  ``!m f a. measure_space m /\ FINITE (m_space m) /\
+Theorem finite_integral_on_set:
+    !m f a. measure_space m /\ FINITE (m_space m) /\
              f IN borel_measurable (m_space m, measurable_sets m) /\ a IN measurable_sets m  ==>
                 (integral m (\x. f x * indicator_fn a x) =
-                 SIGMA (\r. r * measure m (PREIMAGE f {r} INTER a)) (IMAGE f a))``,
+                 SIGMA (\r. r * measure m (PREIMAGE f {r} INTER a)) (IMAGE f a))
+Proof
    rpt STRIP_TAC
    >> (MP_TAC o Q.SPECL [`m`, `(\x. f x * indicator_fn a x)`]) finite_space_integral_reduce
    >> `(\x. f x * indicator_fn a x) IN borel_measurable (m_space m,measurable_sets m)`
@@ -2685,14 +2733,15 @@ val finite_integral_on_set = store_thm
                     >> ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC real_ss [IN_INTER, IN_PREIMAGE, IN_SING]
                     >> Cases_on `x' IN a` >> RW_TAC real_ss [] >> FULL_SIMP_TAC std_ss [SUBSET_DEF])
    >> POP_ORW
-   >> ASM_SIMP_TAC std_ss [GSYM REAL_SUM_IMAGE_IN_IF, FINITE_DELETE, IMAGE_FINITE]);
+   >> ASM_SIMP_TAC std_ss [GSYM REAL_SUM_IMAGE_IN_IF, FINITE_DELETE, IMAGE_FINITE]
+QED
 
-val finite_space_POW_integral_reduce = store_thm
-  ("finite_space_POW_integral_reduce",
-  ``!m f. measure_space m /\
+Theorem finite_space_POW_integral_reduce:
+    !m f. measure_space m /\
          (POW (m_space m) = measurable_sets m) /\
           FINITE (m_space m) ==>
-         (integral m f = SIGMA (\x. f x * measure m {x}) (m_space m))``,
+         (integral m f = SIGMA (\x. f x * measure m {x}) (m_space m))
+Proof
    rpt STRIP_TAC
    >> `f IN borel_measurable (m_space m, measurable_sets m)`
         by (Q.PAT_X_ASSUM `P = Q` (MP_TAC o GSYM)
@@ -2821,7 +2870,8 @@ val finite_space_POW_integral_reduce = store_thm
         by (ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_IMAGE]
             >> FULL_SIMP_TAC std_ss [BIJ_DEF, INJ_DEF, SURJ_DEF, IN_IMAGE]
             >> METIS_TAC [])
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
 Theorem finite_POW_RN_deriv_reduce :
     !m v. measure_space m /\
@@ -2935,16 +2985,16 @@ Proof
    >> ASM_SIMP_TAC real_ss [REAL_EQ_RDIV_EQ, indicator_fn_def, IN_SING]
 QED
 
-val finite_POW_prod_measure_reduce = store_thm
-  ("finite_POW_prod_measure_reduce",
-  ``!m0 m1. measure_space m0 /\ measure_space m1 /\
+Theorem finite_POW_prod_measure_reduce:
+    !m0 m1. measure_space m0 /\ measure_space m1 /\
              FINITE (m_space m0) /\ FINITE (m_space m1) /\
              (POW (m_space m0) = measurable_sets m0) /\
              (POW (m_space m1) = measurable_sets m1) ==>
         (!a0 a1. a0 IN measurable_sets m0 /\
                  a1 IN measurable_sets m1 ==>
                 ((prod_measure m0 m1) (a0 CROSS a1) =
-                 measure m0 a0 * measure m1 a1))``,
+                 measure m0 a0 * measure m1 a1))
+Proof
    RW_TAC std_ss [prod_measure_def, measure_def,
                   finite_space_POW_integral_reduce]
    >> `(m_space m0) = a0 UNION ((m_space m0) DIFF a0)`
@@ -2992,15 +3042,16 @@ val finite_POW_prod_measure_reduce = store_thm
    >> Suff `SIGMA (\x. measure m0 {x}) a0 = measure m0 a0`
    >- RW_TAC real_ss [REAL_MUL_COMM]
    >> MATCH_MP_TAC (GSYM MEASURE_REAL_SUM_IMAGE)
-   >> METIS_TAC [IN_SING, IN_POW, SUBSET_DEF]);
+   >> METIS_TAC [IN_SING, IN_POW, SUBSET_DEF]
+QED
 
-val measure_space_finite_prod_measure_POW1 = store_thm
-  ("measure_space_finite_prod_measure_POW1",
-  ``!m0 m1. measure_space m0 /\ measure_space m1 /\
+Theorem measure_space_finite_prod_measure_POW1:
+    !m0 m1. measure_space m0 /\ measure_space m1 /\
              FINITE (m_space m0) /\ FINITE (m_space m1) /\
              (POW (m_space m0) = measurable_sets m0) /\
              (POW (m_space m1) = measurable_sets m1) ==>
-        measure_space (prod_measure_space m0 m1)``,
+        measure_space (prod_measure_space m0 m1)
+Proof
    rpt STRIP_TAC
    >> RW_TAC std_ss [prod_measure_space_def]
    >> `(m_space m0 CROSS m_space m1,
@@ -3107,17 +3158,18 @@ val measure_space_finite_prod_measure_POW1 = store_thm
        >> RW_TAC std_ss []
        >| [ METIS_TAC [SND],
             METIS_TAC [SND],
-            ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_UNION, IN_PREIMAGE]]]);
+            ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_UNION, IN_PREIMAGE]]]
+QED
 
-val measure_space_finite_prod_measure_POW2 = store_thm
-  ("measure_space_finite_prod_measure_POW2",
-  ``!m0 m1. measure_space m0 /\ measure_space m1 /\
+Theorem measure_space_finite_prod_measure_POW2:
+    !m0 m1. measure_space m0 /\ measure_space m1 /\
              FINITE (m_space m0) /\ FINITE (m_space m1) /\
              (POW (m_space m0) = measurable_sets m0) /\
              (POW (m_space m1) = measurable_sets m1) ==>
         measure_space (m_space m0 CROSS m_space m1,
                        POW (m_space m0 CROSS m_space m1),
-                       prod_measure m0 m1)``,
+                       prod_measure m0 m1)
+Proof
    rpt STRIP_TAC
    >> `(m_space m0 CROSS m_space m1,
                        POW (m_space m0 CROSS m_space m1),
@@ -3182,7 +3234,8 @@ val measure_space_finite_prod_measure_POW2 = store_thm
    >> RW_TAC std_ss []
    >| [ METIS_TAC [SND],
         METIS_TAC [SND],
-        ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_UNION, IN_PREIMAGE] ]);
+        ONCE_REWRITE_TAC [EXTENSION] >> RW_TAC std_ss [IN_UNION, IN_PREIMAGE] ]
+QED
 
 (* from examples/diningcryptos *)
 Theorem countable_space_integral_reduce :

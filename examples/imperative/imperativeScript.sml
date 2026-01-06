@@ -42,11 +42,9 @@ val _ = store_thm
 ;
 
 
-val     IMPERATIVE_FN_ABSTRACTION =
-        store_thm
-        (
-                "IMPERATIVE_FN_ABSTRACTION",
-                ``!(t :'a -> 'b) (f :'a -> 'b).(t = (\(y :'a). f y)) <=> (!(y:'a).(t (y :'a) = f y)) ``,
+Theorem IMPERATIVE_FN_ABSTRACTION:
+                  !(t :'a -> 'b) (f :'a -> 'b).(t = (\(y :'a). f y)) <=> (!(y:'a).(t (y :'a) = f y))
+Proof
                 (
                         (EVAL_TAC)
                                 (*      [
@@ -63,7 +61,7 @@ val     IMPERATIVE_FN_ABSTRACTION =
                         (ACCEPT_TAC (SPECL [``t:'a->'b``,``f:'a->'b``] FUN_EQ_THM))
                                 (*  [] |- !t f. (t = (\y. f y)) <=> !y. t y = f y : thm *)
                 )
-        )
+QED
 ;
 
 val     thmConditionalFunction =
@@ -207,11 +205,9 @@ val     thmConditionalFunction =
         end
 ;
 
-val     IMPERATIVE_SPEQ_EQ_THM =
-        store_thm
-        (
-                "IMPERATIVE_SPEC_EQ_THM",
-                ``(!(s :'a) (s' :'b).(f :'a -> 'b -> 'c) s s' = (g :'a -> 'b -> 'c) s s') <=> (f = g)``,
+Theorem IMPERATIVE_SPEC_EQ_THM:
+                  (!(s :'a) (s' :'b).(f :'a -> 'b -> 'c) s s' = (g :'a -> 'b -> 'c) s s') <=> (f = g)
+Proof
                 (
                         (EQ_TAC THENL
                                 [(
@@ -283,13 +279,13 @@ val     IMPERATIVE_SPEQ_EQ_THM =
                         (*
                                 [] |- (!s s'. f s s' = g s s') <=> (f = g) : proof
                         *)
-        )
+QED
 ;
 
 val thmAbstractSpecification =
                 INST_TYPE [
                         alpha |-> ``:'a -> 'b``, beta |-> ``:'a -> 'b``, gamma |-> ``:bool``
-                ] IMPERATIVE_SPEQ_EQ_THM
+                ] IMPERATIVE_SPEC_EQ_THM
                         (*
                                 [] |- (!s s'. f s s' <=> g s s') <=> (f = g)   : thm
                         *)
@@ -297,11 +293,10 @@ val thmAbstractSpecification =
 
 val _ = save_thm("PREDICATIVE_SPEC_EQ_THM",thmAbstractSpecification);
 
-val thmOnePointLemma=
-        store_thm
-        (
-                "ONE_POINT_LEMMA",
-                `` (x = x) /\ (f x t ) <=> f x t``,
+(* thmOnePointLemma *)
+Theorem ONE_POINT_LEMMA:
+                   (x = x) /\ (f x t ) <=> f x t
+Proof
                 (
                         (EQ_TAC THENL
                                 [(
@@ -332,7 +327,7 @@ val thmOnePointLemma=
                                 )]
                         )
                 )
-        )
+QED
 ;
 
 
@@ -382,7 +377,7 @@ val thmForwardSubstitution =
                                                                                                                 else s y``
                                                                 (INST_TYPE [
                                                                         alpha |-> ``:('a->'b)`` , beta |-> ``:'c``
-                                                                ] thmOnePointLemma)
+                                                                ] ONE_POINT_LEMMA)
                                                 )
         in
                 store_thm
@@ -501,5 +496,3 @@ val thmForwardSubstitution =
                 )
         end
 ;
-
-

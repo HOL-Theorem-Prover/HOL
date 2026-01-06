@@ -176,10 +176,11 @@ End
    Thus ?k. n = SUC k           by num_CASES
    The result follows           by encode_def
 *)
-val encode_eqn = store_thm(
-  "encode_eqn",
-  ``!n. 0 < n ==> (encode n = n MOD 2 :: encode (HALF n))``,
-  metis_tac[encode_def, num_CASES, NOT_ZERO_LT_ZERO]);
+Theorem encode_eqn:
+    !n. 0 < n ==> (encode n = n MOD 2 :: encode (HALF n))
+Proof
+  metis_tac[encode_def, num_CASES, NOT_ZERO_LT_ZERO]
+QED
 
 (*
 > EVAL ``encode 2``;
@@ -225,9 +226,9 @@ val encode_2 = |- encode 2 = [0; 1]: thm
          = (HALF n) * 2 + (n MOD 2)                by arithmetic
          = n                                       by DIVISION
 *)
-val decode_encode_eq_id = store_thm(
-  "decode_encode_eq_id",
-  ``!n. decode (encode n) = n``,
+Theorem decode_encode_eq_id:
+    !n. decode (encode n) = n
+Proof
   completeInduct_on `n` >>
   Cases_on `n = 0` >-
   rw_tac std_ss[encode_def, decode_def] >>
@@ -238,7 +239,8 @@ val decode_encode_eq_id = store_thm(
   `_ = n MOD 2 + 2 * (HALF n)` by rw[] >>
   `_ = (HALF n) * 2 + (n MOD 2)` by rw[] >>
   `_ = n` by rw[DIVISION] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: EVERY (\x. x = 0) l ==> (decode l = 0) *)
 (* Proof:
@@ -252,22 +254,24 @@ val decode_encode_eq_id = store_thm(
        = (h + 2 * decode l = 0)           by arithmetic
        = (decode (h::l) = 0)              by decode_def
 *)
-val decode_all_zero = store_thm(
-  "decode_all_zero",
-  ``!l. EVERY (\x. x = 0) l ==> (decode l = 0)``,
+Theorem decode_all_zero:
+    !l. EVERY (\x. x = 0) l ==> (decode l = 0)
+Proof
   Induct >>
   rw[decode_def] >>
-  rw[decode_def]);
+  rw[decode_def]
+QED
 
 (* Theorem: decode (GENLIST (K 0) m) = 0 *)
 (* Proof:
    Note EVERY (\x. x = 0) (GENLIST (K 0) m)   by EVERY_GENLIST
     ==> decode (GENLIST (K 0) m) = 0          by decode_all_zero
 *)
-val decode_genlist_zero = store_thm(
-  "decode_genlist_zero",
-  ``!m. decode (GENLIST (K 0) m) = 0``,
-  rw[decode_all_zero, EVERY_GENLIST]);
+Theorem decode_genlist_zero:
+    !m. decode (GENLIST (K 0) m) = 0
+Proof
+  rw[decode_all_zero, EVERY_GENLIST]
+QED
 
 (* Extract theorems from definition *)
 val decode_nil = save_thm("decode_nil", decode_def |> CONJUNCT1);
@@ -278,10 +282,11 @@ val decode_cons = save_thm("decode_cons", decode_def |> CONJUNCT2);
 
 (* Theorem: decode [x] = x *)
 (* Proof: by decode_def *)
-val decode_sing = store_thm(
-  "decode_sing",
-  ``!x. decode [x] = x``,
-  rw_tac std_ss[decode_def]);
+Theorem decode_sing:
+    !x. decode [x] = x
+Proof
+  rw_tac std_ss[decode_def]
+QED
 
 (*
 > EVAL ``decode [0;0;1]``;
@@ -311,13 +316,14 @@ val it = |- decode [0; 0; 1; 1] = 12: thm
          = decode (h::l) + x * 2 ** SUC (LENGTH l)      by decode_cons, EXP
          = decode (h::l) + x * 2 ** LENGTH (h::l)       by LENGTH
 *)
-val decode_snoc = store_thm(
-  "decode_snoc",
-  ``!x l. decode (SNOC x l) = decode l + x * 2 ** (LENGTH l)``,
+Theorem decode_snoc:
+    !x l. decode (SNOC x l) = decode l + x * 2 ** (LENGTH l)
+Proof
   strip_tac >>
   Induct >-
   rw[decode_def] >>
-  rw[decode_def, SNOC_CONS, EXP]);
+  rw[decode_def, SNOC_CONS, EXP]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Binary Representation                                                     *)
@@ -375,9 +381,9 @@ val binary_1 = save_thm("binary_1", EVAL ``binary 1``);
          = 1 + (1 + LOG2 m)              by arithmetic
          = 1 + LOG2 n                    by LOG_DIV
 *)
-val binary_length = store_thm(
-  "binary_length",
-  ``!n. LENGTH (binary n) = if n = 0 then 1 else 1 + LOG2 n``,
+Theorem binary_length:
+    !n. LENGTH (binary n) = if n = 0 then 1 else 1 + LOG2 n
+Proof
   rw[binary_def] >>
   completeInduct_on `n` >>
   rpt strip_tac >>
@@ -388,7 +394,8 @@ val binary_length = store_thm(
     simp[] >>
     rw[encode_1, LOG2_1],
     fs[encode_eqn, LOG_DIV, Abbr`m`]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Size of Binary Representation                                             *)
@@ -407,31 +414,35 @@ val it = |- !n. size n = if n = 0 then 1 else if n = 1 then 1 else size (HALF n)
 
 (* Theorem: size n = if n <= 1 then 1 else 1 + size (HALF n) *)
 (* Proof: by size_def *)
-val size_alt = store_thm(
-  "size_alt",
-  ``!n. size n = if n <= 1 then 1 else 1 + size (HALF n)``,
-  rw[Once size_def]);
+Theorem size_alt:
+    !n. size n = if n <= 1 then 1 else 1 + size (HALF n)
+Proof
+  rw[Once size_def]
+QED
 
 (* Theorem: 0 < size n *)
 (* Proof: by size_def *)
-val size_pos = store_thm(
-  "size_pos[simp]",
-  ``!n. 0 < size n``,
-  rw[Once size_def]);
+Theorem size_pos[simp]:
+    !n. 0 < size n
+Proof
+  rw[Once size_def]
+QED
 
 (* Theorem: size n <> 0 *)
 (* Proof: by size_pos *)
-val size_nonzero = store_thm(
-  "size_nonzero[simp]",
-  ``!n. size n <> 0``,
-  metis_tac[size_pos, NOT_ZERO_LT_ZERO]);
+Theorem size_nonzero[simp]:
+    !n. size n <> 0
+Proof
+  metis_tac[size_pos, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: 1 <= size n *)
 (* Proof: by size_pos *)
-val one_le_size = store_thm(
-  "one_le_size",
-  ``!n. 1 <= size n``,
-  metis_tac[size_nonzero, NOT_ZERO_GE_ONE]);
+Theorem one_le_size:
+    !n. 1 <= size n
+Proof
+  metis_tac[size_nonzero, NOT_ZERO_GE_ONE]
+QED
 
 (* Extract theorems from definition *)
 val size_0 = save_thm("size_0[simp]", size_def |> SPEC ``0`` |> SIMP_RULE arith_ss[]);
@@ -464,9 +475,9 @@ logPowerTheory.halves_def
        = SUC (halves (HALF n))   by induction hypothesis
        = halves n                by halves_def
 *)
-val size_by_halves = store_thm(
-  "size_by_halves",
-  ``!n. size n = if n = 0 then 1 else halves n``,
+Theorem size_by_halves:
+    !n. size n = if n = 0 then 1 else halves n
+Proof
   completeInduct_on `n` >>
   Cases_on `n = 0` >>
   rw[] >>
@@ -478,7 +489,8 @@ val size_by_halves = store_thm(
     `_ = SUC (halves (HALF n))` by rw[] >>
     `_ = halves n` by metis_tac[halves_def] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: size n = if n = 0 then 1 else 1 + LOG2 n *)
 (* Proof:
@@ -488,13 +500,14 @@ val size_by_halves = store_thm(
       size n = halves n    by size_by_halves
              = 1 + LOG2 n  by halves_by_LOG2
 *)
-val size_by_LOG2 = store_thm(
-  "size_by_LOG2",
-  ``!n. size n = if n = 0 then 1 else 1 + LOG2 n``,
+Theorem size_by_LOG2:
+    !n. size n = if n = 0 then 1 else 1 + LOG2 n
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   simp[] >>
-  simp[size_by_halves, halves_by_LOG2]);
+  simp[size_by_halves, halves_by_LOG2]
+QED
 
 (* Theorem: ulog n <= size n /\ size n <= 1 + ulog n *)
 (* Proof:
@@ -508,16 +521,17 @@ val size_by_LOG2 = store_thm(
            ulog n <= 1 + LOG2 n   by ulog_LOG2, 0 < n
       Thus size n <= 1 + ulog n /\ ulog n <= size n.
 *)
-val size_ulog = store_thm(
-  "size_ulog",
-  ``!n. ulog n <= size n /\ size n <= 1 + ulog n``,
+Theorem size_ulog:
+    !n. ulog n <= size n /\ size n <= 1 + ulog n
+Proof
   strip_tac >>
   Cases_on `n = 0` >-
   rw[ulog_0] >>
   `size n = 1 + LOG2 n` by rw[size_by_LOG2] >>
   `0 < n` by decide_tac >>
   imp_res_tac ulog_LOG2 >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < n ==> size n <= 2 * ulog n *)
 (* Proof:
@@ -525,13 +539,14 @@ val size_ulog = store_thm(
           <= ulog n + ulog n   by ulog_ge_1
            = 2 * ulog n        by arithmetic
 *)
-val size_le_ulog = store_thm(
-  "size_le_ulog",
-  ``!n. 1 < n ==> size n <= 2 * ulog n``,
+Theorem size_le_ulog:
+    !n. 1 < n ==> size n <= 2 * ulog n
+Proof
   rpt strip_tac >>
   `size n <= 1 + ulog n` by rw[size_ulog] >>
   `1 <= ulog n` by rw[ulog_ge_1] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: size (MAX 1 n) = size n *)
 (* Proof:
@@ -541,21 +556,23 @@ val size_le_ulog = store_thm(
    If n <> 0, then 1 <= n
       LHS = size (MAX 1 n) = size n        by MAX_DEF
 *)
-val size_max_1_n = store_thm(
-  "size_max_1_n",
-  ``!n. size (MAX 1 n) = size n``,
+Theorem size_max_1_n:
+    !n. size (MAX 1 n) = size n
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[] >>
   `1 <= n` by decide_tac >>
-  metis_tac[MAX_ALT]);
+  metis_tac[MAX_ALT]
+QED
 
 (* Theorem: size n = MAX 1 (size n) *)
 (* Proof: by size_pos, MAX_1_POS *)
-val max_1_size_n = store_thm(
-  "max_1_size_n",
-  ``!n. size n = MAX 1 (size n)``,
-  rw[MAX_1_POS]);
+Theorem max_1_size_n:
+    !n. size n = MAX 1 (size n)
+Proof
+  rw[MAX_1_POS]
+QED
 
 (* Note: (size n) is almost (ulog n).
    In fact, (size n) = (ulog n) except when n is a power of 2, in which case (size n) = 1 + ulog n.
@@ -593,23 +610,25 @@ val it = |- MAP size (GENLIST SUC 10)         = [1; 2; 2; 3; 3; 3; 3; 4; 4; 4]: 
    or  0 < m /\ m < n ==> LOG2 m <= LOG2 n      by NOT_ZERO_LT_ZERO
    which is true                                by LOG2_LT
 *)
-val size_monotone_lt = store_thm(
-  "size_monotone_lt",
-  ``!m n. m < n ==> size m <= size n``,
-  rw[size_by_LOG2, LOG2_LT]);
+Theorem size_monotone_lt:
+    !m n. m < n ==> size m <= size n
+Proof
+  rw[size_by_LOG2, LOG2_LT]
+QED
 
 (* Theorem: m <= n ==> size m <= size n *)
 (* Proof:
    If m < n, this is true by size_monotone_lt
    If m = n, this is true trivially.
 *)
-val size_monotone_le = store_thm(
-  "size_monotone_le",
-  ``!m n. m <= n ==> size m <= size n``,
+Theorem size_monotone_le:
+    !m n. m <= n ==> size m <= size n
+Proof
   rpt strip_tac >>
   `m < n \/ (m = n)` by decide_tac >-
   rw[size_monotone_lt] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: size n = 1 <=> n = 0 \/ n = 1 *)
 (* Proof:
@@ -623,15 +642,16 @@ val size_monotone_le = store_thm(
       True since size 0 = 1           by size_0
              and size 1 = 1           by size_1
 *)
-val size_eq_1 = store_thm(
-  "size_eq_1",
-  ``!n. size n = 1 <=> n = 0 \/ n = 1``,
+Theorem size_eq_1:
+    !n. size n = 1 <=> n = 0 \/ n = 1
+Proof
   (rw[EQ_IMP_THM] >> simp[]) >>
   spose_not_then strip_assume_tac >>
   `2 <= n` by decide_tac >>
   `size 2 <= size n` by rw[size_monotone_le] >>
   `size 2 = 2` by rw[size_2] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: size (n * 2 ** m) = size n + (if n = 0 then 0 else m) *)
 (* Proof:
@@ -647,19 +667,21 @@ val size_eq_1 = store_thm(
    = (1 + LOG2 n) + m         by arithmetic
    = size n + m               by size_by_LOG2
 *)
-val size_mult_two_power = store_thm(
-  "size_mult_two_power",
-  ``!n m. size (n * 2 ** m) = size n + (if n = 0 then 0 else m)``,
+Theorem size_mult_two_power:
+    !n m. size (n * 2 ** m) = size n + (if n = 0 then 0 else m)
+Proof
   rw[size_by_LOG2] >>
   `LOG2 (n * 2 ** m) = m + LOG2 n` by rw[GSYM LOG_EXP] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: size (2 * n) = size n + if n = 0 then 0 else 1 *)
 (* Proof: by size_mult_two_power *)
-val size_twice = store_thm(
-  "size_twice",
-  ``!n. size (2 * n) = size n + if n = 0 then 0 else 1``,
-  metis_tac[size_mult_two_power, EXP_1, MULT_RIGHT_1, MULT_COMM]);
+Theorem size_twice:
+    !n. size (2 * n) = size n + if n = 0 then 0 else 1
+Proof
+  metis_tac[size_mult_two_power, EXP_1, MULT_RIGHT_1, MULT_COMM]
+QED
 
 (* Theorem: size (2 ** n) = 1 + n *)
 (* Proof:
@@ -668,22 +690,24 @@ val size_twice = store_thm(
    = size 1 + n          by size_mult_two_power
    = 1 + n               by size_1
 *)
-val size_2_exp = store_thm(
-  "size_2_exp",
-  ``!n. size (2 ** n) = 1 + n``,
-  metis_tac[size_mult_two_power, size_1, MULT_LEFT_1, DECIDE``1 <> 0``]);
+Theorem size_2_exp:
+    !n. size (2 ** n) = 1 + n
+Proof
+  metis_tac[size_mult_two_power, size_1, MULT_LEFT_1, DECIDE``1 <> 0``]
+QED
 
 (* Theorem: 1 < n ==> SUC (size (HALF n)) = size n *)
 (* Proof:
    Note 1 < n means n <> 0 /\ n <> 1    by arithmetic
    Thus size n = SUC (size (HALF n))    by size_def
 *)
-val size_half_SUC = store_thm(
-  "size_half_SUC",
-  ``!n. 1 < n ==> SUC (size (HALF n)) = size n``,
+Theorem size_half_SUC:
+    !n. 1 < n ==> SUC (size (HALF n)) = size n
+Proof
   rpt strip_tac >>
   `n <> 0 /\ n <> 1` by decide_tac >>
-  metis_tac[size_def]);
+  metis_tac[size_def]
+QED
 
 (* Theorem: 1 < n ==> size (HALF n) = (size n) - 1 *)
 (* Proof:
@@ -691,12 +715,13 @@ val size_half_SUC = store_thm(
                = 1 + size (HALF n)     by SUC_ONE_ADD
    Thus size (HALF n) = (size n) - 1   by arithmetic
 *)
-val size_half = store_thm(
-  "size_half",
-  ``!n. 1 < n ==> size (HALF n) = (size n) - 1``,
+Theorem size_half:
+    !n. 1 < n ==> size (HALF n) = (size n) - 1
+Proof
   rpt strip_tac >>
   `size n = 1 + size (HALF n)` by rw[GSYM size_half_SUC] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: size (n DIV (2 ** k)) = if n < 2 ** k then 1 else size n - k *)
 (* Proof:
@@ -726,9 +751,9 @@ val size_half = store_thm(
        = (size n - 1) - k                 by size_half, 1 < n
        = size n - SUC k                   by ADD1
 *)
-val size_div_2_exp = store_thm(
-  "size_div_2_exp",
-  ``!n k. size (n DIV (2 ** k)) = if n < 2 ** k then 1 else size n - k``,
+Theorem size_div_2_exp:
+    !n k. size (n DIV (2 ** k)) = if n < 2 ** k then 1 else size n - k
+Proof
   Induct_on `k` >| [
     rw[] >>
     `n = 0` by decide_tac >>
@@ -748,7 +773,8 @@ val size_div_2_exp = store_thm(
       `size (HALF n) - k = (size n - 1) - k` by rw[size_half] >>
       decide_tac
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: n < 2 ** (size n) *)
 (* Proof:
@@ -762,12 +788,13 @@ val size_div_2_exp = store_thm(
           = 2 ** SUC (LOG2 n)  by SUC_ONE_ADD
           > n                  by LOG2_PROPERTY
 *)
-val size_exp = store_thm(
-  "size_exp",
-  ``!n. n < 2 ** (size n)``,
+Theorem size_exp:
+    !n. n < 2 ** (size n)
+Proof
   rw[size_by_LOG2] >>
   simp[GSYM ADD1] >>
-  rw[LOG2_PROPERTY]);
+  rw[LOG2_PROPERTY]
+QED
 
 (* Theorem: n < 2 ** size n /\ 2 ** size n <= 2 * (MAX 1 n) *)
 (* Proof:
@@ -779,15 +806,16 @@ val size_exp = store_thm(
        = 2 * 2 ** LOG2 n       by EXP
        <= 2 * n                by LOG2_PROPERTY, 0 < n
 *)
-val size_property = store_thm(
-  "size_property",
-  ``!n. 0 < n ==> n < 2 ** size n /\ 2 ** size n <= 2 * n``,
+Theorem size_property:
+    !n. 0 < n ==> n < 2 ** size n /\ 2 ** size n <= 2 * n
+Proof
   rpt strip_tac >-
   rw[size_exp] >>
   `2 ** size n = 2 ** SUC (LOG2 n)` by rw[size_by_LOG2] >>
   `_ = 2 * 2 ** LOG2 n` by rw[EXP] >>
   `2 * 2 ** LOG2 n <= 2 * n` by rw[LOG2_PROPERTY] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: n < 2 ** size n /\ 2 ** size n <= 2 * (MAX 1 n) *)
 (* Proof:
@@ -805,16 +833,17 @@ val size_property = store_thm(
           Note MAX 1 n = n           by MAX_DEF, 1 <= n
           Thus true                  by size_property
 *)
-val size_property_alt = store_thm(
-  "size_property_alt",
-  ``!n. n < 2 ** size n /\ 2 ** size n <= 2 * (MAX 1 n)``,
+Theorem size_property_alt:
+    !n. n < 2 ** size n /\ 2 ** size n <= 2 * (MAX 1 n)
+Proof
   rpt strip_tac >-
   rw[size_exp] >>
   Cases_on `n = 0` >-
   rw[] >>
   `1 <= n` by decide_tac >>
   `MAX 1 n = n` by rw[MAX_DEF] >>
-  rw[size_property]);
+  rw[size_property]
+QED
 
 (* Theorem: 2 ** m <= 2 * n /\ n < 2 ** m ==> (size n = m) *)
 (* Proof:
@@ -830,16 +859,17 @@ val size_property_alt = store_thm(
           = 1 + LOG2 n
           = size n                        by size_by_LOG2, n <> 0
 *)
-val size_unique = store_thm(
-  "size_unique",
-  ``!n m. 2 ** m <= 2 * n /\ n < 2 ** m ==> (size n = m)``,
+Theorem size_unique:
+    !n m. 2 ** m <= 2 * n /\ n < 2 ** m ==> (size n = m)
+Proof
   rpt strip_tac >>
   `n <> 0` by metis_tac[MULT_0, NOT_LESS] >>
   `m <> 0` by metis_tac[EXP_0, DECIDE``n:num < 1 ==> (n = 0)``] >>
   `?k. m = SUC k` by metis_tac[num_CASES] >>
   `2 ** k <= n` by fs[EXP] >>
   `k = LOG2 n` by metis_tac[LOG2_UNIQUE] >>
-  rw[size_by_LOG2]);
+  rw[size_by_LOG2]
+QED
 
 (* Theorem: 0 < n ==> !m. (size n = m) <=> (2 ** m <= TWICE n /\ n < 2 ** m) *)
 (* Proof:
@@ -848,10 +878,11 @@ val size_unique = store_thm(
    Only-if part: !n m. 2 ** m <= TWICE n /\ n < 2 ** m ==> size n = m
       This is true by size_unique.
 *)
-val size_thm = store_thm(
-  "size_thm",
-  ``!n. 0 < n ==> !m. (size n = m) <=> (2 ** m <= TWICE n /\ n < 2 ** m)``,
-  metis_tac[size_property, size_unique]);
+Theorem size_thm:
+    !n. 0 < n ==> !m. (size n = m) <=> (2 ** m <= TWICE n /\ n < 2 ** m)
+Proof
+  metis_tac[size_property, size_unique]
+QED
 
 (* Theorem: size n = n <=> n = 1 \/ n = 2 *)
 (* Proof:
@@ -867,9 +898,9 @@ val size_thm = store_thm(
    Only-if part: size 1 = 1 /\ size 2 = 2
        This is true                    by size_1, size_2
 *)
-val size_eq_self = store_thm(
-  "size_eq_self",
-  ``!n. (size n = n) <=> ((n = 1) \/ (n = 2))``,
+Theorem size_eq_self:
+    !n. (size n = n) <=> ((n = 1) \/ (n = 2))
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `n <> 0` by metis_tac[size_0, DECIDE``1 <> 0``] >>
@@ -883,7 +914,8 @@ val size_eq_self = store_thm(
     decide_tac,
     rw[],
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < n ==> size n <= n *)
 (* Proof:
@@ -892,13 +924,14 @@ val size_eq_self = store_thm(
      so 1 + LOG2 n <= n       by arithmetic
    Thus     size n <= n       by above
 *)
-val size_le = store_thm(
-  "size_le",
-  ``!n. 0 < n ==> size n <= n``,
+Theorem size_le:
+    !n. 0 < n ==> size n <= n
+Proof
   rpt strip_tac >>
   `size n = 1 + LOG2 n` by rw[size_by_LOG2] >>
   `LOG2 n < n` by rw[LOG2_LT_SELF] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 2 < n ==> size n < n *)
 (* Proof:
@@ -908,13 +941,14 @@ val size_le = store_thm(
     ==> n = 1 or n = 2        by size_eq_self
    This contradicts 2 < n.
 *)
-val size_lt = store_thm(
-  "size_lt",
-  ``!n. 2 < n ==> size n < n``,
+Theorem size_lt:
+    !n. 2 < n ==> size n < n
+Proof
   spose_not_then strip_assume_tac >>
   `size n <= n` by rw[size_le] >>
   `size n = n` by decide_tac >>
-  fs[size_eq_self]);
+  fs[size_eq_self]
+QED
 
 (* Theorem: 0 < n ==> size n <= n *)
 (* Proof:
@@ -923,13 +957,14 @@ val size_lt = store_thm(
    < 1 + n            by LOG2_LT_SELF
    Thus size n <= n   by arithmetic
 *)
-val size_le_self = store_thm(
-  "size_le_self",
-  ``!n. 0 < n ==> size n <= n``,
+Theorem size_le_self:
+    !n. 0 < n ==> size n <= n
+Proof
   rpt strip_tac >>
   `size n = 1 + LOG2 n` by rw[size_by_LOG2] >>
   `1 + LOG2 n < 1 + n` by rw[LOG2_LT_SELF] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: size (size n) <= size n *)
 (* Proof:
@@ -941,13 +976,14 @@ val size_le_self = store_thm(
       Then size n <= n                by size_le_self
       Thus size (size n) <= size n    by size_monotone_le
 *)
-val size_size_le = store_thm(
-  "size_size_le",
-  ``!n. size (size n) <= size n``,
+Theorem size_size_le:
+    !n. size (size n) <= size n
+Proof
   rpt strip_tac >>
   (Cases_on `n = 0` >> simp[]) >>
   `size n <= n` by rw[size_le_self] >>
-  rw[size_monotone_le]);
+  rw[size_monotone_le]
+QED
 
 (*
 > EVAL ``MAP size [1 .. 10]``;
@@ -979,9 +1015,9 @@ val it = |- MAP (\n. LOG2 n) [1 .. 10] = [0; 1; 1; 2; 2; 2; 2; 3; 3; 3]: thm
            n <  2 ** ulog n          by 2 ** ulog n <> n, take e = ulog n.
        ==> size = ulog n             by size_unique
 *)
-val size_by_ulog = store_thm(
-  "size_by_ulog",
-  ``!n. size n = if (n = 0 \/ perfect_power n 2) then 1 + ulog n else ulog n``,
+Theorem size_by_ulog:
+    !n. size n = if (n = 0 \/ perfect_power n 2) then 1 + ulog n else ulog n
+Proof
   rw_tac std_ss[perfect_power_def] >-
   rw[ulog_0] >-
   rw[size_2_exp, ulog_2_exp] >>
@@ -989,44 +1025,50 @@ val size_by_ulog = store_thm(
   `0 < n` by metis_tac[NOT_ZERO_LT_ZERO] >>
   imp_res_tac ulog_property >>
   `n <> 2 ** ulog n` by metis_tac[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: size n = ulog n + (if (n = 0) \/ perfect_power n 2 then 1 else 0) *)
 (* Proof: by size_by_ulog *)
-val size_by_ulog_alt = store_thm(
-  "size_by_ulog_alt",
-  ``!n. size n = ulog n + (if (n = 0) \/ perfect_power n 2 then 1 else 0)``,
-  rw[size_by_ulog]);
+Theorem size_by_ulog_alt:
+    !n. size n = ulog n + (if (n = 0) \/ perfect_power n 2 then 1 else 0)
+Proof
+  rw[size_by_ulog]
+QED
 
 (* Theorem: size n = if (n = 0) then 1 else ulog n + (if perfect_power n 2 then 1 else 0) *)
 (* Proof: by size_by_ulog *)
-val size_by_ulog_eqn = store_thm(
-  "size_by_ulog_eqn",
-  ``!n. size n = if (n = 0) then 1 else ulog n + (if perfect_power n 2 then 1 else 0)``,
+Theorem size_by_ulog_eqn:
+    !n. size n = if (n = 0) then 1 else ulog n + (if perfect_power n 2 then 1 else 0)
+Proof
   rpt strip_tac >>
-  (Cases_on `n = 0` >> rw[size_by_ulog]));
+  (Cases_on `n = 0` >> rw[size_by_ulog])
+QED
 
 (* Theorem: ulog n = if (n = 0) \/ perfect_power n 2 then size n - 1 else size n *)
 (* Proof: by size_by_ulog *)
-val ulog_by_size = store_thm(
-  "ulog_by_size",
-  ``!n. ulog n = if (n = 0) \/ perfect_power n 2 then size n - 1 else size n``,
-  rw[size_by_ulog]);
+Theorem ulog_by_size:
+    !n. ulog n = if (n = 0) \/ perfect_power n 2 then size n - 1 else size n
+Proof
+  rw[size_by_ulog]
+QED
 
 (* Theorem: ulog n = size n - (if (n = 0) \/ perfect_power n 2 then 1 else 0) *)
 (* Proof: by ulog_by_size *)
-val ulog_by_size_alt = store_thm(
-  "ulog_by_size_alt",
-  ``!n. ulog n = size n - (if (n = 0) \/ perfect_power n 2 then 1 else 0)``,
-  rw[ulog_by_size]);
+Theorem ulog_by_size_alt:
+    !n. ulog n = size n - (if (n = 0) \/ perfect_power n 2 then 1 else 0)
+Proof
+  rw[ulog_by_size]
+QED
 
 (* Theorem: ulog n = if (n = 0) then 0 else size n - (if perfect_power n 2 then 1 else 0) *)
 (* Proof: by ulog_by_size *)
-val ulog_by_size_eqn = store_thm(
-  "ulog_by_size_eqn",
-  ``!n. ulog n = if (n = 0) then 0 else size n - (if perfect_power n 2 then 1 else 0)``,
+Theorem ulog_by_size_eqn:
+    !n. ulog n = if (n = 0) then 0 else size n - (if perfect_power n 2 then 1 else 0)
+Proof
   rpt strip_tac >>
-  (Cases_on `n = 0` >> rw[ulog_by_size]));
+  (Cases_on `n = 0` >> rw[ulog_by_size])
+QED
 
 (* Theorem: halves n = if n = 0 then 0 else size n *)
 (* Proof:
@@ -1036,12 +1078,13 @@ val ulog_by_size_eqn = store_thm(
         halves n
       = size n         by size_by_halves, n <> 0
 *)
-val halves_by_size = store_thm(
-  "halves_by_size",
-  ``!n. halves n = if n = 0 then 0 else size n``,
+Theorem halves_by_size:
+    !n. halves n = if n = 0 then 0 else size n
+Proof
   rpt strip_tac >>
   rw[halves_0] >>
-  rw[size_by_halves]);
+  rw[size_by_halves]
+QED
 
 (* Theorem: 1 < k ==> GENLIST (\j. k DIV 2 ** j) (size k) =
             k :: GENLIST (\j. (HALF k) DIV 2 ** j) (size (HALF k)) *)
@@ -1058,10 +1101,10 @@ val halves_by_size = store_thm(
    = f 0::GENLIST (f o SUC) (size h)            by GENLIST_CONS
    = k :: GENLIST (\j. h DIV 2 ** j) (size h)   by above, notation
 *)
-val size_genlist_half = store_thm(
-  "size_genlist_half",
-  ``!k. 1 < k ==> GENLIST (\j. k DIV 2 ** j) (size k) =
-            k :: GENLIST (\j. (HALF k) DIV 2 ** j) (size (HALF k))``,
+Theorem size_genlist_half:
+    !k. 1 < k ==> GENLIST (\j. k DIV 2 ** j) (size k) =
+            k :: GENLIST (\j. (HALF k) DIV 2 ** j) (size (HALF k))
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = \j. k DIV 2 ** j` >>
   `f o SUC = \j. (HALF k) DIV 2 ** j` by
@@ -1069,7 +1112,8 @@ val size_genlist_half = store_thm(
   rw[HALF_DIV_TWO_POWER]) >>
   `f 0 = k` by rw[Abbr`f`] >>
   `GENLIST f (size k) = GENLIST f (SUC (size (HALF k)))` by rw[size_half_SUC] >>
-  rw[GENLIST_CONS]);
+  rw[GENLIST_CONS]
+QED
 
 (* Theorem: 1 < k ==> GENLIST (\j. n * 2 ** j) (size k) =
             n :: GENLIST (\j. 2 * n * 2 ** j) (size (HALF k)) *)
@@ -1086,10 +1130,10 @@ val size_genlist_half = store_thm(
    = f 0::GENLIST (f o SUC) (size h)            by GENLIST_CONS
    = n :: GENLIST (\j. 2 * n * 2 ** j) (size h) by above, notation
 *)
-val size_genlist_twice = store_thm(
-  "size_genlist_twice",
-  ``!n k. 1 < k ==> GENLIST (\j. n * 2 ** j) (size k) =
-              n :: GENLIST (\j. 2 * n * 2 ** j) (size (HALF k))``,
+Theorem size_genlist_twice:
+    !n k. 1 < k ==> GENLIST (\j. n * 2 ** j) (size k) =
+              n :: GENLIST (\j. 2 * n * 2 ** j) (size (HALF k))
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = \j. n * 2 ** j` >>
   `f o SUC = \j. 2 * n * 2 ** j` by
@@ -1097,7 +1141,8 @@ val size_genlist_twice = store_thm(
   rw[EXP]) >>
   `f 0 = n` by rw[Abbr`f`] >>
   `GENLIST f (size k) = GENLIST f (SUC (size (HALF k)))` by rw[size_half_SUC] >>
-  rw[GENLIST_CONS]);
+  rw[GENLIST_CONS]
+QED
 
 (* Theorem: 1 < k ==> GENLIST (\j. n ** 2 ** j) (size k) =
                       n :: GENLIST (\j. (n * n) ** 2 ** j) (size (HALF k)) *)
@@ -1114,10 +1159,10 @@ val size_genlist_twice = store_thm(
    = f 0::GENLIST (f o SUC) (size h)                    by GENLIST_CONS
    = n :: GENLIST (\j. (n * n) * n ** 2 ** j) (size h)  by above, notation
 *)
-val size_genlist_square = store_thm(
-  "size_genlist_square",
-  ``!n:num k. 1 < k ==> GENLIST (\j. n ** 2 ** j) (size k) =
-                       n :: GENLIST (\j. (n * n) ** 2 ** j) (size (HALF k))``,
+Theorem size_genlist_square:
+    !n:num k. 1 < k ==> GENLIST (\j. n ** 2 ** j) (size k) =
+                       n :: GENLIST (\j. (n * n) ** 2 ** j) (size (HALF k))
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = \j. n ** 2 ** j` >>
   `f o SUC = \j. (n * n) ** 2 ** j` by
@@ -1125,7 +1170,8 @@ val size_genlist_square = store_thm(
   rw[EXP_EXP_SUC]) >>
   `f 0 = n` by rw[Abbr`f`] >>
   `GENLIST f (size k) = GENLIST f (SUC (size (HALF k)))` by rw[size_half_SUC] >>
-  rw[GENLIST_CONS]);
+  rw[GENLIST_CONS]
+QED
 
 (* Theorem: 1 < k ==> GENLIST (\j. if EVEN (k DIV 2 ** j) then 0 else n * 2 ** j) (size k) =
             (if EVEN k then 0 else n) ::
@@ -1145,11 +1191,11 @@ val size_genlist_square = store_thm(
    = (if EVEN k then 0 else n) ::
      GENLIST (\j. if EVEN (h DIV 2 ** j) then 0 else 2 * n * 2 ** j) (size h) by above, notation
 *)
-val size_genlist_select = store_thm(
-  "size_genlist_select",
-  ``!n k. 1 < k ==> GENLIST (\j. if EVEN (k DIV 2 ** j) then 0 else n * 2 ** j) (size k) =
+Theorem size_genlist_select:
+    !n k. 1 < k ==> GENLIST (\j. if EVEN (k DIV 2 ** j) then 0 else n * 2 ** j) (size k) =
             (if EVEN k then 0 else n) ::
-            GENLIST (\j. if EVEN ((HALF k) DIV 2 ** j) then 0 else 2 * n * 2 ** j) (size (HALF k))``,
+            GENLIST (\j. if EVEN ((HALF k) DIV 2 ** j) then 0 else 2 * n * 2 ** j) (size (HALF k))
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = \j. if EVEN (k DIV 2 ** j) then 0 else n * 2 ** j` >>
   `f o SUC = \j. if EVEN ((HALF k) DIV 2 ** j) then 0 else 2 * n * 2 ** j` by
@@ -1157,14 +1203,16 @@ val size_genlist_select = store_thm(
   rw[EXP, HALF_DIV_TWO_POWER]) >>
   `f 0 = if EVEN k then 0 else n` by rw[Abbr`f`] >>
   `GENLIST f (size k) = GENLIST f (SUC (size (HALF k)))` by rw[size_half_SUC] >>
-  rw[GENLIST_CONS]);
+  rw[GENLIST_CONS]
+QED
 
 (* Theorem: size (n * 2 ** m) <= size n + m *)
 (* Proof: by size_mult_two_power *)
-val size_mult_two_power_upper = store_thm(
-  "size_mult_two_power_upper",
-  ``!m n. size (n * 2 ** m) <= size n + m``,
-  rw[size_mult_two_power]);
+Theorem size_mult_two_power_upper:
+    !m n. size (n * 2 ** m) <= size n + m
+Proof
+  rw[size_mult_two_power]
+QED
 
 (* Theorem: size (m + n) <= 1 + size (MAX m n) *)
 (* Proof:
@@ -1183,9 +1231,9 @@ val size_mult_two_power_upper = store_thm(
         <= 1 + size m           by size_twice
       Thus size (m + n) <= 1 + size m.
 *)
-val size_add_upper = store_thm(
-  "size_add_upper",
-  ``!m n. size (m + n) <= 1 + size (MAX m n)``,
+Theorem size_add_upper:
+    !m n. size (m + n) <= 1 + size (MAX m n)
+Proof
   rpt strip_tac >>
   Cases_on `m < n` >| [
     `MAX m n = n` by rw[MAX_DEF] >>
@@ -1198,7 +1246,8 @@ val size_add_upper = store_thm(
     `size (m + n) <= size (2 * m)` by rw[size_monotone_le] >>
     `size (2 * m) <= 1 + size m` by rw[size_twice] >>
     fs[]
-  ]);
+  ]
+QED
 
 (* Theorem: size (m * n) <= size m + size n *)
 (* Proof:
@@ -1208,15 +1257,16 @@ val size_add_upper = store_thm(
      <= size (m * 2 ** size n)     by size_monotone_le
      <= size m + size n            by size_mult_two_power_upper
 *)
-val size_mult_upper = store_thm(
-  "size_mult_upper",
-  ``!m n. size (m * n) <= size m + size n``,
+Theorem size_mult_upper:
+    !m n. size (m * n) <= size m + size n
+Proof
   rpt strip_tac >>
   `n < 2 ** size n` by rw[size_exp] >>
   `m * n <= m * 2 ** size n` by rw[] >>
   `size (m * n) <= size (m * 2 ** size n)` by rw[size_monotone_le] >>
   `size (m * 2 ** size n) <= size m + size n` by rw[size_mult_two_power_upper] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: size (SQ n) <= 2 * size n *)
 (* Proof:
@@ -1225,10 +1275,11 @@ val size_mult_upper = store_thm(
    <= (size n) + (size n)   by size_mult_upper
     = 2 * size n            by TIMES2
 *)
-val size_sq_upper = store_thm(
-  "size_sq_upper",
-  ``!n. size (SQ n) <= 2 * size n``,
-  metis_tac[size_mult_upper, EXP_2, TIMES2]);
+Theorem size_sq_upper:
+    !n. size (SQ n) <= 2 * size n
+Proof
+  metis_tac[size_mult_upper, EXP_2, TIMES2]
+QED
 
 (* Theorem: size n <= 1 + n *)
 (* Proof:
@@ -1237,13 +1288,14 @@ val size_sq_upper = store_thm(
      <= size (2 ** n)   by size_monotone_le
       = 1 + n           by size_2_exp
 *)
-val size_upper = store_thm(
-  "size_upper",
-  ``!n. size n <= 1 + n``,
+Theorem size_upper:
+    !n. size n <= 1 + n
+Proof
   rpt strip_tac >>
   `n < 2 ** n` by rw[X_LT_EXP_X] >>
   `size n <= size (2 ** n)` by rw[size_monotone_le] >>
-  rw[GSYM size_2_exp]);
+  rw[GSYM size_2_exp]
+QED
 
 (* Theorem: size (n + 1) <= 1 + size n *)
 (* Proof:
@@ -1251,13 +1303,14 @@ val size_upper = store_thm(
    <= 1 + size (MAX n 1)      by size_add_upper
    <= 1 +  size n             by size_max_1_n, MAX_COMM
 *)
-val size_add1 = store_thm(
-  "size_add1",
-  ``!n. size (n + 1) <= 1 + size n``,
+Theorem size_add1:
+    !n. size (n + 1) <= 1 + size n
+Proof
   rpt strip_tac >>
   `size (n + 1) <= 1 + size (MAX n 1)` by rw[size_add_upper] >>
   `size (MAX n 1) = size n` by metis_tac[size_max_1_n, MAX_COMM] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < n ==> 1 < size n *)
 (* Proof:
@@ -1265,27 +1318,30 @@ val size_add1 = store_thm(
     and size n <> 1       by size_eq_1, n <> 0, n <> 1
    Thus 1 < size n        by arithmetic
 *)
-val size_gt_1 = store_thm(
-  "size_gt_1",
-  ``!n. 1 < n ==> 1 < size n``,
+Theorem size_gt_1:
+    !n. 1 < n ==> 1 < size n
+Proof
   rpt strip_tac >>
   `size n <> 0` by rw[] >>
   `size n <> 1` by rw[size_eq_1] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: size (MAX m n) = MAX (size m) (size n) *)
 (* Proof: by MAX_SWAP, size_monotone_le *)
-val size_max = store_thm(
-  "size_max",
-  ``!m n. size (MAX m n) = MAX (size m) (size n)``,
-  rw[MAX_SWAP, size_monotone_le]);
+Theorem size_max:
+    !m n. size (MAX m n) = MAX (size m) (size n)
+Proof
+  rw[MAX_SWAP, size_monotone_le]
+QED
 
 (* Theorem: size (MIN m n) = MIN (size m) (size n) *)
 (* Proof: by MIN_SWAP, size_monotone_le *)
-val size_min = store_thm(
-  "size_min",
-  ``!m n. size (MIN m n) = MIN (size m) (size n)``,
-  rw[MIN_SWAP, size_monotone_le]);
+Theorem size_min:
+    !m n. size (MIN m n) = MIN (size m) (size n)
+Proof
+  rw[MIN_SWAP, size_monotone_le]
+QED
 
 (* Theorem: size (m ** n) <= MAX 1 (n * size m) *)
 (* Proof:
@@ -1315,9 +1371,9 @@ val size_min = store_thm(
        = SUC n * size m                        by arithmetic
        = MAX 1 (SUC n * size m)                by above
 *)
-val size_exp_upper = store_thm(
-  "size_exp_upper",
-  ``!m n. size (m ** n) <= MAX 1 (n * size m)``,
+Theorem size_exp_upper:
+    !m n. size (m ** n) <= MAX 1 (n * size m)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[EXP_0] >>
@@ -1329,7 +1385,8 @@ val size_exp_upper = store_thm(
   `size m + size (m ** n) <= size m + MAX 1 (n * size m)` by rw[] >>
   `size m + MAX 1 (n * size m) = size m + n * size m` by rw[MAX_1_POS] >>
   `_ = SUC n * size m` by rw[MULT] >>
-  rw[MAX_1_POS]);
+  rw[MAX_1_POS]
+QED
 
 (* This upper bound seems not likely to be lowered:
 val it = |- size 100 = 7: thm
@@ -1348,14 +1405,15 @@ val it = |- size (100 ** 5) = 34: thm
      <= MAX 1 (n * size m)   by size_exp_upper
       = n * size m           by above, MAX_DEF
 *)
-val size_exp_upper_alt = store_thm(
-  "size_exp_upper_alt",
-  ``!m n. 0 < n ==> size (m ** n) <= n * size m``,
+Theorem size_exp_upper_alt:
+    !m n. 0 < n ==> size (m ** n) <= n * size m
+Proof
   rpt strip_tac >>
   `0 < n * size m` by rw[MULT_POS] >>
   `1 <= n * size m` by decide_tac >>
   `MAX 1 (n * size m) = n * size m` by rw[MAX_DEF] >>
-  metis_tac[size_exp_upper]);
+  metis_tac[size_exp_upper]
+QED
 
 (* Theorem: size (n ** 2 ** size m) <= 2 * (MAX 1 m) * size n *)
 (* Proof:
@@ -1364,15 +1422,16 @@ val size_exp_upper_alt = store_thm(
     = 2 ** size m * size n           by EXP_POS, size_pos
    <= 2 * (MAX 1 m) * size n         by size_property_alt
 *)
-val size_exp_two_power_upper = store_thm(
-  "size_exp_two_power_upper",
-  ``!m n. size (n ** 2 ** size m) <= 2 * (MAX 1 m) * size n``,
+Theorem size_exp_two_power_upper:
+    !m n. size (n ** 2 ** size m) <= 2 * (MAX 1 m) * size n
+Proof
   rpt strip_tac >>
   `size (n ** 2 ** size m) <= MAX 1 (2 ** size m * size n)` by rw[size_exp_upper] >>
   `0 < 2 ** size m * size n` by rw[MULT_POS] >>
   `MAX 1 (2 ** size m * size n) = 2 ** size m * size n` by rw[MAX_1_POS] >>
   `2 ** size m * size n <= 2 * (MAX 1 m) * size n` by rw[size_property_alt] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 0 < n /\ j < size n ==> size (m ** 2 ** j) <= n * size m *)
 (* Proof:
@@ -1387,9 +1446,9 @@ val size_exp_two_power_upper = store_thm(
        <= 2 ** j * size m                 by size_exp_upper_alt
        <= n * size m                      by above, 2 ** j <= n.
 *)
-val size_exp_two_power_le = store_thm(
-  "size_exp_two_power_le",
-  ``!n m j. 0 < n /\ j < size n ==> size (m ** 2 ** j) <= n * size m``,
+Theorem size_exp_two_power_le:
+    !n m j. 0 < n /\ j < size n ==> size (m ** 2 ** j) <= n * size m
+Proof
   rpt strip_tac >>
   `size (m ** 2 ** j) <= 2 ** j * size m` by rw[size_exp_upper_alt] >>
   `j <= size n - 1` by decide_tac >>
@@ -1399,7 +1458,8 @@ val size_exp_two_power_le = store_thm(
   `2 * 2 ** (size n - 1) = 2 ** size n` by rw[GSYM EXP] >>
   `2 ** size n <= 2 * n` by rw[size_property] >>
   `2 ** j * size m <= n * size m` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: m <= n ==> size (b ** m) <= size (b ** n) *)
 (* Proof:
@@ -1411,25 +1471,27 @@ val size_exp_two_power_le = store_thm(
       Then b ** m <= b ** n                          by EXP_BASE_LEQ_MONO_IMP
         so size (b ** m) <= size (b ** n)            by size_monotone_le
 *)
-val size_exp_base_le = store_thm(
-  "size_exp_base_le",
-  ``!n m b. m <= n ==> size (b ** m) <= size (b ** n)``,
+Theorem size_exp_base_le:
+    !n m b. m <= n ==> size (b ** m) <= size (b ** n)
+Proof
   rpt strip_tac >>
   Cases_on `b = 0` >-
   rw[ZERO_EXP] >>
   `0 < b` by decide_tac >>
   `b ** m <= b ** n` by rw[EXP_BASE_LEQ_MONO_IMP] >>
-  rw[size_monotone_le]);
+  rw[size_monotone_le]
+QED
 
 (* Theorem: a <= b ==> size (a ** n) <= size (b ** n) *)
 (* Proof:
    Note a ** n <= b ** n                 by EXP_EXP_LE_MONO
    Thus size (a ** n) <= size (b ** n)   by size_monotone_le
 *)
-val size_exp_exp_le = store_thm(
-  "size_exp_exp_le",
-  ``!a b n. a <= b ==> size (a ** n) <= size (b ** n)``,
-  rw[EXP_EXP_LE_MONO, size_monotone_le]);
+Theorem size_exp_exp_le:
+    !a b n. a <= b ==> size (a ** n) <= size (b ** n)
+Proof
+  rw[EXP_EXP_LE_MONO, size_monotone_le]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Encode to Fixed Binary Bits                                               *)
@@ -1483,9 +1545,9 @@ val to_bits_n_SUC = save_thm("to_bits_n_SUC", to_bits_def |> CONJUNCT2);
         = SNOC (((HALF n) DIV 2 ** m) MOD 2) (to_bits n (SUC m))    by to_bits_n_SUC
         = SNOC ((n DIV 2 ** SUC m) MOD 2) (to_bits n (SUC m))       by HALF_DIV_TWO_POWER
 *)
-val to_bits_snoc = store_thm(
-  "to_bits_snoc",
-  ``!n m. to_bits n (SUC m) = SNOC ((n DIV (2 ** m)) MOD 2) (to_bits n m)``,
+Theorem to_bits_snoc:
+    !n m. to_bits n (SUC m) = SNOC ((n DIV (2 ** m)) MOD 2) (to_bits n m)
+Proof
   Induct_on `m` >-
   rw[to_bits_def] >>
   rpt strip_tac >>
@@ -1494,7 +1556,8 @@ val to_bits_snoc = store_thm(
   `_ = SNOC (((HALF n) DIV 2 ** m) MOD 2) (n MOD 2 :: to_bits (HALF n) m)` by rw[SNOC_CONS] >>
   `_ = SNOC (((HALF n) DIV 2 ** m) MOD 2) (to_bits n (SUC m))` by rw[GSYM to_bits_n_SUC] >>
   `_ = SNOC ((n DIV 2 ** SUC m) MOD 2) (to_bits n (SUC m))` by rw[HALF_DIV_TWO_POWER] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: to_bits 0 m = GENLIST (K 0) m *)
 (* Proof:
@@ -1510,12 +1573,13 @@ val to_bits_snoc = store_thm(
        = 0 :: (GENLIST K 0) m           by induction hypothesis
        = GENLIST (K 0) (SUC m)          by GENLIST_K_CONS
 *)
-val to_bits_0_m = store_thm(
-  "to_bits_0_m",
-  ``!m. to_bits 0 m = GENLIST (K 0) m``,
+Theorem to_bits_0_m:
+    !m. to_bits 0 m = GENLIST (K 0) m
+Proof
   Induct >-
   rw_tac std_ss[to_bits_def, GENLIST_0] >>
-  rw_tac std_ss[to_bits_def, GENLIST_K_CONS]);
+  rw_tac std_ss[to_bits_def, GENLIST_K_CONS]
+QED
 
 (*
 > EVAL ``to_bits 7 0``;
@@ -1577,10 +1641,11 @@ QED
    = LENGTH (GENLIST f m)   by to_bits_n_m
    = m                      by LENGTH_GENLIST
 *)
-val to_bits_length = store_thm(
-  "to_bits_length",
-  ``!m n. LENGTH (to_bits n m) = m``,
-  rw_tac std_ss[to_bits_n_m, LENGTH_GENLIST]);
+Theorem to_bits_length:
+    !m n. LENGTH (to_bits n m) = m
+Proof
+  rw_tac std_ss[to_bits_n_m, LENGTH_GENLIST]
+QED
 
 (* Theorem: k < m ==> (EL k (to_bits n m) = (n DIV (2 ** k)) MOD 2) *)
 (* Proof:
@@ -1590,10 +1655,11 @@ val to_bits_length = store_thm(
    = f k                     by EL_GENLIST, k < m
    = (n DIV 2 ** k) MOD 2    by notation
 *)
-val to_bits_element = store_thm(
-  "to_bits_element",
-  ``!k m n. k < m ==> (EL k (to_bits n m) = (n DIV (2 ** k)) MOD 2)``,
-  rw_tac std_ss[to_bits_length, to_bits_n_m, EL_GENLIST]);
+Theorem to_bits_element:
+    !k m n. k < m ==> (EL k (to_bits n m) = (n DIV (2 ** k)) MOD 2)
+Proof
+  rw_tac std_ss[to_bits_length, to_bits_n_m, EL_GENLIST]
+QED
 
 (* Theorem: decode (to_bits n m) = n MOD (2 ** m) *)
 (* Proof:
@@ -1631,9 +1697,9 @@ val to_bits_element = store_thm(
          = n MOD (2 * 2 ** k)                                  by h = 2 ** k
          = n MOD (2 ** m)                                      by EXP
 *)
-val decode_to_bits_eq_mod = store_thm(
-  "decode_to_bits_eq_mod",
-  ``!m n. decode (to_bits n m) = n MOD (2 ** m)``,
+Theorem decode_to_bits_eq_mod:
+    !m n. decode (to_bits n m) = n MOD (2 ** m)
+Proof
   completeInduct_on `n` >>
   Cases_on `n = 0` >-
   rw_tac std_ss[decode_genlist_zero, to_bits_0_m] >>
@@ -1653,7 +1719,8 @@ val decode_to_bits_eq_mod = store_thm(
   `_ = HALF (n MOD (2 * h)) * 2 + (n MOD (2 * h)) MOD 2` by rw[] >>
   `_ = n MOD (2 * h)` by rw[DIVISION] >>
   `_ = n MOD 2 ** m` by rw[EXP, Abbr`m`] >>
-  rw[]);
+  rw[]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

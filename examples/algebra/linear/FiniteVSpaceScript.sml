@@ -95,20 +95,22 @@ val finite_vspace_is_vspace = save_thm("finite_vspace_is_vspace",
 
 (* Theorem: FiniteVSpace r g op ==> FINITE R /\ FINITE V *)
 (* Proof: by FiniteVSpace_def. *)
-val finite_vspace_is_finite = store_thm(
-  "finite_vspace_is_finite",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==> FINITE R /\ FINITE V``,
-  rw[FiniteVSpace_def]);
+Theorem finite_vspace_is_finite:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==> FINITE R /\ FINITE V
+Proof
+  rw[FiniteVSpace_def]
+QED
 
 (* Theorem: For FiniteVSpace, list of all vectors is a basis: basis g (SET_TO_LIST V) *)
 (* Proof:
    Since FINITE V, !x. MEM x (SET_TO_LIST V) <=> x IN V     by MEM_SET_TO_LIST
    Thus true by basis_member.
 *)
-val finite_vspace_all_basis = store_thm(
-  "finite_vspace_all_basis",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==> basis g (SET_TO_LIST V)``,
-  metis_tac[FiniteVSpace_def, basis_member, MEM_SET_TO_LIST]);
+Theorem finite_vspace_all_basis:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==> basis g (SET_TO_LIST V)
+Proof
+  metis_tac[FiniteVSpace_def, basis_member, MEM_SET_TO_LIST]
+QED
 
 (* Theorem: The whole Group g can span itself.
             SpanSpace r g op (SET_TO_LIST V) = g  *)
@@ -125,14 +127,15 @@ val finite_vspace_all_basis = store_thm(
        Let n = the sticks of LENGTH (SET_TO_LIST V), with all #0, but #1 at x.
        Then n |o| (SET_TO_LIST V) = x                   by vspace_basis_stick
 *)
-val finite_vspace_span_itself = store_thm(
-  "finite_vspace_span_itself",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==> (SpanSpace r g op (SET_TO_LIST V) = g)``,
+Theorem finite_vspace_span_itself:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==> (SpanSpace r g op (SET_TO_LIST V) = g)
+Proof
   rpt (stripDup[FiniteVSpace_def]) >>
   `basis g (SET_TO_LIST V)` by metis_tac[finite_vspace_all_basis] >>
   rw[monoid_component_equality, SpanSpace_def, EXTENSION, EQ_IMP_THM] >-
   metis_tac[vsum_basis_stick_vector] >>
-  metis_tac[vspace_basis_stick, MEM_SET_TO_LIST]);
+  metis_tac[vspace_basis_stick, MEM_SET_TO_LIST]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Vector Space Dimension.                                            *)
@@ -157,10 +160,10 @@ End
       dim r g op = MIN_SET (IMAGE LENGTH s) IN (IMAGE LENGTH s)             by MIN_SET_LEM
    or ?b. basis g b /\ (LENGTH b = dim r g op) /\ (SpanSpace r g op b = g)  by IN_IMAGE
 *)
-val finite_vspace_dim_basis = store_thm(
-  "finite_vspace_dim_basis",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
-   ?b. basis g b /\ (LENGTH b = dim r g op) /\ (SpanSpace r g op b = g)``,
+Theorem finite_vspace_dim_basis:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
+   ?b. basis g b /\ (LENGTH b = dim r g op) /\ (SpanSpace r g op b = g)
+Proof
   rw[dim_def] >>
   qabbrev_tac `s = { b | basis g b /\ (SpanSpace r g op b = g) }` >>
   `!b. b IN s ==> basis g b /\ (SpanSpace r g op b = g)` by rw[Abbr`s`] >>
@@ -169,7 +172,8 @@ val finite_vspace_dim_basis = store_thm(
   `SET_TO_LIST V IN s` by rw[Abbr`s`] >>
   `IMAGE LENGTH s <> {}` by metis_tac[MEMBER_NOT_EMPTY, IMAGE_EQ_EMPTY] >>
   `MIN_SET (IMAGE LENGTH s) IN (IMAGE LENGTH s)` by rw[MIN_SET_LEM] >>
-  metis_tac[IN_IMAGE]);
+  metis_tac[IN_IMAGE]
+QED
 
 (* Theorem: FiniteVSpace r g op /\ (dim r g op = 0) ==> (g.carrier = {g.id}) *)
 (* Proof:
@@ -186,15 +190,16 @@ val finite_vspace_dim_basis = store_thm(
         = {[] |o| []}                                by application
         = {g.id}                                     by vsum_nil
 *)
-val finite_vspace_dim_eq_0 = store_thm(
-  "finite_vspace_dim_eq_0",
-  ``!(r:'a ring) (g:'b group) op. FiniteVSpace r g op /\ (dim r g op = 0) ==> (g.carrier = {g.id})``,
+Theorem finite_vspace_dim_eq_0:
+    !(r:'a ring) (g:'b group) op. FiniteVSpace r g op /\ (dim r g op = 0) ==> (g.carrier = {g.id})
+Proof
   rpt (stripDup[FiniteVSpace_def]) >>
   `?b. basis g b /\ (LENGTH b = dim r g op) /\ (SpanSpace r g op b = g)` by rw[finite_vspace_dim_basis] >>
   `b = []` by metis_tac[LENGTH_NIL] >>
   `sticks r 0 = {[]}` by rw[sticks_0] >>
   `g.carrier = IMAGE (\n. n |o| b) (sticks r (LENGTH b))` by rw[GSYM vspace_span_property] >>
-  rw[vsum_nil]);
+  rw[vsum_nil]
+QED
 
 (* Theorem: In a Finite Vector Space,
             A spanning basis of dimension size is linearly independent:
@@ -226,11 +231,11 @@ val finite_vspace_dim_eq_0 = store_thm(
    (2) n IN sticks r (dim r g op) /\ !k. k < dim r g op ==> (EL k n = #0) ==> n |o| b = |0|
        True by vspace_stick_zero.
 *)
-val finite_vspace_dim_basis_indep = store_thm(
-  "finite_vspace_dim_basis_indep",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
+Theorem finite_vspace_dim_basis_indep:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
      !b. basis g b /\ (LENGTH b = dim r g op) /\ (SpanSpace r g op b = g) ==>
-      LinearIndepBasis r g op b``,
+      LinearIndepBasis r g op b
+Proof
   rpt (stripDup[FiniteVSpace_def]) >>
   rw[LinearIndepBasis_def, EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
@@ -248,7 +253,8 @@ val finite_vspace_dim_basis_indep = store_thm(
     `LENGTH b <= LENGTH b'` by metis_tac[MIN_SET_LEM, IN_IMAGE] >>
     decide_tac,
     metis_tac[vspace_stick_zero]
-  ]);
+  ]
+QED
 
 (* Theorem: In a Finite Vector Space,
             A spanning basis of dimension size gives an injective map:
@@ -259,12 +265,13 @@ val finite_vspace_dim_basis_indep = store_thm(
      and LinearIndepBasis r g op b                   by finite_vspace_dim_basis_indep
       so INJ (\n. n |o| b) (sticks r (LENGTH b)) V   by vspace_indep_basis_inj
 *)
-val finite_vspace_dim_map_inj = store_thm(
-  "finite_vspace_dim_map_inj",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
+Theorem finite_vspace_dim_map_inj:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
      !b. basis g b /\ (LENGTH b = dim r g op) /\ (SpanSpace r g op b = g) ==>
-      INJ (\n. n |o| b) (sticks r (LENGTH b)) V``,
-  rw[FiniteVSpace_def, finite_vspace_dim_basis_indep, vspace_indep_basis_inj]);
+      INJ (\n. n |o| b) (sticks r (LENGTH b)) V
+Proof
+  rw[FiniteVSpace_def, finite_vspace_dim_basis_indep, vspace_indep_basis_inj]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Vector Space Cardinality and Linear Independence.                  *)
@@ -289,16 +296,17 @@ val finite_vspace_dim_map_inj = store_thm(
        = CARD R ** (LENGTH b)           by sticks_card
        = CARD R ** (dim r g op)         by given LENGTH b = dim r g op
 *)
-val finite_vspace_card = store_thm(
-  "finite_vspace_card",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==> (CARD V = (CARD R) ** dim r g op)``,
+Theorem finite_vspace_card:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==> (CARD V = (CARD R) ** dim r g op)
+Proof
   rpt (stripDup[FiniteVSpace_def]) >>
   `?b. basis g b /\ (LENGTH b = dim r g op) /\ (SpanSpace r g op b = g)` by rw[finite_vspace_dim_basis] >>
   `V = IMAGE (\n. n |o| b) (sticks r (LENGTH b))` by metis_tac[vspace_span_property, monoid_component_equality] >>
   `INJ (\n. VSUM (MAP2 op n b)) (sticks r (LENGTH b)) V` by rw[finite_vspace_dim_map_inj] >>
   `SURJ (\n. VSUM (MAP2 op n b)) (sticks r (LENGTH b)) V` by rw[IMAGE_SURJ] >>
   `FINITE (sticks r (LENGTH b))` by rw[sticks_finite] >>
-  metis_tac[FINITE_BIJ_CARD_EQ, BIJ_DEF, sticks_card]);
+  metis_tac[FINITE_BIJ_CARD_EQ, BIJ_DEF, sticks_card]
+QED
 
 (*
 
@@ -351,15 +359,16 @@ Can the first goal be done directly with the concept of linearly dependency and 
       = CARD (sticks r (LENGTH b))                        by INJ_CARD_IMAGE_EQ
       = CARD R ** LENGTH b                                by sticks_card
 *)
-val finite_vspace_indep_span_card = store_thm(
-  "finite_vspace_indep_span_card",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
-   !b. LinearIndepBasis r g op b ==> (CARD ((SpanSpace r g op b).carrier) = CARD R ** LENGTH b)``,
+Theorem finite_vspace_indep_span_card:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
+   !b. LinearIndepBasis r g op b ==> (CARD ((SpanSpace r g op b).carrier) = CARD R ** LENGTH b)
+Proof
   rpt (stripDup[FiniteVSpace_def]) >>
   `basis g b` by metis_tac[indep_basis_is_basis] >>
   `INJ (\n. n |o| b) (sticks r (LENGTH b)) V` by rw[vspace_indep_basis_inj] >>
   `FINITE (sticks r (LENGTH b))` by rw[sticks_finite] >>
-  metis_tac[vspace_span_property, INJ_CARD_IMAGE_EQ, sticks_card]);
+  metis_tac[vspace_span_property, INJ_CARD_IMAGE_EQ, sticks_card]
+QED
 
 (* Theorem: basis g b /\ (LENGTH b = dim r g op) /\ LinearIndepBasis r g op b ==> (SpanSpace r g op b = g) *)
 (* Proof:
@@ -374,17 +383,18 @@ val finite_vspace_indep_span_card = store_thm(
       so (SpanSpace r g op b).carrier = V              by SUBSET_EQ_CARD
     Hence SpanSpace r g op b = g                       by SpanSpace_def, monoid_component_equality
 *)
-val finite_vspace_dim_basis_span = store_thm(
-  "finite_vspace_dim_basis_span",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
-    !b. basis g b /\ (LENGTH b = dim r g op) /\ LinearIndepBasis r g op b ==> (SpanSpace r g op b = g)``,
+Theorem finite_vspace_dim_basis_span:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
+    !b. basis g b /\ (LENGTH b = dim r g op) /\ LinearIndepBasis r g op b ==> (SpanSpace r g op b = g)
+Proof
   rpt (stripDup[FiniteVSpace_def]) >>
   `CARD V = CARD R ** dim r g op` by rw[finite_vspace_card] >>
   `CARD ((SpanSpace r g op b).carrier) = CARD R ** LENGTH b` by rw[finite_vspace_indep_span_card] >>
   `(SpanSpace r g op b).carrier SUBSET V` by metis_tac[vspace_span_vector, SUBSET_DEF] >>
   `FINITE (SpanSpace r g op b).carrier` by metis_tac[SUBSET_FINITE] >>
   `(SpanSpace r g op b).carrier = V` by rw[SUBSET_EQ_CARD] >>
-  rw[SpanSpace_def, monoid_component_equality]);
+  rw[SpanSpace_def, monoid_component_equality]
+QED
 
 (* Theorem: basis g b /\ (LENGTH b = dim r g op) ==>
             (LinearIndepBasis r g op b <=> (SpanSpace r g op b = g)) *)
@@ -394,12 +404,13 @@ val finite_vspace_dim_basis_span = store_thm(
    Only-if part: SpanSpace r g op b = g ==> LinearIndepBasis r g op b
       True by finite_vspace_dim_basis_indep
 *)
-val finite_vspace_dim_basis_property = store_thm(
-  "finite_vspace_dim_basis_property",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
+Theorem finite_vspace_dim_basis_property:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
      !b. basis g b /\ (LENGTH b = dim r g op) ==>
-        (LinearIndepBasis r g op b <=> (SpanSpace r g op b = g))``,
-  metis_tac[finite_vspace_dim_basis_span, finite_vspace_dim_basis_indep]);
+        (LinearIndepBasis r g op b <=> (SpanSpace r g op b = g))
+Proof
+  metis_tac[finite_vspace_dim_basis_span, finite_vspace_dim_basis_indep]
+QED
 
 (* Theorem: A basis with a size one more of dimension is linear dependent:
             basis g b /\ (LENGTH b = SUC (dim r g op)) ==> ~LinearIndepBasis r g op b *)
@@ -428,10 +439,10 @@ val finite_vspace_dim_basis_property = store_thm(
       so EL 0 m = #0                        by 0 < LENGTH b
    which is a contradiction with EL 0 m = #1.
 *)
-val finite_vspace_basis_dep_special = store_thm(
-  "finite_vspace_basis_dep_special",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
-     !b. basis g b /\ (LENGTH b = SUC (dim r g op)) ==> ~LinearIndepBasis r g op b``,
+Theorem finite_vspace_basis_dep_special:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
+     !b. basis g b /\ (LENGTH b = SUC (dim r g op)) ==> ~LinearIndepBasis r g op b
+Proof
   rpt (stripDup[FiniteVSpace_def, LinearIndepBasis_def]) >>
   `0 < LENGTH b /\ LENGTH b <> 0` by decide_tac >>
   `?v u. b = v::u` by metis_tac[LENGTH_NIL, list_CASES] >>
@@ -450,7 +461,8 @@ val finite_vspace_basis_dep_special = store_thm(
   qabbrev_tac `m = (- #1) :: n` >>
   `m IN sticks r (LENGTH b)` by metis_tac[stick_cons, LENGTH] >>
   `EL 0 m = -#1` by rw[Abbr`m`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: FiniteVSpace r g op ==>
             !b. basis g b /\ (dim r g op < LENGTH b) ==> ~LinearIndepBasis r g op b *)
@@ -489,10 +501,10 @@ val finite_vspace_basis_dep_special = store_thm(
         but ~LinearIndepBasis r g op t                   by induction hypothesis
       which is a contradiction.
 *)
-val finite_vspace_basis_dep = store_thm(
-  "finite_vspace_basis_dep",
-  ``!(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
-     !b. basis g b /\ (dim r g op < LENGTH b) ==> ~LinearIndepBasis r g op b``,
+Theorem finite_vspace_basis_dep:
+    !(r:'a field) (g:'b group) op. FiniteVSpace r g op ==>
+     !b. basis g b /\ (dim r g op < LENGTH b) ==> ~LinearIndepBasis r g op b
+Proof
   rpt strip_tac >>
   Induct_on `LENGTH b - SUC (dim r g op)` >| [
     rpt strip_tac >>
@@ -505,7 +517,8 @@ val finite_vspace_basis_dep = store_thm(
     `v = LENGTH t - SUC (dim r g op)` by decide_tac >>
     `dim r g op < LENGTH t` by decide_tac >>
     metis_tac[basis_cons, vspace_basis_indep_one_less, finite_vspace_is_vspace]
-  ]);
+  ]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

@@ -57,7 +57,7 @@ local
       (QUse.use tmp
        handle e => (
          checkTryRemove tmp;
-         TextIO.print ("Exception- " ^ exnMessage e ^ " raised\n");
+         TextIO.print ("Exception- " ^ exn_to_string e ^ " raised\n");
          PolyML.Exception.reraise e);
        checkTryRemove tmp)
     open Mutex ConditionVar

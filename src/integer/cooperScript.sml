@@ -72,7 +72,7 @@ QED
 Theorem INT_DIVIDES_NEG'[unlisted] =
   CONV_RULE (DEPTH_CONV FORALL_AND_CONV) INT_DIVIDES_NEG;
 
-Triviality INT_NEG_FLIP_LTL:
+Theorem INT_NEG_FLIP_LTL[local]:
   !x y. ~x < y <=> ~y < x
 Proof
   REPEAT GEN_TAC THEN
@@ -80,7 +80,7 @@ Proof
   REWRITE_TAC [INT_LT_NEG]
 QED
 
-Triviality INT_NEG_FLIP_LTR:
+Theorem INT_NEG_FLIP_LTR[local]:
   !x y. x < ~y <=> y < ~x
 Proof
   REPEAT GEN_TAC THEN

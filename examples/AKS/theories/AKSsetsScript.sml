@@ -206,24 +206,27 @@ val _ = overload_on ("N", ``setN (r:'a ring) k s``);
 
 (* Theorem: !m. m IN N <=> coprime m k /\ !c. 0 < c /\ c <= s ==> m intro X + |c| *)
 (* Proof: by setN_def. *)
-val setN_element = store_thm(
-  "setN_element",
-  ``!r:'a ring (k s):num. !m. m IN N <=> coprime m k /\ (!c. 0 < c /\ c <= s ==> m intro X + |c|)``,
-  rw[setN_def]);
+Theorem setN_element:
+    !r:'a ring (k s):num. !m. m IN N <=> coprime m k /\ (!c. 0 < c /\ c <= s ==> m intro X + |c|)
+Proof
+  rw[setN_def]
+QED
 
 (* Theorem: !m. m IN N ==> coprime m k *)
 (* Proof: by setN_element. *)
-val setN_element_coprime = store_thm(
-  "setN_element_coprime",
-  ``!r:'a ring (k s):num. !m. m IN N ==> coprime m k``,
-  rw[setN_element]);
+Theorem setN_element_coprime:
+    !r:'a ring (k s):num. !m. m IN N ==> coprime m k
+Proof
+  rw[setN_element]
+QED
 
 (* Theorem: 0 < k ==> !m n. m IN N /\ n IN N ==> m * n IN N *)
 (* Proof: by poly_intro_mult, coprime_product_coprime *)
-val setN_closure = store_thm(
-  "setN_closure",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k ==> !m n. m IN N /\ n IN N ==> m * n IN N``,
-  rw[setN_def, poly_intro_mult, coprime_product_coprime]);
+Theorem setN_closure:
+    !r:'a ring (k s):num. Ring r /\ 0 < k ==> !m n. m IN N /\ n IN N ==> m * n IN N
+Proof
+  rw[setN_def, poly_intro_mult, coprime_product_coprime]
+QED
 
 (* Theorem alias *)
 val setN_has_product = save_thm("setN_has_product", setN_closure);
@@ -237,10 +240,11 @@ val setN_has_product = save_thm("setN_has_product", setN_closure);
    ==> k = 1                                    by GCD_0, coprime 0 k
    This contradicts 1 < k.
 *)
-val setN_has_no_0 = store_thm(
-  "setN_has_no_0",
-  ``!r:'a ring (k s):num. 1 < k ==> 0 NOTIN N``,
-  rw[setN_element]);
+Theorem setN_has_no_0:
+    !r:'a ring (k s):num. 1 < k ==> 0 NOTIN N
+Proof
+  rw[setN_element]
+QED
 
 (* Theorem: 0 < k ==> 1 IN N *)
 (* Proof:
@@ -248,17 +252,19 @@ val setN_has_no_0 = store_thm(
    (1) coprime 1 k,       true by GCD_1
    (2) 1 intro (X + |c|), true by poly_intro_1, poly_X_add_c.
 *)
-val setN_has_1 = store_thm(
-  "setN_has_1",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k ==> 1 IN N``,
-  rw[setN_def, poly_intro_1]);
+Theorem setN_has_1:
+    !r:'a ring (k s):num. Ring r /\ 0 < k ==> 1 IN N
+Proof
+  rw[setN_def, poly_intro_1]
+QED
 
 (* Theorem: m IN N ==> m <> 0 *)
 (* Proof: by setN_has_no_0 *)
-val setN_element_nonzero = store_thm(
-  "setN_element_nonzero",
-  ``!r:'a ring (k s):num. 1 < k ==> !m. m IN N ==> m <> 0``,
-  rw[setN_has_no_0]);
+Theorem setN_element_nonzero:
+    !r:'a ring (k s):num. 1 < k ==> !m. m IN N ==> m <> 0
+Proof
+  rw[setN_has_no_0]
+QED
 
 (* Theorem: p IN N ==> !n. p ** n IN N *)
 (* Proof: by induction on n.
@@ -271,13 +277,14 @@ val setN_element_nonzero = store_thm(
      p ** n IN N               by induction hypothesis
      Hence true                by setN_closure
 *)
-val setN_has_element_powers = store_thm(
-  "setN_has_element_powers",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k ==> !p. p IN N ==> !n. p ** n IN N``,
+Theorem setN_has_element_powers:
+    !r:'a ring (k s):num. Ring r /\ 0 < k ==> !p. p IN N ==> !n. p ** n IN N
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[setN_has_1, EXP] >>
-  rw[setN_closure, EXP]);
+  rw[setN_closure, EXP]
+QED
 
 (* Theorem: p IN N /\ q IN N ==>
             !m n x y. (x, y) IN (count m) CROSS (count n) ==> p ** x * q ** y IN N *)
@@ -286,18 +293,20 @@ val setN_has_element_powers = store_thm(
    q ** y IN N    by setN_has_element_powers
    Hence true     by setN_closure
 *)
-val setN_has_element_pair_powers = store_thm(
-  "setN_has_element_pair_powers",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k ==> !p q. p IN N /\ q IN N ==>
-   !m n x y. (x, y) IN (count m) CROSS (count n) ==> p ** x * q ** y IN N``,
-  rw[setN_has_element_powers, setN_closure]);
+Theorem setN_has_element_pair_powers:
+    !r:'a ring (k s):num. Ring r /\ 0 < k ==> !p q. p IN N /\ q IN N ==>
+   !m n x y. (x, y) IN (count m) CROSS (count n) ==> p ** x * q ** y IN N
+Proof
+  rw[setN_has_element_powers, setN_closure]
+QED
 
 (* Theorem: FiniteField r /\ 0 < k /\ coprime (char r) k ==> (char r) IN N *)
 (* Proof: by setN_element, poly_intro_range_char. *)
-val setN_has_char = store_thm(
-  "setN_has_char",
-  ``!r:'a field (k s):num. FiniteField r /\ 0 < k /\ coprime (char r) k ==> (char r) IN N``,
-  metis_tac[setN_element, poly_intro_range_char]);
+Theorem setN_has_char:
+    !r:'a field (k s):num. FiniteField r /\ 0 < k /\ coprime (char r) k ==> (char r) IN N
+Proof
+  metis_tac[setN_element, poly_intro_range_char]
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
             char r divides n /\ n IN N ==> (char r) IN N /\ (n DIV char r) IN N *)
@@ -324,10 +333,10 @@ val setN_has_char = store_thm(
     and poly_intro_range r k q s     by poly_intro_X_add_c_prime_char_3, GCD_SYM, coprime k p, n intro X + |c|
     ==> q IN N                       by setN_element
 *)
-val setN_has_char_and_cofactor = store_thm(
-  "setN_has_char_and_cofactor",
-  ``!r:'a field (k s):num n. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
-         char r divides n /\ n IN N ==> (char r) IN N /\ (n DIV char r) IN N``,
+Theorem setN_has_char_and_cofactor:
+    !r:'a field (k s):num n. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
+         char r divides n /\ n IN N ==> (char r) IN N /\ (n DIV char r) IN N
+Proof
   simp[setN_element] >>
   ntac 5 (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = char r` >>
@@ -344,7 +353,8 @@ val setN_has_char_and_cofactor = store_thm(
   `poly_intro_range r k p s` by rw[poly_intro_X_add_c_prime_char_1, Abbr`p`] >>
   `coprime q k` by metis_tac[coprime_product_coprime_iff] >>
   `poly_intro_range r k q s` by metis_tac[poly_intro_X_add_c_prime_char_3, GCD_SYM] >>
-  fs[]);
+  fs[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Set P = polynomials that are introspective to elements in Set N           *)
@@ -361,27 +371,30 @@ val _ = overload_on ("P", ``setP (r:'a ring) k s``);
 
 (* Theorem: !p. p IN P <=> poly p /\ !m. m IN N ==> m intro p *)
 (* Proof: by setP_def. *)
-val setP_element = store_thm(
-  "setP_element",
-  ``!r:'a ring (k s):num. !p. p IN P <=> poly p /\ (!m. m IN N ==> m intro p)``,
-  rw[setP_def]);
+Theorem setP_element:
+    !r:'a ring (k s):num. !p. p IN P <=> poly p /\ (!m. m IN N ==> m intro p)
+Proof
+  rw[setP_def]
+QED
 
 (* Theorem: p IN P ==> poly p *)
 (* Proof: by setP_def. *)
-val setP_element_poly = store_thm(
-  "setP_element_poly",
-  ``!r:'a ring (k s):num. !p. p IN P ==> poly p``,
-  rw[setP_def]);
+Theorem setP_element_poly:
+    !r:'a ring (k s):num. !p. p IN P ==> poly p
+Proof
+  rw[setP_def]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["setP_element_poly"];
 
 (* Theorem: 0 < k ==> !p q. p IN P /\ q IN P ==> p * q IN P *)
 (* Proof: by poly_intro_compose *)
-val setP_closure = store_thm(
-  "setP_closure",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k ==> !p q. p IN P /\ q IN P ==> p * q IN P``,
-  rw[setP_def, poly_intro_compose]);
+Theorem setP_closure:
+    !r:'a ring (k s):num. Ring r /\ 0 < k ==> !p q. p IN P /\ q IN P ==> p * q IN P
+Proof
+  rw[setP_def, poly_intro_compose]
+QED
 
 (* Theorem: Ring r /\ 1 < k ==> |0| IN P *)
 (* Proof:
@@ -392,31 +405,34 @@ val setP_closure = store_thm(
          so m <> 0, or 0 < m             by m IN N
        Note m intro |0|                  by poly_intro_zero
 *)
-val setP_has_zero = store_thm(
-  "setP_has_zero",
-  ``!r:'a ring (k s):num. Ring r /\ 1 < k ==> |0| IN P``,
+Theorem setP_has_zero:
+    !r:'a ring (k s):num. Ring r /\ 1 < k ==> |0| IN P
+Proof
   rw_tac std_ss[setP_element] >-
   rw[] >>
   `0 NOTIN N` by rw[setN_has_no_0] >>
   `m <> 0` by metis_tac[] >>
-  rw[poly_intro_zero]);
+  rw[poly_intro_zero]
+QED
 
 (* Theorem: 0 < k ==> |1| IN P *)
 (* Proof:
    This is to show: m IN N ==> m intro |1|
    True by poly_intro_one, for any m.
 *)
-val setP_has_one = store_thm(
-  "setP_has_one",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k ==> |1| IN P``,
-  rw[setP_def, poly_intro_one]);
+Theorem setP_has_one:
+    !r:'a ring (k s):num. Ring r /\ 0 < k ==> |1| IN P
+Proof
+  rw[setP_def, poly_intro_one]
+QED
 
 (* Theorem: 0 < k ==> X IN P *)
 (* Proof: by setP_element, poly_intro_X. *)
-val setP_has_X = store_thm(
-  "setP_has_X",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k ==> X IN P``,
-  rw[setP_element, poly_intro_X]);
+Theorem setP_has_X:
+    !r:'a ring (k s):num. Ring r /\ 0 < k ==> X IN P
+Proof
+  rw[setP_element, poly_intro_X]
+QED
 
 (* Theorem: !c. 0 < c /\ c <= s ==>  X + |c| IN P *)
 (* Proof:
@@ -428,11 +444,12 @@ val setP_has_X = store_thm(
    (2) m IN N ==> m intro X + |c|
         True by setN_element
 *)
-val setP_has_X_add_c = store_thm(
-  "setP_has_X_add_c",
-  ``!r:'a ring (k s):num. Ring r ==> !c. 0 < c /\ c <= s ==> X + |c| IN P``,
+Theorem setP_has_X_add_c:
+    !r:'a ring (k s):num. Ring r ==> !c. 0 < c /\ c <= s ==> X + |c| IN P
+Proof
   rw[setP_def] >>
-  metis_tac[setN_element]);
+  metis_tac[setN_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Define (finite) modulo versions of N and P: M and Q                       *)
@@ -452,18 +469,20 @@ val _ = overload_on ("M", ``modN (r:'a ring) k s``);
 
 (* Theorem: M = { m MOD k | m IN N} *)
 (* Proof: by modN_def. *)
-val modN_alt = store_thm(
-  "modN_alt",
-  ``!r:'a ring k s:num. M = { m MOD k | m IN N}``,
-  rw[modN_def, EXTENSION]);
+Theorem modN_alt:
+    !r:'a ring k s:num. M = { m MOD k | m IN N}
+Proof
+  rw[modN_def, EXTENSION]
+QED
 (* presentation of M without IMAGE *)
 
 (* Theorem: n IN M <=> ?m. (n = m MOD k) /\ m IN N *)
 (* Proof: by modN_def. *)
-val modN_element = store_thm(
-  "modN_element",
-  ``!r:'a ring (k s):num. !n. n IN M <=> ?m. (n = m MOD k) /\ m IN N``,
-  rw[modN_def]);
+Theorem modN_element:
+    !r:'a ring (k s):num. !n. n IN M <=> ?m. (n = m MOD k) /\ m IN N
+Proof
+  rw[modN_def]
+QED
 
 (* Theorem: M is closed under MOD multiplication. *)
 (* Proof:
@@ -476,36 +495,40 @@ val modN_element = store_thm(
    Since m * m' IN N                          by setN_closure
    hence (m * m') MOD k IN M                  by modN_def, IN_IMAGE
 *)
-val modN_closure = store_thm(
-  "modN_closure",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k ==>
-   !x y. x IN M /\ y IN M ==> (x * y) MOD k IN M``,
+Theorem modN_closure:
+    !r:'a ring (k s):num. Ring r /\ 0 < k ==>
+   !x y. x IN M /\ y IN M ==> (x * y) MOD k IN M
+Proof
   rw[modN_def] >>
   rw[MOD_TIMES2] >>
-  metis_tac[setN_closure]);
+  metis_tac[setN_closure]
+QED
 
 (* Theorem: 0 < k ==> M SUBSET (count k) *)
 (* Proof: by image_mod_subset_count. *)
-val modN_subset_count = store_thm(
-  "modN_subset_count",
-  ``!r:'a ring k s:num. 0 < k ==> M SUBSET (count k)``,
-  rw[modN_def, image_mod_subset_count]);
+Theorem modN_subset_count:
+    !r:'a ring k s:num. 0 < k ==> M SUBSET (count k)
+Proof
+  rw[modN_def, image_mod_subset_count]
+QED
 
 (* Theorem: 0 < k ==> FINITE M *)
 (* Proof: by modN_subset_count, SUBSET_FINITE, FINITE_count *)
-val modN_finite = store_thm(
-  "modN_finite",
-  ``!r:'a ring (k s):num. 0 < k ==> FINITE M``,
-  metis_tac[modN_subset_count, SUBSET_FINITE, FINITE_COUNT]);
+Theorem modN_finite:
+    !r:'a ring (k s):num. 0 < k ==> FINITE M
+Proof
+  metis_tac[modN_subset_count, SUBSET_FINITE, FINITE_COUNT]
+QED
 
 (* Theorem: 0 < k ==> !n. n IN M ==> n < k *)
 (* Proof:
    By modN_subset_count, SUBSET_DEF, IN_COUNT.
 *)
-val modN_element_less = store_thm(
-  "modN_element_less",
-  ``!r:'a ring (k s):num. 0 < k ==> !n. n IN M ==> n < k``,
-  metis_tac[modN_subset_count, SUBSET_DEF, IN_COUNT]);
+Theorem modN_element_less:
+    !r:'a ring (k s):num. 0 < k ==> !n. n IN M ==> n < k
+Proof
+  metis_tac[modN_subset_count, SUBSET_DEF, IN_COUNT]
+QED
 
 (* Theorem: 1 IN M *)
 (* Proof:
@@ -514,11 +537,12 @@ val modN_element_less = store_thm(
    But 1 MOD k = 1   by ONE_MOD
    Hence true.
 *)
-val modN_has_1 = store_thm(
-  "modN_has_1",
-  ``!r:'a ring (k s):num. Ring r /\ 1 < k ==> 1 IN M``,
+Theorem modN_has_1:
+    !r:'a ring (k s):num. Ring r /\ 1 < k ==> 1 IN M
+Proof
   rw[modN_def] >>
-  metis_tac[setN_has_1, ONE_MOD, ONE_LT_POS]);
+  metis_tac[setN_has_1, ONE_MOD, ONE_LT_POS]
+QED
 
 (* Theorem: 0 < k ==> M <> EMPTY *)
 (* Proof:
@@ -528,11 +552,12 @@ val modN_has_1 = store_thm(
    Since M = IMAGE (\m. m MOD k) N    by modN_def
    Hence M <> EMPTY                   by IMAGE_EQ_EMPTY
 *)
-val modN_not_empty = store_thm(
-  "modN_not_empty",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k ==> M <> EMPTY``,
+Theorem modN_not_empty:
+    !r:'a ring (k s):num. Ring r /\ 0 < k ==> M <> EMPTY
+Proof
   rw[modN_def] >>
-  metis_tac[setN_has_1, MEMBER_NOT_EMPTY]);
+  metis_tac[setN_has_1, MEMBER_NOT_EMPTY]
+QED
 (* This version is better than using modN_has_1, as 1 < k is not required.
    Reason: at least modN has 1 MOD k, whatever k is.
 *)
@@ -545,20 +570,22 @@ val modN_not_empty = store_thm(
    But m IN N ==> coprime m k             by setN_element
    Hence k = 1, contradicting 1 < k.
 *)
-val modN_has_no_0 = store_thm(
-  "modN_has_no_0",
-  ``!r:'a ring (k s):num. 1 < k ==> 0 NOTIN M``,
+Theorem modN_has_no_0:
+    !r:'a ring (k s):num. 1 < k ==> 0 NOTIN M
+Proof
   rw[modN_def, setN_def] >>
   spose_not_then strip_assume_tac >>
   `0 < k /\ k <> 1` by decide_tac >>
-  metis_tac[GCD_MULTIPLE]);
+  metis_tac[GCD_MULTIPLE]
+QED
 
 (* Theorem: m IN N ==> m MOD k IN M *)
 (* Proof: by modN_element *)
-val setN_element_mod = store_thm(
-  "setN_element_mod",
-  ``!r:'a ring (k s):num. !m. m IN N ==> m MOD k IN M``,
-  metis_tac[modN_element]);
+Theorem setN_element_mod:
+    !r:'a ring (k s):num. !m. m IN N ==> m MOD k IN M
+Proof
+  metis_tac[modN_element]
+QED
 
 (* Theorem: 1 < k ==> M SUBSET coprimes k *)
 (* Proof:
@@ -573,9 +600,9 @@ val setN_element_mod = store_thm(
    Thus 0 < x /\ x <= k                    by arithmetic
     ==> x IN coprimes k                    by coprimes_element
 *)
-val modN_subset_coprimes = store_thm(
-  "modN_subset_coprimes",
-  ``!r:'a ring (k s):num. 1 < k ==> M SUBSET coprimes k``,
+Theorem modN_subset_coprimes:
+    !r:'a ring (k s):num. 1 < k ==> M SUBSET coprimes k
+Proof
   rw[SUBSET_DEF] >>
   `?m. (x = m MOD k) /\ m IN N` by rw[GSYM modN_element] >>
   `0 < k` by decide_tac >>
@@ -584,7 +611,8 @@ val modN_subset_coprimes = store_thm(
   `x < k` by metis_tac[modN_element_less] >>
   `x <> 0` by metis_tac[modN_has_no_0] >>
   `0 < x /\ x <= k` by decide_tac >>
-  rw[coprimes_element]);
+  rw[coprimes_element]
+QED
 
 (* Theorem: 1 < k ==> M SUBSET Euler k *)
 (* Proof:
@@ -592,24 +620,27 @@ val modN_subset_coprimes = store_thm(
     and coprimes k = Euler k    by coprimes_eq_Euler, 1 < k
    The result follows.
 *)
-val modN_subset_euler = store_thm(
-  "modN_subset_euler",
-  ``!r:'a ring (k s):num. 1 < k ==> M SUBSET Euler k``,
-  metis_tac[modN_subset_coprimes, coprimes_eq_Euler]);
+Theorem modN_subset_euler:
+    !r:'a ring (k s):num. 1 < k ==> M SUBSET Euler k
+Proof
+  metis_tac[modN_subset_coprimes, coprimes_eq_Euler]
+QED
 
 (* Theorem: 1 < k ==> 1 IN M *)
 (* Proof: by modN_has_1 *)
-val modN_has_1_field = store_thm(
-  "modN_has_1_field",
-  ``!(r:'a field) k s:num. Field r /\ 1 < k ==> 1 IN M``,
-  rw[modN_has_1]);
+Theorem modN_has_1_field:
+    !(r:'a field) k s:num. Field r /\ 1 < k ==> 1 IN M
+Proof
+  rw[modN_has_1]
+QED
 
 (* Theorem: 1 < k ==> M SUBSET Euler k *)
 (* Proof: by modN_not_empty *)
-val modN_not_empty_field = store_thm(
-  "modN_not_empty_field",
-  ``!(r:'a field) k s:num. Field r /\ 0 < k ==> M <> EMPTY``,
-  rw[modN_not_empty]);
+Theorem modN_not_empty_field:
+    !(r:'a field) k s:num. Field r /\ 0 < k ==> M <> EMPTY
+Proof
+  rw[modN_not_empty]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Upper Bound of M: Show M SUBSET (count k), eventually CARD M < k.         *)
@@ -623,10 +654,11 @@ val modN_not_empty_field = store_thm(
            <= CARD (count k)         by CARD_SUBSET, FINITE_COUNT
             = k                      by CARD_COUNT
 *)
-val modN_card_upper_estimate = store_thm(
-  "modN_card_upper_estimate",
-  ``!r:'a ring k s:num. 0 < k ==> CARD M <= k``,
-  metis_tac[modN_element_less, IN_COUNT, SUBSET_DEF, CARD_SUBSET, FINITE_COUNT, CARD_COUNT]);
+Theorem modN_card_upper_estimate:
+    !r:'a ring k s:num. 0 < k ==> CARD M <= k
+Proof
+  metis_tac[modN_element_less, IN_COUNT, SUBSET_DEF, CARD_SUBSET, FINITE_COUNT, CARD_COUNT]
+QED
 (* not used *)
 
 (* Theorem: 1 < k ==> CARD M < k *)
@@ -642,9 +674,9 @@ val modN_card_upper_estimate = store_thm(
       So   CARD M <> k            by SUBSET_EQ_CARD
       or   CARD M < k             by arithmetic
 *)
-val modN_card_upper = store_thm(
-  "modN_card_upper",
-  ``!r:'a ring k s:num. 1 < k ==> CARD M < k``,
+Theorem modN_card_upper:
+    !r:'a ring k s:num. 1 < k ==> CARD M < k
+Proof
   rpt strip_tac >>
   `0 < k` by decide_tac >>
   `M SUBSET (count k)` by rw[modN_subset_count] >>
@@ -654,7 +686,8 @@ val modN_card_upper = store_thm(
   `0 NOTIN M` by rw[modN_has_no_0] >>
   `M <> (count k)` by metis_tac[NOT_EQUAL_SETS] >>
   `CARD M <> k` by metis_tac[SUBSET_EQ_CARD, SUBSET_FINITE] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < k ==> CARD M <= phi k *)
 (* Proof:
@@ -663,13 +696,14 @@ val modN_card_upper = store_thm(
     ==> CARD M <= CARD (coprimes k)   by CARD_SUBSET
      or CARD M <= phi k               by phi_def
 *)
-val modN_card_upper_better = store_thm(
-  "modN_card_upper_better",
-  ``!r:'a ring k s:num. 1 < k ==> CARD M <= phi k``,
+Theorem modN_card_upper_better:
+    !r:'a ring k s:num. 1 < k ==> CARD M <= phi k
+Proof
   rpt strip_tac >>
   `M SUBSET coprimes k` by rw[modN_subset_coprimes] >>
   `FINITE (coprimes k)` by rw[coprimes_finite] >>
-  rw[CARD_SUBSET, phi_def]);
+  rw[CARD_SUBSET, phi_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lower Bound of M: Show Group M, eventually order (element) < CARD M       *)
@@ -681,11 +715,12 @@ val modN_card_upper_better = store_thm(
      but coprime m k                             by setN_element
    Hence n IN (Invertibles (ZN k).prod).carrier  by ZN_coprime_invertible
 *)
-val modN_element_invertible = store_thm(
-  "modN_element_invertible",
-  ``!r:'a ring k s:num. 1 < k ==>
-      !n. n IN M ==> n IN (Invertibles (ZN k).prod).carrier``,
-  metis_tac[modN_element, setN_element, ZN_coprime_invertible, coprime_sym]);
+Theorem modN_element_invertible:
+    !r:'a ring k s:num. 1 < k ==>
+      !n. n IN M ==> n IN (Invertibles (ZN k).prod).carrier
+Proof
+  metis_tac[modN_element, setN_element, ZN_coprime_invertible, coprime_sym]
+QED
 
 (* Theorem: !x y. x IN (Invertibles (ZN k).prod).carrier /\
                   y IN (Invertibles (ZN k).prod).carrier ==>
@@ -713,10 +748,10 @@ val modN_element_invertible = store_thm(
           y IN M                              by induction hypothesis
        so (x * y) MOD k IN M                  by modN_closure
 *)
-val modN_has_element_powers = store_thm(
-  "modN_has_element_powers",
-  ``!r:'a ring k s:num. Ring r /\ 1 < k ==>
-      !x. x IN M ==> !n. (Invertibles (ZN k).prod).exp x n IN M``,
+Theorem modN_has_element_powers:
+    !r:'a ring k s:num. Ring r /\ 1 < k ==>
+      !x. x IN M ==> !n. (Invertibles (ZN k).prod).exp x n IN M
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = (Invertibles (ZN k).prod).carrier` >>
   Induct_on `n` >| [
@@ -727,7 +762,8 @@ val modN_has_element_powers = store_thm(
   by rw_tac std_ss[Invertibles_def, monoid_invertibles_def, ZN_def, times_mod_def, Abbr`t`] >>
     `0 < k` by decide_tac >>
     rw_tac std_ss[monoid_exp_SUC, modN_closure]
-  ]);
+  ]
+QED
 
 (* Theorem: !n. n IN M ==> (Generated (Invertibles (ZN k).prod) n).carrier SUBSET M *)
 (* Proof:
@@ -735,12 +771,13 @@ val modN_has_element_powers = store_thm(
    !m. (Invertibles (ZN k).prod).exp n m IN M
    which is true by modN_has_element_powers.
 *)
-val modN_has_generator_of_element = store_thm(
-  "modN_has_generator_of_element",
-  ``!r:'a ring k s:num. Ring r /\ 1 < k ==>
-   !n. n IN M ==> (Generated (Invertibles (ZN k).prod) n).carrier SUBSET M``,
+Theorem modN_has_generator_of_element:
+    !r:'a ring k s:num. Ring r /\ 1 < k ==>
+   !n. n IN M ==> (Generated (Invertibles (ZN k).prod) n).carrier SUBSET M
+Proof
   rw[Generated_def, SUBSET_DEF] >>
-  rw[modN_has_element_powers]);
+  rw[modN_has_element_powers]
+QED
 
 (* Theorem: 1 < k ==> !n. n IN N ==> ordz k n <= CARD M  *)
 (* Proof:
@@ -756,10 +793,10 @@ val modN_has_generator_of_element = store_thm(
    = CARD (Generated (Invertibles (ZN k).prod) (n MOD k)).carrier  by generated_group_card, group_order_pos
    <= CARD M                                                       by CARD_SUBSET
 *)
-val modN_card_lower = store_thm(
-  "modN_card_lower",
-  ``!r:'a ring k s:num. Ring r /\ 1 < k ==>
-   !n. n IN N ==> ordz k n <= CARD M``,
+Theorem modN_card_lower:
+    !r:'a ring k s:num. Ring r /\ 1 < k ==>
+   !n. n IN N ==> ordz k n <= CARD M
+Proof
   rpt strip_tac >>
   `(n MOD k) IN M` by rw[setN_element_mod] >>
   `(Generated (Invertibles (ZN k).prod) (n MOD k)).carrier SUBSET M` by rw[modN_has_generator_of_element] >>
@@ -771,23 +808,26 @@ val modN_card_lower = store_thm(
   `CARD (Generated (Invertibles (ZN k).prod) (n MOD k)).carrier =
     order (Invertibles (ZN k).prod) (n MOD k)` by rw[GSYM generated_group_card, group_order_pos] >>
   `FINITE M` by rw[modN_finite] >>
-  metis_tac[CARD_SUBSET, ZN_invertibles_order]);
+  metis_tac[CARD_SUBSET, ZN_invertibles_order]
+QED
 
 (* Theorem: 1 < k ==> !n. n IN N ==> ordz k n <= CARD M /\ CARD M < k *)
 (* Proof: by modN_card_lower, modN_card_upper. *)
-val modN_card_bounds = store_thm(
-  "modN_card_bounds",
-  ``!r:'a ring k s:num. Ring r /\ 1 < k ==>
-      !n. n IN N ==> ordz k n <= CARD M /\ CARD M < k``,
-  rw[modN_card_lower, modN_card_upper]);
+Theorem modN_card_bounds:
+    !r:'a ring k s:num. Ring r /\ 1 < k ==>
+      !n. n IN N ==> ordz k n <= CARD M /\ CARD M < k
+Proof
+  rw[modN_card_lower, modN_card_upper]
+QED
 
 (* Theorem: 1 < k ==> !n. n IN N ==> ordz k n <= CARD M /\ CARD M <= phi k *)
 (* Proof: by modN_card_lower, modN_card_upper_better. *)
-val modN_card_bounds_better = store_thm(
-  "modN_card_bounds_better",
-  ``!r:'a ring k s:num. Ring r /\ 1 < k ==>
-      !n. n IN N ==> ordz k n <= CARD M /\ CARD M <= phi k``,
-  rw[modN_card_lower, modN_card_upper_better]);
+Theorem modN_card_bounds_better:
+    !r:'a ring k s:num. Ring r /\ 1 < k ==>
+      !n. n IN N ==> ordz k n <= CARD M /\ CARD M <= phi k
+Proof
+  rw[modN_card_lower, modN_card_upper_better]
+QED
 
 (*
 LOG_MOD   |- !n. 0 < n ==> (n = 2 ** LOG2 n + n MOD 2 ** LOG2 n)
@@ -805,14 +845,15 @@ LOG_EXP   |- !n a b. 1 < a /\ 0 < b ==> (LOG a (a ** n * b) = n + LOG a b)
      and  4 <= (2 * (LOG2 n)) ** 2
    Hence  1 < 4 <= CARD M              by LESS_LESS_EQ_TRANS
 *)
-val modN_card_gt_1_condition = store_thm(
-  "modN_card_gt_1_condition",
-  ``!r:'a ring k s:num. Ring r /\ 1 < k /\
-    (?n. 1 < n /\ n IN N /\ (2 * (LOG2 n)) ** 2 < ordz k n) ==> 1 < CARD M``,
+Theorem modN_card_gt_1_condition:
+    !r:'a ring k s:num. Ring r /\ 1 < k /\
+    (?n. 1 < n /\ n IN N /\ (2 * (LOG2 n)) ** 2 < ordz k n) ==> 1 < CARD M
+Proof
   rpt strip_tac >>
   `ordz k n <= CARD M` by rw[modN_card_lower] >>
   `4 <= (2 * (LOG2 n)) ** 2` by rw[LOG2_TWICE_SQ] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Ring r /\ 1 < k /\ 1 < n /\ n IN N /\
             (2 * LOG2 n) ** 2 <= ordz k n ==> 1 < CARD M *)
@@ -822,14 +863,15 @@ val modN_card_gt_1_condition = store_thm(
      and  4 <= (2 * (LOG2 n)) ** 2    by LOG2_TWICE_SQ
    Hence  1 < 4 <= CARD M             by LESS_LESS_EQ_TRANS
 *)
-val modN_card_gt_1_by_LOG2 = store_thm(
-  "modN_card_gt_1_by_LOG2",
-  ``!(r:'a ring) k n s:num. Ring r /\
-    1 < k /\ 1 < n /\ n IN N /\ (2 * LOG2 n) ** 2 <= ordz k n ==> 1 < CARD M``,
+Theorem modN_card_gt_1_by_LOG2:
+    !(r:'a ring) k n s:num. Ring r /\
+    1 < k /\ 1 < n /\ n IN N /\ (2 * LOG2 n) ** 2 <= ordz k n ==> 1 < CARD M
+Proof
   rpt strip_tac >>
   `ordz k n <= CARD M` by rw[modN_card_lower] >>
   `4 <= (2 * (LOG2 n)) ** 2` by rw[LOG2_TWICE_SQ] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Ring r /\ 1 < k /\ 1 < n /\ n IN N /\
             (2 * ulog n) ** 2 <= ordz k n ==> 1 < CARD M *)
@@ -839,14 +881,15 @@ val modN_card_gt_1_by_LOG2 = store_thm(
      and  4 <= (2 * ulog n) ** 2      by ulog_twice_sq
    Hence  1 < 4 <= CARD M             by LESS_LESS_EQ_TRANS
 *)
-val modN_card_gt_1_by_ulog = store_thm(
-  "modN_card_gt_1_by_ulog",
-  ``!(r:'a ring) k n s:num. Ring r /\
-    1 < k /\ 1 < n /\ n IN N /\ (2 * ulog n) ** 2 <= ordz k n ==> 1 < CARD M``,
+Theorem modN_card_gt_1_by_ulog:
+    !(r:'a ring) k n s:num. Ring r /\
+    1 < k /\ 1 < n /\ n IN N /\ (2 * ulog n) ** 2 <= ordz k n ==> 1 < CARD M
+Proof
   rpt strip_tac >>
   `ordz k n <= CARD M` by rw[modN_card_lower] >>
   `4 <= (2 * ulog n) ** 2` by rw[ulog_twice_sq] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Set (Q z) = MOD z of the polynomials in P                                 *)
@@ -862,19 +905,21 @@ val _ = overload_on ("Q", ``modP (r:'a ring) k s``);
 
 (* Theorem: Q z = { p % z | p IN P } *)
 (* Proof: by modP_def *)
-val modP_alt = store_thm(
-  "modP_alt",
-  ``!r:'a ring k:num s:num z. Q z = { p % z | p IN P }``,
-  rw[modP_def, EXTENSION]);
+Theorem modP_alt:
+    !r:'a ring k:num s:num z. Q z = { p % z | p IN P }
+Proof
+  rw[modP_def, EXTENSION]
+QED
 (* presentation of (Q h) without IMAGE *)
 
 (* Theorem: p IN (Q z) ==> ?q. q IN P /\ (p = q % z) *)
 (* Proof: by modP_def, IN_IMAGE *)
-val modP_element = store_thm(
-  "modP_element",
-  ``!r:'a ring (k s):num z. !p. p IN (Q z) <=> ?q. q IN P /\ (p = q % z)``,
+Theorem modP_element:
+    !r:'a ring (k s):num z. !p. p IN (Q z) <=> ?q. q IN P /\ (p = q % z)
+Proof
   rw[modP_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: p IN (Q z) ==> poly p /\ deg p < deg z *)
 (* Proof:
@@ -883,11 +928,12 @@ val modP_element = store_thm(
    ==> poly p' /\ (p = p' % z)         by setP_element_poly
    ==> poly p /\ deg p < deg z         by poly_mod_poly, poly_deg_mod_less
 *)
-val modP_element_poly = store_thm(
-  "modP_element_poly",
-  ``!r:'a ring (k s):num. Ring r ==>
-   !z. pmonic z ==> !p. p IN (Q z) ==> poly p /\ deg p < deg z``,
-  metis_tac[modP_element, setP_element_poly, poly_mod_poly, poly_deg_mod_less]);
+Theorem modP_element_poly:
+    !r:'a ring (k s):num. Ring r ==>
+   !z. pmonic z ==> !p. p IN (Q z) ==> poly p /\ deg p < deg z
+Proof
+  metis_tac[modP_element, setP_element_poly, poly_mod_poly, poly_deg_mod_less]
+QED
 
 (* Theorem: (Q z) is closed under poly_mod multiplication:
             0 < k /\ ulead z ==> !p q . p IN (Q z) /\ q IN (Q z) ==> (p * q) % z IN (Q z) *)
@@ -900,12 +946,13 @@ val modP_element_poly = store_thm(
    Hence  p' % z * q' % z = (p' * q') % z  by poly_mod_mult, ulead z
      and  p' * q' IN P                     by setP_closure
 *)
-val modP_closure = store_thm(
-  "modP_closure",
-  ``!r:'a ring (k s):num z. Ring r /\ 0 < k /\ ulead z ==>
-    !p q. p IN (Q z) /\ q IN (Q z) ==> (p * q) % z IN (Q z)``,
+Theorem modP_closure:
+    !r:'a ring (k s):num z. Ring r /\ 0 < k /\ ulead z ==>
+    !p q. p IN (Q z) /\ q IN (Q z) ==> (p * q) % z IN (Q z)
+Proof
   rw[modP_def] >>
-  metis_tac[poly_mod_mult, setP_closure, setP_element_poly]);
+  metis_tac[poly_mod_mult, setP_closure, setP_element_poly]
+QED
 
 (* Theorem: pmonic z ==> (Q z) SUBSET (PolyModRing r z).carrier *)
 (* Proof:
@@ -917,12 +964,13 @@ val modP_closure = store_thm(
        p IN P ==> poly p                             by setP_element_poly
        poly p /\ pmonic z ==> deg (p % z) < deg z    by poly_deg_mod_less
 *)
-val modP_subset_mod_factor = store_thm(
-  "modP_subset_mod_factor",
-  ``!r:'a ring (k s):num z. Ring r /\ pmonic z ==> (Q z) SUBSET (PolyModRing r z).carrier``,
+Theorem modP_subset_mod_factor:
+    !r:'a ring (k s):num z. Ring r /\ pmonic z ==> (Q z) SUBSET (PolyModRing r z).carrier
+Proof
   rw[modP_def, poly_mod_ring_def, poly_remainders_def, SUBSET_DEF] >-
   metis_tac[setP_element_poly, poly_mod_poly] >>
-  metis_tac[setP_element_poly, poly_deg_mod_less]);
+  metis_tac[setP_element_poly, poly_deg_mod_less]
+QED
 
 (* Theorem: 1 < k /\ ulead z ==> |0| IN (Q z) *)
 (* Proof:
@@ -930,13 +978,14 @@ val modP_subset_mod_factor = store_thm(
     and |0| % z = |0|         by poly_mod_zero, ulead z
    Thus |0| IN (Q z)          by modP_element
 *)
-val modP_has_zero = store_thm(
-  "modP_has_zero",
-  ``!r:'a ring (k s):num z. Ring r /\ 1 < k /\ ulead z ==> |0| IN (Q z)``,
+Theorem modP_has_zero:
+    !r:'a ring (k s):num z. Ring r /\ 1 < k /\ ulead z ==> |0| IN (Q z)
+Proof
   rpt strip_tac >>
   `|0| IN P` by rw[setP_has_zero] >>
   `|0| % z = |0|` by rw[poly_mod_zero] >>
-  metis_tac[modP_element]);
+  metis_tac[modP_element]
+QED
 
 (* Theorem: pmonic z ==> |1| IN (Q z) *)
 (* Proof:
@@ -944,13 +993,14 @@ val modP_has_zero = store_thm(
     and |1| % z = |1|         by poly_mod_one, pmonic z
    Thus |1| IN (Q z)          by modP_element
 *)
-val modP_has_one = store_thm(
-  "modP_has_one",
-  ``!r:'a ring (k s):num z. Ring r /\ 0 < k /\ pmonic z ==> |1| IN (Q z)``,
+Theorem modP_has_one:
+    !r:'a ring (k s):num z. Ring r /\ 0 < k /\ pmonic z ==> |1| IN (Q z)
+Proof
   rpt strip_tac >>
   `|1| IN P` by rw[setP_has_one] >>
   `|1| % z = |1|` by rw[poly_mod_one] >>
-  metis_tac[modP_element]);
+  metis_tac[modP_element]
+QED
 
 (* Theorem: 0 < k /\ monic z /\ 1 < deg z ==> X IN (Q z) *)
 (* Proof:
@@ -962,14 +1012,15 @@ val modP_has_one = store_thm(
     and deg X = 1   by poly_deg_X, #1 <> #0
     and X = X % z   by poly_mod_less, deg X < deg z
 *)
-val modP_has_X = store_thm(
-  "modP_has_X",
-  ``!r:'a ring (k s):num z. Ring r /\ 0 < k /\ monic z /\ 1 < deg z ==> X IN (Q z)``,
+Theorem modP_has_X:
+    !r:'a ring (k s):num z. Ring r /\ 0 < k /\ monic z /\ 1 < deg z ==> X IN (Q z)
+Proof
   rw_tac std_ss[modP_element] >>
   `0 < deg z` by decide_tac >>
   `#1 <> #0` by metis_tac[poly_deg_pos_ring_one_ne_zero, poly_monic_poly] >>
   qexists_tac `X` >>
-  rw[setP_has_X, poly_mod_less]);
+  rw[setP_has_X, poly_mod_less]
+QED
 
 (* Theorem: FiniteRing r /\ pmonic z ==> FINITE (Q z) *)
 (* Proof:
@@ -981,18 +1032,20 @@ val modP_has_X = store_thm(
    with pmonic z ==> (Q z) SUBSET (PolyModRing r z).carrier  by modP_subset_mod_factor
    Hence FINITE (Q z)                                        by SUBSET_FINITE
 *)
-val modP_finite = store_thm(
-  "modP_finite",
-  ``!r:'a ring (k s):num z. FiniteRing r /\ pmonic z ==> FINITE (Q z)``,
-  metis_tac[modP_subset_mod_factor, poly_mod_ring_finite, FiniteRing_def, SUBSET_FINITE]);
+Theorem modP_finite:
+    !r:'a ring (k s):num z. FiniteRing r /\ pmonic z ==> FINITE (Q z)
+Proof
+  metis_tac[modP_subset_mod_factor, poly_mod_ring_finite, FiniteRing_def, SUBSET_FINITE]
+QED
 
 (* Theorem: p IN P ==> p % z IN (Q z) *)
 (* Proof: by modP_def, IN_IMAGE *)
-val setP_element_mod = store_thm(
-  "setP_element_mod",
-  ``!r:'a ring (k s):num. !p z. p IN P ==> p % z IN (Q z)``,
+Theorem setP_element_mod:
+    !r:'a ring (k s):num. !p z. p IN P ==> p % z IN (Q z)
+Proof
   rw[modP_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The Reduced Set from P.                                                   *)
@@ -1008,10 +1061,11 @@ val _ = overload_on ("PM", ``reduceP (r:'a ring) k s``);
 
 (* Theorem: !p. p IN PM <=> p IN P /\ deg p < CARD M *)
 (* Proof: by reduceP_def *)
-val reduceP_element = store_thm(
-  "reduceP_element",
-  ``!r:'a ring (k s):num p. p IN PM <=> p IN P /\ deg p < CARD M``,
-  rw[reduceP_def]);
+Theorem reduceP_element:
+    !r:'a ring (k s):num p. p IN PM <=> p IN P /\ deg p < CARD M
+Proof
+  rw[reduceP_def]
+QED
 
 (* Theorem: p IN PM ==> p % z IN (Q z) *)
 (* Proof:
@@ -1019,10 +1073,11 @@ val reduceP_element = store_thm(
    ==> p IN P          by reduceP_element
    ==> p % z IN (Q z)  by setP_element_mod
 *)
-val reduceP_element_mod = store_thm(
-  "reduceP_element_mod",
-  ``!r:'a ring (k s):num z. !p. p IN PM ==> p % z IN (Q z)``,
-  rw[reduceP_element, setP_element_mod]);
+Theorem reduceP_element_mod:
+    !r:'a ring (k s):num z. !p. p IN PM ==> p % z IN (Q z)
+Proof
+  rw[reduceP_element, setP_element_mod]
+QED
 
 (* Theore: p IN PM ==> poly p *)
 (* Proof:
@@ -1030,20 +1085,22 @@ val reduceP_element_mod = store_thm(
    ==> p IN P     by reduceP_element
    ==> poly p     by setP_element_poly
 *)
-val reduceP_element_poly = store_thm(
-  "reduceP_element_poly",
-  ``!r:'a ring (k s):num. !p. p IN PM ==> poly p``,
-  metis_tac[reduceP_element, setP_element_poly]);
+Theorem reduceP_element_poly:
+    !r:'a ring (k s):num. !p. p IN PM ==> poly p
+Proof
+  metis_tac[reduceP_element, setP_element_poly]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["reduceP_element_poly"];
 
 (* Theorem: PM SUBSET P *)
 (* Proof: by reduceP_def, SUBSET_DEF. *)
-val reduceP_subset_setP = store_thm(
-  "reduceP_subset_setP",
-  ``!r:'a ring (k s):num. PM SUBSET P``,
-  rw[reduceP_def, SUBSET_DEF]);
+Theorem reduceP_subset_setP:
+    !r:'a ring (k s):num. PM SUBSET P
+Proof
+  rw[reduceP_def, SUBSET_DEF]
+QED
 
 (* Theorem: FiniteRing r ==> FINITE PM *)
 (* Proof:
@@ -1057,16 +1114,17 @@ val reduceP_subset_setP = store_thm(
       so FINITE {p | poly p /\ ((p = []) \/ deg p < n)}    by FINITE_BIJ
    Hence FINITE PM                                         by SUBSET_FINITE
 *)
-val reduceP_finite = store_thm(
-  "reduceP_finite",
-  ``!r:'a ring (k s):num. FiniteRing r ==> FINITE PM``,
+Theorem reduceP_finite:
+    !r:'a ring (k s):num. FiniteRing r ==> FINITE PM
+Proof
   rpt (stripDup[FiniteRing_def]) >>
   qabbrev_tac `n = CARD M` >>
   `PM SUBSET {p | poly p /\ ((p = []) \/ deg p < n)}` by rw[SUBSET_DEF, reduceP_element, setP_element] >>
   `BIJ chop {p | weak p /\ (LENGTH p = n)} {p | poly p /\ ((p = []) \/ deg p < n)}` by rw[weak_poly_poly_bij] >>
   `FINITE {p | weak p /\ (LENGTH p = n)}` by rw[weak_poly_finite] >>
   `FINITE {p | poly p /\ ((p = []) \/ deg p < n)}` by metis_tac[FINITE_BIJ] >>
-  metis_tac[SUBSET_FINITE]);
+  metis_tac[SUBSET_FINITE]
+QED
 
 (* Theorem: 1 < k ==> |0| IN PM *)
 (* Proof:
@@ -1082,14 +1140,15 @@ val reduceP_finite = store_thm(
        and M <> {}                        by modN_not_empty
        Hence 0 < CARD M                   by CARD_EQ_0
 *)
-val reduceP_has_zero = store_thm(
-  "reduceP_has_zero",
-  ``!r:'a ring (k s):num. Ring r /\ 1 < k ==> |0| IN PM``,
+Theorem reduceP_has_zero:
+    !r:'a ring (k s):num. Ring r /\ 1 < k ==> |0| IN PM
+Proof
   rpt strip_tac >>
   `0 < k` by decide_tac >>
   rw_tac std_ss[reduceP_element, setP_element, poly_zero_poly, poly_deg_zero] >-
   metis_tac[setN_has_no_0, poly_intro_zero, NOT_ZERO_LT_ZERO] >>
-  metis_tac[modN_finite, modN_not_empty, CARD_EQ_0, NOT_ZERO_LT_ZERO]);
+  metis_tac[modN_finite, modN_not_empty, CARD_EQ_0, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: 0 < k /\ 1 < CARD M ==> X IN PM *)
 (* Proof:
@@ -1103,16 +1162,17 @@ val reduceP_has_zero = store_thm(
        If #1 <> #0,
           Then deg X = 1 < CARD M      by poly_deg_X
 *)
-val reduceP_has_X = store_thm(
-  "reduceP_has_X",
-  ``!r:'a ring (k s):num. Ring r /\ 0 < k /\ 1 < CARD M ==> X IN PM``,
+Theorem reduceP_has_X:
+    !r:'a ring (k s):num. Ring r /\ 0 < k /\ 1 < CARD M ==> X IN PM
+Proof
   rw_tac std_ss[reduceP_element] >-
   rw[setP_has_X] >>
   Cases_on `#1 = #0` >| [
     `X = |0|` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero, poly_X] >>
     rw[],
     rw[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* The Reduced Set from N.                                                   *)
@@ -1136,9 +1196,9 @@ val _ = overload_on ("NM", ``reduceN``);
    (2) i <= n /\ j <= n ==> ?x'. FST y < SUC n /\ SND y < SUC n
        Take x' = (i, j)
 *)
-val reduceN_alt = store_thm(
-  "reduceN_alt",
-  ``!p q n. NM p q n = {(p ** i) * (q ** j) | i, j | i <= n /\ j <= n}``,
+Theorem reduceN_alt:
+    !p q n. NM p q n = {(p ** i) * (q ** j) | i, j | i <= n /\ j <= n}
+Proof
   rw[reduceN_def, EXTENSION, EQ_IMP_THM] >| [
     `FST x' <= n /\ SND x' <= n` by decide_tac >>
     qexists_tac `FST x'` >>
@@ -1147,7 +1207,8 @@ val reduceN_alt = store_thm(
     `i < SUC n /\ j < SUC n` by decide_tac >>
     qexists_tac `(i,j)` >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: FINITE (NM p q n) *)
 (* Proof:
@@ -1159,21 +1220,23 @@ val reduceN_alt = store_thm(
      ==> FINITE (IMAGE f (c CROSS c))    by IMAGE_FINITE
        = FINITE (NM p q n)               by above
 *)
-val reduceN_finite = store_thm(
-  "reduceN_finite",
-  ``!p q n. FINITE (NM p q n)``,
-  rw[reduceN_def]);
+Theorem reduceN_finite:
+    !p q n. FINITE (NM p q n)
+Proof
+  rw[reduceN_def]
+QED
 
 (* Theorem: x IN NM p q n ==> ?m1 m2. m1 <= n /\ m2 <= n /\ (x = p ** m1 * q ** m2) *)
 (* Proof: by reduceN_def, IN_IMAGE *)
-val reduceN_element = store_thm(
-  "reduceN_element",
-  ``!p q n. !x. x IN NM p q n ==> ?m1 m2. m1 <= n /\ m2 <= n /\ (x = p ** m1 * q ** m2)``,
+Theorem reduceN_element:
+    !p q n. !x. x IN NM p q n ==> ?m1 m2. m1 <= n /\ m2 <= n /\ (x = p ** m1 * q ** m2)
+Proof
   rw[reduceN_def, IN_IMAGE] >>
   `FST x' <= n /\ SND x' <= n` by decide_tac >>
   Cases_on `x'` >>
   fs[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: p IN N /\ q IN N ==> !n. (NM p q n) SUBSET N *)
 (* Proof:
@@ -1183,32 +1246,35 @@ val reduceN_element = store_thm(
    q ** m2 IN N       by setN_has_element_powers
    Hence x IB N       by setN_closure
 *)
-val reduceN_subset_setN = store_thm(
-  "reduceN_subset_setN",
-  ``!r:'a ring k s:num. Ring r /\ 0 < k ==>
-   !p q. p IN N /\ q IN N ==> !n. (NM p q n) SUBSET (N)``,
+Theorem reduceN_subset_setN:
+    !r:'a ring k s:num. Ring r /\ 0 < k ==>
+   !p q. p IN N /\ q IN N ==> !n. (NM p q n) SUBSET (N)
+Proof
   rw[SUBSET_DEF] >>
   `?m1 m2. m1 <= n /\ m2 <= n /\ (x = p ** m1 * q ** m2)` by rw[reduceN_element] >>
-  rw[setN_has_element_powers, setN_closure]);
+  rw[setN_has_element_powers, setN_closure]
+QED
 
 (* Theorem: 0 < k ==> !p q. p IN N /\ q IN N ==> !n x. x IN (NM p q n) ==> x IN N *)
 (* Proof: by reduceN_subset_setN, SUBSET_DEF. *)
-val reduceN_element_in_setN = store_thm(
-  "reduceN_element_in_setN",
-  ``!r:'a ring k s:num. Ring r /\ 0 < k ==>
-   !p q. p IN N /\ q IN N ==> !n x. x IN (NM p q n) ==> x IN N``,
-  rw[reduceN_subset_setN, GSYM SUBSET_DEF]);
+Theorem reduceN_element_in_setN:
+    !r:'a ring k s:num. Ring r /\ 0 < k ==>
+   !p q. p IN N /\ q IN N ==> !n x. x IN (NM p q n) ==> x IN N
+Proof
+  rw[reduceN_subset_setN, GSYM SUBSET_DEF]
+QED
 
 (* Theorem: Ring r /\ 0 < k ==>
            !p q. p IN N /\ q IN N ==> IMAGE (\x. x MOD k) (NM p q (SQRT (CARD M))) SUBSET M *)
 (* Proof: by reduceN_def, SUBSET_DEF, modN_element. *)
-val reduceN_mod_subset = store_thm(
-  "reduceN_mod_subset",
-  ``!r:'a ring k. Ring r /\ 0 < k ==>
-   !p q. p IN N /\ q IN N ==> IMAGE (\x. x MOD k) (NM p q (SQRT (CARD M))) SUBSET M``,
+Theorem reduceN_mod_subset:
+    !r:'a ring k. Ring r /\ 0 < k ==>
+   !p q. p IN N /\ q IN N ==> IMAGE (\x. x MOD k) (NM p q (SQRT (CARD M))) SUBSET M
+Proof
   rw[reduceN_def, SUBSET_DEF, pairTheory.EXISTS_PROD] >>
   `p ** p_1 * q ** p_2 IN N` by rw[setN_has_element_powers, setN_closure] >>
-  metis_tac[modN_element]);
+  metis_tac[modN_element]
+QED
 
 (* Theorem: 1 < p /\ 1 < q ==> !m n. m IN NM p q n ==> m <= (MAX p q) ** (2 * n) *)
 (* Proof:
@@ -1226,9 +1292,9 @@ val reduceN_mod_subset = store_thm(
     = (MAX p q) ** (n + n)                  by EXP_ADD
     = (MAX p q) ** (2 * n)                  by TIMES2
 *)
-val reduceN_element_upper = store_thm(
-  "reduceN_element_upper",
-  ``!p q. 1 < p /\ 1 < q ==> !m n. m IN NM p q n ==> m <= (MAX p q) ** (2 * n)``,
+Theorem reduceN_element_upper:
+    !p q. 1 < p /\ 1 < q ==> !m n. m IN NM p q n ==> m <= (MAX p q) ** (2 * n)
+Proof
   rw_tac std_ss[reduceN_def, IN_IMAGE, pairTheory.EXISTS_PROD] >>
   fs[] >>
   `p_1 <= n /\ p_2 <= n` by decide_tac >>
@@ -1245,16 +1311,18 @@ val reduceN_element_upper = store_thm(
   `p ** p_1 * q ** p_2 <= p ** p_1 * (MAX p q) ** n` by rw[LE_MULT_LCANCEL, ZERO_LT_EXP] >>
   `p ** p_1 * (MAX p q) ** n <= (MAX p q) ** n * (MAX p q) ** n` by rw[] >>
   `p ** p_1 * q ** p_2 <= (MAX p q) ** n * (MAX p q) ** n` by metis_tac[LESS_EQ_TRANS] >>
-  rw_tac std_ss[EXP_ADD, TIMES2]);
+  rw_tac std_ss[EXP_ADD, TIMES2]
+QED
 
 (* Theorem: 1 < p /\ p <= n ==> !e m. e IN NM p n m ==> e <= n ** (2 * m) *)
 (* Proof: by reduceN_element_upper. *)
-val reduceN_element_upper_alt = store_thm(
-  "reduceN_element_upper_alt",
-  ``!n p. 1 < p /\ p <= n ==> !e m. e IN NM p n m ==> e <= n ** (2 * m)``,
+Theorem reduceN_element_upper_alt:
+    !n p. 1 < p /\ p <= n ==> !e m. e IN NM p n m ==> e <= n ** (2 * m)
+Proof
   rpt strip_tac >>
   `1 < n` by decide_tac >>
-  metis_tac[MAX_DEF, reduceN_element_upper, NOT_LESS, EQ_LESS_EQ]);
+  metis_tac[MAX_DEF, reduceN_element_upper, NOT_LESS, EQ_LESS_EQ]
+QED
 
 (* Theorem: 1 < p /\ 1 < q ==> !m n. m IN NM p q n ==> m <= (p * q) ** n *)
 (* Proof:
@@ -1268,16 +1336,17 @@ val reduceN_element_upper_alt = store_thm(
     <= p ** n * q ** n             by LESS_MONO_MULT2
      = (p * q) ** n                by EXP_BASE_MULT
 *)
-val reduceN_element_upper_better = store_thm(
-  "reduceN_element_upper_better",
-  ``!p q. 1 < p /\ 1 < q ==> !m n. m IN NM p q n ==> m <= (p * q) ** n``,
+Theorem reduceN_element_upper_better:
+    !p q. 1 < p /\ 1 < q ==> !m n. m IN NM p q n ==> m <= (p * q) ** n
+Proof
   rw_tac std_ss[reduceN_def, IN_IMAGE, pairTheory.EXISTS_PROD] >>
   fs[] >>
   `p_1 <= n /\ p_2 <= n` by decide_tac >>
   `p ** p_1 <= p ** n` by rw[EXP_BASE_LE_MONO] >>
   `q ** p_2 <= q ** n` by rw[EXP_BASE_LE_MONO] >>
   `p ** p_1 * q ** p_2 <= p ** n * q ** n` by rw[LESS_MONO_MULT2] >>
-  rw[EXP_BASE_MULT]);
+  rw[EXP_BASE_MULT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cardinality of Reduced Set of N.                                          *)
@@ -1327,11 +1396,11 @@ val reduceN_element_upper_better = store_thm(
           But this contradicts ~perfect_power q p.
       If w < u, the proof is symmetric (similar to u < w cases).
 *)
-val count_cross_to_setN_inj = store_thm(
-  "count_cross_to_setN_inj",
-  ``!r:'a ring k s:num. Ring r /\ 0 < k ==>
+Theorem count_cross_to_setN_inj:
+    !r:'a ring k s:num. Ring r /\ 0 < k ==>
    !p q. p IN N /\ q IN N /\ prime p /\ 1 < q /\ ~(perfect_power q p) ==>
-   !n. INJ (\(i, j). p ** i * q ** j) ((count (SUC n)) CROSS (count (SUC n))) N``,
+   !n. INJ (\(i, j). p ** i * q ** j) ((count (SUC n)) CROSS (count (SUC n))) N
+Proof
   rw[INJ_DEF] >| [
     Cases_on `x` >>
     fs[] >>
@@ -1378,7 +1447,8 @@ val count_cross_to_setN_inj = store_thm(
         ]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* This is impressive! *)
 
@@ -1397,11 +1467,11 @@ val count_cross_to_setN_inj = store_thm(
          CARD (NM p q n) = CARD (t CROSS t)       by INJ_CARD_IMAGE_EQ
    Hence CARD (NM p q n) = (SUC n) ** 2.
 *)
-val reduceN_card = store_thm(
-  "reduceN_card",
-  ``!r:'a ring k s:num. Ring r /\ 0 < k ==>
+Theorem reduceN_card:
+    !r:'a ring k s:num. Ring r /\ 0 < k ==>
    !p q. p IN N /\ q IN N /\ prime p /\ 1 < q /\ ~perfect_power q p ==>
-   !n. CARD (NM p q n) = (SUC n) ** 2``,
+   !n. CARD (NM p q n) = (SUC n) ** 2
+Proof
   rpt strip_tac >>
   qabbrev_tac `f = (\(i, j). p ** i * q ** j)` >>
   qabbrev_tac `t = count (SUC n)` >>
@@ -1409,7 +1479,8 @@ val reduceN_card = store_thm(
   `NM p q n = IMAGE f (t CROSS t)` by rw_tac std_ss[reduceN_def, Abbr`f`, Abbr`t`] >>
   `FINITE t /\ (CARD t = SUC n)` by rw_tac std_ss[FINITE_COUNT, CARD_COUNT, Abbr`t`] >>
   `FINITE (t CROSS t) /\ (CARD (t CROSS t) = (SUC n) ** 2)` by rw_tac std_ss[FINITE_CROSS, CARD_CROSS, EXP_2] >>
-  metis_tac[INJ_CARD_IMAGE_EQ]);
+  metis_tac[INJ_CARD_IMAGE_EQ]
+QED
 
 (*
 If so, with suitable parameters,
@@ -1426,12 +1497,13 @@ By pigeonhole principle, no INJ is possible.
 (* Theorem: Field r /\ 0 < k /\ p IN N /\ q IN N /\ prime p /\ 1 < q /\
             ~perfect_power q p ==> !n. CARD (NM p q n) = SUC n ** 2 *)
 (* Proof: by reduceN_card *)
-val reduceN_card_field = store_thm(
-  "reduceN_card_field",
-  ``!(r:'a field) k s:num p q. Field r /\ 0 < k /\
+Theorem reduceN_card_field:
+    !(r:'a field) k s:num p q. Field r /\ 0 < k /\
        p IN N /\ q IN N /\ prime p /\ 1 < q /\ ~perfect_power q p ==>
-       !n. CARD (NM p q n) = SUC n ** 2``,
-  metis_tac[reduceN_card, field_is_ring]);
+       !n. CARD (NM p q n) = SUC n ** 2
+Proof
+  metis_tac[reduceN_card, field_is_ring]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Upper Bound of (Q z): Show (Q z) SUBSET (Z_p[x] mod z)                    *)
@@ -1447,10 +1519,10 @@ val reduceN_card_field = store_thm(
          <= CARD (PolyModRing r z).carrier      by CARD_SUBSET
           = CARD R ** deg z                     by poly_mod_ring_card
 *)
-val modP_card_upper_max = store_thm(
-  "modP_card_upper_max",
-  ``!r:'a field (k s):num z. FiniteField r /\ mifactor z (unity k) ==>
-      CARD (Q z) <= (CARD R) ** (deg z)``,
+Theorem modP_card_upper_max:
+    !r:'a field (k s):num z. FiniteField r /\ mifactor z (unity k) ==>
+      CARD (Q z) <= (CARD R) ** (deg z)
+Proof
   rw_tac std_ss[FiniteField_def] >>
   `Ring r /\ FiniteRing r` by rw[FiniteRing_def] >>
   `pmonic z` by metis_tac[poly_monic_irreducible_factor] >>
@@ -1458,7 +1530,8 @@ val modP_card_upper_max = store_thm(
   `FINITE (PolyModRing r z).carrier` by rw[poly_mod_ring_finite] >>
   `FINITE (Q z)` by metis_tac[SUBSET_FINITE] >>
   `CARD (Q z) <= CARD (PolyModRing r z).carrier` by rw[CARD_SUBSET] >>
-  rw[GSYM poly_mod_ring_card]);
+  rw[GSYM poly_mod_ring_card]
+QED
 
 (*
 This is the absolute upper bound: the size of the embedding quotient field.
@@ -1546,10 +1619,11 @@ QED
     but lead |0| = #0   by poly_lead_zero
    Hence a contradiction.
 *)
-val reduceP_poly_has_no_zero = store_thm(
-  "reduceP_poly_has_no_zero",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n. |0| NOTIN (PPM n)``,
-  metis_tac[reduceP_poly_element_monic, poly_monic_lead, poly_lead_zero]);
+Theorem reduceP_poly_has_no_zero:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n. |0| NOTIN (PPM n)
+Proof
+  metis_tac[reduceP_poly_element_monic, poly_monic_lead, poly_lead_zero]
+QED
 
 (* Theorem: n < char r ==> X NOTIN PPM n *)
 (* Proof:
@@ -1602,10 +1676,11 @@ QED
    hence  FINITE (PPOW (IMAGE SUC (count n)))             by FINITE_PPOW
     thus  FINITE (IMAGE g (PPOW (IMAGE SUC (count n))))   by IMAGE_FINITE
 *)
-val reduceP_poly_finite = store_thm(
-  "reduceP_poly_finite",
-  ``!(r:'a ring) n. FINITE (PPM n)``,
-  rw[reduceP_poly_def, FINITE_PPOW]);
+Theorem reduceP_poly_finite:
+    !(r:'a ring) n. FINITE (PPM n)
+Proof
+  rw[reduceP_poly_def, FINITE_PPOW]
+QED
 
 (* Theorem: Field r /\ n < char r ==> CARD (PPM n) = PRE (2 ** n) *)
 (* Proof:
@@ -1619,9 +1694,9 @@ val reduceP_poly_finite = store_thm(
    = PRE (2 ** n)                                    by CARD_INJ_IMAGE, CARD_COUNT
    Since SUC is injective, by prim_recTheory.INV_SUC_EQ.
 *)
-val reduceP_poly_card = store_thm(
-  "reduceP_poly_card",
-  ``!r:'a field. Field r ==> !n. n < char r ==> (CARD (PPM n) = PRE (2 ** n))``,
+Theorem reduceP_poly_card:
+    !r:'a field. Field r ==> !n. n < char r ==> (CARD (PPM n) = PRE (2 ** n))
+Proof
   rpt strip_tac >>
   rw_tac std_ss[reduceP_poly_def] >>
   qabbrev_tac `f = \c:num. X + |c|` >>
@@ -1629,7 +1704,8 @@ val reduceP_poly_card = store_thm(
   `INJ g (PPOW (IMAGE SUC (count n))) (PolyRing r).carrier` by rw[poly_prod_set_image_X_add_c_inj, Abbr`g`, Abbr`f`] >>
   `FINITE (PPOW (IMAGE SUC (count n)))` by rw[FINITE_PPOW] >>
   `CARD (IMAGE g (PPOW (IMAGE SUC (count n)))) = CARD (PPOW (IMAGE SUC (count n)))` by metis_tac[INJ_CARD_IMAGE_EQ] >>
-  rw[CARD_PPOW, CARD_INJ_IMAGE]);
+  rw[CARD_PPOW, CARD_INJ_IMAGE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

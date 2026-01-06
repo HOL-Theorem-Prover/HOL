@@ -114,24 +114,23 @@ val _ = add_acl2_simps (CONJUNCTS translateTheory.JUDGEMENT_THMS);
               acl2_numberp (unary_minus x); acl2_numberp (reciprocal x)],
 *)
 
-val closure_defaxiom =
- store_thm
-  ("closure_defaxiom",
-   ``|= andl
+Theorem closure_defaxiom:
+     |= andl
          [acl2_numberp (add x y); acl2_numberp (mult x y);
-          acl2_numberp (unary_minus x); acl2_numberp (reciprocal x)]``,
+          acl2_numberp (unary_minus x); acl2_numberp (reciprocal x)]
+Proof
    Cases_on `x` THEN Cases_on `y`
-    THEN ACL2_SIMP_TAC [int_def,cpx_def]);
+    THEN ACL2_SIMP_TAC [int_def,cpx_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::ASSOCIATIVITY-OF-+] [axioms: ] []
      |- |= equal (add (add x y) z) (add x (add y z)),
 *)
 
-val associativity_of_plus_defaxiom =
- store_thm
-  ("associativity_of_plus_defaxiom",
-   ``|= equal (add (add x y) z) (add x (add y z))``,
+Theorem associativity_of_plus_defaxiom:
+     |= equal (add (add x y) z) (add x (add y z))
+Proof
    Cases_on `x` THEN Cases_on `y` THEN Cases_on `z`
     THEN ACL2_SIMP_TAC [int_def,cpx_def]
     THEN TRY(Cases_on `c`)
@@ -143,17 +142,17 @@ val associativity_of_plus_defaxiom =
            GSYM fracTheory.frac_0_def,
            GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID,
            ratTheory.RAT_ADD_RID,ratTheory.RAT_0,
-           ratTheory.RAT_ADD_ASSOC]);
+           ratTheory.RAT_ADD_ASSOC]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMMUTATIVITY-OF-+] [axioms: ] []
      |- |= equal (add x y) (add y x),
 *)
 
-val commutativity_of_plus_defaxiom =
- store_thm
-  ("commutativity_of_plus_defaxiom",
-   ``|= equal (add x y) (add y x)``,
+Theorem commutativity_of_plus_defaxiom:
+     |= equal (add x y) (add y x)
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC [int_def,cpx_def]
     THEN TRY(Cases_on `c`)
@@ -163,17 +162,17 @@ val commutativity_of_plus_defaxiom =
            sexpTheory.rat_def,
            GSYM fracTheory.frac_0_def,
            GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID,
-           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]);
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::UNICITY-OF-0, DISK_THM] [axioms: ] []
      |- |= equal (add (nat 0) x) (fix x),
 *)
 
-val unicity_of_0_defaxiom =
- store_thm
-  ("unicity_of_0_defaxiom",
-   ``|= equal (add (nat 0) x) (fix x)``,
+Theorem unicity_of_0_defaxiom:
+     |= equal (add (nat 0) x) (fix x)
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
     THEN TRY(Cases_on `c`)
@@ -183,17 +182,17 @@ val unicity_of_0_defaxiom =
            GSYM fracTheory.frac_0_def,com_0_def,
            GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID,
            ratTheory.RAT_SUB_LID,ratTheory.RAT_ADD_RINV,
-           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]);
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::INVERSE-OF-+, DISK_THM] [axioms: ] []
      |- |= equal (add x (unary_minus x)) (nat 0),
 *)
 
-val inverse_of_plus_defaxiom =
- store_thm
-  ("inverse_of_plus_defaxiom",
-   ``|= equal (add x (unary_minus x)) (nat 0)``,
+Theorem inverse_of_plus_defaxiom:
+     |= equal (add x (unary_minus x)) (nat 0)
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
     THEN TRY(Cases_on `c`)
@@ -203,17 +202,17 @@ val inverse_of_plus_defaxiom =
            GSYM fracTheory.frac_0_def,com_0_def,
            GSYM ratTheory.rat_0,ratTheory.RAT_ADD_LID,
            ratTheory.RAT_SUB_LID,ratTheory.RAT_ADD_RINV,
-           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]);
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_0,ratTheory.RAT_ADD_COMM]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::ASSOCIATIVITY-OF-*] [axioms: ] []
      |- |= equal (mult (mult x y) z) (mult x (mult y z)),
 *)
 
-val associativity_of_star_defaxiom =
- store_thm
-  ("associativity_of_star_defaxiom",
-   ``|= equal (mult (mult x y) z) (mult x (mult y z))``,
+Theorem associativity_of_star_defaxiom:
+     |= equal (mult (mult x y) z) (mult x (mult y z))
+Proof
    Cases_on `x` THEN Cases_on `y` THEN Cases_on `z`
     THEN ACL2_SIMP_TAC [int_def,cpx_def]
     THEN TRY(Cases_on `c`)
@@ -232,17 +231,17 @@ val associativity_of_star_defaxiom =
            ratTheory.RAT_AINV_ADD,
            ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,
            GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL]
-    THEN METIS_TAC[ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM]);
+    THEN METIS_TAC[ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMMUTATIVITY-OF-*] [axioms: ] []
      |- |= equal (mult x y) (mult y x),
 *)
 
-val commutativity_of_star_defaxiom =
- store_thm
-  ("commutativity_of_star_defaxiom",
-   ``|= equal (mult x y) (mult y x)``,
+Theorem commutativity_of_star_defaxiom:
+     |= equal (mult x y) (mult y x)
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC [int_def,cpx_def]
     THEN TRY(Cases_on `c`)
@@ -260,17 +259,17 @@ val commutativity_of_star_defaxiom =
            ratTheory.RAT_AINV_ADD,
            ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,
            GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL]
-    THEN METIS_TAC[ratTheory.RAT_MUL_COMM,ratTheory.RAT_ADD_COMM]);
+    THEN METIS_TAC[ratTheory.RAT_MUL_COMM,ratTheory.RAT_ADD_COMM]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::UNICITY-OF-1, DISK_THM] [axioms: ] []
      |- |= equal (mult (nat 1) x) (fix x),
 *)
 
-val unicity_of_1_defaxiom =
- store_thm
-  ("unicity_of_1_defaxiom",
-   ``|= equal (mult (nat 1) x) (fix x)``,
+Theorem unicity_of_1_defaxiom:
+     |= equal (mult (nat 1) x) (fix x)
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
     THEN TRY(Cases_on `c`)
@@ -282,7 +281,8 @@ val unicity_of_1_defaxiom =
            GSYM fracTheory.frac_0_def,GSYM ratTheory.rat_0,
            ratTheory.RAT_MUL_LZERO,ratTheory.RAT_SUB_RID,
            ratTheory.RAT_SUB_LID,ratTheory.RAT_ADD_RINV,ratTheory.RAT_MUL_LID,
-           ratTheory.RAT_ADD_RID,ratTheory.RAT_1,ratTheory.RAT_ADD_COMM]);
+           ratTheory.RAT_ADD_RID,ratTheory.RAT_1,ratTheory.RAT_ADD_COMM]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::INVERSE-OF-*, DISK_THM] [axioms: ] []
@@ -332,11 +332,10 @@ val RAT_SUM_SQ_POS =
     THEN RW_TAC std_ss [ratTheory.RAT_0LES_0LES_ADD]);
 
 (* Would expect to be able to improve on the following proof                 *)
-val inverse_of_star_defaxiom =
- store_thm
-  ("inverse_of_star_defaxiom",
-   ``|= implies (andl [acl2_numberp x; not (equal x (nat 0))])
-             (equal (mult x (reciprocal x)) (nat 1))``,
+Theorem inverse_of_star_defaxiom:
+     |= implies (andl [acl2_numberp x; not (equal x (nat 0))])
+             (equal (mult x (reciprocal x)) (nat 1))
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
     THEN TRY(Cases_on `c`)
@@ -380,17 +379,17 @@ val inverse_of_star_defaxiom =
           [ratTheory.RAT_SUB_ADDAINV,ratTheory.RAT_AINV_AINV,
            GSYM ratTheory.RAT_RDISTRIB,ratTheory.RAT_MUL_RINV]
     THEN `0 < r * r + r0 * r0` by PROVE_TAC[RAT_SUM_SQ_POS]
-    THEN PROVE_TAC[ratTheory.RAT_LES_REF]);
+    THEN PROVE_TAC[ratTheory.RAT_LES_REF]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::DISTRIBUTIVITY] [axioms: ] []
      |- |= equal (mult x (add y z)) (add (mult x y) (mult x z)),
 *)
 
-val distributivity_defaxiom =
- store_thm
-  ("distributivity_defaxiom",
-   ``|= equal (mult x (add y z)) (add (mult x y) (mult x z))``,
+Theorem distributivity_defaxiom:
+     |= equal (mult x (add y z)) (add (mult x y) (mult x z))
+Proof
    Cases_on `x` THEN Cases_on `y` THEN Cases_on `z`
     THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
     THEN ACL2_FULL_SIMP_TAC
@@ -414,17 +413,17 @@ val distributivity_defaxiom =
            ratTheory.RAT_AINV_ADD,
            ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_MUL_ASSOC,
            GSYM ratTheory.RAT_AINV_LMUL,GSYM ratTheory.RAT_AINV_RMUL]
-    THEN PROVE_TAC[ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM]);
+    THEN PROVE_TAC[ratTheory.RAT_ADD_ASSOC,ratTheory.RAT_ADD_COMM]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::<-ON-OTHERS, DISK_THM] [axioms: ] []
      |- |= equal (less x y) (less (add x (unary_minus y)) (nat 0)),
 *)
 
-val less_on_others_defaxiom =
- store_thm
-  ("less_on_others_defaxiom",
-   ``|= equal (less x y) (less (add x (unary_minus y)) (nat 0))``,
+Theorem less_on_others_defaxiom:
+     |= equal (less x y) (less (add x (unary_minus y)) (nat 0))
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
     THEN ACL2_FULL_SIMP_TAC
@@ -455,18 +454,19 @@ val less_on_others_defaxiom =
           [ratTheory.RAT_LEQ_LES,ratTheory.RAT_AINV_0,ratTheory.RAT_LES_AINV,
            ratTheory.rat_leq_def,ratTheory.RAT_LES_TOTAL,
            ratTheory.RAT_ADD_LINV,ratTheory.RAT_ADD_RINV,
-           ratTheory.RAT_LES_LADD,ratTheory.RAT_LES_RADD]);
+           ratTheory.RAT_LES_LADD,ratTheory.RAT_LES_RADD]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::ZERO, DISK_THM] [axioms: ] []
      |- |= not (less (nat 0) (nat 0)),
 *)
 
-val zero_defaxiom =
- store_thm
-  ("zero_defaxiom",
-   ``|= not (less (nat 0) (nat 0))``,
-   ACL2_SIMP_TAC [int_def,nat_def,cpx_def,ratTheory.RAT_LES_REF]);
+Theorem zero_defaxiom:
+     |= not (less (nat 0) (nat 0))
+Proof
+   ACL2_SIMP_TAC [int_def,nat_def,cpx_def,ratTheory.RAT_LES_REF]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::TRICHOTOMY, DISK_THM] [axioms: ] []
@@ -480,10 +480,8 @@ val zero_defaxiom =
                 (not (less (nat 0) (unary_minus x)))],
 *)
 
-val trichotomy_defaxiom =
- store_thm
-  ("trichotomy_defaxiom",
-   ``|= andl
+Theorem trichotomy_defaxiom:
+     |= andl
          [implies
            (acl2_numberp x)
            (itel
@@ -492,7 +490,8 @@ val trichotomy_defaxiom =
               (less (nat 0) (unary_minus x)));
               ite (not (less (nat 0) x))
                   (not (less (nat 0) x))
-                  (not (less (nat 0) (unary_minus x)))]``,
+                  (not (less (nat 0) (unary_minus x)))]
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC [int_def,nat_def,cpx_def]
     THEN ACL2_FULL_SIMP_TAC
@@ -524,7 +523,8 @@ val trichotomy_defaxiom =
           [ratTheory.RAT_LEQ_LES,ratTheory.RAT_AINV_0,ratTheory.RAT_LES_AINV,
            ratTheory.rat_leq_def,ratTheory.RAT_LES_TOTAL,
            ratTheory.RAT_ADD_LINV,ratTheory.RAT_ADD_RINV,
-           ratTheory.RAT_LES_LADD,ratTheory.RAT_LES_RADD]);
+           ratTheory.RAT_LES_LADD,ratTheory.RAT_LES_RADD]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::POSITIVE, DISK_THM] [axioms: ] []
@@ -1001,10 +1001,9 @@ val rational_implies2_defaxiom =
      |- |= implies (integerp x) (rationalp x),
 *)
 
-val integer_implies_rational_defaxiom =
- store_thm
-  ("integer_implies_rational_defaxiom",
-   ``|= implies (integerp x) (rationalp x)``,
+Theorem integer_implies_rational_defaxiom:
+     |= implies (integerp x) (rationalp x)
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC []
     THEN Cases_on `c`
@@ -1026,17 +1025,17 @@ val integer_implies_rational_defaxiom =
            ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
            rationalp_def,integerp_def,numerator_def,denominator_def,
            int_def,cpx_def,
-           t_def,nil_def,IS_INT_EXISTS]);
+           t_def,nil_def,IS_INT_EXISTS]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLEX-IMPLIES1, DISK_THM] [axioms: ] []
      |- |= andl [rationalp (realpart x); rationalp (imagpart x)],
 *)
 
-val complex_implies1_defaxiom =
- store_thm
-  ("complex_implies1_defaxiom",
-   ``|= andl [rationalp (realpart x); rationalp (imagpart x)]``,
+Theorem complex_implies1_defaxiom:
+     |= andl [rationalp (realpart x); rationalp (imagpart x)]
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC []
     THEN TRY(Cases_on `c`)
@@ -1058,7 +1057,8 @@ val complex_implies1_defaxiom =
            ratTheory.RAT_0,eq_imp_if,itel_def,T_NIL,ite_def,
            rationalp_def,integerp_def,numerator_def,denominator_def,
            int_def,cpx_def,realpart_def,imagpart_def,
-           t_def,nil_def,IS_INT_EXISTS]);
+           t_def,nil_def,IS_INT_EXISTS]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLEX-DEFINITION, DISK_THM] [axioms: ] []
@@ -1066,12 +1066,11 @@ val complex_implies1_defaxiom =
              (equal (complex x y) (add x (mult (cpx 0 1 1 1) y))),
 *)
 
-val complex_definition_defaxiom =
- store_thm
-  ("complex_definition_defaxiom",
-   ``|= implies
+Theorem complex_definition_defaxiom:
+     |= implies
           (andl [rationalp x; rationalp y])
-          (equal (complex x y) (add x (mult (cpx 0 1 1 1) y)))``,
+          (equal (complex x y) (add x (mult (cpx 0 1 1 1) y)))
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC []
     THEN TRY(Cases_on `c`)
@@ -1101,17 +1100,17 @@ val complex_definition_defaxiom =
           [ratTheory.RAT_MUL_RZERO,ratTheory.RAT_AINV_0,
            ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,
            GSYM fracTheory.frac_1_def,GSYM ratTheory.rat_1,
-           ratTheory.RAT_MUL_LID]);
+           ratTheory.RAT_MUL_LID]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::NONZERO-IMAGPART, DISK_THM] [axioms: ] []
      |- |= implies (complex_rationalp x) (not (equal (nat 0) (imagpart x))),
 *)
 
-val non_zero_imagpart_defaxiom =
- store_thm
-  ("non_zero_imagpart_defaxiom",
-   ``|= implies (complex_rationalp x) (not (equal (nat 0) (imagpart x)))``,
+Theorem non_zero_imagpart_defaxiom:
+     |= implies (complex_rationalp x) (not (equal (nat 0) (imagpart x)))
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC []
     THEN Cases_on `c`
@@ -1136,7 +1135,8 @@ val non_zero_imagpart_defaxiom =
            t_def,nil_def,IS_INT_EXISTS,
            complex_def,add_def,mult_def,complex_rationalp_def,
            nat_def,int_def,cpx_def]
-    THEN RW_TAC std_ss []);
+    THEN RW_TAC std_ss []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::REALPART-IMAGPART-ELIM] [axioms: ] []
@@ -1144,12 +1144,11 @@ val non_zero_imagpart_defaxiom =
              (equal (complex (realpart x) (imagpart x)) x),
 *)
 
-val realpart_imagpart_elim_defaxiom =
- store_thm
-  ("realpart_imagpart_elim_defaxiom",
-   ``|= implies
+Theorem realpart_imagpart_elim_defaxiom:
+     |= implies
          (acl2_numberp x)
-         (equal (complex (realpart x) (imagpart x)) x)``,
+         (equal (complex (realpart x) (imagpart x)) x)
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC []
     THEN Cases_on `c`
@@ -1174,7 +1173,8 @@ val realpart_imagpart_elim_defaxiom =
            t_def,nil_def,IS_INT_EXISTS,
            complex_def,add_def,mult_def,complex_rationalp_def,
            nat_def,int_def,cpx_def]
-    THEN RW_TAC std_ss []);
+    THEN RW_TAC std_ss []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::REALPART-COMPLEX, DISK_THM] [axioms: ] []
@@ -1182,12 +1182,11 @@ val realpart_imagpart_elim_defaxiom =
              (equal (realpart (complex x y)) x),
 *)
 
-val realpart_complex_defaxiom =
- store_thm
-  ("realpart_complex_defaxiom",
-   ``|= implies
+Theorem realpart_complex_defaxiom:
+     |= implies
          (andl [rationalp x; rationalp y])
-         (equal (realpart (complex x y)) x)``,
+         (equal (realpart (complex x y)) x)
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC []
     THEN Cases_on `c`
@@ -1213,7 +1212,8 @@ val realpart_complex_defaxiom =
            t_def,nil_def,IS_INT_EXISTS,
            complex_def,add_def,mult_def,complex_rationalp_def,
            nat_def,int_def,cpx_def]
-    THEN RW_TAC std_ss []);
+    THEN RW_TAC std_ss []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::IMAGPART-COMPLEX, DISK_THM] [axioms: ] []
@@ -1221,12 +1221,11 @@ val realpart_complex_defaxiom =
              (equal (imagpart (complex x y)) y),
 *)
 
-val imagpart_complex_defaxiom =
- store_thm
-  ("imagpart_complex_defaxiom",
-   ``|= implies
+Theorem imagpart_complex_defaxiom:
+     |= implies
          (andl [rationalp x; rationalp y])
-         (equal (imagpart (complex x y)) y)``,
+         (equal (imagpart (complex x y)) y)
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC []
     THEN Cases_on `c`
@@ -1252,7 +1251,8 @@ val imagpart_complex_defaxiom =
            t_def,nil_def,IS_INT_EXISTS,
            complex_def,add_def,mult_def,complex_rationalp_def,
            nat_def,int_def,cpx_def]
-    THEN RW_TAC std_ss []);
+    THEN RW_TAC std_ss []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::NONNEGATIVE-PRODUCT, DISK_THM] [axioms: ] []
@@ -1260,12 +1260,11 @@ val imagpart_complex_defaxiom =
              (andl [rationalp (mult x x); not (less (mult x x) (nat 0))]),
 *)
 
-val nonnegative_product_defaxiom =
- store_thm
-  ("nonnegative_product_defaxiom",
-   ``|= implies
+Theorem nonnegative_product_defaxiom:
+     |= implies
          (rationalp x)
-         (andl [rationalp (mult x x); not (less (mult x x) (nat 0))])``,
+         (andl [rationalp (mult x x); not (less (mult x x) (nat 0))])
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC []
     THEN Cases_on `c`
@@ -1296,38 +1295,39 @@ val nonnegative_product_defaxiom =
            ratTheory.RAT_ADD_LID,ratTheory.RAT_ADD_RID,
            GSYM fracTheory.frac_1_def,GSYM ratTheory.rat_1,
            ratTheory.RAT_MUL_LID,ratTheory.RAT_MUL_LZERO]
-    THEN METIS_TAC[RAT_SQ_NONNEG,ratTheory.RAT_LEQ_LES]);
+    THEN METIS_TAC[RAT_SQ_NONNEG,ratTheory.RAT_LEQ_LES]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::INTEGER-0, DISK_THM] [axioms: ] []
      |- |= integerp (nat 0),
 *)
 
-val integer_0_defaxiom =
- store_thm
-  ("integer_0_defaxiom",
-   ``|= integerp (nat 0)``,
+Theorem integer_0_defaxiom:
+     |= integerp (nat 0)
+Proof
    ACL2_SIMP_TAC
     [nat_def,int_def,cpx_def,
      translateTheory.IS_INT_EXISTS,
      sexpTheory.rat_def,ratTheory.rat_0_def,fracTheory.frac_0_def]
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::INTEGER-1, DISK_THM] [axioms: ] []
      |- |= integerp (nat 1),
 *)
 
-val integer_1_defaxiom =
- store_thm
-  ("integer_1_defaxiom",
-   ``|= integerp (nat 1)``,
+Theorem integer_1_defaxiom:
+     |= integerp (nat 1)
+Proof
    ACL2_SIMP_TAC
     [nat_def,int_def,cpx_def,
      translateTheory.IS_INT_EXISTS,
      sexpTheory.rat_def,ratTheory.rat_0_def,ratTheory.rat_1_def,
      fracTheory.frac_0_def,fracTheory.frac_1_def]
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::INTEGER-STEP, DISK_THM] [axioms: ] []
@@ -1335,12 +1335,11 @@ val integer_1_defaxiom =
              (andl [integerp (add x (nat 1)); integerp (add x (int ~1))]),
 *)
 
-val integer_step_defaxiom =
- store_thm
-  ("integer_step_defaxiom",
-   ``|= implies
+Theorem integer_step_defaxiom:
+     |= implies
          (integerp x)
-         (andl [integerp (add x (nat 1)); integerp (add x (int ~1))])``,
+         (andl [integerp (add x (nat 1)); integerp (add x (int ~1))])
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC []
     THEN Cases_on `c`
@@ -1374,7 +1373,8 @@ val integer_step_defaxiom =
     THEN `!c'. ~(abs_rat (abs_frac (c + ~1,1)) = abs_rat (abs_frac (c',1)))`
           by METIS_TAC[]
     THEN FULL_SIMP_TAC intLib.int_ss
-          [ratTheory.RAT_EQ_CALCULATE,fracTheory.NMR,fracTheory.DNM]);
+          [ratTheory.RAT_EQ_CALCULATE,fracTheory.NMR,fracTheory.DNM]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::LOWEST-TERMS, DISK_THM] [axioms: ] []
@@ -1595,34 +1595,34 @@ val lowest_terms_defaxiom =
      |- |= implies (consp x) (equal (cons (car x) (cdr x)) x),
 *)
 
-val car_cdr_elim_defaxiom =
- store_thm
-  ("car_cdr_elim_defaxiom",
-   ``|= implies (consp x) (equal (cons (car x) (cdr x)) x)``,
+Theorem car_cdr_elim_defaxiom:
+     |= implies (consp x) (equal (cons (car x) (cdr x)) x)
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[]);
+    THEN ACL2_SIMP_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CAR-CONS] [axioms: ] []
      |- |= equal (car (cons x y)) x,
 *)
 
-val car_cons_defaxiom =
- store_thm
-  ("car_cons_defaxiom",
-   ``|= equal (car (cons x y)) x``,
-   ACL2_SIMP_TAC []);
+Theorem car_cons_defaxiom:
+     |= equal (car (cons x y)) x
+Proof
+   ACL2_SIMP_TAC []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CDR-CONS] [axioms: ] []
      |- |= equal (cdr (cons x y)) y,
 *)
 
-val cdr_cons_defaxiom =
- store_thm
-  ("cdr_cons_defaxiom",
-   ``|= equal (cdr (cons x y)) y``,
-   ACL2_SIMP_TAC []);
+Theorem cdr_cons_defaxiom:
+     |= equal (cdr (cons x y)) y
+Proof
+   ACL2_SIMP_TAC []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CONS-EQUAL, DISK_THM] [axioms: ] []
@@ -1630,59 +1630,59 @@ val cdr_cons_defaxiom =
              (andl [equal x1 x2; equal y1 y2]),
 *)
 
-val cons_equal_defaxiom =
- store_thm
-  ("cons_equal_defaxiom",
-   ``|= equal (equal (cons x1 y1) (cons x2 y2))
-              (andl [equal x1 x2; equal y1 y2])``,
+Theorem cons_equal_defaxiom:
+     |= equal (equal (cons x1 y1) (cons x2 y2))
+              (andl [equal x1 x2; equal y1 y2])
+Proof
    ACL2_SIMP_TAC []
-    THEN PROVE_TAC[sexp_11,T_NIL]);
+    THEN PROVE_TAC[sexp_11,T_NIL]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::BOOLEANP-CHARACTERP] [axioms: ] []
      |- |= booleanp (characterp x),
 *)
 
-val booleanp_characterp_defaxiom =
- store_thm
-  ("booleanp_characterp_defaxiom",
-   ``|= booleanp (characterp x)``,
+Theorem booleanp_characterp_defaxiom:
+     |= booleanp (characterp x)
+Proof
    ACL2_SIMP_TAC []
     THEN Cases_on `x`
-    THEN ACL2_FULL_SIMP_TAC[]);
+    THEN ACL2_FULL_SIMP_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CHARACTERP-PAGE] [axioms: ] []
      |- |= characterp (chr #"\f"),
 *)
 
-val characterp_page_defaxiom =
- store_thm
-  ("characterp_page_defaxiom",
-   ``|= characterp (chr #"\f")``,
-   ACL2_SIMP_TAC []);
+Theorem characterp_page_defaxiom:
+     |= characterp (chr #"\f")
+Proof
+   ACL2_SIMP_TAC []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CHARACTERP-TAB] [axioms: ] []
      |- |= characterp (chr #"\t"),
 *)
 
-val characterp_tab_defaxiom =
- store_thm
-  ("characterp_tab_defaxiom",
-   ``|= characterp (chr #"\t")``,
-   ACL2_SIMP_TAC []);
+Theorem characterp_tab_defaxiom:
+     |= characterp (chr #"\t")
+Proof
+   ACL2_SIMP_TAC []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CHARACTERP-RUBOUT] [axioms: ] []
      |- |= characterp (chr #"\127"),
 *)
 
-val characterp_rubout_defaxiom =
- store_thm
-  ("characterp_rubout_defaxiom",
-   ``|= characterp (chr #"\127")``,
-   ACL2_SIMP_TAC []);
+Theorem characterp_rubout_defaxiom:
+     |= characterp (chr #"\127")
+Proof
+   ACL2_SIMP_TAC []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COERCE-INVERSE-1, DISK_THM] [axioms: ] []
@@ -1711,12 +1711,11 @@ val list_EXPLODE_coerce =
 
 
 
-val coerce_inverse_1_defaxiom =
- store_thm
-  ("coerce_inverse_1_defaxiom",
-   ``|= implies
+Theorem coerce_inverse_1_defaxiom:
+     |= implies
           (character_listp x)
-          (equal (coerce (coerce x (csym "STRING")) (csym "LIST")) x)``,
+          (equal (coerce (coerce x (csym "STRING")) (csym "LIST")) x)
+Proof
    ONCE_REWRITE_TAC [character_listp_def]
     THEN RW_TAC std_ss
      [implies_def,ite_def,ACL2_TRUE,equal_def,atom_def,
@@ -1732,7 +1731,8 @@ val coerce_inverse_1_defaxiom =
     THEN RW_TAC std_ss
      [characterp_def,GSYM nil_def,EVAL ``t = nil``,make_character_list_def,
       coerce_list_to_string_def,stringTheory.EXPLODE_EQNS,list_to_sexp_def] THEN
-    METIS_TAC [ACL2_TRUE,list_EXPLODE_coerce]);
+    METIS_TAC [ACL2_TRUE,list_EXPLODE_coerce]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COERCE-INVERSE-2, DISK_THM] [axioms: ] []
@@ -1768,17 +1768,17 @@ val coerce_list_EXPLODE =
            stringTheory.EXPLODE_EQNS,list_to_sexp_def,
            stringTheory.EXPLODE_EQ_NIL,EVAL ``"STRING" = "LIST"``]);
 
-val coerce_inverse_2_defaxiom =
- store_thm
-  ("coerce_inverse_2_defaxiom",
-   ``|= implies
+Theorem coerce_inverse_2_defaxiom:
+     |= implies
          (stringp x)
-         (equal (coerce (coerce x (csym "LIST")) (csym "STRING")) x)``,
+         (equal (coerce (coerce x (csym "LIST")) (csym "STRING")) x)
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC
           [csym_def,COMMON_LISP_def,coerce_string_to_list_def,
            list_to_sexp_def,EVAL ``EXPLODE ""``]
-    THEN PROVE_TAC[coerce_list_EXPLODE,sexp_11,T_NIL]);
+    THEN PROVE_TAC[coerce_list_EXPLODE,sexp_11,T_NIL]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CHARACTER-LISTP-COERCE, DISK_THM] [axioms: ] []
@@ -1793,29 +1793,29 @@ val character_listp_list_to_sexp =
     THEN ACL2_SIMP_TAC[list_to_sexp_def]
     THEN ACL2_FULL_SIMP_TAC[ACL2_TRUE,nil_def]);
 
-val character_listp_coerce_defaxiom =
- store_thm
-  ("character_listp_coerce_defaxiom",
-   ``|= character_listp (coerce acl2_str (csym "LIST"))``,
+Theorem character_listp_coerce_defaxiom:
+     |= character_listp (coerce acl2_str (csym "LIST"))
+Proof
    Cases_on `acl2_str`
     THEN ACL2_SIMP_TAC
           [csym_def,COMMON_LISP_def,coerce_string_to_list_def,
            coerce_list_to_string_def,list_to_sexp_def,
            EVAL ``EXPLODE ""``,stringTheory.EXPLODE_EQNS,
            make_character_list_def]
-    THEN PROVE_TAC[character_listp_list_to_sexp,nil_def,ACL2_TRUE]);
+    THEN PROVE_TAC[character_listp_list_to_sexp,nil_def,ACL2_TRUE]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::STRINGP-SYMBOL-PACKAGE-NAME] [axioms: ] []
      |- |= stringp (symbol_package_name x),
 *)
 
-val stringp_symbol_package_name_defaxiom =
- store_thm
-  ("stringp_symbol_package_name_defaxiom",
-   ``|= stringp (symbol_package_name x)``,
+Theorem stringp_symbol_package_name_defaxiom:
+     |= stringp (symbol_package_name x)
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[]);
+    THEN ACL2_SIMP_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::SYMBOLP-INTERN-IN-PACKAGE-OF-SYMBOL] [axioms: ]
@@ -1849,15 +1849,15 @@ val LOOKUP_NIL =
   ("LOOKUP_NIL",
    time lookup_conv ``LOOKUP "COMMON-LISP" ACL2_PACKAGE_ALIST "NIL"``);
 
-val symbolp_intern_in_package_of_symbol_defaxiom =
- store_thm
-  ("symbolp_intern_in_package_of_symbol_defaxiom",
-   ``|= symbolp (intern_in_package_of_symbol x y)``,
+Theorem symbolp_intern_in_package_of_symbol_defaxiom:
+     |= symbolp (intern_in_package_of_symbol x y)
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC[BASIC_INTERN_def,LOOKUP_NIL]
     THEN METIS_TAC
            [GSYM t_def,GSYM nil_def,if_t_nil,VALID_ACL2_PACKAGE_ALIST,
-            LOOKUP_NOT_EMPTY_STRING,LOOKUP_IDEMPOTENT]);
+            LOOKUP_NOT_EMPTY_STRING,LOOKUP_IDEMPOTENT]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::SYMBOLP-PKG-WITNESS] [axioms: ] []
@@ -1879,10 +1879,9 @@ val symbolp_nil =
    ``~(symbolp nil = nil)``,
   RW_TAC std_ss [symbolp_def,nil_def,BASIC_INTERN_def,t_def,COND_EXPAND,sexp_11,LOOKUP_NIL]);
 
-val symbolp_pkg_witness_defaxiom =
- store_thm
-  ("symbolp_pkg_witness_defaxiom",
-   ``|= symbolp (pkg_witness x)``,
+Theorem symbolp_pkg_witness_defaxiom:
+     |= symbolp (pkg_witness x)
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC[]
     THEN FULL_SIMP_TAC std_ss [GSYM nil_def,markerTheory.Abbrev_def]
@@ -1894,7 +1893,8 @@ val symbolp_pkg_witness_defaxiom =
     THEN REWRITE_TAC []
     THEN Cases_on  `s = ""`
     THEN RW_TAC std_ss [symbolp_nil,GSYM nil_def]
-    THEN ASM_REWRITE_TAC [symbolp_def,BASIC_INTERN_def,EVAL ``t = nil``,sexp_11,LOOKUP_PKG_WITNESS]);
+    THEN ASM_REWRITE_TAC [symbolp_def,BASIC_INTERN_def,EVAL ``t = nil``,sexp_11,LOOKUP_PKG_WITNESS]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::INTERN-IN-PACKAGE-OF-SYMBOL-SYMBOL-NAME,
@@ -1907,14 +1907,13 @@ val symbolp_pkg_witness_defaxiom =
              (equal (intern_in_package_of_symbol (symbol_name x) y) x),
 *)
 
-val intern_in_package_of_symbol_symbol_name_defaxiom =
- store_thm
-  ("intern_in_package_of_symbol_symbol_name_defaxiom",
-   ``|= implies
+Theorem intern_in_package_of_symbol_symbol_name_defaxiom:
+     |= implies
          (andl
            [symbolp x;
             equal (symbol_package_name x) (symbol_package_name y)])
-         (equal (intern_in_package_of_symbol (symbol_name x) y) x)``,
+         (equal (intern_in_package_of_symbol (symbol_name x) y) x)
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC []
     THEN FULL_SIMP_TAC arith_ss
@@ -1924,7 +1923,8 @@ val intern_in_package_of_symbol_symbol_name_defaxiom =
     THEN ACL2_FULL_SIMP_TAC []
     THEN FULL_SIMP_TAC arith_ss
           [if_t_nil,sexp_11,if_eq_imp,BASIC_INTERN_def,T_NIL]
-    THEN METIS_TAC []);
+    THEN METIS_TAC []
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::SYMBOL-NAME-PKG-WITNESS] [axioms: ] []
@@ -1966,13 +1966,12 @@ axiom was revised to:
 
 *)
 
-val symbol_package_name_pkg_witness_name_defaxiom =
- store_thm
-  ("symbol_package_name_pkg_witness_name_defaxiom",
-   ``|= equal (symbol_package_name (pkg_witness pkg_name))
+Theorem symbol_package_name_pkg_witness_name_defaxiom:
+     |= equal (symbol_package_name (pkg_witness pkg_name))
               (ite (andl[stringp pkg_name;not (equal pkg_name (str ""))])
                    pkg_name
-                   (str ACL2))``,
+                   (str ACL2))
+Proof
    Cases_on `pkg_name`
     THEN ACL2_SIMP_TAC[BASIC_INTERN_def,ACL2_def]
     THEN FULL_SIMP_TAC arith_ss
@@ -1982,7 +1981,8 @@ val symbol_package_name_pkg_witness_name_defaxiom =
     THEN REPEAT (POP_ASSUM MP_TAC)
     THEN RW_TAC std_ss
           [symbol_name_def,symbolp_def,if_t_nil,BASIC_INTERN_def,
-           symbol_package_name_def,LOOKUP_PKG_WITNESS,EVAL ``t = nil``,ite_def]);
+           symbol_package_name_def,LOOKUP_PKG_WITNESS,EVAL ``t = nil``,ite_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::SYMBOL-NAME-INTERN-IN-PACKAGE-OF-SYMBOL,
@@ -1993,14 +1993,13 @@ val symbol_package_name_pkg_witness_name_defaxiom =
                 s),
 *)
 
-val symbol_name_intern_in_package_of_symbol_defaxiom =
- store_thm
-  ("symbol_name_intern_in_package_of_symbol_defaxiom",
-   ``|= implies
+Theorem symbol_name_intern_in_package_of_symbol_defaxiom:
+     |= implies
           (andl [stringp s; symbolp any_symbol])
           (equal
             (symbol_name (intern_in_package_of_symbol s any_symbol))
-            s)``,
+            s)
+Proof
    Cases_on `s` THEN Cases_on `any_symbol`
     THEN ACL2_SIMP_TAC[]
     THEN FULL_SIMP_TAC arith_ss
@@ -2009,7 +2008,8 @@ val symbol_name_intern_in_package_of_symbol_defaxiom =
           [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def]
     THEN METIS_TAC
           [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
-           LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT]);
+           LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::ACL2-INPUT-CHANNEL-PACKAGE, DISK_THM]
@@ -2027,15 +2027,14 @@ val LOOKUP_INPUT =
   ("LOOKUP_INPUT",
    time lookup_conv ``LOOKUP "ACL2-INPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
 
-val acl2_input_channel_package_defaxiom =
- store_thm
-  ("acl2_input_channel_package_defaxiom",
-   ``|= implies
+Theorem acl2_input_channel_package_defaxiom:
+     |= implies
          (andl
            [stringp x; symbolp y;
             equal (symbol_package_name y) (str "ACL2-INPUT-CHANNEL")])
          (equal (symbol_package_name (intern_in_package_of_symbol x y))
-                (str "ACL2-INPUT-CHANNEL"))``,
+                (str "ACL2-INPUT-CHANNEL"))
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC[]
     THEN FULL_SIMP_TAC arith_ss
@@ -2045,7 +2044,8 @@ val acl2_input_channel_package_defaxiom =
     THEN RW_TAC std_ss []
     THEN ACL2_FULL_SIMP_TAC
           [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
-           LOOKUP_INPUT]);
+           LOOKUP_INPUT]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::ACL2-OUTPUT-CHANNEL-PACKAGE, DISK_THM]
@@ -2063,15 +2063,14 @@ val LOOKUP_OUTPUT =
   ("LOOKUP_OUTPUT",
    time lookup_conv ``LOOKUP "ACL2-OUTPUT-CHANNEL" ACL2_PACKAGE_ALIST s0``);
 
-val acl2_output_channel_package_defaxiom =
- store_thm
-  ("acl2_output_channel_package_defaxiom",
-   ``|= implies
+Theorem acl2_output_channel_package_defaxiom:
+     |= implies
          (andl
            [stringp x; symbolp y;
             equal (symbol_package_name y) (str ACL2_OUTPUT_CHANNEL)])
          (equal (symbol_package_name (intern_in_package_of_symbol x y))
-                (str ACL2_OUTPUT_CHANNEL))``,
+                (str ACL2_OUTPUT_CHANNEL))
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC[ACL2_OUTPUT_CHANNEL_def]
     THEN FULL_SIMP_TAC arith_ss
@@ -2081,7 +2080,8 @@ val acl2_output_channel_package_defaxiom =
     THEN RW_TAC std_ss []
     THEN ACL2_FULL_SIMP_TAC
           [if_eq_imp,sexp_11,LET_DEF,LOOKUP_PKG_WITNESS,BASIC_INTERN_def,
-           LOOKUP_OUTPUT]);
+           LOOKUP_OUTPUT]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::ACL2-PACKAGE, DISK_THM] [axioms: ] []
@@ -2679,10 +2679,8 @@ val conspList =
    ``|= consp(List(x :: l))``,
    ACL2_SIMP_TAC[List_def]);
 
-val acl2_package_defaxiom =
- store_thm
-  ("acl2_package_defaxiom",
-   ``|= implies
+Theorem acl2_package_defaxiom:
+     |= implies
              (andl
                 [stringp x;
                  not
@@ -3182,7 +3180,8 @@ val acl2_package_defaxiom =
                           csym "YES-OR-NO-P"; csym "VALUES"; csym "ZEROP"]));
                  symbolp y; equal (symbol_package_name y) (str ACL2)])
              (equal (symbol_package_name (intern_in_package_of_symbol x y))
-                (str ACL2))``,
+                (str ACL2))
+Proof
    RW_TAC std_ss
     [GSYM COMMON_LISP_SYMBOLS,t_def,nil_def,GSYM csym_def,GSYM COMMON_LISP_def,KEYWORD_def]
     THEN Cases_on `x` THEN Cases_on `y`
@@ -3202,7 +3201,8 @@ val acl2_package_defaxiom =
           [VALID_ACL2_PACKAGE_ALIST,LOOKUP_NOT_EMPTY_STRING,
            LOOKUP_PKG_WITNESS,LOOKUP_IDEMPOTENT,
            pkg_thm_for_initial_pkg_system_lemma,
-           prove(``"ACL2" <> ""``,RW_TAC std_ss [])]);
+           prove(``"ACL2" <> ""``,RW_TAC std_ss [])]
+QED
 
 (*****************************************************************************)
 (* val LOOKUP_EMPTY = |- LOOKUP "" ACL2_PACKAGE_ALIST s = "" : thm           *)
@@ -3225,15 +3225,14 @@ val LOOKUP_KEYWORD =
   ("LOOKUP_KEYWORD",
    time lookup_conv ``LOOKUP "KEYWORD" ACL2_PACKAGE_ALIST s``);
 
-val keyword_package_defaxiom =
- store_thm
-  ("keyword_package_defaxiom",
-   ``|= implies
+Theorem keyword_package_defaxiom:
+     |= implies
          (andl
            [stringp x; symbolp y;
             equal (symbol_package_name y) (str KEYWORD)])
           (equal (symbol_package_name (intern_in_package_of_symbol x y))
-                 (str KEYWORD))``,
+                 (str KEYWORD))
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC[BASIC_INTERN_def]
     THEN FULL_SIMP_TAC std_ss
@@ -3244,7 +3243,8 @@ val keyword_package_defaxiom =
     THEN ACL2_FULL_SIMP_TAC[]
     THEN FULL_SIMP_TAC std_ss
           [BASIC_INTERN_def,GSYM t_def,GSYM nil_def,if_t_nil,EVAL``"KEYWORD" = ""``,
-           LOOKUP_KEYWORD,EVAL ``t = nil``]);
+           LOOKUP_KEYWORD,EVAL ``t = nil``]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::STRING-IS-NOT-CIRCULAR, DISK_THM] [axioms: ] []
@@ -3385,10 +3385,9 @@ val reduce_int =
     THEN `ABS 1 = 1` by Cooper.COOPER_TAC
     THEN FULL_SIMP_TAC std_ss [integerTheory.NUM_OF_INT,gcd1,integerTheory.INT_DIV_1]);
 
-val char_code_linear_defaxiom =
- store_thm
-  ("char_code_linear_defaxiom",
-   ``|= less (char_code x) (nat 256)``,
+Theorem char_code_linear_defaxiom:
+     |= less (char_code x) (nat 256)
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC[nat_def,int_def,cpx_def]
     THEN FULL_SIMP_TAC intLib.int_ss
@@ -3430,17 +3429,17 @@ val char_code_linear_defaxiom =
            SIMP_RULE intLib.int_ss [] (Q.SPEC `(256,1)`      (CONJUNCT2 fracTheory.frac_bij)),
            SIMP_RULE intLib.int_ss [] (Q.SPEC `(&(ORD c),1)` (CONJUNCT2 fracTheory.frac_bij))]
     THEN `ORD c < 256` by PROVE_TAC[stringTheory.ORD_BOUND]
-    THEN Cooper.COOPER_TAC);
+    THEN Cooper.COOPER_TAC
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CODE-CHAR-TYPE] [axioms: ] []
      |- |= characterp (code_char n),
 *)
 
-val code_char_type_defaxiom =
- store_thm
-  ("code_char_type_defaxiom",
-   ``|= characterp (code_char n)``,
+Theorem code_char_type_defaxiom:
+     |= characterp (code_char n)
+Proof
    Cases_on `n`
     THEN ACL2_SIMP_TAC[nat_def,int_def,cpx_def]
     THEN Cases_on `c`
@@ -3478,17 +3477,17 @@ val code_char_type_defaxiom =
            nat_def,int_def,cpx_def,code_char_def]
     THEN Cases_on `r0 = 0`
     THEN RW_TAC intLib.int_ss []
-    THEN ACL2_FULL_SIMP_TAC[]);
+    THEN ACL2_FULL_SIMP_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CODE-CHAR-CHAR-CODE-IS-IDENTITY] [axioms: ] []
      |- |= implies (force (characterp c)) (equal (code_char (char_code c)) c),
 *)
 
-val code_char_char_code_is_identity_defaxiom =
- store_thm
-  ("code_char_char_code_is_identity_defaxiom",
-   ``|= implies (force (characterp c)) (equal (code_char (char_code c)) c)``,
+Theorem code_char_char_code_is_identity_defaxiom:
+     |= implies (force (characterp c)) (equal (code_char (char_code c)) c)
+Proof
    Cases_on `c`
     THEN ACL2_SIMP_TAC[nat_def,int_def,cpx_def,force_def]
     THEN Cases_on `c' = CHR 0`
@@ -3506,7 +3505,8 @@ val code_char_char_code_is_identity_defaxiom =
     THEN FULL_SIMP_TAC intLib.int_ss
           [ratTheory.rat_nmr_def,ratTheory.rat_dnm_def,
            fracTheory.frac_nmr_def,fracTheory.frac_dnm_def,if_eq_imp]
-    THEN METIS_TAC[]);
+    THEN METIS_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::CHAR-CODE-CODE-CHAR-IS-IDENTITY, DISK_THM]
@@ -3573,15 +3573,15 @@ val char_code_code_char_is_identity_defaxiom =
                  (acl2_numberp y,y)] (nat 0)),
 *)
 
-val completion_of_plus_defaxiom =
- store_thm
-  ("completion_of_plus_defaxiom",
-   ``|= equal (add x y)
+Theorem completion_of_plus_defaxiom:
+     |= equal (add x y)
               (itel
                 [(acl2_numberp x,ite (acl2_numberp y) (add x y) x);
-                 (acl2_numberp y,y)] (nat 0))``,
+                 (acl2_numberp y,y)] (nat 0))
+Proof
    Cases_on `x` THEN Cases_on `y`
-    THEN ACL2_SIMP_TAC [itel_def,int_def,cpx_def,nat_def]);
+    THEN ACL2_SIMP_TAC [itel_def,int_def,cpx_def,nat_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-*, DISK_THM] [axioms: ] []
@@ -3590,15 +3590,15 @@ val completion_of_plus_defaxiom =
                 (nat 0)),
 *)
 
-val completion_of_star_defaxiom =
- store_thm
-  ("completion_of_star_defaxiom",
-   ``|= equal (mult x y)
+Theorem completion_of_star_defaxiom:
+     |= equal (mult x y)
               (ite (acl2_numberp x)
                    (ite (acl2_numberp y) (mult x y) (nat 0))
-                   (nat 0))``,
+                   (nat 0))
+Proof
    Cases_on `x` THEN Cases_on `y`
-    THEN ACL2_SIMP_TAC [itel_def,int_def,cpx_def,nat_def]);
+    THEN ACL2_SIMP_TAC [itel_def,int_def,cpx_def,nat_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-UNARY-MINUS, DISK_THM] [axioms: ]
@@ -3607,13 +3607,13 @@ val completion_of_star_defaxiom =
              (ite (acl2_numberp x) (unary_minus x) (nat 0)),
 *)
 
-val completion_of_unary_minus_defaxiom =
- store_thm
-  ("completion_of_unary_minus_defaxiom",
-   ``|= equal (unary_minus x)
-              (ite (acl2_numberp x) (unary_minus x) (nat 0))``,
+Theorem completion_of_unary_minus_defaxiom:
+     |= equal (unary_minus x)
+              (ite (acl2_numberp x) (unary_minus x) (nat 0))
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC [itel_def,int_def,cpx_def,nat_def]);
+    THEN ACL2_SIMP_TAC [itel_def,int_def,cpx_def,nat_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-UNARY-/, DISK_THM] [axioms: ] []
@@ -3622,19 +3622,19 @@ val completion_of_unary_minus_defaxiom =
                 (reciprocal x) (nat 0)),
 *)
 
-val completion_of_unary_slash_defaxiom =
- store_thm
-  ("completion_of_unary_slash_defaxiom",
-   ``|= equal (reciprocal x)
+Theorem completion_of_unary_slash_defaxiom:
+     |= equal (reciprocal x)
               (ite (andl [acl2_numberp x; not (equal x (nat 0))])
                    (reciprocal x)
-                   (nat 0))``,
+                   (nat 0))
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC [itel_def,int_def,cpx_def,nat_def]
     THEN FULL_SIMP_TAC std_ss
           [GSYM t_def,GSYM nil_def,if_t_nil,
            com_0_def,ratTheory.RAT_0,sexpTheory.rat_def,
-           GSYM ratTheory.rat_0_def,GSYM fracTheory.frac_0_def]);
+           GSYM ratTheory.rat_0_def,GSYM fracTheory.frac_0_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-<, DISK_THM] [axioms: ] []
@@ -3682,36 +3682,36 @@ val completion_of_less_defaxiom =
      |- |= equal (car x) (andl [consp x; car x]),
 *)
 
-val completion_of_car_defaxiom =
- store_thm
-  ("completion_of_car_defaxiom",
-   ``|= equal (car x) (andl [consp x; car x])``,
+Theorem completion_of_car_defaxiom:
+     |= equal (car x) (andl [consp x; car x])
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[]);
+    THEN ACL2_SIMP_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-CDR, DISK_THM] [axioms: ] []
      |- |= equal (cdr x) (andl [consp x; cdr x]),
 *)
 
-val completion_of_cdr_defaxiom =
- store_thm
-  ("completion_of_cdr_defaxiom",
-   ``|= equal (cdr x) (andl [consp x; cdr x])``,
+Theorem completion_of_cdr_defaxiom:
+     |= equal (cdr x) (andl [consp x; cdr x])
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[]);
+    THEN ACL2_SIMP_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-CHAR-CODE, DISK_THM] [axioms: ]
      [] |- |= equal (char_code x) (ite (characterp x) (char_code x) (nat 0)),
 *)
 
-val completion_of_char_code_defaxiom =
- store_thm
-  ("completion_of_char_code_defaxiom",
-   ``|= equal (char_code x) (ite (characterp x) (char_code x) (nat 0))``,
+Theorem completion_of_char_code_defaxiom:
+     |= equal (char_code x) (ite (characterp x) (char_code x) (nat 0))
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[nat_def]);
+    THEN ACL2_SIMP_TAC[nat_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-CODE-CHAR, DISK_THM] [axioms: ]
@@ -3729,14 +3729,13 @@ val RAT_LEQ_ANTISYM_EQ = (* Not used *)
     THEN EQ_TAC
     THEN RW_TAC std_ss [ratTheory.RAT_LEQ_REF,ratTheory.RAT_LEQ_ANTISYM]);
 
-val completion_of_code_char_defaxiom =
- store_thm
-  ("completion_of_code_char_defaxiom",
-   ``|= equal
+Theorem completion_of_code_char_defaxiom:
+     |= equal
          (code_char x)
          (ite (andl [integerp x; not (less x (nat 0)); less x (nat 256)])
               (code_char x)
-              (code_char (nat 0)))``,
+              (code_char (nat 0)))
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC[nat_def,int_def,cpx_def]
     THEN FULL_SIMP_TAC intLib.int_ss
@@ -3775,7 +3774,8 @@ val completion_of_code_char_defaxiom =
           [reduced_nmr_def,abs_rat_reduce_pos,reduce_int,abs_less,
            GSYM ratTheory.RAT_0,ratTheory.rat_0_def,fracTheory.frac_0_def]
     THEN `~(c < 0)` by Cooper.COOPER_TAC
-    THEN METIS_TAC[]);
+    THEN METIS_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-COMPLEX, DISK_THM] [axioms: ] []
@@ -3784,13 +3784,12 @@ val completion_of_code_char_defaxiom =
                 (ite (rationalp y) y (nat 0))),
 *)
 
-val completion_of_complex_defaxiom =
- store_thm
-  ("completion_of_complex_defaxiom",
-   ``|= equal
+Theorem completion_of_complex_defaxiom:
+     |= equal
          (complex x y)
          (complex (ite (rationalp x) x (nat 0))
-                  (ite (rationalp y) y (nat 0)))``,
+                  (ite (rationalp y) y (nat 0)))
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC[nat_def,int_def,cpx_def]
     THEN FULL_SIMP_TAC intLib.int_ss
@@ -3833,7 +3832,8 @@ val completion_of_complex_defaxiom =
     THEN Cases_on `r0' = 0`
     THEN RW_TAC intLib.int_ss []
     THEN FULL_SIMP_TAC intLib.int_ss
-          [complex_def,sexp_11,ratTheory.RAT_0]);
+          [complex_def,sexp_11,ratTheory.RAT_0]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-COERCE, DISK_THM] [axioms: ] []
@@ -3920,14 +3920,13 @@ val coerce_list_coerce_list_list =
        ite_def,itel_def,cdr_def,car_def,nat_def,code_char_zero,
        atom_def,not_def,consp_def,characterp_def,t_def]);
 
-val completion_of_coerce_defaxiom =
- store_thm
-  ("completion_of_coerce_defaxiom",
-   ``|= equal (coerce x y)
+Theorem completion_of_coerce_defaxiom:
+     |= equal (coerce x y)
               (ite
                 (equal y (csym "LIST"))
                 (andl [stringp x; coerce x (csym "LIST")])
-                (coerce (acl2_make_character_list x) (csym "STRING")))``,
+                (coerce (acl2_make_character_list x) (csym "STRING")))
+Proof
   RW_TAC std_ss
    [equal_def,ACL2_TRUE,if_t_nil,ite_def,csym_def,COMMON_LISP_def,EVAL ``t = nil``,andl_def]
    THEN Cases_on `x`
@@ -3941,7 +3940,8 @@ val completion_of_coerce_defaxiom =
    THEN RW_TAC std_ss
     [car_def,cdr_def,characterp_def,nat_def,code_char_zero,coerce_def,
      make_character_list_def,coerce_list_to_string_def,
-     coerce_list_coerce_list_list,EVAL ``t = nil``]);
+     coerce_list_coerce_list_list,EVAL ``t = nil``]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-DENOMINATOR, DISK_THM] [axioms: ]
@@ -3949,28 +3949,28 @@ val completion_of_coerce_defaxiom =
      |- |= equal (denominator x) (ite (rationalp x) (denominator x) (nat 1)),
 *)
 
-val completion_of_denominator_defaxiom =
- store_thm
-  ("completion_of_denominator_defaxiom",
-   ``|= equal (denominator x) (ite (rationalp x) (denominator x) (nat 1))``,
+Theorem completion_of_denominator_defaxiom:
+     |= equal (denominator x) (ite (rationalp x) (denominator x) (nat 1))
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC[nat_def]
     THEN Cases_on `c`
     THEN ACL2_FULL_SIMP_TAC[nat_def]
     THEN Cases_on `r0 = rat_0`
-    THEN ACL2_FULL_SIMP_TAC[nat_def]);
+    THEN ACL2_FULL_SIMP_TAC[nat_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-IMAGPART, DISK_THM] [axioms: ] []
      |- |= equal (imagpart x) (ite (acl2_numberp x) (imagpart x) (nat 0)),
 *)
 
-val completion_of_imagpart_defaxiom =
- store_thm
-  ("completion_of_imagpart_defaxiom",
-   ``|= equal (imagpart x) (ite (acl2_numberp x) (imagpart x) (nat 0))``,
+Theorem completion_of_imagpart_defaxiom:
+     |= equal (imagpart x) (ite (acl2_numberp x) (imagpart x) (nat 0))
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[nat_def]);
+    THEN ACL2_SIMP_TAC[nat_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-INTERN-IN-PACKAGE-OF-SYMBOL,
@@ -3980,41 +3980,41 @@ val completion_of_imagpart_defaxiom =
              (andl [stringp x; symbolp y; intern_in_package_of_symbol x y]),
 *)
 
-val completion_of_intern_in_package_of_symbol_defaxiom =
- store_thm
-  ("completion_of_intern_in_package_of_symbol_defaxiom",
-   ``|= equal (intern_in_package_of_symbol x y)
-              (andl [stringp x; symbolp y; intern_in_package_of_symbol x y])``,
+Theorem completion_of_intern_in_package_of_symbol_defaxiom:
+     |= equal (intern_in_package_of_symbol x y)
+              (andl [stringp x; symbolp y; intern_in_package_of_symbol x y])
+Proof
    Cases_on `x` THEN Cases_on `y`
-    THEN ACL2_SIMP_TAC[]);
+    THEN ACL2_SIMP_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-NUMERATOR, DISK_THM] [axioms: ]
      [] |- |= equal (numerator x) (ite (rationalp x) (numerator x) (nat 0)),
 *)
 
-val completion_of_numerator_defaxiom =
- store_thm
-  ("completion_of_numerator_defaxiom",
-   ``|= equal (numerator x) (ite (rationalp x) (numerator x) (nat 0))``,
+Theorem completion_of_numerator_defaxiom:
+     |= equal (numerator x) (ite (rationalp x) (numerator x) (nat 0))
+Proof
    Cases_on `x`
     THEN ACL2_SIMP_TAC[nat_def]
     THEN Cases_on `c`
     THEN ACL2_FULL_SIMP_TAC[nat_def]
     THEN Cases_on `r0 = rat_0`
-    THEN ACL2_FULL_SIMP_TAC[nat_def]);
+    THEN ACL2_FULL_SIMP_TAC[nat_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-REALPART, DISK_THM] [axioms: ] []
      |- |= equal (realpart x) (ite (acl2_numberp x) (realpart x) (nat 0)),
 *)
 
-val completion_of_realpart_defaxiom =
- store_thm
-  ("completion_of_realpart_defaxiom",
-   ``|= equal (realpart x) (ite (acl2_numberp x) (realpart x) (nat 0))``,
+Theorem completion_of_realpart_defaxiom:
+     |= equal (realpart x) (ite (acl2_numberp x) (realpart x) (nat 0))
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[nat_def]);
+    THEN ACL2_SIMP_TAC[nat_def]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-SYMBOL-NAME, DISK_THM] [axioms: ]
@@ -4022,12 +4022,12 @@ val completion_of_realpart_defaxiom =
      |- |= equal (symbol_name x) (ite (symbolp x) (symbol_name x) (str "")),
 *)
 
-val completion_of_symbol_name_defaxiom =
- store_thm
-  ("completion_of_symbol_name_defaxiom",
-   ``|= equal (symbol_name x) (ite (symbolp x) (symbol_name x) (str ""))``,
+Theorem completion_of_symbol_name_defaxiom:
+     |= equal (symbol_name x) (ite (symbolp x) (symbol_name x) (str ""))
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[]);
+    THEN ACL2_SIMP_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::COMPLETION-OF-SYMBOL-PACKAGE-NAME, DISK_THM]
@@ -4036,13 +4036,13 @@ val completion_of_symbol_name_defaxiom =
              (ite (symbolp x) (symbol_package_name x) (str "")),
 *)
 
-val completion_of_symbol_package_name_defaxiom =
- store_thm
-  ("completion_of_symbol_package_name_defaxiom",
-   ``|= equal (symbol_package_name x)
-             (ite (symbolp x) (symbol_package_name x) (str ""))``,
+Theorem completion_of_symbol_package_name_defaxiom:
+     |= equal (symbol_package_name x)
+             (ite (symbolp x) (symbol_package_name x) (str ""))
+Proof
    Cases_on `x`
-    THEN ACL2_SIMP_TAC[]);
+    THEN ACL2_SIMP_TAC[]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::BOOLEANP-BAD-ATOM<=, DISK_THM] [axioms: ] []
@@ -4051,17 +4051,17 @@ val completion_of_symbol_package_name_defaxiom =
              (equal (bad_atom_less_equal x y) nil),
 *)
 
-val booleanp_bad_atom_less_equal_defaxiom =
- store_thm
-  ("booleanp_bad_atom_less_equal_defaxiom",
-   ``|= ite (equal (bad_atom_less_equal x y) t)
+Theorem booleanp_bad_atom_less_equal_defaxiom:
+     |= ite (equal (bad_atom_less_equal x y) t)
             (equal (bad_atom_less_equal x y) t)
-            (equal (bad_atom_less_equal x y) nil)``,
+            (equal (bad_atom_less_equal x y) nil)
+Proof
    Cases_on `x` THEN Cases_on `y`
     THEN ACL2_SIMP_TAC[SEXP_SYM_LESS_EQ_def,SEXP_SYM_LESS_def]
     THEN FULL_SIMP_TAC std_ss
           [GSYM nil_def, GSYM t_def, if_t_nil,
-           EVAL ``t = nil``, EVAL ``nil = t``]);
+           EVAL ``t = nil``, EVAL ``nil = t``]
+QED
 
 (*
      [oracles: DEFAXIOM ACL2::BAD-ATOM<=-ANTISYMMETRIC, DISK_THM] [axioms: ]

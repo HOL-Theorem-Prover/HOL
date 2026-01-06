@@ -126,13 +126,14 @@ val lisp_x_word_tree = prove(
 
 (* cons *)
 
-val lisp_inv_cons = store_thm("lisp_inv_cons",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (ww1,ww2,ww3,ww4,ww5,ww6,a,x,xs,sym,rest) ==>
+Theorem lisp_inv_cons:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (ww1,ww2,ww3,ww4,ww5,ww6,a,x,xs,sym,rest) ==>
     SUM_LSIZE [x1;x2;x3;x4;x5;x6] < limit ==>
     ?w1 w2 w3 w4 w5 w6 a' x' xs'.
     (arm_alloc (ww1,ww2,ww3,ww4,ww5,ww6,a,x,xs) = (w1,w2,w3,w4,w5,w6,a',x',xs')) /\
     lisp_inv (Dot x1 x2,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a',x',xs',sym,rest) /\
-    arm_alloc_pre (ww1,ww2,ww3,ww4,ww5,ww6,a,x,xs) /\ (a' = a) /\ (x' = x)``,
+    arm_alloc_pre (ww1,ww2,ww3,ww4,ww5,ww6,a,x,xs) /\ (a' = a) /\ (x' = x)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,SUM_LSIZE_def,ADD_ASSOC,LET_DEF]
   \\ REPEAT STRIP_TAC
   \\ Q.ABBREV_TAC `s = ch_active_set (a,if u then 1 + limit else 1,i)`
@@ -164,46 +165,59 @@ val lisp_inv_cons = store_thm("lisp_inv_cons",
   \\ STRIP_TAC
   \\ Q.PAT_X_ASSUM `a' = a` (fn th => FULL_SIMP_TAC std_ss [th])
   \\ Q.EXISTS_TAC `i'` \\ Q.EXISTS_TAC `u'`
-  \\ FULL_SIMP_TAC std_ss [word_tree_def,lisp_x_def] \\ METIS_TAC []);
+  \\ FULL_SIMP_TAC std_ss [word_tree_def,lisp_x_def] \\ METIS_TAC []
+QED
 
 
 (* swap *)
 
-val lisp_inv_swap1 = store_thm("lisp_inv_swap1",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+Theorem lisp_inv_swap1:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []);
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []
+QED
 
-val lisp_inv_swap2 = store_thm("lisp_inv_swap2",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (x2,x1,x3,x4,x5,x6,limit) (w2,w1,w3,w4,w5,w6,a,x,xs,s,rest)``,
+Theorem lisp_inv_swap2:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (x2,x1,x3,x4,x5,x6,limit) (w2,w1,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []);
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []
+QED
 
-val lisp_inv_swap3 = store_thm("lisp_inv_swap3",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (x3,x2,x1,x4,x5,x6,limit) (w3,w2,w1,w4,w5,w6,a,x,xs,s,rest)``,
+Theorem lisp_inv_swap3:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (x3,x2,x1,x4,x5,x6,limit) (w3,w2,w1,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []);
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []
+QED
 
-val lisp_inv_swap4 = store_thm("lisp_inv_swap4",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (x4,x2,x3,x1,x5,x6,limit) (w4,w2,w3,w1,w5,w6,a,x,xs,s,rest)``,
+Theorem lisp_inv_swap4:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (x4,x2,x3,x1,x5,x6,limit) (w4,w2,w3,w1,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []);
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []
+QED
 
-val lisp_inv_swap5 = store_thm("lisp_inv_swap5",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (x5,x2,x3,x4,x1,x6,limit) (w5,w2,w3,w4,w1,w6,a,x,xs,s,rest)``,
+Theorem lisp_inv_swap5:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (x5,x2,x3,x4,x1,x6,limit) (w5,w2,w3,w4,w1,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []);
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []
+QED
 
-val lisp_inv_swap6 = store_thm("lisp_inv_swap6",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (x6,x2,x3,x4,x5,x1,limit) (w6,w2,w3,w4,w5,w1,a,x,xs,s,rest)``,
+Theorem lisp_inv_swap6:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (x6,x2,x3,x4,x5,x1,limit) (w6,w2,w3,w4,w5,w1,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []);
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []
+QED
 
 fun find_swap_thm n =
   el n [lisp_inv_swap1,lisp_inv_swap2,lisp_inv_swap3,lisp_inv_swap4,lisp_inv_swap5,lisp_inv_swap6]
@@ -218,11 +232,13 @@ fun generate_swap i j =
 
 (* copy *)
 
-val lisp_inv_copy = store_thm("lisp_inv_copy",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (x1,x1,x3,x4,x5,x6,limit) (w1,w1,w3,w4,w5,w6,a,x,xs,s,rest)``,
+Theorem lisp_inv_copy:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (x1,x1,x3,x4,x5,x6,limit) (w1,w1,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []);
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss []
+QED
 
 fun generate_copy i j =
   if i = j then generate_swap 1 1 else
@@ -248,22 +264,25 @@ val lisp_inv_move = save_thm("lisp_inv_move",let
 
 (* assignments *)
 
-val lisp_inv_Val = store_thm("lisp_inv_Val",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+Theorem lisp_inv_Val:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
     !n. n < 2 ** 30 ==>
         lisp_inv (Val n,x2,x3,x4,x5,x6,limit)
-                 (n2w (n * 4 + 2),w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+                 (n2w (n * 4 + 2),w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
-  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss [lisp_x_def]);
+  \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u` \\ ASM_SIMP_TAC std_ss [lisp_x_def]
+QED
 
 
 (* car and cdr *)
 
-val lisp_inv_car_cdr = store_thm("lisp_inv_car_cdr",
-  ``lisp_inv (Dot y1 y2,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+Theorem lisp_inv_car_cdr:
+    lisp_inv (Dot y1 y2,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
     (w1 && 3w = 0w) /\ w1 IN x /\ w1 + 4w IN x /\
     lisp_inv (y1,x2,x3,x4,x5,x6,limit) (xs w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) /\
-    lisp_inv (y2,x2,x3,x4,x5,x6,limit) (xs (w1 + 4w),w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+    lisp_inv (y2,x2,x3,x4,x5,x6,limit) (xs (w1 + 4w),w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REVERSE (REPEAT STRIP_TAC)
   \\ FULL_SIMP_TAC std_ss [lisp_x_def,ALIGNED_INTRO]
   \\ REPEAT (Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`)
@@ -275,7 +294,8 @@ val lisp_inv_car_cdr = store_thm("lisp_inv_car_cdr",
     \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC,
     Q.EXISTS_TAC `2 * j`
     \\ SIMP_TAC std_ss [LEFT_ADD_DISTRIB,MULT_ASSOC]
-    \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC]);
+    \\ Cases_on `u` \\ FULL_SIMP_TAC std_ss [] \\ DECIDE_TAC]
+QED
 
 val lisp_inv_car_lemma = prove(
   ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==> isDot x1 ==>
@@ -394,20 +414,23 @@ val symbol_tabel_11 = prove(
      \\ METIS_TAC [WORD_LOWER_EQ_ANTISYM])
   \\ METIS_TAC [IN_DELETE,PAIR_EQ]);
 
-val symbol_table_MEM = store_thm("symbol_table_MEM",
-  ``!xs a sym. symbol_table xs sym (a,dm,m,dg,g) /\ (b,x) IN sym ==>
-               MEM x xs``,
+Theorem symbol_table_MEM:
+    !xs a sym. symbol_table xs sym (a,dm,m,dg,g) /\ (b,x) IN sym ==>
+               MEM x xs
+Proof
   Induct THEN1 SIMP_TAC std_ss [symbol_table_def,NOT_IN_EMPTY,LET_DEF]
   \\ REPEAT STRIP_TAC
   \\ `!y. (b,y) IN sym ==> (x = y)` by METIS_TAC [symbol_tabel_11]
   \\ Cases_on `b = a`
   \\ FULL_SIMP_TAC std_ss [symbol_table_def,MEM,LET_DEF]
-  \\ METIS_TAC [IN_DELETE,PAIR_EQ]);
+  \\ METIS_TAC [IN_DELETE,PAIR_EQ]
+QED
 
-val symbol_table_eq = store_thm("symbol_table_eq",
-  ``!xs sym a.
+Theorem symbol_table_eq:
+    !xs sym a.
       symbol_table xs sym (a,dm,m,dg,g) /\ ALL_DISTINCT xs ==>
-      (w1,s1) IN sym /\ (w2,s2) IN sym ==> ((w1 = w2) = (s1 = s2))``,
+      (w1,s1) IN sym /\ (w2,s2) IN sym ==> ((w1 = w2) = (s1 = s2))
+Proof
   Induct THEN1 SIMP_TAC std_ss [symbol_table_def,NOT_IN_EMPTY]
   \\ REWRITE_TAC [symbol_table_def]
   \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
@@ -427,7 +450,8 @@ val symbol_table_eq = store_thm("symbol_table_eq",
     \\ METIS_TAC [WORD_LOWER_NOT_EQ],
     `(w1 = a) /\ (s1 = h)` by (FULL_SIMP_TAC std_ss [IN_DELETE] \\ METIS_TAC [])
     \\ `(w2 = a) /\ (s2 = h)` by (FULL_SIMP_TAC std_ss [IN_DELETE] \\ METIS_TAC [])
-    \\ ASM_SIMP_TAC std_ss []]);
+    \\ ASM_SIMP_TAC std_ss []]
+QED
 
 val lisp_inv_eq_lemma = prove(
   ``(isVal x1 /\ isVal x2) \/ (isSym x1 /\ isSym x2) ==>
@@ -458,10 +482,11 @@ val lisp_inv_eq_lemma = prove(
   \\ REWRITE_TAC [WORD_SUB_ADD]
   \\ ASM_SIMP_TAC std_ss [WORD_EQ_ADD_RCANCEL]);
 
-val lisp_inv_eq = store_thm("lisp_inv_eq",
-  ``~isDot x1 \/ ~isDot x2 ==>
+Theorem lisp_inv_eq:
+    ~isDot x1 \/ ~isDot x2 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    ((x1 = x2) = (w1 = w2))``,
+    ((x1 = x2) = (w1 = w2))
+Proof
   STRIP_TAC THENL [
     Cases_on `x1` \\ FULL_SIMP_TAC std_ss [isDot_def]
     \\ Cases_on `x2` \\ STRIP_TAC \\ SIMP_TAC std_ss [SExp_distinct]
@@ -472,12 +497,14 @@ val lisp_inv_eq = store_thm("lisp_inv_eq",
     \\ Cases_on `x1` \\ STRIP_TAC \\ SIMP_TAC std_ss [SExp_distinct]
     \\ IMP_RES_TAC lisp_inv_test
     \\ FULL_SIMP_TAC std_ss [isVal_def,isSym_def,isDot_def]
-    \\ METIS_TAC [lisp_inv_eq_lemma,isVal_def,isSym_def]]);
+    \\ METIS_TAC [lisp_inv_eq_lemma,isVal_def,isSym_def]]
+QED
 
-val lisp_inv_eq_0 = store_thm("lisp_inv_eq_0",
-  ``!n. n < 2 ** 30 ==>
+Theorem lisp_inv_eq_0:
+    !n. n < 2 ** 30 ==>
         lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-        ((x1 = Val n) = (w1 = n2w (n * 4 + 2)))``,
+        ((x1 = Val n) = (w1 = n2w (n * 4 + 2)))
+Proof
   REPEAT STRIP_TAC
   \\ `lisp_inv (x1,x1,x3,x4,x5,x6,limit) (w1,w1,w3,w4,w5,w6,a,x,xs,s,rest)` by
       METIS_TAC [lisp_inv_move]
@@ -486,13 +513,14 @@ val lisp_inv_eq_0 = store_thm("lisp_inv_eq_0",
   \\ MATCH_MP_TAC (RW [AND_IMP_INTRO] lisp_inv_eq)
   \\ REWRITE_TAC [isDot_def]
   \\ (IMP_RES_TAC o DISCH ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest)`` o
-      MATCH_MP lisp_inv_swap2 o UNDISCH o Q.SPEC `n` o UNDISCH) lisp_inv_Val);
+      MATCH_MP lisp_inv_swap2 o UNDISCH o Q.SPEC `n` o UNDISCH) lisp_inv_Val
+QED
 
 
 (* symbol test *)
 
-val builti_symbols_thm = store_thm("builti_symbols_thm",
-  ``lisp_symbol_table s (sa,rest) ==>
+Theorem builti_symbols_thm:
+    lisp_symbol_table s (sa,rest) ==>
     (ADDR32 0w,"nil") IN s /\
     (ADDR32 3w,"t") IN s /\
     (ADDR32 6w,"quote") IN s /\
@@ -511,7 +539,8 @@ val builti_symbols_thm = store_thm("builti_symbols_thm",
     (ADDR32 48w,"consp") IN s /\
     (ADDR32 52w,"numberp") IN s /\
     (ADDR32 56w,"symbolp") IN s /\
-    (ADDR32 60w,"lambda") IN s``,
+    (ADDR32 60w,"lambda") IN s
+Proof
   `?dg g dm m. rest = (dm,m,dg,g)` by METIS_TAC [PAIR]
   \\ ASM_REWRITE_TAC [lisp_symbol_table_def]
   \\ POP_ASSUM (K ALL_TAC)
@@ -526,12 +555,14 @@ val builti_symbols_thm = store_thm("builti_symbols_thm",
   \\ NTAC 30 (SIMP_TAC std_ss [GSYM WORD_ADD_ASSOC,word_add_n2w]
   \\ ONCE_REWRITE_TAC [symbol_table_def]
   \\ SIMP_TAC std_ss [LENGTH,LET_DEF,IN_DELETE]
-  \\ SIMP_TAC std_ss [IN_DEF,set_add_def,WORD_ADD_SUB2,ADDR32_n2w]))
+  \\ SIMP_TAC std_ss [IN_DEF,set_add_def,WORD_ADD_SUB2,ADDR32_n2w])
+QED
 
-val lisp_symbol_table_11 = store_thm("lisp_symbol_table_11",
-  ``lisp_symbol_table s (sa,rest) /\
+Theorem lisp_symbol_table_11:
+    lisp_symbol_table s (sa,rest) /\
     (x1,s1) IN s /\ (x2,s2) IN s ==>
-    ((x1 = x2) = (s1 = s2))``,
+    ((x1 = x2) = (s1 = s2))
+Proof
   `?dg g dm m. rest = (dm,m,dg,g)` by METIS_TAC [PAIR]
   \\ ASM_REWRITE_TAC [lisp_symbol_table_def]
   \\ REPEAT STRIP_TAC
@@ -540,7 +571,8 @@ val lisp_symbol_table_11 = store_thm("lisp_symbol_table_11",
   \\ `(x2 + sa,s2) IN (set_add sa s)` by
        FULL_SIMP_TAC std_ss [IN_DEF,set_add_def,WORD_ADD_SUB]
   \\ IMP_RES_TAC symbol_table_eq
-  \\ METIS_TAC [WORD_EQ_ADD_RCANCEL,ADDR32_11]);
+  \\ METIS_TAC [WORD_EQ_ADD_RCANCEL,ADDR32_11]
+QED
 
 val lisp_symbol_table_11_ADDR32 = prove(
   ``lisp_symbol_table s (sa,rest) /\
@@ -605,32 +637,38 @@ val lisp_inv_builtin = save_thm("lisp_inv_builtin",
   SIMP_RULE std_ss [ADDR32_n2w,word_add_n2w]
   lisp_inv_test_builtin_lemma);
 
-val lisp_inv_nil = store_thm("lisp_inv_nil",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (Sym "nil",x2,x3,x4,x5,x6,limit) (3w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+Theorem lisp_inv_nil:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (Sym "nil",x2,x3,x4,x5,x6,limit) (3w,w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
   \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`
   \\ ASM_SIMP_TAC std_ss [lisp_x_def,ALIGNED_INTRO,word_arith_lemma2,
        ALIGNED_n2w] \\ IMP_RES_TAC builti_symbols_thm
-  \\ FULL_SIMP_TAC std_ss [ADDR32_n2w]);
+  \\ FULL_SIMP_TAC std_ss [ADDR32_n2w]
+QED
 
-val lisp_inv_t = store_thm("lisp_inv_t",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (Sym "t",x2,x3,x4,x5,x6,limit) (15w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+Theorem lisp_inv_t:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (Sym "t",x2,x3,x4,x5,x6,limit) (15w,w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
   \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`
   \\ ASM_SIMP_TAC std_ss [lisp_x_def,ALIGNED_INTRO,word_arith_lemma2,
        ALIGNED_n2w] \\ IMP_RES_TAC builti_symbols_thm
-  \\ FULL_SIMP_TAC std_ss [ADDR32_n2w]);
+  \\ FULL_SIMP_TAC std_ss [ADDR32_n2w]
+QED
 
-val lisp_inv_quote = store_thm("lisp_inv_quote",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (Sym "quote",x2,x3,x4,x5,x6,limit) (27w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+Theorem lisp_inv_quote:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
+    lisp_inv (Sym "quote",x2,x3,x4,x5,x6,limit) (27w,w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [lisp_inv_def,LET_DEF] \\ REPEAT STRIP_TAC
   \\ Q.EXISTS_TAC `i` \\ Q.EXISTS_TAC `u`
   \\ ASM_SIMP_TAC std_ss [lisp_x_def,ALIGNED_INTRO,word_arith_lemma2,
        ALIGNED_n2w] \\ IMP_RES_TAC builti_symbols_thm
-  \\ FULL_SIMP_TAC std_ss [ADDR32_n2w]);
+  \\ FULL_SIMP_TAC std_ss [ADDR32_n2w]
+QED
 
 
 (* basic arithmetic *)
@@ -648,30 +686,35 @@ val isVal_TAC =
   \\ IMP_RES_TAC (DISCH_ALL (MATCH_MP lisp_inv_read_Val
         (UNDISCH (Q.INST [`x2`|->`Val n`] lisp_inv_swap2))))
 
-val lisp_inv_ADD = store_thm("lisp_inv_ADD",
-  ``isVal x1 /\ isVal x2 /\ getVal x1 + getVal x2 < 2**30 ==>
+Theorem lisp_inv_ADD:
+    isVal x1 /\ isVal x2 /\ getVal x1 + getVal x2 < 2**30 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (LISP_ADD x1 x2,x2,x3,x4,x5,x6,limit) (w1+w2-2w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+    lisp_inv (LISP_ADD x1 x2,x2,x3,x4,x5,x6,limit) (w1+w2-2w,w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   isVal_TAC
   \\ ASM_REWRITE_TAC [LISP_ADD_def,GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_ADD_SUB]
   \\ ASM_REWRITE_TAC [word_add_n2w,DECIDE ``4*m+2+4*n = (m+n) * 4 + 2:num``]
   \\ (MATCH_MP_TAC o RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH) lisp_inv_Val
-  \\ SIMP_TAC std_ss [] \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [] \\ METIS_TAC []
+QED
 
-val lisp_inv_ADD1 = store_thm("lisp_inv_ADD1",
-  ``isVal x1 /\ getVal x1 + 1 < 2**30 ==>
+Theorem lisp_inv_ADD1:
+    isVal x1 /\ getVal x1 + 1 < 2**30 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (LISP_ADD x1 (Val 1),x2,x3,x4,x5,x6,limit) (w1 + 4w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+    lisp_inv (LISP_ADD x1 (Val 1),x2,x3,x4,x5,x6,limit) (w1 + 4w,w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   isVal_TAC
   \\ ASM_REWRITE_TAC [LISP_ADD_def,GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_ADD_SUB]
   \\ ASM_REWRITE_TAC [word_add_n2w,DECIDE ``4*m+2+4 = (m+1) * 4 + 2:num``]
   \\ (MATCH_MP_TAC o GEN_ALL o RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o UNDISCH) lisp_inv_Val
-  \\ SIMP_TAC std_ss [] \\ METIS_TAC []);
+  \\ SIMP_TAC std_ss [] \\ METIS_TAC []
+QED
 
-val lisp_inv_SUB = store_thm("lisp_inv_SUB",
-  ``isVal x1 /\ isVal x2 /\ getVal x2 <= getVal x1 ==>
+Theorem lisp_inv_SUB:
+    isVal x1 /\ isVal x2 /\ getVal x2 <= getVal x1 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (LISP_SUB x1 x2,x2,x3,x4,x5,x6,limit) (w1 - w2 + 2w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+    lisp_inv (LISP_SUB x1 x2,x2,x3,x4,x5,x6,limit) (w1 - w2 + 2w,w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   isVal_TAC
   \\ ASM_REWRITE_TAC [LISP_SUB_def,GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_ADD_SUB]
   \\ `(n2w (4 * a') + 2w - (n2w (4 * a'') + 2w) + 2w:word32 =
@@ -684,12 +727,14 @@ val lisp_inv_SUB = store_thm("lisp_inv_SUB",
   \\ `~(4 * a' + 2 < 4 * a'' + 2)` by DECIDE_TAC
   \\ ASM_SIMP_TAC bool_ss [word_add_n2w]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (f x = f y)``)
-  \\ DECIDE_TAC);
+  \\ DECIDE_TAC
+QED
 
-val lisp_inv_SUB1 = store_thm("lisp_inv_SUB1",
-  ``isVal x1 /\ 0 < getVal x1 ==>
+Theorem lisp_inv_SUB1:
+    isVal x1 /\ 0 < getVal x1 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    lisp_inv (LISP_SUB x1 (Val 1),x2,x3,x4,x5,x6,limit) (w1 - 4w,w2,w3,w4,w5,w6,a,x,xs,s,rest)``,
+    lisp_inv (LISP_SUB x1 (Val 1),x2,x3,x4,x5,x6,limit) (w1 - 4w,w2,w3,w4,w5,w6,a,x,xs,s,rest)
+Proof
   isVal_TAC
   \\ ASM_REWRITE_TAC [LISP_SUB_def,GSYM word_add_n2w,WORD_ADD_ASSOC,WORD_ADD_SUB]
   \\ `(n2w (4 * a') + 2w - 4w:word32 =
@@ -702,13 +747,16 @@ val lisp_inv_SUB1 = store_thm("lisp_inv_SUB1",
   \\ `~(4 * a' + 2 < 4)` by DECIDE_TAC
   \\ ASM_SIMP_TAC bool_ss [word_add_n2w]
   \\ MATCH_MP_TAC (METIS_PROVE [] ``(x = y) ==> (f x = f y)``)
-  \\ DECIDE_TAC);
+  \\ DECIDE_TAC
+QED
 
-val word_lsr_n2w = store_thm("word_lsr_n2w",
-  ``!m n. m < dimword (:'a) ==>
-          (((n2w m):'a word) >>> n = n2w (m DIV (2 ** n)))``,
+Theorem word_lsr_n2w:
+    !m n. m < dimword (:'a) ==>
+          (((n2w m):'a word) >>> n = n2w (m DIV (2 ** n)))
+Proof
   ONCE_REWRITE_TAC [GSYM n2w_w2n] THEN REWRITE_TAC [w2n_lsr]
-  THEN REWRITE_TAC [n2w_w2n] THEN SIMP_TAC std_ss [w2n_n2w]);
+  THEN REWRITE_TAC [n2w_w2n] THEN SIMP_TAC std_ss [w2n_n2w]
+QED
 
 val LEMMA_MULT_4 = DECIDE ``!n. n < 1073741824 ==> 4 * n + 2 < 4294967296:num``
 
@@ -721,11 +769,12 @@ val lisp_inv_Val_nil_nil = let
   val imp = (GEN_ALL o RW [AND_IMP_INTRO] o DISCH_ALL) (MATCH_MP imp2 (MATCH_MP imp1 imp))
   in imp end;
 
-val lisp_inv_MULT = store_thm("lisp_inv_MULT",
-  ``isVal x1 /\ isVal x2 /\ getVal x1 * getVal x2 < 2 ** 30 ==>
+Theorem lisp_inv_MULT:
+    isVal x1 /\ isVal x2 /\ getVal x1 * getVal x2 < 2 ** 30 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
     lisp_inv (LISP_MULT x1 x2, Sym "nil", Sym "nil",x4,x5,x6,limit)
-             (((w1 >>> 2) * (w2 >>> 2)) << 2 + 2w, 3w, 3w,w4,w5,w6,a,x,xs,s,rest)``,
+             (((w1 >>> 2) * (w2 >>> 2)) << 2 + 2w, 3w, 3w,w4,w5,w6,a,x,xs,s,rest)
+Proof
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO,isVal_thm]
   \\ STRIP_TAC THEN STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [getVal_def,LISP_MULT_def]
@@ -741,7 +790,8 @@ val lisp_inv_MULT = store_thm("lisp_inv_MULT",
   \\ IMP_RES_TAC (SIMP_RULE (std_ss++SIZES_ss) [] (INST_TYPE [``:'a``|->``:32``] word_lsr_n2w))
   \\ ASM_SIMP_TAC std_ss [DIV_MULT]
   \\ ONCE_REWRITE_TAC [MULT_COMM]
-  \\ ASM_SIMP_TAC std_ss [DIV_MULT,WORD_MUL_LSL,word_mul_n2w,word_add_n2w]);
+  \\ ASM_SIMP_TAC std_ss [DIV_MULT,WORD_MUL_LSL,word_mul_n2w,word_add_n2w]
+QED
 
 val LISP_DIV_MOD_LEMMA = prove(
   ``!n. n < 1073741824 ==> (n2w (4 * n + 2) >>> 2 = (n2w n):word32)``,
@@ -755,12 +805,13 @@ val LISP_DIV_MOD_LEMMA = prove(
   \\ ONCE_REWRITE_TAC [MULT_COMM]
   \\ SIMP_TAC std_ss [DIV_MULT]);
 
-val lisp_inv_DIV = store_thm("lisp_inv_DIV",
-  ``isVal x1 /\ isVal x2 /\ getVal x2 <> 0 ==>
+Theorem lisp_inv_DIV:
+    isVal x1 /\ isVal x2 /\ getVal x2 <> 0 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
     lisp_inv (LISP_DIV x1 x2, Sym "nil", Sym "nil",x4,x5,x6,limit)
              (((w1 >>> 2) // (w2 >>> 2)) << 2 + 2w,3w,3w,w4,w5,w6,a,x,xs,s,rest) /\
-    lisp_word_div_pre (w1,w2)``,
+    lisp_word_div_pre (w1,w2)
+Proof
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO,isVal_thm]
   \\ STRIP_TAC THEN STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [getVal_def,LISP_DIV_def]
@@ -791,14 +842,16 @@ val lisp_inv_DIV = store_thm("lisp_inv_DIV",
   \\ IMP_RES_TAC LISP_DIV_MOD_LEMMA
   \\ `a' < 4294967296 /\ a'' < 4294967296` by DECIDE_TAC
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,n2w_11]
-  \\ DECIDE_TAC);
+  \\ DECIDE_TAC
+QED
 
-val lisp_inv_MOD = store_thm("lisp_inv_MOD",
-  ``isVal x1 /\ isVal x2 /\ getVal x2 <> 0 ==>
+Theorem lisp_inv_MOD:
+    isVal x1 /\ isVal x2 /\ getVal x2 <> 0 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
     lisp_inv (LISP_MOD x1 x2, Sym "nil", Sym "nil",x4,x5,x6,limit)
              ((word_mod (w1 >>> 2) (w2 >>> 2)) << 2 + 2w,3w,3w,w4,w5,w6,a,x,xs,s,rest) /\
-    lisp_word_mod_pre (w1,w2)``,
+    lisp_word_mod_pre (w1,w2)
+Proof
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO,isVal_thm]
   \\ STRIP_TAC THEN STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [getVal_def,LISP_MOD_def]
@@ -828,15 +881,18 @@ val lisp_inv_MOD = store_thm("lisp_inv_MOD",
   \\ IMP_RES_TAC LISP_DIV_MOD_LEMMA
   \\ `a' < 4294967296 /\ a'' < 4294967296` by DECIDE_TAC
   \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2n_n2w,n2w_11]
-  \\ DECIDE_TAC);
+  \\ DECIDE_TAC
+QED
 
-val lisp_inv_LESS = store_thm("lisp_inv_LESS",
-  ``isVal x1 /\ isVal x2 ==>
+Theorem lisp_inv_LESS:
+    isVal x1 /\ isVal x2 ==>
     lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,x,xs,s,rest) ==>
-    (getVal x1 < getVal x2 <=> w1 <+ w2)``,
+    (getVal x1 < getVal x2 <=> w1 <+ w2)
+Proof
   isVal_TAC \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [WORD_LO,w2n_n2w]
   \\ `(4 * a'' + 2) < 4294967296 /\ (4 * a' + 2) < 4294967296` by DECIDE_TAC
-  \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC);
+  \\ ASM_SIMP_TAC std_ss [] \\ DECIDE_TAC
+QED
 
 
 (* LDEPTH *)
@@ -947,16 +1003,18 @@ val lisp_inv_LDEPTH_LEMMA = prove(
   \\ MATCH_MP_TAC word_tree_XDEPTH
   \\ ASM_SIMP_TAC std_ss [] \\ METIS_TAC []);
 
-val lisp_inv_LDEPTH = store_thm("lisp_inv_LDEPTH",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,df,f,s,rest) ==>
+Theorem lisp_inv_LDEPTH:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit) (w1,w2,w3,w4,w5,w6,a,df,f,s,rest) ==>
     LDEPTH x1 <= limit /\ LDEPTH x2 <= limit /\ LDEPTH x3 <= limit /\
-    LDEPTH x4 <= limit /\ LDEPTH x5 <= limit /\ LDEPTH x6 <= limit``,
+    LDEPTH x4 <= limit /\ LDEPTH x5 <= limit /\ LDEPTH x6 <= limit
+Proof
   STRIP_TAC
   \\ IMP_RES_TAC lisp_inv_swap2
   \\ IMP_RES_TAC lisp_inv_swap3
   \\ IMP_RES_TAC lisp_inv_swap4
   \\ IMP_RES_TAC lisp_inv_swap5
   \\ IMP_RES_TAC lisp_inv_swap6
-  \\ IMP_RES_TAC lisp_inv_LDEPTH_LEMMA \\ ASM_SIMP_TAC std_ss []);
+  \\ IMP_RES_TAC lisp_inv_LDEPTH_LEMMA \\ ASM_SIMP_TAC std_ss []
+QED
 
 

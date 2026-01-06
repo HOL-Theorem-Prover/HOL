@@ -631,15 +631,16 @@ Theorem peg_eval_rpt[allow_rebind]:
 Proof simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]
 QED
 
-val peg_eval_list = Q.store_thm(
-  "peg_eval_list",
-  `peg_eval_list G (i0, e) (i, r, err) ⇔
+Theorem peg_eval_list:
+   peg_eval_list G (i0, e) (i, r, err) ⇔
      (∃fl fe. peg_eval G (i0, e) (Failure fl fe) ∧ i = i0 ∧ r = [] ∧
              err = (fl,fe)) ∨
      (∃i1 rh rt eo0.
         peg_eval G (i0, e) (Success i1 rh eo0) ∧
-        peg_eval_list G (i1, e) (i, rt, err) ∧ r = rh::rt)`,
-  simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]);
+        peg_eval_list G (i1, e) (i, rt, err) ∧ r = rh::rt)
+Proof
+  simp[Once peg_eval_cases, SimpLHS] >> metis_tac[]
+QED
 
 Theorem pegfail_empty[simp]:
   pegfail G (empty r) = F

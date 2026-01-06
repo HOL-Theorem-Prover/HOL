@@ -72,73 +72,73 @@ End
 (* rewrite theorems *)
 (* ----------------------------------------------------------------------------- *)
 (* rewrites for MARK_REG *)
-val MARK_REG_DEFs = store_thm ("MARK_REG_DEFs", ``
+Theorem MARK_REG_DEFs:
          (      MARK_REG (Eps)     = MEps                          ) /\
          (!c.   MARK_REG (Sym c)   = MSym F c                      ) /\
          (!p q. MARK_REG (Alt p q) = MAlt (MARK_REG p) (MARK_REG q)) /\
          (!p q. MARK_REG (Seq p q) = MSeq (MARK_REG p) (MARK_REG q)) /\
          (!r.   MARK_REG (Rep r)   = MRep (MARK_REG r)             )
-``,
+Proof
 
   REWRITE_TAC [MARK_REG_def]
-);
+QED
 
 (* rewrites for UNMARK_REG *)
-val UNMARK_REG_DEFs = store_thm ("UNMARK_REG_DEFs", ``
+Theorem UNMARK_REG_DEFs:
          (      UNMARK_REG (MEps)     = Eps                              ) /\
          (!b c. UNMARK_REG (MSym b c) = Sym c                            ) /\
          (!p q. UNMARK_REG (MAlt p q) = Alt (UNMARK_REG p) (UNMARK_REG q)) /\
          (!p q. UNMARK_REG (MSeq p q) = Seq (UNMARK_REG p) (UNMARK_REG q)) /\
          (!r.   UNMARK_REG (MRep r)   = Rep (UNMARK_REG r)               )
-``,
+Proof
 
   REWRITE_TAC [UNMARK_REG_def]
-);
+QED
 
 (* rewrites for empty *)
-val empty_DEFs = store_thm ("empty_DEFs", ``
+Theorem empty_DEFs:
          (      empty (MEps)     <=> T                     ) /\
          (!b c. empty (MSym b c) <=> F                     ) /\
          (!p q. empty (MAlt p q) <=> (empty p) \/ (empty q)) /\
          (!p q. empty (MSeq p q) <=> (empty p) /\ (empty q)) /\
          (!r.   empty (MRep r)   <=> T                     )
-``,
+Proof
 
   REWRITE_TAC [empty_def]
-);
+QED
 
 (* rewrites for final *)
-val final_DEFs = store_thm ("final_DEFs", ``
+Theorem final_DEFs:
          (      final (MEps)     <=> F                                    ) /\
          (!b c. final (MSym b c) <=> b                                    ) /\
          (!p q. final (MAlt p q) <=>  (final p) \/ (final q)              ) /\
          (!p q. final (MSeq p q) <=> ((final p) /\ (empty q)) \/ (final q)) /\
          (!r.   final (MRep r)   <=> final r                              )
-``,
+Proof
 
   REWRITE_TAC [final_def]
-);
+QED
 
 (* rewrites for shift *)
-val shift_DEFs = store_thm ("shift_DEFs", ``
+Theorem shift_DEFs:
          (!m c.     shift m (MEps)     c = MEps                                                        ) /\
          (!m b x c. shift m (MSym b x) c = MSym (m /\ (x = c)) x                                       ) /\
          (!m p q c. shift m (MAlt p q) c = MAlt (shift m p c) (shift m q c)                            ) /\
          (!m p q c. shift m (MSeq p q) c = MSeq (shift m p c) (shift ((m /\ (empty p)) \/ final p) q c)) /\
          (!m r c.   shift m (MRep r)   c = MRep (shift (m \/ (final r)) r c)                           )
-``,
+Proof
 
   REWRITE_TAC [shift_def]
-);
+QED
 
 (* rewrites for acceptM *)
-val acceptM_DEFs = store_thm ("acceptM_DEFs", ``
+Theorem acceptM_DEFs:
          (!r.      acceptM r []      = empty r                                 ) /\
          (!r c cs. acceptM r (c::cs) = final (FOLDL (shift F) (shift T r c) cs))
-``,
+Proof
 
   REWRITE_TAC [acceptM_def]
-);
+QED
 
 
 
@@ -164,65 +164,65 @@ Definition HAS_MARKS_def:
          HAS_MARKS mr = ?x. MEM (MSym T x) (EXP_NODELIST mr)
 End
 
-val HAS_MARKS_ALT_DEF = store_thm ("HAS_MARKS_ALT_DEF", ``
+Theorem HAS_MARKS_ALT_DEF:
          (       HAS_MARKS (MEps)     <=> F                              ) /\
          (!b x. (HAS_MARKS (MSym b x) <=> b)                             ) /\
          (!p q. (HAS_MARKS (MAlt p q) <=> (HAS_MARKS p) \/ (HAS_MARKS q))) /\
          (!p q. (HAS_MARKS (MSeq p q) <=> (HAS_MARKS p) \/ (HAS_MARKS q))) /\
          (!r.   (HAS_MARKS (MRep r)   <=> (HAS_MARKS r))                 )
-``,
+Proof
 
   SIMP_TAC (list_ss++MReg_ss) [HAS_MARKS_def, EXP_NODELIST_def, EXISTS_OR_THM]
-);
+QED
 
 (* MARK_REG: afterwards all Sym c are MSym F c <=> !r. ~HAS_MARKS (MARK_REG r) *)
-val MARK_REG_NOT_HAS_MARKS_thm = store_thm ("MARK_REG_NOT_HAS_MARKS_thm", ``
+Theorem MARK_REG_NOT_HAS_MARKS_thm:
          (!r. ~HAS_MARKS (MARK_REG r))
-``,
+Proof
 
   Induct_on `r` >> (
     FULL_SIMP_TAC (list_ss++MReg_ss) [HAS_MARKS_ALT_DEF, MARK_REG_DEFs]
   )
-);
+QED
 
 (* UNMARK_MARK reverses if MSyms are F *)
-val UNMARK_MARK_thm = store_thm ("UNMARK_MARK_thm", ``
+Theorem UNMARK_MARK_thm:
          (!mr. (~HAS_MARKS mr) ==> (mr = MARK_REG (UNMARK_REG mr)))
-``,
+Proof
 
   Induct_on `mr` >> (
     FULL_SIMP_TAC (list_ss++MReg_ss) [HAS_MARKS_ALT_DEF, UNMARK_REG_DEFs, MARK_REG_DEFs]
   )
-);
+QED
 
 (* MARK_UNMARK reverses always *)
-val MARK_UNMARK_thm = store_thm ("MARK_UNMARK_thm", ``
+Theorem MARK_UNMARK_thm:
          (!r. UNMARK_REG (MARK_REG r) = r)
-``,
+Proof
 
   Induct_on `r` >> (
     METIS_TAC [MARK_REG_DEFs, UNMARK_REG_DEFs]
   )
-);
+QED
 
 
 (* --------------------- empty *)
 (* accepts the empty language? i.e., <=> accept r [], or, [] IN (language_of r) *)
-val empty_accept_thm = store_thm ("empty_accept_thm", ``
+Theorem empty_accept_thm:
          (!mr. (empty mr) <=> (accept (UNMARK_REG mr) []))
-``,
+Proof
 
   Induct_on `mr` >> (
     ASM_SIMP_TAC list_ss [empty_DEFs, UNMARK_REG_DEFs, accept_DEFs, split_DEFs, parts_DEFs]
   )
-);
+QED
 
-val empty_sem_thm = store_thm ("empty_sem_thm", ``
+Theorem empty_sem_thm:
          (!mr. (empty mr) <=> [] IN (language_of (UNMARK_REG mr)))
-``,
+Proof
 
   REWRITE_TAC [empty_accept_thm, accept_correctness_thm]
-);
+QED
 
 
 
@@ -242,7 +242,7 @@ Definition lang_of_M_def:
 End
 
 (* this rewrite lemma helps to simplify and clarify the proof of lang_of_M_shift_m_thm *)
-val lang_of_M_REWRS = store_thm ("lang_of_M_REWRS", ``
+Theorem lang_of_M_REWRS:
          (!w m.     w IN (lang_of_M m  MEps     ) <=> (m /\ (w = []))) /\
          (!w m b x. w IN (lang_of_M m (MSym b x)) <=> (m /\ (w = [x])) \/ (b /\ (w = []))) /\
          (!w m p q. w IN (lang_of_M m (MAlt p q)) <=> (w IN lang_of_M m p) \/ (w IN lang_of_M m q)) /\
@@ -253,7 +253,7 @@ val lang_of_M_REWRS = store_thm ("lang_of_M_REWRS", ``
             (w = APPEND w' (FLAT wl)) /\
             ((m /\ (w' = [])) \/ (w' IN lang_of_MF r)) /\
             (!w'. MEM w' wl ==> (w' IN (language_of (UNMARK_REG r))))))
-``,
+Proof
 
   SIMP_TAC
   (list_ss++pred_setSimps.PRED_SET_ss++boolSimps.LIFT_COND_ss++boolSimps.EQUIV_EXTRACT_ss)
@@ -279,16 +279,16 @@ val lang_of_M_REWRS = store_thm ("lang_of_M_REWRS", ``
     DISJ2_TAC >>
     METIS_TAC[]
   ]
-);
+QED
 
-val lang_of_MF_NOT_HAS_MARKS_thm = store_thm ("lang_of_MF_NOT_HAS_MARKS_thm", ``
+Theorem lang_of_MF_NOT_HAS_MARKS_thm:
          (!mr. (~HAS_MARKS mr) ==> ((lang_of_MF mr) = {}))
-``,
+Proof
 
   Induct_on `mr` >> (
     ASM_SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss) [lang_of_MF_def, HAS_MARKS_ALT_DEF, EXTENSION]
   )
-);
+QED
 
 
 
@@ -296,9 +296,9 @@ val lang_of_MF_NOT_HAS_MARKS_thm = store_thm ("lang_of_MF_NOT_HAS_MARKS_thm", ``
 (* what is a state and what means a mark, what does this mean for final (how to interpret final) *)
 (* state is a set of positions, a mark is a potential matching, final says wether the end of such a matching is marked, whether one of the nondeterministic "sub"states accepts *)
 (* !!! if the regular expression after a mark accepts [] *)
-val final_sem_thm = store_thm ("final_sem_thm", ``
+Theorem final_sem_thm:
          (!mr. (final mr) <=> [] IN lang_of_MF mr)
-``,
+Proof
 
   Induct_on `mr` >> (
     ASM_SIMP_TAC (list_ss++pred_setSimps.PRED_SET_ss++boolSimps.LIFT_COND_ss) [final_DEFs, lang_of_MF_def, language_of_DEFs, empty_sem_thm, boolTheory.EQ_IMP_THM]
@@ -307,16 +307,16 @@ val final_sem_thm = store_thm ("final_sem_thm", ``
   REPEAT STRIP_TAC >>
   Q.EXISTS_TAC `[]` >>
   SIMP_TAC (list_ss) []
-);
+QED
 
-val final_NOT_HAS_MARKS_thm = store_thm ("final_NOT_HAS_MARKS_thm", ``
+Theorem final_NOT_HAS_MARKS_thm:
          (!mr. (~HAS_MARKS mr) ==> ((final mr) <=> F))
-``,
+Proof
 
   Induct_on `mr` >> (
     FULL_SIMP_TAC (list_ss++pred_setSimps.PRED_SET_ss) [final_sem_thm, HAS_MARKS_ALT_DEF, lang_of_MF_def]
   )
-);
+QED
 
 
 
@@ -327,50 +327,50 @@ val final_NOT_HAS_MARKS_thm = store_thm ("final_NOT_HAS_MARKS_thm", ``
 (* !!! if (in r) the regular expression after a mark (and the virtual mark m) accepts [c] *)
 (* final (shift m r c) <=> ? *)
 
-val shift_F_NOT_HAS_MARKS_thm = store_thm ("shift_F_NOT_HAS_MARKS_thm", ``
+Theorem shift_F_NOT_HAS_MARKS_thm:
          (!mr c. (~HAS_MARKS mr) ==> ((shift F mr c) = mr))
-``,
+Proof
 
   Induct_on `mr` >> (
     ASM_SIMP_TAC std_ss [HAS_MARKS_ALT_DEF, shift_DEFs, final_NOT_HAS_MARKS_thm]
   )
-);
+QED
 
-val UNMARK_REG_shift_thm = store_thm ("UNMARK_REG_shift_thm", ``
+Theorem UNMARK_REG_shift_thm:
          (!mr m c. ((UNMARK_REG (shift m mr c)) = (UNMARK_REG mr)))
-``,
+Proof
 
   Induct_on `mr` >> (
     FULL_SIMP_TAC (list_ss++pred_setSimps.PRED_SET_ss) [HAS_MARKS_ALT_DEF, shift_DEFs, final_NOT_HAS_MARKS_thm, UNMARK_REG_DEFs]
   )
-);
+QED
 
 
-val lang_of_MF_lang_of_M_F_thm = store_thm ("lang_of_MF_lang_of_M_F_thm", ``
+Theorem lang_of_MF_lang_of_M_F_thm:
          (!mr. (lang_of_MF mr) = lang_of_M F mr)
-``,
+Proof
 
   SIMP_TAC (std_ss++pred_setSimps.PRED_SET_ss) [lang_of_M_def]
-);
+QED
 
-val FLAT_splitup_thm = store_thm ("FLAT_splitup_thm", ``
+Theorem FLAT_splitup_thm:
          (!c cs l. (c::cs = FLAT l) ==> (?ht tl.
                               (FLAT l = FLAT ((c::ht)::tl)) /\
                               (!x. MEM x ((c::ht)::tl) ==> MEM x l)
          ))
-``,
+Proof
 
   Induct_on `l` >- SIMP_TAC list_ss [] >>
 
   REPEAT STRIP_TAC >>
   Cases_on `h` >> (FULL_SIMP_TAC list_ss [] >> METIS_TAC [])
-);
+QED
 
 
-val lang_of_MF_shift_m_thm = store_thm ("lang_of_MF_shift_m_thm", ``
+Theorem lang_of_MF_shift_m_thm:
          (!mr c cs m. (cs IN (lang_of_MF (shift m mr c))) <=>
                     ((c::cs) IN (lang_of_M m mr)))
-``,
+Proof
 
   Induct_on `mr` >|
   [
@@ -482,26 +482,26 @@ val lang_of_MF_shift_m_thm = store_thm ("lang_of_MF_shift_m_thm", ``
       FULL_SIMP_TAC (list_ss) [lang_of_M_def, EVERY_MEM]
     ]
   ]
-);
+QED
 
-val lang_of_MF_shift_T_thm = store_thm ("lang_of_MF_shift_T_thm", ``
+Theorem lang_of_MF_shift_T_thm:
          (!mr c cs. (~HAS_MARKS mr) ==> (
            (cs IN (lang_of_MF (shift T mr c)) <=>
            (c::cs) IN (language_of (UNMARK_REG mr)))
          ))
-``,
+Proof
 
   SIMP_TAC std_ss [lang_of_MF_shift_m_thm, lang_of_M_def, lang_of_MF_NOT_HAS_MARKS_thm, UNION_EMPTY]
-);
+QED
 
-val final_FOLDL_shift_F_thm = store_thm ("final_FOLDL_shift_F_thm", ``
+Theorem final_FOLDL_shift_F_thm:
          (!mr w. (final (FOLDL (shift F) mr w)) <=> (w IN (lang_of_MF mr)))
-``,
+Proof
 
   Induct_on `w` >> (
     FULL_SIMP_TAC (list_ss++pred_setSimps.PRED_SET_ss) [final_sem_thm, lang_of_MF_shift_m_thm, lang_of_M_def]
   )
-);
+QED
 
 
 (* --------------------- acceptM *)
@@ -521,18 +521,20 @@ val final_FOLDL_shift_F_thm = store_thm ("final_FOLDL_shift_F_thm", ``
 
 (* correctness of definition *)
 (* ----------------------------------------------------------------------------- *)
-val acceptM_correctness_thm = store_thm("acceptM_correctness_thm", ``!r w. acceptM (MARK_REG r) w <=> w IN (language_of r)``,
+Theorem acceptM_correctness_thm:   !r w. acceptM (MARK_REG r) w <=> w IN (language_of r)
+Proof
 
   Cases_on `w` >> (
     REWRITE_TAC [acceptM_DEFs, empty_sem_thm, MARK_UNMARK_thm] >>
     SIMP_TAC list_ss [MARK_REG_NOT_HAS_MARKS_thm, lang_of_MF_shift_T_thm, MARK_UNMARK_thm, final_FOLDL_shift_F_thm]
   )
-);
+QED
 
-val acceptM_accept_thm = store_thm("acceptM_accept_thm", ``!r w. acceptM (MARK_REG r) w <=> accept r w``,
+Theorem acceptM_accept_thm:   !r w. acceptM (MARK_REG r) w <=> accept r w
+Proof
 
   REWRITE_TAC [acceptM_correctness_thm, accept_correctness_thm]
-);
+QED
 
 
 

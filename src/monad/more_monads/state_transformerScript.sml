@@ -368,19 +368,17 @@ Proof
    >> REWRITE_TAC [FST]
 QED
 
-Theorem sequence_nil:
+Theorem sequence_nil[simp]:
     sequence [] = UNIT []
 Proof
   BasicProvers.SRW_TAC[][sequence_def]
 QED
-val _ = BasicProvers.export_rewrites["sequence_nil"]
 
-Theorem mapM_nil:
+Theorem mapM_nil[simp]:
     mapM f [] = UNIT []
 Proof
   BasicProvers.SRW_TAC[][mapM_def]
 QED
-val _ = BasicProvers.export_rewrites["mapM_nil"]
 
 Theorem mapM_cons:
     mapM f (x::xs) = BIND (f x) (\y. BIND (mapM f xs) (\ys. UNIT (y::ys)))

@@ -52,9 +52,9 @@ val _ = temp_overload_on ("J", ``j.carrier``);
    or         #1 IN I               by field_mult_rinv
    Hence i = r                      by ideal_with_one
 *)
-val field_ideals = store_thm(
-  "field_ideals",
-  ``!r i:'a ring. Field r /\ i << r ==> (i = <#0>) \/ (i = r)``,
+Theorem field_ideals:
+    !r i:'a ring. Field r /\ i << r ==> (i = <#0>) \/ (i = r)
+Proof
   rpt strip_tac >>
   Cases_on `I = {#0}` >| [
     rw[GSYM ideal_carrier_sing],
@@ -67,7 +67,8 @@ val field_ideals = store_thm(
     `x IN R` by metis_tac[ideal_element_property] >>
     `x IN R+` by rw[ring_nonzero_eq] >>
     metis_tac[field_inv_element, field_mult_rinv, ideal_def, ideal_with_one]
-  ]);
+  ]
+QED
 
 (* Theorem: i <> r /\ maxi i ==> Field (r/i) *)
 (* Proof: by definitions, this is to show:
@@ -107,9 +108,9 @@ val field_ideals = store_thm(
        so p * gen (q o I) === p * q   by ideal_congruence_mult
        Thus goal is true by ideal_congruence_trans.
 *)
-val quotient_field_by_maximal_ideal = store_thm(
-  "quotient_field_by_maximal_ideal",
-  ``!r i:'a ring. Ring r /\ i <> r /\ maxi i ==> Field (r/i)``,
+Theorem quotient_field_by_maximal_ideal:
+    !r i:'a ring. Ring r /\ i <> r /\ maxi i ==> Field (r/i)
+Proof
   rw[ideal_maximal_def, field_def_by_inv] >| [
     rw[quotient_ring_ring],
     rw[quotient_ring_def, quotient_ring_add_def, quotient_ring_mult_def, coset_def] >>
@@ -142,7 +143,8 @@ val quotient_field_by_maximal_ideal = store_thm(
     `#1 === p * q` by rw[ideal_congruence_def] >>
     `p * q === #1` by rw[ideal_congruence_sym] >>
     metis_tac[ideal_congruence_trans, ring_one_element, ring_mult_element]
-  ]);
+  ]
+QED
 
 (* Theorem: The ideal of a quotient field cannot be the ring itself.
             Ring r /\ Field (r / i) ==> r <> i *)
@@ -153,13 +155,14 @@ val quotient_field_by_maximal_ideal = store_thm(
    (r/r).prod.id = R            by field_one_element, IN_SING
    which contradicts field_one_ne_zero.
 *)
-val quotient_field_ideal_ne_ring = store_thm(
-  "quotient_field_ideal_ne_ring",
-  ``!r i:'a ring. Ring r /\ Field (r/i) ==> i <> r``,
+Theorem quotient_field_ideal_ne_ring:
+    !r i:'a ring. Ring r /\ Field (r/i) ==> i <> r
+Proof
   rpt strip_tac >>
   `(r/r).carrier = {R}` by rw[quotient_ring_ring_sing] >>
   `(r/r).sum.id IN (r/r).carrier /\ (r/r).prod.id IN (r/r).carrier` by rw[] >>
-  metis_tac[field_one_ne_zero, IN_SING]);
+  metis_tac[field_one_ne_zero, IN_SING]
+QED
 
 (* Theorem: Ring r /\ i << r /\ Field (r/i) ==> i <> r /\ maxi i  *)
 (* Proof: by definitions, this is to show:
@@ -173,9 +176,9 @@ val quotient_field_ideal_ne_ring = store_thm(
        By ideal_maximal_def, this is to show:
        i << r /\ Field (r / i) /\ i <> r /\ i << j /\ j << r ==> (i = j) \/ (j = r)
 *)
-val quotient_field_imp_maximal_ideal = store_thm(
-  "quotient_field_imp_maximal_ideal",
-  ``!r i:'a ring. Ring r /\ i << r /\ Field (r/i) ==> i <> r /\ maxi i``,
+Theorem quotient_field_imp_maximal_ideal:
+    !r i:'a ring. Ring r /\ i << r /\ Field (r/i) ==> i <> r /\ maxi i
+Proof
   ntac 3 strip_tac >>
   CONJ_ASM1_TAC >| [
     rw[quotient_field_ideal_ne_ring],
@@ -213,7 +216,8 @@ val quotient_field_imp_maximal_ideal = store_thm(
       `J = R` by rw[SUBSET_ANTISYM] >>
       metis_tac[ideal_eq_ideal, ideal_refl]
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ i << r /\ Field (r/i) <=> i <> r /\ maxi i  *)
 (* Proof:
@@ -223,12 +227,13 @@ val quotient_field_imp_maximal_ideal = store_thm(
      the part: i << r           true by ideal_maximal_def
      the part: Field (r / i)    true by quotient_field_by_maximal_ideal.
 *)
-val quotient_field_iff_maximal_ideal = store_thm(
-  "quotient_field_iff_maximal_ideal",
-  ``!r:'a ring. Ring r ==> !i:'a ring. i << r /\ Field (r/i) <=> i <> r /\ maxi i``,
+Theorem quotient_field_iff_maximal_ideal:
+    !r:'a ring. Ring r ==> !i:'a ring. i << r /\ Field (r/i) <=> i <> r /\ maxi i
+Proof
   rw[quotient_field_imp_maximal_ideal, EQ_IMP_THM] >-
   metis_tac[ideal_maximal_def] >>
-  rw[quotient_field_by_maximal_ideal]);
+  rw[quotient_field_by_maximal_ideal]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

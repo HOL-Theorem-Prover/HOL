@@ -28,10 +28,11 @@ val _ = type_abbrev("keysched",
 (* Case analysis on a block, a key schedule                                  *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_BLOCK = Q.store_thm
-  ("FORALL_BLOCK",
-    `(!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)`,
-    SIMP_TAC std_ss [FORALL_PROD]);
+Theorem FORALL_BLOCK:
+     (!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)
+Proof
+    SIMP_TAC std_ss [FORALL_PROD]
+QED
 
 val FORALL_KEYSCHEDS = Q.prove(
  `(!x:keysched. P x) =
@@ -77,12 +78,13 @@ Definition INVROTKEYS_def:
     k37,k38,k39) : keysched
 End
 
-val ROTKEYS_Inversion = Q.store_thm
-  ("ROTKEYS_Inversion",
-  `!k:keysched. (INVROTKEYS(ROTKEYS(k)) = k) /\
-                (ROTKEYS(INVROTKEYS(k)) = k)`,
+Theorem ROTKEYS_Inversion:
+   !k:keysched. (INVROTKEYS(ROTKEYS(k)) = k) /\
+                (ROTKEYS(INVROTKEYS(k)) = k)
+Proof
   SIMP_TAC std_ss [FORALL_KEYSCHEDS] THEN
-  REWRITE_TAC [ROTKEYS_def,INVROTKEYS_def]);
+  REWRITE_TAC [ROTKEYS_def,INVROTKEYS_def]
+QED
 
 Definition GETKEYS_def:
   GETKEYS

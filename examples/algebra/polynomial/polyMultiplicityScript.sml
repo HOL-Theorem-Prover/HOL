@@ -151,17 +151,19 @@ val _ = overload_on("multiplicity", ``poly_root_multiplicity r``);
 
 (* Theorem: c IN R ==> !n. n IN multiplicity_set p c <=> factor c ** n pdivides p *)
 (* Proof: by poly_root_multiplicity_set_def *)
-val poly_root_multiplicity_set_member = store_thm(
-  "poly_root_multiplicity_set_member",
-  ``!r:'a ring. !p c. c IN R ==> !n. n IN multiplicity_set p c <=> factor c ** n pdivides p``,
-  rw[poly_root_multiplicity_set_def]);
+Theorem poly_root_multiplicity_set_member:
+    !r:'a ring. !p c. c IN R ==> !n. n IN multiplicity_set p c <=> factor c ** n pdivides p
+Proof
+  rw[poly_root_multiplicity_set_def]
+QED
 
 (* Theorem: c NOTIN R ==> multiplicity_set p c = {} *)
 (* Proof: by poly_root_multiplicity_set_def *)
-val poly_root_multiplicity_set_empty = store_thm(
-  "poly_root_multiplicity_set_empty",
-  ``!r:'a ring. !p c. c NOTIN R ==> (multiplicity_set p c = {})``,
-  rw_tac std_ss[poly_root_multiplicity_set_def]);
+Theorem poly_root_multiplicity_set_empty:
+    !r:'a ring. !p c. c NOTIN R ==> (multiplicity_set p c = {})
+Proof
+  rw_tac std_ss[poly_root_multiplicity_set_def]
+QED
 
 (* Theorem: c NOTIN R ==> multiplicity p c = 0 *)
 (* Proof:
@@ -170,10 +172,11 @@ val poly_root_multiplicity_set_empty = store_thm(
    ==> multiplicity p x = MAX_SET {}         by poly_root_multiplicity_def
                         = 0                  by MAX_SET_EMPTY
 *)
-val poly_root_multiplicity_0 = store_thm(
-  "poly_root_multiplicity_0",
-  ``!r:'a ring. !p c. c NOTIN R ==> (multiplicity p c = 0)``,
-  metis_tac[poly_root_multiplicity_set_empty, poly_root_multiplicity_def, MAX_SET_EMPTY]);
+Theorem poly_root_multiplicity_0:
+    !r:'a ring. !p c. c NOTIN R ==> (multiplicity p c = 0)
+Proof
+  metis_tac[poly_root_multiplicity_set_empty, poly_root_multiplicity_def, MAX_SET_EMPTY]
+QED
 
 (* Theorem: Ring r ==> !p c. poly p /\ c IN R ==> 0 IN multiplicity_set p c *)
 (* Proof:
@@ -181,10 +184,11 @@ val poly_root_multiplicity_0 = store_thm(
     and |1| pdivides p          by poly_one_divides_all, poly p
    Thus 0 IN s                  by poly_root_multiplicity_set_def
 *)
-val poly_root_multiplicity_set_has_0 = store_thm(
-  "poly_root_multiplicity_set_has_0",
-  ``!r:'a ring. Ring r ==> !p c. poly p /\ c IN R ==> 0 IN multiplicity_set p c``,
-  rw[poly_one_divides_all, poly_root_multiplicity_set_def]);
+Theorem poly_root_multiplicity_set_has_0:
+    !r:'a ring. Ring r ==> !p c. poly p /\ c IN R ==> 0 IN multiplicity_set p c
+Proof
+  rw[poly_one_divides_all, poly_root_multiplicity_set_def]
+QED
 
 (* Theorem: Ring r ==> !p c. poly p /\ c IN R ==> multiplicity_set p c <> {} *)
 (* Proof:
@@ -192,10 +196,11 @@ val poly_root_multiplicity_set_has_0 = store_thm(
    Note 0 IN s        by poly_root_multiplicity_set_has_0
    Thus s <> {}       by MEMBER_NOT_EMPTY
 *)
-val poly_root_multiplicity_set_nonempty = store_thm(
-  "poly_root_multiplicity_set_nonempty",
-  ``!r:'a ring. Ring r ==> !p c. poly p /\ c IN R ==> multiplicity_set p c <> {}``,
-  metis_tac[poly_root_multiplicity_set_has_0, MEMBER_NOT_EMPTY]);
+Theorem poly_root_multiplicity_set_nonempty:
+    !r:'a ring. Ring r ==> !p c. poly p /\ c IN R ==> multiplicity_set p c <> {}
+Proof
+  metis_tac[poly_root_multiplicity_set_has_0, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: poly p /\ p <> |0| ==> FINITE (multiplicity_set p c) *)
 (* Proof:
@@ -221,9 +226,9 @@ val poly_root_multiplicity_set_nonempty = store_thm(
       Then s = {}                                 by poly_root_multiplicity_set_def
        and FINITE {}                              by FINITE_EMPTY
 *)
-val poly_root_multiplicity_set_finite = store_thm(
-  "poly_root_multiplicity_set_finite",
-  ``!r:'a ring. Ring r ==> !p c. poly p /\ p <> |0| ==> FINITE (multiplicity_set p c)``,
+Theorem poly_root_multiplicity_set_finite:
+    !r:'a ring. Ring r ==> !p c. poly p /\ p <> |0| ==> FINITE (multiplicity_set p c)
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   qabbrev_tac `s = multiplicity_set p c` >>
@@ -241,7 +246,8 @@ val poly_root_multiplicity_set_finite = store_thm(
     ) >>
     metis_tac[SUBSET_FINITE, FINITE_COUNT],
     rw[poly_root_multiplicity_set_def, Abbr`s`]
-  ]);
+  ]
+QED
 
 (* Theorem: poly p /\ p <> |0| /\ c IN R /\ (factor c) ** n pdivides p ==> n <= multiplicity p c *)
 (* Proof:
@@ -251,15 +257,16 @@ val poly_root_multiplicity_set_finite = store_thm(
     and n IN s               by poly_root_multiplicity_set_def, c IN R
    Thus n <= MAX_SET s       by in_max_set
 *)
-val poly_root_multiplicity_lower = store_thm(
-  "poly_root_multiplicity_lower",
-  ``!r:'a ring. Ring r ==> !p c n. poly p /\ p <> |0| /\
-       c IN R /\ (factor c) ** n pdivides p ==> n <= multiplicity p c``,
+Theorem poly_root_multiplicity_lower:
+    !r:'a ring. Ring r ==> !p c n. poly p /\ p <> |0| /\
+       c IN R /\ (factor c) ** n pdivides p ==> n <= multiplicity p c
+Proof
   rw_tac std_ss[poly_root_multiplicity_def] >>
   qabbrev_tac `s = multiplicity_set p c` >>
   `FINITE s` by rw[poly_root_multiplicity_set_finite, Abbr`s`] >>
   `n IN s` by rw[poly_root_multiplicity_set_def, Abbr`s`] >>
-  rw[in_max_set]);
+  rw[in_max_set]
+QED
 
 (* Theorem: poly p /\ c IN roots p ==> 1 IN multiplicity_set p c *)
 (* Proof:
@@ -269,13 +276,14 @@ val poly_root_multiplicity_lower = store_thm(
     and (factor c) ** 1 pdivides p         by poly_exp_1, poly (factor c)
     ==> 1 IN multiplicity_set p c          by poly_root_multiplicity_set_def
 *)
-val poly_root_multiplicity_set_has_1 = store_thm(
-  "poly_root_multiplicity_set_has_1",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p c. poly p /\ c IN roots p ==> 1 IN multiplicity_set p c``,
+Theorem poly_root_multiplicity_set_has_1:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p c. poly p /\ c IN roots p ==> 1 IN multiplicity_set p c
+Proof
   rpt strip_tac >>
   `c IN R /\ factor c pdivides p` by metis_tac[poly_root_factor] >>
   `poly (factor c)` by rw[poly_factor_poly] >>
-  rw[poly_root_multiplicity_set_def]);
+  rw[poly_root_multiplicity_set_def]
+QED
 
 (* Theorem: poly p ==> ((multiplicity_set p c = {}) <=> (c NOTIN R)) *)
 (* Proof:
@@ -288,12 +296,13 @@ val poly_root_multiplicity_set_has_1 = store_thm(
    Only-if part: c NOTIN R ==> s = {}
       This is true       by poly_root_multiplicity_set_empty
 *)
-val poly_root_multiplicity_set_eq_empty = store_thm(
-  "poly_root_multiplicity_set_eq_empty",
-  ``!r:'a ring. Ring r ==> !p c. poly p ==> ((multiplicity_set p c = {}) <=> (c NOTIN R))``,
+Theorem poly_root_multiplicity_set_eq_empty:
+    !r:'a ring. Ring r ==> !p c. poly p ==> ((multiplicity_set p c = {}) <=> (c NOTIN R))
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[poly_root_multiplicity_set_has_0, MEMBER_NOT_EMPTY] >>
-  rw[poly_root_multiplicity_set_empty]);
+  rw[poly_root_multiplicity_set_empty]
+QED
 
 (* Theorem: poly p /\ c IN R ==> ((multiplicity_set p c = {0}) <=> (c NOTIN roots p)) *)
 (* Proof:
@@ -315,10 +324,10 @@ val poly_root_multiplicity_set_eq_empty = store_thm(
        ==> c IN roots p                   by SUBSET_DEF
       This contradicts c NOTIN roots p.
 *)
-val poly_root_multiplicity_set_eq_sing = store_thm(
-  "poly_root_multiplicity_set_eq_sing",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
-   !p c. poly p /\ c IN R ==> ((multiplicity_set p c = {0}) <=> (c NOTIN roots p))``,
+Theorem poly_root_multiplicity_set_eq_sing:
+    !r:'a ring. Ring r /\ #1 <> #0 ==>
+   !p c. poly p /\ c IN R ==> ((multiplicity_set p c = {0}) <=> (c NOTIN roots p))
+Proof
   rw[EQ_IMP_THM] >-
   metis_tac[poly_root_multiplicity_set_has_1, IN_SING, DECIDE``1 <> 0``] >>
   qabbrev_tac `s = multiplicity_set p c` >>
@@ -330,7 +339,8 @@ val poly_root_multiplicity_set_eq_sing = store_thm(
   `c IN roots (factor c)` by rw[poly_factor_roots, IN_SING] >>
   `roots (factor c) SUBSET roots (factor c ** n)` by rw[poly_roots_exp_subset] >>
   `roots (factor c ** n) SUBSET roots p` by rw[poly_divides_share_roots] >>
-  metis_tac[SUBSET_DEF]);
+  metis_tac[SUBSET_DEF]
+QED
 
 (* Theorem: poly p /\ poly q /\ p <> |0| /\ q pdivides p ==>
         !c. c IN R ==> multiplicity q c <= multiplicity p c *)
@@ -348,10 +358,10 @@ val poly_root_multiplicity_set_eq_sing = store_thm(
        Note poly (factor c ** x)        by poly_factor_poly, poly_exp_poly, #1 <> #0
        Thus factor c ** x pdivides p    by poly_divides_transitive
 *)
-val poly_root_multiplicity_le = store_thm(
-  "poly_root_multiplicity_le",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q pdivides p ==>
-   !c. c IN R ==> multiplicity q c <= multiplicity p c``,
+Theorem poly_root_multiplicity_le:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q pdivides p ==>
+   !c. c IN R ==> multiplicity q c <= multiplicity p c
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   rw_tac std_ss[poly_root_multiplicity_def] >>
@@ -361,7 +371,8 @@ val poly_root_multiplicity_le = store_thm(
   rw[poly_root_multiplicity_set_finite] >>
   rw[poly_root_multiplicity_set_def, SUBSET_DEF] >>
   `poly (factor c ** x)` by rw[poly_factor_poly] >>
-  metis_tac[poly_divides_transitive]);
+  metis_tac[poly_divides_transitive]
+QED
 
 (* Theorem: poly p /\ p <> |0| ==> !c. c IN (roots p) ==> 0 < multiplicity p c *)
 (* Proof:
@@ -373,17 +384,18 @@ val poly_root_multiplicity_le = store_thm(
      or 1 <= multiplicity p c   by poly_root_multiplicity_def
     <=> 0 < multiplicity p c    by LESS_EQ
 *)
-val poly_root_multiplicity_nonzero = store_thm(
-  "poly_root_multiplicity_nonzero",
-  ``!r:'a ring. Ring r ==> !p. poly p /\ p <> |0| ==>
-   !c. c IN (roots p) ==> 0 < multiplicity p c``,
+Theorem poly_root_multiplicity_nonzero:
+    !r:'a ring. Ring r ==> !p. poly p /\ p <> |0| ==>
+   !c. c IN (roots p) ==> 0 < multiplicity p c
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   qabbrev_tac `s = multiplicity_set p c` >>
   `FINITE s` by rw[poly_root_multiplicity_set_finite, Abbr`s`] >>
   `1 IN s` by rw[poly_root_multiplicity_set_has_1, Abbr`s`] >>
   `1 <= multiplicity p c` by rw[poly_root_multiplicity_def, in_max_set, Abbr`s`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c. c IN R ==> (multiplicity (factor c) c = 1)  *)
 (* Proof:
@@ -408,9 +420,9 @@ val poly_root_multiplicity_nonzero = store_thm(
           Thus s = {0; 1}
    Thus MAX_SET s = MAX_SET {0; 1} = 1       by evaluation
 *)
-val poly_root_multiplicity_factor = store_thm(
-  "poly_root_multiplicity_factor",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (multiplicity (factor c) c = 1)``,
+Theorem poly_root_multiplicity_factor:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (multiplicity (factor c) c = 1)
+Proof
   rw[poly_root_multiplicity_def] >>
   qabbrev_tac `s = multiplicity_set (factor c) c` >>
   `s = {0; 1}` by
@@ -425,7 +437,8 @@ val poly_root_multiplicity_factor = store_thm(
     rw[poly_factor_poly, poly_divides_reflexive]
   ]) >>
   `MAX_SET {0; 1} = 1` by EVAL_TAC >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: poly p /\ p <> |0| ==> !c. c NOTIN roots p <=> (multiplicity p c = 0) *)
 (* Proof:
@@ -443,10 +456,10 @@ val poly_root_multiplicity_factor = store_thm(
       Then 0 < multiplicity p c             by poly_root_multiplicity_nonzero
       This contradicts multiplicity p c = 0.
 *)
-val poly_root_multiplicity_eq_0 = store_thm(
-  "poly_root_multiplicity_eq_0",
-  ``!r:'a ring. Ring r ==> !p. poly p /\ p <> |0| ==>
-   !c. c NOTIN roots p <=> (multiplicity p c = 0)``,
+Theorem poly_root_multiplicity_eq_0:
+    !r:'a ring. Ring r ==> !p. poly p /\ p <> |0| ==>
+   !c. c NOTIN roots p <=> (multiplicity p c = 0)
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   rw_tac std_ss[EQ_IMP_THM] >| [
@@ -459,7 +472,8 @@ val poly_root_multiplicity_eq_0 = store_thm(
     qabbrev_tac `s = multiplicity_set p c` >>
     `0 < multiplicity p c` by fs[poly_root_multiplicity_nonzero] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Overload the complicated function *)
 val _ = temp_overload_on("term", ``\p c. factor c ** multiplicity p c``);
@@ -476,10 +490,10 @@ val _ = temp_overload_on("term", ``\p c. factor c ** multiplicity p c``);
    Note c IN roots p ==> c IN R      by poly_roots_element
     ==> (term p c) pdivides p        by poly_root_multiplicity_set_def
 *)
-val poly_root_multiplicity_root_property = store_thm(
-  "poly_root_multiplicity_root_property",
-  ``!r:'a ring. Ring r ==>
-   !p c. poly p /\ p <> |0| /\ c IN roots p ==> term p c pdivides p``,
+Theorem poly_root_multiplicity_root_property:
+    !r:'a ring. Ring r ==>
+   !p c. poly p /\ p <> |0| /\ c IN roots p ==> term p c pdivides p
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   qabbrev_tac `s = multiplicity_set p c` >>
@@ -488,7 +502,8 @@ val poly_root_multiplicity_root_property = store_thm(
   `s <> {}` by metis_tac[MEMBER_NOT_EMPTY] >>
   `MAX_SET s IN s` by rw[MAX_SET_IN_SET] >>
   `c IN R` by metis_tac[poly_roots_element] >>
-  fs[poly_root_multiplicity_def, poly_root_multiplicity_set_def, Abbr`s`]);
+  fs[poly_root_multiplicity_def, poly_root_multiplicity_set_def, Abbr`s`]
+QED
 
 (* Theorem: poly p /\ p <> |0| /\ c IN R ==> term p c pdivides p *)
 (* Proof:
@@ -499,16 +514,17 @@ val poly_root_multiplicity_root_property = store_thm(
       Thus term p c = |1|          by poly_exp_1
       Then |1| pdivides p          by poly_one_divides_all
 *)
-val poly_root_multiplicity_property = store_thm(
-  "poly_root_multiplicity_property",
-  ``!r:'a ring. Ring r ==>
-   !p c. poly p /\ p <> |0| /\ c IN R ==> term p c pdivides p``,
+Theorem poly_root_multiplicity_property:
+    !r:'a ring. Ring r ==>
+   !p c. poly p /\ p <> |0| /\ c IN R ==> term p c pdivides p
+Proof
   rpt strip_tac >>
   Cases_on `c IN roots p` >-
   rw[poly_root_multiplicity_root_property] >>
   `multiplicity p c = 0` by rw[GSYM poly_root_multiplicity_eq_0] >>
   `term p c = |1|` by rw[] >>
-  rw[poly_one_divides_all]);
+  rw[poly_one_divides_all]
+QED
 
 (* Theorem: poly p /\ poly q /\ p <> |0| ==>
             !c. c IN R /\ (p = term p c * q) ==> c NOTIN (roots q) *)
@@ -531,10 +547,10 @@ val poly_root_multiplicity_property = store_thm(
      ==> SUC m <= multiplicity p c               by poly_root_multiplicity_lower, p <> |0|
       or SUC m <= m, which is false.
 *)
-val poly_root_multiplicity_factor_out_root = store_thm(
-  "poly_root_multiplicity_factor_out_root",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p <> |0| ==>
-   !c. c IN R /\ (p = term p c * q) ==> c NOTIN (roots q)``,
+Theorem poly_root_multiplicity_factor_out_root:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\ p <> |0| ==>
+   !c. c IN R /\ (p = term p c * q) ==> c NOTIN (roots q)
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   qabbrev_tac `m = multiplicity p c` >>
@@ -547,7 +563,8 @@ val poly_root_multiplicity_factor_out_root = store_thm(
   `poly ((factor c) ** (SUC m))` by rw[] >>
   `(factor c) ** (SUC m) pdivides p` by metis_tac[poly_divides_def, poly_mult_comm] >>
   `SUC m <= m` by rw[poly_root_multiplicity_lower, Abbr`m`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: poly p /\ p <> |0| /\ c IN R ==>
             !n. (multiplicity p c = n) <=> factor c ** n pdivides p /\ ~(factor c ** (SUC n) pdivides p) *)
@@ -583,10 +600,10 @@ val poly_root_multiplicity_factor_out_root = store_thm(
          ==> factor c ** (SUC n) pdivides p              by poly_divides_transitive
         This contradicts ~(factor c ** (SUC n) pdivides p).
 *)
-val poly_root_multiplicity_test = store_thm(
-  "poly_root_multiplicity_test",
-  ``!r:'a ring. Ring r ==> !p c. poly p /\ p <> |0| /\ c IN R ==>
-   !n. (multiplicity p c = n) <=> factor c ** n pdivides p /\ ~(factor c ** (SUC n) pdivides p)``,
+Theorem poly_root_multiplicity_test:
+    !r:'a ring. Ring r ==> !p c. poly p /\ p <> |0| /\ c IN R ==>
+   !n. (multiplicity p c = n) <=> factor c ** n pdivides p /\ ~(factor c ** (SUC n) pdivides p)
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   rw_tac std_ss[EQ_IMP_THM] >-
@@ -609,7 +626,8 @@ val poly_root_multiplicity_test = store_thm(
   `factor c ** (SUC n) pdivides factor c ** m` by rw[poly_factor_poly, poly_divides_exp_le] >>
   `factor c ** (SUC n) = factor c * factor c ** n` by rw[] >>
   `!k. poly (factor c ** k)` by rw[poly_factor_poly] >>
-  metis_tac[poly_divides_transitive, poly_mult_poly]);
+  metis_tac[poly_divides_transitive, poly_mult_poly]
+QED
 
 (* Theorem: poly p /\ p <> |0| /\ c IN roots p ==> pmonic (term p c) *)
 (* Proof:
@@ -621,16 +639,17 @@ val poly_root_multiplicity_test = store_thm(
     and 0 < multiplicity p c                by poly_root_multiplicity_nonzero
    Thus pmonic (term p c)                   by poly_monic_pmonic, 0 < deg (term p c)
 *)
-val poly_root_multiplicity_term_pmonic = store_thm(
-  "poly_root_multiplicity_term_pmonic",
-  ``!r:'a ring. Ring r ==> !p c. poly p /\ p <> |0| /\ c IN roots p ==> pmonic (term p c)``,
+Theorem poly_root_multiplicity_term_pmonic:
+    !r:'a ring. Ring r ==> !p c. poly p /\ p <> |0| /\ c IN roots p ==> pmonic (term p c)
+Proof
   ntac 5 strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   `c IN R` by metis_tac[poly_roots_element] >>
   `monic (term p c)` by rw[poly_factor_monic] >>
   `deg (term p c) = multiplicity p c` by rw[poly_factor_exp_deg] >>
   `0 < multiplicity p c` by rw[poly_root_multiplicity_nonzero] >>
-  rw[poly_monic_pmonic]);
+  rw[poly_monic_pmonic]
+QED
 
 (* Theorem: poly p /\ p <> |0| /\ c IN roots p ==> c NOTIN roots (p / (term p c)) *)
 (* Proof:
@@ -655,10 +674,10 @@ val poly_root_multiplicity_term_pmonic = store_thm(
    But ~factor c ** SUC m pdivides p       by poly_root_multiplicity_test
    This is a contradiction.
 *)
-val poly_root_multiplicity_out_root = store_thm(
-  "poly_root_multiplicity_out_root",
-  ``!r:'a ring. Ring r ==>
-   !p c. poly p /\ p <> |0| /\ c IN roots p ==> c NOTIN roots (p / (term p c))``,
+Theorem poly_root_multiplicity_out_root:
+    !r:'a ring. Ring r ==>
+   !p c. poly p /\ p <> |0| /\ c IN roots p ==> c NOTIN roots (p / (term p c))
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   qabbrev_tac `q = p / term p c` >>
@@ -674,7 +693,8 @@ val poly_root_multiplicity_out_root = store_thm(
   `_ = t * (factor c * term p c)` by rw[poly_mult_assoc] >>
   `_ = t * (factor c ** SUC (multiplicity p c))` by rw[] >>
   `factor c ** SUC (multiplicity p c) pdivides p` by metis_tac[poly_divides_def, poly_monic_poly] >>
-  metis_tac[poly_root_multiplicity_test]);
+  metis_tac[poly_root_multiplicity_test]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
             !c. c IN roots p /\ c NOTIN roots q ==> (multiplicity (p * q) c = multiplicity p c) *)
@@ -730,10 +750,10 @@ val poly_root_multiplicity_out_root = store_thm(
 
    Therefore, multiplicity (p * q) c = n    by poly_root_multiplicity_test
 *)
-val poly_root_multiplicity_no_root = store_thm(
-  "poly_root_multiplicity_no_root",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
-   !c. c IN roots p /\ c NOTIN roots q ==> (multiplicity (p * q) c = multiplicity p c)``,
+Theorem poly_root_multiplicity_no_root:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
+   !c. c IN roots p /\ c NOTIN roots q ==> (multiplicity (p * q) c = multiplicity p c)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `poly (p * q)` by rw[] >>
@@ -765,7 +785,8 @@ val poly_root_multiplicity_no_root = store_thm(
   `factor c pdivides h * q` by metis_tac[poly_divides_def] >>
   `ipoly (factor c)` by rw[poly_factor_irreducible] >>
   metis_tac[poly_irreducible_divides_product]) >>
-  metis_tac[poly_root_multiplicity_test]);
+  metis_tac[poly_root_multiplicity_test]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
    !c. c IN roots p /\ c IN roots q ==> (multiplicity (p * q) c = multiplicity p x + multiplicity q c) *)
@@ -835,10 +856,10 @@ val poly_root_multiplicity_no_root = store_thm(
 
    Therefore, multiplicity (p * q) c = (n + m)      by poly_root_multiplicity_test
 *)
-val poly_root_multiplicity_both_roots = store_thm(
-  "poly_root_multiplicity_both_roots",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
-   !c. c IN roots p /\ c IN roots q ==> (multiplicity (p * q) c = multiplicity p c + multiplicity q c)``,
+Theorem poly_root_multiplicity_both_roots:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
+   !c. c IN roots p /\ c IN roots q ==> (multiplicity (p * q) c = multiplicity p c + multiplicity q c)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `poly (p * q)` by rw[] >>
@@ -877,7 +898,8 @@ val poly_root_multiplicity_both_roots = store_thm(
   `ipoly (factor c)` by rw[poly_factor_irreducible] >>
   metis_tac[poly_irreducible_divides_product]) >>
   `term p c * term q c = factor c ** (n + m)` by rw[poly_exp_add] >>
-  metis_tac[poly_root_multiplicity_test]);
+  metis_tac[poly_root_multiplicity_test]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !p. poly p ==> !c. multiplicity (-p) c = multiplicity p c *)
 (* Proof:
@@ -898,9 +920,9 @@ val poly_root_multiplicity_both_roots = store_thm(
 
    Hence their MAX_SET are equal.
 *)
-val poly_root_multiplicity_neg = store_thm(
-  "poly_root_multiplicity_neg",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p. poly p ==> !c. multiplicity (-p) c = multiplicity p c``,
+Theorem poly_root_multiplicity_neg:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p. poly p ==> !c. multiplicity (-p) c = multiplicity p c
+Proof
   rpt strip_tac >>
   reverse (Cases_on `c IN R`) >-
   rw[poly_root_multiplicity_0] >>
@@ -914,7 +936,8 @@ val poly_root_multiplicity_neg = store_thm(
     `?q. poly q /\ (p = q * (factor c ** x))` by rw[GSYM poly_divides_def] >>
     `-p = (-q) * (factor c ** x)` by metis_tac[poly_neg_mult] >>
     metis_tac[poly_divides_def, poly_neg_poly]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p b. poly p /\ b IN R /\ b <> #0 ==>
   !c. multiplicity (b * p) c = multiplicity p c *)
@@ -929,24 +952,26 @@ val poly_root_multiplicity_neg = store_thm(
    Note poly q               by poly_factor_poly, poly_exp_poly
    Thus this is true         by poly_field_divides_cmult_iff
 *)
-val poly_root_multiplicity_cmult = store_thm(
-  "poly_root_multiplicity_cmult",
-  ``!r:'a field. Field r ==> !p b. poly p /\ b IN R /\ b <> #0 ==>
-   !c. multiplicity (b * p) c = multiplicity p c``,
+Theorem poly_root_multiplicity_cmult:
+    !r:'a field. Field r ==> !p b. poly p /\ b IN R /\ b <> #0 ==>
+   !c. multiplicity (b * p) c = multiplicity p c
+Proof
   rpt strip_tac >>
   reverse (Cases_on `c IN R`) >-
   rw[poly_root_multiplicity_0] >>
   rw[poly_root_multiplicity_def] >>
   `multiplicity_set (b * p) c = multiplicity_set p c` suffices_by rw[] >>
   rw[poly_root_multiplicity_set_def, EXTENSION] >>
-  rw[poly_field_divides_cmult_iff, poly_factor_poly]);
+  rw[poly_field_divides_cmult_iff, poly_factor_poly]
+QED
 
 (* Theorem: Ring r ==> !p q. poly p /\ poly q ==> (multiplicity (p * q) = multiplicity (q * p)) *)
 (* Proof: by poly_mult_comm *)
-val poly_root_multiplicity_mult_comm = store_thm(
-  "poly_root_multiplicity_mult_comm",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (multiplicity (p * q) = multiplicity (q * p))``,
-  rw_tac std_ss[poly_mult_comm]);
+Theorem poly_root_multiplicity_mult_comm:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (multiplicity (p * q) = multiplicity (q * p))
+Proof
+  rw_tac std_ss[poly_mult_comm]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
             !c. multiplicity (p * q) c = multiplicity p c + multiplicity q c *)
@@ -976,10 +1001,10 @@ val poly_root_multiplicity_mult_comm = store_thm(
           Now p * q <> |0|                 by poly_mult_eq_zero, Field r
          Thus multiplicity (p * q) c = 0   by poly_root_multiplicity_eq_0
 *)
-val poly_root_multiplicity_mult = store_thm(
-  "poly_root_multiplicity_mult",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
-   !c. multiplicity (p * q) c = multiplicity p c + multiplicity q c``,
+Theorem poly_root_multiplicity_mult:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ p <> |0| /\ q <> |0| ==>
+   !c. multiplicity (p * q) c = multiplicity p c + multiplicity q c
+Proof
   rpt strip_tac >>
   reverse (Cases_on `c IN R`) >-
   rw[poly_root_multiplicity_0] >>
@@ -1000,7 +1025,8 @@ val poly_root_multiplicity_mult = store_thm(
       `multiplicity (p * q) c = 0` by rw[GSYM poly_root_multiplicity_eq_0] >>
       decide_tac
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: b IN R /\ b <> #0 ==> !c. multiplicity [b] c = 0 *)
 (* Proof:
@@ -1012,16 +1038,17 @@ val poly_root_multiplicity_mult = store_thm(
    Thus ~(x IN roots [b])        by MEMBER_NOT_EMPTY
     ==> multiplicity [b] c = 0   by poly_root_multiplicity_eq_0
 *)
-val poly_root_multiplicity_const = store_thm(
-  "poly_root_multiplicity_const",
-  ``!r:'a ring. Ring r ==> !b. b IN R /\ b <> #0 ==> !c. multiplicity [b] c = 0``,
+Theorem poly_root_multiplicity_const:
+    !r:'a ring. Ring r ==> !b. b IN R /\ b <> #0 ==> !c. multiplicity [b] c = 0
+Proof
   rpt strip_tac >>
   reverse (Cases_on `c IN R`) >-
   rw[poly_root_multiplicity_0] >>
   `poly [b] /\ [b] <> |0|` by rw[] >>
   `roots [b] = {}` by rw[poly_roots_const] >>
   `~(c IN roots [b])` by rw[] >>
-  rw[GSYM poly_root_multiplicity_eq_0]);;
+  rw[GSYM poly_root_multiplicity_eq_0]
+QED
 
 (* Theorem: multiplicity |1| c = 0 *)
 (* Proof:
@@ -1029,10 +1056,11 @@ val poly_root_multiplicity_const = store_thm(
    = multiplicity [#1] c    by poly_one, #1 <> #0
    = 1                      by poly_root_multiplicity_const, #1 IN R
 *)
-val poly_root_multiplicity_one = store_thm(
-  "poly_root_multiplicity_one",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. multiplicity |1| c = 0``,
-  rw[poly_root_multiplicity_const, poly_one]);
+Theorem poly_root_multiplicity_one:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. multiplicity |1| c = 0
+Proof
+  rw[poly_root_multiplicity_const, poly_one]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ p <> |0| ==>
             !c n. multiplicity (p ** n) c = n * multiplicity p c *)
@@ -1052,10 +1080,10 @@ val poly_root_multiplicity_one = store_thm(
        = n * multiplicity p c + multiplicity p c      by induction hypothesis
        = SUC n * multiplicity p c                     by MULT
 *)
-val poly_root_multiplicity_exp = store_thm(
-  "poly_root_multiplicity_exp",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==>
-   !c n. multiplicity (p ** n) c = n * multiplicity p c``,
+Theorem poly_root_multiplicity_exp:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==>
+   !c n. multiplicity (p ** n) c = n * multiplicity p c
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[poly_root_multiplicity_one] >>
@@ -1064,7 +1092,8 @@ val poly_root_multiplicity_exp = store_thm(
   `_ = multiplicity (p ** n) c + multiplicity p c` by rw[poly_root_multiplicity_mult] >>
   `_ = n * multiplicity p c + multiplicity p c` by rw[] >>
   `_ = SUC n * multiplicity p c` by rw[MULT] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: poly p /\ p <> |0| ==> !c. c IN roots p <=> 0 < multiplicity p c *)
 (* Proof:
@@ -1072,11 +1101,12 @@ val poly_root_multiplicity_exp = store_thm(
    Thus    c IN roots p <=> multiplicity p c <> 0   by negation on both sides
     or     c IN roots p <=> 0 < multiplicity p c    by arithmetic
 *)
-val poly_root_condition = store_thm(
-  "poly_root_condition",
-  ``!r:'a ring. Ring r ==> !p. poly p /\ p <> |0| ==>
-   !c. c IN roots p <=> 0 < multiplicity p c``,
-  metis_tac[poly_root_multiplicity_eq_0, NOT_ZERO_LT_ZERO]);
+Theorem poly_root_condition:
+    !r:'a ring. Ring r ==> !p. poly p /\ p <> |0| ==>
+   !c. c IN roots p <=> 0 < multiplicity p c
+Proof
+  metis_tac[poly_root_multiplicity_eq_0, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: poly p /\ p <> |0| /\ c IN R ==>
             (1 < multiplicity p c <=> root p c /\ root (diff p) c) *)
@@ -1142,10 +1172,10 @@ val poly_root_condition = store_thm(
         so 2 <= MAX_SET s                              by in_max_set
         or 1 < MAX_SET s
 *)
-val poly_root_multiple = store_thm(
-  "poly_root_multiple",
-  ``!r:'a ring. Ring r ==> !p c. poly p /\ p <> |0| /\ c IN R ==>
-     (1 < multiplicity p c <=> root p c /\ root (diff p) c)``,
+Theorem poly_root_multiple:
+    !r:'a ring. Ring r ==> !p c. poly p /\ p <> |0| /\ c IN R ==>
+     (1 < multiplicity p c <=> root p c /\ root (diff p) c)
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[poly_one_eq_poly_zero, poly_one_eq_zero] >>
   rw_tac std_ss[poly_root_multiplicity_def] >>
@@ -1186,7 +1216,8 @@ val poly_root_multiple = store_thm(
     `2 IN s` by metis_tac[poly_root_multiplicity_set_member] >>
     `2 <= MAX_SET s` by rw[in_max_set] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* This is a major result. *)
 
@@ -1213,10 +1244,10 @@ val poly_root_multiple = store_thm(
       = m + deg q                       by poly_factor_deg
     or deg q = deg p - m                by arithmetic
 *)
-val poly_root_factor_out_root = store_thm(
-  "poly_root_factor_out_root",
-  ``!r:'a field. Field r ==> !p c. poly p /\ p <> |0| /\ c IN roots p ==>
-   ?q. poly q /\ (p = (term p c) * q) /\ (c NOTIN roots q) /\ (deg q = deg p - multiplicity p c)``,
+Theorem poly_root_factor_out_root:
+    !r:'a field. Field r ==> !p c. poly p /\ p <> |0| /\ c IN roots p ==>
+   ?q. poly q /\ (p = (term p c) * q) /\ (c NOTIN roots q) /\ (deg q = deg p - multiplicity p c)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `m = multiplicity p c` >>
@@ -1233,7 +1264,8 @@ val poly_root_factor_out_root = store_thm(
   `deg ((factor c) ** m) = m` by rw[poly_factor_deg, poly_monic_deg_exp] >>
   `deg p = m + deg q` by rw[poly_deg_mult_unit] >>
   `deg q = deg p - m` by decide_tac >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* This is a weak result. *)
 (* Theorem: poly p /\ p <> |0| ==> CARD (roots p) <= SIGMA (multiplicity p) (roots p) *)
@@ -1246,9 +1278,9 @@ val poly_root_factor_out_root = store_thm(
     Hence SIGMA (\x. 1) (roots p) <= SIGMA (multiplicity p) (roots p)  by SIGMA_LE_SIGMA
        or          CARD (roots p) <= SIGMA (multiplicity p) (roots p)  by above
 *)
-val poly_roots_card_upper = store_thm(
-  "poly_roots_card_upper",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> CARD (roots p) <= SIGMA (multiplicity p) (roots p)``,
+Theorem poly_roots_card_upper:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> CARD (roots p) <= SIGMA (multiplicity p) (roots p)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FINITE (roots p)` by rw[poly_roots_finite] >>
@@ -1258,7 +1290,8 @@ val poly_roots_card_upper = store_thm(
   qabbrev_tac `g = multiplicity p` >>
   `!x. f x = 1` by rw[Abbr`f`] >>
   `!c. g c = multiplicity p c` by rw[Abbr`g`] >>
-  metis_tac[SIGMA_LE_SIGMA]);
+  metis_tac[SIGMA_LE_SIGMA]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ p <> |0| ==> monic (PPIMAGE (term p) (roots p)) *)
 (* Proof:
@@ -1268,22 +1301,24 @@ val poly_roots_card_upper = store_thm(
     and mset s                               by poly_factor_monic, poly_roots_element
    Thus monic (PPIMAGE (term p) (roots p))   by poly_monic_prod_set_monic
 *)
-val poly_prod_term_roots_monic = store_thm(
-  "poly_prod_term_roots_monic",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> monic (PPIMAGE (term p) (roots p))``,
+Theorem poly_prod_term_roots_monic:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> monic (PPIMAGE (term p) (roots p))
+Proof
   rpt strip_tac >>
   `FINITE (roots p)` by rw[poly_roots_finite] >>
   (irule poly_monic_prod_set_monic >> simp[]) >>
   rpt strip_tac >>
   `c IN R` by metis_tac[poly_roots_element] >>
-  rw[poly_factor_monic]);
+  rw[poly_factor_monic]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ p <> |0| ==> poly (PPIMAGE (term p) (roots p)) *)
 (* Proof: by poly_prod_term_roots_monic, poly_monic_poly *)
-val poly_prod_term_roots_poly = store_thm(
-  "poly_prod_term_roots_poly",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> poly (PPIMAGE (term p) (roots p))``,
-  rw_tac std_ss[poly_prod_term_roots_monic, poly_monic_poly]);
+Theorem poly_prod_term_roots_poly:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> poly (PPIMAGE (term p) (roots p))
+Proof
+  rw_tac std_ss[poly_prod_term_roots_monic, poly_monic_poly]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ p <> |0| ==>
             FINITE (IMAGE (\x. factor x ** multiplicity p x) (roots p)) *)
@@ -1292,11 +1327,12 @@ val poly_prod_term_roots_poly = store_thm(
    Since Field r, poly p /\ p <> |0| ==> FINITE (roots p)   by poly_roots_finite
    Hence FINITE s                                           by IMAGE_FINITE
 *)
-val poly_root_factor_multiplicity_finite = store_thm(
-  "poly_root_factor_multiplicity_finite",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==>
-       FINITE (IMAGE (\x. factor x ** multiplicity p x) (roots p))``,
-  rw[poly_roots_finite]);
+Theorem poly_root_factor_multiplicity_finite:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==>
+       FINITE (IMAGE (\x. factor x ** multiplicity p x) (roots p))
+Proof
+  rw[poly_roots_finite]
+QED
 
 (* Theorem: Field r ==> !p z. z IN IMAGE (\x. factor x ** multiplicity p x) (roots p) ==> poly z *)
 (* Proof:
@@ -1306,14 +1342,15 @@ val poly_root_factor_multiplicity_finite = store_thm(
    Since  x IN R ==> poly (factor x)                                  by poly_factor_property
    Hence poly z                                                       by poly_exp_poly
 *)
-val poly_root_factor_multiplicity_poly = store_thm(
-  "poly_root_factor_multiplicity_poly",
-  ``!r:'a field. Field r ==>
-   !p z. z IN IMAGE (\x. factor x ** multiplicity p x) (roots p) ==> poly z``,
+Theorem poly_root_factor_multiplicity_poly:
+    !r:'a field. Field r ==>
+   !p z. z IN IMAGE (\x. factor x ** multiplicity p x) (roots p) ==> poly z
+Proof
   rpt strip_tac >>
   `?x. (z = factor x ** multiplicity p x) /\ x IN (roots p)` by rw[GSYM IN_IMAGE] >>
   `!x. x IN R ==> poly (factor x)` by rw[poly_factor_property] >>
-  metis_tac[poly_exp_poly, poly_roots_member, field_is_ring]);
+  metis_tac[poly_exp_poly, poly_roots_member, field_is_ring]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Separable Polynomials                                                     *)
@@ -1351,9 +1388,9 @@ val _ = overload_on("separable", ``poly_separable r``);
      <> #0                     by field_one_ne_zero
    This contradicts root p c   by poly_root_def
 *)
-val poly_separable_unity = store_thm(
-  "poly_separable_unity",
-  ``!r:'a field. Field r ==> !n. 1 < n /\ coprime n (char r) ==> separable (unity n)``,
+Theorem poly_separable_unity:
+    !r:'a field. Field r ==> !n. 1 < n /\ coprime n (char r) ==> separable (unity n)
+Proof
   rpt strip_tac >>
   `0 < n /\ n <> 0` by decide_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
@@ -1370,7 +1407,8 @@ val poly_separable_unity = store_thm(
   `eval p #0 = #0 ** n - #1` by rw[poly_eval_X_exp_n_sub_c, Abbr`p`] >>
   `_ = #0 - #1` by rw[ring_zero_exp] >>
   `#0 - #1 <> #0` by rw[] >>
-  fs[poly_root_def]);
+  fs[poly_root_def]
+QED
 
 (* Theorem: 1 < char r ==> !n. 0 < n ==> separable (master (char r ** n)) *)
 (* Proof:
@@ -1393,10 +1431,10 @@ val poly_separable_unity = store_thm(
      But roots (diff p) = {}                   by poly_diff_master_char_exp_roots
    This is a contradiction                     by MEMBER_NOT_EMPTY
 *)
-val poly_separable_master_char_exp = store_thm(
-  "poly_separable_master_char_exp",
-  ``!r:'a ring. Ring r /\ 1 < char r ==>
-   !n. 0 < n ==> separable (master (char r ** n))``,
+Theorem poly_separable_master_char_exp:
+    !r:'a ring. Ring r /\ 1 < char r ==>
+   !n. 0 < n ==> separable (master (char r ** n))
+Proof
   rpt strip_tac >>
   `#1 <> #0` by metis_tac[ring_char_eq_1, LESS_NOT_EQ] >>
   qabbrev_tac `p = master (char r ** n)` >>
@@ -1408,7 +1446,8 @@ val poly_separable_master_char_exp = store_thm(
   `0 < multiplicity p c` by rw[GSYM poly_root_condition] >>
   `1 < multiplicity p c` by decide_tac >>
   `c IN roots (diff p)` by metis_tac[poly_root_multiple, poly_roots_member] >>
-  metis_tac[poly_diff_master_char_exp_roots, MEMBER_NOT_EMPTY]);
+  metis_tac[poly_diff_master_char_exp_roots, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: poly p /\ poly q /\ q pdivides p /\ separable p ==> separable q *)
 (* Proof:
@@ -1431,10 +1470,10 @@ val poly_separable_master_char_exp = store_thm(
 
        Hence, multiplicity q c = 1     by LESS_EQUAL_ANTISYM
 *)
-val poly_separable_divisor_separable = store_thm(
-  "poly_separable_divisor_separable",
-  ``!r:'a ring. Ring r ==>
-   !p q. poly p /\ poly q /\ q pdivides p /\ separable p ==> separable q``,
+Theorem poly_separable_divisor_separable:
+    !r:'a ring. Ring r ==>
+   !p q. poly p /\ poly q /\ q pdivides p /\ separable p ==> separable q
+Proof
   rw_tac std_ss[poly_separable_def] >-
   metis_tac[poly_zero_divides] >>
   `Ring r` by rw[] >>
@@ -1443,7 +1482,8 @@ val poly_separable_divisor_separable = store_thm(
   `multiplicity q c <= 1` by metis_tac[poly_root_multiplicity_le, poly_roots_member] >>
   `q <> |0|` by metis_tac[poly_zero_divides] >>
   `0 < multiplicity q c` by rw[poly_root_multiplicity_nonzero] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: poly p /\ poly q /\ separable (p * q) ==> separable p /\ separable q *)
 (* Proof:
@@ -1453,14 +1493,15 @@ val poly_separable_divisor_separable = store_thm(
         q divides p * q      by poly_divides_def
    The result follows        by poly_separable_divisor_separable
 *)
-val poly_separable_factors_separable = store_thm(
-  "poly_separable_factors_separable",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\
-    separable (p * q) ==> separable p /\ separable q``,
+Theorem poly_separable_factors_separable:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\
+    separable (p * q) ==> separable p /\ separable q
+Proof
   ntac 5 strip_tac >>
   `poly (p * q)` by rw[] >>
   `p * q = q * p` by rw[poly_mult_comm] >>
-  metis_tac[poly_separable_divisor_separable, poly_divides_def]);
+  metis_tac[poly_separable_divisor_separable, poly_divides_def]
+QED
 
 (* Theorem: Field r ==> !p q. poly p /\ poly q /\
             separable (p * q) ==> DISJOINT (roots p) (roots q) *)
@@ -1480,10 +1521,10 @@ val poly_separable_factors_separable = store_thm(
     Now 2 <= multiplicity (p * q) c         by poly_root_multiplicity_lower, p * q <> |0|
    This implies 2 <= 1, which is false.
 *)
-val poly_separable_factor_roots_disjoint = store_thm(
-  "poly_separable_factor_roots_disjoint",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\
-    separable (p * q) ==> DISJOINT (roots p) (roots q)``,
+Theorem poly_separable_factor_roots_disjoint:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\
+    separable (p * q) ==> DISJOINT (roots p) (roots q)
+Proof
   rw_tac std_ss[DISJOINT_DEF] >>
   CCONTR_TAC >>
   `?c. c IN roots p /\ c IN roots q` by metis_tac[IN_INTER, MEMBER_NOT_EMPTY] >>
@@ -1496,7 +1537,8 @@ val poly_separable_factor_roots_disjoint = store_thm(
   `c IN roots (p * q)` by rw[poly_roots_mult] >>
   `p * q <> |0| /\ (multiplicity (p * q) c = 1)` by metis_tac[poly_separable_def] >>
   `2 <= multiplicity (p * q) c` by rw[poly_root_multiplicity_lower] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

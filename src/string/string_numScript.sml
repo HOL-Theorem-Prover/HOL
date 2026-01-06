@@ -18,7 +18,7 @@ Definition s2n_def:
   (s2n (STRING c s) = s2n s * 256 + ORD c + 1)
 End
 
-Theorem s2n_n2s:
+Theorem s2n_n2s[simp]:
     !n. s2n (n2s n) = n
 Proof
   completeInduct_on `n` THEN ONCE_REWRITE_TAC [n2s_def] THEN
@@ -57,7 +57,7 @@ Proof
   ]
 QED
 
-Theorem n2s_s2n:
+Theorem n2s_s2n[simp]:
     n2s (s2n s) = s
 Proof
   Induct_on `s` THEN ASM_SIMP_TAC (srw_ss()) [s2n_def, Once n2s_def] THEN
@@ -88,12 +88,12 @@ Proof
   ]
 QED
 
-Theorem n2s_11:
+Theorem n2s_11[simp]:
     (n2s x = n2s y) = (x = y)
 Proof
   METIS_TAC [s2n_n2s]
 QED
-Theorem s2n_11:
+Theorem s2n_11[simp]:
     (s2n x = s2n y) = (x = y)
 Proof
   METIS_TAC [n2s_s2n]
@@ -112,17 +112,15 @@ Proof
 QED
 
 
-val _ = export_rewrites ["n2s_s2n", "s2n_n2s", "n2s_11", "s2n_11"]
 
 Definition n2nsum_def:
   n2nsum n = if ODD n then INL (n DIV 2) else INR (n DIV 2)
 End
 
-Definition nsum2n_def:
+Definition nsum2n_def[simp]:
   (nsum2n (INL n) = 2 * n + 1) /\
   (nsum2n (INR n) = 2 * n)
 End
-val _ = export_rewrites ["nsum2n_def"]
 
 Theorem div_lemma[local]:
     (2 * x DIV 2 = x) /\ ((2 * x + 1) DIV 2 = x)

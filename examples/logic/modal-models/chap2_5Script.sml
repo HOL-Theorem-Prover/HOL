@@ -6,20 +6,21 @@ Ancestors
 val _ = temp_delsimps ["satis_def"]
 
 
-val BIGCONJ_EXISTS_DIST_TYPE = store_thm(
-  "BIGCONJ_EXISTS_DIST_TYPE",
-  ``∀s.
+Theorem BIGCONJ_EXISTS_DIST_TYPE:
+    ∀s.
      FINITE s ⇒
      ?ff.
      (∀w:'b M.
         w ∈ M.frame.world ⇒ (satis M w ff ⇔ ∀f. f ∈ s ⇒ satis M w f)) /\
      (∀w:'c M.
-        w ∈ M.frame.world ⇒ (satis M w ff ⇔ ∀f. f ∈ s ⇒ satis M w f))``,
+        w ∈ M.frame.world ⇒ (satis M w ff ⇔ ∀f. f ∈ s ⇒ satis M w f))
+Proof
   Induct_on `FINITE` >> rw[]
   >- (qexists_tac `TRUE` >> rw[TRUE_def,satis_def])
   >- (qexists_tac `AND e ff` >> rw[satis_def,AND_def] >> eq_tac >> rw[]
      >- rw[]
-     >> metis_tac[]));
+     >> metis_tac[])
+QED
 
 
 
@@ -50,13 +51,13 @@ End
 
 
 
-val BIGCONJ_EXISTS_2 = store_thm(
-"BIGCONJ_EXISTS_2",
-``∀s.
+Theorem BIGCONJ_EXISTS_2:
+  ∀s.
      FINITE s ⇒
      ?ff.
      ∀w M.
-        w ∈ M.frame.world ⇒ (satis M w ff ⇔ ∀f. f ∈ s ⇒ satis M w f)``,
+        w ∈ M.frame.world ⇒ (satis M w ff ⇔ ∀f. f ∈ s ⇒ satis M w f)
+Proof
 Induct_on `FINITE s` >> rpt strip_tac
 >- (qexists_tac `TRUE` >> rw[] >> metis_tac[satis_def,TRUE_def])
 >- (qexists_tac `AND ff e` >> rw[] >> eq_tac
@@ -66,12 +67,13 @@ Induct_on `FINITE s` >> rpt strip_tac
       `satis M w e` by metis_tac[] >>
       `!f. f IN s ==> satis M w f` by metis_tac[] >>
       `satis M w ff` by metis_tac[] >>
-      metis_tac[satis_AND])));
+      metis_tac[satis_AND]))
+QED
 
 
-val prop_2_54 = store_thm(
-"prop_2_54",
-``HM_class {M | M_sat M}``,
+Theorem prop_2_54:
+  HM_class {M | M_sat M}
+Proof
 rw[HM_class_def,bisim_world_def,bisim_def] >>
 qexists_tac `λn1 n2. (!form. satis M n1 form <=> satis M' n2 form)` >> rw[]
 >- (fs[M_sat_def] >>
@@ -121,16 +123,17 @@ qexists_tac `λn1 n2. (!form. satis M n1 form <=> satis M' n2 form)` >> rw[]
         metis_tac[])
      >- (`satis M' v' form /\ ¬(satis M x form)` by metis_tac[] >>
         metis_tac[]))
->- metis_tac[modal_eq_tau]);
+>- metis_tac[modal_eq_tau]
+QED
 
 
 
-val prop_2_54_DIST_TYPE = store_thm(
-"prop_2_54_DIST_TYPE",
-``∀M M' w:'b w':'c.
+Theorem prop_2_54_DIST_TYPE:
+  ∀M M' w:'b w':'c.
         (M_sat M ∧ M_sat M' ∧ w ∈ M.frame.world ∧ w' ∈ M'.frame.world /\
         modal_eq M M' w w') ⇒
-        bisim_world M M' w w'``,
+        bisim_world M M' w w'
+Proof
 rw[bisim_world_def,bisim_def] >>
 qexists_tac `λn1 n2. (!form. satis M n1 form <=> satis M' n2 form)` >> rw[]
 >- (fs[M_sat_def] >>
@@ -176,7 +179,8 @@ qexists_tac `λn1 n2. (!form. satis M n1 form <=> satis M' n2 form)` >> rw[]
         metis_tac[])
      >- (`satis M' v' form /\ ¬(satis M x form)` by metis_tac[] >>
         metis_tac[]))
->- metis_tac[modal_eq_tau]);
+>- metis_tac[modal_eq_tau]
+QED
 
 
 Theorem M_sat_bisim_modal_eq:
@@ -201,29 +205,33 @@ Definition only_see_def:
 only_see M X = {w | w IN M.frame.world /\ (!x. x IN M.frame.world /\ M.frame.rel w x ==> x IN X)}
 End
 
-val valt_can_see = store_thm(
-"valt_can_see",
-``!M form. {w | w IN M.frame.world /\ satis M w (DIAM form)} = can_see M {v | v IN M.frame.world /\ satis M v form}``,
+Theorem valt_can_see:
+  !M form. {w | w IN M.frame.world /\ satis M w (DIAM form)} = can_see M {v | v IN M.frame.world /\ satis M v form}
+Proof
 rw[] >> simp[EXTENSION,can_see_def] >> rw[] >> simp[EQ_IMP_THM] >> rw[]
->> metis_tac[satis_def]);
+>> metis_tac[satis_def]
+QED
 
-val valt_only_see = store_thm(
-"valt_only_see",
-``!M form. {w | w IN M.frame.world /\ satis M w (BOX form)} = only_see M {v | v IN M.frame.world /\ satis M v form}``,
+Theorem valt_only_see:
+  !M form. {w | w IN M.frame.world /\ satis M w (BOX form)} = only_see M {v | v IN M.frame.world /\ satis M v form}
+Proof
 rw[] >> simp[only_see_def,BOX_def,EXTENSION] >> rw[] >> simp[EQ_IMP_THM] >> rw[]
->> metis_tac[satis_def]);
+>> metis_tac[satis_def]
+QED
 
-val only_can_dual = store_thm(
-"only_can_dual",
-``!M X. X SUBSET M.frame.world ==> only_see M X = M.frame.world DIFF (can_see M (M.frame.world DIFF X))``,
+Theorem only_can_dual:
+  !M X. X SUBSET M.frame.world ==> only_see M X = M.frame.world DIFF (can_see M (M.frame.world DIFF X))
+Proof
 simp[only_see_def,can_see_def,DIFF_DEF,EXTENSION] >> rw[] >> eq_tac >> rw[]
->> metis_tac[]);
+>> metis_tac[]
+QED
 
-val can_only_dual = store_thm(
-"can_only_dual",
-``!M X. X SUBSET M.frame.world ==> can_see M X = M.frame.world DIFF (only_see M (M.frame.world DIFF X))``,
+Theorem can_only_dual:
+  !M X. X SUBSET M.frame.world ==> can_see M X = M.frame.world DIFF (only_see M (M.frame.world DIFF X))
+Proof
 simp[only_see_def,can_see_def,DIFF_DEF,EXTENSION] >> rw[] >> eq_tac >> rw[]
->- (fs[SUBSET_DEF] >> metis_tac[]) >> metis_tac[]);
+>- (fs[SUBSET_DEF] >> metis_tac[]) >> metis_tac[]
+QED
 
 (* exercise 2.5.5 *)
 
@@ -234,20 +242,22 @@ UE_rel M u v <=> ultrafilter u M.frame.world /\
 End
 
 
-val ultrafilter_DIFF = store_thm(
-"ultrafilter_DIFF",
-``!u W. ultrafilter u W ==> (!x. x SUBSET W ==> (x IN u <=> W DIFF x ∉ u))``,
-rw[] >> fs[ultrafilter_def] >> `x IN POW W'` by simp[POW_DEF] >> metis_tac[]);
+Theorem ultrafilter_DIFF:
+  !u W. ultrafilter u W ==> (!x. x SUBSET W ==> (x IN u <=> W DIFF x ∉ u))
+Proof
+rw[] >> fs[ultrafilter_def] >> `x IN POW W'` by simp[POW_DEF] >> metis_tac[]
+QED
 
-val ultrafilter_SUBSET = store_thm(
-"ultrafilter_SUBSET",
-``!u W. ultrafilter u W ==> (!x. x IN u ==> x SUBSET W)``,
-rw[] >> fs[ultrafilter_def,proper_filter_def,filter_def,POW_DEF,SUBSET_DEF] >> metis_tac[]);
+Theorem ultrafilter_SUBSET:
+  !u W. ultrafilter u W ==> (!x. x IN u ==> x SUBSET W)
+Proof
+rw[] >> fs[ultrafilter_def,proper_filter_def,filter_def,POW_DEF,SUBSET_DEF] >> metis_tac[]
+QED
 
-val exercise_2_5_5 = store_thm(
-"exercise_2_5_5",
-``!M u v. ultrafilter u M.frame.world /\ ultrafilter v M.frame.world ==>
-(UE_rel M u v <=> {Y | (only_see M Y) IN u /\ Y SUBSET M.frame.world} SUBSET v)``,
+Theorem exercise_2_5_5:
+  !M u v. ultrafilter u M.frame.world /\ ultrafilter v M.frame.world ==>
+(UE_rel M u v <=> {Y | (only_see M Y) IN u /\ Y SUBSET M.frame.world} SUBSET v)
+Proof
 rw[] >> eq_tac
 >- (rw[UE_rel_def] >> rw[Once SUBSET_DEF] >>
 `!x. ¬(can_see M x IN u) ==> ¬(x IN v)` by metis_tac[] >>
@@ -272,7 +282,8 @@ metis_tac[])
 `only_see M (M.frame.world DIFF X) SUBSET M.frame.world` by simp[only_see_def,SUBSET_DEF] >>
 `!x. x SUBSET M.frame.world ==> (x IN u <=> M.frame.world DIFF x ∉ u)` by metis_tac[ultrafilter_DIFF] >>
 `M.frame.world DIFF (only_see M (M.frame.world DIFF X)) IN u` by metis_tac[] >>
-metis_tac[can_only_dual]));
+metis_tac[can_only_dual])
+QED
 
 Definition UE_def:
   UE M = <| frame := <| world := {u | ultrafilter u M.frame.world};
@@ -281,53 +292,60 @@ Definition UE_def:
 End
 
 
-val only_see_INTER = store_thm(
-  "only_see_INTER",
-  ``only_see M (X ∩ Y) = only_see M X ∩ only_see M Y``,
-  rw[only_see_def,EXTENSION] >> eq_tac >> rw[]);
+Theorem only_see_INTER:
+    only_see M (X ∩ Y) = only_see M X ∩ only_see M Y
+Proof
+  rw[only_see_def,EXTENSION] >> eq_tac >> rw[]
+QED
 
-val BIGINTER_FINITE = store_thm(
-"BIGINTER_FINITE",
-``!s'. FINITE s' ==> s' <> {} /\ s' SUBSET s ==> (∀a b. a ∈ s ∧ b ∈ s ⇒ a ∩ b ∈ s) ==> BIGINTER s' IN s``,
+Theorem BIGINTER_FINITE:
+  !s'. FINITE s' ==> s' <> {} /\ s' SUBSET s ==> (∀a b. a ∈ s ∧ b ∈ s ⇒ a ∩ b ∈ s) ==> BIGINTER s' IN s
+Proof
 Induct_on `FINITE s'` >> rw[] >> Cases_on `s' = {}`
 >- fs[]
->- metis_tac[]);
+>- metis_tac[]
+QED
 
 
-val SUBSET_UNION_DIFF = store_thm(
-  "SUBSET_UNION_DIFF",
-``s SUBSET a ∪ b /\ s <> {} /\ ¬(s SUBSET b) ==> s DIFF b <> {}``,
-rw[SUBSET_DEF,DIFF_DEF,EXTENSION]);
-
-
-
-val SUBSET_SING = store_thm(
-  "SUBSET_SING",
-``s <> {} /\ s <> {a} ==> ¬(s SUBSET {a})``,
-rw[SUBSET_DEF] >> SPOSE_NOT_THEN ASSUME_TAC >> fs[EXTENSION] >> metis_tac[]);
+Theorem SUBSET_UNION_DIFF:
+  s SUBSET a ∪ b /\ s <> {} /\ ¬(s SUBSET b) ==> s DIFF b <> {}
+Proof
+rw[SUBSET_DEF,DIFF_DEF,EXTENSION]
+QED
 
 
 
-val IN_DIFF = store_thm(
-  "IN_DIFF",
-``a IN s ==> s = (s DIFF {a}) UNION {a}``,
-rw[DIFF_DEF,UNION_DEF,EXTENSION] >> metis_tac[]);
+Theorem SUBSET_SING:
+  s <> {} /\ s <> {a} ==> ¬(s SUBSET {a})
+Proof
+rw[SUBSET_DEF] >> SPOSE_NOT_THEN ASSUME_TAC >> fs[EXTENSION] >> metis_tac[]
+QED
 
 
-val NOTIN_DIFF = store_thm(
-  "NOTIN_DIFF",
-``a NOTIN s ==> s DIFF {a} = s``,
-rw[DIFF_DEF,EXTENSION] >> metis_tac[])
 
-val INTER_ABSORB = store_thm(
-  "INTER_ABSORB",
-  ``a ∩ b ∩ a = a ∩ b``,
-  fs[EXTENSION,INTER_DEF] >> metis_tac[]);
+Theorem IN_DIFF:
+  a IN s ==> s = (s DIFF {a}) UNION {a}
+Proof
+rw[DIFF_DEF,UNION_DEF,EXTENSION] >> metis_tac[]
+QED
 
-val prop_2_59_i = store_thm(
-  "prop_2_59_i",
-  ``!phi u M. ultrafilter u M.frame.world ==>
-          ({w | w IN M.frame.world /\ satis M w phi} IN u <=> satis (UE M) u phi)``,
+
+Theorem NOTIN_DIFF:
+  a NOTIN s ==> s DIFF {a} = s
+Proof
+rw[DIFF_DEF,EXTENSION] >> metis_tac[]
+QED
+
+Theorem INTER_ABSORB:
+    a ∩ b ∩ a = a ∩ b
+Proof
+  fs[EXTENSION,INTER_DEF] >> metis_tac[]
+QED
+
+Theorem prop_2_59_i:
+    !phi u M. ultrafilter u M.frame.world ==>
+          ({w | w IN M.frame.world /\ satis M w phi} IN u <=> satis (UE M) u phi)
+Proof
   Induct_on `phi` >> rw[]
   >- (rw[satis_def,EQ_IMP_THM]
      >- fs[UE_def]
@@ -489,11 +507,12 @@ val prop_2_59_i = store_thm(
         `(can_see M {w | w ∈ M.frame.world ∧ satis M w phi}) ∈ u` by metis_tac[] >>
         `can_see M {w | w ∈ M.frame.world ∧ satis M w phi} =
         {w | w ∈ M.frame.world ∧ satis M w (◇ phi)}` by metis_tac[valt_can_see] >>
-        fs[satis_def])));
+        fs[satis_def]))
+QED
 
-val prop_2_59_ii = store_thm(
-  "prop_2_59_ii",
-  ``!M w. w IN M.frame.world ==> modal_eq M (UE M) w (principle_UF w M.frame.world)``,
+Theorem prop_2_59_ii:
+    !M w. w IN M.frame.world ==> modal_eq M (UE M) w (principle_UF w M.frame.world)
+Proof
   rw[modal_eq_tau] >>
   `M.frame.world <> {}` by metis_tac[MEMBER_NOT_EMPTY] >>
   `ultrafilter (principle_UF w M.frame.world) M.frame.world` by metis_tac[principle_UF_UF] >>
@@ -504,17 +523,19 @@ val prop_2_59_ii = store_thm(
   >- (`{w | w ∈ M.frame.world ∧ satis M w form} ∈
          principle_UF w M.frame.world` by metis_tac[] >> fs[principle_UF_def])
   >- (`{w | w ∈ M.frame.world ∧ satis M w form} ∈
-         principle_UF w M.frame.world` suffices_by metis_tac[] >> fs[principle_UF_def,SUBSET_DEF] >> metis_tac[]));
+         principle_UF w M.frame.world` suffices_by metis_tac[] >> fs[principle_UF_def,SUBSET_DEF] >> metis_tac[])
+QED
 
-val only_see_whole_world = store_thm(
-  "only_see_whole_world",
-  ``only_see M M.frame.world = M.frame.world``,
-  rw[only_see_def]);
+Theorem only_see_whole_world:
+    only_see M M.frame.world = M.frame.world
+Proof
+  rw[only_see_def]
+QED
 
 
-val prop_2_61 = store_thm(
-  "prop_2_61",
-  ``!M:'b model. M_sat (UE M)``,
+Theorem prop_2_61:
+    !M:'b model. M_sat (UE M)
+Proof
   rw[] >> Cases_on `M.frame.world = {}`
 >- (rw[M_sat_def] >> fs[UE_def,ultrafilter_def] >> fs[proper_filter_def,filter_def])
 >- (rw[M_sat_def,fin_satisfiable_in_def,satisfiable_in_def]
@@ -573,25 +594,28 @@ val prop_2_61 = store_thm(
         `{w | w ∈ M.frame.world ∧ satis M w form} ∈ d` suffices_by metis_tac[SUBSET_DEF] >>
         `{w | w ∈ M.frame.world ∧ satis M w form} IN
         {{w | w ∈ M.frame.world ∧ ∀phi. phi ∈ s ⇒ satis M w phi} | FINITE s ∧ s ⊆ Σ}` suffices_by fs[Abbr`d`] >>
-        fs[] >> qexists_tac `{form}` >> rw[]))));
+        fs[] >> qexists_tac `{form}` >> rw[])))
+QED
 
-val modal_eq_SYM = store_thm(
-  "modal_eq_SYM",
-  ``!M M' w w'. modal_eq M M' w w' <=> modal_eq M' M w' w``,
-  metis_tac[modal_eq_def]);
+Theorem modal_eq_SYM:
+    !M M' w w'. modal_eq M M' w w' <=> modal_eq M' M w' w
+Proof
+  metis_tac[modal_eq_def]
+QED
 
-val modal_eq_TRANS = store_thm(
-  "modal_eq_TRANS",
-  ``!M M' M'' w w' w''. modal_eq M M' w w' /\ modal_eq M' M'' w' w'' ==> modal_eq M M'' w w''``,
-  metis_tac[modal_eq_def]);
+Theorem modal_eq_TRANS:
+    !M M' M'' w w' w''. modal_eq M M' w w' /\ modal_eq M' M'' w' w'' ==> modal_eq M M'' w w''
+Proof
+  metis_tac[modal_eq_def]
+QED
 
 
 
-val thm_2_62 = store_thm(
-  "thm_2_62",
-  ``!M M' w:'b w':'c. w IN M.frame.world /\ w' IN M'.frame.world
+Theorem thm_2_62:
+    !M M' w:'b w':'c. w IN M.frame.world /\ w' IN M'.frame.world
                         ==> (modal_eq M M' w w' <=>
-                            bisim_world (UE M) (UE M') (principle_UF w M.frame.world) (principle_UF w' M'.frame.world))``,
+                            bisim_world (UE M) (UE M') (principle_UF w M.frame.world) (principle_UF w' M'.frame.world))
+Proof
   rw[EQ_IMP_THM]
   >- (`∀M M' w:('b -> bool) -> bool w':('c -> bool) -> bool.
      M_sat M ∧ M_sat M' ∧ w ∈ M.frame.world ∧ w' ∈ M'.frame.world ⇒
@@ -616,7 +640,8 @@ val thm_2_62 = store_thm(
          by metis_tac[thm_2_20] >>
      `modal_eq M (UE M) w (principle_UF w M.frame.world) /\
      modal_eq M' (UE M') w' (principle_UF w' M'.frame.world)` by metis_tac[prop_2_59_ii] >>
-     metis_tac[modal_eq_TRANS,modal_eq_SYM]));
+     metis_tac[modal_eq_TRANS,modal_eq_SYM])
+QED
 
 
 Theorem can_see_UNION:

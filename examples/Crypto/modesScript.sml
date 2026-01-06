@@ -62,27 +62,27 @@ val CBC_DEF =
 (* mode of operation is correct.                                             *)
 (*---------------------------------------------------------------------------*)
 
-val CBC_CORRECT = Q.store_thm
-("CBC_CORRECT",
- `!(l:'a list) v (encrypt:'k->'a->'a) (decrypt:'k->'a->'a) f.
+Theorem CBC_CORRECT:
+  !(l:'a list) v (encrypt:'k->'a->'a) (decrypt:'k->'a->'a) f.
      (!k. decrypt k o encrypt k = I) /\
      (!x y. f (f x y) y = x)
      ==>
      !k. CBC_DEC f (decrypt k) v
-        (CBC_ENC f (encrypt k) v l) = l`,
+        (CBC_ENC f (encrypt k) v l) = l
+Proof
  SIMP_TAC list_ss [o_DEF,FUN_EQ_THM]
   THEN Induct
   THEN RW_TAC std_ss [CBC_ENC_DEF,CBC_DEC_DEF,LET_THM]
-  THEN METIS_TAC []);
+  THEN METIS_TAC []
+QED
 
 
 (*---------------------------------------------------------------------------*)
 (* Encryption/decryption can be lifted to arbitrary encodable types.         *)
 (*---------------------------------------------------------------------------*)
 
-val DATA_CBC_CORRECT = Q.store_thm
-("DATA_CBC_CORRECT",
- `!encode decode block unblock encrypt decrypt f.
+Theorem DATA_CBC_CORRECT:
+  !encode decode block unblock encrypt decrypt f.
     (decode o encode = I)   /\
     (!k. decrypt k o encrypt k = I) /\
     (unblock o block = I)   /\
@@ -90,5 +90,7 @@ val DATA_CBC_CORRECT = Q.store_thm
    ==>
     !(x:'a) v key.
       (decode o unblock o CBC_DEC f (decrypt key) v) o
-      (CBC_ENC f (encrypt key) v o block o encode) = I`,
- RW_TAC list_ss [CBC_CORRECT,o_DEF,FUN_EQ_THM]);
+      (CBC_ENC f (encrypt key) v o block o encode) = I
+Proof
+ RW_TAC list_ss [CBC_CORRECT,o_DEF,FUN_EQ_THM]
+QED

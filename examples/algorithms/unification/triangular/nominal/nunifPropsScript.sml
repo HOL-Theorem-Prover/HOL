@@ -22,18 +22,20 @@ val fresh_def_with_choice =
 
 val fresh_def = Q.store_thm("fresh_def",fresh_q,SIMP_TAC (psrw_ss()) [fresh_def_with_choice]);
 
-val fresh_apply_pi = Q.store_thm(
-"fresh_apply_pi",
-`fresh fcs a t ⇒ fresh fcs (lswapstr pi a) (apply_pi pi t)`,
+Theorem fresh_apply_pi:
+ fresh fcs a t ⇒ fresh fcs (lswapstr pi a) (apply_pi pi t)
+Proof
 Induct_on `t` THEN ASM_SIMP_TAC (psrw_ss()) [fresh_def] THEN1 (
   SRW_TAC [][REVERSE_APPEND,pmact_decompose] ) THEN
-SRW_TAC [][] THEN SRW_TAC [][])
+SRW_TAC [][] THEN SRW_TAC [][]
+QED
 
-val lemma27 = Q.store_thm( (* Lemma 2.7 - just consequences of the above, but good for metis *)
-"lemma27",
-`(∀t a pi fcs. fresh fcs a (apply_pi pi t) ⇒ fresh fcs (lswapstr (REVERSE pi) a) t) ∧
+(* Lemma 2.7 - just consequences of the above, but good for metis *)
+Theorem lemma27:
+ (∀t a pi fcs. fresh fcs a (apply_pi pi t) ⇒ fresh fcs (lswapstr (REVERSE pi) a) t) ∧
  (∀t a pi fcs. fresh fcs (lswapstr pi a) t ⇒ fresh fcs a (apply_pi (REVERSE pi) t)) ∧
- (∀t a pi fcs. fresh fcs a t ⇒ fresh fcs (lswapstr pi a) (apply_pi pi t))`,
+ (∀t a pi fcs. fresh fcs a t ⇒ fresh fcs (lswapstr pi a) (apply_pi pi t))
+Proof
 SRW_TAC [][] THEN1 (
   IMP_RES_TAC fresh_apply_pi THEN
   POP_ASSUM (Q.SPEC_THEN `REVERSE pi` MP_TAC) THEN
@@ -42,7 +44,8 @@ THEN1 (
   IMP_RES_TAC fresh_apply_pi THEN
   POP_ASSUM (Q.SPEC_THEN `REVERSE pi` MP_TAC) THEN
   SRW_TAC [][] )
-THEN METIS_TAC [fresh_apply_pi])
+THEN METIS_TAC [fresh_apply_pi]
+QED
 
 val (equiv_rules,equiv_ind,equiv_cases) = Hol_reln`
   (equiv fcs (Nom a) (Nom a)) ∧
@@ -65,9 +68,10 @@ THEN SRW_TAC [][Once equiv_cases] THEN
 NTAC 2 (Q.EXISTS_TAC `l`) THEN
 SRW_TAC [][dis_set_def])
 
-val equiv_fresh = Q.store_thm( (* Lemma 2.9 *)
-"equiv_fresh",
-`equiv fe t1 t2 ∧ fresh fe a t1 ⇒ fresh fe a t2`,
+(* Lemma 2.9 *)
+Theorem equiv_fresh:
+ equiv fe t1 t2 ∧ fresh fe a t1 ⇒ fresh fe a t2
+Proof
 MAP_EVERY Q.ID_SPEC_TAC [`t2`,`t1`] THEN
 SIMP_TAC bool_ss [GSYM AND_IMP_INTRO] THEN
 HO_MATCH_MP_TAC equiv_ind THEN
@@ -85,11 +89,13 @@ Q.PAT_X_ASSUM `a ≠ a1` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 IMP_RES_TAC fresh_apply_pi THEN
 POP_ASSUM (Q.SPEC_THEN `REVERSE [(a1,a2)]` MP_TAC) THEN
-ASM_SIMP_TAC (srw_ss()) [])
+ASM_SIMP_TAC (srw_ss()) []
+QED
 
-val equiv_apply_pi = Q.store_thm( (* equation 9, used for Theorem 2.11 *)
-"equiv_apply_pi",
-`equiv fe t1 t2 ⇒ equiv fe (apply_pi pi t1) (apply_pi pi t2)`,
+(* equation 9, used for Theorem 2.11 *)
+Theorem equiv_apply_pi:
+ equiv fe t1 t2 ⇒ equiv fe (apply_pi pi t1) (apply_pi pi t2)
+Proof
 Q_TAC SUFF_TAC
 `∀t1 t2. equiv fe t1 t2 ⇒ ∀pi. equiv fe (apply_pi pi t1) (apply_pi pi t2)`
 THEN1 METIS_TAC [] THEN
@@ -107,11 +113,12 @@ FIRST_X_ASSUM (Q.SPEC_THEN `pi` MP_TAC) THEN
 Q.MATCH_ABBREV_TAC `equiv fe X Y1 ⇒ equiv fe X Y2` THEN
 Q_TAC SUFF_TAC `Y1 = Y2` THEN1 METIS_TAC [] THEN
 MAP_EVERY Q.UNABBREV_TAC [`Y1`,`Y2`] THEN
-SRW_TAC [][pmact_sing_to_back]);
+SRW_TAC [][pmact_sing_to_back]
+QED
 
-val equiv_sym = Q.store_thm(
-"equiv_sym",
-`equiv fe t1 t2 ⇒ equiv fe t2 t1`,
+Theorem equiv_sym:
+ equiv fe t1 t2 ⇒ equiv fe t2 t1
+Proof
 MAP_EVERY Q.ID_SPEC_TAC [`t2`,`t1`] THEN
 HO_MATCH_MP_TAC equiv_ind THEN
 SRW_TAC [][] THEN1 (
@@ -129,12 +136,14 @@ THEN1 (
   IMP_RES_TAC fresh_apply_pi THEN
   POP_ASSUM (Q.SPEC_THEN `[(a1,a2)]` MP_TAC) THEN
   SRW_TAC [][]) THEN
-SRW_TAC [][Once equiv_cases])
+SRW_TAC [][Once equiv_cases]
+QED
 
-val fresh_ds_equiv = Q.store_thm( (* Lemma 2.8 *)
-"fresh_ds_equiv",
-`(∀a. a IN (dis_set pi1 pi2) ⇒ (fresh fcs a t)) ⇒
- equiv fcs (apply_pi pi1 t) (apply_pi pi2 t)`,
+(* Lemma 2.8 *)
+Theorem fresh_ds_equiv:
+ (∀a. a IN (dis_set pi1 pi2) ⇒ (fresh fcs a t)) ⇒
+ equiv fcs (apply_pi pi1 t) (apply_pi pi2 t)
+Proof
 MAP_EVERY Q.ID_SPEC_TAC [`pi2`,`pi1`,`t`] THEN
 Induct THEN SRW_TAC [][fresh_def] THEN
 FULL_SIMP_TAC (psrw_ss()) [dis_set_def] THEN
@@ -159,11 +168,13 @@ Cases_on `lswapstr pi2 s = lswapstr pi1 s` THEN SRW_TAC [][] THENL [
   Cases_on `lswapstr pi2 a = lswapstr pi1 s` THEN
   Cases_on `lswapstr pi2 a = lswapstr pi2 s` THEN
   FULL_SIMP_TAC (srw_ss()) []
-])
+]
+QED
 
-val equiv_ds_fresh = Q.store_thm( (* 2.12.3 *)
-"equiv_ds_fresh",
-`equiv fe (apply_pi pi1 t) (apply_pi pi2 t) ∧ a IN dis_set pi1 pi2 ⇒ fresh fe a t`,
+(* 2.12.3 *)
+Theorem equiv_ds_fresh:
+ equiv fe (apply_pi pi1 t) (apply_pi pi2 t) ∧ a IN dis_set pi1 pi2 ⇒ fresh fe a t
+Proof
 Q_TAC SUFF_TAC
 `!t1 t2. equiv fe t1 t2 ⇒
 !pi1 pi2 t a. (apply_pi pi1 t = t1) ∧ (apply_pi pi2 t = t2) ∧
@@ -201,11 +212,12 @@ STRIP_TAC THEN1 (
 STRIP_TAC THEN1 (
   ASM_SIMP_TAC (psrw_ss()) [apply_pi_eql,fresh_def,dis_set_def] THEN
   METIS_TAC [] ) THEN
-ASM_SIMP_TAC (psrw_ss()) [apply_pi_eql,fresh_def,dis_set_def])
+ASM_SIMP_TAC (psrw_ss()) [apply_pi_eql,fresh_def,dis_set_def]
+QED
 
-val equiv_trans_lemma = Q.store_thm(
-"equiv_trans_lemma",
-`equiv fe t1 t2 ∧ equiv fe t2 (apply_pi pi t2) ⇒ equiv fe t1 (apply_pi pi t2)`,
+Theorem equiv_trans_lemma:
+ equiv fe t1 t2 ∧ equiv fe t2 (apply_pi pi t2) ⇒ equiv fe t1 (apply_pi pi t2)
+Proof
 Q_TAC SUFF_TAC
 `∀t1 t2. equiv fe t1 t2 ⇒ ∀pi. equiv fe t2 (apply_pi pi t2) ⇒ equiv fe t1 (apply_pi pi t2)`
 THEN1 METIS_TAC [] THEN
@@ -287,11 +299,12 @@ STRIP_TAC THEN1 (
   SRW_TAC [][Once equiv_cases] THEN
   POP_ASSUM MP_TAC THEN
   SRW_TAC [][Once equiv_cases] ) THEN
-SRW_TAC [][Once equiv_cases])
+SRW_TAC [][Once equiv_cases]
+QED
 
-val equiv_trans = Q.store_thm(
-"equiv_trans",
-`equiv fe t1 t2 ∧ equiv fe t2 t3 ⇒ equiv fe t1 t3`,
+Theorem equiv_trans:
+ equiv fe t1 t2 ∧ equiv fe t2 t3 ⇒ equiv fe t1 t3
+Proof
 Q_TAC SUFF_TAC
 `∀t1 t2. equiv fe t1 t2 ⇒ ∀t3. equiv fe t2 t3 ⇒ equiv fe t1 t3`
 THEN1 METIS_TAC [] THEN
@@ -361,71 +374,79 @@ STRIP_TAC THEN1 (
   SRW_TAC [][Once equiv_cases] THEN
   POP_ASSUM MP_TAC THEN
   SRW_TAC [][Once equiv_cases] ) THEN
-SRW_TAC [][Once equiv_cases])
+SRW_TAC [][Once equiv_cases]
+QED
 
-val fresh_extra_fcs = Q.store_thm(
-"fresh_extra_fcs",
-`fresh fe a t ∧ fe SUBSET fex ⇒ fresh fex a t`,
-Induct_on `t` THEN SRW_TAC [][fresh_def] THEN METIS_TAC [SUBSET_DEF])
+Theorem fresh_extra_fcs:
+ fresh fe a t ∧ fe SUBSET fex ⇒ fresh fex a t
+Proof
+Induct_on `t` THEN SRW_TAC [][fresh_def] THEN METIS_TAC [SUBSET_DEF]
+QED
 
-val term_fcs_FINITE = Q.store_thm(
-"term_fcs_FINITE",
-`(term_fcs a t = SOME fe) ⇒ FINITE fe`,
+Theorem term_fcs_FINITE:
+ (term_fcs a t = SOME fe) ⇒ FINITE fe
+Proof
 Q.ID_SPEC_TAC `fe` THEN
 Induct_on `t` THEN
 ASM_SIMP_TAC (psrw_ss()) [Once term_fcs_def] THEN
-SRW_TAC [][] THEN SRW_TAC [][])
+SRW_TAC [][] THEN SRW_TAC [][]
+QED
 
-val term_fcs_fresh = Q.store_thm(
-"term_fcs_fresh",
-`(term_fcs a t = SOME fe) ⇒ fresh fe a t`,
+Theorem term_fcs_fresh:
+ (term_fcs a t = SOME fe) ⇒ fresh fe a t
+Proof
 Q.ID_SPEC_TAC `fe` THEN Induct_on `t` THEN
 ASM_SIMP_TAC (psrw_ss()) [Once term_fcs_def, fresh_def] THEN
-SRW_TAC [][] THEN METIS_TAC [fresh_extra_fcs,SUBSET_UNION])
+SRW_TAC [][] THEN METIS_TAC [fresh_extra_fcs,SUBSET_UNION]
+QED
 
-val term_fcs_minimal = Q.store_thm(
-"term_fcs_minimal",
-`(term_fcs a t = SOME fe) ∧ fresh fe' a t ⇒ fe SUBSET fe'`,
+Theorem term_fcs_minimal:
+ (term_fcs a t = SOME fe) ∧ fresh fe' a t ⇒ fe SUBSET fe'
+Proof
 Q.ID_SPEC_TAC `fe` THEN Induct_on `t` THEN
 ASM_SIMP_TAC (psrw_ss()) [Once term_fcs_def, fresh_def] THEN
-SRW_TAC [][] THEN SRW_TAC [][])
+SRW_TAC [][] THEN SRW_TAC [][]
+QED
 
 val term_fcs_SOME = LIST_CONJ [term_fcs_FINITE,term_fcs_fresh,term_fcs_minimal]
 
-val term_fcs_NONE = Q.store_thm(
-"term_fcs_NONE",
-`∀t fe. (term_fcs a t = NONE) ⇒ ∀fe. ¬fresh fe a t`,
+Theorem term_fcs_NONE:
+ ∀t fe. (term_fcs a t = NONE) ⇒ ∀fe. ¬fresh fe a t
+Proof
 Induct THEN SRW_TAC [][fresh_def] THEN
 TRY (POP_ASSUM MP_TAC) THEN
 SRW_TAC [][Once term_fcs_def] THEN
-METIS_TAC [])
+METIS_TAC []
+QED
 
-val fcs_acc_RECURSES = Q.store_thm(
-"fcs_acc_RECURSES",
-`FINITE t ⇒
+Theorem fcs_acc_RECURSES:
+ FINITE t ⇒
  (ITSET (fcs_acc s) (e INSERT t) b =
-  fcs_acc s e (ITSET (fcs_acc s) (t DELETE e) b))`,
+  fcs_acc s e (ITSET (fcs_acc s) (t DELETE e) b))
+Proof
 STRIP_TAC THEN MATCH_MP_TAC COMMUTING_ITSET_RECURSES THEN
 SIMP_TAC (srw_ss()) [FORALL_PROD] THEN
 SRW_TAC [][fcs_acc_def] THEN
 MAP_EVERY Cases_on
 [`z`,`term_fcs p_1 (nwalk* s (Sus [] p_2))`,`term_fcs p_1' (nwalk* s (Sus [] p_2'))`] THEN
 SRW_TAC [][] THEN
-METIS_TAC [UNION_ASSOC,UNION_COMM])
+METIS_TAC [UNION_ASSOC,UNION_COMM]
+QED
 
-val unify_eq_vars_extends_fe = Q.store_thm(
-"unify_eq_vars_extends_fe",
-`FINITE ds ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ⇒ fe SUBSET fex`,
+Theorem unify_eq_vars_extends_fe:
+ FINITE ds ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ⇒ fe SUBSET fex
+Proof
 SRW_TAC [][unify_eq_vars_def] THEN
-SRW_TAC [][SUBSET_UNION])
+SRW_TAC [][SUBSET_UNION]
+QED
 
 val image_lem = Q.prove(
 `e NOTIN t ⇒ (IMAGE (λa. (a,v:num)) t DELETE (e,v) = IMAGE (λa. (a,v)) t)`,
 SRW_TAC [][EXTENSION,EQ_IMP_THM])
 
-val unify_eq_vars_FINITE = Q.store_thm(
-"unify_eq_vars_FINITE",
-`FINITE ds ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ FINITE fe ⇒ FINITE fex`,
+Theorem unify_eq_vars_FINITE:
+ FINITE ds ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ FINITE fe ⇒ FINITE fex
+Proof
 Q_TAC SUFF_TAC
 `∀ds. FINITE ds ⇒ ∀fe fex. (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ FINITE fe ⇒ FINITE fex`
 THEN1 METIS_TAC [] THEN
@@ -434,12 +455,13 @@ SIMP_TAC (srw_ss()) [unify_eq_vars_def,ITSET_EMPTY] THEN
 SRW_TAC [][] THEN SRW_TAC [][] THEN
 Q.PAT_X_ASSUM `X = SOME fex'` MP_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT,fcs_acc_RECURSES,fcs_acc_def,image_lem] THEN
-SRW_TAC [][] THEN METIS_TAC [FINITE_UNION,term_fcs_FINITE])
+SRW_TAC [][] THEN METIS_TAC [FINITE_UNION,term_fcs_FINITE]
+QED
 
-val unify_eq_vars_fresh = Q.store_thm(
-"unify_eq_vars_fresh",
-`FINITE ds ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ a ∈ ds ⇒
- fresh fex a (nwalk* s' (Sus [] v))`,
+Theorem unify_eq_vars_fresh:
+ FINITE ds ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ a ∈ ds ⇒
+ fresh fex a (nwalk* s' (Sus [] v))
+Proof
 Q_TAC SUFF_TAC
 `∀ds. FINITE ds ⇒ ∀fe fex. (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ a ∈ ds ⇒
  fresh fex a (nwalk* s' (Sus [] v))`
@@ -450,12 +472,13 @@ SRW_TAC [][] THEN SRW_TAC [][] THEN
 Q.PAT_X_ASSUM `X = SOME fex'` MP_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT,fcs_acc_RECURSES,fcs_acc_def,image_lem] THEN
 SRW_TAC [][] THEN IMP_RES_TAC term_fcs_fresh THEN
-METIS_TAC [fresh_extra_fcs,SUBSET_UNION,UNION_ASSOC])
+METIS_TAC [fresh_extra_fcs,SUBSET_UNION,UNION_ASSOC]
+QED
 
-val unify_eq_vars_minimal = Q.store_thm(
-"unify_eq_vars_minimal",
-`FINITE ds ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ c ∈ fex ⇒
- c ∈ fe ∨ c ∉ fe ∧ ∃a fcs. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧ a ∈ ds ∧ c ∈ fcs`,
+Theorem unify_eq_vars_minimal:
+ FINITE ds ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ c ∈ fex ⇒
+ c ∈ fe ∨ c ∉ fe ∧ ∃a fcs. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧ a ∈ ds ∧ c ∈ fcs
+Proof
 Q_TAC SUFF_TAC
 `∀ds. FINITE ds ⇒ ∀fe fex. (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ c ∈ fex ⇒
  c ∈ fe ∨ c ∉ fe ∧ ∃a fcs. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧ a ∈ ds ∧ c ∈ fcs`
@@ -466,14 +489,15 @@ SRW_TAC [][] THEN SRW_TAC [][] THEN
 Cases_on `c ∈ fe` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 Q.PAT_X_ASSUM `X = SOME fex'` MP_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT,fcs_acc_RECURSES,fcs_acc_def,image_lem] THEN
-SRW_TAC [][] THEN METIS_TAC [UNION_COMM])
+SRW_TAC [][] THEN METIS_TAC [UNION_COMM]
+QED
 
 val unify_eq_vars_SOME = LIST_CONJ [unify_eq_vars_FINITE,unify_eq_vars_fresh,unify_eq_vars_minimal]
 
-val unify_eq_vars_NONE = Q.store_thm(
-"unify_eq_vars_NONE",
-`FINITE ds ∧ (unify_eq_vars ds v (s,fe) = NONE) ⇒
- ∃a. a ∈ ds ∧ ∀fe. ¬ fresh fe a (nwalk* s (Sus [] v))`,
+Theorem unify_eq_vars_NONE:
+ FINITE ds ∧ (unify_eq_vars ds v (s,fe) = NONE) ⇒
+ ∃a. a ∈ ds ∧ ∀fe. ¬ fresh fe a (nwalk* s (Sus [] v))
+Proof
 Q_TAC SUFF_TAC
 `∀t. FINITE t ⇒ ∀fe. (unify_eq_vars t v (s,fe) = NONE) ⇒
   (∃a. a IN t ∧ ∀fex. ¬ fresh fex a (nwalk* s (Sus [] v)))`
@@ -484,15 +508,16 @@ IMP_RES_TAC image_lem THEN POP_ASSUM (Q.SPEC_THEN `v` MP_TAC) THEN STRIP_TAC THE
 Q.PAT_X_ASSUM `FINITE t` ASSUME_TAC THEN
 Q.PAT_X_ASSUM `a NOTIN t` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [fcs_acc_RECURSES,DELETE_NON_ELEMENT,fcs_acc_def] THEN
-METIS_TAC [term_fcs_NONE])
+METIS_TAC [term_fcs_NONE]
+QED
 
-val unify_eq_vars_decompose = Q.store_thm(
-"unify_eq_vars_decompose",
-`(unify_eq_vars (a INSERT ds) v (s,fe) = SOME (sx,fex)) ∧ FINITE ds ⇒
+Theorem unify_eq_vars_decompose:
+ (unify_eq_vars (a INSERT ds) v (s,fe) = SOME (sx,fex)) ∧ FINITE ds ⇒
  ∃fe0 fcs.
  (unify_eq_vars ds v (s,fe) = SOME (s, fe0)) ∧
  (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧
- (fex = fe0 ∪ fcs)`,
+ (fex = fe0 ∪ fcs)
+Proof
 SRW_TAC [][] THEN
 Cases_on `a ∈ ds` THEN1 (
   FULL_SIMP_TAC (srw_ss()) [ABSORPTION] THEN
@@ -510,14 +535,15 @@ FULL_SIMP_TAC (srw_ss()) [unify_eq_vars_def,fcs_acc_RECURSES,fcs_acc_def] THEN
 `(a,v) ∉ IMAGE (λa. (a,v)) ds`
 by (SRW_TAC [][]) THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
-METIS_TAC [UNION_ASSOC])
+METIS_TAC [UNION_ASSOC]
+QED
 
-val unify_eq_vars_INSERT = Q.store_thm(
-"unify_eq_vars_INSERT",
-`(unify_eq_vars ds v (s,fe) = SOME (sx,fex)) ∧
+Theorem unify_eq_vars_INSERT:
+ (unify_eq_vars ds v (s,fe) = SOME (sx,fex)) ∧
  (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧
  FINITE ds ⇒
- (unify_eq_vars (a INSERT ds) v (s,fe) = SOME (s,fex ∪ fcs))`,
+ (unify_eq_vars (a INSERT ds) v (s,fe) = SOME (s,fex ∪ fcs))
+Proof
 SRW_TAC [][unify_eq_vars_def,fcs_acc_RECURSES,fcs_acc_def] THEN
 REVERSE (Cases_on `(a,v) ∈ IMAGE (λa. (a,v)) ds`) THEN1 (
   FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] THEN
@@ -526,26 +552,29 @@ REVERSE (Cases_on `(a,v) ∈ IMAGE (λa. (a,v)) ds`) THEN1 (
 by SRW_TAC [][] THEN
 (fcs_acc_RECURSES |> Q.INST [`e`|->`(a,v)`,`t`|->`IMAGE (λa. (a,v)) ds DELETE (a,v)`,`b`|->`SOME {}`]
  |> SIMP_RULE (srw_ss()) [fcs_acc_def] |> MP_TAC) THEN
-SRW_TAC [][] THEN SRW_TAC [][UNION_IDEMPOT,GSYM UNION_ASSOC])
+SRW_TAC [][] THEN SRW_TAC [][UNION_IDEMPOT,GSYM UNION_ASSOC]
+QED
 
-val equiv_eq_perms = Q.store_thm(
-"equiv_eq_perms",
-`equiv fcs (Sus p1 v1) (Sus p2 v2) ∧ p1 == q1 ∧ p2 == q2 ⇒ equiv fcs (Sus q1 v1) (Sus q2 v2)`,
+Theorem equiv_eq_perms:
+ equiv fcs (Sus p1 v1) (Sus p2 v2) ∧ p1 == q1 ∧ p2 == q2 ⇒ equiv fcs (Sus q1 v1) (Sus q2 v2)
+Proof
 SRW_TAC [][Once equiv_cases] THEN
 SRW_TAC [][Once equiv_cases] THEN
 FULL_SIMP_TAC (srw_ss()) [dis_set_def] THEN
-METIS_TAC [pmact_permeq,permeq_sym])
+METIS_TAC [pmact_permeq,permeq_sym]
+QED
 
-val fresh_eq_perms = Q.store_thm(
-"fresh_eq_perms",
-`fresh fcs a (Sus p v) ∧ p == q ⇒ fresh fcs a (Sus q v)`,
+Theorem fresh_eq_perms:
+ fresh fcs a (Sus p v) ∧ p == q ⇒ fresh fcs a (Sus q v)
+Proof
 ASM_SIMP_TAC (psrw_ss()) [fresh_def] THEN
-METIS_TAC [pmact_eql,pmact_permeq])
+METIS_TAC [pmact_eql,pmact_permeq]
+QED
 
-val unify_eq_vars_equiv = Q.store_thm(
-"unify_eq_vars_equiv",
-`nwfs s ∧ (unify_eq_vars (dis_set pi1 pi2) v (s,fe) = SOME (s,fcs)) ⇒
- equiv fcs (nwalk* s (Sus pi1 v)) (nwalk* s (Sus pi2 v))`,
+Theorem unify_eq_vars_equiv:
+ nwfs s ∧ (unify_eq_vars (dis_set pi1 pi2) v (s,fe) = SOME (s,fcs)) ⇒
+ equiv fcs (nwalk* s (Sus pi1 v)) (nwalk* s (Sus pi2 v))
+Proof
 STRIP_TAC THEN
 MP_TAC (Q.SPECL [`s`,`pi1`,`v`] (nvwalk_modulo_pi)) THEN
 MP_TAC (Q.SPECL [`s`,`pi2`,`v`] (nvwalk_modulo_pi)) THEN
@@ -583,11 +612,12 @@ Cases_on `nvwalk s [] v` THEN FULL_SIMP_TAC (psrw_ss()) [] THENL [
   `FINITE (dis_set pi1 pi2)` by SRW_TAC [][] THEN
   SRW_TAC [][] THEN
   IMP_RES_TAC unify_eq_vars_fresh THEN
-  POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (psrw_ss()) []])
+  POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (psrw_ss()) []]
+QED
 
-val nunify_extends_fe = Q.store_thm(
-"nunify_extends_fe",
-`∀s fe t1 t2 sx fex. nwfs s ∧ (nunify (s,fe) t1 t2 = SOME (sx,fex)) ⇒  fe SUBSET fex`,
+Theorem nunify_extends_fe:
+ ∀s fe t1 t2 sx fex. nwfs s ∧ (nunify (s,fe) t1 t2 = SOME (sx,fex)) ⇒  fe SUBSET fex
+Proof
 HO_MATCH_MP_TAC nunify_ind THEN SRW_TAC [][] THEN
 Q.PAT_X_ASSUM `nunify p t1 t2 = SOME px` MP_TAC THEN
 Cases_on `nwalk s t1` THEN Cases_on `nwalk s t2` THEN
@@ -597,7 +627,8 @@ SRW_TAC [][Once nunify_def,LET_THM] THEN SRW_TAC [][] THENL [
   Cases_on `x` THEN
   `nwfs q` by METIS_TAC [nunify_uP,uP_def] THEN
   METIS_TAC [SUBSET_TRANS]
-])
+]
+QED
 
 val unify_eq_vars_empty = RWstore_thm(
 "unify_eq_vars_empty",
@@ -609,9 +640,9 @@ val verify_fcs_empty = RWstore_thm(
 `verify_fcs {} s = SOME {}`,
 SRW_TAC [][verify_fcs_def,ITSET_EMPTY]);
 
-val verify_fcs_FINITE = Q.store_thm(
-"verify_fcs_FINITE",
-`FINITE fe ∧ (verify_fcs fe s = SOME ve) ⇒ FINITE ve`,
+Theorem verify_fcs_FINITE:
+ FINITE fe ∧ (verify_fcs fe s = SOME ve) ⇒ FINITE ve
+Proof
 Q_TAC SUFF_TAC
 `∀fe. FINITE fe ⇒ ∀ve. (verify_fcs fe s = SOME ve) ⇒ FINITE ve`
 THEN1 METIS_TAC [] THEN
@@ -620,12 +651,13 @@ SRW_TAC [] [verify_fcs_def,ITSET_EMPTY] THEN
 SRW_TAC [][] THEN POP_ASSUM MP_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT,fcs_acc_RECURSES] THEN
 Cases_on `e` THEN ASM_SIMP_TAC (srw_ss()) [fcs_acc_def] THEN
-SRW_TAC [][] THEN SRW_TAC [][] THEN IMP_RES_TAC term_fcs_FINITE);
+SRW_TAC [][] THEN SRW_TAC [][] THEN IMP_RES_TAC term_fcs_FINITE
+QED
 
-val verify_fcs_covers_all = Q.store_thm(
-"verify_fcs_covers_all",
-`FINITE fe ∧ (verify_fcs fe s = SOME ve) ∧ (a,v) ∈ fe ⇒
- ∃fcs. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧ fcs SUBSET ve`,
+Theorem verify_fcs_covers_all:
+ FINITE fe ∧ (verify_fcs fe s = SOME ve) ∧ (a,v) ∈ fe ⇒
+ ∃fcs. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧ fcs SUBSET ve
+Proof
 Q_TAC SUFF_TAC
 `∀fe. FINITE fe ⇒ ∀ve. (verify_fcs fe s = SOME ve) ∧ (a,v) ∈ fe ⇒
  ∃fcs. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧ fcs SUBSET ve`
@@ -638,12 +670,13 @@ SRW_TAC [] [verify_fcs_def,ITSET_EMPTY] THEN1 (
 Q.PAT_X_ASSUM `X = SOME ve` MP_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT,fcs_acc_RECURSES] THEN
 Cases_on `e` THEN SRW_TAC [][fcs_acc_def] THEN
-FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [SUBSET_TRANS,SUBSET_UNION]);
+FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC [SUBSET_TRANS,SUBSET_UNION]
+QED
 
-val verify_fcs_minimal = Q.store_thm(
-"verify_fcs_minimal",
-`FINITE fe ∧ (verify_fcs fe s = SOME ve) ∧ (a,v) ∈ ve ⇒
- ∃b w fcs. (b,w) ∈ fe ∧ (term_fcs b (nwalk* s (Sus [] w)) = SOME fcs) ∧ (a,v) ∈ fcs`,
+Theorem verify_fcs_minimal:
+ FINITE fe ∧ (verify_fcs fe s = SOME ve) ∧ (a,v) ∈ ve ⇒
+ ∃b w fcs. (b,w) ∈ fe ∧ (term_fcs b (nwalk* s (Sus [] w)) = SOME fcs) ∧ (a,v) ∈ fcs
+Proof
 Q_TAC SUFF_TAC
 `∀fe. FINITE fe ⇒ ∀ve. (verify_fcs fe s = SOME ve) ∧ (a,v) ∈ ve ⇒
  ∃b w fcs. (b,w) ∈ fe ∧ (term_fcs b (nwalk* s (Sus [] w)) = SOME fcs) ∧ (a,v) ∈ fcs`
@@ -654,14 +687,15 @@ SRW_TAC [][] THEN
 Q.PAT_X_ASSUM `X = SOME ve` MP_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT,fcs_acc_RECURSES] THEN
 Cases_on `e` THEN SRW_TAC [][fcs_acc_def] THEN
-FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
+FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
+QED
 
 val verify_fcs_SOME = LIST_CONJ [verify_fcs_FINITE, verify_fcs_covers_all, verify_fcs_minimal];
 
-val verify_fcs_NONE = Q.store_thm(
-"verify_fcs_NONE",
-`FINITE fe ∧ (verify_fcs fe s = NONE) ⇒
- ∃a v. (a,v) ∈ fe ∧ (term_fcs a (nwalk* s (Sus [] v)) = NONE)`,
+Theorem verify_fcs_NONE:
+ FINITE fe ∧ (verify_fcs fe s = NONE) ⇒
+ ∃a v. (a,v) ∈ fe ∧ (term_fcs a (nwalk* s (Sus [] v)) = NONE)
+Proof
 Q_TAC SUFF_TAC
 `∀t. FINITE t ⇒ (verify_fcs t s = NONE) ⇒
     ∃a v. (a,v) IN t ∧ (term_fcs a (nwalk* s (Sus [] v)) = NONE)`
@@ -674,42 +708,45 @@ Q.PAT_X_ASSUM `e NOTIN fcs` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [fcs_acc_RECURSES,DELETE_NON_ELEMENT] THEN
 Cases_on `e` THEN SRW_TAC [][] THEN
 FULL_SIMP_TAC (srw_ss()) [fcs_acc_def] THEN
-METIS_TAC []);
+METIS_TAC []
+QED
 
-val verify_fcs_INSERT = Q.store_thm(
-"verify_fcs_INSERT",
-`FINITE fe ∧
+Theorem verify_fcs_INSERT:
+ FINITE fe ∧
  (verify_fcs fe s = SOME ve) ∧
  (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ⇒
- (verify_fcs ((a,v) INSERT fe) s = SOME (ve ∪ fcs))`,
+ (verify_fcs ((a,v) INSERT fe) s = SOME (ve ∪ fcs))
+Proof
 SRW_TAC [][verify_fcs_def,fcs_acc_RECURSES,fcs_acc_def] THEN
 REVERSE (Cases_on `(a,v) ∈ fe`) THEN1 (
   FULL_SIMP_TAC (srw_ss()) [DELETE_NON_ELEMENT] ) THEN
 `(a,v) INSERT (fe DELETE (a,v)) = fe` by SRW_TAC [][] THEN
 (fcs_acc_RECURSES |> Q.INST [`e`|->`(a,v)`,`t`|->`fe DELETE (a,v)`,`b`|->`SOME {}`] |>
  SIMP_RULE (srw_ss()) [fcs_acc_def] |> MP_TAC) THEN
-SRW_TAC [][] THEN SRW_TAC [][UNION_IDEMPOT,GSYM UNION_ASSOC]);
+SRW_TAC [][] THEN SRW_TAC [][UNION_IDEMPOT,GSYM UNION_ASSOC]
+QED
 
-val verify_fcs_decompose = Q.store_thm(
-"verify_fcs_decompose",
-`(verify_fcs ((a,v) INSERT fe) s = SOME ve) ∧ FINITE fe ⇒
+Theorem verify_fcs_decompose:
+ (verify_fcs ((a,v) INSERT fe) s = SOME ve) ∧ FINITE fe ⇒
  ∃ve0 fcs.
  (verify_fcs fe s = SOME ve0) ∧
  (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧
- (ve = ve0 ∪ fcs)`,
+ (ve = ve0 ∪ fcs)
+Proof
 SRW_TAC [][] THEN
 Cases_on `(a,v) ∈ fe` THEN1 (
   IMP_RES_TAC verify_fcs_SOME THEN
   FULL_SIMP_TAC (srw_ss()) [ABSORPTION] THEN
   RES_TAC THEN Q.EXISTS_TAC `fcs` THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF,EXTENSION] THEN METIS_TAC []) THEN
-FULL_SIMP_TAC (srw_ss()) [verify_fcs_def,fcs_acc_RECURSES,fcs_acc_def,DELETE_NON_ELEMENT]);
+FULL_SIMP_TAC (srw_ss()) [verify_fcs_def,fcs_acc_RECURSES,fcs_acc_def,DELETE_NON_ELEMENT]
+QED
 
-val verify_fcs_UNION_I = Q.store_thm(
-"verify_fcs_UNION_I",
-`FINITE fe1 ∧ FINITE fe2 ∧
+Theorem verify_fcs_UNION_I:
+ FINITE fe1 ∧ FINITE fe2 ∧
  (verify_fcs fe1 s = SOME ve1) ∧ (verify_fcs fe2 s = SOME ve2) ⇒
- (verify_fcs (fe1 ∪ fe2) s = SOME (ve1 ∪ ve2))`,
+ (verify_fcs (fe1 ∪ fe2) s = SOME (ve1 ∪ ve2))
+Proof
 Q_TAC SUFF_TAC
 `∀fe1. FINITE fe1 ⇒
  ∀fe2 ve1 ve2.
@@ -726,16 +763,17 @@ Q.MATCH_ABBREV_TAC `X = SOME (ve0 ∪ fcs ∪ ve2)` THEN
 Q_TAC SUFF_TAC `X = SOME (ve0 ∪ ve2 ∪ fcs)` THEN1 METIS_TAC [UNION_COMM,UNION_ASSOC] THEN
 Q.UNABBREV_TAC `X` THEN
 Cases_on `e` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-MATCH_MP_TAC verify_fcs_INSERT THEN SRW_TAC [][]);
+MATCH_MP_TAC verify_fcs_INSERT THEN SRW_TAC [][]
+QED
 
-val verify_fcs_UNION_E = Q.store_thm(
-"verify_fcs_UNION_E",
-`FINITE (fe1 ∪ fe2) ∧
+Theorem verify_fcs_UNION_E:
+ FINITE (fe1 ∪ fe2) ∧
 (verify_fcs (fe1 ∪ fe2) s = SOME ve) ⇒
  ∃ve1 ve2.
  (verify_fcs fe1 s = SOME ve1) ∧
  (verify_fcs fe2 s = SOME ve2) ∧
- (ve = ve1 ∪ ve2)`,
+ (ve = ve1 ∪ ve2)
+Proof
 Q_TAC SUFF_TAC
 `∀fe1. FINITE fe1 ⇒
  ∀fe2 ve. FINITE fe2 ∧ (verify_fcs (fe1 ∪ fe2) s = SOME ve) ⇒
@@ -754,23 +792,25 @@ SRW_TAC [][] THEN
 Cases_on `e` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 Q.EXISTS_TAC `ve1 ∪ fcs` THEN SRW_TAC [][] THEN1 (
   MATCH_MP_TAC verify_fcs_INSERT THEN SRW_TAC [][] ) THEN
-METIS_TAC [UNION_COMM,UNION_ASSOC]);
+METIS_TAC [UNION_COMM,UNION_ASSOC]
+QED
 
-val verify_fcs_UNION = Q.store_thm(
-"verify_fcs_UNION",
-`FINITE fe1 ∧ FINITE fe2 ⇒
+Theorem verify_fcs_UNION:
+ FINITE fe1 ∧ FINITE fe2 ⇒
  ((∃ve1 ve2. (verify_fcs fe1 s = SOME ve1) ∧ (verify_fcs fe2 s = SOME ve2) ∧ (ve = ve1 ∪ ve2)) ⇔
-  (verify_fcs (fe1 ∪ fe2) s = SOME ve))`,
+  (verify_fcs (fe1 ∪ fe2) s = SOME ve))
+Proof
 SRW_TAC [][EQ_IMP_THM] THEN1
 METIS_TAC [verify_fcs_UNION_I] THEN
 IMP_RES_TAC FINITE_UNION THEN
-METIS_TAC [verify_fcs_UNION_E]);
+METIS_TAC [verify_fcs_UNION_E]
+QED
 
-val fresh_verify_fcs = Q.store_thm(
-"fresh_verify_fcs",
-`nwfs s ∧ fresh fe a t ∧ FINITE fe ∧
+Theorem fresh_verify_fcs:
+ nwfs s ∧ fresh fe a t ∧ FINITE fe ∧
  (verify_fcs fe s = SOME fex)
- ⇒ fresh fex a (nwalk* s t)`,
+ ⇒ fresh fex a (nwalk* s t)
+Proof
 Induct_on `t` THEN SRW_TAC [][] THEN
 FULL_SIMP_TAC (psrw_ss()) [fresh_def] THEN
 `∃fcs. fresh fcs a (apply_pi (REVERSE (REVERSE l)) (nwalk* s (Sus [] n))) ∧ fcs SUBSET fex`
@@ -779,27 +819,29 @@ Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (psrw_ss()) [GSYM nwalkstar_apply_pi] THEN
 Cases_on `nvwalk s l n` THEN FULL_SIMP_TAC (psrw_ss()) [fresh_def] THEN1 (
 FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] ) THEN
-METIS_TAC [fresh_extra_fcs]);
+METIS_TAC [fresh_extra_fcs]
+QED
 
-val nwalkstar_subterm_exists = Q.store_thm(
-"nwalkstar_subterm_exists",
-`nwfs s ⇒ ∀t. (∀a c. (nwalk* s t = Tie a c) ⇒
+Theorem nwalkstar_subterm_exists:
+ nwfs s ⇒ ∀t. (∀a c. (nwalk* s t = Tie a c) ⇒
                  ∃t2. nwalk* s t2 = c) ∧
              (∀c1 c2. (nwalk* s t = nPair c1 c2) ⇒
                      (∃t2. nwalk* s t2 = c1) ∧
-                     (∃t2. nwalk* s t2 = c2))`,
+                     (∃t2. nwalk* s t2 = c2))
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN SRW_TAC [][] THEN
 Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN Cases_on `t` THEN
 FULL_SIMP_TAC (srw_ss()) [] THENL [
   Cases_on `nvwalk s l n` THEN FULL_SIMP_TAC (srw_ss()) [], ALL_TAC,
   Cases_on `nvwalk s l n` THEN FULL_SIMP_TAC (srw_ss()) [], ALL_TAC,
   Cases_on `nvwalk s l n` THEN FULL_SIMP_TAC (srw_ss()) [], ALL_TAC
-] THEN METIS_TAC []);
+] THEN METIS_TAC []
+QED
 
-val equiv_verify_fcs = Q.store_thm(
-"equiv_verify_fcs",
-`equiv fe t1 t2 ∧ nwfs s ∧ FINITE fe ∧ (verify_fcs fe s = SOME fex) ⇒
-   equiv fex (nwalk* s t1) (nwalk* s t2)`,
+Theorem equiv_verify_fcs:
+ equiv fe t1 t2 ∧ nwfs s ∧ FINITE fe ∧ (verify_fcs fe s = SOME fex) ⇒
+   equiv fex (nwalk* s t1) (nwalk* s t2)
+Proof
 MAP_EVERY Q.ID_SPEC_TAC [`t2`,`t1`] THEN
 SIMP_TAC (srw_ss()) [GSYM AND_IMP_INTRO] THEN
 HO_MATCH_MP_TAC equiv_ind THEN
@@ -829,12 +871,13 @@ THEN1 (
   SRW_TAC [][Once equiv_cases] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
   SRW_TAC [][] THEN
-  METIS_TAC [nwalkstar_subterm_exists] ))
+  METIS_TAC [nwalkstar_subterm_exists] )
+QED
 
-val nunify_FINITE_fe = Q.store_thm(
-"nunify_FINITE_fe",
-`∀s fe t1 t2 sx fex. nwfs s ∧ FINITE fe ∧ (nunify (s,fe) t1 t2 = SOME (sx,fex)) ⇒
- FINITE fex`,
+Theorem nunify_FINITE_fe:
+ ∀s fe t1 t2 sx fex. nwfs s ∧ FINITE fe ∧ (nunify (s,fe) t1 t2 = SOME (sx,fex)) ⇒
+ FINITE fex
+Proof
 HO_MATCH_MP_TAC nunify_ind THEN
 REPEAT STRIP_TAC THEN
 Cases_on `nwalk s t1` THEN Cases_on `nwalk s t2` THEN
@@ -847,11 +890,12 @@ SRW_TAC [][] THEN SRW_TAC [][] THENL [
   METIS_TAC [term_fcs_FINITE],
   Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   METIS_TAC [nunify_uP,uP_def]
-]);
+]
+QED
 
-val fresh_SUBMAP = Q.store_thm(
-"fresh_SUBMAP",
-`fresh fcs a (nwalk* s t) ∧ nwfs s ⇒ ∃fe. fresh fe a t ∧ ∀b w. (b,w) ∈ fe ⇒ fresh fcs b (nwalk* s (Sus [] w))`,
+Theorem fresh_SUBMAP:
+ fresh fcs a (nwalk* s t) ∧ nwfs s ⇒ ∃fe. fresh fe a t ∧ ∀b w. (b,w) ∈ fe ⇒ fresh fcs b (nwalk* s (Sus [] w))
+Proof
 Induct_on `t` THEN SRW_TAC [][] THEN
 FULL_SIMP_TAC (psrw_ss()) [fresh_def] THENL [
   Q.EXISTS_TAC `{}` THEN SRW_TAC [][],
@@ -864,11 +908,12 @@ FULL_SIMP_TAC (psrw_ss()) [fresh_def] THENL [
   Q.EXISTS_TAC `{}` THEN SRW_TAC [][],
   Q.EXISTS_TAC `fe ∪ fe'` THEN SRW_TAC [][] THEN
   METIS_TAC [fresh_extra_fcs,SUBSET_UNION],
-  Q.EXISTS_TAC `{}` THEN SRW_TAC [][] ])
+  Q.EXISTS_TAC `{}` THEN SRW_TAC [][] ]
+QED
 
-val equiv_SUBSET = Q.store_thm(
-"equiv_SUBSET",
-`equiv fe t1 t2 ∧ fe SUBSET fex ⇒ equiv fex t1 t2`,
+Theorem equiv_SUBSET:
+ equiv fe t1 t2 ∧ fe SUBSET fex ⇒ equiv fex t1 t2
+Proof
 SIMP_TAC (srw_ss()) [GSYM AND_IMP_INTRO] THEN
 MAP_EVERY Q.ID_SPEC_TAC [`t2`,`t1`] THEN
 HO_MATCH_MP_TAC equiv_ind THEN
@@ -876,53 +921,59 @@ SRW_TAC [][] THEN
 SRW_TAC [][Once equiv_cases] THEN1 (
 MAP_EVERY Q.EXISTS_TAC [`p1`,`p2`] THEN
 SRW_TAC [][] THEN METIS_TAC [SUBSET_DEF] ) THEN
-METIS_TAC [fresh_extra_fcs])
+METIS_TAC [fresh_extra_fcs]
+QED
 
-val fresh_drop_NOTIN_nvars = Q.store_thm(
-"fresh_drop_NOTIN_nvars",
-`fresh fe a t ∧ v NOTIN nvars t ⇒ fresh (fe DIFF {(b,u) | u = v}) a t`,
-Induct_on `t` THEN SRW_TAC [][fresh_def] THEN SRW_TAC [][])
+Theorem fresh_drop_NOTIN_nvars:
+ fresh fe a t ∧ v NOTIN nvars t ⇒ fresh (fe DIFF {(b,u) | u = v}) a t
+Proof
+Induct_on `t` THEN SRW_TAC [][fresh_def] THEN SRW_TAC [][]
+QED
 
-val term_fcs_IN_nvars = Q.store_thm(
-"term_fcs_IN_nvars",
-`(term_fcs a t = SOME fe) ∧ (b,v) IN fe ⇒ v IN nvars t`,
+Theorem term_fcs_IN_nvars:
+ (term_fcs a t = SOME fe) ∧ (b,v) IN fe ⇒ v IN nvars t
+Proof
 SRW_TAC [][] THEN
 `fresh fe a t` by IMP_RES_TAC term_fcs_fresh THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 IMP_RES_TAC fresh_drop_NOTIN_nvars THEN
 POP_ASSUM (Q.SPEC_THEN `b` STRIP_ASSUME_TAC) THEN
 IMP_RES_TAC term_fcs_minimal THEN
-FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF])
+FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]
+QED
 
-val fresh_drop_IN_FDOM = Q.store_thm(
-"fresh_drop_IN_FDOM",
-`nwfs s ∧ fresh fe a (nwalk* s t) ∧ v IN FDOM s ⇒ fresh (fe DIFF {(b,u) | u = v}) a (nwalk* s t)`,
+Theorem fresh_drop_IN_FDOM:
+ nwfs s ∧ fresh fe a (nwalk* s t) ∧ v IN FDOM s ⇒ fresh (fe DIFF {(b,u) | u = v}) a (nwalk* s t)
+Proof
 SRW_TAC [][] THEN
 Q_TAC SUFF_TAC `v NOTIN nvars (nwalk* s t)` THEN1 SRW_TAC [][fresh_drop_NOTIN_nvars] THEN
 SRW_TAC [][GSYM noc_eq_nvars_nwalkstar,IN_DEF] THEN
-METIS_TAC [noc_NOTIN_FDOM])
+METIS_TAC [noc_NOTIN_FDOM]
+QED
 
-val term_fcs_NOTIN_FDOM = Q.store_thm(
-"term_fcs_NOTIN_FDOM",
-`nwfs s ∧ (term_fcs a (nwalk* s t) = SOME fe) ∧ (b,v) IN fe ⇒ v NOTIN FDOM s`,
+Theorem term_fcs_NOTIN_FDOM:
+ nwfs s ∧ (term_fcs a (nwalk* s t) = SOME fe) ∧ (b,v) IN fe ⇒ v NOTIN FDOM s
+Proof
 SRW_TAC [][] THEN
 `fresh fe a (nwalk* s t)` by IMP_RES_TAC term_fcs_fresh THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 IMP_RES_TAC fresh_drop_IN_FDOM THEN
 POP_ASSUM (Q.SPEC_THEN `b` STRIP_ASSUME_TAC) THEN
 IMP_RES_TAC term_fcs_minimal THEN
-FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF])
+FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]
+QED
 
-val verify_fcs_NOTIN_FDOM = Q.store_thm(
-"verify_fcs_NOTIN_FDOM",
-`(verify_fcs fe s = SOME ve) ∧ (a,v) ∈ ve ∧ nwfs s ∧ FINITE fe ⇒ v ∉ FDOM s`,
+Theorem verify_fcs_NOTIN_FDOM:
+ (verify_fcs fe s = SOME ve) ∧ (a,v) ∈ ve ∧ nwfs s ∧ FINITE fe ⇒ v ∉ FDOM s
+Proof
 STRIP_TAC THEN IMP_RES_TAC verify_fcs_SOME THEN
-IMP_RES_TAC term_fcs_NOTIN_FDOM)
+IMP_RES_TAC term_fcs_NOTIN_FDOM
+QED
 
-val verify_fcs_SUBSET = Q.store_thm(
-"verify_fcs_SUBSET",
-`FINITE fex ∧ (verify_fcs fex s = SOME vex) ∧ fe SUBSET fex ⇒
- ∃ve. (verify_fcs fe s = SOME ve) ∧ ve SUBSET vex`,
+Theorem verify_fcs_SUBSET:
+ FINITE fex ∧ (verify_fcs fex s = SOME vex) ∧ fe SUBSET fex ⇒
+ ∃ve. (verify_fcs fe s = SOME ve) ∧ ve SUBSET vex
+Proof
 SRW_TAC [][] THEN
 IMP_RES_TAC SUBSET_FINITE THEN
 Cases_on `verify_fcs fe s` THEN SRW_TAC [][] THEN1 (
@@ -935,12 +986,13 @@ SRW_TAC [][] THEN
 `∃b w fcs. (b,w) ∈ fe ∧ (term_fcs b (nwalk* s (Sus [] w)) = SOME fcs) ∧ (p_1,p_2) ∈ fcs`
 by METIS_TAC [verify_fcs_minimal] THEN
 `fcs SUBSET vex` by METIS_TAC [verify_fcs_covers_all,optionTheory.SOME_11] THEN
-FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF])
+FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF]
+QED
 
-val term_fcs_apply_pi = Q.store_thm(
-"term_fcs_apply_pi",
-`(term_fcs a t = SOME fcs) ⇒
- (term_fcs (lswapstr pi a) (apply_pi pi t) = SOME fcs)`,
+Theorem term_fcs_apply_pi:
+ (term_fcs a t = SOME fcs) ⇒
+ (term_fcs (lswapstr pi a) (apply_pi pi t) = SOME fcs)
+Proof
 Q.ID_SPEC_TAC `fcs` THEN
 Induct_on `t` THEN SRW_TAC [][] THEN1 (
   FULL_SIMP_TAC (srw_ss()) [term_fcs_def] )
@@ -958,16 +1010,17 @@ THEN1 (
   Q.PAT_X_ASSUM `term_fcs a X = SOME fcs` MP_TAC THEN
   SRW_TAC [][Once term_fcs_def] THEN
   FULL_SIMP_TAC (srw_ss()) []) THEN
-FULL_SIMP_TAC (srw_ss()) [term_fcs_def])
+FULL_SIMP_TAC (srw_ss()) [term_fcs_def]
+QED
 
-val term_fcs_nwalkstar = Q.store_thm(
-"term_fcs_nwalkstar",
-`nwfs s ∧
+Theorem term_fcs_nwalkstar:
+ nwfs s ∧
  (term_fcs b t = SOME fcs) ∧
  (term_fcs b (nwalk* s t) = SOME fcs2) ∧
  (a,v) ∈ fcs ⇒
  ∃fcs1. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs1) ∧
-        fcs1 ⊆ fcs2`,
+        fcs1 ⊆ fcs2
+Proof
 STRIP_TAC THEN
 NTAC 4 (POP_ASSUM MP_TAC) THEN
 SPEC_ALL_TAC [`t`,`s`] THEN
@@ -1039,14 +1092,15 @@ THEN
   Cases_on `t` THEN FULL_SIMP_TAC (psrw_ss()) [Once term_fcs_def] THEN
   SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   (nvwalk_modulo_pi |> Q.SPECL [`s`,`l`,`n`] |> GSYM |> MP_TAC) THEN
-  SRW_TAC [][apply_pi_eql] )
+  SRW_TAC [][apply_pi_eql]
+QED
 
-val verify_fcs_SUBMAP = Q.store_thm(
-"verify_fcs_SUBMAP",
-`FINITE fe ∧ (verify_fcs fe sx = SOME fex) ∧ nwfs sx ∧ s SUBMAP sx ⇒
+Theorem verify_fcs_SUBMAP:
+ FINITE fe ∧ (verify_fcs fe sx = SOME fex) ∧ nwfs sx ∧ s SUBMAP sx ⇒
  ∃fe1. (verify_fcs fe s = SOME fe1) ∧
  ∀a v. (a,v) ∈ fe1 ⇒
-∃fcs. (term_fcs a (nwalk* sx (Sus [] v)) = SOME fcs) ∧ fcs ⊆ fex`,
+∃fcs. (term_fcs a (nwalk* sx (Sus [] v)) = SOME fcs) ∧ fcs ⊆ fex
+Proof
 REPEAT STRIP_TAC THEN
 Cases_on `verify_fcs fe s` THEN1 (
   IMP_RES_TAC verify_fcs_NONE THEN
@@ -1065,13 +1119,14 @@ by METIS_TAC[verify_fcs_covers_all] THEN
   MAP_EVERY Q.EXISTS_TAC [`nwalk* s (Sus [] w)`,`fcs`,`b`] THEN
   SRW_TAC [][] THEN
   METIS_TAC [nwalkstar_SUBMAP] ) THEN
-METIS_TAC [SUBSET_TRANS])
+METIS_TAC [SUBSET_TRANS]
+QED
 
-val verify_fcs_term_fcs = Q.store_thm(
-"verify_fcs_term_fcs",
-`(term_fcs a t = SOME fcs) ∧
+Theorem verify_fcs_term_fcs:
+ (term_fcs a t = SOME fcs) ∧
  (term_fcs a (nwalk* s t) = SOME fex) ∧ nwfs s ⇒
- (verify_fcs fcs s = SOME fex)`,
+ (verify_fcs fcs s = SOME fex)
+Proof
 MAP_EVERY Q.ID_SPEC_TAC [`fcs`,`fex`] THEN
 Induct_on `t` THEN SRW_TAC [][] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN1 (
@@ -1107,14 +1162,15 @@ THEN1 (
   IMP_RES_TAC term_fcs_SOME THEN
   SRW_TAC [][verify_fcs_UNION_I]) THEN
 FULL_SIMP_TAC (srw_ss()) [term_fcs_def] THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val verify_fcs_iter_SUBMAP = Q.store_thm(
-"verify_fcs_iter_SUBMAP",
-`(verify_fcs fe s = SOME ve0) ∧
+Theorem verify_fcs_iter_SUBMAP:
+ (verify_fcs fe s = SOME ve0) ∧
  (verify_fcs fe sx = SOME ve) ∧
  s SUBMAP sx ∧ nwfs sx ∧ FINITE fe ⇒
- (verify_fcs ve0 sx = SOME ve)`,
+ (verify_fcs ve0 sx = SOME ve)
+Proof
 Q_TAC SUFF_TAC
 `∀fe. FINITE fe ⇒ ∀ve0 ve.
  (verify_fcs fe s = SOME ve0) ∧
@@ -1135,16 +1191,18 @@ Q_TAC SUFF_TAC
   SRW_TAC [][verify_fcs_UNION_I]) THEN
 MATCH_MP_TAC (GEN_ALL verify_fcs_term_fcs) THEN
 MAP_EVERY Q.EXISTS_TAC [`nwalk* s (Sus [] r)`,`q`] THEN
-METIS_TAC [nwalkstar_SUBMAP,nwfs_SUBMAP])
+METIS_TAC [nwalkstar_SUBMAP,nwfs_SUBMAP]
+QED
 
-val verify_fcs_idem = Q.store_thm(
-"verify_fcs_idem",
-`nwfs s ∧ FINITE fe ∧ (verify_fcs fe s = SOME fex) ⇒ (verify_fcs fex s = SOME fex)`,
-METIS_TAC [verify_fcs_iter_SUBMAP, SUBMAP_REFL])
+Theorem verify_fcs_idem:
+ nwfs s ∧ FINITE fe ∧ (verify_fcs fe s = SOME fex) ⇒ (verify_fcs fex s = SOME fex)
+Proof
+METIS_TAC [verify_fcs_iter_SUBMAP, SUBMAP_REFL]
+QED
 
-val unify_eq_vars_adds_same_fcs = Q.store_thm(
-"unify_eq_vars_adds_same_fcs",
-`∀ds. FINITE ds ⇒ ∃fu. ∀fe sx fex. (unify_eq_vars ds v (s,fe) = SOME (sx,fex)) ⇒ (fex = fe ∪ fu)`,
+Theorem unify_eq_vars_adds_same_fcs:
+ ∀ds. FINITE ds ⇒ ∃fu. ∀fe sx fex. (unify_eq_vars ds v (s,fe) = SOME (sx,fex)) ⇒ (fex = fe ∪ fu)
+Proof
 HO_MATCH_MP_TAC FINITE_INDUCT THEN SRW_TAC [][]
 THEN1 (Q.EXISTS_TAC `{}` THEN SRW_TAC [][]) THEN
 Cases_on `term_fcs e (nwalk* s (Sus [] v))` THEN1 (
@@ -1154,12 +1212,13 @@ Cases_on `term_fcs e (nwalk* s (Sus [] v))` THEN1 (
 Q.EXISTS_TAC `fu ∪ x` THEN SRW_TAC [][] THEN
 IMP_RES_TAC unify_eq_vars_decompose THEN
 RES_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-METIS_TAC [UNION_ASSOC]);
+METIS_TAC [UNION_ASSOC]
+QED
 
-val unify_eq_vars_ignores_fe = Q.store_thm(
-"unify_eq_vars_ignores_fe",
-`(unify_eq_vars ds v (s,fe) = SOME (sx,fex)) ∧ FINITE ds ⇒
- ∀fe'.∃fex'. (unify_eq_vars ds v (s,fe') = SOME (s,fex'))`,
+Theorem unify_eq_vars_ignores_fe:
+ (unify_eq_vars ds v (s,fe) = SOME (sx,fex)) ∧ FINITE ds ⇒
+ ∀fe'.∃fex'. (unify_eq_vars ds v (s,fe') = SOME (s,fex'))
+Proof
 SRW_TAC [][] THEN
 Cases_on `unify_eq_vars ds v (s,fe')` THEN1 (
   IMP_RES_TAC unify_eq_vars_NONE THEN
@@ -1169,13 +1228,14 @@ Cases_on `unify_eq_vars ds v (s,fe')` THEN1 (
   RES_TAC) THEN
 Cases_on `x` THEN
 IMP_RES_TAC unify_eq_vars_preserves_s THEN
-SRW_TAC [][]);
+SRW_TAC [][]
+QED
 
-val nunify_ignores_fe = Q.store_thm(
-"nunify_ignores_fe",
-`∀s fe t1 t2 sx fex.
+Theorem nunify_ignores_fe:
+ ∀s fe t1 t2 sx fex.
    nwfs s ∧ (nunify (s,fe) t1 t2 = SOME (sx,fex)) ⇒
-   ∀fe'. ∃fex'. nunify (s,fe') t1 t2 = SOME (sx,fex')`,
+   ∀fe'. ∃fex'. nunify (s,fe') t1 t2 = SOME (sx,fex')
+Proof
 HO_MATCH_MP_TAC nunify_ind THEN SRW_TAC [][] THEN
 POP_ASSUM MP_TAC THEN
 MAP_EVERY Cases_on [`nwalk s t1`,`nwalk s t2`] THEN
@@ -1199,12 +1259,13 @@ Q.PAT_X_ASSUM `nunify (q,r) Y Z = X` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) C2 C2' = SOME (q,r)` THEN
 `∃r'. nunify (s,fe') C2 C2' = SOME (q,r')` by METIS_TAC [] THEN
-SRW_TAC [][]);
+SRW_TAC [][]
+QED
 
-val nunify_ignores_fe_NONE = Q.store_thm(
-"nunify_ignores_fe_NONE",
-`nwfs s ∧ (nunify (s,fe) t1 t2 = NONE) ⇒
- ∀fe'. nunify (s,fe') t1 t2 = NONE`,
+Theorem nunify_ignores_fe_NONE:
+ nwfs s ∧ (nunify (s,fe) t1 t2 = NONE) ⇒
+ ∀fe'. nunify (s,fe') t1 t2 = NONE
+Proof
 SRW_TAC [][] THEN
 Cases_on `nunify (s,fe') t1 t2` THEN
 SRW_TAC [][] THEN Cases_on `x` THEN
@@ -1213,14 +1274,15 @@ SRW_TAC [][] THEN
  Q.SPECL [`s`,`fe'`,`t1`,`t2`,`q`,`r`] |>
  MP_TAC) THEN
 SRW_TAC [][] THEN Q.EXISTS_TAC `fe` THEN
-SRW_TAC [][]);
+SRW_TAC [][]
+QED
 
-val nunify_adds_same_fcs = Q.store_thm(
-"nunify_adds_same_fcs",
-`nwfs s ⇒
+Theorem nunify_adds_same_fcs:
+ nwfs s ⇒
  ∃fu.
    ∀fe sx fex.
-      (nunify (s,fe) t1 t2 = SOME (sx,fex)) ⇒ (fex = fe ∪ fu)`,
+      (nunify (s,fe) t1 t2 = SOME (sx,fex)) ⇒ (fex = fe ∪ fu)
+Proof
 Q_TAC SUFF_TAC
 `∀s (fe:fe) t1 t2. nwfs s ⇒ ∃fu.∀fe sx fex. (nunify (s,fe) t1 t2 = SOME (sx,fex))
 ⇒ (fex = fe ∪ fu)` THEN1 METIS_TAC [] THEN
@@ -1270,12 +1332,13 @@ THEN1 (
   SRW_TAC [][] THEN RES_TAC THEN
   METIS_TAC [UNION_ASSOC] )
 THEN1 (Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
-THEN1 (Q.EXISTS_TAC `{}` THEN SRW_TAC [][] ));
+THEN1 (Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
+QED
 
-val nomunify_unifier = Q.store_thm(
-"nomunify_unifier",
-`nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ==>
-   FINITE fex ∧ nwfs sx ∧ s SUBMAP sx ∧ (equiv fex (nwalk* sx t1) (nwalk* sx t2))`,
+Theorem nomunify_unifier:
+ nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ==>
+   FINITE fex ∧ nwfs sx ∧ s SUBMAP sx ∧ (equiv fex (nwalk* sx t1) (nwalk* sx t2))
+Proof
 Q_TAC SUFF_TAC
 `!s fe t1 t2 sx fex. nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ==>
    (equiv fex (nwalk* sx t1) (nwalk* sx t2))`
@@ -1481,12 +1544,13 @@ THEN1 (
   Cases_on `t2` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   Q.PAT_X_ASSUM `nwfs sx` ASSUME_TAC THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   SRW_TAC [][Abbr`sx`,Once nvwalk_def,FLOOKUP_UPDATE] ) THEN
-METIS_TAC [nwalkstar_nwalk,equiv_refl]);
+METIS_TAC [nwalkstar_nwalk,equiv_refl]
+QED
 
-val nomunify_fcs_consistent = Q.store_thm(
-"nomunify_fcs_consistent",
-`!s fe t1 t2 sx fex. nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (a,v) ∈ fex ==>
-     fresh fex a (nwalk* sx (Sus [] v))`,
+Theorem nomunify_fcs_consistent:
+ !s fe t1 t2 sx fex. nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (a,v) ∈ fex ==>
+     fresh fex a (nwalk* sx (Sus [] v))
+Proof
 HO_MATCH_MP_TAC nunify_ind THEN SRW_TAC [][nomunify_def,UNCURRY] THEN
 `∃sx fx0. x = (sx,fx0)` by (Cases_on `x` THEN SRW_TAC [][]) THEN SRW_TAC [][] THEN
 `nwfs sx /\ s SUBMAP sx` by METIS_TAC [nunify_uP,uP_def] THEN
@@ -1546,12 +1610,13 @@ THEN1 (
   ASM_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk,fresh_def])
 THEN1 (
   IMP_RES_TAC verify_fcs_NOTIN_FDOM THEN
-  ASM_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk,fresh_def]));
+  ASM_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk,fresh_def])
+QED
 
-val nomunify_solves_fe = Q.store_thm(
-"nomunify_solves_fe",
-`!s fe t1 t2 sx fex. nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (a,v) ∈ fe ==>
-     fresh fex a (nwalk* sx (Sus [] v))`,
+Theorem nomunify_solves_fe:
+ !s fe t1 t2 sx fex. nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (a,v) ∈ fe ==>
+     fresh fex a (nwalk* sx (Sus [] v))
+Proof
 HO_MATCH_MP_TAC nunify_ind THEN SRW_TAC [][nomunify_def,UNCURRY] THEN
 `∃sx fx0. x = (sx,fx0)` by (Cases_on `x` THEN SRW_TAC [][]) THEN SRW_TAC [][] THEN
 `nwfs sx /\ s SUBMAP sx` by METIS_TAC [nunify_uP,uP_def] THEN
@@ -1636,7 +1701,8 @@ THEN1 (
   IMP_RES_TAC verify_fcs_covers_all THEN
   IMP_RES_TAC term_fcs_fresh THEN
   IMP_RES_TAC fresh_extra_fcs THEN
-  POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (srw_ss()) [] ))
+  POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (srw_ss()) [] )
+QED
 
 val _ = set_fixity "COMPAT" (Infix(NONASSOC,450))
 
@@ -1649,33 +1715,34 @@ Definition COMPAT_def:
              equiv vex (nwalk* sx t1) (nwalk* sx t2)
 End
 
-val COMPAT_REFL = Q.store_thm(
-"COMPAT_REFL",
-`nwfs s ∧ FINITE fe ∧ (verify_fcs fe s = SOME ve) ==>
+Theorem COMPAT_REFL:
+ nwfs s ∧ FINITE fe ∧ (verify_fcs fe s = SOME ve) ==>
 (s,fe) COMPAT (s,fe) ∧
 (s,ve) COMPAT (s,fe) ∧
 (s,fe) COMPAT (s,ve) ∧
 (s,ve) COMPAT (s,ve)
-`,
+Proof
 SRW_TAC [][COMPAT_def] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 `FINITE ve` by IMP_RES_TAC verify_fcs_SOME THEN
 SRW_TAC [][] THEN
 IMP_RES_TAC verify_fcs_idem THEN
-FULL_SIMP_TAC (srw_ss()) [])
+FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val COMPAT_TRANS = Q.store_thm(
-"COMPAT_TRANS",
-`p2 COMPAT p1 /\ p1 COMPAT p0 ==> p2 COMPAT p0`,
+Theorem COMPAT_TRANS:
+ p2 COMPAT p1 /\ p1 COMPAT p0 ==> p2 COMPAT p0
+Proof
 MAP_EVERY Cases_on [`p0`,`p1`,`p2`] THEN
 SRW_TAC [][COMPAT_def] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val SUBMAP_COMPAT = Q.store_thm(
-"SUBMAP_COMPAT",
-`nwfs sx ∧ s SUBMAP sx ∧ FINITE fe ∧ (verify_fcs fe sx = SOME ve) ⇒
- (sx,fe) COMPAT (s,fe)`,
+Theorem SUBMAP_COMPAT:
+ nwfs sx ∧ s SUBMAP sx ∧ FINITE fe ∧ (verify_fcs fe sx = SOME ve) ⇒
+ (sx,fe) COMPAT (s,fe)
+Proof
 STRIP_TAC THEN
 IMP_RES_TAC nwfs_SUBMAP THEN
 SRW_TAC [][COMPAT_def] THEN
@@ -1689,22 +1756,24 @@ Q.EXISTS_TAC `fe1` THEN
 SRW_TAC [][] THEN1
 IMP_RES_TAC verify_fcs_SOME THEN
 MATCH_MP_TAC verify_fcs_iter_SUBMAP THEN
-SRW_TAC [][] )
+SRW_TAC [][]
+QED
 
-val SUBSET_COMPAT = Q.store_thm(
-"SUBSET_COMPAT",
-`nwfs s ∧ (verify_fcs fex s = SOME vex) ∧ FINITE fex ∧ fe SUBSET fex ⇒
- (s,fex) COMPAT (s,fe)`,
+Theorem SUBSET_COMPAT:
+ nwfs s ∧ (verify_fcs fex s = SOME vex) ∧ FINITE fex ∧ fe SUBSET fex ⇒
+ (s,fex) COMPAT (s,fe)
+Proof
 SRW_TAC [][COMPAT_def] THEN1
 METIS_TAC [SUBSET_FINITE] THEN
 `∃ve. ve SUBSET vex ∧ (verify_fcs fe s = SOME ve)`
 by METIS_TAC [verify_fcs_SUBSET] THEN
 SRW_TAC [][] THEN
-METIS_TAC [equiv_SUBSET])
+METIS_TAC [equiv_SUBSET]
+QED
 
-val nomunify_COMPAT = Q.store_thm(
-"nomunify_COMPAT",
-`nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (su,fu)) ⇒ (su,fu) COMPAT (s,fe)`,
+Theorem nomunify_COMPAT:
+ nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (su,fu)) ⇒ (su,fu) COMPAT (s,fe)
+Proof
 SRW_TAC [][nomunify_def] THEN
 Cases_on `x` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][] THEN
@@ -1723,12 +1792,13 @@ Q.EXISTS_TAC `(su,fu0)` THEN
 CONJ_TAC THEN1 (
   METIS_TAC [COMPAT_REFL] ) THEN
 MATCH_MP_TAC (GEN_ALL SUBSET_COMPAT) THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val nvwalk_irrelevant_FUPDATE = Q.store_thm(
-"nvwalk_irrelevant_FUPDATE",
-`nwfs (s|+(vx,tx)) /\ vx NOTIN FDOM s ==>
-  !p v.~(nvR s)^* vx v ==> (nvwalk (s|+(vx,tx)) p v = nvwalk s p v)`,
+Theorem nvwalk_irrelevant_FUPDATE:
+ nwfs (s|+(vx,tx)) /\ vx NOTIN FDOM s ==>
+  !p v.~(nvR s)^* vx v ==> (nvwalk (s|+(vx,tx)) p v = nvwalk s p v)
+Proof
 STRIP_TAC THEN
 `nwfs s` by METIS_TAC [nwfs_SUBMAP,SUBMAP_FUPDATE_EQN] THEN
 HO_MATCH_MP_TAC nvwalk_ind THEN
@@ -1749,7 +1819,8 @@ Cases_on `is_Sus x` THEN1 (
   ASM_SIMP_TAC (psrw_ss()) [Once nvwalk_def,SimpRHS,FLOOKUP_UPDATE,nvwalk_case_thms] )
 THEN Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 ASM_SIMP_TAC (psrw_ss()) [Once nvwalk_def,SimpLHS,FLOOKUP_UPDATE,nvwalk_case_thms] THEN
-ASM_SIMP_TAC (psrw_ss()) [Once nvwalk_def,SimpRHS,FLOOKUP_UPDATE,nvwalk_case_thms])
+ASM_SIMP_TAC (psrw_ss()) [Once nvwalk_def,SimpRHS,FLOOKUP_UPDATE,nvwalk_case_thms]
+QED
 
 val nvR_SUBMAP = Q.prove(
 `s SUBMAP sx ==> nvR s u v ==> nvR sx u v`,
@@ -1758,17 +1829,18 @@ SRW_TAC [][nvR_def] THEN
 `FLOOKUP sx v = SOME x` by METIS_TAC [FLOOKUP_SUBMAP] THEN
 SRW_TAC [][])
 
-val TC_nvR_SUBMAP = Q.store_thm(
-"TC_nvR_SUBMAP",
-`s SUBMAP sx ==> !u v.(nvR s)^+ u v ==> (nvR sx)^+ u v`,
+Theorem TC_nvR_SUBMAP:
+ s SUBMAP sx ==> !u v.(nvR s)^+ u v ==> (nvR sx)^+ u v
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC TC_INDUCT THEN
 SRW_TAC [][] THEN1 METIS_TAC [TC_SUBSET,nvR_SUBMAP] THEN
-METIS_TAC [TC_RULES])
+METIS_TAC [TC_RULES]
+QED
 
-val nvwalk_FUPDATE_var = Q.store_thm(
-"nvwalk_FUPDATE_var",
-`nwfs (s |+ (vx,tx)) ∧ vx ∉ FDOM s ⇒
- (nvwalk (s |+ (vx,tx)) [] vx = nwalk s tx)`,
+Theorem nvwalk_FUPDATE_var:
+ nwfs (s |+ (vx,tx)) ∧ vx ∉ FDOM s ⇒
+ (nvwalk (s |+ (vx,tx)) [] vx = nwalk s tx)
+Proof
 STRIP_TAC THEN
 `nwfs s` by METIS_TAC [nwfs_SUBMAP,SUBMAP_FUPDATE_EQN] THEN
 Cases_on `is_Sus tx` THEN1 (
@@ -1788,12 +1860,13 @@ Cases_on `is_Sus tx` THEN1 (
     `nvR (s|+(vx,Sus p v)) v vx` by FULL_SIMP_TAC (srw_ss()) [nvR_def,FLOOKUP_UPDATE] THEN
     METIS_TAC [TC_RULES] ) THEN
 Cases_on `tx` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-SRW_TAC [][Once nvwalk_def,SimpLHS,FLOOKUP_UPDATE])
+SRW_TAC [][Once nvwalk_def,SimpLHS,FLOOKUP_UPDATE]
+QED
 
-val nwalkstar_irrelevant_FUPDATE = Q.store_thm(
-"nwalkstar_irrelevant_FUPDATE",
-`nwfs (s|+(vx,tx)) ∧ vx ∉ FDOM s ∧ ¬ noc s t vx ⇒
- (nwalk* (s|+(vx,tx)) t = nwalk* s t)`,
+Theorem nwalkstar_irrelevant_FUPDATE:
+ nwfs (s|+(vx,tx)) ∧ vx ∉ FDOM s ∧ ¬ noc s t vx ⇒
+ (nwalk* (s|+(vx,tx)) t = nwalk* s t)
+Proof
 Q_TAC SUFF_TAC
 `nwfs (s|+(vx,tx)) ∧ vx ∉ FDOM s ⇒
 ∀t. ¬ noc s t vx ⇒ (nwalk* (s|+(vx,tx)) t = nwalk* s t)`
@@ -1823,12 +1896,13 @@ Cases_on `nvwalk s l n` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [noc_eq_nvars_nwalkstar] THEN
-METIS_TAC [IN_DEF,IN_UNION])
+METIS_TAC [IN_DEF,IN_UNION]
+QED
 
-val extension_is_nwfs = Q.store_thm(
-"extension_is_nwfs",
-`nwfs (s|+(vx,tx)) ∧ vx ∉ FDOM s ⇒
- nwfs s ∧ ¬ noc s tx vx`,
+Theorem extension_is_nwfs:
+ nwfs (s|+(vx,tx)) ∧ vx ∉ FDOM s ⇒
+ nwfs s ∧ ¬ noc s tx vx
+Proof
 STRIP_TAC THEN
 `s SUBMAP (s|+(vx,tx))` by METIS_TAC [SUBMAP_FUPDATE_EQN] THEN
 CONJ1_TAC THEN1 (
@@ -1840,12 +1914,13 @@ IMP_RES_TAC noc_TC_nvR THEN
 IMP_RES_TAC RTC_CASES_TC THEN1
   METIS_TAC [nwfs_no_cycles,TC_SUBSET] THEN
 IMP_RES_TAC TC_nvR_SUBMAP THEN
-METIS_TAC [nwfs_no_cycles,TC_RULES]);
+METIS_TAC [nwfs_no_cycles,TC_RULES]
+QED
 
-val nwalkstar_FUPDATE_var = Q.store_thm(
-"nwalkstar_FUPDATE_var",
-`nwfs (s|+(vx,tx)) ∧ vx ∉ FDOM s ⇒
- (nwalk* (s|+(vx,tx)) (Sus [] vx) = nwalk* s tx)`,
+Theorem nwalkstar_FUPDATE_var:
+ nwfs (s|+(vx,tx)) ∧ vx ∉ FDOM s ⇒
+ (nwalk* (s|+(vx,tx)) (Sus [] vx) = nwalk* s tx)
+Proof
 STRIP_TAC THEN
 `nwfs s` by METIS_TAC [nwfs_SUBMAP,SUBMAP_FUPDATE_EQN] THEN
 Q_TAC SUFF_TAC
@@ -1859,13 +1934,15 @@ SRW_TAC [][] THEN
 IMP_RES_TAC extension_is_nwfs THEN
 POP_ASSUM MP_TAC THEN
 ASM_SIMP_TAC (srw_ss()) [noc_eq_nvars_nwalkstar] THEN
-METIS_TAC [nwalkstar_nwalk]);
+METIS_TAC [nwalkstar_nwalk]
+QED
 
-val equiv_extend = Q.store_thm ((* Lemma 3.3 ; nominal version of nwalkstar_extend ?*)
-"equiv_extend",
-`nwfs s1 ∧ nwfs (s|+(vx,apply_pi (REVERSE pi) tx)) ∧ vx ∉ FDOM s ∧
+(* Lemma 3.3 ; nominal version of nwalkstar_extend ?*)
+Theorem equiv_extend:
+ nwfs s1 ∧ nwfs (s|+(vx,apply_pi (REVERSE pi) tx)) ∧ vx ∉ FDOM s ∧
  equiv fe (nwalk* s1 (Sus pi vx)) (nwalk* s1 (nwalk* s tx)) ⇒
- ∀t. equiv fe (nwalk* s1 (nwalk* (s|+(vx,apply_pi (REVERSE pi) tx)) t)) (nwalk* s1 (nwalk* s t))`,
+ ∀t. equiv fe (nwalk* s1 (nwalk* (s|+(vx,apply_pi (REVERSE pi) tx)) t)) (nwalk* s1 (nwalk* s t))
+Proof
 STRIP_TAC THEN
 Q.ABBREV_TAC `sx = (s|+(vx,apply_pi (REVERSE pi) tx))` THEN
 `nwfs s ∧ s SUBMAP sx` by METIS_TAC [nwfs_SUBMAP,SUBMAP_FUPDATE_EQN] THEN
@@ -1900,12 +1977,13 @@ Cases_on `nwalk s t` THEN FULL_SIMP_TAC (srw_ss()) [] THEN1 (
       SRW_TAC [][] ) THEN
   POP_ASSUM MP_TAC THEN ASM_SIMP_TAC (srw_ss()) [] )
 THEN1 (SRW_TAC [][Once equiv_cases])
-THEN1 (SRW_TAC [][Once equiv_cases]));
+THEN1 (SRW_TAC [][Once equiv_cases])
+QED
 
-val nvars_nwalkstar_subterm = Q.store_thm(
-"nvars_nwalkstar_subterm",
-`nwfs s ⇒
- ((∃v1. v1 ∈ nvars t ∧ v2 ∈ nvars (nwalk* s (Sus [] v1))) ⇔ v2 ∈ nvars (nwalk* s t))`,
+Theorem nvars_nwalkstar_subterm:
+ nwfs s ⇒
+ ((∃v1. v1 ∈ nvars t ∧ v2 ∈ nvars (nwalk* s (Sus [] v1))) ⇔ v2 ∈ nvars (nwalk* s t))
+Proof
 STRIP_TAC THEN EQ_TAC THEN1 (
   STRIP_TAC THEN
   IMP_RES_TAC noc_eq_nvars_nwalkstar THEN
@@ -1941,21 +2019,23 @@ THEN1 (
   Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
   (nvwalk_modulo_pi |> Q.SPECL [`s`,`l`,`n`] |> GSYM |> MP_TAC) THEN
   ASM_SIMP_TAC (srw_ss()) [apply_pi_eql,nwalkstar_apply_pi] THEN
-  SRW_TAC [][] THEN METIS_TAC []));
+  SRW_TAC [][] THEN METIS_TAC [])
+QED
 
-val equiv_ties_fcs = Q.store_thm(
-"equiv_ties_fcs",
-`equiv fe (Tie a1 t1) (Tie a2 t2) ∧ a1 ≠ a2 ⇒
- ∃fcs. (term_fcs a1 t2 = SOME fcs) ∧ fcs SUBSET fe`,
+Theorem equiv_ties_fcs:
+ equiv fe (Tie a1 t1) (Tie a2 t2) ∧ a1 ≠ a2 ⇒
+ ∃fcs. (term_fcs a1 t2 = SOME fcs) ∧ fcs SUBSET fe
+Proof
 SRW_TAC [][Once equiv_cases] THEN
 Cases_on `term_fcs a1 t2` THEN1 (
   IMP_RES_TAC term_fcs_NONE ) THEN
 IMP_RES_TAC term_fcs_minimal THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val fresh_FINITE = Q.store_thm(
-"fresh_FINITE",
-`fresh fe a t ⇒ ∃fcs. fcs SUBSET fe ∧ FINITE fcs ∧ fresh fcs a t`,
+Theorem fresh_FINITE:
+ fresh fe a t ⇒ ∃fcs. fcs SUBSET fe ∧ FINITE fcs ∧ fresh fcs a t
+Proof
 Induct_on `t` THEN ASM_SIMP_TAC (psrw_ss()) [fresh_def] THEN SRW_TAC [][] THEN1 (
   Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
 THEN1 (
@@ -1970,11 +2050,12 @@ THEN1 (
   Q.EXISTS_TAC `fcs ∪ fcs'` THEN
   SRW_TAC [][] THEN
   METIS_TAC [fresh_extra_fcs,SUBSET_UNION] )
-THEN Q.EXISTS_TAC `{}` THEN SRW_TAC [][] );
+THEN Q.EXISTS_TAC `{}` THEN SRW_TAC [][]
+QED
 
-val equiv_FINITE = Q.store_thm(
-"equiv_FINITE",
-`∀t1 t2. equiv fe t1 t2 ⇒ ∃fcs. fcs SUBSET fe ∧ FINITE fcs ∧ equiv fcs t1 t2`,
+Theorem equiv_FINITE:
+ ∀t1 t2. equiv fe t1 t2 ⇒ ∃fcs. fcs SUBSET fe ∧ FINITE fcs ∧ equiv fcs t1 t2
+Proof
 HO_MATCH_MP_TAC equiv_ind THEN SRW_TAC [][] THEN1 (
   Q.EXISTS_TAC `{}` THEN SRW_TAC [][] )
 THEN1 (
@@ -1998,31 +2079,33 @@ THEN1 (
   Q.EXISTS_TAC `fcs ∪ fcs'` THEN
   SRW_TAC [][] THEN
   METIS_TAC [equiv_SUBSET,SUBSET_UNION] )
-THEN Q.EXISTS_TAC `{}` THEN SRW_TAC [][])
+THEN Q.EXISTS_TAC `{}` THEN SRW_TAC [][]
+QED
 
-val term_fcs_irrelevant_nwalkstar = Q.store_thm(
-"term_fcs_irrelevant_nwalkstar",
-`(term_fcs b t = SOME fcs) ∧
+Theorem term_fcs_irrelevant_nwalkstar:
+ (term_fcs b t = SOME fcs) ∧
  (term_fcs b (nwalk* s t) = SOME fcs2) ∧
  (a,v) ∈ fcs ∧ v ∉ FDOM s ∧
  nwfs s ⇒
- (a,v) ∈ fcs2`,
+ (a,v) ∈ fcs2
+Proof
 SRW_TAC [][] THEN
 `∃fcs1. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs1) ∧ fcs1 ⊆ fcs2`
 by METIS_TAC [term_fcs_nwalkstar] THEN
 NTAC 2 (POP_ASSUM MP_TAC) THEN
 ASM_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk] THEN
 ASM_SIMP_TAC (psrw_ss()) [Once term_fcs_def,EXTENSION] THEN
-SRW_TAC [][SUBSET_DEF] THEN METIS_TAC []);
+SRW_TAC [][SUBSET_DEF] THEN METIS_TAC []
+QED
 
 val ee = equiv_extend |> UNDISCH |> SPEC_ALL |> DISCH_ALL |> Q.GEN `tx` |> Q.GEN `pi`
 
-val nomunify_mgu2 = Q.store_thm(
-"nomunify_mgu2",
-`∀s fe t1 t2 sx fex.
+Theorem nomunify_mgu2:
+ ∀s fe t1 t2 sx fex.
 (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧
 (equiv fe2 (nwalk* s2 (nwalk* s t1)) (nwalk* s2 (nwalk* s t2))) ∧ nwfs s2 ∧ nwfs s ∧ FINITE fe
-⇒ (∀t. equiv fe2 (nwalk* s2 (nwalk* sx t)) (nwalk* s2 (nwalk* s t)))`,
+⇒ (∀t. equiv fe2 (nwalk* s2 (nwalk* sx t)) (nwalk* s2 (nwalk* s t)))
+Proof
 HO_MATCH_MP_TAC nunify_ind THEN SRW_TAC [][] THEN
 `nwfs sx ∧ s SUBMAP sx ∧ FINITE fex ∧ equiv fex (nwalk* sx t1) (nwalk* sx t2)`
 by (IMP_RES_TAC nomunify_unifier THEN SRW_TAC [][]) THEN
@@ -2142,12 +2225,13 @@ THEN1 (
   `(nwalk* s t1 = nwalk* s (nwalk s t1)) ∧
    (nwalk* s t2 = nwalk* s (nwalk s t2))` by METIS_TAC [nwalkstar_nwalk] THEN
   FULL_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk] THEN
-  METIS_TAC [equiv_sym]));
+  METIS_TAC [equiv_sym])
+QED
 
-val term_fcs_equiv = Q.store_thm(
-"term_fcs_equiv",
-`equiv fe t1 t2 ∧ (term_fcs a t1 = SOME fcs1) ∧ fcs1 ⊆ fe ⇒
- ∃fcs2. (term_fcs a t2 = SOME fcs2) ∧ fcs2 ⊆ fe`,
+Theorem term_fcs_equiv:
+ equiv fe t1 t2 ∧ (term_fcs a t1 = SOME fcs1) ∧ fcs1 ⊆ fe ⇒
+ ∃fcs2. (term_fcs a t2 = SOME fcs2) ∧ fcs2 ⊆ fe
+Proof
 Q_TAC SUFF_TAC
 `∀t1 t2. equiv fe t1 t2 ⇒ ∀fcs.
 (term_fcs a t1 = SOME fcs) ∧ fcs ⊆ fe ⇒ ∃fcs2. (term_fcs a t2 = SOME fcs2) ∧ fcs2 ⊆ fe`
@@ -2191,11 +2275,12 @@ THEN STRIP_TAC THEN1 (
   SRW_TAC [][Once term_fcs_def] THEN
   SRW_TAC [][Once term_fcs_def] THEN
   FULL_SIMP_TAC (srw_ss()) [] )
-THEN NTAC 2 (SRW_TAC [][Once term_fcs_def]));
+THEN NTAC 2 (SRW_TAC [][Once term_fcs_def])
+QED
 
-val nvwalk_SUBMAP_idem = Q.store_thm(
-"nvwalk_SUBMAP_idem",
-`nwfs sx ∧ s SUBMAP sx ⇒ ∀pi v. nwalk s (nvwalk sx pi v) = nvwalk sx pi v`,
+Theorem nvwalk_SUBMAP_idem:
+ nwfs sx ∧ s SUBMAP sx ⇒ ∀pi v. nwalk s (nvwalk sx pi v) = nvwalk sx pi v
+Proof
 STRIP_TAC THEN IMP_RES_TAC nwfs_SUBMAP THEN
 HO_MATCH_MP_TAC (Q.INST[`s`|->`sx`]nvwalk_ind) THEN
 SRW_TAC [][] THEN
@@ -2212,11 +2297,12 @@ ASM_SIMP_TAC (srw_ss()) [Once nvwalk_def] THEN
 ASM_SIMP_TAC (srw_ss()) [Once nvwalk_def,SimpRHS] THEN
 SELECT_ELIM_TAC THEN
 SRW_TAC [][] THEN
-METIS_TAC [nvwalk_eq_perms,permeq_refl,app_permeq_monotone]);
+METIS_TAC [nvwalk_eq_perms,permeq_refl,app_permeq_monotone]
+QED
 
-val nwalkstar_SUBMAP_idem = Q.store_thm(
-"nwalkstar_SUBMAP_idem",
-`nwfs sx ∧ s SUBMAP sx ⇒ ∀t.nwalk* s (nwalk* sx t) = nwalk* sx t`,
+Theorem nwalkstar_SUBMAP_idem:
+ nwfs sx ∧ s SUBMAP sx ⇒ ∀t.nwalk* s (nwalk* sx t) = nwalk* sx t
+Proof
 STRIP_TAC THEN IMP_RES_TAC nwfs_SUBMAP THEN
 HO_MATCH_MP_TAC (Q.INST[`s`|->`sx`]nwalkstar_ind) THEN
 SRW_TAC [][] THEN
@@ -2232,11 +2318,12 @@ IMP_RES_TAC nvwalk_to_var THEN
 Q.MATCH_ASSUM_RENAME_TAC `v ∉ FDOM sx` THEN
 `v ∉ FDOM s` by METIS_TAC [SUBMAP_DEF,SUBSET_DEF] THEN
 SRW_TAC [][] THEN
-FULL_SIMP_TAC (srw_ss()) [NOT_FDOM_nvwalk]);
+FULL_SIMP_TAC (srw_ss()) [NOT_FDOM_nvwalk]
+QED
 
-val unify_eq_vars_NOTIN_FDOM = Q.store_thm(
-"unify_eq_vars_NOTIN_FDOM",
-`FINITE ds ∧ nwfs s ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ (b,w) ∉ fe ∧ (b,w) ∈ fex ⇒ w ∉ FDOM s`,
+Theorem unify_eq_vars_NOTIN_FDOM:
+ FINITE ds ∧ nwfs s ∧ (unify_eq_vars ds v (s,fe) = SOME (s',fex)) ∧ (b,w) ∉ fe ∧ (b,w) ∈ fex ⇒ w ∉ FDOM s
+Proof
 SIMP_TAC (srw_ss()) [GSYM AND_IMP_INTRO] THEN
 STRIP_TAC THEN
 SPEC_ALL_TAC [`ds`] THEN
@@ -2255,13 +2342,14 @@ FULL_SIMP_TAC (srw_ss()) [] THEN1 (
   THEN SRW_TAC [][] ) THEN
 MATCH_MP_TAC (GEN_ALL term_fcs_NOTIN_FDOM) THEN
 MAP_EVERY Q.EXISTS_TAC [`Sus [] v`,`x2`,`b`,`e`] THEN
-SRW_TAC [][]);
+SRW_TAC [][]
+QED
 
-val nunify_fcs_NOTIN_FDOM = Q.store_thm (
-"nunify_fcs_NOTIN_FDOM",
-`∀s fe t1 t2 sx fex. nwfs s ∧ FINITE fe ∧
+Theorem nunify_fcs_NOTIN_FDOM:
+ ∀s fe t1 t2 sx fex. nwfs s ∧ FINITE fe ∧
 (nunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (a,v) ∉ fe ∧ (a,v) ∈ fex ⇒
-v ∉ FDOM s`,
+v ∉ FDOM s
+Proof
 HO_MATCH_MP_TAC nunify_ind THEN SRW_TAC [][] THEN
 Q.PAT_X_ASSUM `nunify p t1 t2 = SOME px` MP_TAC THEN
 Cases_on `nwalk s t1` THEN Cases_on `nwalk s t2` THEN
@@ -2282,26 +2370,29 @@ Cases_on `x` THEN SRW_TAC [][] THEN
 Q.MATCH_ASSUM_RENAME_TAC `nunify (s,fe) t1a t2a = SOME (sa,fa)` THEN
 Cases_on `(a,v) ∈ fa` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 `nwfs sa ∧ FINITE fa ∧ s SUBMAP sa` by METIS_TAC [nunify_uP,uP_def,nunify_FINITE_fe] THEN
-METIS_TAC [SUBMAP_DEF,SUBSET_DEF]);
+METIS_TAC [SUBMAP_DEF,SUBSET_DEF]
+QED
 
-val GEN_SUBMAP_FUPDATE_EQN = Q.store_thm(
-"GEN_SUBMAP_FUPDATE_EQN",
-`f SUBMAP g |+ (k,v) ⇔ k ∉ FDOM f ∧ f SUBMAP g ∨ k ∈ FDOM f ∧ (f \\ k) SUBMAP g ∧ (f ' k = v)`,
+Theorem GEN_SUBMAP_FUPDATE_EQN:
+ f SUBMAP g |+ (k,v) ⇔ k ∉ FDOM f ∧ f SUBMAP g ∨ k ∈ FDOM f ∧ (f \\ k) SUBMAP g ∧ (f ' k = v)
+Proof
 SRW_TAC [][EQ_IMP_THM] THEN1 (
   Cases_on `k ∈ FDOM f` THEN SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [SUBMAP_DEF] THEN
   SRW_TAC [][DOMSUB_FAPPLY_THM,FAPPLY_FUPDATE_THM] THEN
   METIS_TAC []  ) THEN
 FULL_SIMP_TAC (srw_ss()) [SUBMAP_DEF,DOMSUB_FAPPLY_THM,FAPPLY_FUPDATE_THM] THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val fresh_term_fcs = Q.store_thm(
-"fresh_term_fcs",
-`fresh fe a t ⇒ (∃fcs. (term_fcs a t = SOME fcs) ∧ fcs ⊆ fe)`,
+Theorem fresh_term_fcs:
+ fresh fe a t ⇒ (∃fcs. (term_fcs a t = SOME fcs) ∧ fcs ⊆ fe)
+Proof
 SRW_TAC [][] THEN Cases_on `term_fcs a t` THEN
 IMP_RES_TAC term_fcs_NONE THEN
 IMP_RES_TAC term_fcs_minimal THEN
-SRW_TAC [][]);
+SRW_TAC [][]
+QED
 
 val equiv_fcs_q = `
   (equiv_fcs (Nom a) (Nom b) = if a = b then SOME {} else NONE) ∧
@@ -2320,9 +2411,9 @@ val equiv_fcs_def = Define equiv_fcs_q;
 val _ = export_rewrites ["equiv_fcs_def"]
 val _ = store_term_thm("equiv_fcs_def_print",TermWithCase equiv_fcs_q);
 
-val equiv_fcs_minimal = Q.store_thm(
-"equiv_fcs_minimal",
-`∀t1 t2. equiv fe t1 t2 ⇒ ∃fe0. (equiv_fcs t1 t2 = SOME fe0) ∧ fe0 ⊆ fe`,
+Theorem equiv_fcs_minimal:
+ ∀t1 t2. equiv fe t1 t2 ⇒ ∃fe0. (equiv_fcs t1 t2 = SOME fe0) ∧ fe0 ⊆ fe
+Proof
 HO_MATCH_MP_TAC equiv_ind THEN
 ASM_SIMP_TAC (psrw_ss()) [] THEN
 SRW_TAC [][] THEN1 (
@@ -2331,26 +2422,29 @@ SRW_TAC [][] THEN1 (
 THEN1 (
   IMP_RES_TAC fresh_term_fcs THEN
   SRW_TAC [][] ) THEN
-SRW_TAC [][]);
+SRW_TAC [][]
+QED
 
-val equiv_fcs_equiv = Q.store_thm(
-"equiv_fcs_equiv",
-`∀t1 t2 fe. (equiv_fcs t1 t2 = SOME fe) ⇒ equiv fe t1 t2`,
+Theorem equiv_fcs_equiv:
+ ∀t1 t2 fe. (equiv_fcs t1 t2 = SOME fe) ⇒ equiv fe t1 t2
+Proof
 Induct THEN Cases_on `t2` THEN
 FULL_SIMP_TAC (psrw_ss()) [] THEN
 SRW_TAC [][] THEN
 SRW_TAC [][Once equiv_cases] THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
-METIS_TAC [permeq_refl,equiv_SUBSET,SUBSET_UNION,fresh_extra_fcs,term_fcs_fresh]);
+METIS_TAC [permeq_refl,equiv_SUBSET,SUBSET_UNION,fresh_extra_fcs,term_fcs_fresh]
+QED
 
-val nwalk_apply_pi = Q.store_thm(
-"nwalk_apply_pi",
-`nwfs s ⇒ (nwalk s (apply_pi pi t) = apply_pi pi (nwalk s t))`,
+Theorem nwalk_apply_pi:
+ nwfs s ⇒ (nwalk s (apply_pi pi t) = apply_pi pi (nwalk s t))
+Proof
 Induct_on `t` THEN ASM_SIMP_TAC (psrw_ss()) [] THEN
 SRW_TAC [][] THEN
 (nvwalk_modulo_pi |> Q.SPECL [`s`,`l`,`n`] |> MP_TAC) THEN
 (nvwalk_modulo_pi |> Q.SPECL [`s`,`pi ++ l`,`n`] |> MP_TAC) THEN
-SRW_TAC [][apply_pi_decompose]);
+SRW_TAC [][apply_pi_decompose]
+QED
 
 val _ = add_rule {
   fixity = Infix(NONASSOC,450),
@@ -2368,12 +2462,12 @@ val _ = add_rule {
   pp_elements =
   [BreakSpace(1,2),TOK"⊢",BreakSpace(1,2),TM,BreakSpace(1,2),TOK"#",BreakSpace(1,2)] }
 
-val equiv_fcs_nwalkstar = Q.store_thm(
-"equiv_fcs_nwalkstar",
-`(equiv_fcs t1 t2 = SOME fe1) ∧
+Theorem equiv_fcs_nwalkstar:
+ (equiv_fcs t1 t2 = SOME fe1) ∧
  (equiv_fcs (nwalk* s t1) (nwalk* s t2) = SOME fe2) ∧
  (a,v) ∈ fe1 ∧ nwfs s ⇒
- ∃fcs. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧ fcs ⊆ fe2`,
+ ∃fcs. (term_fcs a (nwalk* s (Sus [] v)) = SOME fcs) ∧ fcs ⊆ fe2
+Proof
 MAP_EVERY Q.ID_SPEC_TAC [`fe2`,`fe1`,`t2`,`t1`] THEN
 Induct THEN Cases_on `t2` THEN FULL_SIMP_TAC (psrw_ss()) [] THEN1 (
   SRW_TAC [][] THEN
@@ -2403,13 +2497,14 @@ THEN1 (
   SRW_TAC [][] THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
   RES_TAC THEN
-  METIS_TAC [SUBSET_UNION,SUBSET_TRANS] ));
+  METIS_TAC [SUBSET_UNION,SUBSET_TRANS] )
+QED
 
-val term_fcs_SUBMAP = Q.store_thm(
-"term_fcs_SUBMAP",
-`(term_fcs a (nwalk* s t) = SOME fcs) ∧ nwfs s ⇒
+Theorem term_fcs_SUBMAP:
+ (term_fcs a (nwalk* s t) = SOME fcs) ∧ nwfs s ⇒
  ∃fe0. (term_fcs a t = SOME fe0) ∧
- ∀b w. (b,w) ∈ fe0 ⇒ ∃fe1. (term_fcs b (nwalk* s (Sus [] w)) = SOME fe1) ∧ fe1 ⊆ fcs`,
+ ∀b w. (b,w) ∈ fe0 ⇒ ∃fe1. (term_fcs b (nwalk* s (Sus [] w)) = SOME fe1) ∧ fe1 ⊆ fcs
+Proof
 REPEAT STRIP_TAC THEN
 IMP_RES_TAC term_fcs_fresh THEN
 IMP_RES_TAC fresh_SUBMAP THEN
@@ -2420,13 +2515,14 @@ REPEAT STRIP_TAC THEN
 `(b,w) ∈ fe` by FULL_SIMP_TAC (srw_ss()) [SUBSET_DEF] THEN
 RES_TAC THEN
 IMP_RES_TAC fresh_term_fcs THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val term_fcs_nwalkstar_backwards = Q.store_thm(
-"term_fcs_nwalkstar_backwards",
-`nwfs s ∧ (term_fcs b (nwalk* s t) = SOME fcs) ∧ (a,v) ∈ fcs ∧
+Theorem term_fcs_nwalkstar_backwards:
+ nwfs s ∧ (term_fcs b (nwalk* s t) = SOME fcs) ∧ (a,v) ∈ fcs ∧
  (term_fcs b t = SOME fe0) ⇒
- ∃c w fe1. (c,w) ∈ fe0 ∧ (term_fcs c (nwalk* s (Sus [] w)) = SOME fe1) ∧ (a,v) ∈ fe1`,
+ ∃c w fe1. (c,w) ∈ fe0 ∧ (term_fcs c (nwalk* s (Sus [] w)) = SOME fe1) ∧ (a,v) ∈ fe1
+Proof
 STRIP_TAC THEN
 NTAC 3 (POP_ASSUM MP_TAC) THEN
 SPEC_ALL_TAC [`t`,`s`] THEN
@@ -2488,13 +2584,14 @@ THEN1 (
   FULL_SIMP_TAC (srw_ss()) [] THEN
   METIS_TAC []) THEN
 FULL_SIMP_TAC (srw_ss()) [Once term_fcs_def] THEN
-SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) [])
+SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val nomunify_equiv_fcs = Q.store_thm(
-"nomunify_equiv_fcs",
-`(nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (a,v) ∈ fex ∧ nwfs s ∧ FINITE fe ⇒
+Theorem nomunify_equiv_fcs:
+ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (a,v) ∈ fex ∧ nwfs s ∧ FINITE fe ⇒
  (∃ b w fcs. (b,w) ∈ fe ∧ (term_fcs b (nwalk* sx (Sus [] w)) = SOME fcs) ∧ (a,v) ∈ fcs) ∨
- (a,v) ∈ THE (equiv_fcs (nwalk* sx t1) (nwalk* sx t2))`,
+ (a,v) ∈ THE (equiv_fcs (nwalk* sx t1) (nwalk* sx t2))
+Proof
 Q_TAC SUFF_TAC
 `∀s fe t1 t2 sx sxx b w fex fcs fem fev. (nunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (b,w) ∉ fe ∧ (b,w) ∈ fex ∧
   nwfs sxx ∧ sx SUBMAP sxx ∧
@@ -2600,14 +2697,15 @@ THEN1 (
   NTAC 2 (FIRST_X_ASSUM (Q.SPECL_THEN [`sxx`,`b`,`w`] MP_TAC)) THEN
   SRW_TAC [][] THEN
   DISJ1_TAC THEN POP_ASSUM MATCH_MP_TAC THEN
-  METIS_TAC [SUBMAP_TRANS] ))
+  METIS_TAC [SUBMAP_TRANS] )
+QED
 
-val nomunify_mgu1 = Q.store_thm(
-"nomunify_mgu1",
-`(nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (a,v) ∈ fex ∧
+Theorem nomunify_mgu1:
+ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧ (a,v) ∈ fex ∧
 (equiv fe2 (nwalk* s2 (nwalk* s t1)) (nwalk* s2 (nwalk* s t2))) ∧ nwfs s2 ∧ nwfs s ∧ FINITE fe
 ⇒ (∃ b w fcs. (b,w) ∈ fe ∧ (term_fcs b (nwalk* sx (Sus [] w)) = SOME fcs) ∧ (a,v) ∈ fcs) ∨
-fresh fe2 a (nwalk* s2 (Sus [] v))`,
+fresh fe2 a (nwalk* s2 (Sus [] v))
+Proof
 REPEAT STRIP_TAC THEN
 (nomunify_equiv_fcs |> SIMP_RULE bool_ss [GSYM AND_IMP_INTRO] |> funpow 4 UNDISCH |> STRIP_ASSUME_TAC )
 THEN1 METIS_TAC [] THEN DISJ2_TAC THEN
@@ -2619,27 +2717,29 @@ Q_TAC SUFF_TAC `∃fcs. (term_fcs a (nwalk* s2 (Sus [] v)) = SOME fcs) ∧ fcs �
 THEN1 METIS_TAC [fresh_extra_fcs,term_fcs_fresh,SUBSET_TRANS] THEN
 MATCH_MP_TAC (GEN_ALL equiv_fcs_nwalkstar) THEN
 MAP_EVERY Q.EXISTS_TAC [`nwalk* sx t2`,`nwalk* sx t1`,`fe0'`] THEN
-FULL_SIMP_TAC (srw_ss()) [])
+FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val nomunify_mgu = Q.store_thm(
-"nomunify_mgu",
-`nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧
+Theorem nomunify_mgu:
+ nwfs s ∧ FINITE fe ∧ (nomunify (s,fe) t1 t2 = SOME (sx,fex)) ∧
  nwfs s2 ∧ equiv fe2 (nwalk* s2 (nwalk* s t1)) (nwalk* s2 (nwalk* s t2)) ⇒
  (∀a v. (a,v) ∈ fex ⇒
    (∃b w fcs. (b,w) ∈ fe ∧ (term_fcs b (nwalk* sx (Sus [] w)) = SOME fcs) ∧ (a,v) ∈ fcs) ∨
    fresh fe2 a (nwalk* s2 (Sus [] v))) ∧
- (∀t. equiv fe2 (nwalk* s2 (nwalk* sx t)) (nwalk* s2 (nwalk* s t)))`,
+ (∀t. equiv fe2 (nwalk* s2 (nwalk* sx t)) (nwalk* s2 (nwalk* s t)))
+Proof
 REPEAT STRIP_TAC THEN1
 (MATCH_MP_TAC nomunify_mgu1 THEN
  METIS_TAC []) THEN
-METIS_TAC [nomunify_mgu2])
+METIS_TAC [nomunify_mgu2]
+QED
 
-val equiv_consistent_exists = Q.store_thm(
-"equiv_consistent_exists",
-`equiv fe (nwalk* s t1) (nwalk* s t2) ∧ nwfs s ⇒ ∃fec.
+Theorem equiv_consistent_exists:
+ equiv fe (nwalk* s t1) (nwalk* s t2) ∧ nwfs s ⇒ ∃fec.
  FINITE fec ∧
  (verify_fcs fec s = SOME fec) ∧
- equiv fec (nwalk* s t1) (nwalk* s t2)`,
+ equiv fec (nwalk* s t1) (nwalk* s t2)
+Proof
 Q_TAC SUFF_TAC
 `∀fe w1 w2. equiv fe w1 w2 ⇒
 ∀t1 t2 s. FINITE fe ∧ nwfs s ∧ (nwalk* s t1 = w1) ∧ (nwalk* s t2 = w2) ⇒
@@ -2720,13 +2820,14 @@ THEN1 (
     SRW_TAC [][] ) THEN
   Q.EXISTS_TAC `fec ∪ fec'` THEN SRW_TAC [][] THEN
   METIS_TAC [equiv_SUBSET,SUBSET_UNION] ) THEN
-Q.EXISTS_TAC `{}` THEN SRW_TAC [][])
+Q.EXISTS_TAC `{}` THEN SRW_TAC [][]
+QED
 
-val unify_eq_vars_verify_fcs = Q.store_thm(
-"unify_eq_vars_verify_fcs",
-`(verify_fcs fe s = SOME ve) ∧ nwfs s ∧ FINITE ds ∧ FINITE fe ∧
+Theorem unify_eq_vars_verify_fcs:
+ (verify_fcs fe s = SOME ve) ∧ nwfs s ∧ FINITE ds ∧ FINITE fe ∧
  (unify_eq_vars ds v (s,fe) = SOME (s',fe')) ⇒
- (∃ve'. verify_fcs fe' s' = SOME ve')`,
+ (∃ve'. verify_fcs fe' s' = SOME ve')
+Proof
 SRW_TAC [][] THEN
 Cases_on `verify_fcs fe' s'` THEN SRW_TAC [][] THEN
 IMP_RES_TAC unify_eq_vars_FINITE THEN
@@ -2741,27 +2842,29 @@ by METIS_TAC [unify_eq_vars_minimal] THEN
 SRW_TAC [][] THEN
 IMP_RES_TAC term_fcs_NOTIN_FDOM THEN
 Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
-FULL_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk,Once term_fcs_def])
+FULL_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk,Once term_fcs_def]
+QED
 
-val nwalk_nwalkstar = Q.store_thm(
-"nwalk_nwalkstar",
-`nwfs s ⇒ ∀t. nwalk s (nwalk* s t) = nwalk* s t`,
+Theorem nwalk_nwalkstar:
+ nwfs s ⇒ ∀t. nwalk s (nwalk* s t) = nwalk* s t
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN
 STRIP_TAC THEN
 `nwalk* s t = nwalk* s (nwalk s t)` by METIS_TAC [nwalkstar_nwalk] THEN
 Cases_on `nwalk s t` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 `n ∉ FDOM s` by METIS_TAC [nwalk_to_var] THEN
-ASM_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk])
+ASM_SIMP_TAC (psrw_ss()) [NOT_FDOM_nvwalk]
+QED
 
-val nomunify_eqs = Q.store_thm(
-"nomunify_eqs",
-`∀s fe t1 t2 q1 q2 t ve.
+Theorem nomunify_eqs:
+ ∀s fe t1 t2 q1 q2 t ve.
  (nwalk s t1 = apply_pi q1 t) ∧
  (nwalk s t2 = apply_pi q2 t) ∧ nwfs s ∧
  (∀a. a ∈ dis_set q1 q2 ⇒ term_fcs a (nwalk* s t) ≠ NONE) ∧
  (verify_fcs fe s = SOME ve) ∧ FINITE fe
  ⇒
- ∃fex. nomunify (s,fe) t1 t2 = SOME (s,fex)`,
+ ∃fex. nomunify (s,fe) t1 t2 = SOME (s,fex)
+Proof
 HO_MATCH_MP_TAC nunify_ind THEN
 SRW_TAC [][nomunify_def,EXISTS_PROD] THEN
 Q.PAT_X_ASSUM `nwfs s` MP_TAC THEN
@@ -2861,12 +2964,13 @@ THEN1 (
   IMP_RES_TAC nunify_FINITE_fe THEN
   MAP_EVERY Q.EXISTS_TAC [`q1`,`q2`,`nwalk s td`] THEN
   SRW_TAC [][] THEN
-  METIS_TAC [nwalkstar_nwalk] ) )
+  METIS_TAC [nwalkstar_nwalk] )
+QED
 
-val nvars_measure = Q.store_thm(
-"nvars_measure",
-`v ∈ nvars t ∧ ¬ is_Sus t ∧ nwfs s ⇒
- measure (npair_count o (nwalk* s)) (Sus [] v) t`,
+Theorem nvars_measure:
+ v ∈ nvars t ∧ ¬ is_Sus t ∧ nwfs s ⇒
+ measure (npair_count o (nwalk* s)) (Sus [] v) t
+Proof
 Induct_on `t` THEN SRW_TAC [][] THEN
 Q.MATCH_ASSUM_RENAME_TAC `v ∈ nvars tt` THEN
 Cases_on `tt` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
@@ -2875,22 +2979,24 @@ FULL_SIMP_TAC (srw_ss()++ARITH_ss) [measure_thm] THEN
  UNDISCH |>
  Q.SPECL [`Sus [] n`,`l`] |>
  MP_TAC) THEN
-ASM_SIMP_TAC (psrw_ss()++ARITH_ss) [])
+ASM_SIMP_TAC (psrw_ss()++ARITH_ss) []
+QED
 
 val npair_count_apply_pi = RWstore_thm(
 "npair_count_apply_pi",
 `npair_count (apply_pi pi t) = npair_count t`,
 Induct_on `t` THEN SRW_TAC [][])
 
-val equiv_depth_eq = Q.store_thm(
-"equiv_depth_eq",
-`∀t1 t2. equiv fe t1 t2 ⇒ (npair_count t1 = npair_count t2)`,
-HO_MATCH_MP_TAC equiv_ind THEN SRW_TAC [][])
+Theorem equiv_depth_eq:
+ ∀t1 t2. equiv fe t1 t2 ⇒ (npair_count t1 = npair_count t2)
+Proof
+HO_MATCH_MP_TAC equiv_ind THEN SRW_TAC [][]
+QED
 
-val noc_subterm_nequiv = Q.store_thm(
-"noc_subterm_nequiv",
-`noc s t v ∧ ¬ is_Sus t ∧ nwfs s ∧ nwfs s2 ⇒
-¬ equiv fe (nwalk* s2 (Sus pi v)) (nwalk* s2 (nwalk* s t))`,
+Theorem noc_subterm_nequiv:
+ noc s t v ∧ ¬ is_Sus t ∧ nwfs s ∧ nwfs s2 ⇒
+¬ equiv fe (nwalk* s2 (Sus pi v)) (nwalk* s2 (nwalk* s t))
+Proof
 STRIP_TAC THEN
 `v ∈ nvars (nwalk* s t)` by METIS_TAC [noc_eq_nvars_nwalkstar] THEN
 `~is_Sus (nwalk* s t)` by (Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) []) THEN
@@ -2902,15 +3008,16 @@ FULL_SIMP_TAC (psrw_ss()) [measure_thm,NOT_FDOM_nvwalk] THEN
 `npair_count (nwalk* s2 (apply_pi pi (Sus [] v))) < npair_count (nwalk* s2 (nwalk* s t))`
 by (Q.PAT_X_ASSUM `nwfs s2` ASSUME_TAC THEN FULL_SIMP_TAC (psrw_ss()) [nwalkstar_apply_pi]) THEN
 FULL_SIMP_TAC (psrw_ss()) [] THEN
-METIS_TAC [equiv_depth_eq,LESS_NOT_EQ])
+METIS_TAC [equiv_depth_eq,LESS_NOT_EQ]
+QED
 
 val nwalk_to_var_NOT_FDOM = Q.prove(
 `nwfs s ∧ (nwalk s t = Sus p v) ⇒ v ∉ FDOM s`,
 METIS_TAC [nwalk_to_var])
 
-val term_fcs_equiv_NONE = Q.store_thm(
-"term_fcs_equiv_NONE",
-`(term_fcs a t1 = NONE) ∧ equiv fe t1 t2 ∧ (term_fcs a t2 = SOME fcs) ⇒ ¬ (fcs ⊆ fe)`,
+Theorem term_fcs_equiv_NONE:
+ (term_fcs a t1 = NONE) ∧ equiv fe t1 t2 ∧ (term_fcs a t2 = SOME fcs) ⇒ ¬ (fcs ⊆ fe)
+Proof
 SRW_TAC [][] THEN
 IMP_RES_TAC term_fcs_NONE THEN
 IMP_RES_TAC term_fcs_fresh THEN
@@ -2918,11 +3025,12 @@ IMP_RES_TAC equiv_sym THEN
 IMP_RES_TAC equiv_fresh THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 `fresh fe a t2` by METIS_TAC [fresh_extra_fcs] THEN
-RES_TAC THEN RES_TAC)
+RES_TAC THEN RES_TAC
+QED
 
-val term_fcs_apply_pi_NONE = Q.store_thm(
-"term_fcs_apply_pi_NONE",
-`(term_fcs a t = NONE) ⇔ (term_fcs (lswapstr pi a) (apply_pi pi t) = NONE)`,
+Theorem term_fcs_apply_pi_NONE:
+ (term_fcs a t = NONE) ⇔ (term_fcs (lswapstr pi a) (apply_pi pi t) = NONE)
+Proof
 Cases_on `term_fcs a t` THEN
 Cases_on `term_fcs (lswapstr pi a) (apply_pi pi t)` THEN
 SRW_TAC [][] THEN1 (
@@ -2933,13 +3041,14 @@ SRW_TAC [][] THEN1 (
 (term_fcs_apply_pi |>
  Q.INST [`fcs`|->`x`] |>
  MP_TAC) THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val term_fcs_nwalkstar_NONE = Q.store_thm(
-"term_fcs_nwalkstar_NONE",
-`nwfs s ∧ (term_fcs a t = SOME fcs) ∧
+Theorem term_fcs_nwalkstar_NONE:
+ nwfs s ∧ (term_fcs a t = SOME fcs) ∧
  (term_fcs a (nwalk* s t) = NONE) ⇒
- (verify_fcs fcs s = NONE)`,
+ (verify_fcs fcs s = NONE)
+Proof
 STRIP_TAC THEN
 NTAC 2 (POP_ASSUM MP_TAC) THEN
 MAP_EVERY Q.ID_SPEC_TAC [`fcs`,`t`] THEN
@@ -2996,13 +3105,14 @@ THEN1 (
   Cases_on `verify_fcs (x1 ∪ x2) s` THEN SRW_TAC [][] THEN
   RES_TAC THEN
   METIS_TAC [verify_fcs_UNION,term_fcs_FINITE,optionTheory.NOT_SOME_NONE] ) THEN
-FULL_SIMP_TAC (srw_ss()) [term_fcs_def])
+FULL_SIMP_TAC (srw_ss()) [term_fcs_def]
+QED
 
-val verify_fcs_iter_SUBMAP_exists = Q.store_thm(
-"verify_fcs_iter_SUBMAP_exists",
-`(verify_fcs fe s = SOME ve) ∧ nwfs sx ∧ s SUBMAP sx ∧ FINITE fe ∧
+Theorem verify_fcs_iter_SUBMAP_exists:
+ (verify_fcs fe s = SOME ve) ∧ nwfs sx ∧ s SUBMAP sx ∧ FINITE fe ∧
  (verify_fcs ve sx = SOME vex) ⇒
- (∃fex. verify_fcs fe sx = SOME fex)`,
+ (∃fex. verify_fcs fe sx = SOME fex)
+Proof
 STRIP_TAC THEN Cases_on `verify_fcs fe sx` THEN SRW_TAC [][] THEN
 `∃a v. (a,v) ∈ fe ∧ (term_fcs a (nwalk* sx (Sus [] v)) = NONE)`
 by METIS_TAC [verify_fcs_NONE] THEN
@@ -3014,13 +3124,14 @@ FULL_SIMP_TAC (srw_ss()) [] THEN
 IMP_RES_TAC term_fcs_nwalkstar_NONE THEN
 IMP_RES_TAC verify_fcs_FINITE THEN
 IMP_RES_TAC verify_fcs_SUBSET THEN
-FULL_SIMP_TAC (srw_ss()) [])
+FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val equiv_nomunify = Q.store_thm(
-"equiv_nomunify",
-`equiv fe2 (nwalk* s2 (nwalk* s t1)) (nwalk* s2 (nwalk* s t2)) ∧ nwfs s2 ∧ nwfs s ⇒
+Theorem equiv_nomunify:
+ equiv fe2 (nwalk* s2 (nwalk* s t1)) (nwalk* s2 (nwalk* s t2)) ∧ nwfs s2 ∧ nwfs s ⇒
  ∃sx.∀fe. FINITE fe ∧ (verify_fcs fe sx ≠ NONE) ⇒
-       ∃fex. (nomunify (s,fe) t1 t2 = SOME (sx,fex))`,
+       ∃fex. (nomunify (s,fe) t1 t2 = SOME (sx,fex))
+Proof
 Q_TAC SUFF_TAC
 `∀fe2 s fe t1 t2 ve2. equiv fe2 (nwalk* s2 (nwalk* s t1)) (nwalk* s2 (nwalk* s t2))
                   ∧ nwfs s2 ∧ nwfs s ∧ FINITE (fe:fe) ∧ FINITE fe2 ∧ (verify_fcs fe2 s2 = SOME ve2) ⇒
@@ -3221,4 +3332,5 @@ SRW_TAC [][] THEN
 Cases_on `fcs2 ⊆ fe2` THEN SRW_TAC [][] THEN
 SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
 IMP_RES_TAC term_fcs_SUBMAP THEN
-FULL_SIMP_TAC (srw_ss()) [])
+FULL_SIMP_TAC (srw_ss()) []
+QED

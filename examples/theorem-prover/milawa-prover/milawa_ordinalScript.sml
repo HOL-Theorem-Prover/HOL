@@ -149,13 +149,15 @@ val ord2sexp_sexp2ord = prove(
   \\ Q.PAT_ASSUM `!x. bbb` MATCH_MP_TAC
   \\ ASM_SIMP_TAC std_ss [LSIZE_def] \\ DECIDE_TAC);
 
-val WF_ORD_LESS = store_thm("WF_ORD_LESS",
-  ``WF ORD_LESS``,
+Theorem WF_ORD_LESS:
+    WF ORD_LESS
+Proof
   ASSUME_TAC WF_ord_less
   \\ FULL_SIMP_TAC std_ss [prim_recTheory.WF_IFF_WELLFOUNDED,
        prim_recTheory.wellfounded_def,ord_less_def,is_ord_EQ_ORDP,oless_EQ_ord2sexp]
   \\ FULL_SIMP_TAC std_ss [ORD_LESS_def] \\ REPEAT STRIP_TAC
   \\ POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [`sexp2ord o f`])
   \\ FULL_SIMP_TAC std_ss [] \\ Q.EXISTS_TAC `n`
-  \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss [ord2sexp_sexp2ord]);
+  \\ CCONTR_TAC \\ FULL_SIMP_TAC std_ss [ord2sexp_sexp2ord]
+QED
 

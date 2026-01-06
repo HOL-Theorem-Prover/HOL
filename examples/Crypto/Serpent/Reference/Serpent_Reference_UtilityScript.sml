@@ -9,51 +9,58 @@ Libs
 Definition boolXor_def:   boolXor (x:bool) y = ~(x= y)
 End
 
-val boolXorComm = Q.store_thm(
- "boolXorComm",
- `!x y. boolXor x y = boolXor y x`,
- METIS_TAC [boolXor_def]);
+Theorem boolXorComm:
+  !x y. boolXor x y = boolXor y x
+Proof
+ METIS_TAC [boolXor_def]
+QED
 
-val boolXorAssoc = Q.store_thm(
- "boolXorAssoc",
- `!x y z. boolXor z (boolXor x y) = boolXor (boolXor z x) y`,
- METIS_TAC [boolXor_def]);
+Theorem boolXorAssoc:
+  !x y z. boolXor z (boolXor x y) = boolXor (boolXor z x) y
+Proof
+ METIS_TAC [boolXor_def]
+QED
 
-val boolXorFacts = Q.store_thm(
- "boolXorFacts",
- `(!x.(boolXor x x) = F) /\
+Theorem boolXorFacts:
+  (!x.(boolXor x x) = F) /\
   (!x.(boolXor x T) = ~x) /\
-  (!x.(boolXor x F) = x) `,
- METIS_TAC [boolXor_def]);
+  (!x.(boolXor x F) = x)
+Proof
+ METIS_TAC [boolXor_def]
+QED
 
-val boolXorComm3 = Q.store_thm(
- "boolXorComm3",
- `!x y z. boolXor x (boolXor y z) = boolXor y (boolXor x z)`,
+Theorem boolXorComm3:
+  !x y z. boolXor x (boolXor y z) = boolXor y (boolXor x z)
+Proof
   Cases_on `x` THEN Cases_on `y` THEN Cases_on `z` THEN
-  RW_TAC std_ss [boolXor_def]);
+  RW_TAC std_ss [boolXor_def]
+QED
 
 (* trivial stuff about list *)
 
-val ALL_EL_FILTER = Q.store_thm(
- "ALL_EL_FILTER",
- `!p q l.
+Theorem ALL_EL_FILTER:
+  !p q l.
     ALL_EL p l
     ==>
-    ALL_EL p (FILTER q l)`,
- Induct_on `l` THEN RW_TAC list_ss []);
+    ALL_EL p (FILTER q l)
+Proof
+ Induct_on `l` THEN RW_TAC list_ss []
+QED
 
-val LENGTH_NIL_LEQ = Q.store_thm(
- "LENGTH_NIL_LEQ",
- `!n. LENGTH [] <= n`,
- RW_TAC list_ss []);
+Theorem LENGTH_NIL_LEQ:
+  !n. LENGTH [] <= n
+Proof
+ RW_TAC list_ss []
+QED
 
-val LENGTH_FILTER = Q.store_thm(
- "LENGTH_FILTER",
- `!l p. LENGTH (FILTER p l) <= LENGTH l`,
+Theorem LENGTH_FILTER:
+  !l p. LENGTH (FILTER p l) <= LENGTH l
+Proof
  Induct_on `l` THEN
  RW_TAC list_ss [] THEN
  `LENGTH l <=  SUC (LENGTH l)` by RW_TAC arith_ss [] THEN
- METIS_TAC [LESS_EQ_TRANS]);
+ METIS_TAC [LESS_EQ_TRANS]
+QED
 
 (* make a list of "T" of length n*)
 
@@ -62,21 +69,23 @@ Definition makeTL_def:
  (makeTL (SUC n) = T::(makeTL n))
 End
 
-val LENGTH_makeTL = Q.store_thm(
- "LENGTH_makeTL",
- `!n. LENGTH (makeTL n) = n`,
- Induct_on `n` THEN RW_TAC list_ss [makeTL_def]);
+Theorem LENGTH_makeTL:
+  !n. LENGTH (makeTL n) = n
+Proof
+ Induct_on `n` THEN RW_TAC list_ss [makeTL_def]
+QED
 
-val makeTL_fact = Q.store_thm(
- "makeTL_fact",
- `!i n.
+Theorem makeTL_fact:
+  !i n.
     i<n
     ==>
-    EL i (makeTL n)`,
+    EL i (makeTL n)
+Proof
  Induct_on `n` THENL [
    RW_TAC arith_ss [],
    Cases_on `i` THEN
-   RW_TAC list_ss [makeTL_def]]);
+   RW_TAC list_ss [makeTL_def]]
+QED
 
 (* XOR on bool lists in ZIP fashion *)
 
@@ -86,43 +95,46 @@ Definition zipXor_def:
  (zipXor (xh::xt) [] = [])
 End
 
-val zipXor_fact = Q.store_thm(
- "zipXor_fact",
- `!l. zipXor l [] = [] `,
+Theorem zipXor_fact:
+  !l. zipXor l [] = []
+Proof
  Cases_on `l` THEN
- RW_TAC list_ss [zipXor_def]);
+ RW_TAC list_ss [zipXor_def]
+QED
 
-val LENGTH_zipXor = Q.store_thm(
- "LENGTH_zipXor",
- `!l1 l2. LENGTH (zipXor l1 l2) = LENGTH l2`,
+Theorem LENGTH_zipXor:
+  !l1 l2. LENGTH (zipXor l1 l2) = LENGTH l2
+Proof
  Induct_on `l2` THENL [
    Cases_on `l1` THEN
    RW_TAC list_ss [zipXor_def],
    Cases_on `l1` THEN
-   RW_TAC list_ss [zipXor_def]]);
+   RW_TAC list_ss [zipXor_def]]
+QED
 
 Definition makeL_def:
  (makeL 0 = [T]) /\
  (makeL (SUC n) = F::makeL n)
 End
 
-val zipXor_makeL_COMM = Q.store_thm(
- "zipXor_makeL_COMM",
- `!i n1 n2 l.
+Theorem zipXor_makeL_COMM:
+  !i n1 n2 l.
      zipXor (makeL n2) (zipXor (makeL n1) al) =
-     zipXor (makeL n1) (zipXor (makeL n2) al)`,
+     zipXor (makeL n1) (zipXor (makeL n2) al)
+Proof
  Induct_on `al` THENL [
    RW_TAC list_ss [zipXor_fact],
    Cases_on `n1` THEN Cases_on `n2` THEN
-   RW_TAC list_ss [makeL_def,zipXor_def,boolXor_def]]);
+   RW_TAC list_ss [makeL_def,zipXor_def,boolXor_def]]
+QED
 
-val zipXor_makeL = Q.store_thm(
- "zipXor_makeL",
- `!i al h tl.
+Theorem zipXor_makeL:
+  !i al h tl.
     i < LENGTH al  /\
     h < LENGTH al
     ==>
-    (EL i (zipXor (makeL h) al) = boolXor (i = h) (EL i al))`,
+    (EL i (zipXor (makeL h) al) = boolXor (i = h) (EL i al))
+Proof
  Induct_on `h` THENL [
    RW_TAC list_ss [zipXor_def,makeL_def] THEN
    Cases_on `al` THEN
@@ -133,16 +145,18 @@ val zipXor_makeL = Q.store_thm(
    Cases_on `al` THEN
    RW_TAC list_ss [zipXor_def,boolXor_def] THEN
    Cases_on `i` THEN
-   FULL_SIMP_TAC list_ss [boolXor_def]]);
+   FULL_SIMP_TAC list_ss [boolXor_def]]
+QED
 
-val MAP_ID = Q.store_thm(
- "MAP_ID",
- `!l f.
+Theorem MAP_ID:
+  !l f.
     ALL_EL (\x. f x = x) l
     ==>
-    (MAP f l = l)`,
+    (MAP f l = l)
+Proof
  Induct_on `l` THEN
- RW_TAC list_ss []);
+ RW_TAC list_ss []
+QED
 
 (* housemade FIRSTN and BUTLASTN for easy evaluation*)
 
@@ -164,12 +178,12 @@ Definition myBUTLASTN_def:
    else []
 End
 
-val LENGTH_myFIRSTN = Q.store_thm(
- "LENGTH_myFIRSTN",
- `!n l.
+Theorem LENGTH_myFIRSTN:
+  !n l.
     n <= LENGTH l
     ==>
-    (LENGTH (myFIRSTN n l) = n)`,
+    (LENGTH (myFIRSTN n l) = n)
+Proof
  Induct_on `n` THENL [
    RW_TAC list_ss [] THEN
    `myFIRSTN 0 l =[]` by METIS_TAC  [myFIRSTN_def] THEN
@@ -181,15 +195,17 @@ val LENGTH_myFIRSTN = Q.store_thm(
      `~((h::t) =[])` by RW_TAC list_ss [] THEN
      `myFIRSTN (SUC n) (h::t)= (HD (h::t))::(myFIRSTN (SUC n-1) (TL (h::t)))`
       by  METIS_TAC  [myFIRSTN_def] THEN
-      FULL_SIMP_TAC list_ss []]]);
+      FULL_SIMP_TAC list_ss []]]
+QED
 
-val LENGTH_myBUTLASTN = Q.store_thm(
- "LENGTH_myBUTLASTN",
- `!n l.
+Theorem LENGTH_myBUTLASTN:
+  !n l.
     n <= LENGTH l
     ==>
-    (LENGTH (myBUTLASTN n l) = LENGTH l - n)`,
- RW_TAC arith_ss [myBUTLASTN_def,LENGTH_myFIRSTN,LET_THM]);
+    (LENGTH (myBUTLASTN n l) = LENGTH l - n)
+Proof
+ RW_TAC arith_ss [myBUTLASTN_def,LENGTH_myFIRSTN,LET_THM]
+QED
 
 
 (* conversion between different words, EL 0 is the MS in all split result,
@@ -252,23 +268,24 @@ Definition numtoRevWord4l_def:
  (numtoRevWord4l (SUC m) n = n2w (n MOD 16)::(numtoRevWord4l m (n DIV 16)))
 End
 
-val numtoRevWord4lEval = Q.store_thm(
- "numtoRevWord4lEval",
- `!n m.
+Theorem numtoRevWord4lEval:
+  !n m.
     numtoRevWord4l m n =
     if m = 0 then []
-    else n2w (n MOD 16)::(numtoRevWord4l (m-1) (n DIV 16))`,
+    else n2w (n MOD 16)::(numtoRevWord4l (m-1) (n DIV 16))
+Proof
  RW_TAC arith_ss [numtoRevWord4l_def] THEN
  Cases_on `m` THENL [
    METIS_TAC [],
-   FULL_SIMP_TAC arith_ss [numtoRevWord4l_def]]);
+   FULL_SIMP_TAC arith_ss [numtoRevWord4l_def]]
+QED
 
 (* the length provides a MOD *)
 
-val revWord4ltoNumRange = Q.store_thm(
- "revWord4ltoNumRange",
- `!n l.
-    LENGTH l <= n ==> revWord4ltoNum l < 2 ** (4 * n)`,
+Theorem revWord4ltoNumRange:
+  !n l.
+    LENGTH l <= n ==> revWord4ltoNum l < 2 ** (4 * n)
+Proof
  Induct_on `l` THENL [
    METIS_TAC [ revWord4ltoNum_def,ZERO_LESS_EXP,DECIDE ``2 = SUC 1``],
    RW_TAC list_ss [revWord4ltoNum_def] THEN
@@ -281,23 +298,25 @@ val revWord4ltoNumRange = Q.store_thm(
      `revWord4ltoNum l < 2 ** (4 * n') ` by METIS_TAC [] THEN
      `SUC (revWord4ltoNum l) <= 2 ** (4 * n')` by METIS_TAC [LESS_EQ] THEN
      `16+16* (revWord4ltoNum l)<= 16* 2 ** (4 * n')` by RW_TAC arith_ss [] THEN
-     FULL_SIMP_TAC arith_ss []]]);
+     FULL_SIMP_TAC arith_ss []]]
+QED
 
-val LENGTH_numtoRevWord4l = Q.store_thm(
- "LENGTH_numtoRevWord4l",
- `!wl n.
-    LENGTH (numtoRevWord4l n wl) = n`,
+Theorem LENGTH_numtoRevWord4l:
+  !wl n.
+    LENGTH (numtoRevWord4l n wl) = n
+Proof
  Induct_on `n` THEN
- RW_TAC list_ss [numtoRevWord4l_def]);
+ RW_TAC list_ss [numtoRevWord4l_def]
+QED
 
 (* the conversions between a num and word4 list are reversible *)
 
-val numtoRevWord4l_conversion = Q.store_thm(
- "numtoRevWord4l_conversion",
- `!n wl.
+Theorem numtoRevWord4l_conversion:
+  !n wl.
     (n = LENGTH wl)
     ==>
-    (numtoRevWord4l n (revWord4ltoNum wl) = wl)`,
+    (numtoRevWord4l n (revWord4ltoNum wl) = wl)
+Proof
  Induct_on `wl` THEN
  RW_TAC list_ss [revWord4ltoNum_def,numtoRevWord4l_def] THEN
  `w2n h < 16` by WORD_DECIDE_TAC THENL [
@@ -307,14 +326,15 @@ val numtoRevWord4l_conversion = Q.store_thm(
     `(revWord4ltoNum wl * 16) MOD 16 = 0 `
         by METIS_TAC [MOD_EQ_0,DECIDE ``0<16``] THEN
      FULL_SIMP_TAC arith_ss [ADD_DIV_RWT,LESS_DIV_EQ_ZERO,
-       ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]]);
+       ONCE_REWRITE_RULE [MULT_COMM] MULT_DIV]]
+QED
 
-val revWord4ltoNum_conversion = Q.store_thm(
- "revWord4ltoNum_conversion",
- `!n len.
+Theorem revWord4ltoNum_conversion:
+  !n len.
     n < 2 ** (4 * len)
     ==>
-    (revWord4ltoNum  (numtoRevWord4l len n) = n)`,
+    (revWord4ltoNum  (numtoRevWord4l len n) = n)
+Proof
  Induct_on `len` THEN
  RW_TAC list_ss [revWord4ltoNum_def,numtoRevWord4l_def] THEN
  `n DIV 16 <= 2 ** (4 * SUC len) DIV 16`
@@ -326,7 +346,8 @@ val revWord4ltoNum_conversion = Q.store_thm(
  `n DIV 16 * 16<= 2 ** (4 * len)*16` by RW_TAC arith_ss [] THEN
  Cases_on ` n DIV 16 = 2 ** (4 * len) ` THEN
   Cases_on `n MOD 16 = 0` THEN
- FULL_SIMP_TAC (srw_ss()++ARITH_ss) []);
+ FULL_SIMP_TAC (srw_ss()++ARITH_ss) []
+QED
 
 (* the conversions between a word128 and word4 list*)
 
@@ -338,16 +359,17 @@ Definition word128tow4l_def:
  word128tow4l (w:word128) = REVERSE (numtoRevWord4l 32 (w2n w))
 End
 
-val LENGTH_word128tow4l = Q.store_thm(
- "LENGTH_word128tow4l",
- `!w.  LENGTH (word128tow4l w) = 32`,
- RW_TAC std_ss [word128tow4l_def,LENGTH_REVERSE,LENGTH_numtoRevWord4l]);
+Theorem LENGTH_word128tow4l:
+  !w.  LENGTH (word128tow4l w) = 32
+Proof
+ RW_TAC std_ss [word128tow4l_def,LENGTH_REVERSE,LENGTH_numtoRevWord4l]
+QED
 
 (* the conversions between a word128 and word4 list are reversible*)
 
-val word128tow4l_conversion = Q.store_thm(
- "word128tow4l_conversion",
- `!l. (LENGTH l = 32) ==> (word128tow4l (word4ltow128 l) =l)`,
+Theorem word128tow4l_conversion:
+  !l. (LENGTH l = 32) ==> (word128tow4l (word4ltow128 l) =l)
+Proof
  SRW_TAC [] [word128tow4l_def,word4ltow128_def] THEN
  `LENGTH (REVERSE l) <= 32` by RW_TAC list_ss [LENGTH_REVERSE] THEN
  `revWord4ltoNum (REVERSE l) < 2 ** (4* 32)`
@@ -356,108 +378,120 @@ val word128tow4l_conversion = Q.store_thm(
  `LENGTH (REVERSE l) = 32` by RW_TAC list_ss [LENGTH_REVERSE] THEN
  `numtoRevWord4l 32 (revWord4ltoNum (REVERSE l)) = REVERSE l`
    by METIS_TAC [numtoRevWord4l_conversion] THEN
- METIS_TAC [REVERSE_REVERSE]);
+ METIS_TAC [REVERSE_REVERSE]
+QED
 
-val word4ltow128_conversion = Q.store_thm(
- "word4ltow128_conversion",
- `!w.  word4ltow128 (word128tow4l w) = w`,
+Theorem word4ltow128_conversion:
+  !w.  word4ltow128 (word128tow4l w) = w
+Proof
  RW_TAC arith_ss [word4ltow128_def,word128tow4l_def,REVERSE_REVERSE] THEN
  `w2n w < 2 ** 128` by WORD_DECIDE_TAC THEN
- FULL_SIMP_TAC (srw_ss()) [revWord4ltoNum_conversion]);
+ FULL_SIMP_TAC (srw_ss()) [revWord4ltoNum_conversion]
+QED
 
-val word256to32lLength = Q.store_thm (
- "word256to32lLength",
- `!w.  LENGTH (word256to32l w) = 8`,
- EVAL_TAC THEN METIS_TAC []);
+Theorem word256to32lLength:
+  !w.  LENGTH (word256to32l w) = 8
+Proof
+ EVAL_TAC THEN METIS_TAC []
+QED
 
 (* instantiate explicit list given the length *)
 
-val LENGTH_GREATER_EQ_CONS = Q.store_thm(
- "LENGTH_GREATER_EQ_CONS",
- `!l n.
+Theorem LENGTH_GREATER_EQ_CONS:
+  !l n.
     (LENGTH l >= SUC n)
     ==>
-    ?x l'. (LENGTH l' >= n) /\ (l = x::l')`,
- Induct_on `l` THEN RW_TAC list_ss []);
+    ?x l'. (LENGTH l' >= n) /\ (l = x::l')
+Proof
+ Induct_on `l` THEN RW_TAC list_ss []
+QED
 
-val listInstGreaterEq2 = Q.store_thm(
- "listInstGreaterEq2",
- `!l.
+Theorem listInstGreaterEq2:
+  !l.
     (LENGTH l >= 2)
     ==>
-    ?v_1 v_2 t. l = (v_1::v_2::t)`,
+    ?v_1 v_2 t. l = (v_1::v_2::t)
+Proof
  REWRITE_TAC [REDEPTH_CONV numLib.num_CONV ``2``] THEN
- METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]);
+ METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]
+QED
 
-val listInstEq2 = Q.store_thm(
- "listInstEq2",
- `!l.
+Theorem listInstEq2:
+  !l.
     (LENGTH l = 2)
     ==>
-    ?w_1 w_2. l = (w_1::w_2::[])`,
- METIS_TAC [LENGTH_CONS, LENGTH_NIL, REDEPTH_CONV numLib.num_CONV ``2``]);
+    ?w_1 w_2. l = (w_1::w_2::[])
+Proof
+ METIS_TAC [LENGTH_CONS, LENGTH_NIL, REDEPTH_CONV numLib.num_CONV ``2``]
+QED
 
-val listInstGreaterEq4 = Q.store_thm(
- "listInstGreaterEq4",
- `!l.
+Theorem listInstGreaterEq4:
+  !l.
     (LENGTH l >= 4)
     ==>
-    ?v_1 v_2 v_3 v_4 t. l = (v_1::v_2::v_3::v_4::t)`,
+    ?v_1 v_2 v_3 v_4 t. l = (v_1::v_2::v_3::v_4::t)
+Proof
  REWRITE_TAC [REDEPTH_CONV numLib.num_CONV ``4``] THEN
- METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]);
+ METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]
+QED
 
-val listInstEq4 = Q.store_thm(
- "listInstEq4",
- `!l.
+Theorem listInstEq4:
+  !l.
     (LENGTH l = 4)
     ==>
-    ?w_1 w_2 w_3 w_4. l = (w_1::w_2::w_3::w_4::[])`,
+    ?w_1 w_2 w_3 w_4. l = (w_1::w_2::w_3::w_4::[])
+Proof
  REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, REDEPTH_CONV numLib.num_CONV ``4``] THEN
- METIS_TAC []);
+ METIS_TAC []
+QED
 
-val listInstGreaterEq8 = Q.store_thm(
- "listInstGreaterEq8",
- `!l.
+Theorem listInstGreaterEq8:
+  !l.
     (LENGTH l >= 8)
     ==>
     ?v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 t. l =
-    (v_1::v_2::v_3::v_4::v_5::v_6::v_7::v_8::t)`,
+    (v_1::v_2::v_3::v_4::v_5::v_6::v_7::v_8::t)
+Proof
  REWRITE_TAC [REDEPTH_CONV numLib.num_CONV ``8``] THEN
- METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]);
+ METIS_TAC  [LENGTH_GREATER_EQ_CONS, LENGTH_NIL]
+QED
 
-val listInstEq8 = Q.store_thm(
- "listInstEq8",
- `!l.
+Theorem listInstEq8:
+  !l.
     (LENGTH l = 8)
     ==>
     ?w_1 w_2 w_3 w_4 w_5 w_6 w_7 w_8. l =
-    (w_1::w_2::w_3::w_4::w_5::w_6::w_7::w_8::[])`,
+    (w_1::w_2::w_3::w_4::w_5::w_6::w_7::w_8::[])
+Proof
  REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, REDEPTH_CONV numLib.num_CONV ``8``] THEN
- METIS_TAC []);
+ METIS_TAC []
+QED
 
-val listInstEq32 = Q.store_thm(
- "listInstEq32",
- ` !l.
+Theorem listInstEq32:
+   !l.
     (LENGTH l = 32) ==>
         ?v_0 v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 v_9 v_10 v_11 v_12 v_13 v_14
          v_15 v_16 v_17 v_18 v_19 v_20 v_21 v_22 v_23 v_24 v_25 v_26 v_27
          v_28 v_29 v_30 v_31.
         l = [v_0; v_1; v_2; v_3; v_4; v_5; v_6; v_7; v_8; v_9; v_10; v_11;
              v_12; v_13; v_14; v_15; v_16; v_17; v_18; v_19; v_20; v_21; v_22;
-             v_23; v_24; v_25; v_26; v_27; v_28; v_29; v_30; v_31]`,
+             v_23; v_24; v_25; v_26; v_27; v_28; v_29; v_30; v_31]
+Proof
  REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, REDEPTH_CONV numLib.num_CONV ``32``] THEN
- METIS_TAC []);
+ METIS_TAC []
+QED
 
-val listInstEq33 = Q.store_thm(
- "listInstEq33",
- `!l.
+Theorem listInstEq33:
+  !l.
     (LENGTH l = 33) ==>
         ?v_0 v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 v_9 v_10 v_11 v_12 v_13 v_14
            v_15 v_16 v_17 v_18 v_19 v_20 v_21 v_22 v_23 v_24 v_25 v_26 v_27
            v_28 v_29 v_30 v_31 v_32.
         l = [v_0; v_1; v_2; v_3; v_4; v_5; v_6; v_7; v_8; v_9; v_10; v_11;
              v_12; v_13; v_14; v_15; v_16; v_17; v_18; v_19; v_20; v_21; v_22;
-             v_23; v_24; v_25; v_26; v_27; v_28; v_29; v_30; v_31; v_32]`,
+             v_23; v_24; v_25; v_26; v_27; v_28; v_29; v_30; v_31; v_32]
+Proof
  REWRITE_TAC [LENGTH_CONS, LENGTH_NIL, REDEPTH_CONV numLib.num_CONV ``33``] THEN
- METIS_TAC []);
+ METIS_TAC []
+QED
 

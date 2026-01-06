@@ -114,12 +114,14 @@ End
    to the definition of the sem_t function. These redundant checks are
    removed later in the script. *)
 
-val sem_e_clock = Q.store_thm ("sem_e_clock",
-`!s e r s'. sem_e s e = (r, s') ⇒ s.clock = s'.clock`,
+Theorem sem_e_clock:
+ !s e r s'. sem_e s e = (r, s') ⇒ s.clock = s'.clock
+Proof
  ho_match_mp_tac sem_e_ind >> rw [sem_e_def] >> ect >>
  fs [LET_THM, permute_pair_def, oracle_get_def, unpermute_pair_def, getchar_def] >>
  rw [] >> ect >> fs [] >>
- ect >> fs [] >> rw []);
+ ect >> fs [] >> rw []
+QED
 
 val sem_e_store = Q.prove (
 `!s e r s'. sem_e s e = (r, s') ⇒ FDOM s.store ⊆ FDOM s'.store`,
@@ -129,12 +131,14 @@ val sem_e_store = Q.prove (
  rw [] >> ect >> fs [] >>
  ect >> fs [] >> rw [] >> metis_tac []);
 
-val sem_e_res = Q.store_thm ("sem_e_res",
-`!s e r s'. sem_e s e = (r, s') ⇒ r ≠ Rbreak ∧ r ≠ Rtimeout`,
+Theorem sem_e_res:
+ !s e r s'. sem_e s e = (r, s') ⇒ r ≠ Rbreak ∧ r ≠ Rtimeout
+Proof
  ho_match_mp_tac sem_e_ind >> rw [sem_e_def] >> ect >>
  fs [LET_THM, permute_pair_def, oracle_get_def, unpermute_pair_def, getchar_def] >>
  rw [] >> ect >> fs [] >>
- ect >> fs [] >> rw [] >> metis_tac []);
+ ect >> fs [] >> rw [] >> metis_tac []
+QED
 
 Definition check_clock_def:
 check_clock s' s =
@@ -145,9 +149,11 @@ Definition dec_clock_def:
 dec_clock s = s with clock := s.clock - 1
 End
 
-val dec_clock_store = Q.store_thm ("dec_clock_store[simp]",
-`!s. (dec_clock s).store = s.store`,
- rw [dec_clock_def]);
+Theorem dec_clock_store[simp]:
+ !s. (dec_clock s).store = s.store
+Proof
+ rw [dec_clock_def]
+QED
 
 (* Statement evaluation -- with redundant check_clock *)
 
@@ -198,18 +204,22 @@ Termination
   \\ DECIDE_TAC
 End
 
-val sem_t_clock = Q.store_thm ("sem_t_clock",
-`!s t r s'. sem_t s t = (r, s') ⇒ s'.clock ≤ s.clock`,
+Theorem sem_t_clock:
+ !s t r s'. sem_t s t = (r, s') ⇒ s'.clock ≤ s.clock
+Proof
  ho_match_mp_tac (fetch "-" "sem_t_ind") >>
  reverse (rpt strip_tac) >> pop_assum mp_tac >>
  rw [Once sem_t_def] >> ect >>
  imp_res_tac sem_e_clock >> fs [] >>
  fs [check_clock_def, dec_clock_def, LET_THM] >>
- TRY decide_tac >> rfs [] >> res_tac >> decide_tac);
+ TRY decide_tac >> rfs [] >> res_tac >> decide_tac
+QED
 
-val check_clock_id = Q.store_thm ("check_clock_id",
-`!s s'. s.clock ≤ s'.clock ⇒ check_clock s s' = s`,
- rw [check_clock_def, state_component_equality]);
+Theorem check_clock_id:
+ !s s'. s.clock ≤ s'.clock ⇒ check_clock s s' = s
+Proof
+ rw [check_clock_def, state_component_equality]
+QED
 
 Definition STOP_def:
   STOP x = x
@@ -344,12 +354,13 @@ val sem_t_store = Q.prove (
          metis_tac [sem_e_store, SUBSET_TRANS]) >>
      metis_tac [sem_e_store, SUBSET_TRANS]));
 
-val sem_for_not_break = Q.store_thm ("sem_for_not_break",
-`!s t' t e1 e2 s' r.
+Theorem sem_for_not_break:
+ !s t' t e1 e2 s' r.
   sem_t s t' = (r, s') ∧
   t' = For e1 e2 t
   ⇒
-  r ≠ Rbreak`,
+  r ≠ Rbreak
+Proof
  ho_match_mp_tac sem_t_ind >>
  reverse  (rpt conj_tac)
  >- (rw [] >>
@@ -362,7 +373,8 @@ val sem_for_not_break = Q.store_thm ("sem_for_not_break",
  ect >>
  fs [] >>
  imp_res_tac sem_e_res >>
- fs []);
+ fs []
+QED
 
 
 (* === A simple type checker and its soundness === *)

@@ -49,10 +49,11 @@ val _ = type_abbrev("state", ``:word32#word32#word32#word32#word32#word32``);
 (* Case analysis on blocks and keys.                                         *)
 (*---------------------------------------------------------------------------*)
 
-val FORALL_BLOCK = Q.store_thm
-  ("FORALL_BLOCK",
-    `(!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)`,
-    SIMP_TAC std_ss [FORALL_PROD]);
+Theorem FORALL_BLOCK:
+     (!b:block. P b) = !v0 v1 v2 v3. P (v0,v1,v2,v3)
+Proof
+    SIMP_TAC std_ss [FORALL_PROD]
+QED
 
 val FORALL_KEYS = Q.prove
 (`(!x:key. P x) = !k0 k1. P(k0,k1)`,
@@ -121,11 +122,12 @@ Definition BwdRound_def:
          c)
 End
 
-val OneRound_Inversion = Q.store_thm
-  ("OneRound_Inversion",
-  `!b:block k:key. BwdRound (FwdRound b k) k = b`,
+Theorem OneRound_Inversion:
+   !b:block k:key. BwdRound (FwdRound b k) k = b
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_KEYS]
-    THEN SRW_TAC [] [FwdRound_def, BwdRound_def]);
+    THEN SRW_TAC [] [FwdRound_def, BwdRound_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Rotate keys and get a pair of keys from the head of the key schedule      *)
@@ -174,13 +176,14 @@ Definition InvPostWhitening_def:
             (a, b - FST(GETKEYS(k)), c, d - SND(GETKEYS(k))) : block
 End
 
-val Whitening_Inversion = Q.store_thm
-  ("Whitening_Inversion",
-  `!b k. (InvPostWhitening k (PreWhitening k b) = b) /\
-         (InvPreWhitening k (PostWhitening k b) = b)`,
+Theorem Whitening_Inversion:
+   !b k. (InvPostWhitening k (PreWhitening k b) = b) /\
+         (InvPreWhitening k (PostWhitening k b) = b)
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK]
     THEN SRW_TAC [] [InvPostWhitening_def, PreWhitening_def,
-                     InvPreWhitening_def, PostWhitening_def]);
+                     InvPreWhitening_def, PostWhitening_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Round operations in the encryption and the decryption. Slow to define.    *)
@@ -233,12 +236,13 @@ End
 val [FwdRound] = decls "FwdRound";
 val [BwdRound] = decls "BwdRound";
 
-val RC6_LEMMA = Q.store_thm
-("RC6_LEMMA",
- `!(plaintext:block) (keys:keysched).
-     RC6_BWD keys (RC6_FWD keys plaintext) = plaintext`,
+Theorem RC6_LEMMA:
+  !(plaintext:block) (keys:keysched).
+     RC6_BWD keys (RC6_FWD keys plaintext) = plaintext
+Proof
    RESTR_EVAL_TAC [FwdRound, BwdRound] THEN
-   RW_TAC std_ss [OneRound_Inversion, Whitening_Inversion]);
+   RW_TAC std_ss [OneRound_Inversion, Whitening_Inversion]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Build the keyschedule from a key. This definition is too specific, but    *)
@@ -332,10 +336,11 @@ Definition RC6_def:
    in (RC6_FWD keys, RC6_BWD keys)
 End
 
-val RC6_CORRECT = Q.store_thm
-  ("RC6_CORRECT",
-   `!key plaintext.
+Theorem RC6_CORRECT:
+    !key plaintext.
        ((encrypt,decrypt) = RC6 key)
        ==>
-       (decrypt (encrypt plaintext) = plaintext)`,
-         RW_TAC std_ss [RC6_def,LET_THM,RC6_LEMMA]);
+       (decrypt (encrypt plaintext) = plaintext)
+Proof
+         RW_TAC std_ss [RC6_def,LET_THM,RC6_LEMMA]
+QED

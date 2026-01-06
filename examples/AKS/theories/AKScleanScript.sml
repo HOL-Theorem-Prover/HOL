@@ -385,15 +385,16 @@ End
 (* Proof:
    By aks_checks_def, this is true   by ZN_intro_eqn, 0 < k, 0 < n.
 *)
-val aks_checks_alt = store_thm(
-  "aks_checks_alt",
-  ``!n k. aks_checks n k <=>
+Theorem aks_checks_alt:
+    !n k. aks_checks n k <=>
          (1 < k /\ ulog n ** 2 <= ordz k n /\
          (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\
-         (k < n ==> poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n)))``,
+         (k < n ==> poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n)))
+Proof
   rpt strip_tac >>
   `!n k. 1 < k /\ k < n ==> 0 < k /\ 0 < n` by decide_tac >>
-  metis_tac[aks_checks_def, ZN_intro_eqn]);
+  metis_tac[aks_checks_def, ZN_intro_eqn]
+QED
 
 (* The following is effectively the shifting from (ZN n) ring to (ZN p) finite field. *)
 
@@ -438,9 +439,9 @@ val aks_checks_alt = store_thm(
         Now poly_intro_range (ZN n) k n s   by implication, k < n
         ==> poly_intro_range (ZN p) k n s   by ring_homo_intro_ZN_to_ZN_X_add_c, s < p, 0 < n, 0 < k
 *)
-val aks_checks_gives_aks_criteria = store_thm(
-  "aks_checks_gives_aks_criteria",
-  ``!n k. k < n /\ aks_checks n k ==> ?p. prime p /\ aks_criteria (ZN p) n k``,
+Theorem aks_checks_gives_aks_criteria:
+    !n k. k < n /\ aks_checks n k ==> ?p. prime p /\ aks_criteria (ZN p) n k
+Proof
   rw_tac std_ss[aks_checks_alt, aks_criteria_def] >>
   Cases_on `n = 2` >| [
     qexists_tac `2` >>
@@ -468,7 +469,8 @@ val aks_checks_gives_aks_criteria = store_thm(
     decide_tac) >>
     `0 < k /\ 0 < n` by decide_tac >>
     metis_tac[ring_homo_intro_ZN_to_ZN_X_add_c]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < p /\ aks_criteria (ZN p) n k ==>
             0 < n /\ 0 < k /\ 1 < ordz k p /\
@@ -485,13 +487,14 @@ val aks_checks_gives_aks_criteria = store_thm(
           ulog n ** 2 <= ordz k n /\
           poly_intro_range (ZN p) k n (SQRT (phi k) * ulog n)
 *)
-val aks_criteria_ZN = store_thm(
-  "aks_criteria_ZN",
-  ``!p n k. 0 < p /\ aks_criteria (ZN p) n k ==>
+Theorem aks_criteria_ZN:
+    !p n k. 0 < p /\ aks_criteria (ZN p) n k ==>
            0 < n /\ 0 < k /\ 1 < ordz k p /\
            p divides n /\ k < p /\ ulog n ** 2 <= ordz k n /\
-           poly_intro_range (ZN p) k n (SQRT (phi k) * ulog n)``,
-  metis_tac[aks_criteria_def, ZN_char]);
+           poly_intro_range (ZN p) k n (SQRT (phi k) * ulog n)
+Proof
+  metis_tac[aks_criteria_def, ZN_char]
+QED
 
 (* Theorem: FiniteField r /\ (CARD R = char r) ==>
             !n k. aks_criteria r n k ==> perfect_power n (char r) *)
@@ -499,11 +502,12 @@ val aks_criteria_ZN = store_thm(
    After expanding by aks_criteria_def,
    this is just AKS_main_ulog_2b in disguise.
 *)
-val aks_main_punch = store_thm(
-  "aks_main_punch",
-  ``!r:'a field. FiniteField r /\ (CARD R = char r) ==>
-   !n k. aks_criteria r n k ==> perfect_power n (char r)``,
-  metis_tac[aks_criteria_def, AKS_main_ulog_2b]);
+Theorem aks_main_punch:
+    !r:'a field. FiniteField r /\ (CARD R = char r) ==>
+   !n k. aks_criteria r n k ==> perfect_power n (char r)
+Proof
+  metis_tac[aks_criteria_def, AKS_main_ulog_2b]
+QED
 
 (* This is the basic punch line. *)
 
@@ -516,15 +520,16 @@ val aks_main_punch = store_thm(
 (* Proof:
    This is just AKS_main_ulog_2b to fit aks_criteria.
 *)
-val aks_main_punch_alt = store_thm(
-  "aks_main_punch_alt",
-  ``!r:'a field. FiniteField r /\ (CARD R = char r) ==>
+Theorem aks_main_punch_alt:
+    !r:'a field. FiniteField r /\ (CARD R = char r) ==>
    !n k. 0 < n /\ 0 < k /\ 1 < ordz k (char r) /\
          char r divides n /\ k < char r /\
          ulog n ** 2 <= ordz k n /\
          poly_intro_range r k n (SQRT (phi k) * ulog n)
-     ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_ulog_2b]);
+     ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_ulog_2b]
+QED
 
 (* Theorem: FiniteField r /\ (CARD R = char r) ==>
    !n a k s. 0 < n /\ 0 < k /\ 1 < ordz k (char r) /\
@@ -533,15 +538,16 @@ val aks_main_punch_alt = store_thm(
               a <= ordz k n /\ poly_intro_range r k n s
           ==> perfect_power n (char r) *)
 (* Proof: another format for aks_main_punch_alt. *)
-val aks_main_punch_thm = store_thm(
-  "aks_main_punch_thm",
-  ``!r:'a field. FiniteField r /\ (CARD R = char r) ==>
+Theorem aks_main_punch_thm:
+    !r:'a field. FiniteField r /\ (CARD R = char r) ==>
    !n a k s. 0 < n /\ 0 < k /\ 1 < ordz k (char r) /\
          char r divides n /\ k < char r /\
          (a = ulog n ** 2) /\ (s = SQRT (phi k) * ulog n) /\
          a <= ordz k n /\ poly_intro_range r k n s
-     ==> perfect_power n (char r)``,
-  metis_tac[aks_main_punch_alt]);
+     ==> perfect_power n (char r)
+Proof
+  metis_tac[aks_main_punch_alt]
+QED
 
 (* Theorem: prime p /\ 0 < n /\ 0 < k /\
             1 < ordz k p /\ p divides n /\ k < p /\
@@ -555,18 +561,19 @@ val aks_main_punch_thm = store_thm(
     and char r = p           by ZN_char, 0 < p
    Hence true                by aks_main_punch_alt
 *)
-val aks_main_punch_ZN = store_thm(
-  "aks_main_punch_ZN",
-  ``!p n a k s. prime p /\ 0 < n /\ 0 < k /\
+Theorem aks_main_punch_ZN:
+    !p n a k s. prime p /\ 0 < n /\ 0 < k /\
                1 < ordz k p /\ p divides n /\ k < p /\
                (a = ulog n ** 2) /\ (s = SQRT (phi k) * ulog n) /\
                a <= ordz k n /\ poly_intro_range (ZN p) k n s
-           ==> perfect_power n p``,
+           ==> perfect_power n p
+Proof
   rpt strip_tac >>
   `FiniteField (ZN p)` by rw[ZN_finite_field] >>
   `CARD (ZN p).carrier = p` by rw[ZN_card] >>
   `char (ZN p) = p` by rw[ZN_char] >>
-  metis_tac[aks_main_punch_alt]);
+  metis_tac[aks_main_punch_alt]
+QED
 
 
 (* Theorem: k < n /\ aks_checks n k ==> ?p. prime p /\ perfect_power n p *)
@@ -580,16 +587,17 @@ val aks_main_punch_ZN = store_thm(
    Take this prime p,
    Then perfect_power n p          by aks_main_punch
 *)
-val aks_main_step = store_thm(
-  "aks_main_step",
-  ``!n k. k < n /\ aks_checks n k ==> ?p. prime p /\ perfect_power n p``,
+Theorem aks_main_step:
+    !n k. k < n /\ aks_checks n k ==> ?p. prime p /\ perfect_power n p
+Proof
   rpt strip_tac >>
   `?p. prime p /\ aks_criteria (ZN p) n k` by rw[aks_checks_gives_aks_criteria] >>
   `0 < p` by rw[PRIME_POS] >>
   `CARD (ZN p).carrier = p` by rw[ZN_card] >>
   `char (ZN p) = p` by rw[ZN_char] >>
   `FiniteField (ZN p)` by rw[ZN_finite_field] >>
-  metis_tac[aks_main_punch]);
+  metis_tac[aks_main_punch]
+QED
 
 (* Theorem: For prime n, there is always a k that gives aks_checks n k.
             prime n ==> ?k. aks_checks n k *)
@@ -621,9 +629,9 @@ val aks_main_step = store_thm(
        Note 0 < k                             by 1 < k
          so poly_intro (ZN n) k n (x+ n c)    by ZN_intro_by_prime, 0 < c
 *)
-val aks_when_prime = store_thm(
-  "aks_when_prime",
-  ``!n. prime n ==> ?k. aks_checks n k``,
+Theorem aks_when_prime:
+    !n. prime n ==> ?k. aks_checks n k
+Proof
   rpt strip_tac >>
   Cases_on `n = 2` >| [
     qexists_tac `3` >>
@@ -641,7 +649,8 @@ val aks_when_prime = store_thm(
     rw_tac std_ss[aks_checks_alt] >-
     metis_tac[prime_def, LESS_NOT_EQ] >>
     rw[ZN_intro_by_prime]
-  ]);
+  ]
+QED
 
 (* Theorem: prime n ==> power_free n /\ ?k. aks_checks n k *)
 (* Proof:
@@ -650,10 +659,11 @@ val aks_when_prime = store_thm(
          so prower_free n         by prime_is_power_free
         and ?k. aks_checks n k    by aks_when_prime
 *)
-val aks_main_theorem_1 = store_thm(
-  "aks_main_theorem_1",
-  ``!n. prime n ==> power_free n /\ ?k. aks_checks n k``,
-  rw[prime_is_power_free, aks_when_prime]);
+Theorem aks_main_theorem_1:
+    !n. prime n ==> power_free n /\ ?k. aks_checks n k
+Proof
+  rw[prime_is_power_free, aks_when_prime]
+QED
 
 (* Therefore:
 Since prime 7, power_free 7, ?k. aks_checks 7 k.
@@ -677,16 +687,17 @@ But ~prime 10, power_free 10, there is no such k for aks_checks 10 k.
          This gives: !j. 1 < j /\ j < n ==> ~(j divides n)
          Thus prime n                            by prime_iff_no_proper_factor, 1 < n
 *)
-val aks_main_theorem_2 = store_thm(
-  "aks_main_theorem_2",
-  ``!n k. power_free n /\ aks_checks n k ==> prime n``,
+Theorem aks_main_theorem_2:
+    !n k. power_free n /\ aks_checks n k ==> prime n
+Proof
   rpt strip_tac >>
   `1 < n` by rw[power_free_gt_1] >>
   Cases_on `k < n` >-
   metis_tac[aks_main_step, power_free_perfect_power] >>
   fs[aks_checks_def] >>
   `!j. 1 < j /\ j < n ==> 1 < j /\ j <= k /\ j < n` by decide_tac >>
-  metis_tac[prime_iff_no_proper_factor]);
+  metis_tac[prime_iff_no_proper_factor]
+QED
 
 (* Theorem: [The AKS Main Theorem]
             prime n <=> power_free n /\ ?k. aks_checks n k *)
@@ -696,10 +707,11 @@ val aks_main_theorem_2 = store_thm(
    Only-if part: power_free n /\ ?k. aks_checks n k ==> prime n
       True by aks_main_theorem_2.
 *)
-val aks_main_theorem = store_thm(
-  "aks_main_theorem",
-  ``!n. prime n <=> power_free n /\ ?k. aks_checks n k``,
-  metis_tac[aks_main_theorem_1, aks_main_theorem_2]);
+Theorem aks_main_theorem:
+    !n. prime n <=> power_free n /\ ?k. aks_checks n k
+Proof
+  metis_tac[aks_main_theorem_1, aks_main_theorem_2]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* AKS algorithm based on parameter search                                   *)
@@ -754,17 +766,18 @@ EVAL ``poly_intro_checks 31 29 25``; -- symbolic by for all
                               [1 .. (SQRT (phi k) * ulog n)]
                       | bad => F *)
 (* Proof: by aks_def, poly_intro_checks_thm] *)
-val aks_eval = store_thm(
-  "aks_eval[compute]",
-  ``!n. aks n <=> power_free n /\
+Theorem aks_eval[compute]:
+    !n. aks n <=> power_free n /\
                  case aks_param n of
                    nice j => j = n
                  | good k =>
                    (* poly_intro_checks n k (SQRT (phi k) * ulog n) *)
                    EVERY (\c. (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)))
                          [1 .. (SQRT (phi k) * ulog n)]
-                 | bad => F``,
-  simp[aks_def, poly_intro_checks_thm]);
+                 | bad => F
+Proof
+  simp[aks_def, poly_intro_checks_thm]
+QED
 
 (*
 EVAL ``aks 7``; <=> T
@@ -801,10 +814,10 @@ This makes (aks_compute n) redundant.
    With poly_intro_checks n k s                      by given
     ==> prime n                                      by AKS_main_ulog_8b, 0 < k
 *)
-val aks_param_good_for_prime = store_thm(
-  "aks_param_good_for_prime",
-  ``!n k. (aks_param n = good k) /\ power_free n ==>
-   (prime n <=> poly_intro_checks n k (SQRT (phi k) * ulog n))``,
+Theorem aks_param_good_for_prime:
+    !n k. (aks_param n = good k) /\ power_free n ==>
+   (prime n <=> poly_intro_checks n k (SQRT (phi k) * ulog n))
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = SQRT (phi k) * (ulog n)` >>
   `!n k. nice n <> good k` by rw[] >>
@@ -816,7 +829,8 @@ val aks_param_good_for_prime = store_thm(
     `1 < k /\ (ulog n) ** 2 <= ordz k n /\ !j. 1 < j /\ j <= k ==> ~(j divides n)` by metis_tac[aks_param_good, EXP_2] >>
     `0 < k` by decide_tac >>
     metis_tac[AKS_main_ulog_8b]
-  ]);
+  ]
+QED
 
 (* Theorem: (aks_param n = good k) ==>
             (poly_intro_checks n k (SQRT (phi k) * ulog n) = (1 < n /\ k < n /\ aks_checks n k)) *)
@@ -829,30 +843,33 @@ val aks_param_good_for_prime = store_thm(
    Thus aks_checks n k                           by aks_checks_def
     The converse is true                         by aks_checks_def
 *)
-val aks_param_good_gives_checks_eq_checks = store_thm(
-  "aks_param_good_gives_checks_eq_checks",
-  ``!n k. (aks_param n = good k) ==>
-         (poly_intro_checks n k (SQRT (phi k) * ulog n) = (1 < n /\ k < n /\ aks_checks n k))``,
+Theorem aks_param_good_gives_checks_eq_checks:
+    !n k. (aks_param n = good k) ==>
+         (poly_intro_checks n k (SQRT (phi k) * ulog n) = (1 < n /\ k < n /\ aks_checks n k))
+Proof
   rpt strip_tac >>
   `!j. 1 < j /\ j <= k ==> ~(j divides n)` by rw_tac std_ss[aks_param_good] >>
   `ulog n ** 2 <= ordz k n` by rw_tac std_ss[aks_param_good, EXP_2] >>
   `1 < n /\ 1 < k /\ k < n` by metis_tac[aks_param_good_range] >>
   `!j. 1 < j /\ j <= k /\ j < n ==> 1 < j /\ j < n` by decide_tac >>
-  rw_tac std_ss[aks_checks_def, ZN_intro_range_eqn]);
+  rw_tac std_ss[aks_checks_def, ZN_intro_range_eqn]
+QED
 
 (* Theorem: 1 < n /\ (aks_param n = good k) ==> SQRT (phi k) * ulog n <= k *)
 (* Proof: by aks_param_good_coprime_order, sqrt_phi_times_ulog_less *)
-val aks_param_good_intro_limit = store_thm(
-  "aks_param_good_intro_limit",
-  ``!n k. 1 < n /\ (aks_param n = good k) ==> SQRT (phi k) * ulog n <= k``,
-  metis_tac[aks_param_good_coprime_order, sqrt_phi_times_ulog_less, ONE_LT_POS]);
+Theorem aks_param_good_intro_limit:
+    !n k. 1 < n /\ (aks_param n = good k) ==> SQRT (phi k) * ulog n <= k
+Proof
+  metis_tac[aks_param_good_coprime_order, sqrt_phi_times_ulog_less, ONE_LT_POS]
+QED
 
 (* Theorem: 1 < n /\ (aks_param n = good k) /\ (s = SQRT (phi k) * ulog n) ==> s <= k *)
 (* Proof: by aks_param_good_intro_limit *)
-val aks_param_good_intro_limit_alt = store_thm(
-  "aks_param_good_intro_limit_alt",
-  ``!n k s. 1 < n /\ (aks_param n = good k) /\ (s = SQRT (phi k) * ulog n) ==> s <= k``,
-  metis_tac[aks_param_good_intro_limit]);
+Theorem aks_param_good_intro_limit_alt:
+    !n k s. 1 < n /\ (aks_param n = good k) /\ (s = SQRT (phi k) * ulog n) ==> s <= k
+Proof
+  metis_tac[aks_param_good_intro_limit]
+QED
 
 (* Theorem: aks n ==> power_free n /\ ?k. aks_checks n k *)
 (* This is if-part of aks_alt, just by definitions. *)
@@ -872,9 +889,9 @@ val aks_param_good_intro_limit_alt = store_thm(
    (3) aks_param n = bad ==> ...
        True, since aks_param n <> bad                   by aks_param_exists
 *)
-val aks_alt_if = store_thm(
-  "aks_alt_if",
-  ``!n. aks n ==> power_free n /\ ?k. aks_checks n k``,
+Theorem aks_alt_if:
+    !n. aks n ==> power_free n /\ ?k. aks_checks n k
+Proof
   rw_tac std_ss[aks_def] >>
   Cases_on `aks_param n` >| [
     `n' = n` by fs[] >>
@@ -884,7 +901,8 @@ val aks_alt_if = store_thm(
     `poly_intro_checks n n' (SQRT (phi n') * ulog n)` by fs[] >>
     metis_tac[aks_param_good_gives_checks_eq_checks],
     metis_tac[aks_param_exists]
-  ]);
+  ]
+QED
 
 (* Theorem: aks n = power_free n /\ ?k. aks_checks n k *)
 (* Proof:
@@ -906,9 +924,9 @@ val aks_alt_if = store_thm(
    (3) aks_param n = bad ==> ...
        True, since aks_param n <> bad                   by aks_param_exists
 *)
-val aks_alt = store_thm(
-  "aks_alt",
-  ``!n. aks n <=> power_free n /\ ?k. aks_checks n k``,
+Theorem aks_alt:
+    !n. aks n <=> power_free n /\ ?k. aks_checks n k
+Proof
   rw_tac std_ss[aks_def] >>
   Cases_on `aks_param n` >| [
     rw_tac std_ss[] >>
@@ -916,7 +934,8 @@ val aks_alt = store_thm(
     rw_tac std_ss[] >>
     metis_tac[aks_param_good_for_prime, aks_main_theorem],
     metis_tac[aks_param_exists]
-  ]);
+  ]
+QED
 
 (* Theorem: prime n = aks n *)
 (* Proof:
@@ -924,10 +943,11 @@ val aks_alt = store_thm(
    <=> power_free n /\ ?k. aks_checks n k   by aks_main_theorem
    <=> aks n                                by aks_alt
 *)
-val aks_theorem = store_thm(
-  "aks_theorem",
-  ``!n. prime n = aks n``,
-  rw[aks_alt, aks_main_theorem]);
+Theorem aks_theorem:
+    !n. prime n = aks n
+Proof
+  rw[aks_alt, aks_main_theorem]
+QED
 
 (* A major milestone -- first proof of the AKS theorem! *)
 
@@ -963,9 +983,9 @@ Only-if part uses aks_param_good_for_prime, relies on AKS_main_ulog_8b.
               Note aks_param n <> bad               by aks_param_exists
               This is a contradiction, hence true.
 *)
-val aks_thm_1 = store_thm(
-  "aks_thm_1",
-  ``!n. prime n ==> aks n``,
+Theorem aks_thm_1:
+    !n. prime n ==> aks n
+Proof
   rw_tac std_ss[aks_def] >-
   rw[prime_is_power_free] >>
   `1 < n` by rw[ONE_LT_PRIME] >>
@@ -979,7 +999,8 @@ val aks_thm_1 = store_thm(
     `0 < n'` by metis_tac[aks_param_good_range, ONE_LT_POS] >>
     metis_tac[ZN_intro_checks_by_prime],
     metis_tac[aks_param_exists]
-  ]);
+  ]
+QED
 
 (* Theorem: aks n ==> prime n *)
 (* This is the only-if part of aks_thm *)
@@ -1000,9 +1021,9 @@ val aks_thm_1 = store_thm(
       (3) aks_param n = bad ==> prime n
           The premise is false, hence true             by aks_param_exists
 *)
-val aks_thm_2 = store_thm(
-  "aks_thm_2",
-  ``!n. aks n ==> prime n``,
+Theorem aks_thm_2:
+    !n. aks n ==> prime n
+Proof
   rw_tac std_ss[aks_def] >>
   `1 < n` by rw[power_free_gt_1] >>
   Cases_on `aks_param n` >| [
@@ -1012,17 +1033,19 @@ val aks_thm_2 = store_thm(
     `poly_intro_checks n n' s` by fs[] >>
     metis_tac[aks_param_good_for_prime],
     metis_tac[aks_param_exists]
-  ]);
+  ]
+QED
 
 (* Theorem: prime n = aks n *)
 (* Proof:
    If part: prime n ==> aks n, true        by aks_thm_1
    Only-if part: aks n ==> prime n, true   by aks_thm_2
 *)
-val aks_thm = store_thm(
-  "aks_thm",
-  ``!n. prime n = aks n``,
-  metis_tac[aks_thm_1, aks_thm_2]);
+Theorem aks_thm:
+    !n. prime n = aks n
+Proof
+  metis_tac[aks_thm_1, aks_thm_2]
+QED
 
 (* This is the ultimate theorem of AKS! *)
 
@@ -1032,14 +1055,15 @@ val aks_thm = store_thm(
              | good k => poly_intro_checks n k (SQRT (phi k) * ulog n)
              | bad => F *)
 (* Proof: by aks_thm, aks_def *)
-val aks_eqn = store_thm(
-  "aks_eqn",
-  ``!n. prime n <=> power_free n /\
+Theorem aks_eqn:
+    !n. prime n <=> power_free n /\
                    case aks_param n of
                      nice j => j = n
                    | good k => poly_intro_checks n k (SQRT (phi k) * ulog n)
-                   | bad => F``,
-  rw_tac std_ss[aks_thm, aks_def]);
+                   | bad => F
+Proof
+  rw_tac std_ss[aks_thm, aks_def]
+QED
 
 (*
 Although these set of iff-theorems look impressive:
@@ -1091,11 +1115,12 @@ Such a route is taken up in aks_decide.
    <=> ((X + |c|) ** n == X ** n + |c|) (pm z)    by unity_mod_intro_alt
    <=> n intro (X + |c|)                          by poly_intro_X_add_c
 *)
-val unity_mod_intro_eqn = store_thm(
-  "unity_mod_intro_eqn",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !k n. 1 < k /\ 0 < n ==>
-   !c:num. unity_mod_intro r k n c <=> n intro (X + |c|)``,
-  rw[unity_mod_intro_alt, poly_intro_X_add_c]);
+Theorem unity_mod_intro_eqn:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !k n. 1 < k /\ 0 < n ==>
+   !c:num. unity_mod_intro r k n c <=> n intro (X + |c|)
+Proof
+  rw[unity_mod_intro_alt, poly_intro_X_add_c]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !k n. 1 < k /\ 0 < n ==>
            !m. unity_mod_intro_range r k n m = poly_intro_range r k n m *)
@@ -1115,10 +1140,10 @@ val unity_mod_intro_eqn = store_thm(
           !c. 0 < c /\ c <= m ==> n intro X + |c|       by induction hypothesis
       <=> !c. 0 < c /\ c <= SUC m ==> n intro X + |c|   by merging indexes
 *)
-val unity_mod_intro_range_alt = store_thm(
-  "unity_mod_intro_range_alt",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !k n. 1 < k /\ 0 < n ==>
-   !m. unity_mod_intro_range r k n m = poly_intro_range r k n m``,
+Theorem unity_mod_intro_range_alt:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !k n. 1 < k /\ 0 < n ==>
+   !m. unity_mod_intro_range r k n m = poly_intro_range r k n m
+Proof
   rpt strip_tac >>
   Induct_on `m` >-
   rw[unity_mod_intro_range_def] >>
@@ -1128,7 +1153,8 @@ val unity_mod_intro_range_alt = store_thm(
     metis_tac[DECIDE``j <= SUC m ==> j <= m \/ (j = SUC m)``],
     `unity_mod_intro_range r k n m /\ n intro X + ###(SUC m)` by rw[] >>
     metis_tac[unity_mod_intro_range_def, unity_mod_intro_eqn]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < n /\ 1 < k ==>
             !m. unity_mod_intro_range (ZN n) k n m = poly_intro_checks n k m *)
@@ -1141,15 +1167,16 @@ val unity_mod_intro_range_alt = store_thm(
    <=> poly_intro_range (ZN n) k n m      by unity_mod_intro_range_alt, Ring (ZN n)
    <=> poly_intro_checks n k m            by poly_intro_X_add_c
 *)
-val unity_mod_intro_range_eqn = store_thm(
-  "unity_mod_intro_range_eqn",
-  ``!n k. 1 < n /\ 1 < k ==>
-   !m. unity_mod_intro_range (ZN n) k n m = poly_intro_checks n k m``,
+Theorem unity_mod_intro_range_eqn:
+    !n k. 1 < n /\ 1 < k ==>
+   !m. unity_mod_intro_range (ZN n) k n m = poly_intro_checks n k m
+Proof
   rpt strip_tac >>
   `0 < n /\ 0 < k` by decide_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `((ZN n).sum.id = 0) /\ ((ZN n).prod.id = 1) /\ 1 <> 0` by rw[ZN_ids_alt] >>
-  rw_tac std_ss[unity_mod_intro_range_alt, poly_intro_X_add_c]);
+  rw_tac std_ss[unity_mod_intro_range_alt, poly_intro_X_add_c]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of Direct Computation                                         *)
@@ -1164,13 +1191,14 @@ val unity_mod_intro_range_eqn = store_thm(
      unity_mod_intro (ZN n) k n c
    = poly_intro (ZN n) k n (x+ n c)       by unity_mod_intro_eqn, 1 < k, 0 < n, Ring (ZN n)
 *)
-val ZN_unity_mod_intro_eqn = store_thm(
-  "ZN_unity_mod_intro_eqn",
-  ``!n k. 1 < n /\ 1 < k ==> !c. unity_mod_intro (ZN n) k n c = poly_intro (ZN n) k n (x+ n c)``,
+Theorem ZN_unity_mod_intro_eqn:
+    !n k. 1 < n /\ 1 < k ==> !c. unity_mod_intro (ZN n) k n c = poly_intro (ZN n) k n (x+ n c)
+Proof
   rpt strip_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `(ZN n).prod.id <> (ZN n).sum.id` by rw[ZN_ids_alt] >>
-  rw[unity_mod_intro_eqn]);
+  rw[unity_mod_intro_eqn]
+QED
 
 (* Theorem: 1 < n /\ 1 < k ==>
         !c. unity_mod_intro_range (ZN n) k n c = poly_intro_range (ZN n) k n  *)
@@ -1181,14 +1209,15 @@ val ZN_unity_mod_intro_eqn = store_thm(
      unity_mod_intro_range (ZN n) k n c
    = poly_intro (ZN n) k n (x+ n c)       by unity_mod_intro_range_alt, 1 < k, 0 < n, Ring (ZN n)
 *)
-val ZN_unity_mod_intro_range_eqn = store_thm(
-  "ZN_unity_mod_intro_range_eqn",
-  ``!n k. 1 < n /\ 1 < k ==>
-   !c. unity_mod_intro_range (ZN n) k n c = poly_intro_range (ZN n) k n c``,
+Theorem ZN_unity_mod_intro_range_eqn:
+    !n k. 1 < n /\ 1 < k ==>
+   !c. unity_mod_intro_range (ZN n) k n c = poly_intro_range (ZN n) k n c
+Proof
   rpt strip_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `(ZN n).prod.id <> (ZN n).sum.id` by rw[ZN_ids_alt] >>
-  rw[unity_mod_intro_range_alt]);
+  rw[unity_mod_intro_range_alt]
+QED
 
 (* Theorem: 1 < n /\ 1 < k ==> !c. ZN_poly_intro n k c = poly_intro (ZN n) k n (x+ n c) *)
 (* Proof:
@@ -1196,10 +1225,11 @@ val ZN_unity_mod_intro_range_eqn = store_thm(
    = unity_mod_intro (ZN n) k n c     by ZN_poly_intro_alt, 1 < n, 0 < k
    = poly_intro (ZN n) k n (x+ n c)   by ZN_unity_mod_intro_eqn, 1 < k, 1 < n
 *)
-val ZN_poly_intro_eqn = store_thm(
-  "ZN_poly_intro_eqn",
-  ``!n k. 1 < n /\ 1 < k ==> !c. ZN_poly_intro n k c = poly_intro (ZN n) k n (x+ n c)``,
-  rw[ZN_poly_intro_alt, ZN_unity_mod_intro_eqn]);
+Theorem ZN_poly_intro_eqn:
+    !n k. 1 < n /\ 1 < k ==> !c. ZN_poly_intro n k c = poly_intro (ZN n) k n (x+ n c)
+Proof
+  rw[ZN_poly_intro_alt, ZN_unity_mod_intro_eqn]
+QED
 
 (* Theorem: 1 < n /\ 1 < k ==> !c. ZN_poly_intro n k c = (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k)) *)
 (* Proof:
@@ -1210,13 +1240,14 @@ val ZN_poly_intro_eqn = store_thm(
    = poly_intro (ZN n) k n (x+ n c)                    by ZN_poly_intro_eqn, 1 < k, 1 < n
    = (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))  by poly_intro_X_add_c, Ring (ZN n)
 *)
-val ZN_poly_intro_thm = store_thm(
-  "ZN_poly_intro_thm",
-  ``!n k. 1 < n /\ 1 < k ==> !c. ZN_poly_intro n k c = (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))``,
+Theorem ZN_poly_intro_thm:
+    !n k. 1 < n /\ 1 < k ==> !c. ZN_poly_intro n k c = (x+^ n c n == x^+ n c n) (pmod (ZN n) (x^- n k))
+Proof
   rpt strip_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `(ZN n).prod.id <> (ZN n).sum.id` by rw[ZN_ids_alt] >>
-  metis_tac[ZN_poly_intro_eqn, poly_intro_X_add_c, ONE_LT_POS]);
+  metis_tac[ZN_poly_intro_eqn, poly_intro_X_add_c, ONE_LT_POS]
+QED
 
 (* Theorem: 1 < n /\ 1 < k ==> !m. ZN_poly_intro_range n k m = poly_intro_checks n k m *)
 (* Proof:
@@ -1224,10 +1255,11 @@ val ZN_poly_intro_thm = store_thm(
    = unity_mod_intro_range (ZN n) k n m   by ZN_poly_intro_range_alt, 1 < n, 0 < k
    = poly_intro_checks n k m              by unity_mod_intro_range_eqn, 1 < n, 1 < k
 *)
-val ZN_poly_intro_range_eqn = store_thm(
-  "ZN_poly_intro_range_eqn",
-  ``!n k. 1 < n /\ 1 < k ==> !m. ZN_poly_intro_range n k m = poly_intro_checks n k m``,
-  metis_tac[ZN_poly_intro_range_alt, unity_mod_intro_range_eqn, ONE_LT_POS]);
+Theorem ZN_poly_intro_range_eqn:
+    !n k. 1 < n /\ 1 < k ==> !m. ZN_poly_intro_range n k m = poly_intro_checks n k m
+Proof
+  metis_tac[ZN_poly_intro_range_alt, unity_mod_intro_range_eqn, ONE_LT_POS]
+QED
 
 (* Theorem: (aks_param n = good k) /\ power_free n ==>
             (prime n = ZN_poly_intro_range n k (sqrt_compute (phi_compute k) * ulog n)) *)
@@ -1244,16 +1276,17 @@ val ZN_poly_intro_range_eqn = store_thm(
      = ZN_poly_intro_range n k (SQRT (phi k) * ulog n)                    by ZN_poly_intro_range_thm
      = ZN_poly_intro_range n k (sqrt_compute (phi_compute k) * ulog n)    by sqrt_compute_eqn, phi_compute_eqn
 *)
-val aks_param_good_for_prime_alt = store_thm(
-  "aks_param_good_for_prime_alt",
-  ``!n k. (aks_param n = good k) /\ power_free n ==>
-          (prime n = ZN_poly_intro_range n k (sqrt_compute (phi_compute k) * ulog n))``,
+Theorem aks_param_good_for_prime_alt:
+    !n k. (aks_param n = good k) /\ power_free n ==>
+          (prime n = ZN_poly_intro_range n k (sqrt_compute (phi_compute k) * ulog n))
+Proof
   rpt strip_tac >>
   `!n k. good n <> nice k` by rw[] >>
   `n <> 0 /\ n <> 1` by metis_tac[aks_param_0, aks_param_1] >>
   `1 < n` by decide_tac >>
   `1 < k` by metis_tac[aks_param_good] >>
-  metis_tac[aks_param_good_for_prime, ZN_poly_intro_thm, ZN_poly_intro_range_thm, sqrt_compute_eqn, phi_compute_eqn]);
+  metis_tac[aks_param_good_for_prime, ZN_poly_intro_thm, ZN_poly_intro_range_thm, sqrt_compute_eqn, phi_compute_eqn]
+QED
 
 (* Theorem: 1 < n /\ 1 < k ==>
     (valueOf (poly_introM n k c) <=> poly_intro (ZN n) k n (x+ n c)) *)
@@ -1262,11 +1295,12 @@ val aks_param_good_for_prime_alt = store_thm(
    = unity_mod_intro (ZN n) k n c     by poly_introM_value, 0 < n
    = poly_intro (ZN n) k n (x+ n c)   by ZN_unity_mod_intro_eqn, 1 < k, 1 < n
 *)
-val poly_introM_value_alt = store_thm(
-  "poly_introM_value_alt",
-  ``!n k c. 1 < n /\ 1 < k ==>
-    (valueOf (poly_introM n k c) <=> poly_intro (ZN n) k n (x+ n c))``,
-  rw[poly_introM_value, ZN_unity_mod_intro_eqn]);
+Theorem poly_introM_value_alt:
+    !n k c. 1 < n /\ 1 < k ==>
+    (valueOf (poly_introM n k c) <=> poly_intro (ZN n) k n (x+ n c))
+Proof
+  rw[poly_introM_value, ZN_unity_mod_intro_eqn]
+QED
 
 (* Theorem: 1 < n /\ 1 < k ==>
     (valueOf (poly_intro_rangeM n k c) <=> poly_intro_range (ZN n) k n c) *)
@@ -1275,11 +1309,12 @@ val poly_introM_value_alt = store_thm(
    = unity_mod_intro_range (ZN n) k n c   by poly_intro_rangeM_value, 0 < n
    = poly_intro_range (ZN n) k n c        by ZN_unity_mod_intro_range_eqn, 1 < k, 1 < n
 *)
-val poly_intro_rangeM_value_alt = store_thm(
-  "poly_intro_rangeM_value_alt",
-  ``!n k c. 1 < n /\ 1 < k ==>
-    (valueOf (poly_intro_rangeM n k c) <=> poly_intro_range (ZN n) k n c)``,
-  rw[poly_intro_rangeM_value, ZN_unity_mod_intro_range_eqn]);
+Theorem poly_intro_rangeM_value_alt:
+    !n k c. 1 < n /\ 1 < k ==>
+    (valueOf (poly_intro_rangeM n k c) <=> poly_intro_range (ZN n) k n c)
+Proof
+  rw[poly_intro_rangeM_value, ZN_unity_mod_intro_range_eqn]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Correctness of AKS Computation                                            *)
@@ -1309,9 +1344,9 @@ val poly_intro_rangeM_value_alt = store_thm(
       Then aks_compute n = F     by aks_compute_def, power_free_check_eqn
        and aks n = F             by aks_def
 *)
-val aks_compute_alt = store_thm(
-  "aks_compute_alt",
-  ``!n. aks_compute n = aks n``,
+Theorem aks_compute_alt:
+    !n. aks_compute n = aks n
+Proof
   rpt strip_tac >>
   Cases_on `power_free n` >| [
     rw_tac std_ss[aks_compute_def, aks_def, power_free_check_eqn] >>
@@ -1322,14 +1357,16 @@ val aks_compute_alt = store_thm(
     metis_tac[aks_param_good, unity_mod_intro_range_eqn, sqrt_compute_eqn, phi_compute_eqn]) >>
     fs[],
     metis_tac[aks_compute_def, aks_def, power_free_check_eqn]
-  ]);
+  ]
+QED
 
 (* Theorem: aks n = aks_compute n *)
 (* Proof: by aks_compute_alt *)
-val aks_compute_thm = store_thm(
-  "aks_compute_thm",
-  ``!n. aks n = aks_compute n``,
-  rw[aks_compute_alt]);
+Theorem aks_compute_thm:
+    !n. aks n = aks_compute n
+Proof
+  rw[aks_compute_alt]
+QED
 
 (* Theorem: prime n = aks_compute n *)
 (* Proof:
@@ -1337,10 +1374,11 @@ val aks_compute_thm = store_thm(
    <=> aks n               by aks_thm
    <=> aks_compute n       by aks_compute_alt
 *)
-val aks_compute_eqn = store_thm(
-  "aks_compute_eqn",
-  ``!n. prime n = aks_compute n``,
-  rw_tac std_ss[aks_thm, aks_compute_alt]);
+Theorem aks_compute_eqn:
+    !n. prime n = aks_compute n
+Proof
+  rw_tac std_ss[aks_thm, aks_compute_alt]
+QED
 
 (* Another major milestone theorem! *)
 
@@ -1410,9 +1448,9 @@ val it = |- aks_compute 31 <=> T: thm
       Then aks_algo n = F        by aks_algo_def, power_free_check_eqn
        and aks n = F             by aks_def
 *)
-val aks_algo_alt = store_thm(
-  "aks_algo_alt",
-  ``!n. aks_algo n = aks n``,
+Theorem aks_algo_alt:
+    !n. aks_algo n = aks n
+Proof
   rpt strip_tac >>
   Cases_on `power_free n` >| [
     rw_tac std_ss[aks_algo_def, aks_def, power_free_check_eqn] >>
@@ -1425,7 +1463,8 @@ val aks_algo_alt = store_thm(
     metis_tac[ZN_poly_intro_range_alt, unity_mod_intro_range_eqn, sqrt_compute_eqn, phi_compute_eqn]) >>
     simp[],
     metis_tac[aks_algo_def, aks_def, power_free_check_eqn]
-  ]);
+  ]
+QED
 
 (* Theorem: prime n = aks_algo n *)
 (* Proof:
@@ -1433,10 +1472,11 @@ val aks_algo_alt = store_thm(
    <=> aks n            by aks_thm
    <=> aks_algo n       by aks_algo_alt
 *)
-val aks_algo_eqn = store_thm(
-  "aks_algo_eqn",
-  ``!n. prime n = aks_algo n``,
-  rw_tac std_ss[aks_thm, aks_algo_alt]);
+Theorem aks_algo_eqn:
+    !n. prime n = aks_algo n
+Proof
+  rw_tac std_ss[aks_thm, aks_algo_alt]
+QED
 
 (* Another major milestone theorem, easy! *)
 
@@ -1518,10 +1558,11 @@ End
 
 (* Theorem: aks_field_criteria r n k = aks_criteria r n k *)
 (* Proof: by aks_field_criteria_def, aks_criteria_def *)
-val aks_field_criteria_alt = store_thm(
-  "aks_field_criteria_alt",
-  ``!(r:'a field) n k. aks_field_criteria r n k = aks_criteria r n k``,
-  rw_tac std_ss[aks_field_criteria_def, aks_criteria_def]);
+Theorem aks_field_criteria_alt:
+    !(r:'a field) n k. aks_field_criteria r n k = aks_criteria r n k
+Proof
+  rw_tac std_ss[aks_field_criteria_def, aks_criteria_def]
+QED
 
 (* Define aks_decide *)
 Definition aks_decide_def:
@@ -1551,13 +1592,13 @@ End
           = poly_intro_range (ZN n) k n m   by ZN_intro_range_eqn, 0 < k /\ 0 < n
    If aks_param n = bad, both false.
 *)
-val aks_decide_alt = store_thm(
-  "aks_decide_alt",
-  ``!n. aks_decide n <=>
+Theorem aks_decide_alt:
+    !n. aks_decide n <=>
        case aks_param n of
          nice j => j = n
        | good k => poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n)
-       | bad => F``,
+       | bad => F
+Proof
   rpt strip_tac >>
   `(case aks_param n of nice j => j = n | good k => poly_intro_checks n k (SQRT (phi k) * ulog n)| bad => F) =
     (case aks_param n of nice j => j = n | good k => poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n)| bad => F)` suffices_by rw_tac std_ss[aks_decide_def] >>
@@ -1572,14 +1613,16 @@ val aks_decide_alt = store_thm(
     `0 < n' /\ 0 < n` by decide_tac >>
     rw_tac std_ss[ZN_intro_range_eqn]
   ]) >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: aks n <=> power_free n /\ aks_decide n *)
 (* Proof: by aks_def, aks_decide_def *)
-val aks_by_decide = store_thm(
-  "aks_by_decide",
-  ``!n. aks n <=> power_free n /\ aks_decide n``,
-  rw[aks_def, aks_decide_def]);
+Theorem aks_by_decide:
+    !n. aks n <=> power_free n /\ aks_decide n
+Proof
+  rw[aks_def, aks_decide_def]
+QED
 
 (*
 Still only indirect, no direct: ZN_poly_intro  to poly_intro (ZN n)
@@ -1620,17 +1663,18 @@ therefore n = p, a prime.
     ==> aks_ring_criteria (ZN n) n k            by aks_ring_criteria_def
     The converse is true                        by aks_ring_criteria_def
 *)
-val aks_param_good_gives_checks_eq_ring_criteria = store_thm(
-  "aks_param_good_gives_checks_eq_ring_criteria",
-  ``!n k. (aks_param n = good k) ==>
-         (poly_intro_checks n k (SQRT (phi k) * ulog n) = aks_ring_criteria (ZN n) n k)``,
+Theorem aks_param_good_gives_checks_eq_ring_criteria:
+    !n k. (aks_param n = good k) ==>
+         (poly_intro_checks n k (SQRT (phi k) * ulog n) = aks_ring_criteria (ZN n) n k)
+Proof
   rpt strip_tac >>
   `1 < n /\ 1 < k /\ k < n` by metis_tac[aks_param_good_range] >>
   `char (ZN n) = n` by rw[ZN_char] >>
   `!j. 1 < j /\ j <= k ==> ~(j divides n)` by rw_tac std_ss[aks_param_good] >>
   `ulog n ** 2 <= ordz k n` by rw_tac std_ss[aks_param_good, EXP_2] >>
   `0 < k /\ 0 < n` by decide_tac >>
-  rw_tac std_ss[aks_ring_criteria_def, ZN_intro_range_eqn]);
+  rw_tac std_ss[aks_ring_criteria_def, ZN_intro_range_eqn]
+QED
 
 (* Theorem: aks_decide n =
             case aks_param n of
@@ -1645,21 +1689,21 @@ val aks_param_good_gives_checks_eq_ring_criteria = store_thm(
    If aks_param n = good k, true            by aks_param_good_gives_checks_eq_ring_criteria
    If aks_param n = bad, both false.
 *)
-val aks_decide_meets_ring_criteria = store_thm(
-  "aks_decide_meets_ring_criteria",
-  ``!n. aks_decide n <=>
+Theorem aks_decide_meets_ring_criteria:
+    !n. aks_decide n <=>
        case aks_param n of
          nice j => j = n
        | good k => aks_ring_criteria (ZN n) n k
        | bad => F
-``,
+Proof
   rpt strip_tac >>
   `(case aks_param n of nice j => j = n | good k => poly_intro_checks n k (SQRT (phi k) * ulog n)| bad => F) =
     (case aks_param n of nice j => j = n | good k => aks_ring_criteria (ZN n) n k| bad => F)` suffices_by rw_tac std_ss[aks_decide_def] >>
   Cases_on `aks_param n` >-
   rw_tac std_ss[] >-
   rw_tac std_ss[aks_param_good_gives_checks_eq_ring_criteria] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* For old version *)
 
@@ -1673,32 +1717,33 @@ val aks_decide_meets_ring_criteria = store_thm(
    If aks_param n = good k, true    by aks_param_good_gives_checks_eq_checks
    If aks_param n = bad, both false.
 *)
-val aks_decide_meets_checks = store_thm(
-  "aks_decide_meets_checks",
-  ``!n. aks_decide n <=>
+Theorem aks_decide_meets_checks:
+    !n. aks_decide n <=>
        case aks_param n of
          nice j => j = n
        | good k => 1 < n /\ k < n /\ aks_checks n k
        | bad => F
-``,
+Proof
   rpt strip_tac >>
   `(case aks_param n of nice j => j = n | good k => poly_intro_checks n k (SQRT (phi k) * ulog n)| bad => F) =
     (case aks_param n of nice j => j = n | good k => 1 < n /\ k < n /\ aks_checks n k| bad => F)` suffices_by rw_tac std_ss[aks_decide_def] >>
   Cases_on `aks_param n` >-
   rw_tac std_ss[] >-
   rw_tac std_ss[aks_param_good_gives_checks_eq_checks] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Now follows with old: aks_checks_gives_aks_criteria to bypass aks_checks, which is a bit ugly. *)
 
 (* Theorem: (aks_param n = good k) /\ poly_intro_checks n k (SQRT (phi k) * ulog n) ==>
             ?p. prime p /\ aks_criteria (ZN p) n k *)
 (* Proof: by aks_param_good_gives_checks_eq_checks, aks_checks_gives_aks_criteria *)
-val aks_param_good_with_checks_implies_criteria = store_thm(
-  "aks_param_good_with_checks_implies_criteria",
-  ``!n k. (aks_param n = good k) /\ poly_intro_checks n k (SQRT (phi k) * ulog n) ==>
-   ?p. prime p /\ aks_criteria (ZN p) n k``,
-  metis_tac[aks_param_good_gives_checks_eq_checks, aks_checks_gives_aks_criteria]);
+Theorem aks_param_good_with_checks_implies_criteria:
+    !n k. (aks_param n = good k) /\ poly_intro_checks n k (SQRT (phi k) * ulog n) ==>
+   ?p. prime p /\ aks_criteria (ZN p) n k
+Proof
+  metis_tac[aks_param_good_gives_checks_eq_checks, aks_checks_gives_aks_criteria]
+QED
 
 (* Theorem: aks_decide n ==>
             case aks_param n of
@@ -1711,19 +1756,19 @@ val aks_param_good_with_checks_implies_criteria = store_thm(
    If aks_param n = good k, true    by aks_param_good_with_checks_implies_criteria
    If aks_param n = bad, both false.
 *)
-val aks_decide_implies_criteria = store_thm(
-  "aks_decide_implies_criteria",
-  ``!n. aks_decide n ==>
+Theorem aks_decide_implies_criteria:
+    !n. aks_decide n ==>
        case aks_param n of
          nice j => j = n
        | good k => ?p. prime p /\ aks_criteria (ZN p) n k
        | bad => F
-``,
+Proof
   rw_tac std_ss[aks_decide_def] >>
   Cases_on `aks_param n` >-
   fs[] >-
   fs[aks_param_good_with_checks_implies_criteria] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: prime n ==> aks_decide n *)
 (* Proof:
@@ -1732,9 +1777,9 @@ val aks_decide_implies_criteria = store_thm(
    If aks_param n = good k, true by aks_param_good_for_prime, prime_is_power_free
    If aks_param n = bad,    true by aks_param_exists, no bad
 *)
-val aks_decide_prime = store_thm(
-  "aks_decide_prime",
-  ``!n. prime n ==> aks_decide n``,
+Theorem aks_decide_prime:
+    !n. prime n ==> aks_decide n
+Proof
   rw_tac std_ss[aks_decide_def] >>
   Cases_on `aks_param n` >| [
     rw_tac std_ss[] >>
@@ -1742,7 +1787,8 @@ val aks_decide_prime = store_thm(
     rw_tac std_ss[] >>
     metis_tac[aks_param_good_for_prime, prime_is_power_free],
     metis_tac[aks_param_exists]
-  ]);
+  ]
+QED
 
 (* Theorem: prime n ==> power_free n /\ aks_decide n *)
 (* Proof:
@@ -1750,12 +1796,13 @@ val aks_decide_prime = store_thm(
    (1) prime n ==> power_free n, true   by prime_is_power_free
    (2) prime n ==> aks_decide n, true   by aks_decide_prime
 *)
-val aks_thm_easy = store_thm(
-  "aks_thm_easy",
-  ``!n. prime n ==> power_free n /\ aks_decide n``,
+Theorem aks_thm_easy:
+    !n. prime n ==> power_free n /\ aks_decide n
+Proof
   rpt strip_tac >-
   rw[prime_is_power_free] >>
-  rw[aks_decide_prime]);
+  rw[aks_decide_prime]
+QED
 
 (* Theorem: power_free n /\ aks_decide n ==> prime n *)
 (* Proof:
@@ -1765,9 +1812,9 @@ val aks_thm_easy = store_thm(
    If aks_param n = good k, true    by aks_param_good_for_prime
    If aks_param n = bad, true       by aks_param_exists, no bad
 *)
-val aks_thm_hard = store_thm(
-  "aks_thm_hard",
-  ``!n. power_free n /\ aks_decide n ==> prime n``,
+Theorem aks_thm_hard:
+    !n. power_free n /\ aks_decide n ==> prime n
+Proof
   rw_tac std_ss[aks_decide_def] >>
   `1 < n` by rw[power_free_gt_1] >>
   Cases_on `aks_param n` >| [
@@ -1778,14 +1825,16 @@ val aks_thm_hard = store_thm(
     `poly_intro_checks n n' (SQRT (phi n') * ulog n)` by fs[] >>
     metis_tac[aks_param_good_for_prime],
     metis_tac[aks_param_exists]
-  ]);
+  ]
+QED
 
 (* Theorem: prime n = (power_free n /\ aks_decide n) *)
 (* Proof: by aks_thm_easy, aks_thm_hard *)
-val aks_thm_iff = store_thm(
-  "aks_thm_iff",
-  ``!n. prime n = (power_free n /\ aks_decide n)``,
-  metis_tac[aks_thm_easy, aks_thm_hard]);
+Theorem aks_thm_iff:
+    !n. prime n = (power_free n /\ aks_decide n)
+Proof
+  metis_tac[aks_thm_easy, aks_thm_hard]
+QED
 
 (* Can the critical theorems be proved without the big-guns?
 aks_param_nice_for_prime     by aks_param_nice_coprime_all
@@ -1814,10 +1863,10 @@ val it = |- !n k. (aks_param n = good k) /\ power_free n ==>
        ==> perfect_power n p                        by aks_main_punch, 1 < n
        ==> n = p, hence prime n                     by power_free_perfect_power
 *)
-val aks_param_good_for_prime_check = store_thm(
-  "aks_param_good_for_prime_check",
-  ``!n k. power_free n /\ (aks_param n = good k) ==>
-         (prime n = poly_intro_checks n k (SQRT (phi k) * ulog n))``,
+Theorem aks_param_good_for_prime_check:
+    !n k. power_free n /\ (aks_param n = good k) ==>
+         (prime n = poly_intro_checks n k (SQRT (phi k) * ulog n))
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = SQRT (phi k) * (ulog n)` >>
   `1 < n /\ 1 < k /\ k < n` by metis_tac[aks_param_good_range] >>
@@ -1827,7 +1876,8 @@ val aks_param_good_for_prime_check = store_thm(
   `FiniteField (ZN p)` by rw[ZN_finite_field] >>
   `CARD (ZN p).carrier = p` by rw[ZN_card] >>
   `char (ZN p) = p` by rw[ZN_char, PRIME_POS] >>
-  metis_tac[aks_main_punch, power_free_perfect_power]);
+  metis_tac[aks_main_punch, power_free_perfect_power]
+QED
 
 (* This is the proof I want! -- another milestone. *)
 
@@ -1838,26 +1888,29 @@ val aks_param_good_for_prime_check = store_thm(
      or 0 < k /\ k < n                     by arithmetic
    Thus prime n = poly_intro_checks n k m  by aks_param_good_for_prime_check, ZN_intro_range_eqn
 *)
-val aks_param_good_for_prime_range = store_thm(
-  "aks_param_good_for_prime_range",
-  ``!n k. power_free n /\ (aks_param n = good k) ==>
-         (prime n = poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n))``,
-  metis_tac[aks_param_good_for_prime_check, aks_param_good_range, ZN_intro_range_eqn, ONE_LT_POS]);
+Theorem aks_param_good_for_prime_range:
+    !n k. power_free n /\ (aks_param n = good k) ==>
+         (prime n = poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n))
+Proof
+  metis_tac[aks_param_good_for_prime_check, aks_param_good_range, ZN_intro_range_eqn, ONE_LT_POS]
+QED
 
 (* Theorem: power_free n /\ (aks_param n = good k) ==> (prime n = poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n)) *)
 (* Proof: by aks_param_good_for_prime_range. *)
-val aks_param_good_with_range_prime = store_thm(
-  "aks_param_good_with_range_prime",
-  ``!n k. power_free n /\ (aks_param n = good k) /\
-         poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n) ==> prime n``,
-  metis_tac[aks_param_good_for_prime_range]);
+Theorem aks_param_good_with_range_prime:
+    !n k. power_free n /\ (aks_param n = good k) /\
+         poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n) ==> prime n
+Proof
+  metis_tac[aks_param_good_for_prime_range]
+QED
 
 (* Theorem variation *)
-val aks_param_good_with_range_prime_alt = store_thm(
-  "aks_param_good_with_range_prime_alt",
-  ``!n k s. power_free n /\ (aks_param n = good k) /\ (s = SQRT (phi k) * ulog n) /\
-           poly_intro_range (ZN n) k n s ==> prime n``,
-  rw[aks_param_good_with_range_prime]);
+Theorem aks_param_good_with_range_prime_alt:
+    !n k s. power_free n /\ (aks_param n = good k) /\ (s = SQRT (phi k) * ulog n) /\
+           poly_intro_range (ZN n) k n s ==> prime n
+Proof
+  rw[aks_param_good_with_range_prime]
+QED
 
 (* Theorem: (aks_param n = good k) /\ poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n) ==>
             ?p. prime p /\ aks_criteria (ZN p) n k *)
@@ -1866,11 +1919,12 @@ val aks_param_good_with_range_prime_alt = store_thm(
    Thus ?p. prime p /\ aks_criteria (ZN p) n k  by aks_param_good_with_checks_implies_criteria,
                                                    ZN_intro_range_eqn
 *)
-val aks_param_good_with_range_implies_criteria = store_thm(
-  "aks_param_good_with_range_implies_criteria",
-  ``!n k. (aks_param n = good k) /\ poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n) ==>
-         ?p. prime p /\ aks_criteria (ZN p) n k``,
-  metis_tac[aks_param_good_with_checks_implies_criteria, aks_param_good_range, ZN_intro_range_eqn, ONE_LT_POS]);
+Theorem aks_param_good_with_range_implies_criteria:
+    !n k. (aks_param n = good k) /\ poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n) ==>
+         ?p. prime p /\ aks_criteria (ZN p) n k
+Proof
+  metis_tac[aks_param_good_with_checks_implies_criteria, aks_param_good_range, ZN_intro_range_eqn, ONE_LT_POS]
+QED
 
 (* Theorem: (aks_param n = good k) ==>
         !m. poly_intro_range (ZN n) k n m <=> poly_intro_checks n k m *)
@@ -1879,14 +1933,15 @@ val aks_param_good_with_range_implies_criteria = store_thm(
      so 0 < k             by 1 < k
    The result follows     by ZN_intro_range_eqn
 *)
-val aks_param_good_poly_intro_range = store_thm(
-  "aks_param_good_poly_intro_range",
-  ``!n k. (aks_param n = good k) ==>
-   !m. poly_intro_range (ZN n) k n m <=> poly_intro_checks n k m``,
+Theorem aks_param_good_poly_intro_range:
+    !n k. (aks_param n = good k) ==>
+   !m. poly_intro_range (ZN n) k n m <=> poly_intro_checks n k m
+Proof
   rpt strip_tac >>
   `1 < k /\ k < n` by metis_tac[aks_param_good_coprime_order] >>
   `0 < k` by decide_tac >>
-  rw[ZN_intro_range_eqn]);
+  rw[ZN_intro_range_eqn]
+QED
 
 (* Theorem: aks n <=> power_free n /\
         case aks_param n of
@@ -1894,18 +1949,19 @@ val aks_param_good_poly_intro_range = store_thm(
         | good k => poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n)
         | bad => F *)
 (* Proof: by aks_def, aks_param_good_poly_intro_range *)
-val aks_by_poly_intro_range = store_thm(
-  "aks_by_poly_intro_range",
-  ``!n. aks n <=> power_free n /\
+Theorem aks_by_poly_intro_range:
+    !n. aks n <=> power_free n /\
         case aks_param n of
            nice j => (j = n)
         | good k => poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n)
-        | bad => F``,
+        | bad => F
+Proof
   rpt strip_tac >>
   Cases_on `aks_param n` >-
   rw[aks_def] >-
   rw[aks_def, aks_param_good_poly_intro_range] >>
-  rw[aks_def]);
+  rw[aks_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Variations of AKS algorithm                                               *)
@@ -1964,15 +2020,15 @@ in polynomial introspective checks of the AKS algorithm.
       (3) aks_param n = bad ==> prime n
           The premise is false, hence true             by aks_param_exists
 *)
-val aks_variation_thm = store_thm(
-  "aks_variation_thm",
-  ``!n limit. (!k. 0 < k /\ (ulog n) ** 2 <= ordz k n ==>
+Theorem aks_variation_thm:
+    !n limit. (!k. 0 < k /\ (ulog n) ** 2 <= ordz k n ==>
                   SQRT (phi k) * ulog n <= limit k n) ==>
          (prime n <=> power_free n /\
           case aks_param n of
             nice j => j = n
           | good k => poly_intro_checks n k (limit k n)
-          | bad => F)``,
+          | bad => F)
+Proof
   rw_tac std_ss[EQ_IMP_THM] >-
   rw[prime_is_power_free] >-
  (Cases_on `aks_param n` >| [
@@ -1998,7 +2054,8 @@ val aks_variation_thm = store_thm(
     `poly_intro_checks n n' s` by fs[] >>
     metis_tac[aks_param_good_for_prime],
     metis_tac[aks_param_exists]
-  ]);
+  ]
+QED
 
 (* Theorem: prime n <=> power_free n /\
             case aks_param n of
@@ -2013,14 +2070,15 @@ val aks_variation_thm = store_thm(
      or !k. SQRT (phi k) * ulog n <= f k n   by LESS_MONO_MULT
    The result follows                        by aks_variation_thm
 *)
-val aks_variation_1 = store_thm(
-  "aks_variation_1",
-  ``!n. prime n <=> power_free n /\
+Theorem aks_variation_1:
+    !n. prime n <=> power_free n /\
                    case aks_param n of
                      nice j => j = n
                    | good k => poly_intro_checks n k (SQRT k * ulog n)
-                   | bad => F``,
-  rw_tac std_ss[aks_variation_thm, phi_le, SQRT_LE]);
+                   | bad => F
+Proof
+  rw_tac std_ss[aks_variation_thm, phi_le, SQRT_LE]
+QED
 
 (* Theorem: prime n <=> power_free n /\
             case aks_param n of
@@ -2037,13 +2095,13 @@ val aks_variation_1 = store_thm(
                                    =limit k n
    The result follows                            by aks_variation_thm
 *)
-val aks_variation_2 = store_thm(
-  "aks_variation_2",
-  ``!n. prime n <=> power_free n /\
+Theorem aks_variation_2:
+    !n. prime n <=> power_free n /\
                    case aks_param n of
                      nice j => j = n
                    | good k => poly_intro_checks n k (k * ulog n)
-                   | bad => F``,
+                   | bad => F
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `limit = \k n. k * ulog n` >>
   `!k. SQRT (phi k) * ulog n <= limit k n` by
@@ -2054,7 +2112,8 @@ val aks_variation_2 = store_thm(
   decide_tac) >>
   assume_tac aks_variation_thm >>
   first_x_assum (qspecl_then [`n`, `limit`] strip_assume_tac) >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: prime n <=> power_free n /\
             case aks_param n of
@@ -2077,13 +2136,13 @@ val aks_variation_2 = store_thm(
 
    The result follows                        by aks_variation_thm, claim.
 *)
-val aks_variation_3 = store_thm(
-  "aks_variation_3",
-  ``!n. prime n <=> power_free n /\
+Theorem aks_variation_3:
+    !n. prime n <=> power_free n /\
                    case aks_param n of
                      nice j => j = n
                    | good k => poly_intro_checks n k k
-                   | bad => F``,
+                   | bad => F
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `limit = \k:num n:num. k` >>
   `!k. 0 < k /\ (ulog n) ** 2 <= ordz k n ==>
@@ -2099,7 +2158,8 @@ val aks_variation_3 = store_thm(
   decide_tac) >>
   assume_tac aks_variation_thm >>
   first_x_assum (drule_all_then strip_assume_tac) >>
-  fs[Abbr`limit`]);
+  fs[Abbr`limit`]
+QED
 
 (* Theorem: aks0 n <=> power_free_test n /\
                  case param n of
@@ -2112,16 +2172,17 @@ val aks_variation_3 = store_thm(
    need 1 < n, provided        by power_free_gt_1
     and 1 < k, provided        by param_good_range
 *)
-val aks0_eqn = store_thm(
-  "aks0_eqn",
-  ``!n. aks0 n <=> power_free_test n /\
+Theorem aks0_eqn:
+    !n. aks0 n <=> power_free_test n /\
                   case param n of
                     nice j => j = n
                   | good k => poly_intro_checks n k k
-                  | bad => F``,
+                  | bad => F
+Proof
   rw_tac std_ss[aks0_def] >>
   (Cases_on `param n` >> rw_tac std_ss[]) >>
-  metis_tac[power_free_gt_1, param_good_range, unity_mod_intro_range_eqn]);
+  metis_tac[power_free_gt_1, param_good_range, unity_mod_intro_range_eqn]
+QED
 
 (* Theorem: prime n <=> aks0 n *)
 (* Proof:
@@ -2147,9 +2208,9 @@ val aks0_eqn = store_thm(
        <=> 1 < n /\ poly_intro_checks n k k  by unity_mod_intro_range_eqn
       Hence true.
 *)
-val aks0_thm = store_thm(
-  "aks0_thm",
-  ``!n. prime n <=> aks0 n``,
+Theorem aks0_thm:
+    !n. prime n <=> aks0 n
+Proof
   rw[aks0_alt] >>
   assume_tac aks_variation_3 >>
   first_x_assum (qspec_then `n` strip_assume_tac) >>
@@ -2159,31 +2220,35 @@ val aks0_thm = store_thm(
   `prime n <=> power_free n /\ unity_mod_intro_range (ZN n) n' n n'` suffices_by rw[] >>
   `1 < n'` by metis_tac[aks_param_good] >>
   metis_tac[unity_mod_intro_range_eqn, power_free_gt_1]) >>
-  fs[]);
+  fs[]
+QED
 
 (* This is really spectacular! *)
 
 (* Theorem: aks0 n = aks n *)
 (* Proof: by aks0_thm, aks_thm *)
-val aks0_eq_aks = store_thm(
-  "aks0_eq_aks",
-  ``!n. aks0 n = aks n``,
-  rw[GSYM aks0_thm, aks_thm]);
+Theorem aks0_eq_aks:
+    !n. aks0 n = aks n
+Proof
+  rw[GSYM aks0_thm, aks_thm]
+QED
 
 (* Theorem: valueOf(aksM n) = aks n *)
 (* Proof: aksM_value, aks0_eq_aks *)
-val aksM_value_alt = store_thm(
-  "aksM_value_alt",
-  ``!n. valueOf(aksM n) = aks n``,
-  rw[aksM_value, aks0_eq_aks]);
+Theorem aksM_value_alt:
+    !n. valueOf(aksM n) = aks n
+Proof
+  rw[aksM_value, aks0_eq_aks]
+QED
 
 (* Theorem: (valueOf (aksM n) <=> aks n) /\
             (stepsOf o aksM) IN big_O (\n. ulog n ** 21) *)
 (* Proof: by aksM_value_alt, aksM_steps_big_O *)
-val aksM_thm_alt = store_thm(
-  "aksM_thm_alt",
-  ``!n. (valueOf (aksM n) <=> aks n) /\ (stepsOf o aksM) IN big_O (\n. ulog n ** 21)``,
-  metis_tac[aksM_value_alt, aksM_steps_big_O]);
+Theorem aksM_thm_alt:
+    !n. (valueOf (aksM n) <=> aks n) /\ (stepsOf o aksM) IN big_O (\n. ulog n ** 21)
+Proof
+  metis_tac[aksM_value_alt, aksM_steps_big_O]
+QED
 
 
 (* ------------------------------------------------------------------------- *)
@@ -2281,22 +2346,24 @@ For n = 10 = 2 * 5 = p * q, k = 6.
 
 (* Theorem: reducePQ p q k = IMAGE (\(i, j). (p ** i * q ** j) MOD k) (univ(num) CROSS univ(num)) *)
 (* Proof: by reducePQ_def, IN_IMAGE, IN_CROSS. *)
-val reducePQ_alt = store_thm(
-  "reducePQ_alt",
-  ``!p q k. reducePQ p q k = IMAGE (\(i, j). (p ** i * q ** j) MOD k) (univ(num) CROSS univ(num))``,
+Theorem reducePQ_alt:
+    !p q k. reducePQ p q k = IMAGE (\(i, j). (p ** i * q ** j) MOD k) (univ(num) CROSS univ(num))
+Proof
   rw[reducePQ_def, EXTENSION, EQ_IMP_THM] >| [
     qexists_tac `(i, j)` >>
     rw[],
     rw[pairTheory.UNCURRY] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: !x. x IN reducePQ p q k <=> ?i j. x = (p ** i * q ** j) MOD k *)
 (* Proof: by reducePQ_def, IN_IMAGE *)
-val reducePQ_element = store_thm(
-  "reducePQ_element",
-  ``!p q k. !x. x IN reducePQ p q k <=> ?i j. x = (p ** i * q ** j) MOD k``,
-  rw[reducePQ_def]);
+Theorem reducePQ_element:
+    !p q k. !x. x IN reducePQ p q k <=> ?i j. x = (p ** i * q ** j) MOD k
+Proof
+  rw[reducePQ_def]
+QED
 
 (* Theorem: 1 < k ==> 1 IN (reducePQ p q k) *)
 (* Proof:
@@ -2306,45 +2373,49 @@ val reducePQ_element = store_thm(
           = (1 * 1) MOD k             by EXP_0
           = 1 MOD k                   by MULT_RIGHT_1
 *)
-val reducePQ_has_one = store_thm(
-  "reducePQ_has_one",
-  ``!p q k. 1 MOD k IN (reducePQ p q k)``,
+Theorem reducePQ_has_one:
+    !p q k. 1 MOD k IN (reducePQ p q k)
+Proof
   rpt strip_tac >>
   qabbrev_tac `e = (p ** 0 * q ** 0) MOD k` >>
   `e IN (reducePQ p q k)` by metis_tac[reducePQ_element] >>
   `e = 1 MOD k` by rw[Abbr`e`] >>
-  fs[]);
+  fs[]
+QED
 
 (* Theorem: (reducePQ p q k) <> {} *)
 (* Proof:
    Note 1 MOD k IN (reducePQ p q k)   by reducePQ_has_one
     ==> (reducePQ p q k) <> {}        by MEMBER_NOT_EMPTY
 *)
-val reducePQ_nonempty = store_thm(
-  "reducePQ_nonempty",
-  ``!p q k. (reducePQ p q k) <> {}``,
-  metis_tac[reducePQ_has_one, MEMBER_NOT_EMPTY]);
+Theorem reducePQ_nonempty:
+    !p q k. (reducePQ p q k) <> {}
+Proof
+  metis_tac[reducePQ_has_one, MEMBER_NOT_EMPTY]
+QED
 
 (* Theorem: 1 < k ==> 1 IN (reducePQ p q k) *)
 (* Proof:
    Note 1 MOD k IN (reducePQ p q k)   by reducePQ_has_one
     and 1 MOD k = 1                   by ONE_MOD, 1 < k
 *)
-val reducePQ_has_1 = store_thm(
-  "reducePQ_has_1",
-  ``!p q k. 1 < k ==> 1 IN (reducePQ p q k)``,
-  metis_tac[reducePQ_has_one, ONE_MOD]);
+Theorem reducePQ_has_1:
+    !p q k. 1 < k ==> 1 IN (reducePQ p q k)
+Proof
+  metis_tac[reducePQ_has_one, ONE_MOD]
+QED
 
 (* Theorem: 0 < k ==> (reducePQ p q k) SUBSET (count k) *)
 (* Proof:
    Note !n. n MOD k < k                      by MOD_LESS, 0 < k
    Thus (reducePQ p q k) SUBSET (count k)    by reducePQ_def, SUBSET_DEF
 *)
-val reducePQ_subset = store_thm(
-  "reducePQ_subset",
-  ``!p q k. 0 < k ==> (reducePQ p q k) SUBSET (count k)``,
+Theorem reducePQ_subset:
+    !p q k. 0 < k ==> (reducePQ p q k) SUBSET (count k)
+Proof
   rw[reducePQ_def, SUBSET_DEF] >>
-  rw[MOD_LESS]);
+  rw[MOD_LESS]
+QED
 
 (* Theorem: 0 < k ==> FINITE (reducePQ p q k) *)
 (* Proof:
@@ -2352,10 +2423,11 @@ val reducePQ_subset = store_thm(
     and FINITE (count k)                     by FINITE_COUNT
     ==> FINITE (reducePQ p q k)              by SUBSET_FINITE
 *)
-val reducePQ_finite = store_thm(
-  "reducePQ_finite",
-  ``!p q k. 0 < k ==> FINITE (reducePQ p q k)``,
-  metis_tac[reducePQ_subset, SUBSET_FINITE, FINITE_COUNT]);
+Theorem reducePQ_finite:
+    !p q k. 0 < k ==> FINITE (reducePQ p q k)
+Proof
+  metis_tac[reducePQ_subset, SUBSET_FINITE, FINITE_COUNT]
+QED
 
 (* Theorem: 0 < k ==> CARD (reducePQ p q k) <= k *)
 (* Proof:
@@ -2364,10 +2436,11 @@ val reducePQ_finite = store_thm(
     ==> CARD (reducePQ p q k) <= CARD (count k)   by CARD_SUBSET
      or CARD (reducePQ p q k) <= k                by CARD_COUNT
 *)
-val reducePQ_upper = store_thm(
-  "reducePQ_upper",
-  ``!p q k. 0 < k ==> CARD (reducePQ p q k) <= k``,
-  metis_tac[reducePQ_subset, FINITE_COUNT, CARD_COUNT, CARD_SUBSET]);
+Theorem reducePQ_upper:
+    !p q k. 0 < k ==> CARD (reducePQ p q k) <= k
+Proof
+  metis_tac[reducePQ_subset, FINITE_COUNT, CARD_COUNT, CARD_SUBSET]
+QED
 
 (* This is the simplest estimate, unconditional. *)
 
@@ -2391,13 +2464,14 @@ End
    (3) 1 IN N
        True by setN_has_1, 0 < k.
 *)
-val monoidN_monoid = store_thm(
-  "monoidN_monoid",
-  ``!(r:'a ring) (k s):num. Ring r /\ 0 < k ==> Monoid (monoidN r k s)``,
+Theorem monoidN_monoid:
+    !(r:'a ring) (k s):num. Ring r /\ 0 < k ==> Monoid (monoidN r k s)
+Proof
   rw_tac std_ss[Monoid_def, monoidN_def] >-
   rw[setN_closure] >-
   rw[MULT_ASSOC] >>
-  rw[setN_has_1]);
+  rw[setN_has_1]
+QED
 
 (* The monoid of set M *)
 Definition monoidM_def:
@@ -2406,14 +2480,15 @@ End
 
 (* Theorem: Properties of monoidM *)
 (* Proof: by monoidM_def. *)
-val monoidM_property = store_thm(
-  "monoidM_property",
-  ``!(r:'a ring) (k s):num.
+Theorem monoidM_property:
+    !(r:'a ring) (k s):num.
      ((monoidM r k s).carrier = M) /\
      (!x. x IN (monoidM r k s).carrier <=> x IN M) /\
      (!x y. x IN (monoidM r k s).carrier /\ y IN (monoidM r k s).carrier ==> ((monoidM r k s).op x y = (x * y) MOD k)) /\
-     ((monoidM r k s).id = 1)``,
-  rw[monoidM_def]);
+     ((monoidM r k s).id = 1)
+Proof
+  rw[monoidM_def]
+QED
 
 (* Theorem: 1 < k ==> Monoid (monoidM r k s) *)
 (* Proof:
@@ -2435,9 +2510,9 @@ val monoidM_property = store_thm(
        this is to show: x * 1 = x and x < k
        True by MULT_RIGHT_1, IN_COUNT.
 *)
-val monoidM_monoid = store_thm(
-  "monoidM_monoid",
-  ``!(r:'a ring) (k s):num. Ring r /\ 1 < k ==> Monoid (monoidM r k s)``,
+Theorem monoidM_monoid:
+    !(r:'a ring) (k s):num. Ring r /\ 1 < k ==> Monoid (monoidM r k s)
+Proof
   rpt strip_tac >>
   `0 < k` by decide_tac >>
   rw_tac std_ss[Monoid_def, monoidM_property] >-
@@ -2456,7 +2531,8 @@ val monoidM_monoid = store_thm(
   `1 IN M` by rw[modN_has_1] >>
   rw_tac std_ss[monoidM_property] >>
   `M SUBSET (count k)` by rw[modN_subset_count] >>
-  metis_tac[SUBSET_DEF, IN_COUNT]);
+  metis_tac[SUBSET_DEF, IN_COUNT]
+QED
 
 (* Theorem: 1 < k ==> FiniteMonoid (monoidN r k s) *)
 (* Proof:
@@ -2467,14 +2543,15 @@ val monoidM_monoid = store_thm(
        i.e. to show: FINITE (M)     by monoidM_def
        Since M SUBSET (count k)     by modN_subset_count
 *)
-val monoidM_finite_monoid = store_thm(
-  "monoidM_finite_monoid",
-  ``!(r:'a ring) (k s):num. Ring r /\ 1 < k ==> FiniteMonoid (monoidM r k s)``,
+Theorem monoidM_finite_monoid:
+    !(r:'a ring) (k s):num. Ring r /\ 1 < k ==> FiniteMonoid (monoidM r k s)
+Proof
   rw[FiniteMonoid_def] >-
   rw[monoidM_monoid] >>
   rw[monoidM_def] >>
   `0 < k` by decide_tac >>
-  metis_tac[modN_subset_count, FINITE_COUNT, SUBSET_FINITE]);
+  metis_tac[modN_subset_count, FINITE_COUNT, SUBSET_FINITE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Introspective Monomials in Quotient Ring.                                 *)
@@ -2487,28 +2564,31 @@ End
 
 (* Theorem: intro_monomials r n k = IMAGE (\c:num. X + |c|) {c | c:num | (n intro (X + |c|))} *)
 (* Proof: by intro_monomials_def, EXTENSION. *)
-val intro_monomials_alt = store_thm(
-  "intro_monomials_alt",
-  ``!(r:'a ring) n k. intro_monomials r n k = IMAGE (\c:num. X + |c|) {c | c:num | (n intro (X + |c|))}``,
-  rw[intro_monomials_def, EXTENSION]);
+Theorem intro_monomials_alt:
+    !(r:'a ring) n k. intro_monomials r n k = IMAGE (\c:num. X + |c|) {c | c:num | (n intro (X + |c|))}
+Proof
+  rw[intro_monomials_def, EXTENSION]
+QED
 
 (* Theorem: p IN (intro_monomials r n k) <=> ?c:num. (p = X + |c|) /\ n intro p *)
 (* Proof: by intro_monomials_def *)
-val intro_monomials_element = store_thm(
-  "intro_monomials_element",
-  ``!(r:'a ring) n k p. p IN (intro_monomials r n k) <=> ?c:num. (p = X + |c|) /\ n intro p``,
+Theorem intro_monomials_element:
+    !(r:'a ring) n k p. p IN (intro_monomials r n k) <=> ?c:num. (p = X + |c|) /\ n intro p
+Proof
   rw[intro_monomials_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: Ring r /\ poly z /\ 1 < deg z ==>
             intro_monomials r n k SUBSET ((PolyModRing r z).prod excluding |0|).carrier *)
 (* Proof: by SUBSET_DEF, intro_monomials_element, poly_mod_ring_has_monomials *)
-val intro_monomials_subset = store_thm(
-  "intro_monomials_subset",
-  ``!(r:'a ring) n k z. Ring r /\ poly z /\ 1 < deg z ==>
-       intro_monomials r n k SUBSET ((PolyModRing r z).prod excluding |0|).carrier``,
+Theorem intro_monomials_subset:
+    !(r:'a ring) n k z. Ring r /\ poly z /\ 1 < deg z ==>
+       intro_monomials r n k SUBSET ((PolyModRing r z).prod excluding |0|).carrier
+Proof
   rw_tac std_ss[SUBSET_DEF, intro_monomials_element] >>
-  metis_tac[poly_mod_ring_has_monomials]);
+  metis_tac[poly_mod_ring_has_monomials]
+QED
 
 (* Define the subgroup of introspective monomials in the quotient field by poly z. *)
 Definition intro_monomials_group_def:
@@ -2526,13 +2606,14 @@ End
        Note poly z                by poly_irreducible_poly
        This is true               by intro_monomials_subset, poly z
 *)
-val intro_monomials_group_group = store_thm(
-  "intro_monomials_group_group",
-  ``!(r:'a ring) n k z. Field r /\ ipoly z /\ 1 < deg z ==> Group (intro_monomials_group r n k z)``,
+Theorem intro_monomials_group_group:
+    !(r:'a ring) n k z. Field r /\ ipoly z /\ 1 < deg z ==> Group (intro_monomials_group r n k z)
+Proof
   rw_tac std_ss[intro_monomials_group_def] >>
   (irule Generated_subset_group >> rpt conj_tac) >-
   rw[poly_mod_prod_group] >>
-  rw[intro_monomials_subset, poly_irreducible_poly]);
+  rw[intro_monomials_subset, poly_irreducible_poly]
+QED
 
 (* Theorem: Field r /\ ipoly z /\ 1 < deg z ==>
             (intro_monomials_group r n k z) <= ((PolyModRing r z).prod excluding |0|) *)
@@ -2549,10 +2630,10 @@ val intro_monomials_group_group = store_thm(
    (4) (intro_monomials_group r n k z).op = (e.prod excluding |0|).op
        This is true               by intro_monomials_group_def, Generated_subset_def
 *)
-val intro_monomials_group_subgroup = store_thm(
-  "intro_monomials_group_subgroup",
-  ``!(r:'a ring) n k z. Field r /\ ipoly z /\ 1 < deg z ==>
-    (intro_monomials_group r n k z) <= ((PolyModRing r z).prod excluding |0|)``,
+Theorem intro_monomials_group_subgroup:
+    !(r:'a ring) n k z. Field r /\ ipoly z /\ 1 < deg z ==>
+    (intro_monomials_group r n k z) <= ((PolyModRing r z).prod excluding |0|)
+Proof
   rpt strip_tac >>
   qabbrev_tac `e = PolyModRing r z` >>
   rw_tac std_ss[Subgroup_def] >-
@@ -2562,7 +2643,8 @@ val intro_monomials_group_subgroup = store_thm(
   (irule Generated_subset_subset >> rpt conj_tac) >-
   rw[poly_mod_prod_group, Abbr`e`] >>
   rw[intro_monomials_subset, poly_irreducible_poly, Abbr`e`]) >>
-  rw[intro_monomials_group_def, Generated_subset_def, Abbr`e`]);
+  rw[intro_monomials_group_def, Generated_subset_def, Abbr`e`]
+QED
 
 (* Since it is a subgroup of a cyclic group, it must be also cyclic. *)
 (* Will this help in estimating the CARD of its carrier cardinality? *)
@@ -2580,24 +2662,27 @@ End
 
 (* Theorem: n IN intro_exp_mod r k s <=> ?m. (n = m MOD k) /\ coprime m k /\ poly_intro_range r k m s *)
 (* Proof: by intro_exp_mod_def *)
-val intro_exp_mod_element = store_thm(
-  "intro_exp_mod_element",
-  ``!r:'a ring k s n. n IN intro_exp_mod r k s <=> ?m. (n = m MOD k) /\ coprime m k /\ poly_intro_range r k m s``,
-  rw[intro_exp_mod_def]);
+Theorem intro_exp_mod_element:
+    !r:'a ring k s n. n IN intro_exp_mod r k s <=> ?m. (n = m MOD k) /\ coprime m k /\ poly_intro_range r k m s
+Proof
+  rw[intro_exp_mod_def]
+QED
 
 (* Theorem: intro_exp_mod r k s = modN r k s *)
 (* Proof: by intro_exp_mod_def, modN_def, setN_def *)
-val intro_exp_mod_thm = store_thm(
-  "intro_exp_mod_thm",
-  ``!r:'a ring k s. intro_exp_mod r k s = modN r k s``,
-  rw[intro_exp_mod_def, modN_def, setN_def, EXTENSION]);
+Theorem intro_exp_mod_thm:
+    !r:'a ring k s. intro_exp_mod r k s = modN r k s
+Proof
+  rw[intro_exp_mod_def, modN_def, setN_def, EXTENSION]
+QED
 
 (* Theorem: FiniteField r /\ 0 < k /\ coprime (char r) k ==> ((char r) MOD k) IN (intro_exp_mod r k s) *)
 (* Proof: by intro_exp_mod_element, poly_intro_range_char *)
-val intro_exp_mod_has_char_mod = store_thm(
-  "intro_exp_mod_has_char_mod",
-  ``!r:'a field k s. FiniteField r /\ 0 < k /\ coprime (char r) k ==> ((char r) MOD k) IN (intro_exp_mod r k s)``,
-  metis_tac[intro_exp_mod_element, poly_intro_range_char]);
+Theorem intro_exp_mod_has_char_mod:
+    !r:'a field k s. FiniteField r /\ 0 < k /\ coprime (char r) k ==> ((char r) MOD k) IN (intro_exp_mod r k s)
+Proof
+  metis_tac[intro_exp_mod_element, poly_intro_range_char]
+QED
 
 (* Theorem: Ring r /\ 0 < k ==>
             !m n. m IN (intro_exp_mod r k s) /\ n IN (intro_exp_mod r k s) ==>
@@ -2612,18 +2697,19 @@ val intro_exp_mod_has_char_mod = store_thm(
     and (m1 * n1) MOD k = (m * n) MOD k            by MOD_TIMES2, 0 < k
    Thus ((m * n) MOD k) IN (intro_exp_mod r k s)   by intro_exp_mod_element
 *)
-val intro_exp_mod_closure = store_thm(
-  "intro_exp_mod_closure",
-  ``!r:'a ring k s. Ring r /\0 < k ==>
+Theorem intro_exp_mod_closure:
+    !r:'a ring k s. Ring r /\0 < k ==>
    !m n. m IN (intro_exp_mod r k s) /\ n IN (intro_exp_mod r k s) ==>
-         ((m * n) MOD k) IN (intro_exp_mod r k s)``,
+         ((m * n) MOD k) IN (intro_exp_mod r k s)
+Proof
   rpt strip_tac >>
   `?m1. (m = m1 MOD k) /\ coprime m1 k /\ poly_intro_range r k m1 s` by rw[GSYM intro_exp_mod_element] >>
   `?n1. (n = n1 MOD k) /\ coprime n1 k /\ poly_intro_range r k n1 s` by rw[GSYM intro_exp_mod_element] >>
   `coprime (m1 * n1) k` by rw[coprime_product_coprime] >>
   `poly_intro_range r k (m1 * n1) s` by metis_tac[poly_intro_range_product] >>
   `(m1 * n1) MOD k = (m * n) MOD k` by rw[MOD_TIMES2] >>
-  metis_tac[intro_exp_mod_element]);
+  metis_tac[intro_exp_mod_element]
+QED
 
 (* Theorem alias *)
 val intro_exp_mod_has_product = save_thm("intro_exp_mod_has_product", intro_exp_mod_closure);
@@ -2633,10 +2719,11 @@ val intro_exp_mod_has_product = save_thm("intro_exp_mod_has_product", intro_exp_
 
 (* Theorem: 1 < k ==> (intro_exp_mod r k s) SUBSET (Euler k) *)
 (* Proof: by intro_exp_mod_thm, modN_subset_euler *)
-val intro_exp_mod_subset_euler = store_thm(
-  "intro_exp_mod_subset_euler",
-  ``!r:'a ring k s. 1 < k ==> (intro_exp_mod r k s) SUBSET (Euler k)``,
-  rw[intro_exp_mod_thm, modN_subset_euler]);
+Theorem intro_exp_mod_subset_euler:
+    !r:'a ring k s. 1 < k ==> (intro_exp_mod r k s) SUBSET (Euler k)
+Proof
+  rw[intro_exp_mod_thm, modN_subset_euler]
+QED
 
 (* Define the subgroup generated by (intro_exp_mod r k s) *)
 Definition intro_exp_mod_group_def:
@@ -2651,13 +2738,14 @@ End
        Note (Estar k).carrier = Euler k       by Estar_property
        The result follows                     by intro_exp_mod_subset_euler, 1 < k
 *)
-val intro_exp_mod_group_group = store_thm(
-  "intro_exp_mod_group_group",
-  ``!r:'a ring k s. 1 < k ==> Group (intro_exp_mod_group r k s)``,
+Theorem intro_exp_mod_group_group:
+    !r:'a ring k s. 1 < k ==> Group (intro_exp_mod_group r k s)
+Proof
   rw[intro_exp_mod_group_def] >>
   (irule Generated_subset_group >> rpt conj_tac) >-
   rw[Estar_group] >>
-  rw[Estar_property, intro_exp_mod_subset_euler]);
+  rw[Estar_property, intro_exp_mod_subset_euler]
+QED
 
 (* Theorem: 1 < k ==> (intro_exp_mod_group r k s) <= Estar k *)
 (* Proof:
@@ -2667,13 +2755,14 @@ val intro_exp_mod_group_group = store_thm(
        Note (Estar k).carrier = Euler k       by Estar_property
        The result follows                     by intro_exp_mod_subset_euler, 1 < k
 *)
-val intro_exp_mod_group_subgroup = store_thm(
-  "intro_exp_mod_group_subgroup",
-  ``!r:'a ring k s. 1 < k ==> (intro_exp_mod_group r k s) <= Estar k``,
+Theorem intro_exp_mod_group_subgroup:
+    !r:'a ring k s. 1 < k ==> (intro_exp_mod_group r k s) <= Estar k
+Proof
   rw[intro_exp_mod_group_def] >>
   (irule Generated_subset_subgroup >> rpt conj_tac) >-
   rw[Estar_group] >>
-  rw[Estar_property, intro_exp_mod_subset_euler]);
+  rw[Estar_property, intro_exp_mod_subset_euler]
+QED
 
 (* This is a finite subgroup, and Estar_card |- !n. CARD (Estar n).carrier = totient n *)
 

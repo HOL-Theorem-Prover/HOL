@@ -286,10 +286,11 @@ val it = |- !r s x n. conj x n = x ** CARD B ** n: thm
 
 (* Theorem: Ring r ==> !x. x IN R ==> !n. conj x n IN R *)
 (* Proof: by ring_conjugate_def, ring_exp_element *)
-val ring_conjugate_element = store_thm(
-  "ring_conjugate_element",
-  ``!(r s):'a ring. Ring r ==> !x. x IN R ==> !n. conj x n IN R``,
-  rw[ring_conjugate_def]);
+Theorem ring_conjugate_element:
+    !(r s):'a ring. Ring r ==> !x. x IN R ==> !n. conj x n IN R
+Proof
+  rw[ring_conjugate_def]
+QED
 
 (* Theorem: Ring r /\ 0 < CARD B ==> !n. ring_conjugate r s #0 n = #0 *)
 (* Proof:
@@ -298,20 +299,22 @@ val ring_conjugate_element = store_thm(
    = #0 ** CARD B ** n                    by ring_conjugate_def
    = #0                                   by ring_zero_exp, CARD B ** n <> 0.
 *)
-val ring_conjugate_zero = store_thm(
-  "ring_conjugate_zero",
-  ``!(r s):'a ring. Ring r /\ 0 < CARD B ==> !n. ring_conjugate r s #0 n = #0``,
+Theorem ring_conjugate_zero:
+    !(r s):'a ring. Ring r /\ 0 < CARD B ==> !n. ring_conjugate r s #0 n = #0
+Proof
   rw_tac std_ss[ring_conjugate_def] >>
   `0 < CARD B ** n` by rw[EXP_POS] >>
   `CARD B ** n <> 0` by decide_tac >>
-  rw[ring_zero_exp]);
+  rw[ring_zero_exp]
+QED
 
 (* Theorem: Ring r ==> !n. ring_conjugate r s #1 n = #1 *)
 (* Proof: by ring_conjugate_def, ring_one_exp *)
-val ring_conjugate_one = store_thm(
-  "ring_conjugate_one",
-  ``!(r s):'a ring. Ring r ==> !n. ring_conjugate r s #1 n = #1``,
-  rw[ring_conjugate_def]);
+Theorem ring_conjugate_one:
+    !(r s):'a ring. Ring r ==> !n. ring_conjugate r s #1 n = #1
+Proof
+  rw[ring_conjugate_def]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> (conj x 0 = x) *)
 (* Proof:
@@ -320,10 +323,11 @@ val ring_conjugate_one = store_thm(
     = x ** 1                 by EXP
     = x                      by ring_exp_1
 *)
-val ring_conjugate_0 = store_thm(
-  "ring_conjugate_0",
-  ``!(r s):'a ring. Ring r ==> !x. x IN R ==> (conj x 0 = x)``,
-  rw[ring_conjugate_def, EXP]);
+Theorem ring_conjugate_0:
+    !(r s):'a ring. Ring r ==> !x. x IN R ==> (conj x 0 = x)
+Proof
+  rw[ring_conjugate_def, EXP]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Conjugates of an element                                                  *)
@@ -342,17 +346,19 @@ val it = |- !r s x. Conj x = IMAGE (conj x) univ(:num): thm
 
 (* Theorem: ring_conjugates r s x = {x ** CARD B ** n | n | n IN univ(:num)} *)
 (* Proof: by ring_conjugates_def, ring_conjugate_def *)
-val ring_conjugates_alt = store_thm(
-  "ring_conjugates_alt",
-  ``!(r:'a ring) s x. ring_conjugates r s x = {x ** CARD B ** n | n | n IN univ(:num)}``,
-  rw[ring_conjugates_def, ring_conjugate_def, EXTENSION]);
+Theorem ring_conjugates_alt:
+    !(r:'a ring) s x. ring_conjugates r s x = {x ** CARD B ** n | n | n IN univ(:num)}
+Proof
+  rw[ring_conjugates_def, ring_conjugate_def, EXTENSION]
+QED
 
 (* Theorem: !x y. y IN Conj x <=> ?n. y = conj x n *)
 (* Proof: by ring_conjugates_def, IN_IMAGE *)
-val ring_conjugates_member = store_thm(
-  "ring_conjugates_member",
-  ``!(r s):'a ring. !x y. y IN Conj x <=> ?n. y = conj x n``,
-  rw[ring_conjugates_def]);
+Theorem ring_conjugates_member:
+    !(r s):'a ring. !x y. y IN Conj x <=> ?n. y = conj x n
+Proof
+  rw[ring_conjugates_def]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> (Conj x) SUBSET R *)
 (* Proof:
@@ -362,11 +368,12 @@ val ring_conjugates_member = store_thm(
    <=> !n. conj x n IN R                by IN_IMAGE
    which is true                        by ring_conjugate_element
 *)
-val ring_conjugates_subset = store_thm(
-  "ring_conjugates_subset",
-  ``!(r s):'a ring. Ring r ==> !x. x IN R ==> (Conj x) SUBSET R``,
+Theorem ring_conjugates_subset:
+    !(r s):'a ring. Ring r ==> !x. x IN R ==> (Conj x) SUBSET R
+Proof
   rw[ring_conjugates_def, SUBSET_DEF] >>
-  metis_tac[ring_conjugate_element]);
+  metis_tac[ring_conjugate_element]
+QED
 
 (* Theorem: FiniteRing r ==> !x. x IN R ==> FINITE (Conj x) *)
 (* Proof:
@@ -375,36 +382,40 @@ val ring_conjugates_subset = store_thm(
     Now (Conj x) SUBSET R        by ring_conjugates_subset
    Hence FINITE (Conj x)         by SUBSET_FINITE
 *)
-val ring_conjugates_finite = store_thm(
-  "ring_conjugates_finite",
-  ``!(r s):'a ring. FiniteRing r ==> !x. x IN R ==> FINITE (Conj x)``,
-  metis_tac[FiniteRing_def, ring_conjugates_subset, SUBSET_FINITE]);
+Theorem ring_conjugates_finite:
+    !(r s):'a ring. FiniteRing r ==> !x. x IN R ==> FINITE (Conj x)
+Proof
+  metis_tac[FiniteRing_def, ring_conjugates_subset, SUBSET_FINITE]
+QED
 
 (* Theorem: Ring r /\ 0 < CARD B ==> (Conj #0 = {#0}) *)
 (* Proof: by ring_conjugates_def, ring_conjugate_zero *)
-val ring_conjugates_zero = store_thm(
-  "ring_conjugates_zero",
-  ``!(r s):'a ring. Ring r /\ 0 < CARD B ==> (Conj #0 = {#0})``,
+Theorem ring_conjugates_zero:
+    !(r s):'a ring. Ring r /\ 0 < CARD B ==> (Conj #0 = {#0})
+Proof
   rw[ring_conjugates_def, EXTENSION] >>
-  metis_tac[ring_conjugate_zero]);
+  metis_tac[ring_conjugate_zero]
+QED
 
 (* Theorem: Ring r ==> (Conj #1 = {#1}) *)
 (* Proof: by ring_conjugates_def, ring_conjugate_one *)
-val ring_conjugates_one = store_thm(
-  "ring_conjugates_one",
-  ``!(r s):'a ring. Ring r ==> (Conj #1 = {#1})``,
+Theorem ring_conjugates_one:
+    !(r s):'a ring. Ring r ==> (Conj #1 = {#1})
+Proof
   rw[ring_conjugates_def, EXTENSION] >>
-  metis_tac[ring_conjugate_one]);
+  metis_tac[ring_conjugate_one]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> x IN (Conj x) *)
 (* Proof:
    Since conj x 0 = x      by ring_conjugate_0
    Hence x IN (Conj x)     by ring_conjugates_member
 *)
-val ring_conjugates_has_self = store_thm(
-  "ring_conjugates_has_self",
-  ``!(r s):'a ring. Ring r ==> !x. x IN R ==> x IN (Conj x)``,
-  metis_tac[ring_conjugates_member, ring_conjugate_0]);
+Theorem ring_conjugates_has_self:
+    !(r s):'a ring. Ring r ==> !x. x IN R ==> x IN (Conj x)
+Proof
+  metis_tac[ring_conjugates_member, ring_conjugate_0]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !y. y IN Conj x ==> y IN R *)
 (* Proof:
@@ -415,17 +426,19 @@ val ring_conjugates_has_self = store_thm(
    Since Conj x SUBSET R   by ring_conjugates_subset
       so result follows    by SUBSET_DEF
 *)
-val ring_conjugates_member_element = store_thm(
-  "ring_conjugates_member_element",
-  ``!(r s):'a ring. Ring r ==> !x. x IN R ==> !y. y IN Conj x ==> y IN R``,
-  metis_tac[ring_conjugates_subset, SUBSET_DEF]);
+Theorem ring_conjugates_member_element:
+    !(r s):'a ring. Ring r ==> !x. x IN R ==> !y. y IN Conj x ==> y IN R
+Proof
+  metis_tac[ring_conjugates_subset, SUBSET_DEF]
+QED
 
 (* Theorem: y IN Conj x <=> ?n. y = x ** ((CARD B) ** n) *)
 (* Proof: by ring_conjugates_member, ring_conjugate_def *)
-val ring_conjugates_member_eqn = store_thm(
-  "ring_conjugates_member_eqn",
-  ``!(r s):'a ring. !x y. y IN Conj x <=> ?n. y = x ** ((CARD B) ** n)``,
-  rw[ring_conjugates_member, ring_conjugate_def]);
+Theorem ring_conjugates_member_eqn:
+    !(r s):'a ring. !x y. y IN Conj x <=> ?n. y = x ** ((CARD B) ** n)
+Proof
+  rw[ring_conjugates_member, ring_conjugate_def]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !z. z IN Conj x ==> !n. (conj z n) IN Conj x *)
 (* Proof:
@@ -436,10 +449,11 @@ val ring_conjugates_member_eqn = store_thm(
    = x ** (CARD B) ** (n + n')                by EXP_ADD
    Thus putting n'' = n + n' will make the result true.
 *)
-val ring_conjugates_has_element_conjugate = store_thm(
-  "ring_conjugates_has_element_conjugate",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !z. z IN Conj x ==> !n. (conj z n) IN Conj x``,
-  metis_tac[ring_conjugates_member, ring_conjugate_def, ring_exp_mult, EXP_ADD]);
+Theorem ring_conjugates_has_element_conjugate:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !z. z IN Conj x ==> !n. (conj z n) IN Conj x
+Proof
+  metis_tac[ring_conjugates_member, ring_conjugate_def, ring_exp_mult, EXP_ADD]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !z. z IN Conj x ==> (Conj z) SUBSET (Conj x) *)
 (* Proof:
@@ -448,10 +462,11 @@ val ring_conjugates_has_element_conjugate = store_thm(
      ==> ?n. x' = conj z n   by ring_conjugates_member
     then x' IN Conj x        by ring_conjugates_has_element_conjugate, z IN Conj x
 *)
-val ring_conjugates_subset_element_conjugates = store_thm(
-  "ring_conjugates_subset_element_conjugates",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> !z. z IN Conj x ==> (Conj z) SUBSET (Conj x)``,
-  metis_tac[SUBSET_DEF, ring_conjugates_has_element_conjugate, ring_conjugates_member]);
+Theorem ring_conjugates_subset_element_conjugates:
+    !r:'a ring. Ring r ==> !x. x IN R ==> !z. z IN Conj x ==> (Conj z) SUBSET (Conj x)
+Proof
+  metis_tac[SUBSET_DEF, ring_conjugates_has_element_conjugate, ring_conjugates_member]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !e. e IN Conj x ==> e ** (CARD B) IN Conj x *)
 (* Proof:
@@ -467,14 +482,15 @@ val ring_conjugates_subset_element_conjugates = store_thm(
      = conj x (SUC n)              by ring_conjugate_def
   Hence e ** m IN Conj x           by ring_conjugates_member
 *)
-val ring_conjugate_exp_subfield_card = store_thm(
-  "ring_conjugate_exp_subfield_card",
-  ``!(r s):'a ring. Ring r ==> !x. x IN R ==> !e. e IN Conj x ==> e ** (CARD B) IN Conj x``,
+Theorem ring_conjugate_exp_subfield_card:
+    !(r s):'a ring. Ring r ==> !x. x IN R ==> !e. e IN Conj x ==> e ** (CARD B) IN Conj x
+Proof
   rw[ring_conjugates_def, ring_conjugate_def] >>
   qabbrev_tac `m = CARD B` >>
   `(x ** m ** x') ** m  = x ** ((m ** x') * m)` by rw[ring_exp_mult] >>
   `_ = x ** (m ** SUC x')` by rw_tac std_ss[EXP, MULT_COMM] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* The following is a generalisation of ring_conjugate_exp_subfield_card *)
 
@@ -491,11 +507,12 @@ val ring_conjugate_exp_subfield_card = store_thm(
      = conj x (k + n)                by ring_conjugate_def
   Hence e ** (m ** n) IN Conj x      by ring_conjugates_member
 *)
-val ring_conjugate_exp_conjugate = store_thm(
-  "ring_conjugate_exp_conjugate",
-  ``!(r s):'a ring. Ring r ==> !x. x IN R ==> !e. e IN Conj x ==> !n. e ** CARD B ** n IN Conj x``,
+Theorem ring_conjugate_exp_conjugate:
+    !(r s):'a ring. Ring r ==> !x. x IN R ==> !e. e IN Conj x ==> !n. e ** CARD B ** n IN Conj x
+Proof
   rw[ring_conjugates_member, ring_conjugate_def] >>
-  metis_tac[ring_exp_mult, EXP_ADD]);
+  metis_tac[ring_exp_mult, EXP_ADD]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cardinality of Conjugates                                                 *)
@@ -508,20 +525,22 @@ val ring_conjugate_exp_conjugate = store_thm(
      = x ** (m ** n)                   by ring_conjugate_def
      = x ** (m ** n MOD (forder x))    by finite_field_exp_mod_order, x IN R+
 *)
-val finite_field_conjugate_member_eqn = store_thm(
-  "finite_field_conjugate_member_eqn",
-  ``!(r s):'a field. FiniteField r ==> !x. x IN R+ ==> !n. conj x n = x ** ((CARD B ** n) MOD (forder x))``,
-  metis_tac[ring_conjugate_def, finite_field_exp_mod_order]);
+Theorem finite_field_conjugate_member_eqn:
+    !(r s):'a field. FiniteField r ==> !x. x IN R+ ==> !n. conj x n = x ** ((CARD B ** n) MOD (forder x))
+Proof
+  metis_tac[ring_conjugate_def, finite_field_exp_mod_order]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r  ==> !n. conj #0 n = #0 *)
 (* Proof:
    Since 0 < CARD B           by finite_subfield_card_pos
       so !n. conj #0 n = #0   by ring_conjugate_zero
 *)
-val finite_field_conjugate_zero = store_thm(
-  "finite_field_conjugate_zero",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. conj #0 n = #0``,
-  metis_tac[finite_subfield_card_pos, ring_conjugate_zero, finite_field_is_field, field_is_ring]);
+Theorem finite_field_conjugate_zero:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. conj #0 n = #0
+Proof
+  metis_tac[finite_subfield_card_pos, ring_conjugate_zero, finite_field_is_field, field_is_ring]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> !n. conj x n = conj x (n MOD (r <:> s)) *)
 (* Proof:
@@ -538,9 +557,9 @@ val finite_field_conjugate_zero = store_thm(
    = x ** (m ** (n MOD d))                               by finite_field_fermat_all
    = conj x (n MOD d)                                    by ring_conjugate_def
 *)
-val finite_field_conjugate_eqn = store_thm(
-  "finite_field_conjugate_eqn",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> !n. conj x n = conj x (n MOD (r <:> s))``,
+Theorem finite_field_conjugate_eqn:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> !n. conj x n = conj x (n MOD (r <:> s))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD B` >>
   qabbrev_tac `d = (r <:> s)` >>
@@ -552,7 +571,8 @@ val finite_field_conjugate_eqn = store_thm(
   `_ = (x ** ((m ** d) ** (n DIV d))) ** (m ** (n MOD d))` by rw[field_exp_mult] >>
   `_ = x ** (m ** (n MOD d))` by metis_tac[finite_field_fermat_all] >>
   `_ = conj x (n MOD d)` by rw[ring_conjugate_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem:  FiniteField r /\ s <<= r ==>
              !x. x IN R ==> !n. (conj x n = #1) <=> (x = #1) *)
@@ -576,10 +596,10 @@ val finite_field_conjugate_eqn = store_thm(
    Only-if part: x = #1 ==> conj x n = #1
       True by ring_conjugate_one
 *)
-val finite_field_conjugate_eq_one = store_thm(
-  "finite_field_conjugate_eq_one",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> !n. (conj x n = #1) <=> (x = #1)``,
+Theorem finite_field_conjugate_eq_one:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> !n. (conj x n = #1) <=> (x = #1)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >| [
     qabbrev_tac `m = CARD B` >>
@@ -597,7 +617,8 @@ val finite_field_conjugate_eq_one = store_thm(
     `forder x = 1` by metis_tac[GCD_IS_GREATEST_COMMON_DIVISOR, DIVIDES_ONE] >>
     rw[GSYM field_order_eq_1],
     rw[ring_conjugate_one]
-  ]);
+  ]
+QED
 
 (* This is an unexpected theorem, which leads to investigation of coprime_power_and_power_predecessor. *)
 
@@ -606,10 +627,11 @@ val finite_field_conjugate_eq_one = store_thm(
    Since 0 < CARD B           by finite_subfield_card_pos
       so Conj #0 = {#0}       by ring_conjugates_zero
 *)
-val finite_field_conjugates_zero = store_thm(
-  "finite_field_conjugates_zero",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> (Conj #0 = {#0})``,
-  metis_tac[finite_subfield_card_pos, ring_conjugates_zero, finite_field_is_field, field_is_ring]);
+Theorem finite_field_conjugates_zero:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> (Conj #0 = {#0})
+Proof
+  metis_tac[finite_subfield_card_pos, ring_conjugates_zero, finite_field_is_field, field_is_ring]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> !n. (conj x n = #0) <=> (x = #0) *)
 (* Proof:
@@ -619,15 +641,16 @@ val finite_field_conjugates_zero = store_thm(
    Note conj x n = x ** m ** n     by ring_conjugate_def
    Thus conj x n = #0 <=> x = #0   by field_exp_eq_zero
 *)
-val finite_field_conjugate_eq_zero = store_thm(
-  "finite_field_conjugate_eq_zero",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> !n. (conj x n = #0) <=> (x = #0)``,
+Theorem finite_field_conjugate_eq_zero:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> !n. (conj x n = #0) <=> (x = #0)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[ring_conjugate_def] >>
   qabbrev_tac `m = CARD B` >>
   `0 < m ** n` by metis_tac[finite_subfield_card_pos, EXP_POS] >>
   `m ** n <> 0` by decide_tac >>
-  rw[field_exp_eq_zero]);
+  rw[field_exp_eq_zero]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> (#0 IN (Conj x) <=> (x = #0)) *)
 (* Proof:
@@ -635,10 +658,11 @@ val finite_field_conjugate_eq_zero = store_thm(
    <=> ?n. #0 = conj x n    by ring_conjugates_member
    <=> x = #0               by finite_field_conjugate_eq_zero
 *)
-val finite_field_conjugates_has_zero = store_thm(
-  "finite_field_conjugates_has_zero",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (#0 IN (Conj x) <=> (x = #0))``,
-  metis_tac[ring_conjugates_member, finite_field_conjugate_eq_zero]);
+Theorem finite_field_conjugates_has_zero:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (#0 IN (Conj x) <=> (x = #0))
+Proof
+  metis_tac[ring_conjugates_member, finite_field_conjugate_eq_zero]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !x. x IN R ==> (Conj x) SUBSET (IMAGE (conj x) (count (r <:> s))) *)
@@ -652,16 +676,17 @@ val finite_field_conjugates_has_zero = store_thm(
       so y IN IMAGE (conj x) (count d)             by IN_IMAGE, IN_COUNT
    or (Conj x) SUBSET (IMAGE (conj x) (count d))   by SUBSET_DEF
 *)
-val finite_field_conjugates_subset = store_thm(
-  "finite_field_conjugates_subset",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> (Conj x) SUBSET (IMAGE (conj x) (count (r <:> s)))``,
+Theorem finite_field_conjugates_subset:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> (Conj x) SUBSET (IMAGE (conj x) (count (r <:> s)))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD B` >>
   qabbrev_tac `d = (r <:> s)` >>
   `0 < d` by rw[finite_field_over_subfield_dim_pos, Abbr`d`] >>
   rw[SUBSET_DEF] >>
-  metis_tac[ring_conjugates_member, finite_field_conjugate_eqn, MOD_LESS]);
+  metis_tac[ring_conjugates_member, finite_field_conjugate_eqn, MOD_LESS]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> CARD (Conj x) <= (r <:> s) *)
 (* Proof:
@@ -673,9 +698,9 @@ val finite_field_conjugates_subset = store_thm(
                       <= CARD c                    by CARD_IMAGE
                        = (r <:> s)                 by CARD_COUNT
 *)
-val finite_field_conjugates_card_upper = store_thm(
-  "finite_field_conjugates_card_upper",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> CARD (Conj x) <= (r <:> s)``,
+Theorem finite_field_conjugates_card_upper:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> CARD (Conj x) <= (r <:> s)
+Proof
   rpt strip_tac >>
   qabbrev_tac `c = count (r <:> s)` >>
   `(Conj x) SUBSET (IMAGE (conj x) c)` by rw[finite_field_conjugates_subset, Abbr`c`] >>
@@ -683,7 +708,8 @@ val finite_field_conjugates_card_upper = store_thm(
   `CARD (Conj x) <= CARD (IMAGE (conj x) c)` by rw[CARD_SUBSET] >>
   `CARD (IMAGE (conj x) c) <= CARD c` by rw[CARD_IMAGE, Abbr`c`] >>
   `CARD c = (r <:> s)` by rw[Abbr`c`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !x. x IN R ==> SURJ (\z. z ** CARD B) (Conj x) (Conj x) *)
@@ -718,10 +744,10 @@ val finite_field_conjugates_card_upper = store_thm(
           = x ** (m * m ** k)     by MULT_COMM
           = x ** (m ** SUC k)     by EXP
 *)
-val finite_field_conjugates_exp_surj = store_thm(
-  "finite_field_conjugates_exp_surj",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> SURJ (\z. z ** CARD B) (Conj x) (Conj x)``,
+Theorem finite_field_conjugates_exp_surj:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> SURJ (\z. z ** CARD B) (Conj x) (Conj x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[SURJ_DEF] >-
   rw[ring_conjugate_exp_subfield_card] >>
@@ -747,7 +773,8 @@ val finite_field_conjugates_exp_surj = store_thm(
     `x ** m ** SUC n' = x ** (m ** n' * m)` by rw_tac std_ss[EXP, MULT_COMM] >>
     `_ = (x ** m ** n') ** m` by rw[ring_exp_mult] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !x. x IN R ==> (IMAGE (\z. z ** CARD B) (Conj x) = Conj x) *)
@@ -755,11 +782,12 @@ val finite_field_conjugates_exp_surj = store_thm(
    Since SURJ (\z. z ** CARD B) (Conj x) (Conj x)   by finite_field_conjugates_exp_surj
    Hence IMAGE (\z. z ** CARD B) (Conj x) = Conj x  by IMAGE_SURJ
 *)
-val finite_field_conjugates_exp_image_eq = store_thm(
-  "finite_field_conjugates_exp_image_eq",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> (IMAGE (\z. z ** CARD B) (Conj x) = Conj x)``,
-  rw[finite_field_conjugates_exp_surj, GSYM IMAGE_SURJ]);
+Theorem finite_field_conjugates_exp_image_eq:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> (IMAGE (\z. z ** CARD B) (Conj x) = Conj x)
+Proof
+  rw[finite_field_conjugates_exp_surj, GSYM IMAGE_SURJ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Conjugate Properties                                                      *)
@@ -780,15 +808,16 @@ val finite_field_conjugates_exp_image_eq = store_thm(
        = #0                             by field_zero_exp, CARD B <> 0
    Hence root p (conj x n)              by poly_root_def
 *)
-val subfield_poly_conjugate_roots = store_thm(
-  "subfield_poly_conjugate_roots",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !p. Poly s p ==>
-   !x. x IN R /\ root p x ==> !n. root p (conj x n)``,
+Theorem subfield_poly_conjugate_roots:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !p. Poly s p ==>
+   !x. x IN R /\ root p x ==> !n. root p (conj x n)
+Proof
   rw[poly_root_def, ring_conjugate_def, GSYM subfield_poly_eval_freshman_all] >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `0 < CARD B` by rw[finite_field_card_pos] >>
   `CARD B <> 0` by decide_tac >>
-  rw[field_zero_exp, finite_field_is_field]);
+  rw[field_zero_exp, finite_field_is_field]
+QED
 
 (* Theorem: FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> (Conj x) SUBSET (roots (minimal x)) *)
 (* Proof:
@@ -801,9 +830,9 @@ val subfield_poly_conjugate_roots = store_thm(
      or !z. z IN (Conj x) ==> z IN roots p         by poly_roots_member
    Hence (Conj x) SUBSET roots p                   by SUBSET_DEF
 *)
-val subfield_conjugates_are_minimal_roots = store_thm(
-  "subfield_conjugates_are_minimal_roots",
-  ``!r:'a field. FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> (Conj x) SUBSET (roots (minimal x))``,
+Theorem subfield_conjugates_are_minimal_roots:
+    !r:'a field. FiniteField r ==> !s. s <<= r ==> !x. x IN R ==> (Conj x) SUBSET (roots (minimal x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = minimal x` >>
   `Poly s p` by rw[poly_minimal_spoly, Abbr`p`] >>
@@ -811,7 +840,8 @@ val subfield_conjugates_are_minimal_roots = store_thm(
   `!n. root p (conj x n)` by rw[subfield_poly_conjugate_roots, Abbr`p`] >>
   `Ring r` by rw[] >>
   `!z. z IN (Conj x) ==> z IN R /\ root p z` by metis_tac[ring_conjugates_member, ring_conjugate_element] >>
-  rw[poly_roots_member, SUBSET_DEF]);
+  rw[poly_roots_member, SUBSET_DEF]
+QED
 
 (*
 This is a weak result. To get: roots (minimal x) = Conj x
@@ -839,9 +869,9 @@ Then later, with p pdivides (PPROD (IMAGE factor (Conj x))) due to it being a Po
          or order r.prod (x ** CARD B ** n) = a        by MULT_RIGHT_1
          or       forder (conj x n) = forder x         by ring_conjugate_def
 *)
-val finite_field_conjugate_order = store_thm(
-  "finite_field_conjugate_order",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> !n. forder (conj x n) = forder x``,
+Theorem finite_field_conjugate_order:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> !n. forder (conj x n) = forder x
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
@@ -852,7 +882,8 @@ val finite_field_conjugate_order = store_thm(
   `coprime a (CARD B ** n)` by rw[finite_field_order_coprime, Abbr`a`] >>
   `Group f*` by rw[field_mult_group] >>
   `x IN F*` by rw[field_mult_carrier] >>
-  metis_tac[group_order_power, field_nonzero_exp, ring_conjugate_def, MULT_RIGHT_1]);
+  metis_tac[group_order_power, field_nonzero_exp, ring_conjugate_def, MULT_RIGHT_1]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> !n. forder (conj x n) = forder x *)
 (* Proof:
@@ -860,10 +891,11 @@ val finite_field_conjugate_order = store_thm(
      ==> ?n. y = conj x n     by ring_conjugates_member
       so forder y = forder x  by finite_field_conjugate_order
 *)
-val finite_field_conjugates_order = store_thm(
-  "finite_field_conjugates_order",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> !y. y IN (Conj x) ==> (forder y = forder x)``,
-  metis_tac[ring_conjugates_member, finite_field_conjugate_order]);
+Theorem finite_field_conjugates_order:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> !y. y IN (Conj x) ==> (forder y = forder x)
+Proof
+  metis_tac[ring_conjugates_member, finite_field_conjugate_order]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !x n. x IN (orders f* n) ==> (Conj x) SUBSET (orders f* n) *)
@@ -881,10 +913,10 @@ val finite_field_conjugates_order = store_thm(
      or x' IN R+                by field_nonzero_eq
     ==> x' IN orders f* n       by field_orders_element_property
 *)
-val finite_field_conjugates_subset_orders = store_thm(
-  "finite_field_conjugates_subset_orders",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x n. x IN (orders f* n) ==> (Conj x) SUBSET (orders f* n)``,
+Theorem finite_field_conjugates_subset_orders:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x n. x IN (orders f* n) ==> (Conj x) SUBSET (orders f* n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[SUBSET_DEF] >>
   `x IN R` by metis_tac[field_orders_element] >>
@@ -892,7 +924,8 @@ val finite_field_conjugates_subset_orders = store_thm(
   `x IN R+` by metis_tac[field_orders_nonzero_element] >>
   `x' IN R` by metis_tac[ring_conjugates_member_element, field_is_ring] >>
   `x' IN R+` by metis_tac[field_nonzero_eq, field_order_eq_0] >>
-  metis_tac[field_orders_element_property]);
+  metis_tac[field_orders_element_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Product of Conjugate Factors                                              *)
@@ -903,10 +936,11 @@ val finite_field_conjugates_subset_orders = store_thm(
    Since FiniteRing r /\ x IN R ==> FINITE (Conj x)  by ring_conjugates_finite
    Hence FINITE (IMAGE factor (Conj x))              by IMAGE_FINITE
 *)
-val conjugate_factors_finite = store_thm(
-  "conjugate_factors_finite",
-  ``!(r s):'a ring. FiniteRing r ==> !x. x IN R ==> FINITE (IMAGE factor (Conj x))``,
-  rw[ring_conjugates_finite]);
+Theorem conjugate_factors_finite:
+    !(r s):'a ring. FiniteRing r ==> !x. x IN R ==> FINITE (IMAGE factor (Conj x))
+Proof
+  rw[ring_conjugates_finite]
+QED
 
 (* Theorem: !x p. p IN (IMAGE factor (Conj x)) ==> ?n. p = factor (conj x n) *)
 (* Proof:
@@ -914,10 +948,11 @@ val conjugate_factors_finite = store_thm(
    <=> ?y. (p = factor y) /\ y IN (Conj x)   by IN_IMAGE
    <=> ?n. p = factor (conj x n)             by ring_conjugates_member
 *)
-val conjugate_factors_member = store_thm(
-  "conjugate_factors_member",
-  ``!(r s):'a ring. !x p. p IN (IMAGE factor (Conj x)) ==> ?n. p = factor (conj x n)``,
-  metis_tac[ring_conjugates_member, IN_IMAGE]);
+Theorem conjugate_factors_member:
+    !(r s):'a ring. !x p. p IN (IMAGE factor (Conj x)) ==> ?n. p = factor (conj x n)
+Proof
+  metis_tac[ring_conjugates_member, IN_IMAGE]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !x. x IN R ==>
             !p. p IN (IMAGE factor (Conj x)) ==> poly p /\ (deg p = 1) /\ (lead p = #1) /\ monic p *)
@@ -930,14 +965,15 @@ val conjugate_factors_member = store_thm(
      and lead p = #1                   by poly_factor_lead, #1 <> #0
      and monic p                       by poly_factor_monic, #1 <> #0
 *)
-val conjugate_factors_member_property = store_thm(
-  "conjugate_factors_member_property",
-  ``!(r s):'a ring. Ring r /\ #1 <> #0 ==> !x. x IN R ==>
-   !p. p IN (IMAGE factor (Conj x)) ==> poly p /\ (deg p = 1) /\ (lead p = #1) /\ monic p``,
+Theorem conjugate_factors_member_property:
+    !(r s):'a ring. Ring r /\ #1 <> #0 ==> !x. x IN R ==>
+   !p. p IN (IMAGE factor (Conj x)) ==> poly p /\ (deg p = 1) /\ (lead p = #1) /\ monic p
+Proof
   ntac 7 strip_tac >>
   `?n. p = factor (conj x n)` by rw[conjugate_factors_member] >>
   `conj x n IN R` by rw[ring_conjugate_element] >>
-  rw[poly_factor_poly, poly_factor_deg, poly_factor_lead, poly_factor_monic]);
+  rw[poly_factor_poly, poly_factor_deg, poly_factor_lead, poly_factor_monic]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> monic (PIFACTOR (Conj x)) *)
 (* Proof:
@@ -948,28 +984,31 @@ val conjugate_factors_member_property = store_thm(
     and !p. p IN (IMAGE factor (Conj x)) ==> monic p  by conjugate_factors_member_property, Ring r, #1 <> #0
    Hence monic (PIFACTOR (Conj x))                    by poly_monic_prod_set_monic
 *)
-val poly_prod_conjugate_factors_monic = store_thm(
-  "poly_prod_conjugate_factors_monic",
-  ``!(r s):'a field. FiniteField r ==> !x. x IN R ==> monic (PIFACTOR (Conj x))``,
+Theorem poly_prod_conjugate_factors_monic:
+    !(r s):'a field. FiniteField r ==> !x. x IN R ==> monic (PIFACTOR (Conj x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteRing r` by rw[finite_field_is_finite_ring] >>
   `FINITE (IMAGE factor (Conj x))` by rw[conjugate_factors_finite] >>
   `Ring r /\ #1 <> #0` by rw[] >>
-  metis_tac[poly_monic_prod_set_monic, conjugate_factors_member_property]);
+  metis_tac[poly_monic_prod_set_monic, conjugate_factors_member_property]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> poly (PIFACTOR (Conj x)) *)
 (* Proof: by poly_prod_conjugate_factors_monic, poly_monic_poly *)
-val poly_prod_conjugate_factors_poly = store_thm(
-  "poly_prod_conjugate_factors_poly",
-  ``!(r s):'a field. FiniteField r ==> !x. x IN R ==> poly (PIFACTOR (Conj x))``,
-  rw[poly_prod_conjugate_factors_monic]);
+Theorem poly_prod_conjugate_factors_poly:
+    !(r s):'a field. FiniteField r ==> !x. x IN R ==> poly (PIFACTOR (Conj x))
+Proof
+  rw[poly_prod_conjugate_factors_monic]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> (lead (PIFACTOR (Conj x)) = #1) *)
 (* Proof: by poly_prod_conjugate_factors_monic, poly_monic_lead *)
-val poly_prod_conjugate_factors_lead = store_thm(
-  "poly_prod_conjugate_factors_lead",
-  ``!(r s):'a field. FiniteField r ==> !x. x IN R ==> (lead (PIFACTOR (Conj x)) = #1)``,
-  rw[poly_prod_conjugate_factors_monic]);
+Theorem poly_prod_conjugate_factors_lead:
+    !(r s):'a field. FiniteField r ==> !x. x IN R ==> (lead (PIFACTOR (Conj x)) = #1)
+Proof
+  rw[poly_prod_conjugate_factors_monic]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> (deg (PIFACTOR (Conj x)) = CARD (Conj x)) *)
 (* Proof:
@@ -978,15 +1017,16 @@ val poly_prod_conjugate_factors_lead = store_thm(
      and (Conj x) SUBSET R                         by ring_conjugates_subset
    Hence deg (PIFACTOR (Conj x)) = CARD (Conj x)   by poly_prod_factors_deg
 *)
-val poly_prod_conjugate_factors_deg = store_thm(
-  "poly_prod_conjugate_factors_deg",
-  ``!(r s):'a field. FiniteField r ==> !x. x IN R ==> (deg (PIFACTOR (Conj x)) = CARD (Conj x))``,
+Theorem poly_prod_conjugate_factors_deg:
+    !(r s):'a field. FiniteField r ==> !x. x IN R ==> (deg (PIFACTOR (Conj x)) = CARD (Conj x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteRing r` by rw[finite_field_is_finite_ring] >>
   `FINITE (Conj x)` by rw[ring_conjugates_finite] >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `(Conj x) SUBSET R` by rw[ring_conjugates_subset] >>
-  rw[poly_prod_factors_deg]);
+  rw[poly_prod_factors_deg]
+QED
 
 (* Theorem: FiniteField r ==> !x. x IN R ==> (roots (PIFACTOR (Conj x)) = Conj x) *)
 (* Proof:
@@ -995,15 +1035,16 @@ val poly_prod_conjugate_factors_deg = store_thm(
      and (Conj x) SUBSET R                         by ring_conjugates_subset
    Hence roots (PIFACTOR (Conj x)) = Conj x        by poly_prod_factors_roots
 *)
-val poly_prod_conjugate_factors_roots = store_thm(
-  "poly_prod_conjugate_factors_roots",
-  ``!(r s):'a field. FiniteField r ==> !x. x IN R ==> (roots (PIFACTOR (Conj x)) = Conj x)``,
+Theorem poly_prod_conjugate_factors_roots:
+    !(r s):'a field. FiniteField r ==> !x. x IN R ==> (roots (PIFACTOR (Conj x)) = Conj x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `FiniteRing r` by rw[finite_field_is_finite_ring] >>
   `FINITE (Conj x)` by rw[ring_conjugates_finite] >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `(Conj x) SUBSET R` by rw[ring_conjugates_subset] >>
-  rw[poly_prod_factors_roots]);
+  rw[poly_prod_factors_roots]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Roots of Irreducible                                                      *)
@@ -1063,15 +1104,16 @@ and the roots are given by the m distinct elements: X, X^q, X^{q^2}, ..., X^{q^m
    Only-if part: x = y ==> (factor x) ** (char r) ** n = (factor y) ** (char r) ** n
       This is trivially true.
 *)
-val poly_factor_exp_eq = store_thm(
-  "poly_factor_exp_eq",
-  ``!r:'a field. FiniteField r ==> !x y. x IN R /\ y IN R ==>
-   !n. ((factor x) ** (char r) ** n = (factor y) ** (char r) ** n) <=> (x = y)``,
+Theorem poly_factor_exp_eq:
+    !r:'a field. FiniteField r ==> !x y. x IN R /\ y IN R ==>
+   !n. ((factor x) ** (char r) ** n = (factor y) ** (char r) ** n) <=> (x = y)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >>
   qabbrev_tac `m = (char r) ** n` >>
   `!c. c IN R ==> (eval ((factor c) ** m) #0 = (-c) ** m)` by rw[poly_factor_poly, poly_eval_exp, poly_eval_factor] >>
-  metis_tac[field_neg_element, finite_field_element_eq_condition, field_neg_neg]);
+  metis_tac[field_neg_element, finite_field_element_eq_condition, field_neg_neg]
+QED
 
 (* Theorem: FiniteField r ==> !s. s SUBSET R ==>
             !n. INJ (\p. p ** (char r) ** n) (IMAGE factor s) univ(:'a poly) *)
@@ -1087,13 +1129,14 @@ val poly_factor_exp_eq = store_thm(
        Note x IN R /\ x' IN R                  by SUBSET_DEF
        The result follows                      by poly_factor_exp_eq
 *)
-val poly_factor_map_exp_inj = store_thm(
-  "poly_factor_map_exp_inj",
-  ``!r:'a field. FiniteField r ==> !s. s SUBSET R ==>
-   !n. INJ (\p. p ** (char r) ** n) (IMAGE factor s) univ(:'a poly)``,
+Theorem poly_factor_map_exp_inj:
+    !r:'a field. FiniteField r ==> !s. s SUBSET R ==>
+   !n. INJ (\p. p ** (char r) ** n) (IMAGE factor s) univ(:'a poly)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[INJ_DEF] >>
-  metis_tac[poly_factor_exp_eq, SUBSET_DEF]);
+  metis_tac[poly_factor_exp_eq, SUBSET_DEF]
+QED
 
 (* Theorem: FiniteField r ==> !c. c IN R ==>
             !n. (factor c) ** (char r) ** n = peval (factor (c ** (char r) ** n)) (X ** (char r) ** n) *)
@@ -1106,17 +1149,18 @@ val poly_factor_map_exp_inj = store_thm(
    = X ** m - (c ** m) * |1|               by poly_one_exp
    = peval (factor (c ** m)) (X ** m)      by poly_peval_factor_alt, c ** m IN R
 *)
-val poly_factor_exp_to_peval_factor = store_thm(
-  "poly_factor_exp_to_peval_factor",
-  ``!r:'a field. FiniteField r ==> !c. c IN R ==>
-   !n. (factor c) ** (char r) ** n = peval (factor (c ** (char r) ** n)) (X ** (char r) ** n)``,
+Theorem poly_factor_exp_to_peval_factor:
+    !r:'a field. FiniteField r ==> !c. c IN R ==>
+   !n. (factor c) ** (char r) ** n = peval (factor (c ** (char r) ** n)) (X ** (char r) ** n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = (char r) ** n` >>
   `prime (char r)` by rw[finite_field_char] >>
   `c ** m IN R` by rw[] >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `poly X /\ poly (X ** m) /\ poly |1| /\ poly (c * |1|)` by rw[] >>
-  rw_tac std_ss[poly_factor_alt, poly_freshman_all_sub, poly_cmult_exp, poly_one_exp, poly_peval_factor_alt, Abbr`m`]);
+  rw_tac std_ss[poly_factor_alt, poly_freshman_all_sub, poly_cmult_exp, poly_one_exp, poly_peval_factor_alt, Abbr`m`]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==>
             INJ (\p. p ** (CARD B)) (IMAGE factor (Conj x)) univ(:'a poly) *)
@@ -1125,12 +1169,13 @@ val poly_factor_exp_to_peval_factor = store_thm(
    Since Conj x SUBSET R                        by ring_conjugates_subset
    The result follows                           by poly_factor_map_exp_inj
 *)
-val poly_factor_conjugates_exp_inj = store_thm(
-  "poly_factor_conjugates_exp_inj",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
-   INJ (\p. p ** (CARD B)) (IMAGE factor (Conj x)) univ(:'a poly)``,
+Theorem poly_factor_conjugates_exp_inj:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
+   INJ (\p. p ** (CARD B)) (IMAGE factor (Conj x)) univ(:'a poly)
+Proof
   metis_tac[finite_field_subfield_card, ring_conjugates_subset,
-             poly_factor_map_exp_inj, finite_field_is_field, field_is_ring]);
+             poly_factor_map_exp_inj, finite_field_is_field, field_is_ring]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !x. x IN R ==> !q. poly q ==>
             INJ (\p. peval p q) (IMAGE factor (Conj x)) univ(:'a poly) *)
@@ -1138,11 +1183,12 @@ val poly_factor_conjugates_exp_inj = store_thm(
    Since Conj x SUBSET R    by ring_conjugates_subset
    The result follows       by poly_peval_factor_map_inj
 *)
-val poly_factor_conjugates_peval_inj = store_thm(
-  "poly_factor_conjugates_peval_inj",
-  ``!(r s):'a ring. Ring r /\ #1 <> #0 ==> !x. x IN R ==> !q. poly q ==>
-   INJ (\p. peval p q) (IMAGE factor (Conj x)) univ(:'a poly)``,
-  rw[poly_peval_factor_map_inj, ring_conjugates_subset]);
+Theorem poly_factor_conjugates_peval_inj:
+    !(r s):'a ring. Ring r /\ #1 <> #0 ==> !x. x IN R ==> !q. poly q ==>
+   INJ (\p. peval p q) (IMAGE factor (Conj x)) univ(:'a poly)
+Proof
+  rw[poly_peval_factor_map_inj, ring_conjugates_subset]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==>
             (IMAGE ((\p. p ** (CARD B)) o factor) (Conj x) =
@@ -1166,10 +1212,10 @@ val poly_factor_conjugates_peval_inj = store_thm(
    Note: This proof is tricky in (2), using finite_field_conjugates_exp_surj to find the candidate.
          Both (1) and (2) uses poly_factor_exp_to_peval_factor.
 *)
-val finite_field_conjugates_exp_to_peval_images = store_thm(
-  "finite_field_conjugates_exp_to_peval_images",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
-    (IMAGE ((\p. p ** (CARD B)) o factor) (Conj x) = IMAGE ((\p. peval p (X ** (CARD B))) o factor) (Conj x))``,
+Theorem finite_field_conjugates_exp_to_peval_images:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==>
+    (IMAGE ((\p. p ** (CARD B)) o factor) (Conj x) = IMAGE ((\p. peval p (X ** (CARD B))) o factor) (Conj x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   qabbrev_tac `m = CARD B` >>
@@ -1183,7 +1229,8 @@ val finite_field_conjugates_exp_to_peval_images = store_thm(
     `_ = z ** m` by rw[Abbr`f`] >>
     `z IN R` by metis_tac[ring_conjugates_member_element] >>
     metis_tac[poly_factor_exp_to_peval_factor, finite_field_subfield_card]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> Poly s (PIFACTOR (Conj x)) *)
 (* Proof:
@@ -1219,9 +1266,9 @@ val finite_field_conjugates_exp_to_peval_images = store_thm(
 
     Hence Poly s p                             by subfield_poly_condition
 *)
-val poly_prod_factors_conjugates_subfield_poly = store_thm(
-  "poly_prod_factors_conjugates_subfield_poly",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> Poly s (PIFACTOR (Conj x))``,
+Theorem poly_prod_factors_conjugates_subfield_poly:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> Poly s (PIFACTOR (Conj x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = PIFACTOR (Conj x)` >>
   qabbrev_tac `m = CARD B` >>
@@ -1244,7 +1291,8 @@ val poly_prod_factors_conjugates_subfield_poly = store_thm(
   `peval p q = PPIMAGE (\p. peval p q) ss` by rw[poly_peval_poly_prod, Abbr`p`] >>
   `_ = PPIMAGE ((\p. peval p q) o factor) (Conj x)` by rw[IMAGE_COMPOSE, Abbr`ss`] >>
   `p ** m = peval p q` by metis_tac[finite_field_conjugates_exp_to_peval_images] >>
-  metis_tac[subfield_poly_condition]);
+  metis_tac[subfield_poly_condition]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -1304,9 +1352,9 @@ minimal x = PIFACTOR (Conj x), giving an explicit expression of the minimal poly
   Step 3: conclude
   Hence p = q                        by poly_monic_divides_antisymmetric
 *)
-val poly_minimal_eq_factors_conjugates = store_thm(
-  "poly_minimal_eq_factors_conjugates",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x = PIFACTOR (Conj x))``,
+Theorem poly_minimal_eq_factors_conjugates:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x = PIFACTOR (Conj x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = minimal x` >>
   qabbrev_tac `q = PIFACTOR (Conj x)` >>
@@ -1319,7 +1367,8 @@ val poly_minimal_eq_factors_conjugates = store_thm(
   `Conj x = roots q` by rw[poly_prod_conjugate_factors_roots, Abbr`q`] >>
   `root q x` by metis_tac[poly_roots_member] >>
   `p pdivides q` by rw[poly_minimal_divides_subfield_poly, Abbr`p`] >>
-  metis_tac[poly_monic_divides_antisymmetric, field_is_ring]);
+  metis_tac[poly_monic_divides_antisymmetric, field_is_ring]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -1332,23 +1381,25 @@ val poly_minimal_eq_factors_conjugates = store_thm(
       = PIFACTOR (Conj x)            by poly_minimal_eq_factors_conjugates
       = PPROD t                      by above
 *)
-val poly_minimal_eq_factors_conjugates_alt = store_thm(
-  "poly_minimal_eq_factors_conjugates_alt",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> (minimal x = PPROD {X - c * |1| | c | c  IN (Conj x)})``,
+Theorem poly_minimal_eq_factors_conjugates_alt:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> (minimal x = PPROD {X - c * |1| | c | c  IN (Conj x)})
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   rw_tac std_ss[poly_minimal_eq_factors_conjugates] >>
   `IMAGE factor (Conj x) = {X - c * |1| | c | c IN Conj x}` suffices_by rw_tac std_ss[] >>
   rw_tac std_ss[EXTENSION, GSPECIFICATION, IN_IMAGE] >>
-  metis_tac[poly_factor_alt, ring_conjugates_member_element]);
+  metis_tac[poly_factor_alt, ring_conjugates_member_element]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x = (PIFACTOR o Conj) x) *)
 (* Proof: by poly_minimal_eq_factors_conjugates, notation. *)
-val poly_minimal_eq_factors_conjugates_compose = store_thm(
-  "poly_minimal_eq_factors_conjugates_compose",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x = (PIFACTOR o Conj) x)``,
-  rw_tac std_ss[poly_minimal_eq_factors_conjugates]);
+Theorem poly_minimal_eq_factors_conjugates_compose:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x = (PIFACTOR o Conj) x)
+Proof
+  rw_tac std_ss[poly_minimal_eq_factors_conjugates]
+QED
 
 (* Another proof of poly_minimal_one -- using theorem above. *)
 
@@ -1379,10 +1430,11 @@ val poly_minimal_one = prove( (* no need to store *)
    = roots (PIFACTOR (Conj x))   by poly_minimal_eq_factors_conjugates
    = Conj x                      by poly_prod_conjugate_factors_roots
 *)
-val poly_minimal_roots = store_thm(
-  "poly_minimal_roots",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (roots (minimal x) = Conj x)``,
-  rw_tac std_ss[poly_minimal_eq_factors_conjugates, poly_prod_conjugate_factors_roots]);
+Theorem poly_minimal_roots:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (roots (minimal x) = Conj x)
+Proof
+  rw_tac std_ss[poly_minimal_eq_factors_conjugates, poly_prod_conjugate_factors_roots]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> (degree x = CARD (Conj x)) *)
 (* Proof:
@@ -1391,10 +1443,11 @@ val poly_minimal_roots = store_thm(
    = deg (PIFACTOR (Conj x))   by poly_minimal_eq_factors_conjugates
    = CARD (Conj x)             by poly_prod_conjugate_factors_deg
 *)
-val poly_minimal_deg = store_thm(
-  "poly_minimal_deg",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (degree x = CARD (Conj x))``,
-  rw_tac std_ss[poly_minimal_eq_factors_conjugates, poly_prod_conjugate_factors_deg]);
+Theorem poly_minimal_deg:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> (degree x = CARD (Conj x))
+Proof
+  rw_tac std_ss[poly_minimal_eq_factors_conjugates, poly_prod_conjugate_factors_deg]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Counting Conjugates                                                       *)
@@ -1420,12 +1473,13 @@ Need to squeeze out more ZN_mult_* theorems from the proof below.
       = x ** ((m ** (n MOD om)) MOD ox)     by ZN_coprime_exp_mod, 0 < ox, coprime ox m
       = conj x (n MOD om)                   by finite_field_conjugate_member_eqn, x IN R+
 *)
-val finite_field_conjugate_mod_order = store_thm(
-  "finite_field_conjugate_mod_order",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
-   !n. conj x n = conj x (n MOD (order (ZN (forder x)).prod (CARD B)))``,
+Theorem finite_field_conjugate_mod_order:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
+   !n. conj x n = conj x (n MOD (order (ZN (forder x)).prod (CARD B)))
+Proof
   metis_tac[finite_field_order_property, finite_field_conjugate_member_eqn,
-            ZN_coprime_exp_mod, finite_field_is_field]);
+            ZN_coprime_exp_mod, finite_field_is_field]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
             !y. y IN Conj x ==> ?n. n < order (ZN (forder x)).prod (CARD B) /\ (y = conj x n) *)
@@ -1448,10 +1502,10 @@ val finite_field_conjugate_mod_order = store_thm(
       thus n MOD om < om             by MOD_LESS, 0 < om
       Take n = n MOD om, the result follows.
 *)
-val finite_field_conjugates_member = store_thm(
-  "finite_field_conjugates_member",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
-   !y. y IN Conj x ==> ?n. n < order (ZN (forder x)).prod (CARD B) /\ (y = conj x n)``,
+Theorem finite_field_conjugates_member:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
+   !y. y IN Conj x ==> ?n. n < order (ZN (forder x)).prod (CARD B) /\ (y = conj x n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD B` >>
   qabbrev_tac `ox = forder x` >>
@@ -1468,7 +1522,8 @@ val finite_field_conjugates_member = store_thm(
     `ox <> 1` by rw[field_order_eq_1, Abbr`ox`] >>
     `1 < ox` by decide_tac >>
     metis_tac[ZN_coprime_order_alt, MOD_LESS]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x y. x IN R /\ y IN Conj x ==> (forder y = forder x) *)
 (* Proof:
@@ -1476,13 +1531,14 @@ val finite_field_conjugates_member = store_thm(
      ==> ?n. y = conj x n     by ring_conjugates_member
    Hence forder y = forder x  by finite_field_conjugate_order
 *)
-val finite_field_conjugates_member_order = store_thm(
-  "finite_field_conjugates_member_order",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x y. x IN R /\ y IN Conj x ==> (forder y = forder x)``,
+Theorem finite_field_conjugates_member_order:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x y. x IN R /\ y IN Conj x ==> (forder y = forder x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `?n. y = conj x n` by rw[GSYM ring_conjugates_member] >>
-  rw[finite_field_conjugate_order]);
+  rw[finite_field_conjugate_order]
+QED
 
 (* Note:
 > group_exp_equal |> ISPEC ``f*``;
@@ -1544,10 +1600,10 @@ val it = |- FiniteGroup g ==>
             ==>      g.exp z x' = g.exp z y                by above
             ==>              x' = y                        by group_exp_equal, om = order g (z)
 *)
-val finite_field_conjugates_inj = store_thm(
-  "finite_field_conjugates_inj",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
-    INJ (conj x) (count (order (ZN (forder x)).prod (CARD B))) (Conj x)``,
+Theorem finite_field_conjugates_inj:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
+    INJ (conj x) (count (order (ZN (forder x)).prod (CARD B))) (Conj x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD B` >>
   qabbrev_tac `ox = forder x` >>
@@ -1576,7 +1632,8 @@ val finite_field_conjugates_inj = store_thm(
   `(m ** x') MOD ox = (m ** y) MOD ox` by metis_tac[group_exp_equal, MOD_LESS] >>
   `(m ** x') MOD ox = (m ** y) MOD ox` by metis_tac[ZN_coprime_exp_mod, LESS_MOD] >>
   `(z ** x') MOD ox = (z ** y) MOD ox` by metis_tac[EXP_MOD] >>
-  metis_tac[group_exp_equal]);
+  metis_tac[group_exp_equal]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
             SURJ (conj x) (count (order (ZN (forder x)).prod (CARD B))) (Conj x) *)
@@ -1608,10 +1665,10 @@ val finite_field_conjugates_inj = store_thm(
        Thus (n MOD om) < om              by MOD_LESS, 0 < om
        Take y = n MOD om, the result follows.
 *)
-val finite_field_conjugates_surj = store_thm(
-  "finite_field_conjugates_surj",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
-    SURJ (conj x) (count (order (ZN (forder x)).prod (CARD B))) (Conj x)``,
+Theorem finite_field_conjugates_surj:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
+    SURJ (conj x) (count (order (ZN (forder x)).prod (CARD B))) (Conj x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = CARD B` >>
   qabbrev_tac `ox = forder x` >>
@@ -1627,16 +1684,18 @@ val finite_field_conjugates_surj = store_thm(
   `ox <> 1` by rw[field_order_eq_1, Abbr`ox`] >>
   `1 < ox` by decide_tac >>
   `0 < om` by rw[ZN_coprime_order_alt, Abbr`om`] >>
-  metis_tac[MOD_LESS]);
+  metis_tac[MOD_LESS]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
             BIJ (conj x) (count (order (ZN (forder x)).prod (CARD B))) (Conj x) *)
 (* Proof: by BIJ_DEF, finite_field_conjugates_inj, finite_field_conjugates_surj *)
-val finite_field_conjugates_bij = store_thm(
-  "finite_field_conjugates_bij",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
-    BIJ (conj x) (count (order (ZN (forder x)).prod (CARD B))) (Conj x)``,
-  rw[BIJ_DEF, finite_field_conjugates_inj, finite_field_conjugates_surj]);
+Theorem finite_field_conjugates_bij:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
+    BIJ (conj x) (count (order (ZN (forder x)).prod (CARD B))) (Conj x)
+Proof
+  rw[BIJ_DEF, finite_field_conjugates_inj, finite_field_conjugates_surj]
+QED
 
 (* Note:
 finite_field_conjugates_subset
@@ -1650,11 +1709,12 @@ finite_field_conjugates_subset
    Conj #0 = {#0}      by ring_conjugates_zero
    Conj #1 = {#1}      by ring_conjugates_one
 *)
-val finite_field_conjugates_eq_image = store_thm(
-  "finite_field_conjugates_eq_image",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
-    (Conj x = IMAGE (conj x) (count (order (ZN (forder x)).prod (CARD B))))``,
-  rw[finite_field_conjugates_surj, GSYM IMAGE_SURJ]);
+Theorem finite_field_conjugates_eq_image:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
+    (Conj x = IMAGE (conj x) (count (order (ZN (forder x)).prod (CARD B))))
+Proof
+  rw[finite_field_conjugates_surj, GSYM IMAGE_SURJ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
             (CARD (Conj x) = (order (ZN (forder x)).prod (CARD B))) *)
@@ -1673,16 +1733,17 @@ val finite_field_conjugates_eq_image = store_thm(
    CARD (Conj #0) = CARD {#0} = 1      by ring_conjugates_zero
    CARD (Conj #1) = CARD {#1} = 1      by ring_conjugates_one
 *)
-val finite_field_conjugates_card = store_thm(
-  "finite_field_conjugates_card",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
-    (CARD (Conj x) = order (ZN (forder x)).prod (CARD B))``,
+Theorem finite_field_conjugates_card:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
+    (CARD (Conj x) = order (ZN (forder x)).prod (CARD B))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `om = order (ZN (forder x)).prod (CARD B)` >>
   `x IN R` by rw[field_nonzero_element] >>
   `FINITE (Conj x)` by rw[ring_conjugates_finite, finite_field_is_finite_ring] >>
   `BIJ (conj x) (count om) (Conj x)` by rw[finite_field_conjugates_bij, Abbr`om`] >>
-  metis_tac[FINITE_BIJ_CARD_EQ, FINITE_COUNT, CARD_COUNT]);
+  metis_tac[FINITE_BIJ_CARD_EQ, FINITE_COUNT, CARD_COUNT]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -1703,13 +1764,14 @@ val finite_field_conjugates_card = store_thm(
    deg (minimal #0) = deg X = 1            by poly_minimal_zero
    deg (minimal #1) = deg (X - |1|) = 1    by poly_minimal_one
 *)
-val poly_minimal_deg_eqn = store_thm(
-  "poly_minimal_deg_eqn",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
-    (degree x = order (ZN (forder x)).prod (CARD B))``,
+Theorem poly_minimal_deg_eqn:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R+ ==>
+    (degree x = order (ZN (forder x)).prod (CARD B))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `x IN R` by rw[field_nonzero_element] >>
-  rw[poly_minimal_deg, finite_field_conjugates_card]);
+  rw[poly_minimal_deg, finite_field_conjugates_card]
+QED
 
 (*
 > poly_minimal_subfield_irreducible
@@ -1751,9 +1813,9 @@ val it = |- FiniteField s ==> !p. poly_monic s p /\ IPoly s p ==>
       so Deg s p divides d               by poly_irreducible_master_divisibility
       or deg p divides d                 by above, Deg s p = deg p
 *)
-val poly_minimal_deg_divides_dim = store_thm(
-  "poly_minimal_deg_divides_dim",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> degree x divides (r <:> s)``,
+Theorem poly_minimal_deg_divides_dim:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x. x IN R ==> degree x divides (r <:> s)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `p = minimal x` >>
   qabbrev_tac `d = (r <:> s)` >>
@@ -1774,7 +1836,8 @@ val poly_minimal_deg_divides_dim = store_thm(
   `deg p = Deg s p` by rw[subring_poly_deg] >>
   `Ulead s p` by rw[poly_monic_ulead] >>
   `Poly s q` by metis_tac[poly_master_poly, subring_poly_master] >>
-  metis_tac[subring_poly_divides_iff, poly_irreducible_master_divisibility]);
+  metis_tac[subring_poly_divides_iff, poly_irreducible_master_divisibility]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Monic Irreducible to be Minimal Polynomial                                *)
@@ -1842,10 +1905,10 @@ by poly_irreducible_not_unit.
    Only-if part: (p = minimal x) ==> root p x
       True by poly_minimal_has_element_root.
 *)
-val poly_minimal_unique = store_thm(
-  "poly_minimal_unique",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p ==>
-   !x. x IN R ==> (root p x <=> (p = minimal x))``,
+Theorem poly_minimal_unique:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p ==>
+   !x. x IN R ==> (root p x <=> (p = minimal x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >| [
     `s <= r` by rw[subfield_is_subring] >>
@@ -1860,7 +1923,8 @@ val poly_minimal_unique = store_thm(
     `q <> |1|` by rw[poly_minimal_ne_poly_one, Abbr`q`] >>
     metis_tac[poly_monic_divides_monic_irreducible, subring_poly_one, field_is_ring],
     rw[poly_minimal_has_element_root]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p ==>
             !x. x IN R ==> (root p x <=> (p = PIFACTOR (Conj x))) *)
@@ -1869,11 +1933,12 @@ val poly_minimal_unique = store_thm(
      and minimal x = PIFACTOR (Conj x)        by poly_minimal_eq_factors_conjugates
       so root p x <=> (p = PIFACTOR (Conj x))
 *)
-val subfield_monic_irreducible_by_conjugate_factors = store_thm(
-  "subfield_monic_irreducible_by_conjugate_factors",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p ==>
-   !x. x IN R ==> (root p x <=> (p = PIFACTOR (Conj x)))``,
-  metis_tac[poly_minimal_unique, poly_minimal_eq_factors_conjugates]);
+Theorem subfield_monic_irreducible_by_conjugate_factors:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p ==>
+   !x. x IN R ==> (root p x <=> (p = PIFACTOR (Conj x)))
+Proof
+  metis_tac[poly_minimal_unique, poly_minimal_eq_factors_conjugates]
+QED
 
 (* Theorem: A monic irreducible subfield poly with degree divides the dimension must be a minimal polynomial.
             FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p /\ (deg p) divides (r <:> s) ==>
@@ -1902,10 +1967,10 @@ val subfield_monic_irreducible_by_conjugate_factors = store_thm(
       or     x IN R /\ root p x          by poly_roots_member
     Take this x, then p = minimal x      by poly_minimal_unique
 *)
-val poly_monic_irreducible_is_minimal_poly = store_thm(
-  "poly_monic_irreducible_is_minimal_poly",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !p. monic p /\ IPoly s p /\ (deg p) divides (r <:> s) ==> ?x. x IN R /\ (p = minimal x)``,
+Theorem poly_monic_irreducible_is_minimal_poly:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !p. monic p /\ IPoly s p /\ (deg p) divides (r <:> s) ==> ?x. x IN R /\ (p = minimal x)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `d = (r <:> s)` >>
   qabbrev_tac `q = Master s (CARD B ** d)` >>
@@ -1923,7 +1988,8 @@ val poly_monic_irreducible_is_minimal_poly = store_thm(
   `p <> |1|` by metis_tac[poly_irreducible_ne_poly_one, subring_poly_one] >>
   `(roots p) INTER R <> {}` by metis_tac[poly_monic_divides_poly_prod_factors_property, SUBSET_REFL] >>
   `?x. x IN R /\ x IN (roots p)` by metis_tac[MEMBER_NOT_EMPTY, IN_INTER] >>
-  metis_tac[poly_minimal_unique, poly_roots_member]);
+  metis_tac[poly_minimal_unique, poly_roots_member]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -1939,15 +2005,16 @@ val poly_monic_irreducible_is_minimal_poly = store_thm(
       (b) IPoly s (minimal x), true          by poly_minimal_subfield_irreducible
       (c) degree x divides (r <:> s), true   by poly_minimal_deg_divides_dim
 *)
-val poly_monic_irreducible_minimal_condition = store_thm(
-  "poly_monic_irreducible_minimal_condition",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !p. monic p /\ IPoly s p /\ (deg p) divides (r <:> s) <=> ?x. x IN R /\ (p = minimal x)``,
+Theorem poly_monic_irreducible_minimal_condition:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !p. monic p /\ IPoly s p /\ (deg p) divides (r <:> s) <=> ?x. x IN R /\ (p = minimal x)
+Proof
   rw[EQ_IMP_THM] >-
   rw[poly_monic_irreducible_is_minimal_poly] >-
   rw[poly_minimal_monic] >-
   rw[poly_minimal_subfield_irreducible] >>
-  rw[poly_minimal_deg_divides_dim]);
+  rw[poly_minimal_deg_divides_dim]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==> (minimal x) pdivides (master (CARD R)) *)
 (* Proof:
@@ -1957,15 +2024,16 @@ val poly_monic_irreducible_minimal_condition = store_thm(
     and (deg p) divides (r <:> s)      by poly_minimal_deg_divides_dim
    Thus p pdivides (master (CARD R))   by poly_irreducible_master_subfield_divisibility
 *)
-val poly_minimal_divides_master = store_thm(
-  "poly_minimal_divides_master",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> (minimal x) pdivides (master (CARD R))``,
+Theorem poly_minimal_divides_master:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> (minimal x) pdivides (master (CARD R))
+Proof
   rpt strip_tac >>
   `monic (minimal x)` by rw[poly_minimal_monic] >>
   `IPoly s (minimal x)` by rw[poly_minimal_subfield_irreducible] >>
   `degree x divides (r <:> s)` by rw[poly_minimal_deg_divides_dim] >>
-  metis_tac[poly_irreducible_master_subfield_divisibility]);
+  metis_tac[poly_irreducible_master_subfield_divisibility]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
    !p. monic p /\ IPoly s p /\ p pdivides master (CARD R) <=> ?x. x IN R /\ (p = minimal x) *)
@@ -1979,16 +2047,17 @@ val poly_minimal_divides_master = store_thm(
       (3) (minimal x) pdivides master (CARD R),
           This is true                   by poly_minimal_divides_master
 *)
-val poly_monic_irreducible_eq_minimal_poly = store_thm(
-  "poly_monic_irreducible_eq_minimal_poly",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !p. monic p /\ IPoly s p /\ p pdivides master (CARD R) <=> ?x. x IN R /\ (p = minimal x)``,
+Theorem poly_monic_irreducible_eq_minimal_poly:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !p. monic p /\ IPoly s p /\ p pdivides master (CARD R) <=> ?x. x IN R /\ (p = minimal x)
+Proof
   rpt strip_tac >>
   rw_tac std_ss[EQ_IMP_THM] >-
   metis_tac[poly_irreducible_master_subfield_divisibility, poly_monic_irreducible_is_minimal_poly] >-
   rw[poly_minimal_monic] >-
   rw[poly_minimal_subfield_irreducible] >>
-  rw[poly_minimal_divides_master]);
+  rw[poly_minimal_divides_master]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Orders Partition by Conjugates                                            *)
@@ -2010,10 +2079,11 @@ val it = |- !r s x y. x ~~ y <=> ?k. y = conj x k: thm *)
    Since conj x 0 = x      by ring_conjugate_0
       so x ~~ x            by eq_conj_def
 *)
-val eq_conj_refl = store_thm(
-  "eq_conj_refl",
-  ``!(r s):'a ring. Ring r ==> !x. x IN R ==> x ~~ x``,
-  metis_tac[eq_conj_def, ring_conjugate_0]);
+Theorem eq_conj_refl:
+    !(r s):'a ring. Ring r ==> !x. x IN R ==> x ~~ x
+Proof
+  metis_tac[eq_conj_def, ring_conjugate_0]
+QED
 
 (* Theorem: Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x ~~ y) /\ (y ~~ z) ==> (x ~~ z)) *)
 (* Proof:
@@ -2027,14 +2097,15 @@ val eq_conj_refl = store_thm(
    = x ** (m ** (k + k'))        by EXP_ADD
    = x ** m ** k''               by k'' = k + k'
 *)
-val eq_conj_trans = store_thm(
-  "eq_conj_trans",
-  ``!(r s):'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x ~~ y) /\ (y ~~ z) ==> (x ~~ z))``,
+Theorem eq_conj_trans:
+    !(r s):'a ring. Ring r ==> !x y z. x IN R /\ y IN R /\ z IN R ==> ((x ~~ y) /\ (y ~~ z) ==> (x ~~ z))
+Proof
   rw_tac std_ss[eq_conj_def, ring_conjugate_def] >>
   qabbrev_tac `m = CARD B` >>
   `(x ** m ** k) ** m ** k' = x ** (m ** k * m ** k')` by rw[] >>
   `_ = x ** (m ** (k + k'))` by rw_tac std_ss[EXP_ADD] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x y. x IN R /\ y IN R ==> ((x ~~ y) ==> (y ~~ x) *)
 (* Proof:
@@ -2061,9 +2132,9 @@ val eq_conj_trans = store_thm(
     = x ** (CARD R) ** c          by above, finite_subfield_card_eqn
     = x                           by finite_field_fermat_all
 *)
-val eq_conj_sym = store_thm(
-  "eq_conj_sym",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !x y. x IN R /\ y IN R ==> ((x ~~ y) ==> (y ~~ x))``,
+Theorem eq_conj_sym:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !x y. x IN R /\ y IN R ==> ((x ~~ y) ==> (y ~~ x))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   fs[eq_conj_def, ring_conjugate_def] >>
   qabbrev_tac `m = CARD B` >>
@@ -2081,7 +2152,8 @@ val eq_conj_sym = store_thm(
   `_ = x ** (m ** d) ** c` by rw[EXP_EXP_MULT] >>
   `_ = x ** (CARD R) ** c` by rw[] >>
   `_ = x` by rw[finite_field_fermat_all] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> $~~ equiv_on R *)
 (* Proof:
@@ -2090,14 +2162,15 @@ val eq_conj_sym = store_thm(
    (2) x IN R /\ y IN R ==> (x ~~ y) <=> (y ~~ x), true                by eq_conj_sym
    (3) x IN R /\ y IN R /\ z IN R /\ x ~~ y /\ y ~~ z ==> x ~~ z, true by eq_conj_trans
 *)
-val eq_conj_equiv_on_field_carrier = store_thm(
-  "eq_conj_equiv_on_field_carrier",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> $~~ equiv_on R``,
+Theorem eq_conj_equiv_on_field_carrier:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> $~~ equiv_on R
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[equiv_on_def] >-
   rw[eq_conj_refl] >-
   metis_tac[eq_conj_sym] >>
-  metis_tac[eq_conj_trans, field_is_ring]);
+  metis_tac[eq_conj_trans, field_is_ring]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. $~~ equiv_on (orders f* n) *)
 (* Proof:
@@ -2105,10 +2178,11 @@ val eq_conj_equiv_on_field_carrier = store_thm(
      and (orders f* n) SUBSET R      by field_orders_subset_carrier
      ==> $~~ equiv_on (orders f* n)  by equiv_on_subset
 *)
-val eq_conj_equiv_on_orders = store_thm(
-  "eq_conj_equiv_on_orders",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. $~~ equiv_on (orders f* n)``,
-  metis_tac[field_orders_subset_carrier, eq_conj_equiv_on_field_carrier, equiv_on_subset]);
+Theorem eq_conj_equiv_on_orders:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. $~~ equiv_on (orders f* n)
+Proof
+  metis_tac[field_orders_subset_carrier, eq_conj_equiv_on_field_carrier, equiv_on_subset]
+QED
 
 (* Theorem: Ring r ==> !x. x IN R ==> !y. y IN Conj x <=> y IN R /\ x ~~ y *)
 (* Proof:
@@ -2120,17 +2194,19 @@ val eq_conj_equiv_on_orders = store_thm(
       Note ?k. y = conj x k       by eq_conj_def
         so y IN Conj x            by ring_conjugates_member
 *)
-val ring_conjugates_element = store_thm(
-  "ring_conjugates_element",
-  ``!(r s):'a ring. Ring r ==> !x. x IN R ==> !y. y IN Conj x <=> y IN R /\ x ~~ y``,
-  metis_tac[ring_conjugates_member, ring_conjugate_element, eq_conj_def]);
+Theorem ring_conjugates_element:
+    !(r s):'a ring. Ring r ==> !x. x IN R ==> !y. y IN Conj x <=> y IN R /\ x ~~ y
+Proof
+  metis_tac[ring_conjugates_member, ring_conjugate_element, eq_conj_def]
+QED
 
 (* Theorem: Ring r ==> !x y. x IN R /\ y IN R ==> (x ~~ y <=> y IN Conj x) *)
 (* Proof: by eq_conj_def, ring_conjugates_member *)
-val eq_conj_in_conjugates = store_thm(
-  "eq_conj_in_conjugates",
-  ``!(r s):'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x ~~ y <=> y IN Conj x)``,
-  rw[eq_conj_def, ring_conjugates_member]);
+Theorem eq_conj_in_conjugates:
+    !(r s):'a ring. Ring r ==> !x y. x IN R /\ y IN R ==> (x ~~ y <=> y IN Conj x)
+Proof
+  rw[eq_conj_def, ring_conjugates_member]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x y. x IN R /\ y IN R ==> (x ~~ y <=> (Conj x = Conj y)) *)
 (* Proof:
@@ -2155,10 +2231,10 @@ val eq_conj_in_conjugates = store_thm(
          ==> y IN Conj x           by Conj x = Conj y
          ==> x ~~ y                by eq_conj_in_conjugates
 *)
-val eq_conj_eq_conjugages = store_thm(
-  "eq_conj_eq_conjugages",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-    !x y. x IN R /\ y IN R ==> (x ~~ y <=> (Conj x = Conj y))``,
+Theorem eq_conj_eq_conjugages:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+    !x y. x IN R /\ y IN R ==> (x ~~ y <=> (Conj x = Conj y))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   rw[EXTENSION, EQ_IMP_THM] >| [
@@ -2171,7 +2247,8 @@ val eq_conj_eq_conjugages = store_thm(
     `x ~~ x'` by metis_tac[eq_conj_trans] >>
     rw[GSYM eq_conj_in_conjugates],
     rw[ring_conjugates_has_self, eq_conj_in_conjugates]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !x y. x IN R /\ y IN R /\ x ~~ y ==> (forder x = forder y) *)
@@ -2182,11 +2259,12 @@ val eq_conj_eq_conjugages = store_thm(
       = forder (conj x k)      by above
       = forder x               by finite_field_conjugate_order
 *)
-val eq_conj_eq_order = store_thm(
-  "eq_conj_eq_order",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x y. x IN R /\ y IN R /\ x ~~ y ==> (forder x = forder y)``,
-  metis_tac[eq_conj_def, finite_field_conjugate_order]);
+Theorem eq_conj_eq_order:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x y. x IN R /\ y IN R /\ x ~~ y ==> (forder x = forder y)
+Proof
+  metis_tac[eq_conj_def, finite_field_conjugate_order]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !x y. x IN R /\ y IN R ==> (x ~~ y <=> (minimal x = minimal y)) *)
@@ -2215,23 +2293,25 @@ val eq_conj_eq_order = store_thm(
        ==> x ~~ y                  by eq_conj_in_conjugates
 
 *)
-val eq_conj_eq_poly_minimal = store_thm(
-  "eq_conj_eq_poly_minimal",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !x y. x IN R /\ y IN R ==> (x ~~ y <=> (minimal x = minimal y))``,
+Theorem eq_conj_eq_poly_minimal:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !x y. x IN R /\ y IN R ==> (x ~~ y <=> (minimal x = minimal y))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[EQ_IMP_THM] >-
   metis_tac[eq_conj_eq_conjugages, poly_minimal_eq_factors_conjugates] >>
-  metis_tac[ring_conjugates_has_self, poly_minimal_roots, eq_conj_in_conjugates, field_is_ring]);
+  metis_tac[ring_conjugates_has_self, poly_minimal_roots, eq_conj_in_conjugates, field_is_ring]
+QED
 
 (* Theorem: Ring r ==> (partition $~~ R = IMAGE Conj R) *)
 (* Proof: by partition_elements, ring_conjugates_element *)
-val eq_conj_partition_field_carrier = store_thm(
-  "eq_conj_partition_field_carrier",
-  ``!r:'a ring. Ring r ==> (partition $~~ R = IMAGE Conj R)``,
+Theorem eq_conj_partition_field_carrier:
+    !r:'a ring. Ring r ==> (partition $~~ R = IMAGE Conj R)
+Proof
   rw[partition_elements] >>
   rw[EXTENSION] >>
-  metis_tac[ring_conjugates_element]);
+  metis_tac[ring_conjugates_element]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !n. partition $~~ (orders f* n) = IMAGE Conj (orders f* n) *)
@@ -2258,10 +2338,10 @@ val eq_conj_partition_field_carrier = store_thm(
    <=> ?z. z IN t /\ (x = Conj z)                   by Claim
    <=> x IN IMAGE Conj t                            by IN_IMAGE
 *)
-val eq_conj_partition_conjugates = store_thm(
-  "eq_conj_partition_conjugates",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !n. partition $~~ (orders f* n) = IMAGE Conj (orders f* n)``,
+Theorem eq_conj_partition_conjugates:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !n. partition $~~ (orders f* n) = IMAGE Conj (orders f* n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   rw[partition_elements] >>
@@ -2276,7 +2356,8 @@ val eq_conj_partition_conjugates = store_thm(
   qabbrev_tac `f = \x. {y | y IN t /\ x ~~ y}` >>
   `x IN IMAGE f t <=> ?z. z IN t /\ (x = f z)` by metis_tac[IN_IMAGE] >>
   `_ = ?z. z IN t /\ (x = {y | y IN t /\ z ~~ y})` by rw[Abbr`f`] >>
-  metis_tac[IN_IMAGE]);
+  metis_tac[IN_IMAGE]
+QED
 
 (* Note: compare cyclic_orders_partition
 |- !g. cyclic g /\ FINITE G ==> (partition (eq_order g) G = IMAGE (orders g) (divisors (CARD G)))
@@ -2293,13 +2374,14 @@ val eq_conj_partition_conjugates = store_thm(
        With PIFACTOR s1 = PIFACTOR s2     by given
         ==> s1 = s2                       by poly_prod_factors_eq
 *)
-val poly_prod_factors_conjugates_inj = store_thm(
-  "poly_prod_factors_conjugates_inj",
-  ``!r:'a field. Field r ==> !t. FINITE t /\ t SUBSET R ==> INJ PIFACTOR (partition $~~ t) UNIV``,
+Theorem poly_prod_factors_conjugates_inj:
+    !r:'a field. Field r ==> !t. FINITE t /\ t SUBSET R ==> INJ PIFACTOR (partition $~~ t) UNIV
+Proof
   rw[INJ_DEF] >>
   `s' SUBSET t /\ s'' SUBSET t` by metis_tac[partition_SUBSET] >>
   `s' SUBSET R /\ s'' SUBSET R` by metis_tac[SUBSET_TRANS] >>
-  metis_tac[poly_prod_factors_eq, SUBSET_FINITE]);
+  metis_tac[poly_prod_factors_eq, SUBSET_FINITE]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Master Polynomial as Product of Minimal Polynomial                        *)
@@ -2319,9 +2401,9 @@ val poly_prod_factors_conjugates_inj = store_thm(
    = PPIMAGE (PIFACTOR o Conj) R                 by IMAGE_CONG, IMAGE_COMPOSE
    = PPIMAGE minimal R                           by poly_minimal_eq_factors_conjugates_compose, IMAGE_CONG
 *)
-val poly_master_eq_poly_minimal_product = store_thm(
-  "poly_master_eq_poly_minimal_product",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> (master (CARD R) = PPIMAGE minimal R)``,
+Theorem poly_master_eq_poly_minimal_product:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> (master (CARD R) = PPIMAGE minimal R)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `ring_set_multiplicative_fun r PIFACTOR` by rw[poly_prod_factors_ring_mult_fun] >>
@@ -2331,18 +2413,20 @@ val poly_master_eq_poly_minimal_product = store_thm(
   `_  = PPIMAGE PIFACTOR (partition $~~ R)` by rw[ring_prod_set_mult_fun_by_partition] >>
   `_ = PPIMAGE PIFACTOR (IMAGE Conj R)` by rw[eq_conj_partition_field_carrier] >>
   `_ = PPIMAGE minimal R` by metis_tac[poly_minimal_eq_factors_conjugates_compose, IMAGE_COMPOSE, IMAGE_CONG] >>
-  rw[]);
+  rw[]
+QED
 
 (* This is a major alternative expression for master (CARD R) *)
 
 (* Theorem: FiniteField r /\ s <<= r ==> (master (CARD R) = PPROD {minimal x | x | x IN R}) *)
 (* Proof: by poly_master_eq_poly_minimal_product *)
-val poly_master_eq_poly_minimal_product_alt = store_thm(
-  "poly_master_eq_poly_minimal_product_alt",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> (master (CARD R) = PPROD {minimal x | x | x IN R})``,
+Theorem poly_master_eq_poly_minimal_product_alt:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> (master (CARD R) = PPROD {minimal x | x | x IN R})
+Proof
   rpt strip_tac >>
   `IMAGE minimal R = {minimal x | x | x IN R}` by rw[EXTENSION] >>
-  metis_tac[poly_master_eq_poly_minimal_product]);
+  metis_tac[poly_master_eq_poly_minimal_product]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclotomic Polynomial as Product of Minimal Polynomial                    *)
@@ -2361,10 +2445,10 @@ val poly_master_eq_poly_minimal_product_alt = store_thm(
     and INJ PIFACTOR (partition $~~ t) univ(:'a poly)     by poly_prod_factors_conjugates_inj
     ==> PIFACTOR t = PPIMAGE PIFACTOR (partition $~~ t)   by ring_prod_set_mult_fun_by_partition
 *)
-val poly_cyclo_eq_prod_factors_by_partition = store_thm(
-  "poly_cyclo_eq_prod_factors_by_partition",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==>
-   !n. cyclo n = PPIMAGE PIFACTOR (partition $~~ (orders f* n))``,
+Theorem poly_cyclo_eq_prod_factors_by_partition:
+    !(r s):'a field. FiniteField r /\ s <<= r ==>
+   !n. cyclo n = PPIMAGE PIFACTOR (partition $~~ (orders f* n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw[poly_cyclo_def] >>
   qabbrev_tac `t = orders f* n` >>
@@ -2373,7 +2457,8 @@ val poly_cyclo_eq_prod_factors_by_partition = store_thm(
   `$~~ equiv_on t` by rw[eq_conj_equiv_on_orders, Abbr`t`] >>
   `ring_set_multiplicative_fun r PIFACTOR` by rw[poly_prod_factors_ring_mult_fun] >>
   `INJ PIFACTOR (partition $~~ t) univ(:'a poly)` by rw[poly_prod_factors_conjugates_inj] >>
-  rw[ring_prod_set_mult_fun_by_partition]);
+  rw[ring_prod_set_mult_fun_by_partition]
+QED
 
 (* This is the first alternative expression for cyclo n *)
 
@@ -2390,25 +2475,27 @@ val poly_cyclo_eq_prod_factors_by_partition = store_thm(
    = PPROD (IMAGE minimal t)                 by poly_minimal_eq_factors_conjugates_compose, IMAGE_CONG
    = PPIMAGE minimal t                       by notation
 *)
-val poly_cyclo_eq_poly_minimal_product = store_thm(
-  "poly_cyclo_eq_poly_minimal_product",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. cyclo n = PPIMAGE minimal (orders f* n)``,
+Theorem poly_cyclo_eq_poly_minimal_product:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. cyclo n = PPIMAGE minimal (orders f* n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   qabbrev_tac `f = PIFACTOR o Conj` >>
   metis_tac[poly_cyclo_eq_prod_factors_by_partition, eq_conj_partition_conjugates,
-             poly_minimal_eq_factors_conjugates_compose, IMAGE_COMPOSE, IMAGE_CONG, field_orders_element]);
+             poly_minimal_eq_factors_conjugates_compose, IMAGE_COMPOSE, IMAGE_CONG, field_orders_element]
+QED
 
 (* This expression for (cyclo n) is a major result. *)
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. cyclo n = PPROD {minimal x | x | x IN (orders f* n)} *)
 (* Proof: by poly_cyclo_eq_poly_minimal_product *)
-val poly_cyclo_eq_poly_minimal_product_alt = store_thm(
-  "poly_cyclo_eq_poly_minimal_product_alt",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. cyclo n = PPROD {minimal x | x | x IN (orders f* n)}``,
+Theorem poly_cyclo_eq_poly_minimal_product_alt:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. cyclo n = PPROD {minimal x | x | x IN (orders f* n)}
+Proof
   rpt strip_tac >>
   `IMAGE minimal (orders f* n) = {minimal x | x | x IN (orders f* n)}` by rw[EXTENSION] >>
-  metis_tac[poly_cyclo_eq_poly_minimal_product]);
+  metis_tac[poly_cyclo_eq_poly_minimal_product]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !n. Poly s (cyclo n) *)
 (* Proof:
@@ -2420,9 +2507,9 @@ val poly_cyclo_eq_poly_minimal_product_alt = store_thm(
    Also !x. x IN t ==> Poly s (minimal x)   by poly_minimal_spoly, SUBSET_DEF
    Thus Poly s (cyclo n)                    by subring_poly_prod_set_spoly
 *)
-val poly_cyclo_spoly = store_thm(
-  "poly_cyclo_spoly",
-  ``!(r s):'a field. FiniteField r /\ s <<= r ==> !n. Poly s (cyclo n)``,
+Theorem poly_cyclo_spoly:
+    !(r s):'a field. FiniteField r /\ s <<= r ==> !n. Poly s (cyclo n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = orders f* n` >>
   `cyclo n = PPIMAGE minimal t` by rw[poly_cyclo_eq_poly_minimal_product, Abbr`t`] >>
@@ -2430,7 +2517,8 @@ val poly_cyclo_spoly = store_thm(
   `t SUBSET R` by rw[field_orders_subset_carrier, Abbr`t`] >>
   `FINITE t` by metis_tac[SUBSET_FINITE] >>
   `!x. x IN t ==> Poly s (minimal x)` by metis_tac[poly_minimal_spoly, SUBSET_DEF] >>
-  rw[subring_poly_prod_set_spoly]);
+  rw[subring_poly_prod_set_spoly]
+QED
 
 (* This simple result is actually a major theorem! *)
 
@@ -2479,10 +2567,10 @@ val poly_cyclo_spoly = store_thm(
       = order (ZN (forder x)).prod (CARD B)   by poly_minimal_deg_eqn, x <> #1
       = order (ZN n).prod (CARD B)            by above, forder x = n
 *)
-val poly_cyclo_irreducible_factor_deg = store_thm(
-  "poly_cyclo_irreducible_factor_deg",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p ==>
-   !n. 0 < n /\ p pdivides (cyclo n) ==> (deg p = order (ZN n).prod (CARD B))``,
+Theorem poly_cyclo_irreducible_factor_deg:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> !p. monic p /\ IPoly s p ==>
+   !n. 0 < n /\ p pdivides (cyclo n) ==> (deg p = order (ZN n).prod (CARD B))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = IMAGE minimal (orders f* n)` >>
   `p IN t` by
@@ -2510,7 +2598,8 @@ val poly_cyclo_irreducible_factor_deg = store_thm(
     rw[ZN_order_mod_1],
     `x <> #1` by metis_tac[field_nonzero_element, field_order_eq_1] >>
     rw[poly_minimal_deg_eqn]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r ==>
             !p. monic p /\ ipoly p ==> !n. 0 < n /\ p pdivides cyclo n ==> (deg p = ordz n (CARD R)) *)
@@ -2520,11 +2609,12 @@ val poly_cyclo_irreducible_factor_deg = store_thm(
 val it = |- FiniteField r /\ r <<= r ==> !p. monic p /\ ipoly p ==>
      !n. 0 < n /\ p pdivides cyclo n ==> (deg p = ordz n (CARD R)): thm
 *)
-val poly_cyclo_irreducible_factor_deg_alt = store_thm(
-  "poly_cyclo_irreducible_factor_deg_alt",
-  ``!r:'a field. FiniteField r ==>
-   !p. monic p /\ ipoly p ==> !n. 0 < n /\ p pdivides cyclo n ==> (deg p = ordz n (CARD R))``,
-  rw_tac std_ss[poly_cyclo_irreducible_factor_deg, subfield_refl, finite_field_is_field]);
+Theorem poly_cyclo_irreducible_factor_deg_alt:
+    !r:'a field. FiniteField r ==>
+   !p. monic p /\ ipoly p ==> !n. 0 < n /\ p pdivides cyclo n ==> (deg p = ordz n (CARD R))
+Proof
+  rw_tac std_ss[poly_cyclo_irreducible_factor_deg, subfield_refl, finite_field_is_field]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Special subfield factor of Cyclo and Unity polynomials                    *)
@@ -2614,11 +2704,11 @@ order (ZN 7).prod 2 = ord 7 2 = 3,    and 2^3 MOD 7 = 1.
    (4) degree x = ordz n (CARD B)
        This is true                   by poly_minimal_deg_eqn, x IN R+
 *)
-val poly_cyclo_special_subfield_factor = store_thm(
-  "poly_cyclo_special_subfield_factor",
-  ``!(r s):'a field. FiniteField r /\ s <<= r /\ 1 < (r <:> s) ==>
+Theorem poly_cyclo_special_subfield_factor:
+    !(r s):'a field. FiniteField r /\ s <<= r /\ 1 < (r <:> s) ==>
    !n. 0 < n /\ coprime n (CARD B) /\ (ordz n (CARD B) = (r <:> s)) ==>
-   ?h. monic h /\ IPoly s h /\ h pdivides (cyclo n) /\ (deg h = ordz n (CARD B))``,
+   ?h. monic h /\ IPoly s h /\ h pdivides (cyclo n) /\ (deg h = ordz n (CARD B))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = IMAGE minimal (orders f* n)` >>
   `cyclo n = PPROD t` by rw[poly_cyclo_eq_poly_minimal_product, Abbr`t`] >>
@@ -2634,7 +2724,8 @@ val poly_cyclo_special_subfield_factor = store_thm(
   `FINITE t` by rw[field_orders_finite, Abbr`t`] >>
   `pset t` by metis_tac[poly_minimal_poly, field_orders_element, IN_IMAGE] >>
   metis_tac[poly_prod_set_element_divides, field_is_ring]) >>
-  rw[poly_minimal_deg_eqn]);
+  rw[poly_minimal_deg_eqn]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r /\ 1 < (r <:> s) ==>
             !n. 0 < n /\ coprime n (CARD B) /\ (ordz n (CARD B) = (r <:> s)) ==>
@@ -2659,12 +2750,12 @@ val poly_cyclo_special_subfield_factor = store_thm(
          and (roots h) SUBSET roots (cyclo n)  by poly_divides_share_roots
         ==> roots h SUBSET orders f* n         by abive, poly_cyclo_roots
 *)
-val poly_unity_special_subfield_factor = store_thm(
-  "poly_unity_special_subfield_factor",
-  ``!(r s):'a field. FiniteField r /\ s <<= r /\ 1 < (r <:> s) ==>
+Theorem poly_unity_special_subfield_factor:
+    !(r s):'a field. FiniteField r /\ s <<= r /\ 1 < (r <:> s) ==>
    !n. 0 < n /\ coprime n (CARD B) /\ (ordz n (CARD B) = (r <:> s)) ==>
    ?h. monic h /\ IPoly s h /\ h pdivides (unity n) /\
-       (deg h = ordz n (CARD B)) /\ (roots h) SUBSET (orders f* n)``,
+       (deg h = ordz n (CARD B)) /\ (roots h) SUBSET (orders f* n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r` by rw[] >>
   `poly (unity n)` by rw[] >>
@@ -2672,7 +2763,8 @@ val poly_unity_special_subfield_factor = store_thm(
   `(cyclo n) pdivides (unity n)` by rw[poly_cyclo_divides_poly_unity, DIVIDES_REFL] >>
   `?h. monic h /\ IPoly s h /\ h pdivides (cyclo n) /\ (deg h = ordz n (CARD B))` by rw[poly_cyclo_special_subfield_factor] >>
   `poly h` by rw[] >>
-  metis_tac[poly_divides_transitive, poly_divides_share_roots, poly_cyclo_roots]);
+  metis_tac[poly_divides_transitive, poly_divides_share_roots, poly_cyclo_roots]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Cyclo and Unity polynomials by Irreducible Factors                        *)
@@ -2692,10 +2784,10 @@ val poly_unity_special_subfield_factor = store_thm(
      so s <> {}                    by IMAGE_EQ_EMPTY
    Take this s, and the result follows.
 *)
-val poly_cyclo_by_distinct_irreducibles = store_thm(
-  "poly_cyclo_by_distinct_irreducibles",
-  ``!r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
-   ?s. FINITE s /\ miset s /\ s <> {} /\ (cyclo n = PPROD s)``,
+Theorem poly_cyclo_by_distinct_irreducibles:
+    !r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
+   ?s. FINITE s /\ miset s /\ s <> {} /\ (cyclo n = PPROD s)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `r <<= r` by rw[subfield_refl] >>
   qabbrev_tac `s = IMAGE (poly_minimal r r) (orders f* n)` >>
@@ -2706,7 +2798,8 @@ val poly_cyclo_by_distinct_irreducibles = store_thm(
   `miset s` by metis_tac[poly_minimal_monic, poly_minimal_subfield_irreducible, IN_IMAGE, SUBSET_DEF] >>
   `(orders f* n) <> {}` by rw[GSYM finite_field_orders_nonempty_iff] >>
   `s <> {}` by rw[IMAGE_EQ_EMPTY, Abbr`s`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: FiniteField r ==> !n. n divides CARD R+ ==>
             !p q. poly p /\ poly q /\ (p ** char r == q ** char r) (pm (cyclo n)) ==> (p == q) (pm (cyclo n)) *)
@@ -2715,11 +2808,12 @@ val poly_cyclo_by_distinct_irreducibles = store_thm(
     ==> ?s. FINITE s /\ miset s /\ (cyclo n = PPROD s)  by poly_cyclo_by_distinct_irreducibles
     The result follows                                  by poly_distinct_irreducibles_mod_exp_char_eq
 *)
-val poly_cyclo_mod_exp_char_eq = store_thm(
-  "poly_cyclo_mod_exp_char_eq",
-  ``!r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
-   !p q. poly p /\ poly q /\ (p ** char r == q ** char r) (pm (cyclo n)) ==> (p == q) (pm (cyclo n))``,
-  metis_tac[poly_cyclo_by_distinct_irreducibles, poly_distinct_irreducibles_mod_exp_char_eq]);
+Theorem poly_cyclo_mod_exp_char_eq:
+    !r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
+   !p q. poly p /\ poly q /\ (p ** char r == q ** char r) (pm (cyclo n)) ==> (p == q) (pm (cyclo n))
+Proof
+  metis_tac[poly_cyclo_by_distinct_irreducibles, poly_distinct_irreducibles_mod_exp_char_eq]
+QED
 
 (* Theorem: FiniteField r ==> !n. n divides CARD R+ ==>
             ?s. FINITE s /\ miset s /\ s <> {} /\ (unity n = PPROD s) *)
@@ -2778,10 +2872,10 @@ val poly_cyclo_mod_exp_char_eq = store_thm(
 
    Take (BIGUNION s), and the result follows.
 *)
-val poly_unity_by_distinct_irreducibles = store_thm(
-  "poly_unity_by_distinct_irreducibles",
-  ``!r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
-   ?s. FINITE s /\ miset s /\ s <> {} /\ (unity n = PPROD s)``,
+Theorem poly_unity_by_distinct_irreducibles:
+    !r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
+   ?s. FINITE s /\ miset s /\ s <> {} /\ (unity n = PPROD s)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `c = IMAGE cyclo (divisors n)` >>
   `unity n = PPROD c` by rw[poly_unity_eq_poly_cyclo_product, Abbr`c`] >>
@@ -2812,16 +2906,18 @@ val poly_unity_by_distinct_irreducibles = store_thm(
   `!x. x IN s ==> x <> {}` by metis_tac[finite_field_orders_nonempty_iff, IMAGE_EQ_EMPTY] >>
   metis_tac[IN_SING]
   ) >>
-  metis_tac[monic_irreducible_set_bigunion]);
+  metis_tac[monic_irreducible_set_bigunion]
+QED
 
 (* Theorem: FiniteField r ==> !n. n divides CARD R+ ==>
             !p q. poly p /\ poly q /\ (p ** char r == q ** char r) (pm (unity n)) ==> (p == q) (pm (unity n)) *)
 (* Proof: by poly_unity_by_distinct_irreducibles, poly_distinct_irreducibles_mod_exp_char_eq *)
-val poly_unity_mod_exp_char_eq = store_thm(
-  "poly_unity_mod_exp_char_eq",
-  ``!r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
-   !p q. poly p /\ poly q /\ (p ** char r == q ** char r) (pm (unity n)) ==> (p == q) (pm (unity n))``,
-  metis_tac[poly_unity_by_distinct_irreducibles, poly_distinct_irreducibles_mod_exp_char_eq]);
+Theorem poly_unity_mod_exp_char_eq:
+    !r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
+   !p q. poly p /\ poly q /\ (p ** char r == q ** char r) (pm (unity n)) ==> (p == q) (pm (unity n))
+Proof
+  metis_tac[poly_unity_by_distinct_irreducibles, poly_distinct_irreducibles_mod_exp_char_eq]
+QED
 
 (* Theorem: FiniteField r ==> !n. n divides CARD R+ ==>
         !p. poly p /\ (p ** char r == |0|) (pm (unity n)) ==> (p == |0|) (pm (unity n)) *)
@@ -2831,15 +2927,16 @@ val poly_unity_mod_exp_char_eq = store_thm(
     ==> |0| ** char r = |0|  by poly_zero_exp, char r <> 0
    The result follows        by poly_unity_mod_exp_char_eq
 *)
-val poly_unity_mod_exp_char_eq_zero = store_thm(
-  "poly_unity_mod_exp_char_eq_zero",
-  ``!r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
-   !p. poly p /\ (p ** char r == |0|) (pm (unity n)) ==> (p == |0|) (pm (unity n))``,
+Theorem poly_unity_mod_exp_char_eq_zero:
+    !r:'a field. FiniteField r ==> !n. n divides CARD R+ ==>
+   !p. poly p /\ (p ** char r == |0|) (pm (unity n)) ==> (p == |0|) (pm (unity n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `poly |0|` by rw[] >>
   `0 < char r` by rw[finite_field_char_pos] >>
   `|0| ** char r = |0|` by rw[poly_zero_exp] >>
-  rw_tac std_ss[poly_unity_mod_exp_char_eq]);
+  rw_tac std_ss[poly_unity_mod_exp_char_eq]
+QED
 
 (* Theorem: FiniteField r ==>
         !n. coprime n (CARD R) /\ 1 < ordz n (CARD R) ==>
@@ -2887,12 +2984,12 @@ val poly_unity_mod_exp_char_eq_zero = store_thm(
     ==> (p_ == q_) (pmod t u_)                       by poly_unity_mod_exp_char_eq
     ==> (p == q) (pm u)                              by poly_mod_lift_poly_poly_mod
 *)
-val poly_unity_mod_exp_char_equal = store_thm(
-  "poly_unity_mod_exp_char_equal",
-  ``!r:'a field. FiniteField r ==>
+Theorem poly_unity_mod_exp_char_equal:
+    !r:'a field. FiniteField r ==>
    !n. coprime n (CARD R) /\ 1 < ordz n (CARD R) ==>
    !p q. poly p /\ poly q /\
-         (p ** char r == q ** char r) (pm (unity n)) ==> (p == q) (pm (unity n))``,
+         (p ** char r == q ** char r) (pm (unity n)) ==> (p == q) (pm (unity n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `d = ordz n (CARD R)` >>
   `1 < n` by metis_tac[ZN_order_with_coprime_1, finite_field_card_gt_1] >>
@@ -2919,7 +3016,8 @@ val poly_unity_mod_exp_char_equal = store_thm(
   `pmonic (unity n)` by rw[poly_unity_pmonic] >>
   `((lift p) **z c == (lift q) **z c) (pmod t (unityz n))` by metis_tac[poly_mod_lift_poly_mod, poly_exp_poly, field_is_ring] >>
   `(lift p == lift q) (pmod t (unityz n))` by metis_tac[poly_unity_mod_exp_char_eq] >>
-  metis_tac[poly_mod_lift_poly_mod, field_is_ring]);
+  metis_tac[poly_mod_lift_poly_mod, field_is_ring]
+QED
 
 (* Theorem: FiniteField r ==> !n. coprime n (CARD R) /\ 1 < ordz n (CARD R) ==>
         !p. poly p /\ (p ** char r == |0|) (pm (unity n)) ==> (p == |0|) (pm (unity n)) *)
@@ -2929,15 +3027,16 @@ val poly_unity_mod_exp_char_equal = store_thm(
     ==> |0| ** char r = |0|  by poly_zero_exp, char r <> 0
    The result follows        by poly_unity_mod_exp_char_equal
 *)
-val poly_unity_mod_exp_char_equal_zero = store_thm(
-  "poly_unity_mod_exp_char_equal_zero",
-  ``!r:'a field. FiniteField r ==> !n. coprime n (CARD R) /\ 1 < ordz n (CARD R) ==>
-   !p. poly p /\ (p ** char r == |0|) (pm (unity n)) ==> (p == |0|) (pm (unity n))``,
+Theorem poly_unity_mod_exp_char_equal_zero:
+    !r:'a field. FiniteField r ==> !n. coprime n (CARD R) /\ 1 < ordz n (CARD R) ==>
+   !p. poly p /\ (p ** char r == |0|) (pm (unity n)) ==> (p == |0|) (pm (unity n))
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `poly |0|` by rw[] >>
   `0 < char r` by rw[finite_field_char_pos] >>
   `|0| ** char r = |0|` by rw[poly_zero_exp] >>
-  rw_tac std_ss[poly_unity_mod_exp_char_equal]);
+  rw_tac std_ss[poly_unity_mod_exp_char_equal]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Unity Roots by Master Roots                                               *)
@@ -2961,9 +3060,9 @@ val poly_unity_mod_exp_char_equal_zero = store_thm(
       = (roots p) DELETE #0                    by DELETE_DEF
       = roots p                                by DELETE_NON_ELEMENT
 *)
-val poly_unity_roots_by_master_roots = store_thm(
-  "poly_unity_roots_by_master_roots",
-  ``!r:'a field. FiniteField r ==> (roots (unity (CARD R+)) = R+)``,
+Theorem poly_unity_roots_by_master_roots:
+    !r:'a field. FiniteField r ==> (roots (unity (CARD R+)) = R+)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0 /\ #0 IN R` by rw[] >>
   qabbrev_tac `p = unity (CARD R+)` >>
@@ -2979,7 +3078,8 @@ val poly_unity_roots_by_master_roots = store_thm(
   `_ = (roots p) DIFF {#0}` by rw[DIFF_SAME_UNION] >>
   `_ = (roots p) DELETE #0` by rw[DELETE_DEF] >>
   `_ = roots p` by metis_tac[DELETE_NON_ELEMENT] >>
-  rw[]);
+  rw[]
+QED
 
 (* This is put here because, to be clean, ffUnity does not know about ffMaster.
    This script is the first one that knows about both ffUnity and ffMaster.
@@ -2993,16 +3093,17 @@ val poly_unity_roots_by_master_roots = store_thm(
     and deg (unity (CARD R+)) = CARD R+  by poly_unity_deg
    Thus unity (CARD R+) = PIFACTOR R+    by poly_eq_prod_factor_roots
 *)
-val poly_unity_eq_root_factor_product = store_thm(
-  "poly_unity_eq_root_factor_product",
-  ``!r:'a field. FiniteField r ==> (unity (CARD R+) = PIFACTOR R+)``,
+Theorem poly_unity_eq_root_factor_product:
+    !r:'a field. FiniteField r ==> (unity (CARD R+) = PIFACTOR R+)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `0 < CARD R+` by rw[field_nonzero_card_pos] >>
   `roots (unity (CARD R+)) = R+` by rw[poly_unity_roots_by_master_roots] >>
   `monic (unity (CARD R+))` by rw[] >>
   `deg (unity (CARD R+)) = CARD R+` by rw[] >>
-  metis_tac[poly_eq_prod_factor_roots]);
+  metis_tac[poly_eq_prod_factor_roots]
+QED
 
 (* Theorem: FiniteField r ==> (master (CARD R) = PPROD {X - c * |1| | c | c IN R}) *)
 (* Proof:
@@ -3013,16 +3114,17 @@ val poly_unity_eq_root_factor_product = store_thm(
    Thus unity (CARD R+)
       = PPROD {X - c * |1| | c | c IN R+ }    by poly_eq_prod_factor_roots_alt
 *)
-val poly_unity_eq_root_factor_product_alt = store_thm(
-  "poly_unity_eq_root_factor_product_alt",
-  ``!r:'a field. FiniteField r ==> (unity (CARD R+) = PPROD {X - c * |1| | c | c IN R+})``,
+Theorem poly_unity_eq_root_factor_product_alt:
+    !r:'a field. FiniteField r ==> (unity (CARD R+) = PPROD {X - c * |1| | c | c IN R+})
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `0 < CARD R+` by rw[field_nonzero_card_pos] >>
   `roots (unity (CARD R+)) = R+` by rw[poly_unity_roots_by_master_roots] >>
   `monic (unity (CARD R+))` by rw[] >>
   `deg (unity (CARD R+)) = CARD R+` by rw[] >>
-  metis_tac[poly_eq_prod_factor_roots_alt]);
+  metis_tac[poly_eq_prod_factor_roots_alt]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

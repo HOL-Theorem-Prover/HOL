@@ -1,8 +1,6 @@
 (* file inttoScript.sml, split off from totoScript 12/13/13 to be the  *)
 (* only theory that loads intLib. *)
 
-(* app load ["totoTheory", "intLib"]; *)
-
 Theory intto
 Ancestors
   pred_set relation pair arithmetic numeral toto integer
@@ -18,17 +16,6 @@ val _ = ParseExtras.temp_loose_equality()
 val AR = ASM_REWRITE_TAC [];
 fun ulist x = [x];
 
-(* ***************************************************************** *)
-(* Following switch, BigSig, allows "maybe_thm" to act either as     *)
-(* store_thm or as prove, thus maximizing or minimizing the output   *)
-(* from print_theory and the stuff known to DB.match, DB.find        *)
-(* ***************************************************************** *)
-
-val BigSig = false;
-
-fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
-                                       else prove (tm, tac);
-
 (* **************************************************************** *)
 (* Theorems to support intto_CONV, for comparing at type int.       *)
 (* **************************************************************** *)
@@ -43,17 +30,22 @@ fun maybe_thm (s, tm, tac) = if BigSig then store_thm (s, tm, tac)
 Definition intOrd:  intOrd = TO_of_LinearOrder ($< :int reln)
 End
 
-val StrongLinearOrder_int_lt = maybe_thm ("StrongLinearOrder_int_lt",
-``StrongLinearOrder ($< :int reln)``,
+Theorem StrongLinearOrder_int_lt[local]:
+  StrongLinearOrder ($< :int reln)
+Proof
 SRW_TAC [][StrongLinearOrder,
  StrongOrder_ALT, trichotomous, Order, irreflexive_def, transitive_def] THENL
 [IMP_RES_TAC integerTheory.INT_LT_TRANS
 ,STRIP_ASSUME_TAC (SPECL [``a:int``, ``b:int``] integerTheory.INT_LT_TOTAL)
- THEN AR]);
+ THEN AR]
+QED
 
-val TO_intOrd = maybe_thm ("TO_intOrd", ``TotOrd intOrd``,
-REWRITE_TAC [intOrd] THEN MATCH_MP_TAC TotOrd_TO_of_Strong THEN
-ACCEPT_TAC StrongLinearOrder_int_lt);
+Theorem TO_intOrd[local]:
+  TotOrd intOrd
+Proof
+  REWRITE_TAC [intOrd] THEN MATCH_MP_TAC TotOrd_TO_of_Strong THEN
+  ACCEPT_TAC StrongLinearOrder_int_lt
+QED
 
 Definition intto:  intto = TO intOrd
 End

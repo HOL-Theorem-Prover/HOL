@@ -39,7 +39,9 @@ End
 
 (* distinctness theorem *)
 
-val ALL_DISTINCT_Zreg = store_thm("ALL_DISTINCT_Zreg",
-  ``ALL_DISTINCT ([RAX;RCX;RDX;RBX;RSP;RBP;RSI;RDI;zR8;zR9;zR10;zR11;
-      zR12;zR13;zR14;zR15;zGhost_stack_top;zGhost_stack_bottom]:Zreg list)``,
-  SRW_TAC[][]);
+Theorem ALL_DISTINCT_Zreg:
+    ALL_DISTINCT ([RAX;RCX;RDX;RBX;RSP;RBP;RSI;RDI;zR8;zR9;zR10;zR11;
+      zR12;zR13;zR14;zR15;zGhost_stack_top;zGhost_stack_bottom]:Zreg list)
+Proof
+  SRW_TAC[][]
+QED

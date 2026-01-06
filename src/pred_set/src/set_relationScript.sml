@@ -337,7 +337,7 @@ Proof
             (Q.SPECL [`r`, `\(x, y). tc' x y`] transitive_closure_strongind))
 QED
 
-Triviality tc_cases_lem:
+Theorem tc_cases_lem[local]:
   !x y.
     (x, y) IN tc r ==>
     (x, y) IN r \/
@@ -361,7 +361,7 @@ Proof
   METIS_TAC [tc_cases_lem, tc_rules]
 QED
 
-Triviality tc_ind_left_lem:
+Theorem tc_ind_left_lem[local]:
   !r P.
     (!x y. (x, y) IN r ==> P x y) /\
     (!x y. (?z. (x, z) IN r /\ P z y) ==> P x y) ==>
@@ -382,7 +382,7 @@ Proof
   METIS_TAC [tc_ind_left_lem]
 QED
 
-Triviality tc_strongind_left_lem:
+Theorem tc_strongind_left_lem[local]:
   !r P.
     (!x y. (x, y) IN r ==> P x y) /\
     (!x y. (?z. (x, z) IN r /\ (z, y) IN tc r /\ P z y) ==> P x y) ==>
@@ -404,7 +404,7 @@ Proof
   METIS_TAC [tc_strongind_left_lem]
 QED
 
-Triviality tc_ind_right_lem:
+Theorem tc_ind_right_lem[local]:
   !r P.
     (!x y. (x, y) IN r ==> P x y) /\
     (!x y. (?z. P x z /\ (z, y) IN r) ==> P x y) ==>
@@ -438,7 +438,7 @@ Proof
   THEN METIS_TAC []
 QED
 
-Triviality tc_strongind_right_lem:
+Theorem tc_strongind_right_lem[local]:
   !r P.
     (!x y. (x, y) IN r ==> P x y) /\
     (!x y. (?z. (x, z) IN tc r /\ P x z /\ (z, y) IN r) ==> P x y) ==>
@@ -468,7 +468,7 @@ Proof
   THENL [SRW_TAC [] [Once tc_cases], METIS_TAC [tc_rules]]
 QED
 
-Triviality tc_implication_lem:
+Theorem tc_implication_lem[local]:
   !x y. (x, y) IN tc r1 ==>
         !r2. (!x y. (x, y) IN r1 ==> (x, y) IN r2) ==> (x, y) IN tc r2
 Proof
@@ -484,7 +484,7 @@ Proof
   METIS_TAC [tc_implication_lem]
 QED
 
-Triviality tc_empty:
+Theorem tc_empty[local]:
   !x y. (x, y) IN tc {} ==> F
 Proof
   HO_MATCH_MP_TAC tc_ind THEN SRW_TAC [] []
@@ -514,7 +514,7 @@ Proof
   THEN METIS_TAC [tc_rules]
 QED
 
-Triviality pair_in_IMAGE_SWAP:
+Theorem pair_in_IMAGE_SWAP[local]:
   ((a, b) IN IMAGE SWAP r) = ((b, a) IN r)
 Proof
   Ho_Rewrite.REWRITE_TAC [IN_IMAGE, EXISTS_PROD, SWAP_def, FST, SND, PAIR_EQ]
@@ -589,7 +589,7 @@ Proof
   REWRITE_TAC [acyclic_def, tc_SWAP, pair_in_IMAGE_SWAP]
 QED
 
-Triviality tc_BIGUNION_lem:
+Theorem tc_BIGUNION_lem[local]:
   !x y.
     (x, y) IN tc (BIGUNION rs) ==>
     (!r r'.
@@ -655,7 +655,7 @@ End
 
 val _ = ot "transitive"
 
-Triviality transitive_tc_lem:
+Theorem transitive_tc_lem[local]:
   !x y. (x, y) IN tc r ==> transitive r ==> (x, y) IN r
 Proof
   HO_MATCH_MP_TAC tc_ind
@@ -1131,7 +1131,7 @@ Proof
               reln_rel_conv_props]
 QED
 
-Triviality aux1:
+Theorem aux1[local]:
   ((reln_to_rel r) RSUBSET RRUNIV s) = (domain r SUBSET s /\ range r SUBSET s)
 Proof
   SRW_TAC [] [RSUBSET, RRUNIV_def, domain_def, range_def, reln_to_rel_app,
@@ -1139,7 +1139,7 @@ Proof
   THEN PROVE_TAC []
 QED
 
-Triviality aux2:
+Theorem aux2[local]:
   (domain r SUBSET s /\ range r SUBSET s) ==>
   (transitive (RREFL_EXP (reln_to_rel r) s) = transitive (reln_to_rel r))
 Proof
@@ -1149,7 +1149,7 @@ Proof
   THEN PROVE_TAC []
 QED
 
-Triviality aux3:
+Theorem aux3[local]:
   (domain r SUBSET s /\ range r SUBSET s) ==>
   (antisymmetric (RREFL_EXP (reln_to_rel r) s) = antisymmetric (reln_to_rel r))
 Proof
@@ -1336,7 +1336,7 @@ Proof
   ]
 QED
 
-Triviality tc_path_max_lem:
+Theorem tc_path_max_lem[local]:
   !s. FINITE s ==>
       s <> {} ==> !r. acyclic r ==> ?x. x IN maximal_elements s (tc r)
 Proof
@@ -1357,7 +1357,7 @@ Proof
   ]
 QED
 
-Triviality tc_path_min_lem:
+Theorem tc_path_min_lem[local]:
   !s. FINITE s ==>
       s <> {} ==> !r. acyclic r ==> ?x. x IN minimal_elements s (tc r)
 Proof
@@ -1396,7 +1396,7 @@ Proof
   THEN METIS_TAC [tc_rules]
 QED
 
-Triviality lemma1:
+Theorem lemma1[local]:
   !x y. (x, y) IN tc r ==> ?z. (x, z) IN r /\ (x <> y ==> x <> z)
 Proof
   HO_MATCH_MP_TAC tc_ind
@@ -1416,7 +1416,7 @@ Proof
   THEN METIS_TAC [lemma1, tc_rules]
 QED
 
-Triviality lemma1:
+Theorem lemma1[local]:
   !y x. (y, x) IN tc r ==> ?z. (z, x) IN r /\ (x <> y ==> x <> z)
 Proof
   HO_MATCH_MP_TAC tc_ind
@@ -1625,7 +1625,7 @@ Proof
   THEN FULL_SIMP_TAC (srw_ss()) [strict_linear_order_def, transitive_def]
 QED
 
-Triviality acyclic_union:
+Theorem acyclic_union[local]:
   acyclic (r1 UNION r2) ==> (q, r) IN r2 ==> (r, q) NOTIN r1
 Proof
   REWRITE_TAC [acyclic_def]
@@ -1839,14 +1839,14 @@ Definition fchains_def:
                minimal_elements ((upper_bounds C r DIFF C) INTER k) r) }
 End
 
-Triviality lemma1:
+Theorem lemma1[local]:
   !x s r. chain s r /\ x IN s ==> x IN domain r /\ x IN range r
 Proof
   SRW_TAC [] [chain_def, in_domain, in_range]
   THEN METIS_TAC []
 QED
 
-Triviality lemma2:
+Theorem lemma2[local]:
   !r k1 k2 x x'.
     transitive r /\
     k1 IN fchains r /\
@@ -1893,7 +1893,7 @@ Proof
    THEN METIS_TAC [transitive_def]
 QED
 
-Triviality lemma3:
+Theorem lemma3[local]:
   !r k1 k2.
      transitive r /\ antisym r /\ k1 IN fchains r /\ k2 IN fchains r ==>
      k1 SUBSET k2 \/ k2 SUBSET k1
@@ -1905,7 +1905,7 @@ Proof
   THEN METIS_TAC [lemma2]
 QED
 
-Triviality lemma4:
+Theorem lemma4[local]:
   !r. antisym r /\ transitive r ==>
       chain (BIGUNION (fchains r)) r /\
       (!x x' k.
@@ -1928,7 +1928,7 @@ Proof
  ]
 QED
 
-Triviality lemma5:
+Theorem lemma5[local]:
   !r s. range r SUBSET s /\ (range r <> {}) /\ reflexive r s ==>
         { CHOICE (range r) } IN fchains r
 Proof
@@ -1942,7 +1942,7 @@ Proof
   ]
 QED
 
-Triviality lemma6:
+Theorem lemma6[local]:
   !r k x C.
     transitive r /\
     antisym r /\
@@ -1970,7 +1970,7 @@ Proof
   THEN METIS_TAC []
 QED
 
-Triviality lemma7:
+Theorem lemma7[local]:
   !r s.
      range r SUBSET s /\ (range r <> {}) /\ antisym r /\ reflexive r s /\
      transitive r ==>
@@ -2000,7 +2000,7 @@ Proof
   ]
 QED
 
-Triviality lemma8:
+Theorem lemma8[local]:
   !r s k.
      range r SUBSET s /\
      (range r <> {}) /\
@@ -2053,7 +2053,7 @@ Proof
   ]
 QED
 
-Triviality lemma9:
+Theorem lemma9[local]:
   !r s.
      range r SUBSET s /\
      (range r <> {}) /\
@@ -2309,7 +2309,7 @@ QED
 (*  set can be extended to a linear order with finite prefixes.             *)
 (* ------------------------------------------------------------------------ *)
 
-Triviality po2lolem1:
+Theorem po2lolem1[local]:
   !(f: num -> 'a option) (s : 'a set).
     (!n m. (f m = f n) /\ ~(f m = NONE) ==> (m = n)) /\
     (!x. x IN s ==> ?m. (f m = SOME x)) /\
@@ -2343,7 +2343,7 @@ Definition nth_min_def:
         nth_min r' (s DELETE (THE min), r) n)
 End
 
-Triviality nth_min_surj_lem1:
+Theorem nth_min_surj_lem1[local]:
   !r' s' x s r.
     linear_order r' s /\
     finite_prefixes r' s /\
@@ -2416,7 +2416,7 @@ Proof
   ]
 QED
 
-Triviality nth_min_surj_lem2:
+Theorem nth_min_surj_lem2[local]:
   !r' s r m m' x x'.
     nth_min r' (s, r) m = SOME x /\
     nth_min r' (s DIFF {x | ?n. n <= m /\ (nth_min r' (s, r) n = SOME x)}, r)
@@ -2466,7 +2466,7 @@ Proof
   THEN SRW_TAC [] []
 QED
 
-Triviality nth_min_surj_lem3:
+Theorem nth_min_surj_lem3[local]:
   !r' s r s' x.
     linear_order r' s /\
     finite_prefixes r' s /\
@@ -2515,7 +2515,7 @@ Proof
   ]
 QED
 
-Triviality get_min_lem1:
+Theorem get_min_lem1[local]:
   !r' s r x. (get_min r' (s, r) = SOME x) ==> x IN s
 Proof
   SRW_TAC [] [get_min_def, LET_THM, SING_DEF]
@@ -2524,7 +2524,7 @@ Proof
   THEN METIS_TAC []
 QED
 
-Triviality nth_min_lem1:
+Theorem nth_min_lem1[local]:
   !r' s r m x. (nth_min r' (s, r) m = SOME x) ==> x IN s
 Proof
   Induct_on `m`
@@ -2534,7 +2534,7 @@ Proof
   THEN FULL_SIMP_TAC (srw_ss()) []
 QED
 
-Triviality nth_min_lem2:
+Theorem nth_min_lem2[local]:
   !r' s r n m.
     nth_min r' (s, r) m <> NONE ==>
     nth_min r' (s, r) m <> nth_min r' (s, r) (SUC (m + n))
@@ -2553,7 +2553,7 @@ Proof
   ]
 QED
 
-Triviality nth_min_inj_lem:
+Theorem nth_min_inj_lem[local]:
   !r' s r.
     (nth_min r' (s, r) m = nth_min r' (s, r) n) /\
     nth_min r' (s, r) m <> NONE ==>
@@ -2571,7 +2571,7 @@ Proof
   ]
 QED
 
-Triviality nth_min_subset_lem1:
+Theorem nth_min_subset_lem1[local]:
   !m n x y s r r'.
     m < n /\ x <> y /\
     (nth_min r' (s, r) n = SOME x) /\ (nth_min r' (s, r) m = SOME y) ==>
@@ -2603,7 +2603,7 @@ Proof
   ]
 QED
 
-Triviality nth_min_subset_lem2:
+Theorem nth_min_subset_lem2[local]:
   !r' r s.
     linear_order {(x, y) | ?m n. m <= n /\ (nth_min r' (s, r) m = SOME x) /\
                                  (nth_min r' (s, r) n = SOME y)} s /\

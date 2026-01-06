@@ -23,16 +23,17 @@ Definition iseg_def:
   iseg A R x = SPEC0 (λy. y ∈ A ∧ R y x ∧ x ≠ y ∧ x ∈ A)
 End
 
-val iseg_SUBSET = store_thm(
-  "iseg_SUBSET",
-  ``∀x y. x ∈ A ∧ y ∈ A ∧ poc A R ∧ R x y ⇒ iseg A R x ⊆ iseg A R y``,
+Theorem iseg_SUBSET:
+    ∀x y. x ∈ A ∧ y ∈ A ∧ poc A R ∧ R x y ⇒ iseg A R x ⊆ iseg A R y
+Proof
   rpt strip_tac >>
   `∀x y z. x ∈ A ∧ y ∈ A ∧ z ∈ A ∧ R x y ∧ R y z ⇒ R x z` by fs[poc_def] >>
   rw[iseg_def, SUBSET_def, SPEC0] >- metis_tac [] >>
   `R u y` by metis_tac [] >>
   strip_tac >> srw_tac [][] >>
   `∀x y. x ∈ A ∧ y ∈ A ∧ R x y ∧ R y x ⇒ (x = y)` by fs[poc_def] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 Definition woclass_def:
   woclass A R ⇔
@@ -43,14 +44,15 @@ End
 val Nats_SETs = prove(``n ∈ Nats ⇒ SET n``, metis_tac [SET_def])
 val _ = augment_srw_ss [rewrites [Nats_SETs]]
 
-val Nats_wo = store_thm(
-  "Nats_wo",
-  ``woclass Nats (λx y. x ≤ y)``,
+Theorem Nats_wo:
+    woclass Nats (λx y. x ≤ y)
+Proof
   rw[woclass_def, totalR_def, poc_def, LE_ANTISYM]
     >- metis_tac [LE_TRANS]
     >- metis_tac [LE_TOTAL] >>
   `∃e. e ∈ B` by (fs[EXTENSION] >> metis_tac[]) >>
-  metis_tac [Nats_least_element]);
+  metis_tac [Nats_least_element]
+QED
 
 Definition ordinal_def:
   ordinal α ⇔ SET α ∧ transitive α ∧
@@ -68,16 +70,17 @@ End
 
 val _ = overload_on ("<=", ``ordle``)
 
-val ordle_REFL = store_thm(
-  "ordle_REFL",
-  ``x:vbgc ≤ x``,
-  rw[ordle_def])
+Theorem ordle_REFL:
+    x:vbgc ≤ x
+Proof
+  rw[ordle_def]
+QED
 val _ = export_rewrites ["ordle_REFL"]
 
-val woclass_thm = store_thm(
-  "woclass_thm",
-  ``woclass A R ⇔ (∀x y. x ∈ A ∧ y ∈ A ∧ R x y ∧ R y x ⇒ (x = y)) ∧
-                  ∀B. B ⊆ A ∧ B ≠ {} ⇒ ∃e. e ∈ B ∧ ∀d. d ∈ B ⇒ R e d``,
+Theorem woclass_thm:
+    woclass A R ⇔ (∀x y. x ∈ A ∧ y ∈ A ∧ R x y ∧ R y x ⇒ (x = y)) ∧
+                  ∀B. B ⊆ A ∧ B ≠ {} ⇒ ∃e. e ∈ B ∧ ∀d. d ∈ B ⇒ R e d
+Proof
   rw[woclass_def, EQ_IMP_THM]
     >- fs[totalR_def, poc_def] >>
   rw[totalR_def, poc_def]
@@ -97,17 +100,19 @@ val woclass_thm = store_thm(
         `SET x ∧ SET y` by metis_tac [SET_def] >>
         `{x;y} ≠ {}`
            by rw[Once EXTENSION, EXISTS_OR_THM] >>
-        srw_tac[CONJ_ss, DNF_ss][SUBSET_def]))
+        srw_tac[CONJ_ss, DNF_ss][SUBSET_def])
+QED
 
-val EMPTY_ordinal = store_thm(
-  "EMPTY_ordinal",
-  ``ordinal {}``,
-  rw[ordinal_def, transitive_def])
+Theorem EMPTY_ordinal:
+    ordinal {}
+Proof
+  rw[ordinal_def, transitive_def]
+QED
 val _ = export_rewrites ["EMPTY_ordinal"]
 
-val ORDINALS_CONTAIN_ORDINALS = store_thm(
-  "ORDINALS_CONTAIN_ORDINALS",
-  ``∀α β. ordinal α ∧ β ∈ α ⇒ ordinal β``,
+Theorem ORDINALS_CONTAIN_ORDINALS:
+    ∀α β. ordinal α ∧ β ∈ α ⇒ ordinal β
+Proof
   rw[ordinal_def]
     >- metis_tac [SET_def]
     >- (fs[transitive_def] >>
@@ -119,29 +124,32 @@ val ORDINALS_CONTAIN_ORDINALS = store_thm(
         `u ∈ α` by metis_tac [SUBSET_def] >>
         `u ∈ β ∨ β ∈ u ∨ (β = u)` by metis_tac [] >>
         metis_tac [IN3_ANTISYM, IN_ANTISYM])
-   >- metis_tac [transitive_def, SUBSET_def])
+   >- metis_tac [transitive_def, SUBSET_def]
+QED
 
-val ORD_INDUCTION = store_thm(
-  "ORD_INDUCTION",
-  ``(∀a. ordinal a ∧ (∀x. x ∈ a ⇒ P x) ⇒ P a) ⇒ ∀a. ordinal a ⇒ P a``,
+Theorem ORD_INDUCTION:
+    (∀a. ordinal a ∧ (∀x. x ∈ a ⇒ P x) ⇒ P a) ⇒ ∀a. ordinal a ⇒ P a
+Proof
   strip_tac >>
   qsuff_tac `∀a. SET a ⇒ ordinal a ⇒ P a`
     >- metis_tac [SET_def, ordinal_def] >>
-  Induct_on `SET a` >> rw[] >> metis_tac [ORDINALS_CONTAIN_ORDINALS]);
+  Induct_on `SET a` >> rw[] >> metis_tac [ORDINALS_CONTAIN_ORDINALS]
+QED
 val _ = IndDefLib.export_rule_induction "ORD_INDUCTION"
 
-val EMPTY_LE_ORDS = store_thm(
-  "EMPTY_LE_ORDS",
-  ``∀α. ordinal α ⇒ {} ≤ α``,
+Theorem EMPTY_LE_ORDS:
+    ∀α. ordinal α ⇒ {} ≤ α
+Proof
   Induct_on `ordinal α` >> rw[] >>
   Cases_on `α = {}` >> rw[] >>
   `∃β. β ∈ α` by metis_tac [EMPTY_UNIQUE] >>
   `{} ≤ β` by metis_tac [] >>
-  fs[ordle_def] >> metis_tac [transitive_ALT, ordinal_def]);
+  fs[ordle_def] >> metis_tac [transitive_ALT, ordinal_def]
+QED
 
-val ords_segs = store_thm(
-  "ords_segs",
-  ``∀α. ordinal α ⇒ (iseg Ord ordle α = α)``,
+Theorem ords_segs:
+    ∀α. ordinal α ⇒ (iseg Ord ordle α = α)
+Proof
   rw[Ord_def, ordinal_def, iseg_def] >> rw[Once EXTENSION] >>
   rw[EQ_IMP_THM] >| [
     fs[ordle_def],
@@ -152,14 +160,16 @@ val ords_segs = store_thm(
     metis_tac [transitive_ALT],
     rw[ordle_def],
     metis_tac [IN_REFL]
-  ])
+  ]
+QED
 
-val ords_segs2 = store_thm(
-  "ords_segs2",
-  ``ordinal α ∧ e ∈ α ⇒ (iseg α ordle e = e)``,
+Theorem ords_segs2:
+    ordinal α ∧ e ∈ α ⇒ (iseg α ordle e = e)
+Proof
   rw[ordinal_def, iseg_def] >> rw[Once EXTENSION] >>
   EQ_TAC >- srw_tac[CONJ_ss][ordle_def] >>
-  metis_tac [SET_def, ordle_def, IN_REFL, transitive_ALT]);
+  metis_tac [SET_def, ordle_def, IN_REFL, transitive_ALT]
+QED
 
 
 Definition orderiso_def:
@@ -170,9 +180,9 @@ Definition orderiso_def:
                        (∀x1 x2. x1 ∈ A ∧ x2 ∈ A ∧ R x1 x2 ⇒ R (f x1) (f x2))
 End
 
-val ordle_wo = store_thm(
-  "ordle_wo",
-  ``ordinal α ⇒ woclass α ordle``,
+Theorem ordle_wo:
+    ordinal α ⇒ woclass α ordle
+Proof
   rw[woclass_thm, Ord_def]
     >- ((* antisymmetry *)
         fs[ordinal_def, transitive_def] >>
@@ -183,19 +193,21 @@ val ordle_wo = store_thm(
         `∃x. x ∈ B ∧ (x ∩ B = {})` by metis_tac [FOUNDATION3] >>
         qexists_tac `x` >> rw[] >>
         `d ∉ x` by (fs [Once EXTENSION] >> metis_tac [SET_def]) >>
-        metis_tac [ordinal_def, ordle_def, SUBSET_def]));
+        metis_tac [ordinal_def, ordle_def, SUBSET_def])
+QED
 
-val wlog_seteq = store_thm(
-  "wlog_seteq",
-  ``(∀a b. Q a b ⇒ Q b a) ∧ (∀a b. Q a b ⇒ a ⊆ b) ⇒
-    (∀a b. Q a b ⇒ (a = b))``,
+Theorem wlog_seteq:
+    (∀a b. Q a b ⇒ Q b a) ∧ (∀a b. Q a b ⇒ a ⊆ b) ⇒
+    (∀a b. Q a b ⇒ (a = b))
+Proof
   rpt strip_tac >>
   qsuff_tac `a ⊆ b ∧ b ⊆ a` >- metis_tac[SUBSET_def, EXTENSION] >>
-  metis_tac []);
+  metis_tac []
+QED
 
-val orderiso_ordinals = store_thm(
-  "orderiso_ordinals",
-  ``∀α β. ordinal α ∧ ordinal β ∧ orderiso α β $<= ⇒ (α = β)``,
+Theorem orderiso_ordinals:
+    ∀α β. ordinal α ∧ ordinal β ∧ orderiso α β $<= ⇒ (α = β)
+Proof
   ho_match_mp_tac wlog_seteq >> conj_tac
     >- (rw[orderiso_def]>>
         `∀a. a ∈ α ⇒ ∃!b. b ∈ β ∧ (a = f b)` by metis_tac [] >>
@@ -259,7 +271,8 @@ val orderiso_ordinals = store_thm(
          metis_tac [ordle_def, IN_REFL, IN_ANTISYM]) >>
   `_ = f e` by metis_tac [ords_segs2] >>
   `iseg α ordle e = e` by metis_tac [ords_segs2] >>
-  metis_tac [])
+  metis_tac []
+QED
 
 
 

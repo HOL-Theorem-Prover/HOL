@@ -70,9 +70,9 @@ End
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val INSERT_SORTED = store_thm
-  ("INSERT_SORTED",
-   ``!f a l. totalorder f ==> (sorted f (insert f a l) = sorted f l)``,
+Theorem INSERT_SORTED:
+     !f a l. totalorder f ==> (sorted f (insert f a l) = sorted f l)
+Proof
    S_TAC
    >> AR_TAC [totalorder_def, partialorder_def, preorder_def,
               reflexive_def, transitive_def, total_def]
@@ -107,7 +107,8 @@ val INSERT_SORTED = store_thm
     >> Cases_on `f a x`
     >> Cases_on `f a h`
     >> R_TAC [sorted_def]
-    >> ho_PROVE_TAC []]);
+    >> ho_PROVE_TAC []]
+QED
 
 (* non-interactive mode
 *)

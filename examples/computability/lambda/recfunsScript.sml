@@ -30,19 +30,20 @@ val FV_UM = Store_thm(
   ``FV UM = {}``,
   SRW_TAC [][UM_def, EXTENSION]);
 
-val PhiSOME_UM_I = store_thm(
-  "PhiSOME_UM_I",
-  ``(Phi n m = SOME p) ⇒ UM @@ church (n ⊗ m) -n->* church p``,
+Theorem PhiSOME_UM_I:
+    (Phi n m = SOME p) ⇒ UM @@ church (n ⊗ m) -n->* church p
+Proof
   SRW_TAC [][Phi_def, UM_def] THEN
   SIMP_TAC (bsrw_ss()) [cnfst_behaviour, cnumdB_behaviour, cnsnd_behaviour,
                         cchurch_behaviour, cdAPP_behaviour] THEN
   IMP_RES_TAC cbnf_of_works1 THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN
-  ASM_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour]);
+  ASM_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour]
+QED
 
-val PhiNONE_UM = store_thm(
-  "PhiNONE_UM",
-  ``(Phi n m = NONE) ⇔ ¬has_bnf (UM @@ church (n ⊗ m))``,
+Theorem PhiNONE_UM:
+    (Phi n m = NONE) ⇔ ¬has_bnf (UM @@ church (n ⊗ m))
+Proof
   EQ_TAC THENL [
     SRW_TAC [][Phi_def] THEN REPEAT STRIP_TAC THEN
     `∃M. UM @@ church (n ⊗ m) == M ∧ bnf M`
@@ -61,41 +62,44 @@ val PhiNONE_UM = store_thm(
     Cases_on `Phi n m` THEN SRW_TAC [][] THEN
     IMP_RES_TAC PhiSOME_UM_I THEN
     METIS_TAC [nstar_betastar, bnf_church, has_bnf_thm]
-  ]);
+  ]
+QED
 
 (* effectively the other case for PhiSOME_UM *)
-val UM_bnf = store_thm(
-  "UM_bnf",
-  ``UM @@ church (n ⊗ m) == M ∧ bnf M ⇒
-    ∃p. (Phi n m = SOME p) ∧ (M = church p)``,
+Theorem UM_bnf:
+    UM @@ church (n ⊗ m) == M ∧ bnf M ⇒
+    ∃p. (Phi n m = SOME p) ∧ (M = church p)
+Proof
   REPEAT STRIP_TAC THEN Cases_on `Phi n m` THEN SRW_TAC [][] THENL [
     METIS_TAC [PhiNONE_UM, has_bnf_thm, betastar_lameq_bnf],
     `UM @@ church (n ⊗ m) == church x`
       by METIS_TAC [PhiSOME_UM_I, nstar_lameq] THEN
     METIS_TAC [betastar_lameq_bnf,  bnf_reduction_to_self, bnf_triangle,
                bnf_church]
-  ]);
+  ]
+QED
 
-val PhiSOME_UM = store_thm(
-  "PhiSOME_UM",
-  ``(Phi n m = SOME p) ⇔ UM @@ church (n ⊗ m) -n->* church p``,
+Theorem PhiSOME_UM:
+    (Phi n m = SOME p) ⇔ UM @@ church (n ⊗ m) -n->* church p
+Proof
   EQ_TAC THEN SRW_TAC [][PhiSOME_UM_I] THEN
   MATCH_MP_TAC
     (UM_bnf |> Q.INST [`M` |-> `church p`] |> SIMP_RULE (srw_ss()) []) THEN
-  ASM_SIMP_TAC (bsrw_ss()) []);
+  ASM_SIMP_TAC (bsrw_ss()) []
+QED
 
 (* Phi and its connection to cbnf_ofk *)
 val cbnf_of_works1' =
     cbnf_of_works1 |> Q.INST [`M` |-> `toTerm dM`, `N` |-> `toTerm dN`]
                    |> SIMP_RULE (srw_ss()) []
 
-val PhiSOME_cbnf_ofk = store_thm(
-  "PhiSOME_cbnf_ofk",
-  ``(Phi N e = SOME z) ⇒
+Theorem PhiSOME_cbnf_ofk:
+    (Phi N e = SOME z) ⇒
     ∃v.
       (∀k. cbnf_ofk @@ k @@ cDB (dAPP (numdB N) (fromTerm (church e))) ==
            k @@ cDB v) ∧
-      (z = force_num (toTerm v))``,
+      (z = force_num (toTerm v))
+Proof
   STRIP_TAC THEN
   `UM @@ church (N ⊗ e) -n->* church z`
     by FULL_SIMP_TAC (srw_ss()) [PhiSOME_UM] THEN
@@ -111,17 +115,18 @@ val PhiSOME_cbnf_ofk = store_thm(
   SIMP_TAC (bsrw_ss()) [cforce_num_behaviour] THEN STRIP_TAC THEN
   IMP_RES_TAC cbnf_of_works1' THEN
   ASM_SIMP_TAC (bsrw_ss()) [] THEN
-  METIS_TAC [chap2Theory.lameq_refl]);
+  METIS_TAC [chap2Theory.lameq_refl]
+QED
 
 val optlemma = prove(
   ``(x ≠ NONE) ⇔ ∃z. x = SOME z``,
   Cases_on `x` THEN SRW_TAC [][]);
 
-val PhiNONE_cbnf_ofk = store_thm(
-  "PhiNONE_cbnf_ofk",
-  ``(Phi N e = NONE) ⇒
+Theorem PhiNONE_cbnf_ofk:
+    (Phi N e = NONE) ⇒
     (bnf_of (cbnf_ofk @@ k @@ cDB (dAPP (numdB N) (fromTerm (church e)))) =
-     NONE)``,
+     NONE)
+Proof
   ONCE_REWRITE_TAC [MONO_NOT_EQ] THEN
   STRIP_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [optlemma] THEN
@@ -132,13 +137,14 @@ val PhiNONE_cbnf_ofk = store_thm(
         SOME (toTerm v)) ∧
        k @@ cDB v -n->* z`
      by METIS_TAC [cbnf_ofk_works2] THEN
-  SRW_TAC [][Phi_def] THEN FULL_SIMP_TAC (srw_ss()) []);
+  SRW_TAC [][Phi_def] THEN FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val bnf_of_UM = store_thm(
-  "bnf_of_UM",
-  ``bnf_of (UM @@ church n) =
+Theorem bnf_of_UM:
+    bnf_of (UM @@ church n) =
     OPTION_MAP (church o force_num)
-               (bnf_of (toTerm (numdB (nfst n)) @@ church (nsnd n)))``,
+               (bnf_of (toTerm (numdB (nfst n)) @@ church (nsnd n)))
+Proof
   SIMP_TAC (bsrw_ss()) [UM_def, cnsnd_behaviour, cchurch_behaviour,
                         cnumdB_behaviour, cnfst_behaviour, cdAPP_behaviour] THEN
   Cases_on `bnf_of (toTerm (numdB (nfst n)) @@ church (nsnd n))` THENL [
@@ -147,7 +153,8 @@ val bnf_of_UM = store_thm(
 
     IMP_RES_TAC cbnf_of_works1 THEN
     FULL_SIMP_TAC (bsrw_ss()) [cforce_num_behaviour, bnf_bnf_of]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     computable functions compose
@@ -155,9 +162,9 @@ val bnf_of_UM = store_thm(
 
 val OPTION_MAP_COMPOSE = optionTheory.OPTION_MAP_COMPOSE
 
-val composition_computable = store_thm(
-  "composition_computable",
-  ``∀f g. ∃fg. ∀n. Phi fg n = do x <- Phi g n ; Phi f x od``,
+Theorem composition_computable:
+    ∀f g. ∃fg. ∀n. Phi fg n = do x <- Phi g n ; Phi f x od
+Proof
   SRW_TAC [][] THEN
   Q.EXISTS_TAC `dBnum (fromTerm (LAM "n" (
     cbnf_ofk
@@ -170,7 +177,8 @@ val composition_computable = store_thm(
   IMP_RES_TAC PhiSOME_cbnf_ofk THEN
   ASM_SIMP_TAC (bsrw_ss()) [cnpair_behaviour, cforce_num_behaviour,
                             bnf_of_UM, OPTION_MAP_COMPOSE] THEN
-  SIMP_TAC (srw_ss()) [Phi_def]);
+  SIMP_TAC (srw_ss()) [Phi_def]
+QED
 
 val computable_composition_def = new_specification(
   "computable_composition_def", ["computable_composition"],
@@ -226,9 +234,9 @@ val s11f_def = new_specification(
 
 
 
-val recursion_thm = store_thm(
-  "recursion_thm",
-  ``(∀n. ∃r. Phi fi n = SOME r) ⇒ ∃e. Phi (THE (Phi fi e)) = Phi e``,
+Theorem recursion_thm:
+    (∀n. ∃r. Phi fi n = SOME r) ⇒ ∃e. Phi (THE (Phi fi e)) = Phi e
+Proof
   (* if fi is the index of a total computable function f, then there
      exists an index e such that Phi e = Phi (f e). *)
   DISCH_THEN (STRIP_ASSUME_TAC o SIMP_RULE (srw_ss()) [SKOLEM_THM]) THEN
@@ -274,4 +282,5 @@ val recursion_thm = store_thm(
   Q.EXISTS_TAC `h e` THEN
   `Phi (h e) = Phi (THE (Phi e e))` by SRW_TAC [][] THEN
   ASM_SIMP_TAC (srw_ss()) [] THEN
-  ASM_SIMP_TAC (srw_ss()) [Abbr`h`, Abbr`hi`, s11f_def]);
+  ASM_SIMP_TAC (srw_ss()) [Abbr`h`, Abbr`hi`, s11f_def]
+QED

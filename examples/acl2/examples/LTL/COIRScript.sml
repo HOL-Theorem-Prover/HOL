@@ -121,11 +121,11 @@ Definition MAKE_MODEL_def:
        S0 :=  I |>
 End
 
-val MODEL_MAKE_MODEL =
- store_thm
-  ("MODEL_MAKE_MODEL",
-   ``!I E. MODEL(MAKE_MODEL(I,E))``,
-   RW_TAC (srw_ss()) [MODEL_def,MAKE_MODEL_def,SUBSET_DEF]);
+Theorem MODEL_MAKE_MODEL:
+     !I E. MODEL(MAKE_MODEL(I,E))
+Proof
+   RW_TAC (srw_ss()) [MODEL_def,MAKE_MODEL_def,SUBSET_DEF]
+QED
 
 
 

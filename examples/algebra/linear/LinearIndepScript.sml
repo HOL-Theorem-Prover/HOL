@@ -81,10 +81,11 @@ This is a simple form of a change of basis by permutation.
 (* Proof:
    By sticks_def, rotate_same_length, rotate_same_set.
 *)
-val stick_rotate_length = store_thm(
-  "stick_rotate_length",
-  ``!r:'a field. !n1 n. n1 IN sticks r n ==> !k. (rotate k n1) IN sticks r n``,
-  rw[sticks_def, rotate_same_length, rotate_same_set]);
+Theorem stick_rotate_length:
+    !r:'a field. !n1 n. n1 IN sticks r n ==> !k. (rotate k n1) IN sticks r n
+Proof
+  rw[sticks_def, rotate_same_length, rotate_same_set]
+QED
 
 (* Theorem: !b. basis g b ==> basis g (rotate 1 b) *)
 (* Proof:
@@ -101,16 +102,17 @@ val stick_rotate_length = store_thm(
      With h IN V,    !x. MEM x (b ++ [h]) <=> x IN V.
      Hence basis g (b ++ [h])                        by basis_member
 *)
-val basis_rotate_once_basis = store_thm(
-  "basis_rotate_once_basis",
-  ``!(g:'b group) (b:'b list). basis g b ==> basis g (rotate 1 b)``,
+Theorem basis_rotate_once_basis:
+    !(g:'b group) (b:'b list). basis g b ==> basis g (rotate 1 b)
+Proof
   strip_tac >>
   Cases_on `b` >-
   rw[basis_nil, rotate_nil] >>
   rw[basis_cons, rotate_def] >>
   pop_assum mp_tac >>
   rw[basis_member] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: basis g b ==> !k. k < LENGTH b ==> basis g (rotate k b) *)
 (* Proof:
@@ -125,15 +127,16 @@ val basis_rotate_once_basis = store_thm(
       = T                                 by basis_rotate_once_basis
       due to basis g (rotate k b)         by induction hypothesis
 *)
-val basis_rotate_basis = store_thm(
-  "basis_rotate_basis",
-  ``!(g:'b group) (b:'b list). basis g b ==> !k. k < LENGTH b ==> basis g (rotate k b)``,
+Theorem basis_rotate_basis:
+    !(g:'b group) (b:'b list). basis g b ==> !k. k < LENGTH b ==> basis g (rotate k b)
+Proof
   rpt strip_tac >>
   Induct_on `k` >-
   rw[rotate_0] >>
   rw[] >>
   `k < LENGTH b` by decide_tac >>
-  rw[rotate_suc, basis_rotate_once_basis]);
+  rw[rotate_suc, basis_rotate_once_basis]
+QED
 
 (* Theorem: basis g b ==> !n. n IN sticks r (LENGTH b) ==> n |o| b = (rotate 1 n) |o| (rotate 1 b) *)
 (* Proof:
@@ -150,10 +153,10 @@ val basis_rotate_basis = store_thm(
        = k o h || (s |o| t)                   by vsum_stick_snoc
        = LHS
 *)
-val vsum_stick_rotate_once = store_thm(
-  "vsum_stick_rotate_once",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !n. n IN sticks r (LENGTH b) ==> (n |o| b = (rotate 1 n) |o| (rotate 1 b))``,
+Theorem vsum_stick_rotate_once:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !n. n IN sticks r (LENGTH b) ==> (n |o| b = (rotate 1 n) |o| (rotate 1 b))
+Proof
   rpt strip_tac >>
   Cases_on `b` >| [
     pop_assum mp_tac >>
@@ -165,7 +168,8 @@ val vsum_stick_rotate_once = store_thm(
     rw[basis_cons, stick_cons] >>
     rw[vsum_cons, rotate_def] >>
     metis_tac[vsum_stick_snoc, SNOC_APPEND]
-  ]);
+  ]
+QED
 
 (* Theorem: basis g b ==>
    !n. n IN sticks r (LENGTH b) ==> !k. k < LENGTH b ==> n |o| b = (rotate k n) |o| (rotate k b) *)
@@ -184,10 +188,10 @@ val vsum_stick_rotate_once = store_thm(
          = n |o| b                                              by induction hypothesis
          = LHS
 *)
-val vsum_stick_rotate = store_thm(
-  "vsum_stick_rotate",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !n. n IN sticks r (LENGTH b) ==> !k. k < LENGTH b ==> (n |o| b = (rotate k n) |o| (rotate k b))``,
+Theorem vsum_stick_rotate:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !n. n IN sticks r (LENGTH b) ==> !k. k < LENGTH b ==> (n |o| b = (rotate k n) |o| (rotate k b))
+Proof
   ntac 8 strip_tac >>
   Induct >-
   rw[rotate_0] >>
@@ -197,7 +201,8 @@ val vsum_stick_rotate = store_thm(
   `basis g (rotate k b)` by rw[basis_rotate_basis] >>
   `(rotate k n) IN sticks r (LENGTH b)` by metis_tac[stick_rotate_length] >>
   `LENGTH (rotate k b) = LENGTH b` by rw[rotate_same_length] >>
-  metis_tac[rotate_suc, vsum_stick_rotate_once]);
+  metis_tac[rotate_suc, vsum_stick_rotate_once]
+QED
 
 (* Theorem: !k. k < LENGTH b ==> SpanSpace r g op (rotate k b) = SpanSpace r g op b *)
 (* Proof:
@@ -215,14 +220,15 @@ val vsum_stick_rotate = store_thm(
           = (rotate k n) |o| (rotate k b)                          by n' = rotate k n
           = n |o| b                                                by vsum_stick_rotate
 *)
-val vspace_span_with_rotate = store_thm(
-  "vspace_span_with_rotate",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
-   !k. k < LENGTH b ==> (SpanSpace r g op (rotate k b) = SpanSpace r g op b)``,
+Theorem vspace_span_with_rotate:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+   !k. k < LENGTH b ==> (SpanSpace r g op (rotate k b) = SpanSpace r g op b)
+Proof
   rpt strip_tac >>
   rw[SpanSpace_def, monoid_component_equality, rotate_same_length, EXTENSION, EQ_IMP_THM] >-
   metis_tac[stick_rotate_length, stick_length, vsum_stick_rotate, rotate_rcancel] >>
-  metis_tac[vsum_stick_rotate, stick_rotate_length]);
+  metis_tac[vsum_stick_rotate, stick_rotate_length]
+QED
 
 (* Theorem: Let n IN sticks r (LENGTH b) /\ (n |o| b = |0|)
             If n is nonzero at index k, the basis b at same index k, after deletion (from list),
@@ -290,12 +296,12 @@ val vspace_span_with_rotate = store_thm(
           = u                                           by vspace_cmult_lone
        Hence u = |/h o (h o u) IN (SpanSpace r g op b').carrier  by vspace_span_cmult
 *)
-val vspace_span_basis_shrink = store_thm(
-  "vspace_span_basis_shrink",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
+Theorem vspace_span_basis_shrink:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !b. basis g b ==>
     !n. n IN sticks r (LENGTH b) /\ (n |o| b = |0|) ==>
     !k. k < LENGTH b /\ EL k n <> #0 ==>
-     (SpanSpace r g op ((DROP (SUC k) b) ++ (TAKE k b)) = SpanSpace r g op b)``,
+     (SpanSpace r g op ((DROP (SUC k) b) ++ (TAKE k b)) = SpanSpace r g op b)
+Proof
   rpt strip_tac >>
   qabbrev_tac `u = EL k b` >>
   qabbrev_tac `h = EL k n` >>
@@ -322,7 +328,8 @@ val vspace_span_basis_shrink = store_thm(
   `_ = #1 o u` by rw[] >>
   `_ = u` by metis_tac[vspace_cmult_lone] >>
   metis_tac[vspace_span_cmult]) >>
-  metis_tac[vspace_span_with_rotate, rotate_shift_element, vspace_span_with_member]);
+  metis_tac[vspace_span_with_rotate, rotate_shift_element, vspace_span_with_member]
+QED
 
 (*
 If SpanSpace r g op b = SpanSpace r g op b', what is the condition on an additional vector h such that:
@@ -354,19 +361,21 @@ End
 
 (* Theorem: LinearIndepBasis r g op b ==> basis g b *)
 (* Proof: by LinearIndepBasis_def *)
-val indep_basis_is_basis = store_thm(
-  "indep_basis_is_basis",
-  ``!(r:'a field) (g:'b group) op b. LinearIndepBasis r g op b ==> basis g b``,
-  rw[LinearIndepBasis_def]);
+Theorem indep_basis_is_basis:
+    !(r:'a field) (g:'b group) op b. LinearIndepBasis r g op b ==> basis g b
+Proof
+  rw[LinearIndepBasis_def]
+QED
 
 (* Theorem: LinearIndepBasis r g op b ==>
    !n. n IN sticks r (LENGTH b) ==> ((n |o| b = |0|) <=> !k. k < LENGTH b ==> (EL k n = #0)) *)
 (* Proof: by LinearIndepBasis_def *)
-val indep_basis_property = store_thm(
-  "indep_basis_property",
-  ``!(r:'a field) (g:'b group) op b. LinearIndepBasis r g op b ==>
-   !n. n IN sticks r (LENGTH b) ==> ((n |o| b = |0|) <=> !k. k < LENGTH b ==> (EL k n = #0))``,
-  rw[LinearIndepBasis_def]);
+Theorem indep_basis_property:
+    !(r:'a field) (g:'b group) op b. LinearIndepBasis r g op b ==>
+   !n. n IN sticks r (LENGTH b) ==> ((n |o| b = |0|) <=> !k. k < LENGTH b ==> (EL k n = #0))
+Proof
+  rw[LinearIndepBasis_def]
+QED
 
 (* Theorem: LinearIndepBasis r g op b ==> INJ (\n. n |o| b) (sticks r (LENGTH b)) V *)
 (* Proof:
@@ -383,10 +392,10 @@ val indep_basis_property = store_thm(
           !k. k < LENGTH b ==> (EL k (n - n') = #0)  by indep_basis_property
        Hence n = n'                                  by stick_eq_property.
 *)
-val vspace_indep_basis_inj = store_thm(
-  "vspace_indep_basis_inj",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-   !b. LinearIndepBasis r g op b ==> INJ (\n. n |o| b) (sticks r (LENGTH b)) V``,
+Theorem vspace_indep_basis_inj:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+   !b. LinearIndepBasis r g op b ==> INJ (\n. n |o| b) (sticks r (LENGTH b)) V
+Proof
   rw[INJ_DEF, LinearIndepBasis_def] >-
   metis_tac[vsum_basis_stick_vector] >>
   `(n - n') |o| b = (n |o| b) || g.inv (n' |o| b)` by rw[vsum_stick_sub] >>
@@ -394,7 +403,8 @@ val vspace_indep_basis_inj = store_thm(
   `(n - n') |o| b = |0|` by metis_tac[group_rinv, vspace_has_group] >>
   `Field r` by metis_tac[vspace_has_field] >>
   `n - n' IN sticks r (LENGTH b)` by rw[stick_sub_length] >>
-  metis_tac[stick_eq_property]);
+  metis_tac[stick_eq_property]
+QED
 
 (* Theorem: Reduce-by-1 of linear indepedent basis is still linear independent:
             LinearIndepBasis r g op (h::t) ==> LinearIndepBasis r g op t *)
@@ -435,10 +445,10 @@ val vspace_indep_basis_inj = store_thm(
           m |o| (h::t) = |0|
        or n |o| t = |0|.
 *)
-val vspace_basis_indep_one_less = store_thm(
-  "vspace_basis_indep_one_less",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-     !h t. LinearIndepBasis r g op (h::t) ==> LinearIndepBasis r g op t``,
+Theorem vspace_basis_indep_one_less:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+     !h t. LinearIndepBasis r g op (h::t) ==> LinearIndepBasis r g op t
+Proof
   rw[LinearIndepBasis_def, basis_cons] >>
   `Field r` by metis_tac[vspace_has_field] >>
   `Group g` by metis_tac[vspace_has_group] >>
@@ -453,16 +463,18 @@ val vspace_basis_indep_one_less = store_thm(
   `EL 0 (#0::n) = #0` by rw[Abbr`m`] >>
   rw_tac bool_ss[EQ_IMP_THM] >-
   metis_tac[] >>
-  metis_tac[num_CASES]);
+  metis_tac[num_CASES]
+QED
 
 (* Theorem: Add-by-1 of a linear dependent basis is still linear dependent:
             ~LinearIndepBasis r g op t ==> ~LinearIndepBasis r g op (h::t) *)
 (* Proof: by contrapositive of vspace_basis_indep_one_less. *)
-val vspace_basis_dep_one_more = store_thm(
-  "vspace_basis_dep_one_more",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-     !h t. ~LinearIndepBasis r g op t ==> ~LinearIndepBasis r g op (h::t)``,
-  metis_tac[vspace_basis_indep_one_less]);
+Theorem vspace_basis_dep_one_more:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+     !h t. ~LinearIndepBasis r g op t ==> ~LinearIndepBasis r g op (h::t)
+Proof
+  metis_tac[vspace_basis_indep_one_less]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

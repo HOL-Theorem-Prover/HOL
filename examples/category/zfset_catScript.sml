@@ -17,39 +17,42 @@ Definition implode_def:
   implode s = @z. explode z = s
 End
 
-val implode_explode = Q.store_thm(
-"implode_explode",
-`∀z. implode (explode z) = z`,
+Theorem implode_explode:
+ ∀z. implode (explode z) = z
+Proof
 srw_tac [][implode_def] >>
 SELECT_ELIM_TAC >>
 srw_tac [][] >- metis_tac [] >>
 fsrw_tac [][explode_def,EXTENSION] >>
-fsrw_tac [][Extension_ax]);
+fsrw_tac [][Extension_ax]
+QED
 val _ = export_rewrites["implode_explode"];
 
-val explode_inj = Q.store_thm(
-"explode_inj",
-`∀x y. (explode x = explode y) ⇒ (x = y)`,
+Theorem explode_inj:
+ ∀x y. (explode x = explode y) ⇒ (x = y)
+Proof
 srw_tac [][explode_def,EXTENSION] >>
-srw_tac [][Extension_ax]);
+srw_tac [][Extension_ax]
+QED
 
 Definition IsSmall_def:
   IsSmall s = ∃f z. INJ f s (explode z)
 End
 (* WARNING THIS IS NOT HEREDITARILY SMALL *)
 
-val IsSmall_FINITE = Q.store_thm(
-"IsSmall_FINITE",
-`∀s. FINITE s ⇒ IsSmall s`,
+Theorem IsSmall_FINITE:
+ ∀s. FINITE s ⇒ IsSmall s
+Proof
 ho_match_mp_tac FINITE_INDUCT >>
 srw_tac [][IsSmall_def] >>
 map_every qexists_tac [`λx. if x = e then z else f x`,`Suc z`] >>
 fsrw_tac [][INJ_DEF,explode_def,Suc_def,U_def,Singleton_def] >>
-srw_tac [][] >> metis_tac [NotInSelf]);
+srw_tac [][] >> metis_tac [NotInSelf]
+QED
 
-val IsSmall_IMAGE = Q.store_thm(
-"IsSmall_IMAGE",
-`∀s f. IsSmall s ⇒ IsSmall (IMAGE f s)`,
+Theorem IsSmall_IMAGE:
+ ∀s f. IsSmall s ⇒ IsSmall (IMAGE f s)
+Proof
 srw_tac [][IsSmall_def] >>
 qmatch_assum_rename_tac `INJ g s (explode z)` >>
 map_every qexists_tac [`λx. g (@y. y ∈ s ∧ (f y = x))`,`z`] >>
@@ -62,21 +65,23 @@ pop_assum mp_tac >>
 SELECT_ELIM_TAC >>
 SELECT_ELIM_TAC >>
 srw_tac [][] >>
-metis_tac []);
+metis_tac []
+QED
 val _ = export_rewrites["IsSmall_IMAGE"];
 
-val IsSmall_IMAGE_iff = Q.store_thm(
-"IsSmall_IMAGE_iff",
-`∀s t f. INJ f s t ⇒ (IsSmall (IMAGE f s) ⇔ IsSmall s)`,
+Theorem IsSmall_IMAGE_iff:
+ ∀s t f. INJ f s t ⇒ (IsSmall (IMAGE f s) ⇔ IsSmall s)
+Proof
 srw_tac [][EQ_IMP_THM] >>
 fsrw_tac [][IsSmall_def] >>
 qmatch_assum_rename_tac `INJ g (IMAGE f s) (explode z)` >>
 map_every qexists_tac [`g o f`,`z`] >>
-fsrw_tac [DNF_ss][INJ_DEF]);
+fsrw_tac [DNF_ss][INJ_DEF]
+QED
 
-val IsSmall_explode = Q.store_thm(
-"IsSmall_explode",
-`∀s. IsSmall s ⇔ (∃z. s = explode z)`,
+Theorem IsSmall_explode:
+ ∀s. IsSmall s ⇔ (∃z. s = explode z)
+Proof
 srw_tac [][IsSmall_def,explode_def,EQ_IMP_THM] >>
 srw_tac [][EXTENSION] >- (
   qexists_tac `Image (LINV f s) (Spec z (λx. ∃y. y ∈ s ∧ (x = f y)))` >>
@@ -87,46 +92,51 @@ srw_tac [][EXTENSION] >- (
     metis_tac []) >>
   metis_tac [LINV_DEF]) >>
 map_every qexists_tac [`I`,`z`] >>
-srw_tac [][INJ_DEF]);
+srw_tac [][INJ_DEF]
+QED
 
-val explode_IsSmall = Q.store_thm(
-"explode_IsSmall",
-`∀s. IsSmall (explode s)`,
-metis_tac [IsSmall_explode]);
+Theorem explode_IsSmall:
+ ∀s. IsSmall (explode s)
+Proof
+metis_tac [IsSmall_explode]
+QED
 val _ = export_rewrites["explode_IsSmall"];
 
-val In_implode = Q.store_thm(
-"In_implode",
-`∀s x. IsSmall s ⇒ (x In implode s ⇔ x ∈ s)`,
+Theorem In_implode:
+ ∀s x. IsSmall s ⇒ (x In implode s ⇔ x ∈ s)
+Proof
 srw_tac [][] >>
 imp_res_tac IsSmall_explode >>
-srw_tac [][explode_def]);
+srw_tac [][explode_def]
+QED
 val _ = export_rewrites["In_implode"];
 
-val explode_implode = Q.store_thm(
-"explode_implode",
-`∀s. IsSmall s ⇒ (explode (implode s) = s)`,
-srw_tac [][explode_def]);
+Theorem explode_implode:
+ ∀s. IsSmall s ⇒ (explode (implode s) = s)
+Proof
+srw_tac [][explode_def]
+QED
 val _ = export_rewrites["explode_implode"];
 
-val IsSmall_BIJ = Q.store_thm(
-"IsSmall_BIJ",
-`∀s. IsSmall s ⇒ ∃b z. BIJ b s (IMAGE SOME (explode z)) ∧
-                       ∀x. x ∉ s ⇒ (b x = NONE)`,
+Theorem IsSmall_BIJ:
+ ∀s. IsSmall s ⇒ ∃b z. BIJ b s (IMAGE SOME (explode z)) ∧
+                       ∀x. x ∉ s ⇒ (b x = NONE)
+Proof
 srw_tac [][IsSmall_def] >>
 qexists_tac `λx. if x ∈ s then SOME (f x) else NONE` >>
 qexists_tac `Spec z (λx. ∃y. y ∈ s ∧ (x = f y))` >>
 fsrw_tac [DNF_ss][BIJ_DEF,INJ_DEF,SURJ_DEF,explode_def,Spec_def] >>
-metis_tac []);
+metis_tac []
+QED
 
 Definition the_zfrep_def:
   the_zfrep s = @bz. BIJ (FST bz) s (IMAGE SOME (explode (SND bz))) ∧
                      ∀x. x ∉ s ⇒ (FST bz x = NONE)
 End
 
-val the_zfrep_inj = Q.store_thm(
-"the_zfrep_inj",
-`∀s1 s2. IsSmall s1 ∧ IsSmall s2 ∧ (the_zfrep s1 = the_zfrep s2) ⇒ (s1 = s2)`,
+Theorem the_zfrep_inj:
+ ∀s1 s2. IsSmall s1 ∧ IsSmall s2 ∧ (the_zfrep s1 = the_zfrep s2) ⇒ (s1 = s2)
+Proof
 simp_tac std_ss [the_zfrep_def,GSYM AND_IMP_INTRO] >>
 rpt gen_tac >> ntac 2 strip_tac >>
 imp_res_tac IsSmall_BIJ >>
@@ -137,14 +147,15 @@ conj_tac >- metis_tac [FST,SND] >>
 Cases >> srw_tac [][EXTENSION] >>
 srw_tac [][EQ_IMP_THM] >> spose_not_then strip_assume_tac >>
 res_tac >> fsrw_tac [DNF_ss][BIJ_DEF,SURJ_DEF] >>
-res_tac >> fsrw_tac [][]);
+res_tac >> fsrw_tac [][]
+QED
 
 val _ = overload_on("zfbij",``λs. FST(the_zfrep s)``);
 val _ = overload_on("zfrep",``λs. SND(the_zfrep s)``);
 
-val zfbij_SOME = Q.store_thm(
-"zfbij_SOME",
-`∀s x. IsSmall s ⇒ (IS_SOME (zfbij s x) ⇔ x ∈ s)`,
+Theorem zfbij_SOME:
+ ∀s x. IsSmall s ⇒ (IS_SOME (zfbij s x) ⇔ x ∈ s)
+Proof
 rpt strip_tac >>
 srw_tac [][the_zfrep_def] >>
 SELECT_ELIM_TAC >>
@@ -152,7 +163,8 @@ conj_tac >- metis_tac [FST,SND,IsSmall_BIJ] >>
 Cases >> srw_tac [][] >>
 Cases_on `x ∈ s` >> res_tac >> fsrw_tac [][] >>
 fsrw_tac [DNF_ss][BIJ_DEF,SURJ_DEF] >>
-res_tac >> fsrw_tac [][]);
+res_tac >> fsrw_tac [][]
+QED
 
 Definition zfel_def:
   zfel s x = THE (zfbij s x)
@@ -162,9 +174,9 @@ Definition elzf_def:
   elzf s z = LINV (zfbij s) s (SOME z)
 End
 
-val In_zfrep_thm = Q.store_thm(
-"In_zfrep_thm",
-`∀s z. IsSmall s ⇒ (z In zfrep s ⇔ ∃x. x ∈ s ∧ (z = zfel s x))`,
+Theorem In_zfrep_thm:
+ ∀s z. IsSmall s ⇒ (z In zfrep s ⇔ ∃x. x ∈ s ∧ (z = zfel s x))
+Proof
 srw_tac [][zfel_def] >>
 srw_tac [][the_zfrep_def] >>
 SELECT_ELIM_TAC >>
@@ -177,11 +189,12 @@ EQ_TAC >- (
 srw_tac [][] >>
 qmatch_rename_tac `THE (b x) In z` >>
 Cases_on `b x` >>
-res_tac >> fsrw_tac [][] >> srw_tac [][]);
+res_tac >> fsrw_tac [][] >> srw_tac [][]
+QED
 
-val elzf_zfel = Q.store_thm(
-"elzf_zfel",
-`∀s x. IsSmall s ∧ x ∈ s ⇒ (elzf s (zfel s x) = x)`,
+Theorem elzf_zfel:
+ ∀s x. IsSmall s ∧ x ∈ s ⇒ (elzf s (zfel s x) = x)
+Proof
 srw_tac[][elzf_def,zfel_def] >>
 imp_res_tac zfbij_SOME >>
 Cases_on `zfbij s x` >> fsrw_tac [][] >>
@@ -190,22 +203,25 @@ match_mp_tac (MP_CANON LINV_DEF) >>
 srw_tac [][the_zfrep_def] >>
 SELECT_ELIM_TAC >>
 conj_tac >- metis_tac [FST,SND,IsSmall_BIJ] >>
-metis_tac [BIJ_DEF]);
+metis_tac [BIJ_DEF]
+QED
 
-val zfel_elzf = Q.store_thm(
-"zfel_elzf",
-`∀s z. IsSmall s ∧ z In zfrep s ⇒ (zfel s (elzf s z) = z)`,
+Theorem zfel_elzf:
+ ∀s z. IsSmall s ∧ z In zfrep s ⇒ (zfel s (elzf s z) = z)
+Proof
 srw_tac [][] >>
 `∃x. x ∈ s ∧ (z = zfel s x)` by metis_tac[In_zfrep_thm] >>
-srw_tac [][elzf_zfel]);
+srw_tac [][elzf_zfel]
+QED
 
 val _ = export_rewrites["elzf_zfel","zfel_elzf"];
 
-val zfrep_empty = Q.store_thm(
-"zfrep_empty",
-`∀s. IsSmall s ⇒ ((zfrep s = {}) = (s = {}))`,
+Theorem zfrep_empty:
+ ∀s. IsSmall s ⇒ ((zfrep s = {}) = (s = {}))
+Proof
 srw_tac [][EXTENSION,Extension_ax] >>
-metis_tac [Empty_def,In_zfrep_thm]);
+metis_tac [Empty_def,In_zfrep_thm]
+QED
 val _ = export_rewrites["zfrep_empty"];
 
 Definition IsTypedFn_def:
@@ -217,19 +233,21 @@ Definition TypedGraphFn_def:
     dom := X; cod := Y; map := GraphFn X f |>
 End
 
-val TypedGraphFn_components = Q.store_thm(
-"TypedGraphFn_components",
-`∀X Y f. ((TypedGraphFn (X,Y) f).dom = X) ∧
+Theorem TypedGraphFn_components:
+ ∀X Y f. ((TypedGraphFn (X,Y) f).dom = X) ∧
          ((TypedGraphFn (X,Y) f).cod = Y) ∧
-         ((TypedGraphFn (X,Y) f).map = GraphFn X f)`,
-srw_tac [][TypedGraphFn_def]);
+         ((TypedGraphFn (X,Y) f).map = GraphFn X f)
+Proof
+srw_tac [][TypedGraphFn_def]
+QED
 val _ = export_rewrites["TypedGraphFn_components"];
 
-val IsTypedFnTypedGraphFn = Q.store_thm(
-"IsTypedFnTypedGraphFn",
-`∀f X Y. IsTypedFn (TypedGraphFn (X,Y) f) = HasFnType f X Y`,
+Theorem IsTypedFnTypedGraphFn:
+ ∀f X Y. IsTypedFn (TypedGraphFn (X,Y) f) = HasFnType f X Y
+Proof
 srw_tac [][IsTypedFn_def,TypedGraphFn_def,GraphFnType,EQ_IMP_THM] >>
-srw_tac [][HasFnType_def] >> metis_tac [InFn,GraphFnAp]);
+srw_tac [][HasFnType_def] >> metis_tac [InFn,GraphFnAp]
+QED
 val _ = export_rewrites["IsTypedFnTypedGraphFn"];
 
 Definition ComposeTypedFn_def:
@@ -239,13 +257,14 @@ End
 val _ = add_infix("|o|",800,RIGHT);
 val _ = overload_on("|o|",``λg f. ComposeTypedFn f g``);
 
-val ComposeTypedFn_components = Q.store_thm(
-"ComposeTypedFn_components",
-`∀f g. (f ≈> g) ⇒
+Theorem ComposeTypedFn_components:
+ ∀f g. (f ≈> g) ⇒
        (((g |o| f).dom = f.dom) ∧
         ((g |o| f).cod = g.cod) ∧
-        ((g |o| f).map = ComposeFn(f.dom,f.cod,g.cod) g.map f.map))`,
-srw_tac [][ComposeTypedFn_def]);
+        ((g |o| f).map = ComposeFn(f.dom,f.cod,g.cod) g.map f.map))
+Proof
+srw_tac [][ComposeTypedFn_def]
+QED
 val _ = export_rewrites["ComposeTypedFn_components"];
 
 Definition pre_set_cat_def:
@@ -256,45 +275,50 @@ Definition pre_set_cat_def:
     comp := λf g. (g |o| f).map |>
 End
 
-val pre_set_cat_obj_mor = Q.store_thm(
-"pre_set_cat_obj_mor",
-`(∀x. x ∈ pre_set_cat.obj) ∧
- (∀f. f ∈ pre_set_cat.mor = IsTypedFn f)`,
-srw_tac [][pre_set_cat_def]);
+Theorem pre_set_cat_obj_mor:
+ (∀x. x ∈ pre_set_cat.obj) ∧
+ (∀f. f ∈ pre_set_cat.mor = IsTypedFn f)
+Proof
+srw_tac [][pre_set_cat_def]
+QED
 val _ = export_rewrites["pre_set_cat_obj_mor"];
 
-val pre_set_cat_id = Q.store_thm(
-"pre_set_cat_id",
-`∀x. (id x -:pre_set_cat) = TypedGraphFn (x,x) I`,
-srw_tac [][id_in_def,restrict_def,pre_set_cat_def,TypedGraphFn_def,IdFn_eq_GraphFnI]);
+Theorem pre_set_cat_id:
+ ∀x. (id x -:pre_set_cat) = TypedGraphFn (x,x) I
+Proof
+srw_tac [][id_in_def,restrict_def,pre_set_cat_def,TypedGraphFn_def,IdFn_eq_GraphFnI]
+QED
 val _ = export_rewrites["pre_set_cat_id"];
 
-val pre_set_cat_maps_to_in = Q.store_thm(
-"pre_set_cat_maps_to_in",
-`∀f x y. f :- x → y -:pre_set_cat ⇔ IsTypedFn f ∧ f :- x → y`,
-srw_tac [][maps_to_in_def,EQ_IMP_THM]);
+Theorem pre_set_cat_maps_to_in:
+ ∀f x y. f :- x → y -:pre_set_cat ⇔ IsTypedFn f ∧ f :- x → y
+Proof
+srw_tac [][maps_to_in_def,EQ_IMP_THM]
+QED
 val _ = export_rewrites["pre_set_cat_maps_to_in"];
 
-val pre_set_cat_composable_in = Q.store_thm(
-"pre_set_cat_composable_in",
-`∀f g. f ≈> g -:pre_set_cat ⇔ IsTypedFn f ∧ IsTypedFn g ∧ f ≈> g`,
-srw_tac [][composable_in_def]);
+Theorem pre_set_cat_composable_in:
+ ∀f g. f ≈> g -:pre_set_cat ⇔ IsTypedFn f ∧ IsTypedFn g ∧ f ≈> g
+Proof
+srw_tac [][composable_in_def]
+QED
 val _ = export_rewrites["pre_set_cat_composable_in"];
 
-val pre_set_cat_compose_in = Q.store_thm(
-"pre_set_cat_compose_in",
-`∀f g. f ≈> g -:pre_set_cat ⇒ (g o f -:pre_set_cat = g |o| f)`,
+Theorem pre_set_cat_compose_in:
+ ∀f g. f ≈> g -:pre_set_cat ⇒ (g o f -:pre_set_cat = g |o| f)
+Proof
 srw_tac [][compose_in_def,restrict_def,pre_set_cat_def] >>
-srw_tac [][morphism_component_equality]);
+srw_tac [][morphism_component_equality]
+QED
 val _ = export_rewrites["pre_set_cat_compose_in"];
 
 Definition set_cat_def:
   set_cat = mk_cat pre_set_cat
 End
 
-val is_category_set_cat = Q.store_thm(
-"is_category_set_cat",
-`is_category set_cat`,
+Theorem is_category_set_cat:
+ is_category set_cat
+Proof
 srw_tac [][set_cat_def] >>
 srw_tac [][category_axioms_def] >- (
   srw_tac [][HasFnType_def] )
@@ -325,47 +349,54 @@ srw_tac [][category_axioms_def] >- (
   fsrw_tac [][IsTypedFn_def] ) >>
 srw_tac [][IsTypedFn_def] >>
 match_mp_tac ComposeFnType >>
-fsrw_tac [][IsTypedFn_def])
+fsrw_tac [][IsTypedFn_def]
+QED
 val _ = export_rewrites["is_category_set_cat"];
 
-val set_cat_obj = Q.store_thm(
-"set_cat_obj",
-`set_cat.obj = UNIV`,
-srw_tac [][set_cat_def,pre_set_cat_def]);
+Theorem set_cat_obj:
+ set_cat.obj = UNIV
+Proof
+srw_tac [][set_cat_def,pre_set_cat_def]
+QED
 
-val set_cat_mor = Q.store_thm(
-"set_cat_mor",
-`set_cat.mor = {f | IsTypedFn f}`,
-srw_tac [][set_cat_def,pre_set_cat_def]);
+Theorem set_cat_mor:
+ set_cat.mor = {f | IsTypedFn f}
+Proof
+srw_tac [][set_cat_def,pre_set_cat_def]
+QED
 
-val set_cat_id = Q.store_thm(
-"set_cat_id",
-`∀x. (id x -:set_cat) = TypedGraphFn (x,x) I`,
-srw_tac [][set_cat_def]);
+Theorem set_cat_id:
+ ∀x. (id x -:set_cat) = TypedGraphFn (x,x) I
+Proof
+srw_tac [][set_cat_def]
+QED
 
-val set_cat_composable_in = Q.store_thm(
-"set_cat_composable_in",
-`∀f g. f ≈> g -:set_cat ⇔ IsTypedFn f ∧ IsTypedFn g ∧ f ≈> g`,
-srw_tac [][set_cat_def]);
+Theorem set_cat_composable_in:
+ ∀f g. f ≈> g -:set_cat ⇔ IsTypedFn f ∧ IsTypedFn g ∧ f ≈> g
+Proof
+srw_tac [][set_cat_def]
+QED
 
-val set_cat_compose_in = Q.store_thm(
-"set_cat_compose_in",
-`∀f g. f ≈> g -:set_cat ⇒ (g o f -:set_cat = g |o| f)`,
-srw_tac [][set_cat_def]);
+Theorem set_cat_compose_in:
+ ∀f g. f ≈> g -:set_cat ⇒ (g o f -:set_cat = g |o| f)
+Proof
+srw_tac [][set_cat_def]
+QED
 
-val set_cat_maps_to_in = Q.store_thm(
-"set_cat_maps_to_in",
-`∀f x y. f :- x → y -:set_cat ⇔ IsTypedFn f ∧ f :- x → y`,
-srw_tac [][set_cat_def]);
+Theorem set_cat_maps_to_in:
+ ∀f x y. f :- x → y -:set_cat ⇔ IsTypedFn f ∧ f :- x → y
+Proof
+srw_tac [][set_cat_def]
+QED
 
 val _ = export_rewrites[
 "set_cat_obj","set_cat_mor","set_cat_id",
 "set_cat_composable_in","set_cat_compose_in",
 "set_cat_maps_to_in"];
 
-val has_binary_products_set_cat = Q.store_thm(
-"has_binary_products_set_cat",
-`has_binary_products set_cat`,
+Theorem has_binary_products_set_cat:
+ has_binary_products set_cat
+Proof
 srw_tac [][has_binary_products_thm,is_binary_product_thm] >>
 map_every qexists_tac [`TypedGraphFn (Prod a b, a) Fst`,`TypedGraphFn (Prod a b, b) Snd`] >>
 fsrw_tac [][HasFnType_def] >>
@@ -429,7 +460,8 @@ ntac 4 (pop_assum mp_tac) >>
 `Pair x11 x21 In Y` by metis_tac [InProd] >>
 `Pair x12 x22 In Y` by metis_tac [InProd] >>
 fsrw_tac [][ApComposeFn,GraphFnAp] >>
-fsrw_tac [][Fst,Snd]);
+fsrw_tac [][Fst,Snd]
+QED
 
 Definition pre_set_to_ens_def:
   pre_set_to_ens = <|
@@ -438,17 +470,18 @@ Definition pre_set_to_ens_def:
     map := λf. TypedGraphFun (explode f.dom,explode f.cod) (λx. f.map ' x) |>
 End
 
-val pre_set_to_ens_components = Q.store_thm(
-"pre_set_to_ens_components",
-`(pre_set_to_ens.dom = set_cat) ∧
+Theorem pre_set_to_ens_components:
+ (pre_set_to_ens.dom = set_cat) ∧
  (pre_set_to_ens.cod = ens_cat {s | IsSmall s}) ∧
- (∀f. pre_set_to_ens##f = TypedGraphFun (explode f.dom,explode f.cod) (λx. f.map ' x))`,
-srw_tac [][pre_set_to_ens_def,morf_def]);
+ (∀f. pre_set_to_ens##f = TypedGraphFun (explode f.dom,explode f.cod) (λx. f.map ' x))
+Proof
+srw_tac [][pre_set_to_ens_def,morf_def]
+QED
 val _ = export_rewrites["pre_set_to_ens_components"];
 
-val pre_set_to_ens_objf = Q.store_thm(
-"pre_set_to_ens_objf",
-`∀x. pre_set_to_ens@@x = explode x`,
+Theorem pre_set_to_ens_objf:
+ ∀x. pre_set_to_ens@@x = explode x
+Proof
 srw_tac [][objf_def] >>
 SELECT_ELIM_TAC >>
 srw_tac [][] >- (
@@ -457,16 +490,17 @@ srw_tac [][] >- (
   srw_tac [][restrict_def,FUN_EQ_THM] >>
   srw_tac [][GraphFnAp,explode_def]) >>
 pop_assum mp_tac >>
-srw_tac [][EXTENSION,explode_def,morphism_component_equality]);
+srw_tac [][EXTENSION,explode_def,morphism_component_equality]
+QED
 val _ = export_rewrites["pre_set_to_ens_objf"];
 
 Definition set_to_ens_def:
   set_to_ens = mk_functor pre_set_to_ens
 End
 
-val is_functor_set_to_ens = Q.store_thm(
-"is_functor_set_to_ens",
-`is_functor set_to_ens`,
+Theorem is_functor_set_to_ens:
+ is_functor set_to_ens
+Proof
 srw_tac [][set_to_ens_def] >>
 srw_tac [][functor_axioms_def] >- (
   fsrw_tac [][IsTypedFun_def,IsTypedFn_def,
@@ -487,26 +521,29 @@ srw_tac [][morphism_component_equality] >>
 srw_tac [][FUN_EQ_THM] >>
 srw_tac [][pre_set_to_ens_def,morf_def,restrict_def,ComposeFun_def] >>
 fsrw_tac [][IsTypedFn_def,explode_def] >>
-metis_tac [InFn,ApComposeFn]);
+metis_tac [InFn,ApComposeFn]
+QED
 val _ = export_rewrites["is_functor_set_to_ens"];
 
-val set_to_ens_components = Q.store_thm(
-"set_to_ens_components",
-`(set_to_ens.dom = set_cat) ∧
+Theorem set_to_ens_components:
+ (set_to_ens.dom = set_cat) ∧
  (set_to_ens.cod = ens_cat {s | IsSmall s}) ∧
- (∀f. IsTypedFn f ⇒ (set_to_ens##f = TypedGraphFun (explode f.dom,explode f.cod) (λx. f.map ' x)))`,
-srw_tac [][set_to_ens_def])
+ (∀f. IsTypedFn f ⇒ (set_to_ens##f = TypedGraphFun (explode f.dom,explode f.cod) (λx. f.map ' x)))
+Proof
+srw_tac [][set_to_ens_def]
+QED
 val _ = export_rewrites["set_to_ens_components"];
 
-val set_to_ens_objf = Q.store_thm(
-"set_to_ens_objf",
-`∀x. set_to_ens@@x = explode x`,
-srw_tac [][set_to_ens_def]);
+Theorem set_to_ens_objf:
+ ∀x. set_to_ens@@x = explode x
+Proof
+srw_tac [][set_to_ens_def]
+QED
 val _ = export_rewrites["set_to_ens_objf"];
 
-val cat_iso_set_to_ens = Q.store_thm(
-"cat_iso_set_to_ens",
-`cat_iso set_to_ens`,
+Theorem cat_iso_set_to_ens:
+ cat_iso set_to_ens
+Proof
 srw_tac [][cat_iso_bij] >- (
   srw_tac [][BIJ_DEF,INJ_DEF,SURJ_DEF,explode_inj] >>
   metis_tac [explode_implode] ) >>
@@ -536,30 +573,33 @@ srw_tac [][morphism_component_equality] >>
 srw_tac [][FUN_EQ_THM] >>
 fsrw_tac [][HasFnType_def,explode_def,restrict_def] >>
 fsrw_tac [][IsTypedFun_def,HasFunType_def,extensional_def] >>
-srw_tac [][GraphFnAp]);
+srw_tac [][GraphFnAp]
+QED
 
 val _ = overload_on("ens_to_set",``@f. cat_iso_pair set_to_ens f``);
 
-val ens_to_set_dom_cod = Q.store_thm(
-"ens_to_set_dom_cod",
-`(ens_to_set.dom = ens_cat {s | IsSmall s}) ∧
- (ens_to_set.cod = set_cat)`,
+Theorem ens_to_set_dom_cod:
+ (ens_to_set.dom = ens_cat {s | IsSmall s}) ∧
+ (ens_to_set.cod = set_cat)
+Proof
 SELECT_ELIM_TAC >>
 conj_tac >- metis_tac [cat_iso_set_to_ens,cat_iso_def] >>
-metis_tac [cat_iso_pair_def,cat_iso_pair_sym,composable_def,set_to_ens_components]);
+metis_tac [cat_iso_pair_def,cat_iso_pair_sym,composable_def,set_to_ens_components]
+QED
 val _ = export_rewrites["ens_to_set_dom_cod"];
 
-val is_functor_ens_to_set = Q.store_thm(
-"is_functor_ens_to_set",
-`is_functor ens_to_set`,
+Theorem is_functor_ens_to_set:
+ is_functor ens_to_set
+Proof
 SELECT_ELIM_TAC >>
 conj_tac >- metis_tac [cat_iso_set_to_ens,cat_iso_def] >>
-srw_tac [][cat_iso_pair_def]);
+srw_tac [][cat_iso_pair_def]
+QED
 val _ = export_rewrites["is_functor_ens_to_set"];
 
-val ens_to_set_morf = Q.store_thm(
-"ens_to_set_morf",
-`∀f. f ∈ (ens_cat {s | IsSmall s}).mor ⇒ (ens_to_set##f = TypedGraphFn (implode f.dom, implode f.cod) f.map)`,
+Theorem ens_to_set_morf:
+ ∀f. f ∈ (ens_cat {s | IsSmall s}).mor ⇒ (ens_to_set##f = TypedGraphFn (implode f.dom, implode f.cod) f.map)
+Proof
 srw_tac [][] >>
 SELECT_ELIM_TAC >>
 conj_tac >- metis_tac [cat_iso_set_to_ens,cat_iso_def] >>
@@ -615,12 +655,13 @@ fsrw_tac [][] >>
 match_mp_tac (MP_CANON BIJ_LINV_INV) >>
 unabbrev_all_tac >>
 qexists_tac `ens_cat {s | IsSmall s}|f.dom→f.cod|` >>
-srw_tac [][]);
+srw_tac [][]
+QED
 val _ = export_rewrites["ens_to_set_morf"];
 
-val ens_to_set_objf = Q.store_thm(
-"ens_to_set_objf",
-`∀s. IsSmall s ⇒ (ens_to_set@@s = implode s)`,
+Theorem ens_to_set_objf:
+ ∀s. IsSmall s ⇒ (ens_to_set@@s = implode s)
+Proof
 srw_tac [][objf_def] >>
 SELECT_ELIM_TAC >>
 conj_tac >- (
@@ -628,14 +669,16 @@ conj_tac >- (
   srw_tac [][morphism_component_equality] >>
   match_mp_tac GraphFnExt >>
   srw_tac [][restrict_def] ) >>
-srw_tac [][morphism_component_equality]);
+srw_tac [][morphism_component_equality]
+QED
 val _ = export_rewrites["ens_to_set_objf"];
 
-val cat_iso_ens_to_set = Q.store_thm(
-"cat_iso_ens_to_set",
-`cat_iso ens_to_set`,
+Theorem cat_iso_ens_to_set:
+ cat_iso ens_to_set
+Proof
 SELECT_ELIM_TAC >>
-metis_tac [cat_iso_pair_sym,cat_iso_set_to_ens,cat_iso_def]);
+metis_tac [cat_iso_pair_sym,cat_iso_set_to_ens,cat_iso_def]
+QED
 val _ = export_rewrites["cat_iso_ens_to_set"];
 
 Definition is_locally_small_def:
@@ -652,17 +695,18 @@ Definition pre_rep_functor_def:
     |>
 End
 
-val pre_rep_functor_components = Q.store_thm(
-"pre_rep_functor_components",
-`∀u. ((pre_rep_functor u).dom = ens_cat u) ∧
+Theorem pre_rep_functor_components:
+ ∀u. ((pre_rep_functor u).dom = ens_cat u) ∧
      ((pre_rep_functor u).cod = ens_cat {s | IsSmall s}) ∧
-     (∀f. ((pre_rep_functor u)##f = TypedGraphFun (explode (zfrep f.dom), explode (zfrep f.cod)) (λz. zfel f.cod (f.map (elzf f.dom z)))))`,
-srw_tac [][pre_rep_functor_def,morf_def]);
+     (∀f. ((pre_rep_functor u)##f = TypedGraphFun (explode (zfrep f.dom), explode (zfrep f.cod)) (λz. zfel f.cod (f.map (elzf f.dom z)))))
+Proof
+srw_tac [][pre_rep_functor_def,morf_def]
+QED
 val _ = export_rewrites["pre_rep_functor_components"];
 
-val pre_rep_functor_objf = Q.store_thm(
-"pre_rep_functor_objf",
-`∀u x. IsSmall x ∧ x ∈ u ⇒ ((pre_rep_functor u)@@x = explode (zfrep x))`,
+Theorem pre_rep_functor_objf:
+ ∀u x. IsSmall x ∧ x ∈ u ⇒ ((pre_rep_functor u)@@x = explode (zfrep x))
+Proof
 srw_tac [][objf_def] >>
 SELECT_ELIM_TAC >>
 conj_tac >- (
@@ -674,16 +718,17 @@ conj_tac >- (
   metis_tac [elzf_zfel] ) >>
 qx_gen_tac `s` >>
 srw_tac [][] >>
-pop_assum mp_tac >> srw_tac [][TypedGraphFun_Ext]);
+pop_assum mp_tac >> srw_tac [][TypedGraphFun_Ext]
+QED
 val _ = export_rewrites["pre_rep_functor_objf"];
 
 Definition rep_functor_def:
   rep_functor u = mk_functor (pre_rep_functor u)
 End
 
-val is_functor_rep_functor = Q.store_thm(
-"is_functor_rep_functor",
-`∀u. (∀s. s ∈ u ⇒ IsSmall s) ⇒ is_functor (rep_functor u)`,
+Theorem is_functor_rep_functor:
+ ∀u. (∀s. s ∈ u ⇒ IsSmall s) ⇒ is_functor (rep_functor u)
+Proof
 srw_tac [][rep_functor_def] >>
 fsrw_tac [][functor_axioms_def] >>
 conj_tac >- (
@@ -715,31 +760,35 @@ srw_tac [][FUN_EQ_THM] >>
 fsrw_tac [][IsTypedFun_def,HasFunType_def,In_zfrep_thm] >>
 srw_tac [][] >>
 res_tac >>
-fsrw_tac [][In_zfrep_thm]);
+fsrw_tac [][In_zfrep_thm]
+QED
 
-val rep_functor_dom_cod = Q.store_thm(
-"rep_functor_dom_cod",
-`∀u. ((rep_functor u).dom = ens_cat u) ∧
-     ((rep_functor u).cod = ens_cat {s | IsSmall s})`,
-srw_tac [][rep_functor_def])
+Theorem rep_functor_dom_cod:
+ ∀u. ((rep_functor u).dom = ens_cat u) ∧
+     ((rep_functor u).cod = ens_cat {s | IsSmall s})
+Proof
+srw_tac [][rep_functor_def]
+QED
 val _ = export_rewrites["rep_functor_dom_cod"];
 
-val rep_functor_morf = Q.store_thm(
-"rep_functor_morf",
-`∀u f. f ∈ (ens_cat u).mor ⇒ ((rep_functor u)##f =
-TypedGraphFun (explode (zfrep f.dom), explode (zfrep f.cod)) (λz. zfel f.cod (f.map (elzf f.dom z))))`,
-srw_tac [][rep_functor_def]);
+Theorem rep_functor_morf:
+ ∀u f. f ∈ (ens_cat u).mor ⇒ ((rep_functor u)##f =
+TypedGraphFun (explode (zfrep f.dom), explode (zfrep f.cod)) (λz. zfel f.cod (f.map (elzf f.dom z))))
+Proof
+srw_tac [][rep_functor_def]
+QED
 val _ = export_rewrites["rep_functor_morf"];
 
-val rep_functor_objf = Q.store_thm(
-"rep_functor_objf",
-`∀u x. IsSmall x ∧ x ∈ u ⇒ (rep_functor u@@x = explode (zfrep x))`,
-srw_tac [][rep_functor_def]);
+Theorem rep_functor_objf:
+ ∀u x. IsSmall x ∧ x ∈ u ⇒ (rep_functor u@@x = explode (zfrep x))
+Proof
+srw_tac [][rep_functor_def]
+QED
 val _ = export_rewrites["rep_functor_objf"];
 
-val rep_functor_embedding = Q.store_thm(
-"rep_functor_embedding",
-`∀u. (∀s. s ∈ u ⇒ IsSmall s) ⇒ embedding (rep_functor u)`,
+Theorem rep_functor_embedding:
+ ∀u. (∀s. s ∈ u ⇒ IsSmall s) ⇒ embedding (rep_functor u)
+Proof
 srw_tac [][embedding_def,full_def,faithful_def] >- (
   qmatch_abbrev_tac `X` >>
   qpat_x_assum `a ∈ u` assume_tac >>
@@ -776,7 +825,8 @@ fsrw_tac [][elzf_zfel] >>
 qpat_x_assum  `IsSmall g.cod` assume_tac >>
 `g.map x ∈ g.cod ∧ h.map x ∈ g.cod` by metis_tac [] >>
 qpat_x_assum `g.map x ∈ g.cod` assume_tac >>
-fsrw_tac [][elzf_zfel]);
+fsrw_tac [][elzf_zfel]
+QED
 
 (*
 val rep_functor_inj_obj = Q.store_thm(
@@ -812,25 +862,28 @@ Definition the_hom_tag_def:
   the_hom_tag c h = if is_self_hom c h then {{}} else Empty
 End
 
-val hom_tag_not_empty = Q.store_thm(
-"hom_tag_not_empty",
-`∀c x. hom_tag c x <> {}`,
+Theorem hom_tag_not_empty:
+ ∀c x. hom_tag c x <> {}
+Proof
 srw_tac [][hom_tag_def] >>
-metis_tac [NotEmpty,InSing]);
+metis_tac [NotEmpty,InSing]
+QED
 val _ = export_rewrites["hom_tag_not_empty"];
 
-val the_hom_tag_in_hom_tag = Q.store_thm(
-"the_hom_tag_in_hom_tag",
-`∀c h. the_hom_tag c h In hom_tag c h`,
-srw_tac [][hom_tag_def,the_hom_tag_def,InSing]);
+Theorem the_hom_tag_in_hom_tag:
+ ∀c h. the_hom_tag c h In hom_tag c h
+Proof
+srw_tac [][hom_tag_def,the_hom_tag_def,InSing]
+QED
 val _ = export_rewrites["the_hom_tag_in_hom_tag"];
 
-val In_hom_tag = Q.store_thm(
-"In_hom_tag",
-`∀x c h. x In hom_tag c h = (x = the_hom_tag c h)`,
+Theorem In_hom_tag:
+ ∀x c h. x In hom_tag c h = (x = the_hom_tag c h)
+Proof
 srw_tac [][EQ_IMP_THM] >>
 fsrw_tac [][hom_tag_def,the_hom_tag_def] >>
-Cases_on `is_self_hom c h` >> fsrw_tac [][InSing]);
+Cases_on `is_self_hom c h` >> fsrw_tac [][InSing]
+QED
 val _ = export_rewrites["In_hom_tag"];
 
 Definition tagged_homset_def:
@@ -842,10 +895,10 @@ Definition tag_fun_def:
                        ((ens_to_set##((rep_functor (homs c))##f)).map ' (Snd x))
 End
 
-val HasFnType_tag_fun = Q.store_thm(
-"HasFnType_tag_fun",
-`∀c f a b. f ∈ (ens_cat (homs c)).mor ∧ is_lscat c ∧ (a = tagged_homset c f.dom) ∧ (b = tagged_homset c f.cod) ⇒
-  HasFnType (tag_fun c f) a b`,
+Theorem HasFnType_tag_fun:
+ ∀c f a b. f ∈ (ens_cat (homs c)).mor ∧ is_lscat c ∧ (a = tagged_homset c f.dom) ∧ (b = tagged_homset c f.cod) ⇒
+  HasFnType (tag_fun c f) a b
+Proof
 srw_tac [][HasFnType_def] >>
 srw_tac [][tagged_homset_def,InProdEq] >>
 fsrw_tac [][tag_fun_def,PairEq] >>
@@ -872,12 +925,13 @@ srw_tac [][] >>
   srw_tac [][In_implode,Abbr`gg`] ) >>
 srw_tac [][GraphFnAp] >>
 srw_tac [][Abbr`gg`,restrict_def] >>
-srw_tac [][Abbr`A`,elzf_zfel]);
+srw_tac [][Abbr`A`,elzf_zfel]
+QED
 
-val tag_fun_comp = Q.store_thm(
-"tag_fun_comp",
-`∀c f g x. is_lscat c ∧ (f ≈> g -:(ens_cat (homs c))) ∧ (x In tagged_homset c f.dom)
-⇒ (tag_fun c (g o f) x = tag_fun c g (tag_fun c f x))`,
+Theorem tag_fun_comp:
+ ∀c f g x. is_lscat c ∧ (f ≈> g -:(ens_cat (homs c))) ∧ (x In tagged_homset c f.dom)
+⇒ (tag_fun c (g o f) x = tag_fun c g (tag_fun c f x))
+Proof
 srw_tac [][] >>
 `IsSmall f.dom ∧ IsSmall f.cod ∧ IsSmall g.dom ∧ IsSmall g.cod` by (
   fsrw_tac [][is_locally_small_def] ) >>
@@ -951,7 +1005,8 @@ fsrw_tac [][] >>
   unabbrev_all_tac >> srw_tac [][] ) >>
 fsrw_tac [][] >>
 `f1.cod = set_cat` by srw_tac [][Abbr`f1`] >>
-fsrw_tac [][]);
+fsrw_tac [][]
+QED
 
 Definition pre_tag_functor_def:
   pre_tag_functor c = <|
@@ -960,22 +1015,24 @@ Definition pre_tag_functor_def:
     map := λf. TypedGraphFn (tagged_homset c f.dom, tagged_homset c f.cod) (tag_fun c f) |>
 End
 
-val pre_tag_functor_dom_cod = Q.store_thm(
-"pre_tag_functor_dom_cod",
-`∀c. ((pre_tag_functor c).dom = ens_cat (homs c)) ∧
-     ((pre_tag_functor c).cod = set_cat)`,
-srw_tac [][pre_tag_functor_def]);
+Theorem pre_tag_functor_dom_cod:
+ ∀c. ((pre_tag_functor c).dom = ens_cat (homs c)) ∧
+     ((pre_tag_functor c).cod = set_cat)
+Proof
+srw_tac [][pre_tag_functor_def]
+QED
 val _ = export_rewrites["pre_tag_functor_dom_cod"];
 
-val pre_tag_functor_morf = Q.store_thm(
-"pre_tag_functor_morf",
-`∀c f. (pre_tag_functor c)##f = TypedGraphFn (tagged_homset c f.dom, tagged_homset c f.cod) (tag_fun c f)`,
-srw_tac [][pre_tag_functor_def,morf_def]);
+Theorem pre_tag_functor_morf:
+ ∀c f. (pre_tag_functor c)##f = TypedGraphFn (tagged_homset c f.dom, tagged_homset c f.cod) (tag_fun c f)
+Proof
+srw_tac [][pre_tag_functor_def,morf_def]
+QED
 val _ = export_rewrites["pre_tag_functor_morf"];
 
-val pre_tag_functor_objf = Q.store_thm(
-"pre_tag_functor_objf",
-`∀c x. is_lscat c ∧ x ∈ homs c ⇒ ((pre_tag_functor c)@@x = tagged_homset c x)`,
+Theorem pre_tag_functor_objf:
+ ∀c x. is_lscat c ∧ x ∈ homs c ⇒ ((pre_tag_functor c)@@x = tagged_homset c x)
+Proof
 srw_tac [][objf_def] >>
 SELECT_ELIM_TAC >>
 conj_tac >- (
@@ -1005,16 +1062,17 @@ conj_tac >- (
   qpat_x_assum `x2 In zfrep x` mp_tac >>
   srw_tac [][In_zfrep_thm] >>
   metis_tac [elzf_zfel] ) >>
-srw_tac [][morphism_component_equality]);
+srw_tac [][morphism_component_equality]
+QED
 val _ = export_rewrites["pre_tag_functor_objf"];
 
 Definition tag_functor_def:
   tag_functor c = mk_functor (pre_tag_functor c)
 End
 
-val is_functor_tag_functor = Q.store_thm(
-"is_functor_tag_functor",
-`∀c. is_lscat c ⇒ is_functor (tag_functor c)`,
+Theorem is_functor_tag_functor:
+ ∀c. is_lscat c ⇒ is_functor (tag_functor c)
+Proof
 srw_tac [][tag_functor_def] >>
 fsrw_tac [][functor_axioms_def] >>
 conj_tac >- (
@@ -1061,31 +1119,35 @@ match_mp_tac GraphFnExt >>
 srw_tac [][Abbr`gg`,Abbr`hh`] >>
 match_mp_tac tag_fun_comp >>
 unabbrev_all_tac >>
-srw_tac [][]);
+srw_tac [][]
+QED
 val _ = export_rewrites["is_functor_tag_functor"];
 
-val tag_functor_dom_cod = Q.store_thm(
-"tag_functor_dom_cod",
-`∀c. ((tag_functor c).dom = ens_cat (homs c)) ∧
-     ((tag_functor c).cod = set_cat)`,
-srw_tac [][tag_functor_def]);
+Theorem tag_functor_dom_cod:
+ ∀c. ((tag_functor c).dom = ens_cat (homs c)) ∧
+     ((tag_functor c).cod = set_cat)
+Proof
+srw_tac [][tag_functor_def]
+QED
 val _ = export_rewrites["tag_functor_dom_cod"];
 
-val tag_functor_morf = Q.store_thm(
-"tag_functor_morf",
-`∀c f. f ∈ (ens_cat (homs c)).mor ⇒ ((tag_functor c)##f = TypedGraphFn (tagged_homset c f.dom, tagged_homset c f.cod) (tag_fun c f))`,
-srw_tac [][tag_functor_def]);
+Theorem tag_functor_morf:
+ ∀c f. f ∈ (ens_cat (homs c)).mor ⇒ ((tag_functor c)##f = TypedGraphFn (tagged_homset c f.dom, tagged_homset c f.cod) (tag_fun c f))
+Proof
+srw_tac [][tag_functor_def]
+QED
 val _ = export_rewrites["tag_functor_morf"];
 
-val tag_functor_objf = Q.store_thm(
-"tag_functor_objf",
-`∀c x. is_lscat c ∧ x ∈ homs c ⇒ (tag_functor c@@x = tagged_homset c x)`,
-srw_tac [][tag_functor_def]);
+Theorem tag_functor_objf:
+ ∀c x. is_lscat c ∧ x ∈ homs c ⇒ (tag_functor c@@x = tagged_homset c x)
+Proof
+srw_tac [][tag_functor_def]
+QED
 val _ = export_rewrites["tag_functor_objf"];
 
-val tag_functor_embedding = Q.store_thm(
-"tag_functor_embedding",
-`∀c. is_lscat c ⇒ embedding (tag_functor c)`,
+Theorem tag_functor_embedding:
+ ∀c. is_lscat c ⇒ embedding (tag_functor c)
+Proof
 srw_tac [][] >>
 `embedding (ens_to_set ◎ (rep_functor (homs c)))` by (
   match_mp_tac embedding_functor_comp >>
@@ -1205,16 +1267,17 @@ qpat_x_assum `X ' w = Y ' w2` mp_tac >>
 fsrw_tac [][] >>
 `zfel g.dom z In zfrep g.dom` by (
   fsrw_tac [][explode_def,In_zfrep_thm] ) >>
-fsrw_tac [][GraphFnAp,restrict_def])
+fsrw_tac [][GraphFnAp,restrict_def]
+QED
 val _ = export_rewrites["tag_functor_embedding"];
 
 Definition zYfunctor_def:
   zYfunctor c = (postcomp_functor (c°) (tag_functor c)) ◎ Yfunctor c
 End
 
-val is_functor_zYfunctor = Q.store_thm(
-"is_functor_zYfunctor",
-`∀c. is_lscat c ⇒ is_functor (zYfunctor c)`,
+Theorem is_functor_zYfunctor:
+ ∀c. is_lscat c ⇒ is_functor (zYfunctor c)
+Proof
 srw_tac [][] >>
 fsrw_tac [][zYfunctor_def] >>
 match_mp_tac is_functor_comp >>
@@ -1222,28 +1285,31 @@ conj_tac >- srw_tac [][is_functor_Yfunctor] >>
 conj_tac >- (
   match_mp_tac is_functor_postcomp_functor >>
   srw_tac [][] ) >>
-srw_tac [][]);
+srw_tac [][]
+QED
 val _ = export_rewrites["is_functor_zYfunctor"];
 
-val zYfunctor_dom_cod = Q.store_thm(
-"zYfunctor_dom_cod",
-`∀c. ((zYfunctor c).dom = c) ∧
-     ((zYfunctor c).cod = [(c°)→set_cat])`,
-srw_tac [][zYfunctor_def]);
+Theorem zYfunctor_dom_cod:
+ ∀c. ((zYfunctor c).dom = c) ∧
+     ((zYfunctor c).cod = [(c°)→set_cat])
+Proof
+srw_tac [][zYfunctor_def]
+QED
 val _ = export_rewrites["zYfunctor_dom_cod"];
 
-val zYfunctorEmbedding = Q.store_thm(
-"zYfunctorEmbedding",
-`∀c. is_lscat c ⇒ embedding (zYfunctor c)`,
+Theorem zYfunctorEmbedding:
+ ∀c. is_lscat c ⇒ embedding (zYfunctor c)
+Proof
 srw_tac [][zYfunctor_def] >>
 match_mp_tac embedding_functor_comp >>
 fsrw_tac [][is_functor_Yfunctor,YonedaEmbedding] >>
 match_mp_tac embedding_functor_cats >>
-srw_tac [][]);
+srw_tac [][]
+QED
 
-val zYfunctorInjObj = Q.store_thm(
-"zYfunctorInjObj",
-`∀c. is_lscat c ⇒ inj_obj (zYfunctor c)`,
+Theorem zYfunctorInjObj:
+ ∀c. is_lscat c ⇒ inj_obj (zYfunctor c)
+Proof
 srw_tac [][zYfunctor_def] >>
 srw_tac [][inj_obj_def] >>
 qmatch_assum_abbrev_tac `(f ◎ g)@@a = (f ◎ g)@@b` >>
@@ -1281,4 +1347,5 @@ fsrw_tac [][hom_def,EXTENSION] >>
 qmatch_assum_rename_tac `!x. x :- a → b -:c = x :- z → z -:c` >>
 `id z -: c :- z → z -:c` by metis_tac [id_maps_to] >>
 `id z -: c :- a → b -:c` by metis_tac [] >>
-fsrw_tac [][maps_to_in_def]);
+fsrw_tac [][maps_to_in_def]
+QED

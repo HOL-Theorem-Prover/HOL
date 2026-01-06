@@ -7,6 +7,7 @@
 (*                (c) Copyright, Marco Maggesi 2014-2017                     *)
 (*             (c) Copyright, Andrea Gabrielli  2016-2017                    *)
 (* ========================================================================= *)
+
 Theory metric
 Ancestors
   arithmetic num pair quotient pred_set real real_sigma cardinal
@@ -14,7 +15,6 @@ Ancestors
 Libs
   boolSimps simpLib mesonLib metisLib jrhUtils pairLib
   pred_setLib RealArith tautLib realSimps hurdUtils
-
 
 fun METIS ths tm = prove(tm,METIS_TAC ths);
 val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
@@ -341,6 +341,13 @@ Proof
   BETA_TAC THEN REWRITE_TAC[]
 QED
 
+Theorem MTOP_OPEN' :
+    !m s. open_in(mtop m) s <=>
+          !x. x IN s ==> ?e. 0 < e /\ !y. dist m (x,y) < e ==> y IN s
+Proof
+    RW_TAC std_ss [IN_APP, MTOP_OPEN]
+QED
+
 (*---------------------------------------------------------------------------*)
 (* Define open ball in metric space + prove basic properties                 *)
 (*---------------------------------------------------------------------------*)
@@ -416,7 +423,14 @@ Proof
 QED
 
 Theorem MDIST_POS_LE = METRIC_POS
+Theorem MDIST_POS_LT = METRIC_NZ
 Theorem MDIST_EQ_0   = METRIC_ZERO
+
+Theorem MDIST_POS_EQ :
+    !m x y. 0 < dist m (x,y) <=> x <> y
+Proof
+    METIS_TAC [MDIST_POS_LT, MDIST_REFL, REAL_LT_REFL]
+QED
 
 Theorem mtopology :
    !m. mtopology (m:'a metric) =
@@ -542,6 +556,13 @@ Proof
     REWRITE_TAC[SUBSET_applied] THEN DISCH_THEN MATCH_MP_TAC THEN
     FIRST_ASSUM ACCEPT_TAC
    ]
+QED
+
+Theorem MTOP_LIMPT' :
+    !m x s. limpt(mtop m) x s <=>
+            !e. 0 < e ==> ?y. x <> y /\ y IN s /\ dist m (x,y) < e
+Proof
+    RW_TAC std_ss [IN_APP, MTOP_LIMPT]
 QED
 
 (*---------------------------------------------------------------------------*)
@@ -739,6 +760,12 @@ Theorem DIST_TRIANGLE_ADD:
    !x x' y y'. dist(x + y,x' + y') <= dist(x,x') + dist(y,y')
 Proof
   SIMP_TAC std_ss [dist] THEN REAL_ARITH_TAC
+QED
+
+Theorem DIST_ADD :
+    !x y c. dist (x + c,y + c) = dist (x,y)
+Proof
+    RW_TAC std_ss [dist] >> REAL_ARITH_TAC
 QED
 
 Theorem DIST_MUL:
@@ -1557,6 +1584,30 @@ Proof
  >> rw [MDIST_TRIANGLE_SUB]
 QED
 
+Theorem MDIST_LE_0 :
+    !m x y. dist m (x,y) <= 0 <=> dist m (x,y) = 0
+Proof
+    rpt GEN_TAC
+ >> reverse EQ_TAC >- rw []
+ >> rw [REAL_LE_LT]
+ >> PROVE_TAC [REAL_LET_ANTISYM, METRIC_POS]
+QED
+
+Theorem MCBALL_TRIVIAL :
+    !m x. mcball m (x,0) = {x}
+Proof
+    rw [Once EXTENSION, IN_MCBALL, MSPACE]
+ >> rename1 ‘_ <=> y = x’
+ >> simp [MDIST_LE_0, METRIC_ZERO]
+ >> PROVE_TAC []
+QED
+
+Theorem MCBALL_SING :
+    !m x e. e = 0 ==> mcball m (x,e) = {x}
+Proof
+    rw [MCBALL_TRIVIAL]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* More general infimum of distance between two sets.                        *)
 (* ------------------------------------------------------------------------- *)
@@ -1891,7 +1942,7 @@ Definition Lipschitz_condition_def :
       !x y. dist E2 (f x,f y) <= k * dist E1 (x,y)
 End
 
-(* Definition 13.8 [1, p.249], cf. topologyTheory.continuous_map *)
+(* Definition 13.8 [1, p.249] (or [2]), cf. topologyTheory.continuous_map *)
 Definition Lipschitz_continuous_map :
     Lipschitz_continuous_map (E1,E2) f <=>
       ?k. 0 < k /\ Lipschitz_condition (E1,E2) k f
@@ -1912,6 +1963,21 @@ Proof
  >> ‘k <> 0’ by rw [REAL_LT_IMP_NE]
  >> Q.EXISTS_TAC ‘e / k’ >> rw [REAL_LT_DIV]
  >> Q_TAC (TRANS_TAC REAL_LET_TRANS) ‘k * dist E1 (a,x)’ >> art []
+QED
+
+(* cf. CONTINUOUS_MAP_COMPOSE *)
+Theorem Lipschitz_continuous_map_compose :
+    !top1 top2 top3 f g. Lipschitz_continuous_map (top1,top2) f /\
+                         Lipschitz_continuous_map (top2,top3) g ==>
+                         Lipschitz_continuous_map (top1,top3) (g o f)
+Proof
+    rw [Lipschitz_continuous_map_def]
+ >> Q.EXISTS_TAC ‘k * k'’
+ >> rw [REAL_LT_MUL]
+ >> ‘k * k' * dist top1 (x,y) = k' * (k * dist top1 (x,y))’ by REAL_ARITH_TAC
+ >> POP_ORW
+ >> Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘k' * dist top2 (f x,f y)’
+ >> simp []
 QED
 
 (* Another form of SET_DIST_LIPSCHITZ *)
@@ -2064,8 +2130,11 @@ QED
 
 val _ = remove_ovl_mapping "B" {Name = "B", Thy = "metric"};
 
+(* END *)
+
 (* References:
 
   [1] Klenke, A.: Probability Theory: A Comprehensive Course. Second Edition.
       Springer Science & Business Media, London (2013).
+  [2] https://en.wikipedia.org/wiki/Lipschitz_continuity
  *)

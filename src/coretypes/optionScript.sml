@@ -133,12 +133,11 @@ Theorem EXISTS_OPTION:
 Proof METIS_TAC [option_nchotomy]
 QED
 
-Theorem SOME_11:
+Theorem SOME_11[simp]:
   !x y :'a. (SOME x = SOME y) <=> (x=y)
 Proof
   REWRITE_TAC [SOME_DEF,option_ABS_ONE_ONE,sumTheory.INR_INL_11]
 QED
-val _ = export_rewrites ["SOME_11"]
 val _ = computeLib.add_persistent_funs ["SOME_11"]
 
 Theorem NOT_NONE_SOME[simp]:
@@ -197,7 +196,7 @@ val option_rws =
      NOT_NONE_SOME,NOT_SOME_NONE, SOME_11, option_case_def,
      OPTION_MAP_DEF, OPTION_JOIN_DEF];
 
-Theorem OPTION_MAP2_THM:
+Theorem OPTION_MAP2_THM[simp]:
    (OPTION_MAP2 f (SOME x) (SOME y) = SOME (f x y)) /\
    (OPTION_MAP2 f (SOME x) NONE = NONE) /\
    (OPTION_MAP2 f NONE (SOME y) = NONE) /\
@@ -205,7 +204,6 @@ Theorem OPTION_MAP2_THM:
 Proof
   REWRITE_TAC (OPTION_MAP2_DEF::option_rws)
 QED
-val _ = export_rewrites ["OPTION_MAP2_THM"];
 Overload lift2[inferior] = ``OPTION_MAP2``
 val _ = computeLib.add_persistent_funs ["OPTION_MAP2_THM"]
 
@@ -324,7 +322,7 @@ Proof
     THEN ASM_REWRITE_TAC option_rws
 QED
 
-Theorem IF_EQUALS_OPTION:
+Theorem IF_EQUALS_OPTION[simp]:
     (((if P then SOME x else NONE) = NONE) <=> ~P) /\
     (((if P then NONE else SOME x) = NONE) <=> P) /\
     (((if P then SOME x else NONE) = SOME y) <=> P /\ (x = y)) /\
@@ -332,7 +330,6 @@ Theorem IF_EQUALS_OPTION:
 Proof
   SRW_TAC [][]
 QED
-val _ = export_rewrites ["IF_EQUALS_OPTION"]
 
 Theorem if_option_eq[simp]:
     (((if P then X else SOME x) = NONE) <=> P /\ (X = NONE)) /\
@@ -363,7 +360,7 @@ QED
     OPTION_MAP theorems
    ---------------------------------------------------------------------- *)
 
-Theorem OPTION_MAP_EQ_SOME:
+Theorem OPTION_MAP_EQ_SOME[simp]:
    !f (x:'a option) y.
          (OPTION_MAP f x = SOME y) = ?z. (x = SOME z) /\ (y = f z)
 Proof
@@ -372,7 +369,6 @@ Proof
     [SOME_11, NOT_NONE_SOME, NOT_SOME_NONE, OPTION_MAP_DEF] THEN
   mesonLib.MESON_TAC []
 QED
-val _ = export_rewrites ["OPTION_MAP_EQ_SOME"]
 
 Theorem OPTION_MAP_EQ_NONE:
    !f x.  (OPTION_MAP f x = NONE) = (x = NONE)
@@ -381,7 +377,7 @@ Proof
   REWRITE_TAC [option_CLAUSES]
 QED
 
-Theorem OPTION_MAP_EQ_NONE_both_ways:
+Theorem OPTION_MAP_EQ_NONE_both_ways[simp]:
    ((OPTION_MAP f x = NONE) = (x = NONE)) /\
    ((NONE = OPTION_MAP f x) = (x = NONE))
 Proof
@@ -389,7 +385,6 @@ Proof
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [EQ_SYM_EQ])) THEN
   REWRITE_TAC [OPTION_MAP_EQ_NONE]
 QED
-val _ = export_rewrites ["OPTION_MAP_EQ_NONE_both_ways"]
 
 Theorem OPTION_MAP_COMPOSE:
     OPTION_MAP f (OPTION_MAP g (x:'a option)) = OPTION_MAP (f o g) x
@@ -438,7 +433,7 @@ QED
 
 (* and some about OPTION_MAP2 *)
 
-Theorem OPTION_MAP2_SOME:
+Theorem OPTION_MAP2_SOME[simp]:
    (OPTION_MAP2 f (o1:'a option) (o2:'b option) = SOME v) <=>
    (?x1 x2. (o1 = SOME x1) /\ (o2 = SOME x2) /\ (v = f x1 x2))
 Proof
@@ -446,16 +441,14 @@ Proof
   OPTION_CASES_TAC “o2:'b option” THEN
   SRW_TAC [][EQ_IMP_THM]
 QED
-val _ = export_rewrites["OPTION_MAP2_SOME"];
 
-Theorem OPTION_MAP2_NONE:
+Theorem OPTION_MAP2_NONE[simp]:
    (OPTION_MAP2 f (o1:'a option) (o2:'b option) = NONE) <=> (o1 = NONE) \/ (o2 = NONE)
 Proof
   OPTION_CASES_TAC “o1:'a option” THEN
   OPTION_CASES_TAC “o2:'b option” THEN
   SRW_TAC [][]
 QED
-val _ = export_rewrites["OPTION_MAP2_NONE"];
 
 Theorem OPTION_MAP2_cong[defncong]:
   !x1 x2 y1 y2 f1 f2.
@@ -557,13 +550,12 @@ val OPTION_IGNORE_BIND_def = new_definition(
   "OPTION_IGNORE_BIND_def",
   ``OPTION_IGNORE_BIND m1 m2 = OPTION_BIND m1 (K m2)``);
 
-Theorem OPTION_IGNORE_BIND_thm:
+Theorem OPTION_IGNORE_BIND_thm[simp]:
     (OPTION_IGNORE_BIND NONE m = NONE) /\
     (OPTION_IGNORE_BIND (SOME v) m = m)
 Proof
   SRW_TAC[][OPTION_IGNORE_BIND_def]
 QED
-val _ = export_rewrites ["OPTION_IGNORE_BIND_thm"]
 val _ = computeLib.add_persistent_funs ["OPTION_IGNORE_BIND_thm"]
 
 Theorem OPTION_IGNORE_BIND_EQUALS_OPTION[simp]:
@@ -599,13 +591,12 @@ Proof
   ASM_CASES_TAC ``b:bool`` THEN ASM_REWRITE_TAC [OPTION_GUARD_def]
 QED
 
-Theorem OPTION_GUARD_EQ_THM:
+Theorem OPTION_GUARD_EQ_THM[simp]:
     ((OPTION_GUARD b = SOME ()) <=> b) /\
     ((OPTION_GUARD b = NONE) <=> ~b)
 Proof
   Cases_on `b` THEN SRW_TAC[][]
 QED
-val _ = export_rewrites ["OPTION_GUARD_EQ_THM"]
 
 val OPTION_CHOICE_def = new_recursive_definition
   {name = "OPTION_CHOICE_def",
@@ -718,7 +709,7 @@ Proof
 QED
 val _ = IndDefLib.export_mono "OPTREL_MONO"
 
-Theorem OPTREL_refl:
+Theorem OPTREL_refl[simp]:
   (!x. R x x) ==> !x. OPTREL R x x
 Proof
 STRIP_TAC THEN GEN_TAC
@@ -726,7 +717,6 @@ THEN OPTION_CASES_TAC ``x:'a option``
 THEN ASM_REWRITE_TAC(OPTREL_def::option_rws)
 THEN PROVE_TAC[]
 QED
-val _ = export_rewrites["OPTREL_refl"]
 
 Theorem OPTREL_eq[simp]:
   OPTREL (=) = (=)
@@ -816,19 +806,17 @@ Proof
 QED
 val _ = set_fixity "some" Binder
 
-Theorem some_F:
+Theorem some_F[simp]:
     (some x. F) = NONE
 Proof
   DEEP_INTRO_TAC some_intro THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["some_F"]
 
-Theorem some_EQ:
+Theorem some_EQ[simp]:
     ((some x. x = y) = SOME y) /\ ((some x. y = x) = SOME y)
 Proof
   CONJ_TAC THEN DEEP_INTRO_TAC some_intro THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["some_EQ"]
 
 (* |- !M M' v f.
         M = M' /\ (M' = NONE ==> v = v') /\ (!x. M' = SOME x ==> f x = f' x) ==>

@@ -166,9 +166,10 @@ val next_token_PROGRESS = prove(
   \\ IMP_RES_TAC str2sym_LENGTH
   \\ FULL_SIMP_TAC std_ss [LENGTH] \\ DECIDE_TAC);
 
-val sexp_parse_stream_PROGRESS = store_thm("sexp_parse_stream_PROGRESS",
-  ``((F,str1) = is_eof str) /\ ((s,str2) = sexp_parse_stream str1) ==>
-    LENGTH str2 < LENGTH str``,
+Theorem sexp_parse_stream_PROGRESS:
+    ((F,str1) = is_eof str) /\ ((s,str2) = sexp_parse_stream str1) ==>
+    LENGTH str2 < LENGTH str
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC is_eof_F_IMP
   \\ FULL_SIMP_TAC std_ss [sexp_parse_stream_def]
   \\ Q.PAT_X_ASSUM `(s,str2) = bb` (MP_TAC o GSYM)
@@ -178,7 +179,8 @@ val sexp_parse_stream_PROGRESS = store_thm("sexp_parse_stream_PROGRESS",
   \\ IMP_RES_TAC next_token_PROGRESS
   \\ POP_ASSUM (MP_TAC o Q.SPEC `xs`)
   \\ FULL_SIMP_TAC std_ss [] \\ SRW_TAC [] []
-  \\ IMP_RES_TAC sexp_lex_parse_LESS_EQ \\ DECIDE_TAC);
+  \\ IMP_RES_TAC sexp_lex_parse_LESS_EQ \\ DECIDE_TAC
+QED
 
 val read_sexps_def = tDefine "read_sexps" `
   read_sexps str =

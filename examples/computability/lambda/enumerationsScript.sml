@@ -101,12 +101,14 @@ val numdB_11 = Store_thm(
   ``(numdB n = numdB m) ⇔ (n = m)``,
   METIS_TAC [dBnumdB]);
 
-val numdB_onto = store_thm(
-  "numdB_onto",
-  ``∀t. ∃n. numdB n = t``,
-  METIS_TAC [numdBnum]);
-val dBnum_onto = store_thm(
-  "dBnum_onto",
-  ``∀n. ∃t. dBnum t = n``,
-  METIS_TAC [dBnumdB]);
+Theorem numdB_onto:
+    ∀t. ∃n. numdB n = t
+Proof
+  METIS_TAC [numdBnum]
+QED
+Theorem dBnum_onto:
+    ∀n. ∃t. dBnum t = n
+Proof
+  METIS_TAC [dBnumdB]
+QED
 

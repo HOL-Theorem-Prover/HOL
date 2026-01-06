@@ -35,15 +35,16 @@ End
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val REAL_LE_EQ = store_thm
-  ("REAL_LE_EQ",
-   ``!(x:real) y. x <= y /\ y <= x ==> (x = y)``,
-   REAL_ARITH_TAC);
+Theorem REAL_LE_EQ:
+     !(x:real) y. x <= y /\ y <= x ==> (x = y)
+Proof
+   REAL_ARITH_TAC
+QED
 
 (* the same theorem in realTheory is slightly different *)
-val REAL_INF_MIN = store_thm
-  ("REAL_INF_MIN",
-   ``!p z. z IN p /\ (!x. x IN p ==> z <= x) ==> (inf p = z)``,
+Theorem REAL_INF_MIN:
+     !p z. z IN p /\ (!x. x IN p ==> z <= x) ==> (inf p = z)
+Proof
    RW_TAC std_ss [SPECIFICATION]
    >> MP_TAC (SPECL [``(\r. (p:real->bool) (~r))``, ``~(z:real)``]
               REAL_SUP_MAX)
@@ -52,24 +53,27 @@ val REAL_INF_MIN = store_thm
    >- PROVE_TAC [REAL_ARITH ``~~(x:real) = x``]
    >> REPEAT STRIP_TAC
    >> Suff `z <= ~x` >- (KILL_TAC >> REAL_ARITH_TAC)
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val POW_HALF_TWICE = store_thm
-  ("POW_HALF_TWICE",
-   ``!n. (1 / 2) pow n = 2 * (1 / 2) pow (SUC n)``,
+Theorem POW_HALF_TWICE:
+     !n. (1 / 2) pow n = 2 * (1 / 2) pow (SUC n)
+Proof
    RW_TAC std_ss [pow, REAL_MUL_ASSOC]
-   >> PROVE_TAC [HALF_CANCEL, REAL_MUL_LID]);
+   >> PROVE_TAC [HALF_CANCEL, REAL_MUL_LID]
+QED
 
-val REAL_INVINV_ALL = store_thm
-  ("REAL_INVINV_ALL",
-   ``!x. inv (inv x) = x``,
+Theorem REAL_INVINV_ALL:
+     !x. inv (inv x) = x
+Proof
    STRIP_TAC
    >> reverse (Cases_on `x = 0`) >- RW_TAC std_ss [REAL_INVINV]
-   >> RW_TAC std_ss [REAL_INV_0]);
+   >> RW_TAC std_ss [REAL_INV_0]
+QED
 
-val ABS_BETWEEN_LE = store_thm
-  ("ABS_BETWEEN_LE",
-   ``!x y d. 0 <= d /\ x - d <= y /\ y <= x + d <=> abs (y - x) <= d``,
+Theorem ABS_BETWEEN_LE:
+     !x y d. 0 <= d /\ x - d <= y /\ y <= x + d <=> abs (y - x) <= d
+Proof
    RW_TAC std_ss [abs] >|
    [EQ_TAC >- REAL_ARITH_TAC
     >> STRIP_TAC
@@ -101,35 +105,39 @@ val ABS_BETWEEN_LE = store_thm
      >- (POP_ASSUM MP_TAC >> KILL_TAC >> REAL_ARITH_TAC)
      >> Q.PAT_ASSUM `0 <= x - y` MP_TAC
      >> KILL_TAC
-     >> REAL_ARITH_TAC]]);
+     >> REAL_ARITH_TAC]]
+QED
 
-val POW_HALF_EXP = store_thm
-  ("POW_HALF_EXP",
-   ``!n. (1 / 2) pow n = inv (&(2 EXP n))``,
+Theorem POW_HALF_EXP:
+     !n. (1 / 2) pow n = inv (&(2 EXP n))
+Proof
    RW_TAC std_ss [GSYM REAL_POW, GSYM REAL_INV_1OVER]
    >> ONCE_REWRITE_TAC [EQ_SYM_EQ]
    >> MATCH_MP_TAC POW_INV
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val REAL_LE_INV_LE = store_thm
-  ("REAL_LE_INV_LE",
-   ``!x y. 0 < x /\ x <= y ==> inv y <= inv x``,
+Theorem REAL_LE_INV_LE:
+     !x y. 0 < x /\ x <= y ==> inv y <= inv x
+Proof
    RW_TAC std_ss []
    >> Know `0 < inv x` >- PROVE_TAC [REAL_INV_POS]
    >> STRIP_TAC
    >> Suff `~(inv x < inv y)` >- PROVE_TAC [REAL_NOT_LT]
    >> STRIP_TAC
    >> Know `inv (inv y) < inv (inv x)` >- PROVE_TAC [REAL_LT_INV]
-   >> RW_TAC std_ss [REAL_INVINV_ALL, REAL_NOT_LT]);
+   >> RW_TAC std_ss [REAL_INVINV_ALL, REAL_NOT_LT]
+QED
 
-val INV_SUC_POS = store_thm
-  ("INV_SUC_POS",
-   ``!n. 0 < 1 / & (SUC n)``,
-   RW_TAC real_ss [GSYM REAL_INV_1OVER, REAL_LT_INV_EQ, REAL_LT]);
+Theorem INV_SUC_POS:
+     !n. 0 < 1 / & (SUC n)
+Proof
+   RW_TAC real_ss [GSYM REAL_INV_1OVER, REAL_LT_INV_EQ, REAL_LT]
+QED
 
-val INV_SUC_MAX = store_thm
-  ("INV_SUC_MAX",
-   ``!n. 1 / & (SUC n) <= 1``,
+Theorem INV_SUC_MAX:
+     !n. 1 / & (SUC n) <= 1
+Proof
    REWRITE_TAC [GSYM REAL_INV_1OVER]
    >> Induct
    >- RW_TAC std_ss [GSYM ONE, REAL_INV1, REAL_LE_REFL]
@@ -137,88 +145,103 @@ val INV_SUC_MAX = store_thm
    >- PROVE_TAC [REAL_LE_TRANS]
    >> Suff `inv (& (SUC (SUC n))) < inv (& (SUC n))` >- REAL_ARITH_TAC
    >> MATCH_MP_TAC REAL_LT_INV
-   >> RW_TAC arith_ss [REAL_LT]);
+   >> RW_TAC arith_ss [REAL_LT]
+QED
 
-val INV_SUC = store_thm
-  ("INV_SUC",
-   ``!n. 0 < 1 / & (SUC n) /\ 1 / & (SUC n) <= 1``,
-   PROVE_TAC [INV_SUC_POS, INV_SUC_MAX])
+Theorem INV_SUC:
+     !n. 0 < 1 / & (SUC n) /\ 1 / & (SUC n) <= 1
+Proof
+   PROVE_TAC [INV_SUC_POS, INV_SUC_MAX]
+QED
 
-val ABS_UNIT_INTERVAL = store_thm
-  ("ABS_UNIT_INTERVAL",
-   ``!x y. 0 <= x /\ x <= 1 /\ 0 <= y /\ y <= 1 ==> abs (x - y) <= 1``,
-   REAL_ARITH_TAC);
+Theorem ABS_UNIT_INTERVAL:
+     !x y. 0 <= x /\ x <= 1 /\ 0 <= y /\ y <= 1 ==> abs (x - y) <= 1
+Proof
+   REAL_ARITH_TAC
+QED
 
-val REAL_LE_LT_MUL = store_thm
-  ("REAL_LE_LT_MUL",
-   ``!x y : real. 0 <= x /\ 0 < y ==> 0 <= x * y``,
+Theorem REAL_LE_LT_MUL:
+     !x y : real. 0 <= x /\ 0 < y ==> 0 <= x * y
+Proof
    rpt STRIP_TAC
    >> MP_TAC (Q.SPECL [`0`, `x`, `y`] REAL_LE_RMUL)
-   >> RW_TAC std_ss [REAL_MUL_LZERO]);
+   >> RW_TAC std_ss [REAL_MUL_LZERO]
+QED
 
-val REAL_LT_LE_MUL = store_thm
-  ("REAL_LT_LE_MUL",
-   ``!x y : real. 0 < x /\ 0 <= y ==> 0 <= x * y``,
-   PROVE_TAC [REAL_LE_LT_MUL, REAL_MUL_SYM]);
+Theorem REAL_LT_LE_MUL:
+     !x y : real. 0 < x /\ 0 <= y ==> 0 <= x * y
+Proof
+   PROVE_TAC [REAL_LE_LT_MUL, REAL_MUL_SYM]
+QED
 
-val REAL_INV_NEG = store_thm
-  ("REAL_INV_NEG",
-   ``!x. 0 < ~x ==> 0 < ~inv x``,
+Theorem REAL_INV_NEG:
+     !x. 0 < ~x ==> 0 < ~inv x
+Proof
    rpt STRIP_TAC
    >> Know `~(x = 0)` >- (POP_ASSUM MP_TAC >> REAL_ARITH_TAC)
    >> RW_TAC std_ss [REAL_NEG_INV]
-   >> PROVE_TAC [REAL_INV_POS]);
+   >> PROVE_TAC [REAL_INV_POS]
+QED
 
-val IN_ZREAL = store_thm
-  ("IN_ZREAL",
-   ``!x. x IN zreal <=> (x = 0)``,
-   RW_TAC std_ss [zreal_def, SPECIFICATION]);
+Theorem IN_ZREAL:
+     !x. x IN zreal <=> (x = 0)
+Proof
+   RW_TAC std_ss [zreal_def, SPECIFICATION]
+QED
 
-val IN_NZREAL = store_thm
-  ("IN_NZREAL",
-   ``!x. x IN nzreal <=> ~(x = 0)``,
-   RW_TAC std_ss [nzreal_def, SPECIFICATION]);
+Theorem IN_NZREAL:
+     !x. x IN nzreal <=> ~(x = 0)
+Proof
+   RW_TAC std_ss [nzreal_def, SPECIFICATION]
+QED
 
-val IN_POSREAL = store_thm
-  ("IN_POSREAL",
-   ``!x. x IN posreal <=> 0 < x``,
-   RW_TAC std_ss [posreal_def, SPECIFICATION]);
+Theorem IN_POSREAL:
+     !x. x IN posreal <=> 0 < x
+Proof
+   RW_TAC std_ss [posreal_def, SPECIFICATION]
+QED
 
-val IN_NNEGREAL = store_thm
-  ("IN_NNEGREAL",
-   ``!x. x IN nnegreal <=> 0 <= x``,
-   RW_TAC std_ss [nnegreal_def, SPECIFICATION]);
+Theorem IN_NNEGREAL:
+     !x. x IN nnegreal <=> 0 <= x
+Proof
+   RW_TAC std_ss [nnegreal_def, SPECIFICATION]
+QED
 
-val IN_NEGREAL = store_thm
-  ("IN_NEGREAL",
-   ``!x. x IN negreal <=> 0 < ~x``,
-   RW_TAC std_ss [negreal_def, SPECIFICATION]);
+Theorem IN_NEGREAL:
+     !x. x IN negreal <=> 0 < ~x
+Proof
+   RW_TAC std_ss [negreal_def, SPECIFICATION]
+QED
 
-val IN_NPOSREAL = store_thm
-  ("IN_NPOSREAL",
-   ``!x. x IN nposreal <=> 0 <= ~x``,
-   RW_TAC std_ss [nposreal_def, SPECIFICATION]);
+Theorem IN_NPOSREAL:
+     !x. x IN nposreal <=> 0 <= ~x
+Proof
+   RW_TAC std_ss [nposreal_def, SPECIFICATION]
+QED
 
-val POSREAL_ALT = store_thm
-  ("POSREAL_ALT",
-   ``posreal = nnegreal INTER nzreal``,
+Theorem POSREAL_ALT:
+     posreal = nnegreal INTER nzreal
+Proof
    RW_TAC std_ss [SET_EQ, IN_INTER, IN_POSREAL, IN_NNEGREAL, IN_NZREAL]
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val NEGREAL_ALT = store_thm
-  ("NEGREAL_ALT",
-   ``negreal = nposreal INTER nzreal``,
+Theorem NEGREAL_ALT:
+     negreal = nposreal INTER nzreal
+Proof
    RW_TAC std_ss [SET_EQ, IN_INTER, IN_NEGREAL, IN_NPOSREAL, IN_NZREAL]
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val REAL_ZERO_SUBTYPE = store_thm
-  ("REAL_ZERO_SUBTYPE",
-   ``0 IN zreal``,
-   RW_TAC std_ss [IN_ZREAL, SPECIFICATION]);
+Theorem REAL_ZERO_SUBTYPE:
+     0 IN zreal
+Proof
+   RW_TAC std_ss [IN_ZREAL, SPECIFICATION]
+QED
 
-val REAL_OF_NUM_SUBTYPE = store_thm
-  ("REAL_OF_NUM_SUBTYPE",
-   ``real_of_num IN ((UNIV -> nnegreal) INTER (gtnum 0 -> posreal))``,
+Theorem REAL_OF_NUM_SUBTYPE:
+     real_of_num IN ((UNIV -> nnegreal) INTER (gtnum 0 -> posreal))
+Proof
    RW_TAC std_ss [IN_INTER, IN_FUNSET, IN_NNEGREAL, REAL_POS, IN_GTNUM,
                   IN_ZREAL, IN_POSREAL]
    >> Suff `~(& x = 0)`
@@ -227,67 +250,72 @@ val REAL_OF_NUM_SUBTYPE = store_thm
    >> Cases_on `x` >- DECIDE_TAC
    >> RW_TAC std_ss [REAL]
    >> Know `0 <= & n` >- RW_TAC std_ss [REAL_POS]
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val NEG_SUBTYPE = store_thm
-  ("NEG_SUBTYPE",
-   ``real_neg IN
+Theorem NEG_SUBTYPE:
+     real_neg IN
      ((negreal -> posreal) INTER (posreal -> negreal) INTER
       (nnegreal -> nposreal) INTER (nposreal -> nnegreal) INTER
-      (nzreal -> nzreal) INTER (zreal -> zreal))``,
+      (nzreal -> nzreal) INTER (zreal -> zreal))
+Proof
    RW_TAC std_ss [IN_FUNSET, IN_NEGREAL, IN_POSREAL, IN_INTER,
                   IN_NPOSREAL, IN_NNEGREAL, IN_NZREAL, IN_ZREAL]
    >> TRY (POP_ASSUM MP_TAC)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val INV_SUBTYPE = store_thm
-  ("INV_SUBTYPE",
-   ``inv IN
+Theorem INV_SUBTYPE:
+     inv IN
      ((nzreal -> nzreal) INTER (posreal -> posreal) INTER
-      (negreal -> negreal))``,
+      (negreal -> negreal))
+Proof
    RW_TAC std_ss [IN_NZREAL, REAL_INV_NZ, IN_FUNSET, IN_INTER, IN_POSREAL,
                   IN_NEGREAL, REAL_INV_POS, REAL_INV_NEG]
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val SQRT_SUBTYPE = store_thm
-  ("SQRT_SUBTYPE",
-   ``sqrt IN ((nnegreal -> nnegreal) INTER (posreal -> posreal))``,
+Theorem SQRT_SUBTYPE:
+     sqrt IN ((nnegreal -> nnegreal) INTER (posreal -> posreal))
+Proof
    RW_TAC std_ss [IN_INTER, IN_FUNSET, IN_NNEGREAL, SQRT_POS_LE, IN_POSREAL,
-                  SQRT_POS_LT]);
+                  SQRT_POS_LT]
+QED
 
-val REAL_ADD_SUBTYPE = store_thm
-  ("REAL_ADD_SUBTYPE",
-   ``!x. $+ IN ((posreal -> nnegreal -> posreal) INTER
+Theorem REAL_ADD_SUBTYPE:
+     !x. $+ IN ((posreal -> nnegreal -> posreal) INTER
                 (nnegreal -> posreal -> posreal) INTER
                 (nnegreal -> nnegreal -> nnegreal) INTER
                 (negreal -> nposreal -> negreal) INTER
                 (nposreal -> negreal -> negreal) INTER
                 (nposreal -> nposreal -> nposreal) INTER
                 (zreal -> x -> x) INTER
-                (x -> zreal -> x))``,
+                (x -> zreal -> x))
+Proof
   RW_TAC real_ss [IN_FUNSET, IN_NEGREAL, IN_POSREAL, IN_INTER,
                   IN_NPOSREAL, IN_NNEGREAL, IN_NZREAL, IN_ZREAL]
    >> REPEAT (POP_ASSUM MP_TAC)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val REAL_SUB_SUBTYPE = store_thm
-  ("REAL_SUB_SUBTYPE",
-   ``!x. $- IN ((posreal -> nposreal -> posreal) INTER
+Theorem REAL_SUB_SUBTYPE:
+     !x. $- IN ((posreal -> nposreal -> posreal) INTER
                 (nnegreal -> negreal -> posreal) INTER
                 (nnegreal -> nposreal -> nnegreal) INTER
                 (negreal -> nnegreal -> negreal) INTER
                 (nposreal -> posreal -> negreal) INTER
                 (nposreal -> nnegreal -> nposreal) INTER
-                (x -> zreal -> x))``,
+                (x -> zreal -> x))
+Proof
   RW_TAC real_ss [IN_FUNSET, IN_NEGREAL, IN_POSREAL, IN_INTER,
                   IN_NPOSREAL, IN_NNEGREAL, IN_NZREAL, IN_ZREAL,
                   REAL_SUB_RZERO]
    >> REPEAT (POP_ASSUM MP_TAC)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val REAL_MULT_SUBTYPE = store_thm
-  ("REAL_MULT_SUBTYPE",
-   ``$* IN ((posreal -> nnegreal -> nnegreal) INTER
+Theorem REAL_MULT_SUBTYPE:
+     $* IN ((posreal -> nnegreal -> nnegreal) INTER
             (nnegreal -> posreal -> nnegreal) INTER
             (posreal -> posreal -> posreal) INTER
             (negreal -> nposreal -> nnegreal) INTER
@@ -301,16 +329,17 @@ val REAL_MULT_SUBTYPE = store_thm
             (negreal -> posreal -> negreal) INTER
             (zreal -> UNIV -> zreal) INTER
             (UNIV -> zreal -> zreal) INTER
-            (nzreal -> nzreal -> nzreal))``,
+            (nzreal -> nzreal -> nzreal))
+Proof
    RW_TAC std_ss [IN_FUNSET, IN_NEGREAL, IN_POSREAL, IN_INTER,
                   IN_NPOSREAL, IN_NNEGREAL, IN_NZREAL, IN_ZREAL,
                   REAL_ENTIRE, IN_UNIV]
    >> PROVE_TAC [REAL_LE_MUL, REAL_LT_MUL, REAL_NEGNEG, REAL_MUL_LNEG,
-                 REAL_MUL_RNEG, REAL_LE_LT_MUL, REAL_LT_LE_MUL]);
+                 REAL_MUL_RNEG, REAL_LE_LT_MUL, REAL_LT_LE_MUL]
+QED
 
-val REAL_DIV_SUBTYPE = store_thm
-  ("REAL_DIV_SUBTYPE",
-   ``$/ IN ((nnegreal -> posreal -> nnegreal) INTER
+Theorem REAL_DIV_SUBTYPE:
+     $/ IN ((nnegreal -> posreal -> nnegreal) INTER
             (posreal -> posreal -> posreal) INTER
             (nposreal -> negreal -> nnegreal) INTER
             (negreal -> negreal -> posreal) INTER
@@ -319,61 +348,68 @@ val REAL_DIV_SUBTYPE = store_thm
             (nposreal -> posreal -> nposreal) INTER
             (negreal -> posreal -> negreal) INTER
             (zreal -> nzreal -> zreal) INTER
-            (nzreal -> nzreal -> nzreal))``,
+            (nzreal -> nzreal -> nzreal))
+Proof
    MP_TAC INV_SUBTYPE
    >> MP_TAC REAL_MULT_SUBTYPE
-   >> RW_TAC std_ss [IN_FUNSET, IN_INTER, real_div, IN_UNIV]);
+   >> RW_TAC std_ss [IN_FUNSET, IN_INTER, real_div, IN_UNIV]
+QED
 
-val REAL_MULT_EQ_CANCEL = store_thm
-  ("REAL_MULT_EQ_CANCEL",
-   ``!x y z : real. ~(x = 0) ==> ((x * y = z) <=> (y = inv x * z))``,
+Theorem REAL_MULT_EQ_CANCEL:
+     !x y z : real. ~(x = 0) ==> ((x * y = z) <=> (y = inv x * z))
+Proof
    Strip
    >> Suff `(x * y = z) <=> (x = 0) \/ (y = inv x * z)` >- PROVE_TAC []
    >> REWRITE_TAC [GSYM REAL_EQ_MUL_LCANCEL]
    >> RW_TAC std_ss [REAL_MUL_ASSOC, REAL_MUL_RINV]
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val REAL_MULT_LE_CANCEL = store_thm
-  ("REAL_MULT_LE_CANCEL",
-   ``!x y z : real. 0 < x ==> ((x * y <= z) <=> (y <= inv x * z))``,
+Theorem REAL_MULT_LE_CANCEL:
+     !x y z : real. 0 < x ==> ((x * y <= z) <=> (y <= inv x * z))
+Proof
    Strip
    >> Suff `(x * y <= z) = (x * y <= x * (inv x * z))`
    >- PROVE_TAC [REAL_LE_LMUL]
    >> RW_TAC std_ss [REAL_MUL_ASSOC, REAL_MUL_RINV, REAL_LT_IMP_NE]
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val INV_DIFF_SUC = store_thm
-  ("INV_DIFF_SUC",
-   ``!n : num. 0 < n ==> (1 / &n - 1 / (&n + 1) = 1 / &(n * (n + 1)))``,
+Theorem INV_DIFF_SUC:
+     !n : num. 0 < n ==> (1 / &n - 1 / (&n + 1) = 1 / &(n * (n + 1)))
+Proof
    RW_TAC std_ss [GSYM REAL_INV_1OVER]
    >> Know `~(&n = 0) /\ ~(&n + 1 = 0)`
    >- RW_TAC arith_ss [REAL_LT_NZ, REAL_NZ_IMP_LT, GSYM REAL]
    >> RW_TAC std_ss [REAL_SUB_INV2]
    >> Know `&n + 1 - &n = 1` >- REAL_ARITH_TAC
    >> RW_TAC std_ss [GSYM REAL_INV_1OVER]
-   >> RW_TAC std_ss [GSYM REAL, REAL_MUL, GSYM ADD1]);
+   >> RW_TAC std_ss [GSYM REAL, REAL_MUL, GSYM ADD1]
+QED
 
-val ABS_TRIANGLE = store_thm
-  ("ABS_TRIANGLE",
-   ``!x y z. abs (x - z) <= abs (x - y) + abs (y - z)``,
+Theorem ABS_TRIANGLE:
+     !x y z. abs (x - z) <= abs (x - y) + abs (y - z)
+Proof
    RW_TAC std_ss [abs]
    >> rpt (POP_ASSUM MP_TAC)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val ABS_TRANS = store_thm
-  ("ABS_TRANS",
-   ``!x y z e. abs (x - y) + abs (y - z) < e ==> abs (x - z) < e``,
+Theorem ABS_TRANS:
+     !x y z e. abs (x - y) + abs (y - z) < e ==> abs (x - z) < e
+Proof
    rpt GEN_TAC
    >> MP_TAC (Q.SPECL [`x`, `y`, `z`] ABS_TRIANGLE)
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val INCREASING_SEQ = store_thm
-  ("INCREASING_SEQ",
-   ``!f l.
+Theorem INCREASING_SEQ:
+     !f l.
        (!n. f n <= f (SUC n)) /\
        (!n. f n <= l) /\
        (!e. 0 < e ==> ?n. l < f n + e) ==>
-       f --> l``,
+       f --> l
+Proof
    RW_TAC std_ss [SEQ, GREATER_EQ]
    >> Q.PAT_X_ASSUM `!e. P e` (MP_TAC o Q.SPEC `e`)
    >> RW_TAC std_ss []
@@ -391,20 +427,22 @@ val INCREASING_SEQ = store_thm
    >> RW_TAC std_ss [ADD_CLAUSES]
    >> Q.PAT_X_ASSUM `!n. f n <= f (SUC n)` (MP_TAC o Q.SPEC `n + d`)
    >> POP_ASSUM MP_TAC
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val SUM_CONST = store_thm
-  ("SUM_CONST",
-   ``!n r. sum (0,n) (K r) = &n * r``,
+Theorem SUM_CONST:
+     !n r. sum (0,n) (K r) = &n * r
+Proof
    Induct >- RW_TAC real_ss [sum]
    >> RW_TAC bool_ss [sum, ADD1, K_THM, GSYM REAL_ADD, REAL_ADD_RDISTRIB]
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val LOG2_SUC = store_thm
-  ("LOG2_SUC",
-   ``!n t.
+Theorem LOG2_SUC:
+     !n t.
        0 < n /\ 2 * log2 (n + 1) <= t ==>
-       (1 / 2) pow t <= 1 / &n - 1 / (&n + 1)``,
+       (1 / 2) pow t <= 1 / &n - 1 / (&n + 1)
+Proof
    REPEAT STRIP_TAC
    >> RW_TAC std_ss [INV_DIFF_SUC, POW_HALF_EXP, GSYM REAL_INV_1OVER]
    >> MATCH_MP_TAC REAL_LE_INV_LE
@@ -428,19 +466,21 @@ val LOG2_SUC = store_thm
        >> RW_TAC arith_ss [])
    >> MATCH_MP_TAC EXP2_MONO_LE
    >> MP_TAC (Q.SPEC `n + 1` LOG2_LOWER)
-   >> RW_TAC arith_ss []);
+   >> RW_TAC arith_ss []
+QED
 
-val SER_POS_COMPAR = store_thm
-  ("SER_POS_COMPAR",
-   ``!f g. (!n. 0 <= f n) /\ summable g /\ (!n. f n <= g n) ==> summable f``,
-   PROVE_TAC [SER_POS_COMPARE]);
+Theorem SER_POS_COMPAR:
+     !f g. (!n. 0 <= f n) /\ summable g /\ (!n. f n <= g n) ==> summable f
+Proof
+   PROVE_TAC [SER_POS_COMPARE]
+QED
 
-val SUM_SUMINF = store_thm
-  ("SUM_SUMINF",
-   ``!p f n.
+Theorem SUM_SUMINF:
+     !p f n.
        (summable (\m. if m < n then f m else 0) ==>
         p (suminf (\m. if m < n then f m else 0))) ==>
-       p (sum (0, n) f)``,
+       p (sum (0, n) f)
+Proof
    RW_TAC std_ss []
    >> Suff `(\m. (if m < n then f m else 0)) sums (sum (0, n) f)`
    >- (RW_TAC std_ss [SUMS_EQ]
@@ -450,24 +490,26 @@ val SUM_SUMINF = store_thm
        >> MATCH_MP_TAC SER_0
        >> RW_TAC arith_ss [])
    >> MATCH_MP_TAC SUM_EQ
-   >> RW_TAC arith_ss []);
+   >> RW_TAC arith_ss []
+QED
 
-val SUMS_PICK = store_thm
-  ("SUMS_PICK",
-   ``!k x. (\n. if n = k then x else 0) sums x``,
+Theorem SUMS_PICK:
+     !k x. (\n. if n = k then x else 0) sums x
+Proof
    RW_TAC std_ss []
    >> Know `sum (0, SUC k) (\n. if n = k then x else 0) = x`
    >- RW_TAC arith_ss [SUM_PICK]
    >> DISCH_THEN (CONV_TAC o RAND_CONV o ONCE_REWRITE_CONV o wrap o SYM)
    >> MATCH_MP_TAC SER_0
-   >> RW_TAC arith_ss []);
+   >> RW_TAC arith_ss []
+QED
 
-val SUM_REORDER_LE = store_thm
-  ("SUM_REORDER_LE",
-   ``!f n1 n2 j1 j2.
+Theorem SUM_REORDER_LE:
+     !f n1 n2 j1 j2.
        (!n. 0 <= f n) /\ INJ j1 (count n1) UNIV /\
        IMAGE j1 (count n1) SUBSET IMAGE j2 (count n2) ==>
-       sum (0, n1) (f o j1) <= sum (0, n2) (f o j2)``,
+       sum (0, n1) (f o j1) <= sum (0, n2) (f o j2)
+Proof
    Induct_on `n1`
    >- (RW_TAC std_ss [sum, COUNT_ZERO, EMPTY_SUBSET, IMAGE_EMPTY]
        >> Suff `!n. 0 <= (f o j2) n` >- RW_TAC std_ss [SUM_POS]
@@ -509,14 +551,15 @@ val SUM_REORDER_LE = store_thm
        >> RW_TAC real_ss [o_THM])
    >> Rewr
    >> CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [REAL_ADD_COMM]))
-   >> RW_TAC real_ss [SUM_ADD, SUM_PICK, REAL_LE_LADD, REAL_LE_REFL]);
+   >> RW_TAC real_ss [SUM_ADD, SUM_PICK, REAL_LE_LADD, REAL_LE_REFL]
+QED
 
-val SER_BIJ_COMPRESS1 = store_thm
-  ("SER_BIJ_COMPRESS1",
-   ``!f h s.
+Theorem SER_BIJ_COMPRESS1:
+     !f h s.
        (!n. 0 <= f n) /\ summable f /\ BIJ h UNIV s /\
        (!n. ~(n IN s) ==> (f n = 0)) ==>
-       (f o h) sums suminf f``,
+       (f o h) sums suminf f
+Proof
    RW_TAC std_ss [sums, SEQ]
    >> ONCE_REWRITE_TAC [ABS_SUB]
    >> RW_TAC std_ss [abs]
@@ -619,14 +662,15 @@ val SER_BIJ_COMPRESS1 = store_thm
     >> KILL_TAC
     >> DECIDE_TAC,
     Q.EXISTS_TAC `n' + n`
-    >> RW_TAC arith_ss []]);
+    >> RW_TAC arith_ss []]
+QED
 
-val SER_BIJ_COMPRESS2 = store_thm
-  ("SER_BIJ_COMPRESS2",
-   ``!f h s.
+Theorem SER_BIJ_COMPRESS2:
+     !f h s.
        (!n. 0 <= f n) /\ summable (f o h) /\ BIJ h UNIV s /\
        (!n. ~(n IN s) ==> (f n = 0)) ==>
-       f sums suminf (f o h)``,
+       f sums suminf (f o h)
+Proof
    RW_TAC std_ss [sums, SEQ]
    >> ONCE_REWRITE_TAC [ABS_SUB]
    >> RW_TAC std_ss [abs]
@@ -728,13 +772,14 @@ val SER_BIJ_COMPRESS2 = store_thm
                      I_THM, IN_IMAGE]
    >> Q.PAT_X_ASSUM `N' N <= n` MP_TAC
    >> Suff `h x' < N' N` >- (KILL_TAC >> DECIDE_TAC)
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val SER_BIJ_COMPRESS = store_thm
-  ("SER_BIJ_COMPRESS",
-   ``!f h s l.
+Theorem SER_BIJ_COMPRESS:
+     !f h s l.
        (!n. 0 <= f n) /\ BIJ h UNIV s /\ (!n. ~(n IN s) ==> (f n = 0)) ==>
-       ((f o h) sums l <=> f sums l)``,
+       ((f o h) sums l <=> f sums l)
+Proof
    RW_TAC std_ss [SUMS_EQ]
    >> EQ_TAC >|
    [STRIP_TAC
@@ -744,26 +789,29 @@ val SER_BIJ_COMPRESS = store_thm
     STRIP_TAC
     >> REWRITE_TAC [GSYM SUMS_EQ]
     >> RW_TAC std_ss []
-    >> PROVE_TAC [SER_BIJ_COMPRESS1]]);
+    >> PROVE_TAC [SER_BIJ_COMPRESS1]]
+QED
 
-val SER_BIJ = store_thm
-  ("SER_BIJ",
-   ``!f g h l.
+Theorem SER_BIJ:
+     !f g h l.
        (!n. 0 <= f n) /\ BIJ h UNIV UNIV ==>
-       ((f o h) sums l <=> f sums l)``,
+       ((f o h) sums l <=> f sums l)
+Proof
    RW_TAC std_ss []
    >> MATCH_MP_TAC SER_BIJ_COMPRESS
    >> Q.EXISTS_TAC `UNIV`
-   >> RW_TAC std_ss [IN_UNIV]);
+   >> RW_TAC std_ss [IN_UNIV]
+QED
 
-val SUMS_ZERO = store_thm
-  ("SUMS_ZERO",
-   ``(K 0) sums 0``,
-   RW_TAC real_ss [sums, SEQ, SUM_CONST, abs, REAL_SUB_REFL, REAL_LE_REFL]);
+Theorem SUMS_ZERO:
+     (K 0) sums 0
+Proof
+   RW_TAC real_ss [sums, SEQ, SUM_CONST, abs, REAL_SUB_REFL, REAL_LE_REFL]
+QED
 
-val GP_REC = store_thm
-  ("GP_REC",
-   ``!a b x : real. abs b < 1 /\ (x = a + b * x) ==> (x = a / (1 - b))``,
+Theorem GP_REC:
+     !a b x : real. abs b < 1 /\ (x = a + b * x) ==> (x = a / (1 - b))
+Proof
    RW_TAC std_ss []
    >> Know `x * (1 - b) = a`
    >- (RW_TAC std_ss [REAL_SUB_LDISTRIB, REAL_MUL_RID]
@@ -782,12 +830,13 @@ val GP_REC = store_thm
    >- (POP_ASSUM K_TAC
        >> RW_TAC std_ss [REAL_EQ_RMUL])
    >> RW_TAC std_ss [real_div, GSYM REAL_INV_1OVER, GSYM REAL_MUL_ASSOC,
-                     REAL_MUL_LINV, REAL_MUL_RID]);
+                     REAL_MUL_LINV, REAL_MUL_RID]
+QED
 
-val REAL_DIV_EQ = store_thm
-  ("REAL_DIV_EQ",
-   ``!a b c d : real.
-       ~(b = 0) /\ ~(d = 0) /\ (a * d = c * b) ==> (a / b = c / d)``,
+Theorem REAL_DIV_EQ:
+     !a b c d : real.
+       ~(b = 0) /\ ~(d = 0) /\ (a * d = c * b) ==> (a / b = c / d)
+Proof
    RW_TAC std_ss [real_div]
    >> Suff `(a * inv b) * b = (c * inv d) * b`
    >- RW_TAC std_ss [REAL_EQ_RMUL]
@@ -796,74 +845,84 @@ val REAL_DIV_EQ = store_thm
    >- RW_TAC std_ss [REAL_EQ_RMUL]
    >> Know `inv d * b = b * inv d` >- PROVE_TAC [REAL_MUL_SYM]
    >> Rewr
-   >> RW_TAC std_ss [GSYM REAL_MUL_ASSOC, REAL_MUL_LINV, REAL_MUL_RID]);
+   >> RW_TAC std_ss [GSYM REAL_MUL_ASSOC, REAL_MUL_LINV, REAL_MUL_RID]
+QED
 
-val REAL_DIV_MUL = store_thm
-  ("REAL_DIV_MUL",
-   ``!x y z. ~(x = 0) /\ ~(z = 0) ==> ((x * y) / (x * z) = y / z)``,
-   PROVE_TAC [REAL_DIV_MUL2]);
+Theorem REAL_DIV_MUL:
+     !x y z. ~(x = 0) /\ ~(z = 0) ==> ((x * y) / (x * z) = y / z)
+Proof
+   PROVE_TAC [REAL_DIV_MUL2]
+QED
 
-val REAL_LDIV_EQ = store_thm
-  ("REAL_LDIV_EQ",
-   ``!x y z. ~(y = 0) /\ (x = y * z) ==> (x / y = z)``,
+Theorem REAL_LDIV_EQ:
+     !x y z. ~(y = 0) /\ (x = y * z) ==> (x / y = z)
+Proof
    REPEAT STRIP_TAC
    >> Know `z = z / 1` >- RW_TAC std_ss [REAL_OVER1]
    >> Rewr'
    >> MATCH_MP_TAC REAL_DIV_EQ
    >> RW_TAC real_ss []
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val ADD1_HALF_MULT = store_thm
-  ("ADD1_HALF_MULT",
-   ``!x y. x + (1 / 2) * y = (1 / 2) * (2 * x + y)``,
+Theorem ADD1_HALF_MULT:
+     !x y. x + (1 / 2) * y = (1 / 2) * (2 * x + y)
+Proof
    RW_TAC std_ss [REAL_ADD_LDISTRIB, REAL_MUL_ASSOC]
    >> Know `(1 / 2) * 2 = 2 * (1 / 2)` >- PROVE_TAC [REAL_MUL_SYM]
    >> Rewr
-   >> RW_TAC std_ss [HALF_CANCEL, REAL_MUL_LID]);
+   >> RW_TAC std_ss [HALF_CANCEL, REAL_MUL_LID]
+QED
 
-val ADD2_HALF_MULT = store_thm
-  ("ADD2_HALF_MULT",
-   ``!x y. (1 / 2) * y + x = (1 / 2) * (y + 2 * x)``,
-   PROVE_TAC [ADD1_HALF_MULT, REAL_ADD_SYM]);
+Theorem ADD2_HALF_MULT:
+     !x y. (1 / 2) * y + x = (1 / 2) * (y + 2 * x)
+Proof
+   PROVE_TAC [ADD1_HALF_MULT, REAL_ADD_SYM]
+QED
 
-val HALF_CANCEL_REV = store_thm
-  ("HALF_CANCEL_REV",
-   ``(1 / 2) * 2 = 1``,
-   PROVE_TAC [HALF_CANCEL, REAL_MUL_SYM]);
+Theorem HALF_CANCEL_REV:
+     (1 / 2) * 2 = 1
+Proof
+   PROVE_TAC [HALF_CANCEL, REAL_MUL_SYM]
+QED
 
-val HALF_CANCEL_MULT = store_thm
-  ("HALF_CANCEL_MULT",
-   ``!x. 2 * ((1 / 2) * x) = x``,
-   RW_TAC std_ss [HALF_CANCEL, REAL_MUL_ASSOC, REAL_MUL_LID]);
+Theorem HALF_CANCEL_MULT:
+     !x. 2 * ((1 / 2) * x) = x
+Proof
+   RW_TAC std_ss [HALF_CANCEL, REAL_MUL_ASSOC, REAL_MUL_LID]
+QED
 
-val HALF_CANCEL_MULT_REV = store_thm
-  ("HALF_CANCEL_MULT_REV",
-   ``!x. (1 / 2) * (2 * x) = x``,
-   RW_TAC std_ss [HALF_CANCEL_REV, REAL_MUL_ASSOC, REAL_MUL_LID]);
+Theorem HALF_CANCEL_MULT_REV:
+     !x. (1 / 2) * (2 * x) = x
+Proof
+   RW_TAC std_ss [HALF_CANCEL_REV, REAL_MUL_ASSOC, REAL_MUL_LID]
+QED
 
-val ABS_EQ = store_thm
-  ("ABS_EQ",
-   ``!x y. (!e. 0 < e ==> abs (x - y) < e) ==> (x = y)``,
+Theorem ABS_EQ:
+     !x y. (!e. 0 < e ==> abs (x - y) < e) ==> (x = y)
+Proof
    RW_TAC std_ss []
    >> MATCH_MP_TAC SEQ_UNIQ
    >> Q.EXISTS_TAC `\n. x`
    >> RW_TAC std_ss [SEQ_CONST]
-   >> RW_TAC std_ss [SEQ]);
+   >> RW_TAC std_ss [SEQ]
+QED
 
-val POW_LE_1 = store_thm
-  ("POW_LE_1",
-   ``!p n. 0 < p /\ p <= 1 ==> p pow n <= 1``,
+Theorem POW_LE_1:
+     !p n. 0 < p /\ p <= 1 ==> p pow n <= 1
+Proof
    STRIP_TAC
    >> Induct
    >> RW_TAC std_ss [pow, REAL_LE_REFL]
    >> MATCH_MP_TAC REAL_LE_TRANS
    >> Q.EXISTS_TAC `p * 1`
    >> reverse CONJ_TAC >- RW_TAC real_ss []
-   >> RW_TAC std_ss [REAL_LE_LMUL]);
+   >> RW_TAC std_ss [REAL_LE_LMUL]
+QED
 
-val POW_LE_1_MONO = store_thm
-  ("POW_LE_1_MONO",
-   ``!p m n. 0 < p /\ p <= 1 /\ m <= n ==> p pow n <= p pow m``,
+Theorem POW_LE_1_MONO:
+     !p m n. 0 < p /\ p <= 1 /\ m <= n ==> p pow n <= p pow m
+Proof
    RW_TAC std_ss []
    >> POP_ASSUM MP_TAC
    >> Q.SPEC_TAC (`n`, `n`)
@@ -874,11 +933,12 @@ val POW_LE_1_MONO = store_thm
    >> MATCH_MP_TAC REAL_LE_TRANS
    >> Q.EXISTS_TAC `1 * p pow (d + m)`
    >> reverse CONJ_TAC >- RW_TAC real_ss []
-   >> RW_TAC std_ss [REAL_LE_RMUL, REAL_POW_LT]);
+   >> RW_TAC std_ss [REAL_LE_RMUL, REAL_POW_LT]
+QED
 
-val REAL_LE_MUL_EPSILON = store_thm
-  ("REAL_LE_MUL_EPSILON",
-   ``!x y. (!z. 0 < z /\ z < 1 ==> z * x <= y) ==> x <= y``,
+Theorem REAL_LE_MUL_EPSILON:
+     !x y. (!z. 0 < z /\ z < 1 ==> z * x <= y) ==> x <= y
+Proof
     REPEAT STRIP_TAC
     >> Cases_on `x = 0`
     >- (Q.PAT_X_ASSUM `!z. P z` (MP_TAC o Q.SPEC `1/2`) >> RW_TAC real_ss [REAL_HALF_BETWEEN])
@@ -904,5 +964,6 @@ val REAL_LE_MUL_EPSILON = store_thm
     >> RW_TAC real_ss []
     >> RW_TAC std_ss [Once (GSYM REAL_LE_NEG), GSYM REAL_MUL_RNEG]
     >> Suff `1/2 * ~x <= 1 * ~x` >- RW_TAC real_ss []
-    >> METIS_TAC [REAL_NEG_GT0, REAL_LT_TOTAL, REAL_LE_REFL, REAL_HALF_BETWEEN, REAL_LE_RMUL]);
+    >> METIS_TAC [REAL_NEG_GT0, REAL_LT_TOTAL, REAL_LE_REFL, REAL_HALF_BETWEEN, REAL_LE_RMUL]
+QED
 

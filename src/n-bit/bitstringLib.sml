@@ -10,8 +10,6 @@ structure Parse = struct
 end
 open Parse
 
-val _ = Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ()
-
 val ERR = Feedback.mk_HOL_ERR "bitstringLib"
 
 (* ------------------------------------------------------------------------- *)
@@ -104,7 +102,7 @@ local
       “(l2n 2 [] = 0) /\
        (!l. l2n 2 (0::l) = 2 * l2n 2 l) /\
        (!l. l2n 2 (1::l) = 2 * l2n 2 l + 1)”,
-      simp [numposrepTheory.l2n_def])
+      simp_tac arith_ss [numposrepTheory.l2n_def])
 
    val l2n_2_numeric = prove(
       “(l2n 2 [] = ZERO) /\
@@ -117,7 +115,8 @@ local
      “(num_from_bin_list [] = 0) /\
       (!l. num_from_bin_list (0::l) = NUMERAL (l2n 2 $ REVERSE (0::l))) /\
       (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 $ REVERSE (1::l)))”,
-      simp [numposrepTheory.num_from_bin_list_def] >> qm [NUMERAL_DEF])
+      simp_tac list_ss [numposrepTheory.num_from_bin_list_def,
+                        numposrepTheory.l2n_def] >> qm [NUMERAL_DEF])
 
    val cnv =
       Conv.REWR_CONV bitstringTheory.v2n_def
@@ -367,8 +366,6 @@ local
          computeLib.add_conv (c, 1, BOOLIFY_v2w_CONV thm)
       end
 
-   val rw = SRW_TAC [boolSimps.LET_ss]
-
    fun Cases_on_v2w q =
       Q.ISPEC_THEN q STRUCT_CASES_TAC bitstringTheory.ranged_bitstring_nchotomy
 
@@ -393,7 +390,7 @@ local
 
    fun boolify_bitify_tac x l =
       Tactic.STRIP_TAC THEN pairLib.PairCases_on [HOLPP.ANTIQUOTE x]
-      THEN rw l
+      THEN SRW_TAC [boolSimps.LET_ss] l
 
    fun bitify_boolify_tac l =
       SRW_TAC [fcpLib.FCP_ss, boolSimps.LET_ss] (l @

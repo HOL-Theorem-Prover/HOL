@@ -928,16 +928,22 @@ End
 (* Some useful theorems                                                      *)
 (* ------------------------------------------------------------------------- *)
 
-val STATE_ARM_THM = store_thm("STATE_ARM_THM",
-  `IMAP ARM_SPEC I NEXT_ARM OUT_ARM`,
+Theorem STATE_ARM_THM:
+   IMAP ARM_SPEC I NEXT_ARM OUT_ARM
+Proof
   RW_TAC (std_ss++boolSimps.LET_ss)
-    [ARM_SPEC_def,STATE_ARM_def,IMAP_def,combinTheory.I_THM]);
+    [ARM_SPEC_def,STATE_ARM_def,IMAP_def,combinTheory.I_THM]
+QED
 
-val STATE_ARM_THM2 = store_thm("STATE_ARM_THM2",
-  `IS_IMAP ARM_SPEC`, PROVE_TAC [STATE_ARM_THM,IS_IMAP_def]);
+Theorem STATE_ARM_THM2:
+   IS_IMAP ARM_SPEC
+Proof PROVE_TAC [STATE_ARM_THM,IS_IMAP_def]
+QED
 
-val STATE_ARM_THM3 = store_thm("STATE_ARM_THM3",
-  `IS_IMAP_INIT ARM_SPEC I`, PROVE_TAC [STATE_ARM_THM,IS_IMAP_INIT_def]);
+Theorem STATE_ARM_THM3:
+   IS_IMAP_INIT ARM_SPEC I
+Proof PROVE_TAC [STATE_ARM_THM,IS_IMAP_INIT_def]
+QED
 
 val ARM_SPEC_STATE = save_thm("ARM_SPEC_STATE",
   (SIMP_CONV (srw_ss()++boolSimps.LET_ss) [ARM_SPEC_def])
@@ -945,10 +951,12 @@ val ARM_SPEC_STATE = save_thm("ARM_SPEC_STATE",
 
 (* ......................................................................... *)
 
-val UPDATE_LT_COMMUTES = store_thm("UPDATE_LT_COMMUTES",
-  `!m a b c d. a <+ b ==>
-     ((b =+ d) ((a =+ c) m) = (a =+ c) ((b =+ d) m))`,
+Theorem UPDATE_LT_COMMUTES:
+   !m a b c d. a <+ b ==>
+     ((b =+ d) ((a =+ c) m) = (a =+ c) ((b =+ d) m))
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC wordsTheory.WORD_LOWER_NOT_EQ
-    \\ ASM_SIMP_TAC std_ss [combinTheory.UPDATE_COMMUTES]);
+    \\ ASM_SIMP_TAC std_ss [combinTheory.UPDATE_COMMUTES]
+QED
 
 (* ------------------------------------------------------------------------- *)

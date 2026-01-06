@@ -2,11 +2,16 @@ signature HOL_REPL =
 sig
   val sigint_handler : unit -> unit
   val topLevel : {diag: string -> unit, zeroTerm : bool} -> unit
+  val resetOpenHook : (unit -> unit) ref
 end;
 
 
 structure HOL_REPL :> HOL_REPL =
 struct
+
+(* Hook for resetting HOL_Interactive state after compile failure.
+   Set by prelude.ML to HOL_Interactive.reset_open once it's available. *)
+val resetOpenHook = ref (fn () => ())
 
 fun printOut s =
   (TextIO.output(TextIO.stdOut, s); TextIO.flushOut TextIO.stdOut)
@@ -147,10 +152,11 @@ fun topLevel {diag, zeroTerm} =
 
           (* Moves to the next state if another statement is ready. *)
           fun finishCommand () =
-            case !state of
-              Next s => state := Current s
-            | _ => () (* this can only happen if endOfFile is true *)
-
+            if input 1024 = "" then
+              case !state of
+                Next s => state := Current s
+              | _ => () (* this can only happen if endOfFile is true *)
+            else finishCommand () (* consume the rest of the block *)
         in fn () =>
           let
             (* Create a new lexer for each command block. *)
@@ -163,15 +169,18 @@ fun topLevel {diag, zeroTerm} =
             fun readEvalPrint compileAcc runAcc =
               let
                 val {compileTime, runTime, result} =
-                  readEvalPrint1 read' (fn () => ());
+                  readEvalPrint1 read' (!resetOpenHook);
                 val () = reportResult result;
               in
                 if !endOfBlock then
-                  (finishCommand (); reportTiming compileTime runTime)
+                  reportTiming compileTime runTime
                 else
                   readEvalPrint (compileAcc + compileTime) (runAcc + runTime)
               end;
-          in readEvalPrint Time.zeroTime Time.zeroTime end
+          in
+            (readEvalPrint Time.zeroTime Time.zeroTime; finishCommand ())
+            handle exn => (finishCommand (); PolyML.Exception.reraise exn)
+          end
         end
       else (* not zeroTerm *)
         let

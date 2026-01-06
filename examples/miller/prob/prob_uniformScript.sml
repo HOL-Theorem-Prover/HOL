@@ -44,51 +44,55 @@ End
 (* (1 / 2) pow t                                                             *)
 (* ------------------------------------------------------------------------- *)
 
-val PROB_UNIF_MONAD = store_thm
-  ("PROB_UNIF_MONAD",
-   ``(prob_unif 0 = UNIT 0) /\
+Theorem PROB_UNIF_MONAD:
+     (prob_unif 0 = UNIT 0) /\
      (!n.
         prob_unif (SUC n) =
         BIND (prob_unif (SUC n DIV 2))
-        (\m. BIND sdest (\b. UNIT (if b then 2 * m + 1 else 2 * m))))``,
+        (\m. BIND sdest (\b. UNIT (if b then 2 * m + 1 else 2 * m))))
+Proof
    FUN_EQ_TAC
    >> RW_TAC arith_ss [BIND_DEF, UNIT_DEF, o_THM, prob_unif_def, sdest_def,
-                       LET_DEF, UNCURRY, FST, SND]);
+                       LET_DEF, UNCURRY, FST, SND]
+QED
 
-val PROB_UNIFORM_CUT_MONAD = store_thm
-  ("PROB_UNIFORM_CUT_MONAD",
-   ``(!n. prob_uniform_cut 0 (SUC n) = UNIT 0) /\
+Theorem PROB_UNIFORM_CUT_MONAD:
+     (!n. prob_uniform_cut 0 (SUC n) = UNIT 0) /\
      (!t n.
         prob_uniform_cut (SUC t) (SUC n) =
         BIND (prob_unif n)
-        (\m. if m < SUC n then UNIT m else prob_uniform_cut t (SUC n)))``,
+        (\m. if m < SUC n then UNIT m else prob_uniform_cut t (SUC n)))
+Proof
    FUN_EQ_TAC
    >> RW_TAC std_ss [BIND_DEF, UNIT_DEF, o_DEF, prob_uniform_cut_def,
-                     sdest_def, LET_DEF, UNCURRY]);
+                     sdest_def, LET_DEF, UNCURRY]
+QED
 
-val INDEP_FN_PROB_UNIF = store_thm
-  ("INDEP_FN_PROB_UNIF",
-   ``!n. prob_unif n IN indep_fn``,
+Theorem INDEP_FN_PROB_UNIF:
+     !n. prob_unif n IN indep_fn
+Proof
    recInduct log2_ind
    >> RW_TAC std_ss [PROB_UNIF_MONAD, INDEP_FN_UNIT]
    >> MATCH_MP_TAC INDEP_FN_BIND
    >> RW_TAC std_ss []
    >> MATCH_MP_TAC INDEP_FN_BIND
-   >> RW_TAC std_ss [INDEP_FN_UNIT, INDEP_FN_SDEST]);
+   >> RW_TAC std_ss [INDEP_FN_UNIT, INDEP_FN_SDEST]
+QED
 
-val INDEP_FN_PROB_UNIFORM_CUT = store_thm
-  ("INDEP_FN_PROB_UNIFORM_CUT",
-   ``!t n. prob_uniform_cut t (SUC n) IN indep_fn``,
+Theorem INDEP_FN_PROB_UNIFORM_CUT:
+     !t n. prob_uniform_cut t (SUC n) IN indep_fn
+Proof
    Induct >- RW_TAC std_ss [PROB_UNIFORM_CUT_MONAD, INDEP_FN_UNIT]
    >> RW_TAC std_ss [PROB_UNIFORM_CUT_MONAD]
    >> MATCH_MP_TAC INDEP_FN_BIND
-   >> RW_TAC std_ss [INDEP_FN_PROB_UNIF, INDEP_FN_UNIT]);
+   >> RW_TAC std_ss [INDEP_FN_PROB_UNIF, INDEP_FN_UNIT]
+QED
 
-val PROB_BERN_UNIF = store_thm
-  ("PROB_BERN_UNIF",
-   ``!n k.
+Theorem PROB_BERN_UNIF:
+     !n k.
        prob bern {s | FST (prob_unif n s) = k} =
-       if k < 2 EXP log2 n then (1 / 2) pow log2 n else 0``,
+       if k < 2 EXP log2 n then (1 / 2) pow log2 n else 0
+Proof
    recInduct log2_ind
    >> REPEAT STRIP_TAC
    >- (Know `(0 = k) = k < 1` >- DECIDE_TAC
@@ -186,30 +190,33 @@ val PROB_BERN_UNIF = store_thm
     >> SET_EQ_TAC
     >> RW_TAC std_ss [GSPECIFICATION]
     >> RW_TAC std_ss [SPECIFICATION, o_THM]
-    >> PROVE_TAC []]);
+    >> PROVE_TAC []]
+QED
 
-val PROB_UNIF_RANGE = store_thm
-  ("PROB_UNIF_RANGE",
-   ``!n s. FST (prob_unif n s) < 2 EXP log2 n``,
+Theorem PROB_UNIF_RANGE:
+     !n s. FST (prob_unif n s) < 2 EXP log2 n
+Proof
    recInduct log2_ind
    >> RW_TAC arith_ss [prob_unif_def, log2_def, EXP]
    >> Q.PAT_X_ASSUM `!s. P s` (MP_TAC o Q.SPEC `s`)
-   >> RW_TAC arith_ss []);
+   >> RW_TAC arith_ss []
+QED
 
-val PROB_BERN_UNIF_PAIR = store_thm
-  ("PROB_BERN_UNIF_PAIR",
-   ``!n k k'.
+Theorem PROB_BERN_UNIF_PAIR:
+     !n k k'.
        (prob bern {s | FST (prob_unif n s) = k} =
         prob bern {s | FST (prob_unif n s) = k'}) =
-       (k < 2 EXP log2 n = k' < 2 EXP log2 n)``,
+       (k < 2 EXP log2 n = k' < 2 EXP log2 n)
+Proof
    RW_TAC std_ss [PROB_BERN_UNIF]
-   >> PROVE_TAC [POW_HALF_POS, REAL_LT_LE]);
+   >> PROVE_TAC [POW_HALF_POS, REAL_LT_LE]
+QED
 
-val PROB_BERN_UNIF_LT = store_thm
-  ("PROB_BERN_UNIF_LT",
-   ``!n k.
+Theorem PROB_BERN_UNIF_LT:
+     !n k.
        k <= 2 EXP log2 n ==>
-       (prob bern {s | FST (prob_unif n s) < k} = &k * (1 / 2) pow log2 n)``,
+       (prob bern {s | FST (prob_unif n s) < k} = &k * (1 / 2) pow log2 n)
+Proof
    STRIP_TAC
    >> Induct
    >- (RW_TAC arith_ss [GEMPTY, PROB_BERN_BASIC]
@@ -221,11 +228,12 @@ val PROB_BERN_UNIF_LT = store_thm
    >> Know `k < 2 EXP log2 n` >- DECIDE_TAC
    >> POP_ASSUM (fn th => RW_TAC std_ss [th, o_DEF, PROB_BERN_UNIF])
    >> RW_TAC bool_ss [ADD1, REAL_ADD_RDISTRIB, GSYM REAL_ADD]
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val PROB_BERN_UNIF_GOOD = store_thm
-  ("PROB_BERN_UNIF_GOOD",
-   ``!n. 1 / 2 <= prob bern {s | FST (prob_unif n s) < SUC n}``,
+Theorem PROB_BERN_UNIF_GOOD:
+     !n. 1 / 2 <= prob bern {s | FST (prob_unif n s) < SUC n}
+Proof
    RW_TAC std_ss []
    >> MP_TAC (Q.SPECL [`n`, `SUC n`] PROB_BERN_UNIF_LT)
    >> RW_TAC std_ss [LOG2_LOWER_SUC]
@@ -247,26 +255,28 @@ val PROB_BERN_UNIF_GOOD = store_thm
    >> RW_TAC std_ss [REAL_LE, REAL_MUL]
    >> Suff `SUC (2 * n) <= SUC n * 2`
    >- PROVE_TAC [LOG2_UPPER_SUC, LESS_EQ_TRANS]
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val PROB_UNIFORM_CUT_RANGE = store_thm
-  ("PROB_UNIFORM_CUT_RANGE",
-   ``!t n s. FST (prob_uniform_cut t (SUC n) s) < SUC n``,
+Theorem PROB_UNIFORM_CUT_RANGE:
+     !t n s. FST (prob_uniform_cut t (SUC n) s) < SUC n
+Proof
    Induct >- RW_TAC arith_ss [prob_uniform_cut_def]
    >> RW_TAC arith_ss [prob_uniform_cut_def]
    >> Cases_on `prob_unif n s`
-   >> RW_TAC arith_ss []);
+   >> RW_TAC arith_ss []
+QED
 
-val PROB_BERN_UNIFORM_CUT_LOWER_BOUND = store_thm
-  ("PROB_BERN_UNIFORM_CUT_LOWER_BOUND",
-   ``!b.
+Theorem PROB_BERN_UNIFORM_CUT_LOWER_BOUND:
+     !b.
        (!k.
           k < SUC n ==>
           prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k} < b) ==>
        !m.
          m < SUC n ==>
          prob bern
-         {s | FST (prob_uniform_cut t (SUC n) s) < SUC m} < &(SUC m) * b``,
+         {s | FST (prob_uniform_cut t (SUC n) s) < SUC m} < &(SUC m) * b
+Proof
    NTAC 2 STRIP_TAC
    >> Induct
    >- (RW_TAC arith_ss []
@@ -289,18 +299,19 @@ val PROB_BERN_UNIFORM_CUT_LOWER_BOUND = store_thm
    >> Rewr
    >> RW_TAC std_ss [REAL_ADD_RDISTRIB]
    >> MATCH_MP_TAC REAL_LT_ADD2
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val PROB_BERN_UNIFORM_CUT_UPPER_BOUND = store_thm
-  ("PROB_BERN_UNIFORM_CUT_UPPER_BOUND",
-   ``!b.
+Theorem PROB_BERN_UNIFORM_CUT_UPPER_BOUND:
+     !b.
        (!k.
           k < SUC n ==>
           b < prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k}) ==>
        (!m.
           m < SUC n ==>
           &(SUC m) * b <
-          prob bern {s | FST (prob_uniform_cut t (SUC n) s) < SUC m})``,
+          prob bern {s | FST (prob_uniform_cut t (SUC n) s) < SUC m})
+Proof
    NTAC 2 STRIP_TAC
    >> Induct
    >- (RW_TAC arith_ss []
@@ -320,16 +331,17 @@ val PROB_BERN_UNIFORM_CUT_UPPER_BOUND = store_thm
    >- (RW_TAC arith_ss [REAL_ADD,REAL_INJ] >> DECIDE_TAC)
    >> RW_TAC std_ss [REAL_ADD_RDISTRIB]
    >> MATCH_MP_TAC REAL_LT_ADD2
-   >> RW_TAC real_ss []);
+   >> RW_TAC real_ss []
+QED
 
-val PROB_BERN_UNIFORM_CUT_PAIR = store_thm
-  ("PROB_BERN_UNIFORM_CUT_PAIR",
-   ``!t n k k'.
+Theorem PROB_BERN_UNIFORM_CUT_PAIR:
+     !t n k k'.
        k < SUC n /\ k' < SUC n ==>
        abs
        (prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k} -
         prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k'}) <=
-       (1 / 2) pow t``,
+       (1 / 2) pow t
+Proof
    RW_TAC std_ss []
    >> Induct_on `t`
    >- (RW_TAC bool_ss [prob_uniform_cut_def, pow]
@@ -476,15 +488,16 @@ val PROB_BERN_UNIFORM_CUT_PAIR = store_thm
    >> KILL_TAC
    >> MP_TAC (Q.SPEC `n` PROB_BERN_UNIF_GOOD)
    >> RW_TAC real_ss [o_DEF, GSPEC_DEST]
-   >> RW_TAC bool_ss [ONE_MINUS_HALF]);
+   >> RW_TAC bool_ss [ONE_MINUS_HALF]
+QED
 
-val PROB_BERN_UNIFORM_CUT_SUC = store_thm
-  ("PROB_BERN_UNIFORM_CUT_SUC",
-   ``!t n k.
+Theorem PROB_BERN_UNIFORM_CUT_SUC:
+     !t n k.
        k < SUC n ==>
        abs
        (prob bern {s | FST (prob_uniform_cut t (SUC n) s) = k} - 1 / & (SUC n))
-       <= (1 / 2) pow t``,
+       <= (1 / 2) pow t
+Proof
    RW_TAC bool_ss [GSYM ABS_BETWEEN_LE]
    >> REWRITE_TAC [real_lte] >| (* 3 sub-goals here *)
   [ (* goal 1 (of 3) *)
@@ -558,23 +571,25 @@ val PROB_BERN_UNIFORM_CUT_SUC = store_thm
     >> ASM_REWRITE_TAC []
     >> DISCH_THEN (MP_TAC o Q.SPEC `n`)
     >> Know `~(& (SUC n) = (0 :real))` >- RW_TAC arith_ss [REAL_INJ]
-    >> RW_TAC arith_ss [GSYM REAL_INV_1OVER, REAL_MUL_RINV]]);
+    >> RW_TAC arith_ss [GSYM REAL_INV_1OVER, REAL_MUL_RINV]]
+QED
 
-val PROB_BERN_UNIFORM_CUT = store_thm
-  ("PROB_BERN_UNIFORM_CUT",
-   ``!t n k.
+Theorem PROB_BERN_UNIFORM_CUT:
+     !t n k.
        k < n ==>
        abs (prob bern {s | FST (prob_uniform_cut t n s) = k} - 1 / &n) <=
-       (1 / 2) pow t``,
+       (1 / 2) pow t
+Proof
    NTAC 3 STRIP_TAC
    >> Cases_on `n` >- RW_TAC arith_ss []
-   >> RW_TAC bool_ss [PROB_BERN_UNIFORM_CUT_SUC]);
+   >> RW_TAC bool_ss [PROB_BERN_UNIFORM_CUT_SUC]
+QED
 
-val PROB_PROB_UNIFORM_CUT_LOWER_SUC = store_thm
-  ("PROB_PROB_UNIFORM_CUT_LOWER_SUC",
-   ``!t n k.
+Theorem PROB_PROB_UNIFORM_CUT_LOWER_SUC:
+     !t n k.
        k < n /\ 2 * log2 (n + 1) <= t ==>
-       1 / (&n + 1) <= prob bern {s | FST (prob_uniform_cut t n s) = k}``,
+       1 / (&n + 1) <= prob bern {s | FST (prob_uniform_cut t n s) = k}
+Proof
    REPEAT STRIP_TAC
    >> MP_TAC (Q.SPECL [`t`, `n`, `k`] PROB_BERN_UNIFORM_CUT)
    >> ASM_REWRITE_TAC [GSYM ABS_BETWEEN_LE]
@@ -585,14 +600,15 @@ val PROB_PROB_UNIFORM_CUT_LOWER_SUC = store_thm
        >> REAL_ARITH_TAC)
    >> POP_ASSUM K_TAC
    >> Know `0 < n` >- DECIDE_TAC
-   >> PROVE_TAC [LOG2_SUC]);
+   >> PROVE_TAC [LOG2_SUC]
+QED
 
-val PROB_BERN_UNIFORM_CUT_CARD_LOWER = store_thm
-  ("PROB_BERN_UNIFORM_CUT_CARD_LOWER",
-   ``!t n a.
+Theorem PROB_BERN_UNIFORM_CUT_CARD_LOWER:
+     !t n a.
        0 < n /\ a SUBSET count n ==>
        &(CARD a) * (1 / &n - (1 / 2) pow t) <=
-       prob bern {s | FST (prob_uniform_cut t n s) IN a}``,
+       prob bern {s | FST (prob_uniform_cut t n s) IN a}
+Proof
    REPEAT STRIP_TAC
    >> Know `FINITE a`
    >- PROVE_TAC [FINITE_COUNT, SUBSET_FINITE]
@@ -623,14 +639,15 @@ val PROB_BERN_UNIFORM_CUT_CARD_LOWER = store_thm
    >- RW_TAC bool_ss [REAL_MUL_LID, GSYM ABS_BETWEEN_LE]
    >> MATCH_MP_TAC PROB_BERN_UNIFORM_CUT
    >> Suff `e IN count (SUC n')` >- RW_TAC bool_ss [SPECIFICATION, IN_COUNT]
-   >> PROVE_TAC [IN_INSERT, SUBSET_DEF]);
+   >> PROVE_TAC [IN_INSERT, SUBSET_DEF]
+QED
 
-val PROB_BERN_UNIFORM_CUT_CARD_LOWER_SUC = store_thm
-  ("PROB_BERN_UNIFORM_CUT_CARD_LOWER_SUC",
-   ``!t n a.
+Theorem PROB_BERN_UNIFORM_CUT_CARD_LOWER_SUC:
+     !t n a.
        0 < n /\ a SUBSET count n /\ 2 * log2 (n + 1) <= t ==>
        &(CARD a) * (1 / &(n + 1)) <=
-       prob bern {s | FST (prob_uniform_cut t n s) IN a}``,
+       prob bern {s | FST (prob_uniform_cut t n s) IN a}
+Proof
    REPEAT STRIP_TAC
    >> Cases_on `a = {}`
    >- RW_TAC real_ss [CARD_EMPTY, PROB_BERN_BASIC, NOT_IN_EMPTY, GEMPTY,
@@ -653,11 +670,12 @@ val PROB_BERN_UNIFORM_CUT_CARD_LOWER_SUC = store_thm
        `y`)
    >> KILL_TAC
    >> REWRITE_TAC [REAL_ADD]
-   >> REAL_ARITH_TAC);
+   >> REAL_ARITH_TAC
+QED
 
-val PROB_UNIFORM_TERMINATES = store_thm
-  ("PROB_UNIFORM_TERMINATES",
-   ``!n. ?*s. FST (prob_unif n s) < SUC n``,
+Theorem PROB_UNIFORM_TERMINATES:
+     !n. ?*s. FST (prob_unif n s) < SUC n
+Proof
    RW_TAC bool_ss [possibly_bern_def, possibly_def]
    >- (Suff
        `{s | FST (prob_unif n s) < SUC n} = {x | x < SUC n} o FST o prob_unif n`
@@ -668,17 +686,19 @@ val PROB_UNIFORM_TERMINATES = store_thm
    >> impl_tac >- RW_TAC bool_ss [LOG2_LOWER_SUC]
    >> Rewr
    >> RW_TAC bool_ss [REAL_ENTIRE, REAL_INJ]
-   >> PROVE_TAC [POW_HALF_POS, REAL_LT_LE]);
+   >> PROVE_TAC [POW_HALF_POS, REAL_LT_LE]
+QED
 
-val INDEP_FN_PROB_UNIFORM = store_thm
-  ("INDEP_FN_PROB_UNIFORM",
-   ``!n. prob_uniform (SUC n) IN indep_fn``,
+Theorem INDEP_FN_PROB_UNIFORM:
+     !n. prob_uniform (SUC n) IN indep_fn
+Proof
    RW_TAC bool_ss [prob_uniform_def, INDEP_FN_PROB_UNTIL, INDEP_FN_PROB_UNIF,
-                  PROB_UNIFORM_TERMINATES]);
+                  PROB_UNIFORM_TERMINATES]
+QED
 
-val PROB_BERN_UNIFORM = store_thm
-  ("PROB_BERN_UNIFORM",
-   ``!n k. k < n ==> (prob bern {s | FST (prob_uniform n s) = k} = 1 / &n)``,
+Theorem PROB_BERN_UNIFORM:
+     !n k. k < n ==> (prob bern {s | FST (prob_uniform n s) = k} = 1 / &n)
+Proof
    Cases >- RW_TAC arith_ss []
    >> RW_TAC bool_ss [prob_uniform_def]
    >> (MP_TAC o
@@ -716,12 +736,14 @@ val PROB_BERN_UNIFORM = store_thm
    >> MATCH_MP_TAC REAL_DIV_EQ
    >> RW_TAC bool_ss [REAL_ENTIRE, REAL_INJ, REAL_MUL_LID]
    >- PROVE_TAC [POW_HALF_POS, REAL_LT_LE]
-   >> RW_TAC bool_ss [REAL_MUL_SYM]);
+   >> RW_TAC bool_ss [REAL_MUL_SYM]
+QED
 
-val PROB_UNIFORM_RANGE = store_thm
-  ("PROB_UNIFORM_RANGE",
-   ``!n. !*s. FST (prob_uniform (SUC n) s) < SUC n``,
+Theorem PROB_UNIFORM_RANGE:
+     !n. !*s. FST (prob_uniform (SUC n) s) < SUC n
+Proof
    RW_TAC bool_ss [prob_uniform_def]
    >> MP_TAC (Q.ISPECL [`prob_unif n`, `\x. x < SUC n`] PROB_UNTIL_POST)
-   >> RW_TAC bool_ss [PROB_UNIFORM_TERMINATES, INDEP_FN_PROB_UNIF]);
+   >> RW_TAC bool_ss [PROB_UNIFORM_TERMINATES, INDEP_FN_PROB_UNIF]
+QED
 

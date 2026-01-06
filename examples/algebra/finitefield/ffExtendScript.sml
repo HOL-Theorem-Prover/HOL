@@ -140,10 +140,11 @@ Libs
 
 (* Theorem: FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> ?f. BIJ f s t *)
 (* Proof: by CARD_CARDEQ_I, cardeq_def *)
-val CARD_EQ_BIJ = store_thm(
-  "CARD_EQ_BIJ",
-  ``!s t. FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> ?f. BIJ f s t``,
-  rw[CARD_CARDEQ_I, GSYM cardeq_def]);
+Theorem CARD_EQ_BIJ:
+    !s t. FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> ?f. BIJ f s t
+Proof
+  rw[CARD_CARDEQ_I, GSYM cardeq_def]
+QED
 
 (* Theorem: FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> ?f. INJ f s t /\ (IMAGE f s = t) *)
 (* Proof:
@@ -151,13 +152,14 @@ val CARD_EQ_BIJ = store_thm(
      or INJ f s t /\ SURJ f s t       by BIJ_DEF
      or INJ f s t /\ (IMAGE f s = t)  by IMAGE_SURJ
 *)
-val CARD_EQ_INJ = store_thm(
-  "CARD_EQ_INJ",
-  ``!s t. FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> ?f. INJ f s t /\ (IMAGE f s = t)``,
+Theorem CARD_EQ_INJ:
+    !s t. FINITE s /\ FINITE t /\ (CARD s = CARD t) ==> ?f. INJ f s t /\ (IMAGE f s = t)
+Proof
   rpt strip_tac >>
   `?f. INJ f s t /\ SURJ f s t` by metis_tac[CARD_EQ_BIJ, BIJ_DEF] >>
   qexists_tac `f` >>
-  rw[GSYM IMAGE_SURJ]);
+  rw[GSYM IMAGE_SURJ]
+QED
 
 (* Theorem: FINITE s /\ INFINITE univ(:'b) ==> ?f. INJ f s univ(:'b) *)
 (* Proof:
@@ -167,10 +169,11 @@ val CARD_EQ_INJ = store_thm(
      and      t SUBSET univ(:'b)                       by SUBSET_UNIV
    Hence    INJ f s univ(:'b)                          by INJ_SUBSET
 *)
-val INJ_FINITE_INFINITE = store_thm(
-  "INJ_FINITE_INFINITE",
-  ``!s. FINITE s /\ INFINITE univ(:'b) ==> ?f. INJ f s univ(:'b)``,
-  metis_tac[finite_set_exists, CARD_EQ_INJ, INJ_SUBSET, SUBSET_REFL, SUBSET_UNIV]);
+Theorem INJ_FINITE_INFINITE:
+    !s. FINITE s /\ INFINITE univ(:'b) ==> ?f. INJ f s univ(:'b)
+Proof
+  metis_tac[finite_set_exists, CARD_EQ_INJ, INJ_SUBSET, SUBSET_REFL, SUBSET_UNIV]
+QED
 
 (* Theorem: FINITE s /\ INFINITE univ(:'a) ==> INFINITE (univ(:'a) DIFF s) *)
 (* Proof:
@@ -180,12 +183,13 @@ val INJ_FINITE_INFINITE = store_thm(
     ==> FINITE univ(:'a)                         by FINITE_UNION
    But this contradicts INFINITE univ(:'a).
 *)
-val INFINITE_UNIV_DIFF_FINITE = store_thm(
-  "INFINITE_UNIV_DIFF_FINITE",
-  ``!s. FINITE s /\ INFINITE univ(:'a) ==> INFINITE (univ(:'a) DIFF s)``,
+Theorem INFINITE_UNIV_DIFF_FINITE:
+    !s. FINITE s /\ INFINITE univ(:'a) ==> INFINITE (univ(:'a) DIFF s)
+Proof
   spose_not_then strip_assume_tac >>
   `univ(:'a) = (univ(:'a) DIFF s) UNION s` by rw[UNION_DIFF, SUBSET_UNIV] >>
-  metis_tac[FINITE_UNION]);
+  metis_tac[FINITE_UNION]
+QED
 
 (* Theorem: INFINITE t ==> ?s. s SUBSET t /\ FINITE s /\ (CARD s = n) *)
 (* Proof:
@@ -201,9 +205,9 @@ val INFINITE_UNIV_DIFF_FINITE = store_thm(
         = CARD (count n)                   by INJ_CARD_IMAGE_EQ
         = n                                by CARD_COUNT
 *)
-val finite_subset_exists = store_thm(
-  "finite_subset_exists",
-  ``!(t:'a -> bool) n. INFINITE t ==> ?s. s SUBSET t /\ FINITE s /\ (CARD s = n)``,
+Theorem finite_subset_exists:
+    !(t:'a -> bool) n. INFINITE t ==> ?s. s SUBSET t /\ FINITE s /\ (CARD s = n)
+Proof
   rpt strip_tac >>
   `?f. INJ f univ(:num) t` by rw[GSYM infinite_num_inj] >>
   `INJ f (count n) t` by metis_tac[INJ_SUBSET, SUBSET_UNIV, SUBSET_REFL] >>
@@ -211,7 +215,8 @@ val finite_subset_exists = store_thm(
   rpt strip_tac >-
   metis_tac[IMAGE_SUBSET_TARGET, INJ_DEF] >-
   rw[] >>
-  metis_tac[INJ_CARD_IMAGE_EQ, FINITE_COUNT, CARD_COUNT]);
+  metis_tac[INJ_CARD_IMAGE_EQ, FINITE_COUNT, CARD_COUNT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Extending Finite Set                                                      *)
@@ -251,10 +256,10 @@ val finite_subset_exists = store_thm(
    (2) x IN s ==> (\x. if x IN s then f x else g x) x = f x
        This is trivially true.
 *)
-val subset_inj_extension_exists = store_thm(
-  "subset_inj_extension_exists",
-  ``!s t f. FINITE t /\ s SUBSET t /\ INJ f s univ(:'b) /\ INFINITE univ(:'b) ==>
-   ?g. INJ g t univ(:'b) /\ !x. x IN s ==> (g x = f x)``,
+Theorem subset_inj_extension_exists:
+    !s t f. FINITE t /\ s SUBSET t /\ INJ f s univ(:'b) /\ INFINITE univ(:'b) ==>
+   ?g. INJ g t univ(:'b) /\ !x. x IN s ==> (g x = f x)
+Proof
   rpt strip_tac >>
   qabbrev_tac `d = t DIFF s` >>
   qabbrev_tac `m = IMAGE f s` >>
@@ -282,7 +287,8 @@ val subset_inj_extension_exists = store_thm(
       ]
     ],
     rw[]
-  ]);
+  ]
+QED
 
 (* Apply Skolemization *)
 val lemma = prove(
@@ -340,10 +346,10 @@ val subset_inj_extension_def = new_specification(
             = CARD (count n)                        by INJ_CARD_IMAGE
             = n                                     by CARD_COUNT
 *)
-val finite_super_set_exists = store_thm(
-  "finite_super_set_exists",
-  ``!s:'a -> bool. FINITE s /\ INFINITE univ(:'a) ==>
-   !n. CARD s <= n ==> ?t. FINITE t /\ (s SUBSET t) /\ (CARD t = n)``,
+Theorem finite_super_set_exists:
+    !s:'a -> bool. FINITE s /\ INFINITE univ(:'a) ==>
+   !n. CARD s <= n ==> ?t. FINITE t /\ (s SUBSET t) /\ (CARD t = n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = CARD s` >>
   `?f. BIJ f (count m) s` by rw[eqcard_bij_exists, Abbr`m`] >>
@@ -357,7 +363,8 @@ val finite_super_set_exists = store_thm(
   rw[] >-
  ((`IMAGE g (count m) = IMAGE f (count m)` by (rw_tac std_ss[IN_IMAGE, EXTENSION] >> metis_tac[])) >>
   metis_tac[IMAGE_SUBSET]) >>
-  metis_tac[INJ_CARD_IMAGE, FINITE_COUNT, CARD_COUNT]);
+  metis_tac[INJ_CARD_IMAGE, FINITE_COUNT, CARD_COUNT]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Extending Finite Field                                                    *)
@@ -435,11 +442,11 @@ val _ = overload_on ("C", ``(t:'a field).carrier``);
    With CARD R = p ** m = CARD S_                       by above
      so r =f= s_                                        by finite_field_eq_card_isomorphic
 *)
-val finite_field_clone_extension_exists = store_thm(
-  "finite_field_clone_extension_exists",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
+Theorem finite_field_clone_extension_exists:
+    !r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
    !n. 0 < n ==> ?(r_:'b field) (s_:'b field) f. FiniteField r_ /\ FiniteField s_ /\
-      FieldIso f r s_ /\ s_ <<= r_ /\ (CARD R_ = (CARD R) ** n)``,
+      FieldIso f r s_ /\ s_ <<= r_ /\ (CARD R_ = (CARD R) ** n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `?p m. prime p /\ 0 < m /\ (CARD R = p ** m)` by rw[finite_field_card_eq_prime_power] >>
   `?(r_:'b field). FiniteField r_ /\ (CARD R_ = p ** (m * n))` by rw[finite_field_existence, ZERO_LESS_MULT] >>
@@ -447,7 +454,8 @@ val finite_field_clone_extension_exists = store_thm(
   `m divides (m * n)` by metis_tac[divides_def, MULT_COMM] >>
   `?(s_:'b field). Field s_ /\ s_ <<= r_ /\ (CARD S_ = p ** m)` by metis_tac[finite_field_subfield_existence] >>
   `FiniteField s_` by metis_tac[subfield_finite_field] >>
-  metis_tac[finite_field_eq_card_isomorphic]);
+  metis_tac[finite_field_eq_card_isomorphic]
+QED
 
 (* Theorem: FiniteField r /\ INFINITE univ(:'a) ==>
             !n. 0 < n ==> ?(t:'a field) (s:'a field) f. FiniteField t /\ FiniteField s /\
@@ -488,9 +496,9 @@ val finite_field_self_extension_exists =
                                               true   by subfield_property_alt
        (3) f s.prod.id = f #1, true                  by subfield_ids
 *)
-val subfield_ring_inj_image_subfield = store_thm(
-  "subfield_ring_inj_image_subfield",
-  ``!(r s:'a field) f. s <<= r /\ INJ f R univ(:'a) ==> subfield (ring_inj_image s f) (ring_inj_image r f)``,
+Theorem subfield_ring_inj_image_subfield:
+    !(r s:'a field) f. s <<= r /\ INJ f R univ(:'a) ==> subfield (ring_inj_image s f) (ring_inj_image r f)
+Proof
   rpt strip_tac >>
   `B SUBSET R` by rw[subfield_carrier_subset] >>
   `(IMAGE f B) SUBSET (IMAGE f R)` by rw[SUBSET_DEF] >>
@@ -509,7 +517,8 @@ val subfield_ring_inj_image_subfield = store_thm(
   rw_tac std_ss[MonoidHomo_def, ring_inj_image_def] >-
   metis_tac[SUBSET_DEF] >-
   metis_tac[subfield_property_alt] >>
-  metis_tac[subfield_ids]);
+  metis_tac[subfield_ids]
+QED
 
 (* Theorem: (r === s) f /\ (ring_inj_image s g) <<= t /\
             (!x. x IN B ==> (g x = LINV f R x)) ==> subfield r t *)
@@ -560,10 +569,10 @@ val subfield_ring_inj_image_subfield = store_thm(
            = g (s.prod.id)                           by ring_inj_image_def
            = #1                                      by field_homo_ids, FieldHomo g s r
 *)
-val field_iso_with_subfield_ring_inj_image_subfield = store_thm(
-  "field_iso_with_subfield_ring_inj_image_subfield",
-  ``!(r:'a field) (s:'a field) (t:'a field) f g. (r === s) f /\ (ring_inj_image s g) <<= t /\
-      (!x. x IN B ==> (g x = LINV f R x)) ==> subfield r t``,
+Theorem field_iso_with_subfield_ring_inj_image_subfield:
+    !(r:'a field) (s:'a field) (t:'a field) f g. (r === s) f /\ (ring_inj_image s g) <<= t /\
+      (!x. x IN B ==> (g x = LINV f R x)) ==> subfield r t
+Proof
   rpt strip_tac >>
   `BIJ f R B` by metis_tac[FieldIso_def] >>
   `IMAGE f R = B` by fs[BIJ_DEF, IMAGE_SURJ] >>
@@ -597,7 +606,8 @@ val field_iso_with_subfield_ring_inj_image_subfield = store_thm(
   `t.prod.id = (ring_inj_image s g).prod.id` by rw[subfield_ids] >>
   `_ = g (s.prod.id)` by rw_tac std_ss[ring_inj_image_def] >>
   `_ = #1` by rw_tac std_ss[field_homo_ids] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: FiniteField r /\ INFINITE univ(:'a) ==>
             !n. 0 < n ==> ?(t:'a field). FiniteField t /\ r <<= t /\ (CARD C = (CARD R) ** n) *)
@@ -639,10 +649,10 @@ val field_iso_with_subfield_ring_inj_image_subfield = store_thm(
        = CARD (u.carrier)                                      by INJ_CARD_IMAGE, FINITE u.carrier
        = CARD R ** n                                           by above
 *)
-val finite_field_extension_exists = store_thm(
-  "finite_field_extension_exists",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'a) ==>
-   !n. 0 < n ==> ?(t:'a field). FiniteField t /\ r <<= t /\ (CARD C = (CARD R) ** n)``,
+Theorem finite_field_extension_exists:
+    !r:'a field. FiniteField r /\ INFINITE univ(:'a) ==>
+   !n. 0 < n ==> ?(t:'a field). FiniteField t /\ r <<= t /\ (CARD C = (CARD R) ** n)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `?(u:'a field) (v:'a field) f. FiniteField u /\ FiniteField v /\ FieldIso f r v /\
             v <<= u /\ (CARD u.carrier = (CARD R ** n))` by metis_tac[finite_field_clone_extension_exists] >>
@@ -662,7 +672,8 @@ val finite_field_extension_exists = store_thm(
   rw[field_inj_image_finite_field, finite_field_is_field] >-
   rw[] >-
   metis_tac[subfield_ring_inj_image_subfield, field_iso_with_subfield_ring_inj_image_subfield] >>
-  metis_tac[ring_inj_image_carrier, INJ_CARD_IMAGE]);
+  metis_tac[ring_inj_image_carrier, INJ_CARD_IMAGE]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -708,11 +719,11 @@ finite_field_clone_exists
     But MAP g (lift p) = MAP (g o up) p     by poly_lift_def, MAP_COMPOSE
    Take f = g o up, b = g X, the result follows.
 *)
-val finite_field_irreducible_extension_exists = store_thm(
-  "finite_field_irreducible_extension_exists",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
+Theorem finite_field_irreducible_extension_exists:
+    !r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
    !p. ipoly p /\ 1 < deg p ==>
-       ?(r_:'b field) f b. FieldHomo f r r_ /\ b IN R_ /\ (root_ p_ b)``,
+       ?(r_:'b field) f b. FieldHomo f r r_ /\ b IN R_ /\ (root_ p_ b)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `t = PolyModRing r p` >>
   qabbrev_tac `st = PolyModConst r p` >>
@@ -730,7 +741,8 @@ val finite_field_irreducible_extension_exists = store_thm(
   `g X IN R_` by metis_tac[field_iso_element] >>
   `root_ (MAP g (lift p)) (g X)` by metis_tac[field_iso_poly_root, finite_field_is_field] >>
   `MAP g (lift p) = MAP (g o up) p` by rw[poly_lift_def, MAP_COMPOSE] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* We can clone a finite field (from finite_set_clone_exists):
 finite_field_clone_exists
@@ -773,11 +785,11 @@ The FiniteField r in the following is purely due to finite_field_clone_exists.
     But MAP g (lift p) = MAP (g o up) p     by poly_lift_def, MAP_COMPOSE
    Take f = g o up, b = g X, the result follows.
 *)
-val finite_field_irreducible_iso_extension_exists = store_thm(
-  "finite_field_irreducible_iso_extension_exists",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
+Theorem finite_field_irreducible_iso_extension_exists:
+    !r:'a field. FiniteField r /\ INFINITE univ(:'b) ==>
    !p. ipoly p /\ 1 < deg p ==>
-    ?(s:'b field) (r_:'b field) f b. FieldIso f r s /\ s <<= r_ /\ FINITE R_ /\ b IN R_ /\ (root_ p_ b)``,
+    ?(s:'b field) (r_:'b field) f b. FieldIso f r s /\ s <<= r_ /\ FINITE R_ /\ b IN R_ /\ (root_ p_ b)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `pmonic p` by rw[poly_irreducible_pmonic] >>
   qabbrev_tac `t = PolyModRing r p` >>
@@ -798,7 +810,8 @@ val finite_field_irreducible_iso_extension_exists = store_thm(
   `g X IN R_` by metis_tac[field_iso_element] >>
   `root_ (MAP g (lift p)) (g X)` by metis_tac[field_iso_poly_root] >>
   `MAP g (lift p) = MAP (g o up) p` by rw[poly_lift_def, MAP_COMPOSE] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: FiniteField r /\ INFINITE univ(:'a) ==> !p. poly p /\ 0 < deg p ==>
             ?(s:'a field) (t:'a field) f b.
@@ -832,11 +845,11 @@ val finite_field_irreducible_iso_extension_exists = store_thm(
       also MAP I p = p                              by MAP_ID
       Take s = r, t = r, the result follows.
 *)
-val poly_extension_field_exists = store_thm(
-  "poly_extension_field_exists",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'a) ==> !p. poly p /\ 0 < deg p ==>
+Theorem poly_extension_field_exists:
+    !r:'a field. FiniteField r /\ INFINITE univ(:'a) ==> !p. poly p /\ 0 < deg p ==>
    ?(s:'a field) (t:'a field) f b.
-       FieldIso f r s /\ s <<= t /\ FINITE C /\ b IN C /\ (poly_root t (MAP f p) b)``,
+       FieldIso f r s /\ s <<= t /\ FINITE C /\ b IN C /\ (poly_root t (MAP f p) b)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   Cases_on `roots p = {}` >| [
     `?q. ipoly q /\ q pdivides p` by rw[poly_irreducible_factor_exists] >>
@@ -859,17 +872,19 @@ val poly_extension_field_exists = store_thm(
     `r <<= r` by rw[subfield_refl] >>
     `MAP I p = p` by rw[] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ INFINITE univ(:'a) ==> !p. poly p /\ 0 < deg p ==>
     ?(s:'a field) (t:'a field) f b. FieldIso f r s /\ s <<= t /\ FINITE C /\ b IN (poly_roots t (MAP f p)) *)
 (* Proof: by poly_extension_field_exists, poly_roots_member *)
-val poly_extension_field_exists_alt = store_thm(
-  "poly_extension_field_exists_alt",
-  ``!r:'a field. FiniteField r /\ INFINITE univ(:'a) ==> !p. poly p /\ 0 < deg p ==>
+Theorem poly_extension_field_exists_alt:
+    !r:'a field. FiniteField r /\ INFINITE univ(:'a) ==> !p. poly p /\ 0 < deg p ==>
    ?(s:'a field) (t:'a field) f b.
-       FieldIso f r s /\ s <<= t /\ FINITE C /\ b IN (poly_roots t (MAP f p))``,
-  metis_tac[poly_extension_field_exists, poly_roots_member]);
+       FieldIso f r s /\ s <<= t /\ FINITE C /\ b IN (poly_roots t (MAP f p))
+Proof
+  metis_tac[poly_extension_field_exists, poly_roots_member]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Generators                                                   *)
@@ -901,22 +916,24 @@ val _ = overload_on("generators", ``field_generators``);
         and eval p a IN R          by poly_eval_element
    (3) x IN R ==> ?p. (x = eval p z) /\ Poly s p, true by implication
 *)
-val field_generator_alt = store_thm(
-  "field_generator_alt",
-  ``!(r:'a ring) s. s <= r ==> !z. z IN R ==>
-     (generator s z <=> !x. x IN R ==> ?p. Poly s p /\ (x = eval p z))``,
+Theorem field_generator_alt:
+    !(r:'a ring) s. s <= r ==> !z. z IN R ==>
+     (generator s z <=> !x. x IN R ==> ?p. Poly s p /\ (x = eval p z))
+Proof
   rw_tac std_ss[field_generator_def, EXTENSION, IN_IMAGE, poly_ring_element, EQ_IMP_THM] >-
   metis_tac[] >-
  (`poly p` by metis_tac[subring_poly_poly] >>
   rw[]) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: z IN generators r s <=> z IN R /\ generator s z *)
 (* Proof: by field_generators_def *)
-val field_generators_member = store_thm(
-  "field_generators_member",
-  ``!(r:'a ring) (s:'a ring). !z. z IN generators r s <=> z IN R /\ generator s z``,
-  rw[field_generators_def]);
+Theorem field_generators_member:
+    !(r:'a ring) (s:'a ring). !z. z IN generators r s <=> z IN R /\ generator s z
+Proof
+  rw[field_generators_def]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> (FPrimitives r) SUBSET field_generators r s *)
 (* Proof:
@@ -940,9 +957,9 @@ val field_generators_member = store_thm(
          = x ** n            by poly_eval_X, poly_eval_exp
          = y                 by above
 *)
-val field_primitives_subset_field_generators = store_thm(
-  "field_primitives_subset_field_generators",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> (FPrimitives r) SUBSET field_generators r s``,
+Theorem field_primitives_subset_field_generators:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> (FPrimitives r) SUBSET field_generators r s
+Proof
   rpt (stripDup[FiniteField_def]) >>
   rw_tac std_ss[field_generators_def, SUBSET_DEF] >>
   `s <= r` by rw[subfield_is_subring] >>
@@ -956,7 +973,8 @@ val field_primitives_subset_field_generators = store_thm(
     `?n. n < CARD R+ /\ (y = x ** n)` by rw[field_primitives_element_property] >>
     qexists_tac `X ** n` >>
     rw[poly_X_exp_n_spoly]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> (primitive r) IN generators r s *)
 (* Proof:
@@ -965,10 +983,11 @@ val field_primitives_subset_field_generators = store_thm(
     and FPrimitives r SUBSET generators r s   by field_primitives_subset_field_generators
    Thus z IN generators r s                   by SUBSET_DEF
 *)
-val field_primitive_in_field_generators = store_thm(
-  "field_primitive_in_field_generators",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> (primitive r) IN field_generators r s``,
-  metis_tac[field_primitives_has_primitive, field_primitives_subset_field_generators, SUBSET_DEF]);
+Theorem field_primitive_in_field_generators:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> (primitive r) IN field_generators r s
+Proof
+  metis_tac[field_primitives_has_primitive, field_primitives_subset_field_generators, SUBSET_DEF]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> generator s (primitive r) *)
 (* Proof:
@@ -976,10 +995,11 @@ val field_primitive_in_field_generators = store_thm(
    Note z IN generators r s    by field_primitive_in_field_generators
    Thus generator s z          by field_generators_member
 *)
-val field_primitive_is_field_generator = store_thm(
-  "field_primitive_is_field_generator",
-  ``!(r:'a field) s. FiniteField r /\ s <<= r ==> generator s (primitive r)``,
-  metis_tac[field_primitive_in_field_generators, field_generators_member]);
+Theorem field_primitive_is_field_generator:
+    !(r:'a field) s. FiniteField r /\ s <<= r ==> generator s (primitive r)
+Proof
+  metis_tac[field_primitive_in_field_generators, field_generators_member]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Finite Field Isomorphism by Minimal Polynomial of generator               *)
@@ -1010,10 +1030,10 @@ val field_primitive_is_field_generator = store_thm(
           = eval (p + p') x                    by poly_eval_poly_mod_at_root, poly_add_poly
           = eval p x + eval p' x               by poly_eval_add
 *)
-val poly_mod_ring_by_minimal_sum_homo = store_thm(
-  "poly_mod_ring_by_minimal_sum_homo",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
-         GroupHomo (\p. eval p x) (PolyModRing s (minimal x)).sum r.sum``,
+Theorem poly_mod_ring_by_minimal_sum_homo:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
+         GroupHomo (\p. eval p x) (PolyModRing s (minimal x)).sum r.sum
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = minimal x` >>
   `s <= r` by rw[subfield_is_subring] >>
@@ -1030,7 +1050,8 @@ val poly_mod_ring_by_minimal_sum_homo = store_thm(
     `ulead m` by metis_tac[subring_poly_ulead] >>
     `eval (poly_mod s (poly_add s p p') m) x = eval ((p + p') % m) x` by prove_tac[subring_poly_add, subring_poly_mod, poly_add_poly] >>
     rw[poly_eval_poly_mod_at_root]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==>
             MonoidHomo (\p. eval p x) (PolyModRing s (minimal x)).prod r.prod *)
@@ -1061,10 +1082,10 @@ val poly_mod_ring_by_minimal_sum_homo = store_thm(
           = eval |1| s         by subring_poly_one
           = #1                 by poly_eval_one
 *)
-val poly_mod_ring_by_minimal_prod_homo = store_thm(
-  "poly_mod_ring_by_minimal_prod_homo",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
-         MonoidHomo (\p. eval p x) (PolyModRing s (minimal x)).prod r.prod``,
+Theorem poly_mod_ring_by_minimal_prod_homo:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
+         MonoidHomo (\p. eval p x) (PolyModRing s (minimal x)).prod r.prod
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = minimal x` >>
   `s <= r` by rw[subfield_is_subring] >>
@@ -1082,7 +1103,8 @@ val poly_mod_ring_by_minimal_prod_homo = store_thm(
     `eval (poly_mod s (poly_mult s p p') m) x = eval ((p * p') % m) x` by prove_tac[subring_poly_mult, subring_poly_mod, poly_mult_poly] >>
     rw[poly_eval_poly_mod_at_root],
     metis_tac[subring_poly_one, poly_eval_one]
-  ]);
+  ]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==>
             FieldHomo (\p. eval p x) (PolyModRing s (minimal x)) r *)
@@ -1099,14 +1121,15 @@ val poly_mod_ring_by_minimal_prod_homo = store_thm(
    (3) MonoidHomo (\p. eval p x) (PolyModRing s m).prod r.prod
        This is true    by poly_mod_ring_by_minimal_prod_homo
 *)
-val poly_mod_ring_by_minimal_homo_field = store_thm(
-  "poly_mod_ring_by_minimal_homo_field",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
-         FieldHomo (\p. eval p x) (PolyModRing s (minimal x)) r``,
+Theorem poly_mod_ring_by_minimal_homo_field:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
+         FieldHomo (\p. eval p x) (PolyModRing s (minimal x)) r
+Proof
   rw_tac std_ss[FieldHomo_def, RingHomo_def, poly_mod_ring_property] >-
   metis_tac[subfield_is_subring, subring_poly_poly, poly_eval_element] >-
   rw[poly_mod_ring_by_minimal_sum_homo] >>
-  rw[poly_mod_ring_by_minimal_prod_homo]);
+  rw[poly_mod_ring_by_minimal_prod_homo]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN R ==>
             INJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R *)
@@ -1129,10 +1152,10 @@ val poly_mod_ring_by_minimal_homo_field = store_thm(
        Thus p % m = p, and q % m = q   by poly_mod_less
          or p = q                      by above, p % m = p' % m
 *)
-val poly_mod_ring_by_minimal_map_inj = store_thm(
-  "poly_mod_ring_by_minimal_map_inj",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
-     INJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R``,
+Theorem poly_mod_ring_by_minimal_map_inj:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN R ==>
+     INJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = minimal x` >>
   `s <= r` by rw[subfield_is_subring] >>
@@ -1141,7 +1164,8 @@ val poly_mod_ring_by_minimal_map_inj = store_thm(
   `p % m = p' % m` by rw[GSYM poly_minimal_eval_congruence, Abbr`m`] >>
   `monic m` by rw[poly_minimal_monic, Abbr`m`] >>
   `pmonic m` by rw[poly_monic_pmonic, poly_minimal_deg_pos, Abbr`m`] >>
-  metis_tac[subring_poly_poly, subring_poly_deg, poly_mod_less]);
+  metis_tac[subring_poly_poly, subring_poly_deg, poly_mod_less]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
             SURJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R *)
@@ -1168,10 +1192,10 @@ val poly_mod_ring_by_minimal_map_inj = store_thm(
           = eval q x                   by poly_eval_poly_mod_at_root, subring_poly_poly
           = x'                         by above
 *)
-val poly_mod_ring_by_minimal_map_surj = store_thm(
-  "poly_mod_ring_by_minimal_map_surj",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
-     SURJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R``,
+Theorem poly_mod_ring_by_minimal_map_surj:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
+     SURJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R
+Proof
   rpt (stripDup[FiniteField_def]) >>
   qabbrev_tac `m = minimal x` >>
   `s <= r` by rw[subfield_is_subring] >>
@@ -1189,7 +1213,8 @@ val poly_mod_ring_by_minimal_map_surj = store_thm(
   rw[poly_deg_mod_less, Abbr`p`] >>
   `x IN roots m` by metis_tac[poly_minimal_has_element_root, poly_roots_member] >>
   `p = q % m` by rw[subring_poly_mod, Abbr`p`] >>
-  metis_tac[poly_eval_poly_mod_at_root, subring_poly_poly]);
+  metis_tac[poly_eval_poly_mod_at_root, subring_poly_poly]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
             BIJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R *)
@@ -1201,15 +1226,16 @@ val poly_mod_ring_by_minimal_map_surj = store_thm(
    (2) SURJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R
        This is true       by poly_mod_ring_by_minimal_map_surj
 *)
-val poly_mod_ring_by_minimal_map_bij = store_thm(
-  "poly_mod_ring_by_minimal_map_bij",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
-     BIJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R``,
+Theorem poly_mod_ring_by_minimal_map_bij:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
+     BIJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R
+Proof
   rpt strip_tac >>
   `x IN R` by fs[field_generators_def] >>
   rw_tac std_ss[BIJ_DEF] >-
   rw[poly_mod_ring_by_minimal_map_inj] >>
-  rw[poly_mod_ring_by_minimal_map_surj]);
+  rw[poly_mod_ring_by_minimal_map_surj]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
             FieldIso (\p. eval p x) (PolyModRing s (minimal x)) r *)
@@ -1221,15 +1247,16 @@ val poly_mod_ring_by_minimal_map_bij = store_thm(
    (2) BIJ (\p. eval p x) (PolyModRing s (minimal x)).carrier R
        This is true       by poly_mod_ring_by_minimal_map_bij
 *)
-val poly_mod_ring_by_minimal_iso_field = store_thm(
-  "poly_mod_ring_by_minimal_iso_field",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
-         FieldIso (\p. eval p x) (PolyModRing s (minimal x)) r``,
+Theorem poly_mod_ring_by_minimal_iso_field:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
+         FieldIso (\p. eval p x) (PolyModRing s (minimal x)) r
+Proof
   rpt strip_tac >>
   `x IN R` by fs[field_generators_def] >>
   rw_tac std_ss[FieldIso_def] >-
   rw[poly_mod_ring_by_minimal_homo_field] >>
-  rw[poly_mod_ring_by_minimal_map_bij]);
+  rw[poly_mod_ring_by_minimal_map_bij]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
             ((PolyModRing s (minimal x)) === r) (\p. eval p x) *)
@@ -1242,16 +1269,17 @@ val poly_mod_ring_by_minimal_iso_field = store_thm(
    (2) FieldIso (\p. eval p x) (PolyModRing s (minimal x)) r
        This is true                             by poly_mod_ring_by_minimal_iso_field
 *)
-val poly_mod_ring_by_minimal_field_iso = store_thm(
-  "poly_mod_ring_by_minimal_field_iso",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
-         ((PolyModRing s (minimal x)) === r) (\p. eval p x)``,
+Theorem poly_mod_ring_by_minimal_field_iso:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==> !x. x IN generators r s ==>
+         ((PolyModRing s (minimal x)) === r) (\p. eval p x)
+Proof
   (rpt strip_tac >> simp[]) >| [
     `x IN R` by fs[field_generators_def] >>
     `IPoly s (minimal x)` by rw[poly_minimal_subfield_irreducible] >>
     rw[poly_mod_irreducible_field],
     rw[poly_mod_ring_by_minimal_iso_field]
-  ]);
+  ]
+QED
 
 (* Another milestone theorem! *)
 
@@ -1262,14 +1290,15 @@ val poly_mod_ring_by_minimal_field_iso = store_thm(
     and IPoly s (minimal x)                       by poly_minimal_subfield_irreducible, x IN R
     ==> FiniteField (PolyModRing s (minimal x))   by poly_mod_irreducible_finite_field
 *)
-val poly_mod_ring_by_minimal_finite_field = store_thm(
-  "poly_mod_ring_by_minimal_finite_field",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==>
-   !x. x IN R ==> FiniteField (PolyModRing s (minimal x))``,
+Theorem poly_mod_ring_by_minimal_finite_field:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==>
+   !x. x IN R ==> FiniteField (PolyModRing s (minimal x))
+Proof
   rpt strip_tac >>
   `FiniteField s` by metis_tac[subfield_finite_field] >>
   `IPoly s (minimal x)` by rw[poly_minimal_subfield_irreducible] >>
-  rw[poly_mod_irreducible_finite_field]);
+  rw[poly_mod_irreducible_finite_field]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             !x. x IN generators r s ==> (r =ff= PolyModRing s (minimal x)) *)
@@ -1280,14 +1309,15 @@ val poly_mod_ring_by_minimal_finite_field = store_thm(
     and (t === r) (\p. eval p x)   by poly_mod_ring_by_minimal_field_iso
     ==> r =ff= t                   by field_iso_sym, finite_field_is_field
 *)
-val poly_mod_ring_by_minimal_field_isomorphism = store_thm(
-  "poly_mod_ring_by_minimal_field_isomorphism",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==>
-   !x. x IN generators r s ==> (r =ff= PolyModRing s (minimal x))``,
+Theorem poly_mod_ring_by_minimal_field_isomorphism:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==>
+   !x. x IN generators r s ==> (r =ff= PolyModRing s (minimal x))
+Proof
   ntac 5 strip_tac >>
   `x IN R` by metis_tac[field_generators_member] >>
   `FiniteField (PolyModRing s (minimal x))` by rw[poly_mod_ring_by_minimal_finite_field] >>
-  metis_tac[poly_mod_ring_by_minimal_field_iso, field_iso_sym, finite_field_is_field]);
+  metis_tac[poly_mod_ring_by_minimal_field_iso, field_iso_sym, finite_field_is_field]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             ((PolyModRing s (minimal (primitive r))) === r) (\p. eval p (primitive r)) *)
@@ -1296,11 +1326,12 @@ val poly_mod_ring_by_minimal_field_isomorphism = store_thm(
    Then x IN generators r s                                by field_primitive_in_field_generators
     ==> (PolyModRing s (minimal x) === r) (\p. eval p x)   by poly_mod_ring_by_minimal_field_iso
 *)
-val poly_mod_ring_by_primitive_minimal_field_iso = store_thm(
-  "poly_mod_ring_by_primitive_minimal_field_iso",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==>
-    ((PolyModRing s (minimal (primitive r))) === r) (\p. eval p (primitive r))``,
-  rw_tac std_ss[field_primitive_in_field_generators, poly_mod_ring_by_minimal_field_iso]);
+Theorem poly_mod_ring_by_primitive_minimal_field_iso:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==>
+    ((PolyModRing s (minimal (primitive r))) === r) (\p. eval p (primitive r))
+Proof
+  rw_tac std_ss[field_primitive_in_field_generators, poly_mod_ring_by_minimal_field_iso]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r ==>
             (r =ff= (PolyModRing s (minimal (primitive r)))) *)
@@ -1311,14 +1342,15 @@ val poly_mod_ring_by_primitive_minimal_field_iso = store_thm(
     and (t === r) (\p. eval p x)   by poly_mod_ring_by_primitive_minimal_field_iso
      or r =ff= t                   by field_iso_sym
 *)
-val poly_mod_ring_by_primitive_minimal_field_isomorphism = store_thm(
-  "poly_mod_ring_by_primitive_minimal_field_isomorphism",
-  ``!(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==>
-    (r =ff= (PolyModRing s (minimal (primitive r))))``,
+Theorem poly_mod_ring_by_primitive_minimal_field_isomorphism:
+    !(r:'a field) (s:'a field). FiniteField r /\ s <<= r ==>
+    (r =ff= (PolyModRing s (minimal (primitive r))))
+Proof
   ntac 3 strip_tac >>
   `(primitive r) IN R` by rw[field_primitive_element] >>
   `FiniteField (PolyModRing s (minimal (primitive r)))` by rw[poly_mod_ring_by_minimal_finite_field] >>
-  metis_tac[poly_mod_ring_by_primitive_minimal_field_iso, field_iso_sym]);
+  metis_tac[poly_mod_ring_by_primitive_minimal_field_iso, field_iso_sym]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r /\ z IN (FPrimitives r) ==>
             ((PolyModRing s (minimal z)) === r) (\p. eval p z) *)
@@ -1327,11 +1359,12 @@ val poly_mod_ring_by_primitive_minimal_field_isomorphism = store_thm(
    Then z IN generators r s                                by field_primitives_subset_field_generators, SUBSET_DEF
     ==> (PolyModRing s (minimal z) === r) (\p. eval p z)   by poly_mod_ring_by_minimal_field_iso
 *)
-val poly_mod_ring_by_primitives_element_field_iso = store_thm(
-  "poly_mod_ring_by_primitives_element_field_iso",
-  ``!(r:'a field) (s:'a field) z. FiniteField r /\ s <<= r /\ z IN (FPrimitives r) ==>
-    ((PolyModRing s (minimal z)) === r) (\p. eval p z)``,
-  metis_tac[field_primitives_subset_field_generators, poly_mod_ring_by_minimal_field_iso, SUBSET_DEF]);
+Theorem poly_mod_ring_by_primitives_element_field_iso:
+    !(r:'a field) (s:'a field) z. FiniteField r /\ s <<= r /\ z IN (FPrimitives r) ==>
+    ((PolyModRing s (minimal z)) === r) (\p. eval p z)
+Proof
+  metis_tac[field_primitives_subset_field_generators, poly_mod_ring_by_minimal_field_iso, SUBSET_DEF]
+QED
 
 (* Theorem: FiniteField r /\ s <<= r /\ z IN (FPrimitives r) ==> (r =ff= (PolyModRing s (minimal z))) *)
 (* Proof:
@@ -1341,14 +1374,15 @@ val poly_mod_ring_by_primitives_element_field_iso = store_thm(
     and (t === r) (\p. eval p z)   by poly_mod_ring_by_primitives_element_field_iso
      or r =ff= t                   by field_iso_sym
 *)
-val poly_mod_ring_by_primitives_element_field_isomorphism = store_thm(
-  "poly_mod_ring_by_primitives_element_field_isomorphism",
-  ``!(r:'a field) (s:'a field) z. FiniteField r /\ s <<= r /\ z IN (FPrimitives r) ==>
-    (r =ff= (PolyModRing s (minimal z)))``,
+Theorem poly_mod_ring_by_primitives_element_field_isomorphism:
+    !(r:'a field) (s:'a field) z. FiniteField r /\ s <<= r /\ z IN (FPrimitives r) ==>
+    (r =ff= (PolyModRing s (minimal z)))
+Proof
   ntac 4 strip_tac >>
   `z IN R` by metis_tac[field_primitives_element, field_nonzero_element] >>
   `FiniteField (PolyModRing s (minimal z))` by rw[poly_mod_ring_by_minimal_finite_field] >>
-  metis_tac[poly_mod_ring_by_primitives_element_field_iso, field_iso_sym]);
+  metis_tac[poly_mod_ring_by_primitives_element_field_iso, field_iso_sym]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Uniqueness of Finite Field by Isomorphisms                                *)
@@ -1392,10 +1426,10 @@ val poly_mod_ring_by_primitives_element_field_isomorphism = store_thm(
     and FieldIso f3 (PolyModRing s_ m_) r_
    Thus ?f4. FieldIso f4 r r_          by field_iso_iso
 *)
-val finite_field_eq_card_field_iso = store_thm(
-  "finite_field_eq_card_field_iso",
-  ``!(r:'a field) (r_:'b field).
-      FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> r =ff= r_``,
+Theorem finite_field_eq_card_field_iso:
+    !(r:'a field) (r_:'b field).
+      FiniteField r /\ FiniteField r_ /\ (CARD R = CARD R_) ==> r =ff= r_
+Proof
   rw_tac std_ss[] >>
   qabbrev_tac `s = PF r` >>
   qabbrev_tac `s_ = PF r_` >>
@@ -1419,7 +1453,8 @@ val finite_field_eq_card_field_iso = store_thm(
   `IPoly s_ m_` by rw[poly_minimal_subfield_irreducible, Abbr`m_`] >>
   `Field (PolyModRing s_ m_)` by rw[poly_mod_irreducible_field] >>
   `Field (PolyModRing s m)` by rw[poly_mod_irreducible_field] >>
-  metis_tac[field_iso_iso, field_iso_sym]);
+  metis_tac[field_iso_iso, field_iso_sym]
+QED
 
 (* Another proof of the milestone: uniqueness of finite fields up to isomorphism. *)
 

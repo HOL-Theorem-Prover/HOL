@@ -36,8 +36,7 @@ val [ordlt_REFL, ordlt_TRANS, ordlt_WF0, ordlt_trichotomy] =
                  alphaise (REWRITE_RULE [relationTheory.WF_DEF] orderlt_WF),
                  alphaise orderlt_trichotomy]}
 
-Theorem ordlt_REFL = ordlt_REFL
-val _ = export_rewrites ["ordlt_REFL"]
+Theorem ordlt_REFL[simp] = ordlt_REFL
 Theorem ordlt_TRANS = ordlt_TRANS
 Theorem ordlt_WF =
   REWRITE_RULE [GSYM relationTheory.WF_DEF] ordlt_WF0
@@ -162,14 +161,13 @@ Definition preds_def:
   preds (w : 'a ordinal) = { w0 | ordlt w0 w }
 End
 
-Theorem IN_preds:
+Theorem IN_preds[simp]:
     x IN preds w <=> ordlt x w
 Proof
   rw[preds_def]
 QED
-val _ = export_rewrites ["IN_preds"]
 
-Theorem preds_11:
+Theorem preds_11[simp]:
     (preds w1 = preds w2) = (w1 = w2)
 Proof
   rw[EQ_IMP_THM] >>
@@ -178,7 +176,6 @@ Proof
   qpat_x_assum `x = y` mp_tac >> rw[EXTENSION, preds_def] >>
   metis_tac [ordlt_REFL]
 QED
-val _ = export_rewrites ["preds_11"]
 
 Theorem ordlt_preds_mono:
   a < b ==> preds a <<= preds b
@@ -353,18 +350,16 @@ Definition fromNat_def:
   (fromNat 0 = oleast a. T) /\
   (fromNat (SUC n) = ordSUC (fromNat n))
 End
-Theorem fromNat_SUC = fromNat_def |> CONJUNCT2
-val _ = export_rewrites ["fromNat_SUC"]
+Theorem fromNat_SUC[simp] = fromNat_def |> CONJUNCT2
 
 val _ = add_numeral_form (#"o", SOME "fromNat")
 
 (* prints as 0 <= a *)
-Theorem ordlt_ZERO:
+Theorem ordlt_ZERO[simp]:
     ~(a < 0)
 Proof
  simp[fromNat_def] >> DEEP_INTRO_TAC oleast_intro >> simp[]
 QED
-val _ = export_rewrites ["ordlt_ZERO"]
 
 Theorem preds_surj =
   preds_bij |> SIMP_RULE (srw_ss()) [BIJ_DEF] |> CONJUNCT2
@@ -394,22 +389,20 @@ Proof
   simp[PSUBSET_DEF, EXTENSION] >> metis_tac [ordlt_REFL]
 QED
 
-Theorem ordlt_SUC:
+Theorem ordlt_SUC[simp]:
     a < ordSUC a
 Proof
   simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
   >- metis_tac[no_maximal_ordinal] >> simp[]
 QED
-val _ = export_rewrites ["ordlt_SUC"]
 
-Theorem ordSUC_ZERO:
+Theorem ordSUC_ZERO[simp]:
     ordSUC a <> 0
 Proof
   simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
   >- metis_tac [ordlt_SUC] >>
   rpt strip_tac >> fs[]
 QED
-val _ = export_rewrites ["ordSUC_ZERO"]
 
 Theorem ordlt_DISCRETE1:
     ~(a < b /\ b < ordSUC a)
@@ -425,7 +418,7 @@ Proof
   metis_tac [ordlt_trichotomy, ordlt_DISCRETE1]
 QED
 
-Theorem ordSUC_MONO:
+Theorem ordSUC_MONO[simp]:
     a^+ < b^+ <=> a < b
 Proof
   eq_tac >> spose_not_then strip_assume_tac
@@ -437,16 +430,14 @@ Proof
   `b < a^+` by metis_tac [ordlt_trichotomy] >>
   fs[ordlt_SUC_DISCRETE] >> metis_tac [ordlt_TRANS, ordlt_REFL]
 QED
-val _ = export_rewrites ["ordSUC_MONO"]
 
-Theorem ordSUC_11:
+Theorem ordSUC_11[simp]:
     (a^+ = b^+) <=> (a = b)
 Proof
   simp[EQ_IMP_THM] >> strip_tac >> spose_not_then assume_tac >>
   `a < b \/ b < a` by metis_tac [ordlt_trichotomy] >>
   metis_tac [ordlt_REFL, ordSUC_MONO]
 QED
-val _ = export_rewrites ["ordSUC_11"]
 
 Definition sup_def:
   sup ordset = oleast a. a NOTIN BIGUNION (IMAGE preds ordset)
@@ -545,16 +536,15 @@ Theorem suppred_suplt_ELIM =
   predimage_suplt_ELIM |> Q.INST [`f` |-> `\x.x`]
                        |> SIMP_RULE (srw_ss()) [];
 
-Theorem sup_EMPTY:
+Theorem sup_EMPTY[simp]:
     sup {} = 0
 Proof
   simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >>
   qx_gen_tac `a` >> disch_then (qspec_then `0` mp_tac) >>
   simp[ordle_lteq]
 QED
-val _ = export_rewrites ["sup_EMPTY"]
 
-Theorem sup_SING:
+Theorem sup_SING[simp]:
     sup {a} = a
 Proof
   simp[sup_def] >> DEEP_INTRO_TAC oleast_intro >> simp[] >> conj_tac >-
@@ -562,7 +552,6 @@ Proof
   simp[] >> qx_gen_tac `b` >> rw[ordle_lteq] >>
   metis_tac [ordlt_REFL]
 QED
-val _ = export_rewrites ["sup_SING"]
 
 Theorem sup_preds_SUC:
     sup (preds a^+) = a
@@ -628,34 +617,30 @@ Proof
   metis_tac [ordle_lteq]
 QED
 
-Theorem omax_EMPTY:
+Theorem omax_EMPTY[simp]:
     omax {} = NONE
 Proof
   simp[omax_NONE]
 QED
-val _ = export_rewrites ["omax_EMPTY"]
 
-Theorem preds_0:
+Theorem preds_0[simp]:
     preds 0 = {}
 Proof
   simp[preds_def]
 QED
-val _ = export_rewrites ["preds_0"]
 
-Theorem ordleq0:
+Theorem ordleq0[simp]:
     (x:'a ordinal) <= 0 <=> (x = 0)
 Proof
   eq_tac >> simp[ordle_lteq]
 QED
-val _ = export_rewrites ["ordleq0"]
 
-Theorem preds_EQ_EMPTY:
+Theorem preds_EQ_EMPTY[simp]:
     preds x = {} <=> x = 0
 Proof
   simp[EQ_IMP_THM] >> simp[EXTENSION] >>
   disch_then (qspec_then `0` mp_tac) >> simp[]
 QED
-val _ = export_rewrites ["preds_EQ_EMPTY"]
 
 Theorem omax_sup:
     (omax s = SOME a) ==> (sup s = a)
@@ -814,12 +799,11 @@ Proof
   dsimp [ordlt_SUC_DISCRETE, DECIDE ``m < SUC n <=> m < n \/ (m = n)``]
 QED
 
-Theorem fromNat_ordlt:
+Theorem fromNat_ordlt[simp]:
     (&n:'a ordinal < &m) <=> (n < m)
 Proof
   simp[ordlt_fromNat]
 QED
-val _ = export_rewrites ["fromNat_ordlt"]
 
 Theorem allNats_dwardclosedetc[local]:
     downward_closed { fromNat i : 'a ordinal | T } /\
@@ -852,19 +836,17 @@ Proof
   qexists_tac `SUC n` >> simp[]
 QED
 
-Theorem fromNat_lt_omega:
+Theorem fromNat_lt_omega[simp]:
     !n. &n < omega
 Proof
   simp[lt_omega]
 QED
-val _ = export_rewrites ["fromNat_lt_omega"]
 
-Theorem fromNat_eq_omega:
+Theorem fromNat_eq_omega[simp]:
     !n. &n <> omega
 Proof
   metis_tac [ordlt_REFL, fromNat_lt_omega]
 QED
-val _ = export_rewrites ["fromNat_eq_omega"]
 
 (* recursion principles *)
 Theorem restrict_away[local]:
@@ -905,7 +887,7 @@ val ordADD_def = new_specification(
 val _ = export_rewrites ["ordADD_def"]
 Overload "+" = ``ordADD``
 
-Theorem ordADD_0L:
+Theorem ordADD_0L[simp]:
     !a:'a ordinal. 0 + a = a
 Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> qx_gen_tac `a` >>
@@ -914,7 +896,6 @@ Proof
     by (rpt (asm_simp_tac (srw_ss() ++ CONJ_ss)[EXTENSION])) >>
   fs[sup_preds_omax_NONE]
 QED
-val _ = export_rewrites ["ordADD_0L"]
 
 Theorem ubsup_thm:
     (!a. a IN s ==> a < b) ==> !c. c < sup s <=> ?d. d IN s /\ c < d
@@ -927,12 +908,11 @@ Proof
   `d <= a`by metis_tac[] >> fs[ordle_lteq] >> rw[] >> metis_tac [ordlt_TRANS]
 QED
 
-Theorem ordADD_fromNat:
+Theorem ordADD_fromNat[simp]:
     ordADD (&n) (&m) = &(n + m)
 Proof
   Induct_on `m` >> simp[arithmeticTheory.ADD_CLAUSES]
 QED
-val _ = export_rewrites ["ordADD_fromNat"]
 
 Theorem omax_preds_omega:
     omax (preds omega) = NONE
@@ -962,28 +942,25 @@ QED
 Theorem lt_suppreds =
   predimage_sup_thm |> Q.INST [`f` |-> `\x. x`] |> SIMP_RULE (srw_ss()) []
 
-Theorem ORD_ONE:
+Theorem ORD_ONE[simp]:
     0^+ = 1
 Proof
   simp_tac bool_ss [GSYM fromNat_SUC] >> simp[]
 QED
-val _ = export_rewrites ["ORD_ONE"]
 
-Theorem ordSUC_NUMERAL:
+Theorem ordSUC_NUMERAL[simp]:
     (&NUMERAL n)^+ = &(NUMERAL n + 1)
 Proof
   simp[GSYM arithmeticTheory.ADD1]
 QED
-val _ = export_rewrites ["ordSUC_NUMERAL"]
 
-Theorem ordZERO_ltSUC:
+Theorem ordZERO_ltSUC[simp]:
     0 < x^+
 Proof
   metis_tac [ordSUC_ZERO, ordlt_ZERO, ordlt_trichotomy]
 QED
-val _ = export_rewrites ["ordZERO_ltSUC"]
 
-Theorem ordlt_CANCEL_ADDR:
+Theorem ordlt_CANCEL_ADDR[simp]:
     !(b:'a ordinal) a. a < a + b <=> 0 < b
 Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> conj_tac
@@ -994,15 +971,13 @@ Proof
   simp_tac (srw_ss() ++ CONJ_ss)[predimage_sup_thm] >> rpt strip_tac >>
   simp[GSYM lt_suppreds] >> fs[sup_preds_omax_NONE]
 QED
-val _ = export_rewrites ["ordlt_CANCEL_ADDR"]
 
-Theorem ordlt_CANCEL_ADDL:
+Theorem ordlt_CANCEL_ADDL[simp]:
     a + b < a <=> F
 Proof
   simp[ordle_lteq] >> Cases_on `0 < b` >> simp[] >>
   fs[ordleq0]
 QED
-val _ = export_rewrites ["ordlt_CANCEL_ADDL"]
 
 Theorem ordADD_CANCEL_LEMMA0[local]:
     a = a + c <=> c = 0
@@ -1011,11 +986,10 @@ Proof
   qsuff_tac `a < a + c` >- metis_tac[ordlt_REFL] >> simp[] >>
   spose_not_then strip_assume_tac >> fs[ordle_lteq]
 QED
-Theorem ordADD_CANCEL1 =
+Theorem ordADD_CANCEL1[simp] =
   CONJ (GEN_ALL ordADD_CANCEL_LEMMA0)
        (ordADD_CANCEL_LEMMA0 |> CONV_RULE (LAND_CONV (REWR_CONV EQ_SYM_EQ))
                              |> GEN_ALL)
-val _ = export_rewrites ["ordADD_CANCEL1"]
 
 Theorem ordADD_MONO:
     !b:'a ordinal a c. a < b ==> c + a < c + b
@@ -1029,22 +1003,20 @@ Proof
   metis_tac[]
 QED
 
-Theorem ordlt_CANCEL:
+Theorem ordlt_CANCEL[simp]:
     !b a (c:'a ordinal). c + a < c + b <=> a < b
 Proof
   simp[EQ_IMP_THM, ordADD_MONO] >> rpt strip_tac >>
   metis_tac[ordlt_trichotomy, ordlt_REFL, ordlt_TRANS, ordADD_MONO]
 QED
-val _ = export_rewrites ["ordlt_CANCEL"]
 
-Theorem ordADD_RIGHT_CANCEL:
+Theorem ordADD_RIGHT_CANCEL[simp]:
     !b a c. ((a:'a ordinal) + b = a + c) <=> (b = c)
 Proof
   metis_tac[ordlt_trichotomy, ordADD_MONO, ordlt_REFL]
 QED
-val _ = export_rewrites ["ordADD_RIGHT_CANCEL"]
 
-Theorem leqLEFT_CANCEL:
+Theorem leqLEFT_CANCEL[simp]:
     !x a. x <= a + x
 Proof
   ho_match_mp_tac simple_ord_induction >> rpt conj_tac >- simp[] >- simp[] >>
@@ -1055,7 +1027,6 @@ Proof
   `a + x < a + b` by metis_tac [ordle_lteq, ordlt_TRANS] >>
   fs[] >> metis_tac[ordlt_TRANS, ordlt_REFL]
 QED
-val _ = export_rewrites ["leqLEFT_CANCEL"]
 
 Theorem lemma[local]:
     !c a b:'a ordinal. a < b /\ b < a + c ==> ?d. a + d = b
@@ -1083,12 +1054,11 @@ Proof
   simp[ordle_lteq] >> metis_tac [ordlt_EXISTS_ADD, ordADD_def]
 QED
 
-Theorem ordle_CANCEL_ADDR:
+Theorem ordle_CANCEL_ADDR[simp]:
     x <= x + a
 Proof
   simp[ordle_lteq] >> metis_tac[ordlt_trichotomy, ordlt_ZERO]
 QED
-val _ = export_rewrites ["ordle_CANCEL_ADDR"]
 
 Theorem dclose_BIGUNION:
     dclose s = BIGUNION (IMAGE preds s)
@@ -1309,20 +1279,19 @@ val ordMULT_def = new_specification(
 val _ = export_rewrites ["ordMULT_def"]
 Overload "*" = ``ordMULT``
 
-Theorem ordMULT_0L:
+Theorem ordMULT_0L[simp]:
     !a:'a ordinal. 0 * a = 0
 Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> qx_gen_tac `a` >>
   strip_tac >> qsuff_tac `IMAGE ($* 0) (preds a) = {0}` >> simp[] >>
   simp[EXTENSION] >> metis_tac[]
 QED
-val _ = export_rewrites ["ordMULT_0L"]
 
 Theorem ordMULT_0R:   !a:'a ordinal. a * 0 = 0
 Proof simp[]
 QED
 
-Theorem ordMULT_1L:
+Theorem ordMULT_1L[simp]:
     !a. 1 * (a:'a ordinal) = a
 Proof
   ho_match_mp_tac simple_ord_induction >> simp[ADD1R] >> qx_gen_tac `a` >>
@@ -1330,14 +1299,12 @@ Proof
   >- fs [sup_preds_omax_NONE] >>
   dsimp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) []
 QED
-val _ = export_rewrites ["ordMULT_1L"]
 
-Theorem ordMULT_1R:
+Theorem ordMULT_1R[simp]:
     !a:'a ordinal. a * 1 = a
 Proof
   simp_tac bool_ss [GSYM ORD_ONE, ordMULT_def, ordADD_0L]
 QED
-val _ = export_rewrites ["ordMULT_1R"]
 
 Theorem ordMULT_2R:
     (a:'a ordinal) * 2 = a + a
@@ -1377,13 +1344,12 @@ Proof
   metis_tac [ordMULT_lt_MONO_R]
 QED
 
-Theorem ordMULT_lt_MONO_R_EQN:
+Theorem ordMULT_lt_MONO_R_EQN[simp]:
     c * a < c * b <=> a < b /\ 0 < c
 Proof
   simp[EQ_IMP_THM, ordMULT_lt_MONO_R] >>
   Cases_on `0 < c` >- metis_tac [ordMULT_le_MONO_R] >> fs[]
 QED
-val _ = export_rewrites ["ordMULT_lt_MONO_R_EQN"]
 
 Theorem ordADD_le_MONO_L:
     x <= y ==> x + z <= y + z
@@ -1409,7 +1375,7 @@ Proof
   simp[] >> metis_tac[]
 QED
 
-Theorem ordMULT_CANCEL_R:
+Theorem ordMULT_CANCEL_R[simp]:
     (z * x = z * y:'a ordinal) <=> (z = 0) \/ (x = y)
 Proof
   simp[EQ_IMP_THM, DISJ_IMP_THM] >> strip_tac >>
@@ -1417,7 +1383,6 @@ Proof
   `x < y \/ (x = y) \/ y < x` by metis_tac [ordlt_trichotomy] >>
   metis_tac [ordMULT_lt_MONO_R_EQN, ordlt_REFL]
 QED
-val _ = export_rewrites ["ordMULT_CANCEL_R"]
 
 val ordMULT_continuous0 =
   generic_continuity |> Q.INST [`f` |-> `$* a`]
@@ -1429,12 +1394,11 @@ Proof
   rpt strip_tac >> Cases_on `s = {}` >> simp[ordMULT_continuous0]
 QED
 
-Theorem ordMULT_fromNat:
+Theorem ordMULT_fromNat[simp]:
     (&n : 'a ordinal) * &m = &(n * m)
 Proof
   Induct_on `m` >> simp[arithmeticTheory.MULT_CLAUSES]
 QED
-val _ = export_rewrites ["ordMULT_fromNat"]
 
 Theorem omega_MUL_fromNat:
     0 < n ==> &n * omega = omega
@@ -1610,21 +1574,19 @@ val ordEXP_def = new_specification(
 val _ = export_rewrites ["ordEXP_def"]
 Overload "**" = ``ordEXP``
 
-Theorem ordEXP_1R:
+Theorem ordEXP_1R[simp]:
     (a:'a ordinal) ** 1 = a
 Proof
   simp_tac bool_ss [GSYM ORD_ONE, ordEXP_def] >> simp[]
 QED
-val _ = export_rewrites ["ordEXP_1R"]
 
-Theorem ordEXP_1L:
+Theorem ordEXP_1L[simp]:
     !a:'a ordinal. 1 ** a = 1
 Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >> qx_gen_tac `a` >>
   strip_tac >> qsuff_tac `IMAGE ($** 1) (preds a) = {1}` >> simp[] >>
   simp[EXTENSION] >> asm_simp_tac (srw_ss() ++ CONJ_ss) [] >> metis_tac[]
 QED
-val _ = export_rewrites ["ordEXP_1L"]
 
 Theorem ordEXP_2R:
     (a:'a ordinal) ** 2 = a * a
@@ -1632,12 +1594,11 @@ Proof
   `2 = 1^+` by simp[] >> pop_assum SUBST1_TAC >> simp[]
 QED
 
-Theorem ordEXP_fromNat:
+Theorem ordEXP_fromNat[simp]:
     (&x:'a ordinal) ** &n = &(x ** n)
 Proof
   Induct_on `n` >> simp[arithmeticTheory.EXP]
 QED
-val _ = export_rewrites ["ordEXP_fromNat"]
 
 Theorem ordEXP_le_MONO_L:
     !x a b. a <= b ==> a ** x <= b ** x
@@ -1661,20 +1622,18 @@ Proof
   metis_tac [ordlt_trichotomy, ordlt_ZERO]
 QED
 
-Theorem islimit_SUC:
+Theorem islimit_SUC[simp]:
     islimit x^+ <=> F
 Proof
   simp[omax_NONE, impI, ordlt_SUC_DISCRETE] >>
   metis_tac[ordle_lteq]
 QED
-val _ = export_rewrites ["islimit_SUC"]
 
-Theorem islimit_fromNat:
+Theorem islimit_fromNat[simp]:
     islimit &x <=> x = 0
 Proof
   Cases_on `x` >> simp[]
 QED
-val _ = export_rewrites ["islimit_fromNat"]
 
 Theorem ordEXP_ZERO_limit:
     !x. islimit x ==> 0 ** x = 1
@@ -1717,7 +1676,7 @@ Proof
   disch_then (K ALL_TAC) >> simp[EXTENSION] >> metis_tac[]
 QED
 
-Theorem ordADD_EQ_0:
+Theorem ordADD_EQ_0[simp]:
     !y x. (x:'a ordinal) + y = 0 <=> x = 0 /\ y = 0
 Proof
   ho_match_mp_tac simple_ord_induction >> simp[] >>
@@ -1729,7 +1688,6 @@ Proof
   qexists_tac `x^+` >> simp[] >> qexists_tac `1` >>
   metis_tac [ADD1R, islimit_SUC_lt, ORD_ONE]
 QED
-val _ = export_rewrites ["ordADD_EQ_0"]
 
 Theorem IMAGE_EQ_SING:
     IMAGE f s = {x} <=> (?y. y IN s) /\ !y. y IN s ==> f y = x
@@ -1737,7 +1695,7 @@ Proof
   simp[EXTENSION] >> metis_tac []
 QED
 
-Theorem ordMULT_EQ_0:
+Theorem ordMULT_EQ_0[simp]:
     !x y. x * y = 0 <=> x = 0 \/ y = 0
 Proof
   CONV_TAC SWAP_FORALL_CONV >>
@@ -1751,7 +1709,6 @@ Proof
       disch_then match_mp_tac >> metis_tac [islimit_SUC_lt, ORD_ONE]) >>
   simp[IMAGE_EQ_SING] >> metis_tac[]
 QED
-val _ = export_rewrites ["ordMULT_EQ_0"]
 
 Theorem ordEXP_EQ_0:
     !y x. x ** y = 0 <=> x = 0 /\ ~islimit y
@@ -1793,14 +1750,13 @@ Proof
   metis_tac[]
 QED
 
-Theorem ordEXP_lt_IFF:
+Theorem ordEXP_lt_IFF[simp]:
     !x y a:'a ordinal. 1 < a ==> (a ** x < a ** y <=> x < y)
 Proof
   simp[EQ_IMP_THM, ordEXP_lt_MONO_R] >> rpt strip_tac >>
   spose_not_then strip_assume_tac >> fs[ordle_lteq]
   >- metis_tac[ordlt_TRANS, ordlt_REFL, ordEXP_lt_MONO_R] >> fs[]
 QED
-val _ = export_rewrites ["ordEXP_lt_IFF"]
 
 Theorem ordEXP_le_MONO_R:
     !x y a. 0 < a /\ x <= y ==> a ** x <= a ** y
@@ -1930,24 +1886,21 @@ val one_lt_epsilon0 =
              |> SIMP_RULE (srw_ss()) []
 
 (* |- omega < epsilon0 *)
-Theorem omega_lt_epsilon0 =
+Theorem omega_lt_epsilon0[simp] =
   MATCH_MP epsilon0_least_fixpoint one_lt_epsilon0
            |> SIMP_RULE (srw_ss()) []
-val _ = export_rewrites ["omega_lt_epsilon0"]
 
-Theorem fromNat_lt_epsilon0:
+Theorem fromNat_lt_epsilon0[simp]:
     &n < epsilon0
 Proof
   metis_tac [ordlt_TRANS, fromNat_lt_omega, omega_lt_epsilon0]
 QED
-val _ = export_rewrites ["fromNat_lt_epsilon0"]
 
-Theorem add_nat_islimit:
+Theorem add_nat_islimit[simp]:
     0 < n ==> islimit (a + &n) = F
 Proof
   Induct_on `n` >> simp[]
 QED
-val _ = export_rewrites ["add_nat_islimit"]
 
 Theorem strict_continuity_preserves_islimit:
     (!s. s <<= univ(:'a inf) /\ s <> {} ==>
@@ -1971,13 +1924,12 @@ Proof
   match_mp_tac suple_thm >> simp[preds_inj_univ]
 QED
 
-Theorem add_omega_islimit:
+Theorem add_omega_islimit[simp]:
     islimit (a + omega)
 Proof
   ho_match_mp_tac strict_continuity_preserves_islimit >>
   simp[omax_preds_omega, ordADD_continuous]
 QED
-val _ = export_rewrites ["add_omega_islimit"]
 
 Theorem islimit_mul_R:
     !a. islimit a ==> islimit (b * a)
@@ -2112,11 +2064,10 @@ Proof
   metis_tac [ordlet_TRANS]
 QED
 
-Definition eval_poly_def:
+Definition eval_poly_def[simp]:
   eval_poly (a:'a ordinal) [] = 0 /\
   eval_poly a ((c,e)::t) = a ** e * c + eval_poly a t
 End
-val _ = export_rewrites ["eval_poly_def"]
 
 Definition is_polyform_def:
   (is_polyform (a:'a ordinal) [] <=> T) /\
@@ -2293,13 +2244,12 @@ Proof
   fs[] >> metis_tac[is_polyform_CONS_E, expbounds]
 QED
 
-Theorem cx_lt_x:
+Theorem cx_lt_x[simp]:
     x * c < (x:'a ordinal) <=> 0 < x /\ c = 0
 Proof
   simp_tac bool_ss [SimpLHS, SimpR ``ordlt``, Once (GSYM ordMULT_1R)] >>
   simp[] >> metis_tac [IFF_ZERO_lt]
 QED
-val _ = export_rewrites ["cx_lt_x"]
 
 Theorem explemma[local]:
     1 < a /\ a ** e1 * c1 + eval_poly a t1 = a ** e2 * c2 + eval_poly a t2 /\

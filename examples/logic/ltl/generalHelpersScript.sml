@@ -7,9 +7,9 @@ Ancestors
 
 val _ = ParseExtras.temp_loose_equality()
 
-val NONEMPTY_LEMM = store_thm
-  ("NONEMPTY_LEMM",
-   ``!s. ~(s = {}) ==> ?e s'. (s = {e} ∪ s') /\ ~(e ∈ s')``,
+Theorem NONEMPTY_LEMM:
+     !s. ~(s = {}) ==> ?e s'. (s = {e} ∪ s') /\ ~(e ∈ s')
+Proof
    rpt strip_tac >> fs[] >> qexists_tac `CHOICE s`
    >> qexists_tac `s DIFF {CHOICE s}` >> strip_tac
      >- (`(s ⊆ {CHOICE s} ∪ (s DIFF {CHOICE s}))
@@ -17,69 +17,69 @@ val NONEMPTY_LEMM = store_thm
            suffices_by metis_tac[SET_EQ_SUBSET]
          >> strip_tac >> (fs[SUBSET_DEF,CHOICE_DEF]))
      >- simp[DIFF_DEF]
-  );
+QED
 
-val RRESTRICT_TRANS = store_thm
- ("RRESTRICT_TRANS",
-  ``!s r. transitive r ==> transitive (rrestrict r s)``,
+Theorem RRESTRICT_TRANS:
+    !s r. transitive r ==> transitive (rrestrict r s)
+Proof
    rpt strip_tac >> fs[transitive_def, rrestrict_def]
    >> rpt strip_tac >> metis_tac[]
- );
+QED
 
-val RRESTRICT_ANTISYM = store_thm
-  ("RRESTRICT_ANTISYM",
-  ``!s r. antisym r ==> antisym (rrestrict r s)``,
+Theorem RRESTRICT_ANTISYM:
+    !s r. antisym r ==> antisym (rrestrict r s)
+Proof
    rpt strip_tac >> fs[antisym_def, in_rrestrict]
-  );
+QED
 
-val ADD_N_INJ_LEMM = store_thm
-  ("ADD_N_INJ_LEMM",
-  ``!n x y. ((\x. x+n ) x = (\x. x+n) y) ==> (x = y)``,
+Theorem ADD_N_INJ_LEMM:
+    !n x y. ((\x. x+n ) x = (\x. x+n) y) ==> (x = y)
+Proof
   rpt strip_tac >> Induct_on `n` >> fs[]
   >> rw[ADD_SUC]
-  );
+QED
 
-val ADD_N_IMAGE_LEMM = store_thm
-  ("ADD_N_IMAGE_LEMM",
-  ``!n. IMAGE (\x. x+n) 𝕌(:num) = { x | x >= n }``,
+Theorem ADD_N_IMAGE_LEMM:
+    !n. IMAGE (\x. x+n) 𝕌(:num) = { x | x >= n }
+Proof
   strip_tac >> fs[IMAGE_DEF]
   >> `({n + x | x | T} ⊆ {x | x ≥ n}) /\ ({x | x ≥ n} ⊆ {n + x | x | T})`
         suffices_by metis_tac[SET_EQ_SUBSET]
   >> rpt strip_tac >> fs[SUBSET_DEF]
   >> rpt strip_tac
   >> qexists_tac `x - n` >> simp[]
-  );
+QED
 
-val SUBS_UNION_LEMM = store_thm
-  ("SUBS_UNION_LEMM",
-  ``!s s1 s2. (s = s1) \/ (s = s2) ==> (s ⊆ s1 ∪ s2)``,
+Theorem SUBS_UNION_LEMM:
+    !s s1 s2. (s = s1) \/ (s = s2) ==> (s ⊆ s1 ∪ s2)
+Proof
   rpt strip_tac >> metis_tac[SUBSET_UNION]
-  );
+QED
 
-val SUBS_UNION_LEMM2 = store_thm
-  ("SUBS_UNION_LEMM2",
-  ``!s s1 s2 s3. s ⊆ s1 ∪ s2 /\ s1 ⊆ s3 ==> s ⊆ s3 ∪ s2``,
+Theorem SUBS_UNION_LEMM2:
+    !s s1 s2 s3. s ⊆ s1 ∪ s2 /\ s1 ⊆ s3 ==> s ⊆ s3 ∪ s2
+Proof
   fs[UNION_DEF, SUBSET_DEF] >> rpt strip_tac
   >> `x ∈ s1 \/ x ∈ s2` by metis_tac[]
   >> metis_tac[]
-  );
+QED
 
-val INFINITE_DIFF_FINITE = store_thm
-  ("INFINITE_DIFF_FINITE",
-   ``!s t. INFINITE s ∧ FINITE t ==> INFINITE (s DIFF t)``,
+Theorem INFINITE_DIFF_FINITE:
+     !s t. INFINITE s ∧ FINITE t ==> INFINITE (s DIFF t)
+Proof
    rpt strip_tac >> metis_tac[FINITE_DIFF_down]
-  );
+QED
 
-val INSERT_LEMM = store_thm
-  ("INSERT_LEMM",
-  ``!f q e s. {f q | q ∈ e INSERT s } = f e INSERT {f q | q ∈ s }``,
+Theorem INSERT_LEMM:
+    !f q e s. {f q | q ∈ e INSERT s } = f e INSERT {f q | q ∈ s }
+Proof
    fs[SET_EQ_SUBSET, SUBSET_DEF] >> rpt strip_tac
    >> metis_tac[]
-  );
+QED
 
-val POW_11 = store_thm
-  ("POW_11",
-   ``!s1 s2. (POW s1 = POW s2) = (s1 = s2)``,
+Theorem POW_11:
+     !s1 s2. (POW s1 = POW s2) = (s1 = s2)
+Proof
    simp[EQ_IMP_THM] >> fs[]
    >> `∀s1 s2. (POW s1 = POW s2) ⇒ s1 ⊆ s2` suffices_by metis_tac[SET_EQ_SUBSET]
    >> fs[SET_EQ_SUBSET,SUBSET_DEF,POW_DEF] >> rpt strip_tac
@@ -89,21 +89,21 @@ val POW_11 = store_thm
          >> simp[]
    )
    >> fs[]
-  );
+QED
 
-val IN_BIGINTER_SUBSET = store_thm
-  ("IN_BIGINTER_SUBSET",
-   ``!x P. (x ∈ P) ==> (BIGINTER P ⊆ x)``,
+Theorem IN_BIGINTER_SUBSET:
+     !x P. (x ∈ P) ==> (BIGINTER P ⊆ x)
+Proof
    rpt strip_tac
    >> `x INSERT P = P` by simp[SET_EQ_SUBSET,SUBSET_DEF]
    >> `x ∩ BIGINTER P = BIGINTER P` by metis_tac[BIGINTER_INSERT]
    >> metis_tac[INTER_SUBSET]
-  );
+QED
 
-val NO_BOUNDS_INFINITE = store_thm
-  ("NO_BOUNDS_INFINITE",
-  ``!f. (!i. i <= f i)
-  ==> INFINITE { f i | i ∈ 𝕌(:num) }``,
+Theorem NO_BOUNDS_INFINITE:
+    !f. (!i. i <= f i)
+  ==> INFINITE { f i | i ∈ 𝕌(:num) }
+Proof
   rpt strip_tac >> fs[FINITE_WEAK_ENUMERATE]
   >> `linear_order (rrestrict (rel_to_reln $<=) {f' n | n < b }) {f' n | n < b }`
      by (fs[linear_order_def,rrestrict_def,rel_to_reln_def] >> rpt strip_tac
@@ -148,12 +148,12 @@ val NO_BOUNDS_INFINITE = store_thm
         )
         >> fs[]
         )
-  );
+QED
 
-val FIXPOINT_EXISTS = store_thm
-  ("FIXPOINT_EXISTS",
-  ``!Rel f. WF Rel /\ (!y. (RC Rel) (f y) y)
-                    ==> (!x. ?n. !m. (m >= n) ==> (FUNPOW f m x = FUNPOW f n x))``,
+Theorem FIXPOINT_EXISTS:
+    !Rel f. WF Rel /\ (!y. (RC Rel) (f y) y)
+                    ==> (!x. ?n. !m. (m >= n) ==> (FUNPOW f m x = FUNPOW f n x))
+Proof
    rpt gen_tac >> strip_tac
     >> IMP_RES_THEN ho_match_mp_tac WF_INDUCTION_THM
     >> rpt strip_tac
@@ -169,7 +169,7 @@ val FIXPOINT_EXISTS = store_thm
            >- (`m >= SUC n` by simp[] >> metis_tac[])
        )
     >- (exists_tac ``0`` >> simp[FUNPOW] >> Induct_on `m` >> simp[FUNPOW])
-  );
+QED
 
 Definition char_def:   char Σ p = { a | (a ∈ Σ) /\ (p ∈ a)}
 End
@@ -177,17 +177,17 @@ End
 Definition char_neg_def:   char_neg Σ p = Σ DIFF (char Σ p)
 End
 
-val CHAR_LEMM = store_thm
-  ("CHAR_LEMM",
-   ``!Σ x. char Σ x ⊆ Σ``,
+Theorem CHAR_LEMM:
+     !Σ x. char Σ x ⊆ Σ
+Proof
    fs[char_def,SUBSET_DEF] >> rpt strip_tac
-  );
+QED
 
-val CHAR_NEG_LEMM = store_thm
-  ("CHAR_NEG_LEMM",
-   ``!Σ x. char_neg Σ x ⊆ Σ``,
+Theorem CHAR_NEG_LEMM:
+     !Σ x. char_neg Σ x ⊆ Σ
+Proof
    fs[char_neg_def,DIFF_SUBSET]
-  );
+QED
 
 Definition d_conj_def:
    d_conj d1 d2 = { (a1 ∩ a2, e1 ∪ e2) | ((a1,e1) ∈ d1) /\ ((a2,e2) ∈ d2)}
@@ -197,15 +197,15 @@ Definition d_conj_set_def:
   d_conj_set ts Σ = ITSET (d_conj o SND) ts {(Σ, {})}
 End
 
-val D_CONJ_UNION_DISTR = store_thm
-  ("D_CONJ_UNION_DISTR",
-  ``!s t d. d_conj s (t ∪ d) = (d_conj s t) ∪ (d_conj s d)``,
+Theorem D_CONJ_UNION_DISTR:
+    !s t d. d_conj s (t ∪ d) = (d_conj s t) ∪ (d_conj s d)
+Proof
    rpt strip_tac >> fs[d_conj_def] >> rw[SET_EQ_SUBSET]
    >> fs[SUBSET_DEF] >> rpt strip_tac >> metis_tac[]
-                             );
-val D_CONJ_FINITE = store_thm
-  ("D_CONJ_FINITE",
-   ``!s d. FINITE s ∧ FINITE d ==> FINITE (d_conj s d)``,
+QED
+Theorem D_CONJ_FINITE:
+     !s d. FINITE s ∧ FINITE d ==> FINITE (d_conj s d)
+Proof
    rpt gen_tac
    >> `d_conj s d = {(a1 ∩ a2, e1 ∪ e2) | ((a1,e1),a2,e2) ∈ s × d}`
        by fs[CROSS_DEF, FST, SND, d_conj_def]
@@ -226,18 +226,18 @@ val D_CONJ_FINITE = store_thm
             )
     )
    >> metis_tac[IMAGE_FINITE]
-  );
+QED
 
-val D_CONJ_ASSOC = store_thm
-  ("D_CONJ_ASSOC",
-  ``!s d t. d_conj s (d_conj d t) = d_conj (d_conj s d) t``,
+Theorem D_CONJ_ASSOC:
+    !s d t. d_conj s (d_conj d t) = d_conj (d_conj s d) t
+Proof
   simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[d_conj_def]
   >> metis_tac[INTER_ASSOC,UNION_ASSOC]
-  );
+QED
 
-val D_CONJ_COMMUTES = store_thm
-  ("D_CONJ_COMMUTES",
-  ``!s d t. d_conj s (d_conj d t) = d_conj d (d_conj s t)``,
+Theorem D_CONJ_COMMUTES:
+    !s d t. d_conj s (d_conj d t) = d_conj d (d_conj s t)
+Proof
   simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[d_conj_def]
     >- (qexists_tac `a1'` >> qexists_tac `a1 ∩ a2'`
         >> qexists_tac `e1'` >> qexists_tac `e1 ∪ e2'`
@@ -255,24 +255,24 @@ val D_CONJ_COMMUTES = store_thm
           >- metis_tac[]
           >- metis_tac[]
        )
-  );
+QED
 
-val D_CONJ_SND_COMMUTES = store_thm
-  ("D_CONJ_SND_COMMUTES",
-  ``!s d t. (d_conj o SND) s ((d_conj o SND) d t)
-          = (d_conj o SND) d ((d_conj o SND) s t)``,
+Theorem D_CONJ_SND_COMMUTES:
+    !s d t. (d_conj o SND) s ((d_conj o SND) d t)
+          = (d_conj o SND) d ((d_conj o SND) s t)
+Proof
   rpt strip_tac >> fs[SND] >> metis_tac[D_CONJ_COMMUTES]
-  );
+QED
 
-val D_CONJ_SET_RECURSES = store_thm
-  ("D_CONJ_SET_RECURSES",
-  ``!s. FINITE s ==>
+Theorem D_CONJ_SET_RECURSES:
+    !s. FINITE s ==>
       ∀e b. ITSET (d_conj o SND) (e INSERT s) b =
-                          (d_conj o SND) e (ITSET (d_conj o SND) (s DELETE e) b)``,
+                          (d_conj o SND) e (ITSET (d_conj o SND) (s DELETE e) b)
+Proof
   rpt strip_tac
   >> HO_MATCH_MP_TAC COMMUTING_ITSET_RECURSES
   >> metis_tac[D_CONJ_SND_COMMUTES]
-  );
+QED
 
 (* val D_CONJ_SET_SND = store_thm *)
 (*   ("D_CONJ_SET_SND", *)
@@ -366,10 +366,10 @@ val D_CONJ_SET_RECURSES = store_thm
 
 
 
-val D_CONJ_SET_LEMM = store_thm
-  ("D_CONJ_SET_LEMM",
-  ``!A s. FINITE s ==> !a e.(a,e) ∈ d_conj_set s A
-           ==> (!q d. (q,d) ∈ s ==> ?a' e'. (a',e') ∈ d ∧ a ⊆ a' ∧ e' ⊆ e)``,
+Theorem D_CONJ_SET_LEMM:
+    !A s. FINITE s ==> !a e.(a,e) ∈ d_conj_set s A
+           ==> (!q d. (q,d) ∈ s ==> ?a' e'. (a',e') ∈ d ∧ a ⊆ a' ∧ e' ⊆ e)
+Proof
   gen_tac >> Induct_on `s` >> rpt strip_tac >> fs[NOT_IN_EMPTY]
   >> `(a,e') ∈ (d_conj o SND) e (d_conj_set s A)` by (
       fs[d_conj_set_def, DELETE_NON_ELEMENT]
@@ -389,23 +389,23 @@ val D_CONJ_SET_LEMM = store_thm
         >> qexists_tac `a'` >> qexists_tac `e''`
         >> metis_tac[SUBSET_DEF,IN_INTER,IN_UNION]
         )
-  );
+QED
 
-val D_CONJ_SET_LEMM2 = store_thm
-  ("D_CONJ_SET_LEMM2",
-  ``!A s a e. FINITE s ∧ (a,e) ∈ d_conj_set s A
-     ==> (!q d. (q,d) ∈ s ==> ?a' e'. (a',e') ∈ d ∧ a ⊆ a' ∧ e' ⊆ e)``,
+Theorem D_CONJ_SET_LEMM2:
+    !A s a e. FINITE s ∧ (a,e) ∈ d_conj_set s A
+     ==> (!q d. (q,d) ∈ s ==> ?a' e'. (a',e') ∈ d ∧ a ⊆ a' ∧ e' ⊆ e)
+Proof
   rpt strip_tac >> metis_tac[D_CONJ_SET_LEMM]
-  );
+QED
 
-val D_CONJ_SET_LEMM2_STRONG = store_thm
-  ("D_CONJ_SET_LEMM2_STRONG",
-  ``!A s. FINITE s
+Theorem D_CONJ_SET_LEMM2_STRONG:
+    !A s. FINITE s
       ==> !a e. (a,e) ∈ d_conj_set s A
         ==> (?f_a f_e. !q d.
            ((q,d) ∈ s ==> (f_a q d,f_e q d) ∈ d ∧ a ⊆ f_a q d ∧ f_e q d ⊆ e)
          ∧ (A ∩ BIGINTER {f_a q d | (q,d) ∈ s } = a)
-         ∧ (BIGUNION {f_e q d | (q,d) ∈ s } = e))``,
+         ∧ (BIGUNION {f_e q d | (q,d) ∈ s } = e))
+Proof
   gen_tac >> Induct_on `s` >> rpt strip_tac
   >- (fs[NOT_IN_EMPTY,d_conj_set_def,ITSET_THM])
   >- (rename[`(a,e1) ∈ d_conj_set (e INSERT s) A`]
@@ -453,16 +453,16 @@ val D_CONJ_SET_LEMM2_STRONG = store_thm
          >> rw[] >> metis_tac[UNION_COMM]
          )
      )
-  );
+QED
 
-val D_CONJ_SET_LEMM3 = store_thm
-  ("D_CONJ_SET_LEMM3",
-   ``!s A a a' e'. FINITE s
+Theorem D_CONJ_SET_LEMM3:
+     !s A a a' e'. FINITE s
         ∧ (!q d. (q,d) ∈ s ==> (a' q,e' q) ∈ d ∧ a ⊆ a' q)
         ∧ (a ⊆ A)
      ==> (A ∩ BIGINTER {a' q | q ∈ IMAGE FST s },
           BIGUNION {e' q | q ∈ IMAGE FST s})
-                      ∈ d_conj_set s A``,
+                      ∈ d_conj_set s A
+Proof
     `!s. FINITE (s:α # ((β -> bool) # (γ -> bool) -> bool) -> bool)
         ==>
          (!A a a' e'. (!q d. (q,d) ∈ s  ==> (a' q,e' q) ∈ d ∧ a ⊆ a' q)
@@ -489,53 +489,53 @@ val D_CONJ_SET_LEMM3 = store_thm
          >> simp[IN_IMAGE] >> dsimp[] >> simp[SET_EQ_SUBSET,SUBSET_DEF,IN_BIGINTER]
          >> rpt strip_tac >> metis_tac[]
         )
-  );
+QED
 
 Definition MEM_SUBSET_def:
     (MEM_SUBSET [] l = T)
   ∧ (MEM_SUBSET (h::ls) l = (MEM h l ∧ MEM_SUBSET ls l))
 End
 
-val MEM_SUBSET_SET_TO_LIST = store_thm
-  ("MEM_SUBSET_SET_TO_LIST",
-   ``!l1 l2. MEM_SUBSET l1 l2 = (set l1 ⊆ set l2)``,
+Theorem MEM_SUBSET_SET_TO_LIST:
+     !l1 l2. MEM_SUBSET l1 l2 = (set l1 ⊆ set l2)
+Proof
    Induct_on `l1` >> fs[MEM_SUBSET_def] >> rpt strip_tac
-  );
+QED
 
-val MEM_SUBSET_REFL = store_thm
-  ("MEM_SUBSET_REFL",
-   ``!l. MEM_SUBSET l l``,
+Theorem MEM_SUBSET_REFL:
+     !l. MEM_SUBSET l l
+Proof
    Induct_on `l` >> fs[MEM_SUBSET_def] >> rpt strip_tac
    >> metis_tac[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF,MEM]
-  );
+QED
 
-val MEM_SUBSET_APPEND = store_thm
-  ("MEM_SUBSET_APPEND",
-   ``!l1 l2. MEM_SUBSET l1 (l1++l2)
-           ∧ MEM_SUBSET l2 (l1++l2)``,
+Theorem MEM_SUBSET_APPEND:
+     !l1 l2. MEM_SUBSET l1 (l1++l2)
+           ∧ MEM_SUBSET l2 (l1++l2)
+Proof
    rpt strip_tac
    >> metis_tac[MEM_SUBSET_SET_TO_LIST,SUBSET_DEF,MEM,MEM_APPEND]
-  );
+QED
 
-val MEM_SUBSET_TRANS = store_thm
-  ("MEM_SUBSET_TRANS",
-   ``!l1 l2 l3. MEM_SUBSET l1 l2 ∧ MEM_SUBSET l2 l3 ==> MEM_SUBSET l1 l3``,
+Theorem MEM_SUBSET_TRANS:
+     !l1 l2 l3. MEM_SUBSET l1 l2 ∧ MEM_SUBSET l2 l3 ==> MEM_SUBSET l1 l3
+Proof
    metis_tac[MEM_SUBSET_SET_TO_LIST,SUBSET_TRANS]
-  );
+QED
 
 Definition MEM_EQUAL_def:
   (MEM_EQUAL l1 l2 = (MEM_SUBSET l1 l2 ∧ MEM_SUBSET l2 l1))
 End
 
-val MEM_EQUAL_SET = store_thm
-  ("MEM_EQUAL_SET",
-   ``!l1 l2. MEM_EQUAL l1 l2 = (set l1 = set l2)``,
+Theorem MEM_EQUAL_SET:
+     !l1 l2. MEM_EQUAL l1 l2 = (set l1 = set l2)
+Proof
    metis_tac[MEM_SUBSET_SET_TO_LIST,SET_EQ_SUBSET,MEM_EQUAL_def]
-  );
+QED
 
-val SET_OF_SUBLISTS_FINITE = store_thm
-  ("SET_OF_SUBLISTS_FINITE",
-   ``!l. FINITE {qs | MEM_SUBSET qs l ∧ ALL_DISTINCT qs }``,
+Theorem SET_OF_SUBLISTS_FINITE:
+     !l. FINITE {qs | MEM_SUBSET qs l ∧ ALL_DISTINCT qs }
+Proof
       Induct_on `l`
       >- (`{qs | MEM_SUBSET qs [] ∧ ALL_DISTINCT qs} = {[]}` by (
            simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
@@ -615,29 +615,29 @@ val SET_OF_SUBLISTS_FINITE = store_thm
            )
           >> metis_tac[FINITE_UNION]
          )
-  );
+QED
 
-val NUB_NUB = store_thm
-  ("NUB_NUB",
-   ``!l. nub (nub l) = nub l``,
+Theorem NUB_NUB:
+     !l. nub (nub l) = nub l
+Proof
    Induct_on `l` >> fs[nub_def] >> rpt strip_tac
    >> Cases_on `MEM h l` >> fs[nub_def]
-  );
+QED
 
-val ALL_DISTINCT_SAME_NUB = store_thm
-  ("ALL_DISTINCT_SAME_NUB",
-   ``!l. ALL_DISTINCT l ==> (l = nub l)``,
+Theorem ALL_DISTINCT_SAME_NUB:
+     !l. ALL_DISTINCT l ==> (l = nub l)
+Proof
    Induct_on `l` >> fs[nub_def]
-  );
+QED
 
-val ALL_DISTINCT_PAIRS_LEMM = store_thm
-  ("ALL_DISTINCT_PAIRS_LEMM",
-   ``(!x y1 y2 l.
+Theorem ALL_DISTINCT_PAIRS_LEMM:
+     (!x y1 y2 l.
      (ALL_DISTINCT (MAP FST l) ∧ (MEM (x,y1) l) ∧ (MEM (x,y2) l)
      ==> (y1 = y2)))
      ∧ (!x y1 y2 l.
          (ALL_DISTINCT (MAP SND l) ∧ (MEM (y1,x) l) ∧ (MEM (y2,x) l)
-                     ==> (y1 = y2)))``,
+                     ==> (y1 = y2)))
+Proof
    strip_tac >> Induct_on `l` >> fs[ALL_DISTINCT] >> rpt strip_tac
    >- (Cases_on `h` >> fs[])
    >- (fs[MEM_MAP] >> Cases_on `h` >> fs[] >> rw[]
@@ -651,28 +651,28 @@ val ALL_DISTINCT_PAIRS_LEMM = store_thm
    >- (fs[MEM_MAP] >> Cases_on `h` >> fs[] >> rw[]
          >> first_x_assum (qspec_then `(y1,r)` mp_tac) >> fs[])
    >- metis_tac[]
-  );
+QED
 
-val FOLDR_INTER = store_thm
-  ("FOLDR_INTER",
-   ``!f A l.
+Theorem FOLDR_INTER:
+     !f A l.
   (!x. MEM x l
        ==> (FOLDR (λa sofar. f a ∩ sofar) A l
                   ⊆ f x))
   ∧ (FOLDR (λa sofar. f a ∩ sofar) A l
-           ⊆ A)``,
+           ⊆ A)
+Proof
    Induct_on `l` >> rpt strip_tac >> fs[]
    >> metis_tac[INTER_SUBSET,SUBSET_TRANS]
-  );
+QED
 
-val FOLDR_APPEND_LEMM = store_thm
-  ("FOLDR_APPEND_LEMM",
-   ``!f A l.
+Theorem FOLDR_APPEND_LEMM:
+     !f A l.
   (!x. MEM x l
        ==> MEM_SUBSET (f x) (FOLDR (λa sofar. f a ++ sofar) A l))
   ∧ (MEM_SUBSET A (FOLDR (λa sofar. f a ++ sofar) A l))
   ∧ (set (FOLDR (λa sofar. f a ++ sofar) A l) =
-     set A ∪ BIGUNION {set (f a) | MEM a l })``,
+     set A ∪ BIGUNION {set (f a) | MEM a l })
+Proof
    Induct_on `l` >> rpt strip_tac >> fs[]
    >- fs[MEM_SUBSET_REFL]
    >- fs[MEM_SUBSET_APPEND]
@@ -681,28 +681,28 @@ val FOLDR_APPEND_LEMM = store_thm
    >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[]
        >> metis_tac[]
       )
-  );
+QED
 
-val FOLDR_LEMM5 = store_thm
-  ("FOLDR_LEMM5",
-   ``!l1 l2 l3 l4 f1 f2 s.
+Theorem FOLDR_LEMM5:
+     !l1 l2 l3 l4 f1 f2 s.
       (FOLDR (λa sofar. f1 a ∩ sofar)
              (FOLDR (λa sofar. f2 a ∩ sofar) s (l1++l2)) (l3++l4))
        = ((FOLDR (λa sofar. f1 a ∩ sofar)
                  (FOLDR (λa sofar. f2 a ∩ sofar) s l1) l3)
               ∩ ((FOLDR (λa sofar. f1 a ∩ sofar)
-                        (FOLDR (λa sofar. f2 a ∩ sofar) s l2) l4)))``,
+                        (FOLDR (λa sofar. f2 a ∩ sofar) s l2) l4)))
+Proof
    Induct_on `l3` >> simp[SET_EQ_SUBSET,SUBSET_DEF]
    >> rpt strip_tac >> fs[]
    >> Induct_on `l4`
    >> Induct_on `l1` >> fs[] >> Induct_on `l2` >> fs[]
-  );
+QED
 
-val FOLDR_INTER_MEMEQUAL = store_thm
-  ("FOLDR_INTER_MEMEQUAL",
-   ``!l1 l2 s f. (set l1 = set l2)
+Theorem FOLDR_INTER_MEMEQUAL:
+     !l1 l2 s f. (set l1 = set l2)
                ==> (FOLDR (λa sofar. f a ∩ sofar) s l1 =
-                     FOLDR (λa sofar. f a ∩ sofar) s l2)``,
+                     FOLDR (λa sofar. f a ∩ sofar) s l2)
+Proof
    `!l1 l2 s f. (MEM_SUBSET l1 l2)
                ==> (FOLDR (λa sofar. f a ∩ sofar) s l2
                           ⊆ FOLDR (λa sofar. f a ∩ sofar) s l1)`
@@ -712,20 +712,20 @@ val FOLDR_INTER_MEMEQUAL = store_thm
    >- (rpt strip_tac >> simp[FOLDR] >> fs[MEM_SUBSET_def]
        >> metis_tac[FOLDR_INTER]
       )
-  );
+QED
 
-val ZIP_MAP = store_thm
-  ("ZIP_MAP",
-   ``!l. ZIP (MAP FST l, MAP SND l) = l``,
+Theorem ZIP_MAP:
+     !l. ZIP (MAP FST l, MAP SND l) = l
+Proof
    Induct_on `l` >> fs[ZIP]
-  );
+QED
 
-val MAP_LEMM = store_thm
-  ("MAP_LEMM",
-   ``!l f h a. ~MEM h l
-             ==> (MAP (λq. if q = h then a else f q) l = MAP f l)``,
+Theorem MAP_LEMM:
+     !l f h a. ~MEM h l
+             ==> (MAP (λq. if q = h then a else f q) l = MAP f l)
+Proof
    Induct_on `l` >> rpt strip_tac >> fs[]
-  );
+QED
 
 Definition CAT_OPTIONS_def:
    (CAT_OPTIONS [] = [])
@@ -733,58 +733,58 @@ Definition CAT_OPTIONS_def:
  ∧ (CAT_OPTIONS (NONE::ls) = CAT_OPTIONS ls)
 End
 
-val CAT_OPTIONS_MEM = store_thm
-  ("CAT_OPTIONS_MEM",
-   ``!x l. (MEM x (CAT_OPTIONS l)) = (?y. (SOME x = y) ∧ MEM y l)``,
+Theorem CAT_OPTIONS_MEM:
+     !x l. (MEM x (CAT_OPTIONS l)) = (?y. (SOME x = y) ∧ MEM y l)
+Proof
    Induct_on `l` >> rpt strip_tac >> fs[CAT_OPTIONS_def]
    >> Cases_on `h` >> fs[CAT_OPTIONS_def]
-  );
+QED
 
-val CAT_OPTIONS_MAP_LEMM = store_thm
-  ("CAT_OPTIONS_MAP_LEMM",
-   ``!i f ls. MEM i (CAT_OPTIONS (MAP f ls))
-  = ?x. MEM x ls ∧ (SOME i = f x)``,
+Theorem CAT_OPTIONS_MAP_LEMM:
+     !i f ls. MEM i (CAT_OPTIONS (MAP f ls))
+  = ?x. MEM x ls ∧ (SOME i = f x)
+Proof
    Induct_on `ls` >> fs[CAT_OPTIONS_def,MAP]
    >> rpt strip_tac >> Cases_on `f h` >> simp[EQ_IMP_THM]
    >> rw[] >> fs[CAT_OPTIONS_def] >> metis_tac[SOME_11,NOT_SOME_NONE]
-  );
+QED
 
-val CAT_OPTIONS_APPEND = store_thm
-  ("CAT_OPTIONS_APPEND",
-   ``!l1 l2. CAT_OPTIONS (l1 ++ l2) = CAT_OPTIONS l1 ++ CAT_OPTIONS l2``,
+Theorem CAT_OPTIONS_APPEND:
+     !l1 l2. CAT_OPTIONS (l1 ++ l2) = CAT_OPTIONS l1 ++ CAT_OPTIONS l2
+Proof
    Induct_on `l1` >> fs[CAT_OPTIONS_def] >> rpt strip_tac
    >> Cases_on `h` >> fs[CAT_OPTIONS_def]
-  );
+QED
 
-val CAT_OPTIONS_LENGTH = store_thm
-  ("CAT_OPTIONS_LENGTH",
-   ``!l. (EVERY IS_SOME l = (LENGTH (CAT_OPTIONS l) = LENGTH l))
-       ∧ (LENGTH (CAT_OPTIONS l) <= LENGTH l)``,
+Theorem CAT_OPTIONS_LENGTH:
+     !l. (EVERY IS_SOME l = (LENGTH (CAT_OPTIONS l) = LENGTH l))
+       ∧ (LENGTH (CAT_OPTIONS l) <= LENGTH l)
+Proof
    Induct_on `l` >> fs[CAT_OPTIONS_def] >> rpt strip_tac
    >> Cases_on `h` >> fs[IS_SOME_DEF,CAT_OPTIONS_def]
-  );
+QED
 
-val CAT_OPTIONS_EL = store_thm
-  ("CAT_OPTIONS_EL",
-   ``!l. EVERY IS_SOME l
+Theorem CAT_OPTIONS_EL:
+     !l. EVERY IS_SOME l
           ==> !i. (i < LENGTH l)
-          ==> (SOME (EL i (CAT_OPTIONS l)) = EL i l)``,
+          ==> (SOME (EL i (CAT_OPTIONS l)) = EL i l)
+Proof
    Induct_on `l` >> fs[CAT_OPTIONS_def] >> rpt strip_tac
    >> Cases_on `h` >> fs[IS_SOME_DEF,CAT_OPTIONS_def]
    >> Cases_on `i` >> fs[EL]
-  );
+QED
 
 Definition OPTION_TO_LIST_def:
     (OPTION_TO_LIST NONE = [])
   ∧ (OPTION_TO_LIST (SOME l) = l)
 End
 
-val OPTION_TO_LIST_MEM = store_thm
-  ("OPTION_TO_LIST_MEM",
-   ``!x o_l. MEM x (OPTION_TO_LIST o_l)
-             = ?l. (o_l = SOME l) ∧ (MEM x l)``,
+Theorem OPTION_TO_LIST_MEM:
+     !x o_l. MEM x (OPTION_TO_LIST o_l)
+             = ?l. (o_l = SOME l) ∧ (MEM x l)
+Proof
    rpt strip_tac >> Cases_on `o_l` >> fs[OPTION_TO_LIST_def]
-  );
+QED
 
 Definition LIST_INTER_def:
     (LIST_INTER [] ls = [])
@@ -822,17 +822,17 @@ Definition SPAN_def:
    )
 End
 
-val SPAN_APPEND = store_thm
-  ("SPAN_APPEND",
-   ``!R l l1 l2. (SPAN R l = (l1,l2)) ==> (l1 ++ l2 = l)``,
+Theorem SPAN_APPEND:
+     !R l l1 l2. (SPAN R l = (l1,l2)) ==> (l1 ++ l2 = l)
+Proof
    gen_tac >> Induct_on `l` >> fs[SPAN_def] >> rpt strip_tac
    >> Cases_on `R h` >> fs[]
    >> Cases_on `SPAN R l` >> rw[] >> fs[]
-  );
+QED
 
-val SPAN_EQ = store_thm
-  ("SPAN_EQ",
-   ``!R x y t. equivalence R ∧ R x y ==> (SPAN (R x) t = SPAN (R y) t)``,
+Theorem SPAN_EQ:
+     !R x y t. equivalence R ∧ R x y ==> (SPAN (R x) t = SPAN (R y) t)
+Proof
    gen_tac >> Induct_on `t` >> fs[SPAN_def] >> rpt strip_tac
    >> `SPAN (R x) t = SPAN (R y) t` by metis_tac[]
    >> `R x h = R y h` by (
@@ -841,15 +841,15 @@ val SPAN_EQ = store_thm
                  relationTheory.symmetric_def]
    )
    >> Cases_on `R x h` >> fs[]
-  );
+QED
 
-val SPAN_FST_LEMM = store_thm
-  ("SPAN_FST_LEMM",
-   ``!x R l. MEM x (FST (SPAN R l)) ==> R x``,
+Theorem SPAN_FST_LEMM:
+     !x R l. MEM x (FST (SPAN R l)) ==> R x
+Proof
    Induct_on `l` >> fs[SPAN_def] >> rpt strip_tac
    >> Cases_on `R h` >> fs[] >> Cases_on `x = h` >> fs[]
    >> Cases_on `SPAN R l` >> fs[]
-  );
+QED
 
 Definition GROUP_BY_def:
    (GROUP_BY P []  = [])
@@ -864,9 +864,9 @@ Termination
     >> fs[]
 End
 
-val GROUP_BY_FLAT = store_thm
-  ("GROUP_BY_FLAT",
-   ``!P l. (FLAT (GROUP_BY P l)) = l``,
+Theorem GROUP_BY_FLAT:
+     !P l. (FLAT (GROUP_BY P l)) = l
+Proof
    gen_tac
    >> `!l1 l2 l. (l1 ++ l2 = l)
                  ==> ((FLAT (GROUP_BY P l2)) = l2)` by (
@@ -885,7 +885,7 @@ val GROUP_BY_FLAT = store_thm
           )
    )
    >> strip_tac >> `[] ++ l = l` by simp[] >> metis_tac[]
-  );
+QED
 
 Definition rel_corr_def:
   rel_corr R P =
@@ -966,13 +966,13 @@ QED
 
 val _ = Cond_rewr.stack_limit := 1
 
-val SORTED_GROUP_BY = store_thm
-  ("SORTED_GROUP_BY",
-    ``!R P l. SORTED P l ∧ transitive P ∧ equivalence R
+Theorem SORTED_GROUP_BY:
+      !R P l. SORTED P l ∧ transitive P ∧ equivalence R
             ∧ rel_corr R P
        ==> (!l_sub. MEM l_sub (GROUP_BY R l)
             ==> ((!x y. MEM x l_sub ∧ MEM y l_sub ==> R x y)
-               ∧ (!x y. MEM x l_sub ∧ MEM y l ∧ R x y ==> MEM y l_sub)))``,
+               ∧ (!x y. MEM x l_sub ∧ MEM y l ∧ R x y ==> MEM y l_sub)))
+Proof
    gen_tac >> gen_tac >> Induct_on `l`
    >- (rpt strip_tac >> fs[GROUP_BY_def])
    >- (
@@ -1186,7 +1186,7 @@ val SORTED_GROUP_BY = store_thm
         )
        )
    )
-  );
+QED
 
 Definition ONLY_MINIMAL_def:
   ONLY_MINIMAL P l =
@@ -1201,42 +1201,42 @@ End
   (*     x::(FILTER (λa. ~P a x) (ONLY_MINIMAL P xs)) *)
   (*   )`; *)
 
-val ONLY_MINIMAL_SUBSET = store_thm
-  ("ONLY_MINIMAL_SUBSET",
-   ``!P l. MEM_SUBSET (ONLY_MINIMAL P l) l``,
+Theorem ONLY_MINIMAL_SUBSET:
+     !P l. MEM_SUBSET (ONLY_MINIMAL P l) l
+Proof
    gen_tac >> Induct_on `l` >> fs[ONLY_MINIMAL_def,MEM_SUBSET_def]
    >> rpt strip_tac >> fs[MEM_SUBSET_SET_TO_LIST]
    >> Cases_on `EVERY ($~ ∘ (λx. P x h ∧ x ≠ h)) l`
    >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> fs[MEM_FILTER,EVERY_MEM]
-  );
+QED
 
-val ONLY_MINIMAL_MEM = store_thm
-  ("ONLY_MINIMAL_MEM",
-   ``!P l x.
+Theorem ONLY_MINIMAL_MEM:
+     !P l x.
        (MEM x (ONLY_MINIMAL P l) =
-        (MEM x l ∧ (!y. MEM y l ∧ ~(x = y) ==> ~P y x)))``,
+        (MEM x l ∧ (!y. MEM y l ∧ ~(x = y) ==> ~P y x)))
+Proof
    simp[EQ_IMP_THM] >> rpt strip_tac
    >- metis_tac[MEM_SUBSET_SET_TO_LIST,ONLY_MINIMAL_SUBSET,MEM,SUBSET_DEF]
    >- (fs[ONLY_MINIMAL_def,MEM_FILTER,EVERY_MEM] >> metis_tac[])
    >- (simp[ONLY_MINIMAL_def,MEM_FILTER,EVERY_MEM] >> rpt strip_tac
        >> metis_tac[]
       )
-  );
+QED
 
-val INDEX_FIND_LEMM = store_thm
-  ("INDEX_FIND_LEMM",
-   ``!P i ls. OPTION_MAP SND (INDEX_FIND i P ls)
-                            = OPTION_MAP SND (INDEX_FIND (SUC i) P ls)``,
+Theorem INDEX_FIND_LEMM:
+     !P i ls. OPTION_MAP SND (INDEX_FIND i P ls)
+                            = OPTION_MAP SND (INDEX_FIND (SUC i) P ls)
+Proof
    gen_tac >> Induct_on `ls` >> fs[OPTION_MAP_DEF,INDEX_FIND_def]
    >> Cases_on `P h`
     >- fs[OPTION_MAP_DEF,INDEX_FIND_def]
     >- metis_tac[]
-  );
+QED
 
-val FIND_LEMM = store_thm
-  ("FIND_LEMM",
-   ``!P x l. MEM x l ∧ P x
-           ==> ?y. (FIND P l = SOME y) ∧ (P y)``,
+Theorem FIND_LEMM:
+     !P x l. MEM x l ∧ P x
+           ==> ?y. (FIND P l = SOME y) ∧ (P y)
+Proof
   gen_tac >> Induct_on `l` >> rpt strip_tac >> fs[]
    >- (rw[] >> simp[FIND_def,INDEX_FIND_def])
    >- (rw[]
@@ -1253,11 +1253,11 @@ val FIND_LEMM = store_thm
             >> qexists_tac `y` >> rpt strip_tac
             >> metis_tac[INDEX_FIND_LEMM,DECIDE ``SUC 0 = 1``])
       )
-  );
+QED
 
-val FIND_LEMM2 = store_thm
-  ("FIND_LEMM2",
-   ``!P x l. (FIND P l = SOME x) ==> (MEM x l ∧ P x)``,
+Theorem FIND_LEMM2:
+     !P x l. (FIND P l = SOME x) ==> (MEM x l ∧ P x)
+Proof
    gen_tac >> Induct_on `l` >> fs[FIND_def,INDEX_FIND_def]
    >> rpt strip_tac >> Cases_on `P h` >> fs[] >> Cases_on `z`
    >> fs[]
@@ -1270,12 +1270,12 @@ val FIND_LEMM2 = store_thm
        >> metis_tac[]
    )
    >> fs[]
-  );
+QED
 
-val FIND_UNIQUE = store_thm
-  ("FIND_UNIQUE",
-   ``!P x l. P x ∧ (!y. MEM y l ∧ P y ==> (y = x)) ∧ MEM x l
-         ==> (FIND P l = SOME x)``,
+Theorem FIND_UNIQUE:
+     !P x l. P x ∧ (!y. MEM y l ∧ P y ==> (y = x)) ∧ MEM x l
+         ==> (FIND P l = SOME x)
+Proof
    gen_tac >> Induct_on `l` >> rpt strip_tac
    >- fs[]
    >- (Cases_on `P h`
@@ -1297,12 +1297,12 @@ val FIND_UNIQUE = store_thm
            >> metis_tac[]
           )
       )
-  );
+QED
 
 
-val PSUBSET_WF = store_thm
- ("PSUBSET_WF",
-  ``!d. FINITE d ==> WF (\s t. s ⊂ t ∧ s ⊆ d ∧ t ⊆ d)``,
+Theorem PSUBSET_WF:
+    !d. FINITE d ==> WF (\s t. s ⊂ t ∧ s ⊆ d ∧ t ⊆ d)
+Proof
   rpt strip_tac
   >> qabbrev_tac `r_reln = rel_to_reln (\s t. s ⊂ t ∧ s ⊆ d ∧ t ⊆ d)`
   >> `transitive r_reln` by (
@@ -1329,13 +1329,13 @@ val PSUBSET_WF = store_thm
   >> `FINITE (POW d)` by metis_tac[FINITE_POW]
   >> `WF (reln_to_rel r_reln)` suffices_by fs[]
   >> metis_tac[acyclic_WF]
- );
+QED
 
-val BOUNDED_INCR_WF_LEMM = store_thm
-  ("BOUNDED_INCR_WF_LEMM",
-   ``!b m n. WF (λ(i,j) (i1,j1).
+Theorem BOUNDED_INCR_WF_LEMM:
+     !b m n. WF (λ(i,j) (i1,j1).
                   (b (i,j) = b (i1,j1))
-                  ∧ (i1 < i) ∧ (i <= b (i,j)))``,
+                  ∧ (i1 < i) ∧ (i <= b (i,j)))
+Proof
    rpt strip_tac >> rw[WF_IFF_WELLFOUNDED] >> simp[wellfounded_def]
    >> rpt strip_tac >> CCONTR_TAC >> fs[]
    >> `!n. b (FST (f n), SND (f n)) = b (FST (f 0), SND (f 0))` by (
@@ -1369,12 +1369,12 @@ val BOUNDED_INCR_WF_LEMM = store_thm
    >> first_x_assum (qspec_then `B` mp_tac) >> rpt strip_tac
    >> first_x_assum (qspec_then `n` mp_tac) >> rpt strip_tac
    >> Cases_on `f (SUC n)` >> Cases_on `f n` >> fs[]
-  );
+QED
 
-val WF_LEMM = store_thm
-  ("WF_LEMM",
-   ``!P A b. (!k. A k ==> WF (P k))
-         ==> ((!k. A (b k)) ==> WF (λa a2. (b a = b a2) ∧ P (b a) a a2))``,
+Theorem WF_LEMM:
+     !P A b. (!k. A k ==> WF (P k))
+         ==> ((!k. A (b k)) ==> WF (λa a2. (b a = b a2) ∧ P (b a) a a2))
+Proof
    rpt strip_tac >> rw[WF_IFF_WELLFOUNDED] >> simp[wellfounded_def]
     >> rpt strip_tac >> CCONTR_TAC >> fs[]
     >> `∀n. b (f (SUC n)) = b (f n)` by metis_tac[]
@@ -1384,7 +1384,7 @@ val WF_LEMM = store_thm
     >> `!n. P (b (f 0)) (f (SUC n)) (f n)` by metis_tac[]
     >> `~wellfounded (P (b (f 0)))` by metis_tac[wellfounded_def]
     >> metis_tac[WF_IFF_WELLFOUNDED]
-  );
+QED
 
 Definition NoNodeProcessedTwice_def:
   NoNodeProcessedTwice g m (a,ns) (a2,ns2) =
@@ -1393,9 +1393,9 @@ Definition NoNodeProcessedTwice_def:
            ∧ (LENGTH ns) < (LENGTH ns2)))
 End
 
-val NNPT_WF = store_thm
- ("NNPT_WF",
-  ``!g m. FINITE g ==> WF (NoNodeProcessedTwice g m)``,
+Theorem NNPT_WF:
+    !g m. FINITE g ==> WF (NoNodeProcessedTwice g m)
+Proof
    rpt strip_tac
    >> `WF (λs t. s ⊂ t
          ∧ s ⊆ g ∧ t ⊆ g)` by metis_tac[PSUBSET_WF]
@@ -1435,14 +1435,14 @@ val NNPT_WF = store_thm
          >> (qunabbrev_tac `j` >> simp[])
    )
    >> metis_tac[WF_SUBSET]
- );
+QED
 
-val P_DIVIDED_WF_LEMM = store_thm
-  ("P_DIVIDED_WF_LEMM",
-   ``!P R1 R2.
+Theorem P_DIVIDED_WF_LEMM:
+     !P R1 R2.
      WF (λx y. ~P x ∧ ~P y ∧ R1 x y) ∧ WF R2
      ∧ (!x y. P y ∧ R2 x y ==> P x)
-     ==> WF (λx y. ((~P y ∧ ~P x) ==> R1 x y) ∧ (P y ==> R2 x y))``,
+     ==> WF (λx y. ((~P y ∧ ~P x) ==> R1 x y) ∧ (P y ==> R2 x y))
+Proof
    rpt strip_tac >> rw[WF_IFF_WELLFOUNDED] >> simp[wellfounded_def]
    >> rpt strip_tac
    >> `!k. P (f k)
@@ -1481,11 +1481,11 @@ val P_DIVIDED_WF_LEMM = store_thm
        )
        >> metis_tac[]
       )
-  );
+QED
 
-val MOD_LEMM = store_thm
-  ("MOD_LEMM",
-   ``!x n. (0 < n) ==> ((x - (x MOD n)) MOD n = 0)``,
+Theorem MOD_LEMM:
+     !x n. (0 < n) ==> ((x - (x MOD n)) MOD n = 0)
+Proof
    rpt strip_tac
     >> `((x - (x MOD n) + (x MOD n)) MOD n = ((0 + (x MOD n)) MOD n))` by (
        `(x MOD n) <= x` by simp[MOD_LESS_EQ]
@@ -1493,11 +1493,11 @@ val MOD_LEMM = store_thm
        >> fs[]
    )
     >> metis_tac[ADD_MOD,MOD_EQ_0,DECIDE ``0 * n = 0``]
-  );
+QED
 
-val MOD_GEQ_2_INCREASES = store_thm
-  ("MOD_GEQ_2_INCREASES",
-   ``!N x. 2 <= N ==> ~((x + 1) MOD N = x MOD N)``,
+Theorem MOD_GEQ_2_INCREASES:
+     !N x. 2 <= N ==> ~((x + 1) MOD N = x MOD N)
+Proof
    rpt strip_tac >> simp[] >> `0 < N` by simp[]
    >> `(x + 1 + (N - (x MOD N))) MOD N = (x + (N - (x MOD N))) MOD N`
       by metis_tac[ADD_MOD]
@@ -1510,14 +1510,14 @@ val MOD_GEQ_2_INCREASES = store_thm
    >> rw[] >> `((x - (x MOD N)) +1) MOD N = 1` suffices_by fs[]
    >> `(x - (x MOD N)) MOD N = 0 MOD N` by simp[]
    >> `1 MOD N = 1` by simp[] >> metis_tac[ADD_MOD,DECIDE ``0 + 1 = 1``]
-  );
+QED
 
-val INCREASING_MOD_CYCLES = store_thm
-  ("INCREASING_MOD_CYCLES",
-   ``!f N. (!j. (f (SUC j) = f j) \/ ((f (SUC j)) = ((f j + 1) MOD N)))
+Theorem INCREASING_MOD_CYCLES:
+     !f N. (!j. (f (SUC j) = f j) \/ ((f (SUC j)) = ((f j + 1) MOD N)))
          ∧ (!i. ?k. (i <= k) ∧ ~(f (SUC k) = f k))
          ∧ (f 0 = 0) ∧ (0 < N)
-         ==> (!n. (n < N) ==> !i. ?k. (i <= k) ∧ (f k = n))``,
+         ==> (!n. (n < N) ==> !i. ?k. (i <= k) ∧ (f k = n))
+Proof
    strip_tac >> strip_tac >> strip_tac
    >> `!a. f a < N` by (
        Induct_on `a` >> fs[]
@@ -1589,7 +1589,7 @@ val INCREASING_MOD_CYCLES = store_thm
             by (`f i ∈ count N` suffices_by metis_tac[] >> fs[count_def])
        >> qunabbrev_tac `U` >> fs[] >> metis_tac[DECIDE ``i <= i``]
       )
-  );
+QED
 
 
 

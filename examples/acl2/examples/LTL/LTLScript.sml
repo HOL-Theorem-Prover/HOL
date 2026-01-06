@@ -331,13 +331,13 @@ Definition PATH_def:
    PATH M s p = (p 0 = s) /\ !i. M.R(p(i),p(i+1))
 End
 
-val PATH_LEMMA =
- store_thm
-  ("PATH_LEMMA",
-   ``!M s p. s IN M.S /\ PATH M s p /\ MODEL M ==> !n. (p n) IN M.S``,
+Theorem PATH_LEMMA:
+     !M s p. s IN M.S /\ PATH M s p /\ MODEL M ==> !n. (p n) IN M.S
+Proof
    RW_TAC std_ss [PATH_def,MODEL_def,IN_DEF, pred_setTheory.SUBSET_DEF]
     THEN Induct_on `n`
-    THEN METIS_TAC[DECIDE``SUC n = n+1``]);
+    THEN METIS_TAC[DECIDE``SUC n = n+1``]
+QED
 
 (******************************************************************************
 * SUFFIX p in is the ith suffix of p
@@ -527,12 +527,12 @@ val Lemma1a =
     THEN METIS_TAC[]);
 
 (* Matt's proof by symmetry *)
-val BISIM_SYM =
- store_thm
-  ("BISIM_SYM",
-   ``!M M' B. BISIM M M' B Vars ==> BISIM M' M (\(x,y). B(y,x)) Vars``,
+Theorem BISIM_SYM:
+     !M M' B. BISIM M M' B Vars ==> BISIM M' M (\(x,y). B(y,x)) Vars
+Proof
    RW_TAC std_ss [BISIM_def]
-    THEN METIS_TAC[]);
+    THEN METIS_TAC[]
+QED
 
 val Lemma1b =
  prove
@@ -570,31 +570,31 @@ val Lemma1 =
 (* Preparation for Lemma  2, p 10 of Ray et al.
    Lemma 32, p 172 of Clarke et al.
 *)
-val BISIM_SUFFIX =
- store_thm
-  ("BISIM_SUFFIX",
-   ``!p p'. (!i. B(p i, p' i)) ==> !n. (!i. B(SUFFIX p n i,SUFFIX p' n i))``,
+Theorem BISIM_SUFFIX:
+     !p p'. (!i. B(p i, p' i)) ==> !n. (!i. B(SUFFIX p n i,SUFFIX p' n i))
+Proof
    RW_TAC std_ss [SUFFIX_def]
     THEN Induct_on `n`
-    THEN RW_TAC arith_ss []);
+    THEN RW_TAC arith_ss []
+QED
 
-val PATH_SUFFIX =
- store_thm
-  ("PATH_SUFFIX",
-   ``!M p. PATH M s p ==> !n. PATH M (p n) (SUFFIX p n)``,
+Theorem PATH_SUFFIX:
+     !M p. PATH M s p ==> !n. PATH M (p n) (SUFFIX p n)
+Proof
    RW_TAC std_ss [PATH_def,SUFFIX_def]
-    THEN METIS_TAC[arithmeticTheory.ADD_ASSOC]);
+    THEN METIS_TAC[arithmeticTheory.ADD_ASSOC]
+QED
 
-val PATH_SUFFIX_IN =
- store_thm
-  ("PATH_SUFFIX_IN",
-   ``!M s p. MODEL M /\ M.S s /\ PATH M s p
-             ==> !n i. M.S (SUFFIX p n i)``,
+Theorem PATH_SUFFIX_IN:
+     !M s p. MODEL M /\ M.S s /\ PATH M s p
+             ==> !n i. M.S (SUFFIX p n i)
+Proof
    RW_TAC std_ss [MODEL_def,PATH_def,SUFFIX_def,IN_DEF]
     THEN Induct_on `n` THEN Induct_on `i`
     THEN RW_TAC arith_ss []
     THEN FULL_SIMP_TAC arith_ss [DECIDE ``n + 1 = SUC n``]
-    THEN METIS_TAC[DECIDE``SUC i + SUC n = SUC(n + SUC i)``]);
+    THEN METIS_TAC[DECIDE``SUC i + SUC n = SUC(n + SUC i)``]
+QED
 
 (* Lemma  2, p 10 of Ray et al. Lemma 32, p 172 of Clarke et al. *)
 (* runtime: 161.497s,    gctime: 6.142s,     systime: 0.410s. *)

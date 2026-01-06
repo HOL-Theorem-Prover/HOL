@@ -26,46 +26,52 @@ val (abselim_rules,abselim_ind,abselim_cases) = Hol_reln`
     ⇒ abselim (LAM x (t1 @@ t2)) (S @@ t1' @@ t2')) ∧
   (abselim S S) ∧ (abselim K K)`
 
-val abselim_absfree = store_thm(
-"abselim_absfree",
-``∀t u. abselim t u ⇒ absfree u``,
+Theorem abselim_absfree:
+  ∀t u. abselim t u ⇒ absfree u
+Proof
 ho_match_mp_tac abselim_ind >>
-srw_tac [][absfree_rules])
+srw_tac [][absfree_rules]
+QED
 
-val absfree_abselim_id = store_thm(
-"absfree_abselim_id",
-``∀t. absfree t ⇒ abselim t t``,
+Theorem absfree_abselim_id:
+  ∀t. absfree t ⇒ abselim t t
+Proof
 ho_match_mp_tac absfree_ind >>
-srw_tac [][abselim_rules]);
+srw_tac [][abselim_rules]
+QED
 
-val lameq_lamext = store_thm(
-"lameq_lamext",
-``∀t u. t == u ⇒ lamext t u``,
+Theorem lameq_lamext:
+  ∀t u. t == u ⇒ lamext t u
+Proof
 ho_match_mp_tac lameq_ind >>
-metis_tac [lamext_rules])
+metis_tac [lamext_rules]
+QED
 
-val lamext_refl = store_thm(
-  "lamext_refl",
-  ``lamext M M``,
-  SRW_TAC [][lamext_rules]);
+Theorem lamext_refl:
+    lamext M M
+Proof
+  SRW_TAC [][lamext_rules]
+QED
 val _ = export_rewrites["lamext_refl"];
 
-val lamext_app_cong = store_thm(
-  "lamext_app_cong",
-  ``lamext M1 M2 ==> lamext N1 N2 ==> lamext (M1 @@ N1) (M2 @@ N2)``,
-  METIS_TAC [lamext_rules]);
+Theorem lamext_app_cong:
+    lamext M1 M2 ==> lamext N1 N2 ==> lamext (M1 @@ N1) (M2 @@ N2)
+Proof
+  METIS_TAC [lamext_rules]
+QED
 
 val [_,lamext_refl,lamext_sym,lamext_trans,_,_,_,lamext_ext] = CONJUNCTS lamext_rules
 val [_,conversion_sym,conversion_trans,conversion_subset,_,_] = CONJUNCTS (SPEC_ALL conversion_rules)
 
-val lamext_betaeta = store_thm(
-"lamext_betaeta",
-``lamext = conversion (β RUNION η)``,
-metis_tac [lemma2_14,beta_eta_lameta,FUN_EQ_THM]);
+Theorem lamext_betaeta:
+  lamext = conversion (β RUNION η)
+Proof
+metis_tac [lemma2_14,beta_eta_lameta,FUN_EQ_THM]
+QED
 
-val abselim_lamext = store_thm(
-"abselim_lamext",
-``∀t u. abselim t u ⇒ lamext t u``,
+Theorem abselim_lamext:
+  ∀t u. abselim t u ⇒ lamext t u
+Proof
 ho_match_mp_tac abselim_ind >>
 conj_tac >- srw_tac [][] >>
 conj_tac >- srw_tac [][lamext_app_cong] >>
@@ -113,7 +119,8 @@ conj_tac >- (
   conj_tac >- PROVE_TAC [lamext_rules] >>
   match_mp_tac lameq_lamext >>
   srw_tac [BETA_ss][] ) >>
-srw_tac [][lamext_refl]);
+srw_tac [][lamext_refl]
+QED
 
 val lemma1 = prove(
 ``x ∉ FV t ⇒ (LAM x (tpm [(x,y)] t) = LAM y t)``,
@@ -162,15 +169,16 @@ val app_count_def = new_specification ("app_count_def",["app_count"],app_count_e
 
 val _ = export_rewrites["lam_count_def","app_count_def"];
 
-val lam_count_absfree = store_thm(
-"lam_count_absfree",
-``∀t. absfree t ⇒ (lam_count t = 0)``,
+Theorem lam_count_absfree:
+  ∀t. absfree t ⇒ (lam_count t = 0)
+Proof
 ho_match_mp_tac absfree_ind >>
-srw_tac [][S_def,K_def])
+srw_tac [][S_def,K_def]
+QED
 
-val abselim_total = store_thm(
-"abselim_total",
-``∀t.∃u. abselim t u``,
+Theorem abselim_total:
+  ∀t.∃u. abselim t u
+Proof
 WF_INDUCTION_THM
  |> Q.ISPEC `inv_image ($< LEX $<) (λt. (lam_count t, app_count t))`
  |> SIMP_RULE (srw_ss()) [pairTheory.WF_LEX,prim_recTheory.WF_LESS,relationTheory.WF_inv_image]
@@ -215,13 +223,14 @@ Cases_on `LAM y t = S` >- (
   `x ∈ FV S` by metis_tac [] >> fsrw_tac [][S_def] ) >>
 Cases_on `LAM y t = K` >- (
   `x ∈ FV K` by metis_tac [] >> fsrw_tac [][K_def] ) >>
-srw_tac [ARITH_ss][])
+srw_tac [ARITH_ss][]
+QED
 
 val [abselim_VAR,abselim_APP,abselim_LAM,abselim_LAM_VAR,abselim_LAM_LAM,abselim_LAM_APP,abselim_S,abselim_K] = CONJUNCTS abselim_rules
 
-val abselim_tpm = store_thm(
-"abselim_tpm",
-``∀t u. abselim t u ⇒ ∀x y. abselim (tpm [(x,y)] t) (tpm [(x,y)] u)``,
+Theorem abselim_tpm:
+  ∀t u. abselim t u ⇒ ∀x y. abselim (tpm [(x,y)] t) (tpm [(x,y)] u)
+Proof
 ho_match_mp_tac abselim_ind >>
 conj_tac >- srw_tac [][abselim_VAR] >>
 conj_tac >- srw_tac [][abselim_APP] >>
@@ -242,11 +251,12 @@ conj_tac >- (
   asm_simp_tac (srw_ss()) [tpm_fresh] >>
   match_mp_tac abselim_LAM_APP >>
   fsrw_tac [][] ) >>
-srw_tac [][tpm_fresh,abselim_S,abselim_K]);
+srw_tac [][tpm_fresh,abselim_S,abselim_K]
+QED
 
-val abselim_FV = store_thm(
-"abselim_FV",
-``∀t u. abselim t u ⇒ (FV t = FV u)``,
+Theorem abselim_FV:
+  ∀t u. abselim t u ⇒ (FV t = FV u)
+Proof
 ho_match_mp_tac abselim_ind >>
 conj_tac >- srw_tac [][] >>
 conj_tac >- srw_tac [][] >>
@@ -254,11 +264,12 @@ conj_tac >- fsrw_tac [][pred_setTheory.DELETE_NON_ELEMENT] >>
 conj_tac >- srw_tac [][] >>
 conj_tac >- srw_tac [][] >>
 conj_tac >- fsrw_tac [][pred_setTheory.DELETE_NON_ELEMENT,pred_setTheory.UNION_DELETE] >>
-srw_tac [][]);
+srw_tac [][]
+QED
 
-val abselim_unique = store_thm(
-"abselim_unique",
-``∀t u1 u2. abselim t u1 ∧ abselim t u2 ⇒ (u1 = u2)``,
+Theorem abselim_unique:
+  ∀t u1 u2. abselim t u1 ∧ abselim t u2 ⇒ (u1 = u2)
+Proof
 qsuff_tac `∀t u1. abselim t u1 ⇒ ∀u2. abselim t u2 ⇒ (u1 = u2)` >- metis_tac [] >>
 ho_match_mp_tac abselim_ind >>
 conj_tac >- (
@@ -408,5 +419,6 @@ srw_tac [][]
 >- ( metis_tac [] )
 >- ( fsrw_tac [][K_def,LAM_eq_thm] )
 >- ( fsrw_tac [][K_def,LAM_eq_thm] )
->- ( fsrw_tac [][] ) )
+>- ( fsrw_tac [][] )
+QED
 

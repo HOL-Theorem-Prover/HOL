@@ -100,7 +100,7 @@ Proof
   first_x_assum drule >> simp[]
 QED
 
-Triviality mk_onto:
+Theorem mk_onto[local]:
   ∀n. ∃s. mk s = n
 Proof
   completeInduct_on `n` >>
@@ -277,7 +277,7 @@ Proof
   strip_assume_tac (MATCH_MP BIJ_LINV_INV mk_BIJ) >> fs[HFS_TYBIJ]
 QED
 
-Triviality LINV_mk:
+Theorem LINV_mk[local]:
   ∀s. LINV mk UNIV (mk s) = s
 Proof
   rpt strip_tac >> irule LINV_DEF >> simp[INJ_DEF, mk_11] >>

@@ -166,20 +166,22 @@ Libs
 
 (* Theorem: Field r ==> !p. poly p /\ p <> |0| ==> ulead p *)
 (* Proof: by poly_field_unit_lead. *)
-val poly_field_poly_ulead = store_thm(
-  "poly_field_poly_ulead",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> ulead p``,
-  rw[]);
+Theorem poly_field_poly_ulead:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> ulead p
+Proof
+  rw[]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ 0 < deg p ==> pmonic p *)
 (* Proof:
    Since deg p <> 0, p <> |0|     by poly_deg_zero
    Hence unit (lead p)            by poly_field_unit_lead
 *)
-val poly_field_poly_pmonic = store_thm(
-  "poly_field_poly_pmonic",
-  ``!r:'a field. Field r ==> !p. poly p /\ 0 < deg p ==> pmonic p``,
-  metis_tac[poly_field_unit_lead, poly_deg_zero, NOT_ZERO]);
+Theorem poly_field_poly_pmonic:
+    !r:'a field. Field r ==> !p. poly p /\ 0 < deg p ==> pmonic p
+Proof
+  metis_tac[poly_field_unit_lead, poly_deg_zero, NOT_ZERO]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_field_poly_ulead", "poly_field_poly_pmonic"];
@@ -199,11 +201,12 @@ Now poly_field_division_eqn is based on poly_division_eqn.
    Note unit (lead q)      by poly_field_poly_ulead
    The result follows      by poly_division_all
 *)
-val poly_field_division_all = store_thm(
-  "poly_field_division_all",
-  ``!r:'a field p q. Field r /\ poly p /\ poly q /\ q <> |0| ==>
-        (p = p / q * q + p % q) /\ poly (p / q) /\ poly (p % q)``,
-  rw[poly_division_all]);
+Theorem poly_field_division_all:
+    !r:'a field p q. Field r /\ poly p /\ poly q /\ q <> |0| ==>
+        (p = p / q * q + p % q) /\ poly (p / q) /\ poly (p % q)
+Proof
+  rw[poly_division_all]
+QED
 
 (* Theorem: poly p /\ poly q /\ 0 < deg q ==>
             (p = p / q * q + p % q) /\ deg (p % q) < deg q *)
@@ -211,11 +214,12 @@ val poly_field_division_all = store_thm(
    Since 0 < deg q, unit (lead q)    by poly_field_poly_pmonic
    The result follows                by poly_division
 *)
-val poly_field_division = store_thm(
-  "poly_field_division",
-  ``!r:'a field p q. Field r /\ poly p /\ poly q /\ 0 < deg q ==>
-          (p = p / q * q + p % q) /\ deg (p % q) < deg q``,
-  rw[poly_division]);
+Theorem poly_field_division:
+    !r:'a field p q. Field r /\ poly p /\ poly q /\ 0 < deg q ==>
+          (p = p / q * q + p % q) /\ deg (p % q) < deg q
+Proof
+  rw[poly_division]
+QED
 
 (* Theorem: poly p /\ poly q /\ q <> |0| ==>
             ?s t. poly s /\ poly t /\ (p = s * q + t) /\
@@ -224,23 +228,25 @@ val poly_field_division = store_thm(
    Since unit (lead q)       by poly_field_poly_ulead
    The result follows        by poly_division_all_eqn
 *)
-val poly_field_division_all_eqn = store_thm(
-  "poly_field_division_all_eqn",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ q <> |0| ==>
+Theorem poly_field_division_all_eqn:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ q <> |0| ==>
      ?s t. poly s /\ poly t /\ (p = s * q + t) /\
-           if 0 < deg q then deg t < deg q else t = |0|``,
-  rw[poly_division_all_eqn]);
+           if 0 < deg q then deg t < deg q else t = |0|
+Proof
+  rw[poly_division_all_eqn]
+QED
 
 (* Theorem: poly p /\ poly q /\ 0 < deg q ==> ?s t. p = s * q + t  with deg t < deg q *)
 (* Proof:
    Since 0 < deg q, unit (lead q)    by poly_field_poly_pmonic
    The result follows                by poly_division_eqn
 *)
-val poly_field_division_eqn = store_thm(
-  "poly_field_division_eqn",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ 0 < deg q ==>
-     ?s t. poly s /\ poly t /\ (p = s * q + t) /\ deg t < deg q``,
-  rw[poly_division_eqn]);
+Theorem poly_field_division_eqn:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ 0 < deg q ==>
+     ?s t. poly s /\ poly t /\ (p = s * q + t) /\ deg t < deg q
+Proof
+  rw[poly_division_eqn]
+QED
 
 (* Convert this existence into quotient and remainder operators. *)
 (*
@@ -289,12 +295,13 @@ val _ = set_fixity "%" (Infixl 650);
    Since unit (lead q)    by poly_field_unit_lead
    The result follows     by poly_div_mod_all_def
 *)
-val poly_field_div_mod_all_def = store_thm(
-  "poly_field_div_mod_all_def",
-  ``!(r:'a field) p q. Field r /\ poly p /\ poly q /\ q <> |0| ==>
+Theorem poly_field_div_mod_all_def:
+    !(r:'a field) p q. Field r /\ poly p /\ poly q /\ q <> |0| ==>
       poly (p / q) /\ poly (p % q) /\ (p = p / q * q + p % q) /\
-      if 0 < deg q then deg (p % q) < deg q else p % q = |0|``,
-  rw[poly_div_mod_all_def]);
+      if 0 < deg q then deg (p % q) < deg q else p % q = |0|
+Proof
+  rw[poly_div_mod_all_def]
+QED
 
 (* Theorem: poly p /\ poly q /\ 0 < deg q ==>
             poly (p / q) /\ poly (p % q) /\
@@ -303,11 +310,12 @@ val poly_field_div_mod_all_def = store_thm(
    Since 0 < deg q, unit (lead q)    by poly_field_poly_pmonic
    The result follows                by poly_div_mod_all_def
 *)
-val poly_field_div_mod_def = store_thm(
-  "poly_field_div_mod_def",
-  ``!(r:'a field) p q. Field r /\ poly p /\ poly q /\ 0 < deg q ==>
-     poly (p / q) /\ poly (p % q) /\ (p = p / q * q + p % q) /\ deg (p % q) < deg q``,
-  rw[poly_div_mod_def]);
+Theorem poly_field_div_mod_def:
+    !(r:'a field) p q. Field r /\ poly p /\ poly q /\ 0 < deg q ==>
+     poly (p / q) /\ poly (p % q) /\ (p = p / q * q + p % q) /\ deg (p % q) < deg q
+Proof
+  rw[poly_div_mod_def]
+QED
 
 (* Theorem: Uniqueness of quotient and remainder:
             (p = s1 * q + t1) /\ deg t1 < deg q
@@ -318,45 +326,49 @@ val poly_field_div_mod_def = store_thm(
    Since unit (lead q)           by poly_field_poly_pmonic
    Result follows                by poly_div_mod_unique
 *)
-val poly_field_div_mod_unique = store_thm(
-  "poly_field_div_mod_unique",
-  ``!r:'a field. Field r ==> !p q s1 t1 s2 t2. poly p /\ poly q /\ poly s1 /\ poly t1 /\ poly s2 /\ poly t2 /\
+Theorem poly_field_div_mod_unique:
+    !r:'a field. Field r ==> !p q s1 t1 s2 t2. poly p /\ poly q /\ poly s1 /\ poly t1 /\ poly s2 /\ poly t2 /\
            (p = s1 * q + t1) /\ deg t1 < deg q /\
-           (p = s2 * q + t2) /\ deg t2 < deg q  ==> (s1 = s2) /\ (t1 = t2)``,
+           (p = s2 * q + t2) /\ deg t2 < deg q  ==> (s1 = s2) /\ (t1 = t2)
+Proof
   ntac 9 strip_tac >>
   Cases_on `deg q = 0` >| [
     `0 <= deg t1 /\ 0 <= deg t2` by rw[] >>
     metis_tac[NOT_LESS],
     `0 < deg q` by decide_tac >>
     metis_tac[poly_div_mod_unique, poly_field_poly_pmonic, field_is_ring]
-  ]);
+  ]
+QED
 
 (* Theorem: Uniqueness of quotient and remainder:
             (p = s * q + t) /\ deg t < deg q ==> (s = p /q) /\ (t = p % q) *)
 (* Proof: by poly_field_div_mod_def and poly_field_div_mod_unique. *)
-val poly_field_div_mod_eqn = store_thm(
-  "poly_field_div_mod_eqn",
-  ``!r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
-     (p = s * q + t) /\ deg t < deg q ==> (p / q = s) /\ (p % q = t)``,
+Theorem poly_field_div_mod_eqn:
+    !r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\
+     (p = s * q + t) /\ deg t < deg q ==> (p / q = s) /\ (p % q = t)
+Proof
   ntac 7 strip_tac >>
   `0 < deg q` by decide_tac >>
   `(p = (p / q) * q + (p % q)) /\ deg (p % q) < deg q /\ poly (p / q) /\ poly (p % q)`
     by rw_tac std_ss[poly_field_div_mod_def] >>
-  metis_tac[poly_field_div_mod_unique]);
+  metis_tac[poly_field_div_mod_unique]
+QED
 
 (* Theorem: Uniqueness of p / q *)
 (* Proof: by poly_field_div_mod_eqn. *)
-val poly_field_div_unique = store_thm(
-  "poly_field_div_unique",
-  ``!r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\ (p = s * q + t) /\ deg t < deg q ==> (p / q = s)``,
-  metis_tac[poly_field_div_mod_eqn]);
+Theorem poly_field_div_unique:
+    !r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\ (p = s * q + t) /\ deg t < deg q ==> (p / q = s)
+Proof
+  metis_tac[poly_field_div_mod_eqn]
+QED
 
 (* Theorem: Uniqueness of p % q *)
 (* Proof: by poly_field_div_mod_eqn. *)
-val poly_field_mod_unique = store_thm(
-  "poly_field_mod_unique",
-  ``!r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\ (p = s * q + t) /\ deg t < deg q ==> (p % q = t)``,
-  metis_tac[poly_field_div_mod_eqn]);
+Theorem poly_field_mod_unique:
+    !r:'a field. Field r ==> !p q s t. poly p /\ poly q /\ poly s /\ poly t /\ (p = s * q + t) /\ deg t < deg q ==> (p % q = t)
+Proof
+  metis_tac[poly_field_div_mod_eqn]
+QED
 
 (* Compare these with:
 poly_div_poly  |- !r q p. Ring r /\ poly p /\ pmonic q ==> poly (p / q): thm
@@ -378,234 +390,330 @@ val poly_field_mod_poly = save_thm("poly_field_mod_poly",
 (* ------------------------------------------------------------------------- *)
 
 (* Note: 0 < deg z comes from deg p < deq z *)
-val poly_field_div_mod_less = store_thm("poly_field_div_mod_less",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ deg p < deg z ==> (p / z = |0|) /\ (p % z = p)``,
-  rw[poly_div_mod_less]);
+Theorem poly_field_div_mod_less:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ deg p < deg z ==> (p / z = |0|) /\ (p % z = p)
+Proof
+  rw[poly_div_mod_less]
+QED
 
-val poly_field_div_less = store_thm("poly_field_div_less",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ deg p < deg z ==> (p / z = |0|)``,
-  rw[poly_div_less]);
+Theorem poly_field_div_less:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ deg p < deg z ==> (p / z = |0|)
+Proof
+  rw[poly_div_less]
+QED
 
-val poly_field_mod_less = store_thm("poly_field_mod_less",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ deg p < deg z ==> (p % z = p)``,
-  rw[poly_mod_less]);
+Theorem poly_field_mod_less:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ deg p < deg z ==> (p % z = p)
+Proof
+  rw[poly_mod_less]
+QED
 
-val poly_field_zero_div_mod = store_thm("poly_field_zero_div_mod",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ( |0| / z = |0|) /\ ( |0| % z = |0|)``,
-  rw[Once poly_zero_div_mod]);
+Theorem poly_field_zero_div_mod:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ( |0| / z = |0|) /\ ( |0| % z = |0|)
+Proof
+  rw[Once poly_zero_div_mod]
+QED
 
-val poly_field_zero_div = store_thm("poly_field_zero_div",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ( |0| / z = |0|)``,
-  rw[Once poly_zero_div]);
+Theorem poly_field_zero_div:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ( |0| / z = |0|)
+Proof
+  rw[Once poly_zero_div]
+QED
 
-val poly_field_zero_mod = store_thm("poly_field_zero_mod",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ( |0| % z = |0|)``,
-  rw[Once poly_zero_mod]);
+Theorem poly_field_zero_mod:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ( |0| % z = |0|)
+Proof
+  rw[Once poly_zero_mod]
+QED
 
-val poly_field_mod_mod = store_thm("poly_field_mod_mod",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> ((p % z) % z = p % z)``,
-  rw[Once poly_mod_mod]);
+Theorem poly_field_mod_mod:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> ((p % z) % z = p % z)
+Proof
+  rw[Once poly_mod_mod]
+QED
 
-val poly_field_div_mod_by_const = store_thm("poly_field_div_mod_by_const",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| /\ (deg z = 0) ==>
-                 (p / z = |/ (lead z) * p) /\ (p % z = |0|)``,
-  rw[poly_div_mod_by_const]);
+Theorem poly_field_div_mod_by_const:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| /\ (deg z = 0) ==>
+                 (p / z = |/ (lead z) * p) /\ (p % z = |0|)
+Proof
+  rw[poly_div_mod_by_const]
+QED
 
-val poly_field_div_by_const = store_thm("poly_field_div_by_const",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| /\ (deg z = 0) ==>
-                 (p / z = |/ (lead z) * p)``,
-  rw[Once poly_div_by_const]);
+Theorem poly_field_div_by_const:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| /\ (deg z = 0) ==>
+                 (p / z = |/ (lead z) * p)
+Proof
+  rw[Once poly_div_by_const]
+QED
 
-val poly_field_mod_by_const = store_thm("poly_field_mod_by_const",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| /\ (deg z = 0) ==>
-                 (p % z = |0|)``,
-  rw[Once poly_mod_by_const]);
+Theorem poly_field_mod_by_const:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| /\ (deg z = 0) ==>
+                 (p % z = |0|)
+Proof
+  rw[Once poly_mod_by_const]
+QED
 
-val poly_field_div_mod_const = store_thm("poly_field_div_mod_const",
-  ``!r:'a field. Field r ==> !z. poly z /\ 0 < deg z ==>
-    !c. c IN R /\ c <> #0 ==> (([c] / z = |0|) /\ ([c] % z = [c]))``,
-  rw[Once poly_div_mod_const]);
+Theorem poly_field_div_mod_const:
+    !r:'a field. Field r ==> !z. poly z /\ 0 < deg z ==>
+    !c. c IN R /\ c <> #0 ==> (([c] / z = |0|) /\ ([c] % z = [c]))
+Proof
+  rw[Once poly_div_mod_const]
+QED
 (* Note: when deg z = 0, [c] / z <> |0|, but [c] % z = |0| *)
 
-val poly_field_div_const = store_thm("poly_field_div_const",
-  ``!r:'a field. Field r ==> !z. poly z /\ 0 < deg z ==>
-    !c. c IN R /\ c <> #0 ==> ([c] / z = |0|)``,
-  rw[Once poly_div_const]);
+Theorem poly_field_div_const:
+    !r:'a field. Field r ==> !z. poly z /\ 0 < deg z ==>
+    !c. c IN R /\ c <> #0 ==> ([c] / z = |0|)
+Proof
+  rw[Once poly_div_const]
+QED
 (* Note: when deg z = 0, [c] / z <> |0|. *)
 
-val poly_field_mod_const = store_thm("poly_field_mod_const",
-  ``!r:'a field. Field r ==> !z. poly z /\ 0 < deg z ==>
-    !c. c IN R /\ c <> #0 ==> ([c] % z = [c])``,
-  rw[Once poly_mod_const]);
+Theorem poly_field_mod_const:
+    !r:'a field. Field r ==> !z. poly z /\ 0 < deg z ==>
+    !c. c IN R /\ c <> #0 ==> ([c] % z = [c])
+Proof
+  rw[Once poly_mod_const]
+QED
 (* Note: when deg z = 0, [c] % z = |0| *)
 
-val poly_field_div_mod_neg = store_thm("poly_field_div_mod_neg",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
-    (((- p) / z = - (p / z)) /\ ((- p) % z = - (p % z)))``,
-  rw[poly_div_mod_neg]);
+Theorem poly_field_div_mod_neg:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
+    (((- p) / z = - (p / z)) /\ ((- p) % z = - (p % z)))
+Proof
+  rw[poly_div_mod_neg]
+QED
 
-val poly_field_div_neg = store_thm("poly_field_div_neg",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (-p / z = -(p / z))``,
-  rw[Once poly_div_neg]);
+Theorem poly_field_div_neg:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (-p / z = -(p / z))
+Proof
+  rw[Once poly_div_neg]
+QED
 
-val poly_field_mod_neg = store_thm("poly_field_mod_neg",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (-p % z = -(p % z))``,
-  rw[Once poly_mod_neg]);
+Theorem poly_field_mod_neg:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (-p % z = -(p % z))
+Proof
+  rw[Once poly_mod_neg]
+QED
 
-val poly_field_div_mod_multiple = store_thm("poly_field_div_mod_multiple",
-  ``!r:'a field. Field r ==>
-    !p z. poly p /\ poly z /\ z <> |0| ==> ((p * z) / z = p) /\ ((p * z) % z = |0|)``,
-  rw[poly_div_mod_multiple]);
+Theorem poly_field_div_mod_multiple:
+    !r:'a field. Field r ==>
+    !p z. poly p /\ poly z /\ z <> |0| ==> ((p * z) / z = p) /\ ((p * z) % z = |0|)
+Proof
+  rw[poly_div_mod_multiple]
+QED
 
-val poly_field_div_multiple = store_thm("poly_field_div_multiple",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (p * z / z = p)``,
-  rw[Once poly_div_multiple]);
+Theorem poly_field_div_multiple:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (p * z / z = p)
+Proof
+  rw[Once poly_div_multiple]
+QED
 
-val poly_field_mod_multiple = store_thm("poly_field_mod_multiple",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> ((p * z) % z = |0|)``,
-  rw[Once poly_mod_multiple]);
+Theorem poly_field_mod_multiple:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> ((p * z) % z = |0|)
+Proof
+  rw[Once poly_mod_multiple]
+QED
 
-val poly_field_div_multiple_comm = store_thm("poly_field_div_multiple_comm",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (z * p / z = p)``,
-  rw[Once poly_div_multiple_comm]);
+Theorem poly_field_div_multiple_comm:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (z * p / z = p)
+Proof
+  rw[Once poly_div_multiple_comm]
+QED
 
-val poly_field_mod_multiple_comm = store_thm("poly_field_mod_multiple_comm",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> ((z * p) % z = |0|)``,
-  rw[Once poly_mod_multiple_comm]);
+Theorem poly_field_mod_multiple_comm:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> ((z * p) % z = |0|)
+Proof
+  rw[Once poly_mod_multiple_comm]
+QED
 
-val poly_field_div_mod_id = store_thm("poly_field_div_mod_id",
-  ``!r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (p / p = |1|) /\ (p % p = |0|)``,
-  rw[poly_div_mod_id]);
+Theorem poly_field_div_mod_id:
+    !r:'a field. Field r ==> !p. poly p /\ p <> |0| ==> (p / p = |1|) /\ (p % p = |0|)
+Proof
+  rw[poly_div_mod_id]
+QED
 
-val poly_field_add_mod = store_thm("poly_field_add_mod",
-  ``!r:'a field. Field r ==>
-    !p q z. poly p /\ poly q /\ poly z /\ deg q < deg z /\ (p = z + q) ==> (p % z = q)``,
-  rw[Once poly_add_mod]);
+Theorem poly_field_add_mod:
+    !r:'a field. Field r ==>
+    !p q z. poly p /\ poly q /\ poly z /\ deg q < deg z /\ (p = z + q) ==> (p % z = q)
+Proof
+  rw[Once poly_add_mod]
+QED
 (* Note: when z <> |0| and deg z = 0, p % z = |0| *)
 
-val poly_field_mod_add = store_thm("poly_field_mod_add",
-  ``!r:'a field. Field r ==> !p q z. poly p /\ poly q /\ poly z /\ z <> |0| ==>
-                 ((p + q) % z = (p % z + q % z) % z)``,
-  rw[Once poly_mod_add]);
+Theorem poly_field_mod_add:
+    !r:'a field. Field r ==> !p q z. poly p /\ poly q /\ poly z /\ z <> |0| ==>
+                 ((p + q) % z = (p % z + q % z) % z)
+Proof
+  rw[Once poly_mod_add]
+QED
 
-val poly_field_mod_add_assoc = store_thm("poly_field_mod_add_assoc",
-  ``!r:'a field. Field r ==> !p q t z. poly p /\ poly q /\ poly t /\ poly z /\ z <> |0| ==>
-     (((p + q) % z + t) % z = (p + (q + t) % z) % z)``,
-  rw[Once poly_mod_add_assoc]);
+Theorem poly_field_mod_add_assoc:
+    !r:'a field. Field r ==> !p q t z. poly p /\ poly q /\ poly t /\ poly z /\ z <> |0| ==>
+     (((p + q) % z + t) % z = (p + (q + t) % z) % z)
+Proof
+  rw[Once poly_mod_add_assoc]
+QED
 
-val poly_field_mod_sub = store_thm("poly_field_mod_sub",
-  ``!r:'a field. Field r ==>
-    !p q z. poly p /\ poly q /\ poly z /\ z <> |0| ==> ((p - q) % z = (p % z - q % z) % z)``,
-  rw[Once poly_mod_sub]);
+Theorem poly_field_mod_sub:
+    !r:'a field. Field r ==>
+    !p q z. poly p /\ poly q /\ poly z /\ z <> |0| ==> ((p - q) % z = (p % z - q % z) % z)
+Proof
+  rw[Once poly_mod_sub]
+QED
 
-val poly_field_mod_mult = store_thm("poly_field_mod_mult",
-  ``!r:'a field. Field r ==>
-    !p q z. poly p /\ poly q /\ poly z /\ z <> |0| ==> ((p * q) % z = (p % z * q % z) % z)``,
-  rw[Once poly_mod_mult]);
+Theorem poly_field_mod_mult:
+    !r:'a field. Field r ==>
+    !p q z. poly p /\ poly q /\ poly z /\ z <> |0| ==> ((p * q) % z = (p % z * q % z) % z)
+Proof
+  rw[Once poly_mod_mult]
+QED
 
-val poly_field_mod_mult_assoc = store_thm("poly_field_mod_mult_assoc",
-  ``!r:'a field. Field r ==> !p q t z. poly p /\ poly q /\ poly t /\ poly z /\ z <> |0| ==>
-                 (((p * q) % z * t) % z = (p * (q * t) % z) % z)``,
-  rw[Once poly_mod_mult_assoc]);
+Theorem poly_field_mod_mult_assoc:
+    !r:'a field. Field r ==> !p q t z. poly p /\ poly q /\ poly t /\ poly z /\ z <> |0| ==>
+                 (((p * q) % z * t) % z = (p * (q * t) % z) % z)
+Proof
+  rw[Once poly_mod_mult_assoc]
+QED
 
-val poly_field_mod_cmult = store_thm("poly_field_mod_cmult",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
-   !c. c IN R ==> ((c * p) % z = (c * p % z) % z)``,
-  rw[Once poly_mod_cmult]);
+Theorem poly_field_mod_cmult:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
+   !c. c IN R ==> ((c * p) % z = (c * p % z) % z)
+Proof
+  rw[Once poly_mod_cmult]
+QED
 
-val poly_field_mod_eq_zero = store_thm("poly_field_mod_eq_zero",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
-       ((p % z = |0|) <=> ?q. poly q /\ (p = q * z))``,
-  rw[Once poly_mod_eq_zero]);
+Theorem poly_field_mod_eq_zero:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
+       ((p % z = |0|) <=> ?q. poly q /\ (p = q * z))
+Proof
+  rw[Once poly_mod_eq_zero]
+QED
 
-val pmod_field_mod = store_thm("pmod_field_mod",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (p % z == p) (pm z)``,
-  rw[Once pmod_mod]);
+Theorem pmod_field_mod:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==> (p % z == p) (pm z)
+Proof
+  rw[Once pmod_mod]
+QED
 
-val pmod_field_neg = store_thm("pmod_field_neg",
-  ``!r:'a field. Field r ==> !p1 p2 z. poly p1 /\ poly p2 /\ poly z /\ z <> |0| ==>
-   ((p1 == p2) (pm z) <=> (- p1 == - p2) (pm z))``,
-  rw[Once pmod_neg]);
+Theorem pmod_field_neg:
+    !r:'a field. Field r ==> !p1 p2 z. poly p1 /\ poly p2 /\ poly z /\ z <> |0| ==>
+   ((p1 == p2) (pm z) <=> (- p1 == - p2) (pm z))
+Proof
+  rw[Once pmod_neg]
+QED
 
-val pmod_field_add = store_thm("pmod_field_add",
-  ``!r:'a field. Field r ==> !p1 p2 q1 q2 z. poly p1 /\ poly p2 /\ poly q1 /\ poly q2 /\
-   poly z /\ z <> |0| ==> (p1 == p2) (pm z) /\ (q1 == q2) (pm z) ==> (p1 + q1 == p2 + q2) (pm z)``,
-  rw[Once pmod_add]);
+Theorem pmod_field_add:
+    !r:'a field. Field r ==> !p1 p2 q1 q2 z. poly p1 /\ poly p2 /\ poly q1 /\ poly q2 /\
+   poly z /\ z <> |0| ==> (p1 == p2) (pm z) /\ (q1 == q2) (pm z) ==> (p1 + q1 == p2 + q2) (pm z)
+Proof
+  rw[Once pmod_add]
+QED
 
-val pmod_field_mult = store_thm("pmod_field_mult",
-  ``!r:'a field. Field r ==> !p1 p2 q1 q2 z. poly p1 /\ poly p2 /\ poly q1 /\ poly q2 /\
-    poly z /\ z <> |0| ==> (p1 == p2) (pm z) /\ (q1 == q2) (pm z) ==> (p1 * q1 == p2 * q2) (pm z)``,
-  rw[Once pmod_mult]);
+Theorem pmod_field_mult:
+    !r:'a field. Field r ==> !p1 p2 q1 q2 z. poly p1 /\ poly p2 /\ poly q1 /\ poly q2 /\
+    poly z /\ z <> |0| ==> (p1 == p2) (pm z) /\ (q1 == q2) (pm z) ==> (p1 * q1 == p2 * q2) (pm z)
+Proof
+  rw[Once pmod_mult]
+QED
 
-val pmod_field_cmult = store_thm("pmod_field_cmult",
-  ``!r:'a field. Field r ==> !p1 p2 z. poly p1 /\ poly p2 /\ poly z /\ z <> |0| ==>
-   !c. c IN R ==> (p1 == p2) (pm z) ==> (c * p1 == c * p2) (pm z)``,
-  rw[Once pmod_cmult]);
+Theorem pmod_field_cmult:
+    !r:'a field. Field r ==> !p1 p2 z. poly p1 /\ poly p2 /\ poly z /\ z <> |0| ==>
+   !c. c IN R ==> (p1 == p2) (pm z) ==> (c * p1 == c * p2) (pm z)
+Proof
+  rw[Once pmod_cmult]
+QED
 
-val poly_field_mod_of_zero = store_thm("poly_field_mod_of_zero",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ([] % z = |0|)``,
-  rw[Once poly_mod_of_zero]);
+Theorem poly_field_mod_of_zero:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ([] % z = |0|)
+Proof
+  rw[Once poly_mod_of_zero]
+QED
 
-val poly_field_mod_zero = store_thm("poly_field_mod_zero",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ( |0| % z = |0|)``,
-  rw[Once poly_mod_zero]);
+Theorem poly_field_mod_zero:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==> ( |0| % z = |0|)
+Proof
+  rw[Once poly_mod_zero]
+QED
 
-val poly_field_mod_one = store_thm("poly_field_mod_one",
-  ``!r:'a field. Field r ==> !z. poly z /\ 0 < deg z ==> ( |1| % z = |1|)``,
-  rw[Once poly_mod_one]);
+Theorem poly_field_mod_one:
+    !r:'a field. Field r ==> !z. poly z /\ 0 < deg z ==> ( |1| % z = |1|)
+Proof
+  rw[Once poly_mod_one]
+QED
 (* Note: when deg z = 0, |1| % z = |0|, not |1|. *)
 
-val poly_field_mod_one_all = store_thm("poly_field_mod_one_all",
-  ``!r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
-         |1| % z = if deg z = 0 then |0| else |1|``,
-  rw[Once poly_mod_one_all]);
+Theorem poly_field_mod_one_all:
+    !r:'a field. Field r ==> !z. poly z /\ z <> |0| ==>
+         |1| % z = if deg z = 0 then |0| else |1|
+Proof
+  rw[Once poly_mod_one_all]
+QED
 
-val poly_field_mod_exp = store_thm("poly_field_mod_exp",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
-    !n. (p ** n) % z = ((p % z) ** n) % z``,
-  rw[Once poly_mod_exp]);
+Theorem poly_field_mod_exp:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| ==>
+    !n. (p ** n) % z = ((p % z) ** n) % z
+Proof
+  rw[Once poly_mod_exp]
+QED
 
-val poly_field_mod_eq = store_thm("poly_field_mod_eq",
-  ``!(r:'a field) z. Field r /\ poly z /\ z <> |0| ==>
-    !p q. poly p /\ poly q ==> ((p % z = q % z) <=> ((p - q) % z = |0|))``,
-  rw[Once poly_mod_eq]);
+Theorem poly_field_mod_eq:
+    !(r:'a field) z. Field r /\ poly z /\ z <> |0| ==>
+    !p q. poly p /\ poly q ==> ((p % z = q % z) <=> ((p - q) % z = |0|))
+Proof
+  rw[Once poly_mod_eq]
+QED
 
-val poly_field_mod_eq_divisor = store_thm("poly_field_mod_eq_divisor",
-  ``!(r:'a field) z h. Field r /\ poly z /\ poly h /\
+Theorem poly_field_mod_eq_divisor:
+    !(r:'a field) z h. Field r /\ poly z /\ poly h /\
                        z <> |0| /\ h <> |0| /\ (z % h = |0|) ==>
-    !p q. poly p /\ poly q /\ (p == q) (pm z) ==> (p == q) (pm h)``,
-  metis_tac[poly_mod_eq_divisor, poly_field_poly_ulead, field_is_ring]);
+    !p q. poly p /\ poly q /\ (p == q) (pm z) ==> (p == q) (pm h)
+Proof
+  metis_tac[poly_mod_eq_divisor, poly_field_poly_ulead, field_is_ring]
+QED
 
-val poly_field_deg_mod_less = store_thm("poly_field_deg_mod_less",
-  ``!(r:'a field) p q. Field r /\ poly p /\ poly q /\ 0 < deg q ==> deg (p % q) < deg q``,
-  rw[Once poly_deg_mod_less]);
+Theorem poly_field_deg_mod_less:
+    !(r:'a field) p q. Field r /\ poly p /\ poly q /\ 0 < deg q ==> deg (p % q) < deg q
+Proof
+  rw[Once poly_deg_mod_less]
+QED
 (* Note: when deg q = 0, deg (p % q) < 0 is meaningless. *)
 
-val poly_field_div_eq_zero = store_thm("poly_field_div_eq_zero",
-  ``!r:'a field. Field r ==>
-    !p q. poly p /\ poly q /\ 0 < deg q ==> ((p / q = |0|) <=> deg p < deg q)``,
-  rw[Once poly_div_eq_zero]);
+Theorem poly_field_div_eq_zero:
+    !r:'a field. Field r ==>
+    !p q. poly p /\ poly q /\ 0 < deg q ==> ((p / q = |0|) <=> deg p < deg q)
+Proof
+  rw[Once poly_div_eq_zero]
+QED
 (* Note: when deg q = 0, deg p < 0 is meaningless. *)
 
-val poly_field_div_multiple_alt = store_thm("poly_field_div_multiple_alt",
-  ``!r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| /\ (p % z = |0|) ==>
-             ((p / z) * z = p) /\ (z * (p / z) = p)``,
-  rw[poly_div_multiple_alt]);
+Theorem poly_field_div_multiple_alt:
+    !r:'a field. Field r ==> !p z. poly p /\ poly z /\ z <> |0| /\ (p % z = |0|) ==>
+             ((p / z) * z = p) /\ (z * (p / z) = p)
+Proof
+  rw[poly_div_multiple_alt]
+QED
 
-val poly_field_mult_rcancel = store_thm("poly_field_mult_rcancel",
-  ``!r:'a field. Field r ==>
-    !p q t. poly p /\ poly q /\ poly t /\ p <> |0| ==> ((q * p = t * p) <=> (q = t))``,
-  rw[Once poly_ulead_mult_rcancel]);
+Theorem poly_field_mult_rcancel:
+    !r:'a field. Field r ==>
+    !p q t. poly p /\ poly q /\ poly t /\ p <> |0| ==> ((q * p = t * p) <=> (q = t))
+Proof
+  rw[Once poly_ulead_mult_rcancel]
+QED
 
-val poly_field_mult_lcancel = store_thm("poly_field_mult_lcancel",
-  ``!r:'a field. Field r ==>
-    !p q t. poly p /\ poly q /\ poly t /\ p <> |0| ==> ((p * q = p * t) <=> (q = t))``,
-  rw[Once poly_ulead_mult_lcancel]);
+Theorem poly_field_mult_lcancel:
+    !r:'a field. Field r ==>
+    !p q t. poly p /\ poly q /\ poly t /\ p <> |0| ==> ((p * q = p * t) <=> (q = t))
+Proof
+  rw[Once poly_ulead_mult_lcancel]
+QED
 
-val poly_field_eval_poly_mod_at_root = store_thm("poly_field_eval_poly_mod_at_root",
-  ``!r:'a field. Field r ==> !p q. poly p /\ poly q /\ q <> |0| ==>
-    !x. x IN roots q ==> (eval (p % q) x = eval p x)``,
-  rw[Once poly_eval_poly_mod_at_root]);
+Theorem poly_field_eval_poly_mod_at_root:
+    !r:'a field. Field r ==> !p q. poly p /\ poly q /\ q <> |0| ==>
+    !x. x IN roots q ==> (eval (p % q) x = eval p x)
+Proof
+  rw[Once poly_eval_poly_mod_at_root]
+QED
 
 
 

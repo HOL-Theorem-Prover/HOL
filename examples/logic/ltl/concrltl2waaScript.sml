@@ -20,55 +20,54 @@ Definition tempDNF_concr_def:
   ∧ (tempDNF_concr (R f1 f2) = [[R f1 f2]])
 End
 
-val FOLDR_LEMM1 = store_thm
-  ("FOLDR_LEMM1",
-  ``!m2 m1 p. MEM p (FOLDR (λq l. (MAP ($++ q) m1) ++l) [] m2)
-  ==> (?l1 l2. (MEM l1 m1 ∧ MEM l2 m2) ∧ (p = (l2 ++ l1)))``,
+Theorem FOLDR_LEMM1:
+    !m2 m1 p. MEM p (FOLDR (λq l. (MAP ($++ q) m1) ++l) [] m2)
+  ==> (?l1 l2. (MEM l1 m1 ∧ MEM l2 m2) ∧ (p = (l2 ++ l1)))
+Proof
   Induct_on `m2` >> fs[]
   >> rpt strip_tac >> fs[MEM_MAP] >> rw[] >> simp[EQ_IMP_THM]
   >> rpt strip_tac >> metis_tac[]
-  );
+QED
 
-val FOLDR_LEMM2 = store_thm
-  ("FOLDR_LEMM2",
-   ``!m2 m1 p. MEM p (FOLDR (λq l. (MAP ($++ q) m1) ++l) [] m2)
-  = (?l1 l2. (MEM l1 m1 ∧ MEM l2 m2) ∧ (p = (l2 ++ l1)))``,
+Theorem FOLDR_LEMM2:
+     !m2 m1 p. MEM p (FOLDR (λq l. (MAP ($++ q) m1) ++l) [] m2)
+  = (?l1 l2. (MEM l1 m1 ∧ MEM l2 m2) ∧ (p = (l2 ++ l1)))
+Proof
    Induct_on `m2` >> fs[]
    >> rpt strip_tac >> fs[MEM_MAP] >> rw[] >> simp[EQ_IMP_THM]
    >> rpt strip_tac >> metis_tac[]
-  );
+QED
 
-val FOLDR_LEMM3 = store_thm
-  ("FOLDR_LEMM3",
-   ``!f m2 m1 a b. MEM (f a b)
+Theorem FOLDR_LEMM3:
+     !f m2 m1 a b. MEM (f a b)
                      (FOLDR (λa1 l. (MAP (\b1. f a1 b1) m2) ++l) [] m1)
-     = (?a' b'. MEM a' m1 ∧ MEM b' m2 ∧ (f a b = f a' b'))``,
+     = (?a' b'. MEM a' m1 ∧ MEM b' m2 ∧ (f a b = f a' b'))
+Proof
    Induct_on `m1` >> fs[]
    >> rpt strip_tac >> fs[MEM_MAP] >> rw[] >> simp[EQ_IMP_THM]
    >> rpt strip_tac >> metis_tac[]
-  );
+QED
 
-val FOLDR_LEMM4 = store_thm
-  ("FOLDR_LEMM4",
-   ``!f m2 m1 x. MEM x
+Theorem FOLDR_LEMM4:
+     !f m2 m1 x. MEM x
                      (FOLDR (λa1 l. (MAP (\b1. f a1 b1) m2) ++l) [] m1)
-     = (?a' b'. MEM a' m1 ∧ MEM b' m2 ∧ (x = f a' b'))``,
+     = (?a' b'. MEM a' m1 ∧ MEM b' m2 ∧ (x = f a' b'))
+Proof
    Induct_on `m1` >> fs[]
    >> rpt strip_tac >> fs[MEM_MAP] >> rw[] >> simp[EQ_IMP_THM]
    >> rpt strip_tac >> metis_tac[]
-  );
+QED
 
-val FOLDR_LEMM6 = store_thm
-  ("FOLDR_LEMM6",
-   ``!g l x. MEM x (FOLDR (λe pr. (g e) ⧺ pr) [] l)
-                  = (?a. MEM a l ∧ MEM x (g a))``,
+Theorem FOLDR_LEMM6:
+     !g l x. MEM x (FOLDR (λe pr. (g e) ⧺ pr) [] l)
+                  = (?a. MEM a l ∧ MEM x (g a))
+Proof
    Induct_on `l` >> rpt strip_tac >> fs[]
    >> simp[EQ_IMP_THM] >> rpt strip_tac >> metis_tac[]
-  );
+QED
 
-val FOLDR_CONCR_EDGE = store_thm
-  ("FOLDR_CONCR_EDGE",
-   ``!l. FOLDR
+Theorem FOLDR_CONCR_EDGE:
+     !l. FOLDR
            (λsF e.
                 <|pos := sF.pos ⧺ e.pos; neg := sF.neg ⧺ e.neg;
                   sucs := sF.sucs ⧺ e.sucs|>) (concrEdge [] [] [])
@@ -76,13 +75,14 @@ val FOLDR_CONCR_EDGE = store_thm
          concrEdge
              (FOLDR (λe pr. e.pos ++ pr) [] l)
              (FOLDR (λe pr. e.neg ++ pr) [] l)
-             (FOLDR (λe pr. e.sucs ++ pr) [] l)``,
+             (FOLDR (λe pr. e.sucs ++ pr) [] l)
+Proof
    Induct_on `l` >> fs[concrEdge_component_equality]
-  );
+QED
 
-val TEMPDNF_CONCR_LEMM = store_thm
-  ("TEMPDNF_CONCR_LEMM",
-   ``!f. set (MAP set (tempDNF_concr f)) = tempDNF f``,
+Theorem TEMPDNF_CONCR_LEMM:
+     !f. set (MAP set (tempDNF_concr f)) = tempDNF f
+Proof
    Induct_on `f` >> simp[tempDNF_concr_def,tempDNF_def]
    >> simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac
     >- (fs[MEM_MAP]
@@ -116,7 +116,7 @@ val TEMPDNF_CONCR_LEMM = store_thm
           >- (simp[SET_EQ_SUBSET,SUBSET_DEF] >> rpt strip_tac >> metis_tac[])
           >- (metis_tac[FOLDR_LEMM2])
        )
-  );
+QED
 
 Definition props_concr_def:
     (props_concr (VAR a) = [a])
@@ -128,13 +128,13 @@ Definition props_concr_def:
   ∧ (props_concr (R f1 f2) = props_concr f1 ++ props_concr f2)
 End
 
-val PROPS_CONCR_LEMM = store_thm
-  ("PROPS_CONCR_LEMM",
-  ``!φ. set (props_concr φ) = (props φ)``,
+Theorem PROPS_CONCR_LEMM:
+    !φ. set (props_concr φ) = (props φ)
+Proof
   Induct_on `φ` >> rpt strip_tac >> fs[props_concr_def,props_def,subForms_def]
   >> simp[SET_EQ_SUBSET,UNION_DEF,SUBSET_DEF] >> rpt strip_tac
   >> metis_tac[]
-  );
+QED
 
 Definition d_conj_concr_def:
   d_conj_concr d1 d2 =
@@ -190,11 +190,11 @@ End
 (*       ) *)
 (*    >- (fs[MEM_MAP,concrEdge_component_equality,tempDNF_concr_def] >> metis_tac[MEM]) *)
 
-val TRANS_CONCR_AP = store_thm
-  ("TRANS_CONCR_AP",
-   ``!f ce. MEM ce (trans_concr f)
+Theorem TRANS_CONCR_AP:
+     !f ce. MEM ce (trans_concr f)
             ==> ((set ce.pos ⊆ (props f))
-               ∧ (set ce.neg ⊆ (props f)))``,
+               ∧ (set ce.neg ⊆ (props f)))
+Proof
    Induct_on `f` >> rpt strip_tac >> fs[trans_concr_def,props_def,subForms_def]
    >> fs[SUBSET_DEF] >> rpt strip_tac
    >- metis_tac[]
@@ -312,13 +312,13 @@ val TRANS_CONCR_AP = store_thm
        >> first_x_assum (qspec_then `ce` mp_tac) >> simp[]
        >> simp[props_def] >> rpt strip_tac >> metis_tac[]
       )
-  );
+QED
 
 
-val TRANS_CONCR_LEMM = store_thm
-  ("TRANS_CONCR_LEMM",
-   ``!aP f. set (MAP (concr2AbstractEdge aP) (trans_concr f))
-                       = trans (POW aP) f``,
+Theorem TRANS_CONCR_LEMM:
+     !aP f. set (MAP (concr2AbstractEdge aP) (trans_concr f))
+                       = trans (POW aP) f
+Proof
    gen_tac >> Induct_on `f`
    >> simp[trans_concr_def,trans_def,char_def] >> rpt strip_tac
      >- (`<|pos := [a]; neg := []; sucs := []|> = concrEdge [a] [] []`
@@ -682,15 +682,15 @@ val TRANS_CONCR_LEMM = store_thm
                   )
              )
         )
-  );
+QED
 
-val ONE_STEP_TRANS_CONCR = store_thm
-  ("ONE_STEP_TRANS_CONCR",
-   ``!f x y. (x ∈ tempSubForms f)
+Theorem ONE_STEP_TRANS_CONCR:
+     !f x y. (x ∈ tempSubForms f)
               ==> (oneStep (ltl2vwaa f) x y)
                     = (y ∈ BIGUNION
                          (set (MAP (SND o (concr2AbstractEdge (props f)))
-                                   (trans_concr x))))``,
+                                   (trans_concr x))))
+Proof
    rpt strip_tac
    >> `(y ∈ BIGUNION (set (MAP (SND ∘ concr2AbstractEdge (props f))
                                (trans_concr x))))
@@ -707,7 +707,7 @@ val ONE_STEP_TRANS_CONCR = store_thm
           )
    )
    >> simp[oneStep_def,ltl2vwaa_def,ltl2vwaa_free_alph_def]
-  );
+QED
 
 Definition tempSubfCl_def:
   tempSubfCl l = BIGUNION { tempSubForms f | MEM f l }
@@ -718,9 +718,9 @@ Definition list_to_bag_def:
   ∧ (list_to_bag (x::xs) = (list_to_bag xs) ⊎ {|x|})
 End
 
-val LST_TO_BAG_FINITE = store_thm
-  ("LST_TO_BAG_FINITE",
-  ``!l. FINITE_BAG (list_to_bag l)``,
+Theorem LST_TO_BAG_FINITE:
+    !l. FINITE_BAG (list_to_bag l)
+Proof
   simp[FINITE_BAG] >> Induct_on `l`
    >- (fs[list_to_bag_def,EMPTY_BAG])
    >- (rpt strip_tac >> simp[list_to_bag_def]
@@ -729,24 +729,24 @@ val LST_TO_BAG_FINITE = store_thm
        >> `P (EL_BAG h ⊎ (list_to_bag l))` by metis_tac[BAG_INSERT_UNION]
        >> fs[EL_BAG] >> metis_tac[COMM_BAG_UNION]
       )
-  );
+QED
 
-val LST_TO_BAG_APPEND_UNION = store_thm
-  ("LST_TO_BAG_APPEND_UNION",
-   ``!l k. list_to_bag (l ++ k) = list_to_bag l ⊎ list_to_bag k``,
+Theorem LST_TO_BAG_APPEND_UNION:
+     !l k. list_to_bag (l ++ k) = list_to_bag l ⊎ list_to_bag k
+Proof
    gen_tac >> Induct_on `l`
      >- (simp[list_to_bag_def] >> fs[EMPTY_BAG])
      >- (simp[list_to_bag_def] >> rpt strip_tac
          >> metis_tac[COMM_BAG_UNION,ASSOC_BAG_UNION])
-  );
+QED
 
-val IN_LST_TO_BAG = store_thm
- ("IN_LST_TO_BAG",
-  ``!x l. (x ⋲ list_to_bag l) = (x ∈ set l)``,
+Theorem IN_LST_TO_BAG:
+    !x l. (x ⋲ list_to_bag l) = (x ∈ set l)
+Proof
   gen_tac >> Induct_on `l`
    >- (simp[list_to_bag_def] >> metis_tac[NOT_IN_EMPTY_BAG,EMPTY_BAG])
    >- (rpt strip_tac >> simp[list_to_bag_def] >> metis_tac[])
- );
+QED
 
 Definition expandGraph_def:
    (expandGraph g [] = SOME g)
@@ -1138,9 +1138,8 @@ QED
 (* ) *)
 
 
-val EXP_GRAPH_WFG_AND_SOME = store_thm
-  ("EXP_GRAPH_WFG_AND_SOME",
-   ``!g fs. wfg g
+Theorem EXP_GRAPH_WFG_AND_SOME:
+     !g fs. wfg g
           ∧ (unique_node_formula g)
           (* ∧ (first_flw_has_max_counter g) *)
           ∧ (flws_sorted g)
@@ -1152,7 +1151,8 @@ val EXP_GRAPH_WFG_AND_SOME = store_thm
               ∧ (until_iff_final g ==> until_iff_final g2)
               ∧ (unique_node_formula g2)
               ∧ (flws_sorted g2)
-              (* ∧ (first_flw_has_max_counter g2) *))``,
+              (* ∧ (first_flw_has_max_counter g2) *))
+Proof
    HO_MATCH_MP_TAC (theorem "expandGraph_ind")
    >> rpt strip_tac >> fs[expandGraph_def]
    >> Q.HO_MATCH_ABBREV_TAC
@@ -1271,11 +1271,10 @@ val EXP_GRAPH_WFG_AND_SOME = store_thm
    >> `Q ==> H` suffices_by fs[] >> qunabbrev_tac `Q` >> qunabbrev_tac `H`
    >> rpt strip_tac >> qexists_tac `g2` >> fs[]
    >> qunabbrev_tac `C` >> fs[] >> metis_tac[SUBSET_TRANS]
-   );
+QED
 
-val EXP_GRAPH_REACHABLE = store_thm
-  ("EXP_GRAPH_REACHABLE",
-   ``!f g ls.
+Theorem EXP_GRAPH_REACHABLE:
+     !f g ls.
             (!g2.
               (!x. MEM x ls
                    ==> x ∈ reachRelFromSet (ltl2vwaa f) (set (graphStates g)))
@@ -1292,7 +1291,8 @@ val EXP_GRAPH_REACHABLE = store_thm
          ==> (!x. MEM x (graphStates g2)
                   ==> ((x ∈ reachRelFromSet (ltl2vwaa f)
                              (BIGUNION (ltl2vwaa f).initial))
-                    ∧ (x ∈ tempSubForms f))))``,
+                    ∧ (x ∈ tempSubForms f))))
+Proof
    gen_tac
    >> HO_MATCH_MP_TAC (theorem "expandGraph_ind")
    >> strip_tac >> strip_tac >> strip_tac >> strip_tac
@@ -1483,11 +1483,10 @@ val EXP_GRAPH_REACHABLE = store_thm
            )
         >- fs[expandGraph_def]
        )
-  );
+QED
 
-val EXP_AUTO_ALL_REACHABLE = store_thm
-  ("EXP_AUTO_ALL_REACHABLE",
-   ``!f g ls g2 x. (!x. MEM x (graphStates g) ∧ ~ MEM x ls
+Theorem EXP_AUTO_ALL_REACHABLE:
+     !f g ls g2 x. (!x. MEM x (graphStates g) ∧ ~ MEM x ls
                             ==> (!y. oneStep (ltl2vwaa f) x y
                                      ==> MEM y (graphStates g)))
                      ∧ (expandGraph g ls = SOME g2)
@@ -1498,7 +1497,8 @@ val EXP_AUTO_ALL_REACHABLE = store_thm
                      ∧ (flws_sorted g)
                    ==> (!x. MEM x (graphStates g2)
                           ==> (!y. oneStep (ltl2vwaa f) x y
-                                ==> (MEM y (graphStates g2))))``,
+                                ==> (MEM y (graphStates g2))))
+Proof
    gen_tac >> HO_MATCH_MP_TAC (theorem "expandGraph_ind") >> rpt strip_tac
    >> fs[]
     >- (fs[expandGraph_def] >> rw[] >> metis_tac[])
@@ -1612,11 +1612,10 @@ val EXP_AUTO_ALL_REACHABLE = store_thm
          >- (fs[MEM_FILTER] >> fs[SET_EQ_SUBSET,SUBSET_DEF])
          >- (fs[SET_EQ_SUBSET,SUBSET_DEF])
        )
-  );
+QED
 
-val EXP_GRAPH_TRANS_LEMM = store_thm
-  ("EXP_GRAPH_TRANS_LEMM",
-   ``!f g ls g2 x.
+Theorem EXP_GRAPH_TRANS_LEMM:
+     !f g ls g2 x.
       (!x. MEM x (graphStates g) ∧ ~ MEM x ls
            ==> (!y. concrTrans g (props f) x
                 = trans (POW (props f)) x))
@@ -1630,7 +1629,8 @@ val EXP_GRAPH_TRANS_LEMM = store_thm
     ∧ flws_sorted g
     ==> (!x. MEM x (graphStates g2)
            ==> (!y. concrTrans g2 (props f) x
-                     = trans (POW (props f)) x))``,
+                     = trans (POW (props f)) x))
+Proof
    gen_tac >> HO_MATCH_MP_TAC (theorem "expandGraph_ind") >> rpt strip_tac
    >> fs[]
    >- (fs[expandGraph_def] >> rw[] >> metis_tac[])
@@ -1871,7 +1871,7 @@ val EXP_GRAPH_TRANS_LEMM = store_thm
           )
        )
    )
-  );
+QED
 
 Definition expandAuto_init_def:
   expandAuto_init φ =
@@ -1917,12 +1917,12 @@ End
 (* ) *)
 
 
-val EXP_WAA_CORRECT_LEMM = store_thm
-  ("EXP_WAA_CORRECT_LEMM",
-   ``!φ. case expandAuto_init φ of
+Theorem EXP_WAA_CORRECT_LEMM:
+     !φ. case expandAuto_init φ of
           | NONE => F
           | SOME concrA =>
-            concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ)``,
+            concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ)
+Proof
    rpt strip_tac >> Cases_on `expandAuto_init φ` >> fs[]
     >- (fs[expandAuto_init_def] >> POP_ASSUM mp_tac
         >> Q.HO_MATCH_ABBREV_TAC `(expandGraph G FS = NONE) ==> F`
@@ -2462,13 +2462,13 @@ val EXP_WAA_CORRECT_LEMM = store_thm
                )
            )
        )
-  );
+QED
 
-val EXP_WAA_CORRECT = store_thm
-  ("EXP_WAA_CORRECT",
-   ``!φ. ?concrA.
+Theorem EXP_WAA_CORRECT:
+     !φ. ?concrA.
      (expandAuto_init φ = SOME concrA)
-     ∧ (concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ))``,
+     ∧ (concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ))
+Proof
    rpt strip_tac
    >> `case expandAuto_init φ of
              NONE => F
@@ -2476,11 +2476,10 @@ val EXP_WAA_CORRECT = store_thm
               concr2AbstrAA concrA = removeStatesSimpl (ltl2vwaa φ)`
         by metis_tac[EXP_WAA_CORRECT_LEMM]
    >> Cases_on `expandAuto_init φ` >> fs[]
-  );
+QED
 
-val EXP_WAA_AP = store_thm
-  ("EXP_WAA_AP",
-   ``!f g_AA init aP.
+Theorem EXP_WAA_AP:
+     !f g_AA init aP.
       (expandAuto_init f = SOME (concrAA g_AA init aP))
       ==>
       ((∀id fls.
@@ -2494,7 +2493,8 @@ val EXP_WAA_AP = store_thm
         ==> (!e. MEM e nL.true_labels
                  ==> MEM_SUBSET e.pos_lab aP ∧ MEM_SUBSET e.neg_lab aP
             )
-      ))``,
+      ))
+Proof
    rpt gen_tac >> strip_tac >> rpt gen_tac >> strip_tac
    >> gen_tac >> strip_tac
    >> `!φ. case expandAuto_init φ of
@@ -2602,6 +2602,6 @@ val EXP_WAA_AP = store_thm
        >> rpt strip_tac >> fs[MEM_MAP]
    )
    >> metis_tac[]
-  );
+QED
 
 

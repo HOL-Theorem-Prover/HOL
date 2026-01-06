@@ -390,16 +390,17 @@ Proof
   srw_tac [][FUN_EQ_THM] >> METIS_TAC [aeq_trans, aeq_sym, aeq_refl]
 QED
 
-val alt_aeq_lam = store_thm(
-  "alt_aeq_lam",
-  ``(∀z. z ∉ allatomsl t1 ∧ z ∉ allatomsl t2 ∧ z ≠ u ∧ z ≠ v ⇒
+Theorem alt_aeq_lam:
+    (∀z. z ∉ allatomsl t1 ∧ z ∉ allatomsl t2 ∧ z ≠ u ∧ z ≠ v ⇒
          aeql (ptpml [(u,z)] t1) (ptpml [(v,z)] t2)) ∧
     aeql u1 u2 ⇒
-    aeq (lam u fvs bv t1 u1) (lam v fvs bv t2 u2)``,
+    aeq (lam u fvs bv t1 u1) (lam v fvs bv t2 u2)
+Proof
   strip_tac >> MATCH_MP_TAC aeq_lam >>
   Q_TAC (NEW_TAC "z")
      `allatomsl t1 ∪ allatomsl t2 ∪ {u;v}` >>
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
 Theorem fresh_swap:
   (∀t:α pregterm x y. x ∉ fv t ∧ y ∉ fv t ⇒ aeq t (ptpm [(x, y)] t)) ∧
@@ -479,13 +480,14 @@ val aeql_LIST_REL = prove(
   srw_tac [][Once aeq_cases] >> Cases_on `l2` >>
   srw_tac [][]);
 
-val lam_respects_aeq = store_thm(
-  "lam_respects_aeq",
-  ``!v fvs bv t1 t2 u1 u2.
-      aeql t1 t2 ∧ aeql u1 u2 ==> aeq (lam v fvs bv t1 u1) (lam v fvs bv t2 u2)``,
+Theorem lam_respects_aeq:
+    !v fvs bv t1 t2 u1 u2.
+      aeql t1 t2 ∧ aeql u1 u2 ==> aeq (lam v fvs bv t1 u1) (lam v fvs bv t2 u2)
+Proof
   srw_tac [][] >> match_mp_tac aeq_lam >>
   srw_tac [][aeql_ptpm_eqn, pmact_sing_inv] >>
-  Q_TAC (NEW_TAC "z") `v INSERT allatomsl t1 ∪ allatomsl t2` >> metis_tac []);
+  Q_TAC (NEW_TAC "z") `v INSERT allatomsl t1 ∪ allatomsl t2` >> metis_tac []
+QED
 
 val rmaeql = REWRITE_RULE [aeql_LIST_REL]
 
@@ -723,12 +725,13 @@ Proof
 QED
 val _ = augment_srw_ss [rewrites [genind_gtpm_eqn]]
 
-val LIST_REL_genind_gtpm_eqn = store_thm(
-  "LIST_REL_genind_gtpm_eqn",
-  ``LIST_REL (genind lp) ns (listpm gt_pmact pi ts) =
-    LIST_REL (genind lp) ns ts``,
+Theorem LIST_REL_genind_gtpm_eqn:
+    LIST_REL (genind lp) ns (listpm gt_pmact pi ts) =
+    LIST_REL (genind lp) ns ts
+Proof
   qid_spec_tac `ns` >> Induct_on `ts` >> Cases_on `ns` >>
-  fsrw_tac [][]);
+  fsrw_tac [][]
+QED
 
 val _ = augment_srw_ss [rewrites [FINITE_GFV, LIST_REL_genind_gtpm_eqn]]
 
@@ -984,13 +987,14 @@ Proof
   metis_tac []
 QED
 
-val gtmsize_GLAM_subterm = store_thm(
-"gtmsize_GLAM_subterm",
-``(MEM t ts ∨ MEM t us) ⇒ gtmsize t < gtmsize (GLAM s fvs bv ts us)``,
+Theorem gtmsize_GLAM_subterm:
+  (MEM t ts ∨ MEM t us) ⇒ gtmsize t < gtmsize (GLAM s fvs bv ts us)
+Proof
 srw_tac [][gtmsize_thm] >>
 imp_res_tac SUM_MAP_MEM >>
 pop_assum (qspec_then `gtmsize` mp_tac) >>
-DECIDE_TAC);
+DECIDE_TAC
+QED
 
 Theorem LIST_REL_relsupp_gtpml[local]:
   ∀A dpm ppm l1 l2.

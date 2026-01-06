@@ -14,6 +14,7 @@ structure HOL_Interactive :>
     val setquietp : bool -> bool (* returns old value *)
     val start_open : unit -> unit
     val end_open : unit -> unit
+    val reset_open : unit -> unit (* reset stack after compile failure *)
     val noisy_open : bool ref
   end =
 struct
@@ -77,6 +78,13 @@ struct
   fun end_open () = (
     setquietp (hd (!quietp_stack));
     quietp_stack := tl (!quietp_stack)
+  )
+  fun reset_open () = (
+    (* Restore stack and quiet state after compile failure.
+       This handles the case where start_open was called but the open failed
+       before end_open could be called. Restores to non-quiet mode (normal REPL). *)
+    quietp_stack := [true];
+    ignore (setquietp false)
   )
 end;
 

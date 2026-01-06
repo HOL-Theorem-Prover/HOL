@@ -31,10 +31,10 @@ Proof
  METIS_TAC [EXTENSION,IN_DEF]
 QED
 
-Triviality LENGTH_NIL_SYM =
+Theorem LENGTH_NIL_SYM[local] =
    GEN_ALL (CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL LENGTH_NIL));
 
-Triviality CONS_APPEND_11 :
+Theorem CONS_APPEND_11[local] :
  !h t list. (h::t = list ++ t) <=> (list = [h])
 Proof
   SIMP_TAC list_ss [EQ_IMP_THM]
@@ -42,7 +42,7 @@ Proof
   THEN RW_TAC list_ss [APPEND_EQ_SELF]
 QED
 
-Triviality CONS_APPEND_11_SIMPS :
+Theorem CONS_APPEND_11_SIMPS[local] :
   (!h t list. (h::t = list ++ t) <=> (list = [h])) /\
   (!h t list. (list ++ t = h::t) <=> (list = [h]))
 Proof
@@ -59,7 +59,7 @@ Definition LIST_UNION_def :
   (LIST_UNION (h::t) = h UNION LIST_UNION t)
 End
 
-Triviality LIST_UNION_THM :
+Theorem LIST_UNION_THM[local] :
   (LIST_UNION [] x = F) /\
   (LIST_UNION (h::t) x = (h x \/ LIST_UNION t x))
 Proof
@@ -80,7 +80,7 @@ Proof
  recInduct ZIP_ind_alt >> RW_TAC list_ss [ZIP_def]
 QED
 
-Triviality cons_eq_ZIP :
+Theorem cons_eq_ZIP[local] :
  !l1 l2 a b t.
     ((a,b)::t = ZIP (l1,l2)) ==> ?t1 t2. (l1 = a::t1) /\ (l2 = b::t2)
 Proof
@@ -103,7 +103,7 @@ Proof
  recInduct ZIP_ind_alt THEN RW_TAC list_ss [ZIP_def]
 QED
 
-Triviality zip_map_lem :
+Theorem zip_map_lem[local] :
  !t. ZIP (MAP FST t,MAP SND t) = t
 Proof
  Induct >> rw[]
@@ -135,7 +135,7 @@ Proof
   ACCEPT_TAC (fetch "-" "regexp_induction")
 QED
 
-Triviality regexp_distinct = fetch "-" "regexp_distinct";
+Theorem regexp_distinct[local] = fetch "-" "regexp_distinct";
 
 (*---------------------------------------------------------------------------*)
 (* "And" on regexps is derived syntax                                        *)

@@ -14,14 +14,15 @@ Definition is_initial_def:
   is_initial c x = is_terminal (op_cat c) x
 End
 
-val is_initial_thm = Q.store_thm(
-"is_initial_thm",
-`∀c x. is_category c ⇒ (is_initial c x = x ∈ c.obj ∧ ∀y. y ∈ c.obj ⇒ ∃!f. f :- x → y-:c)`,
-metis_tac [is_initial_def,is_terminal_def,op_cat_maps_to_in,op_cat_idem,op_cat_obj,op_mor_idem])
+Theorem is_initial_thm:
+ ∀c x. is_category c ⇒ (is_initial c x = x ∈ c.obj ∧ ∀y. y ∈ c.obj ⇒ ∃!f. f :- x → y-:c)
+Proof
+metis_tac [is_initial_def,is_terminal_def,op_cat_maps_to_in,op_cat_idem,op_cat_obj,op_mor_idem]
+QED
 
-val terminal_unique = Q.store_thm(
-"terminal_unique",
-`∀c x y. is_category c ∧ is_terminal c x ∧ is_terminal c y ⇒ uiso_objs c x y`,
+Theorem terminal_unique:
+ ∀c x y. is_category c ∧ is_terminal c x ∧ is_terminal c y ⇒ uiso_objs c x y
+Proof
 srw_tac [][uiso_objs_thm] >>
 simp_tac (srw_ss()) [EXISTS_UNIQUE_THM] >>
 reverse conj_tac >- metis_tac [is_terminal_def] >>
@@ -30,16 +31,19 @@ qexists_tac `f` >> srw_tac [][iso_def] >>
 `∃g. g :- y → x-:c` by metis_tac [is_terminal_def] >>
 qexists_tac `g` >> srw_tac [][iso_pair_def]
 >- metis_tac [maps_to_composable,FST,SND]
->> PROVE_TAC [is_terminal_def,id_maps_to,maps_to_comp,maps_to_def,maps_to_in_def,mor_obj]);
+>> PROVE_TAC [is_terminal_def,id_maps_to,maps_to_comp,maps_to_def,maps_to_in_def,mor_obj]
+QED
 
-val initial_unique = Q.store_thm(
-"initial_unique",
-`∀c x y. is_category c ∧ is_initial c x ∧ is_initial c y ⇒ uiso_objs c x y`,
-metis_tac [terminal_unique,is_initial_def,is_category_op_cat,op_cat_uiso_objs]);
+Theorem initial_unique:
+ ∀c x y. is_category c ∧ is_initial c x ∧ is_initial c y ⇒ uiso_objs c x y
+Proof
+metis_tac [terminal_unique,is_initial_def,is_category_op_cat,op_cat_uiso_objs]
+QED
 
-val is_terminal_cat_iso = Q.store_thm(
-"is_terminal_cat_iso", (* actually should work for just an equivalence *)
-`∀f c d x. cat_iso f ∧ (f :- c → d) ∧ is_terminal c x ⇒ is_terminal d (f@@x)`,
+(* actually should work for just an equivalence *)
+Theorem is_terminal_cat_iso:
+ ∀f c d x. cat_iso f ∧ (f :- c → d) ∧ is_terminal c x ⇒ is_terminal d (f@@x)
+Proof
 srw_tac [][cat_iso_def] >>
 imp_res_tac cat_iso_pair_sym >>
 `is_functor f ∧ is_functor g` by fsrw_tac [][cat_iso_pair_def] >>
@@ -57,15 +61,16 @@ qmatch_assum_rename_tac `h :- g@@y → x -:f.dom` >>
 conj_tac >- metis_tac [functor_comp_objf,cat_iso_pair_def,id_functor_objf,composable_def] >>
 qx_gen_tac `h1` >> qx_gen_tac `h2` >> strip_tac >>
 fsrw_tac [][faithful_def,cat_iso_pair_def] >>
-metis_tac [morf_maps_to,functor_comp_objf,id_functor_objf,composable_def,maps_to_def]);
+metis_tac [morf_maps_to,functor_comp_objf,id_functor_objf,composable_def,maps_to_def]
+QED
 
 Definition cone_cat_def:
   cone_cat f = comma_cat (diagonal_functor f.dom f.cod) (itself_functor f)
 End
 
-val is_category_cone_cat = Q.store_thm(
-"is_category_cone_cat",
-`∀f. is_functor f ⇒ is_category (cone_cat f)`,
+Theorem is_category_cone_cat:
+ ∀f. is_functor f ⇒ is_category (cone_cat f)
+Proof
 srw_tac [][cone_cat_def] >>
 imp_res_tac is_functor_is_category >>
 match_mp_tac is_category_comma_cat >>
@@ -73,7 +78,8 @@ srw_tac [][] >- (
   match_mp_tac is_functor_diagonal_functor >>
   srw_tac [][] ) >>
 match_mp_tac is_functor_itself_functor >>
-srw_tac [][]);
+srw_tac [][]
+QED
 val _ = export_rewrites["is_category_cone_cat"];
 
 val _ = type_abbrev("cone",``:(γ,unit,(α,β,γ,δ) nat_trans) morphism``);
@@ -83,31 +89,33 @@ val _ = overload_on("proj",``λ(c:(α,β,γ,δ)cone) x. c.map@+x``);
 val _ = overload_on("is_cone",``λd c. c ∈ (cone_cat d).obj``);
 val _ = overload_on("is_cone_mor",``λd f. f ∈ (cone_cat d).mor``);
 
-val vertex_obj = Q.store_thm(
-"vertex_obj",
-`∀d l c. is_cone d l ∧ (c = d.cod) ⇒ vertex l ∈ c.obj`,
-srw_tac [][cone_cat_def,is_comma_cat_obj_def]);
+Theorem vertex_obj:
+ ∀d l c. is_cone d l ∧ (c = d.cod) ⇒ vertex l ∈ c.obj
+Proof
+srw_tac [][cone_cat_def,is_comma_cat_obj_def]
+QED
 val _ = export_rewrites["vertex_obj"];
 
-val proj_maps_to = Q.store_thm(
-"proj_maps_to",
-`∀d l x a b c. is_functor d ∧ l ∈ (cone_cat d).obj ∧ x ∈ d.dom.obj ∧
+Theorem proj_maps_to:
+ ∀d l x a b c. is_functor d ∧ l ∈ (cone_cat d).obj ∧ x ∈ d.dom.obj ∧
                (a = vertex l) ∧ (b = d@@x) ∧ (c = d.cod)
-  ⇒ proj l x :- a → b -:c`,
+  ⇒ proj l x :- a → b -:c
+Proof
 srw_tac [][cone_cat_def] >>
 fsrw_tac [][is_comma_cat_obj_def] >>
 match_mp_tac nt_at_maps_to >>
 imp_res_tac is_functor_is_category >>
-fsrw_tac [][]);
+fsrw_tac [][]
+QED
 
-val is_cone_thm = Q.store_thm(
-"is_cone_thm",
-`∀d c. is_functor d ⇒
+Theorem is_cone_thm:
+ ∀d c. is_functor d ⇒
 (is_cone d c =
     vertex c ∈ d.cod.obj ∧ extensional (proj c) d.dom.obj ∧
     (c.map :- (K_functor d.dom d.cod (vertex c)) → d) ∧
     (∀x. x ∈ d.dom.obj ⇒ proj c x :- vertex c → d@@x -:d.cod) ∧
-    (∀f. f ∈ d.dom.mor ⇒ ((d##f) o proj c f.dom -:d.cod = proj c f.cod)))`,
+    (∀f. f ∈ d.dom.mor ⇒ ((d##f) o proj c f.dom -:d.cod = proj c f.cod)))
+Proof
 srw_tac [][cone_cat_def] >>
 fsrw_tac [][is_comma_cat_obj_def] >>
 imp_res_tac is_functor_is_category >>
@@ -136,7 +144,8 @@ srw_tac [][nat_trans_axioms_def] >>
 res_tac >>
 imp_res_tac maps_to_in_def >>
 fsrw_tac [][] >>
-metis_tac []);
+metis_tac []
+QED
 
 Definition mk_cone_def:
   (mk_cone d v ps : (α,β,γ,δ) cone) =
@@ -146,43 +155,46 @@ Definition mk_cone_def:
                      map := ps |> |>
 End
 
-val mk_cone_dom_cod = Q.store_thm(
-"mk_cone_dom_cod",
-`∀d v ps. ((mk_cone d v ps).dom = v) ∧
-          ((mk_cone d v ps).cod = ())`,
-srw_tac [][mk_cone_def]);
+Theorem mk_cone_dom_cod:
+ ∀d v ps. ((mk_cone d v ps).dom = v) ∧
+          ((mk_cone d v ps).cod = ())
+Proof
+srw_tac [][mk_cone_def]
+QED
 val _ = export_rewrites["mk_cone_dom_cod"];
 
-val mk_cone_proj = Q.store_thm(
-"mk_cone_proj",
-`∀d v ps. (proj (mk_cone d v ps) = restrict ps d.dom.obj)`,
-srw_tac [][mk_cone_def,FUN_EQ_THM,mk_nt_def]);
+Theorem mk_cone_proj:
+ ∀d v ps. (proj (mk_cone d v ps) = restrict ps d.dom.obj)
+Proof
+srw_tac [][mk_cone_def,FUN_EQ_THM,mk_nt_def]
+QED
 
 val mk_cone_proj_ext = save_thm(
 "mk_cone_proj_ext",
 GEN_ALL(SIMP_RULE std_ss [FUN_EQ_THM] (SPEC_ALL mk_cone_proj)));
 
-val is_cone_mk_cone = Q.store_thm(
-"is_cone_mk_cone",
-`∀d v ps. is_functor d ⇒
+Theorem is_cone_mk_cone:
+ ∀d v ps. is_functor d ⇒
 (is_cone d (mk_cone d v ps) = v ∈ d.cod.obj ∧
   (∀x. x ∈ d.dom.obj ⇒ ps x :- v → d@@x -:d.cod) ∧
-  (∀f. f ∈ d.dom.mor ⇒ (ps f.cod = (d##f) o ps f.dom -:d.cod)))`,
+  (∀f. f ∈ d.dom.mor ⇒ (ps f.cod = (d##f) o ps f.dom -:d.cod)))
+Proof
 srw_tac [][is_cone_thm,mk_cone_proj,EQ_IMP_THM] >>
 fsrw_tac [][mk_cone_def,mk_nt_def,restrict_def] >>
 imp_res_tac is_functor_is_category >>
 imp_res_tac mor_obj >>
 srw_tac [][] >>
 first_x_assum (qspec_then `f` mp_tac) >>
-srw_tac [][]);
+srw_tac [][]
+QED
 
-val is_cone_mor_thm = Q.store_thm(
-"is_cone_mor_thm",
-`∀d f. is_functor d ⇒
+Theorem is_cone_mor_thm:
+ ∀d f. is_functor d ⇒
 (is_cone_mor d f =
   is_cone d f.dom ∧ is_cone d f.cod ∧
   (FST f.map) :- (vertex f.dom) → (vertex f.cod) -:d.cod ∧
-  ∀x. x ∈ d.dom.obj ⇒ (proj f.dom x = proj f.cod x o (FST f.map) -:d.cod))`,
+  ∀x. x ∈ d.dom.obj ⇒ (proj f.dom x = proj f.cod x o (FST f.map) -:d.cod))
+Proof
 srw_tac [][] >>
 EQ_TAC >> strip_tac >- (
   Q.ISPECL_THEN [`cone_cat d`,`f`] mp_tac mor_obj >>
@@ -216,62 +228,68 @@ qpat_x_assum `f.dom.map.cod = d` (assume_tac o SYM) >>
   full_simp_tac std_ss [composable_nts_def] ) >>
 fsrw_tac [][] >>
 match_mp_tac nt_eq_thm >>
-fsrw_tac [][]);
+fsrw_tac [][]
+QED
 
 Definition mk_cone_mor_def:
   (mk_cone_mor c1 c2 m : (α,β,γ,δ) cone_mor) =
     <| dom := c1; cod := c2; map := (m,ARB) |>
 End
 
-val mk_cone_mor_dom_cod = Q.store_thm(
-"mk_cone_mor_dom_cod",
-`∀c1 c2 m. ((mk_cone_mor c1 c2 m).dom = c1) ∧
-           ((mk_cone_mor c1 c2 m).cod = c2)`,
-srw_tac [][mk_cone_mor_def]);
+Theorem mk_cone_mor_dom_cod:
+ ∀c1 c2 m. ((mk_cone_mor c1 c2 m).dom = c1) ∧
+           ((mk_cone_mor c1 c2 m).cod = c2)
+Proof
+srw_tac [][mk_cone_mor_def]
+QED
 val _ = export_rewrites["mk_cone_mor_dom_cod"];
 
-val FST_mk_cone_mor_map = Q.store_thm(
-"FST_mk_cone_mor_map",
-`∀c1 c2 m. (FST (mk_cone_mor c1 c2 m).map = m)`,
-srw_tac [][mk_cone_mor_def]);
+Theorem FST_mk_cone_mor_map:
+ ∀c1 c2 m. (FST (mk_cone_mor c1 c2 m).map = m)
+Proof
+srw_tac [][mk_cone_mor_def]
+QED
 val _ = export_rewrites["FST_mk_cone_mor_map"];
 
-val is_cone_mor_mk_cone_mor = Q.store_thm(
-"is_cone_mor_mk_cone_mor",
-`∀d c1 c2 f. is_functor d ⇒ (
+Theorem is_cone_mor_mk_cone_mor:
+ ∀d c1 c2 f. is_functor d ⇒ (
   is_cone_mor d (mk_cone_mor c1 c2 f) =
   is_cone d c1 ∧ is_cone d c2 ∧
   f :- c1.dom → c2.dom -:d.cod ∧
-  (∀x. x ∈ d.dom.obj ⇒ (proj c1 x = proj c2 x o f -:d.cod)))`,
+  (∀x. x ∈ d.dom.obj ⇒ (proj c1 x = proj c2 x o f -:d.cod)))
+Proof
 srw_tac [][is_cone_mor_thm] >>
-srw_tac [][mk_cone_mor_def]);
+srw_tac [][mk_cone_mor_def]
+QED
 
 Definition is_limit_def:
   is_limit d l = is_functor d ∧ is_terminal (cone_cat d) l
 End
 
-val is_limit_is_cone = Q.store_thm(
-"is_limit_is_cone",
-`∀d l. is_limit d l ⇒ is_cone d l`,
-srw_tac [][is_limit_def,is_terminal_def]);
+Theorem is_limit_is_cone:
+ ∀d l. is_limit d l ⇒ is_cone d l
+Proof
+srw_tac [][is_limit_def,is_terminal_def]
+QED
 val _ = export_rewrites["is_limit_is_cone"];
 
-val limit_universal = Q.store_thm(
-"limit_universal",
-`∀d l c. is_limit d l ∧ c ∈ (cone_cat d).obj ⇒
-  ∃!m. m :- c → l -:(cone_cat d)`,
-srw_tac [][is_limit_def,is_terminal_def]);
+Theorem limit_universal:
+ ∀d l c. is_limit d l ∧ c ∈ (cone_cat d).obj ⇒
+  ∃!m. m :- c → l -:(cone_cat d)
+Proof
+srw_tac [][is_limit_def,is_terminal_def]
+QED
 
-val cone_cat_maps_to = Q.store_thm(
-"cone_cat_maps_to",
-`∀m c1 c2 d. is_functor d ⇒
+Theorem cone_cat_maps_to:
+ ∀m c1 c2 d. is_functor d ⇒
 (m :- c1 → c2 -:cone_cat d =
    (m :- c1 → c2) ∧ (is_cone d c1) ∧ (is_cone d c2) ∧
    (FST m.map) :- vertex c1 → vertex c2 -:d.cod ∧
    (∀x. x ∈ d.dom.obj ⇒ (proj m.dom x = proj m.cod x o (FST m.map) -:d.cod)) ∧
    (∀f. f ∈ d.dom.mor ⇒
      (((d##f) o proj c2 f.dom -:d.cod) o (FST m.map) -:d.cod =
-      proj c2 f.cod o (FST m.map) -:d.cod)))`,
+      proj c2 f.cod o (FST m.map) -:d.cod)))
+Proof
 rpt strip_tac >> EQ_TAC >- (
   strip_tac >>
   imp_res_tac maps_to_in_def >>
@@ -296,7 +314,8 @@ rpt strip_tac >> EQ_TAC >- (
   fsrw_tac [][maps_to_in_def]) >>
 strip_tac >>
 srw_tac [][maps_to_in_def] >>
-fsrw_tac [][is_cone_mor_thm]);
+fsrw_tac [][is_cone_mor_thm]
+QED
 
 (* stylistic decision to be made: should predicates be defined to include all
 of their assumptions, e.g. is_category of the appropriate fields of a record?
@@ -366,12 +385,13 @@ why bother proving this?
 
 val _ = overload_on("product_diagram",``λc a b. discrete_functor {1;2} c (λn. if n = 1 then a else b)``);
 
-val is_functor_product_diagram = Q.store_thm(
-"is_functor_product_diagram",
-`∀c a b. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ⇒ is_functor (product_diagram c a b)`,
+Theorem is_functor_product_diagram:
+ ∀c a b. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ⇒ is_functor (product_diagram c a b)
+Proof
 srw_tac [][] >>
 match_mp_tac is_functor_discrete_functor >>
-srw_tac [][]);
+srw_tac [][]
+QED
 
 Theorem is_binary_product_thm:
 ∀c a b l. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ⇒
@@ -484,12 +504,12 @@ Definition has_binary_products_def:
   has_binary_products c = has_limits (discrete_cat {1;2}) c
 End
 
-val has_binary_products_thm = Q.store_thm(
-"has_binary_products_thm",
-`∀c. is_category c ⇒
+Theorem has_binary_products_thm:
+ ∀c. is_category c ⇒
 (has_binary_products c =
   ∀a b. a ∈ c.obj ∧ b ∈ c.obj ⇒
-  ∃l. is_limit (product_diagram c a b) l)`,
+  ∃l. is_limit (product_diagram c a b) l)
+Proof
 srw_tac [][has_binary_products_def,has_limits_def,EQ_IMP_THM] >- (
   first_x_assum match_mp_tac >>
   srw_tac [][is_functor_product_diagram] ) >>
@@ -502,20 +522,22 @@ match_mp_tac functor_eq_thm >>
 srw_tac [][Abbr`d'`,is_functor_product_diagram] >>
 fsrw_tac [][] >>
 match_mp_tac (GSYM morf_discrete_mor) >>
-qexists_tac `{1;2}` >> srw_tac [][]);
+qexists_tac `{1;2}` >> srw_tac [][]
+QED
 
-val binary_product_projections_exist_thm = Q.store_thm(
-"binary_product_projections_exist_thm",
-`∃f1 f2 f3. ∀c a b. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ∧ (∃l. is_limit (product_diagram c a b) l) ⇒
+Theorem binary_product_projections_exist_thm:
+ ∃f1 f2 f3. ∀c a b. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ∧ (∃l. is_limit (product_diagram c a b) l) ⇒
   f2 c a b :- f1 c a b → a -:c ∧
   f3 c a b :- f1 c a b → b -:c ∧
   ∀p p1 p2.
     p1 :- p → a -:c ∧ p2 :- p → b -:c ⇒
-    ∃!m. m :- p → f1 c a b -:c ∧ (f2 c a b o m -:c = p1) ∧ (f3 c a b o m -:c = p2)`,
+    ∃!m. m :- p → f1 c a b -:c ∧ (f2 c a b o m -:c = p1) ∧ (f3 c a b o m -:c = p2)
+Proof
 srw_tac [][GSYM SKOLEM_THM,RIGHT_EXISTS_IMP_THM] >>
 pop_assum mp_tac >> srw_tac [][is_binary_product_thm] >>
 map_every qexists_tac [`ab`,`π1`,`π2`] >>
-srw_tac [][]);
+srw_tac [][]
+QED
 
 val binary_product_projections_def = new_specification(
 "binary_product_projections_def",
@@ -570,79 +592,87 @@ val _ = overload_on("binary_product_proj2_syntax",``λa b c. binary_product_proj
 val _ = overload_on("pair_morphism_syntax",``λf g c. pair_morphism c f.cod g.cod f.dom f g``);
 val _ = overload_on("binary_product_syntax", ``λf g c. pair_morphism_syntax (f o (π1 f.dom × g.dom -:c) -:c) (g o (π2 f.dom × g.dom -:c) -:c) c``);
 
-val binary_product_obj = Q.store_thm(
-"binary_product_obj",
-`∀c x y. is_category c ∧ (∃l. is_limit (product_diagram c x y) l) ∧ x ∈ c.obj ∧ y ∈ c.obj ⇒ x × y -:c ∈ c.obj`,
-metis_tac [binary_product_projections_def,maps_to_obj]);
+Theorem binary_product_obj:
+ ∀c x y. is_category c ∧ (∃l. is_limit (product_diagram c x y) l) ∧ x ∈ c.obj ∧ y ∈ c.obj ⇒ x × y -:c ∈ c.obj
+Proof
+metis_tac [binary_product_projections_def,maps_to_obj]
+QED
 val _ = export_rewrites["binary_product_obj"];
 
-val pi_maps_to = Q.store_thm(
-"pi_maps_to",
-`∀c a b. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj ⇒
+Theorem pi_maps_to:
+ ∀c a b. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj ⇒
   π1 a×b -:c :- a × b -:c → a -:c ∧
-  π2 a×b -:c :- a × b -:c → b -:c`,
-metis_tac [binary_product_projections_def]);
+  π2 a×b -:c :- a × b -:c → b -:c
+Proof
+metis_tac [binary_product_projections_def]
+QED
 
-val pair_morphism_unique = Q.store_thm(
-"pair_morphism_unique",
-`∀c a b p p1 p2 m. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj ∧
+Theorem pair_morphism_unique:
+ ∀c a b p p1 p2 m. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj ∧
   p1 :- p → a -:c ∧ p2 :- p → b -:c ∧
   m :- p → a × b -:c -:c ∧
   ((π1 a×b -:c) o m -:c = p1) ∧
   ((π2 a×b -:c) o m -:c = p2) ⇒
-  (m = pair_morphism c a b p p1 p2)`,
-metis_tac [pair_morphism_def]);
+  (m = pair_morphism c a b p p1 p2)
+Proof
+metis_tac [pair_morphism_def]
+QED
 
-val binary_product_id = Q.store_thm(
-"binary_product_id",
-`∀c a b. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj ⇒
-  (id a × b -:c -:c = (id a -:c) × id b -:c -:c)`,
+Theorem binary_product_id:
+ ∀c a b. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj ⇒
+  (id a × b -:c -:c = (id a -:c) × id b -:c -:c)
+Proof
 srw_tac [][] >>
 qspecl_then [`c`,`a`,`b`] mp_tac pi_maps_to >> srw_tac [SATISFY_ss][] >>
 imp_res_tac maps_to_in_def >>
 imp_res_tac maps_to_obj >>
 match_mp_tac pair_morphism_unique >>
-fsrw_tac [SATISFY_ss][]);
+fsrw_tac [SATISFY_ss][]
+QED
 
-val pair_morphism_maps_to = Q.store_thm(
-"pair_morphism_maps_to",
-`∀c a b p p1 p2 x y. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj ∧
+Theorem pair_morphism_maps_to:
+ ∀c a b p p1 p2 x y. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj ∧
   p1 :- p → a -:c ∧ p2 :- p → b -:c ∧ (x = p) ∧ (y = a × b -:c) ⇒
-  pair_morphism c a b p p1 p2 :- x → y -:c`,
-metis_tac [pair_morphism_def]);
+  pair_morphism c a b p p1 p2 :- x → y -:c
+Proof
+metis_tac [pair_morphism_def]
+QED
 
-val pair_pi_id = Q.store_thm(
-"pair_pi_id",
-`∀c a b. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj
-  ⇒ (pair_morphism c a b (a × b -:c) (π1 a×b -:c) (π2 a×b -:c) = id a × b -:c -:c)`,
+Theorem pair_pi_id:
+ ∀c a b. is_category c ∧ (∃l. is_limit (product_diagram c a b) l) ∧ a ∈ c.obj ∧ b ∈ c.obj
+  ⇒ (pair_morphism c a b (a × b -:c) (π1 a×b -:c) (π2 a×b -:c) = id a × b -:c -:c)
+Proof
 srw_tac [][] >>
 match_mp_tac EQ_SYM >>
 match_mp_tac pair_morphism_unique >>
 fsrw_tac [SATISFY_ss][] >>
 conj_asm1_tac >- srw_tac [SATISFY_ss][pi_maps_to] >>
 conj_asm1_tac >- srw_tac [SATISFY_ss][pi_maps_to] >>
-fsrw_tac [][maps_to_in_def]);
+fsrw_tac [][maps_to_in_def]
+QED
 
-val pi1_comp_pair = Q.store_thm(
-"pi1_comp_pair",
-`∀c f g p a b. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ∧
+Theorem pi1_comp_pair:
+ ∀c f g p a b. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ∧
    (∃l. is_limit (product_diagram c a b) l) ∧
     f :- p → a -:c ∧ g :- p → b -:c
-  ⇒ ((π1 a×b -:c) o ⟨f,g⟩-:c -:c = f)`,
-metis_tac [pair_morphism_def,maps_to_in_def,maps_to_def])
+  ⇒ ((π1 a×b -:c) o ⟨f,g⟩-:c -:c = f)
+Proof
+metis_tac [pair_morphism_def,maps_to_in_def,maps_to_def]
+QED
 
-val pi2_comp_pair = Q.store_thm(
-"pi2_comp_pair",
-`∀c f g p a b. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ∧
+Theorem pi2_comp_pair:
+ ∀c f g p a b. is_category c ∧ a ∈ c.obj ∧ b ∈ c.obj ∧
    (∃l. is_limit (product_diagram c a b) l) ∧
     f :- p → a -:c ∧ g :- p → b -:c
-  ⇒ ((π2 a×b -:c) o ⟨f,g⟩-:c -:c = g)`,
-metis_tac [pair_morphism_def,maps_to_in_def,maps_to_def])
+  ⇒ ((π2 a×b -:c) o ⟨f,g⟩-:c -:c = g)
+Proof
+metis_tac [pair_morphism_def,maps_to_in_def,maps_to_def]
+QED
 
-val pair_morphism_comp = Q.store_thm(
-"pair_morphism_comp",
-`∀c f g h. is_category c ∧ h ≈> f -:c ∧ h ≈> g -:c ∧ (∃l. is_limit (product_diagram c f.cod g.cod) l)
- ⇒ ((⟨f,g⟩-:c) o h -:c = ⟨f o h -:c,g o h -:c⟩-:c)`,
+Theorem pair_morphism_comp:
+ ∀c f g h. is_category c ∧ h ≈> f -:c ∧ h ≈> g -:c ∧ (∃l. is_limit (product_diagram c f.cod g.cod) l)
+ ⇒ ((⟨f,g⟩-:c) o h -:c = ⟨f o h -:c,g o h -:c⟩-:c)
+Proof
 srw_tac [][] >>
 match_mp_tac pair_morphism_unique >>
 qspecl_then [`c`,`h`,`f`,`h.dom`,`f.cod`] mp_tac composable_maps_to >>
@@ -668,25 +698,27 @@ AP_TERM_TAC >|[
   match_mp_tac pi1_comp_pair,
   match_mp_tac pi2_comp_pair
 ] >> qexists_tac `f.dom` >>
-fsrw_tac [SATISFY_ss][maps_to_in_def,maps_to_obj,composable_in_def]);
+fsrw_tac [SATISFY_ss][maps_to_in_def,maps_to_obj,composable_in_def]
+QED
 
 Definition pre_product_functor_def:
   pre_product_functor c y = <|
     dom := c; cod := c; map := λf. f × id y -:c -:c |>
 End
 
-val pre_product_functor_components = Q.store_thm(
-"pre_product_functor_components",
-`∀c x. ((pre_product_functor c x).dom = c) ∧
+Theorem pre_product_functor_components:
+ ∀c x. ((pre_product_functor c x).dom = c) ∧
        ((pre_product_functor c x).cod = c) ∧
-       (∀f. (pre_product_functor c x)##f = f × id x-:c -:c)`,
-srw_tac [][pre_product_functor_def,morf_def])
+       (∀f. (pre_product_functor c x)##f = f × id x-:c -:c)
+Proof
+srw_tac [][pre_product_functor_def,morf_def]
+QED
 val _ = export_rewrites["pre_product_functor_components"];
 
-val pre_product_functor_objf = Q.store_thm(
-"pre_product_functor_objf",
-`∀c x y. is_category c ∧ (∃l. is_limit (product_diagram c x y) l) ∧ x ∈ c.obj ∧ y ∈ c.obj
-⇒ ((pre_product_functor c y)@@x = x × y -:c)`,
+Theorem pre_product_functor_objf:
+ ∀c x y. is_category c ∧ (∃l. is_limit (product_diagram c x y) l) ∧ x ∈ c.obj ∧ y ∈ c.obj
+⇒ ((pre_product_functor c y)@@x = x × y -:c)
+Proof
 srw_tac [][objf_def] >>
 SELECT_ELIM_TAC >>
 srw_tac [][] >- (
@@ -700,15 +732,16 @@ strip_tac >>
 imp_res_tac maps_to_in_def >>
 unabbrev_all_tac >>
 fsrw_tac [SATISFY_ss][] >>
-srw_tac [][maps_to_in_def]);
+srw_tac [][maps_to_in_def]
+QED
 
 Definition product_functor_def:
   product_functor c x = mk_functor (pre_product_functor c x)
 End
 
-val is_functor_product_functor = Q.store_thm(
-"is_functor_product_functor",
-`∀c y. is_category c ∧ has_binary_products c ∧ y ∈ c.obj ⇒ is_functor (product_functor c y)`,
+Theorem is_functor_product_functor:
+ ∀c y. is_category c ∧ has_binary_products c ∧ y ∈ c.obj ⇒ is_functor (product_functor c y)
+Proof
 srw_tac [][product_functor_def] >>
 qpat_x_assum `has_binary_products c` mp_tac >> srw_tac [][has_binary_products_thm] >>
 srw_tac [][functor_axioms_def] >- (
@@ -803,4 +836,5 @@ conj_tac >- metis_tac [maps_to_composable] >>
 conj_tac >- metis_tac [maps_to_composable] >>
 srw_tac [][DECIDE ``(1 = n) = (n = 1)``] >>
 first_x_assum match_mp_tac >>
-fsrw_tac [][maps_to_in_def]);
+fsrw_tac [][maps_to_in_def]
+QED

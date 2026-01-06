@@ -116,16 +116,17 @@ val [MultCol] = decls "MultCol";
 val [InvMultCol] = decls "InvMultCol";
 val [genMixColumns] = decls "genMixColumns";
 
-val AES_LEMMA = Q.store_thm
-("AES_LEMMA",
- `!(plaintext:state) (keys:keysched).
-     AES_BWD (REVKEYS keys) (AES_FWD keys plaintext) = plaintext`,
+Theorem AES_LEMMA:
+  !(plaintext:state) (keys:keysched).
+     AES_BWD (REVKEYS keys) (AES_FWD keys plaintext) = plaintext
+Proof
  SIMP_TAC std_ss [FORALL_BLOCK] THEN
  SIMP_TAC std_ss [FORALL_KEYSCHED]
    THEN RESTR_EVAL_TAC [MultCol,InvMultCol,genMixColumns]
    THEN RW_TAC std_ss [ShiftRows_Inversion,SubBytes_Inversion,
                        XOR_BLOCK_IDEM,MixColumns_Inversion,
-                       from_state_Inversion,from_state_def]);
+                       from_state_Inversion,from_state_def]
+QED
 
 
 (*---------------------------------------------------------------------------
@@ -214,12 +215,13 @@ End
 (* Basic theorem about encryption/decryption                                 *)
 (*---------------------------------------------------------------------------*)
 
-val AES_CORRECT = Q.store_thm
-  ("AES_CORRECT",
-   `!key plaintext.
+Theorem AES_CORRECT:
+    !key plaintext.
        ((encrypt,decrypt) = AES key)
        ==>
-       (decrypt (encrypt plaintext) = plaintext)`,
- RW_TAC std_ss [AES_def,LET_THM,AES_LEMMA]);
+       (decrypt (encrypt plaintext) = plaintext)
+Proof
+ RW_TAC std_ss [AES_def,LET_THM,AES_LEMMA]
+QED
 
 

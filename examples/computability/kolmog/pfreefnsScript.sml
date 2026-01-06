@@ -218,7 +218,7 @@ Proof
   simp[ctl0_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
-Triviality ctl0_eqn = brackabs.brackabs_equiv [] ctl0_def
+Theorem ctl0_eqn[local] = brackabs.brackabs_equiv [] ctl0_def
 
 Theorem ctl0_behaviour:
   ctl0 @@ cnil == cvpr cnil cnil ∧
@@ -258,7 +258,7 @@ Proof
   simp_tac (bsrw_ss()) [ctl0_thm, Excl "cvlist_thm"]
 QED
 
-Triviality cvlist_LIST_REL:
+Theorem cvlist_LIST_REL[local]:
   ∀l1 l2. cvlist l1 == cvlist l2 <=> LIST_REL $== l1 l2
 Proof
   simp[EQ_IMP_THM, cvlist_LIST_REL_cong] >>
@@ -327,7 +327,7 @@ Proof
   simp[EXTENSION, cn2bl0_def, DISJ_IMP_EQ]
 QED
 
-Triviality cn2bl0_eqn = brackabs.brackabs_equiv [] cn2bl0_def
+Theorem cn2bl0_eqn[local] = brackabs.brackabs_equiv [] cn2bl0_def
 
 Theorem cn2bl0_thm:
   ∀t n.
@@ -373,7 +373,7 @@ Proof
   simp[cbeq_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
-Triviality cbeq_eqn = brackabs.brackabs_equiv [] cbeq_def
+Theorem cbeq_eqn[local] = brackabs.brackabs_equiv [] cbeq_def
 
 Theorem cbeq_behaviour:
   cbeq @@ cB b1 @@ cB b2 == cB (b1 = b2)
@@ -403,7 +403,7 @@ Proof
   simp[cblprefix_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
-Triviality cblprefix_eqn = brackabs.brackabs_equiv [] cblprefix_def
+Theorem cblprefix_eqn[local] = brackabs.brackabs_equiv [] cblprefix_def
 
 Theorem cblprefix_behaviour:
   cblprefix @@ cnil @@ t == cB T ∧
@@ -437,7 +437,7 @@ Proof
   simp[cevery_def, EXTENSION, DISJ_IMP_EQ]
 QED
 
-Triviality cevery_eqn = brackabs.brackabs_equiv [] cevery_def
+Theorem cevery_eqn[local] = brackabs.brackabs_equiv [] cevery_def
 
 Theorem cevery_behaviour:
   cevery @@ P @@ cnil == cB T ∧

@@ -1,6 +1,6 @@
 Theory ncfolLang
 Ancestors
-  pred_set list string[qualified]
+  pred_set list string[qualified] absConseq
 
 val _ = Unicode.unicode_version {tmnm = "INSERT", u = "⨾"}
 
@@ -178,6 +178,13 @@ val _ = set_mapped_fixity {term_name = "dedg", fixity = Infix(NONASSOC, 450),
 val _ = set_mapped_fixity {term_name = "ded0", fixity = Infix(NONASSOC, 450),
                            tok = "⊩⁰"}
 
+Theorem ded0_dedg:
+  Hs ⊩⁰ ϕ ⇒ Hs ⊩ᵍ ϕ
+Proof
+  Induct_on ‘ded’ >> REWRITE_TAC[] >> rpt strip_tac >>
+  metis_tac[ded_rules]
+QED
+
 Theorem ded_I:
   Hs ⊩ (ϕ ⥰ ϕ)
 Proof
@@ -215,6 +222,9 @@ Proof
   >- (irule ded_MP >> irule_at (Pos last) PL1 >> simp[PL5])
 QED
 
+(* have to effectively repeat for ded0 because the proof can't be done for
+   arbitrary R. This is because we have no idea how R will behave when
+   shown the slightly different state *)
 Theorem deduction0_thm:
   ∀h Hs ϕ. (h INSERT Hs) ⊩⁰ ϕ ⇒ Hs ⊩⁰ (h ⥰ ϕ)
 Proof
@@ -272,7 +282,7 @@ Proof
   qexists_tac ‘∅’ >> simp[]
 QED
 
-Theorem closed_weakening:
+Theorem closed_weakening0:
   (∀f. f ∈ Hs' ⇒ fFV f = ∅) ∧ Hs ⊩⁰ ϕ ⇒ Hs ∪ Hs' ⊩⁰ ϕ
 Proof
   Cases_on ‘∀f. f ∈ Hs' ⇒ fFV f = ∅’ >> simp[] >>
@@ -287,11 +297,10 @@ Proof
   strip_tac >> irule ded_R >> simp[PULL_EXISTS] >> metis_tac[SUBSET_UNION]
 QED
 
-Theorem ded0_dedg:
-  Hs ⊩⁰ ϕ ⇒ Hs ⊩ᵍ ϕ
+Theorem gweakening_subset:
+  Γ₀ ⊩ᵍ ϕ ∧ Γ₀ ⊆ Γ ⇒ Γ ⊩ᵍ ϕ
 Proof
-  Induct_on ‘ded’ >> REWRITE_TAC[] >> rpt strip_tac >>
-  metis_tac[ded_rules]
+  metis_tac[gweakening, SUBSET_UNION_ABSORPTION]
 QED
 
 Theorem closed_dedg_ded0:
@@ -302,7 +311,7 @@ Proof
   >- (gvs[] >>
       ‘∃hs1. Hs = hs0 ∪ hs1’ suffices_by
         (strip_tac >> gvs[DISJ_IMP_THM, FORALL_AND_THM] >>
-         metis_tac[closed_weakening]) >>
+         metis_tac[closed_weakening0]) >>
       qexists_tac ‘Hs DIFF hs0’ >> simp[EXTENSION]>> metis_tac[SUBSET_DEF]) >>
   metis_tac[ded_rules]
 QED
@@ -468,6 +477,18 @@ Proof
   ‘Γ ⊩ᵍ IMP p r’ by metis_tac[Gdeduction_thm] >>
   ‘Γ ⊩ᵍ IMP (IMP q r) r’ by metis_tac[ded_MP] >>
   metis_tac[Gdeduction_thm, ded_MP]
+QED
+
+Theorem gdisj1_I:
+  Γ ⊩ᵍ p ⇒ Γ ⊩ᵍ disj p q
+Proof
+  metis_tac[disjI1, ded_MP, ded0_dedg]
+QED
+
+Theorem gdisj2_I:
+  Γ ⊩ᵍ q ⇒ Γ ⊩ᵍ disj p q
+Proof
+  metis_tac[disjI2, ded_MP, ded0_dedg]
 QED
 
 Definition conj_def:
@@ -658,6 +679,28 @@ Proof
   irule ded_R >> simp[PULL_EXISTS] >> goal_assum drule >> simp[SUBSET_DEF]
 QED
 
+Theorem ded0_empty_conjI[simp]:
+  ∅ ⊩⁰ conj p q ⇔ ∅ ⊩⁰ p ∧ ∅ ⊩⁰ q
+Proof
+  simp[]
+QED
+
+Theorem disj_CONG:
+  p1 ≡ p2 ∧ q1 ≡ q2 ⇒ disj p1 q1 ≡ disj p2 q2
+Proof
+  rw[fequiv_def, IFF_def] >>
+  simp[] >>
+  irule disjE >>
+  irule_at (Pat ‘{ϕ} ⊩ _’) ded_hyp >> simp[] >> irule_at Any EQ_REFL >>
+  rpt strip_tac >>~-
+  ([‘{p ; disj p q} (* sg *)’],
+   irule gdisj1_I >> irule ded_MP >> qexists ‘p’ >> simp[ded_hyp] >>
+   irule gweakening_subset >> first_assum $ irule_at Any >> simp[]) >>~-
+  ([‘{q ; disj p q} (* sg *)’],
+   irule gdisj2_I >> irule ded_MP >> qexists ‘q’ >> simp[ded_hyp] >>
+   irule gweakening_subset >> first_assum $ irule_at Any >> simp[])
+QED
+
 Definition EXISTS_def:
   EXISTS x P = NEG (ALL x (NEG P))
 End
@@ -698,4 +741,64 @@ Proof
   simp[ded_hyp, Excl "stripimp_rwt"]
 QED
 
+Theorem cut_lemma:
+  ∀A B Γ ϕ. FINITE A ∧ A ∪ B ⊩ᵍ ϕ ∧ (∀a. a ∈ A ⇒ Γ ⊩ᵍ a) ⇒
+            Γ ∪ B ⊩ᵍ ϕ
+Proof
+  Induct_on ‘FINITE’ >> simp[] >> rpt strip_tac >~
+  [‘B ⊩ᵍ ϕ (* a *)’, ‘Γ ∪ B ⊩ᵍ ϕ (* g *)’]
+  >- metis_tac[gweakening, UNION_COMM] >>
+  gvs[DISJ_IMP_THM, FORALL_AND_THM, INSERT_UNION_EQ,
+      GSYM stripimp_rwt, Excl "stripimp_rwt"] >>
+  rename [‘ψ ∉ A’] >>
+  ‘A ∪ (B ∪ Γ) ⊩ᵍ ψ ⥰ ϕ’
+    by (‘A ∪ (B ∪ Γ) = (A ∪ B) ∪ Γ’ by simp[AC UNION_COMM UNION_ASSOC] >>
+        pop_assum SUBST1_TAC >> simp[gweakening]) >>
+  ‘A ∪ (B ∪ Γ) ⊩ᵍ ψ’
+    by (‘A ∪ (B ∪ Γ) = Γ ∪ (A ∪ B)’ by simp[AC UNION_COMM UNION_ASSOC] >>
+        pop_assum SUBST1_TAC >> simp[gweakening]) >>
+  dxrule_all_then assume_tac ded_MP >>
+  first_x_assum drule >> disch_then $ qspec_then ‘Γ’ mp_tac >> simp[] >>
+  simp[AC UNION_COMM UNION_ASSOC]
+QED
 
+
+Theorem dedg_cut:
+  lift dedg Γ Δ ∧ Δ ∪ Σ ⊩ᵍ ϕ ⇒ Γ ∪ Σ ⊩ᵍ ϕ
+Proof
+  strip_tac >> drule_then strip_assume_tac finite_deductions >>
+  rename [‘FINITE Hs0’] >>
+  ‘∃Δ₀ Σ₀. Hs0 = Δ₀ ∪ Σ₀ ∧ Δ₀ ⊆ Δ ∧ Σ₀ ⊆ Σ’
+    by (qexistsl [‘Hs0 ∩ Δ’, ‘Hs0 ∩ Σ’] >> simp[] >> ASM_SET_TAC[]) >>
+  gvs[] >>
+  ‘∀d. d ∈ Δ₀ ⇒ Γ ⊩ᵍ d’
+    by (gvs[lift_def] >> qpat_x_assum ‘Δ ⊆ _’ mp_tac>>
+        simp[Once SUBSET_DEF] >> metis_tac[SUBSET_DEF]) >>
+  drule_all_then assume_tac cut_lemma >>
+  irule gweakening_subset >> first_assum $ irule_at Any >>
+  ASM_SET_TAC[]
+QED
+
+Theorem dedg_isfinitary_consequence:
+  finitary_consequence dedg
+Proof
+  simp[finitary_consequence_def, isConsequence_def] >> rpt strip_tac >~
+  [‘{ϕ} ⊩ᵍ ϕ’]
+  >- simp[ded_hyp] >~
+  [‘Γ ⊆ Δ’, ‘Γ ⊩ᵍ ϕ’]
+  >- (‘Δ = Γ ∪ Δ’ by gvs[SUBSET_UNION_ABSORPTION] >>
+      pop_assum SUBST1_TAC >> irule gweakening >> simp[]) >~
+  [‘lift _ _ _ (* a *)’] >- metis_tac[dedg_cut] >>
+  simp[Once EXTENSION, PULL_EXISTS] >> simp[IN_DEF] >>
+  rw[EQ_IMP_THM] >>
+  metis_tac[gweakening_subset, finite_deductions]
+QED
+
+Theorem pure_hilbert =
+        ded_rules |> Q.SPEC ‘λs hs b. F’
+                  |> SIMP_RULE bool_ss []
+                  |> CONJUNCTS
+                  |> map (Q.SPEC ‘{}’)
+                  |> LIST_CONJ
+                  |> CONV_RULE (EVERY_CONJ_CONV
+                                (SIMP_CONV bool_ss [NOT_IN_EMPTY]))

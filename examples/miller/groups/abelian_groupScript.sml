@@ -66,11 +66,11 @@ End
 (* Theorems.                                                                 *)
 (* ------------------------------------------------------------------------- *)
 
-val ABELIAN_GPOW_GOP = store_thm
-  ("ABELIAN_GPOW_GOP",
-   ``!G :: finite_group. !g h :: gset G. !n.
+Theorem ABELIAN_GPOW_GOP:
+     !G :: finite_group. !g h :: gset G. !n.
        abelian G ==>
-       (gpow G (gop G g h) n = gop G (gpow G g n) (gpow G h n))``,
+       (gpow G (gop G g h) n = gop G (gpow G g n) (gpow G h n))
+Proof
    S_TAC
    ++ Induct_on `n` >> G_TAC []
    ++ G_TAC []
@@ -81,13 +81,14 @@ val ABELIAN_GPOW_GOP = store_thm
    ++ G_TAC []
    ++ Q.PAT_X_ASSUM `abelian G` MP_TAC
    ++ R_TAC [abelian_def]
-   ++ DISCH_THEN (fn th => G_TAC [Q_RESQ_HALF_SPECL [`h`, `gpow G g n`] th]));
+   ++ DISCH_THEN (fn th => G_TAC [Q_RESQ_HALF_SPECL [`h`, `gpow G g n`] th])
+QED
 
-val ABELIAN_GORD_GCD_1 = store_thm
-  ("ABELIAN_GORD_GCD_1",
-   ``!G :: finite_group. !g h :: gset G.
+Theorem ABELIAN_GORD_GCD_1:
+     !G :: finite_group. !g h :: gset G.
        abelian G /\ (gcd (gord G g) (gord G h) = 1) ==>
-       (gord G (gop G g h) = gord G g * gord G h)``,
+       (gord G (gop G g h) = gord G g * gord G h)
+Proof
    S_TAC
    ++ G_TAC [IS_GORD]
    ++ S_TAC
@@ -127,15 +128,16 @@ val ABELIAN_GORD_GCD_1 = store_thm
        ++ Q.PAT_X_ASSUM `gpow G h m = x` K_TAC
        ++ ASM_REWRITE_TAC []
        ++ PROVE_TAC [])
-   ++ G_TAC [GORD_GINV]);
+   ++ G_TAC [GORD_GINV]
+QED
 
 (* The structure theorem *)
 
-val STRUCTURE_LEMMA = store_thm
-  ("STRUCTURE_LEMMA",
-   ``!G :: finite_group.
+Theorem STRUCTURE_LEMMA:
+     !G :: finite_group.
        abelian G ==>
-       !g1 g2 :: gset G. ?h :: gset G. gord G h = lcm (gord G g1) (gord G g2)``,
+       !g1 g2 :: gset G. ?h :: gset G. gord G h = lcm (gord G g1) (gord G g2)
+Proof
    NTAC 2 RESQ_STRIP_TAC
    ++ Suff
       `!g. !g1 g2 :: gset G.
@@ -227,12 +229,13 @@ val STRUCTURE_LEMMA = store_thm
     ++ Suff `0 < g` >> R_TAC [DIV_CANCEL, GSYM MULT_ASSOC]
     ++ Suff `~(g = 0)` >> DECIDE_TAC
     ++ S_TAC
-    ++ AG_TAC [GORD_EQ_0]]);
+    ++ AG_TAC [GORD_EQ_0]]
+QED
 
-val STRUCTURE_THM = store_thm
-  ("STRUCTURE_THM",
-   ``!G :: finite_group.
-       abelian G ==> ?g :: gset G. !h :: gset G. gpow G h (gord G g) = gid G``,
+Theorem STRUCTURE_THM:
+     !G :: finite_group.
+       abelian G ==> ?g :: gset G. !h :: gset G. gpow G h (gord G g) = gid G
+Proof
    S_TAC
    ++ MP_TAC (Q_RESQ_SPEC `G` MAXIMAL_ORDER)
    ++ S_TAC
@@ -253,7 +256,8 @@ val STRUCTURE_THM = store_thm
    >> (POP_ASSUM K_TAC
        ++ Suff `~(gord G h' = 0)` >> DECIDE_TAC
        ++ G_TAC [GORD_EQ_0])
-   ++ PROVE_TAC [DIVIDES_LCM_L]);
+   ++ PROVE_TAC [DIVIDES_LCM_L]
+QED
 
 (* non-interactive mode
 *)

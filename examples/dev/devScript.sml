@@ -59,9 +59,10 @@ End
 (* MIN_LEMMA - if a signal s is false at time t and is true at time (t+d),   *)
 (* then there exists a `minimum` t' > t such that (s t')                     *)
 (*****************************************************************************)
-val MIN_LEMMA = store_thm("MIN_LEMMA",
-    ``!t. ~(s t) /\ (s (t+d)) ==>
-          (?t'. (t' > t) /\ (!tt. t <= tt /\ tt < t' ==> ~(s tt)) /\ s t')``,
+Theorem MIN_LEMMA:
+      !t. ~(s t) /\ (s (t+d)) ==>
+          (?t'. (t' > t) /\ (!tt. t <= tt /\ tt < t' ==> ~(s tt)) /\ s t')
+Proof
     completeInduct_on `d`
     THEN RW_TAC arith_ss []
     THEN Cases_on `d`
@@ -101,7 +102,8 @@ val MIN_LEMMA = store_thm("MIN_LEMMA",
     , (* end of `!tt. t <= tt /\ tt < t' ==> ~s tt` *)
     `t' > t` by RW_TAC arith_ss []
     THEN Q.EXISTS_TAC `t'` THEN PROVE_TAC []
-    ]]]);
+    ]]]
+QED
 
 
 
@@ -110,23 +112,26 @@ val MIN_LEMMA = store_thm("MIN_LEMMA",
 (* exists a time t' > t which determines the exact moment the computation    *)
 (* finishes                                                                  *)
 (*****************************************************************************)
-val LIV_LEMMA = store_thm("LIV_LEMMA",
-    ``LIV (load,inp,done,out) ==>
-     (!t. ~(done t) ==> ?t'. (t' >  t) /\ (HOLDF (t,t') done) /\ (done t'))``,
+Theorem LIV_LEMMA:
+      LIV (load,inp,done,out) ==>
+     (!t. ~(done t) ==> ?t'. (t' >  t) /\ (HOLDF (t,t') done) /\ (done t'))
+Proof
     RW_TAC arith_ss [LIV_def,HOLDF_def]
     THEN `?t'. t' > t /\ done t'` by PROVE_TAC []
     THEN `?d. d = t'-t` by RW_TAC arith_ss []
     THEN `t+d = t'` by RW_TAC arith_ss []
     THEN `done (t+d)` by PROVE_TAC []
-    THEN metisLib.METIS_TAC [MIN_LEMMA]);
+    THEN metisLib.METIS_TAC [MIN_LEMMA]
+QED
 
 
 
 (*****************************************************************************)
 (* ATM - atomic circuits satisfy DEV                                         *)
 (*****************************************************************************)
-val ATM = store_thm("ATM",
-    ``ATM f (load,inp,done,out) ==> DEV f (load,inp,done,out)``,
+Theorem ATM:
+      ATM f (load,inp,done,out) ==> DEV f (load,inp,done,out)
+Proof
     RW_TAC arith_ss [DEV_def,ATM_def,LIV_def]
     THEN IMP_RES_TAC ATM_def THEN IMP_RES_TAC SAFE_ATM
     THEN `c0 t` by PROVE_TAC [ATM_def, NOT_def, POSEDGE_def,
@@ -153,7 +158,8 @@ val ATM = store_thm("ATM",
     THEN `HOLDF (SUC n,(SUC (SUC n))) done` by RW_TAC arith_ss [HOLDF_def]
     THEN Q.EXISTS_TAC `SUC(SUC n)`
     THEN PROVE_TAC []
-    ]);
+    ]
+QED
 
 
 
@@ -161,9 +167,10 @@ val ATM = store_thm("ATM",
 (* HOLDT_NOT_POSEDGE' - if a signal is T during an internval,                *)
 (* then no positive edge occurs in this period.                              *)
 (*****************************************************************************)
-val HOLDT_NOT_POSEDGE' = store_thm("HOLDT_NOT_POSEDGE'",
-     ``(!t. t0 <= t /\ t < t1 ==> s t) ==>
-       !t. t0 < t /\ t <= t1 ==> ~POSEDGE s t``,
+Theorem HOLDT_NOT_POSEDGE':
+       (!t. t0 <= t /\ t < t1 ==> s t) ==>
+       !t. t0 < t /\ t <= t1 ==> ~POSEDGE s t
+Proof
    Induct_on `t1`
    THENL [
    RW_TAC arith_ss []
@@ -175,16 +182,18 @@ val HOLDT_NOT_POSEDGE' = store_thm("HOLDT_NOT_POSEDGE'",
    `s t1` by RW_TAC arith_ss []
    THEN PROVE_TAC [POSEDGE]
    , (* end of Cases_on `t=t1+1` *)
-   RW_TAC arith_ss []]]);
+   RW_TAC arith_ss []]]
+QED
 
 
 
 (*****************************************************************************)
 (* SEQ - sequential circuits satisfy DEV                                     *)
 (*****************************************************************************)
-val SEQ = store_thm("SEQ",
-    ``SEQ (DEV f) (DEV g) (load,inp,done,out) ==>
-      DEV (g o f) (load,inp,done,out)``,
+Theorem SEQ:
+      SEQ (DEV f) (DEV g) (load,inp,done,out) ==>
+      DEV (g o f) (load,inp,done,out)
+Proof
     RW_TAC arith_ss [DEV_def,SEQ_def,LIV_def]
     THEN IMP_RES_TAC SEQ_def THEN IMP_RES_TAC SAFE_SEQ
     THEN `LIV (c0,inp,c1,data)` by RW_TAC arith_ss [LIV_def]
@@ -237,7 +246,8 @@ val SEQ = store_thm("SEQ",
     THEN `tt' > t` by RW_TAC arith_ss []
     THEN PROVE_TAC [AND_def]
     ]
-    ]);
+    ]
+QED
 
 
 
@@ -245,9 +255,10 @@ val SEQ = store_thm("SEQ",
 (* PAR - parallel circuits satisfy DEV                                       *)
 (*****************************************************************************)
 
-val PAR = store_thm("PAR",
-    ``PAR (DEV f) (DEV g) (load,inp,done,out) ==>
-      DEV (\x. (f x, g x)) (load,inp,done,out)``,
+Theorem PAR:
+      PAR (DEV f) (DEV g) (load,inp,done,out) ==>
+      DEV (\x. (f x, g x)) (load,inp,done,out)
+Proof
     REWRITE_TAC [DEV_def,PAR_def,LIV_def]
     THEN STRIP_TAC THEN CONJ_TAC
     THEN `PAR (SAFE_DEV f) (SAFE_DEV g) (load,inp,done,out)`
@@ -318,15 +329,17 @@ val PAR = store_thm("PAR",
     THEN `done' t2` by RW_TAC arith_ss []
     THEN `t2 > t` by RW_TAC arith_ss []
     THEN Q.EXISTS_TAC `t2` THEN PROVE_TAC [AND_def]
-    ]]]);
+    ]]]
+QED
 
 
 (*****************************************************************************)
 (* ITE - conditional circuits satisfy DEV                                    *)
 (*****************************************************************************)
-val ITE = store_thm("ITE",
-    ``ITE (DEV e) (DEV f) (DEV g) (load,inp,done,out) ==>
-      DEV (\x. (if e x then f x else g x)) (load,inp,done,out)``,
+Theorem ITE:
+      ITE (DEV e) (DEV f) (DEV g) (load,inp,done,out) ==>
+      DEV (\x. (if e x then f x else g x)) (load,inp,done,out)
+Proof
     RW_TAC arith_ss [DEV_def,ITE_def,LIV_def] (* proof of SAFE_DEV /\ LIV *)
     THENL [
     REPEAT (PAT_X_ASSUM ``!(t:num). X`` kill)
@@ -557,7 +570,8 @@ val ITE = store_thm("ITE",
     THEN `done_f tg` by RW_TAC arith_ss []
     THEN `tg > t` by RW_TAC arith_ss []
     THEN Q.EXISTS_TAC `tg` THEN PROVE_TAC [AND_def]
-    ]]]]]]);
+    ]]]]]]
+QED
 
 
 
@@ -567,15 +581,16 @@ val ITE = store_thm("ITE",
 (* start_f in the next time and done_e and done_g remain asserted            *)
 (*****************************************************************************)
 
-val REC_e_g_LEMMA = store_thm("REC_e_g_LEMMA",
-    ``~(done t0) /\ done_e t0 /\ done_g t0 /\
+Theorem REC_e_g_LEMMA:
+      ~(done t0) /\ done_e t0 /\ done_g t0 /\
       CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
       DFF (inp_e,start_e,q) /\ SELECT (done_e,data_e,start_f,start_g) /\
       FINISH (done_e,done_f,done_g,done) /\
       SAFE_DEV f1 (start_e,inp_e,done_e,data_e) /\
       SAFE_DEV f2 (start_f,q,done_f,out) /\
       SAFE_DEV f3 (start_g,q,done_g,data_g)
-      ==> (~POSEDGE start_f (t0+1)) /\ done_e (t0+1) /\ done_g (t0+1)``,
+      ==> (~POSEDGE start_f (t0+1)) /\ done_e (t0+1) /\ done_g (t0+1)
+Proof
     REWRITE_TAC [SAFE_DEV_def,FINISH_def,CALL_def,SELECT_def]
     THEN STRIP_TAC
     THEN `~(c1 (t0+1))` by PROVE_TAC [DEL_def]
@@ -588,7 +603,8 @@ val REC_e_g_LEMMA = store_thm("REC_e_g_LEMMA",
          POSEDGE_IMPL,AND_def]
     THEN `done_e (t0+1)` by PROVE_TAC []
     THEN `done_g (t0+1)` by PROVE_TAC []
-    THEN PROVE_TAC []);
+    THEN PROVE_TAC []
+QED
 
 
 
@@ -597,15 +613,16 @@ val REC_e_g_LEMMA = store_thm("REC_e_g_LEMMA",
 (* (~done t0 /\ done_e t0 /\ done_f t0 /\ done_g t0),                        *)
 (* then done will be asserted evetually                                      *)
 (*****************************************************************************)
-val REC_e_f_g = store_thm("REC_e_f_g",
-    ``~(done t0) /\ done_e t0 /\ done_f t0 /\ done_g t0 /\
+Theorem REC_e_f_g:
+      ~(done t0) /\ done_e t0 /\ done_f t0 /\ done_g t0 /\
       CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
       DFF (inp_e,start_e,q) /\ SELECT (done_e,data_e,start_f,start_g) /\
       FINISH (done_e,done_f,done_g,done) /\
       DEV f1 (start_e,inp_e,done_e,data_e) /\
       DEV f2 (start_f,q,done_f,out) /\
       DEV f3 (start_g,q,done_g,data_g)
-      ==> ?t1. t1 > t0 /\ HOLDF (t0,t1) done /\ done t1``,
+      ==> ?t1. t1 > t0 /\ HOLDF (t0,t1) done /\ done t1
+Proof
     RW_TAC arith_ss [DEV_def,SAFE_DEV_def,FINISH_def]
     THEN Cases_on `done_g (t0-1)`
     THENL [
@@ -716,7 +733,8 @@ val REC_e_f_g = store_thm("REC_e_f_g",
     THEN `c3 (t0+1)` by PROVE_TAC [DEL_def,AND_def]
     THEN `done (t0+1)` by PROVE_TAC [DEL_def,AND_def]
     THEN Q.EXISTS_TAC `t0+1` THEN PROVE_TAC []
-    ]]]);
+    ]]]
+QED
 
 
 (*****************************************************************************)
@@ -725,15 +743,16 @@ val REC_e_f_g = store_thm("REC_e_f_g",
 (* then done will be asserted evetually                                      *)
 (*****************************************************************************)
 
-val REC_e_NOTf_g = store_thm("REC_e_NOTf_g",
-    ``~(done t0) /\ done_e t0 /\ ~(done_f t0) /\ done_g t0 /\
+Theorem REC_e_NOTf_g:
+      ~(done t0) /\ done_e t0 /\ ~(done_f t0) /\ done_g t0 /\
       CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
       DFF (inp_e,start_e,q) /\ SELECT (done_e,data_e,start_f,start_g) /\
       FINISH (done_e,done_f,done_g,done) /\
       DEV f1 (start_e,inp_e,done_e,data_e) /\
       DEV f2 (start_f,q,done_f,out) /\
       DEV f3 (start_g,q,done_g,data_g)
-      ==> ?t1. t1 > t0 /\ HOLDF (t0,t1) done /\ done t1``,
+      ==> ?t1. t1 > t0 /\ HOLDF (t0,t1) done /\ done t1
+Proof
     RW_TAC arith_ss [DEV_def]
     THEN Cases_on `done_f (t0+1)`
     THENL [
@@ -811,7 +830,8 @@ val REC_e_NOTf_g = store_thm("REC_e_NOTf_g",
    THEN `HOLDF (t0,t1+1) done` by PROVE_TAC [HOLDF_def]
    THEN `t1+1 > t0` by RW_TAC arith_ss []
    THEN Q.EXISTS_TAC `t1+1` THEN PROVE_TAC []
-   ]]]]);
+   ]]]]
+QED
 
 
 
@@ -821,18 +841,20 @@ val REC_e_NOTf_g = store_thm("REC_e_NOTf_g",
 (* then done will be asserted evetually                                      *)
 (*****************************************************************************)
 
-val REC_e_g = store_thm("REC_e_g",
-    ``~done t0 /\ done_e t0 /\ done_g t0 /\
+Theorem REC_e_g:
+      ~done t0 /\ done_e t0 /\ done_g t0 /\
       CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
       DFF (inp_e,start_e,q) /\ SELECT (done_e,data_e,start_f,start_g) /\
       FINISH (done_e,done_f,done_g,done) /\
       DEV f1 (start_e,inp_e,done_e,data_e) /\
       DEV f2 (start_f,q,done_f,out) /\
       DEV f3 (start_g,q,done_g,data_g) ==>
-      ?t1. t1 > t0 /\ HOLDF (t0,t1) done /\ done t1``,
+      ?t1. t1 > t0 /\ HOLDF (t0,t1) done /\ done t1
+Proof
     Cases_on `done_f t0`
     THENL [metisLib.METIS_TAC [REC_e_f_g],
-           metisLib.METIS_TAC [REC_e_NOTf_g]]);
+           metisLib.METIS_TAC [REC_e_NOTf_g]]
+QED
 
 
 
@@ -844,15 +866,16 @@ val REC_e_g = store_thm("REC_e_g",
 (* If such state holds, then done will be asserted eventually                *)
 (*****************************************************************************)
 
-val REC_LIV_LEMMA = store_thm("REC_LIV_LEMMA",
-    ``CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
+Theorem REC_LIV_LEMMA:
+      CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
       DFF (inp_e,start_e,q) /\ SELECT (done_e,data_e,start_f,start_g) /\
       FINISH (done_e,done_f,done_g,done) /\
       (!x. ~f1 x ==> variant (f3 x) < variant x) /\
       done_e t /\ done_g (t + 1) /\ POSEDGE start_e (t + 1) /\
       DEV f1 (start_e,inp_e,done_e,data_e) /\
       DEV f2 (start_f,q,done_f,out) /\ DEV f3 (start_g,q,done_g,data_g)
-      ==> ?t'. t' > (t+1) /\ HOLDF (t+1,t') done /\ done t'``,
+      ==> ?t'. t' > (t+1) /\ HOLDF (t+1,t') done /\ done t'
+Proof
     RW_TAC arith_ss []
     THEN completeInduct_on `variant (inp_e (t+1))`
     THEN REPEAT STRIP_TAC
@@ -1146,7 +1169,8 @@ val REC_LIV_LEMMA = store_thm("REC_LIV_LEMMA",
     THEN PROVE_TAC [HOLDF_TRANS]
     , (* end of `HOLDF (t+1,tf') done` *)
     Q.EXISTS_TAC `tf'` THEN PROVE_TAC []
-    ] ] ] ] ] ] ] ] ] ] ]);
+    ] ] ] ] ] ] ] ] ] ] ]
+QED
 
 
 
@@ -1156,8 +1180,8 @@ val REC_LIV_LEMMA = store_thm("REC_LIV_LEMMA",
 (* (~done_g t0), then done will be asserted evetually                        *)
 (*****************************************************************************)
 
-val REC_NOTg = store_thm("REC_NOTg",
-    ``~done_g t0 /\
+Theorem REC_NOTg:
+      ~done_g t0 /\
       TOTAL (f1,f2,f3) /\
       CALL (load,inp,done,done_g,data_g,start_e,inp_e) /\
       DFF (inp_e,start_e,q) /\ SELECT (done_e,data_e,start_f,start_g) /\
@@ -1165,7 +1189,8 @@ val REC_NOTg = store_thm("REC_NOTg",
       DEV f1 (start_e,inp_e,done_e,data_e) /\
       DEV f2 (start_f,q,done_f,out) /\
       DEV f3 (start_g,q,done_g,data_g) ==>
-      ?t1. t1 > t0 /\ HOLDF (t0,t1) done /\ done t1``,
+      ?t1. t1 > t0 /\ HOLDF (t0,t1) done /\ done t1
+Proof
     RW_TAC arith_ss []
     THEN `?tg. tg > t0 /\ HOLDF (t0,tg) done_g /\ done_g tg`
          by PROVE_TAC [DEV_def,LIV_LEMMA]
@@ -1407,16 +1432,17 @@ val REC_NOTg = store_thm("REC_NOTg",
     ] (* Cases_on `done_g te` *)
     ] (* `!tt. tg < tt /\ tt <= (te-1) ==> done_g tt` *)
     ] (* Cases_on `done_e tg` *)
-);
+QED
 
 
 (*****************************************************************************)
 (* REC - recursive circuits satisfy DEV                                      *)
 (*****************************************************************************)
-val REC = Q.store_thm("REC",
-    `TOTAL (f1,f2,f3) /\
+Theorem REC:
+     TOTAL (f1,f2,f3) /\
      REC (DEV f1) (DEV f2) (DEV f3) (load,inp,done,out) ==>
-     DEV  (TAILREC f1 f2 f3) (load,inp,done,out)`,
+     DEV  (TAILREC f1 f2 f3) (load,inp,done,out)
+Proof
     RW_TAC arith_ss [DEV_def,REC_def,LIV_def]
     THENL [
     REPEAT (Q.PAT_X_ASSUM `!(t:num). X` kill)
@@ -1502,4 +1528,4 @@ val REC = Q.store_thm("REC",
     ] (* Cases_on `done_g te` *)
     ] (* Cases_on `done_e t` *)
     ] (* RW_TAC arith_ss [DEV_def,REC_def,LIV_def] *)
-);
+QED

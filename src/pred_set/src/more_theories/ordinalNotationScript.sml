@@ -818,12 +818,11 @@ Definition restn_def:
   (restn a (SUC n) = restn (tail a) n)
 End
 
-Definition cf1_def:
+Definition cf1_def[simp]:
   (cf1 (End _) b = 0) /\
   (cf1 (Plus e1 c1 k1) b = if ord_less (expt b) e1 then 1 + cf1 k1 b
                            else 0)
 End
-val _ = export_rewrites ["cf1_def"]
 
 Definition cf2_def:  cf2 a b n = n + cf1 (restn a n) b
 End

@@ -130,14 +130,14 @@ End
 (********* FUNCTIONAL CORRECTNESS*********************************)
 
 (*use induction*)
-val deRound_enRound_cancel=Q.store_thm(
-"deRound_enRound_cancel",
-`!r t revKeyHat.
+Theorem deRound_enRound_cancel:
+ !r t revKeyHat.
     r >0 /\
     r<31 /\
     (LENGTH revKeyHat=r+1)
     ==>
-    (deRound (enRound t r revKeyHat) (31-r) revKeyHat=t)`,
+    (deRound (enRound t r revKeyHat) (31-r) revKeyHat=t)
+Proof
   Induct_on `r` THENL [
     FULL_SIMP_TAC arith_ss [],
     RW_TAC std_ss [] THEN
@@ -153,14 +153,15 @@ val deRound_enRound_cancel=Q.store_thm(
         `SUC (31 - SUC (SUC n)) = 31 - SUC n` by RW_TAC arith_ss [] THEN
         FULL_SIMP_TAC (srw_ss()++ARITH_ss)
           [enRound_def,deRound_def,invSBlock_sBlock_cancel,
-           invLT_LT_cancel,LET_THM,R_def]]]);
+           invLT_LT_cancel,LET_THM,R_def]]]
+QED
 
-val decryptwithKeyHat_encryptwithKeyHat_cancel=Q.store_thm(
-"decryptwithKeyHat_encryptwithKeyHat_cancel",
-`!keyHat pt.
+Theorem decryptwithKeyHat_encryptwithKeyHat_cancel:
+ !keyHat pt.
     (LENGTH keyHat=33)
     ==>
-    (decryptwithKeyHat (encryptwithKeyHat pt keyHat) keyHat= pt)`,
+    (decryptwithKeyHat (encryptwithKeyHat pt keyHat) keyHat= pt)
+Proof
   RW_TAC std_ss [encryptwithKeyHat_def, decryptwithKeyHat_def,
                  LET_THM,invFP_FP_cancel] THEN
   `?v_0 v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 v_9 v_10 v_11 v_12 v_13 v_14 v_15
@@ -177,21 +178,23 @@ val decryptwithKeyHat_encryptwithKeyHat_cancel=Q.store_thm(
            v_8; v_7; v_6; v_5; v_4; v_3; v_2; v_1; v_0] = 30 + 1`
     by RW_TAC list_ss [] THEN
   METIS_TAC [deRound_enRound_cancel,invIP_IP_cancel,
-             DECIDE ``30 > 0 /\ 30 < 31 /\ (31 = 30 + 1) /\ (1 = 31 - 30)``]);
+             DECIDE ``30 > 0 /\ 30 < 31 /\ (31 = 30 + 1) /\ (1 = 31 - 30)``]
+QED
 
 (*based on deRound_enRound_cancel*)
-val serpentBlockDecrypt_serpentBlockEncrypt_cancel_rec=Q.store_thm(
-"serpentBlockDecrypt_serpentBlockEncrypt_cancel_rec",
-`!userKey pt kl.
-    serpentBlockDecrypt (serpentBlockEncrypt pt userKey kl) userKey kl=pt`,
+Theorem serpentBlockDecrypt_serpentBlockEncrypt_cancel_rec:
+ !userKey pt kl.
+    serpentBlockDecrypt (serpentBlockEncrypt pt userKey kl) userKey kl=pt
+Proof
   RW_TAC std_ss [serpentBlockDecrypt_def,serpentBlockEncrypt_def,LET_THM] THEN
-  METIS_TAC [makeKeyHatLength,decryptwithKeyHat_encryptwithKeyHat_cancel]);
+  METIS_TAC [makeKeyHatLength,decryptwithKeyHat_encryptwithKeyHat_cancel]
+QED
 
 (*without induction,brutal force*)
-val serpentBlockDecrypt_serpentBlockEncrypt_cancel_whole=Q.store_thm(
-"serpentBlockDecrypt_serpentBlockEncrypt_cancel_whole",
-`!userKey pt kl.
-    serpentBlockDecrypt (serpentBlockEncrypt pt userKey kl) userKey kl = pt`,
+Theorem serpentBlockDecrypt_serpentBlockEncrypt_cancel_whole:
+ !userKey pt kl.
+    serpentBlockDecrypt (serpentBlockEncrypt pt userKey kl) userKey kl = pt
+Proof
  RW_TAC std_ss [serpentBlockDecrypt_def,serpentBlockEncrypt_def,
                 LET_THM,encryptwithKeyHat_def, decryptwithKeyHat_def] THEN
   `?v_0 v_1 v_2 v_3 v_4 v_5 v_6 v_7 v_8 v_9 v_10 v_11 v_12 v_13 v_14 v_15
@@ -206,5 +209,6 @@ val serpentBlockDecrypt_serpentBlockEncrypt_cancel_whole=Q.store_thm(
   SRW_TAC [] [doAllDeRound_def,deRound_def,doAllEnRound_def,
               enRound_def,enRound31_def,deRound0_def,invFP_FP_cancel,
               invIP_IP_cancel,invSBlock_sBlock_cancel,invLT_LT_cancel,
-              LET_THM,R_def]);
+              LET_THM,R_def]
+QED
 

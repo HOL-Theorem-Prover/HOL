@@ -81,35 +81,39 @@ val _ = overload_on("diff", ``poly_diff r``);
 
 (* Theorem: diff [] = [] *)
 (* Proof: by poly_diff_def *)
-val poly_diff_of_zero = store_thm(
-  "poly_diff_of_zero",
-  ``!r:'a ring. diff [] = []``,
-  rw[poly_diff_def]);
+Theorem poly_diff_of_zero:
+    !r:'a ring. diff [] = []
+Proof
+  rw[poly_diff_def]
+QED
 
 (* Theorem: diff |0| = |0| *)
 (* Proof: by poly_diff_def *)
-val poly_diff_zero = store_thm(
-  "poly_diff_zero",
-  ``!r:'a ring. diff |0| = |0|``,
-  rw[poly_diff_def]);
+Theorem poly_diff_zero:
+    !r:'a ring. diff |0| = |0|
+Proof
+  rw[poly_diff_def]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_diff_of_zero", "poly_diff_zero"];
 
 (* Theorem: diff (h::t) = t + (diff t) >> 1 *)
 (* Proof: by poly_diff_def *)
-val poly_diff_cons = store_thm(
-  "poly_diff_cons",
-  ``!r:'a ring. !h t. diff (h::t) = t + (diff t) >> 1``,
-  rw[poly_diff_def]);
+Theorem poly_diff_cons:
+    !r:'a ring. !h t. diff (h::t) = t + (diff t) >> 1
+Proof
+  rw[poly_diff_def]
+QED
 
 (* Theorem: diff [c] = |0| *)
 (* Proof: by poly_diff_def *)
-val poly_diff_const = store_thm(
-  "poly_diff_const",
-  ``!r:'a ring. !c:'a. diff [c] = |0|``,
+Theorem poly_diff_const:
+    !r:'a ring. !c:'a. diff [c] = |0|
+Proof
   rw[poly_diff_def] >>
-  metis_tac[poly_add_zero_zero, poly_zero]);
+  metis_tac[poly_add_zero_zero, poly_zero]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_diff_const"];
@@ -121,13 +125,14 @@ val _ = export_rewrites["poly_diff_const"];
    If #1 <> #0, |1| = [#1]        by poly_one
       diff |1| = diff [#1] = |0|  by poly_diff_const
 *)
-val poly_diff_one = store_thm(
-  "poly_diff_one",
-  ``!r:'a ring. Ring r ==> (diff |1| = |0|)``,
+Theorem poly_diff_one:
+    !r:'a ring. Ring r ==> (diff |1| = |0|)
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >-
   metis_tac[poly_one, poly_diff_zero, poly_zero] >>
-  rw_tac std_ss[poly_one, poly_diff_const]);
+  rw_tac std_ss[poly_one, poly_diff_const]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_diff_one"];
@@ -144,13 +149,14 @@ val _ = export_rewrites["poly_diff_one"];
        and weak (diff p) >> 1             by poly_shift_weak
      Hence weak (diff (h::p))             by poly_add_def, weak_add_weak, poly_chop_weak
 *)
-val poly_diff_weak = store_thm(
-  "poly_diff_weak",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> weak (diff p)``,
+Theorem poly_diff_weak:
+    !r:'a ring. Ring r ==> !p. weak p ==> weak (diff p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
-  rw_tac std_ss[weak_cons, poly_diff_cons, poly_shift_weak, poly_add_def, weak_add_weak, poly_chop_weak]);
+  rw_tac std_ss[weak_cons, poly_diff_cons, poly_shift_weak, poly_add_def, weak_add_weak, poly_chop_weak]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_diff_weak"];
@@ -167,23 +173,25 @@ val _ = export_rewrites["poly_diff_weak"];
        and poly (diff p) >> 1             by poly_shift_poly
      Hence poly (diff (h::p))             by poly_add_poly
 *)
-val poly_diff_poly = store_thm(
-  "poly_diff_poly",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> poly (diff p)``,
+Theorem poly_diff_poly:
+    !r:'a ring. Ring r ==> !p. poly p ==> poly (diff p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
-  rw[poly_diff_def]);
+  rw[poly_diff_def]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_diff_poly"];
 
 (* Theorem: diff (h::t) = t + (diff t)* X *)
 (* Proof: by poly_diff_def, poly_mult_X *)
-val poly_diff_cons_alt = store_thm(
-  "poly_diff_cons_alt",
-  ``!r:'a ring. Ring r ==> !h t. poly t ==> (diff (h::t) = t + (diff t)* X)``,
-  rw[poly_diff_cons, poly_mult_X]);
+Theorem poly_diff_cons_alt:
+    !r:'a ring. Ring r ==> !h t. poly t ==> (diff (h::t) = t + (diff t)* X)
+Proof
+  rw[poly_diff_cons, poly_mult_X]
+QED
 
 (* Theorem: Ring r ==> diff |c| = |0| *)
 (* Proof:
@@ -197,11 +205,12 @@ val poly_diff_cons_alt = store_thm(
       = diff [##c]             by poly_chop_const_nonzero
       = |0|                    by poly_diff_const
 *)
-val poly_diff_sum_num = store_thm(
-  "poly_diff_sum_num",
-  ``!r:'a ring. Ring r ==> !c:num. diff |c| = |0|``,
+Theorem poly_diff_sum_num:
+    !r:'a ring. Ring r ==> !c:num. diff |c| = |0|
+Proof
   rw[poly_ring_sum_c] >>
-  rw[]);
+  rw[]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_diff_sum_num"];
@@ -219,14 +228,15 @@ val _ = export_rewrites["poly_diff_sum_num"];
       = p + |0|               by poly_shift_zero
       = |0|                   by poly_add_def, zero_poly_chop
 *)
-val poly_diff_zero_poly = store_thm(
-  "poly_diff_zero_poly",
-  ``!r:'a ring. !p. zerop p ==> (diff p = |0|)``,
+Theorem poly_diff_zero_poly:
+    !r:'a ring. !p. zerop p ==> (diff p = |0|)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   rw[poly_diff_cons] >>
-  rw[poly_add_def, GSYM zero_poly_chop]);
+  rw[poly_add_def, GSYM zero_poly_chop]
+QED
 
 (* Theorem: weak p ==> diff (chop p) = chop (diff p) *)
 (* Proof:
@@ -260,9 +270,9 @@ val poly_diff_zero_poly = store_thm(
       = chop (p + (diff p) >> 1)                by poly_add_def
       = chop (diff (h::p))                      by poly_diff_cons
 *)
-val poly_diff_chop = store_thm(
-  "poly_diff_chop",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> (diff (chop p) = chop (diff p))``,
+Theorem poly_diff_chop:
+    !r:'a ring. Ring r ==> !p. weak p ==> (diff (chop p) = chop (diff p))
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -278,7 +288,8 @@ val poly_diff_chop = store_thm(
   `_ = chop (chop (p || (diff p) >> 1))` by rw[poly_chop_chop] >>
   `_ = chop (p + (diff p) >> 1)` by rw_tac std_ss[poly_add_def] >>
   `_ = chop (diff (h::p))` by rw[poly_diff_cons] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: poly p /\ poly q ==> (diff (p + q) = diff p + diff q) *)
 (* Proof:
@@ -319,9 +330,9 @@ val poly_diff_chop = store_thm(
             = diff (h'::p) + diff (h::q)                        by poly_diff_cons
             = RHS
 *)
-val poly_diff_add = store_thm(
-  "poly_diff_add",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (diff (p + q) = diff p + diff q)``,
+Theorem poly_diff_add:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (diff (p + q) = diff p + diff q)
+Proof
   ntac 2 strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -348,7 +359,8 @@ val poly_diff_add = store_thm(
   `_ = ((p + diff p >> 1) + q) + diff q >> 1` by rw_tac std_ss[poly_add_assoc] >>
   `_ = (p + diff p >> 1) + (q + diff q >> 1)` by rw_tac std_ss[poly_add_assoc, poly_add_poly] >>
   `_ = diff (h'::p) + diff (h::q)` by rw_tac std_ss[poly_diff_cons] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: poly p ==> (diff (-p) = - diff p) *)
 (* Proof:
@@ -372,9 +384,9 @@ val poly_diff_add = store_thm(
          = - diff (h::p)              by poly_diff_cons
          = RHS
 *)
-val poly_diff_neg = store_thm(
-  "poly_diff_neg",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> (diff (-p) = - diff p)``,
+Theorem poly_diff_neg:
+    !r:'a ring. Ring r ==> !p. poly p ==> (diff (-p) = - diff p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -386,7 +398,8 @@ val poly_diff_neg = store_thm(
   `_ = (-p) + (- (diff p >> 1))` by rw[poly_neg_shift] >>
   `_ = - (p + diff p >> 1)` by rw[poly_neg_add] >>
   `_ = - diff (h::p)` by rw_tac std_ss[poly_diff_cons] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: poly p /\ poly q ==> (diff (p - q) = diff p - diff q) *)
 (* Proof:
@@ -397,10 +410,11 @@ val poly_diff_neg = store_thm(
    = diff p + - diff q       by poly_diff_neg
    = diff p - diff q         by poly_sub_def
 *)
-val poly_diff_sub = store_thm(
-  "poly_diff_sub",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (diff (p - q) = diff p - diff q)``,
-  rw[poly_sub_def, poly_diff_add, poly_diff_neg]);
+Theorem poly_diff_sub:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (diff (p - q) = diff p - diff q)
+Proof
+  rw[poly_sub_def, poly_diff_add, poly_diff_neg]
+QED
 
 (* Theorem: poly p ==> !c. c IN R ==> (diff (c * p) = c * diff p) *)
 (* Proof:
@@ -433,9 +447,9 @@ val poly_diff_sub = store_thm(
          = c * diff (h::p)                                    by poly_diff_cons
          = RHS
 *)
-val poly_diff_cmult = store_thm(
-  "poly_diff_cmult",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> !c. c IN R ==> (diff (c * p) = c * diff p)``,
+Theorem poly_diff_cmult:
+    !r:'a ring. Ring r ==> !p. poly p ==> !c. c IN R ==> (diff (c * p) = c * diff p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   metis_tac[poly_cmult_zero, poly_zero, poly_diff_of_zero] >>
@@ -458,7 +472,8 @@ val poly_diff_cmult = store_thm(
   `_ = (c * p) + c * (diff p >> 1)` by rw_tac std_ss[poly_cmult_shift] >>
   `_ = c * (p + diff p >> 1)` by rw_tac std_ss[poly_cmult_add] >>
   `_ = c * diff (h::p)` by rw_tac std_ss[poly_diff_cons] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: poly p ==> diff (p >> 1) = p + (diff p) >> 1 *)
 (* Proof:
@@ -479,13 +494,14 @@ val poly_diff_cmult = store_thm(
          = (h::p) + (diff (h::p)) >> 1     by poly_diff_cons
          = RHS
 *)
-val poly_diff_shift_1 = store_thm(
-  "poly_diff_shift_1",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> (diff (p >> 1) = p + (diff p) >> 1)``,
+Theorem poly_diff_shift_1:
+    !r:'a ring. Ring r ==> !p. poly p ==> (diff (p >> 1) = p + (diff p) >> 1)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
-  rw[poly_cons_poly, poly_shift_1_cons, poly_diff_cons]);
+  rw[poly_cons_poly, poly_shift_1_cons, poly_diff_cons]
+QED
 
 (* Theorem: poly p /\ poly q ==> diff (p * q) = (diff p) * q + p * (diff q) *)
 (* Proof:
@@ -519,9 +535,9 @@ val poly_diff_shift_1 = store_thm(
           = diff (h::p) * q + (h::p) * diff q                                by poly_mult_cons
           = RHS
 *)
-val poly_diff_mult = store_thm(
-  "poly_diff_mult",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (diff (p * q) = (diff p) * q + p * (diff q))``,
+Theorem poly_diff_mult:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> (diff (p * q) = (diff p) * q + p * (diff q))
+Proof
   ntac 2 strip_tac >>
   Induct_on `p` >-
   metis_tac[poly_mult_lzero, poly_zero, poly_diff_of_zero, poly_add_zero_zero] >>
@@ -545,7 +561,8 @@ val poly_diff_mult = store_thm(
   `_ = p * q + (diff p >> 1) * q + (h::p) * diff q` by rw_tac std_ss[poly_mult_cons] >>
   `_ = (p + diff p >> 1) * q + (h::p) * diff q` by rw_tac std_ss[poly_mult_ladd] >>
   `_ = diff (h::p) * q + (h::p) * diff q` by rw_tac std_ss[poly_diff_cons] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: poly p ==> !n. diff (p ** n) = ##n * (p ** PRE n) * diff p *)
 (* Proof:
@@ -590,9 +607,9 @@ val poly_diff_mult = store_thm(
          = ##(SUC n) * p ** n * diff p                             by poly_cmult_mult
          = RHS
 *)
-val poly_diff_exp = store_thm(
-  "poly_diff_exp",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> !n. diff (p ** n) = ##n * (p ** PRE n) * diff p``,
+Theorem poly_diff_exp:
+    !r:'a ring. Ring r ==> !p. poly p ==> !n. diff (p ** n) = ##n * (p ** PRE n) * diff p
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -616,7 +633,8 @@ val poly_diff_exp = store_thm(
   `_ = (#1 + ##n) * (p ** n * diff p)` by rw_tac std_ss[poly_add_cmult, poly_mult_poly] >>
   `_ = ##(SUC n) * (p ** n * diff p)` by rw_tac std_ss[ring_num_SUC] >>
   `_ = ##(SUC n) * p ** n * diff p` by rw_tac std_ss[poly_cmult_mult] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Formal Derivative Examples                                                *)
@@ -632,10 +650,11 @@ val poly_diff_exp = store_thm(
    = [#1]                       by poly_add_rzero
    = |1|                        by poly_one
 *)
-val poly_diff_X = store_thm(
-  "poly_diff_X",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> (diff X = |1|)``,
-  rw[poly_diff_def, poly_one]);
+Theorem poly_diff_X:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> (diff X = |1|)
+Proof
+  rw[poly_diff_def, poly_one]
+QED
 
 (* export simple results *)
 val _ = export_rewrites["poly_diff_X"];
@@ -647,10 +666,11 @@ val _ = export_rewrites["poly_diff_X"];
    = ##n * (X ** PRE n) * |1|       by poly_diff_X
    = ##n * X ** PRE n               by poly_mult_rone
 *)
-val poly_diff_X_exp_n = store_thm(
-  "poly_diff_X_exp_n",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n. diff (X ** n) = ##n * X ** PRE n``,
-  rw[poly_diff_exp]);
+Theorem poly_diff_X_exp_n:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n. diff (X ** n) = ##n * X ** PRE n
+Proof
+  rw[poly_diff_exp]
+QED
 
 (* Theorem: diff (factor c) = |1| *)
 (* Proof:
@@ -663,16 +683,17 @@ val poly_diff_X_exp_n = store_thm(
    = |1| - |0|                 by poly_cmult_zero
    = |1|                       by poly_sub_rzero
 *)
-val poly_diff_factor = store_thm(
-  "poly_diff_factor",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (diff (factor c) = |1|)``,
+Theorem poly_diff_factor:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==> (diff (factor c) = |1|)
+Proof
   rpt strip_tac >>
   `diff (factor c) = diff (X - c * |1|)` by rw[poly_factor_alt] >>
   `_ = diff X - diff (c * |1|)` by rw[poly_diff_sub] >>
   `_ = |1| - diff (c * |1|)` by rw[] >>
   `_ = |1| - c * (diff |1|)` by rw[poly_diff_cmult] >>
   `_ = |1| - c * |0| ` by rw_tac std_ss[poly_diff_one] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: diff (unity n) = ##n * X ** PRE n *)
 (* Proof:
@@ -683,10 +704,11 @@ val poly_diff_factor = store_thm(
    = diff (X ** n)              by poly_sub_rzero
    = ##n * X ** PRE n           by poly_diff_X_exp_n
 *)
-val poly_diff_unity = store_thm(
-  "poly_diff_unity",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n.  diff (unity n) = ##n * X ** PRE n``,
-  rw[poly_diff_sub, poly_diff_X_exp_n]);
+Theorem poly_diff_unity:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n.  diff (unity n) = ##n * X ** PRE n
+Proof
+  rw[poly_diff_sub, poly_diff_X_exp_n]
+QED
 
 (* Theorem: Field r ==> !n. 1 < n /\ coprime n (char r) ==> (roots (diff (unity n)) = {#0}) *)
 (* Proof:
@@ -704,9 +726,9 @@ val poly_diff_unity = store_thm(
     Hence root (diff (unity n) #0             by poly_root_def
     Thus roots (diff (unity n) = {#0}
 *)
-val poly_diff_unity_roots = store_thm(
-  "poly_diff_unity_roots",
-  ``!r:'a field. Field r ==> !n. 1 < n /\ coprime n (char r) ==> (roots (diff (unity n)) = {#0})``,
+Theorem poly_diff_unity_roots:
+    !r:'a field. Field r ==> !n. 1 < n /\ coprime n (char r) ==> (roots (diff (unity n)) = {#0})
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `n <> 0 /\ n <> 1 /\ PRE n <> 0` by decide_tac >>
@@ -727,7 +749,8 @@ val poly_diff_unity_roots = store_thm(
     `_ = ##n * #0 ` by rw_tac std_ss[ring_zero_exp] >>
     `_ = #0` by rw_tac std_ss[ring_mult_rzero] >>
     rw[poly_root_def]
-  ]);
+  ]
+QED
 
 (* Theorem: diff (master n) = ##n * X ** PRE n - |1| *)
 (* Proof:
@@ -737,10 +760,11 @@ val poly_diff_unity_roots = store_thm(
    = diff (X ** n) - |1|        by poly_diff_X
    = ##n * X ** PRE n - |1|     by poly_diff_X_exp_n
 *)
-val poly_diff_master = store_thm(
-  "poly_diff_master",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n. diff (master n) = ##n * X ** PRE n - |1|``,
-  rw[poly_diff_sub, poly_diff_X, poly_diff_X_exp_n]);
+Theorem poly_diff_master:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n. diff (master n) = ##n * X ** PRE n - |1|
+Proof
+  rw[poly_diff_sub, poly_diff_X, poly_diff_X_exp_n]
+QED
 
 (* Theorem: diff (master (char r ** n)) = if n = 0 then |0| else - |1| *)
 (* Proof:
@@ -761,15 +785,16 @@ val poly_diff_master = store_thm(
    = |0| - |1|                                        by poly_cmult_lzero
    = -|1|                                             by poly_sub_lzero
 *)
-val poly_diff_master_char_exp = store_thm(
-  "poly_diff_master_char_exp",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n. diff (master (char r ** n)) = if n = 0 then |0| else - |1|``,
+Theorem poly_diff_master_char_exp:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n. diff (master (char r ** n)) = if n = 0 then |0| else - |1|
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw_tac std_ss[EXP, poly_X, poly_exp_1, poly_sub_eq, poly_diff_zero] >>
   `diff (master (char r ** n)) = ##(char r ** n) * X ** PRE (char r ** n) - |1|` by rw[poly_diff_master] >>
   `_ = (##(char r) ** n) * X ** PRE (char r ** n) - |1|` by rw[ring_num_exp] >>
-  rw[char_property, ring_zero_exp]);
+  rw[char_property, ring_zero_exp]
+QED
 
 (* Theorem: !n. 0 < n ==> roots (diff (master (char r ** n))) = {} *)
 (* Proof:
@@ -777,16 +802,17 @@ val poly_diff_master_char_exp = store_thm(
      and -|1| = -[#1] = [-#1] and -#1 <> #0     by poly_one_alt, poly_neg_cons, ring_neg_eq_zero
    Hence roots (-|1|) = {}                      by poly_roots_const
 *)
-val poly_diff_master_char_exp_roots = store_thm(
-  "poly_diff_master_char_exp_roots",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !n. 0 < n ==> (roots (diff (master (char r ** n))) = {})``,
+Theorem poly_diff_master_char_exp_roots:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !n. 0 < n ==> (roots (diff (master (char r ** n))) = {})
+Proof
   rpt strip_tac >>
   `n <> 0` by decide_tac >>
   `diff (master (char r ** n)) = -|1|` by rw[poly_diff_master_char_exp] >>
   `_ = -[#1]` by rw[poly_one_alt] >>
   `_ = [-#1]` by rw[] >>
   `-#1 <> #0` by rw[] >>
-  rw[poly_roots_const]);
+  rw[poly_roots_const]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

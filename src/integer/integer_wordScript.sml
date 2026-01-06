@@ -890,22 +890,20 @@ QED
 
 (* ------------------------------------------------------------------------- *)
 
-Theorem INT_MIN:
+Theorem INT_MIN[simp]:
    INT_MIN (:'a) = -&words$INT_MIN (:'a)
 Proof
   SRW_TAC [] [INT_MIN_def, INT_MAX_def, wordsTheory.INT_MIN_def]
 QED
-val _ = export_rewrites ["INT_MIN"]
 
-Theorem INT_MAX:
+Theorem INT_MAX[simp]:
    INT_MAX (:'a) = &words$INT_MAX (:'a)
 Proof
   SRW_TAC [] [INT_MAX_def, wordsTheory.INT_MAX_def, int_arithTheory.INT_NUM_SUB]
   \\ FULL_SIMP_TAC arith_ss [wordsTheory.ZERO_LT_INT_MIN]
 QED
-val _ = export_rewrites ["INT_MAX"]
 
-Theorem UINT_MAX:
+Theorem UINT_MAX[simp]:
    UINT_MAX (:'a) = &words$UINT_MAX (:'a)
 Proof
   SRW_TAC [] [UINT_MAX_def, wordsTheory.UINT_MAX_def,
@@ -913,7 +911,6 @@ Proof
   \\ ASSUME_TAC wordsTheory.ZERO_LT_dimword
   \\ DECIDE_TAC
 QED
-val _ = export_rewrites ["UINT_MAX"]
 
 Theorem INT_BOUND_ORDER:
    INT_MIN (:'a) < INT_MAX (:'a) : int /\
@@ -923,12 +920,11 @@ Proof
   SRW_TAC [ARITH_ss] [BOUND_ORDER]
 QED
 
-Theorem INT_ZERO_LT_INT_MIN:
+Theorem INT_ZERO_LT_INT_MIN[simp]:
    INT_MIN (:'a) < 0
 Proof
   SRW_TAC [ARITH_ss] [ZERO_LT_INT_MIN]
 QED
-val _ = export_rewrites ["INT_ZERO_LT_INT_MIN"]
 
 Theorem INT_ZERO_LT_INT_MAX:
    1 < dimindex(:'a) ==> 0i < INT_MAX (:'a)
@@ -942,12 +938,11 @@ Proof
   SRW_TAC [ARITH_ss] [ZERO_LE_INT_MAX]
 QED
 
-Theorem INT_ZERO_LT_UINT_MAX:
+Theorem INT_ZERO_LT_UINT_MAX[simp]:
    0i < UINT_MAX (:'a)
 Proof
   SRW_TAC [ARITH_ss] [ZERO_LT_UINT_MAX]
 QED
-val _ = export_rewrites ["INT_ZERO_LT_UINT_MAX"]
 
 Theorem w2i_1:
    w2i (1w:'a word) = if dimindex(:'a) = 1 then -1 else 1

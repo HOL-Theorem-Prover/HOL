@@ -531,7 +531,7 @@ Proof
   \\ metis_tac [si_trans, label_distinct, relationTheory.transitive_def]
 QED
 
-Triviality coh_helper:
+Theorem coh_helper[local]:
   WellFormed G /\ sc_per_loc G /\ G.rf z y /\ po G z x /\ po G x y /\
   W G x /\ same_loc G x y ==> F
 Proof
@@ -1293,7 +1293,7 @@ Proof
   \\ metis_tac []
 QED
 
-Triviality acyclic_pre_helper:
+Theorem acyclic_pre_helper[local]:
   WellFormed G /\ sc_per_loc G /\ acyclic (obs G ⨾ si G RUNION lob G) ==>
   acyclic
     (diag (W_ex G) ⨾ si G ⨾ aob G RUNION
@@ -1446,7 +1446,7 @@ Proof
   \\ metis_tac []
 QED
 
-Triviality ArmConsistent_implies_ExtComp:
+Theorem ArmConsistent_implies_ExtComp[local]:
   arm_ev G ==> arm_ec G
 Proof
   rw [arm_ev, arm_ec, external_completion, linearization_of, preorder_cb_lift,
@@ -2260,7 +2260,7 @@ Proof
   \\ fs [acyclic]
 QED
 
-Triviality ArmConsistent_implies_GlobExtComp:
+Theorem ArmConsistent_implies_GlobExtComp[local]:
   arm_ev G ==> arm_egc G
 Proof
   rw [arm_ev, arm_egc, external_global, linearization_of, preorder_gcb_lift,
@@ -2479,7 +2479,7 @@ Proof
   \\ metis_tac [si_po, rsubset_runion, rsubset_refl, seq_assoc]
 QED
 
-Triviality scaob_lob_helper:
+Theorem scaob_lob_helper[local]:
   WellFormed G ==>
   scaob G ⨾ (lob G RMINUS gc_req G) RSUBSET lob G RINTER gc_req G
 Proof
@@ -2597,7 +2597,7 @@ Proof
   \\ metis_tac []
 QED
 
-Triviality transitive_tc_delift_erln:
+Theorem transitive_tc_delift_erln[local]:
   transitive gcb ==>
   !x y. TC (delift (erln G) gcb) x y ==> gcb (erln G x) (erln G y)
 Proof
@@ -2607,7 +2607,7 @@ Proof
   \\ metis_tac [relationTheory.transitive_def]
 QED
 
-Triviality transitive_tc_delift_erln_lob:
+Theorem transitive_tc_delift_erln_lob[local]:
   lift (erln G)
     (im0 G RUNION lob G RINTER gc_req G RUNION scaob G) RSUBSET gcb /\
   transitive gcb ==>

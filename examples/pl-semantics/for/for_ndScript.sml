@@ -97,21 +97,25 @@ Definition type_t_def:
 (type_t in_for s (For e1 e2 t) ⇔ type_e s e1 ∧ type_e s e2 ∧ type_t T s t)
 End
 
-val type_weakening_e = Q.store_thm ("type_weakening_e",
-`!s e s' s1. type_e s e ∧ s ⊆ s1 ⇒ type_e s1 e`,
+Theorem type_weakening_e:
+ !s e s' s1. type_e s e ∧ s ⊆ s1 ⇒ type_e s1 e
+Proof
  Induct_on `e` >>
  rw [type_e_def, SUBSET_DEF] >>
  ect >>
  fs [] >>
  rw [EXTENSION] >>
- metis_tac [SUBSET_DEF, NOT_SOME_NONE, SOME_11]);
+ metis_tac [SUBSET_DEF, NOT_SOME_NONE, SOME_11]
+QED
 
-val type_weakening_t = Q.store_thm ("type_weakening_t",
-`!in_for s t s' s1. type_t in_for s t ∧ s ⊆ s1 ⇒ type_t in_for s1 t`,
+Theorem type_weakening_t:
+ !in_for s t s' s1. type_t in_for s t ∧ s ⊆ s1 ⇒ type_t in_for s1 t
+Proof
  Induct_on `t` >>
  rw [type_t_def, SUBSET_DEF] >>
  ect >>
  fs [] >>
  rw [EXTENSION] >>
- metis_tac [SUBSET_DEF, NOT_SOME_NONE, SOME_11, type_weakening_e, INSERT_SUBSET]);
+ metis_tac [SUBSET_DEF, NOT_SOME_NONE, SOME_11, type_weakening_e, INSERT_SUBSET]
+QED
 

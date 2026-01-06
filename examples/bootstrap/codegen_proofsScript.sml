@@ -254,7 +254,7 @@ Proof
   \\ rw [] \\ fs [] \\ rw [] \\ fs []
 QED
 
-Triviality blast_lemma = blastLib.BBLAST_PROVE “w ≠ w + 8w:word64”;
+Theorem blast_lemma[local] = blastLib.BBLAST_PROVE “w ≠ w + 8w:word64”;
 
 val step_tac =
   ho_match_mp_tac IMP_step \\ fs []
@@ -1547,7 +1547,7 @@ QED
 
 (* compilation of enitre program *)
 
-Triviality FST_SND:
+Theorem FST_SND[local]:
   FST = (λ(x,y). x) ∧ SND = (λ(x,y). y)
 Proof
   fs [FUN_EQ_THM,FORALL_PROD]

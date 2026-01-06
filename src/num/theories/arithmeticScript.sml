@@ -2126,21 +2126,23 @@ Proof
    REWRITE_TAC [SYM (SPEC_ALL LESS_EQ),NOT_LESS_0]
 QED
 
-val SUB_RIGHT_LESS =
-   let val BOOL_EQ_NOT_BOOL_EQ = prove(
-        “!x y. (x = y) = (~x = ~y)”,
-        REPEAT GEN_TAC THEN
-        BOOL_CASES_TAC (“x:bool”) THEN
-        REWRITE_TAC [])
-   in
-   store_thm ("SUB_RIGHT_LESS",
-   “!m n p. ((m - n) < p) = ((m < (n + p)) /\ (0 < p))”,
+Theorem BOOL_EQ_NOT_BOOL_EQ[local]:
+    !x y. (x = y) = (~x = ~y)
+Proof
+   REPEAT GEN_TAC THEN
+   BOOL_CASES_TAC (“x:bool”) THEN
+   REWRITE_TAC []
+QED
+
+Theorem SUB_RIGHT_LESS:
+    !m n p. ((m - n) < p) = ((m < (n + p)) /\ (0 < p))
+Proof
    REPEAT GEN_TAC THEN
    PURE_ONCE_REWRITE_TAC [BOOL_EQ_NOT_BOOL_EQ] THEN
    PURE_REWRITE_TAC [DE_MORGAN_THM,NOT_LESS] THEN
    SUBST1_TAC (SPECL [(“n:num”),(“p:num”)] ADD_SYM) THEN
-   REWRITE_TAC [SUB_LEFT_LESS_EQ])
-   end;
+   REWRITE_TAC [SUB_LEFT_LESS_EQ]
+QED
 
 Theorem SUB_LEFT_GREATER_EQ:
     !m n p. (m >= (n - p)) = ((m + p) >= n)
@@ -2409,8 +2411,9 @@ local val (eq,ls) =
    CONJ_PAIR (SPEC (“k:num”)
        (REWRITE_RULE [LESS_0] (SPEC (“SUC(r+p)”) DIVISION)))
 in
-val DIV_UNIQUE = store_thm ("DIV_UNIQUE",
- “!n k q. (?r. (k = q*n + r) /\ r<n) ==> (k DIV n = q)”,
+Theorem DIV_UNIQUE:
+  !n k q. (?r. (k = q*n + r) /\ r<n) ==> (k DIV n = q)
+Proof
 REPEAT GEN_TAC THEN
  DISCH_THEN (CHOOSE_THEN (CONJUNCTS_THEN2
    MP_TAC (STRIP_THM_THEN SUBST_ALL_TAC o MATCH_MP LESS_ADD_1))) THEN
@@ -2454,7 +2457,8 @@ REPEAT GEN_TAC THEN
              ONCE_REWRITE_RULE [ADD_SYM]LESS_EQ_MONO_ADD_EQ]
      THEN REWRITE_TAC[ZERO_LESS_EQ,
                REWRITE_RULE[ADD_CLAUSES]
-                 (SPECL [“1”,“0”,“p:num”]ADD_MONO_LESS_EQ)]])
+                 (SPECL [“1”,“0”,“p:num”]ADD_MONO_LESS_EQ)]]
+QED
 end;
 
 Theorem lemma[local]:
@@ -2500,7 +2504,7 @@ Proof
       Q.EXISTS_TAC ‘q’ >> ASM_REWRITE_TAC [] ]
 QED
 
-Theorem DIV2_DOUBLE:  !n. DIV2 (2 * n) = n
+Theorem DIV2_DOUBLE[simp]:  !n. DIV2 (2 * n) = n
 Proof
     GEN_TAC >> REWRITE_TAC [DIV2_def]
  >> MATCH_MP_TAC DIV_UNIQUE
@@ -2508,7 +2512,6 @@ Proof
  >> `0:num < 2` by METIS_TAC [TWO, ONE, LESS_0]
  >> ASM_REWRITE_TAC [Once MULT_COMM, ADD_0]
 QED
-val _ = export_rewrites ["DIV2_DOUBLE"];
 
 (* ---------------------------------------------------------------------*)
 (* Properties of MOD and DIV proved using uniqueness.                   *)
@@ -2591,11 +2594,14 @@ Proof
 QED
 
 Theorem MOD_TIMES:
-  !n. 0<n ==> !q r. (((q * n) + r) MOD n) = (r MOD n)
+  !n q r. (((q * n) + r) MOD n) = (r MOD n)
 Proof
    let fun SUBS th = SUBST_OCCS_TAC [([1],th)]
    in
    REPEAT STRIP_TAC THEN
+   Cases_on `n = 0`
+   THEN1 (ASM_REWRITE_TAC [MOD_0,MULT_CLAUSES,ADD_CLAUSES]) THEN
+   dxrule_then assume_tac $ iffLR NOT_ZERO_LT_ZERO THEN
    IMP_RES_THEN (TRY o SUBS o SPEC (“r:num”)) DIVISION THEN
    REWRITE_TAC [ADD_ASSOC,SYM(SPEC_ALL RIGHT_ADD_DISTRIB)] THEN
    IMP_RES_THEN (ASSUME_TAC o SPEC (“r:num”)) DIVISION THEN
@@ -2615,24 +2621,29 @@ Proof
 QED
 
 Theorem MOD_PLUS:
-  !n. 0<n ==> !j k. (((j MOD n) + (k MOD n)) MOD n) = ((j+k) MOD n)
+  !n j k. (((j MOD n) + (k MOD n)) MOD n) = ((j+k) MOD n)
 Proof
    let fun SUBS th = SUBST_OCCS_TAC [([2],th)]
    in
    REPEAT STRIP_TAC THEN
-   IMP_RES_TAC MOD_TIMES THEN
+   Cases_on `n = 0`
+   THEN1 (ASM_REWRITE_TAC [MOD_0]) THEN
+   dxrule_then assume_tac $ iffLR NOT_ZERO_LT_ZERO THEN
    IMP_RES_THEN (TRY o SUBS o SPEC (“j:num”)) DIVISION THEN
-   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)] THEN
+   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC),MOD_TIMES] THEN
    PURE_ONCE_REWRITE_TAC [ADD_SYM] THEN
    IMP_RES_THEN (TRY o SUBS o SPEC (“k:num”)) DIVISION THEN
-   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC)]
+   ASM_REWRITE_TAC [SYM(SPEC_ALL ADD_ASSOC),MOD_TIMES]
    end
 QED
 
 Theorem MOD_MOD:
-  !n. 0<n ==> (!k. (k MOD n) MOD n = (k MOD n))
+  !n k. (k MOD n) MOD n = (k MOD n)
 Proof
    REPEAT STRIP_TAC THEN
+   Cases_on `n = 0`
+   THEN1 (ASM_REWRITE_TAC [MOD_0,MULT_CLAUSES,ADD_CLAUSES]) THEN
+   dxrule_then assume_tac $ iffLR NOT_ZERO_LT_ZERO THEN
    MATCH_MP_TAC LESS_MOD THEN
    IMP_RES_THEN (STRIP_ASSUME_TAC o SPEC (“k:num”)) DIVISION
 QED
@@ -2722,15 +2733,31 @@ Theorem DIV_ONE =
 
 Theorem DIV_1 = REWRITE_RULE [SYM ONE] DIV_ONE;
 
+Theorem DIV_ID[simp]:
+  !n. 0 < n ==> (n DIV n = 1)
+Proof
+  REPEAT STRIP_TAC THEN
+  MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `0` THEN
+  ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES]
+QED
+
+Theorem MOD_ID[simp]:
+   !n. (n MOD n = 0)
+Proof
+  REPEAT STRIP_TAC THEN
+  Cases_on `n` THENL
+  [
+    ASM_REWRITE_TAC [MOD_0],
+    MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `1` THEN
+    ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES,LESS_0]
+  ]
+QED
+
+(*for backwards compatibility*)
 Theorem DIVMOD_ID:
    !n. 0 < n ==> (n DIV n = 1) /\ (n MOD n = 0)
 Proof
-  REPEAT STRIP_TAC THENL [
-    MATCH_MP_TAC DIV_UNIQUE THEN Q.EXISTS_TAC `0` THEN
-    ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES],
-    MATCH_MP_TAC MOD_UNIQUE THEN Q.EXISTS_TAC `1` THEN
-    ASM_REWRITE_TAC [MULT_CLAUSES, ADD_CLAUSES]
-  ]
+   fs[ DIV_ID,MOD_ID]
 QED
 
 Theorem Less_lemma[local]:
@@ -2801,10 +2828,12 @@ QED
 local
    open prim_recTheory
 in
-   val SUC_PRE = store_thm ("SUC_PRE",
-      “0 < m <=> (SUC (PRE m) = m)”,
+Theorem SUC_PRE:
+       0 < m <=> (SUC (PRE m) = m)
+Proof
       STRUCT_CASES_TAC (SPEC (“m:num”) num_CASES) THEN
-      REWRITE_TAC [PRE,NOT_LESS_0,LESS_0,NOT_SUC])
+      REWRITE_TAC [PRE,NOT_LESS_0,LESS_0,NOT_SUC]
+QED
 end
 
 val LESS_MONO_LEM =
@@ -2854,10 +2883,10 @@ Proof
 QED
 
 Theorem ADD_MODULUS:
- (!n x. 0 < n ==> ((x + n) MOD n = x MOD n)) /\
- (!n x. 0 < n ==> ((n + x) MOD n = x MOD n))
+ (!n x.(x + n) MOD n = x MOD n) /\
+ (!n x.(n + x) MOD n = x MOD n)
 Proof
- METIS_TAC [ADD_SYM,MOD_PLUS,DIVMOD_ID,MOD_MOD,ADD_CLAUSES]
+ METIS_TAC [ADD_SYM,MOD_PLUS,MOD_ID,MOD_MOD,ADD_CLAUSES]
 QED
 
 Theorem ADD_MODULUS_LEFT = CONJUNCT1 ADD_MODULUS;
@@ -2944,10 +2973,12 @@ in
 end
 
 Theorem MOD_TIMES2:
-   !n. 0 < n ==>
-        !j k. (j MOD n * k MOD n) MOD n = (j * k) MOD n
+   !n j k. (j MOD n * k MOD n) MOD n = (j * k) MOD n
 Proof
   REPEAT STRIP_TAC THEN
+  Cases_on `n = 0`
+  THEN1 (ASM_REWRITE_TAC [MOD_0,MULT_CLAUSES,ADD_CLAUSES]) THEN
+  dxrule_then assume_tac $ iffLR NOT_ZERO_LT_ZERO THEN
   IMP_RES_THEN (Q.SPEC_THEN `j` STRIP_ASSUME_TAC) DIVISION THEN
   IMP_RES_THEN (Q.SPEC_THEN `k` STRIP_ASSUME_TAC) DIVISION THEN
   Q.ABBREV_TAC `q = j DIV n` THEN POP_ASSUM (K ALL_TAC) THEN
@@ -2958,7 +2989,7 @@ Proof
   REWRITE_TAC [LEFT_ADD_DISTRIB, RIGHT_ADD_DISTRIB, ADD_ASSOC] THEN
   move_var_left "n" THEN REWRITE_TAC [GSYM LEFT_ADD_DISTRIB] THEN
   ONCE_REWRITE_TAC [MULT_COMM] THEN
-  IMP_RES_THEN (fn th => REWRITE_TAC [th]) MOD_TIMES
+  REWRITE_TAC [MOD_TIMES]
 QED
 
 Theorem MOD_COMMON_FACTOR:
@@ -3411,8 +3442,9 @@ QED
 
 Theorem num_case_cong = Prim_rec.case_cong_thm num_CASES num_case_def;
 
-val SUC_ELIM_THM = store_thm ("SUC_ELIM_THM",
-  (“!P. (!n. P (SUC n) n) = (!n. (0 < n ==> P n (n-1)))”),
+Theorem SUC_ELIM_THM:
+   !P. (!n. P (SUC n) n) = (!n. (0 < n ==> P n (n-1)))
+Proof
   GEN_TAC THEN EQ_TAC THENL [
       REPEAT STRIP_TAC THEN
       FIRST_ASSUM (MP_TAC o SPEC (“n-1”)) THEN
@@ -3429,7 +3461,8 @@ val SUC_ELIM_THM = store_thm ("SUC_ELIM_THM",
       REPEAT STRIP_TAC THEN
       FIRST_ASSUM (MP_TAC o SPEC (“n+1”)) THEN
       SIMP_TAC bool_ss [GSYM ADD1, SUC_SUB1, LESS_0]
-    ]);
+    ]
+QED
 
 Theorem SUC_ELIM_NUMERALS:
    !f g. (!n. g (SUC n) = f n (SUC n)) <=>
@@ -3825,13 +3858,16 @@ QED
 
 local fun Cases_on q = Q.SPEC_THEN q STRUCT_CASES_TAC num_CASES in
 
-val ZERO_EXP = Q.store_thm ("ZERO_EXP",
-   `0 ** x = if x = 0 then 1 else 0`,
+Theorem ZERO_EXP:
+    0 ** x = if x = 0 then 1 else 0
+Proof
    Cases_on `x` THEN
-   SIMP_TAC bool_ss [EXP,numTheory.NOT_SUC,MULT])
+   SIMP_TAC bool_ss [EXP,numTheory.NOT_SUC,MULT]
+QED
 
-val X_LT_EXP_X_IFF = Q.store_thm ("X_LT_EXP_X_IFF",
-   `x < b ** x <=> 1 < b \/ (x = 0)`,
+Theorem X_LT_EXP_X_IFF:
+    x < b ** x <=> 1 < b \/ (x = 0)
+Proof
    EQ_TAC THEN1 (
      Cases_on `b` THEN1 (
        Cases_on `x` THEN
@@ -3843,7 +3879,8 @@ val X_LT_EXP_X_IFF = Q.store_thm ("X_LT_EXP_X_IFF",
      SIMP_TAC bool_ss [LESS_MONO_EQ,ONE,LESS_0] ) THEN
    STRIP_TAC THEN1 (
      POP_ASSUM MP_TAC THEN ACCEPT_TAC X_LT_EXP_X) THEN
-   ASM_SIMP_TAC bool_ss [EXP,ONE,LESS_0])
+   ASM_SIMP_TAC bool_ss [EXP,ONE,LESS_0]
+QED
    end
 
 (* theorems about exponentiation where the exponent is held constant *)
@@ -3914,7 +3951,7 @@ Proof
    METIS_TAC [SUB_ADD]
 QED
 
-Theorem EXP_SUB_NUMERAL:
+Theorem EXP_SUB_NUMERAL[simp]:
    0 < n ==>
      (n ** (NUMERAL (BIT1 x)) DIV n = n ** (NUMERAL (BIT1 x) - 1)) /\
      (n ** (NUMERAL (BIT2 x)) DIV n = n ** (NUMERAL (BIT1 x)))
@@ -3935,7 +3972,6 @@ Proof
                      LESS_EQ_MONO, ZERO_LESS_EQ]
   ]
 QED
-val _ = export_rewrites ["EXP_SUB_NUMERAL"]
 
 Theorem EXP_BASE_MULT:
    !z x y. (x * y) ** z = (x ** z) * (y ** z)
@@ -4340,12 +4376,11 @@ QED
 
 Theorem ABS_DIFF_COMM = ABS_DIFF_SYM
 
-Theorem ABS_DIFF_EQS:
+Theorem ABS_DIFF_EQS[simp]:
     !n. ABS_DIFF n n = 0
 Proof
    SRW_TAC [][ABS_DIFF_def,SUB_EQUAL_0]
 QED
-val _ = export_rewrites ["ABS_DIFF_EQS"]
 
 Theorem ABS_DIFF_EQ_0:
     !n m. (ABS_DIFF n m = 0) <=> (n = m)
@@ -4354,13 +4389,12 @@ Proof
    METIS_TAC [LESS_ANTISYM]
 QED
 
-Theorem ABS_DIFF_ZERO:
+Theorem ABS_DIFF_ZERO[simp]:
     !n. (ABS_DIFF n 0 = n) /\ (ABS_DIFF 0 n = n)
 Proof
    SRW_TAC [][ABS_DIFF_def,SUB_0] THEN
    METIS_TAC [NOT_LESS_0,NOT_ZERO_LT_ZERO]
 QED
-val _ = export_rewrites ["ABS_DIFF_ZERO"]
 
 Theorem ABS_DIFF_SUC:
     !n m. (ABS_DIFF (SUC n) (SUC m)) = (ABS_DIFF n m)
@@ -4500,12 +4534,11 @@ Proof
           THEN ASM_REWRITE_TAC []]
 QED
 
-Theorem FUNPOW_0:
+Theorem FUNPOW_0[simp]:
    FUNPOW f 0 x = x
 Proof
   REWRITE_TAC [FUNPOW]
 QED
-val _ = export_rewrites ["FUNPOW_0"]
 
 Theorem FUNPOW_ADD:
    !m n. FUNPOW f (m + n) x = FUNPOW f m (FUNPOW f n x)
@@ -4516,12 +4549,11 @@ Proof
   ]
 QED
 
-Theorem FUNPOW_1:
+Theorem FUNPOW_1[simp]:
    FUNPOW f 1 x = f x
 Proof
   REWRITE_TAC [FUNPOW, ONE]
 QED
-val _ = export_rewrites ["FUNPOW_1"]
 
 (* Theorem: FUNPOW f 2 x = f (f x) *)
 (* Proof: by definition. *)
@@ -4596,15 +4628,13 @@ Proof
   metis_tac[FUNPOW_ADD, ADD_COMM]
 QED
 
-Theorem NRC_0 = CONJUNCT1 NRC;
-val _ = export_rewrites ["NRC_0"]
+Theorem NRC_0[simp] = CONJUNCT1 NRC;
 
-Theorem NRC_1:
+Theorem NRC_1[simp]:
    NRC R 1 x y = R x y
 Proof
   SRW_TAC [][ONE, NRC]
 QED
-val _ = export_rewrites ["NRC_1"]
 
 Theorem NRC_ADD_I:
    !m n x y z. NRC R m x y /\ NRC R n y z ==> NRC R (m + n) x z
@@ -5159,13 +5189,40 @@ Proof
   irule MODEQ_MULT_CONG >> SRW_TAC[][]
 QED
 
-Theorem EXP_MOD =
-  MODEQ_EXP_CONG |> SIMP_RULE bool_ss [GSYM NOT_LT_ZERO_EQ_ZERO,
-                                       ASSUME “0 < n”, MODEQ_THM]
-                 |> INST [“y:num” |-> “x MOD n”, “e1:num” |-> “e:num”,
-                          “e2:num” |-> “e:num”]
-                 |> SIMP_RULE bool_ss [MATCH_MP MOD_MOD (ASSUME “0 < n”)]
-                 |> SYM |> DISCH_ALL
+(* Theorem: ((a MOD n) ** m) MOD n = (a ** m) MOD n  *)
+(* Proof: by induction on m.
+   Base case: (a MOD n) ** 0 MOD n = a ** 0 MOD n
+       (a MOD n) ** 0 MOD n
+     = 1 MOD n              by EXP
+     = a ** 0 MOD n         by EXP
+   Step case: (a MOD n) ** m MOD n = a ** m MOD n ==> (a MOD n) ** SUC m MOD n = a ** SUC m MOD n
+       (a MOD n) ** SUC m MOD n
+     = ((a MOD n) * (a MOD n) ** m) MOD n             by EXP
+     = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n   by MOD_TIMES2, MOD_MOD
+     = ((a MOD n) * (a ** m MOD n)) MOD n             by induction hypothesis
+     = (a * a ** m) MOD n                             by MOD_TIMES2
+     = a ** SUC m MOD n                               by EXP
+*)
+Theorem MOD_EXP:
+    !n a m. ((a MOD n) ** m) MOD n = (a ** m) MOD n
+Proof
+  rpt strip_tac >>
+  Cases_on `n = 0` >-
+  fs[] >>
+  Induct_on `m` >-
+  rw[EXP] >>
+  `(a MOD n) ** SUC m MOD n = ((a MOD n) * (a MOD n) ** m) MOD n` by rw[EXP] >>
+  `_ = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n` by metis_tac[MOD_TIMES2, MOD_MOD] >>
+  `_ = ((a MOD n) * (a ** m MOD n)) MOD n` by rw[] >>
+  `_ = (a * a ** m) MOD n` by rw[MOD_TIMES2] >>
+  rw[EXP]
+QED
+
+Theorem EXP_MOD:
+  (x MOD n) ** e MOD n = x ** e MOD n
+Proof
+  MATCH_ACCEPT_TAC MOD_EXP
+QED
 
 Theorem MODEQ_SYM:
    MODEQ n x y <=> MODEQ n y x
@@ -5660,33 +5717,6 @@ Theorem MOD_EQ_0_IFF:
     !m n. n < m ==> ((n MOD m = 0) <=> (n = 0))
 Proof
   rw_tac bool_ss[LESS_MOD]
-QED
-
-(* Theorem: ((a MOD n) ** m) MOD n = (a ** m) MOD n  *)
-(* Proof: by induction on m.
-   Base case: (a MOD n) ** 0 MOD n = a ** 0 MOD n
-       (a MOD n) ** 0 MOD n
-     = 1 MOD n              by EXP
-     = a ** 0 MOD n         by EXP
-   Step case: (a MOD n) ** m MOD n = a ** m MOD n ==> (a MOD n) ** SUC m MOD n = a ** SUC m MOD n
-       (a MOD n) ** SUC m MOD n
-     = ((a MOD n) * (a MOD n) ** m) MOD n             by EXP
-     = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n   by MOD_TIMES2, MOD_MOD
-     = ((a MOD n) * (a ** m MOD n)) MOD n             by induction hypothesis
-     = (a * a ** m) MOD n                             by MOD_TIMES2
-     = a ** SUC m MOD n                               by EXP
-*)
-Theorem MOD_EXP:
-    !n. 0 < n ==> !a m. ((a MOD n) ** m) MOD n = (a ** m) MOD n
-Proof
-  rpt strip_tac >>
-  Induct_on `m` >-
-  rw[EXP] >>
-  `(a MOD n) ** SUC m MOD n = ((a MOD n) * (a MOD n) ** m) MOD n` by rw[EXP] >>
-  `_ = ((a MOD n) * (((a MOD n) ** m) MOD n)) MOD n` by metis_tac[MOD_TIMES2, MOD_MOD] >>
-  `_ = ((a MOD n) * (a ** m MOD n)) MOD n` by rw[] >>
-  `_ = (a * a ** m) MOD n` by rw[MOD_TIMES2] >>
-  rw[EXP]
 QED
 
 Theorem ODD_bool_to_bit[simp]:

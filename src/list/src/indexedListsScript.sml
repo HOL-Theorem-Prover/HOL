@@ -304,12 +304,11 @@ Proof
   fs[arithmeticTheory.ADD_CLAUSES] >> simp[]
 QED
 
-Definition fupdLast_def:
+Definition fupdLast_def[simp]:
   (fupdLast f [] = []) /\
   (fupdLast f [h] = [f h]) /\
   (fupdLast f (h::t) = h::fupdLast f t)
 End
-val _ = export_rewrites ["fupdLast_def"]
 
 Theorem fupdLast_EQ_NIL[simp]:
     (fupdLast f x = [] <=> x = []) /\
@@ -387,12 +386,11 @@ QED
     MAP2i
    ---------------------------------------------------------------------- *)
 
-Definition MAP2i_def[nocompute]:
+Definition MAP2i_def[nocompute,simp]:
   (MAP2i f [] _ = []) /\
   (MAP2i f _ [] = []) /\
   (MAP2i f (h1::t1) (h2::t2) = f 0 h1 h2::MAP2i (f o SUC) t1 t2)
 End
-val _ = export_rewrites["MAP2i_def"];
 
 (* Define doesn't generate this case, though the second pattern looks as if
    it should *)
@@ -418,12 +416,11 @@ Proof
   HO_MATCH_MP_TAC MAP2i_ind >> rw[] >> Cases_on‘n’ >> fs[]
 QED
 
-Definition MAP2ia_def:
+Definition MAP2ia_def[simp]:
   (MAP2ia f i [] _ = []) /\
   (MAP2ia f i _ [] = []) /\
   (MAP2ia f i (h1::t1) (h2::t2) = f i h1 h2 :: MAP2ia f (i + 1) t1 t2)
 End
-val _= export_rewrites ["MAP2ia_def"]
 
 Theorem MAP2ia_NIL2[simp]:
    MAP2ia f i l1 [] = []

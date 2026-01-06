@@ -128,20 +128,26 @@ Proof
 QED
 
 
-val prefix_refl = Q.store_thm("prefix_refl[simp]",
-`~(l ≺ l)`,
-simp[prefix_def])
+Theorem prefix_refl[simp]:
+ ~(l ≺ l)
+Proof
+simp[prefix_def]
+QED
 
 Definition prefix_free_def:  prefix_free (s:'a list set) = ∀a b. a ∈ s /\ b ∈ s ==> ¬(a ≺ b)
 End
 
-val prefix_free_empty = Q.store_thm("prefix_free_empty[simp]",
-`prefix_free EMPTY `,
-rw[prefix_free_def])
+Theorem prefix_free_empty[simp]:
+ prefix_free EMPTY
+Proof
+rw[prefix_free_def]
+QED
 
-val prefix_free_sing = Q.store_thm("prefix_free_sing[simp]",
-`prefix_free {l}`,
-rw[prefix_free_def])
+Theorem prefix_free_sing[simp]:
+ prefix_free {l}
+Proof
+rw[prefix_free_def]
+QED
 
 
 Definition bar_def: bar x = (Tpow (LENGTH x)) ++ [F] ++ x
@@ -162,12 +168,15 @@ Proof
   ONCE_REWRITE_TAC[ADD_COMM] >> fs[Tpow_def,GENLIST_APPEND,combinTheory.K_DEF]
 QED
 
-val tpow_suc = Q.store_thm("tpow_suc",
-`Tpow (SUC a) = T::(Tpow a)`,
-fs[Tpow_def,GENLIST_CONS])
+Theorem tpow_suc:
+ Tpow (SUC a) = T::(Tpow a)
+Proof
+fs[Tpow_def,GENLIST_CONS]
+QED
 
-val prefix_free_bar = Q.store_thm("prefix_free_bar",
-`prefix_free (IMAGE bar s)`,
+Theorem prefix_free_bar:
+ prefix_free (IMAGE bar s)
+Proof
 fs[prefix_free_def,PULL_EXISTS] >> rw[] >> rename[`bar x ≺ bar y`] >> simp[bar_def] >> strip_tac >>
 fs[prefix_append] >>
 `LENGTH x = LENGTH y` by
@@ -176,7 +185,8 @@ fs[prefix_append] >>
       full_simp_tac bool_ss[GSYM APPEND_ASSOC,APPEND_11,tpow_append] >> Cases_on`i` >> fs[tpow_suc])
    >-(`∃i. LENGTH x = LENGTH y + i ∧ 0<i` by intLib.ARITH_TAC >>
       full_simp_tac bool_ss[GSYM APPEND_ASSOC,APPEND_11,tpow_append] >> Cases_on`i` >> fs[tpow_suc]))>>full_simp_tac bool_ss[GSYM APPEND_ASSOC,APPEND_11] >>
-first_x_assum(mp_tac o AP_TERM``LENGTH:bool list -> num``) >> simp[] >> Cases_on`s'` >> fs[]  )
+first_x_assum(mp_tac o AP_TERM``LENGTH:bool list -> num``) >> simp[] >> Cases_on`s'` >> fs[]
+QED
 
 Definition unbar_def:  unbar [] = [] ∧
                        unbar (T::x) = unbar x ∧
@@ -184,13 +194,17 @@ Definition unbar_def:  unbar [] = [] ∧
 End
 
 
-val unbar_tpow = Q.store_thm("unbar_tpow",
-`unbar (Tpow n ++ x) = unbar x`,
-simp[Tpow_def] >> Induct_on`n` >> simp[unbar_def,GENLIST_CONS])
+Theorem unbar_tpow:
+ unbar (Tpow n ++ x) = unbar x
+Proof
+simp[Tpow_def] >> Induct_on`n` >> simp[unbar_def,GENLIST_CONS]
+QED
 
-val unbar_bar_inv = Q.store_thm("bar_unbar_inv[simp]",
-`∀x. unbar (bar x) = x `,
-fs[bar_def] >> REWRITE_TAC[GSYM APPEND_ASSOC,unbar_tpow,APPEND,unbar_def])
+Theorem bar_unbar_inv[simp]:
+ ∀x. unbar (bar x) = x
+Proof
+fs[bar_def] >> REWRITE_TAC[GSYM APPEND_ASSOC,unbar_tpow,APPEND,unbar_def]
+QED
 
 
 
@@ -200,9 +214,11 @@ Proof
   fs[bar_def]
 QED
 
-val prefix_free_subset = Q.store_thm("prefix_free_subset",
-`prefix_free s ∧ t ⊆ s ==> prefix_free t`,
-rw[prefix_free_def,SUBSET_DEF] )
+Theorem prefix_free_subset:
+ prefix_free s ∧ t ⊆ s ==> prefix_free t
+Proof
+rw[prefix_free_def,SUBSET_DEF]
+QED
 
 Definition barred_def:  barred x = ∃y. x=bar y
 End
@@ -223,48 +239,66 @@ Definition unbar2_def:  unbar2 i (T::rest) = unbar2 (i+1) rest ∧
                         unbar2 i (F::rest) = (TAKE i rest,unbar (DROP i rest))
 End
 
-val unbar2_induct_bar2 = Q.store_thm("unbar2_induct_bar2",
-`∀i. unbar2 i (Tpow j ++ F::rest) = (TAKE (i+j) rest,unbar (DROP (i+j) rest))`,
-simp[Tpow_def] >> Induct_on`j` >> simp[unbar2_def,GENLIST_CONS,ADD1])
+Theorem unbar2_induct_bar2:
+ ∀i. unbar2 i (Tpow j ++ F::rest) = (TAKE (i+j) rest,unbar (DROP (i+j) rest))
+Proof
+simp[Tpow_def] >> Induct_on`j` >> simp[unbar2_def,GENLIST_CONS,ADD1]
+QED
 
-val bar_lt_bar_f = Q.store_thm("bar_lt_bar_f[simp]",
-`bar x ≺ bar y <=> F`,
-MP_TAC (Q.INST[`s`|->`{x;y}`]prefix_free_bar) >> simp[prefix_free_def,PULL_EXISTS])
+Theorem bar_lt_bar_f[simp]:
+ bar x ≺ bar y <=> F
+Proof
+MP_TAC (Q.INST[`s`|->`{x;y}`]prefix_free_bar) >> simp[prefix_free_def,PULL_EXISTS]
+QED
 
-val Tpow_LENGTH = Q.store_thm("Tpow_LENGTH[simp]",
-`LENGTH (Tpow x) = x`,
-fs[Tpow_def,LENGTH_GENLIST])
+Theorem Tpow_LENGTH[simp]:
+ LENGTH (Tpow x) = x
+Proof
+fs[Tpow_def,LENGTH_GENLIST]
+QED
 
-val bar_one_to_one =  Q.store_thm("bar_one_to_one[simp]",
-`bar x = bar y <=> x=y`,
+Theorem bar_one_to_one[simp]:
+ bar x = bar y <=> x=y
+Proof
 eq_tac >> fs[bar_def] >> Cases_on`LENGTH x = LENGTH y`>> fs[]>> rw[] >>
 `LENGTH (Tpow (LENGTH x) ++ [F] ++ x) = LENGTH (Tpow (LENGTH y) ++ [F] ++ y)` by metis_tac[] >>
-fs[LENGTH_APPEND] )
+fs[LENGTH_APPEND]
+QED
 
-val bar_eq_bar_append = Q.store_thm("bar_eq_bar_append[simp]",
-`bar x = bar y ++ l <=> x=y ∧ l=[]`,
-eq_tac >> simp[] >> strip_tac >> `l=[]` by metis_tac[prefix_append,bar_lt_bar_f] >> fs[])
+Theorem bar_eq_bar_append[simp]:
+ bar x = bar y ++ l <=> x=y ∧ l=[]
+Proof
+eq_tac >> simp[] >> strip_tac >> `l=[]` by metis_tac[prefix_append,bar_lt_bar_f] >> fs[]
+QED
 
-val bar_eq_nil = Q.store_thm("bar_eq_nil[simp]",
-`bar a <> []`,
-fs[bar_def])
+Theorem bar_eq_nil[simp]:
+ bar a <> []
+Proof
+fs[bar_def]
+QED
 
-val bar2_PF = Q.store_thm("bar2_PF",
-`prefix_free (IMAGE bar2 s)`,
+Theorem bar2_PF:
+ prefix_free (IMAGE bar2 s)
+Proof
 fs[prefix_free_def,PULL_EXISTS,pairTheory.FORALL_PROD,bar2_def] >> rw[] >> strip_tac >>
 drule prefix_length_lt >> rw[] >> strip_tac >> fs[prefix_append] >>
 rename[`bar p ++ bar q = bar a ++ bar b ++ r`]>> fs[APPEND_EQ_APPEND] >> rw[] >> fs[] >>
-full_simp_tac bool_ss [GSYM APPEND_ASSOC,bar_eq_bar_append,APPEND_eq_NIL] >> rw[]>>fs[] )
+full_simp_tac bool_ss [GSYM APPEND_ASSOC,bar_eq_bar_append,APPEND_eq_NIL] >> rw[]>>fs[]
+QED
 
-val unbar2_bar2_inv = Q.store_thm("unbar2_bar_inv[simp]",
-`unbar2 0 (bar2 x) = x`,
+Theorem unbar2_bar_inv[simp]:
+ unbar2 0 (bar2 x) = x
+Proof
 Cases_on`x` >> rw[bar2_def,bar_def] >>
 REWRITE_TAC [GSYM APPEND_ASSOC,APPEND,unbar2_induct_bar2,rich_listTheory.TAKE_LENGTH_APPEND,
-             rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES] >> simp[GSYM bar_def] )
+             rich_listTheory.DROP_LENGTH_APPEND,ADD_CLAUSES] >> simp[GSYM bar_def]
+QED
 
-val bar2_one_to_one = Q.store_thm("bar2_one_to_one[simp]",
-`bar2 (x,y) = bar2 (a,b) <=> x = a ∧ y = b`,
-eq_tac  >> fs[bar2_def] >> rw[APPEND_EQ_APPEND] >> fs[] )
+Theorem bar2_one_to_one[simp]:
+ bar2 (x,y) = bar2 (a,b) <=> x = a ∧ y = b
+Proof
+eq_tac  >> fs[bar2_def] >> rw[APPEND_EQ_APPEND] >> fs[]
+QED
 
 Definition bar2ed_plus_def:  bar2ed_plus x <=> ∃y i q. x=(bar y)++(bar i)++q
 End
@@ -378,24 +412,30 @@ Proof
 QED
 
 
-val bl2n_11 = Q.store_thm("bl2n_11[simp]",
-`bl2n x = bl2n y <=> x = y`,
-metis_tac[num_bool_inv])
+Theorem bl2n_11[simp]:
+ bl2n x = bl2n y <=> x = y
+Proof
+metis_tac[num_bool_inv]
+QED
 
-val finite_bool_list_n = Q.store_thm("finite_bool_list_n[simp]",
-`FINITE {s|LENGTH (s:bool list) = n}`,
+Theorem finite_bool_list_n[simp]:
+ FINITE {s|LENGTH (s:bool list) = n}
+Proof
 irule (INST_TYPE[beta|->``:num``] FINITE_INJ) >> qexists_tac`bool_list_to_num` >>
           qexists_tac`count (2n**(n+1)-1)` >> simp[INJ_DEF] >> qid_spec_tac`n` >> Induct_on`x`>>
           simp[bool_list_to_num_def] >> pop_assum(qspec_then`LENGTH x` MP_TAC) >>rw[] >>
-          simp[GSYM ADD1,Once EXP] >> irule (DECIDE``n<=2n /\ b<x-1 ==> 2*b+n<2*x-1``) >> rw[ADD1])
+          simp[GSYM ADD1,Once EXP] >> irule (DECIDE``n<=2n /\ b<x-1 ==> 2*b+n<2*x-1``) >> rw[ADD1]
+QED
 
 
-val finite_bool_list_lt_n = Q.store_thm("finite_bool_list_lt_n",
-`FINITE {(s:bool list) | LENGTH s < n}`,
+Theorem finite_bool_list_lt_n:
+ FINITE {(s:bool list) | LENGTH s < n}
+Proof
 Induct_on`n` >> simp[finite_bool_list_n] >>
 `FINITE {(s:bool list)|LENGTH s = n}` by fs[finite_bool_list_n] >>
 `FINITE ({(s:bool list) | LENGTH s < n \/ LENGTH s = n}) ` by simp[FINITE_UNION,GSPEC_OR] >>
-`{(s:bool list) | LENGTH s < SUC n} = {s | LENGTH s < n \/ LENGTH s = n}` by rw[EXTENSION] >>fs[])
+`{(s:bool list) | LENGTH s < SUC n} = {s | LENGTH s < n \/ LENGTH s = n}` by rw[EXTENSION] >>fs[]
+QED
 
 Definition on2bl_def:
   on2bl x = OPTION_MAP n2bl x

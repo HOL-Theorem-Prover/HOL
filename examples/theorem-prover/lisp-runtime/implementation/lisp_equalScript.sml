@@ -317,14 +317,15 @@ val mc_equal_thm = mc_equal_lemma
   |> Q.SPECL [`[]`,`w0`,`x0`,`w1`,`x1`,`f`]
   |> SIMP_RULE std_ss [EVERY_DEF,LENGTH,lisp_equal_stack_def,one_eq_stack_def,SEP_CLAUSES]
 
-val mc_full_equal_thm = store_thm("mc_full_equal_thm",
-  ``lisp_inv ^STAT (x0,x1,x2,x3,x4,x5,^VAR_REST)
+Theorem mc_full_equal_thm:
+    lisp_inv ^STAT (x0,x1,x2,x3,x4,x5,^VAR_REST)
       (w0,w1,w2,w3,w4,w5,df,f,^REST) ==>
     ?fi w0i w1i.
       mc_full_equal_pre (bp,sp,w2w w0,w2w w1,df,f) /\
       (mc_full_equal (bp,sp,w2w w0,w2w w1,df,f) = (tw0,bp,sp,w2w w0i,w2w w1i,we,df,fi)) /\
       lisp_inv ^STAT (LISP_TEST (x0 = x1),Sym "NIL",x2,x3,x4,x5,^VAR_REST)
-        (w0i,w1i,w2,w3,w4,w5,df,fi,^REST)``,
+        (w0i,w1i,w2,w3,w4,w5,df,fi,^REST)
+Proof
   SIMP_TAC std_ss [mc_full_equal_def] \\ STRIP_TAC
   \\ `?p. (ref_mem bp2 (\x. H_EMP) 0 e * p) (fun2set (f,df))` by
     (FULL_SIMP_TAC std_ss [lisp_inv_def] \\ METIS_TAC [STAR_ASSOC,STAR_COMM])
@@ -357,6 +358,7 @@ val mc_full_equal_thm = store_thm("mc_full_equal_thm",
   \\ `tw0 = 3w` by FULL_SIMP_TAC std_ss [lisp_inv_def]
   \\ Cases_on `x0 = x1` \\ ASM_SIMP_TAC std_ss [LISP_TEST_def]
   \\ FULL_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w]
-  \\ IMP_RES_TAC lisp_inv_Sym_T);
+  \\ IMP_RES_TAC lisp_inv_Sym_T
+QED
 
 

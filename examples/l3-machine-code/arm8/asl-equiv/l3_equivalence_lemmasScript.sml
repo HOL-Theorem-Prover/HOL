@@ -1142,7 +1142,7 @@ Proof
 QED
 *)
 
-Triviality Replicate_64_word_and:
+Theorem Replicate_64_word_and[local]:
   LENGTH l1 = LENGTH l2 ⇒
   Replicate l1 && Replicate l2 = Replicate (band l1 l2) :word64
 Proof
@@ -1150,7 +1150,7 @@ Proof
   simp[band_def, bitwise_replicate]
 QED
 
-Triviality Replicate_64_word_or:
+Theorem Replicate_64_word_or[local]:
   LENGTH l1 = LENGTH l2 ⇒
   Replicate l1 || Replicate l2 = Replicate (bor l1 l2) :word64
 Proof
@@ -1158,7 +1158,7 @@ Proof
   simp[bor_def, bitwise_replicate]
 QED
 
-Triviality word_neg_6:
+Theorem word_neg_6[local]:
   w2n (-a : word6) = (64 - w2n a) MOD 64
 Proof
   Cases_on_word_value `a` >> simp[]

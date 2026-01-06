@@ -95,30 +95,33 @@ val strong_primrec_ind = save_thm(
   IndDefLib.derive_strong_induction(primrec_rules, primrec_ind))
 
 
-val primrec_nzero = store_thm(
-  "primrec_nzero",
-  ``∀f k. primrec f k ⇒ 0 < k``,
+Theorem primrec_nzero:
+    ∀f k. primrec f k ⇒ 0 < k
+Proof
   HO_MATCH_MP_TAC primrec_ind THEN SRW_TAC [ARITH_ss][] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val EL_TAKE = store_thm(
-  "EL_TAKE",
-  ``∀i n l. i < n ∧ n ≤ LENGTH l ⇒ (EL i l = EL i (TAKE n l))``,
-  Induct THEN Cases_on `l` THEN SRW_TAC [ARITH_ss][]);
+Theorem EL_TAKE:
+    ∀i n l. i < n ∧ n ≤ LENGTH l ⇒ (EL i l = EL i (TAKE n l))
+Proof
+  Induct THEN Cases_on `l` THEN SRW_TAC [ARITH_ss][]
+QED
 
-val MAP_EQ = store_thm(
-  "MAP_EQ",
-  ``∀f g l. (MAP f l = MAP g l) ⇔ ∀e. MEM e l ⇒ (f e = g e)``,
-  Induct_on `l` THEN SRW_TAC [][] THEN METIS_TAC []);
+Theorem MAP_EQ:
+    ∀f g l. (MAP f l = MAP g l) ⇔ ∀e. MEM e l ⇒ (f e = g e)
+Proof
+  Induct_on `l` THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 
 val TAKE_ID = prove(
   ``∀l n. (LENGTH l = n) ⇒ (TAKE n l = l)``,
   Induct THEN SRW_TAC [ARITH_ss][]);
 
-val primrec_arg_too_long = store_thm(
-  "primrec_arg_too_long",
-  ``∀f n. primrec f n ⇒
-          ∀l. n ≤ LENGTH l ⇒ (f l = f (TAKE n l))``,
+Theorem primrec_arg_too_long:
+    ∀f n. primrec f n ⇒
+          ∀l. n ≤ LENGTH l ⇒ (f l = f (TAKE n l))
+Proof
   HO_MATCH_MP_TAC primrec_ind THEN SRW_TAC [][] THENL [
     Cases_on `l` THEN FULL_SIMP_TAC (srw_ss()) [],
     SRW_TAC [ARITH_ss][proj_def, EL_TAKE],
@@ -137,7 +140,8 @@ val primrec_arg_too_long = store_thm(
     ASM_SIMP_TAC bool_ss [TWO, ONE, listTheory.TAKE_def,
                           listTheory.LENGTH, ADD_CLAUSES] THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
 val GENLIST1 = prove(``GENLIST f 1 = [f 0]``,
                      SIMP_TAC bool_ss [ONE, GENLIST, SNOC]);
@@ -235,9 +239,9 @@ Definition pr1_def:
 End
 val _ = export_rewrites ["pr1_def"]
 
-val unary_primrec_eq = store_thm(
-  "unary_primrec_eq",
-  ``primrec f 1 ∧ (∀n. f [n] = g n) ⇒ (f = pr1 g)``,
+Theorem unary_primrec_eq:
+    primrec f 1 ∧ (∀n. f [n] = g n) ⇒ (f = pr1 g)
+Proof
   SRW_TAC [][] THEN SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
   Q.X_GEN_TAC `l` THEN
   `(l = []) ∨ ∃n ns. l = n :: ns` by (Cases_on `l` THEN SRW_TAC [][]) THEN
@@ -245,11 +249,13 @@ val unary_primrec_eq = store_thm(
     IMP_RES_THEN MP_TAC primrec_nil THEN SRW_TAC [][GENLIST1],
     IMP_RES_THEN (Q.SPEC_THEN `n::ns` MP_TAC) primrec_arg_too_long THEN
     SRW_TAC [ARITH_ss][]
-  ]);
-val primrec_pr1 = store_thm(
-  "primrec_pr1",
-  ``(∃g. primrec g 1 ∧ (∀n. g [n] = f n)) ⇒ primrec (pr1 f) 1``,
-  METIS_TAC [unary_primrec_eq]);
+  ]
+QED
+Theorem primrec_pr1:
+    (∃g. primrec g 1 ∧ (∀n. g [n] = f n)) ⇒ primrec (pr1 f) 1
+Proof
+  METIS_TAC [unary_primrec_eq]
+QED
 
 Definition pr2_def:
   (pr2 f [] = f 0 0 : num) ∧
@@ -261,9 +267,9 @@ val _ = export_rewrites ["pr2_def"]
 val GENLIST2 = prove(
   ``GENLIST f 2 = [f 0; f 1]``,
   SIMP_TAC bool_ss [TWO, ONE, GENLIST, SNOC]);
-val binary_primrec_eq = store_thm(
-  "binary_primrec_eq",
-  ``primrec f 2 ∧ (∀n m. f [n; m] = g n m) ⇒ (f = pr2 g)``,
+Theorem binary_primrec_eq:
+    primrec f 2 ∧ (∀n m. f [n; m] = g n m) ⇒ (f = pr2 g)
+Proof
   SRW_TAC [][] THEN SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN
   Q.X_GEN_TAC `l` THEN
   `(l = []) ∨ ∃n ns. l = n :: ns` by (Cases_on `l` THEN SRW_TAC [][]) THENL [
@@ -279,12 +285,14 @@ val binary_primrec_eq = store_thm(
       IMP_RES_THEN (Q.SPEC_THEN `n::m::ms` MP_TAC) primrec_arg_too_long THEN
       SRW_TAC [ARITH_ss][]
     ]
-  ])
+  ]
+QED
 
-val primrec_pr2 = store_thm(
-  "primrec_pr2",
-  ``(∃g. primrec g 2 ∧ (∀m n. g [m; n] = f m n)) ⇒ primrec (pr2 f) 2``,
-  METIS_TAC [binary_primrec_eq]);
+Theorem primrec_pr2:
+    (∃g. primrec g 2 ∧ (∀m n. g [m; n] = f m n)) ⇒ primrec (pr2 f) 2
+Proof
+  METIS_TAC [binary_primrec_eq]
+QED
 
 val primrec_pr_add = Store_thm(
   "primrec_pr_add",
@@ -431,13 +439,14 @@ val primrec_pr_div = Store_thm(
   MATCH_MP_TAC alt_Pr_rule THEN SRW_TAC [][] THEN
   MATCH_MP_TAC primrec_pr_cond THEN SRW_TAC [][primrec_rules]);
 
-val pr_div_recursion = store_thm(
-  "pr_div_recursion",
-  ``(pr_div [0; m] = 0) ∧
+Theorem pr_div_recursion:
+    (pr_div [0; m] = 0) ∧
     (pr_div [n + 1; m] = let r = pr_div [n; m]
                          in
-                           if n + 1 - r * m = m then r + 1 else r)``,
-  SIMP_TAC (srw_ss()) [pr_div_def, LET_THM, ADD1]);
+                           if n + 1 - r * m = m then r + 1 else r)
+Proof
+  SIMP_TAC (srw_ss()) [pr_div_def, LET_THM, ADD1]
+QED
 
 val pr_div_thm = Store_thm(
   "pr_div_thm",
@@ -462,10 +471,11 @@ val pr_div_thm = Store_thm(
 Definition pr_mod_def:  pr_mod = proj 0 -. (pr_div *. proj 1)
 End
 
-val pr_mod_eqn = store_thm(
-  "pr_mod_eqn",
-  ``pr_mod [n; m] = n - pr_div [n; m] * m``,
-  SRW_TAC [][pr_mod_def]);
+Theorem pr_mod_eqn:
+    pr_mod [n; m] = n - pr_div [n; m] * m
+Proof
+  SRW_TAC [][pr_mod_def]
+QED
 
 val pr_mod_thm = Store_thm(
   "pr_mod_thm",
@@ -715,12 +725,13 @@ val A12 = prove(
   Q.EXISTS_TAC `H k j + H 0 j` THEN CONJ_TAC THEN1 SRW_TAC [ARITH_ss][] THEN
   METIS_TAC [DECIDE ``k + 0 + 4 = k + 4``, A11]);
 
-val EL_SUM = store_thm(
-  "EL_SUM",
-  ``∀i l. i < LENGTH l ⇒ (EL i l ≤ SUM l)``,
+Theorem EL_SUM:
+    ∀i l. i < LENGTH l ⇒ (EL i l ≤ SUM l)
+Proof
   Induct_on `l` THEN SRW_TAC [][] THEN
   Cases_on `i` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
-  RES_TAC THEN DECIDE_TAC);
+  RES_TAC THEN DECIDE_TAC
+QED
 
 val Cn_case_aux = prove(
   ``EVERY (λg. primrec g k ∧ ∃J. ∀l. (LENGTH l = k) ==> g l < H J (SUM l)) gs
@@ -784,9 +795,9 @@ val Pr_case = prove(
   Q.EXISTS_TAC `Pr f g l + SUM l` THEN SRW_TAC [][] THEN
   METIS_TAC [A12, Pr_case_aux]);
 
-val Ackermann_grows_too_fast = store_thm(
-  "Ackermann_grows_too_fast",
-  ``∀f k. primrec f k ⇒ ∃J. ∀l. (LENGTH l = k) ⇒ f l < H J (SUM l)``,
+Theorem Ackermann_grows_too_fast:
+    ∀f k. primrec f k ⇒ ∃J. ∀l. (LENGTH l = k) ⇒ f l < H J (SUM l)
+Proof
   HO_MATCH_MP_TAC strong_primrec_ind THEN REPEAT STRIP_TAC THENL [
     Q.EXISTS_TAC `0` THEN SRW_TAC [ARITH_ss][],
 
@@ -799,11 +810,12 @@ val Ackermann_grows_too_fast = store_thm(
 
     METIS_TAC [Cn_case],
     METIS_TAC [Pr_case]
-  ]);
+  ]
+QED
 
-val Ackermann_not_primrec = store_thm(
-  "Ackermann_not_primrec",
-  ``¬∃f. primrec f 2 ∧ ∀n m. f [n; m] = H n m``,
+Theorem Ackermann_not_primrec:
+    ¬∃f. primrec f 2 ∧ ∀n m. f [n; m] = H n m
+Proof
   STRIP_TAC THEN
   Q.ABBREV_TAC `g = Cn f [proj 0; proj 0]` THEN
   `∀n. g [n] = H n n` by SRW_TAC [][Abbr`g`] THEN
@@ -814,5 +826,6 @@ val Ackermann_not_primrec = store_thm(
                      (Q.SPEC_THEN `[n]` (MP_TAC o Q.GEN `n`)) THEN
          DISCH_THEN (ASSUME_TAC o SIMP_RULE (srw_ss()) []) THEN
          METIS_TAC []) THEN
-  POP_ASSUM (Q.SPEC_THEN `J` MP_TAC) THEN SRW_TAC [][]);
+  POP_ASSUM (Q.SPEC_THEN `J` MP_TAC) THEN SRW_TAC [][]
+QED
 

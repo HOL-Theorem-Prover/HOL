@@ -339,12 +339,13 @@ Concerning the complexity,
    Also LOG2 n + 1 <> 0                      by arithmetic
     ==> SQRT (phi k) * (LOG2 n + 1) <> 0     by MULT_EQ_0
 *)
-val SQRT_TIMES_SUC_LOG2 = store_thm(
-  "SQRT_TIMES_SUC_LOG2",
-  ``!k n. 0 < k ==> 0 < SQRT (phi k) * SUC (LOG2 n)``,
+Theorem SQRT_TIMES_SUC_LOG2:
+    !k n. 0 < k ==> 0 < SQRT (phi k) * SUC (LOG2 n)
+Proof
   rpt strip_tac >>
   `0 < SUC (LOG2 n)` by decide_tac >>
-  metis_tac[MULT_EQ_0, phi_eq_0, SQRT_EQ_0, NOT_ZERO]);
+  metis_tac[MULT_EQ_0, phi_eq_0, SQRT_EQ_0, NOT_ZERO]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Improve Bounds for AKS Theorem (using cofactor)                           *)
@@ -434,15 +435,15 @@ val SQRT_TIMES_SUC_LOG2 = store_thm(
 
       Therefore, perfect_power n p.
 *)
-val AKS_main_thm_0b = store_thm(
-  "AKS_main_thm_0b",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ (* simple field *)
+Theorem AKS_main_thm_0b:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ (* simple field *)
           1 < ordz k (char r) /\ (* additional condition for using q = n DIV p *)
           mifactor z (unity k) /\ (forderz X = k) ==>
    !n. 1 < k /\ (char r) divides n /\ k < char r /\
            (SUC (LOG2 n)) ** 2 <= ordz k n /\ (* conditions on n, k *)
            poly_intro_range r k n (SQRT (phi k) * (SUC (LOG2 n))) (* AKS tests *)
-       ==> perfect_power n (char r)``,
+       ==> perfect_power n (char r)
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = char r` >>
   qabbrev_tac `a = (SUC (LOG2 n)) ** 2` >>
@@ -487,21 +488,23 @@ val AKS_main_thm_0b = store_thm(
   `CARD (NM p q (SQRT t)) = (SUC (SQRT t)) ** 2` by metis_tac[reduceN_card] >>
   `t < (SUC (SQRT t)) ** 2` by rw[SQRT_PROPERTY] >>
   `t < CARD (NM p q (SQRT t))` by decide_tac >>
-  metis_tac[PHP]);
+  metis_tac[PHP]
+QED
 
 (* Theorem: The AKS Main Theorem (Version 0) *)
 (* Proof:
    Note 1 < k           by poly_X_order_gt_1
    The result follows   by AKS_main_thm_0b
 *)
-val AKS_main_thm_0b_alt = store_thm(
-  "AKS_main_thm_0b_alt",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
+Theorem AKS_main_thm_0b_alt:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
           mifactor z (unity k) /\ 1 < deg z /\ (forderz X = k) ==>
       !n. (char r) divides n /\ k < char r /\ (SUC (LOG2 n)) ** 2 <= ordz k n /\ (* conditions on n, k *)
           poly_intro_range r k n (SQRT (phi k) * SUC (LOG2 n)) (* AKS tests *)
-      ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_thm_0b, poly_X_order_gt_1]);
+      ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_thm_0b, poly_X_order_gt_1]
+QED
 
 (* Theorem: The AKS Main Theorem (Version 1)
    Assume there is FiniteField r with (char r) dividing n,
@@ -522,14 +525,14 @@ val AKS_main_thm_0b_alt = store_thm(
    Thus 1 < k                          by k <> 0, k <> 1
    The result follows                  by AKS_main_thm_0b
 *)
-val AKS_main_thm_1b = store_thm(
-  "AKS_main_thm_1b",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
+Theorem AKS_main_thm_1b:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
            mifactor z (unity k) /\ (forderz X = k) ==>
     !n. 0 < n /\ 0 < k /\ (char r) divides n /\ k < char r /\
         (SUC (LOG2 n)) ** 2 <= ordz k n /\ (* conditions on n, k *)
         poly_intro_range r k n (SQRT (phi k) * SUC (LOG2 n)) (* AKS tests *)
-    ==> perfect_power n (char r)``,
+    ==> perfect_power n (char r)
+Proof
   rpt strip_tac >>
   `1 < char r` by rw[finite_field_char_gt_1] >>
   `n <> 1` by metis_tac[DIVIDES_ONE, LESS_NOT_EQ] >>
@@ -537,7 +540,8 @@ val AKS_main_thm_1b = store_thm(
   `ordz k n <> 1` by decide_tac >>
   `k <> 1` by metis_tac[ZN_order_mod_1] >>
   `1 < k` by decide_tac >>
-  metis_tac[AKS_main_thm_0b]);
+  metis_tac[AKS_main_thm_0b]
+QED
 
 (* Theorem: The AKS Main Theorem (Version 2)
    Assume there is FiniteField r with (CARD R = char r) and (char r) dividing n,
@@ -558,14 +562,14 @@ val AKS_main_thm_1b = store_thm(
    Thus 1 < k                 by 0 < k, k <> 1
    The result follows         by AKS_main_thm_0b
 *)
-val AKS_main_thm_2b = store_thm(
-  "AKS_main_thm_2b",
-  ``!(r:'a field). FiniteField r /\ (CARD R = char r) ==>
+Theorem AKS_main_thm_2b:
+    !(r:'a field). FiniteField r /\ (CARD R = char r) ==>
    !n k. 0 < k /\ 1 < ordz k (char r) /\
          (char r) divides n /\ k < char r /\
          (SUC (LOG2 n)) ** 2 <= ordz k n /\ (* conditions on n, k *)
          poly_intro_range r k n (SQRT (phi k) * SUC (LOG2 n)) (* AKS tests *)
-     ==> perfect_power n (char r)``,
+     ==> perfect_power n (char r)
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = char r` >>
   `?z. mifactor z (unity k) /\ (forderz X = k)` by metis_tac[poly_unity_special_factor_exists_1] >>
@@ -574,7 +578,8 @@ val AKS_main_thm_2b = store_thm(
   `1 < p` by rw[ONE_LT_PRIME] >>
   metis_tac[ZN_order_mod_1, LESS_NOT_EQ]) >>
   `1 < k` by decide_tac >>
-  metis_tac[AKS_main_thm_0b]);
+  metis_tac[AKS_main_thm_0b]
+QED
 
 (* Theorem: The AKS Main Theorem (Version 3)
    Given a number n > 1,
@@ -615,13 +620,13 @@ val AKS_main_thm_2b = store_thm(
 
       The result follows                    by AKS_main_thm_2b, k < p
 *)
-val AKS_main_thm_3b = store_thm(
-  "AKS_main_thm_3b",
-  ``!n k. 1 < n /\ 0 < k /\
+Theorem AKS_main_thm_3b:
+    !n k. 1 < n /\ 0 < k /\
          (!j. 1 < j /\ j <= k ==> ~(j divides n)) /\ (* check on k, gives k < p later *)
          (SUC (LOG2 n)) ** 2 <= ordz k n /\ (* condition on k *)
          poly_intro_range (ZN n) k n (SQRT (phi k) * SUC (LOG2 n)) (* AKS tests *)
-     ==> ?p. prime p /\ perfect_power n p``,
+     ==> ?p. prime p /\ perfect_power n p
+Proof
   rpt strip_tac >>
   Cases_on `prime n` >-
   metis_tac[perfect_power_self] >>
@@ -645,7 +650,8 @@ val AKS_main_thm_3b = store_thm(
   `FiniteField (ZN p)` by rw[ZN_finite_field] >>
   `char (ZN p) = p` by rw[ZN_char] >>
   `CARD (ZN p).carrier = p` by rw[ZN_card] >>
-  metis_tac[AKS_main_thm_2b]);
+  metis_tac[AKS_main_thm_2b]
+QED
 
 (* Theorem: The AKS Main Theorem (Version 7)
    A number n is prime iff
@@ -692,12 +698,12 @@ val AKS_main_thm_3b = store_thm(
          (!j. 0 < j /\ j < n ==> ~(j divides n))        as j < n /\ n <= k ==> j < k, or j <= k
           Hence prime n                                 by prime_iff_no_proper_factor
 *)
-val AKS_main_thm_7b = store_thm(
-  "AKS_main_thm_7b",
-  ``!n. prime n <=> power_free n /\
+Theorem AKS_main_thm_7b:
+    !n. prime n <=> power_free n /\
    ?k. 0 < k /\ (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\
        (SUC (LOG2 n)) ** 2 <= ordz k n /\
-       (k < n ==> poly_intro_range (ZN n) k n (SQRT (phi k) * SUC (LOG2 n)))``,
+       (k < n ==> poly_intro_range (ZN n) k n (SQRT (phi k) * SUC (LOG2 n)))
+Proof
   rw_tac bool_ss[EQ_IMP_THM] >-
   rw[prime_is_power_free] >-
  (qabbrev_tac `a = (SUC (LOG2 n)) ** 2` >>
@@ -718,7 +724,8 @@ val AKS_main_thm_7b = store_thm(
     metis_tac[AKS_main_thm_3b, power_free_perfect_power],
     `!j. 1 < j /\ j < n ==> 1 < j /\ j <= k /\ j < n` by decide_tac >>
     metis_tac[prime_iff_no_proper_factor]
-  ]);
+  ]
+QED
 
 (* Theorem: This is Version 7 with poly_intro made explicit:
             prime n <=> power_free n /\
@@ -731,17 +738,18 @@ val AKS_main_thm_7b = store_thm(
     and  0 < n ==> Ring (ZN n)                        by ZN_ring, 0 < n
    together with poly_intro_X_add_c, this is true     by AKS_main_thm_7b
 *)
-val AKS_main_thm_8b = store_thm(
-  "AKS_main_thm_8b",
-  ``!n. prime n <=> power_free n /\
+Theorem AKS_main_thm_8b:
+    !n. prime n <=> power_free n /\
    ?k. 0 < k /\ (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\ (* checks on k, hidden MIN *)
        (SUC (LOG2 n)) ** 2 <= ordz k n /\ (* property of k *)
        (k < n ==> !c. 0 < c /\ c <= SQRT (phi k) * SUC (LOG2 n) ==>  (* AKS checks *)
-                  ((x+^ n c n) == (x^+ n c n)) (pmod (ZN n) (x^- n k)))``,
+                  ((x+^ n c n) == (x^+ n c n)) (pmod (ZN n) (x^- n k)))
+Proof
   rpt strip_tac >>
   `!n. 1 < n ==> 0 < n` by decide_tac >>
   `!n. 0 < n ==> Ring (ZN n)` by rw[ZN_ring] >>
-  metis_tac[AKS_main_thm_7b, poly_intro_X_add_c, power_free_gt_1]);
+  metis_tac[AKS_main_thm_7b, poly_intro_X_add_c, power_free_gt_1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Theorems with bounds improved using upper logarithm                   *)
@@ -821,15 +829,15 @@ val AKS_main_thm_8b = store_thm(
 
       Therefore, perfect_power n p.
 *)
-val AKS_main_ulog_0b = store_thm(
-  "AKS_main_ulog_0b",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ (* just simple fields *)
+Theorem AKS_main_ulog_0b:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ (* just simple fields *)
            1 < ordz k (char r) /\ (* parameter k *)
            mifactor z (unity k) /\ (forderz X = k) ==>
        !n. 0 < n /\ 1 < k /\ (* 0 < n to keep 0 < a *)
            (char r) divides n /\ k < char r /\ (ulog n) ** 2 <= ordz k n /\ (* conditions on n, k *)
            poly_intro_range r k n (SQRT (phi k) * ulog n) (* AKS tests *)
-       ==> perfect_power n (char r)``,
+       ==> perfect_power n (char r)
+Proof
   rpt strip_tac >>
   qabbrev_tac `a = (ulog n) ** 2` >>
   qabbrev_tac `s = (SQRT (phi k)) * ulog n` >>
@@ -879,23 +887,25 @@ val AKS_main_ulog_0b = store_thm(
     `t < (SUC (SQRT t)) ** 2` by rw[SQRT_PROPERTY] >>
     `t < CARD (NM p q (SQRT t))` by decide_tac >>
     metis_tac[PHP]
-  ]);
+  ]
+QED
 
 (* Theorem: The AKS Main Theorem (Version 0) *)
 (* Proof:
    Note 1 < k           by poly_X_order_gt_1
    The result follows   by AKS_main_ulog_0b
 *)
-val AKS_main_ulog_0b_alt = store_thm(
-  "AKS_main_ulog_0b_alt",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ (* just simple fields *)
+Theorem AKS_main_ulog_0b_alt:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ (* just simple fields *)
            1 < ordz k (char r) /\ (* parameter k *)
            mifactor z (unity k) /\ 1 < deg z /\ (forderz X = k) ==>
        !n. 0 < n /\ (* 0 < n to keep 0 < a *)
            (char r) divides n /\ k < char r /\ (ulog n) ** 2 <= ordz k n /\ (* conditions on n, k *)
            poly_intro_range r k n (SQRT (phi k) * ulog n) (* AKS tests *)
-       ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_ulog_0b, poly_X_order_gt_1]);
+       ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_ulog_0b, poly_X_order_gt_1]
+QED
 
 (* Theorem: The AKS Main Theorem (Version 1) *)
 (* Proof:
@@ -916,14 +926,14 @@ val AKS_main_ulog_0b_alt = store_thm(
    Thus 1 < k                 by k <> 0, k <> 1
    The result follows         by AKS_main_ulog_0b
 *)
-val AKS_main_ulog_1b = store_thm(
-  "AKS_main_ulog_1b",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
+Theorem AKS_main_ulog_1b:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
            mifactor z (unity k) /\ (forderz X = k) ==>
     !n. 0 < n /\ 0 < k /\ (char r) divides n /\ k < char r /\
         (ulog n) ** 2 <= ordz k n /\ (* conditions on n, k *)
         poly_intro_range r k n (SQRT (phi k) * ulog n) (* AKS tests *)
-    ==> perfect_power n (char r)``,
+    ==> perfect_power n (char r)
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = char r` >>
   `prime p` by rw[finite_field_char, Abbr`p`] >>
@@ -937,7 +947,8 @@ val AKS_main_ulog_1b = store_thm(
     `k <> 1` by metis_tac[ZN_order_mod_1] >>
     `1 < k` by decide_tac >>
     metis_tac[AKS_main_ulog_0b]
-  ]);
+  ]
+QED
 
 (* Theorem: The AKS Main Theorem (in generic FiniteField)
    Assume there is FiniteField r with (CARD R = char r) and (char r) dividing n,
@@ -964,13 +975,13 @@ val AKS_main_ulog_1b = store_thm(
    Thus 1 < k                 by 0 < k, k <> 1
    The result follows         by AKS_main_ulog_0b
 *)
-val AKS_main_ulog_2b = store_thm(
-  "AKS_main_ulog_2b",
-  ``!r:'a field. FiniteField r /\ (CARD R = char r) ==>
+Theorem AKS_main_ulog_2b:
+    !r:'a field. FiniteField r /\ (CARD R = char r) ==>
    !n k. 0 < n /\ 0 < k /\ 1 < ordz k (char r) /\ char r divides n /\ k < char r /\
          (ulog n) ** 2 <= ordz k n /\
          poly_intro_range r k n (SQRT (phi k) * (ulog n))
-     ==> perfect_power n (char r)``,
+     ==> perfect_power n (char r)
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = char r` >>
   `?z. mifactor z (unity k) /\ (forderz X = k)` by metis_tac[poly_unity_special_factor_exists_1] >>
@@ -979,7 +990,8 @@ val AKS_main_ulog_2b = store_thm(
   `1 < p` by rw[ONE_LT_PRIME] >>
   metis_tac[ZN_order_mod_1, LESS_NOT_EQ]) >>
   `1 < k` by decide_tac >>
-  metis_tac[AKS_main_ulog_0b]);
+  metis_tac[AKS_main_ulog_0b]
+QED
 
 (* A streamlined proof of the same theorem.
 
@@ -1233,13 +1245,13 @@ val AKS_main_ulog_2b = store_thm(
        and CARD (ZN p).carrier = p    by ZN_card
        ==> perfect_power n p          by AKS_main_ulog_2b, k < p
 *)
-val AKS_main_ulog_3b = store_thm(
-  "AKS_main_ulog_3b",
-  ``!n k. 1 < n /\ 0 < k /\ (* 1 < n to squeeze 2 < n *)
+Theorem AKS_main_ulog_3b:
+    !n k. 1 < n /\ 0 < k /\ (* 1 < n to squeeze 2 < n *)
          (!j. 1 < j /\ j <= k ==> ~(j divides n)) /\ (* check on k, gives k < p later *)
          (ulog n) ** 2 <= ordz k n /\ (* condition on k and n *)
          poly_intro_range (ZN n) k n (SQRT (phi k) * (ulog n)) (* AKS tests *)
-     ==> ?p. prime p /\ perfect_power n p``,
+     ==> ?p. prime p /\ perfect_power n p
+Proof
   rpt strip_tac >>
   Cases_on `prime n` >-
   metis_tac[perfect_power_self] >>
@@ -1265,7 +1277,8 @@ val AKS_main_ulog_3b = store_thm(
   `FiniteField (ZN p)` by rw[ZN_finite_field] >>
   `char (ZN p) = p` by rw[ZN_char] >>
   `CARD (ZN p).carrier = p` by rw[ZN_card] >>
-  metis_tac[AKS_main_ulog_2b]);
+  metis_tac[AKS_main_ulog_2b]
+QED
 
 (* Theorem: The AKS Main Theorem (primality testing version)
    A number n is prime iff
@@ -1326,12 +1339,12 @@ val AKS_main_ulog_3b = store_thm(
          (!j. 0 < j /\ j < n ==> ~(j divides n))        as j < n /\ n <= k ==> j < k, or j <= k
           Hence prime n                                 by prime_iff_no_proper_factor
 *)
-val AKS_main_ulog_7b = store_thm(
-  "AKS_main_ulog_7b",
-  ``!n. prime n <=> power_free n /\
+Theorem AKS_main_ulog_7b:
+    !n. prime n <=> power_free n /\
    ?k. 0 < k /\ (ulog n) ** 2 <= ordz k n /\
        (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\
-       (k < n ==> poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n))``,
+       (k < n ==> poly_intro_range (ZN n) k n (SQRT (phi k) * ulog n))
+Proof
   rw_tac bool_ss[EQ_IMP_THM] >-
   rw[prime_is_power_free] >-
  (qabbrev_tac `a = (ulog n) ** 2` >>
@@ -1362,7 +1375,8 @@ val AKS_main_ulog_7b = store_thm(
     metis_tac[AKS_main_ulog_3b, power_free_perfect_power],
     `!j. 1 < j /\ j < n ==> 1 < j /\ j <= k /\ j < n` by decide_tac >>
     metis_tac[prime_iff_no_proper_factor]
-  ]);
+  ]
+QED
 
 (* Theorem: This is previous version with poly_intro made explicit:
             prime n <=> power_free n /\
@@ -1375,16 +1389,17 @@ val AKS_main_ulog_7b = store_thm(
     and  0 < n ==> Ring (ZN n)                        by ZN_ring, 0 < n
    together with poly_intro_X_add_c, this is true     by AKS_main_ulog_7b
 *)
-val AKS_main_ulog_8b = store_thm(
-  "AKS_main_ulog_8b",
-  ``!n. prime n <=> power_free n /\
+Theorem AKS_main_ulog_8b:
+    !n. prime n <=> power_free n /\
    ?k. 0 < k /\ (ulog n) ** 2 <= ordz k n /\ (* property of k *)
        (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\ (* checks on k, hidden MIN *)
-       (k < n ==> poly_intro_checks n k (SQRT (phi k) * ulog n))``,
+       (k < n ==> poly_intro_checks n k (SQRT (phi k) * ulog n))
+Proof
   rpt strip_tac >>
   `!n. 1 < n ==> 0 < n` by decide_tac >>
   `!n. 0 < n ==> Ring (ZN n)` by rw[ZN_ring] >>
-  metis_tac[AKS_main_ulog_7b, poly_intro_X_add_c, power_free_gt_1]);
+  metis_tac[AKS_main_ulog_7b, poly_intro_X_add_c, power_free_gt_1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Using passChecks                                                          *)
@@ -1398,143 +1413,157 @@ val AKS_main_ulog_8b = store_thm(
 
 (* Use lowercase aks_main_thm with AKS_main_thm as they are really similar. *)
 
-val aks_main_thm_0b = store_thm(
-  "aks_main_thm_0b",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ (* simple field *)
+Theorem aks_main_thm_0b:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ (* simple field *)
           1 < ordz k (char r) /\ (* additional condition for using q = n DIV p *)
           mifactor z (unity k) /\ (forderz X = k) ==>
    !n a s. 1 < k /\ (a = (SUC (LOG2 n)) ** 2) /\
            (s = SQRT (phi k) * (SUC (LOG2 n))) /\
            passChecks r n a k s
-       ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_thm_0b]);
+       ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_thm_0b]
+QED
 
-val aks_main_thm_0b_alt = store_thm(
-  "aks_main_thm_0b_alt",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
+Theorem aks_main_thm_0b_alt:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
            mifactor z (unity k) /\ 1 < deg z /\ (forderz X = k) ==>
    !n a s. (a = (SUC (LOG2 n)) ** 2) /\
            (s = SQRT (phi k) * (SUC (LOG2 n))) /\
            passChecks r n a k s ==>
-           perfect_power n (char r)``,
-  metis_tac[AKS_main_thm_0b_alt]);
+           perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_thm_0b_alt]
+QED
 
-val aks_main_thm_1b = store_thm(
-  "aks_main_thm_1b",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
+Theorem aks_main_thm_1b:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
            mifactor z (unity k) /\ (forderz X = k) ==>
    !n a s. 0 < n /\ 0 < k /\ (a = (SUC (LOG2 n)) ** 2) /\
            (s = SQRT (phi k) * (SUC (LOG2 n))) /\
            passChecks r n a k s
-       ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_thm_1b]);
+       ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_thm_1b]
+QED
 
-val aks_main_thm_2b = store_thm(
-  "aks_main_thm_2b",
-  ``!(r:'a field). FiniteField r /\ (CARD R = char r) ==>
+Theorem aks_main_thm_2b:
+    !(r:'a field). FiniteField r /\ (CARD R = char r) ==>
    !n a k s. 0 < k /\ 1 < ordz k (char r) /\
              (a = (SUC (LOG2 n)) ** 2) /\
              (s = SQRT (phi k) * (SUC (LOG2 n))) /\
              passChecks r n a k s
-         ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_thm_2b]);
+         ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_thm_2b]
+QED
 
-val aks_main_thm_3b = store_thm(
-  "aks_main_thm_3b",
-  ``!n a k s. 1 < n /\ 0 < k /\ (a = (SUC (LOG2 n)) ** 2) /\
+Theorem aks_main_thm_3b:
+    !n a k s. 1 < n /\ 0 < k /\ (a = (SUC (LOG2 n)) ** 2) /\
              (s = SQRT (phi k) * (SUC (LOG2 n))) /\
              (!j. 1 < j /\ j <= k ==> ~(j divides n)) /\
              a <= ordz k n /\ poly_intro_range (ZN n) k n s
-         ==> ?p. prime p /\ perfect_power n p``,
-  metis_tac[AKS_main_thm_3b]);
+         ==> ?p. prime p /\ perfect_power n p
+Proof
+  metis_tac[AKS_main_thm_3b]
+QED
 
-val aks_main_thm_7b = store_thm(
-  "aks_main_thm_7b",
-  ``!n. prime n <=> power_free n /\
+Theorem aks_main_thm_7b:
+    !n. prime n <=> power_free n /\
    ?a k s. 0 < k /\ (a = (SUC (LOG2 n)) ** 2) /\
            (s = SQRT (phi k) * (SUC (LOG2 n))) /\
            (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\ a <= ordz k n /\
-           (k < n ==> poly_intro_range (ZN n) k n s)``,
-  metis_tac[AKS_main_thm_7b]);
+           (k < n ==> poly_intro_range (ZN n) k n s)
+Proof
+  metis_tac[AKS_main_thm_7b]
+QED
 
-val aks_main_thm_8b = store_thm(
-  "aks_main_thm_8b",
-  ``!n. prime n <=> power_free n /\
+Theorem aks_main_thm_8b:
+    !n. prime n <=> power_free n /\
    ?a k s. 0 < k /\ (a = (SUC (LOG2 n)) ** 2) /\
             (s = SQRT (phi k) * (SUC (LOG2 n))) /\
             (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\ a <= ordz k n /\
-            (k < n ==> poly_intro_checks n k s)``,
-  metis_tac[AKS_main_thm_8b]);
+            (k < n ==> poly_intro_checks n k s)
+Proof
+  metis_tac[AKS_main_thm_8b]
+QED
 
-val aks_main_ulog_0b = store_thm(
-  "aks_main_ulog_0b",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
+Theorem aks_main_ulog_0b:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
            mifactor z (unity k) /\ (forderz X = k) ==>
    !n a s. 0 < n /\ 1 < k /\ (* 0 < n to keep 0 < a *)
            (a = (ulog n) ** 2) /\
            (s = SQRT (phi k) * ulog n) /\
            passChecks r n a k s
-       ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_ulog_0b]);
+       ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_ulog_0b]
+QED
 
-val aks_main_ulog_0b_alt = store_thm(
-  "aks_main_ulog_0b_alt",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
+Theorem aks_main_ulog_0b_alt:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
            mifactor z (unity k) /\ 1 < deg z /\ (forderz X = k) ==>
    !n a s. 0 < n /\ (* 0 < n to keep 0 < a *)
            (a = (ulog n) ** 2) /\
            (s = SQRT (phi k) * ulog n) /\
            passChecks r n a k s
-       ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_ulog_0b_alt]);
+       ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_ulog_0b_alt]
+QED
 
-val aks_main_ulog_1b = store_thm(
-  "aks_main_ulog_1b",
-  ``!(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
+Theorem aks_main_ulog_1b:
+    !(r:'a field) k z. FiniteField r /\ (CARD R = char r) /\ 1 < ordz k (char r) /\
            mifactor z (unity k) /\ (forderz X = k) ==>
    !n a s. 0 < n /\ 0 < k /\ (a = (ulog n) ** 2) /\
            (s = SQRT (phi k) * ulog n) /\
            passChecks r n a k s
-       ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_ulog_1b]);
+       ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_ulog_1b]
+QED
 
-val aks_main_ulog_2b = store_thm(
-  "aks_main_ulog_2b",
-  ``!r:'a field. FiniteField r /\ (CARD R = char r) ==>
+Theorem aks_main_ulog_2b:
+    !r:'a field. FiniteField r /\ (CARD R = char r) ==>
    !n a k s. 0 < n /\ 0 < k /\ 1 < ordz k (char r) /\
              (a = (ulog n) ** 2) /\
              (s = SQRT (phi k) * ulog n) /\
              passChecks r n a k s
-         ==> perfect_power n (char r)``,
-  metis_tac[AKS_main_ulog_2b]);
+         ==> perfect_power n (char r)
+Proof
+  metis_tac[AKS_main_ulog_2b]
+QED
 
-val aks_main_ulog_3b = store_thm(
-  "aks_main_ulog_3b",
-  ``!n a k s. 1 < n /\ 0 < k /\
+Theorem aks_main_ulog_3b:
+    !n a k s. 1 < n /\ 0 < k /\
              (a = (ulog n) ** 2) /\
              (s = SQRT (phi k) * ulog n) /\
              (!j. 1 < j /\ j <= k ==> ~(j divides n)) /\
              a <= ordz k n /\ poly_intro_range (ZN n) k n s
-         ==> ?p. prime p /\ perfect_power n p``,
-  metis_tac[AKS_main_ulog_3b]);
+         ==> ?p. prime p /\ perfect_power n p
+Proof
+  metis_tac[AKS_main_ulog_3b]
+QED
 
-val aks_main_ulog_7b = store_thm(
-  "aks_main_ulog_7b",
-  ``!n. prime n <=> power_free n /\
+Theorem aks_main_ulog_7b:
+    !n. prime n <=> power_free n /\
    ?a k s. 0 < k /\ (a = (ulog n) ** 2) /\
            (s = SQRT (phi k) * ulog n) /\ a <= ordz k n /\
            (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\
-           (k < n ==> poly_intro_range (ZN n) k n s)``,
-  metis_tac[AKS_main_ulog_7b]);
+           (k < n ==> poly_intro_range (ZN n) k n s)
+Proof
+  metis_tac[AKS_main_ulog_7b]
+QED
 
-val aks_main_ulog_8b = store_thm(
-  "aks_main_ulog_8b",
-  ``!n. prime n <=> power_free n /\
+Theorem aks_main_ulog_8b:
+    !n. prime n <=> power_free n /\
    ?a k s. 0 < k /\ (a = (ulog n) ** 2) /\
            (s = SQRT (phi k) * ulog n) /\ a <= ordz k n /\
            (!j. 1 < j /\ j <= k /\ j < n ==> ~(j divides n)) /\
-           (k < n ==> poly_intro_checks n k s)``,
-  metis_tac[AKS_main_ulog_8b]);
+           (k < n ==> poly_intro_checks n k s)
+Proof
+  metis_tac[AKS_main_ulog_8b]
+QED
 
 
 

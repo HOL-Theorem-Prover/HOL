@@ -94,9 +94,10 @@ val ADDR_ADD1 = prove(
   \\ Cases_on `x`
   \\ SIMP_TAC std_ss [X86_ENCODE_def,LENGTH,X86_IMMEDIATE_def,APPEND]);
 
-val SPEC_X86_MODEL_IN_BYTE_MEM = store_thm("SPEC_X86_MODEL_IN_BYTE_MEM",
-  ``SPEC X86_MODEL p {(a,xs,T)} q ==>
-    (BYTES_IN_MEM a df f xs ==> SPEC X86_MODEL p (xCODE_SET df f) q)``,
+Theorem SPEC_X86_MODEL_IN_BYTE_MEM:
+    SPEC X86_MODEL p {(a,xs,T)} q ==>
+    (BYTES_IN_MEM a df f xs ==> SPEC X86_MODEL p (xCODE_SET df f) q)
+Proof
   REWRITE_TAC [prog_x86Theory.X86_SPEC_EXLPODE_CODE] \\ REPEAT STRIP_TAC
   \\ MATCH_MP_TAC ((GEN_ALL o RW [AND_IMP_INTRO] o DISCH_ALL o SPEC_ALL o
        UNDISCH_ALL o SPEC_ALL) progTheory.SPEC_SUBSET_CODE)
@@ -111,34 +112,41 @@ val SPEC_X86_MODEL_IN_BYTE_MEM = store_thm("SPEC_X86_MODEL_IN_BYTE_MEM",
   \\ NTAC 4 STRIP_TAC
   \\ Cases_on `n`
   \\ FULL_SIMP_TAC std_ss [EL,WORD_ADD_0,HD,TL,RW1[ADD_COMM]ADD1]
-  \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_ASSOC]);
+  \\ FULL_SIMP_TAC std_ss [GSYM word_add_n2w,WORD_ADD_ASSOC]
+QED
 
-val SPEC_EXISTS_EXISTS = store_thm("SPEC_EXISTS_EXISTS",
-  ``(!x. SPEC m (p x) c (q x)) ==> SPEC m (SEP_EXISTS x. p x) c (SEP_EXISTS x. q x)``,
+Theorem SPEC_EXISTS_EXISTS:
+    (!x. SPEC m (p x) c (q x)) ==> SPEC m (SEP_EXISTS x. p x) c (SEP_EXISTS x. q x)
+Proof
   SIMP_TAC std_ss [GSYM SPEC_PRE_EXISTS]
   \\ REPEAT STRIP_TAC
   \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `x`)
   \\ `SEP_IMP (q x) (SEP_EXISTS x. q x)` by
     (SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS] \\ METIS_TAC [])
-  \\ IMP_RES_TAC SPEC_WEAKEN);
+  \\ IMP_RES_TAC SPEC_WEAKEN
+QED
 
-val SPEC_EXISTS_EXISTS_POP = store_thm("SPEC_EXISTS_EXISTS_POP",
-  ``(!x. SPEC m (p x) c (q (x + 4w))) ==> SPEC m (SEP_EXISTS x. p x) c (SEP_EXISTS x. q x)``,
+Theorem SPEC_EXISTS_EXISTS_POP:
+    (!x. SPEC m (p x) c (q (x + 4w))) ==> SPEC m (SEP_EXISTS x. p x) c (SEP_EXISTS x. q x)
+Proof
   SIMP_TAC std_ss [GSYM SPEC_PRE_EXISTS]
   \\ REPEAT STRIP_TAC
   \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `x`)
   \\ `SEP_IMP (q (x + 4w)) (SEP_EXISTS x. q x)` by
     (SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS] \\ METIS_TAC [])
-  \\ IMP_RES_TAC SPEC_WEAKEN);
+  \\ IMP_RES_TAC SPEC_WEAKEN
+QED
 
-val SPEC_EXISTS_EXISTS_PUSH = store_thm("SPEC_EXISTS_EXISTS_PUSH",
-  ``(!x. SPEC m (p x) c (q (x - 4w))) ==> SPEC m (SEP_EXISTS x. p x) c (SEP_EXISTS x. q x)``,
+Theorem SPEC_EXISTS_EXISTS_PUSH:
+    (!x. SPEC m (p x) c (q (x - 4w))) ==> SPEC m (SEP_EXISTS x. p x) c (SEP_EXISTS x. q x)
+Proof
   SIMP_TAC std_ss [GSYM SPEC_PRE_EXISTS]
   \\ REPEAT STRIP_TAC
   \\ POP_ASSUM (ASSUME_TAC o Q.SPEC `x`)
   \\ `SEP_IMP (q (x - 4w)) (SEP_EXISTS x. q x)` by
     (SIMP_TAC std_ss [SEP_IMP_def,SEP_EXISTS] \\ METIS_TAC [])
-  \\ IMP_RES_TAC SPEC_WEAKEN);
+  \\ IMP_RES_TAC SPEC_WEAKEN
+QED
 
 val sub_lemma = let
   val (spec,_,s,_) = prog_x86Lib.x86_tools
@@ -168,10 +176,11 @@ val jmp_lemma = let
   val th = Q.INST [`w`|->`T`] th
   in save_thm("jmp_lemma",th) end;
 
-val X86_SPEC_COMPOSE_CODE = store_thm("X86_SPEC_COMPOSE_CODE",
-  ``SPEC X86_MODEL p ((a,xs,w) INSERT (b,ys,w) INSERT c) q ==>
+Theorem X86_SPEC_COMPOSE_CODE:
+    SPEC X86_MODEL p ((a,xs,w) INSERT (b,ys,w) INSERT c) q ==>
     (b = a + n2w (LENGTH xs)) ==>
-    SPEC X86_MODEL p ((a,xs++ys,w) INSERT c) q``,
+    SPEC X86_MODEL p ((a,xs++ys,w) INSERT c) q
+Proof
   SIMP_TAC std_ss [AND_IMP_INTRO] \\ ONCE_REWRITE_TAC [CONJ_COMM]
   \\ SIMP_TAC std_ss [GSYM AND_IMP_INTRO] \\ STRIP_TAC
   \\ ASM_SIMP_TAC std_ss [SPEC_def,X86_MODEL_def]
@@ -187,7 +196,8 @@ val X86_SPEC_COMPOSE_CODE = store_thm("X86_SPEC_COMPOSE_CODE",
   \\ POP_ASSUM (K ALL_TAC) \\ Induct
   \\ ASM_SIMP_TAC std_ss [APPEND,X86_INSTR_def,UNION_EMPTY,LENGTH,WORD_ADD_0]
   \\ SIMP_TAC std_ss [RW1[ADD_COMM]ADD1,GSYM word_add_n2w,WORD_ADD_ASSOC]
-  \\ SIMP_TAC std_ss [INSERT_UNION_EQ]);
+  \\ SIMP_TAC std_ss [INSERT_UNION_EQ]
+QED
 
 val pop_lemma = let
   val (spec,_,s,_) = prog_x86Lib.x86_tools
@@ -409,12 +419,13 @@ val iFETCH_iSTOP_IMP_SPEC = prove(
   \\ Q.SPEC_TAC (`ADDR ns a p`,`i`) \\ REPEAT STRIP_TAC
   \\ SPEC_PROVE_TAC [jmp_edx_lemma]);
 
-val iEXEC_IMP_SPEC = store_thm("iEXEC_IMP_SPEC",
-  ``!s t.
+Theorem iEXEC_IMP_SPEC:
+    !s t.
       iEXEC s t /\ CODE_IN_MEM s a df f ==>
       SPEC X86_MODEL (xJIT_INV s a * xR EDX edx)
                      (xCODE_SET df f)
-                     (xSTACK t * xR EDX edx * xPC edx * ~xS)``,
+                     (xSTACK t * xR EDX edx * xPC edx * ~xS)
+Proof
   SIMP_TAC std_ss [GSYM AND_IMP_INTRO]
   \\ HO_MATCH_MP_TAC iEXEC_ind
   \\ REPEAT STRIP_TAC
@@ -426,7 +437,8 @@ val iEXEC_IMP_SPEC = store_thm("iEXEC_IMP_SPEC",
   \\ Q.PAT_X_ASSUM `bb ==> cc` MATCH_MP_TAC
   \\ `?xs l p ns. s = (xs,l,p,ns)` by METIS_TAC [PAIR]
   \\ `?xs2 l2 p2 ns2. s' = (xs2,l2,p2,ns2)` by METIS_TAC [PAIR]
-  \\ FULL_SIMP_TAC std_ss [iSTEP_cases,CODE_IN_MEM_def]);
+  \\ FULL_SIMP_TAC std_ss [iSTEP_cases,CODE_IN_MEM_def]
+QED
 
 val ADDR_0 = prove(
   ``!ns a. ADDR ns a 0 = a``,

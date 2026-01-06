@@ -200,13 +200,13 @@ Induct_on `l`
           >> fs []))
 );
 
-val lex_spec_to_dfa_correct = Q.store_thm
-("lex_spec_to_dfa_correct",
- `!lex_spec.
-   dfa_correct lex_spec lex_spec_transition lex_spec_finals lex_spec`,
+Theorem lex_spec_to_dfa_correct:
+  !lex_spec.
+   dfa_correct lex_spec lex_spec_transition lex_spec_finals lex_spec
+Proof
 rw [dfa_correct_def,EQ_IMP_THM]
  >- metis_tac [path_to_spec]
  >- metis_tac [spec_to_path]
-);
+QED
 
 

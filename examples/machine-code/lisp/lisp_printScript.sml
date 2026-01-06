@@ -1506,14 +1506,15 @@ val DIFF_DIFF_EQ = prove(
   FULL_SIMP_TAC std_ss [EXTENSION,DISJOINT_DEF,IN_INTER,NOT_IN_EMPTY,
      SUBSET_DEF,IN_DIFF] \\ METIS_TAC []);
 
-val arm_print_sexp_lemma = store_thm("arm_print_sexp_lemma",
-  ``(one_space r7 (STRLEN (sexp2string t1) + 1) c) (fun2set (f,df)) /\
+Theorem arm_print_sexp_lemma:
+    (one_space r7 (STRLEN (sexp2string t1) + 1) c) (fun2set (f,df)) /\
     lisp_inv (t1,t2,t3,t4,t5,t6,l) (w1,w2,w3,w4,w5,w6,r9,dh,h,sym,rest) ==>
     ?r4i r7i r8i hi fi.
       arm_print_sexp_pre (w1,r7,r9,dh,h,df,f,rest) /\
       (arm_print_sexp (w1,r7,r9,dh,h,df,f,rest) =
         (r7,r4i,r7i,r8i,r9,dh,hi,df,fi,rest)) /\
-      (one_string r7 (STRCAT (sexp2string t1) null_string) c) (fun2set (fi,df))``,
+      (one_string r7 (STRCAT (sexp2string t1) null_string) c) (fun2set (fi,df))
+Proof
   STRIP_TAC
   \\ IMP_RES_TAC one_space_LESS_EQ
   \\ REPEAT (POP_ASSUM MP_TAC)
@@ -1773,7 +1774,8 @@ val arm_print_sexp_lemma = store_thm("arm_print_sexp_lemma",
   \\ REPEAT (Q.PAT_X_ASSUM `bbb (fun2set(ff,fff))` (K ALL_TAC))
   \\ SIMP_TAC std_ss [APPLY_UPDATE_THM]
   \\ ASM_SIMP_TAC std_ss [word_sub_def,word_2comp_n2w]
-  \\ SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11]);
+  \\ SIMP_TAC (std_ss++SIZES_ss) [WORD_EQ_ADD_CANCEL,n2w_11]
+QED
 
 (*
 

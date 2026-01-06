@@ -27,9 +27,9 @@ val _ = overload_on ("apply_pi", ``pmact nterm_pmact``)
 val _ = set_fixity "·" (Infixr 700)
 val _ = overload_on("·",``apply_pi``)
 
-val apply_pi_raw = Q.store_thm(
-  "apply_pi_raw",
-  `apply_pi = raw_apply_pi`,
+Theorem apply_pi_raw:
+   apply_pi = raw_apply_pi
+Proof
   SRW_TAC [][GSYM pmact_bijections, is_pmact_def] THENL [
     Induct_on `x` THEN ASM_SIMP_TAC (psrw_ss()) [raw_apply_pi_def],
     Induct_on `x` THEN
@@ -37,7 +37,8 @@ val apply_pi_raw = Q.store_thm(
     SIMP_TAC (srw_ss()) [FUN_EQ_THM] THEN Induct_on `x` THEN
     SRW_TAC [][raw_apply_pi_def] THEN
     ASM_SIMP_TAC (psrw_ss()) [app_permeq_monotone]
-  ])
+  ]
+QED
 
 val apply_pi_thm = RWsave_thm(
   "apply_pi_thm",
@@ -55,9 +56,11 @@ val apply_pi_id = save_thm("apply_pi_id",nterm_spec pmact_id)
 val apply_pi_injective =
     save_thm("apply_pi_injective",nterm_inst `pm` pmact_injective);
 val apply_pi_eql = save_thm("apply_pi_eql",nterm_inst `pm` pmact_eql);
-val apply_pi_eqr = store_thm("apply_pi_eqr",
-``(t1 = apply_pi pi t2) ⇔ (apply_pi (REVERSE pi) t1 = t2)``,
-METIS_TAC [apply_pi_inverse]);
+Theorem apply_pi_eqr:
+  (t1 = apply_pi pi t2) ⇔ (apply_pi (REVERSE pi) t1 = t2)
+Proof
+METIS_TAC [apply_pi_inverse]
+QED
 
 val nvars_apply_pi = RWstore_thm(
 "nvars_apply_pi",

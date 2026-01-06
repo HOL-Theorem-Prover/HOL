@@ -78,9 +78,8 @@ val pair_rwts = BasicProvers.thy_ssfrag "pair"
 (* since all the ap's type changes if new state vars are introduced, we have to resort to a little trickery (via AP_EXT)
    to "lift" f to the new ap type that has extra state vars *)
 (* ASSERT: note also that this only works if the L are defined as \s p. p s; the 3rd and 4th assums *)
-val AP_EXT_THM = store_thm(
-  "AP_EXT_THM",
-  ``!ks1 ks2 s1 s2 e1 e2 f.
+Theorem AP_EXT_THM:
+    !ks1 ks2 s1 s2 e1 e2 f.
        wfKS ks1 ==> wfKS ks2 ==>
        (!p s1. p IN ks1.L s1 = p s1) ==>
        (!p s1 s2. p IN ks2.L (s1,s2) = p (s1,s2)) ==>
@@ -91,7 +90,8 @@ val AP_EXT_THM = store_thm(
        IMF f ==>
        (!p. AP p SUBF f ==> p IN ks1.ap)
      ==>
-       (s1 IN STATES f ks1 e1 = (s1,s2) IN STATES (AP_EXT f) ks2 e2)``,
+       (s1 IN STATES f ks1 e1 = (s1,s2) IN STATES (AP_EXT f) ks2 e2)
+Proof
   Induct_on `f` THEN REPEAT CONJ_TAC THENL [
     SIMP_TAC std_ss [STATES_def,IN_UNIV,wfKS_def,AP_EXT_def], (* T *)
     SIMP_TAC std_ss [STATES_def, NOT_IN_EMPTY,AP_EXT_def], (* F *)
@@ -199,7 +199,8 @@ val AP_EXT_THM = store_thm(
      ],
     POP_ASSUM (fn t => METIS_TAC [t])
     ] (* nu *)
-  ])
+  ]
+QED
 
 val lem3a = REWRITE_RULE [GSYM IMF_MU_NNF] (ISPECL [``ks:('prop,'state) KS``,``(NNF f):'prop mu``,``e:string->'state->bool``,``Y:'state->bool``,``X:'state->bool``,``Q:string``] (REWRITE_RULE [SUBSET_DEF] (GEN_ALL (SIMP_RULE std_ss [] (REWRITE_RULE [SUBSET_REFL] (ISPECL [``f:'prop mu``,``ks:('prop,'state) KS``,``e:string -> 'state -> bool``,``e:string -> 'state -> bool``,``Q:string``,``X:'state->bool``,``Y:'state->bool``] STATES_MONO))))));
 

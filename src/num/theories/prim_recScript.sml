@@ -57,6 +57,7 @@
 Theory prim_rec[bare]
 Libs
   HolKernel boolLib Prim_rec Parse simpLib boolSimps
+  BasicProvers[qualified] (* enable [simp] tag *)
 
 
 type thm = Thm.thm
@@ -508,12 +509,11 @@ local
        THEN ASM_REWRITE_TAC [SIMP_REC_THM]
        THEN BETA_TAC THEN RES_TAC THEN IMP_RES_TAC DCkey)
 in
-val DC = store_thm("DC",
-Term
-  `!P R a.
+Theorem DC: !P R a.
       P a /\ (!x. P x ==> ?y. P y /\ R x y)
           ==>
-      ?f. (f 0 = a) /\ (!n. P (f n) /\ R (f n) (f (SUC n)))`,
+      ?f. (f 0 = a) /\ (!n. P (f n) /\ R (f n) (f (SUC n)))
+Proof
 REPEAT STRIP_TAC
   THEN EXISTS_TAC (Term`SIMP_REC a (\x. @y. P y /\ R x y)`)
   THEN REWRITE_TAC [SIMP_REC_THM] THEN BETA_TAC THEN GEN_TAC
@@ -521,7 +521,8 @@ REPEAT STRIP_TAC
        (Term`P (SIMP_REC a (\x. @y. P y /\ R x y) n)`) ASSUME_TAC THENL
   [MATCH_MP_TAC totalDClem THEN ASM_REWRITE_TAC[],
    ASM_REWRITE_TAC[] THEN RES_THEN MP_TAC THEN DISCH_THEN (K ALL_TAC)
-  THEN DISCH_THEN (CHOOSE_THEN (ACCEPT_TAC o CONJUNCT2 o MATCH_MP DCkey))])
+  THEN DISCH_THEN (CHOOSE_THEN (ACCEPT_TAC o CONJUNCT2 o MATCH_MP DCkey))]
+QED
 end;
 
 
@@ -653,12 +654,11 @@ QED
  * closure of predecessor.
  *---------------------------------------------------------------------------*)
 
-Theorem WF_LESS:  WF $<
+Theorem WF_LESS[simp]:  WF $<
 Proof
   REWRITE_TAC[LESS_ALT, relationTheory.WF_TC_EQN, WF_PRED]
 QED
 
-val _ = BasicProvers.export_rewrites ["WF_LESS"]
 
 
 (*---------------------------------------------------------------------------
@@ -669,13 +669,12 @@ val _ = BasicProvers.export_rewrites ["WF_LESS"]
 val measure_def = Q.new_definition ("measure_def", `measure = inv_image $<`);
 val _ = OpenTheoryMap.OpenTheory_const_name{const={Thy="prim_rec",Name="measure"},name=(["Relation"],"measure")}
 
-Theorem WF_measure:  !m. WF (measure m)
+Theorem WF_measure[simp]:  !m. WF (measure m)
 Proof
 REWRITE_TAC[measure_def]
  THEN MATCH_MP_TAC relationTheory.WF_inv_image
  THEN ACCEPT_TAC WF_LESS
 QED
-val _ = BasicProvers.export_rewrites ["WF_measure"]
 
 Theorem measure_thm[simp]:
    !f x y. measure f x y <=> f x < f y

@@ -154,9 +154,8 @@ Proof
    DISCH_THEN SUBST1_TAC THEN REFL_TAC]
 QED
 
-Theorem INR_INL_11 =
+Theorem INR_INL_11[simp] =
                           CONJ (GEN_ALL INL_11) (GEN_ALL INR_11);
-val _ = export_rewrites ["INR_INL_11"]
 
 (* Prove that left injections and right injections are not equal.       *)
 Theorem INR_neq_INL:
@@ -257,7 +256,7 @@ Theorem EXISTS_SUM =
 Theorem sum_CASES =
                          hd (Prim_rec.prove_cases_thm sum_INDUCT);
 
-Theorem sum_distinct:
+Theorem sum_distinct[simp]:
   !x:'a y:'b. ~(INL x = INR y)
 Proof
   REPEAT STRIP_TAC THEN
@@ -266,7 +265,6 @@ Proof
   FIRST_X_ASSUM (MP_TAC o AP_TERM (Term`h:'a + 'b -> bool`)) THEN
   ASM_REWRITE_TAC []
 QED
-val _ = export_rewrites ["sum_distinct"]
 
 Theorem sum_distinct1 = GSYM sum_distinct;
 
@@ -344,24 +342,22 @@ Proof
 QED
 
 (* Prove that: |- !x. ISL(x) ==> INL (OUTL x) = x                       *)
-Theorem INL:
+Theorem INL[simp]:
      !x:('a,'b)sum. ISL(x) ==> (INL (OUTL x) = x)
 Proof
     STRIP_TAC THEN
     STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
     ASM_REWRITE_TAC [ISL,OUTL]
 QED
-val _ = export_rewrites ["INL"]
 
 (* Prove that: |- !x. ISR(x) ==> INR (OUTR x) = x                       *)
-Theorem INR:
+Theorem INR[simp]:
      !x:('a,'b)sum. ISR(x) ==> (INR (OUTR x) = x)
 Proof
     STRIP_TAC THEN
     STRIP_ASSUME_TAC (SPEC “x:('a,'b)sum” sum_CASES) THEN
     ASM_REWRITE_TAC [ISR,OUTR]
 QED
-val _ = export_rewrites ["INR"]
 
 Theorem sum_case_cong =
                              Prim_rec.case_cong_thm sum_CASES sum_case_def;
@@ -406,7 +402,7 @@ Proof
   SIMP_TAC (srw_ss()) [FORALL_SUM, FUN_EQ_THM]
 QED
 
-Theorem cond_sum_expand:
+Theorem cond_sum_expand[simp]:
   (!x y z. ((if P then INR x else INL y) = INR z) = (P /\ (z = x))) /\
   (!x y z. ((if P then INR x else INL y) = INL z) = (~P /\ (z = y))) /\
   (!x y z. ((if P then INL x else INR y) = INL z) = (P /\ (z = x))) /\
@@ -414,21 +410,18 @@ Theorem cond_sum_expand:
 Proof
 Cases_on `P` THEN FULL_SIMP_TAC(srw_ss())[] THEN SRW_TAC[][EQ_IMP_THM]
 QED
-val _ = export_rewrites["cond_sum_expand"]
 
-Theorem NOT_ISL_ISR:
+Theorem NOT_ISL_ISR[simp]:
     !x. ~ISL x = ISR x
 Proof
   GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][]
 QED
-val _ = export_rewrites["NOT_ISL_ISR"]
 
-Theorem NOT_ISR_ISL:
+Theorem NOT_ISR_ISL[simp]:
     !x. ~ISR x = ISL x
 Proof
   GEN_TAC THEN Q.SPEC_THEN `x` STRUCT_CASES_TAC sum_CASES THEN SRW_TAC[][]
 QED
-val _ = export_rewrites["NOT_ISR_ISL"]
 
 (* ----------------------------------------------------------------------
     SUM_ALL

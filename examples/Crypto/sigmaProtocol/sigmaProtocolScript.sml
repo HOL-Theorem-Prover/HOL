@@ -56,9 +56,9 @@ End
 
 
 (* Cross product of Abelian groups is an Abelian group *)
-val Gcross_group_thm = store_thm(
-  "Gcross_group_thm",
-  “AbelianGroup g1 ∧ AbelianGroup g2 ⇒ AbelianGroup (Gcross g1 g2)”,
+Theorem Gcross_group_thm:
+   AbelianGroup g1 ∧ AbelianGroup g2 ⇒ AbelianGroup (Gcross g1 g2)
+Proof
   rw[] >>
   simp[AbelianGroup_def, group_def_alt, Group_def, Gcross_def, pairTheory.FORALL_PROD] >>
   rpt (strip_tac >>
@@ -73,7 +73,8 @@ val Gcross_group_thm = store_thm(
    ‘((g1.op y1 p_1) , (g2.op y2 p_2)) = (g1.id,g2.id)’ by metis_tac[pairTheory.PAIR] >>
    qexists_tac ‘y’ >>
    ‘FST y ∈ g1.carrier ∧ SND y ∈ g2.carrier’ by rw[pairTheory.PAIR, Abbr‘y’] >>
-   metis_tac[]));
+   metis_tac[])
+QED
 
 
 (* Definition of an Abstract Sigma Protocol -
@@ -407,11 +408,12 @@ End
 
 (* Disjointness relation in the equality composition
    is exactly the same as in the original protocol. *)
-val sp_eq_dis_thm = store_thm(
-  "sp_eq_dis_thm",
-  “(SP_eq sp).Disjoint = sp.Disjoint”,
+Theorem sp_eq_dis_thm:
+   (SP_eq sp).Disjoint = sp.Disjoint
+Proof
   rw[] >>
-  simp[SP_eq_def]);
+  simp[SP_eq_def]
+QED
 
 
 (* Well-formedness conditions for a sigma protocol,
@@ -684,57 +686,61 @@ End
 
 (* AND composition of well-formed sigma protocols is also well-formed.
    This shows the AND combiner preserves well-formedness. *)
-val WellFormed_SP_and_thm = store_thm(
-  "WellFormed_SP_and_thm",
-  “WellFormed_SP sp1 ∧ WellFormed_SP sp2 ⇒ WellFormed_SP (SP_and sp1 sp2)”,
+Theorem WellFormed_SP_and_thm:
+   WellFormed_SP sp1 ∧ WellFormed_SP sp2 ⇒ WellFormed_SP (SP_and sp1 sp2)
+Proof
   simp[WellFormed_SP_def, SP_and_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >-
    ‘AbelianGroup (Gcross sp1.Challenges sp2.Challenges)’ by metis_tac[Gcross_group_thm] >>
   rpt (pairarg_tac >> gvs[]) >>
   fs[Gcross_def, pairTheory.PAIR] >>
   gs[WellFormed_SP_def, pairTheory.PAIR] >>
-  metis_tac[pairTheory.PAIR]);
+  metis_tac[pairTheory.PAIR]
+QED
 
 
 (* AND composition of complete sigma protocols is also complete.
    Shows that the AND combiner preserves the ability for honest provers to convince honest verifiers. *)
-val Complete_SP_and_thm = store_thm(
-  "Complete_SP_and_thm",
-  “Complete_SP sp1 ∧ Complete_SP sp2 ⇒ Complete_SP (SP_and sp1 sp2)”,
+Theorem Complete_SP_and_thm:
+   Complete_SP sp1 ∧ Complete_SP sp2 ⇒ Complete_SP (SP_and sp1 sp2)
+Proof
   simp[Complete_SP_def, SP_and_def, pairTheory.FORALL_PROD] >>
-  rpt (strip_tac >> gs[] >> fs[Gcross_def, pairTheory.PAIR]));
+  rpt (strip_tac >> gs[] >> fs[Gcross_def, pairTheory.PAIR])
+QED
 
 
 (* AND composition of special sound sigma protocols is also special sound.
    Shows that the AND combiner preserves the ability to extract witnesses
    from accepting transcripts with different challenges. *)
-val SpecialSoundness_SP_and_thm = store_thm(
-  "SpecialSoundness_SP_and_thm",
-  “SpecialSoundness_SP sp1 ∧ SpecialSoundness_SP sp2 ⇒ SpecialSoundness_SP (SP_and sp1 sp2)”,
+Theorem SpecialSoundness_SP_and_thm:
+   SpecialSoundness_SP sp1 ∧ SpecialSoundness_SP sp2 ⇒ SpecialSoundness_SP (SP_and sp1 sp2)
+Proof
   simp[SpecialSoundness_SP_def, SP_and_def, pairTheory.FORALL_PROD] >>
-  rpt (strip_tac >> fs[Gcross_def, pairTheory.PAIR] >> metis_tac[]));
+  rpt (strip_tac >> fs[Gcross_def, pairTheory.PAIR] >> metis_tac[])
+QED
 
 
 (* AND composition of simulator-correct sigma protocols is also simulator-correct.
   Shows that the AND combiner preserves the ability to generate valid-looking
   simulated transcripts that pass verification. *)
-val SimulatorCorrectness_SP_and_thm = store_thm(
-  "SimulatorCorrectness_SP_and_thm",
-  “SimulatorCorrectness_SP sp1 ∧ SimulatorCorrectness_SP sp2 ⇒ SimulatorCorrectness_SP (SP_and sp1 sp2)”,
+Theorem SimulatorCorrectness_SP_and_thm:
+   SimulatorCorrectness_SP sp1 ∧ SimulatorCorrectness_SP sp2 ⇒ SimulatorCorrectness_SP (SP_and sp1 sp2)
+Proof
   simp[SimulatorCorrectness_SP_def, SP_and_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
   ‘p_1'' ∈ sp1.Challenges.carrier ∧ p_2'' ∈ sp2.Challenges.carrier’ by fs[Gcross_def, pairTheory.PAIR] >>
   rpt (pairarg_tac >> gvs[]) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 
 (* AND composition of Honest-Verifier Zero-Knowledge (HVZK) sigma protocols is also HVZK,
   given the component protocols are well-formed. This shows the AND combiner
   preserves zero-knowledge simulation capabilities. *)
-val HonestVerifierZeroKnowledge_SP_and_thm = store_thm(
-  "HonestVerifierZeroKnowledge_SP_and_thm",
-  “HonestVerifierZeroKnowledge_SP sp1 ∧ HonestVerifierZeroKnowledge_SP sp2 ∧
-   WellFormed_SP sp1 ∧ WellFormed_SP sp2 ⇒ HonestVerifierZeroKnowledge_SP (SP_and sp1 sp2)”,
+Theorem HonestVerifierZeroKnowledge_SP_and_thm:
+   HonestVerifierZeroKnowledge_SP sp1 ∧ HonestVerifierZeroKnowledge_SP sp2 ∧
+   WellFormed_SP sp1 ∧ WellFormed_SP sp2 ⇒ HonestVerifierZeroKnowledge_SP (SP_and sp1 sp2)
+Proof
   simp[HonestVerifierZeroKnowledge_SP_def, SP_and_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >-
    (qabbrev_tac‘s1 = p_1’ >>
@@ -780,26 +786,28 @@ val HonestVerifierZeroKnowledge_SP_and_thm = store_thm(
      ((s1,s2),(c1,c2),(e1,e2),(t11,t22))’ by rw[] >>
     ‘((s1,s2),(c1,c2),(e1,e2),t11,t22) = (λ(s1',c1',e1',t1'). (λ(s2',c2',e2',t2'). ((s1',s2'),(c1',c2'),(e1',e2'),t1',t2')) x2) x1’ by metis_tac[] >>
     metis_tac[]) >>
-  rpt(gs[Gcross_def, pairTheory.PAIR] >> metis_tac[]));
+  rpt(gs[Gcross_def, pairTheory.PAIR] >> metis_tac[])
+QED
 
 
 (* Lemma proving SP_csub (challenge subtraction) produces valid challenges.
   This is crucial for OR composition where we need to manipulate challenges
   while ensuring they remain in the challenge group's carrier set. *)
-val SP_csub_Lemma = store_thm(
-  "SP_csub_Lemma",
-  “∀sp x y.
+Theorem SP_csub_Lemma:
+   ∀sp x y.
      WellFormed_SP sp ∧
      x ∈ sp.Challenges.carrier ∧
      y ∈ sp.Challenges.carrier ⇒
-     SP_csub sp x y ∈ sp.Challenges.carrier”,
+     SP_csub sp x y ∈ sp.Challenges.carrier
+Proof
   simp[SP_csub_def, SP_or_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
   qabbrev_tac‘y1 = sp.Challenges.inv y’ >>
   qabbrev_tac‘Gr = sp.Challenges’ >>
   ‘Group Gr’ by metis_tac[AbelianGroup_def, WellFormed_SP_def] >>
   ‘y1 ∈ Gr.carrier’ by metis_tac[group_inv_element] >>
-  ‘Gr.op x y1 ∈ Gr.carrier’ by metis_tac[group_op_element]);
+  ‘Gr.op x y1 ∈ Gr.carrier’ by metis_tac[group_op_element]
+QED
 
 
 (* Auxiliary tactics *)
@@ -825,9 +833,9 @@ val PAIR_TAC_METIS_TAC =
 
 (* OR composition preserves well-formedness - if the input protocol sp1
   is well-formed, then its OR composition SP_or sp1 is also well-formed *)
-val WellFormed_SP_or_thm = store_thm(
-  "WellFormed_SP_or_thm",
-  “WellFormed_SP sp1 ⇒ WellFormed_SP (SP_or sp1)”,
+Theorem WellFormed_SP_or_thm:
+   WellFormed_SP sp1 ⇒ WellFormed_SP (SP_or sp1)
+Proof
   rw[]>>
   simp[WellFormed_SP_def, SP_or_def, pairTheory.FORALL_PROD]>>
   rpt strip_tac>-
@@ -836,15 +844,16 @@ val WellFormed_SP_or_thm = store_thm(
    (Cases_on ‘p_2 ≠ p_2'' ’ >>
     rpt(fs[] >> metis_tac[WellFormed_SP_def, SP_or_def, SP_csub_Lemma]))>>
   rpt(PAIR_TAC_METIS_TAC)>>
-  rpt(CASES_ON_WITNESS));
+  rpt(CASES_ON_WITNESS)
+QED
 
 
 (* OR composition preserves simulator correctness - if the input protocol sp1
   has correct simulation and is well-formed, then its OR composition SP_or sp1 also produces
   valid simulated transcripts that pass verification. *)
-val SimulatorCorrectness_SP_or_thm = store_thm(
-  "SimulatorCorrectness_SP_or_thm",
-  “SimulatorCorrectness_SP sp1 ∧ WellFormed_SP sp1 ⇒ SimulatorCorrectness_SP (SP_or sp1)”,
+Theorem SimulatorCorrectness_SP_or_thm:
+   SimulatorCorrectness_SP sp1 ∧ WellFormed_SP sp1 ⇒ SimulatorCorrectness_SP (SP_or sp1)
+Proof
   simp[SimulatorCorrectness_SP_def, SP_or_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
   qabbrev_tac‘s1 = p_1’ >> qabbrev_tac‘s2 = p_2’ >> qabbrev_tac‘t1 = p_1'’ >>
@@ -863,7 +872,8 @@ val SimulatorCorrectness_SP_or_thm = store_thm(
   qabbrev_tac‘tb = SND (SND (SND (sp1.Simulator s2 t2 e2)))’ >>
   ‘sp1.Simulator s2 t2 e2 = (sb, cb, eb, tb)’ by rw[pairTheory.PAIR, Abbr‘sb’, Abbr‘cb’, Abbr‘eb’, Abbr‘tb’] >>
   gs[] >>
-  metis_tac[WellFormed_SP_def]);
+  metis_tac[WellFormed_SP_def]
+QED
 
 
 (* Lemma proving a key property of challenge subtraction (SP_csub) in the challenge group:
@@ -871,13 +881,13 @@ val SimulatorCorrectness_SP_or_thm = store_thm(
   SP_csub sp x (SP_csub sp x y) = y
   This is like the algebraic identity:
   x - (x-y) = x - x + y = y *)
-val SP_csub_Lemma2 = store_thm(
-  "SP_csub_Lemma2",
-  “∀sp x y z.
+Theorem SP_csub_Lemma2:
+   ∀sp x y z.
      WellFormed_SP sp ∧
      x ∈ sp.Challenges.carrier ∧
      y ∈ sp.Challenges.carrier ⇒
-     SP_csub sp x (SP_csub sp x y) = y”,
+     SP_csub sp x (SP_csub sp x y) = y
+Proof
   simp[SP_csub_def, SP_or_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
   qabbrev_tac‘Gr = sp.Challenges’ >>
@@ -898,7 +908,8 @@ val SP_csub_Lemma2 = store_thm(
   ‘Gr.op x (Gr.op (Gr.inv x) (Gr.inv s)) = y’ by metis_tac[] >>
   ‘Gr.inv (Gr.op s x) = Gr.op (Gr.inv x) (Gr.inv s)’ by metis_tac[group_inv_op] >>
   ‘Gr.op x (Gr.inv (Gr.op s x)) = y’ by metis_tac[] >>
-  ‘Gr.op x z = y’ by metis_tac[Abbr‘z’]);
+  ‘Gr.op x z = y’ by metis_tac[Abbr‘z’]
+QED
 
 
 (* Lemma proving another key property of challenge subtraction (SP_csub) in the challenge group:
@@ -906,16 +917,16 @@ val SP_csub_Lemma2 = store_thm(
   In other words, if we subtract the same challenge (e3 = e4) from different challenges (e1 ≠ e2),
   we get different results. This is like the algebraic identity:
   If a ≠ b then a - c ≠ b - c *)
-val SP_csub_Lemma3 = store_thm(
-  "SP_csub_Lemma3",
-  “∀sp e1 e2 e3 e4.
+Theorem SP_csub_Lemma3:
+   ∀sp e1 e2 e3 e4.
      WellFormed_SP sp ∧
      e1 ∈ sp.Challenges.carrier ∧
      e2 ∈ sp.Challenges.carrier ∧
      e3 ∈ sp.Challenges.carrier ∧
      e4 ∈ sp.Challenges.carrier ∧
      e1 ≠ e2 ∧ e3 = e4
-     ⇒ (SP_csub sp e1 e3) ≠ (SP_csub sp e2 e4)”,
+     ⇒ (SP_csub sp e1 e3) ≠ (SP_csub sp e2 e4)
+Proof
   rw[] >>
   simp[WellFormed_SP_def, SP_csub_def, SP_or_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
@@ -926,16 +937,17 @@ val SP_csub_Lemma3 = store_thm(
   ‘e1 = Gr.op (Gr.op e2 (Gr.inv e3)) e3’ by metis_tac[group_inv_inv] >>
   ‘e1 = Gr.op e2 (Gr.op (Gr.inv e3) e3)’ by metis_tac[group_assoc, group_op_element, group_inv_element] >>
   ‘e1 = Gr.op e2 Gr.id’ by metis_tac[group_linv, group_op_element, group_inv_element] >>
-  ‘e1 = e2’ by metis_tac[group_rid, group_op_element, group_inv_element]);
+  ‘e1 = e2’ by metis_tac[group_rid, group_op_element, group_inv_element]
+QED
 
 
 (* OR composition preserves completeness - if the input protocol sp1
   is complete, simulator-correct and well-formed, then its OR composition SP_or sp1 is also complete.
   This shows an honest prover can convince an honest verifier in the OR composition when they
   have a valid witness for either statement. *)
-val Complete_SP_or_thm = store_thm(
-  "Complete_SP_or_thm",
-  “Complete_SP sp1 ∧ SimulatorCorrectness_SP sp1 ∧ WellFormed_SP sp1 ⇒ Complete_SP (SP_or sp1)”,
+Theorem Complete_SP_or_thm:
+   Complete_SP sp1 ∧ SimulatorCorrectness_SP sp1 ∧ WellFormed_SP sp1 ⇒ Complete_SP (SP_or sp1)
+Proof
   rw[]>>
   simp[Complete_SP_def, SP_or_def, pairTheory.FORALL_PROD]>>
   rpt strip_tac >-
@@ -988,7 +1000,8 @@ val Complete_SP_or_thm = store_thm(
        ‘e3 ∈ sp1.Challenges.carrier’ by metis_tac[SP_csub_Lemma]>>
        ‘sp1.HonestVerifier (s2,c2,e3,t2)’by metis_tac[Complete_SP_def]>>
        gs[]
-     ]));
+     ])
+QED
 
 
 (* OR composition preserves special soundness - given a well-formed
@@ -996,14 +1009,14 @@ val Complete_SP_or_thm = store_thm(
   its OR composition SP_or sp1 also satisfies special soundness.
   Special soundness means we can extract a valid witness from any two accepting transcripts
   with the same commitment but different challenges. *)
-val SpecialSoundness_SP_or_thm = store_thm(
-  "SpecialSoundness_SP_or_thm",
-  “∀sp. WellFormed_SP sp1 ∧
+Theorem SpecialSoundness_SP_or_thm:
+   ∀sp. WellFormed_SP sp1 ∧
         SpecialSoundness_SP sp1 ∧
         (∀e1 e2. e1 ∈ sp1.Challenges.carrier ∧
                  e2 ∈ sp1.Challenges.carrier ⇒
                  (sp1.Disjoint e1 e2 ⇔ e1 ≠ e2))
-        ⇒ SpecialSoundness_SP (SP_or sp1)”,
+        ⇒ SpecialSoundness_SP (SP_or sp1)
+Proof
   rw[] >>
   simp[SpecialSoundness_SP_def, SP_or_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
@@ -1028,14 +1041,15 @@ val SpecialSoundness_SP_or_thm = store_thm(
       ‘sp1.Disjoint e5 e6’ by metis_tac[] >>
       ‘sp1.Relation s2 w’ by metis_tac[SpecialSoundness_SP_def] >>
       rw[]
-    ]);
+    ]
+QED
 
 
 (* OR composition preserves honest-verifier zero-knowledge (HVZK)
 property. When the input protocol is HVZK and well-formed, its OR composition remains HVZK *)
-val HonestVerifierZeroKnowledge_SP_or_thm = store_thm(
-  "HonestVerifierZeroKnowledge_SP_or_thm",
-  “HonestVerifierZeroKnowledge_SP sp ∧ WellFormed_SP sp ⇒ HonestVerifierZeroKnowledge_SP (SP_or sp)”,
+Theorem HonestVerifierZeroKnowledge_SP_or_thm:
+   HonestVerifierZeroKnowledge_SP sp ∧ WellFormed_SP sp ⇒ HonestVerifierZeroKnowledge_SP (SP_or sp)
+Proof
   rw[]>>
   simp[HonestVerifierZeroKnowledge_SP_def, SP_or_def, pairTheory.FORALL_PROD]>>
   rpt strip_tac >-
@@ -1192,14 +1206,15 @@ val HonestVerifierZeroKnowledge_SP_or_thm = store_thm(
        ‘r = sp.SimulatorMapInverse s2 w e4 t5 ∧ e4 = e5’by rw[]>>
        ‘sp.SimulatorMap s2 w e5 r = t5’by rw[]>>
        rw[]
-     ]));
+     ])
+QED
 
 
 (* Equality composition preserves well-formedness - if the input protocol is
    well-formed, so is its equality composition *)
-val WellFormed_SP_eq_thm = store_thm(
-  "WellFormed_SP_eq_thm",
-  “WellFormed_SP sp ⇒ WellFormed_SP (SP_eq sp)”,
+Theorem WellFormed_SP_eq_thm:
+   WellFormed_SP sp ⇒ WellFormed_SP (SP_eq sp)
+Proof
   rw[] >>
   simp[WellFormed_SP_def, SP_eq_def, pairTheory.FORALL_PROD] >>
   rpt (strip_tac >>
@@ -1207,15 +1222,16 @@ val WellFormed_SP_eq_thm = store_thm(
   rpt (rpt (pairarg_tac >> gvs[]) >>
        fs[Gcross_def, pairTheory.PAIR] >>
        gs[WellFormed_SP_def, pairTheory.PAIR] >>
-       metis_tac[pairTheory.PAIR]));
+       metis_tac[pairTheory.PAIR])
+QED
 
 
 (* Stronger well-formedness conditions preserve under equality composition - when
 the input protocol satisfies the special equality well-formedness properties,
 its equality composition does too. *)
-val Eq_WellFormed_SP_eq_thm = store_thm(
-  "Eq_WellFormed_SP_eq_thm",
-  “Eq_WellFormed_SP sp ⇒ Eq_WellFormed_SP (SP_eq sp)”,
+Theorem Eq_WellFormed_SP_eq_thm:
+   Eq_WellFormed_SP sp ⇒ Eq_WellFormed_SP (SP_eq sp)
+Proof
   rw[] >>
   simp[Eq_WellFormed_SP_def, WellFormed_SP_def, SP_eq_def, pairTheory.FORALL_PROD] >>
   rpt (strip_tac >>
@@ -1223,28 +1239,30 @@ val Eq_WellFormed_SP_eq_thm = store_thm(
   rpt (rpt (pairarg_tac >> gvs[]) >>
        fs[Gcross_def, pairTheory.PAIR] >>
        gs[Eq_WellFormed_SP_def, WellFormed_SP_def, pairTheory.PAIR] >>
-       metis_tac[pairTheory.PAIR]));
+       metis_tac[pairTheory.PAIR])
+QED
 
 
 (* Simulator correctness preserves under equality composition - if the input protocol
 has correct simulation and satisfies equality well-formedness, then its equality
 composition also produces valid simulated proofs. *)
-val SimulatorCorrectness_SP_eq_thm = store_thm(
-  "SimulatorCorrectness_SP_eq_thm",
-  “SimulatorCorrectness_SP sp ∧ Eq_WellFormed_SP sp ⇒ SimulatorCorrectness_SP (SP_eq sp)”,
+Theorem SimulatorCorrectness_SP_eq_thm:
+   SimulatorCorrectness_SP sp ∧ Eq_WellFormed_SP sp ⇒ SimulatorCorrectness_SP (SP_eq sp)
+Proof
   rw[] >>
   simp[SimulatorCorrectness_SP_def, SP_eq_def, Eq_WellFormed_SP_def, WellFormed_SP_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
   rpt (pairarg_tac >> gvs[]) >>
-  metis_tac[SimulatorCorrectness_SP_def, SP_eq_def, Eq_WellFormed_SP_def, WellFormed_SP_def]);
+  metis_tac[SimulatorCorrectness_SP_def, SP_eq_def, Eq_WellFormed_SP_def, WellFormed_SP_def]
+QED
 
 
 (* Completeness preserves under equality composition - if the input protocol is complete
 and satisfies equality well-formedness conditions, then an honest prover can still
 convince an honest verifier in the equality composition. *)
-val Complete_SP_eq_thm = store_thm(
-  "Complete_SP_eq_thm",
-  “Complete_SP sp ∧ Eq_WellFormed_SP sp ⇒ Complete_SP (SP_eq sp)”,
+Theorem Complete_SP_eq_thm:
+   Complete_SP sp ∧ Eq_WellFormed_SP sp ⇒ Complete_SP (SP_eq sp)
+Proof
   rw[] >>
   simp[Complete_SP_def, SP_eq_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >-
@@ -1262,26 +1280,28 @@ val Complete_SP_eq_thm = store_thm(
   qabbrev_tac‘t1 = sp.Prover_1 p_1 w r c1 e’ >>
   qabbrev_tac‘t2 = sp.Prover_1 p_2 w r c2 e’ >>
   ‘sp.Prover_1 p_1 w r c1 e = sp.Prover_1 p_2 w r c2 e’ by metis_tac[Eq_WellFormed_SP_def, WellFormed_SP_def] >>
-  metis_tac[Complete_SP_def]);
+  metis_tac[Complete_SP_def]
+QED
 
 
 (* Special soundness preserves under equality composition - if the input protocol is
 specially sound and equality well-formed, its equality composition maintains the
 ability to extract witnesses from accepting transcripts. *)
-val SpecialSoundness_SP_eq_thm = store_thm(
-  "SpecialSoundness_SP_eq_thm",
-  “SpecialSoundness_SP sp ∧ Eq_WellFormed_SP sp ⇒ SpecialSoundness_SP (SP_eq sp)”,
+Theorem SpecialSoundness_SP_eq_thm:
+   SpecialSoundness_SP sp ∧ Eq_WellFormed_SP sp ⇒ SpecialSoundness_SP (SP_eq sp)
+Proof
   simp[SpecialSoundness_SP_def, SP_eq_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
-  rpt (metis_tac[SpecialSoundness_SP_def, SP_eq_def, Eq_WellFormed_SP_def]));
+  rpt (metis_tac[SpecialSoundness_SP_def, SP_eq_def, Eq_WellFormed_SP_def])
+QED
 
 
 (* Honest-verifier zero-knowledge preserves under equality composition - given a complete,
 HVZK protocol satisfying equality well-formedness, its equality composition remains
 zero-knowledge to honest verifiers.  *)
-val HonestVerifierZeroKnowledge_SP_eq_thm = store_thm(
-  "HonestVerifierZeroKnowledge_SP_eq_thm",
-  “HonestVerifierZeroKnowledge_SP sp ∧ Eq_WellFormed_SP sp ∧ Complete_SP sp ⇒ HonestVerifierZeroKnowledge_SP (SP_eq sp)”,
+Theorem HonestVerifierZeroKnowledge_SP_eq_thm:
+   HonestVerifierZeroKnowledge_SP sp ∧ Eq_WellFormed_SP sp ∧ Complete_SP sp ⇒ HonestVerifierZeroKnowledge_SP (SP_eq sp)
+Proof
   rw[] >>
   simp[HonestVerifierZeroKnowledge_SP_def, SP_eq_def, pairTheory.FORALL_PROD] >>
   rpt strip_tac >>
@@ -1326,4 +1346,5 @@ val HonestVerifierZeroKnowledge_SP_eq_thm = store_thm(
     first_assum$ qspecl_then [‘p_1’, ‘w’, ‘r’, ‘e’] mp_tac >>
     ‘p_1 ∈ sp.Statements ∧ w ∈ sp.Witnesses ∧ r ∈ sp.RandomCoins ∧ e ∈ sp.Challenges.carrier ∧ sp.Relation p_1 w’ by metis_tac[] >>
     ‘let c = sp.Prover_0 p_1 w r; spm = sp.SimulatorMap p_1 w e; spmi = sp.SimulatorMapInverse p_1 w e in spmi(spm r) = r’ by metis_tac[] >>
-    metis_tac[]));
+    metis_tac[])
+QED

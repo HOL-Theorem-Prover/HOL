@@ -1126,12 +1126,13 @@ Definition ch_arm_def:
     ?i e rs l' u m. ch_inv (MAP FST r,h,l) (i,e,rs,l',u,m) /\ ch_word (i,e,rs,MAP SND r,l',u,m) c
 End
 
-val ch_arm_alloc = store_thm("ch_arm_alloc",
-  ``(arm_alloc (v1,v2,v3,v4,v5,v6,a,x,xs) = (w1,w2,w3,w4,w5,w6,a',x',xs')) ==>
+Theorem ch_arm_alloc:
+    (arm_alloc (v1,v2,v3,v4,v5,v6,a,x,xs) = (w1,w2,w3,w4,w5,w6,a',x',xs')) ==>
     CARD (reachables (MAP FST (t1::t2::ts)) (ch_set h)) < l ==>
     ch_arm (t1::t2::ts,h,l) (v1,v2,v3,v4,v5,v6,a,x,xs) ==>
     ch_arm ((fresh h,SND t1)::t2::ts,h |+ (fresh h,FST t1,FST t2,SND t1, SND t2),l) (w1,w2,w3,w4,w5,w6,a',x,xs') /\
-    (a' = a) /\ (x' = x) /\ arm_alloc_pre (v1,v2,v3,v4,v5,v6,a,x,xs)``,
+    (a' = a) /\ (x' = x) /\ arm_alloc_pre (v1,v2,v3,v4,v5,v6,a,x,xs)
+Proof
   REWRITE_TAC [ch_arm_def] \\ STRIP_TAC \\ STRIP_TAC \\ STRIP_TAC
   \\ `?i' e' rs' l'' u' m'. cheney_alloc (i,e,rs,l,u,m) (SND t1, SND t2) = (i',e',rs',l'',u',m')` by METIS_TAC [PAIR]
   \\ `l' = l` by METIS_TAC [ch_inv_def] \\ FULL_SIMP_TAC bool_ss []
@@ -1146,7 +1147,8 @@ val ch_arm_alloc = store_thm("ch_arm_alloc",
   \\ Q.EXISTS_TAC `i'` \\ Q.EXISTS_TAC `e'` \\ Q.EXISTS_TAC `rs'` \\ Q.EXISTS_TAC `l''`
   \\ Q.EXISTS_TAC `u'` \\ Q.EXISTS_TAC `m'` \\ ASM_SIMP_TAC bool_ss [cheney_alloc_spec,FST]
   \\ MATCH_MP_TAC (GEN_ALL (RW [AND_IMP_INTRO] cheney_alloc_spec))
-  \\ FULL_SIMP_TAC bool_ss [] \\ METIS_TAC []);
+  \\ FULL_SIMP_TAC bool_ss [] \\ METIS_TAC []
+QED
 
 
 (* prove tree like representation *)
@@ -2197,18 +2199,20 @@ val ch_tree_alloc_lemma = prove(
     \\ IMP_RES_TAC ch_tree_swap \\ METIS_TAC [])
   \\ MATCH_MP_TAC (GEN_ALL IMP_word_tree) \\ METIS_TAC []);
 
-val ch_tree_alloc = store_thm("ch_tree_alloc",
-  ``ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
+Theorem ch_tree_alloc:
+    ch_tree (t1,t2,t3,t4,t5,t6,l) (v1,v2,v3,v4,v5,v6,a,dm,m,b,k) ==>
     (arm_alloc (v1,v2,v3,v4,v5,v6,a,dm,m) = (w1,w2,w3,w4,w5,w6,a2,dm2,m2)) ==>
     XSIZE t1 + XSIZE t2 + XSIZE t3 + XSIZE t4 + XSIZE t5 + XSIZE t6 < l ==>
     (a2 = a) /\ (dm2 = dm) /\
     arm_alloc_pre (v1,v2,v3,v4,v5,v6,a,dm,m) /\
-    ?b k. ch_tree (XDot t1 t2,t2,t3,t4,t5,t6,l) (w1,w2,w3,w4,w5,w6,a2,dm2,m2,b,k)``,
+    ?b k. ch_tree (XDot t1 t2,t2,t3,t4,t5,t6,l) (w1,w2,w3,w4,w5,w6,a2,dm2,m2,b,k)
+Proof
   REPEAT STRIP_TAC \\ IMP_RES_TAC ch_arm_setup
   \\ IMP_RES_TAC ch_arm_IMP_ch_arm2
   \\ Q.PAT_X_ASSUM `a2 = a` (fn th => FULL_SIMP_TAC std_ss [th])
   \\ Q.PAT_X_ASSUM `dm2 = dm` (fn th => FULL_SIMP_TAC std_ss [th])
-  \\ IMP_RES_TAC ch_tree_alloc_lemma \\ METIS_TAC []);
+  \\ IMP_RES_TAC ch_tree_alloc_lemma \\ METIS_TAC []
+QED
 
 
 (* --- PowerPC --- *)

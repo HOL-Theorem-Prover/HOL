@@ -87,15 +87,17 @@ End
 
 (* -- simplifying rules -- *)
 
-val drop_eq_thm = store_thm("drop_eq_thm",
-  ``!xs. (drop_eq (T::xs) = DT >> drop_eq xs) /\
+Theorem drop_eq_thm:
+    !xs. (drop_eq (T::xs) = DT >> drop_eq xs) /\
          (drop_eq (F::xs) = DF >> drop_eq xs) /\
-         (drop_eq [] = SOME)``,
+         (drop_eq [] = SOME)
+Proof
   REPEAT STRIP_TAC
   THEN SIMP_TAC bool_ss [FUN_EQ_THM] THEN Cases_on `x` THEN Cases_on `r`
   THEN SIMP_TAC std_ss [drop_eq_def,DT_def,DF_def,LET_DEF,LENGTH,option_then_def,DROP_0,TAKE_0]
   THEN Cases_on `h` THEN SIMP_TAC std_ss [drop_eq_def,DT_def,DF_def,
-    LET_DEF,LENGTH,option_then_def,rich_listTheory.BUTFIRSTN,rich_listTheory.FIRSTN,CONS_11]);
+    LET_DEF,LENGTH,option_then_def,rich_listTheory.BUTFIRSTN,rich_listTheory.FIRSTN,CONS_11]
+QED
 
 val assert_option_then_lemma = prove(
   ``!p b. (assert (\g. T) >> p = p) /\
@@ -106,14 +108,16 @@ val assert_option_then_lemma = prove(
   THEN Cases_on `p_2` THEN SRW_TAC [] [DF_def,DT_def]
   THEN Cases_on `h` THEN FULL_SIMP_TAC std_ss [DF_def,DT_def,assert_def]);
 
-val assert_option_then_thm = store_thm("assert_option_then_thm",
-  ``!p q b. (assert (\g. T) >> p = p) /\
+Theorem assert_option_then_thm:
+    !p q b. (assert (\g. T) >> p = p) /\
             (q >> assert (\g. T) >> p = q >> p) /\
             (assert b >> DF = DF >> assert b) /\
             (assert b >> DT = DT >> assert b) /\
             (p >> assert b >> DF = p >> DF >> assert b) /\
-            (p >> assert b >> DT = p >> DT >> assert b)``,
-  METIS_TAC [assert_option_then_lemma,option_then_assoc]);
+            (p >> assert b >> DT = p >> DT >> assert b)
+Proof
+  METIS_TAC [assert_option_then_lemma,option_then_assoc]
+QED
 
 
 (* -- for fast evaluation -- *)
@@ -143,13 +147,15 @@ val DT_over_DF_lemma = prove(
   THEN SIMP_TAC std_ss [DF_def,DT_def,option_then_def,option_orelse_def,LET_DEF]
   THEN METIS_TAC []));
 
-val DT_over_DF = store_thm("DT_over_DF",
-  ``((DT >> x) ++ ((DF >> y) ++ ((DT >> z) ++ g)) = (DT >> (x ++ z)) ++ ((DF >> y) ++ g)) /\
+Theorem DT_over_DF:
+    ((DT >> x) ++ ((DF >> y) ++ ((DT >> z) ++ g)) = (DT >> (x ++ z)) ++ ((DF >> y) ++ g)) /\
     ((DF >> x) ++ ((DT >> y) ++ ((DF >> z) ++ g)) = (DF >> (x ++ z)) ++ ((DT >> y) ++ g)) /\
     ((DT >> x) ++ ((DF >> y) ++ (DT >> z)) = (DT >> (x ++ z)) ++ (DF >> y)) /\
-    ((DF >> x) ++ ((DT >> y) ++ (DF >> z)) = (DF >> (x ++ z)) ++ (DT >> y))``,
+    ((DF >> x) ++ ((DT >> y) ++ (DF >> z)) = (DF >> (x ++ z)) ++ (DT >> y))
+Proof
   REWRITE_TAC [GSYM option_orelse_assoc,
-    REWRITE_RULE [GSYM option_orelse_assoc] DT_over_DF_lemma]);
+    REWRITE_RULE [GSYM option_orelse_assoc] DT_over_DF_lemma]
+QED
 
 Definition DTF_def:
   (DTF p q (g,[])= NONE) /\
@@ -157,11 +163,13 @@ Definition DTF_def:
   (DTF p q (g,T::b) = p (g,b))
 End
 
-val DTF_THM = store_thm("DTF_THM",
-  ``!x y. ((DF >> p) ++ (DT >> q) = DTF q p) /\ ((DT >> q) ++ (DF >> p) = DTF q p)``,
+Theorem DTF_THM:
+    !x y. ((DF >> p) ++ (DT >> q) = DTF q p) /\ ((DT >> q) ++ (DF >> p) = DTF q p)
+Proof
   REPEAT STRIP_TAC THEN REWRITE_TAC [FUN_EQ_THM] THEN Cases THEN Cases_on `r`
   THEN SIMP_TAC bool_ss [DTF_def,DF_def,DT_def,option_then_def,option_orelse_def,LET_DEF]
   THEN Cases_on `h`
   THEN SIMP_TAC std_ss [DTF_def,DF_def,DT_def,option_then_def,option_orelse_def,LET_DEF]
-  THEN METIS_TAC []);
+  THEN METIS_TAC []
+QED
 

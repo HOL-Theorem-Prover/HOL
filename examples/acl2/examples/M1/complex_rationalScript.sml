@@ -200,32 +200,32 @@ End
 (* Multiplication theorems for use in translation                            *)
 (*****************************************************************************)
 
-val COMPLEX_MULT_COMM =
- store_thm
-   ("COMPLEX_MULT_COMM",
-    ``a * b = b * a:complex_rational``,
+Theorem COMPLEX_MULT_COMM:
+      a * b = b * a:complex_rational
+Proof
     Cases_on `a` THEN Cases_on `b`
      THEN RW_TAC std_ss [COMPLEX_MULT_def]
-     THEN METIS_TAC [RAT_MUL_COMM,RAT_ADD_COMM]);
+     THEN METIS_TAC [RAT_MUL_COMM,RAT_ADD_COMM]
+QED
 
-val COMPLEX_MULT_ASSOC =
- store_thm
-  ("COMPLEX_MULT_ASSOC",
-   ``a * (b * c) = a * b * c:complex_rational``,
+Theorem COMPLEX_MULT_ASSOC:
+     a * (b * c) = a * b * c:complex_rational
+Proof
    Cases_on `a` THEN Cases_on `b` THEN Cases_on `c`
     THEN RW_TAC std_ss
           [COMPLEX_MULT_def,RAT_LDISTRIB,RAT_RDISTRIB,
            RAT_SUB_ADDAINV,GSYM RAT_AINV_LMUL,GSYM RAT_AINV_RMUL,
            RAT_ADD_ASSOC,RAT_MUL_ASSOC,RAT_AINV_ADD]
     THEN METIS_TAC
-          [RAT_MUL_COMM,RAT_MUL_ASSOC,RAT_ADD_COMM,RAT_ADD_ASSOC]);
+          [RAT_MUL_COMM,RAT_MUL_ASSOC,RAT_ADD_COMM,RAT_ADD_ASSOC]
+QED
 
-val COMPLEX_MULT_RID =
- store_thm
-  ("COMPLEX_MULT_RID",
-   ``a * com_1 = a``,
+Theorem COMPLEX_MULT_RID:
+     a * com_1 = a
+Proof
    Cases_on `a`
     THEN RW_TAC std_ss
           [com_1_def,COMPLEX_MULT_def,GSYM rat_0,rat_0_def,
            GSYM rat_1,rat_1_def,RAT_MUL_RID,RAT_MUL_RZERO,
-           RAT_ADD_RID,RAT_SUB_RID]);
+           RAT_ADD_RID,RAT_SUB_RID]
+QED

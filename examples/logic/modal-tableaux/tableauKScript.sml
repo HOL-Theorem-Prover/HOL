@@ -243,7 +243,7 @@ Proof
   Induct_on ‘l’ >> simp[]
 QED
 
-Triviality FORALL_NUM:
+Theorem FORALL_NUM[local]:
   (∀n. P n) ⇔ P 0 ∧ ∀n. P (SUC n)
 Proof
   eq_tac >> simp[] >> rw[] >> Cases_on ‘n’ >> simp[]

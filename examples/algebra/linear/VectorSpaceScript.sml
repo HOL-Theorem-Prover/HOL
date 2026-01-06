@@ -237,54 +237,61 @@ val vspace_cmult_ladd = save_thm("vspace_cmult_ladd",
 
 (* Theorem: VSpace r g op ==> Group g *)
 (* Proof: by vspace_has_abelian_group, AbelianGroup_def. *)
-val vspace_has_group = store_thm(
-  "vspace_has_group",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> Group g``,
-  metis_tac[vspace_has_abelian_group, AbelianGroup_def]);
+Theorem vspace_has_group:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> Group g
+Proof
+  metis_tac[vspace_has_abelian_group, AbelianGroup_def]
+QED
 
 (* Theorem: VSpace r g op ==> |0| IN V *)
 (* Proof: by vspace_has_group, group_id_element. *)
-val vspace_has_zero = store_thm(
-  "vspace_has_zero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> |0| IN V``,
-  metis_tac[vspace_has_group, group_id_element]);
+Theorem vspace_has_zero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> |0| IN V
+Proof
+  metis_tac[vspace_has_group, group_id_element]
+QED
 
 (* Theorem: VSpace r g op ==> !u v. u IN V /\ v IN V ==> u || v IN V *)
 (* Proof: by vspace_has_group, group_op_element. *)
-val vspace_vadd_vector = store_thm(
-  "vspace_vadd_vector",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !u v. u IN V /\ v IN V ==> u || v IN V``,
-  metis_tac[vspace_has_group, group_op_element]);
+Theorem vspace_vadd_vector:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !u v. u IN V /\ v IN V ==> u || v IN V
+Proof
+  metis_tac[vspace_has_group, group_op_element]
+QED
 
 (* Theorem: VSpace r g op ==> !v. v IN V ==> ( |0| || v = v) *)
 (* Proof: by vspace_has_group, group_lid. *)
-val vspace_vadd_lzero = store_thm(
-  "vspace_vadd_lzero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !v. v IN V ==> ( |0| || v = v)``,
-  metis_tac[vspace_has_group, group_lid]);
+Theorem vspace_vadd_lzero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !v. v IN V ==> ( |0| || v = v)
+Proof
+  metis_tac[vspace_has_group, group_lid]
+QED
 
 (* Theorem: VSpace r g op ==> !v. v IN V ==> (v || |0| = v) *)
 (* Proof: by vspace_has_group, group_rid. *)
-val vspace_vadd_rzero = store_thm(
-  "vspace_vadd_rzero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !v. v IN V ==> (v || |0| = v)``,
-  metis_tac[vspace_has_group, group_rid]);
+Theorem vspace_vadd_rzero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !v. v IN V ==> (v || |0| = v)
+Proof
+  metis_tac[vspace_has_group, group_rid]
+QED
 
 (* Theorem: VSpace r g op ==> !u v. u IN V /\ v IN V ==> (u || v = v || u) *)
 (* Proof: by vspace_has_abelian_group, AbelianGroup_def. *)
-val vspace_vadd_comm = store_thm(
-  "vspace_vadd_comm",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-    !u v. u IN V /\ v IN V ==> (u || v = v || u)``,
-  metis_tac[vspace_has_abelian_group, AbelianGroup_def]);
+Theorem vspace_vadd_comm:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+    !u v. u IN V /\ v IN V ==> (u || v = v || u)
+Proof
+  metis_tac[vspace_has_abelian_group, AbelianGroup_def]
+QED
 
 (* Theorem: VSpace r g op ==> !u v w. u IN V /\ v IN V /\ w IN V ==> (u || v || w = u || (v || w)) *)
 (* Proof: by vspace_has_group, group_assoc. *)
-val vspace_vadd_assoc = store_thm(
-  "vspace_vadd_assoc",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-    !u v w. u IN V /\ v IN V /\ w IN V ==> (u || v || w = u || (v || w))``,
-  metis_tac[vspace_has_group, group_assoc]);
+Theorem vspace_vadd_assoc:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+    !u v w. u IN V /\ v IN V /\ w IN V ==> (u || v || w = u || (v || w))
+Proof
+  metis_tac[vspace_has_group, group_assoc]
+QED
 
 (* Theorem: #0 o v = |0| *)
 (* Proof:
@@ -294,9 +301,9 @@ val vspace_vadd_assoc = store_thm(
      = #0 o v || v         by vspace_cmult_lone
    hence #0 o v = |0|      by group_rid_unique
 *)
-val vspace_cmult_lzero = store_thm(
-  "vspace_cmult_lzero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !v. v IN V ==> (#0 o v = |0|)``,
+Theorem vspace_cmult_lzero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !v. v IN V ==> (#0 o v = |0|)
+Proof
   rpt strip_tac >>
   `Field r /\ Group g` by metis_tac[VSpace_def, AbelianGroup_def] >>
   `#0 IN R /\ #1 IN R` by rw[] >>
@@ -305,7 +312,8 @@ val vspace_cmult_lzero = store_thm(
   `_ = (#0 + #1) o v` by rw[] >>
   `_ = (#0 o v) || (#1 o v)` by rw[vspace_cmult_ladd] >>
   `_ = #0 o v || v` by metis_tac[vspace_cmult_lone] >>
-  metis_tac[group_lid_unique]);
+  metis_tac[group_lid_unique]
+QED
 
 (* Theorem: a IN R ==> a o |0| = |0| *)
 (* Proof:
@@ -314,16 +322,17 @@ val vspace_cmult_lzero = store_thm(
    = a o |0| || a o |0|    by vspace_cmult_radd
    hence a o |0}= |0|      by group_id_fix
 *)
-val vspace_cmult_rzero = store_thm(
-  "vspace_cmult_rzero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !a. a IN R ==> (a o |0| = |0|)``,
+Theorem vspace_cmult_rzero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !a. a IN R ==> (a o |0| = |0|)
+Proof
   rpt strip_tac >>
   `Group g` by metis_tac[vspace_has_group] >>
   `|0| IN V` by rw[] >>
   `a o |0| IN V` by metis_tac[vspace_cmult_vector] >>
   `a o |0| = a o ( |0| || |0|)` by rw[group_id_id] >>
   `_ = a o |0| || a o |0|` by metis_tac[vspace_cmult_radd] >>
-  metis_tac[group_id_fix]);
+  metis_tac[group_id_fix]
+QED
 
 (* Theorem: a IN R /\ v IN V ==> a o v = |0| <=> a = #0  or v = |0| *)
 (* Proof:
@@ -339,10 +348,10 @@ val vspace_cmult_rzero = store_thm(
    If a = #0, #0 o v = |0|    by vspace_cmult_lzero
    If v = |0|, a o |0| = |0|  by vspace_cmult_rzero
 *)
-val vspace_cmult_eq_zero = store_thm(
-  "vspace_cmult_eq_zero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-    !a v. a IN R /\ v IN V ==> ((a o v = |0|) <=> (a = #0) \/ (v = |0|))``,
+Theorem vspace_cmult_eq_zero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+    !a v. a IN R /\ v IN V ==> ((a o v = |0|) <=> (a = #0) \/ (v = |0|))
+Proof
   rw[EQ_IMP_THM] >| [
     `Field r` by metis_tac[vspace_has_field] >>
     spose_not_then strip_assume_tac >>
@@ -352,7 +361,8 @@ val vspace_cmult_eq_zero = store_thm(
     metis_tac[field_mult_linv, vspace_cmult_cmult, vspace_cmult_rzero],
     metis_tac[vspace_cmult_lzero],
     metis_tac[vspace_cmult_rzero]
-  ]);
+  ]
+QED
 
 (* Theorem: u IN V /\ v IN V ==> ((u = v) <=> (u || (- #1) o v = |0|)) *)
 (* Proof:
@@ -374,10 +384,10 @@ val vspace_cmult_eq_zero = store_thm(
        = |0| || v                   by given
        = v                          by vspace_vadd_lzero
 *)
-val vspace_vsub_eq_zero = store_thm(
-  "vspace_vsub_eq_zero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-    !u v. u IN V /\ v IN V ==> ((u = v) <=> (u || (- #1) o v = |0|))``,
+Theorem vspace_vsub_eq_zero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+    !u v. u IN V /\ v IN V ==> ((u = v) <=> (u || (- #1) o v = |0|))
+Proof
   rpt strip_tac >>
   `Field r` by metis_tac[vspace_has_field] >>
   rw[EQ_IMP_THM] >| [
@@ -389,7 +399,8 @@ val vspace_vsub_eq_zero = store_thm(
     `u = u || #0 o v` by metis_tac[vspace_vadd_rzero, vspace_cmult_lzero] >>
     `_ = u || (-#1 + #1) o v` by rw[] >>
     metis_tac[vspace_cmult_ladd, vspace_cmult_lone, vspace_vadd_assoc, vspace_vadd_lzero]
-  ]);
+  ]
+QED
 
 (* Theorem: u IN V /\ v IN V ==> ((u = v) <=> ((- #1) o u || v = |0|)) *)
 (* Proof:
@@ -397,15 +408,16 @@ val vspace_vsub_eq_zero = store_thm(
      and (- #1) o u || v = v || (- #1) o u      by vspace_vadd_comm
    Hence the result follows by exchange of u, v in vspace_vsub_eq_zero.
 *)
-val vspace_vsub_eq_zero_alt = store_thm(
-  "vspace_vsub_eq_zero_alt",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-    !u v. u IN V /\ v IN V ==> ((u = v) <=> ((- #1) o u || v = |0|))``,
+Theorem vspace_vsub_eq_zero_alt:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+    !u v. u IN V /\ v IN V ==> ((u = v) <=> ((- #1) o u || v = |0|))
+Proof
   rpt strip_tac >>
   `Field r` by metis_tac[vspace_has_field] >>
   `-#1 IN R` by rw[] >>
   `-#1 o u IN V` by metis_tac[vspace_cmult_vector] >>
-  metis_tac[vspace_vsub_eq_zero, vspace_vadd_comm]);
+  metis_tac[vspace_vsub_eq_zero, vspace_vadd_comm]
+QED
 
 (* Theorem: u IN V /\ v IN V ==> ((u || v = |0|) <=> (u = (- #1) o v)) *)
 (* Proof:
@@ -421,10 +433,10 @@ val vspace_vsub_eq_zero_alt = store_thm(
       = -#1 o v || v               by given
       = |0|                        by vspace_vsub_eq_zero_alt
 *)
-val vspace_vadd_eq_zero = store_thm(
-  "vspace_vadd_eq_zero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-    !u v. u IN V /\ v IN V ==> ((u || v = |0|) <=> (u = (- #1) o v))``,
+Theorem vspace_vadd_eq_zero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+    !u v. u IN V /\ v IN V ==> ((u || v = |0|) <=> (u = (- #1) o v))
+Proof
   rpt strip_tac >>
   `Field r` by metis_tac[vspace_has_field] >>
   rw[EQ_IMP_THM] >| [
@@ -432,18 +444,20 @@ val vspace_vadd_eq_zero = store_thm(
     `-#1 o v IN V` by metis_tac[vspace_cmult_vector] >>
     metis_tac[vspace_vadd_rzero, vspace_vsub_eq_zero, vspace_vadd_assoc, vspace_vadd_lzero],
     rw[GSYM vspace_vsub_eq_zero_alt]
-  ]);
+  ]
+QED
 
 (* Theorem: u IN V /\ v IN V ==> ((u || v = |0|) <=> (v = (- #1) o u)) *)
 (* Proof:
    Since u || v = v || u                        by vspace_vadd_comm
    Hence the result follows by exchange of u, v in vspace_vadd_eq_zero.
 *)
-val vspace_vadd_eq_zero_alt = store_thm(
-  "vspace_vadd_eq_zero_alt",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==>
-    !u v. u IN V /\ v IN V ==> ((u || v = |0|) <=> (v = (- #1) o u))``,
-  metis_tac[vspace_vadd_eq_zero, vspace_vadd_comm]);
+Theorem vspace_vadd_eq_zero_alt:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==>
+    !u v. u IN V /\ v IN V ==> ((u || v = |0|) <=> (v = (- #1) o u))
+Proof
+  metis_tac[vspace_vadd_eq_zero, vspace_vadd_comm]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Sticks -- a stick is a list of scalars of fixed width.                    *)
@@ -464,10 +478,11 @@ End
      and {} SUBSET R            by EMPTY_SUBSET
     also LENGTH [] = 0          by LENGTH
 *)
-val sticks_0 = store_thm(
-  "sticks_0",
-  ``!r:'a field. sticks r 0 = {[]}``,
-  rw[sticks_def, EXTENSION, EQ_IMP_THM, LENGTH_NIL]);
+Theorem sticks_0:
+    !r:'a field. sticks r 0 = {[]}
+Proof
+  rw[sticks_def, EXTENSION, EQ_IMP_THM, LENGTH_NIL]
+QED
 
 (* Theorem: sticks r (SUC n) = IMAGE (\(e,l). e :: l) (R CROSS sticks r n) *)
 (* Proof:
@@ -481,11 +496,12 @@ val sticks_0 = store_thm(
        <=> p_1 INSERT set p_2 SUBSET R   by INSERT_SUBSET
        <=> set (p_1 :: p_2) SUBSET R     by LIST_TO_SET_THM
 *)
-val sticks_suc = store_thm(
-  "sticks_suc",
-  ``!r:'a field. sticks r (SUC n) = IMAGE (\(e,l). e :: l) (R CROSS sticks r n)``,
+Theorem sticks_suc:
+    !r:'a field. sticks r (SUC n) = IMAGE (\(e,l). e :: l) (R CROSS sticks r n)
+Proof
   rw[sticks_def, EXTENSION, pairTheory.EXISTS_PROD, LENGTH_CONS] >>
-  metis_tac[LIST_TO_SET_THM, INSERT_SUBSET]);
+  metis_tac[LIST_TO_SET_THM, INSERT_SUBSET]
+QED
 
 (* Theorem: FINITE R ==> !n. FINITE (sticks r n). *)
 (* Proof: by induction on n.
@@ -499,13 +515,14 @@ val sticks_suc = store_thm(
      so    FINITE (R CROSS (sticks r n))          by FINITE_CROSS
      Hence true by IMAGE_FINITE.
 *)
-val sticks_finite = store_thm(
-  "sticks_finite",
-  ``!r:'a field. FINITE R ==> !n. FINITE (sticks r n)``,
+Theorem sticks_finite:
+    !r:'a field. FINITE R ==> !n. FINITE (sticks r n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[sticks_0] >>
-  rw[sticks_suc]);
+  rw[sticks_suc]
+QED
 
 (* Theorem: FINITE R ==> CARD (sticks r n) = (CARD R) ** n. *)
 (* Proof: by induction on n.
@@ -522,13 +539,14 @@ val sticks_finite = store_thm(
      = CARD R * (CARD R ** n)                           by induction hypothesis
      = CARD R ** (SUC n)                                by EXP
 *)
-val sticks_card = store_thm(
-  "sticks_card",
-  ``!r:'a field. FINITE R ==> !n. CARD (sticks r n) = (CARD R) ** n``,
+Theorem sticks_card:
+    !r:'a field. FINITE R ==> !n. CARD (sticks r n) = (CARD R) ** n
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[sticks_0] >>
-  rw[sticks_suc, sticks_finite, CARD_INJ_IMAGE, FINITE_COUNT, CARD_CROSS, pairTheory.FORALL_PROD, EXP]);
+  rw[sticks_suc, sticks_finite, CARD_INJ_IMAGE, FINITE_COUNT, CARD_CROSS, pairTheory.FORALL_PROD, EXP]
+QED
 
 (* Theorem: sticks r 1 = IMAGE (\c. [c]) R *)
 (* Proof:
@@ -551,24 +569,26 @@ val sticks_card = store_thm(
       = SUC 0                           by LENGTH
       = 1                               by ONE
 *)
-val sticks_1 = store_thm(
-  "sticks_1",
-  ``!r:'a field. sticks r 1 = IMAGE (\(c:'a). [c]) R``,
+Theorem sticks_1:
+    !r:'a field. sticks r 1 = IMAGE (\(c:'a). [c]) R
+Proof
   rw[sticks_def, EXTENSION, EQ_IMP_THM] >| [
     `?c. x = [c]` by rw[GSYM LENGTH_EQ_1] >>
     `c IN set [c]` by rw[LIST_TO_SET_THM] >>
     metis_tac[SUBSET_DEF],
     rw[LIST_TO_SET_THM],
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: !p. p IN sticks r 1 <=> ?c. c IN R /\ (p = [c]) *)
 (* Proof: by sticks_1, IN_IMAGE *)
-val sticks_1_member = store_thm(
-  "sticks_1_member",
-  ``!r:'a field. !p. p IN sticks r 1 <=> ?c. c IN R /\ (p = [c])``,
+Theorem sticks_1_member:
+    !r:'a field. !p. p IN sticks r 1 <=> ?c. c IN R /\ (p = [c])
+Proof
   rw[sticks_1] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: !p. p IN sticks r 0 <=> (p = []) *)
 (* Proof:
@@ -576,10 +596,11 @@ val sticks_1_member = store_thm(
   <=> p IN {[]}  by sticks_0
   <=> p = []     by IN_SING
 *)
-val sticks_0_member = store_thm(
-  "sticks_0_member",
-  ``!r:'a field. !p. p IN sticks r 0 <=> (p = [])``,
-  rw[sticks_0]);
+Theorem sticks_0_member:
+    !r:'a field. !p. p IN sticks r 0 <=> (p = [])
+Proof
+  rw[sticks_0]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Stick Properties.                                                         *)
@@ -587,19 +608,21 @@ val sticks_0_member = store_thm(
 
 (* Theorem: l IN sticks r n ==> LENGTH l = n *)
 (* Proof: by sticks_def. *)
-val stick_length = store_thm(
-  "stick_length",
-  ``!r l n. l IN sticks r n ==> (LENGTH l = n)``,
-  rw[sticks_def]);
+Theorem stick_length:
+    !r l n. l IN sticks r n ==> (LENGTH l = n)
+Proof
+  rw[sticks_def]
+QED
 
 (* Theorem: l IN sticks r (SUC n) <=> (?h t. h IN R /\ t IN sticks r n /\ (l = h::t)) *)
 (* Proof: by sticks_suc. *)
-val stick_cons = store_thm(
-  "stick_cons",
-  ``!r:'a field. !(l:'a list) n. l IN sticks r (SUC n) <=>
-                                 (?h t. h IN R /\ t IN sticks r n /\ (l = h::t))``,
+Theorem stick_cons:
+    !r:'a field. !(l:'a list) n. l IN sticks r (SUC n) <=>
+                                 (?h t. h IN R /\ t IN sticks r n /\ (l = h::t))
+Proof
   rw[sticks_suc, pairTheory.EXISTS_PROD] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Define a sticks of length n with all zero *)
 (*
@@ -624,9 +647,9 @@ val stick_all_zero_def = Define`
           and GENLIST (\j. #0) n IN sticks r n  by induction hypothesis
            so result IN sticks r (SUC n)        by stick_cons
 *)
-val stick_all_zero = store_thm(
-  "stick_all_zero",
-  ``!(r:'a field) (g:'b group) op. VSpace r g op ==> !n. (GENLIST (\j. #0) n) IN (sticks r n)``,
+Theorem stick_all_zero:
+    !(r:'a field) (g:'b group) op. VSpace r g op ==> !n. (GENLIST (\j. #0) n) IN (sticks r n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >| [
     rw[] >>
@@ -638,7 +661,8 @@ val stick_all_zero = store_thm(
     rw_tac std_ss[GENLIST_CONS, field_zero_element] >>
     `(\j. #0) o SUC = (\j. #0)` by rw[FUN_EQ_THM] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: h IN R /\ t IN sticks r (n - 1) ==>
             !k. k < n ==> TAKE k t ++ [h] ++ DROP k t IN sticks r n *)
@@ -662,10 +686,10 @@ val stick_all_zero = store_thm(
         = k:: (TAKE n' s ++ [h] ++ DROP n' s)          by APPEND
         IN sticks r (SUC n)                            by stick_cons, k IN R, induction hypothesis.
 *)
-val stick_insert_element = store_thm(
-  "stick_insert_element",
-  ``!r:'a field. !h t n. h IN R /\ t IN sticks r (n - 1) ==>
-    !k. k < n ==> TAKE k t ++ [h] ++ DROP k t IN sticks r n``,
+Theorem stick_insert_element:
+    !r:'a field. !h t n. h IN R /\ t IN sticks r (n - 1) ==>
+    !k. k < n ==> TAKE k t ++ [h] ++ DROP k t IN sticks r n
+Proof
   ntac 2 strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -680,7 +704,8 @@ val stick_insert_element = store_thm(
   `SUC j - 1 = j` by decide_tac >>
   rw[] >>
   `(TAKE n' s ++ [h] ++ DROP n' s) IN sticks r (SUC j)` by rw[] >>
-  metis_tac[stick_cons]);
+  metis_tac[stick_cons]
+QED
 
 (* Theorem: t IN sticks r n ==> !k. k < n ==>
             EL k t IN R /\ TAKE k t IN sticks r k /\ DROP (SUC k) t IN sticks r (n - (SUC k)) *)
@@ -704,10 +729,10 @@ val stick_insert_element = store_thm(
          If k = SUC j < SUC n, DROP (SUC j) (h::t') = DROP j t' IN sticks r (n - SUC j)
                                                                   by induction hypothesis
 *)
-val stick_components_stick = store_thm(
-  "stick_components_stick",
-  ``!(r:'a field) (t:'a list) n. t IN sticks r n ==>
-    !k. k < n ==> EL k t IN R /\ TAKE k t IN sticks r k /\ DROP (SUC k) t IN sticks r (n - (SUC k))``,
+Theorem stick_components_stick:
+    !(r:'a field) (t:'a list) n. t IN sticks r n ==>
+    !k. k < n ==> EL k t IN R /\ TAKE k t IN sticks r k /\ DROP (SUC k) t IN sticks r (n - (SUC k))
+Proof
   strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -716,7 +741,8 @@ val stick_components_stick = store_thm(
     Cases_on `k` >> rw[],
     Cases_on `k` >> rw[sticks_0, stick_cons],
     Cases_on `k` >> rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: l IN sticks r (SUC n) <=> (?h t. h IN R /\ t IN sticks r n /\ (l = SNOC h t)) *)
 (* Proof:
@@ -740,10 +766,10 @@ val stick_components_stick = store_thm(
       ==> set (t ++ [h]) SUBSET R /\ (LENGTH (t ++ [h]) = SUC n)  by SUC_ONE_ADD
       ==> t ++ [h] IN sticks r (SUC n)                            by sticks_def
 *)
-val stick_snoc = store_thm(
-  "stick_snoc",
-  ``!r:'a field. !(l:'a list) n. l IN sticks r (SUC n) <=>
-                                (?h t. h IN R /\ t IN sticks r n /\ (l = SNOC h t))``,
+Theorem stick_snoc:
+    !r:'a field. !(l:'a list) n. l IN sticks r (SUC n) <=>
+                                (?h t. h IN R /\ t IN sticks r n /\ (l = SNOC h t))
+Proof
   rw[EQ_IMP_THM, SNOC_APPEND] >| [
     `n < SUC n /\ (SUC n - SUC n = 0)` by decide_tac >>
     `EL n l IN R /\ TAKE n l IN sticks r n /\ DROP (SUC n) l IN sticks r 0` by metis_tac[stick_components_stick] >>
@@ -758,7 +784,8 @@ val stick_snoc = store_thm(
     metis_tac[],
     pop_assum mp_tac >>
     rw[sticks_def]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Stick Addition.                                                           *)
@@ -796,17 +823,18 @@ val stick_add_cons_cons = save_thm("stick_add_cons_cons", stick_add_def |> CONJU
       and t + t' IN sticks r n               by induction hypothesis
      and (h::t) + (h'::t') = h''::t''        by stick_add_def
 *)
-val stick_add_length = store_thm(
-  "stick_add_length",
-  ``!(r:'a field). Field r ==>
-    !n n1 n2. n1 IN sticks r n /\ n2 IN sticks r n ==> (n1 + n2) IN sticks r n``,
+Theorem stick_add_length:
+    !(r:'a field). Field r ==>
+    !n n1 n2. n1 IN sticks r n /\ n2 IN sticks r n ==> (n1 + n2) IN sticks r n
+Proof
   ntac 2 strip_tac >>
   Induct >-
   metis_tac[sticks_0, IN_SING, stick_add_def] >>
   rw[stick_cons] >>
   qexists_tac `h + h'` >>
   qexists_tac `t + t'` >>
-  rw[stick_add_def]);
+  rw[stick_add_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Stick Negation.                                                           *)
@@ -845,16 +873,17 @@ val stick_neg_cons = save_thm("stick_neg_cons", stick_neg_def |> SPEC_ALL |> CON
       and $- t IN sticks r n             by induction hypothesis
      and $- (h::t) = h'::t'              by stick_neg_def
 *)
-val stick_neg_length = store_thm(
-  "stick_neg_length",
-  ``!(r:'a field). Field r ==> !n n1. n1 IN sticks r n ==> ($- n1) IN sticks r n``,
+Theorem stick_neg_length:
+    !(r:'a field). Field r ==> !n n1. n1 IN sticks r n ==> ($- n1) IN sticks r n
+Proof
   ntac 2 strip_tac >>
   Induct >-
   metis_tac[sticks_0, IN_SING, stick_neg_def] >>
   rw[stick_cons] >>
   qexists_tac `-h` >>
   qexists_tac `$- t` >>
-  rw[stick_neg_def]);
+  rw[stick_neg_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Stick Scalar Multiplication.                                              *)
@@ -893,16 +922,17 @@ val stick_cmult_cons = save_thm("stick_cmult_cons", stick_cmult_def |> SPEC_ALL 
       and c * t IN sticks r n              by induction hypothesis
      and c * (h::t) = h'::t'               by stick_cmult_def
 *)
-val stick_cmult_length = store_thm(
-  "stick_cmult_length",
-  ``!(r:'a field). Field r ==> !n c n1. c IN R /\ n1 IN sticks r n ==> (c * n1) IN sticks r n``,
+Theorem stick_cmult_length:
+    !(r:'a field). Field r ==> !n c n1. c IN R /\ n1 IN sticks r n ==> (c * n1) IN sticks r n
+Proof
   ntac 2 strip_tac >>
   Induct >-
   metis_tac[sticks_0, IN_SING, stick_cmult_def] >>
   rw[stick_cons] >>
   qexists_tac `c * h` >>
   qexists_tac `c * t` >>
-  rw[stick_cmult_def]);
+  rw[stick_cmult_def]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Stick Subtraction.                                                        *)
@@ -945,10 +975,10 @@ val stick_sub_cons_cons = save_thm("stick_sub_cons_cons", stick_sub_def |> SPEC_
      = (h::t) + (-h'::-t')        by stick_add_def
      = (h::t) + -(h'::t')         by stick_neg_def
 *)
-val stick_sub_alt = store_thm(
-  "stick_sub_alt",
-  ``!(r:'a field). Field r ==>
-    !n n1 n2. n1 IN sticks r n /\ n2 IN sticks r n ==> (n1 - n2 = n1 + $- n2)``,
+Theorem stick_sub_alt:
+    !(r:'a field). Field r ==>
+    !n n1 n2. n1 IN sticks r n /\ n2 IN sticks r n ==> (n1 - n2 = n1 + $- n2)
+Proof
   ntac 2 strip_tac >>
   Induct >| [
     rw[] >>
@@ -956,7 +986,8 @@ val stick_sub_alt = store_thm(
     rw[stick_sub_def, stick_add_def, stick_neg_def],
     rw[stick_cons] >>
     rw[stick_sub_def, stick_add_def, stick_neg_def]
-  ]);
+  ]
+QED
 
 (* Subtracting same-length sticks give another stick of the same length *)
 
@@ -976,13 +1007,14 @@ val stick_sub_alt = store_thm(
    n1 - n2 = n1 + $- n2      by stick_sub_alt
    Hence true                by stick_add_length, stick_neg_length.
 *)
-val stick_sub_length = store_thm(
-  "stick_sub_length",
-  ``!(r:'a field). Field r ==>
-    !n n1 n2. n1 IN sticks r n /\ n2 IN sticks r n ==> (n1 - n2) IN sticks r n``,
+Theorem stick_sub_length:
+    !(r:'a field). Field r ==>
+    !n n1 n2. n1 IN sticks r n /\ n2 IN sticks r n ==> (n1 - n2) IN sticks r n
+Proof
   rpt strip_tac >>
   `n1 - n2 = n1 + $- n2` by metis_tac[stick_sub_alt] >>
-  rw[stick_add_length, stick_neg_length]);
+  rw[stick_add_length, stick_neg_length]
+QED
 
 (* Theorem: !n. n1 IN sticks r n /\ n2 IN sticks r n ==>
                 n1 = n2 <=> !k. k < n ==> (EL k (n1 - n2) = #0) *)
@@ -1011,10 +1043,10 @@ val stick_sub_length = store_thm(
      If k = SUC n',
      !n'. n' < n and EL (SUC n') ((h::t) - (h'::t')) = EL n' (t - t') = #0  by induction hypothesis
 *)
-val stick_eq_property = store_thm(
-  "stick_eq_property",
-  ``!(r:'a field). Field r ==> !n n1 n2. n1 IN sticks r n /\ n2 IN sticks r n ==>
-        ((n1 = n2) <=> (!k. k < n ==> (EL k (n1 - n2) = #0)))``,
+Theorem stick_eq_property:
+    !(r:'a field). Field r ==> !n n1 n2. n1 IN sticks r n /\ n2 IN sticks r n ==>
+        ((n1 = n2) <=> (!k. k < n ==> (EL k (n1 - n2) = #0)))
+Proof
   ntac 2 strip_tac >>
   Induct >-
   rw[sticks_0] >>
@@ -1036,7 +1068,8 @@ val stick_eq_property = store_thm(
     `!k. k < n ==> (EL (SUC k) ((h::t) - (h::t')) = #0)` by rw[] >>
     `!k. k < n ==> (EL k (t - t') = #0)` by metis_tac[EL, TL] >>
     rw[]
-  ]);
+  ]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

@@ -396,8 +396,9 @@ val subst_lemma = Q.prove (
          fs [] >>
          decide_tac)));
 
-val subst_correct = Q.store_thm ("subst_correct",
-`!e2 e1. is_val e2 ⇒ exp_rel (App (Fun e1) e2) (Tick (subst 0 e2 e1))`,
+Theorem subst_correct:
+ !e2 e1. is_val e2 ⇒ exp_rel (App (Fun e1) e2) (Tick (subst 0 e2 e1))
+Proof
  rw [exp_rel_def, exec_rel_rw] >>
  fs [sem_def] >>
  imp_res_tac is_val_sem >>
@@ -423,10 +424,12 @@ val subst_correct = Q.store_thm ("subst_correct",
      rw [] >>
      pop_assum match_mp_tac >>
      metis_tac [val_rel_mono, val_rel_mono_list2])
- >- rw [res_rel_def]);
+ >- rw [res_rel_def]
+QED
 
-val beta_reduce_correct = Q.store_thm ("beta_reduce_correct",
-`!e. exp_rel e (betaV_reduce e)`,
+Theorem beta_reduce_correct:
+ !e. exp_rel e (betaV_reduce e)
+Proof
  ho_match_mp_tac (theorem "betaV_reduce_ind") >>
  rw [betaV_reduce_def] >>
  rw [exp_rel_refl]
@@ -437,5 +440,6 @@ val beta_reduce_correct = Q.store_thm ("beta_reduce_correct",
  >- metis_tac [compat_app]
  >- metis_tac [compat_app]
  >- metis_tac [compat_app]
- >- metis_tac [compat_tick]);
+ >- metis_tac [compat_tick]
+QED
 

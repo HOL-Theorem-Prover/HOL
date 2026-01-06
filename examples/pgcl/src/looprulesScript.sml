@@ -40,46 +40,52 @@ val Suff = Q_TAC SUFF_TAC;
 val REVERSE = Tactical.REVERSE;
 val lemma = I prove;
 
-val let_imp_not_infty = store_thm
-  ("let_imp_not_infty",
-   ``!x:posreal. (?y. (y < infty) /\ (x <= y)) ==>
-                 (~(x = infty))``,
-   METIS_TAC [let_trans, infty_le, preal_lt_def]);
+Theorem let_imp_not_infty:
+     !x:posreal. (?y. (y < infty) /\ (x <= y)) ==>
+                 (~(x = infty))
+Proof
+   METIS_TAC [let_trans, infty_le, preal_lt_def]
+QED
 
-val le1_imp_not_infty = store_thm
-  ("le1_imp_not_infty",
-   ``!x:posreal. (x <= 1) ==> (~(x = infty))``,
+Theorem le1_imp_not_infty:
+     !x:posreal. (x <= 1) ==> (~(x = infty))
+Proof
    `1 < infty` by RW_TAC posreal_ss [preal_lt_def]
-   ++ METIS_TAC [let_imp_not_infty]);
+   ++ METIS_TAC [let_imp_not_infty]
+QED
 
-val let_lemma = store_thm
-  ("let_lemma",
-   ``(let x = (a:posreal) in x * y) = a * y``,
-   RW_TAC std_ss []);
+Theorem let_lemma:
+     (let x = (a:posreal) in x * y) = a * y
+Proof
+   RW_TAC std_ss []
+QED
 
-val let_lin_lemma = store_thm
-  ("let_lin_lemma",
-   ``(let x = (a:posreal) in x * y + (1 - x) * z) = a * y + (1 - a) * z``,
-   RW_TAC std_ss []);
+Theorem let_lin_lemma:
+     (let x = (a:posreal) in x * y + (1 - x) * z) = a * y + (1 - a) * z
+Proof
+   RW_TAC std_ss []
+QED
 
-val wp_assign = store_thm
-  ("wp_assign",
-  ``!v s postE.
+Theorem wp_assign:
+    !v s postE.
         wp (Assign v s) postE =
-    (\s'. postE (\w. (if w = v then s s' else s' w)))``,
-   RW_TAC std_ss [wp_def, assign_eta]);
+    (\s'. postE (\w. (if w = v then s s' else s' w)))
+Proof
+   RW_TAC std_ss [wp_def, assign_eta]
+QED
 
-val wp_seq = store_thm
-  ("wp_seq",
-   ``!prog prog' postE.
+Theorem wp_seq:
+     !prog prog' postE.
         wp (Seq prog prog') postE =
-        wp prog (wp prog' postE)``,
-   RW_TAC std_ss [wp_def]);
+        wp prog (wp prog' postE)
+Proof
+   RW_TAC std_ss [wp_def]
+QED
 
-val while_unwind_lemma = store_thm
-  ("while_unwind_lemma",
-   ``!g body Inv.
-        wp (While g body) Inv = (\s. if g s then wp body (wp (While g body) Inv) s else Inv s)``,
+Theorem while_unwind_lemma:
+     !g body Inv.
+        wp (While g body) Inv = (\s. if g s then wp body (wp (While g body) Inv) s else Inv s)
+Proof
    REPEAT STRIP_TAC
    ++ RW_TAC posreal_ss [wp_def, cond_eta]
    ++ `monotonic (expect,Leq) (\e s. (if g s then wp body e s else Inv s))`
@@ -90,11 +96,12 @@ val while_unwind_lemma = store_thm
    ++ `lfp (expect,Leq) (\e s. (if g s then wp body e s else Inv s))
         (expect_lfp (\e s. (if g s then wp body e s else Inv s)))`
         by METIS_TAC [expect_lfp_def]
-   ++ FULL_SIMP_TAC std_ss [Leq_def, wp_def, cond_eta, lfp_def, expect_def]);
+   ++ FULL_SIMP_TAC std_ss [Leq_def, wp_def, cond_eta, lfp_def, expect_def]
+QED
 
-val while_unwind_val_lemma = store_thm
-  ("while_unwind_val_lemma",
-   ``wp (While g (body:value command)) Inv = (\s. if g s then wp body (wp (While g body) Inv) s else Inv s)``,
+Theorem while_unwind_val_lemma:
+     wp (While g (body:value command)) Inv = (\s. if g s then wp body (wp (While g body) Inv) s else Inv s)
+Proof
    REPEAT STRIP_TAC
    ++ RW_TAC posreal_ss [wp_def, cond_eta]
    ++ `monotonic (expect,Leq) (\e s. (if g s then wp body e s else Inv s))`
@@ -105,30 +112,34 @@ val while_unwind_val_lemma = store_thm
    ++ `lfp (expect,Leq) (\e s. (if g s then wp body e s else Inv s))
         (expect_lfp (\e s. (if g s then wp body e s else Inv s)))`
         by METIS_TAC [expect_lfp_def]
-   ++ FULL_SIMP_TAC std_ss [Leq_def, wp_def, cond_eta, lfp_def, expect_def]);
+   ++ FULL_SIMP_TAC std_ss [Leq_def, wp_def, cond_eta, lfp_def, expect_def]
+QED
 
-val INT_OF_NUM_POSINT_EQ = store_thm
-  ("INT_OF_NUM_POSINT_EQ",
-   ``!(x:int). (0 < x) ==> ((& (Num x)) = x)``,
+Theorem INT_OF_NUM_POSINT_EQ:
+     !(x:int). (0 < x) ==> ((& (Num x)) = x)
+Proof
    REPEAT STRIP_TAC
    ++ `?n. x = &n` by METIS_TAC [NUM_POSINT_EXISTS, INT_LT_IMP_LE]
-   ++ ASM_REWRITE_TAC [NUM_OF_INT]);
+   ++ ASM_REWRITE_TAC [NUM_OF_INT]
+QED
 
-val expect1_postE_imp_expect1_wp_postE = store_thm
-  ("expect1_postE_imp_expect1_wp_postE",
-   ``!prog postE. (expect1 postE) ==> (expect1 (wp prog postE))``,
-   METIS_TAC [sublinear_expect1, healthy_def, wp_healthy]);
+Theorem expect1_postE_imp_expect1_wp_postE:
+     !prog postE. (expect1 postE) ==> (expect1 (wp prog postE))
+Proof
+   METIS_TAC [sublinear_expect1, healthy_def, wp_healthy]
+QED
 
-val Term_Leq_One = store_thm
-  ("Term_Leq_One",
-   ``!prog. Leq (wp prog One) One``,
+Theorem Term_Leq_One:
+     !prog. Leq (wp prog One) One
+Proof
    `expect1(One)`
         by RW_TAC posreal_ss [One_def, expect1_def]
-   ++ METIS_TAC [Leq_def, One_def, expect1_def, expect1_postE_imp_expect1_wp_postE]);
+   ++ METIS_TAC [Leq_def, One_def, expect1_def, expect1_postE_imp_expect1_wp_postE]
+QED
 
-val lt_trans = store_thm
-  ("lt_trans",
-   ``!(x:posreal) (y:posreal) (z:posreal). (x<y) /\ (y < z) ==> x < z``,
+Theorem lt_trans:
+     !(x:posreal) (y:posreal) (z:posreal). (x<y) /\ (y < z) ==> x < z
+Proof
    REPEAT STRIP_TAC
    ++ `(x = 0) \/ (x = infty) \/
        ~(x = 0) /\ ?x'. ~(x' = 0) /\ 0 <= x' /\ (x = preal x')`
@@ -144,19 +155,20 @@ val lt_trans = store_thm
    ++ `preal x' < preal y'` by METIS_TAC [preal_lt_def]
    ++ `preal y' < preal z'` by METIS_TAC [preal_lt_def]
    ++ METIS_TAC [lte_trans, lt_le]
-);
+QED
 
-val max_swap = store_thm
-  ("max_swap",
-   ``!x y z. (max (max x y) z) = (max y (max x z))``,
+Theorem max_swap:
+     !x y z. (max (max x y) z) = (max y (max x z))
+Proof
    RW_TAC posreal_ss [preal_max_def, le_trans, le_antisym]
-   ++ METIS_TAC [le_antisym, preal_lt_def, lt_trans, le_total]);
+   ++ METIS_TAC [le_antisym, preal_lt_def, lt_trans, le_total]
+QED
 
-val mul_operands_le1_le1 = store_thm
-  ("mul_operands_le1_le1",
-   ``!(x:posreal)(y:posreal).
+Theorem mul_operands_le1_le1:
+     !(x:posreal)(y:posreal).
         (x<=1) /\ (y<=1) ==>
-        (x*y <= 1)``,
+        (x*y <= 1)
+Proof
    RW_TAC posreal_ss []
    ++ `(x = 0) \/ (x = infty) \/
        ~(x = 0) /\ ?x'. ~(x' = 0) /\ 0 <= x' /\ (x = preal x')`
@@ -188,27 +200,30 @@ val mul_operands_le1_le1 = store_thm
    ++ `y' <= one'`
         by (MATCH_MP_TAC le_preal
             ++ METIS_TAC [])
-   ++ METIS_TAC [REAL_LE_MUL2]);
+   ++ METIS_TAC [REAL_LE_MUL2]
+QED
 
-val operand_le_one_imp_mul_le_one = store_thm
-  ("operand_le_one_imp_mul_le_one",
-   ``!(x:posreal)(y:posreal).
+Theorem operand_le_one_imp_mul_le_one:
+     !(x:posreal)(y:posreal).
         (x <= 1) ==>
-        (x*y <= y)``,
-   METIS_TAC [le_mul2, le_refl, mul_lone]);
+        (x*y <= y)
+Proof
+   METIS_TAC [le_mul2, le_refl, mul_lone]
+QED
 
 
-val mul_nonzero_operands_imp_nonzero_result = store_thm
-  ("mul_nonzero_operands_imp_nonzero_result",
-   ``!(x:posreal) (y:posreal). (0 < x) /\ (0 < y) ==> (0 < x * y)``,
+Theorem mul_nonzero_operands_imp_nonzero_result:
+     !(x:posreal) (y:posreal). (0 < x) /\ (0 < y) ==> (0 < x * y)
+Proof
    RW_TAC posreal_ss [preal_lt_def, entire]
    ++ `~(x <= 0)` by METIS_TAC [preal_lt_def]
    ++ `~(y <= 0)` by METIS_TAC [preal_lt_def]
-   ++ METIS_TAC [le_zero]);
+   ++ METIS_TAC [le_zero]
+QED
 
-val INT_LE_EQ_LT_ADD1 = store_thm
-  ("INT_LE_EQ_LT_ADD1",
-   ``(x:int) <= (y:int) = x < y + 1``,
+Theorem INT_LE_EQ_LT_ADD1:
+     (x:int) <= (y:int) = x < y + 1
+Proof
    REPEAT STRIP_TAC
     ++ `x <= y ==> x < y + 1` by METIS_TAC [INT_LT_ADD1]
     ++ `x < y + 1 ==> x <= y`
@@ -219,46 +234,50 @@ val INT_LE_EQ_LT_ADD1 = store_thm
             ++ FULL_SIMP_TAC int_ss [INT_ADD_CALCULATE]
                 ++ Cases_on `y' <= 1`
                 ++ FULL_SIMP_TAC int_ss [])
-    ++ METIS_TAC []);
+    ++ METIS_TAC []
+QED
 
 Definition posreal_pow_def:
     (posreal_pow (e:posreal) 0 = 1) /\
     (posreal_pow (e:posreal) (SUC n) = e * (posreal_pow e n))
 End
 
-val posreal_pow_1bounded_base_1bounded = store_thm
-  ("posreal_pow_1bounded_base_1bounded",
-   ``!e n. (e <= 1) ==> (posreal_pow e n <= 1)``,
+Theorem posreal_pow_1bounded_base_1bounded:
+     !e n. (e <= 1) ==> (posreal_pow e n <= 1)
+Proof
    RW_TAC posreal_ss []
    ++ Induct_on `n`
    ++ RW_TAC posreal_ss [posreal_pow_def]
-   ++ METIS_TAC [mul_operands_le1_le1]);
+   ++ METIS_TAC [mul_operands_le1_le1]
+QED
 
-val posreal_pow_base1_eq_1 = store_thm
-  ("posreal_pow_base1_eq_1",
-   ``!n. posreal_pow 1 n = 1``,
+Theorem posreal_pow_base1_eq_1:
+     !n. posreal_pow 1 n = 1
+Proof
    Induct
-   ++ METIS_TAC [posreal_pow_def, mul_lone]);
+   ++ METIS_TAC [posreal_pow_def, mul_lone]
+QED
 
-val zero_lt_posreal_pow = store_thm
-  ("zero_lt_posreal_pow",
-   ``!e n. (0 < e) ==> (0 < (posreal_pow e n))``,
+Theorem zero_lt_posreal_pow:
+     !e n. (0 < e) ==> (0 < (posreal_pow e n))
+Proof
    GEN_TAC
    ++ Induct_on `n`
    ++ RW_TAC posreal_ss [posreal_pow_def]
    ++ `0 < posreal_pow e n`
         by METIS_TAC []
-   ++ METIS_TAC [mul_nonzero_operands_imp_nonzero_result]);
+   ++ METIS_TAC [mul_nonzero_operands_imp_nonzero_result]
+QED
 
-val NO_INT_BETWEEN_ZERO_AND_ONE = store_thm
-  ("NO_INT_BETWEEN_ZERO_AND_ONE",
-   ``!(x:int). ~(0<x /\ x < 1)``,
+Theorem NO_INT_BETWEEN_ZERO_AND_ONE:
+     !(x:int). ~(0<x /\ x < 1)
+Proof
    `1 = 0 + (1:int)` by RW_TAC int_ss []
-   ++ METIS_TAC [INT_DISCRETE]);
+   ++ METIS_TAC [INT_DISCRETE]
+QED
 
-val variant_rule = store_thm
-  ("variant_rule",
-   ``!(g :'a state -> bool) (body :'a command) (Inv :'a state -> bool)
+Theorem variant_rule:
+     !(g :'a state -> bool) (body :'a command) (Inv :'a state -> bool)
        (H :int) (L :int) (e :posreal).
       (0 :posreal) < e /\ e <= (1 :posreal) /\
       Leq
@@ -287,7 +306,8 @@ val variant_rule = store_thm
       Leq
         (\(s :'a state).
            (if Inv s then posreal_pow e (Num (H - L)) else (0 :posreal)))
-        (wp (While g body) (One :'a state expect))``,
+        (wp (While g body) (One :'a state expect))
+Proof
 RW_TAC std_ss []
 ++ `!(N :int).
       Leq
@@ -1432,11 +1452,11 @@ RW_TAC std_ss []
             >> METIS_TAC [leq_trans]
             ++ POP_ASSUM (K ALL_TAC)
             ++ FULL_SIMP_TAC posreal_ss [Leq_def, Max_def]
-            ++ METIS_TAC [le_refl, max_le]);
+            ++ METIS_TAC [le_refl, max_le]
+QED
 
-val variant_rule2 = store_thm
-  ("variant_rule2",
-   ``!(g :'a state -> bool) (body :'a command) (Inv :'a state -> bool)
+Theorem variant_rule2:
+     !(g :'a state -> bool) (body :'a command) (Inv :'a state -> bool)
             (H :int) (L :int).
            Leq
              (\(s :'a state).
@@ -1474,7 +1494,8 @@ val variant_rule2 = store_thm
            Leq
              (\(s :'a state).
                 (if Inv s then (1 :posreal) else (0 :posreal)))
-             (wp (While g body) (One :'a state expect))``,
+             (wp (While g body) (One :'a state expect))
+Proof
    RW_TAC posreal_ss []
    ++ `Leq
       (\(s :'a state).
@@ -1497,11 +1518,11 @@ val variant_rule2 = store_thm
           (0 :
         posreal)))`
         by METIS_TAC [FUN_EQ_THM, posreal_pow_base1_eq_1]
-   ++ ASM_REWRITE_TAC []);
+   ++ ASM_REWRITE_TAC []
+QED
 
-val While_variant_rule = store_thm
-  ("While_variant_rule",
-``!(i :string) (n :string) (body :value command).
+Theorem While_variant_rule:
+  !(i :string) (n :string) (body :value command).
            ~(n = i) /\
            Leq
              (\(s :value state).
@@ -1569,7 +1590,8 @@ val While_variant_rule = store_thm
                       (Assign i
                          (\(s :value state).
                             Int (int_of_value (s i) + (1 :int))))))
-                (One :value state expect))``,
+                (One :value state expect))
+Proof
 REPEAT GEN_TAC
 ++ Q.ABBREV_TAC `Inv = (\(s :value state). (0 :int) <= int_of_value (s (i :string)))`
 ++ Q.ABBREV_TAC `g = (\(s :value state).
@@ -2923,11 +2945,11 @@ REPEAT GEN_TAC
         ++ POP_ASSUM (K ALL_TAC)
         ++ METIS_TAC [])
         ++ METIS_TAC [zero_le])
-++ METIS_TAC [zero_le]);
+++ METIS_TAC [zero_le]
+QED
 
-val For_i_0_to_n_variant_rule = store_thm
-  ("For_i_0_to_n_variant_rule",
-``!(i :string) (n :string) (body :value command list).
+Theorem For_i_0_to_n_variant_rule:
+  !(i :string) (n :string) (body :value command list).
            ~(n = i) /\
            Leq
              (\(s :value state).
@@ -2978,7 +3000,8 @@ val For_i_0_to_n_variant_rule = store_thm
                          (0 :
                        posreal))))) ==>
            (wp (For_0_to_n i n body) (One :value state expect) =
-            (One :value state expect))``,
+            (One :value state expect))
+Proof
 RW_TAC posreal_ss [For_0_to_n_def, For_def]
 ++ MATCH_MP_TAC leq_antisym
 ++ SIMP_TAC std_ss [Term_Leq_One]
@@ -3075,11 +3098,11 @@ RW_TAC posreal_ss [For_0_to_n_def, For_def]
           (0 :
         posreal))) (\(w :string). (if w = i then Int (0 :int) else s w))`
 >> METIS_TAC [le_trans]
-++ SIMP_TAC posreal_ss [One_def, int_of_value_def, INT_LE_REFL]);
+++ SIMP_TAC posreal_ss [One_def, int_of_value_def, INT_LE_REFL]
+QED
 
-val bool_Inv_rule = store_thm
-  ("bool_Inv_rule",
-   ``!(Inv :num -> 'a state -> bool) (g :'a state -> bool)
+Theorem bool_Inv_rule:
+     !(Inv :num -> 'a state -> bool) (g :'a state -> bool)
             (body :'a command).
            (!(v :num).
               Leq (bool_exp (\(s :'a state). g s /\ Inv v s))
@@ -3090,7 +3113,8 @@ val bool_Inv_rule = store_thm
            !(v :num).
              Leq (bool_exp (Inv v))
                (wp (While g body)
-                  (bool_exp (\(s :'a state). ?(v' :num). Inv v' s /\ ~g s)))``,
+                  (bool_exp (\(s :'a state). ?(v' :num). Inv v' s /\ ~g s)))
+Proof
    REPEAT STRIP_TAC
    ++ completeInduct_on `v`
    ++ ONCE_REWRITE_TAC [while_unwind_lemma]
@@ -3179,17 +3203,18 @@ val bool_Inv_rule = store_thm
                  (0 :
                posreal)))) s`
         by RW_TAC posreal_ss []
-   ++ METIS_TAC [le_trans]);
+   ++ METIS_TAC [le_trans]
+QED
 
-val assign_while_immediate_term = store_thm
-  ("assign_while_immediate_term",
-   ``!(i :string) (body :value command) (n :num)
+Theorem assign_while_immediate_term:
+     !(i :string) (body :value command) (n :num)
             (postE :value state expect).
            wp (Assign i (\(s :value state). Int (& n :int)))
              (wp
                 (While (\(s :value state). int_of_value (s i) < (& n :int))
                    body) postE) =
-           wp (Assign i (\(s :value state). Int (& n :int))) postE``,
+           wp (Assign i (\(s :value state). Int (& n :int))) postE
+Proof
    REPEAT GEN_TAC
    ++ Q.ABBREV_TAC `g = (\(s :value state).
             int_of_value (s (i :string)) < (& (n :num) :int))`
@@ -3208,11 +3233,11 @@ val assign_while_immediate_term = store_thm
    ++ Q.UNABBREV_TAC `foo`
    ++ POP_ASSUM (K ALL_TAC)
    ++ Q.UNABBREV_TAC `g`
-   ++ RW_TAC int_ss [int_of_value_def, wp_assign]);
+   ++ RW_TAC int_ss [int_of_value_def, wp_assign]
+QED
 
-val while_reverse_unwind_part1 = store_thm
-  ("while_reverse_unwind_part1",
-   ``!(body :value command) (i :string) (postE :'a).
+Theorem while_reverse_unwind_part1:
+     !(body :value command) (i :string) (postE :'a).
            (!(postE :value state expect) (m :num).
               (\(s :value state).
                  wp body
@@ -3260,7 +3285,8 @@ val while_reverse_unwind_part1 = store_thm
                                (Assign i
                                   (\(s :value state).
                                      Int (int_of_value (s i) + (1 :int))))))
-                         postE))))``,
+                         postE))))
+Proof
    REPEAT STRIP_TAC
    ++ `wp (Assign (i :string) (\(s :value state). Int (& (m :num) :int)))
       (wp
@@ -3339,11 +3365,11 @@ val while_reverse_unwind_part1 = store_thm
    ++ POP_ASSUM (K ALL_TAC)
    ++ RW_TAC std_ss [int_of_value_def, wp_seq, wp_assign]
    ++ `(& (m :num) :int) < (& (n :num) :int)` by RW_TAC int_ss []
-   ++ ASM_REWRITE_TAC []);
+   ++ ASM_REWRITE_TAC []
+QED
 
-val while_reverse_unwind_lemma = store_thm
-  ("while_reverse_unwind_lemma",
-   ``!(n :num) (m :num) (body :value command) (i :string)
+Theorem while_reverse_unwind_lemma:
+     !(n :num) (m :num) (body :value command) (i :string)
             (postE :value state expect).
            (!(postE :value state expect) (m :num).
               (\(s :value state).
@@ -3391,7 +3417,8 @@ val while_reverse_unwind_lemma = store_thm
                     (Seq body
                        (Assign i
                           (\(s :value state).
-                             Int (int_of_value (s i) + (1 :int))))))) postE)``,
+                             Int (int_of_value (s i) + (1 :int))))))) postE)
+Proof
    REPEAT STRIP_TAC
    ++ `!(m :num) (n :num) (postE :value state expect).
       m < n ==>
@@ -3570,11 +3597,11 @@ val while_reverse_unwind_lemma = store_thm
    ++ POP_ASSUM (K ALL_TAC)
    ++ POP_ASSUM (K ALL_TAC)
    ++ Q.UNABBREV_TAC `loopbody`
-   ++ RW_TAC std_ss [int_of_value_def, wp_seq, wp_assign]);
+   ++ RW_TAC std_ss [int_of_value_def, wp_seq, wp_assign]
+QED
 
-val For_reverse_unwind_lemma = store_thm
-  ("For_reverse_unwind_lemma",
-   ``!(n :num) (m :num) (body :value command) (i :string)
+Theorem For_reverse_unwind_lemma:
+     !(n :num) (m :num) (body :value command) (i :string)
             (postE :value state expect).
            (!(postE :value state expect) (m :num).
               (\(s :value state).
@@ -3614,13 +3641,14 @@ val For_reverse_unwind_lemma = store_thm
                  (Seq body
                     (Assign i
                        (\(s :value state).
-                          Int (int_of_value (s i) + (1 :int)))))) postE)``,
+                          Int (int_of_value (s i) + (1 :int)))))) postE)
+Proof
    RW_TAC std_ss [For_def, Program_def]
-   ++ METIS_TAC [while_reverse_unwind_lemma, wp_seq]);
+   ++ METIS_TAC [while_reverse_unwind_lemma, wp_seq]
+QED
 
-val For_0_to_n_reverse_unwind_lemma = store_thm
-  ("For_0_to_n_reverse_unwind_lemma",
-   ``!(n :num) (body :value command) (i :string)
+Theorem For_0_to_n_reverse_unwind_lemma:
+     !(n :num) (body :value command) (i :string)
             (postE :value state expect).
            (!(postE :value state expect) (m :num).
               (\(s :value state).
@@ -3659,9 +3687,11 @@ val For_0_to_n_reverse_unwind_lemma = store_thm
                  (Seq body
                     (Assign i
                        (\(s :value state).
-                          Int (int_of_value (s i) + (1 :int)))))) postE)``,
+                          Int (int_of_value (s i) + (1 :int)))))) postE)
+Proof
    REPEAT STRIP_TAC
    ++ `(0 :num) <= (n :num)` by RW_TAC arith_ss []
    ++ `0 = &0` by RW_TAC int_ss []
-   ++ METIS_TAC [For_reverse_unwind_lemma]);
+   ++ METIS_TAC [For_reverse_unwind_lemma]
+QED
 

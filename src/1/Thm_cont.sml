@@ -145,11 +145,12 @@ fun DISJ_CASES_THEN2 ttac1 ttac2 =
 (*               ttac1 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj1)) g *)
             and (gl2, prf2) = ttac2 (foo disth disj2) g
 (*              ttac2 (itlist ADD_ASSUM (Thm.hyp disth) (ASSUME disj2)) g *)
+            val len_gl1 = length gl1 (* Avoid capture of gl1 in closure *)
          in
             (gl1 @ gl2,
              fn thl =>
                let
-                  val (thl1, thl2) = split_after (length gl1) thl
+                  val (thl1, thl2) = split_after len_gl1 thl
                in
                   DISJ_CASES disth (prf1 thl1) (prf2 thl2)
                end)

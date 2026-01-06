@@ -41,12 +41,13 @@ val _ = type_abbrev ("EvenKeySched",
         ``:EvenKey#EvenKey#EvenKey#EvenKey#
            EvenKey#EvenKey#EvenKey#EvenKey``);
 
-val FORALL_BLOCK = Q.store_thm
-("FORALL_BLOCK",
- `(!b:Block. Q b) =
+Theorem FORALL_BLOCK:
+  (!b:Block. Q b) =
    !w1 w2 w3 w4.
-    Q (w1,w2,w3,w4)`,
- SIMP_TAC std_ss [FORALL_PROD]);
+    Q (w1,w2,w3,w4)
+Proof
+ SIMP_TAC std_ss [FORALL_PROD]
+QED
 
 val FORALL_ODDKEYSCHED = Q.prove
 (`(!x:OddKeySched. Q x) = !k1 k2 k3 k4 k5 k6 k7 k8 k9.
@@ -130,17 +131,19 @@ Definition OddRound_def:
           (Xa wmul Ka, Xc + Kc, Xb + Kb,Xd wmul Kd) :Block
 End
 
-val OddRound_Lemma1 = Q.store_thm
-("OddRound_Lemma1",
- `!w1:word16 w2:word16. w1 + w2 + - w2 = w1`,
- SRW_TAC [] []);
+Theorem OddRound_Lemma1:
+  !w1:word16 w2:word16. w1 + w2 + - w2 = w1
+Proof
+ SRW_TAC [] []
+QED
 
-val OddRound_Inversion = Q.store_thm
-("OddRound_Inversion",
- `!s:Block k:OddKey. OddRound (InverseKey k) (OddRound k s) = s`,
+Theorem OddRound_Inversion:
+  !s:Block k:OddKey. OddRound (InverseKey k) (OddRound k s) = s
+Proof
  SIMP_TAC std_ss [FORALL_BLOCK, FORALL_ODDKEY] THEN
  ARW [InverseKey_def, OddRound_def] THEN
- ARW [wmul_ASSOC, wmul_Theorem, wmul_Mul1, OddRound_Lemma1]);
+ ARW [wmul_ASSOC, wmul_Theorem, wmul_Mul1, OddRound_Lemma1]
+QED
 
 Definition Mangler1_def:
  Mangler1 ((Yin:word16), (Zin:word16), (Ke:word16), (Kf:word16)) =
@@ -161,12 +164,13 @@ End
 val [Mangler1] = decls "Mangler1";
 val [Mangler2] = decls "Mangler2";
 
-val EvenRound_Inversion = Q.store_thm
-("EvenRound_Inversion",
- `!s:Block k:EvenKey. EvenRound k (EvenRound k s) = s`,
+Theorem EvenRound_Inversion:
+  !s:Block k:EvenKey. EvenRound k (EvenRound k s) = s
+Proof
   SIMP_TAC std_ss [FORALL_BLOCK, FORALL_EVENKEY] THEN
   RESTR_EVAL_TAC [Mangler1, Mangler2] THEN
-  SRW_TAC [] []);
+  SRW_TAC [] []
+QED
 
 val Round_def =
   tDefine "Round"
@@ -188,14 +192,15 @@ End
 val [OddRound] = decls "OddRound";
 val [EvenRound] = decls "EvenRound";
 
-val IDEA_LEMMA = Q.store_thm
-("IDEA_LEMMA",
- `!plaintext:Block oddkeys:OddKeySched evenkeys:EvenKeySched.
+Theorem IDEA_LEMMA:
+  !plaintext:Block oddkeys:OddKeySched evenkeys:EvenKeySched.
      IdeaFwd (InverseKeys oddkeys) (ReverseKeys evenkeys)
-       (IdeaFwd oddkeys evenkeys plaintext) = plaintext`,
+       (IdeaFwd oddkeys evenkeys plaintext) = plaintext
+Proof
  SIMP_TAC std_ss [FORALL_ODDKEYSCHED, FORALL_EVENKEYSCHED] THEN
  RESTR_EVAL_TAC [OddRound, EvenRound] THEN
- SIMP_TAC std_ss [OddRound_Inversion, EvenRound_Inversion]);
+ SIMP_TAC std_ss [OddRound_Inversion, EvenRound_Inversion]
+QED
 
 val MakeEnKeys_def =
   tDefine "MakeEnKeys"
@@ -242,11 +247,12 @@ Definition IDEA_def:   IDEA key =
     (ReverseKeys evenkeys))
 End
 
-val IDEA_CORRECT = Q.store_thm
-  ("IDEA_CORRECT",
-   `!key plaintext.
+Theorem IDEA_CORRECT:
+    !key plaintext.
       ((encrypt,decrypt) = IDEA key)
       ==>
-       (decrypt (encrypt plaintext) = plaintext)`,
- RW_TAC std_ss [IDEA_def,LET_THM,IDEA_LEMMA]);
+       (decrypt (encrypt plaintext) = plaintext)
+Proof
+ RW_TAC std_ss [IDEA_def,LET_THM,IDEA_LEMMA]
+QED
 

@@ -16,3 +16,14 @@ val _ = shouldfail {checkexn = (fn Conv.UNCHANGED => true | _ => false),
                                (fn ss0 => ss0 -* ["BETA_CONV"])
                                (fn t => SIMP_CONV (srw_ss()) [] t)}
                    “(λx. x /\ p) T”
+
+val _ = convtest ("SIMP_CONV (srw_ss()) [] “p ∧ T”", SIMP_CONV (srw_ss()) [],
+                  “p ∧ T”, “p:bool”)
+
+val _ = convtest("above w/simpset_updates removing",
+                 BasicProvers.with_simpset_updates
+                   (simpLib.remove_simps ["AND_CLAUSES"])
+                   (fn x => Conv.QCONV (SIMP_CONV (srw_ss()) []) x),
+                   “p ∧ T”, “p ∧ T”)
+
+val _ = convtest("Original again", SIMP_CONV (srw_ss()) [], “p ∧ T”, “p:bool”)

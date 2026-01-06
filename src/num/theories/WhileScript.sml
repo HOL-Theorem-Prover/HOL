@@ -226,14 +226,13 @@ Proof
    REWRITE_TAC [LEAST_EXISTS]
 QED
 
-Theorem LEAST_EQ:
+Theorem LEAST_EQ[simp]:
     ((LEAST n. n = x) = x) /\ ((LEAST n. x = n) = x)
 Proof
   CONJ_TAC THEN
   Q.SPEC_THEN `\n. n = x` (MATCH_MP_TAC o BETA_RULE) LEAST_ELIM THEN
   SIMP_TAC (srw_ss()) []
 QED
-val _ = export_rewrites ["LEAST_EQ"]
 
 Theorem LEAST_T[simp]:
     (LEAST x. T) = 0
@@ -274,7 +273,7 @@ Proof
   ]
 QED
 
-Theorem OLEAST_EQNS:
+Theorem OLEAST_EQNS[simp]:
     ((OLEAST n. n = x) = SOME x) /\
     ((OLEAST n. x = n) = SOME x) /\
     ((OLEAST n. F) = NONE) /\
@@ -283,7 +282,6 @@ Proof
   REPEAT STRIP_TAC THEN DEEP_INTRO_TAC OLEAST_INTRO THEN SRW_TAC [][] THEN
   METIS_TAC [NOT_ZERO_LT_ZERO]
 QED
-val _ = export_rewrites ["OLEAST_EQNS"]
 
 Theorem OLEAST_EQ_NONE[simp]:
    ((OLEAST) P = NONE) <=> !n. ~P n

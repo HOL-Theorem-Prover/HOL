@@ -73,21 +73,23 @@ Definition dFV_def:
   (dFV (dABS t) = IMAGE PRE (dFV t DELETE 0))
 End
 
-val IN_dFV_thm = store_thm(
-  "IN_dFV_thm",
-  ``(j IN dFV (dV i) = (i = j)) /\
+Theorem IN_dFV_thm:
+    (j IN dFV (dV i) = (i = j)) /\
     (j IN dFV (dAPP t u) = j IN dFV t \/ j IN dFV u) /\
-    (j IN dFV (dABS t) = j + 1 IN dFV t)``,
+    (j IN dFV (dABS t) = j + 1 IN dFV t)
+Proof
   SRW_TAC [][dFV_def, EQ_IMP_THM] THENL [
     Cases_on `x` THEN FULL_SIMP_TAC (srw_ss()) [ADD1],
     Q.EXISTS_TAC `j + 1` THEN SRW_TAC [ARITH_ss][]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["IN_dFV_thm"]
 
-val FINITE_dFV = store_thm(
-  "FINITE_dFV",
-  ``FINITE (dFV t)``,
-  Induct_on `t` THEN SRW_TAC [][dFV_def]);
+Theorem FINITE_dFV:
+    FINITE (dFV t)
+Proof
+  Induct_on `t` THEN SRW_TAC [][dFV_def]
+QED
 val _ = export_rewrites ["FINITE_dFV"]
 
 (* guarded increment of a string: it's untouched if the corresponding index
@@ -97,14 +99,15 @@ Definition ginc_def:
   ginc gd s = if s2n s < gd then s else n2s (s2n s + 1)
 End
 
-val ginc_0 = store_thm(
-  "ginc_0",
-  ``ginc 0 s = n2s (s2n s + 1)``,
-  SRW_TAC [][ginc_def])
+Theorem ginc_0:
+    ginc 0 s = n2s (s2n s + 1)
+Proof
+  SRW_TAC [][ginc_def]
+QED
 
-val ginc_11 = store_thm(
-  "ginc_11",
-  ``(ginc g s1 = ginc g s2) = (s1 = s2)``,
+Theorem ginc_11:
+    (ginc g s1 = ginc g s2) = (s1 = s2)
+Proof
   SRW_TAC [][ginc_def] THENL [
     `s2n s1 < s2n s2` by DECIDE_TAC THEN
     `~(s1 = s2)` by METIS_TAC [DECIDE ``~(x < x)``] THEN
@@ -114,17 +117,19 @@ val ginc_11 = store_thm(
     `~(s1 = s2)` by METIS_TAC [DECIDE ``~(x < x)``] THEN
     SRW_TAC [][] THEN STRIP_TAC THEN SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
-  ]);
+  ]
+QED
 val _ = export_rewrites ["ginc_11"]
 
-val ginc_neq = store_thm(
-  "ginc_neq",
-  ``~(ginc (s2n s1) s2 = s1)``,
+Theorem ginc_neq:
+    ~(ginc (s2n s1) s2 = s1)
+Proof
   SRW_TAC [][ginc_def] THENL [
     STRIP_TAC THEN FULL_SIMP_TAC (srw_ss()) [],
     STRIP_TAC THEN SRW_TAC [][] THEN
     FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 val _ = export_rewrites ["ginc_neq"]
 
 (* incrementing a permutation, defined in terms of the underlying list of
@@ -135,30 +140,33 @@ Definition inc_pm_def:
 End
 val _ = export_rewrites ["inc_pm_def"]
 
-val inc_pm_APPEND = store_thm(
-  "inc_pm_APPEND",
-  ``!pi1 pi2. inc_pm g (pi1 ++ pi2) = inc_pm g pi1 ++ inc_pm g pi2``,
-  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]);
+Theorem inc_pm_APPEND:
+    !pi1 pi2. inc_pm g (pi1 ++ pi2) = inc_pm g pi1 ++ inc_pm g pi2
+Proof
+  Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD]
+QED
 
 (* characterisation of what an incremented permutation does to a string *)
-val lswapstr_inc_pm = store_thm(
-  "lswapstr_inc_pm",
-  ``!pi g s. lswapstr (inc_pm g pi) s =
+Theorem lswapstr_inc_pm:
+    !pi g s. lswapstr (inc_pm g pi) s =
                 if s2n s < g then ginc g (lswapstr pi s)
                 else if s2n s = g then s
-                else ginc g (lswapstr pi (n2s (s2n s - 1)))``,
+                else ginc g (lswapstr pi (n2s (s2n s - 1)))
+Proof
   Induct THENL [
     SRW_TAC [ARITH_ss][ginc_def],
     ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD] THEN
     SRW_TAC [][] THEN
     SRW_TAC [][basic_swapTheory.swapstr_def]
-  ]);
+  ]
+QED
 
-val inc_pm_permeq = store_thm(
-  "inc_pm_permeq",
-  ``!p1 p2. (p1 == p2) ==> (inc_pm g p1 == inc_pm g p2)``,
+Theorem inc_pm_permeq:
+    !p1 p2. (p1 == p2) ==> (inc_pm g p1 == inc_pm g p2)
+Proof
   SIMP_TAC (srw_ss()) [nomsetTheory.permeq_thm, lswapstr_inc_pm,
-                       FUN_EQ_THM]);
+                       FUN_EQ_THM]
+QED
 
 (* definition of permutation over de Bruijn terms *)
 Definition raw_dpm_def:
@@ -171,9 +179,9 @@ val _ = overload_on("d_pmact",``mk_pmact raw_dpm``);
 val _ = overload_on("dpm",``pmact d_pmact``);
 
 (* proof that dB terms + dpm form a nominal set *)
-val dpm_raw = store_thm(
-  "dpm_raw",
-  ``dpm = raw_dpm``,
+Theorem dpm_raw:
+    dpm = raw_dpm
+Proof
   SRW_TAC [][GSYM nomsetTheory.pmact_bijections] THEN
   SIMP_TAC (srw_ss()) [nomsetTheory.is_pmact_def] THEN REPEAT CONJ_TAC THENL [
     Induct_on `x` THEN SRW_TAC [][],
@@ -181,7 +189,8 @@ val dpm_raw = store_thm(
     SIMP_TAC (srw_ss()) [FUN_EQ_THM, GSYM RIGHT_FORALL_IMP_THM,
                          nomsetTheory.permeq_thm] THEN
     Induct_on `x` THEN SRW_TAC [][lswapstr_inc_pm]
-  ]);
+  ]
+QED
 val dpm_thm = save_thm(
 "dpm_thm",
 raw_dpm_def |> SUBS [GSYM dpm_raw]);
@@ -193,52 +202,57 @@ val _ = export_rewrites ["dpm_thm"]
 Definition dFVs_def:  dFVs t = IMAGE n2s (dFV t)
 End
 
-val IN_dFVs_thm = store_thm(
-  "IN_dFVs_thm",
-  ``(s IN dFVs (dV i) = (i = s2n s)) /\
+Theorem IN_dFVs_thm:
+    (s IN dFVs (dV i) = (i = s2n s)) /\
     (s IN dFVs (dAPP t u) = s IN dFVs t \/ s IN dFVs u) /\
-    (s IN dFVs (dABS t) = n2s (s2n s + 1) IN dFVs t)``,
+    (s IN dFVs (dABS t) = n2s (s2n s + 1) IN dFVs t)
+Proof
   SRW_TAC [][dFVs_def] THENL [
     SRW_TAC [][EQ_IMP_THM],
     METIS_TAC [],
     SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][] THEN
     Q.EXISTS_TAC `s2n s` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 val _ = export_rewrites ["IN_dFVs_thm"]
 
-val FINITE_dFVs = store_thm(
-  "FINITE_dFVs",
-  ``FINITE (dFVs t)``,
-  SRW_TAC [][dFVs_def]);
+Theorem FINITE_dFVs:
+    FINITE (dFVs t)
+Proof
+  SRW_TAC [][dFVs_def]
+QED
 val _ = export_rewrites ["FINITE_dFVs"]
 
 (* this and the next result establish that dFVs gives the support of a
    dB term *)
-val dpm_apart = store_thm(
-  "dpm_apart",
-  ``!x y. x IN dFVs t /\ ~(y IN dFVs t) ==> ~(dpm [(x,y)] t = t)``,
+Theorem dpm_apart:
+    !x y. x IN dFVs t /\ ~(y IN dFVs t) ==> ~(dpm [(x,y)] t = t)
+Proof
   Induct_on `t` THEN SRW_TAC [][] THENL [
     FULL_SIMP_TAC (srw_ss()) [],
     METIS_TAC [],
     METIS_TAC [],
     FIRST_X_ASSUM MATCH_MP_TAC THEN
     SRW_TAC [][ginc_0]
-  ]);
+  ]
+QED
 
-val dpm_fresh = store_thm(
-  "dpm_fresh",
-  ``!x y. ~(x IN dFVs t) /\ ~(y IN dFVs t) ==> (dpm [(x,y)] t = t)``,
+Theorem dpm_fresh:
+    !x y. ~(x IN dFVs t) /\ ~(y IN dFVs t) ==> (dpm [(x,y)] t = t)
+Proof
   Induct_on `t` THEN SRW_TAC [][ginc_0] THEN
   SRW_TAC [][basic_swapTheory.swapstr_def] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val dpm_supp = store_thm(
-  "dpm_supp",
-  ``supp d_pmact = dFVs``,
+Theorem dpm_supp:
+    supp d_pmact = dFVs
+Proof
   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN SRW_TAC [][] THEN
   MATCH_MP_TAC nomsetTheory.supp_unique_apart THEN
   SRW_TAC [][dpm_apart, nomsetTheory.support_def] THEN
-  MATCH_MP_TAC dpm_fresh THEN SRW_TAC [][]);
+  MATCH_MP_TAC dpm_fresh THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["dpm_supp"]
 
 
@@ -258,10 +272,11 @@ val _ = binderLib.local_update (
 )
 
 (* substitution of a fresh variable is actually a permutation *)
-val fresh_dpm_sub = store_thm(
-  "fresh_dpm_sub",
-  ``!i j M. ~(j IN dFV M) ==> (sub (dV j) i M = dpm [(n2s j, n2s i)] M)``,
-  Induct_on `M` THEN SRW_TAC [][ginc_0]);
+Theorem fresh_dpm_sub:
+    !i j M. ~(j IN dFV M) ==> (sub (dV j) i M = dpm [(n2s j, n2s i)] M)
+Proof
+  Induct_on `M` THEN SRW_TAC [][ginc_0]
+QED
 
 val ginc_0n = prove(
   ``ginc 0 (ginc n s) = ginc (n + 1) (ginc 0 s)``,
@@ -272,9 +287,9 @@ val inc_pm_0n = prove(
   Induct THEN ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ginc_0n])
 
 (* interaction of lifting and permutation *)
-val lift_dpm = store_thm(
-  "lift_dpm",
-  ``!n pi. lift (dpm pi M) n = dpm (inc_pm n pi) (lift M n)``,
+Theorem lift_dpm:
+    !n pi. lift (dpm pi M) n = dpm (inc_pm n pi) (lift M n)
+Proof
   Induct_on `M` THEN SRW_TAC [][lswapstr_inc_pm] THENL [
     SRW_TAC [][ginc_def],
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [] THEN
@@ -282,74 +297,83 @@ val lift_dpm = store_thm(
     SRW_TAC [ARITH_ss][ginc_def],
     SRW_TAC [ARITH_ss][ginc_def],
     SRW_TAC [][inc_pm_0n]
-  ]);
+  ]
+QED
 
 (* substitution and permutation are clean *)
-val dpm_sub = store_thm(
-  "dpm_sub",
-  ``!pi M j N.
+Theorem dpm_sub:
+    !pi M j N.
         dpm pi (sub M j N) = sub (dpm pi M) (s2n (lswapstr pi (n2s j)))
-                                         (dpm pi N)``,
+                                         (dpm pi N)
+Proof
   Induct_on `N` THEN SRW_TAC [][lswapstr_inc_pm, lift_dpm] THEN
-  SRW_TAC [][ginc_0]);
+  SRW_TAC [][ginc_0]
+QED
 
 (* thus, so too is dLAM *)
-val dpm_dLAM = store_thm(
-  "dpm_dLAM",
-  ``dpm pi (dLAM j t) = dLAM (s2n (lswapstr pi (n2s j))) (dpm pi t)``,
+Theorem dpm_dLAM:
+    dpm pi (dLAM j t) = dLAM (s2n (lswapstr pi (n2s j))) (dpm pi t)
+Proof
   SRW_TAC [][dLAM_def, dpm_sub, lift_dpm, lswapstr_inc_pm] THEN
-  SRW_TAC [][ginc_0])
+  SRW_TAC [][ginc_0]
+QED
 val _ = export_rewrites ["dpm_dLAM"]
 
 (* some standard results about substitution *)
-val sub_14a = store_thm(
-  "sub_14a",
-  ``!i t. sub (dV i) i t = t``,
-  Induct_on `t` THEN SRW_TAC [][]);
+Theorem sub_14a:
+    !i t. sub (dV i) i t = t
+Proof
+  Induct_on `t` THEN SRW_TAC [][]
+QED
 
-val sub_14b = store_thm(
-  "sub_14b",
-  ``!M i N. ~(i IN dFV N) ==> (sub M i N = N)``,
+Theorem sub_14b:
+    !M i N. ~(i IN dFV N) ==> (sub M i N = N)
+Proof
   Induct_on `N` THEN SRW_TAC [][] THEN
   FIRST_X_ASSUM (Q.SPEC_THEN `i + 1` MP_TAC) THEN
-  SRW_TAC [ARITH_ss][])
+  SRW_TAC [ARITH_ss][]
+QED
 
-val sub_15a = store_thm(
-  "sub_15a",
-  ``!M i j N. ~(i IN dFV M) ==>
-              (sub N i (sub (dV i) j M) = sub N j M)``,
+Theorem sub_15a:
+    !M i j N. ~(i IN dFV M) ==>
+              (sub N i (sub (dV i) j M) = sub N j M)
+Proof
   Induct_on `M` THEN SRW_TAC [][] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  FIRST_X_ASSUM (Q.SPEC_THEN `i + 1` MP_TAC) THEN SRW_TAC [ARITH_ss][]);
+  FIRST_X_ASSUM (Q.SPEC_THEN `i + 1` MP_TAC) THEN SRW_TAC [ARITH_ss][]
+QED
 
 (* from Nipkow *)
-val nipkow_lift_lemma1 = store_thm(
-  "nipkow_lift_lemma1",
-  ``!t i k. i < k ==> (lift (lift t i) k = lift (lift t (k - 1)) i)``,
-  Induct THEN SRW_TAC [ARITH_ss][])
+Theorem nipkow_lift_lemma1:
+    !t i k. i < k ==> (lift (lift t i) k = lift (lift t (k - 1)) i)
+Proof
+  Induct THEN SRW_TAC [ARITH_ss][]
+QED
 
 (* result needed to establish the substitution lemma *)
-val lift_sub = store_thm(
-  "lift_sub",
-  ``!M i N n.
+Theorem lift_sub:
+    !M i N n.
        n <= i ==>
-       (lift (sub M i N) n = sub (lift M n) (i + 1) (lift N n))``,
+       (lift (sub M i N) n = sub (lift M n) (i + 1) (lift N n))
+Proof
   Induct_on `N` THEN
-  SRW_TAC [ARITH_ss][nipkow_lift_lemma1])
+  SRW_TAC [ARITH_ss][nipkow_lift_lemma1]
+QED
 
 val sn_iso_num = prove(
   ``((s = n2s n) = (n = s2n s)) /\ ((n2s n = s) = (n = s2n s))``,
   METIS_TAC [string_numTheory.s2n_n2s, string_numTheory.n2s_s2n])
 
-val IN_dFV_lift = store_thm(
-  "IN_dFV_lift",
-  ``!n m. m IN dFV (lift M n) = m IN dFV M /\ m < n \/
-                                m - 1 IN dFV M /\ n < m``,
+Theorem IN_dFV_lift:
+    !n m. m IN dFV (lift M n) = m IN dFV M /\ m < n \/
+                                m - 1 IN dFV M /\ n < m
+Proof
   Induct_on `M` THEN SRW_TAC [ARITH_ss][] THENL [
     METIS_TAC [],
     SIMP_TAC (srw_ss() ++ DNF_ss ++ ARITH_ss ++ CONJ_ss)
              [EQ_IMP_THM]
-  ])
+  ]
+QED
 val _ = export_rewrites ["IN_dFV_lift"]
 
 Theorem dLAM_alt_dpm :
@@ -359,15 +383,16 @@ Proof
 QED
 
 (* The substitution lemma, in dB guise *)
-val sub_lemma = store_thm(
-  "sub_lemma",
-  ``!M N i j L. ~(i = j) /\ ~(j IN dFV M) ==>
+Theorem sub_lemma:
+    !M N i j L. ~(i = j) /\ ~(j IN dFV M) ==>
                 (sub M i (sub N j L) =
-                 sub (sub M i N) j (sub M i L))``,
+                 sub (sub M i N) j (sub M i L))
+Proof
   Induct_on `L` THEN
   SRW_TAC [][sub_14b, lift_sub] THEN
   FIRST_X_ASSUM MATCH_MP_TAC THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 (* which allows us to prove that substitution interacts with dLAM in the way
    we'd expect *)
@@ -380,21 +405,23 @@ Proof
   SRW_TAC [][lift_sub]
 QED
 
-val dFVs_lift = store_thm(
-  "dFVs_lift",
-  ``!n. dFVs (lift M n) = { n2s m | m IN dFV M /\ m < n } UNION
-                          { n2s (m + 1) | m IN dFV M /\ n <= m }``,
+Theorem dFVs_lift:
+    !n. dFVs (lift M n) = { n2s m | m IN dFV M /\ m < n } UNION
+                          { n2s (m + 1) | m IN dFV M /\ n <= m }
+Proof
   SRW_TAC [][dFVs_def, EXTENSION, EQ_IMP_THM] THEN
   SRW_TAC [][] THENL [
     DISJ2_TAC THEN Q.EXISTS_TAC `x' - 1` THEN SRW_TAC [ARITH_ss][],
     SRW_TAC [ARITH_ss][]
-  ]);
+  ]
+QED
 
 (* free variables of a substitution *)
-val IN_dFV = store_thm(
-  "IN_dFV",
-  ``x IN dFV t = n2s x IN dFVs t``,
-  SRW_TAC [][dFVs_def]);
+Theorem IN_dFV:
+    x IN dFV t = n2s x IN dFVs t
+Proof
+  SRW_TAC [][dFVs_def]
+QED
 
 val dFVs_sub1 = prove(
   ``!M j. j IN dFV N ==>
@@ -405,24 +432,26 @@ val dFVs_sub1 = prove(
     SRW_TAC [][dFVs_lift, IN_dFV, sn_iso_num] THEN METIS_TAC []
   ]);
 
-val dFVs_sub = store_thm(
-  "dFVs_sub",
-  ``!M j. dFVs (sub M j N) = if j IN dFV N then
+Theorem dFVs_sub:
+    !M j. dFVs (sub M j N) = if j IN dFV N then
                                (dFVs N DELETE n2s j) UNION dFVs M
-                             else dFVs N``,
-  SRW_TAC [][EXTENSION, dFVs_sub1, sub_14b]);
+                             else dFVs N
+Proof
+  SRW_TAC [][EXTENSION, dFVs_sub1, sub_14b]
+QED
 
 (* and thus, the free variables of dLAM *)
-val dFVs_dLAM = store_thm(
-  "dFVs_dLAM",
-  ``dFVs (dLAM i bod) = dFVs bod DELETE (n2s i)``,
+Theorem dFVs_dLAM:
+    dFVs (dLAM i bod) = dFVs bod DELETE (n2s i)
+Proof
   SRW_TAC [ARITH_ss][dLAM_def, dFVs_sub, dFVs_lift, EXTENSION, IN_dFV] THEN
-  METIS_TAC [sn_iso_num]);
+  METIS_TAC [sn_iso_num]
+QED
 val _ = export_rewrites ["dFVs_dLAM"]
 
-val dpm_ALPHA = store_thm(
-  "dpm_ALPHA",
-  ``u ∉ dFVs t ==> (dLAM (s2n u) (dpm [(u,v)] t) = dLAM (s2n v) t)``,
+Theorem dpm_ALPHA:
+    u ∉ dFVs t ==> (dLAM (s2n u) (dpm [(u,v)] t) = dLAM (s2n v) t)
+Proof
   SRW_TAC [][dLAM_def, lift_dpm] THEN
   `sub (dV 0) (s2n u + 1) (dpm [(ginc 0 u, ginc 0 v)] (lift t 0)) =
    dpm [(ginc 0 u, ginc 0 v)] (sub (dV 0) (s2n v + 1) (lift t 0))`
@@ -430,7 +459,8 @@ val dpm_ALPHA = store_thm(
   POP_ASSUM SUBST1_TAC THEN
   MATCH_MP_TAC dpm_fresh THEN
   SRW_TAC [][dFVs_sub, ginc_0, dFVs_lift, IN_dFV] THEN
-  FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []);
+  FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) []
+QED
 
 val _ = augment_srw_ss [simpLib.name_ss "fromTerm_def" (rewrites [dpm_ALPHA])]
 
@@ -458,26 +488,29 @@ val fromTerm_eq0 = prove(
    match up *)
 
 (* free variables *)
-val dFVs_fromTerm = store_thm(
-  "dFVs_fromTerm",
-  ``!N. dFVs (fromTerm N) = FV N``,
+Theorem dFVs_fromTerm:
+    !N. dFVs (fromTerm N) = FV N
+Proof
   REWRITE_TAC [EXTENSION] THEN
-  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN METIS_TAC []);
+  HO_MATCH_MP_TAC simple_induction THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 val _ = export_rewrites ["dFVs_fromTerm"]
 
 (* substitution *)
-val fromTerm_subst = store_thm(
-  "fromTerm_subst",
-  ``!M. fromTerm ([N/v] M) = sub (fromTerm N) (s2n v) (fromTerm M)``,
+Theorem fromTerm_subst:
+    !M. fromTerm ([N/v] M) = sub (fromTerm N) (s2n v) (fromTerm M)
+Proof
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `v INSERT FV N` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR, fromTerm_def, sub_dLAM, IN_dFV]);
+  SRW_TAC [][SUB_THM, SUB_VAR, fromTerm_def, sub_dLAM, IN_dFV]
+QED
 
 
-val lift_11 = store_thm(
-  "lift_11",
-  ``!M1 M2 n. (lift M1 n = lift M2 n) = (M1 = M2)``,
+Theorem lift_11:
+    !M1 M2 n. (lift M1 n = lift M2 n) = (M1 = M2)
+Proof
   Induct_on `M1` THEN SRW_TAC [][] THEN Cases_on `M2` THEN
-  SRW_TAC [][] THEN DECIDE_TAC);
+  SRW_TAC [][] THEN DECIDE_TAC
+QED
 
 val fromTerm_eqlam = prove(
   ``(fromTerm t = dLAM i d) = ?t0. (t = LAM (n2s i) t0) /\ (d = fromTerm t0)``,
@@ -543,28 +576,31 @@ val (dbeta'_rules, dbeta'_ind, dbeta'_cases) = Hol_reln`
   (!M N i. dbeta' M N ==> dbeta' (dLAM i M) (dLAM i N))
 `;
 
-val dbeta'_ccbeta = store_thm(
-  "dbeta'_ccbeta",
-  ``!t u. dbeta' t u ==> !M N. (t = fromTerm M) /\ (u = fromTerm N) ==>
-                               compat_closure beta M N``,
+Theorem dbeta'_ccbeta:
+    !t u. dbeta' t u ==> !M N. (t = fromTerm M) /\ (u = fromTerm N) ==>
+                               compat_closure beta M N
+Proof
   HO_MATCH_MP_TAC dbeta'_ind THEN
   SRW_TAC [][fromTerm_eqn] THEN
   FULL_SIMP_TAC (srw_ss()) [fromTerm_11, compat_closure_rules] THEN
   MATCH_MP_TAC (hd (CONJUNCTS (SPEC_ALL compat_closure_rules))) THEN
   SRW_TAC [][beta_def] THEN MAP_EVERY Q.EXISTS_TAC [`n2s i`, `t0`] THEN
   SRW_TAC [][] THEN ONCE_REWRITE_TAC [GSYM fromTerm_11] THEN
-  REWRITE_TAC [fromTerm_subst] THEN SRW_TAC [][]);
-val ccbeta_dbeta' = store_thm(
-  "ccbeta_dbeta'",
-  ``!M N. compat_closure beta M N ==> dbeta' (fromTerm M) (fromTerm N)``,
+  REWRITE_TAC [fromTerm_subst] THEN SRW_TAC [][]
+QED
+Theorem ccbeta_dbeta':
+    !M N. compat_closure beta M N ==> dbeta' (fromTerm M) (fromTerm N)
+Proof
   HO_MATCH_MP_TAC compat_closure_ind THEN
   SRW_TAC [][dbeta'_rules, beta_def] THEN
-  SRW_TAC [][fromTerm_def, fromTerm_subst, dbeta'_rules]);
+  SRW_TAC [][fromTerm_def, fromTerm_subst, dbeta'_rules]
+QED
 
-val dbeta'_eq_ccbeta = store_thm(
-  "dbeta'_eq_ccbeta",
-  ``dbeta' (fromTerm M) (fromTerm N) = compat_closure beta M N``,
-  METIS_TAC [ccbeta_dbeta', dbeta'_ccbeta]);
+Theorem dbeta'_eq_ccbeta:
+    dbeta' (fromTerm M) (fromTerm N) = compat_closure beta M N
+Proof
+  METIS_TAC [ccbeta_dbeta', dbeta'_ccbeta]
+QED
 
 val onto_lemma = prove(
   ``!t i n. ~(i IN dFV t) ==>
@@ -602,45 +638,49 @@ val onto_lemma2 = prove(
     RES_TAC THEN DECIDE_TAC
   ])
 
-val dfresh_exists = store_thm(
-  "dfresh_exists",
-  ``!t. ?v. ~(v IN dFV t)``,
+Theorem dfresh_exists:
+    !t. ?v. ~(v IN dFV t)
+Proof
   STRIP_TAC THEN Q.SPEC_THEN `t` STRIP_ASSUME_TAC onto_lemma2 THEN
   Q.EXISTS_TAC `j` THEN STRIP_TAC THEN RES_TAC THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
 (* a cases theorem for dB based around dLAM rather than dSUB *)
-val db_cases' = store_thm(
-  "db_cases'",
-  ``!t. (?i. t = dV i) \/ (?t0 t1. t = dAPP t0 t1) \/
-        (?i t0. t = dLAM i t0)``,
+Theorem db_cases':
+    !t. (?i. t = dV i) \/ (?t0 t1. t = dAPP t0 t1) \/
+        (?i t0. t = dLAM i t0)
+Proof
   Cases_on `t` THEN SRW_TAC [][dLAM_def] THEN
   Q.MATCH_ABBREV_TAC `?i t0. p = sub (dV 0) (i + 1) (lift t0 0)` THEN
   `?i. !j. j IN dFV p ==> j < i` by METIS_TAC [onto_lemma2] THEN
   `~(i + 1 IN dFV p)`
      by (STRIP_TAC THEN RES_TAC THEN DECIDE_TAC) THEN
-  METIS_TAC [onto_lemma]);
+  METIS_TAC [onto_lemma]
+QED
 
-val sub_nsub = store_thm(
-  "sub_nsub",
-  ``!N i n M.
+Theorem sub_nsub:
+    !N i n M.
        n <= i ==>
-       (sub N i M = nsub N n (sub (dV n) (i + 1) (lift M n)))``,
+       (sub N i M = nsub N n (sub (dV n) (i + 1) (lift M n)))
+Proof
   Induct_on `M` THEN SRW_TAC [][] THENL [
     SRW_TAC [ARITH_ss][] THEN FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [],
     SRW_TAC [ARITH_ss][],
     SRW_TAC [ARITH_ss][]
-  ]);
+  ]
+QED
 
-val sub_nsub15a = store_thm(
-  "sub_nsub15a",
-  ``!d2 d1 i j. i + 1 NOTIN dFV d2 /\ j <= i ==>
-                (sub d1 i (nsub (dV i) j d2) = nsub d1 j d2)``,
+Theorem sub_nsub15a:
+    !d2 d1 i j. i + 1 NOTIN dFV d2 /\ j <= i ==>
+                (sub d1 i (nsub (dV i) j d2) = nsub d1 j d2)
+Proof
   Induct THEN SRW_TAC [][] THENL [
     FULL_SIMP_TAC (srw_ss()) [],
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) [],
     ASM_SIMP_TAC (srw_ss() ++ ARITH_ss) []
-  ]);
+  ]
+QED
 
 (* Nipkow's definition of beta reduction *)
 val (dbeta_rules, dbeta_ind, dbeta_cases) = Hol_reln`
@@ -651,40 +691,44 @@ val (dbeta_rules, dbeta_ind, dbeta_cases) = Hol_reln`
 `;
 
 (* all of the "lambda-calculus" redexes reduce appropriately under dbeta *)
-val alt_dbeta_rule = store_thm(
-  "alt_dbeta_rule",
-  ``dbeta (dAPP (dLAM i M) N) (sub N i M)``,
+Theorem alt_dbeta_rule:
+    dbeta (dAPP (dLAM i M) N) (sub N i M)
+Proof
   SRW_TAC [][dLAM_def] THEN
   Q_TAC SUFF_TAC `sub N i M =
                   nsub N 0 (sub (dV 0) (i + 1) (lift M 0))`
         THEN1 (DISCH_THEN SUBST1_TAC THEN
                MATCH_ACCEPT_TAC (hd (CONJUNCTS dbeta_rules))) THEN
-  MATCH_MP_TAC sub_nsub THEN SRW_TAC [][]);
+  MATCH_MP_TAC sub_nsub THEN SRW_TAC [][]
+QED
 
-val dABS_renamed = store_thm(
-  "dABS_renamed",
-  ``!M. ~(v IN dFV (dABS M)) ==> ?t0. dABS M = dLAM v t0``,
-  SRW_TAC [][dLAM_def] THEN SRW_TAC [ARITH_ss][onto_lemma])
+Theorem dABS_renamed:
+    !M. ~(v IN dFV (dABS M)) ==> ?t0. dABS M = dLAM v t0
+Proof
+  SRW_TAC [][dLAM_def] THEN SRW_TAC [ARITH_ss][onto_lemma]
+QED
 
 (* conversely, the de Bruijn redexes reduce under dbeta' *)
-val alt_dbeta'_rule = store_thm(
-  "alt_dbeta'_rule",
-  ``dbeta' (dAPP (dABS t) u) (nsub u 0 t)``,
+Theorem alt_dbeta'_rule:
+    dbeta' (dAPP (dABS t) u) (nsub u 0 t)
+Proof
   `?z. ~(z IN dFV (dABS t))` by METIS_TAC [dfresh_exists] THEN
   `?t0. dABS t = dLAM z t0` by METIS_TAC [dABS_renamed] THEN
   SRW_TAC [][] THEN
   Q_TAC SUFF_TAC `nsub u 0 t = sub u z t0` THEN1 SRW_TAC [][dbeta'_rules] THEN
   FULL_SIMP_TAC (srw_ss()) [dLAM_def] THEN
-  SRW_TAC [][GSYM sub_nsub]);
+  SRW_TAC [][GSYM sub_nsub]
+QED
 
 val dbeta'_dpm = prove(
   ``!M N. dbeta' M N ==> !pi. dbeta' (dpm pi M) (dpm pi N)``,
   HO_MATCH_MP_TAC dbeta'_ind THEN SRW_TAC [][dpm_sub, dbeta'_rules]);
 
-val dbeta'_dpm_calc = store_thm(
-  "dbeta'_dpm_calc",
-  ``!M N. dbeta' (dpm pi M) N = dbeta' M (dpm (REVERSE pi) N)``,
-  METIS_TAC [dbeta'_dpm, nomsetTheory.pmact_inverse])
+Theorem dbeta'_dpm_calc:
+    !M N. dbeta' (dpm pi M) N = dbeta' M (dpm (REVERSE pi) N)
+Proof
+  METIS_TAC [dbeta'_dpm, nomsetTheory.pmact_inverse]
+QED
 
 (* We can construct a lift permutation.
      inc_as_pm lim n
@@ -698,14 +742,14 @@ Definition lifting_pm_def:
                     else lifting_pm lim (n - 1) ++ [(n2s n, n2s (n + 1))]
 End
 
-val lifting_pm_behaves = store_thm(
-  "lifting_pm_behaves",
-  ``!n lim i.
+Theorem lifting_pm_behaves:
+    !n lim i.
       lswapstr (lifting_pm lim n) (n2s i) =
           if i < lim then n2s i
           else if i <= n then n2s (i + 1)
           else if i = n + 1 then n2s lim
-          else n2s i``,
+          else n2s i
+Proof
   Induct THEN ONCE_REWRITE_TAC [lifting_pm_def] THENL [
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [],
     REPEAT GEN_TAC THEN Cases_on `SUC n < lim` THENL [
@@ -733,23 +777,25 @@ val lifting_pm_behaves = store_thm(
         SRW_TAC [ARITH_ss][]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* interaction of inc_pm with lifting_pm *)
-val inc_pm0_lifting_pm = store_thm(
-  "inc_pm0_lifting_pm",
-  ``!m n. inc_pm 0 (lifting_pm m n) = lifting_pm (m + 1) (n + 1)``,
+Theorem inc_pm0_lifting_pm:
+    !m n. inc_pm 0 (lifting_pm m n) = lifting_pm (m + 1) (n + 1)
+Proof
   Induct_on `n` THEN ONCE_REWRITE_TAC [lifting_pm_def] THENL [
     SRW_TAC [][ginc_0] THEN
     FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [],
 
     SRW_TAC [][ginc_0, inc_pm_APPEND, ADD1]
-  ])
+  ]
+QED
 
-val lifts_are_specific_dpms = store_thm(
-  "lifts_are_specific_dpms",
-  ``!M n. (!i. i IN dFV M ==> i <= n) ==>
-          !m. lift M m = dpm (lifting_pm m n) M``,
+Theorem lifts_are_specific_dpms:
+    !M n. (!i. i IN dFV M ==> i <= n) ==>
+          !m. lift M m = dpm (lifting_pm m n) M
+Proof
   Induct THEN SRW_TAC [][] THENL [
     SRW_TAC [][lifting_pm_behaves],
     FULL_SIMP_TAC (srw_ss() ++ DNF_ss) [inc_pm0_lifting_pm] THEN
@@ -758,22 +804,24 @@ val lifts_are_specific_dpms = store_thm(
       SRW_TAC [][],
       FULL_SIMP_TAC (srw_ss()) [ADD1]
     ]
-  ]);
+  ]
+QED
 
-val lifts_are_dpms = store_thm(
-  "lifts_are_dpms",
-  ``!M n. ?pi. lift M n = dpm pi M``,
+Theorem lifts_are_dpms:
+    !M n. ?pi. lift M n = dpm pi M
+Proof
   REPEAT GEN_TAC THEN
   Q.SPEC_THEN `M` STRIP_ASSUME_TAC onto_lemma2 THEN
   Q.EXISTS_TAC `lifting_pm n j` THEN MATCH_MP_TAC lifts_are_specific_dpms THEN
-  REPEAT STRIP_TAC THEN RES_TAC THEN DECIDE_TAC);
+  REPEAT STRIP_TAC THEN RES_TAC THEN DECIDE_TAC
+QED
 
-val dABS_rules_are_dLAM_compatible = store_thm(
-  "dABS_rules_are_dLAM_compatible",
-  ``(!p t u. R (dpm p t) (dpm p u) = R t u) ==>
+Theorem dABS_rules_are_dLAM_compatible:
+    (!p t u. R (dpm p t) (dpm p u) = R t u) ==>
     ((!t u. R t u ==> R (dABS t) (dABS u))
       =
-     !i t u. R t u ==> R (dLAM i t) (dLAM i u))``,
+     !i t u. R t u ==> R (dLAM i t) (dLAM i u))
+Proof
   STRIP_TAC THEN EQ_TAC THEN REPEAT STRIP_TAC THENL [
     SRW_TAC [][dLAM_def, fresh_dpm_sub] THEN
     FIRST_X_ASSUM MATCH_MP_TAC THEN SRW_TAC [][] THEN
@@ -805,11 +853,12 @@ val dABS_rules_are_dLAM_compatible = store_thm(
             REPEAT STRIP_TAC THEN RES_TAC THEN Q.UNABBREV_TAC `k` THEN
             DECIDE_TAC) THEN
     SRW_TAC [][]
-  ]);
+  ]
+QED
 
-val dbeta'_lift = store_thm(
-  "dbeta'_lift",
-  ``dbeta' (lift M n) (lift N n) = dbeta' M N``,
+Theorem dbeta'_lift:
+    dbeta' (lift M n) (lift N n) = dbeta' M N
+Proof
   Q.SPEC_THEN `M` STRIP_ASSUME_TAC onto_lemma2 THEN
   Q.SPEC_THEN `N` STRIP_ASSUME_TAC onto_lemma2 THEN
   Q.ABBREV_TAC `k = if j < j' then j' else j` THEN
@@ -817,23 +866,25 @@ val dbeta'_lift = store_thm(
      by (CONJ_TAC THEN MATCH_MP_TAC lifts_are_specific_dpms THEN
          REPEAT STRIP_TAC THEN RES_TAC THEN Q.UNABBREV_TAC `k` THEN
          DECIDE_TAC) THEN
-  SRW_TAC [][dbeta'_dpm_calc, nomsetTheory.pmact_inverse])
+  SRW_TAC [][dbeta'_dpm_calc, nomsetTheory.pmact_inverse]
+QED
 
-val dbeta_dbeta' = store_thm(
-  "dbeta_dbeta'",
-  ``!M N. dbeta M N ==> dbeta' M N``,
+Theorem dbeta_dbeta':
+    !M N. dbeta M N ==> dbeta' M N
+Proof
   HO_MATCH_MP_TAC dbeta_ind THEN SRW_TAC [][dbeta'_rules] THENL [
     SRW_TAC [][alt_dbeta'_rule],
     Q_TAC SUFF_TAC `!p t u. dbeta' (dpm p t) (dpm p u) = dbeta' t u`
           THEN1 METIS_TAC [dABS_rules_are_dLAM_compatible, dbeta'_rules] THEN
     SRW_TAC [][dbeta'_dpm_calc, nomsetTheory.pmact_inverse]
-  ]);
+  ]
+QED
 
 (* nsub must be icky - just look at how it behaves under permutations *)
-val dpm_nsub = store_thm(
-  "dpm_nsub",
-  ``!M i pi.
-       dpm pi (nsub M i N) = nsub (dpm pi M) i (dpm (inc_pm i pi) N)``,
+Theorem dpm_nsub:
+    !M i pi.
+       dpm pi (nsub M i N) = nsub (dpm pi M) i (dpm (inc_pm i pi) N)
+Proof
   Induct_on `N` THENL [
     SIMP_TAC (srw_ss()) [] THEN REPEAT GEN_TAC THEN Cases_on `i < n` THENL [
       ASM_SIMP_TAC (srw_ss()) [] THEN
@@ -864,16 +915,18 @@ val dpm_nsub = store_thm(
     Q.ID_SPEC_TAC `i` THEN Induct_on `pi` THEN1 SRW_TAC [][] THEN
     ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, ginc_0] THEN
     SRW_TAC [][ginc_def]
-  ]);
+  ]
+QED
 
-val dbeta_dpm = store_thm(
-  "dbeta_dpm",
-  ``!M N. dbeta M N ==> !pi. dbeta (dpm pi M) (dpm pi N)``,
-  HO_MATCH_MP_TAC dbeta_ind THEN SRW_TAC [][dbeta_rules, dpm_nsub])
+Theorem dbeta_dpm:
+    !M N. dbeta M N ==> !pi. dbeta (dpm pi M) (dpm pi N)
+Proof
+  HO_MATCH_MP_TAC dbeta_ind THEN SRW_TAC [][dbeta_rules, dpm_nsub]
+QED
 
-val dbeta_lift = store_thm(
-  "dbeta_lift",
-  ``dbeta (lift M n) (lift N n) = dbeta M N``,
+Theorem dbeta_lift:
+    dbeta (lift M n) (lift N n) = dbeta M N
+Proof
   Q.SPEC_THEN `M` STRIP_ASSUME_TAC onto_lemma2 THEN
   Q.SPEC_THEN `N` STRIP_ASSUME_TAC onto_lemma2 THEN
   Q.ABBREV_TAC `k = if j < j' then j' else j` THEN
@@ -881,20 +934,23 @@ val dbeta_lift = store_thm(
      by (CONJ_TAC THEN MATCH_MP_TAC lifts_are_specific_dpms THEN
          REPEAT STRIP_TAC THEN RES_TAC THEN Q.UNABBREV_TAC `k` THEN
          DECIDE_TAC) THEN
-  METIS_TAC [dbeta_dpm, nomsetTheory.pmact_inverse])
+  METIS_TAC [dbeta_dpm, nomsetTheory.pmact_inverse]
+QED
 
-val dbeta'_dbeta = store_thm(
-  "dbeta'_dbeta",
-  ``!M N. dbeta' M N ==> dbeta M N``,
+Theorem dbeta'_dbeta:
+    !M N. dbeta' M N ==> dbeta M N
+Proof
   HO_MATCH_MP_TAC dbeta'_ind THEN
   SRW_TAC [][dbeta_rules, alt_dbeta_rule] THEN
   METIS_TAC [dABS_rules_are_dLAM_compatible, dbeta_rules, dbeta_dpm,
-             nomsetTheory.pmact_inverse]);
+             nomsetTheory.pmact_inverse]
+QED
 
-val dbeta_dbeta'_eqn = store_thm(
-  "dbeta_dbeta'_eqn",
-  ``dbeta = dbeta'``,
-  SRW_TAC [][FUN_EQ_THM] THEN METIS_TAC [dbeta'_dbeta, dbeta_dbeta'])
+Theorem dbeta_dbeta'_eqn:
+    dbeta = dbeta'
+Proof
+  SRW_TAC [][FUN_EQ_THM] THEN METIS_TAC [dbeta'_dbeta, dbeta_dbeta']
+QED
 
 (* We've shown that dbeta and dbeta' are equivalent.  Now we use this to
    show that dbeta matches up with beta on terms, and then we're all done *)
@@ -921,10 +977,11 @@ val ccbeta_dbeta2 = prove(
   MATCH_MP_TAC (hd (CONJUNCTS (SPEC_ALL compat_closure_rules))) THEN
   SRW_TAC [][beta_def] THEN METIS_TAC [])
 
-val dbeta_ccbeta_eqn = store_thm(
-  "dbeta_ccbeta_eqn",
-  ``dbeta (fromTerm M) (fromTerm N) = compat_closure beta M N``,
-  METIS_TAC [ccbeta_dbeta2, ccbeta_dbeta1]);
+Theorem dbeta_ccbeta_eqn:
+    dbeta (fromTerm M) (fromTerm N) = compat_closure beta M N
+Proof
+  METIS_TAC [ccbeta_dbeta2, ccbeta_dbeta1]
+QED
 
 (* to finish, a demonstration that fromTerm is also onto, using a size
    measure on dB terms.  Could alternatively prove an induction
@@ -936,27 +993,30 @@ Definition dbsize_def:
 End
 val _ = export_rewrites ["dbsize_def"]
 
-val dbsize_sub = store_thm(
-  "dbsize_sub",
-  ``!n i M. dbsize (sub (dV n) i M) = dbsize M``,
-  Induct_on `M` THEN SRW_TAC [][]);
+Theorem dbsize_sub:
+    !n i M. dbsize (sub (dV n) i M) = dbsize M
+Proof
+  Induct_on `M` THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["dbsize_sub"]
 
-val dbsize_lift = store_thm(
-  "dbsize_lift",
-  ``!n M. dbsize (lift M n) = dbsize M``,
-  Induct_on `M` THEN SRW_TAC [][]);
+Theorem dbsize_lift:
+    !n M. dbsize (lift M n) = dbsize M
+Proof
+  Induct_on `M` THEN SRW_TAC [][]
+QED
 val _ = export_rewrites ["dbsize_lift"]
 
-val dbsize_dLAM = store_thm(
-  "dbsize_dLAM",
-  ``dbsize (dLAM i t) = dbsize t + 1``,
-  SRW_TAC [][dLAM_def])
+Theorem dbsize_dLAM:
+    dbsize (dLAM i t) = dbsize t + 1
+Proof
+  SRW_TAC [][dLAM_def]
+QED
 val _ = export_rewrites ["dbsize_dLAM"]
 
-val fromTerm_onto = store_thm(
-  "fromTerm_onto",
-  ``!d. ?t. (d = fromTerm t)``,
+Theorem fromTerm_onto:
+    !d. ?t. (d = fromTerm t)
+Proof
   GEN_TAC THEN completeInduct_on `dbsize d` THEN
   FULL_SIMP_TAC (srw_ss() ++ DNF_ss) [] THEN
   GEN_TAC THEN Q.SPEC_THEN `d` STRIP_ASSUME_TAC db_cases' THEN
@@ -971,7 +1031,8 @@ val fromTerm_onto = store_thm(
     SRW_TAC [][] THEN POP_ASSUM (Q.SPEC_THEN `t0` MP_TAC) THEN
     SRW_TAC [ARITH_ss][] THEN
     Q.EXISTS_TAC `LAM (n2s i) t` THEN SRW_TAC [][]
-  ]);
+  ]
+QED
 
 (* ----------------------------------------------------------------------
     toTerm (inverse of fromTerm)
@@ -991,10 +1052,11 @@ Proof
   SRW_TAC [][Excl "fromTerm_11"]
 QED
 
-val toTerm_onto = store_thm(
-  "toTerm_onto",
-  ``!t. ?d. toTerm d = t``,
-  METIS_TAC [fromTerm_11, fromtoTerm]);
+Theorem toTerm_onto:
+    !t. ?d. toTerm d = t
+Proof
+  METIS_TAC [fromTerm_11, fromtoTerm]
+QED
 
 Theorem tofromTerm[simp] :
     toTerm (fromTerm t) = t
@@ -1002,10 +1064,11 @@ Proof
   METIS_TAC [toTerm_onto, toTerm_11, fromtoTerm]
 QED
 
-val toTerm_eqn = store_thm(
-  "toTerm_eqn",
-  ``(toTerm x = y) <=> (fromTerm y = x)``,
-  SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][])
+Theorem toTerm_eqn:
+    (toTerm x = y) <=> (fromTerm y = x)
+Proof
+  SRW_TAC [][EQ_IMP_THM] THEN SRW_TAC [][]
+QED
 
 Theorem toTerm_thm[simp] :
     (toTerm (dV i) = VAR (n2s i)) /\
@@ -1027,25 +1090,28 @@ val lemma = prove(
     SRW_TAC [ARITH_ss][]
   ]);
 
-val dABS_dLAM = store_thm(
-  "dABS_dLAM",
-  ``i + 1 NOTIN dFV M ==> (dABS M = dLAM i (nsub (dV i) 0 M))``,
+Theorem dABS_dLAM:
+    i + 1 NOTIN dFV M ==> (dABS M = dLAM i (nsub (dV i) 0 M))
+Proof
   SIMP_TAC (srw_ss()) [dLAM_def] THEN
   ONCE_REWRITE_TAC [EQ_SYM_EQ] THEN
   Q.SPECL_THEN [`i`, `0`] ASSUME_TAC lemma THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val dABS_dLAM_exists = store_thm(
-  "dABS_dLAM_exists",
-  ``!M. ?i N. dABS M = dLAM i N``,
+Theorem dABS_dLAM_exists:
+    !M. ?i N. dABS M = dLAM i N
+Proof
   Q.X_GEN_TAC `M` THEN Q.SPEC_THEN `dABS M` STRIP_ASSUME_TAC db_cases' THEN
-  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []);
+  FULL_SIMP_TAC (srw_ss()) [] THEN METIS_TAC []
+QED
 
-val toTerm_dABS = store_thm(
-  "toTerm_dABS",
-  ``s2n v + 1 NOTIN dFV M ==>
-      (toTerm (dABS M) = LAM v (toTerm (nsub (dV (s2n v)) 0 M)))``,
-  SRW_TAC [][toTerm_eqn, dABS_dLAM]);
+Theorem toTerm_dABS:
+    s2n v + 1 NOTIN dFV M ==>
+      (toTerm (dABS M) = LAM v (toTerm (nsub (dV (s2n v)) 0 M)))
+Proof
+  SRW_TAC [][toTerm_eqn, dABS_dLAM]
+QED
 
 (* ----------------------------------------------------------------------
     bnf
@@ -1145,34 +1211,38 @@ val (eta_rules, eta_ind, eta_cases) = Hol_reln`
   (!i t t'. eta t t'      ==> eta (dLAM i t) (dLAM i t'))
 `;
 
-val nsub_lift = store_thm(
-  "nsub_lift",
-  ``!t u n. nsub u n (lift t n) = t``,
-  Induct_on `t` THEN SRW_TAC [ARITH_ss][]);
+Theorem nsub_lift:
+    !t u n. nsub u n (lift t n) = t
+Proof
+  Induct_on `t` THEN SRW_TAC [ARITH_ss][]
+QED
 val _ = export_rewrites ["nsub_lift"]
 
-val IN_dFV_dpm = store_thm(
-  "IN_dFV_dpm",
-  ``!t p i. i IN dFV (dpm p t) = s2n (lswapstr (REVERSE p) (n2s i)) IN dFV t``,
+Theorem IN_dFV_dpm:
+    !t p i. i IN dFV (dpm p t) = s2n (lswapstr (REVERSE p) (n2s i)) IN dFV t
+Proof
   SRW_TAC [][IN_dFV] THEN REWRITE_TAC [SYM dpm_supp] THEN
   `supp d_pmact (dpm p t) = ssetpm p (supp d_pmact t)`
      by METIS_TAC [nomsetTheory.perm_supp] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
-val REVERSE_inc_pm = store_thm(
-  "REVERSE_inc_pm",
-  ``!p x. REVERSE (inc_pm x p) = inc_pm x (REVERSE p)``,
+Theorem REVERSE_inc_pm:
+    !p x. REVERSE (inc_pm x p) = inc_pm x (REVERSE p)
+Proof
   Induct THEN
-  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, inc_pm_APPEND]);
+  ASM_SIMP_TAC (srw_ss()) [pairTheory.FORALL_PROD, inc_pm_APPEND]
+QED
 
-val nipkow_eta_lemma = store_thm(
-  "nipkow_eta_lemma",
-  ``!t i. ~(i IN dFV t) ==> !u v. nsub u i t = nsub v i t``,
-  Induct THEN SRW_TAC [][]);
+Theorem nipkow_eta_lemma:
+    !t i. ~(i IN dFV t) ==> !u v. nsub u i t = nsub v i t
+Proof
+  Induct THEN SRW_TAC [][]
+QED
 
-val neta_dpm = store_thm(
-  "neta_dpm",
-  ``!t u. neta t u ==> !p. neta (dpm p t) (dpm p u)``,
+Theorem neta_dpm:
+    !t u. neta t u ==> !p. neta (dpm p t) (dpm p u)
+Proof
   HO_MATCH_MP_TAC neta_ind THEN SRW_TAC [][neta_rules] THEN
   SRW_TAC [][lswapstr_inc_pm] THEN
   Q.MATCH_ABBREV_TAC `neta (dABS (dAPP tm (dV 0))) tm'` THEN
@@ -1180,7 +1250,8 @@ val neta_dpm = store_thm(
         THEN1 SRW_TAC [][neta_rules] THEN
   UNABBREV_ALL_TAC THEN
   SRW_TAC [][dpm_nsub,nipkow_eta_lemma, IN_dFV_dpm, REVERSE_inc_pm,
-             lswapstr_inc_pm]);
+             lswapstr_inc_pm]
+QED
 
 val alt_neta_redex = prove(
   ``~(i IN dFV t) ==> neta (dLAM i (dAPP t (dV i))) t``,
@@ -1192,38 +1263,43 @@ val alt_neta_redex = prove(
   `tm = lift t 0` by METIS_TAC [sub_14b] THEN
   SRW_TAC [][]);
 
-val eta_neta = store_thm(
-  "eta_neta",
-  ``!t u. eta t u ==> neta t u``,
+Theorem eta_neta:
+    !t u. eta t u ==> neta t u
+Proof
   HO_MATCH_MP_TAC eta_ind THEN
   SRW_TAC [][neta_rules, alt_neta_redex] THEN
   METIS_TAC [neta_rules, dABS_rules_are_dLAM_compatible, neta_dpm,
-             nomsetTheory.pmact_inverse]);
+             nomsetTheory.pmact_inverse]
+QED
 
-val nipkow_free_sub_lemmma = store_thm(
-  "nipkow_free_sub_lemmma",
-  ``!s t i k.
+Theorem nipkow_free_sub_lemmma:
+    !s t i k.
       i IN dFV (nsub t k s) = k IN dFV s /\ i IN dFV t \/
                               if i < k then i IN dFV s
-                              else i + 1 IN dFV s``,
-  Induct THEN SRW_TAC [ARITH_ss][] THEN METIS_TAC []);
+                              else i + 1 IN dFV s
+Proof
+  Induct THEN SRW_TAC [ARITH_ss][] THEN METIS_TAC []
+QED
 
-val lift_nsub = store_thm(
-  "lift_nsub",
-  ``!t n u. ~(n IN dFV t) ==> (lift (nsub u n t) n = t)``,
-  Induct THEN SRW_TAC [ARITH_ss][]);
+Theorem lift_nsub:
+    !t n u. ~(n IN dFV t) ==> (lift (nsub u n t) n = t)
+Proof
+  Induct THEN SRW_TAC [ARITH_ss][]
+QED
 
-val eta_dpm = store_thm(
-  "eta_dpm",
-  ``!t u. eta t u ==> !p. eta (dpm p t) (dpm p u)``,
+Theorem eta_dpm:
+    !t u. eta t u ==> !p. eta (dpm p t) (dpm p u)
+Proof
   HO_MATCH_MP_TAC eta_ind THEN SRW_TAC [][eta_rules] THEN
   MATCH_MP_TAC (hd (CONJUNCTS eta_rules)) THEN
-  SRW_TAC [][IN_dFV_dpm]);
+  SRW_TAC [][IN_dFV_dpm]
+QED
 
-val eta_dpm_eqn = store_thm(
-  "eta_dpm_eqn",
-  ``eta (dpm p t) (dpm p u) = eta t u``,
-  METIS_TAC [nomsetTheory.pmact_inverse, eta_dpm]);
+Theorem eta_dpm_eqn:
+    eta (dpm p t) (dpm p u) = eta t u
+Proof
+  METIS_TAC [nomsetTheory.pmact_inverse, eta_dpm]
+QED
 
 val alt_eta_redex = prove(
   ``~(0 IN dFV t) ==> eta (dABS (dAPP t (dV 0))) (nsub u 0 t)``,
@@ -1237,21 +1313,23 @@ val alt_eta_redex = prove(
   SRW_TAC [][dLAM_def] THEN
   SRW_TAC [][sub_14b, nipkow_eta_lemma, lift_nsub]);
 
-val neta_eta = store_thm(
-  "neta_eta",
-  ``!t u. neta t u ==> eta t u``,
+Theorem neta_eta:
+    !t u. neta t u ==> eta t u
+Proof
   HO_MATCH_MP_TAC neta_ind THEN SRW_TAC [][eta_rules, alt_eta_redex] THEN
-  METIS_TAC [eta_dpm_eqn, dABS_rules_are_dLAM_compatible, eta_rules]);
+  METIS_TAC [eta_dpm_eqn, dABS_rules_are_dLAM_compatible, eta_rules]
+QED
 
-val neta_eq_eta = store_thm(
-  "neta_eq_eta",
-  ``neta = eta``,
-  SRW_TAC [][FUN_EQ_THM] THEN METIS_TAC [neta_eta, eta_neta]);
+Theorem neta_eq_eta:
+    neta = eta
+Proof
+  SRW_TAC [][FUN_EQ_THM] THEN METIS_TAC [neta_eta, eta_neta]
+QED
 
-val eta_lam_eta = store_thm(
-  "eta_lam_eta",
-  ``!t u. eta t u ==> !M N. (t = fromTerm M) /\ (u = fromTerm N) ==>
-                            compat_closure eta M N``,
+Theorem eta_lam_eta:
+    !t u. eta t u ==> !M N. (t = fromTerm M) /\ (u = fromTerm N) ==>
+                            compat_closure eta M N
+Proof
   HO_MATCH_MP_TAC eta_ind THEN SRW_TAC [][fromTerm_eqn] THEN
   FULL_SIMP_TAC (srw_ss()) [fromTerm_11, IN_dFV] THENL [
     `eta (LAM (n2s i) (t1 @@ VAR (n2s i))) t1`
@@ -1260,20 +1338,23 @@ val eta_lam_eta = store_thm(
     METIS_TAC [compat_closure_rules],
     METIS_TAC [compat_closure_rules],
     METIS_TAC [compat_closure_rules]
-  ]);
+  ]
+QED
 
-val lam_eta_eta = store_thm(
-  "lam_eta_eta",
-  ``!M N. compat_closure eta M N ==> eta (fromTerm M) (fromTerm N)``,
+Theorem lam_eta_eta:
+    !M N. compat_closure eta M N ==> eta (fromTerm M) (fromTerm N)
+Proof
   HO_MATCH_MP_TAC compat_closure_ind THEN
   SRW_TAC [][eta_rules, eta_def] THEN
   SRW_TAC [][] THEN MATCH_MP_TAC (hd (CONJUNCTS eta_rules)) THEN
-  SRW_TAC [][IN_dFV]);
+  SRW_TAC [][IN_dFV]
+QED
 
-val eta_eq_lam_eta = store_thm(
-  "eta_eq_lam_eta",
-  ``eta (fromTerm M) (fromTerm N) = compat_closure eta M N``,
-  METIS_TAC [eta_lam_eta, lam_eta_eta]);
+Theorem eta_eq_lam_eta:
+    eta (fromTerm M) (fromTerm N) = compat_closure eta M N
+Proof
+  METIS_TAC [eta_lam_eta, lam_eta_eta]
+QED
 
 (*---------------------------------------------------------------------------*
  *  Accumulated operators for dB terms (LAMl, appstar, etc.)

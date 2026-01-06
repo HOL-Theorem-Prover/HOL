@@ -449,19 +449,16 @@ QED
 Theorem thm1_3_iii1:
   rec_sigma A n ∧ rec_sigma B n ==> (rec_sigma (A ∪ B) n ∧ rec_sigma (A ∩ B) n)
 Proof
-
 QED
 
 Theorem thm1_3_iii2:
   rec_pi A n ∧ rec_pi B n ==> (rec_pi (A ∪ B) n ∧ rec_pi (A ∩ B) n)
 Proof
-
 QED
 
 Theorem thm1_3_iv:
   rec_sigma R n ∧ n>0 ∧ A = {x | ∃y. R (x,y)} ==> rec_sigma A n
 Proof
-
 QED
 
 

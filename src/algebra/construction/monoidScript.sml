@@ -187,20 +187,16 @@ End
 (* val _ = export_rewrites ["AbelianMonoid_def"]; *)
 
 (* Finite Monoid = a Monoid with a finite carrier set. *)
-Definition FiniteMonoid_def:
+Definition FiniteMonoid_def[simp]:
   FiniteMonoid (g:'a monoid) <=>
     Monoid g /\ FINITE G
 End
-(* export simple definition. *)
-val _ = export_rewrites ["FiniteMonoid_def"];
 
 (* Finite Abelian Monoid = a Monoid that is both Finite and Abelian. *)
-Definition FiniteAbelianMonoid_def:
+Definition FiniteAbelianMonoid_def[simp]:
   FiniteAbelianMonoid (g:'a monoid) <=>
     AbelianMonoid g /\ FINITE G
 End
-(* export simple definition. *)
-val _ = export_rewrites ["FiniteAbelianMonoid_def"];
 
 (* ------------------------------------------------------------------------- *)
 (* Basic theorems from definition.                                           *)
@@ -227,7 +223,7 @@ val monoid_clauses = Monoid_def |> SPEC_ALL |> #1 o EQ_IMP_RULE;
 (* No need to export as definition is already exported. *)
 
 (* Theorem: [Closure] x * y in carrier. *)
-Theorem monoid_op_element =
+Theorem monoid_op_element[simp] =
   monoid_clauses |> UNDISCH_ALL |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_op_element = |- !g. Monoid g ==> !x y. x IN G /\ y IN G ==> x * y IN G : thm*)
 
@@ -237,7 +233,7 @@ Theorem monoid_assoc =
 (* > val monoid_assoc = |- !g. Monoid g ==> !x y z. x IN G /\ y IN G /\ z IN G ==> (x * y * z = x * (y * z)) : thm *)
 
 (* Theorem: [Identity exists] #e in carrier. *)
-Theorem monoid_id_element =
+Theorem monoid_id_element[simp] =
   monoid_clauses |> UNDISCH_ALL |> CONJUNCT2|> CONJUNCT2 |> CONJUNCT1 |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_id_element = |- !g. Monoid g ==> #e IN G : thm *)
 
@@ -248,36 +244,28 @@ Theorem monoid_id =
 
 (* Theorem: [Left identity] #e * x = x *)
 (* Proof: from monoid_id. *)
-Theorem monoid_lid =
+Theorem monoid_lid[simp] =
   monoid_id |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT1
             |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_lid = |- !g. Monoid g ==> !x. x IN G ==> (#e * x = x) : thm *)
 
 (* Theorem: [Right identity] x * #e = x *)
 (* Proof: from monoid_id. *)
-Theorem monoid_rid =
+Theorem monoid_rid[simp] =
   monoid_id |> SPEC_ALL |> UNDISCH_ALL |> SPEC_ALL |> UNDISCH_ALL |> CONJUNCT2
             |> DISCH ``x IN G`` |> GEN_ALL |> DISCH_ALL |> GEN_ALL;
 (* > val monoid_rid = |- !g. Monoid g ==> !x. x IN G ==> (x * #e = x) : thm *)
-
-(* export simple statements (no complicated and's) *)
-val _ = export_rewrites ["monoid_op_element"];
-(* val _ = export_rewrites ["monoid_assoc"]; -- no associativity *)
-val _ = export_rewrites ["monoid_id_element"];
-val _ = export_rewrites ["monoid_lid"];
-val _ = export_rewrites ["monoid_rid"];
 
 (* Theorem: #e * #e = #e *)
 (* Proof:
    by monoid_lid and monoid_id_element.
 *)
-Theorem monoid_id_id:
+Theorem monoid_id_id[simp]:
     !g:'a monoid. Monoid g ==> (#e * #e = #e)
 Proof
   rw[]
 QED
 
-val _ = export_rewrites ["monoid_id_id"];
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems in basic Monoid Theory.                                          *)
@@ -370,24 +358,22 @@ Overload "**" = ``g.exp``
 
 (* Theorem: x ** 0 = #e *)
 (* Proof: by definition and FUNPOW_0. *)
-Theorem monoid_exp_0:
+Theorem monoid_exp_0[simp]:
     !g:'a monoid. !x:'a. x ** 0 = #e
 Proof
   rw[monoid_exp_def]
 QED
 
-val _ = export_rewrites ["monoid_exp_0"];
 
 (* Theorem: x ** (SUC n) = x * (x ** n) *)
 (* Proof: by definition and FUNPOW_SUC. *)
-Theorem monoid_exp_SUC:
+(* should this be exported? Only FUNPOW_0 is exported. *)
+Theorem monoid_exp_SUC[simp]:
     !g:'a monoid. !x:'a. !n. x ** (SUC n) = x * (x ** n)
 Proof
   rw[monoid_exp_def, FUNPOW_SUC]
 QED
 
-(* should this be exported? Only FUNPOW_0 is exported. *)
-val _ = export_rewrites ["monoid_exp_SUC"];
 
 (* Theorem: (x ** n) in G *)
 (* Proof: by induction on n.
@@ -399,7 +385,7 @@ val _ = export_rewrites ["monoid_exp_SUC"];
    = x * (x ** n)    by monoid_exp_SUC
      in G            by monoid_op_element and induction hypothesis
 *)
-Theorem monoid_exp_element:
+Theorem monoid_exp_element[simp]:
     !g:'a monoid. Monoid g ==> !x. x IN G ==> !n. (x ** n) IN G
 Proof
   rpt strip_tac>>
@@ -407,7 +393,6 @@ Proof
   rw[]
 QED
 
-val _ = export_rewrites ["monoid_exp_element"];
 
 (* Theorem: x ** 1 = x *)
 (* Proof:
@@ -417,14 +402,13 @@ val _ = export_rewrites ["monoid_exp_element"];
    = x * #e         by monoid_exp_0
    = x              by monoid_rid
 *)
-Theorem monoid_exp_1:
+Theorem monoid_exp_1[simp]:
     !g:'a monoid. Monoid g ==> !x. x IN G ==> (x ** 1 = x)
 Proof
   rewrite_tac[ONE] >>
   rw[]
 QED
 
-val _ = export_rewrites ["monoid_exp_1"];
 
 (* Theorem: (#e ** n) = #e  *)
 (* Proof: by induction on n.
@@ -436,7 +420,7 @@ val _ = export_rewrites ["monoid_exp_1"];
       = #e ** n         by monoid_lid, monoid_exp_element
       hence true by induction hypothesis.
 *)
-Theorem monoid_id_exp:
+Theorem monoid_id_exp[simp]:
     !g:'a monoid. Monoid g ==> !n. #e ** n = #e
 Proof
   rpt strip_tac>>
@@ -444,7 +428,6 @@ Proof
   rw[]
 QED
 
-val _ = export_rewrites ["monoid_id_exp"];
 
 (* Theorem: For Abelian Monoid g,  (x ** n) * y = y * (x ** n) *)
 (* Proof:
@@ -592,7 +575,7 @@ QED
    = (x * (x ** n)) * (x ** k)  by monoid_assoc
    = (x ** SUC n) * (x ** k)    by monoid_exp_def
 *)
-Theorem monoid_exp_add:
+Theorem monoid_exp_add[simp]:
     !g:'a monoid. Monoid g ==> !x. x IN G ==> !n k. x ** (n + k) = (x ** n) * (x ** k)
 Proof
   rpt strip_tac >>
@@ -601,8 +584,6 @@ Proof
   rw_tac std_ss[monoid_exp_SUC, monoid_assoc, monoid_exp_element, DECIDE ``SUC n + k = SUC (n+k)``]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["monoid_exp_add"];
 
 (* Theorem: x ** (n * k) = (x ** n) ** k  *)
 (* Proof:
@@ -622,7 +603,7 @@ val _ = export_rewrites ["monoid_exp_add"];
    = (x * (x ** n)) ** k          by monoid_exp_comm
    = (x ** SUC n) ** k            by monoid_exp_def
 *)
-Theorem monoid_exp_mult:
+Theorem monoid_exp_mult[simp]:
     !g:'a monoid. Monoid g ==> !x. x IN G ==> !n k. x ** (n * k) = (x ** n) ** k
 Proof
   rpt strip_tac >>
@@ -633,8 +614,6 @@ Proof
   rw[monoid_exp_comm]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["monoid_exp_mult"];
 
 (* Theorem: x IN G ==> (x ** m) ** n = (x ** n) ** m *)
 (* Proof:
@@ -1135,14 +1114,12 @@ QED
    Obviously, 0 < 1 and there is no m such that 0 < m < 1
    hence true by order_thm
 *)
-Theorem monoid_order_id:
+Theorem monoid_order_id[simp]:
     !g:'a monoid. Monoid g ==> (ord #e = 1)
 Proof
   rw[order_thm, DECIDE``!m . ~(0 < m /\ m < 1)``]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["monoid_order_id"];
 
 (* Theorem: Monoid g ==> !x. x IN G ==> ((ord x = 1) <=> (x = #e)) *)
 (* Proof:
@@ -2061,7 +2038,7 @@ QED
 
 (* Theorem: #e IN G* *)
 (* Proof: by monoid_id and definition. *)
-Theorem monoid_id_invertible:
+Theorem monoid_id_invertible[simp]:
     !g:'a monoid. Monoid g ==> #e IN G*
 Proof
   rw[monoid_invertibles_def] >>
@@ -2069,7 +2046,6 @@ Proof
   rw[]
 QED
 
-val _ = export_rewrites ["monoid_id_invertible"];
 
 (* This is a direct proof, next one is shorter. *)
 
@@ -2115,7 +2091,7 @@ QED
 
 (* Theorem: x IN G* ==> |/ x IN G* *)
 (* Proof: by monoid_inv_def. *)
-Theorem monoid_inv_invertible:
+Theorem monoid_inv_invertible[simp]:
     !g:'a monoid. Monoid g ==> !x. x IN G* ==> |/ x IN G*
 Proof
   rpt strip_tac >>
@@ -2124,7 +2100,6 @@ Proof
   metis_tac[monoid_inv_def, monoid_inv_element]
 QED
 
-val _ = export_rewrites ["monoid_inv_invertible"];
 
 (* Theorem: The Invertibles of a monoid form a monoid. *)
 (* Proof: by checking definition. *)
@@ -3628,14 +3603,12 @@ QED
 
 (* Theorem: elements in submonoid are also in monoid. *)
 (* Proof: Since h << g ==> H SUBSET G by Submonoid_def. *)
-Theorem submonoid_element:
+Theorem submonoid_element[simp]:
     !(g:'a monoid) h. h << g ==> !x. x IN H ==> x IN G
 Proof
   rw_tac std_ss[Submonoid_def, SUBSET_DEF]
 QED
 
-(* export simple result *)
-val _ = export_rewrites ["submonoid_element"];
 
 (* Theorem: h << g ==> (h.op = $* ) *)
 (* Proof: by Subgroup_def *)
@@ -3647,14 +3620,12 @@ QED
 
 (* Theorem: h << g ==> #i = #e *)
 (* Proof: by Submonoid_def. *)
-Theorem submonoid_id:
+Theorem submonoid_id[simp]:
     !(g:'a monoid) h. h << g ==> (#i = #e)
 Proof
   rw_tac std_ss[Submonoid_def]
 QED
 
-(* export simple results *)
-val _ = export_rewrites["submonoid_id"];
 
 (* Theorem: h << g ==> !x. x IN H ==> !n. h.exp x n = x ** n *)
 (* Proof: by induction on n.
@@ -4575,23 +4546,21 @@ val it = |- set_inter.op {1; 4; 5; 6} {5; 6; 8; 9} = {5; 6}: thm
 
 (* Theorem: set_inter is a Monoid. *)
 (* Proof: check definitions. *)
-Theorem set_inter_monoid:
+Theorem set_inter_monoid[simp]:
     Monoid set_inter
 Proof
   rw[Monoid_def, set_inter_def, INTER_ASSOC]
 QED
 
-val _ = export_rewrites ["set_inter_monoid"];
 
 (* Theorem: set_inter is an abelian Monoid. *)
 (* Proof: check definitions. *)
-Theorem set_inter_abelian_monoid:
+Theorem set_inter_abelian_monoid[simp]:
     AbelianMonoid set_inter
 Proof
   rw[AbelianMonoid_def, set_inter_def, INTER_COMM]
 QED
 
-val _ = export_rewrites ["set_inter_abelian_monoid"];
 
 (* The Monoid of set union *)
 Definition set_union_def:
@@ -4607,23 +4576,21 @@ val it = |- set_union.op {1; 4; 5; 6} {5; 6; 8; 9} = {1; 4; 5; 6; 8; 9}: thm
 
 (* Theorem: set_union is a Monoid. *)
 (* Proof: check definitions. *)
-Theorem set_union_monoid:
+Theorem set_union_monoid[simp]:
     Monoid set_union
 Proof
   rw[Monoid_def, set_union_def, UNION_ASSOC]
 QED
 
-val _ = export_rewrites ["set_union_monoid"];
 
 (* Theorem: set_union is an abelian Monoid. *)
 (* Proof: check definitions. *)
-Theorem set_union_abelian_monoid:
+Theorem set_union_abelian_monoid[simp]:
     AbelianMonoid set_union
 Proof
   rw[AbelianMonoid_def, set_union_def, UNION_COMM]
 QED
 
-val _ = export_rewrites ["set_union_abelian_monoid"];
 
 (* ------------------------------------------------------------------------- *)
 (* Addition of numbers form a Monoid                                         *)

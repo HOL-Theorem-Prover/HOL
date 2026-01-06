@@ -52,10 +52,11 @@ End
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val STRCAT1 = store_thm
-  ("STRCAT1",
-   ``!s1 s2. STRCAT s1 s2 = IMPLODE (EXPLODE s1 ++ EXPLODE s2)``,
-   Induct_on `s1` THEN SRW_TAC [][STRCAT_def]);
+Theorem STRCAT1:
+     !s1 s2. STRCAT s1 s2 = IMPLODE (EXPLODE s1 ++ EXPLODE s2)
+Proof
+   Induct_on `s1` THEN SRW_TAC [][STRCAT_def]
+QED
 
 val append_neq_lem = prove
   (``!m l. (~(l = [])) ==> (~(l ++ m = m))``,
@@ -69,26 +70,27 @@ val append_sing_eq_lem = prove
   (``!l l' x x'. (l ++ [x] = l' ++ [x']) = ((l = l') /\ (x = x'))``,
    RW_TAC std_ss [GSYM SNOC_APPEND, SNOC_11] >> DECIDE_TAC);
 
-val IMPLODE_APPEND_EQ = store_thm
-  ("IMPLODE_APPEND_EQ",
-   ``!s1 s2 s1' s2'.
+Theorem IMPLODE_APPEND_EQ:
+     !s1 s2 s1' s2'.
         (IMPLODE (s1 ++ s2) = IMPLODE (s1' ++ s2')) =
-        (s1 ++ s2 = s1' ++ s2')``,
+        (s1 ++ s2 = s1' ++ s2')
+Proof
    Induct
    >- (Induct >- (RW_TAC std_ss [APPEND_NIL, IMPLODE_EQ_EMPTYSTRING, IMPLODE_EQNS]
                   >> RW_TAC bool_ss [EQ_SYM_EQ])
        >> FULL_SIMP_TAC std_ss [APPEND_NIL, IMPLODE_EQNS, IMPLODE_EQ_THM, EXPLODE_IMPLODE]
        >> RW_TAC bool_ss [EQ_SYM_EQ])
    >> FULL_SIMP_TAC std_ss [APPEND, IMPLODE_EQNS, IMPLODE_EQ_THM, EXPLODE_IMPLODE]
-   >> RW_TAC bool_ss [EQ_SYM_EQ]);
+   >> RW_TAC bool_ss [EQ_SYM_EQ]
+QED
 
-val STRCAT_NEQ = store_thm
-  ("STRCAT_NEQ",
-   ``!s1 s1'.
+Theorem STRCAT_NEQ:
+     !s1 s1'.
         (~ (s1 = "")) /\ (~ (s1' = "")) /\
         (~ (IS_PREFIX (EXPLODE s1) (EXPLODE s1'))) /\
         (~ (IS_PREFIX (EXPLODE s1') (EXPLODE s1))) ==>
-        (!s2 s2'. ~(STRCAT s1 s2 = STRCAT s1' s2'))``,
+        (!s2 s2'. ~(STRCAT s1 s2 = STRCAT s1' s2'))
+Proof
    STRIP_TAC >> STRIP_TAC
    >> (ASSUME_TAC o Q.SPEC `s1`) IMPLODE_ONTO
    >> FULL_SIMP_TAC std_ss [] >> POP_ASSUM (K ALL_TAC)
@@ -128,15 +130,16 @@ val STRCAT_NEQ = store_thm
            o Q.ISPECL [`p:num`, `LENGTH (cs':char list)`,`(cs:char list)`])
        APPEND_FIRSTN_LASTN
    >> FULL_SIMP_TAC std_ss [IS_PREFIX_APPEND]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
 
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val toString_inj = store_thm
-  ("toString_inj",
-   ``!n m. (toString n = toString m) = (n = m)``,
+Theorem toString_inj:
+     !n m. (toString n = toString m) = (n = m)
+Proof
    completeInduct_on `n`
    >> REPEAT STRIP_TAC
    >> Cases_on `n`
@@ -222,19 +225,21 @@ val toString_inj = store_thm
        >> Suff `toString (SUC n'') = toString (SUC n''')` >- METIS_TAC []
        >> SIMP_TAC arith_ss [toString_def, IMPLODE_11]
        >> ASM_REWRITE_TAC [])
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val STRCAT_toString_inj = store_thm
-  ("STRCAT_toString_inj",
-   ``!n m s. (STRCAT s (toString n) = STRCAT s (toString m)) = (n = m)``,
-   SRW_TAC [] [STRCAT1, toString_inj]);
+Theorem STRCAT_toString_inj:
+     !n m s. (STRCAT s (toString n) = STRCAT s (toString m)) = (n = m)
+Proof
+   SRW_TAC [] [STRCAT1, toString_inj]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)
 
-val toString_toNum_cancel = store_thm
-  ("toString_toNum_cancel",
-   ``!n. toNum(toString n) = n``,
+Theorem toString_toNum_cancel:
+     !n. toNum(toString n) = n
+Proof
    completeInduct_on `n`
    >> Cases_on `n`
    >- (SRW_TAC [] [toString_def, toNum_def, rec_toNum_def])
@@ -277,7 +282,8 @@ val toString_toNum_cancel = store_thm
    >> Cases_on `SUC n DIV 10`
    >- SRW_TAC [] [toString_def, toNum_def, rec_toNum_def, rec_toString_def]
    >> Q.PAT_ASSUM `!m. m < SUC n ==> !n. b` (MP_TAC o Q.SPECL [`SUC n''`])
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* ------------------------------------------------------------------------- *)

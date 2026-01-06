@@ -3,30 +3,34 @@ Ancestors
   numpair pred_set relation list arithmetic set_relation pair
   nlist
 
-val partition_eq_EMPTY = store_thm(
-  "partition_eq_EMPTY[simp]",
-  ``(partition R s = {} <=> s = {}) /\ ({} = partition R s <=> s = {})``,
-  conj_tac >> rw[partition_def, Once EXTENSION] >> simp[EXTENSION]);
+Theorem partition_eq_EMPTY[simp]:
+    (partition R s = {} <=> s = {}) /\ ({} = partition R s <=> s = {})
+Proof
+  conj_tac >> rw[partition_def, Once EXTENSION] >> simp[EXTENSION]
+QED
 
 
-val equiv_on_same_partition1 = store_thm(
-"equiv_on_same_partition1",
-``R equiv_on s ==> !t. t IN partition R s ==> !x y. x IN s /\ y IN s /\ R x y ==> (x IN t <=> y IN t)``,
+Theorem equiv_on_same_partition1:
+  R equiv_on s ==> !t. t IN partition R s ==> !x y. x IN s /\ y IN s /\ R x y ==> (x IN t <=> y IN t)
+Proof
 rw[partition_def,equiv_on_def] >> eq_tac >> rw[]
->> metis_tac[]);
+>> metis_tac[]
+QED
 
 
-val equiv_on_same_partition = store_thm(
-"equiv_on_same_partition",
-``R equiv_on s ==> !x y. R x y ==> (!t1 t2. t1 IN partition R s /\ t2 IN partition R s /\ x IN t1 /\ y IN t2 ==> t1 = t2)``,
+Theorem equiv_on_same_partition:
+  R equiv_on s ==> !x y. R x y ==> (!t1 t2. t1 IN partition R s /\ t2 IN partition R s /\ x IN t1 /\ y IN t2 ==> t1 = t2)
+Proof
 rw[partition_def,equiv_on_def] >> rw[EXTENSION,EQ_IMP_THM] >> fs[]
->> metis_tac[]);
+>> metis_tac[]
+QED
 
-val equiv_partition_unique = store_thm(
-"equiv_partition_unique",
-``R equiv_on s ==> !x. x IN s /\ p1 IN partition R s /\ x IN p1 ==> (!p2. p2 IN partition R s /\ x IN p2 ==> p2 = p1)``,
+Theorem equiv_partition_unique:
+  R equiv_on s ==> !x. x IN s /\ p1 IN partition R s /\ x IN p1 ==> (!p2. p2 IN partition R s /\ x IN p2 ==> p2 = p1)
+Proof
 rw[partition_def,equiv_on_def] >> rw[EXTENSION,EQ_IMP_THM]
->> fs[] >> metis_tac[]);
+>> fs[] >> metis_tac[]
+QED
 
 
 Theorem equiv_on_SUBSET_partition:
@@ -76,11 +80,12 @@ Proof
       fs[equiv_on_def,UNION_DEF] >> metis_tac[])
 QED
 
-val equiv_on_partition_NOT_R = store_thm(
-"equiv_on_partition_NOT_R",
-``R equiv_on s ==> !t1 t2. t1 IN partition R s /\ t2 IN partition R s /\ t1 <> t2 ==> !x. x IN t1 ==> !y. y IN t2 ==> ¬R x y``,
+Theorem equiv_on_partition_NOT_R:
+  R equiv_on s ==> !t1 t2. t1 IN partition R s /\ t2 IN partition R s /\ t1 <> t2 ==> !x. x IN t1 ==> !y. y IN t2 ==> ¬R x y
+Proof
 rw[] >> SPOSE_NOT_THEN ASSUME_TAC >>
-metis_tac[equiv_on_same_partition]);
+metis_tac[equiv_on_same_partition]
+QED
 
 Theorem equiv_on_INSERT_partition:
   R equiv_on s ==>
@@ -95,12 +100,13 @@ Proof
   metis_tac[equiv_on_partition_NOT_R]
 QED
 
-val equiv_on_INSERT_partition_UNION = store_thm(
-"equiv_on_INSERT_partition_UNION",
-``R equiv_on s ==>  !e p. e INSERT p = partition R s ==> s = e UNION (BIGUNION p)``,
+Theorem equiv_on_INSERT_partition_UNION:
+  R equiv_on s ==>  !e p. e INSERT p = partition R s ==> s = e UNION (BIGUNION p)
+Proof
 rw[] >>
 `BIGUNION (e INSERT p) = s` by metis_tac[BIGUNION_partition] >>
-fs[BIGUNION]);
+fs[BIGUNION]
+QED
 
 Theorem FINITE_partition_SUBSET:
   !R s. R equiv_on s ==> FINITE (partition R s) ==>

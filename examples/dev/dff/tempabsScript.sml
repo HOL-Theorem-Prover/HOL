@@ -25,41 +25,41 @@ Libs
   Globals proofManagerLib Psyntax hol88Lib numLib
 
 
-val SUB_MONO_EQ =
-    store_thm
-    ("SUB_MONO_EQ",
-     ``!n m. (SUC n) - (SUC m) = (n - m)``,
-     DECIDE_TAC);
+Theorem SUB_MONO_EQ:
+       !n m. (SUC n) - (SUC m) = (n - m)
+Proof
+     DECIDE_TAC
+QED
 
-val SUB_PLUS =
-   store_thm
-   ("SUB_PLUS",
-    ``!a b c. a - (b + c) = (a - b) - c``,
-    DECIDE_TAC);
+Theorem SUB_PLUS:
+      !a b c. a - (b + c) = (a - b) - c
+Proof
+    DECIDE_TAC
+QED
 
-val INV_PRE_LESS =
-   store_thm
-   ("INV_PRE_LESS",
-    ``!m n. 0 < m /\ 0 < n ==> ((PRE m < PRE n) = (m < n))``,
-    DECIDE_TAC);
+Theorem INV_PRE_LESS:
+      !m n. 0 < m /\ 0 < n ==> ((PRE m < PRE n) = (m < n))
+Proof
+    DECIDE_TAC
+QED
 
-val INV_PRE_LESS_EQ =
-   store_thm
-   ("INV_PRE_LESS_EQ",
-    ``!m n. 0 < m /\ 0 < n ==> ((PRE m <= PRE n) = (m <= n))``,
-    DECIDE_TAC);
+Theorem INV_PRE_LESS_EQ:
+      !m n. 0 < m /\ 0 < n ==> ((PRE m <= PRE n) = (m <= n))
+Proof
+    DECIDE_TAC
+QED
 
-val SUB_LESS_EQ =
-    store_thm
-    ("SUB_LESS_EQ",
-     ``!n m. (n - m) <= n``,
-     DECIDE_TAC);
+Theorem SUB_LESS_EQ:
+       !n m. (n - m) <= n
+Proof
+     DECIDE_TAC
+QED
 
-val SUB_EQ_EQ_0 =
-    store_thm
-    ("SUB_EQ_EQ_0",
-     ``!m n. (m - n = m) = ((m = 0) \/ (n = 0))``,
-     DECIDE_TAC);
+Theorem SUB_EQ_EQ_0:
+       !m n. (m - n = m) = ((m = 0) \/ (n = 0))
+Proof
+     DECIDE_TAC
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -164,9 +164,9 @@ Proof
 QED
 
 (* Prove that Inf could be alternatively defined as follows:            *)
-val Inf_thm2 =
-    store_thm("Inf_thm2",
-              ``!sig. Inf sig = !t. ?t'. t<=t' /\ sig(t')``,
+Theorem Inf_thm2:
+                !sig. Inf sig = !t. ?t'. t<=t' /\ sig(t')
+Proof
               REWRITE_TAC [Inf,LESS_OR_EQ] THEN
               REPEAT (STRIP_TAC ORELSE EQ_TAC) THENL
               [POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``t:num``) THEN
@@ -176,7 +176,8 @@ val Inf_thm2 =
                [IMP_RES_TAC SUC_LESS THEN
                 EXISTS_TAC ``t':num`` THEN ASM_REWRITE_TAC[],
                 EXISTS_TAC ``t':num`` THEN
-                ASM_REWRITE_TAC [LESS_EQ,LESS_EQ_REFL]]]);
+                ASM_REWRITE_TAC [LESS_EQ,LESS_EQ_REFL]]]
+QED
 
 (* Conditions for ~Inf(sig)                                             *)
 Theorem Not_Inf:
@@ -234,21 +235,22 @@ val Istimeof_thm1 =
                   (SPECL [``sig:num->bool``,``t:num``,``t:num``] n_exists_lemma)));
 
 (* We now show that if (Istimeof n sig t) holds then sig(t).            *)
-val Istimeof_thm2 =
-    store_thm
-     ("Istimeof_thm2",
-      ``!sig t. (?n. Istimeof n sig t) ==> sig t``,
+Theorem Istimeof_thm2:
+        !sig t. (?n. Istimeof n sig t) ==> sig t
+Proof
       REPEAT STRIP_TAC THEN
       POP_ASSUM MP_TAC THEN
       (REPEAT_TCL STRIP_THM_THEN) SUBST1_TAC (SPEC ``n:num`` num_CASES) THEN
       REWRITE_TAC [Istimeof,Next] THEN
-      STRIP_TAC);
+      STRIP_TAC
+QED
 
 (* There is an n such that Istimeof n sig t only if sig(t).             *)
-val Istimeof_thm3 =
-    store_thm("Istimeof_thm3",
-              ``!sig t. sig t = ?n. Istimeof n sig t``,
-              PROVE_TAC[Istimeof_thm1,Istimeof_thm2]);
+Theorem Istimeof_thm3:
+                !sig t. sig t = ?n. Istimeof n sig t
+Proof
+              PROVE_TAC[Istimeof_thm1,Istimeof_thm2]
+QED
 
 (* If sig is true infinitely often, then, for any n, there always exists *)
 (* a time t such that sig is true for the nth time at time t.           *)
@@ -256,9 +258,9 @@ val Istimeof_thm3 =
 (* I.e. Inf(sig) ==> !n.?t.Istimeof n sig t                             *)
 (*                                                                      *)
 (* This will be proven by induction on n.                               *)
-val Istimeof_thm4 =
-    store_thm("Istimeof_thm4",
-              ``!sig. Inf(sig) ==> !n.?t.Istimeof n sig t``,
+Theorem Istimeof_thm4:
+                !sig. Inf(sig) ==> !n.?t.Istimeof n sig t
+Proof
               PURE_REWRITE_TAC [Inf] THEN
               REPEAT (FILTER_STRIP_TAC ``n:num``) THEN
               INDUCT_TAC THEN
@@ -273,13 +275,14 @@ val Istimeof_thm4 =
                POP_ASSUM (STRIP_ASSUME_TAC o MATCH_WOP_MP o SPEC_ALL) THEN
                EXISTS_TAC ``n:num`` THEN
                ASM_REWRITE_TAC[] THEN
-               REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC]);
+               REPEAT STRIP_TAC THEN RES_TAC THEN RES_TAC]
+QED
 
 (* Istimeof defines a Unique time:                                      *)
 (* Istimeof n sig t /\ Istimeof n sig t' ==> (t=t')                     *)
-val Istimeof_thm5 =
-    store_thm("Istimeof_thm5",
-              ``!n sig t t'.Istimeof n sig t /\ Istimeof n sig t' ==> (t=t')``,
+Theorem Istimeof_thm5:
+                !n sig t t'.Istimeof n sig t /\ Istimeof n sig t' ==> (t=t')
+Proof
               INDUCT_TAC THEN
               REWRITE_TAC [Istimeof] THENL
               [CONV_TAC (ONCE_DEPTH_CONV (CONTRAPOS_CONV)) THEN
@@ -288,14 +291,14 @@ val Istimeof_thm5 =
                [RES_TAC,IMP_RES_TAC LESS_CASES_IMP THEN RES_TAC],
                REPEAT STRIP_TAC THEN
                RES_TAC THEN REPEAT (POP_ASSUM SUBST_ALL_TAC) THEN
-               IMP_RES_TAC Next_Unique]);
+               IMP_RES_TAC Next_Unique]
+QED
 
 (* If there is always a time when sig is true for the nth time, then sig        *)
 (* is true infinitely often.                                            *)
-val Istimeof_thm6 =
-    store_thm
-     ("Istimeof_thm6",
-      ``!sig. (!n.?t.Istimeof n sig t) ==> Inf sig``,
+Theorem Istimeof_thm6:
+        !sig. (!n.?t.Istimeof n sig t) ==> Inf sig
+Proof
       CONV_TAC (ONCE_DEPTH_CONV CONTRAPOS_CONV) THEN
       CONV_TAC (REDEPTH_CONV (NOT_FORALL_CONV ORELSEC NOT_EXISTS_CONV)) THEN
       REWRITE_TAC [Not_Inf] THEN
@@ -308,14 +311,16 @@ val Istimeof_thm6 =
        REPEAT STRIP_TAC THEN
        IMP_RES_TAC Istimeof_thm5 THEN
        REPEAT (POP_ASSUM SUBST_ALL_TAC) THEN
-       RES_TAC]);
+       RES_TAC]
+QED
 
 (* Inf sig iff there is always an nth time sig is true.                 *)
-val Istimeof_thm7 =
-    store_thm("Istimeof_thm7",
-              ``!sig. Inf(sig) = !n. ?t. Istimeof n sig t``,
+Theorem Istimeof_thm7:
+                !sig. Inf(sig) = !n. ?t. Istimeof n sig t
+Proof
               GEN_TAC THEN EQ_TAC THEN STRIP_TAC THENL
-              [IMP_RES_TAC Istimeof_thm4, IMP_RES_TAC Istimeof_thm6]);
+              [IMP_RES_TAC Istimeof_thm4, IMP_RES_TAC Istimeof_thm6]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* THEOREMS about Timeof                                                        *)
@@ -323,10 +328,9 @@ val Istimeof_thm7 =
 
 (* We prove the theorem relating Timeof and Next:                       *)
 (* ``!sig. Inf(sig) ==> !n. Next (Timeof n sig) (Timeof (n+1) sig) sig``        *)
-val Timeof_thm1 =
-    store_thm
-    ("Timeof_thm1",
-     ``!sig. Inf(sig) ==> !n. Next (Timeof sig n) (Timeof sig (SUC n)) sig``,
+Theorem Timeof_thm1:
+       !sig. Inf(sig) ==> !n. Next (Timeof sig n) (Timeof sig (SUC n)) sig
+Proof
      REPEAT STRIP_TAC THEN
      REWRITE_TAC [Timeof,Istimeof] THEN
      IMP_RES_THEN
@@ -339,77 +343,78 @@ val Timeof_thm1 =
      POP_ASSUM
         (ASSUME_TAC o GEN_ALL o (MATCH_MP (hd(RES_CANON Istimeof_thm5)))) THEN
      RES_THEN SUBST1_TAC THEN
-     FIRST_ASSUM ACCEPT_TAC);
+     FIRST_ASSUM ACCEPT_TAC
+QED
 
-val Timeof_thm2 =
-    store_thm
-    ("Timeof_thm2",
-     ``!sig. Inf(sig) ==> !n. (Timeof sig n) < (Timeof sig (SUC n))``,
+Theorem Timeof_thm2:
+       !sig. Inf(sig) ==> !n. (Timeof sig n) < (Timeof sig (SUC n))
+Proof
      REPEAT STRIP_TAC THEN
      IMP_RES_THEN MP_TAC Timeof_thm1 THEN
      REWRITE_TAC [Next] THEN
      DISCH_THEN (STRIP_ASSUME_TAC o SPEC ``n:num``) THEN
-     FIRST_ASSUM ACCEPT_TAC);
+     FIRST_ASSUM ACCEPT_TAC
+QED
 
-val Timeof_thm3 =
-    store_thm
-    ("Timeof_thm3",
-     ``!sig. Inf(sig) ==>
-      !n t. ((Timeof sig n) < t /\ t < (Timeof sig (SUC n))) ==> ~sig t``,
+Theorem Timeof_thm3:
+       !sig. Inf(sig) ==>
+      !n t. ((Timeof sig n) < t /\ t < (Timeof sig (SUC n))) ==> ~sig t
+Proof
      REPEAT STRIP_TAC THEN
      IMP_RES_THEN MP_TAC Timeof_thm1 THEN
      REWRITE_TAC [Next] THEN
      DISCH_THEN (STRIP_ASSUME_TAC o SPEC ``n:num``) THEN
-     RES_TAC);
+     RES_TAC
+QED
 
 (* Also prove that:  Inf(sig) ==> sig(Timeof n sig)                     *)
-val Timeof_thm4 =
-    store_thm
-    ("Timeof_thm4",
-     ``!sig. Inf(sig) ==> !n. sig(Timeof sig n)``,
+Theorem Timeof_thm4:
+       !sig. Inf(sig) ==> !n. sig(Timeof sig n)
+Proof
      REPEAT STRIP_TAC THEN
      REWRITE_TAC [Timeof] THEN
      IMP_RES_THEN (MP_TAC o SELECT_RULE o SPEC_ALL) Istimeof_thm4 THEN
      STRIP_ASSUME_TAC (SPEC ``n:num`` num_CASES) THEN
      ASM_REWRITE_TAC [Istimeof,Next] THEN
-     REPEAT STRIP_TAC);
+     REPEAT STRIP_TAC
+QED
 
-val Timeof_thm5 =
-    store_thm
-      ("Timeof_thm5",
-       ``!sig t. sig(t) ==> ?n. t = Timeof sig n``,
+Theorem Timeof_thm5:
+         !sig t. sig(t) ==> ?n. t = Timeof sig n
+Proof
        REPEAT STRIP_TAC THEN
        IMP_RES_THEN STRIP_ASSUME_TAC Istimeof_thm1 THEN
        EXISTS_TAC ``n:num`` THEN
        ASSUME_TAC (SELECT_RULE (EXISTS (``?t.Istimeof n sig t``,``t:num``)
                                        (ASSUME ``Istimeof n sig t``))) THEN
        REWRITE_TAC [Timeof] THEN
-       IMP_RES_TAC Istimeof_thm5);
+       IMP_RES_TAC Istimeof_thm5
+QED
 
 
-val Timeof_thm6 =
-    store_thm
-      ("Timeof_thm6",
-       ``!sig. Inf sig ==> !t. 0 < (Timeof sig (SUC t) - Timeof sig t)``,
+Theorem Timeof_thm6:
+         !sig. Inf sig ==> !t. 0 < (Timeof sig (SUC t) - Timeof sig t)
+Proof
        REPEAT STRIP_TAC THEN
        IMP_RES_THEN
         (STRIP_THM_THEN SUBST1_TAC o MATCH_MP LESS_ADD_1 o SPEC ``t:num``)
         Timeof_thm2 THEN
        REWRITE_TAC [ADD_ASSOC,num_CONV ``1``,ADD_CLAUSES,SUB] THEN
        REWRITE_TAC [REWRITE_RULE[SYM(SPEC_ALL NOT_LESS)] LESS_EQ_ADD] THEN
-       REWRITE_TAC [LESS_0]);
+       REWRITE_TAC [LESS_0]
+QED
 
-val Timeof_thm7 =
-    store_thm
-    ("Timeof_thm7",
-     ``!c. Inf c ==> !t. (Timeof c (SUC t) - 1) < Timeof c (SUC t)``,
+Theorem Timeof_thm7:
+       !c. Inf c ==> !t. (Timeof c (SUC t) - 1) < Timeof c (SUC t)
+Proof
      REPEAT STRIP_TAC THEN
      STRIP_ASSUME_TAC (SPECL [``Timeof c (SUC t)``,``1``] SUB_LESS_EQ) THEN
      POP_ASSUM (STRIP_ASSUME_TAC o REWRITE_RULE [LESS_OR_EQ]) THEN
      POP_ASSUM
          (ASSUME_TAC o REWRITE_RULE [SUB_EQ_EQ_0,num_CONV ``1``,NOT_SUC]) THEN
      IMP_RES_THEN (MP_TAC o SPEC ``t:num``) Timeof_thm2 THEN
-     ASM_REWRITE_TAC [NOT_LESS_0]);
+     ASM_REWRITE_TAC [NOT_LESS_0]
+QED
 
 
 (* --------------------------------------------------------------------- *)
@@ -486,9 +491,9 @@ val Istimeof_lemma =
 (* A theorem relating Incr, Inf and Timeof.                             *)
 (* ---------------------------------------------------------------------        *)
 
-val Incr_Inf_thm =
-    store_thm("Incr_Inf_thm",
-              ``!f.Incr f = ?g. Inf(g) /\ (f = Timeof g)``,
+Theorem Incr_Inf_thm:
+                !f.Incr f = ?g. Inf(g) /\ (f = Timeof g)
+Proof
               REPEAT (FIRST [STRIP_TAC, EQ_TAC]) THENL
               [EXISTS_TAC ``\n:num.?m:num. n = f m`` THEN
                CONV_TAC (DEPTH_CONV FUN_EQ_CONV) THEN
@@ -518,27 +523,28 @@ val Incr_Inf_thm =
                                                (SPEC_ALL LESS_TRANS))) THEN
                 IMP_RES_THEN
                   (STRIP_ASSUME_TAC o
-                    SPEC ``SUC(n+p)`` o REWRITE_RULE [Next]) Timeof_thm1]]);
+                    SPEC ``SUC(n+p)`` o REWRITE_RULE [Next]) Timeof_thm1]]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Theorems about when.                                                 *)
 (* --------------------------------------------------------------------- *)
 
-val when_thm1 =
-    store_thm
-     ("when_thm1",
-      ``!f g c. (((\t.(f t,g t))when c)t) = (((f when c) t),((g when c) t))``,
+Theorem when_thm1:
+        !f g c. (((\t.(f t,g t))when c)t) = (((f when c) t),((g when c) t))
+Proof
       REPEAT STRIP_TAC THEN
       REWRITE_TAC [when,o_THM] THEN
-      CONV_TAC (DEPTH_CONV BETA_CONV) THEN REFL_TAC);
+      CONV_TAC (DEPTH_CONV BETA_CONV) THEN REFL_TAC
+QED
 
-val when_thm2 =
-    store_thm
-     ("when_thm2",
-      ``!c. Inf(c) ==> !t. (c when c) t``,
+Theorem when_thm2:
+        !c. Inf(c) ==> !t. (c when c) t
+Proof
       REPEAT STRIP_TAC THEN
       IMP_RES_TAC Timeof_thm4 THEN
-      ASM_REWRITE_TAC [when,o_THM]);
+      ASM_REWRITE_TAC [when,o_THM]
+QED
 
 (* --------------------------------------------------------------------- *)
 (* Iteration theorems.                                                   *)
@@ -549,11 +555,12 @@ val Funpow_DEF = new_recursive_definition
    def = ``(Funpow 0 f = I) /\ (Funpow (SUC n) f = (f o (Funpow n f)))``,
    rec_axiom = num_Axiom}
 
-val Funpow1 =
-    store_thm("Funpow1",
-             ``!f. (Funpow 0 f x = x) /\
-                  (!n. Funpow (SUC n) f x = f((Funpow n f)x))``,
-             REWRITE_TAC [Funpow_DEF,I_THM,o_THM]);
+Theorem Funpow1:
+               !f. (Funpow 0 f x = x) /\
+                  (!n. Funpow (SUC n) f x = f((Funpow n f)x))
+Proof
+             REWRITE_TAC [Funpow_DEF,I_THM,o_THM]
+QED
 
 val Dev =
     new_definition
@@ -561,17 +568,16 @@ val Dev =
      ``Dev f g (c,a,b,s) =
        !t:num. s(t+1) = if c t then f (a t) (b t) (s t) else g (a t) (s t)``);
 
-val tempabs =
-    store_thm
-   ("tempabs",
-    ``!a b s c f g.
+Theorem tempabs:
+      !a b s c f g.
      Dev f g (c,a,b,s) ==>
      (!t. Stable (Timeof c t) (Timeof c (t+1)) a) ==>
      Inf(c) ==>
      !n t.((Timeof c n < t) /\ (t <= Timeof c (n+1))) ==>
            (s t =
             Funpow (t - ((Timeof c n)+1)) (g ((a when c) n))
-                   (f((a when c) n) ((b when c) n) ((s when c) n)))``,
+                   (f((a when c) n) ((b when c) n) ((s when c) n)))
+Proof
     PURE_ONCE_REWRITE_TAC [Dev] THEN
     CONV_TAC (DEPTH_CONV num_CONV) THEN
     REWRITE_TAC [ADD_CLAUSES,when,o_THM,Stable] THEN
@@ -595,22 +601,23 @@ val tempabs =
       POP_ASSUM (ASSUME_TAC o (REWRITE_RULE [NOT_LESS])) THEN
       POP_ASSUM (ASSUME_TAC o (MATCH_MP OR_LESS)) THEN
       IMP_RES_TAC LESS_IMP_LESS_OR_EQ THEN
-      RES_TAC THEN ASM_REWRITE_TAC[]]]);
+      RES_TAC THEN ASM_REWRITE_TAC[]]]
+QED
 
-val tempabs' =
-    store_thm
-   ("tempabs'",
-    ``!a b s c f g.
+Theorem tempabs':
+      !a b s c f g.
      Dev f g (c,a,b,s) ==>
      (!t. Stable (Timeof c t) (Timeof c (t+1)) a) ==>
      Inf(c) ==>
      !n.(s when c) (n+1) =
             Funpow ((Timeof c (n+1)) - ((Timeof c n)+1)) (g ((a when c) n))
-                   (f((a when c) n) ((b when c) n) ((s when c) n))``,
+                   (f((a when c) n) ((b when c) n) ((s when c) n))
+Proof
     REPEAT (DISCH_TAC ORELSE GEN_TAC) THEN
     REWRITE_TAC [when,o_THM] THEN
     MATCH_MP_TAC (REWRITE_RULE [when,o_THM]
                                (UNDISCH_ALL (SPEC_ALL tempabs))) THEN
     IMP_RES_THEN (STRIP_ASSUME_TAC o REWRITE_RULE [Next] o SPEC ``n:num``)
                        Timeof_thm1 THEN
-    ASM_REWRITE_TAC [LESS_OR_EQ,num_CONV ``1``,ADD_CLAUSES]);
+    ASM_REWRITE_TAC [LESS_OR_EQ,num_CONV ``1``,ADD_CLAUSES]
+QED

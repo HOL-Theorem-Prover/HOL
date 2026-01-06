@@ -115,12 +115,12 @@ Definition makeKeyHat_def:
     makeSubKeyHat subKey
 End
 
-val makeSubKeyBitSliceLength = Q.store_thm(
-"makeSubKeyBitSliceLength",
-`!longKey n.
+Theorem makeSubKeyBitSliceLength:
+ !longKey n.
     (LENGTH longKey>= 8)
     ==>
-    (LENGTH (makeSubKeyBitSlice longKey n) = n + LENGTH longKey + 1)`,
+    (LENGTH (makeSubKeyBitSlice longKey n) = n + LENGTH longKey + 1)
+Proof
   Induct_on `n` THENL [
     FULL_SIMP_TAC list_ss [makeSubKeyBitSlice_def,LENGTH,Abbrev_def] THEN
     RW_TAC std_ss [] THEN
@@ -135,12 +135,13 @@ val makeSubKeyBitSliceLength = Q.store_thm(
         by METIS_TAC [listInstGreaterEq8] THEN
     FULL_SIMP_TAC list_ss [makeSubKeyBitSlice_def] THEN
     RW_TAC list_ss [] THEN
-    FULL_SIMP_TAC list_ss [Abbrev_def]]);
+    FULL_SIMP_TAC list_ss [Abbrev_def]]
+QED
 
-val makeRevPreKeyLength = Q.store_thm(
-"makeRevPreKeyLength",
-`!userKey.
-    LENGTH (makeRevPreKey userKey) = 132`,
+Theorem makeRevPreKeyLength:
+ !userKey.
+    LENGTH (makeRevPreKey userKey) = 132
+Proof
   RW_TAC std_ss [makeRevPreKey_def,LET_THM] THEN
   `LENGTH (word256to32l userKey)= 8` by METIS_TAC [word256to32lLength] THEN
   `LENGTH (word256to32l userKey)>= 8` by RW_TAC arith_ss [] THEN
@@ -149,13 +150,14 @@ val makeRevPreKeyLength = Q.store_thm(
       by METIS_TAC [makeSubKeyBitSliceLength,LENGTH_REVERSE] THEN
   `8 <= LENGTH (makeSubKeyBitSlice (word256to32l userKey) 131)`
       by FULL_SIMP_TAC arith_ss [] THEN
-  FULL_SIMP_TAC list_ss [LENGTH_myBUTLASTN,LENGTH_REVERSE]);
+  FULL_SIMP_TAC list_ss [LENGTH_myBUTLASTN,LENGTH_REVERSE]
+QED
 
-val makeRevSubKeyLength = Q.store_thm(
-"makeRevSubKeyLength",
-`!n revPreKey.
+Theorem makeRevSubKeyLength:
+ !n revPreKey.
     (LENGTH revPreKey = 4 * (n+1)) ==>
-    (LENGTH (makeRevSubKey revPreKey n) = n + 1)`,
+    (LENGTH (makeRevSubKey revPreKey n) = n + 1)
+Proof
   Induct_on `n` THENL [
     RW_TAC arith_ss [] THEN
     `?w_1 w_2 w_3 w_4.
@@ -171,26 +173,29 @@ val makeRevSubKeyLength = Q.store_thm(
         revPreKey = (v_1::v_2::v_3::v_4::t)`
         by METIS_TAC [listInstGreaterEq4] THEN
     `LENGTH t = 4 * (n + 1)` by FULL_SIMP_TAC list_ss [LENGTH] THEN
-    FULL_SIMP_TAC list_ss [makeRevSubKey_def,LET_THM]]);
+    FULL_SIMP_TAC list_ss [makeRevSubKey_def,LET_THM]]
+QED
 
-val makeSubKeyLength = Q.store_thm(
-"makeSubKeyLength",
-`!revPreKey.
-    (LENGTH revPreKey = 132) ==> (LENGTH (makeSubKey revPreKey) = 33)`,
- RW_TAC list_ss [makeSubKey_def,makeRevSubKeyLength,LENGTH_REVERSE]);
+Theorem makeSubKeyLength:
+ !revPreKey.
+    (LENGTH revPreKey = 132) ==> (LENGTH (makeSubKey revPreKey) = 33)
+Proof
+ RW_TAC list_ss [makeSubKey_def,makeRevSubKeyLength,LENGTH_REVERSE]
+QED
 
 (* the only property of key shecduling which matters for the functional
    correctness of Serpent is the length of the generated key *)
 
-val makeKeyHatLength = Q.store_thm(
-"makeKeyHatLength",
-`!userKey kl.
-    LENGTH (makeKeyHat userKey kl) = 33`,
+Theorem makeKeyHatLength:
+ !userKey kl.
+    LENGTH (makeKeyHat userKey kl) = 33
+Proof
   RW_TAC std_ss [makeKeyHat_def,makeSubKeyHat_def] THEN
   RW_TAC std_ss [LENGTH_MAP] THEN
   FULL_SIMP_TAC std_ss [Abbrev_def] THEN
   `LENGTH  (makeRevPreKey (short2longKey userKey kl))= 132`
       by METIS_TAC [makeRevPreKeyLength] THEN
   `132 = 4*(32+1)` by EVAL_TAC THEN
-  FULL_SIMP_TAC arith_ss [makeSubKeyLength]);
+  FULL_SIMP_TAC arith_ss [makeSubKeyLength]
+QED
 

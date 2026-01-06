@@ -36,26 +36,23 @@ Definition divides_def[nocompute]:
    divides a b = ?q. b = q*a
 End
 
-val ALL_DIVIDES_0 = store_thm
-("ALL_DIVIDES_0",
- ``!a. divides a 0``,
- METIS_TAC[divides_def,MULT_CLAUSES])
- before
- export_rewrites ["ALL_DIVIDES_0"];
+Theorem ALL_DIVIDES_0[simp]:
+ !a. divides a 0
+Proof
+  METIS_TAC[divides_def,MULT_CLAUSES]
+QED
 
-val ZERO_DIVIDES = store_thm(
-  "ZERO_DIVIDES",
-  ``divides 0 m = (m = 0)``,
-  SRW_TAC [][divides_def])
-  before
-  export_rewrites ["ZERO_DIVIDES"];
+Theorem ZERO_DIVIDES[simp]:
+  divides 0 m = (m = 0)
+Proof
+  SRW_TAC [][divides_def]
+QED
 
-val DIVIDES_REFL = store_thm
-("DIVIDES_REFL",
- ``!a. divides a a``,
- METIS_TAC[divides_def,MULT_CLAUSES])
- before
- export_rewrites ["DIVIDES_REFL"];
+Theorem DIVIDES_REFL[simp]:
+  !a. divides a a
+Proof
+ METIS_TAC[divides_def,MULT_CLAUSES]
+QED
 
 Theorem DIVIDES_TRANS:
     !a b c. divides a b /\ divides b c ==> divides a c
@@ -63,19 +60,17 @@ Proof
   METIS_TAC [divides_def,MULT_ASSOC]
 QED
 
-val ONE_DIVIDES_ALL = store_thm
-("ONE_DIVIDES_ALL",
- ``!a. divides 1 a``,
- METIS_TAC[divides_def,MULT_CLAUSES])
- before
- export_rewrites ["ONE_DIVIDES_ALL"];
+Theorem ONE_DIVIDES_ALL[simp]:
+  !a. divides 1 a
+Proof
+ METIS_TAC[divides_def,MULT_CLAUSES]
+QED
 
-val DIVIDES_ONE = store_thm
- ("DIVIDES_ONE",
-  ``!x. divides x 1 = (x = 1)``,
-  METIS_TAC [divides_def,MULT_CLAUSES,MULT_EQ_1])
-  before
-  export_rewrites ["DIVIDES_ONE"];
+Theorem DIVIDES_ONE[simp]:
+  !x. divides x 1 = (x = 1)
+Proof
+  METIS_TAC [divides_def,MULT_CLAUSES,MULT_EQ_1]
+QED
 
 Theorem DIVIDES_ADD_1:
    !a b c. divides a b /\ divides a c ==> divides a (b+c)
@@ -250,41 +245,37 @@ Definition prime_def[nocompute]:
 End
 
 
-val NOT_PRIME_0 = Q.store_thm
- ("NOT_PRIME_0",
-  `~prime 0`,
-  ARW [prime_def, ALL_DIVIDES_0])
-  before
-  export_rewrites ["NOT_PRIME_0"];
+Theorem NOT_PRIME_0[simp]:
+  ~prime 0
+Proof
+  ARW [prime_def, ALL_DIVIDES_0]
+QED
 
-val NOT_PRIME_1 = Q.store_thm
- ("NOT_PRIME_1",
-  `~prime 1`,
-  ARW [prime_def, DIVIDES_LE])
-  before
-  export_rewrites ["NOT_PRIME_1"];
+Theorem NOT_PRIME_1[simp]:
+  ~prime 1
+Proof
+  ARW [prime_def, DIVIDES_LE]
+QED
 
-val PRIME_2 = store_thm
- ("PRIME_2",
-  ``prime 2``,
+Theorem PRIME_2[simp]:
+  prime 2
+Proof
   RW_TAC arith_ss  [prime_def] THEN
   `0 < b /\ b <= 2` by METIS_TAC [DIVIDES_LE, ZERO_DIVIDES,
                                   CALC ``0<2``,NOT_ZERO_LT_ZERO] THEN
-  NTAC 2 (POP_ASSUM MP_TAC) THEN ARITH_TAC)
-  before
-  export_rewrites ["PRIME_2"];
+  NTAC 2 (POP_ASSUM MP_TAC) THEN ARITH_TAC
+QED
 
-val PRIME_3 = Q.store_thm
-("PRIME_3",
- `prime 3`,
+Theorem PRIME_3[simp]:
+  prime 3
+Proof
   RW_TAC arith_ss  [prime_def] THEN
   `b <= 3` by RW_TAC arith_ss [DIVIDES_LE] THEN
   `(b=0) \/ (b=1) \/ (b=2) \/ (b=3)` by (POP_ASSUM MP_TAC THEN ARITH_TAC) THEN
   RW_TAC arith_ss [] THENL
   [FULL_SIMP_TAC arith_ss [ZERO_DIVIDES],
-   FULL_SIMP_TAC arith_ss [divides_def]])
-  before
-  export_rewrites ["PRIME_3"];
+   FULL_SIMP_TAC arith_ss [divides_def]]
+QED
 
 Theorem PRIME_POS:
     !p. prime p ==> 0<p

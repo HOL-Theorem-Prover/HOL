@@ -60,11 +60,12 @@ val NULL_EQ_NIL = prove
   (``!l. NULL l = (l = [])``,
    Cases THEN RW_TAC list_ss []);
 
-val LENGTH_EQ_ONE = store_thm
-  ("LENGTH_EQ_ONE",
-   ``!l. (LENGTH l = 1) = ?x. l = [x]``,
+Theorem LENGTH_EQ_ONE:
+     !l. (LENGTH l = 1) = ?x. l = [x]
+Proof
    Cases THEN RW_TAC list_ss [] THEN
-   Cases_on `t` THEN RW_TAC list_ss []);
+   Cases_on `t` THEN RW_TAC list_ss []
+QED
 
 val MEM_TL = prove
   (``!x l. ~NULL l ==> MEM x (TL l) ==> MEM x l``,
@@ -263,19 +264,21 @@ Definition sem_def:
      ?w'. sem r (w <> w'))
 End
 
-val sem_Dot = store_thm
-  ("sem_Dot",
-   ``!l. sem Dot l = (LENGTH l = 1)``,
-   RW_TAC std_ss [sem_def, Dot_def]);
+Theorem sem_Dot:
+     !l. sem Dot l = (LENGTH l = 1)
+Proof
+   RW_TAC std_ss [sem_def, Dot_def]
+QED
 
-val sem_Zero = store_thm
-  ("sem_Zero",
-   ``!l. ~(sem Zero l)``,
-   RW_TAC std_ss [sem_def, Zero_def]);
+Theorem sem_Zero:
+     !l. ~(sem Zero l)
+Proof
+   RW_TAC std_ss [sem_def, Zero_def]
+QED
 
-val sem_One = store_thm
-  ("sem_One",
-   ``!l. sem One l = (l = [])``,
+Theorem sem_One:
+     !l. sem One l = (l = [])
+Proof
    RW_TAC std_ss [sem_def, One_def]
    >> REVERSE EQ_TAC
    >- (RW_TAC std_ss []
@@ -284,7 +287,8 @@ val sem_One = store_thm
    >> RW_TAC std_ss []
    >> POP_ASSUM MP_TAC
    >> Cases_on `wlist`
-   >> RW_TAC std_ss [CONCAT_def, ALL_EL, sem_Zero]);
+   >> RW_TAC std_ss [CONCAT_def, ALL_EL, sem_Zero]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Misc. semantics lemmas                                                    *)
@@ -370,9 +374,9 @@ val (match_def, match_ind) = Defn.tprove
 (* Correctness of the matcher                                                *)
 (*---------------------------------------------------------------------------*)
 
-val sem_match = store_thm
-  ("sem_match",
-   ``!r w. sem r w = match r w``,
+Theorem sem_match:
+     !r w. sem r w = match r w
+Proof
    recInduct match_ind THEN REPEAT CONJ_TAC THENL
    [(* Atom c *) RW_TAC list_ss [sem_def,match_def],
     (* r || r' *) RW_TAC list_ss [sem_def,match_def],
@@ -426,4 +430,5 @@ val sem_match = store_thm
       `?wlist. (p_2=CONCAT wlist) /\ EVERY (sem r) wlist` by PROVE_TAC[] THEN
       Q.EXISTS_TAC `p_1::wlist` THEN RW_TAC list_ss [CONCAT_def] THEN
       PROVE_TAC [MEM_TL,SPLITS_NON_EMPTY,SPLITS_APPEND,IN_DEF]]],
-    RW_TAC std_ss [sem_def, match_def]]);
+    RW_TAC std_ss [sem_def, match_def]]
+QED

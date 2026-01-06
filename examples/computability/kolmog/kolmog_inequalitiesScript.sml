@@ -256,7 +256,7 @@ Proof
   simp[comp_machine_t_def, EXTENSION]
 QED
 
-Triviality comp_machine_equiv = brackabs.brackabs_equiv [] comp_machine_t_def
+Theorem comp_machine_equiv[local] = brackabs.brackabs_equiv [] comp_machine_t_def
 
 Theorem comp_machine_t_behaviour_good:
   Phi j x = SOME n ∧ Phi i n = SOME r ⇒

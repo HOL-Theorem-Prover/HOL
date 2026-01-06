@@ -117,12 +117,11 @@ Theorem GCD_IS_GREATEST_COMMON_DIVISOR =
   REWRITE_RULE [IS_GCD] GCD_IS_GCD
 
 
-Theorem GCD_REF:
+Theorem GCD_REF[simp]:
                         !a. gcd a a = a
 Proof
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_REF]
 QED
-val _ = export_rewrites ["GCD_REF"]
 
 Theorem GCD_SYM:
                         !a b. gcd a b = gcd b a
@@ -133,19 +132,17 @@ QED
 (* |- gcd a b = gcd b a *)
 Theorem GCD_COMM = GCD_SYM |> SPEC_ALL;
 
-Theorem GCD_0R:
+Theorem GCD_0R[simp]:
                         !a. gcd a 0 = a
 Proof
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0R]
 QED
-val _ = export_rewrites ["GCD_0R"]
 
-Theorem GCD_0L:
+Theorem GCD_0L[simp]:
                         !a. gcd 0 a = a
 Proof
                         PROVE_TAC[GCD_IS_GCD,IS_GCD_UNIQUE,IS_GCD_0L]
 QED
-val _ = export_rewrites ["GCD_0L"]
 
 (* Theorem: (gcd 0 x = x) /\ (gcd x 0 = x) *)
 (* Proof: by GCD_0L, GCD_0R *)
@@ -162,9 +159,8 @@ Proof
                         THEN ARW[GCD_IS_GCD,SPECL [Term `a:num`, Term `a+b`] IS_GCD_MINUS_R]
 QED
 
-Theorem GCD_ADD_R_THM =
+Theorem GCD_ADD_R_THM[simp] =
   CONJ GCD_ADD_R (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_R)
-val _ = export_rewrites ["GCD_ADD_R_THM"]
 
 Theorem GCD_ADD_L:
                         !a b. gcd (a+b) a = gcd a b
@@ -172,23 +168,21 @@ Proof
                         PROVE_TAC[GCD_SYM,GCD_ADD_R]
 QED
 
-Theorem GCD_ADD_L_THM =
+Theorem GCD_ADD_L_THM[simp] =
  CONJ GCD_ADD_L (ONCE_REWRITE_RULE [ADD_COMM] GCD_ADD_L)
-val _ = export_rewrites ["GCD_ADD_L_THM"]
 
 Theorem GCD_EQ_0[simp]:
   !n m. (gcd n m = 0) <=> (n = 0) /\ (m = 0)
 Proof HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][gcd_def]
 QED
 
-Theorem GCD_1:
+Theorem GCD_1[simp]:
     (gcd 1 x = 1) /\ (gcd x 1 = 1)
 Proof
   Q_TAC SUFF_TAC `!m n. (m = 1) ==> (gcd m n = 1)`
         THEN1 PROVE_TAC [GCD_SYM] THEN
   HO_MATCH_MP_TAC gcd_ind THEN SRW_TAC [][gcd_def]
 QED
-val _ = export_rewrites ["GCD_1"]
 
 Theorem PRIME_GCD:
                         !p b. prime p ==> divides p b \/ (gcd p b = 1)
@@ -418,19 +412,17 @@ Proof
   ]
 QED
 
-Theorem LCM_0:
+Theorem LCM_0[simp]:
     (lcm 0 x = 0) /\ (lcm x 0 = 0)
 Proof
   SRW_TAC [][lcm_def]
 QED
-val _ = export_rewrites ["LCM_0"]
 
-Theorem LCM_1:
+Theorem LCM_1[simp]:
     (lcm 1 x = x) /\ (lcm x 1 = x)
 Proof
   SRW_TAC [][lcm_def]
 QED
-val _ = export_rewrites ["LCM_1"]
 
 Theorem LCM_COMM:
     lcm a b = lcm b a
@@ -441,7 +433,7 @@ QED
 (* |- !a b. lcm a b = lcm b a *)
 Theorem LCM_SYM = LCM_COMM |> GEN ``b:num`` |> GEN ``a:num``;
 
-Theorem LCM_LE:
+Theorem LCM_LE[simp]:
     0 < m /\ 0 < n ==> (m <= lcm m n) /\ (m <= lcm n m)
 Proof
   SIMP_TAC (srw_ss() ++ ARITH_ss) [lcm_def, GCD_SYM] THEN
@@ -454,7 +446,6 @@ Proof
   Q_TAC SUFF_TAC `1 <= a` THEN1 METIS_TAC [LE_MULT_LCANCEL, MULT_CLAUSES] THEN
   FULL_SIMP_TAC (srw_ss() ++ ARITH_ss) [ZERO_LESS_MULT]
 QED
-val _ = export_rewrites ["LCM_LE"]
 
 Theorem LCM_LEAST:
     0 < m /\ 0 < n ==>

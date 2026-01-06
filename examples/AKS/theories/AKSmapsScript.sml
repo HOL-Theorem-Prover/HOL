@@ -232,11 +232,11 @@ p IN PM /\ q IN PM /\ p % h = q % h ==> p = q  by above, poly_peval_by_X
     Hence (peval p (X ** m) == peval q (X ** m)) (pm u)  by poly_mod_eq_eq
       and (peval (p - q) (X ** m) == |0|) (pm u)         by poly_mod_peval_eq
 *)
-val setP_poly_mod_eq = store_thm(
-  "setP_poly_mod_eq",
-  ``!(r:'a ring) k s:num. Ring r /\ 0 < k ==>
+Theorem setP_poly_mod_eq:
+    !(r:'a ring) k s:num. Ring r /\ 0 < k ==>
     !p q. p IN P /\ q IN P /\ (p == q) (pm (unity k)) ==>
-    !m. m IN N ==> (peval (p - q) (X ** m) == |0|) (pm (unity k))``,
+    !m. m IN N ==> (peval (p - q) (X ** m) == |0|) (pm (unity k))
+Proof
   rpt strip_tac >>
   `poly p /\ m intro p` by metis_tac[setP_element] >>
   `poly q /\ m intro q` by metis_tac[setP_element] >>
@@ -247,7 +247,8 @@ val setP_poly_mod_eq = store_thm(
   `(q ** m == peval q (X ** m)) (pm u)` by metis_tac[poly_intro_def] >>
   `!h n. poly h ==> poly (h ** n)` by rw[] >>
   `(peval p (X ** m) == peval q (X ** m)) (pm u)` by prove_tac[poly_mod_eq_eq, poly_peval_poly] >>
-  rw[GSYM poly_mod_peval_eq]);
+  rw[GSYM poly_mod_peval_eq]
+QED
 
 (* Theorem: 0 < k /\ ulead z /\ ((unity k) % h = |0|) ==>
             !p q. p IN P /\ q IN P /\ (p == q) (pm h) ==>
@@ -266,11 +267,11 @@ val setP_poly_mod_eq = store_thm(
     Hence (peval p (X ** m) == peval q (X ** m)) (pm z)  by poly_mod_eq_eq
       and (peval (p - q) (X ** m) == |0|) (pm z)         by poly_mod_peval_eq
 *)
-val setP_poly_mod_divisor_eq = store_thm(
-  "setP_poly_mod_divisor_eq",
-  ``!(r:'a ring) k s:num z. Ring r /\ 0 < k /\ ulead z /\ ((unity k) % z = |0|) ==>
+Theorem setP_poly_mod_divisor_eq:
+    !(r:'a ring) k s:num z. Ring r /\ 0 < k /\ ulead z /\ ((unity k) % z = |0|) ==>
     !p q. p IN P /\ q IN P /\ (p == q) (pm z) ==>
-    !m. m IN N ==> (peval (p - q) (X ** m) == |0|) (pm z)``,
+    !m. m IN N ==> (peval (p - q) (X ** m) == |0|) (pm z)
+Proof
   rpt strip_tac >>
   `poly p /\ m intro p` by metis_tac[setP_element] >>
   `poly q /\ m intro q` by metis_tac[setP_element] >>
@@ -284,7 +285,8 @@ val setP_poly_mod_divisor_eq = store_thm(
   `(p ** m == peval p (X ** m)) (pm z)` by metis_tac[poly_mod_eq_divisor] >>
   `(q ** m == peval q (X ** m)) (pm z)` by metis_tac[poly_mod_eq_divisor] >>
   `(peval p (X ** m) == peval q (X ** m)) (pm z)` by prove_tac[poly_mod_eq_eq] >>
-  rw[GSYM poly_mod_peval_eq]);
+  rw[GSYM poly_mod_peval_eq]
+QED
 
 (* Theorem: 0 < k ==> !p q. p IN P /\ q IN P /\ (p == q) (pm (unity k)) ==>
             !n. n IN M ==> (peval (p - q) (X ** n) == |0|) (pm (unity k)) *)
@@ -305,11 +307,11 @@ val setP_poly_mod_divisor_eq = store_thm(
     Hence (peval p (X ** n) == peval q (X ** n)) (pm u)  by poly_mod_eq_eq
        or (peval (p - q) (X ** n) == |0|) (pm u)         by poly_mod_peval_eq
 *)
-val setP_poly_modN_eq = store_thm(
-  "setP_poly_modN_eq",
-  ``!(r:'a ring) k s:num. Ring r /\ 0 < k ==>
+Theorem setP_poly_modN_eq:
+    !(r:'a ring) k s:num. Ring r /\ 0 < k ==>
     !p q. p IN P /\ q IN P /\ (p == q) (pm (unity k)) ==>
-    !n. n IN M ==> (peval (p - q) (X ** n) == |0|) (pm (unity k))``,
+    !n. n IN M ==> (peval (p - q) (X ** n) == |0|) (pm (unity k))
+Proof
   rpt strip_tac >>
   `?m. m IN N /\ (n = m MOD k)` by metis_tac[modN_element] >>
   `poly p /\ m intro p` by metis_tac[setP_element] >>
@@ -325,7 +327,8 @@ val setP_poly_modN_eq = store_thm(
   `(peval p (X ** m) == peval p (X ** n)) (pm u)` by rw[poly_peval_mod_eq] >>
   `(peval q (X ** m) == peval q (X ** n)) (pm u)` by rw[poly_peval_mod_eq] >>
   `(peval p (X ** n) == peval q (X ** n)) (pm u)` by prove_tac[poly_mod_eq_eq] >>
-  rw[GSYM poly_mod_peval_eq]);
+  rw[GSYM poly_mod_peval_eq]
+QED
 
 (* Theorem: ((unity k) % z = |0|) /\ p IN P /\ q IN P /\ (p == q) (pm z) ==>
             !n. n IN M ==> (peval (p - q) (X ** n) == |0|) (pm z) *)
@@ -354,11 +357,11 @@ val setP_poly_modN_eq = store_thm(
     Hence (peval p (X ** n) == peval q (X ** n)) (pm z)  by poly_mod_eq_eq from [2], [3]
        or (peval (p - q) (X ** n) == |0|) (pm z)         by poly_mod_peval_eq
 *)
-val setP_poly_modN_divisor_eq = store_thm(
-  "setP_poly_modN_divisor_eq",
-  ``!(r:'a ring) k s:num z. Ring r /\ 0 < k /\ ulead z /\ ((unity k) % z = |0|) ==>
+Theorem setP_poly_modN_divisor_eq:
+    !(r:'a ring) k s:num z. Ring r /\ 0 < k /\ ulead z /\ ((unity k) % z = |0|) ==>
      !p q. p IN P /\ q IN P /\ (p == q) (pm z) ==>
-       !n. n IN M ==> (peval (p - q) (X ** n) == |0|) (pm z)``,
+       !n. n IN M ==> (peval (p - q) (X ** n) == |0|) (pm z)
+Proof
   rpt strip_tac >>
   `?m. m IN N /\ (n = m MOD k)` by metis_tac[modN_element] >>
   `poly p /\ m intro p` by metis_tac[setP_element] >>
@@ -376,7 +379,8 @@ val setP_poly_modN_divisor_eq = store_thm(
   `(q ** m == peval q (X ** n)) (pm z)` by metis_tac[poly_mod_transitive, poly_mod_eq_divisor] >>
   `(p ** m == q ** m) (pm z)` by rw[pmod_exp_eq] >>
   `(peval p (X ** n) == peval q (X ** n)) (pm z)` by prove_tac[poly_mod_eq_eq] >>
-  rw[GSYM poly_mod_peval_eq]);
+  rw[GSYM poly_mod_peval_eq]
+QED
 
 (*
 Given:
@@ -408,17 +412,18 @@ but setP_poly_modN_divisor_eq
    ==> ((peval d (X ** n)) % z = |0|)        by pmod_zero
    ==> rootz (lift (p - q)) (X ** n % z)     by poly_mod_lift_root_X_exp
 *)
-val setP_mod_eq_gives_modN_roots = store_thm(
-  "setP_mod_eq_gives_modN_roots",
-  ``!(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
+Theorem setP_mod_eq_gives_modN_roots:
+    !(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
    !p q. p IN P /\ q IN P /\ (p == q) (pm z) ==>
-   !n. n IN M ==> rootz (lift (p - q)) (X ** n % z)``,
+   !n. n IN M ==> rootz (lift (p - q)) (X ** n % z)
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   `pmonic z` by metis_tac[poly_monic_irreducible_factor] >>
   qabbrev_tac `d = p - q` >>
   `poly p /\ poly q /\ poly d` by metis_tac[setP_element_poly, poly_sub_poly] >>
-  metis_tac[setP_poly_modN_divisor_eq, pmod_zero, poly_mod_lift_root_X_exp]);
+  metis_tac[setP_poly_modN_divisor_eq, pmod_zero, poly_mod_lift_root_X_exp]
+QED
 
 (* Theorem: mifactor z (unity k) /\ 1 < deg z /\ (forderz X = k) ==> INJ (\p. p % z) PM (Q z) *)
 (* Proof:
@@ -480,10 +485,10 @@ val setP_mod_eq_gives_modN_roots = store_thm(
       or  deg d < CARD M                             by MAX_LE, LESS_EQ_LESS_TRANS
        Which contradicts CARD M <= deg d             from above.
 *)
-val reduceP_mod_modP_inj_0 = store_thm(
-  "reduceP_mod_modP_inj_0",
-  ``!(r:'a field) k s:num z. FiniteField r /\ mifactor z (unity k) /\ 1 < deg z /\
-          (forderz X = k) ==> INJ (\p. p % z) PM (Q z)``,
+Theorem reduceP_mod_modP_inj_0:
+    !(r:'a field) k s:num z. FiniteField r /\ mifactor z (unity k) /\ 1 < deg z /\
+          (forderz X = k) ==> INJ (\p. p % z) PM (Q z)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `pmonic z` by rw[] >>
@@ -520,7 +525,8 @@ val reduceP_mod_modP_inj_0 = store_thm(
   `deg p' < CARD M` by metis_tac[reduceP_element] >>
   `deg d <= MAX (deg p) (deg p')` by metis_tac[poly_deg_sub] >>
   `deg d < CARD M` by metis_tac[MAX_LE, LESS_EQ_LESS_TRANS] >>
-  `~(CARD M <= deg d)` by decide_tac);
+  `~(CARD M <= deg d)` by decide_tac
+QED
 (* Not in use now *)
 
 (* Theorem: mifactor z (unity k) /\ (forderz X = k) ==> INJ (\p. p % z) PM (Q z) *)
@@ -584,10 +590,10 @@ val reduceP_mod_modP_inj_0 = store_thm(
       or  deg d < CARD M                             by MAX_LE, LESS_EQ_LESS_TRANS
        Which contradicts CARD M <= deg d             from above.
 *)
-val reduceP_mod_modP_inj_1 = store_thm(
-  "reduceP_mod_modP_inj_1",
-  ``!(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) /\
-                 (forderz X = k) ==> INJ (\p. p % z) PM (Q z)``,
+Theorem reduceP_mod_modP_inj_1:
+    !(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) /\
+                 (forderz X = k) ==> INJ (\p. p % z) PM (Q z)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `pmonic z` by metis_tac[poly_monic_irreducible_factor] >>
@@ -624,7 +630,8 @@ val reduceP_mod_modP_inj_1 = store_thm(
   `deg p' < CARD M` by metis_tac[reduceP_element] >>
   `deg d <= MAX (deg p) (deg p')` by metis_tac[poly_deg_sub] >>
   `deg d < CARD M` by metis_tac[MAX_LE, LESS_EQ_LESS_TRANS] >>
-  `~(CARD M <= deg d)` by decide_tac);
+  `~(CARD M <= deg d)` by decide_tac
+QED
 (* for Version 1 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -658,11 +665,11 @@ val reduceP_mod_modP_inj_1 = store_thm(
       = (p ** n - p ** m)                                by poly_peval_X_exp
    Hence  (peval (X ** n - X ** m) p == |0|) (pm u)
 *)
-val setP_element_as_root_mod_unity = store_thm(
-  "setP_element_as_root_mod_unity",
-  ``!(r:'a ring) k s:num. Ring r /\ 0 < k ==>
+Theorem setP_element_as_root_mod_unity:
+    !(r:'a ring) k s:num. Ring r /\ 0 < k ==>
    !n m. n IN N /\ m IN N /\ (n MOD k = m MOD k) ==>
-   !p. p IN P ==> (peval (X ** n - X ** m) p == |0|) (pm (unity k))``,
+   !p. p IN P ==> (peval (X ** n - X ** m) p == |0|) (pm (unity k))
+Proof
   rpt strip_tac >>
   `poly p /\ n intro p /\ m intro p` by metis_tac[setP_element] >>
   Cases_on `#1 = #0` >| [
@@ -679,7 +686,8 @@ val setP_element_as_root_mod_unity = store_thm(
     `(p ** n - p ** m == |0|) (pm u)` by rw[GSYM poly_pmod_sub_eq_zero] >>
     `peval (X ** n - X ** m) p = p ** n - p ** m` by rw[poly_peval_sub, poly_peval_X_exp] >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < k /\ mifactor z (unity k) ==>
             !n m. n IN N /\ m IN N /\ (n MOD k = m MOD k) ==>
@@ -693,11 +701,11 @@ val setP_element_as_root_mod_unity = store_thm(
           (peval (X ** n - X ** m) p == |0|) (pm u)      by setP_element_as_root_mod_unity
    Hence  (peval (X ** n - X ** m) p == |0|) (pm z)      by poly_mod_eq_divisor
 *)
-val setP_element_as_root_mod_unity_factor = store_thm(
-  "setP_element_as_root_mod_unity_factor",
-  ``!(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
+Theorem setP_element_as_root_mod_unity_factor:
+    !(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
    !n m. n IN N /\ m IN N /\ (n MOD k = m MOD k) ==>
-   !p. p IN P ==> (peval (X ** n - X ** m) p == |0|) (pm z)``,
+   !p. p IN P ==> (peval (X ** n - X ** m) p == |0|) (pm z)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `pmonic z` by metis_tac[poly_monic_irreducible_factor] >>
@@ -706,7 +714,8 @@ val setP_element_as_root_mod_unity_factor = store_thm(
   `pmonic u` by rw[poly_unity_pmonic, Abbr`u`] >>
   `(peval (X ** n - X ** m) p == |0|) (pm u)` by metis_tac[setP_element_as_root_mod_unity] >>
   `poly (peval (X ** n - X ** m) p) /\ poly |0|` by rw[] >>
-  metis_tac[poly_mod_eq_divisor]);
+  metis_tac[poly_mod_eq_divisor]
+QED
 
 (* Theorem: 0 < k /\ mifactor z (unity k) /\ 1 < deg z ==>
             !n m. n IN N /\ m IN N /\ (n MOD k = m MOD k) ==>
@@ -732,11 +741,11 @@ val setP_element_as_root_mod_unity_factor = store_thm(
      and deg p < deg z                                   by poly_deg_mod_less
       or p is a root of d, of degree limited by n, m.    by poly_mod_lift_root_by_mod_peval
 *)
-val setN_mod_eq_gives_modP_roots_0 = store_thm(
-  "setN_mod_eq_gives_modP_roots_0",
-  ``!(r:'a ring) k s:num z. Ring r /\ 0 < k /\ mifactor z (unity k) /\ 1 < deg z ==>
+Theorem setN_mod_eq_gives_modP_roots_0:
+    !(r:'a ring) k s:num z. Ring r /\ 0 < k /\ mifactor z (unity k) /\ 1 < deg z ==>
    !n m. n IN N /\ m IN N /\ (n MOD k = m MOD k) ==>
-   !p. p IN Q z ==> rootz (lift (X ** n - X ** m)) p``,
+   !p. p IN Q z ==> rootz (lift (X ** n - X ** m)) p
+Proof
   rpt strip_tac >>
   `pmonic z` by rw[] >>
   `0 < deg z` by decide_tac >>
@@ -753,7 +762,8 @@ val setN_mod_eq_gives_modP_roots_0 = store_thm(
   `(peval d q == |0|) (pm u)` by metis_tac[setP_element_as_root_mod_unity] >>
   `(peval d q == |0|) (pm z)` by metis_tac[poly_mod_eq_divisor, poly_peval_poly, poly_zero_poly] >>
   `(peval d q) % z = |0|` by rw[GSYM pmod_zero] >>
-  rw[poly_peval_mod, poly_deg_mod_less, poly_mod_lift_root_by_mod_peval]);
+  rw[poly_peval_mod, poly_deg_mod_less, poly_mod_lift_root_by_mod_peval]
+QED
 (* Not in use now *)
 
 (*
@@ -788,11 +798,11 @@ This needs Field r due to essential use of poly_field_units, which uses properti
      and deg p < deg z                                   by poly_deg_mod_less
       or p is a root of d, of degree limited by n, m.    by poly_mod_lift_root_by_mod_peval
 *)
-val setN_mod_eq_gives_modP_roots_1 = store_thm(
-  "setN_mod_eq_gives_modP_roots_1",
-  ``!(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
+Theorem setN_mod_eq_gives_modP_roots_1:
+    !(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
    !n m. n IN N /\ m IN N /\ (n MOD k = m MOD k) ==>
-   !p. p IN Q z ==> rootz (lift (X ** n - X ** m)) p``,
+   !p. p IN Q z ==> rootz (lift (X ** n - X ** m)) p
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `d = X ** n - X ** m` >>
@@ -806,7 +816,8 @@ val setN_mod_eq_gives_modP_roots_1 = store_thm(
   `(peval d q == |0|) (pm u)` by metis_tac[setP_element_as_root_mod_unity] >>
   `(peval d q == |0|) (pm z)` by metis_tac[poly_mod_eq_divisor, poly_peval_poly, poly_zero_poly] >>
   `(peval d q) % z = |0|` by rw[GSYM pmod_zero] >>
-  rw[poly_peval_mod, poly_deg_mod_less, poly_mod_lift_root_by_mod_peval]);
+  rw[poly_peval_mod, poly_deg_mod_less, poly_mod_lift_root_by_mod_peval]
+QED
 (* for Version 1 *)
 
 (* Theorem: Field r /\ 0 < k /\ mifactor z (unity k) ==>
@@ -821,17 +832,18 @@ val setN_mod_eq_gives_modP_roots_1 = store_thm(
    (2) x IN Q z ==> rootz (lift (X ** n - X ** m)) x
        This is true                          by setN_mod_eq_gives_modP_roots_1
 *)
-val setN_mod_eq_gives_modP_roots_2 = store_thm(
-  "setN_mod_eq_gives_modP_roots_2",
-  ``!r:'a field k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
+Theorem setN_mod_eq_gives_modP_roots_2:
+    !r:'a field k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
    !n m. n IN N /\ m IN N /\ (n MOD k = m MOD k) ==>
-         (Q z) SUBSET rootsz (lift (X ** n - X ** m))``,
+         (Q z) SUBSET rootsz (lift (X ** n - X ** m))
+Proof
   rpt strip_tac >>
   `Ring r` by rw[] >>
   `pmonic z` by rw[poly_irreducible_pmonic] >>
   rw_tac std_ss[poly_roots_member, SUBSET_DEF] >-
   metis_tac[modP_element_poly, poly_mod_ring_element, NOT_ZERO] >>
-  metis_tac[setN_mod_eq_gives_modP_roots_1]);
+  metis_tac[setN_mod_eq_gives_modP_roots_1]
+QED
 
 (* Theorem: 0 < k /\ mifactor z (unity k) ==>
    !n m. n IN N /\ m IN N /\ (n MOD k = m MOD k) ==>
@@ -854,11 +866,11 @@ val setN_mod_eq_gives_modP_roots_2 = store_thm(
       or (peval d p == peval d q) (pm z)                 by pmod_def_alt
    Hence (peval d p == |0|) (pm z)                       by poly_mod_transitive
 *)
-val setN_mod_eq_gives_modP_roots = store_thm(
-  "setN_mod_eq_gives_modP_roots",
-  ``!(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
+Theorem setN_mod_eq_gives_modP_roots:
+    !(r:'a field) k s:num z. Field r /\ 0 < k /\ mifactor z (unity k) ==>
    !n m. n IN N /\ m IN N /\ (n MOD k = m MOD k) ==>
-   !p. p IN Q z ==> (peval (X ** n - X ** m) p == |0|) (pm z)``,
+   !p. p IN Q z ==> (peval (X ** n - X ** m) p == |0|) (pm z)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `d = X ** n - X ** m` >>
@@ -873,7 +885,8 @@ val setN_mod_eq_gives_modP_roots = store_thm(
   `(peval d q == |0|) (pm u)` by metis_tac[setP_element_as_root_mod_unity] >>
   `(peval d q == |0|) (pm z)` by metis_tac[poly_mod_eq_divisor] >>
   `(peval d p == peval d q) (pm z)` by rw[poly_peval_mod, pmod_def_alt] >>
-  metis_tac[poly_mod_transitive]);
+  metis_tac[poly_mod_transitive]
+QED
 (* for showing root by peval *)
 
 (* ------------------------------------------------------------------------- *)
@@ -927,12 +940,12 @@ val setN_mod_eq_gives_modP_roots = store_thm(
              CARD (Q z) <= (MAX p q) ** (2 * SQRT t)
        which contradicts the given: (MAX p q) ** (2 * SQRT t) < CARD (Q z).
 *)
-val reduceN_mod_modN_inj_0 = store_thm(
-  "reduceN_mod_modN_inj_0",
-  ``!(r:'a field) k s:num z. Field r /\ mifactor z (unity k) /\ 1 < deg z ==>
+Theorem reduceN_mod_modN_inj_0:
+    !(r:'a field) k s:num z. Field r /\ mifactor z (unity k) /\ 1 < deg z ==>
    !p q. 1 < p /\ 1 < q /\ p IN N /\ q IN N /\
         (MAX p q) ** (2 * (SQRT (CARD M))) < CARD (Q z) ==>
-        INJ (\m. m MOD k) (NM p q (SQRT (CARD M))) M``,
+        INJ (\m. m MOD k) (NM p q (SQRT (CARD M))) M
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `pmonic z` by rw[] >>
@@ -959,7 +972,8 @@ val reduceN_mod_modN_inj_0 = store_thm(
   `CARD (rootsz (lift d)) <= deg d` by metis_tac[poly_roots_count] >>
   `deg d <= MAX m m'` by metis_tac[poly_deg_sub, poly_deg_X_exp, Abbr`d`] >>
   `MAX m m' <= (MAX p q) ** (2 * SQRT t)` by rw[reduceN_element_upper] >>
-  `~(MAX p q ** (2 * SQRT t) < CARD (Q z))` by decide_tac);
+  `~(MAX p q ** (2 * SQRT t) < CARD (Q z))` by decide_tac
+QED
 (* Not used now *)
 
 (* Theorem: mifactor z (unity k) ==> 1 < p /\ 1 < q /\ p IN N /\ q IN N /\
@@ -1006,12 +1020,12 @@ val reduceN_mod_modN_inj_0 = store_thm(
              CARD (Q z) <= (MAX p q) ** (2 * SQRT t)
        which contradicts the given: (MAX p q) ** (2 * SQRT t) < CARD (Q z).
 *)
-val reduceN_mod_modN_inj_1 = store_thm(
-  "reduceN_mod_modN_inj_1",
-  ``!(r:'a field) k s:num z. Field r /\ mifactor z (unity k) ==>
+Theorem reduceN_mod_modN_inj_1:
+    !(r:'a field) k s:num z. Field r /\ mifactor z (unity k) ==>
    !p q. 1 < p /\ 1 < q /\ p IN N /\ q IN N /\
    (MAX p q) ** (2 * (SQRT (CARD M))) < CARD (Q z) ==>
-   INJ (\m. m MOD k) (NM p q (SQRT (CARD M))) M``,
+   INJ (\m. m MOD k) (NM p q (SQRT (CARD M))) M
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `pmonic z` by rw[poly_irreducible_deg_nonzero] >>
@@ -1038,7 +1052,8 @@ val reduceN_mod_modN_inj_1 = store_thm(
   `CARD (rootsz (lift d)) <= deg d` by metis_tac[poly_roots_count] >>
   `deg d <= MAX m m'` by metis_tac[poly_deg_sub, poly_deg_X_exp, Abbr`d`] >>
   `MAX m m' <= (MAX p q) ** (2 * SQRT t)` by rw[reduceN_element_upper] >>
-  `~(MAX p q ** (2 * SQRT t) < CARD (Q z))` by decide_tac);
+  `~(MAX p q ** (2 * SQRT t) < CARD (Q z))` by decide_tac
+QED
 
 (* Theorem: mifactor z (unity k) ==>
             !p q. 1 < p /\ 1 < q /\ p IN N /\ q IN N /\ (p * q) ** (SQRT (CARD M)) < CARD (Q z) ==>
@@ -1081,12 +1096,12 @@ val reduceN_mod_modN_inj_1 = store_thm(
              CARD (Q z) <= (p * q) ** (SQRT t)
        which contradicts the given: (p * q) ** (SQRT t) < CARD (Q z).
 *)
-val reduceN_mod_modN_inj_2 = store_thm(
-  "reduceN_mod_modN_inj_2",
-  ``!(r:'a field) k s:num z. Field r /\ mifactor z (unity k) ==>
+Theorem reduceN_mod_modN_inj_2:
+    !(r:'a field) k s:num z. Field r /\ mifactor z (unity k) ==>
    !p q. 1 < p /\ 1 < q /\ p IN N /\ q IN N /\
    (p * q) ** (SQRT (CARD M)) < CARD (Q z) ==>
-   INJ (\m. m MOD k) (NM p q (SQRT (CARD M))) M``,
+   INJ (\m. m MOD k) (NM p q (SQRT (CARD M))) M
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `pmonic z` by rw[poly_irreducible_deg_nonzero] >>
@@ -1113,7 +1128,8 @@ val reduceN_mod_modN_inj_2 = store_thm(
   `CARD (rootsz (lift d)) <= deg d` by metis_tac[poly_roots_count] >>
   `deg d <= MAX m m'` by metis_tac[poly_deg_sub, poly_deg_X_exp, Abbr`d`] >>
   `MAX m m' <= (p * q) ** (SQRT t)` by rw[reduceN_element_upper_better] >>
-  `~((p * q) ** (SQRT t) < CARD (Q z))` by decide_tac);
+  `~((p * q) ** (SQRT t) < CARD (Q z))` by decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Product map to Power set of Monomials                          *)
@@ -1129,15 +1145,16 @@ val reduceN_mod_modN_inj_2 = store_thm(
        Hence 0 < c and c = SUC n <= s,
        Thus true by setN_element.
 *)
-val set_of_X_add_c_subset_setP_0 = store_thm(
-  "set_of_X_add_c_subset_setP_0",
-  ``!(r:'a ring) k s:num. Ring r ==>
-   !t. t SUBSET (IMAGE SUC (count s)) ==> (IMAGE (\c. X + |c|) t) SUBSET P``,
+Theorem set_of_X_add_c_subset_setP_0:
+    !(r:'a ring) k s:num. Ring r ==>
+   !t. t SUBSET (IMAGE SUC (count s)) ==> (IMAGE (\c. X + |c|) t) SUBSET P
+Proof
   rw[setP_def, SUBSET_DEF] >-
   rw[] >>
   `?n. (c = SUC n) /\ n < s` by rw[] >>
   `0 < c /\ c <= s` by decide_tac >>
-  metis_tac[setN_element]);
+  metis_tac[setN_element]
+QED
 
 (* Theorem: t SUBSET (IMAGE SUC (count (MIN s h))) ==> (IMAGE (\c. X + |c|) t) SUBSET P *)
 (* Proof:
@@ -1149,15 +1166,16 @@ val set_of_X_add_c_subset_setP_0 = store_thm(
        Hence 0 < c and SUC n < SUC s, or c <= s,
        Thus true by setN_element.
 *)
-val set_of_X_add_c_subset_setP = store_thm(
-  "set_of_X_add_c_subset_setP",
-  ``!(r:'a ring) k s:num. Ring r ==>
-   !h t. t SUBSET (IMAGE SUC (count (MIN s h))) ==> (IMAGE (\c. X + |c|) t) SUBSET P``,
+Theorem set_of_X_add_c_subset_setP:
+    !(r:'a ring) k s:num. Ring r ==>
+   !h t. t SUBSET (IMAGE SUC (count (MIN s h))) ==> (IMAGE (\c. X + |c|) t) SUBSET P
+Proof
   rw[setP_def, SUBSET_DEF] >-
   rw[] >>
   `?n. (c = SUC n) /\ n < s /\ n < h` by rw[] >>
   `0 < c /\ c <= s` by decide_tac >>
-  metis_tac[setN_element]);
+  metis_tac[setN_element]
+QED
 
 (* Theorem: Ring r /\ 0 < k ==> !t. FINITE t /\ t SUBSET P ==> PPROD t IN P *)
 (* Proof:
@@ -1179,10 +1197,10 @@ val set_of_X_add_c_subset_setP = store_thm(
       !p. p IN P ==> poly p ==> p IN (PolyRing r).carrier by setP_element_poly, poly_ring_element
       Hence (CHOICE t) * PPROD z (REST t) IN P            by setP_closure
 *)
-val poly_prod_set_in_setP = store_thm(
-  "poly_prod_set_in_setP",
-  ``!(r:'a ring) k s:num. Ring r /\ 0 < k ==>
-   !t. FINITE t /\ t SUBSET P ==> PPROD t IN P``,
+Theorem poly_prod_set_in_setP:
+    !(r:'a ring) k s:num. Ring r /\ 0 < k ==>
+   !t. FINITE t /\ t SUBSET P ==> PPROD t IN P
+Proof
   rpt strip_tac >>
   completeInduct_on `CARD t` >>
   rule_assum_tac(SIMP_RULE bool_ss[GSYM RIGHT_FORALL_IMP_THM, AND_IMP_INTRO]) >>
@@ -1202,7 +1220,8 @@ val poly_prod_set_in_setP = store_thm(
   `PPROD t = PPROD ((CHOICE t) INSERT (REST t))` by metis_tac[] >>
   `_ = (CHOICE t) * PPROD ((REST t) DELETE (CHOICE t))` by rw[poly_prod_set_thm] >>
   `_ = (CHOICE t) * PPROD (REST t)` by metis_tac[CHOICE_NOT_IN_REST, DELETE_NON_ELEMENT] >>
-  rw[setP_closure]);
+  rw[setP_closure]
+QED
 
 (*
 INSERT_SUBSET;
@@ -1265,10 +1284,10 @@ But CARD (p INSERT (PPM (MIN s (CARD M))))
        Hence CARD s' < CARD (IMAGE SUC (count s))   by CARD_PSUBSET
        Therefore deg (PPROD (IMAGE (\c. X + |c|) s')) < CARD M.
 *)
-val reduceP_poly_subset_reduceP_0 = store_thm(
-  "reduceP_poly_subset_reduceP_0",
-  ``!(r:'a ring) k s. Ring r /\ 0 < k /\ s < CARD M /\ CARD M < char r ==>
-                     PPM s SUBSET PM``,
+Theorem reduceP_poly_subset_reduceP_0:
+    !(r:'a ring) k s. Ring r /\ 0 < k /\ s < CARD M /\ CARD M < char r ==>
+                     PPM s SUBSET PM
+Proof
   rpt strip_tac >>
   `char r <> 1` by decide_tac >>
   `#1 <> #0` by rw[GSYM ring_char_eq_1] >>
@@ -1289,7 +1308,8 @@ val reduceP_poly_subset_reduceP_0 = store_thm(
     `CARD (IMAGE SUC (count s)) = s` by rw[FINITE_CARD_IMAGE] >>
     `CARD s' < CARD (IMAGE SUC (count s))` by rw[CARD_PSUBSET] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (*
 The theorem above is reasonable, since PPM s takes (X + 1) ... (X + s) to form products.
@@ -1350,10 +1370,10 @@ reduceP_poly_def   |- !r n. PPM n = IMAGE (\s. PPIMAGE (\c. X + |c|) s) (PPOW (n
        Hence CARD s' < CARD (IMAGE SUC (count z))     by CARD_PSUBSET
        Therefore deg (PPROD (IMAGE (\c. X + |c|) s')) < z <= t.
 *)
-val reduceP_poly_subset_reduceP = store_thm(
-  "reduceP_poly_subset_reduceP",
-  ``!(r:'a ring) k s:num. Ring r /\ 0 < k /\ 0 < s /\ s < char r ==>
-     PPM (MIN s (CARD M)) SUBSET PM``,
+Theorem reduceP_poly_subset_reduceP:
+    !(r:'a ring) k s:num. Ring r /\ 0 < k /\ 0 < s /\ s < char r ==>
+     PPM (MIN s (CARD M)) SUBSET PM
+Proof
   rpt strip_tac >>
   `char r <> 1` by decide_tac >>
   `#1 <> #0` by rw[GSYM ring_char_eq_1] >>
@@ -1377,7 +1397,8 @@ val reduceP_poly_subset_reduceP = store_thm(
     `CARD (IMAGE SUC (count z)) = z` by rw[FINITE_CARD_IMAGE] >>
     `CARD s' < CARD (IMAGE SUC (count z))` by rw[CARD_PSUBSET] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Lower Bound for (Q z) by Combinatorics                                    *)
@@ -1406,10 +1427,10 @@ val reduceP_poly_subset_reduceP = store_thm(
    = 2 ** n                                 by SUC_PRE, with 0 < 2 ** n by ZERO_LT_EXP.
    Hence  2 ** n <= CARD (Q z)              by LESS_EQ_TRANS
 *)
-val modP_card_lower_0 = store_thm(
-  "modP_card_lower_0",
-  ``!(r:'a field) k s z. FiniteField r /\ mifactor z (unity k) /\ 1 < deg z /\
-       (forderz X = k) /\ 0 < s /\ s < char r ==> 2 ** (MIN s (CARD M)) <= CARD (Q z)``,
+Theorem modP_card_lower_0:
+    !(r:'a field) k s z. FiniteField r /\ mifactor z (unity k) /\ 1 < deg z /\
+       (forderz X = k) /\ 0 < s /\ s < char r ==> 2 ** (MIN s (CARD M)) <= CARD (Q z)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FiniteRing r` by rw[FiniteRing_def] >>
@@ -1432,7 +1453,8 @@ val modP_card_lower_0 = store_thm(
   `CARD ( |0| INSERT PPM n) = SUC (CARD (PPM n))` by metis_tac[CARD_INSERT] >>
   `_ = SUC (PRE (2 ** n))` by rw[reduceP_poly_card] >>
   `_ = 2 ** n` by metis_tac[SUC_PRE, ZERO_LT_EXP, DECIDE``0 < 2``] >>
-  decide_tac);
+  decide_tac
+QED
 (* Not in use now *)
 
 (* Theorem: mifactor z (unity k) /\ (forderz X = k) /\
@@ -1458,10 +1480,10 @@ val modP_card_lower_0 = store_thm(
    = 2 ** n                                 by SUC_PRE, with 0 < 2 ** n by ZERO_LT_EXP.
    Hence  2 ** n <= CARD (Q z)              by LESS_EQ_TRANS
 *)
-val modP_card_lower_1 = store_thm(
-  "modP_card_lower_1",
-  ``!(r:'a field) k s:num z. FiniteField r /\ mifactor z (unity k) /\ (forderz X = k) /\
-         1 < k /\ 0 < s /\ s < char r ==> 2 ** (MIN s (CARD M)) <= CARD (Q z)``,
+Theorem modP_card_lower_1:
+    !(r:'a field) k s:num z. FiniteField r /\ mifactor z (unity k) /\ (forderz X = k) /\
+         1 < k /\ 0 < s /\ s < char r ==> 2 ** (MIN s (CARD M)) <= CARD (Q z)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FiniteRing r` by rw[FiniteRing_def] >>
@@ -1483,7 +1505,8 @@ val modP_card_lower_1 = store_thm(
   `CARD ( |0| INSERT PPM n) = SUC (CARD (PPM n))` by metis_tac[CARD_INSERT] >>
   `_ = SUC (PRE (2 ** n))` by rw[reduceP_poly_card] >>
   `_ = 2 ** n` by metis_tac[SUC_PRE, ZERO_LT_EXP, DECIDE``0 < 2``] >>
-  decide_tac);
+  decide_tac
+QED
 (* for version 1 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -1510,11 +1533,11 @@ val modP_card_lower_1 = store_thm(
    But h = 1 ==> p = |1|                by group_order_eq_1
    which is excluded by p <> |1|.
 *)
-val poly_order_prime_condition_0 = store_thm(
-  "poly_order_prime_condition_0",
-  ``!r:'a field. Field r ==> !z. monic z /\ ipoly z ==>
+Theorem poly_order_prime_condition_0:
+    !r:'a field. Field r ==> !z. monic z /\ ipoly z ==>
    !p. poly p /\ deg p < deg z /\ p <> |0| /\ p <> |1| ==>
-   !k. prime k /\ (p ** k == |1|) (pm z) ==> (forderz p = k)``,
+   !k. prime k /\ (p ** k == |1|) (pm z) ==> (forderz p = k)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `0 < deg z` by rw[poly_irreducible_deg_nonzero] >>
@@ -1527,7 +1550,8 @@ val poly_order_prime_condition_0 = store_thm(
   `((PolyModRing r z).prod excluding |0|).exp p k = (p ** k) % z` by rw[poly_mod_exp_alt] >>
   `_ = |1| % z` by rw[GSYM pmod_def_alt] >>
   `_ = |1|` by rw[] >>
-  metis_tac[group_order_condition, prime_def, group_order_eq_1]);
+  metis_tac[group_order_condition, prime_def, group_order_eq_1]
+QED
 (* Not in use now *)
 
 (* Theorem: poly p /\ p % z <> |0| /\ p % z <> |1| ==>
@@ -1553,11 +1577,11 @@ val poly_order_prime_condition_0 = store_thm(
    But h = 1 ==> p % z = |1|            by group_order_eq_1
    which is excluded by p % z <> |1|.
 *)
-val poly_order_prime_condition = store_thm(
-  "poly_order_prime_condition",
-  ``!r:'a field. Field r ==> !z. monic z /\ ipoly z ==>
+Theorem poly_order_prime_condition:
+    !r:'a field. Field r ==> !z. monic z /\ ipoly z ==>
    !p. poly p /\ p % z <> |0| /\ p % z <> |1| ==>
-   !k. prime k /\ (p ** k == |1|) (pm z) ==> (forderz p = k)``,
+   !k. prime k /\ (p ** k == |1|) (pm z) ==> (forderz p = k)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `0 < deg z` by rw[poly_irreducible_deg_nonzero] >>
@@ -1574,7 +1598,8 @@ val poly_order_prime_condition = store_thm(
   `_ = |1|` by rw[] >>
   `h divides k` by metis_tac[group_order_condition] >>
   `(h = 1) \/ (h = k)` by metis_tac[prime_def] >>
-  metis_tac[group_order_eq_1]);
+  metis_tac[group_order_eq_1]
+QED
 
 (* Theorem: monic z /\ ipoly z /\ z <> unity 1 ==>
             !k. prime k /\ (X ** k == |1|) (pm z) ==> (forderz X = k) *)
@@ -1609,10 +1634,10 @@ val poly_order_prime_condition = store_thm(
    Hence X % z <> |0|, and X % z <> |1|.
    and the result follows by poly_order_prime_condition.
 *)
-val poly_X_order_prime_condition = store_thm(
-  "poly_X_order_prime_condition",
-  ``!r:'a field. Field r ==> !z. monic z /\ ipoly z /\ z <> unity 1 ==>
-   !k. prime k /\ (X ** k == |1|) (pm z) ==> (forderz X = k)``,
+Theorem poly_X_order_prime_condition:
+    !r:'a field. Field r ==> !z. monic z /\ ipoly z /\ z <> unity 1 ==>
+   !k. prime k /\ (X ** k == |1|) (pm z) ==> (forderz X = k)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `0 < deg z` by rw[poly_irreducible_deg_nonzero] >>
@@ -1641,7 +1666,8 @@ val poly_X_order_prime_condition = store_thm(
       rw[poly_mod_less, poly_one, poly_unity_1]
     ]
   ]) >>
-  rw[poly_order_prime_condition]);
+  rw[poly_order_prime_condition]
+QED
 
 (* Theorem: prime k /\ mifactor z (unity k) /\ z <> unity 1 ==> INJ (\p. p % z) PM (Q z) *)
 (* Proof:
@@ -1654,10 +1680,10 @@ val poly_X_order_prime_condition = store_thm(
      ==> forderz X = k                  by poly_X_order_prime_condition, z <> unity 1
    The result follows                   by reduceP_mod_modP_inj_1
 *)
-val reduceP_mod_modP_inj_2 = store_thm(
-  "reduceP_mod_modP_inj_2",
-  ``!(r:'a field) k s:num z. Field r /\
-    prime k /\ mifactor z (unity k) /\ z <> unity 1 ==> INJ (\p. p % z) PM (Q z)``,
+Theorem reduceP_mod_modP_inj_2:
+    !(r:'a field) k s:num z. Field r /\
+    prime k /\ mifactor z (unity k) /\ z <> unity 1 ==> INJ (\p. p % z) PM (Q z)
+Proof
   rpt strip_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `0 < deg z` by rw[poly_irreducible_deg_nonzero] >>
@@ -1668,7 +1694,8 @@ val reduceP_mod_modP_inj_2 = store_thm(
   `(X ** k == |1|) (pm u)` by metis_tac[poly_unity_pmod_eqn] >>
   `(X ** k == |1|) (pm z)` by metis_tac[poly_mod_eq_divisor] >>
   `forderz X = k` by rw[poly_X_order_prime_condition] >>
-  rw[reduceP_mod_modP_inj_1]);
+  rw[reduceP_mod_modP_inj_1]
+QED
 (* for version 2 *)
 
 (* Theorem: prime k /\ 0 < s /\ s < char r /\ mifactor z (unity k) /\ z <> unity 1 ==>
@@ -1694,10 +1721,10 @@ val reduceP_mod_modP_inj_2 = store_thm(
    = 2 ** n                                by SUC_PRE, with 0 < 2 ** n by ZERO_LT_EXP.
    Hence  2 ** n <= CARD (Q z)             by LESS_EQ_TRANS
 *)
-val modP_card_lower_2 = store_thm(
-  "modP_card_lower_2",
-  ``!(r:'a field) k s:num z. FiniteField r /\ prime k /\ 0 < s /\ s < char r /\
-     mifactor z (unity k) /\ z <> unity 1 ==> 2 ** (MIN s (CARD M)) <= CARD (Q z)``,
+Theorem modP_card_lower_2:
+    !(r:'a field) k s:num z. FiniteField r /\ prime k /\ 0 < s /\ s < char r /\
+     mifactor z (unity k) /\ z <> unity 1 ==> 2 ** (MIN s (CARD M)) <= CARD (Q z)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FiniteRing r` by rw[FiniteRing_def] >>
@@ -1720,7 +1747,8 @@ val modP_card_lower_2 = store_thm(
   `CARD ( |0| INSERT PPM n) = SUC (CARD (PPM n))` by metis_tac[CARD_INSERT] >>
   `_ = SUC (PRE (2 ** n))` by rw[reduceP_poly_card] >>
   `_ = 2 ** n` by metis_tac[SUC_PRE, ZERO_LT_EXP, DECIDE``0 < 2``] >>
-  decide_tac);
+  decide_tac
+QED
 (* for version 2 *)
 
 (* ------------------------------------------------------------------------- *)
@@ -1789,11 +1817,11 @@ val modP_card_lower_2 = store_thm(
 
   Therefore, CARD (Q z) <= n ** SQRT t by [3], [4]
 *)
-val modP_card_upper_better = store_thm(
-  "modP_card_upper_better",
-  ``!r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
+Theorem modP_card_upper_better:
+    !r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
          char r divides n /\ n IN N /\ ~perfect_power n (char r) /\ mifactor z (unity k) ==>
-         CARD (Q z) <= n ** SQRT (CARD M)``,
+         CARD (Q z) <= n ** SQRT (CARD M)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   qabbrev_tac `p = char r` >>
@@ -1849,7 +1877,8 @@ val modP_card_upper_better = store_thm(
   `m1 <= n ** SQRT t /\ m2 <= n ** SQRT t` by rw[reduceN_element_upper_better] >>
   `MAX m1 m2 <= n ** SQRT t` by rw[] >>
   decide_tac) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* This is the usual story in conventional proofs of the AKS theorem! *)
 
@@ -1876,11 +1905,11 @@ And (CARD M <= phi k) by modN_card_upper_better.
      = 2 ** (ulog n * SQRT t)         by EXP_EXP_MULT
      = 2 ** (SQRT t * ulog n)         by arithmetic
 *)
-val modP_card_upper_better_1 = store_thm(
-  "modP_card_upper_better_1",
-  ``!r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
+Theorem modP_card_upper_better_1:
+    !r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
          char r divides n /\ n IN N /\ ~perfect_power n (char r) /\ mifactor z (unity k) ==>
-         CARD (Q z) <= 2 ** (SQRT (CARD M) * ulog n)``,
+         CARD (Q z) <= 2 ** (SQRT (CARD M) * ulog n)
+Proof
   rpt strip_tac >>
   `1 < k` by metis_tac[ZN_order_with_coprime_1, finite_field_card_gt_1] >>
   `n <> 0` by metis_tac[GCD_0, setN_element, LESS_NOT_EQ] >>
@@ -1889,7 +1918,8 @@ val modP_card_upper_better_1 = store_thm(
   `n ** SQRT t <= (2 ** ulog n) ** SQRT t` by rw[ulog_property] >>
   `(2 ** ulog n) ** SQRT t = 2 ** (ulog n * SQRT t)` by rw[EXP_EXP_MULT] >>
   `_ = 2 ** (SQRT t * ulog n)` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
             char r divides n /\ n IN N /\ ~perfect_power n (char r) /\ mifactor z (unity k) ==>
@@ -1903,18 +1933,19 @@ val modP_card_upper_better_1 = store_thm(
     <= 2 ** (SQRT t * ulog n)         by modP_card_upper_better_1, 1 < k
     <= 2 ** (SQRT (phi k) * ulog n)   by modN_card_upper_better, EXP_BASE_LE_MONO
 *)
-val modP_card_upper_better_2 = store_thm(
-  "modP_card_upper_better_2",
-  ``!r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
+Theorem modP_card_upper_better_2:
+    !r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
          char r divides n /\ n IN N /\ ~perfect_power n (char r) /\ mifactor z (unity k) ==>
-         CARD (Q z) <= 2 ** (SQRT (phi k) * ulog n)``,
+         CARD (Q z) <= 2 ** (SQRT (phi k) * ulog n)
+Proof
   rpt strip_tac >>
   `1 < k` by metis_tac[ZN_order_with_coprime_1, finite_field_card_gt_1] >>
   qabbrev_tac `t = CARD M` >>
   `CARD (Q z) <= 2 ** (SQRT t * ulog n)` by rw[modP_card_upper_better_1, Abbr`t`] >>
   `SQRT t <= SQRT (phi k)` by rw[modN_card_upper_better, SQRT_LE, Abbr`t`] >>
   `2 ** (SQRT t * ulog n) <= 2 ** (SQRT (phi k) * ulog n)` by rw[] >>
-  decide_tac);
+  decide_tac
+QED
 
 (*
 This clearly shows that the upper bound is independent of the range s of polynomial checks.
@@ -1951,10 +1982,10 @@ This clearly shows that the upper bound is independent of the range s of polynom
    Hence  SUC (2 ** n) <= CARD (Q z)  by LESS_EQ_TRANS
       or       2 ** n  <  CARD (Q z)  by LESS_SUC, x < SUC x
 *)
-val modP_card_lower_better = store_thm(
-  "modP_card_lower_better",
-  ``!(r:'a field) k s:num z. FiniteField r /\ mifactor z (unity k) /\ 1 < deg z /\
-    (forderz X = k) /\ 1 < CARD M /\ 0 < s /\ s < char r ==> 2 ** (MIN s (CARD M)) < CARD (Q z)``,
+Theorem modP_card_lower_better:
+    !(r:'a field) k s:num z. FiniteField r /\ mifactor z (unity k) /\ 1 < deg z /\
+    (forderz X = k) /\ 1 < CARD M /\ 0 < s /\ s < char r ==> 2 ** (MIN s (CARD M)) < CARD (Q z)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `Ring r /\ #1 <> #0` by rw[] >>
   `FiniteRing r` by rw[FiniteRing_def] >>
@@ -1980,7 +2011,8 @@ val modP_card_lower_better = store_thm(
   `CARD (X INSERT |0| INSERT PPM n) = SUC (SUC (CARD (PPM n)))` by rw[CARD_INSERT] >>
   `_ = SUC (SUC (PRE (2 ** n)))` by rw[reduceP_poly_card] >>
   `_ = SUC (2 ** n)` by metis_tac[SUC_PRE, ZERO_LT_EXP, DECIDE``0 < 2``] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
          char r divides n /\ n IN N /\ ~perfect_power n (char r) /\ 0 < s /\ s < char r /\
@@ -1992,15 +2024,16 @@ val modP_card_lower_better = store_thm(
    The lower bound follows     by modP_card_lower_better, 1 < CARD M
    The upper bound follows     by modP_card_upper_better
 *)
-val modP_card_range = store_thm(
-  "modP_card_range",
-  ``!r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
+Theorem modP_card_range:
+    !r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
          char r divides n /\ n IN N /\ ~perfect_power n (char r) /\ 0 < s /\ s < char r /\
          mifactor z (unity k) /\ 1 < deg z /\ (forderz X = k) /\
-         1 < CARD M ==> 2 ** MIN s (CARD M) < CARD (Q z) /\ CARD (Q z) <= n ** SQRT (CARD M)``,
+         1 < CARD M ==> 2 ** MIN s (CARD M) < CARD (Q z) /\ CARD (Q z) <= n ** SQRT (CARD M)
+Proof
   ntac 6 strip_tac >>
   `1 < k` by metis_tac[ZN_order_with_coprime_1, finite_field_card_gt_1] >>
-  rw[modP_card_lower_better, modP_card_upper_better]);
+  rw[modP_card_lower_better, modP_card_upper_better]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Exponent bounds for (CARD M)                                              *)
@@ -2031,11 +2064,11 @@ val modP_card_range = store_thm(
 
           Hence SQRT t * m <= MIN c t           by MIN_DEF
 *)
-val modN_card_with_ulog_le_min_1 = store_thm(
-  "modN_card_with_ulog_le_min_1",
-  ``!r:'a ring. Ring r ==>
+Theorem modN_card_with_ulog_le_min_1:
+    !r:'a ring. Ring r ==>
    !k n s:num. 1 < k /\ n IN N /\ (ulog n) ** 2 <= ordz k n  ==>
-               SQRT (CARD M) * ulog n <= MIN (SQRT (phi k) * ulog n) (CARD M)``,
+               SQRT (CARD M) * ulog n <= MIN (SQRT (phi k) * ulog n) (CARD M)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = CARD M` >>
   qabbrev_tac `h = ordz k n` >>
@@ -2053,7 +2086,8 @@ val modN_card_with_ulog_le_min_1 = store_thm(
   `m * SQRT t <= SQRT h * SQRT t` by rw_tac arith_ss[] >>
   `(SQRT t) * (SQRT t) <= t` by rw[SQ_SQRT_LE] >>
   decide_tac) >>
-  metis_tac[MIN_DEF]);
+  metis_tac[MIN_DEF]
+QED
 
 (* Theorem: Ring r ==>
     !k n s. 1 < k /\ n IN N /\ (2 * ulog n) ** 2 <= ordz k n  ==>
@@ -2081,11 +2115,11 @@ val modN_card_with_ulog_le_min_1 = store_thm(
 
           Hence 2 * SQRT t * m <= MIN c t          by MIN_DEF
 *)
-val modN_card_with_ulog_le_min_2 = store_thm(
-  "modN_card_with_ulog_le_min_2",
-  ``!r:'a ring. Ring r ==>
+Theorem modN_card_with_ulog_le_min_2:
+    !r:'a ring. Ring r ==>
    !k n s:num. 1 < k /\ n IN N /\ (2 * ulog n) ** 2 <= ordz k n  ==>
-               2 * SQRT (CARD M) * ulog n <= MIN (2 * SQRT (phi k) * ulog n) (CARD M)``,
+               2 * SQRT (CARD M) * ulog n <= MIN (2 * SQRT (phi k) * ulog n) (CARD M)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = CARD M` >>
   qabbrev_tac `h = ordz k n` >>
@@ -2103,7 +2137,8 @@ val modN_card_with_ulog_le_min_2 = store_thm(
   `2 * m * SQRT t <= SQRT h * SQRT t` by rw_tac arith_ss[] >>
   `(SQRT t) * (SQRT t) <= t` by rw[SQ_SQRT_LE] >>
   decide_tac) >>
-  metis_tac[MIN_DEF]);
+  metis_tac[MIN_DEF]
+QED
 
 (*
 > reduceN_mod_modN_inj_1;
@@ -2174,11 +2209,11 @@ Later, will pick p = p IN N, and q = n IN N. Better: q = n DIV p IN N.
         n ** (2 * SQRT t) < (2 ** m) ** (2 * SQRT t)  by EXP_EXP_LT_MONO
    Overall,  n ** (2 * SQRT t) < 2 ** MIN c t
 *)
-val modN_card_in_exp_lt_bound_0 = store_thm(
-  "modN_card_in_exp_lt_bound_0",
-  ``!r:'a ring. Ring r ==>
+Theorem modN_card_in_exp_lt_bound_0:
+    !r:'a ring. Ring r ==>
    !k n s:num. 1 < k /\ 1 < n /\ n IN N /\ (2 * SUC (LOG2 n)) ** 2 <= ordz k n  ==>
-             n ** (2 * SQRT (CARD M)) < 2 ** MIN (2 * (SQRT (phi k)) * SUC (LOG2 n)) (CARD M)``,
+             n ** (2 * SQRT (CARD M)) < 2 ** MIN (2 * (SQRT (phi k)) * SUC (LOG2 n)) (CARD M)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = CARD M` >>
   qabbrev_tac `h = ordz k n` >>
@@ -2204,7 +2239,8 @@ val modN_card_in_exp_lt_bound_0 = store_thm(
   `n < 2 ** m` by rw[LOG2_PROPERTY, Abbr`m`] >>
   `0 < 2 * SQRT t` by metis_tac[SQRT_EQ_0, MULT_EQ_0, NOT_ZERO_LT_ZERO] >>
   `n ** (2 * SQRT t) < (2 ** m) ** (2 * SQRT t)` by rw[EXP_EXP_LT_MONO] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < k /\ 1 < n /\ n IN N /\ (SUC (LOG2 n)) ** 2 <= ordz k n ==>
             n ** (SQRT (CARD M)) < 2 ** MIN (SQRT (phi k) * SUC (LOG2 n)) (CARD M) *)
@@ -2250,11 +2286,11 @@ val modN_card_in_exp_lt_bound_0 = store_thm(
 
    Combining [1] and [2], the result follows.
 *)
-val modN_card_in_exp_lt_bound_1 = store_thm(
-  "modN_card_in_exp_lt_bound_1",
-  ``!r:'a ring. Ring r ==>
+Theorem modN_card_in_exp_lt_bound_1:
+    !r:'a ring. Ring r ==>
    !k n s:num. 1 < k /\ 1 < n /\ n IN N /\ (SUC (LOG2 n)) ** 2 <= ordz k n ==>
-         n ** (SQRT (CARD M)) < 2 ** MIN (SQRT (phi k) * SUC (LOG2 n)) (CARD M)``,
+         n ** (SQRT (CARD M)) < 2 ** MIN (SQRT (phi k) * SUC (LOG2 n)) (CARD M)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = CARD M` >>
   qabbrev_tac `m = SUC (LOG2 n)` >>
@@ -2282,7 +2318,8 @@ val modN_card_in_exp_lt_bound_1 = store_thm(
   `SQRT t * SQRT t <= t` by rw[SQ_SQRT_LE] >>
   `m * SQRT t <= t` by decide_tac >>
   metis_tac[MIN_DEF]) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < k /\ n IN N ==>
             !h. 0 < h /\ n < 2 ** h /\ h ** 2 <= ordz k n ==>
@@ -2330,11 +2367,11 @@ val modN_card_in_exp_lt_bound_1 = store_thm(
 
    Combining [1] and [2], the result follows.
 *)
-val modN_card_in_exp_lt_bound_2 = store_thm(
-  "modN_card_in_exp_lt_bound_2",
-  ``!r:'a ring. Ring r ==> !k n s:num. 1 < k /\ n IN N ==>
+Theorem modN_card_in_exp_lt_bound_2:
+    !r:'a ring. Ring r ==> !k n s:num. 1 < k /\ n IN N ==>
    !h. 0 < h /\ n < 2 ** h /\ h ** 2 <= ordz k n ==>
-       n ** SQRT (CARD M) < 2 ** MIN (SQRT (phi k) * h) (CARD M)``,
+       n ** SQRT (CARD M) < 2 ** MIN (SQRT (phi k) * h) (CARD M)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = CARD M` >>
   qabbrev_tac `p = SQRT (phi k) * h` >>
@@ -2360,7 +2397,8 @@ val modN_card_in_exp_lt_bound_2 = store_thm(
   `SQRT t * SQRT t <= t` by rw[SQ_SQRT_LE] >>
   `h * SQRT t <= t` by decide_tac >>
   metis_tac[MIN_DEF]) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < k /\ 1 < n /\ ~(perfect_power n 2) /\ n IN N /\ (ulog n) ** 2 <= ordz k n ==>
             n ** SQRT (CARD M) < 2 ** MIN (SQRT (phi k) * (ulog n)) (CARD M) *)
@@ -2369,12 +2407,13 @@ val modN_card_in_exp_lt_bound_2 = store_thm(
     and n < 2 ** (ulog n)     by ulog_property_not_exact, ~(perfect_power 2 n)
    Let h = ulog n in modN_card_in_exp_lt_bound_2, the result follows.
 *)
-val modN_card_in_exp_lt_bound_3 = store_thm(
-  "modN_card_in_exp_lt_bound_3",
-  ``!r:'a ring. Ring r ==>
+Theorem modN_card_in_exp_lt_bound_3:
+    !r:'a ring. Ring r ==>
    !k n s:num. 1 < k /\ 1 < n /\ ~(perfect_power n 2) /\ n IN N /\ (ulog n) ** 2 <= ordz k n ==>
-         n ** SQRT (CARD M) < 2 ** MIN (SQRT (phi k) * (ulog n)) (CARD M)``,
-  rw[modN_card_in_exp_lt_bound_2, ulog_property_not_exact]);
+         n ** SQRT (CARD M) < 2 ** MIN (SQRT (phi k) * (ulog n)) (CARD M)
+Proof
+  rw[modN_card_in_exp_lt_bound_2, ulog_property_not_exact]
+QED
 
 (* Theorem: Ring r ==>
    !k n s. 1 < k /\ 1 < n /\ ~(perfect_power n 2) /\
@@ -2382,14 +2421,15 @@ val modN_card_in_exp_lt_bound_3 = store_thm(
            (s = SQRT (phi k) * (ulog n)) ==>
            n ** SQRT (CARD M) < 2 ** MIN s (CARD M) *)
 (* Proof: by modN_card_in_exp_lt_bound_3 *)
-val modN_card_in_exp_lt_bound_3_alt = store_thm(
-  "modN_card_in_exp_lt_bound_3_alt",
-  ``!r:'a ring. Ring r ==>
+Theorem modN_card_in_exp_lt_bound_3_alt:
+    !r:'a ring. Ring r ==>
    !n a k s. 1 < k /\ 1 < n /\ ~(perfect_power n 2) /\
           (a = (ulog n) ** 2) /\ (s = SQRT (phi k) * (ulog n)) /\
            a <= ordz k n /\ n IN N ==>
-           n ** SQRT (CARD M) < 2 ** MIN s (CARD M)``,
-  rw[modN_card_in_exp_lt_bound_3]);
+           n ** SQRT (CARD M) < 2 ** MIN s (CARD M)
+Proof
+  rw[modN_card_in_exp_lt_bound_3]
+QED
 
 (* Theorem: Ring r ==>
    !k n s. 1 < k /\ 1 < n /\ ~perfect_power n 2 /\ n IN N /\
@@ -2418,12 +2458,12 @@ val modN_card_in_exp_lt_bound_3_alt = store_thm(
 
    Overall,  n ** (2 * SQRT t) < 2 ** MIN c t                by (1), (2)
 *)
-val modN_card_in_exp_lt_bound_4 = store_thm(
-  "modN_card_in_exp_lt_bound_4",
-  ``!(r:'a ring). Ring r ==>
+Theorem modN_card_in_exp_lt_bound_4:
+    !(r:'a ring). Ring r ==>
    !k n s:num. 1 < k /\ 1 < n /\ ~perfect_power n 2 /\ n IN N /\
         (2 * ulog n) ** 2 <= ordz k n ==>
-        n ** (2 * SQRT (CARD M)) < 2 ** MIN (2 * SQRT (phi k) * ulog n) (CARD M)``,
+        n ** (2 * SQRT (CARD M)) < 2 ** MIN (2 * SQRT (phi k) * ulog n) (CARD M)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = CARD M` >>
   qabbrev_tac `h = ordz k n` >>
@@ -2441,7 +2481,8 @@ val modN_card_in_exp_lt_bound_4 = store_thm(
   `2 ** (2 * (SQRT t) * m) <= 2 ** MIN c t` by rw[EXP_BASE_LE_MONO] >>
   `2 ** (2 * (SQRT t) * m) = 2 ** (m * (2 * SQRT t))` by decide_tac >>
   `_ = (2 ** m) ** (2 * SQRT t)` by rw[EXP_EXP_MULT] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Less-than-or-equal Bounds                                                 *)
@@ -2472,11 +2513,11 @@ val modN_card_in_exp_lt_bound_4 = store_thm(
 
    Overall,  n ** (2 * SQRT t) <= 2 ** MIN c t                by (1), (2)
 *)
-val modN_card_in_exp_le_bound_0 = store_thm(
-  "modN_card_in_exp_le_bound_0",
-  ``!r:'a ring. Ring r ==>
+Theorem modN_card_in_exp_le_bound_0:
+    !r:'a ring. Ring r ==>
    !k n s:num. 1 < k /\ 1 < n /\ n IN N /\ (2 * ulog n) ** 2 <= ordz k n  ==>
-        n ** (2 * SQRT (CARD M)) <= 2 ** MIN (2 * SQRT (phi k) * ulog n) (CARD M)``,
+        n ** (2 * SQRT (CARD M)) <= 2 ** MIN (2 * SQRT (phi k) * ulog n) (CARD M)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = CARD M` >>
   qabbrev_tac `h = ordz k n` >>
@@ -2489,7 +2530,8 @@ val modN_card_in_exp_le_bound_0 = store_thm(
   `2 ** (2 * (SQRT t) * m) <= 2 ** MIN c t` by rw[EXP_BASE_LE_MONO] >>
   `2 ** (2 * (SQRT t) * m) = 2 ** (m * (2 * SQRT t))` by decide_tac >>
   `_ = (2 ** m) ** (2 * SQRT t)` by rw[EXP_EXP_MULT] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < k /\ n IN N ==> !h. 0 < h /\ n <= 2 ** h /\ h ** 2 <= ordz k n ==>
             n ** SQRT (CARD M) <= 2 ** MIN (SQRT (phi k) * h) (CARD M) *)
@@ -2536,11 +2578,11 @@ val modN_card_in_exp_le_bound_0 = store_thm(
 
    Combining [1] and [2], the result follows.
 *)
-val modN_card_in_exp_le_bound_1 = store_thm(
-  "modN_card_in_exp_le_bound_1",
-  ``!r:'a ring. Ring r ==> !k n s:num. 1 < k /\ n IN N ==>
+Theorem modN_card_in_exp_le_bound_1:
+    !r:'a ring. Ring r ==> !k n s:num. 1 < k /\ n IN N ==>
    !h. 0 < h /\ n <= 2 ** h /\ h ** 2 <= ordz k n ==>
-       n ** SQRT (CARD M) <= 2 ** MIN (SQRT (phi k) * h) (CARD M)``,
+       n ** SQRT (CARD M) <= 2 ** MIN (SQRT (phi k) * h) (CARD M)
+Proof
   rpt strip_tac >>
   qabbrev_tac `t = CARD M` >>
   qabbrev_tac `p = SQRT (phi k) * h` >>
@@ -2566,7 +2608,8 @@ val modN_card_in_exp_le_bound_1 = store_thm(
   `SQRT t * SQRT t <= t` by rw[SQ_SQRT_LE] >>
   `h * SQRT t <= t` by decide_tac >>
   metis_tac[MIN_DEF]) >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < k /\ 1 < n /\ n IN N /\ (ulog n) ** 2 <= ordz k n ==>
             n ** SQRT (CARD M) <= 2 ** MIN (SQRT (phi k) * (ulog n)) (CARD M) *)
@@ -2575,12 +2618,13 @@ val modN_card_in_exp_le_bound_1 = store_thm(
     and n <= 2 ** (ulog n)    by ulog_property, 0 < n
    Let h = ulog n in modN_card_in_exp_le_bound_1, the result follows.
 *)
-val modN_card_in_exp_le_bound_2 = store_thm(
-  "modN_card_in_exp_le_bound_2",
-  ``!r:'a ring. Ring r ==>
+Theorem modN_card_in_exp_le_bound_2:
+    !r:'a ring. Ring r ==>
    !k n s:num. 1 < k /\ 1 < n /\ n IN N /\ (ulog n) ** 2 <= ordz k n ==>
-         n ** SQRT (CARD M) <= 2 ** MIN (SQRT (phi k) * (ulog n)) (CARD M)``,
-  rw[modN_card_in_exp_le_bound_1, ulog_property]);
+         n ** SQRT (CARD M) <= 2 ** MIN (SQRT (phi k) * (ulog n)) (CARD M)
+Proof
+  rw[modN_card_in_exp_le_bound_1, ulog_property]
+QED
 
 (* Theorem: coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
          char r divides n /\ n IN N /\ ~perfect_power n (char r) /\ mifactor z (unity k) /\
@@ -2599,12 +2643,12 @@ val modN_card_in_exp_le_bound_2 = store_thm(
      <= 2 ** MIN u t        by modN_card_in_exp_le_bound_2
   The result follows        by LESS_EQ_TRANS
 *)
-val modP_card_upper_better_3 = store_thm(
-  "modP_card_upper_better_3",
-  ``!r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
+Theorem modP_card_upper_better_3:
+    !r:'a field k n s:num z. FiniteField r /\ coprime k (CARD R) /\ 1 < ordz k (CARD R) /\
          char r divides n /\ n IN N /\ ~perfect_power n (char r) /\ mifactor z (unity k) /\
          ulog n ** 2 <= ordz k n ==>
-         CARD (Q z) <= 2 ** MIN (SQRT (phi k) * ulog n) (CARD M)``,
+         CARD (Q z) <= 2 ** MIN (SQRT (phi k) * ulog n) (CARD M)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `1 < CARD R` by rw[finite_field_card_gt_1] >>
   `1 < k` by metis_tac[ZN_order_with_coprime_1] >>
@@ -2616,7 +2660,8 @@ val modP_card_upper_better_3 = store_thm(
   qabbrev_tac `t = CARD M` >>
   `CARD (Q z) <= n ** SQRT t` by rw[modP_card_upper_better, Abbr`t`] >>
   `n ** SQRT t <= 2 ** MIN u t` by rw[modN_card_in_exp_le_bound_2, Abbr`u`, Abbr`t`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: FiniteField r /\
          mifactor z (unity k) /\ 1 < deg z /\ (forderz X = k) /\ (* conditions on z *)
@@ -2657,12 +2702,12 @@ val modP_card_upper_better_3 = store_thm(
                                            by modN_card_in_exp_le_bound_1
    The result follows.
 *)
-val modP_card_lower_better_3 = store_thm(
-  "modP_card_lower_better_3",
-  ``!r:'a field k n s z. FiniteField r /\
+Theorem modP_card_lower_better_3:
+    !r:'a field k n s z. FiniteField r /\
          mifactor z (unity k) /\ 1 < deg z /\ (forderz X = k) /\ (* conditions on z *)
          1 < n /\ n IN N /\ (ulog n) ** 2 <= ordz k n /\ (* conditions on n *)
-         (s = SQRT (phi k) * ulog n) /\ s < char r ==> n ** SQRT (CARD M) < CARD (Q z)``,
+         (s = SQRT (phi k) * ulog n) /\ s < char r ==> n ** SQRT (CARD M) < CARD (Q z)
+Proof
   rpt (stripDup[FiniteField_def]) >>
   `ulog n <> 0` by metis_tac[ulog_eq_0, DECIDE``1n < n ==> ~(n = 0) /\ ~(n = 1)``] >>
   `0 < ulog n` by decide_tac >>
@@ -2692,7 +2737,8 @@ val modP_card_lower_better_3 = store_thm(
   `2 ** MIN s (CARD M) < CARD (Q z)` by rw[modP_card_lower_better] >>
   `n <= 2 ** ulog n` by rw[ulog_property] >>
   `n ** SQRT (CARD M) <= 2 ** MIN s (CARD M)` by rw[modN_card_in_exp_le_bound_1] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

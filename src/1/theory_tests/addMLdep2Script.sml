@@ -18,4 +18,4 @@ fun grep s fname =
 val _ = if grep "MLdepLib" "addMLdep1Theory.sml" then ()
         else OS.Process.exit OS.Process.failure
 
-val _ = save_thm("thm2", TRUTH);
+Theorem thm2 = TRUTH;

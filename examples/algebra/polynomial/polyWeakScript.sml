@@ -471,12 +471,13 @@ val _ = export_rewrites ["weak_zero"];
       <=> h IN R /\ EVERY (\x. x IN R) p   by induction hypothesis
       <=> EVERY (\x. x IN R) (h::p)        by EVERY_DEF
 *)
-val weak_def_alt = store_thm(
-  "weak_def_alt",
-  ``!r:'a ring. !p. weak p <=> EVERY (\x. x IN R) p``,
+Theorem weak_def_alt:
+    !r:'a ring. !p. weak p <=> EVERY (\x. x IN R) p
+Proof
   rpt strip_tac >>
   Induct_on `p` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: weak (p ++ q) <=> weak p /\ weak q *)
 (* Proof:
@@ -485,10 +486,11 @@ val weak_def_alt = store_thm(
    <=> EVERY (\x. x IN R) p /\ EVERY (\x. x IN R) q   by EVERY_APPEND
    <=> weak p /\ weak q                               by weak_def_alt
 *)
-val weak_append_weak = store_thm(
-  "weak_append_weak",
-  ``!r:'a ring. !p q. weak (p ++ q) <=> weak p /\ weak q``,
-  rw[weak_def_alt, EVERY_APPEND]);
+Theorem weak_append_weak:
+    !r:'a ring. !p q. weak (p ++ q) <=> weak p /\ weak q
+Proof
+  rw[weak_def_alt, EVERY_APPEND]
+QED
 
 (* Theorem: weak (SNOC h t) <=> h IN R /\ weak t *)
 (* Proof:
@@ -506,14 +508,15 @@ val weak_append_weak = store_thm(
       <=> h IN R /\ h' IN R /\ weak t    by logical AND
       <=> h IN R /\ weak (h'::t)         by weak_cons
 *)
-val weak_snoc = store_thm(
-  "weak_snoc",
-  ``!(r:'a ring) h t. weak (SNOC h t) <=> h IN R /\ weak t``,
+Theorem weak_snoc:
+    !(r:'a ring) h t. weak (SNOC h t) <=> h IN R /\ weak t
+Proof
   rpt strip_tac >>
   Induct_on `t` >-
   rw[] >>
   rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: weak p <=> EVERY (\c. c IN R) p *)
 (* Proof:
@@ -530,19 +533,21 @@ val weak_snoc = store_thm(
      <=> h IN R /\ EVERY (\c. c IN R) p   by induction hypothesis
      <=> EVERY (\c. c IN R) (h::p)        by EVERY_DEF
 *)
-val weak_every_element = store_thm(
-  "weak_every_element",
-  ``!r:'a ring. !p. weak p <=> EVERY (\c. c IN R) p``,
+Theorem weak_every_element:
+    !r:'a ring. !p. weak p <=> EVERY (\c. c IN R) p
+Proof
   strip_tac >>
   Induct >>
-  rw_tac std_ss[Weak_def, EVERY_DEF]);
+  rw_tac std_ss[Weak_def, EVERY_DEF]
+QED
 
 (* Theorem: weak p <=> (!x. MEM x p ==> x IN R) *)
 (* Proof: by weak_every_element, EVERY_MEM *)
-val weak_every_mem = store_thm(
-  "weak_every_mem",
-  ``!r:'a ring. !p. weak p <=> (!x. MEM x p ==> x IN R)``,
-  rw[weak_every_element, EVERY_MEM]);
+Theorem weak_every_mem:
+    !r:'a ring. !p. weak p <=> (!x. MEM x p ==> x IN R)
+Proof
+  rw[weak_every_element, EVERY_MEM]
+QED
 
 (* A better proof without induction. *)
 
@@ -568,12 +573,13 @@ QED
    Thus weak (FRONT p)                         by MEM_FRONT, weak_every_mem
     and weak [LAST p]                          by MEM_LAST, weak_every_mem, Weak_def
 *)
-val weak_front_last = store_thm(
-  "weak_front_last",
-  ``!p. weak p /\ p <> |0| ==> weak (FRONT p) /\ weak [LAST p]``,
+Theorem weak_front_last:
+    !p. weak p /\ p <> |0| ==> weak (FRONT p) /\ weak [LAST p]
+Proof
   ntac 3 strip_tac >>
   `?h t. h IN R /\ weak t /\ (p = h::t)` by metis_tac[list_CASES, weak_cons, poly_zero] >>
-  metis_tac[MEM_FRONT, MEM_LAST, weak_every_mem, Weak_def]);
+  metis_tac[MEM_FRONT, MEM_LAST, weak_every_mem, Weak_def]
+QED
 
 (* Theorem: weak p ==> !q. q <= p ==> weak q *)
 (* Proof:
@@ -582,50 +588,55 @@ val weak_front_last = store_thm(
    ==> EVERY (\c. c IN R) q    by sublist_every, q <= p
    <=> weak q                  by weak_every_element
 *)
-val weak_sublist = store_thm(
-  "weak_sublist",
-  ``!r:'a ring p q. weak p ==> !q. q <= p ==> weak q``,
-  metis_tac[weak_every_element, sublist_every]);
+Theorem weak_sublist:
+    !r:'a ring p q. weak p ==> !q. q <= p ==> weak q
+Proof
+  metis_tac[weak_every_element, sublist_every]
+QED
 
 (* Theorem: weak p ==> weak (TAKE n p) *)
 (* Proof:
    Note (TAKE n p) <= p        by sublist_take
    Thus weak (TAKE n p)        by weak_sublist
 *)
-val weak_take = store_thm(
-  "weak_take",
-  ``!r:'a ring p n. weak p ==> weak (TAKE n p)``,
-  metis_tac[weak_sublist, sublist_take]);
+Theorem weak_take:
+    !r:'a ring p n. weak p ==> weak (TAKE n p)
+Proof
+  metis_tac[weak_sublist, sublist_take]
+QED
 
 (* Theorem: weak p ==> weak (DROP n p) *)
 (* Proof:
    Note (DROP n p) <= p        by sublist_drop
    Thus weak (DROP n p)        by weak_sublist
 *)
-val weak_drop = store_thm(
-  "weak_drop",
-  ``!r:'a ring p n. weak p ==> weak (DROP n p)``,
-  metis_tac[weak_sublist, sublist_drop]);
+Theorem weak_drop:
+    !r:'a ring p n. weak p ==> weak (DROP n p)
+Proof
+  metis_tac[weak_sublist, sublist_drop]
+QED
 
 (* Theorem: weak p /\ p <> |0| => weak (FRONT p) *)
 (* Proof:
    Note (FRONT p) <= p        by sublist_front, poly_zero
    Thus weak (FRONT p)        by weak_sublist
 *)
-val weak_front = store_thm(
-  "weak_front",
-  ``!r:'a ring p. weak p /\ p <> |0| ==> weak (FRONT p)``,
-  metis_tac[weak_sublist, sublist_front, poly_zero]);
+Theorem weak_front:
+    !r:'a ring p. weak p /\ p <> |0| ==> weak (FRONT p)
+Proof
+  metis_tac[weak_sublist, sublist_front, poly_zero]
+QED
 
 (* Theorem: weak p /\ p <> |0| => weak (TL p) *)
 (* Proof:
    Note (TL p) <= p        by sublist_tail, poly_zero
    Thus weak (TL p)        by weak_sublist
 *)
-val weak_tail = store_thm(
-  "weak_tail",
-  ``!r:'a ring p. weak p /\ p <> |0| ==> weak (TL p)``,
-  metis_tac[weak_sublist, sublist_tail, poly_zero]);
+Theorem weak_tail:
+    !r:'a ring p. weak p /\ p <> |0| ==> weak (TL p)
+Proof
+  metis_tac[weak_sublist, sublist_tail, poly_zero]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Zero Polynomials - for normalization.                                     *)
@@ -659,21 +670,23 @@ val _ = export_rewrites ["zero_poly_zero"];
               !h. zerop (h::p) <=> EVERY (\c. c = #0) (h::p)
       true by zero_poly_cons, EVERY_CONS, induction hypothesis.
 *)
-val zero_poly_every_zero = store_thm(
-  "zero_poly_every_zero",
-  ``!p. zerop p <=> EVERY (\c. c = #0) p``,
+Theorem zero_poly_every_zero:
+    !p. zerop p <=> EVERY (\c. c = #0) p
+Proof
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: zerop p ==> EVERY (\c. c IN R) p  *)
 (* Proof: by zero_poly_every_zero and ring_zero_element. *)
-val zero_poly_every_element = store_thm(
-  "zero_poly_every_element",
-  ``!r:'a ring. Ring r ==> !p:'a poly. zerop p ==> EVERY (\c. c IN R) p``,
+Theorem zero_poly_every_element:
+    !r:'a ring. Ring r ==> !p:'a poly. zerop p ==> EVERY (\c. c IN R) p
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[ring_zero_element]);
+  rw[ring_zero_element]
+QED
 (* Q: How to make use of zero_poly_every_zero and ring_zero_element?
    A: see below.
 *)
@@ -686,10 +699,11 @@ val zero_poly_every_element = store_thm(
    <=> zerop p /\ T                       by zero_poly_every_zero
    <=> zerop p
 *)
-val zero_poly_snoc = store_thm(
-  "zero_poly_snoc",
-  ``!r:'a ring. !p. zerop (SNOC #0 p) <=> zerop p``,
-  rw[zero_poly_every_zero, EVERY_SNOC]);
+Theorem zero_poly_snoc:
+    !r:'a ring. !p. zerop (SNOC #0 p) <=> zerop p
+Proof
+  rw[zero_poly_every_zero, EVERY_SNOC]
+QED
 
 (* Theorem: zerop p ==> weak p  *)
 (* Proof: by induction on p.
@@ -698,13 +712,14 @@ val zero_poly_snoc = store_thm(
    Step: zerop p ==> weak p ==> zerop (h::p) ==> weak (h::p)
       true by ring_zero_element, zero_poly_cons, weak_cons.
 *)
-val zero_poly_weak = store_thm(
-  "zero_poly_weak",
-  ``!r:'a ring. Ring r ==> !p:'a poly. zerop p ==> weak p``,
+Theorem zero_poly_weak:
+    !r:'a ring. Ring r ==> !p:'a poly. zerop p ==> weak p
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[ring_zero_element]);
+  rw[ring_zero_element]
+QED
 
 (* Theorem: Ring r ==> (( |1| = |0|) <=> !p. weak p ==> zerop p) *)
 (* Proof:
@@ -725,9 +740,9 @@ val zero_poly_weak = store_thm(
        but ~zerop [#1]    by zero_poly_def, #1 <> #0
       This contradicts the implication.
 *)
-val weak_all_zero_poly = store_thm(
-  "weak_all_zero_poly",
-  ``!r:'a ring. Ring r ==> (( |1| = |0|) <=> !p. weak p ==> zerop p)``,
+Theorem weak_all_zero_poly:
+    !r:'a ring. Ring r ==> (( |1| = |0|) <=> !p. weak p ==> zerop p)
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     `#1 = #0` by rw[GSYM poly_one_eq_poly_zero] >>
     `R = {#0}` by rw[GSYM ring_one_eq_zero] >>
@@ -737,31 +752,35 @@ val weak_all_zero_poly = store_thm(
     `#1 <> #0` by rw[GSYM poly_one_eq_poly_zero] >>
     `weak [#1]` by rw[] >>
     metis_tac[zero_poly_cons]
-  ]);
+  ]
+QED
 
 (* Theorem: zerop [#0] *)
 (* Proof: by zero_poly_every_zero. *)
-val zero_poly_element_zero = store_thm(
-  "zero_poly_element_zero",
-  ``zerop [#0]``,
-  rw[]);
+Theorem zero_poly_element_zero:
+    zerop [#0]
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["zero_poly_element_zero"];
 
 (* Theorem: zerop p ==> zerop (#0::p) *)
 (* Proof: by definition. *)
-val zero_poly_cons_zero = store_thm(
-  "zero_poly_cons_zero",
-  ``!p. zerop p ==> zerop (#0::p)``,
-  rw[]);
+Theorem zero_poly_cons_zero:
+    !p. zerop p ==> zerop (#0::p)
+Proof
+  rw[]
+QED
 
 (* Theorem: zerop (h::t) ==> LAST (h::t) = #0 *)
 (* Proof: by induction on t. *)
-val zero_poly_last_zero = store_thm(
-  "zero_poly_last_zero",
-  ``!h t. zerop (h::t) ==> (LAST (h::t) = #0)``,
+Theorem zero_poly_last_zero:
+    !h t. zerop (h::t) ==> (LAST (h::t) = #0)
+Proof
   Induct_on `t` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: zerop p <=> !k. k < LENGTH p ==> (EL k p = #0) *)
 (* Proof:
@@ -769,10 +788,11 @@ val zero_poly_last_zero = store_thm(
    <=> EVERY (\c. c = #0) p     by zero_poly_every_zero
    <=> !k. k < LENGTH p ==> (EL k p = #0)   by EVERY_EL
 *)
-val zero_poly_element = store_thm(
-  "zero_poly_element",
-  ``!p. zerop p <=> !k. k < LENGTH p ==> (EL k p = #0)``,
-  rw[zero_poly_every_zero, EVERY_EL]);
+Theorem zero_poly_element:
+    !p. zerop p <=> !k. k < LENGTH p ==> (EL k p = #0)
+Proof
+  rw[zero_poly_every_zero, EVERY_EL]
+QED
 
 (* Theorem: zerop p /\ zerop q ==> ((LENGTH p = LENGTH q) <=> (p = q)) *)
 (* Proof:
@@ -785,15 +805,16 @@ val zero_poly_element = store_thm(
    Only-if part: p = q ==> (LENGTH p = LENGTH q)
       This is trivially true.
 *)
-val zero_poly_eq_zero_poly = store_thm(
-  "zero_poly_eq_zero_poly",
-  ``!r:'a ring. !p q. zerop p /\ zerop q ==> ((LENGTH p = LENGTH q) <=> (p = q))``,
+Theorem zero_poly_eq_zero_poly:
+    !r:'a ring. !p q. zerop p /\ zerop q ==> ((LENGTH p = LENGTH q) <=> (p = q))
+Proof
   rw[EQ_IMP_THM] >>
   qabbrev_tac `f = \x. x = #0` >>
   `!x. f x = (x = #0)` by rw[Abbr`f`] >>
   `EVERY f p` by rw[GSYM zero_poly_every_zero, Abbr`f`] >>
   `EVERY f q` by rw[GSYM zero_poly_every_zero, Abbr`f`] >>
-  metis_tac[LIST_EQ, EVERY_EL]);
+  metis_tac[LIST_EQ, EVERY_EL]
+QED
 
 (* Theorem: zerop (GENLIST (K #0) n) *)
 (* Proof:
@@ -802,10 +823,11 @@ val zero_poly_eq_zero_poly = store_thm(
      so EVERY (\x. x = #0) p  by EVERY_GENLIST
      or zerop p               by zero_poly_every_zero
 *)
-val zero_poly_genlist_zero = store_thm(
-  "zero_poly_genlist_zero",
-  ``!r:'a ring. !n. zerop (GENLIST (K #0) n)``,
-  rw[zero_poly_every_zero, EVERY_GENLIST]);
+Theorem zero_poly_genlist_zero:
+    !r:'a ring. !n. zerop (GENLIST (K #0) n)
+Proof
+  rw[zero_poly_every_zero, EVERY_GENLIST]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Weal Polynomial Pair Addition.                                            *)
@@ -813,33 +835,37 @@ val zero_poly_genlist_zero = store_thm(
 
 (* Theorem: [] || [] = [] *)
 (* Proof: by defintion. *)
-val weak_add_of_zero_zero = store_thm(
-  "weak_add_of_zero_zero",
-  ``[] || [] = []``,
-  rw_tac std_ss[weak_add_def]);
+Theorem weak_add_of_zero_zero:
+    [] || [] = []
+Proof
+  rw_tac std_ss[weak_add_def]
+QED
 
 (* Theorem: [] || p = p *)
 (* Proof: by defintion. *)
-val weak_add_of_lzero = store_thm(
-  "weak_add_of_lzero",
-  ``!p:'a poly. [] || p = p``,
-  metis_tac[weak_add_def, list_CASES]);
+Theorem weak_add_of_lzero:
+    !p:'a poly. [] || p = p
+Proof
+  metis_tac[weak_add_def, list_CASES]
+QED
 
 (* Theorem: p || [] = p *)
 (* Proof: by defintion. *)
-val weak_add_of_rzero = store_thm(
-  "weak_add_of_rzero",
-  ``!p:'a poly. p || [] = p``,
-  metis_tac[weak_add_def, list_CASES]);
+Theorem weak_add_of_rzero:
+    !p:'a poly. p || [] = p
+Proof
+  metis_tac[weak_add_def, list_CASES]
+QED
 
 val _ = export_rewrites ["weak_add_of_zero_zero", "weak_add_of_lzero", "weak_add_of_rzero"];
 
 (* Theorem: (p || [] = p) /\ ([] || p = p) *)
 (* Proof: by weak_add_def. *)
-val weak_add_nil = store_thm(
-  "weak_add_nil",
-  ``!r:'a ring p. (p || [] = p) /\ ([] || p = p)``,
-  rw[]);
+Theorem weak_add_nil:
+    !r:'a ring p. (p || [] = p) /\ ([] || p = p)
+Proof
+  rw[]
+QED
 
 (* Theorem alias *)
 val weak_add_of_zero = save_thm("weak_add_of_zero", weak_add_nil);
@@ -847,10 +873,11 @@ val weak_add_of_zero = save_thm("weak_add_of_zero", weak_add_nil);
 
 (* Theorem: (p || |0| = p) /\ ( |0| || p = p) *)
 (* Proof: by weak_add_lzero, weak_add_rzero *)
-val weak_add_zero = store_thm(
-  "weak_add_zero",
-  ``!r:'a ring p. (p || |0| = p) /\ ( |0| || p = p)``,
-  rw[]);
+Theorem weak_add_zero:
+    !r:'a ring p. (p || |0| = p) /\ ( |0| || p = p)
+Proof
+  rw[]
+QED
 
 (* Theorem: |0| || |0| = |0| *)
 (* Proof: by weak_add_zero_zero and poly_zero. *)
@@ -898,9 +925,9 @@ val _ = export_rewrites ["weak_add_cons"];
       = MAX (SUC (LENGTH p)) (SUC (LENGTH q))  by SUC_MAX
       = MAX (LENGTH (h::p)) (LENGTH (h'::q))   by LENGTH
 *)
-val weak_add_length = store_thm(
-  "weak_add_length",
-  ``!r:'a ring. !p q. LENGTH (p || q) = MAX (LENGTH p) (LENGTH q)``,
+Theorem weak_add_length:
+    !r:'a ring. !p q. LENGTH (p || q) = MAX (LENGTH p) (LENGTH q)
+Proof
   strip_tac >>
   Induct >-
   rw[] >>
@@ -908,7 +935,8 @@ val weak_add_length = store_thm(
   Induct >-
   rw[] >>
   rw[weak_add_cons] >>
-  rw[SUC_MAX]);
+  rw[SUC_MAX]
+QED
 
 (* Theorem: p || q = [] <=> p = [] /\ q = [] *)
 (* Proof:
@@ -919,10 +947,11 @@ val weak_add_length = store_thm(
            (LENGTH q = 0)                by MAX_EQ_0
    <=> p = [] /\ q = []                  by LENGTH_NIL
 *)
-val weak_add_eq_of_zero = store_thm(
-  "weak_add_eq_of_zero",
-  ``!r:'a ring p q. ((p || q = []) <=> (p = []) /\ (q = []))``,
-  prove_tac[weak_add_length, LENGTH_NIL, MAX_EQ_0]);
+Theorem weak_add_eq_of_zero:
+    !r:'a ring p q. ((p || q = []) <=> (p = []) /\ (q = []))
+Proof
+  prove_tac[weak_add_length, LENGTH_NIL, MAX_EQ_0]
+QED
 
 (* Theorem: p || q = |0| <=> p = |0| /\ q = |0| *)
 (* Proof: by weak_add_eq_of_zero and poly_zero. *)
@@ -950,16 +979,17 @@ val weak_add_eq_zero = save_thm("weak_add_eq_zero", weak_add_eq_of_zero |> REWRI
       <=> T           /\ zerop (p || q)    by ring_add_zero_zero, as h = h' = #0
       <=> T                                by induction hypothesis
 *)
-val zero_weak_add_zero = store_thm(
-  "zero_weak_add_zero",
-  ``!r:'a ring. Ring r ==> !p q. zerop p /\ zerop q ==> zerop (p || q)``,
+Theorem zero_weak_add_zero:
+    !r:'a ring. Ring r ==> !p q. zerop p /\ zerop q ==> zerop (p || q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw[] >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: weak (p || q) *)
 (* Proof: by induction on p and q.
@@ -976,16 +1006,17 @@ val zero_weak_add_zero = store_thm(
       <=> h + h' IN R /\ T               by induction hypothesis
       <=> T                              by ring_add_element
 *)
-val weak_add_weak = store_thm(
-  "weak_add_weak",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> weak (p || q)``,
+Theorem weak_add_weak:
+    !r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> weak (p || q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw[] >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_add_weak"];
 
@@ -1002,9 +1033,9 @@ val _ = export_rewrites ["weak_add_weak"];
                  !h'. (h::p) || (h'::q) = (h'::q) || (h::p)
          true by weak_add_cons, ring_add_comm and induction hypothesis.
 *)
-val weak_add_comm = store_thm(
-  "weak_add_comm",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> (p || q = q || p)``,
+Theorem weak_add_comm:
+    !r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> (p || q = q || p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -1012,7 +1043,8 @@ val weak_add_comm = store_thm(
   strip_tac >>
   Induct >-
   rw_tac std_ss[weak_add_of_lzero, weak_add_of_rzero] >>
-  metis_tac[weak_add_cons, ring_add_comm, weak_cons]);
+  metis_tac[weak_add_cons, ring_add_comm, weak_cons]
+QED
 
 (* do not export commutativity. *)
 (* val _ = export_rewrites ["weak_add_comm"]; *)
@@ -1041,9 +1073,9 @@ val weak_add_comm = store_thm(
                = (h::p) || (h' + h'':: q || t)    by weak_add_cons
                = (h::p) || ((h'::q) || (h''::t))  by weak_add_cons
 *)
-val weak_add_assoc = store_thm(
-  "weak_add_assoc",
-  ``!r:'a ring. Ring r ==> !p q t:'a poly. weak p /\ weak q /\ weak t ==> (p || q || t = p || (q || t))``,
+Theorem weak_add_assoc:
+    !r:'a ring. Ring r ==> !p q t:'a poly. weak p /\ weak q /\ weak t ==> (p || q || t = p || (q || t))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -1054,18 +1086,20 @@ val weak_add_assoc = store_thm(
   strip_tac >>
   Induct >-
   rw[] >>
-  rw_tac std_ss[ring_add_assoc, weak_add_cons, weak_cons]);
+  rw_tac std_ss[ring_add_assoc, weak_add_cons, weak_cons]
+QED
 
 (* no export of associativity *)
 (* val _ = export_rewrites ["weak_add_assoc"]; *)
 
 (* Theorem: Polynomial addition clauses. *)
 (* Proof: by theorems proved. *)
-val weak_add_clauses = store_thm(
-  "weak_add_clauses",
-  ``!r:'a ring. Ring r ==> !p q t :'a poly. weak p /\ weak q /\ weak t ==>
-      ([] || p = p) /\ (p || [] = p) /\ (p || q = q || p) /\ ((p || q) || t = p || (q || t))``,
-  rw[weak_add_comm, weak_add_assoc]);
+Theorem weak_add_clauses:
+    !r:'a ring. Ring r ==> !p q t :'a poly. weak p /\ weak q /\ weak t ==>
+      ([] || p = p) /\ (p || [] = p) /\ (p || q = q || p) /\ ((p || q) || t = p || (q || t))
+Proof
+  rw[weak_add_comm, weak_add_assoc]
+QED
 
 (* Theorem: Ring r ==> !p q. zerop p /\ weak q /\ LENGTH p <= LENGTH q ==> (p || q = q) *)
 (* Proof:
@@ -1088,9 +1122,9 @@ val weak_add_clauses = store_thm(
                = #0 + h' :: q                         by induction hypothesis
                = h':: q                               by ring_add_lzero
 *)
-val weak_add_lzero_poly = store_thm(
-  "weak_add_lzero_poly",
-  ``!r:'a ring. Ring r ==> !p q. zerop p /\ weak q /\ LENGTH p <= LENGTH q ==> (p || q = q)``,
+Theorem weak_add_lzero_poly:
+    !r:'a ring. Ring r ==> !p q. zerop p /\ weak q /\ LENGTH p <= LENGTH q ==> (p || q = q)
+Proof
   ntac 2 strip_tac >>
   Induct >-
   rw[] >>
@@ -1100,7 +1134,8 @@ val weak_add_lzero_poly = store_thm(
     `0 < LENGTH (h::p) /\ (LENGTH [] = 0)` by rw[] >>
     fs[DECIDE``~(0 < 0)``],
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !p q. zerop p /\ weak q /\ LENGTH p <= LENGTH q ==> (q || p = q) *)
 (* Proof:
@@ -1109,10 +1144,11 @@ val weak_add_lzero_poly = store_thm(
    = p || q                     by weak_add_comm
    = q                          by weak_add_lzero_poly
 *)
-val weak_add_rzero_poly = store_thm(
-  "weak_add_rzero_poly",
-  ``!r:'a ring. Ring r ==> !p q. zerop p /\ weak q /\ LENGTH p <= LENGTH q ==> (q || p = q)``,
-  rw[weak_add_lzero_poly, weak_add_comm, zero_poly_weak]);
+Theorem weak_add_rzero_poly:
+    !r:'a ring. Ring r ==> !p q. zerop p /\ weak q /\ LENGTH p <= LENGTH q ==> (q || p = q)
+Proof
+  rw[weak_add_lzero_poly, weak_add_comm, zero_poly_weak]
+QED
 
 (* Theorem: weak p /\ weak q /\ (LENGTH p = LENGTH q) ==>
             (p || q = MAP2 (\x y. x + y) p q) *)
@@ -1142,10 +1178,10 @@ val weak_add_rzero_poly = store_thm(
             = (f h h') :: MAP2 f p q               by notation
             = MAP2 f (h::p) (h'::q)                by MAP2
 *)
-val weak_add_map2 = store_thm(
-  "weak_add_map2",
-  ``!r:'a ring. !p q. weak p /\ weak q /\ (LENGTH p = LENGTH q) ==>
-      (p || q = MAP2 (\x y. x + y) p q)``,
+Theorem weak_add_map2:
+    !r:'a ring. !p q. weak p /\ weak q /\ (LENGTH p = LENGTH q) ==>
+      (p || q = MAP2 (\x y. x + y) p q)
+Proof
   strip_tac >>
   Induct >| [
     rpt strip_tac >>
@@ -1154,7 +1190,8 @@ val weak_add_map2 = store_thm(
     strip_tac >>
     Induct >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: j < LENGTH p /\ j < LENGTH q ==> EL j (p || q) = (EL j p) + (EL j q) *)
 (* Proof:
@@ -1179,15 +1216,16 @@ val weak_add_map2 = store_thm(
           = EL (SUC n) (h::p) + EL (SUC n) (k::s)   by EL
           = EL j (h::p) + EL j (k::s)               by j = SUC n
 *)
-val weak_add_element = store_thm(
-  "weak_add_element",
-  ``!r:'a ring p q j. j < LENGTH p /\ j < LENGTH q ==>
-      (EL j (p || q) = (EL j p) + (EL j q))``,
+Theorem weak_add_element:
+    !r:'a ring p q j. j < LENGTH p /\ j < LENGTH q ==>
+      (EL j (p || q) = (EL j p) + (EL j q))
+Proof
   strip_tac >>
   Induct >-
   rw[] >>
   (Cases_on `q` >> rw[]) >>
-  (Cases_on `j` >> rw[]));
+  (Cases_on `j` >> rw[])
+QED
 
 (* Theorem: p <> |0| /\ q <> |0| /\ (LENGTH p = LENGTH q) ==>
            (LAST (p || q) = LAST p + LAST q) *)
@@ -1202,15 +1240,16 @@ val weak_add_element = store_thm(
      = EL j p + EL j q                by weak_add_element
      = LAST p + LAST q                by LAST_EL
 *)
-val weak_add_last = store_thm(
-  "weak_add_last",
-  ``!r:'a ring p q. p <> |0| /\ q <> |0| /\ (LENGTH p = LENGTH q) ==>
-           (LAST (p || q) = LAST p + LAST q)``,
+Theorem weak_add_last:
+    !r:'a ring p q. p <> |0| /\ q <> |0| /\ (LENGTH p = LENGTH q) ==>
+           (LAST (p || q) = LAST p + LAST q)
+Proof
   rw[] >>
   qabbrev_tac `k = LENGTH p` >>
   `LENGTH (p || q) = k` by rw[weak_add_length, Abbr`k`] >>
   `k <> 0 /\ (p || q) <> []` by metis_tac[LENGTH_NIL] >>
-  rw[weak_add_element, LAST_EL]);
+  rw[weak_add_element, LAST_EL]
+QED
 
 (* Theorem: p <> |0| /\ q <> |0| /\ (LENGTH p = LENGTH q) ==>
            (FRONT (p || q) = (FRONT p) || (FRONT q)) *)
@@ -1230,10 +1269,10 @@ val weak_add_last = store_thm(
      = EL x (FRONT p || FRONT q)                by weak_add_element
    Thus FRONT (p || q) = FRONT p || FRONT q     by LIST_EQ
 *)
-val weak_add_front = store_thm(
-  "weak_add_front",
-  ``!r:'a ring p q. p <> |0| /\ q <> |0| /\ (LENGTH p = LENGTH q) ==>
-           (FRONT (p || q) = (FRONT p) || (FRONT q))``,
+Theorem weak_add_front:
+    !r:'a ring p q. p <> |0| /\ q <> |0| /\ (LENGTH p = LENGTH q) ==>
+           (FRONT (p || q) = (FRONT p) || (FRONT q))
+Proof
   rw[] >>
   qabbrev_tac `k = LENGTH p` >>
   `LENGTH (p || q) = k` by rw[weak_add_length, Abbr`k`] >>
@@ -1248,7 +1287,8 @@ val weak_add_front = store_thm(
   rpt strip_tac >>
   `j < k` by rw[Abbr`j`] >>
   `x < k` by decide_tac >>
-  rw[FRONT_EL, weak_add_element]);
+  rw[FRONT_EL, weak_add_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Weak Polynomial Scalar Multiplication                                     *)
@@ -1269,10 +1309,11 @@ val weak_cmult_cons = save_thm("weak_cmult_cons", weak_cmult_def |> CONJUNCT2);
 
 (* Theorem: Polynomial scalar multiplication clauses. *)
 (* Proof: by theorems proved. *)
-val weak_cmult_clauses = store_thm(
-  "weak_cmult_clauses",
-  ``!r:'a ring. !c. (c o [] = []) /\ !h t. c o (h::t) = c * h::c o t``,
-  rw[]);
+Theorem weak_cmult_clauses:
+    !r:'a ring. !c. (c o [] = []) /\ !h t. c o (h::t) = c * h::c o t
+Proof
+  rw[]
+QED
 
 (* Theorem: c o |0| = |0| *)
 (* Proof: by weak_cmult_of_zero and poly_zero. *)
@@ -1293,12 +1334,13 @@ val _ = export_rewrites ["weak_cmult_zero"];
        = c * h :: MAP (\x. c * x) p   by induction hypothesis
        = MAP (\x. c * x) (h::p)       by MAP
 *)
-val weak_cmult_map = store_thm(
-  "weak_cmult_map",
-  ``!r:'a ring. !(c:'a) p. c o p = MAP (\x. c * x) p``,
+Theorem weak_cmult_map:
+    !r:'a ring. !(c:'a) p. c o p = MAP (\x. c * x) p
+Proof
   ntac 2 strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: LENGTH (c o p) = LENGTH p *)
 (* Proof:
@@ -1306,10 +1348,11 @@ val weak_cmult_map = store_thm(
    = LENGTH (MAP (\x. c * x) p)    by weak_cmult_map
    = LENGTH p                      by LENGTH_MAP
 *)
-val weak_cmult_length = store_thm(
-  "weak_cmult_length",
-  ``!r:'a ring. !(c:'a) p. LENGTH (c o p) = LENGTH p``,
-  rw[weak_cmult_map]);
+Theorem weak_cmult_length:
+    !r:'a ring. !(c:'a) p. LENGTH (c o p) = LENGTH p
+Proof
+  rw[weak_cmult_map]
+QED
 
 (* Theorem: c o p = [] <=> p = [] *)
 (* Proof:
@@ -1318,10 +1361,11 @@ val weak_cmult_length = store_thm(
    <=> LENGTH p = 0          by weak_cmult_length
    <=> p = []                by LENGTH_NIL
 *)
-val weak_cmult_eq_of_zero = store_thm(
-  "weak_cmult_eq_of_zero",
-  ``!r:'a ring. !(c:'a) p. (c o p = []) <=> (p = [])``,
-  metis_tac[weak_cmult_length, LENGTH_NIL]);
+Theorem weak_cmult_eq_of_zero:
+    !r:'a ring. !(c:'a) p. (c o p = []) <=> (p = [])
+Proof
+  metis_tac[weak_cmult_length, LENGTH_NIL]
+QED
 
 (* Theorem: c o p = |0| <=> p = |0| *)
 (* Proof: by weak_cmult_eq_of_zero and poly_zero. *)
@@ -1335,10 +1379,11 @@ val weak_cmult_eq_zero = save_thm("weak_cmult_eq_zero", weak_cmult_eq_of_zero |>
      = MAX (LENGTH p) (LENGTH q)         by weak_cmult_length
      = LENGTH p = k                      by MAX_DEF, LENGTH q <= LENGTH p
 *)
-val weak_cmult_add_length = store_thm(
-  "weak_cmult_add_length",
-  ``!r:'a ring. !(h:'a) (p q):'a poly. LENGTH q <= LENGTH p ==> (LENGTH (h o p || q) = LENGTH p)``,
-  rw[weak_add_length, weak_cmult_length, MAX_DEF]);
+Theorem weak_cmult_add_length:
+    !r:'a ring. !(h:'a) (p q):'a poly. LENGTH q <= LENGTH p ==> (LENGTH (h o p || q) = LENGTH p)
+Proof
+  rw[weak_add_length, weak_cmult_length, MAX_DEF]
+QED
 
 (* Theorem: c o (SNOC h t) = SNOC (c * h) (c o t) *)
 (* Proof:
@@ -1347,10 +1392,11 @@ val weak_cmult_add_length = store_thm(
    = SNOC ((\x. c * x) h) (MAP (\x. c * x) t)  by MAP_SNOC
    = SNOC (c * h) (c o t)                      by weak_cmult_map, applying function.
 *)
-val weak_cmult_snoc = store_thm(
-  "weak_cmult_snoc",
-  ``!r:'a ring. !c:'a h t. c o (SNOC h t) = SNOC (c * h) (c o t)``,
-  rw_tac std_ss[weak_cmult_map, MAP_SNOC]);
+Theorem weak_cmult_snoc:
+    !r:'a ring. !c:'a h t. c o (SNOC h t) = SNOC (c * h) (c o t)
+Proof
+  rw_tac std_ss[weak_cmult_map, MAP_SNOC]
+QED
 
 (* Theorem: p <> |0| ==> (c o FRONT p = FRONT (c o p)) /\ (c * LAST p = LAST (c o p)) *)
 (* Proof:
@@ -1363,17 +1409,18 @@ val weak_cmult_snoc = store_thm(
   Thus FRONT (c o p) = c o FRONT p              by FRONT_SNOC
    and LAST (c o p) = c * LAST p                by LAST_SNOC
 *)
-val weak_cmult_front_last = store_thm(
-  "weak_cmult_front_last",
-  ``!r:'a ring. !c:'a p. p <> |0| ==>
-       (c o FRONT p = FRONT (c o p)) /\ (c * LAST p = LAST (c o p))``,
+Theorem weak_cmult_front_last:
+    !r:'a ring. !c:'a p. p <> |0| ==>
+       (c o FRONT p = FRONT (c o p)) /\ (c * LAST p = LAST (c o p))
+Proof
   ntac 4 strip_tac >>
   qabbrev_tac `f = \(x:'a). c * x` >>
   `c o p = MAP f p` by rw[weak_cmult_map, Abbr`f`] >>
   `_ = MAP f (SNOC (LAST p) (FRONT p))` by metis_tac[SNOC_LAST_FRONT', poly_zero] >>
   `_ = SNOC (f (LAST p)) (MAP f (FRONT p))` by rw[MAP_SNOC] >>
   `_ = SNOC (c * LAST p) (c o FRONT p)` by rw[weak_cmult_map, weak_front_last, Abbr`f`] >>
-  rw[]);
+  rw[]
+QED
 
 (* Others proofs of the same result by element *)
 
@@ -1384,10 +1431,11 @@ val weak_cmult_front_last = store_thm(
    = EL j (MAP (\x. c * x) p)       by weak_cmult_map
    = c * (EL j p)                   by EL_MAP
 *)
-val weak_cmult_element = store_thm(
-  "weak_cmult_element",
-  ``!r:'a ring c:'a p j. j < LENGTH p ==> (EL j (c o p) = c * EL j p)``,
-  rw[weak_cmult_length, weak_cmult_map, EL_MAP]);
+Theorem weak_cmult_element:
+    !r:'a ring c:'a p j. j < LENGTH p ==> (EL j (c o p) = c * EL j p)
+Proof
+  rw[weak_cmult_length, weak_cmult_map, EL_MAP]
+QED
 
 (* Theorem: p <> |0| ==> (LAST (c o p) = c * LAST p) *)
 (* Proof:
@@ -1401,16 +1449,17 @@ val weak_cmult_element = store_thm(
      = c * EL j p           by weak_cmult_element
      = c * LAST p           by LAST_EL
 *)
-val weak_cmult_last = store_thm(
-  "weak_cmult_last",
-  ``!r:'a ring c:'a p. p <> |0| ==> (LAST (c o p) = c * LAST p)``,
+Theorem weak_cmult_last:
+    !r:'a ring c:'a p. p <> |0| ==> (LAST (c o p) = c * LAST p)
+Proof
   rw[] >>
   qabbrev_tac `k = LENGTH p` >>
   qabbrev_tac `j = PRE k` >>
   `LENGTH (c o p) = k` by rw[weak_cmult_length, Abbr`k`] >>
   `k <> 0 /\ c o p <> []` by metis_tac[LENGTH_NIL] >>
   `j < k` by rw[Abbr`j`] >>
-  rw[LAST_EL, weak_cmult_element]);
+  rw[LAST_EL, weak_cmult_element]
+QED
 
 (* Theorem: p <> |0| ==> (FRONT (c o p) = c o FRONT p) *)
 (* Proof:
@@ -1428,9 +1477,9 @@ val weak_cmult_last = store_thm(
      = EL x (c o FRONT p)                       by weak_cmult_element
    Thus FRONT (c o p) = c o FRONT p             by LIST_EQ
 *)
-val weak_cmult_front = store_thm(
-  "weak_cmult_front",
-  ``!r:'a ring c:'a p. p <> |0| ==> (FRONT (c o p) = c o FRONT p)``,
+Theorem weak_cmult_front:
+    !r:'a ring c:'a p. p <> |0| ==> (FRONT (c o p) = c o FRONT p)
+Proof
   rw[] >>
   qabbrev_tac `k = LENGTH p` >>
   `LENGTH (c o p) = k` by rw[weak_cmult_length, Abbr`k`] >>
@@ -1444,7 +1493,8 @@ val weak_cmult_front = store_thm(
   rpt strip_tac >>
   `j < k` by rw[Abbr`j`] >>
   `x < k` by decide_tac >>
-  rw[FRONT_EL, weak_cmult_element]);
+  rw[FRONT_EL, weak_cmult_element]
+QED
 
 (* Theorem: weak p ==> weak (c o p) *)
 (* Proof: by induction on p.
@@ -1455,13 +1505,14 @@ val weak_cmult_front = store_thm(
    = weak (c * h :: c o p)   by weak_cmult_cons
    = T                       by ring_mult_element, induction hypothesis
 *)
-val weak_cmult_weak = store_thm(
-  "weak_cmult_weak",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> !c. c IN R ==> weak (c o p)``,
+Theorem weak_cmult_weak:
+    !r:'a ring. Ring r ==> !p. weak p ==> !c. c IN R ==> weak (c o p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_cmult_weak"];
 
@@ -1491,17 +1542,18 @@ val _ = export_rewrites ["weak_cmult_weak"];
       = ((c * h)::(c o p)) || ((c * h')::(c o q))  by weak_add_cons
       = c o (h::p) || c o (h'::q)                  by weak_cmult_cons
 *)
-val weak_cmult_add = store_thm(
-  "weak_cmult_add",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ weak q ==>
-    !c. c IN R ==> (c o (p || q) = c o p || c o q)``,
+Theorem weak_cmult_add:
+    !r:'a ring. Ring r ==> !p q. weak p /\ weak q ==>
+    !c. c IN R ==> (c o (p || q) = c o p || c o q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw[] >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: (b + c) o p = b o p || c o p  *)
 (* Proof: by induction on p, and ring_distrib_ladd.
@@ -1516,13 +1568,14 @@ val weak_cmult_add = store_thm(
     = (b*h :: b o p) || (c*h :: c o p)   by weak_add_cons
     = b o (h::p) || c o (h::p)           by weak_cmult_cons
 *)
-val weak_add_cmult = store_thm(
-  "weak_add_cmult",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> !b c. b IN R /\ c IN R ==> ((b + c) o p = b o p || c o p)``,
+Theorem weak_add_cmult:
+    !r:'a ring. Ring r ==> !p. weak p ==> !b c. b IN R /\ c IN R ==> ((b + c) o p = b o p || c o p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: b o (c o p) = (b * c) o p  *)
 (* Proof: by induction on p and ring_mult_assoc.
@@ -1537,13 +1590,14 @@ val weak_add_cmult = store_thm(
    = ((b * c) * h)::((b * c) o p)   by induction hypothesis
    = (b * c) o (h::p)               by weak_cmult_cons
 *)
-val weak_cmult_cmult = store_thm(
-  "weak_cmult_cmult",
-  ``!r:'a ring. Ring r ==> !p:'a poly. weak p ==> !b c. b IN R /\ c IN R ==> (b o (c o p) = (b * c) o p)``,
+Theorem weak_cmult_cmult:
+    !r:'a ring. Ring r ==> !p:'a poly. weak p ==> !b c. b IN R /\ c IN R ==> (b o (c o p) = (b * c) o p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[ring_mult_assoc]);
+  rw[ring_mult_assoc]
+QED
 
 (* Theorem: b o (c o p) = c o (b o p)  *)
 (* Proof: by weak_cmult_cmult and ring_mult_comm.
@@ -1552,10 +1606,11 @@ val weak_cmult_cmult = store_thm(
    = (c * b) o p      by ring_mult_comm
    = c o (b o p)      by weak_cmult_cmult
 *)
-val weak_cmult_cmult_comm = store_thm(
-  "weak_cmult_cmult_comm",
-  ``!r:'a ring. Ring r ==> !p:'a poly. weak p ==> !b c. b IN R /\ c IN R ==> (b o (c o p) = c o (b o p))``,
-  rw_tac std_ss[ring_mult_comm, weak_cmult_cmult]);
+Theorem weak_cmult_cmult_comm:
+    !r:'a ring. Ring r ==> !p:'a poly. weak p ==> !b c. b IN R /\ c IN R ==> (b o (c o p) = c o (b o p))
+Proof
+  rw_tac std_ss[ring_mult_comm, weak_cmult_cmult]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Negation.                                                      *)
@@ -1575,10 +1630,11 @@ val weak_neg_cons = save_thm("weak_neg_cons", weak_neg_def |> CONJUNCT2);
 
 (* Theorem: Polynomial negation clauses. *)
 (* Proof: by theorems proved. *)
-val weak_neg_clauses = store_thm(
-  "weak_neg_clauses",
-  ``!r:'a ring. (neg [] = []) /\ !h t. neg (h::t) = -h::neg t``,
-  rw[]);
+Theorem weak_neg_clauses:
+    !r:'a ring. (neg [] = []) /\ !h t. neg (h::t) = -h::neg t
+Proof
+  rw[]
+QED
 (* better than:
 val weak_neg_clauses = save_thm("weak_neg_clauses", CONJ weak_neg_of_zero weak_neg_cons);
 > val weak_neg_clauses = |- (!r. -[] = []) /\ !r h t. -(h::t) = -h::-t : thm
@@ -1598,12 +1654,13 @@ val _ = export_rewrites ["weak_neg_zero"];
    Step: neg p = MAP (\x. -x) p ==> !h. neg (h::p) = MAP (\x. -x) (h::p)
       true by weak_neg_cons, poly_cons_poly.
 *)
-val weak_neg_map = store_thm(
-  "weak_neg_map",
-  ``!r:'a ring p. neg p = MAP (\x. -x) p``,
+Theorem weak_neg_map:
+    !r:'a ring p. neg p = MAP (\x. -x) p
+Proof
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: LENGTH (neg p) = LENGTH p *)
 (* Proof:
@@ -1611,10 +1668,11 @@ val weak_neg_map = store_thm(
     = LENGTH (MAP (\x. -x) p)   by weak_neg_map
     = LENGTH p                  by LENGTH_MAP
 *)
-val weak_neg_length = store_thm(
-  "weak_neg_length",
-  ``!r:'a ring p. LENGTH (neg p) = LENGTH p``,
-  rw[weak_neg_map]);
+Theorem weak_neg_length:
+    !r:'a ring p. LENGTH (neg p) = LENGTH p
+Proof
+  rw[weak_neg_map]
+QED
 
 (* Theorem: neg p = [] <=> p = [] *)
 (* Proof:
@@ -1623,10 +1681,11 @@ val weak_neg_length = store_thm(
    <=> LENGTH p = 0            by weak_neg_length
    <=> p = []                  by LENGTH_NIL
 *)
-val weak_neg_eq_of_zero = store_thm(
-  "weak_neg_eq_of_zero",
-  ``!r:'a ring p. (neg p = []) <=> (p = [])``,
-  metis_tac[weak_neg_length, LENGTH_NIL]);
+Theorem weak_neg_eq_of_zero:
+    !r:'a ring p. (neg p = []) <=> (p = [])
+Proof
+  metis_tac[weak_neg_length, LENGTH_NIL]
+QED
 
 (* Theorem: neg p = |0| <=> p = |0| *)
 (* Proof: by weak_neg_eq_of_zero and poly_zero. *)
@@ -1644,13 +1703,14 @@ val weak_neg_eq_zero = save_thm("weak_neg_eq_zero", weak_neg_eq_of_zero |> REWRI
    = h::neg (neg p)      by ring_neg_neg
    = h::p                by induction hypothesis
 *)
-val weak_neg_neg = store_thm(
-  "weak_neg_neg",
-  ``!r:'a ring. Ring r ==> !p:'a poly. weak p ==> (neg (neg p) = p)``,
+Theorem weak_neg_neg:
+    !r:'a ring. Ring r ==> !p:'a poly. weak p ==> (neg (neg p) = p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_neg_neg"];
 
@@ -1667,13 +1727,14 @@ val _ = export_rewrites ["weak_neg_neg"];
    ==> weak (-h :: neg p)        by weak_cons
    ==> weak (neg (h::p))         by weak_neg_cons
 *)
-val weak_neg_weak = store_thm(
-  "weak_neg_weak",
-  ``!r:'a ring. Ring r ==> !p:'a poly. weak p ==> weak (neg p)``,
+Theorem weak_neg_weak:
+    !r:'a ring. Ring r ==> !p:'a poly. weak p ==> weak (neg p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_neg_weak"];
 
@@ -1690,14 +1751,15 @@ val _ = export_rewrites ["weak_neg_weak"];
    = (- c * h):: (- c o p)    by induction hypothesis
    = - c o (h::p)             by weak_cmult_cons
 *)
-val weak_cmult_neg = store_thm(
-  "weak_cmult_neg",
-  ``!r:'a ring. Ring r ==> !p:'a poly. weak p ==> !c. c IN R ==> (c o neg p = (- c) o p)``,
+Theorem weak_cmult_neg:
+    !r:'a ring. Ring r ==> !p:'a poly. weak p ==> !c. c IN R ==> (c o neg p = (- c) o p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw[] >>
-  rw_tac std_ss[ring_mult_lneg, ring_mult_rneg, weak_neg_cons, weak_cmult_cons, weak_cons]);
+  rw_tac std_ss[ring_mult_lneg, ring_mult_rneg, weak_neg_cons, weak_cmult_cons, weak_cons]
+QED
 
 (* Theorem: neg (c o p) = (- c) o p *)
 (* Proof: by induction on p.
@@ -1712,14 +1774,15 @@ val weak_cmult_neg = store_thm(
       = -c * h :: -c o p        by ring_mult_lneg
       = -c o (h::p)             by weak_cmult_cons
 *)
-val weak_neg_cmult = store_thm(
-  "weak_neg_cmult",
-  ``!r:'a ring. Ring r ==> !p:'a poly. weak p ==> !c. c IN R ==> (neg (c o p) = (- c) o p)``,
+Theorem weak_neg_cmult:
+    !r:'a ring. Ring r ==> !p:'a poly. weak p ==> !c. c IN R ==> (neg (c o p) = (- c) o p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw[] >>
-  rw_tac std_ss[ring_mult_lneg, weak_neg_cons, weak_cmult_cons, weak_cons]);
+  rw_tac std_ss[ring_mult_lneg, weak_neg_cons, weak_cmult_cons, weak_cons]
+QED
 
 val _ = export_rewrites ["weak_cmult_neg", "weak_neg_cmult"];
 
@@ -1730,10 +1793,11 @@ val _ = export_rewrites ["weak_cmult_neg", "weak_neg_cmult"];
    = EL j (MAP (\x. -x) p)          by weak_neg_map
    = - (EL j p)                     by EL_MAP
 *)
-val weak_neg_element = store_thm(
-  "weak_neg_element",
-  ``!r:'a ring p j. j < LENGTH p ==> (EL j (neg p) = - (EL j p))``,
-  rw[weak_neg_length, weak_neg_map, EL_MAP]);
+Theorem weak_neg_element:
+    !r:'a ring p j. j < LENGTH p ==> (EL j (neg p) = - (EL j p))
+Proof
+  rw[weak_neg_length, weak_neg_map, EL_MAP]
+QED
 
 (* Theorem: p <> |0| ==> LAST (neg p) = - LAST p *)
 (* Proof:
@@ -1747,16 +1811,17 @@ val weak_neg_element = store_thm(
      = - EL j p             by weak_neg_element
      = = LAST p             by LAST_EL
 *)
-val weak_neg_last = store_thm(
-  "weak_neg_last",
-  ``!r:'a ring p. p <> |0| ==> (LAST (neg p) = - LAST p)``,
+Theorem weak_neg_last:
+    !r:'a ring p. p <> |0| ==> (LAST (neg p) = - LAST p)
+Proof
   rw[] >>
   qabbrev_tac `k = LENGTH p` >>
   qabbrev_tac `j = PRE k` >>
   `LENGTH (neg p) = k` by rw[weak_neg_length, Abbr`k`] >>
   `k <> 0 /\ neg p <> []` by metis_tac[LENGTH_NIL] >>
   `j < k` by rw[Abbr`j`] >>
-  rw[LAST_EL, weak_neg_element]);
+  rw[LAST_EL, weak_neg_element]
+QED
 
 (* Theorem: p <> |0| ==> FRONT (neg p) = neg (FRONT p) *)
 (* Proof:
@@ -1774,9 +1839,9 @@ val weak_neg_last = store_thm(
      = EL x (neg (FRONT p))                     by weak_neg_element
    Thus FRONT (neg p) = neg (FRONT p)           by LIST_EQ
 *)
-val weak_neg_front = store_thm(
-  "weak_neg_front",
-  ``!r:'a ring p. p <> |0| ==> (FRONT (neg p) = neg (FRONT p))``,
+Theorem weak_neg_front:
+    !r:'a ring p. p <> |0| ==> (FRONT (neg p) = neg (FRONT p))
+Proof
   rw[] >>
   qabbrev_tac `k = LENGTH p` >>
   `LENGTH (neg p) = k` by rw[weak_neg_length, Abbr`k`] >>
@@ -1790,7 +1855,8 @@ val weak_neg_front = store_thm(
   rpt strip_tac >>
   `j < k` by rw[Abbr`j`] >>
   `x < k` by decide_tac >>
-  rw[FRONT_EL, weak_neg_element]);
+  rw[FRONT_EL, weak_neg_element]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Turn                                                           *)
@@ -1814,10 +1880,11 @@ val turn_eq_zero = save_thm("turn_eq_zero", turn_eq_of_zero |> REWRITE_RULE [GSY
        and weak (FRONT p)                   by weak_front_last
         so weak (turn p)                    by weak_cons
 *)
-val weak_turn = store_thm(
-  "weak_turn",
-  ``!r:'a ring. !p. weak p ==> weak (turn p)``,
-  rw[turn_def, weak_front_last, weak_last_element]);
+Theorem weak_turn:
+    !r:'a ring. !p. weak p ==> weak (turn p)
+Proof
+  rw[turn_def, weak_front_last, weak_last_element]
+QED
 
 (* Theorem: weak p ==> !n. weak (turn_exp p n) *)
 (* Proof:
@@ -1831,13 +1898,14 @@ val weak_turn = store_thm(
        Now weak (turn_exp p n)            by induction hypothesis
         so weak (turn (turn_exp p n))     by weak_turn
 *)
-val weak_turn_exp = store_thm(
-  "weak_turn_exp",
-  ``!r:'a ring. !p. weak p ==> !n. weak (turn_exp p n)``,
+Theorem weak_turn_exp:
+    !r:'a ring. !p. weak p ==> !n. weak (turn_exp p n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  rw[turn_exp_suc, weak_turn]);
+  rw[turn_exp_suc, weak_turn]
+QED
 
 (* Theorem: (LENGTH p = LENGTH q) ==> (turn (p || q) = (turn p) || (turn q)) *)
 (* Proof:
@@ -1870,9 +1938,9 @@ This picture holds only for lists of the same length:
 > EVAL ``turn (weak_add (ZN 10) [1;2] [3;4;5])``; = [5; 4; 6]: thm
 > EVAL ``weak_add (ZN 10) (turn [1;2]) (turn [3;4;5])``; = [7; 4; 4]: thm
 *)
-val weak_add_turn = store_thm(
-  "weak_add_turn",
-  ``!r:'a ring p q. (LENGTH p = LENGTH q) ==> (turn (p || q) = (turn p) || (turn q))``,
+Theorem weak_add_turn:
+    !r:'a ring p q. (LENGTH p = LENGTH q) ==> (turn (p || q) = (turn p) || (turn q))
+Proof
   rpt strip_tac >>
   (Cases_on `p = []` >> rw[turn_nil]) >>
   (Cases_on `q = []` >> rw[turn_nil]) >>
@@ -1881,7 +1949,8 @@ val weak_add_turn = store_thm(
   `_ = (LAST p + LAST q) :: (FRONT p || FRONT q)` by rw[weak_add_last, weak_add_front] >>
   `_ = (LAST p :: FRONT p) || (LAST q :: FRONT q)` by rw[] >>
   `_ = turn p || turn q` by rw[turn_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: turn (c o p) = c o turn p *)
 (* Proof:
@@ -1899,13 +1968,14 @@ val weak_add_turn = store_thm(
     = c o (LAST p :: FRONT p)         by weak_cmult_cons
     = c o turn p                      by turn_def
 *)
-val weak_cmult_turn = store_thm(
-  "weak_cmult_turn",
-  ``!r:'a ring c:'a p. turn (c o p) = c o turn p``,
+Theorem weak_cmult_turn:
+    !r:'a ring c:'a p. turn (c o p) = c o turn p
+Proof
   rpt strip_tac >>
   (Cases_on `p = []` >> rw[turn_nil]) >>
   rw[turn_def, weak_cmult_cons, weak_cmult_last, weak_cmult_front] >>
-  metis_tac[weak_cmult_eq_zero, poly_zero]);
+  metis_tac[weak_cmult_eq_zero, poly_zero]
+QED
 
 (* Theorem: !n. (c o (turn_exp p n) = turn_exp (c o p) n) *)
 (* Proof:
@@ -1922,13 +1992,14 @@ val weak_cmult_turn = store_thm(
        = turn (turn_exp (c o p) n)    by induction hypothesis
        = turn_exp (c o p) n (SUC n)   by turn_exp_suc
 *)
-val weak_cmult_turn_exp = store_thm(
-  "weak_cmult_turn_exp",
-  ``!r:'a ring p c:'a n. (c o (turn_exp p n) = turn_exp (c o p) n)``,
+Theorem weak_cmult_turn_exp:
+    !r:'a ring p c:'a n. (c o (turn_exp p n) = turn_exp (c o p) n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  metis_tac[turn_exp_suc, weak_cmult_turn, weak_turn_exp]);
+  metis_tac[turn_exp_suc, weak_cmult_turn, weak_turn_exp]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Shifts                                                         *)
@@ -1936,17 +2007,19 @@ val weak_cmult_turn_exp = store_thm(
 
 (* Theorem: p >> 0 = p *)
 (* Proof: by definition. *)
-val poly_shift_0 = store_thm(
-  "poly_shift_0",
-  ``!p:'a poly. p >> 0 = p``,
-  metis_tac[poly_shift_def, list_CASES]);
+Theorem poly_shift_0:
+    !p:'a poly. p >> 0 = p
+Proof
+  metis_tac[poly_shift_def, list_CASES]
+QED
 
 (* Theorem: p >> SUC n = if p = |0| then |0| else #0::p >> n *)
 (* Proof: by definition. *)
-val poly_shift_suc = store_thm(
-  "poly_shift_suc",
-  ``!p:'a poly. !n. p >> SUC n = if p = |0| then |0| else #0::p >> n``,
-  metis_tac[poly_shift_def, list_CASES, poly_zero]);
+Theorem poly_shift_suc:
+    !p:'a poly. !n. p >> SUC n = if p = |0| then |0| else #0::p >> n
+Proof
+  metis_tac[poly_shift_def, list_CASES, poly_zero]
+QED
 
 (* These are more general than definition. *)
 val _ = export_rewrites ["poly_shift_0", "poly_shift_suc"];
@@ -1954,10 +2027,11 @@ val _ = export_rewrites ["poly_shift_0", "poly_shift_suc"];
 
 (* Theorem: [] >> n = [] *)
 (* Proof: by definition. *)
-val poly_shift_of_zero = store_thm(
-  "poly_shift_of_zero",
-  ``!n. [] >> n = []``,
-  metis_tac[poly_shift_def, num_CASES]);
+Theorem poly_shift_of_zero:
+    !n. [] >> n = []
+Proof
+  metis_tac[poly_shift_def, num_CASES]
+QED
 
 val _ = export_rewrites ["poly_shift_of_zero"];
 
@@ -1970,10 +2044,11 @@ val _ = export_rewrites ["poly_shift_zero"];
 
 (* Theorem: p >> n = [] <=> p = [] *)
 (* Proof: by cases on p. *)
-val poly_shift_eq_of_zero = store_thm(
-  "poly_shift_eq_of_zero",
-  ``!(p:'a poly) n. (p >> n = []) <=> (p = [])``,
-  metis_tac[poly_shift_def, num_CASES, list_CASES, NOT_CONS_NIL]);
+Theorem poly_shift_eq_of_zero:
+    !(p:'a poly) n. (p >> n = []) <=> (p = [])
+Proof
+  metis_tac[poly_shift_def, num_CASES, list_CASES, NOT_CONS_NIL]
+QED
 
 (* Theorem: p >> n = |0| <=> p = |0| *)
 (* Proof: by poly_shift_eq_of_zero and poly_zero. *)
@@ -1990,14 +2065,15 @@ val poly_shift_eq_zero = save_thm("poly_shift_eq_zero", poly_shift_eq_of_zero |>
       Since weak ((h::t) >> SUC n = #0::(h::t)>> n   by poly_shift_suc
       hence weak ((h::t) >> SUC n  by weak_cons, ring_zero_element
 *)
-val poly_shift_weak = store_thm(
-  "poly_shift_weak",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> !n. weak (p >> n)``,
+Theorem poly_shift_weak:
+    !r:'a ring. Ring r ==> !p. weak p ==> !n. weak (p >> n)
+Proof
   rpt strip_tac >>
   Cases_on `p` >-
   rw[] >>
   Induct_on `n` >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["poly_shift_weak"];
 
@@ -2013,13 +2089,14 @@ val _ = export_rewrites ["poly_shift_weak"];
     = LAST (h'::t')             by LAST_CONS
     = LAST (h::t)               by induction hypothesis
 *)
-val poly_shift_last = store_thm(
-  "poly_shift_last",
-  ``!p:'a poly. p <> |0| ==> !n. LAST (p >> n) = LAST p``,
+Theorem poly_shift_last:
+    !p:'a poly. p <> |0| ==> !n. LAST (p >> n) = LAST p
+Proof
   rw_tac std_ss[poly_zero] >>
   Induct_on `n` >-
   rw[] >>
-  metis_tac[poly_shift_suc, poly_shift_eq_zero, LAST_CONS, list_CASES, poly_zero]);
+  metis_tac[poly_shift_suc, poly_shift_eq_zero, LAST_CONS, list_CASES, poly_zero]
+QED
 
 (* Theorem: p <> |0| ==> !n. LENGTH (p >> n) = (LENGTH p) + n *)
 (* Proof:
@@ -2038,12 +2115,13 @@ val poly_shift_last = store_thm(
          = SUC (LENGTH p + n)      by induction hypothesis
          = LENGTH p + SUC n        by ADD_SUC
 *)
-val poly_shift_length = store_thm(
-  "poly_shift_length",
-  ``!p:'a poly. p <> |0| ==> !n. LENGTH (p >> n) = (LENGTH p) + n``,
+Theorem poly_shift_length:
+    !p:'a poly. p <> |0| ==> !n. LENGTH (p >> n) = (LENGTH p) + n
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: p <> |0| ==> !n. p >> n = PAD_LEFT #0 (n + LENGTH p) p *)
 (* Proof:
@@ -2059,13 +2137,14 @@ val poly_shift_length = store_thm(
       = PAD_LEFT #0 (SUC (n + LENGTH p)) p     by PAD_LEFT_CONS, LENGTH p <= n + LENGTH p
       = PAD_LEFT #0 (SUC n + LENGTH p) p       by ADD
 *)
-val poly_shift_nonzero = store_thm(
-  "poly_shift_nonzero",
-  ``!r:'a ring. !p. p <> |0| ==> !n. p >> n = PAD_LEFT #0 (n + LENGTH p) p``,
+Theorem poly_shift_nonzero:
+    !r:'a ring. !p. p <> |0| ==> !n. p >> n = PAD_LEFT #0 (n + LENGTH p) p
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[PAD_LEFT_ID] >>
-  rw[poly_shift_suc, PAD_LEFT_CONS, ADD]);
+  rw[poly_shift_suc, PAD_LEFT_CONS, ADD]
+QED
 
 (* Theorem: [c] >> n = PAD_LEFT #0 (SUC n) [c] *)
 (* Proof:
@@ -2075,10 +2154,11 @@ val poly_shift_nonzero = store_thm(
    = PAD_LEFT #0 (n + 1) [c]            by LENGTH
    = PAD_LEFT #0 (SUC n) [c]            by ADD1
 *)
-val poly_shift_const = store_thm(
-  "poly_shift_const",
-  ``!r:'a ring. !c n. [c] >> n = PAD_LEFT #0 (SUC n) [c]``,
-  rw[poly_shift_nonzero, ADD1]);
+Theorem poly_shift_const:
+    !r:'a ring. !c n. [c] >> n = PAD_LEFT #0 (SUC n) [c]
+Proof
+  rw[poly_shift_nonzero, ADD1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Shift Theorems                                                 *)
@@ -2089,29 +2169,32 @@ val poly_shift_const = store_thm(
    If p = |0|, trivially true.
    If p <> |0|, true by poly_shift_def.
 *)
-val poly_shift_1 = store_thm(
-  "poly_shift_1",
-  ``!p:'a poly. p >> 1 = if p = |0| then |0| else #0::p``,
+Theorem poly_shift_1:
+    !p:'a poly. p >> 1 = if p = |0| then |0| else #0::p
+Proof
   rw_tac std_ss[] >-
   rw[] >>
-  metis_tac[poly_shift_suc, poly_shift_0, ONE, poly_zero]);
+  metis_tac[poly_shift_suc, poly_shift_0, ONE, poly_zero]
+QED
 
 (* Theorem: (h::p) >> 1 = #0::h::p *)
 (* Proof: by poly_shift_1, more useful than above. *)
-val poly_shift_1_cons = store_thm(
-  "poly_shift_1_cons",
-  ``!h:'a. !t:'a poly. (h::t) >> 1 = #0::h::t``,
-  rw_tac std_ss[poly_shift_1, poly_zero]);
+Theorem poly_shift_1_cons:
+    !h:'a. !t:'a poly. (h::t) >> 1 = #0::h::t
+Proof
+  rw_tac std_ss[poly_shift_1, poly_zero]
+QED
 
 (* These will always expand p >> 1 to #0::p, causing problems during pattern matching with theorems with p >> 1 *)
 (* val _ = export_rewrites ["poly_shift_1", "poly_shift_1_cons"]); *)
 
 (* Theorem: (h::t) >> 0 = (h::t) and (h::t) >> SUC n = ((h::t) >> n) >> 1 *)
 (* Proof: by definition *)
-val poly_shift_cons = store_thm(
-  "poly_shift_cons",
-  ``!h:'a. !t:'a poly. ((h::t) >> 0 = (h::t)) /\ (!n. (h::t) >> (SUC n) = ((h::t) >> n) >> 1)``,
-  rw[poly_shift_1, poly_shift_eq_zero]);
+Theorem poly_shift_cons:
+    !h:'a. !t:'a poly. ((h::t) >> 0 = (h::t)) /\ (!n. (h::t) >> (SUC n) = ((h::t) >> n) >> 1)
+Proof
+  rw[poly_shift_1, poly_shift_eq_zero]
+QED
 
 (* better than poly_shift_def:
 val poly_shift_cons = save_thm("poly_shift_cons", poly_shift_def |> CONJUNCT2 |> CONJUNCT2);
@@ -2130,13 +2213,14 @@ val _ = export_rewrites ["poly_shift_cons"];
    If p <> |0|, p = h::t        by poly_zero
       Then (h::t) >> SUC n = ((h::t) >> n) >> 1   by poly_shift_cons
 *)
-val poly_shift_SUC = store_thm(
-  "poly_shift_SUC",
-  ``!p n. p >> SUC n = (p >> n) >> 1``,
+Theorem poly_shift_SUC:
+    !p n. p >> SUC n = (p >> n) >> 1
+Proof
   rpt strip_tac >>
   Cases_on `p` >-
   metis_tac[poly_zero, poly_shift_zero] >>
-  rw[poly_shift_cons]);
+  rw[poly_shift_cons]
+QED
 
 (* Theorem: h::t = [h] || t >> 1 *)
 (* Proof:
@@ -2150,13 +2234,14 @@ val poly_shift_SUC = store_thm(
    = (h + #0)::([] || t)   by weak_add_def
    = h::t                  by ring_add_rzero, weak_add_of_lzero
 *)
-val weak_cons_eq_add_shift = store_thm(
-  "weak_cons_eq_add_shift",
-  ``!r:'a ring. Ring r ==> !h t. weak (h::t) ==> (h::t = [h] || t >> 1)``,
+Theorem weak_cons_eq_add_shift:
+    !r:'a ring. Ring r ==> !h t. weak (h::t) ==> (h::t = [h] || t >> 1)
+Proof
   rw_tac std_ss[weak_cons] >>
   Cases_on `t = |0|` >-
   rw[] >>
-  rw_tac std_ss[poly_shift_1, weak_add_cons, ring_add_rzero, weak_add_of_lzero]);
+  rw_tac std_ss[poly_shift_1, weak_add_cons, ring_add_rzero, weak_add_of_lzero]
+QED
 
 (* Theorem: (neg p) >> n = neg (p >> n) *)
 (* Proof: by induction on n.
@@ -2173,15 +2258,16 @@ val weak_cons_eq_add_shift = store_thm(
     = neg (#0 :: p >> n)     by weak_neg_cons
     = neg (p >> SUC n)       by poly_shift_suc
 *)
-val weak_neg_shift = store_thm(
-  "weak_neg_shift",
-  ``!r:'a ring. Ring r ==> !p n. (neg p) >> n = neg (p >> n)``,
+Theorem weak_neg_shift:
+    !r:'a ring. Ring r ==> !p n. (neg p) >> n = neg (p >> n)
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
   Induct_on `n` >-
   rw[] >>
-  rw[weak_neg_eq_zero]);
+  rw[weak_neg_eq_zero]
+QED
 
 (* Theorem: (p || q) >> 1 = (p >> 1) || (q >> 1) *)
 (* Proof:
@@ -2196,13 +2282,14 @@ val weak_neg_shift = store_thm(
    = #0::(p || q)          by ring_add_zero_zero
    = (p || q) >> 1         by poly_shift_1
 *)
-val weak_add_shift_1 = store_thm(
-  "weak_add_shift_1",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. (p || q) >> 1 = (p >> 1) || (q >> 1)``,
+Theorem weak_add_shift_1:
+    !r:'a ring. Ring r ==> !p q:'a poly. (p || q) >> 1 = (p >> 1) || (q >> 1)
+Proof
   rpt strip_tac >>
   Cases_on `(p = |0|) \/ (q = |0|)` >-
   metis_tac[poly_shift_zero, weak_add_zero] >>
-  rw[poly_shift_1, weak_add_eq_zero]);
+  rw[poly_shift_1, weak_add_eq_zero]
+QED
 (* This theorem is actually used below. This is also useful for p o (h::t), since only >> 1 is involved. *)
 
 (* Theorem: (p || q) >> n = (p >> n) || (q >> n) *)
@@ -2223,16 +2310,17 @@ val weak_add_shift_1 = store_thm(
       = (p >> n) >> 1 || (q >> n) >> 1  by weak_add_shift_1, poly_shift_weak
       = (p >> SUC n) || (q >> SUC n)    by poly_shift_cons
 *)
-val weak_add_shift = store_thm(
-  "weak_add_shift",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. !n. (p || q) >> n = (p >> n) || (q >> n)``,
+Theorem weak_add_shift:
+    !r:'a ring. Ring r ==> !p q:'a poly. !n. (p || q) >> n = (p >> n) || (q >> n)
+Proof
   ntac 4 strip_tac >>
   Induct >-
   rw[] >>
   Cases_on `(p = |0|) \/ (q = |0|)` >-
   metis_tac[poly_shift_zero, weak_add_zero] >>
   `((p || q) >> n) >> 1 = (p >> n) >> 1 || (q >> n) >> 1` by rw[weak_add_shift_1] >>
-  metis_tac[poly_shift_cons, weak_add_eq_zero, list_CASES, poly_zero]);
+  metis_tac[poly_shift_cons, weak_add_eq_zero, list_CASES, poly_zero]
+QED
 
 Theorem HD_weak_add_shift:
   Ring r /\ weak p /\ p <> |0| ==>
@@ -2284,13 +2372,14 @@ QED
           = c o (#0::(h::t))        by weak_cmult_cons
           = c o (h::t) >> 1 = RHS   by poly_shift_1
 *)
-val weak_cmult_shift_1 = store_thm(
-  "weak_cmult_shift_1",
-  ``!r:'a ring. Ring r ==> !p:'a poly c. c IN R ==> ((c o p) >> 1 = c o (p >> 1))``,
+Theorem weak_cmult_shift_1:
+    !r:'a ring. Ring r ==> !p:'a poly c. c IN R ==> ((c o p) >> 1 = c o (p >> 1))
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
-  metis_tac[ring_mult_rzero, weak_cmult_cons, poly_shift_1, list_CASES, NOT_CONS_NIL, poly_zero]);
+  metis_tac[ring_mult_rzero, weak_cmult_cons, poly_shift_1, list_CASES, NOT_CONS_NIL, poly_zero]
+QED
 (* This theorem is now not used below. *)
 
 (* Theorem: (c o p) >> n = c o (p >> n) *)
@@ -2312,15 +2401,16 @@ val weak_cmult_shift_1 = store_thm(
    = c o (#0::p >> n)       by weak_cmult_cons
    = c o (p >> SUC n)       by poly_shift_suc, p <> |0|
 *)
-val weak_cmult_shift = store_thm(
-  "weak_cmult_shift",
-  ``!r:'a ring. Ring r ==> !p:'a poly c:'a. c IN R ==> !n. (c o p) >> n = c o (p >> n)``,
+Theorem weak_cmult_shift:
+    !r:'a ring. Ring r ==> !p:'a poly c:'a. c IN R ==> !n. (c o p) >> n = c o (p >> n)
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
   `c o p <> |0|` by rw_tac std_ss[weak_cmult_eq_zero] >>
   Induct_on `n` >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Weak Polynomial Multiplication                                            *)
@@ -2351,11 +2441,12 @@ val weak_mult_cons = save_thm("weak_mult_cons", weak_mult_def |> CONJUNCT2);
    = [] || []                  by poly_shift_of_zero
    = []                        by weak_add_of_zero_zero
 *)
-val weak_mult_of_rzero = store_thm(
-  "weak_mult_of_rzero",
-  ``!p:'a poly. p o [] = []``,
+Theorem weak_mult_of_rzero:
+    !p:'a poly. p o [] = []
+Proof
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_mult_of_rzero"];
 
@@ -2420,14 +2511,15 @@ Well, p = h::t, q = k::s, by weak_mult_cross, there is at least the constant ter
         q = []   and  (t o q) >> 1   by weak_cmult_eq_of_zero
     hence q = [].
 *)
-val weak_mult_eq_of_zero = store_thm(
-  "weak_mult_eq_of_zero",
-  ``!r:'a ring. !p:'a poly q. (p o q = []) <=> (p = []) \/ (q = [])``,
+Theorem weak_mult_eq_of_zero:
+    !r:'a ring. !p:'a poly q. (p o q = []) <=> (p = []) \/ (q = [])
+Proof
   (rw[EQ_IMP_THM] >> simp[weak_mult_of_zero]) >>
   spose_not_then strip_assume_tac >>
   `?h t. p = h::t` by metis_tac[list_CASES] >>
   fs[weak_cons, weak_mult_cons] >>
-  metis_tac[weak_cmult_eq_of_zero, weak_add_eq_of_zero]);
+  metis_tac[weak_cmult_eq_of_zero, weak_add_eq_of_zero]
+QED
 
 (* Theorem: p o q = |0| <=> p = |0| \/ q = |0|  *)
 (* Proof: by weak_mult_eq_of_zero and poly_zero. *)
@@ -2447,13 +2539,14 @@ val weak_mult_eq_zero = save_thm("weak_mult_eq_zero", weak_mult_eq_of_zero |> RE
       hence weak ((p o q) >> 1)   by poly_shift_weak
       hence weak (h::p) o q       by weak_add_weak
 *)
-val weak_mult_weak = store_thm(
-  "weak_mult_weak",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> weak (p o q)``,
+Theorem weak_mult_weak:
+    !r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> weak (p o q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_mult_weak"];
 
@@ -2653,14 +2746,15 @@ QED
           = c o (h o q || (p o q) >> 1)        by weak_cmult_add
           = c o ((h::p) o q) = RHS             by weak_mult_cons
 *)
-val weak_cmult_mult = store_thm(
-  "weak_cmult_mult",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==>
-    !c. c IN R ==> ((c o p) o q = c o (p o q))``,
+Theorem weak_cmult_mult:
+    !r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==>
+    !c. c IN R ==> ((c o p) o q = c o (p o q))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[weak_cmult_cmult, weak_cmult_shift_1, weak_cmult_add]);
+  rw[weak_cmult_cmult, weak_cmult_shift_1, weak_cmult_add]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Negation with Addition                                         *)
@@ -2678,20 +2772,22 @@ val weak_cmult_mult = store_thm(
    <=> zerop (#0 :: neg p || p)        by ring_add_lneg
    <=> T                               by zero_poly_cons, induction hypothesis
 *)
-val weak_add_lneg = store_thm(
-  "weak_add_lneg",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> zerop (neg p || p)``,
+Theorem weak_add_lneg:
+    !r:'a ring. Ring r ==> !p. weak p ==> zerop (neg p || p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: zerop (p || neg p) *)
 (* Proof: by weak_add_lneg, weak_add_comm, weak_neg_weak. *)
-val weak_add_rneg = store_thm(
-  "weak_add_rneg",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> zerop (p || neg p)``,
-  metis_tac[weak_add_lneg, weak_add_comm, weak_neg_weak]);
+Theorem weak_add_rneg:
+    !r:'a ring. Ring r ==> !p. weak p ==> zerop (p || neg p)
+Proof
+  metis_tac[weak_add_lneg, weak_add_comm, weak_neg_weak]
+QED
 (* Q: Why rw[weak_add_lneg] is not working here? *)
 
 val _ = export_rewrites ["weak_add_lneg", "weak_add_rneg"];
@@ -2708,13 +2804,14 @@ val _ = export_rewrites ["weak_add_lneg", "weak_add_rneg"];
    ==> zerop (c * h :: c o p)         by zero_poly_cons
    ==> zerop (c o (h::p))             by weak_cmult_cons
 *)
-val zero_poly_cmult = store_thm(
-  "zero_poly_cmult",
-  ``!r:'a ring. Ring r ==> !p:'a poly. zerop p ==> !c. c IN R ==> zerop (c o p)``,
+Theorem zero_poly_cmult:
+    !r:'a ring. Ring r ==> !p:'a poly. zerop p ==> !c. c IN R ==> zerop (c o p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["zero_poly_cmult"];
 
@@ -2729,13 +2826,14 @@ val _ = export_rewrites ["zero_poly_cmult"];
    <=> zerop (#0 * p)             by zero_poly_cons
    <=> T                          by induction hypothesis
 *)
-val weak_cmult_lzero = store_thm(
-  "weak_cmult_lzero",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> zerop (#0 o p)``,
+Theorem weak_cmult_lzero:
+    !r:'a ring. Ring r ==> !p. weak p ==> zerop (#0 o p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: zerop p = zerop (neg p) *)
 (* Proof: by induction on p.
@@ -2749,13 +2847,14 @@ val weak_cmult_lzero = store_thm(
    <=> zerop (-h::neg p)           by zero_poly_cons
    <=> zerop (neg (h::p))          by weak_neg_cons
 *)
-val zero_weak_neg = store_thm(
-  "zero_weak_neg",
-  ``!r:'a ring. Ring r ==> !p:'a poly. weak p ==> (zerop p <=> zerop (neg p))``,
+Theorem zero_weak_neg:
+    !r:'a ring. Ring r ==> !p:'a poly. weak p ==> (zerop p <=> zerop (neg p))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[ring_neg_eq_zero]);
+  rw[ring_neg_eq_zero]
+QED
 
 (* Seems this is no good -- two sides too similar! *)
 (* val _ = export_rewrites ["zero_weak_neg"]; *)
@@ -2770,12 +2869,13 @@ val zero_weak_neg = store_thm(
    <=> zerop (p >> n)        by zero_poly_cons
    <=> zerop p               by induction hypothesis
 *)
-val zero_poly_shift = store_thm(
-  "zero_poly_shift",
-  ``!p n. zerop (p >> n) = zerop p``,
+Theorem zero_poly_shift:
+    !p n. zerop (p >> n) = zerop p
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[]);
+  rw[]
+QED
 
 (* val _ = export_rewrites ["zero_poly_shift"]; *)
 
@@ -2796,14 +2896,15 @@ val zero_poly_shift = store_thm(
     = zerop  || zerop          by zero_poly_shift, induction hypothesis
     = zerop                    by zero_weak_add_zero
 *)
-val zero_weak_lmult = store_thm(
-  "zero_weak_lmult",
-  ``!r:'a ring. Ring r ==> !p q. zerop p /\ weak q ==> zerop (p o q)``,
+Theorem zero_weak_lmult:
+    !r:'a ring. Ring r ==> !p q. zerop p /\ weak q ==> zerop (p o q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw_tac std_ss[weak_mult_of_lzero] >>
-  rw[weak_cmult_lzero, zero_weak_add_zero, zero_poly_cons, zero_poly_shift]);
+  rw[weak_cmult_lzero, zero_weak_add_zero, zero_poly_cons, zero_poly_shift]
+QED
 
 (* Theorem: zerop q ==> zerop (p o q) *)
 (* Proof: by induction on p and q.
@@ -2817,14 +2918,15 @@ val zero_weak_lmult = store_thm(
     = zerop || zerop          by zero_poly_shift, induction hypothesis
     = zerop                   by zero_weak_add_zero
 *)
-val zero_weak_rmult = store_thm(
-  "zero_weak_rmult",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ zerop q ==> zerop (p o q)``,
+Theorem zero_weak_rmult:
+    !r:'a ring. Ring r ==> !p q. weak p /\ zerop q ==> zerop (p o q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw_tac std_ss[weak_mult_of_lzero, zero_poly_of_zero] >>
-  rw[zero_poly_cmult, zero_poly_shift, zero_weak_add_zero]);
+  rw[zero_poly_cmult, zero_poly_shift, zero_weak_add_zero]
+QED
 
 (* val _ = export_rewrites ["zero_weak_lmult", "zero_weak_rmult"]; *)
 
@@ -2843,13 +2945,14 @@ val zero_weak_rmult = store_thm(
    = h o (q >> 1) || (p o (q >> 1)) >> 1  by induction hypothesis
    = (h::p) o (q >> 1)                    by weak_mult_cons
 *)
-val weak_mult_shift_1 = store_thm(
-  "weak_mult_shift_1",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> ((p o q) >> 1 = p o (q >> 1))``,
+Theorem weak_mult_shift_1:
+    !r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> ((p o q) >> 1 = p o (q >> 1))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[weak_add_shift_1, weak_cmult_shift_1]);
+  rw[weak_add_shift_1, weak_cmult_shift_1]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Constant Polynomials.                                                     *)
@@ -2879,10 +2982,11 @@ Only use of weak_cons_eq_add_shift is somewhere below.
 
 (* Theorem: weak [k] *)
 (* Proof: by weak_cons, weak_of_zero. *)
-val weak_const = store_thm(
-  "weak_const",
-  ``!r:'a ring. !k. k IN R ==> weak [k]``,
-  rw[]);
+Theorem weak_const:
+    !r:'a ring. !k. k IN R ==> weak [k]
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_const"];
 
@@ -2894,10 +2998,11 @@ val _ = export_rewrites ["weak_const"];
    = (h * k::h o [])    by weak_cmult_cons
    = [h * k]            by weak_cmult_of_zero
 *)
-val weak_cmult_const = store_thm(
-  "weak_cmult_const",
-  ``!r:'a ring. !h k. h o [k] = [h * k]``,
-  rw[]);
+Theorem weak_cmult_const:
+    !r:'a ring. !h k. h o [k] = [h * k]
+Proof
+  rw[]
+QED
 
 (* Theorem: h o [k] = k o [h] *)
 (* Proof:
@@ -2906,10 +3011,11 @@ val weak_cmult_const = store_thm(
    = [k * h]       by ring_mult_comm
    = k o [h]       by weak_cmult_const
 *)
-val weak_cmult_const_comm = store_thm(
-  "weak_cmult_const_comm",
-  ``!r:'a ring. Ring r ==> !h k. h IN R /\ k IN R ==> (h o [k] = k o [h])``,
-  rw_tac std_ss[weak_cmult_const, ring_mult_comm]);
+Theorem weak_cmult_const_comm:
+    !r:'a ring. Ring r ==> !h k. h IN R /\ k IN R ==> (h o [k] = k o [h])
+Proof
+  rw_tac std_ss[weak_cmult_const, ring_mult_comm]
+QED
 
 (* The following relates weak_mult with weak_cmult for constant poly. *)
 
@@ -2921,17 +3027,19 @@ val weak_cmult_const_comm = store_thm(
    = k o p || []               by poly_shift_of_zero
    = k o p                     by weak_add_of_rzero
 *)
-val weak_mult_const = store_thm(
-  "weak_mult_const",
-  ``!r:'a ring. !p k. k IN R ==> ([k] o p = k o p)``,
-  rw[]);
+Theorem weak_mult_const:
+    !r:'a ring. !p k. k IN R ==> ([k] o p = k o p)
+Proof
+  rw[]
+QED
 
 (* Theorem: [h] o [k] = h o [k] *)
 (* Proof: by weak_mult_const. *)
-val weak_mult_const_const = store_thm(
-  "weak_mult_const_const",
-  ``!r:'a ring. !h k. h IN R /\ k IN R ==> ([h] o [k] = h o [k])``,
-  rw[]);
+Theorem weak_mult_const_const:
+    !r:'a ring. !h k. h IN R /\ k IN R ==> ([h] o [k] = h o [k])
+Proof
+  rw[]
+QED
 
 (* Theorem:  [h] o [k] = [k] o [h] *)
 (* Proof:
@@ -2940,10 +3048,11 @@ val weak_mult_const_const = store_thm(
    = k o [h]       by weak_cmult_const_comm
    = [k] o [h]     by weak_mult_const_const
 *)
-val weak_mult_const_const_comm = store_thm(
-  "weak_mult_const_const_comm",
-  ``!r:'a ring. Ring r ==> !h k. h IN R /\ k IN R ==> ([h] o [k] = [k] o [h])``,
-  rw_tac std_ss[weak_mult_const_const, weak_cmult_const_comm]);
+Theorem weak_mult_const_const_comm:
+    !r:'a ring. Ring r ==> !h k. h IN R /\ k IN R ==> ([h] o [k] = [k] o [h])
+Proof
+  rw_tac std_ss[weak_mult_const_const, weak_cmult_const_comm]
+QED
 
 (* Start of weak_mult_cons for constant poly. *)
 
@@ -2961,13 +3070,14 @@ val weak_mult_const_const_comm = store_thm(
        = h o [k] || ([k] o p) >> 1   by weak_mult_const
        = RHS
 *)
-val weak_mult_const_cons = store_thm(
-  "weak_mult_const_cons",
-  ``!r:'a ring. Ring r ==> !p h k. k IN R /\ weak (h::p) ==> ([k] o (h::p) = h o [k] || ([k] o p) >> 1)``,
+Theorem weak_mult_const_cons:
+    !r:'a ring. Ring r ==> !p h k. k IN R /\ weak (h::p) ==> ([k] o (h::p) = h o [k] || ([k] o p) >> 1)
+Proof
   rw_tac std_ss[weak_cons] >>
   `h::p = [h] || p >> 1` by rw_tac std_ss[weak_cons_eq_add_shift, weak_cons] >>
   rw_tac std_ss[weak_mult_const, weak_cmult_shift_1, weak_cmult_const_comm,
-                 weak_cmult_add, weak_const, poly_shift_weak]);
+                 weak_cmult_add, weak_const, poly_shift_weak]
+QED
 
 (* This is to jump over the fact that [h * k] may not be polynomial:
    h * (k::q) = (h * k) :: (h * q) = [h * k] + (h * q) >> 1
@@ -2983,12 +3093,13 @@ val weak_mult_const_cons = store_thm(
        = [k * h] || (k o p) >> 1    by ring_mult_comm
        = RHS
 *)
-val weak_cmult_cons_eq_add_shift = store_thm(
-  "weak_cmult_cons_eq_add_shift",
-  ``!r:'a ring. Ring r ==> !p h k. k IN R /\ weak (h::p) ==> (k o (h::p) = [k * h] || (k o p) >> 1)``,
+Theorem weak_cmult_cons_eq_add_shift:
+    !r:'a ring. Ring r ==> !p h k. k IN R /\ weak (h::p) ==> (k o (h::p) = [k * h] || (k o p) >> 1)
+Proof
   rw_tac std_ss[weak_cons] >>
   `k o (h::p) = [k] o (h::p)` by rw_tac std_ss[weak_mult_const] >>
-  rw[weak_mult_const, weak_mult_const_cons, weak_cmult_const, ring_mult_comm]);
+  rw[weak_mult_const, weak_mult_const_cons, weak_cmult_const, ring_mult_comm]
+QED
 
 (* Theorem: p o [k] = k o p *)
 (* Proof: by induction on p
@@ -3003,16 +3114,17 @@ val weak_cmult_cons_eq_add_shift = store_thm(
    = k o ([h] || p >> 1)         by weak_cmult_add
    = k o (h::p)                  by weak_cons_eq_add_shift
 *)
-val weak_mult_const_comm = store_thm(
-  "weak_mult_const_comm",
-  ``!r:'a ring. Ring r ==> !p k. k IN R /\ weak p ==> (p o [k] = k o p)``,
+Theorem weak_mult_const_comm:
+    !r:'a ring. Ring r ==> !p k. k IN R /\ weak p ==> (p o [k] = k o p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw[] >>
   rw_tac std_ss[weak_cons] >>
   `weak [h] /\ weak (p >> 1) /\ weak (h::p)` by rw_tac std_ss[weak_const, poly_shift_weak, weak_cons] >>
-  metis_tac[weak_cmult_add, weak_cmult_shift_1, weak_cons_eq_add_shift, weak_cmult_const_comm, weak_mult_cons]);
+  metis_tac[weak_cmult_add, weak_cmult_shift_1, weak_cons_eq_add_shift, weak_cmult_const_comm, weak_mult_cons]
+QED
 
 (* Theorem: weak (h::p) ==> (h::p) o [k] = k o (h::p) *)
 (* Proof:
@@ -3025,11 +3137,12 @@ val weak_mult_const_comm = store_thm(
        = k o (h::p)                  by weak_cons_eq_add_shift
        = RHS
 *)
-val weak_mult_cons_const = store_thm(
-  "weak_mult_cons_const",
-  ``!r:'a ring. Ring r ==> !p h k. k IN R /\ weak (h::p) ==> ((h::p) o [k] = k o (h::p))``,
+Theorem weak_mult_cons_const:
+    !r:'a ring. Ring r ==> !p h k. k IN R /\ weak (h::p) ==> ((h::p) o [k] = k o (h::p))
+Proof
   metis_tac[weak_mult_cons, weak_cmult_const_comm, weak_mult_const_comm, weak_cmult_shift_1,
-             weak_cmult_add, weak_cons_eq_add_shift, weak_const, poly_shift_weak]);
+             weak_cmult_add, weak_cons_eq_add_shift, weak_const, poly_shift_weak]
+QED
 
 (* Theorem: p o (h::q) = h o p || (p o q) >> 1 *)
 (* Proof:
@@ -3076,9 +3189,9 @@ val weak_mult_cons_const = store_thm(
    = h' o (h::p) || (h o q || p o q >> 1) >> 1            by weak_cmult_cons
    = h' o (h::p) || (h::p) o q >> 1                       by weak_mult_cons
 *)
-val weak_mult_cons_comm = store_thm(
-  "weak_mult_cons_comm",
-  ``!r:'a ring. Ring r ==> !p q h. h IN R /\ weak p /\ weak (h::q) ==> (p o (h::q) = (h o p) || ((p o q) >> 1))``,
+Theorem weak_mult_cons_comm:
+    !r:'a ring. Ring r ==> !p q h. h IN R /\ weak p /\ weak (h::q) ==> (p o (h::q) = (h o p) || ((p o q) >> 1))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -3096,7 +3209,8 @@ val weak_mult_cons_comm = store_thm(
   `(h::p) o (h'::q) = (h * h':: h o q) || (h' o p || (p o q) >> 1) >> 1` by rw[] >>
   `_ = h' * h + #0 :: h o q || h' o p || p o q >> 1` by rw[poly_shift_1, weak_add_assoc, ring_mult_comm] >>
   `_ = h' * h + #0 :: h' o p || h o q || p o q >> 1` by rw_tac std_ss[weak_add_comm] >>
-  rw[weak_add_assoc, poly_shift_1]);
+  rw[weak_add_assoc, poly_shift_1]
+QED
 
 (* Theorem: [Cross-multiplication]
             (h::p) * (k::q) = [h * k] + k * (p >> 1) + h * (q >> 1) + (p >> 1) * (q >> 1) *)
@@ -3127,17 +3241,18 @@ val weak_mult_cons_comm = store_thm(
    = [h * k] || (((h o q) >> 1 || (k o p) >> 1 || ((p o q) >> 1) >> 1))  by weak_add_assoc
    = [h * k] || (h o q) >> 1 || (k o p) >> 1 || ((p o q) >> 1) >> 1      by weak_add_assoc, weak_add_weak
 *)
-val weak_mult_cross = store_thm(
-  "weak_mult_cross",
-  ``!r:'a ring. Ring r ==> !h k p q. weak (h::p) /\ weak (k::q) ==>
-   ((h::p) o (k::q) = [h * k] || (h o q) >> 1 || (k o p) >> 1 || ((p o q) >> 1) >> 1)``,
+Theorem weak_mult_cross:
+    !r:'a ring. Ring r ==> !h k p q. weak (h::p) /\ weak (k::q) ==>
+   ((h::p) o (k::q) = [h * k] || (h o q) >> 1 || (k o p) >> 1 || ((p o q) >> 1) >> 1)
+Proof
   rw_tac std_ss[weak_cons] >>
   `weak (h::p) /\ weak (k::q)` by rw[] >>
   `weak [h * k] /\ weak (h o q) /\ weak (k o p) /\ weak (p o q)` by rw[] >>
   `!t. weak t ==> weak (t >> 1)` by rw[] >>
   `(h::p) o (k::q) = [h * k] || ((h o q) >> 1 || (p o (k::q)) >> 1)`
     by rw[weak_add_assoc, weak_cmult_cons_eq_add_shift] >>
-  rw[weak_add_assoc, weak_mult_cons_comm, weak_add_shift_1]);
+  rw[weak_add_assoc, weak_mult_cons_comm, weak_add_shift_1]
+QED
 
 (* This is overcoming a major hundle! Next is simple. *)
 
@@ -3158,9 +3273,9 @@ val weak_mult_cross = store_thm(
    = [h' * h] || (h' o p) >> 1 || (h o q) >> 1 || ((q o p) >> 1) >> 1       by ring_mult_comm
    = (h'::q) o (h::p)                                                       by weak_mult_cross
 *)
-val weak_mult_comm = store_thm(
-  "weak_mult_comm",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> (p o q = q o p)``,
+Theorem weak_mult_comm:
+    !r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> (p o q = q o p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -3176,7 +3291,8 @@ val weak_mult_comm = store_thm(
   `(h::p) o (h'::q) = [h * h'] || ((h o q) >> 1 || (h' o p) >> 1 || ((p o q) >> 1) >> 1)` by rw[weak_add_assoc, weak_mult_cross] >>
   `_ = [h * h'] || ((h o q) >> 1 || (h' o p) >> 1 || ((q o p) >> 1) >> 1)` by metis_tac[] >>
   `_ = [h * h'] || ((h' o p) >> 1 || (h o q) >> 1 || ((q o p) >> 1) >> 1)` by rw_tac std_ss[weak_add_comm] >>
-  rw[weak_mult_cross, weak_add_assoc, ring_mult_comm]);
+  rw[weak_mult_cross, weak_add_assoc, ring_mult_comm]
+QED
 
 (* no export of commutativity. *)
 (* val _ = export_rewrites ["weak_mult_comm"]; *)
@@ -3189,12 +3305,13 @@ val weak_mult_comm = store_thm(
    = c o (p o q)    by weak_mult_comm
    = (c o p) o q    by weak_cmult_mult
 *)
-val weak_mult_cmult = store_thm(
-  "weak_mult_cmult",
-  ``!r:'a ring. Ring r ==> !c. c IN R ==> !p q. weak p /\ weak q ==> (p o (c o q) = (c o p) o q)``,
+Theorem weak_mult_cmult:
+    !r:'a ring. Ring r ==> !c. c IN R ==> !p q. weak p /\ weak q ==> (p o (c o q) = (c o p) o q)
+Proof
   rpt strip_tac >>
   `p o (c o q) = (c o q) o p` by rw[weak_mult_comm] >>
-  rw[weak_cmult_mult, weak_mult_comm]);
+  rw[weak_cmult_mult, weak_mult_comm]
+QED
 
 (* Theorem: (p o q) >> 1 = (p >> 1) o q *)
 (* Proof: by weak_mult_shift_1 and weak_mult_comm.
@@ -3203,10 +3320,11 @@ val weak_mult_cmult = store_thm(
    = q o (p >> 1)    by weak_mult_shift_1
    = (p >> 1) o q    by weak_mult_comm
 *)
-val weak_mult_shift_1_comm = store_thm(
-  "weak_mult_shift_1_comm",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> ((p o q) >> 1 = (p >> 1) o q)``,
-  rw[GSYM weak_mult_shift_1, weak_mult_comm]);
+Theorem weak_mult_shift_1_comm:
+    !r:'a ring. Ring r ==> !p q:'a poly. weak p /\ weak q ==> ((p o q) >> 1 = (p >> 1) o q)
+Proof
+  rw[GSYM weak_mult_shift_1, weak_mult_comm]
+QED
 
 (* Only shift_1 is required for poly_mult_shift_1 and general shift. *)
 
@@ -3232,10 +3350,10 @@ val weak_mult_shift_1_comm = store_thm(
    = (h o q || (p o q) >> 1) || (h o t || (p o t) >> 1)   by weak_add_assoc
    = (h::p) o q || (h::p) o t                             by weak_mult_cons
 *)
-val weak_mult_radd = store_thm(
-  "weak_mult_radd",
-  ``!r:'a ring. Ring r ==>
-    !p q t:'a poly. weak p /\ weak q /\ weak t ==> (p o (q || t) = p o q || p o t)``,
+Theorem weak_mult_radd:
+    !r:'a ring. Ring r ==>
+    !p q t:'a poly. weak p /\ weak q /\ weak t ==> (p o (q || t) = p o q || p o t)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -3246,7 +3364,8 @@ val weak_mult_radd = store_thm(
   `(h::p) o (q || t) = h o q || (h o t || (p o q) >> 1 || (p o t) >> 1)`
      by rw[weak_cmult_add, weak_add_shift_1, weak_add_assoc] >>
   `_ = h o q || ((p o q) >> 1 || h o t || (p o t) >> 1)` by rw_tac std_ss[weak_add_comm] >>
-  rw[weak_add_assoc]);
+  rw[weak_add_assoc]
+QED
 
 (* Theorem: (p || q) o t = p o t || q o t *)
 (* Proof: by weak_mult_comm and weak_mult_radd.
@@ -3255,10 +3374,11 @@ val weak_mult_radd = store_thm(
    = t o p || t o q      by weak_mult_radd
    = p o t || q o t      by weak_mult_comm
 *)
-val weak_mult_ladd = store_thm(
-  "weak_mult_ladd",
-  ``!r:'a ring. Ring r ==> !p q t:'a poly. weak p /\ weak q /\ weak t ==> ((p || q) o t = p o t || q o t)``,
-  rw[weak_mult_radd, weak_mult_comm]);
+Theorem weak_mult_ladd:
+    !r:'a ring. Ring r ==> !p q t:'a poly. weak p /\ weak q /\ weak t ==> ((p || q) o t = p o t || q o t)
+Proof
+  rw[weak_mult_radd, weak_mult_comm]
+QED
 
 val _ = export_rewrites ["weak_mult_radd", "weak_mult_ladd"];
 
@@ -3290,9 +3410,9 @@ Theorem weak_mult_add =
    = h o (q o t) || (p o (q o t)) >> 1     by induction hypothesis
    = (h::p) o (q o t)                      by weak_mult_cons_comm
 *)
-val weak_mult_assoc = store_thm(
-  "weak_mult_assoc",
-  ``!r:'a ring. Ring r ==> !p q t:'a poly. weak p /\ weak q /\ weak t ==> ((p o q) o t = p o (q o t))``,
+Theorem weak_mult_assoc:
+    !r:'a ring. Ring r ==> !p q t:'a poly. weak p /\ weak q /\ weak t ==> ((p o q) o t = p o (q o t))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -3304,18 +3424,20 @@ val weak_mult_assoc = store_thm(
   `((h::p) o q) o t = h o (q o t) || ((p o q) >> 1) o t`
     by rw_tac std_ss[weak_mult_ladd, weak_mult_cons, weak_cmult_mult] >>
   `_ = h o (q o t) || ((p o q) o t) >> 1` by rw_tac std_ss[weak_mult_shift_1_comm] >>
-  rw[]);
+  rw[]
+QED
 
 (* no export of associativity *)
 (* val _ = export_rewrites ["weak_mult_assoc"]; *)
 
 (* Theorem: Polynomial multiplication clauses. *)
 (* Proof: by theorems proved. *)
-val weak_mult_clauses = store_thm(
-  "weak_mult_clauses",
-  ``!r:'a ring. Ring r ==> !p q t :'a poly. weak p /\ weak q /\ weak t ==>
-      ([] o p = []) /\ (p o [] = []) /\ (p o q = q o p) /\ ((p o q) o t = p o (q o t))``,
-  rw[weak_mult_comm, weak_mult_assoc]);
+Theorem weak_mult_clauses:
+    !r:'a ring. Ring r ==> !p q t :'a poly. weak p /\ weak q /\ weak t ==>
+      ([] o p = []) /\ (p o [] = []) /\ (p o q = q o p) /\ ((p o q) o t = p o (q o t))
+Proof
+  rw[weak_mult_comm, weak_mult_assoc]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Theorems on polynomial multiplicative identity.                           *)
@@ -3323,17 +3445,19 @@ val weak_mult_clauses = store_thm(
 
 (* Theorem: [#1] <> [] *)
 (* Proof: since [#1] <> []. *)
-val weak_one_ne_zero = store_thm(
-  "weak_one_ne_zero",
-  ``[#1] <> []``,
-  rw[]);
+Theorem weak_one_ne_zero:
+    [#1] <> []
+Proof
+  rw[]
+QED
 
 (* Theorem: weak [#1] *)
 (* Proof: by weak_const. *)
-val weak_one = store_thm(
-  "weak_one",
-  ``!r:'a ring. Ring r ==> weak [#1]``,
-  rw[]);
+Theorem weak_one:
+    !r:'a ring. Ring r ==> weak [#1]
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_one_ne_zero", "weak_one"];
 
@@ -3343,10 +3467,11 @@ val _ = export_rewrites ["weak_one_ne_zero", "weak_one"];
    If #1 = #0, weak []           by weak_of_zero
    If #1 <> #0, weak [#1]        by weak_one
 *)
-val weak_one_poly = store_thm(
-  "weak_one_poly",
-  ``!r:'a ring. Ring r ==> weak |1|``,
-  rw_tac std_ss[poly_one, weak_of_zero, weak_one]);
+Theorem weak_one_poly:
+    !r:'a ring. Ring r ==> weak |1|
+Proof
+  rw_tac std_ss[poly_one, weak_of_zero, weak_one]
+QED
 
 (* Theorem: c o [#1] = [c] *)
 (* Proof: by weak_cmult_cons.
@@ -3355,10 +3480,11 @@ val weak_one_poly = store_thm(
    = [c * #1]             by weak_cmult_of_zero
    = [c]                  by ring_mult_rone
 *)
-val weak_cmult_one = store_thm(
-  "weak_cmult_one",
-  ``!r:'a ring. Ring r ==> !c. c IN R ==> (c o [#1] = [c])``,
-  rw[]);
+Theorem weak_cmult_one:
+    !r:'a ring. Ring r ==> !c. c IN R ==> (c o [#1] = [c])
+Proof
+  rw[]
+QED
 
 (* Theorem: #1 o p = p *)
 (* Proof: by induction on p.
@@ -3370,13 +3496,14 @@ val weak_cmult_one = store_thm(
    = (h:: #1 o p)          by ring_mult_lone
    = (h::p)                by induction hypothesis
 *)
-val weak_cmult_lone = store_thm(
-  "weak_cmult_lone",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> (#1 o p = p)``,
+Theorem weak_cmult_lone:
+    !r:'a ring. Ring r ==> !p. weak p ==> (#1 o p = p)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_cmult_one", "weak_cmult_lone"];
 
@@ -3386,10 +3513,11 @@ val _ = export_rewrites ["weak_cmult_one", "weak_cmult_lone"];
    = #1 o p     by weak_mult_const
    = p          by weak_cmult_lone
 *)
-val weak_mult_lone = store_thm(
-  "weak_mult_lone",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> ([#1] o p = p)``,
-  rw[]);
+Theorem weak_mult_lone:
+    !r:'a ring. Ring r ==> !p. weak p ==> ([#1] o p = p)
+Proof
+  rw[]
+QED
 
 (* Theorem: p o [#1] = p *)
 (* Proof:
@@ -3397,10 +3525,11 @@ val weak_mult_lone = store_thm(
    = [#1] o p      by weak_mult_comm, weak_one
    = p             by weak_mult_lone
 *)
-val weak_mult_rone = store_thm(
-  "weak_mult_rone",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> (p o [#1] = p)``,
-  rw[Once weak_mult_comm]);
+Theorem weak_mult_rone:
+    !r:'a ring. Ring r ==> !p. weak p ==> (p o [#1] = p)
+Proof
+  rw[Once weak_mult_comm]
+QED
 
 val _ = export_rewrites ["weak_mult_lone", "weak_mult_rone"];
 
@@ -3408,10 +3537,11 @@ val _ = export_rewrites ["weak_mult_lone", "weak_mult_rone"];
 (* Proof: combine weak_mult_lone and weak_mult_rone. *)
 (* val weak_mult_one = save_thm("weak_mult_one", CONJ weak_mult_lone weak_mult_rone); *)
 (* > val weak_mult_one = |- (!r. Ring r ==> !p. weak p ==> ([#1] o p = p)) /\ !r. Ring r ==> !p. weak p ==> (p o [#1] = p) : thm *)
-val weak_mult_one = store_thm(
-  "weak_mult_one",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> ([#1] o p = p) /\ (p o [#1] = p)``,
-  rw[]);
+Theorem weak_mult_one:
+    !r:'a ring. Ring r ==> !p. weak p ==> ([#1] o p = p) /\ (p o [#1] = p)
+Proof
+  rw[]
+QED
 
 (* Note: Only at this point can Monoid (monoid_weak_mult r) be established. *)
 
@@ -3421,10 +3551,11 @@ val weak_mult_one = store_thm(
 
 (* Theorem: lead [h] = h *)
 (* Proof: by definition. *)
-val poly_lead_const = store_thm(
-  "poly_lead_const",
-  ``!h. lead [h] = h``,
-  rw[poly_lead_def]);
+Theorem poly_lead_const:
+    !h. lead [h] = h
+Proof
+  rw[poly_lead_def]
+QED
 
 val _ = export_rewrites ["poly_lead_const"];
 
@@ -3451,20 +3582,22 @@ val _ = export_rewrites ["poly_lead_zero"];
       |1| = [#1]                 by poly one
       lead |1| = lead [#1] = #1  by poly_lead_const
 *)
-val poly_lead_one = store_thm(
-  "poly_lead_one",
-  ``!r:'a ring. Ring r ==> (lead |1| = #1)``,
-  rw [poly_one]);
+Theorem poly_lead_one:
+    !r:'a ring. Ring r ==> (lead |1| = #1)
+Proof
+  rw [poly_one]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["poly_lead_one"];
 
 (* Theorem: p <> |0| ==> lead p = LAST p *)
 (* Proof: by definition. *)
-val poly_lead_alt = store_thm(
-  "poly_lead_alt",
-  ``!p. p <> |0| ==> (lead p = LAST p)``,
-  metis_tac[poly_lead_def, list_CASES, poly_zero]);
+Theorem poly_lead_alt:
+    !p. p <> |0| ==> (lead p = LAST p)
+Proof
+  metis_tac[poly_lead_def, list_CASES, poly_zero]
+QED
 
 val _ = export_rewrites ["poly_lead_alt"];
 
@@ -3475,17 +3608,19 @@ val _ = export_rewrites ["poly_lead_alt"];
     = EL (PRE (LENGTH p))    by LAST_EL, p <> []
     = EL (deg p) p           by poly_deg_def
 *)
-val poly_lead_at_deg_index = store_thm(
-  "poly_lead_at_deg_index",
-  ``!p. p <> |0| ==> (lead p = EL (deg p) p)``,
-  rw[poly_lead_alt, poly_deg_def, LAST_EL]);
+Theorem poly_lead_at_deg_index:
+    !p. p <> |0| ==> (lead p = EL (deg p) p)
+Proof
+  rw[poly_lead_alt, poly_deg_def, LAST_EL]
+QED
 
 (* Theorem: t <> |0| ==> lead (h::t) = lead t *)
 (* Proof: by LAST (x::y::z) = LAST (y::z). *)
-val poly_lead_cons = store_thm(
-  "poly_lead_cons",
-  ``!h t. t <> |0| ==> (lead (h::t) = lead t)``,
-  metis_tac[poly_lead_def, poly_lead_alt, LAST_CONS, list_CASES, poly_zero]);
+Theorem poly_lead_cons:
+    !h t. t <> |0| ==> (lead (h::t) = lead t)
+Proof
+  metis_tac[poly_lead_def, poly_lead_alt, LAST_CONS, list_CASES, poly_zero]
+QED
 
 val _ = export_rewrites ["poly_lead_cons"];
 
@@ -3504,15 +3639,16 @@ val _ = export_rewrites ["poly_lead_cons"];
             = lead p            by poly_lead_cons
             = #0                by induction hypothesis
 *)
-val zero_poly_lead = store_thm(
-  "zero_poly_lead",
-  ``!r:'a ring. !p. zerop p ==> (lead p = #0)``,
+Theorem zero_poly_lead:
+    !r:'a ring. !p. zerop p ==> (lead p = #0)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
   rw_tac std_ss[zero_poly_cons] >>
   Cases_on `p = |0|` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: lead (p >> n) = lead p *)
 (* Proof:
@@ -3526,13 +3662,14 @@ val zero_poly_lead = store_thm(
       = LAST p         by poly_shift_last
       = lead p         by poly_lead_alt, p <> |0|
 *)
-val poly_lead_shift = store_thm(
-  "poly_lead_shift",
-  ``!p n. lead (p >> n) = lead p``,
+Theorem poly_lead_shift:
+    !p n. lead (p >> n) = lead p
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
-  rw[poly_shift_eq_zero, poly_shift_last]);
+  rw[poly_shift_eq_zero, poly_shift_last]
+QED
 
 val _ = export_rewrites ["poly_lead_shift"];
 
@@ -3546,9 +3683,9 @@ val _ = export_rewrites ["poly_lead_shift"];
       lead (h::p) = lead p      by poly_lead_cons, p <> |0|
       hence lead (h::p) IN R    by induction hypothesis
 *)
-val weak_lead_element = store_thm(
-  "weak_lead_element",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> lead p IN R``,
+Theorem weak_lead_element:
+    !r:'a ring. Ring r ==> !p. weak p ==> lead p IN R
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -3556,7 +3693,8 @@ val weak_lead_element = store_thm(
   rw_tac std_ss[weak_cons] >>
   Cases_on `p = |0|` >-
   rw[] >>
-  rw_tac std_ss[poly_lead_cons]);
+  rw_tac std_ss[poly_lead_cons]
+QED
 
 val _ = export_rewrites["weak_lead_element"];
 
@@ -3600,11 +3738,12 @@ val poly_chop_cons = save_thm("poly_chop_cons", poly_chop_def |> CONJUNCT2);
        <= SUC (LENGTH p)        by induction hypothesis
         = LENGTH (h::p)         by LENGTH
 *)
-val poly_chop_length = store_thm(
-  "poly_chop_length",
-  ``!p:'a poly. LENGTH (chop p) <= LENGTH p``,
+Theorem poly_chop_length:
+    !p:'a poly. LENGTH (chop p) <= LENGTH p
+Proof
   Induct >>
-  rw[poly_chop_def]);
+  rw[poly_chop_def]
+QED
 
 (* Theorem: zerop p ==> (chop p = |0|) *)
 (* Proof:
@@ -3614,11 +3753,12 @@ val poly_chop_length = store_thm(
    Step: zerop p ==> (chop p = |0|) ==> !h. zerop (h::p) ==> (chop (h::p) = |0|)
         True by poly_chop_cons, poly_zero.
 *)
-val poly_chop_zero_poly = store_thm(
-  "poly_chop_zero_poly",
-  ``!p. zerop p ==> (chop p = |0|)``,
+Theorem poly_chop_zero_poly:
+    !p. zerop p ==> (chop p = |0|)
+Proof
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: chop |0| = |0| *)
 (* Proof: by poly_chop_of_zero and poly_zero. *)
@@ -3629,12 +3769,13 @@ val _ = export_rewrites ["poly_chop_zero"];
 
 (* Theorem: zerop p <=> chop p = [] *)
 (* Proof: by definition and cases on p. *)
-val zero_poly_chop = store_thm(
-  "zero_poly_chop",
-  ``!p:'a poly. zerop p <=> (chop p = [])``,
+Theorem zero_poly_chop:
+    !p:'a poly. zerop p <=> (chop p = [])
+Proof
   rpt strip_tac >>
   Cases_on `p` >>
-  rw[]);
+  rw[]
+QED
 
 (* for export_rewrites: use equation *)
 (* val _ = export_rewrites ["zero_poly_chop"]; *)
@@ -3648,11 +3789,12 @@ val zero_poly_chop = store_thm(
       true by poly_chop_cons: if zero, zero_poly_chop gives [], so poses no problem;
                               if ~zero, chop operator can pass to tail, true by induction hypothesis.
 *)
-val poly_chop_chop = store_thm(
-  "poly_chop_chop",
-  ``!p:'a poly. chop (chop p) = chop p``,
+Theorem poly_chop_chop:
+    !p:'a poly. chop (chop p) = chop p
+Proof
   Induct >>
-  rw[zero_poly_chop]);
+  rw[zero_poly_chop]
+QED
 
 (* This is a useful equality. *)
 val _ = export_rewrites ["poly_chop_chop"];
@@ -3679,11 +3821,12 @@ val _ = export_rewrites ["poly_chop_chop"];
          and   ~ zerop (h::%p)     by zero_poly_cons
          hence true by weak_cons, since h is known to be in R.
 *)
-val poly_chop_weak = store_thm(
-  "poly_chop_weak",
-  ``!p:'a poly. weak p ==> weak (chop p)``,
+Theorem poly_chop_weak:
+    !p:'a poly. weak p ==> weak (chop p)
+Proof
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: zerop p <=> zerop (chop p) *)
 (* Proof:
@@ -3692,10 +3835,11 @@ val poly_chop_weak = store_thm(
    <=> chop (chop p) = []   by poly_chop_chop
    <=> zerop (chop p)       by zero_poly_chop
 *)
-val zero_poly_eq_zero_poly_chop = store_thm(
-  "zero_poly_eq_zero_poly_chop",
-  ``!p. zerop p <=> zerop (chop p)``,
-  rw[zero_poly_chop]);
+Theorem zero_poly_eq_zero_poly_chop:
+    !p. zerop p <=> zerop (chop p)
+Proof
+  rw[zero_poly_chop]
+QED
 
 (* Theorem: (LENGTH p = LENGTH q) ==> ((chop p = chop q) <=> (p = q)) *)
 (* Proof:
@@ -3729,9 +3873,9 @@ val zero_poly_eq_zero_poly_chop = store_thm(
    Only-if part: p = q ==> chop p = chop q
       True trivially.
 *)
-val poly_chop_eq_chop = store_thm(
-  "poly_chop_eq_chop",
-  ``!r:'a ring. !p q. (LENGTH p = LENGTH q) ==> ((chop p = chop q) <=> (p = q))``,
+Theorem poly_chop_eq_chop:
+    !r:'a ring. !p q. (LENGTH p = LENGTH q) ==> ((chop p = chop q) <=> (p = q))
+Proof
   rw[EQ_IMP_THM] >>
   ntac 2 (pop_assum mp_tac) >>
   qid_spec_tac `q` >>
@@ -3749,7 +3893,8 @@ val poly_chop_eq_chop = store_thm(
     `(h = k) /\ (chop p = chop t)` by metis_tac[CONS_11] >>
     `p = t` by metis_tac[LENGTH, SUC_EQ] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !p. weak p ==> (chop p = p * |1|) *)
 (* Proof:
@@ -3768,9 +3913,9 @@ val poly_chop_eq_chop = store_thm(
    = chop (p o |1|)       by weak_mult_rone
    = p * |1|              by poly_mult_def
 *)
-val poly_chop_weak_alt = store_thm(
-  "poly_chop_weak_alt",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> (chop p = p * |1|)``,
+Theorem poly_chop_weak_alt:
+    !r:'a ring. Ring r ==> !p. weak p ==> (chop p = p * |1|)
+Proof
   rpt strip_tac >>
   Cases_on `#1 = #0` >| [
     `|1| = |0|` by rw[poly_one_eq_poly_zero] >>
@@ -3778,7 +3923,8 @@ val poly_chop_weak_alt = store_thm(
     `chop p = |0|` by rw[poly_chop_zero_poly] >>
     metis_tac[weak_mult_rzero, poly_mult_def, poly_chop_zero],
     metis_tac[weak_mult_rone, poly_mult_def, poly_one]
-  ]);
+  ]
+QED
 
 (* Theorem: chop (p || q) = chop (chop p || q) *)
 (* Proof: almost by poly_chop_chop. Use induction.
@@ -3797,9 +3943,9 @@ val poly_chop_weak_alt = store_thm(
        = chop ((h :: (chop p) || (h'::q))       by poly_chop_chop
        = chop (chop (h::p) || (h'::q))          by weak_add_cons
 *)
-val poly_chop_add = store_thm(
-  "poly_chop_add",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p || q) = chop (chop p || q))``,
+Theorem poly_chop_add:
+    !r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p || q) = chop (chop p || q))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -3809,7 +3955,8 @@ val poly_chop_add = store_thm(
   rw[weak_add_of_rzero, zero_poly_chop] >>
   rw[zero_poly_chop] >-
   metis_tac[ring_add_lzero, weak_add_of_lzero] >>
-  metis_tac[ring_add_lzero, weak_add_of_lzero]);
+  metis_tac[ring_add_lzero, weak_add_of_lzero]
+QED
 
 (* Theorem: chop (p || q) = chop (p || chop q) *)
 (* Proof:
@@ -3818,10 +3965,11 @@ val poly_chop_add = store_thm(
    = chop (chop q || p)   by poly_chop_add
    = chop (p || chop q)   by weak_add_comm, poly_chop_weak
 *)
-val poly_chop_add_comm = store_thm(
-  "poly_chop_add_comm",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p || q) = chop (p || chop q))``,
-  metis_tac[weak_add_comm, poly_chop_add, poly_chop_weak]);
+Theorem poly_chop_add_comm:
+    !r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p || q) = chop (p || chop q))
+Proof
+  metis_tac[weak_add_comm, poly_chop_add, poly_chop_weak]
+QED
 
 (* Theorem: chop (p || q) = chop (chop p || chop q) *)
 (* Proof:
@@ -3829,10 +3977,11 @@ val poly_chop_add_comm = store_thm(
    = chop (chop p || q)       by poly_chop_add
    = chop (chop p || chop q)  by poly_chop_add_comm, poly_chop_weak
 *)
-val poly_chop_add_chop = store_thm(
-  "poly_chop_add_chop",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p || q) = chop (chop p || chop q))``,
-  metis_tac[poly_chop_add, poly_chop_add_comm, poly_chop_weak]);
+Theorem poly_chop_add_chop:
+    !r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p || q) = chop (chop p || chop q))
+Proof
+  metis_tac[poly_chop_add, poly_chop_add_comm, poly_chop_weak]
+QED
 
 (* useful transformations. *)
 val _ = export_rewrites ["poly_chop_add", "poly_chop_add_comm", "poly_chop_add_chop"];
@@ -3862,13 +4011,14 @@ val _ = export_rewrites ["poly_chop_add", "poly_chop_add_comm", "poly_chop_add_c
           = chop (c o (h::p))       by weak_cmult_cons
           = RHS
 *)
-val poly_chop_cmult = store_thm(
-  "poly_chop_cmult",
-  ``!r:'a ring. Ring r ==> !p:'a poly. weak p ==> !c. c IN R ==> (chop (c o p) = chop (c o chop p))``,
+Theorem poly_chop_cmult:
+    !r:'a ring. Ring r ==> !p:'a poly. weak p ==> !c. c IN R ==> (chop (c o p) = chop (c o chop p))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[zero_poly_chop]);
+  rw[zero_poly_chop]
+QED
 
 val _ = export_rewrites ["poly_chop_cmult"];
 
@@ -3884,14 +4034,15 @@ val _ = export_rewrites ["poly_chop_cmult"];
    = neg (h::chop p)      by weak_neg_cons
    = neg (chop (h::p))    by poly_chop_cons
 *)
-val poly_chop_neg = store_thm(
-  "poly_chop_neg",
-  ``!r:'a ring. Ring r ==> !p:'a poly. weak p ==> (chop (neg p) = neg (chop p))``,
+Theorem poly_chop_neg:
+    !r:'a ring. Ring r ==> !p:'a poly. weak p ==> (chop (neg p) = neg (chop p))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw[] >>
-  rw_tac std_ss[GSYM zero_poly_chop, zero_weak_neg, weak_neg_of_zero, weak_neg_cons, poly_chop_cons, weak_cons]);
+  rw_tac std_ss[GSYM zero_poly_chop, zero_weak_neg, weak_neg_of_zero, weak_neg_cons, poly_chop_cons, weak_cons]
+QED
 
 val _ = export_rewrites ["poly_chop_neg"];
 
@@ -3915,9 +4066,9 @@ val _ = export_rewrites ["poly_chop_neg"];
      = #0::(chop p) >> n      by induction hypothesis
      = (chop p) >> SUC n      by poly_shift_suc, chop p <> []
 *)
-val poly_chop_shift = store_thm(
-  "poly_chop_shift",
-  ``!p n. chop (p >> n) = (chop p) >> n``,
+Theorem poly_chop_shift:
+    !p n. chop (p >> n) = (chop p) >> n
+Proof
   rpt strip_tac >>
   Cases_on `zerop p` >-
   metis_tac[zero_poly_chop, zero_poly_shift, poly_shift_of_zero] >>
@@ -3925,7 +4076,8 @@ val poly_chop_shift = store_thm(
   rw[] >>
   `p <> [] /\ chop p <> [] /\ ~zerop (p >> n)`
     by metis_tac[zero_poly_of_zero, zero_poly_chop, zero_poly_shift] >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["poly_chop_shift"];
 
@@ -3955,9 +4107,9 @@ val _ = export_rewrites ["poly_chop_shift"];
           = chop (h o q || chop ((p o q) >> 1))                 by poly_chop_shift
           = chop (h o q || (p o q) >> 1) = LHS                  by poly_chop_add_comm
 *)
-val poly_chop_mult = store_thm(
-  "poly_chop_mult",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p o q) = chop ((chop p) o q))``,
+Theorem poly_chop_mult:
+    !r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p o q) = chop ((chop p) o q))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -3966,7 +4118,8 @@ val poly_chop_mult = store_thm(
   Cases_on `zerop (h::p)` >-
   metis_tac[zero_poly_chop, weak_mult_of_lzero, zero_weak_lmult, poly_chop_of_zero] >>
   `weak (h o q) /\ weak (p o q) /\ weak ((p o q) >> 1) /\ weak (((chop p) o q) >> 1)` by rw[poly_chop_weak] >>
-  metis_tac[weak_mult_cons, poly_chop_add_comm, poly_chop_shift, poly_chop_cons]);
+  metis_tac[weak_mult_cons, poly_chop_add_comm, poly_chop_shift, poly_chop_cons]
+QED
 
 (* Theorem: chop (p o q) = chop (p o (chop q)) *)
 (* Proof:
@@ -3975,10 +4128,11 @@ val poly_chop_mult = store_thm(
    = chop ((chop q) o p)   by poly_chop_mult
    = chop (p o (chop q))   by weak_mult_comm
 *)
-val poly_chop_mult_comm = store_thm(
-  "poly_chop_mult_comm",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p o q) = chop (p o (chop q)))``,
-  metis_tac[weak_mult_comm, poly_chop_mult, poly_chop_weak]);
+Theorem poly_chop_mult_comm:
+    !r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p o q) = chop (p o (chop q)))
+Proof
+  metis_tac[weak_mult_comm, poly_chop_mult, poly_chop_weak]
+QED
 
 (* Theorem: chop (p o q) = chop ((chop p) o (chop q)) *)
 (* Proof:
@@ -3986,10 +4140,11 @@ val poly_chop_mult_comm = store_thm(
    = chop ((chop p) o q)          by poly_chop_mult
    = chop ((chop p) o (chop q))   by poly_chop_mult_comm
 *)
-val poly_chop_mult_chop = store_thm(
-  "poly_chop_mult_chop",
-  ``!r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p o q) = chop ((chop p) o (chop q)))``,
-  metis_tac[poly_chop_mult, poly_chop_mult_comm, poly_chop_weak]);
+Theorem poly_chop_mult_chop:
+    !r:'a ring. Ring r ==> !p q. weak p /\ weak q ==> (chop (p o q) = chop ((chop p) o (chop q)))
+Proof
+  metis_tac[poly_chop_mult, poly_chop_mult_comm, poly_chop_weak]
+QED
 
 val _ = export_rewrites ["poly_chop_mult", "poly_chop_mult_comm", "poly_chop_mult_chop"];
 
@@ -3999,10 +4154,11 @@ val _ = export_rewrites ["poly_chop_mult", "poly_chop_mult_comm", "poly_chop_mul
 
 (* Theorem: chop [#0] = |0| *)
 (* Proof: by defintion and zero_poly_element_zero, poly_zero. *)
-val poly_chop_const_zero = store_thm(
-  "poly_chop_const_zero",
-  ``chop [#0] = |0|``,
-  rw[]);
+Theorem poly_chop_const_zero:
+    chop [#0] = |0|
+Proof
+  rw[]
+QED
 
 (* Theorem: Ring r /\ h IN R ==> chop [h] = |0| <=> h = #0 *)
 (* Proof:
@@ -4012,17 +4168,19 @@ val poly_chop_const_zero = store_thm(
    Only-if part:
              chop [#0] = |0|     by poly_chop_const_zero
 *)
-val poly_chop_const_eq_zero = store_thm(
-  "poly_chop_const_eq_zero",
-  ``!(r:'a ring) h. Ring r /\ h IN R ==> ((chop [h] = |0|) <=> (h = #0))``,
-  rw[]);
+Theorem poly_chop_const_eq_zero:
+    !(r:'a ring) h. Ring r /\ h IN R ==> ((chop [h] = |0|) <=> (h = #0))
+Proof
+  rw[]
+QED
 
 (* Theorem: chop [h] = [h]  if h <> #0 *)
 (* Proof: by defintion and zero_poly_cons. *)
-val poly_chop_const_nonzero = store_thm(
-  "poly_chop_const_nonzero",
-  ``!r:'a ring. !h. h IN R /\ h <> #0 ==> (chop [h] = [h])``,
-  rw[zero_poly_cons]);
+Theorem poly_chop_const_nonzero:
+    !r:'a ring. !h. h IN R /\ h <> #0 ==> (chop [h] = [h])
+Proof
+  rw[zero_poly_cons]
+QED
 
 (* This theorem is not used later, but it is the most significant property of chop, the normalizing operator. *)
 
@@ -4048,14 +4206,15 @@ val poly_chop_const_nonzero = store_thm(
                         = LAST (k::t)          by LAST_CONS
                         = LAST (chop p) <> #0  by induction hypothesis
 *)
-val poly_chop_of_last_nonzero = store_thm(
-  "poly_chop_of_last_nonzero",
-  ``!p:'a poly. chop p <> [] ==> LAST (chop p) <> #0``,
+Theorem poly_chop_of_last_nonzero:
+    !p:'a poly. chop p <> [] ==> LAST (chop p) <> #0
+Proof
   Induct >-
   rw[] >>
   rw[zero_poly_chop] >>
   Cases_on `chop p` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: !p. chop p <> |0| ==> LAST (chop p) <> #0  *)
 (* Proof: by poly_chop_of_last_nonzero and poly_zero. *)
@@ -4090,9 +4249,9 @@ val poly_chop_last_nonzero = save_thm("poly_chop_last_nonzero", poly_chop_of_las
             = h :: chop p                  by induction hypothesis
             = chop (h::p)                  by ~zerop (h::p)
 *)
-val poly_chop_alt = store_thm(
-  "poly_chop_alt",
-  ``!r:'a ring. !p. chop (SNOC #0 p) = chop p``,
+Theorem poly_chop_alt:
+    !r:'a ring. !p. chop (SNOC #0 p) = chop p
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -4106,7 +4265,8 @@ val poly_chop_alt = store_thm(
   (fs[zero_poly_cons] >>
     rw[GSYM zero_poly_snoc]) >>
     rw_tac std_ss[poly_chop_cons]
-  ]);
+  ]
+QED
 
 (* Theorem: (lead (chop p) = #0) <=> (chop p = |0|) *)
 (* Proof:
@@ -4118,15 +4278,16 @@ val poly_chop_alt = store_thm(
    Only-if part: chop p = |0| ==> lead (chop p) = #0
       True since lead |0| = #0        by poly_lead_zero
 *)
-val poly_chop_lead_zero = store_thm(
-  "poly_chop_lead_zero",
-  ``!r:'a ring. !p. (lead (chop p) = #0) <=> (chop p = |0|)``,
+Theorem poly_chop_lead_zero:
+    !r:'a ring. !p. (lead (chop p) = #0) <=> (chop p = |0|)
+Proof
   rw_tac std_ss[EQ_IMP_THM] >| [
     spose_not_then strip_assume_tac >>
     `LAST (chop p) <> #0` by rw[poly_chop_last_nonzero] >>
     fs[poly_lead_alt],
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: (p <> |0| /\ (chop p = p)) <=> lead p <> #0 *)
 (* Proof:
@@ -4166,9 +4327,9 @@ val poly_chop_lead_zero = store_thm(
                 = h :: chop p        by poly_chop_cons
                 = h :: p             by induction hypothesis
 *)
-val poly_chop_nonzero_eq = store_thm(
-  "poly_chop_nonzero_eq",
-  ``!r:'a ring. !p. (p <> |0| /\ (chop p = p)) <=> lead p <> #0``,
+Theorem poly_chop_nonzero_eq:
+    !r:'a ring. !p. (p <> |0| /\ (chop p = p)) <=> lead p <> #0
+Proof
   strip_tac >>
   Induct >-
   rw[] >>
@@ -4185,7 +4346,8 @@ val poly_chop_nonzero_eq = store_thm(
     Cases_on `p = |0|` >-
     fs[poly_lead_const] >>
     metis_tac[poly_chop_cons, poly_lead_cons]
-  ]);
+  ]
+QED
 
 (* Theorem: (chop p = p) <=> ((p = |0|) \/ lead p <> #0) *)
 (* Proof:
@@ -4226,9 +4388,9 @@ QED
         or LENGTH (chop q) <> LENGTH p
       This contradicts chop q = p.
 *)
-val poly_chop_front = store_thm(
-  "poly_chop_front",
-  ``!r:'a ring. !p. p <> |0| ==> ((lead p = #0) <=> (chop (FRONT p) = chop p))``,
+Theorem poly_chop_front:
+    !r:'a ring. !p. p <> |0| ==> ((lead p = #0) <=> (chop (FRONT p) = chop p))
+Proof
   rpt strip_tac >>
   `p <> []` by metis_tac[poly_zero] >>
   rw_tac std_ss[EQ_IMP_THM] >| [
@@ -4243,7 +4405,8 @@ val poly_chop_front = store_thm(
     `LENGTH (chop q) <= LENGTH q` by rw[poly_chop_length] >>
     `LENGTH (chop q) <> LENGTH p` by decide_tac >>
     metis_tac[]
-  ]);
+  ]
+QED
 
 (* Theorem: chop (p ++ GENLIST (K #0) n) = chop p *)
 (* Proof:
@@ -4265,14 +4428,15 @@ val poly_chop_front = store_thm(
       = chop ((p ++ GENLIST (K #0) n))          by poly_chop_alt
       = chop p                                  by induction hypothesis
 *)
-val poly_chop_add_genlist_zero = store_thm(
-  "poly_chop_add_genlist_zero",
-  ``!r:'a ring. !p n. chop (p ++ GENLIST (K #0) n) = chop p``,
+Theorem poly_chop_add_genlist_zero:
+    !r:'a ring. !p n. chop (p ++ GENLIST (K #0) n) = chop p
+Proof
   ntac 2 strip_tac >>
   Induct >-
   rw[] >>
   `p ++ GENLIST (K #0) (SUC n) = SNOC #0 (p ++ GENLIST (K #0) n)` by rw[GENLIST] >>
-  metis_tac[poly_chop_alt]);
+  metis_tac[poly_chop_alt]
+QED
 
 (* Theorem: chop (PAD_RIGHT #0 n p) = chop p *)
 (* Proof:
@@ -4280,10 +4444,11 @@ val poly_chop_add_genlist_zero = store_thm(
    = chop (p ++ GENLIST (K #0) (n - LENGTH p))   by PAD_RIGHT
    = chop p                                      by poly_chop_add_genlist_zero
 *)
-val poly_chop_pad_right = store_thm(
-  "poly_chop_pad_right",
-  ``!r:'a ring. !p n. chop (PAD_RIGHT #0 n p) = chop p``,
-  rw[PAD_RIGHT, poly_chop_add_genlist_zero]);
+Theorem poly_chop_pad_right:
+    !r:'a ring. !p n. chop (PAD_RIGHT #0 n p) = chop p
+Proof
+  rw[PAD_RIGHT, poly_chop_add_genlist_zero]
+QED
 
 Theorem HD_chop:
   !p. chop p <> [] ==> HD (chop p) = HD p
@@ -4318,19 +4483,21 @@ QED
 
 (* Theorem: !p n. p ** SUC n = p * p ** n *)
 (* Proof: monoid_exp_SUC *)
-val poly_exp_SUC = store_thm(
-  "poly_exp_SUC",
-  ``!p n. p ** SUC n = p * p ** n``,
-  rw[]);
+Theorem poly_exp_SUC:
+    !p n. p ** SUC n = p * p ** n
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["poly_exp_SUC"];
 
 (* Theorem: !p. p ** 0 = |1| *)
 (* Proof: by monoid_exp_0 *)
-val weak_exp_0 = store_thm(
-  "weak_exp_0",
-  ``!p. p ** 0 = |1|``,
-  rw[]);
+Theorem weak_exp_0:
+    !p. p ** 0 = |1|
+Proof
+  rw[]
+QED
 
 (* Theorem: p ** 1 = p * |1| *)
 (* Proof:
@@ -4339,10 +4506,11 @@ val weak_exp_0 = store_thm(
    = p * p ** 0      by poly_exp_SUC
    = p * |1|         by weak_exp_0
 *)
-val weak_exp_1 = store_thm(
-  "weak_exp_1",
-  ``!r:'a ring. !p. p ** 1 = p * |1|``,
-  metis_tac[poly_exp_SUC, weak_exp_0, ONE]);
+Theorem weak_exp_1:
+    !r:'a ring. !p. p ** 1 = p * |1|
+Proof
+  metis_tac[poly_exp_SUC, weak_exp_0, ONE]
+QED
 
 (* Theorem: Ring r ==> !p. weak p ==> (p ** 2 = p * p) *)
 (* Proof:
@@ -4355,9 +4523,9 @@ val weak_exp_1 = store_thm(
    = chop (p o p)        by poly_chop_mult_comm
    = p * p               by poly_mult_def
 *)
-val weak_exp_2 = store_thm(
-  "weak_exp_2",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> (p ** 2 = p * p)``,
+Theorem weak_exp_2:
+    !r:'a ring. Ring r ==> !p. weak p ==> (p ** 2 = p * p)
+Proof
   rpt strip_tac >>
   `p ** 2 = p * p ** 1` by metis_tac[poly_exp_SUC, TWO] >>
   `_ = p * (p * |1|)` by rw[weak_exp_1] >>
@@ -4365,7 +4533,8 @@ val weak_exp_2 = store_thm(
   `_ = chop (p o (chop p))` by rw_tac std_ss[poly_mult_def] >>
   `_ = chop (p o p)` by rw_tac std_ss[poly_chop_mult_comm] >>
   `_ = p * p` by rw_tac std_ss[poly_mult_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: weak p ==> weak (p ** n) *)
 (* Proof:
@@ -4382,13 +4551,14 @@ val weak_exp_2 = store_thm(
    hence weak (p o p ** n)      by weak_mult_weak
    and weak (chop (p o p ** n)) by poly_chop_weak
 *)
-val weak_exp_weak = store_thm(
-  "weak_exp_weak",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> !n. weak (p ** n)``,
+Theorem weak_exp_weak:
+    !r:'a ring. Ring r ==> !p. weak p ==> !n. weak (p ** n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw_tac std_ss[weak_exp_0, weak_one_poly] >>
-  rw_tac std_ss[poly_exp_SUC, poly_mult_def, weak_mult_weak, poly_chop_weak]);
+  rw_tac std_ss[poly_exp_SUC, poly_mult_def, weak_mult_weak, poly_chop_weak]
+QED
 
 val _ = export_rewrites ["weak_exp_weak"];
 
@@ -4398,24 +4568,27 @@ val _ = export_rewrites ["weak_exp_weak"];
 
 (* Theorem: 0 <= deg p *)
 (* Proof: by being a num. *)
-val poly_deg_pos_or_zero = store_thm(
-  "poly_deg_pos_or_zero",
-  ``!p:'a poly. 0 <= deg p``,
-  rw_tac std_ss[]);
+Theorem poly_deg_pos_or_zero:
+    !p:'a poly. 0 <= deg p
+Proof
+  rw_tac std_ss[]
+QED
 
 (* Theorem: ~(deg p < 0) *)
 (* Proof: by poly_deg_pos_or_zero *)
-val poly_deg_not_less = store_thm(
-  "poly_deg_not_less",
-  ``!p:'a poly. ~(deg p < 0)``,
-  rw_tac std_ss[]);
+Theorem poly_deg_not_less:
+    !p:'a poly. ~(deg p < 0)
+Proof
+  rw_tac std_ss[]
+QED
 
 (* Theorem: deg [] = 0 *)
 (* Proof: by definition. *)
-val poly_deg_of_zero = store_thm(
-  "poly_deg_of_zero",
-  ``deg [] = 0``,
-  rw_tac std_ss[poly_deg_def]);
+Theorem poly_deg_of_zero:
+    deg [] = 0
+Proof
+  rw_tac std_ss[poly_deg_def]
+QED
 
 val _ = export_rewrites ["poly_deg_of_zero"];
 
@@ -4432,26 +4605,29 @@ val _ = export_rewrites ["poly_deg_zero"];
    Then deg p = deg |0| = 0      by poly_deg_zero
    which contradicts 0 < deg p
 *)
-val poly_deg_pos_nonzero = store_thm(
-  "poly_deg_pos_nonzero",
-  ``!p. 0 < deg p ==> p <> |0|``,
-  metis_tac[poly_deg_zero, NOT_ZERO_LT_ZERO]);
+Theorem poly_deg_pos_nonzero:
+    !p. 0 < deg p ==> p <> |0|
+Proof
+  metis_tac[poly_deg_zero, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: deg [h] = 0  *)
 (* Proof: by definition and LENGTH. *)
-val poly_deg_const = store_thm(
-  "poly_deg_const",
-  ``!h. deg [h] = 0``,
-  rw[poly_deg_def]);
+Theorem poly_deg_const:
+    !h. deg [h] = 0
+Proof
+  rw[poly_deg_def]
+QED
 
 val _ = export_rewrites ["poly_deg_const"];
 
 (* Theorem: deg [#1] = 0 *)
 (* Proof: by poly_deg_const. *)
-val poly_deg_of_one = store_thm(
-  "poly_deg_of_one",
-  ``!r:'a ring. deg [#1] = 0``,
-  rw[]);
+Theorem poly_deg_of_one:
+    !r:'a ring. deg [#1] = 0
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["poly_deg_of_one"];
 
@@ -4467,20 +4643,22 @@ val _ = export_rewrites ["poly_deg_of_one"];
               = PRE (SUC 0)           by LENGTH
               = 0                     by prim_recTheory.PRE
 *)
-val poly_deg_one = store_thm(
-  "poly_deg_one",
-  ``!r:'a ring. deg |1| = 0``,
-  rw_tac std_ss[poly_one, poly_deg_def, LENGTH]);
+Theorem poly_deg_one:
+    !r:'a ring. deg |1| = 0
+Proof
+  rw_tac std_ss[poly_one, poly_deg_def, LENGTH]
+QED
 
 (* export simple result *)
 val _ = export_rewrites["poly_deg_one"];
 
 (* Theorem: If p <> |0|, deg p = PRE (LENGTH p) *)
 (* Proof: by definition. *)
-val poly_deg_nonzero = store_thm(
-  "poly_deg_nonzero",
-  ``!p:'a poly. p <> |0| ==> (deg p = PRE (LENGTH p))``,
-  rw_tac std_ss[poly_deg_def, poly_zero]);
+Theorem poly_deg_nonzero:
+    !p:'a poly. p <> |0| ==> (deg p = PRE (LENGTH p))
+Proof
+  rw_tac std_ss[poly_deg_def, poly_zero]
+QED
 
 (* Theorem: deg (h::t) = LENGTH t *)
 (* Proof:
@@ -4490,10 +4668,11 @@ val poly_deg_nonzero = store_thm(
    = PRE (SUC (LENGTH t))   by LENGTH
    = LENGTH t               by PRE_SUC, or decide_tac
 *)
-val poly_deg_cons_length = store_thm(
-  "poly_deg_cons_length",
-  ``!h t. deg (h::t) = LENGTH t``,
-  rw[poly_deg_def]);
+Theorem poly_deg_cons_length:
+    !h t. deg (h::t) = LENGTH t
+Proof
+  rw[poly_deg_def]
+QED
 
 val _ = export_rewrites ["poly_deg_cons_length"];
 
@@ -4506,12 +4685,13 @@ val _ = export_rewrites ["poly_deg_cons_length"];
    = SUC (PRE (LENGTH p))    by PRE_SUC, 0 < LENGTH p
    = SUC (deg p)             by poly_deg_def
 *)
-val poly_deg_cons = store_thm(
-  "poly_deg_cons",
-  ``!h (p:'a poly). p <> |0| ==> (deg (h::p) = SUC (deg p))``,
+Theorem poly_deg_cons:
+    !h (p:'a poly). p <> |0| ==> (deg (h::p) = SUC (deg p))
+Proof
   rw_tac std_ss[poly_deg_def, poly_zero, LENGTH] >>
   `0 < LENGTH p` by metis_tac[LENGTH_NIL, NOT_ZERO_LT_ZERO] >>
-  decide_tac);
+  decide_tac
+QED
 
 val _ = export_rewrites ["poly_deg_cons"];
 
@@ -4522,10 +4702,11 @@ val _ = export_rewrites ["poly_deg_cons"];
    = EL (PRE (LENGTH p)) p)   by LAST_EL, p <> []
    = EL (deg p) p             by poly_deg_def, p <> []
 *)
-val poly_last_at_deg_index = store_thm(
-  "poly_last_at_deg_index",
-  ``!p:'a poly. p <> |0| ==> (LAST p = EL (deg p) p)``,
-  rw_tac std_ss[poly_deg_def, LAST_EL, poly_zero]);
+Theorem poly_last_at_deg_index:
+    !p:'a poly. p <> |0| ==> (LAST p = EL (deg p) p)
+Proof
+  rw_tac std_ss[poly_deg_def, LAST_EL, poly_zero]
+QED
 
 (* Theorem: If p <> |0|, (deg p < k <=> ~(k < LENGTH p) *)
 (* Proof:
@@ -4536,13 +4717,14 @@ val poly_last_at_deg_index = store_thm(
    <=>      LENGTH p <= k            by decide_tac
    <=>      ~(k < LENGTH p)          by decide_tac, or LESS_LESS_SUC
 *)
-val poly_deg_less_length = store_thm(
-  "poly_deg_less_length",
-  ``!p:'a poly. p <> |0| ==> !k. deg p < k <=> ~(k < LENGTH p)``,
+Theorem poly_deg_less_length:
+    !p:'a poly. p <> |0| ==> !k. deg p < k <=> ~(k < LENGTH p)
+Proof
   rw_tac std_ss[poly_zero] >>
   `0 < LENGTH p` by metis_tac[LENGTH_NIL, NOT_ZERO_LT_ZERO] >>
   `(PRE (SUC k) = k) /\ (LENGTH p < SUC k <=> LENGTH p <= k) /\ (LENGTH p <= k <=> ~(k < LENGTH p))` by decide_tac >>
-  metis_tac[poly_deg_def, INV_PRE_LESS, LESS_LESS_SUC]);
+  metis_tac[poly_deg_def, INV_PRE_LESS, LESS_LESS_SUC]
+QED
 
 (* Theorem: weak p ==> deg (chop p) <= deg p *)
 (* Proof: by induction on p.
@@ -4562,9 +4744,9 @@ val poly_deg_less_length = store_thm(
       = deg (h::p)          by poly_deg_cons, if p <> []
 
 *)
-val poly_deg_chop = store_thm(
-  "poly_deg_chop",
-  ``!p. weak p ==> deg (chop p) <= deg p``,
+Theorem poly_deg_chop:
+    !p. weak p ==> deg (chop p) <= deg p
+Proof
   Induct >-
   rw[] >>
   rpt strip_tac >>
@@ -4576,7 +4758,8 @@ val poly_deg_chop = store_thm(
   `p <> [] /\ chop p <> []` by metis_tac[] >>
   `deg (chop (h::p)) = SUC (deg (chop p))` by rw_tac std_ss[poly_chop_cons, poly_deg_cons, poly_zero] >>
   `deg (h::p) = SUC (deg p)` by rw_tac std_ss[poly_deg_cons, poly_zero] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: weak p /\ deg p = 0 ==> p = |0| \/ ?h. p = [h] *)
 (* Proof: by p = h::t and conclude t = [].
@@ -4588,11 +4771,12 @@ val poly_deg_chop = store_thm(
          0 = deg (h::t) = SUC (deg t)  by poly_deg_cons
          a contradiction with SUC_NOT.
 *)
-val poly_deg_weak_eq_zero = store_thm(
-  "poly_deg_weak_eq_zero",
-  ``!p. weak p /\ (deg p = 0) ==> (p = |0|) \/ (?h. h IN R /\ (p = [h]))``,
+Theorem poly_deg_weak_eq_zero:
+    !p. weak p /\ (deg p = 0) ==> (p = |0|) \/ (?h. h IN R /\ (p = [h]))
+Proof
   `!n. PRE (SUC n) = n` by decide_tac >>
-  metis_tac[poly_deg_def, weak_cons, LENGTH, LENGTH_NIL, list_CASES, poly_zero]);
+  metis_tac[poly_deg_def, weak_cons, LENGTH, LENGTH_NIL, list_CASES, poly_zero]
+QED
 
 (* Theorem: deg (neg p) = deg p *)
 (* Proof: due to lists are of the same length.
@@ -4620,12 +4804,13 @@ QED
    = PRE (LENGTH p)        by weak_cmult_map, LENGTH_MAP
    = deg p                 by poly_deg_def, p <> []
 *)
-val poly_deg_weak_cmult = store_thm(
-  "poly_deg_weak_cmult",
-  ``!r:'a ring c:'a p. deg (c o p) = deg p``,
+Theorem poly_deg_weak_cmult:
+    !r:'a ring c:'a p. deg (c o p) = deg p
+Proof
   rpt strip_tac >>
   Cases_on `p = []` >>
-  rw[weak_cmult_eq_of_zero, poly_deg_def, weak_cmult_map]);
+  rw[weak_cmult_eq_of_zero, poly_deg_def, weak_cmult_map]
+QED
 
 (* Theorem: p <> |0| ==> deg (p >> 1) = SUC (deg p) *)
 (* Proof:
@@ -4633,10 +4818,11 @@ val poly_deg_weak_cmult = store_thm(
    = deg (#0::p)           by poly_shift_1, as p <> []
    = SUC (deg p)           by poly_deg_cons, as p <> []
 *)
-val poly_deg_shift_1 = store_thm(
-  "poly_deg_shift_1",
-  ``!r:'a ring p. p <> |0| ==> (deg (p >> 1) = SUC (deg p))``,
-  rw_tac std_ss[poly_shift_1, poly_deg_cons]);
+Theorem poly_deg_shift_1:
+    !r:'a ring p. p <> |0| ==> (deg (p >> 1) = SUC (deg p))
+Proof
+  rw_tac std_ss[poly_shift_1, poly_deg_cons]
+QED
 
 (* Theorem: p <> |0| ==> deg (p >> n) = deg p + n *)
 (* Proof: by induction on n.
@@ -4650,28 +4836,31 @@ val poly_deg_shift_1 = store_thm(
     = SUC (deg p + n)    by induction hypothesis
     = deg p + SUC n      by ADD_SUC
 *)
-val poly_deg_shift = store_thm(
-  "poly_deg_shift",
-  ``!r:'a ring p. p <> |0| ==> !n. deg (p >> n) = deg p + n``,
+Theorem poly_deg_shift:
+    !r:'a ring p. p <> |0| ==> !n. deg (p >> n) = deg p + n
+Proof
   rpt strip_tac >>
   Induct_on `n` >>
-  rw[poly_shift_eq_zero, ADD_SUC]);
+  rw[poly_shift_eq_zero, ADD_SUC]
+QED
 
 (* Theorem: 0 < deg q /\ deg q <= deq p ==> deg (q >> (deg p - deg q)) = deg p *)
 (* Proof:
    By poly_deg_shift, since each q >> 1 increases (deg q) by 1.
 *)
-val poly_deg_shift_equal = store_thm(
-  "poly_deg_shift_equal",
-  ``!r:'a ring p q. 0 < deg q /\ deg q <= deg p ==> (deg (q >> (deg p - deg q)) = deg p)``,
-  metis_tac[poly_deg_shift, poly_deg_zero, ADD_COMM, SUB_ADD, NOT_ZERO_LT_ZERO]);
+Theorem poly_deg_shift_equal:
+    !r:'a ring p q. 0 < deg q /\ deg q <= deg p ==> (deg (q >> (deg p - deg q)) = deg p)
+Proof
+  metis_tac[poly_deg_shift, poly_deg_zero, ADD_COMM, SUB_ADD, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: p = q ==> deg p = deg q *)
 (* Proof: by poly_deg_def. *)
-val poly_eq_deg_eq = store_thm(
-  "poly_eq_deg_eq",
-  ``!r:'a ring p q. (p = q) ==> (deg p = deg q)``,
-  rw_tac std_ss[]);
+Theorem poly_eq_deg_eq:
+    !r:'a ring p q. (p = q) ==> (deg p = deg q)
+Proof
+  rw_tac std_ss[]
+QED
 
 (* Theorem: weak p /\ (deg p = 0) ==> (deg (chop p) = 0) *)
 (* Proof:
@@ -4690,9 +4879,9 @@ val poly_eq_deg_eq = store_thm(
          Then chop [h] = [h]        by poly_chop_def
           and deg [h] = 0           by poly_deg_const
 *)
-val weak_deg_chop_eq_0 = store_thm(
-  "weak_deg_chop_eq_0",
-  ``!r:'a ring. !p. weak p /\ (deg p = 0) ==> (deg (chop p) = 0)``,
+Theorem weak_deg_chop_eq_0:
+    !r:'a ring. !p. weak p /\ (deg p = 0) ==> (deg (chop p) = 0)
+Proof
   rpt strip_tac >>
   Cases_on `p = []` >-
   rw[] >>
@@ -4702,7 +4891,8 @@ val weak_deg_chop_eq_0 = store_thm(
   `?h. p = [h]` by rw[GSYM LENGTH_EQ_1] >>
   `h IN R` by metis_tac[weak_cons] >>
   Cases_on `h = #0` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 0 < deg p ==> (deg p = SUC (deg (FRONT p))) *)
 (* Proof:
@@ -4718,9 +4908,9 @@ val weak_deg_chop_eq_0 = store_thm(
       = SUC (PRE (deg p))       by SUC_PRE, 0 < deg p
       = SUC (deg (FRONT p))     by above
 *)
-val weak_front_deg = store_thm(
-  "weak_front_deg",
-  ``!r:'a ring. !p. 0 < deg p ==> (deg p = SUC (deg (FRONT p)))``,
+Theorem weak_front_deg:
+    !r:'a ring. !p. 0 < deg p ==> (deg p = SUC (deg (FRONT p)))
+Proof
   rpt strip_tac >>
   `p <> []` by metis_tac[poly_deg_of_zero, NOT_ZERO_LT_ZERO] >>
   `deg p = PRE (LENGTH p)` by rw[poly_deg_def] >>
@@ -4728,7 +4918,8 @@ val weak_front_deg = store_thm(
   qabbrev_tac `q = FRONT p` >>
   `q <> []` by metis_tac[LENGTH_NIL, NOT_ZERO_LT_ZERO] >>
   `deg q = PRE (LENGTH q)` by rw[poly_deg_def] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Coefficient.                                                   *)
@@ -4794,19 +4985,21 @@ val poly_coeff_cons = save_thm("poly_coeff_cons", poly_coeff_def |> CONJUNCT2);
 
 (* Theorem: (h::t) ' 0  = h *)
 (* Proof: by definition. *)
-val poly_coeff_0_cons = store_thm(
-  "poly_coeff_0_cons",
-  ``!h t. (h::t) ' 0 = h``,
-  rw[]);
+Theorem poly_coeff_0_cons:
+    !h t. (h::t) ' 0 = h
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["poly_coeff_0_cons"];
 
 (* Theorem: if p <> |0|, !n. p ' n = if deg p < n then #0 else EL n p *)
 (* Proof: by poly_coeff_cons. *)
-val poly_coeff_nonzero = store_thm(
-  "poly_coeff_nonzero",
-  ``!p:'a poly. p <> |0| ==> !n. p ' n = if deg p < n then #0 else EL n p``,
-  metis_tac[poly_coeff_cons, list_CASES, poly_zero]);
+Theorem poly_coeff_nonzero:
+    !p:'a poly. p <> |0| ==> !n. p ' n = if deg p < n then #0 else EL n p
+Proof
+  metis_tac[poly_coeff_cons, list_CASES, poly_zero]
+QED
 
 (* Theorem: p <> |0| ==> !n. p ' n = if n < LENGTH p then EL n p else #0 *)
 (* Proof:
@@ -4818,9 +5011,9 @@ val poly_coeff_nonzero = store_thm(
    If ~(n < LENGTH p),
       Then (deg p < n), so p ' n = #0        by poly_coeff_nonzero
 *)
-val poly_coeff_nonzero_alt = store_thm(
-  "poly_coeff_nonzero_alt",
-  ``!p:'a poly. p <> |0| ==> !n. p ' n = if n < LENGTH p then EL n p else #0``,
+Theorem poly_coeff_nonzero_alt:
+    !p:'a poly. p <> |0| ==> !n. p ' n = if n < LENGTH p then EL n p else #0
+Proof
   rpt strip_tac >>
   `deg p = PRE (LENGTH p)` by rw[poly_deg_nonzero] >>
   `LENGTH p <> 0` by metis_tac[poly_zero, LENGTH_NIL] >>
@@ -4831,14 +5024,16 @@ val poly_coeff_nonzero_alt = store_thm(
     rw[poly_coeff_nonzero],
     `deg p < n` by decide_tac >>
     rw[poly_coeff_nonzero]
-  ]);
+  ]
+QED
 
 (* Theorem: If p <> |0| and k < LENGTH p, then p ' k = EL k p *)
 (* Proof: by poly_deg_less_length, poly_coeff_nonzero. *)
-val poly_coeff_as_element = store_thm(
-  "poly_coeff_as_element",
-  ``!r:'a ring. !p. p <> |0| ==> !k. k < LENGTH p ==> (p ' k = EL k p)``,
-  rw_tac std_ss[poly_deg_less_length, poly_coeff_nonzero]);
+Theorem poly_coeff_as_element:
+    !r:'a ring. !p. p <> |0| ==> !k. k < LENGTH p ==> (p ' k = EL k p)
+Proof
+  rw_tac std_ss[poly_deg_less_length, poly_coeff_nonzero]
+QED
 
 (* Theorem: !k. (h::t) ' (SUC k) = t ' k *)
 (* Proof:
@@ -4862,9 +5057,9 @@ val poly_coeff_as_element = store_thm(
    hence ~(deg t < k),
    or t ' k = EL k t                 by poly_coeff_cons
 *)
-val poly_coeff_SUC = store_thm(
-  "poly_coeff_SUC",
-  ``!h t k. (h::t) ' (SUC k) = t ' k``,
+Theorem poly_coeff_SUC:
+    !h t k. (h::t) ' (SUC k) = t ' k
+Proof
   rw[] >| [
     Cases_on `t` >-
     rw[] >>
@@ -4876,7 +5071,8 @@ val poly_coeff_SUC = store_thm(
     rw[] >>
     `LENGTH (h::t') = SUC (LENGTH t')` by rw[] >>
     `~(LENGTH t' < k)` by decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: p ' (deg p) = lead p *)
 (* Proof:
@@ -4897,13 +5093,14 @@ val poly_coeff_SUC = store_thm(
        = lead (h::t)                       by poly_lead_def
        = lead p = RHS
 *)
-val poly_coeff_lead = store_thm(
-  "poly_coeff_lead",
-  ``!p:'a poly. p ' (deg p) = lead p``,
+Theorem poly_coeff_lead:
+    !p:'a poly. p ' (deg p) = lead p
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
-  rw_tac std_ss[poly_lead_def, poly_coeff_nonzero, poly_lead_at_deg_index]);
+  rw_tac std_ss[poly_lead_def, poly_coeff_nonzero, poly_lead_at_deg_index]
+QED
 
 (* Theorem: zerop p <=> !k. p ' k = #0 *)
 (* Proof:
@@ -4928,9 +5125,9 @@ val poly_coeff_lead = store_thm(
      Since n < LENGTH (h::t) means ~(deg (h::t) < n),
          EL n (h::t) = #0    by poly_coeff_cons
 *)
-val zero_poly_coeff_all_zero = store_thm(
-  "zero_poly_coeff_all_zero",
-  ``!p:'a poly. zerop p <=> !k. p ' k = #0``,
+Theorem zero_poly_coeff_all_zero:
+    !p:'a poly. zerop p <=> !k. p ' k = #0
+Proof
   Cases_on `p` >-
   rw[] >>
   `EVERY (\c. c = #0) (h::t) <=> !k. (h::t) ' k = #0` suffices_by metis_tac [zero_poly_every_zero] >>
@@ -4945,7 +5142,8 @@ val zero_poly_coeff_all_zero = store_thm(
     rw_tac std_ss[poly_coeff_cons, EVERY_EL] >>
     `~(LENGTH t < n)` by decide_tac >>
     metis_tac []
-  ]);
+  ]
+QED
 
 (* Theorem: weak p ==> !k. (chop p) ' k = p ' k *)
 (* Proof: by induction on p.
@@ -4965,16 +5163,17 @@ val zero_poly_coeff_all_zero = store_thm(
      = p ' n                             by induction hypothesis
      = (h::p) ' SUC n                    by poly_coeff_SUC
 *)
-val poly_coeff_chop = store_thm(
-  "poly_coeff_chop",
-  ``!p:'a poly. weak p ==> !k. (chop p) ' k = p ' k``,
+Theorem poly_coeff_chop:
+    !p:'a poly. weak p ==> !k. (chop p) ' k = p ' k
+Proof
   Induct >-
   rw[] >>
   rw_tac std_ss[weak_cons, poly_chop_cons] >-
   metis_tac [zero_poly_coeff_all_zero, zero_poly_of_zero] >>
   Cases_on `k` >-
   rw_tac std_ss[poly_coeff_0_cons] >>
-  rw_tac std_ss[poly_coeff_SUC]);
+  rw_tac std_ss[poly_coeff_SUC]
+QED
 
 (* Theorem: Ring r ==> !p. weak p ==> !k. (p ' k) IN R *)
 (* Proof:
@@ -4991,15 +5190,16 @@ val poly_coeff_chop = store_thm(
       and   EVERY (\c. c IN R) p ==> !k. k < LENGTH p ==> EL k p IN R  by EVERY_ELEMENT_PROPERTY
       hence true      by poly_coeff_nonzero
 *)
-val weak_coeff_element = store_thm(
-  "weak_coeff_element",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> !k. (p ' k) IN R``,
+Theorem weak_coeff_element:
+    !r:'a ring. Ring r ==> !p. weak p ==> !k. (p ' k) IN R
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
   Cases_on `deg p < k` >-
   rw[poly_coeff_nonzero] >>
-  metis_tac[poly_coeff_nonzero, weak_every_element, EVERY_ELEMENT_PROPERTY, poly_deg_less_length]);
+  metis_tac[poly_coeff_nonzero, weak_every_element, EVERY_ELEMENT_PROPERTY, poly_deg_less_length]
+QED
 
 (* Theorem: [h] ' k = if k = 0 then h else #0 *)
 (* Proof:
@@ -5010,13 +5210,14 @@ val weak_coeff_element = store_thm(
    If k <> 0,
       [h] ' k = #0          by poly_coeff_def
 *)
-val poly_coeff_const = store_thm(
-  "poly_coeff_const",
-  ``!r:'a ring. !(h:'a) k. [h] ' k = if k = 0 then h else #0``,
+Theorem poly_coeff_const:
+    !r:'a ring. !(h:'a) k. [h] ' k = if k = 0 then h else #0
+Proof
   rpt strip_tac >>
   `deg [h] = 0` by rw[] >>
   `EL 0 [h] = h` by rw[] >>
-  metis_tac[poly_coeff_def, NOT_ZERO_LT_ZERO]);
+  metis_tac[poly_coeff_def, NOT_ZERO_LT_ZERO]
+QED
 
 (* Theorem: p <> |0| /\ (lead p = #0) ==> !k. (FRONT p) ' k = p ' k *)
 (* Proof:
@@ -5051,9 +5252,9 @@ val poly_coeff_const = store_thm(
       If k > LENGTH q,
          Then p ' k = #0            by poly_coeff_nonzero_alt, ~(k < LENGTH p)
 *)
-val poly_coeff_front = store_thm(
-  "poly_coeff_front",
-  ``!r:'a ring. !p. p <> |0| /\ (lead p = #0) ==> !k. (FRONT p) ' k = p ' k``,
+Theorem poly_coeff_front:
+    !r:'a ring. !p. p <> |0| /\ (lead p = #0) ==> !k. (FRONT p) ' k = p ' k
+Proof
   rpt strip_tac >>
   qabbrev_tac `q = FRONT p` >>
   `p <> []` by metis_tac[poly_zero] >>
@@ -5083,7 +5284,8 @@ val poly_coeff_front = store_thm(
         rw[]
       ]
     ]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Degree of Polynomial Addition (weak form).                                *)
@@ -5133,9 +5335,9 @@ val poly_coeff_front = store_thm(
         = MAX (0 SUC (deg t))              by MAX_0
         = MAX (deg [h] deg [h'::t])        by poly_deg_const
 *)
-val poly_deg_weak_add = store_thm(
-  "poly_deg_weak_add",
-  ``!r:'a ring. Ring r ==> !p q. deg (p || q) = MAX (deg p) (deg q)``,
+Theorem poly_deg_weak_add:
+    !r:'a ring. Ring r ==> !p q. deg (p || q) = MAX (deg p) (deg q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -5155,7 +5357,8 @@ val poly_deg_weak_add = store_thm(
       (Cases_on `p = |0|` >>  simp[]) >>
       rw[MAX_1_POS]
     ]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Degree of Polynomial Multiplication (weak form).                          *)
@@ -5185,10 +5388,10 @@ val poly_deg_weak_add = store_thm(
           = SUC (deg p) + deg q                      by ADD
           = deg (h::p) + deg q                       by poly_deg_cons, p <> |0|.
 *)
-val poly_deg_weak_mult = store_thm(
-  "poly_deg_weak_mult",
-  ``!r:'a ring. Ring r ==>
-   !p q. p <> |0| /\ q <> |0| ==> (deg (p o q) = deg p + deg q)``,
+Theorem poly_deg_weak_mult:
+    !r:'a ring. Ring r ==>
+   !p q. p <> |0| /\ q <> |0| ==> (deg (p o q) = deg p + deg q)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -5198,7 +5401,8 @@ val poly_deg_weak_mult = store_thm(
   rw[weak_mult_const, poly_deg_weak_cmult] >>
   `p o q <> |0|` by rw_tac std_ss[weak_mult_eq_zero] >>
   `!x y. y < SUC (x + y)` by decide_tac >>
-  rw[poly_deg_weak_add, poly_deg_shift_1, poly_deg_weak_cmult, MAX_DEF, ADD]);
+  rw[poly_deg_weak_add, poly_deg_shift_1, poly_deg_weak_cmult, MAX_DEF, ADD]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Evaluation.                                                    *)
@@ -5260,10 +5464,11 @@ val _ = export_rewrites ["poly_eval_zero"];
    = h + #0           by ring_mult_lzero
    = h                by ring_add_rzero
 *)
-val poly_eval_const = store_thm(
-  "poly_eval_const",
-  ``!r:'a ring. Ring r ==> !h x. h IN R /\ x IN R ==> (eval [h] x = h)``,
-  rw[]);
+Theorem poly_eval_const:
+    !r:'a ring. Ring r ==> !h x. h IN R /\ x IN R ==> (eval [h] x = h)
+Proof
+  rw[]
+QED
 
 val _ = export_rewrites ["poly_eval_const"];
 
@@ -5278,13 +5483,14 @@ val _ = export_rewrites ["poly_eval_const"];
        h IN R          by weak_cons
     Hence (h::p)(x) IN R   by ring_add_element, ring_mult_element.
 *)
-val weak_eval_element = store_thm(
-  "weak_eval_element",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> !x. x IN R ==> eval p x IN R``,
+Theorem weak_eval_element:
+    !r:'a ring. Ring r ==> !p. weak p ==> !x. x IN R ==> eval p x IN R
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["weak_eval_element"];
 
@@ -5300,13 +5506,14 @@ val _ = export_rewrites ["weak_eval_element"];
     = #0 + #0             by ring_mult_lzero
     = #0                  by ring_add_zero_zero
 *)
-val poly_eval_zerop = store_thm(
-  "poly_eval_zerop",
-  ``!r:'a ring. Ring r ==> !p x. zerop p /\ x IN R ==> (eval p x = #0)``,
+Theorem poly_eval_zerop:
+    !r:'a ring. Ring r ==> !p x. zerop p /\ x IN R ==> (eval p x = #0)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["poly_eval_zerop"];
 
@@ -5326,13 +5533,14 @@ val _ = export_rewrites ["poly_eval_zerop"];
       = h + p(x) * x           by induction hypothesis
       = (h::p)(x)              by poly_eval_cons
 *)
-val poly_eval_chop = store_thm(
-  "poly_eval_chop",
-  ``!r:'a ring. Ring r ==> !p x. x IN R ==> (eval (chop p) x = eval p x)``,
+Theorem poly_eval_chop:
+    !r:'a ring. Ring r ==> !p x. x IN R ==> (eval (chop p) x = eval p x)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["poly_eval_chop"];
 
@@ -5343,10 +5551,11 @@ val _ = export_rewrites ["poly_eval_chop"];
     = eval [#1] x          by poly_eval_chop
     = #1                   by poly_eval_const, ring_one_element
 *)
-val poly_eval_one = store_thm(
-  "poly_eval_one",
-  ``!r:'a ring. Ring r ==> !x. x IN R ==> (eval |1| x = #1)``,
-  rw[poly_one]);
+Theorem poly_eval_one:
+    !r:'a ring. Ring r ==> !x. x IN R ==> (eval |1| x = #1)
+Proof
+  rw[poly_one]
+QED
 
 val _ = export_rewrites ["poly_eval_one"];
 
@@ -5364,15 +5573,16 @@ val _ = export_rewrites ["poly_eval_one"];
    = c * (h + p(x) * x)      by ring_mult_radd
    = c * (h::p)(x)           by poly_eval_cons
 *)
-val weak_eval_cmult = store_thm(
-  "weak_eval_cmult",
-  ``!r:'a ring. Ring r ==> !p c x. weak p /\ c IN R /\ x IN R ==> (eval (c o p) x = c * (eval p x))``,
+Theorem weak_eval_cmult:
+    !r:'a ring. Ring r ==> !p c x. weak p /\ c IN R /\ x IN R ==> (eval (c o p) x = c * (eval p x))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw[] >>
   rw_tac std_ss[weak_cons, weak_cmult_cons, poly_eval_cons, weak_eval_element,
-                 ring_mult_assoc, ring_mult_radd, ring_mult_element]);
+                 ring_mult_assoc, ring_mult_radd, ring_mult_element]
+QED
 
 (* val _ = export_rewrites ["weak_eval_cmult"]; *)
 
@@ -5391,15 +5601,16 @@ val weak_eval_cmult = store_thm(
    = -(h + p(x) * x)         by ring_neg_add
    = - (h::p)(x)             by poly_eval_cons
 *)
-val weak_eval_neg = store_thm(
-  "weak_eval_neg",
-  ``!r:'a ring. Ring r ==> !p x. weak p /\ x IN R ==> (eval (neg p) x = - (eval p x))``,
+Theorem weak_eval_neg:
+    !r:'a ring. Ring r ==> !p x. weak p /\ x IN R ==> (eval (neg p) x = - (eval p x))
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
   rw[] >>
   rw_tac std_ss[weak_cons, weak_neg_cons, poly_eval_cons, weak_eval_element,
-                 ring_mult_lneg, ring_neg_add, ring_mult_element]);
+                 ring_mult_lneg, ring_neg_add, ring_mult_element]
+QED
 
 (* val _ = export_rewrites ["weak_eval_neg"]; *)
 
@@ -5426,9 +5637,9 @@ val weak_eval_neg = store_thm(
       = (h + p(x) * x) + (h' + q(x) * x)  by ring_add_assoc, ring_add_comm
       = (h::p)(x) + (h'::q)(x)            by poly_eval_cons
 *)
-val weak_eval_add = store_thm(
-  "weak_eval_add",
-  ``!r:'a ring. Ring r ==> !p q x. weak p /\ weak q /\ x IN R ==> (eval (p || q) x = eval p x + eval q x)``,
+Theorem weak_eval_add:
+    !r:'a ring. Ring r ==> !p q x. weak p /\ weak q /\ x IN R ==> (eval (p || q) x = eval p x + eval q x)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -5442,7 +5653,8 @@ val weak_eval_add = store_thm(
   `h + h' + (eval p x + eval q x) * x = h + (h' + eval p x * x + eval q x * x)`
     by rw_tac std_ss[ring_mult_ladd, ring_add_assoc, ring_add_element] >>
   `_ = h + (eval p x * x + h' + eval q x * x)` by rw_tac std_ss[ring_add_comm] >>
-  rw_tac std_ss[ring_add_assoc, ring_add_element]);
+  rw_tac std_ss[ring_add_assoc, ring_add_element]
+QED
 
 (* val _ = export_rewrites ["weak_eval_add"]; *)
 
@@ -5467,14 +5679,15 @@ val weak_eval_add = store_thm(
    = p(x) * (x ** n * x)        by ring_mult_assoc
    = p(x) * x ** SUC n          by ring_exp_suc
 *)
-val weak_eval_shift = store_thm(
-  "weak_eval_shift",
-  ``!r:'a ring. Ring r ==> !p x. weak p /\ x IN R ==> !n. eval (p >> n) x = (eval p x) * (x ** n)``,
+Theorem weak_eval_shift:
+    !r:'a ring. Ring r ==> !p x. weak p /\ x IN R ==> !n. eval (p >> n) x = (eval p x) * (x ** n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   Cases_on `p = |0|` >>
-  rw[ring_exp_suc, ring_mult_assoc]);
+  rw[ring_exp_suc, ring_mult_assoc]
+QED
 
 (* val _ = export_rewrites ["weak_eval_shift"]; *)
 
@@ -5500,9 +5713,9 @@ val weak_eval_shift = store_thm(
    = (h + p(x) * x) * q(x)                 by ring_mult_ladd
    = (h::p)(x) * q(x)                      by poly_eval_cons
 *)
-val weak_eval_mult = store_thm(
-  "weak_eval_mult",
-  ``!r:'a ring. Ring r ==> !p q x. weak p /\ weak q /\ x IN R ==> (eval (p o q) x = eval p x * eval q x)``,
+Theorem weak_eval_mult:
+    !r:'a ring. Ring r ==> !p q x. weak p /\ weak q /\ x IN R ==> (eval (p o q) x = eval p x * eval q x)
+Proof
   strip_tac >>
   strip_tac >>
   Induct >-
@@ -5521,7 +5734,8 @@ val weak_eval_mult = store_thm(
   `_ = h * eval q x + eval p x * x * eval q x` by rw_tac std_ss[ring_mult_assoc] >>
   `_ = (h + eval p x * x) * eval q x` by rw_tac std_ss[ring_mult_ladd] >>
   `_ = eval (h::p) x * eval q x` by rw_tac std_ss[poly_eval_cons] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* val _ = export_rewrites ["weak_eval_mult"]; *)
 
@@ -5552,16 +5766,17 @@ val weak_eval_mult = store_thm(
            = eval (h'::t) x + h * x ** LENGTH (h'::t)     by LENGTH
            = RHS
 *)
-val weak_eval_snoc = store_thm(
-  "weak_eval_snoc",
-  ``!r:'a ring. Ring r ==> !h t. h IN R /\ weak t ==>
-   !x. x IN R ==> (eval (SNOC h t) x = eval t x + h * x ** LENGTH t)``,
+Theorem weak_eval_snoc:
+    !r:'a ring. Ring r ==> !h t. h IN R /\ weak t ==>
+   !x. x IN R ==> (eval (SNOC h t) x = eval t x + h * x ** LENGTH t)
+Proof
   rpt strip_tac >>
   Induct_on `t` >-
   rw[] >>
   rw[ring_add_assoc, ring_mult_assoc] >>
   `x ** LENGTH t * x = x * x ** LENGTH t` by rw[ring_mult_comm] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Root.                                                          *)
@@ -5584,10 +5799,11 @@ val weak_eval_snoc = store_thm(
 
 (* Theorem: [] has every x as root. *)
 (* Proof: by [](x) = #0. *)
-val poly_root_of_zero = store_thm(
-  "poly_root_of_zero",
-  ``!r:'a ring. !x. x IN R ==> root [] x``,
-  rw[poly_root_def]);
+Theorem poly_root_of_zero:
+    !r:'a ring. !x. x IN R ==> root [] x
+Proof
+  rw[poly_root_def]
+QED
 
 val _ = export_rewrites ["poly_root_of_zero"];
 
@@ -5626,9 +5842,9 @@ val _ = export_rewrites ["poly_root_zero"];
       = c * lead p          by induction hypothesis
       = c * lead (h::p)     by poly_lead_cons, c <> |0|
 *)
-val weak_lead_cmult = store_thm(
-  "weak_lead_cmult",
-  ``!r:'a ring. Ring r ==> !p c. c IN R ==> (lead (c o p) = c * lead p)``,
+Theorem weak_lead_cmult:
+    !r:'a ring. Ring r ==> !p c. c IN R ==> (lead (c o p) = c * lead p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw [] >>
@@ -5636,7 +5852,8 @@ val weak_lead_cmult = store_thm(
   Cases_on `p = |0|` >-
   rw [] >>
   `c o p <> |0|` by rw_tac std_ss[weak_cmult_eq_zero] >>
-  rw_tac std_ss[weak_cmult_cons, poly_lead_cons]);
+  rw_tac std_ss[weak_cmult_cons, poly_lead_cons]
+QED
 
 (* Theorem: deg (c o p) = deg p *)
 (* Proof: by induction on p.
@@ -5660,9 +5877,9 @@ val weak_lead_cmult = store_thm(
       = SUC (deg p)        by induction hypothesis
       = deg (h::p)         by poly_deg_cons, c <> |0|
 *)
-val weak_deg_cmult = store_thm(
-  "weak_deg_cmult",
-  ``!r:'a ring. Ring r ==> !p c. c IN R ==> (deg (c o p) = deg p)``,
+Theorem weak_deg_cmult:
+    !r:'a ring. Ring r ==> !p c. c IN R ==> (deg (c o p) = deg p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw [] >>
@@ -5670,7 +5887,8 @@ val weak_deg_cmult = store_thm(
   Cases_on `p = |0|` >-
   rw [] >>
   `c o p <> |0|` by rw_tac std_ss[weak_cmult_eq_zero] >>
-  rw []);
+  rw []
+QED
 
 (* Theorem: #1 <> #0 ==> !p. p <> |0| ==> p || [#1] >> (deg p) = SNOC #1 p *)
 (* Proof: by induction on p.
@@ -5700,10 +5918,10 @@ val weak_deg_cmult = store_thm(
       = h :: SNOC #1 p                      by induction hypothesis
       = SNOC #1 (h::p)                      by SNOC
 *)
-val weak_add_one_shift = store_thm(
-  "weak_add_one_shift",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
-    !p. weak p /\ p <> |0| ==> (p || [#1] >> SUC (deg p) = SNOC #1 p)``,
+Theorem weak_add_one_shift:
+    !r:'a ring. Ring r /\ #1 <> #0 ==>
+    !p. weak p /\ p <> |0| ==> (p || [#1] >> SUC (deg p) = SNOC #1 p)
+Proof
   rpt strip_tac >>
   `[#1] <> |0|` by rw[] >>
   Induct_on `p` >-
@@ -5715,7 +5933,8 @@ val weak_add_one_shift = store_thm(
   (`(h::p) || [#1] >> SUC (deg (h::p)) = (h::p) || (#0::[#1] >> (deg (h::p)))` by metis_tac [poly_shift_suc]) >>
   (`_ = h::p || [#1] >> (deg (h::p))` by rw[]) >>
   `_ = h::SNOC #1 p` by metis_tac[] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: #1 <> #0 ==> !p. p <> |0| ==> p || c o ([#1] >> (deg p)) = SNOC c p *)
 (* Proof: by induction on p.
@@ -5740,10 +5959,10 @@ val weak_add_one_shift = store_thm(
       = h :: SNOC c p                                    by induction hypothesis
       = SNOC c (h::p)                  by SNOC
 *)
-val weak_add_cmult_shift = store_thm(
-  "weak_add_cmult_shift",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
-    !c p. c IN R /\ weak p /\ p <> |0| ==> (p || c o ([#1] >> SUC (deg p)) = SNOC c p)``,
+Theorem weak_add_cmult_shift:
+    !r:'a ring. Ring r /\ #1 <> #0 ==>
+    !c p. c IN R /\ weak p /\ p <> |0| ==> (p || c o ([#1] >> SUC (deg p)) = SNOC c p)
+Proof
   rpt strip_tac >>
   `[#1] <> |0|` by rw[] >>
   Induct_on `p` >-
@@ -5756,7 +5975,8 @@ val weak_add_cmult_shift = store_thm(
   (`_ = (h::p) || (#0::c o ([#1] >> (deg (h::p))))` by rw[]) >>
   (`_ = h::p || c o ([#1] >> (deg (h::p)))` by rw[]) >>
   `_ = h::SNOC c p` by metis_tac[] >>
-  rw[]);
+  rw[]
+QED
 
 (* weak_add_one_shift
 |- !r. Ring r /\ #1 <> #0 ==>
@@ -5783,10 +6003,10 @@ val weak_add_cmult_shift = store_thm(
      = h :: SNOC c p                         by ring_add_rzero
      = SNOC c (h::p)                         by SNOC
 *)
-val weak_add_const_shift = store_thm(
-  "weak_add_const_shift",
-  ``!r:'a ring. Ring r ==> !p c. weak p /\ c IN R /\ c <> #0 ==>
-               (p || [c] >> (LENGTH p) = SNOC c p)``,
+Theorem weak_add_const_shift:
+    !r:'a ring. Ring r ==> !p c. weak p /\ c IN R /\ c <> #0 ==>
+               (p || [c] >> (LENGTH p) = SNOC c p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -5797,7 +6017,8 @@ val weak_add_const_shift = store_thm(
   `_ = (h + #0) :: SNOC c p` by rw[] >>
   `_ = h :: SNOC c p` by rw[] >>
   `_ = SNOC c (h::p)` by rw[] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

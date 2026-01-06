@@ -62,7 +62,7 @@ Definition top_sort_def:
       top_sort_aux roots reach []
 End
 
-Triviality top_sort_example:
+Theorem top_sort_example[local]:
    top_sort
      [(0,fromAList[]);               (* 0 has no deps *)
       (1,fromAList[(2,());(0,())]);  (* 1 depens on 2 and 0 *)
@@ -96,7 +96,7 @@ Definition top_sort_any_def:
           nesting
 End
 
-Triviality top_sort_any_example:
+Theorem top_sort_any_example[local]:
    top_sort_any
      [("A",[]);          (* A has no deps *)
       ("B",["C";"A"]);   (* B depens on C and A *)
@@ -156,7 +156,7 @@ Proof
   PairCases_on `p` >> gvs[]
 QED
 
-Triviality ALL_DISTINCT_APPEND_SWAP:
+Theorem ALL_DISTINCT_APPEND_SWAP[local]:
   !l1 l2.  ALL_DISTINCT (l1 ++ l2) <=> ALL_DISTINCT (l2 ++ l1)
 Proof
   rw[] >> gvs[ALL_DISTINCT_APPEND] >> metis_tac[]
@@ -296,7 +296,7 @@ Proof
     )
 QED
 
-Triviality domain_lookup_num_set:
+Theorem domain_lookup_num_set[local]:
   !t k. k IN domain t <=> lookup k t = SOME ()
 Proof
   rw[domain_lookup]
@@ -488,7 +488,7 @@ Proof
   metis_tac[SCC_REFL,SCC_SYM,SCC_TRANS]
 QED
 
-Triviality is_reachable_IMP_MEM:
+Theorem is_reachable_IMP_MEM[local]:
   ALL_DISTINCT (MAP FST graph) ⇒ x ≠ y ⇒
   is_reachable (fromAList graph) x y ⇒ MEM x (MAP FST graph)
 Proof
@@ -531,13 +531,13 @@ Proof
   rw[] >> eq_tac >> rw[] >> gvs[] >> metis_tac[]
 QED
 
-Triviality ALL_DISTINCT_MAPi_ID:
+Theorem ALL_DISTINCT_MAPi_ID[local]:
   !l.  ALL_DISTINCT (MAPi (\i _. i) l)
 Proof
   rw[EL_ALL_DISTINCT_EL_EQ]
 QED
 
-Triviality ALL_DISTINCT_FLAT:
+Theorem ALL_DISTINCT_FLAT[local]:
    ∀l. ALL_DISTINCT (FLAT l) ⇔
         (∀l0. MEM l0 l ⇒ ALL_DISTINCT l0) ∧
         (∀i j. i < j ∧ j < LENGTH l ⇒
@@ -549,7 +549,7 @@ Proof
   metis_tac[MEM_EL]
 QED
 
-Triviality ALOOKUP_MAPi_ID:
+Theorem ALOOKUP_MAPi_ID[local]:
   !l k. ALOOKUP (MAPi (\i n. (i,n)) l) k =
         if k < LENGTH l then SOME (EL k l) else NONE
 Proof
@@ -557,7 +557,7 @@ Proof
   gvs[ALOOKUP_APPEND, EL_APPEND_EQN, indexedListsTheory.MAPi_APPEND] >> rw[]
 QED
 
-Triviality ALOOKUP_MAPi_ID_f:
+Theorem ALOOKUP_MAPi_ID_f[local]:
   !l k. ALOOKUP (MAPi (\i n. (i,f n)) l) k =
         if k < LENGTH l then SOME (f (EL k l)) else NONE
 Proof
@@ -565,13 +565,13 @@ Proof
   gvs[ALOOKUP_APPEND, EL_APPEND_EQN, indexedListsTheory.MAPi_APPEND] >> rw[]
 QED
 
-Triviality MAPi_MAP[simp]:
+Theorem MAPi_MAP[local,simp]:
   !l. MAPi (\i n. f n) l = MAP f l
 Proof
   Induct >> rw[combinTheory.o_DEF]
 QED
 
-Triviality MEM_ALOOKUP:
+Theorem MEM_ALOOKUP[local]:
   !l k v.
     ALL_DISTINCT (MAP FST l)
   ==> (MEM (k,v) l <=> ALOOKUP l k = SOME v)
@@ -697,7 +697,7 @@ Proof
   simp[FUN_EQ_THM,lambdify depends_on1_def,depends_on_def]
 QED
 
-Triviality top_sort_any_depends_on_weak:
+Theorem top_sort_any_depends_on_weak[local]:
   !lets res.
     (!xss ys zss y.
       res = xss ++ [ys] ++ zss /\ MEM y ys ==>
@@ -753,7 +753,7 @@ Proof
   gvs[ALL_DISTINCT_APPEND] >> metis_tac[]
 QED
 
-Triviality MEM_MEM_top_sort:
+Theorem MEM_MEM_top_sort[local]:
   ALL_DISTINCT (MAP FST l) ∧
   MEM xs $ top_sort l ∧
   MEM n xs ⇒
@@ -767,7 +767,7 @@ Proof
   metis_tac[MEM_FLAT]
 QED
 
-Triviality ALL_DISTINCT_enc_graph:
+Theorem ALL_DISTINCT_enc_graph[local]:
   ALL_DISTINCT
     (MAPi
        ($o FST o
@@ -779,7 +779,7 @@ Proof
   ntac 2 (pairarg_tac >> fs[])
 QED
 
-Triviality RTC_ALOOKUP_enc_graph_IMP_depends_on:
+Theorem RTC_ALOOKUP_enc_graph_IMP_depends_on[local]:
   ALL_DISTINCT (MAP FST graph) ⇒
   ∀n n'. RTC (λx y.
    ∃aSetx.
@@ -876,7 +876,7 @@ Definition TC_depends_on_def:
   TC $ depends_on1 alist
 End
 
-Triviality cycle_CASES_lem:
+Theorem cycle_CASES_lem[local]:
   ∀x z. TC R x z ⇒ x = z ⇒
   (R x z ∨ (∃y. x ≠ y ∧ TC R x y ∧ TC R y z))
 Proof
@@ -897,7 +897,7 @@ Proof
   metis_tac[TC_RULES]
 QED
 
-Triviality depends_on_IMP_MEM:
+Theorem depends_on_IMP_MEM[local]:
   ∀x y. depends_on graph x y ⇒ x ≠ y ⇒ MEM y (MAP FST graph)
 Proof
   simp[depends_on_def] >>
@@ -907,14 +907,14 @@ Proof
   simp[]
 QED
 
-Triviality TC_depends_on_SCC:
+Theorem TC_depends_on_SCC[local]:
   x ≠ y ⇒
   SCC (depends_on1 graph) x y = (TC_depends_on graph x y ∧ TC_depends_on graph y x)
 Proof
   simp[SCC_def,TC_depends_on_def,RTC_CASES_TC]
 QED
 
-Triviality ONE_LT_LENGTH_ALL_DISTINCT_IMP:
+Theorem ONE_LT_LENGTH_ALL_DISTINCT_IMP[local]:
   1 < LENGTH l ∧ ALL_DISTINCT l ⇒ ∃x y. MEM x l ∧ MEM y l ∧ x ≠ y
 Proof
   rpt strip_tac >>
@@ -924,7 +924,7 @@ Proof
   fs[EL_MEM]
 QED
 
-Triviality DISTINCT_IMP_ONE_LT_LENGTH:
+Theorem DISTINCT_IMP_ONE_LT_LENGTH[local]:
   MEM x l ∧ MEM y l ∧ x ≠ y ⇒ 1 < LENGTH l
 Proof
   rpt strip_tac >>
@@ -994,7 +994,7 @@ Proof
   simp[]
 QED
 
-Triviality TC_depends_on_weak_IMP_TC_depends_on:
+Theorem TC_depends_on_weak_IMP_TC_depends_on[local]:
   ∀x y. TC_depends_on_weak graph x y ⇒
     MEM y (MAP FST graph) ⇒
     TC_depends_on graph x y

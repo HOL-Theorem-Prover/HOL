@@ -70,11 +70,10 @@ Definition PSL_TO_LTL_CLOCK_def:
     PSL_TO_LTL_CLOCK c f = (RLTL_TO_LTL P_FALSE P_FALSE (PSL_TO_RLTL (F_CLOCK_COMP c f)))
 End
 
-val CONVERT_PATH_PSL_LTL___NO_TOP_BOT_LEMMA =
- store_thm
-   ("CONVERT_PATH_PSL_LTL___NO_TOP_BOT_LEMMA",
-    ``!v b t. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==>
-              (CONVERT_PATH_PSL_LTL t b v = CONVERT_PATH_PSL_LTL___NO_TOP_BOT v)``,
+Theorem CONVERT_PATH_PSL_LTL___NO_TOP_BOT_LEMMA:
+      !v b t. IS_INFINITE_TOP_BOTTOM_FREE_PATH v ==>
+              (CONVERT_PATH_PSL_LTL t b v = CONVERT_PATH_PSL_LTL___NO_TOP_BOT v)
+Proof
 
    SIMP_TAC std_ss [IS_INFINITE_TOP_BOTTOM_FREE_PATH_def,
                     CONVERT_PATH_PSL_LTL_def,
@@ -84,22 +83,22 @@ val CONVERT_PATH_PSL_LTL___NO_TOP_BOT_LEMMA =
    ASM_SIMP_TAC std_ss [LENGTH_def, LS, ELEM_INFINITE] THEN
    GEN_TAC THEN
    `?s. p x = STATE s` by PROVE_TAC[] THEN
-   ASM_SIMP_TAC std_ss [TRANSLATE_STATE_def, TRANSLATE_TOP_BOTTOM_def]);
+   ASM_SIMP_TAC std_ss [TRANSLATE_STATE_def, TRANSLATE_TOP_BOTTOM_def]
+QED
 
 
-val CONVERT_PATH_LTL_PSL___IS_INFINITE_TOP_BOTTOM_FREE =
- store_thm
-   ("CONVERT_PATH_LTL_PSL___IS_INFINITE_TOP_BOTTOM_FREE",
-      ``!p. IS_INFINITE_TOP_BOTTOM_FREE_PATH (CONVERT_PATH_LTL_PSL p)``,
+Theorem CONVERT_PATH_LTL_PSL___IS_INFINITE_TOP_BOTTOM_FREE:
+        !p. IS_INFINITE_TOP_BOTTOM_FREE_PATH (CONVERT_PATH_LTL_PSL p)
+Proof
 
       SIMP_TAC std_ss [IS_INFINITE_TOP_BOTTOM_FREE_PATH_def,
-        CONVERT_PATH_LTL_PSL_def, path_11, letter_11]);
+        CONVERT_PATH_LTL_PSL_def, path_11, letter_11]
+QED
 
-val CONVERT_PATH_LTL_PSL___CONVERT_PATH_PSL_LTL =
- store_thm
-   ("CONVERT_PATH_LTL_PSL___CONVERT_PATH_PSL_LTL",
-      ``(!p. CONVERT_PATH_PSL_LTL___NO_TOP_BOT (CONVERT_PATH_LTL_PSL p) = p) /\
-        (!p t b. CONVERT_PATH_PSL_LTL t b (CONVERT_PATH_LTL_PSL p) = p)``,
+Theorem CONVERT_PATH_LTL_PSL___CONVERT_PATH_PSL_LTL:
+        (!p. CONVERT_PATH_PSL_LTL___NO_TOP_BOT (CONVERT_PATH_LTL_PSL p) = p) /\
+        (!p t b. CONVERT_PATH_PSL_LTL t b (CONVERT_PATH_LTL_PSL p) = p)
+Proof
 
       SIMP_TAC std_ss [CONVERT_PATH_LTL_PSL_def,
                        CONVERT_PATH_PSL_LTL_def,
@@ -107,33 +106,31 @@ val CONVERT_PATH_LTL_PSL___CONVERT_PATH_PSL_LTL =
                        LENGTH_def, LS, ELEM_INFINITE,
                        TRANSLATE_STATE_def,
                        TRANSLATE_TOP_BOTTOM_def] THEN
-      METIS_TAC[]);
+      METIS_TAC[]
+QED
 
 
-val BEXP_TO_PROP_LOGIC_THM =
- store_thm
-  ("BEXP_TO_PROP_LOGIC_THM",
-   ``!p s. (P_SEM s (BEXP_TO_PROP_LOGIC p)) = (B_SEM (STATE s) p)``,
+Theorem BEXP_TO_PROP_LOGIC_THM:
+     !p s. (P_SEM s (BEXP_TO_PROP_LOGIC p)) = (B_SEM (STATE s) p)
+Proof
 
    INDUCT_THEN bexp_induct ASSUME_TAC THEN
    ASM_SIMP_TAC std_ss [B_SEM_def, BEXP_TO_PROP_LOGIC_def, P_SEM_THM]
-);
+QED
 
 
-val PROP_LOGIC_TO_BEXP_THM =
- store_thm
-  ("PROP_LOGIC_TO_BEXP_THM",
-   ``!p s. (P_SEM s p) = (B_SEM (STATE s) (PROP_LOGIC_TO_BEXP p))``,
+Theorem PROP_LOGIC_TO_BEXP_THM:
+     !p s. (P_SEM s p) = (B_SEM (STATE s) (PROP_LOGIC_TO_BEXP p))
+Proof
 
    INDUCT_THEN prop_logic_induct ASSUME_TAC THEN
    ASM_SIMP_TAC std_ss [B_SEM_def, PROP_LOGIC_TO_BEXP_def, P_SEM_THM]
-);
+QED
 
 
-val CONVERT_PATH_PSL_LTL_COMPLEMENT =
- store_thm
-  ("CONVERT_PATH_PSL_LTL_COMPLEMENT",
-   ``!t b f. CONVERT_PATH_PSL_LTL b t (COMPLEMENT f) = CONVERT_PATH_PSL_LTL t b f``,
+Theorem CONVERT_PATH_PSL_LTL_COMPLEMENT:
+     !t b f. CONVERT_PATH_PSL_LTL b t (COMPLEMENT f) = CONVERT_PATH_PSL_LTL t b f
+Proof
 
    SIMP_TAC std_ss [CONVERT_PATH_PSL_LTL_def, COMPLEMENT_def, LENGTH_COMPLEMENT, ELEM_COMPLEMENT] THEN
    ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
@@ -145,24 +142,24 @@ val CONVERT_PATH_PSL_LTL_COMPLEMENT =
       REWRITE_TAC[COMPLEMENT_LETTER_def, TRANSLATE_TOP_BOTTOM_def],
 
       ASM_SIMP_TAC std_ss []
-   ]);
+   ]
+QED
 
 
 
-val CONVERT_PATH_PSL_LTL_ELEM_INFINITE =
- store_thm
-  ("CONVERT_PATH_PSL_LTL_ELEM_INFINITE",
-   ``!p t b t'. ((CONVERT_PATH_PSL_LTL t b (INFINITE p)) t' = TRANSLATE_TOP_BOTTOM t b (p t'))``,
+Theorem CONVERT_PATH_PSL_LTL_ELEM_INFINITE:
+     !p t b t'. ((CONVERT_PATH_PSL_LTL t b (INFINITE p)) t' = TRANSLATE_TOP_BOTTOM t b (p t'))
+Proof
 
-   SIMP_TAC std_ss [LENGTH_def, LESS_def, CONVERT_PATH_PSL_LTL_def, ELEM_INFINITE, LS]);
+   SIMP_TAC std_ss [LENGTH_def, LESS_def, CONVERT_PATH_PSL_LTL_def, ELEM_INFINITE, LS]
+QED
 
 
 
-val CONVERT_PATH_PSL_LTL___NAND_ON_PATH =
- store_thm
-  ("CONVERT_PATH_PSL_LTL___NAND_ON_PATH",
+Theorem CONVERT_PATH_PSL_LTL___NAND_ON_PATH:
 
-   ``!t' t b v. (~(t=b) /\ PATH_PROP_FREE t v /\ PATH_PROP_FREE b v) ==> NAND_ON_PATH_RESTN t' (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b)``,
+     !t' t b v. (~(t=b) /\ PATH_PROP_FREE t v /\ PATH_PROP_FREE b v) ==> NAND_ON_PATH_RESTN t' (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b)
+Proof
 
    SIMP_TAC std_ss [NAND_ON_PATH_RESTN_def, CONVERT_PATH_PSL_LTL_def] THEN
    REPEAT STRIP_TAC THEN
@@ -177,15 +174,15 @@ val CONVERT_PATH_PSL_LTL___NAND_ON_PATH =
       ],
 
       ASM_REWRITE_TAC [NOT_IN_EMPTY, P_SEM_def]
-   ]);
+   ]
+QED
 
 
 
-val PSL_TO_RLTL_THM =
- store_thm
-  ("PSL_TO_RLTL_THM",
-   ``!f v b t. ((IS_INFINITE_PROPER_PATH v) /\ (F_CLOCK_SERE_FREE f) /\ ~(t = b) /\ (PATH_PROP_FREE t v) /\ (PATH_PROP_FREE b v)) ==>
-   ((UF_SEM v f) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b) (PSL_TO_RLTL f)))``,
+Theorem PSL_TO_RLTL_THM:
+     !f v b t. ((IS_INFINITE_PROPER_PATH v) /\ (F_CLOCK_SERE_FREE f) /\ ~(t = b) /\ (PATH_PROP_FREE t v) /\ (PATH_PROP_FREE b v)) ==>
+   ((UF_SEM v f) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b) (PSL_TO_RLTL f)))
+Proof
 
 
 INDUCT_THEN fl_induct ASSUME_TAC THENL [
@@ -519,26 +516,26 @@ INDUCT_THEN fl_induct ASSUME_TAC THENL [
 
    REWRITE_TAC[F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def],
    REWRITE_TAC[F_CLOCK_SERE_FREE_def, F_SERE_FREE_def]
-]);
+]
+QED
 
 
 
-val P_USED_VARS___BEXP_TO_PROP_LOGIC =
- store_thm
-  ("P_USED_VARS___BEXP_TO_PROP_LOGIC",
-  ``!b. P_USED_VARS (BEXP_TO_PROP_LOGIC b) = B_USED_VARS b``,
+Theorem P_USED_VARS___BEXP_TO_PROP_LOGIC:
+    !b. P_USED_VARS (BEXP_TO_PROP_LOGIC b) = B_USED_VARS b
+Proof
 
   INDUCT_THEN bexp_induct ASSUME_TAC THEN (
     ASM_SIMP_TAC std_ss [P_USED_VARS_def, BEXP_TO_PROP_LOGIC_def,
                     B_USED_VARS_def, P_FALSE_def]
-  ));
+  )
+QED
 
 
-val RLTL_USED_VARS___PSL_TO_RLTL =
- store_thm
-  ("RLTL_USED_VARS___PSL_TO_RLTL",
-  ``!f. F_CLOCK_SERE_FREE f ==>
-    (RLTL_USED_VARS (PSL_TO_RLTL f) = F_USED_VARS f)``,
+Theorem RLTL_USED_VARS___PSL_TO_RLTL:
+    !f. F_CLOCK_SERE_FREE f ==>
+    (RLTL_USED_VARS (PSL_TO_RLTL f) = F_USED_VARS f)
+Proof
 
 REWRITE_TAC[F_CLOCK_SERE_FREE_def] THEN
 INDUCT_THEN fl_induct ASSUME_TAC THEN (
@@ -546,15 +543,15 @@ INDUCT_THEN fl_induct ASSUME_TAC THEN (
                    F_USED_VARS_def,
                    F_CLOCK_FREE_def, F_SERE_FREE_def,
                    PSL_TO_RLTL_def, P_USED_VARS___BEXP_TO_PROP_LOGIC]
-));
+)
+QED
 
 
 
-val PSL_TO_RLTL___F_USED_VARS =
- store_thm
-  ("PSL_TO_RLTL___F_USED_VARS",
-   ``!f v b t. ((IS_INFINITE_PROPER_PATH v) /\ (F_CLOCK_SERE_FREE f) /\ ~(t = b) /\ (~(t IN F_USED_VARS f)) /\ (~(b IN F_USED_VARS f))) ==>
-   ((UF_SEM v f) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b (PATH_LETTER_RESTRICT (F_USED_VARS f) v)) (P_PROP t) (P_PROP b) (PSL_TO_RLTL f)))``,
+Theorem PSL_TO_RLTL___F_USED_VARS:
+     !f v b t. ((IS_INFINITE_PROPER_PATH v) /\ (F_CLOCK_SERE_FREE f) /\ ~(t = b) /\ (~(t IN F_USED_VARS f)) /\ (~(b IN F_USED_VARS f))) ==>
+   ((UF_SEM v f) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b (PATH_LETTER_RESTRICT (F_USED_VARS f) v)) (P_PROP t) (P_PROP b) (PSL_TO_RLTL f)))
+Proof
 
   REPEAT STRIP_TAC THEN
   `?w. w = PATH_LETTER_RESTRICT ((F_USED_VARS f)) v` by METIS_TAC[] THEN
@@ -581,14 +578,14 @@ val PSL_TO_RLTL___F_USED_VARS =
   ASSUME_TAC PSL_TO_RLTL_THM THEN
   Q_SPECL_NO_ASSUM 0 [`f`, `w`, `b`, `t`] THEN
   UNDISCH_HD_TAC THEN
-  ASM_SIMP_TAC std_ss []);
+  ASM_SIMP_TAC std_ss []
+QED
 
 
-val PSL_TO_RLTL___ELIM_ACCEPT_REJECT_THM =
- store_thm
-  ("PSL_TO_RLTL___ELIM_ACCEPT_REJECT_THM",
-   ``!f v b t. ((IS_INFINITE_PROPER_PATH v) /\ ~(t = b) /\ (PATH_PROP_FREE t v) /\ (PATH_PROP_FREE b v)) ==>
-    (RLTL_SEM (CONVERT_PATH_PSL_LTL t b v) (RLTL_ACCEPT (RLTL_REJECT (f,P_PROP b), P_PROP t)) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b) f))``,
+Theorem PSL_TO_RLTL___ELIM_ACCEPT_REJECT_THM:
+     !f v b t. ((IS_INFINITE_PROPER_PATH v) /\ ~(t = b) /\ (PATH_PROP_FREE t v) /\ (PATH_PROP_FREE b v)) ==>
+    (RLTL_SEM (CONVERT_PATH_PSL_LTL t b v) (RLTL_ACCEPT (RLTL_REJECT (f,P_PROP b), P_PROP t)) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b) f))
+Proof
 
    REPEAT STRIP_TAC THEN
    SIMP_TAC std_ss [RLTL_SEM_def, RLTL_SEM_TIME_def, RLTL_REJECT_def] THEN
@@ -600,42 +597,42 @@ val PSL_TO_RLTL___ELIM_ACCEPT_REJECT_THM =
 
    `NAND_ON_PATH_RESTN 0 (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b)` by PROVE_TAC[CONVERT_PATH_PSL_LTL___NAND_ON_PATH] THEN
    FULL_SIMP_TAC std_ss [NAND_ON_PATH_RESTN_def, EQUIV_ON_PATH_RESTN_def, P_SEM_THM] THEN
-   PROVE_TAC[]);
+   PROVE_TAC[]
+QED
 
 
-val PSL_TO_RLTL___CLOCKED_THM =
- store_thm
-  ("PSL_TO_RLTL___CLOCKED_THM",
-   ``!f v b t c. ((IS_INFINITE_PROPER_PATH v) /\ (F_SERE_FREE f) /\ ~(t = b) /\
+Theorem PSL_TO_RLTL___CLOCKED_THM:
+     !f v b t c. ((IS_INFINITE_PROPER_PATH v) /\ (F_SERE_FREE f) /\ ~(t = b) /\
                   (PATH_PROP_FREE t v) /\ (PATH_PROP_FREE b v)) ==>
-     ((F_SEM v c f) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b) (PSL_TO_RLTL (F_CLOCK_COMP c f))))``,
+     ((F_SEM v c f) = (RLTL_SEM_TIME 0 (CONVERT_PATH_PSL_LTL t b v) (P_PROP t) (P_PROP b) (PSL_TO_RLTL (F_CLOCK_COMP c f))))
+Proof
 
    PROVE_TAC[PSL_TO_RLTL_THM, F_CLOCK_COMP_CORRECT, F_CLOCK_SERE_FREE_def,
              F_SERE_FREE___IMPLIES___F_SERE_FREE_F_CLOCK_COMP,
-             F_CLOCK_FREE___F_CLOCK_COMP]);
+             F_CLOCK_FREE___F_CLOCK_COMP]
+QED
 
 
-val P_VAR_RENAMING___BEXP_TO_PROP_LOGIC =
- store_thm
-  ("P_VAR_RENAMING___BEXP_TO_PROP_LOGIC",
+Theorem P_VAR_RENAMING___BEXP_TO_PROP_LOGIC:
 
-    ``!f g. P_VAR_RENAMING g (BEXP_TO_PROP_LOGIC f) =
-        BEXP_TO_PROP_LOGIC (B_VAR_RENAMING g f)``,
+      !f g. P_VAR_RENAMING g (BEXP_TO_PROP_LOGIC f) =
+        BEXP_TO_PROP_LOGIC (B_VAR_RENAMING g f)
+Proof
 
 INDUCT_THEN bexp_induct ASSUME_TAC THEN (
     ASM_SIMP_TAC std_ss [BEXP_TO_PROP_LOGIC_def,
                                P_VAR_RENAMING_def,
                                B_VAR_RENAMING_def,
                                P_FALSE_def]
-))
+)
+QED
 
-val RLTL_VAR_RENAMING___PSL_TO_RLTL =
- store_thm
-  ("RLTL_VAR_RENAMING___PSL_TO_RLTL",
+Theorem RLTL_VAR_RENAMING___PSL_TO_RLTL:
 
-    ``!f g.  F_CLOCK_SERE_FREE f ==> (
+      !f g.  F_CLOCK_SERE_FREE f ==> (
         RLTL_VAR_RENAMING g (PSL_TO_RLTL f) =
-        PSL_TO_RLTL (F_VAR_RENAMING g f))``,
+        PSL_TO_RLTL (F_VAR_RENAMING g f))
+Proof
 
     INDUCT_THEN fl_induct ASSUME_TAC THEN (
         ASM_SIMP_TAC std_ss [PSL_TO_RLTL_def, RLTL_VAR_RENAMING_def,
@@ -643,7 +640,8 @@ val RLTL_VAR_RENAMING___PSL_TO_RLTL =
                                     P_VAR_RENAMING___BEXP_TO_PROP_LOGIC,
                                     F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def,
                                     F_SERE_FREE_def]
-    ));
+    )
+QED
 
 
 
@@ -677,11 +675,10 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM___WITH_T_B =
 
 
 
-val PSL_TO_RLTL___NO_TOP_BOT_THM =
- store_thm
-  ("PSL_TO_RLTL___NO_TOP_BOT_THM",
-   ``!f v. (IS_INFINITE_TOP_BOTTOM_FREE_PATH v) /\ (F_CLOCK_SERE_FREE f) ==>
-    ((UF_SEM v f) = RLTL_SEM (CONVERT_PATH_PSL_LTL___NO_TOP_BOT v) (PSL_TO_RLTL f))``,
+Theorem PSL_TO_RLTL___NO_TOP_BOT_THM:
+     !f v. (IS_INFINITE_TOP_BOTTOM_FREE_PATH v) /\ (F_CLOCK_SERE_FREE f) ==>
+    ((UF_SEM v f) = RLTL_SEM (CONVERT_PATH_PSL_LTL___NO_TOP_BOT v) (PSL_TO_RLTL f))
+Proof
 
     REPEAT STRIP_TAC THEN
     REMAINS_TAC `UF_SEM (PATH_LETTER_RESTRICT (F_USED_VARS f) v) f =
@@ -785,7 +782,7 @@ val PSL_TO_RLTL___NO_TOP_BOT_THM =
     `?s. p x = STATE s` by PROVE_TAC[] THEN
     ASM_SIMP_TAC std_ss [LETTER_RESTRICT_def, LETTER_VAR_RENAMING_def,
         TRANSLATE_STATE_def, set_lemmataTheory.INTER_INTER_ABSORPTION]
- );
+QED
 
 
 
@@ -802,13 +799,12 @@ Definition F_KS_SEM_def:
 End
 
 
-val PSL_TO_RLTL___UF_KS_SEM =
- store_thm
-  ("PSL_TO_RLTL___UF_KS_SEM",
-    ``!M f. F_CLOCK_SERE_FREE f
+Theorem PSL_TO_RLTL___UF_KS_SEM:
+      !M f. F_CLOCK_SERE_FREE f
             ==>
             (UF_KS_SEM M f =
-             RLTL_KS_SEM M (PSL_TO_RLTL f))``,
+             RLTL_KS_SEM M (PSL_TO_RLTL f))
+Proof
 
 
 
@@ -829,17 +825,17 @@ val PSL_TO_RLTL___UF_KS_SEM =
       SIMP_TAC std_ss [CONVERT_PATH_LTL_PSL_def,
                        CONVERT_PATH_PSL_LTL___NO_TOP_BOT_def,
                        LENGTH_def, LS, ELEM_INFINITE, TRANSLATE_STATE_def,
-                       FUN_EQ_THM]);
+                       FUN_EQ_THM]
+QED
 
 
 
-val PSL_TO_RLTL___F_KS_SEM =
- store_thm
-  ("PSL_TO_RLTL___F_KS_SEM",
-    ``!M f c. F_SERE_FREE f
+Theorem PSL_TO_RLTL___F_KS_SEM:
+      !M f c. F_SERE_FREE f
             ==>
             (F_KS_SEM M c f =
-             RLTL_KS_SEM M (PSL_TO_RLTL (F_CLOCK_COMP c f)))``,
+             RLTL_KS_SEM M (PSL_TO_RLTL (F_CLOCK_COMP c f)))
+Proof
 
 
       REPEAT STRIP_TAC THEN
@@ -854,67 +850,67 @@ val PSL_TO_RLTL___F_KS_SEM =
       ) THEN
       ASM_REWRITE_TAC[] THEN
       SIMP_TAC std_ss [F_KS_SEM_def, UF_KS_SEM_def,
-                       F_CLOCK_COMP_CORRECT]);
+                       F_CLOCK_COMP_CORRECT]
+QED
 
 
 
-val PSL_TO_RLTL___NO_TOP_BOT___CLOCKED_THM =
- store_thm
-  ("PSL_TO_RLTL___NO_TOP_BOT___CLOCKED_THM",
-   ``!f c v. ((IS_INFINITE_TOP_BOTTOM_FREE_PATH v) /\ (F_SERE_FREE f)) ==>
-    ((F_SEM v c f) = RLTL_SEM (CONVERT_PATH_PSL_LTL___NO_TOP_BOT v) (PSL_TO_RLTL (F_CLOCK_COMP c f)))``,
+Theorem PSL_TO_RLTL___NO_TOP_BOT___CLOCKED_THM:
+     !f c v. ((IS_INFINITE_TOP_BOTTOM_FREE_PATH v) /\ (F_SERE_FREE f)) ==>
+    ((F_SEM v c f) = RLTL_SEM (CONVERT_PATH_PSL_LTL___NO_TOP_BOT v) (PSL_TO_RLTL (F_CLOCK_COMP c f)))
+Proof
 
    PROVE_TAC[PSL_TO_RLTL___NO_TOP_BOT_THM, F_CLOCK_COMP_CORRECT, F_CLOCK_SERE_FREE_def,
              F_SERE_FREE___IMPLIES___F_SERE_FREE_F_CLOCK_COMP,
-             F_CLOCK_FREE___F_CLOCK_COMP]);
+             F_CLOCK_FREE___F_CLOCK_COMP]
+QED
 
 
 
-val PSL_TO_LTL_THM =
- store_thm
-  ("PSL_TO_LTL_THM",
-   ``!f v b t. ((IS_INFINITE_PROPER_PATH v) /\ (F_CLOCK_SERE_FREE f) /\ ~(t = b) /\ (PATH_PROP_FREE t v) /\ (PATH_PROP_FREE b v)) ==>
-   ((UF_SEM v f) = (LTL_SEM (CONVERT_PATH_PSL_LTL t b v) (RLTL_TO_LTL (P_PROP t) (P_PROP b) (PSL_TO_RLTL f))))``,
+Theorem PSL_TO_LTL_THM:
+     !f v b t. ((IS_INFINITE_PROPER_PATH v) /\ (F_CLOCK_SERE_FREE f) /\ ~(t = b) /\ (PATH_PROP_FREE t v) /\ (PATH_PROP_FREE b v)) ==>
+   ((UF_SEM v f) = (LTL_SEM (CONVERT_PATH_PSL_LTL t b v) (RLTL_TO_LTL (P_PROP t) (P_PROP b) (PSL_TO_RLTL f))))
+Proof
 
    SIMP_TAC std_ss [LTL_SEM_def] THEN
-   METIS_TAC[RLTL_TO_LTL_THM, PSL_TO_RLTL_THM]);
+   METIS_TAC[RLTL_TO_LTL_THM, PSL_TO_RLTL_THM]
+QED
 
 
 
-val PSL_TO_LTL___UF_KS_SEM =
- store_thm
-  ("PSL_TO_LTL___UF_KS_SEM",
-    ``!M f. F_CLOCK_SERE_FREE f ==>
+Theorem PSL_TO_LTL___UF_KS_SEM:
+      !M f. F_CLOCK_SERE_FREE f ==>
             (UF_KS_SEM M f =
-             LTL_KS_SEM M (PSL_TO_LTL f))``,
+             LTL_KS_SEM M (PSL_TO_LTL f))
+Proof
 
-      SIMP_TAC std_ss [PSL_TO_LTL_def, PSL_TO_RLTL___UF_KS_SEM, RLTL_TO_LTL_THM___KS_SEM]);
+      SIMP_TAC std_ss [PSL_TO_LTL_def, PSL_TO_RLTL___UF_KS_SEM, RLTL_TO_LTL_THM___KS_SEM]
+QED
 
 
-val PSL_TO_LTL___F_KS_SEM =
- store_thm
-  ("PSL_TO_LTL___F_KS_SEM",
-    ``!M f c. F_SERE_FREE f ==>
+Theorem PSL_TO_LTL___F_KS_SEM:
+      !M f c. F_SERE_FREE f ==>
             (F_KS_SEM M c f =
-             LTL_KS_SEM M (PSL_TO_LTL_CLOCK c f))``,
+             LTL_KS_SEM M (PSL_TO_LTL_CLOCK c f))
+Proof
 
-      SIMP_TAC std_ss [PSL_TO_LTL_CLOCK_def, PSL_TO_RLTL___F_KS_SEM, RLTL_TO_LTL_THM___KS_SEM]);
+      SIMP_TAC std_ss [PSL_TO_LTL_CLOCK_def, PSL_TO_RLTL___F_KS_SEM, RLTL_TO_LTL_THM___KS_SEM]
+QED
 
-val F_KS_SEM___TO___UF_KS_SEM =
- store_thm
-  ("F_KS_SEM___TO___UF_KS_SEM",
-    ``!M f c. (F_KS_SEM M c f =
-               UF_KS_SEM M (F_CLOCK_COMP c f))``,
+Theorem F_KS_SEM___TO___UF_KS_SEM:
+      !M f c. (F_KS_SEM M c f =
+               UF_KS_SEM M (F_CLOCK_COMP c f))
+Proof
 
-      SIMP_TAC std_ss [F_KS_SEM_def, UF_KS_SEM_def, F_CLOCK_COMP_CORRECT]);
+      SIMP_TAC std_ss [F_KS_SEM_def, UF_KS_SEM_def, F_CLOCK_COMP_CORRECT]
+QED
 
 
-val PSL_TO_LTL___UF_CONTRADICTION =
- store_thm
-  ("PSL_TO_LTL___UF_CONTRADICTION",
-    ``!f. F_CLOCK_SERE_FREE f ==>
+Theorem PSL_TO_LTL___UF_CONTRADICTION:
+      !f. F_CLOCK_SERE_FREE f ==>
             (UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE f =
-             LTL_IS_CONTRADICTION (PSL_TO_LTL f))``,
+             LTL_IS_CONTRADICTION (PSL_TO_LTL f))
+Proof
 
       SIMP_TAC std_ss [PSL_TO_LTL_def, UF_IS_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE_def,
                        LTL_IS_CONTRADICTION_def, PSL_TO_RLTL___NO_TOP_BOT_THM,
@@ -925,15 +921,15 @@ val PSL_TO_LTL___UF_CONTRADICTION =
                              CONVERT_PATH_LTL_PSL___CONVERT_PATH_PSL_LTL],
 
         PROVE_TAC[]
-      ]);
+      ]
+QED
 
 
-val PSL_TO_LTL___UF_TAUTOLOGY =
- store_thm
-  ("PSL_TO_LTL___UF_TAUTOLOGY",
-    ``!f. F_CLOCK_SERE_FREE f ==>
+Theorem PSL_TO_LTL___UF_TAUTOLOGY:
+      !f. F_CLOCK_SERE_FREE f ==>
             (UF_IS_TAUTOLOGY___INFINITE_TOP_BOTTOM_FREE f =
-             LTL_IS_TAUTOLOGY (PSL_TO_LTL f))``,
+             LTL_IS_TAUTOLOGY (PSL_TO_LTL f))
+Proof
 
       REPEAT STRIP_TAC THEN
       ASSUME_TAC PSL_TO_LTL___UF_CONTRADICTION THEN
@@ -941,15 +937,15 @@ val PSL_TO_LTL___UF_TAUTOLOGY =
       SIMP_ALL_TAC std_ss [UF_IS_TAUTOLOGY_CONTRADICTION___INFINITE_TOP_BOTTOM_FREE___DUAL,
        LTL_TAUTOLOGY_CONTRADICTION_DUAL, PSL_TO_LTL_def, PSL_TO_RLTL_def,
        RLTL_TO_LTL_def, F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def, F_SERE_FREE_def] THEN
-      PROVE_TAC[]);
+      PROVE_TAC[]
+QED
 
 
-val PSL_TO_LTL___UF_EQUIVALENT =
- store_thm
-  ("PSL_TO_LTL___UF_EQUIVALENT",
-    ``!f1 f2. F_CLOCK_SERE_FREE f1 ==> F_CLOCK_SERE_FREE f2 ==>
+Theorem PSL_TO_LTL___UF_EQUIVALENT:
+      !f1 f2. F_CLOCK_SERE_FREE f1 ==> F_CLOCK_SERE_FREE f2 ==>
             (UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE f1 f2 =
-             LTL_IS_CONTRADICTION (LTL_NOT (LTL_EQUIV(PSL_TO_LTL f1, PSL_TO_LTL f2))))``,
+             LTL_IS_CONTRADICTION (LTL_NOT (LTL_EQUIV(PSL_TO_LTL f1, PSL_TO_LTL f2))))
+Proof
 
       REWRITE_TAC[UF_EQUIVALENT___INFINITE_TOP_BOTTOM_FREE___TO___CONTRADICTION] THEN
       REPEAT STRIP_TAC THEN
@@ -959,70 +955,70 @@ val PSL_TO_LTL___UF_EQUIVALENT =
       SIMP_TAC std_ss [PSL_TO_LTL_def, F_IFF_def, F_OR_def, F_IMPLIES_def,
                        PSL_TO_RLTL_def, RLTL_TO_LTL_def,
                        LTL_IS_CONTRADICTION_def, LTL_SEM_THM] THEN
-      PROVE_TAC[]);
+      PROVE_TAC[]
+QED
 
 
 
 
-val IS_PSL_RELATIONS =
- store_thm
-  ("IS_PSL_RELATIONS",
-   ``!f. ((IS_PSL_F f = IS_PSL_G (F_NOT f)) /\ (IS_PSL_G f = IS_PSL_F (F_NOT f)) /\
+Theorem IS_PSL_RELATIONS:
+     !f. ((IS_PSL_F f = IS_PSL_G (F_NOT f)) /\ (IS_PSL_G f = IS_PSL_F (F_NOT f)) /\
           (IS_PSL_FG f = IS_PSL_GF (F_NOT f)) /\ (IS_PSL_GF f = IS_PSL_FG (F_NOT f)) /\
           (IS_PSL_F f ==> IS_PSL_FG f) /\ (IS_PSL_G f ==> IS_PSL_GF f) /\
           (IS_PSL_G f ==> IS_PSL_FG f) /\ (IS_PSL_F f ==> IS_PSL_GF f) /\
-          (IS_PSL_PREFIX f ==> (IS_PSL_FG f /\ IS_PSL_GF f)))``,
+          (IS_PSL_PREFIX f ==> (IS_PSL_FG f /\ IS_PSL_GF f)))
+Proof
 
       INDUCT_THEN fl_induct ASSUME_TAC THEN
       FULL_SIMP_TAC std_ss [IS_PSL_G_def, IS_PSL_PREFIX_def, IS_PSL_GF_def] THEN
       METIS_TAC[]
-  );
+QED
 
 
-val IS_PSL___NOT_F_CLOCK_SERE_FREE =
- store_thm
-  ("IS_PSL___NOT_F_CLOCK_SERE_FREE",
+Theorem IS_PSL___NOT_F_CLOCK_SERE_FREE:
 
-   ``!f. (~F_CLOCK_SERE_FREE f ==> (
+     !f. (~F_CLOCK_SERE_FREE f ==> (
           ~IS_PSL_G f /\ ~IS_PSL_F f /\ ~IS_PSL_GF f /\
-          ~IS_PSL_FG f /\ ~IS_PSL_PREFIX f /\ ~IS_PSL_STREET f))``,
+          ~IS_PSL_FG f /\ ~IS_PSL_PREFIX f /\ ~IS_PSL_STREET f))
+Proof
 
    INDUCT_THEN fl_induct STRIP_ASSUME_TAC THEN
    ASM_SIMP_TAC std_ss [F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def, F_SERE_FREE_def, IS_RLTL_THM, IS_PSL_THM, PSL_TO_RLTL_def] THEN
-   PROVE_TAC[F_CLOCK_SERE_FREE_def]);
+   PROVE_TAC[F_CLOCK_SERE_FREE_def]
+QED
 
 
 
-val IS_PSL_RLTL_THM =
- store_thm
-  ("IS_PSL_RLTL_THM",
+Theorem IS_PSL_RLTL_THM:
 
-   ``!f. (F_CLOCK_SERE_FREE f ==> (
+     !f. (F_CLOCK_SERE_FREE f ==> (
          (IS_PSL_G f = IS_RLTL_G (PSL_TO_RLTL f)) /\
          (IS_PSL_F f = IS_RLTL_F (PSL_TO_RLTL f)) /\
          (IS_PSL_GF f = IS_RLTL_GF (PSL_TO_RLTL f)) /\
          (IS_PSL_FG f = IS_RLTL_FG (PSL_TO_RLTL f)) /\
          (IS_PSL_PREFIX f = IS_RLTL_PREFIX (PSL_TO_RLTL f)) /\
-         (IS_PSL_STREET f = IS_RLTL_STREET (PSL_TO_RLTL f))))``,
+         (IS_PSL_STREET f = IS_RLTL_STREET (PSL_TO_RLTL f))))
+Proof
 
       INDUCT_THEN fl_induct STRIP_ASSUME_TAC THEN
-      ASM_SIMP_TAC std_ss [F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def, F_SERE_FREE_def, IS_RLTL_THM, IS_PSL_THM, PSL_TO_RLTL_def]);
+      ASM_SIMP_TAC std_ss [F_CLOCK_SERE_FREE_def, F_CLOCK_FREE_def, F_SERE_FREE_def, IS_RLTL_THM, IS_PSL_THM, PSL_TO_RLTL_def]
+QED
 
 
 
-val IS_PSL_LTL_THM =
- store_thm
-  ("IS_PSL_LTL_THM",
+Theorem IS_PSL_LTL_THM:
 
-   ``!f a r. (F_CLOCK_SERE_FREE f ==> (
+     !f a r. (F_CLOCK_SERE_FREE f ==> (
              (IS_PSL_G f = IS_LTL_G (RLTL_TO_LTL a r (PSL_TO_RLTL f))) /\
              (IS_PSL_F f = IS_LTL_F (RLTL_TO_LTL a r (PSL_TO_RLTL f))) /\
              (IS_PSL_GF f = IS_LTL_GF (RLTL_TO_LTL a r (PSL_TO_RLTL f))) /\
              (IS_PSL_FG f = IS_LTL_FG (RLTL_TO_LTL a r (PSL_TO_RLTL f))) /\
              (IS_PSL_PREFIX f = IS_LTL_PREFIX (RLTL_TO_LTL a r (PSL_TO_RLTL f))) /\
-             (IS_PSL_STREET f = IS_LTL_STREET (RLTL_TO_LTL a r (PSL_TO_RLTL f)))))``,
+             (IS_PSL_STREET f = IS_LTL_STREET (RLTL_TO_LTL a r (PSL_TO_RLTL f)))))
+Proof
 
-      PROVE_TAC[IS_PSL_RLTL_THM, IS_RLTL_LTL_THM]);
+      PROVE_TAC[IS_PSL_RLTL_THM, IS_RLTL_LTL_THM]
+QED
 
 
 
@@ -1036,12 +1032,11 @@ End
 
 
 
-val FUTURE_LTL_TO_PSL_THM =
- store_thm
-  ("FUTURE_LTL_TO_PSL_THM",
+Theorem FUTURE_LTL_TO_PSL_THM:
 
-   ``!f t v. (IS_FUTURE_LTL f) ==>
-      ((LTL_SEM_TIME t v f) = (UF_SEM (RESTN (CONVERT_PATH_LTL_PSL v) t) (FUTURE_LTL_TO_PSL f)))``,
+     !f t v. (IS_FUTURE_LTL f) ==>
+      ((LTL_SEM_TIME t v f) = (UF_SEM (RESTN (CONVERT_PATH_LTL_PSL v) t) (FUTURE_LTL_TO_PSL f)))
+Proof
 
 
    INDUCT_THEN ltl_induct ASSUME_TAC THENL [
@@ -1090,23 +1085,24 @@ val FUTURE_LTL_TO_PSL_THM =
 
       REWRITE_TAC[IS_FUTURE_LTL_def],
       REWRITE_TAC[IS_FUTURE_LTL_def]
-   ]);
+   ]
+QED
 
 
-val IS_LTL_PSL_THM =
- store_thm
-  ("IS_LTL_PSL_THM",
+Theorem IS_LTL_PSL_THM:
 
-   ``!f. (IS_FUTURE_LTL f) ==>
+     !f. (IS_FUTURE_LTL f) ==>
             ((IS_LTL_G f = IS_PSL_G (FUTURE_LTL_TO_PSL f)) /\
              (IS_LTL_F f = IS_PSL_F (FUTURE_LTL_TO_PSL f)) /\
              (IS_LTL_GF f = IS_PSL_GF (FUTURE_LTL_TO_PSL f)) /\
              (IS_LTL_FG f = IS_PSL_FG (FUTURE_LTL_TO_PSL f)) /\
              (IS_LTL_PREFIX f = IS_PSL_PREFIX (FUTURE_LTL_TO_PSL f)) /\
-             (IS_LTL_STREET f = IS_PSL_STREET (FUTURE_LTL_TO_PSL f)))``,
+             (IS_LTL_STREET f = IS_PSL_STREET (FUTURE_LTL_TO_PSL f)))
+Proof
 
       INDUCT_THEN ltl_induct STRIP_ASSUME_TAC THEN
-      FULL_SIMP_TAC std_ss[IS_PSL_THM, IS_LTL_THM, IS_FUTURE_LTL_def, FUTURE_LTL_TO_PSL_def, LTL_OR_def]);
+      FULL_SIMP_TAC std_ss[IS_PSL_THM, IS_LTL_THM, IS_FUTURE_LTL_def, FUTURE_LTL_TO_PSL_def, LTL_OR_def]
+QED
 
 (* References:
 

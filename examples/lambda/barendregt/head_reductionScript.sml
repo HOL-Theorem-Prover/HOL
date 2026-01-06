@@ -56,16 +56,18 @@ Proof
  >> Q.EXISTS_TAC ‘M1’ >> art []
 QED
 
-val hreduce_ccbeta = store_thm(
-  "hreduce_ccbeta",
-  ``∀M N. M -h-> N ⇒ M -β-> N``,
+Theorem hreduce_ccbeta:
+    ∀M N. M -h-> N ⇒ M -β-> N
+Proof
   HO_MATCH_MP_TAC hreduce1_ind THEN SRW_TAC [][cc_beta_thm] THEN
-  METIS_TAC []);
+  METIS_TAC []
+QED
 
-val hreduce1_FV = store_thm(
-  "hreduce1_FV",
-  ``∀M N. M -h-> N ⇒ ∀v. v ∈ FV N ⇒ v ∈ FV M``,
-  METIS_TAC [SUBSET_DEF, hreduce_ccbeta, cc_beta_FV_SUBSET]);
+Theorem hreduce1_FV:
+    ∀M N. M -h-> N ⇒ ∀v. v ∈ FV N ⇒ v ∈ FV M
+Proof
+  METIS_TAC [SUBSET_DEF, hreduce_ccbeta, cc_beta_FV_SUBSET]
+QED
 
 (* |- !M N. M -h-> N ==> FV N SUBSET FV M *)
 Theorem hreduce1_FV_SUBSET = hreduce1_FV |> REWRITE_RULE [GSYM SUBSET_DEF]
@@ -93,10 +95,11 @@ val _ = temp_add_rule {block_style = (AroundEachPhrase, (PP.INCONSISTENT,2)),
 val _ = temp_overload_on ("apply_perm", ``λp M. tpm [p] M``)
 val _ = temp_overload_on ("apply_perm", ``tpm``)
 
-val tpm_hreduce_I = store_thm(
-  "tpm_hreduce_I",
-  ``∀M N. M -h-> N ⇒ ∀π. π·M -h-> π·N``,
-  HO_MATCH_MP_TAC hreduce1_ind THEN SRW_TAC [][tpm_subst, hreduce1_rules]);
+Theorem tpm_hreduce_I:
+    ∀M N. M -h-> N ⇒ ∀π. π·M -h-> π·N
+Proof
+  HO_MATCH_MP_TAC hreduce1_ind THEN SRW_TAC [][tpm_subst, hreduce1_rules]
+QED
 
 Theorem tpm_hreduce[simp] :
     ∀M N π. π·M -h-> π·N ⇔ M -h-> N
@@ -119,12 +122,12 @@ Proof
     METIS_TAC [pmact_inverse, tpm_hreduces_I]
 QED
 
-val hreduce1_rwts = store_thm(
-  "hreduce1_rwts",
-  ``(VAR s -h-> M ⇔ F) ∧
+Theorem hreduce1_rwts:
+    (VAR s -h-> M ⇔ F) ∧
     (¬is_abs M ⇒ (M @@ N -h-> P ⇔ ∃M'. (P = M' @@ N) ∧ M -h-> M')) ∧
     (LAM v M -h-> N ⇔ ∃M'. (N = LAM v M') ∧ M -h-> M') ∧
-    (LAM v M @@ N -h-> P ⇔ (P = [N/v]M))``,
+    (LAM v M @@ N -h-> P ⇔ (P = [N/v]M))
+Proof
   REPEAT STRIP_TAC THENL [
     SRW_TAC [][Once hreduce1_cases],
     CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [hreduce1_cases])) THEN
@@ -147,15 +150,17 @@ val hreduce1_rwts = store_thm(
     SRW_TAC [DNF_ss][Once hreduce1_cases, LAM_eq_thm] THEN
     SRW_TAC [][EQ_IMP_THM, tpm_eqr] THEN
     METIS_TAC [lemma15a, pmact_flip_args, fresh_tpm_subst]
-  ]);
+  ]
+QED
 
-val hreduce1_unique = store_thm(
-  "hreduce1_unique",
-  ``∀M N1 N2. M -h-> N1 ∧ M -h-> N2 ⇒ (N1 = N2)``,
+Theorem hreduce1_unique:
+    ∀M N1 N2. M -h-> N1 ∧ M -h-> N2 ⇒ (N1 = N2)
+Proof
   Q_TAC SUFF_TAC `∀M N. M -h-> N ⇒ ∀P. M -h-> P ⇒ (N = P)`
         THEN1 METIS_TAC [] THEN
   HO_MATCH_MP_TAC hreduce1_ind THEN
-  SIMP_TAC (srw_ss() ++ DNF_ss) [hreduce1_rwts]);
+  SIMP_TAC (srw_ss() ++ DNF_ss) [hreduce1_rwts]
+QED
 
 Theorem hreduce1_appstar :
     !Ns. M1 -h-> M2 /\ ~is_abs M1 ==> M1 @* Ns -h-> M2 @* Ns
@@ -620,9 +625,9 @@ QED
 val strong_cc_ind = IndDefLib.derive_strong_induction (compat_closure_rules,
                                                        compat_closure_ind)
 
-val hnf_ccbeta_preserved = store_thm(
-  "hnf_ccbeta_preserved",
-  ``∀M N. compat_closure beta M N ∧ hnf M ⇒ hnf N``,
+Theorem hnf_ccbeta_preserved:
+    ∀M N. compat_closure beta M N ∧ hnf M ⇒ hnf N
+Proof
   Q_TAC SUFF_TAC
         `∀M N. compat_closure beta M N ⇒ hnf M ⇒ hnf N`
         THEN1 METIS_TAC [] THEN
@@ -633,7 +638,8 @@ val hnf_ccbeta_preserved = store_thm(
     Q.SPEC_THEN `M` FULL_STRUCT_CASES_TAC term_CASES THEN
     FULL_SIMP_TAC (srw_ss()) [cc_beta_thm] THEN
     SRW_TAC [][] THEN FULL_SIMP_TAC (srw_ss()) []
-  ]);
+  ]
+QED
 
 Theorem hnf_I :
     hnf I
@@ -718,10 +724,11 @@ End
 val _ = set_fixity "-w->" (Infix(NONASSOC, 450))
 val _ = overload_on ("-w->", ``weak_head``)
 
-val wh_is_abs = store_thm(
-  "wh_is_abs",
-  ``∀M N. M -w-> N ⇒ ¬is_abs M``,
-  HO_MATCH_MP_TAC weak_head_ind THEN SRW_TAC [][]);
+Theorem wh_is_abs:
+    ∀M N. M -w-> N ⇒ ¬is_abs M
+Proof
+  HO_MATCH_MP_TAC weak_head_ind THEN SRW_TAC [][]
+QED
 
 Theorem wh_lam[simp] :
     ∀v M N. ¬(LAM v M -w-> N)
@@ -729,65 +736,74 @@ Proof
   ONCE_REWRITE_TAC [weak_head_cases] THEN SRW_TAC [][]
 QED
 
-val wh_head = store_thm(
-  "wh_head",
-  ``∀M N. M -w-> N ⇒ M -h-> N``,
+Theorem wh_head:
+    ∀M N. M -w-> N ⇒ M -h-> N
+Proof
     HO_MATCH_MP_TAC weak_head_strongind
- >> METIS_TAC [wh_is_abs, hreduce1_rules]);
+ >> METIS_TAC [wh_is_abs, hreduce1_rules]
+QED
 
 val _ = set_fixity "-w->*" (Infix(NONASSOC, 450))
 val _ = overload_on ("-w->*", ``RTC (-w->)``)
 
-val whead_FV = store_thm(
-  "whead_FV",
-  ``∀M N. M -w-> N ⇒ v ∈ FV N ⇒ v ∈ FV M``,
+Theorem whead_FV:
+    ∀M N. M -w-> N ⇒ v ∈ FV N ⇒ v ∈ FV M
+Proof
   HO_MATCH_MP_TAC weak_head_ind THEN SRW_TAC [][FV_SUB] THEN
-  METIS_TAC []);
-val whstar_FV = store_thm(
-  "whstar_FV",
-  ``∀M N. M -w->* N ⇒ v ∈ FV N ⇒ v ∈ FV M``,
+  METIS_TAC []
+QED
+Theorem whstar_FV:
+    ∀M N. M -w->* N ⇒ v ∈ FV N ⇒ v ∈ FV M
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN
-  METIS_TAC [relationTheory.RTC_RULES, whead_FV]);
+  METIS_TAC [relationTheory.RTC_RULES, whead_FV]
+QED
 
-val whY1 = store_thm(
-  "whY1",
-  ``chap2$Y @@ f -w-> Yf f``,
+Theorem whY1:
+    chap2$Y @@ f -w-> Yf f
+Proof
   SRW_TAC [][chap2Theory.Y_def, chap2Theory.Yf_def, LET_THM,
              Once weak_head_cases] THEN
   NEW_ELIM_TAC THEN REPEAT STRIP_TAC THEN
   SRW_TAC [DNF_ss][LAM_eq_thm] THEN DISJ1_TAC THEN
   SRW_TAC [][chap2Theory.SUB_LAM_RWT, LET_THM] THEN NEW_ELIM_TAC THEN
-  SRW_TAC [][LAM_eq_thm, tpm_fresh]);
+  SRW_TAC [][LAM_eq_thm, tpm_fresh]
+QED
 
-val whY2 = store_thm(
-  "whY2",
-  ``Yf f -w-> f @@ Yf f``,
+Theorem whY2:
+    Yf f -w-> f @@ Yf f
+Proof
   SRW_TAC [][chap2Theory.Yf_def, LET_THM, Once weak_head_cases] THEN
-  NEW_ELIM_TAC THEN SRW_TAC [DNF_ss][LAM_eq_thm, lemma14b]);
+  NEW_ELIM_TAC THEN SRW_TAC [DNF_ss][LAM_eq_thm, lemma14b]
+QED
 
-val wh_unique = store_thm(
-  "wh_unique",
-  ``M -w-> N₁ ∧ M -w-> N₂ ⇒ (N₁ = N₂)``,
-  METIS_TAC [hreduce1_unique, wh_head]);
+Theorem wh_unique:
+    M -w-> N₁ ∧ M -w-> N₂ ⇒ (N₁ = N₂)
+Proof
+  METIS_TAC [hreduce1_unique, wh_head]
+QED
 
 Definition whnf_def:
   whnf M = ∀N. ¬(M -w-> N)
 End
 
-val hnf_whnf = store_thm(
-  "hnf_whnf",
-  ``hnf M ⇒ whnf M``,
-  METIS_TAC [hnf_def, whnf_def, wh_head]);
+Theorem hnf_whnf:
+    hnf M ⇒ whnf M
+Proof
+  METIS_TAC [hnf_def, whnf_def, wh_head]
+QED
 
-val bnf_hnf = store_thm(
-  "bnf_hnf",
-  ``bnf M ⇒ hnf M``,
-  METIS_TAC [hnf_def, beta_normal_form_bnf, corollary3_2_1, hreduce_ccbeta]);
+Theorem bnf_hnf:
+    bnf M ⇒ hnf M
+Proof
+  METIS_TAC [hnf_def, beta_normal_form_bnf, corollary3_2_1, hreduce_ccbeta]
+QED
 
-val bnf_whnf = store_thm(
-  "bnf_whnf",
-  ``bnf M ⇒ whnf M``,
-  METIS_TAC [hnf_whnf, bnf_hnf]);
+Theorem bnf_whnf:
+    bnf M ⇒ whnf M
+Proof
+  METIS_TAC [hnf_whnf, bnf_hnf]
+QED
 
 Theorem whnf_thm[simp] :
    whnf (VAR s) ∧
@@ -803,9 +819,9 @@ Proof
   ]
 QED
 
-val wh_weaken_cong = store_thm(
-  "wh_weaken_cong",
-  ``whnf N ⇒ M₁ -w->* M₂ ⇒ (M₁ -w->* N <=> M₂ -w->* N)``,
+Theorem wh_weaken_cong:
+    whnf N ⇒ M₁ -w->* M₂ ⇒ (M₁ -w->* N <=> M₂ -w->* N)
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, IMP_CONJ_THM] THEN CONJ_TAC THENL [
     Q_TAC SUFF_TAC `∀M N. M -w->* N ⇒ ∀N'. M -w->* N' ∧ whnf N' ⇒ N -w->* N'`
           THEN1 METIS_TAC [] THEN
@@ -813,28 +829,31 @@ val wh_weaken_cong = store_thm(
     METIS_TAC [relationTheory.RTC_CASES1, whnf_def, wh_unique],
 
     METIS_TAC [relationTheory.RTC_CASES_RTC_TWICE]
-  ]);
+  ]
+QED
 
-val wh_app_congL = store_thm(
-  "wh_app_congL",
-  ``M -w->* M' ==> M @@ N -w->* M' @@ N``,
+Theorem wh_app_congL:
+    M -w->* M' ==> M @@ N -w->* M' @@ N
+Proof
   STRIP_TAC THEN Q.ID_SPEC_TAC `N` THEN POP_ASSUM MP_TAC THEN
   MAP_EVERY Q.ID_SPEC_TAC [`M'`, `M`] THEN
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
-  METIS_TAC [relationTheory.RTC_RULES, weak_head_rules]);
+  METIS_TAC [relationTheory.RTC_RULES, weak_head_rules]
+QED
 
-val tpm_whead_I = store_thm(
-  "tpm_whead_I",
-  ``∀M N. M -w-> N ⇒ π·M -w-> π·N``,
-  HO_MATCH_MP_TAC weak_head_ind THEN SRW_TAC [][weak_head_rules, tpm_subst]);
+Theorem tpm_whead_I:
+    ∀M N. M -w-> N ⇒ π·M -w-> π·N
+Proof
+  HO_MATCH_MP_TAC weak_head_ind THEN SRW_TAC [][weak_head_rules, tpm_subst]
+QED
 
-val whead_gen_bvc_ind = store_thm(
-  "whead_gen_bvc_ind",
-  ``∀P f. (∀x. FINITE (f x)) ∧
+Theorem whead_gen_bvc_ind:
+    ∀P f. (∀x. FINITE (f x)) ∧
           (∀v M N x. v ∉ f x ⇒ P (LAM v M @@ N) ([N/v]M) x) ∧
           (∀M₁ M₂ N x. (∀z. P M₁ M₂ z) ⇒ P (M₁ @@ N) (M₂ @@ N) x)
         ⇒
-          ∀M N. M -w-> N ⇒ ∀x. P M N x``,
+          ∀M N. M -w-> N ⇒ ∀x. P M N x
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `∀M N. M -w-> N ⇒ ∀π x. P (π·M) (π·N) x`
         THEN1 METIS_TAC [pmact_nil] THEN
@@ -844,7 +863,8 @@ val whead_gen_bvc_ind = store_thm(
      by SRW_TAC [][SIMPLE_ALPHA] THEN
   `[π·N/lswapstr π v](π·M) = [π·N/z] ([VAR z/lswapstr π v](π·M))`
      by SRW_TAC [][lemma15a] THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 val whead_bvcX_ind = save_thm(
   "whead_bvcX_ind",
@@ -853,29 +873,33 @@ val whead_bvcX_ind = save_thm(
                     |> Q.INST [`P'` |-> `P`]
                     |> Q.GEN `X` |> Q.GEN `P`);
 
-val wh_substitutive = store_thm(
-  "wh_substitutive",
-  ``∀M N. M -w-> N ⇒ [P/v]M -w-> [P/v]N``,
+Theorem wh_substitutive:
+    ∀M N. M -w-> N ⇒ [P/v]M -w-> [P/v]N
+Proof
   HO_MATCH_MP_TAC whead_bvcX_ind THEN Q.EXISTS_TAC `FV P ∪ {v}` THEN
   SRW_TAC [][weak_head_rules] THEN
-  METIS_TAC [chap2Theory.substitution_lemma, weak_head_rules]);
+  METIS_TAC [chap2Theory.substitution_lemma, weak_head_rules]
+QED
 
-val whstar_substitutive = store_thm(
-  "whstar_substitutive",
-  ``∀M N. M -w->* N ⇒ [P/v]M -w->* [P/v]N``,
+Theorem whstar_substitutive:
+    ∀M N. M -w->* N ⇒ [P/v]M -w->* [P/v]N
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
-  METIS_TAC [relationTheory.RTC_RULES, wh_substitutive]);
+  METIS_TAC [relationTheory.RTC_RULES, wh_substitutive]
+QED
 
-val whstar_betastar = store_thm(
-  "whstar_betastar",
-  ``∀M N. M -w->* N ⇒ M -β->* N``,
+Theorem whstar_betastar:
+    ∀M N. M -w->* N ⇒ M -β->* N
+Proof
   HO_MATCH_MP_TAC relationTheory.RTC_INDUCT THEN SRW_TAC [][] THEN
-  METIS_TAC [relationTheory.RTC_RULES, wh_head, hreduce_ccbeta]);
+  METIS_TAC [relationTheory.RTC_RULES, wh_head, hreduce_ccbeta]
+QED
 
-val whstar_lameq = store_thm(
-  "whstar_lameq",
-  ``M -w->* N ⇒ M == N``,
-  METIS_TAC [betastar_lameq, whstar_betastar]);
+Theorem whstar_lameq:
+    M -w->* N ⇒ M == N
+Proof
+  METIS_TAC [betastar_lameq, whstar_betastar]
+QED
 
 Theorem whstar_abs[simp] :
     LAM v M -w->* N ⇔ (N = LAM v M)
@@ -897,9 +921,9 @@ Definition has_whnf_def:
   has_whnf M = ∃N. M -w->* N ∧ whnf N
 End
 
-val has_whnf_APP_E = store_thm(
-  "has_whnf_APP_E",
-  ``has_whnf (M @@ N) ⇒ has_whnf M``,
+Theorem has_whnf_APP_E:
+    has_whnf (M @@ N) ⇒ has_whnf M
+Proof
   simp_tac (srw_ss())[has_whnf_def] >>
   Q_TAC SUFF_TAC
      `∀M N. M -w->* N ⇒ ∀M0 M1. (M = M0 @@ M1) ∧ whnf N ⇒
@@ -912,25 +936,28 @@ val has_whnf_APP_E = store_thm(
         full_simp_tac (srw_ss()) [] >>
         metis_tac [relationTheory.RTC_RULES, whnf_thm]) >>
   full_simp_tac (srw_ss()) [Once weak_head_cases] >>
-  metis_tac [relationTheory.RTC_RULES])
+  metis_tac [relationTheory.RTC_RULES]
+QED
 
-val hreduce_weak_or_strong = store_thm(
-  "hreduce_weak_or_strong",
-  ``∀M N. M -h-> N ⇒ whnf M ∨ M -w-> N``,
+Theorem hreduce_weak_or_strong:
+    ∀M N. M -h-> N ⇒ whnf M ∨ M -w-> N
+Proof
   ho_match_mp_tac simple_induction >> simp_tac (srw_ss()) [] >>
   rpt gen_tac >> strip_tac >> rpt gen_tac >>
   simp_tac (srw_ss()) [Once hreduce1_cases] >>
   simp_tac (srw_ss() ++ DNF_ss) [] >> conj_tac
     >- metis_tac [weak_head_rules] >>
-  srw_tac [][] >> metis_tac [weak_head_rules]);
+  srw_tac [][] >> metis_tac [weak_head_rules]
+QED
 
-val head_reductions_have_weak_prefixes = store_thm(
-  "head_reductions_have_weak_prefixes",
-  ``∀M N. M -h->* N ⇒ hnf N ⇒
-          ∃N0. M -w->* N0 ∧ whnf N0 ∧ N0 -h->* N``,
+Theorem head_reductions_have_weak_prefixes:
+    ∀M N. M -h->* N ⇒ hnf N ⇒
+          ∃N0. M -w->* N0 ∧ whnf N0 ∧ N0 -h->* N
+Proof
    ho_match_mp_tac relationTheory.RTC_STRONG_INDUCT >> conj_tac
      >- metis_tac [hnf_whnf, relationTheory.RTC_RULES] >>
-   metis_tac [relationTheory.RTC_RULES, hreduce_weak_or_strong]);
+   metis_tac [relationTheory.RTC_RULES, hreduce_weak_or_strong]
+QED
 
 (* ----------------------------------------------------------------------
     Head redex
@@ -945,13 +972,13 @@ Inductive is_head_redex :
                (Lt::p) is_head_redex (t @@ u) @@ v)
 End
 
-val ihr_bvc_ind = store_thm(
-  "ihr_bvc_ind",
-  ``!P X. FINITE X /\
+Theorem ihr_bvc_ind:
+    !P X. FINITE X /\
           (!v M N. ~(v IN X) /\ ~(v IN FV N) ==> P [] (LAM v M @@ N)) /\
           (!v M p. ~(v IN X) /\ P p M ==> P (In::p) (LAM v M)) /\
           (!M N L p. P p (M @@ N) ==> P (Lt::p) ((M @@ N) @@ L)) ==>
-          !p M. p is_head_redex M ==> P p M``,
+          !p M. p is_head_redex M ==> P p M
+Proof
   REPEAT GEN_TAC THEN STRIP_TAC THEN
   Q_TAC SUFF_TAC `!p M. p is_head_redex M ==> !pi. P p (tpm pi M)`
         THEN1 METIS_TAC [pmact_nil] THEN
@@ -966,14 +993,16 @@ val ihr_bvc_ind = store_thm(
     Q_TAC (NEW_TAC "z") `FV MM UNION X` THEN
     `LAM vv MM = LAM z (tpm [(z,vv)] MM)` by SRW_TAC [][tpm_ALPHA] THEN
     SRW_TAC [][GSYM pmact_decompose, Abbr`MM`]
-  ]);
+  ]
+QED
 
-val is_head_redex_subst_invariant = store_thm(
-  "is_head_redex_subst_invariant",
-  ``!p t u v. p is_head_redex t ==> p is_head_redex [u/v] t``,
+Theorem is_head_redex_subst_invariant:
+    !p t u v. p is_head_redex t ==> p is_head_redex [u/v] t
+Proof
   REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`t`, `p`] THEN
   HO_MATCH_MP_TAC ihr_bvc_ind THEN Q.EXISTS_TAC `v INSERT FV u` THEN
-  SRW_TAC [][SUB_THM, SUB_VAR, is_head_redex_rules]);
+  SRW_TAC [][SUB_THM, SUB_VAR, is_head_redex_rules]
+QED
 
 Theorem is_head_redex_tpm_invariant[simp] :
     p is_head_redex (tpm pi t) = p is_head_redex t
@@ -983,64 +1012,70 @@ Proof
   HO_MATCH_MP_TAC is_head_redex_ind THEN SRW_TAC [][is_head_redex_rules]
 QED
 
-val is_head_redex_unique = store_thm(
-  "is_head_redex_unique",
-  ``!t p1 p2. p1 is_head_redex t /\ p2 is_head_redex t ==> (p1 = p2)``,
+Theorem is_head_redex_unique:
+    !t p1 p2. p1 is_head_redex t /\ p2 is_head_redex t ==> (p1 = p2)
+Proof
   Q_TAC SUFF_TAC
         `!p1 t. p1 is_head_redex t ==> !p2. p2 is_head_redex t ==> (p1 = p2)`
         THEN1 PROVE_TAC [] THEN
   HO_MATCH_MP_TAC is_head_redex_ind THEN REPEAT STRIP_TAC THEN
   POP_ASSUM MP_TAC THEN ONCE_REWRITE_TAC [is_head_redex_cases] THEN
-  SRW_TAC [][LAM_eq_thm]);
+  SRW_TAC [][LAM_eq_thm]
+QED
 
-val is_head_redex_thm = store_thm(
-  "is_head_redex_thm",
-  ``(p is_head_redex (LAM v t) <=> ?p0. (p = In::p0) /\ p0 is_head_redex t) /\
+Theorem is_head_redex_thm:
+    (p is_head_redex (LAM v t) <=> ?p0. (p = In::p0) /\ p0 is_head_redex t) /\
     (p is_head_redex (t @@ u) <=> (p = []) /\ is_abs t \/
                                 ?p0. (p = Lt::p0) /\ is_comb t /\
                                           p0 is_head_redex t) /\
-    (p is_head_redex (VAR v) <=> F)``,
+    (p is_head_redex (VAR v) <=> F)
+Proof
   REPEAT CONJ_TAC THEN
   SRW_TAC [][Once is_head_redex_cases, SimpLHS, LAM_eq_thm] THEN
   SRW_TAC [][EQ_IMP_THM] THENL [
     PROVE_TAC [],
     PROVE_TAC [is_abs_thm, term_CASES],
     METIS_TAC [is_comb_thm, term_CASES]
-  ]);
+  ]
+QED
 
-val head_redex_leftmost = store_thm(
-  "head_redex_leftmost",
-  ``!p t. p is_head_redex t ==>
-          !p'. p' IN redex_posns t ==> (p = p') \/ p < p'``,
+Theorem head_redex_leftmost:
+    !p t. p is_head_redex t ==>
+          !p'. p' IN redex_posns t ==> (p = p') \/ p < p'
+Proof
   HO_MATCH_MP_TAC is_head_redex_ind THEN
-  SRW_TAC [][redex_posns_thm, DISJ_IMP_THM]);
+  SRW_TAC [][redex_posns_thm, DISJ_IMP_THM]
+QED
 
-val hnf_no_head_redex = store_thm(
-  "hnf_no_head_redex",
-  ``!t. hnf t <=> !p. ~(p is_head_redex t)``,
+Theorem hnf_no_head_redex:
+    !t. hnf t <=> !p. ~(p is_head_redex t)
+Proof
   HO_MATCH_MP_TAC simple_induction THEN
   SRW_TAC [][hnf_thm, is_head_redex_thm] THEN
   Q.SPEC_THEN `t` STRUCT_CASES_TAC term_CASES THEN
-  SRW_TAC [][is_head_redex_thm]);
+  SRW_TAC [][is_head_redex_thm]
+QED
 
-val head_redex_is_redex = store_thm(
-  "head_redex_is_redex",
-  ``!p t. p is_head_redex t ==> p IN redex_posns t``,
+Theorem head_redex_is_redex:
+    !p t. p is_head_redex t ==> p IN redex_posns t
+Proof
   HO_MATCH_MP_TAC is_head_redex_ind THEN
-  SRW_TAC [][redex_posns_thm]);
+  SRW_TAC [][redex_posns_thm]
+QED
 
-val is_head_redex_vsubst_invariant = store_thm(
-  "is_head_redex_vsubst_invariant",
-  ``!t v x p. p is_head_redex ([VAR v/x] t) <=> p is_head_redex t``,
+Theorem is_head_redex_vsubst_invariant:
+    !t v x p. p is_head_redex ([VAR v/x] t) <=> p is_head_redex t
+Proof
   REPEAT GEN_TAC THEN MAP_EVERY Q.ID_SPEC_TAC [`p`, `t`] THEN
   HO_MATCH_MP_TAC nc_INDUCTION2 THEN Q.EXISTS_TAC `{x;v}` THEN
-  SRW_TAC [][is_head_redex_thm, SUB_THM, SUB_VAR]);
+  SRW_TAC [][is_head_redex_thm, SUB_THM, SUB_VAR]
+QED
 
-val head_redex_preserved = store_thm(
-  "head_redex_preserved",
-  ``!M p N.
+Theorem head_redex_preserved:
+    !M p N.
       labelled_redn beta M p N ==>
-      !h. h is_head_redex M /\ ~(h = p) ==> h is_head_redex N``,
+      !h. h is_head_redex M /\ ~(h = p) ==> h is_head_redex N
+Proof
   HO_MATCH_MP_TAC strong_labelled_redn_ind THEN
   SRW_TAC [][is_head_redex_thm, beta_def] THENL [
     FULL_SIMP_TAC (srw_ss()) [is_head_redex_thm],
@@ -1052,7 +1087,8 @@ val head_redex_preserved = store_thm(
     ONCE_REWRITE_TAC [labelled_redn_cases] THEN
     FULL_SIMP_TAC (srw_ss()) [is_head_redex_thm, beta_def] THEN
     PROVE_TAC [is_comb_thm]
-  ]);
+  ]
+QED
 
 (* moved here from standardisationScript.sml *)
 Definition is_head_reduction_def :
@@ -1082,9 +1118,9 @@ Definition head_reduces_def :
                          is_head_reduction s
 End
 
-val head_reduce1_def = store_thm(
-  "head_reduce1_def",
-  ``M -h-> N <=> (?r. r is_head_redex M /\ labelled_redn beta M r N)``,
+Theorem head_reduce1_def:
+    M -h-> N <=> (?r. r is_head_redex M /\ labelled_redn beta M r N)
+Proof
   EQ_TAC THENL [
     Q_TAC SUFF_TAC `!M N. M -h-> N ==>
                           ?r. r is_head_redex M /\ labelled_redn beta M r N`
@@ -1104,11 +1140,12 @@ val head_reduce1_def = store_thm(
     HO_MATCH_MP_TAC labelled_redn_ind THEN
     SIMP_TAC (srw_ss() ++ DNF_ss) [beta_def, is_head_redex_thm,
                                    Once is_comb_APP_EXISTS, hreduce1_rwts]
-  ]);
+  ]
+QED
 
-val head_reduces_RTC_hreduce1 = store_thm(
-  "head_reduces_RTC_hreduce1",
-  ``(head_reduces) = RTC (-h->)``,
+Theorem head_reduces_RTC_hreduce1:
+    (head_reduces) = RTC (-h->)
+Proof
   SIMP_TAC (srw_ss()) [head_reduces_def, FUN_EQ_THM, GSYM LEFT_FORALL_IMP_THM,
                        FORALL_AND_THM, EQ_IMP_THM] THEN
   CONJ_TAC THENL [
@@ -1127,14 +1164,16 @@ val head_reduces_RTC_hreduce1 = store_thm(
       Q.EXISTS_TAC `stopped_at x` THEN SRW_TAC [][],
       Q.EXISTS_TAC `pcons x r s` THEN SRW_TAC [][]
     ]
-  ]);
+  ]
+QED
 
-val head_reduces_reduction_beta = store_thm(
-  "head_reduces_reduction_beta",
-  ``!M N. M head_reduces N ==> reduction beta M N``,
+Theorem head_reduces_reduction_beta:
+    !M N. M head_reduces N ==> reduction beta M N
+Proof
   SIMP_TAC (srw_ss()) [head_reduces_RTC_hreduce1] THEN
   MATCH_MP_TAC relationTheory.RTC_MONOTONE THEN
-  METIS_TAC [head_reduce1_def, labelled_redn_cc]);
+  METIS_TAC [head_reduce1_def, labelled_redn_cc]
+QED
 
 Theorem hreduces_lameq :
     M -h->* N ==> M == N
@@ -1144,10 +1183,11 @@ Proof
  >> MATCH_MP_TAC head_reduces_reduction_beta >> art []
 QED
 
-val head_reduces_TRANS = store_thm(
-  "head_reduces_TRANS",
-  ``!M N P. M head_reduces N /\ N head_reduces P ==> M head_reduces P``,
-  METIS_TAC [relationTheory.RTC_RTC, head_reduces_RTC_hreduce1]);
+Theorem head_reduces_TRANS:
+    !M N P. M head_reduces N /\ N head_reduces P ==> M head_reduces P
+Proof
+  METIS_TAC [relationTheory.RTC_RTC, head_reduces_RTC_hreduce1]
+QED
 
 (* moved here from standardisationScript.sml *)
 Definition has_hnf_def:
@@ -1191,11 +1231,12 @@ Proof
  >> MATCH_MP_TAC RTC_SINGLE >> art []
 QED
 
-val has_bnf_hnf = store_thm(
-  "has_bnf_hnf",
-  ``has_bnf M ⇒ has_hnf M``,
+Theorem has_bnf_hnf:
+    has_bnf M ⇒ has_hnf M
+Proof
   SRW_TAC [][has_hnf_def, chap2Theory.has_bnf_def] THEN
-  METIS_TAC [bnf_hnf]);
+  METIS_TAC [bnf_hnf]
+QED
 
 Definition head_reduct_def:
   head_reduct M = if ?r. r is_head_redex M then
@@ -1203,34 +1244,37 @@ Definition head_reduct_def:
                   else NONE
 End
 
-val head_reduct_unique = store_thm(
-  "head_reduct_unique",
-  ``!M N. M -h-> N ==> (head_reduct M = SOME N)``,
+Theorem head_reduct_unique:
+    !M N. M -h-> N ==> (head_reduct M = SOME N)
+Proof
   SRW_TAC [][head_reduce1_def, head_reduct_def] THEN1 METIS_TAC [] THEN
-  SELECT_ELIM_TAC THEN METIS_TAC [is_head_redex_unique, labelled_redn_det]);
+  SELECT_ELIM_TAC THEN METIS_TAC [is_head_redex_unique, labelled_redn_det]
+QED
 
-val head_reduct_NONE = store_thm(
-  "head_reduct_NONE",
-  ``(head_reduct M = NONE) = !N. ~(M -h-> N)``,
+Theorem head_reduct_NONE:
+    (head_reduct M = NONE) = !N. ~(M -h-> N)
+Proof
   SRW_TAC [][head_reduct_def, head_reduce1_def] THEN
   METIS_TAC [head_redex_is_redex, IN_term_IN_redex_posns,
-             is_redex_occurrence_def]);
+             is_redex_occurrence_def]
+QED
 
-val head_reduct_SOME = store_thm(
-  "head_reduct_SOME",
-  ``(head_reduct M = SOME N) <=> M -h-> N``,
+Theorem head_reduct_SOME:
+    (head_reduct M = SOME N) <=> M -h-> N
+Proof
   SIMP_TAC (srw_ss()) [EQ_IMP_THM, head_reduct_unique] THEN
   SRW_TAC [][head_reduct_def] THEN SELECT_ELIM_TAC THEN
   SRW_TAC [][head_reduce1_def] THEN
   METIS_TAC [head_redex_is_redex, IN_term_IN_redex_posns,
-             is_redex_occurrence_def]);
+             is_redex_occurrence_def]
+QED
 
-val is_head_reduction_coind = store_thm(
-  "is_head_reduction_coind",
-  ``(!x r q. P (pcons x r q) ==>
+Theorem is_head_reduction_coind:
+    (!x r q. P (pcons x r q) ==>
              labelled_redn beta x r (first q) /\
              r is_head_redex x /\ P q) ==>
-    !p. P p ==> is_head_reduction p``,
+    !p. P p ==> is_head_reduction p
+Proof
   SIMP_TAC (srw_ss()) [is_head_reduction_def, IMP_CONJ_THM,
                        FORALL_AND_THM] THEN CONJ_TAC
   THENL [
@@ -1257,7 +1301,8 @@ val is_head_reduction_coind = store_thm(
       `nth_label i q = s` by METIS_TAC [nth_label_def, first_label_def] THEN
       SRW_TAC [][drop_tail_commute]
     ]
-  ]);
+  ]
+QED
 
 val head_reduction_path_uexists = prove(
   ``!M. ?!p. (first p = M) /\ is_head_reduction p /\
@@ -1327,16 +1372,17 @@ val head_reduction_path_def = new_specification(
               SIMP_RULE bool_ss [UNIQUE_SKOLEM_THM])
              head_reduction_path_uexists));
 
-val head_reduction_path_unique = store_thm(
-  "head_reduction_path_unique",
-  ``!M p. (first p = M) /\ is_head_reduction p /\
+Theorem head_reduction_path_unique:
+    !M p. (first p = M) /\ is_head_reduction p /\
           (finite p ==> hnf (last p)) ==>
-          (head_reduction_path M = p)``,
+          (head_reduction_path M = p)
+Proof
   REPEAT STRIP_TAC THEN
   Q.SPEC_THEN `M` (ASSUME_TAC o CONJUNCT2 o
                    SIMP_RULE bool_ss [EXISTS_UNIQUE_THM])
               head_reduction_path_uexists THEN
-  METIS_TAC [head_reduction_path_def]);
+  METIS_TAC [head_reduction_path_def]
+QED
 
 Theorem infinite_is_head_reduction_drop :
     !p. infinite p /\ is_head_reduction p ==> !n. is_head_reduction (drop n p)

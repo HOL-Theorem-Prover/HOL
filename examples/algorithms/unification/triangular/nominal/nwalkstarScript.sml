@@ -213,10 +213,11 @@ val nwalkstar_thm = RWsave_thm(
   LIST_CONJ [nwalkstar_nom,nwalkstar_var,nwalkstar_tie,nwalkstar_pair,nwalkstar_const]
   |> SIMP_RULE bool_ss [GSYM IMP_CONJ_THM])
 
-val noc_ignores_pi = Q.store_thm(
-"noc_ignores_pi",
-`nwfs s ⇒ ∀t. (noc s (apply_pi pi t) v ⇔ noc s t v)`,
-STRIP_TAC THEN Induct THEN SRW_TAC [][])
+Theorem noc_ignores_pi:
+ nwfs s ⇒ ∀t. (noc s (apply_pi pi t) v ⇔ noc s t v)
+Proof
+STRIP_TAC THEN Induct THEN SRW_TAC [][]
+QED
 
 val noc_if_nvars_nwalkstar = Q.prove(
 `nwfs s ==> !t. v IN nvars (nwalk* s t) ==> noc s t v`,
@@ -239,9 +240,9 @@ Cases_on `nvwalk s l n` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
   METIS_TAC [noc_ignores_pi]
 ])
 
-val NOT_FDOM_nwalkstar = Q.store_thm(
-"NOT_FDOM_nwalkstar",
-`nwfs s ==> !t. v NOTIN FDOM s ==> v IN nvars t ==> v IN nvars (nwalk* s t)`,
+Theorem NOT_FDOM_nwalkstar:
+ nwfs s ==> !t. v NOTIN FDOM s ==> v IN nvars t ==> v IN nvars (nwalk* s t)
+Proof
 DISCH_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN SRW_TAC [][] THEN
 Cases_on `t` THEN Cases_on `nvwalk s l n` THEN
 Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
@@ -249,16 +250,18 @@ FULL_SIMP_TAC (srw_ss()) [] THEN
 SRW_TAC [][] THEN
 Q.PAT_X_ASSUM `n NOTIN FDOM s` ASSUME_TAC THEN
 FULL_SIMP_TAC (srw_ss()) [Once nvwalk_def,FLOOKUP_DEF] THEN
-SRW_TAC [][])
+SRW_TAC [][]
+QED
 
-val noc_NOTIN_FDOM = Q.store_thm(
-  "noc_NOTIN_FDOM",
-  `nwfs s ==> !t v. noc s t v ==> v NOTIN FDOM s`,
-  STRIP_TAC THEN HO_MATCH_MP_TAC noc_ind THEN SRW_TAC [] [])
+Theorem noc_NOTIN_FDOM:
+   nwfs s ==> !t v. noc s t v ==> v NOTIN FDOM s
+Proof
+  STRIP_TAC THEN HO_MATCH_MP_TAC noc_ind THEN SRW_TAC [] []
+QED
 
-val nvars_nwalkstar_ignores_pi = Q.store_thm(
-"nvars_nwalkstar_ignores_pi",
-`nwfs s ⇒ ∀t pi. nvars (nwalkstar s t) = nvars (nwalkstar s (apply_pi pi t))`,
+Theorem nvars_nwalkstar_ignores_pi:
+ nwfs s ⇒ ∀t pi. nvars (nwalkstar s t) = nvars (nwalkstar s (apply_pi pi t))
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN
 SRW_TAC [][] THEN
 REVERSE (Cases_on `t`) THEN
@@ -269,7 +272,8 @@ FULL_SIMP_TAC (psrw_ss()) [] THEN1 METIS_TAC [] THEN
 SRW_TAC [][] THEN
 Cases_on `nvwalk s [] n` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
 FULL_SIMP_TAC (srw_ss()) [apply_pi_decompose] THEN
-METIS_TAC [])
+METIS_TAC []
+QED
 
 val nvars_nwalkstar_if_noc = Q.prove(
 `nwfs s ==> !t v. noc s t v ==> v IN nvars (nwalkstar s t)`,
@@ -289,11 +293,12 @@ Induct_on `t` THEN SRW_TAC [][] THEN1 (
 METIS_TAC []
 )
 
-val noc_eq_nvars_nwalkstar = Q.store_thm(
-  "noc_eq_nvars_nwalkstar",
-  `nwfs s ==> (noc s t v ⇔ v ∈ nvars (nwalk* s t))`,
+Theorem noc_eq_nvars_nwalkstar:
+   nwfs s ==> (noc s t v ⇔ v ∈ nvars (nwalk* s t))
+Proof
   SRW_TAC [][FUN_EQ_THM] THEN
-  METIS_TAC [nvars_nwalkstar_if_noc,noc_if_nvars_nwalkstar,IN_DEF])
+  METIS_TAC [nvars_nwalkstar_if_noc,noc_if_nvars_nwalkstar,IN_DEF]
+QED
 
 val nvwalk_EQ_nom_nvR = Q.prove(
 `!v u. (nvR s)^+ v u ⇒ v NOTIN FDOM s ∧ nwfs s ⇒
@@ -386,11 +391,11 @@ val nvwalk_EQ_pair_nvR = prove(
     METIS_TAC [TC_RTC]
   ])
 
-val TC_nvR_nvars_nwalkstar = Q.store_thm(
-  "TC_nvR_nvars_nwalkstar",
-   `nwfs s ==>
+Theorem TC_nvR_nvars_nwalkstar:
+    nwfs s ==>
    !t v u. (nvR s)^+ v u /\ v NOTIN FDOM s /\ u IN nvars t ==>
-           v IN nvars (nwalkstar s t)`,
+           v IN nvars (nwalkstar s t)
+Proof
   STRIP_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN SRW_TAC [][] THEN
   REVERSE (Cases_on `t`) THEN Q.PAT_X_ASSUM `nwfs s` ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][]
@@ -412,11 +417,12 @@ val TC_nvR_nvars_nwalkstar = Q.store_thm(
     FULL_SIMP_TAC (srw_ss()) [NOT_FDOM_nwalkstar] THEN
     METIS_TAC [],
     METIS_TAC [nvwalk_EQ_const_nvR]
-  ])
+  ]
+QED
 
-val noc_TC_nvR = Q.store_thm(
-"noc_TC_nvR",
-`∀t v. noc s t v ⇒ nwfs s ⇒ ∃u. u ∈ nvars t ∧ (nvR s)^* v u`,
+Theorem noc_TC_nvR:
+ ∀t v. noc s t v ⇒ nwfs s ⇒ ∃u. u ∈ nvars t ∧ (nvR s)^* v u
+Proof
 HO_MATCH_MP_TAC noc_ind THEN SRW_TAC [][] THEN1 (
   Q.EXISTS_TAC `v` THEN SRW_TAC [][RTC_REFL] ) THEN
 RES_TAC THEN
@@ -429,11 +435,12 @@ MATCH_MP_TAC (UNDISCH nvwalk_nvR) THEN
 `nvwalk s [] u ≠ Sus [] u` by (
   SPOSE_NOT_THEN STRIP_ASSUME_TAC THEN
   FULL_SIMP_TAC (srw_ss()) [] ) THEN
-METIS_TAC [])
+METIS_TAC []
+QED
 
-val nwalkstar_SUBMAP = Q.store_thm(
-"nwalkstar_SUBMAP",
-`s ⊑ sx ∧ nwfs sx ⇒ (nwalk* sx t = nwalk* sx (nwalk* s t))`,
+Theorem nwalkstar_SUBMAP:
+ s ⊑ sx ∧ nwfs sx ⇒ (nwalk* sx t = nwalk* sx (nwalk* s t))
+Proof
 SRW_TAC [][] THEN
 `nwfs s` by METIS_TAC [nwfs_SUBMAP] THEN
 Q.ID_SPEC_TAC `t` THEN
@@ -449,29 +456,32 @@ SRW_TAC [][Once nwalkstar_def,SimpLHS] THEN
 MP_TAC nwalk_SUBMAP THEN
 SRW_TAC [][] THEN
 POP_ASSUM (Q.SPEC_THEN `l` MP_TAC) THEN SRW_TAC [][] THEN
-ASM_SIMP_TAC (psrw_ss()) [])
+ASM_SIMP_TAC (psrw_ss()) []
+QED
 
-val nwalkstar_idempotent = Q.store_thm(
-"nwalkstar_idempotent",
-`nwfs s ==> !t.(nwalkstar s t = nwalkstar s (nwalkstar s t))`,
-METIS_TAC [nwalkstar_SUBMAP,SUBMAP_REFL])
+Theorem nwalkstar_idempotent:
+ nwfs s ==> !t.(nwalkstar s t = nwalkstar s (nwalkstar s t))
+Proof
+METIS_TAC [nwalkstar_SUBMAP,SUBMAP_REFL]
+QED
 
 val nwalkstar_FEMPTY = RWstore_thm(
 "nwalkstar_FEMPTY",
 `nwalk* (FEMPTY) t = t`,
 Induct_on `t` THEN ASM_SIMP_TAC (psrw_ss()) [])
 
-val nwalkstar_nwalk = Q.store_thm(
-"nwalkstar_nwalk",
-`nwfs s ==> (nwalk* s (nwalk s t) = nwalk* s t)`,
+Theorem nwalkstar_nwalk:
+ nwfs s ==> (nwalk* s (nwalk s t) = nwalk* s t)
+Proof
 Cases_on `t` THEN SRW_TAC [][] THEN
 Cases_on `nvwalk s l n` THEN ASM_SIMP_TAC (psrw_ss()) [] THEN
 `nvwalk s l' n' = Sus l' n'` by METIS_TAC [nvwalk_to_var,NOT_FDOM_nvwalk] THEN
-ASM_SIMP_TAC (psrw_ss()) [])
+ASM_SIMP_TAC (psrw_ss()) []
+QED
 
-val nwalkstar_to_var = Q.store_thm(
-"nwalkstar_to_var",
-`(nwalk* s t = Sus pi v) ∧ nwfs s ⇒ v NOTIN FDOM s ∧ ∃pu u. t = Sus pu u`,
+Theorem nwalkstar_to_var:
+ (nwalk* s t = Sus pi v) ∧ nwfs s ⇒ v NOTIN FDOM s ∧ ∃pu u. t = Sus pu u
+Proof
 STRIP_TAC THEN
 IMP_RES_TAC (GSYM nwalkstar_nwalk) THEN
 POP_ASSUM (Q.SPEC_THEN `t` ASSUME_TAC) THEN
@@ -479,11 +489,13 @@ Cases_on `nwalk s t` THEN
 FULL_SIMP_TAC (srw_ss()) [] THEN
 IMP_RES_TAC nwalk_to_var THEN
 IMP_RES_TAC NOT_FDOM_nvwalk THEN
-FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][])
+FULL_SIMP_TAC (srw_ss()) [] THEN SRW_TAC [][]
+QED
 
-val nwalkstar_apply_pi = Q.store_thm(
-"nwalkstar_apply_pi", (* Lemma 2.14.0*)
-`nwfs s ⇒ ∀t.nwalk* s (apply_pi pi t) = apply_pi pi (nwalk* s t)`,
+(* Lemma 2.14.0 *)
+Theorem nwalkstar_apply_pi:
+ nwfs s ⇒ ∀t.nwalk* s (apply_pi pi t) = apply_pi pi (nwalk* s t)
+Proof
 STRIP_TAC THEN HO_MATCH_MP_TAC nwalkstar_ind THEN
 STRIP_TAC THEN Cases_on `t` THEN
 ASM_SIMP_TAC (psrw_ss()) [] THEN
@@ -491,5 +503,5 @@ SRW_TAC [][] THEN
 (nvwalk_modulo_pi |> Q.SPECL [`s`,`l`,`n`] |> MP_TAC) THEN
 (nvwalk_modulo_pi |> Q.SPECL [`s`,`pi++l`,`n`] |> MP_TAC) THEN
 SRW_TAC [][] THEN Cases_on `nvwalk s [] n` THEN
-FULL_SIMP_TAC (psrw_ss()) [pmact_decompose]);
-
+FULL_SIMP_TAC (psrw_ss()) [pmact_decompose]
+QED

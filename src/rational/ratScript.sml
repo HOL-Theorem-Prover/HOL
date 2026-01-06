@@ -1592,21 +1592,22 @@ Proof
         RW_TAC int_ss[RAT_SGN_0]
 QED
 
-val RAT_LES_ANTISYM =
-let
-  val lemmaX = prove(``!f. frac_sgn (frac_ainv f) = ~frac_sgn f``,
-                     REWRITE_TAC[GSYM INT_NEG_EQ] THEN
-                     RW_TAC int_ss[FRAC_SGN_NEG] );
-in
-  store_thm(
-    "RAT_LES_ANTISYM",
-    ``!r1 r2. rat_les r1 r2 ==> ~(rat_les r2 r1)``,
-    REPEAT GEN_TAC THEN
-    REWRITE_TAC[rat_les_def, rat_sgn_def, rat_sub_def] THEN
-    REWRITE_TAC[RAT_SGN_CONG] THEN
-    SUBST_TAC[SPECL [``rep_rat r1``, ``rep_rat r2``] (GSYM FRAC_AINV_SUB)] THEN
-    REWRITE_TAC[lemmaX] THEN REWRITE_TAC[INT_NEG_EQ] THEN RW_TAC int_ss[] )
-end;
+Theorem lemmaX[local]:
+  !f. frac_sgn (frac_ainv f) = ~frac_sgn f
+Proof
+  REWRITE_TAC[GSYM INT_NEG_EQ] THEN
+  RW_TAC int_ss[FRAC_SGN_NEG]
+QED
+
+Theorem RAT_LES_ANTISYM:
+  !r1 r2. rat_les r1 r2 ==> ~(rat_les r2 r1)
+Proof
+  REPEAT GEN_TAC THEN
+  REWRITE_TAC[rat_les_def, rat_sgn_def, rat_sub_def] THEN
+  REWRITE_TAC[RAT_SGN_CONG] THEN
+  SUBST_TAC[SPECL [``rep_rat r1``, ``rep_rat r2``] (GSYM FRAC_AINV_SUB)] THEN
+  REWRITE_TAC[lemmaX] THEN REWRITE_TAC[INT_NEG_EQ] THEN RW_TAC int_ss[]
+QED
 
 Theorem RAT_LES_TRANS:
     !r1 r2 r3. rat_les r1 r2 /\ rat_les r2 r3 ==> rat_les r1 r3

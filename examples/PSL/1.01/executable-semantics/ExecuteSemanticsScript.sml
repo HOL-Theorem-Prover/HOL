@@ -73,15 +73,14 @@ val S_FALSE_def = Define `S_FALSE = S_BOOL B_FALSE`;
 *   <==>
 *   |w| > 0 And (w |= f2  Or  (w |= f1  And  w^1 |= [f1 U f2]))
 ******************************************************************************)
-val UF_SEM_F_UNTIL_REC =
- store_thm
-  ("UF_SEM_F_UNTIL_REC",
-   ``UF_SEM w (F_UNTIL(f1,f2)) =
+Theorem UF_SEM_F_UNTIL_REC:
+     UF_SEM w (F_UNTIL(f1,f2)) =
       LENGTH w > 0
       /\
       (UF_SEM w f2
        \/
-       (UF_SEM w f1 /\ UF_SEM (RESTN w 1) (F_UNTIL(f1,f2))))``,
+       (UF_SEM w f1 /\ UF_SEM (RESTN w 1) (F_UNTIL(f1,f2))))
+Proof
    RW_TAC arith_resq_ss [UF_SEM_def]
     THEN Cases_on `w`
     THEN ONCE_REWRITE_TAC[arithmeticTheory.ONE]
@@ -149,7 +148,8 @@ val UF_SEM_F_UNTIL_REC =
        THEN RES_TAC
        THEN `j = SUC(j-1)` by DECIDE_TAC
        THEN POP_ASSUM(fn th => SUBST_TAC[th])
-       THEN RW_TAC std_ss [RESTN_def]]);
+       THEN RW_TAC std_ss [RESTN_def]]
+QED
 
 (******************************************************************************
 * Executable semantics of {r}(f) on finite paths.
@@ -178,16 +178,16 @@ End
 (******************************************************************************
 * Form needed for computeLib.EVAL
 ******************************************************************************)
-val UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX =
- store_thm
-  ("UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX",
-  ``UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n =
+Theorem UF_SEM_F_SUFFIX_IMP_FINITE_REC_AUX:
+    UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n =
      (n = 0) \/
      (UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) (n-1)
       /\
-     (US_SEM (SEL w (0, (n-1))) r ==> UF_SEM (RESTN w (n-1)) f))``,
+     (US_SEM (SEL w (0, (n-1))) r ==> UF_SEM (RESTN w (n-1)) f))
+Proof
   Cases_on `n`
-   THEN RW_TAC arith_ss [UF_SEM_F_SUFFIX_IMP_FINITE_REC_def]);
+   THEN RW_TAC arith_ss [UF_SEM_F_SUFFIX_IMP_FINITE_REC_def]
+QED
 
 (******************************************************************************
 * UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL
@@ -215,25 +215,25 @@ val UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL2 =
     THEN `j < n` by DECIDE_TAC
     THEN PROVE_TAC[]);
 in
-val UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL =
- store_thm
-  ("UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL",
-   ``(!j. j < n ==> US_SEM (SEL w (0,j)) r ==> UF_SEM (RESTN w j) f)
+Theorem UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL:
+     (!j. j < n ==> US_SEM (SEL w (0,j)) r ==> UF_SEM (RESTN w j) f)
      =
-     UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n``,
-   PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL1,UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL2]);
+     UF_SEM_F_SUFFIX_IMP_FINITE_REC w (r,f) n
+Proof
+   PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL1,UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL2]
+QED
 end;
 
 (******************************************************************************
 * w |= {r}(f)  <==>  w |=_|w| {r}(f)
 ******************************************************************************)
-val UF_SEM_F_SUFFIX_IMP_FINITE_REC =
- store_thm
-  ("UF_SEM_F_SUFFIX_IMP_FINITE_REC",
-   ``UF_SEM (FINITE w) (F_SUFFIX_IMP(r,f)) =
-      UF_SEM_F_SUFFIX_IMP_FINITE_REC (FINITE w) (r,f) (LENGTH w)``,
+Theorem UF_SEM_F_SUFFIX_IMP_FINITE_REC:
+     UF_SEM (FINITE w) (F_SUFFIX_IMP(r,f)) =
+      UF_SEM_F_SUFFIX_IMP_FINITE_REC (FINITE w) (r,f) (LENGTH w)
+Proof
    RW_TAC list_resq_ss [UF_SEM_def]
-    THEN PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL]);
+    THEN PROVE_TAC[UF_SEM_F_SUFFIX_IMP_FINITE_REC_FORALL]
+QED
 
 (******************************************************************************
 * Define w |=_x {r}(f) where x is an extended number (xnum)
@@ -249,15 +249,15 @@ End
 (******************************************************************************
 * w |= {r}(f)  <==>  w |=_|w| {r}(f)  (for finite and infinite paths w)
 ******************************************************************************)
-val UF_SEM_F_SUFFIX_IMP_REC =
- store_thm
-  ("UF_SEM_F_SUFFIX_IMP_REC",
-   ``UF_SEM w (F_SUFFIX_IMP(r,f)) =
-      UF_SEM_F_SUFFIX_IMP_REC w (r,f) (LENGTH w)``,
+Theorem UF_SEM_F_SUFFIX_IMP_REC:
+     UF_SEM w (F_SUFFIX_IMP(r,f)) =
+      UF_SEM_F_SUFFIX_IMP_REC w (r,f) (LENGTH w)
+Proof
    Cases_on `w`
     THEN RW_TAC list_resq_ss
           [UF_SEM_def,UF_SEM_F_SUFFIX_IMP_FINITE_REC,
-           UF_SEM_F_SUFFIX_IMP_REC_def]);
+           UF_SEM_F_SUFFIX_IMP_REC_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Converting regexps from SyntaxTheory to regexpTheory.                     *)
@@ -321,33 +321,35 @@ val sere2regexp = prove
    >> CONV_TAC (DEPTH_CONV ETA_CONV)
    >> RW_TAC std_ss [CONCAT_is_CONCAT]);
 
-val EVAL_US_SEM = store_thm
-  ("EVAL_US_SEM",
-   ``!l r.
+Theorem EVAL_US_SEM:
+     !l r.
        US_SEM l r =
-       if S_CLOCK_FREE r then amatch (sere2regexp r) l else US_SEM l r``,
-   RW_TAC std_ss [GSYM sere2regexp, amatch]);
+       if S_CLOCK_FREE r then amatch (sere2regexp r) l else US_SEM l r
+Proof
+   RW_TAC std_ss [GSYM sere2regexp, amatch]
+QED
 
 (******************************************************************************
 * w |= {r1} |-> {r2}!  <==>  w |= {r1}(not({r2}(F)))
 ******************************************************************************)
-val EVAL_UF_SEM_F_SUFFIX_IMP = store_thm
-  ("EVAL_UF_SEM_F_SUFFIX_IMP",
-   ``!w r f.
+Theorem EVAL_UF_SEM_F_SUFFIX_IMP:
+     !w r f.
        UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f)) =
        if S_CLOCK_FREE r then acheck (sere2regexp r) (\x. UF_SEM (FINITE x) f) w
-       else UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f))``,
+       else UF_SEM (FINITE w) (F_SUFFIX_IMP (r,f))
+Proof
    RW_TAC list_resq_ss [acheck, UF_SEM_def, sere2regexp, RESTN_FINITE]
    >> RW_TAC arith_ss
       [RESTN_is_BUTFIRSTN, SEL_FINITE_is_BUTFIRSTN_FIRSTN, BUTFIRSTN]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
-  ("FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
-   ``!w r1 r2.
+Theorem FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP:
+     !w r1 r2.
        UF_SEM (FINITE w) (F_STRONG_IMP (r1,r2)) =
        UF_SEM (FINITE w)
-       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))``,
+       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))
+Proof
    RW_TAC list_resq_ss [UF_SEM_def, B_SEM, AND_IMP_INTRO]
    >> HO_MATCH_MP_TAC
       (METIS_PROVE []
@@ -367,14 +369,15 @@ val FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
    >> MATCH_MP_TAC (PROVE [] ``(a ==> (b = c)) ==> (b /\ a = c /\ a)``)
    >> STRIP_TAC
    >> RW_TAC arith_ss [xnum_to_def, RESTN_FINITE, LENGTH_def]
-   >> RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN]);
+   >> RW_TAC arith_ss [FinitePSLPathTheory.LENGTH_RESTN]
+QED
 
-val INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
-  ("INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
-   ``!p r1 r2.
+Theorem INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP:
+     !p r1 r2.
        UF_SEM (INFINITE p) (F_STRONG_IMP (r1,r2)) =
        UF_SEM (INFINITE p)
-       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))``,
+       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))
+Proof
    RW_TAC list_resq_ss [UF_SEM_def, B_SEM, AND_IMP_INTRO]
     THEN HO_MATCH_MP_TAC (* MJCG tried using >>, >|, but it wouldn't parse *)
           (METIS_PROVE []
@@ -383,18 +386,20 @@ val INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
     THEN EQ_TAC
     THEN RW_TAC std_ss []
     THENL[Q.EXISTS_TAC `k-j`, Q.EXISTS_TAC `j+j'`]
-    THEN RW_TAC arith_ss []);
+    THEN RW_TAC arith_ss []
+QED
 
-val UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP = store_thm
-  ("UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP",
-   ``!w r1 r2.
+Theorem UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP:
+     !w r1 r2.
        UF_SEM w (F_STRONG_IMP (r1,r2)) =
        UF_SEM w
-       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))``,
+       (F_SUFFIX_IMP (r1, F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))))
+Proof
    Cases_on `w`
     THEN PROVE_TAC
           [FINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP,
-           INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]);
+           INFINITE_UF_SEM_F_STRONG_IMP_F_SUFFIX_IMP]
+QED
 
 (******************************************************************************
 * Weak implication
@@ -435,16 +440,16 @@ val UF_SEM_F_WEAK_IMP_FINITE = prove
    >> Q.EXISTS_TAC `SEL (FINITE w) (k + 1, LENGTH w - 1) <> w'`
    >> RW_TAC arith_ss [APPEND_ASSOC, GSYM SEL_SPLIT]);
 
-val EVAL_UF_SEM_F_WEAK_IMP = store_thm
-  ("EVAL_UF_SEM_F_WEAK_IMP",
-   ``!w r1 r2.
+Theorem EVAL_UF_SEM_F_WEAK_IMP:
+     !w r1 r2.
        UF_SEM (FINITE w) (F_WEAK_IMP (r1,r2)) =
        if S_CLOCK_FREE r1 /\ S_CLOCK_FREE r2 then
          acheck (sere2regexp r1)
          (\x.
             UF_SEM (FINITE x) (F_NOT (F_SUFFIX_IMP (r2, F_BOOL B_FALSE))) \/
             amatch (Prefix (sere2regexp r2)) x) w
-       else UF_SEM (FINITE w) (F_WEAK_IMP (r1,r2))``,
+       else UF_SEM (FINITE w) (F_WEAK_IMP (r1,r2))
+Proof
    RW_TAC list_resq_ss
      [UF_SEM_F_WEAK_IMP_FINITE, acheck, amatch, sere2regexp]
    >> ONCE_REWRITE_TAC [UF_SEM_def]
@@ -477,7 +482,8 @@ val EVAL_UF_SEM_F_WEAK_IMP = store_thm
    >> POP_ASSUM_LIST (K ALL_TAC)
    >> Know `SUC (n + n') = SUC n' + n` >- DECIDE_TAC
    >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [th])
-   >> METIS_TAC [BUTFIRSTN_FIRSTN]);
+   >> METIS_TAC [BUTFIRSTN_FIRSTN]
+QED
 
 (******************************************************************************
 * always{r} = {T[*]} |-> {r}
@@ -493,12 +499,12 @@ Definition F_SERE_NEVER_def:
    F_SERE_NEVER r = F_WEAK_IMP(S_CAT(S_REPEAT S_TRUE, r), S_FALSE)
 End
 
-val F_SERE_NEVER_amatch = store_thm
-  ("F_SERE_NEVER_amatch",
-   ``!r w.
+Theorem F_SERE_NEVER_amatch:
+     !r w.
        S_CLOCK_FREE r /\ IS_INFINITE w ==>
        (UF_SEM w (F_SERE_NEVER r) =
-        !n. ~amatch (sere2regexp (S_CAT (S_REPEAT S_TRUE,r))) (SEL w (0,n)))``,
+        !n. ~amatch (sere2regexp (S_CAT (S_REPEAT S_TRUE,r))) (SEL w (0,n)))
+Proof
    RW_TAC std_ss [F_SERE_NEVER_def]
    >> Know `LENGTH w = INFINITY`
    >- PROVE_TAC [PSLPathTheory.IS_INFINITE_EXISTS, PSLPathTheory.LENGTH_def]
@@ -511,7 +517,8 @@ val F_SERE_NEVER_amatch = store_thm
    >> Suff `!j : num. (!k : num. ~(j <= k)) = F`
    >- DISCH_THEN (fn th => REWRITE_TAC [th])
    >> RW_TAC std_ss []
-   >> PROVE_TAC [arithmeticTheory.LESS_EQ_REFL]);
+   >> PROVE_TAC [arithmeticTheory.LESS_EQ_REFL]
+QED
 
 (******************************************************************************
 * Generating FSA checkers for the simple subset of PSL.
@@ -519,67 +526,74 @@ val F_SERE_NEVER_amatch = store_thm
 
 (* Lemmas *)
 
-val ELEM_SEL = store_thm
-  ("ELEM_SEL",
-   ``!w i. ELEM (SEL w (0,i)) 0 = ELEM w 0``,
+Theorem ELEM_SEL:
+     !w i. ELEM (SEL w (0,i)) 0 = ELEM w 0
+Proof
    Cases
    >> RW_TAC arith_ss
       [FinitePSLPathTheory.ELEM_def, FinitePSLPathTheory.RESTN_def,
        FinitePSLPathTheory.HEAD_def, ELEM_def, RESTN_def, SEL_def]
-   >> REWRITE_TAC [GSYM arithmeticTheory.ADD1, SEL_REC_def, HEAD_def, HD]);
+   >> REWRITE_TAC [GSYM arithmeticTheory.ADD1, SEL_REC_def, HEAD_def, HD]
+QED
 
-val US_SEM_REPEAT_TRUE = store_thm
-  ("US_SEM_REPEAT_TRUE",
-   ``!w. US_SEM w (S_REPEAT S_TRUE)``,
+Theorem US_SEM_REPEAT_TRUE:
+     !w. US_SEM w (S_REPEAT S_TRUE)
+Proof
    RW_TAC std_ss [US_SEM_def, B_SEM, S_TRUE_def]
    >> Q.EXISTS_TAC `MAP (\x. [x]) w`
    >> (RW_TAC std_ss [listTheory.EVERY_MAP, listTheory.LENGTH]
        >> RW_TAC std_ss [listTheory.EVERY_MEM])
    >> Induct_on `w`
    >> RW_TAC std_ss [CONCAT_def, MAP, APPEND]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val US_SEM_APPEND = store_thm
-  ("US_SEM_APPEND",
-   ``!r r' w w'.
-       US_SEM w r /\ US_SEM w' r' ==> US_SEM (APPEND w w') (S_CAT (r,r'))``,
+Theorem US_SEM_APPEND:
+     !r r' w w'.
+       US_SEM w r /\ US_SEM w' r' ==> US_SEM (APPEND w w') (S_CAT (r,r'))
+Proof
    RW_TAC std_ss []
    >> ONCE_REWRITE_TAC [US_SEM_def]
    >> Q.EXISTS_TAC `w`
    >> Q.EXISTS_TAC `w'`
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val CONCAT_EMPTY = store_thm
-  ("CONCAT_EMPTY",
-   ``!l. (FinitePSLPath$CONCAT l = []) = EVERY (\x. x = []) l``,
+Theorem CONCAT_EMPTY:
+     !l. (FinitePSLPath$CONCAT l = []) = EVERY (\x. x = []) l
+Proof
    Induct
    >> RW_TAC std_ss [CONCAT_def, listTheory.EVERY_DEF,
-                     listTheory.APPEND_eq_NIL]);
+                     listTheory.APPEND_eq_NIL]
+QED
 
-val EMPTY_CONCAT = store_thm
-  ("EMPTY_CONCAT",
-   ``!l. ([] = FinitePSLPath$CONCAT l) = EVERY (\x. x = []) l``,
-   PROVE_TAC [CONCAT_EMPTY]);
+Theorem EMPTY_CONCAT:
+     !l. ([] = FinitePSLPath$CONCAT l) = EVERY (\x. x = []) l
+Proof
+   PROVE_TAC [CONCAT_EMPTY]
+QED
 
-val S_FLEX_AND_EMPTY = store_thm
-  ("S_FLEX_AND_EMPTY",
-   ``!f g. US_SEM [] (S_FLEX_AND (f,g)) = US_SEM [] f /\ US_SEM [] g``,
+Theorem S_FLEX_AND_EMPTY:
+     !f g. US_SEM [] (S_FLEX_AND (f,g)) = US_SEM [] f /\ US_SEM [] g
+Proof
    RW_TAC std_ss [US_SEM_def, S_FLEX_AND_def, S_TRUE_def, B_SEM,
                   listTheory.APPEND_eq_NIL, EMPTY_CONCAT,
                   GSYM listTheory.EVERY_CONJ]
    >> RW_TAC (simpLib.++ (arith_ss, boolSimps.CONJ_ss)) [LENGTH]
-   >> RW_TAC std_ss [ALL_EL_F]);
+   >> RW_TAC std_ss [ALL_EL_F]
+QED
 
-val SEL_NIL = store_thm
-  ("SEL_NIL",
-   ``!n p. ~(SEL p (0,n) = [])``,
-   RW_TAC arith_suc_ss [SEL_def, SEL_REC_def]);
+Theorem SEL_NIL:
+     !n p. ~(SEL p (0,n) = [])
+Proof
+   RW_TAC arith_suc_ss [SEL_def, SEL_REC_def]
+QED
 
-val SEL_INIT_APPEND = store_thm
-  ("SEL_INIT_APPEND",
-   ``!p w.
+Theorem SEL_INIT_APPEND:
+     !p w.
        (?l n. SEL p (0,n) = APPEND w l) ==>
-       (w = []) \/ (SEL p (0, LENGTH w - 1) = w)``,
+       (w = []) \/ (SEL p (0, LENGTH w - 1) = w)
+Proof
    Induct_on `w` >- RW_TAC std_ss []
    >> RW_TAC std_ss []
    >> POP_ASSUM MP_TAC
@@ -609,47 +623,53 @@ val SEL_INIT_APPEND = store_thm
        >> RW_TAC std_ss [LENGTH])
    >> REWRITE_TAC [IMP_DISJ_THM]
    >> FIRST_ASSUM MATCH_MP_TAC
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val CAT_APPEND = store_thm
-  ("CAT_APPEND",
-   ``!a b c. CAT (a, CAT (b,c)) = CAT (a <> b, c)``,
-   Induct >> RW_TAC std_ss [APPEND, CAT_def]);
+Theorem CAT_APPEND:
+     !a b c. CAT (a, CAT (b,c)) = CAT (a <> b, c)
+Proof
+   Induct >> RW_TAC std_ss [APPEND, CAT_def]
+QED
 
-val REST_CAT = store_thm
-  ("REST_CAT",
-   ``!l p. ~(l = []) ==> (REST (CAT (l,p)) = CAT (TL l, p))``,
+Theorem REST_CAT:
+     !l p. ~(l = []) ==> (REST (CAT (l,p)) = CAT (TL l, p))
+Proof
    Induct >- RW_TAC std_ss []
-   >> RW_TAC std_ss [CAT_def, REST_CONS, TL]);
+   >> RW_TAC std_ss [CAT_def, REST_CONS, TL]
+QED
 
 Definition S_EMPTY_def:   S_EMPTY = S_REPEAT S_FALSE
 End
 
-val S_EMPTY = store_thm
-  ("S_EMPTY",
-   ``!p. US_SEM p S_EMPTY = (p = [])``,
+Theorem S_EMPTY:
+     !p. US_SEM p S_EMPTY = (p = [])
+Proof
    RW_TAC std_ss
    [US_SEM_def, S_EMPTY_def, listTheory.EVERY_MEM, S_FALSE_def,
-    B_SEM, NO_MEM, CONCAT_def]);
+    B_SEM, NO_MEM, CONCAT_def]
+QED
 
-val S_EMPTY_CAT = store_thm
-  ("S_EMPTY_CAT",
-   ``!p a. US_SEM p (S_CAT (S_EMPTY, a)) = US_SEM p a``,
-   RW_TAC std_ss [US_SEM_def, S_EMPTY, APPEND]);
+Theorem S_EMPTY_CAT:
+     !p a. US_SEM p (S_CAT (S_EMPTY, a)) = US_SEM p a
+Proof
+   RW_TAC std_ss [US_SEM_def, S_EMPTY, APPEND]
+QED
 
-val S_OR_CAT = store_thm
-  ("S_OR_CAT",
-   ``!p a b c.
+Theorem S_OR_CAT:
+     !p a b c.
        US_SEM p (S_CAT (S_OR (a,b), c)) =
-       US_SEM p (S_OR (S_CAT (a,c), S_CAT (b,c)))``,
+       US_SEM p (S_OR (S_CAT (a,c), S_CAT (b,c)))
+Proof
    RW_TAC std_ss [US_SEM_def]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
-val S_REPEAT_UNWIND = store_thm
-  ("S_REPEAT_UNWIND",
-   ``!a p.
+Theorem S_REPEAT_UNWIND:
+     !a p.
        US_SEM p (S_OR (S_EMPTY, S_CAT (a, S_REPEAT a))) =
-       US_SEM p (S_REPEAT a)``,
+       US_SEM p (S_REPEAT a)
+Proof
    RW_TAC std_ss [US_SEM_def, S_EMPTY]
    >> EQ_TAC
    >| [STRIP_TAC
@@ -663,25 +683,28 @@ val S_REPEAT_UNWIND = store_thm
        >> Q.EXISTS_TAC `h`
        >> Q.EXISTS_TAC `FinitePSLPath$CONCAT t`
        >> FULL_SIMP_TAC std_ss [CONCAT_def, listTheory.EVERY_DEF]
-       >> PROVE_TAC []]);
+       >> PROVE_TAC []]
+QED
 
-val S_REPEAT_CAT_UNWIND = store_thm
-  ("S_REPEAT_CAT_UNWIND",
-   ``!a b p.
+Theorem S_REPEAT_CAT_UNWIND:
+     !a b p.
        US_SEM p (S_OR (b, S_CAT (a, S_CAT (S_REPEAT a, b)))) =
-       US_SEM p (S_CAT (S_REPEAT a, b))``,
+       US_SEM p (S_CAT (S_REPEAT a, b))
+Proof
    RW_TAC std_ss []
    >> CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [US_SEM_def]))
    >> CONV_TAC (LAND_CONV (LAND_CONV (ONCE_REWRITE_CONV [GSYM S_EMPTY_CAT])))
    >> RW_TAC std_ss [GSYM S_CAT_ASSOC]
    >> RW_TAC std_ss [GSYM US_SEM_def, GSYM S_OR_CAT]
    >> ONCE_REWRITE_TAC [US_SEM_def]
-   >> RW_TAC std_ss [GSYM S_REPEAT_UNWIND]);
+   >> RW_TAC std_ss [GSYM S_REPEAT_UNWIND]
+QED
 
-val SEL_REC0 = store_thm
-  ("SEL_REC0",
-   ``!n p. SEL_REC (n + 1) 0 p = SEL p (0,n)``,
-   RW_TAC arith_ss [SEL_def]);
+Theorem SEL_REC0:
+     !n p. SEL_REC (n + 1) 0 p = SEL p (0,n)
+Proof
+   RW_TAC arith_ss [SEL_def]
+QED
 
 Theorem S_FLEX_AND_SEL_REC:
   !p f g.
@@ -777,14 +800,14 @@ Proof
         >> PROVE_TAC []]
 QED
 
-val S_FLEX_AND_SEL = store_thm
-  ("S_FLEX_AND_SEL",
-   ``!p f g.
+Theorem S_FLEX_AND_SEL:
+     !p f g.
        US_SEM [] (S_FLEX_AND (f,g)) \/
        (?n. US_SEM (SEL p (0,n)) (S_FLEX_AND (f,g))) =
        ?n.
          US_SEM (SEL p (0,n))
-         (S_AND (S_CAT (f, S_REPEAT S_TRUE), S_CAT (g, S_REPEAT S_TRUE)))``,
+         (S_AND (S_CAT (f, S_REPEAT S_TRUE), S_CAT (g, S_REPEAT S_TRUE)))
+Proof
    RW_TAC std_ss []
    >> MP_TAC (Q.SPECL [`p`, `f`, `g`] S_FLEX_AND_SEL_REC)
    >> Know `!P Q.
@@ -803,13 +826,14 @@ val S_FLEX_AND_SEL = store_thm
    >> ONCE_REWRITE_TAC [US_SEM_def]
    >> RW_TAC std_ss [SEL_REC_def, US_SEM_REPEAT_TRUE, APPEND_eq_NIL]
    >> Q.EXISTS_TAC `0`
-   >> PROVE_TAC [APPEND]);
+   >> PROVE_TAC [APPEND]
+QED
 
-val S_FLEX_AND = store_thm
-  ("S_FLEX_AND",
-   ``!p f g.
+Theorem S_FLEX_AND:
+     !p f g.
        (?n. US_SEM (SEL_REC n 0 p) (S_FLEX_AND (f,g))) =
-       (?n. US_SEM (SEL_REC n 0 p) f) /\ (?n. US_SEM (SEL_REC n 0 p) g)``,
+       (?n. US_SEM (SEL_REC n 0 p) f) /\ (?n. US_SEM (SEL_REC n 0 p) g)
+Proof
    RW_TAC std_ss [S_FLEX_AND_SEL_REC]
    >> ONCE_REWRITE_TAC [US_SEM_def]
    >> ONCE_REWRITE_TAC [US_SEM_def]
@@ -845,14 +869,15 @@ val S_FLEX_AND = store_thm
            >> RW_TAC std_ss []
            >> ONCE_REWRITE_TAC [ADD_COMM]
            >> RW_TAC arith_ss [SEL_REC_SPLIT]
-           >> PROVE_TAC [APPEND_LENGTH_EQ, LENGTH_SEL_REC]]]);
+           >> PROVE_TAC [APPEND_LENGTH_EQ, LENGTH_SEL_REC]]]
+QED
 
-val S_CAT_SEL_REC = store_thm
-  ("S_CAT_SEL_REC",
-   ``!p s t.
+Theorem S_CAT_SEL_REC:
+     !p s t.
        (?n. US_SEM (SEL_REC n 0 p) (S_CAT (s,t))) =
        (?m. US_SEM (SEL_REC m 0 p) s /\
-            ?n. US_SEM (SEL_REC n 0 (RESTN p m)) t)``,
+            ?n. US_SEM (SEL_REC n 0 (RESTN p m)) t)
+Proof
    RW_TAC std_ss [US_SEM_def]
    >> EQ_TAC
    >| [RW_TAC std_ss []
@@ -869,14 +894,15 @@ val S_CAT_SEL_REC = store_thm
        >> Q.EXISTS_TAC `n + m`
        >> Q.EXISTS_TAC `SEL_REC m 0 p`
        >> Q.EXISTS_TAC `SEL_REC n 0 (RESTN p m)`
-       >> RW_TAC arith_ss [SEL_REC_SPLIT, SEL_REC_RESTN]]);
+       >> RW_TAC arith_ss [SEL_REC_SPLIT, SEL_REC_RESTN]]
+QED
 
-val S_FUSION_SEL_REC = store_thm
-  ("S_FUSION_SEL_REC",
-   ``!p s t.
+Theorem S_FUSION_SEL_REC:
+     !p s t.
        (?n. US_SEM (SEL_REC n 0 p) (S_FUSION (s,t))) =
        (?m. US_SEM (SEL_REC (m + 1) 0 p) s /\
-            ?n. US_SEM (SEL_REC (n + 1) 0 (RESTN p m)) t)``,
+            ?n. US_SEM (SEL_REC (n + 1) 0 (RESTN p m)) t)
+Proof
    RW_TAC std_ss [US_SEM_def]
    >> EQ_TAC
    >| [RW_TAC std_ss []
@@ -911,16 +937,17 @@ val S_FUSION_SEL_REC = store_thm
            >> RW_TAC arith_ss [SEL_REC_RESTN, SEL_REC_SPLIT])
        >> POP_ASSUM MP_TAC
        >> SIMP_TAC arith_ss [SEL_REC_SPLIT]
-       >> RW_TAC arith_ss [SEL_REC_RESTN]]);
+       >> RW_TAC arith_ss [SEL_REC_RESTN]]
+QED
 
-val S_CAT_SEL_REC0 = store_thm
-  ("S_CAT_SEL_REC0",
-   ``!p s t n.
+Theorem S_CAT_SEL_REC0:
+     !p s t n.
        US_SEM (SEL_REC n 0 p) (S_CAT (s,t)) =
        (?m.
          m <= n /\
          US_SEM (SEL_REC m 0 p) s /\
-         US_SEM (SEL_REC (n - m) 0 (RESTN p m)) t)``,
+         US_SEM (SEL_REC (n - m) 0 (RESTN p m)) t)
+Proof
    RW_TAC std_ss [US_SEM_def]
    >> EQ_TAC
    >| [RW_TAC std_ss []
@@ -939,50 +966,56 @@ val S_CAT_SEL_REC0 = store_thm
        >> MP_TAC (Q.SPECL [`p`, `n - m`, `m`, `0`]
                   (GEN_ALL (INST_TYPE [alpha |-> ``:'a -> bool``]
                             (GSYM SEL_REC_SPLIT))))
-       >> RW_TAC arith_ss []]);
+       >> RW_TAC arith_ss []]
+QED
 
-val RESTN_CAT = store_thm
-  ("RESTN_CAT",
-   ``!l p n. (LENGTH l = n) ==> (RESTN (CAT (l,p)) n = p)``,
+Theorem RESTN_CAT:
+     !l p n. (LENGTH l = n) ==> (RESTN (CAT (l,p)) n = p)
+Proof
    Induct
    >> RW_TAC std_ss [CAT_def, LENGTH]
-   >> RW_TAC std_ss [RESTN_def, REST_CONS]);
+   >> RW_TAC std_ss [RESTN_def, REST_CONS]
+QED
 
-val CONS_HEAD_REST = store_thm
-  ("CONS_HEAD_REST",
-   ``!p. LENGTH p > 0 ==> (CONS (HEAD p, REST p) = p)``,
+Theorem CONS_HEAD_REST:
+     !p. LENGTH p > 0 ==> (CONS (HEAD p, REST p) = p)
+Proof
    Cases
    >> RW_TAC arith_ss [LENGTH_def, GT, REST_def, CONS_def, HEAD_def, FUN_EQ_THM]
-   >> PROVE_TAC [CONS, LENGTH_NOT_NULL, GREATER_DEF]);
+   >> PROVE_TAC [CONS, LENGTH_NOT_NULL, GREATER_DEF]
+QED
 
-val CAT_SEL_REC_RESTN = store_thm
-  ("CAT_SEL_REC_RESTN",
-   ``!n p. IS_INFINITE p ==> (CAT (SEL_REC n 0 p, RESTN p n) = p)``,
+Theorem CAT_SEL_REC_RESTN:
+     !n p. IS_INFINITE p ==> (CAT (SEL_REC n 0 p, RESTN p n) = p)
+Proof
    Induct
    >> RW_TAC std_ss [CAT_def, SEL_REC_def, RESTN_def, IS_INFINITE_REST]
-   >> PROVE_TAC [CONS_HEAD_REST, GT, LENGTH_def, IS_INFINITE_EXISTS]);
+   >> PROVE_TAC [CONS_HEAD_REST, GT, LENGTH_def, IS_INFINITE_EXISTS]
+QED
 
-val SEL_REC_CAT_0 = store_thm
-  ("SEL_REC_CAT_0",
-   ``!n l p. (LENGTH l = n) ==> (SEL_REC n 0 (CAT (l,p)) = l)``,
+Theorem SEL_REC_CAT_0:
+     !n l p. (LENGTH l = n) ==> (SEL_REC n 0 (CAT (l,p)) = l)
+Proof
    Induct_on `l`
    >> RW_TAC std_ss [LENGTH]
-   >> RW_TAC std_ss [SEL_REC_def, CAT_def, HEAD_CONS, REST_CONS]);
+   >> RW_TAC std_ss [SEL_REC_def, CAT_def, HEAD_CONS, REST_CONS]
+QED
 
-val SEL_REC_CAT = store_thm
-  ("SEL_REC_CAT",
-   ``!n m l p. (LENGTH l = n) ==> (SEL_REC m n (CAT (l,p)) = SEL_REC m 0 p)``,
+Theorem SEL_REC_CAT:
+     !n m l p. (LENGTH l = n) ==> (SEL_REC m n (CAT (l,p)) = SEL_REC m 0 p)
+Proof
    Induct_on `l`
    >> RW_TAC std_ss [LENGTH]
    >> Cases_on `m`
-   >> RW_TAC std_ss [SEL_REC_def, CAT_def, HEAD_CONS, REST_CONS]);
+   >> RW_TAC std_ss [SEL_REC_def, CAT_def, HEAD_CONS, REST_CONS]
+QED
 
-val UF_SEM_F_W_ALT = store_thm
-  ("UF_SEM_F_W_ALT",
-   ``!f g w.
+Theorem UF_SEM_F_W_ALT:
+     !f g w.
        UF_SEM w (F_W (f,g)) =
        !j :: 0 to LENGTH w.
-         ~UF_SEM (RESTN w j) f ==> ?k :: 0 to SUC j. UF_SEM (RESTN w k) g``,
+         ~UF_SEM (RESTN w j) f ==> ?k :: 0 to SUC j. UF_SEM (RESTN w k) g
+Proof
    RW_TAC std_ss []
    >> (Cases_on `w` (* 2 subgoals *)
        >> RW_TAC arith_resq_ss
@@ -1023,20 +1056,23 @@ val UF_SEM_F_W_ALT = store_thm
            >> RW_TAC arith_ss []
            >> Know `!m n. (m:num) <= (n:num) \/ n < m` >- DECIDE_TAC
            >> METIS_TAC [])
-       >> METIS_TAC []]);
+       >> METIS_TAC []]
+QED
 
-val UF_SEM_WEAK_UNTIL = store_thm
-  ("UF_SEM_WEAK_UNTIL",
-   ``!p f g.
+Theorem UF_SEM_WEAK_UNTIL:
+     !p f g.
        UF_SEM p
        (F_NOT (F_AND (F_NOT (F_UNTIL (f,g)),F_UNTIL (F_BOOL B_TRUE,F_NOT f)))) =
-       UF_SEM p (F_W (f,g))``,
-   RW_TAC std_ss [UF_SEM_def, F_W_def, F_OR_def, F_G_def, F_F_def]);
+       UF_SEM p (F_W (f,g))
+Proof
+   RW_TAC std_ss [UF_SEM_def, F_W_def, F_OR_def, F_G_def, F_F_def]
+QED
 
-val LENGTH_IS_INFINITE = store_thm
-  ("LENGTH_IS_INFINITE",
-   ``!p. IS_INFINITE p ==> (LENGTH p = INFINITY)``,
-   METIS_TAC [LENGTH_def, IS_INFINITE_EXISTS]);
+Theorem LENGTH_IS_INFINITE:
+     !p. IS_INFINITE p ==> (LENGTH p = INFINITY)
+Proof
+   METIS_TAC [LENGTH_def, IS_INFINITE_EXISTS]
+QED
 
 (* Safety violations *)
 
@@ -1045,20 +1081,21 @@ Definition safety_violation_def:
    ?n. !q. IS_INFINITE q ==> ~UF_SEM (CAT (SEL_REC n 0 p, q)) f
 End
 
-val safety_violation_alt = store_thm
-  ("safety_violation_alt",
-   ``!p f.
+Theorem safety_violation_alt:
+     !p f.
        safety_violation p f =
-       ?n. !w. ~UF_SEM (CAT (SEL_REC n 0 p, INFINITE w)) f``,
+       ?n. !w. ~UF_SEM (CAT (SEL_REC n 0 p, INFINITE w)) f
+Proof
    REPEAT STRIP_TAC
    >> REWRITE_TAC [safety_violation_def]
-   >> PROVE_TAC [IS_INFINITE_EXISTS, path_nchotomy, IS_INFINITE_def]);
+   >> PROVE_TAC [IS_INFINITE_EXISTS, path_nchotomy, IS_INFINITE_def]
+QED
 
-val safety_violation = store_thm
-  ("safety_violation",
-   ``!p f.
+Theorem safety_violation:
+     !p f.
        safety_violation p f =
-       ?n. !q. IS_INFINITE q ==> ~UF_SEM (CAT (SEL p (0,n), q)) f``,
+       ?n. !q. IS_INFINITE q ==> ~UF_SEM (CAT (SEL p (0,n), q)) f
+Proof
    REPEAT STRIP_TAC
    >> SIMP_TAC arith_ss [safety_violation_def, SEL_def]
    >> REVERSE EQ_TAC >- PROVE_TAC []
@@ -1066,39 +1103,44 @@ val safety_violation = store_thm
    >> POP_ASSUM MP_TAC
    >> REVERSE (Cases_on `n`) >- PROVE_TAC [ADD1]
    >> SIMP_TAC std_ss [SEL_REC_def, CAT_def]
-   >> PROVE_TAC [IS_INFINITE_CAT]);
+   >> PROVE_TAC [IS_INFINITE_CAT]
+QED
 
-val safety_violation_aux = store_thm
-  ("safety_violation_aux",
-   ``!p f.
+Theorem safety_violation_aux:
+     !p f.
        safety_violation p f =
-       ?n. !w. ~UF_SEM (CAT (SEL p (0,n), INFINITE w)) f``,
+       ?n. !w. ~UF_SEM (CAT (SEL p (0,n), INFINITE w)) f
+Proof
    REPEAT STRIP_TAC
    >> REWRITE_TAC [safety_violation]
-   >> PROVE_TAC [IS_INFINITE_EXISTS, path_nchotomy, IS_INFINITE_def]);
+   >> PROVE_TAC [IS_INFINITE_EXISTS, path_nchotomy, IS_INFINITE_def]
+QED
 
-val safety_violation_refl = store_thm
-  ("safety_violation_refl",
-   ``!p f. IS_INFINITE p /\ safety_violation p f ==> ~UF_SEM p f``,
+Theorem safety_violation_refl:
+     !p f. IS_INFINITE p /\ safety_violation p f ==> ~UF_SEM p f
+Proof
    RW_TAC std_ss [safety_violation_alt]
    >> MP_TAC (Q.SPECL [`n`, `p`]
               (INST_TYPE [alpha |-> ``:'a->bool``] CAT_SEL_REC_RESTN))
    >> ASM_REWRITE_TAC []
    >> DISCH_THEN (fn th => ONCE_REWRITE_TAC [GSYM th])
-   >> PROVE_TAC [IS_INFINITE_EXISTS, IS_INFINITE_RESTN]);
+   >> PROVE_TAC [IS_INFINITE_EXISTS, IS_INFINITE_RESTN]
+QED
 
-val safety_violation_NOT_NOT = store_thm
-  ("safety_violation_NOT_NOT",
-   ``!f p. safety_violation p (F_NOT (F_NOT f)) = safety_violation p f``,
-   RW_TAC std_ss [safety_violation_def, UF_SEM_def]);
+Theorem safety_violation_NOT_NOT:
+     !f p. safety_violation p (F_NOT (F_NOT f)) = safety_violation p f
+Proof
+   RW_TAC std_ss [safety_violation_def, UF_SEM_def]
+QED
 
-val safety_violation_WEAK_UNTIL = store_thm
-  ("safety_violation_WEAK_UNTIL",
-   ``!p f g.
+Theorem safety_violation_WEAK_UNTIL:
+     !p f g.
        safety_violation p
        (F_NOT (F_AND (F_NOT (F_UNTIL (f,g)),F_UNTIL (F_BOOL B_TRUE,F_NOT f)))) =
-       safety_violation p (F_W (f,g))``,
-   RW_TAC std_ss [safety_violation_def, UF_SEM_WEAK_UNTIL]);
+       safety_violation p (F_W (f,g))
+Proof
+   RW_TAC std_ss [safety_violation_def, UF_SEM_WEAK_UNTIL]
+QED
 
 (* The simple subset *)
 
@@ -1146,30 +1188,32 @@ End
 
 val simple_ind = theorem "simple_ind";
 
-val boolean_simple = store_thm
-  ("boolean_simple",
-   ``!f. boolean f ==> simple f /\ simple (F_NOT f)``,
+Theorem boolean_simple:
+     !f. boolean f ==> simple f /\ simple (F_NOT f)
+Proof
    (INDUCT_THEN fl_induct ASSUME_TAC
     >> RW_TAC std_ss [boolean_def, simple_def])
    >> (Cases_on `f` >> RW_TAC std_ss [simple_def])
    >> (Cases_on `f''` >> RW_TAC std_ss [simple_def])
-   >> FULL_SIMP_TAC std_ss [boolean_def]);
+   >> FULL_SIMP_TAC std_ss [boolean_def]
+QED
 
-val UF_SEM_boolean = store_thm
-  ("UF_SEM_boolean",
-   ``!f p.
+Theorem UF_SEM_boolean:
+     !f p.
        boolean f /\ LENGTH p > 0 ==>
-       (UF_SEM (FINITE [ELEM p 0]) f = UF_SEM p f)``,
+       (UF_SEM (FINITE [ELEM p 0]) f = UF_SEM p f)
+Proof
    INDUCT_THEN fl_induct ASSUME_TAC
    >> RW_TAC std_ss
       [boolean_def, UF_SEM_def, LENGTH, ELEM_def,
-       RESTN_def, GT, LENGTH_SEL, LENGTH_def, HEAD_def, HD]);
+       RESTN_def, GT, LENGTH_SEL, LENGTH_def, HEAD_def, HD]
+QED
 
-val boolean_safety_violation = store_thm
-  ("boolean_safety_violation",
-   ``!p f.
+Theorem boolean_safety_violation:
+     !p f.
        boolean f /\ IS_INFINITE p ==>
-       (safety_violation p f = ~UF_SEM (FINITE [ELEM p 0]) f)``,
+       (safety_violation p f = ~UF_SEM (FINITE [ELEM p 0]) f)
+Proof
    GEN_TAC
    >> Know `!P : num -> (num -> 'a -> bool) -> ('a -> bool) path.
               (!n w. LENGTH (P n w) > 0) ==>
@@ -1182,7 +1226,8 @@ val boolean_safety_violation = store_thm
    >> BETA_TAC
    >> STRIP_TAC
    >> INDUCT_THEN fl_induct (K ALL_TAC)
-   >> RW_TAC std_ss [boolean_def, safety_violation_aux, ELEM_CAT_SEL]);
+   >> RW_TAC std_ss [boolean_def, safety_violation_aux, ELEM_CAT_SEL]
+QED
 
 (* The basic constraint on simple formulas *)
 
@@ -1572,27 +1617,29 @@ Definition checker_def:
    (checker (F_SUFFIX_IMP (r,f)) = S_FUSION (r, checker f))
 End
 
-val boolean_checker_CLOCK_FREE = store_thm
-  ("boolean_checker_CLOCK_FREE",
-   ``!f. boolean f ==> S_CLOCK_FREE (boolean_checker f)``,
+Theorem boolean_checker_CLOCK_FREE:
+     !f. boolean f ==> S_CLOCK_FREE (boolean_checker f)
+Proof
    Induct
-   >> RW_TAC std_ss [simple_def, S_CLOCK_FREE_def, boolean_checker_def]);
+   >> RW_TAC std_ss [simple_def, S_CLOCK_FREE_def, boolean_checker_def]
+QED
 
-val boolean_checker_initially_ok = store_thm
-  ("boolean_checker_initially_ok",
-   ``!f. boolean f ==> ~US_SEM [] (boolean_checker f)``,
+Theorem boolean_checker_initially_ok:
+     !f. boolean f ==> ~US_SEM [] (boolean_checker f)
+Proof
    recInduct simple_ind
    >> REPEAT CONJ_TAC
    >> RW_TAC arith_ss [boolean_def, boolean_checker_def, bool_checker_def]
    >> ONCE_REWRITE_TAC [US_SEM_def]
-   >> RW_TAC arith_ss [listTheory.LENGTH]);
+   >> RW_TAC arith_ss [listTheory.LENGTH]
+QED
 
-val boolean_checker = store_thm
-  ("boolean_checker",
-   ``!f p.
+Theorem boolean_checker:
+     !f p.
        boolean f /\ IS_INFINITE p ==>
        (safety_violation p f =
-        ?n. amatch (sere2regexp (boolean_checker f)) (SEL p (0,n)))``,
+        ?n. amatch (sere2regexp (boolean_checker f)) (SEL p (0,n)))
+Proof
    SIMP_TAC arith_ss
      [amatch, GSYM sere2regexp, boolean_checker_CLOCK_FREE,
       boolean_safety_violation, boolean_checker_def, bool_checker_def,
@@ -1601,14 +1648,15 @@ val boolean_checker = store_thm
    >> REPEAT (POP_ASSUM MP_TAC)
    >> SIMP_TAC arith_ss
       [boolean_def, bool_checker_def, UF_SEM_def, LENGTH_def, HD,
-       ELEM_def, GT, B_SEM_def, RESTN_def, HEAD_def, listTheory.LENGTH]);
+       ELEM_def, GT, B_SEM_def, RESTN_def, HEAD_def, listTheory.LENGTH]
+QED
 
-val boolean_checker_SEL_REC = store_thm
-  ("boolean_checker_SEL_REC",
-   ``!f p.
+Theorem boolean_checker_SEL_REC:
+     !f p.
        boolean f /\ IS_INFINITE p ==>
        (safety_violation p f =
-        ?n. amatch (sere2regexp (boolean_checker f)) (SEL_REC n 0 p))``,
+        ?n. amatch (sere2regexp (boolean_checker f)) (SEL_REC n 0 p))
+Proof
    RW_TAC arith_ss
      [boolean_checker, SEL_def, amatch, GSYM sere2regexp,
       boolean_checker_CLOCK_FREE]
@@ -1616,33 +1664,36 @@ val boolean_checker_SEL_REC = store_thm
    >> STRIP_TAC
    >> POP_ASSUM MP_TAC
    >> REVERSE (Cases_on `n`) >- PROVE_TAC [ADD1]
-   >> RW_TAC std_ss [SEL_REC_def, boolean_checker_initially_ok]);
+   >> RW_TAC std_ss [SEL_REC_def, boolean_checker_initially_ok]
+QED
 
-val boolean_checker_US_SEM = store_thm
-  ("boolean_checker_US_SEM",
-   ``!f p.
+Theorem boolean_checker_US_SEM:
+     !f p.
        boolean f /\ IS_INFINITE p ==>
        (safety_violation p f =
-        ?n. US_SEM (SEL_REC n 0 p) (boolean_checker f))``,
+        ?n. US_SEM (SEL_REC n 0 p) (boolean_checker f))
+Proof
    SIMP_TAC std_ss
      [boolean_checker_SEL_REC, amatch, GSYM sere2regexp,
-      boolean_checker_CLOCK_FREE]);
+      boolean_checker_CLOCK_FREE]
+QED
 
-val US_SEM_boolean_checker = store_thm
-  ("US_SEM_boolean_checker",
-   ``!f w.
+Theorem US_SEM_boolean_checker:
+     !f w.
        US_SEM w (boolean_checker f) =
-       (?x. (w = [x]) /\ US_SEM [x] (boolean_checker f))``,
+       (?x. (w = [x]) /\ US_SEM [x] (boolean_checker f))
+Proof
    RW_TAC std_ss [US_SEM_def, boolean_checker_def]
    >> Cases_on `w` >- RW_TAC std_ss [LENGTH]
    >> REVERSE (Cases_on `t`) >- RW_TAC bool_ss [LENGTH, ONE]
-   >> RW_TAC std_ss []);
+   >> RW_TAC std_ss []
+QED
 
-val US_SEM_boolean_checker_SEL_REC = store_thm
-  ("US_SEM_boolean_checker_SEL_REC",
-   ``!f n m p.
+Theorem US_SEM_boolean_checker_SEL_REC:
+     !f n m p.
        US_SEM (SEL_REC n m p) (boolean_checker f) =
-       (n = 1) /\ US_SEM (SEL_REC 1 m p) (boolean_checker f)``,
+       (n = 1) /\ US_SEM (SEL_REC 1 m p) (boolean_checker f)
+Proof
    RW_TAC std_ss []
    >> CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [US_SEM_boolean_checker]))
    >> Cases_on `n` >- RW_TAC std_ss [SEL_REC_def]
@@ -1657,13 +1708,14 @@ val US_SEM_boolean_checker_SEL_REC = store_thm
        >> Suff `t = []` >- PROVE_TAC []
        >> Cases_on `t` >- RW_TAC std_ss []
        >> PROVE_TAC [LENGTH_SEL_REC, LENGTH, numTheory.NOT_SUC,
-                     prim_recTheory.INV_SUC_EQ]]);
+                     prim_recTheory.INV_SUC_EQ]]
+QED
 
-val US_SEM_boolean_checker_CONJ = store_thm
-  ("US_SEM_boolean_checker_CONJ",
-   ``!f p.
+Theorem US_SEM_boolean_checker_CONJ:
+     !f p.
        (?w. US_SEM w (boolean_checker f) /\ p w f) =
-       (?x. US_SEM [x] (boolean_checker f) /\ p [x] f)``,
+       (?x. US_SEM [x] (boolean_checker f) /\ p [x] f)
+Proof
    RW_TAC std_ss [US_SEM_def, boolean_checker_def]
    >> MATCH_MP_TAC EQ_SYM
    >> MP_TAC
@@ -1672,22 +1724,24 @@ val US_SEM_boolean_checker_CONJ = store_thm
    >> DISCH_THEN (fn th => HO_MATCH_MP_TAC th >> ASSUME_TAC th)
    >> SIMP_TAC std_ss [LENGTH]
    >> POP_ASSUM HO_MATCH_MP_TAC
-   >> RW_TAC arith_ss [LENGTH]);
+   >> RW_TAC arith_ss [LENGTH]
+QED
 
-val boolean_checker_US_SEM1 = store_thm
-  ("boolean_checker_US_SEM1",
-   ``!f p.
+Theorem boolean_checker_US_SEM1:
+     !f p.
        boolean f /\ IS_INFINITE p ==>
-       (US_SEM (SEL_REC 1 0 p) (boolean_checker f) = ~UF_SEM p f)``,
+       (US_SEM (SEL_REC 1 0 p) (boolean_checker f) = ~UF_SEM p f)
+Proof
    RW_TAC std_ss []
    >> MP_TAC (Q.SPECL [`f`, `p`] (GSYM boolean_checker_US_SEM))
    >> CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [US_SEM_boolean_checker_SEL_REC]))
    >> RW_TAC std_ss []
-   >> RW_TAC std_ss [simple_safety, boolean_simple]);
+   >> RW_TAC std_ss [simple_safety, boolean_simple]
+QED
 
-val checker_initially_ok = store_thm
-  ("checker_initially_ok",
-   ``!f. simple f ==> ~US_SEM [] (checker f)``,
+Theorem checker_initially_ok:
+     !f. simple f ==> ~US_SEM [] (checker f)
+Proof
    recInduct simple_ind
    >> REPEAT CONJ_TAC
    >> RW_TAC arith_ss [simple_def, checker_def, boolean_checker_def,
@@ -1696,16 +1750,18 @@ val checker_initially_ok = store_thm
    >> ONCE_REWRITE_TAC [US_SEM_def]
    >> RW_TAC arith_ss [listTheory.LENGTH, US_SEM_REPEAT_TRUE,
                        listTheory.APPEND_eq_NIL, S_FLEX_AND_EMPTY]
-   >> RW_TAC std_ss [US_SEM_def, S_TRUE_def, LENGTH]);
+   >> RW_TAC std_ss [US_SEM_def, S_TRUE_def, LENGTH]
+QED
 
-val checker_CLOCK_FREE = store_thm
-  ("checker_CLOCK_FREE",
-   ``!f. simple f ==> S_CLOCK_FREE (checker f)``,
+Theorem checker_CLOCK_FREE:
+     !f. simple f ==> S_CLOCK_FREE (checker f)
+Proof
    recInduct simple_ind
    >> REPEAT CONJ_TAC
    >> RW_TAC std_ss [simple_def, S_CLOCK_FREE_def, checker_def, S_TRUE_def,
                      boolean_checker_CLOCK_FREE, S_FLEX_AND_def, S_FALSE_def]
-   >> PROVE_TAC [boolean_def, boolean_checker_CLOCK_FREE]);
+   >> PROVE_TAC [boolean_def, boolean_checker_CLOCK_FREE]
+QED
 
 Theorem checker_NOT_AND:
    !f g.
@@ -1743,9 +1799,8 @@ Proof
        >> PROVE_TAC [IS_INFINITE_CAT, IS_INFINITE_EXISTS]]
 QED
 
-val checker_AND = store_thm
-  ("checker_AND",
-   ``!f g.
+Theorem checker_AND:
+     !f g.
        (!p.
           simple f /\ IS_INFINITE p ==>
           (safety_violation p f =
@@ -1757,13 +1812,14 @@ val checker_AND = store_thm
        !p.
          (simple f /\ simple g) /\ IS_INFINITE p ==>
          (safety_violation p (F_AND (f,g)) =
-          ?n. US_SEM (SEL_REC n 0 p) (S_OR (checker f,checker g)))``,
+          ?n. US_SEM (SEL_REC n 0 p) (S_OR (checker f,checker g)))
+Proof
    RW_TAC std_ss [simple_safety, simple_def, UF_SEM_def, US_SEM_def]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val checker_NEXT = store_thm
-  ("checker_NEXT",
-   ``!f.
+Theorem checker_NEXT:
+     !f.
       (!p.
          simple f /\ IS_INFINITE p ==>
          (safety_violation p f =
@@ -1771,7 +1827,8 @@ val checker_NEXT = store_thm
       !p.
         simple f /\ IS_INFINITE p ==>
         (safety_violation p (F_NEXT f) =
-         ?n. US_SEM (SEL_REC n 0 p) (S_CAT (S_TRUE,checker f)))``,
+         ?n. US_SEM (SEL_REC n 0 p) (S_CAT (S_TRUE,checker f)))
+Proof
    RW_TAC std_ss []
    >> RW_TAC arith_suc_ss
         [safety_violation_alt, UF_SEM_def, US_SEM_def, LENGTH_CAT,
@@ -1803,11 +1860,11 @@ val checker_NEXT = store_thm
    >> Know `!P Q. (Q = P 0 \/ ?n. P (SUC n)) ==> (Q = ?n. P n)`
    >- PROVE_TAC [arithmeticTheory.num_CASES]
    >> DISCH_THEN HO_MATCH_MP_TAC
-   >> RW_TAC arith_suc_ss [SEL_REC_def, TL, checker_initially_ok]);
+   >> RW_TAC arith_suc_ss [SEL_REC_def, TL, checker_initially_ok]
+QED
 
-val checker_UNTIL = store_thm
-  ("checker_UNTIL",
-   ``!f g h.
+Theorem checker_UNTIL:
+     !f g h.
        (!p.
           simple f /\ IS_INFINITE p ==>
           (safety_violation p f =
@@ -1820,7 +1877,8 @@ val checker_UNTIL = store_thm
             US_SEM (SEL_REC n 0 p)
               (S_CAT
                  (S_REPEAT (boolean_checker g),
-                  S_FLEX_AND (checker f,boolean_checker g))))``,
+                  S_FLEX_AND (checker f,boolean_checker g))))
+Proof
    RW_TAC std_ss []
    >> Know
       `safety_violation p
@@ -1969,14 +2027,15 @@ val checker_UNTIL = store_thm
    >> RW_TAC std_ss []
    >> RW_TAC std_ss [boolean_checker_US_SEM1, IS_INFINITE_RESTN]
    >> FIRST_ASSUM MATCH_MP_TAC
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val checker_SEL_REC = store_thm
-  ("checker_SEL_REC",
-   ``!f p.
+Theorem checker_SEL_REC:
+     !f p.
        simple f /\ IS_INFINITE p ==>
        (safety_violation p f =
-        ?n. amatch (sere2regexp (checker f)) (SEL_REC n 0 p))``,
+        ?n. amatch (sere2regexp (checker f)) (SEL_REC n 0 p))
+Proof
    SIMP_TAC std_ss [amatch, GSYM sere2regexp, checker_CLOCK_FREE]
    >> recInduct simple_ind
    >> (REPEAT CONJ_TAC
@@ -2049,19 +2108,21 @@ val checker_SEL_REC = store_thm
        >> REVERSE EQ_TAC >- METIS_TAC []
        >> RW_TAC std_ss []
        >> REVERSE (Cases_on `n`) >- METIS_TAC [ADD1]
-       >> METIS_TAC [SEL_REC_def, checker_initially_ok]]);
+       >> METIS_TAC [SEL_REC_def, checker_initially_ok]]
+QED
 
-val checker = store_thm
-  ("checker",
-   ``!f p.
+Theorem checker:
+     !f p.
        simple f /\ IS_INFINITE p ==>
        (safety_violation p f =
-        ?n. amatch (sere2regexp (checker f)) (SEL p (0,n)))``,
+        ?n. amatch (sere2regexp (checker f)) (SEL p (0,n)))
+Proof
    RW_TAC arith_ss [checker_SEL_REC, SEL_def]
    >> REVERSE EQ_TAC >- METIS_TAC []
    >> RW_TAC std_ss [amatch, GSYM sere2regexp, checker_CLOCK_FREE]
    >> REVERSE (Cases_on `n`) >- METIS_TAC [ADD1]
-   >> METIS_TAC [SEL_REC_def, checker_initially_ok]);
+   >> METIS_TAC [SEL_REC_def, checker_initially_ok]
+QED
 
 (******************************************************************************
 * Beginning of some stuff that turned out to be useless for execution.
@@ -2075,11 +2136,10 @@ Definition F_PREF_def[nocompute]:
   F_PREF w f = ?w'. UF_SEM (CAT(w,w')) f
 End
 
-val EXISTS_RES_to =
- store_thm
-  ("EXISTS_RES_to",
-   ``!m n P.
-      (?j :: (m to n). P j n) =  (m < n) /\ (P m n \/ ?j :: ((m+1) to n). P j n)``,
+Theorem EXISTS_RES_to:
+     !m n P.
+      (?j :: (m to n). P j n) =  (m < n) /\ (P m n \/ ?j :: ((m+1) to n). P j n)
+Proof
    Cases_on `n`
     THEN RW_TAC std_resq_ss [num_to_def,xnum_to_def,LS]
     THENL
@@ -2087,7 +2147,8 @@ val EXISTS_RES_to =
       EQ_TAC
        THEN RW_TAC std_ss []
        THEN TRY(PROVE_TAC[DECIDE ``m <= j = (m=j) \/ m+1 <= j``])
-       THEN DECIDE_TAC]);
+       THEN DECIDE_TAC]
+QED
 
 Definition ABORT_AUX_def[nocompute]:
    ABORT_AUX w f b n =
@@ -2102,24 +2163,24 @@ val EXISTS_RES_to_COR =
      `\j n. UF_SEM (RESTN w j) (F_BOOL b) /\ F_PREF (SEL w (0,j - 1)) f`]
     EXISTS_RES_to);
 
-val ABORT_AUX_REC =
- store_thm
-  ("ABORT_AUX_REC",
-   ``ABORT_AUX w f b n
+Theorem ABORT_AUX_REC:
+     ABORT_AUX w f b n
       = n < LENGTH w /\
         (UF_SEM (RESTN w n) (F_BOOL b) /\ F_PREF (SEL w (0,n - 1)) f
          \/
-         ABORT_AUX w f b (n+1))``,
+         ABORT_AUX w f b (n+1))
+Proof
    RW_TAC std_ss [ABORT_AUX_def]
-    THEN ACCEPT_TAC EXISTS_RES_to_COR);
+    THEN ACCEPT_TAC EXISTS_RES_to_COR
+QED
 
-val UF_ABORT_REC =
- store_thm
-  ("UF_ABORT_REC",
-   ``UF_SEM w (F_ABORT (f,b)) =
-      UF_SEM w f \/ UF_SEM w (F_BOOL b) \/ ABORT_AUX w f b 1``,
+Theorem UF_ABORT_REC:
+     UF_SEM w (F_ABORT (f,b)) =
+      UF_SEM w f \/ UF_SEM w (F_BOOL b) \/ ABORT_AUX w f b 1
+Proof
      RW_TAC std_resq_ss [UF_SEM_def,F_PREF_def,ABORT_AUX_def]
-    THEN PROVE_TAC[]);
+    THEN PROVE_TAC[]
+QED
 
 (******************************************************************************
 * End of useless stuff.

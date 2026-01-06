@@ -78,7 +78,7 @@ End
 
 Type word_ptreeset = ``:('a, unit) word_ptree``
 
-Definition THE_PTREE_def:    THE_PTREE (Word_ptree a t) = t
+Definition THE_PTREE_def[simp]:    THE_PTREE (Word_ptree a t) = t
 End
 
 Definition SOME_PTREE_def[nocompute]:   SOME_PTREE t = Word_ptree (K ()) t
@@ -87,7 +87,6 @@ End
 Definition WordEmpty_def:    WordEmpty = SOME_PTREE Empty
 End
 
-val _ = export_rewrites ["THE_PTREE_def"];
 
 Definition PEEKw_def:
   PEEKw (t:('a,'b) word_ptree) (w:'a word) = PEEK (THE_PTREE t) (w2n w)
@@ -348,13 +347,12 @@ Theorem ADD_INSERT_WORD =
   (GEN_ALL o SIMP_CONV (srw_ss()) [GSYM INSERT_PTREEw_def, oneTheory.one])
   ``ADDw t (w,v:unit)``;
 
-Theorem THE_PTREE_SOME_PTREE:
+Theorem THE_PTREE_SOME_PTREE[simp]:
    !t. THE_PTREE (SOME_PTREE t) = t
 Proof
   SRW_TAC [] [SOME_PTREE_def]
 QED
 
-val _ = export_rewrites ["THE_PTREE_SOME_PTREE"];
 
 (*
 val PTREE_OF_WORDSET_EMPTY = store_thm("PTREE_OF_WORDSET_EMPTY",
@@ -395,4 +393,3 @@ val _ = computeLib.add_persistent_funs
    "THE_PTREE_SOME_PTREE"];
 
 (* ------------------------------------------------------------------------- *)
-

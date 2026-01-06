@@ -23,13 +23,12 @@ val tr_def =
 
 val tr_ind = fetch "-" "tr_ind";
 
-val tr_INTRO = Q.store_thm
-("tr_INTRO",
-  `!f f1 f2.
+Theorem tr_INTRO:
+   !f f1 f2.
      (!x:'a. f x = if f1(x) then x else f(f2 x))
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f2 x) x))
-     ==> (f:'a->'a = tr f1 f2)`,
-
+     ==> (f:'a->'a = tr f1 f2)
+Proof
   REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
   ONCE_REWRITE_TAC [FUN_EQ_THM] THEN
   HO_MATCH_MP_TAC tr_ind THEN
@@ -37,15 +36,14 @@ val tr_INTRO = Q.store_thm
   IMP_RES_TAC (DISCH_ALL tr_def) THEN
   POP_ASSUM (fn th => ONCE_REWRITE_TAC[th]) THEN
   METIS_TAC[]
- );
+QED
 
-val rec_INTRO = Q.store_thm
-("rec_INTRO",
-  `!f f1 f2 f3.
+Theorem rec_INTRO:
+   !f f1 f2 f3.
      (!x:'a. f x = if f1(x) then f2(x) else f(f3 x))
      ==> (?R. WF R /\ (!x. ~f1 x ==> R (f3 x) x))
-     ==> (f:'a->'b x = let y = (tr f1 f3) x in f2 y)`,
-
+     ==> (f:'a->'b x = let y = (tr f1 f3) x in f2 y)
+Proof
   REPEAT (GEN_TAC ORELSE STRIP_TAC) THEN
   IMP_RES_TAC  relationTheory.WF_INDUCTION_THM THEN
   POP_ASSUM (MATCH_MP_TAC o SIMP_RULE std_ss [] o
@@ -56,7 +54,7 @@ val rec_INTRO = Q.store_thm
     IMP_RES_TAC (DISCH_ALL tr_def) THEN
     METIS_TAC []
   ]
- );
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Structured Assembly Language                                              *)
@@ -119,31 +117,30 @@ val _ = map save_thm
 
 
 (* TRANSFER_RULE is a special case of the seq_rule *)
-val TRANSFER_RULE = Q.store_thm (
-  "TRANSFER_RULE",
-   `Reduce (l1,S1,l2) (e,v) /\ Reduce (l2,S2,l3) (v,w) ==>
+Theorem TRANSFER_RULE:
+    Reduce (l1,S1,l2) (e,v) /\ Reduce (l2,S2,l3) (v,w) ==>
          Reduce (l1,S1 |++| S2,l3) (e,w)
-   `,
+Proof
    REPEAT STRIP_TAC THEN
    `Reduce (l2,S2,l3) ((\x.x) v, w)` by RW_TAC std_ss [] THEN
    IMP_RES_TAC seq_rule THEN
    FULL_SIMP_TAC std_ss [LET_THM]
-  );
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Translate conditional-jump structures into structured assembly            *)
 (*---------------------------------------------------------------------------*)
 
-val CONDITIONAL_RULE = Q.store_thm (
-  "CONDITIONAL_RULE",
-   `Reduce (l2, S1, l4) (e1 v, w) /\ Reduce (l3, S2, l4) (e2 v, w) ==>
-    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| S2, l4) (if c v then e1 v else e2 v, w)`,
+Theorem CONDITIONAL_RULE:
+    Reduce (l2, S1, l4) (e1 v, w) /\ Reduce (l3, S2, l4) (e2 v, w) ==>
+    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| S2, l4) (if c v then e1 v else e2 v, w)
+Proof
    Cases_on `c v` THEN
    RW_TAC std_ss [] THENL [
        METIS_TAC [ift_rule, nop_rule, skip_rule],
        METIS_TAC [iff_rule, nop_rule, skip_rule]
    ]
-  );
+QED
 
 (*---------------------------------------------------------------------------*)
 (* The basic theorem for translating recursive structures into               *)
@@ -151,48 +148,44 @@ val CONDITIONAL_RULE = Q.store_thm (
 (*---------------------------------------------------------------------------*)
 
 (* lem1 (rule tr, page 12) in the CADE paper *)
-val TR_LEM1 = Q.store_thm (
-  "TR_LEM1",
-   `Reduce (l3, S1, l4) w /\ c v ==>
-    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2) (v,v)`,
-
+Theorem TR_LEM1:
+    Reduce (l3, S1, l4) w /\ c v ==>
+    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2) (v,v)
+Proof
   REPEAT STRIP_TAC THEN
   METIS_TAC [ift_rule, skip_rule, goto_rule]
-  );
+QED
 
 (* thm1 (rule tr, page 12) in the CADE paper *)
-val TR_LEM2 = Q.store_thm (
-  "TR_LEM2",
-   `(!x. ~(c x) ==> R (f x) x) /\ WF R /\       (* terminated loop *)
+Theorem TR_LEM2:
+    (!x. ~(c x) ==> R (f x) x) /\ WF R /\       (* terminated loop *)
     c v /\ Reduce (l3, S1, l4) (f v, v)
     ==>
     Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2)
-        (tr c f v, v)`,
-
+        (tr c f v, v)
+Proof
   RW_TAC std_ss [] THEN
   METIS_TAC[TR_LEM1, DISCH_ALL tr_def]
-  );
+QED
 
 (* asm4 (rule tr, page 12) in the CADE paper is the assumption when applying the tr_ind *)
 
 (* asm5 (rule tr, page 12) in the CADE paper *)
-val TR_LEM3 = Q.store_thm (
-  "TR_LEM3",
-   `~c v /\ Reduce (l3, S1, l4) (f v, v)  ==>
-    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l1) (f v, v)`,
-
+Theorem TR_LEM3:
+    ~c v /\ Reduce (l3, S1, l4) (f v, v)  ==>
+    Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l1) (f v, v)
+Proof
   RW_TAC std_ss [] THEN
   `Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1, l4) (f v, v)` by METIS_TAC [iff_rule, nop_rule] THEN
   METIS_TAC [goto_rule, TRANSFER_RULE]
-  );
+QED
 
-val TR_RULE = Q.store_thm (
-   "TR_RULE",
-   `(!x. ~(c x) ==> R (f x) x) /\ WF R ==>
+Theorem TR_RULE:
+    (!x. ~(c x) ==> R (f x) x) /\ WF R ==>
     (!v. (c v ==> Reduce (l3, S1, l4) w) /\
          (~c v ==> Reduce (l3, S1, l4) (f v, v))) ==>
-        !v. Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2) (tr c f v, v)`,
-
+        !v. Reduce (l1, (IFGOTO l1 c l2 l3) |++| S1 |++| (GOTO l4 l1), l2) (tr c f v, v)
+Proof
   STRIP_TAC THEN STRIP_TAC THEN
   IMP_RES_TAC (DISCH_ALL tr_ind) THEN
   POP_ASSUM HO_MATCH_MP_TAC THEN
@@ -201,27 +194,25 @@ val TR_RULE = Q.store_thm (
     METIS_TAC [TR_LEM1, DISCH_ALL tr_def],
     METIS_TAC [TR_LEM3, loop_rule]
   ]
-  );
+QED
 
 (*---------------------------------------------------------------------------*)
 (* The basic theorem for translating function call structures into           *)
 (* structured assembly                                                       *)
 (*---------------------------------------------------------------------------*)
 
-val FUN_CALL_LEM = Q.store_thm (
-  "FUN_CALL_LEM",
-   `Reduce (l2, S1, l3) (f w1, v1) ==>
-    Reduce (l1, (ASG l1 w1 w2 l2) |++| S1, l3) ((let w1 = w2 in f w1), v1)`,
-
+Theorem FUN_CALL_LEM:
+    Reduce (l2, S1, l3) (f w1, v1) ==>
+    Reduce (l1, (ASG l1 w1 w2 l2) |++| S1, l3) ((let w1 = w2 in f w1), v1)
+Proof
    RW_TAC std_ss [] THEN
    METIS_TAC [inst_rule, seq_rule]
-  );
+QED
 
-val FUN_CALL_RULE = Q.store_thm (
-  "FUN_CALL_RULE",
-   `Reduce (l2, S1, l3) (f w1, v1) ==>
-    Reduce (l1, (ASG l1 w1 w2 l2) |++| S1 |++| (ASG l3 v2 v1 l4), l4) (f w2, v2)`,
-
+Theorem FUN_CALL_RULE:
+    Reduce (l2, S1, l3) (f w1, v1) ==>
+    Reduce (l1, (ASG l1 w1 w2 l2) |++| S1 |++| (ASG l3 v2 v1 l4), l4) (f w2, v2)
+Proof
    RW_TAC std_ss [] THEN
    IMP_RES_TAC FUN_CALL_LEM THEN
    FULL_SIMP_TAC std_ss [LET_THM] THEN
@@ -229,7 +220,7 @@ val FUN_CALL_RULE = Q.store_thm (
    Q.PAT_ASSUM `!w2 l1.P` (ASSUME_TAC o Q.SPECL [`w2`,`l1`]) THEN
    IMP_RES_TAC seq_rule THEN
    FULL_SIMP_TAC std_ss [LET_THM]
-  );
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Examples                                                                  *)

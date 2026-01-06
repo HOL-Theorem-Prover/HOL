@@ -82,42 +82,46 @@ End
 
 (* ------------------------------------------------------------------------ *)
 
-val m0_NZCV_HIDE = Q.store_thm("m0_NZCV_HIDE",
-   `~m0_NZCV = ~m0_PSR_N * ~m0_PSR_Z * ~m0_PSR_C * ~m0_PSR_V`,
+Theorem m0_NZCV_HIDE:
+    ~m0_NZCV = ~m0_PSR_N * ~m0_PSR_Z * ~m0_PSR_C * ~m0_PSR_V
+Proof
    SIMP_TAC std_ss [SEP_HIDE_def, m0_NZCV_def, SEP_CLAUSES, FUN_EQ_THM]
    \\ SIMP_TAC std_ss [SEP_EXISTS]
    \\ METIS_TAC [m0_NZCV_def, pairTheory.PAIR]
-   )
+QED
 
-val m0_PSR_T_F = Q.store_thm("m0_PSR_T_F",
-   `( n ==> (m0_PSR_N T = m0_PSR_N n)) /\
+Theorem m0_PSR_T_F:
+    ( n ==> (m0_PSR_N T = m0_PSR_N n)) /\
     (~n ==> (m0_PSR_N F = m0_PSR_N n)) /\
     ( z ==> (m0_PSR_Z T = m0_PSR_Z z)) /\
     (~z ==> (m0_PSR_Z F = m0_PSR_Z z)) /\
     ( c ==> (m0_PSR_C T = m0_PSR_C c)) /\
     (~c ==> (m0_PSR_C F = m0_PSR_C c)) /\
     ( v ==> (m0_PSR_V T = m0_PSR_V v)) /\
-    (~v ==> (m0_PSR_V F = m0_PSR_V v))`,
+    (~v ==> (m0_PSR_V F = m0_PSR_V v))
+Proof
     simp []
-    )
+QED
 
-val m0_PC_INTRO = Q.store_thm("m0_PC_INTRO",
-   `SPEC m (p1 * m0_PC pc) code (p2 * m0_REG RName_PC pc') ==>
+Theorem m0_PC_INTRO:
+    SPEC m (p1 * m0_PC pc) code (p2 * m0_REG RName_PC pc') ==>
     (aligned 1 pc ==> aligned 1 pc') ==>
-    SPEC m (p1 * m0_PC pc) code (p2 * m0_PC pc')`,
+    SPEC m (p1 * m0_PC pc) code (p2 * m0_PC pc')
+Proof
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss [m0_PC_def, SPEC_MOVE_COND, STAR_ASSOC, SEP_CLAUSES]
-   )
+QED
 
-val m0_TEMPORAL_PC_INTRO = Q.store_thm("m0_TEMPORAL_PC_INTRO",
-   `TEMPORAL_NEXT m (p1 * m0_PC pc) code (p2 * m0_REG RName_PC pc') ==>
+Theorem m0_TEMPORAL_PC_INTRO:
+    TEMPORAL_NEXT m (p1 * m0_PC pc) code (p2 * m0_REG RName_PC pc') ==>
     (aligned 1 pc ==> aligned 1 pc') ==>
-    TEMPORAL_NEXT m (p1 * m0_PC pc) code (p2 * m0_PC pc')`,
+    TEMPORAL_NEXT m (p1 * m0_PC pc) code (p2 * m0_PC pc')
+Proof
    REPEAT STRIP_TAC
    \\ FULL_SIMP_TAC std_ss
         [m0_PC_def, temporal_stateTheory.TEMPORAL_NEXT_MOVE_COND,
          STAR_ASSOC, SEP_CLAUSES]
-   )
+QED
 
 (* ------------------------------------------------------------------------ *)
 
@@ -175,9 +179,8 @@ val m0_instr_star_not_disjoint = Q.prove(
    \\ fs [pred_setTheory.INSERT_INTER]
    )
 
-val MOVE_TO_TEMPORAL_M0_CODE_POOL = Q.store_thm
-  ("MOVE_TO_TEMPORAL_M0_CODE_POOL",
-   `!a w c p q.
+Theorem MOVE_TO_TEMPORAL_M0_CODE_POOL:
+    !a w c p q.
        TEMPORAL_NEXT M0_MODEL
         (p *
          m0_MEM a ((7 >< 0) w) *
@@ -194,7 +197,8 @@ val MOVE_TO_TEMPORAL_M0_CODE_POOL = Q.store_thm
         (cond (DISJOINT (m0_instr (a, data_to_thumb2 w))
               (BIGUNION (IMAGE m0_instr c))) * p)
         ((a, data_to_thumb2 w) INSERT c)
-        q`,
+        q
+Proof
     REPEAT strip_tac
     \\ once_rewrite_tac [GSYM temporal_stateTheory.TEMPORAL_NEXT_CODE]
     \\ rewrite_tac [M0_MODEL_def, stateTheory.CODE_POOL,
@@ -211,10 +215,10 @@ val MOVE_TO_TEMPORAL_M0_CODE_POOL = Q.store_thm
     \\ fs [set_sepTheory.SEP_CLAUSES,
            temporal_stateTheory.TEMPORAL_NEXT_FALSE_PRE,
            AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
-    )
+QED
 
-val MOVE_TO_M0_CODE_POOL = Q.store_thm("MOVE_TO_M0_CODE_POOL",
-   `!a w c p q.
+Theorem MOVE_TO_M0_CODE_POOL:
+    !a w c p q.
        SPEC M0_MODEL
         (p *
          m0_MEM a ((7 >< 0) w) *
@@ -231,7 +235,8 @@ val MOVE_TO_M0_CODE_POOL = Q.store_thm("MOVE_TO_M0_CODE_POOL",
         (cond (DISJOINT (m0_instr (a, data_to_thumb2 w))
                         (BIGUNION (IMAGE m0_instr c))) * p)
         ((a, data_to_thumb2 w) INSERT c)
-        q`,
+        q
+Proof
     REPEAT strip_tac
     \\ once_rewrite_tac [GSYM progTheory.SPEC_CODE]
     \\ rewrite_tac [M0_MODEL_def, stateTheory.CODE_POOL,
@@ -247,7 +252,7 @@ val MOVE_TO_M0_CODE_POOL = Q.store_thm("MOVE_TO_M0_CODE_POOL",
     \\ imp_res_tac m0_instr_star_not_disjoint
     \\ fs [set_sepTheory.SEP_CLAUSES, progTheory.SPEC_FALSE_PRE,
            AC set_sepTheory.STAR_ASSOC set_sepTheory.STAR_COMM]
-    )
+QED
 
 val sub_intro = Theory.save_thm("sub_intro",
    simpLib.SIMP_PROVE (srw_ss()) []
@@ -261,10 +266,11 @@ val tac = asm_simp_tac (srw_ss()++wordsLib.WORD_CANCEL_ss)
 val top = utilsLib.rhsc (wordsLib.WORD_EVAL_CONV ``word_T : word32``)
 *)
 
-val DISJOINT_m0_instr = Q.store_thm("DISJOINT_m0_instr",
-   `!a pc x y.
+Theorem DISJOINT_m0_instr:
+    !a pc x y.
       3w <+ a /\ a <+ 0xFFFFFFFDw ==>
-      DISJOINT (m0_instr (pc + a, data_to_thumb2 x)) (m0_instr (pc, INL y))`,
+      DISJOINT (m0_instr (pc + a, data_to_thumb2 x)) (m0_instr (pc, INL y))
+Proof
    rw [m0_instr_def, data_to_thumb2_def, byte_lem, pred_setTheory.DISJOINT_DEF]
    \\ `a + 1w <> 0w` by blastLib.FULL_BBLAST_TAC
    \\ `a + 2w <> 0w` by blastLib.FULL_BBLAST_TAC
@@ -274,7 +280,7 @@ val DISJOINT_m0_instr = Q.store_thm("DISJOINT_m0_instr",
    \\ `2w <> a` by blastLib.FULL_BBLAST_TAC
    \\ `1w <> a` by blastLib.FULL_BBLAST_TAC
    \\ tac
-   )
+QED
 
 fun disjoint_m0_instr q =
    DISJOINT_m0_instr

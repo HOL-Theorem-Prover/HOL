@@ -166,10 +166,10 @@ End
    <=>       ((X + |c|) ** n) % z = (X ** n + |c|) % z                by above
    <=> ((X + |c|) ** n == X ** n + |c|) (pm z)                        by pmod_def_alt
 *)
-val unity_mod_intro_alt = store_thm(
-  "unity_mod_intro_alt",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !k n. 1 < k /\ 0 < n ==>
-   !c. unity_mod_intro r k n c = ((X + |c|) ** n == X ** n + |c|) (pm (unity k))``,
+Theorem unity_mod_intro_alt:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !k n. 1 < k /\ 0 < n ==>
+   !c. unity_mod_intro r k n c = ((X + |c|) ** n == X ** n + |c|) (pm (unity k))
+Proof
   rpt strip_tac >>
   `0 < k` by decide_tac >>
   qabbrev_tac `q = unity_mod_monomial r k c` >>
@@ -186,7 +186,8 @@ val unity_mod_intro_alt = store_thm(
   `_ = (((X + |c|) % z) ** n) % z` by rw_tac std_ss[unity_mod_monomial_chop, Abbr`z`, Abbr`q`] >>
   `_ = ((X + |c|) ** n) % z` by rw_tac std_ss[poly_mod_exp] >>
   `chop (unity_mod_special r k n c) = (X ** n + |c|) % z` by rw_tac std_ss[unity_mod_special_chop, Abbr`z`] >>
-  metis_tac[unity_mod_intro_def, poly_chop_eq_chop, pmod_def_alt]);
+  metis_tac[unity_mod_intro_def, poly_chop_eq_chop, pmod_def_alt]
+QED
 
 (* Got it! A nice result. *)
 
@@ -272,9 +273,9 @@ val it = |- ZN_poly_intro_range 4 3 4 <=> F: thm
    <=> unity_mod_exp p n = unity_mod_special (ZN n) k n c        by above
    <=> unity_mod_intro (ZN n) k n c                              by unity_mod_intro_def
 *)
-val ZN_poly_intro_alt = store_thm(
-  "ZN_poly_intro_alt",
-  ``!n k. 1 < n /\ 0 < k ==> !c. ZN_poly_intro n k c = unity_mod_intro (ZN n) k n c``,
+Theorem ZN_poly_intro_alt:
+    !n k. 1 < n /\ 0 < k ==> !c. ZN_poly_intro n k c = unity_mod_intro (ZN n) k n c
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
@@ -282,7 +283,8 @@ val ZN_poly_intro_alt = store_thm(
   `zweak p` by rw[unity_mod_monomial_weak, Abbr`p`] >>
   `LENGTH p = k` by rw[unity_mod_monomial_length, Abbr`p`] >>
   `p <> []` by metis_tac[LENGTH_NIL, NOT_ZERO_LT_ZERO] >>
-  metis_tac[ZN_poly_monomial_alt, ZN_poly_exp_alt, ZN_poly_special_alt, ZN_poly_intro_def, unity_mod_intro_def]);
+  metis_tac[ZN_poly_monomial_alt, ZN_poly_exp_alt, ZN_poly_special_alt, ZN_poly_intro_def, unity_mod_intro_def]
+QED
 
 (* Theorem: 1 < n /\ 0 < k ==> !m. ZN_poly_intro_range n k m = unity_mod_intro_range (ZN n) k n m *)
 (* Proof:
@@ -302,12 +304,13 @@ val ZN_poly_intro_alt = store_thm(
              unity_mod_intro_range (ZN n) k n m   by ZN_poly_intro_alt, 1 < n, 0 < k
       <=> unity_mod_intro_range (ZN n) k n m      by unity_mod_intro_range_def
 *)
-val ZN_poly_intro_range_alt = store_thm(
-  "ZN_poly_intro_range_alt",
-  ``!n k. 1 < n /\ 0 < k ==> !m. ZN_poly_intro_range n k m = unity_mod_intro_range (ZN n) k n m``,
+Theorem ZN_poly_intro_range_alt:
+    !n k. 1 < n /\ 0 < k ==> !m. ZN_poly_intro_range n k m = unity_mod_intro_range (ZN n) k n m
+Proof
   ntac 3 strip_tac >>
   Induct >>
-  rw[ZN_poly_intro_range_def, unity_mod_intro_range_def, ZN_poly_intro_alt]);
+  rw[ZN_poly_intro_range_def, unity_mod_intro_range_def, ZN_poly_intro_alt]
+QED
 
 (* Theorem: ZN_poly_intro_range n k m = (!c. 0 < c /\ c <= m ==> ZN_poly_intro n k c) *)
 (* Proof:
@@ -332,15 +335,16 @@ val ZN_poly_intro_range_alt = store_thm(
                      and ZN_poly_intro n k (SUC m)                 by substitution
               or ZN_poly_intro_range n k (SUC m)                   by ZN_poly_intro_range_def
 *)
-val ZN_poly_intro_range_thm = store_thm(
-  "ZN_poly_intro_range_thm",
-  ``!n k m. ZN_poly_intro_range n k m = (!c. 0 < c /\ c <= m ==> ZN_poly_intro n k c)``,
+Theorem ZN_poly_intro_range_thm:
+    !n k m. ZN_poly_intro_range n k m = (!c. 0 < c /\ c <= m ==> ZN_poly_intro n k c)
+Proof
   ntac 2 strip_tac >>
   Induct >-
   rw[ZN_poly_intro_range_def] >>
   rw[ZN_poly_intro_range_def, EQ_IMP_THM] >>
   Cases_on `c = SUC m` >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Algorithm -- original                                                 *)
@@ -393,14 +397,15 @@ g `!n. aks_compute n = power_free n /\
             | good k => unity_mod_intro_range (ZN n) k n ((SQRT (phi k)) * ((LOG2 n) + 1))
             | bad => F *)
 (* Proof: by aks_compute_def, power_free_check_eqn, sqrt_compute_eqn, phi_compute_eqn *)
-val aks_compute_alt_weak = store_thm(
-  "aks_compute_alt_weak",
-  ``!n. aks_compute n <=> power_free n /\
+Theorem aks_compute_alt_weak:
+    !n. aks_compute n <=> power_free n /\
        case aks_param n of
          nice j => (j = n)
        | good k => unity_mod_intro_range (ZN n) k n ((SQRT (phi k)) * (ulog n))
-       | bad => F``,
-  rw[aks_compute_def, power_free_check_eqn, sqrt_compute_eqn, phi_compute_eqn]);
+       | bad => F
+Proof
+  rw[aks_compute_def, power_free_check_eqn, sqrt_compute_eqn, phi_compute_eqn]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* AKS Algorithm with simple bound                                           *)
@@ -425,15 +430,16 @@ End
           | good k => unity_mod_intro_range (ZN n) k n k
           | bad => F *)
 (* Proof: by aks0_def, param_eqn, power_free_test_eqn *)
-val aks0_alt = store_thm(
-  "aks0_alt",
-  ``!n. aks0 n <=>
+Theorem aks0_alt:
+    !n. aks0 n <=>
           power_free n /\
           case aks_param n of
             nice j => j = n
           | good k => unity_mod_intro_range (ZN n) k n k
-          | bad => F``,
-  rw[aks0_def, param_eqn, power_free_test_eqn]);
+          | bad => F
+Proof
+  rw[aks0_def, param_eqn, power_free_test_eqn]
+QED
 
 (* Correctness is proved in AKSclean:
    aks0_thm   |- !n. prime n <=> aks0 n

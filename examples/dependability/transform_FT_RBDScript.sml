@@ -60,7 +60,6 @@ Theorem OR_AND_to_parallel_series :
 !p L. (FTree p ((OR of (\a. AND (gate_list a))) L) =
           rbd_struct p ((parallel of (\a. series (rbd_list a))) L))
 Proof
-
 GEN_TAC >> Induct
 >- (RW_TAC list_ss[of_DEF,o_DEF,gate_list_def,FTree_def,gate_list_def,rbd_list_def,rbd_struct_def])
 >> RW_TAC list_ss[of_DEF,o_DEF,gate_list_def,FTree_def,gate_list_def,rbd_list_def,rbd_struct_def]
@@ -82,7 +81,6 @@ Theorem NOR_gate_transform :
 !p L. p_space p DIFF FTree p (OR (gate_list L)) =
           p_space p DIFF rbd_struct p (parallel (rbd_list L))
 Proof
-
 GEN_TAC >> Induct
 >- (RW_TAC std_ss[gate_list_def,FTree_def,gate_list_def,rbd_list_def,rbd_struct_def])
 >> RW_TAC std_ss[gate_list_def,FTree_def,gate_list_def,rbd_list_def,rbd_struct_def]

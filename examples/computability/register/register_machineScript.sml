@@ -49,13 +49,17 @@ reg_fun inst input = let reg0 =  initial_reg inst input in
                        OPTION_MAP (λt. (run_reg t reg0)) (OLEAST n. is_halted (run_reg n reg0))
 End
 
-val FUNPOW_TWO = Q.store_thm("FUNPOW_TWO",
-`FUNPOW f 2 a = f (f a)`,
-`FUNPOW f 2 a = FUNPOW f (SUC (SUC 0)) a` by fs[] >> rw[FUNPOW_SUC])
+Theorem FUNPOW_TWO:
+ FUNPOW f 2 a = f (f a)
+Proof
+`FUNPOW f 2 a = FUNPOW f (SUC (SUC 0)) a` by fs[] >> rw[FUNPOW_SUC]
+QED
 
-val FUNPOW_THREE = Q.store_thm("FUNPOW_THREE",
-`FUNPOW f 3 a = f (f (f a))`,
-`FUNPOW f 3 a = FUNPOW f (SUC (SUC (SUC 0))) a` by fs[] >> rw[FUNPOW_SUC])
+Theorem FUNPOW_THREE:
+ FUNPOW f 3 a = f (f (f a))
+Proof
+`FUNPOW f 3 a = FUNPOW f (SUC (SUC (SUC 0))) a` by fs[] >> rw[FUNPOW_SUC]
+QED
 
 Definition Jump_def:  Jump i = JZ 0 i T
 End

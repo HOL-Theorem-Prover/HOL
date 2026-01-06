@@ -627,15 +627,16 @@ val tac2 =
       \\ `(8 + 4 * k) < 4294967296` by DECIDE_TAC
       \\ ASM_SIMP_TAC std_ss [LESS_MOD] \\ DECIDE_TAC)
 
-val lisp_inv_equal = store_thm("lisp_inv_equal",
-  ``lisp_inv (x1,x2,x3,x4,x5,x6,limit)
+Theorem lisp_inv_equal:
+    lisp_inv (x1,x2,x3,x4,x5,x6,limit)
      (r3,r4,r5,r6,r7,r8,a,df,f,s,rest) ==>
     ?r3' r4' r5' r6' r7' r8' a' df' f'.
    (arm_eq (r3,r4,r5,r6,r7,r8,a,df,f) =
     (r3',r4',r5',r6',r7',r8',a',df',f')) /\
    arm_eq_pre (r3,r4,r5,r6,r7,r8,a,df,f) /\ (df' = df) /\ (a' = a) /\
    lisp_inv (LISP_EQUAL x1 x2,x2,x3,x4,x5,x6,limit)
-     (r3',r4',r5',r6',r7',r8',a',df',f',s,rest)``,
+     (r3',r4',r5',r6',r7',r8',a',df',f',s,rest)
+Proof
   `?r3' r4' r5' r6' r7' r8' a' df' f'.
    (arm_eq (r3,r4,r5,r6,r7,r8,a,df,f) =
     (r3',r4',r5',r6',r7',r8',a',df',f'))` by METIS_TAC [PAIR]
@@ -779,6 +780,7 @@ val lisp_inv_equal = store_thm("lisp_inv_equal",
     (STRIP_TAC THEN Cases_on `u` \\ REWRITE_TAC [] \\ METIS_TAC [SUBSET_DEF])
     \\ ASM_SIMP_TAC std_ss [GSPECIFICATION,GSYM WORD_EQ_SUB_RADD])
   \\ IMP_RES_TAC lisp_x_or \\ ASM_SIMP_TAC std_ss []
-  \\ REPEAT STRIP_TAC \\ METIS_TAC [WORD_ADD_SUB]);
+  \\ REPEAT STRIP_TAC \\ METIS_TAC [WORD_ADD_SUB]
+QED
 
 

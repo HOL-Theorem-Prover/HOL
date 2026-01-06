@@ -943,7 +943,7 @@ QED
   ∀p . is_simple_polygon p ⇒ ¬collinear (set p)
 Proof
   cheat
-QED *)
+QED*)
 
 Definition line_intersects_polygon_def:
   line_intersects_polygon l p ⇔ ∃a . point_of_polygon a p ∧ a ol l
@@ -966,7 +966,7 @@ End
                                     ∧ (∀a b . a ∈ A ∧ b ∈ B ⇒ ∀bl . bl_joins_points bl a b ⇒ bl_intersects_polygon bl p)
 Proof
   rpt strip_tac >> cheat
-QED *)
+QED*)
 
 Definition is_convex_polygon_def:
   is_convex_polygon p ⇔ is_simple_polygon p

@@ -1327,7 +1327,6 @@ End
 Theorem prob_space_word6x6:
    prob_space word6x6
 Proof
-
      MATCH_MP_TAC prob_uniform_on_finite_set
   >> rw[]
 
@@ -1361,7 +1360,6 @@ End
 Theorem prob_space_word6p:
    prob_space word6p
 Proof
-
      MATCH_MP_TAC prob_uniform_on_finite_set
   >> rw[]
 
@@ -1527,7 +1525,6 @@ End
 Theorem prob_space_word48p:
    prob_space word48p
 Proof
-
      MATCH_MP_TAC prob_uniform_on_finite_set
   >> rw[]
 

@@ -42,11 +42,11 @@ End
 (* 2. !n l. !*s. EVEN (FST (random_walk n s)) = EVEN n                       *)
 (* ------------------------------------------------------------------------- *)
 
-val RANDOM_LURCHES_TRANSLATION = store_thm
-  ("RANDOM_LURCHES_TRANSLATION",
-   ``!p i n.
+Theorem RANDOM_LURCHES_TRANSLATION:
+     !p i n.
        prob_while_cut ($< p) random_lurch n (p + i) =
-       BIND (prob_while_cut ($< 0) random_lurch n i) (\l. UNIT (p + l))``,
+       BIND (prob_while_cut ($< 0) random_lurch n i) (\l. UNIT (p + l))
+Proof
    RW_TAC std_ss []
    >> Know `i = (p + i) - p` >- DECIDE_TAC
    >> Rewr'
@@ -64,24 +64,27 @@ val RANDOM_LURCHES_TRANSLATION = store_thm
       [prob_while_cut_def, random_lurch_def, BIND_DEF, o_THM,
        sdest_def, SHD_SCONS, STL_SCONS, UNCURRY, UNIT_DEF]
    >> Suff `F` >- PROVE_TAC []
-   >> DECIDE_TAC);
+   >> DECIDE_TAC
+QED
 
-val INDEP_FN_RANDOM_LURCH = store_thm
-  ("INDEP_FN_RANDOM_LURCH",
-   ``!a. random_lurch a IN indep_fn``,
+Theorem INDEP_FN_RANDOM_LURCH:
+     !a. random_lurch a IN indep_fn
+Proof
    RW_TAC std_ss [random_lurch_def, INDEP_FN_BIND, INDEP_FN_UNIT,
-                  INDEP_FN_SDEST]);
+                  INDEP_FN_SDEST]
+QED
 
-val INDEP_FN_RANDOM_LURCHES = store_thm
-  ("INDEP_FN_RANDOM_LURCHES",
-   ``!a b c. prob_while_cut a random_lurch b c IN indep_fn``,
-   RW_TAC std_ss [INDEP_FN_PROB_WHILE_CUT, INDEP_FN_RANDOM_LURCH]);
+Theorem INDEP_FN_RANDOM_LURCHES:
+     !a b c. prob_while_cut a random_lurch b c IN indep_fn
+Proof
+   RW_TAC std_ss [INDEP_FN_PROB_WHILE_CUT, INDEP_FN_RANDOM_LURCH]
+QED
 
-val EVENTS_BERN_RANDOM_LURCHES = store_thm
-  ("EVENTS_BERN_RANDOM_LURCHES",
-   ``!a.
+Theorem EVENTS_BERN_RANDOM_LURCHES:
+     !a.
        {s | ?n. FST (prob_while_cut ($< 0) random_lurch n a s) = 0} IN
-       events bern``,
+       events bern
+Proof
    RW_TAC std_ss [GBIGUNION_IMAGE]
    >> MATCH_MP_TAC EVENTS_COUNTABLE_UNION
    >> RW_TAC std_ss [PROB_SPACE_BERN, COUNTABLE_NUM, image_countable,
@@ -93,7 +96,8 @@ val EVENTS_BERN_RANDOM_LURCHES = store_thm
    >> SET_EQ_TAC
    >> RW_TAC std_ss [GSPECIFICATION, IN_o, o_THM]
    >> RW_TAC std_ss [SPECIFICATION]
-   >> PROVE_TAC []);
+   >> PROVE_TAC []
+QED
 
 Theorem RANDOM_LURCHES_MULTIPLICATIVE:
   !a.
@@ -362,11 +366,11 @@ Proof
    >> RW_TAC real_ss []
 QED
 
-val RANDOM_LURCHES_PARITY = store_thm
-  ("RANDOM_LURCHES_PARITY",
-   ``!n k. !*s.
+Theorem RANDOM_LURCHES_PARITY:
+     !n k. !*s.
        EVEN (SND (FST (prob_while_cost ($< 0) random_lurch (n, k) s))) =
-       EVEN (n + k)``,
+       EVEN (n + k)
+Proof
    RW_TAC std_ss [prob_while_cost_def]
    >> MP_TAC
       (Q.SPECL
@@ -394,23 +398,25 @@ val RANDOM_LURCHES_PARITY = store_thm
     >> POP_ASSUM_LIST K_TAC
     >> RW_TAC arith_ss [ADD1],
     POP_ASSUM MP_TAC
-    >> RW_TAC arith_ss []]);
+    >> RW_TAC arith_ss []]
+QED
 
-val INDEP_FN_RANDOM_WALK = store_thm
-  ("INDEP_FN_RANDOM_WALK",
-   ``!n k. random_walk n k IN indep_fn``,
+Theorem INDEP_FN_RANDOM_WALK:
+     !n k. random_walk n k IN indep_fn
+Proof
    RW_TAC std_ss [random_walk_def]
    >> MATCH_MP_TAC INDEP_FN_BIND
    >> RW_TAC std_ss [INDEP_FN_UNIT]
    >> MATCH_MP_TAC INDEP_FN_PROB_WHILE_COST
-   >> RW_TAC std_ss [INDEP_FN_RANDOM_LURCH, PROB_TERMINATES_RANDOM_WALK]);
+   >> RW_TAC std_ss [INDEP_FN_RANDOM_LURCH, PROB_TERMINATES_RANDOM_WALK]
+QED
 
-val RANDOM_WALK = store_thm
-  ("RANDOM_WALK",
-   ``!n.
+Theorem RANDOM_WALK:
+     !n.
        (random_walk 0 k = UNIT k) /\
        (random_walk (SUC n) k =
-        BIND sdest (\b. random_walk (if b then SUC (SUC n) else n) (SUC k)))``,
+        BIND sdest (\b. random_walk (if b then SUC (SUC n) else n) (SUC k)))
+Proof
    FUN_EQ_TAC
    >> RW_TAC std_ss [random_walk_def, prob_while_cost_def]
    >- RW_TAC arith_ss [prob_cost_def, PROB_WHILE_ADVANCE,
@@ -425,22 +431,24 @@ val RANDOM_WALK = store_thm
          PROB_TERMINATES_RANDOM_WALK, INDEP_FN_RANDOM_LURCH,
          o_THM, BIND_LEFT_UNIT]))
    >> RW_TAC arith_ss [BIND_DEF, UNIT_DEF, UNCURRY, o_THM, random_lurch_def,
-                       ADD1]);
+                       ADD1]
+QED
 
-val RANDOM_WALK_ML = store_thm
-  ("RANDOM_WALK_ML",
-   ``!n k.
+Theorem RANDOM_WALK_ML:
+     !n k.
        random_walk n k =
        if n = 0 then UNIT k
        else coin_flip (random_walk (n + 1) (k + 1))
-                      (random_walk (n - 1) (k + 1))``,
+                      (random_walk (n - 1) (k + 1))
+Proof
    Cases
    >> RW_TAC (arith_ss ++ boolSimps.COND_elim_ss)
-      [RANDOM_WALK, ADD1, coin_flip_def]);
+      [RANDOM_WALK, ADD1, coin_flip_def]
+QED
 
-val RANDOM_WALK_PARITY = store_thm
-  ("RANDOM_WALK_PARITY",
-   ``!n k. !*s. EVEN (FST (random_walk n k s)) = EVEN (n + k)``,
+Theorem RANDOM_WALK_PARITY:
+     !n k. !*s. EVEN (FST (random_walk n k s)) = EVEN (n + k)
+Proof
    RW_TAC std_ss [random_walk_def]
    >> Suff
       `!s.
@@ -449,5 +457,6 @@ val RANDOM_WALK_PARITY = store_thm
           (prob_while_cost ($< 0) random_lurch (n,k)) (\x. UNIT (SND x)) s) =
          SND (FST (prob_while_cost ($< 0) random_lurch (n, k) s))`
    >- RW_TAC std_ss [RANDOM_LURCHES_PARITY]
-   >> RW_TAC std_ss [BIND_DEF, UNIT_DEF, UNCURRY, o_THM]);
+   >> RW_TAC std_ss [BIND_DEF, UNIT_DEF, UNCURRY, o_THM]
+QED
 

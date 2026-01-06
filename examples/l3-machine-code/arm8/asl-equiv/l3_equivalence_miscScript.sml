@@ -499,7 +499,7 @@ Proof
   \\ REWRITE_TAC [GSYM word_sub_def,WORD_SUB_ADD]
 QED
 
-Triviality v2n_add_less_limit:
+Theorem v2n_add_less_limit[local]:
   ∀xs. EXISTS I xs ⇒  v2n (MAP $¬ xs) + 1 < 2 ** LENGTH xs
 Proof
   rw[] >> gvs[] >>
@@ -572,7 +572,7 @@ Proof
   simp[n2v_2_POW, zero_extend_def, PAD_LEFT]
 QED
 
-Triviality LENGTH_ADD:
+Theorem LENGTH_ADD[local]:
   ∀m n. LENGTH xs = m + n ⇔
         ∃ys zs. LENGTH ys = m ∧ LENGTH zs = n ∧ xs = ys ++ zs
 Proof

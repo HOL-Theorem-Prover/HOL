@@ -174,14 +174,13 @@ Proof
   METIS_TAC [lbtree_repabs']
 QED
 
-Theorem Lf_NOT_Nd:
+Theorem Lf_NOT_Nd[simp]:
     ~(Lf = Nd a t1 t2)
 Proof
   SRW_TAC [][Lf_def, Nd_def, lbtree_abs_11, is_lbtree_rules] THEN
   SRW_TAC [][Lfrep_def, Ndrep_def, FUN_EQ_THM] THEN
   Q.EXISTS_TAC `[]` THEN SRW_TAC [][]
 QED
-val _ = export_rewrites ["Lf_NOT_Nd"]
 
 Theorem Nd_11[simp]:
   (Nd a1 t1 u1 = Nd a2 t2 u2) <=> (a1 = a2) /\ (t1 = t2) /\ (u1 = u2)
@@ -264,13 +263,12 @@ Definition lbtree_case_def:
                              (@t2. ?a t1. t = Nd a t1 t2)
 End
 
-Theorem lbtree_case_thm:
+Theorem lbtree_case_thm[simp]:
     (lbtree_case e f Lf = e) /\
     (lbtree_case e f (Nd a t1 t2) = f a t1 t2)
 Proof
   SRW_TAC [][lbtree_case_def]
 QED
-val _ = export_rewrites ["lbtree_case_thm"]
 
 (* ----------------------------------------------------------------------
     Bisimulation
@@ -406,13 +404,12 @@ val map_def = new_specification("map_def", ["map"],
     SRW_TAC [][]));
 val _ = export_rewrites ["map_def"]
 
-Theorem map_eq_Lf:
+Theorem map_eq_Lf[simp]:
     ((map f t = Lf) = (t = Lf)) /\ ((Lf = map f t) = (t = Lf))
 Proof
   `(t = Lf) \/ ?a t1 t2. t = Nd a t1 t2` by METIS_TAC [lbtree_cases] THEN
   SRW_TAC [][]
 QED
-val _ = export_rewrites ["map_eq_Lf"]
 
 Theorem map_eq_Nd:
     (map f t = Nd a t1 t2) =
@@ -445,7 +442,7 @@ Proof
 QED
 
 
-Theorem finite_map:
+Theorem finite_map[simp]:
     finite (map f t) = finite t
 Proof
   Q_TAC SUFF_TAC `(!t. finite t ==> finite (map f t)) /\
@@ -457,7 +454,6 @@ Proof
     SRW_TAC [][]
   ]
 QED
-val _ = export_rewrites ["finite_map"]
 
 (* ----------------------------------------------------------------------
     bf_flatten : 'a lbtree list -> 'a llist

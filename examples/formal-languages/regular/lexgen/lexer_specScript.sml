@@ -64,14 +64,15 @@ Definition lexer_spec_matches_prefix_alt_def:
           (s = prefix ++ suffix)
 End
 
-val lexer_spec_matches_equiv = Q.store_thm
-("lexer_spec_matches_equiv",
- `!lexer_spec tok prefix suffix s.
+Theorem lexer_spec_matches_equiv:
+  !lexer_spec tok prefix suffix s.
    lexer_spec_matches_prefix_alt lexer_spec tok prefix suffix s
     =
-   ?n. lexer_spec_matches_prefix lexer_spec n tok prefix suffix s`,
+   ?n. lexer_spec_matches_prefix lexer_spec n tok prefix suffix s
+Proof
  rw [lexer_spec_matches_prefix_def, lexer_spec_matches_prefix_alt_def]
-  >> metis_tac [MEM_EL])
+  >> metis_tac [MEM_EL]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* A correct lexer breaks a string into a sequence of non-null lexemes, each *)
@@ -100,9 +101,8 @@ Definition correct_lex_def:
            (LENGTH prefix' <> LENGTH prefix) \/ n <= n'))
 End
 
-val correct_lex_thm = Q.store_thm
-("correct_lex_thm",
- `!lexer_spec s tok toks.
+Theorem correct_lex_thm:
+  !lexer_spec s tok toks.
     (correct_lex lexer_spec s [] = (s = [])) /\
     (correct_lex lexer_spec s (tok::toks) =
      ?prefix n suffix.
@@ -117,7 +117,8 @@ val correct_lex_thm = Q.store_thm
               lexer_spec tok' (prefix++prefix') suffix' s) /\
         (* Ensure the earliest match of equal length *)
         (!tok'.
-           ~lexer_spec_matches_prefix_alt (TAKE n lexer_spec) tok' prefix suffix s))`,
+           ~lexer_spec_matches_prefix_alt (TAKE n lexer_spec) tok' prefix suffix s))
+Proof
  rw []
  >> rw [Once correct_lex_def]
  >> eq_tac
@@ -163,14 +164,14 @@ val correct_lex_thm = Q.store_thm
                   by DECIDE_TAC
          >> fs [MEM_EL] >> rw []
          >> metis_tac [EL_TAKE, LENGTH_TAKE]))
-);
+QED
 
-val correct_lex_determ = Q.store_thm
-("correct_lex_determ",
- `!lexer_spec s toks toks'.
+Theorem correct_lex_determ:
+  !lexer_spec s toks toks'.
     correct_lex lexer_spec s toks /\ correct_lex lexer_spec s toks'
     ==>
-    (toks = toks')`,
+    (toks = toks')
+Proof
 Induct_on `toks`
  >> rw [correct_lex_def]
  >> Cases_on `toks'`
@@ -194,5 +195,5 @@ Induct_on `toks`
      >> fs [lexer_spec_matches_prefix_def]
      >> rw [] >> fs []
      >> metis_tac [strcat_lem])
-);
+QED
 

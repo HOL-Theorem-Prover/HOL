@@ -70,51 +70,57 @@ fun GCONJUNCTS th =
 Definition MLEX_def:   MLEX f r x y = f x < f y \/ (f x = f y) /\ r x y
 End
 
-val WF_MLEX = store_thm
-  ("WF_MLEX",
-   ``!f r. WF r ==> WF (MLEX f r)``,
+Theorem WF_MLEX:
+     !f r. WF r ==> WF (MLEX f r)
+Proof
    RW_TAC std_ss []
    >> Suff `MLEX f r = inv_image ((<) LEX r) (\x. (f x, x))`
    >- METIS_TAC [prim_recTheory.WF_LESS, WF_LEX, relationTheory.WF_inv_image]
-   >> RW_TAC std_ss [FUN_EQ_THM,MLEX_def,relationTheory.inv_image_def,LEX_DEF]);
+   >> RW_TAC std_ss [FUN_EQ_THM,MLEX_def,relationTheory.inv_image_def,LEX_DEF]
+QED
 
-val NO_MEM = store_thm
-  ("NO_MEM",
-   ``!l. (!x. ~MEM x l) = (l = [])``,
-   Cases >> RW_TAC std_ss [MEM] >> METIS_TAC []);
+Theorem NO_MEM:
+     !l. (!x. ~MEM x l) = (l = [])
+Proof
+   Cases >> RW_TAC std_ss [MEM] >> METIS_TAC []
+QED
 
 Definition set_of_list_def:
    (set_of_list [] = {}) /\
    (set_of_list (h :: t) = h INSERT set_of_list t)
 End
 
-val set_of_list = store_thm
-  ("set_of_list",
-   ``!l x. x IN set_of_list l = MEM x l``,
-   Induct >> RW_TAC std_ss [set_of_list_def, MEM, NOT_IN_EMPTY, IN_INSERT]);
+Theorem set_of_list:
+     !l x. x IN set_of_list l = MEM x l
+Proof
+   Induct >> RW_TAC std_ss [set_of_list_def, MEM, NOT_IN_EMPTY, IN_INSERT]
+QED
 
 Definition interval_def:
    (interval x 0 = []) /\
    (interval x (SUC n) = x :: interval (SUC x) n)
 End
 
-val MEM_interval = store_thm
-  ("MEM_interval",
-   ``!x k n. MEM x (interval k n) = k <= x /\ x < k + n``,
+Theorem MEM_interval:
+     !x k n. MEM x (interval k n) = k <= x /\ x < k + n
+Proof
    Induct_on `n`
-   >> RW_TAC arith_ss [MEM, interval_def]);
+   >> RW_TAC arith_ss [MEM, interval_def]
+QED
 
-val MEM_FILTER = store_thm
-  ("MEM_FILTER",
-   ``!p l x. MEM x (FILTER p l) = MEM x l /\ p x``,
+Theorem MEM_FILTER:
+     !p l x. MEM x (FILTER p l) = MEM x l /\ p x
+Proof
    Induct_on `l`
    >> RW_TAC std_ss [FILTER, MEM]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val EVERY_MONO = store_thm
-  ("EVERY_MONO",
-   ``!p q l. (!x. p x ==> q x) /\ EVERY p l ==> EVERY q l``,
-   METIS_TAC [EVERY_MONOTONIC]);
+Theorem EVERY_MONO:
+     !p q l. (!x. p x ==> q x) /\ EVERY p l ==> EVERY q l
+Proof
+   METIS_TAC [EVERY_MONOTONIC]
+QED
 
 Definition partition_def:
    (partition p [] = ([],[])) /\
@@ -122,23 +128,24 @@ Definition partition_def:
     let (l,r) = partition p t in if p h then (h::l,r) else (l,h::r))
 End
 
-val LENGTH_partition = store_thm
-  ("LENGTH_partition",
-   ``!p l x y. (partition p l = (x,y)) ==> (LENGTH l = LENGTH x + LENGTH y)``,
+Theorem LENGTH_partition:
+     !p l x y. (partition p l = (x,y)) ==> (LENGTH l = LENGTH x + LENGTH y)
+Proof
    Induct_on `l`
    >> RW_TAC list_ss [partition_def]
    >> Introduce `partition p l = (a,b)`
    >> REPEAT (POP_ASSUM MP_TAC)
    >> RW_TAC arith_ss [LENGTH]
    >> RES_TAC
-   >> RW_TAC arith_ss [LENGTH]);
+   >> RW_TAC arith_ss [LENGTH]
+QED
 
-val MEM_partition = store_thm
-  ("MEM_partition",
-   ``!p l x y k.
+Theorem MEM_partition:
+     !p l x y k.
        (partition p l = (x,y)) ==>
        (MEM k x = p k /\ MEM k l) /\
-       (MEM k y = ~p k /\ MEM k l)``,
+       (MEM k y = ~p k /\ MEM k l)
+Proof
    Induct_on `l`
    >> RW_TAC list_ss [partition_def]
    >> Introduce `partition p l = (a,b)`
@@ -146,49 +153,56 @@ val MEM_partition = store_thm
    >> RW_TAC arith_ss [MEM]
    >> RES_TAC
    >> RW_TAC arith_ss [MEM]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
-val BUTFIRSTN_EL = store_thm
-  ("BUTFIRSTN_EL",
-   ``!n l.
+Theorem BUTFIRSTN_EL:
+     !n l.
        n < LENGTH l ==>
-       (EL n l :: BUTFIRSTN (SUC n) l = BUTFIRSTN n l)``,
+       (EL n l :: BUTFIRSTN (SUC n) l = BUTFIRSTN n l)
+Proof
    Induct
    >> Cases
-   >> RW_TAC arith_ss [EL, BUTFIRSTN, LENGTH, HD, TL]);
+   >> RW_TAC arith_ss [EL, BUTFIRSTN, LENGTH, HD, TL]
+QED
 
-val BUTFIRSTN_HD = store_thm
-  ("BUTFIRSTN_HD",
-   ``!n l. n < LENGTH l ==> (HD (BUTFIRSTN n l) = EL n l)``,
+Theorem BUTFIRSTN_HD:
+     !n l. n < LENGTH l ==> (HD (BUTFIRSTN n l) = EL n l)
+Proof
    Induct
    >> Cases
-   >> RW_TAC arith_ss [EL, BUTFIRSTN, LENGTH, HD, TL]);
+   >> RW_TAC arith_ss [EL, BUTFIRSTN, LENGTH, HD, TL]
+QED
 
-val BUTFIRSTN_TL = store_thm
-  ("BUTFIRSTN_TL",
-   ``!n l. n < LENGTH l ==> (TL (BUTFIRSTN n l) = BUTFIRSTN (SUC n) l)``,
+Theorem BUTFIRSTN_TL:
+     !n l. n < LENGTH l ==> (TL (BUTFIRSTN n l) = BUTFIRSTN (SUC n) l)
+Proof
    Induct
    >> Cases
-   >> RW_TAC arith_ss [EL, BUTFIRSTN, LENGTH, HD, TL]);
+   >> RW_TAC arith_ss [EL, BUTFIRSTN, LENGTH, HD, TL]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Theorems for reducing character equations.                                *)
 (*---------------------------------------------------------------------------*)
 
-val chr_11 = store_thm
-  ("chr_11",
-   ``!m n x. (m = ORD x) /\ (n = ORD x) = (m = n) /\ (m = ORD x)``,
-   METIS_TAC []);
+Theorem chr_11:
+     !m n x. (m = ORD x) /\ (n = ORD x) = (m = n) /\ (m = ORD x)
+Proof
+   METIS_TAC []
+QED
 
-val chr_suff = store_thm
-  ("chr_suff",
-   ``!n p. (?x. (n = ORD x) \/ p x) = n < 256 \/ ?x. p x``,
-   METIS_TAC [ORD_ONTO]);
+Theorem chr_suff:
+     !n p. (?x. (n = ORD x) \/ p x) = n < 256 \/ ?x. p x
+Proof
+   METIS_TAC [ORD_ONTO]
+QED
 
-val chr_suff1 = store_thm
-  ("chr_suff1",
-   ``!n. (?x. (n = ORD x)) = n < 256``,
-   METIS_TAC [ORD_ONTO]);
+Theorem chr_suff1:
+     !n. (?x. (n = ORD x)) = n < 256
+Proof
+   METIS_TAC [ORD_ONTO]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Dijkstra's reachability algorithm.                                        *)
@@ -199,13 +213,13 @@ Definition accepting_path_def:
    (accepting_path t a s (s' :: l) = t s s' /\ accepting_path t a s' l)
 End
 
-val accepting_path_tail = store_thm
-  ("accepting_path_tail",
-   ``!p t a k ks.
+Theorem accepting_path_tail:
+     !p t a k ks.
        ~p k /\ accepting_path t a k ks ==>
        ?j js n.
          n <= LENGTH ks /\ (j :: js = BUTFIRSTN n (k :: ks)) /\
-         ~p j /\ EVERY p js /\ accepting_path t a j js``,
+         ~p j /\ EVERY p js /\ accepting_path t a j js
+Proof
    completeInduct_on `LENGTH ks`
    >> RW_TAC std_ss []
    >> Cases_on `EVERY p ks`
@@ -244,7 +258,8 @@ val accepting_path_tail = store_thm
    >> Induct_on `n`
    >> Cases
    >> RW_TAC arith_ss [BUTFIRSTN, LENGTH, EL, HD, accepting_path_def, TL]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
 val (dijkstra_def, dijkstra_ind) = Defn.tprove
  (Defn.Hol_defn "dijkstra"
@@ -385,23 +400,24 @@ Proof
    >> METIS_TAC []
 QED
 
-val dijkstra_partition = store_thm
-  ("dijkstra_partition",
-   ``!t a p l u v.
+Theorem dijkstra_partition:
+     !t a p l u v.
        (partition p l = (u,v)) ==>
        (EXISTS a u \/ dijkstra t a u v =
-        ?k ks. MEM k u /\ EVERY (\j. MEM j l) ks /\ accepting_path t a k ks)``,
+        ?k ks. MEM k u /\ EVERY (\j. MEM j l) ks /\ accepting_path t a k ks)
+Proof
    RW_TAC std_ss [dijkstra, MEM_APPEND]
    >> Suff `!j. MEM j l = MEM j u \/ MEM j v`
    >- RW_TAC std_ss []
-   >> METIS_TAC [MEM_partition]);
+   >> METIS_TAC [MEM_partition]
+QED
 
-val dijkstra1 = store_thm
-  ("dijkstra1",
-   ``!t a s l.
+Theorem dijkstra1:
+     !t a s l.
        MEM s l ==>
        (a s \/ dijkstra t a [s] (FILTER (\x. ~(x = s)) l) =
-        ?ks. EVERY (\j. MEM j l) ks /\ accepting_path t a s ks)``,
+        ?ks. EVERY (\j. MEM j l) ks /\ accepting_path t a s ks)
+Proof
    RW_TAC std_ss []
    >> Know `a s = EXISTS a [s]` >- RW_TAC std_ss [EXISTS_DEF]
    >> DISCH_THEN (fn th => REWRITE_TAC [th])
@@ -410,7 +426,8 @@ val dijkstra1 = store_thm
    >> Suff `!j. (j = s) \/ IS_EL j (FILTER (\x. ~(x = s)) l) = IS_EL j l`
    >- RW_TAC std_ss []
    >> RW_TAC std_ss [MEM_FILTER]
-   >> METIS_TAC []);
+   >> METIS_TAC []
+QED
 
 (*---------------------------------------------------------------------------*)
 (* BIGLIST is designed to speed up evaluation of very long lists.            *)
@@ -429,46 +446,51 @@ val drop_nil = prove
   (``!i. drop i [] = []``,
    Induct >> RW_TAC std_ss [NULL_DEF, drop_def]);
 
-val null_drop = store_thm
-  ("null_drop",
-   ``!i l. NULL (drop i l) = LENGTH l <= i``,
+Theorem null_drop:
+     !i l. NULL (drop i l) = LENGTH l <= i
+Proof
    Induct
    >- (RW_TAC arith_ss [drop_def] >> METIS_TAC [LENGTH_NIL, NULL_EQ_NIL])
    >> Cases_on `l`
-   >> RW_TAC arith_ss [drop_def, LENGTH, NULL_DEF, TL]);
+   >> RW_TAC arith_ss [drop_def, LENGTH, NULL_DEF, TL]
+QED
 
-val tl_drop = store_thm
-  ("tl_drop",
-   ``!i l.
-       TL (drop i l) = if i < LENGTH l then drop (SUC i) l else TL (drop i l)``,
+Theorem tl_drop:
+     !i l.
+       TL (drop i l) = if i < LENGTH l then drop (SUC i) l else TL (drop i l)
+Proof
    Induct
    >- (RW_TAC arith_ss [drop_def, NULL_EQ_NIL]
        >> FULL_SIMP_TAC arith_ss [LENGTH])
    >> Cases_on `l`
    >> RW_TAC arith_ss [drop_def, LENGTH, NULL_EQ_NIL, TL]
    >> Q.PAT_X_ASSUM `!l. P l` (fn th => ONCE_REWRITE_TAC [th])
-   >> FULL_SIMP_TAC arith_ss [LENGTH, drop_def, NULL_EQ_NIL]);
+   >> FULL_SIMP_TAC arith_ss [LENGTH, drop_def, NULL_EQ_NIL]
+QED
 
-val head_drop = store_thm
-  ("head_drop",
-   ``!i l h t. (drop i l = h :: t) ==> (HD (drop i l) = h)``,
-   RW_TAC std_ss [HD]);
+Theorem head_drop:
+     !i l h t. (drop i l = h :: t) ==> (HD (drop i l) = h)
+Proof
+   RW_TAC std_ss [HD]
+QED
 
-val tail_drop = store_thm
-  ("tail_drop",
-   ``!l i h t. (drop i l = h :: t) ==> (drop (SUC i) l = t)``,
+Theorem tail_drop:
+     !l i h t. (drop i l = h :: t) ==> (drop (SUC i) l = t)
+Proof
    Induct >- RW_TAC bool_ss [drop_def, drop_nil]
    >> RW_TAC std_ss [drop_def, TL, NULL, drop_nil]
    >> POP_ASSUM MP_TAC
    >> Cases_on `i`
-   >> RW_TAC std_ss [drop_def, NULL_EQ_NIL, TL]);
+   >> RW_TAC std_ss [drop_def, NULL_EQ_NIL, TL]
+QED
 
-val length_drop = store_thm
-  ("length_drop",
-   ``!i l h. (drop i l = [h]) ==> (LENGTH l = SUC i)``,
+Theorem length_drop:
+     !i l h. (drop i l = [h]) ==> (LENGTH l = SUC i)
+Proof
    Induct >- RW_TAC arith_ss [drop_def, LENGTH]
    >> Cases
-   >> RW_TAC std_ss [drop_def, TL, NULL_EQ_NIL, drop_nil, LENGTH]);
+   >> RW_TAC std_ss [drop_def, TL, NULL_EQ_NIL, drop_nil, LENGTH]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Non-deterministic and deterministic automata.                             *)
@@ -524,14 +546,15 @@ val na2da_lemma = prove
    >> RW_TAC std_ss [GSYM na2da_def, GSPECIFICATION]
    >> METIS_TAC []);
 
-val na2da = store_thm
-  ("na2da",
-   ``!n l. na_accepts n l = da_accepts (na2da n) l``,
+Theorem na2da:
+     !n l. na_accepts n l = da_accepts (na2da n) l
+Proof
    RW_TAC std_ss []
    >> Introduce `n = (i,trans,acc)`
    >> RW_TAC std_ss [na_accepts_def, da_accepts_def, na2da_def]
    >> RW_TAC std_ss [na2da_lemma, GSYM na2da_def, IN_SING]
-   >> RW_TAC std_ss [initial_def]);
+   >> RW_TAC std_ss [initial_def]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* A checker that works by constructing a deterministic finite automata.     *)
@@ -1190,15 +1213,17 @@ val da_accepts_regexp2da = prove
   (``!r. sem r = da_accepts (regexp2da r)``,
    RW_TAC std_ss [FUN_EQ_THM, regexp2da_def, GSYM na2da, na_match]);
 
-val da_match = store_thm
-  ("da_match",
-   ``!r l. da_match r l = sem r l``,
-   RW_TAC std_ss [da_match_def, da_accepts_regexp2da]);
+Theorem da_match:
+     !r l. da_match r l = sem r l
+Proof
+   RW_TAC std_ss [da_match_def, da_accepts_regexp2da]
+QED
 
-val kleene_regexp2dfa = store_thm
-  ("kleene_regexp2dfa",
-   ``!exp : 'a regexp. ?dfa : (num->bool,'a) da. sem exp = da_accepts dfa``,
-   METIS_TAC [da_accepts_regexp2da]);
+Theorem kleene_regexp2dfa:
+     !exp : 'a regexp. ?dfa : (num->bool,'a) da. sem exp = da_accepts dfa
+Proof
+   METIS_TAC [da_accepts_regexp2da]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* A version of the automata matcher that is easy to execute.                *)
@@ -1257,9 +1282,8 @@ val transition_regexp2na_fuse = prove
    >> RW_TAC arith_ss [transition_regexp2na_fuse_def]
    >> METIS_TAC [prim_recTheory.LESS_THM]);
 
-val initial_regexp2na = store_thm
-  ("initial_regexp2na",
-   ``(initial_regexp2na (Atom b : 'a regexp) = 1) /\
+Theorem initial_regexp2na:
+     (initial_regexp2na (Atom b : 'a regexp) = 1) /\
      (initial_regexp2na (r1 # r2 : 'a regexp) =
       initial_regexp2na r1 + initial_regexp2na r2 + 1) /\
      (initial_regexp2na (r1 % r2) =
@@ -1272,18 +1296,19 @@ val initial_regexp2na = store_thm
      (initial_regexp2na (Repeat r : 'a regexp) =
       let i = initial_regexp2na r in
       if accept_regexp2na r i then i else i + 1) /\
-     (initial_regexp2na (Prefix r : 'a regexp) = initial_regexp2na r)``,
+     (initial_regexp2na (Prefix r : 'a regexp) = initial_regexp2na r)
+Proof
    Introduce `regexp2na r1 = (i1,t1,a1)`
    >> Introduce `regexp2na r2 = (i2,t2,a2)`
    >> Introduce `regexp2na r = (i,t,a)`
    >> NTAC 2
       (RW_TAC std_ss
        [regexp2na_def, initial_def, accept_def,
-        initial_regexp2na_def, accept_regexp2na_def]));
+        initial_regexp2na_def, accept_regexp2na_def])
+QED
 
-val accept_regexp2na = store_thm
-  ("accept_regexp2na",
-   ``(accept_regexp2na (Atom b : 'a regexp) s = (s = 0)) /\
+Theorem accept_regexp2na:
+     (accept_regexp2na (Atom b : 'a regexp) s = (s = 0)) /\
      (accept_regexp2na (r1 # r2 : 'a regexp) s =
       let i2 = initial_regexp2na r2 in
       if s <= i2 then accept_regexp2na r2 s
@@ -1308,7 +1333,8 @@ val accept_regexp2na = store_thm
      (accept_regexp2na (Prefix r : 'a regexp) s =
       accept_regexp2na r s \/
       dijkstra (exists_transition_regexp2na r) (accept_regexp2na r)
-      [s] (FILTER (\x. ~(x = s)) (interval 0 (SUC (initial_regexp2na r)))))``,
+      [s] (FILTER (\x. ~(x = s)) (interval 0 (SUC (initial_regexp2na r)))))
+Proof
    Introduce `regexp2na r1 = (i1,t1,a1)`
    >> Introduce `regexp2na r2 = (i2,t2,a2)`
    >> Introduce `regexp2na r = (i,t,a)`
@@ -1348,11 +1374,11 @@ val accept_regexp2na = store_thm
    >> Q.SPEC_TAC (`s`, `s`)
    >> Induct_on `l`
    >> RW_TAC std_ss [accepting_path_def, EVERY_DEF]
-   >> METIS_TAC [regexp2na_trans]);
+   >> METIS_TAC [regexp2na_trans]
+QED
 
-val transition_regexp2na = store_thm
-  ("transition_regexp2na",
-   ``(transition_regexp2na (Atom b : 'a regexp) s x s' =
+Theorem transition_regexp2na:
+     (transition_regexp2na (Atom b : 'a regexp) s x s' =
       (s = 1) /\ (s' = 0) /\ b x) /\
      (transition_regexp2na (r1 # r2 : 'a regexp) s x s' =
       let i2 = initial_regexp2na r2 in
@@ -1393,7 +1419,8 @@ val transition_regexp2na = store_thm
         transition_regexp2na r s x s' \/
         accept_regexp2na r s /\ transition_regexp2na r i x s') /\
      (transition_regexp2na (Prefix r : 'a regexp) s x s' =
-      transition_regexp2na r s x s')``,
+      transition_regexp2na r s x s')
+Proof
    Introduce `regexp2na r1 = (i1,t1,a1)`
    >> Introduce `regexp2na r2 = (i2,t2,a2)`
    >> Introduce `regexp2na r = (i,t,a)`
@@ -1410,7 +1437,8 @@ val transition_regexp2na = store_thm
        Know `!n. ~(n + 1 <= n)` >- DECIDE_TAC
        >> METIS_TAC [regexp2na_trans, regexp2na_acc],
        Know `!n. ~(n + 1 <= n)` >- DECIDE_TAC
-       >> METIS_TAC [regexp2na_trans, regexp2na_acc]]);
+       >> METIS_TAC [regexp2na_trans, regexp2na_acc]]
+QED
 
 Definition eval_accepts_def[nocompute]:
    (eval_accepts (Prefix r) l =
@@ -1537,9 +1565,9 @@ val da_step_regexp2na = prove
           `x = n` by PROVE_TAC [] \\
           METIS_TAC [] ] ]);
 
-val amatch = store_thm
-  ("amatch",
-   ``!r l. amatch r l = sem r l``,
+Theorem amatch:
+     !r l. amatch r l = sem r l
+Proof
    RW_TAC std_ss
    [GSYM da_match, da_match_def, regexp2da_def, da_accepts_na2da, amatch_def]
    >> normalForms.REMOVE_ABBR_TAC
@@ -1552,13 +1580,14 @@ val amatch = store_thm
        set_of_list, accept_regexp2na_def]
    >> ONCE_REWRITE_TAC [astep_def]
    >> SIMP_TAC std_ss [da_step_regexp2na, eval_transitions_def, NULL_DEF, TL]
-   >> RW_TAC std_ss [initial_regexp2na_def, HD]);
+   >> RW_TAC std_ss [initial_regexp2na_def, HD]
+QED
 
-val acheck = store_thm
-  ("acheck",
-   ``!r l.
+Theorem acheck:
+     !r l.
        acheck r f l =
-       !n. n < LENGTH l /\ sem r (FIRSTN (SUC n) l) ==> f (BUTFIRSTN n l)``,
+       !n. n < LENGTH l /\ sem r (FIRSTN (SUC n) l) ==> f (BUTFIRSTN n l)
+Proof
    RW_TAC std_ss
    [acheck_def, GSYM da_match, da_match_def, regexp2da_def, da_accepts_na2da]
    >> normalForms.REMOVE_ABBR_TAC
@@ -1575,4 +1604,5 @@ val acheck = store_thm
        ``(P = Q 0 /\ !n. Q (SUC n)) ==> (P = !n. Q n)``)
    >> RW_TAC arith_ss
       [LENGTH, FIRSTN, BUTFIRSTN, da_step_regexp2na, areport_def, eval_accepts,
-       accept_regexp2na_def, eval_transitions_def, initial_regexp2na_def]);
+       accept_regexp2na_def, eval_transitions_def, initial_regexp2na_def]
+QED

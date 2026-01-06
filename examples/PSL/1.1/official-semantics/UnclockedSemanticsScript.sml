@@ -93,13 +93,12 @@ Definition US_SEM_def[nocompute]:
 End
 
 (* Lemma for deriving theorem US_SEM below *)
-val US_SEM_REPEAT =
- store_thm
-  ("US_SEM_REPEAT",
-   ``US_SEM v (S_REPEAT r) =
+Theorem US_SEM_REPEAT:
+     US_SEM v (S_REPEAT r) =
       US_SEM v S_EMPTY \/
       ?v1 v2.
-       ~(v=[]) /\ (v = v1 <> v2) /\ US_SEM v1 r /\ US_SEM v2 (S_REPEAT r)``,
+       ~(v=[]) /\ (v = v1 <> v2) /\ US_SEM v1 r /\ US_SEM v2 (S_REPEAT r)
+Proof
     Induct_on `v`
      THEN RW_TAC std_ss [US_SEM_def]
      THENL
@@ -113,7 +112,8 @@ val US_SEM_REPEAT =
            THEN Q.EXISTS_TAC `h'` THEN Q.EXISTS_TAC `CONCAT t`
            THEN PROVE_TAC[],
           Q.EXISTS_TAC `v1::vlist`
-           THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def]]]);
+           THEN RW_TAC list_ss [FinitePSLPathTheory.CONCAT_def]]]
+QED
 
 (******************************************************************************
 * Unclocked semantics of SEREs.
@@ -123,10 +123,8 @@ val US_SEM_REPEAT =
 * (see clause for ``US_SEM v (S_REPEAT r)``).
 * Theorem US_SEM gives version corresponding to LRM Version 1.1.
 ******************************************************************************)
-val US_SEM =
- store_thm
-  ("US_SEM",
-   ``(US_SEM v (S_BOOL b) = (LENGTH v = 1) /\ B_SEM (ELEM v 0) b)
+Theorem US_SEM:
+     (US_SEM v (S_BOOL b) = (LENGTH v = 1) /\ B_SEM (ELEM v 0) b)
      /\
      (US_SEM v (S_CAT(r1,r2)) =
        ?v1 v2. (v = v1 <> v2) /\ US_SEM v1 r1 /\ US_SEM v2 r2)
@@ -147,8 +145,10 @@ val US_SEM =
      (US_SEM v (S_REPEAT r) =
        US_SEM v S_EMPTY \/
         ?v1 v2.
-         ~(v=[]) /\ (v = v1 <> v2) /\ US_SEM v1 r /\ US_SEM v2 (S_REPEAT r))``,
-   RW_TAC std_ss [US_SEM_def, GSYM US_SEM_REPEAT]);
+         ~(v=[]) /\ (v = v1 <> v2) /\ US_SEM v1 r /\ US_SEM v2 (S_REPEAT r))
+Proof
+   RW_TAC std_ss [US_SEM_def, GSYM US_SEM_REPEAT]
+QED
 
 (******************************************************************************
 * Complement a path
@@ -249,10 +249,8 @@ End
 * UF_SEM_def is unfolded version for easy definition.
 * Theorem UF_SEM gives version corresponding to LRM v1.1
 ******************************************************************************)
-val UF_SEM =
- store_thm
-  ("UF_SEM",
-   ``(UF_SEM v (F_NOT f) =
+Theorem UF_SEM:
+     (UF_SEM v (F_NOT f) =
        ~(UF_SEM (COMPLEMENT v) f))
      /\
      (UF_SEM v (F_AND(f1,f2)) =
@@ -303,8 +301,10 @@ val UF_SEM =
      /\
      (UF_SEM v (F_SUFFIX_IMP(r,f)) =
        !j :: (LESS(LENGTH v)).
-         US_SEM (SEL (COMPLEMENT v) (0,j)) r ==> UF_SEM (RESTN v j) f)``,
-   RW_TAC std_ss [UF_SEM_def]);
+         US_SEM (SEL (COMPLEMENT v) (0,j)) r ==> UF_SEM (RESTN v j) f)
+Proof
+   RW_TAC std_ss [UF_SEM_def]
+QED
 
 (*****************************************************************************)
 (* Map a function over a path (used to define Lhat -- see LRM B.2.2)         *)

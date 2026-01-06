@@ -293,9 +293,7 @@ End
 Definition invLTFun_def:   invLTFun x = EL x InvLTTable
 End
 
-val LTFunVal = Q.store_thm(
-"LTFunVal",
-`
+Theorem LTFunVal:
 (LTFun 0 = [ 16;52;56;70;83;94;105])  /\
 (LTFun 1 = [ 72;114;125])  /\
 (LTFun 2 = [ 2;9;15;30;76;84;126])  /\
@@ -423,14 +421,14 @@ val LTFunVal = Q.store_thm(
 (LTFun 124 = [ 12;48;52;66;79;90;101])  /\
 (LTFun 125 = [ 68;110;121])  /\
 (LTFun 126 = [ 5;11;26;80;122;126])  /\
-(LTFun 127 = [ 32;86;99])`,
-REPEAT STRIP_TAC THEN EVAL_TAC);
+(LTFun 127 = [ 32;86;99])
+Proof
+REPEAT STRIP_TAC THEN EVAL_TAC
+QED
 
 (* linear transformation table used in decryption *)
 
-val invLTFunVal = Q.store_thm(
-"invLTFunVal",
-`
+Theorem invLTFunVal:
 (invLTFun 0 = [53;55;72])  /\
 (invLTFun 1 = [1;5;20;90])  /\
 (invLTFun 2 = [15;102])  /\
@@ -558,8 +556,10 @@ val invLTFunVal = Q.store_thm(
 (invLTFun 124 = [49;51;68])  /\
 (invLTFun 125 = [1;16;86;97;125])  /\
 (invLTFun 126 = [11;98])  /\
-(invLTFun 127 = [4;27;86;97;113;115;127])`,
-REPEAT STRIP_TAC THEN EVAL_TAC);
+(invLTFun 127 = [4;27;86;97;113;115;127])
+Proof
+REPEAT STRIP_TAC THEN EVAL_TAC
+QED
 
 
 (* compute the parity on select bits *)
@@ -569,12 +569,13 @@ Definition selParity_def:
  (selParity w (pos::t) = boolXor (w ' pos) (selParity w t))
 End
 
-val selParityAppend = Q.store_thm(
- "selParityAppend",
- `!w l1 l2. selParity w (l1++l2) = boolXor (selParity w l1) (selParity w l2)`,
+Theorem selParityAppend:
+  !w l1 l2. selParity w (l1++l2) = boolXor (selParity w l1) (selParity w l2)
+Proof
  Induct_on `l1` THEN
  RW_TAC list_ss [selParity_def] THEN
- METIS_TAC [boolXorFacts,boolXorComm,boolXorAssoc,selParity_def]);
+ METIS_TAC [boolXorFacts,boolXorComm,boolXorAssoc,selParity_def]
+QED
 
 (*linear transform*)
 
@@ -596,9 +597,8 @@ Definition transform_def:
    newWord || transform transFun i w)
 End
 
-val transformEval = Q.store_thm(
- "transformEval",
- `!n transFun (w:word128).
+Theorem transformEval:
+  !n transFun (w:word128).
     transform transFun n w =
         if n = 0
            then let newBit = selParity w (transFun 0)
@@ -612,11 +612,13 @@ val transformEval = Q.store_thm(
                            then ((1w:word128)<<n)
                             else (0w:word128)
                in
-             newWord || transform transFun (n-1) w`,
+             newWord || transform transFun (n-1) w
+Proof
   RW_TAC std_ss [transform_def,LET_THM] THEN
   (Cases_on `n` THENL [
      METIS_TAC [],
-     FULL_SIMP_TAC arith_ss [transform_def,LET_THM]]));
+     FULL_SIMP_TAC arith_ss [transform_def,LET_THM]])
+QED
 
 Definition LT_def:   LT w =  transform LTFun 127 w
 End
@@ -626,32 +628,34 @@ End
 
 (*desired properties of transform*)
 
-val transform_inv1_w128 = Q.store_thm(
- "transform_inv1_w128",
- `!to d w transFun.
+Theorem transform_inv1_w128:
+  !to d w transFun.
      to < 128 /\
       d < 128 /\
      to > d
      ==>
-     ~((transform transFun d w) ' to)`,
+     ~((transform transFun d w) ' to)
+Proof
   Induct_on `d` THEN
-  SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def,transform_def,LET_THM]);
+  SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def,transform_def,LET_THM]
+QED
 
-val transform_inv2_w128 = Q.store_thm(
- "transform_inv2_w128",
- `!to d w transFun.
+Theorem transform_inv2_w128:
+  !to d w transFun.
      to < 128 /\
       d < 128 /\
      to <= d
      ==>
-     ((transform transFun d w) ' to = selParity w (transFun to))`,
+     ((transform transFun d w) ' to = selParity w (transFun to))
+Proof
  Induct_on `d` THEN
   SRW_TAC [WORD_BIT_EQ_ss] [transform_def,LET_THM] THEN
   `d < 128` by DECIDE_TAC THEN
   Cases_on `to <= d` THEN
   ASM_SIMP_TAC arith_ss [] THEN
   `to = SUC d` by DECIDE_TAC THEN
-  SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def,transform_inv1_w128]);
+  SRW_TAC [WORD_BIT_EQ_ss,BIT_ss] [n2w_def,transform_inv1_w128]
+QED
 
 (* the composite of two linear transformations *)
 
@@ -665,51 +669,56 @@ Definition transInRange_def:
     !i. i < 128 ==> ALL_EL (\x. x < 128) (transFun i)
 End
 
-val LTFunInRange = Q.store_thm(
- "LTFunInRange",
- `transInRange LTFun`,
- SIMP_TAC std_ss [transInRange_def] THEN CONV_TAC (time row_conv));
+Theorem LTFunInRange:
+  transInRange LTFun
+Proof
+ SIMP_TAC std_ss [transInRange_def] THEN CONV_TAC (time row_conv)
+QED
 
-val invLTFunInRange = Q.store_thm(
- "invLTFunInRange",
- `transInRange invLTFun`,
- SIMP_TAC std_ss [transInRange_def] THEN CONV_TAC (time row_conv));
+Theorem invLTFunInRange:
+  transInRange invLTFun
+Proof
+ SIMP_TAC std_ss [transInRange_def] THEN CONV_TAC (time row_conv)
+QED
 
 (* desired properties of composite of linear transformations *)
 
-val transformComposeLemma = Q.store_thm(
- "transformComposeLemma",
- `!transFun1 transL2 w.
+Theorem transformComposeLemma:
+  !transFun1 transL2 w.
     transInRange transFun1  /\
     ALL_EL (\x. x < 128) transL2
     ==>
     (selParity (transform transFun1 127 w) transL2
-     = selParity w (FLAT (MAP transFun1 transL2)))`,
+     = selParity w (FLAT (MAP transFun1 transL2)))
+Proof
  Induct_on `transL2` THEN
  FULL_SIMP_TAC list_ss
-   [MAP,FLAT,selParity_def,transform_def,selParityAppend,transform_inv2_w128]);
+   [MAP,FLAT,selParity_def,transform_def,selParityAppend,transform_inv2_w128]
+QED
 
-val transformComposeBit = Q.store_thm(
- "transformComposeBit",
- `!i transFun1 transFun2 w.
+Theorem transformComposeBit:
+  !i transFun1 transFun2 w.
     i < 128                 /\
     transInRange transFun1  /\
     transInRange transFun2
     ==>
     ((transform transFun2 127 (transform transFun1 127 w)) ' i =
-     (transform (transCompose transFun1 transFun2) 127 w) ' i)`,
+     (transform (transCompose transFun1 transFun2) 127 w) ' i)
+Proof
  RW_TAC arith_ss [transCompose_def,transInRange_def,transform_inv2_w128,
-                  transformComposeLemma]);
+                  transformComposeLemma]
+QED
 
-val transformComposeWord = Q.store_thm(
- "transformComposeWord",
- `!transFun1 transFun2 w.
+Theorem transformComposeWord:
+  !transFun1 transFun2 w.
     transInRange transFun1  /\
     transInRange transFun2
     ==>
     (transform transFun2 127 (transform transFun1 127 w) =
-     transform (transCompose transFun1 transFun2) 127 w)`,
- SRW_TAC [WORD_BIT_EQ_ss] [transformComposeBit]);
+     transform (transCompose transFun1 transFun2) 127 w)
+Proof
+ SRW_TAC [WORD_BIT_EQ_ss] [transformComposeBit]
+QED
 
 val TL128_eq_makeTL128 = save_thm(
  "TL128_eq_makeTL128", SYM (EVAL ``makeTL 128``));
@@ -754,49 +763,52 @@ Definition countEvenL_def:
        T; T; T; T; T; T; T; T; T; T; T; T; T] tl
 End
 
-val countEvenL_LT_facts = Q.store_thm(
- "countEvenL_LT_facts",
- `!i.
+Theorem countEvenL_LT_facts:
+  !i.
     i < 128
     ==>
-        (countEvenL (Res i) = countEvenL [i]) `,
- SIMP_TAC std_ss [] THEN CONV_TAC (time row_conv) THEN REWRITE_TAC []);
+        (countEvenL (Res i) = countEvenL [i])
+Proof
+ SIMP_TAC std_ss [] THEN CONV_TAC (time row_conv) THEN REWRITE_TAC []
+QED
 
 Definition countEven_def:
  (countEven x [] = T) /\
  (countEven x (h::t) = boolXor (x = h) (countEven x t))
 End
 
-val countL_fact = Q.store_thm(
- "countL_fact",
- `!i al h tl.
+Theorem countL_fact:
+  !i al h tl.
     i < LENGTH al  /\
     h < LENGTH al  /\
     ALL_EL (\x. x < LENGTH al) tl
     ==>
     (EL i (countL (zipXor (makeL h) al) tl) =
-     boolXor (i = h) (EL i (countL al tl)))`,
+     boolXor (i = h) (EL i (countL al tl)))
+Proof
  Induct_on `tl` THEN
  RW_TAC list_ss [countL_def,LET_THM,zipXor_makeL,
-                 zipXor_makeL_COMM,LENGTH_zipXor,boolXorComm3]);
+                 zipXor_makeL_COMM,LENGTH_zipXor,boolXorComm3]
+QED
 
-val Res_fact = Q.store_thm(
- "Res_fact",
- `!i.
+Theorem Res_fact:
+  !i.
     i < 128
     ==>
-    ALL_EL (\x. x < 128) (Res i)`,
- SIMP_TAC std_ss [] THEN CONV_TAC (time row_conv));
+    ALL_EL (\x. x < 128) (Res i)
+Proof
+ SIMP_TAC std_ss [] THEN CONV_TAC (time row_conv)
+QED
 
 (* equivalence between countEven and countEvenL *)
 
-val countEvenL_countEven_eq = Q.store_thm(
- "countEvenL_countEven_eq",
- `!i tl.
+Theorem countEvenL_countEven_eq:
+  !i tl.
     i < 128 /\
     ALL_EL (\x. x < 128) tl
     ==>
-    (EL i (countEvenL tl) = countEven i tl)`,
+    (EL i (countEvenL tl) = countEven i tl)
+Proof
  SIMP_TAC std_ss [] THEN
  Induct_on `tl` THENL [
    FULL_SIMP_TAC arith_ss [countEvenL_def,countEven_def,countL_def,
@@ -807,43 +819,45 @@ val countEvenL_countEven_eq = Q.store_thm(
                          zipXor_makeL_COMM,LENGTH_zipXor,boolXorComm3,
                          LENGTH_makeTL] THEN
    FULL_SIMP_TAC std_ss [countEven_def,countL_fact,countEvenL_def,
-                         TL128_eq_makeTL128,LENGTH_makeTL]]);
+                         TL128_eq_makeTL128,LENGTH_makeTL]]
+QED
 
-val LTFun_invLTFun_fact = Q.store_thm(
- "LTFun_invLTFun_fact",
- `!i.
+Theorem LTFun_invLTFun_fact:
+  !i.
     i < 128
     ==>
     !j.
          j < 128
          ==>
          (countEven j ((transCompose LTFun invLTFun) i)
-          = countEven j [i])`,
+          = countEven j [i])
+Proof
  RW_TAC std_ss [GSYM Res_def, transCompose_def, GSYM countEvenL_countEven_eq,
-                countEvenL_LT_facts,Res_fact,ALL_EL]);
+                countEvenL_LT_facts,Res_fact,ALL_EL]
+QED
 
 (* desired properties of countEven *)
 
-val countEven_filter1 = Q.store_thm(
- "countEven_filter1",
- `!i L d transL.
+Theorem countEven_filter1:
+  !i L d transL.
     LENGTH transL <= L /\
     i < d+1  /\
     ALL_EL (\x. x < d+1) transL
 
     ==>
-    countEven i (FILTER (\x. ~(x = i)) transL)`,
+    countEven i (FILTER (\x. ~(x = i)) transL)
+Proof
  Induct_on `L` THEN
  RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER] THEN
  Cases_on `transL` THEN
  RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER] THEN
  FULL_SIMP_TAC list_ss [boolXor_def] THEN
- METIS_TAC []);
+ METIS_TAC []
+QED
 
 
-val countEven_filter2 = Q.store_thm(
- "countEven_filter2",
- `!i k L d transL.
+Theorem countEven_filter2:
+  !i k L d transL.
     LENGTH transL <= L /\
     i < d+1  /\
     k < d+1  /\
@@ -852,18 +866,19 @@ val countEven_filter2 = Q.store_thm(
     (countEven k (FILTER (\x. ~(x = i)) transL)
      = if k = i
           then T
-          else countEven k transL)`,
+          else countEven k transL)
+Proof
  Induct_on `L` THEN
  RW_TAC arith_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER] THEN
  Cases_on `transL` THEN
  FULL_SIMP_TAC list_ss [countEven_def,ALL_EL,LENGTH_NIL,FILTER]THEN
  Cases_on `k = i` THEN Cases_on `h = i` THEN
  RW_TAC std_ss [boolXor_def,countEven_def] THEN
- METIS_TAC []);
+ METIS_TAC []
+QED
 
-val countEven_filter3 = Q.store_thm(
- "countEven_filter3",
- `!i k L d transL1 transL2.
+Theorem countEven_filter3:
+  !i k L d transL1 transL2.
     LENGTH transL1 <= L /\
     LENGTH transL2 <= L /\
     (!j. j < d+1 ==> (countEven j transL1 = countEven j transL2)) /\
@@ -873,37 +888,40 @@ val countEven_filter3 = Q.store_thm(
     ALL_EL (\x. x < d+1) transL2
     ==>
     (countEven k (FILTER (\x. ~(x = i)) transL1) =
-     countEven k (FILTER (\x. ~(x = i)) transL2))`,
- RW_TAC std_ss [] THEN METIS_TAC [countEven_filter2]);
+     countEven k (FILTER (\x. ~(x = i)) transL2))
+Proof
+ RW_TAC std_ss [] THEN METIS_TAC [countEven_filter2]
+QED
 
 (* desired properties of selParity *)
 
-val selParity_filter = Q.store_thm(
- "selParity_filter",
- `!i transL w.
+Theorem selParity_filter:
+  !i transL w.
     i < 128 /\
     ALL_EL (\x. x < 128) transL
     ==>
     (selParity w transL
      = if countEven i transL
           then  selParity w (FILTER (\x. ~(x = i)) transL)
-          else  boolXor (w ' i) (selParity w (FILTER (\x. ~(x = i)) transL)))`,
+          else  boolXor (w ' i) (selParity w (FILTER (\x. ~(x = i)) transL)))
+Proof
  Induct_on `transL`  THEN1 METIS_TAC [FILTER,countEven_def] THEN
    SRW_TAC [] [selParity_def,countEven_def,FILTER,ALL_EL] THEN
-   FULL_SIMP_TAC std_ss [boolXor_def] THEN METIS_TAC []);
+   FULL_SIMP_TAC std_ss [boolXor_def] THEN METIS_TAC []
+QED
 
 (*equivalence between two position list used in selParity*)
 
-val selParity_eq1 = Q.store_thm(
- "selParity_eq1",
- `!L transL1 transL2 w.
+Theorem selParity_eq1:
+  !L transL1 transL2 w.
     ALL_EL (\x. x < 128) transL1 /\
     ALL_EL (\x. x < 128) transL2 /\
     LENGTH transL1 <= L /\
     LENGTH transL2 <= L /\
     (!j. j < 128 ==> (countEven j transL1 = countEven j transL2 ))
     ==>
-    (selParity w transL1  = selParity w transL2)`,
+    (selParity w transL1  = selParity w transL2)
+Proof
  Induct_on `L` THEN
  RW_TAC arith_ss [boolXor_def,countEven_def,selParity_def,LENGTH_NIL] THEN
  Cases_on `transL1` THEN Cases_on `transL2` THENL [
@@ -1018,11 +1036,11 @@ val selParity_eq1 = Q.store_thm(
       Cases_on `countEven h' (h'::t')` THEN
       Cases_on `countEven h (h'::t')` THEN
       FULL_SIMP_TAC std_ss [] THEN
-      METIS_TAC []]);
+      METIS_TAC []]
+QED
 
-val selParity_eq2 = Q.store_thm(
- "selParity_eq2",
-  `!transL1 transL2 w.
+Theorem selParity_eq2:
+   !transL1 transL2 w.
     ALL_EL (\x. x < 128) transL1 /\
     ALL_EL (\x. x < 128) transL2 /\
     (!j.
@@ -1030,7 +1048,8 @@ val selParity_eq2 = Q.store_thm(
         ==>
         (countEven j transL1 = countEven j transL2 ))
     ==>
-    (selParity w transL1 = selParity w transL2)`,
+    (selParity w transL1 = selParity w transL2)
+Proof
  RW_TAC std_ss [] THEN
  Cases_on `LENGTH transL1 < LENGTH transL2` THENL [
     `LENGTH transL1 <=  LENGTH transL2` by RW_TAC arith_ss [] THEN
@@ -1038,13 +1057,14 @@ val selParity_eq2 = Q.store_thm(
     METIS_TAC [selParity_eq1],
     `LENGTH transL1 <=  LENGTH transL1` by RW_TAC arith_ss [] THEN
     `LENGTH transL2 <=  LENGTH transL1` by RW_TAC arith_ss [] THEN
-    METIS_TAC [selParity_eq1]]);
+    METIS_TAC [selParity_eq1]]
+QED
 
 (* given linear transformations cancel each other *)
 
-val invLT_LT_cancel = Q.store_thm(
- "invLT_LT_cancel",
- `!w. invLT (LT w) = w`,
+Theorem invLT_LT_cancel:
+  !w. invLT (LT w) = w
+Proof
  SRW_TAC [fcpLib.FCP_ss]
    [invLT_def,LT_def,transformComposeWord,LTFunInRange,invLTFunInRange] THEN
  `w ' i = selParity w [i]` by RW_TAC std_ss [selParity_def,boolXor_def] THEN
@@ -1055,5 +1075,5 @@ val invLT_LT_cancel = Q.store_thm(
          by METIS_TAC [Res_fact] THEN
        FULL_SIMP_TAC arith_ss []) THEN
  `ALL_EL (\x. x < 128) [i]` by RW_TAC list_ss [ALL_EL] THEN
- RW_TAC arith_ss [LTFun_invLTFun_fact,selParity_eq2]);
-
+ RW_TAC arith_ss [LTFun_invLTFun_fact,selParity_eq2]
+QED

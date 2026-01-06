@@ -392,7 +392,7 @@ fun getlimit (SS ss) = #limit ss
        refl x
      end
    in
-     CONGPROC mk_refl th
+     QCHANGED_CONV o CONGPROC mk_refl th
    end
  in
    TRAVRULES {relations = rels,

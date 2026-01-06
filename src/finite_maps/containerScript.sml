@@ -50,11 +50,10 @@ Theorem FINITE_LIST_TO_SET =
     in bagTheory.
  ---------------------------------------------------------------------------*)
 
-Definition LIST_TO_BAG_def:
+Definition LIST_TO_BAG_def[simp]:
      (LIST_TO_BAG [] = {||})
  /\  (LIST_TO_BAG (h::t) = BAG_INSERT h (LIST_TO_BAG t))
 End
-val _ = export_rewrites ["LIST_TO_BAG_def"]
 
 Theorem LIST_TO_BAG_alt:
     !l x. LIST_TO_BAG l x = LENGTH (FILTER ($= x) l)
@@ -109,20 +108,18 @@ Proof
 QED
 
 (* version with the equation the "rewrite" way round *)
-Theorem MEM_BAG_TO_LIST:
+Theorem MEM_BAG_TO_LIST[simp]:
   !b. FINITE_BAG b ==> !x. MEM x (BAG_TO_LIST b) = BAG_IN x b
 Proof
   PROVE_TAC [BAG_IN_MEM]
 QED
 
-val _ = export_rewrites ["MEM_BAG_TO_LIST"];
 
-Theorem FINITE_LIST_TO_BAG:
+Theorem FINITE_LIST_TO_BAG[simp]:
  FINITE_BAG (LIST_TO_BAG ls)
 Proof
 Induct_on `ls` THEN SRW_TAC [][LIST_TO_BAG_def]
 QED
-val _ = export_rewrites["FINITE_LIST_TO_BAG"];
 
 
 Theorem EVERY_LIST_TO_BAG:
@@ -207,11 +204,11 @@ Proof
     DISCH_TAC THEN irule EQ_EXT THEN ASM_SIMP_TAC std_ss [LIST_TO_BAG_alt] ]
 QED
 
-val CARD_LIST_TO_BAG = Q.store_thm(
-"CARD_LIST_TO_BAG",
-`BAG_CARD (LIST_TO_BAG ls) = LENGTH ls`,
-Induct_on `ls` THEN SRW_TAC [][BAG_CARD_THM,arithmeticTheory.ADD1])
-before export_rewrites ["CARD_LIST_TO_BAG"];
+Theorem CARD_LIST_TO_BAG[simp]:
+  BAG_CARD (LIST_TO_BAG ls) = LENGTH ls
+Proof
+  Induct_on `ls` THEN SRW_TAC [][BAG_CARD_THM,arithmeticTheory.ADD1]
+QED
 
 val EQ_TRANS' = REWRITE_RULE [GSYM AND_IMP_INTRO] EQ_TRANS ;
 val th = MATCH_MP EQ_TRANS' (SYM CARD_LIST_TO_BAG) ;
@@ -223,21 +220,22 @@ Proof
     ASM_SIMP_TAC bool_ss [BAG_TO_LIST_INV] ]
 QED
 
-val BAG_TO_LIST_EQ_NIL = Q.store_thm(
-"BAG_TO_LIST_EQ_NIL",
-`FINITE_BAG b ==>
+Theorem BAG_TO_LIST_EQ_NIL[simp]:
+FINITE_BAG b ==>
  (([] = BAG_TO_LIST b) <=> (b = {||})) /\
- ((BAG_TO_LIST b = []) <=> (b = {||}))`,
+ ((BAG_TO_LIST b = []) <=> (b = {||}))
+Proof
 Q.SPEC_THEN `b` STRUCT_CASES_TAC BAG_cases THEN
-SRW_TAC [][BAG_TO_LIST_THM])
-before export_rewrites ["BAG_TO_LIST_EQ_NIL"];
+SRW_TAC [][BAG_TO_LIST_THM]
+QED
 
 local open rich_listTheory arithmeticTheory in
-  val LIST_ELEM_COUNT_LIST_TO_BAG = Q.store_thm(
-    "LIST_ELEM_COUNT_LIST_TO_BAG",
-    `LIST_ELEM_COUNT e ls = LIST_TO_BAG ls e`,
+Theorem LIST_ELEM_COUNT_LIST_TO_BAG:
+     LIST_ELEM_COUNT e ls = LIST_TO_BAG ls e
+Proof
     Induct_on `ls` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,EMPTY_BAG] THEN
-    Cases_on `h = e` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,BAG_INSERT,ADD1]);
+    Cases_on `h = e` THEN SRW_TAC [][LIST_ELEM_COUNT_THM,BAG_INSERT,ADD1]
+QED
 end
 
 Theorem LIST_TO_BAG_SUB_BAG_FLAT_suff:
@@ -391,6 +389,3 @@ GEN_TAC THEN HO_MATCH_MP_TAC fmap_INDUCT THEN
 SIMP_TAC std_ss [BAG_OF_FMAP_THM, FINITE_EMPTY_BAG,
                  DOMSUB_NOT_IN_DOM, FINITE_BAG_INSERT]
 QED
-
-
-

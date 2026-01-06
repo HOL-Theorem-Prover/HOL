@@ -79,14 +79,13 @@ Proof
   METIS_TAC [ZERO_DIVIDES, DECIDE ``x <> 0 <=> 0 < x``]
 QED
 
-Theorem gcdset_EMPTY:
+Theorem gcdset_EMPTY[simp]:
     gcdset {} = 0
 Proof
   SRW_TAC [][gcdset_def]
 QED
-val _ = export_rewrites ["gcdset_EMPTY"]
 
-Theorem gcdset_INSERT:
+Theorem gcdset_INSERT[simp]:
     gcdset (x INSERT s) = gcd x (gcdset s)
 Proof
   Q.MATCH_ABBREV_TAC `G1 = G2` THEN
@@ -103,7 +102,6 @@ Proof
     METIS_TAC [gcdset_divides, DIVIDES_TRANS]
   ]
 QED
-val _ = export_rewrites ["gcdset_INSERT"]
 
 (* ------------------------------------------------------------------------- *)
 (* Naturals -- counting from 1 rather than 0, and inclusive.                 *)

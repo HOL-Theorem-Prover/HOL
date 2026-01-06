@@ -124,63 +124,70 @@ val cmetis = metis_tac[pair_CASES, count_CASES];
 
 (* Theorem: alternate form of bind *)
 (* Proof: by bind_def *)
-val bind_alt = store_thm(
-  "bind_alt",
-  ``!v1 c1 f. bind (v1, Count c1) f =
+Theorem bind_alt:
+    !v1 c1 f. bind (v1, Count c1) f =
     case f v1 of
-      (v2, Count c2) => (v2, Count (c1 + c2))``,
-  rw[bind_def]);
+      (v2, Count c2) => (v2, Count (c1 + c2))
+Proof
+  rw[bind_def]
+QED
 
 (* Theorem: alternate form of valueOf *)
 (* Proof: by valueOf_def *)
-val valueOf_alt = store_thm(
-  "valueOf_alt",
-  ``!v c. valueOf (v, Count c) = v``,
-  rw[valueOf_def]);
+Theorem valueOf_alt:
+    !v c. valueOf (v, Count c) = v
+Proof
+  rw[valueOf_def]
+QED
 
 (* Theorem: alternate form of stepsOf *)
 (* Proof: by stepsOf_def *)
-val stepsOf_alt = store_thm(
-  "stepsOf_alt",
-  ``!v c. stepsOf (v, Count c) = c``,
-  rw[stepsOf_def]);
+Theorem stepsOf_alt:
+    !v c. stepsOf (v, Count c) = c
+Proof
+  rw[stepsOf_def]
+QED
 
 (* Theorem: bind (unit x) f = f x *)
 (* Proof: by bind_def, unit_def *)
-val bind_unit1 = store_thm(
-  "bind_unit1",
-  ``!f x. bind (unit x) f = f x``,
+Theorem bind_unit1:
+    !f x. bind (unit x) f = f x
+Proof
   rw[bind_def, unit_def] >>
-  (`?b c2. f x = (b, Count c2)` by cmetis >> simp[]));
+  (`?b c2. f x = (b, Count c2)` by cmetis >> simp[])
+QED
 
 (* Theorem: bind m unit = m *)
 (* Proof: by bind_def, unit_def *)
-val bind_unit2 = store_thm(
-  "bind_unit2",
-  ``!m. bind m unit = m``,
+Theorem bind_unit2:
+    !m. bind m unit = m
+Proof
   rw[bind_def, unit_def, AllCaseEqs(), PULL_EXISTS] >>
-  cmetis);
+  cmetis
+QED
 
 (* Theorem: bind m (\a. bind (f a) g) = bind (bind m f) g *)
 (* Proof: by bind_def *)
-val bind_assoc = store_thm(
-  "bind_assoc",
-  ``!m f g. bind m (\a. bind (f a) g) = bind (bind m f) g``,
+Theorem bind_assoc:
+    !m f g. bind m (\a. bind (f a) g) = bind (bind m f) g
+Proof
   rw[bind_def, AllCaseEqs(), PULL_EXISTS] >>
   csimp[] >>
-  cmetis);
+  cmetis
+QED
 
 (* Theorem: (m1 = m2) /\ (!mval. mval = valueOf m1 ==> fm1 mval = fm2 mval)
             ==> (bind m1 fm1 = bind m2 fm2) *)
 (* Proof: by bind_def, valueOf_def *)
-val bind_cong = store_thm(
-  "bind_cong[defncong]",
-  ``!m1 m2 fm1 fm2. (m1 = m2) /\ (!mval. mval = valueOf m1 ==> fm1 mval = fm2 mval) ==>
-      (bind m1 fm1 = bind m2 fm2)``,
+Theorem bind_cong[defncong]:
+    !m1 m2 fm1 fm2. (m1 = m2) /\ (!mval. mval = valueOf m1 ==> fm1 mval = fm2 mval) ==>
+      (bind m1 fm1 = bind m2 fm2)
+Proof
   rw[bind_def, valueOf_def] >>
   Cases_on `m1` >>
   Cases_on `r` >>
-  fs[]);
+  fs[]
+QED
 (* for total define, or tDefine *)
 
 (*
@@ -203,45 +210,50 @@ change to:   'a option # num
 
 (* Theorem: valueOf (unit x) = x *)
 (* Proof: by valueOf_def, unit_def *)
-val unit_value = store_thm(
-  "unit_value[simp]",
-  ``!x. valueOf (unit x) = x``,
-  rw[valueOf_def, unit_def]);
+Theorem unit_value[simp]:
+    !x. valueOf (unit x) = x
+Proof
+  rw[valueOf_def, unit_def]
+QED
 
 (* Theorem: valueOf (tick n) = () *)
 (* Proof: by valueOf_def, tick_def *)
-val tick_value = store_thm(
-  "tick_value[simp]",
-  ``!n. valueOf (tick n) = ()``,
-  rw[valueOf_def, tick_def]);
+Theorem tick_value[simp]:
+    !n. valueOf (tick n) = ()
+Proof
+  rw[valueOf_def, tick_def]
+QED
 
 (* Theorem: valueOf (bind m f) = valueOf (f (valueOf m)) *)
 (* Proof:
    By definitions, and resolving cases.
 *)
-val bind_value = store_thm(
-  "bind_value[simp]",
-  ``!m f. valueOf (bind m f) = valueOf (f (valueOf m))``,
+Theorem bind_value[simp]:
+    !m f. valueOf (bind m f) = valueOf (f (valueOf m))
+Proof
   rw[bind_def, valueOf_def] >>
   (Cases_on `m` >> simp[]) >>
   (Cases_on `r` >> simp[]) >>
   (Cases_on `f q` >> simp[]) >>
-  (Cases_on `r` >> simp[]));
+  (Cases_on `r` >> simp[])
+QED
 (* Once in [simp], just rw[] proves it. *)
 
 (* Theorem: stepsOf (unit x) = 0 *)
 (* Proof: by stepsOf_def, unit_def *)
-val unit_count = store_thm(
-  "unit_count[simp]",
-  ``!x. stepsOf (unit x) = 0``,
-  rw[stepsOf_def, unit_def]);
+Theorem unit_count[simp]:
+    !x. stepsOf (unit x) = 0
+Proof
+  rw[stepsOf_def, unit_def]
+QED
 
 (* Theorem: stepsOf (tick n) = n *)
 (* Proof: by stepsOf_def, tick_def *)
-val tick_count = store_thm(
-  "tick_count[simp]",
-  ``!n. stepsOf (tick n) = n``,
-  rw[stepsOf_def, tick_def]);
+Theorem tick_count[simp]:
+    !n. stepsOf (tick n) = n
+Proof
+  rw[stepsOf_def, tick_def]
+QED
 
 (* Theorem: stepsOf (bind m f) = stepsOf m + stepsOf (f (valueOf m)) *)
 (* Proof:
@@ -249,12 +261,13 @@ val tick_count = store_thm(
       ?a a' c1 c2. m = (a',Count c1) /\ f a' = (a,Count c2)
    The values exists by pair_CASES and count_CASES.
 *)
-val bind_count = store_thm(
-  "bind_count[simp]",
-  ``!m f. stepsOf (bind m f) = stepsOf m + stepsOf (f (valueOf m))``,
+Theorem bind_count[simp]:
+    !m f. stepsOf (bind m f) = stepsOf m + stepsOf (f (valueOf m))
+Proof
   rw[bind_def, stepsOf_def, valueOf_def, AllCaseEqs(), PULL_EXISTS] >>
   csimp[] >>
-  cmetis);
+  cmetis
+QED
 (* Once in [simp], this proof is not repeatable. Just rw[] proves it. *)
 
 (* ------------------------------------------------------------------------- *)
@@ -299,19 +312,21 @@ val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
 
 (* Theorem: valueOf (ifM gM tM eM) = if valueOf gM then valueOf tM else valueOf eM *)
 (* Proof: by ifM_def *)
-val ifM_value = store_thm(
-  "ifM_value[simp]",
-  ``!gM tM eM. valueOf (ifM gM tM eM) = if valueOf gM then valueOf tM else valueOf eM``,
-  rw[ifM_def]);
+Theorem ifM_value[simp]:
+    !gM tM eM. valueOf (ifM gM tM eM) = if valueOf gM then valueOf tM else valueOf eM
+Proof
+  rw[ifM_def]
+QED
 
 (* Theorem: stepsOf (ifM gM tM eM) =
             stepsOf gM + if valueOf gM then stepsOf tM else stepsOf eM *)
 (* Proof: by ifM_def *)
-val ifM_count = store_thm(
-  "ifM_count[simp]",
-  ``!gM tM eM. stepsOf (ifM gM tM eM) =
-    stepsOf gM + if valueOf gM then stepsOf tM else stepsOf eM``,
-  rw[ifM_def]);
+Theorem ifM_count[simp]:
+    !gM tM eM. stepsOf (ifM gM tM eM) =
+    stepsOf gM + if valueOf gM then stepsOf tM else stepsOf eM
+Proof
+  rw[ifM_def]
+QED
 
 (* for EVAL IFm *)
 val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);

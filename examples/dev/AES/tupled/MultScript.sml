@@ -50,12 +50,13 @@ Definition xtime_def:
          else (b6,b5,b4,b3,b2,b1,b0,F)
 End
 
-val xtime_distrib = Q.store_thm
-("xtime_distrib",
- `!a b. xtime (a # b) = (xtime a) # (xtime b)`,
+Theorem xtime_distrib:
+  !a b. xtime (a # b) = (xtime a) # (xtime b)
+Proof
  SIMP_TAC std_ss [FORALL_BYTE_VARS,XOR8_def]
    THEN RW_TAC std_ss [xtime_def, XOR8_def, XOR_def]
-   THEN DECIDE_TAC);
+   THEN DECIDE_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Multiplication by a constant                                              *)
@@ -81,13 +82,14 @@ val _ = save_thm("ConstMult_def",ConstMult_def);
 val _ = save_thm("ConstMult_ind",ConstMult_ind);
 val _ = computeLib.add_persistent_funs ["ConstMult_def"];
 
-val ConstMultDistrib = Q.store_thm
-("ConstMultDistrib",
- `!x y z. x ** (y # z) = (x ** y) # (x ** z)`,
+Theorem ConstMultDistrib:
+  !x y z. x ** (y # z) = (x ** y) # (x ** z)
+Proof
  recInduct ConstMult_ind
    THEN REPEAT STRIP_TAC
    THEN ONCE_REWRITE_TAC [ConstMult_def]
-   THEN RW_TAC std_ss [XOR8_ZERO,xtime_distrib,AC a c]);
+   THEN RW_TAC std_ss [XOR8_ZERO,xtime_distrib,AC a c]
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Iterative version                                                         *)
@@ -118,13 +120,14 @@ val _ = computeLib.add_persistent_funs ["IterConstMult_def"];
 (* Equivalence between recursive and iterative forms.                        *)
 (*---------------------------------------------------------------------------*)
 
-val ConstMultEq = Q.store_thm
-("ConstMultEq",
- `!b1 b2 acc. (b1 ** b2) # acc = SND(SND(IterConstMult (b1,b2,acc)))`,
+Theorem ConstMultEq:
+  !b1 b2 acc. (b1 ** b2) # acc = SND(SND(IterConstMult (b1,b2,acc)))
+Proof
  recInduct IterConstMult_ind THEN RW_TAC std_ss []
    THEN ONCE_REWRITE_TAC [ConstMult_def,IterConstMult_def]
    THEN RW_TAC std_ss [XOR8_ZERO,AC a c]
-   THEN FULL_SIMP_TAC std_ss [AC a c]);
+   THEN FULL_SIMP_TAC std_ss [AC a c]
+QED
 
 
 (*---------------------------------------------------------------------------*)
@@ -142,15 +145,16 @@ Definition TableConstMult_def:
             else ARB
 End
 
-val tcm_thm = Q.store_thm
- ("tcm_thm",
- `(tcm TWO   = GF256_by_2)  /\
+Theorem tcm_thm:
+  (tcm TWO   = GF256_by_2)  /\
   (tcm THREE = GF256_by_3) /\
   (tcm NINE  = GF256_by_9)  /\
   (tcm B_HEX = GF256_by_11) /\
   (tcm D_HEX = GF256_by_13) /\
-  (tcm E_HEX = GF256_by_14)`,
- EVAL_TAC);
+  (tcm E_HEX = GF256_by_14)
+Proof
+ EVAL_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Directly looking up answers in specialized tables is equivalent to        *)

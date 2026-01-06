@@ -42,19 +42,19 @@ val simp_rule = SIMP_RULE;
 val comparison_distinct = TypeBase.distinct_of ``:ordering``
 val comparison_nchotomy = TypeBase.nchotomy_of ``:ordering``
 
-Triviality SET_EQ_THM :
+Theorem SET_EQ_THM[local] :
  !s1 s2. (s1 = s2) = !x. s1 x = s2 x
 Proof
  METIS_TAC [EXTENSION,IN_DEF]
 QED
 
-Triviality INTER_DELETE :
+Theorem INTER_DELETE[local] :
   !A a. A INTER (A DELETE a) = A DELETE a
 Proof
   SET_TAC []
 QED
 
-Triviality LENGTH_NIL_SYM =
+Theorem LENGTH_NIL_SYM[local] =
    GEN_ALL (CONV_RULE (LHS_CONV SYM_CONV) (SPEC_ALL LENGTH_NIL));
 
 val list_ss = list_ss ++ rewrites [LENGTH_NIL, LENGTH_NIL_SYM];

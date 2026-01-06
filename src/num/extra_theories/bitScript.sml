@@ -131,9 +131,8 @@ Theorem NOT_ZERO_ADD1 =
     Q.SPECL [`m`, `0`]) LESS_ADD_1
 
 (* |- !n. 0 < 2 ** n *)
-Theorem ZERO_LT_TWOEXP =
+Theorem ZERO_LT_TWOEXP[simp] =
    GEN_ALL (numLib.REDUCE_RULE (Q.SPECL [`n`, `1`] ZERO_LESS_EXP))
-val _ = export_rewrites ["ZERO_LT_TWOEXP"]
 
 Theorem ONE_LE_TWOEXP[simp]:
    !n. 1n <= 2 ** n
@@ -1435,16 +1434,18 @@ QED
 (* ------------------------------------------------------------------------- *)
 
 Theorem MOD_PLUS_RIGHT:
-    !n. 0 < n ==> !j k. ((j + (k MOD n)) MOD n) = ((j + k) MOD n)
+    !n j k. ((j + (k MOD n)) MOD n) = ((j + k) MOD n)
 Proof
    let
       fun SUBS th = SUBST_OCCS_TAC [([2], th)]
    in
       REPEAT STRIP_TAC
-      \\ IMP_RES_TAC MOD_TIMES
+      \\ Cases_on `n = 0`
+      >- (ASM_REWRITE_TAC [MOD_0,MULT_CLAUSES,ADD_CLAUSES])
+      \\ dxrule_then assume_tac $ iffLR NOT_ZERO_LT_ZERO
       \\ PURE_ONCE_REWRITE_TAC [ADD_SYM]
       \\ IMP_RES_THEN (TRY o SUBS o Q.SPEC (`k:num`)) DIVISION
-      \\ ASM_REWRITE_TAC [SYM (SPEC_ALL ADD_ASSOC)]
+      \\ ASM_REWRITE_TAC [SYM (SPEC_ALL ADD_ASSOC),MOD_TIMES]
    end
 QED
 
@@ -1479,8 +1480,7 @@ Proof
    REPEAT STRIP_TAC
    \\ Cases_on `n = 1`
    >- ASM_SIMP_TAC arith_ss [MOD_1]
-   \\ IMP_RES_TAC MOD_PLUS
-   \\ POP_ASSUM (fn th => ONCE_REWRITE_TAC [GSYM th])
+   \\ ONCE_REWRITE_TAC [GSYM MOD_PLUS]
    \\ `1 < n` by ASM_SIMP_TAC arith_ss []
    \\ ASM_SIMP_TAC bool_ss [LESS_MOD]
    \\ EQ_TAC
@@ -1811,7 +1811,7 @@ Proof
   \\ simp[]
 QED
 
-Triviality BITWISE_AND_0_lemma:
+Theorem BITWISE_AND_0_lemma[local]:
   BITWISE w $/\ x 0 = 0
 Proof
   Q.ID_SPEC_TAC`x`

@@ -363,40 +363,45 @@ val pop_alt = save_thm("pop_alt", pop_def |> REWRITE_RULE [SUC_ONE_ADD]);
 
 (* Theorem: (b <= 1) \/ (n = 0) ==> (pop b n = 0) *)
 (* Proof: by pop_def *)
-val pop_0 = store_thm(
-  "pop_0",
-  ``!b n. (b <= 1) \/ (n = 0) ==> (pop b n = 0)``,
-  rw[Once pop_def]);
+Theorem pop_0:
+    !b n. (b <= 1) \/ (n = 0) ==> (pop b n = 0)
+Proof
+  rw[Once pop_def]
+QED
 
 (* Theorem: 1 < b /\ 0 < n ==> (pop b n = SUC (pop b (n DIV b))) *)
 (* Proof: by pop_def *)
-val pop_suc = store_thm(
-  "pop_suc",
-  ``!b n. 1 < b /\ 0 < n ==> (pop b n = SUC (pop b (n DIV b)))``,
-  rw[Once pop_def]);
+Theorem pop_suc:
+    !b n. 1 < b /\ 0 < n ==> (pop b n = SUC (pop b (n DIV b)))
+Proof
+  rw[Once pop_def]
+QED
 
 (* Theorem: (pop b 0 = 0) /\ (pop 0 n = 0) /\ (pop 1 n = 0) *)
 (* Proof: by pop_def *)
-val pop_zero = store_thm(
-  "pop_zero",
-  ``!b n. (pop b 0 = 0) /\ (pop 0 n = 0) /\ (pop 1 n = 0)``,
+Theorem pop_zero:
+    !b n. (pop b 0 = 0) /\ (pop 0 n = 0) /\ (pop 1 n = 0)
+Proof
   rw[Once pop_def] >>
   rw[Once pop_def] >>
-  rw[Once pop_def]);
+  rw[Once pop_def]
+QED
 
 (* Theorem: 1 < b /\ 0 < n ==> (pop b n = 1 + pop b (n DIV b)) *)
 (* Proof: by pop_def *)
-val pop_nonzero = store_thm(
-  "pop_nonzero",
-  ``!b n. 1 < b /\ 0 < n ==> (pop b n = 1 + pop b (n DIV b))``,
-  rw[Once pop_def]);
+Theorem pop_nonzero:
+    !b n. 1 < b /\ 0 < n ==> (pop b n = 1 + pop b (n DIV b))
+Proof
+  rw[Once pop_def]
+QED
 
 (* Theorem: 1 < b /\ 0 < n ==> 0 < pop b n *)
 (* Proof: by pop_def *)
-val pop_pos = store_thm(
-  "pop_pos",
-  ``!b n. 1 < b /\ 0 < n ==> 0 < pop b n``,
-  rw[Once pop_def]);
+Theorem pop_pos:
+    !b n. 1 < b /\ 0 < n ==> 0 < pop b n
+Proof
+  rw[Once pop_def]
+QED
 
 (* Theorem: 1 < b /\ 0 < n ==> !j. b ** j <= n <=> j < pop b n *)
 (* Proof:
@@ -480,22 +485,24 @@ QED
            <=> F
       Thus n < b ** pop b n is true
 *)
-val pop_exceeds = store_thm(
-  "pop_exceeds",
-  ``!b n. 1 < b ==> n < b ** pop b n``,
+Theorem pop_exceeds:
+    !b n. 1 < b ==> n < b ** pop b n
+Proof
   rpt strip_tac >>
   (Cases_on `n = 0` >> simp[]) >>
-  metis_tac[pop_property, LESS_EQ_REFL, NOT_LESS, NOT_ZERO]);
+  metis_tac[pop_property, LESS_EQ_REFL, NOT_LESS, NOT_ZERO]
+QED
 
 (* Theorem: 1 < b ==> (n DIV b ** pop b n = 0) *)
 (* Proof:
    Note n < b ** pop b n         by pop_exceeds
    Thus n DIV b ** pop b n = 0   by LESS_DIV_EQ_ZERO
 *)
-val pop_exceeds_div = store_thm(
-  "pop_exceeds_div",
-  ``!b n. 1 < b ==> (n DIV b ** pop b n = 0)``,
-  rw[pop_exceeds, LESS_DIV_EQ_ZERO]);
+Theorem pop_exceeds_div:
+    !b n. 1 < b ==> (n DIV b ** pop b n = 0)
+Proof
+  rw[pop_exceeds, LESS_DIV_EQ_ZERO]
+QED
 
 (*
 val foo_def = Define`
@@ -536,9 +543,9 @@ val foo_def = Define`
            = SUC (LOG b n)                by ROOT_RWT
            = 1 + LOG b n = RHS            by ADD1
 *)
-val pop_eqn = store_thm(
-  "pop_eqn",
-  ``!b n. pop b n = if b <= 1 \/ (n = 0) then 0 else (1 + LOG b n)``,
+Theorem pop_eqn:
+    !b n. pop b n = if b <= 1 \/ (n = 0) then 0 else (1 + LOG b n)
+Proof
   strip_tac >>
   completeInduct_on `n` >>
   Cases_on `b <= 1 \/ (n = 0)` >-
@@ -551,14 +558,16 @@ val pop_eqn = store_thm(
     simp[GSYM ADD1] >>
     `~(n < b)` by rw[GSYM DIV_EQ_0] >>
     rw[LOG_RWT]
-  ]);
+  ]
+QED
 
 (* Theorem: pop b n <= 1 + LOG b n *)
 (* Proof: by pop_eqn *)
-val pop_LOG = store_thm(
-  "pop_LOG",
-  ``!b n. pop b n <= 1 + LOG b n``,
-  rw[pop_eqn]);
+Theorem pop_LOG:
+    !b n. pop b n <= 1 + LOG b n
+Proof
+  rw[pop_eqn]
+QED
 
 (*
 > EVAL ``MAP size [0 .. 10]``;    = [1; 1; 2; 2; 3; 3; 3; 3; 4; 4; 4]: thm
@@ -584,9 +593,9 @@ val pop_LOG = store_thm(
              = SUC (size (HALF n))    by induction hypothesis
              = size n                 by size_half_SUC
 *)
-val pop_2_size = store_thm(
-  "pop_2_size",
-  ``!n. pop 2 n = if n = 0 then 0 else size n``,
+Theorem pop_2_size:
+    !n. pop 2 n = if n = 0 then 0 else size n
+Proof
   completeInduct_on `n` >>
   rw[] >-
   rw[pop_zero] >>
@@ -596,7 +605,8 @@ val pop_2_size = store_thm(
     rw[],
     `n <> 1` by fs[HALF_EQ_0] >>
     rw[size_half_SUC]
-  ]);
+  ]
+QED
 
 (* Theorem: pop b n <= size n *)
 (* Proof:
@@ -610,9 +620,9 @@ val pop_2_size = store_thm(
    <= 1 + LOG2 n       by LOG_LE_REVERSE, 2 <= m.
     = size n           by size_by_LOG2, 0 < n.
 *)
-val pop_size = store_thm(
-  "pop_size",
-  ``!b n. pop b n <= size n``,
+Theorem pop_size:
+    !b n. pop b n <= size n
+Proof
   rpt strip_tac >>
   Cases_on `b <= 1 \/ (n = 0)` >| [
     fs[pop_zero] >>
@@ -621,7 +631,8 @@ val pop_size = store_thm(
     `1 + LOG b n <= 1 + LOG2 n` by rw[LOG_LE_REVERSE] >>
     `1 + LOG2 n = size n` by rw[size_by_LOG2] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < b ==> (pop b x = loop_count (\x. x = 0) (\x. x DIV b) x) *)
 (* Proof:
@@ -646,9 +657,9 @@ val pop_size = store_thm(
                                            by induction hypothesis
          = loop_count guard modify x       by loop_count_suc
 *)
-val pop_eq_loop_count = store_thm(
-  "pop_eq_loop_count",
-  ``!b x. 1 < b ==> (pop b x = loop_count (\x. x = 0) (\x. x DIV b) x)``,
+Theorem pop_eq_loop_count:
+    !b x. 1 < b ==> (pop b x = loop_count (\x. x = 0) (\x. x DIV b) x)
+Proof
   ho_match_mp_tac (theorem "pop_ind") >>
   rw[] >>
   qabbrev_tac `guard = \x. x = 0` >>
@@ -664,7 +675,8 @@ val pop_eq_loop_count = store_thm(
     `_ = SUC (loop_count guard modify (x DIV b))` by metis_tac[NOT_LESS] >>
     `_ = loop_count guard modify x` by metis_tac[loop_count_suc] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < b ==> (pop b y = loop2_count (\x y. y = 0) (\y. y DIV b) f x y) *)
 (* Proof:
@@ -689,9 +701,9 @@ val pop_eq_loop_count = store_thm(
                                              by induction hypothesis, take (f x).
          = loop2_count guard modify f x y    by loop2_count_suc
 *)
-val pop_eq_loop2_count = store_thm(
-  "pop_eq_loop2_count",
-  ``!b f x y. 1 < b ==> (pop b y = loop2_count (\x y. y = 0) (\y. y DIV b) f x y)``,
+Theorem pop_eq_loop2_count:
+    !b f x y. 1 < b ==> (pop b y = loop2_count (\x y. y = 0) (\y. y DIV b) f x y)
+Proof
   ntac 4 strip_tac >>
   qid_spec_tac `x` >>
   qid_spec_tac `y` >>
@@ -711,17 +723,19 @@ val pop_eq_loop2_count = store_thm(
     `_ = SUC (loop2_count guard modify f (f x) (y DIV b))` by metis_tac[NOT_LESS] >>
     `_ = loop2_count guard modify f x y` by metis_tac[loop2_count_suc] >>
     decide_tac
-  ]);
+  ]
+QED
 
 (* Theorem: 0 < b ==> FALLING (\x. x DIV b) *)
 (* Proof:
    By FALLING, this is to show:
       !x. x DIV b <= x, which is true    by DIV_LESS_EQ, 0 < b
 *)
-val divide_falling = store_thm(
-  "divide_falling",
-  ``!b. 0 < b ==> FALLING (\x. x DIV b)``,
-  simp[DIV_LESS_EQ]);
+Theorem divide_falling:
+    !b. 0 < b ==> FALLING (\x. x DIV b)
+Proof
+  simp[DIV_LESS_EQ]
+QED
 
 (* Theorem: 0 < b ==> (FUNPOW (\x. x DIV b) n x = x DIV (b ** n)) *)
 (* Proof:
@@ -741,13 +755,14 @@ val divide_falling = store_thm(
        = x DIV (b * b ** n)    by DIV_DIV_DIV_MULT
        = x DIV b ** SUC n      by EXP
 *)
-val iterating_div_eqn = store_thm(
-  "iterating_div_eqn",
-  ``!b n x. 0 < b ==> (FUNPOW (\x. x DIV b) n x = x DIV (b ** n))``,
+Theorem iterating_div_eqn:
+    !b n x. 0 < b ==> (FUNPOW (\x. x DIV b) n x = x DIV (b ** n))
+Proof
   strip_tac >>
   Induct >-
   rw[EXP_0] >>
-  rw[FUNPOW_SUC, DIV_DIV_DIV_MULT, EXP]);
+  rw[FUNPOW_SUC, DIV_DIV_DIV_MULT, EXP]
+QED
 
 (* Theorem:  1 < b ==> (FUNPOW (\x. x DIV b) (pop b x) x = 0) *)
 (* Proof:
@@ -760,16 +775,17 @@ val iterating_div_eqn = store_thm(
     and guard (FUNPOW modify (loop_count guard modify x) x)   by loop_count_iterating
      or FUNPOW modify (loop_count guard modify x) x = 0       by guard
 *)
-val iterating_div_pop = store_thm(
-  "iterating_div_pop",
-  ``!b x. 1 < b ==> (FUNPOW (\x. x DIV b) (pop b x) x = 0)``,
+Theorem iterating_div_pop:
+    !b x. 1 < b ==> (FUNPOW (\x. x DIV b) (pop b x) x = 0)
+Proof
   rw[pop_eq_loop_count] >>
   qabbrev_tac `guard = \x. x = 0` >>
   qabbrev_tac `modify = \x. x DIV b` >>
   qabbrev_tac `R = measure (\x. x)` >>
   `WF R` by rw[Abbr`R`] >>
   `!x. ~guard x ==> R (modify x) x` by rw[Abbr`guard`, Abbr`modify`, Abbr`R`] >>
-  metis_tac[loop_count_iterating]);
+  metis_tac[loop_count_iterating]
+QED
 
 (* Theorem: 1 < b ==> x < b ** (pop b x) *)
 (* Proof:
@@ -778,12 +794,13 @@ val iterating_div_pop = store_thm(
      or             x DIV b ** (pop b x) = 0     by iterating_div_eqn, 0 < b
      or                   x < b ** (pop b x)     by DIV_EQUAL_0, 0 <  b ** (pop b x)
 *)
-val iterating_div_pop_alt = store_thm(
-  "iterating_div_pop_alt",
-  ``!b x. 1 < b ==> x < b ** (pop b x)``,
+Theorem iterating_div_pop_alt:
+    !b x. 1 < b ==> x < b ** (pop b x)
+Proof
   rpt strip_tac >>
   `0 < b` by decide_tac >>
-  rw[iterating_div_pop, GSYM iterating_div_eqn, GSYM DIV_EQUAL_0]);
+  rw[iterating_div_pop, GSYM iterating_div_eqn, GSYM DIV_EQUAL_0]
+QED
 
 (* This is the same as pop_exceeds: |- !b n. 1 < b ==> n < b ** pop b n *)
 
@@ -812,11 +829,11 @@ val iterating_div_pop_alt = store_thm(
       = quit z + SUM (GENLIST f n)        by loop_modify_count_eqn
       = c + SUM (GENLIST (\j. body (x DIV b ** j)) (pop b x))
 *)
-val loop_div_count_eqn = store_thm(
-  "loop_div_count_eqn",
-  ``!loop body b c. 1 < b /\
+Theorem loop_div_count_eqn:
+    !loop body b c. 1 < b /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
-        !x. loop x = c + SUM (GENLIST (\j. body (x DIV b ** j)) (pop b x))``,
+        !x. loop x = c + SUM (GENLIST (\j. body (x DIV b ** j)) (pop b x))
+Proof
   rpt strip_tac >>
   qabbrev_tac `guard = \x. x = 0` >>
   qabbrev_tac `modify = \x. x DIV b` >>
@@ -831,7 +848,8 @@ val loop_div_count_eqn = store_thm(
   qabbrev_tac `u = \j. body (FUNPOW modify j x)` >>
   qabbrev_tac `v = \j. body (x DIV b ** j)` >>
   `u = v` by rw[FUN_EQ_THM, iterating_div_eqn, Abbr`modify`, Abbr`u`, Abbr`v`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 1 < b /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
@@ -854,11 +872,11 @@ val loop_div_count_eqn = store_thm(
       <= quit z + SUM (GENLIST f n)       by loop_modify_count_exit_le
        = c + SUM (GENLIST (\j. body (x DIV b ** j)) (pop b x))
 *)
-val loop_div_count_exit_sum_le = store_thm(
-  "loop_div_count_exit_sum_le",
-  ``!loop body exit b c. 1 < b /\
+Theorem loop_div_count_exit_sum_le:
+    !loop body exit b c. 1 < b /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-        !x. loop x <= c + SUM (GENLIST (\j. body (x DIV b ** j)) (pop b x))``,
+        !x. loop x <= c + SUM (GENLIST (\j. body (x DIV b ** j)) (pop b x))
+Proof
   rpt strip_tac >>
   qabbrev_tac `guard = \x. x = 0` >>
   qabbrev_tac `modify = \x. x DIV b` >>
@@ -873,7 +891,8 @@ val loop_div_count_exit_sum_le = store_thm(
   qabbrev_tac `u = \j. body (FUNPOW modify j x)` >>
   qabbrev_tac `v = \j. body (x DIV b ** j)` >>
   `u = v` by rw[FUN_EQ_THM, iterating_div_eqn, Abbr`modify`, Abbr`u`, Abbr`v`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
@@ -894,11 +913,11 @@ val loop_div_count_exit_sum_le = store_thm(
     <= quit z + n * cover x               by loop_fall_count_cover_exit_le, MONO cover
      = c + pop b x * cover x              by pop_eq_loop_count
 *)
-val loop_div_count_cover_exit_le = store_thm(
-  "loop_div_count_cover_exit_le",
-  ``!loop body cover exit b c. 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
+Theorem loop_div_count_cover_exit_le:
+    !loop body cover exit b c. 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-        !x. loop x <= c + pop b x * cover x``,
+        !x. loop x <= c + pop b x * cover x
+Proof
   rpt strip_tac >>
   qabbrev_tac `guard = \x. x = 0` >>
   qabbrev_tac `modify = \x. x DIV b` >>
@@ -911,7 +930,8 @@ val loop_div_count_cover_exit_le = store_thm(
   imp_res_tac loop_fall_count_cover_exit_le >>
   first_x_assum (qspecl_then [`x`, `cover`] strip_assume_tac) >>
   `loop_count guard modify x = pop b x` by rw[pop_eq_loop_count, Abbr`guard`, Abbr`modify`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Other similar theorems -- directly *)
 
@@ -919,44 +939,47 @@ val loop_div_count_cover_exit_le = store_thm(
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
         !x. loop x <= c + pop b x * body x *)
 (* Proof: by loop_div_count_cover_exit_le with cover = body. *)
-val loop_div_count_exit_le = store_thm(
-  "loop_div_count_exit_le",
-  ``!loop body exit b c. 1 < b /\ MONO body /\
+Theorem loop_div_count_exit_le:
+    !loop body exit b c. 1 < b /\ MONO body /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-        !x. loop x <= c + pop b x * body x``,
+        !x. loop x <= c + pop b x * body x
+Proof
   rpt strip_tac >>
   `!x. body x <= body x` by rw[] >>
   imp_res_tac loop_div_count_cover_exit_le >>
-  first_x_assum (qspec_then `x` strip_assume_tac));
+  first_x_assum (qspec_then `x` strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
         !x. loop x <= c + pop b x * cover x *)
 (* Proof: by loop_div_count_cover_exit_le with exit = F. *)
-val loop_div_count_cover_le = store_thm(
-  "loop_div_count_cover_le",
-  ``!loop body cover b c. 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
+Theorem loop_div_count_cover_le:
+    !loop body cover b c. 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
-        !x. loop x <= c + pop b x * cover x``,
+        !x. loop x <= c + pop b x * cover x
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num. F` >>
   `!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)` by metis_tac[] >>
   imp_res_tac loop_div_count_cover_exit_le >>
-  first_x_assum (qspec_then`x` strip_assume_tac));
+  first_x_assum (qspec_then`x` strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ MONO body /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
         !x. loop x <= c + pop b x * body x *)
 (* Proof: by loop_div_count_cover_le with cover = body. *)
-val loop_div_count_le = store_thm(
-  "loop_div_count_le",
-  ``!loop body b c. 1 < b /\ MONO body /\
+Theorem loop_div_count_le:
+    !loop body b c. 1 < b /\ MONO body /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
-        !x. loop x <= c + pop b x * body x``,
+        !x. loop x <= c + pop b x * body x
+Proof
   rpt strip_tac >>
   `!x. body x <= body x` by rw[] >>
   imp_res_tac loop_div_count_cover_le >>
-  first_x_assum (qspec_then `x` strip_assume_tac));
+  first_x_assum (qspec_then `x` strip_assume_tac)
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -982,11 +1005,11 @@ val loop_div_count_le = store_thm(
      = c + pop b x * cover (x DIV b ** pop b x)  by pop_eq_loop_count
      = c + pop b x * cover 0                     by pop_exceeds_div
 *)
-val loop_div_count_rcover_exit_le = store_thm(
-  "loop_div_count_rcover_exit_le",
-  ``!loop body cover exit b c. 1 < b /\ (!x. body x <= cover x) /\ RMONO cover /\
+Theorem loop_div_count_rcover_exit_le:
+    !loop body cover exit b c. 1 < b /\ (!x. body x <= cover x) /\ RMONO cover /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-        !x. loop x <= c + pop b x * cover 0``,
+        !x. loop x <= c + pop b x * cover 0
+Proof
   rpt strip_tac >>
   qabbrev_tac `guard = \x. x = 0` >>
   qabbrev_tac `modify = \x. x DIV b` >>
@@ -1002,7 +1025,8 @@ val loop_div_count_rcover_exit_le = store_thm(
   qabbrev_tac `n = pop b x` >>
   `FUNPOW modify n x = x DIV b ** n` by rw[iterating_div_eqn, Abbr`modify`] >>
   `_ = 0` by rw[GSYM pop_exceeds_div, Abbr`n`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Other similar theorems -- directly *)
 
@@ -1010,44 +1034,47 @@ val loop_div_count_rcover_exit_le = store_thm(
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
         !x. loop x <= c + pop b x * body 0 *)
 (* Proof: by loop_div_count_rcover_exit_le with cover = body. *)
-val loop_div_count_rbody_exit_le = store_thm(
-  "loop_div_count_rbody_exit_le",
-  ``!loop body exit b c. 1 < b /\ RMONO body /\
+Theorem loop_div_count_rbody_exit_le:
+    !loop body exit b c. 1 < b /\ RMONO body /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-        !x. loop x <= c + pop b x * body 0``,
+        !x. loop x <= c + pop b x * body 0
+Proof
   rpt strip_tac >>
   `!x. body x <= body x` by rw[] >>
   imp_res_tac loop_div_count_rcover_exit_le >>
-  first_x_assum (qspec_then `x` strip_assume_tac));
+  first_x_assum (qspec_then `x` strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ (!x. body x <= cover x) /\ RMONO cover /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
         !x. loop x <= c + pop b x * cover 0 *)
 (* Proof: by loop_div_count_rcover_exit_le with exit = F. *)
-val loop_div_count_rcover_le = store_thm(
-  "loop_div_count_rcover_le",
-  ``!loop body cover b c. 1 < b /\ (!x. body x <= cover x) /\ RMONO cover /\
+Theorem loop_div_count_rcover_le:
+    !loop body cover b c. 1 < b /\ (!x. body x <= cover x) /\ RMONO cover /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
-        !x. loop x <= c + pop b x * cover 0``,
+        !x. loop x <= c + pop b x * cover 0
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num. F` >>
   `!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)` by metis_tac[] >>
   imp_res_tac loop_div_count_rcover_exit_le >>
-  first_x_assum (qspec_then `x` strip_assume_tac));
+  first_x_assum (qspec_then `x` strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ RMONO body /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
         !x. loop x <= c + pop b x * body 0 *)
 (* Proof: by loop_div_count_rcover_le with cover = body. *)
-val loop_div_count_rbody_le = store_thm(
-  "loop_div_count_rbody_le",
-  ``!loop body b c. 1 < b /\ RMONO body /\
+Theorem loop_div_count_rbody_le:
+    !loop body b c. 1 < b /\ RMONO body /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
-        !x. loop x <= c + pop b x * body 0``,
+        !x. loop x <= c + pop b x * body 0
+Proof
   rpt strip_tac >>
   `!x. body x <= body x` by rw[] >>
   imp_res_tac loop_div_count_rcover_le >>
-  first_x_assum (qspec_then `x` strip_assume_tac));
+  first_x_assum (qspec_then `x` strip_assume_tac)
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Dividing Loop with Transform                                              *)
@@ -1076,12 +1103,12 @@ val loop_div_count_rbody_le = store_thm(
       = quit p + SUM (GENLIST g (pop b y))             by n = pop b y
       = quit (FUNPOW f (pop b y) x) + SUM (GENLIST (\j. body (FUNPOW f j x) (y DIV b ** j)) (pop b y))
 *)
-val loop2_div_count_eqn = store_thm(
-  "loop2_div_count_eqn",
-  ``!loop f body quit b. 1 < b /\
+Theorem loop2_div_count_eqn:
+    !loop f body quit b. 1 < b /\
     (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
      !x y. loop x y = quit (FUNPOW f (pop b y) x) +
-                      SUM (GENLIST (\j. body (FUNPOW f j x) (y DIV b ** j)) (pop b y))``,
+                      SUM (GENLIST (\j. body (FUNPOW f j x) (y DIV b ** j)) (pop b y))
+Proof
   rpt strip_tac >>
   imp_res_tac pop_eq_loop2_count >>
   first_x_assum (qspecl_then [`y`, `x`, `f`] strip_assume_tac) >>
@@ -1097,7 +1124,8 @@ val loop2_div_count_eqn = store_thm(
   qabbrev_tac `u = \j. body (FUNPOW f j x) (FUNPOW modify j y)` >>
   qabbrev_tac `v = \j. body (FUNPOW f j x) (y DIV b ** j)` >>
   `u = v` by rw[FUN_EQ_THM, iterating_div_eqn, Abbr`modify`, Abbr`u`, Abbr`v`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 1 < b /\
     (!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
@@ -1123,12 +1151,12 @@ val loop2_div_count_eqn = store_thm(
       = quit p + SUM (GENLIST g (pop b y))             by n = pop b y
       = quit (FUNPOW f (pop b y) x) + SUM (GENLIST (\j. body (FUNPOW f j x) (y DIV b ** j)) (pop b y))
 *)
-val loop2_div_count_sum_le = store_thm(
-  "loop2_div_count_sum_le",
-  ``!loop f body quit exit b. 1 < b /\
+Theorem loop2_div_count_sum_le:
+    !loop f body quit exit b. 1 < b /\
     (!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
      !x y. loop x y <= quit (FUNPOW f (pop b y) x) +
-                       SUM (GENLIST (\j. body (FUNPOW f j x) (y DIV b ** j)) (pop b y))``,
+                       SUM (GENLIST (\j. body (FUNPOW f j x) (y DIV b ** j)) (pop b y))
+Proof
   rpt strip_tac >>
   imp_res_tac pop_eq_loop2_count >>
   first_x_assum (qspecl_then [`y`, `x`, `f`] strip_assume_tac) >>
@@ -1144,7 +1172,8 @@ val loop2_div_count_sum_le = store_thm(
   qabbrev_tac `u = \j. body (FUNPOW f j x) (FUNPOW modify j y)` >>
   qabbrev_tac `v = \j. body (FUNPOW f j x) (y DIV b ** j)` >>
   `u = v` by rw[FUN_EQ_THM, iterating_div_eqn, Abbr`modify`, Abbr`u`, Abbr`v`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Dividing Loop with Transform-independent Body                             *)
@@ -1164,12 +1193,12 @@ val loop2_div_count_sum_le = store_thm(
     = quit z + g y * n                                  by SUM_GENLIST_K
     = quit z + n * g y                                  by MULT_COMM
 *)
-val loop2_div_count_mono_cover_exit_le = store_thm(
-  "loop2_div_count_mono_cover_exit_le",
-  ``!loop f body quit cover exit b g. 1 < b /\
+Theorem loop2_div_count_mono_cover_exit_le:
+    !loop f body quit cover exit b g. 1 < b /\
     (!x y. body x y <= cover x y) /\ (cover = \x y. g y) /\ MONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y``,
+     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y
+Proof
   rpt strip_tac >>
   imp_res_tac loop2_div_count_sum_le >>
   first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac) >>
@@ -1178,7 +1207,8 @@ val loop2_div_count_mono_cover_exit_le = store_thm(
     SUM (GENLIST (\j. cover (FUNPOW f j x) (y DIV b ** j)) n)` by fs[SUM_LE] >>
   `SUM (GENLIST (\j. cover (FUNPOW f j x) (y DIV b ** j)) n) <= SUM (GENLIST (K (g y)) n)` by rw[SUM_LE, DIV_LESS_EQ] >>
   `SUM (GENLIST (K (g y)) n) = g y * n` by rw[SUM_GENLIST_K] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Other similar theorems -- directly *)
 
@@ -1186,46 +1216,49 @@ val loop2_div_count_mono_cover_exit_le = store_thm(
     (!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
      !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y *)
 (* Proof: by loop2_div_count_mono_cover_exit_le with cover = body. *)
-val loop2_div_count_mono_exit_le = store_thm(
-  "loop2_div_count_mono_exit_le",
-  ``!loop f body quit exit b g. 1 < b /\ (body = \x y. g y) /\ MONO g /\
+Theorem loop2_div_count_mono_exit_le:
+    !loop f body quit exit b g. 1 < b /\ (body = \x y. g y) /\ MONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y``,
+     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_count_mono_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\
     (!x y. body x y <= cover x y) /\ (cover = \x y. g y) /\ MONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
      !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y *)
 (* Proof: by loop2_div_count_mono_cover_exit_le with exit = F. *)
-val loop2_div_count_mono_cover_le = store_thm(
-  "loop2_div_count_mono_cover_le",
-  ``!loop f body quit cover b g. 1 < b /\
+Theorem loop2_div_count_mono_cover_le:
+    !loop f body quit cover b g. 1 < b /\
     (!x y. body x y <= cover x y) /\ (cover = \x y. g y) /\ MONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y``,
+     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:'a y:num. F` >>
   `!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)` by metis_tac[] >>
   imp_res_tac loop2_div_count_mono_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ (body = \x y. g y) /\ MONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
      !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y *)
 (* Proof: by loop2_div_count_mono_cover_le with cover = body. *)
-val loop2_div_count_mono_le = store_thm(
-  "loop2_div_count_mono_le",
-  ``!loop f body quit b g. 1 < b /\ (body = \x y. g y) /\ MONO g /\
+Theorem loop2_div_count_mono_le:
+    !loop f body quit b g. 1 < b /\ (body = \x y. g y) /\ MONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y``,
+     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g y
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_count_mono_cover_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1244,12 +1277,12 @@ val loop2_div_count_mono_le = store_thm(
     = quit z + g 0 * n                                  by pop_exceeds_div
     = quit z + n * g 0                                  by MULT_COMM
 *)
-val loop2_div_count_rmono_cover_exit_le = store_thm(
-  "loop2_div_count_rmono_cover_exit_le",
-  ``!loop f body quit cover exit b g. 1 < b /\
+Theorem loop2_div_count_rmono_cover_exit_le:
+    !loop f body quit cover exit b g. 1 < b /\
     (!x y. body x y <= cover x y) /\ (cover = \x y. g y) /\ RMONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0``,
+     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0
+Proof
   rpt strip_tac >>
   imp_res_tac loop2_div_count_sum_le >>
   first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac) >>
@@ -1260,7 +1293,8 @@ val loop2_div_count_rmono_cover_exit_le = store_thm(
     SUM (GENLIST (K (g (y DIV b ** n))) n)` by rw[SUM_LE, DIV_LE_MONOTONE_REVERSE] >>
   `SUM (GENLIST (K (g (y DIV b ** n))) n) = g (y DIV b ** n) * n` by rw[SUM_GENLIST_K] >>
   `_ = g 0 * n` by rw[pop_exceeds_div, Abbr`n`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Other similar theorems -- directly *)
 
@@ -1268,46 +1302,49 @@ val loop2_div_count_rmono_cover_exit_le = store_thm(
     (!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
      !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0 *)
 (* Proof: by loop2_div_count_rmono_cover_exit_le with cover = body. *)
-val loop2_div_count_rmono_exit_le = store_thm(
-  "loop2_div_count_rmono_exit_le",
-  ``!loop f body quit exit b g. 1 < b /\ (body = \x y. g y) /\ RMONO g /\
+Theorem loop2_div_count_rmono_exit_le:
+    !loop f body quit exit b g. 1 < b /\ (body = \x y. g y) /\ RMONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0``,
+     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_count_rmono_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\
     (!x y. body x y <= cover x y) /\ (cover = \x y. g y) /\ RMONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
      !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0 *)
 (* Proof: by loop2_div_count_rmono_cover_exit_le with exit = F. *)
-val loop2_div_count_rmono_cover_le = store_thm(
-  "loop2_div_count_rmono_cover_le",
-  ``!loop f body quit cover b g. 1 < b /\
+Theorem loop2_div_count_rmono_cover_le:
+    !loop f body quit cover b g. 1 < b /\
     (!x y. body x y <= cover x y) /\ (cover = \x y. g y) /\ RMONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0``,
+     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:'a y:num. F` >>
   `!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)` by metis_tac[] >>
   imp_res_tac loop2_div_count_rmono_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ (body = \x y. g y) /\ RMONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
      !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0 *)
 (* Proof: by loop2_div_count_rmono_cover_le with cover = body. *)
-val loop2_div_count_rmono_le = store_thm(
-  "loop2_div_count_rmono_le",
-  ``!loop f body quit b g. 1 < b /\ (body = \x y. g y) /\ RMONO g /\
+Theorem loop2_div_count_rmono_le:
+    !loop f body quit b g. 1 < b /\ (body = \x y. g y) /\ RMONO g /\
     (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0``,
+     !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * g 0
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_count_rmono_cover_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Dividing Loop with Numeric Transform                                      *)
@@ -1337,14 +1374,14 @@ val loop2_div_count_rmono_le = store_thm(
       = quit p + (pop b y) * cover (FUNPOW f (pop b y) x) y
       = quit (FUNPOW f (pop b y) x) + (pop b y) * cover (FUNPOW f (pop b y) x) y
 *)
-val loop2_div_rise_count_cover_exit_le = store_thm(
-  "loop2_div_rise_count_cover_exit_le",
-  ``!loop f body quit cover exit b.
+Theorem loop2_div_rise_count_cover_exit_le:
+    !loop f body quit cover exit b.
           1 < b /\ (!x y. body x y <= cover x y) /\ MONO2 cover /\ RISING f /\
           (!x y. loop x y =
                  if y = 0 then quit x
                  else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover (FUNPOW f (pop b y) x) y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover (FUNPOW f (pop b y) x) y
+Proof
   rpt strip_tac >>
   assume_tac (pop_eq_loop2_count |> ISPEC ``b:num`` |> ISPEC ``f:num -> num``) >>
   first_x_assum (qspecl_then [`x`, `y`] strip_assume_tac) >>
@@ -1358,7 +1395,8 @@ val loop2_div_rise_count_cover_exit_le = store_thm(
   `FALLING modify` by rw[divide_falling, Abbr`modify`] >>
   imp_res_tac loop2_rise_fall_count_cover_exit_le >>
   first_x_assum (qspecl_then [`y`, `x`, `cover`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Other similar theorems -- directly *)
 
@@ -1368,47 +1406,50 @@ val loop2_div_rise_count_cover_exit_le = store_thm(
                  else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
            !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body (FUNPOW f (pop b y) x) y *)
 (* Proof: by loop2_div_rise_count_cover_exit_le with cover = body. *)
-val loop2_div_rise_count_exit_le = store_thm(
-  "loop2_div_rise_count_exit_le",
-  ``!loop f body quit exit b. 1 < b /\ MONO2 body /\ RISING f /\
+Theorem loop2_div_rise_count_exit_le:
+    !loop f body quit exit b. 1 < b /\ MONO2 body /\ RISING f /\
           (!x y. loop x y =
                  if y = 0 then quit x
                  else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body (FUNPOW f (pop b y) x) y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body (FUNPOW f (pop b y) x) y
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_rise_count_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ (!x y. body x y <= cover x y) /\ MONO2 cover /\ RISING f /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
            !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover (FUNPOW f (pop b y) x) y *)
 (* Proof: by loop2_div_rise_count_cover_exit_le with exit = F. *)
-val loop2_div_rise_count_cover_le = store_thm(
-  "loop2_div_rise_count_cover_le",
-  ``!loop f body quit cover b.
+Theorem loop2_div_rise_count_cover_le:
+    !loop f body quit cover b.
           1 < b /\ (!x y. body x y <= cover x y) /\ MONO2 cover /\ RISING f /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover (FUNPOW f (pop b y) x) y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover (FUNPOW f (pop b y) x) y
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num y:num. F` >>
   `!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)` by metis_tac[] >>
   imp_res_tac loop2_div_rise_count_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ MONO2 body /\ RISING f /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
            !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body (FUNPOW f (pop b y) x) y *)
 (* Proof: by loop2_div_rise_count_cover_le with cover = body. *)
-val loop2_div_rise_count_le = store_thm(
-  "loop2_div_rise_count_le",
-  ``!loop f body quit b. 1 < b /\ MONO2 body /\ RISING f /\
+Theorem loop2_div_rise_count_le:
+    !loop f body quit b. 1 < b /\ MONO2 body /\ RISING f /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body (FUNPOW f (pop b y) x) y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body (FUNPOW f (pop b y) x) y
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_rise_count_cover_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* ------------------------------------------------------------------------- *)
 
@@ -1436,14 +1477,14 @@ val loop2_div_rise_count_le = store_thm(
       = quit p + (pop b y) * cover x y                  by n = pop b y
       = quit (FUNPOW f (pop b y) x) + (pop b y) * cover x y
 *)
-val loop2_div_fall_count_cover_exit_le = store_thm(
-  "loop2_div_fall_count_cover_exit_le",
-  ``!loop f body quit cover exit b.
+Theorem loop2_div_fall_count_cover_exit_le:
+    !loop f body quit cover exit b.
           1 < b /\ (!x y. body x y <= cover x y) /\ MONO2 cover /\ FALLING f /\
           (!x y. loop x y =
                  if y = 0 then quit x
                  else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover x y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover x y
+Proof
   rpt strip_tac >>
   assume_tac (pop_eq_loop2_count |> ISPEC ``b:num`` |> ISPEC ``f:num -> num``) >>
   first_x_assum (qspecl_then [`x`, `y`] strip_assume_tac) >>
@@ -1459,7 +1500,8 @@ val loop2_div_fall_count_cover_exit_le = store_thm(
   first_x_assum (qspecl_then [`loop`, `guard`, `body`, `quit2`, `exit`, `modify`, `f`, `R`] strip_assume_tac) >>
   first_x_assum (drule_all_then strip_assume_tac) >>
   first_x_assum (qspecl_then [`x`, `y`, `cover`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Other similar theorems -- directly *)
 
@@ -1469,47 +1511,50 @@ val loop2_div_fall_count_cover_exit_le = store_thm(
                  else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
            !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body x y *)
 (* Proof: by loop2_div_fall_count_cover_exit_le with cover = body. *)
-val loop2_div_fall_count_exit_le = store_thm(
-  "loop2_div_fall_count_exit_le",
-  ``!loop f body quit exit b. 1 < b /\ MONO2 body /\ FALLING f /\
+Theorem loop2_div_fall_count_exit_le:
+    !loop f body quit exit b. 1 < b /\ MONO2 body /\ FALLING f /\
           (!x y. loop x y =
                  if y = 0 then quit x
                  else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body x y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body x y
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_fall_count_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ (!x y. body x y <= cover x y) /\ MONO2 cover /\ FALLING f /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
            !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover x y *)
 (* Proof: by loop2_div_fall_count_cover_exit_le with exit = F. *)
-val loop2_div_fall_count_cover_le = store_thm(
-  "loop2_div_fall_count_cover_le",
-  ``!loop f body quit cover b.
+Theorem loop2_div_fall_count_cover_le:
+    !loop f body quit cover b.
           1 < b /\ (!x y. body x y <= cover x y) /\ MONO2 cover /\ FALLING f /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover x y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * cover x y
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num y:num. F` >>
   `!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)` by metis_tac[] >>
   imp_res_tac loop2_div_fall_count_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ MONO2 body /\ FALLING f /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
            !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body x y *)
 (* Proof: by loop2_div_fall_count_cover_le with cover = body. *)
-val loop2_div_fall_count_le = store_thm(
-  "loop2_div_fall_count_le",
-  ``!loop f body quit b. 1 < b /\ MONO2 body /\ FALLING f /\
+Theorem loop2_div_fall_count_le:
+    !loop f body quit b. 1 < b /\ MONO2 body /\ FALLING f /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body x y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + (pop b y) * body x y
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_fall_count_cover_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Dividing Loop with Transform cover                                        *)
@@ -1546,15 +1591,15 @@ val loop2_div_fall_count_le = store_thm(
       = quit p + n * cover (FUNPOW g n x)                     by SUM_GENLIST_K
       = quit p + (pop b y) * cover (FUNPOW g (pop b y) x) y   by notation
 *)
-val loop2_div_mono_count_cover_exit_le = store_thm(
-  "loop2_div_mono_count_cover_exit_le",
-  ``!loop f g body quit cover exit b.
+Theorem loop2_div_mono_count_cover_exit_le:
+    !loop f g body quit cover exit b.
           1 < b /\ (!x y. body x y <= cover x y) /\ MONO2 cover /\
           (!x. f x <= g x) /\ MONO g /\ RISING g /\
           (!x y. loop x y =
                  if y = 0 then quit x
                  else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * cover (FUNPOW g (pop b y) x) y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * cover (FUNPOW g (pop b y) x) y
+Proof
   rpt strip_tac >>
   imp_res_tac loop2_div_count_sum_le >>
   first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac) >>
@@ -1572,7 +1617,8 @@ val loop2_div_mono_count_cover_exit_le = store_thm(
   `cover (FUNPOW f k x) (y DIV b ** k) <= cover (FUNPOW g n x) y` by rw[] >>
   decide_tac) >>
   `SUM (GENLIST f2 n) = n * cover (FUNPOW g n x) y` by rw[SUM_GENLIST_K, Abbr`f2`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Note:
 There is no corresponding theorem for RMONO g and FALLING g,
@@ -1588,52 +1634,55 @@ because there is no FUNPOW_LE_RMONO.
                  else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
            !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * body (FUNPOW g (pop b y) x) y *)
 (* Proof: by loop2_div_mono_count_cover_exit_le with cover = body. *)
-val loop2_div_mono_count_exit_le = store_thm(
-  "loop2_div_mono_count_exit_le",
-  ``!loop f g body quit exit b. 1 < b /\ MONO2 body /\
+Theorem loop2_div_mono_count_exit_le:
+    !loop f g body quit exit b. 1 < b /\ MONO2 body /\
           (!x. f x <= g x) /\ MONO g /\ RISING g /\
           (!x y. loop x y =
                  if y = 0 then quit x
                  else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * body (FUNPOW g (pop b y) x) y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * body (FUNPOW g (pop b y) x) y
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_mono_count_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ (!x y. body x y <= cover x y) /\ MONO2 cover /\
           (!x. f x <= g x) /\ MONO g /\ RISING g /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
            !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * cover (FUNPOW g (pop b y) x) y *)
 (* Proof: by loop2_div_mono_count_cover_exit_le with exit = F. *)
-val loop2_div_mono_count_cover_le = store_thm(
-  "loop2_div_mono_count_cover_le",
-  ``!loop f g body quit cover b.
+Theorem loop2_div_mono_count_cover_le:
+    !loop f g body quit cover b.
           1 < b /\ (!x y. body x y <= cover x y) /\ MONO2 cover /\
           (!x. f x <= g x) /\ MONO g /\ RISING g /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * cover (FUNPOW g (pop b y) x) y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * cover (FUNPOW g (pop b y) x) y
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:num y:num. F` >>
   `!x y. loop x y = if y = 0 then quit x else body x y + if exit x y then 0 else loop (f x) (y DIV b)` by metis_tac[] >>
   imp_res_tac loop2_div_mono_count_cover_exit_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* Theorem: 1 < b /\ MONO2 body /\
           (!x. f x <= g x) /\ MONO g /\ RISING g /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
            !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * body (FUNPOW g (pop b y) x) y *)
 (* Proof: by loop2_div_mono_count_cover_le with cover = body. *)
-val loop2_div_mono_count_le = store_thm(
-  "loop2_div_mono_count_le",
-  ``!loop f g body quit b. 1 < b /\ MONO2 body /\
+Theorem loop2_div_mono_count_le:
+    !loop f g body quit b. 1 < b /\ MONO2 body /\
           (!x. f x <= g x) /\ MONO g /\ RISING g /\
           (!x y. loop x y = if y = 0 then quit x else body x y + loop (f x) (y DIV b)) ==>
-           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * body (FUNPOW g (pop b y) x) y``,
+           !x y. loop x y <= quit (FUNPOW f (pop b y) x) + pop b y * body (FUNPOW g (pop b y) x) y
+Proof
   rpt strip_tac >>
   `!x y. body x y <= body x y` by rw[] >>
   imp_res_tac loop2_div_mono_count_cover_le >>
-  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac));
+  first_x_assum (qspecl_then [`y`, `x`] strip_assume_tac)
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Original investigation, some with quit = constant.                        *)
@@ -1657,45 +1706,51 @@ EVAL ``halving 10``; = [10; 5; 2; 1]: thm
 
 (* Theorem: (b = 0) \/ (n = 0) ==> (divide_by b n = []) *)
 (* Proof: by divide_by_def *)
-val divide_by_nil = store_thm(
-  "divide_by_nil",
-  ``!b n. (b <= 1) \/ (n = 0) ==> (divide_by b n = [])``,
-  rw[Once divide_by_def]);
+Theorem divide_by_nil:
+    !b n. (b <= 1) \/ (n = 0) ==> (divide_by b n = [])
+Proof
+  rw[Once divide_by_def]
+QED
 
 (* Theorem: 0 < b /\ 0 < n ==> (divide_by b n = n::divide_by b (n DIV b)) *)
 (* Proof: by divide_by_def *)
-val divide_by_cons = store_thm(
-  "divide_by_cons",
-  ``!b n. 1 < b /\ 0 < n ==> (divide_by b n = n::divide_by b (n DIV b))``,
-  rw[Once divide_by_def]);
+Theorem divide_by_cons:
+    !b n. 1 < b /\ 0 < n ==> (divide_by b n = n::divide_by b (n DIV b))
+Proof
+  rw[Once divide_by_def]
+QED
 
 (* Theorem: divide_by 0 n = [] *)
 (* Proof: by divide_by_def *)
-val divide_by_0_n = store_thm(
-  "divide_by_0_n",
-  ``!n. divide_by 0 n = []``,
-  rw[Once divide_by_def]);
+Theorem divide_by_0_n:
+    !n. divide_by 0 n = []
+Proof
+  rw[Once divide_by_def]
+QED
 
 (* Theorem: divide_by 1 n = [] *)
 (* Proof: by divide_by_def *)
-val divide_by_1_n = store_thm(
-  "divide_by_1_n",
-  ``!n. divide_by 1 n = []``,
-  rw[Once divide_by_def]);
+Theorem divide_by_1_n:
+    !n. divide_by 1 n = []
+Proof
+  rw[Once divide_by_def]
+QED
 
 (* Theorem: divide_by b 0 = [] *)
 (* Proof: by divide_by_def *)
-val divide_by_b_0 = store_thm(
-  "divide_by_b_0",
-  ``!b. divide_by b 0 = []``,
-  rw[Once divide_by_def]);
+Theorem divide_by_b_0:
+    !b. divide_by b 0 = []
+Proof
+  rw[Once divide_by_def]
+QED
 
 (* Theorem: 1 < b /\ n <> 0 ==> (divide_by b n = n :: divide_by b (n DIV b)) *)
 (* Proof: by divide_by_def *)
-val divide_by_b_nonzero = store_thm(
-  "divide_by_b_nonzero",
-  ``!b n. 1 < b /\ n <> 0 ==> (divide_by b n = n :: divide_by b (n DIV b))``,
-  rw[Once divide_by_def]);
+Theorem divide_by_b_nonzero:
+    !b n. 1 < b /\ n <> 0 ==> (divide_by b n = n :: divide_by b (n DIV b))
+Proof
+  rw[Once divide_by_def]
+QED
 
 (*
 > EVAL ``divide_by 3 10``; = [10; 3; 1]: thm
@@ -1727,9 +1782,9 @@ val divide_by_b_nonzero = store_thm(
        = GENLIST g (SUC (pop b (n DIV b)))           by GENLIST_CONS
        = GENLIST g (pop b n)                         by pop_def
 *)
-val divide_by_eqn = store_thm(
-  "divide_by_eqn",
-  ``!b n. divide_by b n = GENLIST (\j. n DIV b ** j) (pop b n)``,
+Theorem divide_by_eqn:
+    !b n. divide_by b n = GENLIST (\j. n DIV b ** j) (pop b n)
+Proof
   ho_match_mp_tac (theorem "divide_by_ind") >>
   rw[] >>
   rw[Once divide_by_def] >-
@@ -1744,7 +1799,8 @@ val divide_by_eqn = store_thm(
   `n :: GENLIST f (pop b (n DIV b))  = g 0 :: GENLIST (g o SUC) (pop b (n DIV b))` by rw[EXP_0, Abbr`g`] >>
   `_ = GENLIST g (SUC (pop b (n DIV b)))` by rw[GENLIST_CONS] >>
   `_ = GENLIST g (pop b n)` by metis_tac[pop_def] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: 1 < b /\ 0 < n /\ b ** j <= n ==> MEM (n DIV (b ** j)) (divide_by b n) *)
 (* Proof:
@@ -1753,19 +1809,21 @@ val divide_by_eqn = store_thm(
    <=> ?m. m < pop b n /\ n DIV b ** j = n DIV b ** m              by MEM_GENLIST
    <=> take m = j, with j < pop b n                                by pop_property
 *)
-val divide_by_member = store_thm(
-  "divide_by_member",
-  ``!b n j. 1 < b /\ 0 < n /\ b ** j <= n ==> MEM (n DIV (b ** j)) (divide_by b n)``,
+Theorem divide_by_member:
+    !b n j. 1 < b /\ 0 < n /\ b ** j <= n ==> MEM (n DIV (b ** j)) (divide_by b n)
+Proof
   rw[divide_by_eqn] >>
   rw[MEM_GENLIST] >>
-  metis_tac[pop_property]);
+  metis_tac[pop_property]
+QED
 
 (* Theorem: 1 < b /\ 0 < n ==> MEM n (divide_by b n) *)
 (* Proof: by divide_by_member, EXP_0, DIV_1 *)
-val divide_by_head = store_thm(
-  "divide_by_head",
-  ``!b n. 1 < b /\ 0 < n ==> MEM n (divide_by b n)``,
-  metis_tac[divide_by_member, EXP_0, DIV_1, DECIDE``0 < n <=> 1 <= n``]);
+Theorem divide_by_head:
+    !b n. 1 < b /\ 0 < n ==> MEM n (divide_by b n)
+Proof
+  metis_tac[divide_by_member, EXP_0, DIV_1, DECIDE``0 < n <=> 1 <= n``]
+QED
 
 (* Theorem: LENGTH (divide_by b n) = pop b n *)
 (* Proof:
@@ -1774,10 +1832,11 @@ val divide_by_head = store_thm(
    = LENGTH (GENLIST f (pop b n))    by divide_by_eqn
    = pop b n                         by LENGTH_GENLIST
 *)
-val divide_by_length = store_thm(
-  "divide_by_length",
-  ``!b n. LENGTH (divide_by b n) = pop b n``,
-  rw[divide_by_eqn, LENGTH_GENLIST]);
+Theorem divide_by_length:
+    !b n. LENGTH (divide_by b n) = pop b n
+Proof
+  rw[divide_by_eqn, LENGTH_GENLIST]
+QED
 
 (* Theorem: j < pop b n ==> (EL j (divide_by b n) = n DIV b ** j) *)
 (* Proof:
@@ -1787,10 +1846,11 @@ val divide_by_length = store_thm(
    = g j                          by EL_GENLIST, j < pop b n
    = n DIV b ** j                 by notation
 *)
-val divide_by_element = store_thm(
-  "divide_by_element",
-  ``!b n j. j < pop b n ==> (EL j (divide_by b n) = n DIV b ** j)``,
-  rw[divide_by_eqn]);
+Theorem divide_by_element:
+    !b n j. j < pop b n ==> (EL j (divide_by b n) = n DIV b ** j)
+Proof
+  rw[divide_by_eqn]
+QED
 
 (* Theorem: 1 < b ==> (divide_by b x = loop_arg (\x. x = 0) (\x. x DIV b) x) *)
 (* Proof:
@@ -1814,9 +1874,9 @@ val divide_by_element = store_thm(
          = x :: loop_arg guard modify (x DIV b)  by induction hypothesis
          = loop_arg guard modify x               by loop_arg_cons, ~guard x
 *)
-val divide_by_eq_loop_arg = store_thm(
-  "divide_by_eq_loop_arg",
-  ``!b x. 1 < b ==> (divide_by b x = loop_arg (\x. x = 0) (\x. x DIV b) x)``,
+Theorem divide_by_eq_loop_arg:
+    !b x. 1 < b ==> (divide_by b x = loop_arg (\x. x = 0) (\x. x DIV b) x)
+Proof
   ho_match_mp_tac (theorem "divide_by_ind") >>
   rw[] >>
   qabbrev_tac `guard = \x. x = 0` >>
@@ -1832,7 +1892,8 @@ val divide_by_eq_loop_arg = store_thm(
     `_ = x :: loop_arg guard modify (x DIV b)` by metis_tac[NOT_LESS] >>
     `_ = loop_arg guard modify x` by metis_tac[loop_arg_cons] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: 1 < b ==> (MAP2 body (iterating f x (pop b y)) (divide_by b y) =
                        MAP (UNCURRY body) (loop2_arg (\x y. y = 0) (\y. y DIV b) f x y)) *)
@@ -1870,11 +1931,11 @@ val divide_by_eq_loop_arg = store_thm(
           = MAP (UNCURRY body) (loop2_arg guard modify f x y)
                                                 by loop2_arg_cons
 *)
-val iterating_divide_eq_loop2_arg = store_thm(
-  "iterating_divide_eq_loop2_arg",
-  ``!b body f x y. 1 < b ==>
+Theorem iterating_divide_eq_loop2_arg:
+    !b body f x y. 1 < b ==>
     (MAP2 body (iterating f x (pop b y)) (divide_by b y) =
-     MAP (UNCURRY body) (loop2_arg (\x y. y = 0) (\y. y DIV b) f x y))``,
+     MAP (UNCURRY body) (loop2_arg (\x y. y = 0) (\y. y DIV b) f x y))
+Proof
   ntac 5 strip_tac >>
   qid_spec_tac `x` >>
   qid_spec_tac `y` >>
@@ -1897,7 +1958,8 @@ val iterating_divide_eq_loop2_arg = store_thm(
     `_ = body x y::MAP (UNCURRY body) (loop2_arg guard modify f (f x) (y DIV b))` by metis_tac[NOT_LESS] >>
     `_ = MAP (UNCURRY body) ((x,y)::loop2_arg guard modify f (f x) (modify y))` by rw[Abbr`modify`] >>
     metis_tac[loop2_arg_cons]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Dividing Loop -- original                                                 *)
@@ -1926,11 +1988,11 @@ loop_modify_count_by_sum |> SPEC_ALL |> INST_TYPE [alpha |-> ``:num``]
       = c + SUM (MAP body (loop_arg guard modify x))  by loop_modify_count_by_sum
       = c + SUM (MAP body (divide_by b x))            by divide_by_eq_loop_arg
 *)
-val loop_div_count_by_sum = store_thm(
-  "loop_div_count_by_sum",
-  ``!loop body b c. 1 < b /\
+Theorem loop_div_count_by_sum:
+    !loop body b c. 1 < b /\
    (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
-     !x. loop x = c + SUM (MAP body (divide_by b x))``,
+     !x. loop x = c + SUM (MAP body (divide_by b x))
+Proof
   rpt strip_tac >>
   qabbrev_tac `guard = \x. x = 0` >>
   qabbrev_tac `modify = \x. x DIV b` >>
@@ -1940,7 +2002,8 @@ val loop_div_count_by_sum = store_thm(
   `!x. loop x = if guard x then c else body x + loop (modify x)` by metis_tac[] >>
   imp_res_tac loop_modify_count_by_sum >>
   `loop_arg guard modify x = divide_by b x` by rw[divide_by_eq_loop_arg, Abbr`guard`, Abbr`modify`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 1 < b /\
             (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
@@ -1957,11 +2020,11 @@ val loop_div_count_by_sum = store_thm(
      <= c + SUM (MAP body (loop_arg guard modify x))  by loop_modify_count_exit_by_sum
       = c + SUM (MAP body (divide_by b x))            by divide_by_eq_loop_arg
 *)
-val loop_div_count_exit_by_sum = store_thm(
-  "loop_div_count_exit_by_sum",
-  ``!loop body b c exit. 1 < b /\
+Theorem loop_div_count_exit_by_sum:
+    !loop body b c exit. 1 < b /\
    (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-     !x. loop x <= c + SUM (MAP body (divide_by b x))``,
+     !x. loop x <= c + SUM (MAP body (divide_by b x))
+Proof
   rpt strip_tac >>
   qabbrev_tac `guard = \x. x = 0` >>
   qabbrev_tac `modify = \x. x DIV b` >>
@@ -1971,7 +2034,8 @@ val loop_div_count_exit_by_sum = store_thm(
   `!x. loop x = if guard x then c else body x + if exit x then 0 else loop (modify x)` by metis_tac[] >>
   imp_res_tac loop_modify_count_exit_by_sum >>
   `loop_arg guard modify x = divide_by b x` by rw[divide_by_eq_loop_arg, Abbr`guard`, Abbr`modify`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem:  1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
@@ -1984,11 +2048,11 @@ val loop_div_count_exit_by_sum = store_thm(
      = (cover x) * LENGTH ls       by SUM_MAP_K
      = (cover x) * (pop b x)       by divide_by_length
 *)
-val loop_div_count_cover_exit_upper = store_thm(
-  "loop_div_count_cover_exit_upper",
-  ``!loop body cover exit b c. 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
+Theorem loop_div_count_cover_exit_upper:
+    !loop body cover exit b c. 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-        !x. loop x <= c + cover x * pop b x``,
+        !x. loop x <= c + cover x * pop b x
+Proof
   rpt strip_tac >>
   qabbrev_tac `ls = divide_by b x` >>
   `loop x <= c + SUM (MAP body ls)` by metis_tac[loop_div_count_exit_by_sum] >>
@@ -2001,42 +2065,46 @@ val loop_div_count_cover_exit_upper = store_thm(
   decide_tac) >>
   `SUM (MAP (K (cover x)) ls) = (cover x) * LENGTH ls` by rw[SUM_MAP_K] >>
   `_ = (cover x) * (pop b x)` by rw[divide_by_length, Abbr`ls`] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: 1 < b /\ MONO body /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
         !x. loop x <= c + body x * pop b x *)
 (* Proof: by loop_div_count_cover_exit_upper with cover = body. *)
-val loop_div_count_exit_upper = store_thm(
-  "loop_div_count_exit_upper",
-  ``!loop body b c exit. 1 < b /\ MONO body /\
+Theorem loop_div_count_exit_upper:
+    !loop body b c exit. 1 < b /\ MONO body /\
        (!x. loop x = if x = 0 then c else body x + if exit x then 0 else loop (x DIV b)) ==>
-        !x. loop x <= c + body x * pop b x``,
-  metis_tac[loop_div_count_cover_exit_upper, LESS_EQ_REFL]);
+        !x. loop x <= c + body x * pop b x
+Proof
+  metis_tac[loop_div_count_cover_exit_upper, LESS_EQ_REFL]
+QED
 
 (* Theorem: 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
         !x. loop x <= c + cover x * pop b x *)
 (* Proof: by loop_div_count_cover_exit_upper with exit = F. *)
-val loop_div_count_cover_upper = store_thm(
-  "loop_div_count_cover_upper",
-  ``!loop body b c cover. 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
+Theorem loop_div_count_cover_upper:
+    !loop body b c cover. 1 < b /\ (!x. body x <= cover x) /\ MONO cover /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
-        !x. loop x <= c + cover x * pop b x``,
+        !x. loop x <= c + cover x * pop b x
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = (\x:num. F)` >>
-  metis_tac[loop_div_count_cover_exit_upper]);
+  metis_tac[loop_div_count_cover_exit_upper]
+QED
 
 (* Theorem: 1 < b /\ MONO body /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
         !x. loop x <= c + body x * pop b x *)
 (* Proof: by loop_div_count_cover_upper with body = cover. *)
-val loop_div_count_upper = store_thm(
-  "loop_div_count_upper",
-  ``!loop body b c. 1 < b /\ MONO body /\
+Theorem loop_div_count_upper:
+    !loop body b c. 1 < b /\ MONO body /\
        (!x. loop x = if x = 0 then c else body x + loop (x DIV b)) ==>
-        !x. loop x <= c + body x * pop b x``,
-  metis_tac[loop_div_count_cover_upper, LESS_EQ_REFL]);
+        !x. loop x <= c + body x * pop b x
+Proof
+  metis_tac[loop_div_count_cover_upper, LESS_EQ_REFL]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Dividing Loop with Transform -- original                                  *)
@@ -2056,11 +2124,11 @@ val loop_div_count_upper = store_thm(
       = c + SUM (MAP (UNCURRY body) (loop2_arg guard modify f x y))     by loop2_modify_count_by_sum
       = c + SUM (MAP2 body (iterating f x (pop b y)) (divide_by b y))   by iterating_divide_eq_loop2_arg
 *)
-val loop2_div_count_by_sum = store_thm(
-  "loop2_div_count_by_sum",
-  ``!loop f body b c. 1 < b /\
+Theorem loop2_div_count_by_sum:
+    !loop f body b c. 1 < b /\
     (!x y. loop x y = if y = 0 then c else body x y + loop (f x) (y DIV b)) ==>
-     !x y. loop x y = c + SUM (MAP2 body (iterating f x (pop b y)) (divide_by b y))``,
+     !x y. loop x y = c + SUM (MAP2 body (iterating f x (pop b y)) (divide_by b y))
+Proof
   rpt strip_tac >>
   qabbrev_tac `guard = \x y. y = 0` >>
   qabbrev_tac `modify = \y. y DIV b` >>
@@ -2071,7 +2139,8 @@ val loop2_div_count_by_sum = store_thm(
   `loop x y = c + SUM (MAP (UNCURRY body) (loop2_arg guard modify f x y))` by metis_tac[loop2_modify_count_by_sum] >>
   `MAP (UNCURRY body) (loop2_arg guard modify f x y) =
     MAP2 body (iterating f x (pop b y)) (divide_by b y)` by rw[iterating_divide_eq_loop2_arg, Abbr`guard`, Abbr`modify`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 1 < b /\
     (!x y. loop x y = if y = 0 then c else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
@@ -2088,11 +2157,11 @@ val loop2_div_count_by_sum = store_thm(
      <= c + SUM (MAP (UNCURRY body) (loop2_arg guard modify f x y))     by loop2_modify_count_exit_by_sum
       = c + SUM (MAP2 body (iterating f x (pop b y)) (divide_by b y))   by iterating_divide_eq_loop2_arg
 *)
-val loop2_div_count_exit_by_sum = store_thm(
-  "loop2_div_count_exit_by_sum",
-  ``!loop f body b c exit. 1 < b /\
+Theorem loop2_div_count_exit_by_sum:
+    !loop f body b c exit. 1 < b /\
     (!x y. loop x y = if y = 0 then c else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= c + SUM (MAP2 body (iterating f x (pop b y)) (divide_by b y))``,
+     !x y. loop x y <= c + SUM (MAP2 body (iterating f x (pop b y)) (divide_by b y))
+Proof
   rpt strip_tac >>
   qabbrev_tac `guard = \x y. y = 0` >>
   qabbrev_tac `modify = \y. y DIV b` >>
@@ -2105,7 +2174,8 @@ val loop2_div_count_exit_by_sum = store_thm(
   `loop x y <= c + SUM (MAP (UNCURRY body) (loop2_arg guard modify f x y))` by metis_tac[] >>
   `MAP (UNCURRY body) (loop2_arg guard modify f x y) =
     MAP2 body (iterating f x (pop b y)) (divide_by b y)` by rw[iterating_divide_eq_loop2_arg, Abbr`guard`, Abbr`modify`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 1 < b /\ (!x y. body x y <= cover x y) /\
        (!x1 x2 y1 y2. y1 <= y2 ==> cover x1 y1 <= cover x2 y2) /\
@@ -2124,13 +2194,13 @@ val loop2_div_count_exit_by_sum = store_thm(
      <= c + cover x y * loop2_count guard modify f x y       by loop2_modify_count_bcover_exit_upper
       = c + cover x y * pop b y                              by pop_eq_loop2_count
 *)
-val loop2_div_count_cover_exit_upper = store_thm(
-  "loop2_div_count_cover_exit_upper",
-  ``!loop f body cover exit b c. 1 < b /\
+Theorem loop2_div_count_cover_exit_upper:
+    !loop f body cover exit b c. 1 < b /\
        (!x y. body x y <= cover x y) /\
        (!x1 x2 y1 y2. y1 <= y2 ==> cover x1 y1 <= cover x2 y2) /\
        (!x y. loop x y = if y = 0 then c else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-        !x y. loop x y <= c + cover x y * pop b y``,
+        !x y. loop x y <= c + cover x y * pop b y
+Proof
   rpt strip_tac >>
   qabbrev_tac `guard = \x y. y = 0` >>
   qabbrev_tac `modify = \y. y DIV b` >>
@@ -2142,53 +2212,57 @@ val loop2_div_count_cover_exit_upper = store_thm(
   assume_tac (loop2_modify_count_bcover_exit_upper |> ISPEC ``loop:'a -> num -> num``) >>
   last_x_assum (qspecl_then [`guard`, `body`, `c`, `exit`, `cover`, `modify`, `f`, `R`] strip_assume_tac) >>
   `loop2_count guard modify f x y = pop b y` by rw[pop_eq_loop2_count, Abbr`guard`, Abbr`modify`] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 1 < b /\ (!x1 x2 y1 y2. y1 <= y2 ==> body x1 y1 <= body x2 y2) /\
        (!x y. loop x y = if y = 0 then c else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
         !x y. loop x y <= c + body x y * pop b y *)
 (* Proof: by loop2_div_count_cover_exit_upper, with cover = body. *)
-val loop2_div_count_exit_upper = store_thm(
-  "loop2_div_count_exit_upper",
-  ``!loop f body exit b c. 1 < b /\
+Theorem loop2_div_count_exit_upper:
+    !loop f body exit b c. 1 < b /\
        (!x1 x2 y1 y2. y1 <= y2 ==> body x1 y1 <= body x2 y2) /\
        (!x y. loop x y = if y = 0 then c else body x y + if exit x y then 0 else loop (f x) (y DIV b)) ==>
-        !x y. loop x y <= c + body x y * pop b y``,
+        !x y. loop x y <= c + body x y * pop b y
+Proof
   rpt strip_tac >>
   assume_tac loop2_div_count_cover_exit_upper >>
   last_x_assum (qspecl_then [`loop`, `f`, `body`, `body`, `exit`, `b`, `c`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 (* Theorem: 1 < b /\ (!x y. body x y <= cover x y) /\
        (!x1 x2 y1 y2. y1 <= y2 ==> cover x1 y1 <= cover x2 y2) /\
        (!x y. loop x y = if y = 0 then c else body x y + loop (f x) (y DIV b)) ==>
         !x y. loop x y <= c + cover x y * pop b y *)
 (* Proof: by loop2_div_count_cover_exit_upper, with exit = F. *)
-val loop2_div_count_cover_upper = store_thm(
-  "loop2_div_count_cover_upper",
-  ``!loop f body cover b c. 1 < b /\ (!x y. body x y <= cover x y) /\
+Theorem loop2_div_count_cover_upper:
+    !loop f body cover b c. 1 < b /\ (!x y. body x y <= cover x y) /\
        (!x1 x2 y1 y2. y1 <= y2 ==> cover x1 y1 <= cover x2 y2) /\
        (!x y. loop x y = if y = 0 then c else body x y + loop (f x) (y DIV b)) ==>
-        !x y. loop x y <= c + cover x y * pop b y``,
+        !x y. loop x y <= c + cover x y * pop b y
+Proof
   rpt strip_tac >>
   qabbrev_tac `exit = \x:'a y:num. F` >>
   assume_tac loop2_div_count_cover_exit_upper >>
   last_x_assum (qspecl_then [`loop`, `f`, `body`, `cover`, `exit`, `b`, `c`] strip_assume_tac) >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: 1 < b /\ (!x1 x2 y1 y2. y1 <= y2 ==> body x1 y1 <= body x2 y2) /\
     (!x y. loop x y = if y = 0 then c else body x y + loop (f x) (y DIV b)) ==>
      !x y. loop x y <= c + body x y * pop b y *)
 (* Proof: loop2_div_count_cover_upper, with body = cover. *)
-val loop2_div_count_upper = store_thm(
-  "loop2_div_count_upper",
-  ``!loop f body b c. 1 < b /\ (!x1 x2 y1 y2. y1 <= y2 ==> body x1 y1 <= body x2 y2) /\
+Theorem loop2_div_count_upper:
+    !loop f body b c. 1 < b /\ (!x1 x2 y1 y2. y1 <= y2 ==> body x1 y1 <= body x2 y2) /\
     (!x y. loop x y = if y = 0 then c else body x y + loop (f x) (y DIV b)) ==>
-     !x y. loop x y <= c + body x y * pop b y``,
+     !x y. loop x y <= c + body x y * pop b y
+Proof
   rpt strip_tac >>
   assume_tac loop2_div_count_cover_upper >>
   last_x_assum (qspecl_then [`loop`, `f`, `body`, `body`, `b`, `c`] strip_assume_tac) >>
-  metis_tac[LESS_EQ_REFL]);
+  metis_tac[LESS_EQ_REFL]
+QED
 
 
 (* ------------------------------------------------------------------------- *)

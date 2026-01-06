@@ -128,13 +128,15 @@ End
 val _ = overload_on ("COMPL", ``COMPL_LAB``);
 val _ = export_rewrites ["COMPL_LAB_def"];
 
-val coname_COMPL = store_thm
-  ("coname_COMPL", ``!(s :'a). coname s = COMPL (name s)``,
-    REWRITE_TAC [COMPL_LAB_def]);
+Theorem coname_COMPL:   !(s :'a). coname s = COMPL (name s)
+Proof
+    REWRITE_TAC [COMPL_LAB_def]
+QED
 
-val COMPL_COMPL_LAB = store_thm (
-   "COMPL_COMPL_LAB", ``!(l :'a Label). COMPL_LAB (COMPL_LAB l) = l``,
-    Induct >> REWRITE_TAC [COMPL_LAB_def]);
+Theorem COMPL_COMPL_LAB:   !(l :'a Label). COMPL_LAB (COMPL_LAB l) = l
+Proof
+    Induct >> REWRITE_TAC [COMPL_LAB_def]
+QED
 
 (* Extend the complement to actions, COMPL_ACT: Action -> Action. *)
 Definition COMPL_ACT_def:
@@ -174,12 +176,14 @@ Definition Is_Relabeling_def:
     Is_Relabeling (f: 'a Label -> 'a Label) = (!s. f (coname s) = COMPL (f (name s)))
 End
 
-val EXISTS_Relabeling = store_thm ("EXISTS_Relabeling",
-  ``?(f: 'a Label -> 'a Label). Is_Relabeling f``,
+Theorem EXISTS_Relabeling:
+    ?(f: 'a Label -> 'a Label). Is_Relabeling f
+Proof
     Q.EXISTS_TAC `\a. a`
  >> PURE_ONCE_REWRITE_TAC [Is_Relabeling_def]
  >> BETA_TAC
- >> REWRITE_TAC [COMPL_LAB_def]);
+ >> REWRITE_TAC [COMPL_LAB_def]
+QED
 
 (* |- ?rep. TYPE_DEFINITION Is_Relabeling rep *)
 val Relabeling_TY_DEF = new_type_definition ("Relabeling", EXISTS_Relabeling);
@@ -2547,16 +2551,18 @@ Proof
 QED
 
 (* for CCS_TRANS_CONV *)
-val TRANS_SUM_EQ' = store_thm (
-   "TRANS_SUM_EQ'",
-  ``!E1 E2 u E. TRANS (sum E1 E2) u E <=> TRANS E1 u E \/ TRANS E2 u E``,
-    REWRITE_TAC [TRANS_SUM_EQ]);
+Theorem TRANS_SUM_EQ':
+    !E1 E2 u E. TRANS (sum E1 E2) u E <=> TRANS E1 u E \/ TRANS E2 u E
+Proof
+    REWRITE_TAC [TRANS_SUM_EQ]
+QED
 
 val TRANS_SUM = save_thm (
    "TRANS_SUM", EQ_IMP_LR TRANS_SUM_EQ);
 
-val TRANS_COMM_EQ = store_thm ("TRANS_COMM_EQ",
-  ``!E E' E'' u. TRANS (sum E E') u E'' <=> TRANS (sum E' E) u E''``,
+Theorem TRANS_COMM_EQ:
+    !E E' E'' u. TRANS (sum E E') u E'' <=> TRANS (sum E' E) u E''
+Proof
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -2568,10 +2574,12 @@ val TRANS_COMM_EQ = store_thm ("TRANS_COMM_EQ",
       DISCH_TAC \\
       IMP_RES_TAC TRANS_SUM >|
       [ MATCH_MP_TAC SUM2, MATCH_MP_TAC SUM1 ] \\
-      art [] ]);
+      art [] ]
+QED
 
-val TRANS_ASSOC_EQ = store_thm ("TRANS_ASSOC_EQ",
-  ``!E E' E'' E1 u. TRANS (sum (sum E E') E'') u E1 <=> TRANS (sum E (sum E' E'')) u E1``,
+Theorem TRANS_ASSOC_EQ:
+    !E E' E'' E1 u. TRANS (sum (sum E E') E'') u E1 <=> TRANS (sum E (sum E' E'')) u E1
+Proof
     rpt GEN_TAC
  >> EQ_TAC
  >| [ (* goal 1 (of 2) *)
@@ -2596,14 +2604,15 @@ val TRANS_ASSOC_EQ = store_thm ("TRANS_ASSOC_EQ",
         [ MATCH_MP_TAC SUM1 >> MATCH_MP_TAC SUM1,
           MATCH_MP_TAC SUM1 >> MATCH_MP_TAC SUM2,
           MATCH_MP_TAC SUM2,
-          MATCH_MP_TAC SUM2 ] >> art [] ] ]);
+          MATCH_MP_TAC SUM2 ] >> art [] ] ]
+QED
 
 val TRANS_ASSOC_RL = save_thm (
    "TRANS_ASSOC_RL", EQ_IMP_RL TRANS_ASSOC_EQ);
 
-val TRANS_SUM_NIL_EQ = store_thm (
-   "TRANS_SUM_NIL_EQ",
-  ``!E u E'. TRANS (sum E nil) u E' <=> TRANS E u E'``,
+Theorem TRANS_SUM_NIL_EQ:
+    !E u E'. TRANS (sum E nil) u E' <=> TRANS E u E'
+Proof
     rpt GEN_TAC
  >> EQ_TAC (* 2 sub-goals here *)
  >| [ (* goal 1 (of 2) *)
@@ -2612,19 +2621,22 @@ val TRANS_SUM_NIL_EQ = store_thm (
       IMP_RES_TAC NIL_NO_TRANS,
       (* goal 2 (of 2) *)
       DISCH_TAC \\
-      MATCH_MP_TAC SUM1 >> art [] ]);
+      MATCH_MP_TAC SUM1 >> art [] ]
+QED
 
 (* !E u E'. E + nil --u-> E' ==> E --u-> E' *)
 val TRANS_SUM_NIL = save_thm ("TRANS_SUM_NIL", EQ_IMP_LR TRANS_SUM_NIL_EQ);
 
-val TRANS_P_SUM_P_EQ = store_thm ("TRANS_P_SUM_P_EQ",
-  ``!E u E'. TRANS (sum E E) u E' = TRANS E u E'``,
+Theorem TRANS_P_SUM_P_EQ:
+    !E u E'. TRANS (sum E E) u E' = TRANS E u E'
+Proof
     rpt GEN_TAC
  >> EQ_TAC
  >| [ DISCH_TAC \\
       IMP_RES_TAC TRANS_SUM,
       DISCH_TAC \\
-      MATCH_MP_TAC SUM1 >> art [] ]);
+      MATCH_MP_TAC SUM1 >> art [] ]
+QED
 
 val TRANS_P_SUM_P = save_thm
   ("TRANS_P_SUM_P", EQ_IMP_LR TRANS_P_SUM_P_EQ);
@@ -2669,17 +2681,20 @@ QED
 
 val TRANS_PAR = save_thm ("TRANS_PAR", EQ_IMP_LR TRANS_PAR_EQ);
 
-val TRANS_PAR_P_NIL = store_thm ("TRANS_PAR_P_NIL",
-  ``!E u E'. TRANS (par E nil) u E' ==> (?E''. TRANS E u E'' /\ (E' = par E'' nil))``,
+Theorem TRANS_PAR_P_NIL:
+    !E u E'. TRANS (par E nil) u E' ==> (?E''. TRANS E u E'' /\ (E' = par E'' nil))
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_PAR
  >| [ Q.EXISTS_TAC `E1` >> art [],
       IMP_RES_TAC NIL_NO_TRANS,
-      IMP_RES_TAC NIL_NO_TRANS ]);
+      IMP_RES_TAC NIL_NO_TRANS ]
+QED
 
-val TRANS_PAR_NO_SYNCR = store_thm ("TRANS_PAR_NO_SYNCR",
-  ``!(l :'a Label) l'. l <> COMPL l' ==>
-        !E E' E''. ~(TRANS (par (prefix (label l) E) (prefix (label l') E')) tau E'')``,
+Theorem TRANS_PAR_NO_SYNCR:
+    !(l :'a Label) l'. l <> COMPL l' ==>
+        !E E' E''. ~(TRANS (par (prefix (label l) E) (prefix (label l') E')) tau E'')
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_PAR (* 3 sub-goals here *)
  >| [ IMP_RES_TAC TRANS_PREFIX >> IMP_RES_TAC Action_distinct,
@@ -2689,7 +2704,8 @@ val TRANS_PAR_NO_SYNCR = store_thm ("TRANS_PAR_NO_SYNCR",
         (REWRITE_RULE [SYM (ASSUME ``(l'' :'a Label) = l``),
                        SYM (ASSUME ``COMPL (l'' :'a Label) = l'``), COMPL_COMPL_LAB]
                       (ASSUME ``~(l = COMPL (l' :'a Label))``)) \\
-      RW_TAC bool_ss [] ]);
+      RW_TAC bool_ss [] ]
+QED
 
 val RESTR_cases_EQ = save_thm (
    "RESTR_cases_EQ",
@@ -2736,9 +2752,9 @@ QED
 val TRANS_RESTR = save_thm (
    "TRANS_RESTR", EQ_IMP_LR TRANS_RESTR_EQ);
 
-val TRANS_P_RESTR = store_thm (
-   "TRANS_P_RESTR",
-  ``!E u E' L. TRANS (restr L E) u (restr L E') ==> TRANS E u E'``,
+Theorem TRANS_P_RESTR:
+    !E u E' L. TRANS (restr L E) u (restr L E') ==> TRANS E u E'
+Proof
   let
       val thm = REWRITE_RULE [CCS_one_one]
                   (ASSUME ``restr (L :'a Label set) E' = restr L E''``)
@@ -2748,32 +2764,40 @@ val TRANS_P_RESTR = store_thm (
       [ FILTER_ASM_REWRITE_TAC (fn t => t !~ ``(u :'a Action) = tau``) [thm],
         FILTER_ASM_REWRITE_TAC (fn t => t !~ ``(u :'a Action) = label l``) [thm]
       ]
-  end);
+  end
+QED
 
-val RESTR_NIL_NO_TRANS = store_thm ("RESTR_NIL_NO_TRANS",
-  ``!(L :'a Label set) u E. ~(TRANS (restr L nil) u E)``,
+Theorem RESTR_NIL_NO_TRANS:
+    !(L :'a Label set) u E. ~(TRANS (restr L nil) u E)
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_RESTR (* two sub-goals here, but same proofs *)
- >> IMP_RES_TAC NIL_NO_TRANS);
+ >> IMP_RES_TAC NIL_NO_TRANS
+QED
 
-val TRANS_IMP_NO_RESTR_NIL = store_thm ("TRANS_IMP_NO_RESTR_NIL",
-  ``!E u E'. TRANS E u E' ==> !L. ~(E = restr L nil)``,
+Theorem TRANS_IMP_NO_RESTR_NIL:
+    !E u E'. TRANS E u E' ==> !L. ~(E = restr L nil)
+Proof
     rpt STRIP_TAC
  >> ASSUME_TAC (REWRITE_RULE [ASSUME ``E = restr L nil``]
                              (ASSUME ``TRANS E u E'``))
- >> IMP_RES_TAC RESTR_NIL_NO_TRANS);
+ >> IMP_RES_TAC RESTR_NIL_NO_TRANS
+QED
 
-val TRANS_RESTR_NO_NIL = store_thm ("TRANS_RESTR_NO_NIL",
-  ``!E L u E'. TRANS (restr L E) u (restr L E') ==> ~(E = nil)``,
+Theorem TRANS_RESTR_NO_NIL:
+    !E L u E'. TRANS (restr L E) u (restr L E') ==> ~(E = nil)
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_RESTR
  >> ASSUME_TAC (REWRITE_RULE [ASSUME ``E = nil``]
                              (ASSUME ``TRANS E u E''``))
- >> IMP_RES_TAC NIL_NO_TRANS);
+ >> IMP_RES_TAC NIL_NO_TRANS
+QED
 
-val RESTR_LABEL_NO_TRANS = store_thm ("RESTR_LABEL_NO_TRANS",
-  ``!(l :'a Label) L. (l IN L) \/ ((COMPL l) IN L) ==>
-                      (!E u E'. ~(TRANS (restr L (prefix (label l) E)) u E'))``,
+Theorem RESTR_LABEL_NO_TRANS:
+    !(l :'a Label) L. (l IN L) \/ ((COMPL l) IN L) ==>
+                      (!E u E'. ~(TRANS (restr L (prefix (label l) E)) u E'))
+Proof
     rpt STRIP_TAC (* 2 goals here *)
  >| [ (* goal 1 *)
       IMP_RES_TAC TRANS_RESTR >| (* 2 sub-goals here *)
@@ -2804,7 +2828,8 @@ val RESTR_LABEL_NO_TRANS = store_thm ("RESTR_LABEL_NO_TRANS",
                 [REWRITE_RULE [ASSUME ``(u :'a Action) = label l'``, Action_11]
                               (ASSUME ``(u :'a Action) = label l``)]
                 (ASSUME ``~((COMPL (l' :'a Label)) IN L)``))
-              (ASSUME ``(COMPL (l :'a Label)) IN L``)) ] ]);
+              (ASSUME ``(COMPL (l :'a Label)) IN L``)) ] ]
+QED
 
 (* |- !E rf u P.
          relab E rf --u-> P <=>
@@ -2844,11 +2869,13 @@ val TRANS_RELAB = save_thm ("TRANS_RELAB", EQ_IMP_LR TRANS_RELAB_EQ);
 val TRANS_RELAB_labl = save_thm ("TRANS_RELAB_labl",
     Q.GENL [`E`, `labl`] (Q.SPECL [`E`, `RELAB labl`] TRANS_RELAB));
 
-val RELAB_NIL_NO_TRANS = store_thm ("RELAB_NIL_NO_TRANS",
-  ``!(rf :'a Relabeling) u E. ~(TRANS (relab nil rf) u E)``,
+Theorem RELAB_NIL_NO_TRANS:
+    !(rf :'a Relabeling) u E. ~(TRANS (relab nil rf) u E)
+Proof
     rpt STRIP_TAC
  >> IMP_RES_TAC TRANS_RELAB
- >> IMP_RES_TAC NIL_NO_TRANS);
+ >> IMP_RES_TAC NIL_NO_TRANS
+QED
 
 (* NOTE: This is the *ONLY* theorem for which the induction principle of
   ‘TRANS’ is needed. And this theorem (and the next TRANS_PROC) is only needed

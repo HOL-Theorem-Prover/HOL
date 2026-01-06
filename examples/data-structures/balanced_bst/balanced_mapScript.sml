@@ -11,7 +11,7 @@ val _ = temp_delsimps ["lift_disj_eq", "lift_imp_disj"]
 
 val _ = numLib.temp_prefer_num();
 
-Triviality list_rel_lem1:
+Theorem list_rel_lem1[local]:
   !f l l'.
   ~LIST_REL f l l'
   ⇒
@@ -31,7 +31,7 @@ Proof
 QED
 
 val _ = augment_srw_ss [rewrites [listTheory.TAKE_def]]
-Triviality list_rel_lem2:
+Theorem list_rel_lem2[local]:
  !l l'.
   LIST_REL f l l'
   ⇒
@@ -65,7 +65,7 @@ Proof
      full_simp_tac (srw_ss()) [])
 QED
 
-Triviality list_rel_thm0:
+Theorem list_rel_thm0[local]:
  !f l l'.
   LIST_REL f l l' ⇔
   !n.
@@ -82,7 +82,7 @@ Proof
  metis_tac [list_rel_lem1]
 QED
 
-Triviality list_rel_thm:
+Theorem list_rel_thm[local]:
  !f l l'.
   LIST_REL f l l' ⇔
   !n.
@@ -130,11 +130,11 @@ end
 
 val fdom_eq = PROVE [] ``m1 = m2 ⇒ FDOM m1 = FDOM m2``;
 
-Triviality TIMES_MIN: !x y z. x * MIN y z = MIN (x * y) (x * z)
+Theorem TIMES_MIN[local]: !x y z. x * MIN y z = MIN (x * y) (x * z)
 Proof rw [MIN_DEF] >> fs []
 QED
 
-Triviality FCARD_DISJOINT_UNION:
+Theorem FCARD_DISJOINT_UNION[local]:
   !m1 m2.
     DISJOINT (FDOM m1) (FDOM m2) ∨ DISJOINT (FDOM m2) (FDOM m1)
   ⇒
@@ -144,7 +144,7 @@ Proof
  metis_tac [CARD_UNION, FDOM_FINITE, CARD_DEF, ADD_0, INTER_COMM]
 QED
 
-Triviality CARD_DISJOINT_UNION:
+Theorem CARD_DISJOINT_UNION[local]:
   !s1 s2.
     FINITE s1 ∧ FINITE s2
   ⇒
@@ -156,18 +156,18 @@ Proof
  metis_tac [CARD_UNION, CARD_DEF, ADD_0, INTER_COMM]
 QED
 
-Triviality FCARD_DRESTRICT:
+Theorem FCARD_DRESTRICT[local]:
   ∀m s. FCARD (DRESTRICT m s) = CARD (FDOM m ∩ s)
 Proof rw [FCARD_DEF, FDOM_DRESTRICT]
 QED
 
-Triviality DELETE_INTER2:
+Theorem DELETE_INTER2[local]:
   ∀s t x. t ∩ (s DELETE x) = s ∩ t DELETE x
 Proof
  metis_tac [DELETE_INTER, INTER_COMM]
 QED
 
-Triviality POS_CARD_HAS_MEM:
+Theorem POS_CARD_HAS_MEM[local]:
   !s. FINITE s ⇒ 0 < CARD s ⇒ ?x. x ∈ s
 Proof
  Cases_on `s` >> rw [CARD_INSERT] >> metis_tac []
@@ -199,7 +199,7 @@ Theorem key_set_equiv:
 Proof rw [key_set_def] >> metis_tac [good_cmp_def]
 QED
 
-Triviality key_set_nonempty:
+Theorem key_set_nonempty[local]:
   good_cmp cmp ⇒ key_set cmp k ≠ {}
 Proof
   rw [EXTENSION]
@@ -262,7 +262,7 @@ Proof
  \\ res_tac
 QED
 
-Triviality good_cmp_eq_trans:
+Theorem good_cmp_eq_trans[local]:
   good_cmp cmp ∧
   cmp x y = Equal ∧
   cmp y z = Equal ⇒
@@ -812,12 +812,12 @@ End
 
 (* ----------------------- proofs ------------------------ *)
 
-Triviality balanceL'_thm: !k v l r. balanceL k v l r = balanceL' k v l r
+Theorem balanceL'_thm[local]: !k v l r. balanceL k v l r = balanceL' k v l r
 Proof
  ho_match_mp_tac balanceL_ind >> rw [balanceL_def, balanceL'_def]
 QED
 
-Triviality balanceR'_thm: !k v l r. balanceR k v l r = balanceR' k v l r
+Theorem balanceR'_thm[local]: !k v l r. balanceR k v l r = balanceR' k v l r
 Proof
   ho_match_mp_tac balanceR_ind >> rw [balanceR_def, balanceR'_def]
 QED
@@ -852,7 +852,7 @@ Definition key_ordered_def:
   key_ordered cmp k r res)
 End
 
-Triviality key_ordered_to_fmap:
+Theorem key_ordered_to_fmap[local]:
 !cmp k t res.
   good_cmp cmp ⇒
     (key_ordered cmp k t res
@@ -901,7 +901,7 @@ Proof
  metis_tac [cmp_thms]
 QED
 
-Triviality inv_props:
+Theorem inv_props[local]:
 !cmp s k v l r.
   good_cmp cmp ∧
   invariant cmp (Bin s k v l r)
@@ -915,14 +915,14 @@ Proof
  rfs [key_set_cmp_thm]
 QED
 
-Triviality structure_size_thm:
+Theorem structure_size_thm[local]:
   !cmp t. invariant cmp t ⇒ size t = structure_size t
 Proof
  Cases_on `t` >>
  rw [size_def, invariant_def, structure_size_def]
 QED
 
-Triviality structure_size_to_fmap:
+Theorem structure_size_to_fmap[local]:
   !cmp t. good_cmp cmp ∧ invariant cmp t ⇒
           FCARD (to_fmap cmp t) = structure_size t
 Proof
@@ -964,7 +964,7 @@ Proof
  metis_tac [cmp_thms]
 QED
 
-Triviality member_eq_lookup:
+Theorem member_eq_lookup[local]:
   ∀cmp k t. member cmp k t = IS_SOME (lookup cmp k t)
 Proof
   Induct_on ‘t’ \\ gvs [member_def,lookup_def]
@@ -1099,11 +1099,11 @@ almost_balancedR l r =
     2 * r < (2 * delta + 3) * l + 2
 End
 
-Triviality balanced_lem1: !l r. l + r ≤ 1 ⇒ balanced l r
+Theorem balanced_lem1[local]: !l r. l + r ≤ 1 ⇒ balanced l r
 Proof rw [balanced_def]
 QED
 
-Triviality balanced_lem2:
+Theorem balanced_lem2[local]:
   !l r.
     ¬(l > delta * r) ∧
     almost_balancedL l r ∧
@@ -1114,7 +1114,7 @@ Proof rw [almost_balancedL_def, balanced_def, NOT_LESS_EQUAL, NOT_GREATER,
           TIMES_MIN, delta_def]
 QED
 
-Triviality balanced_lem3:
+Theorem balanced_lem3[local]:
   !b b0 r.
      almost_balancedL (b + b0 + 1) r ∧
      b + b0 + 1 > delta * r ∧
@@ -1127,7 +1127,7 @@ Proof
   rw [almost_balancedL_def, balanced_def, TIMES_MIN, delta_def, ratio_def]
 QED
 
-Triviality balanced_lem4:
+Theorem balanced_lem4[local]:
 !b b' b0' r.
   almost_balancedL (b + b' + b0' + 2) r ∧
   b + b' + b0' + 2 > delta * r ∧
@@ -1142,7 +1142,7 @@ Proof
  rw [almost_balancedL_def, balanced_def, TIMES_MIN, delta_def, ratio_def]
 QED
 
-Triviality balanced_lem5:
+Theorem balanced_lem5[local]:
 !l r.
    ¬(r > delta * l) ∧ almost_balancedR l r
   ⇒
@@ -1151,7 +1151,7 @@ Proof rw [almost_balancedR_def, balanced_def, NOT_LESS_EQUAL, NOT_GREATER,
           TIMES_MIN, delta_def]
 QED
 
-Triviality balanced_lem6:
+Theorem balanced_lem6[local]:
   !b b0 l.
     almost_balancedR l (b + b0 + 1) ∧
     b + b0 + 1 > delta * l ∧
@@ -1163,7 +1163,7 @@ Proof
   rw [almost_balancedR_def, balanced_def, TIMES_MIN, delta_def, ratio_def]
 QED
 
-Triviality balanced_lem7:
+Theorem balanced_lem7[local]:
   !b b0 b0' l b'.
     almost_balancedR l (b' + b0 + b0' + 2) ∧
     b' + b0 + b0' + 2 > delta * l ∧
@@ -1178,7 +1178,7 @@ Proof
  rw [almost_balancedR_def, balanced_def, TIMES_MIN, delta_def, ratio_def]
 QED
 
-Triviality singleR_thm:
+Theorem singleR_thm[local]:
 !k v r cmp n k' v' b b0.
   good_cmp cmp ∧
   key_ordered cmp k (Bin n k' v' b b0) Greater ∧
@@ -1210,7 +1210,7 @@ Proof
                 FUNION_ASSOC])
 QED
 
-Triviality doubleR_thm:
+Theorem doubleR_thm[local]:
 !k v r cmp n k' v' b b0.
   good_cmp cmp ∧
   key_ordered cmp k (Bin n k' v' b b0) Greater ∧
@@ -1265,7 +1265,7 @@ Proof
      \\ metis_tac [FUPDATE_COMMUTES])
 QED
 
-Triviality rotateR_thm:
+Theorem rotateR_thm[local]:
 !k v l r cmp.
   good_cmp cmp ∧
   key_ordered cmp k l Greater ∧
@@ -1286,7 +1286,7 @@ Proof
   metis_tac [singleR_thm, doubleR_thm, ADD_COMM, NOT_ZERO_LT_ZERO, GREATER_DEF]
 QED
 
-Triviality balanceL_balL:
+Theorem balanceL_balL[local]:
 !k v l r cmp.
   good_cmp cmp ∧
   invariant cmp l ∧
@@ -1318,7 +1318,7 @@ Proof
  gvs []
 QED
 
-Triviality balanceL_thm:
+Theorem balanceL_thm[local]:
 !k v l r cmp.
   good_cmp cmp ∧
   key_ordered cmp k l Greater ∧
@@ -1340,7 +1340,7 @@ Proof
  metis_tac [rotateR_thm]
 QED
 
-Triviality singleL_thm:
+Theorem singleL_thm[local]:
 !k v l cmp n k' v' b b0.
   good_cmp cmp ∧
   key_ordered cmp k (Bin n k' v' b b0) Less ∧
@@ -1371,7 +1371,7 @@ Proof
      metis_tac [to_fmap_key_set, key_set_cmp_thm, cmp_thms, FUPDATE_COMMUTES])
 QED
 
-Triviality doubleL_thm:
+Theorem doubleL_thm[local]:
 !k v l cmp n k' v' b b0.
   good_cmp cmp ∧
   key_ordered cmp k (Bin n k' v' b b0) Less ∧
@@ -1431,7 +1431,7 @@ Proof
      \\ metis_tac [FUPDATE_COMMUTES])
 QED
 
-Triviality rotateL_thm:
+Theorem rotateL_thm[local]:
 !k v l r cmp.
   good_cmp cmp ∧
   key_ordered cmp k r Less ∧
@@ -1452,7 +1452,7 @@ Proof
  metis_tac [singleL_thm, doubleL_thm, ADD_COMM, NOT_ZERO_LT_ZERO, GREATER_DEF]
 QED
 
-Triviality balanceR_balR:
+Theorem balanceR_balR[local]:
 !k v l r cmp.
   good_cmp cmp ∧
   invariant cmp l ∧
@@ -1479,7 +1479,7 @@ Proof
  rw []
 QED
 
-Triviality balanceR_thm:
+Theorem balanceR_thm[local]:
 !k v l r cmp.
   good_cmp cmp ∧
   key_ordered cmp k r Less ∧
@@ -1500,7 +1500,7 @@ Proof
  metis_tac [rotateL_thm]
 QED
 
-Triviality almost_balancedL_thm:
+Theorem almost_balancedL_thm[local]:
   !l r.
     balanced l r
    ⇒
@@ -1511,7 +1511,7 @@ Proof
  rw [MIN_DEF]
 QED
 
-Triviality almost_balancedR_thm:
+Theorem almost_balancedR_thm[local]:
   !l r.
     balanced l r
    ⇒
@@ -1961,7 +1961,7 @@ Proof
      metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm])
 QED
 
-Triviality FLOOKUP_EXT' = FLOOKUP_EXT |> SIMP_RULE (srw_ss()) [FUN_EQ_THM];
+Theorem FLOOKUP_EXT'[local] = FLOOKUP_EXT |> SIMP_RULE (srw_ss()) [FUN_EQ_THM];
 
 Theorem glue_thm:
  !l r.
@@ -2135,7 +2135,7 @@ Definition restrict_domain_def:
     DRESTRICT m (IMAGE (key_set cmp) (restrict_set cmp lo hi))
 End
 
-Triviality restrict_domain_union:
+Theorem restrict_domain_union[local]:
   restrict_domain cmp lo hi (FUNION m1 m2) =
     FUNION (restrict_domain cmp lo hi m1) (restrict_domain cmp lo hi m2)
 Proof
@@ -2143,7 +2143,7 @@ Proof
  rw [FLOOKUP_DRESTRICT, FLOOKUP_FUNION]
 QED
 
-Triviality restrict_domain_update:
+Theorem restrict_domain_update[local]:
   good_cmp cmp
  ⇒
   restrict_domain cmp lo hi (m1 |+ (key_set cmp k,v)) =
@@ -2161,7 +2161,7 @@ Proof
  metis_tac [cmp_thms |> CONJUNCTS |> last]
 QED
 
-Triviality restrict_domain_FMERGE_WITH_KEY:
+Theorem restrict_domain_FMERGE_WITH_KEY[local]:
   restrict_domain cmp lo hi (FMERGE_WITH_KEY f m1 m2) =
     FMERGE_WITH_KEY f (restrict_domain cmp lo hi m1) (restrict_domain cmp lo hi m2)
 Proof
@@ -2175,7 +2175,7 @@ Definition bounded_root_def:
     !s k v l r. t = Bin s k v l r ⇒ k ∈ restrict_set cmp lk hk
 End
 
-Triviality trim_thm:
+Theorem trim_thm[local]:
 !t lk hk cmp.
   good_cmp cmp ∧
   invariant cmp t
@@ -2213,7 +2213,7 @@ Proof
  metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm, to_fmap_key_set]
 QED
 
-Triviality link_balanced_lem1:
+Theorem link_balanced_lem1[local]:
 !r rz l.
   balanced r rz ∧
   delta * (l + 1) < r + (rz + 1)
@@ -2224,7 +2224,7 @@ Proof
  simp [MIN_DEF] >> decide_tac
 QED
 
-Triviality link_balanced_lem2:
+Theorem link_balanced_lem2[local]:
 !r l ly.
   balanced ly l ∧
   ¬(delta * (l + (ly + 1)) < r + 1) ∧
@@ -2236,7 +2236,7 @@ Proof
  simp [MIN_DEF] >> decide_tac
 QED
 
-Triviality link_balanced_lem3:
+Theorem link_balanced_lem3[local]:
 !r l.
   ¬(delta * (l + 1) < r + 1) ∧
   ¬(delta * (r + 1) < l + 1)
@@ -2247,7 +2247,7 @@ Proof
  simp [MIN_DEF] >> decide_tac
 QED
 
-Triviality link2_balanced_lem:
+Theorem link2_balanced_lem[local]:
   balanced lx l ∧
   balanced r ry ∧
   delta * (l + lx + 1) < r + ry + 1 ⇒
@@ -2257,7 +2257,7 @@ Proof
   simp [MIN_DEF] >> decide_tac
 QED
 
-Triviality link2_balanced_lem2:
+Theorem link2_balanced_lem2[local]:
   balanced lx l ∧
   balanced r ry ∧
   ¬(delta * (l + lx + 1) < r + ry + 1) ∧
@@ -2268,7 +2268,7 @@ Proof
   simp [MIN_DEF] >> decide_tac
 QED
 
-Triviality link_thm: (* slow *)
+Theorem link_thm[local]: (* slow *)
 !k v l r.
   good_cmp cmp ∧
   invariant cmp l ∧
@@ -2369,7 +2369,7 @@ Proof
      to_fmap_tac)
 QED
 
-Triviality link2_thm: (* very slow *)
+Theorem link2_thm[local]: (* very slow *)
   ∀l r.
     good_cmp cmp ∧
     invariant cmp l ∧
@@ -2437,7 +2437,7 @@ Proof
   \\ metis_tac [key_set_cmp2_thm, to_fmap_key_set, key_set_cmp_thm, cmp_thms]
 QED
 
-Triviality filter_lt_help_thm:
+Theorem filter_lt_help_thm[local]:
 !cmp bound t.
   good_cmp cmp ∧
   invariant cmp t
@@ -2469,7 +2469,7 @@ Proof
      to_fmap_tac)
 QED
 
-Triviality filterLt_thm:
+Theorem filterLt_thm[local]:
 !cmp bound t.
   good_cmp cmp ∧
   invariant cmp t
@@ -2489,7 +2489,7 @@ Proof
  rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def]
 QED
 
-Triviality filter_gt_help_thm:
+Theorem filter_gt_help_thm[local]:
 !cmp bound t.
   good_cmp cmp ∧
   invariant cmp t
@@ -2523,7 +2523,7 @@ Proof
      to_fmap_tac)
 QED
 
-Triviality filterGt_thm:
+Theorem filterGt_thm[local]:
 !cmp bound t.
   good_cmp cmp ∧
   invariant cmp t
@@ -2544,14 +2544,14 @@ Proof
  rw [restrict_domain_def, restrict_set_def, option_cmp2_def, option_cmp_def]
 QED
 
-Triviality if_some_none_eq:
+Theorem if_some_none_eq[local]:
   (if b1 then SOME x1 else NONE) = (if b2 then SOME x2 else NONE) ⇔
   (b1 = b2) ∧ (b1 ∧ b2 ⇒ x1 = x2)
 Proof
   Cases_on ‘b1’ \\ Cases_on ‘b2’ \\ gvs []
 QED
 
-Triviality restrict_domain_partition: (* slow *)
+Theorem restrict_domain_partition[local]: (* slow *)
 !cmp x l h t1 t2.
   good_cmp cmp ∧
   x ∈ restrict_set cmp l h ∧
@@ -2576,7 +2576,7 @@ Proof
  metis_tac [cmp_thms, key_set_eq, EXTENSION]
 QED
 
-Triviality restrict_domain_union_swap:
+Theorem restrict_domain_union_swap[local]:
  good_cmp cmp
 ⇒
   a ⊌
@@ -2598,7 +2598,7 @@ Proof
  metis_tac [cmp_thms, key_set_eq]
 QED
 
-Triviality restrict_domain_extend:
+Theorem restrict_domain_extend[local]:
   good_cmp cmp ∧
   invariant cmp (Bin s kx x t1 t1') ∧
   kx ∈ restrict_set cmp blo bhi
@@ -2620,7 +2620,7 @@ Proof
  metis_tac [cmp_thms, key_set_eq, key_set_cmp_thm, to_fmap_key_set]
 QED
 
-Triviality restrict_domain_combine:
+Theorem restrict_domain_combine[local]:
   good_cmp cmp ∧
   key_set cmp kx ≠ k ∧
   kx ∈ restrict_set cmp blo bhi
@@ -2646,7 +2646,7 @@ Definition bounded_all_def:
     bounded_all cmp lk hk t2)
 End
 
-Triviality bounded_all_shrink1:
+Theorem bounded_all_shrink1[local]:
  !t blo bhi.
    good_cmp cmp ∧
    bounded_all cmp blo bhi t ∧
@@ -2662,7 +2662,7 @@ Proof
  metis_tac []
 QED
 
-Triviality bounded_all_shrink2:
+Theorem bounded_all_shrink2[local]:
   !t blo bhi.
      good_cmp cmp ∧
      bounded_all cmp blo bhi t ∧
@@ -2678,7 +2678,7 @@ Proof
  metis_tac []
 QED
 
-Triviality bounded_restrict_id:
+Theorem bounded_restrict_id[local]:
 !t.
   good_cmp cmp ∧
   bounded_all cmp blo bhi t
@@ -2692,7 +2692,7 @@ Proof
  fs [restrict_domain_def, restrict_set_def, option_cmp_def, option_cmp2_def]
 QED
 
-Triviality restrict_domain_empty:
+Theorem restrict_domain_empty[local]:
 good_cmp cmp ⇒
   restrict_domain cmp blo (SOME kx)
     (restrict_domain cmp (SOME kx) bhi t) = FEMPTY ∧
@@ -2705,7 +2705,7 @@ Proof
  metis_tac [good_cmp_def, comparison_distinct, key_set_eq]
 QED
 
-Triviality hedgeUnion_thm: (* slow *)
+Theorem hedgeUnion_thm[local]: (* slow *)
 !cmp blo bhi t1 t2.
   good_cmp cmp ∧
   invariant cmp t1 ∧
@@ -2825,7 +2825,7 @@ Proof
  metis_tac [restrict_domain_combine])
 QED
 
-Triviality bounded_all_NONE:   ∀cmp t. bounded_all cmp NONE NONE t
+Theorem bounded_all_NONE[local]:   ∀cmp t. bounded_all cmp NONE NONE t
 Proof
  Induct_on `t` >>
  rw [bounded_all_def, restrict_set_def, option_cmp_def, option_cmp2_def]
@@ -2865,7 +2865,7 @@ Proof
   rw[lookup_thm,union_thm,FLOOKUP_FUNION]
 QED
 
-Triviality hedgeUnionWithKey_thm: (* slowish *)
+Theorem hedgeUnionWithKey_thm[local]: (* slowish *)
   ∀cmp f blo bhi t1 t2.
     good_cmp cmp ∧
     invariant cmp t1 ∧
@@ -3059,7 +3059,7 @@ Proof
   strip_tac \\ simp [unionWith_def, lookup_unionWithKey]
 QED
 
-Triviality EXT2:
+Theorem EXT2[local]:
  !s1 s2. s1 = s2 ⇔ (!k v. (k,v) ∈ s1 ⇔ (k,v) ∈ s2)
 Proof
  rw [EXTENSION] >>
@@ -3073,7 +3073,7 @@ Definition lift_key_def:
 lift_key cmp kvs = IMAGE (\(k,v). (key_set cmp k, v)) kvs
 End
 
-Triviality toAscList_helper: (* slowish *)
+Theorem toAscList_helper[local]: (* slowish *)
 ∀cmp l t.
   good_cmp cmp ∧
   invariant cmp t ∧
@@ -3244,7 +3244,7 @@ Proof
  metis_tac []
 QED
 
-Triviality compare_thm1: (* slowish *)
+Theorem compare_thm1[local]: (* slowish *)
  !cmp1 cmp2 t1 t2.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
@@ -3300,21 +3300,21 @@ Proof
      metis_tac [cmp_thms])
 QED
 
-Triviality NONE_lem:
+Theorem NONE_lem[local]:
  x = NONE ⇔ ¬?y. x = SOME y
 Proof
  Cases_on `x` >>
  rw []
 QED
 
-Triviality pair_cmp_lem:
+Theorem pair_cmp_lem[local]:
  !cmp1 cmp2. pair_cmp cmp1 cmp2 (x1,x2) (y1,y2) = Equal ⇔ cmp1 x1 y1 = Equal ∧ cmp2 x2 y2 = Equal
 Proof
  rw [pair_cmp_def] >>
  every_case_tac
 QED
 
-Triviality strict_sorted_unique:
+Theorem strict_sorted_unique[local]:
  !cmp l x1 y1 x2 y2.
   good_cmp cmp ∧
   SORTED (λ(x,y) (x',y'). cmp x x' = Less) l ∧
@@ -3332,7 +3332,7 @@ Proof
  metis_tac [cmp_thms]
 QED
 
-Triviality strict_sorted_eq_el:
+Theorem strict_sorted_eq_el[local]:
  !cmp l m n.
   good_cmp cmp ∧
   SORTED (λ(x,y) (x',y'). cmp x x' = Less) l ∧
@@ -3367,7 +3367,7 @@ Proof
      metis_tac [cmp_thms])
 QED
 
-Triviality compare_lem2:
+Theorem compare_lem2[local]:
  !cmp1 cmp2 n l1 l2.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
@@ -3489,7 +3489,7 @@ Proof
          metis_tac [cmp_thms]))
 QED
 
-Triviality compare_thm2:
+Theorem compare_thm2[local]:
  !cmp1 cmp2 t1 t2.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
@@ -3694,7 +3694,7 @@ Proof
      metis_tac [cmp_thms, key_set_cmp_def, key_set_cmp_thm])
 QED
 
-Triviality submap'_thm: (* slowish *)
+Theorem submap'_thm[local]: (* slowish *)
  !cmp f t1 t2.
   good_cmp cmp ∧
   invariant cmp t1 ∧
@@ -3900,7 +3900,7 @@ Definition map_keys_def:
 map_keys cmp f t = fromList cmp (MAP (\(k,v). (f k, v)) (toAscList t))
 End
 
-Triviality in_lift_key:
+Theorem in_lift_key[local]:
  !cmp k v l.
   good_cmp cmp ∧
   SORTED (λ(x,y:'a) (x',y':'a). cmp x x' = Less) l ∧
@@ -3922,7 +3922,7 @@ Proof
  metis_tac [cmp_thms]
 QED
 
-Triviality bigunion_key_sets: (* slow *)
+Theorem bigunion_key_sets[local]: (* slow *)
  !cmp1.
   good_cmp cmp1 ∧
   good_cmp cmp2 ∧
@@ -3957,7 +3957,7 @@ Proof
  \\ metis_tac [good_cmp_eq_trans,good_cmp_eq_sym]
 QED
 
-Triviality image_lem:
+Theorem image_lem[local]:
  good_cmp cmp1
  ⇒
  IMAGE (λx. key_set cmp2 (f x)) (key_set cmp1 k'') =

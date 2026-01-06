@@ -155,13 +155,13 @@ val ultraproduct_valt = save_thm(
 
 
 
-val ultraproduct_world_constant = store_thm(
-  "ultraproduct_world_constant",
-  ``!U J MS w.
+Theorem ultraproduct_world_constant:
+    !U J MS w.
   ultrafilter U J ⇒
   (∀i. i ∈ J ⇒ MS i = M) ⇒
   ({fw | Uequiv U J (models2worlds MS) (λi. w) fw} ∈ (ultraproduct_model U J MS).frame.world
-  <=> w ∈ M.frame.world)``,
+  <=> w ∈ M.frame.world)
+Proof
   rw[EQ_IMP_THM]
   >- (`?i. i IN J`
        by metis_tac[ultrafilter_def,proper_filter_def,filter_def,
@@ -178,15 +178,16 @@ val ultraproduct_world_constant = store_thm(
   >- (rw[ultraproduct_world] (* 2 *)
      >- metis_tac[MEMBER_NOT_EMPTY]
      >- (qexists_tac `\i.w` >> rw[Uequiv_def,models2worlds_def,Cart_prod_def] >>
-        simp[EXTENSION] >> metis_tac[])));
+        simp[EXTENSION] >> metis_tac[]))
+QED
 
 
 
-val ultrapower_valt_well_defined = store_thm(
-  "ultrapower_valt_well_defined",
-  ``!U J Ms. ultrafilter U J ==> !f g. Uequiv U J (models2worlds Ms) f g ==>
+Theorem ultrapower_valt_well_defined:
+    !U J Ms. ultrafilter U J ==> !f g. Uequiv U J (models2worlds Ms) f g ==>
              ({i | i IN J /\ (f i) IN (Ms i).valt p} IN U <=>
-             {i | i IN J /\ (g i) IN (Ms i).valt p} IN U)``,
+             {i | i IN J /\ (g i) IN (Ms i).valt p} IN U)
+Proof
   rw[Uequiv_def,models2worlds_def,Cart_prod_def] >> eq_tac >> rw[]
   >- (`{i | i IN J /\ f i = g i} ∩ {i | i IN J /\ f i IN (Ms i).valt p} IN U`
        by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
@@ -201,7 +202,8 @@ val ultrapower_valt_well_defined = store_thm(
      `({i | i IN J /\ f i = g i} ∩ {i | i IN J /\ g i IN (Ms i).valt p}) ⊆
      {i | i IN J /\ f i IN (Ms i).valt p}`
         suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
-     rw[INTER_DEF,SUBSET_DEF] >> metis_tac[]));
+     rw[INTER_DEF,SUBSET_DEF] >> metis_tac[])
+QED
 
 
 Theorem Los_modal_thm:
@@ -523,10 +525,10 @@ QED
 
 
 
-val prop_2_71 = store_thm(
-  "prop_2_71",
-  ``!U J Ms. (!i. i IN J ==> (Ms i) = M) /\ ultrafilter U J ==>
-         !phi w. satis (ultraproduct_model U J Ms) {fw | Uequiv U J (models2worlds Ms) (\i.w) fw} phi <=> satis M w phi``,
+Theorem prop_2_71:
+    !U J Ms. (!i. i IN J ==> (Ms i) = M) /\ ultrafilter U J ==>
+         !phi w. satis (ultraproduct_model U J Ms) {fw | Uequiv U J (models2worlds Ms) (\i.w) fw} phi <=> satis M w phi
+Proof
   rw[EQ_IMP_THM] (* 2 *)
   >- (`!phi fc.
               fc IN (ultraproduct_model U J Ms).frame.world ==>
@@ -561,7 +563,8 @@ val prop_2_71 = store_thm(
         metis_tac[ultrafilter_def,proper_filter_def,filter_def,MEMBER_NOT_EMPTY])
      >- (`{i | i IN J /\ satis (Ms i) w phi} = J`
           suffices_by metis_tac[ultrafilter_def,proper_filter_def,filter_def] >>
-        rw[EXTENSION,EQ_IMP_THM])));
+        rw[EXTENSION,EQ_IMP_THM]))
+QED
 
 
 

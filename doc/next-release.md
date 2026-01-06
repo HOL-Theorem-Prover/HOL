@@ -14,8 +14,9 @@ Contents
 -   [Bugs fixed](#bugs-fixed)
 -   [New theories](#new-theories)
 -   [New tools](#new-tools)
--   [New Examples](#new-examples)
+-   [New examples](#new-examples)
 -   [Incompatibilities](#incompatibilities)
+-   [Deprecations](#deprecations)
 
 New features
 ------------
@@ -50,6 +51,30 @@ Incompatibilities
 -   The `examples/balanced_bst` directory has been renamed `examples/data-structures/balanced_bst`;
     the script file `examples/zipper/zipperScript.sml` has been moved to `examples/data-structures`;
     the script file `examples/balanced_bst/AVL_treeScript.sml` has been moved to a directory of its own at `examples/data-structures/AVL_tree`.
+
+-   The left-hand side of `LIST_REL_MAP2` has been changed from `LIST_REL (\a b. R a b) l1 (MAP f l2)` to
+    `LIST_REL R l1 (MAP f l2)`. We do not expect this to break proof scripts, but document this change here just in case.
+
+-   A few theorems (ended with `'`) in `real_sigmaTheory` are renamed to avoid naming conflicts
+    with `realaxTheory`, or to better reflect their nature (see the table below for details.)
+    In particular, users are recommended to *not* directly opening `realaxTheory` (an intermediate
+    theory for constructing real numbers), in which all useful theorems should be also covered by
+   `realTheory` (under same or different theorem names).
+  
+|  Old name       | New name           | Statements                                    |
+| --------------- | ------------------ | --------------------------------------------- |
+| `REAL_LE_SUP'`  | `REAL_LE_SUP2`     | `!s a b y. y IN s /\ a <= y /\ (!x. x IN s ==> x <= b) ==> a <= sup s` |
+| `REAL_LE_MUL'`  | `REAL_LE_MUL_NEG`  | `!x y. x <= 0 /\ y <= 0 ==> 0 <= x * y`       |
+| `REAL_LT_MUL'`  | `REAL_LT_MUL_NEG`  | `!x y. x < 0 /\ y < 0 ==> 0 < x * y`          |
+| `REAL_LT_LMUL'` | `REAL_LT_LMUL_NEG` | `!x y z. x < 0 ==> (x * y < x * z <=> z < y)` | 
+| `REAL_LT_RMUL'` | `REAL_LT_RMUL_NEG` | `!x y z. z < 0 ==> (x * z < y * z <=> y < x)` |
+
+Deprecations
+------------
+
+-   `Triviality` has been deprecated and may be removed in the future.
+    Please update theorems of the form `Triviality foo` and `Triviality foo[..]` to
+    `Theorem foo[local]` and `Theorem foo[local,..]` respectively to avoid future breakage.
 
 * * * * *
 

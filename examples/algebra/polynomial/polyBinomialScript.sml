@@ -336,13 +336,14 @@ val poly_binomial_thm = save_thm("poly_binomial_thm",
    Ring r ==> prime (char r) ==> !x y. poly x /\ poly y ==>
    ((x + y) ** char (PolyRing r) = x ** char (PolyRing r) + y ** char (PolyRing r))
 *)
-val poly_freshman_thm = store_thm(
-  "poly_freshman_thm",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !x y. poly x /\ poly y ==> ((x + y) ** (char r) = x ** (char r) + y ** (char r))``,
+Theorem poly_freshman_thm:
+    !r:'a ring. Ring r /\ prime (char r) ==> !x y. poly x /\ poly y ==> ((x + y) ** (char r) = x ** (char r) + y ** (char r))
+Proof
   rpt strip_tac >>
   `Ring (PolyRing r)` by rw_tac std_ss[poly_add_mult_ring] >>
   `char (PolyRing r) = char r` by rw_tac std_ss[poly_ring_char] >>
-  metis_tac [ring_freshman_thm, poly_ring_element]);
+  metis_tac [ring_freshman_thm, poly_ring_element]
+QED
 
 (* Theorem: Ring r /\ prime (char r) ==>
             !x y. poly x /\ poly y ==> ((x - y) ** char r = x ** char r - y ** char r) *)
@@ -353,14 +354,15 @@ val poly_freshman_thm = store_thm(
    Ring r /\ prime (char r) ==> !x y. x IN R /\ y IN R ==>
    ((x - y) ** char r = x ** char r - y ** char r)
 *)
-val poly_freshman_thm_sub = store_thm(
-  "poly_freshman_thm_sub",
-  ``!r:'a ring. Ring r /\ prime (char r) ==>
-   !x y. poly x /\ poly y ==> ((x - y) ** char r = x ** char r - y ** char r)``,
+Theorem poly_freshman_thm_sub:
+    !r:'a ring. Ring r /\ prime (char r) ==>
+   !x y. poly x /\ poly y ==> ((x - y) ** char r = x ** char r - y ** char r)
+Proof
   rpt strip_tac >>
   `Ring (PolyRing r)` by rw_tac std_ss[poly_add_mult_ring] >>
   `char (PolyRing r) = char r` by rw_tac std_ss[poly_ring_char] >>
-  metis_tac [ring_freshman_thm_sub, poly_ring_element, poly_exp_poly, poly_sub_alt]);
+  metis_tac [ring_freshman_thm_sub, poly_ring_element, poly_exp_poly, poly_sub_alt]
+QED
 
 (* Theorem: [Freshman's Theorem, power form]
             Ring r /\ prime (char r) ==>
@@ -373,14 +375,15 @@ val poly_freshman_thm_sub = store_thm(
    !n. (x + y) ** (char (PolyRing r) ** n)
      = x ** (char (PolyRing r) ** n) + y ** (char (PolyRing r) ** n)
 *)
-val poly_freshman_all = store_thm(
-  "poly_freshman_all",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !x y. poly x /\ poly y ==>
-   !n. (x + y) ** (char r ** n) = x ** (char r ** n) + y ** (char r ** n)``,
+Theorem poly_freshman_all:
+    !r:'a ring. Ring r /\ prime (char r) ==> !x y. poly x /\ poly y ==>
+   !n. (x + y) ** (char r ** n) = x ** (char r ** n) + y ** (char r ** n)
+Proof
   rpt strip_tac >>
   `Ring (PolyRing r)` by rw_tac std_ss[poly_add_mult_ring] >>
   `char (PolyRing r) = char r` by rw_tac std_ss[poly_ring_char] >>
-  metis_tac [ring_freshman_all, poly_ring_property]);
+  metis_tac [ring_freshman_all, poly_ring_property]
+QED
 
 (* Theorem: [Freshman's Theorem, power form and subtraction form]
             Ring r /\ prime (char r) ==>
@@ -393,14 +396,15 @@ val poly_freshman_all = store_thm(
    !n. (x - y) ** (char (PolyRing r) ** n)
      = x ** (char (PolyRing r) ** n) - y ** (char (PolyRing r) ** n)
 *)
-val poly_freshman_all_sub = store_thm(
-  "poly_freshman_all_sub",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !x y. poly x /\ poly y ==>
-   !n. (x - y) ** (char r ** n) = x ** (char r ** n) - y ** (char r ** n)``,
+Theorem poly_freshman_all_sub:
+    !r:'a ring. Ring r /\ prime (char r) ==> !x y. poly x /\ poly y ==>
+   !n. (x - y) ** (char r ** n) = x ** (char r ** n) - y ** (char r ** n)
+Proof
   rpt strip_tac >>
   `Ring (PolyRing r)` by rw_tac std_ss[poly_add_mult_ring] >>
   `char (PolyRing r) = char r` by rw_tac std_ss[poly_ring_char] >>
-  metis_tac [ring_freshman_all_sub, poly_ring_element, poly_exp_poly, poly_sub_alt]);
+  metis_tac [ring_freshman_all_sub, poly_ring_element, poly_exp_poly, poly_sub_alt]
+QED
 
 (* Theorem: [Fermat's Little Theorem]
             Ring r /\ prime (char r) ==> !c. |c| ** (char r) = |c| *)
@@ -410,13 +414,14 @@ val poly_freshman_all_sub = store_thm(
    The result follows                by ring_fermat_thm,
    Ring r /\ prime (char r) ==> !n. ##n ** char r = ##n
 *)
-val poly_fermat_thm = store_thm(
-  "poly_fermat_thm",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !c:num. |c| ** (char r) = |c|``,
+Theorem poly_fermat_thm:
+    !r:'a ring. Ring r /\ prime (char r) ==> !c:num. |c| ** (char r) = |c|
+Proof
   rpt strip_tac >>
   `Ring (PolyRing r)` by rw_tac std_ss[poly_add_mult_ring] >>
   `char (PolyRing r) = char r` by rw_tac std_ss[poly_ring_char] >>
-  metis_tac [ring_fermat_thm]);
+  metis_tac [ring_fermat_thm]
+QED
 
 (* Theorem: Ring r /\ prime (char r) ==> (X + |c|) ** (char r) = X ** (char r) + |c| *)
 (* Proof:
@@ -425,20 +430,22 @@ val poly_fermat_thm = store_thm(
     = X ** p + |c| ** p     by poly_freshman_thm
     = X ** p + |c|          by poly_fermat_thm
 *)
-val poly_freshman_fermat = store_thm(
-  "poly_freshman_fermat",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !c:num. (X + |c|) ** (char r) = X ** (char r) + |c|``,
-  rw[poly_freshman_thm, poly_fermat_thm, poly_sum_num_poly]);
+Theorem poly_freshman_fermat:
+    !r:'a ring. Ring r /\ prime (char r) ==> !c:num. (X + |c|) ** (char r) = X ** (char r) + |c|
+Proof
+  rw[poly_freshman_thm, poly_fermat_thm, poly_sum_num_poly]
+QED
 
 (* Theorem: FiniteField r ==> !c:num. (X + |c|) ** (char r) = X ** (char r) + |c| *)
 (* Proof:
    Note prime (char r)    by finite_field_char
    The result follows     by poly_freshman_fermat
 *)
-val poly_freshman_fermat_field = store_thm(
-  "poly_freshman_fermat_field",
-  ``!r:'a field. FiniteField r ==> !c:num. (X + |c|) ** (char r) = X ** (char r) + |c|``,
-  rw_tac std_ss[poly_freshman_fermat, finite_field_char, finite_field_is_field, field_is_ring]);
+Theorem poly_freshman_fermat_field:
+    !r:'a field. FiniteField r ==> !c:num. (X + |c|) ** (char r) = X ** (char r) + |c|
+Proof
+  rw_tac std_ss[poly_freshman_fermat, finite_field_char, finite_field_is_field, field_is_ring]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Weak Functions and Lists.                                                 *)
@@ -478,12 +485,13 @@ val poly_weak_list_cons = save_thm("poly_weak_list_cons", poly_weak_list_def |> 
    Step case: plist s ==> plist (SNOC p s) ==> !h. plist (h::s) ==> plist (SNOC p (h::s))
      True since SNOC p (h::s) = h :: SNOC p s   by SNOC and induction hypothesis
 *)
-val poly_weak_list_SNOC = store_thm(
-  "poly_weak_list_SNOC",
-  ``!r:'a ring. !p s. weak p /\ plist s ==> plist (SNOC p s)``,
+Theorem poly_weak_list_SNOC:
+    !r:'a ring. !p s. weak p /\ plist s ==> plist (SNOC p s)
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r ==> !f. wfun f ==> !n. plist (GENLIST f n) *)
 (* Proof:
@@ -498,13 +506,14 @@ val poly_weak_list_SNOC = store_thm(
        and plist (GENLIST f n)               by induction hypothesis
         so plist (SNOC (f n) (GENLIST f n))  by poly_weak_list_SNOC
 *)
-val poly_weak_list_from_weak_fun = store_thm(
-  "poly_weak_list_from_weak_fun",
-  ``!r:'a ring. Ring r ==> !f. wfun f ==> !n. plist (GENLIST f n)``,
+Theorem poly_weak_list_from_weak_fun:
+    !r:'a ring. Ring r ==> !f. wfun f ==> !n. plist (GENLIST f n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  metis_tac[GENLIST, weak_fun_def, poly_weak_list_SNOC]);
+  metis_tac[GENLIST, weak_fun_def, poly_weak_list_SNOC]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Weak Sum in Polynomial Ring.                                              *)
@@ -539,12 +548,13 @@ val poly_weak_sum_cons = save_thm("poly_weak_sum_cons", poly_weak_sum_def |> CON
       with weak h and plist s ==> weak (psum s)  by induction hypothesis
       true by weak_add_weak
 *)
-val poly_weak_sum_weak = store_thm(
-  "poly_weak_sum_weak",
-  ``!r:'a ring. Ring r ==> !s. plist s ==> weak (psum s)``,
+Theorem poly_weak_sum_weak:
+    !r:'a ring. Ring r ==> !s. plist s ==> weak (psum s)
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[]);
+  rw[]
+QED
 
 val _ = export_rewrites ["poly_weak_sum_weak"];
 
@@ -555,10 +565,11 @@ val _ = export_rewrites ["poly_weak_sum_weak"];
    = p || |0|        by poly_weak_sum_nil
    = p               by weak_add_rzero
 *)
-val poly_weak_sum_sing = store_thm(
-  "poly_weak_sum_sing",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> (psum [p] = p)``,
-  rw[]);
+Theorem poly_weak_sum_sing:
+    !r:'a ring. Ring r ==> !p. weak p ==> (psum [p] = p)
+Proof
+  rw[]
+QED
 
 (* Theorem: plist s ==> psum (SNOC p s) = (psum s) || p *)
 (* Proof:
@@ -579,9 +590,9 @@ val poly_weak_sum_sing = store_thm(
    = (h || psum s) || p   by weak_add_assoc, poly_weak_sum_weak
    = psum(h::s) || p      by poly_weak_sum_def
 *)
-val poly_weak_sum_SNOC = store_thm(
-  "poly_weak_sum_SNOC",
-  ``!r:'a ring. Ring r ==> !p s. weak p /\ plist s ==> (psum (SNOC p s) = (psum s) || p)``,
+Theorem poly_weak_sum_SNOC:
+    !r:'a ring. Ring r ==> !p s. weak p /\ plist s ==> (psum (SNOC p s) = (psum s) || p)
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
@@ -589,7 +600,8 @@ val poly_weak_sum_SNOC = store_thm(
   `psum (h::SNOC p s) = h || psum (SNOC p s)` by rw[] >>
   `_ = h || ((psum s) || p)` by rw_tac std_ss[] >>
   `_ = psum(h::s) || p` by rw[weak_add_assoc] >>
-  rw_tac std_ss[]);
+  rw_tac std_ss[]
+QED
 
 (* Theorem: Ring r ==> !f. wfun f ==> !n. (f n) || psum (GENLIST f n) = psum (GENLIST f (SUC n)) *)
 (* Proof:
@@ -602,14 +614,15 @@ val poly_weak_sum_SNOC = store_thm(
     = psum (SNOC (f n) (GENLIST f n))   by poly_weak_sum_SNOC
     = psum (GENLIST f (SUC n))          by GENLIST
 *)
-val poly_weak_sum_genlist_suc = store_thm(
-  "poly_weak_sum_genlist_suc",
-  ``!r:'a ring. Ring r ==> !f. wfun f ==> !n. (f n) || psum (GENLIST f n) = psum (GENLIST f (SUC n))``,
+Theorem poly_weak_sum_genlist_suc:
+    !r:'a ring. Ring r ==> !f. wfun f ==> !n. (f n) || psum (GENLIST f n) = psum (GENLIST f (SUC n))
+Proof
   rpt strip_tac >>
   `plist (GENLIST f n)` by rw[poly_weak_list_from_weak_fun] >>
   `weak (psum (GENLIST f n))` by rw[poly_weak_sum_weak] >>
   `weak (f n)` by metis_tac[weak_fun_def] >>
-  metis_tac[weak_add_comm, poly_weak_sum_SNOC, GENLIST]);
+  metis_tac[weak_add_comm, poly_weak_sum_SNOC, GENLIST]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Functions and Lists.                                           *)
@@ -623,17 +636,19 @@ val _ = overload_on ("poly_list", ``ring_list (PolyRing r)``);
 
 (* Theorem: poly_fun f <=> !x. poly (f x) *)
 (* Proof: by ring_fun_def, poly_ring_element *)
-val poly_fun_def = store_thm(
-  "poly_fun_def",
-  ``!(r:'a ring) f. poly_fun f <=> !x. poly (f x)``,
-  rw[ring_fun_def, poly_ring_element]);
+Theorem poly_fun_def:
+    !(r:'a ring) f. poly_fun f <=> !x. poly (f x)
+Proof
+  rw[ring_fun_def, poly_ring_element]
+QED
 
 (* Theorem: poly_fun f ==> !x. poly (f x) *)
 (* Proof: by ring_fun_def, poly_ring_element *)
-val poly_list_element = store_thm(
-  "poly_list_element",
-  ``!r:'a ring. !f. poly_fun f ==> !x. poly (f x)``,
-  rw_tac std_ss[ring_fun_def, poly_ring_element]);
+Theorem poly_list_element:
+    !r:'a ring. !f. poly_fun f ==> !x. poly (f x)
+Proof
+  rw_tac std_ss[ring_fun_def, poly_ring_element]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["poly_list_element"];
@@ -642,10 +657,11 @@ val _ = export_rewrites ["poly_list_element"];
 
 (* Theorem: poly_list [] *)
 (* Proof: by poly_add_mult_ring, ring_list_nil *)
-val poly_list_nil = store_thm(
-  "poly_list_nil",
-  ``!r:'a ring. Ring r ==> poly_list []``,
-  metis_tac [ring_list_nil, poly_add_mult_ring, poly_ring_property]);
+Theorem poly_list_nil:
+    !r:'a ring. Ring r ==> poly_list []
+Proof
+  metis_tac [ring_list_nil, poly_add_mult_ring, poly_ring_property]
+QED
 
 val _ = export_rewrites ["poly_list_nil"];
 
@@ -653,10 +669,11 @@ val _ = export_rewrites ["poly_list_nil"];
 
 (* Theorem: poly_list (p::s) <=> poly p /\ poly_list s *)
 (* Proof: by poly_add_mult_ring, ring_list_cons *)
-val poly_list_cons = store_thm(
-  "poly_list_cons",
-  ``!r:'a ring. Ring r ==> !p s. poly_list (p::s) <=> poly p /\ poly_list s``,
-  metis_tac [ring_list_cons, poly_add_mult_ring, poly_ring_property]);
+Theorem poly_list_cons:
+    !r:'a ring. Ring r ==> !p s. poly_list (p::s) <=> poly p /\ poly_list s
+Proof
+  metis_tac [ring_list_cons, poly_add_mult_ring, poly_ring_property]
+QED
 
 val _ = export_rewrites ["poly_list_cons"];
 
@@ -678,14 +695,15 @@ val _ = export_rewrites ["poly_list_cons"];
          = poly p /\ poly h /\ poly_list s   by poly_list_cons
          = LHS
 *)
-val poly_list_SNOC = store_thm(
-  "poly_list_SNOC",
-  ``!r:'a ring. Ring r ==> !p s. poly_list (SNOC p s) <=> poly p /\ poly_list s``,
+Theorem poly_list_SNOC:
+    !r:'a ring. Ring r ==> !p s. poly_list (SNOC p s) <=> poly p /\ poly_list s
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
   rw[] >>
-  metis_tac[]);
+  metis_tac[]
+QED
 
 (* Theorem: poly_fun f /\ poly_list s ==> poly_list (MAP f s) *)
 (* Proof:
@@ -700,13 +718,14 @@ val poly_list_SNOC = store_thm(
        and poly (MAP f s)                      by induction hypothesis
       Thus poly_list ((f h) :: (MAP f s))      by poly_list_cons
 *)
-val poly_list_from_poly_fun = store_thm(
-  "poly_list_from_poly_fun",
-  ``!f s. poly_fun f /\ poly_list s ==> poly_list (MAP f s)``,
+Theorem poly_list_from_poly_fun:
+    !f s. poly_fun f /\ poly_list s ==> poly_list (MAP f s)
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
-  fs[poly_ring_property, ring_fun_def]);
+  fs[poly_ring_property, ring_fun_def]
+QED
 
 (* Theorem: Ring r ==> !z. ulead z ==> !x. poly_list s ==> poly_list (MAP (\x. x % z) s) *)
 (* Proof:
@@ -722,12 +741,13 @@ val poly_list_from_poly_fun = store_thm(
        and poly (MAP (\x. x % z) s)     by induction hypothesis
       Thus poly_list (h % z :: MAP (\x. x % z) s)  by poly_list_cons
 *)
-val poly_list_from_poly_mod = store_thm(
-  "poly_list_from_poly_mod",
-  ``!r:'a ring. Ring r ==> !z. ulead z ==> !s. poly_list s ==> poly_list (MAP (\x. x % z) s)``,
+Theorem poly_list_from_poly_mod:
+    !r:'a ring. Ring r ==> !z. ulead z ==> !s. poly_list s ==> poly_list (MAP (\x. x % z) s)
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: rfun f ==> !p. poly p ==> poly_fun (\j. f j * p ** j) *)
 (* Proof:
@@ -735,18 +755,20 @@ val poly_list_from_poly_mod = store_thm(
       so !j. poly (f j * p ** j)       by poly_X, poly_exp_poly, poly_cmult_poly
     Thus poly_fun (\j. f j * p ** j)   by ring_fun_def, poly_ring_element
 *)
-val poly_fun_from_ring_fun = store_thm(
-  "poly_fun_from_ring_fun",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==>
-   !p. poly p ==> poly_fun (\j. f j * p ** j)``,
-  rw[poly_ring_element]);
+Theorem poly_fun_from_ring_fun:
+    !r:'a ring. Ring r ==> !f. rfun f ==>
+   !p. poly p ==> poly_fun (\j. f j * p ** j)
+Proof
+  rw[poly_ring_element]
+QED
 
 (* Theorem: rfun f ==> !p. poly p ==> !n. poly_fun (\j. (f j * p ** j) ** n) *)
 (* Proof: by ring_fun_def, poly_cmult_poly, poly_exp_poly, poly_ring_property. *)
-val poly_fun_from_ring_fun_exp = store_thm(
-  "poly_fun_from_ring_fun_exp",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !p. poly p ==> !n. poly_fun (\j. (f j * p ** j) ** n)``,
-  rw[GSYM poly_ring_property]);
+Theorem poly_fun_from_ring_fun_exp:
+    !r:'a ring. Ring r ==> !f. rfun f ==> !p. poly p ==> !n. poly_fun (\j. (f j * p ** j) ** n)
+Proof
+  rw[GSYM poly_ring_property]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Sum.                                                           *)
@@ -763,10 +785,11 @@ val poly_fun_from_ring_fun_exp = store_thm(
 
 (* Theorem: poly_sum [] = |0| *)
 (* Proof: by poly_add_mult_ring, ring_sum_nil *)
-val poly_sum_nil = store_thm(
-  "poly_sum_nil",
-  ``!r:'a ring. Ring r ==> (poly_sum [] = |0|)``,
-  metis_tac [ring_sum_nil, poly_add_mult_ring, poly_ring_property]);
+Theorem poly_sum_nil:
+    !r:'a ring. Ring r ==> (poly_sum [] = |0|)
+Proof
+  metis_tac [ring_sum_nil, poly_add_mult_ring, poly_ring_property]
+QED
 
 val _ = export_rewrites ["poly_sum_nil"];
 
@@ -774,10 +797,11 @@ val _ = export_rewrites ["poly_sum_nil"];
 
 (* Theorem: poly_sum (p::s) = p + poly_sum s *)
 (* Proof: by poly_add_mult_ring, ring_sum_cons *)
-val poly_sum_cons = store_thm(
-  "poly_sum_cons",
-  ``!r:'a ring. Ring r ==> !p s. poly p /\ poly_list s ==> (poly_sum (p::s) = p + poly_sum s)``,
-  metis_tac [ring_sum_cons, poly_add_mult_ring, poly_ring_property]);
+Theorem poly_sum_cons:
+    !r:'a ring. Ring r ==> !p s. poly p /\ poly_list s ==> (poly_sum (p::s) = p + poly_sum s)
+Proof
+  metis_tac [ring_sum_cons, poly_add_mult_ring, poly_ring_property]
+QED
 
 val _ = export_rewrites ["poly_sum_cons"];
 
@@ -797,12 +821,13 @@ val _ = export_rewrites ["poly_sum_cons"];
        and poly (poly_sum s)       by induction hypothesis
      Hence poly (poly_sum (h::s))  by poly_add_poly
 *)
-val poly_sum_poly = store_thm(
-  "poly_sum_poly",
-  ``!r:'a ring. Ring r ==> !s. poly_list s ==> poly (poly_sum s)``,
+Theorem poly_sum_poly:
+    !r:'a ring. Ring r ==> !s. poly_list s ==> poly (poly_sum s)
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[]);
+  rw[]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["poly_sum_poly"];
@@ -813,10 +838,11 @@ val _ = export_rewrites ["poly_sum_poly"];
 *)
 (* Theorem: poly_sum (SNOC p s) = (poly_sum s) + p *)
 (* Proof: by poly_add_mult_ring, ring_sum_SNOC *)
-val poly_sum_SNOC = store_thm(
-  "poly_sum_SNOC",
-  ``!r:'a ring. Ring r ==> !p s. poly p /\ poly_list s ==> (poly_sum (SNOC p s) = (poly_sum s) + p)``,
-  metis_tac [ring_sum_SNOC, poly_add_mult_ring, poly_ring_property]);
+Theorem poly_sum_SNOC:
+    !r:'a ring. Ring r ==> !p s. poly p /\ poly_list s ==> (poly_sum (SNOC p s) = (poly_sum s) + p)
+Proof
+  metis_tac [ring_sum_SNOC, poly_add_mult_ring, poly_ring_property]
+QED
 
 (* Theorem: poly p ==> (poly_sum [p] = p) *)
 (* Proof:
@@ -825,10 +851,11 @@ val poly_sum_SNOC = store_thm(
    = p + |0|             by poly_sum_nil
    = p                   by poly_add_rzero
 *)
-val poly_sum_const = store_thm(
-  "poly_sum_const",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> (poly_sum [p] = p)``,
-  rw[]);
+Theorem poly_sum_const:
+    !r:'a ring. Ring r ==> !p. poly p ==> (poly_sum [p] = p)
+Proof
+  rw[]
+QED
 
 (* Theorem: Ring r ==> !s. poly_list s ==>
             !c. c IN R ==> (c * (poly_sum s) = poly_sum (MAP (\x. c * x) s)) *)
@@ -850,14 +877,15 @@ val poly_sum_const = store_thm(
        = c * h + poly_sum (MAP (\x. c * x) s)   by induction hypothesis
        = poly_sum (MAP (\x. c * x) (h::s))      by poly_sum_cons
 *)
-val poly_cmult_poly_sum = store_thm(
-  "poly_cmult_poly_sum",
-  ``!r:'a ring. Ring r ==> !s. poly_list s ==>
-   !c. c IN R ==> (c * (poly_sum s) = poly_sum (MAP (\x. c * x) s))``,
+Theorem poly_cmult_poly_sum:
+    !r:'a ring. Ring r ==> !s. poly_list s ==>
+   !c. c IN R ==> (c * (poly_sum s) = poly_sum (MAP (\x. c * x) s))
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[poly_cmult_of_zero] >>
-  rw[poly_cmult_add]);
+  rw[poly_cmult_add]
+QED
 
 (* Theorem: Ring r ==> !s. poly_list s ==>
             !p. poly p ==> (p * (poly_sum s) = poly_sum (MAP (\x. p * x) s)) *)
@@ -879,14 +907,15 @@ val poly_cmult_poly_sum = store_thm(
        = p * h + poly_sum (MAP (\x. p * x) s)   by induction hypothesis
        = poly_sum (MAP (\x. p * x) (h::s))      by poly_sum_cons
 *)
-val poly_mult_poly_sum = store_thm(
-  "poly_mult_poly_sum",
-  ``!r:'a ring. Ring r ==> !s. poly_list s ==>
-   !p. poly p ==> (p * (poly_sum s) = poly_sum (MAP (\x. p * x) s))``,
+Theorem poly_mult_poly_sum:
+    !r:'a ring. Ring r ==> !s. poly_list s ==>
+   !p. poly p ==> (p * (poly_sum s) = poly_sum (MAP (\x. p * x) s))
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[poly_mult_of_zero] >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: Ring r ==> !s. poly_list s ==>
             !z. ulead z ==> ((poly_sum s) % z = (poly_sum (MAP (\x. x % z) s)) % z) *)
@@ -911,10 +940,10 @@ val poly_mult_poly_sum = store_thm(
        = (h % z + poly_sum (MAP (\x. x % z) s)) % z             by poly_mod_add
        = (poly_sum (MAP (\x. x % z) (h::s))) % z                by poly_sum_cons
 *)
-val poly_mod_poly_sum = store_thm(
-  "poly_mod_poly_sum",
-  ``!r:'a ring. Ring r ==> !s. poly_list s ==>
-   !z. ulead z ==> ((poly_sum s) % z = (poly_sum (MAP (\x. x % z) s)) % z)``,
+Theorem poly_mod_poly_sum:
+    !r:'a ring. Ring r ==> !s. poly_list s ==>
+   !z. ulead z ==> ((poly_sum s) % z = (poly_sum (MAP (\x. x % z) s)) % z)
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
@@ -926,7 +955,8 @@ val poly_mod_poly_sum = store_thm(
   `_ = (h % z + poly_sum (MAP (\x. x % z) s) % z) % z` by rw[] >>
   `_ = ((h % z) % z + poly_sum (MAP (\x. x % z) s) % z) % z` by rw[poly_mod_mod] >>
   `_ = (h % z + poly_sum (MAP (\x. x % z) s)) % z` by rw[GSYM poly_mod_add] >>
-  rw[]);
+  rw[]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Sum over GENLIST in Polynomial Ring.                                      *)
@@ -946,15 +976,16 @@ val poly_mod_poly_sum = store_thm(
           = SNOC (f n) (GENLIST f n)   by GENLIST
       Hence weak (GENLIST f (SUC n))   by weak_snoc
 *)
-val weak_genlist = store_thm(
-  "weak_genlist",
-  ``!r:'a ring. !f. rfun f ==> !n. weak (GENLIST f n)``,
+Theorem weak_genlist:
+    !r:'a ring. !f. rfun f ==> !n. weak (GENLIST f n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   rpt strip_tac >>
   `f n IN R` by metis_tac[ring_fun_def] >>
-  rw[weak_snoc, GENLIST]);
+  rw[weak_snoc, GENLIST]
+QED
 
 (* Theorem: !f. rfun f ==> !n. f n <> #0 ==> poly (GENLIST f (SUC n)) *)
 (* Proof:
@@ -962,10 +993,11 @@ val weak_genlist = store_thm(
      and LAST (GENLIST f (SUC n)) = f n   by GENLIST_LAST
    Hence poly (GENLIST f (SUC n))         by poly_def_alt, f n <> #0
 *)
-val poly_genlist = store_thm(
-  "poly_genlist",
-  ``!r:'a ring. !f. rfun f ==> !n. f n <> #0 ==> poly (GENLIST f (SUC n))``,
-  rw[poly_def_alt, weak_genlist, GENLIST_LAST]);
+Theorem poly_genlist:
+    !r:'a ring. !f. rfun f ==> !n. f n <> #0 ==> poly (GENLIST f (SUC n))
+Proof
+  rw[poly_def_alt, weak_genlist, GENLIST_LAST]
+QED
 
 (* Theorem: !n. plist (GENLIST (\k. (f k) o (X ** k)) n) *)
 (* Proof: by induction on n.
@@ -980,16 +1012,17 @@ val poly_genlist = store_thm(
      giving weak (f n) o (X ** n)  by weak_cmult_weak
      thus true by poly_weak_list_SNOC.
 *)
-val poly_weak_list_genlist = store_thm(
-  "poly_weak_list_genlist",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !n. plist (GENLIST (\k. (f k) o (X ** k)) n)``,
+Theorem poly_weak_list_genlist:
+    !r:'a ring. Ring r ==> !f. rfun f ==> !n. plist (GENLIST (\k. (f k) o (X ** k)) n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
   `f n IN R` by metis_tac [ring_fun_def] >>
   `poly (X ** n)` by rw[] >>
   `weak ((f n) o (X ** n))` by rw[] >>
-  rw[GENLIST, poly_weak_list_SNOC]);
+  rw[GENLIST, poly_weak_list_SNOC]
+QED
 
 (* Theorem: #1 <> #0 ==> deg (psum (GENLIST (\k. (f k) * (X ** k)) (SUC n))) = n *)
 (* Proof: by induction on n.
@@ -1010,10 +1043,10 @@ val poly_weak_list_genlist = store_thm(
      = MAX n (SUC n)                    by induction hypothesis, poly_monic_deg_exp
      = SUC n                            by MAX_DEF
 *)
-val poly_deg_weak_sum_genlist = store_thm(
-  "poly_deg_weak_sum_genlist",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f ==>
-      (deg (psum (GENLIST (\k. (f k) o (X ** k)) (SUC n))) = n)``,
+Theorem poly_deg_weak_sum_genlist:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f ==>
+      (deg (psum (GENLIST (\k. (f k) o (X ** k)) (SUC n))) = n)
+Proof
   rpt strip_tac >>
   `!x. f x IN R` by metis_tac [ring_fun_def] >>
   `!n. plist (GENLIST (\k. f k o (X ** k)) n)` by rw[poly_weak_list_genlist] >>
@@ -1029,7 +1062,8 @@ val poly_deg_weak_sum_genlist = store_thm(
   `_ = MAX (deg (psum (GENLIST (\k. f k o (X ** k)) (SUC n)))) (deg (f (SUC n) o (X ** (SUC n))))` by rw[poly_deg_weak_add] >>
   `_ = MAX n (SUC n)` by rw[] >>
   `_ = SUC n` by rw[MAX_DEF, DECIDE ``n < SUC n``] >>
-  rw[]);
+  rw[]
+QED
 
 (*
    Given a plist s --- every element is weak,
@@ -1054,12 +1088,13 @@ val poly_deg_weak_sum_genlist = store_thm(
      poly_list (MAP chop s)        by induction hypothesis
      hence true by poly_list_cons.
 *)
-val poly_list_by_weak_list = store_thm(
-  "poly_list_by_weak_list",
-  ``!r:'a ring. Ring r ==> !s. plist s ==> poly_list (MAP chop s)``,
+Theorem poly_list_by_weak_list:
+    !r:'a ring. Ring r ==> !s. plist s ==> poly_list (MAP chop s)
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: poly_sum (MAP chop s) = chop (psum s) *)
 (* Proof: by induction on s.
@@ -1084,9 +1119,9 @@ val poly_list_by_weak_list = store_thm(
      = chop (h || (psum s))                by poly_chop_add_chop
      = chop (psum (h::s))                  by poly_weak_sum_cons
 *)
-val poly_sum_by_weak_sum = store_thm(
-  "poly_sum_by_weak_sum",
-  ``!r:'a ring. Ring r ==> !s. plist s ==> (poly_sum (MAP chop s) = chop (psum s))``,
+Theorem poly_sum_by_weak_sum:
+    !r:'a ring. Ring r ==> !s. plist s ==> (poly_sum (MAP chop s) = chop (psum s))
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
@@ -1095,29 +1130,33 @@ val poly_sum_by_weak_sum = store_thm(
   `poly (chop h)` by rw[poly_chop_weak_poly] >>
   rw_tac std_ss[poly_sum_cons] >>
   `weak (psum s)` by rw[] >>
-  rw_tac std_ss[poly_add_def, poly_chop_add_chop, poly_weak_sum_cons]);
+  rw_tac std_ss[poly_add_def, poly_chop_add_chop, poly_weak_sum_cons]
+QED
 
 (* Theorem: Ring r ==> !s. plist s ==> (chop (psum s) = poly_sum (MAP chop s)) *)
 (* Proof: reformulation of poly_sum_by_weak_sum *)
-val poly_chop_weak_sum = store_thm(
-  "poly_chop_weak_sum",
-  ``!r:'a ring. Ring r ==> !s. plist s ==> (chop (psum s) = poly_sum (MAP chop s))``,
-  rw[poly_sum_by_weak_sum]);
+Theorem poly_chop_weak_sum:
+    !r:'a ring. Ring r ==> !s. plist s ==> (chop (psum s) = poly_sum (MAP chop s))
+Proof
+  rw[poly_sum_by_weak_sum]
+QED
 
 (* Theorem: rfun f ==> ((\k. chop ((f k) o (X ** k))) = chop o (\k. (f k) o (X ** k))) *)
 (* Proof: by equal functions *)
-val poly_chop_with_function = store_thm(
-  "poly_chop_with_function",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> ((\k. chop ((f k) o (X ** k))) = chop o (\k. (f k) o (X ** k)))``,
-  rw_tac std_ss[FUN_EQ_THM]);
+Theorem poly_chop_with_function:
+    !r:'a ring. Ring r ==> !f. rfun f ==> ((\k. chop ((f k) o (X ** k))) = chop o (\k. (f k) o (X ** k)))
+Proof
+  rw_tac std_ss[FUN_EQ_THM]
+QED
 (* should just prove on the fly *)
 
 (* Theorem: rfun f ==> ((\j. (f j) * (X ** j)) = (\j. chop (f j o (X ** j))))*)
 (* Proof: by poly_cmult_def. *)
-val poly_cmult_in_function = store_thm(
-  "poly_cmult_in_function",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> ((\j. (f j) * (X ** j)) = (\j. chop (f j o (X ** j))))``,
-  rw_tac std_ss[poly_cmult_def]);
+Theorem poly_cmult_in_function:
+    !r:'a ring. Ring r ==> !f. rfun f ==> ((\j. (f j) * (X ** j)) = (\j. chop (f j o (X ** j))))
+Proof
+  rw_tac std_ss[poly_cmult_def]
+QED
 
 (* Theorem: From poly_sum to psum involing GENLIST and cmult: #1 <> #0 ==>
             !n. poly_sum (GENLIST (\j. f j * X ** j) n) = chop (psum (GENLIST (\j. (f j) o (X ** j)) n)) *)
@@ -1134,10 +1173,10 @@ val poly_cmult_in_function = store_thm(
    = poly_sum (MAP chop (GENLIST (\j. f j o (X ** j)) n))  by MAP_GENLIST
    = chop (psum (GENLIST (\j. f j o (X ** j)) n))          by poly_sum_by_weak_sum
 *)
-val poly_sum_by_weak_sum_genlist = store_thm(
-  "poly_sum_by_weak_sum_genlist",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f. rfun f ==>
-   !n. poly_sum (GENLIST (\j. f j * X ** j) n) = chop (psum (GENLIST (\j. (f j) o (X ** j)) n))``,
+Theorem poly_sum_by_weak_sum_genlist:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !f. rfun f ==>
+   !n. poly_sum (GENLIST (\j. f j * X ** j) n) = chop (psum (GENLIST (\j. (f j) o (X ** j)) n))
+Proof
   rpt strip_tac >>
   `!j. f j IN R` by metis_tac [ring_fun_def] >>
   `|1| <> |0| /\ ( |1| = [#1])` by metis_tac [poly_zero_eq_one, poly_one] >>
@@ -1149,7 +1188,8 @@ val poly_sum_by_weak_sum_genlist = store_thm(
     poly_sum (GENLIST (\j. chop (f j o (X ** j))) n)` by rw_tac std_ss[poly_cmult_def] >>
   `_ = poly_sum (GENLIST (chop o (\j. (f j) o (X ** j))) n)` by rw[poly_chop_with_function] >>
   `_ = poly_sum (MAP chop (GENLIST (\j. (f j) o (X ** j)) n))` by rw[MAP_GENLIST] >>
-  rw[poly_sum_by_weak_sum]);
+  rw[poly_sum_by_weak_sum]
+QED
 
 (* Theorem: #1 <> #0 ==> poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) ' k = f k  *)
 (* Proof: by induction on n.
@@ -1272,9 +1312,9 @@ QED
    = chop ((##n * c ** k) o p)              by weak_mult_const
    = ##n * c ** k * p                       by poly_cmult_def
 *)
-val poly_mult_num_const_exp = store_thm(
-  "poly_mult_num_const_exp",
-  ``!r:'a ring. Ring r ==> !p c. weak p /\ c IN R ==> !n k. |n| * [c] ** k * p = ##n * c ** k * p``,
+Theorem poly_mult_num_const_exp:
+    !r:'a ring. Ring r ==> !p c. weak p /\ c IN R ==> !n k. |n| * [c] ** k * p = ##n * c ** k * p
+Proof
   rpt strip_tac >>
   `##n IN R /\ weak [##n] /\ weak [c] /\ weak ([c ** k])` by rw[] >>
   `##n * c ** k IN R /\ weak [##n * c ** k]` by rw[] >>
@@ -1286,7 +1326,8 @@ val poly_mult_num_const_exp = store_thm(
   `_ = chop (chop (##n o [c ** k]) o p)` by rw_tac std_ss[weak_mult_const] >>
   `_ = chop (chop [##n * c ** k] o p)` by rw_tac std_ss[weak_cmult_const] >>
   `_ = chop ([##n * c ** k] o p)` by rw_tac std_ss[poly_chop_mult] >>
-  rw_tac std_ss[weak_mult_const, poly_cmult_def]);
+  rw_tac std_ss[weak_mult_const, poly_cmult_def]
+QED
 
 (* Theorem: c <> #0 ==> for all k <= n, ((X + [c]) ** n) ' k  = ##(binomial n k) * c ** (n - k)  *)
 (* Proof:
@@ -1309,10 +1350,10 @@ val poly_mult_num_const_exp = store_thm(
    = (\j. ##(binomial n j) * c ** (n - j)) k                                            by poly_coeff_sum_genlist
    = ##(binomial n k) * c ** (n - k)                                                    by function application
 *)
-val poly_coeff_X_add_c_exp_n = store_thm(
-  "poly_coeff_X_add_c_exp_n",
-  ``!r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==>
-    !n k. k < SUC n ==> (((X + [c]) ** n) ' k = ##(binomial n k) * c ** (n - k))``,
+Theorem poly_coeff_X_add_c_exp_n:
+    !r:'a ring. Ring r ==> !c. c IN R /\ c <> #0 ==>
+    !n k. k < SUC n ==> (((X + [c]) ** n) ' k = ##(binomial n k) * c ** (n - k))
+Proof
   rpt strip_tac >>
   `poly [c]` by rw[] >>
   `poly X` by rw[] >>
@@ -1323,7 +1364,8 @@ val poly_coeff_X_add_c_exp_n = store_thm(
     by rw_tac std_ss[poly_binomial_thm] >>
   `_ = poly_sum (GENLIST (\j. ##(binomial n j) * c ** (n - j) * X ** j) (SUC n)) ' k`
     by rw[poly_mult_num_const_exp] >>
-  rw_tac std_ss[poly_coeff_sum_genlist]);
+  rw_tac std_ss[poly_coeff_sum_genlist]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !c. c IN R ==>
             !k n. (factor c ** n) ' k = if n < k then #0 else if n = k then #1
@@ -1373,11 +1415,11 @@ poly_coeff_X_add_c_exp_n
      !c. c IN R /\ c <> #0 ==>
        !n k. k < SUC n ==> (((X + [c]) ** n) ' k = ##(binomial n k) * c ** (n - k))
 *)
-val poly_coeff_factor_exp = store_thm(
-  "poly_coeff_factor_exp",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==>
+Theorem poly_coeff_factor_exp:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. c IN R ==>
    !k n. (factor c ** n) ' k = if n < k then #0 else if n = k then #1
-                               else ##(binomial n k) * (-c) ** (n - k)``,
+                               else ##(binomial n k) * (-c) ** (n - k)
+Proof
   rpt strip_tac >>
   `monic (factor c ** n)` by rw[poly_factor_monic] >>
   `deg (factor c ** n) = n` by rw[poly_factor_exp_deg] >>
@@ -1401,7 +1443,8 @@ val poly_coeff_factor_exp = store_thm(
     `-c IN R /\ -c <> #0` by rw[] >>
     `k < SUC n` by decide_tac >>
     rw[GSYM poly_coeff_X_add_c_exp_n]
-  ]);
+  ]
+QED
 
 (* In a binomial expansion:
      (X + |c|) ** n
@@ -1472,10 +1515,10 @@ val poly_coeff_factor_exp = store_thm(
      !k. 0 < k /\ k < n ==> n divides (binomial n k)    by L_EUCLIDES (Euclid's Lemma)
      With 1 < n, prime n                                by prime_iff_divides_binomials
 *)
-val poly_ring_prime_identity = store_thm(
-  "poly_ring_prime_identity",
-  ``!r:'a ring. Ring r ==> !c. coprime c (char r) ==>
-       (prime (char r) <=> 1 < char r /\ ((X + |c|) ** (char r) = X ** (char r) + |c|))``,
+Theorem poly_ring_prime_identity:
+    !r:'a ring. Ring r ==> !c. coprime c (char r) ==>
+       (prime (char r) <=> 1 < char r /\ ((X + |c|) ** (char r) = X ** (char r) + |c|))
+Proof
   rpt strip_tac >>
   qabbrev_tac `n = char r` >>
   `poly X` by rw[] >>
@@ -1491,7 +1534,8 @@ val poly_ring_prime_identity = store_thm(
   `!k. k < SUC n ==> (((X + |c|) ** n) ' k = ## ((binomial n k) * c ** (n - k)))`
     by metis_tac[poly_coeff_X_add_c_exp_n, ring_num_mult_exp] >>
   `!k. 0 < k /\ k < n ==> k < SUC n` by decide_tac >>
-  metis_tac [ring_char_divides, coprime_exp, L_EUCLIDES, MULT_COMM, prime_iff_divides_binomials]);
+  metis_tac [ring_char_divides, coprime_exp, L_EUCLIDES, MULT_COMM, prime_iff_divides_binomials]
+QED
 
 (* Theorem: [Two-Way Freshman's Theorem]
             Ring r /\ #1 <> #0 ==> !c. coprime c (char r) ==>
@@ -1541,10 +1585,10 @@ val poly_ring_prime_identity = store_thm(
      !k. 0 < k /\ k < n ==> n divides (binomial n k)    by L_EUCLIDES (Euclid's Lemma)
      With 1 < n, prime n                                by prime_iff_divides_binomials
 *)
-val poly_ring_prime_char_eqn = store_thm(
-  "poly_ring_prime_char_eqn",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !c. coprime c (char r) ==>
-       (prime (char r) <=> ((X + |c|) ** (char r) = X ** (char r) + |c|))``,
+Theorem poly_ring_prime_char_eqn:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !c. coprime c (char r) ==>
+       (prime (char r) <=> ((X + |c|) ** (char r) = X ** (char r) + |c|))
+Proof
   rpt strip_tac >>
   qabbrev_tac `n = char r` >>
   `##c <> #0` by rw[ring_num_char_coprime_nonzero] >>
@@ -1567,7 +1611,8 @@ val poly_ring_prime_char_eqn = store_thm(
       `!k. 0 < k /\ k < n ==> k < SUC n` by decide_tac >>
       metis_tac [ring_char_divides, coprime_exp, L_EUCLIDES, MULT_COMM, prime_iff_divides_binomials]
     ]
-  ]);
+  ]
+QED
 
 (*
 > poly_ring_prime_identity |> ISPEC ``(ZN n)``;
@@ -1609,10 +1654,11 @@ val _ = temp_overload_on ("x^+", ``\n c:num m. (PolyRing (ZN n)).sum.op
        = poly_chop (ZN n) [1]                by above
        = [1]                                 by (ZN n).prod.id <> (ZN n).sum.id
 *)
-val poly_ZN_prod_id = store_thm(
-  "poly_ZN_prod_id",
-  ``!n. 1 < n ==> ((PolyRing (ZN n)).prod.id = [1])``,
-  rw[poly_ring_property, ZN_property]);
+Theorem poly_ZN_prod_id:
+    !n. 1 < n ==> ((PolyRing (ZN n)).prod.id = [1])
+Proof
+  rw[poly_ring_property, ZN_property]
+QED
 
 (* Theorem: 1 < n /\ coprime c n ==> (prime n <=> ((x+^ n c n) = (x^+ n c n))) *)
 (* Proof:
@@ -1620,14 +1666,15 @@ val poly_ZN_prod_id = store_thm(
      and char (ZN n) = n                          by ZN_char, 0 < n
    Hence prime n <=> ((x+^ n c n) = (x^+ n c n))  by poly_ring_prime_identity
 *)
-val poly_ZN_prime_identity = store_thm(
-  "poly_ZN_prime_identity",
-  ``!n (c: num). 1 < n /\ coprime c n ==> (prime n <=> ((x+^ n c n) = (x^+ n c n)))``,
+Theorem poly_ZN_prime_identity:
+    !n (c: num). 1 < n /\ coprime c n ==> (prime n <=> ((x+^ n c n) = (x^+ n c n)))
+Proof
   rpt strip_tac >>
   `0 < n` by decide_tac >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `char (ZN n) = n` by rw[ZN_char] >>
-  metis_tac[poly_ring_prime_identity]);
+  metis_tac[poly_ring_prime_identity]
+QED
 
 (* Theorem: coprime c n ==> (prime n <=> 1 < n /\ (x+^ n c n = x^+ n c n)) *)
 (* Proof:
@@ -1638,15 +1685,16 @@ val it =
   Note Ring (ZN n)       by ZN_ring
    and char (ZN n) = n   by ZN_char
  *)
-val poly_ZN_prime_thm = store_thm(
-  "poly_ZN_prime_thm",
-  ``!n c. coprime c n ==> (prime n <=> 1 < n /\ (x+^ n c n = x^+ n c n))``,
+Theorem poly_ZN_prime_thm:
+    !n c. coprime c n ==> (prime n <=> 1 < n /\ (x+^ n c n = x^+ n c n))
+Proof
   rpt strip_tac >>
   Cases_on `n = 0` >-
   rw[NOT_PRIME_0] >>
   `Ring (ZN n)` by rw[ZN_ring] >>
   `char (ZN n) = n` by rw[ZN_char] >>
-  metis_tac[poly_ring_prime_identity]);
+  metis_tac[poly_ring_prime_identity]
+QED
 
 (* obtain a corollary *)
 val poly_ZN_prime_simple = save_thm("poly_ZN_prime_simple",
@@ -1665,10 +1713,11 @@ poly_freshman_fermat_field |> ISPEC ``(ZN n)``;
 val it = |- FiniteField (ZN n) ==>
       !c. x+^ n c (char (ZN n)) = x^+ n c (char (ZN n)): thm
 *)
-val poly_ZN_freshman_fermat = store_thm(
-  "poly_ZN_freshman_fermat",
-  ``!n c. prime n ==> (x+^ n c n = x^+ n c n)``,
-  metis_tac[poly_freshman_fermat_field, ZN_finite_field, ZN_char, PRIME_POS]);
+Theorem poly_ZN_freshman_fermat:
+    !n c. prime n ==> (x+^ n c n = x^+ n c n)
+Proof
+  metis_tac[poly_freshman_fermat_field, ZN_finite_field, ZN_char, PRIME_POS]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial as sum of Terms                                                *)
@@ -1676,10 +1725,11 @@ val poly_ZN_freshman_fermat = store_thm(
 
 (* Theorem: rfun (poly_coeff r) *)
 (* Proof: by ring_fun_def, poly_coeff_element. *)
-val poly_coeff_ring_fun = store_thm(
-  "poly_coeff_ring_fun",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> rfun (\k. p ' k)``,
-  rw[]);
+Theorem poly_coeff_ring_fun:
+    !r:'a ring. Ring r ==> !p. poly p ==> rfun (\k. p ' k)
+Proof
+  rw[]
+QED
 
 (* Theorem: poly p /\ poly q /\ !k. p ' k = q ' k ==> p = |0| <=> q = |0| *)
 (* Proof:
@@ -1690,11 +1740,12 @@ val poly_coeff_ring_fun = store_thm(
         or q = |0|            by zero_poly_zero_poly, poly_zero
    If q = |0|, the proof is similar.
 *)
-val poly_coeff_eq_poly_zero = store_thm(
-  "poly_coeff_eq_poly_zero",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q /\
-   (!k. p ' k = q ' k) ==> ((p = |0|) <=> (q = |0|))``,
-  metis_tac[zero_poly_zero, zero_poly_coeff_all_zero, zero_poly_zero_poly]);
+Theorem poly_coeff_eq_poly_zero:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q /\
+   (!k. p ' k = q ' k) ==> ((p = |0|) <=> (q = |0|))
+Proof
+  metis_tac[zero_poly_zero, zero_poly_coeff_all_zero, zero_poly_zero_poly]
+QED
 
 (* Theorem: poly p /\ poly q /\ !k. p ' k = q ' k ==> deg p = deg q *)
 (* Proof:
@@ -1709,9 +1760,9 @@ val poly_coeff_eq_poly_zero = store_thm(
       which contradicts the given.
       Similarly for deg q < deg p.
 *)
-val poly_coeff_eq_deg_eq = store_thm(
-  "poly_coeff_eq_deg_eq",
-  ``!r:'a ring. Ring r ==> !p q:'a poly. poly p /\ poly q /\ (!k. p ' k = q ' k) ==> (deg p = deg q)``,
+Theorem poly_coeff_eq_deg_eq:
+    !r:'a ring. Ring r ==> !p q:'a poly. poly p /\ poly q /\ (!k. p ' k = q ' k) ==> (deg p = deg q)
+Proof
   rpt strip_tac >>
   `(p = |0|) <=> (q = |0|)` by rw[poly_coeff_eq_poly_zero] >>
   Cases_on `p = |0|` >-
@@ -1722,7 +1773,8 @@ val poly_coeff_eq_deg_eq = store_thm(
     all_tac,
     `deg q < deg p` by decide_tac
   ] >>
-  metis_tac[poly_coeff_lead, poly_lead_nonzero, poly_coeff_nonzero]);
+  metis_tac[poly_coeff_lead, poly_lead_nonzero, poly_coeff_nonzero]
+QED
 
 (* Theorem: poly p /\ poly q ==> (p = q) <=> !k. p ' k = q ' k *)
 (* Proof:
@@ -1739,9 +1791,9 @@ val poly_coeff_eq_deg_eq = store_thm(
      Hence !k. k < LENGTH p ==> (EL k p = EL k q)    by poly_coeff_as_element
        Thus p = q                                    by LIST_EQ
 *)
-val poly_coeff_eq_poly_eq = store_thm(
-  "poly_coeff_eq_poly_eq",
-  ``!r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> ((p = q) <=> !k. p ' k = q ' k)``,
+Theorem poly_coeff_eq_poly_eq:
+    !r:'a ring. Ring r ==> !p q. poly p /\ poly q ==> ((p = q) <=> !k. p ' k = q ' k)
+Proof
   rw[EQ_IMP_THM] >>
   `(p = |0|) <=> (q = |0|)` by rw[poly_coeff_eq_poly_zero] >>
   Cases_on `p = |0|` >-
@@ -1751,7 +1803,8 @@ val poly_coeff_eq_poly_eq = store_thm(
   `LENGTH p <> 0 /\ LENGTH q <> 0` by metis_tac[LENGTH_NIL, poly_zero] >>
   `0 < LENGTH p /\ 0 < LENGTH q` by decide_tac >>
   `LENGTH p = LENGTH q` by metis_tac[SUC_PRE] >>
-  metis_tac[poly_coeff_as_element, LIST_EQ]);
+  metis_tac[poly_coeff_as_element, LIST_EQ]
+QED
 
 (* Theorem: Ring r ==> !a b. poly_fun a /\ poly_fun b ==>
             !n. poly_sum (GENLIST a n ++ GENLIST b n) = poly_sum (GENLIST (\k. a k + b k) n) *)
@@ -1761,11 +1814,12 @@ val poly_coeff_eq_poly_eq = store_thm(
      !n. poly_sum (GENLIST a n ++ GENLIST b n) = poly_sum (GENLIST (\k. a k + b k) n): thm
    and Ring (PolyRing r) is true by poly_add_mult_ring
 *)
-val poly_sum_gen_append = store_thm(
-  "poly_sum_gen_append",
-  ``!r:'a ring. Ring r ==> !a b. poly_fun a /\ poly_fun b ==>
-   !n. poly_sum (GENLIST a n ++ GENLIST b n) = poly_sum (GENLIST (\k. a k + b k) n)``,
-  rw_tac std_ss[poly_add_mult_ring, ring_sum_genlist_append]);
+Theorem poly_sum_gen_append:
+    !r:'a ring. Ring r ==> !a b. poly_fun a /\ poly_fun b ==>
+   !n. poly_sum (GENLIST a n ++ GENLIST b n) = poly_sum (GENLIST (\k. a k + b k) n)
+Proof
+  rw_tac std_ss[poly_add_mult_ring, ring_sum_genlist_append]
+QED
 
 (* Theorem: Ring r ==> !p. poly p ==> !n. poly_sum (GENLIST (K p) n) = |n| * p *)
 (* Proof:
@@ -1775,10 +1829,11 @@ val poly_sum_gen_append = store_thm(
    and Ring (PolyRing r)                     by poly_add_mult_ring
    and poly x <=> x IN (PolyRing r).carrier  by poly_ring_element
 *)
-val poly_sum_gen_const = store_thm(
-  "poly_sum_gen_const",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> !n. poly_sum (GENLIST (K p) n) = |n| * p``,
-  rw[poly_add_mult_ring, poly_ring_element, ring_sum_genlist_const]);
+Theorem poly_sum_gen_const:
+    !r:'a ring. Ring r ==> !p. poly p ==> !n. poly_sum (GENLIST (K p) n) = |n| * p
+Proof
+  rw[poly_add_mult_ring, poly_ring_element, ring_sum_genlist_const]
+QED
 
 (* Note: |n| = chop [##n] by poly_ring_sum_c *)
 
@@ -1787,10 +1842,11 @@ val poly_sum_gen_const = store_thm(
    Apply ring_sum_decompose_first |> GEN_ALL |> ISPEC ``(PolyRing r)``;
    val it = |- !f n. poly_sum (GENLIST f (SUC n)) = f 0 + poly_sum (GENLIST (f o SUC) n): thm
 *)
-val poly_sum_decompose_first = store_thm(
-  "poly_sum_decompose_first",
-  ``!r:'a ring. !f n. poly_sum (GENLIST f (SUC n)) = f 0 + poly_sum (GENLIST (f o SUC) n)``,
-  rw[poly_add_mult_ring, ring_sum_decompose_first]);
+Theorem poly_sum_decompose_first:
+    !r:'a ring. !f n. poly_sum (GENLIST f (SUC n)) = f 0 + poly_sum (GENLIST (f o SUC) n)
+Proof
+  rw[poly_add_mult_ring, ring_sum_decompose_first]
+QED
 
 (* Theorem: poly_fun f ==>
             !n. poly_sum (GENLIST f (SUC n)) = poly_sum (GENLIST f n) + f n *)
@@ -1798,11 +1854,12 @@ val poly_sum_decompose_first = store_thm(
    Since Ring r ==> Ring (PolyRing r)   by poly_add_mult_ring
    The result follows by ring_sum_decompose_last.
 *)
-val poly_sum_decompose_last = store_thm(
-  "poly_sum_decompose_last",
-  ``!r:'a ring. Ring r ==> !f. poly_fun f ==>
-   !n. poly_sum (GENLIST f (SUC n)) = poly_sum (GENLIST f n) + f n``,
-  rw[poly_add_mult_ring, ring_sum_decompose_last]);
+Theorem poly_sum_decompose_last:
+    !r:'a ring. Ring r ==> !f. poly_fun f ==>
+   !n. poly_sum (GENLIST f (SUC n)) = poly_sum (GENLIST f n) + f n
+Proof
+  rw[poly_add_mult_ring, ring_sum_decompose_last]
+QED
 
 (* Theorem: poly_fun f ==> !n. poly_list (GENLIST f n) *)
 (* Proof:
@@ -1816,34 +1873,37 @@ val poly_sum_decompose_last = store_thm(
      and poly (f n)                                by poly_list_element
      hence poly_list (GENLIST f (SUC n)))          by poly_list_SNOC
 *)
-val poly_list_gen_from_poly_fun = store_thm(
-  "poly_list_gen_from_poly_fun",
-  ``!r:'a ring. Ring r ==> !f. poly_fun f ==> !n. poly_list (GENLIST f n)``,
+Theorem poly_list_gen_from_poly_fun:
+    !r:'a ring. Ring r ==> !f. poly_fun f ==> !n. poly_list (GENLIST f n)
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
-  rw[poly_list_SNOC, GENLIST]);
+  rw[poly_list_SNOC, GENLIST]
+QED
 
 (* Theorem: rfun f ==> !p. poly p ==> !n. poly_list (GENLIST (\j. f j * p ** j) n) *)
 (* Proof:
    Since poly_fun (\j. f j * p ** j)  by poly_fun_from_ring_fun
    This is true by poly_list_gen_from_poly_fun.
 *)
-val poly_list_gen_from_ring_fun = store_thm(
-  "poly_list_gen_from_ring_fun",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !p. poly p ==>
-    !n. poly_list (GENLIST (\j. f j * p ** j) n)``,
-  rw[poly_fun_from_ring_fun, poly_list_gen_from_poly_fun]);
+Theorem poly_list_gen_from_ring_fun:
+    !r:'a ring. Ring r ==> !f. rfun f ==> !p. poly p ==>
+    !n. poly_list (GENLIST (\j. f j * p ** j) n)
+Proof
+  rw[poly_fun_from_ring_fun, poly_list_gen_from_poly_fun]
+QED
 
 (* Theorem: poly_fun f ==> !n. poly (poly_sum (GENLIST f n)) *)
 (* Proof:
    Since poly_list (GENLIST f n)   by poly_list_gen_from_poly_fun
    Result is true by poly_sum_poly.
 *)
-val poly_sum_gen_poly_fun_poly = store_thm(
-  "poly_sum_gen_poly_fun_poly",
-  ``!r:'a ring. Ring r ==> !f. poly_fun f ==> !n. poly (poly_sum (GENLIST f n))``,
-  rw[poly_list_gen_from_poly_fun]);
+Theorem poly_sum_gen_poly_fun_poly:
+    !r:'a ring. Ring r ==> !f. poly_fun f ==> !n. poly (poly_sum (GENLIST f n))
+Proof
+  rw[poly_list_gen_from_poly_fun]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["poly_sum_gen_poly_fun_poly"];
@@ -1853,11 +1913,12 @@ val _ = export_rewrites ["poly_sum_gen_poly_fun_poly"];
    Since poly_list (GENLIST (\j. f j * p ** j) n)   by poly_list_gen_from_ring_fun
    Result is true by poly_sum_poly.
 *)
-val poly_sum_gen_ring_fun_poly = store_thm(
-  "poly_sum_gen_ring_fun_poly",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !p. poly p ==>
-    !n. poly (poly_sum (GENLIST (\j. f j * p ** j) n))``,
-  rw[poly_list_gen_from_ring_fun]);
+Theorem poly_sum_gen_ring_fun_poly:
+    !r:'a ring. Ring r ==> !f. rfun f ==> !p. poly p ==>
+    !n. poly (poly_sum (GENLIST (\j. f j * p ** j) n))
+Proof
+  rw[poly_list_gen_from_ring_fun]
+QED
 
 (* export simple result *)
 val _ = export_rewrites ["poly_sum_gen_ring_fun_poly"];
@@ -1893,10 +1954,10 @@ val _ = export_rewrites ["poly_sum_gen_ring_fun_poly"];
      Hence deg (poly_sum (GENLIST (\j. f j * X ** j) (SUC (SUC n)))) = SUC n  by poly_deg_add_less
      Either case, the degree <= SUC n.
 *)
-val poly_sum_gen_deg_bound = store_thm(
-  "poly_sum_gen_deg_bound",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f. rfun f ==>
-   !n. (deg (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) <= n)``,
+Theorem poly_sum_gen_deg_bound:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !f. rfun f ==>
+   !n. (deg (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) <= n)
+Proof
   rpt strip_tac >>
   `!x. f x IN R` by metis_tac[ring_fun_def] >>
   Induct_on `n` >| [
@@ -1923,7 +1984,8 @@ val poly_sum_gen_deg_bound = store_thm(
      by rw_tac std_ss[poly_deg_add_less, poly_sum_gen_ring_fun_poly, poly_cmult_poly] >>
       decide_tac
     ]
-  ]);
+  ]
+QED
 
 (* Theorem: rfun f /\ f n <> #0 ==> deg (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) = n *)
 (* Proof:
@@ -1942,10 +2004,10 @@ val poly_sum_gen_deg_bound = store_thm(
      deg (f (SUC m) * X ** SUC m) = SUC m                            by weak_deg_cmult_nonzero, f n <> #0
      Hence deg (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) = n   by poly_deg_add_less
 *)
-val poly_sum_gen_deg = store_thm(
-  "poly_sum_gen_deg",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
-   (deg (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) = n)``,
+Theorem poly_sum_gen_deg:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
+   (deg (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) = n)
+Proof
   rpt strip_tac >>
   `!x. f x IN R` by metis_tac[ring_fun_def] >>
   `poly_fun (\j. f j * X ** j)` by rw[poly_fun_from_ring_fun] >>
@@ -1956,7 +2018,8 @@ val poly_sum_gen_deg = store_thm(
   `poly X /\ poly (X ** (SUC n')) /\ (lead (X ** (SUC n')) = #1)` by rw[] >>
   `deg (f (SUC n') * X ** SUC n') = SUC n'` by rw[weak_deg_cmult_nonzero] >>
   `!m n. m <= n ==> m < SUC n` by decide_tac >>
-  rw_tac std_ss[poly_deg_add_less, poly_sum_gen_ring_fun_poly, poly_cmult_poly]);
+  rw_tac std_ss[poly_deg_add_less, poly_sum_gen_ring_fun_poly, poly_cmult_poly]
+QED
 
 (* Theorem: rfun f /\ f n <> #0 ==> lead (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) = f n *)
 (* Proof:
@@ -1977,10 +2040,10 @@ val poly_sum_gen_deg = store_thm(
           = lead (f (SUC m) * X ** SUC m)                            by poly_lead_add_less
           = f n                                                      by weak_lead_cmult_nonzero, f n <> #0
 *)
-val poly_sum_gen_lead = store_thm(
-  "poly_sum_gen_lead",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
-   (lead (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) = f n)``,
+Theorem poly_sum_gen_lead:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
+   (lead (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) = f n)
+Proof
   rpt strip_tac >>
   `!x. f x IN R` by metis_tac[ring_fun_def] >>
   `poly_fun (\j. f j * X ** j)` by rw[poly_fun_from_ring_fun] >>
@@ -1992,7 +2055,8 @@ val poly_sum_gen_lead = store_thm(
   `deg (f (SUC n') * X ** SUC n') = SUC n'` by rw[weak_deg_cmult_nonzero] >>
   `!m n. m <= n ==> m < SUC n` by decide_tac >>
   `lead (f (SUC n') * X ** SUC n') = f (SUC n')` by rw[weak_lead_cmult_nonzero] >>
-  rw_tac std_ss[poly_lead_add_less, poly_sum_gen_ring_fun_poly, poly_cmult_poly]);
+  rw_tac std_ss[poly_lead_add_less, poly_sum_gen_ring_fun_poly, poly_cmult_poly]
+QED
 
 (* Theorem: poly p ==> (p = poly_sum (GENLIST (\k. (p ' k) * (X ** k)) (SUC (deg p)))) *)
 (* Proof:
@@ -2021,10 +2085,10 @@ val poly_sum_gen_lead = store_thm(
          so  !j. poly_sum (GENLIST (\k. (p ' k) * (X ** k)) (SUC (deg p))) ' j = (p ' j)
       Hence result follows by poly_coeff_eq_poly_eq
 *)
-val poly_eq_poly_sum = store_thm(
-  "poly_eq_poly_sum",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==>
-   !p. poly p ==> (p = poly_sum (GENLIST (\k. (p ' k) * (X ** k)) (SUC (deg p))))``,
+Theorem poly_eq_poly_sum:
+    !r:'a ring. Ring r /\ #1 <> #0 ==>
+   !p. poly p ==> (p = poly_sum (GENLIST (\k. (p ' k) * (X ** k)) (SUC (deg p))))
+Proof
   rpt strip_tac >>
   `rfun (\k. p ' k)` by rw[poly_coeff_ring_fun] >>
   Cases_on `p = |0|` >| [
@@ -2040,7 +2104,8 @@ val poly_eq_poly_sum = store_thm(
     `!j. deg p < j ==> (poly_sum (GENLIST (\k. (p ' k) * (X ** k)) (SUC (deg p))) ' j = (p ' j))` by metis_tac[poly_coeff_nonzero] >>
     `!j n. ~(n < j) <=> j < SUC n` by decide_tac >>
     metis_tac[poly_coeff_eq_poly_eq]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r ==> !f. wfun f ==> !p. weak p ==>
             (poly_sum (GENLIST (\k. (chop p) ' k * (f k)) (SUC (deg (chop p)))) =
@@ -2097,11 +2162,11 @@ val poly_eq_poly_sum = store_thm(
      = poly_sum (GENLIST g (SUC (deg q)))           by poly_add_rzero
      = poly_sum (GENLIST g (SUC (deg (chop q))))    by induction hypothesis
 *)
-val weak_poly_sum_genlist = store_thm(
-  "weak_poly_sum_genlist",
-  ``!r:'a ring. Ring r ==> !f. wfun f ==> !p. weak p ==>
+Theorem weak_poly_sum_genlist:
+    !r:'a ring. Ring r ==> !f. wfun f ==> !p. weak p ==>
      (poly_sum (GENLIST (\k. (chop p) ' k * (f k)) (SUC (deg (chop p)))) =
-      poly_sum (GENLIST (\k. p ' k * (f k)) (SUC (deg p))))``,
+      poly_sum (GENLIST (\k. p ' k * (f k)) (SUC (deg p))))
+Proof
   rpt strip_tac >>
   rw[poly_coeff_chop] >>
   Induct_on `deg p - deg (chop p)` >| [
@@ -2139,7 +2204,8 @@ val weak_poly_sum_genlist = store_thm(
     `_ = poly_sum (GENLIST g (SUC (deg q))) + |0|` by rw_tac std_ss[] >>
     `_ = poly_sum (GENLIST g (SUC (deg (chop q))))` by rw[Abbr`g`] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* This milestone theorem is the magic key to transform weak poly_sums. *)
 
@@ -2176,11 +2242,11 @@ val weak_poly_sum_genlist = store_thm(
           = poly_sum (GENLIST (\j. (f j * p ** j) ** m) n) + (f n * p ** n) ** m) by poly_sum_decompose_last
           = LHS
 *)
-val poly_sum_freshman_thm = store_thm(
-  "poly_sum_freshman_thm",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !f. rfun f ==> !p. poly p ==>
+Theorem poly_sum_freshman_thm:
+    !r:'a ring. Ring r /\ prime (char r) ==> !f. rfun f ==> !p. poly p ==>
    !n. (poly_sum (GENLIST (\j. f j * p ** j) n)) ** (char r)
-      = poly_sum (GENLIST (\j. (f j * p ** j) ** (char r)) n)``,
+      = poly_sum (GENLIST (\j. (f j * p ** j) ** (char r)) n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = char r` >>
   Induct_on `n` >| [
@@ -2199,7 +2265,8 @@ val poly_sum_freshman_thm = store_thm(
     `_ = poly_sum (GENLIST (\j. (f j * p ** j) ** m) n) + (f n * p ** n) ** m` by rw[] >>
     `_ = poly_sum (GENLIST (\j. (f j * p ** j) ** m) (SUC n))` by rw[poly_sum_decompose_last] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ prime (char r) ==> !f. rfun f ==> !p. poly p ==>
             !n k. (poly_sum (GENLIST (\j. f j * p ** j) n)) ** (char r ** k)
@@ -2231,11 +2298,11 @@ val poly_sum_freshman_thm = store_thm(
           = poly_sum (GENLIST (\j. (f j * p ** j) ** m ** k) n) + (f n * p ** n) ** m ** k) by poly_sum_decompose_last
           = LHS
 *)
-val poly_sum_freshman_all = store_thm(
-  "poly_sum_freshman_all",
-  ``!r:'a ring. Ring r /\ prime (char r) ==> !f. rfun f ==> !p. poly p ==>
+Theorem poly_sum_freshman_all:
+    !r:'a ring. Ring r /\ prime (char r) ==> !f. rfun f ==> !p. poly p ==>
    !n k. (poly_sum (GENLIST (\j. f j * p ** j) n)) ** (char r ** k)
-       = poly_sum (GENLIST (\j. (f j * p ** j) ** (char r ** k)) n)``,
+       = poly_sum (GENLIST (\j. (f j * p ** j) ** (char r ** k)) n)
+Proof
   rpt strip_tac >>
   qabbrev_tac `m = char r` >>
   Induct_on `n` >| [
@@ -2255,7 +2322,8 @@ val poly_sum_freshman_all = store_thm(
     `_ = poly_sum (GENLIST (\j. (f j * p ** j) ** m ** k) n) + (f n * p ** n) ** m ** k` by rw[] >>
     `_ = poly_sum (GENLIST (\j. (f j * p ** j) ** m ** k) (SUC n))` by rw[poly_sum_decompose_last] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More on Evaluation of Polynomials                                         *)
@@ -2277,13 +2345,14 @@ val poly_sum_freshman_all = store_thm(
        and rlist (MAP (\p. eval p x) s)        by induction hypothesis
      hence rlist (MAP (\p. eval p x) (h::s))   by ring_list_cons
 *)
-val poly_eval_poly_list = store_thm(
-  "poly_eval_poly_list",
-  ``!r:'a ring. Ring r ==> !s. poly_list s ==>
-   !x. x IN R ==> rlist (MAP (\p. eval p x) s)``,
+Theorem poly_eval_poly_list:
+    !r:'a ring. Ring r ==> !s. poly_list s ==>
+   !x. x IN R ==> rlist (MAP (\p. eval p x) s)
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: poly_list s ==> !x. x IN R ==> (eval (poly_sum s) x = rsum (MAP (\p. eval p x) s)) *)
 (* Proof:
@@ -2305,14 +2374,15 @@ val poly_eval_poly_list = store_thm(
       = rsum ((eval h x):: (MAP (\p. eval p x) s))       by ring_sum_cons
       = rsum (MAP (\p. eval p x) (h::s))                 by MAP
 *)
-val poly_eval_poly_sum = store_thm(
-  "poly_eval_poly_sum",
-  ``!r:'a ring. Ring r ==> !s. poly_list s ==>
-   !x. x IN R ==> (eval (poly_sum s) x = rsum (MAP (\p. eval p x) s))``,
+Theorem poly_eval_poly_sum:
+    !r:'a ring. Ring r ==> !s. poly_list s ==>
+   !x. x IN R ==> (eval (poly_sum s) x = rsum (MAP (\p. eval p x) s))
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
-  rw[poly_eval_add, poly_eval_poly_list]);
+  rw[poly_eval_add, poly_eval_poly_list]
+QED
 
 (* Theorem: poly_fun f ==> !x. x IN R ==>
             !n. eval (poly_sum (GENLIST f n)) x = rsum (MAP (\p. eval p x) (GENLIST f n)) *)
@@ -2320,11 +2390,12 @@ val poly_eval_poly_sum = store_thm(
    Since poly_list (GENLIST f n)      by poly_list_gen_from_poly_fun
    The result is true                 by poly_eval_poly_sum
 *)
-val poly_eval_poly_sum_gen = store_thm(
-  "poly_eval_poly_sum_gen",
-  ``!r:'a ring. Ring r ==> !f. poly_fun f ==> !x. x IN R ==>
-   !n. eval (poly_sum (GENLIST f n)) x = rsum (MAP (\p. eval p x) (GENLIST f n))``,
-  rw[poly_list_gen_from_poly_fun, poly_eval_poly_sum]);
+Theorem poly_eval_poly_sum_gen:
+    !r:'a ring. Ring r ==> !f. poly_fun f ==> !x. x IN R ==>
+   !n. eval (poly_sum (GENLIST f n)) x = rsum (MAP (\p. eval p x) (GENLIST f n))
+Proof
+  rw[poly_list_gen_from_poly_fun, poly_eval_poly_sum]
+QED
 
 (* Theorem: rfun f ==> !p x. poly p /\ x IN R ==>
             !n. eval (poly_sum (GENLIST (\k. f k * (p ** k)) n)) x =
@@ -2342,17 +2413,18 @@ val poly_eval_poly_sum_gen = store_thm(
     = rsum (GENLIST (\k. f k * eval (p ** k) x) n)                by poly_eval_cmult
     = rsum (GENLIST (\k. f k * ((eval p x) ** k)) n)              by poly_eval_exp
 *)
-val poly_eval_poly_sum_gen_poly = store_thm(
-  "poly_eval_poly_sum_gen_poly",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !p x. poly p /\ x IN R ==>
+Theorem poly_eval_poly_sum_gen_poly:
+    !r:'a ring. Ring r ==> !f. rfun f ==> !p x. poly p /\ x IN R ==>
    !n. eval (poly_sum (GENLIST (\k. f k * (p ** k)) n)) x =
-       rsum (GENLIST (\k. f k * ((eval p x) ** k)) n)``,
+       rsum (GENLIST (\k. f k * ((eval p x) ** k)) n)
+Proof
   rpt strip_tac >>
   `!x. f x IN R` by metis_tac[ring_fun_def] >>
   `poly_fun (\j. f j * p ** j)` by rw[poly_fun_from_ring_fun] >>
   `poly_list (GENLIST (\k. f k * (p ** k)) n)` by rw[poly_list_gen_from_poly_fun] >>
   `(\p. eval p x) o (\k. f k * (p ** k)) = (\k. eval (f k * (p ** k)) x)` by rw[FUN_EQ_THM] >>
-  rw[poly_eval_poly_sum, MAP_GENLIST, poly_eval_cmult, poly_eval_exp]);
+  rw[poly_eval_poly_sum, MAP_GENLIST, poly_eval_cmult, poly_eval_exp]
+QED
 
 (* Theorem: poly p /\ x IN R ==>
             (eval p x = rsum (GENLIST (\k. (p ' k) * (x ** k)) (SUC (deg p)))) *)
@@ -2364,15 +2436,16 @@ val poly_eval_poly_sum_gen_poly = store_thm(
    = rsum (GENLIST (\k. p ' k * ((eval X x) ** k)) (SUC (deg p)))     by poly_eval_poly_sum_gen_poly
    = rsum (GENLIST (\k. p ' k * (x ** k)) (SUC (deg p)))              by poly_eval_X
 *)
-val poly_eval_by_ring_sum = store_thm(
-  "poly_eval_by_ring_sum",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p x. poly p /\ x IN R ==>
-    (eval p x = rsum (GENLIST (\k. (p ' k) * (x ** k)) (SUC (deg p))))``,
+Theorem poly_eval_by_ring_sum:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p x. poly p /\ x IN R ==>
+    (eval p x = rsum (GENLIST (\k. (p ' k) * (x ** k)) (SUC (deg p))))
+Proof
   rpt strip_tac >>
   `rfun (\k. p ' k)` by rw[poly_coeff_ring_fun] >>
   `poly_fun ((\k. p ' k * X ** k))` by rw[poly_fun_from_ring_fun] >>
   `eval p x = eval (poly_sum (GENLIST (\k. p ' k * X ** k) (SUC (deg p)))) x` by rw[GSYM poly_eq_poly_sum] >>
-  rw[poly_eval_poly_sum_gen_poly, poly_eval_X]);
+  rw[poly_eval_poly_sum_gen_poly, poly_eval_X]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* More on Polynomial Evaluation by Polynomials                              *)
@@ -2393,12 +2466,13 @@ val poly_eval_by_ring_sum = store_thm(
        and poly_list (MAP (\x. peval x p) s)      by induction hypothesis
      hence poly_list (MAP (\x. peval x p) (h::s)) by poly_list_cons
 *)
-val poly_peval_poly_list = store_thm(
-  "poly_peval_poly_list",
-  ``!r:'a ring. Ring r ==> !s. poly_list s ==> !p. poly p ==> poly_list (MAP (\x. peval x p) s)``,
+Theorem poly_peval_poly_list:
+    !r:'a ring. Ring r ==> !s. poly_list s ==> !p. poly p ==> poly_list (MAP (\x. peval x p) s)
+Proof
   rpt strip_tac >>
   Induct_on `s` >>
-  rw[]);
+  rw[]
+QED
 
 (* Theorem: poly_list s ==> !p. poly p ==>
             (peval (poly_sum s) p = poly_sum (MAP (\x. peval x p) s)) *)
@@ -2423,14 +2497,15 @@ val poly_peval_poly_list = store_thm(
          = poly_sum (MAP (\x. peval x p) (h::s))             by MAP
          = RHS
 *)
-val poly_peval_poly_sum = store_thm(
-  "poly_peval_poly_sum",
-  ``!r:'a ring. Ring r ==> !s. poly_list s ==>
-   !p. poly p ==> (peval (poly_sum s) p = poly_sum (MAP (\x. peval x p) s))``,
+Theorem poly_peval_poly_sum:
+    !r:'a ring. Ring r ==> !s. poly_list s ==>
+   !p. poly p ==> (peval (poly_sum s) p = poly_sum (MAP (\x. peval x p) s))
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
-  rw[poly_peval_add, poly_peval_poly_list]);
+  rw[poly_peval_add, poly_peval_poly_list]
+QED
 
 (* Theorem: poly_fun f ==> !p. poly p ==>
             !n. peval (poly_sum (GENLIST f n)) p = poly_sum (MAP (\x. peval x p) (GENLIST f n)) *)
@@ -2438,11 +2513,12 @@ val poly_peval_poly_sum = store_thm(
    Since poly_list (GENLIST f n)      by poly_list_gen_from_poly_fun
    The result is true                 by poly_peval_poly_sum
 *)
-val poly_peval_poly_sum_gen = store_thm(
-  "poly_peval_poly_sum_gen",
-  ``!r:'a ring. Ring r ==> !f. poly_fun f ==> !p. poly p ==>
-   !n. peval (poly_sum (GENLIST f n)) p = poly_sum (MAP (\x. peval x p) (GENLIST f n))``,
-  rw[poly_list_gen_from_poly_fun, poly_peval_poly_sum]);
+Theorem poly_peval_poly_sum_gen:
+    !r:'a ring. Ring r ==> !f. poly_fun f ==> !p. poly p ==>
+   !n. peval (poly_sum (GENLIST f n)) p = poly_sum (MAP (\x. peval x p) (GENLIST f n))
+Proof
+  rw[poly_list_gen_from_poly_fun, poly_peval_poly_sum]
+QED
 
 (* Theorem: rfun f ==> !p q. poly p /\ poly q ==>
             !n. peval (poly_sum (GENLIST (\k. f k * (p ** k)) n)) q =
@@ -2460,17 +2536,18 @@ val poly_peval_poly_sum_gen = store_thm(
     = poly_sum (GENLIST (\k. f k * peval (p ** k) q) n)                by poly_peval_cmult
     = poly_sum (GENLIST (\k. f k * ((peval p q) ** k)) n)              by poly_peval_exp
 *)
-val poly_peval_poly_sum_gen_poly = store_thm(
-  "poly_peval_poly_sum_gen_poly",
-  ``!r:'a ring. Ring r ==> !f. rfun f ==> !p q. poly p /\ poly q ==>
+Theorem poly_peval_poly_sum_gen_poly:
+    !r:'a ring. Ring r ==> !f. rfun f ==> !p q. poly p /\ poly q ==>
    !n. peval (poly_sum (GENLIST (\k. f k * (p ** k)) n)) q =
-       poly_sum (GENLIST (\k. f k * ((peval p q) ** k)) n)``,
+       poly_sum (GENLIST (\k. f k * ((peval p q) ** k)) n)
+Proof
   rpt strip_tac >>
   `!x. f x IN R` by metis_tac[ring_fun_def] >>
   `poly_fun (\j. f j * p ** j)` by rw[poly_fun_from_ring_fun] >>
   `poly_list (GENLIST (\k. f k * (p ** k)) n)` by rw[poly_list_gen_from_poly_fun] >>
   `(\x. peval x q) o (\k. f k * (p ** k)) = (\k. peval (f k * (p ** k)) q)` by rw[FUN_EQ_THM] >>
-  rw[poly_peval_poly_sum, MAP_GENLIST, poly_peval_cmult, poly_peval_exp]);
+  rw[poly_peval_poly_sum, MAP_GENLIST, poly_peval_cmult, poly_peval_exp]
+QED
 
 (* Theorem: poly p /\ poly q ==>
             (peval p q = poly_sum (GENLIST (\k. p ' k * (q ** k)) (SUC (deg p)))) *)
@@ -2482,15 +2559,16 @@ val poly_peval_poly_sum_gen_poly = store_thm(
    = poly_sum (GENLIST (\k. p ' k * ((peval X q) ** k)) (SUC (deg p)))   by poly_peval_poly_sum_gen_poly
    = poly_sum (GENLIST (\k. p ' k * (q ** k)) (SUC (deg p)))             by poly_peval_X
 *)
-val poly_peval_by_poly_sum = store_thm(
-  "poly_peval_by_poly_sum",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !p q. poly p /\ poly q ==>
-    (peval p q = poly_sum (GENLIST (\k. (p ' k) * (q ** k)) (SUC (deg p))))``,
+Theorem poly_peval_by_poly_sum:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !p q. poly p /\ poly q ==>
+    (peval p q = poly_sum (GENLIST (\k. (p ' k) * (q ** k)) (SUC (deg p))))
+Proof
   rpt strip_tac >>
   `rfun (\k. p ' k)` by rw[poly_coeff_ring_fun] >>
   `poly_fun ((\k. p ' k * X ** k))` by rw[poly_fun_from_ring_fun] >>
   `peval p q = peval (poly_sum (GENLIST (\k. p ' k * X ** k) (SUC (deg p)))) q` by rw[GSYM poly_eq_poly_sum] >>
-  rw[poly_peval_poly_sum_gen_poly, poly_peval_X]);
+  rw[poly_peval_poly_sum_gen_poly, poly_peval_X]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (* Polynomial Sums of Distinct Degrees                                       *)
@@ -2569,10 +2647,10 @@ val poly_peval_by_poly_sum = store_thm(
              = MAX_LIST (MAP deg s)               by MAX_0
              = deg (poly_sum s)                   by induction hypothesis
 *)
-val poly_sum_deg = store_thm(
-  "poly_sum_deg",
-  ``!r:'a ring. Ring r ==> !s. poly_list s /\ ALL_DISTINCT (FILTER (\x. x <> 0) (MAP deg s)) ==>
-        (deg (poly_sum s) = MAX_LIST (MAP deg s))``,
+Theorem poly_sum_deg:
+    !r:'a ring. Ring r ==> !s. poly_list s /\ ALL_DISTINCT (FILTER (\x. x <> 0) (MAP deg s)) ==>
+        (deg (poly_sum s) = MAX_LIST (MAP deg s))
+Proof
   rpt strip_tac >>
   Induct_on `s` >-
   rw[] >>
@@ -2596,7 +2674,8 @@ val poly_sum_deg = store_thm(
     ],
     `deg (h + poly_sum s) = deg (poly_sum s)` by rw[poly_deg_add_deg_zero] >>
     rw[]
-  ]);
+  ]
+QED
 
 (* Theorem: Field r ==> !p. poly p /\ 0 < deg p ==> !f. rfun f ==>
             ALL_DISTINCT (FILTER (\x. x <> 0) (MAP deg (GENLIST (\j. f j * p ** j) n))) *)
@@ -2642,10 +2721,10 @@ val poly_sum_deg = store_thm(
       <=> ALL_DISTINCT (FILTER (\x. x <> 0) (MAP deg (GENLIST g n)))  by FILTER_SNOC
       <=> T                                                           by induction hypothesis
 *)
-val poly_genlist_deg_distinct = store_thm(
-  "poly_genlist_deg_distinct",
-  ``!r:'a field. Field r ==> !p. poly p /\ 0 < deg p ==> !f. rfun f ==>
-   !n. ALL_DISTINCT (FILTER (\x. x <> 0) (MAP deg (GENLIST (\j. f j * p ** j) n)))``,
+Theorem poly_genlist_deg_distinct:
+    !r:'a field. Field r ==> !p. poly p /\ 0 < deg p ==> !f. rfun f ==>
+   !n. ALL_DISTINCT (FILTER (\x. x <> 0) (MAP deg (GENLIST (\j. f j * p ** j) n)))
+Proof
   rpt strip_tac >>
   Induct_on `n` >-
   rw[] >>
@@ -2657,7 +2736,8 @@ val poly_genlist_deg_distinct = store_thm(
   `f n <> #0 /\ f j <> #0` by metis_tac[poly_deg_zero, poly_cmult_lzero] >>
   `deg p <> 0` by decide_tac >>
   `n = j` by metis_tac[poly_field_deg_cmult, poly_field_deg_exp, EQ_MULT_RCANCEL] >>
-  decide_tac);
+  decide_tac
+QED
 
 (* Theorem: Field r ==> !f. rfun f ==> !p. poly p /\ 0 < deg p ==>
             !n. (poly_sum (GENLIST (\j. f j * p ** j) n) = |0|) <=> (!j. j < n ==> (f j = #0)) *)
@@ -2717,10 +2797,10 @@ val poly_genlist_deg_distinct = store_thm(
       = |n| * |0|                                        by poly_sum_gen_const
       = |0|                                              by poly_cmult_zero
 *)
-val poly_sum_gen_eq_zero = store_thm(
-  "poly_sum_gen_eq_zero",
-  ``!r:'a field. Field r ==> !f. rfun f ==> !p. poly p /\ 0 < deg p ==>
-   !n. (poly_sum (GENLIST (\j. f j * p ** j) n) = |0|) <=> (!j. j < n ==> (f j = #0))``,
+Theorem poly_sum_gen_eq_zero:
+    !r:'a field. Field r ==> !f. rfun f ==> !p. poly p /\ 0 < deg p ==>
+   !n. (poly_sum (GENLIST (\j. f j * p ** j) n) = |0|) <=> (!j. j < n ==> (f j = #0))
+Proof
   rpt strip_tac >>
   qabbrev_tac `s = GENLIST (\j. f j * p ** j) n` >>
   `deg (poly_sum s) = MAX_LIST (MAP deg s)` by
@@ -2767,7 +2847,8 @@ val poly_sum_gen_eq_zero = store_thm(
     `s = GENLIST (K |0|) n` by rw[GENLIST_K_LESS, Abbr`s`] >>
     `poly_sum s = poly_sum (GENLIST (K |0|) n)` by metis_tac[] >>
     rw[poly_sum_gen_const]
-  ]);
+  ]
+QED
 
 (* This is a milestone theorem. *)
 (* However, proof looks very ugly! Especially the part of shifting to 0 < j < n, then argue f 0 = #0. *)
@@ -2791,10 +2872,10 @@ val poly_sum_gen_eq_zero = store_thm(
    Only-if part: peval |0| q = |0|
       True by poly_peval_zero.
 *)
-val poly_peval_eq_zero = store_thm(
-  "poly_peval_eq_zero",
-  ``!r:'a field. Field r ==>
-   !p q. poly p /\ poly q /\ 0 < deg q ==> ((peval p q = |0|) <=> (p = |0|))``,
+Theorem poly_peval_eq_zero:
+    !r:'a field. Field r ==>
+   !p q. poly p /\ poly q /\ 0 < deg q ==> ((peval p q = |0|) <=> (p = |0|))
+Proof
   rw_tac std_ss[poly_peval_zero, EQ_IMP_THM] >>
   spose_not_then strip_assume_tac >>
   `Ring r /\ #1 <> #0` by rw[] >>
@@ -2805,7 +2886,8 @@ val poly_peval_eq_zero = store_thm(
   `!j. j <= n ==> (p ' j = #0)` by metis_tac[poly_sum_gen_eq_zero, LESS_EQ_IFF_LESS_SUC] >>
   `!j. n < j ==> (p ' j = #0)` by rw[poly_coeff_nonzero, Abbr`n`] >>
   `!j. p ' j = #0` by metis_tac[NOT_LESS] >>
-  metis_tac[poly_coeff_eq_zero]);
+  metis_tac[poly_coeff_eq_zero]
+QED
 
 (* This is the key for the next theorem. *)
 
@@ -2824,15 +2906,16 @@ val poly_peval_eq_zero = store_thm(
    Only-if part: p = q ==> peval p t = peval q t
       This is trivially true.
 *)
-val poly_peval_eq = store_thm(
-  "poly_peval_eq",
-  ``!r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t /\ 0 < deg t ==>
-   ((peval p t = peval q t) <=> (p = q))``,
+Theorem poly_peval_eq:
+    !r:'a field. Field r ==> !p q t. poly p /\ poly q /\ poly t /\ 0 < deg t ==>
+   ((peval p t = peval q t) <=> (p = q))
+Proof
   rw[EQ_IMP_THM] >>
   `Ring r /\ poly (p - q)` by rw[] >>
   `peval (p - q) t = |0|` by rw[poly_peval_sub] >>
   `p - q = |0|` by metis_tac[poly_peval_eq_zero] >>
-  metis_tac[poly_sub_eq_zero]);
+  metis_tac[poly_sub_eq_zero]
+QED
 
 (* This is a major milestone theorem. *)
 
@@ -2847,12 +2930,13 @@ val poly_peval_eq = store_thm(
    (2) p IN s /\ p' IN s /\ peval p q = peval p' q ==> p = p'
        True by poly_peval_eq, poly q /\ 0 < deg q.
 *)
-val poly_peval_poly_set_inj = store_thm(
-  "poly_peval_poly_set_inj",
-  ``!r:'a field. Field r ==> !s. (!p. p IN s ==> poly p) ==>
-   !q. poly q /\ 0 < deg q ==> INJ (\p. peval p q) s univ(:'a poly)``,
+Theorem poly_peval_poly_set_inj:
+    !r:'a field. Field r ==> !s. (!p. p IN s ==> poly p) ==>
+   !q. poly q /\ 0 < deg q ==> INJ (\p. peval p q) s univ(:'a poly)
+Proof
   rw[INJ_DEF] >>
-  metis_tac[poly_peval_eq]);
+  metis_tac[poly_peval_eq]
+QED
 
 (* Note: If s = image of factor, can use poly_peval_factor_map_inj: just Ring r, and #1 <> #0. *)
 
@@ -2868,10 +2952,11 @@ val poly_peval_poly_set_inj = store_thm(
       so GENLIST f (SUC n) <> []     by LENGTH_NIL
       or                   <> |0|    by poly_zero
 *)
-val poly_genlist_nonzero = store_thm(
-  "poly_genlist_nonzero",
-  ``!r:'a ring. !f n. GENLIST f (SUC n) <> |0|``,
-  metis_tac[LENGTH_GENLIST, LENGTH_NIL, poly_zero, numTheory.NOT_SUC]);
+Theorem poly_genlist_nonzero:
+    !r:'a ring. !f n. GENLIST f (SUC n) <> |0|
+Proof
+  metis_tac[LENGTH_GENLIST, LENGTH_NIL, poly_zero, numTheory.NOT_SUC]
+QED
 
 (* Theorem: deg (GENLIST f (SUC n)) = n *)
 (* Proof:
@@ -2882,10 +2967,11 @@ val poly_genlist_nonzero = store_thm(
        = PRE (SUC n)        by LENGTH_GENLIST
        = n                  by PRE
 *)
-val poly_genlist_deg = store_thm(
-  "poly_genlist_deg",
-  ``!r:'a ring. !f n. deg (GENLIST f (SUC n)) = n``,
-  rw[poly_genlist_nonzero, poly_deg_nonzero]);
+Theorem poly_genlist_deg:
+    !r:'a ring. !f n. deg (GENLIST f (SUC n)) = n
+Proof
+  rw[poly_genlist_nonzero, poly_deg_nonzero]
+QED
 
 (* Theorem: lead (GENLIST f (SUC n)) = f n *)
 (* Proof:
@@ -2895,10 +2981,11 @@ val poly_genlist_deg = store_thm(
        = LAST p             by poly_lead_alt
        = f n                by GENLIST_LAST
 *)
-val poly_genlist_lead = store_thm(
-  "poly_genlist_lead",
-  ``!r:'a ring. !f n. lead (GENLIST f (SUC n)) = f n``,
-  rw[poly_genlist_nonzero, poly_lead_alt, GENLIST_LAST]);
+Theorem poly_genlist_lead:
+    !r:'a ring. !f n. lead (GENLIST f (SUC n)) = f n
+Proof
+  rw[poly_genlist_nonzero, poly_lead_alt, GENLIST_LAST]
+QED
 
 (* Theorem: (GENLIST f (SUC n)) ' k = if n < k then #0 else f k *)
 (* Proof:
@@ -2913,10 +3000,11 @@ val poly_genlist_lead = store_thm(
        = EL k p             by poly_coeff_nonzero
        = f k                by EL_GENLIST, k < SUC n
 *)
-val poly_genlist_coeff = store_thm(
-  "poly_genlist_coeff",
-  ``!r:'a ring. !f n k. (GENLIST f (SUC n)) ' k = if n < k then #0 else f k``,
-  rw[poly_genlist_nonzero, poly_genlist_deg, poly_coeff_nonzero, EL_GENLIST]);
+Theorem poly_genlist_coeff:
+    !r:'a ring. !f n k. (GENLIST f (SUC n)) ' k = if n < k then #0 else f k
+Proof
+  rw[poly_genlist_nonzero, poly_genlist_deg, poly_coeff_nonzero, EL_GENLIST]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
             poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) <> |0| *)
@@ -2926,11 +3014,12 @@ val poly_genlist_coeff = store_thm(
                           <> #0    by given
         so (poly_sum s) <> |0|     by poly_lead_zero
 *)
-val poly_sum_nonzero = store_thm(
-  "poly_sum_nonzero",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
-    poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) <> |0|``,
-  metis_tac[poly_sum_gen_lead, poly_lead_zero]);
+Theorem poly_sum_nonzero:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
+    poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) <> |0|
+Proof
+  metis_tac[poly_sum_gen_lead, poly_lead_zero]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
             !k. (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) ' k = if n < k then #0 else f k *)
@@ -2959,10 +3048,10 @@ val poly_sum_nonzero = store_thm(
           = p ' k                                                by poly_eq_poly_sum
           = f k                                                  by poly_genlist_coeff
 *)
-val poly_sum_gen_coeff = store_thm(
-  "poly_sum_gen_coeff",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
-   !k. (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) ' k = if n < k then #0 else f k``,
+Theorem poly_sum_gen_coeff:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
+   !k. (poly_sum (GENLIST (\j. f j * X ** j) (SUC n))) ' k = if n < k then #0 else f k
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = GENLIST f (SUC n)` >>
   `p <> |0|` by rw[poly_genlist_nonzero, Abbr`p`] >>
@@ -2979,7 +3068,8 @@ val poly_sum_gen_coeff = store_thm(
     `!j. j < SUC n ==> (p ' j = f j)` by rw[poly_coeff_nonzero_alt, Abbr`p`] >>
     `GENLIST (\j. p ' j * X ** j) (SUC n) = GENLIST (\j. f j * X ** j) (SUC n)` by rw[GENLIST_EL] >>
     metis_tac[poly_eq_poly_sum, poly_genlist_coeff]
-  ]);
+  ]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
             (poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) = GENLIST f (SUC n)) *)
@@ -2993,10 +3083,10 @@ val poly_sum_gen_coeff = store_thm(
      and q ' k = if n < k then #0 else f k     by poly_genlist_coeff
     Thus p = q                                 by poly_coeff_eq_poly_eq
 *)
-val poly_sum_gen_is_genlist = store_thm(
-  "poly_sum_gen_is_genlist",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
-    (poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) = GENLIST f (SUC n))``,
+Theorem poly_sum_gen_is_genlist:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> !f n. rfun f /\ f n <> #0 ==>
+    (poly_sum (GENLIST (\j. f j * X ** j) (SUC n)) = GENLIST f (SUC n))
+Proof
   rpt strip_tac >>
   qabbrev_tac `p = poly_sum (GENLIST (\j. f j * X ** j) (SUC n))` >>
   qabbrev_tac `q = GENLIST f (SUC n)` >>
@@ -3004,7 +3094,8 @@ val poly_sum_gen_is_genlist = store_thm(
   `!k. p ' k = if n < k then #0 else f k` by rw[poly_sum_gen_coeff, Abbr`p`] >>
   `poly q` by rw[poly_genlist, Abbr`q`] >>
   `!k. q ' k = if n < k then #0 else f k` by rw[poly_genlist_coeff, Abbr`q`] >>
-  metis_tac[poly_coeff_eq_poly_eq]);
+  metis_tac[poly_coeff_eq_poly_eq]
+QED
 
 (* This is a milestone theorem. *)
 
@@ -3074,17 +3165,19 @@ but that is not used now as we have above: poly_sum_gen_is_genlist
    = p ** 2 + ###2 * p + |1| ** 2           by poly_mult_rone
    = p ** 2 + ###2 * p + |1|                by poly_one_exp
 *)
-val poly_binomial_2_p = store_thm(
-  "poly_binomial_2_p",
-  ``!(r:'a ring) p. Ring r /\ poly p ==> ((p + |1|) ** 2 = p ** 2 + ###2 * p + |1|)``,
-  rw[poly_add_mult_ring, ring_binomial_2, GSYM poly_ring_property]);
+Theorem poly_binomial_2_p:
+    !(r:'a ring) p. Ring r /\ poly p ==> ((p + |1|) ** 2 = p ** 2 + ###2 * p + |1|)
+Proof
+  rw[poly_add_mult_ring, ring_binomial_2, GSYM poly_ring_property]
+QED
 
 (* Theorem: Ring r /\ #1 <> #0 ==> (X + |1|) ** 2 = X ** 2 + ###2 * X + |1| *)
 (* Proof: by poly_binomial_2_p, poly_X. *)
-val poly_binomial_2_X = store_thm(
-  "poly_binomial_2_X",
-  ``!r:'a ring. Ring r /\ #1 <> #0 ==> ((X + |1|) ** 2 = X ** 2 + ###2 * X + |1|)``,
-  rw_tac std_ss[poly_binomial_2_p, poly_X]);
+Theorem poly_binomial_2_X:
+    !r:'a ring. Ring r /\ #1 <> #0 ==> ((X + |1|) ** 2 = X ** 2 + ###2 * X + |1|)
+Proof
+  rw_tac std_ss[poly_binomial_2_p, poly_X]
+QED
 
 (*
 Surely, poly_binomial_2_p ==> poly_binomial_2_X
@@ -3121,10 +3214,11 @@ val _ = export_rewrites["poly_dilate_def"];
    = DILATE #0 0 n []    by poly_zero
    = [] = |0|            by DILATE_NIL
 *)
-val poly_dilate_zero = store_thm(
-  "poly_dilate_zero",
-  ``!r:'a ring. !n. pdilate n |0| = |0|``,
-  rw[]);
+Theorem poly_dilate_zero:
+    !r:'a ring. !n. pdilate n |0| = |0|
+Proof
+  rw[]
+QED
 
 (* Theorem: pdilate 0 p = p *)
 (* Proof:
@@ -3132,10 +3226,11 @@ val poly_dilate_zero = store_thm(
    = DILATE #0 0 0 p     by poly_dilate_def
    = p                   by DILATE_0_0
 *)
-val poly_dilate_0 = store_thm(
-  "poly_dilate_0",
-  ``!r:'a ring. !p. pdilate 0 p = p``,
-  rw[DILATE_0_0]);
+Theorem poly_dilate_0:
+    !r:'a ring. !p. pdilate 0 p = p
+Proof
+  rw[DILATE_0_0]
+QED
 
 (* Theorem: pdilate n p = |0| <=> p = |0| *)
 (* Proof:
@@ -3144,10 +3239,11 @@ val poly_dilate_0 = store_thm(
    <=> p = []                   by DILATE_0_EQ_NIL
    <=> p = |0|                  by poly_zero
 *)
-val poly_dilate_eq_zero = store_thm(
-  "poly_dilate_eq_zero",
-  ``!r:'a ring. !p n. (pdilate n p = |0|) <=> (p = |0|)``,
-  rw[DILATE_0_EQ_NIL]);
+Theorem poly_dilate_eq_zero:
+    !r:'a ring. !p n. (pdilate n p = |0|) <=> (p = |0|)
+Proof
+  rw[DILATE_0_EQ_NIL]
+QED
 
 (* Theorem: deg (pdilate n p) = if n = 0 then deg p else if p = |0| then 0 else (SUC n) * deg p *)
 (* Proof:
@@ -3167,10 +3263,11 @@ val poly_dilate_eq_zero = store_thm(
       = SUC n * PRE (LENGTH p)              by PRE
       = SUC n * deg p                       by poly_deg_def
 *)
-val poly_dilate_deg = store_thm(
-  "poly_dilate_deg",
-  ``!r:'a ring. !p n. deg (pdilate n p) = if n = 0 then deg p else if p = |0| then 0 else (SUC n) * deg p``,
-  rw[DILATE_0_LENGTH, poly_deg_def, DILATE_0_EQ_NIL]);
+Theorem poly_dilate_deg:
+    !r:'a ring. !p n. deg (pdilate n p) = if n = 0 then deg p else if p = |0| then 0 else (SUC n) * deg p
+Proof
+  rw[DILATE_0_LENGTH, poly_deg_def, DILATE_0_EQ_NIL]
+QED
 
 (* Theorem: deg p <= deg (pdilate n p) *)
 (* Proof:
@@ -3185,15 +3282,16 @@ val poly_dilate_deg = store_thm(
     or       deg p <= deg (DILATE #0 0 n p)           by poly_deg_def
     or       deg p <= deg (pdilate n p)               by poly_dilate_def
 *)
-val poly_dilate_deg_lower = store_thm(
-  "poly_dilate_deg_lower",
-  ``!r:'a ring. !p n. deg p <= deg (pdilate n p)``,
+Theorem poly_dilate_deg_lower:
+    !r:'a ring. !p n. deg p <= deg (pdilate n p)
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
   `p <> [] /\ DILATE #0 0 n p <> []` by metis_tac[DILATE_0_EQ_NIL, poly_zero] >>
   `0 < LENGTH (DILATE #0 0 n p)` by metis_tac[LENGTH_NIL, NOT_ZERO] >>
-  rw[DILATE_0_LENGTH_LOWER, INV_PRE_LESS_EQ, poly_deg_def]);
+  rw[DILATE_0_LENGTH_LOWER, INV_PRE_LESS_EQ, poly_deg_def]
+QED
 
 (* Theorem: 0 < n ==> !p. deg (pdilate n p) <= SUC n * deg p *)
 (* Proof:
@@ -3212,14 +3310,15 @@ val poly_dilate_deg_lower = store_thm(
            deg (DILATE #0 0 n p) <= SUC n * deg p                      by poly_deg_def
                deg (pdilate n p) <= SUC n * deg p                      by poly_dilate_def
 *)
-val poly_dilate_deg_upper = store_thm(
-  "poly_dilate_deg_upper",
-  ``!r:'a ring. !n. 0 < n ==> !p. deg (pdilate n p) <= SUC n * deg p``,
+Theorem poly_dilate_deg_upper:
+    !r:'a ring. !n. 0 < n ==> !p. deg (pdilate n p) <= SUC n * deg p
+Proof
   rpt strip_tac >>
   `0 < SUC (SUC n * PRE (LENGTH p))` by decide_tac >>
   `!n. PRE (SUC n) = n` by rw[] >>
   `PRE (LENGTH (DILATE #0 0 n p)) <= SUC n * PRE (LENGTH p)` by metis_tac[DILATE_0_LENGTH_UPPER, INV_PRE_LESS_EQ] >>
-  rw[poly_deg_def]);
+  rw[poly_deg_def]
+QED
 
 (* Theorem: (pdilate n p) ' k = if k MOD (SUC n) = 0 then p ' (k DIV (SUC n)) else #0 *)
 (* Proof:
@@ -3258,9 +3357,9 @@ val poly_dilate_deg_upper = store_thm(
              so     deg p < k DIV m            by MULT_LT_DIV, MULT_COMM
             Thus EL (k DIV m) p = #0           by poly_coeff_nonzero
 *)
-val poly_dilate_coeff = store_thm(
-  "poly_dilate_coeff",
-  ``!r:'a ring. !p n k. (pdilate n p) ' k = if k MOD (SUC n) = 0 then p ' (k DIV (SUC n)) else #0``,
+Theorem poly_dilate_coeff:
+    !r:'a ring. !p n k. (pdilate n p) ' k = if k MOD (SUC n) = 0 then p ' (k DIV (SUC n)) else #0
+Proof
   rpt strip_tac >>
   `0 < SUC n` by decide_tac >>
   qabbrev_tac `m = SUC n` >>
@@ -3282,7 +3381,8 @@ val poly_dilate_coeff = store_thm(
     `m * deg p < k` by metis_tac[poly_dilate_deg] >>
     `(k MOD m = 0) ==> deg p < k DIV m` by metis_tac[MULT_LT_DIV, MULT_COMM] >>
     rw[poly_coeff_nonzero]
-  ]);
+  ]
+QED
 
 (* Theorem: lead (pdilate n p) = lead p *)
 (* Proof:
@@ -3297,13 +3397,14 @@ val poly_dilate_coeff = store_thm(
       = LAST p                   by DILATE_0_LAST
       = lead p                   by poly_lead_alt, p <> |0|
 *)
-val poly_dilate_lead = store_thm(
-  "poly_dilate_lead",
-  ``!r:'a ring. !p n. lead (pdilate n p) = lead p``,
+Theorem poly_dilate_lead:
+    !r:'a ring. !p n. lead (pdilate n p) = lead p
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
-  rw[poly_dilate_eq_zero, poly_lead_alt, DILATE_0_LAST]);
+  rw[poly_dilate_eq_zero, poly_lead_alt, DILATE_0_LAST]
+QED
 
 (* Theorem: Ring r ==> !p. weak p ==> !n. weak (pdilate n p) *)
 (* Proof:
@@ -3329,9 +3430,9 @@ val poly_dilate_lead = store_thm(
      <=> weak (h::GENLIST (K #0) n)                            by induction hypothesis
      <=> T                                                     by weak_genlist
 *)
-val weak_dilate_weak = store_thm(
-  "weak_dilate_weak",
-  ``!r:'a ring. Ring r ==> !p. weak p ==> !n. weak (pdilate n p)``,
+Theorem weak_dilate_weak:
+    !r:'a ring. Ring r ==> !p. weak p ==> !n. weak (pdilate n p)
+Proof
   rpt strip_tac >>
   Induct_on `p` >-
   rw[] >>
@@ -3341,7 +3442,8 @@ val weak_dilate_weak = store_thm(
   rw_tac std_ss[DILATE_0_CONS] >>
   `weak (DILATE #0 0 n p)` by metis_tac[poly_dilate_def] >>
   `rfun (K #0)` by rw[ring_fun_def] >>
-  rw[weak_append_weak, weak_genlist]);
+  rw[weak_append_weak, weak_genlist]
+QED
 
 (* Theorem: Ring r ==> !p. poly p ==> !n. poly (pdilate n p) *)
 (* Proof:
@@ -3356,16 +3458,17 @@ val weak_dilate_weak = store_thm(
          <> #0                      by poly_lead_nonzero
       Hence poly (pdilate n p)      by poly_def_alt, poly_lead_alt
 *)
-val poly_dilate_poly = store_thm(
-  "poly_dilate_poly",
-  ``!r:'a ring. Ring r ==> !p. poly p ==> !n. poly (pdilate n p)``,
+Theorem poly_dilate_poly:
+    !r:'a ring. Ring r ==> !p. poly p ==> !n. poly (pdilate n p)
+Proof
   rpt strip_tac >>
   Cases_on `p = |0|` >-
   rw[] >>
   `pdilate n p <> |0|` by rw[poly_dilate_eq_zero] >>
   `weak (pdilate n p)` by rw[weak_dilate_weak] >>
   `lead (pdilate n p) <> #0` by rw_tac std_ss[poly_dilate_lead, poly_lead_nonzero] >>
-  metis_tac[poly_def_alt, poly_lead_alt]);
+  metis_tac[poly_def_alt, poly_lead_alt]
+QED
 
 (* Theorem: pdilate n [c] = [c] *)
 (* Proof:
@@ -3373,10 +3476,11 @@ val poly_dilate_poly = store_thm(
    = DILATE #0 0 n [c]    by poly_dilate_def
    = [c]                  by DILATE_SING
 *)
-val poly_dilate_const = store_thm(
-  "poly_dilate_const",
-  ``!r:'a ring. !n c. pdilate n [c] = [c]``,
-  rw[DILATE_SING]);
+Theorem poly_dilate_const:
+    !r:'a ring. !n c. pdilate n [c] = [c]
+Proof
+  rw[DILATE_SING]
+QED
 
 (* ------------------------------------------------------------------------- *)
 (*===========================================================================*)

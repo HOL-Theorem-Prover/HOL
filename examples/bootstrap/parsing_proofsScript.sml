@@ -634,7 +634,7 @@ Proof
   \\ pop_assum mp_tac \\ simp [Once exp2v_def] \\ gvs []
 QED
 
-Triviality exps2v_thm[simp]:
+Theorem exps2v_thm[local,simp]:
   exps2v [] = [] ∧
   exps2v (e::es) = exp2v e :: exps2v es
 Proof

@@ -365,28 +365,31 @@ Definition interpret_def[simp]:
   (interpret f (c::cs) ⇔ interpret_clause f c /\ interpret f cs)
 End
 
-val empty_clause_interpret = store_thm(
-  "empty_clause_interpret",
-  ``!cs. MEM [] cs ==> ~interpret f cs``,
-  Induct THEN SRW_TAC [][] THEN SRW_TAC [][]);
+Theorem empty_clause_interpret:
+    !cs. MEM [] cs ==> ~interpret f cs
+Proof
+  Induct THEN SRW_TAC [][] THEN SRW_TAC [][]
+QED
 
-val iclause_rewrite = store_thm(
-  "iclause_rewrite",
-  ``!c v. ~MEM (v,f v) c /\ interpret_clause f c ==>
-          interpret_clause f (FILTER ($~ o binds v) c)``,
+Theorem iclause_rewrite:
+    !c v. ~MEM (v,f v) c /\ interpret_clause f c ==>
+          interpret_clause f (FILTER ($~ o binds v) c)
+Proof
   Induct THEN1 SRW_TAC [][] THEN
   ASM_SIMP_TAC (srw_ss() ++ DNF_ss) [pairTheory.FORALL_PROD, binds_def] THEN
-  SRW_TAC [][] THEN METIS_TAC []);
+  SRW_TAC [][] THEN METIS_TAC []
+QED
 
-val interpret_rewrite = store_thm(
-  "interpret_rewrite",
-  ``!cs v b. (f v = b) /\ interpret f cs ==>
-             interpret f (rewrite v b cs)``,
-  Induct THEN SRW_TAC [][rewrite_def] THEN METIS_TAC [iclause_rewrite]);
+Theorem interpret_rewrite:
+    !cs v b. (f v = b) /\ interpret f cs ==>
+             interpret f (rewrite v b cs)
+Proof
+  Induct THEN SRW_TAC [][rewrite_def] THEN METIS_TAC [iclause_rewrite]
+QED
 
-val interpret_uprop = store_thm(
-  "interpret_uprop",
-  ``(find_uprop cs = SOME (q,r)) ==> ~interpret f (rewrite q (~r) cs)``,
+Theorem interpret_uprop:
+    (find_uprop cs = SOME (q,r)) ==> ~interpret f (rewrite q (~r) cs)
+Proof
   Induct_on `cs` THEN SRW_TAC [][find_uprop_def, rewrite_def] THENL [
     Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [] THENL [
       Cases_on `r` THEN FULL_SIMP_TAC (srw_ss()) [],
@@ -394,12 +397,13 @@ val interpret_uprop = store_thm(
     ],
     Cases_on `h` THEN FULL_SIMP_TAC (srw_ss()) [binds_def] THEN
     Cases_on `t` THEN FULL_SIMP_TAC (srw_ss()) [binds_def]
-  ]);
+  ]
+QED
 
 (* might equally be able to get conclusion from !fm. ~(fm satisfies cs) *)
-val dpll_interpret = store_thm(
-  "dpll_interpret",
-  ``!cs f. (dpll cs = NONE) ==> (interpret f cs = F)``,
+Theorem dpll_interpret:
+    !cs f. (dpll cs = NONE) ==> (interpret f cs = F)
+Proof
   HO_MATCH_MP_TAC dpll_ind THEN GEN_TAC THEN STRIP_TAC THEN
   ONCE_REWRITE_TAC [dpll_def] THEN SRW_TAC [][empty_clause_interpret] THEN
   Cases_on `find_uprop cs` THENL [
@@ -415,7 +419,8 @@ val dpll_interpret = store_thm(
     `~interpret f (rewrite q (~r) cs)` by METIS_TAC [interpret_uprop] THEN
     Cases_on `r` THEN FULL_SIMP_TAC (srw_ss()) [] THEN
     METIS_TAC [interpret_rewrite]
-  ]);
+  ]
+QED
 
 val t0 = `` (((~a \/ p /\ ~q \/ ~p /\ q) /\
                     (~(p /\ ~q \/ ~p /\ q) \/ a)) /\

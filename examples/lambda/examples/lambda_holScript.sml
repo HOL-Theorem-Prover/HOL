@@ -151,18 +151,20 @@ Proof
   Q.EXISTS_TAC `z` THEN SRW_TAC [][aeq_rawpm]
 QED
 
-val aeq_sym = store_thm(
-  "aeq_sym",
-  ``!t u. aeq t u ==> aeq u t``,
+Theorem aeq_sym:
+    !t u. aeq t u ==> aeq u t
+Proof
   HO_MATCH_MP_TAC aeq_ind THEN SRW_TAC [][aeq_rules] THEN
-  METIS_TAC [aeq_rules]);
+  METIS_TAC [aeq_rules]
+QED
 
-val aeq_app_rwt = store_thm(
-  "aeq_app_rwt",
-  ``aeq (rhapp t u) z = ?z1 z2. (z = rhapp z1 z2) /\
-                                aeq t z1 /\ aeq u z2``,
+Theorem aeq_app_rwt:
+    aeq (rhapp t u) z = ?z1 z2. (z = rhapp z1 z2) /\
+                                aeq t z1 /\ aeq u z2
+Proof
   CONV_TAC (LAND_CONV (ONCE_REWRITE_CONV [aeq_cases])) THEN
-  SRW_TAC [][]);
+  SRW_TAC [][]
+QED
 
 Theorem aeq_trans:
   !s t u. aeq s t /\ aeq t u ==> aeq s u
@@ -212,16 +214,18 @@ Proof
   Induct_on `t` THEN SRW_TAC [][] THEN SRW_TAC [][]
 QED
 
-val IN_fv_rawpm = store_thm(
-  "IN_fv_rawpm",
-  ``x IN fv ty (rhpm ty pi t) ⇔ lswapstr (REVERSE pi) x IN fv ty t``,
+Theorem IN_fv_rawpm:
+    x IN fv ty (rhpm ty pi t) ⇔ lswapstr (REVERSE pi) x IN fv ty t
+Proof
   Induct_on `t` THEN SRW_TAC [][pmact_eql] THEN
-  FULL_SIMP_TAC (srw_ss()) []);
+  FULL_SIMP_TAC (srw_ss()) []
+QED
 
-val fv_rawpm_diff = store_thm(
-  "fv_rawpm_diff",
-  ``~(ty = ty') ==> (fv ty (rhpm ty' pi t) = fv ty t)``,
-  Induct_on `t` THEN SRW_TAC [][] THEN METIS_TAC []);
+Theorem fv_rawpm_diff:
+    ~(ty = ty') ==> (fv ty (rhpm ty' pi t) = fv ty t)
+Proof
+  Induct_on `t` THEN SRW_TAC [][] THEN METIS_TAC []
+QED
 
 Theorem aeq_fv:
   !t u. aeq t u ==> !ty. fv ty t = fv ty u

@@ -1,6 +1,7 @@
 (* ************************************************************************* *)
 (* Sum of a real-valued function on a set: SIGMA f s                         *)
 (* ************************************************************************* *)
+
 Theory real_sigma
 Ancestors
   arithmetic combin pair pred_set cardinal prim_rec permutes real
@@ -8,7 +9,6 @@ Ancestors
 Libs
   res_quanTools hurdUtils numLib tautLib mesonLib jrhUtils
   pred_setLib RealArith realSimps
-
 
 (* ------------------------------------------------------------------------- *)
 (* MESON, METIS, SET_TAC, SET_RULE, ASSERT_TAC, ASM_ARITH_TAC                *)
@@ -388,8 +388,7 @@ Proof
   MP_TAC(SPEC ``t:real->bool`` SUP) THEN ASM_SET_TAC[]
 QED
 
-(* there's another REAL_LE_SUP in HOL's realTheory *)
-Theorem REAL_LE_SUP' :
+Theorem REAL_LE_SUP2 : (* was: REAL_LE_SUP' (conflicted with realTheory) *)
     !s a b y:real. y IN s /\ a <= y /\ (!x. x IN s ==> x <= b) ==> a <= sup s
 Proof
     MESON_TAC [SUP, MEMBER_NOT_EMPTY, REAL_LE_TRANS]
@@ -3064,7 +3063,7 @@ Proof
   METIS_TAC []
 QED
 
-Theorem REAL_LE_MUL' :
+Theorem REAL_LE_MUL_NEG : (* was: REAL_LE_MUL' *)
     !x y. x <= 0 /\ y <= 0 ==> 0 <= x * y
 Proof
     rpt STRIP_TAC
@@ -3074,7 +3073,7 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-Theorem REAL_LT_MUL' :
+Theorem REAL_LT_MUL_NEG : (* was: REAL_LT_MUL' *)
     !x y. x < 0 /\ y < 0 ==> 0 < x * y
 Proof
     rpt STRIP_TAC
@@ -3084,8 +3083,8 @@ Proof
  >> ASM_REWRITE_TAC []
 QED
 
-Theorem REAL_LT_LMUL' :
-    !x y z. x < 0 ==> ((x * y) < (x * z) <=> z < y)
+Theorem REAL_LT_LMUL_NEG : (* was: REAL_LT_LMUL' *)
+    !x y z. x < 0 ==> (x * y < x * z <=> z < y)
 Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [‘-x’, ‘z’, ‘y’] REAL_LT_LMUL)
@@ -3093,8 +3092,8 @@ Proof
  >> rw [GSYM REAL_NEG_RMUL, REAL_LT_NEG]
 QED
 
-Theorem REAL_LT_RMUL' :
-    !x y z. z < 0 ==> ((x * z) < (y * z) <=> y < x)
+Theorem REAL_LT_RMUL_NEG : (* was: REAL_LT_RMUL' *)
+    !x y z. z < 0 ==> (x * z < y * z <=> y < x)
 Proof
     rpt STRIP_TAC
  >> MP_TAC (Q.SPECL [‘y’, ‘x’, ‘-z’] REAL_LT_RMUL)

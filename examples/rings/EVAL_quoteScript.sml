@@ -26,10 +26,12 @@ fun type_rws ty = #rewrs (TypeBase.simpls_of ty)
 val index_discr = tl (type_rws ``:index``);
 
 
-val compare_index_equal = store_thm("compare_index_equal",
-  “!i1 i2. (index_compare i1 i2 = EQUAL) = (i1 = i2)”,
+Theorem compare_index_equal:
+   !i1 i2. (index_compare i1 i2 = EQUAL) = (i1 = i2)
+Proof
 Induct THEN Induct THEN
-RW_TAC bool_ss (index_compare_def :: index_discr));
+RW_TAC bool_ss (index_compare_def :: index_discr)
+QED
 
 
 val compare_list_index = save_thm(

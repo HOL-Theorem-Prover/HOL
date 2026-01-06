@@ -41,10 +41,11 @@ Definition token_def:
   (token p (h::t) = if isSpace h then token p t else p (h::t))
 End
 
-val token_APPEND = Q.store_thm(
-  "token_APPEND[simp]",
-  ‘EVERY isSpace s1 ⇒ token p (s1 ++ s2) = token p s2’,
-  Induct_on ‘s1’ >> simp[token_def]);
+Theorem token_APPEND[simp]:
+   EVERY isSpace s1 ⇒ token p (s1 ++ s2) = token p s2
+Proof
+  Induct_on ‘s1’ >> simp[token_def]
+QED
 
 val token_Spaces = token_APPEND |> Q.INST [‘s2’ |-> ‘[]’]
                                 |> REWRITE_RULE [listTheory.APPEND_NIL]
@@ -80,11 +81,11 @@ Proof
   simp[] >> rw[] >> fs[] >> Cases_on ‘px’ >> fs[]
 QED
 
-val token_EQ_NONE = Q.store_thm(
-  "token_EQ_NONE",
-  ‘(token p s = NONE) ⇔
+Theorem token_EQ_NONE:
+   (token p s = NONE) ⇔
      ∃px sx. s = px ++ sx ∧ EVERY isSpace px ∧ (∀h t. sx = h::t ⇒ ¬isSpace h) ∧
-             p sx = NONE’,
+             p sx = NONE
+Proof
   Induct_on ‘s’ >> simp[token_def, TypeBase.case_eq_of ``:bool``] >> rw[] >>
   rw[EQ_IMP_THM]
   >- (rename [‘h :: (px ++ sx)’] >> map_every qexists_tac [‘h::px’, ‘sx’] >>
@@ -94,13 +95,14 @@ val token_EQ_NONE = Q.store_thm(
   >- (rename [‘h::rest = px ++ sx’] >> Cases_on ‘isSpace h’
       >- (simp[] >> Cases_on ‘px’ >> fs[] >> rw[] >> metis_tac[])
       >- (‘px = []’ by (Cases_on ‘px’ >> fs[] >> rw[] >> fs[]) >>
-          fs[])));
+          fs[]))
+QED
 
-val token_EQ_SOME = Q.store_thm(
-  "token_EQ_SOME",
-  ‘(token p s = SOME (v, s')) ⇔
+Theorem token_EQ_SOME:
+   (token p s = SOME (v, s')) ⇔
     ∃px sx. s = px ++ sx ∧ EVERY isSpace px ∧ (∀h t. sx = h :: t ⇒ ¬isSpace h) ∧
-            p sx = SOME (v, s')’,
+            p sx = SOME (v, s')
+Proof
   Induct_on ‘s’ >> simp[token_def, TypeBase.case_eq_of “:bool”] >>
   qx_gen_tac ‘c’ >> Cases_on ‘isSpace c’ >> simp[]
   >- (rw[EQ_IMP_THM]
@@ -110,18 +112,21 @@ val token_EQ_SOME = Q.store_thm(
   rw[EQ_IMP_THM]
   >- (rename [‘p (c::s) = SOME _’] >> map_every qexists_tac [‘[]’, ‘c::s’] >>
       simp[]) >>
-  Cases_on ‘px’ >> fs[]);
+  Cases_on ‘px’ >> fs[]
+QED
 
-val literal_EQ_SOME = Q.store_thm(
-  "literal_EQ_SOME",
-  ‘literal l s = SOME ((), sx) ⇔ (s = l ++ sx)’,
+Theorem literal_EQ_SOME:
+   literal l s = SOME ((), sx) ⇔ (s = l ++ sx)
+Proof
   csimp[literal_def, rich_listTheory.IS_PREFIX_APPEND, PULL_EXISTS,
-        rich_listTheory.DROP_LENGTH_APPEND]);
+        rich_listTheory.DROP_LENGTH_APPEND]
+QED
 
-val literal_EQ_NONE = Q.store_thm(
-  "literal_EQ_NONE",
-  ‘literal l s = NONE ⇔ ¬(l <<= s)’,
-  simp[literal_def]);
+Theorem literal_EQ_NONE:
+   literal l s = NONE ⇔ ¬(l <<= s)
+Proof
+  simp[literal_def]
+QED
 
 Definition parseFGX_def:
   parseFGX fgx top =
@@ -157,12 +162,12 @@ Definition parseFGX_def:
     od
 End
 
-val parseFGX_CONG = Q.store_thm(
-  "parseFGX_CONG[defncong]",
-  ‘∀s1 s2 f1 f2 top1 top2.
+Theorem parseFGX_CONG[defncong]:
+   ∀s1 s2 f1 f2 top1 top2.
      (s1 = s2) ∧ (∀s. LENGTH s < LENGTH s1 ⇒ (f1 s = f2 s)) ∧
      (∀s. LENGTH s < LENGTH s1 ⇒ (top1 s = top2 s)) ⇒
-     (parseFGX f1 top1 s1 = parseFGX f2 top2 s2)’,
+     (parseFGX f1 top1 s1 = parseFGX f2 top2 s2)
+Proof
   simp[] >> rpt strip_tac >>
   simp[parseFGX_def, GSYM ES_CHOICE_ASSOC, IGNORE_BIND_DEF] >>
   ONCE_REWRITE_TAC [ES_CHOICE_DEF] >>
@@ -200,7 +205,8 @@ val parseFGX_CONG = Q.store_thm(
       >- ntac 2 (ONCE_REWRITE_TAC [ES_CHOICE_DEF] >>
                  simp[BIND_DEF, token_def, literal_def]) >>
       rename [‘f2 s2 = SOME p’] >> Cases_on ‘p’ >> simp[UNIT_DEF]) >>
-  simp[ES_CHOICE_DEF, BIND_DEF, token_def, literal_def] >> rw[]);
+  simp[ES_CHOICE_DEF, BIND_DEF, token_def, literal_def] >> rw[]
+QED
 
 Definition ParseFGX_def:
   ParseFGX top s = parseFGX (ParseFGX top) top s
@@ -223,51 +229,58 @@ Definition is_safe_def:
   is_safe p = ∀s s' v. p s = SOME (v,s') ⇒ IS_SUFFIX s s'
 End
 
-val is_safe_mksafe = Q.store_thm(
-  "is_safe_mksafe[simp]",
-  ‘is_safe (mksafe p)’,
+Theorem is_safe_mksafe[simp]:
+   is_safe (mksafe p)
+Proof
   simp[is_safe_def, mksafe_def, optionTheory.option_case_eq,
-       pairTheory.pair_case_eq]);
+       pairTheory.pair_case_eq]
+QED
 
-val IGNORE_BIND_EQ_SOME = Q.store_thm(
-  "IGNORE_BIND_EQ_SOME[simp]",
-  ‘IGNORE_BIND m1 m2 s = SOME r ⇔ ∃v0 s'. m1 s = SOME (v0,s') ∧ m2 s' = SOME r’,
+Theorem IGNORE_BIND_EQ_SOME[simp]:
+   IGNORE_BIND m1 m2 s = SOME r ⇔ ∃v0 s'. m1 s = SOME (v0,s') ∧ m2 s' = SOME r
+Proof
   simp[IGNORE_BIND_DEF, BIND_DEF, optionTheory.option_case_eq,
-       pairTheory.pair_case_eq, PULL_EXISTS]);
+       pairTheory.pair_case_eq, PULL_EXISTS]
+QED
 
-val is_safe_mksafe_id = Q.store_thm(
-  "is_safe_mksafe_id",
-  ‘is_safe p ⇒ mksafe p = p’,
+Theorem is_safe_mksafe_id:
+   is_safe p ⇒ mksafe p = p
+Proof
   simp[is_safe_def, mksafe_def, FUN_EQ_THM, optionTheory.option_case_eq,
        pairTheory.pair_case_eq, PULL_EXISTS] >> rw[] >> csimp[] >>
-  metis_tac[optionTheory.option_CASES, pairTheory.pair_CASES]);
+  metis_tac[optionTheory.option_CASES, pairTheory.pair_CASES]
+QED
 
-val IS_SUFFIX_APPEND_I = Q.store_thm(
-  "IS_SUFFIX_APPEND_I",
-  ‘IS_SUFFIX m n ⇒ IS_SUFFIX (p ++ m) n’,
-  simp[rich_listTheory.IS_SUFFIX_APPEND, PULL_EXISTS]);
+Theorem IS_SUFFIX_APPEND_I:
+   IS_SUFFIX m n ⇒ IS_SUFFIX (p ++ m) n
+Proof
+  simp[rich_listTheory.IS_SUFFIX_APPEND, PULL_EXISTS]
+QED
 
-val IS_SUFFIX_APPEND_E = Q.store_thm(
-  "IS_SUFFIX_APPEND_E",
-  ‘IS_SUFFIX m (p ++ n) ⇒ IS_SUFFIX m n’,
-  simp[rich_listTheory.IS_SUFFIX_APPEND, PULL_EXISTS]);
+Theorem IS_SUFFIX_APPEND_E:
+   IS_SUFFIX m (p ++ n) ⇒ IS_SUFFIX m n
+Proof
+  simp[rich_listTheory.IS_SUFFIX_APPEND, PULL_EXISTS]
+QED
 
-val IS_SUFFIX_TRANS = Q.store_thm(
-  "IS_SUFFIX_TRANS",
-  ‘IS_SUFFIX m n ∧ IS_SUFFIX n p ⇒ IS_SUFFIX m p’,
+Theorem IS_SUFFIX_TRANS:
+   IS_SUFFIX m n ∧ IS_SUFFIX n p ⇒ IS_SUFFIX m p
+Proof
   metis_tac[rich_listTheory.IS_PREFIX_TRANS,
-            rich_listTheory.IS_SUFFIX_compute]);
+            rich_listTheory.IS_SUFFIX_compute]
+QED
 
-val is_safe_BIND = Q.store_thm(
-  "is_safe_BIND",
-  ‘is_safe m ∧ (∀v. is_safe (f v)) ⇒ is_safe (BIND m f)’,
+Theorem is_safe_BIND:
+   is_safe m ∧ (∀v. is_safe (f v)) ⇒ is_safe (BIND m f)
+Proof
   simp[is_safe_def, BIND_DEF, optionTheory.option_case_eq, PULL_EXISTS,
        pairTheory.pair_case_eq] >> rpt strip_tac >>
-  rpt (first_x_assum drule) >> metis_tac[IS_SUFFIX_TRANS]);
+  rpt (first_x_assum drule) >> metis_tac[IS_SUFFIX_TRANS]
+QED
 
-val is_safe_ParseFGX = Q.store_thm(
-  "is_safe_ParseFGX",
-  ‘is_safe top ⇒ is_safe (ParseFGX top)’,
+Theorem is_safe_ParseFGX:
+   is_safe top ⇒ is_safe (ParseFGX top)
+Proof
   simp[is_safe_def] >> strip_tac >>
   gen_tac >> completeInduct_on ‘STRLEN s’ >> fs[PULL_FORALL] >>
   rw[Once ParseFGX_thm] >> pop_assum mp_tac >>
@@ -286,19 +299,22 @@ val is_safe_ParseFGX = Q.store_thm(
   >- (fs[] >> rpt (irule IS_SUFFIX_APPEND_I) >> first_x_assum irule >>
       simp[] >> metis_tac[])
   >- (fs[] >> rpt (irule IS_SUFFIX_APPEND_I) >> first_x_assum irule >>
-      simp[] >> metis_tac[]));
+      simp[] >> metis_tac[])
+QED
 
-val IS_SUFFIX_LENGTH = Q.store_thm(
-  "IS_SUFFIX_LENGTH",
-  ‘IS_SUFFIX m n ⇒ LENGTH n ≤ LENGTH m’,
+Theorem IS_SUFFIX_LENGTH:
+   IS_SUFFIX m n ⇒ LENGTH n ≤ LENGTH m
+Proof
   metis_tac[listTheory.LENGTH_REVERSE, rich_listTheory.IS_PREFIX_LENGTH,
-            rich_listTheory.IS_SUFFIX_compute]);
+            rich_listTheory.IS_SUFFIX_compute]
+QED
 
 
-val ParseFGX_CONG = Q.store_thm("ParseFGX_CONG[defncong]",
-  ‘∀s1 s2 t1 t2.
+Theorem ParseFGX_CONG[defncong]:
+   ∀s1 s2 t1 t2.
      (s1 = s2) ∧ (∀s. STRLEN s < STRLEN s1 ⇒ t1 s = t2 s) ⇒
-     ParseFGX t1 s1 = ParseFGX t2 s2’,
+     ParseFGX t1 s1 = ParseFGX t2 s2
+Proof
   ONCE_REWRITE_TAC [ParseFGX_def] >> rpt strip_tac >> rw[] >>
   rename [‘parseFGX _ _ s’] >>
   ‘∀t. STRLEN t ≤ STRLEN s ⇒
@@ -306,12 +322,15 @@ val ParseFGX_CONG = Q.store_thm("ParseFGX_CONG[defncong]",
     suffices_by metis_tac[DECIDE “x:num ≤ x”] >> gen_tac >>
   completeInduct_on ‘STRLEN t’ >> fs[PULL_FORALL] >> rw[] >>
   irule parseFGX_CONG >> simp[] >> rpt strip_tac >>
-  ONCE_REWRITE_TAC [ParseFGX_def] >> first_x_assum irule >> simp[]);
+  ONCE_REWRITE_TAC [ParseFGX_def] >> first_x_assum irule >> simp[]
+QED
 
-val mksafe_cong = Q.store_thm("mksafe_cong",
-  ‘∀n. (∀s. STRLEN s < n ⇒ t1 s = t2 s) ⇒
-       ∀s. STRLEN s < n ⇒ mksafe t1 s = mksafe t2 s’,
-  simp[mksafe_def]);
+Theorem mksafe_cong:
+   ∀n. (∀s. STRLEN s < n ⇒ t1 s = t2 s) ⇒
+       ∀s. STRLEN s < n ⇒ mksafe t1 s = mksafe t2 s
+Proof
+  simp[mksafe_def]
+QED
 
 Definition parseU_def:
   parseU u top =
@@ -325,11 +344,12 @@ Definition parseU_def:
     od
 End
 
-val parseU_CONG = Q.store_thm("parseU_CONG[defncong]",
-  ‘∀s1 s2 t1 t2 c1 c2.
+Theorem parseU_CONG[defncong]:
+   ∀s1 s2 t1 t2 c1 c2.
       (s1 = s2) ∧ (∀s. STRLEN s < STRLEN s1 ⇒ t1 s = t2 s) ∧
       (∀s. STRLEN s < STRLEN s1 ⇒ c1 s = c2 s) ⇒
-      (parseU c1 t1 s1 = parseU c2 t2 s2)’,
+      (parseU c1 t1 s1 = parseU c2 t2 s2)
+Proof
   rw[parseU_def, BIND_DEF] >>
   csimp[optionTheory.option_case_eq, pairTheory.pair_case_eq] >>
   rename [‘∀s. STRLEN s < STRLEN s0 ⇒ _ s = _ s’] >>
@@ -356,7 +376,8 @@ val parseU_CONG = Q.store_thm("parseU_CONG[defncong]",
   fs[is_safe_def] >> pop_assum drule >> strip_tac >>
   drule IS_SUFFIX_LENGTH >> simp[] >> strip_tac >>
   qpat_x_assum `c1 ss = SOME _` mp_tac >> simp[] >>
-  metis_tac[pairTheory.pair_CASES]);
+  metis_tac[pairTheory.pair_CASES]
+QED
 
 Definition ParseU_def:
   ParseU top s = parseU (ParseU top) top s
@@ -366,20 +387,21 @@ End
 val ParseU_thm =
     ParseU_def |> SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss) [parseU_def]
 
-val ParseU_CONG = Q.store_thm(
-  "ParseU_CONG[defncong]",
-  ‘∀s1 s2 t1 t2.
+Theorem ParseU_CONG[defncong]:
+   ∀s1 s2 t1 t2.
      (s1 = s2) ∧ (∀s. STRLEN s < STRLEN s1 ⇒ t1 s = t2 s) ⇒
-     ParseU t1 s1 = ParseU t2 s2’,
+     ParseU t1 s1 = ParseU t2 s2
+Proof
   simp[] >> rpt strip_tac >> rename [‘ParseU _ s’] >>
   ‘∀t. STRLEN t ≤ STRLEN s ⇒ ParseU t1 t = ParseU t2 t’
     suffices_by metis_tac[DECIDE “x:num ≤ x”] >> gen_tac >>
   completeInduct_on ‘STRLEN t’ >> fs[PULL_FORALL] >> rw[] >>
-  ONCE_REWRITE_TAC [ParseU_def] >> irule parseU_CONG >> simp[]);
+  ONCE_REWRITE_TAC [ParseU_def] >> irule parseU_CONG >> simp[]
+QED
 
-val is_safe_ParseU = Q.store_thm(
-  "is_safe_ParseU",
-  ‘is_safe (ParseU top)’,
+Theorem is_safe_ParseU:
+   is_safe (ParseU top)
+Proof
   simp[is_safe_def] >> gen_tac >> completeInduct_on ‘STRLEN s’ >>
   fs[PULL_FORALL] >>
   simp[Once ParseU_thm, BIND_DEF, optionTheory.option_case_eq, is_safe_def,
@@ -394,7 +416,8 @@ val is_safe_ParseU = Q.store_thm(
   rename [‘ParseU top s2 = SOME (f2, s3)’] >>
   ‘IS_SUFFIX s2 s3’
     by (first_x_assum irule >> simp[] >> fs[rich_listTheory.IS_SUFFIX_APPEND])>>
-  metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]);
+  metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]
+QED
 
 Definition parseCNJ_def:
   parseCNJ cnj top =
@@ -408,11 +431,12 @@ Definition parseCNJ_def:
     od
 End
 
-val parseCNJ_CONG = Q.store_thm("parseCNJ_CONG[defncong]",
-  ‘∀s1 s2 t1 t2 c1 c2.
+Theorem parseCNJ_CONG[defncong]:
+   ∀s1 s2 t1 t2 c1 c2.
       (s1 = s2) ∧ (∀s. STRLEN s < STRLEN s1 ⇒ t1 s = t2 s) ∧
       (∀s. STRLEN s < STRLEN s1 ⇒ c1 s = c2 s) ⇒
-      (parseCNJ c1 t1 s1 = parseCNJ c2 t2 s2)’,
+      (parseCNJ c1 t1 s1 = parseCNJ c2 t2 s2)
+Proof
   rw[parseCNJ_def, BIND_DEF] >>
   csimp[optionTheory.option_case_eq, pairTheory.pair_case_eq] >>
   rename [‘∀s. STRLEN s < STRLEN s0 ⇒ _ s = _ s’] >>
@@ -439,7 +463,8 @@ val parseCNJ_CONG = Q.store_thm("parseCNJ_CONG[defncong]",
   fs[is_safe_def] >> pop_assum drule >> strip_tac >>
   drule IS_SUFFIX_LENGTH >> simp[] >> strip_tac >>
   qpat_x_assum `c1 ss = SOME _` mp_tac >> simp[] >>
-  metis_tac[pairTheory.pair_CASES]);
+  metis_tac[pairTheory.pair_CASES]
+QED
 
 Definition ParseCNJ_def:
   ParseCNJ top s = parseCNJ (ParseCNJ top) top s
@@ -449,20 +474,21 @@ End
 val ParseCNJ_thm =
     ParseCNJ_def |> SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss) [parseCNJ_def]
 
-val ParseCNJ_CONG = Q.store_thm(
-  "ParseCNJ_CONG[defncong]",
-  ‘∀s1 s2 t1 t2.
+Theorem ParseCNJ_CONG[defncong]:
+   ∀s1 s2 t1 t2.
      (s1 = s2) ∧ (∀s. STRLEN s < STRLEN s1 ⇒ t1 s = t2 s) ⇒
-     ParseCNJ t1 s1 = ParseCNJ t2 s2’,
+     ParseCNJ t1 s1 = ParseCNJ t2 s2
+Proof
   simp[] >> rpt strip_tac >> rename [‘ParseCNJ _ s’] >>
   ‘∀t. STRLEN t ≤ STRLEN s ⇒ ParseCNJ t1 t = ParseCNJ t2 t’
     suffices_by metis_tac[DECIDE “x:num ≤ x”] >> gen_tac >>
   completeInduct_on ‘STRLEN t’ >> fs[PULL_FORALL] >> rw[] >>
-  ONCE_REWRITE_TAC [ParseCNJ_def] >> irule parseCNJ_CONG >> simp[]);
+  ONCE_REWRITE_TAC [ParseCNJ_def] >> irule parseCNJ_CONG >> simp[]
+QED
 
-val is_safe_ParseCNJ = Q.store_thm(
-  "is_safe_ParseCNJ",
-  ‘is_safe (ParseCNJ top)’,
+Theorem is_safe_ParseCNJ:
+   is_safe (ParseCNJ top)
+Proof
   simp[is_safe_def] >> gen_tac >> completeInduct_on ‘STRLEN s’ >>
   fs[PULL_FORALL] >>
   simp[Once ParseCNJ_thm, BIND_DEF, optionTheory.option_case_eq, is_safe_def,
@@ -477,7 +503,8 @@ val is_safe_ParseCNJ = Q.store_thm(
   rename [‘ParseCNJ top s2 = SOME (f2, s3)’] >>
   ‘IS_SUFFIX s2 s3’
     by (first_x_assum irule >> simp[] >> fs[rich_listTheory.IS_SUFFIX_APPEND])>>
-  metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]);
+  metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]
+QED
 
 Definition F_DISJ_def[nocompute]:
   F_DISJ f1 f2 = F_NEG (F_CONJ (F_NEG f1) (F_NEG f2))
@@ -495,11 +522,12 @@ Definition parseDSJ_def:
     od
 End
 
-val parseDSJ_CONG = Q.store_thm("parseDSJ_CONG[defncong]",
-  ‘∀s1 s2 t1 t2 d1 d2.
+Theorem parseDSJ_CONG[defncong]:
+   ∀s1 s2 t1 t2 d1 d2.
       (s1 = s2) ∧ (∀s. STRLEN s < STRLEN s1 ⇒ t1 s = t2 s) ∧
       (∀s. STRLEN s < STRLEN s1 ⇒ d1 s = d2 s) ⇒
-      (parseDSJ d1 t1 s1 = parseDSJ d2 t2 s2)’,
+      (parseDSJ d1 t1 s1 = parseDSJ d2 t2 s2)
+Proof
   rw[parseDSJ_def, BIND_DEF] >>
   csimp[optionTheory.option_case_eq, pairTheory.pair_case_eq] >>
   rename [‘∀s. STRLEN s < STRLEN s0 ⇒ _ s = _ s’] >>
@@ -526,7 +554,8 @@ val parseDSJ_CONG = Q.store_thm("parseDSJ_CONG[defncong]",
   fs[is_safe_def] >> pop_assum drule >> strip_tac >>
   drule IS_SUFFIX_LENGTH >> simp[] >> strip_tac >>
   qpat_x_assum `c1 ss = SOME _` mp_tac >> simp[] >>
-  metis_tac[pairTheory.pair_CASES]);
+  metis_tac[pairTheory.pair_CASES]
+QED
 
 Definition ParseDSJ_def:
   ParseDSJ top s = parseDSJ (ParseDSJ top) top s
@@ -536,20 +565,21 @@ End
 val ParseDSJ_thm =
     ParseDSJ_def |> SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss) [parseDSJ_def]
 
-val ParseDSJ_CONG = Q.store_thm(
-  "ParseDSJ_CONG[defncong]",
-  ‘∀s1 s2 t1 t2.
+Theorem ParseDSJ_CONG[defncong]:
+   ∀s1 s2 t1 t2.
      (s1 = s2) ∧ (∀s. STRLEN s < STRLEN s1 ⇒ t1 s = t2 s) ⇒
-     ParseDSJ t1 s1 = ParseDSJ t2 s2’,
+     ParseDSJ t1 s1 = ParseDSJ t2 s2
+Proof
   simp[] >> rpt strip_tac >> rename [‘ParseDSJ _ s’] >>
   ‘∀t. STRLEN t ≤ STRLEN s ⇒ ParseDSJ t1 t = ParseDSJ t2 t’
     suffices_by metis_tac[DECIDE “x:num ≤ x”] >> gen_tac >>
   completeInduct_on ‘STRLEN t’ >> fs[PULL_FORALL] >> rw[] >>
-  ONCE_REWRITE_TAC [ParseDSJ_def] >> irule parseDSJ_CONG >> simp[]);
+  ONCE_REWRITE_TAC [ParseDSJ_def] >> irule parseDSJ_CONG >> simp[]
+QED
 
-val is_safe_ParseDSJ = Q.store_thm(
-  "is_safe_ParseDSJ",
-  ‘is_safe (ParseDSJ top)’,
+Theorem is_safe_ParseDSJ:
+   is_safe (ParseDSJ top)
+Proof
   simp[is_safe_def] >> gen_tac >> completeInduct_on ‘STRLEN s’ >>
   fs[PULL_FORALL] >>
   simp[Once ParseDSJ_thm, BIND_DEF, optionTheory.option_case_eq, is_safe_def,
@@ -564,7 +594,8 @@ val is_safe_ParseDSJ = Q.store_thm(
   rename [‘ParseDSJ top s2 = SOME (f2, s3)’] >>
   ‘IS_SUFFIX s2 s3’
     by (first_x_assum irule >> simp[] >> fs[rich_listTheory.IS_SUFFIX_APPEND])>>
-  metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]);
+  metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]
+QED
 
 Definition F_IMP_def[nocompute]:
   F_IMP f1 f2 = F_DISJ (F_NEG f1) f2
@@ -582,11 +613,12 @@ Definition parseIMP_def:
     od
 End
 
-val parseIMP_CONG = Q.store_thm("parseIMP_CONG[defncong]",
-  ‘∀s1 s2 t1 t2 d1 d2.
+Theorem parseIMP_CONG[defncong]:
+   ∀s1 s2 t1 t2 d1 d2.
       (s1 = s2) ∧ (∀s. STRLEN s < STRLEN s1 ⇒ t1 s = t2 s) ∧
       (∀s. STRLEN s < STRLEN s1 ⇒ d1 s = d2 s) ⇒
-      (parseIMP d1 t1 s1 = parseIMP d2 t2 s2)’,
+      (parseIMP d1 t1 s1 = parseIMP d2 t2 s2)
+Proof
   rw[parseIMP_def, BIND_DEF] >>
   csimp[optionTheory.option_case_eq, pairTheory.pair_case_eq] >>
   rename [‘∀s. STRLEN s < STRLEN s0 ⇒ _ s = _ s’] >>
@@ -613,7 +645,8 @@ val parseIMP_CONG = Q.store_thm("parseIMP_CONG[defncong]",
   fs[is_safe_def] >> pop_assum drule >> strip_tac >>
   drule IS_SUFFIX_LENGTH >> simp[] >> strip_tac >>
   qpat_x_assum `c1 ss = SOME _` mp_tac >> simp[] >>
-  metis_tac[pairTheory.pair_CASES]);
+  metis_tac[pairTheory.pair_CASES]
+QED
 
 Definition ParseIMP_def:
   ParseIMP top s = parseIMP (ParseIMP top) top s
@@ -623,20 +656,21 @@ End
 val ParseIMP_thm =
     ParseIMP_def |> SIMP_RULE (srw_ss() ++ boolSimps.ETA_ss) [parseIMP_def]
 
-val ParseIMP_CONG = Q.store_thm(
-  "ParseIMP_CONG[defncong]",
-  ‘∀s1 s2 t1 t2.
+Theorem ParseIMP_CONG[defncong]:
+   ∀s1 s2 t1 t2.
      (s1 = s2) ∧ (∀s. STRLEN s < STRLEN s1 ⇒ t1 s = t2 s) ⇒
-     ParseIMP t1 s1 = ParseIMP t2 s2’,
+     ParseIMP t1 s1 = ParseIMP t2 s2
+Proof
   simp[] >> rpt strip_tac >> rename [‘ParseIMP _ s’] >>
   ‘∀t. STRLEN t ≤ STRLEN s ⇒ ParseIMP t1 t = ParseIMP t2 t’
     suffices_by metis_tac[DECIDE “x:num ≤ x”] >> gen_tac >>
   completeInduct_on ‘STRLEN t’ >> fs[PULL_FORALL] >> rw[] >>
-  ONCE_REWRITE_TAC [ParseIMP_def] >> irule parseIMP_CONG >> simp[]);
+  ONCE_REWRITE_TAC [ParseIMP_def] >> irule parseIMP_CONG >> simp[]
+QED
 
-val is_safe_ParseIMP = Q.store_thm(
-  "is_safe_ParseIMP",
-  ‘is_safe (ParseIMP top)’,
+Theorem is_safe_ParseIMP:
+   is_safe (ParseIMP top)
+Proof
   simp[is_safe_def] >> gen_tac >> completeInduct_on ‘STRLEN s’ >>
   fs[PULL_FORALL] >>
   simp[Once ParseIMP_thm, BIND_DEF, optionTheory.option_case_eq, is_safe_def,
@@ -651,18 +685,20 @@ val is_safe_ParseIMP = Q.store_thm(
   rename [‘ParseIMP top s2 = SOME (f2, s3)’] >>
   ‘IS_SUFFIX s2 s3’
     by (first_x_assum irule >> simp[] >> fs[rich_listTheory.IS_SUFFIX_APPEND])>>
-  metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]);
+  metis_tac[IS_SUFFIX_TRANS, IS_SUFFIX_APPEND_E]
+QED
 
 
 Definition Parse_def: Parse s = ParseIMP Parse s
 Termination WF_REL_TAC ‘inv_image $< STRLEN’
 End
 
-val is_safe_Parse = Q.store_thm(
-  "is_safe_Parse",
-  ‘is_safe Parse’,
+Theorem is_safe_Parse:
+   is_safe Parse
+Proof
   simp[is_safe_def, Once Parse_def] >> simp[GSYM is_safe_def] >>
-  simp_tac (srw_ss() ++ boolSimps.ETA_ss) [is_safe_ParseIMP]);
+  simp_tac (srw_ss() ++ boolSimps.ETA_ss) [is_safe_ParseIMP]
+QED
 
 val Parse_thm = save_thm(
   "Parse_thm",

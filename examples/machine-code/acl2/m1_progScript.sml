@@ -356,18 +356,23 @@ val UNIT_IN_SET = prove(
   ``!x. () IN x = (x = {()})``,
   SIMP_TAC std_ss [EXTENSION,IN_INSERT,NOT_IN_EMPTY] \\ METIS_TAC [oneTheory.one]);
 
-val ite_intro = store_thm("ite_intro",
-  ``!p x y. (if |= p then x else y) = ite p x y``,
-  ASM_SIMP_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS] THEN METIS_TAC []);
+Theorem ite_intro:
+    !p x y. (if |= p then x else y) = ite p x y
+Proof
+  ASM_SIMP_TAC std_ss [hol_defaxiomsTheory.ACL2_SIMPS] THEN METIS_TAC []
+QED
 
-val add_COMM = store_thm("add_COMM",
-  ``!x y. add x y = add y x``,
+Theorem add_COMM:
+    !x y. add x y = add y x
+Proof
   Cases \\ Cases \\ SIMP_TAC std_ss [add_def] \\ Cases_on `c` \\ Cases_on `c'`
   \\ SIMP_TAC std_ss [complex_rationalTheory.COMPLEX_ADD_def]
-  \\ METIS_TAC [ratTheory.RAT_ADD_COMM]);
+  \\ METIS_TAC [ratTheory.RAT_ADD_COMM]
+QED
 
-val add_ASSOC = store_thm("add_ASSOC",
-  ``!x y z. add (add x y) z = add x (add y z)``,
+Theorem add_ASSOC:
+    !x y z. add (add x y) z = add x (add y z)
+Proof
   Cases \\ Cases \\ Cases \\ SIMP_TAC std_ss [add_def,int_def,cpx_def]
   \\ Q.SPEC_TAC (`c`,`c`) \\ Q.SPEC_TAC (`c'`,`c2`)
   \\ SIMP_TAC std_ss [] \\ REPEAT Cases
@@ -375,51 +380,64 @@ val add_ASSOC = store_thm("add_ASSOC",
   \\ SIMP_TAC std_ss [complex_rationalTheory.COMPLEX_ADD_def,rat_def]
   \\ REPEAT Cases \\ SIMP_TAC std_ss [GSYM (EVAL ``0:rat``),ratTheory.RAT_ADD_LID,
        RW1[ratTheory.RAT_ADD_COMM]ratTheory.RAT_ADD_LID,
-       complex_rationalTheory.COMPLEX_ADD_def,ratTheory.RAT_ADD_ASSOC]);
+       complex_rationalTheory.COMPLEX_ADD_def,ratTheory.RAT_ADD_ASSOC]
+QED
 
-val add_nat = store_thm("add_nat",
-  ``!m n. add (nat m) (nat n) = nat (m + n)``,
+Theorem add_nat:
+    !m n. add (nat m) (nat n) = nat (m + n)
+Proof
   SIMP_TAC (srw_ss()) [add_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_ADD_def,rat_def,
     ratTheory.RAT_ADD_CALCULATE,fracTheory.FRAC_ADD_CALCULATE]
   \\ `!m n. &(m + n) = &m + (&(n:num)):int` by intLib.COOPER_TAC
-  \\ ASM_SIMP_TAC std_ss []);
+  \\ ASM_SIMP_TAC std_ss []
+QED
 
-val less_nat = store_thm("less_nat",
-  ``!m n. (|= (less (nat m) (nat n))) = m < n``,
+Theorem less_nat:
+    !m n. (|= (less (nat m) (nat n))) = m < n
+Proof
   SIMP_TAC (srw_ss()) [less_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_LT_def,rat_def,
     ratTheory.RAT_LES_CALCULATE,fracTheory.NMR,fracTheory.DNM]
-  \\ SRW_TAC [] [] \\ EVAL_TAC);
+  \\ SRW_TAC [] [] \\ EVAL_TAC
+QED
 
-val sexp_not = store_thm("sexp_not",
-  ``!s. (|= not s) = ~(|= s)``,
+Theorem sexp_not:
+    !s. (|= not s) = ~(|= s)
+Proof
   REPEAT STRIP_TAC \\ Cases_on `s = nil` \\ POP_ASSUM MP_TAC
-  \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC);
+  \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC
+QED
 
-val mult_nat = store_thm("mult_nat",
-  ``!m n. mult (nat m) (nat n) = nat (m * n)``,
+Theorem mult_nat:
+    !m n. mult (nat m) (nat n) = nat (m * n)
+Proof
   SIMP_TAC (srw_ss()) [mult_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_MULT_def,rat_def,
     ratTheory.RAT_MUL_CALCULATE,fracTheory.FRAC_MULT_CALCULATE,
     complex_rationalTheory.COMPLEX_ADD_def,rat_def,
     ratTheory.RAT_ADD_CALCULATE,fracTheory.FRAC_ADD_CALCULATE,
-    ratTheory.RAT_SUB_CALCULATE,fracTheory.FRAC_SUB_CALCULATE]);
+    ratTheory.RAT_SUB_CALCULATE,fracTheory.FRAC_SUB_CALCULATE]
+QED
 
-val add_nat_int = store_thm("add_nat_int",
-  ``!m n. n <= m ==> (add (nat m) (int (-&n)) = nat (m - n))``,
+Theorem add_nat_int:
+    !m n. n <= m ==> (add (nat m) (int (-&n)) = nat (m - n))
+Proof
   SIMP_TAC (srw_ss()) [add_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_ADD_def,rat_def,
     ratTheory.RAT_ADD_CALCULATE,fracTheory.FRAC_ADD_CALCULATE,
-    integerTheory.INT_SUB,GSYM integerTheory.int_sub]);
+    integerTheory.INT_SUB,GSYM integerTheory.int_sub]
+QED
 
-val unary_minus_int = store_thm("unary_minus_int",
-  ``!i. unary_minus (int i) = int (-i)``,
+Theorem unary_minus_int:
+    !i. unary_minus (int i) = int (-i)
+Proof
   SIMP_TAC (srw_ss()) [unary_minus_def,int_def,nat_def,cpx_def,
     complex_rationalTheory.COMPLEX_SUB_def,rat_def,
     complex_rationalTheory.com_0_def,ratTheory.rat_0_def,fracTheory.frac_0_def,
     ratTheory.RAT_SUB_CALCULATE,fracTheory.FRAC_SUB_CALCULATE,
-    integerTheory.INT_SUB,GSYM integerTheory.int_sub]);
+    integerTheory.INT_SUB,GSYM integerTheory.int_sub]
+QED
 
 val rat_lemma = prove(
   ``!x. ?y. (rep_rat (abs_rat x) = y) /\ rat_equiv x y``,
@@ -448,9 +466,10 @@ val INTEGERP_INT = prove(
   \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC \\ POP_ASSUM MP_TAC
   \\ METIS_TAC [fracTheory.FRAC_DNMPOS,DIVIDES_lemma]);
 
-val nth_lemma = store_thm("nth_lemma",
-  ``(nth (nat 0) x = car x) /\
-    (nth (nat (SUC n)) x = nth (nat n) (cdr x))``,
+Theorem nth_lemma:
+    (nth (nat 0) x = car x) /\
+    (nth (nat (SUC n)) x = nth (nat n) (cdr x))
+Proof
   SIMP_TAC std_ss [arithmeticTheory.ADD1] \\ REPEAT STRIP_TAC
   \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [acl2_simp nth_defun]))
   \\ SIMP_TAC (srw_ss()) [ACL2_SIMPS,nat_def,INTEGERP_INT,less_def,
@@ -459,11 +478,13 @@ val nth_lemma = store_thm("nth_lemma",
   \\ SIMP_TAC std_ss [add_nat_int] \\ SIMP_TAC std_ss [nat_def]
   \\ SIMP_TAC (srw_ss()) [ACL2_SIMPS,nat_def,INTEGERP_INT,less_def,int_def,
         cpx_def,EVAL ``int 0``,rat_def,ratTheory.RAT_LES_CALCULATE,
-        fracTheory.NMR,fracTheory.DNM,DECIDE ``0<n+1:num``]);
+        fracTheory.NMR,fracTheory.DNM,DECIDE ``0<n+1:num``]
+QED
 
-val update_nth_lemma = store_thm("update_nth_lemma",
-  ``(update_nth (nat 0) v list = cons v (cdr list)) /\
-    (update_nth (nat (SUC n)) v list = cons (car list) (update_nth (nat n) v (cdr list)))``,
+Theorem update_nth_lemma:
+    (update_nth (nat 0) v list = cons v (cdr list)) /\
+    (update_nth (nat (SUC n)) v list = cons (car list) (update_nth (nat n) v (cdr list)))
+Proof
   SIMP_TAC std_ss [arithmeticTheory.ADD1] \\ REPEAT STRIP_TAC
   \\ CONV_TAC (RATOR_CONV (ONCE_REWRITE_CONV [acl2_simp update_nth_defun]))
   \\ SIMP_TAC (srw_ss()) [ACL2_SIMPS,nat_def,INTEGERP_INT,less_def,
@@ -472,7 +493,8 @@ val update_nth_lemma = store_thm("update_nth_lemma",
   \\ SIMP_TAC std_ss [add_nat_int] \\ SIMP_TAC std_ss [nat_def]
   \\ SIMP_TAC (srw_ss()) [ACL2_SIMPS,nat_def,INTEGERP_INT,less_def,int_def,
         cpx_def,EVAL ``int 0``,rat_def,ratTheory.RAT_LES_CALCULATE,
-        fracTheory.NMR,fracTheory.DNM,DECIDE ``0<n+1:num``]);
+        fracTheory.NMR,fracTheory.DNM,DECIDE ``0<n+1:num``]
+QED
 
 val nth_thm = prove(
   ``(nth (nat 0) (cons x0 x1) = x0) /\
@@ -488,17 +510,21 @@ val nth_1 = save_thm("nth_1",
 val update_nth_1 = save_thm("update_nth_1",
   SIMP_CONV bool_ss [GSYM (EVAL ``SUC 0``),update_nth_lemma] ``update_nth (nat 1) v list``);
 
-val not_eq_nil = store_thm("not_eq_nil",
-  ``!x. (not x = nil) = (|= x)``,
+Theorem not_eq_nil:
+    !x. (not x = nil) = (|= x)
+Proof
   REPEAT STRIP_TAC \\ Cases_on `x = nil` \\ POP_ASSUM MP_TAC
-  \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss []);
+  \\ ASM_SIMP_TAC std_ss [] \\ EVAL_TAC \\ ASM_SIMP_TAC std_ss []
+QED
 
-val sexp_reduce_SUC = store_thm("sexp_reduce_SUC",
-  ``!n. add (nat (SUC n)) (unary_minus (nat 1)) = nat n``,
+Theorem sexp_reduce_SUC:
+    !n. add (nat (SUC n)) (unary_minus (nat 1)) = nat n
+Proof
   SIMP_TAC std_ss [ADD1,GSYM add_nat,add_ASSOC]
   \\ `add (nat 1) (unary_minus (nat 1)) = nat 0` by ALL_TAC
   \\ ASM_SIMP_TAC std_ss [add_nat] \\ SIMP_TAC std_ss [nat_def,unary_minus_int]
-  \\ SIMP_TAC std_ss [GSYM nat_def,add_nat_int]);
+  \\ SIMP_TAC std_ss [GSYM nat_def,add_nat_int]
+QED
 
 val make_state_thm = prove(
   ``(pc (make_state x y z p) = x) /\
@@ -597,67 +623,85 @@ fun M1_TAC thm =
   \\ METIS_TAC [add_COMM]
 
 
-val M1_ICONST = store_thm("M1_ICONST",
-  ``SPEC M1_MODEL
+Theorem M1_ICONST:
+    SPEC M1_MODEL
        (tS s * PC p)
        {(p, List [sym "M1" "ICONST"; x])}
-       (tS (push x s) * PC (add p (nat 1)))``,
-  M1_TAC IMP_SPEC_M1_MODEL);
+       (tS (push x s) * PC (add p (nat 1)))
+Proof
+  M1_TAC IMP_SPEC_M1_MODEL
+QED
 
-val M1_IADD = store_thm("M1_IADD",
-  ``SPEC M1_MODEL
+Theorem M1_IADD:
+    SPEC M1_MODEL
        (tS s * PC p)
        {(p, List [sym "M1" "IADD"])}
-       (tS (push (add (top (pop s)) (top s)) (pop (pop s))) * PC (add p (nat 1)))``,
-  M1_TAC IMP_SPEC_M1_MODEL);
+       (tS (push (add (top (pop s)) (top s)) (pop (pop s))) * PC (add p (nat 1)))
+Proof
+  M1_TAC IMP_SPEC_M1_MODEL
+QED
 
-val M1_ISUB = store_thm("M1_ISUB",
-  ``SPEC M1_MODEL
+Theorem M1_ISUB:
+    SPEC M1_MODEL
        (tS s * PC p)
        {(p, List [sym "M1" "ISUB"])}
-       (tS (push (add (top (pop s)) (unary_minus (top s))) (pop (pop s))) * PC (add p (nat 1)))``,
-  M1_TAC IMP_SPEC_M1_MODEL);
+       (tS (push (add (top (pop s)) (unary_minus (top s))) (pop (pop s))) * PC (add p (nat 1)))
+Proof
+  M1_TAC IMP_SPEC_M1_MODEL
+QED
 
-val M1_IMUL = store_thm("M1_IMUL",
-  ``SPEC M1_MODEL
+Theorem M1_IMUL:
+    SPEC M1_MODEL
        (tS s * PC p)
        {(p, List [sym "M1" "IMUL"])}
-       (tS (push (mult (top (pop s)) (top s)) (pop (pop s))) * PC (add p (nat 1)))``,
-  M1_TAC IMP_SPEC_M1_MODEL);
+       (tS (push (mult (top (pop s)) (top s)) (pop (pop s))) * PC (add p (nat 1)))
+Proof
+  M1_TAC IMP_SPEC_M1_MODEL
+QED
 
-val M1_GOTO = store_thm("M1_GOTO",
-  ``SPEC M1_MODEL
+Theorem M1_GOTO:
+    SPEC M1_MODEL
        (tS s * PC p)
        {(p, List [sym "M1" "GOTO"; x])}
-       (tS s * PC (add p x))``,
-  M1_TAC IMP_SPEC_M1_MODEL);
+       (tS s * PC (add p x))
+Proof
+  M1_TAC IMP_SPEC_M1_MODEL
+QED
 
-val M1_IFLE = store_thm("M1_IFLE",
-  ``SPEC M1_MODEL
+Theorem M1_IFLE:
+    SPEC M1_MODEL
        (tS s * PC p * precond ((|= (not (less (nat 0) (top s))))))
        {(p, List [sym "M1" "IFLE"; x])}
-       (tS (pop s) * PC (add p x))``,
-  M1_TAC IMP_SPEC_M1_MODEL);
+       (tS (pop s) * PC (add p x))
+Proof
+  M1_TAC IMP_SPEC_M1_MODEL
+QED
 
-val M1_IFLE_NOP = store_thm("M1_IFLE_NOP",
-  ``SPEC M1_MODEL
+Theorem M1_IFLE_NOP:
+    SPEC M1_MODEL
        (tS s * PC p * precond (~(|= (not (less (nat 0) (top s))))))
        {(p, List [sym "M1" "IFLE"; x])}
-       (tS (pop s) * PC (add p (nat 1)))``,
-  M1_TAC IMP_SPEC_M1_MODEL);
+       (tS (pop s) * PC (add p (nat 1)))
+Proof
+  M1_TAC IMP_SPEC_M1_MODEL
+QED
 
-val M1_ILOAD = store_thm("M1_ILOAD",
-  ``SPEC M1_MODEL
+Theorem M1_ILOAD:
+    SPEC M1_MODEL
        (tS s * tL n v * PC p)
        {(p, List [sym "M1" "ILOAD"; (nat n)])}
-       (tS (push v s) * tL n v * PC (add p (nat 1)))``,
-  M1_TAC IMP_SPEC_M1_MODEL_2);
+       (tS (push v s) * tL n v * PC (add p (nat 1)))
+Proof
+  M1_TAC IMP_SPEC_M1_MODEL_2
+QED
 
-val M1_ISTORE = store_thm("M1_ISTORE",
-  ``SPEC M1_MODEL
+Theorem M1_ISTORE:
+    SPEC M1_MODEL
        (tS s * tL n v * PC p)
        {(p, List [sym "M1" "ISTORE"; (nat n)])}
-       (tS (pop s) * tL n (top s) * PC (add p (nat 1)))``,
-  M1_TAC IMP_SPEC_M1_MODEL_3);
+       (tS (pop s) * tL n (top s) * PC (add p (nat 1)))
+Proof
+  M1_TAC IMP_SPEC_M1_MODEL_3
+QED
 
 

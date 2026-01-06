@@ -2,6 +2,7 @@ structure wordsLib :> wordsLib =
 struct
 
 open HolKernel Parse boolLib bossLib computeLib
+open BasicProvers
 open wordsTheory wordsSyntax
 open bitTheory numeral_bitTheory bitLib
 open numposrepTheory numposrepLib
@@ -12,10 +13,9 @@ open stringSyntax
 val ambient_grammars = Parse.current_grammars();
 val _ = Parse.temp_set_grammars $ valOf $ grammarDB {thyname = "words"}
 
-val () = ignore (Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ())
-
 val ERR = mk_HOL_ERR "wordsLib"
 
+fun SRW_TAC xs ys = PRIM_SRW_TAC arith_ss xs ys
 (* ------------------------------------------------------------------------- *)
 
 fun is_word_literal t =
@@ -315,13 +315,13 @@ local
   val w2n_n2w_compute = Q.prove(
      `!n. w2n ((n2w n) : 'a word) =
           if n < dimword(:'a) then n else n MOD dimword(:'a)`,
-     SRW_TAC [boolSimps.LET_ss] [])
+     PRIM_SRW_TAC (bossLib.arith_ss) [boolSimps.LET_ss] [w2n_n2w])
 
   val word_2comp_compute = Q.prove(
      `!n. word_2comp (n2w n) : 'a word =
             let x = n MOD dimword (:'a) in
               if x = 0 then 0w else n2w (dimword (:'a) - x)`,
-     SRW_TAC [boolSimps.LET_ss] [word_2comp_n2w])
+     PRIM_SRW_TAC (bossLib.arith_ss)[boolSimps.LET_ss] [word_2comp_n2w,n2w_11])
 
   val word_lsl_compute = Q.prove(
      `!n m. (n2w m : 'a word) << n =
@@ -1407,7 +1407,7 @@ val ROL_ROR_MOD_RWT = Q.prove(
        words$word_rol w (arithmetic$MOD n (fcp$dimindex (:'a)))) /\
       (words$word_ror w n =
        words$word_ror w (arithmetic$MOD n (fcp$dimindex (:'a))))`,
-   SRW_TAC [] [Once (GSYM ROL_MOD), Once (GSYM ROR_MOD)])
+   BasicProvers.PRIM_SRW_TAC bossLib.arith_ss [] [Once (GSYM ROL_MOD), Once (GSYM ROR_MOD)])
 
 val ASR_ROR_ROL_UINT_MAX = Q.prove(
   `(!m n. (n2w n = -1w: 'a word) ==> (n2w n >> m = -1w: 'a word)) /\
@@ -1890,7 +1890,7 @@ local
     `!m n. (n2w m = n2w n : 'a word) /\
            m < dimword(:'a) /\
            n < dimword(:'a) ==> (m = n)`,
-    SRW_TAC [] [] THEN FULL_SIMP_TAC arith_ss [])
+    SRW_TAC [] [n2w_11] THEN FULL_SIMP_TAC arith_ss [])
 
   val word_lt_imp_num_lt = Q.prove(
     `!m n. (n2w m) <+ (n2w n : 'a word) /\
@@ -1964,7 +1964,7 @@ local
 
   val word_extract_le = Q.prove(
     `!a:'a word h l. w2n ((h >< l) a : 'b word) <= w2n a`,
-    Cases THEN SRW_TAC [] [word_extract_n2w]
+    Cases THEN SRW_TAC [] [word_extract_n2w,w2n_n2w]
     THEN SRW_TAC [] [bitTheory.BITS_COMP_THM2, MOD_DIMINDEX]
     THEN SRW_TAC [] [arithmeticTheory.MIN_DEF, bitTheory.BITS_LEQ])
 
@@ -1982,7 +1982,8 @@ local
 
   val word_lsl_le = Q.prove(
     `!a:'a word b. w2n (a << b) <= w2n a * 2 ** b`,
-    Cases THEN SRW_TAC [] [word_lsl_n2w, bitTheory.MOD_LEQ, ZERO_LT_dimword])
+    Cases THEN SRW_TAC [] [word_lsl_n2w, w2n_n2w,
+           bitTheory.MOD_LEQ, ZERO_LT_dimword])
 
   val word_div_le = Q.prove(
     `!a:'a word b.

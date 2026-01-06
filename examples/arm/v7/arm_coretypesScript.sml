@@ -410,21 +410,25 @@ in
   val aligned_n2w = save_thm("aligned_n2w", rule aligned_def)
 end;
 
-val align_slice = Q.store_thm("align_slice",
-  `!n a:'a word. align (a,2 ** n) = (dimindex(:'a) - 1 '' n) a`,
+Theorem align_slice:
+   !n a:'a word. align (a,2 ** n) = (dimindex(:'a) - 1 '' n) a
+Proof
   STRIP_TAC \\ Cases
     \\ SRW_TAC [ARITH_ss] [align_def, word_slice_n2w, SLICE_THM, BITS_THM2,
          DECIDE ``0 < n ==> (SUC (n - 1) = n)``]
-    \\ FULL_SIMP_TAC (srw_ss()) [dimword_def]);
+    \\ FULL_SIMP_TAC (srw_ss()) [dimword_def]
+QED
 
 val MIN_LEM = Q.prove(`!a b. MIN a (MIN a b) = MIN a b`, SRW_TAC [] [MIN_DEF]);
 
-val align_id = Q.store_thm("align_id",
-  `!n a. align (align (a,2 ** n),2 ** n) = align (a,2 ** n)`,
+Theorem align_id:
+   !n a. align (align (a,2 ** n),2 ** n) = align (a,2 ** n)
+Proof
   SRW_TAC [ARITH_ss,wordsLib.WORD_EXTRACT_ss]
           [DIMINDEX_GT_0,MIN_LEM,align_slice]
     \\ SRW_TAC [ARITH_ss] [MIN_DEF]
-    \\ `n = 0` by DECIDE_TAC \\ SRW_TAC [] []);
+    \\ `n = 0` by DECIDE_TAC \\ SRW_TAC [] []
+QED
 
 val align_id_248 = save_thm("align_id_248",
   numLib.REDUCE_RULE
@@ -458,12 +462,13 @@ val LOWEST_SET_BIT_LT_DIMINDEX = Q.prove(
     \\ `n < 2 ** n'` by DECIDE_TAC
     \\ METIS_TAC [NOT_BIT_GT_TWOEXP]);
 
-val lowest_set_bit_compute = Q.store_thm("lowest_set_bit_compute",
-  `!w. lowest_set_bit (w:'a word) =
+Theorem lowest_set_bit_compute:
+   !w. lowest_set_bit (w:'a word) =
        if w = 0w then
          dimindex(:'a)
        else
-         LOWEST_SET_BIT (w2n w)`,
+         LOWEST_SET_BIT (w2n w)
+Proof
   Cases \\ SRW_TAC [] [lowest_set_bit_def, LOWEST_SET_BIT_def]
     \\ MATCH_MP_TAC LEAST_THM
     \\ SRW_TAC [] []
@@ -471,15 +476,16 @@ val lowest_set_bit_compute = Q.store_thm("lowest_set_bit_compute",
     \\ FULL_SIMP_TAC (srw_ss()++ARITH_ss)
          [word_index, LOWEST_SET_BIT_LESS_LEAST]
     \\ MATCH_MP_TAC LEAST_BIT_INTRO
-    \\ METIS_TAC [BIT_EXISTS]);
+    \\ METIS_TAC [BIT_EXISTS]
+QED
 
 val NOT_IN_EMPTY_SPECIFICATION = save_thm("NOT_IN_EMPTY_SPECIFICATION",
   (GSYM o SIMP_RULE (srw_ss()) [] o Q.SPEC `{}`) pred_setTheory.SPECIFICATION);
 
 (* ------------------------------------------------------------------------ *)
 
-val encode_psr_bit = Q.store_thm("encode_psr_bit",
-  `(!cpsr. encode_psr cpsr ' 31 = cpsr.N) /\
+Theorem encode_psr_bit:
+   (!cpsr. encode_psr cpsr ' 31 = cpsr.N) /\
    (!cpsr. encode_psr cpsr ' 30 = cpsr.Z) /\
    (!cpsr. encode_psr cpsr ' 29 = cpsr.C) /\
    (!cpsr. encode_psr cpsr ' 28 = cpsr.V) /\
@@ -510,22 +516,26 @@ val encode_psr_bit = Q.store_thm("encode_psr_bit",
    (!cpsr. encode_psr cpsr ' 3 = cpsr.M ' 3) /\
    (!cpsr. encode_psr cpsr ' 2 = cpsr.M ' 2) /\
    (!cpsr. encode_psr cpsr ' 1 = cpsr.M ' 1) /\
-   (!cpsr. encode_psr cpsr ' 0 = cpsr.M ' 0)`,
-  SRW_TAC [fcpLib.FCP_ss] [encode_psr_def]);
+   (!cpsr. encode_psr cpsr ' 0 = cpsr.M ' 0)
+Proof
+  SRW_TAC [fcpLib.FCP_ss] [encode_psr_def]
+QED
 
 val extract_modify =
    (GEN_ALL o SIMP_CONV (arith_ss++fcpLib.FCP_ss++boolSimps.CONJ_ss)
     [word_extract_def, word_bits_def, w2w])
     ``(h >< l) ($FCP P) = value``;
 
-val encode_psr_bits = Q.store_thm("encode_psr_bits",
-  `(!cpsr. (26 >< 25) (encode_psr cpsr) = (1 >< 0) cpsr.IT) /\
+Theorem encode_psr_bits:
+   (!cpsr. (26 >< 25) (encode_psr cpsr) = (1 >< 0) cpsr.IT) /\
    (!cpsr. (23 >< 20) (encode_psr cpsr) = cpsr.Reserved) /\
    (!cpsr. (19 >< 16) (encode_psr cpsr) = cpsr.GE) /\
    (!cpsr. (15 >< 10) (encode_psr cpsr) = (7 >< 2) cpsr.IT) /\
-   (!cpsr. ( 4 >< 0 ) (encode_psr cpsr) = cpsr.M)`,
+   (!cpsr. ( 4 >< 0 ) (encode_psr cpsr) = cpsr.M)
+Proof
   REPEAT STRIP_TAC \\ REWRITE_TAC [encode_psr_def, extract_modify]
-    \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def, word_bits_def, w2w]);
+    \\ SRW_TAC [ARITH_ss,fcpLib.FCP_ss] [word_extract_def, word_bits_def, w2w]
+QED
 
 (* ------------------------------------------------------------------------ *)
 

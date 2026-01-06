@@ -2635,7 +2635,7 @@ Proof
 QED
 
 Theorem INTEGRAL_SUB:
-   !f:real->real g k l s.
+   !(f :real -> real) g s.
         f integrable_on s /\ g integrable_on s
         ==> (integral s (\x. f x - g x) = integral s f - integral s g)
 Proof
@@ -4953,17 +4953,6 @@ Proof
     ASM_MESON_TAC[]
 QED
 
-Theorem REAL_MUL_POS_LT:
-   !x y:real. &0 < x * y <=> &0 < x /\ &0 < y \/ x < &0 /\ y < &0
-Proof
-  REPEAT STRIP_TAC THEN
-  STRIP_ASSUME_TAC(SPEC ``x:real`` REAL_LT_NEGTOTAL) THEN
-  STRIP_ASSUME_TAC(SPEC ``y:real`` REAL_LT_NEGTOTAL) THEN
-  ASM_REWRITE_TAC[REAL_MUL_LZERO, REAL_MUL_RZERO, REAL_LT_REFL] THEN
-  ASSUM_LIST(MP_TAC o MATCH_MP REAL_LT_MUL o end_itlist CONJ) THEN
-  REPEAT(POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC
-QED
-
 Theorem HAS_INTEGRAL_NEGLIGIBLE:
    !f:real->real s t.
         negligible s /\ (!x. x IN (t DIFF s) ==> (f x = 0))
@@ -5205,7 +5194,7 @@ Proof
 QED
 
 Theorem INTEGRAL_SPIKE:
-   !f:real->real g s t y.
+   !f:real->real g s t.
         negligible s /\ (!x. x IN (t DIFF s) ==> (g x = f x))
         ==> (integral t f = integral t g)
 Proof

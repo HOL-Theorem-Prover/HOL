@@ -20,47 +20,51 @@ Overload "_/_" = “field_div (GF q)”; val _ = set_fixity "_/_" (Infixl 600);
 
 (* Theorems *)
 
-val field_mult_solve_eqn = store_thm(
-  "field_mult_solve_eqn",
-  “!r:'a field. Field r ==>
+Theorem field_mult_solve_eqn:
+   !r:'a field. Field r ==>
        !x y z. x IN R /\ y IN R /\ z IN R /\ y <> #0 ==>
-               (x = z * y <=> x / y = z)”,
+               (x = z * y <=> x / y = z)
+Proof
   rw[EQ_IMP_THM] >-
    (simp[field_nonzero_eq, field_mult_assoc, field_mult_rinv]) >>
-   simp[field_nonzero_eq, field_mult_assoc, field_mult_linv]);
+   simp[field_nonzero_eq, field_mult_assoc, field_mult_linv]
+QED
 
-val GF_mult_solve_eqn = store_thm(
-  "GF_mult_solve_eqn",
-  “!q. prime q ==>
+Theorem GF_mult_solve_eqn:
+   !q. prime q ==>
       !d m i. m IN (GF q).carrier /\
               d IN (GF q).carrier /\
               i IN (GF q).carrier /\ m <> _0_ ==>
-              (d = i _*_ m <=>  d _/_ m = i)”,
-  simp[GF_field, field_mult_solve_eqn]);
+              (d = i _*_ m <=>  d _/_ m = i)
+Proof
+  simp[GF_field, field_mult_solve_eqn]
+QED
 
-val GF_sub_not_eq_zero = store_thm(
-  "GF_sub_not_eq_zero",
-  “∀q. prime q ⇒
+Theorem GF_sub_not_eq_zero:
+   ∀q. prime q ⇒
        ∀m1 m2.
          m1 IN (GF q).carrier ∧
          m2 IN (GF q).carrier ∧
          m2 ≠ m1 ⇒
-         m2 _-_ m1 ≠ _0_”,
+         m2 _-_ m1 ≠ _0_
+Proof
   rpt strip_tac >>
   ‘Field (GF q)’ by rw[GF_field] >>
-  metis_tac[field_sub_eq_zero]);
+  metis_tac[field_sub_eq_zero]
+QED
 
-val GF_mult_rsub = store_thm(
-  "GF_mult_rsub",
-  “∀q. prime q ⇒
+Theorem GF_mult_rsub:
+   ∀q. prime q ⇒
        ∀m1 m2 i.
          m1 IN (GF q).carrier ∧
          m2 IN (GF q).carrier ∧
          i IN (GF q).carrier ⇒
-         (i _*_ m2) _-_ (i _*_ m1) = i _*_ (m2 _-_ m1)”,
+         (i _*_ m2) _-_ (i _*_ m1) = i _*_ (m2 _-_ m1)
+Proof
   rpt strip_tac >>
   ‘Field (GF q)’ by rw[GF_field] >>
-  metis_tac[field_mult_rsub]);
+  metis_tac[field_mult_rsub]
+QED
 
 Theorem field_mult_not_zero:
   !r:'a field.
@@ -72,37 +76,38 @@ Proof
   ‘i = #0 ∨ m = #0’ by metis_tac[field_mult_eq_zero]
 QED
 
-val GF_mult_not_zero = store_thm(
-  "GF_mult_not_zero",
-  “∀q. prime q ⇒
+Theorem GF_mult_not_zero:
+   ∀q. prime q ⇒
        ∀d m i.
          m IN (GF q).carrier ∧
          d IN (GF q).carrier ∧
          i IN (GF q).carrier ∧
          d = i _*_ m ∧
          i ≠  _0_ ∧
-         m ≠  _0_   ⇒ d ≠ _0_”,
+         m ≠  _0_   ⇒ d ≠ _0_
+Proof
   rpt strip_tac >>
   ‘Field (GF q)’ by rw[GF_field] >>
-  metis_tac[field_mult_not_zero]);
+  metis_tac[field_mult_not_zero]
+QED
 
-val GF_add_sub_identity = store_thm(
-  "GF_add_sub_identity",
-  “∀q. prime q ⇒
+Theorem GF_add_sub_identity:
+   ∀q. prime q ⇒
        ∀x y z t.
          x IN (GF q).carrier ∧
          y IN (GF q).carrier ∧
          z IN (GF q).carrier ∧
          t IN (GF q).carrier ∧
          x _+_ y = z _+_ t ⇒
-         x _-_ z = t _-_ y”,
+         x _-_ z = t _-_ y
+Proof
   rpt strip_tac >>
   ‘Field (GF q)’ by metis_tac[GF_field] >>
-  metis_tac[field_add_sub_identity]);
+  metis_tac[field_add_sub_identity]
+QED
 
-val GF_diff_mult_solve = store_thm(
-  "GF_diff_mult_solve",
-  “∀q. prime q ⇒
+Theorem GF_diff_mult_solve:
+   ∀q. prime q ⇒
        ∀d1 d2 m1 m2 i.
          d1 IN (GF q).carrier ∧
          d2 IN (GF q).carrier ∧
@@ -111,12 +116,14 @@ val GF_diff_mult_solve = store_thm(
          i IN (GF q).carrier ∧
          m2 ≠ m1 ∧
          d1 _-_ d2 = i _*_ (m2 _-_ m1) ⇒
-         (d1 _-_ d2) _/_ (m2 _-_ m1) = i”,
+         (d1 _-_ d2) _/_ (m2 _-_ m1) = i
+Proof
   rpt strip_tac >>
   ‘Field (GF q)’ by rw[GF_field] >>
   ‘m2 _-_ m1 ≠ _0_’ by metis_tac[GF_sub_not_eq_zero] >>
   ‘(d1 _-_ d2) IN (GF q).carrier ∧ (m2 _-_ m1) IN (GF q).carrier’ by rw[] >>
-  metis_tac[GF_mult_solve_eqn]);
+  metis_tac[GF_mult_solve_eqn]
+QED
 
 (* Definitions *)
 Definition commit_def:
@@ -128,9 +135,8 @@ Definition verify_def:
 End
 
 (* Theorems involving commit and verify *)
-val GF_pedersen_binding = store_thm(
-  "GF_pedersen_binding",
-  “∀q. prime q ⇒
+Theorem GF_pedersen_binding:
+   ∀q. prime q ⇒
        ∀m1 m2 d1 d2.
          m1 IN (GF q).carrier ∧
          m2 IN (GF q).carrier ∧
@@ -141,7 +147,8 @@ val GF_pedersen_binding = store_thm(
                   ∀k. k IN G ∧
                       verify g (cyclic_gen g) (commit g (cyclic_gen g) d1 k m1) d2 k m2
                                             ⇒
-                     (d1 _-_ d2) _/_ (m2 _-_ m1) = cyclic_index g k”,
+                     (d1 _-_ d2) _/_ (m2 _-_ m1) = cyclic_index g k
+Proof
   simp[commit_def, verify_def, Excl "ring_sub_def", Excl "field_div_def"] >>
   rpt strip_tac >>
   qabbrev_tac ‘h = cyclic_gen g’ >>
@@ -166,18 +173,19 @@ val GF_pedersen_binding = store_thm(
   ‘Field (GF q)’ by rw[GF_field] >>
   ‘d1 _-_ d2 = (i _*_ m2) _-_ (i _*_ m1)’ by rw[GF_add_sub_identity, GF_eval] >>
   ‘d1 _-_ d2 = i _*_ (m2 _-_ m1)’ by rw[GF_mult_rsub, GF_eval] >>
-  prove_tac[GF_diff_mult_solve]);
+  prove_tac[GF_diff_mult_solve]
+QED
 
 Theorem GF_pedersen_binding_prime = GF_pedersen_binding |> SIMP_RULE (srw_ss()) [verify_def];
 
-val GF_pedersen_hiding = store_thm(
-  "GF_pedersen_hiding",
-  “∀q. prime q ⇒
+Theorem GF_pedersen_hiding:
+   ∀q. prime q ⇒
        ∀m. m IN (GF q).carrier ⇒
            ∀g: 'a group. cyclic g ∧ FINITE G ∧ (ord (cyclic_gen g) = q) ⇒
                          ∀c k. c IN G ∧ k IN G  ⇒
                                ∃d. d IN (GF q).carrier ∧
-                                   c = commit g (cyclic_gen g) d k m”,
+                                   c = commit g (cyclic_gen g) d k m
+Proof
   simp[commit_def] >>
   rw[] >>
   ‘∃i. i < CARD G ∧ c = monoid_exp g (cyclic_gen g) i’ by rw[cyclic_element_by_gen] >>
@@ -194,16 +202,17 @@ val GF_pedersen_hiding = store_thm(
   ‘ord (cyclic_gen g) = CARD G’ by rw[cyclic_gen_order] >>
   ‘d ∈ (GF (CARD G)).carrier’ by rw[GF_eval] >>
   qexists_tac ‘d’ >>
-  rw[]);
+  rw[]
+QED
 
-val ZN_pedersen_hiding = store_thm(
-  "ZN_pedersen_hiding",
-  “∀q. prime q ⇒
+Theorem ZN_pedersen_hiding:
+   ∀q. prime q ⇒
        ∀m. m IN (ZN q).carrier ⇒
            ∀g: 'a group. cyclic g ∧ FINITE G ∧ (ord (cyclic_gen g) = q) ⇒
                          ∀c k. c IN G ∧ k IN G  ⇒
                                ∃d. d IN (ZN q).carrier ∧
-                                   c = commit g (cyclic_gen g) d k m”,
+                                   c = commit g (cyclic_gen g) d k m
+Proof
   simp[commit_def] >>
   rw[] >>
   ‘∃i. i < CARD G ∧ c = monoid_exp g (cyclic_gen g) i’ by rw[cyclic_element_by_gen] >>
@@ -215,6 +224,7 @@ val ZN_pedersen_hiding = store_thm(
   rw[group_lsolve, cyclic_gen_element, cyclic_gen_order] >>
   rw[Once EQ_SYM_EQ] >>
   irule cyclic_element_by_gen >>
-  simp[]);
+  simp[]
+QED
 
 Theorem GF_pedersen_hiding_prime = GF_pedersen_hiding |> SIMP_RULE (srw_ss()) [verify_def];
