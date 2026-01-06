@@ -43,7 +43,7 @@ val f2_def = new_specification(
 
 val _ = computeLib.add_funs([f1_def, P1_def, P2_def, f2_def])
 
-fun EVAL t = computeLib.CBV_CONV computeLib.the_compset t
+fun EVAL t = computeLib.CBV_CONV (!computeLib.the_compset) t
 
 (* Check that `EVAL` reduces `t` to `t'` *)
 fun assert_reduces_to t t' =

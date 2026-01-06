@@ -107,15 +107,12 @@ val _ = if s = "\"\\042)\"" then OK()
     ASCIInumbersLib's compsets
    ---------------------------------------------------------------------- *)
 
-val cs = let
-  val cs = listLib.list_compset()
-in
-  stringLib.add_string_compset cs;
-  numposrepLib.add_numposrep_compset cs;
-  bitLib.add_bit_compset cs;
-  ASCIInumbersLib.add_ASCIInumbers_compset cs;
-  cs
-end
+val cs =
+  listLib.list_compset()
+  |> stringLib.add_string_compset
+  |> numposrepLib.add_numposrep_compset
+  |> bitLib.add_bit_compset
+  |> ASCIInumbersLib.add_ASCIInumbers_compset
 
 fun test (in_t, expected_t) =
     convtest ("ASCIInumbersLib: " ^ term_to_string in_t ^ " = " ^
