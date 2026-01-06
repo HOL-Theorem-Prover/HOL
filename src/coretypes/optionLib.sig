@@ -44,5 +44,5 @@ sig
   val is_option_case   : term -> bool
 
    val option_rws : thm
-   val OPTION_rws : computeLib.compset -> unit
+   val OPTION_rws : computeLib.compset -> computeLib.compset
 end

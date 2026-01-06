@@ -368,9 +368,10 @@ in
         end handle HOL_ERR _ => raise ERR "print_arm_state" "cannot print state"
 end;
 
-val _ = computeLib.add_conv
-          (``arm_eval$ptree_arm_next``,5,PTREE_ARM_NEXT_CONV)
-          computeLib.the_compset;
+val () = computeLib.the_compset :=
+          computeLib.add_conv
+            (``arm_eval$ptree_arm_next``,5,PTREE_ARM_NEXT_CONV)
+            (!computeLib.the_compset);
 
 local
   fun decode_psr n = Term.mk_comb(``arm_coretypes$decode_psr``, n) |> eval

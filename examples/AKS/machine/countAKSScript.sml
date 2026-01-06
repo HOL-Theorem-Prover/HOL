@@ -216,7 +216,7 @@ val _ = ParseExtras.tight_equality();
 (* ------------------------------------------------------------------------- *)
 
 (* for EVAL IFm *)
-val _ = computeLib.set_skip computeLib.the_compset ``ifM`` (SOME 1);
+val _ = computeLib.set_EVAL_skip ``ifM`` (SOME 1);
 (* EVAL IFm must be in current script, e.g. EVAL ``expn 1 2 3``; *)
 
 (* ------------------------------------------------------------------------- *)

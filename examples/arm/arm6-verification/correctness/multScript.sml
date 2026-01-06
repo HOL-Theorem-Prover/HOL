@@ -525,7 +525,7 @@ val word_add_n2w_mod = prove(
   `!m n. ((n2w m):bool ** 'a) + n2w n = n2w ((m + n) MOD 2 ** ^WL)`,
   PROVE_TAC [dimword_def,n2w_mod,word_add_n2w]);
 
-val _ = computeLib.add_thms [word_add_n2w_mod] computeLib.the_compset;
+val _ = computeLib.add_funs [word_add_n2w_mod];
 
 Theorem RD_INVARIANT_THM:
    !n a rm rs rn. 2 * (n + 1) <= 32 ==>
