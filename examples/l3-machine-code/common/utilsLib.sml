@@ -270,12 +270,11 @@ fun find_rw net tm =
 (* ---------------------------- *)
 
 local
-   val cmp = reduceLib.num_compset ()
-   val () = computeLib.add_thms
+   val cmp = computeLib.add_thms
               [pairTheory.UNCURRY, combinTheory.o_THM,
                state_transformerTheory.FOR_def,
                state_transformerTheory.BIND_DEF,
-               state_transformerTheory.UNIT_DEF] cmp
+               state_transformerTheory.UNIT_DEF] (reduceLib.num_compset ())
    val FOR_CONV = computeLib.CBV_CONV cmp
    fun term_frag_of_int i = [QUOTE (Int.toString i)]: term frag list
 in
@@ -988,11 +987,13 @@ in
    fun add_base_datatypes cmp =
       let
          val cnv = computeLib.CBV_CONV cmp
+         val cmp = computeLib.add_thms basic_rewrites cmp
+         val cmp = computeLib.add_conv
+             (pred_setSyntax.in_tm, 2, in_conv cnv) cmp
+         val cmp = computeLib.add_conv
+             (pred_setSyntax.insert_tm, 2, pred_setLib.INSERT_CONV cnv) cmp
       in
-         computeLib.add_thms basic_rewrites cmp
-         ; List.app (fn x => computeLib.add_conv x cmp)
-             [(pred_setSyntax.in_tm, 2, in_conv cnv),
-              (pred_setSyntax.insert_tm, 2, pred_setLib.INSERT_CONV cnv)]
+         cmp
       end
 end
 
@@ -1035,10 +1036,11 @@ in
 end
 
 local
-   fun add_datatype cmp =
-     computeLib.add_datatype_info cmp o Option.valOf o TypeBase.fetch
+   fun add_datatype ty cmp =
+     computeLib.add_datatype_info cmp (Option.valOf (TypeBase.fetch ty))
 in
-   fun add_datatypes l cmp = List.app (add_datatype cmp) l
+   fun add_datatypes l cmp =
+     List.foldl (fn (ty, cmp) => add_datatype ty cmp) cmp l
 end
 
 type inventory = {C: string list, N: int list, T: string list, Thy: string}
@@ -1080,16 +1082,20 @@ in
 end
 
 fun add_theory (x as (_, i)) cmp =
-   ( add_datatypes (theory_types i) cmp
-   ; computeLib.add_thms (theory_rewrites x) cmp)
+   let
+      val cmp = add_datatypes (theory_types i) cmp
+   in
+      computeLib.add_thms (theory_rewrites x) cmp
+   end
 
 fun add_to_the_compset x = computeLib.add_funs (theory_rewrites x)
 
 fun theory_compset x =
    let
       val cmp = wordsLib.words_compset ()
+      val cmp = add_base_datatypes cmp
    in
-      add_base_datatypes cmp; add_theory x cmp; cmp
+      add_theory x cmp
    end
 
 (* ---------------------------- *)
@@ -1294,9 +1300,8 @@ in
             let
                val (nh, h) = no_hyp l
                val c = INST_REWRITE_CONV h
-               val cmp = reduceLib.num_compset ()
-               val () = ( computeLib.add_thms (rwts @ nh) cmp
-                        ; add_word_eq cmp )
+               val cmp = computeLib.add_thms (rwts @ nh) (reduceLib.num_compset ())
+               val cmp = add_word_eq cmp
                fun cnv rwt =
                   Conv.REPEATC
                     (Conv.TRY_CONV (CHANGE_CBV_CONV cmp)

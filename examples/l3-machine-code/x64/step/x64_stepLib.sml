@@ -111,7 +111,7 @@ local
                          THENC REWRITE_CONV [num2Zreg_thm])
          (List.tabulate (8, fn i => ``RexReg (^b, ^(mk_3 i))``))
    val cmp = wordsLib.words_compset ()
-   val () =
+   val cmp =
       utilsLib.add_theory
          ([immediate8_rwt, immediate16_rwt, immediate32_rwt, immediate64_rwt,
            immediate8, immediate16, immediate32, immediate64, immediate_def,
@@ -119,11 +119,11 @@ local
            readModRM_byte_not_4, readModRM_dword_not_4,
            RexReg_rwt boolSyntax.F, RexReg_rwt boolSyntax.T],
           utilsLib.filter_inventory ["readPrefix"] (Import.gen_inventory{thyname="x64"})) cmp
-   val () = utilsLib.add_base_datatypes cmp
-   val () = computeLib.add_conv
+   val cmp = utilsLib.add_base_datatypes cmp
+   val cmp = computeLib.add_conv
                (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV) cmp
-   val () = computeLib.add_conv (``boolify8``, 1, boolify8_CONV) cmp
-   val () = computeLib.add_conv (``readPrefix``, 1, prefix_CONV) cmp
+   val cmp = computeLib.add_conv (``boolify8``, 1, boolify8_CONV) cmp
+   val cmp = computeLib.add_conv (``readPrefix``, 1, prefix_CONV) cmp
 in
    val x64_CONV = utilsLib.CHANGE_CBV_CONV cmp
 end
