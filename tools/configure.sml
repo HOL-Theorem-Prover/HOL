@@ -417,9 +417,10 @@ val _ = let
   val _ = let
     val utilsig = "buildutils.sig"
     val utilsml = "buildutils.sml"
+    val depsdir = Path.concat(holmakedir, "deps")
   in
-    if compile ["-I", holmakedir] utilsig andalso
-       compile ["-I", holmakedir] utilsml
+    if compile ["-I", holmakedir, "-I", depsdir] utilsig andalso
+       compile ["-I", holmakedir, "-I", depsdir] utilsml
     then ()
     else die "Failed to build buildutils module"
   end
@@ -429,6 +430,7 @@ val _ = let
   val command =
       [compiler, "-o", bin, "-I", holmakedir,
        "-I", Path.concat(holmakedir, "mosml"),
+       "-I", Path.concat(holmakedir, "deps"),
        target]
 in
   if Process.isSuccess (systeml command) then ()
