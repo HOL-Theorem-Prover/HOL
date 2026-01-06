@@ -13,10 +13,9 @@ infix 1 THENC
 infix 0 ORELSEC;
 
 local
-  val compset = num_compset ();
-  val _ = add_thms [PROB_TRICHOTOMY_COMPUTE, BIND_DEF, o_THM, sdest_def,
+  val compset = add_thms [PROB_TRICHOTOMY_COMPUTE, BIND_DEF, o_THM, sdest_def,
                     UNCURRY_DEF, SHD_PROB_PSEUDO, STL_PROB_PSEUDO,
-                    UNIT_DEF] compset;
+                    UNIT_DEF] (num_compset ());
 in
   val PROB_TRICHOTOMY_CONV = CBV_CONV compset;
 end;

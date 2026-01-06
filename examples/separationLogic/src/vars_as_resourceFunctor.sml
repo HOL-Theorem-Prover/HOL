@@ -422,10 +422,9 @@ local
                xconv1 THENC xconv2 THENC xconv3
             end;
 
-         val cs = computeLib.bool_compset ();
-         val _ = computeLib.add_thms [
+         val cs = computeLib.add_thms [
                     listTheory.HD,
-                    listTheory.TL] cs
+                    listTheory.TL] (computeLib.bool_compset ())
 
          val conv2 = DEPTH_CONV PairRules.PBETA_CONV
          val conv3 =  computeLib.CBV_CONV cs
@@ -488,9 +487,8 @@ val tref = ref T;
 val ttt = !tref
 *)
 
-val all_distinct_cs = computeLib.bool_compset ();
-val _ = computeLib.add_thms [listTheory.ALL_DISTINCT,
-                             listTheory.MEM] all_distinct_cs;
+val all_distinct_cs = computeLib.add_thms [listTheory.ALL_DISTINCT,
+                             listTheory.MEM] (computeLib.bool_compset ());
 val ALL_DISTINCT_EXPAND_CONV =
    computeLib.CBV_CONV all_distinct_cs
 
@@ -785,11 +783,13 @@ val combinatorRWL = [IS_VAR_RES_COMBINATOR___holfoot_separation_combinator,
                      GET_VAR_RES_COMBINATOR___holfoot_separation_combinator]
 *)
 
-val critical_section_cs = computeLib.bool_compset ();
-val _ = computeLib.add_thms [listTheory.MAP, pairTheory.FST,
+val critical_section_cs =
+  let val cs = computeLib.bool_compset ()
+      val cs = computeLib.add_thms [listTheory.MAP, pairTheory.FST,
                              listTheory.ALL_DISTINCT,
-                             listTheory.MEM] critical_section_cs;
-val _ = computeLib.add_conv (Term `($=):'a -> 'a -> bool`, 2, stringLib.string_EQ_CONV) critical_section_cs;
+                             listTheory.MEM] cs
+  in computeLib.add_conv (Term `($=):'a -> 'a -> bool`, 2, stringLib.string_EQ_CONV) cs
+  end;
 
 fun ASL_PROGRAM_ABSTRACTION___var_res_cond_critical_section pf abstL sys xenv penv p =
    let

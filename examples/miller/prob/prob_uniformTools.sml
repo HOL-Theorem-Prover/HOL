@@ -52,10 +52,9 @@ fun UNIFORML 0 _ _ _ = []
     end;
 
 local open computeLib
-      val compset = initial_rws ()
-      val _ = add_thms [UNIF_DEF_ALT, UNIFORM_DEF_ALT, pseudo_linear1_def,
+      val compset = add_thms [UNIF_DEF_ALT, UNIFORM_DEF_ALT, pseudo_linear1_def,
                         pseudo_def,
-                        pseudo_linear_hd_def, pseudo_linear_tl_def] compset
+                        pseudo_linear_hd_def, pseudo_linear_tl_def] (initial_rws ())
 in val EVAL = CBV_CONV compset
 end
 

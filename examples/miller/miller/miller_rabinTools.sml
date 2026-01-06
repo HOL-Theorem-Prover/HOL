@@ -16,12 +16,11 @@ open HolKernel Parse boolLib bossLib computeLib combinTheory prob_pseudoTheory
      miller_rabin_mlTheory miller_rabinTheory hurdUtils reduceLib;
 
 local
-  val compset = num_compset ();
-  val _ = add_thms [BIND_ML, FACTOR_TWOS_ML, LOG2_ML, MANY_ML,
+  val compset = add_thms [BIND_ML, FACTOR_TWOS_ML, LOG2_ML, MANY_ML,
                     MILLER_RABIN_1_ML, MILLER_RABIN_ML, MODEXP_ML,
                     PROB_UNIFORM_CUT_ML, PROB_UNIF_ML, UNCURRY_ML,
                     UNIT_ML, WITNESS_ML, WITNESS_TAIL_ML, o_THM,
-                    SHD_PROB_PSEUDO, STL_PROB_PSEUDO] compset;
+                    SHD_PROB_PSEUDO, STL_PROB_PSEUDO] (num_compset ());
 in
   val EVAL = CBV_CONV compset;
 end;
