@@ -86,7 +86,7 @@ val base_compute_thms =
 
    (* adding stuff revealed by computeLib.unmapped *)
    combinTheory.o_DEF, combinTheory.I_THM, combinTheory.C_DEF,
-   combinTheory.FAIL_DEF, rich_listTheory.SPLITP_AUX_def,
+   combinTheory.FAIL_DEF, rich_listTheory.SPLITP_TAILREC_def,
    rich_listTheory.SPLITP_compute,rich_listTheory.SEG_compute
  ];
 
