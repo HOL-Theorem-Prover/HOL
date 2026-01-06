@@ -860,10 +860,10 @@ end
 
 local
    val cmp = realSimps.real_compset ()
-   val () = computeLib.add_thms
-                ([pairTheory.pair_CASE_def,
-                  pairTheory.FST, pairTheory.SND] @
-                 #rewrs (TypeBase.simpls_of ``:float_value``)) cmp
+             |> computeLib.add_thms
+                  ([pairTheory.pair_CASE_def,
+                    pairTheory.FST, pairTheory.SND] @
+                   #rewrs (TypeBase.simpls_of ``:float_value``))
    val float_compare_CONV =
       Conv.REWR_CONV binary_ieeeTheory.float_compare_def
       THENC Conv.LAND_CONV (Conv.BINOP_CONV float_value_CONV)
@@ -950,8 +950,8 @@ fun add_ieee_to_compset cmp =
    let
       open computeLib
    in
-      add_thms ieee_rewrites cmp
-    ; List.app (fn a => add_conv a cmp)
+      cmp |> add_thms ieee_rewrites
+          |> (fn cs => foldl (fn (a, c) => add_conv a c) cs
         [
          (float_Sign_fupd_tm, 2, infinity_intro_CONV),
          (binary_ieeeSyntax.ULP_tm, 1, ULP_CONV),
@@ -974,10 +974,10 @@ fun add_ieee_to_compset cmp =
          (binary_ieeeSyntax.float_less_equal_tm, 2, less_equal_CONV),
          (binary_ieeeSyntax.float_greater_than_tm, 2, greater_than_CONV),
          (binary_ieeeSyntax.float_greater_equal_tm, 2, greater_equal_CONV)
-        ]
+        ])
    end
 
-val () = add_ieee_to_compset computeLib.the_compset
+val () = computeLib.the_compset := add_ieee_to_compset (!computeLib.the_compset)
 
 (* ------------------------------------------------------------------------ *)
 

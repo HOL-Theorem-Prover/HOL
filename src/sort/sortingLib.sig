@@ -1,7 +1,7 @@
 signature sortingLib =
 sig
 
-val add_sorting_compset : computeLib.compset -> unit
+val add_sorting_compset : computeLib.compset -> computeLib.compset
   (* need to use
        val cs = listLib.list_compset()
        val _ = pairLib.add_pair_compset cs;

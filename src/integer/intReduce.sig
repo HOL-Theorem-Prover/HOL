@@ -2,7 +2,7 @@ signature intReduce =
 sig
   include Abbrev
 
-  val add_int_compset : computeLib.compset -> unit
+  val add_int_compset : computeLib.compset -> computeLib.compset
   val int_compset     : unit -> computeLib.compset
 
   val REDUCE_CONV : term -> thm

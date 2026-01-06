@@ -1,7 +1,7 @@
 signature binary_ieeeLib =
 sig
 
-   val add_ieee_to_compset: computeLib.compset -> unit
+   val add_ieee_to_compset: computeLib.compset -> computeLib.compset
 
    val FLOAT_DATATYPE_CONV: Conv.conv
    val REAL_REDUCE_CONV: Conv.conv
