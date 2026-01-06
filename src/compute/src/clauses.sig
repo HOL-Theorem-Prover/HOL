@@ -28,7 +28,7 @@ sig
 
   datatype action =
            Rewrite of rewrite list
-         | Conv of (term -> Thm.thm * db fterm)
+         | Conv of (term -> Thm.thm)
 
   and db =
       EndDb
@@ -46,7 +46,7 @@ sig
   type compset
   val empty_rws : unit -> compset
   val from_list : thm list -> compset
-  val add_extern : term * int * (term -> thm * db fterm) -> compset -> compset
+  val add_extern : term * int * (term -> thm) -> compset -> compset
   val add_thms : thm list -> compset -> compset
   val add_thmset : string -> compset -> compset
 
@@ -56,7 +56,7 @@ sig
   val set_skip : compset -> string * string -> int option -> compset
 
   datatype transform
-    = Conversion of (term -> thm * db fterm)
+    = Conversion of (term -> thm)
     | RRules of thm list
 
   val deplist : compset -> ((string * string) * transform list) list
