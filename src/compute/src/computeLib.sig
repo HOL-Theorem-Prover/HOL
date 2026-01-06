@@ -11,15 +11,15 @@ sig
   val new_compset     : thm list -> compset
   val bool_compset    : unit -> compset
 
-  val add_thms        : thm list -> compset -> unit
-  val add_conv        : term * int * conv -> compset -> unit
-  val add_thmset      : string -> compset -> unit
-  val set_skip        : compset -> term -> int option -> unit
+  val add_thms        : thm list -> compset -> compset
+  val add_conv        : term * int * conv -> compset -> compset
+  val add_thmset      : string -> compset -> compset
+  val set_skip        : compset -> term -> int option -> compset
   val set_EVAL_skip   : term -> int option -> unit
   val temp_set_EVAL_skip : term -> int option -> unit
 
-  val scrub_const     : compset -> term -> unit
-  val scrub_thms      : thm list -> compset -> unit
+  val scrub_const     : compset -> term -> compset
+  val scrub_thms      : thm list -> compset -> compset
 
   val lazyfy_thm      : thm -> thm
   val strictify_thm   : thm -> thm
@@ -28,7 +28,7 @@ sig
   val CBVn_CONV       : int -> compset -> conv
   val WEAK_CBV_CONV   : compset -> conv
 
-  val the_compset     : compset
+  val the_compset     : compset ref
   val add_funs        : thm list -> unit
   val add_convs       : (term * int * conv) list -> unit
 
@@ -44,7 +44,7 @@ sig
   val RESTR_EVAL_RULE : term list -> thm -> thm
   val RESTR_EVAL_TAC  : term list -> tactic
 
-  val add_datatype_info : compset -> TypeBasePure.tyinfo -> unit
+  val add_datatype_info : compset -> TypeBasePure.tyinfo -> compset
   val write_datatype_info : TypeBasePure.tyinfo -> unit
 
   val add_persistent_funs : string list -> unit
@@ -59,9 +59,9 @@ sig
   datatype compset_element =
       Convs of (term * int * conv) list
     | Defs of thm list
-    | Extenders of (compset -> unit) list
+    | Extenders of (compset -> compset) list
     | Tys of hol_type list
 
   val compset_conv: compset -> compset_element list -> conv
-  val extend_compset: compset_element list -> compset -> unit
+  val extend_compset: compset_element list -> compset -> compset
 end
