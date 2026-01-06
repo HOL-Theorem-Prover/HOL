@@ -85,8 +85,12 @@ fun stack_out(th, Cbv_top) =
   | stack_out(_, Cbv_ant _) =
     raise DEAD_CODE "stack_out"
 
+(* initial_state returns the updated compset along with the initial state.
+   The compset may be updated if new constants are encountered in the term. *)
 fun initial_state rws t =
-  ((refl_thm t, mk_clos([],from_term (rws,[],t))), Cbv_top : cbv_stack);
+  let val (rws', dt) = from_term (rws,[],t)
+  in (rws', ((refl_thm t, mk_clos([],dt)), Cbv_top : cbv_stack))
+  end;
 
 (*
    `cbv_wk ((thm, cl), stk)` puts the closure `cl` (useful information about
@@ -242,7 +246,7 @@ and strong_up (th, Cbv_top) = th
  * using rewrites rws.
  *---------------------------------------------------------------------------*)
 
-fun CBV_CONV rws = evaluate o strong o cbv_wk o initial_state rws;
+fun CBV_CONV rws = evaluate o strong o cbv_wk o #2 o initial_state rws;
 
 (*---------------------------------------------------------------------------
  * WEAK_CBV_CONV is the same as CBV_CONV except that it does not reduce
@@ -254,7 +258,7 @@ fun WEAK_CBV_CONV rws =
       evaluate
     o (fn ((th,_),stk) => stack_out(th,stk))
     o cbv_wk
-    o initial_state rws;
+    o #2 o initial_state rws;
 
 fun CBVn_CONV n rws t =
     let val counter = ref n
@@ -273,8 +277,9 @@ fun CBVn_CONV n rws t =
  *---------------------------------------------------------------------------*)
 
 fun extern_of_conv rws conv tm =
-  let val thm = conv tm in
-  (thm, mk_clos([],from_term(rws,[],rhs(concl thm))))
+  let val thm = conv tm
+      val (_, dt) = from_term(rws,[],rhs(concl thm))
+  in (thm, mk_clos([],dt))
   end;
 
 fun add_conv (cst,arity,conv) rws =
@@ -298,25 +303,23 @@ val bool_redns =
       [COND_CLAUSES, COND_ID, NOT_CLAUSES,
        AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
 
-fun bool_compset() = let
-  val base = from_list bool_redns
-  val _ = set_skip base boolSyntax.conditional NONE
-          (* change last parameter to SOME 1 to stop CBV_CONV looking at
-             conditionals' branches before the guard is fully true or false *)
-in
-  base
-end
+fun bool_compset() =
+  (* change NONE to SOME 1 to stop CBV_CONV looking at conditionals'
+     branches before the guard is fully true or false *)
+  set_skip (from_list bool_redns) boolSyntax.conditional NONE;
 
-val the_compset = bool_compset();
+val the_compset = ref (bool_compset());
 
-val add_funs = Lib.C add_thms the_compset;
-val add_convs = List.app (Lib.C add_conv the_compset);
+fun add_funs thms = the_compset := add_thms thms (!the_compset);
+fun add_convs convs =
+  the_compset := foldl (fn (c, cs) => add_conv c cs) (!the_compset) convs;
 
-val del_consts = List.app (scrub_const the_compset);
-val del_funs = Lib.C scrub_thms the_compset;
+fun del_consts cs =
+  the_compset := foldl (fn (c, cset) => scrub_const cset c) (!the_compset) cs;
+fun del_funs thms = the_compset := scrub_thms thms (!the_compset);
 
-val EVAL_CONV = CBV_CONV the_compset;
-fun EVALn_CONV n t = CBVn_CONV n the_compset t
+fun EVAL_CONV t = CBV_CONV (!the_compset) t;
+fun EVALn_CONV n t = CBVn_CONV n (!the_compset) t
 val EVAL_RULE = Conv.CONV_RULE EVAL_CONV;
 val EVAL_TAC  = Tactic.CONV_TAC EVAL_CONV;
 
@@ -370,11 +373,12 @@ in
            List.partition (fn thm => tmopt_eq (Lib.total get_f thm) case_const)
                           simpls
         val case_thm = List.map lazyfy_thm case_thm
+        val cs' = foldl (fn (c, cset) => add_conv c cset) cs (translate_convs convs)
     in
-        List.app (fn c => add_conv c cs) (translate_convs convs)
-      ; add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs
+        add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs'
     end
-    val write_datatype_info = add_datatype_info the_compset
+    fun write_datatype_info tyi =
+        the_compset := add_datatype_info (!the_compset) tyi
 end
 
 val _ = TypeBase.register_update_fn (fn tyi => (write_datatype_info tyi; tyi))
@@ -421,7 +425,8 @@ fun decdelta d =
 
 fun apply_delta cld () =
     case cld of
-        CLD_set_skip (t, iopt) => set_skip the_compset t iopt
+        CLD_set_skip (t, iopt) =>
+          the_compset := set_skip (!the_compset) t iopt
       | CLD_delconst t => del_consts [t]
 
 val {record_delta,get_deltas=thy_updates,...} =
@@ -437,7 +442,8 @@ val {record_delta,get_deltas=thy_updates,...} =
     }
 
 fun set_EVAL_skip t i = record_delta (CLD_set_skip(t,i))
-fun temp_set_EVAL_skip t i = set_skip the_compset t i
+fun temp_set_EVAL_skip t i =
+    the_compset := set_skip (!the_compset) t i
 fun del_persistent_consts cs = app (fn c => record_delta(CLD_delconst c)) cs
 
 (* ----------------------------------------------------------------------
@@ -454,19 +460,22 @@ datatype compset_element =
     Convs of (term * int * conv) list
   | Defs of thm list
   | Tys of hol_type list
-  | Extenders of (compset -> unit) list
+  | Extenders of (compset -> compset) list
 
 local
-  fun add_datatype cmp = add_datatype_info cmp o Option.valOf o TypeBase.fetch
+  fun add_datatype cmp ty =
+      add_datatype_info cmp (Option.valOf (TypeBase.fetch ty))
 in
   fun extend_compset frags cmp =
-    List.app
-      (fn Convs l => List.app (fn x => add_conv x cmp) l
-        | Defs l => add_thms l cmp
-        | Tys l => List.app (add_datatype cmp) l
-        | Extenders l => List.app (fn f => f cmp) l) frags
+    foldl (fn (frag, cs) =>
+             case frag of
+               Convs l => foldl (fn (x, cs') => add_conv x cs') cs l
+             | Defs l => add_thms l cs
+             | Tys l => foldl (fn (ty, cs') => add_datatype cs' ty) cs l
+             | Extenders l => foldl (fn (f, cs') => f cs') cs l)
+          cmp frags
 end
 
-fun compset_conv cmp l = (extend_compset l cmp; CBV_CONV cmp)
+fun compset_conv cmp l = CBV_CONV (extend_compset l cmp)
 
 end
