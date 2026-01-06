@@ -801,10 +801,16 @@ Definition EPSILON_ELT_def:
   EPSILON_ELT L = L ∩ {ε}
 End
 
+Theorem IN_EPSILON_ELT:
+  x ∈ EPSILON_ELT L ⇔ x = ε ∧ x ∈ L
+Proof
+  rw[EPSILON_ELT_def] >> metis_tac[]
+QED
+
 Theorem EPSILON_ELT_LANG:
   EPSILON_ELT L = if ε ∈ L then {ε} else ∅
 Proof
-  rw [EXTENSION,EPSILON_ELT_def] >> metis_tac[]
+  rw [EXTENSION,IN_EPSILON_ELT] >> metis_tac[]
 QED
 
 Theorem FINITE_EPSILON_ELT:
@@ -817,8 +823,7 @@ Theorem LEFT_QUOTIENT_SYMBOL_DOT:
   LEFT_QUOTIENT [a] (L1 • L2) =
     (LEFT_QUOTIENT [a] L1 • L2) ∪ EPSILON_ELT L1 • LEFT_QUOTIENT [a] L2
 Proof
-  simp [EPSILON_ELT_LANG] >>
-  rw[EXTENSION,EQ_IMP_THM,IN_LEFT_QUOTIENT,IN_dot]
+  rw[EXTENSION,EQ_IMP_THM,IN_LEFT_QUOTIENT,IN_dot,IN_EPSILON_ELT]
   >- (Cases_on ‘u = ε’ >> gvs[] >> disj1_tac >>
       Cases_on ‘u’ >> gvs[] >> metis_tac[])
   >> metis_tac [APPEND]
@@ -1069,6 +1074,7 @@ QED
 (* arguments are about the finiteness of the partition.                      *)
 (*---------------------------------------------------------------------------*)
 
+
 Theorem FINITE_STATE_UNION:
   FINITE_STATE(L1,A) ∧ FINITE_STATE (L2,A) ⇒ FINITE_STATE(L1 ∪ L2, A)
 Proof
@@ -1083,7 +1089,7 @@ Proof
   >- (rw[SUBSET_DEF] >>
       qexists_tac ‘(LEFT_QUOTIENT w L1, LEFT_QUOTIENT w L2)’ >>
       unabbrev_all_tac >> rw[] >> metis_tac[])
-
+QED
 
 fun Conjecture name q s = Parse.Term q
 
@@ -1117,9 +1123,9 @@ End
 val _ =
   Conjecture "FINITE_STATE_SUBSET_REGSET"
     ‘FINITE_STATE ⊆ REGSET’
-    "This might need an induction theorem for FINITE_STATE. There is a proof
-     from Eilenberg that might be adaptable to this, but it goes through the
-     automata representation. Morally there should be "
+    "This might need an induction theorem for FINITE_STATE. There is a proof \
+     \ from Eilenberg that might be adaptable to this, but it goes through the \
+     \ automata representation."
 
 val _ =
   Conjecture "REGSET_SUBSET_FINITE_STATE"
