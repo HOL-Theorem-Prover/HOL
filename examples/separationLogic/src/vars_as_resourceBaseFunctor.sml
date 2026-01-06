@@ -240,10 +240,10 @@ val var_res_prove_RWL = [
       val rewrites = flatten [
           var_res_param.combinator_thmL,
           (fst extra), var_res_prove_RWL]
-      val var_res_prove_cs = listLib.list_compset ();
-      val _ = computeLib.add_thms rewrites var_res_prove_cs
-      val _ = computeLib.add_conv (stringSyntax.ord_tm, 1, stringLib.ORD_CHR_CONV) var_res_prove_cs
-      val _ = computeLib.add_thms [stringTheory.CHR_ORD,stringTheory.CHAR_EQ_THM,stringTheory.ORD_11] var_res_prove_cs
+      val var_res_prove_cs = listLib.list_compset ()
+      val var_res_prove_cs = computeLib.add_thms rewrites var_res_prove_cs
+      val var_res_prove_cs = computeLib.add_conv (stringSyntax.ord_tm, 1, stringLib.ORD_CHR_CONV) var_res_prove_cs
+      val var_res_prove_cs = computeLib.add_thms [stringTheory.CHR_ORD,stringTheory.CHAR_EQ_THM,stringTheory.ORD_11] var_res_prove_cs
 
       val strengthen = append [VAR_RES_IS_STACK_IMPRECISE___USED_VARS___VAR_RES_REWRITES,
                                FEVERY_STRENGTHEN_THM]
@@ -796,11 +796,10 @@ val BAG_NORMALISE_CONV = REWRITE_CONV [
      el 1 (BODY_CONJUNCTS BAG_UNION_INSERT), BAG_UNION_EMPTY];
 
 
-val BAG_ALL_DISTINCT_cs = computeLib.bool_compset ();
-val _ = computeLib.add_thms [BAG_ALL_DISTINCT_THM, BAG_ALL_DISTINCT_BAG_UNION,
+val BAG_ALL_DISTINCT_cs = computeLib.add_thms [BAG_ALL_DISTINCT_THM, BAG_ALL_DISTINCT_BAG_UNION,
     BAG_IN_BAG_INSERT, NOT_IN_EMPTY_BAG, BAG_DISJOINT_EMPTY, BAG_DISJOINT_BAG_INSERT,
     BAG_IN_BAG_UNION, DE_MORGAN_THM, GSYM CONJ_ASSOC]
-    BAG_ALL_DISTINCT_cs;
+    (computeLib.bool_compset ());
 
 
 fun GENERATE___var_res_exp_varlist_update___REWRITES wpb rpb vcL_t =
