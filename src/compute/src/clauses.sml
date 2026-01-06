@@ -136,7 +136,7 @@ fun inst_type_dterm ([],v) = v
 
 datatype action =
     Rewrite of rewrite list
-  | Conv of (term -> Thm.thm * db fterm)
+  | Conv of (term -> Thm.thm)
 
 (*
    Database of actions for a single constant. There is a linked list through the
@@ -457,7 +457,7 @@ fun rws_of (Compset rbmap) =
  end;
 
 datatype transform
-  = Conversion of (term -> thm * db fterm)
+  = Conversion of (term -> thm)
   | RRules of thm list;
 
 (*---------------------------------------------------------------------------*)
