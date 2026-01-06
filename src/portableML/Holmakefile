@@ -37,7 +37,7 @@ Int_Graph.uo: Int_Graph.sml Graph.ui
 
 ifndef POLY # i.e., Moscow ML
 holmake_holpathdb.uo holmake_holpathdb.ui: holmake_holpathdb.sml
-	$(HOLMOSMLC) -c -I $(protect $(HOLDIR)/tools/Holmake) -I $(protect $(HOLDIR)/tools/Holmake/deps) $<
+	$(HOLMOSMLC) -c $< -I $(protect $(HOLDIR)/tools/Holmake)
 
 endif
 
