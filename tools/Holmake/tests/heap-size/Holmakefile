@@ -1,0 +1,11 @@
+ifdef POLY
+
+heap-size-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = heap-size-selftest.log selftest.exe
+
+endif
