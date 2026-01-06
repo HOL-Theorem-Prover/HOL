@@ -59,15 +59,15 @@ fun cbv_MOD_CONV tm =
  ---------------------------------------------------------------------------*)
 
 local
-  fun add_compset compset = let
-    open computeLib
-    val _ = add_thms numeral_redns compset
-    val _ = add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV) compset
-    val _ = add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV) compset
-  in compset end
+  fun add_compset compset =
+    let open computeLib
+    in compset |> add_thms numeral_redns
+               |> add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV)
+               |> add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV)
+    end
 in
   val num_compset = add_compset o bool_compset
-  val _ = add_compset the_compset
+  val () = computeLib.the_compset := add_compset (!computeLib.the_compset)
 end
 
 (*-----------------------------------------------------------------------*)
@@ -76,10 +76,9 @@ end
 (*-----------------------------------------------------------------------*)
 
 local
-  val cs = num_compset ()
-  val _ = computeLib.set_skip cs boolSyntax.conditional NONE
-          (* ensure that REDUCE_CONV will look at all of a term, even
-             conditionals' branches *)
+  val cs = computeLib.set_skip (num_compset()) boolSyntax.conditional NONE
+           (* ensure that REDUCE_CONV will look at all of a term, even
+              conditionals' branches *)
 in
   val REDUCE_CONV = computeLib.CBV_CONV cs
 end

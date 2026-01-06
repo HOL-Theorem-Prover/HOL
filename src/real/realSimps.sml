@@ -331,7 +331,7 @@ val rel_rwts = [eq_ints, le_int, lt_int] @
 val rwts = pow_rat :: (op_rwts @ rel_rwts)
 
 val n_compset = reduceLib.num_compset()
-val _ = computeLib.add_thms (mult_ints:: mult_rats) n_compset
+                |> computeLib.add_thms (mult_ints:: mult_rats)
 
 fun elim_common_factor t = let
   open realSyntax Arbint
@@ -384,14 +384,10 @@ val real_ss = arith_ss ++ real_SS ++ REAL_REDUCE_ss
 
 val real_ac_ss = real_ss ++ real_ac_SS
 
-fun real_compset () = let
-  open computeLib
-  val compset = reduceLib.num_compset()
-  val _ = add_thms rwts compset
-  val _ = add_conv (div_tm, 2, elim_common_factor) compset
-in
-  compset
-end
+fun real_compset () =
+  reduceLib.num_compset()
+  |> computeLib.add_thms rwts
+  |> computeLib.add_conv (div_tm, 2, elim_common_factor)
 
 (* add real calculation facilities to global functionality *)
 val _ = let open computeLib in

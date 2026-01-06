@@ -1,5 +1,5 @@
 signature sumSimps =
 sig
   val SUM_ss  : simpLib.ssfrag
-  val SUM_rws : computeLib.compset -> unit
+  val SUM_rws : computeLib.compset -> computeLib.compset
 end

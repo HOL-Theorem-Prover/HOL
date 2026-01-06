@@ -413,14 +413,9 @@ fun add_words_compset extras =
            wordsSyntax.uint_max_tm, wordsSyntax.int_min_tm,
            wordsSyntax.int_max_tm, pred_setSyntax.finite_tm])])
 
-val () = add_words_compset false computeLib.the_compset
+val () = computeLib.the_compset := add_words_compset false (!computeLib.the_compset)
 
-fun words_compset () =
-   let
-      val cmp = reduceLib.num_compset ()
-   in
-      add_words_compset true cmp; cmp
-   end
+fun words_compset () = add_words_compset true (reduceLib.num_compset ())
 
 val WORD_EVAL_CONV = computeLib.CBV_CONV (words_compset ())
 val WORD_EVAL_RULE = CONV_RULE WORD_EVAL_CONV

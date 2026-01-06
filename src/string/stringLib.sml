@@ -116,9 +116,8 @@ val string_rwts =
     ORD_CHR_COMPUTE, CHAR_EQ_THM]
 
 fun add_string_compset cmp =
-   ( computeLib.add_thms string_rwts cmp
-   ; computeLib.add_conv (stringSyntax.ord_tm, 1, ORD_CHR_CONV) cmp
-   )
+   cmp |> computeLib.add_thms string_rwts
+       |> computeLib.add_conv (stringSyntax.ord_tm, 1, ORD_CHR_CONV)
 
 (* ------------------------------------------------------------------------
      Define enum <-> string maps.

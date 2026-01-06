@@ -52,9 +52,9 @@ fun mk_size_thm (i,ty) = mk_less_thm (i, wordsSyntax.mk_dimindex ty)
 
 local
    val e_tys = ref (Redblackset.empty Type.compare)
-   val cmp = reduceLib.num_compset ()
-   val () = computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM] cmp
-   val cnv = computeLib.CBV_CONV cmp
+   val cmp = ref (reduceLib.num_compset ()
+                  |> computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM])
+   fun cnv tm = computeLib.CBV_CONV (!cmp) tm
 
    val fcp_beta_thm = fcpTheory.FCP_BETA
                       |> Thm.INST_TYPE [Type.alpha |-> Type.bool]
@@ -85,7 +85,7 @@ local
       List.concat o List.map (mk_index_thms o wordsSyntax.dim_of) o
       HolKernel.find_terms is_new
 
-   fun add_index_thms tm = computeLib.add_thms (new_index_thms tm) cmp
+   fun add_index_thms tm = cmp := computeLib.add_thms (new_index_thms tm) (!cmp)
 in
    fun ADD_INDEX_CONV tm = (add_index_thms tm; cnv tm)
 

@@ -51,7 +51,7 @@ in
    fun add_bit_compset cmp = computeLib.add_thms thms cmp
 end
 
-val () = add_bit_compset computeLib.the_compset
+val () = computeLib.the_compset := add_bit_compset (!computeLib.the_compset)
 
 (* ------------------------------------------------------------------------- *)
 

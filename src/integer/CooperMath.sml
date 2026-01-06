@@ -6,7 +6,7 @@ open HolKernel boolLib intSyntax integerTheory
 type num = Arbnum.num
 
 val cooper_compset = int_compset()
-val _ = computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY] cooper_compset
+                     |> computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY]
 val REDUCE_CONV = computeLib.CBV_CONV cooper_compset
 
 val ERR = mk_HOL_ERR "CooperMath";

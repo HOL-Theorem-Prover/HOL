@@ -1,6 +1,6 @@
 signature ASCIInumbersLib =
 sig
-   val add_ASCIInumbers_compset : computeLib.compset -> unit
+   val add_ASCIInumbers_compset : computeLib.compset -> computeLib.compset
      (* on base of listLib.list_compset(),
         requires
             stringLib.add_string_compset cs;

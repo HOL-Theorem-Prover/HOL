@@ -9325,7 +9325,7 @@ Proof
 QED
 
 val _ = computeLib.add_persistent_funs ["Zadd_inv_compute"];
-val _ = computeLib.set_skip (computeLib.the_compset) ``combin$FAIL`` (SOME 0);
+val _ = computeLib.set_EVAL_skip ``combin$FAIL`` (SOME 0);
 
 (*
 - EVAL ``(Z 5).inv 2``;
@@ -9546,7 +9546,7 @@ QED
 (* Now put thse input computeLib for EVAL *)
 val _ = computeLib.add_persistent_funs ["Zstar_eval"];
 val _ = computeLib.add_persistent_funs ["Zstar_inv_compute"];
-val _ = computeLib.set_skip (computeLib.the_compset) ``combin$FAIL`` (SOME 0);
+val _ = computeLib.set_EVAL_skip ``combin$FAIL`` (SOME 0);
 
 (*
 - EVAL ``(Z* 5).op 3 2``;
@@ -10405,7 +10405,7 @@ QED
 
 (* Function can be put to computeLib *)
 val _ = computeLib.add_persistent_funs ["add_mod_inv_compute"];
-(* val _ = computeLib.set_skip (computeLib.the_compset) ``combin$FAIL`` (SOME 0); *)
+(* val _ = computeLib.set_EVAL_skip ``combin$FAIL`` (SOME 0); *)
 
 (*
 - EVAL ``(add_mod 5).inv 3``;
@@ -10667,7 +10667,7 @@ QED
 (* Now put thse input computeLib for EVAL *)
 val _ = computeLib.add_persistent_funs ["mult_mod_eval"];
 val _ = computeLib.add_persistent_funs ["mult_mod_inv_compute"];
-(* val _ = computeLib.set_skip (computeLib.the_compset) ``combin$FAIL`` (SOME 0); *)
+(* val _ = computeLib.set_EVAL_skip ``combin$FAIL`` (SOME 0); *)
 
 (*
 - EVAL ``(mult_mod 5).id``;
