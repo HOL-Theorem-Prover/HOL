@@ -518,8 +518,8 @@ in
   val REAL_INT_ABS_CONV = TRY_CONV (GEN_REWRITE_CONV I [pth])
 end
 
-fun real_int_compset () =
-  reduceLib.num_compset()
+val real_int_compset =
+  reduceLib.num_compset
   |> computeLib.add_conv (realSyntax.leq_tm,     2, REAL_INT_LE_CONV)
   |> computeLib.add_conv (realSyntax.less_tm,    2, REAL_INT_LT_CONV)
   |> computeLib.add_conv (realSyntax.geq_tm,     2, REAL_INT_GE_CONV)
@@ -531,12 +531,13 @@ fun real_int_compset () =
   |> computeLib.add_conv (realSyntax.minus_tm,   2, REAL_INT_SUB_CONV)
   |> computeLib.add_conv (realSyntax.mult_tm,    2, REAL_INT_MUL_CONV)
   |> computeLib.add_conv (realSyntax.exp_tm,     2, REAL_INT_POW_CONV)
+  |> computeLib.seal
 
 val REAL_INT_REDUCE_CONV =
   (* ensure that REDUCE_CONV will look at all of a term, even
      conditionals' branches *)
   computeLib.CBV_CONV
-    (computeLib.set_skip (real_int_compset ()) boolSyntax.conditional NONE)
+    (computeLib.set_skip (computeLib.copy real_int_compset) boolSyntax.conditional NONE)
 
 (* ------------------------------------------------------------------------- *)
 (* Combinators.                                                              *)

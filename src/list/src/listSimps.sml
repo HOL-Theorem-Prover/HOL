@@ -345,6 +345,6 @@ val list_rws = computeLib.add_thms
    dropWhile_def, isPREFIX, list_size_def, nub_def, splitAtPki_def
   ]
 
-fun list_compset () = list_rws (reduceLib.num_compset())
+val list_compset = computeLib.seal (list_rws reduceLib.num_compset)
 
 end (* struct *)

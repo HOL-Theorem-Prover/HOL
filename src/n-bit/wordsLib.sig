@@ -2,7 +2,7 @@ signature wordsLib =
 sig
     include Abbrev
 
-    val words_compset       : unit -> computeLib.compset
+    val words_compset       : computeLib.compset
 
     val SIZES_ss            : simpLib.ssfrag
     val BIT_ss              : simpLib.ssfrag

@@ -103,7 +103,7 @@ fun add_sptree_compset compset =
     end
 
 val SPTREE_CONV =
-   computeLib.CBV_CONV (add_sptree_compset (reduceLib.num_compset ()))
+   computeLib.CBV_CONV (add_sptree_compset (reduceLib.num_compset))
 
 (* ------------------------------------------------------------------------- *)
 

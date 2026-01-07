@@ -83,7 +83,7 @@ rules needed for basic boolean and arithmetical calculations built in.
    - computeLib.CBV_CONV rws ``(\x.x) ((\x.x) if T then 0+0 else 10)``;
    > val it = |- (\x. x) ((\x. x) (if T then 0 + 0 else 10)) = 0 + 0 : thm
 
-   - computeLib.CBV_CONV (reduceLib.num_compset())
+   - computeLib.CBV_CONV reduceLib.num_compset
               ``if 100 - 5 * 5 < 80  then 2 EXP 16 else 3``;
    > val it = |- (if 100 - 5 * 5 < 80 then 2 ** 16 else 3) = 65536 : thm
 ```

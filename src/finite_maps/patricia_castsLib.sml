@@ -58,12 +58,12 @@ let open listTheory pred_setTheory in
           |> add_conv (the_ptree_tm, 1, THE_PTREE_CONV)
 end;
 
-fun cast_ptree_compset () =
-  wordsLib.words_compset()
+val cast_ptree_compset =
+  wordsLib.words_compset
   |> add_ptree_compset
   |> add_cast_ptree_compset
 
-val CAST_PTREE_CONV = CBV_CONV (cast_ptree_compset());
+val CAST_PTREE_CONV = CBV_CONV cast_ptree_compset;
 
 (* ------------------------------------------------------------------------- *)
 

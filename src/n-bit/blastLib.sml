@@ -52,7 +52,7 @@ fun mk_size_thm (i,ty) = mk_less_thm (i, wordsSyntax.mk_dimindex ty)
 
 local
    val e_tys = ref (Redblackset.empty Type.compare)
-   val cmp = ref (reduceLib.num_compset ()
+   val cmp = ref (reduceLib.num_compset
                   |> computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM])
    fun cnv tm = computeLib.CBV_CONV (!cmp) tm
 
@@ -180,7 +180,7 @@ end
    ------------------------------------------------------------------------ *)
 
 val EVAL_CONV =
-  computeLib.compset_conv (reduceLib.num_compset())
+  computeLib.compset_conv (reduceLib.num_compset)
     [computeLib.Defs
        [pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
         REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def,
@@ -816,7 +816,7 @@ local
           | NONE => ONCE_REWRITE_CONV [WORD_NEG] tm
       end
 
-   val cnv = computeLib.compset_conv (reduceLib.num_compset())
+   val cnv = computeLib.compset_conv (reduceLib.num_compset)
      [computeLib.Defs
         [n2w_def, v2w_def, word_xor, word_or_def, word_and_def,
          word_1comp_def, word_nor_def, word_xnor_def, word_nand_def,

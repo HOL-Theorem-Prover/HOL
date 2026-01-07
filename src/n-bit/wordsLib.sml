@@ -59,7 +59,7 @@ val TIMES_2EXP1 =
 
 local
   val cnv =
-    computeLib.compset_conv (reduceLib.num_compset())
+    computeLib.compset_conv (reduceLib.num_compset)
       [computeLib.Defs
          [NUMERAL_SFUNPOW_FDUB, NUMERAL_SFUNPOW_iDUB, iDUB_NUMERAL,
           FDUB_iDUB, FDUB_FDUB, NUMERAL_TIMES_2EXP]]
@@ -415,9 +415,9 @@ fun add_words_compset extras =
 
 val () = computeLib.the_compset := add_words_compset false (!computeLib.the_compset)
 
-fun words_compset () = add_words_compset true (reduceLib.num_compset ())
+val words_compset = computeLib.seal (add_words_compset true (computeLib.copy reduceLib.num_compset))
 
-val WORD_EVAL_CONV = computeLib.CBV_CONV (words_compset ())
+val WORD_EVAL_CONV = computeLib.CBV_CONV words_compset
 val WORD_EVAL_RULE = CONV_RULE WORD_EVAL_CONV
 val WORD_EVAL_TAC  = CONV_TAC WORD_EVAL_CONV
 
@@ -1133,7 +1133,7 @@ end
 
 val BITWISE_CONV =
   let open numeral_bitTheory in
-    computeLib.compset_conv (reduceLib.num_compset())
+    computeLib.compset_conv (reduceLib.num_compset)
       [computeLib.Defs [NUMERAL_BITWISE, iBITWISE, numeral_log2, numeral_ilog2],
        computeLib.Convs [(``fcp$dimindex:'a itself->num``, 1, SIZES_CONV)]]
   end
@@ -1704,7 +1704,7 @@ val WORD_CONV = SIMP_CONV (std_ss++WORD_ss++WORD_EXTRACT_ss)
 local
    open listTheory
    val cnv =
-     computeLib.compset_conv (reduceLib.num_compset())
+     computeLib.compset_conv (reduceLib.num_compset)
        [computeLib.Defs
           [foldl_reduce_and, foldl_reduce_or, foldl_reduce_xor,
            foldl_reduce_nand, foldl_reduce_nor, foldl_reduce_xnor,
@@ -2658,7 +2658,7 @@ val dest_word_literal = fst o wordsSyntax.dest_mod_word_literal
 val Cases_word = Cases
 val Cases_on_word = Cases_on
 
-val LESS_CONV = computeLib.compset_conv (reduceLib.num_compset())
+val LESS_CONV = computeLib.compset_conv (computeLib.copy reduceLib.num_compset)
                   [computeLib.Defs [wordsTheory.NUMERAL_LESS_THM]]
 
 local

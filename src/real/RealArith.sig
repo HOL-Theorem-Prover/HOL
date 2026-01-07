@@ -27,7 +27,7 @@ sig
   val REAL_INT_ABS_CONV    : conv
 
   val REAL_INT_REDUCE_CONV : conv
-  val real_int_compset     : unit -> computeLib.compset
+  val real_int_compset     : computeLib.compset
 
  (* fn translator (eq,le,lt) -> 'a *)
   val REAL_LINEAR_PROVER   : (thm list * thm list * thm list ->

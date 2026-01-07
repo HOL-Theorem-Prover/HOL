@@ -24,7 +24,7 @@ fun index_compset () =
       open numeral_bitTheory
       val rule = REWRITE_RULE [arithmeticTheory.TIMES2, GSYM numeralTheory.iDUB]
    in
-      reduceLib.num_compset()
+      reduceLib.num_compset
       |> computeLib.add_thms
            [index_sum, index_one, rule index_bit0, rule index_bit1,
             finite_sum, finite_one, finite_bit0, finite_bit1,

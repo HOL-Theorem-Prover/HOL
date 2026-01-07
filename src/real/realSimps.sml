@@ -330,7 +330,7 @@ val rel_rwts = [eq_ints, le_int, lt_int] @
 
 val rwts = pow_rat :: (op_rwts @ rel_rwts)
 
-val n_compset = reduceLib.num_compset()
+val n_compset = reduceLib.num_compset
                 |> computeLib.add_thms (mult_ints:: mult_rats)
 
 fun elim_common_factor t = let
@@ -384,10 +384,11 @@ val real_ss = arith_ss ++ real_SS ++ REAL_REDUCE_ss
 
 val real_ac_ss = real_ss ++ real_ac_SS
 
-fun real_compset () =
-  reduceLib.num_compset()
+val real_compset =
+  reduceLib.num_compset
   |> computeLib.add_thms rwts
   |> computeLib.add_conv (div_tm, 2, elim_common_factor)
+  |> computeLib.seal
 
 (* add real calculation facilities to global functionality *)
 val _ = let open computeLib in
@@ -650,7 +651,7 @@ val neg1_t = mk_negated one_tm
 val NEG1_MUL = SPEC neg1_t REAL_MUL_ASSOC
 val Flor = OR_CLAUSES |> SPEC_ALL |> CONJUNCTS |> el 3
 
-val realreduce_cs = real_compset()
+val realreduce_cs = real_compset
 fun REPORT_ALL_CONV t =
     ((*print ("\nGiving up on " ^ term_to_string t ^ "\n"); *) NO_CONV t)
 val REAL_REDUCE =
