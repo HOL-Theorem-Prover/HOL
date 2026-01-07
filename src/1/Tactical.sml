@@ -217,7 +217,7 @@ fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
  *                  first subgoal of tac1
  *---------------------------------------------------------------------------*)
 
-fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
+fun op THEN1 (tac1, tac2) =
    fn g =>
       let
          val (gl, jf) = tac1 g
@@ -232,6 +232,10 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
       in
          (t_gl, fn thl => jf (h_jf [] :: thl))
       end
+
+(* first argument can be a tactic or a list-tactic *)
+val _ = op THEN1 : tactic * tactic -> tactic ;
+val _ = op THEN1 : list_tactic * tactic -> list_tactic ;
 
 val op >- = op THEN1
 
