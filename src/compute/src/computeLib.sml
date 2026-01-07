@@ -25,6 +25,8 @@ val new_compset = from_list;
 
 val listItems = clauses.deplist;
 val unmapped  = clauses.no_transform;
+val seal      = clauses.seal;
+val copy      = clauses.copy;
 
 datatype cbv_stack =
     Cbv_top
@@ -302,12 +304,12 @@ val bool_redns =
       [COND_CLAUSES, COND_ID, NOT_CLAUSES,
        AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
 
-fun bool_compset() =
+val bool_compset =
   (* change NONE to SOME 1 to stop CBV_CONV looking at conditionals'
      branches before the guard is fully true or false *)
-  set_skip (from_list bool_redns) boolSyntax.conditional NONE;
+  seal (set_skip (from_list bool_redns) boolSyntax.conditional NONE);
 
-val the_compset = ref (bool_compset());
+val the_compset = ref bool_compset;
 
 fun add_funs thms = the_compset := add_thms thms (!the_compset);
 fun add_convs convs =

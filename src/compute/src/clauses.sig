@@ -44,7 +44,9 @@ sig
               thm: Thm.thm };      (* thm we use for rewriting *)
 
   type compset
-  val empty_rws : unit -> compset
+  val empty_rws : compset
+  val seal : compset -> compset
+  val copy : compset -> compset
   val from_list : thm list -> compset
   val add_extern : term * int * (term -> thm) -> compset -> compset
   val add_thms : thm list -> compset -> compset

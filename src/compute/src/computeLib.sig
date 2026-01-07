@@ -9,7 +9,9 @@ sig
   val stoppers        : (term -> bool) option ref
 
   val new_compset     : thm list -> compset
-  val bool_compset    : unit -> compset
+  val bool_compset    : compset
+  val seal            : compset -> compset
+  val copy            : compset -> compset
 
   val add_thms        : thm list -> compset -> compset
   val add_conv        : term * int * conv -> compset -> compset
