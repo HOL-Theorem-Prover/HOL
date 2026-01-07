@@ -96,7 +96,7 @@ val _ = tprint "Checking seal prevents adding rules for existing constants"
 val sealed_cs = computeLib.seal (computeLib.new_compset [boolTheory.AND_CLAUSES])
 val _ = let
   (* Trying to add more rules for /\ should fail on sealed compset *)
-  val failed = (computeLib.add_thms [boolTheory.OR_CLAUSES] sealed_cs; false)
+  val failed = (computeLib.add_thms [boolTheory.AND_CLAUSES] sealed_cs; false)
                handle HOL_ERR _ => true
 in
   if failed then OK()
@@ -117,7 +117,7 @@ val _ = tprint "Checking copy creates modifiable compset"
 val copied_cs = computeLib.copy sealed_cs
 val _ = let
   (* Adding more rules for existing /\ should succeed after copy *)
-  val _ = computeLib.add_thms [boolTheory.OR_CLAUSES] copied_cs
+  val _ = computeLib.add_thms [boolTheory.AND_CLAUSES] copied_cs
 in
   OK()
 end
@@ -143,3 +143,51 @@ in
   if failed then OK()
   else die "bool_compset should be sealed"
 end
+
+(* More detailed sealing tests *)
+
+val _ = tprint "Checking theorems with existing RHS constants work on sealed compsets"
+(* This tests that from_term can look up existing constants without failing *)
+val _ = let
+  val base_cs = computeLib.seal (computeLib.new_compset [boolTheory.AND_CLAUSES])
+  (* Define a theorem whose RHS mentions T (which is in base_cs via AND_CLAUSES) *)
+  val new_thm = prove(“foo_const = T”, REWRITE_TAC [])
+      handle HOL_ERR _ => TRUTH (* fallback if foo_const doesn't exist *)
+  val _ = new_constant("test_const", “:bool”)
+  val test_def = new_definition("test_def", “test_const = T”)
+  (* Adding this should work even though T is on the RHS and in the sealed compset *)
+  val _ = computeLib.add_thms [test_def] base_cs
+in
+  OK()
+end
+handle HOL_ERR e => die ("RHS lookup failed on sealed compset: " ^ message_of e)
+
+val _ = tprint "Checking set_skip fails for existing constants in sealed compset"
+val _ = let
+  val cs = computeLib.seal (computeLib.new_compset [boolTheory.COND_CLAUSES])
+  val failed = (computeLib.set_skip cs boolSyntax.conditional NONE; false)
+               handle HOL_ERR _ => true
+in
+  if failed then OK()
+  else die "set_skip should fail for existing constant in sealed compset"
+end
+
+val _ = tprint "Checking set_skip works for new constants in sealed compset"
+val _ = let
+  val cs = computeLib.seal (computeLib.new_compset [])
+  (* This should succeed since COND is not in the empty compset *)
+  val _ = computeLib.set_skip cs boolSyntax.conditional NONE
+in
+  OK()
+end
+handle HOL_ERR e => die ("set_skip failed for new constant: " ^ message_of e)
+
+val _ = tprint "Checking set_skip works after copy"
+val _ = let
+  val cs = computeLib.seal (computeLib.new_compset [boolTheory.COND_CLAUSES])
+  val cs' = computeLib.copy cs
+  val _ = computeLib.set_skip cs' boolSyntax.conditional NONE
+in
+  OK()
+end
+handle HOL_ERR e => die ("set_skip after copy failed: " ^ message_of e)
