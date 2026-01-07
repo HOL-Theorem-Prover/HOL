@@ -5,7 +5,7 @@ open HolKernel boolLib intSyntax integerTheory
 
 type num = Arbnum.num
 
-val cooper_compset = int_compset()
+val cooper_compset = int_compset
                      |> computeLib.add_thms [gcdTheory.GCD_EFFICIENTLY]
 val REDUCE_CONV = computeLib.CBV_CONV cooper_compset
 

@@ -243,7 +243,7 @@ val float_datatype_rwts =
 val FLOAT_DATATYPE_CONV =
    REWRITE_CONV (combinTheory.K_THM :: float_datatype_rwts)
 
-val REAL_REDUCE_CONV = computeLib.CBV_CONV (realSimps.real_compset())
+val REAL_REDUCE_CONV = computeLib.CBV_CONV (realSimps.real_compset)
 
 fun memo_conv is_tm cnv0 s =
    let
@@ -859,7 +859,7 @@ end
    ------------------------------------------------------------------------ *)
 
 local
-   val cmp = realSimps.real_compset ()
+   val cmp = realSimps.real_compset
              |> computeLib.add_thms
                   ([pairTheory.pair_CASE_def,
                     pairTheory.FST, pairTheory.SND] @

@@ -413,7 +413,7 @@ val sha1thms =
   Helper_def, Round_def,expand_def, 
   digestBlock_def,digest_def,H0_def,H1_def,H2_def,H3_def,H4_def,computeMD_def];
 
-val compset = reduceLib.num_compset();
+val compset = reduceLib.num_compset;
 
 val _ = try (computeLib.add_thms 
           (string_to_w8_thms @ string_thms @ pairs_and_lists @ 

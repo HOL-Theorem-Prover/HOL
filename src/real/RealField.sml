@@ -447,7 +447,7 @@ val max_tm = “max :real -> real -> real”;
 val min_tm = “min :real -> real -> real”;
 
 fun real_rat_compset () =
-  reduceLib.num_compset()
+  reduceLib.num_compset
   |> computeLib.add_conv (leq_tm,     2, REAL_RAT_LE_CONV)
   |> computeLib.add_conv (less_tm,    2, REAL_RAT_LT_CONV)
   |> computeLib.add_conv (geq_tm,     2, REAL_RAT_GE_CONV)

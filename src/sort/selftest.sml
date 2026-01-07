@@ -3,7 +3,7 @@ open HolKernel Parse boolLib testutils
 local
 val sorteval =
   computeLib.CBV_CONV
-    (listLib.list_compset()
+    (computeLib.copy listLib.list_compset
      |> pairLib.add_pair_compset
      |> sortingLib.add_sorting_compset)
 val sort = ``QSORT $<``

@@ -7,5 +7,5 @@ sig
      val LIST_EQ_SIMP_CONV : Conv.conv
 
      val list_rws : computeLib.compset -> computeLib.compset
-     val list_compset : unit -> computeLib.compset
+     val list_compset : computeLib.compset
 end

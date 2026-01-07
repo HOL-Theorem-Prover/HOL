@@ -662,7 +662,7 @@ end
 (* ------------------------------------------------------------------------- *)
 
 val is_ptree_compset =
-  wordsLib.words_compset ()
+  wordsLib.words_compset
   |> computeLib.add_thms
        [REWRITE_RULE [bitTheory.LT_TWOEXP] IS_PTREE_def,
         (GSYM o CONJUNCT1) ptree_distinct,
@@ -1084,10 +1084,10 @@ fun add_ptree_compset compset =
               |> add_ptree_core
    end
 
-fun ptree_compset () =
+val ptree_compset =
    add_ptree_compset (computeLib.new_compset [])
 
-val PTREE_CONV = computeLib.CBV_CONV (ptree_compset ())
+val PTREE_CONV = computeLib.CBV_CONV ptree_compset
 
 (* ------------------------------------------------------------------------- *)
 

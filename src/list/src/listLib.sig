@@ -15,7 +15,7 @@ sig
   val LIST_EQ_SIMP_CONV : conv
 
   val list_rws : computeLib.compset -> computeLib.compset
-  val list_compset : unit -> computeLib.compset
+  val list_compset : computeLib.compset
 
   (* rich_listSimps *)
   val add_rich_list_compset : computeLib.compset -> computeLib.compset

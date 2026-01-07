@@ -108,7 +108,7 @@ val _ = if s = "\"\\042)\"" then OK()
    ---------------------------------------------------------------------- *)
 
 val cs =
-  listLib.list_compset()
+  listLib.list_compset
   |> stringLib.add_string_compset
   |> numposrepLib.add_numposrep_compset
   |> bitLib.add_bit_compset

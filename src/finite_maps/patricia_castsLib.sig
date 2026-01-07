@@ -10,7 +10,7 @@ sig
   val mk_word_ptree   : num * term_ptree -> term
 
   val add_cast_ptree_compset : computeLib.compset -> computeLib.compset
-  val cast_ptree_compset     : unit -> computeLib.compset
+  val cast_ptree_compset     : computeLib.compset
   val CAST_PTREE_CONV        : conv
 
   val Define_mk_word_ptree  : string * string -> num -> term_ptree -> thm * thm

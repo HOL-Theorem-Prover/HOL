@@ -74,6 +74,6 @@ sig
   val ptree_new_defn_depth : int ref
 
   val add_ptree_compset : computeLib.compset -> computeLib.compset
-  val ptree_compset     : unit -> computeLib.compset
+  val ptree_compset     : computeLib.compset
 
 end

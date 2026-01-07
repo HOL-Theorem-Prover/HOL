@@ -29,13 +29,13 @@ val elim_thms = [INT_ADD_REDUCE, INT_SUB_REDUCE, INT_MUL_REDUCE,
 
 fun add_int_compset cmp = computeLib.add_thms elim_thms cmp
 
-fun int_compset () = add_int_compset (reduceLib.num_compset())
+val int_compset = computeLib.seal (add_int_compset reduceLib.num_compset)
 
 (*---------------------------------------------------------------------------*)
 (* Reducer for ground integer expressions                                    *)
 (*---------------------------------------------------------------------------*)
 
-val REDUCE_CONV = computeLib.CBV_CONV (int_compset())
+val REDUCE_CONV = computeLib.CBV_CONV int_compset
 
 (*---------------------------------------------------------------------------*)
 (* Add integer reductions to the global compset                              *)

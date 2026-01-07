@@ -66,7 +66,7 @@ local
                |> add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV)
     end
 in
-  val num_compset = add_compset o bool_compset
+  val num_compset = computeLib.seal (add_compset computeLib.bool_compset)
   val () = computeLib.the_compset := add_compset (!computeLib.the_compset)
 end
 
@@ -76,7 +76,9 @@ end
 (*-----------------------------------------------------------------------*)
 
 local
-  val cs = computeLib.set_skip (num_compset()) boolSyntax.conditional NONE
+  (* copy needed because set_skip modifies COND which exists in num_compset *)
+  val cs = computeLib.set_skip (computeLib.copy num_compset)
+                               boolSyntax.conditional NONE
            (* ensure that REDUCE_CONV will look at all of a term, even
               conditionals' branches *)
 in

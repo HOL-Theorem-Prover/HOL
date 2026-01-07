@@ -21,7 +21,7 @@ val add_finite_map_compset = computeLib.add_thms
   ,FDOM_FEMPTY
   ]
 
-val FEVERY_cs = computeLib.bool_compset ()
+val FEVERY_cs = computeLib.bool_compset
                 |> computeLib.add_thms
                            [FEVERY_FEMPTY, DRESTRICT_FEMPTY,
                             FEVERY_FUPDATE, IN_INSERT,

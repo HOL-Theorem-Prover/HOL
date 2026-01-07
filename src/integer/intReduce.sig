@@ -3,7 +3,7 @@ sig
   include Abbrev
 
   val add_int_compset : computeLib.compset -> computeLib.compset
-  val int_compset     : unit -> computeLib.compset
+  val int_compset     : computeLib.compset
 
   val REDUCE_CONV : term -> thm
   val RED_CONV    : term -> thm
