@@ -257,7 +257,7 @@ fun add_in_db (n,cst,act,EndDb) =
 fun add_in_db_upd compset (name,arity,hcst) action =
   let val _ = if is_sealed_existing compset name then
                 raise CL_ERR "add_in_db_upd"
-                  ("cannot add rules for existing constant " ^ #1 name ^ "$" ^ #2 name ^
+                  ("cannot add rules for existing constant " ^ #2 name ^ "$" ^ #1 name ^
                    " in sealed compset; use copy to create an unsealed copy")
               else ()
       val (compset', rl) = assoc_clause compset name
@@ -269,7 +269,7 @@ fun add_in_db_upd compset (name,arity,hcst) action =
 fun set_skip compset p sk =
   let val _ = if is_sealed_existing compset p then
                 raise CL_ERR "set_skip"
-                  ("cannot modify skip for existing constant " ^ #1 p ^ "$" ^ #2 p ^
+                  ("cannot modify skip for existing constant " ^ #2 p ^ "$" ^ #1 p ^
                    " in sealed compset; use copy to create an unsealed copy")
               else ()
       val (compset', rl) = assoc_clause compset p
