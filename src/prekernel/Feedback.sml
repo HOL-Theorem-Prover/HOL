@@ -160,12 +160,12 @@ fun exn_to_string (HOL_ERR herr) = !ERR_to_string herr
 
 fun render_exn e =
     if !Globals.interactive then
-       raise e
+       Portable.reraise e
     else
       (output_ERR (exn_to_string e);
        OS.Process.exit OS.Process.failure)
 
-fun Raise e = (output_ERR (exn_to_string e); raise e)
+fun Raise e = (output_ERR (exn_to_string e); Portable.reraise e)
 
 local
    val err1 = mk_HOL_ERR "??" "??" "fail"
@@ -427,7 +427,7 @@ fun trace (nm, i) f x =
          ; let
               val init = trfp_get value
               val _ = trfp_set value i
-              val y = f x handle e => (trfp_set value init; raise e)
+              val y = f x handle e => (trfp_set value init; Portable.reraise e)
               val _ = trfp_set value init
            in
               y
