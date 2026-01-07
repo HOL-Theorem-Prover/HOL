@@ -228,22 +228,18 @@ fun copy (Compset {dict, ...}) =
    not exist, create an empty database for this constant. The constant is given
    as a pair `(const_name, theory_name)`. Returns the (possibly updated) compset
    and the ref to the per-constant database.
-
-   If the compset is sealed and the constant already exists, raises an exception.
-   Use `copy` to create an unsealed copy if you need to extend existing constants.
 *)
 fun assoc_clause (Compset {sealed, dict}) cst =
   case Redblackmap.peek (dict, cst)
-   of SOME rl =>
-        if sealed then
-          raise CL_ERR "assoc_clause"
-            ("cannot add rules for existing constant " ^ #1 cst ^ "$" ^ #2 cst ^
-             " in sealed compset; use copy to create an unsealed copy")
-        else
-          (Compset {sealed=sealed, dict=dict}, rl)
+   of SOME rl => (Compset {sealed=sealed, dict=dict}, rl)
     | NONE => let val mt = ref (EndDb, NONE)
               in (Compset {sealed=false, dict=Redblackmap.insert (dict,cst,mt)}, mt)
               end;
+
+(* Check if modifying this constant would violate sealing.
+   Returns true if the compset is sealed AND the constant already exists. *)
+fun is_sealed_existing (Compset {sealed, dict}) cst =
+  sealed andalso isSome (Redblackmap.peek (dict, cst))
 
 fun add_in_db (n,cst,act,EndDb) =
       funpow n NeedArg (Try{Hcst=cst, Rws=act, Tail=EndDb})
@@ -259,14 +255,24 @@ fun add_in_db (n,cst,act,EndDb) =
       NeedArg(add_in_db(n-1,cst,act,tail));
 
 fun add_in_db_upd compset (name,arity,hcst) action =
-  let val (compset', rl) = assoc_clause compset name
+  let val _ = if is_sealed_existing compset name then
+                raise CL_ERR "add_in_db_upd"
+                  ("cannot add rules for existing constant " ^ #1 name ^ "$" ^ #2 name ^
+                   " in sealed compset; use copy to create an unsealed copy")
+              else ()
+      val (compset', rl) = assoc_clause compset name
       val (db, sk) = !rl
   in rl := (add_in_db (arity,hcst,action,db), sk)
    ; compset'
   end;
 
 fun set_skip compset p sk =
-  let val (compset', rl) = assoc_clause compset p
+  let val _ = if is_sealed_existing compset p then
+                raise CL_ERR "set_skip"
+                  ("cannot modify skip for existing constant " ^ #1 p ^ "$" ^ #2 p ^
+                   " in sealed compset; use copy to create an unsealed copy")
+              else ()
+      val (compset', rl) = assoc_clause compset p
       val (db,_) = !rl
   in rl := (db,sk)
    ; compset'

@@ -309,7 +309,7 @@ val bool_compset =
      branches before the guard is fully true or false *)
   seal (set_skip (from_list bool_redns) boolSyntax.conditional NONE);
 
-val the_compset = ref bool_compset;
+val the_compset = ref (copy bool_compset);
 
 fun add_funs thms = the_compset := add_thms thms (!the_compset);
 fun add_convs convs =
