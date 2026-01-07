@@ -195,28 +195,54 @@ fun partition_skip (SOME n) Args =
    The compset type is functional at the outer level (no ref wrapping the dict),
    but the per-constant entries are still refs to keep the treatment of recursive
    equations straightforward.
+
+   A compset can be "sealed" to prevent mutation of existing constant entries.
+   This allows base compsets (like bool_compset) to be shared safely as values.
+   Adding rules for NEW constants to a sealed compset works fine.
+   Adding rules for EXISTING constants in a sealed compset raises an exception.
+   Use `copy` to create an unsealed copy if you need to extend existing constants.
 *)
 datatype compset
-   = Compset of (string * string, (db * int option) ref) Redblackmap.dict;
+   = Compset of { sealed: bool,
+                  dict: (string * string, (db * int option) ref) Redblackmap.dict };
 
 fun lex_string_comp ((s1, s2), (s3, s4)) =
   case String.compare (s1, s3) of
     EQUAL => String.compare (s2, s4)
   | x => x
 
-fun empty_rws () = Compset (Redblackmap.mkDict lex_string_comp);
+val empty_rws = Compset { sealed = true,
+                          dict = Redblackmap.mkDict lex_string_comp };
+
+(* Seal a compset, preventing mutation of existing constant entries. *)
+fun seal (Compset {dict, ...}) = Compset {sealed = true, dict = dict}
+
+(* Create an unsealed copy of a compset with fresh refs for all constants.
+   Use this when you need to extend rules for existing constants. *)
+fun copy (Compset {dict, ...}) =
+  Compset { sealed = false,
+            dict = Redblackmap.transform (fn r => ref (!r)) dict }
 
 (*
    Look up the per-constant database of `cst` in the given compset. If it does
    not exist, create an empty database for this constant. The constant is given
    as a pair `(const_name, theory_name)`. Returns the (possibly updated) compset
    and the ref to the per-constant database.
+
+   If the compset is sealed and the constant already exists, raises an exception.
+   Use `copy` to create an unsealed copy if you need to extend existing constants.
 *)
-fun assoc_clause (Compset rws) cst =
-  case Redblackmap.peek (rws, cst)
-   of SOME rl => (Compset rws, rl)
+fun assoc_clause (Compset {sealed, dict}) cst =
+  case Redblackmap.peek (dict, cst)
+   of SOME rl =>
+        if sealed then
+          raise CL_ERR "assoc_clause"
+            ("cannot add rules for existing constant " ^ #1 cst ^ "$" ^ #2 cst ^
+             " in sealed compset; use copy to create an unsealed copy")
+        else
+          (Compset {sealed=sealed, dict=dict}, rl)
     | NONE => let val mt = ref (EndDb, NONE)
-              in (Compset (Redblackmap.insert (rws,cst,mt)), mt)
+              in (Compset {sealed=false, dict=Redblackmap.insert (dict,cst,mt)}, mt)
               end;
 
 fun add_in_db (n,cst,act,EndDb) =
@@ -246,9 +272,9 @@ fun set_skip compset p sk =
    ; compset'
   end;
 
-fun scrub_const (Compset htbl) c =
+fun scrub_const (Compset {sealed, dict}) c =
   let val {Thy,Name,Ty} = dest_thy_const c
-  in Compset (#1 (Redblackmap.remove (htbl,(Name,Thy))))
+  in Compset {sealed=false, dict = #1 (Redblackmap.remove (dict,(Name,Thy)))}
   end;
 
 (*
@@ -422,10 +448,10 @@ fun add_extern (cst,arity,fconv) compset =
   add_in_db_upd compset ((Name,Thy),arity,cst) (Conv fconv)
   end;
 
-fun new_rws () =
-  add_thms [boolTheory.REFL_CLAUSE] (empty_rws());
+val new_rws =
+  add_thms [boolTheory.REFL_CLAUSE] empty_rws;
 
-fun from_list lthm = add_thms lthm (new_rws());
+fun from_list lthm = add_thms lthm new_rws;
 
 fun scrub_thms lthm compset =
  let val tmlist = map (concl o hd o BODY_CONJUNCTS) lthm
@@ -438,8 +464,8 @@ fun scrub_thms lthm compset =
 (* Support for analysis of compsets                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun rws_of (Compset rbmap) =
- let val thinglist = Redblackmap.listItems rbmap
+fun rws_of (Compset {dict, ...}) =
+ let val thinglist = Redblackmap.listItems dict
      fun db_of_entry (ss, r) = let val (db,opt) = !r in db end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =
@@ -467,8 +493,8 @@ datatype transform
 (* Otherwise, one would have to do a transitive closure sort of construction *)
 (* to make all the dependencies explicit.                                    *)
 (*---------------------------------------------------------------------------*)
-fun deplist (Compset rbmap) =
- let val thinglist = Redblackmap.listItems rbmap
+fun deplist (Compset {dict, ...}) =
+ let val thinglist = Redblackmap.listItems dict
      fun db_of_entry (ss, r) = let val (db,opt) = !r in (ss,db) end
      val dblist = List.map db_of_entry thinglist
      fun get_actions db =
