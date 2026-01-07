@@ -237,9 +237,13 @@ fun assoc_clause (Compset {sealed, dict}) cst =
               end;
 
 (* Check if modifying this constant would violate sealing.
-   Returns true if the compset is sealed AND the constant already exists. *)
+   Returns true if the compset is sealed AND the constant already has rules.
+   Empty entries (created by from_term for RHS constants) don't count. *)
 fun is_sealed_existing (Compset {sealed, dict}) cst =
-  sealed andalso isSome (Redblackmap.peek (dict, cst))
+  sealed andalso
+  (case Redblackmap.peek (dict, cst) of
+     SOME r => (case !r of (EndDb, _) => false | _ => true)
+   | NONE => false)
 
 fun add_in_db (n,cst,act,EndDb) =
       funpow n NeedArg (Try{Hcst=cst, Rws=act, Tail=EndDb})
