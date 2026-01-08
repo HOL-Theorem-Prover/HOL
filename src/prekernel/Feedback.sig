@@ -81,5 +81,6 @@ sig
     val reset_trace       : string -> unit
     val reset_traces      : unit -> unit
     val trace             : string * int -> ('a -> 'b) -> 'a -> 'b
+    val with_traces       : (string * int) list -> ('a -> 'b) -> 'a -> 'b
 
 end

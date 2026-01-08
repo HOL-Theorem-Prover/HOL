@@ -419,6 +419,26 @@ fun current_trace nm =
       SOME {value, ...} => trfp_get value
     | NONE => registered_err "current_trace" nm
 
+fun with_traces flags f x =
+  let fun update_flag (nm,new) =
+          case find_record nm
+           of NONE => registered_err "with_traces" nm
+            | SOME (recd as {value, maximum, ...}) =>
+              let val orig = trfp_get value
+                  fun reset_value() = trfp_set value orig
+              in bound_check "with_traces" nm maximum new;
+                 trfp_set value new;
+                 reset_value end
+      val reset_fns = map update_flag flags
+      fun reset_flags() = List.app (fn f => f()) reset_fns
+      val y = f x handle e => (reset_flags(); Portable.reraise e)
+  in
+   reset_flags(); y
+  end
+
+fun trace flag = with_traces [flag]
+
+(*
 fun trace (nm, i) f x =
    case find_record nm of
       NONE => registered_err "trace" nm
@@ -432,6 +452,7 @@ fun trace (nm, i) f x =
            in
               y
            end)
+*)
 
 val () = register_btrace ("assumptions", Globals.show_assums)
 val () = register_btrace ("numeral types", Globals.show_numeral_types)
