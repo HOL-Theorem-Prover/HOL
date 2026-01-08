@@ -8,7 +8,7 @@ Feedback.with_traces : (string * int) list -> ('a -> 'b) -> 'a -> 'b
 
 Invoke a function with specified levels for traces.
 
-The `with_traces` function is used to set values for a collection of
+The `with_traces` function is used to set values of a collection of
 tracing variables for the duration of one top-level function call.
 
 In a state where trace variables designated by `nm_1,...,nm_k` have
@@ -30,67 +30,28 @@ if the function invocation fails.
 
 ### Example
 
-In the following we make a recursive definition, temporarily setting
-some traces so that aspects of the internal workings of the definition
-mechanism are printed out. First we find the present values of the
-trace variables:
-
+First we define a convenience function.
 ``` hol4
-> map current_trace
-      ["Definition.TC extraction",
-       "Definition.termination candidates"];
-val it = [0, 0]: int list   (* default values *)
-```
-Now we make the definition while locally setting the trace values:
-``` hol4
-> with_traces [("Definition.TC extraction", 3),
-               ("Definition.termination candidates",2)]
-  Define
- `fact n = if n = 0 then 1 else n * fact (n-1)`;
-
-# # # #
-------------------------
-TC extraction on clause:
-
-fact n = if n = 0 then 1 else n * RESTRICT fact R n (n − 1)
-
-Extracting from:
-
-   n = 0
-
-push_context:
-   n = 0
-
-Extracting from:
-
-   1
-
-push_context:
-   n ≠ 0
-
-Extracting from:
-
-   n * RESTRICT fact R n (n − 1)
-
-TC Capture:
- [n ≠ 0, n ≠ 0 ⇒ R (n − 1) n] ⊢ RESTRICT fact R n (n − 1) = fact (n − 1)
-
-Termination conditions: 1
-Candidate termination relations generated: 2
-Termination proof successful with candidate 1:
-  inv_image $< (λx. x)
-
-Equations stored under "fact_def".
-Induction stored under "fact_ind".
-val it = ⊢ ∀n. fact n = if n = 0 then 1 else n * fact (n − 1): thm
+> fun pr_thm th = (print_thm th; print "\n");
+val pr_thm = fn: thm -> unit
 ```
 
-And the trace values have been restored:
+Now we examine a theorem with and without traces set to local values.
+
 ``` hol4
-> map current_trace
-      ["Definition.TC extraction",
-       "Definition.termination candidates"]
-val it = [0, 0]: int list   (* back to default values *)
+> map current_trace ["assumptions", "types"] ;
+val it = [0, 0]: int list
+
+> pr_thm EQ_SYM_EQ;
+⊢ ∀x y. x = y ⇔ y = x
+val it = (): unit
+
+> with_traces [("assumptions",1), ("types",1)] pr_thm EQ_SYM_EQ;
+ [] ⊢ ∀(x :α) (y :α). x = y ⇔ y = x
+val it = (): unit
+
+> map current_trace ["assumptions", "types"] ;
+val it = [0, 0]: int list
 ```
 
 ### See also
