@@ -3366,6 +3366,22 @@ Proof
   metis_tac[IS_PREFIX_LENGTH_ANTI]
 QED
 
+(* lcp2: binary longest common prefix *)
+Definition lcp2_def:
+  lcp2 x y = longest_prefix {x;y}
+End
+
+Theorem lcp2_thm:
+  lcp2 xs ys =
+    case xs of
+    | x::xs => (case ys of
+                | y::ys => if x = y then x :: lcp2 xs ys else []
+                | _ => [])
+    | _ => []
+Proof
+  Cases_on `xs` >> Cases_on `ys` >> rw[lcp2_def, longest_prefix_PAIR]
+QED
+
 (* lcp: longest common prefix of a list of lists *)
 Definition lcp_def:
   lcp ls = longest_prefix (set ls)
@@ -3383,19 +3399,21 @@ Proof
   simp[lcp_def]
 QED
 
-(* Helper: longest_prefix {x;y} is a prefix of both x and y *)
-Theorem longest_prefix_PAIR_prefix:
-  longest_prefix {x;y} <<= x /\ longest_prefix {x;y} <<= y
+(* lcp2 is a prefix of both arguments *)
+Theorem lcp2_prefix:
+  lcp2 x y <<= x /\ lcp2 x y <<= y
 Proof
+  simp[lcp2_def] >>
   MAP_EVERY qid_spec_tac [`y`,`x`] >>
   Induct >> simp[longest_prefix_PAIR] >>
   gen_tac >> Cases >> simp[longest_prefix_PAIR] >> rw[]
 QED
 
-(* Helper: any common prefix of x and y is a prefix of longest_prefix {x;y} *)
-Theorem longest_prefix_PAIR_maximal:
-  p <<= x /\ p <<= y ==> p <<= longest_prefix {x;y}
+(* any common prefix of x and y is a prefix of lcp2 x y *)
+Theorem lcp2_maximal:
+  p <<= x /\ p <<= y ==> p <<= lcp2 x y
 Proof
+  simp[lcp2_def] >>
   MAP_EVERY qid_spec_tac [`y`,`x`,`p`] >>
   Induct >- simp[] >>
   rpt strip_tac >>
@@ -3403,30 +3421,30 @@ Proof
   Cases_on `y` >> fs[longest_prefix_PAIR] >> rw[]
 QED
 
-(* Key lemma: replacing {x;y} with {lcp {x;y}} preserves common_prefixes *)
+(* Key lemma: replacing {x;y} with {lcp2 x y} preserves common_prefixes *)
 Theorem common_prefixes_INSERT2:
   common_prefixes ({x; y} UNION rest) =
-  common_prefixes ({longest_prefix {x; y}} UNION rest)
+  common_prefixes ({lcp2 x y} UNION rest)
 Proof
-  simp[common_prefixes_def, EXTENSION] >>
+  simp[lcp2_def, common_prefixes_def, EXTENSION] >>
   gen_tac >> eq_tac >> rw[] >>
-  metis_tac[longest_prefix_PAIR_maximal, longest_prefix_PAIR_prefix, IS_PREFIX_TRANS]
+  metis_tac[lcp2_def, lcp2_maximal, lcp2_prefix, IS_PREFIX_TRANS]
 QED
 
-(* Key lemma: replacing {x;y} with {lcp {x;y}} preserves longest_prefix *)
+(* Key lemma: replacing {x;y} with {lcp2 x y} preserves longest_prefix *)
 Theorem longest_prefix_INSERT2:
-  longest_prefix ({x; y} UNION rest) = longest_prefix ({longest_prefix {x;y}} UNION rest)
+  longest_prefix ({x; y} UNION rest) = longest_prefix ({lcp2 x y} UNION rest)
 Proof
-  `{x; y} UNION rest <> {} /\ {longest_prefix {x;y}} UNION rest <> {}`
+  `{x; y} UNION rest <> {} /\ {lcp2 x y} UNION rest <> {}`
     by simp[] >>
-  simp[longest_prefix_def, common_prefixes_INSERT2]
+  simp[longest_prefix_def, lcp2_def, common_prefixes_INSERT2]
 QED
 
 Theorem lcp_cons2:
-  lcp (x::y::xs) = lcp (longest_prefix {x;y} :: xs)
+  lcp (x::y::xs) = lcp (lcp2 x y :: xs)
 Proof
-  simp[lcp_def] >>
-  metis_tac[longest_prefix_INSERT2, INSERT_UNION_EQ, UNION_EMPTY, INSERT_SING_UNION]
+  simp[lcp_def, lcp2_def] >>
+  metis_tac[lcp2_def, longest_prefix_INSERT2, INSERT_UNION_EQ, UNION_EMPTY, INSERT_SING_UNION]
 QED
 
 Theorem lcp_thm:
@@ -3448,31 +3466,15 @@ Proof
       metis_tac[IS_PREFIX_LENGTH, IS_PREFIX_LENGTH_ANTI, LESS_EQUAL_ANTISYM])
 QED
 
-Theorem longest_prefix_assoc:
-  longest_prefix {longest_prefix {x;y}; z} =
-  longest_prefix {x; longest_prefix {y;z}}
+Theorem lcp2_assoc:
+  lcp2 (lcp2 x y) z = lcp2 x (lcp2 y z)
 Proof
+  simp[lcp2_def] >>
   MAP_EVERY qid_spec_tac [`z`,`y`,`x`] >>
   Induct >> rw[longest_prefix_PAIR] >>
   Cases_on `y` >> rw[longest_prefix_PAIR] >>
   Cases_on `z` >> rw[longest_prefix_PAIR] >>
   rw[] >> fs[longest_prefix_PAIR]
-QED
-
-(* lcp2: binary longest common prefix for cv_trans *)
-Definition lcp2_def:
-  lcp2 x y = longest_prefix {x;y}
-End
-
-Theorem lcp2_thm:
-  lcp2 xs ys =
-    case xs of
-    | x::xs => (case ys of
-                | y::ys => if x = y then x :: lcp2 xs ys else []
-                | _ => [])
-    | _ => []
-Proof
-  Cases_on `xs` >> Cases_on `ys` >> rw[lcp2_def, longest_prefix_PAIR]
 QED
 
 Theorem lcp_oneline:
@@ -3483,15 +3485,15 @@ Theorem lcp_oneline:
     | x::y::xs => lcp (lcp2 x y :: xs)
 Proof
   Cases_on `ls` >> rw[lcp_nil, lcp_sing] >>
-  Cases_on `t` >> rw[lcp_sing, lcp_cons2, lcp2_def]
+  Cases_on `t` >> rw[lcp_sing, lcp_cons2]
 QED
 
 Theorem lcp_CONS:
   lcp (x::xs) = if NULL xs then x else lcp2 x (lcp xs)
 Proof
   qid_spec_tac `x` >>
-  Induct_on `xs` >> rw[lcp_sing, lcp_cons2, lcp2_def] >>
-  simp[longest_prefix_assoc]
+  Induct_on `xs` >> rw[lcp_sing, lcp_cons2] >>
+  simp[lcp2_def, lcp2_assoc]
 QED
 
 Theorem lcp2_is_nil:
