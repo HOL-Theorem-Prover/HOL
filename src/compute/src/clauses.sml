@@ -193,8 +193,8 @@ fun partition_skip (SOME n) Args =
    width of their lhs.
 
    The compset type is functional at the outer level (no ref wrapping the dict),
-   but the per-constant entries are still refs to allow efficient sharing and
-   lookup during evaluation.
+   but the per-constant entries are still refs to keep the treatment of recursive
+   equations straightforward.
 *)
 datatype compset
    = Compset of (string * string, (db * int option) ref) Redblackmap.dict;
