@@ -258,6 +258,23 @@ QED
 
 val res = cv_trans UNZIP_eq
 
+val lcp2_pre_def = cv_trans_pre "lcp2_pre" rich_listTheory.lcp2_thm;
+
+Theorem lcp2_pre[cv_pre]:
+  !xs ys. lcp2_pre xs ys
+Proof
+  Induct \\ rw[] \\ simp[Once lcp2_pre_def] \\
+  Cases_on `ys` \\ simp[Once lcp2_pre_def]
+QED
+
+val lcp_pre_def = cv_trans_pre "lcp_pre" rich_listTheory.lcp_oneline;
+
+Theorem lcp_pre[cv_pre]:
+  lcp_pre ls
+Proof
+  completeInduct_on `LENGTH ls` \\ rw[Once lcp_pre_def]
+QED
+
 Definition genlist_def:
   genlist i f 0 = [] /\
   genlist i f (SUC n) = f i :: genlist (i+1:num) f n
