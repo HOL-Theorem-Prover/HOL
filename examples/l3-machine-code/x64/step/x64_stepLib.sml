@@ -110,7 +110,7 @@ local
                          THENC EVAL
                          THENC REWRITE_CONV [num2Zreg_thm])
          (List.tabulate (8, fn i => ``RexReg (^b, ^(mk_3 i))``))
-   val cmp = wordsLib.words_compset ()
+   val cmp = computeLib.copy wordsLib.words_compset
    val cmp =
       utilsLib.add_theory
          ([immediate8_rwt, immediate16_rwt, immediate32_rwt, immediate64_rwt,

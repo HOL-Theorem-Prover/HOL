@@ -41,7 +41,7 @@ fun WORD_ONLY_RULE n x =
       ((GEN_ALL o INST [n |-> `n2w (NUMERAL n)`]) y)
   end;
 
-val arm_compset = wordsLib.words_compset();
+val arm_compset = computeLib.copy wordsLib.words_compset;
 
 val _ = Lib.C add_thms arm_compset
   [FST,SND,listTheory.EL_compute,HD,TL,MAP,FILTER,LENGTH,ZIP,FOLDL,
@@ -184,14 +184,10 @@ val _ = Lib.C add_thms arm_compset
 val ARM_CONV = CBV_CONV arm_compset;
 val ARM_RULE = CONV_RULE ARM_CONV;
 
-fun add_rws f rws =
-let val cmp_set = f()
-    val _ = add_thms rws cmp_set
-in cmp_set end;
-
 val EVAL_UPDATE_CONV =
-let val compset = add_rws reduceLib.num_compset
+let val compset = add_thms
           [register_EQ_register,register2num_thm,APPLY_UPDATE_THM]
+          reduceLib.num_compset
 in
   computeLib.CBV_CONV compset
 end;
@@ -208,13 +204,14 @@ let open arm_evalTheory fcpTheory updateTheory
     val Ub_RULE_PSR = rule2 `\x y. psr2num x < psr2num y`
     val FUa_RULE = (rule o SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE1
     val FUb_RULE = (rule o SPEC `\x y. x < y`) FCP_UPDATE_SORT_RULE2
-    val compset = add_rws wordsLib.words_compset
+    val compset = add_thms
         [o_THM,register_EQ_register,register2num_thm,psr_EQ_psr,psr2num_thm,
          SYM Ua_def,UPDATE_EQ_RULE,Ua_RULE4,Ub_RULE4,Ua_RULE_PSR,Ub_RULE_PSR,
          SYM FUa_def,FCP_UPDATE_EQ_RULE,FUa_RULE,FUb_RULE,
          LENGTH,SUC_RULE JOIN,listTheory.DROP_def,APPEND,
          PURE_REWRITE_RULE [SYM Ua_def] UPDATE_LUPDATE,
          LIST_UPDATE_SORT_RULE1,LIST_UPDATE_SORT_RULE2,GSYM LUa_def]
+        (copy wordsLib.words_compset)
 in
   computeLib.CBV_CONV compset
     THENC PURE_REWRITE_CONV [Ua_def,Ub_def,FUa_def,FUb_def,LUa_def,LUb_def]
@@ -223,17 +220,18 @@ in
 end;
 
 val FOLD_UPDATE_CONV =
-let val compset = add_rws wordsLib.words_compset
+let val compset = add_thms
       [SET_IFMODE_def,SET_NZCV_def,FOLDL,APPLY_UPDATE_THM,
        psr_EQ_psr,psr2num_thm,mode_num_def,mode_case_def,
        register_EQ_register,register2num_thm,
        empty_registers_def,empty_memory_def,empty_psrs_def]
+      wordsLib.words_compset
 in
   computeLib.CBV_CONV compset THENC SORT_UPDATE_CONV
 end;
 
 val ARM_ASSEMBLE_CONV = let open instructionTheory
-  val compset = add_rws wordsLib.words_compset
+  val compset = add_thms
        [transfer_options_accessors,transfer_options_updates_eq_literal,
         transfer_options_accfupds,transfer_options_fupdfupds,
         transfer_options_literal_11,transfer_options_fupdfupds_comp,
@@ -247,6 +245,7 @@ val ARM_ASSEMBLE_CONV = let open instructionTheory
         options_encode_def,options_encode2_def,
         data_proc_encode_def,instruction_encode_def,K_THM,
         SET_NZCV_def,SET_IFMODE_def,mode_num_def,mode_case_def]
+       wordsLib.words_compset
 in
   computeLib.CBV_CONV compset
 end;

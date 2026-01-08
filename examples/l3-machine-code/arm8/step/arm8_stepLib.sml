@@ -443,7 +443,7 @@ fun arm8_fetch tm = inst_opcode tm Fetch_rwt
 (* Decode *)
 
 local
-   val cmp = wordsLib.words_compset()
+   val cmp = wordsLib.words_compset
    val cmp = bitstringLib.add_bitstring_compset cmp
    val cmp = integer_wordLib.add_integer_word_compset cmp
    val cmp = intReduce.add_int_compset cmp

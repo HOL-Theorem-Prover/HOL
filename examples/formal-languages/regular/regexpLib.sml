@@ -116,7 +116,7 @@ val DOT_charset = DOT_def |> concl |> rhs |> EVAL |> concl |> rhs |> rand
 val charset_mem_conv =
  let val cs_memEval =
       let open computeLib
-          val compset = listLib.list_compset()
+          val compset = copy listLib.list_compset
       in
           wordsLib.add_words_compset true compset
         ; add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
@@ -148,7 +148,7 @@ val charset_mem_conv =
 val charset_union_conv =
  let val charset_unionEval =
         let open computeLib
-            val compset = listLib.list_compset()
+            val compset = copy listLib.list_compset
         in wordsLib.add_words_compset true compset
          ; add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
          ; add_thms [charset_union_def, charset_empty_def] compset
@@ -222,7 +222,7 @@ fun transitions_conv compset =
 
 fun base_compset() =
  let open computeLib
-     val compset = listLib.list_compset()
+     val compset = copy listLib.list_compset
  in
      optionLib.OPTION_rws compset
    ; pairLib.add_pair_compset compset
@@ -282,7 +282,7 @@ fun gen_dfa_conv r =
 
 fun exec_dfa_compset() =
  let open computeLib
-     val compset = listLib.list_compset()
+     val compset = copy listLib.list_compset
  in
      optionLib.OPTION_rws compset
    ; stringLib.add_string_compset compset

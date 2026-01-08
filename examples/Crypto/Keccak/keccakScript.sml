@@ -4341,7 +4341,7 @@ QED
 
 (*
 
-val cs = num_compset();
+val cs = num_compset;
 val () = extend_compset [
   Tys [``:state_array``],
   Defs [

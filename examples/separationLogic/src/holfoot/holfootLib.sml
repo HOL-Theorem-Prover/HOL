@@ -841,7 +841,7 @@ end;
 local
    val my_compset = computeLib.add_thms [asl_bigstar_list_REWRITE,
       asl_star_holfoot_THM, LIST_TO_FMAP_THM, asl_trivial_cond_TF,
-      pairTheory.SND, pairTheory.FST] (listLib.list_compset ())
+      pairTheory.SND, pairTheory.FST] (listLib.list_compset)
 in
    val tree_prop_implies_eq_SIMP_CONV = computeLib.CBV_CONV my_compset
 end
@@ -1008,7 +1008,7 @@ end;
 local
    open stringTheory stringLib
    val char_eq_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
-   val in_compset = listLib.list_compset ()
+   val in_compset = listLib.list_compset
    val in_compset = computeLib.add_conv (ord_tm, 1, ORD_CHR_CONV) in_compset
    val in_compset = computeLib.add_thms char_eq_thms in_compset
    val in_compset = computeLib.add_thms [FDOM_FUPDATE, FDOM_FEMPTY,
@@ -1199,7 +1199,7 @@ end;
 local
    open stringTheory stringLib
    val char_eq_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
-   val apply_compset = listLib.list_compset ()
+   val apply_compset = listLib.list_compset
    val apply_compset = computeLib.add_conv (ord_tm, 1, ORD_CHR_CONV) apply_compset
    val apply_compset = computeLib.add_thms char_eq_thms apply_compset
    val apply_compset = computeLib.add_thms [FAPPLY_FUPDATE_THM, holfoot_tag_11] apply_compset
@@ -1662,7 +1662,7 @@ local
    open stringTheory stringLib
 
    val char_eq_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
-   val my_compset = listLib.list_compset ()
+   val my_compset = listLib.list_compset
    val my_compset = computeLib.add_conv (ord_tm, 1, ORD_CHR_CONV) my_compset
    val my_compset = computeLib.add_thms char_eq_thms my_compset
    val my_compset = computeLib.add_thms [FAPPLY_FUPDATE_THM, holfoot_tag_11,
@@ -1764,7 +1764,7 @@ local
              SOME (n, valOf found_opt)
        end
 
-  val simplify_cs = computeLib.bool_compset ()
+  val simplify_cs = computeLib.bool_compset
   val simplify_cs = computeLib.add_thms [listTheory.MAP, pairTheory.FST,
                                pairTheory.SND, listTheory.MEM,
                                BAG_UNION_INSERT, BAG_UNION_EMPTY,
@@ -2012,7 +2012,7 @@ local
              end
        end
 
-  val simplify_cs = computeLib.bool_compset ()
+  val simplify_cs = computeLib.bool_compset
   val simplify_cs = computeLib.add_thms [listTheory.MAP, pairTheory.FST,
                     pairTheory.SND, FAPPLY_FUPDATE_THM,
                     holfoot_tag_11,asl_bigstar_list_REWRITE,
@@ -2226,9 +2226,8 @@ end;
    val tt = find_term is_VAR_RES_FRAME_SPLIT (snd (top_goal ()))
 *)
 local
-  val array_compset = computeLib.bool_compset ()
-  val _ =
-      computeLib.add_thms [pairTheory.SND, pairTheory.FST, MAP] array_compset
+  val array_compset =
+      computeLib.add_thms [pairTheory.SND, pairTheory.FST, MAP] computeLib.bool_compset
 
   fun try_split context i1 i2 (ec1,nc1) (ec2,nc2,data2) =
     let
@@ -2387,7 +2386,7 @@ val tt =
 local
    open stringTheory stringLib
    val char_eq_thms   = [CHR_ORD,CHAR_EQ_THM,ORD_11];
-   val my_compset = listLib.list_compset ()
+   val my_compset = listLib.list_compset
    val my_compset = computeLib.add_conv (ord_tm, 1, ORD_CHR_CONV) my_compset
    val my_compset = computeLib.add_thms char_eq_thms my_compset
    val my_compset = computeLib.add_thms [holfoot_tag_11, LIST_TO_FMAP_THM,

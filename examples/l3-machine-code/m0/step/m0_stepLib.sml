@@ -82,7 +82,7 @@ val STATE_CONV =
 
 local
    val cmp = computeLib.add_thms (datatype_thms [pairTheory.FST])
-               (computeLib.bool_compset ())
+               computeLib.bool_compset
 in
    val EVAL_DATATYPE_CONV = Conv.TRY_CONV (utilsLib.CHANGE_CBV_CONV cmp)
 end

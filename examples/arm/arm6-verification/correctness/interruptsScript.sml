@@ -124,63 +124,66 @@ val IS_RESET_EXISTS = prove(
   RW_TAC std_ss [IS_RESET_def] \\ Cases_on_arm6inp `i (t:num)`
     \\ FULL_SIMP_TAC std_ss [PROJ_NRESET_def]);
 
-fun add_rws f rws =
-    computeLib.add_thms rws (f());
-
-fun reset_rws() =
-  add_rws computeLib.bool_compset
+val reset_rws =
+  computeLib.add_thms
     [pairTheory.FST,pairTheory.SND,LET_THM,pairTheory.UNCURRY_DEF,
      REWRITE_RULE [DECODE_PSR_def,COND_PAIR] NEXT_ARM6_def,
-     RESETLATCH_def,AFTER_RESET1_def];
+     RESETLATCH_def,AFTER_RESET1_def]
+    (computeLib.copy computeLib.bool_compset);
 
-fun reset_rws2() = add_rws reset_rws
-  [AFTER_RESET2_def,IREGVAL_def,PIPESTATIREGWRITE_def];
+val reset_rws2 = computeLib.add_thms
+  [AFTER_RESET2_def,IREGVAL_def,PIPESTATIREGWRITE_def]
+  reset_rws;
 
-fun reset_rws3() = add_rws reset_rws2
-  [AFTER_RESET3_def,PIPEBLL_def,ABORTINST_def,IC_def,NEWINST_def];
+val reset_rws3 = computeLib.add_thms
+  [AFTER_RESET3_def,PIPEBLL_def,ABORTINST_def,IC_def,NEWINST_def]
+  reset_rws2;
 
-fun reset_rws4() = add_rws reset_rws3
+val reset_rws4 = computeLib.add_thms
   [AFTER_RESET4_def,PIPEALL_def,PIPEAVAL_def,PIPESTATAWRITE_def,
-   PIPESTATBWRITE_def];
+   PIPESTATBWRITE_def]
+  reset_rws3;
 
-fun reset_rws5() = add_rws reset_rws4
-  [AFTER_NRESET1_def,ENDINST_def,RWA_def,PCCHANGE_def,RESETSTART_def];
+val reset_rws5 = computeLib.add_thms
+  [AFTER_NRESET1_def,ENDINST_def,RWA_def,PCCHANGE_def,RESETSTART_def]
+  reset_rws4;
 
-fun reset_rws6() = add_rws reset_rws5
+val reset_rws6 = computeLib.add_thms
   [AFTER_NRESET2_def,NOPC_def,AREGN1_def,NRW_def,NMREQ_def,MASK_def,NXTIC_def,
-   NXTIS_def,INTSEQ_def,iclass_EQ_iclass,iclass2num_thm];
+   NXTIS_def,INTSEQ_def,iclass_EQ_iclass,iclass2num_thm]
+  reset_rws5;
 
 val AFTER_RESET1_THM = prove(
   `!a t i. IS_RESET i t ==> AFTER_RESET1 (NEXT_ARM6 a (i t))`,
   Cases_arm6 \\ REPEAT STRIP_TAC \\ IMP_RES_TAC IS_RESET_EXISTS
-    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV (reset_rws())));
+    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV reset_rws));
 
 val AFTER_RESET2_THM = prove(
   `!a t i. AFTER_RESET1 a /\ IS_RESET i t ==> AFTER_RESET2 (NEXT_ARM6 a (i t))`,
   Cases_arm6 \\ RW_TAC std_ss [AFTER_RESET1_def] \\ IMP_RES_TAC IS_RESET_EXISTS
-    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV (reset_rws2())));
+    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV reset_rws2));
 
 val AFTER_RESET3_THM = prove(
   `!a t i. AFTER_RESET2 a /\ IS_RESET i t ==> AFTER_RESET3 (NEXT_ARM6 a (i t))`,
   Cases_arm6 \\ RW_TAC std_ss [AFTER_RESET2_def] \\ IMP_RES_TAC IS_RESET_EXISTS
-    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV (reset_rws3())));
+    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV reset_rws3));
 
 val AFTER_RESET4_THM = prove(
   `!a t i. AFTER_RESET3 a /\ IS_RESET i t ==> AFTER_RESET4 (NEXT_ARM6 a (i t))`,
   Cases_arm6 \\ RW_TAC std_ss [AFTER_RESET3_def] \\ IMP_RES_TAC IS_RESET_EXISTS
-    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV (reset_rws4())));
+    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV reset_rws4));
 
 val AFTER_NRESET1_THM = prove(
   `!a t i. AFTER_RESET4 a /\ ~IS_RESET i t ==>
            AFTER_NRESET1 (NEXT_ARM6 a (i t))`,
   Cases_arm6 \\ RW_TAC std_ss [AFTER_RESET4_def] \\ IMP_RES_TAC IS_RESET_EXISTS
-    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV (reset_rws5())));
+    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV reset_rws5));
 
 val AFTER_NRESET2_THM = prove(
   `!a t i. AFTER_NRESET1 a /\ ~IS_RESET i t ==>
            AFTER_NRESET2 (NEXT_ARM6 a (i t))`,
   Cases_arm6 \\ RW_TAC std_ss [AFTER_NRESET1_def] \\ IMP_RES_TAC IS_RESET_EXISTS
-    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV (reset_rws6()))
+    \\ ASM_REWRITE_TAC [] \\ CONV_TAC (computeLib.CBV_CONV reset_rws6)
     \\ SIMP_TAC std_ss []);
 
 val AFTER_NRESET2_THM2 = prove(

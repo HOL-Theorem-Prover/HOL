@@ -424,7 +424,7 @@ local
 
          val cs = computeLib.add_thms [
                     listTheory.HD,
-                    listTheory.TL] (computeLib.bool_compset ())
+                    listTheory.TL] computeLib.bool_compset
 
          val conv2 = DEPTH_CONV PairRules.PBETA_CONV
          val conv3 =  computeLib.CBV_CONV cs
@@ -488,7 +488,7 @@ val ttt = !tref
 *)
 
 val all_distinct_cs = computeLib.add_thms [listTheory.ALL_DISTINCT,
-                             listTheory.MEM] (computeLib.bool_compset ());
+                             listTheory.MEM] computeLib.bool_compset;
 val ALL_DISTINCT_EXPAND_CONV =
    computeLib.CBV_CONV all_distinct_cs
 
@@ -784,7 +784,7 @@ val combinatorRWL = [IS_VAR_RES_COMBINATOR___holfoot_separation_combinator,
 *)
 
 val critical_section_cs =
-  let val cs = computeLib.bool_compset ()
+  let val cs = computeLib.bool_compset
       val cs = computeLib.add_thms [listTheory.MAP, pairTheory.FST,
                              listTheory.ALL_DISTINCT,
                              listTheory.MEM] cs
