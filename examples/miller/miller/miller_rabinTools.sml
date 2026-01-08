@@ -20,7 +20,7 @@ local
                     MILLER_RABIN_1_ML, MILLER_RABIN_ML, MODEXP_ML,
                     PROB_UNIFORM_CUT_ML, PROB_UNIF_ML, UNCURRY_ML,
                     UNIT_ML, WITNESS_ML, WITNESS_TAIL_ML, o_THM,
-                    SHD_PROB_PSEUDO, STL_PROB_PSEUDO] (num_compset ());
+                    SHD_PROB_PSEUDO, STL_PROB_PSEUDO] (num_compset);
 in
   val EVAL = CBV_CONV compset;
 end;

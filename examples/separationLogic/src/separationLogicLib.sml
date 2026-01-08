@@ -552,7 +552,7 @@ fun ASL_PROGRAM_IS_ABSTRACTION___ABSTRACTION___CONSEQ_CONV fL abstL t =
 
 
 val names_all_distinct_cs =
-  let val cs = computeLib.bool_compset ()
+  let val cs = computeLib.bool_compset
       val cs = computeLib.add_thms [listTheory.MAP, pairTheory.FST, pairTheory.SND,
                              listTheory.ALL_DISTINCT,
                              listTheory.MEM] cs
@@ -562,7 +562,7 @@ val names_all_distinct_cs =
 
 
 val proc_free_specs_cs =
-  let val cs = computeLib.bool_compset ()
+  let val cs = computeLib.bool_compset
       val cs = computeLib.add_thms [listTheory.EVERY_DEF, pairTheory.SND, pairTheory.FST,
     REWRITE_RULE [asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___ALTERNATIVE_DEF] asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___prim_command,
     REWRITE_RULE [asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___ALTERNATIVE_DEF] asl_prog_IS_RESOURCE_AND_PROCCALL_FREE___SIMPLE_REWRITES] cs
@@ -603,7 +603,7 @@ end;
 
 
 val precond1_cs =
-  let val cs = computeLib.bool_compset ()
+  let val cs = computeLib.bool_compset
       val cs = computeLib.add_thms [listTheory.EVERY_DEF,
           pairTheory.FST, pairTheory.SND] cs
       val cs = computeLib.add_conv (pairSyntax.uncurry_tm, 2, pairLib.GEN_BETA_CONV) cs
