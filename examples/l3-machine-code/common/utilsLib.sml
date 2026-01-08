@@ -1036,11 +1036,11 @@ in
 end
 
 local
-   fun add_datatype ty cmp =
+   fun add_datatype (ty, cmp) =
      computeLib.add_datatype_info cmp (Option.valOf (TypeBase.fetch ty))
 in
    fun add_datatypes l cmp =
-     List.foldl (fn (ty, cmp) => add_datatype ty cmp) cmp l
+     List.foldl add_datatype cmp l
 end
 
 type inventory = {C: string list, N: int list, T: string list, Thy: string}
