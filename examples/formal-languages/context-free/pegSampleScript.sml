@@ -65,9 +65,9 @@ val testexp = “[Number 3; Plus; Number 4; Times; Number 5]”
 val _ = let
   open computeLib
 in
-  set_EVAL_skip ``evalcase_CASE`` (SOME 1);
-  set_EVAL_skip ``option_CASE`` (SOME 1);
-  set_EVAL_skip ``COND`` (SOME 1)
+  set_EVAL_skip “evalcase_CASE” (SOME 1);
+  set_EVAL_skip “option_CASE” (SOME 1);
+  set_EVAL_skip “COND” (SOME 1)
 end
 
 Theorem pegexec_nt0 =
