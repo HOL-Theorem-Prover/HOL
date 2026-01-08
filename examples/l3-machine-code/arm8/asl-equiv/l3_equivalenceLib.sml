@@ -124,14 +124,14 @@ val l3_run_tac =
 (***** custom compset *****)
 local
 
-  fun add_type ty cmp =
+  fun add_type (ty, cmp) =
     computeLib.add_datatype_info cmp (Option.valOf (TypeBase.fetch ty))
-  fun add_types l cmp = List.foldl (fn (ty, cmp) => add_type ty cmp) cmp l
+  fun add_types l cmp = List.foldl add_type cmp l
 
   val tyvars = [alpha, beta, gamma, delta, etyvar, ftyvar]
   fun mk_cmp_type (thy, (name, arity)) =
     mk_thy_type {Args = List.take (tyvars, arity), Thy = thy, Tyop = name}
-  fun add_all_types thy cmp =
+  fun add_all_types (thy, cmp) =
     add_types (map (mk_cmp_type o pair thy) (types thy)) cmp
 
   fun add_defs defs cmp = computeLib.add_thms defs cmp
@@ -140,7 +140,7 @@ local
   fun unpack_defn_thm (DefnBase.STDEQNS t) = t
     | unpack_defn_thm (DefnBase.OTHER   t) = t
 
-  fun add_all_defs thy cmp =
+  fun add_all_defs (thy, cmp) =
     add_defs (DefnBase.thy_userdefs {thyname = thy} |>
               map (unpack_defn_thm o #thm)) cmp
 
@@ -186,8 +186,8 @@ in
   val cmp = computeLib.add_conv
     (``$= : α word -> α word -> bool``, 2, QCHANGED_CONV blastLib.BBLAST_CONV) cmp
   val cmp = bitstringLib.add_bitstring_compset cmp (* has to come after BBLAST_CONV *)
-  val cmp = List.foldl (fn (thy, cmp) => add_all_types thy cmp) cmp thys
-  val cmp = List.foldl (fn (thy, cmp) => add_all_defs thy cmp) cmp thys
+  val cmp = List.foldl add_all_types cmp thys
+  val cmp = List.foldl add_all_defs cmp thys
   val cmp = computeLib.add_thms [
               armv86aTheory.ExecuteA64_def,
               armv86aTheory.DecodeA64_def,
