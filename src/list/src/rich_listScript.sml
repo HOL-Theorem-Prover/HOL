@@ -3366,6 +3366,126 @@ Proof
   metis_tac[IS_PREFIX_LENGTH_ANTI]
 QED
 
+(* lcp: longest common prefix of a list of lists *)
+Definition lcp_def:
+  lcp ls = longest_prefix (set ls)
+End
+
+Theorem lcp_nil[simp]:
+  lcp [] = []
+Proof
+  simp[lcp_def]
+QED
+
+Theorem lcp_sing[simp]:
+  lcp [x] = x
+Proof
+  simp[lcp_def]
+QED
+
+(* Helper: longest_prefix {x;y} is a prefix of both x and y *)
+Theorem longest_prefix_PAIR_prefix:
+  longest_prefix {x;y} <<= x /\ longest_prefix {x;y} <<= y
+Proof
+  MAP_EVERY qid_spec_tac [`y`,`x`] >>
+  Induct >> simp[longest_prefix_PAIR] >>
+  gen_tac >> Cases >> simp[longest_prefix_PAIR] >> rw[]
+QED
+
+(* Helper: any common prefix of x and y is a prefix of longest_prefix {x;y} *)
+Theorem longest_prefix_PAIR_maximal:
+  p <<= x /\ p <<= y ==> p <<= longest_prefix {x;y}
+Proof
+  MAP_EVERY qid_spec_tac [`y`,`x`,`p`] >>
+  Induct >- simp[] >>
+  rpt strip_tac >>
+  Cases_on `x` >> fs[] >>
+  Cases_on `y` >> fs[longest_prefix_PAIR] >> rw[]
+QED
+
+(* Key lemma: replacing {x;y} with {lcp {x;y}} preserves common_prefixes *)
+Theorem common_prefixes_INSERT2:
+  common_prefixes ({x; y} UNION rest) =
+  common_prefixes ({longest_prefix {x; y}} UNION rest)
+Proof
+  simp[common_prefixes_def, EXTENSION] >>
+  gen_tac >> eq_tac >> rw[] >>
+  metis_tac[longest_prefix_PAIR_maximal, longest_prefix_PAIR_prefix, IS_PREFIX_TRANS]
+QED
+
+(* Key lemma: replacing {x;y} with {lcp {x;y}} preserves longest_prefix *)
+Theorem longest_prefix_INSERT2:
+  longest_prefix ({x; y} UNION rest) = longest_prefix ({longest_prefix {x;y}} UNION rest)
+Proof
+  `{x; y} UNION rest <> {} /\ {longest_prefix {x;y}} UNION rest <> {}`
+    by simp[] >>
+  simp[longest_prefix_def, common_prefixes_INSERT2]
+QED
+
+Theorem lcp_cons2:
+  lcp (x::y::xs) = lcp (longest_prefix {x;y} :: xs)
+Proof
+  simp[lcp_def] >>
+  metis_tac[longest_prefix_INSERT2, INSERT_UNION_EQ, UNION_EMPTY, INSERT_SING_UNION]
+QED
+
+Theorem lcp_thm:
+  (!x. MEM x ls ==> lcp ls <<= x) /\
+  (ls <> [] ==> !p. (!x. MEM x ls ==> p <<= x) ==> p <<= lcp ls)
+Proof
+  simp[lcp_def] >> rw[]
+  >- (`set ls <> {}` by (Cases_on `ls` >> fs[]) >>
+      simp[longest_prefix_def] >> SELECT_ELIM_TAC >> conj_tac
+      >- (irule FINITE_is_measure_maximal >> simp[]) >>
+      simp[is_measure_maximal_def, common_prefixes_def])
+  >- (`p IN common_prefixes (set ls)` by simp[common_prefixes_def] >>
+      `set ls <> {}` by (Cases_on `ls` >> fs[]) >>
+      simp[longest_prefix_def] >> SELECT_ELIM_TAC >> conj_tac
+      >- (irule FINITE_is_measure_maximal >> simp[]) >>
+      simp[is_measure_maximal_def] >> rw[] >>
+      `x IN common_prefixes (set ls)` by simp[] >>
+      `p <<= x \/ x <<= p` by metis_tac[two_common_prefixes] >>
+      metis_tac[IS_PREFIX_LENGTH, IS_PREFIX_LENGTH_ANTI, LESS_EQUAL_ANTISYM])
+QED
+
+Theorem longest_prefix_assoc:
+  longest_prefix {longest_prefix {x;y}; z} =
+  longest_prefix {x; longest_prefix {y;z}}
+Proof
+  MAP_EVERY qid_spec_tac [`z`,`y`,`x`] >>
+  Induct >> rw[longest_prefix_PAIR] >>
+  Cases_on `y` >> rw[longest_prefix_PAIR] >>
+  Cases_on `z` >> rw[longest_prefix_PAIR] >>
+  rw[] >> fs[longest_prefix_PAIR]
+QED
+
+(* lcp2: binary longest common prefix for cv_trans *)
+Definition lcp2_def:
+  lcp2 x y = longest_prefix {x;y}
+End
+
+Theorem lcp2_thm:
+  lcp2 xs ys =
+    case xs of
+    | x::xs => (case ys of
+                | y::ys => if x = y then x :: lcp2 xs ys else []
+                | _ => [])
+    | _ => []
+Proof
+  Cases_on `xs` >> Cases_on `ys` >> rw[lcp2_def, longest_prefix_PAIR]
+QED
+
+Theorem lcp_oneline:
+  lcp ls =
+    case ls of
+    | [] => []
+    | [x] => x
+    | x::y::xs => lcp (lcp2 x y :: xs)
+Proof
+  Cases_on `ls` >> rw[lcp_nil, lcp_sing] >>
+  Cases_on `t` >> rw[lcp_sing, lcp_cons2, lcp2_def]
+QED
+
 (*---------------------------------------------------------------------------
    A list of numbers
  ---------------------------------------------------------------------------*)
