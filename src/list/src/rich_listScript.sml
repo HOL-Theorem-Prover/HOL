@@ -3430,8 +3430,8 @@ Proof
 QED
 
 Theorem lcp_thm:
-  (!x. MEM x ls ==> lcp ls <<= x) /\
-  (ls <> [] ==> !p. (!x. MEM x ls ==> p <<= x) ==> p <<= lcp ls)
+  !ls. (!x. MEM x ls ==> lcp ls <<= x) /\
+       (ls <> [] ==> !p. (!x. MEM x ls ==> p <<= x) ==> p <<= lcp ls)
 Proof
   simp[lcp_def] >> rw[]
   >- (`set ls <> {}` by (Cases_on `ls` >> fs[]) >>
@@ -3484,6 +3484,48 @@ Theorem lcp_oneline:
 Proof
   Cases_on `ls` >> rw[lcp_nil, lcp_sing] >>
   Cases_on `t` >> rw[lcp_sing, lcp_cons2, lcp2_def]
+QED
+
+Theorem lcp_CONS:
+  lcp (x::xs) = if NULL xs then x else lcp2 x (lcp xs)
+Proof
+  qid_spec_tac `x` >>
+  Induct_on `xs` >> rw[lcp_sing, lcp_cons2, lcp2_def] >>
+  simp[longest_prefix_assoc]
+QED
+
+Theorem lcp2_is_nil:
+  lcp2 x y = [] <=> (x = [] \/ y = [] \/ HD x <> HD y)
+Proof
+  rw[lcp2_def, EQ_IMP_THM]
+  >> Cases_on `x` >> Cases_on `y` >> fs[longest_prefix_PAIR]
+QED
+
+Theorem lcp_is_nil:
+  !ls. lcp ls = [] <=>
+  (ls = [] \/ ?x y. MEM x ls /\ MEM y ls /\ lcp2 x y = [])
+Proof
+  Induct_on `ls` >> rw[]
+  >> rw[lcp_CONS]
+  >> fs[NULL_EQ, lcp2_is_nil]
+  >> Cases_on `lcp ls` >> fs[]
+  >- metis_tac[]
+  >> Cases_on `h` >> fs[]
+  >- metis_tac[]
+  >> Q.MATCH_GOALSUB_RENAME_TAC `h1 = h2 ==> _`
+  >> Q.SPEC_THEN `ls` mp_tac lcp_thm
+  >> rw[NULL_EQ]
+  >> Cases_on `h1 <> h2` >> fs[]
+  >- (Cases_on `ls` >> fs[]
+      >> Q.MATCH_GOALSUB_RENAME_TAC `h1::t1`
+      >> MAP_EVERY Q.EXISTS_TAC [`h1::t1`, `h`]
+      >> simp[]
+      >> Cases_on `h` >> fs[]
+      >> full_simp_tac (srw_ss() ++ boolSimps.DNF_ss) [] >> rw[])
+  >> rw[EQ_IMP_THM]
+  >- metis_tac[]
+  >> TRY (first_x_assum drule >> CASE_TAC >> rw[] >> NO_TAC)
+  >> metis_tac[]
 QED
 
 (*---------------------------------------------------------------------------
