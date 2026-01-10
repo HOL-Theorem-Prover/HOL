@@ -1823,7 +1823,8 @@ in
          val lconsts =
              HOLset.intersection (FVL [pbod] empty_tmset, hyp_frees th)
          val ltyconsts = HOLset.listItems (hyp_tyvars th)
-         val flex_candidates_vlist = filter (can dom_rng o type_of) (free_vars bod)
+         val flex_candidates_vlist =
+            filter (can dom_rng o type_of) (HOLset.listItems (FVL [bod] empty_tmset))
       in
          if (null flex_candidates_vlist) then
             (fn tm =>
