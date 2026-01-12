@@ -4232,12 +4232,16 @@ Proof
   Induct_on ‘n’ >> simp[] >> Induct_on ‘l1’ >> dsimp[]
 QED
 
+Theorem LIST_REL_DROP = EVERY2_DROP
+
 Theorem EVERY2_TAKE:
   !P xs ys n. EVERY2 P xs ys ==> EVERY2 P (TAKE n xs) (TAKE n ys)
 Proof
   Induct_on ‘n’ >> simp[] >> Induct_on ‘xs’ >>
   asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss) []
 QED
+
+Theorem LIST_REL_TAKE = EVERY2_TAKE
 
 Theorem LIST_REL_APPEND_SING[simp]:
   LIST_REL R (l1 ++ [x1]) (l2 ++ [x2]) <=> LIST_REL R l1 l2 /\ R x1 x2
@@ -4256,6 +4260,8 @@ Proof
   >> fs [GENLIST,LIST_REL_APPEND_SING,SNOC_APPEND]
   >> fs [DECIDE ``i < SUC n <=> i < n \/ (i = n)``] >> METIS_TAC []
 QED
+
+Theorem EVERY2_GENLIST = LIST_REL_GENLIST
 
 Theorem ALL_DISTINCT_MEM_ZIP_MAP:
     !f x ls.
@@ -4292,6 +4298,8 @@ Proof
    >> drule (iffRL EVERY_REVERSE)
    >> simp[REVERSE_ZIP, Excl "EVERY_REVERSE"]
 QED
+
+Theorem LIST_REL_REVERSE1 = EVERY2_REVERSE1
 
 Theorem LIST_REL_REVERSE_EQ[simp]:
    LIST_REL R (REVERSE l1) (REVERSE l2) <=> LIST_REL R l1 l2
