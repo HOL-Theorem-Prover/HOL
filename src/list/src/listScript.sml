@@ -2363,6 +2363,8 @@ Proof
   METIS_TAC[]
 QED
 
+Theorem LIST_REL_cong = EVERY2_cong
+
 Theorem MAP_EQ_EVERY2:
   !f1 f2 l1 l2. (MAP f1 l1 = MAP f2 l2) <=>
                   (LENGTH l1 = LENGTH l2) /\
@@ -2374,6 +2376,8 @@ Cases_on ‘l2’ THEN SRW_TAC [] [MAP] THEN
 PROVE_TAC[]
 QED
 
+Theorem MAP_EQ_LIST_REL = MAP_EQ_EVERY2
+
 Theorem EVERY2_EVERY:
   !l1 l2 f. EVERY2 f l1 l2 <=>
             LENGTH l1 = LENGTH l2 /\ EVERY (UNCURRY f) (ZIP (l1,l2))
@@ -2381,6 +2385,8 @@ Proof
 Induct THEN1 SRW_TAC [] [LENGTH_NIL_SYM, EQ_IMP_THM, ZIP] THEN
 GEN_TAC THEN Cases THEN SRW_TAC [] [ZIP, EQ_IMP_THM]
 QED
+
+Theorem LIST_REL_EVERY = EVERY2_EVERY
 
 Theorem EVERY2_LENGTH:
  !P l1 l2. EVERY2 P l1 l2 ==> (LENGTH l1 = LENGTH l2)
@@ -4646,6 +4652,8 @@ Proof
    >> ASM_SIMP_TAC (arith_ss) []
 QED
 
+Theorem LIST_REL_REVERSE = EVERY2_REVERSE
+
 Theorem SUM_MAP_PLUS:
     !f g ls. SUM (MAP (\x. f x + g x) ls) = SUM (MAP f ls) + SUM (MAP g ls)
 Proof
@@ -4693,6 +4701,8 @@ Proof
    THEN METIS_TAC []
 QED
 
+Theorem LIST_REL_trans_same = EVERY2_trans
+
 Theorem EVERY2_sym:
     (!x y. R1 x y ==> R2 y x) ==> !x y. EVERY2 R1 x y ==> EVERY2 R2 y x
 Proof
@@ -4701,6 +4711,8 @@ Proof
    THEN STRIP_TAC
    THEN FULL_SIMP_TAC (srw_ss()++DNF_ss) [MEM_ZIP]
 QED
+
+Theorem LIST_REL_sym = EVERY2_sym
 
 Theorem EVERY2_LUPDATE_same:
     !P l1 l2 v1 v2 n.
@@ -4716,11 +4728,15 @@ Proof
    THEN FULL_SIMP_TAC (srw_ss()) [LUPDATE_def]
 QED
 
+Theorem LIST_REL_LUPDATE_same = EVERY2_LUPDATE_same
+
 Theorem EVERY2_refl:
     (!x. MEM x ls ==> R x x) ==> (EVERY2 R ls ls)
 Proof
    Induct_on‘ls’ >> rw []
 QED
+
+Theorem LIST_REL_refl = EVERY2_refl
 
 Theorem EVERY2_THM[simp]:
     (!P ys. EVERY2 P [] ys = (ys = [])) /\
@@ -4738,6 +4754,8 @@ Proof
    THEN Cases
    THEN SRW_TAC [] [EVERY2_EVERY]
 QED
+
+Theorem LIST_REL_THM = EVERY2_THM
 
 Theorem LIST_REL_trans:
     !l1 l2 l3.
@@ -5012,6 +5030,8 @@ Proof
    >> SRW_TAC [DNF_ss] [pairTheory.FORALL_PROD, LENGTH_MAP, MEM_ZIP]
 QED
 
+Theorem LIST_REL_MAP = EVERY2_MAP
+
 Theorem exists_list_GENLIST:
     (?ls. P ls) = (?n f. P (GENLIST f n))
 Proof
@@ -5036,6 +5056,8 @@ Theorem EVERY2_MEM_MONO:
 Proof
    rw [EVERY2_EVERY] >> MATCH_MP_TAC EVERY_MEM_MONO >> PROVE_TAC []
 QED
+
+Theorem LIST_REL_MEM_MONO = EVERY2_MEM_MONO
 
 Theorem mem_exists_set:
     !x y l. MEM (x,y) l ==> ?z. (x = FST z) /\ z IN set l
