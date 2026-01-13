@@ -366,14 +366,14 @@ fun pp_sexp t =
      | Integer i => add_string (if i < 0 then "-" ^ Int.toString (~i) else Int.toString i)
      | Cons _ =>
         let val (els, last) = break_sexp_list t
-         in block INCONSISTENT 1 (
-              add_string "(" ::
-              pr_list pp_sexp [add_break(1,0)] els @
-              (case last
-                of Symbol "nil" => [add_string ")"]
-                 | t => [add_string " .", add_break(1,0), printer t, add_string ")"])
-            )
-         end
+        in block INCONSISTENT 1 (
+             add_string "(" ::
+             pr_list pp_sexp [add_break(1,0)] els @
+             (case last
+               of Symbol "nil" => [add_string ")"]
+                | t => [add_string " .", add_break(1,0), pp_sexp t, add_string ")"])
+           )
+        end
  end
 
 (*---------------------------------------------------------------------------*)

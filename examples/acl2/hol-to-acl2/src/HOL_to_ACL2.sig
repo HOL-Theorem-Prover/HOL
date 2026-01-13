@@ -2,11 +2,7 @@ signature HOL_to_ACL2 =
 sig
   include Abbrev
 
-  datatype t =
-      Cons of t * t
-    | Integer of int
-    | String of string
-    | Symbol of string
+  datatype t = datatype HOLsexp_dtype.t
 
   val basis_defs : thm list
   val builtin_const_map : (term * string) list
@@ -34,6 +30,5 @@ sig
    thm ->
      {fns: term list,
       defs: (term list * ((term * term list) * term)) list}
-
 
 end
