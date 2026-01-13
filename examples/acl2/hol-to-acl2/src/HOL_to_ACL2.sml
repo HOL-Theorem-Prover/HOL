@@ -7,13 +7,26 @@
 
 structure HOL_to_ACL2 :> HOL_to_ACL2 =
 struct
-open HolKernel boolLib bossLib hol_to_acl2Theory;
+open HolKernel boolLib bossLib
+     pairTheory listTheory hol_to_acl2Theory;
+
 open HOLsexp List;
 
 val ERR = mk_HOL_ERR  "HOL_to_ACL2";
 
-val THM_const  = prim_mk_const{Thy="hol_to_acl2",Name="THM"};
-val GOAL_const = prim_mk_const{Thy="hol_to_acl2",Name="GOAL"};
+(*---------------------------------------------------------------------------*)
+(* Basic definitions underpinning examples                                   *)
+(*---------------------------------------------------------------------------*)
+
+val basis_defs =
+  [cond_thm, COMMA_def, FST, SND, suc_thm, leq_thm, HD, null_thm]
+
+(*---------------------------------------------------------------------------*)
+(* Tags on elements to be translated                                         *)
+(*---------------------------------------------------------------------------*)
+
+val THM_const  = prim_mk_const{Thy="hol_to_acl2",Name="THM"}
+val GOAL_const = prim_mk_const{Thy="hol_to_acl2",Name="GOAL"}
 val SPEC_const = prim_mk_const{Thy="hol_to_acl2",Name="SPEC"};
 
 (*---------------------------------------------------------------------------*)
@@ -195,7 +208,7 @@ fun mk_named_thm name thm =
 
 fun dest_named_thm thm =
  let val (c,[v,th]) = strip_comb $ concl thm
- in if same_const ``THM`` c then
+ in if same_const THM_const c then
        (fst $ dest_var v,th)
     else failwith ""
  end
@@ -223,7 +236,7 @@ fun mk_named_goal name tm =
 
 fun dest_named_goal thm =
  let val (c,[v,tm]) = strip_comb $ concl thm
- in if same_const ``GOAL`` c then
+ in if same_const GOAL_const c then
        (fst $ dest_var v,tm)
     else failwith ""
  end
@@ -252,7 +265,7 @@ fun mk_spec clist thm =
 
 fun dest_spec thm =
  let val (c,[consts,tm]) = strip_comb $ concl thm
- in if same_const ``SPEC`` c then
+ in if same_const SPEC_const c then
        (snd $ strip_comb consts,tm)
     else failwith ""
  end
@@ -326,7 +339,8 @@ fun hol_sexp thm =
   def_sexp thm handle HOL_ERR _ =>
   thm_sexp thm handle HOL_ERR _ =>
   spec_sexp thm handle HOL_ERR _ =>
-  goal_sexp thm handle HOL_ERR _ => ("ERROR", Symbol "!<unknown construct>!");
+  goal_sexp thm handle HOL_ERR _ =>
+  ("ERROR", Symbol "!<unknown construct> in hol_sexp!");
 
 (*---------------------------------------------------------------------------*)
 (* Prettyprinting for ACL2 defhol form. Adapted from                         *)

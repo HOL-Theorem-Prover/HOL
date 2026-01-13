@@ -27,3 +27,22 @@ QED
 Definition COMMA_def:
   COMMA x y = (x,y)
 End
+
+Theorem cond_thm:
+  (!x y:'a. (if T then x else y) = x) /\
+  (!x y:'a. (if F then x else y) = y)
+Proof
+  rw[]
+QED
+
+Theorem null_thm:
+  (NULL ([]:'a list) = T) /\ (!h t. NULL(h::t : 'a list) = F)
+Proof
+  rw[]
+QED
+
+Theorem leq_thm:
+  !x y. x <= y <=> x < y \/ x = y
+Proof
+  rw[]
+QED

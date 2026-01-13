@@ -8,6 +8,7 @@ sig
     | String of string
     | Symbol of string
 
+  val basis_defs : thm list
   val builtin_const_map : (term * string) list
   val ty_sexp : hol_type -> t
   val tm_sexp : term -> t
