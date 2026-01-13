@@ -174,7 +174,8 @@ sig
   *)
 
   (* Enable Parser *)
-  val ENABLE_PMATCH_CASES : unit -> unit
+  val temp_enable_pmatch : unit -> unit
+  val enable_pmatch : unit -> unit
 
   val grammar_add_pmatch : term_grammar.grammar -> term_grammar.grammar
 
