@@ -82,8 +82,6 @@ val when_ar = {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                pp_elements = [RE (TOK "when")],
                term_name = PMATCH_when}
 
-fun mk_dtcase ar = map_tok_add_record (fn "case" => "dtcase" | s => s) ar
-fun mk_pmcase ar = ar_name_fupd (K PMATCH_case_special) ar
 fun mk_pmatch_rule ar =
   ar |> map_tok_add_record (fn "case" => "pmatch" | s => s)
      |> ar_name_fupd (K PMATCH_case_special)
