@@ -2,7 +2,8 @@ structure ReplCommands :> ReplCommands =
 struct
 
 
-datatype string_src = Direct of string | ViaFile of {proxy_filename : string}
+datatype string_src =
+         Direct of string | ViaFile of {proxy_filename : string} | FromSource
 type script_text = locn.locn * {filename : string option, text : string_src}
 
 datatype repl_command = Success of string | Failure of string

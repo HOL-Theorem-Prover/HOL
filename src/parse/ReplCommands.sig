@@ -21,7 +21,14 @@ sig
 
 *)
 
-datatype string_src = Direct of string | ViaFile of {proxy_filename : string}
+datatype string_src =
+         Direct of string
+       | ViaFile of {proxy_filename : string}
+       | FromSource
+         (* given the locn and filename (locn can't be unknown or similar;
+            filename can't be NONE), the desired text is as specified in the
+            script_text value (see below). *)
+
 type script_text = locn.locn * {filename : string option, text : string_src}
 
 datatype repl_command = Success of string | Failure of string
