@@ -891,7 +891,7 @@ local
   val tymatch = Type.raw_match_type
   open KernelSig
 in
-fun RM [] theta = theta
+fun RM [] (tmS,tyS) = (tmS,tyS)
   | RM (((v as Fv(n,Ty)),tm,scoped)::rst) ((S1 as (tmS,Id)),tyS)
      = if bound_by_scope scoped tm
        then MERR "Attempt to capture bound variable"
@@ -920,12 +920,12 @@ fun RM [] theta = theta
            | (POLY pat,POLY obj) => (tmS, tymatch pat obj tyS))
   | RM ((Abs(Fv(_,ty1),M),Abs(Fv(_,ty2),N),_)::rst) (tmS,tyS)
       = RM ((M,N,true)::rst) (tmS, tymatch ty1 ty2 tyS)
-  | RM ((Comb(M,N),Comb(P,Q),s)::rst) S = RM ((M,P,s)::(N,Q,s)::rst) S
-  | RM ((Bv i,Bv j,_)::rst) S  = if i=j then RM rst S
-                                 else MERR "Bound var doesn't match"
-  | RM (((pat as Clos _),ob,s)::t) S = RM ((push_clos pat,ob,s)::t) S
-  | RM ((pat,(ob as Clos _),s)::t) S = RM ((pat,push_clos ob,s)::t) S
-  | RM all others                    = MERR "different constructors"
+  | RM ((Comb(M,N),Comb(P,Q),s)::rst) (tmS,tyS) = RM ((M,P,s)::(N,Q,s)::rst) (tmS,tyS)
+  | RM ((Bv i,Bv j,_)::rst) (tmS,tyS)        = if i=j then RM rst (tmS,tyS)
+                                               else MERR "Bound var doesn't match"
+  | RM (((pat as Clos _),ob,s)::t) (tmS,tyS) = RM ((push_clos pat,ob,s)::t) (tmS,tyS)
+  | RM ((pat,(ob as Clos _),s)::t) (tmS,tyS) = RM ((pat,push_clos ob,s)::t) (tmS,tyS)
+  | RM all (tmS,tyS)                         = MERR "different constructors"
 end
 
 fun raw_match tyfixed tmfixed pat ob (tmS,tyS)
