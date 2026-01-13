@@ -1549,13 +1549,13 @@ val _ = run_test (“(4::3::l) : num list”, “PMATCH ((4 :num)::(3 :num)::l)
         (\((x :num),(y :num),(_3 :num list)). T)
         (\((x :num),(y :num),(_3 :num list)). x + y)]”);
 
-val _ = test_conv "EVAL_CONV" EVAL_CONV (“case [] of x::xs => SUC x”, SOME “ARB:num”);
+val _ = test_conv "EVAL_CONV" EVAL_CONV (“pmatch [] of x::xs => SUC x”, SOME “ARB:num”);
 
-val _ = test_conv "EVAL_CONV" EVAL_CONV (“case [] of SNOC x xs => SUC x”, SOME “ARB:num”);
+val _ = test_conv "EVAL_CONV" EVAL_CONV (“pmatch [] of SNOC x xs => SUC x”, SOME “ARB:num”);
 
-val _ = test_conv "EVAL_CONV" EVAL_CONV (“case [] of [] => 0 | SNOC x xs => SUC x”, SOME “0”);
+val _ = test_conv "EVAL_CONV" EVAL_CONV (“pmatch [] of [] => 0 | SNOC x xs => SUC x”, SOME “0”);
 
-val _ = test_conv "EVAL_CONV" EVAL_CONV (“case SNOC x xs of [] => 0 | SNOC x xs => SUC x”, SOME “SUC x”);
+val _ = test_conv "EVAL_CONV" EVAL_CONV (“pmatch SNOC x xs of [] => 0 | SNOC x xs => SUC x”, SOME “SUC x”);
 
 val test = test_conv "PMATCH_CASE_SPLIT_CONV" PMATCH_CASE_SPLIT_CONV (
  “pmatch lx of
