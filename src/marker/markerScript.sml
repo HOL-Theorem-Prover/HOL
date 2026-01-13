@@ -148,6 +148,15 @@ val suspendimp_def = new_definition(
   "suspendimp_def",
   “suspendimp = $==>”);
 
+val resconj_def = new_definition(
+  "resconj_def",
+  “resconj = $/\”);
+
+(* hopefully won't appear that often *)
+val _ = set_mapped_fixity {
+  term_name = "resconj", fixity = Infixr 400,
+  tok = UnicodeChars.conj ^ UnicodeChars.sub_r
+  };
 
 (* ----------------------------------------------------------------------
     The 'using' label

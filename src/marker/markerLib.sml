@@ -818,7 +818,7 @@ val labty = slab_def' |> concl |> dest_forall |> #1 |> dest_var |> #2
 fun sDISCH t th =
     CONV_RULE (RATOR_CONV (RATOR_CONV (K simp_def'))) $ DISCH t th
 
-fun addlabel nm th = EQ_MP (SPECL [mk_var(nm, labty), concl th] slab_def') th
+fun add_suspension_label nm th = EQ_MP (SPECL [mk_var(nm, labty), concl th] slab_def') th
 
 fun suspended_to_goal t =
     let val (_, s_t) = dest_slab t
@@ -827,39 +827,87 @@ fun suspended_to_goal t =
       (List.rev asl0, g)
     end
 
+val (resconj_t, mk_resconj, dest_resconj, is_resconj) = syntax_fns2 "marker" "resconj"
+val list_mk_resconj = list_mk_rbinop (curry mk_resconj)
+val strip_resconj = strip_binop dest_resconj
+
+fun RESCONJ_PAIR th =
+    if is_resconj (concl th) then
+      th |> CONV_RULE (RATOR_CONV (RATOR_CONV (REWR_CONV resconj_def)))
+         |> CONJ_PAIR
+    else raise ERR "RESCONJ_PAIR" "not a resumption conjunction"
+
+fun RESCONJS th =
+    let fun recurse A ths =
+            case ths of
+                [] => A
+              | th::rest =>
+                case total RESCONJ_PAIR th of
+                    NONE => recurse (th::A) rest
+                  | SOME (th1, th2) =>
+                    recurse (th2::th1::A) rest
+    in
+      recurse [] [th]
+    end
+
 (* th is the theorem corresponding to the suspended goal (which the user has
    presumably just proved interactively);
    s_t is the term encoding that goal.
-   We need to generate the theorem |- s_t so that we can PROVE_HYP this against
-   the main, overall theorem *)
-fun prove_suspended s_t th =
+   nm is the name of the label
+   tgt is the theorem that has a corresponding suspended hypothesis.
+   Then aim is to produce a version of tgt with fewer hypotheses.
+
+   For the simple case, where the user hasn't encoded multiple goals with the
+   same name, we need to generate the theorem |- s_t so that we can PROVE_HYP
+   this against the main, overall theorem.  This is done by prove_suspended0.
+
+   When there are multiple goals, we need to repeat the above having stripped
+   away the "resumption conjunctions".
+ *)
+fun prove_suspended0 nm s_t th tgt =
     let
-      val (nm, tm) = dest_slab s_t
-      val (imps, c) = strip_simp tm
+      val (imps, c) = strip_simp s_t
       val result0 = itlist sDISCH imps th
     in
-      addlabel nm result0
+      PROVE_HYP (add_suspension_label nm result0) tgt
     end
-
-fun extract_suspended_goal0 th label =
-    let fun myhyp t =
-            #1 (dest_slab t) = label handle HOL_ERR _ => false
+fun prove_suspended nm s_t th tgt =
+  if is_resconj s_t then
+    let val cs = strip_resconj s_t
+        val ths = RESCONJS th
+        fun foldthis (t, th, tgt) = prove_suspended0 nm t th tgt
     in
-      case List.find myhyp (hyp th) of
-          NONE => raise ERR "extract_suspended_goal"
-                        ("No such label in theorem: " ^ label)
-        | SOME t => t
+      ListPair.foldl foldthis tgt (cs, ths)
     end
+  else prove_suspended0 nm s_t th tgt
 
 fun extract_suspended_goal th label =
-    suspended_to_goal (extract_suspended_goal0 th label)
+    let fun myhyp t =
+            case total dest_slab t of
+                SOME (nm,t0) => if nm = label then SOME t0 else NONE
+              | NONE => NONE
+    in
+      case List.mapPartial myhyp (hyp th) of
+          [] => raise ERR "extract_suspended_goal"
+                        ("No such label in theorem: " ^ label)
+        | [t] => t
+        | ts => list_mk_resconj ts
+    end
+
+fun resumption_to_goal r_t =
+    if is_resconj r_t then ([], r_t)
+    else let val (asl0, g) = strip_simp r_t
+         in
+           (List.rev asl0, g)
+         end
+
 
 fun resume (th,label,tac) =
-    let val s_t = extract_suspended_goal0 th label
-        val sub_th = prove_goal(suspended_to_goal s_t, tac)
+    let val s_t = extract_suspended_goal th label
+        val goal = resumption_to_goal s_t
+        val sub_th = prove_goal(goal, tac)
     in
-      {subresult = sub_th, main = PROVE_HYP (prove_suspended s_t sub_th) th,
-       label = label}
+      {subresult = sub_th, updated_main = prove_suspended label s_t sub_th th}
     end
 
 end
