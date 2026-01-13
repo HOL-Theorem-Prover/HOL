@@ -57,7 +57,7 @@ fun ty_sexp ty =
    of (s,[]) => Symbol (tyop_dict s)
     | ("fun",_) =>
         let val tylist = (op@ o (I ## single) o strip_fun) ty
-	in Cons(Symbol(tyop_dict "fun"),List (map ty_sexp tylist))
+        in Cons(Symbol(tyop_dict "fun"),List (map ty_sexp tylist))
         end
     | (s,args) => Cons(Symbol(tyop_dict s),List (map ty_sexp args))
 ;
@@ -132,7 +132,7 @@ fun const_sexp c =
        | SOME acl2_name =>
            let val tylist =
                if is_ground generic_const then
-	          [] else
+                  [] else
                if same_const c listSyntax.nil_tm then
                   [mk_typ (listSyntax.dest_list_type Ty)] else
                if same_const c optionSyntax.none_tm then
