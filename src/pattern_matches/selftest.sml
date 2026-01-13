@@ -169,7 +169,7 @@ val _ = app test [
 
   (* decision-tree case still works *)
   ("case x of NONE => 3 | SOME y => y + 1",
-   "option_CASE (x : num option) 3n (\z:num. z + 1)")
+   “option_CASE (x : num option) 3n (\z:num. z + 1)”)
 
 ]
 
