@@ -30,7 +30,6 @@ src/bool
 src/1
 (otknl)src/opentheory/postbool
 src/proofman
-[poly]bin/hol.state0
 !src/proofman/tests
 !tools/Holmake/tests/preexec
 !tools/Holmake/tests/parallel_tests
