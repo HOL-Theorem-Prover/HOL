@@ -902,7 +902,7 @@ fun resumption_to_goal r_t =
          end
 
 
-fun resume (th,label,tac) =
+fun prim_resume (th,label,tac) =
     let val s_t = extract_suspended_goal th label
         val goal = resumption_to_goal s_t
         val sub_th = prove_goal(goal, tac)
@@ -910,4 +910,39 @@ fun resume (th,label,tac) =
       {subresult = sub_th, updated_main = prove_suspended label s_t sub_th th}
     end
 
-end
+fun resume {suspension_name,label_name} tac =
+    case boolLib.find_suspension suspension_name of
+        NONE => raise ERR "resume"
+                      ("No suspension with name " ^ suspension_name)
+      | SOME th =>
+        let
+          val {subresult, updated_main} = prim_resume (th,label_name,tac)
+        in
+          case get_suspended_names updated_main of
+              [] =>
+                HOL_MESG (
+                  "No suspended subgoals remain in theorem " ^
+                  suspension_name
+                )
+            | nms =>
+                HOL_MESG (
+                  Int.toString (length nms) ^ " subgoals (" ^
+                  String.concatWith ", " nms ^
+                  ") remain in theorem " ^ suspension_name
+                );
+          update_suspensionDB false (suspension_name, updated_main);
+          subresult
+        end
+
+fun set_suspended_goal tacmod {suspension_name,label_name} =
+    case boolLib.find_suspension suspension_name of
+        NONE => raise ERR "set_suspended_goal"
+                      ("No suspension with name " ^ suspension_name)
+      | SOME th =>
+          proofManagerLib.new_goalstack (
+            resumption_to_goal (extract_suspended_goal th label_name)
+          )
+          tacmod
+          I
+
+end (* struct *)

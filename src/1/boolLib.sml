@@ -110,6 +110,81 @@ end (* local open *)
 
 val def_suffix = ref "_def"
 
+fun has_suspended_subgoals th =
+    let
+      open HolKernel
+      fun issusp_hyp t =
+          let
+            val (fx,_) = dest_comb t
+            val (sl_c, lnm) = dest_comb fx
+            val {Thy,Name,...} = dest_thy_const sl_c
+          in
+            Thy = "marker" andalso Name = "suspendlabel" andalso
+            is_var lnm
+          end handle HOL_ERR _ => false
+    in
+      isSome (HOLset.find issusp_hyp (hypset th))
+    end
+
+fun dest_suspended t =
+    let
+      open HolKernel
+      val (fx,y) = dest_comb t
+      val (sl_c, lnm) = dest_comb fx
+      val {Thy,Name,...} = dest_thy_const sl_c
+    in
+      if Thy = "marker" andalso Name = "suspendlabel" then
+        SOME (#1 (dest_var lnm), y)
+      else NONE
+    end handle Feedback.HOL_ERR _ => NONE
+
+fun get_suspended_names th =
+    let
+      fun foldthis (t,A) =
+          case dest_suspended t of NONE => A | SOME (nm,_) => nm::A
+    in
+      HOLset.foldl foldthis [] (Thm.hypset th)
+    end
+
+local
+  open HolKernel
+  val suspensionDBref = Sref.new (Symtab.empty)
+  fun check_DBempty thydelta =
+      let open TheoryDelta
+      in
+        case thydelta of
+            ExportTheory _ =>
+            let val keys = Symtab.keys (Sref.value suspensionDBref)
+            in
+              case keys of
+                  [] => ()
+                | _ =>
+                  raise mk_HOL_ERR "boolLib" "check_DBempty"
+                        ("Incomplete theorems (" ^
+                         String.concatWith ", " keys ^ ") remain")
+            end
+          | _ => ()
+      end
+
+in
+fun update_suspensionDB firstp (n,th) =
+    (if firstp then
+       case Symtab.lookup (Sref.value suspensionDBref) n of
+           NONE => ()
+         | SOME _ => Feedback.HOL_MESG (
+                      "Replacing stashed suspension theorem with name " ^
+                      n
+                    )
+     else ();
+     Sref.update suspensionDBref (Symtab.update(n,th)))
+
+(* don't eta-reduce *)
+fun find_suspension k = Symtab.lookup (Sref.value suspensionDBref) k
+
+fun remove_suspension k = Sref.update suspensionDBref (Symtab.delete k)
+
+end (* local *)
+
 local
 open Feedback Theory
 fun prove_local loc privp (n,th) =
@@ -149,8 +224,44 @@ fun save_thm_attrs loc (attrblock, th) = let
                  else (fn f => f)
   fun do_attr (k,vs) = attrf {thm = th, name = n, attrname = k, args = vs}
 in
-  storemod save(n,th) before app do_attr attrs
+  case get_suspended_names th of
+      [] => storemod save(n,th) before app do_attr attrs
+    | susp_names =>
+      let
+      in
+        HOL_MESG (
+          "Stashing suspended theorem " ^ n ^
+          " with pending subgoals: " ^
+          String.concatWith ", " susp_names ^ "."
+        );
+        if localp orelse not (null attrs) then
+          HOL_WARNING "boolLib" "save_thm_attrs"
+                      "Ignoring attributes on suspended theorem"
+        else ();
+        update_suspensionDB true (n,th);
+        th
+      end
 end
+end (* local *)
+
+fun finalise_suspended_thm loc nm0 =
+    let val attrblock = ThmAttribute.extract_attributes nm0
+        val name = #thmname attrblock
+    in
+      case find_suspension name of
+          NONE => raise ERR "finalise_suspended_thm"
+                        ("No such suspended theorem: " ^ name)
+        | SOME th =>
+          case get_suspended_names th of
+              [] => (
+                remove_suspension name;
+                save_thm_attrs loc (attrblock, th)
+              )
+            | snms =>
+              raise ERR "finalise_suspended_thm"
+                    ("Theorem retains unproved subgoals: " ^
+                     String.concatWith ", " snms)
+    end
 
 local
   open Feedback
@@ -213,7 +324,6 @@ fun variant_of_term vs t =
     (t', sub)
   end
 
-end (* local *)
 
 datatype pel = pLeft | pRight | pAbs
 fun term_diff t1 t2 =

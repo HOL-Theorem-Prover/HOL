@@ -178,7 +178,7 @@ val _ = shouldfail {checkexn = is_struct_HOL_ERR "markerLib",
                    pq_th1
 
 val _ = show_assums := true
-val _ = tprint "resume (1a)"
+val _ = tprint "prim_resume (1a)"
 fun pp {subresult,updated_main} =
     let open HOLPP
     in
@@ -189,7 +189,7 @@ fun pp {subresult,updated_main} =
                     ])
     end
 fun one_b (Res {subresult,updated_main}) = (
-  tprint "resume (1b)";
+  tprint "prim_resume (1b)";
   require_msg(check_result
                 (fn {subresult,updated_main} =>
                     thm_eq (HOLset.fromList Term.compare [q], q)
@@ -198,7 +198,7 @@ fun one_b (Res {subresult,updated_main}) = (
                     thm_eq (HOLset.empty Term.compare, “p /\ q ==> q /\ p”)
                            updated_main))
              (HOLPP.pp_to_string 75 pp)
-             (fn th => resume (th, "q", first_assum ACCEPT_TAC))
+             (fn th => prim_resume (th, "q", first_assum ACCEPT_TAC))
              updated_main
 )
   | one_b (Exn _) = die "Shouldn't happen in test"
@@ -212,6 +212,6 @@ val _ = require_msgk (check_result
                                      ],
                                     “p /\ q ==> q /\ p”) updated_main))
                      pp
-                     (fn th => resume(th,"p",first_assum ACCEPT_TAC))
+                     (fn th => prim_resume(th,"p",first_assum ACCEPT_TAC))
                      one_b
                      pq_th1
