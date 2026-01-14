@@ -4261,8 +4261,6 @@ Proof
   >> fs [DECIDE ``i < SUC n <=> i < n \/ (i = n)``] >> METIS_TAC []
 QED
 
-Theorem EVERY2_GENLIST = LIST_REL_GENLIST
-
 Theorem ALL_DISTINCT_MEM_ZIP_MAP:
     !f x ls.
      ALL_DISTINCT ls ==>
