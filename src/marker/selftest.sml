@@ -215,3 +215,11 @@ val _ = require_msgk (check_result
                      (fn th => prim_resume(th,"p",first_assum ACCEPT_TAC))
                      one_b
                      pq_th1
+
+val incomplete_th = Feedback.quiet_messages save_thm("incomplete_th", pq_th1)
+val _ = shouldfail {
+      checkexn = is_struct_HOL_ERR "Theory",
+      printarg = K "export_theory fails on incomplete suspension",
+      printresult = K "()",
+      testfn = export_theory} ()
+val _ = boolLib.remove_suspension "incomplete_th"

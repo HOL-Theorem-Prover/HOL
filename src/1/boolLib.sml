@@ -165,7 +165,10 @@ local
             end
           | _ => ()
       end
-
+  val _ = Theory.register_hook (
+        "Unfinished Suspension Check",
+        check_DBempty
+      )
 in
 fun update_suspensionDB firstp (n,th) =
     (if firstp then
