@@ -102,7 +102,7 @@ evaluations.")
   "*Do automatic loading?")
 
 (defvar hol-bare-p nil
-  "*use hol.bare?")
+  "*use hol --bare?")
 
 ;;; For compatability between both Emacs and XEmacs, please use the following
 ;;; two functions to determine if the mark is active, or to set it active.
@@ -960,8 +960,12 @@ region instead. With prefix ARG prompt for a file-name to load."
 
 ;** hol map keys and function definitions
 (defun hol-executable-with-bare ()
-  (if hol-bare-p (concat hol-executable ".bare")
-                 hol-executable))
+  "Return the HOL executable path (hol-bare-p affects args, not executable)."
+  hol-executable)
+
+(defun hol-bare-args ()
+  "Return list of extra args for HOL when hol-bare-p is set."
+  (if hol-bare-p '("--bare") nil))
 
 (defun hol--looks-like-root-holdir (dir)
   (cl-every
@@ -996,9 +1000,11 @@ region instead. With prefix ARG prompt for a file-name to load."
            ((file-exists-p (concat bindir "hol.state"))
             (list (concat bindir "hol") "(as we are in its HOL directory)"))
            ((file-exists-p (concat bindir "hol.state0"))
-            (list
-             (concat bindir "hol.bare")
-             "(as we are in its HOL directory and hol.state doesn't exist)"))))))))
+            (progn
+              (setq hol-bare-p t)
+              (list
+               (concat bindir "hol")
+               "(as we are in its HOL directory and hol.state doesn't exist, using --bare)"))))))))
 
 (defun hol--get-executable ()
   (let ((first-option (hol-executable-with-bare)))
@@ -1030,8 +1036,8 @@ region instead. With prefix ARG prompt for a file-name to load."
                 (comint-send-eof)
                 (sleep-for 0 500)))
           (setq default-directory my-dir)
-          (make-comint-in-buffer "HOL" hol-buffer-name hol-executable))
-      (let* ((buf (make-comint "HOL" hol-executable)))
+          (apply #'make-comint-in-buffer "HOL" hol-buffer-name hol-executable nil (hol-bare-args)))
+      (let* ((buf (apply #'make-comint "HOL" hol-executable nil (hol-bare-args))))
         (setq hol-buffer-name (buffer-name buf))
         (set-buffer hol-buffer-name)))
 

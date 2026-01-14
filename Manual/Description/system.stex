@@ -1574,7 +1574,7 @@ function:
 
   When an interactive \HOL{} session begins, some theories will
   already be in the logical context. The exact set of theories in
-  context will vary.  If the executable used is \texttt{hol.bare},
+  context will vary.  If \texttt{hol --bare} is used,
   then only \theoryimp{min} and \theoryimp{bool} will be loaded.  When
   the \texttt{hol} executable is used, a richer context is loaded.
 

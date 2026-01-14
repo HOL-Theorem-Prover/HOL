@@ -1106,7 +1106,7 @@ function:
 
 When an interactive HOL session begins, some theories will already be in the logical context.
 The exact set of theories in context will vary.
-If the executable used is `hol.bare`, then only `min` and `bool` will be loaded.
+If `hol --bare` is used, then only `min` and `bool` will be loaded.
 When the `hol` executable is used, a richer context is loaded.
 
 The exact set of theories loaded can be determined with the `ancestry` command.

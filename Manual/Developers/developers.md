@@ -151,8 +151,8 @@ Under both Moscow&nbsp;ML and Poly/ML the following are created:
 `hol`
 : The standard executable, which loads a `bossLib` based logical context. This is designed for use by “every user”.
 
-`hol.bare`
-: The “bare” executable, which includes `boolLib` and the goalstack infrastructure but no theories past `bool`.
+`hol --bare`
+: the “bare” mode, which includes `boolLib` and the goalstack infrastructure but no theories past `bool`.
 
 `Holmake`
 : The Holmake tool, again designed for every user.

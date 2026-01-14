@@ -5,7 +5,7 @@ fun p1 ++ p2 = OS.Path.concat(p1,p2)
 
 val _ = tprint "Checking holpathdb bindings make it into interactive sessions"
 
-val _ = Systeml.system_ps (Globals.HOLDIR ++ "bin" ++ "hol.bare" ^ " < input > /dev/null 2>&1")
+val _ = Systeml.system_ps (Globals.HOLDIR ++ "bin" ++ "hol" ^ " --bare < input > /dev/null 2>&1")
 
 exception InternalDie of string
 
