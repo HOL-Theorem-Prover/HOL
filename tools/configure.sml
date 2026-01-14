@@ -512,8 +512,7 @@ val _ =
  end;
 
 (* Remove Poly/HOL executables from bin, if they're there *)
-val _ = FileSys.remove (fullPath [holdir, "bin", "heapname"]) handle _ => ()
-val _ = FileSys.remove (fullPath [holdir, "bin", "buildheap"]) handle _ => ()
+val _ = FileSys.remove (fullPath [holdir, "bin", "hol"]) handle _ => ()
 
 
 (*---------------------------------------------------------------------------

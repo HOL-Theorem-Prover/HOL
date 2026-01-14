@@ -827,11 +827,11 @@ This can make developing big mechanisations considerably more pleasant.
 
 \subsection{\texorpdfstring{Generating \HOL{} heaps}{Generating HOL heaps}}
 
-The easiest way to generate a \HOL{} heap is to use the \texttt{buildheap} executable that is built as part of the standard build process for (Poly/ML)~\HOL.
-This program takes a list of object files to include in a heap, an optional heap to build upon (use the \texttt{-b} command-line switch; the default is to use the heap behind the core \texttt{hol} executable), and an optional name for the new heap (the default is the traditional Unix \texttt{a.out}).
+The easiest way to generate a \HOL{} heap is to use the \texttt{hol buildheap} subcommand that is part of the standard \texttt{hol} executable for (Poly/ML)~\HOL.
+This subcommand takes a list of object files to include in a heap, an optional heap to build upon (use the \texttt{-b} command-line switch; the default is to use the heap behind the core \texttt{hol} executable), and a required name for the new heap (the \texttt{-o} switch).
 Thus the command-line
 \begin{alltt}
-   buildheap -o realheap transcTheory polyTheory
+   hol buildheap -o realheap transcTheory polyTheory
 \end{alltt}
 would build a heap in the current directory called \texttt{realheap}, and would preload it with the standard theories of transcendental numbers and real-valued polynomials.
 
@@ -849,12 +849,12 @@ Secondly, the other products in the current directory will be built on top of th
    DEPS = $(patsubst %,$(dprot $(SIGOBJ)/%),$(OBJNAMES))
 
    $(HOLHEAP): $(DEPS)
-           $(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES)
+           $(protect $(HOLDIR)/bin/hol) buildheap -o $@ $(OBJNAMES)
    endif
 \end{alltt}
 \caption{A \texttt{Holmakefile} fragment for building a custom \HOL{} heap embodying the standard real number theories.
-If the heap's dependencies are not core \HOL{} theories as they are here, then both the dependency line and the arguments to \texttt{buildheap} will need to be adjusted to link to the directory containing the files.
-For core \HOL{} theories, the dependency has to mention the \texttt{SIGOBJ} directory, but when passing arguments to \texttt{buildheap}, that information doesn't need to be provided as \texttt{SIGOBJ} is always consulted by all \HOL{} builds.
+If the heap's dependencies are not core \HOL{} theories as they are here, then both the dependency line and the arguments to \texttt{hol buildheap} will need to be adjusted to link to the directory containing the files.
+For core \HOL{} theories, the dependency has to mention the \texttt{SIGOBJ} directory, but when passing arguments to \texttt{hol buildheap}, that information doesn't need to be provided as \texttt{SIGOBJ} is always consulted by all \HOL{} builds.
 Finally, note how the use of the \texttt{dprot} and \texttt{protect} functions will ensure that \holmake{} will do the right thing even when \texttt{HOLDIR} contains spaces.}
 \label{fig:realheap-makefile}
 \end{figure}

@@ -16,7 +16,7 @@ OBJS = $(patsubst %,$(dprot $(SIGOBJ)/%.uo),$(OBJNAMES)) \
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(OBJS) $(dprot $(HOLDIR)/bin/hol.state)
-	$(protect $(HOLDIR)/bin/buildheap) -o $@ $(OBJNAMES) $(LOCAL_OBJNAMES)
+	$(protect $(HOLDIR)/bin/hol) buildheap -o $@ $(OBJNAMES) $(LOCAL_OBJNAMES)
 endif
 
 all: $(DEFAULT_TARGETS) selftest.exe
