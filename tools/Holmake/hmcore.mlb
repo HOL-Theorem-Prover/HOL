@@ -22,8 +22,8 @@ deps/Holdep.sig
 deps/Holdep.sml
 regexpMatch.sig
 regexpMatch.sml
-deps/parse_glob.sig
-deps/parse_glob.sml
+parse_glob.sig
+parse_glob.sml
 tailbuffer.sig
 tailbuffer.sml
 Holmake_tools_dtype.sml
@@ -35,8 +35,8 @@ internal_functions.sig
 internal_functions.sml
 Holmake_types.sig
 Holmake_types.sml
-deps/ReadHMF.sig
-deps/ReadHMF.sml
+ReadHMF.sig
+ReadHMF.sml
 GetOpt.sig
 GetOpt.sml
 FunctionalRecordUpdate.sml

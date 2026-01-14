@@ -25,14 +25,13 @@ val _ = let
 in
   app (myuse hmakedir) ["HOLFS_dtype.sml", "HFS_NameMunge.sig"];
   myuse (OS.Path.concat(hmakedir, "poly")) "HFS_NameMunge.sml";
-  app appthis ["HOLFileSys", "regexpMatch"] ;
-  app appdeps ["parse_glob", "Holdep_tokens"] ;
+  app appthis ["HOLFileSys", "regexpMatch", "parse_glob"] ;
+  app appdeps ["Holdep_tokens"] ;
   app appthis ["AttributeSyntax"] ;
   app (myuse hmakedir) ["HolLex.sml", "Holmake_tools_dtype.sml",
                         "terminal_primitives.sig",
                         "poly-terminal-prims.ML"];
   app appthis ["HolParser"] ;
   app appdeps ["Holdep"] ;
-  app appthis ["Holmake_tools", "internal_functions", "Holmake_types"] ;
-  app appdeps ["ReadHMF"]
+  app appthis ["Holmake_tools", "internal_functions", "Holmake_types", "ReadHMF"]
 end;
