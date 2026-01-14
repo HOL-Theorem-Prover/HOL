@@ -125,7 +125,7 @@ fun upload ((src, regulardir), target, symlink) =
  ---------------------------------------------------------------------------*)
 
 fun buildDir symlink s =
-  if #1 s = fullPath [HOLDIR, "bin/hol.bare"] then phase := Bare
+  if #1 s = fullPath [HOLDIR, "bin/hol.state0"] then phase := Bare
   else if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
   else
     (build_dir Holmake selftest_level s; upload(s,SIGOBJ,symlink))

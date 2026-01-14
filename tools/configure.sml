@@ -489,26 +489,24 @@ val _ =
 
 val _ =
  let val _ = echo "Generating bin/hol."
-     val target      = fullPath [holdir, "bin/hol.bare"]
-     val qend        = fullPath [holdir, "tools/end-init.sml"]
-     val target_boss = fullPath [holdir, "bin/hol"]
-     val qend_boss   = fullPath [holdir, "tools/end-init-boss.sml"]
+     val target      = fullPath [holdir, "bin/hol"]
+     val bare_qend   = fullPath [holdir, "tools/end-init.sml"]
+     val boss_qend   = fullPath [holdir, "tools/end-init-boss.sml"]
+     val qends       = {boss_qend = boss_qend, bare_qend = bare_qend}
  in
    (* "unquote" scripts use the unquote executable to provide nice
       handling of double-backquote characters *)
-   emit_hol_unquote_script target qend [];
-   emit_hol_unquote_script target_boss qend_boss []
+   emit_hol_unquote_script target qends []
  end;
 
 val _ =
  let val _ = echo "Generating bin/hol.noquote."
-     val target      = fullPath [holdir,   "bin/hol.bare.noquote"]
-     val target_boss = fullPath [holdir,   "bin/hol.noquote"]
-     val qend        = fullPath [holdir,   "tools/end-init.sml"]
-     val qend_boss   = fullPath [holdir,   "tools/end-init-boss.sml"]
+     val target      = fullPath [holdir, "bin/hol.noquote"]
+     val bare_qend   = fullPath [holdir, "tools/end-init.sml"]
+     val boss_qend   = fullPath [holdir, "tools/end-init-boss.sml"]
+     val qends       = {boss_qend = boss_qend, bare_qend = bare_qend}
  in
-  emit_hol_script target qend [];
-  emit_hol_script target_boss qend_boss []
+  emit_hol_script target qends []
  end;
 
 (* Remove Poly/HOL executables from bin, if they're there *)

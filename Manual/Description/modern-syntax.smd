@@ -77,7 +77,7 @@ The `Ancestors` and `Libs` components may be omitted.
 \index{special syntactic forms for scripts!Theory@\ml{Theory}}
 The name following the `Theory` keyword must match the name that precedes the `Script.sml` of the file-name, and must be a valid SML structure identifier.
 In some cases, such as when a theory is huge and the theorems not particularly interesting, it is possible to disable the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `no_sig_docs` annotation.
-The other annotation possible in this position is `bare`, which is used to indicate that the theory is built with the minimal `hol.bare` executable (and won't be using the facilities in `bossLib`, for example).
+The other annotation possible in this position is `bare`, which is used to indicate that the theory is built with the minimal `hol --bare` mode (and won't be using the facilities in `bossLib`, for example).
 We expect this modifier should only be necessary for developers.
 
 \index{Ancestors keyword@\ml{Ancestors} keyword}
