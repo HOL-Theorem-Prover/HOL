@@ -124,11 +124,16 @@ fun upload ((src, regulardir), target, symlink) =
     (thus requiring only a single place to look for things).
  ---------------------------------------------------------------------------*)
 
+val hol_state0 = fullPath [HOLDIR, "bin", "hol.state0"]
 fun buildDir symlink s =
-  if #1 s = fullPath [HOLDIR, "bin/hol.state0"] then phase := Bare
-  else if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
-  else
-    (build_dir Holmake selftest_level s; upload(s,SIGOBJ,symlink))
+  if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
+  else (
+    build_dir Holmake selftest_level s;
+    upload(s,SIGOBJ,symlink);
+    if !phase = Initial andalso OS.FileSys.access(hol_state0, [])
+    then phase := Bare
+    else ()
+  )
 
 fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 
