@@ -308,10 +308,8 @@ val _ =
     compile [] "holpathdb.sml";
     compile [] "regexpMatch.sig";
     compile [] "regexpMatch.sml";
-    FileSys.chDir "deps";
-    compile ["-I", ".."] "parse_glob.sig";
-    compile ["-I", ".."] "parse_glob.sml";
-    FileSys.chDir "..";
+    compile [] "parse_glob.sig";
+    compile [] "parse_glob.sml";
     compile [] "HOLFS_dtype.sml";
     compile [] "HFS_NameMunge.sig";
     FileSys.chDir "mosml";
@@ -346,10 +344,8 @@ val _ =
     compile ["-I", "deps"] "internal_functions.sml";
     compile [] "Holmake_types.sig";
     compile [] "Holmake_types.sml";
-    FileSys.chDir "deps";
-    compile ["-I", ".."] "ReadHMF.sig";
-    compile ["-I", ".."] "ReadHMF.sml";
-    FileSys.chDir "..";
+    compile [] "ReadHMF.sig";
+    compile [] "ReadHMF.sml";
     compile [] "GetOpt.sig";
     compile [] "GetOpt.sml";
     compile [] "FunctionalRecordUpdate.sml";
