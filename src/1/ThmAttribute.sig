@@ -4,6 +4,14 @@ sig
   type attrfun =
        {name:string,attrname:string,args:string list,thm:Thm.thm} -> unit
   type attrfuns = {localf : attrfun, storedf : attrfun}
+  type attrblock = {
+    attrs : (string * string list) list,
+    reserved : (string * string list) list,
+    thmname : string,
+    unknown : (string * string list) list
+  } (* encoding syntax like thmname[foo,bar=baz qux] *)
+
+
   val register_attribute : string * attrfuns -> unit
   val reserve_word : string -> unit
 
@@ -12,11 +20,7 @@ sig
   val all_attributes : unit -> string list
   val store_at_attribute : attrfun
   val local_attribute    : attrfun
-  val extract_attributes :
-      string -> {thmname : string,
-                 attrs : (string * string list) list,
-                 unknown : (string * string list) list,
-                 reserved : (string * string list) list}
+  val extract_attributes : string -> attrblock
   val toString : string * string list -> string
 
   val insert_attribute : {attr: string} -> string -> string

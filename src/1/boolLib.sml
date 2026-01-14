@@ -202,7 +202,7 @@ fun extract_localpriv (loc,priv,rebindok,acc) attrs =
       | ("allow_rebind",_) :: rest => extract_localpriv (loc,priv,true,acc) rest
       | a :: rest => extract_localpriv (loc,priv,rebindok,a::acc) rest
 in
-fun save_thm_attrs loc (attrblock, th) = let
+fun save_thm_attrs loc (attrblock:ThmAttribute.attrblock, th) = let
   val {thmname=n,attrs,unknown,reserved} = attrblock
   val _ = null unknown orelse
           raise ERR "save_thm_attrs"

@@ -7,6 +7,13 @@ struct
   type attrfun = {name:string,attrname:string,args:string list,thm:Thm.thm} ->
                  unit
   type attrfuns = {localf: attrfun, storedf : attrfun}
+  type attrblock = {
+    attrs : (string * string list) list,
+    reserved : (string * string list) list,
+    thmname : string,
+    unknown : (string * string list) list
+  } (* encoding syntax like thmname[foo,bar=baz qux] *)
+
   structure Map = Symtab
 
   val ERR = Feedback.mk_HOL_ERR "ThmAttribute"
