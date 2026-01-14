@@ -12,10 +12,10 @@ Libs
 (*---------------------------------------------------------------------------*)
 
 Definition polyp_def:
-  polyp [] = T ∧
-  polyp [(c,e)] = (0 < c /\ 0 <= e) ∧
-  polyp ((c1,e1)::(c2,e2)::r) =
-      (0 < c1 /\ 0 <= e1 /\ e2 < e1 /\ polyp ((c2,e2)::r))
+ polyp [] = T /\
+ polyp ((c,e)::r) =
+     (polyp r /\ c <> 0 /\ 0 <= e /\
+      (NULL r \/ SND(HD r) < e))
 End
 
 (*---------------------------------------------------------------------------*)
@@ -75,9 +75,8 @@ Proof
   recInduct sum_polys_ind >> rw[] >>
   gvs [eval_poly_def,sum_polys_def] >>
   `polyp r1 /\ polyp r2` by
-     (Cases_on ‘r1’ >> Cases_on ‘r2’ >>
-      TRY(Cases_on ‘h’) >> TRY (Cases_on ‘h'’) >>
-      gvs [polyp_def]) >>
+     (Cases_on ‘r1’ >>
+      Cases_on ‘r2’ >> gvs [polyp_def]) >>
   gvs[] >> rw[] >> gvs[eval_poly_def]
 QED
 

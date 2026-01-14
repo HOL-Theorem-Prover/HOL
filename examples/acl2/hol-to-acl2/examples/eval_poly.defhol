@@ -1,3 +1,7 @@
+#|
+   ⊢ (∀x y. (if T then x else y) = x) ∧ ∀x y. (if F then x else y) = y
+|#
+
 (defhol
    :fns ((cond (:arrow* :bool a a a)))
    :defs ((:forall ((x a) (y a))
@@ -5,26 +9,46 @@
      (:forall ((x a) (y a))
       (equal (hap* (cond (typ (:arrow* :bool a a a))) (hp-false) x y) y))))
 
+#|
+   ⊢ ∀x y. hol_to_acl2$COMMA x y = (x,y)
+|#
+
 (defhol
    :fns ((comma (:arrow* a b (:hash a b))))
    :defs ((:forall ((x a) (y b))
       (equal (hap* (comma (typ (:arrow* a b (:hash a b)))) x y)
        (hp-comma x y)))))
 
+#|
+   ⊢ ∀x y. FST (x,y) = x
+|#
+
 (defhol
    :fns ((fst (:arrow* (:hash a b) a)))
    :defs ((:forall ((x a) (y b))
       (equal (hap* (fst (typ (:arrow* (:hash a b) a))) (hp-comma x y)) x))))
+
+#|
+   ⊢ ∀x y. SND (x,y) = y
+|#
 
 (defhol
    :fns ((snd (:arrow* (:hash a b) b)))
    :defs ((:forall ((x a) (y b))
       (equal (hap* (snd (typ (:arrow* (:hash a b) b))) (hp-comma x y)) y))))
 
+#|
+   ⊢ ∀m. SUC m = 1 + m
+|#
+
 (defhol
    :fns ((suc (:arrow* :num :num)))
    :defs ((:forall ((m :num))
       (equal (hap* (suc (typ (:arrow* :num :num))) m) (hp+ (hp-num 1) m)))))
+
+#|
+   ⊢ ∀x y. x ≤ y ⇔ x < y ∨ x = y
+|#
 
 (defhol
    :fns ((<= (:arrow* :num :num :bool)))
@@ -32,10 +56,18 @@
       (equal (hap* (<= (typ (:arrow* :num :num :bool))) x y)
        (hp-or (hp< x y) (hp= x y))))))
 
+#|
+   ⊢ ∀h t. HD (h::t) = h
+|#
+
 (defhol
    :fns ((hd (:arrow* (:list a) a)))
    :defs ((:forall ((h a) (t (:list a)))
       (equal (hap* (hd (typ (:arrow* (:list a) a))) (hp-cons h t)) h))))
+
+#|
+   ⊢ (NULL [] ⇔ T) ∧ ∀h t. NULL (h::t) ⇔ F
+|#
 
 (defhol
    :fns ((null (:arrow* (:list a) :bool)))
@@ -45,6 +77,10 @@
      (:forall ((h a) (t (:list a)))
       (equal (hap* (null (typ (:arrow* (:list a) :bool))) (hp-cons h t))
        (hp-false)))))
+
+#|
+   ⊢ (∀m. m ** 0 = 1) ∧ ∀m n. m ** SUC n = m * m ** n
+|#
 
 (defhol
    :fns ((exp (:arrow* :num :num :num)))
@@ -57,27 +93,37 @@
         (hap* (suc (typ (:arrow* :num :num))) n))
        (hp* m (hap* (exp (typ (:arrow* :num :num :num))) m n))))))
 
+#|
+   ⊢ (polyp [] ⇔ T) ∧
+     ∀r e c.
+       polyp ((c,e)::r) ⇔ polyp r ∧ c ≠ 0 ∧ 0 ≤ e ∧ (NULL r ∨ SND (HD r) < e)
+|#
+
 (defhol
    :fns ((polyp (:arrow* (:list (:hash :num :num)) :bool)))
    :defs ((equal
       (hap* (polyp (typ (:arrow* (:list (:hash :num :num)) :bool)))
        (hp-nil (typ (:hash :num :num)))) (hp-true))
-     (:forall ((e :num) (c :num))
+     (:forall ((r (:list (:hash :num :num))) (e :num) (c :num))
       (equal
        (hap* (polyp (typ (:arrow* (:list (:hash :num :num)) :bool)))
-        (hp-cons (hp-comma c e) (hp-nil (typ (:hash :num :num)))))
-       (hp-and (hp< (hp-num 0) c)
-        (hap* (<= (typ (:arrow* :num :num :bool))) (hp-num 0) e))))
-     (:forall
-      ((r (:list (:hash :num :num))) (e2 :num) (e1 :num) (c2 :num) (c1 :num))
-      (equal
-       (hap* (polyp (typ (:arrow* (:list (:hash :num :num)) :bool)))
-        (hp-cons (hp-comma c1 e1) (hp-cons (hp-comma c2 e2) r)))
-       (hp-and (hp< (hp-num 0) c1)
-        (hp-and (hap* (<= (typ (:arrow* :num :num :bool))) (hp-num 0) e1)
-         (hp-and (hp< e2 e1)
-          (hap* (polyp (typ (:arrow* (:list (:hash :num :num)) :bool)))
-           (hp-cons (hp-comma c2 e2) r)))))))))
+        (hp-cons (hp-comma c e) r))
+       (hp-and
+        (hap* (polyp (typ (:arrow* (:list (:hash :num :num)) :bool))) r)
+        (hp-and (hp-not (hp= c (hp-num 0)))
+         (hp-and (hap* (<= (typ (:arrow* :num :num :bool))) (hp-num 0) e)
+          (hp-or
+           (hap* (null (typ (:arrow* (:list (:hash :num :num)) :bool))) r)
+           (hp<
+            (hap* (snd (typ (:arrow* (:hash :num :num) :num)))
+             (hap*
+              (hd (typ (:arrow* (:list (:hash :num :num)) (:hash :num :num))))
+              r)) e)))))))))
+
+#|
+   ⊢ (∀v. eval_poly [] v = 0) ∧
+     ∀v r e c. eval_poly ((c,e)::r) v = c * v ** e + eval_poly r v
+|#
 
 (defhol
    :fns ((eval_poly (:arrow* (:list (:hash :num :num)) :num :num)))
@@ -92,6 +138,16 @@
        (hp+ (hp* c (hap* (exp (typ (:arrow* :num :num :num))) v e))
         (hap* (eval_poly (typ (:arrow* (:list (:hash :num :num)) :num :num)))
          r v))))))
+
+#|
+   ⊢ sum_polys [] [] = [] ∧ (∀v7 v6. sum_polys [] (v6::v7) = v6::v7) ∧
+     (∀v3 v2. sum_polys (v2::v3) [] = v2::v3) ∧
+     ∀r2 r1 e2 e1 c2 c1.
+       sum_polys ((c1,e1)::r1) ((c2,e2)::r2) =
+       if e1 = e2 then (c1 + c2,e1)::sum_polys r1 r2
+       else if e1 < e2 then (c2,e2)::sum_polys ((c1,e1)::r1) r2
+       else (c1,e1)::sum_polys r1 ((c2,e2)::r2)
+|#
 
 (defhol
    :fns ((sum_polys
@@ -158,6 +214,13 @@
             (typ
              (:arrow* (:list (:hash :num :num)) (:list (:hash :num :num))
               (:list (:hash :num :num))))) r1 (hp-cons (hp-comma c2 e2) r2)))))))))
+
+#|
+   ⊢ hol_to_acl2$GOAL eval_sum_poly_distrib
+       (∀x y v.
+          polyp x ∧ polyp y ⇒
+          eval_poly (sum_polys x y) v = eval_poly x v + eval_poly y v)
+|#
 
 (defhol
    :name eval_sum_poly_distrib

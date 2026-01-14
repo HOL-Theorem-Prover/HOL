@@ -1,7 +1,15 @@
+#|
+   ⊢ ∀m. SUC m = 1 + m
+|#
+
 (defhol
    :fns ((suc (:arrow* :num :num)))
    :defs ((:forall ((m :num))
       (equal (hap* (suc (typ (:arrow* :num :num))) m) (hp+ (hp-num 1) m)))))
+
+#|
+   ⊢ PRE 0 = 0 ∧ ∀m. PRE (SUC m) = m
+|#
 
 (defhol
    :fns ((pre (:arrow* :num :num)))
@@ -11,9 +19,17 @@
        (hap* (pre (typ (:arrow* :num :num)))
         (hap* (suc (typ (:arrow* :num :num))) m)) m))))
 
+#|
+   ⊢ ∀x. I x = x
+|#
+
 (defhol
    :fns ((i (:arrow* a a)))
    :defs ((:forall ((x a)) (equal (hap* (i (typ (:arrow* a a))) x) x))))
+
+#|
+   ⊢ ∀f x y. flip f x y = f y x
+|#
 
 (defhol
    :fns ((c (:arrow* (:arrow* a b c) b a c)))
@@ -21,10 +37,18 @@
       (equal (hap* (c (typ (:arrow* (:arrow* a b c) b a c))) f x y)
        (hap* f y x)))))
 
+#|
+   ⊢ ∀x y. K x y = x
+|#
+
 (defhol
    :fns ((k (:arrow* a b a)))
    :defs ((:forall ((x a) (y b))
       (equal (hap* (k (typ (:arrow* a b a))) x y) x))))
+
+#|
+   ⊢ ∀f g x. (f ∘ g) x = f (g x)
+|#
 
 (defhol
    :fns ((o (:arrow* (:arrow* a b) (:arrow* c a) c b)))
@@ -32,21 +56,37 @@
       (equal (hap* (o (typ (:arrow* (:arrow* a b) (:arrow* c a) c b))) f g x)
        (hap* f (hap* g x))))))
 
+#|
+   ⊢ ∀x y. COMMA x y = (x,y)
+|#
+
 (defhol
    :fns ((comma (:arrow* a b (:hash a b))))
    :defs ((:forall ((x a) (y b))
       (equal (hap* (comma (typ (:arrow* a b (:hash a b)))) x y)
        (hp-comma x y)))))
 
+#|
+   ⊢ ∀x y. FST (x,y) = x
+|#
+
 (defhol
    :fns ((fst (:arrow* (:hash a b) a)))
    :defs ((:forall ((x a) (y b))
       (equal (hap* (fst (typ (:arrow* (:hash a b) a))) (hp-comma x y)) x))))
 
+#|
+   ⊢ ∀x y. SND (x,y) = y
+|#
+
 (defhol
    :fns ((snd (:arrow* (:hash a b) b)))
    :defs ((:forall ((x a) (y b))
       (equal (hap* (snd (typ (:arrow* (:hash a b) b))) (hp-comma x y)) y))))
+
+#|
+   ⊢ ∀f x y. UNCURRY f (x,y) = f x y
+|#
 
 (defhol
    :fns ((uncurry (:arrow* (:arrow* a b c) (:hash a b) c)))
@@ -54,6 +94,10 @@
       (equal
        (hap* (uncurry (typ (:arrow* (:arrow* a b c) (:hash a b) c))) f
         (hp-comma x y)) (hap* f x y)))))
+
+#|
+   ⊢ (∀f. OPTION_BIND NONE f = NONE) ∧ ∀x f. OPTION_BIND (SOME x) f = f x
+|#
 
 (defhol
    :fns ((option_bind
@@ -71,6 +115,10 @@
          (typ (:arrow* (:option b) (:arrow* b (:option a)) (:option a))))
         (hp-some x) f) (hap* f x)))))
 
+#|
+   ⊢ (∀f x. OPTION_MAP f (SOME x) = SOME (f x)) ∧ ∀f. OPTION_MAP f NONE = NONE
+|#
+
 (defhol
    :fns ((option_map (:arrow* (:arrow* a b) (:option a) (:option b))))
    :defs ((:forall ((f (:arrow* a b)) (x a))
@@ -84,6 +132,11 @@
         (option_map (typ (:arrow* (:arrow* a b) (:option a) (:option b)))) f
         (hp-none (typ a))) (hp-none (typ b))))))
 
+#|
+   ⊢ (∀v f. list_CASE [] v f = v) ∧
+     ∀a0 a1 v f. list_CASE (a0::a1) v f = f a0 a1
+|#
+
 (defhol
    :fns ((list_case (:arrow* (:list a) b (:arrow* a (:list a) b) b)))
    :defs ((:forall ((v b) (f (:arrow* a (:list a) b)))
@@ -94,6 +147,11 @@
       (equal
        (hap* (list_case (typ (:arrow* (:list a) b (:arrow* a (:list a) b) b)))
         (hp-cons a0 a1) v f) (hap* f a0 a1)))))
+
+#|
+   ⊢ (∀f. list_size f [] = 0) ∧
+     ∀f a0 a1. list_size f (a0::a1) = 1 + (f a0 + list_size f a1)
+|#
 
 (defhol
    :fns ((list_size (:arrow* (:arrow* a :num) (:list a) :num)))
@@ -110,6 +168,10 @@
          (hap* (list_size (typ (:arrow* (:arrow* a :num) (:list a) :num))) f
           a1)))))))
 
+#|
+   ⊢ (∀f. MAP f [] = []) ∧ ∀f h t. MAP f (h::t) = f h::MAP f t
+|#
+
 (defhol
    :fns ((map (:arrow* (:arrow* a b) (:list a) (:list b))))
    :defs ((:forall ((f (:arrow* a b)))
@@ -122,6 +184,10 @@
         (hp-cons h t))
        (hp-cons (hap* f h)
         (hap* (map (typ (:arrow* (:arrow* a b) (:list a) (:list b)))) f t))))))
+
+#|
+   ⊢ (∀f e. FOLDR f e [] = e) ∧ ∀f e x l. FOLDR f e (x::l) = f x (FOLDR f e l)
+|#
 
 (defhol
    :fns ((foldr (:arrow* (:arrow* a b b) b (:list a) b)))
@@ -136,6 +202,10 @@
        (hap* f x
         (hap* (foldr (typ (:arrow* (:arrow* a b b) b (:list a) b))) f e l))))))
 
+#|
+   ⊢ (∀f e. FOLDL f e [] = e) ∧ ∀f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l
+|#
+
 (defhol
    :fns ((foldl (:arrow* (:arrow* b a b) b (:list a) b)))
    :defs ((:forall ((f (:arrow* b a b)) (e b))
@@ -149,6 +219,11 @@
        (hap* (foldl (typ (:arrow* (:arrow* b a b) b (:list a) b))) f
         (hap* f e x) l)))))
 
+#|
+   ⊢ SPEC (consts $DIV $MOD)
+       (∀n k. 0 < n ⇒ k = k DIV n * n + k MOD n ∧ k MOD n < n ⇔ T)
+|#
+
 (defhol
    :fns ((div (:arrow* :num :num :num)) (mod (:arrow* :num :num :num)))
    :defs ((:forall ((n :num) (k :num))
@@ -159,6 +234,11 @@
           (hp+ (hp* (hap* (div (typ (:arrow* :num :num :num))) k n) n)
            (hap* (mod (typ (:arrow* :num :num :num))) k n)))
          (hp< (hap* (mod (typ (:arrow* :num :num :num))) k n) n))) (hp-true)))))
+
+#|
+   ⊢ (Even 0 ⇔ T) ∧ (∀n. Even (SUC n) ⇔ Odd n) ∧ (Odd 0 ⇔ F) ∧
+     ∀n. Odd (SUC n) ⇔ Even n
+|#
 
 (defhol
    :fns ((even (:arrow* :num :bool)) (odd (:arrow* :num :bool)))
@@ -176,6 +256,10 @@
         (hap* (suc (typ (:arrow* :num :num))) n))
        (hap* (even (typ (:arrow* :num :bool))) n)))))
 
+#|
+   ⊢ (∀m. m ** 0 = 1) ∧ ∀m n. m ** SUC n = m * m ** n
+|#
+
 (defhol
    :fns ((exp (:arrow* :num :num :num)))
    :defs ((:forall ((m :num))
@@ -187,11 +271,19 @@
         (hap* (suc (typ (:arrow* :num :num))) n))
        (hp* m (hap* (exp (typ (:arrow* :num :num :num))) m n))))))
 
+#|
+   ⊢ THM MAP_ID_I (MAP I = I)
+|#
+
 (defhol
    :name map_id_i
    :thm (hp=
      (hap* (map (typ (:arrow* (:arrow* a a) (:list a) (:list a))))
       (i (typ (:arrow* a a)))) (i (typ (:arrow* (:list a) (:list a))))))
+
+#|
+   ⊢ THM MAP_o (∀f g. MAP (f ∘ g) = MAP f ∘ MAP g)
+|#
 
 (defhol
    :name map_o
@@ -207,14 +299,26 @@
        (hap* (map (typ (:arrow* (:arrow* b c) (:list b) (:list c)))) f)
        (hap* (map (typ (:arrow* (:arrow* a b) (:list a) (:list b)))) g)))))
 
+#|
+   ⊢ GOAL $var$(FST-COMMA) (∀x y. FST (x,y) = x)
+|#
+
 (defhol
    :name fst-comma
    :goal (:forall ((x a) (y b))
      (hp= (hap* (fst (typ (:arrow* (:hash a b) a))) (hp-comma x y)) x)))
 
+#|
+   ⊢ GOAL BOOL_CASES_AX (∀t. (t ⇔ T) ∨ (t ⇔ F))
+|#
+
 (defhol
    :name bool_cases_ax
    :goal (:forall ((t :bool)) (hp-or (hp= t (hp-true)) (hp= t (hp-false)))))
+
+#|
+   ⊢ GOAL pair_fst_snd_eq (∀p q. FST p = FST q ∧ SND p = SND q ⇔ p = q)
+|#
 
 (defhol
    :name pair_fst_snd_eq
