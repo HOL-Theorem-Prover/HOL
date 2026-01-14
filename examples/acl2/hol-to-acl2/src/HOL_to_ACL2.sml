@@ -444,7 +444,7 @@ fun pp_thm_as_defhol th =
              [add_string "#|", NL,
               add_string"   ", block CONSISTENT 3 [pp_thm th], NL,
               add_string "|#",NL,NL,
-	      pp_defhol (snd (hol_sexp th))]
+              pp_defhol (snd (hol_sexp th))]
     end
 
 (* Following code includes time of file generation ... not sure this helps
@@ -453,7 +453,7 @@ fun pp_thm_as_defhol th =
       val timestamp = Date.toString(Date.fromTimeUniv(Time.now()))
       val pp = block CONSISTENT 0
                [add_string "; Time of generation (UTC): ",
-	        add_string timestamp, NL,NL,
+                add_string timestamp, NL,NL,
                 block CONSISTENT 0 (pr_list pp_thm_as_defhol [NL,NL] ths)]
 *)
 
