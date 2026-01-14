@@ -876,15 +876,18 @@ val temp_enable_pmatch =
                 addup = K o temp_add_user_printer,
                 up = userprinter_info}
 
-(* Note: enable_pmatch uses temp_add_preterm_processor and temp_add_user_printer
-   because Parse lacks permanent versions with matching signatures. *)
+(* TODO: A permanent enable_pmatch would require:
+   1. A permanent add_preterm_processor, which doesn't currently exist
+   2. Parse.add_user_printer takes (string * term) but userprinter_info is
+      (string * term * userprinter), so the types don't match
+   See GitHub issue for future work.
 val enable_pmatch =
     add_pmatch {get = term_grammar,
                 arule = K o Parse.add_rule,
-                add_ptmproc =
-                  (fn s => fn pp => K (temp_add_preterm_processor s pp)),
-                addup = K o temp_add_user_printer,
-                up = userprinter_info}
+                add_ptmproc = ...,
+                addup = K o add_user_printer,
+                up = ...}
+*)
 
 val grammar_add_pmatch =
     add_pmatch { get = (fn g => g),

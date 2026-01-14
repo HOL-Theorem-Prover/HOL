@@ -7,14 +7,9 @@ sig
   (* parsing                      *)
   (********************************)
 
-  (* enable_pmatch() enables parsing for PMATCH style case expressions
-     using "pmatch ... of ..." syntax. Call this in a theory Script to
-     permanently enable the syntax; it will be inherited by descendent
-     theories. *)
-  val enable_pmatch : unit -> unit
-
-  (* Enable pmatch syntax in the current theory only, without
-     exporting to descendent theories. *)
+  (* temp_enable_pmatch() enables parsing for PMATCH style case expressions
+     using "pmatch ... of ..." syntax. This enables the syntax for the
+     current theory only; it will not be exported to descendent theories. *)
   val temp_enable_pmatch : unit -> unit
 
 
