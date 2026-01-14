@@ -30,29 +30,29 @@ val _ = use "lsp-server.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate16 z
+  fun makeUpdateT z = makeUpdate17 z
 in
 fun updateT z = let
-  fun from all_forced base_state checkerr checkfors debug defaultout exe
+  fun from all_forced bare base_state checkerr checkfors debug defaultout exe
            extra_data forced_objs help lsp multithread output quietp repl z_repl =
-    {all_forced = all_forced, base_state = base_state,
+    {all_forced = all_forced, bare = bare, base_state = base_state,
      checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      lsp = lsp, multithread = multithread,
      output = output, quietp = quietp, repl = repl, z_repl = z_repl}
   fun from' z_repl repl quietp output multithread lsp help forced_objs extra_data exe
-            defaultout debug checkfors checkerr base_state all_forced =
-    {all_forced = all_forced, base_state = base_state, checkfors = checkfors,
-     checkerr = checkerr, debug = debug,
+            defaultout debug checkfors checkerr base_state bare all_forced =
+    {all_forced = all_forced, bare = bare, base_state = base_state,
+     checkfors = checkfors, checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      lsp = lsp, multithread = multithread,
      output = output, quietp = quietp, repl = repl, z_repl = z_repl}
-  fun to f {all_forced, base_state, checkerr, checkfors, debug, defaultout, exe,
-            extra_data,
+  fun to f {all_forced, bare, base_state, checkerr, checkfors, debug, defaultout,
+            exe, extra_data,
             forced_objs, help, lsp, multithread, output, quietp, repl, z_repl} =
-    f all_forced base_state checkerr checkfors debug defaultout exe extra_data
+    f all_forced bare base_state checkerr checkfors debug defaultout exe extra_data
       forced_objs help lsp multithread
       output quietp repl z_repl
 in
@@ -62,6 +62,54 @@ val U = U
 val $$ = $$
 end (* FRU local *)
 
+(* Subcommand types *)
+datatype subcommand = REPL | LSP | BUILDHEAP | RUN | HEAPNAME
+
+fun parse_subcommand args =
+  case args of
+      [] => (REPL, args)
+    | first :: rest =>
+      (case first of
+           "repl" => (REPL, rest)
+         | "lsp" => (LSP, rest)
+         | "buildheap" => (BUILDHEAP, rest)
+         | "run" => (RUN, rest)
+         | "heapname" => (HEAPNAME, rest)
+         | _ => (REPL, args)) (* default to REPL, keep all args *)
+
+(* Get heap name from Holmakefile or return default *)
+fun get_heap_name () =
+  let
+    val default = Systeml.DEFAULT_STATE
+    val heap =
+        if OS.FileSys.access ("Holmakefile", [OS.FileSys.A_READ]) then
+          let
+            open Holmake_types
+            val holpathdb_extensions =
+                holpathdb.search_for_extensions ReadHMF.find_includes
+                  {starter_dirs = [OS.FileSys.getDir()],
+                   skip = holpathdb.db_dirs()}
+            val _ = List.app holpathdb.extend_db holpathdb_extensions
+            fun foldthis {vname,path} env = env_extend (vname, [LIT path]) env
+            val env0 = holpathdb.fold foldthis (base_environment())
+            val (env, _, _) = ReadHMF.read "Holmakefile" env0
+            fun envlist id =
+                map dequote (tokenize (perform_substitution env [VREF id]))
+            val heap_v = envlist "HOLHEAP"
+          in
+            case heap_v of
+                [] => default
+              | [x] => x
+              | _ => default (* malformed, ignore *)
+          end handle _ => default (* bogus Holmakefile, ignore *)
+        else default
+    val heap = if OS.Path.isRelative heap
+               then OS.Path.concat(OS.FileSys.getDir(), heap)
+               else heap
+  in
+    heap
+  end
+
 val heapname = ref (SOME Systeml.DEFAULT_STATE)
 
 structure BuildHeap_CLINE =
@@ -69,6 +117,7 @@ struct
 
 datatype option_record = OR of {
   all_forced : bool,
+  bare : bool,
   base_state : string option,
   checkfors : string list,
   checkerr : string option,
@@ -124,6 +173,8 @@ local
             (fn (OR r) => OR (updateT r (U #multithread (SOME i)) $$)))
 in
 val cline_opts = [
+  {help = "use minimal (bare) heap without bossLib", long = ["bare"], short = "",
+   desc = mkBoolT #bare},
   {help = "error if checked for file is absent", long = ["checkerr"],
    short = "e", desc = setStringOpt "message" #checkerr},
   {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
@@ -152,7 +203,7 @@ val cline_opts = [
    desc = NoArg (fn () => fn r => r)}, (* checked for and acted on by HOL repl *)
   {help = "output heap/munger name", long = [], short = "o",
    desc = setStringOpt "filename" #output},
-  {help = "use poly as base", long = ["poly"], short = "",
+  {help = "use poly as base (no HOL state)", long = ["poly"], short = "",
    desc = setBaseNone},
   {help = "reduce verbosity", long = ["quiet"], short = "q",
    desc = mkBoolT #quietp},
@@ -162,6 +213,7 @@ val cline_opts = [
    desc = mkBoolT #z_repl}
 ]
 val initial_cline = OR {all_forced = false,
+                        bare = false,
                         base_state = !heapname,
                         checkerr = NONE,
                         checkfors = [],
@@ -293,20 +345,17 @@ val buildheap_cline_mt = ref (NONE : int option)
 
 fun main() = let
   open BuildHeap_CLINE
+  val progname = CommandLine.name()
+  (* Parse subcommand first *)
+  val (subcmd, remaining_args) = parse_subcommand (CommandLine.arguments())
   val usage_header =
-    "Usage:\n  " ^ CommandLine.name() ^ " [options] obj1.uo obj2.uo ...\n\n\
-    \Object files can be provided with .uo suffixes or not. If they are not\n\
-    \present, they will be assumed. \"Object\" files may also be .sml/.ML\n\
-    \files which will be used directly (without any dependency analysis being\n\
-    \done).\n\n\
-    \If a -o option is provided, a heap containing the context generated\n\
-    \by loading/executing the .uo files will be dumped. Otherwise, the files\n\
-    \are loaded solely for their side effects.\n\n\
-    \If a --holstate option is not given, the operation will be with respect\n\
-    \to the core HOL state that contains bossLib, lists and sets.\n\n\
-    \Forcing a file means that it will be loaded even though it is in a\n\
-    \directory not included in the current directory's Holmakefile's INCLUDES\n\
-    \specifications.\n\n\
+    "Usage:\n  " ^ progname ^ " [subcommand] [options] [files...]\n\n\
+    \Subcommands:\n\
+    \  repl       Start interactive REPL (default)\n\
+    \  lsp        Start LSP server\n\
+    \  buildheap  Build a heap from object files\n\
+    \  run        Run script files for side effects\n\
+    \  heapname   Print the heap path\n\n\
     \Options:"
   val usage =
       GetOpt.usageInfo {header = usage_header,
@@ -315,18 +364,38 @@ fun main() = let
   val (cline_upds, objs0) =
       GetOpt.getOpt {argOrder = GetOpt.Permute, options = cline_opts,
                      errFn = die}
-                    (CommandLine.arguments())
+                    remaining_args
+  (* Check for unrecognized options - anything starting with - that isn't a file *)
+  fun check_unknown_opt s =
+    if String.isPrefix "-" s andalso not (OS.FileSys.access(s, [])) then
+      die ("Unrecognized option: " ^ s ^ "\nUse --help for usage information.")
+    else ()
+  val _ = List.app check_unknown_opt objs0
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
   val {quietp = qp, output, base_state, all_forced, forced_objs, lsp,
-       repl, z_repl, help, debug, extra_data, defaultout, exe, ...} = options
+       bare, repl, z_repl, help, debug, extra_data, defaultout, exe, ...} = options
+  (* Determine base_state:
+     - --bare: use hol.state0
+     - --poly/--poly_not_hol: use no state (NONE)
+     - --holstate=X: use X
+     - REPL mode with default: auto-detect using get_heap_name()
+     - Other modes: use specified state or default *)
+  val base_state =
+      if bare then SOME (OS.Path.concat(Systeml.HOLDIR, "bin/hol.state0"))
+      else if subcmd = REPL andalso base_state = SOME Systeml.DEFAULT_STATE then
+        (* Auto-detect heap for REPL mode when no explicit --holstate was given *)
+        SOME (get_heap_name())
+      else
+        (* Use explicitly specified state (including NONE for --poly) *)
+        base_state
   val diag = if debug then (fn s => warn ("DIAG: "^s)) else (fn _ => ())
   val _ = not help orelse (print usage; OS.Process.exit OS.Process.success)
-  val outrepl_error = "Can't simultaneously dump output and start REPL"
-  val _ =
-      case (lsp orelse repl, output, defaultout) of
-          (true, SOME _, _) => die outrepl_error
-        | (true, _, SOME _) => die outrepl_error
-        | _ => ()
+  (* For HEAPNAME subcommand, just print and exit immediately *)
+  val _ = if subcmd = HEAPNAME then
+            (print (case base_state of SOME s => s | NONE => get_heap_name());
+             print "\n";
+             OS.Process.exit OS.Process.success)
+          else ()
   fun force s = (s, true)
   fun unforce s = (s, false)
   val forced_objs = map force forced_objs
@@ -344,9 +413,11 @@ fun main() = let
   val base_state = Option.map mkAbs base_state
   val output = Option.map mkAbs output
   val output = case output of NONE => Option.map mkAbs defaultout | _ => output
-  val _ = case (output, exe) of
-              (NONE, SOME _) => die "Can't have exe without an output"
+  val _ = case (subcmd, output, exe) of
+              (BUILDHEAP, NONE, _) => die "buildheap subcommand requires -o option"
+            | (_, NONE, SOME _) => die "Can't have exe without an output"
             | _ => ()
+  (* Load base state if specified *)
   val _ =
       case base_state of
           NONE => (diag "Not loading a base state"; heapname := NONE)
@@ -367,10 +438,30 @@ fun main() = let
   val _ = diag ("holpathdb extensions: "^
                 String.concatWith ", " (map print_ext exts))
   val _ = List.app holpathdb.extend_db exts
+  (* Helper to load preludes for REPL mode.
+     Load Arbint and Arbrat first - they provide pp_int/pp_rat for the
+     pretty-printers registered in prelude.ML. *)
+  fun load_preludes () =
+    let
+      val prelude = OS.Path.concat(Systeml.HOLDIR, "tools-poly/prelude.ML")
+      val prelude2 = OS.Path.concat(Systeml.HOLDIR, "tools-poly/prelude2.ML")
+    in
+      diag "Loading Arbint";
+      Meta.load "Arbint";
+      diag "Loading Arbrat";
+      Meta.load "Arbrat";
+      diag ("Loading prelude: " ^ prelude);
+      QUse.use prelude;
+      if not bare then
+        (diag ("Loading prelude2: " ^ prelude2);
+         QUse.use prelude2)
+      else ()
+    end
 in
-  case (output, exe) of
-      (SOME s, NONE) =>
+  case subcmd of
+      BUILDHEAP =>
       let
+        val s = valOf output
         val _ = List.app (check_objpath die (absPath "." :: allincs)) objs
         val search_these =
             "." :: OS.Path.concat(Systeml.HOLDIR, "sigobj") :: allincs
@@ -385,9 +476,8 @@ in
         heapname := SOME s;
         create_heap diag qp findmod (map #1 objs, s)
       end
-    | _ =>
-      let
-      in
+    | LSP =>
+      let in
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
@@ -397,28 +487,48 @@ in
                 NONE => []
               | SOME _ => [("poly_decide_threadcount.uo", false)]) @
            objs);
-        if lsp then
-          LSPServer.start {diag = diag}
-        else if repl then
-          (diag "Starting REPL";
-           PolyML.print_depth 100;
-           HOL_REPL.sigint_handler();
-           HOL_REPL.topLevel {diag = diag, zeroTerm = z_repl} )
-        else
-          case exe of
-              SOME f => BuildHeap_EXE_Compile.exe_compile
-                          {fnname = f, output_exe = valOf output,
-                           keep_temp_files = debug}
-            | _ => ();
+        LSPServer.start {diag = diag}
+      end
+    | REPL =>
+      let in
+        case #multithread options of
+            NONE => ()
+          | SOME i => buildheap_cline_mt := SOME i;
+        List.app
+          (maybe_check_load diag)
+          ((case #multithread options of
+                NONE => []
+              | SOME _ => [("poly_decide_threadcount.uo", false)]) @
+           objs);
+        (* Load prelude files for interactive mode *)
+        load_preludes();
+        diag "Starting REPL";
+        PolyML.print_depth 100;
+        HOL_REPL.sigint_handler();
+        HOL_REPL.topLevel {diag = diag, zeroTerm = z_repl}
+      end
+    | RUN =>
+      let in
+        case #multithread options of
+            NONE => ()
+          | SOME i => buildheap_cline_mt := SOME i;
+        List.app
+          (maybe_check_load diag)
+          ((case #multithread options of
+                NONE => []
+              | SOME _ => [("poly_decide_threadcount.uo", false)]) @
+           objs);
+        (* Check for required output files *)
         List.app (fn s => if HOLFileSys.access(s, [HOLFileSys.A_READ]) then ()
                           else die ("Couldn't find required output file: "^s ^
                                     (case #checkerr options of
                                          NONE => ""
                                        | SOME s => "\n" ^ s)))
                  (#checkfors options);
-        diag "Buildheap done; about to exit successfully";
+        diag "Run done; about to exit successfully";
         OS.Process.exit OS.Process.success
       end
+    | HEAPNAME => () (* Already handled above *)
 end handle e =>
       BuildHeap_CLINE.die ("Uncaught exception" ^
         (case PolyML.Exception.exceptionLocation e of

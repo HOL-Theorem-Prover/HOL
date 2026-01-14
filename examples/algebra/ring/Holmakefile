@@ -19,7 +19,7 @@ FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS))
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(FULL_OBJPATHS) $(HOLDIR)/bin/hol.state
-	$(protect $(HOLDIR)/bin/buildheap) $(DEBUG_FLAG) -o $@ $(FULL_OBJPATHS)
+	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -o $@ $(FULL_OBJPATHS)
 endif
 
 ifdef HOLSELFTESTLEVEL

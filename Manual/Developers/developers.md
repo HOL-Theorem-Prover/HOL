@@ -169,25 +169,27 @@ Under both Moscow&nbsp;ML and Poly/ML the following are created:
 
 Under Poly/ML, the following additional files will appear:
 
-`buildheap`
-:   This is the core execution engine of all Poly/ML HOL (but not `Holmake` or `build`). 
-    It will appear as the process name for HOL executions when working interactively, or when scripts are run to generate a theory file. It embodies the quotation handling by implementing a copy of the standard Poly/ML REPL that fiddles with the lexer.
+`hol`
+:   this is the main Poly/ML HOL executable with subcommand-based CLI. It supports the following subcommands:
+
+    - `hol` or `hol repl`: Start an interactive REPL (default)
+    - `hol --bare`: Start REPL with minimal heap (hol.state0)
+    - `hol lsp`: Start LSP server
+    - `hol buildheap -o <file>`: Build a heap from object files
+    - `hol run`: Run script files for side effects (used by Holmake)
+    - `hol heapname`: Print the heap path (reads HOLHEAP from Holmakefile)
+
+    It embodies the quotation handling by implementing a copy of the standard Poly/ML REPL that fiddles with the lexer.
 
 `genscriptdep`
 :   Given a filename, this utility executable will generate a list of a script files dependencies.
-
-`heapname`
-:   This little executable reads the startup directory’s `Holmakefile` (if present) to determine which heap should be used as the basis for interactive execution in this directory.  
-    It is called by `hol`, but *not* `hol.bare`.
-
-    `Holmake` reads `Holmakefile`s for `HOLHEAP` information for every invocation, so interactive execution of HOL in directories such as `src/pred_set/src` and `src/list/src` will have to use `hol.bare` (these are before bossLib), and will not get to use the `numheap` executable created in `src/num/termination`, even though non-interactive builds do get that benefit.
 
 `hol.state`
 :   The Poly/ML heap used by `hol` by default. 
     This embodies `bossLib` and is created in `src/boss`.
 
 `hol.state0`
-:   The Poly/ML heap used by `hol.bare`. This is built in `src/proofman`.
+:   the Poly/ML heap used by `hol --bare`. This is built in `src/proofman`.
 
 # Sources and Their Organisation {#sources}
 

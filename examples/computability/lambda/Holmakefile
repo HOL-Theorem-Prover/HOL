@@ -16,6 +16,6 @@ all: $(DEFAULT_TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o computability-heap $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/hol) buildheap -o computability-heap $(BARE_THYS)
 
 endif

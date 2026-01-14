@@ -251,7 +251,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   in
     p "#!/bin/sh";
     p ("set -e");
-    p (protect(fullPath [HOLDIR, "bin", "buildheap"]) ^ " --gcthreads=1 " ^
+    p (protect(fullPath [HOLDIR, "bin", "hol"]) ^ " run --gcthreads=1 " ^
        (case #holheap extra of NONE => "--poly"
                              | SOME d => "--holstate="^tgt_toString d) ^ " " ^
        (if isSome debug then "--dbg " else "") ^
@@ -303,9 +303,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
       let
         fun safedelete s = FileSys.remove s handle OS.SysErr _ => ()
         val _ = app safedelete expecteds
-        val useScript = fullPath [HOLDIR, "bin", "buildheap"]
+        val useScript = fullPath [HOLDIR, "bin", "hol"]
         val cline =
-            useScript::"--gcthreads=1"::
+            useScript::"run"::"--gcthreads=1"::
             (case maxheap of
                  NONE => []
                | SOME n => ["--maxheap", Int.toString n]) @
