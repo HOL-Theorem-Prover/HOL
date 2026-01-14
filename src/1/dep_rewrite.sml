@@ -176,6 +176,8 @@ fun print_all_thm th =
 fun print_theorems []        = ()
    | print_theorems (t :: ts) = (print_theorem t; print_string "\n";
                                  print_theorems ts);
+(* Not using goalStack.print_tac because this is not a tactic and we don't
+   want to include the assumptions in the output *)
 fun print_goal (asl,gl) = (print_term gl; print_newline());
 fun pthm th = (print_all_thm th; th);
 (**)

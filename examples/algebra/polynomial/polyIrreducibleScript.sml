@@ -546,7 +546,7 @@ QED
        True by poly_monic_def.
 *)
 (* Example of Debugging *)
-fun print_tac s g = (print (s^"\n"); ALL_TAC g);
+val print_tac = goalStack.note_tac
 Theorem poly_irreducible_monic:
     !r:'a field. Field r ==> !p. ipoly p ==> ?q. ipoly q /\ (deg q = deg p) /\ monic q
 Proof

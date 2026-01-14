@@ -403,4 +403,6 @@ in
   Tactical.ALL_TAC g
 end
 
+fun note_tac msg g = (print (msg ^ "\n"); Tactical.ALL_TAC g)
+
 end (* goalStack *)
