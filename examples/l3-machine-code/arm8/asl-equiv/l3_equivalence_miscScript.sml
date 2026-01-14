@@ -660,7 +660,7 @@ Proof
   rpt $ pop_assum kall_tac >> map_every qid_spec_tac [`v`,`n`] >>
   Induct >> rw[v2n_lt] >>
   Cases_on `v` >> rw[v2n] >>
-  DEP_ONCE_REWRITE_TAC[GSYM bitTheory.MOD_PLUS_RIGHT] >> conj_tac >- simp[] >>
+  ONCE_REWRITE_TAC[GSYM bitTheory.MOD_PLUS_RIGHT] >>
   qsuff_tac `2 ** LENGTH t MOD 2 ** (LENGTH t - n) = 0`
   >- (disch_then SUBST_ALL_TAC >> simp[]) >>
   pop_assum kall_tac >>
@@ -710,4 +710,3 @@ QED
 
 
 (****************************************)
-

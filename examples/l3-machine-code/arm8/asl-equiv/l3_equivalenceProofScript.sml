@@ -1401,6 +1401,62 @@ Proof
   irule $ b64 alpha X_set_asl_sys_regs_ok >> rpt $ goal_assum drule
 QED
 
+Theorem l3_models_asl_Shift:
+  l3_models_asl_instr (Data (Shift@64 (0x1w,sh,w1,w2,w3)))
+Proof
+  rw[l3_models_asl_instr_def, l3_models_asl_def] >>
+  simp[encode_rws] >>
+  qmatch_goalsub_abbrev_tac `Decode opc` >>
+  `Decode opc = Data (Shift@64 (0b1w,sh,w1,w2,w3))` by (
+    unabbrev_all_tac >> l3_decode_tac >>
+    Cases_on ‘sh’ >> gvs[DecodeShift_def]) >>
+  unabbrev_all_tac >> simp[] >> rw[] >>
+  l3_run_tac >>
+  gvs[GSYM $ b64 ``:'N`` X_def |> SIMP_RULE (srw_ss()) [FUN_EQ_THM]] >>
+  gvs[GSYM $ ShiftReg_def |> SIMP_RULE std_ss [FUN_EQ_THM]] >>
+  gvs[PULL_FORALL] >> first_x_assum $ qspec_then `l3` assume_tac >>
+  qmatch_goalsub_abbrev_tac `seqS (wr s) ex` >>
+  `∃s'. (do wr s; ex od asl) = (do wr s';
+    execute_aarch64_instrs_integer_shift_variable (&w2n w3) (:64)
+      (&w2n w1) (&w2n w2) (l3_to_asl_ShiftType sh) od asl)` by (
+    unabbrev_all_tac >>
+    Cases_on ‘sh’ >> gvs [] >>
+    asl_cexecute_tac >> gvs[] >>
+    simp [decode_lslv_aarch64_instrs_integer_shift_variable_def,
+          decode_lsrv_aarch64_instrs_integer_shift_variable_def,
+          decode_asrv_aarch64_instrs_integer_shift_variable_def,
+          decode_rorv_aarch64_instrs_integer_shift_variable_def] >>
+    gvs[armv86aTheory.DecodeShift_def] >>
+    simp[asl_reg_rws, returnS, seqS, l3_to_asl_LogicalOp_def, l3_to_asl_ShiftType_def] >>
+    irule_at Any EQ_REFL) >>
+  simp[] >> pop_assum kall_tac >> simp[Abbr `wr`, Abbr `s`, Abbr `ex`] >>
+  simp[asl_reg_rws, seqS, Once returnS] >>
+  qmatch_goalsub_abbrev_tac `asl1 : regstate sequential_state` >>
+  `state_rel l3 asl1 ∧ asl_sys_regs_ok asl1` by (unabbrev_all_tac >> state_rel_tac[]) >>
+  qpat_x_assum `state_rel l3 asl` kall_tac >>
+  simp[execute_aarch64_instrs_integer_shift_variable_def] >>
+  drule X_read >> disch_then $ qspec_then `&w2n w1` mp_tac >> impl_tac
+  >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+  drule returnS_bindS_unit >> simp[] >> disch_then kall_tac >> simp[asl_word_rws] >>
+  `ShiftReg 64 (&w2n w2) (l3_to_asl_ShiftType sh) (&(w2n (X w1 l3 : word64) MOD 64)) asl1 =
+    returnS (ShiftReg (w2,sh,w2n (X w1 l3 : word64) MOD 64) l3) asl1 : word64 res` by (
+      gvs[ShiftReg_def, ShiftValue_def, armv86aTheory.ShiftReg_def] >>
+      drule X_read >> disch_then $ qspec_then `&w2n w2` mp_tac >> impl_tac
+      >- (simp[int_ge] >> WORD_DECIDE_TAC) >> strip_tac >>
+      drule returnS_bindS_word64 >> simp[] >> disch_then kall_tac >> simp[asl_word_rws] >>
+      Cases_on `sh` >> gvs[l3_to_asl_ShiftType_def]) >>
+  drule returnS_bindS_unit >> simp [] >> disch_then kall_tac >>
+  Cases_on `w3 = 31w` >> gvs[X_set_31]
+  >- (simp[returnS] >> gvs[SetTheFlags_def, w2v_v2w]) >>
+  drule $ b64 alpha X_set_not_31 >>
+  qmatch_goalsub_abbrev_tac `X_set _ _ shift` >>
+  disch_then $ qspecl_then [`64`,`&w2n w3`,`shift`] mp_tac >> simp[] >>
+  impl_tac >- (Cases_on ‘w3’ >> gvs [] >> simp[int_ge]) >> strip_tac >>
+  simp[Abbr `shift`, returnS] >>
+  gvs[write'X_def,ShiftReg_def,arm8Theory.X_def] >>
+  irule $ b64 alpha X_set_asl_sys_regs_ok >> rpt $ goal_assum drule
+QED
+
 Theorem l3_models_asl_LogicalShiftedRegister:
   ∀b lop b1 b2 shift_type i r3 r2 r1. i < 64 ⇒
     IS_SOME (EncodeLogicalOp (lop, b2))
@@ -7667,4 +7723,3 @@ QED
 
 
 (****************************************)
-
