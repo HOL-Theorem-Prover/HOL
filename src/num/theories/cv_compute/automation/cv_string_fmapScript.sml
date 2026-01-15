@@ -48,7 +48,7 @@ Definition st_make_def:
 End
 
 Definition st_set_nil_def:
-  st_set_nil (Branch _ _ rest) y = st_set_nil rest y ∧
+  st_set_nil (Branch c t rest) y = Branch c t (st_set_nil rest y) ∧
   st_set_nil _ y = Just y
 End
 
