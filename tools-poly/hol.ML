@@ -392,7 +392,7 @@ fun main() = let
   val _ = not help orelse (print usage; OS.Process.exit OS.Process.success)
   (* For HEAPNAME subcommand, just print and exit immediately *)
   val _ = if subcmd = HEAPNAME then
-            (print (case base_state of SOME s => s | NONE => get_heap_name());
+            (print (get_heap_name());
              print "\n";
              OS.Process.exit OS.Process.success)
           else ()
