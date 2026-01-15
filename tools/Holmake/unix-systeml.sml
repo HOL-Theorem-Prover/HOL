@@ -126,7 +126,7 @@ val build_after_reloc_envvar = "HOL_REBUILD_HEAPS_ONLY"
 
 
 (* Generate shell script that supports --bare flag *)
-fun emit_hol_script target {boss_qend, bare_qend} _ = let
+fun emit_hol_script target {boss_qend, bare_qend} = let
   val ostrm = TextIO.openOut target
   fun output s = TextIO.output(ostrm, s)
   val sigobj = protect (fullPath [HOLDIR, "sigobj"])
@@ -159,7 +159,7 @@ end
 
 
 (* Generate shell script with unquote filter that supports --bare flag *)
-fun emit_hol_unquote_script target {boss_qend, bare_qend} _ = let
+fun emit_hol_unquote_script target {boss_qend, bare_qend} = let
   val ostrm = TextIO.openOut target
   fun output s = TextIO.output(ostrm, s)
   val qfilter = protect (fullPath [HOLDIR, "bin", "unquote"])

@@ -9,10 +9,11 @@ sig
   val xable_string : string -> string
   val mk_xable : string -> OS.Process.status
 
-(* first argument to these are the name of the desired executable, the
-   second is the name of the post-initialisation script to run. *)
-  val emit_hol_script : string -> string -> string list -> OS.Process.status
-  val emit_hol_unquote_script : string -> string -> string list ->
+(* first argument is the name of the desired executable, the
+   second is a record with quotation end patterns for bare and full modes *)
+  val emit_hol_script : string -> {boss_qend: string, bare_qend: string} ->
+                        OS.Process.status
+  val emit_hol_unquote_script : string -> {boss_qend: string, bare_qend: string} ->
                                 OS.Process.status
 
   val find_my_path : unit -> string
