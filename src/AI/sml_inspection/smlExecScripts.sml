@@ -86,9 +86,10 @@ fun exec_scriptb b script =
     val fileout = !buildheap_dir ^ "/buildheap_" ^ bare script
     val depl = find_genscriptdep script
     val heap = if b then find_tttheapname script else find_heapname script
+    (* Poly/ML runtime options must come before subcommand *)
     val cmd = String.concatWith " "
-      ([hol_bin,"run","--holstate=" ^ heap,"--gcthreads=1"] @
-       [!buildheap_options] @
+      ([hol_bin,"--gcthreads=1"] @ [!buildheap_options] @
+       ["run","--holstate=" ^ heap] @
        depl @ [OS.Path.file script,">",fileout])
   in
     cmd_in_dir (OS.Path.dir script) cmd
@@ -149,9 +150,10 @@ fun exec_ttteval dirout script =
   let
     val fileout = dirout ^ "/buildheap_" ^ bare script
     val heap = HOLDIR ^ "/bin/hol.state0"
+    (* Poly/ML runtime options must come before subcommand *)
     val cmd = String.concatWith " "
-      ([hol_bin,"run","--holstate=" ^ heap,"--gcthreads=1"] @
-       [!buildheap_options,OS.Path.file script,">",fileout])
+      ([hol_bin,"--gcthreads=1"] @ [!buildheap_options] @
+       ["run","--holstate=" ^ heap,OS.Path.file script,">",fileout])
   in
     cmd_in_dir (OS.Path.dir script) cmd
   end
