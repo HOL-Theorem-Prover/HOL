@@ -349,13 +349,15 @@ fun main() = let
   (* Parse subcommand first *)
   val (subcmd, remaining_args) = parse_subcommand (CommandLine.arguments())
   val usage_header =
-    "Usage:\n  " ^ progname ^ " [subcommand] [options] [files...]\n\n\
+    "Usage:\n  " ^ progname ^ " [poly-options] [subcommand] [options] [files...]\n\n\
     \Subcommands:\n\
     \  repl       Start interactive REPL (default)\n\
     \  lsp        Start LSP server\n\
     \  buildheap  Build a heap from object files\n\
     \  run        Run script files for side effects\n\
     \  heapname   Print the heap path\n\n\
+    \NOTE: Poly/ML runtime options (e.g., --maxheap, --gcthreads) must appear\n\
+    \      BEFORE the subcommand to take effect.\n\n\
     \Options:"
   val usage =
       GetOpt.usageInfo {header = usage_header,
