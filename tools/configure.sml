@@ -509,8 +509,6 @@ val _ =
   emit_hol_script target qends
  end;
 
-(* Remove Poly/HOL executables from bin, if they're there *)
-val _ = FileSys.remove (fullPath [holdir, "bin", "hol"]) handle _ => ()
 
 
 (*---------------------------------------------------------------------------
