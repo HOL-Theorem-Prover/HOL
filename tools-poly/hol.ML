@@ -183,8 +183,8 @@ val cline_opts = [
    long = ["dbg"], short = "", desc = mkBoolT #debug},
   {help = "default outputname", long = ["defaultout"], short = "",
    desc = setStringOpt "filename" #defaultout},
-  {help = "fn name to be executable's main", long = ["exe"], short = "",
-   desc = setStringOpt "fn-name" #exe},
+  {help = "create executable with given main fn (buildheap only)",
+   long = ["exe"], short = "", desc = setStringOpt "fn-name" #exe},
   {help = "pass 'extra data' to code", long = ["extra"], short = "",
    desc = setStringOpt "data" #extra_data},
   {help = "force all object files", long = [], short = "F",
@@ -353,7 +353,9 @@ fun main() = let
     \Subcommands:\n\
     \  repl       Start interactive REPL (default)\n\
     \  lsp        Start LSP server\n\
-    \  buildheap  Build a heap from object files\n\
+    \  buildheap  Build a heap or executable from object files\n\
+    \             Use -o to specify output. Add --exe=fnname to create a\n\
+    \             standalone executable instead of a heap.\n\
     \  run        Run script files for side effects\n\
     \  heapname   Print the heap path\n\n\
     \NOTE: Poly/ML runtime options (e.g., --maxheap, --gcthreads) must appear\n\
@@ -476,7 +478,23 @@ in
             | SOME p => p
       in
         heapname := SOME s;
-        create_heap diag qp findmod (map #1 objs, s)
+        case exe of
+            NONE =>
+            (* No --exe: create heap, expects .uo files *)
+            create_heap diag qp findmod (map #1 objs, s)
+          | SOME fnname =>
+            (* --exe specified: use maybe_check_load for .sml/.ML support,
+               then export executable *)
+            (case #multithread options of
+                 NONE => ()
+               | SOME i => buildheap_cline_mt := SOME i;
+             List.app (maybe_check_load diag)
+               ((case #multithread options of
+                     NONE => []
+                   | SOME _ => [("poly_decide_threadcount.uo", false)]) @
+                objs);
+             BuildHeap_EXE_Compile.exe_compile
+               {fnname = fnname, output_exe = s, keep_temp_files = debug})
       end
     | LSP =>
       let in
