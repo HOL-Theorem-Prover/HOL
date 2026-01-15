@@ -22,7 +22,7 @@ all: selftest.exe $(TARGET) $(UOFILES)
 .PHONY: all
 
 ifdef POLY
-$(TARGET): poly-mkmkmunge.ML $(dprot $(HOLDIR)/bin/hol) buildheap
+$(TARGET): poly-mkmkmunge.ML $(dprot $(HOLDIR)/bin/hol)
 	$(protect $(HOLDIR)/bin/hol) buildheap --poly $<
 else
 $(TARGET): $($(ML_SYSNAME)_MKMUNGE_DEP)
