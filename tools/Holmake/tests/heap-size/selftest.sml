@@ -16,13 +16,13 @@ val _ = inDir "test" (fn () =>
                                           "cleanAll"]))
 val _ = OK()
 
-val _ = tprint "--heap-size=1 should fail (heap too small)"
+val _ = tprint "--heap-size=2 should fail (heap too small)"
 val res = inDir "test" (fn () =>
   Systeml.systeml [Systeml.HOLDIR ^ "/bin/Holmake",
                    "--holstate", Systeml.HOLDIR ^ "/bin/hol.state0",
-                   "--heap-size=1", "--no_overlay", "-r"])
+                   "--heap-size=2", "--no_overlay", "-r"])
 val _ = if OS.Process.isSuccess res
-        then die "FAILED: expected build to fail with 1MB heap"
+        then die "FAILED: expected build to fail with 2MB heap"
         else OK()
 
 val _ = tprint "Cleaning test directory"
