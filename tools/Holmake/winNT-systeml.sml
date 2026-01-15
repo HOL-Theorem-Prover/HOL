@@ -117,7 +117,7 @@ local
   fun q s = "\""^munge s^"\""
 in
 (* Generate batch script that supports --bare flag *)
-fun emit_hol_script target {boss_qend, bare_qend} _ =
+fun emit_hol_script target {boss_qend, bare_qend} =
  let val ostrm = fopen(target^".bat")
      fun output s = TextIO.output(ostrm, s)
      val sigobj = q (fullPath [HOLDIR, "sigobj"])
@@ -150,7 +150,7 @@ fun emit_hol_script target {boss_qend, bare_qend} _ =
 
 
 (* Generate batch script with unquote filter that supports --bare flag *)
-fun emit_hol_unquote_script target {boss_qend, bare_qend} _ =
+fun emit_hol_unquote_script target {boss_qend, bare_qend} =
  let val ostrm = fopen(target^".bat")
      fun output s = TextIO.output(ostrm, s)
      val qfilter = q (fullPath [HOLDIR, "bin", "unquote"])
