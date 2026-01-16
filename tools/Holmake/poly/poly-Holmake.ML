@@ -15,9 +15,9 @@ fun useS f = use ("../" ^ f ^ ".sml")
 
 val _ = use "../hmcore.ML";
 
-val _ = useC "tailbuffer";
-val _ = useC "GetOpt";
-val _ = useS "FunctionalRecordUpdate";
+val _ = useC "util/tailbuffer";
+val _ = (use "../../util/GetOpt.sig"; use "../../util/GetOpt.sml");
+val _ = use "../../util/FunctionalRecordUpdate.sml";
 val _ = useC "HM_Core_Cline";
 val _ = useC "deps/HM_DepGraph";
 val _ = useC "HM_GraphBuildJ1";

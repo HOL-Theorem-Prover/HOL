@@ -6,9 +6,9 @@ val _ = use "../tools/Holmake/Systeml.sig"
 val _ = use "Holmake/Systeml.sml";
 
 val _ = use "../tools/Holmake/hmcore.ML";
-val _ = use "../tools/Holmake/GetOpt.sig";
-val _ = use "../tools/Holmake/GetOpt.sml";
-val _ = use "../tools/Holmake/FunctionalRecordUpdate.sml";
+val _ = use "../tools/util/GetOpt.sig";
+val _ = use "../tools/util/GetOpt.sml";
+val _ = use "../tools/util/FunctionalRecordUpdate.sml";
 val _ = use "holrepl.ML";
 val _ = use "execompile.ML";
 
