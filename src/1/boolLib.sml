@@ -170,6 +170,22 @@ local
         check_DBempty
       )
 in
+fun printable_keys nms =
+    let val ctab =
+            List.foldl
+              (fn (nm,T) => Symtab.map_default (nm,0) (fn c => c + 1) T)
+              Symtab.empty
+              nms
+    in
+      Symtab.fold_rev
+        (fn (nm,c) => fn A =>
+            (if c = 1 then nm
+             else nm ^ "(" ^ Int.toString c ^ ")") ::
+            A)
+        ctab
+        []
+    end
+
 fun update_suspensionDB firstp (n,th) =
     (if firstp then
        case Symtab.lookup (Sref.value suspensionDBref) n of
@@ -232,11 +248,18 @@ in
     | susp_names =>
       let
       in
-        HOL_MESG (
-          "Stashing suspended theorem " ^ n ^
-          " with pending subgoals: " ^
-          String.concatWith ", " susp_names ^ "."
-        );
+        case printable_keys susp_names of
+            [nstr] =>
+            HOL_MESG (
+              "Stashing suspended theorem " ^ n ^
+              " with pending subgoal: " ^ nstr ^ "."
+            )
+          | strs =>
+            HOL_MESG (
+              "Stashing suspended theorem " ^ n ^
+              " with pending subgoals: " ^
+              String.concatWith ", " strs ^ "."
+            );
         if localp orelse not (null attrs) then
           HOL_WARNING "boolLib" "save_thm_attrs"
                       "Ignoring attributes on suspended theorem"

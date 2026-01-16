@@ -4,7 +4,7 @@ Theory suspTest[bare]
    after the first
 *)
 
-Libs HolKernel Parse boolLib markerLib Q
+Libs HolKernel Parse boolLib markerLib Q[qualified]
 
 Theorem willsplit:
   p ∧ (p ⇒ q) ⇒ p ∧ q
@@ -50,3 +50,20 @@ val final = finalise_suspended_thm (DB_dtype.mkloc(#(FILE),#(LINE),true))
 
 val ws = fetch "suspTest" "willsplit"
 val ws2 = fetch "suspTest" "willsplit2"
+
+Theorem multisplit:
+  p ∧ q ⇒ q ∧ p
+Proof
+  rpt strip_tac >> suspend "p"
+QED
+
+val _ = set_suspended_goal Manager.id_tacm
+  {label_name = "p", suspension_name = "multisplit"}
+
+val multi_resumed = resume{label_name = "p", suspension_name = "multisplit"}
+  (RESUME_TAC >> FIRST_ASSUM ACCEPT_TAC)
+
+val multi_final = finalise_suspended_thm (DB_dtype.mkloc(#(FILE),#(LINE),true))
+                                         "multisplit"
+
+val ms = fetch "suspTest" "multisplit"

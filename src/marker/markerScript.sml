@@ -152,10 +152,15 @@ val resconj_def = new_definition(
   "resconj_def",
   “resconj = $/\”);
 
-(* hopefully won't appear that often *)
+(* hopefully these won't appear to the user that often *)
 val _ = set_mapped_fixity {
   term_name = "resconj", fixity = Infixr 400,
-  tok = UnicodeChars.conj ^ UnicodeChars.sub_r
+  tok = UTF8.chr 0x214B ^ UnicodeChars.sub_r
+  };
+
+val _ = set_mapped_fixity {
+  term_name = "suspendimp", fixity = Infixr 200,
+  tok = UTF8.chr 0x21E8 ^ UnicodeChars.sub_r
   };
 
 (* ----------------------------------------------------------------------

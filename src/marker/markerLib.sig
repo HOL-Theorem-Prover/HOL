@@ -117,6 +117,7 @@ sig
   val add_suspension_label : string -> thm -> thm
   val resumption_to_goal : term -> (term list * term)
   val extract_suspended_goal : thm -> string -> term
+  val RESUME_TAC : tactic
 
 end (* sig *)
 
