@@ -466,7 +466,6 @@ in
       BUILDHEAP =>
       let
         val s = valOf output
-        val _ = List.app (check_objpath die (absPath "." :: allincs)) objs
         val search_these =
             "." :: OS.Path.concat(Systeml.HOLDIR, "sigobj") :: allincs
         fun findmod s =
@@ -480,8 +479,10 @@ in
         heapname := SOME s;
         case exe of
             NONE =>
-            (* No --exe: create heap, expects .uo files *)
-            create_heap diag qp findmod (map #1 objs, s)
+            (* No --exe: create heap, expects .uo files.
+               check_objpath validates paths are in sigobj or includes *)
+            (List.app (check_objpath die (absPath "." :: allincs)) objs;
+             create_heap diag qp findmod (map #1 objs, s))
           | SOME fnname =>
             (* --exe specified: use maybe_check_load for .sml/.ML support,
                then export executable *)
