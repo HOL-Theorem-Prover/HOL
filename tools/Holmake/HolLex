@@ -20,6 +20,8 @@ datatype decl
   | TheoremDecl of {
       head: int * string, quote: qbody, proof_tok: (int * string) option,
       body: decls, qed: int option, stop: int}
+  | ResumeDecl of {
+      head: int * string, body: decls, qed: int option, stop: int}
   | Chunk of int
   | Semi of int
   | FullQuote of {
@@ -300,6 +302,14 @@ ProofLine = {newline}"Proof"({ws}*"["{optallws}{defn_attribute_list}{optallws}"]
       head = (yypos, yytext), quote = q, proof_tok = proof_tok,
       body = decls, qed = qed, stop = stop}, extra)
   end);
+<INITIAL>^"Resume"{ws}+{id_with_attributes}{ws}*":" => (let
+  val (decls, qed, stop, extra) =
+    parseDecls yyarg continue yyend (fn QED p => SOME p | _ => NONE)
+in
+  Decl (ResumeDecl {
+      head = (yypos, yytext), body = decls, qed = qed, stop = stop
+  }, extra)
+end);
 <INITIAL>^"QED" => (QED yypos);
 <INITIAL>^{Definitionpfx} => (let
   val _ = YYBEGIN quote

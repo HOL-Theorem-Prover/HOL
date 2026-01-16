@@ -349,11 +349,36 @@ structure ToSML = struct
     strstr: int * int -> unit,
     strstr': int * substring -> unit }
 
+  fun doProofMod ddargs (p,sz) gabs mod_alist =
+      let
+        val {aux,readAt,line,ss,countlines,...} = ddargs:doDecl_args
+        fun ofKey "exclude_simps" = "simpLib.remove_simps"
+          | ofKey "exclude_frags" = "simpLib.remove_ssfrags"
+          | ofKey k = k
+        fun mktm1 (k,vals) =
+            ofKey (ss k) ^ " [" ^
+            String.concatWith "," (map (mlquote o ss) vals) ^ "]"
+        fun mktm kv [] = mktm1 kv
+          | mktm kv (kv2::xs) = mktm1 kv ^ " o " ^ mktm kv2 xs
+        val () =
+            case mod_alist of
+                [] => ()
+              | kv::attrs => aux ("BasicProvers.with_simpset_updates (" ^
+                                  mktm kv attrs ^ ") ")
+        val n = #1 (!line)
+        val _ = readAt p (p + sz) countlines
+      in
+        aux gabs;
+        aux (CharVector.tabulate (#1 (!line) - n, (fn _ => #"\n")))
+      end
+
+
   fun mkDoDecl
-      ({regular, aux, strstr, parseError, quietOpen,
-       full, ss, cat, regular', strstr', filename, line, isTheory,
-       noSigDocs, doQuote, doDecls, magicBind, doQuoteConj,
-       doThmAttrs, readAt, countlines}: doDecl_args) = let
+      (ddargs as
+       {regular, aux, strstr, parseError, quietOpen,
+        full, ss, cat, regular', strstr', filename, line, isTheory,
+        noSigDocs, doQuote, doDecls, magicBind, doQuoteConj,
+        doThmAttrs, readAt, countlines}: doDecl_args) = let
     open Simple
     fun doDecl d = case d of
         TheoryDecl {head = (p, head), elems, stop} => let
@@ -529,22 +554,32 @@ structure ToSML = struct
           doThmAttrs isTriv attrs name_attrs; aux "\", ";
           doQuote quote; aux ", ";
           case proof_tok of
-            SOME (p, tok) => let
-            fun ofKey "exclude_simps" = "simpLib.remove_simps"
-              | ofKey "exclude_frags" = "simpLib.remove_ssfrags"
-              | ofKey k = k
-            fun mktm1 (k,vals) = ofKey (ss k) ^ " [" ^
-              String.concatWith "," (map (mlquote o ss) vals) ^ "]"
-            fun mktm kv [] = mktm1 kv
-              | mktm kv (kv2::xs) = mktm1 kv ^ " o " ^ mktm kv2 xs
-            val () = case destAttrs (#2 (destNameAttrs (full tok))) of
-              [] => ()
-            | kv::attrs => aux ("BasicProvers.with_simpset_updates (" ^ mktm kv attrs ^ ") ")
-            val n = #1 (!line)
-            val _ = readAt p (p + size tok) countlines
-            in aux goalabs; aux (CharVector.tabulate (#1 (!line) - n, (fn _ => #"\n"))) end
+            SOME (p, tok) =>
+             doProofMod ddargs (p,size tok) goalabs
+                (destAttrs (#2 (destNameAttrs (full tok))))
           | _ => aux goalabs;
           doDecls dstart decls dstop; aux ") HOL__GOAL__foo));"
+        end
+      | ResumeDecl {head = (p, head), body, ...} => let
+          val {thmname,attrs,name_attrs,...} = parseTheoremPfx head
+          val goalabs = "(fn HOL__GOAL__foo => ("
+          val (label,rest) =
+              case destAttrs attrs of
+                  [] => ("",[])
+                | (s,_)::t => (ss s,t)
+          val (subname,rest) =
+              case rest of
+                  (maybe_sub,[snm])::more_alist =>
+                  if ss maybe_sub = "sub" then (ss snm,more_alist)
+                  else ("_", rest)
+                | _ => ("_" , rest)
+          val Decls {start = dstart, decls, stop = dstop} = body
+        in
+          aux "val "; aux subname; aux " = ";
+          aux "markerLib.resume{label_name="; aux (mlquote label^",");
+          aux "suspension_name="; aux (mlquote (ss thmname) ^ "}(");
+          doProofMod ddargs (p,size head) goalabs rest;
+          doDecls dstart decls dstop; aux ") HOL__GOAL__foo))"
         end
       | Chunk _ => ()
       | Semi _ => ()
@@ -687,6 +722,7 @@ structure ToSML = struct
       | QuoteEqnDecl   {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
       | InductiveDecl  {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
       | TheoremDecl    {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | ResumeDecl     {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
       | BeginType      (p, head) => (regular (pos, p); finishThmVal (); doDeclCore d; inThmVal := true; p + size head)
       | BeginSimpleThm (p, head) => (regular (pos, p); finishThmVal (); doDeclCore d; inThmVal := true; p + size head)
       | Chunk p =>

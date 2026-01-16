@@ -1,7 +1,7 @@
 Theory suspTest[bare]
 
-(* tests suspension and resumption without any "modern syntax" for steps
-   after the first
+(* Tests suspension and resumption with and without "modern syntax" for
+   the various steps (Theorem (with suspend tactic), Resume, and Finalise).
 *)
 
 Libs HolKernel Parse boolLib markerLib Q[qualified]
@@ -30,11 +30,15 @@ val psubgoal = resume{label_name = "p", suspension_name = "willsplit"}
 val _ = set_suspended_goal Manager.id_tacm {
   label_name = "q", suspension_name = "willsplit"}
 
-val qsubgoal = resume{label_name = "q", suspension_name = "willsplit"}
-  (RES_TAC)
+Resume willsplit[q]:
+  RES_TAC
+QED
 
-val q2sg = resume{label_name = "q", suspension_name = "willsplit2"}
-  (SUFF_TAC “F” THENL [REWRITE_TAC[], suspend "q"])
+Resume willsplit2[q,sub=q2sg]:
+  SUFF_TAC “F” THENL [REWRITE_TAC[], suspend "q"]
+QED
+
+val c = concl q2sg;
 
 val _ = set_suspended_goal Manager.id_tacm {
   label_name = "q", suspension_name = "willsplit2"
