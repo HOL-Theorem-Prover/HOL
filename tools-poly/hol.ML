@@ -515,14 +515,15 @@ in
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
+        (* Load prelude files first for interactive mode, so user scripts
+           have access to Parse, bossLib, etc. *)
+        load_preludes();
         List.app
           (maybe_check_load diag)
           ((case #multithread options of
                 NONE => []
               | SOME _ => [("poly_decide_threadcount.uo", false)]) @
            objs);
-        (* Load prelude files for interactive mode *)
-        load_preludes();
         diag "Starting REPL";
         PolyML.print_depth 100;
         HOL_REPL.sigint_handler();
