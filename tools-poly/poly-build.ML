@@ -10,9 +10,15 @@ fun useC f =
 fun useDeps f =
     (use ("../tools/Holmake/deps/" ^ f ^ ".sig");
      use ("../tools/Holmake/deps/" ^ f ^ ".sml"))
+fun useUtil f =
+    (use ("../tools/util/" ^ f ^ ".sig");
+     use ("../tools/util/" ^ f ^ ".sml"))
+fun useHMUtil f =
+    (use ("../tools/Holmake/util/" ^ f ^ ".sig");
+     use ("../tools/Holmake/util/" ^ f ^ ".sml"))
 
 val _ = use "Holmake/Systeml.sml";
-val _ = useC "GetOpt";
+val _ = useUtil "GetOpt";
 val _ = use "../tools/Holmake/HOLFS_dtype.sml";
 val _ = use "../tools/Holmake/HFS_NameMunge.sig";
 val _ = use "../tools/Holmake/poly/HFS_NameMunge.sml";
@@ -24,16 +30,16 @@ val _ = use "../tools/Holmake/HolLex.sml";
 val _ = useC "HolParser";
 val _ = useDeps "Holdep";
 val _ = use "../tools/Holmake/Holmake_tools_dtype.sml";
-val _ = use "../tools/Holmake/terminal_primitives.sig";
-val _ = use "../tools/Holmake/poly-terminal-prims.ML";
+val _ = use "../tools/Holmake/util/terminal_primitives.sig";
+val _ = use "../tools/Holmake/util/poly-terminal-prims.ML";
 val _ = useC "Holmake_tools"
-val _ = useC "regexpMatch"
+val _ = useUtil "regexpMatch"
 val _ = useC "parse_glob"
 val _ = useC "internal_functions"
 val _ = useC "Holmake_types"
 val _ = useC "ReadHMF"
 val _ = use "../tools/buildcline_dtype.sml"
-val _ = use "../tools/Holmake/FunctionalRecordUpdate.sml"
+val _ = use "../tools/util/FunctionalRecordUpdate.sml"
 val _ = useC "../buildcline"
 val _ = use "../tools/buildutils.sig";
 val _ = use "../tools/buildutils.sml";

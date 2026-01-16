@@ -306,8 +306,8 @@ val _ =
     systeml [mllex, "HolLex"];
     compile [] "holpathdb.sig";
     compile [] "holpathdb.sml";
-    compile [] "regexpMatch.sig";
-    compile [] "regexpMatch.sml";
+    compile [] "../util/regexpMatch.sig";
+    compile [] "../util/regexpMatch.sml";
     compile [] "parse_glob.sig";
     compile [] "parse_glob.sml";
     compile [] "HOLFS_dtype.sml";
@@ -329,8 +329,8 @@ val _ =
     compile [] "AttributeSyntax.sig";
     compile [] "AttributeSyntax.sml";
     compile [] "HolLex.sml";
-    compile [] "terminal_primitives.sig";
-    compile [] "terminal_primitives.sml";
+    compile [] "util/terminal_primitives.sig";
+    compile [] "util/terminal_primitives.sml";
     compile [] "Holmake_tools_dtype.sml";
     compile [] "HolParser.sig";
     compile [] "HolParser.sml";
@@ -346,9 +346,9 @@ val _ =
     compile [] "Holmake_types.sml";
     compile [] "ReadHMF.sig";
     compile [] "ReadHMF.sml";
-    compile [] "GetOpt.sig";
-    compile [] "GetOpt.sml";
-    compile [] "FunctionalRecordUpdate.sml";
+    compile [] "../util/GetOpt.sig";
+    compile [] "../util/GetOpt.sml";
+    compile [] "../util/FunctionalRecordUpdate.sml";
     compile [] "HM_Core_Cline.sig";
     compile [] "HM_Core_Cline.sml";
     compile ["-I", "deps"] "holdeptool.sml";

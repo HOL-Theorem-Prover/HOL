@@ -1,6 +1,6 @@
 use "../../../tools-poly/poly/Binarymap.sig";
 use "../../../tools-poly/poly/Binarymap.sml";
-use "../FunctionalRecordUpdate.sml";
+use "../../util/FunctionalRecordUpdate.sml";
 use "ProcessMultiplexor.sig";
 use "ProcessMultiplexor.sml";
 
