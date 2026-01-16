@@ -3,7 +3,6 @@ hol.state0
 Holmake
 build
 hol
-hol.noquote
 unquote
 hol.builder
 hol.builder0

@@ -134,10 +134,10 @@ stage, consult Section~\ref{sec:editting-configure} below.
 
 The next step is to run the \texttt{build} program.  This should
 result in a great deal of output as all of the system code is compiled
-and the theories built.  Eventually, a \HOL{} system\footnote{Two
-  \HOL{} executables are produced: \textsf{hol} and \textsf{hol.noquote}.
-  The \texttt{--bare} flag can be used for a minimal environment.
-  The first of these will be used for most examples in the \TUTORIAL{}.} is produced in
+and the theories built.  Eventually, a \HOL{} system\footnote{The
+  \textsf{hol} executable supports \texttt{--bare} for a minimal environment.
+  With Moscow~ML, \texttt{--noquote} disables the quotation filter;
+  with Poly/ML, \texttt{--poly} starts with no HOL state.} is produced in
 the \texttt{bin/} directory.
 
 \begin{session}
@@ -253,7 +253,6 @@ Making bin/build.
 - Setting up the standard prelude.
 - Setting up src/0/Globals.sml.
 - Generating bin/hol.
-- Generating bin/hol.noquote.
 - Attempting to compile quote filter ... successful.
 - Setting up the muddy library Makefile.
 - Setting up the help Makefile.

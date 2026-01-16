@@ -9,12 +9,10 @@ sig
   val xable_string : string -> string
   val mk_xable : string -> OS.Process.status
 
-(* first argument is the name of the desired executable, the
-   second is a record with quotation end patterns for bare and full modes *)
+(* Generate HOL shell script supporting --bare and --noquote flags.
+   First argument is the target path, second is quotation end patterns. *)
   val emit_hol_script : string -> {boss_qend: string, bare_qend: string} ->
                         OS.Process.status
-  val emit_hol_unquote_script : string -> {boss_qend: string, bare_qend: string} ->
-                                OS.Process.status
 
   val find_my_path : unit -> string
 
