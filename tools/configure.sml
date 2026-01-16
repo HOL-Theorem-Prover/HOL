@@ -494,19 +494,8 @@ val _ =
      val boss_qend   = fullPath [holdir, "tools/end-init-boss.sml"]
      val qends       = {boss_qend = boss_qend, bare_qend = bare_qend}
  in
-   (* "unquote" scripts use the unquote executable to provide nice
-      handling of double-backquote characters *)
-   emit_hol_unquote_script target qends
- end;
-
-val _ =
- let val _ = echo "Generating bin/hol.noquote."
-     val target      = fullPath [holdir, "bin/hol.noquote"]
-     val bare_qend   = fullPath [holdir, "tools/end-init.sml"]
-     val boss_qend   = fullPath [holdir, "tools/end-init-boss.sml"]
-     val qends       = {boss_qend = boss_qend, bare_qend = bare_qend}
- in
-  emit_hol_script target qends
+   (* Single script supports --bare and --noquote flags *)
+   emit_hol_script target qends
  end;
 
 
