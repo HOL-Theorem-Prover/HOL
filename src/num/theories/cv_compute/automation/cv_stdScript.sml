@@ -494,6 +494,17 @@ Proof
   \\ rw[finite_mapTheory.DOMSUB_FLOOKUP_THM]
 QED
 
+Theorem cv_rep_FUNION[cv_rep]:
+  from_fmap f (FUNION m1 m2) = cv_union (from_fmap f m1) (from_fmap f m2)
+Proof
+  rw[from_fmap_def, GSYM (theorem "cv_union_thm")]
+  \\ AP_TERM_TAC
+  \\ DEP_REWRITE_TAC[sptreeTheory.spt_eq_thm]
+  \\ simp[sptreeTheory.wf_union, sptreeTheory.wf_fromAList]
+  \\ simp[sptreeTheory.lookup_union, sptreeTheory.lookup_fromAList]
+  \\ simp[finite_mapTheory.FLOOKUP_FUNION]
+QED
+
 (*----------------------------------------------------------*
    num fset
  *----------------------------------------------------------*)
