@@ -25,7 +25,8 @@ sig
    val export_termsimp : string -> unit
    val temp_export_termsimp : string -> unit
 
-   val termination_solve_simps : thm list ref
+   val termination_solve_simps : unit -> thm list
+   val export_termsolve_simp : string -> unit
 
    val termination_ss  : unit -> simpset
    val TC_SIMP_TAC     : simpset -> thm list -> tactic
