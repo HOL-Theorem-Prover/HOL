@@ -3,6 +3,7 @@ header-includes: |
   \usepackage{amssymb}
   \usepackage{stmaryrd}
   \usepackage{bbm}
+  \usepackage[notextcomp]{stix}
   \usepackage{accsupp}
   \newcommand*{\llbrace}{%
     \BeginAccSupp{method=hex,unicode,ActualText=2983}%
@@ -34,10 +35,12 @@ header-includes: |
   \DeclareUnicodeCharacter{2081}{\ensuremath{{}\sb{1}}}
   \DeclareUnicodeCharacter{2082}{\ensuremath{{}\sb{2}}}
   \DeclareUnicodeCharacter{2099}{\ensuremath{{}\sb{n}}}
+  \DeclareUnicodeCharacter{214B}{$\upand$}
   \DeclareUnicodeCharacter{21A6}{$\mapsto$}
   \DeclareUnicodeCharacter{21CE}{\ensuremath{\not\Leftrightarrow}}
   \DeclareUnicodeCharacter{21D2}{$\Rightarrow$}
   \DeclareUnicodeCharacter{21D4}{$\Leftrightarrow$}
+  \DeclareUnicodeCharacter{21E8}{$\rightwhitearrow$}
   \DeclareUnicodeCharacter{2200}{$\forall$}
   \DeclareUnicodeCharacter{2203}{$\exists$}
   \DeclareUnicodeCharacter{2208}{\ensuremath{\in}}
@@ -57,6 +60,8 @@ header-includes: |
   \DeclareUnicodeCharacter{2294}{\ensuremath{\sqcup}}
   \DeclareUnicodeCharacter{2297}{\ensuremath{\otimes}}
   \DeclareUnicodeCharacter{22A2}{$\vdash$}
+  \DeclareUnicodeCharacter{2772}{$\lbrbrak$}
+  \DeclareUnicodeCharacter{2773}{$\rbrbrak$}
   \DeclareUnicodeCharacter{2983}{$\llbrace$}
   \DeclareUnicodeCharacter{2984}{$\rrbrace$}
   \DeclareUnicodeCharacter{2987}{\ensuremath{\llparenthesis}}
@@ -412,7 +417,8 @@ a HOL identifier can be of two forms:
       $\lfloor$       `U+230A`      ⦄                 `U+2984`
       $\rfloor$       `U+230B`      ⦇                 `U+2987`
       $\llbracket$    `U+27E6`      ⦈                 `U+2988`
-      $\rrbracket$    `U+27E7`
+      $\rrbracket$    `U+27E7`      ❲                 `U+2772`
+                                     ❳                 `U+2773`
 
     Table: Non-aggregating Unicode characters
 
