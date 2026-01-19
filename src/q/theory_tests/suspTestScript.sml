@@ -34,7 +34,7 @@ Resume willsplit[q]:
   RES_TAC
 QED
 
-Resume willsplit2[q,sub=q2sg]:
+Resume willsplit2[q,smlname=q2sg]:
   SUFF_TAC “F” THENL [REWRITE_TAC[], suspend "q"]
 QED
 

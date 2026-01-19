@@ -22,6 +22,12 @@ fun unescape s =
     doit false 0 []
   end
 
+fun pluck p [] = NONE
+  | pluck p (h::t) =
+    if p h then SOME(h,t)
+    else case pluck p t of NONE => NONE | SOME (e,t) => SOME(e,h::t)
+
+
 structure Simple = struct
 
 local
@@ -575,11 +581,10 @@ structure ToSML = struct
                   [] => ("",[])
                 | (s,_)::t => (ss s,t)
           val (subname,rest) =
-              case rest of
-                  (maybe_sub,[snm])::more_alist =>
-                  if ss maybe_sub = "sub" then (ss snm,more_alist)
-                  else ("_", rest)
-                | _ => ("_" , rest)
+              case pluck (fn (k,v) => ss k = "smlname") rest of
+                  NONE => ("_", rest)
+                | SOME ((_,nm::_), l) => (ss nm, l)
+                | SOME ((_,[]), l) => ("_", rest)
           val Decls {start = dstart, decls, stop = dstop} = body
         in
           aux "val "; aux subname; aux " = ";
