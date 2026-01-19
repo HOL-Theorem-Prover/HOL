@@ -22,6 +22,7 @@ datatype decl
       body: decls, qed: int option, stop: int}
   | ResumeDecl of {
       head: int * string, body: decls, qed: int option, stop: int}
+  | FinaliseThm of int * string
   | Chunk of int
   | Semi of int
   | FullQuote of {
@@ -310,6 +311,9 @@ in
       head = (yypos, yytext), body = decls, qed = qed, stop = stop
   }, extra)
 end);
+<INITIAL>^"Finalise"{ws}+{id_with_attributes} => (
+  Decl (FinaliseThm (yypos, yytext), NONE)
+);
 <INITIAL>^"QED" => (QED yypos);
 <INITIAL>^{Definitionpfx} => (let
   val _ = YYBEGIN quote

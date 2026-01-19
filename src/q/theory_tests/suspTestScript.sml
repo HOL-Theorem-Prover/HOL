@@ -67,7 +67,6 @@ val _ = set_suspended_goal Manager.id_tacm
 val multi_resumed = resume{label_name = "p", suspension_name = "multisplit"}
   (RESUME_TAC >> FIRST_ASSUM ACCEPT_TAC)
 
-val multi_final = finalise_suspended_thm (DB_dtype.mkloc(#(FILE),#(LINE),true))
-                                         "multisplit"
+Finalise multisplit
 
 val ms = fetch "suspTest" "multisplit"

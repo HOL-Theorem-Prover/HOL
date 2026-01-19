@@ -143,10 +143,17 @@ fun parseBeginType (start, text) parseError = let
   in {local_ = !local_, kind = kind, keyword = keyword, tyname = name} end
 
 (* {Theorempfx}{ws}*":"  or  {Theorempfx}({ws}|{newline})+"="
-where Theorempfx = ("Theorem"|"Triviality"){ws}+{alphaMLid}({ws}*"["{alphaMLid_list}"]")?; *)
+   where Theorempfx =
+     ("Theorem"|"Triviality"|"Resume"){ws}+{id_with_attributes}
+   or "Finalise"{ws}+{id_with_attributes}
+*)
 fun parseTheoremPfx text = let
-  val s = Substring.substring(text, 0, size text - 1) (* drop : or = *)
-    |> Substring.dropr Char.isSpace (* drop wspace between name and ] *)
+  val sz = size text
+  val lastc = String.sub (text, sz - 1)
+  val s0 = if lastc = #":" orelse lastc = #"=" then
+             Substring.substring(text, 0, size text - 1) (* drop : or = *)
+           else Substring.full text
+  val s = s0 |> Substring.dropr Char.isSpace (* drop trailing wspace *)
   val {keyword, name, attrs, name_attrs} = destMLThmBinding s
   val isTriv = Substring.size keyword = 10
   in {isTriv = isTriv, keyword = keyword,
@@ -581,6 +588,15 @@ structure ToSML = struct
           doProofMod ddargs (p,size head) goalabs rest;
           doDecls dstart decls dstop; aux ") HOL__GOAL__foo))"
         end
+      | FinaliseThm (pos, text) => let
+          val {thmname,attrs,name_attrs,...} = parseTheoremPfx text
+        in
+          aux "val "; aux (ss thmname); aux " = ";
+          aux "boolLib.finalise_suspended_thm";
+          aux (if !filename = "" then "(DB_dtype.Unknown)"
+               else mk_mkloc_string(!filename, #1(!line)));
+          aux (mlquote (ss name_attrs))
+        end
       | Chunk _ => ()
       | Semi _ => ()
       | FullQuote {type_q, quote, ...} => (
@@ -723,6 +739,9 @@ structure ToSML = struct
       | InductiveDecl  {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
       | TheoremDecl    {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
       | ResumeDecl     {head = (p, _), stop, ...} => (regular (pos, p); finishThmVal (); doDeclCore d; stop)
+      | FinaliseThm (p,head) => (
+          regular(pos,p); finishThmVal(); doDeclCore d; p + size head
+        )
       | BeginType      (p, head) => (regular (pos, p); finishThmVal (); doDeclCore d; inThmVal := true; p + size head)
       | BeginSimpleThm (p, head) => (regular (pos, p); finishThmVal (); doDeclCore d; inThmVal := true; p + size head)
       | Chunk p =>
