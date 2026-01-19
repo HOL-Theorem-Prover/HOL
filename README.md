@@ -71,7 +71,7 @@ The following is a brief listing of what's available in the distribution.
      COPYRIGHT      * Copyright notice
      bin/           * Executables
      developers/    * Resources for developers
-     doc/           * Release notes
+     release-notes/ * Release notes
      examples/      * Example formal developments, from small to large
      help/          * Sources for online help
      Manual/        * System manuals
