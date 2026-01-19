@@ -2032,8 +2032,11 @@ Definition LAST_DEF[nocompute]:
 End
 
 Definition FRONT_DEF[nocompute]:
+  FRONT [] = [] /\
   FRONT (h::t) = if t = [] then [] else h :: FRONT t
 End
+
+Theorem FRONT_NIL[simp] = cj 1 FRONT_DEF
 
 Theorem LAST_CONS[simp]:
    (!x:'a. LAST [x] = x) /\
@@ -2064,10 +2067,16 @@ Proof
   REWRITE_TAC [FRONT_DEF, NOT_CONS_NIL]
 QED
 
-Theorem LENGTH_FRONT_CONS[simp]:
+Theorem LENGTH_FRONT_CONS:
  !x xs. LENGTH (FRONT (x::xs)) = LENGTH xs
 Proof
 Induct_on ‘xs’ THEN ASM_SIMP_TAC bool_ss [FRONT_CONS, LENGTH]
+QED
+
+Theorem LENGTH_FRONT[simp]:
+  !xs. LENGTH (FRONT xs) = LENGTH xs - 1
+Proof
+  Cases >> simp[LENGTH_FRONT_CONS]
 QED
 
 Theorem FRONT_CONS_EQ_NIL[simp]:
@@ -2322,10 +2331,10 @@ Proof   Induct \\ simp[DROP_def] \\ rw[]
 QED
 
 Theorem MAP_FRONT:
-  !ls. ls <> [] ==> (MAP f (FRONT ls) = FRONT (MAP f ls))
-Proof  Induct \\ simp[] \\ Cases_on‘ls’\\fs[]
+  !ls. MAP f (FRONT ls) = FRONT (MAP f ls)
+Proof
+  Induct >> simp[] >> Cases_on ‘ls’ >> fs[]
 QED
-
 (* More functions for operating on pairs of lists *)
 
 Definition FOLDL2_def[simp]:
