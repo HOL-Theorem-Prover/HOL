@@ -10,6 +10,8 @@ ignoring fact that it should really only occur at the beginning of the line.")
 (defconst holscript-font-lock-keywords
   (list '("^\\(Theorem\\|Triviality\\|Resume\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[ :]"
           (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
+        '("^\\(Finalise\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)"
+          (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
         '("^\\(Theory\\)[[:space:]]+\\([A-Za-z0-9'_]+\\)[[:space:]]*"
           (1 'holscript-theorem-syntax) (2 'holscript-thmname-syntax))
         '("^\\(Ancestors\\|Libs\\)\\_>" . 'holscript-theorem-syntax)
@@ -755,6 +757,7 @@ a store_thm equivalent.")
             ("^Triviality" theorem-contents "^QED")
             ("^Resume" resume-contents "^QED")
             ("^Theorem=" sml-expr)
+            ("^Finalise" sml-expr)
             ("^Triviality=" id)
             ("^Definition" definition-contents "^End")
             ("^Quote" id-quoted "^End")
@@ -887,10 +890,10 @@ class characters.")
   (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Type"
                 "Proof" "Quote" "Theory" "Ancestors" "Libs"
                 "Termination" "End" "QED" "Inductive" "CoInductive"
-                "Overload" "Resume")))
+                "Overload" "Resume" "Finalise")))
 (defconst holscript-column0-declbegin-keyword
   (regexp-opt '("Definition" "Datatype" "Theorem" "Triviality" "Resume" "Quote"
-                "Type" "Inductive" "CoInductive" "Overload")))
+                "Type" "Inductive" "CoInductive" "Overload" "Finalise")))
 
 (defconst holscript-sml-declaration-keyword
   (regexp-opt '("open" "val" "datatype" "local" "fun" "infix" "infixl" "infixr"
