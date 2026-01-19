@@ -2066,13 +2066,13 @@ Proof
   REWRITE_TAC [FRONT_DEF, NOT_CONS_NIL]
 QED
 
-Theorem LENGTH_FRONT_CONS:
+Theorem LENGTH_FRONT_CONS[simp]:
  !x xs. LENGTH (FRONT (x::xs)) = LENGTH xs
 Proof
 Induct_on ‘xs’ THEN ASM_SIMP_TAC bool_ss [FRONT_CONS, LENGTH]
 QED
 
-Theorem LENGTH_FRONT[simp]:
+Theorem LENGTH_FRONT:
   !xs. LENGTH (FRONT xs) = LENGTH xs - 1
 Proof
   Cases >> simp[LENGTH_FRONT_CONS]
