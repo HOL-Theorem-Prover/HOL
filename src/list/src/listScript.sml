@@ -1092,7 +1092,8 @@ Proof
       Cases_on ‘p’ >> fs[])
 QED
 
-Theorem MEM_SPLIT:
+(* tfl_termsolve: useful for proving termination in fold and rose-tree settings *)
+Theorem MEM_SPLIT[tfl_termsolve]:
   !x l. (MEM x l) = ?l1 l2. (l = l1 ++ x::l2)
 Proof
  Induct_on ‘l’ THEN SRW_TAC [] [] THEN EQ_TAC THENL [
