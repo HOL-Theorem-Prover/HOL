@@ -7,7 +7,7 @@
    bin/unquote before being passed to Moscow ML.
 
    This is loaded during Moscow ML interactive session initialization
-   (from std.prelude via the generated hol shell script).
+   (from tools/std.prelude via the generated hol shell script).
 
    For Poly/ML, quotation handling is built into the compiler via
    PolyML.Compiler hooks, so no separate filter is needed.

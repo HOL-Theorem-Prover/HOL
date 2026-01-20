@@ -78,6 +78,5 @@ The following is a brief listing of what's available in the distribution.
      release-notes/ * Release notes
      sigobj/        * Collection of all signatures and compiled code
      src/           * System sources
-     std.prelude    * File loaded at the beginning of each HOL session
      tools/         * Support for building the system
      tools-poly/    * Poly/ML-specific support for building the system

@@ -75,7 +75,7 @@ Poly/ML sessions are managed by `tools-poly/hol.ML`, which loads:
 
 Moscow ML sessions use the `bin/hol` shell script, which loads:
 
-1. **`std.prelude`** (in HOL root) — Main prelude that loads the kernel,
+1. **`tools/std.prelude`** — Main prelude that loads the kernel,
    sets up pretty-printers, help paths, and defines `HOL_Interactive`
 2. **`tools/unquote-init.sml`** — Defines `QUse` for quotation handling
 3. **`tools/end-init.sml`** — (Bare HOL) Just sets `quietdec := false`
