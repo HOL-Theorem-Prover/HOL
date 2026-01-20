@@ -62,7 +62,7 @@ are loaded to set up the environment. These differ between ML backends:
 
 ### Poly/ML Initialization
 
-Poly/ML sessions are managed by `tools-poly/hol.ML`, which loads:
+Poly/ML sessions are managed by `bin/hol`, which loads:
 
 1. **`tools-poly/prelude.ML`** — Sets up pretty-printers, help paths,
    loads `holinteractive.ML`, and runs `check-intconfig.sml`
