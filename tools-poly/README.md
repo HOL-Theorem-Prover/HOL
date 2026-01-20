@@ -17,7 +17,7 @@ system. These complement the compiler-agnostic code in `tools/`.
 
 ### Interactive Session
 
-The main entry point for HOL sessions is **`hol.ML`**, which provides
+The main entry point for HOL sessions is **`bin/hol`**, which provides
 a unified interface supporting multiple modes:
 
 - `hol repl` — Interactive REPL (default)
@@ -26,11 +26,11 @@ a unified interface supporting multiple modes:
 - `hol lsp` — Language Server Protocol mode
 - `hol heapname` — Print heap path for current directory
 
-See `hol.ML --help` for full options.
+See `hol --help` for full options.
 
 ### Initialization Files
 
-When starting an interactive session, `hol.ML` loads these files:
+When starting an interactive session, `hol` loads these files:
 
 1. **`prelude.ML`** — Main initialization:
    - Installs pretty-printers for HOL types (terms, types, theorems, etc.)
