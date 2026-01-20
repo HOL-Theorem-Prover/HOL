@@ -54,3 +54,34 @@ live in `mlton/` subdirectories.
 - `smart-configure.sml` — Entry point for configuration
 
 See also `tools-poly/` for Poly/ML-specific build components.
+
+## Interactive Session Initialization Files
+
+When starting an interactive HOL session, several initialization files
+are loaded to set up the environment. These differ between ML backends:
+
+### Poly/ML Initialization
+
+Poly/ML sessions are managed by `tools-poly/hol.ML`, which loads:
+
+1. **`tools-poly/prelude.ML`** — Sets up pretty-printers, help paths,
+   loads `holinteractive.ML`, and runs `check-intconfig.sml`
+2. **`tools-poly/prelude2.ML`** — (Full HOL only) Loads bossLib and
+   additional libraries
+3. **`tools-poly/holinteractive.ML`** — Defines `HOL_Interactive`
+   structure for banner printing and quiet mode control
+
+### Moscow ML Initialization
+
+Moscow ML sessions use the `bin/hol` shell script, which loads:
+
+1. **`std.prelude`** (in HOL root) — Main prelude that loads the kernel,
+   sets up pretty-printers, help paths, and defines `HOL_Interactive`
+2. **`tools/unquote-init.sml`** — Defines `QUse` for quotation handling
+3. **`tools/end-init.sml`** — (Bare HOL) Just sets `quietdec := false`
+4. **`tools/end-init-boss.sml`** — (Full HOL) Loads bossLib and extras
+
+### Shared
+
+**`tools/check-intconfig.sml`** — Loaded by both backends at the end of
+initialization to process user configuration files (e.g., `~/.hol-config.sml`)

@@ -1,3 +1,19 @@
+(* poly-init.ML - Poly/ML Bootstrap Initialization
+   ===============================================
+
+   This file provides early bootstrap initialization for Poly/ML builds.
+   It loads compatibility shims and core infrastructure before the main
+   HOL sources can be compiled:
+
+   - Moscow ML compatibility layer (Mosml.sml, Binarymap, Binaryset, Listsort)
+   - Path database (holpathdb)
+   - Compiler-specific hooks (CompilerSpecific.ML)
+   - System interface (Systeml)
+
+   This is one of the first files loaded during HOL build and is used
+   before the full kernel is available.
+*)
+
 (* this is an -*- sml -*- file *)
 
 val _ = use "poly/Mosml.sml";

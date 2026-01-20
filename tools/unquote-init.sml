@@ -1,3 +1,18 @@
+(* unquote-init.sml - Moscow ML Quotation Filter Support
+   =====================================================
+
+   This file defines the QUse structure which provides a version of "use"
+   that automatically filters HOL quotations (terms and types enclosed
+   in backticks). Files containing quotations are preprocessed through
+   bin/unquote before being passed to Moscow ML.
+
+   This is loaded during Moscow ML interactive session initialization
+   (from std.prelude via the generated hol shell script).
+
+   For Poly/ML, quotation handling is built into the compiler via
+   PolyML.Compiler hooks, so no separate filter is needed.
+*)
+
 (*---------------------------------------------------------------------------*
  * A version of "use" that filters quotations. The native MoscowML version   *
  * of "use" is found in the "Meta" structure.                                *
