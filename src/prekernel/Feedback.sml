@@ -165,6 +165,21 @@ fun render_exn e =
       (output_ERR (exn_to_string e);
        OS.Process.exit OS.Process.failure)
 
+(*---------------------------------------------------------------------------*)
+(* System-dependent display of uncaught exceptions just before hitting the   *)
+(* "Print" part of the REPL. In PolyML, just reraise the exn since it will   *)
+(* be caught and the contents printed by the REPL. In MoscowML, the REPL     *)
+(* "Print" function doesn't print the contents of uncaught exns, so one has  *)
+(* handle the display of exn contents.                                       *)
+(*---------------------------------------------------------------------------*)
+
+fun display_uncaught e = Portable.display_exn (output_ERR o exn_to_string) e
+
+(*---------------------------------------------------------------------------*)
+(* Raise overlaps with display_uncaught but can also be useful for           *)
+(* inspecting exn contents during the "Eval" part of the REPL.               *)
+(*---------------------------------------------------------------------------*)
+
 fun Raise e = (output_ERR (exn_to_string e); Portable.reraise e)
 
 local

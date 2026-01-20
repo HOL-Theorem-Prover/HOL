@@ -49,6 +49,7 @@ sig
     val WARNING_to_string : (string -> string -> string -> string) ref
     val exn_to_string     : exn -> string
 
+    val display_uncaught  : exn -> 'a
     val Raise             : exn -> 'a
     val fail              : unit -> 'a
     val failwith          : string -> 'a
