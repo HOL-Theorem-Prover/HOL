@@ -240,6 +240,32 @@ fun X_CHOOSE_THEN y (ttac: thm_tactic) : thm_tactic =
       end
       handle HOL_ERR _ => raise ERR "X_CHOOSE_THEN" ""
 
+local
+fun dest_list [] tm vf = (tm,vf)
+  | dest_list (x::xs) tm vf =
+    let
+       val (Bvar,Body) = dest_exists (tm)
+       val Body = subst[Bvar |-> x] Body
+    in
+       dest_list xs Body (vf o (CHOOSE (x,ASSUME tm)))
+    end
+in
+fun X_CHOOSE_THENL ys (ttac: thm_tactic) : thm_tactic =
+    fn xth =>
+      let
+         val (tm,vf) = dest_list ys (Thm.concl xth) (PROVE_HYP xth)
+         val th = foo xth (tm)
+         (* itlist ADD_ASSUM (hyp xth) (ASSUME (subst[Bvar |-> y] Body)) *)
+      in fn (asl,w) =>
+            let
+               val (gl,prf) = ttac th (asl,w)
+            in
+               (gl, vf o prf)
+            end
+      end
+      handle HOL_ERR _ => raise ERR "X_CHOOSE_THENL" ""
+end
+
 (*---------------------------------------------------------------------------
  * Chooses a variant for the user.
  *---------------------------------------------------------------------------*)
@@ -311,7 +337,7 @@ val CHOOSE_ALL_THEN: thm_tactical =
                                     else []
             val vars = merge 0 dups vars
          in
-            EVERY_TCL (map X_CHOOSE_THEN vars) ttac xth g
+            X_CHOOSE_THENL vars ttac xth g
          end
          handle HOL_ERR _ => raise ERR "CHOOSE_THEN" ""
       end
