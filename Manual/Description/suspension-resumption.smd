@@ -1,7 +1,7 @@
 <!-- PolyML code for extracting stuff from structures and printing types etc -->
 >>__ structure PNV = PolyML.NameSpace.Values
 >>__ fun die s = (TextIO.output(TextIO.stdErr, s ^ "\n"); OS.Process.exit OS.Process.failure)
->>__ fun printNameAndType0 qp indent str nm =
+>>__ fun printNameAndType0 qp (indent:FixedInt.int) str nm =
        let val sinfo = valOf $ #lookupStruct PolyML.globalNameSpace str
                        handle Option => raise Fail ("Structure " ^ str ^ " not found")
            val snames = PolyML.NameSpace.Structures.contents sinfo
