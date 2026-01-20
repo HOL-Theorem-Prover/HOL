@@ -1,3 +1,20 @@
+(* std.prelude - Moscow ML Interactive Session Prelude
+   ====================================================
+
+   This file is loaded when starting an interactive HOL session with Moscow ML.
+   It establishes the basic environment including:
+   - Loading the HOL kernel and basic libraries
+   - Installing pretty-printers for terms, types, theorems, etc.
+   - Setting up help paths
+   - Defining the HOL_Interactive structure
+
+   For Poly/ML, the equivalent is tools-poly/prelude.ML.
+
+   After this file loads, one of the following "end-init" files is loaded:
+   - tools/end-init.sml (bare HOL) - just resets quietdec
+   - tools/end-init-boss.sml (full HOL) - loads bossLib and extras
+*)
+
 val _ = quietdec := true;
 
 (* ----------------------------------------------------------------------

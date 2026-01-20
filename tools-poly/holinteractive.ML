@@ -1,3 +1,19 @@
+(* holinteractive.ML - HOL_Interactive Structure for Poly/ML
+   =========================================================
+
+   This file defines the HOL_Interactive structure which provides:
+   - toggle_quietdec() — Toggle quiet/verbose compilation mode
+   - amquiet() — Check if in quiet mode
+   - print_banner() — Print the HOL startup banner
+   - setquietp(bool) — Set quiet mode explicitly
+   - start_open/end_open/reset_open — Manage quietness during opens
+
+   This is loaded by prelude.ML during interactive session startup.
+
+   For Moscow ML, the equivalent HOL_Interactive structure is defined
+   directly in std.prelude.
+*)
+
 local
 open Globals
 in

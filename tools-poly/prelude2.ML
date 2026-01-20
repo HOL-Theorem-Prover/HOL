@@ -1,3 +1,16 @@
+(* prelude2.ML - Poly/ML Full HOL Additional Setup
+   ================================================
+
+   This file is loaded after prelude.ML for full HOL sessions (the default,
+   without --bare). It:
+   - Opens bossLib for convenience
+   - Installs additional pretty-printers (simpsets, defns, compsets, etc.)
+
+   For bare HOL sessions, this file is not loaded.
+
+   For Moscow ML, the equivalent is tools/end-init-boss.sml.
+*)
+
 (* this is an -*- sml -*- file *)
 val () = PolyML.print_depth 0;
 
