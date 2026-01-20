@@ -11,7 +11,7 @@
    For full HOL sessions (the default), prelude2.ML is loaded after this
    to add bossLib and additional libraries.
 
-   For Moscow ML, the equivalent is std.prelude (in the HOL root directory).
+   For Moscow ML, the equivalent is tools/std.prelude.
 
    This file is loaded by hol.ML when running in REPL mode.
 *)

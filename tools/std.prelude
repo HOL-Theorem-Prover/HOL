@@ -1,5 +1,5 @@
-(* std.prelude - Moscow ML Interactive Session Prelude
-   ====================================================
+(* tools/std.prelude - Moscow ML Interactive Session Prelude
+   ==========================================================
 
    This file is loaded when starting an interactive HOL session with Moscow ML.
    It establishes the basic environment including:

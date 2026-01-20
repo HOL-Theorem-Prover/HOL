@@ -11,7 +11,7 @@
    This is loaded by prelude.ML during interactive session startup.
 
    For Moscow ML, the equivalent HOL_Interactive structure is defined
-   directly in std.prelude.
+   directly in tools/std.prelude.
 *)
 
 local

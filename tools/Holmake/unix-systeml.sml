@@ -132,7 +132,7 @@ fun emit_hol_script target {boss_qend, bare_qend} = let
   fun output s = TextIO.output(ostrm, s)
   val qfilter = protect (fullPath [HOLDIR, "bin", "unquote"])
   val sigobj = protect (fullPath [HOLDIR, "sigobj"])
-  val std_prelude = protect (fullPath [HOLDIR, "std.prelude"])
+  val std_prelude = protect (fullPath [HOLDIR, "tools", "std.prelude"])
   val mosml = protect (fullPath [MOSMLDIR, "mosml"])
   val qinit = protect (fullPath [HOLDIR, "tools", "unquote-init.sml"])
 in
