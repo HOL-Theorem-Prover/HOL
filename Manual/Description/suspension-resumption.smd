@@ -21,7 +21,7 @@
      val _ = linewidth := 65
    in
      ((fn i => (linewidth := i; lwstk := i :: !lwstk)),
-      (fn () => case !lwstk of [_] => () 
+      (fn () => case !lwstk of [_] => ()
                   | i::is => (linewidth := i; lwstk := is))
      )
    end
@@ -50,7 +50,7 @@ A theorem is bound to the provided name in the SML namespace, but is not yet sav
 \index{theorem resumption}
 \index{special syntactic forms for scripts!Resume@\ml{Resume}}
 To resume work on the unproven subgoal, it is necessary to use the `Resume` form, specifying the theorem name first, and then providing the subgoal name as if it were a theorem/proof attribute.
-```{=latex} 
+```{=latex}
 (See Chapter~\ref{chap:modern-syntax} for more on the syntax of attributes.)
 ```
 
@@ -61,19 +61,19 @@ Thus:
          first_assum ACCEPT_TAC
        QED
 
-The `smlname` attribute allows for inspection of the theorem corresponding to the sub-goal.
+The optional `smlname` attribute allows for inspection of the theorem corresponding to the sub-goal.
 \index{special syntactic forms for scripts!Finalise@\ml{Finalise}}
-To finish their work on the whole theorem, the user must now ‘finalise’ it. 
+To finish their work on the whole theorem, the user must now ‘finalise’ it.
 This step checks that the theorem has indeed had all of its subgoals proved and saves it, possibly alongside the usual collection of attributes:
 
     >> Finalise to_suspend[simp]
 
 If the subgoals associated with a name have not all been proved, the `Finalise` step will fail.
-Also, if a theorem has not been finalised by the end of the containing script-file, the theory-saving process will fail with an exception. 
+Also, if a theorem has not been finalised by the end of the containing script-file, the theory-saving process will fail with an exception.
 
 ### Suspension and Resumption Niceties
 
-- If the `suspend` tactic is called multiple times with the same name within the same goal, resumption at that label will present the user with a complicated looking encoding of multiple goals within just one. 
+- If the `suspend` tactic is called multiple times with the same name within the same goal, resumption at that label will present the user with a complicated looking encoding of multiple goals within just one.
   In order to convert this one goal back into the multiple goals that were originally saved, the user should use the `RESUME_TAC` tactic.
   \index{RESUME_TAC@\ml{RESUME\_TAC}}
 - Goals that have been resumed can again be `suspend`-ed, reusing subgoal names, or not.
