@@ -126,6 +126,9 @@ fun strip_imp_until_rel genvars tm =
  * ---------------------------------------------------------------------*)
 
 val equality = boolSyntax.equality
+fun l2string p l = "[" ^ String.concatWith "," (map p l) ^ "]"
+
+fun lztext n f = trace(n,Trace.LZ_TEXT f)
 
 fun CONGPROC refl trans congrule =
 let
@@ -156,6 +159,12 @@ let
        map (map reprocess_flag o fst o strip_imp_until_rel vars o
             #2 o strip_forall)
            conditions
+   val _ = lztext 2 (
+         fn () =>
+            "Processing congrule = " ^ thm_to_string congrule ^ "; rel = " ^
+            term_to_string rel ^ "; reprocess_flags = " ^
+            l2string (l2string Bool.toString) reprocess_flags
+       )
 
 in fn {relation,solver,depther,freevars} =>
   if not (samerel rel relation) andalso not (same_const rel relation) then (
@@ -206,7 +215,6 @@ in fn {relation,solver,depther,freevars} =>
           then
             let
               val (orig,res) = case args of [x,y] => (x,y) | _ => raise Bind
-              val origth : thm = refl {Rinst = oper, arg = orig}
               val genv = #1 (strip_comb res)
               val assum_thms = map ASSUME assums
               fun reprocess thm flag =
@@ -220,16 +228,22 @@ in fn {relation,solver,depther,freevars} =>
                 trace (7,
                   LZ_TEXT (fn () =>
                     "oper: " ^ term_to_string oper ^
-                    " rpa_thms: [" ^
-                    String.concatWith ", "
-                                      (map thm_to_string reprocessed_assum_thms) ^
-                    "] origth: " ^ thm_to_string origth));
+                    " rpa_thms: " ^
+                    l2string thm_to_string reprocessed_assum_thms ^
+                    " arg: " ^ term_to_string orig));
                 (depther (reprocessed_assum_thms,oper) orig,true)
               ) handle e as HOL_ERR _ => (
+                let (* need reflexivity instance of orig with oper; this
+                       doesn't come from the refl function at top; that is refl for
+                       the operator of the congruence rule's conclusion, which might
+                       be different! *)
+                  val origth : thm = refl {Rinst = oper, arg = orig}
+                in
                     trace(5,PRODUCE(orig,"UNCHANGED",origth));
                     trace(7, LZ_TEXT(fn () => "exn: " ^ General.exnMessage e));
                     (origth,false)
-                  )
+                end)
+              val _ = lztext 7 (fn () => "rewr_thm = " ^ thm_to_string rewr_thm)
               val absify = CONV_RULE (RAND_CONV (MK_ABSL_CONV ho_vars))
               val abs_rewr_thm =
                   if null ho_vars then rewr_thm
@@ -272,6 +286,9 @@ in fn {relation,solver,depther,freevars} =>
 
     val (final_thm,allunch) =
         process_subgoals (nconds,match_thm,reprocess_flags,normal)
+    val _ = trace(7, LZ_TEXT (fn () =>
+                   "CONGPROC: final_thm = " ^ thm_to_string final_thm ^ "; " ^
+                   "allunch = " ^ Bool.toString allunch))
 
   in
     if allunch then
