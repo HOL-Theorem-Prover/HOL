@@ -4,15 +4,16 @@
 >>__ fun printNameAndType0 qp (indent:FixedInt.int) str nm =
        let val sinfo = valOf $ #lookupStruct PolyML.globalNameSpace str
                        handle Option => raise Fail ("Structure " ^ str ^ " not found")
+           val f2i = FixedInt.toInt
            val snames = PolyML.NameSpace.Structures.contents sinfo
            val sval = valOf (#lookupVal snames nm)
                        handle Option => raise Fail ("Name " ^ nm ^ " not found in structure " ^ str)
            val ctxt = if qp then NONE else SOME snames
            val typ_p = PNV.printType(PNV.typeof sval, 100, ctxt)
-           val spaces = CharVector.tabulate(indent, fn _ => #" ")
+           val spaces = CharVector.tabulate(f2i indent, fn _ => #" ")
            open PolyML
        in
-           PP.prettyPrint(TextIO.print, 70-indent)
+           PP.prettyPrint(TextIO.print, 70-f2i indent)
             (PrettyBlock(indent,true,[],[PrettyString (spaces ^ nm^" :"), PrettyBreak(1,2), typ_p]))
        end
 >>__ val printNameAndType = printNameAndType0 false
