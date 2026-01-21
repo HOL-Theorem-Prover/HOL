@@ -77,7 +77,7 @@ The `Ancestors` and `Libs` components may be omitted.
 \index{special syntactic forms for scripts!Theory@\ml{Theory}}
 The name following the `Theory` keyword must match the name that precedes the `Script.sml` of the file-name, and must be a valid SML structure identifier.
 In some cases, such as when a theory is huge and the theorems not particularly interesting, it is possible to disable the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `no_sig_docs` annotation.
-The other annotation possible in this position is `bare`, which is used to indicate that the theory is built with the minimal `hol.bare` executable (and won't be using the facilities in `bossLib`, for example).
+The other annotation possible in this position is `bare`, which is used to indicate that the theory is built with the minimal `hol --bare` mode (and won't be using the facilities in `bossLib`, for example).
 We expect this modifier should only be necessary for developers.
 
 \index{Ancestors keyword@\ml{Ancestors} keyword}
@@ -135,12 +135,11 @@ All keywords beginning with capital letters (`Theory`, `Ancestors`, `Libs`, ...)
 --------------    -----  ---------------------
 ⟨*thydecl*⟩        ::=   ⟨*SML-declaration*⟩    |    ⟨*theorem-decl*⟩    |    ⟨*definition-decl*⟩
                     |    ⟨*parsing-decl*⟩    |    ⟨*quotation-decl*⟩
-⟨*theorem-decl*⟩   ::=   ⟨*thm-eqn*⟩    |    ⟨*thm-proof*⟩
-⟨*thm-eqn*⟩        ::=   ⟨*thm-keyword*⟩ ⟨*ident*⟩⟨*thm-attrs*⟩ `=` ⟨*SML-expression*⟩
-⟨*thm-proof*⟩      ::=   ⟨*thm-keyword*⟩ ⟨*ident*⟩⟨*thm-attrs*⟩ `:` ⟨*thm-stmt*⟩
+⟨*theorem-decl*⟩   ::=   ⟨*thm-eqn*⟩   |   ⟨*thm-proof*⟩   |   ⟨*resumption*⟩   |   ⟨*final-thm*⟩
+⟨*thm-eqn*⟩        ::=   `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `=` ⟨*SML-expression*⟩
+⟨*thm-proof*⟩      ::=   `Theorem` ⟨*ident*⟩⟨*thm-attrs*⟩ `:` ⟨*thm-stmt*⟩
                          `Proof`⟨*proof-attrs*⟩ ⟨*tactic*⟩
                          `QED`
-⟨*thm-keyword*⟩    ::=   `Theorem`
 ⟨*defn-decl*⟩      ::=   ⟨*datatype-decl*⟩    |    ⟨*function-decl*⟩    |    ⟨*relation-decl*⟩
 ⟨*datatype-decl*⟩  ::=   `Datatype:`⟨*datatype-spec*⟩ `End`
 ⟨*relation-decl*⟩  ::=   (`Inductive`|`CoInductive`) ⟨*ident*⟩ `:` ⟨*relation-spec*⟩ `End`
@@ -150,6 +149,9 @@ All keywords beginning with capital letters (`Theory`, `Ancestors`, `Libs`, ...)
 ⟨*parsing-decl*⟩   ::=   `Overload` ⟨*quoted-ident*⟩⟨*overload-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
                     |    `Type` ⟨*quoted-ident*⟩⟨*type-attrs*⟩^?^ `=` ⟨*SML-expression*⟩
 ⟨*quotation-decl*⟩ ::=   `Quote` (⟨*ident*⟩ `=`)^?^ ⟨*ident*⟩ `:` ⟨*quoted-material*⟩ `End`
+⟨*resumption*⟩     ::=   `Resume` ⟨*ident*⟩⟨*resumption-attrs*⟩ `:` ⟨*tactic*⟩
+                         `QED`
+⟨*final-thm*⟩      ::=   `Finalise` ⟨*ident*⟩⟨*thm-attrs*⟩
 --------------    -----  ---------------------
 
 Table: Syntax for expressing theorem proofs, definitions and other theory changes. Again, upper-case keywords (`End` in particular, despite the table layout), must occur in column 0.
@@ -169,14 +171,21 @@ Attribute specifications are added to commands, usually after user-provided iden
 If multiple identifiers appear to the right of an equals-sign in the above syntax, they are separated by whitespace.
 Libraries can enable more attributes than this core set for theorems and definitions; this allows theorem values to be stored in custom data-sets for later retrieval by customisable tools.
 
-Keyword          (Commonly used) Possible attributes
---------------   ----------------------
-`Definition`     `ind=`..., `nocompute`, `schematic`, `simp`
-`Overload`       `by_nametype`, `inferior`, `local`
-`Proof`          `exclude_frags`, `exclude_simps`
-`Theorem`        `compute`, `cong`, `local`, `mono`, `rule_induction`, `simp`
-`Type`           `local`, `pp`
---------------   ----------------------
+Keyword             (Commonly used) Possible attributes
+--------------      ----------------------
+`Definition`        `ind=`..., `nocompute`, `schematic`, `simp`
+`Overload`          `by_nametype`, `inferior`, `local`
+`Proof`             `exclude_frags`, `exclude_simps`
+`Resume`            `exclude_frags`, `exclude_simps`, `smlname`
+`Theorem`           `compute`, `cong`, `local`, `mono`, `rule_induction`, `simp`
+  (\& `Finalise`)
+`Type`              `local`, `pp`
+--------------      ----------------------
+
+\index{Resume keyword@\ml{Resume} keyword}
+\index{special syntactic forms for scripts!Resume@\ml{Resume}}
+\index{theorem resumption}
+In addition, the `Resume` command is *required* to include an attribute list that has as its first element the name/label for the particular sub-case that is to be proved in this resumption block.
 
 The following describes the attributes listed above:
 
@@ -203,12 +212,12 @@ The following describes the attributes listed above:
 
 `exclude_frags`=...
 
-:   Used with `Proof`.
+:   Used with `Proof` or `Resume`.
     The list of fragment names following is removed from the global simpset for the duration of the given proof, affecting all simplifier tactics that refer to the global simpset.
 
 `exclude_simps`=...
 
-:   Used with `Proof`.
+:   Used with `Proof` or `Resume`.
     The list of theorem names following is removed from the global simpset for the duration of the given proof.
     Names are not SML identifiers, but rather references to the names used internally by the simpset (visible by examining it with a call to `srw_ss()`), and can be given without theory-qualification.
     For example, with or without `sumTheory`’s identifiers visible to SML, one can use `exclude_simps=ISR` to stop the `ISR` rewrite from being used.
@@ -278,6 +287,11 @@ The following describes the attributes listed above:
     ```{=latex}
     See Section~\ref{sec:srw-ss} for more on the global simpset.
     ```
+
+`smlname`=⟨*ident*⟩
+
+:   Used with `Resume`.
+    Gives the subresult corresponding to this theorem resumption the name ⟨*ident*⟩ in the SML namespace.
 
 
 \index{theorem attributes|)}

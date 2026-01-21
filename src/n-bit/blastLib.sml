@@ -2,6 +2,7 @@ structure blastLib :> blastLib =
 struct
 
 open HolKernel boolLib bossLib;
+open BasicProvers
 open bitTheory wordsTheory bitstringTheory blastTheory;
 open listLib wordsLib bitSyntax bitstringSyntax;
 
@@ -14,7 +15,7 @@ structure Parse = struct
 end
 
 open Parse
-
+fun SRW_TAC xs ys = PRIM_SRW_TAC (arith_ss ++ WORD_ss) xs ys
 (* ------------------------------------------------------------------------ *)
 
 val ERR = Feedback.mk_HOL_ERR "blastLib"
@@ -51,9 +52,9 @@ fun mk_size_thm (i,ty) = mk_less_thm (i, wordsSyntax.mk_dimindex ty)
 
 local
    val e_tys = ref (Redblackset.empty Type.compare)
-   val cmp = reduceLib.num_compset ()
-   val () = computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM] cmp
-   val cnv = computeLib.CBV_CONV cmp
+   val cmp = ref (reduceLib.num_compset
+                  |> computeLib.add_thms [combinTheory.o_THM, combinTheory.K_THM])
+   fun cnv tm = computeLib.CBV_CONV (!cmp) tm
 
    val fcp_beta_thm = fcpTheory.FCP_BETA
                       |> Thm.INST_TYPE [Type.alpha |-> Type.bool]
@@ -84,7 +85,7 @@ local
       List.concat o List.map (mk_index_thms o wordsSyntax.dim_of) o
       HolKernel.find_terms is_new
 
-   fun add_index_thms tm = computeLib.add_thms (new_index_thms tm) cmp
+   fun add_index_thms tm = cmp := computeLib.add_thms (new_index_thms tm) (!cmp)
 in
    fun ADD_INDEX_CONV tm = (add_index_thms tm; cnv tm)
 
@@ -179,7 +180,7 @@ end
    ------------------------------------------------------------------------ *)
 
 val EVAL_CONV =
-  computeLib.compset_conv (reduceLib.num_compset())
+  computeLib.compset_conv (reduceLib.num_compset)
     [computeLib.Defs
        [pred_setTheory.NOT_IN_EMPTY, pred_setTheory.IN_INSERT,
         REWRITE_RULE [GSYM arithmeticTheory.DIV2_def] BIT_SET_def,
@@ -815,7 +816,7 @@ local
           | NONE => ONCE_REWRITE_CONV [WORD_NEG] tm
       end
 
-   val cnv = computeLib.compset_conv (reduceLib.num_compset())
+   val cnv = computeLib.compset_conv (reduceLib.num_compset)
      [computeLib.Defs
         [n2w_def, v2w_def, word_xor, word_or_def, word_and_def,
          word_1comp_def, word_nor_def, word_xnor_def, word_nand_def,

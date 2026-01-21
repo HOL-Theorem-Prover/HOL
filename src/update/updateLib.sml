@@ -296,13 +296,13 @@ end
    Examples:
 
       SORT_UPDATES_CONV ``\(a, x:'a) (b, y:'a). a <+ b``
-        (wordsLib.words_compset()) wordsLib.word_EQ_CONV
+        (wordsLib.words_compset) wordsLib.word_EQ_CONV
         ``(1w:word32 =+ "a") ((3w =+ "b") ((2w =+ "c") ((3w =+ "c") f)))``
       |- (1w =+ "a") ((3w =+ "b") ((2w =+ "c") ((3w =+ "c") f))) =
          (1w =+ "a") ((2w =+ "c") ((3w =+ "b") f))
 
       SORT_UPDATES_CONV ``\(a, x:'a) (b, y:'a). a <+ b``
-        (wordsLib.words_compset()) wordsLib.word_EQ_CONV
+        (wordsLib.words_compset) wordsLib.word_EQ_CONV
         ``(1w:word32 =+ "a") o (3w =+ "b") o (2w =+ "c") o (3w =+ "c")``
       |- (1w =+ "a") o (3w =+ "b") o (2w =+ "c") o (3w =+ "c") =
          (1w =+ "a") o (2w =+ "c") o (3w =+ "b")
@@ -310,13 +310,13 @@ end
 
 fun SORT_UPDATES_CONV ord cmp cnv =
    let
-      val () = computeLib.add_thms
+      val cmp' = computeLib.add_thms
                 [pairTheory.CURRY_DEF, pairTheory.UNCURRY_DEF,
                  pairTheory.PAIR_EQ, pairTheory.FST, pairTheory.SND,
                  listTheory.APPEND, combinTheory.o_THM, sortingTheory.PART_DEF,
                  REWRITE_RULE [sortingTheory.PARTITION_DEF]
                    sortingTheory.QSORT_DEF] cmp
-      val SORT_CONV = computeLib.CBV_CONV cmp
+      val SORT_CONV = computeLib.CBV_CONV cmp'
       val thm = Drule.ISPEC ord updateTheory.LIST_UPDATE_SORT_OVERRIDE
       val cnv1 = Conv.REWR_CONV thm
       val cnv2 = OVERRIDE_CONV cnv
@@ -350,7 +350,7 @@ fun SORT_UPDATES_CONV ord cmp cnv =
    Examples:
 
       SORT_UPDATES_MAPTO_CONV ``FST : 'a word # 'b -> 'a word``
-         (wordsLib.words_compset()) wordsLib.WORD_EVAL_CONV
+         (wordsLib.words_compset) wordsLib.WORD_EVAL_CONV
          ``(1w:word32 =+ "a") ((3w =+ "b") ((2w =+ "c") ((3w =+ "c") f)))``
       |- (1w =+ "a") ((3w =+ "b") ((2w =+ "c") ((3w =+ "c") f))) =
          (1w =+ "a") ((2w =+ "c") ((3w =+ "b") f))
@@ -395,7 +395,7 @@ val SORT_NUM_UPDATES_CONV =
       val f = Term.mk_thy_const {Ty = fty, Thy = "pair", Name = "FST"}
    in
       SORT_UPDATES_MAPTO_CONV
-         f numSyntax.less_tm (reduceLib.num_compset()) numLib.REDUCE_CONV
+         f numSyntax.less_tm (reduceLib.num_compset) numLib.REDUCE_CONV
    end
 
 (* -----------------------------------------------------------------------
@@ -420,10 +420,10 @@ fun SORT_WORD_UPDATES_CONV ty =
       val word_lo =
          PURE_REWRITE_RULE [dimword]
             (Thm.INST_TYPE [Type.alpha |-> ty] wordsTheory.word_lo_n2w)
-      val cmp = reduceLib.num_compset()
-      val () = computeLib.add_thms
-                 [numLib.SUC_RULE numeral_bitTheory.MOD_2EXP_EQ, word_lo,
-                  numLib.SUC_RULE numeral_bitTheory.MOD_2EXP_MAX] cmp
+      val cmp = reduceLib.num_compset
+                |> computeLib.add_thms
+                     [numLib.SUC_RULE numeral_bitTheory.MOD_2EXP_EQ, word_lo,
+                      numLib.SUC_RULE numeral_bitTheory.MOD_2EXP_MAX]
       val wty = wordsSyntax.mk_word_type ty
       val fty = pairSyntax.mk_prod (wty, Type.alpha) --> wty
       val f = Term.mk_thy_const {Ty = fty, Thy = "pair", Name = "FST"}
@@ -455,8 +455,8 @@ fun SORT_ENUM_UPDATES_CONV ty =
       val ty2num_tm = Term.prim_mk_const {Thy = Thy, Name = ty2num}
       val ty2num_11 = DB.fetch Thy (ty2num ^ "_11")
       val ty2num_thm = DB.fetch Thy (ty2num ^ "_thm")
-      val cmp = reduceLib.num_compset()
-      val () = computeLib.add_thms [GSYM ty2num_11, ty2num_thm] cmp
+      val cmp = reduceLib.num_compset
+                |> computeLib.add_thms [GSYM ty2num_11, ty2num_thm]
       val cnv = computeLib.CBV_CONV cmp
    in
       SORT_UPDATES_MAPTO_CONV

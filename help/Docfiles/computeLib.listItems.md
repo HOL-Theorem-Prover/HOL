@@ -17,7 +17,7 @@ transformation can be attached.
 ### Example
 
 ``` hol4
-   > val compset = computeLib.bool_compset()
+   > val compset = computeLib.bool_compset
    val compset = <compset> : computeLib.compset
 
    > computeLib.listItems compset;

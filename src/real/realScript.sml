@@ -1,6 +1,7 @@
 (*---------------------------------------------------------------------------*)
 (* Develop the theory of reals                                               *)
 (*---------------------------------------------------------------------------*)
+
 Theory real
 Ancestors
   arithmetic num prim_rec While pred_set realax
@@ -9,7 +10,6 @@ Libs
   numLib reduceLib pairLib mesonLib tautLib simpLib Arithconv
   jrhUtils Canon_Port BasicProvers TotalDefn metisLib hurdUtils
   RealArith
-
 
 val TAUT_CONV   = jrhUtils.TAUT_CONV; (* conflict with tautLib.TAUT_CONV *)
 val GEN_ALL     = hol88Lib.GEN_ALL;   (* it has old reverted variable order *)
@@ -1446,7 +1446,14 @@ Proof
     REWRITE_TAC[abs, REAL_LT_REFL, REAL_LE_REFL]]
 QED
 
+(* |- !x. 0 < abs x <=> x <> 0 *)
 Theorem ABS_NZ'[simp] = GSYM ABS_NZ
+
+Theorem ABS_NOT_ZERO :
+    !(x :real). abs x <> 0 <=> x <> 0
+Proof
+    PROVE_TAC [ABS_ZERO]
+QED
 
 Theorem ABS_INV:
    !x. ~(x = 0) ==> (abs(inv x) = inv(abs(x)))
@@ -1499,6 +1506,14 @@ Theorem ABS_EQ_NEG :
     !(x :real). x < 0 ==> abs x = -x
 Proof
     RW_TAC std_ss [real_lt, real_abs]
+QED
+
+Theorem ABS_EQ_NEG' :
+    !(x :real). x <= 0 ==> abs x = -x
+Proof
+    RW_TAC std_ss [REAL_LE_LT]
+ >- (MATCH_MP_TAC ABS_EQ_NEG >> art [])
+ >> REWRITE_TAC [ABS_0, REAL_NEG_0]
 QED
 
 (* |- !n. abs (&n) = &n *)
@@ -2851,6 +2866,18 @@ Theorem REAL_MUL_RNEG = REAL_MUL_RNEG;
 
 (* |- !x y. -x * y = -(x * y) *)
 Theorem REAL_MUL_LNEG = REAL_MUL_LNEG;
+
+Theorem REAL_DIV_RNEG :
+    !x y. x / -y = -(x / y)
+Proof
+    simp [real_div, REAL_INV_NEG, REAL_MUL_RNEG]
+QED
+
+Theorem REAL_DIV_LNEG :
+    !x y. -x / y = -(x / y)
+Proof
+    simp [real_div, REAL_INV_NEG, REAL_MUL_LNEG]
+QED
 
 Theorem REAL_LE_LMUL_NEG:
   !x y z. x < 0 ==> (x * y <= x * z <=> z <= y)
@@ -5834,9 +5861,11 @@ Proof
     simp[REAL_ADD_LDISTRIB,REAL_POW_2] >>
     qmatch_abbrev_tac ‘l1:real = r ==> l2 = r’ >> ‘l1 = l2’ suffices_by simp[] >>
     UNABBREV_ALL_TAC >> ‘2r * 2 = 4’ by simp[] >> simp[REAL_MUL_ASSOC] >>
-    ‘2 * x * 2 * a * b = (2 * 2) * a * b * x’ by metis_tac[REAL_MUL_COMM,REAL_MUL_ASSOC] >>
+    ‘2 * x * 2 * a * b = (2 * 2) * a * b * x’
+      by metis_tac[REAL_MUL_COMM,REAL_MUL_ASSOC] >>
     ntac 2 $ pop_assum SUBST1_TAC >>
-    ‘x * x * 4 * a * a = 4 * a * a * x * x’ by metis_tac[REAL_MUL_COMM,REAL_MUL_ASSOC] >>
+    ‘x * x * 4 * a * a = 4 * a * a * x * x’
+      by metis_tac[REAL_MUL_COMM,REAL_MUL_ASSOC] >>
     pop_assum SUBST1_TAC >> metis_tac[REAL_ADD_COMM,REAL_ADD_ASSOC]
 QED
 
@@ -6015,5 +6044,14 @@ Proof
   ASSUM_LIST(MP_TAC o MATCH_MP REAL_LT_MUL o end_itlist CONJ) THEN
   REPEAT(POP_ASSUM MP_TAC) THEN REAL_ARITH_TAC
 QED
+
+Theorem REAL_CHOOSE_SIZE :
+   !c. &0 <= c ==> (?x. abs x = c:real)
+Proof
+  METIS_TAC [ABS_REFL]
+QED
+
+(* Temporarily re-enable printing of numeral bits for help documents *)
+val _ = temp_remove_user_printer "num.numeral_computations";
 
 (* END *)

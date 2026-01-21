@@ -6,13 +6,6 @@ Libs
 
 val _ = ParseExtras.temp_loose_equality()
 
-infixr 0 ++ || << |-> THENC;
-infixr 1 >> ;
-
-val op++ = op THEN;
-val op|| = op ORELSE;
-val op>> = op THEN1;
-val op<< = op THENL;
 
 (* ------------------------------------------------------------------------- *)
 (* Definitions.                                                              *)

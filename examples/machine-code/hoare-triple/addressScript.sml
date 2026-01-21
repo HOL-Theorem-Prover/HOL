@@ -487,7 +487,7 @@ Theorem NOT_ALIGNED:
     !a. ALIGNED a ==> ~(ALIGNED (a + 1w)) /\  ~(ALIGNED (a + 2w)) /\ ~(ALIGNED (a + 3w))
 Proof
   Cases_word \\ SIMP_TAC std_ss [ALIGNED_n2w,word_add_n2w]
-  \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0<4``)]
+  \\ ONCE_REWRITE_TAC [(GSYM MOD_PLUS)]
   \\ STRIP_TAC \\ ASM_REWRITE_TAC [ADD] \\ EVAL_TAC
 QED
 
@@ -615,7 +615,7 @@ val ALIGNED_ADD_EQ_LEMMA = prove(
   ``!x y. ALIGNED x ==> (ALIGNED (x + y) = ALIGNED y)``,
   Cases_word \\ Cases_word
   \\ SIMP_TAC std_ss [word_add_n2w,ALIGNED_n2w]
-  \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0<4``)]
+  \\ ONCE_REWRITE_TAC [(GSYM MOD_PLUS)]
   \\ ASM_SIMP_TAC bool_ss [ADD] \\ SIMP_TAC std_ss [MOD_MOD]);
 
 Theorem ALIGNED_ADD_EQ:

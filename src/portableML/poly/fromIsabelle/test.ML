@@ -17,7 +17,7 @@ fun METIS_PROVE thl g =
   Exn.trace General.exnMessage print (fn () => metisLib.METIS_PROVE thl g)
 *)
 
-val EVAL = computeLib.CBV_CONV computeLib.the_compset
+val EVAL = computeLib.CBV_CONV (!computeLib.the_compset)
 val realtime = Portable.realtime
 
 signature CMAP = sig

@@ -4,7 +4,7 @@ val _ = Feedback.emit_MESG := false
 
 fun badpp x = HOLPP.add_string "<Can't print this>"
 
-fun EVAL t = computeLib.CBV_CONV computeLib.the_compset t
+fun EVAL t = computeLib.CBV_CONV (!computeLib.the_compset) t
 val _ = tprint "Testing mutually recursive function definition"
 
 val f_def = require (check_result (K true)) Define`

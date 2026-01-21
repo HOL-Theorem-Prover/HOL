@@ -10,9 +10,9 @@ local
   val _ = let
     open computeLib
   in
-    set_skip the_compset ``evalcase_CASE`` (SOME 1);
-    set_skip the_compset ``option_CASE`` (SOME 1);
-    set_skip the_compset ``COND`` (SOME 1)
+    set_EVAL_skip ``evalcase_CASE`` (SOME 1);
+    set_EVAL_skip ``option_CASE`` (SOME 1);
+    set_EVAL_skip ``COND`` (SOME 1)
   end
 in
 fun test0 nt s = let

@@ -725,13 +725,13 @@ START:
        not r8
        jmp START
 EXIT:
-     `)
+     `);
 
 val PUSH_IF = METIS_PROVE []
   ``((if b then mc_read_num (x1,y) else mc_read_num (x2,y)) =
      mc_read_num (if b then x1 else x2,y)) /\
     ((if b then mc_read_num_pre (x1,y) else mc_read_num_pre (x2,y)) =
-     mc_read_num_pre (if b then x1 else x2,y))``
+     mc_read_num_pre (if b then x1 else x2,y))``;
 
 val mc_read_num_lemma = prove(
   ``!cs cs2 n.
@@ -775,7 +775,7 @@ val mc_read_num_lemma = prove(
   \\ REVERSE (Cases_on `n < 1073741824`) THEN1
    (ASM_SIMP_TAC std_ss [EVAL ``~0w:word64``,word_mul_n2w,word_add_n2w]
     \\ ASM_SIMP_TAC (std_ss++SIZES_ss) [w2w_def,w2n_n2w,word_lo_n2w]
-    \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0 < 18446744073709551616:num``)]
+    \\ ONCE_REWRITE_TAC [GSYM MOD_PLUS]
     \\ SIMP_TAC std_ss []
     \\ `(ORD h - 48) < 18446744073709551616` by DECIDE_TAC
     \\ `(18446744073709551606 + (ORD h - 48)) < 18446744073709551616` by DECIDE_TAC
@@ -808,10 +808,10 @@ val ORD_BOUND_LEMMA = prove(
 val mc_read_num_thm = mc_read_num_lemma
   |> Q.SPECL [`cs1`,`cs2`,`ORD h - 48`]
   |> SIMP_RULE std_ss [RW1[MULT_COMM](GSYM str2num_def)]
-  |> SIMP_RULE std_ss [ORD_BOUND_LEMMA] |> GEN_ALL
+  |> SIMP_RULE std_ss [ORD_BOUND_LEMMA] |> GEN_ALL;
 
 val mc_read_num_thm0 = mc_read_num_lemma
-  |> Q.SPECL [`cs1`,`cs2`,`0`] |> SIMP_RULE std_ss []
+  |> Q.SPECL [`cs1`,`cs2`,`0`] |> SIMP_RULE std_ss [];
 
 val read_while_SPLIT_lemma = prove(
   ``!xs ys P.

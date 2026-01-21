@@ -124,25 +124,25 @@ val l3_run_tac =
 (***** custom compset *****)
 local
 
-  fun add_type cmp =
-    computeLib.add_datatype_info cmp o Option.valOf o TypeBase.fetch
-  fun add_types cmp l = List.app (add_type cmp) l
+  fun add_type (ty, cmp) =
+    computeLib.add_datatype_info cmp (Option.valOf (TypeBase.fetch ty))
+  fun add_types l cmp = List.foldl add_type cmp l
 
   val tyvars = [alpha, beta, gamma, delta, etyvar, ftyvar]
   fun mk_cmp_type (thy, (name, arity)) =
     mk_thy_type {Args = List.take (tyvars, arity), Thy = thy, Tyop = name}
-  fun add_all_types cmp thy =
-    add_types cmp (map (mk_cmp_type o pair thy) (types thy))
+  fun add_all_types (thy, cmp) =
+    add_types (map (mk_cmp_type o pair thy) (types thy)) cmp
 
-  fun add_defs cmp defs = computeLib.add_thms defs cmp
-    handle (HOL_ERR _) => ((* PolyML.print defs;*) ())
+  fun add_defs defs cmp = computeLib.add_thms defs cmp
+    handle (HOL_ERR _) => ((* PolyML.print defs;*) cmp)
 
   fun unpack_defn_thm (DefnBase.STDEQNS t) = t
     | unpack_defn_thm (DefnBase.OTHER   t) = t
 
-  fun add_all_defs cmp thy =
-    DefnBase.thy_userdefs {thyname = thy} |>
-      map (unpack_defn_thm o #thm) |> add_defs cmp
+  fun add_all_defs (thy, cmp) =
+    add_defs (DefnBase.thy_userdefs {thyname = thy} |>
+              map (unpack_defn_thm o #thm)) cmp
 
   val thys = [
       "lem_machine_word", "lem",
@@ -174,27 +174,27 @@ local
     *)
 in
 
-  val cmp = reduceLib.num_compset();
-  val _ = pairLib.add_pair_compset cmp;
-  val _ = optionLib.OPTION_rws cmp;
-  val _ = combinLib.add_combin_compset cmp;
-  val _ = wordsLib.add_words_compset true cmp;
-  (* val _ = integer_wordLib.add_integer_word_compset cmp; *)
-  val _ = intReduce.add_int_compset cmp;
-  val _ = cmp |> computeLib.add_conv
-    (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV);
-  val _ = cmp |> computeLib.add_conv
-    (``$= : α word -> α word -> bool``, 2, QCHANGED_CONV blastLib.BBLAST_CONV);
-  val _ = bitstringLib.add_bitstring_compset cmp; (* has to come after BBLAST_CONV *)
-  val _ = app (add_all_types cmp) thys;
-  val _ = app (add_all_defs cmp) thys;
-  val _ = cmp |> computeLib.add_thms [
+  val cmp = reduceLib.num_compset
+  val cmp = pairLib.add_pair_compset cmp
+  val cmp = optionLib.OPTION_rws cmp
+  val cmp = combinLib.add_combin_compset cmp
+  val cmp = wordsLib.add_words_compset true cmp
+  (* val cmp = integer_wordLib.add_integer_word_compset cmp *)
+  val cmp = intReduce.add_int_compset cmp
+  val cmp = computeLib.add_conv
+    (bitstringSyntax.v2w_tm, 1, bitstringLib.v2w_n2w_CONV) cmp
+  val cmp = computeLib.add_conv
+    (``$= : α word -> α word -> bool``, 2, QCHANGED_CONV blastLib.BBLAST_CONV) cmp
+  val cmp = bitstringLib.add_bitstring_compset cmp (* has to come after BBLAST_CONV *)
+  val cmp = List.foldl add_all_types cmp thys
+  val cmp = List.foldl add_all_defs cmp thys
+  val cmp = computeLib.add_thms [
               armv86aTheory.ExecuteA64_def,
               armv86aTheory.DecodeA64_def,
               armv86aTheory.Zeros_def
-            ];
+            ] cmp
   (* don't look at conditional branches before guard is fully evaluated *)
-  (* val _ = computeLib.set_skip cmp boolSyntax.conditional (SOME 1) *)
+  (* val cmp = computeLib.set_skip cmp boolSyntax.conditional (SOME 1) *)
   val CEVAL = computeLib.CBV_CONV cmp
 
 end

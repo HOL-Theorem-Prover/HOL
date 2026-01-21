@@ -10,4 +10,4 @@ all: $(DEFAULT_TARGETS) regexp2dfa
 EXTRA_CLEANS = regexp2dfa.o regexp2dfa
 
 regexp2dfa : regexp2dfa.uo
-	$(protect $(HOLDIR)/bin/buildheap) regexp2dfa.uo -o $@ --exe main
+	$(protect $(HOLDIR)/bin/hol) buildheap regexp2dfa.uo -o $@ --exe main

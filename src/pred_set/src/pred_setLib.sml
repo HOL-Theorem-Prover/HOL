@@ -103,12 +103,12 @@ in
              (sum_image_tm, 2, SUM_IMAGE_CONV)
            ]
     in
-      List.app (Lib.C computeLib.add_conv compset) convs ;
-      computeLib.add_thms thms compset
+      foldl (uncurry computeLib.add_conv) compset convs
+      |> computeLib.add_thms thms
     end
 end
 
-val _ = add_pred_set_compset computeLib.the_compset
+val () = computeLib.the_compset := add_pred_set_compset (!computeLib.the_compset)
 
 
 end

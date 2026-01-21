@@ -45,11 +45,11 @@ else
   die "HOL directory \"$holdir\" doesn't exist or is inaccessible."
 fi
 
-if [ -r std.prelude -a -d sigobj -a -r tools/smart-configure.sml ]
+if [ -r tools/std.prelude -a -d sigobj -a -r tools/smart-configure.sml ]
 then
     :
 else
-    die "Directory \"$holdir\" unlikely (no std.prelude, sigobj or configure.sml)"
+    die "Directory \"$holdir\" unlikely (no tools/std.prelude, sigobj or configure.sml)"
 fi
 
 if [ -d .git ]

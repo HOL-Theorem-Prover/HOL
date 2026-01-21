@@ -1262,7 +1262,7 @@ fun SUBST_EXISTS_CONV vs cs =
   THENC SUBST_EXISTS_CONV_AUX vs cs
   THENC REWRITE_CONV [];
 
-(*
+(* Consider using goalStack.print_tac instead if this is re-enabled
 fun PRINT_GOAL_TAC s (hs,goal) = let
   val _ = print "\n\n"
   val _ = print s

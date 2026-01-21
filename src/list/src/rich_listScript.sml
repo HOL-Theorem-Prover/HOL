@@ -75,12 +75,6 @@ Definition SPLITP[nocompute]:
          (CONS x (FST (SPLITP P l)), SND (SPLITP P l)))
 End
 
-Definition SPLITP_AUX_def:
-   (SPLITP_AUX acc P [] = (acc,[])) /\
-   (SPLITP_AUX acc P (h::t) =
-      if P h then (acc, h::t) else SPLITP_AUX (acc ++ [h]) P t)
-End
-
 Theorem SPLITP_splitAtPki:
   SPLITP P = splitAtPki (K P) $,
 Proof
@@ -205,7 +199,7 @@ Proof
   THEN simp[DROP, FUNPOW]
 QED
 
-Theorem NOT_NULL_SNOC:
+Theorem NOT_NULL_SNOC[simp]:
     !x l. ~NULL (SNOC x l)
 Proof
    BasicProvers.Induct_on `l`
@@ -1628,13 +1622,12 @@ Proof
 QED
 
 Theorem BUTLASTN_1:
-    !l. ~(l = []) ==> (BUTLASTN 1 l = FRONT l)
+    !l. BUTLASTN 1 l = FRONT l
 Proof
    SNOC_INDUCT_TAC
-   THEN REWRITE_TAC []
-   THEN REPEAT STRIP_TAC
-   THEN CONV_TAC (ONCE_DEPTH_CONV num_CONV)
-   THEN REWRITE_TAC [FRONT_SNOC, BUTLASTN]
+   >- simp[BUTLASTN_def]
+   >> CONV_TAC (ONCE_DEPTH_CONV num_CONV)
+   >> REWRITE_TAC [FRONT_SNOC, BUTLASTN]
 QED
 
 Theorem BUTLASTN_APPEND1:
@@ -3372,6 +3365,170 @@ Proof
   metis_tac[IS_PREFIX_LENGTH_ANTI]
 QED
 
+(* lcp2: binary longest common prefix *)
+Definition lcp2_def:
+  lcp2 x y = longest_prefix {x;y}
+End
+
+Theorem lcp2_thm:
+  lcp2 xs ys =
+    case xs of
+    | x::xs => (case ys of
+                | y::ys => if x = y then x :: lcp2 xs ys else []
+                | _ => [])
+    | _ => []
+Proof
+  Cases_on `xs` >> Cases_on `ys` >> rw[lcp2_def, longest_prefix_PAIR]
+QED
+
+(* lcp: longest common prefix of a list of lists *)
+Definition lcp_def:
+  lcp ls = longest_prefix (set ls)
+End
+
+Theorem lcp_nil[simp]:
+  lcp [] = []
+Proof
+  simp[lcp_def]
+QED
+
+Theorem lcp_sing[simp]:
+  lcp [x] = x
+Proof
+  simp[lcp_def]
+QED
+
+(* lcp2 is a prefix of both arguments *)
+Theorem lcp2_prefix:
+  lcp2 x y <<= x /\ lcp2 x y <<= y
+Proof
+  simp[lcp2_def] >>
+  MAP_EVERY qid_spec_tac [`y`,`x`] >>
+  Induct >> simp[longest_prefix_PAIR] >>
+  gen_tac >> Cases >> simp[longest_prefix_PAIR] >> rw[]
+QED
+
+(* any common prefix of x and y is a prefix of lcp2 x y *)
+Theorem lcp2_maximal:
+  p <<= x /\ p <<= y ==> p <<= lcp2 x y
+Proof
+  simp[lcp2_def] >>
+  MAP_EVERY qid_spec_tac [`y`,`x`,`p`] >>
+  Induct >- simp[] >>
+  rpt strip_tac >>
+  Cases_on `x` >> fs[] >>
+  Cases_on `y` >> fs[longest_prefix_PAIR] >> rw[]
+QED
+
+(* Key lemma: replacing {x;y} with {lcp2 x y} preserves common_prefixes *)
+Theorem common_prefixes_INSERT2:
+  common_prefixes ({x; y} UNION rest) =
+  common_prefixes ({lcp2 x y} UNION rest)
+Proof
+  simp[lcp2_def, common_prefixes_def, EXTENSION] >>
+  gen_tac >> eq_tac >> rw[] >>
+  metis_tac[lcp2_def, lcp2_maximal, lcp2_prefix, IS_PREFIX_TRANS]
+QED
+
+(* Key lemma: replacing {x;y} with {lcp2 x y} preserves longest_prefix *)
+Theorem longest_prefix_INSERT2:
+  longest_prefix ({x; y} UNION rest) = longest_prefix ({lcp2 x y} UNION rest)
+Proof
+  `{x; y} UNION rest <> {} /\ {lcp2 x y} UNION rest <> {}`
+    by simp[] >>
+  simp[longest_prefix_def, lcp2_def, common_prefixes_INSERT2]
+QED
+
+Theorem lcp_cons2:
+  lcp (x::y::xs) = lcp (lcp2 x y :: xs)
+Proof
+  simp[lcp_def, lcp2_def] >>
+  metis_tac[lcp2_def, longest_prefix_INSERT2, INSERT_UNION_EQ, UNION_EMPTY, INSERT_SING_UNION]
+QED
+
+Theorem lcp_thm:
+  !ls. (!x. MEM x ls ==> lcp ls <<= x) /\
+       (ls <> [] ==> !p. (!x. MEM x ls ==> p <<= x) ==> p <<= lcp ls)
+Proof
+  simp[lcp_def] >> rw[]
+  >- (`set ls <> {}` by (Cases_on `ls` >> fs[]) >>
+      simp[longest_prefix_def] >> SELECT_ELIM_TAC >> conj_tac
+      >- (irule FINITE_is_measure_maximal >> simp[]) >>
+      simp[is_measure_maximal_def, common_prefixes_def])
+  >- (`p IN common_prefixes (set ls)` by simp[common_prefixes_def] >>
+      `set ls <> {}` by (Cases_on `ls` >> fs[]) >>
+      simp[longest_prefix_def] >> SELECT_ELIM_TAC >> conj_tac
+      >- (irule FINITE_is_measure_maximal >> simp[]) >>
+      simp[is_measure_maximal_def] >> rw[] >>
+      `x IN common_prefixes (set ls)` by simp[] >>
+      `p <<= x \/ x <<= p` by metis_tac[two_common_prefixes] >>
+      metis_tac[IS_PREFIX_LENGTH, IS_PREFIX_LENGTH_ANTI, LESS_EQUAL_ANTISYM])
+QED
+
+Theorem lcp2_assoc:
+  lcp2 (lcp2 x y) z = lcp2 x (lcp2 y z)
+Proof
+  simp[lcp2_def] >>
+  MAP_EVERY qid_spec_tac [`z`,`y`,`x`] >>
+  Induct >> rw[longest_prefix_PAIR] >>
+  Cases_on `y` >> rw[longest_prefix_PAIR] >>
+  Cases_on `z` >> rw[longest_prefix_PAIR] >>
+  rw[] >> fs[longest_prefix_PAIR]
+QED
+
+Theorem lcp_oneline:
+  lcp ls =
+    case ls of
+    | [] => []
+    | [x] => x
+    | x::y::xs => lcp (lcp2 x y :: xs)
+Proof
+  Cases_on `ls` >> rw[lcp_nil, lcp_sing] >>
+  Cases_on `t` >> rw[lcp_sing, lcp_cons2]
+QED
+
+Theorem lcp_CONS:
+  lcp (x::xs) = if NULL xs then x else lcp2 x (lcp xs)
+Proof
+  qid_spec_tac `x` >>
+  Induct_on `xs` >> rw[lcp_sing, lcp_cons2] >>
+  simp[lcp2_def, lcp2_assoc]
+QED
+
+Theorem lcp2_is_nil:
+  lcp2 x y = [] <=> (x = [] \/ y = [] \/ HD x <> HD y)
+Proof
+  rw[lcp2_def, EQ_IMP_THM]
+  >> Cases_on `x` >> Cases_on `y` >> fs[longest_prefix_PAIR]
+QED
+
+Theorem lcp_is_nil:
+  !ls. lcp ls = [] <=>
+  (ls = [] \/ ?x y. MEM x ls /\ MEM y ls /\ lcp2 x y = [])
+Proof
+  Induct_on `ls` >> rw[]
+  >> rw[lcp_CONS]
+  >> fs[NULL_EQ, lcp2_is_nil]
+  >> Cases_on `lcp ls` >> fs[]
+  >- metis_tac[]
+  >> Cases_on `h` >> fs[]
+  >- metis_tac[]
+  >> Q.MATCH_GOALSUB_RENAME_TAC `h1 = h2 ==> _`
+  >> Q.SPEC_THEN `ls` mp_tac lcp_thm
+  >> rw[NULL_EQ]
+  >> Cases_on `h1 <> h2` >> fs[]
+  >- (Cases_on `ls` >> fs[]
+      >> Q.MATCH_GOALSUB_RENAME_TAC `h1::t1`
+      >> MAP_EVERY Q.EXISTS_TAC [`h1::t1`, `h`]
+      >> simp[]
+      >> Cases_on `h` >> fs[]
+      >> full_simp_tac (srw_ss() ++ boolSimps.DNF_ss) [] >> rw[])
+  >> rw[EQ_IMP_THM]
+  >- metis_tac[]
+  >> TRY (first_x_assum drule >> CASE_TAC >> rw[] >> NO_TAC)
+  >> metis_tac[]
+QED
+
 (*---------------------------------------------------------------------------
    A list of numbers
  ---------------------------------------------------------------------------*)
@@ -4074,12 +4231,16 @@ Proof
   Induct_on ‘n’ >> simp[] >> Induct_on ‘l1’ >> dsimp[]
 QED
 
+Theorem LIST_REL_DROP = EVERY2_DROP
+
 Theorem EVERY2_TAKE:
   !P xs ys n. EVERY2 P xs ys ==> EVERY2 P (TAKE n xs) (TAKE n ys)
 Proof
   Induct_on ‘n’ >> simp[] >> Induct_on ‘xs’ >>
   asm_simp_tac (srw_ss() ++ boolSimps.DNF_ss) []
 QED
+
+Theorem LIST_REL_TAKE = EVERY2_TAKE
 
 Theorem LIST_REL_APPEND_SING[simp]:
   LIST_REL R (l1 ++ [x1]) (l2 ++ [x2]) <=> LIST_REL R l1 l2 /\ R x1 x2
@@ -4134,6 +4295,8 @@ Proof
    >> drule (iffRL EVERY_REVERSE)
    >> simp[REVERSE_ZIP, Excl "EVERY_REVERSE"]
 QED
+
+Theorem LIST_REL_REVERSE1 = EVERY2_REVERSE1
 
 Theorem LIST_REL_REVERSE_EQ[simp]:
    LIST_REL R (REVERSE l1) (REVERSE l2) <=> LIST_REL R l1 l2
@@ -4461,29 +4624,31 @@ Proof
    THEN FULL_SIMP_TAC (srw_ss()) [COUNT_LIST_GENLIST, COUNT_LIST_AUX]
 QED
 
-Theorem SPLITP_AUX_lem1[local]:
-    !P acc l h.
-     ~P h ==> (h::FST (SPLITP_AUX acc P l) = FST (SPLITP_AUX (h::acc) P l))
+Definition SPLITP_TAILREC_def:
+  SPLITP_TAILREC acc P [] = (REVERSE acc,[]) /\
+  SPLITP_TAILREC acc P (h::t) =
+     (if P h then
+        (REVERSE acc, h::t)
+      else
+        SPLITP_TAILREC (h::acc) P t)
+End
+
+Theorem SPLITP_TAILREC_LEM[local]:
+ ∀list l1 l2 acc.
+    SPLITP_TAILREC acc P list
+    =
+    let (l1,l2) = SPLITP P list
+    in (REVERSE acc ++ l1, l2)
 Proof
-   Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]
+  Induct >> rw[SPLITP, SPLITP_TAILREC_def]
 QED
 
-Theorem SPLITP_AUX_lem2[local]:
-    !P acc1 acc2 l. SND (SPLITP_AUX acc1 P l) = SND (SPLITP_AUX acc2 P l)
+Theorem SPLITP_compute:
+  SPLITP = SPLITP_TAILREC []
 Proof
-   Induct_on `l` THEN SRW_TAC [] [SPLITP_AUX_def]
+  simp[FUN_EQ_THM, SPLITP_TAILREC_LEM, LET_THM] >>
+  CONV_TAC (DEPTH_CONV PairRules.PBETA_CONV) >> simp[]
 QED
-
-Theorem SPLITP_AUX[local]:
-    !P l. SPLITP P l = SPLITP_AUX [] P l
-Proof
-   Induct_on `l`
-   THEN SRW_TAC [] [SPLITP_AUX_def, SPLITP, SPLITP_AUX_lem1]
-   THEN metisLib.METIS_TAC [SPLITP_AUX_lem2, pairTheory.PAIR]
-QED
-
-Theorem SPLITP_compute =
-   REWRITE_RULE [GSYM FUN_EQ_THM] SPLITP_AUX;
 
 Theorem IS_SUFFIX_compute = GSYM IS_PREFIX_REVERSE;
 

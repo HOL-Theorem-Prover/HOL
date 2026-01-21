@@ -894,8 +894,7 @@ Proof
   \\ Cases_on ‘w’ \\ gvs [word_lsl_n2w]
   \\ rw [] \\ gvs [dimword_def]
   \\ ‘0n < 2 ** dimindex (:'a)’ by gvs []
-  \\ drule MOD_TIMES2
-  \\ disch_then (fn th => once_rewrite_tac [GSYM th])
+  \\ once_rewrite_tac [GSYM MOD_TIMES2]
   \\ qsuff_tac ‘2 ** n MOD 2 ** dimindex (:'a) = 0’ \\ gvs []
   \\ ‘dimindex (:'a) <= n’ by fs []
   \\ gvs [LESS_EQ_EXISTS,EXP_ADD]
@@ -1335,8 +1334,7 @@ Proof
   >- (gvs [] \\ irule_at Any arithmeticTheory.DIV_LE_MONOTONE \\ gvs [])
   \\ strip_tac \\ gvs [bitTheory.BITWISE_LT_2EXP,wordsTheory.dimword_def]
   \\ ‘0 < 2:num’ by fs []
-  \\ drule arithmeticTheory.MOD_PLUS
-  \\ disch_then (fn th => simp_tac std_ss [Once (GSYM th)])
+  \\ simp_tac std_ss [Once (GSYM arithmeticTheory.MOD_PLUS)]
   \\ Cases_on ‘ODD m’
   \\ Cases_on ‘ODD n’
   \\ imp_res_tac bitTheory.ODD_MOD2_LEM

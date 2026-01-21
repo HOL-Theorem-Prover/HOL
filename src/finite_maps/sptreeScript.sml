@@ -1967,7 +1967,7 @@ Proof
   \\ full_simp_tac(srw_ss())[ONCE_REWRITE_RULE [MULT_COMM] DIV_MULT]
   \\ IMP_RES_TAC (METIS_PROVE [] ``(m = n) ==> (m MOD 2 = n MOD 2)``)
   \\ POP_ASSUM MP_TAC \\ SIMP_TAC std_ss []
-  \\ ONCE_REWRITE_TAC [MATCH_MP (GSYM MOD_PLUS) (DECIDE ``0 < 2:num``)]
+  \\ ONCE_REWRITE_TAC [GSYM MOD_PLUS]
   \\ EVAL_TAC \\ fs[MOD_EQ_0,ONCE_REWRITE_RULE [MULT_COMM] MOD_EQ_0]
 QED
 

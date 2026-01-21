@@ -131,11 +131,10 @@ val _ = Lib.appi (fn i => fn t =>
                   (``FOLDR $* 1 []``, SOME ``1``)]
 
 local
-  val cs = listSimps.list_compset()
-  val () = List.app (fn f => f cs)
-             [indexedListsSimps.add_indexedLists_compset,
-              numposrepLib.add_numposrep_compset,
-              bitLib.add_bit_compset]
+  val cs = listSimps.list_compset
+           |> indexedListsSimps.add_indexedLists_compset
+           |> numposrepLib.add_numposrep_compset
+           |> bitLib.add_bit_compset
 in
   fun ct(s,inp,out) =
     testutils.convtest

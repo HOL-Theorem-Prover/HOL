@@ -6589,7 +6589,7 @@ SIMP_TAC list_ss [holfoot_ap_data_array___CONST, holfoot_ap_data_array_MAP_LIST_
    EVERY_MAP] THEN
 SIMP_TAC std_ss [asl_trivial_cond___asl_star, asl_trivial_cond___asl_trivial_cond,
    GSYM EVERY_CONJ, CONJ_ASSOC, MAP_MAP_o, o_DEF, ETA_THM] THEN
-`!l:num list. (~NULL l /\ (LENGTH (TL l) = n)) = (LENGTH l = SUC n)` by (
+`!l:num list. (~NULL l /\ (LENGTH l - 1 = n)) = (LENGTH l = SUC n)` by (
    Cases_on `l` THEN SIMP_TAC list_ss []
 ) THEN
 ASM_SIMP_TAC std_ss []

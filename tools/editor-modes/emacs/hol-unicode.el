@@ -228,6 +228,8 @@
 (define-key hol-unicode-rparen-map (kbd "C-M-^") "⎤")
 (define-key hol-unicode-lparen-map (kbd "C-M-[") "⦗")
 (define-key hol-unicode-rparen-map (kbd "C-M-]") "⦘")
+(define-key hol-unicode-lparen-map (kbd "C-M-{") "❲")
+(define-key hol-unicode-rparen-map (kbd "C-M-}") "❳")
 
 ; shift map
 (define-key hol-unicode-shift-map (kbd "a") "≫")

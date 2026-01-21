@@ -422,7 +422,7 @@ Proof
   qexists_tac `b` >> simp[] >> metis_tac[]
 QED
 
-fun PRINT_TAC s gl = (print ("** " ^ s ^ "\n"); ALL_TAC gl)
+fun PRINT_TAC s = goalStack.note_tac ("** " ^ s)
 
 Theorem SET_SQUARED_CARDEQ_SET:
     !s. INFINITE s ==> (s CROSS s =~ s)
