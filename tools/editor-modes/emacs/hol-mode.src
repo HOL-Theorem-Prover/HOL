@@ -1113,7 +1113,7 @@ region instead. With prefix ARG prompt for a file-name to load."
               (setq hol-bare-p t)
               (list
                (concat bindir "hol")
-               "(as we are in its HOL directory and hol.state doesn't exist, using --bare)"))))))))
+               "(as we are in its HOL directory and hol.state doesn't exist, using --bare)")))))))))
 
 (defun hol--get-executable ()
   (let ((first-option (hol-executable-with-bare)))
