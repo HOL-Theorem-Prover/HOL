@@ -70,3 +70,36 @@ val multi_resumed = resume{label_name = "p", suspension_name = "multisplit"}
 Finalise multisplit
 
 val ms = fetch "suspTest" "multisplit"
+
+Theorem testTacMod:
+  p ∧ q ⇒ q ∧ (p ∧ p)
+Proof
+  strip_tac >> suspend "rtp_qpp"
+QED
+
+Resume testTacMod[rtp_qpp,exclude_simps=AND_CLAUSES]:
+  TRY (simp[] >> NO_TAC) >>
+  simp[] >> rpt conj_tac >> ACCEPT_TAC TRUTH
+QED
+
+Finalise testTacMod
+
+Theorem testFinalEqn:
+  p ∧ T ∧ q <=> p ∧ q
+Proof
+  iff_tac >- suspend "l2r" >- suspend "r2l"
+QED
+
+Resume testFinalEqn[l2r]:
+  simp[]
+QED
+
+Resume testFinalEqn[r2l]:
+  simp[]
+QED
+
+Finalise testFinalEqn[simp]
+
+val th = SCONV [Excl "AND_CLAUSES"] “a ∧ T ∧ b”
+
+val simped = assert (aconv “a ∧ b”) (rhs $ concl th)
