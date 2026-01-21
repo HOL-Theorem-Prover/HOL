@@ -125,12 +125,14 @@ fun upload ((src, regulardir), target, symlink) =
  ---------------------------------------------------------------------------*)
 
 val hol_state0 = fullPath [HOLDIR, "bin", "hol.state0"]
+val sigobj_proofmanLib = fullPath [HOLDIR, "sigobj", "proofManagerLib.uo"]
 fun buildDir symlink s =
   if #1 s = fullPath [HOLDIR, "bin/hol"] then phase := Full
   else (
     build_dir Holmake selftest_level s;
     upload(s,SIGOBJ,symlink);
-    if !phase = Initial andalso OS.FileSys.access(hol_state0, [])
+    if !phase = Initial andalso OS.FileSys.access(hol_state0, []) andalso
+       OS.FileSys.access(sigobj_proofmanLib, [])
     then phase := Bare
     else ()
   )
