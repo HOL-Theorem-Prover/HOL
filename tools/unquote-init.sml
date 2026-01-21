@@ -9,8 +9,8 @@
    This is loaded during Moscow ML interactive session initialization
    (from tools/std.prelude via the generated hol shell script).
 
-   For Poly/ML, quotation handling is built into the compiler via
-   PolyML.Compiler hooks, so no separate filter is needed.
+   For Poly/ML, quotation handling is done via a modified copy of Poly/ML's
+   REPL code in tools-poly/holrepl.ML (called from tools-poly/hol.ML).
 *)
 
 (*---------------------------------------------------------------------------*
