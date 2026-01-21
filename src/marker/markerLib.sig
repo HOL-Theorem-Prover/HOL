@@ -110,9 +110,12 @@ sig
   val suspend : string -> tactic
   val prim_resume : (thm * string * tactic) -> {updated_main: thm, subresult:thm}
   val resume : {suspension_name:string, label_name:string} -> tactic -> thm
-  val set_suspended_goal :
+  val prim_set_suspended_goal :
       Manager.tacmodifier -> {suspension_name:string, label_name:string} ->
       proofManagerLib.proofs
+  val set_suspended_goal :
+      {suspension_name:string, label_name:string} -> proofManagerLib.proofs
+      (* provides id_tacm for the tactic modifier value *)
 
   val add_suspension_label : string -> thm -> thm
   val resumption_to_goal : term -> (term list * term)

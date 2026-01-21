@@ -945,7 +945,7 @@ fun resume {suspension_name,label_name} tac =
           subresult
         end
 
-fun set_suspended_goal tacmod {suspension_name,label_name} =
+fun prim_set_suspended_goal tacmod {suspension_name,label_name} =
     case boolLib.find_suspension suspension_name of
         NONE => raise ERR "set_suspended_goal"
                       ("No suspension with name " ^ suspension_name)
@@ -955,5 +955,7 @@ fun set_suspended_goal tacmod {suspension_name,label_name} =
           )
           tacmod
           I
+
+val set_suspended_goal = prim_set_suspended_goal Manager.id_tacm
 
 end (* struct *)
