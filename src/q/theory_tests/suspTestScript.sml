@@ -21,13 +21,13 @@ Proof
   disch_then (CONJUNCTS_THEN assume_tac) >> suspend "q"
 QED
 
-val _ = set_suspended_goal Manager.id_tacm {
+val _ = set_suspended_goal {
   label_name = "p", suspension_name = "willsplit"}
 
 val psubgoal = resume{label_name = "p", suspension_name = "willsplit"}
   (ASM_REWRITE_TAC[])
 
-val _ = set_suspended_goal Manager.id_tacm {
+val _ = set_suspended_goal {
   label_name = "q", suspension_name = "willsplit"}
 
 Resume willsplit[q]:
@@ -40,7 +40,7 @@ QED
 
 val c = concl q2sg;
 
-val _ = set_suspended_goal Manager.id_tacm {
+val _ = set_suspended_goal {
   label_name = "q", suspension_name = "willsplit2"
   }
 
@@ -61,7 +61,7 @@ Proof
   rpt strip_tac >> suspend "p"
 QED
 
-val _ = set_suspended_goal Manager.id_tacm
+val _ = set_suspended_goal
   {label_name = "p", suspension_name = "multisplit"}
 
 val multi_resumed = resume{label_name = "p", suspension_name = "multisplit"}
