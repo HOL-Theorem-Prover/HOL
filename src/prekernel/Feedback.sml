@@ -12,6 +12,7 @@ structure Feedback :> Feedback =
 struct
 
 open Feedback_dtype
+
 local open HOLPP in end
 
 fun mk_origin s1 s2 loc =
@@ -106,21 +107,6 @@ fun set_message msg (HOL_ERROR {origins,message}) =
 
 val ERR = mk_HOL_ERR "Feedback"  (* local to this file *)
 
-(*---------------------------------------------------------------------------
-     Misc. utilities
- ---------------------------------------------------------------------------*)
-
-fun quote s = String.concat ["\"", s, "\""]
-
-fun assoc1 item =
-   let
-      fun assc ((e as (key, _)) :: rst) =
-            if item = key then SOME e else assc rst
-        | assc [] = NONE
-   in
-      assc
-   end
-
 (*---------------------------------------------------------------------------*
  * Controlling the display of exceptions, messages, and warnings.            *
  *---------------------------------------------------------------------------*)
@@ -174,12 +160,27 @@ fun exn_to_string (HOL_ERR herr) = !ERR_to_string herr
 
 fun render_exn e =
     if !Globals.interactive then
-       raise e
+       Portable.reraise e
     else
       (output_ERR (exn_to_string e);
        OS.Process.exit OS.Process.failure)
 
-fun Raise e = (output_ERR (exn_to_string e); raise e)
+(*---------------------------------------------------------------------------*)
+(* System-dependent display of uncaught exceptions just before hitting the   *)
+(* "Print" part of the REPL. In PolyML, just reraise the exn since it will   *)
+(* be caught and the contents printed by the REPL. In MoscowML, the REPL     *)
+(* "Print" function doesn't print the contents of uncaught exns, so one has  *)
+(* handle the display of exn contents.                                       *)
+(*---------------------------------------------------------------------------*)
+
+fun display_uncaught e = Portable.display_exn (output_ERR o exn_to_string) e
+
+(*---------------------------------------------------------------------------*)
+(* Raise overlaps with display_uncaught but can also be useful for           *)
+(* inspecting exn contents during the "Eval" part of the REPL.               *)
+(*---------------------------------------------------------------------------*)
+
+fun Raise e = (output_ERR (exn_to_string e); Portable.reraise e)
 
 local
    val err1 = mk_HOL_ERR "??" "??" "fail"
@@ -252,6 +253,8 @@ fun find_record n =
     | SOME (ALIAS a) => find_record a
 
 val WARN = HOL_WARNING "Feedback"
+
+fun quote s = String.concat ["\"", s, "\""]
 
 local
    fun err f l = raise ERR f (String.concat l)
@@ -431,19 +434,24 @@ fun current_trace nm =
       SOME {value, ...} => trfp_get value
     | NONE => registered_err "current_trace" nm
 
-fun trace (nm, i) f x =
-   case find_record nm of
-      NONE => registered_err "trace" nm
-    | SOME {value, maximum, ...} =>
-        (bound_check "trace" nm maximum i
-         ; let
-              val init = trfp_get value
-              val _ = trfp_set value i
-              val y = f x handle e => (trfp_set value init; raise e)
-              val _ = trfp_set value init
-           in
-              y
-           end)
+fun with_traces flags f x =
+  let fun update_flag (nm,j) =
+          case find_record nm
+           of NONE => registered_err "with_traces" nm
+            | SOME {value, maximum, ...} =>
+              let val i = trfp_get value
+                  fun reset_value() = trfp_set value i
+              in bound_check "with_traces" nm maximum j;
+                 trfp_set value j;
+                 reset_value end
+      val reset_fns = map update_flag flags
+      fun reset_flags() = List.app (fn f => f()) reset_fns
+      val y = f x handle e => (reset_flags(); Portable.reraise e)
+  in
+     reset_flags(); y
+  end
+
+fun trace flag = with_traces [flag]
 
 val () = register_btrace ("assumptions", Globals.show_assums)
 val () = register_btrace ("numeral types", Globals.show_numeral_types)

@@ -1,3 +1,24 @@
+(* check-intconfig.sml - User Configuration File Loading
+   =====================================================
+
+   This file is loaded at the end of interactive session initialization
+   for both Poly/ML and Moscow ML. It checks for and loads user
+   configuration files in the following order:
+
+   1. If HOL_NOCONFIG environment variable is set, skip all config loading
+   2. If --noconfig command line flag is present, skip all config loading
+   3. If HOL_CONFIG environment variable is set, load that file
+   4. Otherwise, look for these files in $HOME (or %APPDATA% on Windows):
+      - hol-config.sml
+      - hol-config.ML
+      - .hol-config
+      - .hol-config.sml
+      - .hol-config.ML
+
+   The configuration file can contain any SML code to customize the
+   interactive environment (e.g., setting traces, loading libraries).
+*)
+
 let
   fun checkfor f =
     if FileSys.access (f, [FileSys.A_READ]) then SOME f else NONE

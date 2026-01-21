@@ -1,20 +1,32 @@
 (*===========================================================================*)
 (* Theory of Moore-Smith convergence nets, and special cases like sequences  *)
 (*===========================================================================*)
+
 Theory nets
 Ancestors
-  pred_set pair arithmetic num prim_rec relation real topology
-  metric
+  pred_set pair combin arithmetic num prim_rec relation real topology
+  metric cardinal
 Libs
-  numLib reduceLib pairLib mesonLib RealArith hurdUtils jrhUtils
-  tautLib
-
+  numLib reduceLib pairLib mesonLib realLib hurdUtils jrhUtils tautLib
 
 val _ = Parse.reveal "B";
 
-val num_EQ_CONV = Arithconv.NEQ_CONV;
+val NUM_EQ_CONV = Arithconv.NEQ_CONV;
 val DISC_RW_KILL = DISCH_TAC THEN ONCE_ASM_REWRITE_TAC [] THEN
                    POP_ASSUM K_TAC;
+
+val ASM_REAL_ARITH_TAC = REAL_ASM_ARITH_TAC;
+
+(* !x. P x ==> Q x) ==> (!x. P x) ==> !x. Q x *)
+Theorem MONO_FORALL = MONO_ALL
+
+Theorem REAL_HALF :
+   (!e. &0 < e / &2 <=> &0 < e) /\
+   (!e. e / &2 + e / &2 = e) /\
+   (!e. &2 * (e / &2) = e)
+Proof
+    REAL_ARITH_TAC
+QED
 
 (*---------------------------------------------------------------------------*)
 (* Basic definitions: directed order, net, bounded net, pointwise limit [1]  *)
@@ -369,7 +381,7 @@ Proof
             THEN REWRITE_TAC[REAL_MUL_LID]) THEN
     CONJ_TAC THENL
      [ASM_REWRITE_TAC[ABS_NZ, ABS_ABS],
-      REWRITE_TAC[REAL_INJ] THEN CONV_TAC(RAND_CONV num_EQ_CONV) THEN
+      REWRITE_TAC[REAL_INJ] THEN CONV_TAC(RAND_CONV NUM_EQ_CONV) THEN
       REWRITE_TAC[]], ALL_TAC] THEN
   SUBGOAL_THEN “~(x(n:'a) = &0)” (SUBST1_TAC o MATCH_MP ABS_INV) THENL
    [ASM_REWRITE_TAC[ABS_NZ], ALL_TAC] THEN
@@ -715,8 +727,11 @@ Proof
   MESON_TAC[NET]
 QED
 
+(* NOTE: It seems that purpose of “g x x” in dorder for “at a”, is to make
+   sure ‘x <> a’, or 0 < mdist m (x,a).
+ *)
 Theorem DORDER_NET :
-    !n. dorder (netord n)
+    !net. dorder (netord net)
 Proof
     RW_TAC std_ss [dorder, OLDNET]
 QED
@@ -728,37 +743,66 @@ QED
 val _ = set_fixity "within" (Infix(NONASSOC, 450));
 val _ = set_fixity "in_direction" (Infix(NONASSOC, 450));
 
-(* new definition, making connection to netsTheory *)
-Definition at_def :
-    at z = mk_net (tendsto (mr1,z))
+(* HOL-Light: (atpointof top a) = mk_net({u | open_in top u /\ a IN u},{a})
+
+   NOTE: HOL-Light's “atpointof” takes a (general) topology, while here HOL4
+   takes a metric (therefore only works for metrizable topology).
+ *)
+Definition atpointof_def[nocompute]:
+    atpointof m a = mk_net (tendsto (m,a))
 End
 
-(* old definition, now becomes an equivalent theorem *)
-Theorem at :
-    !a. at a = mk_net(\x y. &0 < dist(x,a) /\ dist(x,a) <= dist(y,a))
+(* HOL-Light: at a = atpointof euclidean a *)
+Definition at_DEF :
+    at z = atpointof mr1 z
+End
+
+(* The previous "definition" now (again) becomes a theorem. *)
+Theorem at_def :
+    !z. at z = mk_net (tendsto (mr1,z))
 Proof
-    RW_TAC std_ss [at_def]
+    RW_TAC std_ss [at_DEF, atpointof_def]
+QED
+
+Theorem atpointof :
+    !m a. atpointof m a =
+          mk_net (\x y. 0 < mdist m (x,a) /\ mdist m (x,a) <= mdist m (y,a))
+Proof
+    RW_TAC std_ss [atpointof_def]
  >> AP_TERM_TAC
- >> RW_TAC std_ss [FUN_EQ_THM, tendsto, dist_def]
+ >> RW_TAC std_ss [FUN_EQ_THM, tendsto]
  >> PROVE_TAC [METRIC_SYM]
 QED
 
+(* |- !a. at a = mk_net (\x y. 0 < dist (x,a) /\ dist (x,a) <= dist (y,a)) *)
+Theorem at = atpointof |> ISPEC “mr1”
+                       |> REWRITE_RULE [GSYM at_DEF, GSYM dist_def]
+
+(* HOL-Light: at_infinity = mk_net({{x | b <= norm x} | b IN (:real)},{}) *)
 Definition at_infinity[nocompute]:
   at_infinity = mk_net(\x y. abs(x) >= abs(y))
 End
 
+(* HOL-Light: at_posinfinity = mk_net({{x | a <= x} | a IN (:real)},{}) *)
 Definition at_posinfinity[nocompute]:
   at_posinfinity = mk_net(\x y:real. x >= y)
 End
 
+(* HOL-Light: at_neginfinity = mk_net({{x | x <= a} | a IN (:real)},{}) *)
 Definition at_neginfinity[nocompute]:
   at_neginfinity = mk_net(\x y:real. x <= y)
 End
 
+(* HOL-Light: sequentially = mk_net({from n | n IN (:num)},{}) *)
 Definition sequentially[nocompute]:
   sequentially = mk_net(\m:num n. m >= n)
 End
 
+(* HOL-Light's definition:
+
+let within = new_definition
+  `net within s = mk_net (netfilter net relative_to s,netlimits net)`;;
+ *)
 Definition within[nocompute]:
   (net within s) = mk_net(\x y. netord net x y /\ x IN s)
 End
@@ -776,21 +820,37 @@ fun NET_PROVE_TAC [def] =
   REWRITE_TAC [ETA_AX] THEN
   ASM_SIMP_TAC std_ss [GSYM(CONJUNCT2 net_tybij)];
 
-Theorem AT:
-   !a:real x y.
-        netord(at a) x y <=> &0 < dist(x,a) /\ dist(x,a) <= dist(y,a)
+(* NOTE: Most of the time, user only need to use this theorem instead of the
+   definition(s) of “atpointof”.
+ *)
+Theorem ATPOINTOF :
+   !m a x y.
+      netord(atpointof m a) x y <=>
+      0 < mdist m (x,a) /\ mdist m (x,a) <= mdist m (y,a)
 Proof
-  GEN_TAC THEN NET_PROVE_TAC[at] THEN
+  NTAC 2 GEN_TAC THEN NET_PROVE_TAC[atpointof] THEN
   METIS_TAC[REAL_LE_TOTAL, REAL_LE_REFL, REAL_LE_TRANS, REAL_LET_TRANS]
 QED
 
-(* Connection between HOL4's “tendsto” and HOL-Light's “at”, cf. [at_def] *)
-Theorem tendsto_mr1 :
-    !m a. tendsto (mr1,a) = netord (at a)
+(* |- !a x y.
+        netord (at a) x y <=> 0 < dist (x,a) /\ dist (x,a) <= dist (y,a)
+ *)
+Theorem AT = ATPOINTOF |> ISPEC “mr1”
+                       |> REWRITE_RULE [GSYM at_DEF, GSYM dist_def]
+
+Theorem tendsto_alt_atpointof :
+    !m a. tendsto (m,a) = netord (atpointof m a)
 Proof
-    rw [FUN_EQ_THM, tendsto, AT, GSYM dist_def]
- >> METIS_TAC [DIST_SYM]
+    rw [FUN_EQ_THM, tendsto, ATPOINTOF]
+ >> METIS_TAC [MDIST_SYM]
 QED
+
+(* Connection between HOL4's “tendsto” and HOL-Light's “at”, cf. [at_def]
+
+   |- !a. tendsto (mr1,a) = netord (at a)
+ *)
+Theorem tendsto_mr1 = tendsto_alt_atpointof |> ISPEC “mr1”
+                                            |> REWRITE_RULE [GSYM at_DEF]
 
 Theorem AT_INFINITY:
    !x y. netord at_infinity x y <=> abs(x) >= abs(y)
@@ -839,10 +899,16 @@ Proof
   SIMP_TAC std_ss [WITHIN, AT, in_direction, GSPECIFICATION] THEN METIS_TAC []
 QED
 
-Theorem WITHIN_UNIV:
-   !x:real. (at x within UNIV) = at x
+Theorem NET_WITHIN_UNIV :
+    !net. (net within UNIV) = net
 Proof
-  REWRITE_TAC[within, at, IN_UNIV] THEN REWRITE_TAC[ETA_AX, net_tybij]
+    RW_TAC std_ss [within, IN_UNIV, SF ETA_ss, net_tybij]
+QED
+
+Theorem WITHIN_UNIV :
+    !x. (at x within UNIV) = at x
+Proof
+    REWRITE_TAC [NET_WITHIN_UNIV]
 QED
 
 Theorem WITHIN_WITHIN:
@@ -853,25 +919,358 @@ Proof
 QED
 
 (* ------------------------------------------------------------------------- *)
+(* It's also sometimes useful to extract the limit point from the net.       *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: adding “x <> a” after “!x.” will break proof of NETLIMIT_ATPOINTOF. *)
+Definition netlimit_def :
+    netlimit net = @a. !x. ~(netord net x a)
+End
+
+(* NOTE: The definition of “netlimits” must be alighed with “netlimit”. *)
+Definition netlimits_def :
+    netlimits net = {a | !x. ~(netord net x a)}
+End
+
+(* NOTE: This theorem is the definition of “netlimit” in HOL-Light *)
+Theorem netlimit :
+    !n. netlimit n = (@x. x IN netlimits n)
+Proof
+    rw [netlimit_def, netlimits_def]
+QED
+
+Theorem NETLIMIT_ATPOINTOF :
+    !m a. netlimit(atpointof m a) = a
+Proof
+    RW_TAC std_ss [netlimit_def, ATPOINTOF]
+ >> SELECT_ELIM_TAC
+ >> CONJ_TAC
+ >- (Q.EXISTS_TAC ‘a’ \\
+     rw [MDIST_REFL, REAL_NOT_LE, MDIST_POS_LT])
+ >> rw [REAL_NOT_LE, MDIST_POS_EQ]
+ >> CCONTR_TAC
+ >> Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘x’)
+ >> simp [REAL_NOT_LT, MDIST_REFL, MDIST_POS_LE, MDIST_POS_LT]
+QED
+
+(* |- !a. netlimit (at a) = a *)
+Theorem NETLIMIT_AT = NETLIMIT_ATPOINTOF |> ISPEC “mr1”
+                   |> REWRITE_RULE [GSYM at_DEF]
+
+Theorem NETLIMITS_ATPOINTOF :
+    !m a. netlimits (atpointof m a) = {a}
+Proof
+    rw [netlimits_def, ATPOINTOF, MDIST_POS_EQ, REAL_NOT_LE]
+ >> rw [Once EXTENSION]
+ >> reverse EQ_TAC >- rw [MDIST_REFL, MDIST_POS_EQ]
+ >> rpt STRIP_TAC
+ >> CCONTR_TAC
+ >> Q.PAT_X_ASSUM ‘!x. P’ (MP_TAC o Q.SPEC ‘x’)
+ >> simp [REAL_NOT_LT, MDIST_REFL, MDIST_POS_LE]
+QED
+
+(* |- !a. netlimits (at a) = {a} *)
+Theorem NETLIMITS_AT = NETLIMITS_ATPOINTOF |> ISPEC “mr1”
+                    |> REWRITE_RULE [GSYM at_DEF]
+
+Theorem NETLIMITS_SEQUENTIALLY :
+    netlimits sequentially = {}
+Proof
+    rw [Once EXTENSION, NOT_IN_EMPTY, netlimits_def, SEQUENTIALLY, GREATER_EQ]
+ >> Q.EXISTS_TAC ‘x’ >> simp []
+QED
+
+Theorem NETLIMITS_AT_POSINFINITY :
+    netlimits at_posinfinity = {}
+Proof
+    rw [Once EXTENSION, NOT_IN_EMPTY, netlimits_def, AT_POSINFINITY, real_ge]
+ >> Q.EXISTS_TAC ‘x’ >> simp []
+QED
+
+Theorem NETLIMITS_AT_NEGINFINITY :
+    netlimits at_neginfinity = {}
+Proof
+    rw [Once EXTENSION, NOT_IN_EMPTY, netlimits_def, AT_NEGINFINITY]
+ >> Q.EXISTS_TAC ‘x’ >> simp []
+QED
+
+Theorem NETLIMITS_AT_INFINITY :
+    netlimits at_infinity = {}
+Proof
+    rw [Once EXTENSION, NOT_IN_EMPTY, netlimits_def, AT_INFINITY, real_ge]
+ >> Q.EXISTS_TAC ‘x’ >> simp []
+QED
+
+(* NOTE: This lemma shows that “within” makes netlimits potentially larger. *)
+Theorem NETLIMITS_WITHIN_lemma1[local] :
+    netlimits net SUBSET netlimits (net within s)
+Proof
+    rw [SUBSET_DEF, netlimits_def, WITHIN]
+QED
+
+Theorem NETLIMITS_WITHIN_lemma2[local] :
+    (!x. (!y. ~netord net y x \/ y NOTIN s) ==> x IN netlimits net) ==>
+    netlimits (net within s) SUBSET netlimits net
+Proof
+    rpt STRIP_TAC
+ >> simp [SUBSET_DEF, Once netlimits_def, WITHIN]
+QED
+
+Theorem NETLIMITS_WITHIN_lemma3[local] :
+    (!x. (!y. ~netord net y x \/ y NOTIN s) ==> x IN netlimits net) <=>
+    (!x. x NOTIN netlimits net ==> ?y. y IN s /\ netord net y x)
+Proof
+    METIS_TAC []
+QED
+
+(* NOTE: This definition is the exact condition for “NETLIMITS_WITHIN” to hold. *)
+Definition net_condition_def :
+    net_condition net s =
+      !x. x NOTIN netlimits net ==> ?y. y IN s /\ netord net y x
+End
+
+Theorem NET_CONDITION_MONO :
+    !net s t. net_condition net s /\ s SUBSET t ==> net_condition net t
+Proof
+    rw [net_condition_def, SUBSET_DEF]
+ >> METIS_TAC []
+QED
+
+Theorem NET_CONDITION_UNION :
+    !net s t. net_condition net s /\ net_condition net s ==>
+              net_condition net (s UNION t)
+Proof
+    rw [net_condition_def]
+ >> ‘?y. y IN s /\ netord net y x’ by PROVE_TAC []
+ >> Q.EXISTS_TAC ‘y’ >> art []
+QED
+
+Theorem NET_CONDITION_UNIV[simp] :
+    net_condition net UNIV
+Proof
+    rw [net_condition_def, netlimits_def]
+QED
+
+(* NOTE: This is key theorem for which the “net_condition” is defined. *)
+Theorem NETLIMITS_WITHIN :
+    !net s. net_condition net s ==> netlimits (net within s) = netlimits net
+Proof
+    RW_TAC std_ss [net_condition_def]
+ >> MATCH_MP_TAC SUBSET_ANTISYM
+ >> REWRITE_TAC [NETLIMITS_WITHIN_lemma1]
+ >> MATCH_MP_TAC NETLIMITS_WITHIN_lemma2
+ >> ASM_REWRITE_TAC [NETLIMITS_WITHIN_lemma3]
+QED
+
+Theorem NET_CONDITION_ATPOINTOF :
+    !m a s. limpt (mtop m) a s ==> net_condition (atpointof m a) s
+Proof
+    rw [ATPOINTOF, net_condition_def, NETLIMITS_ATPOINTOF, MTOP_LIMPT']
+ >> qabbrev_tac ‘e = dist m (x,a)’
+ >> ‘0 < e’ by simp [Abbr ‘e’, MDIST_POS_LT]
+ >> Q.PAT_X_ASSUM ‘!e. 0 < e ==> _’ (MP_TAC o Q.SPEC ‘e’) >> rw []
+ >> Q.EXISTS_TAC ‘y’
+ >> simp [MDIST_REFL, MDIST_POS_LE, MDIST_POS_LT, REAL_LT_IMP_LE, Once MDIST_SYM]
+QED
+
+Theorem NET_CONDITION_AT_lemma[local] :
+    !a s. net_condition (at a) s ==> limpt (mtop mr1) a s
+Proof
+    rw [AT, net_condition_def, NETLIMITS_AT, MTOP_LIMPT', GSYM dist_def]
+ (* NOTE: this subgoal property doesn't hold for metric space in general *)
+ >> Know ‘?x. x <> a /\ dist (a,x) = e / 2’
+ >- (Q.EXISTS_TAC ‘a - e / 2’ \\
+     simp [dist, REAL_SUB_SUB2] \\
+    ‘0 < e / 2’ by simp [REAL_HALF] \\
+     simp [ABS_REDUCE, REAL_LT_IMP_LE] \\
+     REAL_ASM_ARITH_TAC)
+ >> STRIP_TAC
+ >> Q.PAT_X_ASSUM ‘!x. x <> a ==> _’ (MP_TAC o Q.SPEC ‘x’) >> rw []
+ >> Q.EXISTS_TAC ‘y’
+ >> FULL_SIMP_TAC std_ss [GSYM DIST_NZ]
+ >> simp [Once DIST_SYM]
+ >> Q_TAC (TRANS_TAC REAL_LET_TRANS) ‘dist (x,a)’ >> art []
+ >> simp [Once DIST_SYM]
+QED
+
+(* |- !a s. net_condition (at a) s <=> limpt (mtop mr1) a s *)
+Theorem NET_CONDITION_AT :
+    !a s. net_condition (at a) s <=> limpt (mtop mr1) a s
+Proof
+    rpt GEN_TAC
+ >> EQ_TAC >- REWRITE_TAC [NET_CONDITION_AT_lemma]
+ >> REWRITE_TAC [at_DEF, NET_CONDITION_ATPOINTOF]
+QED
+
+Theorem NETLIMITS_ATPOINTOF_WITHIN :
+    !m a s. limpt (mtop m) a s ==>
+            netlimits ((atpointof m a) within s) = netlimits (atpointof m a)
+Proof
+    rpt STRIP_TAC
+ >> MATCH_MP_TAC NETLIMITS_WITHIN
+ >> MATCH_MP_TAC NET_CONDITION_ATPOINTOF >> art []
+QED
+
+(* |- !a s.
+        net_condition (at a) s ==>
+        netlimits (at a within s) = netlimits (at a)
+ *)
+Theorem NETLIMITS_AT_WITHIN =
+        NETLIMITS_ATPOINTOF_WITHIN |> ISPEC “mr1”
+     |> REWRITE_RULE [GSYM at_DEF, GSYM NET_CONDITION_AT]
+
+(* NOTE: The original NETLIMIT_WITHIN is still below *)
+Theorem NETLIMIT_WITHIN_NEW :
+    !a s. net_condition (at a) s ==> netlimit (at a within s) = a
+Proof
+    rpt STRIP_TAC
+ >> ASM_SIMP_TAC std_ss [netlimit, NETLIMITS_WITHIN]
+ >> REWRITE_TAC [GSYM netlimit, NETLIMIT_AT]
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* netfilter (compatible with HOL-Light)                                     *)
+(* ------------------------------------------------------------------------- *)
+
+(* NOTE: “x NOTIN netlimits net” is necessary for EVENTUALLY_ATPOINTOF below.
+   And also, if it's replaced by “T” then “netfilter net <> {}” holds, making
+   the first part of “eventually” (below, unchangable) meaningless.
+ *)
+Definition netfilter_def :
+    netfilter net = {{y | netord net y x} | x | x NOTIN netlimits net}
+End
+
+Theorem EMPTY_NOTIN_NETFILTER :
+    !net. {} NOTIN netfilter net
+Proof
+    simp [netfilter_def, netlimits_def, Once EXTENSION] >> METIS_TAC []
+QED
+
+(* NOTE: This is the theorem [NET] of HOL-Light *)
+Theorem NETFILTER :
+    !n s t. s IN netfilter n /\ t IN netfilter n ==> s INTER t IN netfilter n
+Proof
+    rpt GEN_TAC
+ >> simp [netfilter_def]
+ >> DISCH_THEN (CONJUNCTS_THEN2
+                 (Q.X_CHOOSE_THEN ‘u’ STRIP_ASSUME_TAC)
+                 (Q.X_CHOOSE_THEN ‘v’ STRIP_ASSUME_TAC))
+ >> ‘s INTER t = {y | netord n y u /\ netord n y v}’ by ASM_SET_TAC []
+ >> POP_ORW
+ (* applying NET here! *)
+ >> STRIP_ASSUME_TAC (Q.SPECL [‘n’, ‘u’, ‘v’] NET)
+ >| [ (* goal 1 (of 2) *)
+      Q.EXISTS_TAC ‘u’ >> ASM_SET_TAC [],
+      (* goal 2 (of 2) *)
+      Q.EXISTS_TAC ‘v’ >> ASM_SET_TAC [] ]
+QED
+
+Theorem NETFILTER_AT_POSINFINITY :
+    netfilter at_posinfinity = {{x | a <= x} | a IN univ(:real)}
+Proof
+    simp [netfilter_def, NETLIMITS_AT_POSINFINITY, AT_POSINFINITY, real_ge]
+QED
+
+Theorem NETFILTER_AT_NEGINFINITY :
+    netfilter at_neginfinity = {{x | x <= a} | a IN univ(:real)}
+Proof
+    simp [netfilter_def, NETLIMITS_AT_NEGINFINITY, AT_NEGINFINITY]
+QED
+
+Theorem NETFILTER_AT_INFINITY :
+    netfilter at_infinity = {{x | b <= abs x} | b IN univ(:real)}
+Proof
+    simp [netfilter_def, NETLIMITS_AT_INFINITY, AT_INFINITY, real_ge]
+ >> rw [Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >- (Q.EXISTS_TAC ‘abs x'’ >> REFL_TAC)
+ >> Cases_on ‘0 <= b’
+ >- (Q.EXISTS_TAC ‘abs b’ >> simp [ABS_REDUCE])
+ >> fs [REAL_NOT_LE]
+ >> Know ‘!x. b <= abs x <=> 0 <= abs x’
+ >- (Q.X_GEN_TAC ‘x’ \\
+     EQ_TAC >> rw [] \\
+     Q_TAC (TRANS_TAC REAL_LE_TRANS) ‘0’ >> simp [ABS_POS, REAL_LT_IMP_LE])
+ >> Rewr'
+ >> Q.EXISTS_TAC ‘0’ >> simp [ABS_0]
+QED
+
+Theorem NETFILTER_SEQUENTIALLY :
+    netfilter sequentially = {from n | n IN univ(:num)}
+Proof
+    simp [netfilter_def, NETLIMITS_SEQUENTIALLY, SEQUENTIALLY,
+          GREATER_EQ, from_def]
+QED
+
+Theorem NETFILTER_ATPOINTOF :
+    !m a. netfilter (atpointof m a) =
+          {{y | 0 < dist m (y,a) /\ dist m (y,a) <= dist m (x,a)} | x | x <> a}
+Proof
+    simp [netfilter_def, NETLIMITS_ATPOINTOF, ATPOINTOF, MDIST_POS_EQ]
+QED
+
+(* |- !a. netfilter (at a) =
+          {{y | 0 < dist (y,a) /\ dist (y,a) <= dist (x,a)} | x | x <> a}
+ *)
+Theorem NETFILTER_AT =
+        NETFILTER_ATPOINTOF |> ISPEC “mr1”
+                            |> REWRITE_RULE [GSYM dist_def, GSYM at_DEF]
+
+(* NOTE: This theorem is HOL-Light's WITHIN *)
+Theorem NETFILTER_WITHIN :
+    !net s. net_condition net s ==>
+           (netfilter (net within s) = netfilter net relative_to s)
+Proof
+    rw [netfilter_def, WITHIN, RELATIVE_TO, NETLIMITS_WITHIN]
+ >> rw [Once EXTENSION]
+ >> EQ_TAC >> rw []
+ >- (rename1 ‘x NOTIN netlimits net’ \\
+     Q.EXISTS_TAC ‘{y | netord net y x}’ \\
+     reverse CONJ_TAC >- (Q.EXISTS_TAC ‘x’ >> art []) \\
+     SET_TAC [])
+ >> rename1 ‘x NOTIN netlimits net’
+ >> Q.EXISTS_TAC ‘x’ >> art []
+ >> SET_TAC []
+QED
+
+(* ------------------------------------------------------------------------- *)
+(* Some property holds "sufficiently close" to the limit point (eventually). *)
+(* ------------------------------------------------------------------------- *)
 (* Identify trivial limits, where we can't approach arbitrarily closely.     *)
 (* ------------------------------------------------------------------------- *)
 
+(* old (existing) definitions diverged from HOL-Light *)
 Definition trivial_limit :
     trivial_limit net <=>
       (!(a:'a) b. a = b) \/
       ?(a:'a) b. ~(a = b) /\ !x. ~(netord(net) x a) /\ ~(netord(net) x b)
 End
 
+Definition eventually :
+    eventually p net <=>
+      trivial_limit net \/
+      ?y. (?x. netord net x y) /\ (!x. netord net x y ==> p x)
+End
+
+(* new definitions (compatible with HOL-Light)
+Definition eventually_def :
+    eventually (P :'a -> bool) net <=>
+      netfilter net = {} \/
+      ?u. u IN netfilter net /\
+            !x. x IN u DIFF netlimits net ==> P x
+End
+
+Definition trivial_limit_def :
+    trivial_limit net = eventually (\x. F) net
+End
+ *)
+
+(* ------------------------------------------------------------------------- *)
+
 Theorem NONTRIVIAL_LIMIT_WITHIN :
     !net s. trivial_limit net ==> trivial_limit(net within s)
 Proof
     REWRITE_TAC[trivial_limit, WITHIN] THEN MESON_TAC[]
-QED
-
-Theorem REAL_CHOOSE_SIZE :
-   !c. &0 <= c ==> (?x. abs x = c:real)
-Proof
-  METIS_TAC [ABS_REFL]
 QED
 
 Theorem TRIVIAL_LIMIT_AT_INFINITY :
@@ -886,7 +1285,8 @@ Theorem TRIVIAL_LIMIT_AT_POSINFINITY :
 Proof
   REWRITE_TAC[trivial_limit, AT_POSINFINITY, DE_MORGAN_THM] THEN
   CONJ_TAC THENL
-   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC, ALL_TAC] THEN
+   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC,
+    ALL_TAC] THEN
   REWRITE_TAC[DE_MORGAN_THM, NOT_EXISTS_THM, real_ge, REAL_NOT_LE] THEN
   MESON_TAC[REAL_LT_TOTAL, REAL_LT_ANTISYM]
 QED
@@ -896,7 +1296,8 @@ Theorem TRIVIAL_LIMIT_AT_NEGINFINITY :
 Proof
   REWRITE_TAC[trivial_limit, AT_NEGINFINITY, DE_MORGAN_THM] THEN
   CONJ_TAC THENL
-   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC, ALL_TAC] THEN
+   [DISCH_THEN(MP_TAC o SPECL [``&0:real``, ``&1:real``]) THEN REAL_ARITH_TAC,
+    ALL_TAC] THEN
   REWRITE_TAC[DE_MORGAN_THM, NOT_EXISTS_THM, real_ge, REAL_NOT_LE] THEN
   MESON_TAC[REAL_LT_TOTAL, REAL_LT_ANTISYM]
 QED
@@ -907,16 +1308,6 @@ Proof
   REWRITE_TAC[trivial_limit, SEQUENTIALLY] THEN
   MESON_TAC[GREATER_EQ, LESS_EQ_REFL, SUC_NOT]
 QED
-
-(* ------------------------------------------------------------------------- *)
-(* Some property holds "sufficiently close" to the limit point.              *)
-(* ------------------------------------------------------------------------- *)
-
-Definition eventually :
-    eventually p net <=>
-      trivial_limit net \/
-      ?y. (?x. netord net x y) /\ (!x. netord net x y ==> p x)
-End
 
 Theorem EVENTUALLY_FALSE :
     !net. eventually (\x. F) net <=> trivial_limit net
@@ -929,11 +1320,6 @@ Theorem EVENTUALLY_TRUE :
 Proof
   REWRITE_TAC[eventually, trivial_limit] THEN MESON_TAC[]
 QED
-
-(* This is HOL-Light's definition of ‘trivial_limit’
-   |- !net. trivial_limit net <=> eventually (\x. F) net
- *)
-Theorem trivial_limit_def = GSYM EVENTUALLY_FALSE
 
 Theorem EVENTUALLY_HAPPENS :
     !net p. eventually p net ==> trivial_limit net \/ ?x. p x
@@ -1055,19 +1441,22 @@ Proof
   SIMP_TAC std_ss [EVENTUALLY_FORALL]
 QED
 
-(* ------------------------------------------------------------------------- *)
-(* It's also sometimes useful to extract the limit point from the net.       *)
-(* ------------------------------------------------------------------------- *)
+(* NOTE: This theorem is trivial (by NET_WITHIN_UNIV and MSPACE) in HOL4.
+   The original HOL-Light version is:
 
-Definition netlimit :
-    netlimit net = @a. !x. ~(netord net x a)
-End
+   |- !top a:A. (atpointof top a) within (topspace top) = atpointof top a
+ *)
+Theorem ATPOINTOF_WITHIN_TOPSPACE :
+    !m a. ((atpointof m a) within (mspace m)) = atpointof m a
+Proof
+    rw [NET_WITHIN_UNIV, MSPACE]
+QED
 
 Theorem NETLIMIT_WITHIN :
    !a:real s. ~(trivial_limit (at a within s))
     ==> (netlimit (at a within s) = a)
 Proof
-  REWRITE_TAC[trivial_limit, netlimit, AT, WITHIN, DE_MORGAN_THM] THEN
+  REWRITE_TAC[trivial_limit, netlimit_def, AT, WITHIN, DE_MORGAN_THM] THEN
   REPEAT STRIP_TAC THEN MATCH_MP_TAC SELECT_UNIQUE THEN REWRITE_TAC[] THEN
   SUBGOAL_THEN
    ``!x:real. ~(&0 < dist(x,a) /\ dist(x,a) <= dist(a,a) /\ x IN s)``
@@ -1126,8 +1515,14 @@ Proof
  >> ‘f m IN N’ by PROVE_TAC [SUBSET_DEF] >> fs [IN_APP]
 QED
 
+(* END *)
+
 (* References:
 
  [1] Moore, E.H., Smith, H.L.: A General Theory of Limits. American Journal of
      Mathematics. 44, 102-121 (1922).
+ [2] Kelley, J.L.: General Topology. Springer Science & Business Media (1975).
+ [3] https://en.wikipedia.org/wiki/Net_(mathematics)
+ [4] Schilling, R.L.: Measures, Integrals and Martingales (2nd Edition).
+     Cambridge University Press (2017).
  *)

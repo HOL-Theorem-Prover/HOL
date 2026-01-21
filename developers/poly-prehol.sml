@@ -8,7 +8,7 @@ local infix ++
   fun useB s = (use (s ^ ".sig"); use (s ^ ".sml"))
 in
 val _ = use (HOLDIR ++ "src" ++ "postkernel" ++ "Termtab.sml");
-val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "regexpMatch");
+val _ = useB (HOLDIR ++ "tools" ++ "util" ++ "regexpMatch");
 val _ = useB (HOLDIR ++ "src" ++ "postkernel" ++ "DBSearchParser");
 val _ = useB (HOLDIR ++ "src" ++ "postkernel" ++ "DB");
 val _ = use (HOLDIR ++ "src" ++ "portableML" ++ "Inttab.sml");
@@ -19,9 +19,9 @@ val _ = useB (HOLDIR ++ "src" ++ "portableML" ++ "Arbint");
 val _ = useB (HOLDIR ++ "src" ++ "portableML" ++ "Arbrat");
 val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "parse_glob");
 val _ = use (HOLDIR ++ "tools" ++ "Holmake" ++ "Holmake_tools_dtype.sml");
-val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "terminal_primitives");
-val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "Holdep_tokens");
-val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "Holdep");
+val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "util" ++ "terminal_primitives");
+val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "deps" ++ "Holdep_tokens");
+val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "deps" ++ "Holdep");
 val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "Holmake_tools");
 val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "internal_functions");
 val _ = useB (HOLDIR ++ "tools" ++ "Holmake" ++ "Holmake_types");

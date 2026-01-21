@@ -14,15 +14,15 @@ sig
   val NORM_CONS_APPEND_CONV : conv
   val LIST_EQ_SIMP_CONV : conv
 
-  val list_rws : computeLib.compset -> unit
-  val list_compset : unit -> computeLib.compset
+  val list_rws : computeLib.compset -> computeLib.compset
+  val list_compset : computeLib.compset
 
   (* rich_listSimps *)
-  val add_rich_list_compset : computeLib.compset -> unit
+  val add_rich_list_compset : computeLib.compset -> computeLib.compset
   val RICH_LIST_ss : simpLib.ssfrag
 
   (* indexedListsSimps *)
-  val add_indexedLists_compset : computeLib.compset -> unit
+  val add_indexedLists_compset : computeLib.compset -> computeLib.compset
   val indexedLists_ss : simpLib.ssfrag
 
   (* ListConv1 *)

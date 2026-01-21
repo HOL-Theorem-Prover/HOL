@@ -38,7 +38,7 @@ val _ = hide "Y";
 (* some proofs here are large with too many assumptions *)
 val _ = set_trace "Goalstack.print_goal_at_top" 0;
 
-fun PRINT_TAC pfx g = (print (pfx ^ "\n"); ALL_TAC g);
+val PRINT_TAC = goalStack.note_tac
 
 (* Disable some conflicting overloads from labelledTermsTheory *)
 Overload FV  = “supp term_pmact”

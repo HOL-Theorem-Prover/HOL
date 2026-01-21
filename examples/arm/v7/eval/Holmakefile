@@ -20,6 +20,6 @@ DEPS = $(patsubst %,%.uo,$(BARE_THYS))
 all: $(HOLHEAP)
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -o arm-heap $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/hol) buildheap -o arm-heap $(BARE_THYS)
 
 endif

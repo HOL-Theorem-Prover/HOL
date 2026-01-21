@@ -557,7 +557,8 @@ fun SOLVES tac g =
 (* Extra rewrites, used only if they would solve a termination conjunct.     *)
 (*---------------------------------------------------------------------------*)
 
-val termination_solve_simps = ref ([] : thm list);
+val {getDB = termination_solve_simps, export = export_termsolve_simp, ...} =
+    ThmSetData.export_list {settype = "tfl_termsolve", initial = []}
 
 (*---------------------------------------------------------------------------*)
 (* Create TC simplifiers and provers. WF(-) formulas not handled             *)
@@ -581,7 +582,7 @@ fun termination_ss() =
 
 (* simplify then case split and simplify from asms *)
 fun TC_SIMP_TAC ss thl =
-    let val ss' = ss ++ rewrites (!termination_solve_simps @ thl)
+    let val ss' = ss ++ rewrites (termination_solve_simps() @ thl)
     in
       CONV_TAC (simpLib.SIMP_CONV ss' []) THEN
       BasicProvers.PRIM_STP_TAC ss' NO_TAC

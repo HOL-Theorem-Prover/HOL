@@ -32,6 +32,8 @@ structure HOLSusp = Susp
 
 fun reraise e = raise e
 
+fun display_exn f e = (f e; raise e)
+
 fun make_counter {inc,init} =
   let
     val n = ref init

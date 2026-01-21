@@ -96,7 +96,7 @@ determining "holdir";
 val holdir = let
   val cdir_files = readdir currentdir
 in
-  if mem "sigobj" cdir_files andalso mem "std.prelude" cdir_files then
+  if mem "sigobj" cdir_files andalso mem "tools" cdir_files then
     currentdir
   else if mem "smart-configure.sml" cdir_files andalso
           mem "configure.sml" cdir_files

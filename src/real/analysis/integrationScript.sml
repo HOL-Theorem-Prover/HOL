@@ -10807,6 +10807,15 @@ Proof
   SIMP_TAC std_ss [COND_RAND, ABS_0]
 QED
 
+Theorem HAS_ABSOLUTE_INTEGRAL :
+   !(f :real->real) s y.
+        f absolutely_integrable_on s /\ integral s f = y <=>
+        f absolutely_integrable_on s /\ (f has_integral y) s
+Proof
+  MESON_TAC[ABSOLUTELY_INTEGRABLE_IMP_INTEGRABLE,
+            HAS_INTEGRAL_INTEGRABLE_INTEGRAL]
+QED
+
 Theorem ABSOLUTELY_INTEGRABLE_EQ:
    !f:real->real g s.
         (!x. x IN s ==> (f x = g x)) /\ f absolutely_integrable_on s

@@ -217,7 +217,7 @@ fun (ltac1 ORELSE_LT ltac2) gl = ltac1 gl handle HOL_ERR _ => ltac2 gl
  *                  first subgoal of tac1
  *---------------------------------------------------------------------------*)
 
-fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
+fun op THEN1 (tac1, tac2) =
    fn g =>
       let
          val (gl, jf) = tac1 g
@@ -232,6 +232,10 @@ fun op THEN1 (tac1: tactic, tac2: tactic) : tactic =
       in
          (t_gl, fn thl => jf (h_jf [] :: thl))
       end
+
+(* first argument can be a tactic or a list-tactic *)
+val _ = op THEN1 : tactic * tactic -> tactic ;
+val _ = op THEN1 : list_tactic * tactic -> list_tactic ;
 
 val op >- = op THEN1
 
@@ -1000,10 +1004,6 @@ fun count_decreases m ((_,w), gl) =
       List.all (fn (_,w') => m w' < c0) gl
     end
 
-(*---------------------------------------------------------------------------
- * A tactical that parses in the context of a goal, a la the Q library.
- *---------------------------------------------------------------------------*)
-
 fun parse_with_goal t (asms, g) =
    let
       val ctxt = free_varsl (g :: asms)
@@ -1011,31 +1011,59 @@ fun parse_with_goal t (asms, g) =
       Parse.parse_in_context ctxt t
    end
 
+
+(*---------------------------------------------------------------------------
+ * A tactical that parses in the context of a goal, a la the Q library.
+ * Steps
+ * 1. Build sequence of parses of q under given traces
+ * 2. Step through parses until one succeeds
+ * 3. Try the tactic (under given traces) on that term. If it succeeds,
+ *    great. Otherwise store the error and go to 2
+ * 4. If no parse has succeeded, say that.
+ * 5. If only one parse succeeded and the tactic failed on it, raise the error.
+ * 6. It can happen that multiple parses succeed and the tactic application
+ *    fails on all of them. That needs to be distinguished from 4.
+ *---------------------------------------------------------------------------*)
+
 fun Q_TAC0 {traces} tyopt (tac : term -> tactic) q (g as (asl,w)) =
-  let
-    open Parse
-    val ctxt = free_varsl (w::asl)
-    val ab =
+  let open Parse
+      val ttac = with_traces traces tac
+      val dest_seq = with_traces traces seq.cases
+      val ctxt = free_varsl (w::asl)
+      val ab =
         case tyopt of
             NONE => Absyn
           | SOME ty =>
             fn q => Absyn.TYPED(locn.Loc_None, Absyn q, Pretype.fromType ty)
-    val s = TermParse.prim_ctxt_termS ab (term_grammar()) ctxt q
-    fun cases s = List.foldl
-                    (fn (trpair,f) => Feedback.trace trpair f)
-                    seq.cases
-                    traces
-                    s
+      val terms_of = TermParse.prim_ctxt_termS ab (term_grammar()) ctxt
+      val tactic_failures = ref [] : exn list ref
+      fun failure() =
+        case !tactic_failures
+         of [] => raise ERR "Q_TAC0" "unable to parse quotation"
+          | [e] => (* one quotation parsed, but tactic failed *)
+            raise wrap_exn "Tactical" "Q_TAC0" e
+          | fails => (* multiple parses, tactic fails on all *)
+            raise ERR "Q_TAC0"
+              (String.concat
+                 [Int.toString (length fails),
+                  " parses for quotation, but tactic failed on all of them"])
+      fun search seq =
+        case dest_seq seq
+         of NONE => failure()
+          | SOME(tm,seq') =>
+            ttac tm g handle e =>
+              (tactic_failures := e :: !tactic_failures;
+               search seq')
   in
-    case cases s of
-        NONE => raise ERR "Q_TAC" "No parse for quotation"
-      | SOME _ =>
-        (case cases (seq.mapPartial (fn t => total (tac t) g) s) of
-             NONE => raise ERR "Q_TAC" "No parse of quotation leads to success"
-           | SOME (res,_) => res)
+    search (terms_of q)
   end
 
-val Q_TAC = Q_TAC0 {traces = []} NONE
-fun QTY_TAC ty = Q_TAC0 {traces = []} (SOME ty)
+fun Q_TAC tac q g =
+    Q_TAC0 {traces = []} NONE tac q g
+    handle e => raise wrap_exn "Tactical" "Q_TAC" e
+
+fun QTY_TAC ty tac q g =
+    Q_TAC0 {traces = []} (SOME ty) tac q g
+    handle e => raise wrap_exn "Tactical" "QTY_TAC" e
 
 end (* Tactical *)

@@ -40,7 +40,7 @@ sig
    val char_EQ_CONV   : conv
    val string_EQ_CONV : conv
 
-   val add_string_compset : computeLib.compset -> unit
+   val add_string_compset : computeLib.compset -> computeLib.compset
 
    val Define_enum2string : hol_type -> thm
    val Define_string2enum : hol_type -> thm

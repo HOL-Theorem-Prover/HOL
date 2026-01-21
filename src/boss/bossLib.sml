@@ -365,13 +365,7 @@ fun name_ind_cases nm_tms thm = let
 
 end
 
-(* ----------------------------------------------------------------------
-    useful for proving termination in fold and rose-tree settings
-   ---------------------------------------------------------------------- *)
 
-val _ = let
-  val sref = TotalDefn.termination_solve_simps
-in sref := ([listTheory.MEM_SPLIT] @ ! sref) end
 
 (* ----------------------------------------------------------------------
     convenient simplification aliases

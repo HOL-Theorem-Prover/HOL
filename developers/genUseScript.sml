@@ -6,8 +6,8 @@ use "../tools/Holmake/HOLFileSys.sig";
 use "../tools/Holmake/HOLFileSys.sml";
 use "../tools/Holmake/AttributeSyntax.sig";
 use "../tools/Holmake/AttributeSyntax.sml";
-use "../tools/Holmake/GetOpt.sig";
-use "../tools/Holmake/GetOpt.sml";
+use "../tools/util/GetOpt.sig";
+use "../tools/util/GetOpt.sml";
 use "../tools-poly/poly/Binaryset.sig";
 use "../tools-poly/poly/Binaryset.sml";
 use "../tools-poly/poly/Binarymap.sig";
@@ -44,8 +44,8 @@ end;
 val _ = use "../tools/Holmake/HolLex.sml";
 val _ = use "../tools/Holmake/HolParser.sig";
 val _ = use "../tools/Holmake/HolParser.sml";
-val _ = use "../tools/Holmake/Holdep_tokens.sig"
-val _ = use "../tools/Holmake/Holdep_tokens.sml";
+val _ = use "../tools/Holmake/deps/Holdep_tokens.sig"
+val _ = use "../tools/Holmake/deps/Holdep_tokens.sml";
 
 
 infix ^^

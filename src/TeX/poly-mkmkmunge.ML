@@ -1,5 +1,5 @@
 (* this is an -*- sml -*- file *)
-(* this file gets executed by buildheap *)
+(* this file gets executed by hol buildheap *)
 
 
 infix ++
@@ -11,8 +11,8 @@ fun TD s = Systeml.protect (Systeml.HOLDIR ++ "src" ++ "TeX" ++ s);
 
 TextIO.output(outstrm, "#!/bin/sh\n");
 TextIO.output(outstrm,
-              Systeml.protect (Systeml.HOLDIR ++ "bin" ++ "buildheap") ^
-              " \"$@\" --exe main --defaultout munge.exe " ^
+              Systeml.protect (Systeml.HOLDIR ++ "bin" ++ "hol") ^
+              " buildheap \"$@\" --exe main --defaultout munge.exe " ^
               String.concatWith " "
                    (map TD ["mungeTools", "munger.lex.sml", "holindex",
                             "mkmunger.sml", "poly-mkmunger.ML"]) ^ "\n");

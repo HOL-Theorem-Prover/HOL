@@ -1775,6 +1775,7 @@ val (imp_spec, imp_temp, read_thms, write_thms, select_state_thms,
 local
    val spec_debug = ref false
    val () = Feedback.register_btrace ("stateLib.spec", spec_debug)
+   (* Could use goalStack.print_tac "" instead for formatted goal output *)
    val PRINT_TAC =
       RULE_ASSUM_TAC (CONV_RULE PRINT_CONV) THEN CONV_TAC PRINT_CONV
    val WEAK_STRIP_TAC = DISCH_THEN (REPEAT_TCL CONJUNCTS_THEN ASSUME_TAC)
