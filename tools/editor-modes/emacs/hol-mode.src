@@ -508,7 +508,7 @@ Failing all that, send term around point to HOL process as goal."
               (mapcar (lambda (l) (format "%s=%s" (car l) (string-join (cdr l) " ")))
                       proof-attrs))
              (proof-attr-str (if proof-attrs
-                                 (format "(BasicProvers.mk_tacm \"[%s]\")"
+                                 (format "(BasicProvers.mk_tacmod \"[%s]\")"
                                          (string-join proof-attr-str0 ","))
                                "Manager.id_tacm"))
              (to-send
