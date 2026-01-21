@@ -4,7 +4,10 @@ Theory suspTest[bare]
    the various steps (Theorem (with suspend tactic), Resume, and Finalise).
 *)
 
-Libs HolKernel Parse boolLib markerLib Q[qualified]
+Libs HolKernel Parse boolLib markerLib BasicProvers Q[qualified]
+
+fun simp ths = simpLib.asm_simp_tac (srw_ss()) ths
+fun SCONV ths = simpLib.SIMP_CONV (srw_ss()) ths
 
 Theorem willsplit:
   p ∧ (p ⇒ q) ⇒ p ∧ q

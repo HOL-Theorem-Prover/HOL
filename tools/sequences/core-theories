@@ -6,7 +6,6 @@ src/taut
 !tools/Holmake/tests/incs_vs_sigobj/dir2
 src/marker
 src/q
-!src/q/theory_tests
 src/combin
 src/lite
 src/refute
