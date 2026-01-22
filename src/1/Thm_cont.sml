@@ -292,9 +292,8 @@ local
    fun varyAcc v (V, l) = let val v' = gen_variant Parse.is_constname "" V v in (v'::V, v'::l) end
    (* There are actual cases where strip_exists differ from this function *)
    fun strip_exists1 tm =
-   let fun dest_exist_opt tm = SOME (dest_exists tm) handle HOL_ERR _ => NONE
-       fun strip A tm =
-           case dest_exist_opt tm of
+   let fun strip A tm =
+           case Lib.total dest_exists tm of
                NONE => (List.rev A, tm)
              | SOME (x,tm') => strip (x::A) tm'
    in
