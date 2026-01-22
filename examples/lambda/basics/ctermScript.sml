@@ -214,7 +214,7 @@ val tlf =
      | ctap => taf (HD ds2) (HD (TL ds2)) (cterm_ABS (HD ts2))
                    (cterm_ABS (HD (TL ts2))) p
      | ctlm => tlf (HD ds1) v (cterm_ABS (HD ts1)) p
-     | ctc a => tcf a ``
+     | ctc a => tcf a p``
 
 val termP_elim = prove(
   ``(∀g. ^termP g ⇒ P g) ⇔ (∀t. P (^term_REP_t t))``,
@@ -236,8 +236,7 @@ val termP0 = prove(
   Q.ISPEC_THEN `t` STRUCT_CASES_TAC gterm_cases >>
   srw_tac [][genind_GLAM_eqn]);
 
-val parameter_tm_recursion = save_thm(
-  "parameter_tm_recursion",
+Theorem parameter_tm_recursion =
   parameter_gtm_recursion
       |> INST_TYPE [alpha |-> ``:'a ctrep``, gamma |-> “:'r”]
       |> Q.INST [`lf` |-> `^tlf`, `lp` |-> `^lp`, `n` |-> `0`]
@@ -270,19 +269,19 @@ val parameter_tm_recursion = save_thm(
       |> CONV_RULE (LAND_CONV (REWRITE_CONV [GSYM CONJ_ASSOC]))
       |> Q.INST [`tvf` |-> `vr`, `tlf` |-> `lm`, `taf` |-> `ap`,
                  `dpm` |-> `apm`, ‘tcf’ |-> ‘cn’]
-      |> CONV_RULE (REDEPTH_CONV sort_uvars))
+      |> CONV_RULE (REDEPTH_CONV sort_uvars)
 
-val ctm_recursion = save_thm(
-  "ctm_recursion",
+Theorem ctm_recursion =
   parameter_tm_recursion
       |> Q.INST_TYPE [`:ρ` |-> `:unit`]
       |> Q.INST [`ppm` |-> `discrete_pmact`, `vr` |-> `λs u. vru s`,
+                 ‘cn’ |-> ‘λa u. cnu a’,
                  `ap` |-> `λr1 r2 t1 t2 u. apu (r1()) (r2()) t1 t2`,
                  `lm` |-> `λr v t u. lmu (r()) v t`]
       |> SIMP_RULE (srw_ss()) [oneTheory.FORALL_ONE, oneTheory.FORALL_ONE_FN,
                                oneTheory.EXISTS_ONE_FN, fnpm_def]
       |> SIMP_RULE (srw_ss() ++ CONJ_ss) [supp_unitfn]
-      |> Q.INST [`apu` |-> `ap`, `lmu` |-> `lm`, `vru` |-> `vr`])
+      |> Q.INST [`apu` |-> `ap`, `lmu` |-> `lm`, `vru` |-> `vr`, ‘cnu’ |-> ‘cn’]
 
 (* |- !x t p. x IN FV (tpm p t) <=> lswapstr (REVERSE p) x IN FV t *)
 Theorem FV_tpm[simp] = ``x ∈ cFV (ctpm p t)``
@@ -401,15 +400,17 @@ Proof
   srw_tac [][supp_fresh]
 QED
 
-val rewrite_pairing = prove(
-  ``(∃f: α cterm -> (string # α cterm) -> α cterm. P f) <=>
-    (∃f: α cterm -> string -> α cterm -> α cterm. P (λM (x,N). f N x M))``,
+Theorem rewrite_pairing[local]:
+  (∃f: α cterm -> (string # α cterm) -> α cterm. P f) <=>
+  (∃f: α cterm -> string -> α cterm -> α cterm. P (λM (x,N). f N x M))
+Proof
   EQ_TAC >> strip_tac >| [
     qexists_tac `λN x M. f M (x,N)` >> srw_tac [][] >>
     CONV_TAC (DEPTH_CONV pairLib.PAIRED_ETA_CONV) >>
     srw_tac [ETA_ss][],
     qexists_tac `λM (x,N). f N x M` >> srw_tac [][]
-  ]);
+  ]
+QED
 
 val subst_exists =
     parameter_tm_recursion
@@ -418,7 +419,7 @@ val subst_exists =
         |> Q.INST [`A` |-> `{}`, `apm` |-> `^t_pmact_t`,
                    `ppm` |-> `pair_pmact string_pmact ^t_pmact_t`,
                    `vr` |-> `\s (x,N). if s = x then N else VAR s`,
-                   ‘cn’ |-> ‘CONST’,
+                   ‘cn’ |-> ‘λa (x,N). CONST a’,
                    `ap` |-> `\r1 r2 t1 t2 p. r1 p @@ r2 p`,
                    `lm` |-> `\r v t p. LAM v (r p)`]
         |> CONV_RULE (LAND_CONV (SIMP_CONV (srw_ss()) [pairTheory.FORALL_PROD]))
@@ -835,11 +836,13 @@ Proof
   srw_tac [][supp_setpm] >> srw_tac [][]
 QED
 
-val ordering = prove(
-  ``(∃f. P f) <=> (∃f. P (combin$C f))``,
+Theorem reordering:
+  (∃f. P f) <=> (∃f. P (combin$C f))
+Proof
   srw_tac [][EQ_IMP_THM] >-
     (qexists_tac `λx y. f y x` >> srw_tac [ETA_ss][combinTheory.C_DEF]) >>
-  metis_tac [])
+  metis_tac []
+QED
 
 Theorem notin_frange:
   v ∉ tmscFV (FRANGE p) <=> ∀y. y ∈ FDOM p ==> v ∉ cFV (p ' y)
@@ -855,13 +858,13 @@ val ssub_exists =
                    `lm` |-> `\r v t fm. LAM v (r fm)`, `apm` |-> `^t_pmact_t`,
                    `ppm` |-> `fm_pmact string_pmact ^t_pmact_t`,
                    `ap` |-> `\r1 r2 t1 t2 fm. r1 fm @@ r2 fm`,
-                   ‘cn’ |-> ‘CONST’,
+                   ‘cn’ |-> ‘λa fm. CONST a’,
                    `A` |-> `{}`]
         |> SRULE [tpm_COND, strterm_fmap_supp, lem2,
                   FAPPLY_eqv_lswapstr, supp_fresh,
                   pmact_sing_inv, fnpm_def,
                   fmpm_FDOM, notin_frange]
-        |> SIMP_RULE (srw_ss()) [Once ordering]
+        |> SIMP_RULE (srw_ss()) [Once reordering]
         |> CONV_RULE (DEPTH_CONV (rename_vars [("p", "fm")]))
         |> prove_alpha_fcbhyp {ppms = [``fm_pmact string_pmact ^t_pmact_t``],
                                rwts = [notin_frange, strterm_fmap_supp],
