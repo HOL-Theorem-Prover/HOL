@@ -50,10 +50,16 @@ type stdconvdata = { name: string,
 (*---------------------------------------------------------------------------*)
 
 (* boolean argument to c is whether or not the rewrite is bounded *)
-fun appconv (c,UNBOUNDED) solver stk tm = c false solver stk tm
-  | appconv (c,BOUNDED r) solver stk tm = if !r = 0 then failwith "exceeded rewrite bound"
-                                          else c true solver stk tm before
-                                            Portable.dec r
+fun appconv (c,UNBOUNDED) = c false (* do not eta expand! *)
+  | appconv (c,BOUNDED r) =
+    let
+      val c = c true (* do not inline! *)
+    in
+      (fn solver => fn stk => fn tm =>
+      if !r = 0 then failwith "exceeded rewrite bound"
+      else c solver stk tm before
+      Portable.dec r)
+    end
 
 fun split_name {Thy,Name} = (SOME Thy, Name)
 fun mk_rewr_convdata (nmopt,(thm,tag)) : tagged_convdata option = let
