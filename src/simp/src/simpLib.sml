@@ -391,8 +391,9 @@ fun getlimit (SS ss) = #limit ss
      in
        refl x
      end
+     val congproc = CONGPROC mk_refl th (* do not inline *)
    in
-     QCHANGED_CONV o CONGPROC mk_refl th
+     (fn rel => QCHANGED_CONV o congproc rel) (* do not eta expand *)
    end
  in
    TRAVRULES {relations = rels,
