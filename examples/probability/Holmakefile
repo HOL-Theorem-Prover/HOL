@@ -1,5 +1,5 @@
 INCLUDES = $(HOLDIR)/src/probability $(HOLDIR)/src/n-bit $(HOLDIR)/src/real \
-	   $(HOLDIR)/src/real/analysis $(HOLDIR)/examples/simple_complexity/lib
+	   $(HOLDIR)/src/real/analysis
 
 CLINE_OPTIONS = -r
 

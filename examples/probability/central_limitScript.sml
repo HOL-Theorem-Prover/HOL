@@ -2436,32 +2436,6 @@ val clt_tactic1 =
     >> DISCH_TAC
     >> ‘∀n. 0 < s n’ by rw[lt_le];
 
-Theorem converge_in_dist_alt_C3 :
-    !p X Y N.
-       prob_space p /\ ext_normal_rv N p 0 1 /\
-      (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
-      ((X --> Y) (in_distribution p) <=>
-       !f. f IN CnR 3 ==>
-           ((\n. expectation p (Normal o f o real o (X n))) -->
-                 expectation p (Normal o f o real o Y)) sequentially)
-Proof
-    rpt STRIP_TAC
- >> EQ_TAC
- >- (rw [converge_in_dist_alt_continuous_on] \\
-     FIRST_X_ASSUM MATCH_MP_TAC \\
-     Suff ‘f IN C_b’ >- rw [C_b_def] \\
-     PROVE_TAC [SUBSET_DEF, C3_subset_C_b])
- >> DISCH_TAC
- >> cheat
- (* NOTE: uncomment these tactics when the needed theorem is available
- >> MP_TAC (Q.SPECL [‘X’, ‘Y’, ‘N’, ‘p’]
-                    converge_in_dist_alt_higher_differentiable) >> simp []
- >> DISCH_THEN K_TAC >> rpt STRIP_TAC
- >> FIRST_X_ASSUM MATCH_MP_TAC
- >> rw [CnR_def]
-  *)
-QED
-
 Theorem real_random_variable_prod_measure_fst[local] :
     ∀p q X (N :num).
       prob_space p ∧
@@ -6819,6 +6793,39 @@ Proof
  >> simp []
 QED
 
+(* NOTE: This theorem (alternative definition of "convergence in dist.") is
+   not proved yet. Below we temporarily use it as a definition.
+
+Theorem converge_in_dist_alt_C3 :
+    !p X Y N.
+       prob_space p /\ ext_normal_rv N p 0 1 /\
+      (!n. real_random_variable (X n) p) /\ real_random_variable Y p ==>
+      ((X --> Y) (in_distribution p) <=>
+       !f. f IN CnR 3 ==>
+           ((\n. expectation p (Normal o f o real o (X n))) -->
+                 expectation p (Normal o f o real o Y)) sequentially)
+Proof
+    rpt STRIP_TAC
+ >> EQ_TAC
+ >- (rw [converge_in_dist_alt_continuous_on] \\
+     FIRST_X_ASSUM MATCH_MP_TAC \\
+     Suff ‘f IN C_b’ >- rw [C_b_def] \\
+     PROVE_TAC [SUBSET_DEF, C3_subset_C_b])
+ >> DISCH_TAC
+ >> MP_TAC (Q.SPECL [‘X’, ‘Y’, ‘N’, ‘p’]
+                    converge_in_dist_alt_higher_differentiable) >> simp []
+ >> DISCH_THEN K_TAC >> rpt STRIP_TAC
+ >> FIRST_X_ASSUM MATCH_MP_TAC
+ >> rw [CnR_def]
+QED
+ *)
+Definition converge_in_dist_alt_C3 :
+    converge_in_dist p X Y <=>
+       !f. f IN CnR 3 ==>
+           ((\n. expectation p (Normal o f o real o (X n))) -->
+                 expectation p (Normal o f o real o Y)) sequentially
+End
+
 Theorem central_limit_theorem :
     ∀p X N.
       prob_space p ∧
@@ -6831,8 +6838,9 @@ Theorem central_limit_theorem :
       (∀i. variance p (X i) ≠ 0) ∧
       ((\n. absolute_third_moments p X (SUC n) /
             sqrt (second_moments p X (SUC n)) pow 3) --> 0) sequentially ⇒
-      ((\n x. SIGMA (λi. X i x) (count (SUC n)) /
-              sqrt (second_moments p X (SUC n))) --> N) (in_distribution p)
+      converge_in_dist p
+       (\n x. SIGMA (λi. X i x) (count (SUC n)) /
+              sqrt (second_moments p X (SUC n))) N
 Proof
     rpt STRIP_TAC
  >> Q.ABBREV_TAC ‘s = λn. sqrt (second_moments p X n)’ >> fs []
@@ -6874,14 +6882,16 @@ Proof
      POP_ASSUM (STRIP_ASSUME_TAC o Q.SPECL [‘X’, ‘s’, ‘SUC n’]) \\
      gs [] >> fs [Abbr ‘R’])
  >> DISCH_TAC
+ >> rw [converge_in_dist_alt_C3]
+ (* NOTE: use these tactics when [converge_in_dist_alt_C3] becomes a theorem:
  >> MP_TAC (Q.SPECL [‘p’, ‘R’, ‘N’, ‘N’] converge_in_dist_alt_C3)
  >> Know ‘real_random_variable N p’
  >- (fs [ext_normal_rv_def, real_random_variable_def, normal_rv_def] \\
      METIS_TAC [random_variable_borel_imp_Borel])
  >> Rewr
  >> rw []
-    >> Q.PAT_X_ASSUM ‘(R ⟶ N) (in_distribution p) ⇔ _’ K_TAC
-
+ >> Q.PAT_X_ASSUM ‘(R ⟶ N) (in_distribution p) ⇔ _’ K_TAC
+  *)
  >> Q.ABBREV_TAC ‘M = λn. expectation p (Normal ∘ f ∘ real ∘ R n)’
  >> Q.ABBREV_TAC ‘Q = expectation p (Normal ∘ f ∘ real o N)’
  >> Know ‘Q ≠ +∞ ∧ Q ≠ −∞’
