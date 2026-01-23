@@ -302,8 +302,10 @@ val _ =
        systeml (pfx @ extras @ [srcobj])
      end
   in
+    FileSys.chDir "parsing";
     print "Calling mllex on HolLex\n";
     systeml [mllex, "HolLex"];
+    FileSys.chDir "..";
     compile [] "holpathdb.sig";
     compile [] "holpathdb.sml";
     FileSys.chDir "../util";
@@ -328,16 +330,20 @@ val _ =
     compile ["-I", ".."] "Holdep_tokens.sig";
     compile ["-I", ".."] "Holdep_tokens.sml";
     FileSys.chDir "..";
-    compile [] "AttributeSyntax.sig";
-    compile [] "AttributeSyntax.sml";
-    compile [] "HolLex.sml";
+    FileSys.chDir "parsing";
+    compile ["-I", ".."] "AttributeSyntax.sig";
+    compile ["-I", ".."] "AttributeSyntax.sml";
+    compile ["-I", ".."] "HolLex.sml";
+    FileSys.chDir "..";
     FileSys.chDir "util";
     compile ["-I", ".."] "terminal_primitives.sig";
     compile ["-I", ".."] "terminal_primitives.sml";
     FileSys.chDir "..";
     compile [] "Holmake_tools_dtype.sml";
-    compile [] "HolParser.sig";
-    compile [] "HolParser.sml";
+    FileSys.chDir "parsing";
+    compile ["-I", ".."] "HolParser.sig";
+    compile ["-I", ".."] "HolParser.sml";
+    FileSys.chDir "..";
     FileSys.chDir "deps";
     compile ["-I", "..", "-I", "../mosml"] "Holdep.sig";
     compile ["-I", "..", "-I", "../mosml"] "Holdep.sml";
