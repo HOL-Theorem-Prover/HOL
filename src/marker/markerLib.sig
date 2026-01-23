@@ -108,8 +108,19 @@ sig
   val process_taclist_then : {arg: thm list} -> (thm list -> tactic) -> tactic
 
   val suspend : string -> tactic
-  val resume : (thm * string * tactic) -> {main: thm, subresult:thm, label:string}
-  val extract_suspended_goal : thm -> string -> (term list * term)
+  val prim_resume : (thm * string * tactic) -> {updated_main: thm, subresult:thm}
+  val resume : {suspension_name:string, label_name:string} -> tactic -> thm
+  val prim_set_suspended_goal :
+      Manager.tacmodifier -> {suspension_name:string, label_name:string} ->
+      proofManagerLib.proofs
+  val set_suspended_goal :
+      {suspension_name:string, label_name:string} -> proofManagerLib.proofs
+      (* provides id_tacm for the tactic modifier value *)
+
+  val add_suspension_label : string -> thm -> thm
+  val resumption_to_goal : term -> (term list * term)
+  val extract_suspended_goal : thm -> string -> term
+  val RESUME_TAC : tactic
 
 end (* sig *)
 

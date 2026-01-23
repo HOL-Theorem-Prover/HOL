@@ -844,7 +844,7 @@ fun pmatch_printer
     doparen "(" >>
     ublock PP.CONSISTENT 0 (
        ublock PP.CONSISTENT 2
-               (add_string "case" >> add_break(1,2) >>
+               (add_string "pmatch" >> add_break(1,2) >>
                 sys (Top, Top, Top) (d - 1) v >>
                 add_break(1,0) >> add_string "of") >>
        add_break (1, 2) >>
@@ -868,19 +868,30 @@ end
 (* Enabling pmatch *)
 open parsePMATCH
 
-val ENABLE_PMATCH_CASES =
+val temp_enable_pmatch =
     add_pmatch {get = term_grammar,
                 arule = K o Parse.temp_add_rule,
-                rmtmtok = K o Parse.temp_remove_termtok,
                 add_ptmproc =
                   (fn s => fn pp => K (temp_add_preterm_processor s pp)),
                 addup = K o temp_add_user_printer,
                 up = userprinter_info}
 
+(* TODO: A permanent enable_pmatch would require:
+   1. A permanent add_preterm_processor, which doesn't currently exist
+   2. Parse.add_user_printer takes (string * term) but userprinter_info is
+      (string * term * userprinter), so the types don't match
+   See GitHub issue for future work.
+val enable_pmatch =
+    add_pmatch {get = term_grammar,
+                arule = K o Parse.add_rule,
+                add_ptmproc = ...,
+                addup = K o add_user_printer,
+                up = ...}
+*)
+
 val grammar_add_pmatch =
     add_pmatch { get = (fn g => g),
                  arule = term_grammar.add_rule,
-                 rmtmtok = C term_grammar.remove_form_with_tok,
                  add_ptmproc = term_grammar.new_preterm_processor,
                  addup = term_grammar.add_user_printer,
                  up = userprinter_info }

@@ -17,6 +17,6 @@ all: $(TARGETS) $(HOLHEAP)
 .PHONY: all
 
 $(HOLHEAP): $(DEPS)
-	$(protect $(HOLDIR)/bin/buildheap) -b ../prog/x64-step-heap -o $(HOLHEAP) $(BARE_THYS)
+	$(protect $(HOLDIR)/bin/hol) buildheap -b ../prog/x64-step-heap -o $(HOLHEAP) $(BARE_THYS)
 
 endif

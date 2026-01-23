@@ -10,8 +10,6 @@ structure Parse = struct
 end
 open Parse
 
-val _ = Lib.with_flag (Feedback.emit_MESG, false) bossLib.srw_ss ()
-
 val ERR = Feedback.mk_HOL_ERR "bitstringLib"
 
 (* ------------------------------------------------------------------------- *)
@@ -60,7 +58,7 @@ local
    open bitstringTheory
    val cnv =
      Conv.REWR_CONV (REWRITE_RULE [zero_extend_def] fixwidth_def)
-     THENC change_compset_conv (listSimps.list_compset())
+     THENC change_compset_conv (listSimps.list_compset)
              [computeLib.Defs [combinTheory.K_THM],
               computeLib.Convs
                 [(``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV)]]
@@ -104,7 +102,7 @@ local
       “(l2n 2 [] = 0) /\
        (!l. l2n 2 (0::l) = 2 * l2n 2 l) /\
        (!l. l2n 2 (1::l) = 2 * l2n 2 l + 1)”,
-      simp [numposrepTheory.l2n_def])
+      simp_tac arith_ss [numposrepTheory.l2n_def])
 
    val l2n_2_numeric = prove(
       “(l2n 2 [] = ZERO) /\
@@ -117,7 +115,8 @@ local
      “(num_from_bin_list [] = 0) /\
       (!l. num_from_bin_list (0::l) = NUMERAL (l2n 2 $ REVERSE (0::l))) /\
       (!l. num_from_bin_list (1::l) = NUMERAL (l2n 2 $ REVERSE (1::l)))”,
-      simp [numposrepTheory.num_from_bin_list_def] >> qm [NUMERAL_DEF])
+      simp_tac list_ss [numposrepTheory.num_from_bin_list_def,
+                        numposrepTheory.l2n_def] >> qm [NUMERAL_DEF])
 
    val cnv =
       Conv.REWR_CONV bitstringTheory.v2n_def
@@ -214,7 +213,7 @@ local
    fun is_bool tm = Teq tm orelse Feq tm
    val cnv =
      Conv.REWR_CONV bitstringTheory.v2w_11
-     THENC change_compset_conv (listSimps.list_compset())
+     THENC change_compset_conv (listSimps.list_compset)
              [computeLib.Defs
                 [bitstringTheory.v2w_fixwidth,
                  bitstringTheory.fixwidth,
@@ -259,7 +258,7 @@ local
      qm [bitstringTheory.extract_v2w, bitstringTheory.field_def])
    val shiftr_CONV =
      Conv.REWR_CONV bitstringTheory.shiftr_def
-     THENC Conv.CHANGED_CONV (computeLib.CBV_CONV (listSimps.list_compset()))
+     THENC Conv.CHANGED_CONV (computeLib.CBV_CONV (listSimps.list_compset))
 in
    fun extract_v2w_CONV tm =
       let
@@ -312,7 +311,7 @@ local
    val word_bit_last_shiftr =
       REWRITE_RULE [bitstringTheory.shiftr_def]
          bitstringTheory.word_bit_last_shiftr
-   val cnv = change_compset_conv (computeLib.bool_compset())
+   val cnv = change_compset_conv computeLib.bool_compset
                [computeLib.Defs
                   [numeral_distrib, numeral_suc, numeral_iisuc, numeral_sub,
                    numeral_lt, iSUB_THM, iDUB_removal,
@@ -367,8 +366,6 @@ local
          computeLib.add_conv (c, 1, BOOLIFY_v2w_CONV thm)
       end
 
-   val rw = SRW_TAC [boolSimps.LET_ss]
-
    fun Cases_on_v2w q =
       Q.ISPEC_THEN q STRUCT_CASES_TAC bitstringTheory.ranged_bitstring_nchotomy
 
@@ -393,7 +390,7 @@ local
 
    fun boolify_bitify_tac x l =
       Tactic.STRIP_TAC THEN pairLib.PairCases_on [HOLPP.ANTIQUOTE x]
-      THEN rw l
+      THEN SRW_TAC [boolSimps.LET_ss] l
 
    fun bitify_boolify_tac l =
       SRW_TAC [fcpLib.FCP_ss, boolSimps.LET_ss] (l @
@@ -576,7 +573,7 @@ local
      | NONE => false
 in
   val add_bitstring_compset = computeLib.add_thms thms
-  val cnv = change_compset_conv (wordsLib.words_compset())
+  val cnv = change_compset_conv (wordsLib.words_compset)
                [computeLib.Extenders [add_bitstring_compset]]
   fun BITSTRING_GROUND_CONV tm =
     if is_ground tm then cnv tm

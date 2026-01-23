@@ -105,6 +105,14 @@ fun call_hooks td =
       List.app error_report (Listener.call_listener delta_hook td)
     end
 
+fun hooks_or_abort td =
+    case Listener.call_listener delta_hook td of
+        [] => ()
+      | (s,_,e)::_ => raise ERR "hooks_or_abort"
+                         ("Hook " ^ s ^ " failed on event " ^
+                          TheoryDelta.toString td ^ " with problem " ^
+                          Feedback.exn_to_string e)
+
 (* This reference is set in course of loading the parsing library *)
 val pp_thm = ref (fn _:thm => PP.add_string "<thm>")
 
@@ -911,7 +919,7 @@ local
                        | SOME {fullfile,...} => fullfile
 in
 fun export_theory_return_hash () = let
-  val _ = call_hooks (TheoryDelta.ExportTheory (current_theory()))
+  val _ = hooks_or_abort (TheoryDelta.ExportTheory (current_theory()))
   val {name=thyname,facts,thydata,mldeps,...} = scrubCT()
   fun foldthis (nm, (thm, info)) A =
       if is_temp_binding nm then A else (nm,thm,info)::A

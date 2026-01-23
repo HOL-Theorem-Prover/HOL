@@ -100,8 +100,8 @@ val STATE_CONV =
                  [boolTheory.COND_ID, cond_rand_thms])
 
 local
-   val cmp = computeLib.bool_compset ()
-   val () = computeLib.add_thms (datatype_thms [pairTheory.FST]) cmp
+   val cmp = computeLib.add_thms (datatype_thms [pairTheory.FST])
+               computeLib.bool_compset
 in
    val EVAL_DATATYPE_CONV = Conv.TRY_CONV (utilsLib.CHANGE_CBV_CONV cmp)
 end

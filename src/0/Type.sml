@@ -225,14 +225,19 @@ fun type_var_in v =
  *---------------------------------------------------------------------------*)
 
 fun ty_sub [] _ = SAME
-  | ty_sub theta (Tyapp(tyc,Args))
-      = (case delta_map (ty_sub theta) Args
-          of SAME => SAME
-           | DIFF Args' => DIFF (Tyapp(tyc, Args')))
-  | ty_sub theta v =
-      case Lib.subst_assoc (equal v) theta
-       of NONE    => SAME
-        | SOME ty => DIFF ty
+  | ty_sub theta ty =
+    let
+      fun ty_sub1 theta (Tyapp(tyc,Args)) =
+            (case delta_map (ty_sub1 theta) Args of
+                SAME => SAME
+              | DIFF Args' => DIFF (Tyapp(tyc, Args')))
+        | ty_sub1 theta v =
+             case Lib.subst_assoc (equal v) theta of
+                NONE    => SAME
+              | SOME ty => DIFF ty
+    in
+       ty_sub1 theta ty
+    end
 
 fun type_subst theta = delta_apply (ty_sub theta)
 

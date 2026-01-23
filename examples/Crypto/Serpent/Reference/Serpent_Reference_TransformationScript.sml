@@ -737,7 +737,7 @@ quietdec := false;*)
 val ResTable =
   LIST_CONJ (map EVAL (map (fn i => ``Res ^(term_of_int i)``) (upto 0 127)));
 
-val _ = computeLib.add_thms [ResTable] computeLib.the_compset;
+val _ = computeLib.add_funs [ResTable];
 
 (* parity check is the same as counting EVEN or ODD.
    countEvenL and countEven is the two equivalent description,

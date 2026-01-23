@@ -39,7 +39,7 @@ ring ()     { ../bin/hol < ring.sml; }
 
 bmark () {
   cd bmark
-  ./run_bmark ../../bin/hol.bare
+  ./run_bmark "../../bin/hol --bare"
   cd ..
 }
 

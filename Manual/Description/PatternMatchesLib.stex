@@ -21,7 +21,7 @@ The conversion \texttt{PMATCH\_CLEANUP\_PVARS\_CONV} removes unused pattern vari
 \begin{session}
 \begin{alltt}
 >>__ open patternMatchesLib;
->>__ val _ = ENABLE_PMATCH_CASES();
+>>__ val _ = temp_enable_pmatch();
 >>__ SIMP_CONV (srw_ss()) [] ``SUC 0``;
 >> PMATCH_CLEANUP_PVARS_CONV ``PMATCH (x:('a # 'b) option) [
      PMATCH_ROW (\x:'a. NONE) (\x. T) (\x. 5);
@@ -35,7 +35,7 @@ This normal form is enforced by \texttt{PMATCH_EXPAND_COLS_CONV}.
 
 \begin{session}
 \begin{alltt}
->> PMATCH_EXPAND_COLS_CONV ``case (x,y,z) of
+>> PMATCH_EXPAND_COLS_CONV ``pmatch (x,y,z) of
     (0,y,T) => y
   | xyz when ~ SND (SND xyz) => 2
   | (x,yz) => x``
@@ -49,7 +49,7 @@ This is rarely needed, though.
 
 \begin{session}
 \begin{alltt}
->> PMATCH_INTRO_WILDCARDS_CONV ``case (x,y,z) of
+>> PMATCH_INTRO_WILDCARDS_CONV ``pmatch (x,y,z) of
     (_x, y, z) => _x + y
   | (x, y, z) when z => x``
 \end{alltt}
@@ -80,7 +80,7 @@ Since the third line matches in any case, the fourth one is deleted.
 
 \begin{session}
 \begin{alltt}
->> PMATCH_CLEANUP_CONV ``case (SOME (x:num),y) of
+>> PMATCH_CLEANUP_CONV ``pmatch (SOME (x:num),y) of
      (NONE, y) => 1
    | (x, 0) => 2
    | (SOME x, y) => 3
@@ -94,7 +94,7 @@ evaluated:
 
 \begin{session}
 \begin{alltt}
->> PMATCH_CLEANUP_CONV ``case (SOME x, y) of
+>> PMATCH_CLEANUP_CONV ``pmatch (SOME x, y) of
      (NONE, y) => 1
    | (SOME x, y) => x+y
    | (x, y) => 4``
@@ -104,7 +104,7 @@ evaluated:
 Similarly, if no row matches, the whole case expression is evaluated.
 \begin{session}
 \begin{alltt}
->> PMATCH_CLEANUP_CONV ``case (SOME (x:num), y:num) of (NONE, y) => 1``
+>> PMATCH_CLEANUP_CONV ``pmatch (SOME (x:num), y:num) of (NONE, y) => 1``
 \end{alltt}
 \end{session}
 
@@ -117,7 +117,7 @@ This situation usually arises after removing certain rows from a case expression
 
 \begin{session}
 \begin{alltt}
->> PMATCH_SIMP_COLS_CONV ``case (SOME x,y) of
+>> PMATCH_SIMP_COLS_CONV ``pmatch (SOME x,y) of
    | (SOME x, 1) => x+y
    | (x, y) => 4``
 \end{alltt}
@@ -127,7 +127,7 @@ Similarly, a column is partially evaluated if all rows contain either a variable
 
 \begin{session}
 \begin{alltt}
->> PMATCH_SIMP_COLS_CONV ``case (SOME x,y) of
+>> PMATCH_SIMP_COLS_CONV ``pmatch (SOME x,y) of
    | (SOME x, 1) => SOME (x+y)
    | (SOME 2, 2) => NONE
    | (x, y) => x``
@@ -148,7 +148,7 @@ A more advanced method for removing redundant rows, which is slower but for exam
 
 \begin{session}
 \begin{alltt}
->> PMATCH_REMOVE_FAST_REDUNDANT_CONV ``case xy of
+>> PMATCH_REMOVE_FAST_REDUNDANT_CONV ``pmatch xy of
    | (SOME x, y) => 1 | (SOME 2, 3) => 2
    | (NONE, y) => 3 | (NONE, y) => 4
    | (x, 5) => 5``
@@ -173,7 +173,7 @@ Thus \texttt{PMATCH\_REMOVE\_FAST\_SUBSUMED\_CONV} takes an additional boolean a
 
 \begin{session}
 \begin{alltt}
->> PMATCH_REMOVE_FAST_SUBSUMED_CONV true ``case xy of
+>> PMATCH_REMOVE_FAST_SUBSUMED_CONV true ``pmatch xy of
    | (SOME 2, _) => 2 | (NONE, 3) => 1
    | (SOME x, _) => x | (NONE, y) => y
    | (x, 5) => ARB``
@@ -181,7 +181,7 @@ Thus \texttt{PMATCH\_REMOVE\_FAST\_SUBSUMED\_CONV} takes an additional boolean a
 \end{session}
 \begin{session}
 \begin{alltt}
->> PMATCH_REMOVE_FAST_SUBSUMED_CONV false ``case xy of
+>> PMATCH_REMOVE_FAST_SUBSUMED_CONV false ``pmatch xy of
    | (SOME 2, _) => 2 | (NONE, 3) => 1
    | (SOME x, _) => x | (NONE, y) => y
    | (x, 5) => ARB``
@@ -190,7 +190,7 @@ Thus \texttt{PMATCH\_REMOVE\_FAST\_SUBSUMED\_CONV} takes an additional boolean a
 The \texttt{PMATCH\_SIMP\_CONV} conversion keeps such rows.
 \begin{session}
 \begin{alltt}
->> PMATCH_SIMP_CONV ``case xy of
+>> PMATCH_SIMP_CONV ``pmatch xy of
    | (SOME 2, _) => 2 | (NONE, 3) => 1
    | (SOME x, _) => x | (NONE, y) => y
    | (x, 5) => ARB``
@@ -206,14 +206,14 @@ evaluation of ground terms that contain \pmatch{} case expressions.
 
 \begin{session}
 \begin{alltt}
->> EVAL ``case (SOME 3, SOME 4) of
+>> EVAL ``pmatch (SOME 3, SOME 4) of
    | (SOME x, SOME y) => SOME (x + y)
    | (_, _) => NONE``
 \end{alltt}
 \end{session}
 \begin{session}
 \begin{alltt}
->> EVAL ``case (NONE, SOME 4) of
+>> EVAL ``pmatch (NONE, SOME 4) of
    | (SOME x, SOME y) => SOME (x + y)
    | (_, _) => NONE``
 \end{alltt}
@@ -237,7 +237,7 @@ This is easily achievable by introducing extra variables into the pattern and co
 
 \begin{session}
 \begin{alltt}
->> PMATCH_REMOVE_DOUBLE_BIND_CONV ``case xy of
+>> PMATCH_REMOVE_DOUBLE_BIND_CONV ``pmatch xy of
    | (x, x) when x > 0 => x + x
    | x.| (x, y) => x
    | (x, _) => SUC x``
@@ -255,7 +255,7 @@ Therefore, the conversion \texttt{PMATCH_REMOVE_GUARDS_CONV} as well as the corr
 
 \begin{session}
 \begin{alltt}
->> PMATCH_REMOVE_GUARDS_CONV ``case (x, y) of
+>> PMATCH_REMOVE_GUARDS_CONV ``pmatch (x, y) of
   | (x, 2) when EVEN x => x + x
   | (SUC x, y) when ODD x => y + x + SUC x
   | (SUC x, 1) => x
@@ -265,7 +265,7 @@ Therefore, the conversion \texttt{PMATCH_REMOVE_GUARDS_CONV} as well as the corr
 
 \begin{session}
 \begin{alltt}
->> PMATCH_REMOVE_GUARDS_CONV ``case (x, y) of
+>> PMATCH_REMOVE_GUARDS_CONV ``pmatch (x, y) of
   | (x, 0) when EVEN x => (SOME x, T)
   | (x, 0) => (SOME x, F)
   | (0, _) => (NONE, T)
@@ -275,7 +275,7 @@ Therefore, the conversion \texttt{PMATCH_REMOVE_GUARDS_CONV} as well as the corr
 
 \begin{session}
 \begin{alltt}
->> SIMP_CONV (std_ss ++ PMATCH_REMOVE_GUARDS_ss) [] ``case x of
+>> SIMP_CONV (std_ss ++ PMATCH_REMOVE_GUARDS_ss) [] ``pmatch x of
   | _ when x < 5 => 0
   | _ when x < 10 => 1
   | _ => 2``
@@ -326,7 +326,7 @@ Using the rule \texttt{PMATCH_TO_TOP_RULE} then produces the desired (conditiona
 \begin{session}
 \begin{alltt}
 >>_ val MYZIP3_def = Define `
-  MYZIP3 xl yl = (case (xl, yl) of
+  MYZIP3 xl yl = (pmatch (xl, yl) of
    | ([], _) => []
    | (_, []) => []
    | (x::xs, y::ys) => (x,y) :: (MYZIP3 xs ys))`
@@ -354,11 +354,11 @@ The preconditions state that no previous row matched or that the result of such 
 \begin{session}
 \begin{alltt}
 >>_ val MYZIP4_def = Define `
-  MYZIP4 xl yl = (case (xl, yl) of
+  MYZIP4 xl yl = (pmatch (xl, yl) of
    | ([], []) => (NONE, [])
    | ([], _) => (SOME T, [])
    | (_, []) => (SOME F, [])
-   | (x::xs, y::ys) => (dtcase (MYZIP4 xs ys) of
+   | (x::xs, y::ys) => (case (MYZIP4 xs ys) of
        | (r, l) => (r, (x,y)::l)))`
 
 >> val MYZIP4_EQS = PMATCH_TO_TOP_RULE MYZIP4_def
@@ -373,13 +373,13 @@ Moreover, notice that \texttt{PMATCH_LIFT_BOOL_CONV} always tries to lift to the
 \begin{session}
 \begin{alltt}
 >> DEPTH_CONV (PMATCH_LIFT_BOOL_CONV true) ``
-  P /\ (f (case x of [] => 0 | x::xs => x) = 5) /\ Q``
+  P /\ (f (pmatch x of [] => 0 | x::xs => x) = 5) /\ Q``
 \end{alltt}
 \end{session}
 \begin{session}
 \begin{alltt}
 >> DEPTH_CONV (PMATCH_LIFT_BOOL_CONV false) ``
-  P /\ (f (case x of [] => 0 | x::xs => x) = 5) /\ Q``
+  P /\ (f (pmatch x of [] => 0 | x::xs => x) = 5) /\ Q``
 \end{alltt}
 \end{session}
 
@@ -401,7 +401,7 @@ This means that no guards can be used and that all patterns need to be construct
 \begin{session}
 \begin{alltt}
 >> PMATCH_ELIM_CONV
-   ``case (xy:(num option # num list)) of (NONE, x::xs) => 0``
+   ``pmatch (xy:(num option # num list)) of (NONE, x::xs) => 0``
 \end{alltt}
 \end{session}
 
@@ -415,13 +415,13 @@ The corresponding conversions are named \texttt{PMATCH_INTRO_CONV} and \texttt{P
 \begin{session}
 \begin{alltt}
 >> PMATCH_INTRO_CONV
-   ``dtcase (xy:(num option # num list)) of (NONE, x::xs) => 0``
+   ``case (xy:(num option # num list)) of (NONE, x::xs) => 0``
 \end{alltt}
 \end{session}
 \begin{session}
 \begin{alltt}
 >> PMATCH_INTRO_CONV_NO_OPTIMISE
-   ``dtcase (xy:(num option # num list)) of (NONE, x::xs) => 0``
+   ``case (xy:(num option # num list)) of (NONE, x::xs) => 0``
 \end{alltt}
 \end{session}
 
@@ -443,7 +443,7 @@ These features need to be removed (see Sec.~\ref{subsec:pmatch/remove-feat}) bef
 \begin{session}
 \begin{alltt}
 >> PMATCH_CASE_SPLIT_CONV
-   ``case l of (SOME x, SOME y) => SOME (x+y) | (_, _) => NONE``
+   ``pmatch l of (SOME x, SOME y) => SOME (x+y) | (_, _) => NONE``
 \end{alltt}
 \end{session}
 
@@ -467,7 +467,7 @@ Figure~\ref{fig:pattern-compilation-column-heuristics} shows the effects of usin
 \begin{session}
 \begin{alltt}
 > val t = ``...``
->>__ val t = ``case (x, y, z) of
+>>__ val t = ``pmatch (x, y, z) of
      | (_, F, T) => 1
      | (F, T, _) => 2
      | (_, _, F) => 3
@@ -564,7 +564,7 @@ Notice, that the old constructors for lists are still present.
 
 \begin{session}
 \begin{alltt}
->> PMATCH_CASE_SPLIT_CONV ``case ll of
+>> PMATCH_CASE_SPLIT_CONV ``pmatch ll of
      (SNOC x xs, []) => x
    | ([], x::xs) => x
    | (_, _) => 0``
@@ -600,11 +600,11 @@ Defining an inexhaustive constructor family for just the \texttt{RED} constructo
 >>__ val cf = mk_constructorFamily (cl, ``tree_red_CASE``, cheat)
 >>_ val _ = pmatch_compile_db_register_constrFam cf
 
->> PMATCH_CASE_SPLIT_CONV ``case (t:'a tree) of
+>> PMATCH_CASE_SPLIT_CONV ``pmatch (t:'a tree) of
      | Red _ _ _ => T
      | _ => F``
 
->> PMATCH_CASE_SPLIT_CONV ``case (t:'a tree) of
+>> PMATCH_CASE_SPLIT_CONV ``pmatch (t:'a tree) of
      | Black _ _ _ => T
      | _ => F``
 \end{alltt}
@@ -626,7 +626,7 @@ Let's look at an example. First we compile a case expression to a decision tree.
 %
 \begin{session}
 \begin{alltt}
->> PMATCH_CASE_SPLIT_CONV ``case xy of
+>> PMATCH_CASE_SPLIT_CONV ``pmatch xy of
   | (SOME x, SOME y) => x + y
   | (_, SOME 0) => 0``
 \end{alltt}
@@ -658,7 +658,7 @@ The conversion \texttt{PMATCH_REMOVE_REDUNDANT_CONV}\index{PMATCH_REMOVE_REDUNDA
 %
 \begin{session}
 \begin{alltt}
->> PMATCH_REMOVE_REDUNDANT_CONV ``case xy of
+>> PMATCH_REMOVE_REDUNDANT_CONV ``pmatch xy of
    | (SOME x, y) => 1 | (SOME 2, 3) => 2
    | (NONE, y) => 3 | (NONE, y) => 4
    | (x, 5) => 5``
@@ -672,7 +672,7 @@ In such situations, it is often beneficial to combine the automated redundancy r
 \begin{figure}[phtb]
 \begin{session}
 \begin{alltt}
->>_ val t = ``case x of _ when EVEN x => 0 | _ when ODD x => 1 | _ => 2``
+>>_ val t = ``pmatch x of _ when EVEN x => 0 | _ when ODD x => 1 | _ => 2``
 >>+ PMATCH_REMOVE_REDUNDANT_CONV t
 
 >> val info = COMPUTE_REDUNDANT_ROWS_INFO_OF_PMATCH t
@@ -699,13 +699,13 @@ A flag determines whether these newly introduced rows should use guards.
 
 \begin{session}
 \begin{alltt}
->> PMATCH_COMPLETE_CONV true ``case (xy : (num option # num option)) of
+>> PMATCH_COMPLETE_CONV true ``pmatch (xy : (num option # num option)) of
        (SOME x, NONE) when x > 0 => 0 | (NONE, _) => 1``;
 \end{alltt}
 \end{session}
 \begin{session}
 \begin{alltt}
->> PMATCH_COMPLETE_CONV false ``case (xy : (num option # num option)) of
+>> PMATCH_COMPLETE_CONV false ``pmatch (xy : (num option # num option)) of
        (SOME x, NONE) when x > 0 => 0 | (NONE, _) => 1``;
 \end{alltt}
 \end{session}
@@ -717,7 +717,7 @@ Similarly, exhaustiveness can be derived \emph{via} pattern compilation.
 \begin{session}
 \begin{alltt}
 >> PMATCH_IS_EXHAUSTIVE_COMPILE_CHECK
-     ``case (xy : (num option # num option)) of
+     ``pmatch (xy : (num option # num option)) of
        (SOME _, _) => 0 | (_, NONE) => 1 | (NONE, SOME _) => 2``
 \end{alltt}
 \end{session}
@@ -726,10 +726,10 @@ Often, the exhaustiveness can be proved much faster by just searching a matching
 %
 \begin{session}
 \begin{alltt}
->> PMATCH_IS_EXHAUSTIVE_FAST_CHECK ``case (x:num option, y:num) of
+>> PMATCH_IS_EXHAUSTIVE_FAST_CHECK ``pmatch (x:num option, y:num) of
        (SOME _, _) => 0 | (_, _) => 1``
 
->>+ PMATCH_IS_EXHAUSTIVE_FAST_CHECK ``case (xy : (num option # num option)) of
+>>+ PMATCH_IS_EXHAUSTIVE_FAST_CHECK ``pmatch (xy : (num option # num option)) of
        (SOME _, _) => 0 | (_, NONE) => 1 | (NONE, SOME _) => 2``
 \end{alltt}
 \end{session}
@@ -770,7 +770,7 @@ The flag of this function indicates whether an exhaustiveness proof should be at
 \begin{session}
 \begin{alltt}
 >> val info = analyse_pmatch false
-   ``case l of [] => 1 | [x] when (x > 2) => 2 | _ => 3``
+   ``pmatch l of [] => 1 | [x] when (x > 2) => 2 | _ => 3``
 
 >> val sml_ok = is_sml_pmatch info
 >> val ocaml_ok = is_ocaml_pmatch info

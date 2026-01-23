@@ -6,8 +6,8 @@ open HolKernel boolLib liteLib Trace;
 
 fun samerel t1 t2 = can (match_term t1) t2
 
-type congproc  = {relation:term,
-                  solver : term -> thm,
+type congproc  = term -> (* relation *)
+                 {solver : term -> thm,
                   freevars: term list,
                   depther : thm list * term -> conv} -> conv
 
@@ -153,10 +153,11 @@ let
             #2 o strip_forall)
            conditions
 
-in fn {relation,solver,depther,freevars} =>
+in fn relation =>
   if not (samerel rel relation) andalso not (same_const rel relation) then
     failwith "not applicable"
-  else fn tm =>
+  else
+    fn {solver,depther,freevars} => fn tm =>
   let
     val theta = match_type (#1 (dom_rng (type_of relation))) (type_of tm)
     val relation' = Term.inst theta relation
@@ -264,9 +265,10 @@ end;
  *  Opening through HOL terms under HOL equality.
  * ---------------------------------------------------------------------*)
 
-fun EQ_CONGPROC {relation,depther,solver,freevars} tm =
+fun EQ_CONGPROC relation =
  if not (same_const relation boolSyntax.equality) then failwith "not applicable"
  else
+ fn {depther,solver,freevars} => fn tm =>
  case dest_term tm
   of COMB(Rator,Rand) =>
       (let val th = depther ([],equality) Rator

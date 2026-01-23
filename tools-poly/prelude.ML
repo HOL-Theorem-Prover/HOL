@@ -1,3 +1,20 @@
+(* prelude.ML - Poly/ML Interactive Session Prelude
+   =================================================
+
+   This file is loaded when starting an interactive HOL session with Poly/ML.
+   It establishes the basic environment including:
+   - Installing pretty-printers for terms, types, theorems, etc.
+   - Setting up help paths
+   - Loading holinteractive.ML (defines HOL_Interactive structure)
+   - Running tools/check-intconfig.sml for user configuration
+
+   For full HOL sessions (the default), prelude2.ML is loaded after this
+   to add bossLib and additional libraries.
+
+   For Moscow ML, the equivalent is tools/std.prelude.
+
+   This file is loaded by hol.ML when running in REPL mode.
+*)
 
 (* this is an -*- sml -*- file *)
 val () = PolyML.print_depth 0;
@@ -124,6 +141,9 @@ in
 end
 
 val _ = PolyML.use (OS.Path.concat(HOLDIR, "tools-poly/holinteractive.ML"));
+
+(* Connect HOL_Interactive.reset_open to REPL's compile-fail handler *)
+val _ = HOL_REPL.resetOpenHook := HOL_Interactive.reset_open;
 
 (*---------------------------------------------------------------------------*
  * Set up the help paths.                                                    *

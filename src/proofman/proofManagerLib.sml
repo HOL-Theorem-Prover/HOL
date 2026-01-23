@@ -91,37 +91,37 @@ fun expandf tac =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expandf tac) (proofs());
     top_proof())
-  handle e => Raise e;
+  handle e => Feedback.display_uncaught e;
 
 fun expand tac =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expand tac) (proofs());
     top_proof())
-  handle e => Raise e;
+  handle e => Feedback.display_uncaught e;
 
 fun expand_listf ltac =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expand_listf ltac) (proofs());
     top_proof())
-  handle e => Raise e;
+  handle e => Feedback.display_uncaught e;
 
 fun expand_list ltac =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expand_list ltac) (proofs());
     top_proof())
-  handle e => Raise e;
+  handle e => Feedback.display_uncaught e;
 
 fun expand_frag ftac =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expand_frag ftac) (proofs());
     top_proof())
-  handle e => Raise e;
+  handle e => Feedback.display_uncaught e;
 
 fun expandv (s,tac) =
    (say "OK..\n";
     the_proofs := Manager.hd_opr (Manager.expandv (s,tac)) (proofs());
     top_proof())
-  handle e => Raise e;
+  handle e => Feedback.display_uncaught e;
 
 val elt = expand_list ;
 fun eall tac = expand_list (Tactical.ALLGOALS tac) ;

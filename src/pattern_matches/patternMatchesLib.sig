@@ -7,13 +7,10 @@ sig
   (* parsing                      *)
   (********************************)
 
-  (* ENABLE_PMATCH_CASES() turns on parsing for
-     PMATCH style case expressions. After calling it
-     expressions like `case ... of ...` are not parsed
-     to decision trees any more, but to PMATCH expressions.
-     Decision tree case expressions are afterwards available
-     via `dtcase ... of ...`. *)
-  val ENABLE_PMATCH_CASES : unit -> unit
+  (* temp_enable_pmatch() enables parsing for PMATCH style case expressions
+     using "pmatch ... of ..." syntax. This enables the syntax for the
+     current theory only; it will not be exported to descendent theories. *)
+  val temp_enable_pmatch : unit -> unit
 
 
   (********************************)

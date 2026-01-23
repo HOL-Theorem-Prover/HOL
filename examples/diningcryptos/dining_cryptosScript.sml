@@ -358,7 +358,8 @@ val fun_eq_lem6 = METIS_PROVE []
         (a = b) /\ ((x = a) \/ P) \/ ~(x = b) /\ ((x = a) \/ P)``;
 
 val _ = print "Starting very long dc3_leakage_result (expect 10min)\n"
-(* NOTE: this theorem needs a long time (~10min) to finish *)
+(* NOTE: this theorem needs a long time (~30seconds) to finish *)
+
 Theorem dc3_leakage_result:
      leakage (dc_prog_space (SUC (SUC (SUC 0))) F) (dcprog (SUC(SUC(SUC 0)))) = 0
 Proof
@@ -372,31 +373,46 @@ Proof
    >> CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [fun_eq_lem])))
    >> RW_TAC set_ss [CROSS_EQNS, STRCAT_toString_inj]
    >> CONV_TAC (FIND_CONV ``x UNION y`` (UNION_CONV (SIMP_CONV set_ss [fun_eq_lem])))
-   >> CONV_TAC
+   >> qabbrev_tac `coin_str = "coin"`
+   >> qabbrev_tac `announces_str = "announces"`
+   >> qabbrev_tac `pays_str = "pays"`
+   >> qabbrev_tac `result_str = "result"`
+   >> Q.SUBGOAL_THEN `!n. STRCAT announces_str n <> result_str` ASSUME_TAC
+   >- (UNABBREV_ALL_TAC >> EVAL_TAC >> simp[])
+   >> POP_ASSUM (fn asm => ASSUME_TAC asm >>
+      CONV_TAC
         (REPEATC ((SIMP_CONV set_ss [REAL_SUM_IMAGE_THM]) THENC
                   ((ONCE_FIND_CONV ``x DELETE y``
                      (DELETE_CONV
-                       ((SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND,
-                                             EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM])
+                       (
+                        (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND,
+                                             EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM,
+                                             STRCAT_11,asm])
                         THENC EVAL
                         THENC (SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR,
-                                                  FORALL_AND_THM, DISJ_IMP_THM])
+                                                  FORALL_AND_THM, DISJ_IMP_THM,STRCAT_11,
+                                                  asm])
                         THENC EVAL
-                        THENC (REPEATC (T_F_UNCHANGED_CONV
+                        THENC (REPEATC (CHANGED_CONV
                                          ((SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR,
-                                                              FORALL_AND_THM])
+                                                              FORALL_AND_THM,STRCAT_11,asm])
                                           THENC EVAL)))))))
-                  THENC SIMP_CONV arith_ss []))
-   >> CONV_TAC (ONCE_FIND_CONV ``if (x=y) then (1:real) else 0``
+                  THENC SIMP_CONV arith_ss [])))
+   >> simp_tac arith_ss [STRCAT_11,toString_inj]
+   >> POP_ASSUM (fn asm => ASSUME_TAC asm >>
+      CONV_TAC (ONCE_FIND_CONV ``if (x=y) then (1:real) else 0``
                  (RATOR_CONV (RATOR_CONV (RAND_CONV
-        (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM, FORALL_AND_THM, DISJ_IMP_THM]
+        (SIMP_CONV arith_ss [FUN_EQ_THM, PAIR_EQ, COND_EXPAND, EQ_IMP_THM,
+                             FORALL_AND_THM, DISJ_IMP_THM, STRCAT_11,asm]
          THENC EVAL
-         THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM, DISJ_IMP_THM]
+         THENC SIMP_CONV bool_ss [COND_EXPAND, LEFT_AND_OVER_OR, FORALL_AND_THM,
+                             DISJ_IMP_THM, STRCAT_11,asm]
          THENC EVAL
          THENC (REPEATC (T_F_UNCHANGED_CONV
-         (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM]
+         (SIMP_CONV bool_ss [fun_eq_lem6, GSYM LEFT_AND_OVER_OR, FORALL_AND_THM,
+                            asm]
          THENC EVAL))))))
-                THENC SIMP_CONV bool_ss []))
+                THENC SIMP_CONV bool_ss [])))
    >> RW_TAC real_ss [REAL_ADD_ASSOC, GSYM REAL_NEG_ADD, GSYM REAL_ADD_RDISTRIB, REAL_MUL_ASSOC]
 QED
 
