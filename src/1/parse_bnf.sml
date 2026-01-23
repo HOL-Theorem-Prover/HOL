@@ -1,7 +1,8 @@
 structure parse_bnf :> parse_bnf =
 struct
 
-open bnfBase_dtype ParseDatatype
+open bnfBase_dtype ParseDatatype HolKernel
+
 fun one_ty() = mk_thy_type {Thy = "one", Tyop = "one", Args = []}
 
 fun isExisting_pty pty =
@@ -10,14 +11,19 @@ fun isExisting_pty pty =
       | dAQ _ => true
       | dTyop{Thy,Tyop,Args} => isSome Thy andalso List.all isExisting_pty Args
 
-fun omap f [] = SOME []
-  | omap f (x::xs) =
-    case f x of
-        NONE => NONE
-      | SOME y =>
-        case omap f xs of
-            NONE => NONE
-          | SOME ys => SOME(y::ys)
+
+fun omap f l =
+    let
+      fun mpk l A =
+          case l of
+              [] => SOME (List.rev A)
+            | h::t =>
+              case f h of
+                  NONE => NONE
+                | SOME fx => mpk t (fx::A)
+    in
+      mpk l []
+    end
 
 fun build_existing pty =
     case pty of
@@ -32,23 +38,20 @@ fun build_existing pty =
               | SOME args =>
                 SOME (mk_thy_type {Tyop = Tyop, Thy = thy, Args = args})
 
-fun mk_sum bty1 bty2 = ftor({Thy="sum", Name="sum"}, [bty1,bty2])
-fun mk_prod bty1 bty2 = ftor({Thy="pair", Name="prod"}, [bty1,bty2])
+fun mk_bintyop thy tyop bty1 bty2 =
+    case (bty1,bty2) of
+        (constty ty1, constty ty2) =>
+        constty (
+          Type.mk_thy_type{Thy = thy, Tyop = tyop, Args = [ty1,ty2]}
+        )
+      | _ => ftor({Thy=thy, Name=tyop}, [bty1,bty2])
+
+val mk_sum = mk_bintyop "sum" "sum"
+val mk_prod = mk_bintyop "pair" "prod"
 
 fun list_mk_prod [] = constty (one_ty())
-  | list_mk_prod (bty::rest) = rev_itlist mk_prod rest bty
-
-fun buildfold f args st0 = let
-  fun recurse Vs st args =
-    case args of
-        [] => (st,List.rev Vs)
-      | a::rest => let val (st',v) = f st0 a
-                   in
-                     recurse (v::Vs) st' rest
-                   end
-in
-  recurse [] st0 args
-end
+  | list_mk_prod (bty::rest) =
+    List.foldl (fn (ty1, ty2) => mk_prod ty2 ty1) bty rest
 
 fun dest_constty (constty ty) = SOME ty
   | dest_constty _ = NONE
@@ -72,8 +75,12 @@ fun parse_one_pty fmap nm pty =
             | SOME bnf => bnf
 
 fun parse_one_constructor fmap nm ((* constructor name *) _, ptys) =
-    val multiplicands = map (parse_one_pty fmap nm) ptys
-    val parse_one
+    let
+      val multiplicands = map (parse_one_pty fmap nm) ptys
+    in
+      list_mk_prod multiplicands
+    end
+
 
 fun parse_one_ast fmap (nm, dtyform) =
     case dtyform of
@@ -81,24 +88,21 @@ fun parse_one_ast fmap (nm, dtyform) =
         parse_one_ast fmap (nm, Constructors [(nm, map snd flds)])
       | Constructors cs =>
         let
-          val bnfs = map (parse_one_constructor nm fmap) cs
-          val sum_bnf =
-              case bnfs of
-                  [] => raise Fail "parse_bnf: no constructors"
-                | b::rest => rev_itlist mk_sum rest b
-          val fmap' =
+          val bnfs = map (parse_one_constructor fmap nm) cs
         in
-          case btys of
-            | b::bs => (fmap', )
+          case bnfs of
+              [] => raise Fail "parse_bnf: no constructors"
+            | b::rest =>
+              (nm, List.foldl (fn (ty1, ty2) => mk_sum ty2 ty1) b rest)
         end
 
 fun parse2ftor asts =
     let
       open ParseDatatype
       val names = map fst asts
-      val fmap0 = Symtab.make (map (fn n => (n,mutrec_var n)) names)
+      val fmap = Symtab.make (map (fn n => (n,mutrec_var n)) names)
     in
-      buildfold parse_one_ast asts fmap0
+      map (parse_one_ast fmap) asts
     end
 
 end

@@ -39,4 +39,25 @@ datatype bnftor =
        | mutrec_var of string
        | previous_op of string
 
+fun bnftor_toString b =
+    case b of
+        ftor(kn,bs) =>
+        if kn = {Name ="sum", Thy = "sum"} then
+          "(" ^ bnftor_toString (hd bs) ^ " + " ^
+          bnftor_toString (hd (tl bs)) ^ ")"
+        else if kn = {Name ="prod", Thy = "pair"} then
+          "(" ^ bnftor_toString (hd bs) ^ " * " ^
+          bnftor_toString (hd (tl bs)) ^ ")"
+        else if kn = {Name = "fun", Thy = "min"} then
+          "(" ^ bnftor_toString (hd bs) ^ " -> " ^
+          bnftor_toString (hd (tl bs)) ^ ")"
+        else
+          "F{" ^ #Thy kn ^ "$" ^ #Name kn ^ ",[" ^
+          String.concatWith "," (map bnftor_toString bs) ^
+          "]}"
+      | the_arg => "the_arg"
+      | constty ty => "K(" ^ Parse.type_to_string ty ^ ")"
+      | mutrec_var s => "Mutual(\"" ^ s ^ "\")"
+      | previous_op s => "PrevOp(\"" ^ s ^ "\")"
+
 end

@@ -1,7 +1,7 @@
 structure bnfBase :> bnfBase =
 struct
 
-open bnfBase_dtype parse_bnf
+open HolKernel bnfBase_dtype parse_bnf
 
 type t = thm info TypeNet.typenet
 
@@ -11,11 +11,11 @@ fun pure_insert db ty info = TypeNet.insert(db,ty,info)
 
 fun kname_to_thm_info (bI {siblings,map,set,relator,bnd}:kname info) =
    let
-     fun convert (tm,kname) = (tm,fetch_knm kname)
+     fun convert (tm,kname) = (tm,DB.fetch_knm kname)
    in
      bI {siblings = siblings, map = convert map,
-     set = List.map convert set, relator = convert relator,
-     bnd = bnd}
+         set = List.map convert set, relator = convert relator,
+         bnd = bnd}
    end
 
 local
