@@ -345,17 +345,17 @@ val _ =
     compile ["-I", ".."] "HolParser.sml";
     FileSys.chDir "..";
     FileSys.chDir "deps";
-    compile ["-I", "..", "-I", "../mosml"] "Holdep.sig";
-    compile ["-I", "..", "-I", "../mosml"] "Holdep.sml";
+    compile ["-I", "..", "-I", "../mosml", "-I", "../parsing"] "Holdep.sig";
+    compile ["-I", "..", "-I", "../mosml", "-I", "../parsing"] "Holdep.sml";
     FileSys.chDir "..";
-    compile ["-I", "deps", "-I", "util"] "Holmake_tools.sig";
-    compile ["-I", "deps", "-I", "util"] "Holmake_tools.sml";
-    compile ["-I", "deps", "-I", "../util"] "internal_functions.sig";
-    compile ["-I", "deps", "-I", "../util"] "internal_functions.sml";
-    compile [] "Holmake_types.sig";
-    compile [] "Holmake_types.sml";
-    compile [] "ReadHMF.sig";
-    compile [] "ReadHMF.sml";
+    compile ["-I", "deps", "-I", "util", "-I", "parsing"] "Holmake_tools.sig";
+    compile ["-I", "deps", "-I", "util", "-I", "parsing"] "Holmake_tools.sml";
+    compile ["-I", "deps", "-I", "../util", "-I", "parsing"] "internal_functions.sig";
+    compile ["-I", "deps", "-I", "../util", "-I", "parsing"] "internal_functions.sml";
+    compile ["-I", "parsing"] "Holmake_types.sig";
+    compile ["-I", "parsing"] "Holmake_types.sml";
+    compile ["-I", "parsing"] "ReadHMF.sig";
+    compile ["-I", "parsing"] "ReadHMF.sml";
     FileSys.chDir "../util";
     compile ["-I", "../Holmake"] "GetOpt.sig";
     compile ["-I", "../Holmake"] "GetOpt.sml";
@@ -363,32 +363,32 @@ val _ =
     FileSys.chDir "../Holmake";
     compile ["-I", "../util"] "HM_Core_Cline.sig";
     compile ["-I", "../util"] "HM_Core_Cline.sml";
-    compile ["-I", "deps"] "holdeptool.sml";
-    compile ["-I", "deps"] "mosml_holdeptool.sml";
-    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util"],
+    compile ["-I", "deps", "-I", "parsing"] "holdeptool.sml";
+    compile ["-I", "deps", "-I", "parsing"] "mosml_holdeptool.sml";
+    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "parsing"],
          srcobj = "mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
     FileSys.chDir "deps";
-    compile ["-I", "..", "-I", "../util"] "HM_DepGraph.sig";
-    compile ["-I", "..", "-I", "../util"] "HM_DepGraph.sml";
+    compile ["-I", "..", "-I", "../util", "-I", "../parsing"] "HM_DepGraph.sig";
+    compile ["-I", "..", "-I", "../util", "-I", "../parsing"] "HM_DepGraph.sml";
     FileSys.chDir "..";
-    compile ["-I", "deps", "-I", "util"] "HM_GraphBuildJ1.sig";
-    compile ["-I", "deps", "-I", "util"] "HM_GraphBuildJ1.sml";
+    compile ["-I", "deps", "-I", "util", "-I", "parsing"] "HM_GraphBuildJ1.sig";
+    compile ["-I", "deps", "-I", "util", "-I", "parsing"] "HM_GraphBuildJ1.sml";
     FileSys.chDir "mosml";
     compile ["-I", "..", "-I", "../../util", "-I", "../util"] "HM_Cline.sig";
     compile ["-I", "..", "-I", "../../util", "-I", "../util"] "HM_Cline.sml";
     compile ["-I", "..", "-I", "../../util", "-I", "../util"] "GraphExtra.sig";
     compile ["-I", "..", "-I", "../../util", "-I", "../util"] "GraphExtra.sml";
-    compile ["-I", "..", "-I", "../../util", "-I", "../util"] "HM_BaseEnv.sig";
-    compile ["-I", "..", "-I", "../../util", "-I", "../util"] "HM_BaseEnv.sml";
+    compile ["-I", "..", "-I", "../../util", "-I", "../util", "-I", "../parsing"] "HM_BaseEnv.sig";
+    compile ["-I", "..", "-I", "../../util", "-I", "../util", "-I", "../parsing"] "HM_BaseEnv.sml";
     FileSys.chDir "..";
-    compile ["-I", "mosml", "-I", "deps", "-I", "../util", "-I", "util"] "BuildCommand.sig";
+    compile ["-I", "mosml", "-I", "deps", "-I", "../util", "-I", "util", "-I", "parsing"] "BuildCommand.sig";
     FileSys.chDir "mosml";
-    compile ["-I", "..", "-I", "../deps", "-I", "../../util", "-I", "../util"] "BuildCommand.sml";
+    compile ["-I", "..", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../parsing"] "BuildCommand.sml";
     FileSys.chDir "..";
-    compile ["-I", "mosml", "-I", "deps", "-I", "../util", "-I", "util"] "Holmake.sml";
+    compile ["-I", "mosml", "-I", "deps", "-I", "../util", "-I", "util", "-I", "parsing"] "Holmake.sml";
     compile [] "mosml_Holmake.sml";
-    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util"], tgt = bin, srcobj = "mosml_Holmake.uo"};
+    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "parsing"], tgt = bin, srcobj = "mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end
@@ -439,9 +439,10 @@ val _ = let
     val utilsig = "buildutils.sig"
     val utilsml = "buildutils.sml"
     val depsdir = Path.concat(holmakedir, "deps")
+    val parsingdir = Path.concat(holmakedir, "parsing")
   in
-    if compile ["-I", holmakedir, "-I", depsdir, "-I", utildir, "-I", hmutildir] utilsig andalso
-       compile ["-I", holmakedir, "-I", depsdir, "-I", utildir, "-I", hmutildir] utilsml
+    if compile ["-I", holmakedir, "-I", depsdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir] utilsig andalso
+       compile ["-I", holmakedir, "-I", depsdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir] utilsml
     then ()
     else die "Failed to build buildutils module"
   end
@@ -452,6 +453,7 @@ val _ = let
       [compiler, "-o", bin, "-I", holmakedir,
        "-I", Path.concat(holmakedir, "mosml"),
        "-I", Path.concat(holmakedir, "deps"),
+       "-I", Path.concat(holmakedir, "parsing"),
        "-I", utildir,
        "-I", hmutildir,
        target]
@@ -518,13 +520,14 @@ val _ = let
 in
   FileSys.chDir (fullPath [holdir, "tools/quote-filter"]);
   compile [] "quotefix.sig";
-  compile ["-I", holmakedir] "quotefix.sml";
+  compile ["-I", holmakedir, "-I", Path.concat(holmakedir, "parsing")] "quotefix.sml";
   compile [] "qfilter_util.sig";
   compile [] "qfilter_util.sml";
-  compile ["-I", holmakedir] "quote-filter.sml";
+  compile ["-I", holmakedir, "-I", Path.concat(holmakedir, "parsing")] "quote-filter.sml";
   echo "Linking quote-filter.uo";
   systeml [compiler, "-o", tgt, "-I", holmakedir,
     "-I", Path.concat(holmakedir, "mosml"),
+    "-I", Path.concat(holmakedir, "parsing"),
     "quote-filter.uo"];
   mk_xable tgt;
   print "Quote-filter built\n"
