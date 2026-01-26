@@ -51,6 +51,29 @@ fun parseSMLSimple body = let
     #"\000" => ()
   | #"`" => next ()
   | _ => (next (); finishQuote ())
+  fun finishDoubleQuote () = case cur () of
+    #"\000" => ()
+  | #"`" => (next (); if cur () = #"`" then next () else finishDoubleQuote ())
+  | _ => (next (); finishDoubleQuote ())
+  (* Curly quotes are UTF-8 multibyte: ' = E2 80 98, ' = E2 80 99 *)
+  val u8_prefix = chr 226    (* 0xE2 *)
+  val u8_cont   = chr 128    (* 0x80 *)
+  val u8_lsquo  = chr 152    (* 0x98 - left single curly *)
+  val u8_rsquo  = chr 153    (* 0x99 - right single curly *)
+  val u8_ldquo  = chr 156    (* 0x9C - left double curly *)
+  val u8_rdquo  = chr 157    (* 0x9D - right double curly *)
+  fun finishCurlyQuote () = case cur () of
+    #"\000" => ()
+  | c => (next ();
+      if c = u8_prefix andalso cur () = u8_cont then (next ();
+        if cur () = u8_rsquo then next () else (next (); finishCurlyQuote ()))
+      else finishCurlyQuote ())
+  fun finishCurlyDoubleQuote () = case cur () of
+    #"\000" => ()
+  | c => (next ();
+      if c = u8_prefix andalso cur () = u8_cont then (next ();
+        if cur () = u8_rdquo then next () else (next (); finishCurlyDoubleQuote ()))
+      else finishCurlyDoubleQuote ())
   fun finishComment () = case cur () of
     #"\000" => ()
   | #"*" => (next (); if cur () = #")" then next () else finishComment ())
@@ -68,13 +91,19 @@ fun parseSMLSimple body = let
   fun token () = (ws (); case cur () of
     #"\000" => (!pos, EOF)
   | #"\"" => (!pos, (next (); finishString (); OpaqueTk))
-  | #"`" => (!pos, (next (); finishQuote (); OpaqueTk))
+  | #"`" => (!pos, (next (); 
+      if cur () = #"`" then (next (); finishDoubleQuote ()) else finishQuote (); 
+      OpaqueTk))
   | #"(" => let
     val start = !pos
     val _ = next ()
     in if cur () = #"*" then (next (); finishComment (); token ()) else (start, Symbol #"(") end
   | c => (!pos, (next ();
-    if Char.contains ")[]{},;" c then Symbol c else
+    if c = u8_prefix andalso cur () = u8_cont then (next ();
+      if cur () = u8_lsquo then (next (); finishCurlyQuote (); OpaqueTk)
+      else if cur () = u8_ldquo then (next (); finishCurlyDoubleQuote (); OpaqueTk)
+      else OpaqueTk)
+    else if Char.contains ")[]{},;" c then Symbol c else
     if isIdSym c then (takeWhile isIdSym; finishId (); IdentTk) else
     if Char.isAlpha c then (takeWhile isIdRest; finishId (); IdentTk) else
     OpaqueTk)))
