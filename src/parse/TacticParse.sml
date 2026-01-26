@@ -91,8 +91,8 @@ fun parseSMLSimple body = let
   fun token () = (ws (); case cur () of
     #"\000" => (!pos, EOF)
   | #"\"" => (!pos, (next (); finishString (); OpaqueTk))
-  | #"`" => (!pos, (next (); 
-      if cur () = #"`" then (next (); finishDoubleQuote ()) else finishQuote (); 
+  | #"`" => (!pos, (next ();
+      if cur () = #"`" then (next (); finishDoubleQuote ()) else finishQuote ();
       OpaqueTk))
   | #"(" => let
     val start = !pos
