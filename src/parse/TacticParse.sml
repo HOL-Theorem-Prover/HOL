@@ -38,7 +38,7 @@ fun parseSMLSimple body = let
   fun takeWhile f = if f (cur ()) then (next (); takeWhile f) else ()
   fun ws () = takeWhile Char.isSpace
   fun isIdRest c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
-  val isIdSym = Char.contains "'_!%&$#+-/:<=>?@\\~`^|*"
+  val isIdSym = Char.contains "'_!%&$#+-/:<=>?@\\~^|*"
   val _ = ws ()
   fun finishString () = case cur () of
     #"\000" => ()
@@ -47,6 +47,10 @@ fun parseSMLSimple body = let
       #"\n" => (next (); ws (); (case cur () of #"\\" => next () | _ => ()); finishString ())
     | _ => (next (); finishString ()))
   | _ => (next (); finishString ())
+  fun finishQuote () = case cur () of
+    #"\000" => ()
+  | #"`" => next ()
+  | _ => (next (); finishQuote ())
   fun finishComment () = case cur () of
     #"\000" => ()
   | #"*" => (next (); if cur () = #")" then next () else finishComment ())
@@ -64,6 +68,7 @@ fun parseSMLSimple body = let
   fun token () = (ws (); case cur () of
     #"\000" => (!pos, EOF)
   | #"\"" => (!pos, (next (); finishString (); OpaqueTk))
+  | #"`" => (!pos, (next (); finishQuote (); OpaqueTk))
   | #"(" => let
     val start = !pos
     val _ = next ()
