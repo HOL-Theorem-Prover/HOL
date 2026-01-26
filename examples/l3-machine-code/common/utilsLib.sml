@@ -274,7 +274,7 @@ local
               [pairTheory.UNCURRY, combinTheory.o_THM,
                state_transformerTheory.FOR_def,
                state_transformerTheory.BIND_DEF,
-               state_transformerTheory.UNIT_DEF] (reduceLib.num_compset)
+               state_transformerTheory.UNIT_DEF] reduceLib.num_compset
    val FOR_CONV = computeLib.CBV_CONV cmp
    fun term_frag_of_int i = [QUOTE (Int.toString i)]: term frag list
 in
@@ -1300,7 +1300,7 @@ in
             let
                val (nh, h) = no_hyp l
                val c = INST_REWRITE_CONV h
-               val cmp = computeLib.add_thms (rwts @ nh) (reduceLib.num_compset)
+               val cmp = computeLib.add_thms (rwts @ nh) (computeLib.copy reduceLib.num_compset)
                val cmp = add_word_eq cmp
                fun cnv rwt =
                   Conv.REPEATC
