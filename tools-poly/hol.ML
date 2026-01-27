@@ -30,31 +30,31 @@ val _ = use "lsp-server.ML";
 val SIGOBJ = OS.Path.concat(Systeml.HOLDIR, "sigobj")
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate16 z
+  fun makeUpdateT z = makeUpdate15 z
 in
 fun updateT z = let
   fun from all_forced bare base_state checkerr checkfors debug defaultout exe
-           extra_data forced_objs help multithread output quietp repl z_repl =
+           extra_data forced_objs help multithread output quietp z_repl =
     {all_forced = all_forced, bare = bare, base_state = base_state,
      checkerr = checkerr, checkfors = checkfors, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
-     output = output, quietp = quietp, repl = repl, z_repl = z_repl}
-  fun from' z_repl repl quietp output multithread help forced_objs extra_data exe
+     output = output, quietp = quietp, z_repl = z_repl}
+  fun from' z_repl quietp output multithread help forced_objs extra_data exe
             defaultout debug checkfors checkerr base_state bare all_forced =
     {all_forced = all_forced, bare = bare, base_state = base_state,
      checkfors = checkfors, checkerr = checkerr, debug = debug,
      defaultout = defaultout, exe = exe,
      extra_data = extra_data, forced_objs = forced_objs, help = help,
      multithread = multithread,
-     output = output, quietp = quietp, repl = repl, z_repl = z_repl}
+     output = output, quietp = quietp, z_repl = z_repl}
   fun to f {all_forced, bare, base_state, checkerr, checkfors, debug, defaultout,
             exe, extra_data,
-            forced_objs, help, multithread, output, quietp, repl, z_repl} =
+            forced_objs, help, multithread, output, quietp, z_repl} =
     f all_forced bare base_state checkerr checkfors debug defaultout exe extra_data
       forced_objs help multithread
-      output quietp repl z_repl
+      output quietp z_repl
 in
   makeUpdateT (from, from', to)
 end z
@@ -130,7 +130,6 @@ datatype option_record = OR of {
   multithread : int option,
   output : string option,
   quietp : bool,
-  repl : bool,
   z_repl : bool
 }
 
@@ -204,8 +203,6 @@ val cline_opts = [
    desc = setBaseNone},
   {help = "reduce verbosity", long = ["quiet"], short = "q",
    desc = mkBoolT #quietp},
-  {help = "start REPL after loading", long = ["repl"], short = "",
-   desc = mkBoolT #repl},
   {help = "use zero-terminated REPL style", long = ["zero"], short = "z",
    desc = mkBoolT #z_repl}
 ]
@@ -223,7 +220,6 @@ val initial_cline = OR {all_forced = false,
                         multithread = NONE,
                         output = NONE,
                         quietp = false,
-                        repl = false,
                         z_repl = false}
 end
 
@@ -373,7 +369,7 @@ fun main() = let
   val _ = List.app check_unknown_opt objs0
   val OR options = List.foldl (fn (f, opts) => f opts) initial_cline cline_upds
   val {quietp = qp, output, base_state, all_forced, forced_objs,
-       bare, repl, z_repl, help, debug, extra_data, defaultout, exe, ...} = options
+       bare, z_repl, help, debug, extra_data, defaultout, exe, ...} = options
   (* Determine base_state:
      - --bare: use hol.state0
      - --poly/--poly_not_hol: use no state (NONE)
