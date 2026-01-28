@@ -4065,7 +4065,8 @@ Proof
           pos_fn_integral m (\x. inf (IMAGE (\i. fi i x) UNIV))’
  >- (MATCH_MP_TAC pos_fn_integral_cong >> rw []) >> Rewr'
  >> REWRITE_TAC [extreal_inf_def]
- >> Know ‘pos_fn_integral m (\x. -sup (IMAGE numeric_negate (IMAGE (\i. fi i x) UNIV))) =
+ >> Know ‘pos_fn_integral m
+            (\x. -sup (IMAGE numeric_negate (IMAGE (\i. fi i x) UNIV))) =
           pos_fn_integral m (\x. -sup (IMAGE (\i. gi i x - fi 0 x) UNIV))’
  >- (MATCH_MP_TAC pos_fn_integral_cong >> BETA_TAC >> art [] \\
      CONJ_TAC >- (rpt STRIP_TAC \\
@@ -5396,6 +5397,14 @@ Proof
  >> `0 <= -c` by METIS_TAC [REAL_LT_IMP_LE, REAL_LE_NEG, REAL_NEG_0]
  >> RW_TAC std_ss [pos_fn_integral_cmul, FN_PLUS_POS]
  >> METIS_TAC [mul_not_infty, integrable_def]
+QED
+
+Theorem integrable_cdiv :
+    !m f c. measure_space m /\ integrable m f /\ c <> 0 ==>
+            integrable m (\x. f x / Normal c)
+Proof
+    rw [extreal_div_def, extreal_inv_def, Once mul_comm]
+ >> MATCH_MP_TAC integrable_cmul >> art []
 QED
 
 Theorem integrable_ainv :
