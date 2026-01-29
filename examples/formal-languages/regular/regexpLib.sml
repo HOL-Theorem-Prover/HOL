@@ -120,11 +120,11 @@ val charset_mem_conv =
  let val cs_memEval =
       let open computeLib
           val compset = copy listLib.list_compset
+          val compset = wordsLib.add_words_compset true compset
+          val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
+          val compset = add_thms [alphabet_size_def, words4_bit_def, charset_mem_def] compset
       in
-          wordsLib.add_words_compset true compset
-        ; add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
-        ; add_thms [alphabet_size_def, words4_bit_def, charset_mem_def] compset
-        ; computeLib.CBV_CONV compset
+          computeLib.CBV_CONV compset
       end
      val pairs = cross alphabet_tms [Empty_charset, DOT_charset]
      val probs = map (fn (x,y) => list_mk_comb(charset_mem_tm, [x,y])) pairs
@@ -152,10 +152,11 @@ val charset_union_conv =
  let val charset_unionEval =
         let open computeLib
             val compset = copy listLib.list_compset
-        in wordsLib.add_words_compset true compset
-         ; add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
-         ; add_thms [charset_union_def, charset_empty_def] compset
-         ; CBV_CONV compset
+            val compset = wordsLib.add_words_compset true compset
+            val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
+            val compset = add_thms [charset_union_def, charset_empty_def] compset
+        in
+            CBV_CONV compset
         end
  in
    fn () =>
@@ -226,21 +227,21 @@ fun transitions_conv compset =
 fun base_compset() =
  let open computeLib
      val compset = copy listLib.list_compset
+     val compset = optionLib.OPTION_rws compset
+     val compset = pairLib.add_pair_compset compset
+     val compset = pred_setLib.add_pred_set_compset compset
+     val compset = wordsLib.add_words_compset true compset
+     val compset = stringLib.add_string_compset compset
+     val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:ordering``))
+     val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:('a,'b)balanced_map``))
+     val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
+     val compset = add_datatype_info compset (valOf(TypeBase.fetch ``:regexp``))
+     val compset = add_thms base_compute_thms compset
+     val compset = add_conv(``charset_mem``, 2, charset_mem_conv ()) compset
+     val compset = add_conv(``charset_union``, 2, charset_union_conv()) compset
+     val compset = add_conv(``transitions``, 1, transitions_conv compset) compset
  in
-     optionLib.OPTION_rws compset
-   ; pairLib.add_pair_compset compset
-   ; pred_setLib.add_pred_set_compset compset
-   ; wordsLib.add_words_compset true compset
-   ; stringLib.add_string_compset compset
-   ; add_datatype_info compset (valOf(TypeBase.fetch ``:ordering``))
-   ; add_datatype_info compset (valOf(TypeBase.fetch ``:('a,'b)balanced_map``))
-   ; add_datatype_info compset (valOf(TypeBase.fetch ``:charset``))
-   ; add_datatype_info compset (valOf(TypeBase.fetch ``:regexp``))
-   ; add_thms base_compute_thms compset
-   ; add_conv(``charset_mem``, 2, charset_mem_conv ()) compset
-   ; add_conv(``charset_union``, 2, charset_union_conv()) compset
-   ; add_conv(``transitions``, 1, transitions_conv compset) compset
-   ; compset
+   compset
  end;
 
 fun gen_dfa_conv r =
@@ -286,11 +287,11 @@ fun gen_dfa_conv r =
 fun exec_dfa_compset() =
  let open computeLib
      val compset = copy listLib.list_compset
+     val compset = optionLib.OPTION_rws compset
+     val compset = stringLib.add_string_compset compset
+     val compset = add_thms exec_dfa_thms compset
  in
-     optionLib.OPTION_rws compset
-   ; stringLib.add_string_compset compset
-   ; add_thms exec_dfa_thms compset
-   ; compset
+   compset
  end;
 
 val exec_dfa_conv = computeLib.CBV_CONV (exec_dfa_compset());

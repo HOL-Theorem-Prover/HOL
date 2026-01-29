@@ -174,7 +174,7 @@ local
     *)
 in
 
-  val cmp = reduceLib.num_compset
+  val cmp = computeLib.copy reduceLib.num_compset
   val cmp = pairLib.add_pair_compset cmp
   val cmp = optionLib.OPTION_rws cmp
   val cmp = combinLib.add_combin_compset cmp
