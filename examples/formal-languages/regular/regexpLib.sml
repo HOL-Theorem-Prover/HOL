@@ -13,6 +13,9 @@ local open Regexp_Numerics DFA_Codegen in end;
 
 val ERR = mk_HOL_ERR "regexpLib";
 
+val stdErr_print = HOL_MESG
+val print = HOL_MESG
+
 fun gen_sml_dfa r =
  let val {matchfn,start,table,final} = Regexp_Match.vector_matcher r
      val _ = stdErr_print (Int.toString(Vector.length final)^" states.\n")

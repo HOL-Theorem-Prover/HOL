@@ -1,4 +1,4 @@
-load "regexpLib";
+open regexpLib testutils
 
 (*---------------------------------------------------------------------------*)
 (* Matchers                                                                  *)
@@ -6,29 +6,60 @@ load "regexpLib";
 
 fun matcher q = #matchfn(regexpLib.gen_dfa regexpLib.HOL (Regexp_Type.fromQuote q));
 
-val test = matcher `foobar`;
- not (test "fo2b")
- andalso (test "foobar")
- andalso not(test "foobar1");
+fun boolcheck pfx f (s, result) = (
+  tprint (pfx ^ " " ^ s ^ " = " ^ Bool.toString result);
+  require_msg
+    (check_result (fn b => b = result))
+    Bool.toString
+    f s
+)
 
-val test = matcher `\d*`;
-  test""
-andalso test"1"
-andalso test"11434123412341234235456337467456745675256245"
-andalso not(test "a")
-andalso not(test "_[");
+fun kill_locncomment s =
+    let open Substring
+        val ss = full s
+        val (_, ss') = position "*)" ss
+    in
+      string (slice(ss',2,NONE))
+    end
 
-val test = matcher `.*1`;
-test"asdfasdfasd1"
-andalso not(test"")
-andalso test"1";
+fun tests (q as [QUOTE s]) checks =
+    let fun k (Res test) = List.app (boolcheck s test) checks
+          | k (Exn _) = raise Fail "Can't happen"
+        val _ = tprint ("Compiling r.e. " ^ kill_locncomment s)
+    in
+      require_msgk
+        (check_result (fn _ => true))
+        (fn m => PP.add_string "<a matcher>")
+        (quietly matcher) k q
+    end
 
-val test = matcher `[0-9]`;
- not(test "")
- andalso test "1"
- andalso test "9"
- andalso test "0"
- andalso not (test "10");
+val _ = tests `foobar` [
+      ("fo2b", false),
+      ("foobar", true),
+      ("foobar1", false)
+    ];
+
+val _ = tests `\d*` [
+      ("", true),
+      ("1", true),
+      ("11434123412341234235456337467456745675256245", true),
+      ("a", false),
+      ("_[", false)
+    ];
+
+val _ = tests `.*1` [
+          ("asdfasdfasd1", true),
+          ("", false),
+          ("1", true)
+        ];
+
+val _ = tests `[0-9]` [
+      ("", false),
+      ("1", true),
+      ("9", true),
+      ("0", true),
+      ("10", false)
+    ];
 
 val test = matcher `[0-9]*`;
  test ""
