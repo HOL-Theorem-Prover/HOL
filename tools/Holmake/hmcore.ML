@@ -13,11 +13,13 @@ val _ = let
   val hmakedir = Systeml.HOLDIR ++ "tools" ++ "Holmake"
   val depsdir = hmakedir ++ "deps"
   val hmutildir = hmakedir ++ "util"
+  val parsingdir = hmakedir ++ "parsing"
   val utildir = Systeml.HOLDIR ++ "tools" ++ "util"
   fun appthis s = (myuse hmakedir (s ^ ".sig"); myuse hmakedir (s ^ ".sml"))
   fun appdeps s = (myuse depsdir (s ^ ".sig"); myuse depsdir (s ^ ".sml"))
   fun apputil s = (myuse utildir (s ^ ".sig"); myuse utildir (s ^ ".sml"))
   fun apphmutil s = (myuse hmutildir (s ^ ".sig"); myuse hmutildir (s ^ ".sml"))
+  fun appparsing s = (myuse parsingdir (s ^ ".sig"); myuse parsingdir (s ^ ".sml"))
 in
   app (myuse hmakedir) ["HOLFS_dtype.sml", "HFS_NameMunge.sig"];
   myuse (hmakedir ++ "poly") "HFS_NameMunge.sml";
@@ -25,10 +27,11 @@ in
   app apputil ["regexpMatch"] ;
   app appthis ["parse_glob"] ;
   app appdeps ["Holdep_tokens"] ;
-  app appthis ["AttributeSyntax"] ;
-  app (myuse hmakedir) ["HolLex.sml", "Holmake_tools_dtype.sml"];
+  app appparsing ["AttributeSyntax"] ;
+  app (myuse parsingdir) ["HolLex.sml"];
+  app (myuse hmakedir) ["Holmake_tools_dtype.sml"];
   app (myuse hmutildir) ["terminal_primitives.sig", "poly-terminal-prims.ML"];
-  app appthis ["HolParser"] ;
+  app appparsing ["HolParser"] ;
   app appdeps ["Holdep"] ;
   app appthis ["Holmake_tools", "internal_functions", "Holmake_types", "ReadHMF"]
 end;

@@ -13,11 +13,11 @@ HOLFileSys.sig
 HOLFileSys.sml
 deps/Holdep_tokens.sig
 deps/Holdep_tokens.sml
-AttributeSyntax.sig
-AttributeSyntax.sml
-HolLex.sml
-HolParser.sig
-HolParser.sml
+parsing/AttributeSyntax.sig
+parsing/AttributeSyntax.sml
+parsing/HolLex.sml
+parsing/HolParser.sig
+parsing/HolParser.sml
 deps/Holdep.sig
 deps/Holdep.sml
 ../util/regexpMatch.sig
