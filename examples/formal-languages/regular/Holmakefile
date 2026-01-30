@@ -19,6 +19,6 @@ ifdef HOLSELFTESTLEVEL
 all: regexp-selftest.log
 
 regexp-selftest.log: selftest.exe
-	$(tee ./selftest.exe 2>&1, $@)
+	$(tee TESTLEVEL=$HOLSELFTESTLEVEL ./selftest.exe 2>&1, $@)
 
 endif
