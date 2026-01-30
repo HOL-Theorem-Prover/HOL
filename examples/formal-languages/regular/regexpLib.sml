@@ -11,6 +11,12 @@ open Regexp_Type regexpSyntax regexpMisc;
 
 local open Regexp_Numerics DFA_Codegen in end;
 
+val chatty = ref false
+
+fun time f x = if !chatty then Lib.time f x else f x
+fun chat s = if !chatty then HOL_MESG s else ()
+fun apply f x = if !chatty then Count.apply f x else f x
+
 val ERR = mk_HOL_ERR "regexpLib";
 
 val stdErr_print = HOL_MESG
@@ -135,13 +141,17 @@ val charset_mem_conv =
     in fn tm =>
        Redblackmap.find (!theMap,tm)
        handle NotFound =>
-       let val _ = print "previously unseen charset ... "
-           val cset_tm = rand tm
-           val pairs = cross alphabet_tms [cset_tm]
-           val probs = map (fn (x,y) => list_mk_comb(charset_mem_tm, [x,y])) pairs
-           val table = List.map (fn x => (x,cs_memEval x)) probs
+       let val table =
+               HOL_PROGRESS_MESG
+                 ("previously unseen charset ... ", "tabulated")
+                 (fn () => let
+                    val cset_tm = rand tm
+                    val pairs = cross alphabet_tms [cset_tm]
+                    val probs = map (fn (x,y) => list_mk_comb(charset_mem_tm, [x,y])) pairs
+                  in
+                    List.map (fn x => (x,cs_memEval x)) probs
+                  end) ()
            val _ = (theMap := Redblackmap.insertList (!theMap, table))
-           val _ = print "tabulated.\n"
        in
           Redblackmap.find (!theMap,tm)
        end
@@ -249,12 +259,13 @@ fun gen_dfa_conv r =
      val compset = base_compset()
      val baseEval = computeLib.CBV_CONV compset
      val dom_Brz_alt_conv = REPEATC (time (REWR_CONV dom_Brz_alt_eqns THENC baseEval))
-     val _ = print "\nProving domain property ...\n"
-     val dom_Brz_thm = EQT_ELIM (Count.apply dom_Brz_alt_conv
-                         ``dom_Brz_alt empty (singleton (normalize ^regexp_tm) ())``)
-     val _ = print "---> done.\n"
+     val dom_Brz_thm =
+         HOL_PROGRESS_MESG
+           ("Proving domain property...", "---> done.")
+           (fn t => EQT_ELIM (apply dom_Brz_alt_conv t))
+           ``dom_Brz_alt empty (singleton (normalize ^regexp_tm) ())``
 
-     val _ = print "\nCompiling regexp ...\n"
+     val _ = print "Compiling regexp ..."
      val exec_Brz_conv = REPEATC (time (REWR_CONV exec_Brz_def THENC baseEval))
      fun compile_regexp_conv regexp_tm =
        let val th1 = baseEval ``normalize ^regexp_tm``
@@ -262,7 +273,7 @@ fun gen_dfa_conv r =
            val th2 = (PURE_REWRITE_CONV [Brzozowski_exec_Brz, MAXNUM_32_def]
                       THENC exec_Brz_conv)
                 ``Brzozowski empty (singleton ^nr ()) (1,singleton ^nr 0,[])``
-           val _ = print "\nState transitions computed; now building DFA.\n\n"
+           val _ = print "State transitions computed; now building DFA."
        in
            compile_regexp_def
              |> SPEC regexp_tm
@@ -271,8 +282,8 @@ fun gen_dfa_conv r =
              |> PURE_ONCE_REWRITE_RULE [th2]
              |> CONV_RULE (RHS_CONV baseEval)
        end
-     val compile_thm = Count.apply compile_regexp_conv regexp_tm
-     val _ = print "---> done.\n"
+     val compile_thm = apply compile_regexp_conv regexp_tm
+     val _ = print "---> done."
      val triple = rhs (concl compile_thm)
      val [t1,t2,t3] = strip_pair triple
      val start_state_thm = baseEval ``lookup regexp_compare (normalize ^regexp_tm) ^t1``
@@ -307,11 +318,9 @@ fun gen_hol_dfa r =
      fun match_string_by_proof s =
        let val stm = stringLib.fromMLstring s
            val dfa_thm1 = SPEC stm dfa_thm
-           val _ = stdErr_print ("Running DFA on string: "^Lib.quote s^" ... ")
+           val _ = chat ("Running DFA on string: "^Lib.quote s^" ... ")
            val dfa_exec_thm = exec_dfa_conv (lhs(concl dfa_thm1))
            val verdict = Teq (rhs(concl dfa_exec_thm))
-           val _ = if verdict then stdErr_print "accepted.\n"
-                   else stdErr_print "rejected.\n"
        in
          verdict
        end
