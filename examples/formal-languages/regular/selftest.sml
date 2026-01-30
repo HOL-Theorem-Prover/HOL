@@ -1,4 +1,16 @@
-load "regexpLib";
+open HolKernel regexpLib testutils
+
+val testlevel =
+    case OS.Process.getEnv "TESTLEVEL" of
+        NONE => 0
+      | SOME s => (case Int.fromString s of
+                           NONE => 0
+                         | SOME i => i)
+
+fun exitIfLevelLE n =
+    if testlevel <= n then OS.Process.exit OS.Process.success
+    else print ("\nTest-level > " ^ Int.toString n ^ "\n")
+
 
 (*---------------------------------------------------------------------------*)
 (* Matchers                                                                  *)
@@ -6,134 +18,176 @@ load "regexpLib";
 
 fun matcher q = #matchfn(regexpLib.gen_dfa regexpLib.HOL (Regexp_Type.fromQuote q));
 
-val test = matcher `foobar`;
- not (test "fo2b")
- andalso (test "foobar")
- andalso not(test "foobar1");
+fun boolcheck pfx0 f (s, result) = let
+  val pfx = if size pfx0 <= 20 then pfx0 else "r.e."
+in
+  tprint ("⟨" ^ pfx ^ "⟩ on \"" ^ s ^ "\" = " ^ Bool.toString result);
+  require_msg
+    (check_result (fn b => b = result))
+    Bool.toString
+    f s
+end
 
-val test = matcher `\d*`;
-  test""
-andalso test"1"
-andalso test"11434123412341234235456337467456745675256245"
-andalso not(test "a")
-andalso not(test "_[");
+fun kill_locncomment s =
+    let open Substring
+        val ss = full s
+        val (_, ss') = position "*)" ss
+    in
+      string (slice(ss',2,NONE))
+    end
 
-val test = matcher `.*1`;
-test"asdfasdfasd1"
-andalso not(test"")
-andalso test"1";
+fun tests (q as [QUOTE s0]) checks =
+    let
+      val s = kill_locncomment s0
+      fun k (Res test) = List.app (boolcheck s test) checks
+        | k (Exn _) = raise Fail "Can't happen"
+      val _ = print "\n"
+      val _ = tprint ("(HOL-)Compiling r.e. ⟨" ^ s ^ "⟩")
+    in
+      require_msgk
+        (check_result (fn _ => true))
+        (fn m => PP.add_string "<a matcher>")
+        (quietly matcher) k q
+    end
 
-val test = matcher `[0-9]`;
- not(test "")
- andalso test "1"
- andalso test "9"
- andalso test "0"
- andalso not (test "10");
+val _ = tests `foobar` [
+      ("fo2b", false),
+      ("foobar", true),
+      ("foobar1", false)
+    ];
 
-val test = matcher `[0-9]*`;
- test ""
- andalso test "1"
- andalso test "9"
- andalso test "0"
- andalso test "10"
- andalso not(test " a")
- andalso test "1024563735355365673463";
+val _ = tests `\d*` [
+      ("", true),
+      ("1", true),
+      ("11434123412341234235456337467456745675256245", true),
+      ("a", false),
+      ("_[", false)
+    ];
 
-val test = matcher `(.*1)(12)*`;
-test "adfasd11212"
-andalso test "111212"
-andalso not (test"");
+val _ = tests `.*1` [
+          ("asdfasdfasd1", true),
+          ("", false),
+          ("1", true)
+        ];
 
-val test = matcher `b*|b*(a|ab*a)b*`;
-test ""
-andalso test "bbbb"
-andalso test "bbbbabb"
-andalso not (test "apha")
-andalso test "a"
-andalso test "baa";
+val _ = tests `[0-9]` [
+      ("", false),
+      ("1", true),
+      ("9", true),
+      ("0", true),
+      ("10", false)
+    ];
 
-val test = matcher `b*ab*ab*`;
-test"bbbaa"
-andalso test"aa"
-andalso test"bababb";
+val _ = tests `[0-9]*` [
+      ("", true),
+      ("1", true),
+      ("9", true),
+      ("0", true),
+      ("10", true),
+      (" a",false),
+      ("1024563735355365673463", true)
+    ];
 
-val test = matcher `[]*|.|..|...`;
-test""
-andalso test"a"
-andalso test"abb"
-andalso test"123"
-andalso not (test"1234");
+val _ = tests `(.*1)(12)*` [
+      ("adfasd11212", true),
+      ("111212", true),
+      ("", false)
+    ];
 
-val test = matcher `.|(ab)*|(ba)*`;
-test""
-andalso test"a"
-andalso test"7"
-andalso not (test"abba")
-andalso not (test"abb")
-andalso test"ababababab"
-andalso not (test"babababab")
-andalso test"bababababa";
+val _ = tests `b*|b*(a|ab*a)b*` [
+      ("", true),
+      ("bbbb", true),
+      ("bbbbabb", true),
+      ("apha", false),
+      ("a", true),
+      ("baa", true)
+    ];
+
+val _ = tests `b*ab*ab*` [
+      ("bbbaa", true),
+      ("aa", true),
+      ("bababb", true)
+    ];
+
+val _ = exitIfLevelLE 1
+
+val _ = tests `[]*|.|..|...` [
+      ("", true),
+      ("a", true),
+      ("abb", true),
+      ("123",true),
+      ("1234", false)
+    ];
+
+val _ = tests `.|(ab)*|(ba)*` [
+      ("", true),
+      ("a", true),
+      ("7", true),
+      ("abba", false),
+      ("abb",false),
+      ("ababababab", true),
+      ("babababab", false),
+      ("bababababa", true)
+    ];
 
 (* Beware the juxtaposition of * and ) in the quotation for some SML lexers. *)
+val _ = tests `~((.*aa.*)|(.*bb.*))` [
+      ("", true),
+      ("a", true),
+      ("b", true),
+      ("aa", false),
+      ("ab", true),
+      ("ba", true),
+      ("bb", false),
+      ("ababababababababababababababababababababababababababab", true),
+      ("abababababababababababbababababababababababababababab", false)
+    ];
 
-val test = matcher `~((.*aa.*)|(.*bb.*))`;
-             (true  = test (""))
-   andalso   (true  = test ("a"))
-   andalso   (true  = test ("b"))
-   andalso   (false = test ("aa"))
-   andalso   (true  = test ("ab"))
-   andalso   (true  = test ("ba"))
-   andalso   (false = test ("bb"))
-   andalso   (true  = test ("ababababababababababababababababababababababababababab"))
-   andalso   (false = test ("abababababababababababbababababababababababababababab"));
-
-val test = matcher `(.*00.*)&~(.*01)`;
-             (true  = test ("00"))
-    andalso  (false = test ("001"))
-    andalso  (true  = test ("0111010101010111111000000"))
-    andalso  (true  = test ("011101010101011111100000010101000111111111111111111111"))
-    andalso  (true  = test ("0011010101010111111000000101010001111111111111111111110"))
-    andalso  (false = test ("0011010101010111111000000101010001111111111111111111101"))
-   ;
+val _ = tests `(.*00.*)&~(.*01)` [
+      ("00", true),
+      ("001", false),
+      ("0111010101010111111000000", true),
+      ("011101010101011111100000010101000111111111111111111111", true),
+      ("0011010101010111111000000101010001111111111111111111110", true),
+      ("0011010101010111111000000101010001111111111111111111101", false)
+    ];
 
 (*---------------------------------------------------------------------------*)
 (* All strings with at least three consecutive ones and not ending in 01 or  *)
 (*   consisting of all ones.                                                 *)
 (*---------------------------------------------------------------------------*)
 
-val test = matcher `(.*111.*)&~((.*01)|1*)`;
-            (true  = test "01110")
-    andalso (false = test "1")
-    andalso (false = test "11")
-    andalso (false = test "111")
-    andalso (false = test "1111111111111111111111111111111111")
-    andalso (false = test "11111111111111111111111111111111111111111111111111111111")
-    andalso (false = test "1111111111111111111111111111111111111111111111111111111111111111")
-    andalso (true  = test "0111010101010111111000000")
-    andalso (true  = test "01101010101011111100000010101000111111111111111111111")
-    andalso (true  = test "10001101010101011000000101010001111111111111111111110")
-    andalso (false = test "0011010101010111111000000101010001111111111111111111101")
-   ;
+val _ = tests `(.*111.*)&~((.*01)|1*)` [
+  ("01110", true),
+  ("1", false),
+  ("11",false),
+  ("111",false),
+  ("1111111111111111111111111111111111",false),
+  ("11111111111111111111111111111111111111111111111111111111",false),
+  ("1111111111111111111111111111111111111111111111111111111111111111",false),
+  ("0111010101010111111000000",true),
+  ("01101010101011111100000010101000111111111111111111111",true),
+  ("10001101010101011000000101010001111111111111111111110",true),
+  ("0011010101010111111000000101010001111111111111111111101",false)
+  ] ;
+
+val _ = exitIfLevelLE 2
 
 (*---------------------------------------------------------------------------*)
 (* Date strings                                                              *)
 (*---------------------------------------------------------------------------*)
 
-val date_matcher = time matcher
-   `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)`;
+val _ = tests
+   `(201\d|202[0-5])-([1-9]|1[0-2])-([1-9]|[1-2]\d|3[0-1]) (1?\d|2[0-3]):(\d|[1-5]\d):(\d|[1-5]\d)` [
+  ("2016-5-21 20:23:24", true),
+  ("2010-12-1 0:0:0", true),
+  ("2019-1-22 11:11:11", true),
+  ("2016-5-21 20:23:24", true),
+  ("20162107-501-2100 20000:23000:", false),
+  ("foo-bar-baz", false)
+];
 
-  date_matcher "2016-5-21 20:23:24"
-  andalso
-  date_matcher "2010-12-1 0:0:0"
-  andalso
-  date_matcher "2019-1-22 11:11:11"
-  andalso
-  date_matcher "2016-5-21 20:23:24"
-  andalso
-  not (date_matcher "20162107-501-2100 20000:23000:")
-  andalso
-  not (date_matcher "foo-bar-baz")
-;
+val _ = exitIfLevelLE 3
 
 (*---------------------------------------------------------------------------*)
 (* UTF-8                                                                     *)
