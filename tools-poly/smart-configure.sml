@@ -71,6 +71,7 @@ val polymllibdir = "";
 val DOT_PATH = SOME "";
 val MLTON = SOME "";
 val GNUMAKE = "";
+val SHASUM = "";
 val POLY_LDFLAGS = [] : string list;
 val EXTRA_POLY_LDFLAGS = [] : string list;
 val POLY_LDFLAGS_STATIC = [] : string list;
@@ -263,22 +264,42 @@ val polymllibdir =
 
 val DOT_PATH = if DOT_PATH = SOME "" then which "dot" else DOT_PATH;
 
-fun find_in_bin_or_path s =
+fun find_in_likelies_or_path dirs s =
     let
-      val binpath = OS.Path.concat("/bin", s)
+      fun findexec s dir =
+          let
+            val p = OS.Path.concat(dir,s)
+          in
+            if OS.FileSys.access(p, [OS.FileSys.A_EXEC]) then
+              SOME p
+            else NONE
+          end
     in
-      if OS.FileSys.access (binpath, [OS.FileSys.A_EXEC]) then
-        (binpath, true)
-      else
-        case which s of
-            NONE => die ("Couldn't find `" ^ s ^
-                         "' executable. Please edit\n\
-                         \tools-poly/poly-includes to include\n\
-                         \  val " ^ String.translate (str o Char.toUpper) s ^
-                         " = \"...\"")
-          | SOME s => (s, false)
+      case List.mapPartial (findexec s) dirs of
+          h :: _ => SOME (h, true)
+        | [] =>
+          case which s of
+              NONE => NONE
+            | SOME p => SOME (p, false)
     end
 
+fun find_multinamed corename dirs names =
+    case List.mapPartial (find_in_likelies_or_path dirs) names of
+        [] => die ("Couldn't find `" ^ corename ^
+                   "' executable. Please edit\n\
+                   \tools-poly/poly-includes to include\n\
+                   \  val " ^ String.translate (str o Char.toUpper) corename ^
+                   " = \"...\"")
+      | h :: _ => h
+
+fun find_in_bin_or_path s =
+    case find_in_likelies_or_path ["/bin"] s of
+        SOME r => r
+      | NONE => die ("Couldn't find `" ^ s ^
+                     "' executable. Please edit\n\
+                     \tools-poly/poly-includes to include\n\
+                     \  val " ^ String.translate (str o Char.toUpper) s ^
+                     " = \"...\"")
 
 val dynlib_available = false;
 
@@ -303,7 +324,10 @@ fun optverdict (prompt, optvalue) =
 
 fun dfltverdict (prompt, (value, dflt)) =
     if dflt then value
-    else (print (StringCvt.padRight #" " 20 (prompt ^ ":") ^ value ^ "\n"); value);
+    else (
+      print (StringCvt.padRight #" " 20 (prompt ^ ":") ^ value ^ "\n");
+      value
+    );
 
 verdict ("OS", OS);
 verdict ("poly", poly);
@@ -316,6 +340,13 @@ verdict ("GNUMAKE", GNUMAKE);
 
 val MV = dfltverdict ("MV", find_in_bin_or_path "mv");
 val CP = dfltverdict ("CP", find_in_bin_or_path "cp");
+val SHASUM =
+    if SHASUM = "" then
+      dfltverdict (
+        "SHASUM",
+        find_multinamed "shasum" ["/usr/bin", "/usr/sbin"] ["sha1sum", "shasum"]
+      )
+    else SHASUM;
 
 print "\nConfiguration will begin with above values.  If they are wrong\n";
 print "press Control-C.\n\n";

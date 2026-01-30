@@ -35,6 +35,7 @@ sig
   val DOT_PATH : string option
   val MV : string
   val CP : string
+  val SHASUM : string
   val DEFAULT_STATE : string
   val haveWord64 : bool
 

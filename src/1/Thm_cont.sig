@@ -26,6 +26,7 @@ sig
   val X_CASES_THEN     : Term.term list list -> thm_tactical
   val CASES_THENL      : thm_tactic list -> thm_tactic
   val STRIP_THM_THEN   : thm_tactical
+  val STRIP_ALL_THEN   : thm_tactical
 
   val ANTE_RES_THEN    : thm_tactical
   val IMP_RES_THEN     : thm_tactic -> thm -> tactic

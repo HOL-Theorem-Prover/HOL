@@ -1,8 +1,12 @@
 #!/bin/bash
 
+from="Michael Norrish <michael.norrish@anu.edu.au>"
+holid="UNKNOWN-HOL"
+gbs="$HOME/generateBuildSummary"
+
 die ()
 {
-    echo "$1" >&2
+    echo "git-regression-build error: $1" | $gbs "$from" "$holid"
     exit 1
 }
 
@@ -129,7 +133,7 @@ maybeBuild ()
         # reliable in practice.
         if ((now - brtime < 60 * 60 * 24))
         then
-            echo "Another build appears to be running - giving up"
+            die "Another build appears to be running - giving up"
             return 0
         fi
     fi

@@ -101,6 +101,7 @@ fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 fun upload_holmake_files symlink =
   (upload ((fullPath[HOLDIR, "tools", "Holmake"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "Holmake", "deps"], 0), SIGOBJ, symlink);
+   upload ((fullPath[HOLDIR, "tools", "Holmake", "parsing"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "Holmake", "util"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "util"], 0), SIGOBJ, symlink);
    transfer_file symlink SIGOBJ
@@ -109,17 +110,6 @@ fun upload_holmake_files symlink =
 val holmake_exns = [
   "Systeml.sig", "Systeml.ui", "Systeml.uo"
 ]
-
-fun remove_holmkdir (dirname,_) =
-    let
-      open OS.FileSys
-      val holmkdir = OS.Path.concat (dirname, ".HOLMK")
-    in
-      if access (holmkdir, [A_READ, A_EXEC]) andalso isDir holmkdir then
-        (map_dir (fn (d,f) => rem_file (OS.Path.concat(d,f))) holmkdir;
-         OS.FileSys.rmDir holmkdir)
-      else ()
-    end
 
 fun build_hol symlink = let
 in

@@ -5,8 +5,9 @@ structure Path = OS.Path
 structure Process = OS.Process
 
 
-infix |>
+infix |> ++
 fun x |> f = f x
+fun p1 ++ p2 = Path.concat(p1,p2)
 
 (* path manipulation functions *)
 fun normPath s = Path.toString(Path.fromString s)
@@ -995,7 +996,7 @@ fun preorder_directory_recurse f d =
 fun remove_holmkdir parent =
     let
       open OS.FileSys
-      val dir = OS.Path.concat(parent, ".HOLMK")
+      val dir = parent ++ ".hol" ++ "make-deps"
     in
       if access (dir, [A_READ, A_EXEC]) andalso not (isLink dir) andalso
          isDir dir

@@ -110,6 +110,7 @@ val release = ""
 val DOT_PATH = ""
 val MV = ""
 val CP = ""
+val SHASUM = ""
 val DEFAULT_STATE = fullPath [HOLDIR, "bin", "hol.state"]
 
 val isUnix = true

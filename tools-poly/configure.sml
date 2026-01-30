@@ -260,6 +260,7 @@ in
    "val DOT_PATH =" --> ("val DOT_PATH = "^optquote DOT_PATH^"\n"),
    "val MV =" -->       ("val MV = "^quote MV^"\n"),
    "val CP =" -->       ("val CP = "^quote CP^"\n"),
+   "val SHASUM ="   --> ("val SHASUM = "^quote SHASUM^"\n"),
    "val haveWord64 ="-->("val haveWord64 = "^
                          Bool.toString
                            (List.exists (fn (s, _) => s = "Word64")
@@ -428,9 +429,9 @@ val _ = work_in_dir
 (* Holmake *)
 val _ = work_in_dir
           "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
-          (fn () => (OS.FileSys.chDir "..";
+          (fn () => (OS.FileSys.chDir "../parsing";
                      systeml [lexer, "HolLex"];
-                     OS.FileSys.chDir "poly";
+                     OS.FileSys.chDir "../poly";
                      polyc_compile (SOME "../mlton/Holmake.mlb")
                                    "poly-Holmake.ML" hmakebin))
 
