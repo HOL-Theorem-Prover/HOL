@@ -448,7 +448,7 @@ val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])
 
 (* build *)
 val _ = work_in_dir "build" toolsdir
-                    (fn () => polyc_compile (SOME "../tools/build.mlb")
+                    (fn () => polyc_compile (SOME "../tools/build/build.mlb")
                                             "poly-build.ML" buildbin)
 
 (* hol - the main HOL executable *)

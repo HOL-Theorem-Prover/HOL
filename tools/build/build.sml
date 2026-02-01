@@ -133,7 +133,7 @@ end
 val check_againstB = check_against EXECUTABLE
 val _ = check_againstB "tools/smart-configure.sml"
 val _ = check_againstB "tools/configure.sml"
-val _ = check_againstB "tools/build.sml"
+val _ = check_againstB "tools/build/build.sml"
 val _ = check_againstB "tools/Holmake/Systeml.sig"
 val _ = check_againstB "tools/configure-mosml.sml"
 

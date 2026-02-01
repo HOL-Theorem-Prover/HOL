@@ -72,7 +72,7 @@ Without doing this, the new implementation will see that it is in a HOL source�
 # Build
 
 The standard options to build are described in its help documentation, which is accessible by invoking `build --help` (or `build -h`, or `build -?`, but not `build help` because this builds the HOL documentation).
-The file containing this information about options is located at `tools/buildhelp.txt`.
+The file containing this information about options is located at `tools/build/buildhelp.txt`.
 
 The most frequently used options to build are those to do with “selftest” level, and the selection of kernel.
 
@@ -101,7 +101,7 @@ There are two standard ways to the install a test that can be run by `build`:
     Though the `Holmakefile` gives build commands in terms of `$(HOLMOSMLC)`, the `selftest.exe` executable will also be built correctly if running Poly/ML.
 
 2.  Create a new directory for build to operate on.
-    This directory can be inserted into the early stages of the build sequence, as explained in the documentation at the head of `tools/build-sequence`.
+    This directory can be inserted into the early stages of the build sequence, as explained in the documentation at the head of `tools/build/build-sequence`.
     If the testing happens after `bossLib` and (in Poly/ML) the creation of the standard `hol.state` heap, the directory should be included in the `Holmakefile` in `src/parallel_builds/core`.
     The various tests in that file can be used to insert regression test directories into the big parallel build of all the post-`bossLib` directories.
     Using a test-directory is necessary if the tests need to examine behaviours to do with theory export and loading.
@@ -125,10 +125,10 @@ This kernel can be selected by passing the `--otknl` option to `build`.
 ## Build Sequences
 
 When `build` runs, it choreographs its calls to `Holmake` by referring to a specified sequence of directories.
-By default this sequence is that specified in the file `tools/build-sequence`, which in turn refers to other files *via* `#include` directives.
+By default this sequence is that specified in the file `tools/build/build-sequence`, which in turn refers to other files *via* `#include` directives.
 It is possible to provide a different sequence by using the `--seq` commandline option to `build`.
 Such sequences can be constructed more easily by referring to sequence fragments in the `tools/sequences` directory, and including these with `#include` commands.
-The details of the required format for sequence files is spelled out in a comment at the head of the `tools/build-sequence` file.
+The details of the required format for sequence files is spelled out in a comment at the head of the `tools/build/build-sequence` file.
 
 Past the initial prefix of this process, most directories in the build sequence are actually listed in the `Holmakefile` in `src/parallel_builds/core`.
 This arrangement allows parallel processing of lots of directories at once.
@@ -205,8 +205,8 @@ Unless otherwise noted, they are built by the configuration process.
 
 `build`
 :   Described [above](#build).
-    The top-level driver code is in files called `build.sml` in `tools` and `tools-poly`.
-    Shared code is in `tools/buildutils.sml`.
+    The top-level driver code is in files called `build.sml` in `tools/build` and `tools-poly`.
+    Shared code is in `tools/build/buildutils.sml`.
     The executable is in `bin/`.
 
 `cmp`

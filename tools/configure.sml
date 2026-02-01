@@ -425,7 +425,8 @@ val _ = let
   open TextIO
   val _ = echo "Making bin/build."
   val cwd = FileSys.getDir()
-  val _ = FileSys.chDir (fullPath[holdir, "tools"])
+  val builddir = fullPath[holdir, "tools", "build"]
+  val _ = FileSys.chDir builddir
   (* cline stuff *)
   val utildir = fullPath[holdir, "tools", "util"]
   val hmutildir = Path.concat(holmakedir, "util")
@@ -461,8 +462,8 @@ in
   if Process.isSuccess (systeml command) then ()
   else (print "*** Failed to build build executable.\n";
         Process.exit Process.failure) ;
-  FileSys.remove (fullPath [holdir,"tools/build.ui"]);
-  FileSys.remove (fullPath [holdir,"tools/build.uo"]);
+  FileSys.remove (fullPath [holdir,"tools","build","build.ui"]);
+  FileSys.remove (fullPath [holdir,"tools","build","build.uo"]);
   mk_xable bin;
   FileSys.chDir cwd
 end;
