@@ -85,11 +85,11 @@ val DYNLIB = Systeml.DYNLIB
 
 fun SYSTEML clist = Process.isSuccess (Systeml.systeml clist)
 
-val dfltbuildseq = fullPath [HOLDIR, "tools", "build-sequence"]
+val dfltbuildseq = fullPath [HOLDIR, "tools", "build", "build-sequence"]
 val dfltjobnum = 4
 
 val help_header = let
-  val istrm = TextIO.openIn (fullPath [HOLDIR, "tools", "buildhelp.txt"])
+  val istrm = TextIO.openIn (fullPath [HOLDIR, "tools", "build", "buildhelp.txt"])
 in
   TextIO.inputAll istrm before TextIO.closeIn istrm
 end handle IO.Io _ => "\n\n<Build help file missing in action>\n\n"
