@@ -466,6 +466,8 @@ end
    we want cleaning to follow all links, even those hidden by conditionals
    that look at HOLSEFLTESTLEVEL.  On the assumption that the INCLUDES
    set grows monotonically, we set to 3 to get all extra INCLUDES.
+
+   Also set the kernel-id to "stdknl".
 *)
 fun hmakefile_data HOLDIR =
     if HOLFileSys.access ("Holmakefile", [HOLFileSys.A_READ]) then let
@@ -473,7 +475,9 @@ fun hmakefile_data HOLDIR =
         fun quietly s = ()
         val qdiags = {info = quietly, die = quietly, warn = quietly}
         val env0 =
-            base_environment() |> env_extend ("HOLSELFTESTLEVEL", [LIT "3"])
+            base_environment()
+              |> env_extend ("HOLSELFTESTLEVEL", [LIT "3"])
+              |> env_extend ("KERNELID", [LIT "stdknl"])
         val (env, _, _) = ReadHMF.diagread qdiags "Holmakefile" env0
         fun envlist id =
             map dequote (tokenize (perform_substitution env [VREF id]))
