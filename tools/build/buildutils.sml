@@ -519,7 +519,7 @@ fun cleanForReloc0 HOLDIR =
 fun maybe_gmakeclean dirname owise () =
     if OS <> "winNT" then
       let
-        val gnumake = 
+        val gnumake =
             case List.rev (#arcs (OS.Path.fromString dirname)) of
               "minisat" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
             | "zc2hs" :: "sat_solvers" :: "HolSat" :: "src" :: _ => true
