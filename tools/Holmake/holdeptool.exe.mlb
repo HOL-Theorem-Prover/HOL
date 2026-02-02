@@ -4,4 +4,4 @@ $(SML_LIB)/basis/basis.mlb
 deps/Holdep_tokens.sig
 deps/Holdep_tokens.sml
 holdeptool.sml
-mosml_holdeptool.sml
+mosml/mosml_holdeptool.sml

@@ -321,8 +321,10 @@ val _ =
     compile ["-I", ".."] "LTSprimitives.sml";
     FileSys.chDir "..";
     compile ["-I", "mosml"] "linkToSigobj.sml";
-    compile ["-I", "mosml"] "mosml_linkToSigobj.sml";
-    link {extras = ["-I", "mosml"], srcobj = "mosml_linkToSigobj.uo",
+    FileSys.chDir "mosml";
+    compile ["-I", ".."] "mosml_linkToSigobj.sml";
+    FileSys.chDir "..";
+    link {extras = ["-I", "mosml"], srcobj = "mosml/mosml_linkToSigobj.uo",
           tgt = fullPath [holdir, "bin", "linkToSigobj"]};
     compile [] "HOLFileSys.sig";
     compile [] "HOLFileSys.sml";
@@ -364,9 +366,11 @@ val _ =
     compile ["-I", "../util"] "HM_Core_Cline.sig";
     compile ["-I", "../util"] "HM_Core_Cline.sml";
     compile ["-I", "deps", "-I", "parsing"] "holdeptool.sml";
-    compile ["-I", "deps", "-I", "parsing"] "mosml_holdeptool.sml";
+    FileSys.chDir "mosml";
+    compile ["-I", "..", "-I", "../deps", "-I", "../parsing"] "mosml_holdeptool.sml";
+    FileSys.chDir "..";
     link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "parsing"],
-         srcobj = "mosml_holdeptool.uo",
+         srcobj = "mosml/mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
     FileSys.chDir "deps";
     compile ["-I", "..", "-I", "../util", "-I", "../parsing"] "HM_DepGraph.sig";
@@ -387,8 +391,10 @@ val _ =
     compile ["-I", "..", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../parsing"] "BuildCommand.sml";
     FileSys.chDir "..";
     compile ["-I", "mosml", "-I", "deps", "-I", "../util", "-I", "util", "-I", "parsing"] "Holmake.sml";
-    compile [] "mosml_Holmake.sml";
-    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "parsing"], tgt = bin, srcobj = "mosml_Holmake.uo"};
+    FileSys.chDir "mosml";
+    compile ["-I", ".."] "mosml_Holmake.sml";
+    FileSys.chDir "..";
+    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "parsing"], tgt = bin, srcobj = "mosml/mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end
