@@ -11,7 +11,7 @@ selftest.exe: selftest.uo
 
 ifdef HOLSELFTESTLEVEL
 
-all: marker-selftest
+all: marker-selftest.log
 
 marker-selftest.log: selftest.exe
 	$(tee ./selftest.exe 2>&1,$@)
