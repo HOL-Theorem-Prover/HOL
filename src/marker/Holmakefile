@@ -10,10 +10,11 @@ selftest.exe: selftest.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifdef HOLSELFTESTLEVEL
-.PHONY: marker-selftest
 
 all: marker-selftest
 
-marker-selftest: selftest.exe
-	./selftest.exe
+marker-selftest.log: selftest.exe
+	$(tee ./selftest.exe 2>&1,$@)
 endif
+
+EXTRA_CLEANS = selftest.exe marker-selftest.log

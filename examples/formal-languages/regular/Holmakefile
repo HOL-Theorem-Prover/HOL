@@ -7,7 +7,7 @@ all: $(DEFAULT_TARGETS) regexp2dfa selftest.exe
 
 .PHONY: all
 
-EXTRA_CLEANS = regexp2dfa.o regexp2dfa regexp-selftest.log
+EXTRA_CLEANS = regexp2dfa.o regexp2dfa regexp-selftest.log selftest.exe
 
 regexp2dfa : regexp2dfa.uo
 	$(protect $(HOLDIR)/bin/hol) buildheap regexp2dfa.uo -o $@ --exe main

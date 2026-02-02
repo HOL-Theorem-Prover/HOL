@@ -4,7 +4,7 @@ MLYACCLIB = $(protect $(HOLDIR)/tools/mlyacc/mlyacclib/)
 MLYACCLIB_UIS = $(patsubst %,MLY_%.ui,base-sig join lrtable parser2 stream)
 
 EXTRA_CLEANS = HOLsexp.grm-sig.sml HOLsexp.grm.sml HOLsexp.lex.sml \
-               portable-selftest.log
+               portable-selftest.log selftest.exe
 
 
 UOFILES = $(patsubst %.sml,%.uo,$(wildcard *.sml))
