@@ -26,11 +26,11 @@ hmf/parse_glob.sig
 hmf/parse_glob.sml
 util/tailbuffer.sig
 util/tailbuffer.sml
-Holmake_tools_dtype.sml
+core/Holmake_tools_dtype.sml
 util/terminal_primitives.sig
 util/poly-terminal-prims.ML
-Holmake_tools.sig
-Holmake_tools.sml
+core/Holmake_tools.sig
+core/Holmake_tools.sml
 hmf/internal_functions.sig
 hmf/internal_functions.sml
 hmf/Holmake_types.sig

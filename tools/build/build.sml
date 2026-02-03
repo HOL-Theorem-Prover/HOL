@@ -100,6 +100,7 @@ fun build_src symlink = List.app (buildDir symlink) SRCDIRS
 
 fun upload_holmake_files symlink =
   (upload ((fullPath[HOLDIR, "tools", "Holmake"], 0), SIGOBJ, symlink);
+   upload ((fullPath[HOLDIR, "tools", "Holmake", "core"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "Holmake", "deps"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "Holmake", "hfs"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "Holmake", "hmf"], 0), SIGOBJ, symlink);

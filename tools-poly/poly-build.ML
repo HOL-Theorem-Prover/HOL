@@ -35,10 +35,13 @@ val _ = useParsing "AttributeSyntax";
 val _ = use "../tools/parsing/HolLex.sml";
 val _ = useParsing "HolParser";
 val _ = useDeps "Holdep";
-val _ = use "../tools/Holmake/Holmake_tools_dtype.sml";
+fun useCore f =
+    (use ("../tools/Holmake/core/" ^ f ^ ".sig");
+     use ("../tools/Holmake/core/" ^ f ^ ".sml"))
+val _ = use "../tools/Holmake/core/Holmake_tools_dtype.sml";
 val _ = use "../tools/Holmake/util/terminal_primitives.sig";
 val _ = use "../tools/Holmake/util/poly-terminal-prims.ML";
-val _ = useC "Holmake_tools"
+val _ = useCore "Holmake_tools"
 val _ = useUtil "regexpMatch"
 fun useHmf f =
     (use ("../tools/Holmake/hmf/" ^ f ^ ".sig");
