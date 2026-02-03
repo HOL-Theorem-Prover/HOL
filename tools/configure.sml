@@ -311,10 +311,10 @@ val _ =
     FileSys.chDir "../../util";
     compile ["-I", "../Holmake"] "regexpMatch.sig";
     compile ["-I", "../Holmake"] "regexpMatch.sml";
-    FileSys.chDir "../Holmake";
-    compile ["-I", "../util"] "parse_glob.sig";
-    compile ["-I", "../util"] "parse_glob.sml";
-    FileSys.chDir "hfs";
+    FileSys.chDir "../Holmake/hmf";
+    compile ["-I", "../../util"] "parse_glob.sig";
+    compile ["-I", "../../util"] "parse_glob.sml";
+    FileSys.chDir "../hfs";
     compile [] "HOLFS_dtype.sml";
     compile [] "HFS_NameMunge.sig";
     FileSys.chDir "../mosml";
@@ -353,52 +353,54 @@ val _ =
     compile ["-I", "..", "-I", "../mosml", "-I", "../../parsing", "-I", "../hfs"] "Holdep.sig";
     compile ["-I", "..", "-I", "../mosml", "-I", "../../parsing", "-I", "../hfs"] "Holdep.sml";
     FileSys.chDir "..";
-    compile ["-I", "deps", "-I", "util", "-I", "../parsing", "-I", "hfs"] "Holmake_tools.sig";
-    compile ["-I", "deps", "-I", "util", "-I", "../parsing", "-I", "hfs"] "Holmake_tools.sml";
-    compile ["-I", "deps", "-I", "../util", "-I", "../parsing", "-I", "hfs"] "internal_functions.sig";
-    compile ["-I", "deps", "-I", "../util", "-I", "../parsing", "-I", "hfs"] "internal_functions.sml";
-    compile ["-I", "../parsing", "-I", "hfs"] "Holmake_types.sig";
-    compile ["-I", "../parsing", "-I", "hfs"] "Holmake_types.sml";
-    compile ["-I", "../parsing", "-I", "hfs"] "ReadHMF.sig";
-    compile ["-I", "../parsing", "-I", "hfs"] "ReadHMF.sml";
+    compile ["-I", "deps", "-I", "util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"] "Holmake_tools.sig";
+    compile ["-I", "deps", "-I", "util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"] "Holmake_tools.sml";
+    FileSys.chDir "hmf";
+    compile ["-I", "..", "-I", "../deps", "-I", "../../util", "-I", "../../parsing", "-I", "../hfs"] "internal_functions.sig";
+    compile ["-I", "..", "-I", "../deps", "-I", "../../util", "-I", "../../parsing", "-I", "../hfs"] "internal_functions.sml";
+    compile ["-I", "..", "-I", "../../parsing", "-I", "../hfs"] "Holmake_types.sig";
+    compile ["-I", "..", "-I", "../../parsing", "-I", "../hfs"] "Holmake_types.sml";
+    compile ["-I", "..", "-I", "../../parsing", "-I", "../hfs"] "ReadHMF.sig";
+    compile ["-I", "..", "-I", "../../parsing", "-I", "../hfs"] "ReadHMF.sml";
+    FileSys.chDir "..";
     FileSys.chDir "../util";
     compile ["-I", "../Holmake"] "GetOpt.sig";
     compile ["-I", "../Holmake"] "GetOpt.sml";
     compile ["-I", "../Holmake"] "FunctionalRecordUpdate.sml";
     FileSys.chDir "../Holmake";
-    compile ["-I", "../util"] "HM_Core_Cline.sig";
-    compile ["-I", "../util"] "HM_Core_Cline.sml";
+    compile ["-I", "../util", "-I", "hmf"] "HM_Core_Cline.sig";
+    compile ["-I", "../util", "-I", "hmf"] "HM_Core_Cline.sml";
     FileSys.chDir "deps";
     compile ["-I", "..", "-I", "../../parsing"] "holdeptool.sml";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../deps", "-I", "../../parsing"] "mosml_holdeptool.sml";
     FileSys.chDir "..";
-    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs"],
+    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"],
          srcobj = "mosml/mosml_holdeptool.uo",
          tgt = fullPath[holdir, "bin", "holdeptool.exe"]};
     FileSys.chDir "deps";
     compile ["-I", "..", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sig";
     compile ["-I", "..", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_DepGraph.sml";
     FileSys.chDir "..";
-    compile ["-I", "deps", "-I", "util", "-I", "../parsing", "-I", "hfs"] "HM_GraphBuildJ1.sig";
-    compile ["-I", "deps", "-I", "util", "-I", "../parsing", "-I", "hfs"] "HM_GraphBuildJ1.sml";
+    compile ["-I", "deps", "-I", "util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"] "HM_GraphBuildJ1.sig";
+    compile ["-I", "deps", "-I", "util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"] "HM_GraphBuildJ1.sml";
     FileSys.chDir "mosml";
     compile ["-I", "..", "-I", "../../util", "-I", "../util"] "HM_Cline.sig";
     compile ["-I", "..", "-I", "../../util", "-I", "../util"] "HM_Cline.sml";
     compile ["-I", "..", "-I", "../../util", "-I", "../util"] "GraphExtra.sig";
     compile ["-I", "..", "-I", "../../util", "-I", "../util"] "GraphExtra.sml";
-    compile ["-I", "..", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_BaseEnv.sig";
-    compile ["-I", "..", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "HM_BaseEnv.sml";
+    compile ["-I", "..", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_BaseEnv.sig";
+    compile ["-I", "..", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "HM_BaseEnv.sml";
     FileSys.chDir "..";
-    compile ["-I", "mosml", "-I", "deps", "-I", "../util", "-I", "util", "-I", "../parsing", "-I", "hfs"] "BuildCommand.sig";
+    compile ["-I", "mosml", "-I", "deps", "-I", "../util", "-I", "util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"] "BuildCommand.sig";
     FileSys.chDir "mosml";
-    compile ["-I", "..", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs"] "BuildCommand.sml";
+    compile ["-I", "..", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "BuildCommand.sml";
     FileSys.chDir "..";
-    compile ["-I", "mosml", "-I", "deps", "-I", "../util", "-I", "util", "-I", "../parsing", "-I", "hfs"] "Holmake.sml";
+    compile ["-I", "mosml", "-I", "deps", "-I", "../util", "-I", "util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"] "Holmake.sml";
     FileSys.chDir "mosml";
     compile ["-I", ".."] "mosml_Holmake.sml";
     FileSys.chDir "..";
-    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs"], tgt = bin, srcobj = "mosml/mosml_Holmake.uo"};
+    link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"], tgt = bin, srcobj = "mosml/mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end
@@ -451,10 +453,11 @@ val _ = let
     val utilsml = "buildutils.sml"
     val depsdir = Path.concat(holmakedir, "deps")
     val hfsdir = Path.concat(holmakedir, "hfs")
+    val hmfdir = Path.concat(holmakedir, "hmf")
     val parsingdir = Path.concat(holdir, "tools/parsing")
   in
-    if compile ["-I", holmakedir, "-I", depsdir, "-I", hfsdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir] utilsig andalso
-       compile ["-I", holmakedir, "-I", depsdir, "-I", hfsdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir] utilsml
+    if compile ["-I", holmakedir, "-I", depsdir, "-I", hfsdir, "-I", hmfdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir] utilsig andalso
+       compile ["-I", holmakedir, "-I", depsdir, "-I", hfsdir, "-I", hmfdir, "-I", parsingdir, "-I", utildir, "-I", hmutildir] utilsml
     then ()
     else die "Failed to build buildutils module"
   end
@@ -466,6 +469,7 @@ val _ = let
        "-I", Path.concat(holmakedir, "mosml"),
        "-I", Path.concat(holmakedir, "deps"),
        "-I", Path.concat(holmakedir, "hfs"),
+       "-I", Path.concat(holmakedir, "hmf"),
        "-I", Path.concat(holdir, "tools/parsing"),
        "-I", utildir,
        "-I", hmutildir,

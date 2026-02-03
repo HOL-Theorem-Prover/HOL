@@ -40,10 +40,13 @@ val _ = use "../tools/Holmake/util/terminal_primitives.sig";
 val _ = use "../tools/Holmake/util/poly-terminal-prims.ML";
 val _ = useC "Holmake_tools"
 val _ = useUtil "regexpMatch"
-val _ = useC "parse_glob"
-val _ = useC "internal_functions"
-val _ = useC "Holmake_types"
-val _ = useC "ReadHMF"
+fun useHmf f =
+    (use ("../tools/Holmake/hmf/" ^ f ^ ".sig");
+     use ("../tools/Holmake/hmf/" ^ f ^ ".sml"))
+val _ = useHmf "parse_glob"
+val _ = useHmf "internal_functions"
+val _ = useHmf "Holmake_types"
+val _ = useHmf "ReadHMF"
 val _ = use "../tools/build/buildcline_dtype.sml"
 val _ = use "../tools/util/FunctionalRecordUpdate.sml"
 val _ = use "../tools/build/buildcline.sig"
