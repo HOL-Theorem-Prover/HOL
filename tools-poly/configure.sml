@@ -429,9 +429,9 @@ val _ = work_in_dir
 (* Holmake *)
 val _ = work_in_dir
           "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
-          (fn () => (OS.FileSys.chDir "../parsing";
+          (fn () => (OS.FileSys.chDir "../../parsing";
                      systeml [lexer, "HolLex"];
-                     OS.FileSys.chDir "../poly";
+                     OS.FileSys.chDir "../Holmake/poly";
                      polyc_compile (SOME "../mlton/Holmake.mlb")
                                    "poly-Holmake.ML" hmakebin))
 
