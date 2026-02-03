@@ -102,6 +102,7 @@ fun upload_holmake_files symlink =
   (upload ((fullPath[HOLDIR, "tools", "Holmake"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "Holmake", "deps"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "Holmake", "hfs"], 0), SIGOBJ, symlink);
+   upload ((fullPath[HOLDIR, "tools", "Holmake", "hmf"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "parsing"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "Holmake", "util"], 0), SIGOBJ, symlink);
    upload ((fullPath[HOLDIR, "tools", "util"], 0), SIGOBJ, symlink);
