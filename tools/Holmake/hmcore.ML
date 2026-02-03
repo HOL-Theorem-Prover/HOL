@@ -11,6 +11,7 @@ val _ = let
       handle e => die (fullnm ^ ": compilation failure: "^General.exnMessage e)
     end
   val hmakedir = Systeml.HOLDIR ++ "tools" ++ "Holmake"
+  val coredir = hmakedir ++ "core"
   val depsdir = hmakedir ++ "deps"
   val hfsdir = hmakedir ++ "hfs"
   val hmfdir = hmakedir ++ "hmf"
@@ -18,6 +19,7 @@ val _ = let
   val parsingdir = Systeml.HOLDIR ++ "tools" ++ "parsing"
   val utildir = Systeml.HOLDIR ++ "tools" ++ "util"
   fun appthis s = (myuse hmakedir (s ^ ".sig"); myuse hmakedir (s ^ ".sml"))
+  fun appcore s = (myuse coredir (s ^ ".sig"); myuse coredir (s ^ ".sml"))
   fun appdeps s = (myuse depsdir (s ^ ".sig"); myuse depsdir (s ^ ".sml"))
   fun apphfs s = (myuse hfsdir (s ^ ".sig"); myuse hfsdir (s ^ ".sml"))
   fun apphmf s = (myuse hmfdir (s ^ ".sig"); myuse hmfdir (s ^ ".sml"))
@@ -33,10 +35,10 @@ in
   app appdeps ["Holdep_tokens"] ;
   app appparsing ["AttributeSyntax"] ;
   app (myuse parsingdir) ["HolLex.sml"];
-  app (myuse hmakedir) ["Holmake_tools_dtype.sml"];
+  app (myuse coredir) ["Holmake_tools_dtype.sml"];
   app (myuse hmutildir) ["terminal_primitives.sig", "poly-terminal-prims.ML"];
   app appparsing ["HolParser"] ;
   app appdeps ["Holdep"] ;
-  app appthis ["Holmake_tools"];
+  app appcore ["Holmake_tools"];
   app apphmf ["internal_functions", "Holmake_types", "ReadHMF"]
 end;
