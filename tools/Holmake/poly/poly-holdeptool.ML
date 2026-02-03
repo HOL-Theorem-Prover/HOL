@@ -14,11 +14,11 @@ use "../deps/Holdep_tokens.sig";
 use "../deps/Holdep_tokens.sml";
 use "../Systeml.sig";
 use "../../../tools-poly/Holmake/Systeml.sml";
-use "../parsing/AttributeSyntax.sig";
-use "../parsing/AttributeSyntax.sml";
-use "../parsing/HolLex.sml";
-use "../parsing/HolParser.sig";
-use "../parsing/HolParser.sml";
+use "../../parsing/AttributeSyntax.sig";
+use "../../parsing/AttributeSyntax.sml";
+use "../../parsing/HolLex.sml";
+use "../../parsing/HolParser.sig";
+use "../../parsing/HolParser.sml";
 use "../holdeptool.sml";
 
 val main = holdeptool.main

@@ -26,10 +26,10 @@ val _ = useC "HOLFileSys";
 val _ = useDeps "Holdep_tokens";
 val _ = useC "HM_SimpleBuffer";
 fun useParsing f =
-    (use ("../tools/Holmake/parsing/" ^ f ^ ".sig");
-     use ("../tools/Holmake/parsing/" ^ f ^ ".sml"))
+    (use ("../tools/parsing/" ^ f ^ ".sig");
+     use ("../tools/parsing/" ^ f ^ ".sml"))
 val _ = useParsing "AttributeSyntax";
-val _ = use "../tools/Holmake/parsing/HolLex.sml";
+val _ = use "../tools/parsing/HolLex.sml";
 val _ = useParsing "HolParser";
 val _ = useDeps "Holdep";
 val _ = use "../tools/Holmake/Holmake_tools_dtype.sml";
