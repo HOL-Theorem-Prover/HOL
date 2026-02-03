@@ -19,10 +19,13 @@ fun useHMUtil f =
 
 val _ = use "Holmake/Systeml.sml";
 val _ = useUtil "GetOpt";
-val _ = use "../tools/Holmake/HOLFS_dtype.sml";
-val _ = use "../tools/Holmake/HFS_NameMunge.sig";
+fun useHfs f =
+    (use ("../tools/Holmake/hfs/" ^ f ^ ".sig");
+     use ("../tools/Holmake/hfs/" ^ f ^ ".sml"))
+val _ = use "../tools/Holmake/hfs/HOLFS_dtype.sml";
+val _ = use "../tools/Holmake/hfs/HFS_NameMunge.sig";
 val _ = use "../tools/Holmake/poly/HFS_NameMunge.sml";
-val _ = useC "HOLFileSys";
+val _ = useHfs "HOLFileSys";
 val _ = useDeps "Holdep_tokens";
 val _ = useUtil "SimpleBuffer";
 fun useParsing f =

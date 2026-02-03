@@ -1,9 +1,9 @@
 
-use "../tools/Holmake/HOLFS_dtype.sml";
-use "../tools/Holmake/HFS_NameMunge.sig";
+use "../tools/Holmake/hfs/HOLFS_dtype.sml";
+use "../tools/Holmake/hfs/HFS_NameMunge.sig";
 use "../tools/Holmake/poly/HFS_NameMunge.sml";
-use "../tools/Holmake/HOLFileSys.sig";
-use "../tools/Holmake/HOLFileSys.sml";
+use "../tools/Holmake/hfs/HOLFileSys.sig";
+use "../tools/Holmake/hfs/HOLFileSys.sml";
 use "../tools/parsing/AttributeSyntax.sig";
 use "../tools/parsing/AttributeSyntax.sml";
 use "../tools/util/GetOpt.sig";
@@ -14,8 +14,8 @@ use "../tools-poly/poly/Binarymap.sig";
 use "../tools-poly/poly/Binarymap.sml";
 use "../tools/Holmake/Systeml.sig";
 use "../tools-poly/Holmake/Systeml.sml";
-use "../tools/Holmake/holpathdb.sig";
-use "../tools/Holmake/holpathdb.sml";
+use "../tools/Holmake/hfs/holpathdb.sig";
+use "../tools/Holmake/hfs/holpathdb.sml";
 
 val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
