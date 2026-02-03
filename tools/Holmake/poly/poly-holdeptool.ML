@@ -19,6 +19,6 @@ use "../../parsing/AttributeSyntax.sml";
 use "../../parsing/HolLex.sml";
 use "../../parsing/HolParser.sig";
 use "../../parsing/HolParser.sml";
-use "../holdeptool.sml";
+use "../deps/holdeptool.sml";
 
 val main = holdeptool.main

@@ -24,7 +24,7 @@ val _ = use "../tools/Holmake/HFS_NameMunge.sig";
 val _ = use "../tools/Holmake/poly/HFS_NameMunge.sml";
 val _ = useC "HOLFileSys";
 val _ = useDeps "Holdep_tokens";
-val _ = useC "HM_SimpleBuffer";
+val _ = useUtil "SimpleBuffer";
 fun useParsing f =
     (use ("../tools/parsing/" ^ f ^ ".sig");
      use ("../tools/parsing/" ^ f ^ ".sml"))

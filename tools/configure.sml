@@ -365,8 +365,9 @@ val _ =
     FileSys.chDir "../Holmake";
     compile ["-I", "../util"] "HM_Core_Cline.sig";
     compile ["-I", "../util"] "HM_Core_Cline.sml";
-    compile ["-I", "deps", "-I", "../parsing"] "holdeptool.sml";
-    FileSys.chDir "mosml";
+    FileSys.chDir "deps";
+    compile ["-I", "..", "-I", "../../parsing"] "holdeptool.sml";
+    FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../deps", "-I", "../../parsing"] "mosml_holdeptool.sml";
     FileSys.chDir "..";
     link{extras = ["-I", "mosml", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing"],
