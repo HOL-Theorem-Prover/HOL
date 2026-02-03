@@ -1,4 +1,4 @@
-structure HM_SimpleBuffer :> HM_SimpleBuffer =
+structure SimpleBuffer :> SimpleBuffer =
 struct
 
 fun mkBuffer () = let

@@ -80,7 +80,7 @@ fun compiler {push = obufPush, read = obufRD, reset = obufRST} handler infn =
 fun silentUse lnum s =
   let
     val filecontents = quoteFile lnum s
-    val buf = HM_SimpleBuffer.mkBuffer()
+    val buf = SimpleBuffer.mkBuffer()
   in
     compiler buf (lnumdie 1) (mkLex filecontents)
   end
@@ -631,7 +631,7 @@ fun main () =
           | [name] => (false, read_umap name)
           | ["-d", name] => (true, read_umap name)
           | _ => die (usage())
-    val (obuf as {push = obPush, ...}) = HM_SimpleBuffer.mkBuffer()
+    val (obuf as {push = obPush, ...}) = SimpleBuffer.mkBuffer()
     val _ = ReadHMF.extend_path_with_includes {verbosity = 0, lpref = loadPath}
     val _ = Feedback.ERR_outstream := obPush
     val _ = Feedback.WARNING_outstream := obPush
