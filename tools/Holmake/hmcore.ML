@@ -12,18 +12,20 @@ val _ = let
     end
   val hmakedir = Systeml.HOLDIR ++ "tools" ++ "Holmake"
   val depsdir = hmakedir ++ "deps"
+  val hfsdir = hmakedir ++ "hfs"
   val hmutildir = hmakedir ++ "util"
   val parsingdir = Systeml.HOLDIR ++ "tools" ++ "parsing"
   val utildir = Systeml.HOLDIR ++ "tools" ++ "util"
   fun appthis s = (myuse hmakedir (s ^ ".sig"); myuse hmakedir (s ^ ".sml"))
   fun appdeps s = (myuse depsdir (s ^ ".sig"); myuse depsdir (s ^ ".sml"))
+  fun apphfs s = (myuse hfsdir (s ^ ".sig"); myuse hfsdir (s ^ ".sml"))
   fun apputil s = (myuse utildir (s ^ ".sig"); myuse utildir (s ^ ".sml"))
   fun apphmutil s = (myuse hmutildir (s ^ ".sig"); myuse hmutildir (s ^ ".sml"))
   fun appparsing s = (myuse parsingdir (s ^ ".sig"); myuse parsingdir (s ^ ".sml"))
 in
-  app (myuse hmakedir) ["HOLFS_dtype.sml", "HFS_NameMunge.sig"];
+  app (myuse hfsdir) ["HOLFS_dtype.sml", "HFS_NameMunge.sig"];
   myuse (hmakedir ++ "poly") "HFS_NameMunge.sml";
-  app appthis ["HOLFileSys"] ;
+  app apphfs ["HOLFileSys"] ;
   app apputil ["regexpMatch"] ;
   app appthis ["parse_glob"] ;
   app appdeps ["Holdep_tokens"] ;
