@@ -8,4 +8,8 @@ sig
 
   val pure_lookup : t -> hol_type -> thm info option
 
+  val thy_lookup : {thyname:string} -> t option
+  val fullDB : unit -> t
+  val updateDB : (hol_type * KernelSig.kernelname info) -> unit
+
 end
