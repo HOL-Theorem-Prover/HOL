@@ -178,9 +178,7 @@ local val DBref = ref empty_dbmap
             fun flat (n,(th,i)) = (n,th,i)
           in
             case thydelta of
-                DelConstant _ => purge_stale_bindings()
-              | DelTypeOp _ => purge_stale_bindings()
-              | NewBinding nb =>
+                NewBinding nb =>
                 (
                   if Theory.is_temp_binding (#1 nb) then ()
                   else
