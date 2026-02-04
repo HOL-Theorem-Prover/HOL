@@ -485,44 +485,28 @@ fun install_type(s,a,thy)   = add_typeCT {name=s, arity=a, theory=thy};
 fun install_const(s,ty,thy) = add_termCT {name=s, htype=ty, theory=thy}
 
 
-(*---------------------------------------------------------------------------
- * Is an object wellformed (current) wrt the symtab, i.e., have none of its
- * constants been re-declared after it was built? A constant is
- * up-to-date if either 1) it was not declared in the current theory (hence
- * it was declared in an ancestor theory and is thus frozen); or 2) it was
- * declared in the current theory and its witness is up-to-date.
- *
- * When a new entry is made in the theory, it is checked to see if it is
- * uptodate (or if its witnesses are). The "overwritten" bit of a segment
- * tells whether any element of the theory has been overwritten. If
- * overwritten is false, then the theory is uptodate. If we want to add
- * something to an uptodate theory, then no processing need be done.
- * Otherwise, we have to examine the item, and recursively any item it
- * depends on, to see if any constant or type constant occurring in it,
- * or any theorem it depends on, is outofdate. If so, then the item
- * will not be added to the theory.
- *
- * To clean up a theory with outofdate elements, use "scrub".
- *
- * To tell if an object is uptodate, we can't just look at it; we have
- * to recursively examine its witness(es). We can't just accept a witness
- * that seems to be uptodate, since its constants may be flagged as uptodate,
- * but some may depend on outofdate witnesses. The solution taken
- * here is to first set all constants in the segment signature to be
- * outofdate. Then a bottom-up pass is made. The "utd" flag in each
- * signature entry is used to cut off repeated recursive traversal, as in
- * dynamic programming. It holds the value "true" when the witness is
- * uptodate.
- *---------------------------------------------------------------------------*)
+(* ----------------------------------------------------------------------
+    Is an object wellformed (current) wrt the symtab, i.e., have none
+    of its constants been re-declared after it was built? This is
+    handled by the kernelid type from KernelSig and the accompanying
+    symbol table type. If a constant (term or tyop) is deleted
+    outright, or replaced by a new one, all instances of the old
+    constant are flagged as out-of-date (by adjusting the one
+    appropriate reference underneath. Derived values like theorems are
+    out-of-date if they refer to any out-of-date constants/tyops.
 
-fun uptodate_thm thm =
-    Lib.all uptodate_term (Thm.concl thm::Thm.hyp thm)
-    andalso
-    uptodate_axioms (Tag.axioms_of (Thm.tag thm))
-and uptodate_axioms [] = true
+    When a new entry is made in the theory, it is checked to see if it is
+    uptodate (else it is not added).
+
+    When a theory is about to be exported it is also "scrubbed" clean of
+    theorems that may have been out-dated by actions after they were first
+    added; this is handled by the functions scrub and scrubCT below.
+   ---------------------------------------------------------------------- *)
+
+fun uptodate_axioms [] = true
   | uptodate_axioms rlist =
     let
-      fun get_axtag th = hd (Tag.axioms_of (Thm.tag th))
+      fun get_axtag th = hd (Tag.axioms_of (tag th))
       val axs = map (fn (_,(th,_)) => (get_axtag th,concl th))
                     (thy_axioms(theCT()))
     in
@@ -531,6 +515,12 @@ and uptodate_axioms [] = true
          axioms never have hypotheses (check type of new_axiom) *)
       Lib.all (uptodate_term o Lib.C Lib.assoc axs) rlist
     end handle HOL_ERR _ => false
+
+fun uptodate_thm thm =
+    List.all Term.uptodate_term (concl thm :: hyp thm) andalso
+    uptodate_axioms (Tag.axioms_of (Thm.tag thm))
+
+
 
 fun tabfilter P tab =
     Symtab.fold (fn nmv => fn A => if P nmv then Symtab.update nmv A else A)
