@@ -57,7 +57,7 @@ Overload "=~" = ``cardeq``
 Overload "≉" = “λa b. ¬(a ≈ b)”
 val _ = set_fixity "≉" (Infix(NONASSOC, 450))
 
-Theorem cardeq_REFL:
+Theorem cardeq_REFL[simp]:
     !s. s =~ s
 Proof
   rw[cardeq_def] >> qexists_tac `\x. x` >> rw[BIJ_IFF_INV] >>
@@ -108,7 +108,7 @@ Theorem cardleq_ANTISYM:
 Proof
     REWRITE_TAC [cardleq_def, cardeq_def]
  >> REWRITE_TAC [SCHROEDER_BERNSTEIN]
-QED(* in pred_setTheory *)
+QED
 
 Theorem CARDEQ_FINITE:
     s1 =~ s2 ==> (FINITE s1 <=> FINITE s2)
@@ -213,6 +213,13 @@ Theorem CARDEQ_SUBSET_CARDLEQ:
     s =~ t ==> s <<= t
 Proof
   rw[cardeq_def, cardleq_def, BIJ_DEF] >> metis_tac[]
+QED
+
+Theorem cardleq_ANTISYM_IFF:
+  ∀s t. s ≼ t ∧ t ≼ s ⇔ s ≈ t
+Proof
+  simp[EQ_IMP_THM, cardleq_ANTISYM] >>
+  metis_tac[CARDEQ_SUBSET_CARDLEQ, cardeq_SYM]
 QED
 
 Theorem CARDEQ_CARDLEQ:
@@ -1776,45 +1783,14 @@ Proof
 QED
 
 Theorem CARD_LE_INJ:
-   !s t. FINITE s /\ FINITE t /\ CARD s <= CARD t
-   ==> ?f:'a->'b. (IMAGE f s) SUBSET t /\
+   !s t.
+     FINITE s /\ FINITE t /\ CARD s <= CARD t ==>
+     ?f:'a->'b. (IMAGE f s) SUBSET t /\
                 !x y. x IN s /\ y IN s /\ (f x = f y) ==> (x = y)
 Proof
-  REWRITE_TAC[CONJ_EQ_IMP] THEN SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN
-  ONCE_REWRITE_TAC [METIS []
-    ``!s. (!t. FINITE t ==> CARD s <= CARD t ==>
-    ?f. IMAGE (f:'a->'b) s SUBSET t /\
-      !x. x IN s ==> !y. y IN s ==> (f x = f y) ==> (x = y)) =
-     (\s. (!t. FINITE t ==> CARD s <= CARD t ==>
-    ?f. IMAGE (f:'a->'b) s SUBSET t /\
-      !x. x IN s ==> !y. y IN s ==> (f x = f y) ==> (x = y))) s``] THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [IMAGE_EMPTY, IMAGE_INSERT, EMPTY_SUBSET, NOT_IN_EMPTY] THEN
-  SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT] THEN
-  SIMP_TAC std_ss [RIGHT_IMP_FORALL_THM] THEN
-  MAP_EVERY X_GEN_TAC [``s:'a->bool``, ``x:'a``] THEN
-  SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN STRIP_TAC THEN DISCH_TAC THEN
-  ONCE_REWRITE_TAC [METIS []
-   ``!t. (SUC (CARD s) <= CARD t ==>
-  ?f. f x INSERT IMAGE (f:'a->'b) s SUBSET t /\
-    !x'. x' IN x INSERT s ==>
-      !y. y IN x INSERT s ==> (f x' = f y) ==> (x' = y)) =
-     (\t. SUC (CARD s) <= CARD t ==>
-  ?f. f x INSERT IMAGE (f:'a->'b) s SUBSET t /\
-    !x'. x' IN x INSERT s ==>
-      !y. y IN x INSERT s ==> (f x' = f y) ==> (x' = y)) t``] THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT, LE, NOT_SUC] THEN
-  SIMP_TAC std_ss [RIGHT_IMP_FORALL_THM] THEN
-  MAP_EVERY X_GEN_TAC [``t:'b->bool``, ``y:'b``] THEN
-  SIMP_TAC std_ss [CARD_EMPTY, CARD_INSERT] THEN
-  STRIP_TAC THEN POP_ASSUM K_TAC THEN DISCH_TAC THEN
-  STRIP_TAC THEN
-  FIRST_X_ASSUM(MP_TAC o SPEC ``t:'b->bool``) THEN ASM_REWRITE_TAC[] THEN
-  DISCH_THEN(X_CHOOSE_THEN ``f:'a->'b`` STRIP_ASSUME_TAC) THEN
-  EXISTS_TAC ``\z:'a. if z = x then (y:'b) else f(z)`` THEN
-  SIMP_TAC std_ss [IN_INSERT, SUBSET_DEF, IN_IMAGE] THEN
-  METIS_TAC[SUBSET_DEF, IN_IMAGE]
+  rpt strip_tac >> drule_all (iffRL CARDLEQ_CARD) >>
+  simp[cardleq_def, INJ_IFF, PULL_EXISTS] >> qx_gen_tac ‘f’ >> strip_tac >>
+  qexists ‘f’ >> csimp[SUBSET_DEF, PULL_EXISTS]
 QED
 
 Theorem CARD_EQ_BIJECTION:
@@ -1968,12 +1944,6 @@ Theorem INFINITE_DIFF_FINITE = INFINITE_DIFF_FINITE'
 (* ------------------------------------------------------------------------- *)
 (* misc.                                                                     *)
 (* ------------------------------------------------------------------------- *)
-
-Theorem GE:
-    !n m:num. m >= n <=> n <= m
-Proof
-  METIS_TAC [GREATER_EQ]
-QED
 
 Theorem LE_SUC_LT:
    !m n. (SUC m <= n) <=> (m < n)
@@ -2203,73 +2173,28 @@ QED
 (* The "easy" ordering properties.                                           *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem CARD_LE_REFL:
-   !s:'a->bool. s <=_c s
-Proof
-  simp[cardleq_REFL]
-QED
+(* HOL Light aliases/names *)
+Theorem CARD_EQ_REFL = cardeq_REFL
+Theorem CARD_EQ_SYM = cardeq_SYM
+Theorem CARD_EQ_TRANS = cardeq_TRANS
+Theorem CARD_EQ_EMPTY = cj 1 CARDEQ_0
+Theorem CARD_EQ_CARD = CARDEQ_CARD_EQN |> Q.GENL [‘s1’, ‘s2’]
+Theorem CARD_EQ_IMP_LE = CARDEQ_SUBSET_CARDLEQ
 
-Theorem CARD_LE_TRANS:
-   !s:'a->bool t:'b->bool u:'c->bool.
-       s <=_c t /\ t <=_c u ==> s <=_c u
-Proof
-  metis_tac[cardleq_TRANS]
-QED
+Theorem CARD_LE_REFL = cardleq_REFL
+Theorem CARD_LE_TRANS = cardleq_TRANS
+Theorem CARD_LE_ANTISYM = cardleq_ANTISYM_IFF
+Theorem CARD_LT_REFL = cardlt_REFL
+Theorem CARD_LET_TRANS = cardleq_lt_trans
+Theorem CARD_LTE_TRANS = cardlt_leq_trans
+Theorem CARD_LT_TRANS = cardlt_TRANS
+Theorem CARD_LE_EMPTY = cardleq_empty
 
-Theorem CARD_LT_REFL:
-   !s:'a->bool. ~(s <_c s)
-Proof
-  MESON_TAC [CARD_LE_REFL]
-QED
+Theorem CARD_LE_TOTAL = cardleq_dichotomy
+Theorem CARD_LE_LT = cardleq_lteq
+Theorem CARD_LE_CONG = CARDEQ_CARDLEQ
+Theorem CARD_LE_SUBSET = SUBSET_CARDLEQ
 
-Theorem CARD_LET_TRANS:
-   !s:'a->bool t:'b->bool u:'c->bool.
-       s <=_c t /\ t <_c u ==> s <_c u
-Proof
-  REPEAT GEN_TAC THEN
-  ONCE_REWRITE_TAC [lt_c] THEN
-  MATCH_MP_TAC(TAUT `(a /\ b ==> c) /\ (c' /\ a ==> b')
-                     ==> a /\ b /\ ~b' ==> c /\ ~c'`) THEN
-  REWRITE_TAC[CARD_LE_TRANS]
-QED
-
-Theorem CARD_LTE_TRANS:
-   !s:'a->bool t:'b->bool u:'c->bool.
-       s <_c t /\ t <=_c u ==> s <_c u
-Proof
-  REPEAT GEN_TAC THEN ONCE_REWRITE_TAC [lt_c] THEN
-  MATCH_MP_TAC(TAUT `(a /\ b ==> c) /\ (b /\ c' ==> a')
-                     ==> (a /\ ~a') /\ b ==> c /\ ~c'`) THEN
-  REWRITE_TAC[CARD_LE_TRANS]
-QED
-
-Theorem CARD_LT_TRANS:
-   !s:'a->bool t:'b->bool u:'c->bool.
-       s <_c t /\ t <_c u ==> s <_c u
-Proof
-  MESON_TAC[lt_c, CARD_LTE_TRANS]
-QED
-
-Theorem CARD_EQ_REFL:
-   !s:'a->bool. s =_c s
-Proof
-  GEN_TAC THEN REWRITE_TAC[eq_c] THEN EXISTS_TAC ``\x:'a. x`` THEN
-  SIMP_TAC std_ss [] THEN MESON_TAC[]
-QED
-
-Theorem CARD_EQ_SYM:
-   !s t. (s =_c t) <=> (t =_c s)
-Proof
-  REPEAT GEN_TAC THEN REWRITE_TAC[eq_c, BIJECTIVE_INVERSES] THEN
-  SIMP_TAC std_ss [GSYM RIGHT_EXISTS_AND_THM] THEN
-  METIS_TAC []
-QED
-
-Theorem CARD_EQ_IMP_LE:
-   !s t. s =_c t ==> s <=_c t
-Proof
-  REWRITE_TAC[le_c, eq_c] THEN MESON_TAC[]
-QED
 
 Theorem CARD_LT_IMP_LE:
    !s t. s <_c t ==> s <=_c t
@@ -2279,48 +2204,14 @@ Proof
 QED
 
 Theorem CARD_LE_RELATIONAL:
-   !(R:'a->'b->bool) s.
-        (!x y y'. x IN s /\ R x y /\ R x y' ==> (y = y'))
-        ==> {y | ?x. x IN s /\ R x y} <=_c s
+  !(R:'a->'b->bool) s.
+     (!x y y'. x IN s /\ R x y /\ R x y' ==> (y = y')) ==>
+     {y | ?x. x IN s /\ R x y} <=_c s
 Proof
-  REPEAT STRIP_TAC THEN REWRITE_TAC[le_c] THEN
-  EXISTS_TAC ``\y:'b. @x:'a. x IN s /\ R x y`` THEN
-  SIMP_TAC std_ss [GSPECIFICATION] THEN METIS_TAC[]
+  rpt strip_tac >> REWRITE_TAC[le_c] >>
+  qexists ‘\y:'b. @x:'a. x IN s /\ R x y’ >> simp[] >>
+  METIS_TAC[]
 QED
-
-(* ------------------------------------------------------------------------- *)
-(* Two trivial lemmas.                                                       *)
-(* ------------------------------------------------------------------------- *)
-
-Theorem CARD_LE_EMPTY:
-   !s. (s <=_c EMPTY) <=> (s = EMPTY)
-Proof
-  SIMP_TAC std_ss [le_c, EXTENSION, NOT_IN_EMPTY] THEN METIS_TAC[]
-QED
-
-Theorem CARD_EQ_EMPTY:
-   !s. (s =_c EMPTY) <=> (s = EMPTY)
-Proof
-  REWRITE_TAC[eq_c, EXTENSION, NOT_IN_EMPTY] THEN MESON_TAC[]
-QED
-
-(* ------------------------------------------------------------------------- *)
-(* Antisymmetry (the Schroeder-Bernstein theorem).                           *)
-(* ------------------------------------------------------------------------- *)
-
-Theorem CARD_LE_ANTISYM:
-    !s:'a->bool t:'b->bool. s <=_c t /\ t <=_c s <=> (s =_c t)
-Proof
-    rpt GEN_TAC >> EQ_TAC
- >- PROVE_TAC [cardleq_ANTISYM]
- >> PROVE_TAC [CARD_EQ_IMP_LE, CARD_EQ_SYM]
-QED
-
-(* ------------------------------------------------------------------------- *)
-(* Totality (cardinal comparability).                                        *)
-(* ------------------------------------------------------------------------- *)
-
-Theorem CARD_LE_TOTAL = cardleq_dichotomy;
 
 (* ------------------------------------------------------------------------- *)
 (* Other variants like "trichotomy of cardinals" now follow easily.          *)
@@ -2329,31 +2220,33 @@ Theorem CARD_LE_TOTAL = cardleq_dichotomy;
 Theorem CARD_LET_TOTAL:
    !s:'a->bool t:'b->bool. s <=_c t \/ t <_c s
 Proof
-  ONCE_REWRITE_TAC [lt_c] THEN MESON_TAC[CARD_LE_TOTAL]
+  REWRITE_TAC [EXCLUDED_MIDDLE]
 QED
 
 Theorem CARD_LTE_TOTAL:
    !s:'a->bool t:'b->bool. s <_c t \/ t <=_c s
 Proof
-  ONCE_REWRITE_TAC [lt_c] THEN MESON_TAC[CARD_LE_TOTAL]
+  MESON_TAC[]
 QED
 
 Theorem CARD_LT_TOTAL:
    !s:'a->bool t:'b->bool. (s =_c t) \/ s <_c t \/ t <_c s
 Proof
-  REWRITE_TAC[Once lt_c, GSYM CARD_LE_ANTISYM] THEN MESON_TAC[CARD_LE_TOTAL]
+  MESON_TAC[cardleq_lteq]
 QED
 
+(* this is an instance of reflexivity *)
 Theorem CARD_NOT_LE:
    !s:'a->bool t:'b->bool. ~(s <=_c t) <=> t <_c s
 Proof
-  ONCE_REWRITE_TAC [lt_c] THEN MESON_TAC[CARD_LE_TOTAL]
+  REWRITE_TAC []
 QED
 
+(* ¬¬p = p *)
 Theorem CARD_NOT_LT:
    !s:'a->bool t:'b->bool. ~(s <_c t) <=> t <=_c s
 Proof
-  ONCE_REWRITE_TAC [lt_c] THEN MESON_TAC[CARD_LE_TOTAL]
+  REWRITE_TAC []
 QED
 
 Theorem CARD_LT_LE:
@@ -2362,9 +2255,6 @@ Proof
   REWRITE_TAC[Once lt_c, GSYM CARD_LE_ANTISYM] THEN TAUT_TAC
 QED
 
-Theorem CARD_LE_LT = cardleq_lteq
-
-Theorem CARD_LE_CONG = CARDEQ_CARDLEQ
 
 Theorem CARD_LT_CONG:
  !s:'a->bool s':'b->bool t:'c->bool t':'d->bool.
@@ -2383,7 +2273,6 @@ Proof
   metis_tac[CARD_LT_CONG, CARD_LT_REFL, cardeq_REFL, cardleq_lteq]
 QED
 
-Theorem CARD_EQ_TRANS = cardeq_TRANS
 
 Theorem CARD_EQ_CONG:
   !s:'a->bool s':'b->bool t:'c->bool t':'d->bool.
@@ -2405,11 +2294,6 @@ Proof
   REWRITE_TAC [Once (GSYM CARD_NOT_LT), INFINITE_CARD_LE]
 QED
 
-Theorem CARD_LE_SUBSET:
-   !s:'a->bool t. s SUBSET t ==> s <=_c t
-Proof
-  REWRITE_TAC[SUBSET_DEF, le_c] THEN MESON_TAC[combinTheory.I_THM]
-QED
 
 Theorem CARD_LE_UNIV:
    !s:'a->bool. s <=_c univ(:'a)
@@ -2514,13 +2398,6 @@ Proof
   METIS_TAC[CARD_SUBSET_EQ, CARD_EQ_CARD_IMP, CARD_EQ_SYM]
 QED
 
-Theorem CARD_EQ_CARD:
-   !s:'a->bool t:'b->bool.
-        FINITE s /\ FINITE t ==> (s =_c t <=> (CARD s = CARD t))
-Proof
-  MESON_TAC[CARD_FINITE_CONG, ARITH_PROVE ``m <= n /\ n <= m <=> (m = n:num)``,
-            CARD_LE_ANTISYM, CARD_LE_CARD]
-QED
 
 Theorem CARD_HAS_SIZE_CONG:
    !s:'a->bool t:'b->bool n. s HAS_SIZE n /\ s =_c t ==> t HAS_SIZE n
@@ -2529,11 +2406,7 @@ Proof
   MESON_TAC[CARD_EQ_CARD, CARD_FINITE_CONG]
 QED
 
-Theorem CARD_LE_IMAGE:
-   !f s. IMAGE f s <=_c s
-Proof
-  SIMP_TAC std_ss [LE_C, FORALL_IN_IMAGE] THEN MESON_TAC[]
-QED
+Theorem CARD_LE_IMAGE = IMAGE_cardleq
 
 Theorem CARD_LE_IMAGE_GEN:
    !f:'a->'b s t. t SUBSET IMAGE f s ==> t <=_c s
@@ -3159,14 +3032,14 @@ Proof
   METIS_TAC []
 QED
 
-Theorem COUNTABLE_INSERT:
+Theorem COUNTABLE_INSERT[simp]:
    !x s. COUNTABLE(x INSERT s) <=> COUNTABLE s
 Proof
   ONCE_REWRITE_TAC[SET_RULE ``x INSERT s = {x} UNION s``] THEN
   REWRITE_TAC[COUNTABLE_UNION, COUNTABLE_SING]
 QED
 
-Theorem COUNTABLE_DELETE:
+Theorem COUNTABLE_DELETE[simp]:
    !x:'a s. COUNTABLE(s DELETE x) <=> COUNTABLE s
 Proof
   REPEAT GEN_TAC THEN ASM_CASES_TAC ``(x:'a) IN s`` THEN
@@ -3179,12 +3052,8 @@ QED
 Theorem COUNTABLE_DIFF_FINITE:
    !s t. FINITE s ==> (COUNTABLE(t DIFF s) <=> COUNTABLE t)
 Proof
-  SIMP_TAC std_ss [RIGHT_FORALL_IMP_THM] THEN
-  ONCE_REWRITE_TAC [METIS [] ``!s. (!t. COUNTABLE (t DIFF s) <=> COUNTABLE t) =
-                          (\s. !t. COUNTABLE (t DIFF s) <=> COUNTABLE t) s``] THEN
-  MATCH_MP_TAC FINITE_INDUCT THEN BETA_TAC THEN
-  SIMP_TAC std_ss [DIFF_EMPTY, SET_RULE ``s DIFF (x INSERT t) = (s DIFF t) DELETE x``,
-           COUNTABLE_DELETE]
+  Induct_on ‘FINITE’ >>
+  simp[SET_RULE ``s DIFF (x INSERT t) = (s DIFF t) DELETE x``]
 QED
 
 Theorem UNCOUNTABLE_DIFF_COUNTABLE :
@@ -3570,17 +3439,8 @@ QED
 (* Misc lemmas from HOL-Light's card.ml                                      *)
 (* ------------------------------------------------------------------------- *)
 
-Theorem MUL_C_UNIV :
-    univ(:'a) *_c univ(:'b) = univ(:'a # 'b)
-Proof
-  REWRITE_TAC[CROSS_UNIV]
-QED
-
-Theorem CARD_MUL_FINITE_EQ :
-    !s t. FINITE (s *_c t) <=> s = {} \/ t = {} \/ FINITE s /\ FINITE t
-Proof
-  REWRITE_TAC [FINITE_CROSS_EQ]
-QED
+Theorem MUL_C_UNIV = SYM CROSS_UNIV
+Theorem CARD_MUL_FINITE_EQ = FINITE_CROSS_EQ
 
 Theorem INJECTIVE_ON_ALT :
     !P (f :'a -> 'b).
