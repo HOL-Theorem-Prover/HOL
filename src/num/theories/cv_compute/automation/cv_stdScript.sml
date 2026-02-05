@@ -3,10 +3,10 @@
 *)
 Theory cv_std
 Ancestors
-  cv cv_type arithmetic words cv_rep cv_prim pair list option sum
+  cv cv_type arithmetic words byte cv_rep cv_prim pair list option sum
   alist indexedLists rich_list sptree finite_set
 Libs
-  dep_rewrite cv_typeLib cv_repLib cv_transLib
+  dep_rewrite wordsLib cv_typeLib cv_repLib cv_transLib
 
 Overload Num[local] = “cv$Num”
 Overload Pair[local] = “cv$Pair”
@@ -637,4 +637,49 @@ Proof
   \\ rw[Q.SPEC`Pair x y`cv_size'_def]
   \\ Cases_on`x` \\ Cases_on`z` \\ gvs[]
   \\ gvs[Q.SPEC`Pair x y`cv_size'_def]
+QED
+
+(*----------------------------------------------------------*
+   byte: word_of_bytes / word_to_bytes
+ *----------------------------------------------------------*)
+
+val _ = cv_trans num_of_bytes_def;
+val _ = cv_trans bytes_of_num_def;
+val _ = cv_trans be_bytes_def;
+
+(* Theorem connecting word_of_bytes (little-endian, starting at 0w) to num_of_bytes.
+   This can be instantiated at any word type and then cv_trans'd. *)
+Theorem word_of_bytes_le_eq_num_of_bytes:
+  8 ≤ dimindex(:'a) ∧ divides 8 (dimindex(:'a)) ⇒
+  word_of_bytes F 0w bs = n2w (num_of_bytes bs) : 'a word
+Proof
+  strip_tac
+  \\ drule_then (drule_then irule) word_eq_of_get_byte
+  \\ qexists_tac `F`
+  \\ qx_gen_tac `j` \\ strip_tac
+  \\ drule_then drule get_byte_word_of_bytes_le
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[first_byte_at_0w]
+  \\ conj_tac >- gvs[DIV_LE_X,dimindex_lt_dimword]
+  \\ DEP_REWRITE_TAC[get_byte_n2w_le]
+  \\ simp[]
+  \\ qmatch_assum_abbrev_tac`j < k`
+  \\ `dimword(:'a) = 256 ** k`
+  by (simp[dimword_def] \\ gvs[dividesTheory.DIV_MULT_EQ]
+      \\ qpat_x_assum`_ * _ = _`(SUBST_ALL_TAC o SYM)
+      \\ simp[EXP_EXP_MULT] )
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac`x MOD _ DIV _`
+  \\ qspecl_then[`x`,`256 ** j`,`256 ** (k - j)`]mp_tac DIV_MOD_MOD_DIV
+  \\ impl_tac >- rw[]
+  \\ simp[GSYM EXP_ADD]
+  \\ disch_then $ SUBST_ALL_TAC o SYM
+  \\ qmatch_goalsub_abbrev_tac`l = _`
+  \\ Cases_on`l` \\ simp[dimword_8]
+  \\ qspecl_then[`256 ** (k - j - 1)`,`256`]mp_tac MOD_MULT_MOD
+  \\ impl_tac >- gvs[]
+  \\ simp[GSYM EXP, ADD1]
+  \\ disch_then kall_tac
+  \\ simp[Abbr`x`, num_of_bytes_DIV_EXP_MOD]
+  \\ rw[] \\ gvs[]
 QED
