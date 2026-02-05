@@ -1079,7 +1079,7 @@ region instead. With prefix ARG prompt for a file-name to load."
 (defun hol--looks-like-root-holdir (dir)
   (cl-every
    (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
-   '("COPYRIGHT" "tools" "tools-poly" "std.prelude" "bin")))
+   '("COPYRIGHT" "tools" "tools-poly" "bin" "sigobj")))
 
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
@@ -1214,7 +1214,7 @@ region instead. With prefix ARG prompt for a file-name to load."
         (new-frame . hol)))
 
 (defun hol-with-region ()
-  "Starts a HOL session and pastes selected region into it. If there is no active region, pastes whole buffer."
+  "Starts a HOL session and pastes selected region into it. If there is no active region, pastes whole buffer up to latest whitespace line before point."
   (interactive)
   (let* ((style-str (completing-read
                      (concat "HOL buffer position ("
