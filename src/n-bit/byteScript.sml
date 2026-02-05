@@ -464,6 +464,23 @@ Proof
   rw[word_to_bytes_def]
 QED
 
+Theorem EL_word_to_bytes_aux:
+  i < n ==> EL i (word_to_bytes_aux n w be) = get_byte (n2w i) w be
+Proof
+  (* By induction on n.
+     - Base n=0: i < 0 is false, vacuously true.
+     - Step: word_to_bytes_aux (SUC n) w be = (word_to_bytes_aux n w be) ++ [get_byte (n2w n) w be]
+       - If i < n: EL i (xs ++ [y]) = EL i xs (since i < LENGTH xs), apply IH.
+       - If i = n: EL n (xs ++ [y]) = y (since LENGTH xs = n).
+  *)
+  map_every qid_spec_tac [`i`,`n`]
+  \\ Induct \\ rw[word_to_bytes_aux_def]
+  \\ Cases_on `i < n`
+  >- simp[EL_APPEND1]
+  \\ `i = n` by gvs[]
+  \\ simp[EL_APPEND2]
+QED
+
 Theorem byte_index_cycle:
   8 <= dimindex (:'a) ==>
   byte_index (n2w ((w2n (a:'a word)) MOD (dimindex (:'a) DIV 8)):'a word) be = byte_index a be
@@ -1013,6 +1030,22 @@ Theorem LENGTH_bytes_of_num[simp]:
   ∀k n. LENGTH (bytes_of_num k n) = k
 Proof
   Induct \\ rw[bytes_of_num_def]
+QED
+
+Theorem EL_bytes_of_num:
+  i < k ==> EL i (bytes_of_num k n) = n2w (n DIV 256 ** i)
+Proof
+  (* By induction on k, generalizing over n.
+     - Base k=0: i < 0 is false, vacuously true.
+     - Step: bytes_of_num (SUC k) n = (n2w n) :: bytes_of_num k (n DIV 256)
+       - If i = 0: EL 0 (x::xs) = n2w n = n2w (n DIV 256^0).
+       - If i = SUC i': EL (SUC i') (x::xs) = EL i' (bytes_of_num k (n DIV 256))
+         By IH: = n2w ((n DIV 256) DIV 256^i') = n2w (n DIV 256^(SUC i')).
+  *)
+  map_every qid_spec_tac [`n`,`i`,`k`]
+  \\ Induct \\ rw[bytes_of_num_def]
+  \\ Cases_on `i` \\ gvs[]
+  \\ simp[DIV_DIV_DIV_MULT, EXP]
 QED
 
 Theorem LENGTH_be_bytes:

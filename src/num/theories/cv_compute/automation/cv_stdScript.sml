@@ -727,22 +727,12 @@ QED
 Theorem word_to_bytes_le_eq_bytes_of_num:
   word_to_bytes (w:'a word) F = bytes_of_num (dimindex(:'a) DIV 8) (w2n w)
 Proof
-  (* Proof sketch:
-     Unfold word_to_bytes to word_to_bytes_aux. Let k = dimindex(:'a) DIV 8.
-     We show both sides produce the same list by proving they have the same
-     length (both k) and the same elements.
-
-     For element i < k:
-       EL i (word_to_bytes_aux k w F) = get_byte (n2w i) w F
-     Using get_byte_n2w_le (from byteTheory):
-       get_byte (n2w i) w F = n2w ((w2n w) DIV 256^i)
-
-     For bytes_of_num:
-       EL i (bytes_of_num k n) = n2w (n DIV 256^i)  (by simple induction on bytes_of_num)
-
-     With n = w2n w, both give n2w ((w2n w) DIV 256^i).
-  *)
-  cheat
+  reverse $ Cases_on`8 ≤ dimindex(:'a)` >- (
+    gvs[GSYM DIV_EQ_0, NOT_LESS_EQUAL]
+    \\ rw[bytes_of_num_def, word_to_bytes_def, word_to_bytes_aux_def])
+  \\ rw[word_to_bytes_def, LIST_EQ_REWRITE]
+  \\ rw[EL_bytes_of_num, EL_word_to_bytes_aux]
+  \\ rw[get_byte_n2w_le]
 QED
 
 (* Theorem connecting word_to_bytes (big-endian) to bytes_of_num.
@@ -751,22 +741,12 @@ Theorem word_to_bytes_be_eq_bytes_of_num:
   word_to_bytes (w:'a word) T =
     REVERSE (bytes_of_num (dimindex(:'a) DIV 8) (w2n w))
 Proof
-  (* Proof sketch:
-     Unfold word_to_bytes to word_to_bytes_aux. Let k = dimindex(:'a) DIV 8.
-     We show both sides produce the same list.
-
-     For element i < k:
-       EL i (word_to_bytes_aux k w T) = get_byte (n2w i) w T
-     Using get_byte_n2w_be (from byteTheory):
-       get_byte (n2w i) w T = n2w ((w2n w) DIV 256^(k - 1 - i))
-
-     For REVERSE (bytes_of_num k n):
-       EL i (REVERSE (bytes_of_num k n)) = EL (k - 1 - i) (bytes_of_num k n)
-                                         = n2w (n DIV 256^(k - 1 - i))
-
-     With n = w2n w, both give n2w ((w2n w) DIV 256^(k - 1 - i)).
-  *)
-  cheat
+  reverse $ Cases_on`8 ≤ dimindex(:'a)` >- (
+    gvs[GSYM DIV_EQ_0, NOT_LESS_EQUAL]
+    \\ rw[bytes_of_num_def, word_to_bytes_def, word_to_bytes_aux_def])
+  \\ rw[word_to_bytes_def, LIST_EQ_REWRITE, EL_REVERSE, PRE_SUB1]
+  \\ rw[EL_bytes_of_num, EL_word_to_bytes_aux]
+  \\ rw[get_byte_n2w_be]
 QED
 
 Definition word_of_bytes_le_def:
@@ -775,6 +755,14 @@ End
 
 Definition word_of_bytes_be_def:
   word_of_bytes_be = word_of_bytes T 0w
+End
+
+Definition word_to_bytes_le_def:
+  word_to_bytes_le w = word_to_bytes w F
+End
+
+Definition word_to_bytes_be_def:
+  word_to_bytes_be w = word_to_bytes w T
 End
 
 (* Translate at common word sizes: 32 and 64 bits *)
@@ -795,10 +783,14 @@ val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
                    |> SRULE[dividesTheory.compute_divides,
                             GSYM word_of_bytes_be_def]);
 val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:32”] |> SRULE []);
+                   |> INST_TYPE [alpha |-> “:32”]
+                   |> SRULE [GSYM word_to_bytes_le_def]);
 val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:64”] |> SRULE []);
+                   |> INST_TYPE [alpha |-> “:64”]
+                   |> SRULE [GSYM word_to_bytes_le_def]);
 val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:32”] |> SRULE []);
+                   |> INST_TYPE [alpha |-> “:32”]
+                   |> SRULE [GSYM word_to_bytes_be_def]);
 val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:64”] |> SRULE [])
+                   |> INST_TYPE [alpha |-> “:64”]
+                   |> SRULE [GSYM word_to_bytes_be_def])
