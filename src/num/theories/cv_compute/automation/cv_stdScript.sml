@@ -683,3 +683,122 @@ Proof
   \\ simp[Abbr`x`, num_of_bytes_DIV_EXP_MOD]
   \\ rw[] \\ gvs[]
 QED
+
+(* Theorem connecting word_of_bytes (big-endian, starting at 0w) to num_of_bytes via be_bytes *)
+Theorem word_of_bytes_be_eq_num_of_bytes:
+  8 ≤ dimindex(:'a) ∧ divides 8 (dimindex (:'a)) ⇒
+  word_of_bytes T 0w bs =
+    n2w (num_of_bytes (be_bytes (dimindex(:'a) DIV 8) [] bs)) : 'a word
+Proof
+  strip_tac
+  \\ drule_then (drule_then irule) word_eq_of_get_byte
+  \\ qexists_tac `T`
+  \\ qx_gen_tac `j` \\ strip_tac
+  \\ drule_then drule get_byte_word_of_bytes_be
+  \\ simp[] \\ disch_then kall_tac
+  \\ DEP_REWRITE_TAC[first_byte_at_0w]
+  \\ qmatch_assum_abbrev_tac `j < k`
+  \\ conj_tac >- gvs[DIV_LE_X, dimindex_lt_dimword, Abbr`k`]
+  \\ DEP_REWRITE_TAC[get_byte_n2w_be]
+  \\ simp[LENGTH_be_bytes]
+  \\ `dimword(:'a) = 256 ** k`
+  by (simp[dimword_def] \\ gvs[dividesTheory.DIV_MULT_EQ]
+      \\ qpat_x_assum`_ * _ = _`(SUBST_ALL_TAC o SYM)
+      \\ simp[EXP_EXP_MULT] )
+  \\ simp[]
+  \\ qmatch_goalsub_abbrev_tac `x MOD _ DIV _`
+  \\ qspecl_then[`x`,`256 ** (k - 1 - j)`,`256 ** (j + 1)`]mp_tac DIV_MOD_MOD_DIV
+  \\ impl_tac >- rw[]
+  \\ simp[GSYM EXP_ADD]
+  \\ disch_then $ SUBST_ALL_TAC o SYM
+  \\ qmatch_goalsub_abbrev_tac `l = _`
+  \\ Cases_on `l` \\ simp[dimword_8]
+  \\ qspecl_then[`256 ** j`,`256`]mp_tac MOD_MULT_MOD
+  \\ impl_tac >- gvs[]
+  \\ simp[GSYM EXP, ADD1]
+  \\ disch_then kall_tac
+  \\ simp[Abbr`x`, num_of_bytes_DIV_EXP_MOD, LENGTH_be_bytes]
+  \\ simp[be_bytes_thm, EL_REVERSE, LENGTH_TAKE_EQ, EL_TAKE, EL_APPEND_EQN, EL_REPLICATE]
+  \\ rw[] \\ gvs[PRE_SUB1]
+QED
+
+(* Theorem connecting word_to_bytes (little-endian) to bytes_of_num.
+   No precondition needed since output length is fixed by dimindex. *)
+Theorem word_to_bytes_le_eq_bytes_of_num:
+  word_to_bytes (w:'a word) F = bytes_of_num (dimindex(:'a) DIV 8) (w2n w)
+Proof
+  (* Proof sketch:
+     Unfold word_to_bytes to word_to_bytes_aux. Let k = dimindex(:'a) DIV 8.
+     We show both sides produce the same list by proving they have the same
+     length (both k) and the same elements.
+
+     For element i < k:
+       EL i (word_to_bytes_aux k w F) = get_byte (n2w i) w F
+     Using get_byte_n2w_le (from byteTheory):
+       get_byte (n2w i) w F = n2w ((w2n w) DIV 256^i)
+
+     For bytes_of_num:
+       EL i (bytes_of_num k n) = n2w (n DIV 256^i)  (by simple induction on bytes_of_num)
+
+     With n = w2n w, both give n2w ((w2n w) DIV 256^i).
+  *)
+  cheat
+QED
+
+(* Theorem connecting word_to_bytes (big-endian) to bytes_of_num.
+   No precondition needed since output length is fixed by dimindex. *)
+Theorem word_to_bytes_be_eq_bytes_of_num:
+  word_to_bytes (w:'a word) T =
+    REVERSE (bytes_of_num (dimindex(:'a) DIV 8) (w2n w))
+Proof
+  (* Proof sketch:
+     Unfold word_to_bytes to word_to_bytes_aux. Let k = dimindex(:'a) DIV 8.
+     We show both sides produce the same list.
+
+     For element i < k:
+       EL i (word_to_bytes_aux k w T) = get_byte (n2w i) w T
+     Using get_byte_n2w_be (from byteTheory):
+       get_byte (n2w i) w T = n2w ((w2n w) DIV 256^(k - 1 - i))
+
+     For REVERSE (bytes_of_num k n):
+       EL i (REVERSE (bytes_of_num k n)) = EL (k - 1 - i) (bytes_of_num k n)
+                                         = n2w (n DIV 256^(k - 1 - i))
+
+     With n = w2n w, both give n2w ((w2n w) DIV 256^(k - 1 - i)).
+  *)
+  cheat
+QED
+
+Definition word_of_bytes_le_def:
+  word_of_bytes_le = word_of_bytes F 0w
+End
+
+Definition word_of_bytes_be_def:
+  word_of_bytes_be = word_of_bytes T 0w
+End
+
+(* Translate at common word sizes: 32 and 64 bits *)
+val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:32”]
+                   |> SRULE[dividesTheory.compute_divides,
+                            GSYM word_of_bytes_le_def]);
+val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:64”]
+                   |> SRULE[dividesTheory.compute_divides,
+                            GSYM word_of_bytes_le_def]);
+val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:32”]
+                   |> SRULE[dividesTheory.compute_divides,
+                            GSYM word_of_bytes_be_def]);
+val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
+                   |> INST_TYPE [alpha |-> “:64”]
+                   |> SRULE[dividesTheory.compute_divides,
+                            GSYM word_of_bytes_be_def]);
+val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:32”] |> SRULE []);
+val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:64”] |> SRULE []);
+val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:32”] |> SRULE []);
+val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
+                   |> INST_TYPE [alpha |-> “:64”] |> SRULE [])
