@@ -523,9 +523,7 @@ Proof
   rw[listset_def] >> irule bigunion_countable >>
   rw[PULL_EXISTS, countable_IMAGE_K0] >> TRY (irule image_countable) >>
   simp[listsetA_countable] >>
-  rw[pairset_def] >> irule bigunion_countable >>
-  rw[PULL_EXISTS, countable_IMAGE_K0] >> TRY (irule image_countable) >>
-  simp[pairsetB_countable, pairsetA_countable]
+  rw[pairset_def, pairsetA_countable]
 QED
 
 Theorem FsetB_countable:
@@ -534,15 +532,13 @@ Proof
   rw[FsetB_def] >> rw[sumset_def] >> irule bigunion_countable >>
   rw[PULL_EXISTS, countable_IMAGE_K0] >> TRY (irule image_countable) >>
   simp[sumsetA_countable, sumsetB_countable] >>
-  rw[pairset_def,fmapset_def] >> irule bigunion_countable >>
+  rw[pairset_def,fmapset_def,fmapsetA_countable] >> irule bigunion_countable >>
   rw[PULL_EXISTS, countable_IMAGE_K0] >> TRY (irule image_countable) >>
-  simp[pairsetB_countable, fmapsetA_countable] >>
+  simp[pairsetB_countable] >>
   rw[listset_def] >> irule bigunion_countable >>
   rw[PULL_EXISTS, countable_IMAGE_K0] >> TRY (irule image_countable) >>
   simp[listsetA_countable] >>
-  rw[pairset_def] >> irule bigunion_countable >>
-  rw[PULL_EXISTS, countable_IMAGE_K0] >> TRY (irule image_countable) >>
-  simp[pairsetB_countable, pairsetA_countable]
+  rw[pairset_def, pairsetB_countable]
 QED
 
 Theorem bnd:

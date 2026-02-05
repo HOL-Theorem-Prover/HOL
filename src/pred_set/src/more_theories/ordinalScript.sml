@@ -5,6 +5,13 @@ Ancestors
 Libs
   boolSimps
 
+Theorem ordlt_preds_mono:
+  a < b ==> preds a <<= preds b
+Proof
+  strip_tac >> irule CARD_LE_SUBSET >> simp[SUBSET_DEF] >>
+  metis_tac[ordlt_TRANS]
+QED
+
 Theorem cardeq_ordinals_exist:
   (s:'b set) <<= univ(:num + 'a) ==>
   ?a:'a ordinal. preds a =~ s
