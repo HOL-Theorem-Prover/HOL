@@ -3,7 +3,4 @@ struct
 
 open bnfBase
 
-fun
-
-
 end (* struct *)
