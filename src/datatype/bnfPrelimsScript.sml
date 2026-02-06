@@ -26,6 +26,7 @@ Theorem sumMap_O[unlisted] =
 
 fun sum_nm s : KernelSig.kernelname = {Thy = "sum", Name = s}
 fun pnm s : KernelSig.kernelname = {Thy = "bnfPrelims", Name = s}
+val T = {Name = "TRUTH", Thy = "bool"} (* placeholder *)
 
 val _ = bnfBase.updateDB (
   “:'a1 + 'a2”,
@@ -38,8 +39,8 @@ val _ = bnfBase.updateDB (
     mapO = pnm "sumMap_O",
     mapIMAGE = [sum_nm "SUM_MAP_SET", sum_nm "SUM_MAP_SET"],
 
-    set = [(“setL”, sum_nm "TRUTH"), (“setR”, sum_nm "TRUTH")],
-    gset = (“sum$SUM_SET”, sum_nm "TRUTH"),
+    set = [(“setL”, T), (“setR”, T)],
+    gset = (“sum$SUM_SET”, T),
 
     relator = (“SUM_REL”, sum_nm "SUM_REL_def"),
     bnd = “UNIV : num set”

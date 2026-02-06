@@ -26,66 +26,31 @@ fun kname_to_thm_info (bI fields :kname info) : thm info =
 local
   open ThyDataSexp
   exception OptionExn = Option.Option
-  fun toSEXP_term_definition (term,kname) = List[Term term,KName kname]
-  fun fromSEXP_term_definition (List[Term term,KName kname]) = (term,kname)
-    | fromSEXP_term_definition _ = raise OptionExn
+  val termdef_ed = pair_ed (term_ed, kname_ed)
 in
-  fun toSEXP0 (bI fields :kname info) =
-      let
-        val {siblings,map,set,gset,relator,bnd,mapO,mapID,mapIMAGE} = fields
-      in
-        List[
-          List[String "siblings",List (List.map Type siblings)],
-          List[String "map",toSEXP_term_definition map],
-          List[String "set",List (List.map toSEXP_term_definition set)],
-          List[String "gset",toSEXP_term_definition gset],
-          List[String "relator", toSEXP_term_definition relator],
-          List[String "bnd", Term bnd],
-          List[String "mapID", KName mapID],
-          List[String "mapO", KName mapO],
-          List[String "mapIMAGE", List (List.map KName mapIMAGE)]
-          ]
-      end
-  fun toSEXP (ty,b_info) = List[Type ty, toSEXP0 b_info]
+  fun tup2rec ((siblings,map,set,gset),
+               (relator,bnd),
+               (mapO,mapID,mapIMAGE)) =
+      bI {siblings = siblings, map = map, set = set, gset = gset,
+          relator = relator, bnd = bnd, mapO = mapO, mapID = mapID,
+          mapIMAGE = mapIMAGE}
+  fun rec2tup (bI {siblings , map, set, gset, relator, bnd, mapO, mapID,
+                   mapIMAGE}) =
+      ((siblings,map,set,gset), (relator,bnd), (mapO,mapID,mapIMAGE))
 
-
-  fun fromSEXP0 s =
-     let
-        fun dest_Type (Type t) = t
-          | dest_Type  _ = raise OptionExn
-        fun dest_KName (KName knm) = knm
-          | dest_KName _ = raise OptionExn
-        val fromSEXP_term_definition_list =
-            List.map fromSEXP_term_definition
-     in
-        case s of
-             List[
-                 List[String "siblings",List siblings_sexps],
-                 List[String "map",map_sexp],
-                 List[String "set", List set_sexps],
-                 List[String "gset", gset_sexp],
-                 List[String "relator", relator_sexp],
-                 List[String "bnd", Term bnd],
-                 List[String "mapID", KName mapID],
-                 List[String "mapO", KName mapO],
-                 List[String "mapIMAGE", List mapimg_names]
-             ] => bI {siblings = List.map dest_Type siblings_sexps,
-                      map = fromSEXP_term_definition map_sexp,
-                      gset = fromSEXP_term_definition gset_sexp,
-                      set = fromSEXP_term_definition_list set_sexps,
-                      relator = fromSEXP_term_definition relator_sexp,
-                      bnd = bnd,
-                      mapID = mapID,
-                      mapO = mapO,
-                      mapIMAGE = map dest_KName mapimg_names}
-          | _ => raise OptionExn
-     end
-
-  fun fromSEXP s =
-    case s of
-        List[Type ty,b_info_sexp] =>
-          (SOME (ty, fromSEXP0 b_info_sexp) handle OptionExn => NONE)
-     |  _ => NONE
+  val ed0 = pair3_ed (
+        pair4_ed (add_label "siblings" $ list_ed type_ed,
+                  add_label "map" $ termdef_ed,
+                  add_label "set" $ list_ed termdef_ed,
+                  add_label "gset" $ termdef_ed),
+        pair_ed (add_label "relator" $ termdef_ed,
+                 add_label "bnd" term_ed),
+        pair3_ed (add_label "mapID" $ kname_ed,
+                  add_label "mapO" $ kname_ed,
+                  add_label "mapIMAGE" $ list_ed kname_ed)
+      )
+  val ed1 = bij_ed (rec2tup, tup2rec) ed0
+  val bnf_ed = pair_ed (type_ed, ed1)
 end
 
 (*
@@ -123,7 +88,7 @@ val full_result as {DB = thy_lookup,
     AncestryData.fullmake {
       adinfo = adinfo,
       uptodate_delta = K true,
-      sexps = { dec = fromSEXP, enc = toSEXP},
+      sexps = { dec = #2 bnf_ed, enc = #1 bnf_ed},
       globinfo = {apply_to_global = apply_delta,
                   thy_finaliser = NONE,
                   initial_value = empty_t}
