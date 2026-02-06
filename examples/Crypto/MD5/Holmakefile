@@ -1,1 +1,17 @@
 INCLUDES = $(HOLDIR)/src/n-bit
+
+all: $(DEFAULT_TARGETS)
+.PHONY: all
+
+EXTRA_CLEANS = selftest.exe md5-selftest.log
+
+ifdef POLY
+all: md5-selftest.log
+
+selftest.exe: selftest.uo
+	$(HOLMOSMLC) -o $@ $<
+
+md5-selftest.log: selftest.exe
+	$(tee ./$< 2>&1,$@)
+
+endif
