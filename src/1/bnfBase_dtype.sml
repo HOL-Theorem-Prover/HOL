@@ -9,11 +9,11 @@ type kname = KernelSig.kernelname
 *)
 datatype 'a info = bI of {
   siblings : hol_type list, (* types I'm mutually recursive with *)
-  map : term * 'a,          (* type's map term and its def'n thm *)
-  set : (term * 'a) list,   (* type's set term and its def'n thm *)
-  gset : (term * 'a),       (* type's "generic set term" and def'n *)
-  relator : term * 'a,      (* type's rel term and its def'n thm *)
-  bnd : term,               (* type's ordinal bnd term and its def'n thm *)
+  map : term,               (* type's map term *)
+  set : term list,          (* type's set terms *)
+  gset : term,              (* type's "generic set term" *)
+  relator : term,           (* type's rel term *)
+  bnd : term,               (* type's ordinal bnd term *)
   mapID : 'a,               (* map id₁ .. idₙ = id theorem *)
   mapO : 'a,                (* map f₁ .. fₙ o map g₁ .. gₙ =
                                map (f₁ o g₁) ... (fₙ o gₙ) thm *)

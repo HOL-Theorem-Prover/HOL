@@ -15,10 +15,10 @@ fun kname_to_thm_info (bI fields :kname info) : thm info =
      fun convertTN (tm,kname) = (tm,DB.fetch_knm kname)
      val convertN = DB.fetch_knm
    in
-     bI {siblings = #siblings fields, map = convertTN map,
-         set = List.map convertTN set,
-         relator = convertTN relator,
-         bnd = bnd, gset = convertTN gset,
+     bI {siblings = #siblings fields, map = map,
+         set = set,
+         relator = relator,
+         bnd = bnd, gset = gset,
          mapID = convertN mapID, mapO = convertN mapO,
          mapIMAGE = List.map convertN mapIMAGE}
    end
@@ -40,10 +40,10 @@ in
 
   val ed0 = pair3_ed (
         pair4_ed (add_label "siblings" $ list_ed type_ed,
-                  add_label "map" $ termdef_ed,
-                  add_label "set" $ list_ed termdef_ed,
-                  add_label "gset" $ termdef_ed),
-        pair_ed (add_label "relator" $ termdef_ed,
+                  add_label "map" $ term_ed,
+                  add_label "set" $ list_ed term_ed,
+                  add_label "gset" $ term_ed),
+        pair_ed (add_label "relator" $ term_ed,
                  add_label "bnd" term_ed),
         pair3_ed (add_label "mapID" $ kname_ed,
                   add_label "mapO" $ kname_ed,
