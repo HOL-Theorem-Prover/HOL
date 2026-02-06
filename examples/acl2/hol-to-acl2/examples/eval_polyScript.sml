@@ -13,9 +13,7 @@ Libs
 
 Definition polyp_def:
  polyp [] = T /\
- polyp ((c,e)::r) =
-     (polyp r /\ c <> 0 /\ 0 <= e /\
-      (NULL r \/ SND(HD r) < e))
+ polyp ((c,e)::r) = (polyp r /\ c <> 0 /\ (NULL r \/ SND(HD r) < e))
 End
 
 (*---------------------------------------------------------------------------*)
@@ -48,7 +46,6 @@ End
 (*---------------------------------------------------------------------------*)
 
 Definition sum_polys_def:
-  sum_polys [] [] = [] ∧
   sum_polys [] p = p ∧
   sum_polys p [] = p ∧
   sum_polys ((c1,e1)::r1) ((c2,e2)::r2) =

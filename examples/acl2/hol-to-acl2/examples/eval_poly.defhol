@@ -95,8 +95,7 @@
 
 #|
    ⊢ (polyp [] ⇔ T) ∧
-     ∀r e c.
-       polyp ((c,e)::r) ⇔ polyp r ∧ c ≠ 0 ∧ 0 ≤ e ∧ (NULL r ∨ SND (HD r) < e)
+     ∀r e c. polyp ((c,e)::r) ⇔ polyp r ∧ c ≠ 0 ∧ (NULL r ∨ SND (HD r) < e)
 |#
 
 (defhol
@@ -111,14 +110,13 @@
        (hp-and
         (hap* (polyp (typ (:arrow* (:list (:hash :num :num)) :bool))) r)
         (hp-and (hp-not (hp= c (hp-num 0)))
-         (hp-and (hap* (<= (typ (:arrow* :num :num :bool))) (hp-num 0) e)
-          (hp-or
-           (hap* (null (typ (:arrow* (:list (:hash :num :num)) :bool))) r)
-           (hp<
-            (hap* (snd (typ (:arrow* (:hash :num :num) :num)))
-             (hap*
-              (hd (typ (:arrow* (:list (:hash :num :num)) (:hash :num :num))))
-              r)) e)))))))))
+         (hp-or
+          (hap* (null (typ (:arrow* (:list (:hash :num :num)) :bool))) r)
+          (hp<
+           (hap* (snd (typ (:arrow* (:hash :num :num) :num)))
+            (hap*
+             (hd (typ (:arrow* (:list (:hash :num :num)) (:hash :num :num))))
+             r)) e))))))))
 
 #|
    ⊢ (∀v. eval_poly [] v = 0) ∧
@@ -140,8 +138,7 @@
          r v))))))
 
 #|
-   ⊢ sum_polys [] [] = [] ∧ (∀v7 v6. sum_polys [] (v6::v7) = v6::v7) ∧
-     (∀v3 v2. sum_polys (v2::v3) [] = v2::v3) ∧
+   ⊢ (∀p. sum_polys [] p = p) ∧ (∀v3 v2. sum_polys (v2::v3) [] = v2::v3) ∧
      ∀r2 r1 e2 e1 c2 c1.
        sum_polys ((c1,e1)::r1) ((c2,e2)::r2) =
        if e1 = e2 then (c1 + c2,e1)::sum_polys r1 r2
@@ -153,21 +150,13 @@
    :fns ((sum_polys
       (:arrow* (:list (:hash :num :num)) (:list (:hash :num :num))
        (:list (:hash :num :num)))))
-   :defs ((equal
-      (hap*
-       (sum_polys
-        (typ
-         (:arrow* (:list (:hash :num :num)) (:list (:hash :num :num))
-          (:list (:hash :num :num))))) (hp-nil (typ (:hash :num :num)))
-       (hp-nil (typ (:hash :num :num)))) (hp-nil (typ (:hash :num :num))))
-     (:forall ((v7 (:list (:hash :num :num))) (v6 (:hash :num :num)))
+   :defs ((:forall ((p (:list (:hash :num :num))))
       (equal
        (hap*
         (sum_polys
          (typ
           (:arrow* (:list (:hash :num :num)) (:list (:hash :num :num))
-           (:list (:hash :num :num))))) (hp-nil (typ (:hash :num :num)))
-        (hp-cons v6 v7)) (hp-cons v6 v7)))
+           (:list (:hash :num :num))))) (hp-nil (typ (:hash :num :num))) p) p))
      (:forall ((v3 (:list (:hash :num :num))) (v2 (:hash :num :num)))
       (equal
        (hap*
