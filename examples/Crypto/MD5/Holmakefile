@@ -1,6 +1,6 @@
 INCLUDES = $(HOLDIR)/src/n-bit
 
-all: $(DEFAULT_TARGETS)
+all: md5Theory.uo
 .PHONY: all
 
 EXTRA_CLEANS = selftest.exe md5-selftest.log
