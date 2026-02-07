@@ -749,22 +749,6 @@ Proof
   \\ rw[get_byte_n2w_be]
 QED
 
-Definition word_of_bytes_le_def:
-  word_of_bytes_le = word_of_bytes F 0w
-End
-
-Definition word_of_bytes_be_def:
-  word_of_bytes_be = word_of_bytes T 0w
-End
-
-Definition word_to_bytes_le_def:
-  word_to_bytes_le w = word_to_bytes w F
-End
-
-Definition word_to_bytes_be_def:
-  word_to_bytes_be w = word_to_bytes w T
-End
-
 (* Translate at common word sizes: 32 and 64 bits *)
 val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
                    |> INST_TYPE [alpha |-> “:32”]
