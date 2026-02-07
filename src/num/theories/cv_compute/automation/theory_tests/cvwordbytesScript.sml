@@ -62,21 +62,17 @@ QED
 
 val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
                    |> INST_TYPE [alpha |-> “:128”]
-                   |> SRULE[dividesTheory.compute_divides,
-                            GSYM word_of_bytes_le_def]);
+                   |> SRULE[dividesTheory.compute_divides]);
 
 val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
                    |> INST_TYPE [alpha |-> “:128”]
-                   |> SRULE[dividesTheory.compute_divides,
-                            GSYM word_of_bytes_be_def]);
+                   |> SRULE[dividesTheory.compute_divides]);
 
 val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:128”]
-                   |> SRULE [GSYM word_to_bytes_le_def]);
+                   |> INST_TYPE [alpha |-> “:128”]);
 
 val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:128”]
-                   |> SRULE [GSYM word_to_bytes_be_def]);
+                   |> INST_TYPE [alpha |-> “:128”]);
 
 (* Test 128-bit translations *)
 

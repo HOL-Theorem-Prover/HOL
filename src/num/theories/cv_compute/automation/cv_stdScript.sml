@@ -651,9 +651,9 @@ val _ = cv_trans be_bytes_def;
    This can be instantiated at any word type and then cv_trans'd. *)
 Theorem word_of_bytes_le_eq_num_of_bytes:
   8 ≤ dimindex(:'a) ∧ divides 8 (dimindex(:'a)) ⇒
-  word_of_bytes F 0w bs = n2w (num_of_bytes bs) : 'a word
+  word_of_bytes_le bs = n2w (num_of_bytes bs) : 'a word
 Proof
-  strip_tac
+  rewrite_tac[word_of_bytes_le_def] \\ strip_tac
   \\ drule_then (drule_then irule) word_eq_of_get_byte
   \\ qexists_tac `F`
   \\ qx_gen_tac `j` \\ strip_tac
@@ -687,10 +687,10 @@ QED
 (* Theorem connecting word_of_bytes (big-endian, starting at 0w) to num_of_bytes via be_bytes *)
 Theorem word_of_bytes_be_eq_num_of_bytes:
   8 ≤ dimindex(:'a) ∧ divides 8 (dimindex (:'a)) ⇒
-  word_of_bytes T 0w bs =
+  word_of_bytes_be bs =
     n2w (num_of_bytes (be_bytes (dimindex(:'a) DIV 8) [] bs)) : 'a word
 Proof
-  strip_tac
+  rewrite_tac[word_of_bytes_be_def] \\ strip_tac
   \\ drule_then (drule_then irule) word_eq_of_get_byte
   \\ qexists_tac `T`
   \\ qx_gen_tac `j` \\ strip_tac
@@ -725,8 +725,9 @@ QED
 (* Theorem connecting word_to_bytes (little-endian) to bytes_of_num.
    No precondition needed since output length is fixed by dimindex. *)
 Theorem word_to_bytes_le_eq_bytes_of_num:
-  word_to_bytes (w:'a word) F = bytes_of_num (dimindex(:'a) DIV 8) (w2n w)
+  word_to_bytes_le (w:'a word) = bytes_of_num (dimindex(:'a) DIV 8) (w2n w)
 Proof
+  rewrite_tac[word_to_bytes_le_def] \\
   reverse $ Cases_on`8 ≤ dimindex(:'a)` >- (
     gvs[GSYM DIV_EQ_0, NOT_LESS_EQUAL]
     \\ rw[bytes_of_num_def, word_to_bytes_def, word_to_bytes_aux_def])
@@ -738,9 +739,10 @@ QED
 (* Theorem connecting word_to_bytes (big-endian) to bytes_of_num.
    No precondition needed since output length is fixed by dimindex. *)
 Theorem word_to_bytes_be_eq_bytes_of_num:
-  word_to_bytes (w:'a word) T =
+  word_to_bytes_be (w:'a word) =
     REVERSE (bytes_of_num (dimindex(:'a) DIV 8) (w2n w))
 Proof
+  rewrite_tac[word_to_bytes_be_def] \\
   reverse $ Cases_on`8 ≤ dimindex(:'a)` >- (
     gvs[GSYM DIV_EQ_0, NOT_LESS_EQUAL]
     \\ rw[bytes_of_num_def, word_to_bytes_def, word_to_bytes_aux_def])
@@ -752,29 +754,21 @@ QED
 (* Translate at common word sizes: 32 and 64 bits *)
 val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
                    |> INST_TYPE [alpha |-> “:32”]
-                   |> SRULE[dividesTheory.compute_divides,
-                            GSYM word_of_bytes_le_def]);
+                   |> SRULE[dividesTheory.compute_divides]);
 val () = cv_trans (word_of_bytes_le_eq_num_of_bytes
                    |> INST_TYPE [alpha |-> “:64”]
-                   |> SRULE[dividesTheory.compute_divides,
-                            GSYM word_of_bytes_le_def]);
+                   |> SRULE[dividesTheory.compute_divides]);
 val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
                    |> INST_TYPE [alpha |-> “:32”]
-                   |> SRULE[dividesTheory.compute_divides,
-                            GSYM word_of_bytes_be_def]);
+                   |> SRULE[dividesTheory.compute_divides]);
 val () = cv_trans (word_of_bytes_be_eq_num_of_bytes
                    |> INST_TYPE [alpha |-> “:64”]
-                   |> SRULE[dividesTheory.compute_divides,
-                            GSYM word_of_bytes_be_def]);
+                   |> SRULE[dividesTheory.compute_divides]);
 val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:32”]
-                   |> SRULE [GSYM word_to_bytes_le_def]);
+                   |> INST_TYPE [alpha |-> “:32”]);
 val () = cv_trans (word_to_bytes_le_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:64”]
-                   |> SRULE [GSYM word_to_bytes_le_def]);
+                   |> INST_TYPE [alpha |-> “:64”]);
 val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:32”]
-                   |> SRULE [GSYM word_to_bytes_be_def]);
+                   |> INST_TYPE [alpha |-> “:32”]);
 val () = cv_trans (word_to_bytes_be_eq_bytes_of_num
-                   |> INST_TYPE [alpha |-> “:64”]
-                   |> SRULE [GSYM word_to_bytes_be_def])
+                   |> INST_TYPE [alpha |-> “:64”])
