@@ -1,5 +1,5 @@
 Theory cvwordbytes
-Ancestors cv_std
+Ancestors cv_std byte
 Libs cv_transLib wordsLib
 
 (* word_of_bytes tests at 32 and 64 bits *)
