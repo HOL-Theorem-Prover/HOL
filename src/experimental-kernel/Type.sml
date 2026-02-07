@@ -126,12 +126,6 @@ fun op_arity {Thy,Tyop} =
         KernelSig.Success(_,i) => SOME i
       | _ => NONE
 
-fun type_vars_set acc [] = acc
-  | type_vars_set acc ((t as Tyv s) :: rest) =
-      type_vars_set (HOLset.add(acc, t)) rest
-  | type_vars_set acc (Tyapp(_, args) :: rest) =
-      type_vars_set acc (args @ rest)
-
 fun compare (Tyv s1, Tyv s2) = String.compare(s1, s2)
   | compare (Tyv _, _) = LESS
   | compare (Tyapp _, Tyv _) = GREATER
@@ -144,9 +138,26 @@ fun compare (Tyv s1, Tyv s2) = String.compare(s1, s2)
 
 val empty_tyset = HOLset.empty compare
 
-fun type_vars ty = HOLset.listItems (type_vars_set empty_tyset [ty])
+(*---------------------------------------------------------------------------*
+ * The variables in a type.                                                  *
+ *---------------------------------------------------------------------------*)
 
-val type_varsl = HOLset.listItems o type_vars_set empty_tyset
+(*
+fun type_vars_set acc [] = acc
+  | type_vars_set acc ((t as Tyv s) :: rest) =
+      type_vars_set (HOLset.add(acc, t)) rest
+  | type_vars_set acc (Tyapp(_, args) :: rest) =
+      type_vars_set acc (args @ rest)
+*)
+
+fun type_vars_acc (Tyapp(_,Args)) vlist = type_varsl_acc Args vlist
+  | type_vars_acc v vlist = Lib.insert v vlist
+and type_varsl_acc L vlist = rev_itlist type_vars_acc L vlist
+
+fun type_vars ty = type_vars_acc ty []
+fun type_vars_lr ty = List.rev (type_vars ty)
+fun type_varsl L = type_varsl_acc L []
+fun type_varsl_lr ty = List.rev (type_varsl ty)
 
 fun exists_tyvar P = let
   fun occ (w as Tyv _) = P w
