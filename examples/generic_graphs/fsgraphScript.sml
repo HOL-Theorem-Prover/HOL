@@ -679,7 +679,7 @@ Definition trail_def:
 End
 
 Definition cycle_def:
-  cycle g vs ⇔ walk g vs ∧ ALL_DISTINCT (TL vs) ∧ 3 ≤ LENGTH vs ∧
+  cycle g vs ⇔ walk g vs ∧ ALL_DISTINCT (TL vs) ∧ 4 ≤ LENGTH vs ∧
                HD vs = LAST vs
 End
 
