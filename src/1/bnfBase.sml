@@ -11,16 +11,22 @@ fun pure_insert db ty info = TypeNet.insert(db,ty,info)
 
 fun kname_to_thm_info (bI fields :kname info) : thm info =
    let
-     val {map,set,gset,relator,bnd,mapID,mapO,mapIMAGE,...} = fields
+     val {map,set,gset,relator,bnd,mapID,mapO,mapIMAGE,bndthms,siblings} = fields
      fun convertTN (tm,kname) = (tm,DB.fetch_knm kname)
      val convertN = DB.fetch_knm
    in
-     bI {siblings = #siblings fields, map = map,
-         set = set,
-         relator = relator,
-         bnd = bnd, gset = gset,
-         mapID = convertN mapID, mapO = convertN mapO,
-         mapIMAGE = List.map convertN mapIMAGE}
+     bI {
+       siblings = siblings,
+       map = map,
+       set = set,
+       relator = relator,
+       bnd = bnd,
+       gset = gset,
+       mapID = convertN mapID,
+       mapO = convertN mapO,
+       mapIMAGE = List.map convertN mapIMAGE,
+       bndthms = List.map convertN bndthms
+     }
    end
 
 local
@@ -29,22 +35,23 @@ local
   val termdef_ed = pair_ed (term_ed, kname_ed)
 in
   fun tup2rec ((siblings,map,set,gset),
-               (relator,bnd),
+               (relator,bnd,bndthms),
                (mapO,mapID,mapIMAGE)) =
       bI {siblings = siblings, map = map, set = set, gset = gset,
           relator = relator, bnd = bnd, mapO = mapO, mapID = mapID,
-          mapIMAGE = mapIMAGE}
+          mapIMAGE = mapIMAGE, bndthms = bndthms}
   fun rec2tup (bI {siblings , map, set, gset, relator, bnd, mapO, mapID,
-                   mapIMAGE}) =
-      ((siblings,map,set,gset), (relator,bnd), (mapO,mapID,mapIMAGE))
+                   mapIMAGE, bndthms}) =
+      ((siblings,map,set,gset), (relator,bnd,bndthms), (mapO,mapID,mapIMAGE))
 
   val ed0 = pair3_ed (
         pair4_ed (add_label "siblings" $ list_ed type_ed,
                   add_label "map" $ term_ed,
                   add_label "set" $ list_ed term_ed,
                   add_label "gset" $ term_ed),
-        pair_ed (add_label "relator" $ term_ed,
-                 add_label "bnd" term_ed),
+        pair3_ed (add_label "relator" $ term_ed,
+                  add_label "bnd" term_ed,
+                  add_label "bndthms" $ list_ed kname_ed),
         pair3_ed (add_label "mapID" $ kname_ed,
                   add_label "mapO" $ kname_ed,
                   add_label "mapIMAGE" $ list_ed kname_ed)

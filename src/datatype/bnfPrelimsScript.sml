@@ -1,6 +1,12 @@
 Theory bnfPrelims[bare]
-Ancestors sum pair option pred_set
+Ancestors sum pair option pred_set cardinal
 Libs HolKernel Parse boolLib BasicProvers simpLib
+
+(* ----------------------------------------------------------------------
+    some bossLib emulation
+   ---------------------------------------------------------------------- *)
+
+fun simp ths = simpLib.ASM_SIMP_TAC (srw_ss()) ths
 
 (* ----------------------------------------------------------------------
     record the sum type's Bounded Natural Functor nature
@@ -42,6 +48,18 @@ Proof
   SIMP_TAC (srw_ss()) [EXTENSION]
 QED
 
+Theorem sum_bnd1:
+  ∀s : 'a + 'b. setL s ≼ univ(:num)
+Proof
+  GEN_TAC >> Cases_on ‘s’ >> simp[cardleq_def, INJ_DEF]
+QED
+
+Theorem sum_bnd2:
+  ∀s : 'a + 'b. setR s ≼ univ(:num)
+Proof
+  GEN_TAC >> Cases_on ‘s’ >> simp[cardleq_def, INJ_DEF]
+QED
+
 fun sum_nm s : KernelSig.kernelname = {Thy = "sum", Name = s}
 fun pnm s : KernelSig.kernelname = {Thy = "bnfPrelims", Name = s}
 val T = {Name = "TRUTH", Thy = "bool"} (* placeholder *)
@@ -62,6 +80,7 @@ val _ = bnfBase.updateDB (
 
     relator = “SUM_REL : ('a1 -> 'c1 -> bool) -> ('a2 -> 'c2 -> bool) ->
                          'a1 + 'a2 -> 'c1 + 'c2 -> bool”,
-    bnd = “UNIV : num set”
+    bnd = “UNIV : num set”,
+    bndthms = [pnm "sum_bnd1", pnm "sum_bnd2"]
   }
 )

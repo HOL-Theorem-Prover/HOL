@@ -17,7 +17,8 @@ datatype 'a info = bI of {
   mapID : 'a,               (* map id₁ .. idₙ = id theorem *)
   mapO : 'a,                (* map f₁ .. fₙ o map g₁ .. gₙ =
                                map (f₁ o g₁) ... (fₙ o gₙ) thm *)
-  mapIMAGE : 'a list        (* set₁ (map f₁ ... fₙ x) = IMAGE f₁ (set₁ x) etc *)
+  mapIMAGE : 'a list,       (* set₁ (map f₁ ... fₙ x) = IMAGE f₁ (set₁ x) etc *)
+  bndthms : 'a list         (* !x. set₁ x ≼ bnd etc *)
 }
 
 (*
