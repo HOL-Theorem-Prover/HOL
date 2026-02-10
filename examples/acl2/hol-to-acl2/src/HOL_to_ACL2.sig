@@ -5,6 +5,9 @@ sig
   datatype t = datatype HOLsexp_dtype.t
 
   val basis_defs : thm list
+
+  val unlambda_conjuncts : thm -> thm * thm list * thm
+
   val builtin_const_map : (term * string) list
   val ty_sexp : hol_type -> t
   val tm_sexp : term -> t

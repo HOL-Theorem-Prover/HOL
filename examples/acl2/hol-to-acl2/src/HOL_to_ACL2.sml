@@ -7,8 +7,9 @@
 
 structure HOL_to_ACL2 :> HOL_to_ACL2 =
 struct
-open HolKernel boolLib bossLib
-     pairTheory listTheory hol_to_acl2Theory;
+
+open HolKernel boolLib bossLib Elim_Lambda
+     pairTheory listTheory hol_to_acl2Theory
 
 open HOLsexp List;
 
@@ -28,6 +29,35 @@ val basis_defs =
 val THM_const  = prim_mk_const{Thy="hol_to_acl2",Name="THM"}
 val GOAL_const = prim_mk_const{Thy="hol_to_acl2",Name="GOAL"}
 val SPEC_const = prim_mk_const{Thy="hol_to_acl2",Name="SPEC"};
+
+(*---------------------------------------------------------------------------*)
+(* Get rid of lambdas in a theorem by creating definitions for them          *)
+(*---------------------------------------------------------------------------*)
+
+fun unlambda thm =
+  case Elim_Lambda.firstify thm
+    of NONE => ([],thm)
+     | SOME (equiv,defs) => (defs, EQ_MP equiv thm)
+
+(*---------------------------------------------------------------------------*)
+(* Top-level universal quantifiers shouldn't be unlambda'ed. A special case  *)
+(* is conjunctions of the form                                               *)
+(*                                                                           *)
+(*   (!x1 ... xn. P1 x1 .. xn) /\ ... /\ (!y1 ... yk. Pj y1 ... yk)          *)
+(*                                                                           *)
+(* Taken naively, all the universals would get unlambda'ed, but the handling *)
+(* on the ACL2(zfc) side treats each conjunct separately, and the top-level  *)
+(* universals for each conjunct get added to a variable context (I think)    *)
+(* so unlambda should not be done.                                           *)
+(*---------------------------------------------------------------------------*)
+
+fun unlambda_conjuncts thm =
+  case CONJUNCTS thm
+    of [] => raise ERR "unlambda_conjuncts" "empty conjuncts (error!)"
+     | conjs =>
+       let val unconjs = map unlambda conjs
+           val (locals,unlambs) = unzip unconjs
+       in (thm,List.concat locals, LIST_CONJ unlambs) end
 
 (*---------------------------------------------------------------------------*)
 (* Types                                                                     *)
@@ -332,7 +362,7 @@ fun def_sexp th =
  handle _ => raise ERR "def_sexp" "";
 
 (*---------------------------------------------------------------------------*)
-(* Decide between the kinds of declaration being made.                       *)
+(* Decide between the kinds of declaration being made. Based on tag on thm.  *)
 (*---------------------------------------------------------------------------*)
 
 fun hol_sexp thm =
@@ -456,6 +486,10 @@ fun pp_thm_as_defhol th =
                 add_string timestamp, NL,NL,
                 block CONSISTENT 0 (pr_list pp_thm_as_defhol [NL,NL] ths)]
 *)
+
+(*---------------------------------------------------------------------------*)
+(* Output defhols                                                            *)
+(*---------------------------------------------------------------------------*)
 
 fun print_defhols ostrm ths =
   let open HOLPP

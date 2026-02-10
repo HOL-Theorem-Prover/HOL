@@ -1,0 +1,645 @@
+#|
+   ⊢ (∀f. MAP f [] = []) ∧ ∀f h t. MAP f (h::t) = f h::MAP f t
+|#
+
+(defhol
+   :fns ((map (:arrow* (:arrow* a b) (:list a) (:list b))))
+   :defs ((:forall ((f (:arrow* a b)))
+      (equal
+       (hap* (map (typ (:arrow* (:arrow* a b) (:list a) (:list b)))) f
+        (hp-nil (typ a))) (hp-nil (typ b))))
+     (:forall ((f (:arrow* a b)) (h a) (t (:list a)))
+      (equal
+       (hap* (map (typ (:arrow* (:arrow* a b) (:list a) (:list b)))) f
+        (hp-cons h t))
+       (hp-cons (hap* f h)
+        (hap* (map (typ (:arrow* (:arrow* a b) (:list a) (:list b)))) f t))))))
+
+#|
+   ⊢ ∀P x y. Fn_0 P x y ⇔ P x y
+|#
+
+(defhol
+   :fns ((fn_0 (:arrow* (:arrow* a b :bool) a b :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (x a) (y b))
+      (equal (hap* (fn_0 (typ (:arrow* (:arrow* a b :bool) a b :bool))) p x y)
+       (hap* p x y)))))
+
+#|
+   ⊢ ∀P x. Fn_1 P x ⇔ $? (Fn_0 P x)
+|#
+
+(defhol
+   :fns ((fn_1 (:arrow* (:arrow* a b :bool) a :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (x a))
+      (equal (hap* (fn_1 (typ (:arrow* (:arrow* a b :bool) a :bool))) p x)
+       (hp-exists
+        (hap* (fn_0 (typ (:arrow* (:arrow* a b :bool) a b :bool))) p x))))))
+
+#|
+   ⊢ ∀P f x. Fn_2 P f x ⇔ P x (f x)
+|#
+
+(defhol
+   :fns ((fn_2 (:arrow* (:arrow* a b :bool) (:arrow* a b) a :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (f (:arrow* a b)) (x a))
+      (equal
+       (hap* (fn_2 (typ (:arrow* (:arrow* a b :bool) (:arrow* a b) a :bool)))
+        p f x) (hap* p x (hap* f x))))))
+
+#|
+   ⊢ ∀P f. Fn_3 P f ⇔ $! (Fn_2 P f)
+|#
+
+(defhol
+   :fns ((fn_3 (:arrow* (:arrow* a b :bool) (:arrow* a b) :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (f (:arrow* a b)))
+      (equal
+       (hap* (fn_3 (typ (:arrow* (:arrow* a b :bool) (:arrow* a b) :bool))) p
+        f)
+       (hp-forall
+        (hap* (fn_2 (typ (:arrow* (:arrow* a b :bool) (:arrow* a b) a :bool)))
+         p f))))))
+
+#|
+   ⊢ THM SKOLEM_THM (∀P. $! (Fn_1 P) ⇔ $? (Fn_3 P))
+|#
+
+(defhol
+   :name skolem_thm
+   :thm (:forall ((p (:arrow* a b :bool)))
+     (hp=
+      (hp-forall (hap* (fn_1 (typ (:arrow* (:arrow* a b :bool) a :bool))) p))
+      (hp-exists
+       (hap* (fn_3 (typ (:arrow* (:arrow* a b :bool) (:arrow* a b) :bool))) p)))))
+
+#|
+   ⊢ ∀P n. Fn_4 P n ⇔ P n ⇒ P (SUC n)
+|#
+
+(defhol
+   :fns ((fn_4 (:arrow* (:arrow* :num :bool) :num :bool)))
+   :defs ((:forall ((p (:arrow* :num :bool)) (n :num))
+      (equal (hap* (fn_4 (typ (:arrow* (:arrow* :num :bool) :num :bool))) p n)
+       (hp-implies (hap* p n)
+        (hap* p (hap* (suc (typ (:arrow* :num :num))) n)))))))
+
+#|
+   ⊢ ∀P n. Fn_5 P n ⇔ P n
+|#
+
+(defhol
+   :fns ((fn_5 (:arrow* (:arrow* :num :bool) :num :bool)))
+   :defs ((:forall ((p (:arrow* :num :bool)) (n :num))
+      (equal (hap* (fn_5 (typ (:arrow* (:arrow* :num :bool) :num :bool))) p n)
+       (hap* p n)))))
+
+#|
+   ⊢ THM INDUCTION (∀P. P 0 ∧ $! (Fn_4 P) ⇒ $! (Fn_5 P))
+|#
+
+(defhol
+   :name induction
+   :thm (:forall ((p (:arrow* :num :bool)))
+     (hp-implies
+      (hp-and (hap* p (hp-num 0))
+       (hp-forall
+        (hap* (fn_4 (typ (:arrow* (:arrow* :num :bool) :num :bool))) p)))
+      (hp-forall
+       (hap* (fn_5 (typ (:arrow* (:arrow* :num :bool) :num :bool))) p)))))
+
+#|
+   ⊢ ∀P t h. Fn_6 P t h ⇔ P (h::t)
+|#
+
+(defhol
+   :fns ((fn_6 (:arrow* (:arrow* (:list a) :bool) (:list a) a :bool)))
+   :defs ((:forall ((p (:arrow* (:list a) :bool)) (t (:list a)) (h a))
+      (equal
+       (hap*
+        (fn_6 (typ (:arrow* (:arrow* (:list a) :bool) (:list a) a :bool))) p t
+        h) (hap* p (hp-cons h t))))))
+
+#|
+   ⊢ ∀P t. Fn_7 P t ⇔ P t ⇒ $! (Fn_6 P t)
+|#
+
+(defhol
+   :fns ((fn_7 (:arrow* (:arrow* (:list a) :bool) (:list a) :bool)))
+   :defs ((:forall ((p (:arrow* (:list a) :bool)) (t (:list a)))
+      (equal
+       (hap* (fn_7 (typ (:arrow* (:arrow* (:list a) :bool) (:list a) :bool)))
+        p t)
+       (hp-implies (hap* p t)
+        (hp-forall
+         (hap*
+          (fn_6 (typ (:arrow* (:arrow* (:list a) :bool) (:list a) a :bool))) p
+          t)))))))
+
+#|
+   ⊢ ∀P l. Fn_8 P l ⇔ P l
+|#
+
+(defhol
+   :fns ((fn_8 (:arrow* (:arrow* (:list a) :bool) (:list a) :bool)))
+   :defs ((:forall ((p (:arrow* (:list a) :bool)) (l (:list a)))
+      (equal
+       (hap* (fn_8 (typ (:arrow* (:arrow* (:list a) :bool) (:list a) :bool)))
+        p l) (hap* p l)))))
+
+#|
+   ⊢ THM list_induction (∀P. P [] ∧ $! (Fn_7 P) ⇒ $! (Fn_8 P))
+|#
+
+(defhol
+   :name list_induction
+   :thm (:forall ((p (:arrow* (:list a) :bool)))
+     (hp-implies
+      (hp-and (hap* p (hp-nil (typ a)))
+       (hp-forall
+        (hap* (fn_7 (typ (:arrow* (:arrow* (:list a) :bool) (:list a) :bool)))
+         p)))
+      (hp-forall
+       (hap* (fn_8 (typ (:arrow* (:arrow* (:list a) :bool) (:list a) :bool)))
+        p)))))
+
+#|
+   ⊢ ∀R x P y. Fn_9 R x P y ⇔ R x y ⇒ P x y
+|#
+
+(defhol
+   :fns ((fn_9 (:arrow* (:arrow* a a :bool) a (:arrow* a a :bool) a :bool)))
+   :defs ((:forall
+      ((r (:arrow* a a :bool)) (x a) (p (:arrow* a a :bool)) (y a))
+      (equal
+       (hap*
+        (fn_9
+         (typ (:arrow* (:arrow* a a :bool) a (:arrow* a a :bool) a :bool))) r
+        x p y) (hp-implies (hap* r x y) (hap* p x y))))))
+
+#|
+   ⊢ ∀R P x. Fn_10 R P x ⇔ $! (Fn_9 R x P)
+|#
+
+(defhol
+   :fns ((fn_10 (:arrow* (:arrow* a a :bool) (:arrow* a a :bool) a :bool)))
+   :defs ((:forall ((r (:arrow* a a :bool)) (p (:arrow* a a :bool)) (x a))
+      (equal
+       (hap*
+        (fn_10
+         (typ (:arrow* (:arrow* a a :bool) (:arrow* a a :bool) a :bool))) r p
+        x)
+       (hp-forall
+        (hap*
+         (fn_9
+          (typ (:arrow* (:arrow* a a :bool) a (:arrow* a a :bool) a :bool))) r
+         x p))))))
+
+#|
+   ⊢ ∀P x y z. Fn_11 P x y z ⇔ P x y ∧ P y z ⇒ P x z
+|#
+
+(defhol
+   :fns ((fn_11 (:arrow* (:arrow* a a :bool) a a a :bool)))
+   :defs ((:forall ((p (:arrow* a a :bool)) (x a) (y a) (z a))
+      (equal
+       (hap* (fn_11 (typ (:arrow* (:arrow* a a :bool) a a a :bool))) p x y z)
+       (hp-implies (hp-and (hap* p x y) (hap* p y z)) (hap* p x z))))))
+
+#|
+   ⊢ ∀P x y. Fn_12 P x y ⇔ $! (Fn_11 P x y)
+|#
+
+(defhol
+   :fns ((fn_12 (:arrow* (:arrow* a a :bool) a a :bool)))
+   :defs ((:forall ((p (:arrow* a a :bool)) (x a) (y a))
+      (equal
+       (hap* (fn_12 (typ (:arrow* (:arrow* a a :bool) a a :bool))) p x y)
+       (hp-forall
+        (hap* (fn_11 (typ (:arrow* (:arrow* a a :bool) a a a :bool))) p x y))))))
+
+#|
+   ⊢ ∀P x. Fn_13 P x ⇔ $! (Fn_12 P x)
+|#
+
+(defhol
+   :fns ((fn_13 (:arrow* (:arrow* a a :bool) a :bool)))
+   :defs ((:forall ((p (:arrow* a a :bool)) (x a))
+      (equal (hap* (fn_13 (typ (:arrow* (:arrow* a a :bool) a :bool))) p x)
+       (hp-forall
+        (hap* (fn_12 (typ (:arrow* (:arrow* a a :bool) a a :bool))) p x))))))
+
+#|
+   ⊢ ∀R a b P. Fn_14 R a b P ⇔ $! (Fn_10 R P) ∧ $! (Fn_13 P) ⇒ P a b
+|#
+
+(defhol
+   :fns ((fn_14 (:arrow* (:arrow* a a :bool) a a (:arrow* a a :bool) :bool)))
+   :defs ((:forall
+      ((r (:arrow* a a :bool)) (a a) (b a) (p (:arrow* a a :bool)))
+      (equal
+       (hap*
+        (fn_14
+         (typ (:arrow* (:arrow* a a :bool) a a (:arrow* a a :bool) :bool))) r
+        a b p)
+       (hp-implies
+        (hp-and
+         (hp-forall
+          (hap*
+           (fn_10
+            (typ (:arrow* (:arrow* a a :bool) (:arrow* a a :bool) a :bool))) r
+           p))
+         (hp-forall
+          (hap* (fn_13 (typ (:arrow* (:arrow* a a :bool) a :bool))) p)))
+        (hap* p a b))))))
+
+#|
+   ⊢ ∀R a b. R⁺ a b ⇔ $! (Fn_14 R a b)
+|#
+
+(defhol
+   :fns ((tc (:arrow* (:arrow* a a :bool) a a :bool)))
+   :defs ((:forall ((r (:arrow* a a :bool)) (a a) (b a))
+      (equal (hap* (tc (typ (:arrow* (:arrow* a a :bool) a a :bool))) r a b)
+       (hp-forall
+        (hap*
+         (fn_14
+          (typ (:arrow* (:arrow* a a :bool) a a (:arrow* a a :bool) :bool))) r
+         a b))))))
+
+#|
+   ⊢ ∀RTC' x. Fn_15 RTC' x ⇔ RTC' x x
+|#
+
+(defhol
+   :fns ((fn_15 (:arrow* (:arrow* a a :bool) a :bool)))
+   :defs ((:forall ((rtc' (:arrow* a a :bool)) (x a))
+      (equal (hap* (fn_15 (typ (:arrow* (:arrow* a a :bool) a :bool))) rtc' x)
+       (hap* rtc' x x)))))
+
+#|
+   ⊢ ∀R x y RTC' z. Fn_16 R x y RTC' z ⇔ R x y ∧ RTC' y z ⇒ RTC' x z
+|#
+
+(defhol
+   :fns ((fn_16 (:arrow* (:arrow* a a :bool) a a (:arrow* a a :bool) a :bool)))
+   :defs ((:forall
+      ((r (:arrow* a a :bool)) (x a) (y a) (rtc' (:arrow* a a :bool)) (z a))
+      (equal
+       (hap*
+        (fn_16
+         (typ (:arrow* (:arrow* a a :bool) a a (:arrow* a a :bool) a :bool)))
+        r x y rtc' z)
+       (hp-implies (hp-and (hap* r x y) (hap* rtc' y z)) (hap* rtc' x z))))))
+
+#|
+   ⊢ ∀R x RTC' y. Fn_17 R x RTC' y ⇔ $! (Fn_16 R x y RTC')
+|#
+
+(defhol
+   :fns ((fn_17 (:arrow* (:arrow* a a :bool) a (:arrow* a a :bool) a :bool)))
+   :defs ((:forall
+      ((r (:arrow* a a :bool)) (x a) (rtc' (:arrow* a a :bool)) (y a))
+      (equal
+       (hap*
+        (fn_17
+         (typ (:arrow* (:arrow* a a :bool) a (:arrow* a a :bool) a :bool))) r
+        x rtc' y)
+       (hp-forall
+        (hap*
+         (fn_16
+          (typ (:arrow* (:arrow* a a :bool) a a (:arrow* a a :bool) a :bool)))
+         r x y rtc'))))))
+
+#|
+   ⊢ ∀R RTC' x. Fn_18 R RTC' x ⇔ $! (Fn_17 R x RTC')
+|#
+
+(defhol
+   :fns ((fn_18 (:arrow* (:arrow* a a :bool) (:arrow* a a :bool) a :bool)))
+   :defs ((:forall ((r (:arrow* a a :bool)) (rtc' (:arrow* a a :bool)) (x a))
+      (equal
+       (hap*
+        (fn_18
+         (typ (:arrow* (:arrow* a a :bool) (:arrow* a a :bool) a :bool))) r
+        rtc' x)
+       (hp-forall
+        (hap*
+         (fn_17
+          (typ (:arrow* (:arrow* a a :bool) a (:arrow* a a :bool) a :bool))) r
+         x rtc'))))))
+
+#|
+   ⊢ ∀R a0 RTC' a1. Fn_19 R a0 RTC' a1 ⇔ R꙳ a0 a1 ⇒ RTC' a0 a1
+|#
+
+(defhol
+   :fns ((fn_19 (:arrow* (:arrow* a a :bool) a (:arrow* a a :bool) a :bool)))
+   :defs ((:forall
+      ((r (:arrow* a a :bool)) (a0 a) (rtc' (:arrow* a a :bool)) (a1 a))
+      (equal
+       (hap*
+        (fn_19
+         (typ (:arrow* (:arrow* a a :bool) a (:arrow* a a :bool) a :bool))) r
+        a0 rtc' a1)
+       (hp-implies
+        (hap* (rtc (typ (:arrow* (:arrow* a a :bool) a a :bool))) r a0 a1)
+        (hap* rtc' a0 a1))))))
+
+#|
+   ⊢ ∀R RTC' a0. Fn_20 R RTC' a0 ⇔ $! (Fn_19 R a0 RTC')
+|#
+
+(defhol
+   :fns ((fn_20 (:arrow* (:arrow* a a :bool) (:arrow* a a :bool) a :bool)))
+   :defs ((:forall ((r (:arrow* a a :bool)) (rtc' (:arrow* a a :bool)) (a0 a))
+      (equal
+       (hap*
+        (fn_20
+         (typ (:arrow* (:arrow* a a :bool) (:arrow* a a :bool) a :bool))) r
+        rtc' a0)
+       (hp-forall
+        (hap*
+         (fn_19
+          (typ (:arrow* (:arrow* a a :bool) a (:arrow* a a :bool) a :bool))) r
+         a0 rtc'))))))
+
+#|
+   ⊢ THM RTC_ind
+       (∀R RTC'. $! (Fn_15 RTC') ∧ $! (Fn_18 R RTC') ⇒ $! (Fn_20 R RTC'))
+|#
+
+(defhol
+   :name rtc_ind
+   :thm (:forall ((r (:arrow* a a :bool)) (rtc' (:arrow* a a :bool)))
+     (hp-implies
+      (hp-and
+       (hp-forall
+        (hap* (fn_15 (typ (:arrow* (:arrow* a a :bool) a :bool))) rtc'))
+       (hp-forall
+        (hap*
+         (fn_18
+          (typ (:arrow* (:arrow* a a :bool) (:arrow* a a :bool) a :bool))) r
+         rtc')))
+      (hp-forall
+       (hap*
+        (fn_20
+         (typ (:arrow* (:arrow* a a :bool) (:arrow* a a :bool) a :bool))) r
+        rtc')))))
+
+#|
+   ⊢ ∀P x y. Fn_21 P x y ⇔ P x y
+|#
+
+(defhol
+   :fns ((fn_21 (:arrow* (:arrow* a b :bool) a b :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (x a) (y b))
+      (equal
+       (hap* (fn_21 (typ (:arrow* (:arrow* a b :bool) a b :bool))) p x y)
+       (hap* p x y)))))
+
+#|
+   ⊢ ∀P x. Fn_22 P x ⇔ $! (Fn_21 P x)
+|#
+
+(defhol
+   :fns ((fn_22 (:arrow* (:arrow* a b :bool) a :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (x a))
+      (equal (hap* (fn_22 (typ (:arrow* (:arrow* a b :bool) a :bool))) p x)
+       (hp-forall
+        (hap* (fn_21 (typ (:arrow* (:arrow* a b :bool) a b :bool))) p x))))))
+
+#|
+   ⊢ ∀P x y. Fn_23 P x y ⇔ P x y
+|#
+
+(defhol
+   :fns ((fn_23 (:arrow* (:arrow* a b :bool) a b :bool)))
+   :defs ((:forall ((p (:arrow* a b :bool)) (x a) (y b))
+      (equal
+       (hap* (fn_23 (typ (:arrow* (:arrow* a b :bool) a b :bool))) p x y)
+       (hap* p x y)))))
+
+#|
+   ⊢ THM PFORALL_THM (∀P. $! (Fn_22 P) ⇔ $! (UNCURRY (Fn_23 P)))
+|#
+
+(defhol
+   :name pforall_thm
+   :thm (:forall ((p (:arrow* a b :bool)))
+     (hp=
+      (hp-forall (hap* (fn_22 (typ (:arrow* (:arrow* a b :bool) a :bool))) p))
+      (hp-forall
+       (hap* (uncurry (typ (:arrow* (:arrow* a b :bool) (:hash a b) :bool)))
+        (hap* (fn_23 (typ (:arrow* (:arrow* a b :bool) a b :bool))) p))))))
+
+#|
+   ⊢ ∀x q r. Fn_24 x q r ⇔ x = (q,r)
+|#
+
+(defhol
+   :fns ((fn_24 (:arrow* (:hash a b) a b :bool)))
+   :defs ((:forall ((x (:hash a b)) (q a) (r b))
+      (equal (hap* (fn_24 (typ (:arrow* (:hash a b) a b :bool))) x q r)
+       (hp= x (hp-comma q r))))))
+
+#|
+   ⊢ ∀x q. Fn_25 x q ⇔ $? (Fn_24 x q)
+|#
+
+(defhol
+   :fns ((fn_25 (:arrow* (:hash a b) a :bool)))
+   :defs ((:forall ((x (:hash a b)) (q a))
+      (equal (hap* (fn_25 (typ (:arrow* (:hash a b) a :bool))) x q)
+       (hp-exists (hap* (fn_24 (typ (:arrow* (:hash a b) a b :bool))) x q))))))
+
+#|
+   ⊢ THM pair_CASES (∀x. $? (Fn_25 x))
+|#
+
+(defhol
+   :name pair_cases
+   :thm (:forall ((x (:hash a b)))
+     (hp-exists (hap* (fn_25 (typ (:arrow* (:hash a b) a :bool))) x))))
+
+#|
+   ⊢ ∀p x f v y. Fn_26 p x f v y ⇔ p = (x,y) ∧ f x y = v
+|#
+
+(defhol
+   :fns ((fn_26 (:arrow* (:hash b c) b (:arrow* b c a) a c :bool)))
+   :defs ((:forall ((p (:hash b c)) (x b) (f (:arrow* b c a)) (v a) (y c))
+      (equal
+       (hap* (fn_26 (typ (:arrow* (:hash b c) b (:arrow* b c a) a c :bool))) p
+        x f v y) (hp-and (hp= p (hp-comma x y)) (hp= (hap* f x y) v))))))
+
+#|
+   ⊢ ∀p f v x. Fn_27 p f v x ⇔ $? (Fn_26 p x f v)
+|#
+
+(defhol
+   :fns ((fn_27 (:arrow* (:hash b c) (:arrow* b c a) a b :bool)))
+   :defs ((:forall ((p (:hash b c)) (f (:arrow* b c a)) (v a) (x b))
+      (equal
+       (hap* (fn_27 (typ (:arrow* (:hash b c) (:arrow* b c a) a b :bool))) p f
+        v x)
+       (hp-exists
+        (hap* (fn_26 (typ (:arrow* (:hash b c) b (:arrow* b c a) a c :bool)))
+         p x f v))))))
+
+#|
+   ⊢ THM pair_case_eq (pair_CASE p f = v ⇔ $? (Fn_27 p f v))
+|#
+
+(defhol
+   :name pair_case_eq
+   :thm (hp=
+     (hp= (hap* (pair_case (typ (:arrow* (:hash b c) (:arrow* b c a) a))) p f)
+      v)
+     (hp-exists
+      (hap* (fn_27 (typ (:arrow* (:hash b c) (:arrow* b c a) a b :bool))) p f
+       v))))
+
+#|
+   ⊢ ∀x f m. Fn_28 x f m ⇔ PRIM_REC x f (SUC m) = f (PRIM_REC x f m) m
+|#
+
+(defhol
+   :fns ((fn_28 (:arrow* a (:arrow* a :num a) :num :bool)))
+   :defs ((:forall ((x a) (f (:arrow* a :num a)) (m :num))
+      (equal
+       (hap* (fn_28 (typ (:arrow* a (:arrow* a :num a) :num :bool))) x f m)
+       (hp=
+        (hap* (prim_rec (typ (:arrow* a (:arrow* a :num a) :num a))) x f
+         (hap* (suc (typ (:arrow* :num :num))) m))
+        (hap* f
+         (hap* (prim_rec (typ (:arrow* a (:arrow* a :num a) :num a))) x f m)
+         m))))))
+
+#|
+   ⊢ THM PRIM_REC_THM (∀x f. PRIM_REC x f 0 = x ∧ $! (Fn_28 x f))
+|#
+
+(defhol
+   :name prim_rec_thm
+   :thm (:forall ((x a) (f (:arrow* a :num a)))
+     (hp-and
+      (hp=
+       (hap* (prim_rec (typ (:arrow* a (:arrow* a :num a) :num a))) x f
+        (hp-num 0)) x)
+      (hp-forall
+       (hap* (fn_28 (typ (:arrow* a (:arrow* a :num a) :num :bool))) x f)))))
+
+#|
+   ⊢ ∀ord h l1 l2. Fn_29 ord h l1 l2 = QSORT ord l1 ⧺ [h] ⧺ QSORT ord l2
+|#
+
+(defhol
+   :fns ((fn_29 (:arrow* (:arrow* a a :bool) a (:list a) (:list a) (:list a))))
+   :defs ((:forall
+      ((ord (:arrow* a a :bool)) (h a) (l1 (:list a)) (l2 (:list a)))
+      (equal
+       (hap*
+        (fn_29
+         (typ (:arrow* (:arrow* a a :bool) a (:list a) (:list a) (:list a))))
+        ord h l1 l2)
+       (hap* (append (typ (:arrow* (:list a) (:list a) (:list a))))
+        (hap* (append (typ (:arrow* (:list a) (:list a) (:list a))))
+         (hap* (qsort (typ (:arrow* (:arrow* a a :bool) (:list a) (:list a))))
+          ord l1) (hp-cons h (hp-nil (typ a))))
+        (hap* (qsort (typ (:arrow* (:arrow* a a :bool) (:list a) (:list a))))
+         ord l2))))))
+
+#|
+   ⊢ ∀ord h y. Fn_30 ord h y ⇔ ord y h
+|#
+
+(defhol
+   :fns ((fn_30 (:arrow* (:arrow* a a :bool) a a :bool)))
+   :defs ((:forall ((ord (:arrow* a a :bool)) (h a) (y a))
+      (equal
+       (hap* (fn_30 (typ (:arrow* (:arrow* a a :bool) a a :bool))) ord h y)
+       (hap* ord y h)))))
+
+#|
+   ⊢ (∀ord. QSORT ord [] = []) ∧
+     ∀t ord h.
+       QSORT ord (h::t) =
+       LET (UNCURRY (Fn_29 ord h)) (PARTITION (Fn_30 ord h) t)
+|#
+
+(defhol
+   :fns ((qsort (:arrow* (:arrow* a a :bool) (:list a) (:list a))))
+   :defs ((:forall ((ord (:arrow* a a :bool)))
+      (equal
+       (hap* (qsort (typ (:arrow* (:arrow* a a :bool) (:list a) (:list a))))
+        ord (hp-nil (typ a))) (hp-nil (typ a))))
+     (:forall ((t (:list a)) (ord (:arrow* a a :bool)) (h a))
+      (equal
+       (hap* (qsort (typ (:arrow* (:arrow* a a :bool) (:list a) (:list a))))
+        ord (hp-cons h t))
+       (hap*
+        (let
+         (typ
+          (:arrow* (:arrow* (:hash (:list a) (:list a)) (:list a))
+           (:hash (:list a) (:list a)) (:list a))))
+        (hap*
+         (uncurry
+          (typ
+           (:arrow* (:arrow* (:list a) (:list a) (:list a))
+            (:hash (:list a) (:list a)) (:list a))))
+         (hap*
+          (fn_29
+           (typ (:arrow* (:arrow* a a :bool) a (:list a) (:list a) (:list a))))
+          ord h))
+        (hap*
+         (partition
+          (typ
+           (:arrow* (:arrow* a :bool) (:list a) (:hash (:list a) (:list a)))))
+         (hap* (fn_30 (typ (:arrow* (:arrow* a a :bool) a a :bool))) ord h) t))))))
+
+#|
+   ⊢ ∀n v1. Fn_31 n v1 = n * fact (n − 1)
+|#
+
+(defhol
+   :fns ((fn_31 (:arrow* :num :num :num)))
+   :defs ((:forall ((n :num) (v1 :num))
+      (equal (hap* (fn_31 (typ (:arrow* :num :num :num))) n v1)
+       (hp* n
+        (hap* (fact (typ (:arrow* :num :num)))
+         (hap* (- (typ (:arrow* :num :num :num))) n (hp-num 1))))))))
+
+#|
+   ⊢ ∀n. fact n = num_CASE n 1 (Fn_31 n)
+|#
+
+(defhol
+   :fns ((fact (:arrow* :num :num)))
+   :defs ((:forall ((n :num))
+      (equal (hap* (fact (typ (:arrow* :num :num))) n)
+       (hap* (num_case (typ (:arrow* :num :num (:arrow* :num :num) :num))) n
+        (hp-num 1) (hap* (fn_31 (typ (:arrow* :num :num :num))) n))))))
+
+#|
+   ⊢ ∀v t. Fn_32 v t = 1 + len t
+|#
+
+(defhol
+   :fns ((fn_32 (:arrow* a (:list a) :num)))
+   :defs ((:forall ((v a) (t (:list a)))
+      (equal (hap* (fn_32 (typ (:arrow* a (:list a) :num))) v t)
+       (hp+ (hp-num 1) (hap* (len (typ (:arrow* (:list a) :num))) t))))))
+
+#|
+   ⊢ ∀list. len list = list_CASE list 0 Fn_32
+|#
+
+(defhol
+   :fns ((len (:arrow* (:list a) :num)))
+   :defs ((:forall ((list (:list a)))
+      (equal (hap* (len (typ (:arrow* (:list a) :num))) list)
+       (hap*
+        (list_case
+         (typ (:arrow* (:list a) :num (:arrow* a (:list a) :num) :num))) list
+        (hp-num 0) (fn_32 (typ (:arrow* a (:list a) :num))))))))
