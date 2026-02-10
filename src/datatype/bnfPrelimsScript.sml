@@ -1,6 +1,6 @@
 Theory bnfPrelims[bare]
 Ancestors sum pair option pred_set cardinal quotient
-Libs HolKernel Parse boolLib BasicProvers simpLib
+Libs HolKernel Parse boolLib BasicProvers simpLib TotalDefn[qualified]
 
 fun sum_nm s : KernelSig.kernelname = {Thy = "sum", Name = s}
 fun pair_nm s : KernelSig.kernelname = {Thy = "pair", Name = s}
@@ -206,14 +206,18 @@ Proof
   irule_at Any SURJ_IMAGE
 QED
 
+Definition fun_gset_def:
+  fun_gset (g1 : 'a1 -> 'c set) (f: 'b1 -> 'a1) =
+  BIGUNION (IMAGE g1 (fset f))
+End
+
 val _ = bnfBase.updateDB (
   “:'b1 -> 'a1”,
   bnfBase.bI {
     siblings = [],
     map = “combin$o : ('a1 -> 'c1) -> ('b1 -> 'a1) -> ('b1 -> 'c1)”,
-    set = [“λ(f : 'b1 -> 'a1). IMAGE f univ(:'b1) : 'a1 set”],
-    gset = “λ(g : 'a1 -> 'c set) (f: 'b1 -> 'a1).
-              BIGUNION (IMAGE (g o f) univ(:'b1)) : 'c set”,
+    set = [“fset: ('b1 -> 'a1) -> 'a1 set”],
+    gset = “fun_gset : ('a1 -> 'c set) -> ('b1 -> 'a1) -> 'c set”,
     mapID = pnm "funMap_ID",
     mapO = pnm "funMap_O",
     mapIMAGE = [pnm "funMapIMAGE1"],
@@ -235,4 +239,81 @@ Proof
   SRW_TAC[][combinTheory.o_DEF] >> simp[] >> Q.RENAME_TAC [‘FST (f b)’] >>
   Cases_on ‘f b’ >> simp[] >> first_x_assum irule >>
   first_x_assum (irule_at Any o SYM)
+QED
+
+(* ----------------------------------------------------------------------
+    record the option type's Bounded Natural Functor nature
+   ---------------------------------------------------------------------- *)
+
+Theorem optMap_ID:
+  OPTION_MAP (I:'a1 -> 'a1) = I : 'a1 option -> 'a1 option
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem optMap_O:
+  OPTION_MAP (f1:'c1 -> 'd1) o OPTION_MAP (g1:'a1 -> 'c1) =
+  OPTION_MAP (f1 o g1) : 'a1 option -> 'd1 option
+Proof
+  simp[FUN_EQ_THM] >> Cases >> simp[]
+QED
+
+Definition optSET_def:
+  optSET NONE = {} ∧
+  optSET (SOME x) = {x}
+End
+
+Definition opt_gset_def:
+  opt_gset (f1:'a1 -> 'c set) (x:'a1 option) = BIGUNION (IMAGE f1 (optSET x))
+End
+
+Theorem optMapIMAGE1:
+  ∀(f : 'a1 -> 'c1) (x : 'a1 option).
+    optSET (OPTION_MAP f x) = IMAGE f (optSET x)
+Proof
+  Cases_on ‘x’ >> simp[EXTENSION, PULL_EXISTS, optSET_def]
+QED
+
+Theorem optMapCONG:
+  (∀a1. a1 ∈ optSET (x : 'a1 option) ⇒ ((f1 : 'a1 -> 'c1) a1 = g1 a1)) ⇒
+  OPTION_MAP f1 x = OPTION_MAP g1 x
+Proof
+  Cases_on ‘x’ >> simp[optSET_def]
+QED
+
+Theorem opt_bnd1:
+  ∀x : 'a1 option. optSET x ≼ univ(:num)
+Proof
+  Cases >> simp[cardleq_def, optSET_def, INJ_DEF]
+QED
+
+val _ = bnfBase.updateDB (
+  “:'b1 -> 'a1”,
+  bnfBase.bI {
+    siblings = [],
+    map = “option$OPTION_MAP : ('a1 -> 'c1) -> 'a1 option -> 'c1 option”,
+    set = [“optSET : 'a1 option -> 'a1 set”],
+    gset = “opt_gset : ('a1 -> 'c set) -> 'a1 option -> 'c set”,
+    mapID = pnm "optMap_ID",
+    mapO = pnm "optMap_O",
+    mapIMAGE = [pnm "optMapIMAGE1"],
+    mapCONG = pnm "optMapCONG",
+    relator = “option$OPTREL : ('a1 -> 'c1 -> bool) ->
+                               ('a1 option -> 'c1 option -> bool)”,
+    bnd = “univ(:num)”,
+    bndthms = [pnm "opt_bnd1"]
+  }
+)
+
+Theorem optrel_thm[local]:
+  OPTREL (R:'a1 -> 'a2 -> bool) (x1:'a1 option) (x2:'a2 option) ⇔
+    ∃x:('a1#'a2) option.
+      x1 = OPTION_MAP FST x ∧ x2 = OPTION_MAP SND x ∧
+      ∀a b. (a,b) ∈ optSET x ⇒ R a b
+Proof
+  Cases_on ‘x1’ >> Cases_on ‘x2’ >> simp[OPTREL_def, PULL_EXISTS, optSET_def] >>
+  iff_tac
+  >- (strip_tac >> Q.RENAME_TAC [‘a = FST _ ∧ b = SND _ ∧ _’] >>
+      Q.EXISTS_TAC ‘(a,b)’ >> simp[]) >>
+  simp[pairTheory.EXISTS_PROD]
 QED
