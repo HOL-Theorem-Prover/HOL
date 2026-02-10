@@ -57,7 +57,7 @@ struct
       (E.UNEXPECTED {encountered = Char.toString c, expected = expected})
   fun DuplicateKey path =
     raise E.ParseError (E.DUPLICATE_KEY path)
-  (*: val parse : (char, 'strm) StringCvt.reader -> 'strm -> table *)
+  (*: val scan : (char,'strm)StringCvt.reader -> (table,'strm)StringCvt.reader *)
   fun scan (getc: (char, 'strm) StringCvt.reader) =
     let
       (*: val expect : char * 'strm -> 'strm *)
