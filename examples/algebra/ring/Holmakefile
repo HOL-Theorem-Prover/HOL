@@ -1,4 +1,4 @@
-INCLUDES = $(HOLDIR)/src/pred_set/src/more_theories $(HOLDIR)/src/integer \
+INCLUDES = $(HOLDIR)/src/pred_set/src $(HOLDIR)/src/integer \
            $(HOLDIR)/src/algebra/construction
 
 all: $(DEFAULT_TARGETS) selftest.exe
@@ -11,7 +11,7 @@ selftest.exe: selftest.uo ringLib.uo
 	$(HOLMOSMLC) -o $@ $<
 
 ifdef POLY
-OBJS = pred_set/src/more_theories/cardinalTheory integer/intLib \
+OBJS = pred_set/src/cardinalTheory integer/intLib \
        algebra/construction/ringTheory
 
 FULL_OBJPATHS = $(patsubst %,$(HOLDIR)/src/%.uo,$(OBJS))

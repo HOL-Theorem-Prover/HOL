@@ -52,7 +52,7 @@ Theorem FORALL_POS_MONO_EQ :
    !P. (!d e. d < e /\ P d ==> P e)
        ==> ((!e. &0 < e ==> P e) <=> (!n. ~(n = 0) ==> P(inv(&n))))
 Proof
-  MESON_TAC[REAL_ARCH_INV, REAL_LT_INV_EQ, REAL_LT_TRANS, LE_1,
+  MESON_TAC[REAL_ARCH_INV, REAL_LT_INV_EQ, REAL_LT_TRANS, NOT_ZERO,
             REAL_OF_NUM_LT]
 QED
 
@@ -866,8 +866,7 @@ Theorem GDELTA_IN_ALT :
         s SUBSET topspace top /\ (COUNTABLE INTERSECTION_OF open_in top) s
 Proof
   SIMP_TAC std_ss [COUNTABLE_INTERSECTION_OF_RELATIVE_TO_ALT, gdelta_in,
-                   OPEN_IN_TOPSPACE] THEN
-  REWRITE_TAC[Once CONJ_ACI]
+                   OPEN_IN_TOPSPACE, simpLib.AC CONJ_ASSOC CONJ_COMM]
 QED
 
 Theorem FSIGMA_IN_SUBSET :

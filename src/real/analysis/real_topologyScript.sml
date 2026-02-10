@@ -3947,22 +3947,26 @@ Proof
   ASM_SET_TAC[]
 QED
 
+val CONJ_ACI = simpLib.AC CONJ_ASSOC CONJ_COMM
+val INTER_ACI = simpLib.AC INTER_ASSOC INTER_COMM
+val UNION_ACI = simpLib.AC UNION_ASSOC UNION_COMM
+
 Theorem CONNECTED_DIFF_OPEN_FROM_CLOSED:
    !s t u:real->bool.
         s SUBSET t /\ t SUBSET u /\
         open s /\ closed t /\ connected u /\ connected(t DIFF s)
         ==> connected(u DIFF s)
 Proof
-  REPEAT STRIP_TAC THEN SIMP_TAC std_ss [connected, NOT_EXISTS_THM] THEN
-  MAP_EVERY X_GEN_TAC [``v:real->bool``, ``w:real->bool``] THEN
-  CCONTR_TAC THEN FULL_SIMP_TAC std_ss [] THEN
-  UNDISCH_TAC ``connected(t DIFF s:real->bool)`` THEN SIMP_TAC std_ss [connected] THEN
-  MAP_EVERY EXISTS_TAC [``v:real->bool``, ``w:real->bool``] THEN
-  ASM_REWRITE_TAC[] THEN CONJ_TAC  THENL [ASM_SET_TAC [], ALL_TAC] THEN
-  CONJ_TAC THENL [ASM_SET_TAC [], ALL_TAC] THEN
-  POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) THEN
-  MAP_EVERY (fn t => SPEC_TAC(t,t)) [``v:real->bool``, ``w:real->bool``] THEN
-  KNOW_TAC ``(!v:real->bool w:real->bool.
+  REPEAT STRIP_TAC >> SIMP_TAC std_ss [connected, NOT_EXISTS_THM] >>
+  MAP_EVERY X_GEN_TAC [“v:real->bool”, “w:real->bool”] >>
+  CCONTR_TAC >> FULL_SIMP_TAC std_ss [] >>
+  UNDISCH_TAC “connected(t DIFF s:real->bool)” >> SIMP_TAC std_ss [connected] >>
+  MAP_EVERY EXISTS_TAC [“v:real->bool”, “w:real->bool”] >>
+  ASM_REWRITE_TAC[] >> CONJ_TAC >- ASM_SET_TAC [] >>
+  CONJ_TAC >- ASM_SET_TAC [] >>
+  POP_ASSUM_LIST(MP_TAC o end_itlist CONJ) >>
+  MAP_EVERY (fn t => SPEC_TAC(t,t)) [“v:real->bool”, “w:real->bool”] >>
+  KNOW_TAC “(!v:real->bool w:real->bool.
       ~(w INTER (u DIFF s) = {}) /\ ~(v INTER (u DIFF s) = {}) /\
       (v INTER w INTER (u DIFF s) = {}) /\ u DIFF s SUBSET v UNION w /\
       open w /\ open v /\ connected u /\ closed t /\ open s /\
@@ -3975,12 +3979,15 @@ Proof
        (v INTER w INTER (u DIFF s) = {}) /\ u DIFF s SUBSET v UNION w /\
        open w /\ open v /\ connected u /\ closed t /\ open s /\
        t SUBSET u /\ s SUBSET t) /\ (w INTER (t DIFF s) = {})
-      ==> F)`` THENL
-  [CONJ_TAC THENL [SIMP_TAC std_ss [CONJ_ACI, INTER_ACI, UNION_ACI], ALL_TAC] THEN
-  REPEAT STRIP_TAC THEN UNDISCH_TAC ``connected u`` THEN
-  GEN_REWR_TAC LAND_CONV [connected] THEN SIMP_TAC std_ss [] THEN
-  MAP_EVERY EXISTS_TAC [``v UNION s:real->bool``, ``w DIFF t:real->bool``] THEN
-  ASM_SIMP_TAC std_ss [OPEN_UNION, OPEN_DIFF] THEN ASM_SET_TAC[], METIS_TAC []]
+      ==> F)”
+  THENL [
+    CONJ_TAC >- SIMP_TAC std_ss [CONJ_ACI, INTER_ACI, UNION_ACI] >>
+    REPEAT STRIP_TAC >> UNDISCH_TAC “connected u” >>
+    GEN_REWR_TAC LAND_CONV [connected] >> SIMP_TAC std_ss [] >>
+    MAP_EVERY EXISTS_TAC [“v UNION s:real->bool”, “w DIFF t:real->bool”] >>
+    ASM_SIMP_TAC std_ss [OPEN_UNION, OPEN_DIFF] >> ASM_SET_TAC[],
+    METIS_TAC []
+  ]
 QED
 
 Theorem CONNECTED_DISJOINT_BIGUNION_OPEN_UNIQUE:
@@ -4803,15 +4810,16 @@ Proof
 QED
 
 Theorem REAL_ARCH_RDIV_EQ_0:
-   !x c:real. &0 <= x /\ &0 <= c /\ (!m. 0 < m ==> &m * x <= c) ==> (x = &0)
+  !x c:real. &0 <= x /\ &0 <= c /\ (!m. 0 < m ==> &m * x <= c) ==> (x = &0)
 Proof
-  SIMP_TAC std_ss [GSYM REAL_LE_ANTISYM, GSYM REAL_NOT_LT] THEN REPEAT STRIP_TAC THEN
-  POP_ASSUM (STRIP_ASSUME_TAC o SPEC ``c:real`` o MATCH_MP REAL_ARCH) THEN
-  ASM_CASES_TAC ``n=0:num`` THENL
-   [POP_ASSUM SUBST_ALL_TAC THEN
-    RULE_ASSUM_TAC (REWRITE_RULE [REAL_MUL_LZERO]) THEN
+  SIMP_TAC std_ss [GSYM REAL_LE_ANTISYM, GSYM REAL_NOT_LT] >> rpt STRIP_TAC >>
+  POP_ASSUM (STRIP_ASSUME_TAC o SPEC “c:real” o MATCH_MP REAL_ARCH) >>
+  ASM_CASES_TAC “n=0:num” >| [
+    POP_ASSUM SUBST_ALL_TAC >>
+    RULE_ASSUM_TAC (REWRITE_RULE [REAL_MUL_LZERO]) >>
     ASM_MESON_TAC [REAL_LET_ANTISYM],
-    ASM_MESON_TAC [REAL_LET_ANTISYM, REAL_MUL_SYM, LT_NZ]]
+    ASM_MESON_TAC [REAL_LET_ANTISYM, REAL_MUL_SYM, NOT_ZERO]
+  ]
 QED
 
 (* ------------------------------------------------------------------------- *)
@@ -8411,7 +8419,8 @@ Proof
   UNDISCH_TAC ``cauchy f`` THEN GEN_REWR_TAC LAND_CONV [cauchy] THEN
   SIMP_TAC std_ss [GE, LIM, SEQUENTIALLY, dist, REAL_SUB_RZERO] THEN
   SUBGOAL_THEN ``!n:num. n <= r(n)`` MP_TAC THENL [INDUCT_TAC, ALL_TAC] THEN
-  ASM_MESON_TAC[LESS_EQ_TRANS, LESS_EQ_REFL, LT, LESS_EQ_LESS_TRANS, ZERO_LESS_EQ, LE_SUC_LT]
+  ASM_MESON_TAC[LESS_EQ_TRANS, LESS_EQ_REFL, LT, LESS_EQ_LESS_TRANS,
+                ZERO_LESS_EQ, NOT_LEQ, NOT_LE]
 QED
 
 Theorem COMPLETE_UNIV:
@@ -8692,7 +8701,7 @@ Theorem LE_1:
    (!n:num. 1 <= n ==> 0 < n) /\
    (!n:num. 1 <= n ==> ~(n = 0))
 Proof
-  REWRITE_TAC[LT_NZ, GSYM NOT_LESS, ONE, LT]
+  REWRITE_TAC[NOT_ZERO, GSYM NOT_LESS, ONE, LT]
 QED
 
 Theorem LIMPT_OF_SEQUENCE_SUBSEQUENCE:
@@ -18657,30 +18666,28 @@ Proof
        ASM_SIMP_TAC real_ss [REAL_LT_RDIV_EQ, REAL_MUL_LINV, REAL_LT_IMP_NE])]
 QED
 
-Theorem CARD_EQ_REAL:   univ(:real) =_c univ(:num->bool)
+Theorem CARD_EQ_REAL:   univ(:real) ≈ univ(:num->bool)
 Proof
   REWRITE_TAC [GSYM CARD_LE_ANTISYM] THEN CONJ_TAC THENL
   [ (* goal 1 (of 2) *)
-    KNOW_TAC ``univ(:real) <=_c (univ(:num) *_c univ(:num->bool)) /\
-               (univ(:num) *_c univ(:num->bool)) <=_c univ(:num -> bool)`` THENL
-    [ALL_TAC, METIS_TAC [CARD_LE_TRANS]] THEN
-    CONJ_TAC THENL
-     [ALL_TAC,
-      MATCH_MP_TAC CARD_MUL2_ABSORB_LE THEN REWRITE_TAC[INFINITE_Unum] THEN
-      SIMP_TAC std_ss [CANTOR_THM_UNIV, CARD_LT_IMP_LE, CARD_LE_REFL]] THEN
-    `univ(:real) <=_c (univ(:num) *_c {x:real | &0 <= x}) /\
-     univ(:num) *_c {x:real | &0 <= x} <=_c univ(:num) *_c univ(:num -> bool)`
+    ‘univ(:real) ≼ (univ(:num) *_c univ(:num->bool)) ∧
+     (univ(:num) *_c univ(:num->bool)) <=_c univ(:num -> bool)’
+    suffices_by METIS_TAC [CARD_LE_TRANS] >>
+    reverse CONJ_TAC
+    >- (MATCH_MP_TAC CARD_MUL2_ABSORB_LE THEN REWRITE_TAC[INFINITE_Unum] THEN
+        SIMP_TAC std_ss [CANTOR_THM_UNIV, CARD_LT_IMP_LE, CARD_LE_REFL]) >>
+    ‘univ(:real) <=_c (univ(:num) *_c {x:real | &0 <= x}) /\
+     univ(:num) *_c {x:real | &0 <= x} <=_c univ(:num) *_c univ(:num -> bool)’
        suffices_by METIS_TAC[CARD_LE_TRANS] THEN
-    CONJ_TAC THENL
-     [SIMP_TAC std_ss [LE_C, mul_c, EXISTS_PROD, IN_ELIM_PAIR_THM, IN_UNIV] THEN
-      EXISTS_TAC ``\(n,x:real). -(&1) pow n * x`` THEN X_GEN_TAC ``x:real`` THEN
-      `?p_2. (p_2 IN {x | 0r <= x} /\ ((\ (n,x). -1 pow n * x) (0,p_2) = x)) \/
-             (p_2 IN {x | 0r <= x} /\ ((\ (n,x). -1 pow n * x) (1,p_2) = x))`
-        suffices_by METIS_TAC[OR_EXISTS_THM] THEN EXISTS_TAC ``abs x:real`` THEN
-      SIMP_TAC std_ss [GSPECIFICATION, pow, POW_1] THEN REAL_ARITH_TAC,
-      ALL_TAC] THEN
+    CONJ_TAC
+    >- (SIMP_TAC std_ss [LE_C, mul_c, EXISTS_PROD, IN_ELIM_PAIR_THM, IN_UNIV] >>
+        EXISTS_TAC “λ(n,x:real). -(&1) pow n * x” >> X_GEN_TAC “x:real” >>
+        ‘∃p_2. (p_2 ∈ {x | 0r <= x} ∧ ((λ(n,x). -1 pow n * x) (0,p_2) = x)) ∨
+               (p_2 ∈ {x | 0r <= x} ∧ ((λ(n,x). -1 pow n * x) (1,p_2) = x))’
+          suffices_by METIS_TAC[] THEN EXISTS_TAC “abs x:real” THEN
+        SIMP_TAC std_ss [GSPECIFICATION, pow, POW_1] THEN REAL_ARITH_TAC) >>
     MATCH_MP_TAC CARD_LE_MUL THEN SIMP_TAC std_ss [CARD_LE_REFL] THEN
-    MP_TAC(ISPECL [``univ(:num)``, ``univ(:num)``] CARD_MUL_ABSORB_LE) THEN
+    MP_TAC(ISPECL [“univ(:num)”, “univ(:num)”] CARD_MUL_ABSORB_LE) THEN
     SIMP_TAC std_ss [CARD_LE_REFL, num_INFINITE] THEN
     SIMP_TAC std_ss [le_c, mul_c, IN_UNIV, FORALL_PROD, IN_ELIM_PAIR_THM] THEN
     REWRITE_TAC [GSYM PAIR_EQ] THEN
@@ -18688,107 +18695,103 @@ Proof
     SIMP_TAC std_ss [LEFT_IMP_EXISTS_THM]
 
     THEN
-    MAP_EVERY X_GEN_TAC [``Pair:num#num->num``, ``Unpair:num->num#num``] THEN
+    MAP_EVERY X_GEN_TAC [“Pair:num#num->num”, “Unpair:num->num#num”] THEN
     DISCH_TAC THEN
-    EXISTS_TAC ``\x:real n:num. &(FST(Unpair n)) * x <= &(SND(Unpair n))`` THEN
+    EXISTS_TAC “\x:real n:num. &(FST(Unpair n)) * x <= &(SND(Unpair n))” THEN
     SIMP_TAC std_ss [] THEN
     HO_MATCH_MP_TAC REAL_WLOG_LT THEN
     SIMP_TAC std_ss [GSPECIFICATION, FUN_EQ_THM] THEN
     CONJ_TAC THENL [SIMP_TAC std_ss [EQ_SYM_EQ, CONJ_ACI], ALL_TAC] THEN
-    MAP_EVERY X_GEN_TAC [``x:real``, ``y:real``] THEN REPEAT STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o GENL [``p:num``, ``q:num``] o
-      SPEC ``(Pair:num#num->num) (p,q)``) THEN
-    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC(TAUT `~p ==> p ==> q`) THEN
-    MP_TAC(SPEC ``y - x:real`` REAL_ARCH) THEN
+    MAP_EVERY X_GEN_TAC [“x:real”, “y:real”] THEN REPEAT STRIP_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o GENL [“p:num”, “q:num”] o
+      SPEC “(Pair:num#num->num) (p,q)”) THEN
+    ASM_REWRITE_TAC[] THEN MATCH_MP_TAC(TAUT ‘~p ==> p ==> q’) THEN
+    MP_TAC(SPEC “y - x:real” REAL_ARCH) THEN
     ASM_SIMP_TAC std_ss [REAL_SUB_LT, NOT_FORALL_THM] THEN
-    DISCH_THEN(MP_TAC o SPEC ``&2:real``) THEN
-    DISCH_THEN (X_CHOOSE_TAC ``p:num``) THEN EXISTS_TAC ``p:num`` THEN
-    MP_TAC(ISPEC ``&p * x:real`` REAL_BIGNUM) THEN
-    ONCE_REWRITE_TAC [METIS [] ``(?n. &p * x < &n:real) = (?n. (\n. &p * x < &n) n)``] THEN
+    DISCH_THEN(MP_TAC o SPEC “&2:real”) THEN
+    DISCH_THEN (X_CHOOSE_TAC “p:num”) THEN EXISTS_TAC “p:num” THEN
+    MP_TAC(ISPEC “&p * x:real” REAL_BIGNUM) THEN
+    ONCE_REWRITE_TAC [METIS [] “(?n. &p * x < &n:real) = (?n. (\n. &p * x < &n) n)”] THEN
     DISCH_THEN (MP_TAC o MATCH_MP WOP) THEN SIMP_TAC std_ss [] THEN
-    DISCH_THEN (X_CHOOSE_TAC ``n:num``) THEN EXISTS_TAC ``n:num`` THEN
-    POP_ASSUM MP_TAC THEN SPEC_TAC (``n:num``,``n:num``) THEN
-    KNOW_TAC ``!n. (\n. &p * x < &n:real /\ (!m. m < n ==> ~(&p * x < &m)) ==>
-                      ~(&p * x <= &n <=> &p * y <= &n:real)) n`` THENL
-    [ALL_TAC, METIS_TAC []] THEN MATCH_MP_TAC INDUCTION THEN
-
+    DISCH_THEN (X_CHOOSE_TAC “n:num”) THEN EXISTS_TAC “n:num” THEN
+    POP_ASSUM MP_TAC THEN SPEC_TAC (“n:num”,“n:num”) >>
+    Cases >>
     ASM_SIMP_TAC std_ss [REAL_LE_MUL, REAL_POS,
-      REAL_ARITH ``x:real < &0 <=> ~(&0 <= x)``]
-
-    THEN
-    X_GEN_TAC ``q:num`` THEN REWRITE_TAC[GSYM REAL_OF_NUM_SUC] THEN
-    DISCH_THEN(K ALL_TAC) THEN STRIP_TAC THEN
-    FIRST_X_ASSUM(MP_TAC o SPEC ``q:num``) THEN
+                         REAL_ARITH “x:real < &0 <=> ~(&0 <= x)”] >>
+    rename [‘SUC q’] >>
+    REWRITE_TAC[GSYM REAL_OF_NUM_SUC] THEN
+    STRIP_TAC THEN
+    FIRST_X_ASSUM(MP_TAC o SPEC “q:num”) THEN
     SIMP_TAC arith_ss [LT] THEN POP_ASSUM MP_TAC THEN
     POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN
     POP_ASSUM MP_TAC THEN POP_ASSUM MP_TAC THEN REAL_ARITH_TAC,
 
     (* goal 2 (of 2) *)
     REWRITE_TAC[le_c, IN_UNIV] THEN
-    EXISTS_TAC ``\s:num->bool. sup { sum (s INTER { 0n..n}) (\i. inv(&3 pow i)) |
-                                    n IN univ(:num) }`` THEN
-    MAP_EVERY X_GEN_TAC [``x:num->bool``, ``y:num->bool``] THEN
+    EXISTS_TAC “\s:num->bool. sup { sum (s INTER { 0n..n}) (\i. inv(&3 pow i)) |
+                                    n IN univ(:num) }” THEN
+    MAP_EVERY X_GEN_TAC [“x:num->bool”, “y:num->bool”] THEN
     ONCE_REWRITE_TAC[MONO_NOT_EQ] THEN
     SIMP_TAC std_ss [EXTENSION, NOT_FORALL_THM] THEN
-    ONCE_REWRITE_TAC [METIS [] ``(?x':num. x' IN x <=/=> x' IN y) =
-                           (?x'. (\x'. x' IN x <=/=> x' IN y) x')``] THEN
+    ONCE_REWRITE_TAC [METIS [] “(?x':num. x' IN x <=/=> x' IN y) =
+                           (?x'. (\x'. x' IN x <=/=> x' IN y) x')”] THEN
     DISCH_THEN (MP_TAC o MATCH_MP WOP) THEN SIMP_TAC std_ss [] THEN
-    MAP_EVERY (fn w => SPEC_TAC(w,w)) [``y:num->bool``, ``x:num->bool``] THEN
-    KNOW_TAC ``!x y.
+    MAP_EVERY (fn w => SPEC_TAC(w,w)) [“y:num->bool”, “x:num->bool”] THEN
+    KNOW_TAC “!x y.
      (?n. ~(n IN x <=> n IN y) /\ (\x y n. !m. m < n ==> (m IN x <=> m IN y)) x y n) ==>
      (\x y. sup {sum (x INTER {0 .. n}) (\i. inv (3 pow i)) | n IN univ(:num)} <>
-            sup {sum (y INTER {0 .. n}) (\i. inv (3 pow i)) | n IN univ(:num)}) x y`` THENL
+            sup {sum (y INTER {0 .. n}) (\i. inv (3 pow i)) | n IN univ(:num)}) x y” THENL
     [ALL_TAC, METIS_TAC []] THEN
     MATCH_MP_TAC(MESON[]
-     ``((!P Q n. R P Q n <=> R Q P n) /\ (!P Q. SS P Q <=> SS Q P)) /\
+     “((!P Q n. R P Q n <=> R Q P n) /\ (!P Q. SS P Q <=> SS Q P)) /\
        (!P Q. (?n. n IN P /\ ~(n IN Q) /\ R P Q n) ==> SS P Q)
-       ==> !P Q. (?n:num. ~(n IN P <=> n IN Q) /\ R P Q n) ==> SS P Q``) THEN
+       ==> !P Q. (?n:num. ~(n IN P <=> n IN Q) /\ R P Q n) ==> SS P Q”) THEN
     SIMP_TAC std_ss [] THEN CONJ_TAC THENL
     [ONCE_REWRITE_TAC[EQ_SYM_EQ] THEN METIS_TAC [], SIMP_TAC std_ss []] THEN
-    MAP_EVERY X_GEN_TAC [``x:num->bool``, ``y:num->bool``] THEN
-    DISCH_THEN(X_CHOOSE_THEN ``n:num`` STRIP_ASSUME_TAC) THEN
-    MATCH_MP_TAC(REAL_ARITH ``!z:real. y < z /\ z <= x ==> ~(x = y)``) THEN
+    MAP_EVERY X_GEN_TAC [“x:num->bool”, “y:num->bool”] THEN
+    DISCH_THEN(X_CHOOSE_THEN “n:num” STRIP_ASSUME_TAC) THEN
+    MATCH_MP_TAC(REAL_ARITH “!z:real. y < z /\ z <= x ==> ~(x = y)”) THEN
 
-    EXISTS_TAC ``sum (x INTER { 0n..n}) (\i. inv(&3 pow i))`` THEN CONJ_TAC THENL
+    EXISTS_TAC “sum (x INTER { 0n..n}) (\i. inv(&3 pow i))” THEN CONJ_TAC THENL
     [ (* goal 2.1 (of 2) *)
       MATCH_MP_TAC REAL_LET_TRANS THEN
       EXISTS_TAC
-       ``sum (y INTER { 0n..n}) (\i. inv(&3 pow i)) +
-         &3 / &2 / &3 pow (SUC n)`` THEN
+       “sum (y INTER { 0n..n}) (\i. inv(&3 pow i)) +
+         &3 / &2 / &3 pow (SUC n)” THEN
 
       CONJ_TAC THENL
        [MATCH_MP_TAC REAL_SUP_LE' THEN
         CONJ_TAC THENL [SET_TAC[], SIMP_TAC std_ss [FORALL_IN_GSPEC, IN_UNIV]] THEN
-        X_GEN_TAC ``p:num`` THEN ASM_CASES_TAC ``n:num <= p`` THENL
+        X_GEN_TAC “p:num” THEN ASM_CASES_TAC “n:num <= p” THENL
          [MATCH_MP_TAC(REAL_ARITH
-           ``!d. (s:real = t + d) /\ d <= e ==> s <= t + e``) THEN
-          EXISTS_TAC ``sum(y INTER {n+ 1n..p}) (\i. inv (&3 pow i))`` THEN
+           “!d. (s:real = t + d) /\ d <= e ==> s <= t + e”) THEN
+          EXISTS_TAC “sum(y INTER {n+ 1n..p}) (\i. inv (&3 pow i))” THEN
           CONJ_TAC THENL
            [ONCE_REWRITE_TAC[INTER_COMM] THEN
             SIMP_TAC std_ss [INTER_DEF, SUM_RESTRICT_SET] THEN
             ASM_SIMP_TAC std_ss [SUM_COMBINE_R, ZERO_LESS_EQ],
             SIMP_TAC std_ss [ADD1, lemma, REAL_LT_IMP_LE]],
-          MATCH_MP_TAC(REAL_ARITH ``y:real <= x /\ &0 <= d ==> y <= x + d``) THEN
+          MATCH_MP_TAC(REAL_ARITH “y:real <= x /\ &0 <= d ==> y <= x + d”) THEN
           SIMP_TAC real_ss [REAL_LE_DIV, REAL_POS, POW_POS] THEN
           MATCH_MP_TAC SUM_SUBSET_SIMPLE THEN
           SIMP_TAC real_ss [REAL_LE_INV_EQ, POW_POS, REAL_POS] THEN
           SIMP_TAC std_ss [FINITE_INTER, FINITE_NUMSEG] THEN MATCH_MP_TAC
-           (SET_RULE ``s SUBSET t ==> u INTER s SUBSET u INTER t``) THEN
+           (SET_RULE “s SUBSET t ==> u INTER s SUBSET u INTER t”) THEN
           REWRITE_TAC[SUBSET_NUMSEG] THEN ASM_SIMP_TAC arith_ss []],
         ONCE_REWRITE_TAC[INTER_COMM] THEN
-        SIMP_TAC std_ss [INTER_DEF, SUM_RESTRICT_SET] THEN ASM_CASES_TAC ``n = 0:num`` THENL
+        SIMP_TAC std_ss [INTER_DEF, SUM_RESTRICT_SET] THEN ASM_CASES_TAC “n = 0:num” THENL
          [FIRST_X_ASSUM SUBST_ALL_TAC THEN
           FULL_SIMP_TAC real_ss [SUM_SING, NUMSEG_SING, pow] THEN
           SIMP_TAC real_ss [REAL_LT_LDIV_EQ, REAL_INV1] THEN REAL_ARITH_TAC,
           ASM_SIMP_TAC std_ss [SUM_CLAUSES_RIGHT, LE_1, ZERO_LESS_EQ, REAL_ADD_RID] THEN
-          MATCH_MP_TAC(REAL_ARITH ``(s:real = t) /\ d < e ==> s + d < t + e``) THEN
+          MATCH_MP_TAC(REAL_ARITH “(s:real = t) /\ d < e ==> s + d < t + e”) THEN
           CONJ_TAC THENL
            [MATCH_MP_TAC SUM_EQ_NUMSEG THEN
-            ASM_SIMP_TAC std_ss [ARITH_PROVE ``~(n = 0:num) /\ m <= n - 1 ==> m < n``],
+            ASM_SIMP_TAC std_ss [ARITH_PROVE “~(n = 0:num) /\ m <= n - 1 ==> m < n”],
             SIMP_TAC real_ss [pow, real_div, REAL_INV_MUL, REAL_MUL_ASSOC] THEN
-            KNOW_TAC ``3 pow n <> 0:real`` THENL
+            KNOW_TAC “3 pow n <> 0:real” THENL
             [MATCH_MP_TAC POW_NZ THEN REAL_ARITH_TAC, DISCH_TAC] THEN
-            KNOW_TAC ``0:real < 3 pow n`` THENL
+            KNOW_TAC “0:real < 3 pow n” THENL
             [MATCH_MP_TAC REAL_POW_LT THEN REAL_ARITH_TAC, DISCH_TAC] THEN
             ASM_SIMP_TAC real_ss [REAL_INV_MUL, REAL_MUL_ASSOC] THEN
             GEN_REWR_TAC RAND_CONV [GSYM REAL_MUL_LID] THEN
@@ -18796,14 +18799,14 @@ Proof
             ONCE_REWRITE_TAC [REAL_MUL_SYM] THEN
             SIMP_TAC real_ss [REAL_MUL_ASSOC, REAL_MUL_LINV] THEN
             SIMP_TAC real_ss [REAL_INV_1OVER, REAL_LT_LDIV_EQ]]]],
-      MP_TAC(ISPEC ``{ sum (x INTER { 0n..n}) (\i. inv(&3 pow i)) | n IN univ(:num) }``
+      MP_TAC(ISPEC “{ sum (x INTER { 0n..n}) (\i. inv(&3 pow i)) | n IN univ(:num) }”
           SUP) THEN SIMP_TAC std_ss [FORALL_IN_GSPEC, IN_UNIV] THEN
-      KNOW_TAC ``{sum (x INTER {0 .. n}) (\i. inv (3 pow i)) | n | T} <> {} /\
-         (?b. !n. sum (x INTER {0 .. n}) (\i. inv (3 pow i)) <= b)`` THENL
+      KNOW_TAC “{sum (x INTER {0 .. n}) (\i. inv (3 pow i)) | n | T} <> {} /\
+         (?b. !n. sum (x INTER {0 .. n}) (\i. inv (3 pow i)) <= b)” THENL
       [ALL_TAC, DISCH_TAC THEN ASM_REWRITE_TAC [] THEN POP_ASSUM K_TAC THEN
        SIMP_TAC std_ss []] THEN
       CONJ_TAC THENL [SET_TAC[], ALL_TAC] THEN
-      EXISTS_TAC ``&3 / &2 / (&3:real) pow 0`` THEN
+      EXISTS_TAC “&3 / &2 / (&3:real) pow 0” THEN
       SIMP_TAC std_ss [lemma, REAL_LT_IMP_LE]]
   ]
 QED
@@ -18832,11 +18835,12 @@ QED
 (* Cardinalities of various useful sets.                                     *)
 (* ------------------------------------------------------------------------- *)
 
+(* original HOL Light theorem is univ(:real[n]) =_c univ(:real), which is
+   not so vacuous *)
 Theorem CARD_EQ_EUCLIDEAN:
    univ(:real) =_c univ(:real)
 Proof
-  REWRITE_TAC [eq_c, IN_UNIV] THEN EXISTS_TAC ``(\x. x:real)`` THEN
-  METIS_TAC []
+  simp[]
 QED
 
 Theorem UNCOUNTABLE_EUCLIDEAN:
