@@ -53,6 +53,14 @@ Proof
   SIMP_TAC (srw_ss()) [EXTENSION]
 QED
 
+Theorem sumMapCONG:
+  (∀a1. a1 ∈ setL x ⇒ (f1 : 'a1 -> 'c1) a1 = g1 a1) ∧
+  (∀a2. a2 ∈ setR x ⇒ (f2 : 'a2 -> 'c2) a2 = g2 a2) ⇒
+  SUM_MAP f1 f2 x = SUM_MAP g1 g2 x
+Proof
+  Cases_on ‘x’ >> simp[]
+QED
+
 Theorem sum_bnd1:
   ∀s : 'a + 'b. setL s ≼ univ(:num)
 Proof
@@ -74,6 +82,7 @@ val _ = bnfBase.updateDB (
     mapID = pnm "sumMap_ID",
     mapO = pnm "sumMap_O",
     mapIMAGE = [pnm "sumMapIMAGE1", pnm "sumMapIMAGE2"],
+    mapCONG = pnm "sumMapCONG",
 
     set = [“setL : 'a1 + 'a2 -> 'a1 set”, “setR : 'a1 + 'a2 -> 'a2 set”],
     gset =
@@ -114,6 +123,14 @@ Proof
   Cases_on ‘p’ >> simp[PAIR_MAP_SET, EXTENSION, EQ_SYM_EQ]
 QED
 
+Theorem pairMapCONG:
+  (∀a1:'a1. a1 ∈ setFST p ⇒ (f1 : 'a1 -> 'c1) a1 = g1 a1) ∧
+  (∀a2:'a2. a2 ∈ setSND p ⇒ (f2 : 'a2 -> 'c2) a2 = g2 a2) ⇒
+  (f1 ## f2) p = (g1 ## g2) p
+Proof
+  Cases_on ‘p’ >> simp[]
+QED
+
 Theorem pair_bnd1:
   ∀p : 'a1 # 'a2. setFST p ≼ univ(:num)
 Proof
@@ -135,6 +152,7 @@ val _ = bnfBase.updateDB (
     mapID = pnm "pairMap_ID",
     mapO = pnm "pairMap_O",
     mapIMAGE = [pnm "pairMapIMAGE1", pnm "pairMapIMAGE2"],
+    mapCONG = pnm "pairMapCONG",
     gset = “pair$PAIR_SET : ('a1 -> 'c set) -> ('a2 -> 'c set) ->
                             ('a1 # 'a2 -> 'c set)”,
     relator = “pair$RPROD : ('a1 -> 'c1 -> bool) -> ('a2 -> 'c2 -> bool) ->
@@ -174,6 +192,13 @@ Proof
   simp[EXTENSION, PULL_EXISTS]
 QED
 
+Theorem funMapCONG:
+  (∀a1. a1 ∈ fset (fn : 'b1 -> 'a1) ⇒ ((f1 : 'a1 -> 'c1) a1 = g1 a1)) ⇒
+  fmap f1 fn = fmap g1 fn
+Proof
+  simp[EXTENSION, PULL_EXISTS, FUN_EQ_THM]
+QED
+
 Theorem fun_bnd1:
   ∀f : 'b1 -> 'a1. fset f ≼ univ(:'b1)
 Proof
@@ -192,6 +217,7 @@ val _ = bnfBase.updateDB (
     mapID = pnm "funMap_ID",
     mapO = pnm "funMap_O",
     mapIMAGE = [pnm "funMapIMAGE1"],
+    mapCONG = pnm "funMapCONG",
     relator = “quotient$===> $= : ('a1 -> 'c1 -> bool) ->
                                   (('b1 -> 'a1) -> ('b1 -> 'c1) -> bool)”,
     bnd = “univ(:'b1)”,

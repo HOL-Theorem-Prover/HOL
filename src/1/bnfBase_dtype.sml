@@ -18,6 +18,8 @@ datatype 'a info = bI of {
   mapO : 'a,                (* map f₁ .. fₙ o map g₁ .. gₙ =
                                map (f₁ o g₁) ... (fₙ o gₙ) thm *)
   mapIMAGE : 'a list,       (* set₁ (map f₁ ... fₙ x) = IMAGE f₁ (set₁ x) etc *)
+  mapCONG : 'a,             (* (!a1. a1 ∈ set₁ x ⇒ f₁ a1 = g₁ a1) ∧ ... ⇒
+                               map f₁ .. fₙ x = map g₁ .. gₙ x *)
   bndthms : 'a list         (* !x. set₁ x ≼ bnd etc *)
 }
 

@@ -11,8 +11,8 @@ fun pure_insert db ty info = TypeNet.insert(db,ty,info)
 
 fun kname_to_thm_info (bI fields :kname info) : thm info =
    let
-     val {map,set,gset,relator,bnd,mapID,mapO,mapIMAGE,bndthms,siblings} = fields
-     fun convertTN (tm,kname) = (tm,DB.fetch_knm kname)
+     val {map,set,gset,relator,bnd,mapID,mapO,mapIMAGE,mapCONG,bndthms,siblings} =
+         fields
      val convertN = DB.fetch_knm
    in
      bI {
@@ -25,6 +25,7 @@ fun kname_to_thm_info (bI fields :kname info) : thm info =
        mapID = convertN mapID,
        mapO = convertN mapO,
        mapIMAGE = List.map convertN mapIMAGE,
+       mapCONG = convertN mapCONG,
        bndthms = List.map convertN bndthms
      }
    end
@@ -36,13 +37,15 @@ local
 in
   fun tup2rec ((siblings,map,set,gset),
                (relator,bnd,bndthms),
-               (mapO,mapID,mapIMAGE)) =
+               (mapO,mapID,mapIMAGE,mapCONG)) =
       bI {siblings = siblings, map = map, set = set, gset = gset,
           relator = relator, bnd = bnd, mapO = mapO, mapID = mapID,
-          mapIMAGE = mapIMAGE, bndthms = bndthms}
+          mapIMAGE = mapIMAGE, mapCONG = mapCONG, bndthms = bndthms}
   fun rec2tup (bI {siblings , map, set, gset, relator, bnd, mapO, mapID,
-                   mapIMAGE, bndthms}) =
-      ((siblings,map,set,gset), (relator,bnd,bndthms), (mapO,mapID,mapIMAGE))
+                   mapIMAGE, mapCONG, bndthms}) =
+      ((siblings,map,set,gset),
+       (relator,bnd,bndthms),
+       (mapO,mapID,mapIMAGE,mapCONG))
 
   val ed0 = pair3_ed (
         pair4_ed (add_label "siblings" $ list_ed type_ed,
@@ -52,9 +55,10 @@ in
         pair3_ed (add_label "relator" $ term_ed,
                   add_label "bnd" term_ed,
                   add_label "bndthms" $ list_ed kname_ed),
-        pair3_ed (add_label "mapID" $ kname_ed,
-                  add_label "mapO" $ kname_ed,
-                  add_label "mapIMAGE" $ list_ed kname_ed)
+        pair4_ed (add_label "mapID" kname_ed,
+                  add_label "mapO" kname_ed,
+                  add_label "mapIMAGE" $ list_ed kname_ed,
+                  add_label "mapCONG" kname_ed)
       )
   val ed1 = bij_ed (rec2tup, tup2rec) ed0
   val bnf_ed = pair_ed (type_ed, ed1)
