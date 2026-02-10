@@ -7,3 +7,5 @@ Libs
 Theorem foo = boolTheory.TRUTH
 
 val _ = Lib.assert isSome (bnfBase.pure_lookup (bnfBase.fullDB()) “:'a1 + 'a2”)
+val _ = Lib.assert isSome (bnfBase.pure_lookup (bnfBase.fullDB()) “:'a1 # 'a2”)
+val _ = Lib.assert isSome (bnfBase.pure_lookup (bnfBase.fullDB()) “:'b1 -> 'a1”)
