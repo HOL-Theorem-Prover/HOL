@@ -18,6 +18,10 @@ datatype 'a info = bI of {
   mapO : 'a,                (* map f₁ .. fₙ o map g₁ .. gₙ =
                                map (f₁ o g₁) ... (fₙ o gₙ) thm *)
   mapIMAGE : 'a list,       (* set₁ (map f₁ ... fₙ x) = IMAGE f₁ (set₁ x) etc *)
+  gsetmap : 'a,             (* gset g₁ .. gₙ (map f₁ ... fₙ x) =
+                                 gset (g₁ ∘ f₁) .. (gₙ ∘ fₙ) x *)
+  gsetIMAGE : 'a,           (* IMAGE f (gset g₁ .. gₙ x) =
+                                 gset (IMAGE f ∘ g₁) .. (IMAGE f ∘ gₙ) x *)
   mapCONG : 'a,             (* (!a1. a1 ∈ set₁ x ⇒ f₁ a1 = g₁ a1) ∧ ... ⇒
                                map f₁ .. fₙ x = map g₁ .. gₙ x *)
   bndthms : 'a list         (* !x. set₁ x ≼ bnd etc *)
@@ -64,6 +68,18 @@ mapO thm has form
         (α₁ ... αₙ, β₁ ... βₙ)tyop ->
         (δ₁ ... δₙ, β₁ ... βₙ)tyop
 
+
+gsetmap has form
+
+   |- gset (f₁ : γ₁ -> δ set) ... (fₙ : γₙ -> δ set)
+        (map (g₁ : α₁ -> γ₁) ... (gₙ : αₙ -> γₙ) (x:(α₁,...,αₙ,β₁,...,βₘ)F) =
+          gset (f₁ ∘ g₁) ... (fₙ ∘ gₙ) x
+
+gsetIMAGE has form
+
+   |- IMAGE (f : γ -> δ)
+      (gset (g₁ : α₁ -> γ set) ... (gₙ : αₙ -> γ set) (x:(α₁,...,αₙ,β₁,...,βₘ)F)) =
+      gset (IMAGE f ∘ g₁) ... (IMAGE f ∘ gₙ) x
 
 *)
 
