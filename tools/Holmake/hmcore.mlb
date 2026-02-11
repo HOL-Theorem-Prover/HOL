@@ -37,6 +37,10 @@ hmf/Holmake_types.sig
 hmf/Holmake_types.sml
 hmf/ReadHMF.sig
 hmf/ReadHMF.sml
+../../src/portableML/poly/SHA1_ML.sig
+../../src/portableML/poly/w64-SHA1.ML
+../../src/portableML/SHA1.sig
+../../src/portableML/SHA1.sml
 ../util/GetOpt.sig
 ../util/GetOpt.sml
 ../util/FunctionalRecordUpdate.sml

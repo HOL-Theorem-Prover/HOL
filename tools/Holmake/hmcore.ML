@@ -18,6 +18,9 @@ val _ = let
   val hmutildir = hmakedir ++ "util"
   val parsingdir = Systeml.HOLDIR ++ "tools" ++ "parsing"
   val utildir = Systeml.HOLDIR ++ "tools" ++ "util"
+  val portableMLdir = Systeml.HOLDIR ++ "src" ++ "portableML"
+  val portableMLpolydir = portableMLdir ++ "poly"
+  fun appportable s = (myuse portableMLdir (s ^ ".sig"); myuse portableMLdir (s ^ ".sml"))
   fun appthis s = (myuse hmakedir (s ^ ".sig"); myuse hmakedir (s ^ ".sml"))
   fun appcore s = (myuse coredir (s ^ ".sig"); myuse coredir (s ^ ".sml"))
   fun appdeps s = (myuse depsdir (s ^ ".sig"); myuse depsdir (s ^ ".sml"))
@@ -40,5 +43,9 @@ in
   app appparsing ["HolParser"] ;
   app appdeps ["Holdep"] ;
   app appcore ["Holmake_tools"];
-  app apphmf ["internal_functions", "Holmake_types", "ReadHMF"]
+  app apphmf ["internal_functions", "Holmake_types", "ReadHMF"];
+  myuse portableMLpolydir "SHA1_ML.sig";
+  myuse portableMLpolydir
+    (if Systeml.haveWord64 then "w64-SHA1.ML" else "SHA1-byexec.ML");
+  app appportable ["SHA1"]
 end;
