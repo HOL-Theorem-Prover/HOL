@@ -3255,6 +3255,55 @@ Proof
   simp[destWO_mkWO] >> simp[strict_def, Abbr‘W2’]
 QED
 
+Theorem finite_subsets_bijection:
+  INFINITE A ==> A =~ { s | FINITE s /\ s SUBSET A }
+Proof
+  strip_tac >> match_mp_tac cardleq_ANTISYM >> conj_tac
+  >- (simp[cardleq_def] >> qexists_tac `\a. {a}` >>
+      simp[INJ_DEF]) >>
+  ‘{s | FINITE s ∧ s ⊆ A} =
+   BIGUNION (IMAGE (λn. { s | s ⊆ A ∧ s HAS_SIZE n }) univ(:num))’
+    by (simp[Once EXTENSION, PULL_EXISTS, EQ_IMP_THM] >> rpt strip_tac >>
+        gvs[HAS_SIZE]) >>
+  simp[] >> irule CARD_BIGUNION >> simp[PULL_EXISTS] >> conj_tac >~
+  [‘IMAGE _ _ ≼ A’]
+  >- (irule IMAGE_cardleq_rwt >> gvs[INFINITE_Unum]) >>
+  qx_gen_tac ‘n’ >> Cases_on ‘n = 0’
+  >- (simp[HAS_SIZE_0, SF CONJ_ss] >> ‘A ≠ ∅’ by (strip_tac >> gvs[]) >>
+      gvs[GSYM MEMBER_NOT_EMPTY] >> rename [‘a ∈ A’] >>
+      simp[cardleq_def] >> qexists_tac ‘λx. a’ >> simp[INJ_DEF]) >>
+  ‘0 < n’ by gvs[NOT_ZERO] >>
+  drule_all_then (assume_tac o ONCE_REWRITE_RULE[cardeq_SYM])
+                 exp_count_cardeq >>
+  resolve_then (Pos hd) (dxrule_then (irule o iffRL)) cardeq_REFL CARD_LE_CONG >>
+  ‘∀s. s HAS_SIZE n ⇒ ∃f. SURJ f (count n) s ∧ ∀m. n ≤ m ⇒ f m = ARB’
+    by (rpt (pop_assum kall_tac) >> simp[HAS_SIZE] >> qid_spec_tac ‘n’ >>
+        Induct_on ‘FINITE’ >> simp[SURJ_EMPTY] >> rw[] >> simp[K_lemma] >>
+        gvs[SURJ_DEF] >> rename [‘g _ ∈ A’, ‘e ∉ A’] >>
+        qexists_tac
+          ‘λn. if n < CARD A then g n else if n = CARD A then e else ARB’ >>
+        simp[AllCaseEqs(), DISJ_IMP_THM, FORALL_AND_THM,
+             DECIDE “x < SUC y ⇔ x = y ∨ x < y”] >>
+        rw[] >> simp[SF ARITH_ss] >>
+        metis_tac[LESS_REFL]) >>
+  gvs[GSYM RIGHT_EXISTS_IMP_THM, SKOLEM_THM] >>
+  rename [‘SURJ (FF _) (count n)’] >>
+  simp[cardleq_def, INJ_DEF] >> qexists_tac ‘FF’ >> rw[] >~
+  [‘FF A0 ∈ A ** count n’]
+  >- (simp[set_exp_def] >> first_x_assum $ drule_then strip_assume_tac >>
+      gvs[NOT_LESS, SURJ_DEF, SUBSET_DEF]) >>
+  rename [‘A1 HAS_SIZE n’, ‘A2 HAS_SIZE n’, ‘FF A1 = FF A2’] >>
+  CCONTR_TAC >>
+  ‘∃a. a ∈ A1 ∧ a ∉ A2’
+    suffices_by (strip_tac >>
+                 ‘∃i. FF A1 i = a ∧ i < n ∧ FF A2 i ≠ a’
+                   by metis_tac[SURJ_DEF]>>
+                 qpat_x_assum ‘FF A1 = FF A2’ mp_tac >>
+                 simp[FUN_EQ_THM] >> metis_tac[]) >>
+  CCONTR_TAC >> gvs[] >> ‘A1 ⊆ A2’ by ASM_SET_TAC[] >>
+  metis_tac[SUBSET_EQ_CARD, HAS_SIZE]
+QED
+
 (* ------------------------------------------------------------------------- *)
 (* Misc lemmas from HOL-Light's card.ml                                      *)
 (* ------------------------------------------------------------------------- *)

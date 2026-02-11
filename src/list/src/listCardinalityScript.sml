@@ -96,20 +96,6 @@ Proof
   simp[EMPTY_set_exp, INFINITE_cardleq_INSERT]
 QED
 
-Theorem finite_subsets_bijection:
-    INFINITE A ==> A =~ { s | FINITE s /\ s SUBSET A }
-Proof
-  strip_tac >> match_mp_tac cardleq_ANTISYM >> conj_tac
-  >- (simp[cardleq_def] >> qexists_tac `\a. {a}` >>
-      simp[INJ_DEF]) >>
-  `{s | FINITE s /\ s SUBSET A} <<= list A`
-    suffices_by metis_tac[CARDEQ_CARDLEQ, INFINITE_A_list_BIJ_A, cardeq_REFL] >>
-  simp[cardleq_SURJ] >> disj1_tac >> qexists_tac `LIST_TO_SET` >>
-  simp[SURJ_DEF, list_def] >> conj_tac >- simp[SUBSET_DEF] >>
-  qx_gen_tac `s` >> strip_tac >> qexists_tac `SET_TO_LIST s` >>
-  simp[SET_TO_LIST_INV] >> gvs[SUBSET_DEF]
-QED
-
 (* cf. INFINITE_LIST_UNIV |- INFINITE univ(:'a list) *)
 Theorem COUNTABLE_LIST_UNIV :
   countable univ(:'a) ==> countable univ(:'a list)
