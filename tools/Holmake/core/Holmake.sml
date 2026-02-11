@@ -1333,10 +1333,24 @@ fun do_cachekey thyname =
           case #command nodeinfo of
               HM_DepGraph.BuiltInCmd (HM_DepGraph.BIC_BuildScript _, _) => ()
             | _ => die ("--cachekey: " ^ thyname ^ " is not a theory target")
+      (* Only hash files whose contents are relevant to the theory:
+         .dat (ancestor theories), .sml/.sig (source files), and
+         .art (article files). Exclude .uo/.ui (compiler dependency
+         metadata) and other files like holheap state. *)
+      fun include_dep dep =
+          case hm_target.filepart dep of
+              DAT _ => true
+            | SML _ => true
+            | SIG _ => true
+            | ART _ => true
+            | _ => false
       val deps =
-          map (fn (_, dep) =>
-                  { name = fromFile (hm_target.filepart dep),
-                    path = tgt_toString dep })
+          List.mapPartial
+              (fn (_, dep) =>
+                  if include_dep dep then
+                    SOME { name = fromFile (hm_target.filepart dep),
+                           path = tgt_toString dep }
+                  else NONE)
               (#dependencies nodeinfo)
       val _ = List.app
                 (fn {name, path} =>

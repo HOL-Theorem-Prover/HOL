@@ -82,7 +82,23 @@ val (ok5, key5) = run_cachekey "childTheory"
 val _ = if ok5 andalso size key5 = 40 then OK()
         else die ("Expected success with 40-char hash, got: \"" ^ key5 ^ "\"")
 
-(* Test 6: modify baseScript.sml without rebuilding -> same cachekey
+(* Test 6: modify a .ui file -> cachekey is unchanged
+   (.ui files are excluded from the hash) *)
+val _ = tprint "Checking --cachekey ignores .ui file changes"
+val _ = let val uifile = ".hol/objs/baseTheory.ui"
+        in
+          if HOLFileSys.access(uifile, [OS.FileSys.A_WRITE]) then
+            let val strm = TextIO.openAppend uifile
+            in TextIO.output(strm, "extra junk\n");
+               TextIO.closeOut strm
+            end
+          else die ("Cannot find " ^ uifile ^ " to modify")
+        end
+val (ok6, key6) = run_cachekey "childTheory"
+val _ = if ok6 andalso key6 = key5 then OK()
+        else die ("Expected same hash " ^ key5 ^ ", got: \"" ^ key6 ^ "\"")
+
+(* Test 7: modify baseScript.sml without rebuilding -> same cachekey
    (the .dat file hasn't changed, so the cachekey shouldn't either) *)
 val _ = tprint "Checking --cachekey unchanged when source modified but not rebuilt"
 val _ = let val strm = TextIO.openOut "baseScript.sml"
@@ -94,18 +110,18 @@ val _ = let val strm = TextIO.openOut "baseScript.sml"
              \val _ = export_theory();\n");
            TextIO.closeOut strm
         end
-val (ok6, key6) = run_cachekey "childTheory"
-val _ = if ok6 andalso key6 = key5 then OK()
-        else die ("Expected same hash " ^ key5 ^ ", got: \"" ^ key6 ^ "\"")
+val (ok7, key7) = run_cachekey "childTheory"
+val _ = if ok7 andalso key7 = key5 then OK()
+        else die ("Expected same hash " ^ key5 ^ ", got: \"" ^ key7 ^ "\"")
 
-(* Test 7: rebuild base with modified source -> cachekey changes
+(* Test 8: rebuild base with modified source -> cachekey changes
    (the .dat file now contains a new theorem, so its hash differs) *)
 val _ = tprint "Checking --cachekey changes after rebuilding modified ancestor"
 val _ = run_holmake ["baseTheory"]
-val (ok7, key7) = run_cachekey "childTheory"
-val _ = if ok7 andalso size key7 = 40 andalso key7 <> key5 then OK()
+val (ok8, key8) = run_cachekey "childTheory"
+val _ = if ok8 andalso size key8 = 40 andalso key8 <> key5 then OK()
         else die ("Expected different hash from " ^ key5 ^ ", got: \"" ^
-                  key7 ^ "\"")
+                  key8 ^ "\"")
 
 (* Clean up depdir and restore baseScript.sml *)
 val _ = run_holmake ["cleanAll"]
