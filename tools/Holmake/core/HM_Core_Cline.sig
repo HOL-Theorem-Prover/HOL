@@ -2,6 +2,7 @@ signature HM_Core_Cline =
 sig
 
 type t = {
+  cachekey : string option,
   debug : {ins:string list, outs:string list} option,
   do_logging : bool,
   fast : bool,
