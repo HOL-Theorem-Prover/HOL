@@ -1333,28 +1333,45 @@ fun do_cachekey thyname =
           case #command nodeinfo of
               HM_DepGraph.BuiltInCmd (HM_DepGraph.BIC_BuildScript _, _) => ()
             | _ => die ("--cachekey: " ^ thyname ^ " is not a theory target")
-      (* Only hash files whose contents are relevant to the theory:
-         .dat (ancestor theories), .sml/.sig (source files), and
-         .art (article files). Exclude .uo/.ui (compiler dependency
-         metadata) and other files like holheap state. *)
-      fun include_dep dep =
+      (* Select files whose contents are relevant to the theory.
+         For .uo/.ui of Theory files, substitute the corresponding
+         .dat file (the actual theory content). Other .uo/.ui files
+         and the holheap state are excluded. *)
+      fun dep_to_hashable dep =
           case hm_target.filepart dep of
-              DAT _ => true
-            | SML _ => true
-            | SIG _ => true
-            | ART _ => true
-            | _ => false
+              DAT _ => SOME dep
+            | SML _ => SOME dep
+            | SIG _ => SOME dep
+            | ART _ => SOME dep
+            | UO (Theory s) =>
+                SOME (hm_target.setFile (DAT s) dep)
+            | UI (Theory s) =>
+                SOME (hm_target.setFile (DAT s) dep)
+            | _ => NONE
       val deps =
-          List.mapPartial
-              (fn (_, dep) =>
-                  if include_dep dep then
-                    SOME { name = fromFile (hm_target.filepart dep),
-                           path = tgt_toString dep }
-                  else NONE)
-              (#dependencies nodeinfo)
+          let val depset =
+                  List.foldl
+                    (fn ((_, dep), acc) =>
+                        case dep_to_hashable dep of
+                            SOME d => Binaryset.add(acc, d)
+                          | NONE => acc)
+                    hm_target.empty_tgtset
+                    (#dependencies nodeinfo)
+          fun toFSpath s =
+              case HFS_NameMunge.HOLtoFS s of
+                  NONE => s
+                | SOME {fullfile, ...} => fullfile
+          in
+            map (fn dep =>
+                    let val p = tgt_toString dep
+                    in { name = fromFile (hm_target.filepart dep),
+                         path = toFSpath p }
+                    end)
+                (Binaryset.listItems depset)
+          end
       val _ = List.app
                 (fn {name, path} =>
-                    if exists_readable path then ()
+                    if OS.FileSys.access(path, [OS.FileSys.A_READ]) then ()
                     else die ("--cachekey: dependency " ^ name ^
                               " (" ^ path ^ ") does not exist"))
                 deps

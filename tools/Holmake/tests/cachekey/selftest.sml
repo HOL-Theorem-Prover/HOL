@@ -87,7 +87,7 @@ val _ = if ok5 andalso size key5 = 40 then OK()
 val _ = tprint "Checking --cachekey ignores .ui file changes"
 val _ = let val uifile = ".hol/objs/baseTheory.ui"
         in
-          if HOLFileSys.access(uifile, [OS.FileSys.A_WRITE]) then
+          if OS.FileSys.access(uifile, [OS.FileSys.A_WRITE]) then
             let val strm = TextIO.openAppend uifile
             in TextIO.output(strm, "extra junk\n");
                TextIO.closeOut strm
