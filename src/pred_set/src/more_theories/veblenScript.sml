@@ -1,6 +1,6 @@
 Theory veblen
 Ancestors
-  ordinal pred_set cardinal
+  ordinalBasic ordinal pred_set cardinal
 
 (* Material from Brian Huffman's AFP entry on Ordinal arithmetic *)
 

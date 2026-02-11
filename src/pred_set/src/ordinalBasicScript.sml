@@ -1,7 +1,7 @@
 Theory ordinalBasic[bare]
 
 Ancestors
-  wellorder pred_set set_relation pair
+  wellorder pred_set set_relation pair option cardinal
 Libs
   HolKernel Parse boolLib boolSimps simpLib BasicProvers QLib metisLib
   TotalDefn pred_setLib
@@ -227,4 +227,237 @@ Theorem preds_wobound:
     preds ord = elsOf (wobound ord allOrds)
 Proof
   simp[EXTENSION, elsOf_wobound, preds_def, WIN_allOrds]
+QED
+
+Definition oleast_def:
+  $oleast (P:'a ordinal -> bool) = @x. P x /\ !y. y < x ==> ~P y
+End
+
+val _ = set_fixity "oleast" Binder
+
+Theorem oleast_intro:
+    !Q P. (?a. P a) /\ (!a. (!b. b < a ==> ~ P b) /\ P a ==> Q a) ==>
+          Q ($oleast P)
+Proof
+  rw[oleast_def] >> SELECT_ELIM_TAC >> conj_tac >-
+    (match_mp_tac ordlt_WF0 >> metis_tac[]) >>
+  rw[]
+QED
+
+Definition ordSUC_def:
+  ordSUC a = oleast b. a < b
+End
+Overload TC = ``ordSUC``
+
+Definition fromNat_def:
+  (fromNat 0 = oleast a. T) /\
+  (fromNat (SUC n) = ordSUC (fromNat n))
+End
+Theorem fromNat_SUC[simp] = fromNat_def |> CONJUNCT2
+
+val _ = add_numeral_form (#"o", SOME "fromNat")
+
+(* recursion principles *)
+Theorem restrict_away[local]:
+    IMAGE (RESTRICT f $< (a:'a ordinal)) (preds a) = IMAGE f (preds a)
+Proof
+  rw[EXTENSION, relationTheory.RESTRICT_DEF] >> srw_tac[CONJ_ss][]
+QED
+
+Theorem preds_inj_univ:
+    preds (ord:'a ordinal) <<= univ(:'a inf)
+Proof
+  simp[preds_wobound] >>
+  qspec_then `ordinal_REP ord` mp_tac wellorder_ordinal_isomorphism >>
+  simp[mkOrdinal_REP] >> strip_tac >> imp_res_tac orderiso_SYM >>
+  pop_assum (strip_assume_tac o SIMP_RULE (srw_ss())[orderiso_thm]) >>
+  simp[cardleq_def] >> qexists_tac `f` >>
+  fs[BIJ_DEF, INJ_DEF]
+QED
+
+Theorem univ_ord_greater_cardinal:
+    ~(univ(:'a ordinal) <<= univ(:'a inf))
+Proof
+  strip_tac >>
+  `elsOf allOrds = univ(:'a ordinal)` by simp[elsOf_allOrds] >>
+  `elsOf (allOrds:'a ordinal wellorder) <<= univ(:'a inf)`
+      by simp[] >>
+  `?w:'a inf wellorder. orderiso (allOrds:'a ordinal wellorder) w`
+    by metis_tac [elsOf_cardeq_iso, cardleq_def] >>
+  `orderiso w (wobound (mkOrdinal w) allOrds)`
+    by simp[wellorder_ordinal_isomorphism] >>
+  `mkOrdinal w IN elsOf allOrds` by simp[elsOf_allOrds] >>
+  `orderlt (allOrds:'a ordinal wellorder) (allOrds:'a ordinal wellorder)`
+     by metis_tac [orderlt_def, orderiso_TRANS] >>
+  fs[orderlt_REFL]
+QED
+
+(* prints as 0 <= a *)
+Theorem ordlt_ZERO[simp]:
+    ~(a < 0)
+Proof
+ simp[fromNat_def] >> DEEP_INTRO_TAC oleast_intro >> simp[]
+QED
+
+Theorem preds_surj =
+  preds_bij |> SIMP_RULE (srw_ss()) [BIJ_DEF] |> CONJUNCT2
+            |> SIMP_RULE (srw_ss()) [SURJ_DEF] |> CONJUNCT2
+            |> REWRITE_RULE [SPECIFICATION];
+
+Theorem no_maximal_ordinal:
+    !a. ?b. a < b
+Proof
+  simp[preds_lt_PSUBSET] >> gen_tac >>
+  qabbrev_tac `P = preds a UNION {a}` >>
+  `a NOTIN preds a` by simp[ordlt_REFL] >>
+  `P <> univ(:'a ordinal)`
+     by (strip_tac >>
+         qsuff_tac `P <<= univ(:'a inf)` >-
+           metis_tac [univ_ord_greater_cardinal] >>
+         pop_assum (K ALL_TAC) >>
+         Cases_on `FINITE P` >- simp[FINITE_CLE_INFINITE] >>
+         `P = a INSERT preds a` by metis_tac [INSERT_SING_UNION,UNION_COMM] >>
+         `INFINITE (preds a)` by fs[] >>
+         `P =~ preds a` by metis_tac [cardeq_INSERT] >>
+         metis_tac [CARDEQ_CARDLEQ, cardeq_REFL, preds_inj_univ]) >>
+  `downward_closed P` by (simp[Abbr`P`, downward_closed_def] >>
+                          metis_tac [ordlt_TRANS]) >>
+  `?b. preds b = P` by metis_tac [preds_surj] >>
+  qexists_tac `b` >> simp[Abbr`P`] >>
+  simp[PSUBSET_DEF, EXTENSION] >> metis_tac [ordlt_REFL]
+QED
+
+Theorem ordlt_SUC[simp]:
+    a < ordSUC a
+Proof
+  simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
+  >- metis_tac[no_maximal_ordinal] >> simp[]
+QED
+
+Theorem ordSUC_ZERO[simp]:
+    ordSUC a <> 0
+Proof
+  simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac
+  >- metis_tac [ordlt_SUC] >>
+  rpt strip_tac >> fs[]
+QED
+
+Definition omax_def:
+  omax (s : 'a ordinal set) =
+    some a. maximal_elements s { (x,y) | x <= y } = {a}
+End
+
+Theorem ordle_lteq:
+    (a:'a ordinal) <= b <=> a < b \/ (a = b)
+Proof
+  metis_tac [ordlt_trichotomy, ordlt_REFL, ordlt_TRANS]
+QED
+
+Theorem omax_SOME:
+    (omax s = SOME a) <=> a IN s /\ !b. b IN s ==> b <= a
+Proof
+  simp[omax_def] >> DEEP_INTRO_TAC some_intro >> simp[] >>
+  conj_tac
+  >- (qx_gen_tac `b` >> simp[maximal_elements_def, EXTENSION] >>
+      strip_tac >> eq_tac
+      >- (strip_tac >> simp[] >> conj_tac >- metis_tac[] >>
+          qx_gen_tac `c` >> rpt strip_tac >>
+          metis_tac [ordlt_REFL, ordle_lteq]) >>
+      metis_tac[]) >>
+  simp[EXTENSION, maximal_elements_def] >> strip_tac >> Cases_on `a IN s` >>
+  simp[] >> first_assum (qspec_then `a` mp_tac) >>
+  disch_then (Q.X_CHOOSE_THEN `b` strip_assume_tac) >>
+  Cases_on `b = a`
+  >- (qpat_x_assum `P /\ Q <=/=> R` mp_tac >> simp[] >> metis_tac [ordle_lteq]) >>
+  fs[] >> metis_tac []
+QED
+
+Theorem omax_NONE:
+    (omax s = NONE) <=> !a. a IN s ==> ?b. b IN s /\ a < b
+Proof
+  simp[omax_def] >> DEEP_INTRO_TAC some_intro >>
+  simp[maximal_elements_def, EXTENSION] >>
+  metis_tac [ordle_lteq]
+QED
+
+Theorem omax_EMPTY[simp]:
+    omax {} = NONE
+Proof
+  simp[omax_NONE]
+QED
+
+Theorem ordlt_DISCRETE1:
+    ~(a < b /\ b < ordSUC a)
+Proof
+  simp[ordSUC_def] >> DEEP_INTRO_TAC oleast_intro >> conj_tac >-
+  metis_tac [ordlt_SUC] >> metis_tac [ordle_lteq]
+QED
+
+Theorem ordlt_SUC_DISCRETE:
+    a < ordSUC b <=> a < b \/ (a = b)
+Proof
+  Tactical.REVERSE eq_tac >- metis_tac [ordlt_TRANS, ordlt_SUC] >>
+  metis_tac [ordlt_trichotomy, ordlt_DISCRETE1]
+QED
+
+Theorem preds_omax_SOME_SUC:
+    (omax (preds a) = SOME b) <=> (a = b^+)
+Proof
+  simp[omax_SOME] >> eq_tac >> strip_tac
+  >- (qsuff_tac `a <= b^+ /\ b^+ <= a` >- metis_tac [ordlt_trichotomy] >>
+      rpt strip_tac >- metis_tac [ordlt_SUC] >>
+      metis_tac [ordlt_SUC_DISCRETE, ordlt_TRANS, ordlt_REFL]) >>
+  simp[ordlt_SUC_DISCRETE, ordle_lteq]
+QED
+
+Theorem omax_preds_SUC[simp]: omax (preds a^+) = SOME a
+Proof metis_tac [preds_omax_SOME_SUC]
+QED
+
+Overload islimit = ``\a:'a ordinal. omax (preds a) = NONE``
+
+Theorem ord_RECURSION:
+  !(z:'b) (sf:'a ordinal -> 'b -> 'b) (lf:'a ordinal -> 'b set -> 'b).
+    ?h : 'a ordinal -> 'b.
+      (h 0 = z) /\
+      (!a. h a^+ = sf a (h a)) /\
+      !a. 0 < a /\ islimit a ==>
+          (h a = lf a (IMAGE h (preds a)))
+Proof
+  rpt gen_tac >>
+  qexists_tac `WFREC $< (\g x. if x = 0 then z
+                               else
+                                 case omax (preds x) of
+                                   NONE => lf x (IMAGE g (preds x))
+                                 | SOME x0 => sf x0 (g x0)) ` >>
+  rpt conj_tac
+  >- simp[relationTheory.WFREC_THM, ordlt_WF]
+  >- simp[Once relationTheory.WFREC_THM, relationTheory.RESTRICT_DEF, SimpLHS,
+          ordlt_WF] >>
+  simp[relationTheory.WFREC_THM, ordlt_WF, restrict_away] >> qx_gen_tac `a` >>
+  strip_tac >> `a <> 0` by metis_tac [ordlt_REFL] >> simp[]
+QED
+
+Theorem ord_induction =
+  ordlt_WF0 |> Q.SPEC `P` |> CONV_RULE CONTRAPOS_CONV
+            |> CONV_RULE (BINOP_CONV NOT_EXISTS_CONV)
+            |> CONV_RULE (LAND_CONV (REWRITE_CONV [DE_MORGAN_THM] THENC
+                                     ONCE_REWRITE_CONV [DISJ_SYM] THENC
+                                     REWRITE_CONV [GSYM IMP_DISJ_THM]))
+            |> Q.INST [`P` |-> `\x. ~ P x`] |> BETA_RULE
+            |> REWRITE_RULE []
+            |> CONV_RULE (RAND_CONV (RENAME_VARS_CONV ["a"]))
+
+Theorem simple_ord_induction:
+    !P. P 0 /\ (!a. P a ==> P a^+) /\
+        (!a. (omax (preds a) = NONE) /\ 0 < a /\ (!b. b < a ==> P b) ==> P a) ==>
+        !a. P a
+Proof
+  gen_tac >> strip_tac >>
+  ho_match_mp_tac ord_induction >> qx_gen_tac `a` >>
+  Cases_on `a = 0` >> simp[] >>
+  `(omax (preds a) = NONE) \/ ?a0. omax (preds a) = SOME a0`
+    by metis_tac [option_CASES]
+  >- (`0 < a` by metis_tac [ordlt_ZERO, ordle_lteq] >> metis_tac[]) >>
+  fs[preds_omax_SOME_SUC]
 QED
