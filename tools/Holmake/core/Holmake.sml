@@ -319,7 +319,8 @@ val cline_nobuild = #no_action coption_value
 val cline_recursive_build = #recursive_build coption_value
 val cline_recursive_clean = #recursive_clean coption_value
 val scan_output_functions =
-    if show_json andalso chattiness_level coption_value <= 1 then
+    if isSome cline_cachekey orelse
+       (show_json andalso chattiness_level coption_value <= 1) then
       quieten_info outputfns
     else outputfns
 
