@@ -103,11 +103,10 @@ val _ = if ok6 andalso key6 = key5 then OK()
 val _ = tprint "Checking --cachekey unchanged when source modified but not rebuilt"
 val _ = let val strm = TextIO.openOut "baseScript.sml"
         in TextIO.output(strm,
-             "open HolKernel Parse boolLib\n\
-             \val _ = new_theory \"base\";\n\
-             \val base_thm = save_thm(\"base_thm\", TRUTH);\n\
-             \val base_thm2 = save_thm(\"base_thm2\", TRUTH);\n\
-             \val _ = export_theory();\n");
+             "Theory base[bare]\n\
+             \Ancestors bool\n\
+             \Theorem base_thm = TRUTH\n\
+             \Theorem base_thm2 = TRUTH\n");
            TextIO.closeOut strm
         end
 val (ok7, key7) = run_cachekey "childTheory"
@@ -127,9 +126,8 @@ val _ = if ok8 andalso size key8 = 40 andalso key8 <> key5 then OK()
 val _ = run_holmake ["cleanAll"]
 val _ = let val strm = TextIO.openOut "baseScript.sml"
         in TextIO.output(strm,
-             "open HolKernel Parse boolLib\n\n\
-             \val _ = new_theory \"base\";\n\n\
-             \val base_thm = save_thm(\"base_thm\", TRUTH);\n\n\
-             \val _ = export_theory();\n");
+             "Theory base[bare]\n\
+             \Ancestors bool\n\
+             \Theorem base_thm = TRUTH\n");
            TextIO.closeOut strm
         end
