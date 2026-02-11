@@ -14,6 +14,28 @@ val T = {Name = "TRUTH", Thy = "bool"} (* placeholder *)
 fun simp ths = simpLib.ASM_SIMP_TAC (srw_ss()) ths
 
 (* ----------------------------------------------------------------------
+    Utility results that all constructions will likely use
+   ---------------------------------------------------------------------- *)
+
+Theorem IMAGE_o_equal:
+  IMAGE f o (=) = (=) o f
+Proof
+  simp[FUN_EQ_THM, IN_DEF, EQ_SYM_EQ]
+QED
+
+Theorem KlamF:
+  K (λx. F) = K {}
+Proof
+  simp[FUN_EQ_THM]
+QED
+
+Theorem o_INTRO:
+  (∀x. f (g x) = h x) ⇔ f o g = h
+Proof
+  simp[combinTheory.o_DEF, FUN_EQ_THM]
+QED
+
+(* ----------------------------------------------------------------------
     record the sum type's Bounded Natural Functor nature
    ---------------------------------------------------------------------- *)
 
