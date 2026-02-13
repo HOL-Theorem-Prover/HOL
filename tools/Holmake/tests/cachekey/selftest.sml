@@ -116,6 +116,10 @@ val _ = if ok7 andalso key7 = key5 then OK()
 (* Test 8: rebuild base with modified source -> cachekey changes
    (the .dat file now contains a new theorem, so its hash differs) *)
 val _ = tprint "Checking --cachekey changes after rebuilding modified ancestor"
+(* Ensure baseScript.sml timestamp is strictly after baseTheory.dat
+   so that Holmake sees it as needing a rebuild *)
+val _ = OS.Process.sleep (Time.fromSeconds 1)
+val _ = OS.FileSys.setTime ("baseScript.sml", NONE)
 val _ = run_holmake ["baseTheory"]
 val (ok8, key8) = run_cachekey "childTheory"
 val _ = if ok8 andalso size key8 = 40 andalso key8 <> key5 then OK()
