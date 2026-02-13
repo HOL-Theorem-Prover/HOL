@@ -58,4 +58,5 @@ sig
   val set_definition_callback   : (thm -> unit) -> unit
   val clear_definition_callback : unit -> unit
 
+  val trace_export : string -> string list -> (string * thm) list -> unit
 end

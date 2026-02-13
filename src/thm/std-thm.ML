@@ -1375,4 +1375,6 @@ in
     end;
 end (*local *)
 
+fun trace_export _ _ _ = ()
+
 end (* Thm *)

@@ -965,6 +965,13 @@ fun export_theory_return_hash () = let
         theory_out (TheoryPP.pp_sig (!pp_thm) sigthry) ostrm1;
         theory_out (TheoryPP.pp_struct hash structthry) ostrm2;
         mesg "done.\n";
+        let val named_thms = map (fn (n,th,_) => (n,th)) all_thms
+            val thy_parents = map thyid_name (Graph.fringe())
+        in
+          Thm.trace_export thyname thy_parents named_thms
+        end
+          handle e => HOL_WARNING "Theory" "export_theory"
+                        ("Proof trace export failed: " ^ exnMessage e);
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");
            maybe_log_time_to_disk thyname (Time.toString time_since))

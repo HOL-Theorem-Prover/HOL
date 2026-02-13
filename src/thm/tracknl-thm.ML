@@ -16,16 +16,183 @@
 structure Thm =
 struct
 
-open Feedback Lib Term Tag Dep
+open Feedback Lib Term Tag Dep Compute
 
 type 'a set = 'a HOLset.set;
 type depdisk = (string * int) * ((string * int list) list);
+datatype thm = THM of Tag.tag * term HOLset.set * term * int
 
 val --> = Type.-->;
 infixr 3 -->;
 infix 5 |-> ;
 
-val kernelid = "otknl"
+val kernelid = "tracknl"
+
+(*---------------------------------------------------------------------------
+     Trace infrastructure: stream proof steps to temp files on disk.
+     Types/terms are interned via ordered maps (Redblackmap).
+     Each thm gets a unique int trace ID.
+ ---------------------------------------------------------------------------*)
+
+val trace_counter = ref 0
+val steps_strm : TextIO.outstream option ref = ref NONE
+val parents_strm : TextIO.outstream option ref = ref NONE
+
+(* Number of lines written to the current temp file.
+   file_base_id = trace_counter - lines_written at any point. *)
+val lines_written : int ref = ref 0
+
+(* Cache external parent thm statements: trace_id -> (hyps, concl).
+   Populated by record_step when parent thms have ID < file_base_id.
+   Used by ProofTrace to write TRUST entries with thm statements. *)
+val ext_thm_cache : (int, term list * term) Redblackmap.dict ref =
+  ref (Redblackmap.mkDict Int.compare)
+
+val ty_map = ref (Redblackmap.mkDict Type.compare)
+val tm_map = ref (Redblackmap.mkDict Term.compare)
+val ty_counter = ref 0
+val tm_counter = ref 0
+val ty_list : hol_type list ref = ref [] (* accumulated in reverse *)
+val tm_list : term list ref = ref []     (* accumulated in reverse *)
+
+(* Per-process temp file paths to avoid races in parallel builds.
+   Paths include PID and are computed lazily (after heap restore). *)
+val trace_steps_path_ref : string option ref = ref NONE
+val trace_parents_path_ref : string option ref = ref NONE
+
+fun trace_paths () =
+  case (!trace_steps_path_ref, !trace_parents_path_ref) of
+    (SOME s, SOME p) => (s, p)
+  | _ =>
+    let val pid = SysWord.toString (Posix.Process.pidToWord
+                    (Posix.ProcEnv.getpid ()))
+        val s = ".tracknl_" ^ pid ^ "_steps.log"
+        val p = ".tracknl_" ^ pid ^ "_parents.tbl"
+    in trace_steps_path_ref := SOME s;
+       trace_parents_path_ref := SOME p;
+       (s, p)
+    end
+
+fun trace_steps_path () = #1 (trace_paths ())
+fun trace_parents_path () = #2 (trace_paths ())
+
+fun open_trace_streams () =
+  let val s = TextIO.openAppend (trace_steps_path ())
+      val p = TextIO.openAppend (trace_parents_path ())
+  in steps_strm := SOME s;
+     parents_strm := SOME p;
+     (s, p)
+  end
+
+fun get_steps_strm () = case !steps_strm of
+    SOME s => s
+  | NONE => #1 (open_trace_streams ())
+
+fun get_parents_strm () = case !parents_strm of
+    SOME s => s
+  | NONE => #2 (open_trace_streams ())
+
+val its = Int.toString
+
+fun intern_type ty =
+  case Redblackmap.peek (!ty_map, ty) of
+    SOME id => id
+  | NONE =>
+    let val _ = if not (Type.is_vartype ty) then
+                  let val {Args,...} = Type.dest_thy_type ty
+                  in List.app (ignore o intern_type) Args end
+                else ()
+        val id = !ty_counter
+    in ty_counter := id + 1;
+       ty_map := Redblackmap.insert (!ty_map, ty, id);
+       ty_list := ty :: !ty_list;
+       id
+    end
+
+fun intern_term tm =
+  case Redblackmap.peek (!tm_map, tm) of
+    SOME id => id
+  | NONE =>
+    let val _ = case dest_term tm of
+            VAR _ => ignore (intern_type (type_of tm))
+          | CONST _ => ignore (intern_type (type_of tm))
+          | COMB (f, x) => (ignore (intern_term f); ignore (intern_term x))
+          | LAMB (v, b) => (ignore (intern_term v); ignore (intern_term b))
+        val id = !tm_counter
+    in tm_counter := id + 1;
+       tm_map := Redblackmap.insert (!tm_map, tm, id);
+       tm_list := tm :: !tm_list;
+       id
+    end
+
+(* Cache external parent thm statements (hyps, concl) for TRUST entries.
+   A parent is external if its trace_id < file_base_id. *)
+fun cache_ext_parents parent_thms =
+  let
+    (* base = trace_counter - lines_written: first ID in current temp file *)
+    val base = !trace_counter - !lines_written
+    fun get_id (THM(_, _, _, id)) = id
+  in
+    if !lines_written = 0 then ()  (* no file yet *)
+    else List.app (fn thm =>
+      let val id = get_id thm
+          val THM(_, hyps, c, _) = thm
+      in if id < base then
+        (case Redblackmap.peek(!ext_thm_cache, id) of
+           SOME _ => ()
+         | NONE =>
+           let val hyp_list = HOLset.listItems hyps
+           in ignore (intern_term c);
+              List.app (ignore o intern_term) hyp_list;
+              ext_thm_cache :=
+                Redblackmap.insert(!ext_thm_cache, id, (hyp_list, c))
+           end)
+        else ()
+      end) parent_thms
+  end
+
+(* Ensure both streams are open before writing to either.
+   This avoids partial writes when one stream is stale after heap restore. *)
+fun record_step line parent_thms =
+  let
+    fun get_id (THM(_, _, _, id)) = id
+    val parent_ids = map get_id parent_thms
+    val sf = get_steps_strm ()
+    val pf = get_parents_strm ()
+    fun write (s, p) =
+      (TextIO.output(s, line);
+       TextIO.output(s, "\n");
+       TextIO.output(p, String.concatWith " " (map its parent_ids));
+       TextIO.output(p, "\n"))
+  in
+    write (sf, pf)
+    handle IO.Io _ =>
+      (* Stale streams after heap restore — reopen both atomically.
+         Also reset path refs and lines counter for the new file. *)
+      (steps_strm := NONE; parents_strm := NONE;
+       trace_steps_path_ref := NONE; trace_parents_path_ref := NONE;
+       lines_written := 0;
+       write (open_trace_streams ()));
+    lines_written := !lines_written + 1;
+    cache_ext_parents parent_thms
+  end
+
+fun trace_id (THM(_,_,_,id)) = id
+
+val iT = intern_term
+val iY = intern_type
+
+(* Format a theorem statement as term IDs: "<concl> <n_hyps> <hyp1> ..." *)
+fun fmt_thm_stmt (THM(_, hyps, c, _)) =
+  let
+    val c_id = iT c
+    val hyp_list = HOLset.listItems hyps
+    val hyp_ids = map iT hyp_list
+  in
+    its c_id ^ " " ^ its (length hyp_ids) ^
+    (if null hyp_ids then ""
+     else " " ^ String.concatWith " " (map its hyp_ids))
+  end
 
 (*---------------------------------------------------------------------------
        Exception handling
@@ -44,7 +211,6 @@ val bool      = Type.bool
 val alpha     = Type.alpha
 fun dom ty    = fst (Type.dom_rng ty)
 fun rng ty    = snd (Type.dom_rng ty);
-val EQ        = Term.fast_term_eq
 val empty_tag = Tag.empty_tag
 
 
@@ -107,56 +273,7 @@ end;
  * The type of theorems and some basic operations on it.                     *
  *---------------------------------------------------------------------------*)
 
-datatype thm = THM of Tag.tag * term HOLset.set * term * proof ref
-and proof =
-  Axiom_prf
-| deleted_prf
-| ASSUME_prf of term
-| REFL_prf of term
-| BETA_CONV_prf of term
-| ABS_prf of term * thm
-| DISCH_prf of term * thm
-| MP_prf of thm * thm
-| SUBST_prf of (term,thm)Lib.subst * term * thm
-| INST_TYPE_prf of (hol_type,hol_type)Lib.subst * thm
-| INST_prf of (term,term)Lib.subst * thm
-| ALPHA_prf of term * term
-| GEN_ABS_prf of term option * term list * thm
-| SYM_prf of thm
-| TRANS_prf of thm * thm
-| MK_COMB_prf of thm * thm
-| AP_TERM_prf of term * thm
-| AP_THM_prf of thm * term
-| EQ_MP_prf of thm * thm
-| EQ_IMP_RULE1_prf of thm
-| EQ_IMP_RULE2_prf of thm
-| SPEC_prf of term * thm
-| GEN_prf of term * thm
-| GENL_prf of term list * thm
-| EXISTS_prf of term * term * thm
-| CHOOSE_prf of term * thm * thm
-| CONJ_prf of thm * thm
-| CONJUNCT1_prf of thm
-| CONJUNCT2_prf of thm
-| DISJ1_prf of thm * term
-| DISJ2_prf of term * thm
-| DISJ_CASES_prf of thm * thm * thm
-| NOT_INTRO_prf of thm
-| NOT_ELIM_prf of thm
-| CCONTR_prf of term * thm
-| Beta_prf of thm
-| Mk_comb_prf of thm * thm * thm
-| Mk_abs_prf of thm * term * thm
-| Specialize_prf of term * thm
-| Def_tyop_prf of {Thy:string,Tyop:string} * hol_type list * thm * hol_type
-| Def_const_prf of {Thy:string,Name:string} * term
-| Def_const_list_prf of string * (string * hol_type) list * thm
-| Def_spec_prf of term list * thm
-| deductAntisym_prf of thm * thm
-| compute_prf
-
-fun proof (THM(_,_,_,p)) = !p
-fun delete_proof (THM(_,_,_,p)) = p := deleted_prf
+(* datatype thm = datatype KernelTypes.thm *)
 
 fun single_hyp tm = HOLset.singleton Term.compare tm
 val empty_hyp = Term.empty_tmset
@@ -170,7 +287,9 @@ val hyp = hyplist   (* backwards compatibility *)
 
 fun dest_thm(t as THM(_,asl,w,_)) = (hyplist t,w) (* Compatible with old code. *)
 fun sdest_thm(THM(_,asl,w,_)) = (asl,w)
-fun make_thm R (x,y,z,p) = (Count.inc_count R; THM (x,y,z,ref p));   (* internal only *)
+fun make_thm R (x,y,z) =
+  let val id = !trace_counter
+  in trace_counter := id + 1; Count.inc_count R; THM(x,y,z,id) end;
 
 fun thm_frees (t as THM(_,asl,c,_)) = free_varsl (c::hyplist t);
 
@@ -214,7 +333,8 @@ fun is_bool tm = (type_of tm = bool);
 
 fun ASSUME tm =
    (Assert (is_bool tm) "ASSUME" "not a proposition";
-    make_thm Count.Assume (empty_tag,single_hyp tm,tm,ASSUME_prf tm));
+    let val thm = make_thm Count.Assume (empty_tag,single_hyp tm,tm)
+    in record_step ("ASSUME " ^ its (iT tm)) []; thm end);
 
 
 (*---------------------------------------------------------------------------*
@@ -226,7 +346,8 @@ fun ASSUME tm =
 val mk_eq_nocheck = Term.prim_mk_eq;
 
 fun refl_nocheck ty tm =
-  make_thm Count.Refl (empty_tag, empty_hyp, mk_eq_nocheck ty tm tm,REFL_prf tm);
+  let val thm = make_thm Count.Refl (empty_tag, empty_hyp, mk_eq_nocheck ty tm tm)
+  in record_step ("REFL " ^ its (iT tm)) []; thm end;
 
 fun REFL tm = refl_nocheck (type_of tm) tm;
 
@@ -238,8 +359,9 @@ fun REFL tm = refl_nocheck (type_of tm) tm;
  *---------------------------------------------------------------------------*)
 
 fun BETA_CONV tm =
-   make_thm Count.Beta
-      (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (beta_conv tm),BETA_CONV_prf tm)
+   let val thm = make_thm Count.Beta
+      (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (beta_conv tm))
+   in record_step ("BETA_CONV " ^ its (iT tm)) []; thm end
    handle HOL_ERR _ => ERR "BETA_CONV" "not a beta-redex"
 
 
@@ -254,10 +376,10 @@ fun BETA_CONV tm =
 fun SUBST replacements template (th as THM(O,asl,c,_)) =
  let val fvs = Term.FVL [template] Term.empty_varset
      val (ltheta, rtheta, hyps, oracles) =
-         itlist (fn {redex, residue = THM(ocls,h,c,_)} =>
+         itlist (fn {redex, residue = THM(ocls,h,c',_)} =>
                  fn (tuple as (ltheta,rtheta,hyps,Ocls)) =>
                     if HOLset.member(fvs,redex)
-                     then let val (lhs,rhs,_) = Term.dest_eq_ty c
+                     then let val (lhs,rhs,_) = Term.dest_eq_ty c'
                           in ((redex |-> lhs)::ltheta,
                               (redex |-> rhs)::rtheta,
                               union_hyp h hyps,
@@ -267,7 +389,13 @@ fun SUBST replacements template (th as THM(O,asl,c,_)) =
                 replacements ([],[],asl,O)
  in
    if aconv (subst ltheta template) c
-    then make_thm Count.Subst (oracles,hyps,subst rtheta template,SUBST_prf(replacements,template,th))
+    then let val result = make_thm Count.Subst (oracles,hyps,subst rtheta template)
+             val n = length replacements
+             val var_ids = String.concatWith " " (map (its o iT o #redex) replacements)
+             val tmpl_id = its (iT template)
+             val parent_thms = map #residue replacements @ [th]
+         in record_step ("SUBST " ^ its n ^ " " ^ var_ids ^ " " ^ tmpl_id) parent_thms;
+            result end
       else th
  end;
 
@@ -284,10 +412,11 @@ fun ABS v (th as THM(ocl,asl,c,_)) =
                       => ERR "ABS" "first argument is not a variable"
  in if var_occursl v asl
      then ERR "ABS" "The variable is free in the assumptions"
-     else make_thm Count.Abs
+     else let val result = make_thm Count.Abs
             (ocl, asl, mk_eq_nocheck (vty --> ty)
                                      (mk_abs(v,lhs))
-                                     (mk_abs(v,rhs)),ABS_prf(v,th))
+                                     (mk_abs(v,rhs)))
+          in record_step ("ABS " ^ its (iT v)) [th]; result end
  end;
 
 (*---------------------------------------------------------------------------*
@@ -305,8 +434,11 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c,_)) =
                                   (thm_err "GEN_ABS" "not an equality")
              val lhs' = list_mk_binder opt (vlist,lhs)
              val rhs' = list_mk_binder opt (vlist,rhs)
-         in make_thm Count.GenAbs
-               (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs',GEN_ABS_prf(opt,vlist,th))
+         in let val result = make_thm Count.GenAbs
+               (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs')
+                val opt_id = case opt of SOME t => its (iT t) | NONE => "~"
+                val v_ids = String.concatWith " " (map (its o iT) vlist)
+            in record_step ("GEN_ABS " ^ opt_id ^ " " ^ its (length vlist) ^ " " ^ v_ids) [th]; result end
          end
     else ERR "GEN_ABS" "variable(s) free in the assumptions"
  end
@@ -320,7 +452,12 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c,_)) =
 
 fun INST_TYPE [] th = th
   | INST_TYPE theta (th as THM(ocl,asl,c,_)) =
-     make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c,INST_TYPE_prf(theta,th))
+     let val result = make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c)
+         val n = length theta
+         val pairs = String.concatWith " "
+           (List.concat (map (fn {redex,residue} =>
+              [its (iY redex), its (iY residue)]) theta))
+     in record_step ("INST_TYPE " ^ its n ^ " " ^ pairs) [th]; result end
 
 (*---------------------------------------------------------------------------
  *          A |- M
@@ -333,11 +470,11 @@ fun INST_TYPE [] th = th
 
 fun DISCH w (th as THM(ocl,asl,c,_)) =
   (Assert (is_bool w) "DISCH" "not a proposition";
-   make_thm Count.Disch
+   let val result = make_thm Count.Disch
       (ocl,
        HOLset.delete(asl, w) handle HOLset.NotFound => asl,
-       Term.prim_mk_imp w c,
-       DISCH_prf(w,th)));
+       Term.prim_mk_imp w c)
+   in record_step ("DISCH " ^ its (iT w)) [th]; result end);
 
 
 (*---------------------------------------------------------------------------
@@ -352,7 +489,8 @@ fun MP (th1 as THM(o1,asl1,c1,_)) (th2 as THM(o2,asl2,c2,_)) =
  let val (ant,conseq) = dest_imp c1
  in Assert (aconv ant c2) "MP"
       "antecedent of first thm not alpha-convertible to concl. of second";
-    make_thm Count.Mp (Tag.merge o1 o2, union_hyp asl1 asl2, conseq, MP_prf(th1,th2))
+    let val result = make_thm Count.Mp (Tag.merge o1 o2, union_hyp asl1 asl2, conseq)
+    in record_step "MP" [th1, th2]; result end
  end;
 
 
@@ -378,9 +516,9 @@ fun MP (th1 as THM(o1,asl1,c1,_)) (th2 as THM(o2,asl2,c2,_)) =
 
 fun ALPHA t1 t2 =
    if aconv t1 t2 then
-     make_thm Count.Alpha (empty_tag, empty_hyp,
-                           mk_eq_nocheck (type_of t1) t1 t2,
-                           ALPHA_prf(t1,t2))
+     let val thm = make_thm Count.Alpha (empty_tag, empty_hyp,
+                           mk_eq_nocheck (type_of t1) t1 t2)
+     in record_step ("ALPHA " ^ its (iT t1) ^ " " ^ its (iT t2)) []; thm end
    else ERR "ALPHA" "Terms not alpha-convertible";
 
 (*---------------------------------------------------------------------------*
@@ -401,9 +539,8 @@ fun ALPHA t1 t2 =
 
 fun SYM th =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
-  in make_thm Count.Sym
-        (tag th, hypset th, mk_eq_nocheck ty rhs lhs, SYM_prf(th))
- end
+     val result = make_thm Count.Sym (tag th, hypset th, mk_eq_nocheck ty rhs lhs)
+ in record_step "SYM" [th]; result end
  handle HOL_ERR _ => ERR "SYM" "";
 
 (*---------------------------------------------------------------------------
@@ -430,8 +567,9 @@ fun TRANS th1 th2 =
        val   _  = Assert (aconv rhs1 lhs2) "" ""
        val hyps = union_hyp (hypset th1) (hypset th2)
        val ocls = Tag.merge (tag th1) (tag th2)
+       val result = make_thm Count.Trans (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2)
    in
-     make_thm Count.Trans (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2, TRANS_prf(th1,th2))
+     record_step "TRANS" [th1, th2]; result
    end
    handle HOL_ERR _ => ERR "TRANS" "";
 
@@ -452,11 +590,12 @@ fun TRANS th1 th2 =
 fun MK_COMB (funth,argth) =
    let val (f,g,ty) = Term.dest_eq_ty (concl funth)
        val (x,y,_)  = Term.dest_eq_ty (concl argth)
-   in
-     make_thm Count.MkComb
+       val result = make_thm Count.MkComb
          (Tag.merge (tag funth) (tag argth),
           union_hyp (hypset funth) (hypset argth),
-          mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)), MK_COMB_prf(funth,argth))
+          mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)))
+   in
+     record_step "MK_COMB" [funth, argth]; result
    end
    handle HOL_ERR _ => ERR "MK_COMB" "";
 
@@ -480,10 +619,10 @@ fun MK_COMB (funth,argth) =
 
 fun AP_TERM f th =
  let val (lhs,rhs,_) = Term.dest_eq_ty (concl th)
- in make_thm Count.ApTerm
+     val result = make_thm Count.ApTerm
        (tag th, hypset th,
-        mk_eq_nocheck (rng (type_of f)) (mk_comb(f,lhs)) (mk_comb(f,rhs)), AP_TERM_prf(f,th))
- end
+        mk_eq_nocheck (rng (type_of f)) (mk_comb(f,lhs)) (mk_comb(f,rhs)))
+ in record_step ("AP_TERM " ^ its (iT f)) [th]; result end
  handle HOL_ERR _ => ERR "AP_TERM" "";
 
 
@@ -507,10 +646,10 @@ fun AP_TERM f th =
 
 fun AP_THM th tm =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
- in make_thm Count.ApThm
+     val result = make_thm Count.ApThm
        (tag th, hypset th,
-        mk_eq_nocheck (rng ty) (mk_comb(lhs,tm)) (mk_comb(rhs,tm)), AP_THM_prf(th,tm))
- end
+        mk_eq_nocheck (rng ty) (mk_comb(lhs,tm)) (mk_comb(rhs,tm)))
+ in record_step ("AP_THM " ^ its (iT tm)) [th]; result end
  handle HOL_ERR _ => ERR "AP_THM" "";
 
 (*---------------------------------------------------------------------------
@@ -531,10 +670,10 @@ fun AP_THM th tm =
 fun EQ_MP th1 th2 =
    let val (lhs,rhs,_) = Term.dest_eq_ty (concl th1)
        val _ = Assert (aconv lhs (concl th2)) "" ""
-   in
-    make_thm Count.EqMp (Tag.merge (tag th1) (tag th2),
-                         union_hyp (hypset th1) (hypset th2), rhs, EQ_MP_prf(th1,th2))
-   end handle HOL_ERR _ => ERR "EQ_MP" "";
+       val result = make_thm Count.EqMp (Tag.merge (tag th1) (tag th2),
+                         union_hyp (hypset th1) (hypset th2), rhs)
+   in record_step "EQ_MP" [th1, th2]; result end
+   handle HOL_ERR _ => ERR "EQ_MP" "";
 
 (*---------------------------------------------------------------------------
  *              A |- t1 = t2
@@ -555,8 +694,11 @@ fun EQ_IMP_RULE th =
      and A = hypset th
      and O = tag th
  in if ty = Type.bool
-    then (make_thm Count.EqImpRule(O,A, Term.prim_mk_imp lhs rhs, EQ_IMP_RULE1_prf th),
-          make_thm Count.EqImpRule(O,A, Term.prim_mk_imp rhs lhs, EQ_IMP_RULE2_prf th))
+    then let val thm1 = make_thm Count.EqImpRule(O,A, Term.prim_mk_imp lhs rhs)
+             val thm2 = make_thm Count.EqImpRule(O,A, Term.prim_mk_imp rhs lhs)
+             val _ = record_step "EQ_IMP_RULE1" [th]
+             val _ = record_step "EQ_IMP_RULE2" [th]
+         in (thm1, thm2) end
     else ERR "" ""
  end
  handle HOL_ERR _ => ERR "EQ_IMP_RULE" "";
@@ -613,8 +755,9 @@ fun SPEC t th =
  in
    Assert (Name="!" andalso Thy="bool")
           "SPEC" "Theorem not universally quantified";
-   make_thm Count.Spec
-       (tag th, hypset th, beta_conv(mk_comb(Rand, t)), SPEC_prf(t,th))
+   let val result = make_thm Count.Spec
+       (tag th, hypset th, beta_conv(mk_comb(Rand, t)))
+   in record_step ("SPEC " ^ its (iT t)) [th]; result end
        handle HOL_ERR _ =>
               raise thm_err "SPEC"
                     "Term argument's type not equal to bound variable's"
@@ -651,7 +794,8 @@ fun GEN x th =
   let val (asl,c) = sdest_thm th
   in if var_occursl x asl
      then ERR  "GEN" "variable occurs free in hypotheses"
-     else make_thm Count.Gen(tag th, asl, Susp.force mk_forall x c, GEN_prf(x,th))
+     else let val result = make_thm Count.Gen(tag th, asl, Susp.force mk_forall x c)
+          in record_step ("GEN " ^ its (iT x)) [th]; result end
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
@@ -660,12 +804,13 @@ fun GENL vs th = let
 in
   if exists (fn v => var_occursl v asl) vs then
     ERR "GENL" "variable occurs free in hypotheses"
-  else
-    make_thm
+  else let
+    val result = make_thm
       Count.Gen(tag th, asl,
                 list_mk_binder (SOME (prim_mk_const {Thy="bool", Name="!"}))
-                               (vs,c),
-                GENL_prf(vs,th))
+                               (vs,c))
+    val v_ids = String.concatWith " " (map (its o iT) vs)
+  in record_step ("GENL " ^ its (length vs) ^ " " ^ v_ids) [th]; result end
     handle HOL_ERR _ => ERR "GENL" ""
 end
 
@@ -710,7 +855,8 @@ fun EXISTS (w,t) th =
      val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" mesg1
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" mesg2
-   in make_thm Count.Exists (tag th, hypset th, w, EXISTS_prf(w,t,th))
+   in let val result = make_thm Count.Exists (tag th, hypset th, w)
+      in record_step ("EXISTS " ^ its (iT w) ^ " " ^ its (iT t)) [th]; result end
    end
 end;
 
@@ -761,8 +907,9 @@ fun CHOOSE (v,xth) bth =
 
        Credit for pointing out this optimisation to Jim Grundy and
        Tom Melham. *)
-  in make_thm Count.Choose
-       (Tag.merge (tag xth) (tag bth), newhyps,  b_c, CHOOSE_prf(v,xth,bth))
+  in let val result = make_thm Count.Choose
+           (Tag.merge (tag xth) (tag bth), newhyps, b_c)
+     in record_step ("CHOOSE " ^ its (iT v)) [xth, bth]; result end
   end
   handle HOL_ERR _ => ERR "CHOOSE" "";
 
@@ -781,10 +928,11 @@ fun CHOOSE (v,xth) bth =
  *---------------------------------------------------------------------------*)
 
 fun CONJ th1 th2 =
-   make_thm Count.Conj
+   let val result = make_thm Count.Conj
         (Tag.merge (tag th1) (tag th2),
          union_hyp (hypset th1) (hypset th2),
-         Susp.force mk_conj(concl th1, concl th2), CONJ_prf(th1,th2))
+         Susp.force mk_conj(concl th1, concl th2))
+   in record_step "CONJ" [th1, th2]; result end
    handle HOL_ERR _ => ERR "CONJ" "";
 
 
@@ -813,7 +961,8 @@ fun conj1 tm =
 
 
 fun CONJUNCT1 th =
-  make_thm Count.Conjunct1 (tag th, hypset th, conj1 (concl th), CONJUNCT1_prf th)
+  let val result = make_thm Count.Conjunct1 (tag th, hypset th, conj1 (concl th))
+  in record_step "CONJUNCT1" [th]; result end
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
 
 
@@ -840,7 +989,8 @@ fun conj2 tm =
   end
 
 fun CONJUNCT2 th =
- make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th), CONJUNCT2_prf th)
+ let val result = make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th))
+ in record_step "CONJUNCT2" [th]; result end
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -855,8 +1005,10 @@ fun CONJUNCT2 th =
  *           handle _ => ERR{function = "DISJ1",message = ""};
  *---------------------------------------------------------------------------*)
 
-fun DISJ1 th w = make_thm Count.Disj1
- (tag th, hypset th, Susp.force mk_disj (concl th, w), DISJ1_prf(th,w))
+fun DISJ1 th w =
+ let val result = make_thm Count.Disj1
+   (tag th, hypset th, Susp.force mk_disj (concl th, w))
+ in record_step ("DISJ1 " ^ its (iT w)) [th]; result end
  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
@@ -871,8 +1023,10 @@ fun DISJ1 th w = make_thm Count.Disj1
  *          handle _ => ERR{function = "DISJ2",message = ""};
  *---------------------------------------------------------------------------*)
 
-fun DISJ2 w th = make_thm Count.Disj2
- (tag th, hypset th, Susp.force mk_disj(w,concl th), DISJ2_prf(w,th))
+fun DISJ2 w th =
+ let val result = make_thm Count.Disj2
+   (tag th, hypset th, Susp.force mk_disj(w,concl th))
+ in record_step ("DISJ2 " ^ its (iT w)) [th]; result end
  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
@@ -905,12 +1059,13 @@ fun dest_disj tm =
 fun DISJ_CASES dth ath bth =
   let val _ = Assert (aconv (concl ath) (concl bth)) "" ""
       val (disj1,disj2) = dest_disj (concl dth)
-  in
-   make_thm Count.DisjCases
+      val result = make_thm Count.DisjCases
        (itlist Tag.merge [tag dth, tag ath, tag bth] empty_tag,
         union_hyp (hypset dth) (union_hyp (disch(disj1, hypset ath))
                                        (disch(disj2, hypset bth))),
-        concl ath, DISJ_CASES_prf(dth,ath,bth))
+        concl ath)
+  in
+   record_step "DISJ_CASES" [dth, ath, bth]; result
   end
   handle HOL_ERR _ => ERR "DISJ_CASES" "";
 
@@ -932,7 +1087,8 @@ fun DISJ_CASES dth ath bth =
 fun NOT_INTRO th =
   let val (ant,c) = dest_imp(concl th)
   in Assert (c = Susp.force F) "" "";
-     make_thm Count.NotIntro  (tag th, hypset th, Susp.force mk_neg ant, NOT_INTRO_prf th)
+     let val result = make_thm Count.NotIntro (tag th, hypset th, Susp.force mk_neg ant)
+     in record_step "NOT_INTRO" [th]; result end
   end
   handle HOL_ERR _ => ERR "NOT_INTRO" "";
 
@@ -959,8 +1115,9 @@ in
 fun NOT_ELIM th =
   case with_exn dest (concl th) (thm_err "NOT_ELIM" "")
    of ({Name="~", Thy="bool",...},Rand)
-       => make_thm Count.NotElim
-             (tag th, hypset th, Term.prim_mk_imp Rand (Susp.force F), NOT_ELIM_prf th)
+       => let val result = make_thm Count.NotElim
+             (tag th, hypset th, Term.prim_mk_imp Rand (Susp.force F))
+          in record_step "NOT_ELIM" [th]; result end
     | otherwise => ERR "NOT_ELIM" ""
 end;
 
@@ -987,8 +1144,9 @@ end;
 
 fun CCONTR w fth =
   (Assert (concl fth = Susp.force F) "CCONTR" "";
-   make_thm Count.Ccontr
-       (tag fth, disch(Susp.force mk_neg w, hypset fth), w, CCONTR_prf(w,fth))
+   let val result = make_thm Count.Ccontr
+       (tag fth, disch(Susp.force mk_neg w, hypset fth), w)
+   in record_step ("CCONTR " ^ its (iT w)) [fth]; result end
      handle HOL_ERR _ => ERR "CCONTR" "");
 
 
@@ -1001,11 +1159,13 @@ fun INST [] th = th
       if List.all (is_var o #redex) theta then
         let
           val substf = subst theta
-        in
-          make_thm Count.Inst
-            (tag th, hypset_map substf (hypset th), substf (concl th), INST_prf(theta,th))
-          handle HOL_ERR _ => ERR "INST" ""
-        end
+          val result = make_thm Count.Inst
+            (tag th, hypset_map substf (hypset th), substf (concl th))
+          val n = length theta
+          val pairs = String.concatWith " "
+            (List.concat (map (fn {redex,residue} =>
+               [its (iT redex), its (iT residue)]) theta))
+        in record_step ("INST " ^ its n ^ " " ^ pairs) [th]; result end
       else
         raise ERR "INST" "can only instantiate variables"
 
@@ -1026,9 +1186,9 @@ fun INST [] th = th
 
 fun Beta th =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
-   in make_thm Count.Beta
-        (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs), Beta_prf th)
-   end
+       val result = make_thm Count.Beta
+        (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
+   in record_step "Beta" [th]; result end
    handle HOL_ERR _ => ERR "Beta" "";
 
 
@@ -1069,9 +1229,9 @@ fun Mk_comb thm =
              val (lhs2, rhs2, _) = Term.dest_eq_ty (concl th2')
              val _ = Assert (aconv lhs2 Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
-         in make_thm Count.MkComb
-           (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)), Mk_comb_prf (thm,th1',th2'))
-         end
+             val result = make_thm Count.MkComb
+               (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))
+         in record_step "Mk_comb" [thm, th1', th2']; result end
          handle HOL_ERR _ => ERR "Mk_comb" "";
        val aty = type_of Rand    (* typing! *)
        val th1 = refl_nocheck (aty --> ty) Rator
@@ -1105,9 +1265,9 @@ fun Mk_abs thm =
              val _ = Assert (aconv lhs1 Body) "" ""
              val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
-         in make_thm Count.Abs
-           (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)), Mk_abs_prf (thm,Bvar,th1'))
-         end
+             val result = make_thm Count.Abs
+               (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)))
+         in record_step ("Mk_abs " ^ its (iT Bvar)) [thm, th1']; result end
          handle HOL_ERR _ => ERR "Mk_abs" ""
        val th1 = refl_nocheck (rng ty) Body
    in (Bvar,th1,mkthm)
@@ -1123,8 +1283,9 @@ fun Specialize t th =
        val {Name,Thy,...} = dest_thy_const Rator
    in
      Assert (Thy="bool" andalso Name="!") "" "";
-     make_thm Count.Spec
-        (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)), Specialize_prf(t,th))
+     let val result = make_thm Count.Spec
+        (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)))
+     in record_step ("Specialize " ^ its (iT t)) [th]; result end
    end
    handle HOL_ERR _ => ERR "Specialize" "";
 
@@ -1132,16 +1293,17 @@ fun Specialize t th =
  * Construct a theorem directly and attach the given tag to it.              *
  *---------------------------------------------------------------------------*)
 
-fun mk_proof_oracle_thm p tg (asl,c) =
+fun mk_oracle_thm tg (asl,c) =
   (Assert (Lib.all is_bool (c::asl)) "mk_oracle_thm"  "not a proposition"
    ; Assert (tg <> "DISK_THM") "mk_oracle_thm"  "invalid user tag"
-   ; make_thm Count.Oracle (Tag.read tg,list_hyp asl,c, p));
+   ; let val result = make_thm Count.Oracle (Tag.read tg,list_hyp asl,c)
+     in record_step ("ORACLE " ^ tg ^ " " ^ fmt_thm_stmt result) [];
+        result end);
 
-val mk_oracle_thm = mk_proof_oracle_thm Axiom_prf
-fun mk_proof_thm p = mk_proof_oracle_thm p "MK_THM"
-val mk_thm = mk_proof_thm Axiom_prf
 
-fun add_tag (tag1, THM(tag2, h,c,p)) = THM(Tag.merge tag1 tag2, h, c,p)
+val mk_thm = mk_oracle_thm "MK_THM"
+
+fun add_tag (tag1, THM(tag2, h, c, id)) = THM(Tag.merge tag1 tag2, h, c, id)
 
 (*---------------------------------------------------------------------------*
  *    The following two are only used internally
@@ -1149,17 +1311,12 @@ fun add_tag (tag1, THM(tag2, h,c,p)) = THM(Tag.merge tag1 tag2, h, c,p)
 
 fun mk_axiom_thm (r,c) =
    (Assert (type_of c = bool) "mk_axiom_thm"  "Not a proposition!";
-    make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c, Axiom_prf))
+    let val result = make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c)
+    in record_step ("AXIOM " ^ its (iT c)) []; result end)
 
-val defn_callback = ref (K ())
-fun set_definition_callback f = defn_callback := f
-fun clear_definition_callback () = defn_callback := K ()
-
-fun mk_defn_thm (witness_tag, c, p) =
+fun mk_defn_thm (witness_tag, c) =
    (Assert (type_of c = bool) "mk_defn_thm"  "Not a proposition!";
-    let val th = make_thm Count.Definition (witness_tag,empty_hyp,c, p)
-        val _  = (!defn_callback) th
-        in th end)
+    make_thm Count.Definition (witness_tag,empty_hyp,c))
 
 (* ----------------------------------------------------------------------
     Primitive Definition Principles
@@ -1231,10 +1388,7 @@ fun okConstName cnm =
     CharVector.all (fn c => Char.isGraph c) cnm
 
 fun prim_type_definition (name as {Thy, Tyop}, thm) = let
-  val c         = concl thm
-  val _         = Term.uptodate_term c orelse
-                  raise TYDEF_ERR "Witness theorem is out-of-date"
-  val (bv,Body) = with_exn dest_exists c TYDEF_FORM_ERR
+  val (bv,Body) = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
   val (P,v)     = with_exn dest_comb Body TYDEF_FORM_ERR
   val _         = assert_exn (equal bv) v TYDEF_FORM_ERR
   val Pty       = type_of P
@@ -1256,7 +1410,9 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
                                Ty = Pty --> (repty-->bool)}
 in
-  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])), Def_tyop_prf(name,tyvars,thm,newty))
+  let val result = mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
+  in record_step ("DEF_TYOP " ^ Thy ^ " " ^ Tyop ^ " " ^
+                  its (iT (concl result))) [thm]; result end
 end
 
 (* subsumed by gen_prim_specification
@@ -1265,8 +1421,6 @@ fun prim_constant_definition Thy M = let
   val {Name, Thy, Ty} =
       if is_const lhs then let
           val r as {Name, Ty, ...} = dest_thy_const lhs
-          (* note how we ignore the constant's theory; this is because the
-             user may be defining another version of an earlier constant *)
         in
           {Name = Name, Thy = Thy, Ty = Ty}
         end
@@ -1280,7 +1434,7 @@ fun prim_constant_definition Thy M = let
   val checked = check_tyvars (type_vars_in_term rhs) Ty DEF_ERR
   val new_lhs = Term.prim_new_const {Name = Name, Thy = Thy} Ty
 in
-  mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs),Def_const_prf({Name=Name,Thy=Thy},rhs))
+  mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs))
 end
 *)
 
@@ -1304,16 +1458,13 @@ fun prim_specification thyname cnames th = let
   fun vOK V v   = check_tyvars V (type_of v) SPEC_ERR
   val checked   = List.app (vOK (type_vars_in_term body)) V
   fun addc v s  = v |-> bind thyname s (snd(dest_var v))
-  val sigma     = map2 addc V cnames
 in
-  mk_defn_thm (tag th, subst sigma body, Def_spec_prf(map #residue sigma,th))
+  let val result = mk_defn_thm (tag th, subst (map2 addc V cnames) body)
+  in record_step ("DEF_SPEC " ^ its (iT (concl result))) [th]; result end
 end
 
 fun gen_prim_specification thyname th = let
   val hyps        = hypset th
-  val body        = concl th
-  val _ = Term.uptodate_term body orelse
-          raise SPEC_ERR "Out-of-date conclusion to theorem"
   val stys        =
     let
       fun foldthis (tm,stys) =
@@ -1324,8 +1475,6 @@ fun gen_prim_specification thyname th = let
               with_exn dest_var l (SPEC_ERR "lhs of hyp not a variable")
           val checked = check_free_vars r SPEC_ERR
           val checked = check_tyvars (type_vars_in_term r) ty SPEC_ERR
-          val _ = Term.uptodate_term tm orelse
-                  raise SPEC_ERR "Out-of-date hypothesis"
         in
           (s,ty)::stys
         end
@@ -1340,15 +1489,12 @@ fun gen_prim_specification thyname th = let
       case List.find (not o okConstName) cnames of
           NONE => ()
         | SOME n => raise SPEC_ERR ("Constant name: \""^n^"\" invalid")
+  val body        = concl th
   val checked     = check_vars body (List.map mk_var stys) SPEC_ERR
   fun addc (s,ty) = (mk_var (s,ty)) |-> bind thyname s ty
-  val prf = Def_const_list_prf(thyname,stys,th)
-  val prf =
-    case cnames of [c] => if HOLset.member(hyps,body) then
-      Def_const_prf({Thy=thyname,Name=c},Term.rand body)
-    else prf | _ => prf
 in
-  (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body, prf))
+  let val result = mk_defn_thm (tag th, subst (List.map addc stys) body)
+  in record_step ("DEF_SPEC " ^ its (iT (concl result))) [th]; (cnames, result) end
 end
 
 
@@ -1361,16 +1507,11 @@ end
     Creating a theorem from disk
    ---------------------------------------------------------------------- *)
 
-local
-  val mk_disk_thm  = make_thm Count.Disk
-in
 fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
-in
-  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c,Axiom_prf)
-end
-end; (* local *)
+  val result = make_thm Count.Disk (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
+in record_step ("DISK_THM " ^ fmt_thm_stmt result) []; result end
 
 (* ----------------------------------------------------------------------
     Saving dependencies of a theorem
@@ -1380,21 +1521,15 @@ end; (* local *)
    a theory. *)
 val thm_order = ref 0
 
-fun save_dep thy (th as (THM(t,h,c,p))) =
+fun save_dep thy (th as (THM(t,h,c,sid))) =
   let
     val did = (thy,!thm_order)
     val dl  = (transfer_thydepl o dep_of o tag) th
     val dep = DEP_SAVED(did,dl)
   in
     thm_order := (!thm_order) + 1;
-    THM(Tag.set_dep dep t,h,c,p)
+    THM(Tag.set_dep dep t,h,c,sid)
   end
-
-(* Some OpenTheory kernel rules *)
-fun deductAntisym (th1 as THM(o1,a1,c1,p1)) (th2 as THM(o2,a2,c2,p2)) = let
-  val a1' = disch (c2,a1)
-  val a2' = disch (c1,a2)
-in make_thm Count.Axiom (Tag.merge o1 o2, union_hyp a1' a2', mk_eq_nocheck bool c1 c2, deductAntisym_prf(th1,th2)) end
 
 (* ----------------------------------------------------------------------
     Computing with first-order lisp-style values
@@ -1420,6 +1555,7 @@ in
   fun compute {cval_terms, cval_type, num_type, char_eqns} =
     let
       val tag0 = merge_tags empty_tag (List.map (tag o snd) char_eqns)
+      val char_thms = List.map snd char_eqns
       val char_eqns = List.map (I ## dest_thm) char_eqns
       val _ = List.all (List.null o fst o snd) char_eqns orelse
               raise ERR "compute" "Characteristic equation with hypotheses"
@@ -1432,6 +1568,7 @@ in
       fn code_eqs =>
         let
           val tag1 = merge_tags tag0 (List.map tag code_eqs)
+          val code_thms = code_eqs
           val eqs = List.map dest_code_eqn code_eqs
           val tc1 = tc0 eqs
         in
@@ -1439,13 +1576,334 @@ in
             let
               val tm' = tc1 tm
               val eqn = safe_mk_eq tm tm'
+              val result = make_thm Count.Compute (tag1, empty_hyp, eqn)
             in
-              make_thm Count.Compute (tag1, empty_hyp, eqn, compute_prf)
+              record_step ("COMPUTE " ^ its (iT tm) ^ " " ^ its (iT eqn))
+                          (char_thms @ code_thms);
+              result
             end
         end
     end;
 end (*local *)
 
-fun trace_export _ _ _ = ()
+(*---------------------------------------------------------------------------
+     Trace accessors for ProofTrace module
+ ---------------------------------------------------------------------------*)
+
+fun trace_get_types () = rev (!ty_list)
+fun trace_get_terms () = rev (!tm_list)
+
+fun trace_lookup_type ty =
+  case Redblackmap.peek (!ty_map, ty) of SOME id => id | NONE => ~1
+fun trace_lookup_term tm =
+  case Redblackmap.peek (!tm_map, tm) of SOME id => id | NONE => ~1
+
+fun trace_close_files () =
+  ((case !steps_strm of SOME s => (TextIO.flushOut s; TextIO.closeOut s) | NONE => ());
+   (case !parents_strm of SOME s => (TextIO.flushOut s; TextIO.closeOut s) | NONE => ());
+   steps_strm := NONE;
+   parents_strm := NONE)
+
+fun trace_step_count () = !trace_counter
+
+fun trace_reset () =
+  (trace_close_files ();
+   (OS.FileSys.remove (trace_steps_path ()) handle OS.SysErr _ => ());
+   (OS.FileSys.remove (trace_parents_path ()) handle OS.SysErr _ => ());
+   trace_steps_path_ref := NONE;
+   trace_parents_path_ref := NONE;
+   trace_counter := 0;
+   ty_map := Redblackmap.mkDict Type.compare;
+   tm_map := Redblackmap.mkDict Term.compare;
+   ty_counter := 0;
+   tm_counter := 0;
+   ty_list := [];
+   tm_list := [];
+   lines_written := 0;
+   ext_thm_cache := Redblackmap.mkDict Int.compare)
+
+fun trace_get_ext_cache () = !ext_thm_cache
+
+(* Cache an external ancestor thm's statement for TRUST entries.
+   Used by ProofTrace for re-exported ancestor thms that were never
+   parents of local steps and thus missed by cache_ext_parents. *)
+fun trace_cache_ext_thm (THM(_, hyps, c, id)) =
+  case Redblackmap.peek(!ext_thm_cache, id) of
+    SOME _ => ()
+  | NONE =>
+    let val hyp_list = HOLset.listItems hyps
+    in ignore (intern_term c);
+       List.app (ignore o intern_term) hyp_list;
+       ext_thm_cache :=
+         Redblackmap.insert(!ext_thm_cache, id, (hyp_list, c))
+    end
+
+(* ===================================================================== *)
+(* trace_export: write .pftrace at theory export time.                   *)
+(* Reads temp files, backward-reachability minimizes, writes .pftrace.   *)
+(* Called directly from Theory.export_theory so it works even when       *)
+(* ProofTrace.sml is not loaded (e.g., Initial build phase).             *)
+(* ===================================================================== *)
+
+local
+  fun count_lines path =
+    let val instrm = TextIO.openIn path
+        fun count n = case TextIO.inputLine instrm of
+                        NONE => n | SOME _ => count (n + 1)
+    in count 0 before TextIO.closeIn instrm end
+
+  fun read_parents path n =
+    let val arr = Array.array (n, [] : int list)
+        val instrm = TextIO.openIn path
+        fun rd i = case TextIO.inputLine instrm of
+            NONE => ()
+          | SOME line =>
+            let val ids = List.mapPartial Int.fromString
+                            (String.tokens Char.isSpace line)
+            in if i < n then Array.update(arr, i, ids) else ();
+               rd (i + 1) end
+    in rd 0; TextIO.closeIn instrm; arr end
+
+  fun mark_live parents base roots =
+    let val n = Array.length parents
+        val live = Array.array (n, false)
+        fun mark gid =
+          let val fp = gid - base in
+            if fp < 0 orelse fp >= n then ()
+            else if Array.sub(live, fp) then ()
+            else (Array.update(live, fp, true);
+                  List.app mark (Array.sub(parents, fp)))
+          end
+    in List.app mark roots; live end
+
+  fun build_renumber live =
+    let val n = Array.length live
+        val remap = Array.array (n, ~1)
+        val next = ref 0
+    in Array.appi (fn (i, true) =>
+         (Array.update(remap, i, !next); next := !next + 1)
+       | _ => ()) live;
+       (remap, !next)
+    end
+
+  fun escape_string s =
+    if CharVector.all (fn c => Char.isPrint c andalso c <> #" ") s
+    then s
+    else "\"" ^ String.translate
+       (fn #"\"" => "\\\"" | #"\\" => "\\\\" | #"\n" => "\\n" | c => str c) s
+         ^ "\""
+
+  (* Detect retired/old constant names: oldN->original_name<-old *)
+  fun decode_old_name name =
+    if String.isPrefix "old" name andalso String.isSuffix "<-old" name then
+      let val inner = String.substring(name, 3, size name - 3)
+          val arrow_pos = Lib.index (fn c => c = #">") (String.explode inner)
+          val orig = String.substring(inner, arrow_pos + 1,
+                       size inner - arrow_pos - 1 - 5)
+      in SOME orig end handle _ => NONE
+    else NONE
+
+  fun build_type_map (types : hol_type list) =
+    #1 (List.foldl (fn (ty, (m, i)) =>
+      case Redblackmap.peek(m, ty) of
+        SOME _ => (m, i + 1)
+      | NONE => (Redblackmap.insert(m, ty, i), i + 1))
+      (Redblackmap.mkDict Type.compare, 0) types)
+
+  fun build_term_map (terms : term list) =
+    #1 (List.foldl (fn (tm, (m, i)) =>
+      case Redblackmap.peek(m, tm) of
+        SOME _ => (m, i + 1)
+      | NONE => (Redblackmap.insert(m, tm, i), i + 1))
+      (Redblackmap.mkDict Term.compare, 0) terms)
+
+  fun write_type_entry ty_lookup ostrm idx ty =
+    if Type.is_vartype ty then
+      TextIO.output(ostrm,
+        "Y " ^ its idx ^ " V " ^ escape_string (Type.dest_vartype ty) ^ "\n")
+    else
+      let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+          val arg_ids = map ty_lookup Args
+          val out_tyop = case decode_old_name Tyop of
+                           SOME orig => orig | NONE => Tyop
+      in TextIO.output(ostrm,
+           "Y " ^ its idx ^ " O " ^ escape_string Thy ^ " " ^
+           escape_string out_tyop ^
+           (if null arg_ids then ""
+            else " " ^ String.concatWith " " (map its arg_ids)) ^ "\n")
+      end
+
+  fun write_term_entry ty_lookup tm_lookup ostrm idx tm =
+    case Term.dest_term tm of
+        Term.VAR (name, ty) =>
+          TextIO.output(ostrm,
+            "M " ^ its idx ^ " V " ^ escape_string name ^ " " ^
+            its (ty_lookup ty) ^ "\n")
+      | Term.CONST {Name, Thy, Ty} =>
+          let val out_name = case decode_old_name Name of
+                               SOME orig => orig | NONE => Name
+          in TextIO.output(ostrm,
+               "M " ^ its idx ^ " C " ^ escape_string Thy ^ " " ^
+               escape_string out_name ^ " " ^ its (ty_lookup Ty) ^ "\n")
+          end
+      | Term.COMB (f, x) =>
+          TextIO.output(ostrm,
+            "M " ^ its idx ^ " A " ^
+            its (tm_lookup f) ^ " " ^ its (tm_lookup x) ^ "\n")
+      | Term.LAMB (v, b) =>
+          TextIO.output(ostrm,
+            "M " ^ its idx ^ " L " ^
+            its (tm_lookup v) ^ " " ^ its (tm_lookup b) ^ "\n")
+
+in
+fun trace_export thyname thy_parents all_thms =
+  let
+    val () = trace_close_files ()
+    val n_file_lines = count_lines (trace_steps_path ())
+    val _ = if n_file_lines = 0 then raise ERR "trace_export" "no steps"
+            else ()
+    val total_steps = !trace_counter
+    val base = total_steps - n_file_lines
+    val root_ids = map (fn (_, THM(_, _, _, id)) => id) all_thms
+    val parents = read_parents (trace_parents_path ()) n_file_lines
+    val live = mark_live parents base root_ids
+    val (remap, n_live) = build_renumber live
+
+    (* Collect external IDs *)
+    val ext_set = ref (Redblackset.empty Int.compare)
+    val _ = Array.appi (fn (i, _) =>
+      if Array.sub(live, i) then
+        List.app (fn pid =>
+          if pid < base then ext_set := Redblackset.add(!ext_set, pid)
+          else ())
+          (Array.sub(parents, i))
+      else ()) live
+    val _ = List.app (fn (_, th as THM(_, _, _, tid)) =>
+      let val fp = tid - base in
+        if fp < 0 orelse fp >= n_file_lines
+        then (ext_set := Redblackset.add(!ext_set, tid);
+              trace_cache_ext_thm th)
+        else ()
+      end) all_thms
+    val ext_ids = Redblackset.listItems (!ext_set)
+    val n_ext = length ext_ids
+
+    val ext_remap =
+      #1 (List.foldl (fn (eid, (m, next)) =>
+            (Redblackmap.insert(m, eid, next), next + 1))
+          (Redblackmap.mkDict Int.compare, n_live) ext_ids)
+
+    fun renumber_id gid =
+      let val fp = gid - base in
+        if fp >= 0 andalso fp < n_file_lines
+        then its (Array.sub(remap, fp))
+        else case Redblackmap.peek(ext_remap, gid) of
+               SOME did => its did
+             | NONE => "?" ^ its gid
+      end
+
+    val types = rev (!ty_list)
+    val terms = rev (!tm_list)
+    val ty_map_local = build_type_map types
+    val tm_map_local = build_term_map terms
+    fun ty_lookup ty = case Redblackmap.peek(ty_map_local, ty) of
+                         SOME id => id | NONE => ~1
+    fun tm_lookup tm = case Redblackmap.peek(tm_map_local, tm) of
+                         SOME id => id | NONE => ~1
+
+    val fname = thyname ^ "Theory.pftrace"
+    val ostrm = TextIO.openOut ("./" ^ fname)
+  in
+    (TextIO.output(ostrm, "HOL4_PROOF_TRACE 1\n");
+     TextIO.output(ostrm, "THEORY " ^ escape_string thyname ^ "\n");
+     TextIO.output(ostrm, "PARENTS " ^
+       String.concatWith " " (map escape_string thy_parents) ^ "\n");
+     TextIO.output(ostrm, "COUNTS " ^ its (length types) ^ " " ^
+       its (length terms) ^ " " ^ its (n_live + n_ext) ^ "\n");
+     TextIO.output(ostrm, "\n");
+
+     (* Types *)
+     ignore (List.foldl (fn (ty, i) =>
+       (write_type_entry ty_lookup ostrm i ty; i+1)) 0 types);
+     TextIO.output(ostrm, "\n");
+
+     (* Terms *)
+     ignore (List.foldl (fn (tm, i) =>
+       (write_term_entry ty_lookup tm_lookup ostrm i tm; i+1)) 0 terms);
+     TextIO.output(ostrm, "\n");
+
+     (* Live proof steps *)
+     let val instrm = TextIO.openIn (trace_steps_path ())
+         fun process fp =
+           case TextIO.inputLine instrm of
+             NONE => ()
+           | SOME line =>
+             (if fp < n_file_lines andalso Array.sub(live, fp) then
+                let val new_id = Array.sub(remap, fp)
+                    val step_line = String.substring(line, 0, size line - 1)
+                    val pids = Array.sub(parents, fp)
+                    val ren = String.concatWith " " (map renumber_id pids)
+                in TextIO.output(ostrm,
+                     "P " ^ its new_id ^ " " ^ step_line ^
+                     (if null pids then "" else " | " ^ ren) ^ "\n")
+                end
+              else ();
+              process (fp + 1))
+     in process 0; TextIO.closeIn instrm end;
+
+     (* External trust entries *)
+     let val ecache = !ext_thm_cache in
+       List.app (fn eid =>
+         let val did = valOf (Redblackmap.peek(ext_remap, eid))
+             val stmt = case Redblackmap.peek(ecache, eid) of
+                 SOME (hyps, c) =>
+                   let val c_id = tm_lookup c
+                       val h_ids = map tm_lookup hyps
+                   in " " ^ its c_id ^ " " ^ its (length h_ids) ^
+                      (if null h_ids then ""
+                       else " " ^ String.concatWith " " (map its h_ids))
+                   end
+               | NONE => ""
+         in TextIO.output(ostrm,
+              "P " ^ its did ^ " TRUST " ^ its eid ^ stmt ^ "\n")
+         end) ext_ids
+     end;
+     TextIO.output(ostrm, "\n");
+
+     (* Exports *)
+     List.app (fn (name, THM(_, _, _, tid)) =>
+       let val fp = tid - base
+           val did = if fp >= 0 andalso fp < n_file_lines
+                     then Array.sub(remap, fp)
+                     else (case Redblackmap.peek(ext_remap, tid) of
+                             SOME d => d | NONE => ~1)
+       in TextIO.output(ostrm,
+            "E " ^ escape_string name ^ " " ^ its did ^ "\n")
+       end) all_thms;
+
+     TextIO.closeOut ostrm;
+     trace_reset ();
+     Feedback.HOL_MESG ("Proof trace: " ^ fname ^ " (" ^
+       its n_live ^ " steps + " ^ its n_ext ^ " trust, " ^
+       its (length terms) ^ " terms, " ^ its (length types) ^ " types)"))
+
+    handle e => (TextIO.closeOut ostrm; raise e)
+  end
+  handle IO.Io e =>
+    Feedback.HOL_WARNING "Thm" "trace_export"
+      ("I/O error: " ^ #function e ^ " " ^ #name e)
+  | HOL_ERR _ => ()
+end (* local trace_export *)
+
+(* Clean up temp files at process exit if trace_reset was never called.
+   Handles heap-building processes that don't call export_theory. *)
+val _ = OS.Process.atExit (fn () =>
+  (trace_close_files ();
+   (case !trace_steps_path_ref of
+      SOME s => (OS.FileSys.remove s handle OS.SysErr _ => ())
+    | NONE => ());
+   (case !trace_parents_path_ref of
+      SOME p => (OS.FileSys.remove p handle OS.SysErr _ => ())
+    | NONE => ())))
 
 end (* Thm *)
