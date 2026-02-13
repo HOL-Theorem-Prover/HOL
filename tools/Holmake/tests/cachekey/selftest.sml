@@ -85,14 +85,9 @@ val _ = if ok5 andalso size key5 = 40 then OK()
 (* Test 6: modify a .ui file -> cachekey is unchanged
    (.ui files are excluded from the hash) *)
 val _ = tprint "Checking --cachekey ignores .ui file changes"
-val _ = let val uifile = ".hol/objs/baseTheory.ui"
-        in
-          if OS.FileSys.access(uifile, [OS.FileSys.A_WRITE]) then
-            let val strm = TextIO.openAppend uifile
-            in TextIO.output(strm, "extra junk\n");
-               TextIO.closeOut strm
-            end
-          else die ("Cannot find " ^ uifile ^ " to modify")
+val _ = let val strm = HOLFileSys.openAppend "baseTheory.ui"
+        in TextIO.output(strm, "extra junk\n");
+           TextIO.closeOut strm
         end
 val (ok6, key6) = run_cachekey "childTheory"
 val _ = if ok6 andalso key6 = key5 then OK()
