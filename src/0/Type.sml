@@ -198,9 +198,7 @@ fun type_vars_acc (Tyapp(_,Args)) vlist = type_varsl_acc Args vlist
 and type_varsl_acc L vlist = rev_itlist type_vars_acc L vlist
 
 fun type_vars ty = type_vars_acc ty []
-fun type_vars_lr ty = List.rev (type_vars ty)
 fun type_varsl L = type_varsl_acc L []
-fun type_varsl_lr ty = List.rev (type_varsl ty)
 
 
 (*---------------------------------------------------------------------------

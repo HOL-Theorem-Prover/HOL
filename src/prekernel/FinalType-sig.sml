@@ -20,10 +20,7 @@ sig
 
  val type_vars_acc  : hol_type -> hol_type list -> hol_type list
  val type_vars      : hol_type -> hol_type list
- val type_vars_lr   : hol_type -> hol_type list
  val type_varsl     : hol_type list -> hol_type list
- val type_varsl_acc : hol_type list -> hol_type list -> hol_type list
- val type_varsl_lr  : hol_type list -> hol_type list
 
  val type_var_in   : hol_type -> hol_type -> bool
  val exists_tyvar  : (hol_type -> bool) -> hol_type -> bool
