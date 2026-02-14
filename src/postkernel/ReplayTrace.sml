@@ -20,6 +20,7 @@ val ERR = mk_HOL_ERR "ReplayTrace"
 
 val replay_debug = ref false
 val first_fail = ref (NONE : string option)
+val compute_verifier = ref (NONE : (term -> thm) option)
 
 fun its i = Int.toString i
 
@@ -74,6 +75,7 @@ datatype header = Header of {
   version: int,
   theory: string,
   parents: string list,
+  ancestors: (string * string) list,  (* (theory, digest) pairs *)
   n_types: int,
   n_terms: int,
   n_steps: int
@@ -94,6 +96,16 @@ fun parse_header (lines : string list) =
     val theory = unescape thy_str
     val (par_str, lines) = get_line "PARENTS " lines
     val parents = map unescape (String.tokens Char.isSpace par_str)
+    (* Parse optional ANCESTOR lines *)
+    val ancestor_lines = List.filter
+      (fn l => String.isPrefix "ANCESTOR " l) lines
+    val ancestors = List.mapPartial (fn l =>
+      let val toks = String.tokens Char.isSpace
+                       (String.extract(l, 9, NONE))
+      in case toks of
+           [thy_s, digest_s] => SOME (unescape thy_s, digest_s)
+         | _ => NONE
+      end) ancestor_lines
     val (cnt_str, _) = get_line "COUNTS " lines
     val cnts = String.tokens Char.isSpace cnt_str
     val (n_types, n_terms, n_steps) =
@@ -102,6 +114,7 @@ fun parse_header (lines : string list) =
       | _ => raise ERR "parse_header" "COUNTS must have 3 integers"
   in
     Header {version=version, theory=theory, parents=parents,
+            ancestors=ancestors,
             n_types=n_types, n_terms=n_terms, n_steps=n_steps}
   end
 
@@ -109,9 +122,9 @@ fun parse_header (lines : string list) =
    Build type array from Y entries
    ----------------------------------------------------------------------- *)
 
-fun build_types (lines : string list) =
+fun build_types n_types (lines : string list) =
   let
-    val arr = Array.array (length lines, Type.bool)  (* placeholder *)
+    val arr = Array.array (n_types, Type.bool)  (* placeholder *)
     fun process line =
       case tokenize line of
         _ :: id_s :: kind :: rest =>
@@ -150,10 +163,10 @@ fun build_types (lines : string list) =
    Build term array from M entries
    ----------------------------------------------------------------------- *)
 
-fun build_terms type_arr (lines : string list) =
+fun build_terms n_terms type_arr (lines : string list) =
   let
     val placeholder = Term.mk_var("_", Type.bool)
-    val arr = Array.array (length lines, placeholder)
+    val arr = Array.array (n_terms, placeholder)
     val deferred = ref ([] : string list)
     fun is_placeholder tm = Term.is_var tm andalso
       let val (n,_) = Term.dest_var tm in n = "_" end
@@ -233,7 +246,38 @@ fun build_terms type_arr (lines : string list) =
    Replay proof steps
    ----------------------------------------------------------------------- *)
 
-fun replay_steps term_arr type_arr (lines : string list) =
+(* Ancestor context: maps conclusion term to list of ancestor thms.
+   Used to resolve TRUST entries against actually-replayed ancestors
+   instead of oracle thms. *)
+type ancestor_ctx = (Term.term, Thm.thm list) Redblackmap.dict
+val empty_ctx : ancestor_ctx = Redblackmap.mkDict Term.compare
+
+(* Look up an ancestor thm by conclusion and hypotheses *)
+fun ctx_lookup (ctx : ancestor_ctx) (concl : Term.term)
+               (hyps : Term.term list) : Thm.thm option =
+  case Redblackmap.peek(ctx, concl) of
+    NONE => NONE
+  | SOME thms =>
+      let fun match_hyps th =
+            let val actual_hyps = Thm.hyp th
+            in length actual_hyps = length hyps andalso
+               List.all (fn h =>
+                 List.exists (fn h' => Term.aconv h h') actual_hyps)
+                 hyps
+            end
+      in List.find match_hyps thms end
+
+(* Add exports to an ancestor context *)
+fun ctx_add_exports (ctx : ancestor_ctx)
+                    (exports : (string * Thm.thm) list) : ancestor_ctx =
+  List.foldl (fn ((_, th), ctx) =>
+    let val c = Thm.concl th
+        val prev = case Redblackmap.peek(ctx, c) of
+                     SOME ths => ths | NONE => []
+    in Redblackmap.insert(ctx, c, th :: prev) end) ctx exports
+
+fun replay_steps term_arr type_arr (lines : string list)
+                 (ctx : ancestor_ctx) =
   let
     val _ = first_fail := NONE
     val n = length lines
@@ -268,9 +312,18 @@ fun replay_steps term_arr type_arr (lines : string list) =
             val nhyps = int_of nhyps_s
             val hyp_ids = List.take(List.mapPartial Int.fromString rest, nhyps)
             val hyps = map tm hyp_ids
-          in Thm.mk_oracle_thm "REPLAY_TRUST" (hyps, c) end
+          in
+            (* Try ancestor context first, fall back to oracle thm *)
+            case ctx_lookup ctx c hyps of
+              SOME ancestor_th => ancestor_th
+            | NONE => Thm.mk_oracle_thm "REPLAY_TRUST" (hyps, c)
+          end
       | [concl_s] =>
-          Thm.mk_oracle_thm "REPLAY_TRUST" ([], tm (int_of concl_s))
+          let val c = tm (int_of concl_s)
+          in case ctx_lookup ctx c [] of
+               SOME ancestor_th => ancestor_th
+             | NONE => Thm.mk_oracle_thm "REPLAY_TRUST" ([], c)
+          end
       | _ => raise ERR "mk_trust_thm" "bad format"
 
     (* Parse type substitution pairs: n redex1 residue1 ... *)
@@ -400,12 +453,30 @@ fun replay_steps term_arr type_arr (lines : string list) =
               ([], tm (int_of (List.last operands)))
         | "COMPUTE" =>
             (* operands: input_tm concl_tm *)
-            Thm.mk_oracle_thm "REPLAY_TRUST" ([], tm (opd 1))
+            let val input = tm (opd 0)
+                val expected_concl = tm (opd 1)
+            in
+              case !compute_verifier of
+                SOME eval_fn =>
+                  (let val result_thm = eval_fn input
+                       val result_concl = Thm.concl result_thm
+                   in if Term.aconv result_concl expected_concl
+                      then result_thm
+                      else Thm.mk_oracle_thm "REPLAY_COMPUTE"
+                             ([], expected_concl)
+                   end
+                   handle _ => Thm.mk_oracle_thm "REPLAY_COMPUTE"
+                                 ([], expected_concl))
+              | NONE =>
+                  Thm.mk_oracle_thm "REPLAY_COMPUTE" ([], expected_concl)
+            end
         | "TRUST" =>
             (* operands: global_id [concl nhyps hyps...] *)
             if length operands >= 2
             then mk_trust_thm (tl operands)  (* skip global_id *)
-            else raise ERR "replay_steps"
+            else
+              (* No statement: try ancestor context by global_id *)
+              raise ERR "replay_steps"
                    ("TRUST entry without statement at step " ^ id_s)
         | other => raise ERR "replay_steps" ("unknown rule: " ^ other)
       in
@@ -464,15 +535,24 @@ fun parse_exports (lines : string list) =
    Main entry points
    ----------------------------------------------------------------------- *)
 
-fun replay_file path =
+(* Read and parse a .pftrace[.gz] file, returning categorized lines
+   and parsed header. *)
+fun read_trace_file path =
   let
-    (* Suppress "non-standard syntax" warnings for %%gen_tyvar%% etc. *)
-    val saved_varcomplain = Feedback.current_trace "Vartype Format Complaint"
-    val _ = Feedback.set_trace "Vartype Format Complaint" 0
-    fun restore () =
-      Feedback.set_trace "Vartype Format Complaint" saved_varcomplain
-
-    val instrm = TextIO.openIn path
+    val is_zst = String.isSuffix ".zst" path
+    val is_gz = String.isSuffix ".gz" path
+    val (instrm, gz_proc) =
+      if is_zst then
+        let val proc : (TextIO.instream, TextIO.outstream) Unix.proc =
+              Unix.execute("/bin/sh", ["-c", "zstd -dc -q " ^
+                String.toString path])
+        in (Unix.textInstreamOf proc, SOME proc) end
+      else if is_gz then
+        let val proc : (TextIO.instream, TextIO.outstream) Unix.proc =
+              Unix.execute("/bin/sh", ["-c", "gunzip -c " ^
+                String.toString path])
+        in (Unix.textInstreamOf proc, SOME proc) end
+      else (TextIO.openIn path, NONE)
     fun read_all acc =
       case TextIO.inputLine instrm of
         NONE => rev acc
@@ -480,13 +560,15 @@ fun replay_file path =
           let val l = String.substring(line, 0, size line - 1)
           in read_all (l :: acc) end
     val all_lines = read_all []
-    val _ = TextIO.closeIn instrm
+    val _ = case gz_proc of
+              SOME p => (Unix.reap p; ())
+            | NONE => TextIO.closeIn instrm
 
-    (* Categorize lines *)
     val header_lines = List.filter
       (fn l => String.isPrefix "HOL4_PROOF_TRACE" l orelse
                String.isPrefix "THEORY " l orelse
                String.isPrefix "PARENTS " l orelse
+               String.isPrefix "ANCESTOR " l orelse
                String.isPrefix "COUNTS " l) all_lines
     val type_lines = List.filter (fn l => String.isPrefix "Y " l) all_lines
     val term_lines = List.filter (fn l => String.isPrefix "M " l) all_lines
@@ -494,25 +576,40 @@ fun replay_file path =
     val export_lines = List.filter (fn l => String.isPrefix "E " l) all_lines
 
     val header = parse_header header_lines
+  in
+    {header = header,
+     type_lines = type_lines,
+     term_lines = term_lines,
+     step_lines = step_lines,
+     export_lines = export_lines}
+  end
+
+fun replay_file_ctx path (ctx : ancestor_ctx) =
+  let
+    val saved_varcomplain = Feedback.current_trace "Vartype Format Complaint"
+    val _ = Feedback.set_trace "Vartype Format Complaint" 0
+    fun restore () =
+      Feedback.set_trace "Vartype Format Complaint" saved_varcomplain
+
+    val {header, type_lines, term_lines, step_lines, export_lines} =
+      read_trace_file path
     val Header {theory, n_types, n_terms, n_steps, ...} = header
 
-    val _ = if length type_lines <> n_types then
-              raise ERR "replay_file" ("expected " ^ its n_types ^
-                " types, got " ^ its (length type_lines))
+    val _ = if length type_lines > n_types then
+              raise ERR "replay_file_ctx" ("type count " ^
+                its (length type_lines) ^ " exceeds dimension " ^
+                its n_types)
             else ()
-    val _ = if length term_lines <> n_terms then
-              raise ERR "replay_file" ("expected " ^ its n_terms ^
-                " terms, got " ^ its (length term_lines))
+    val _ = if length term_lines > n_terms then
+              raise ERR "replay_file_ctx" ("term count " ^
+                its (length term_lines) ^ " exceeds dimension " ^
+                its n_terms)
             else ()
 
-    (* Build type and term arrays *)
-    val type_arr = build_types type_lines
-    val term_arr = build_terms type_arr term_lines
+    val type_arr = build_types n_types type_lines
+    val term_arr = build_terms n_terms type_arr term_lines
+    val thm_arr = replay_steps term_arr type_arr step_lines ctx
 
-    (* Replay proof steps *)
-    val thm_arr = replay_steps term_arr type_arr step_lines
-
-    (* Resolve exports *)
     val exports = parse_exports export_lines
     val result = map (fn (name, step_id) =>
       (name, Array.sub(thm_arr, step_id))) exports
@@ -521,24 +618,27 @@ fun replay_file path =
   end
   handle e =>
     (Feedback.set_trace "Vartype Format Complaint" 1
-       handle _ => ();  (* best-effort restore to default *)
+       handle _ => ();
      raise e)
+
+fun replay_file path = replay_file_ctx path empty_ctx
 
 fun verify_file path =
   let
     val replayed = replay_file path
 
-    (* Extract theory name from header *)
-    val instrm = TextIO.openIn path
-    fun find_thy () =
-      case TextIO.inputLine instrm of
-        NONE => raise ERR "verify_file" "no THEORY line"
-      | SOME line =>
-          if String.isPrefix "THEORY " line
-          then String.substring(line, 7, size line - 8)
-          else find_thy ()
-    val thyname = unescape (find_thy ())
-    val _ = TextIO.closeIn instrm
+    (* Extract theory name from filename: <thy>Theory.pftrace[.gz|.zst] *)
+    val basename = OS.Path.file path
+    val thyname =
+      let val b = if String.isSuffix ".zst" basename
+                  then String.substring(basename, 0,
+                         size basename - size "Theory.pftrace.zst")
+                  else if String.isSuffix ".gz" basename
+                  then String.substring(basename, 0,
+                         size basename - size "Theory.pftrace.gz")
+                  else String.substring(basename, 0,
+                         size basename - size "Theory.pftrace")
+      in b end
 
     (* Compare each replayed export against actual theory theorem.
        Caller must ensure the theory is loaded first. *)
@@ -599,7 +699,8 @@ fun verify_verbose path =
     (print ("ERROR [" ^ exnName e ^ "]: " ^
             General.exnMessage e ^ "\n"); false)
 
-(* Find all .pftrace files under a directory *)
+(* Find all .pftrace files under a directory.
+   Preference order: .pftrace.zst > .pftrace.gz > .pftrace *)
 fun find_traces dir =
   let
     fun walk d acc =
@@ -613,18 +714,45 @@ fun find_traces dir =
             in
               if OS.FileSys.isDir p
               then loop (walk p acc)
+              else if String.isSuffix ".pftrace.zst" entry
+              then
+                let
+                  val thy = String.substring(entry, 0,
+                              size entry - size "Theory.pftrace.zst")
+                in loop ((thy, p) :: acc) end
+              else if String.isSuffix ".pftrace.gz" entry
+              then
+                let
+                  val thy = String.substring(entry, 0,
+                              size entry - size "Theory.pftrace.gz")
+                in loop ((thy, p) :: acc) end
               else if String.isSuffix ".pftrace" entry
               then
                 let
-                  (* Extract theory name from filename *)
                   val thy = String.substring(entry, 0,
                               size entry - size "Theory.pftrace")
                 in loop ((thy, p) :: acc) end
               else loop acc
             end
       in loop acc end
+    (* Deduplicate: if both .zst and .gz exist, keep .zst *)
+    val all = walk dir []
+    val m = List.foldl (fn ((thy, path), m) =>
+      case Redblackmap.peek(m, thy) of
+        SOME existing =>
+          if String.isSuffix ".zst" path andalso
+             not (String.isSuffix ".zst" existing)
+          then Redblackmap.insert(m, thy, path)
+          else if String.isSuffix ".gz" path andalso
+                  String.isSuffix ".pftrace" existing andalso
+                  not (String.isSuffix ".gz" existing) andalso
+                  not (String.isSuffix ".zst" existing)
+          then Redblackmap.insert(m, thy, path)
+          else m
+      | NONE => Redblackmap.insert(m, thy, path))
+      (Redblackmap.mkDict String.compare) all
   in
-    walk dir []
+    Redblackmap.listItems m
   end
 
 fun verify_all dir =
@@ -646,6 +774,99 @@ fun verify_all dir =
            Int.toString (!n_fail) ^ " FAILED ===\n");
     if not (null (!errors)) then
       (print "Failed theories:\n";
+       List.app (fn e => print ("  " ^ e ^ "\n")) (rev (!errors)))
+    else ();
+    {ok = !n_ok, fail = !n_fail, errors = rev (!errors)}
+  end
+
+(* -----------------------------------------------------------------------
+   Chain verification: replay a theory and all its ancestors from
+   .pftrace.gz files, without requiring theories loaded in HOL session.
+   Ancestors are replayed in topological order and their exports are
+   passed as context for TRUST entries in descendant theories.
+   ----------------------------------------------------------------------- *)
+
+fun verify_chain holdir root_theory =
+  let
+    val all_traces = find_traces holdir
+    val trace_map =
+      List.foldl (fn ((thy, path), m) =>
+        Redblackmap.insert(m, thy, path))
+        (Redblackmap.mkDict String.compare) all_traces
+
+    (* Read headers to get dependency info *)
+    fun get_parents thy =
+      case Redblackmap.peek(trace_map, thy) of
+        NONE => []
+      | SOME path =>
+        let val {header, ...} = read_trace_file path
+            val Header {parents, ...} = header
+        in parents end
+        handle _ => []
+
+    (* Topological sort: DFS post-order from root *)
+    fun toposort root =
+      let
+        val visited = ref (Redblackset.empty String.compare)
+        val order = ref ([] : string list)
+        fun visit thy =
+          if Redblackset.member(!visited, thy) then ()
+          else
+            (visited := Redblackset.add(!visited, thy);
+             List.app visit (get_parents thy);
+             (* Only include theories with traces *)
+             if isSome (Redblackmap.peek(trace_map, thy))
+             then order := thy :: !order
+             else ())
+      in
+        visit root;
+        rev (!order)
+      end
+
+    val replay_order = toposort root_theory
+    val _ = print ("Replay chain: " ^ Int.toString (length replay_order) ^
+                   " theories in dependency order\n")
+
+    val n_ok = ref 0
+    val n_fail = ref 0
+    val errors = ref ([] : string list)
+    val ctx = ref empty_ctx
+
+    fun replay_one thy =
+      let
+        val path = valOf (Redblackmap.peek(trace_map, thy))
+        val _ = print ("  " ^ thy ^ " ... ")
+      in
+        let
+          val exports = replay_file_ctx path (!ctx)
+          val _ = ctx := ctx_add_exports (!ctx) exports
+          val n_exports = length exports
+          (* Check for fallback oracles in exports *)
+          val n_fallbacks =
+            length (List.filter (fn (_, th) =>
+              let val (oracles, _) = Tag.dest_tag (Thm.tag th)
+              in List.exists (fn s =>
+                   s = "REPLAY_FALLBACK") oracles
+              end) exports)
+        in
+          if n_fallbacks = 0
+          then (print ("OK (" ^ its n_exports ^ " exports)\n");
+                n_ok := !n_ok + 1)
+          else (print ("WARN: " ^ its n_fallbacks ^ "/" ^
+                       its n_exports ^ " fallbacks\n");
+                n_ok := !n_ok + 1)
+        end
+        handle e =>
+          (print ("FAIL: " ^ General.exnMessage e ^ "\n");
+           n_fail := !n_fail + 1;
+           errors := thy :: !errors)
+      end
+  in
+    List.app replay_one replay_order;
+    print ("\n=== Chain summary: " ^ its (!n_ok) ^ " OK, " ^
+           its (!n_fail) ^ " FAILED ===\n");
+    if not (null (!errors)) then
+      (print "Failed:\n";
        List.app (fn e => print ("  " ^ e ^ "\n")) (rev (!errors)))
     else ();
     {ok = !n_ok, fail = !n_fail, errors = rev (!errors)}

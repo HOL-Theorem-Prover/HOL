@@ -112,6 +112,8 @@ src/TeX/holindex-demo.ps
 
 *.art
 *.pftrace
+*.pftrace.gz
+*.pftrace.zst
 .tracknl_*
 
 Manual/*/*.pdf

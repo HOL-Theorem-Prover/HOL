@@ -151,6 +151,12 @@ fun cache_ext_parents parent_thms =
       end) parent_thms
   end
 
+(* Cleanup handler ref: populated after trace_close_files is defined.
+   Re-registered after heap restore since atExit handlers don't
+   survive PolyML.SaveState.loadState. *)
+val trace_cleanup_fn : (unit -> unit) ref = ref (fn () => ())
+fun trace_cleanup () = (!trace_cleanup_fn) ()
+
 (* Ensure both streams are open before writing to either.
    This avoids partial writes when one stream is stale after heap restore. *)
 fun record_step line parent_thms =
@@ -168,10 +174,14 @@ fun record_step line parent_thms =
     write (sf, pf)
     handle IO.Io _ =>
       (* Stale streams after heap restore — reopen both atomically.
-         Also reset path refs and lines counter for the new file. *)
+         Also reset path refs and lines counter for the new file.
+         Re-register atExit since loadState doesn't preserve it. *)
       (steps_strm := NONE; parents_strm := NONE;
        trace_steps_path_ref := NONE; trace_parents_path_ref := NONE;
        lines_written := 0;
+       (* atExit handlers don't survive loadState; always re-register
+          when we detect heap restore via IO.Io *)
+       (OS.Process.atExit trace_cleanup handle _ => ());
        write (open_trace_streams ()));
     lines_written := !lines_written + 1;
     cache_ext_parents parent_thms
@@ -1599,10 +1609,24 @@ fun trace_lookup_term tm =
   case Redblackmap.peek (!tm_map, tm) of SOME id => id | NONE => ~1
 
 fun trace_close_files () =
-  ((case !steps_strm of SOME s => (TextIO.flushOut s; TextIO.closeOut s) | NONE => ());
-   (case !parents_strm of SOME s => (TextIO.flushOut s; TextIO.closeOut s) | NONE => ());
+  ((case !steps_strm of
+      SOME s => ((TextIO.flushOut s; TextIO.closeOut s) handle _ => ())
+    | NONE => ());
+   (case !parents_strm of
+      SOME s => ((TextIO.flushOut s; TextIO.closeOut s) handle _ => ())
+    | NONE => ());
    steps_strm := NONE;
    parents_strm := NONE)
+
+(* Set the actual cleanup implementation now that trace_close_files exists *)
+val _ = trace_cleanup_fn := (fn () =>
+  ((trace_close_files () handle _ => ());
+   (case !trace_steps_path_ref of
+      SOME s => (OS.FileSys.remove s handle _ => ())
+    | NONE => ());
+   (case !trace_parents_path_ref of
+      SOME p => (OS.FileSys.remove p handle _ => ())
+    | NONE => ())))
 
 fun trace_step_count () = !trace_counter
 
@@ -1675,6 +1699,21 @@ local
                   List.app mark (Array.sub(parents, fp)))
           end
     in List.app mark roots; live end
+
+  (* FNV-1a 64-bit hash for step deduplication *)
+  val fnv_offset = 0wxCBF29CE484222325 : Word64.word
+  val fnv_prime  = 0wx00000100000001B3 : Word64.word
+  fun fnv1a_byte (h, b) =
+    Word64.*(Word64.xorb(h, Word64.fromInt b), fnv_prime)
+  fun fnv1a_string s =
+    CharVector.foldl (fn (c,h) => fnv1a_byte(h, Char.ord c)) fnv_offset s
+  fun fnv1a_word64 (h, w) =
+    let fun byte n =
+          Word64.toInt(Word64.andb(Word64.>>(w, Word.fromInt(n*8)), 0wxFF))
+    in fnv1a_byte(fnv1a_byte(fnv1a_byte(fnv1a_byte(
+       fnv1a_byte(fnv1a_byte(fnv1a_byte(fnv1a_byte(h,
+       byte 0), byte 1), byte 2), byte 3),
+       byte 4), byte 5), byte 6), byte 7) end
 
   fun build_renumber live =
     let val n = Array.length live
@@ -1755,6 +1794,19 @@ local
             "M " ^ its idx ^ " L " ^
             its (tm_lookup v) ^ " " ^ its (tm_lookup b) ^ "\n")
 
+  (* --- Compression: prefer zstd, fallback to gzip --- *)
+  val (compress_ext, compress_cmd) =
+    let val p : (TextIO.instream, TextIO.outstream) Unix.proc =
+          Unix.execute("/bin/sh",
+            ["-c", "echo x | zstd -c > /dev/null 2>/dev/null"])
+        val st = Unix.reap p
+    in if OS.Process.isSuccess st
+       then (".zst", fn path => "zstd -c -q > " ^ path)
+       else (".gz", fn path => "gzip > " ^ path)
+    end
+    handle _ =>
+      (".gz", fn path => "gzip > " ^ path)
+
 in
 fun trace_export thyname thy_parents all_thms =
   let
@@ -1788,20 +1840,6 @@ fun trace_export thyname thy_parents all_thms =
     val ext_ids = Redblackset.listItems (!ext_set)
     val n_ext = length ext_ids
 
-    val ext_remap =
-      #1 (List.foldl (fn (eid, (m, next)) =>
-            (Redblackmap.insert(m, eid, next), next + 1))
-          (Redblackmap.mkDict Int.compare, n_live) ext_ids)
-
-    fun renumber_id gid =
-      let val fp = gid - base in
-        if fp >= 0 andalso fp < n_file_lines
-        then its (Array.sub(remap, fp))
-        else case Redblackmap.peek(ext_remap, gid) of
-               SOME did => its did
-             | NONE => "?" ^ its gid
-      end
-
     val types = rev (!ty_list)
     val terms = rev (!tm_list)
     val ty_map_local = build_type_map types
@@ -1810,100 +1848,342 @@ fun trace_export thyname thy_parents all_thms =
                          SOME id => id | NONE => ~1
     fun tm_lookup tm = case Redblackmap.peek(tm_map_local, tm) of
                          SOME id => id | NONE => ~1
+    val n_types = length types
+    val n_terms = length terms
+    val objdir = ".hol/objs"
+    val _ = (OS.FileSys.mkDir ".hol" handle OS.SysErr _ => ())
+    val _ = (OS.FileSys.mkDir objdir handle OS.SysErr _ => ())
+    val outname = objdir ^ "/" ^ thyname ^ "Theory.pftrace" ^ compress_ext
 
-    val fname = thyname ^ "Theory.pftrace"
-    val ostrm = TextIO.openOut ("./" ^ fname)
-  in
-    (TextIO.output(ostrm, "HOL4_PROOF_TRACE 1\n");
-     TextIO.output(ostrm, "THEORY " ^ escape_string thyname ^ "\n");
-     TextIO.output(ostrm, "PARENTS " ^
-       String.concatWith " " (map escape_string thy_parents) ^ "\n");
-     TextIO.output(ostrm, "COUNTS " ^ its (length types) ^ " " ^
-       its (length terms) ^ " " ^ its (n_live + n_ext) ^ "\n");
-     TextIO.output(ostrm, "\n");
+    fun open_compress path =
+      let val p : (TextIO.instream, TextIO.outstream) Unix.proc =
+            Unix.execute("/bin/sh", ["-c", compress_cmd path])
+      in (Unix.textOutstreamOf p, p) end
+    fun close_compress (ostrm, p) =
+      (TextIO.closeOut ostrm; ignore (Unix.reap p))
 
-     (* Types *)
-     ignore (List.foldl (fn (ty, i) =>
-       (write_type_entry ty_lookup ostrm i ty; i+1)) 0 types);
-     TextIO.output(ostrm, "\n");
+    (* --- Parameterized trace writer --- *)
+    fun write_body ostrm
+        {step_count, step_offset,
+         type_live_fn  : int -> bool,
+         term_live_fn  : int -> bool,
+         step_include  : int -> bool,   (* dense_id → include? *)
+         step_outid    : int -> int,    (* dense_id → output id *)
+         renumber      : int -> string, (* dense_id → output id string *)
+         export_outid  : int -> int} =  (* dense_id → output id *)
+      let
+        val ext_rm =
+          #1 (List.foldl (fn (eid, (m, next)) =>
+                (Redblackmap.insert(m, eid, next), next + 1))
+              (Redblackmap.mkDict Int.compare, step_offset) ext_ids)
+        fun ren gid =
+          let val fp = gid - base in
+            if fp >= 0 andalso fp < n_file_lines then
+              let val did = Array.sub(remap, fp) in
+                if did >= 0 then renumber did else "?" ^ its gid
+              end
+            else case Redblackmap.peek(ext_rm, gid) of
+                   SOME did => its did
+                 | NONE => "?" ^ its gid
+          end
+      in
+        TextIO.output(ostrm, "HOL4_PROOF_TRACE 1\n");
+        TextIO.output(ostrm, "THEORY " ^ escape_string thyname ^ "\n");
+        TextIO.output(ostrm, "PARENTS " ^
+          String.concatWith " " (map escape_string thy_parents) ^ "\n");
+        (* Best-effort ancestor digests: look for parent trace file in
+           .hol/objs/ (try .zst then .gz), compute SHA-256 and record. *)
+        List.app (fn par =>
+          let val base = objdir ^ "/" ^ par ^ "Theory.pftrace"
+              val p = if OS.FileSys.access(base ^ ".zst", [])
+                      then SOME (base ^ ".zst")
+                      else if OS.FileSys.access(base ^ ".gz", [])
+                      then SOME (base ^ ".gz")
+                      else NONE
+          in
+            case p of NONE => ()
+            | SOME pf =>
+              let
+                val proc : (TextIO.instream, TextIO.outstream) Unix.proc =
+                  Unix.execute("/usr/bin/sha256sum", [pf])
+                val line = TextIO.inputAll (Unix.textInstreamOf proc)
+                val hash = hd (String.tokens Char.isSpace line)
+                val _ = Unix.reap proc
+              in
+                TextIO.output(ostrm, "ANCESTOR " ^
+                  escape_string par ^ " sha256:" ^ hash ^ "\n")
+              end handle _ => ()
+          end) thy_parents;
+        TextIO.output(ostrm, "COUNTS " ^ its n_types ^ " " ^
+          its n_terms ^ " " ^ its (step_count + n_ext) ^ "\n");
+        TextIO.output(ostrm, "\n");
 
-     (* Terms *)
-     ignore (List.foldl (fn (tm, i) =>
-       (write_term_entry ty_lookup tm_lookup ostrm i tm; i+1)) 0 terms);
-     TextIO.output(ostrm, "\n");
+        (* Types *)
+        ignore (List.foldl (fn (ty, i) =>
+          (if type_live_fn i
+           then write_type_entry ty_lookup ostrm i ty else ();
+           i+1)) 0 types);
+        TextIO.output(ostrm, "\n");
 
-     (* Live proof steps *)
-     let val instrm = TextIO.openIn (trace_steps_path ())
-         fun process fp =
+        (* Terms *)
+        ignore (List.foldl (fn (tm, i) =>
+          (if term_live_fn i
+           then write_term_entry ty_lookup tm_lookup ostrm i tm else ();
+           i+1)) 0 terms);
+        TextIO.output(ostrm, "\n");
+
+        (* Steps *)
+        let val instrm = TextIO.openIn (trace_steps_path ())
+            fun process fp =
+              case TextIO.inputLine instrm of
+                NONE => ()
+              | SOME line =>
+                (if fp < n_file_lines andalso Array.sub(live, fp) then
+                   let val did = Array.sub(remap, fp) in
+                     if step_include did then
+                       let val sl = String.substring(line, 0, size line - 1)
+                           val pids = Array.sub(parents, fp)
+                           val rs = String.concatWith " " (map ren pids)
+                       in TextIO.output(ostrm,
+                            "P " ^ its (step_outid did) ^ " " ^ sl ^
+                            (if null pids then "" else " | " ^ rs) ^
+                            "\n")
+                       end
+                     else ()
+                   end
+                 else ();
+                 process (fp + 1))
+        in process 0; TextIO.closeIn instrm end;
+
+        (* Trust entries *)
+        let val ecache = !ext_thm_cache in
+          List.app (fn eid =>
+            let val did = valOf (Redblackmap.peek(ext_rm, eid))
+                val stmt = case Redblackmap.peek(ecache, eid) of
+                    SOME (hyps, c) =>
+                      let val c_id = tm_lookup c
+                          val h_ids = map tm_lookup hyps
+                      in " " ^ its c_id ^ " " ^ its (length h_ids) ^
+                         (if null h_ids then ""
+                          else " " ^ String.concatWith " "
+                                       (map its h_ids))
+                      end
+                  | NONE => ""
+            in TextIO.output(ostrm,
+                 "P " ^ its did ^ " TRUST " ^ its eid ^ stmt ^ "\n")
+            end) ext_ids
+        end;
+        TextIO.output(ostrm, "\n");
+
+        (* Exports *)
+        List.app (fn (name, THM(_, _, _, tid)) =>
+          let val fp = tid - base
+              val oid =
+                if fp >= 0 andalso fp < n_file_lines then
+                  let val did = Array.sub(remap, fp) in
+                    if did >= 0 then export_outid did else ~1
+                  end
+                else (case Redblackmap.peek(ext_rm, tid) of
+                        SOME d => d | NONE => ~1)
+          in TextIO.output(ostrm,
+               "E " ^ escape_string name ^ " " ^ its oid ^ "\n")
+          end) all_thms
+      end
+
+    (* === Phase 1: Write raw trace (always valid) via gzip pipe === *)
+    val (os1, p1) = open_compress outname
+    val _ = (write_body os1
+               {step_count = n_live, step_offset = n_live,
+                type_live_fn = fn _ => true,
+                term_live_fn = fn _ => true,
+                step_include = fn _ => true,
+                step_outid = fn did => did,
+                renumber = fn did => its did,
+                export_outid = fn did => did};
+             close_compress (os1, p1))
+            handle e => (close_compress (os1, p1) handle _ => (); raise e)
+
+    (* === Phase 2: Try optimized export (pruning + dedup) === *)
+    val (n_final, n_deduped, n_live_types, n_live_terms) =
+    (let
+       (* Step dedup: hash-cons with equality verification.
+          Hash is used for bucketing only; dedup requires exact match
+          of step line + canonical parent IDs. *)
+       val hash_arr = Array.array(n_live, fnv_offset)
+       val dedup_to = Array.tabulate(n_live, fn i => i)
+       (* Map hash → list of (dense_id, step_line, canonical_parents) *)
+       val cmap = ref (Redblackmap.mkDict Word64.compare
+                       : (Word64.word, (int * string * int list) list)
+                         Redblackmap.dict)
+       fun phash gid =
+         let val fp = gid - base in
+           if fp >= 0 andalso fp < n_file_lines then
+             let val did = Array.sub(remap, fp) in
+               if did >= 0 then Array.sub(hash_arr, did) else fnv_offset
+             end
+           else fnv1a_string (its gid)
+         end
+
+       fun find_equal _ _ [] = NONE
+         | find_equal sl cpids ((did, csl, ccpids) :: rest) =
+             if sl = csl andalso cpids = ccpids then SOME did
+             else find_equal sl cpids rest
+
+       (* Scan: int refs for pruning + step hashes for dedup *)
+       val int_refs = let
+         val refs = ref (Redblackset.empty Int.compare)
+         val instrm = TextIO.openIn (trace_steps_path ())
+         fun scan fp =
            case TextIO.inputLine instrm of
              NONE => ()
            | SOME line =>
              (if fp < n_file_lines andalso Array.sub(live, fp) then
-                let val new_id = Array.sub(remap, fp)
-                    val step_line = String.substring(line, 0, size line - 1)
+                let val did = Array.sub(remap, fp)
+                    val sl = String.substring(line, 0, size line - 1)
+                    val toks = String.tokens Char.isSpace sl
+                    fun collect [] = ()
+                      | collect (t :: rest) =
+                        (case Int.fromString t of
+                           SOME n => refs := Redblackset.add(!refs, n)
+                         | NONE => ();
+                         collect rest)
+                    val _ = collect
+                              (case toks of _ :: rest => rest | _ => [])
                     val pids = Array.sub(parents, fp)
-                    val ren = String.concatWith " " (map renumber_id pids)
-                in TextIO.output(ostrm,
-                     "P " ^ its new_id ^ " " ^ step_line ^
-                     (if null pids then "" else " | " ^ ren) ^ "\n")
+                    (* Canonical parent IDs for equality check *)
+                    val cpids = map (fn gid =>
+                      let val pfp = gid - base in
+                        if pfp >= 0 andalso pfp < n_file_lines then
+                          let val pdid = Array.sub(remap, pfp) in
+                            if pdid >= 0
+                            then Array.sub(dedup_to, pdid)
+                            else gid
+                          end
+                        else gid
+                      end) pids
+                    val h = List.foldl (fn (gid, h) =>
+                              fnv1a_word64(h, phash gid))
+                              (fnv1a_string sl) pids
+                    val bucket = case Redblackmap.peek(!cmap, h) of
+                                   SOME bs => bs | NONE => []
+                in
+                  Array.update(hash_arr, did, h);
+                  case find_equal sl cpids bucket of
+                    SOME canon => Array.update(dedup_to, did, canon)
+                  | NONE => cmap :=
+                      Redblackmap.insert(!cmap, h,
+                        (did, sl, cpids) :: bucket)
                 end
               else ();
-              process (fp + 1))
-     in process 0; TextIO.closeIn instrm end;
+              scan (fp + 1))
+       in scan 0; TextIO.closeIn instrm; !refs end
 
-     (* External trust entries *)
-     let val ecache = !ext_thm_cache in
-       List.app (fn eid =>
-         let val did = valOf (Redblackmap.peek(ext_remap, eid))
-             val stmt = case Redblackmap.peek(ecache, eid) of
-                 SOME (hyps, c) =>
-                   let val c_id = tm_lookup c
-                       val h_ids = map tm_lookup hyps
-                   in " " ^ its c_id ^ " " ^ its (length h_ids) ^
-                      (if null h_ids then ""
-                       else " " ^ String.concatWith " " (map its h_ids))
-                   end
-               | NONE => ""
-         in TextIO.output(ostrm,
-              "P " ^ its did ^ " TRUST " ^ its eid ^ stmt ^ "\n")
-         end) ext_ids
-     end;
-     TextIO.output(ostrm, "\n");
+       (* Output renumbering *)
+       val output_id = Array.array(n_live, ~1)
+       val n_unique = let val next = ref 0 in
+         Array.appi (fn (i, _) =>
+           if Array.sub(dedup_to, i) = i
+           then (Array.update(output_id, i, !next); next := !next + 1)
+           else ()) output_id;
+         !next end
+       val _ = Array.appi (fn (i, _) =>
+         if Array.sub(dedup_to, i) <> i then
+           Array.update(output_id, i,
+             Array.sub(output_id, Array.sub(dedup_to, i)))
+         else ()) output_id
 
-     (* Exports *)
-     List.app (fn (name, THM(_, _, _, tid)) =>
-       let val fp = tid - base
-           val did = if fp >= 0 andalso fp < n_file_lines
-                     then Array.sub(remap, fp)
-                     else (case Redblackmap.peek(ext_remap, tid) of
-                             SOME d => d | NONE => ~1)
-       in TextIO.output(ostrm,
-            "E " ^ escape_string name ^ " " ^ its did ^ "\n")
-       end) all_thms;
+       fun opt_outid did =
+         Array.sub(output_id, Array.sub(dedup_to, did))
 
-     TextIO.closeOut ostrm;
-     trace_reset ();
-     Feedback.HOL_MESG ("Proof trace: " ^ fname ^ " (" ^
-       its n_live ^ " steps + " ^ its n_ext ^ " trust, " ^
-       its (length terms) ^ " terms, " ^ its (length types) ^ " types)"))
+       (* Term/type pruning *)
+       val all_refs = let
+         val refs = ref int_refs
+         val ecache = !ext_thm_cache
+       in
+         List.app (fn eid =>
+           case Redblackmap.peek(ecache, eid) of
+             SOME (hyps, c) =>
+               (refs := Redblackset.add(!refs, tm_lookup c);
+                List.app (fn h =>
+                  refs := Redblackset.add(!refs, tm_lookup h)) hyps)
+           | NONE => ()) ext_ids;
+         !refs
+       end
 
-    handle e => (TextIO.closeOut ostrm; raise e)
+       val ty_arr = Array.fromList types
+       val tm_arr = Array.fromList terms
+       val live_ty = Array.array(n_types, false)
+       val live_tm = Array.array(n_terms, false)
+       fun mark_term i =
+         if i < 0 orelse i >= n_terms orelse Array.sub(live_tm, i) then ()
+         else (Array.update(live_tm, i, true);
+               case Term.dest_term (Array.sub(tm_arr, i)) of
+                 Term.COMB(f, x) =>
+                   (mark_term (tm_lookup f); mark_term (tm_lookup x))
+               | Term.LAMB(v, b) =>
+                   (mark_term (tm_lookup v); mark_term (tm_lookup b))
+               | Term.VAR(_, ty) => mark_type (ty_lookup ty)
+               | Term.CONST{Ty,...} => mark_type (ty_lookup Ty))
+       and mark_type i =
+         if i < 0 orelse i >= n_types orelse Array.sub(live_ty, i) then ()
+         else (Array.update(live_ty, i, true);
+               let val ty = Array.sub(ty_arr, i) in
+                 if Type.is_vartype ty then ()
+                 else let val {Args,...} = Type.dest_thy_type ty
+                      in List.app (fn a => mark_type (ty_lookup a)) Args
+                      end
+               end)
+       val _ = Redblackset.app (fn i =>
+         (if i >= 0 andalso i < n_terms then mark_term i else ();
+          if i >= 0 andalso i < n_types then mark_type i else ())) all_refs
+
+       val nlt = Array.foldl (fn (b,n) => if b then n+1 else n) 0 live_ty
+       val nlm = Array.foldl (fn (b,n) => if b then n+1 else n) 0 live_tm
+
+       (* Write optimized trace to temp .gz, then rename over raw *)
+       val tmpgz = outname ^ ".tmp"
+       val (os2, p2) = open_compress tmpgz
+       val _ = (write_body os2
+                  {step_count = n_unique, step_offset = n_unique,
+                   type_live_fn = fn i => Array.sub(live_ty, i),
+                   term_live_fn = fn i => Array.sub(live_tm, i),
+                   step_include = fn did =>
+                     Array.sub(dedup_to, did) = did,
+                   step_outid = fn did => Array.sub(output_id, did),
+                   renumber = fn did => its (opt_outid did),
+                   export_outid = opt_outid};
+                close_compress (os2, p2))
+               handle e =>
+                 (close_compress (os2, p2) handle _ => (); raise e)
+       val _ = OS.FileSys.rename {old = tmpgz, new = outname}
+     in
+       (n_unique, n_live - n_unique, nlt, nlm)
+     end)
+    handle e =>
+      (Feedback.HOL_WARNING "Thm" "trace_export"
+         ("optimized export failed (" ^ General.exnMessage e ^
+          "); keeping raw trace");
+       (OS.FileSys.remove (outname ^ ".tmp") handle _ => ());
+       (n_live, 0, n_types, n_terms))
+  in
+    trace_reset ();
+    Feedback.HOL_MESG ("Proof trace: " ^ outname ^ " (" ^
+      its n_final ^ " steps" ^
+      (if n_deduped > 0 then " [" ^ its n_deduped ^ " deduped]" else "") ^
+      " + " ^ its n_ext ^ " trust, " ^
+      its n_live_terms ^ "/" ^ its n_terms ^ " terms, " ^
+      its n_live_types ^ "/" ^ its n_types ^ " types)")
   end
   handle IO.Io e =>
-    Feedback.HOL_WARNING "Thm" "trace_export"
-      ("I/O error: " ^ #function e ^ " " ^ #name e)
-  | HOL_ERR _ => ()
+    (trace_reset ();
+     Feedback.HOL_WARNING "Thm" "trace_export"
+       ("I/O error: " ^ #function e ^ " " ^ #name e))
+  | HOL_ERR _ => trace_reset ()
 end (* local trace_export *)
 
-(* Clean up temp files at process exit if trace_reset was never called.
-   Handles heap-building processes that don't call export_theory. *)
-val _ = OS.Process.atExit (fn () =>
-  (trace_close_files ();
-   (case !trace_steps_path_ref of
-      SOME s => (OS.FileSys.remove s handle OS.SysErr _ => ())
-    | NONE => ());
-   (case !trace_parents_path_ref of
-      SOME p => (OS.FileSys.remove p handle OS.SysErr _ => ())
-    | NONE => ())))
+(* Register cleanup for the initial heap build process.
+   For processes that restore this heap via loadState, the handler
+   is re-registered in the IO.Io path of record_step. *)
+val _ = OS.Process.atExit trace_cleanup
 
 end (* Thm *)
