@@ -106,3 +106,19 @@ Finalise testFinalEqn[simp]
 val th = SCONV [Excl "AND_CLAUSES"] “a ∧ T ∧ b”
 
 val simped = assert (aconv “a ∧ b”) (rhs $ concl th)
+
+(* Test from GitHub issue #1822: suspend after gen_tac introduces a free
+   variable that later needs to be re-generalised by GEN *)
+Theorem test_suspend_gen:
+  ∀x. x ∧ T ⇒ x ∧ T
+Proof
+  gen_tac >> strip_tac >> conj_tac
+  >- suspend "base"
+  >> simp[]
+QED
+
+Resume test_suspend_gen[base]:
+  first_assum ACCEPT_TAC
+QED
+
+Finalise test_suspend_gen
