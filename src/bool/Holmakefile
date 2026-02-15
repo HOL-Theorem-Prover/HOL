@@ -1,0 +1,9 @@
+# Preload TraceRecord when proof tracing is enabled.
+# boolTheory builds before hol.state0 exists (in --poly mode), so
+# TraceRecord isn't in the heap yet. POLY_CLINE_OPTIONS causes
+# BuildCommand to pass it as an extra arg to `hol run --poly`,
+# which loads it before boolScript runs.
+# See: tools/Holmake/poly/BuildCommand.sml (extra_poly_cline)
+ifdef HOL_TRACE_PROOFS
+POLY_CLINE_OPTIONS += $(dprot $(SIGOBJ)/TraceRecord.uo)
+endif

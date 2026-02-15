@@ -37,9 +37,9 @@ UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
          $(protect $(SIGOBJ)/Inttab) $(protect $(SIGOBJ)/HOLsexp) \
 	 $(protect $(SIGOBJ)/ThmSetData)
 
-ifeq ($(KERNELID),tracknl)
-DEPS += $(dprot $(SIGOBJ)/ProofTrace.uo)
-UOARGS += $(protect $(SIGOBJ)/ProofTrace)
+ifdef HOL_TRACE_PROOFS
+DEPS += $(dprot $(SIGOBJ)/TraceRecord.uo)
+UOARGS += $(protect $(SIGOBJ)/TraceRecord)
 endif
 
 EXTRA_CLEANS = $(TARGET)

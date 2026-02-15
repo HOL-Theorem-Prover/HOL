@@ -54,9 +54,6 @@ sig
 
   val export_theory          : unit -> unit
 
-(* Hook for proof trace export. Set by ProofTrace module under tracknl. *)
-
-
 (* Make hooks available so that theory changes can be seen by
    "interested parties" *)
   val delta_hook : TheoryDelta.t Listener.t

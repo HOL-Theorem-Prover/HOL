@@ -27,13 +27,6 @@ Thm.sml: otknl-thm.ML
 Thm-sig.sml: otknl-thmsig.ML
 	$(CP) $< $@
 
-else ifeq ($(KERNELID),tracknl)
-Thm.sml: tracknl-thm.ML
-	$(CP) $< $@
-
-Thm-sig.sml: tracknl-thmsig.ML
-	$(CP) $< $@
-
 else
 Thm.sml: std-thm.ML
 	$(CP) $< $@

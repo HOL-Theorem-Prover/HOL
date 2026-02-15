@@ -20,7 +20,8 @@ open Feedback Lib Term Tag Dep Compute
 
 type 'a set = 'a HOLset.set;
 type depdisk = (string * int) * ((string * int list) list);
-datatype thm = THM of Tag.tag * term HOLset.set * term
+datatype thm = THM of Tag.tag * term HOLset.set * term * int
+val trace_counter = ref 0
 
 val --> = Type.-->;
 infixr 3 -->;
@@ -113,17 +114,75 @@ fun single_hyp tm = HOLset.singleton Term.compare tm
 val empty_hyp = Term.empty_tmset
 fun list_hyp tml = HOLset.addList(empty_hyp,tml)
 
-fun tag  (THM(tg,_,_))  = tg
-fun concl(THM(_,_,c))   = c
-fun hypset  (THM(_,asl,_)) = asl
-fun hyplist (THM(_,asl,_)) = HOLset.listItems asl
+fun tag  (THM(tg,_,_,_))  = tg
+fun concl(THM(_,_,c,_))   = c
+fun hypset  (THM(_,asl,_,_)) = asl
+fun hyplist (THM(_,asl,_,_)) = HOLset.listItems asl
 val hyp = hyplist   (* backwards compatibility *)
 
-fun dest_thm(t as THM(_,asl,w)) = (hyplist t,w) (* Compatible with old code. *)
-fun sdest_thm(THM(_,asl,w)) = (asl,w)
-fun make_thm R seq = (Count.inc_count R; THM seq);   (* internal only *)
+fun dest_thm(t as THM(_,asl,w,_)) = (hyplist t,w) (* Compatible with old code.*)
+fun sdest_thm(THM(_,asl,w,_)) = (asl,w)
+fun make_thm R (tg,asl,c) =                      (* internal only *)
+  let val id = !trace_counter
+  in trace_counter := id + 1; Count.inc_count R; THM(tg,asl,c,id) end;
 
-fun thm_frees (t as THM(_,asl,c)) = free_varsl (c::hyplist t);
+fun trace_id (THM(_,_,_,id)) = id
+
+(* Proof trace step: typed representation of each inference rule application.
+   Convention: first thm = result, remaining thms = parents. *)
+datatype trace_step =
+    TR_ASSUME      of thm * term
+  | TR_REFL        of thm * term
+  | TR_BETA_CONV   of thm * term
+  | TR_SUBST       of thm * {redex: term, residue: thm} list * term * thm
+  | TR_ABS         of thm * thm * term
+  | TR_GEN_ABS     of thm * thm * term option * term list
+  | TR_INST_TYPE   of thm * thm * {redex: hol_type, residue: hol_type} list
+  | TR_DISCH       of thm * thm * term
+  | TR_MP          of thm * thm * thm
+  | TR_ALPHA       of thm * term * term
+  | TR_SYM         of thm * thm
+  | TR_TRANS       of thm * thm * thm
+  | TR_MK_COMB     of thm * thm * thm
+  | TR_AP_TERM     of thm * thm * term
+  | TR_AP_THM      of thm * thm * term
+  | TR_EQ_MP       of thm * thm * thm
+  | TR_EQ_IMP_RULE1 of thm * thm
+  | TR_EQ_IMP_RULE2 of thm * thm
+  | TR_SPEC        of thm * thm * term
+  | TR_GEN         of thm * thm * term
+  | TR_GENL        of thm * thm * term list
+  | TR_EXISTS      of thm * thm * term * term
+  | TR_CHOOSE      of thm * thm * thm * term
+  | TR_CONJ        of thm * thm * thm
+  | TR_CONJUNCT1   of thm * thm
+  | TR_CONJUNCT2   of thm * thm
+  | TR_DISJ1       of thm * thm * term
+  | TR_DISJ2       of thm * thm * term
+  | TR_DISJ_CASES  of thm * thm * thm * thm
+  | TR_NOT_INTRO   of thm * thm
+  | TR_NOT_ELIM    of thm * thm
+  | TR_CCONTR      of thm * thm * term
+  | TR_INST        of thm * thm * {redex: term, residue: term} list
+  | TR_Beta        of thm * thm
+  | TR_Mk_comb     of thm * thm * thm * thm
+  | TR_Mk_abs      of thm * thm * thm * term
+  | TR_Specialize  of thm * thm * term
+  | TR_ORACLE      of thm * string
+  | TR_AXIOM       of thm * term
+  | TR_DEF_TYOP    of thm * thm * string * string
+  | TR_DEF_SPEC    of thm * thm
+  | TR_DISK_THM    of thm
+  | TR_COMPUTE     of thm * thm list * term * term
+
+(* Proof trace hook: called after each inference rule.
+   Set by TraceRecord module when tracing is enabled. Default: disabled. *)
+val trace_hook : (trace_step -> unit) option ref = ref NONE
+
+fun tr step =
+  case !trace_hook of NONE => () | SOME f => (f step handle _ => ())
+
+fun thm_frees (t as THM(_,asl,c,_)) = free_varsl (c::hyplist t);
 
 fun add_hyp h asl = HOLset.add(asl,h)
 fun union_hyp asl1 asl2 = HOLset.union(asl1, asl2)
@@ -165,7 +224,8 @@ fun is_bool tm = (type_of tm = bool);
 
 fun ASSUME tm =
    (Assert (is_bool tm) "ASSUME" "not a proposition";
-    make_thm Count.Assume (empty_tag,single_hyp tm,tm));
+    let val th = make_thm Count.Assume (empty_tag,single_hyp tm,tm)
+    in tr (TR_ASSUME (th, tm)); th end);
 
 
 (*---------------------------------------------------------------------------*
@@ -177,7 +237,8 @@ fun ASSUME tm =
 val mk_eq_nocheck = Term.prim_mk_eq;
 
 fun refl_nocheck ty tm =
-  make_thm Count.Refl (empty_tag, empty_hyp, mk_eq_nocheck ty tm tm);
+  let val th = make_thm Count.Refl (empty_tag, empty_hyp, mk_eq_nocheck ty tm tm)
+  in tr (TR_REFL (th, tm)); th end;
 
 fun REFL tm = refl_nocheck (type_of tm) tm;
 
@@ -189,8 +250,9 @@ fun REFL tm = refl_nocheck (type_of tm) tm;
  *---------------------------------------------------------------------------*)
 
 fun BETA_CONV tm =
-   make_thm Count.Beta
+   let val th = make_thm Count.Beta
       (empty_tag, empty_hyp, mk_eq_nocheck (type_of tm) tm (beta_conv tm))
+   in tr (TR_BETA_CONV (th, tm)); th end
    handle HOL_ERR _ => ERR "BETA_CONV" "not a beta-redex"
 
 
@@ -202,13 +264,13 @@ fun BETA_CONV tm =
  * theorem. The replacements provide the lhs and rhs.
  *---------------------------------------------------------------------------*)
 
-fun SUBST replacements template (th as THM(O,asl,c)) =
+fun SUBST replacements template (th as THM(O,asl,c,_)) =
  let val fvs = Term.FVL [template] Term.empty_varset
      val (ltheta, rtheta, hyps, oracles) =
-         itlist (fn {redex, residue = THM(ocls,h,c)} =>
+         itlist (fn {redex, residue = THM(ocls,h,c',_)} =>
                  fn (tuple as (ltheta,rtheta,hyps,Ocls)) =>
                     if HOLset.member(fvs,redex)
-                     then let val (lhs,rhs,_) = Term.dest_eq_ty c
+                     then let val (lhs,rhs,_) = Term.dest_eq_ty c'
                           in ((redex |-> lhs)::ltheta,
                               (redex |-> rhs)::rtheta,
                               union_hyp h hyps,
@@ -218,7 +280,9 @@ fun SUBST replacements template (th as THM(O,asl,c)) =
                 replacements ([],[],asl,O)
  in
    if aconv (subst ltheta template) c
-    then make_thm Count.Subst (oracles,hyps,subst rtheta template)
+    then let val result = make_thm Count.Subst (oracles,hyps,subst rtheta template)
+         in tr (TR_SUBST (result, replacements, template, th));
+            result end
       else th
  end;
 
@@ -228,17 +292,18 @@ fun SUBST replacements template (th as THM(O,asl,c)) =
  *    A |- (\x.t1) = (\x.t2)                                                 *
  *---------------------------------------------------------------------------*)
 
-fun ABS v (THM(ocl,asl,c)) =
+fun ABS v (th as THM(ocl,asl,c,_)) =
  let val (lhs,rhs,ty) = Term.dest_eq_ty c handle HOL_ERR _
                       => ERR "ABS" "not an equality"
      val vty = snd(dest_var v) handle HOL_ERR _
                       => ERR "ABS" "first argument is not a variable"
  in if var_occursl v asl
      then ERR "ABS" "The variable is free in the assumptions"
-     else make_thm Count.Abs
+     else let val result = make_thm Count.Abs
             (ocl, asl, mk_eq_nocheck (vty --> ty)
                                      (mk_abs(v,lhs))
                                      (mk_abs(v,rhs)))
+          in tr (TR_ABS (result, th, v)); result end
  end;
 
 (*---------------------------------------------------------------------------*
@@ -247,7 +312,7 @@ fun ABS v (THM(ocl,asl,c)) =
  *   A |- (Q v1...vn.t1) = (Q v1...vn.t2)    (where no vi is free in A)      *
  *---------------------------------------------------------------------------*)
 
-fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
+fun GEN_ABS opt vlist (th as THM(ocl,asl,c,_)) =
  let open HOLset
      val vset = addList(Term.empty_varset,vlist)
      val hset = hyp_frees th
@@ -256,9 +321,9 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
                                   (thm_err "GEN_ABS" "not an equality")
              val lhs' = list_mk_binder opt (vlist,lhs)
              val rhs' = list_mk_binder opt (vlist,rhs)
-         in make_thm Count.GenAbs
+             val result = make_thm Count.GenAbs
                (ocl,asl,mk_eq_nocheck (Term.type_of lhs') lhs' rhs')
-         end
+         in tr (TR_GEN_ABS (result, th, opt, vlist)); result end
     else ERR "GEN_ABS" "variable(s) free in the assumptions"
  end
 
@@ -270,8 +335,10 @@ fun GEN_ABS opt vlist (th as THM(ocl,asl,c)) =
  *---------------------------------------------------------------------------*)
 
 fun INST_TYPE [] th = th
-  | INST_TYPE theta (THM(ocl,asl,c)) =
-     make_thm Count.InstType(ocl, hypset_map (inst theta) asl, inst theta c)
+  | INST_TYPE theta (th as THM(ocl,asl,c,_)) =
+     let val result = make_thm Count.InstType
+           (ocl, hypset_map (inst theta) asl, inst theta c)
+     in tr (TR_INST_TYPE (result, th, theta)); result end
 
 (*---------------------------------------------------------------------------
  *          A |- M
@@ -282,12 +349,13 @@ fun INST_TYPE [] th = th
  * alpha-convertible to tm are removed.
  *---------------------------------------------------------------------------*)
 
-fun DISCH w (THM(ocl,asl,c)) =
+fun DISCH w (th as THM(ocl,asl,c,_)) =
   (Assert (is_bool w) "DISCH" "not a proposition";
-   make_thm Count.Disch
+   let val result = make_thm Count.Disch
       (ocl,
        HOLset.delete(asl, w) handle HOLset.NotFound => asl,
-       Term.prim_mk_imp w c));
+       Term.prim_mk_imp w c)
+   in tr (TR_DISCH (result, th, w)); result end);
 
 
 (*---------------------------------------------------------------------------
@@ -298,11 +366,13 @@ fun DISCH w (THM(ocl,asl,c)) =
  * M and M' must be alpha-convertible
  *---------------------------------------------------------------------------*)
 
-fun MP (THM(o1,asl1,c1)) (THM(o2,asl2,c2)) =
+fun MP (th1 as THM(o1,asl1,c1,_)) (th2 as THM(o2,asl2,c2,_)) =
  let val (ant,conseq) = dest_imp c1
  in Assert (aconv ant c2) "MP"
       "antecedent of first thm not alpha-convertible to concl. of second";
-    make_thm Count.Mp (Tag.merge o1 o2, union_hyp asl1 asl2, conseq)
+    let val result = make_thm Count.Mp
+          (Tag.merge o1 o2, union_hyp asl1 asl2, conseq)
+    in tr (TR_MP (result, th1, th2)); result end
  end;
 
 
@@ -328,8 +398,9 @@ fun MP (THM(o1,asl1,c1)) (THM(o2,asl2,c2)) =
 
 fun ALPHA t1 t2 =
    if aconv t1 t2 then
-     make_thm Count.Alpha (empty_tag, empty_hyp,
+     let val th = make_thm Count.Alpha (empty_tag, empty_hyp,
                            mk_eq_nocheck (type_of t1) t1 t2)
+     in tr (TR_ALPHA (th, t1, t2)); th end
    else ERR "ALPHA" "Terms not alpha-convertible";
 
 (*---------------------------------------------------------------------------*
@@ -350,9 +421,9 @@ fun ALPHA t1 t2 =
 
 fun SYM th =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
-  in make_thm Count.Sym
+     val result = make_thm Count.Sym
         (tag th, hypset th, mk_eq_nocheck ty rhs lhs)
- end
+ in tr (TR_SYM (result, th)); result end
  handle HOL_ERR _ => ERR "SYM" "";
 
 (*---------------------------------------------------------------------------
@@ -379,9 +450,9 @@ fun TRANS th1 th2 =
        val   _  = Assert (aconv rhs1 lhs2) "" ""
        val hyps = union_hyp (hypset th1) (hypset th2)
        val ocls = Tag.merge (tag th1) (tag th2)
-   in
-     make_thm Count.Trans (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2)
-   end
+       val result = make_thm Count.Trans
+         (ocls, hyps, mk_eq_nocheck ty lhs1 rhs2)
+   in tr (TR_TRANS (result, th1, th2)); result end
    handle HOL_ERR _ => ERR "TRANS" "";
 
 
@@ -401,12 +472,11 @@ fun TRANS th1 th2 =
 fun MK_COMB (funth,argth) =
    let val (f,g,ty) = Term.dest_eq_ty (concl funth)
        val (x,y,_)  = Term.dest_eq_ty (concl argth)
-   in
-     make_thm Count.MkComb
+       val result = make_thm Count.MkComb
          (Tag.merge (tag funth) (tag argth),
           union_hyp (hypset funth) (hypset argth),
           mk_eq_nocheck (rng ty) (mk_comb(f,x)) (mk_comb(g,y)))
-   end
+   in tr (TR_MK_COMB (result, funth, argth)); result end
    handle HOL_ERR _ => ERR "MK_COMB" "";
 
 (*---------------------------------------------------------------------------
@@ -429,10 +499,10 @@ fun MK_COMB (funth,argth) =
 
 fun AP_TERM f th =
  let val (lhs,rhs,_) = Term.dest_eq_ty (concl th)
- in make_thm Count.ApTerm
+     val result = make_thm Count.ApTerm
        (tag th, hypset th,
         mk_eq_nocheck (rng (type_of f)) (mk_comb(f,lhs)) (mk_comb(f,rhs)))
- end
+ in tr (TR_AP_TERM (result, th, f)); result end
  handle HOL_ERR _ => ERR "AP_TERM" "";
 
 
@@ -456,10 +526,10 @@ fun AP_TERM f th =
 
 fun AP_THM th tm =
  let val (lhs,rhs,ty) = Term.dest_eq_ty (concl th)
- in make_thm Count.ApThm
+     val result = make_thm Count.ApThm
        (tag th, hypset th,
         mk_eq_nocheck (rng ty) (mk_comb(lhs,tm)) (mk_comb(rhs,tm)))
- end
+ in tr (TR_AP_THM (result, th, tm)); result end
  handle HOL_ERR _ => ERR "AP_THM" "";
 
 (*---------------------------------------------------------------------------
@@ -480,10 +550,10 @@ fun AP_THM th tm =
 fun EQ_MP th1 th2 =
    let val (lhs,rhs,_) = Term.dest_eq_ty (concl th1)
        val _ = Assert (aconv lhs (concl th2)) "" ""
-   in
-    make_thm Count.EqMp (Tag.merge (tag th1) (tag th2),
+       val result = make_thm Count.EqMp (Tag.merge (tag th1) (tag th2),
                          union_hyp (hypset th1) (hypset th2), rhs)
-   end handle HOL_ERR _ => ERR "EQ_MP" "";
+   in tr (TR_EQ_MP (result, th1, th2)); result end
+   handle HOL_ERR _ => ERR "EQ_MP" "";
 
 (*---------------------------------------------------------------------------
  *              A |- t1 = t2
@@ -504,8 +574,13 @@ fun EQ_IMP_RULE th =
      and A = hypset th
      and O = tag th
  in if ty = Type.bool
-    then (make_thm Count.EqImpRule(O,A, Term.prim_mk_imp lhs rhs),
-          make_thm Count.EqImpRule(O,A, Term.prim_mk_imp rhs lhs))
+    then let val th1 = make_thm Count.EqImpRule
+                         (O,A, Term.prim_mk_imp lhs rhs)
+             val th2 = make_thm Count.EqImpRule
+                         (O,A, Term.prim_mk_imp rhs lhs)
+         in tr (TR_EQ_IMP_RULE1 (th1, th));
+            tr (TR_EQ_IMP_RULE2 (th2, th));
+            (th1, th2) end
     else ERR "" ""
  end
  handle HOL_ERR _ => ERR "EQ_IMP_RULE" "";
@@ -562,8 +637,9 @@ fun SPEC t th =
  in
    Assert (Name="!" andalso Thy="bool")
           "SPEC" "Theorem not universally quantified";
-   make_thm Count.Spec
+   let val result = make_thm Count.Spec
        (tag th, hypset th, beta_conv(mk_comb(Rand, t)))
+   in tr (TR_SPEC (result, th, t)); result end
        handle HOL_ERR _ =>
               raise thm_err "SPEC"
                     "Term argument's type not equal to bound variable's"
@@ -600,7 +676,9 @@ fun GEN x th =
   let val (asl,c) = sdest_thm th
   in if var_occursl x asl
      then ERR  "GEN" "variable occurs free in hypotheses"
-     else make_thm Count.Gen(tag th, asl, Susp.force mk_forall x c)
+     else let val result = make_thm Count.Gen
+                (tag th, asl, Susp.force mk_forall x c)
+          in tr (TR_GEN (result, th, x)); result end
           handle HOL_ERR _ => ERR "GEN" ""
   end;
 
@@ -610,10 +688,11 @@ in
   if exists (fn v => var_occursl v asl) vs then
     ERR "GENL" "variable occurs free in hypotheses"
   else
-    make_thm
+    let val result = make_thm
       Count.Gen(tag th, asl,
                 list_mk_binder (SOME (prim_mk_const {Thy="bool", Name="!"}))
                                (vs,c))
+    in tr (TR_GENL (result, th, vs)); result end
     handle HOL_ERR _ => ERR "GENL" ""
 end
 
@@ -658,8 +737,8 @@ fun EXISTS (w,t) th =
      val _ = Assert ("?"=Name andalso Thy="bool") "EXISTS" mesg1
      val _ = Assert (aconv (beta_conv(mk_comb(Rand,t))) (concl th))
                     "EXISTS" mesg2
-   in make_thm Count.Exists (tag th, hypset th, w)
-   end
+     val result = make_thm Count.Exists (tag th, hypset th, w)
+   in tr (TR_EXISTS (result, th, w, t)); result end
 end;
 
 (*---------------------------------------------------------------------------
@@ -709,9 +788,9 @@ fun CHOOSE (v,xth) bth =
 
        Credit for pointing out this optimisation to Jim Grundy and
        Tom Melham. *)
-  in make_thm Count.Choose
+      val result = make_thm Count.Choose
        (Tag.merge (tag xth) (tag bth), newhyps,  b_c)
-  end
+  in tr (TR_CHOOSE (result, xth, bth, v)); result end
   handle HOL_ERR _ => ERR "CHOOSE" "";
 
 
@@ -729,10 +808,11 @@ fun CHOOSE (v,xth) bth =
  *---------------------------------------------------------------------------*)
 
 fun CONJ th1 th2 =
-   make_thm Count.Conj
+   let val result = make_thm Count.Conj
         (Tag.merge (tag th1) (tag th2),
          union_hyp (hypset th1) (hypset th2),
          Susp.force mk_conj(concl th1, concl th2))
+   in tr (TR_CONJ (result, th1, th2)); result end
    handle HOL_ERR _ => ERR "CONJ" "";
 
 
@@ -761,7 +841,9 @@ fun conj1 tm =
 
 
 fun CONJUNCT1 th =
-  make_thm Count.Conjunct1 (tag th, hypset th, conj1 (concl th))
+  let val result = make_thm Count.Conjunct1
+        (tag th, hypset th, conj1 (concl th))
+  in tr (TR_CONJUNCT1 (result, th)); result end
   handle HOL_ERR _ => ERR "CONJUNCT1" "";
 
 
@@ -788,7 +870,9 @@ fun conj2 tm =
   end
 
 fun CONJUNCT2 th =
- make_thm Count.Conjunct2 (tag th, hypset th, conj2 (concl th))
+ let val result = make_thm Count.Conjunct2
+       (tag th, hypset th, conj2 (concl th))
+ in tr (TR_CONJUNCT2 (result, th)); result end
   handle HOL_ERR _ => ERR "CONJUNCT2" "";
 
 
@@ -803,8 +887,10 @@ fun CONJUNCT2 th =
  *           handle _ => ERR{function = "DISJ1",message = ""};
  *---------------------------------------------------------------------------*)
 
-fun DISJ1 th w = make_thm Count.Disj1
- (tag th, hypset th, Susp.force mk_disj (concl th, w))
+fun DISJ1 th w =
+ let val result = make_thm Count.Disj1
+   (tag th, hypset th, Susp.force mk_disj (concl th, w))
+ in tr (TR_DISJ1 (result, th, w)); result end
  handle HOL_ERR _ => ERR "DISJ1" "";
 
 
@@ -819,8 +905,10 @@ fun DISJ1 th w = make_thm Count.Disj1
  *          handle _ => ERR{function = "DISJ2",message = ""};
  *---------------------------------------------------------------------------*)
 
-fun DISJ2 w th = make_thm Count.Disj2
- (tag th, hypset th, Susp.force mk_disj(w,concl th))
+fun DISJ2 w th =
+ let val result = make_thm Count.Disj2
+   (tag th, hypset th, Susp.force mk_disj(w,concl th))
+ in tr (TR_DISJ2 (result, th, w)); result end
  handle HOL_ERR _ => ERR "DISJ2" "";
 
 
@@ -854,11 +942,12 @@ fun DISJ_CASES dth ath bth =
   let val _ = Assert (aconv (concl ath) (concl bth)) "" ""
       val (disj1,disj2) = dest_disj (concl dth)
   in
-   make_thm Count.DisjCases
+   let val result = make_thm Count.DisjCases
        (itlist Tag.merge [tag dth, tag ath, tag bth] empty_tag,
         union_hyp (hypset dth) (union_hyp (disch(disj1, hypset ath))
                                        (disch(disj2, hypset bth))),
         concl ath)
+   in tr (TR_DISJ_CASES (result, dth, ath, bth)); result end
   end
   handle HOL_ERR _ => ERR "DISJ_CASES" "";
 
@@ -880,7 +969,9 @@ fun DISJ_CASES dth ath bth =
 fun NOT_INTRO th =
   let val (ant,c) = dest_imp(concl th)
   in Assert (c = Susp.force F) "" "";
-     make_thm Count.NotIntro  (tag th, hypset th, Susp.force mk_neg ant)
+     let val result = make_thm Count.NotIntro
+           (tag th, hypset th, Susp.force mk_neg ant)
+     in tr (TR_NOT_INTRO (result, th)); result end
   end
   handle HOL_ERR _ => ERR "NOT_INTRO" "";
 
@@ -907,8 +998,9 @@ in
 fun NOT_ELIM th =
   case with_exn dest (concl th) (thm_err "NOT_ELIM" "")
    of ({Name="~", Thy="bool",...},Rand)
-       => make_thm Count.NotElim
+       => let val result = make_thm Count.NotElim
              (tag th, hypset th, Term.prim_mk_imp Rand (Susp.force F))
+          in tr (TR_NOT_ELIM (result, th)); result end
     | otherwise => ERR "NOT_ELIM" ""
 end;
 
@@ -935,8 +1027,9 @@ end;
 
 fun CCONTR w fth =
   (Assert (concl fth = Susp.force F) "CCONTR" "";
-   make_thm Count.Ccontr
+   let val result = make_thm Count.Ccontr
        (tag fth, disch(Susp.force mk_neg w, hypset fth), w)
+   in tr (TR_CCONTR (result, fth, w)); result end
      handle HOL_ERR _ => ERR "CCONTR" "");
 
 
@@ -949,11 +1042,10 @@ fun INST [] th = th
       if List.all (is_var o #redex) theta then
         let
           val substf = subst theta
-        in
-          make_thm Count.Inst
+          val result = make_thm Count.Inst
             (tag th, hypset_map substf (hypset th), substf (concl th))
+        in tr (TR_INST (result, th, theta)); result end
           handle HOL_ERR _ => ERR "INST" ""
-        end
       else
         raise ERR "INST" "can only instantiate variables"
 
@@ -974,9 +1066,9 @@ fun INST [] th = th
 
 fun Beta th =
    let val (lhs, rhs, ty) = Term.dest_eq_ty (concl th)
-   in make_thm Count.Beta
+       val result = make_thm Count.Beta
         (tag th, hypset th, mk_eq_nocheck ty lhs (Term.lazy_beta_conv rhs))
-   end
+   in tr (TR_Beta (result, th)); result end
    handle HOL_ERR _ => ERR "Beta" "";
 
 
@@ -1017,9 +1109,9 @@ fun Mk_comb thm =
              val (lhs2, rhs2, _) = Term.dest_eq_ty (concl th2')
              val _ = Assert (aconv lhs2 Rand) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1', th2']
-         in make_thm Count.MkComb
-           (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))
-         end
+             val result = make_thm Count.MkComb
+               (ocls, hyps,mk_eq_nocheck ty lhs (mk_comb(rhs1,rhs2)))
+         in tr (TR_Mk_comb (result, thm, th1', th2')); result end
          handle HOL_ERR _ => ERR "Mk_comb" "";
        val aty = type_of Rand    (* typing! *)
        val th1 = refl_nocheck (aty --> ty) Rator
@@ -1053,9 +1145,9 @@ fun Mk_abs thm =
              val _ = Assert (aconv lhs1 Body) "" ""
              val _ = Assert (not (var_occursl Bvar (hypset th1'))) "" ""
              val (ocls,hyps) = tag_hyp_union [thm, th1']
-         in make_thm Count.Abs
-           (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)))
-         end
+             val result = make_thm Count.Abs
+               (ocls, hyps, mk_eq_nocheck ty lhs (mk_abs(Bvar, rhs1)))
+         in tr (TR_Mk_abs (result, thm, th1', Bvar)); result end
          handle HOL_ERR _ => ERR "Mk_abs" ""
        val th1 = refl_nocheck (rng ty) Body
    in (Bvar,th1,mkthm)
@@ -1071,8 +1163,9 @@ fun Specialize t th =
        val {Name,Thy,...} = dest_thy_const Rator
    in
      Assert (Thy="bool" andalso Name="!") "" "";
-     make_thm Count.Spec
+     let val result = make_thm Count.Spec
         (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)))
+     in tr (TR_Specialize (result, th, t)); result end
    end
    handle HOL_ERR _ => ERR "Specialize" "";
 
@@ -1083,12 +1176,13 @@ fun Specialize t th =
 fun mk_oracle_thm tg (asl,c) =
   (Assert (Lib.all is_bool (c::asl)) "mk_oracle_thm"  "not a proposition"
    ; Assert (tg <> "DISK_THM") "mk_oracle_thm"  "invalid user tag"
-   ; make_thm Count.Oracle (Tag.read tg,list_hyp asl,c));
+   ; let val result = make_thm Count.Oracle (Tag.read tg,list_hyp asl,c)
+     in tr (TR_ORACLE (result, tg)); result end);
 
 
 val mk_thm = mk_oracle_thm "MK_THM"
 
-fun add_tag (tag1, THM(tag2, h,c)) = THM(Tag.merge tag1 tag2, h, c)
+fun add_tag (tag1, THM(tag2, h,c,id)) = THM(Tag.merge tag1 tag2, h, c, id)
 
 (*---------------------------------------------------------------------------*
  *    The following two are only used internally
@@ -1096,7 +1190,8 @@ fun add_tag (tag1, THM(tag2, h,c)) = THM(Tag.merge tag1 tag2, h, c)
 
 fun mk_axiom_thm (r,c) =
    (Assert (type_of c = bool) "mk_axiom_thm"  "Not a proposition!";
-    make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c))
+    let val result = make_thm Count.Axiom (Tag.ax_tag r, empty_hyp, c)
+    in tr (TR_AXIOM (result, c)); result end)
 
 fun mk_defn_thm (witness_tag, c) =
    (Assert (type_of c = bool) "mk_defn_thm"  "Not a proposition!";
@@ -1197,7 +1292,8 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
                                Ty = Pty --> (repty-->bool)}
 in
-  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
+  let val result = mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])))
+  in tr (TR_DEF_TYOP (result, thm, Thy, Tyop)); result end
 end
 
 (* subsumed by gen_prim_specification
@@ -1246,7 +1342,8 @@ fun prim_specification thyname cnames th = let
   val checked   = List.app (vOK (type_vars_in_term body)) V
   fun addc v s  = v |-> bind thyname s (snd(dest_var v))
 in
-  mk_defn_thm (tag th, subst (map2 addc V cnames) body)
+  let val result = mk_defn_thm (tag th, subst (map2 addc V cnames) body)
+  in tr (TR_DEF_SPEC (result, th)); result end
 end
 
 fun gen_prim_specification thyname th = let
@@ -1283,7 +1380,8 @@ fun gen_prim_specification thyname th = let
   val checked     = check_vars body (List.map mk_var stys) SPEC_ERR
   fun addc (s,ty) = (mk_var (s,ty)) |-> bind thyname s ty
 in
-  (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body))
+  let val result = mk_defn_thm (tag th, subst (List.map addc stys) body)
+  in tr (TR_DEF_SPEC (result, th)); (cnames, result) end
 end
 
 
@@ -1302,8 +1400,9 @@ in
 fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
+  val result = mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
 in
-  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
+  tr (TR_DISK_THM result); result
 end
 end; (* local *)
 
@@ -1315,14 +1414,14 @@ end; (* local *)
    a theory. *)
 val thm_order = ref 0
 
-fun save_dep thy (th as (THM(t,h,c))) =
+fun save_dep thy (th as (THM(t,h,c,sid))) =
   let
     val did = (thy,!thm_order)
     val dl  = (transfer_thydepl o dep_of o tag) th
     val dep = DEP_SAVED(did,dl)
   in
     thm_order := (!thm_order) + 1;
-    THM(Tag.set_dep dep t,h,c)
+    THM(Tag.set_dep dep t,h,c,sid)
   end
 
 (* ----------------------------------------------------------------------
@@ -1349,6 +1448,7 @@ in
   fun compute {cval_terms, cval_type, num_type, char_eqns} =
     let
       val tag0 = merge_tags empty_tag (List.map (tag o snd) char_eqns)
+      val char_thms = List.map snd char_eqns
       val char_eqns = List.map (I ## dest_thm) char_eqns
       val _ = List.all (List.null o fst o snd) char_eqns orelse
               raise ERR "compute" "Characteristic equation with hypotheses"
@@ -1361,6 +1461,7 @@ in
       fn code_eqs =>
         let
           val tag1 = merge_tags tag0 (List.map tag code_eqs)
+          val code_thms = code_eqs
           val eqs = List.map dest_code_eqn code_eqs
           val tc1 = tc0 eqs
         in
@@ -1368,13 +1469,18 @@ in
             let
               val tm' = tc1 tm
               val eqn = safe_mk_eq tm tm'
+              val result = make_thm Count.Compute (tag1, empty_hyp, eqn)
             in
-              make_thm Count.Compute (tag1, empty_hyp, eqn)
+              tr (TR_COMPUTE (result, char_thms @ code_thms, tm, eqn));
+              result
             end
         end
     end;
 end (*local *)
 
-fun trace_export _ _ _ = ()
+val trace_export_hook :
+  (string -> string list -> (string * thm) list -> unit) option ref = ref NONE
+fun trace_export thy pars thms =
+  case !trace_export_hook of NONE => () | SOME f => f thy pars thms
 
 end (* Thm *)

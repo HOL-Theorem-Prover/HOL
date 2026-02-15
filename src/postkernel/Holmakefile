@@ -1,9 +1,5 @@
-all: $(DEFAULT_TARGETS)
+all: $(DEFAULT_TARGETS) TraceExport.uo TraceRecord.uo ReplayTrace.uo
 .PHONY: all
-
-ifeq ($(KERNELID),tracknl)
-all: ProofTrace.uo ReplayTrace.uo
-endif
 
 Termtab.uo Termtab.ui: Termtab.sml $(dprot $(SIGOBJ)/Table.ui)
 	$(HOLMOSMLC) Overlay.ui Table.ui -c $<

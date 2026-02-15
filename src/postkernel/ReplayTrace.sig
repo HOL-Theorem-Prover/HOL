@@ -9,7 +9,7 @@ sig
      steps get oracle tag "REPLAY_COMPUTE". Set to e.g. EVAL for full
      verification. *)
   val compute_verifier : (Term.term -> Thm.thm) option ref
-  (* Replay a .pftrace or .pftrace.gz file, returning export name→thm map.
+  (* Replay a .pftrace[.gz|.zst] file, returning export name→thm map.
      Raises Fail on verification errors. *)
   val replay_file : string -> (string * Thm.thm) list
 
@@ -25,17 +25,18 @@ sig
      {name, reason} records. *)
   val verify_file : string -> int * {name: string, reason: string} list
 
-  (* Verify a single .pftrace[.gz] file, printing progress. *)
+  (* Verify a single .pftrace[.gz|.zst] file, printing progress. *)
   val verify_verbose : string -> bool
 
-  (* Find all .pftrace[.gz] files under a directory. *)
+  (* Find all *Theory.pftrace[.gz|.zst] files under a directory.
+     Deduplicates by theory name, preferring .zst > .gz > .pftrace. *)
   val find_traces : string -> (string * string) list  (* (theory, path) *)
 
-  (* Verify all .pftrace[.gz] files under a directory. *)
+  (* Verify all .pftrace[.gz|.zst] files under a directory. *)
   val verify_all : string -> {ok: int, fail: int, errors: string list}
 
   (* Verify a complete trace chain: replay root_theory and all its
-     ancestors from .pftrace.gz files found under holdir.
+     ancestors from .pftrace[.gz|.zst] files found under holdir.
      Returns (n_theories_ok, n_theories_fail, errors). *)
   val verify_chain :
     string -> string

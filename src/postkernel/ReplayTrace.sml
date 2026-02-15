@@ -25,7 +25,7 @@ val compute_verifier = ref (NONE : (term -> thm) option)
 fun its i = Int.toString i
 
 (* -----------------------------------------------------------------------
-   String unescaping (inverse of ProofTrace.escape_string)
+   String unescaping (inverse of TraceExport.escape_string)
    ----------------------------------------------------------------------- *)
 fun unescape s =
   if size s >= 2 andalso String.sub(s, 0) = #"\"" then
@@ -91,7 +91,13 @@ fun parse_header (lines : string list) =
           else get_line prefix rest
     val lines = List.filter (fn l => size l > 0) lines
     val (ver_str, lines) = get_line "HOL4_PROOF_TRACE " lines
-    val version = valOf (Int.fromString ver_str)
+    val version = case Int.fromString ver_str of
+        SOME v => v
+      | NONE => raise ERR "parse_header" ("bad version: " ^ ver_str)
+    val _ = if version <> 1 then
+              raise ERR "parse_header"
+                ("unsupported version " ^ Int.toString version)
+            else ()
     val (thy_str, lines) = get_line "THEORY " lines
     val theory = unescape thy_str
     val (par_str, lines) = get_line "PARENTS " lines
@@ -165,11 +171,12 @@ fun build_types n_types (lines : string list) =
 
 fun build_terms n_terms type_arr (lines : string list) =
   let
-    val placeholder = Term.mk_var("_", Type.bool)
+    val placeholder_name = "\000_placeholder"
+    val placeholder = Term.mk_var(placeholder_name, Type.bool)
     val arr = Array.array (n_terms, placeholder)
     val deferred = ref ([] : string list)
     fun is_placeholder tm = Term.is_var tm andalso
-      let val (n,_) = Term.dest_var tm in n = "_" end
+      let val (n,_) = Term.dest_var tm in n = placeholder_name end
     fun process line =
       case tokenize line of
         _ :: id_s :: kind :: rest =>
@@ -295,11 +302,13 @@ fun replay_steps term_arr type_arr (lines : string list)
     fun is_opaque rule = List.exists (fn r => r = rule) opaque_rules
 
     (* Split step line into (rule_toks, parent_ids) at "|" *)
+    fun strict_int s = case Int.fromString s of
+        SOME n => n
+      | NONE => raise ERR "split_at_bar" ("bad parent ID: " ^ s)
     fun split_at_bar toks =
       let
         fun go acc [] = (rev acc, [])
-          | go acc ("|" :: rest) =
-              (rev acc, List.mapPartial Int.fromString rest)
+          | go acc ("|" :: rest) = (rev acc, map strict_int rest)
           | go acc (t :: rest) = go (t :: acc) rest
       in go [] toks end
 
@@ -461,6 +470,7 @@ fun replay_steps term_arr type_arr (lines : string list)
                   (let val result_thm = eval_fn input
                        val result_concl = Thm.concl result_thm
                    in if Term.aconv result_concl expected_concl
+                         andalso null (Thm.hyp result_thm)
                       then result_thm
                       else Thm.mk_oracle_thm "REPLAY_COMPUTE"
                              ([], expected_concl)
@@ -537,32 +547,54 @@ fun parse_exports (lines : string list) =
 
 (* Read and parse a .pftrace[.gz] file, returning categorized lines
    and parsed header. *)
+fun shell_quote s =
+  "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
+
+fun file_digest path =
+  let
+    val qpath = shell_quote path
+    val proc : (TextIO.instream, TextIO.outstream) Unix.proc =
+      Unix.execute("/bin/sh", ["-c", "sha256sum " ^ qpath])
+    val line = TextIO.inputAll (Unix.textInstreamOf proc)
+    val st = Unix.reap proc
+    val _ = if not (OS.Process.isSuccess st)
+            then raise ERR "file_digest" ("sha256sum failed for " ^ path)
+            else ()
+  in "sha256:" ^ hd (String.tokens Char.isSpace line) end
+
 fun read_trace_file path =
   let
     val is_zst = String.isSuffix ".zst" path
     val is_gz = String.isSuffix ".gz" path
+    val qpath = shell_quote path
     val (instrm, gz_proc) =
       if is_zst then
         let val proc : (TextIO.instream, TextIO.outstream) Unix.proc =
-              Unix.execute("/bin/sh", ["-c", "zstd -dc -q " ^
-                String.toString path])
+              Unix.execute("/bin/sh", ["-c", "zstd -dc -q " ^ qpath])
         in (Unix.textInstreamOf proc, SOME proc) end
       else if is_gz then
         let val proc : (TextIO.instream, TextIO.outstream) Unix.proc =
-              Unix.execute("/bin/sh", ["-c", "gunzip -c " ^
-                String.toString path])
+              Unix.execute("/bin/sh", ["-c", "gunzip -c " ^ qpath])
         in (Unix.textInstreamOf proc, SOME proc) end
       else (TextIO.openIn path, NONE)
+    fun cleanup () =
+      case gz_proc of
+        SOME p =>
+          let val st = Unix.reap p
+          in if not (OS.Process.isSuccess st)
+             then raise ERR "read_trace_file"
+                    ("decompressor failed for " ^ path)
+             else ()
+          end
+      | NONE => TextIO.closeIn instrm
     fun read_all acc =
       case TextIO.inputLine instrm of
         NONE => rev acc
       | SOME line =>
           let val l = String.substring(line, 0, size line - 1)
           in read_all (l :: acc) end
-    val all_lines = read_all []
-    val _ = case gz_proc of
-              SOME p => (Unix.reap p; ())
-            | NONE => TextIO.closeIn instrm
+    val all_lines = read_all [] handle e => (cleanup (); raise e)
+    val _ = cleanup ()
 
     val header_lines = List.filter
       (fn l => String.isPrefix "HOL4_PROOF_TRACE" l orelse
@@ -591,35 +623,36 @@ fun replay_file_ctx path (ctx : ancestor_ctx) =
     fun restore () =
       Feedback.set_trace "Vartype Format Complaint" saved_varcomplain
 
-    val {header, type_lines, term_lines, step_lines, export_lines} =
-      read_trace_file path
-    val Header {theory, n_types, n_terms, n_steps, ...} = header
+    val result =
+      let
+        val {header, type_lines, term_lines, step_lines, export_lines} =
+          read_trace_file path
+        val Header {theory, n_types, n_terms, n_steps, ...} = header
 
-    val _ = if length type_lines > n_types then
-              raise ERR "replay_file_ctx" ("type count " ^
-                its (length type_lines) ^ " exceeds dimension " ^
-                its n_types)
-            else ()
-    val _ = if length term_lines > n_terms then
-              raise ERR "replay_file_ctx" ("term count " ^
-                its (length term_lines) ^ " exceeds dimension " ^
-                its n_terms)
-            else ()
+        val _ = if length type_lines > n_types then
+                  raise ERR "replay_file_ctx" ("type count " ^
+                    its (length type_lines) ^ " exceeds dimension " ^
+                    its n_types)
+                else ()
+        val _ = if length term_lines > n_terms then
+                  raise ERR "replay_file_ctx" ("term count " ^
+                    its (length term_lines) ^ " exceeds dimension " ^
+                    its n_terms)
+                else ()
 
-    val type_arr = build_types n_types type_lines
-    val term_arr = build_terms n_terms type_arr term_lines
-    val thm_arr = replay_steps term_arr type_arr step_lines ctx
+        val type_arr = build_types n_types type_lines
+        val term_arr = build_terms n_terms type_arr term_lines
+        val thm_arr = replay_steps term_arr type_arr step_lines ctx
 
-    val exports = parse_exports export_lines
-    val result = map (fn (name, step_id) =>
-      (name, Array.sub(thm_arr, step_id))) exports
+        val exports = parse_exports export_lines
+      in
+        map (fn (name, step_id) =>
+          (name, Array.sub(thm_arr, step_id))) exports
+      end
+      handle e => (restore (); raise e)
   in
     restore (); result
   end
-  handle e =>
-    (Feedback.set_trace "Vartype Format Complaint" 1
-       handle _ => ();
-     raise e)
 
 fun replay_file path = replay_file_ctx path empty_ctx
 
@@ -630,14 +663,17 @@ fun verify_file path =
     (* Extract theory name from filename: <thy>Theory.pftrace[.gz|.zst] *)
     val basename = OS.Path.file path
     val thyname =
-      let val b = if String.isSuffix ".zst" basename
+      let val b = if String.isSuffix "Theory.pftrace.zst" basename
                   then String.substring(basename, 0,
                          size basename - size "Theory.pftrace.zst")
-                  else if String.isSuffix ".gz" basename
+                  else if String.isSuffix "Theory.pftrace.gz" basename
                   then String.substring(basename, 0,
                          size basename - size "Theory.pftrace.gz")
-                  else String.substring(basename, 0,
+                  else if String.isSuffix "Theory.pftrace" basename
+                  then String.substring(basename, 0,
                          size basename - size "Theory.pftrace")
+                  else raise ERR "verify_file"
+                    ("cannot extract theory name from " ^ basename)
       in b end
 
     (* Compare each replayed export against actual theory theorem.
@@ -714,19 +750,19 @@ fun find_traces dir =
             in
               if OS.FileSys.isDir p
               then loop (walk p acc)
-              else if String.isSuffix ".pftrace.zst" entry
+              else if String.isSuffix "Theory.pftrace.zst" entry
               then
                 let
                   val thy = String.substring(entry, 0,
                               size entry - size "Theory.pftrace.zst")
                 in loop ((thy, p) :: acc) end
-              else if String.isSuffix ".pftrace.gz" entry
+              else if String.isSuffix "Theory.pftrace.gz" entry
               then
                 let
                   val thy = String.substring(entry, 0,
                               size entry - size "Theory.pftrace.gz")
                 in loop ((thy, p) :: acc) end
-              else if String.isSuffix ".pftrace" entry
+              else if String.isSuffix "Theory.pftrace" entry
               then
                 let
                   val thy = String.substring(entry, 0,
@@ -794,13 +830,17 @@ fun verify_chain holdir root_theory =
         Redblackmap.insert(m, thy, path))
         (Redblackmap.mkDict String.compare) all_traces
 
-    (* Read headers to get dependency info *)
+    (* Read headers to get dependency info; cache for ancestor checks *)
+    val header_cache = ref (Redblackmap.mkDict String.compare
+                            : (string, header) Redblackmap.dict)
     fun get_parents thy =
       case Redblackmap.peek(trace_map, thy) of
         NONE => []
       | SOME path =>
-        let val {header, ...} = read_trace_file path
-            val Header {parents, ...} = header
+        let val {header as Header {parents, ...}, ...} =
+              read_trace_file path
+            val _ = header_cache :=
+              Redblackmap.insert(!header_cache, thy, header)
         in parents end
         handle _ => []
 
@@ -827,6 +867,29 @@ fun verify_chain holdir root_theory =
     val _ = print ("Replay chain: " ^ Int.toString (length replay_order) ^
                    " theories in dependency order\n")
 
+    (* Compute SHA-256 digests for all trace files in the chain *)
+    val _ = print "Computing trace file digests...\n"
+    val digest_map =
+      List.foldl (fn (thy, m) =>
+        case Redblackmap.peek(trace_map, thy) of
+          NONE => m
+        | SOME path =>
+            (Redblackmap.insert(m, thy, file_digest path)
+             handle _ => m))
+        (Redblackmap.mkDict String.compare) replay_order
+
+    (* Check ancestor digests for a theory against actual file hashes *)
+    fun check_ancestors thy =
+      case Redblackmap.peek(!header_cache, thy) of
+        NONE => []
+      | SOME (Header {ancestors, ...}) =>
+          List.mapPartial (fn (anc_thy, expected) =>
+            case Redblackmap.peek(digest_map, anc_thy) of
+              NONE => NONE  (* ancestor not in chain, can't verify *)
+            | SOME actual =>
+                if expected = actual then NONE
+                else SOME (anc_thy, expected, actual)) ancestors
+
     val n_ok = ref 0
     val n_fail = ref 0
     val errors = ref ([] : string list)
@@ -836,25 +899,44 @@ fun verify_chain holdir root_theory =
       let
         val path = valOf (Redblackmap.peek(trace_map, thy))
         val _ = print ("  " ^ thy ^ " ... ")
+        val mismatches = check_ancestors thy
       in
+        if not (null mismatches) then
+          (List.app (fn (anc, exp, act) =>
+            print ("    ancestor " ^ anc ^ " digest mismatch\n" ^
+                   "      expected: " ^ exp ^ "\n" ^
+                   "      actual:   " ^ act ^ "\n")) mismatches;
+           print "FAIL: ancestor digest mismatch\n";
+           n_fail := !n_fail + 1;
+           errors := thy :: !errors)
+        else
         let
           val exports = replay_file_ctx path (!ctx)
           val _ = ctx := ctx_add_exports (!ctx) exports
           val n_exports = length exports
-          (* Check for fallback oracles in exports *)
-          val n_fallbacks =
+          (* Check for oracle tags in exports *)
+          fun count_oracle tag =
             length (List.filter (fn (_, th) =>
               let val (oracles, _) = Tag.dest_tag (Thm.tag th)
-              in List.exists (fn s =>
-                   s = "REPLAY_FALLBACK") oracles
+              in List.exists (fn s => s = tag) oracles
               end) exports)
+          val n_fallbacks = count_oracle "REPLAY_FALLBACK"
+          val n_trust = count_oracle "REPLAY_TRUST"
+          val n_compute = count_oracle "REPLAY_COMPUTE"
+          val info =
+            String.concatWith ", " (
+              [its n_exports ^ " exports"] @
+              (if n_trust > 0 then [its n_trust ^ " trusted"] else []) @
+              (if n_compute > 0 then [its n_compute ^ " compute-oracle"]
+               else []))
         in
           if n_fallbacks = 0
-          then (print ("OK (" ^ its n_exports ^ " exports)\n");
+          then (print ("OK (" ^ info ^ ")\n");
                 n_ok := !n_ok + 1)
-          else (print ("WARN: " ^ its n_fallbacks ^ "/" ^
-                       its n_exports ^ " fallbacks\n");
-                n_ok := !n_ok + 1)
+          else (print ("FAIL: " ^ its n_fallbacks ^ "/" ^
+                       its n_exports ^ " exports used fallback\n");
+                n_fail := !n_fail + 1;
+                errors := thy :: !errors)
         end
         handle e =>
           (print ("FAIL: " ^ General.exnMessage e ^ "\n");
