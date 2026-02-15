@@ -1,6 +1,7 @@
 Theory bnfPrelims[bare]
 Ancestors sum pair option pred_set cardinal quotient
-Libs HolKernel Parse boolLib BasicProvers simpLib TotalDefn[qualified]
+Libs HolKernel Parse boolLib BasicProvers simpLib TotalDefn[qualified] QLib
+
 
 fun sum_nm s : KernelSig.kernelname = {Thy = "sum", Name = s}
 fun pair_nm s : KernelSig.kernelname = {Thy = "pair", Name = s}
@@ -12,6 +13,7 @@ val T = {Name = "TRUTH", Thy = "bool"} (* placeholder *)
    ---------------------------------------------------------------------- *)
 
 fun simp ths = simpLib.ASM_SIMP_TAC (srw_ss()) ths
+val op >~ = Q.>~
 
 (* ----------------------------------------------------------------------
     Utility results that all constructions will likely use
@@ -34,6 +36,38 @@ Theorem o_INTRO:
 Proof
   simp[combinTheory.o_DEF, FUN_EQ_THM]
 QED
+
+Theorem UNION_CARDLE:
+  INFINITE CC ∧ A ≼ CC ∧ B ≼ CC ⇒ A ∪ B ≼ CC
+Proof
+  strip_tac >>
+  resolve_then Any irule UNION_LE_ADD_C cardleq_TRANS >>
+  irule CARD_ADD2_ABSORB_LE >> simp[]
+QED
+
+Theorem SING_CARDLE:
+  {x} ≼ A ⇔ A ≠ ∅
+Proof
+  simp[EQ_IMP_THM, INJ_DEF, cardleq_def, GSYM MEMBER_NOT_EMPTY] >>
+  rpt strip_tac >~
+  [‘∃f. f x ∈ A’, ‘a ∈ A (* a *)’]
+  >- (qexists_tac ‘K a’ >> simp[]) >>
+  first_assum $ irule_at Any
+QED
+
+Theorem IN_equal:
+  x ∈ (=) y ⇔ x = y
+Proof
+  simp[IN_DEF, EQ_SYM_EQ]
+QED
+
+(* not generally safe as an unbounded rewrite *)
+Theorem EQ_SING:
+  $= x = {x}
+Proof
+  simp[EXTENSION, IN_equal]
+QED
+
 
 (* ----------------------------------------------------------------------
     record the sum type's Bounded Natural Functor nature
