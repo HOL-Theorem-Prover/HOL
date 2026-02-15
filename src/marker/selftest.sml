@@ -112,9 +112,9 @@ fun thm_eq (hyps,t) th =
     HOLset.equal(hyps, hypset th) andalso t ~~ concl th
 
 fun mklab s t = mk_comb(mk_comb(“suspendlabel”, mk_var(s, “:ind”)), t)
-val rhyp = mklab "r" “suspendimp p (suspendimp q r)”
-val shyp = mklab "s" “suspendimp p (suspendimp q s)”
-val rshyp = mklab "r" “suspendimp p (suspendimp q s)”
+val rhyp = mklab "r" “!r q p. suspendimp p (suspendimp q r)”
+val shyp = mklab "s" “!s q p. suspendimp p (suspendimp q s)”
+val rshyp = mklab "r" “!s q p. suspendimp p (suspendimp q s)”
 val p = mk_var("p", bool)
 val q = mk_var("q", bool)
 
@@ -161,8 +161,8 @@ val _ = require_msg
           (check_result (
               goal_eq (
                 [],
-                “resconj (suspendimp p (suspendimp q p))
-                         (suspendimp p (suspendimp q q))”
+                “resconj (!q p. suspendimp p (suspendimp q p))
+                         (!q p. suspendimp p (suspendimp q q))”
               )
             )
           )
@@ -208,7 +208,7 @@ val _ = require_msgk (check_result
                                    subresult andalso
                             thm_eq (HOLset.fromList Term.compare [
                                        mk_comb(“suspendlabel q”,
-                                                “suspendimp p (suspendimp q q)”)
+                                                “!q p. suspendimp p (suspendimp q q)”)
                                      ],
                                     “p /\ q ==> q /\ p”) updated_main))
                      pp
