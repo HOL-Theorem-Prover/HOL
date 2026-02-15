@@ -13,7 +13,7 @@ datatype 'a info = bI of {
   set : term list,          (* type's set terms *)
   gset : term,              (* type's "generic set term" *)
   relator : term,           (* type's rel term *)
-  bnd : term,               (* type's ordinal bnd term *)
+  bnd : term,               (* type's bounding set *)
   mapID : 'a,               (* map id₁ .. idₙ = id theorem *)
   mapO : 'a,                (* map f₁ .. fₙ o map g₁ .. gₙ =
                                map (f₁ o g₁) ... (fₙ o gₙ) thm *)
@@ -24,7 +24,7 @@ datatype 'a info = bI of {
                                  gset (IMAGE f ∘ g₁) .. (IMAGE f ∘ gₙ) x *)
   mapCONG : 'a,             (* (!a1. a1 ∈ set₁ x ⇒ f₁ a1 = g₁ a1) ∧ ... ⇒
                                map f₁ .. fₙ x = map g₁ .. gₙ x *)
-  bndthms : 'a list         (* !x. set₁ x ≼ bnd etc *)
+  bndthms : 'a list         (* !x. set₁ x ≼ B etc *)
 }
 
 (*
