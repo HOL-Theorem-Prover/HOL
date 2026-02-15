@@ -42,12 +42,14 @@ rate: $\omega^2, \omega^2+1, \ldots \omega^2+\omega, \omega^2+\omega +1,\ldots
 \omega^\omega, \ldots,
 \omega^{(\omega^\omega)}, \ldots,
 \omega^{(\omega^{(\omega^\omega)})}, \ldots, \epsilon_0$.
-The set of ordinals less than $\epsilon_0$ is countable.
+The set of ordinals less than $\epsilon_0$ remain countable.
+The first ordinal with uncountably many predecessors is called $\omega_1$.
 
 \begin{hol}
 \begin{alltt}
 >>__ load "ordinalTheory";
-##thm ordinalTheory.ordSUC_def
+##thm ordinalTheory.omega1_def
+##thm ordinalTheory.x_lt_omega1_countable
 \end{alltt}
 \end{hol}
 
