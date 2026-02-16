@@ -254,7 +254,7 @@ fun record_hook (step : Thm.trace_step) =
   | Thm.TR_ABS (_, th, v) =>
       record_step ("ABS " ^ its (iT v)) [th]
   | Thm.TR_GEN_ABS (_, th, opt, vlist) =>
-      let val opt_id = case opt of SOME t => its (iT t) | NONE => "~1"
+      let val opt_id = case opt of SOME t => its (iT t) | NONE => "~"
           val v_ids = String.concatWith " " (map (its o iT) vlist)
       in record_step ("GEN_ABS " ^ opt_id ^ " " ^ its (length vlist) ^
                        " " ^ v_ids) [th]
@@ -341,8 +341,14 @@ fun record_hook (step : Thm.trace_step) =
   | Thm.TR_DEF_TYOP (result, thm, thy, tyop) =>
       record_step ("DEF_TYOP " ^ thy ^ " " ^ tyop ^ " " ^
                     its (iT (Thm.concl result))) [thm]
-  | Thm.TR_DEF_SPEC (result, th) =>
-      record_step ("DEF_SPEC " ^ its (iT (Thm.concl result))) [th]
+  | Thm.TR_DEF_SPEC (result, th, thyname, cnames) =>
+      let val names_str = String.concatWith " "
+            (map TraceExport.escape_string cnames)
+      in record_step ("DEF_SPEC " ^
+           TraceExport.escape_string thyname ^ " " ^
+           its (length cnames) ^ " " ^ names_str ^ " " ^
+           its (iT (Thm.concl result))) [th]
+      end
   | Thm.TR_DISK_THM (result, src_thy) =>
       (cache_ext_thm_with_thy result (SOME src_thy);
        record_step ("DISK_THM " ^ fmt_thm_stmt result) [])

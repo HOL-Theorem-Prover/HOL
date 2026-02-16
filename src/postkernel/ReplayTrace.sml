@@ -458,13 +458,49 @@ fun replay_steps term_arr type_arr (lines : string list)
         | "DISK_THM" => mk_trust_thm operands
         | "ORACLE" => mk_trust_thm (tl operands)  (* skip tag *)
         | "AXIOM" =>
-            Thm.mk_oracle_thm "REPLAY_TRUST" ([], tm (opd 0))
+            Thm.mk_axiom_thm (Nonce.mk "REPLAY", tm (opd 0))
         | "DEF_SPEC" =>
-            Thm.mk_oracle_thm "REPLAY_TRUST" ([], tm (opd 0))
+            (* New format: thyname n_cnames cname1...cnameN concl_id
+               Old format: concl_id (fallback) *)
+            (if length operands >= 3
+             then let
+               val thyname = unescape (List.nth(operands, 0))
+               val n = int_of (List.nth(operands, 1))
+               val cnames = List.tabulate(n, fn i =>
+                 unescape (List.nth(operands, 2 + i)))
+               val witness = parent 0
+               val concl_tm = tm (int_of (List.last operands))
+               (* gen_prim_specification: witness has hypothesis eqns
+                  prim_specification: witness has existential concl *)
+               val has_hyps = not (null (Thm.hyp witness))
+             in
+               (if has_hyps
+                then #2 (Thm.gen_prim_specification thyname witness)
+                else Thm.prim_specification thyname cnames witness)
+               handle _ =>
+                 (* Constants already exist (theory loaded): create defn
+                    thm with witness's tag (clean if witness is clean) *)
+                 Thm.mk_defn_thm (Thm.tag witness, concl_tm)
+             end
+             else
+               (* Old format: just concl_id *)
+               (* Old format: no witness, use empty tag *)
+               let val empty_tag = Thm.tag (Thm.REFL
+                     (Term.mk_var("x", Type.bool)))
+               in Thm.mk_defn_thm (empty_tag, tm (opd 0)) end)
         | "DEF_TYOP" =>
-            (* operands: thy name concl_id *)
-            Thm.mk_oracle_thm "REPLAY_TRUST"
-              ([], tm (int_of (List.last operands)))
+            (* operands: thy tyop concl_id; parent 0 = witness thm *)
+            let val thy = unescape (List.nth(operands, 0))
+                val tyop = unescape (List.nth(operands, 1))
+                val concl_tm = tm (int_of (List.last operands))
+                val witness = parent 0
+            in
+              Thm.prim_type_definition ({Thy=thy, Tyop=tyop}, witness)
+              handle _ =>
+                (* Type already exists: create defn thm with
+                   witness's tag (clean if witness is clean) *)
+                Thm.mk_defn_thm (Thm.tag witness, concl_tm)
+            end
         | "COMPUTE" =>
             (* operands: input_tm concl_tm *)
             let val input = tm (opd 0)
