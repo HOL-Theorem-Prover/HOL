@@ -1,6 +1,6 @@
 #!/bin/bash
 # Benchmark build time with and without proof tracing.
-# Run from $HOLDIR: bash src/postkernel/bench_build.sh
+# Run from $HOLDIR: bash src/postkernel/prooftrace/bench_build.sh
 #
 # Performs two clean builds and reports wall-clock times.
 # Extracts per-phase export timings from per-theory log files.
@@ -66,7 +66,7 @@ END {
 
 echo ""
 echo "=== Replay + parse benchmarks ==="
-bin/hol < src/postkernel/bench_traces.sml 2>&1 | grep -E '^BENCH:|^PROOF|^  '
+bin/hol < src/postkernel/prooftrace/bench_traces.sml 2>&1 | grep -E '^BENCH:|^PROOF|^  '
 
 echo ""
 echo "========================================"

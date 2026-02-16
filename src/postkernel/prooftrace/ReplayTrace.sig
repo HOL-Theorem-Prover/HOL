@@ -13,9 +13,9 @@ sig
      Raises Fail on verification errors. *)
   val replay_file : string -> (string * Thm.thm) list
 
-  (* Replay with ancestor context. TRUST entries are resolved against
-     ancestor_thms (keyed by conclusion, checked by hyps) instead of
-     oracle thms. Returns exports as (name, thm) list. *)
+  (* Replay with ancestor context. ORACLE DISK_THM entries are resolved
+     against ancestor_thms (keyed by conclusion, checked by hyps) instead
+     of creating oracle thms. Returns exports as (name, thm) list. *)
   val replay_file_ctx :
     string -> (Term.term, Thm.thm list) Redblackmap.dict
     -> (string * Thm.thm) list

@@ -437,27 +437,24 @@ fun export ({thyname, thy_parents, exports = all_thms,
                  process (fp + 1))
         in process 0; TextIO.closeIn instrm end;
 
-        (* Trust entries *)
+        (* External (ancestor) theorem entries *)
         List.app (fn eid =>
           let val did = valOf (Redblackmap.peek(ext_rm, eid))
-              val (thy_prefix, stmt) =
+              val stmt =
                 case Redblackmap.peek(ext_cache, eid) of
-                  SOME (hyps, c, thy_opt) =>
+                  SOME (hyps, c, _) =>
                     let val c_id = tm_lookup c
                         val h_ids = map tm_lookup hyps
-                        val tp = case thy_opt of
-                            SOME t => " " ^ escape_string t
-                          | NONE => ""
-                        val st = " " ^ its c_id ^ " " ^
-                                 its (length h_ids) ^
-                                 (if null h_ids then ""
-                                  else " " ^ String.concatWith " "
-                                               (map its h_ids))
-                    in (tp, st) end
-                | NONE => ("", "")
+                    in " " ^ its c_id ^ " " ^
+                       its (length h_ids) ^
+                       (if null h_ids then ""
+                        else " " ^ String.concatWith " "
+                                     (map its h_ids))
+                    end
+                | NONE => ""
           in TextIO.output(ostrm,
-               "P " ^ its did ^ " TRUST " ^ its eid ^
-               thy_prefix ^ stmt ^ "\n")
+               "P " ^ its did ^ " ORACLE DISK_THM" ^
+               stmt ^ "\n")
           end) ext_ids;
         TextIO.output(ostrm, "\n");
 
@@ -681,7 +678,7 @@ fun export ({thyname, thy_parents, exports = all_thms,
       its n_final ^ " steps" ^
       (if n_deduped > 0 then " [" ^ its n_deduped ^ " deduped]"
        else "") ^
-      " + " ^ its n_ext ^ " trust, " ^
+      " + " ^ its n_ext ^ " ancestor, " ^
       its n_live_terms ^ "/" ^ its n_terms ^ " terms, " ^
       its n_live_types ^ "/" ^ its n_types ^ " types)")
   end

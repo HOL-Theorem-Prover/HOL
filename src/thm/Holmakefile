@@ -36,7 +36,7 @@ Thm-sig.sml: std-thmsig.ML
 
 endif
 
-Thm-sig.uo: Thm-sig.sml $(FTHM_UID) $(TERM_UID) $(TAG_UOD)
+Thm-sig.uo: Thm-sig.sml $(FTHM_UID) $(TERM_UID) $(TAG_UOD) trace_step_dtype.uo
 	$(HOLMOSMLC) -c -toplevel $(FTHM_UI) $<
 
 Overlay.uo: Overlay.sml $(TYPE_UID) $(NET_UOD) $(TERM_UOD) $(FTAG_UID) Thm.uo Thm-sig.uo $(FNET_UID)

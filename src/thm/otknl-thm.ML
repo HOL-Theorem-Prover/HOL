@@ -1155,11 +1155,15 @@ val defn_callback = ref (K ())
 fun set_definition_callback f = defn_callback := f
 fun clear_definition_callback () = defn_callback := K ()
 
-fun mk_defn_thm (witness_tag, c, p) =
+fun mk_defn_thm_prf (witness_tag, c, p) =
    (Assert (type_of c = bool) "mk_defn_thm"  "Not a proposition!";
     let val th = make_thm Count.Definition (witness_tag,empty_hyp,c, p)
         val _  = (!defn_callback) th
         in th end)
+
+(* 2-arg version matching FinalThm signature; proof is deleted *)
+fun mk_defn_thm (witness_tag, c) =
+  mk_defn_thm_prf (witness_tag, c, deleted_prf)
 
 (* ----------------------------------------------------------------------
     Primitive Definition Principles
@@ -1256,7 +1260,7 @@ fun prim_type_definition (name as {Thy, Tyop}, thm) = let
   val TYDEF     = mk_thy_const{Name="TYPE_DEFINITION", Thy="bool",
                                Ty = Pty --> (repty-->bool)}
 in
-  mk_defn_thm(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])), Def_tyop_prf(name,tyvars,thm,newty))
+  mk_defn_thm_prf(tag thm, mk_exists(rep, list_mk_comb(TYDEF,[P,rep])), Def_tyop_prf(name,tyvars,thm,newty))
 end
 
 (* subsumed by gen_prim_specification
@@ -1280,7 +1284,7 @@ fun prim_constant_definition Thy M = let
   val checked = check_tyvars (type_vars_in_term rhs) Ty DEF_ERR
   val new_lhs = Term.prim_new_const {Name = Name, Thy = Thy} Ty
 in
-  mk_defn_thm(empty_tag, mk_eq(new_lhs, rhs),Def_const_prf({Name=Name,Thy=Thy},rhs))
+  mk_defn_thm_prf(empty_tag, mk_eq(new_lhs, rhs),Def_const_prf({Name=Name,Thy=Thy},rhs))
 end
 *)
 
@@ -1306,7 +1310,7 @@ fun prim_specification thyname cnames th = let
   fun addc v s  = v |-> bind thyname s (snd(dest_var v))
   val sigma     = map2 addc V cnames
 in
-  mk_defn_thm (tag th, subst sigma body, Def_spec_prf(map #residue sigma,th))
+  mk_defn_thm_prf (tag th, subst sigma body, Def_spec_prf(map #residue sigma,th))
 end
 
 fun gen_prim_specification thyname th = let
@@ -1348,7 +1352,7 @@ fun gen_prim_specification thyname th = let
       Def_const_prf({Thy=thyname,Name=c},Term.rand body)
     else prf | _ => prf
 in
-  (cnames, mk_defn_thm (tag th, subst (List.map addc stys) body, prf))
+  (cnames, mk_defn_thm_prf (tag th, subst (List.map addc stys) body, prf))
 end
 
 

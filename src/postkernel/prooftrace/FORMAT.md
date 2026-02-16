@@ -58,26 +58,26 @@ earlier steps that produced the input theorems.
 | `REFL` | `term_id` | — | `Thm.REFL` |
 | `ASSUME` | `term_id` | — | `Thm.ASSUME` |
 | `BETA_CONV` | `term_id` | — | `Thm.BETA_CONV` |
-| `MK_COMB` | — | 2 | `Thm.MK_COMB` |
+| `ALPHA` | `term_id` `term_id` | — | `Thm.ALPHA` |
 | `ABS` | `var_id` | 1 | `Thm.ABS` |
-| `MP` | — | 2 | `Thm.MP` |
-| `DISCH` | `term_id` | 1 | `Thm.DISCH` |
-| `DEDUCT_ANTISYM` | — | 2 | `Thm.DEDUCT_ANTISYM_RULE` |
-| `EQ_MP` | — | 2 | `Thm.EQ_MP` |
-| `INST_TYPE` | `n` (`tyvar_id` `type_id`){n} | 1 | `Thm.INST_TYPE` |
-| `INST` | `n` (`var_id` `term_id`){n} | 1 | `Thm.INST` |
-| `SUBST` | `n` (`hvar_id` `thm_parent`){n} `template_id` | 1+ | `Thm.SUBST` |
-| `Mk_abs` | `bvar_id` | 1 | internal: `Thm.Mk_abs` |
-| `Mk_comb` | — | 2 | internal: `Thm.Mk_comb` |
+| `MK_COMB` | — | 2 | `Thm.MK_COMB` |
+| `AP_TERM` | `term_id` | 1 | `Thm.AP_TERM` |
+| `AP_THM` | `term_id` | 1 | `Thm.AP_THM` |
 | `SYM` | — | 1 | `Thm.SYM` |
 | `TRANS` | — | 2 | `Thm.TRANS` |
-| `AP_THM` | `term_id` | 1 | `Thm.AP_THM` |
-| `AP_TERM` | `term_id` | 1 | `Thm.AP_TERM` |
-| `ALPHA` | `term_id` `term_id` | — | `Thm.ALPHA` |
+| `EQ_MP` | — | 2 | `Thm.EQ_MP` |
+| `EQ_IMP_RULE1` | — | 1 | `#1 (Thm.EQ_IMP_RULE)` |
+| `EQ_IMP_RULE2` | — | 1 | `#2 (Thm.EQ_IMP_RULE)` |
+| `MP` | — | 2 | `Thm.MP` |
+| `DISCH` | `term_id` | 1 | `Thm.DISCH` |
+| `INST_TYPE` | `n` (`tyvar_id` `type_id`){n} | 1 | `Thm.INST_TYPE` |
+| `INST` | `n` (`var_id` `term_id`){n} | 1 | `Thm.INST` |
+| `SUBST` | `n` `var_id`{n} `template_id` | n+1 | `Thm.SUBST` |
+| `SPEC` | `term_id` | 1 | `Thm.SPEC` |
+| `Specialize` | `term_id` | 1 | `Thm.Specialize` (lazy-beta SPEC) |
+| `GEN` | `var_id` | 1 | `Thm.GEN` |
+| `GENL` | `n` `var_id*` | 1 | `Thm.GENL` |
 | `GEN_ABS` | `opt_cst_id` `n` `var_id*` | 1 | `Thm.GEN_ABS` |
-| `NOT_INTRO` | — | 1 | `Thm.NOT_INTRO` |
-| `NOT_ELIM` | — | 1 | `Thm.NOT_ELIM` |
-| `CCONTR` | `term_id` | 1 | `Thm.CCONTR` |
 | `EXISTS` | `existential_id` `witness_id` | 1 | `Thm.EXISTS` |
 | `CHOOSE` | `var_id` | 2 | `Thm.CHOOSE` |
 | `CONJ` | — | 2 | `Thm.CONJ` |
@@ -86,25 +86,30 @@ earlier steps that produced the input theorems.
 | `DISJ1` | `term_id` | 1 | `Thm.DISJ1` |
 | `DISJ2` | `term_id` | 1 | `Thm.DISJ2` |
 | `DISJ_CASES` | — | 3 | `Thm.DISJ_CASES` |
-| `SPEC` | `term_id` | 1 | `Thm.SPEC` |
-| `GEN` | `var_id` | 1 | `Thm.GEN` |
-| `GENL` | `n` `var_id*` | 1 | `Thm.GENL` |
-| `ADD_ASSUM` | `term_id` | 1 | `Thm.ADD_ASSUM` |
+| `NOT_INTRO` | — | 1 | `Thm.NOT_INTRO` |
+| `NOT_ELIM` | — | 1 | `Thm.NOT_ELIM` |
+| `CCONTR` | `term_id` | 1 | `Thm.CCONTR` |
+| `Beta` | — | 1 | `Thm.Beta` (compute-optimized right-beta) |
+| `Mk_comb` | — | 3 | `Thm.Mk_comb` |
+| `Mk_abs` | — | 2 | `Thm.Mk_abs` |
+| `DEF_TYOP` | `thy` `name` `concl_id` | 1 | `Thm.prim_type_definition` (conservative type definition) |
+| `DEF_SPEC` | `thyname` `n` `cname*` `concl_id` | 1 | `Thm.prim_specification` / `gen_prim_specification` (conservative constant specification) |
+| `COMPUTE` | `input_id` `result_id` | 0+ | `Thm.compute` (first-order evaluation); parents (code equation thms) are recorded but not used during replay |
 
-### Opaque Steps
+### Trust Steps
 
 These record their theorem statement (conclusion + hypotheses) rather than
-being replayed through the kernel.
+being replayed through the kernel. They represent the trust boundary of
+a trace file.
 
 | Rule | Operands | Parents | Meaning |
 |------|----------|---------|---------|
 | `AXIOM` | `concl_id` | — | Axiom introduction |
 | `ORACLE` | `tag` `concl_id` `nhyps` `hyp_ids*` | — | Oracle theorem |
-| `DISK_THM` | `concl_id` `nhyps` `hyp_ids*` | — | Loaded from disk |
-| `TRUST` | `global_id` [`thy_name`] `concl_id` `nhyps` `hyp_ids*` | — | Ancestor theorem |
-| `DEF_TYOP` | `thy` `name` `concl_id` | 1 | Type definition |
-| `DEF_SPEC` | `concl_id` | 1 | Constant specification |
-| `COMPUTE` | `input_id` `result_id` | — | Computation (trusted) |
+
+Ancestor theorems (loaded from `.dat` files) are recorded as `ORACLE`
+with tag `DISK_THM`. During chain verification, these are resolved
+against replayed ancestor exports by matching on conclusion and hypotheses.
 
 ## Semantics
 
@@ -112,8 +117,17 @@ being replayed through the kernel.
   COUNTS declares array dimensions (upper bound).
 - **Types and terms** are in topological order: sub-components have smaller IDs.
 - **Steps** may reference types, terms, and earlier steps. Parent IDs after `|`.
-- **TRUST** entries represent theorems from ancestor theories. During chain
-  verification, these are resolved against actually-replayed ancestor exports.
+- **SUBST** parent order: the first `n` parents are the residue theorems
+  (corresponding to the `n` variable IDs in the operands), followed by the
+  original theorem as the last parent.
+- **Mk_comb** parents: parent 0 is the original equality theorem
+  (`A |- t = u v`), parents 1 and 2 are the function and argument
+  sub-results (`A' |- u = u'` and `A'' |- v = v'`).
+- **Mk_abs** parents: parent 0 is the original equality theorem
+  (`A |- t = \x.u`), parent 1 is the body sub-result (`A' |- u = u'`).
+- **ORACLE DISK_THM** entries represent theorems from ancestor theories.
+  During chain verification, these are resolved against actually-replayed
+  ancestor exports by matching on conclusion and hypotheses.
 - **COMPUTE** entries record `input ⊢ input = result`. A verifier may
   independently evaluate the input term to check the equation.
 - **Exports** map theorem names to step IDs. These are the theory's public API.
@@ -126,7 +140,7 @@ A trace is verified by:
 3. Checking each export's replayed conclusion matches the theory's theorem
 
 Chain verification replays an entire theory dependency graph bottom-up,
-using replayed ancestor exports to resolve TRUST entries.
+using replayed ancestor exports to resolve ORACLE DISK_THM entries.
 
 ## Compression
 

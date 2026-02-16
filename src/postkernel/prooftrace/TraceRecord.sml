@@ -235,7 +235,7 @@ fun fmt_thm_stmt thm =
    Hook: pattern-match on trace_step, format step line, record
    ----------------------------------------------------------------------- *)
 
-fun record_hook (step : Thm.trace_step) =
+fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   case step of
     Thm.TR_ASSUME (_, tm) =>
       record_step ("ASSUME " ^ its (iT tm)) []
@@ -330,8 +330,8 @@ fun record_hook (step : Thm.trace_step) =
       record_step "Beta" [th]
   | Thm.TR_Mk_comb (_, thm, th1', th2') =>
       record_step "Mk_comb" [thm, th1', th2']
-  | Thm.TR_Mk_abs (_, thm, th1', bvar) =>
-      record_step ("Mk_abs " ^ its (iT bvar)) [thm, th1']
+  | Thm.TR_Mk_abs (_, thm, th1', _) =>
+      record_step "Mk_abs" [thm, th1']
   | Thm.TR_Specialize (_, th, t) =>
       record_step ("Specialize " ^ its (iT t)) [th]
   | Thm.TR_ORACLE (result, tg) =>
@@ -351,7 +351,7 @@ fun record_hook (step : Thm.trace_step) =
       end
   | Thm.TR_DISK_THM (result, src_thy) =>
       (cache_ext_thm_with_thy result (SOME src_thy);
-       record_step ("DISK_THM " ^ fmt_thm_stmt result) [])
+       record_step ("ORACLE DISK_THM " ^ fmt_thm_stmt result) [])
   | Thm.TR_COMPUTE (_, parents, tm, eqn) =>
       record_step ("COMPUTE " ^ its (iT tm) ^ " " ^ its (iT eqn)) parents
 

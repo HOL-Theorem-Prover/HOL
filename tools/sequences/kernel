@@ -21,7 +21,7 @@ src/prekernel
 **KERNEL**
 src/thm
 src/postkernel
-src/postkernel/prooftrace
+[poly]src/postkernel/prooftrace
 # these three directories are required to even run hol --bare
 src/parse
 !tools/Holmake/tests/badincludes

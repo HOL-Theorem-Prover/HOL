@@ -5,10 +5,11 @@
    2. Replay proof steps using actual kernel inference rules
    3. Verify exported theorem names map to correctly reconstructed thms
 
-   Trust-like steps (DISK_THM, ORACLE, AXIOM, DEF_SPEC, DEF_TYOP,
-   COMPUTE, TRUST) include their theorem statement in the trace and
-   are created via mk_oracle_thm. All other steps are fully replayed
-   through the kernel.
+   ORACLE and AXIOM steps include their theorem statement in the trace
+   and are created via mk_oracle_thm. All other steps are fully replayed
+   through the kernel. Ancestor theorems (DISK_THM) are recorded as
+   ORACLE with tag "DISK_THM" and resolved against replayed ancestors
+   during chain verification.
 *)
 
 structure ReplayTrace :> ReplayTrace =
@@ -259,7 +260,7 @@ fun build_terms n_terms type_arr (lines : string list) =
    ----------------------------------------------------------------------- *)
 
 (* Ancestor context: maps conclusion term to list of ancestor thms.
-   Used to resolve TRUST entries against actually-replayed ancestors
+   Used to resolve ORACLE DISK_THM entries against actually-replayed ancestors
    instead of oracle thms. *)
 type ancestor_ctx = (Term.term, Thm.thm list) Redblackmap.dict
 val empty_ctx : ancestor_ctx = Redblackmap.mkDict Term.compare
@@ -304,7 +305,7 @@ fun replay_steps term_arr type_arr (lines : string list)
     (* Set of opaque rule tags *)
     (* DEF_SPEC and DEF_TYOP have parent thm dependencies (witness),
        so they must be processed in pass 2 after their parents. *)
-    val opaque_rules = ["DISK_THM", "ORACLE", "AXIOM", "COMPUTE", "TRUST"]
+    val opaque_rules = ["ORACLE", "AXIOM", "COMPUTE"]
     fun is_opaque rule = List.exists (fn r => r = rule) opaque_rules
 
     (* Split step line into (rule_toks, parent_ids) at "|" *)
@@ -319,7 +320,7 @@ fun replay_steps term_arr type_arr (lines : string list)
       in go [] toks end
 
     (* Create oracle thm from statement: concl_id nhyps hyp_ids *)
-    fun mk_trust_thm toks =
+    fun mk_oracle_step toks =
       case toks of
         concl_s :: nhyps_s :: rest =>
           let
@@ -331,15 +332,15 @@ fun replay_steps term_arr type_arr (lines : string list)
             (* Try ancestor context first, fall back to oracle thm *)
             case ctx_lookup ctx c hyps of
               SOME ancestor_th => ancestor_th
-            | NONE => Thm.mk_oracle_thm "REPLAY_TRUST" (hyps, c)
+            | NONE => Thm.mk_oracle_thm "REPLAY_ORACLE" (hyps, c)
           end
       | [concl_s] =>
           let val c = tm (int_of concl_s)
           in case ctx_lookup ctx c [] of
                SOME ancestor_th => ancestor_th
-             | NONE => Thm.mk_oracle_thm "REPLAY_TRUST" ([], c)
+             | NONE => Thm.mk_oracle_thm "REPLAY_ORACLE" ([], c)
           end
-      | _ => raise ERR "mk_trust_thm" "bad format"
+      | _ => raise ERR "mk_oracle_step" "bad format"
 
     (* Parse type substitution pairs: n redex1 residue1 ... *)
     fun parse_type_subst toks =
@@ -437,27 +438,15 @@ fun replay_steps term_arr type_arr (lines : string list)
             in Thm.GEN_ABS opt vs (parent 0) end
         | "Beta" => Thm.Beta (parent 0)
         | "Mk_comb" =>
-            (* Mk_comb produces 3 parents: original eq thm, th1', th2'
-               The result is TRANS original (MK_COMB(th1', th2')) *)
-            Thm.TRANS (parent 0)
-                      (Thm.MK_COMB (parent 1, parent 2))
+            let val (_, _, mkthm) = Thm.Mk_comb (parent 0)
+            in mkthm (parent 1) (parent 2) end
         | "Mk_abs" =>
-            (* Mk_abs produces 2 parents: original eq thm, th1'
-               Bvar ID is recorded as operand (may differ from
-               dest_abs result due to alpha-conversion). *)
-            let
-              val bvar = if null operands then
-                           (* Legacy format: extract from parent 0 *)
-                           let val rhs_tm = Thm.concl (parent 0)
-                                              |> Term.rand
-                           in #1 (Term.dest_abs rhs_tm) end
-                         else tm (opd 0)
-            in Thm.TRANS (parent 0) (Thm.ABS bvar (parent 1)) end
+            let val (_, _, mkthm) = Thm.Mk_abs (parent 0)
+            in mkthm (parent 1) end
         | "Specialize" => Thm.SPEC (tm (opd 0)) (parent 0)
 
-        (* --- Opaque steps: trust with recorded statement --- *)
-        | "DISK_THM" => mk_trust_thm operands
-        | "ORACLE" => mk_trust_thm (tl operands)  (* skip tag *)
+        (* --- Opaque steps: oracle with recorded statement --- *)
+        | "ORACLE" => mk_oracle_step (tl operands)  (* skip tag *)
         | "AXIOM" =>
             Thm.mk_axiom_thm (Nonce.mk "REPLAY", tm (opd 0))
         | "DEF_SPEC" =>
@@ -536,22 +525,6 @@ fun replay_steps term_arr type_arr (lines : string list)
               | NONE =>
                   Thm.mk_oracle_thm "REPLAY_COMPUTE" ([], expected_concl)
             end
-        | "TRUST" =>
-            (* operands: global_id [thy_name] concl nhyps hyps...
-               thy_name is optional; if present it's a non-integer token *)
-            if length operands >= 2
-            then let val rest = tl operands  (* skip global_id *)
-                     (* Skip optional thy_name (non-integer token) *)
-                     val stmt = case rest of
-                         (tok :: more) =>
-                           (case Int.fromString tok of
-                              SOME _ => rest  (* no thy_name *)
-                            | NONE => more)   (* skip thy_name *)
-                       | _ => rest
-                 in mk_trust_thm stmt end
-            else
-              raise ERR "replay_steps"
-                   ("TRUST entry without statement at step " ^ id_s)
         | other => raise ERR "replay_steps" ("unknown rule: " ^ other)
       in
         Array.update(thm_arr, id, result)
@@ -883,7 +856,7 @@ fun verify_all dir =
    Chain verification: replay a theory and all its ancestors from
    .pftrace.gz files, without requiring theories loaded in HOL session.
    Ancestors are replayed in topological order and their exports are
-   passed as context for TRUST entries in descendant theories.
+   passed as context for ORACLE DISK_THM entries in descendant theories.
    ----------------------------------------------------------------------- *)
 
 fun verify_chain holdir root_theory =
@@ -986,7 +959,7 @@ fun verify_chain holdir root_theory =
               end) exports)
           val n_fallbacks = count_oracle "REPLAY_FALLBACK"
           val n_placeholder = count_oracle "PLACEHOLDER"
-          val n_trust = count_oracle "REPLAY_TRUST"
+          val n_trust = count_oracle "REPLAY_ORACLE"
           val n_compute = count_oracle "REPLAY_COMPUTE"
           val n_bad = n_fallbacks + n_placeholder
           val info =
