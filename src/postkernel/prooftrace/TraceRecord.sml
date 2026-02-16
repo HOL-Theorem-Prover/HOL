@@ -408,5 +408,8 @@ val _ = OS.Process.atExit cleanup
 val _ = case OS.Process.getEnv "HOL_TRACE_BENCHMARKS" of
           SOME _ => TraceExport.bench_mode := true
         | NONE => ()
+val _ = case OS.Process.getEnv "HOL_TRACE_RAW" of
+          SOME _ => TraceExport.optimize := false
+        | NONE => ()
 
 end (* structure TraceRecord *)

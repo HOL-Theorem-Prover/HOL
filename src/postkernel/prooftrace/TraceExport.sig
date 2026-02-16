@@ -38,6 +38,12 @@ sig
   val escape_string : string -> string
   val export : export_args -> unit
 
+  (* When true (default), export runs step dedup + type/term pruning
+     after writing the raw trace. When false, only the raw trace is
+     written (faster, larger files). Raw traces are always valid for
+     replay — optimization only reduces size. *)
+  val optimize : bool ref
+
   (* Set to true to collect per-phase timing data during export.
      Off by default (zero overhead). Toggle on in bench scripts. *)
   val bench_mode : bool ref

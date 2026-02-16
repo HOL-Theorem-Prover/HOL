@@ -19,8 +19,11 @@ val ERR = mk_HOL_ERR "TraceExport"
 
 val its = Int.toString
 
-(* --- Timing accumulators (only active when bench_mode = true) --- *)
+(* --- Configuration --- *)
+val optimize = ref true   (* step dedup + type/term pruning *)
 val bench_mode = ref false
+
+(* --- Timing accumulators (only active when bench_mode = true) --- *)
 
 val t_n_exports       = ref 0
 val t_reachability_ms = ref 0
@@ -496,7 +499,8 @@ fun export ({thyname, thy_parents, exports = all_thms,
 
     (* === Phase 2: Try optimized export (pruning + dedup) === *)
     val (n_final, n_deduped, n_live_types, n_live_terms) =
-    (let
+    if not (!optimize) then (n_live, 0, n_types, n_terms)
+    else (let
        val t2_start = Timer.startRealTimer ()  (* bench_mode gated below *)
        val hash_arr = Array.array(n_live, fnv_offset)
        val dedup_to = Array.tabulate(n_live, fn i => i)
