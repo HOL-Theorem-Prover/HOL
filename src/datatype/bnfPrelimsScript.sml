@@ -45,6 +45,19 @@ Proof
   irule CARD_ADD2_ABSORB_LE >> simp[]
 QED
 
+Theorem IN_equal:
+  x ∈ (=) y ⇔ x = y
+Proof
+  simp[IN_DEF, EQ_SYM_EQ]
+QED
+
+(* not generally safe as an unbounded rewrite *)
+Theorem EQ_SING:
+  $= x = {x}
+Proof
+  simp[EXTENSION, IN_equal]
+QED
+
 Theorem SING_CARDLE:
   ({x} ≼ A ⇔ A ≠ ∅) ∧ ((=) x ≼ A ⇔ A ≠ ∅)
 Proof
@@ -67,20 +80,6 @@ Proof
         simp[]) >>
   simp[SING_CARDLE]
 QED
-
-Theorem IN_equal:
-  x ∈ (=) y ⇔ x = y
-Proof
-  simp[IN_DEF, EQ_SYM_EQ]
-QED
-
-(* not generally safe as an unbounded rewrite *)
-Theorem EQ_SING:
-  $= x = {x}
-Proof
-  simp[EXTENSION, IN_equal]
-QED
-
 
 (* ----------------------------------------------------------------------
     record the sum type's Bounded Natural Functor nature
