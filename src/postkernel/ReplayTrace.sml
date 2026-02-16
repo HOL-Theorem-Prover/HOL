@@ -954,4 +954,11 @@ fun verify_chain holdir root_theory =
     {ok = !n_ok, fail = !n_fail, errors = rev (!errors)}
   end
 
+fun parse_trace_stats path =
+  let val {type_lines, term_lines, step_lines, export_lines, ...} =
+        read_trace_file path
+  in {n_types = length type_lines, n_terms = length term_lines,
+      n_steps = length step_lines, n_exports = length export_lines}
+  end
+
 end (* structure *)

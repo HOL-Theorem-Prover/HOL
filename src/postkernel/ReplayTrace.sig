@@ -41,4 +41,9 @@ sig
   val verify_chain :
     string -> string
     -> {ok: int, fail: int, errors: string list}
+
+  (* Parse a trace file (decompress + read + tokenize), returning
+     the number of lines in each section. For benchmarking parse I/O. *)
+  val parse_trace_stats :
+    string -> {n_types: int, n_terms: int, n_steps: int, n_exports: int}
 end
