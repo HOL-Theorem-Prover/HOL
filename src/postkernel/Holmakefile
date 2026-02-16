@@ -1,4 +1,4 @@
-all: $(DEFAULT_TARGETS) TraceExport.uo TraceRecord.uo ReplayTrace.uo
+all: $(DEFAULT_TARGETS)
 .PHONY: all
 
 Termtab.uo Termtab.ui: Termtab.sml $(dprot $(SIGOBJ)/Table.ui)
