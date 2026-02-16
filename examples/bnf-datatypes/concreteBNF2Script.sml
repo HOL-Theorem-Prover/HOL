@@ -1295,9 +1295,8 @@ Proof
   metis_tac[]
 QED
 
-(*
 (* gives bnd, but seems non-trivial to get automatically *)
-Theorem FINITE_SET:
+Theorem countable_SET:
   ∀n. SET n ≼ univ(:num)
 Proof
   ho_match_mp_tac IND >> rpt strip_tac >>
@@ -1305,17 +1304,47 @@ Proof
   [‘Fset1 n ≼ UNIV’]
   >- (ONCE_REWRITE_TAC[gsumset_def] >>
       irule UNION_CARDLE >> rw[] >>
-      irule CARD_BIGUNION >> rw[EQ_SING, SING_CARDLE]
-  ho_match_mp_tac better_ind>> simp[SET_C1, SET_C2, PULL_EXISTS] >> rw[] >~
-  [‘{_} ≼ _’]
-  >- (simp[cardleq_def] >> qexists_tac ‘K 0’>> simp[INJ_DEF]) >>
-  [‘FINITE {a | ∃v. MEM (a,v) l}’]
-  >- (irule SUBSET_FINITE >> qexists ‘set (MAP FST l)’ >>
-      simp[SUBSET_DEF, PULL_EXISTS, listTheory.MEM_MAP, EXISTS_PROD]) >>
-  rename [‘FINITE {a | ∃a0 v. MEM (a0,v) l ∧ a ∈ SET v}’] >>
-  irule SUBSET_FINITE >>
-  qexists ‘BIGUNION (IMAGE SET (set (MAP SND l)))’ >>
-  simp[SUBSET_DEF, PULL_EXISTS, listTheory.MEM_MAP, FORALL_PROD, EXISTS_PROD] >>
-  metis_tac[]
+      irule CARD_BIGUNION >> rpt conj_tac >>
+      REWRITE_TAC[INFINITE_NUM_UNIV] >>
+      TRY (irule IMAGE_cardleq_rwt) >>
+      REWRITE_TAC (#bndthms sum_data) >>
+      simp[PULL_EXISTS] >>
+      ONCE_REWRITE_TAC [EQ_SING] >> simp[SING_CARDLE] >>
+      rpt strip_tac >>
+
+      simp[fun_gset_def] >>
+      irule CARD_BIGUNION >> rpt conj_tac >>
+      REWRITE_TAC[INFINITE_NUM_UNIV] >>
+      rpt (irule IMAGE_cardleq_rwt) >>
+      simp[PULL_EXISTS] >>
+
+      simp[Once gpairset_def] >> rpt gen_tac >>
+      irule UNION_CARDLE >> rw[] >>
+      irule CARD_BIGUNION >> rpt conj_tac >>
+      REWRITE_TAC[INFINITE_NUM_UNIV] >>
+      rpt (irule IMAGE_cardleq_rwt) >>
+      simp[PULL_EXISTS] >>
+      REWRITE_TAC(#bndthms pair_data) >>
+      ONCE_REWRITE_TAC [EQ_SING] >> simp[SING_CARDLE]) >>
+
+  irule CARD_BIGUNION >> rpt conj_tac >>
+  REWRITE_TAC[INFINITE_NUM_UNIV] >> simp[PULL_EXISTS] >>
+  irule IMAGE_cardleq_rwt >>
+  ONCE_REWRITE_TAC [gsumset_def] >>
+  irule UNION_CARDLE >> rw[] >>
+  irule CARD_BIGUNION >> rpt conj_tac >>
+  REWRITE_TAC[INFINITE_NUM_UNIV, IMAGE_KEMPTY_CARDLE, UNIV_NOT_EMPTY] >>
+  simp[PULL_EXISTS] >> rpt strip_tac >> rpt (irule IMAGE_cardleq_rwt) >>
+  simp(#bndthms sum_data) >>
+
+  simp[fun_gset_def] >> irule CARD_BIGUNION >> rpt conj_tac >>
+  REWRITE_TAC[INFINITE_NUM_UNIV] >> simp[PULL_EXISTS] >>
+  rpt (irule IMAGE_cardleq_rwt) >> simp[] >> rpt strip_tac >>
+
+  simp[Once gpairset_def] >>
+  irule UNION_CARDLE >> rw[] >>
+  irule CARD_BIGUNION >> rpt conj_tac >>
+  REWRITE_TAC[INFINITE_NUM_UNIV] >>
+  simp[PULL_EXISTS, IMAGE_KEMPTY_CARDLE, SING_CARDLE] >>
+  irule IMAGE_cardleq_rwt >> simp(#bndthms pair_data)
 QED
-*)
