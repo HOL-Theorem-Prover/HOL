@@ -122,3 +122,18 @@ Resume test_suspend_gen[base]:
 QED
 
 Finalise test_suspend_gen
+
+(* Test that suspend works correctly when partial strip_tac leaves remaining
+   quantification — the closure variables must not disturb the goal's own
+   universal quantifiers. *)
+Theorem test_suspend_partial_strip:
+  ∀p q. p ∧ q ⇒ q ∧ p
+Proof
+  gen_tac >> suspend "s"
+QED
+
+Resume test_suspend_partial_strip[s]:
+  simp[]
+QED
+
+Finalise test_suspend_partial_strip

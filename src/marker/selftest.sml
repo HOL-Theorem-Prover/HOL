@@ -112,9 +112,9 @@ fun thm_eq (hyps,t) th =
     HOLset.equal(hyps, hypset th) andalso t ~~ concl th
 
 fun mklab s t = mk_comb(mk_comb(“suspendlabel”, mk_var(s, “:ind”)), t)
-val rhyp = mklab "r" “!r q p. suspendimp p (suspendimp q r)”
-val shyp = mklab "s" “!s q p. suspendimp p (suspendimp q s)”
-val rshyp = mklab "r" “!s q p. suspendimp p (suspendimp q s)”
+val rhyp = mklab "3 r" “!r q p. suspendimp p (suspendimp q r)”
+val shyp = mklab "3 s" “!s q p. suspendimp p (suspendimp q s)”
+val rshyp = mklab "3 r" “!s q p. suspendimp p (suspendimp q s)”
 val p = mk_var("p", bool)
 val q = mk_var("q", bool)
 
@@ -153,7 +153,7 @@ val _ = tprint "extract_suspended_goal (1)"
 val _ = require_msg
           (check_result (goal_eq ([q, p], p)))
           goal_print
-          (fn th => resumption_to_goal (extract_suspended_goal th "p"))
+          (fn th => let val (nc, st) = extract_suspended_goal th "p" in resumption_to_goal nc st end)
           pq_th1
 
 val _ = tprint "extract_suspended_goal (2)"
@@ -167,14 +167,13 @@ val _ = require_msg
             )
           )
           goal_print
-          (fn th => resumption_to_goal (extract_suspended_goal th "pq"))
+          (fn th => let val (nc, st) = extract_suspended_goal th "pq" in resumption_to_goal nc st end)
           pq_th2
 
 val _ = shouldfail {checkexn = is_struct_HOL_ERR "markerLib",
                     printarg = K "extract_suspended_goal fails (1)",
                     printresult = goal_print,
-                    testfn = (fn th => resumption_to_goal
-                                         (extract_suspended_goal th "pq"))}
+                    testfn = (fn th => let val (nc, st) = extract_suspended_goal th "pq" in resumption_to_goal nc st end)}
                    pq_th1
 
 val _ = show_assums := true
@@ -207,8 +206,8 @@ val _ = require_msgk (check_result
                             thm_eq (HOLset.fromList Term.compare [p],p)
                                    subresult andalso
                             thm_eq (HOLset.fromList Term.compare [
-                                       mk_comb(“suspendlabel q”,
-                                                “!q p. suspendimp p (suspendimp q q)”)
+                                       mklab "2 q"
+                                             “!q p. suspendimp p (suspendimp q q)”
                                      ],
                                     “p /\ q ==> q /\ p”) updated_main))
                      pp
