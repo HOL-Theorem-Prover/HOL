@@ -302,8 +302,9 @@ fun replay_steps term_arr type_arr (lines : string list)
     fun th i = Array.sub(thm_arr, i)
 
     (* Set of opaque rule tags *)
-    val opaque_rules = ["DISK_THM", "ORACLE", "AXIOM", "DEF_SPEC",
-                        "DEF_TYOP", "COMPUTE", "TRUST"]
+    (* DEF_SPEC and DEF_TYOP have parent thm dependencies (witness),
+       so they must be processed in pass 2 after their parents. *)
+    val opaque_rules = ["DISK_THM", "ORACLE", "AXIOM", "COMPUTE", "TRUST"]
     fun is_opaque rule = List.exists (fn r => r = rule) opaque_rules
 
     (* Split step line into (rule_toks, parent_ids) at "|" *)
@@ -470,21 +471,28 @@ fun replay_steps term_arr type_arr (lines : string list)
                  unescape (List.nth(operands, 2 + i)))
                val witness = parent 0
                val concl_tm = tm (int_of (List.last operands))
-               (* gen_prim_specification: witness has hypothesis eqns
-                  prim_specification: witness has existential concl *)
-               val has_hyps = not (null (Thm.hyp witness))
+               (* Check if constant already defined (theory loaded).
+                  Calling prim_specification when constants exist would
+                  rename them with old-> prefix, corrupting the
+                  namespace for subsequent inference steps. *)
+               val already_defined =
+                 (Term.prim_mk_const {Name = hd cnames, Thy = thyname};
+                  true)
+                 handle HOL_ERR _ => false
              in
-               (if has_hyps
-                then #2 (Thm.gen_prim_specification thyname witness)
-                else Thm.prim_specification thyname cnames witness)
-               handle _ =>
-                 (* Constants already exist (theory loaded): create defn
-                    thm with witness's tag (clean if witness is clean) *)
+               if already_defined then
                  Thm.mk_defn_thm (Thm.tag witness, concl_tm)
+               else
+                 let val has_hyps = not (null (Thm.hyp witness))
+                 in (if has_hyps
+                     then #2 (Thm.gen_prim_specification thyname witness)
+                     else Thm.prim_specification thyname cnames witness)
+                    handle _ =>
+                      Thm.mk_defn_thm (Thm.tag witness, concl_tm)
+                 end
              end
              else
                (* Old format: just concl_id *)
-               (* Old format: no witness, use empty tag *)
                let val empty_tag = Thm.tag (Thm.REFL
                      (Term.mk_var("x", Type.bool)))
                in Thm.mk_defn_thm (empty_tag, tm (opd 0)) end)
@@ -494,12 +502,19 @@ fun replay_steps term_arr type_arr (lines : string list)
                 val tyop = unescape (List.nth(operands, 1))
                 val concl_tm = tm (int_of (List.last operands))
                 val witness = parent 0
+                (* Check if type already defined *)
+                val already_defined =
+                  (ignore (Type.mk_thy_type {Thy=thy, Tyop=tyop,
+                                             Args=[]});
+                   true)
+                  handle HOL_ERR _ => false
             in
-              Thm.prim_type_definition ({Thy=thy, Tyop=tyop}, witness)
-              handle _ =>
-                (* Type already exists: create defn thm with
-                   witness's tag (clean if witness is clean) *)
+              if already_defined then
                 Thm.mk_defn_thm (Thm.tag witness, concl_tm)
+              else
+                Thm.prim_type_definition ({Thy=thy, Tyop=tyop}, witness)
+                handle _ =>
+                  Thm.mk_defn_thm (Thm.tag witness, concl_tm)
             end
         | "COMPUTE" =>
             (* operands: input_tm concl_tm *)
@@ -970,8 +985,10 @@ fun verify_chain holdir root_theory =
               in List.exists (fn s => s = tag) oracles
               end) exports)
           val n_fallbacks = count_oracle "REPLAY_FALLBACK"
+          val n_placeholder = count_oracle "PLACEHOLDER"
           val n_trust = count_oracle "REPLAY_TRUST"
           val n_compute = count_oracle "REPLAY_COMPUTE"
+          val n_bad = n_fallbacks + n_placeholder
           val info =
             String.concatWith ", " (
               [its n_exports ^ " exports"] @
@@ -979,11 +996,13 @@ fun verify_chain holdir root_theory =
               (if n_compute > 0 then [its n_compute ^ " compute-oracle"]
                else []))
         in
-          if n_fallbacks = 0
+          if n_bad = 0
           then (print ("OK (" ^ info ^ ")\n");
                 n_ok := !n_ok + 1)
-          else (print ("FAIL: " ^ its n_fallbacks ^ "/" ^
-                       its n_exports ^ " exports used fallback\n");
+          else (print ("FAIL: " ^ its n_bad ^ "/" ^
+                       its n_exports ^ " exports have oracle tags" ^
+                       " (fallback=" ^ its n_fallbacks ^
+                       " placeholder=" ^ its n_placeholder ^ ")\n");
                 n_fail := !n_fail + 1;
                 errors := thy :: !errors)
         end
