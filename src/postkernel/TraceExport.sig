@@ -35,6 +35,7 @@ sig
     thm_id       : Thm.thm -> int
   }
 
+  val escape_string : string -> string
   val export : export_args -> unit
 
   (* Set to true to collect per-phase timing data during export.
@@ -45,12 +46,12 @@ sig
      Only populated when bench_mode is true. *)
   val timings : unit -> {
     n_exports       : int,      (* number of theories exported *)
-    reachability_ms : LargeInt.int,  (* mark_live + renumber *)
-    raw_write_ms    : LargeInt.int,  (* phase 1: raw trace through compressor *)
-    dedup_ms        : LargeInt.int,  (* FNV scan + dedup_to mapping *)
-    prune_ms        : LargeInt.int,  (* type/term reachability *)
-    opt_write_ms    : LargeInt.int,  (* phase 2: optimized trace through compressor *)
-    total_ms        : LargeInt.int   (* total export time *)
+    reachability_ms : int,      (* mark_live + renumber *)
+    raw_write_ms    : int,      (* phase 1: raw trace through compressor *)
+    dedup_ms        : int,      (* FNV scan + dedup_to mapping *)
+    prune_ms        : int,      (* type/term reachability *)
+    opt_write_ms    : int,      (* phase 2: optimized trace through compressor *)
+    total_ms        : int       (* total export time *)
   }
   val reset_timings : unit -> unit
 

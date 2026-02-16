@@ -23,12 +23,12 @@ val its = Int.toString
 val bench_mode = ref false
 
 val t_n_exports       = ref 0
-val t_reachability_ms = ref (0 : LargeInt.int)
-val t_raw_write_ms    = ref (0 : LargeInt.int)
-val t_dedup_ms        = ref (0 : LargeInt.int)
-val t_prune_ms        = ref (0 : LargeInt.int)
-val t_opt_write_ms    = ref (0 : LargeInt.int)
-val t_total_ms        = ref (0 : LargeInt.int)
+val t_reachability_ms = ref 0
+val t_raw_write_ms    = ref 0
+val t_dedup_ms        = ref 0
+val t_prune_ms        = ref 0
+val t_opt_write_ms    = ref 0
+val t_total_ms        = ref 0
 
 fun timings () = {
   n_exports       = !t_n_exports,
@@ -49,17 +49,21 @@ fun reset_timings () = (
   t_opt_write_ms := 0;
   t_total_ms := 0)
 
+(* Portable: Time.toMilliseconds returns LargeInt.int which Moscow ML
+   lacks. Time.toReal is universally available. *)
+fun time_to_ms t = Real.floor(Time.toReal t * 1000.0)
+
 fun timed acc f =
   if !bench_mode then
     let val t0 = Timer.startRealTimer ()
         val result = f ()
-        val elapsed = Time.toMilliseconds (Timer.checkRealTimer t0)
+        val elapsed = time_to_ms (Timer.checkRealTimer t0)
     in acc := !acc + elapsed; result end
   else f ()
 
 fun checkpoint acc timer =
   if !bench_mode then
-    acc := !acc + Time.toMilliseconds (Timer.checkRealTimer timer)
+    acc := !acc + time_to_ms (Timer.checkRealTimer timer)
   else ()
 
 type export_args = {
@@ -198,20 +202,35 @@ fun shell_quote s =
   "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
 
 (* -----------------------------------------------------------------------
-   Compression: prefer zstd, fallback to gzip
+   Compression: prefer zstd, fallback to gzip, then uncompressed.
+   Compression is optional for portability (F2 review feedback).
    ----------------------------------------------------------------------- *)
 
-val (compress_ext, compress_cmd) =
-  let val p : (TextIO.instream, TextIO.outstream) Unix.proc =
-        Unix.execute("/bin/sh",
-          ["-c", "echo x | zstd -c > /dev/null 2>/dev/null"])
-      val st = Unix.reap p
-  in if OS.Process.isSuccess st
-     then (".zst", fn path => "zstd -c -q > " ^ path)
-     else (".gz", fn path => "gzip > " ^ path)
+datatype compress_mode = CM_ZSTD | CM_GZIP | CM_NONE
+
+val compress_mode : compress_mode =
+  let
+    fun try_cmd cmd =
+      let val p : (TextIO.instream, TextIO.outstream) Unix.proc =
+            Unix.execute("/bin/sh", ["-c", cmd])
+          val st = Unix.reap p
+      in OS.Process.isSuccess st end
+      handle _ => false
+  in
+    if try_cmd "echo x | zstd -c > /dev/null 2>/dev/null"
+    then CM_ZSTD
+    else if try_cmd "echo x | gzip > /dev/null 2>/dev/null"
+    then CM_GZIP
+    else CM_NONE
   end
-  handle _ =>
-    (".gz", fn path => "gzip > " ^ path)
+
+fun compress_ext () = case compress_mode of
+    CM_ZSTD => ".zst" | CM_GZIP => ".gz" | CM_NONE => ""
+
+fun compress_cmd path = case compress_mode of
+    CM_ZSTD => "zstd -c -q > " ^ path
+  | CM_GZIP => "gzip > " ^ path
+  | CM_NONE => raise ERR "compress_cmd" "no compressor"
 
 (* -----------------------------------------------------------------------
    FNV-1a 64-bit hash for step deduplication
@@ -291,19 +310,34 @@ fun export ({thyname, thy_parents, exports = all_thms,
     val objdir = ".hol/objs"
     val _ = (OS.FileSys.mkDir ".hol" handle OS.SysErr _ => ())
     val _ = (OS.FileSys.mkDir objdir handle OS.SysErr _ => ())
-    val outname = objdir ^ "/" ^ thyname ^ "Theory.pftrace" ^ compress_ext
+    val outname = objdir ^ "/" ^ thyname ^ "Theory.pftrace" ^ compress_ext ()
 
-    fun open_compress path =
-      let val p : (TextIO.instream, TextIO.outstream) Unix.proc =
-            Unix.execute("/bin/sh", ["-c", compress_cmd (shell_quote path)])
-      in (Unix.textOutstreamOf p, p) end
-    fun close_compress (ostrm, p) =
-      let val _ = TextIO.closeOut ostrm
-          val st = Unix.reap p
-      in if not (OS.Process.isSuccess st)
-         then raise ERR "export" "compressor failed"
-         else ()
-      end
+    (* Output abstraction: compressor pipe or direct file *)
+    datatype out_handle =
+        OH_PIPE of TextIO.outstream *
+                   (TextIO.instream, TextIO.outstream) Unix.proc
+      | OH_FILE of TextIO.outstream
+
+    fun open_output path =
+      case compress_mode of
+        CM_NONE => OH_FILE (TextIO.openOut path)
+      | _ =>
+        let val p : (TextIO.instream, TextIO.outstream) Unix.proc =
+              Unix.execute("/bin/sh",
+                ["-c", compress_cmd (shell_quote path)])
+        in OH_PIPE (Unix.textOutstreamOf p, p) end
+
+    fun out_stream (OH_PIPE (s, _)) = s
+      | out_stream (OH_FILE s) = s
+
+    fun close_output (OH_PIPE (ostrm, p)) =
+          let val _ = TextIO.closeOut ostrm
+              val st = Unix.reap p
+          in if not (OS.Process.isSuccess st)
+             then raise ERR "export" "compressor failed"
+             else ()
+          end
+      | close_output (OH_FILE s) = TextIO.closeOut s
 
     (* --- Parameterized trace writer --- *)
     fun write_body ostrm
@@ -334,13 +368,15 @@ fun export ({thyname, thy_parents, exports = all_thms,
         TextIO.output(ostrm, "THEORY " ^ escape_string thyname ^ "\n");
         TextIO.output(ostrm, "PARENTS " ^
           String.concatWith " " (map escape_string thy_parents) ^ "\n");
-        (* Best-effort ancestor digests *)
+        (* Best-effort ancestor digests (optional, skipped if no sha256sum) *)
         List.app (fn par =>
           let val pbase = objdir ^ "/" ^ par ^ "Theory.pftrace"
               val p = if OS.FileSys.access(pbase ^ ".zst", [])
                       then SOME (pbase ^ ".zst")
                       else if OS.FileSys.access(pbase ^ ".gz", [])
                       then SOME (pbase ^ ".gz")
+                      else if OS.FileSys.access(pbase, [])
+                      then SOME pbase
                       else NONE
           in
             case p of NONE => ()
@@ -442,9 +478,10 @@ fun export ({thyname, thy_parents, exports = all_thms,
           end) all_thms
       end
 
-    (* === Phase 1: Write raw trace (always valid) via compress pipe === *)
+    (* === Phase 1: Write raw trace (always valid) === *)
     val _ = timed t_raw_write_ms (fn () =>
-      let val (os1, p1) = open_compress outname
+      let val oh1 = open_output outname
+          val os1 = out_stream oh1
       in (write_body os1
                {step_count = n_live, step_offset = n_live,
                 type_live_fn = fn _ => true,
@@ -453,8 +490,8 @@ fun export ({thyname, thy_parents, exports = all_thms,
                 step_outid = fn did => did,
                 renumber = fn did => its did,
                 export_outid = fn did => did};
-             close_compress (os1, p1))
-            handle e => (close_compress (os1, p1) handle _ => (); raise e)
+             close_output oh1)
+            handle e => (close_output oh1 handle _ => (); raise e)
       end)
 
     (* === Phase 2: Try optimized export (pruning + dedup) === *)
@@ -595,7 +632,8 @@ fun export ({thyname, thy_parents, exports = all_thms,
        (* Write optimized trace to temp file, then rename over raw *)
        val _ = timed t_opt_write_ms (fn () =>
          let val tmpgz = outname ^ ".tmp"
-             val (os2, p2) = open_compress tmpgz
+             val oh2 = open_output tmpgz
+             val os2 = out_stream oh2
          in (write_body os2
                   {step_count = n_unique, step_offset = n_unique,
                    type_live_fn = fn i => Array.sub(live_ty, i),
@@ -605,9 +643,9 @@ fun export ({thyname, thy_parents, exports = all_thms,
                    step_outid = fn did => Array.sub(output_id, did),
                    renumber = fn did => its (opt_outid did),
                    export_outid = opt_outid};
-                close_compress (os2, p2))
+                close_output oh2)
                handle e =>
-                 (close_compress (os2, p2) handle _ => (); raise e);
+                 (close_output oh2 handle _ => (); raise e);
             OS.FileSys.rename {old = tmpgz, new = outname}
          end)
      in
@@ -622,17 +660,16 @@ fun export ({thyname, thy_parents, exports = all_thms,
   in
     (if !bench_mode then
        let val elapsed =
-             Time.toMilliseconds (Timer.checkRealTimer t_export_start)
-           val li = LargeInt.toString
+             time_to_ms (Timer.checkRealTimer t_export_start)
        in t_total_ms := !t_total_ms + elapsed;
           t_n_exports := !t_n_exports + 1;
           print ("TRACE_BENCH: " ^ thyname ^
-                 " total=" ^ li elapsed ^
-                 " reach=" ^ li (!t_reachability_ms) ^
-                 " raw=" ^ li (!t_raw_write_ms) ^
-                 " dedup=" ^ li (!t_dedup_ms) ^
-                 " prune=" ^ li (!t_prune_ms) ^
-                 " opt=" ^ li (!t_opt_write_ms) ^ "\n");
+                 " total=" ^ its elapsed ^
+                 " reach=" ^ its (!t_reachability_ms) ^
+                 " raw=" ^ its (!t_raw_write_ms) ^
+                 " dedup=" ^ its (!t_dedup_ms) ^
+                 " prune=" ^ its (!t_prune_ms) ^
+                 " opt=" ^ its (!t_opt_write_ms) ^ "\n");
           reset_timings ()
        end
      else ());
