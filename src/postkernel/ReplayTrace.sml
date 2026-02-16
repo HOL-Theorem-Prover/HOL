@@ -35,6 +35,11 @@ fun unescape s =
         | go (#"\\" :: #"\"" :: rest) acc = go rest (#"\"" :: acc)
         | go (#"\\" :: #"\\" :: rest) acc = go rest (#"\\" :: acc)
         | go (#"\\" :: #"n" :: rest) acc = go rest (#"\n" :: acc)
+        | go (#"\\" :: #"x" :: h1 :: h2 :: rest) acc =
+            (case Int.scan StringCvt.HEX Substring.getc
+                    (Substring.full (String.implode [h1, h2])) of
+               SOME (n, _) => go rest (Char.chr n :: acc)
+             | NONE => go rest (h2 :: h1 :: #"x" :: #"\\" :: acc))
         | go (c :: rest) acc = go rest (c :: acc)
     in go (String.explode inner) [] end
   else s
@@ -481,11 +486,19 @@ fun replay_steps term_arr type_arr (lines : string list)
                   Thm.mk_oracle_thm "REPLAY_COMPUTE" ([], expected_concl)
             end
         | "TRUST" =>
-            (* operands: global_id [concl nhyps hyps...] *)
+            (* operands: global_id [thy_name] concl nhyps hyps...
+               thy_name is optional; if present it's a non-integer token *)
             if length operands >= 2
-            then mk_trust_thm (tl operands)  (* skip global_id *)
+            then let val rest = tl operands  (* skip global_id *)
+                     (* Skip optional thy_name (non-integer token) *)
+                     val stmt = case rest of
+                         (tok :: more) =>
+                           (case Int.fromString tok of
+                              SOME _ => rest  (* no thy_name *)
+                            | NONE => more)   (* skip thy_name *)
+                       | _ => rest
+                 in mk_trust_thm stmt end
             else
-              (* No statement: try ancestor context by global_id *)
               raise ERR "replay_steps"
                    ("TRUST entry without statement at step " ^ id_s)
         | other => raise ERR "replay_steps" ("unknown rule: " ^ other)

@@ -15,7 +15,7 @@ sig
        types       - interned type list (reverse order from kernel)
        terms       - interned term list (reverse order from kernel)
        counter     - current trace step counter
-       ext_cache   - external thm cache (global_id -> (hyps, concl))
+       ext_cache   - external thm cache (global_id -> (hyps, concl, source_thy))
        steps_path  - path to temp steps file
        parents_path - path to temp parents file
        thm_id      - function to extract trace_id from a thm
@@ -28,12 +28,30 @@ sig
     types        : Type.hol_type list,
     terms        : Term.term list,
     counter      : int,
-    ext_cache    : (int, Term.term list * Term.term) Redblackmap.dict,
+    ext_cache    : (int, Term.term list * Term.term * string option)
+                   Redblackmap.dict,
     steps_path   : string,
     parents_path : string,
     thm_id       : Thm.thm -> int
   }
 
   val export : export_args -> unit
+
+  (* Set to true to collect per-phase timing data during export.
+     Off by default (zero overhead). Toggle on in bench scripts. *)
+  val bench_mode : bool ref
+
+  (* Accumulated timing data (milliseconds) across all export calls.
+     Only populated when bench_mode is true. *)
+  val timings : unit -> {
+    n_exports       : int,      (* number of theories exported *)
+    reachability_ms : LargeInt.int,  (* mark_live + renumber *)
+    raw_write_ms    : LargeInt.int,  (* phase 1: raw trace through compressor *)
+    dedup_ms        : LargeInt.int,  (* FNV scan + dedup_to mapping *)
+    prune_ms        : LargeInt.int,  (* type/term reachability *)
+    opt_write_ms    : LargeInt.int,  (* phase 2: optimized trace through compressor *)
+    total_ms        : LargeInt.int   (* total export time *)
+  }
+  val reset_timings : unit -> unit
 
 end

@@ -46,7 +46,7 @@ sig
     | TR_AXIOM       of thm * term
     | TR_DEF_TYOP    of thm * thm * string * string
     | TR_DEF_SPEC    of thm * thm
-    | TR_DISK_THM    of thm
+    | TR_DISK_THM    of thm * string
     | TR_COMPUTE     of thm * thm list * term * term
   val trace_hook : (trace_step -> unit) option ref
   val trace_export_hook :

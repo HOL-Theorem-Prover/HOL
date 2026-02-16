@@ -109,8 +109,15 @@ fun get_parents () = case !parents_strm of
    External thm cache: parent thms from ancestor theories
    ----------------------------------------------------------------------- *)
 
-val ext_thm_cache : (int, term list * term) Redblackmap.dict ref =
+(* Maps thm_id → (hyps, concl, source_theory_opt) *)
+val ext_thm_cache : (int, term list * term * string option) Redblackmap.dict ref =
   ref (Redblackmap.mkDict Int.compare)
+
+fun thm_src_theory thm =
+  (case Tag.dep_of (Thm.tag thm) of
+     Dep.DEP_SAVED (did, _) => SOME (Dep.depthy_of did)
+   | _ => NONE)
+  handle _ => NONE
 
 fun cache_ext_parents parent_thms =
   let val base = !Thm.trace_counter - !lines_written
@@ -123,17 +130,18 @@ fun cache_ext_parents parent_thms =
            SOME _ => ()
          | NONE =>
            let val (hyp_list, c) = Thm.dest_thm thm
+               val thy_opt = thm_src_theory thm
            in ignore (iT c);
               List.app (ignore o iT) hyp_list;
               ext_thm_cache :=
                 Redblackmap.insert(!ext_thm_cache, id,
-                                   (hyp_list, c))
+                                   (hyp_list, c, thy_opt))
            end)
         else ()
       end) parent_thms
   end
 
-fun cache_ext_thm thm =
+fun cache_ext_thm_with_thy thm thy_opt =
   case Redblackmap.peek(!ext_thm_cache, Thm.trace_id thm) of
     SOME _ => ()
   | NONE =>
@@ -142,8 +150,10 @@ fun cache_ext_thm thm =
        List.app (ignore o iT) hyp_list;
        ext_thm_cache :=
          Redblackmap.insert(!ext_thm_cache, Thm.trace_id thm,
-                            (hyp_list, c))
+                            (hyp_list, c, thy_opt))
     end
+
+fun cache_ext_thm thm = cache_ext_thm_with_thy thm NONE
 
 (* -----------------------------------------------------------------------
    Cleanup and file management
@@ -333,8 +343,9 @@ fun record_hook (step : Thm.trace_step) =
                     its (iT (Thm.concl result))) [thm]
   | Thm.TR_DEF_SPEC (result, th) =>
       record_step ("DEF_SPEC " ^ its (iT (Thm.concl result))) [th]
-  | Thm.TR_DISK_THM result =>
-      record_step ("DISK_THM " ^ fmt_thm_stmt result) []
+  | Thm.TR_DISK_THM (result, src_thy) =>
+      (cache_ext_thm_with_thy result (SOME src_thy);
+       record_step ("DISK_THM " ^ fmt_thm_stmt result) [])
   | Thm.TR_COMPUTE (_, parents, tm, eqn) =>
       record_step ("COMPUTE " ^ its (iT tm) ^ " " ^ its (iT eqn)) parents
 
@@ -388,5 +399,8 @@ fun trace_step_count () = !Thm.trace_counter
 val _ = Thm.trace_hook := SOME record_hook
 val _ = Thm.trace_export_hook := SOME export_hook
 val _ = OS.Process.atExit cleanup
+val _ = case OS.Process.getEnv "HOL_TRACE_BENCHMARKS" of
+          SOME _ => TraceExport.bench_mode := true
+        | NONE => ()
 
 end (* structure TraceRecord *)

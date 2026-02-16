@@ -172,7 +172,7 @@ datatype trace_step =
   | TR_AXIOM       of thm * term
   | TR_DEF_TYOP    of thm * thm * string * string
   | TR_DEF_SPEC    of thm * thm
-  | TR_DISK_THM    of thm
+  | TR_DISK_THM    of thm * string  (* thm, source_theory *)
   | TR_COMPUTE     of thm * thm list * term * term
 
 (* Proof trace hook: called after each inference rule.
@@ -1401,8 +1401,9 @@ fun disk_thm ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
   val result = mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
+  val (src_thy, _) = fst d
 in
-  tr (TR_DISK_THM result); result
+  tr (TR_DISK_THM (result, src_thy)); result
 end
 end; (* local *)
 

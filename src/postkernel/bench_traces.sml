@@ -161,6 +161,7 @@ val _ = print ("Chain (" ^ chain_thy ^ "): " ^
                LargeInt.toString chain_ms ^ " ms (" ^
                its (#ok chain_result) ^ " ok, " ^
                its (#fail chain_result) ^ " fail)\n");
+val _ = print "(Export phase breakdown: run bench_build.sh)\n";
 val _ = print "========================================\n";
 
 val _ = OS.Process.exit (if !n_fail = 0 andalso #fail chain_result = 0

@@ -19,6 +19,49 @@ val ERR = mk_HOL_ERR "TraceExport"
 
 val its = Int.toString
 
+(* --- Timing accumulators (only active when bench_mode = true) --- *)
+val bench_mode = ref false
+
+val t_n_exports       = ref 0
+val t_reachability_ms = ref (0 : LargeInt.int)
+val t_raw_write_ms    = ref (0 : LargeInt.int)
+val t_dedup_ms        = ref (0 : LargeInt.int)
+val t_prune_ms        = ref (0 : LargeInt.int)
+val t_opt_write_ms    = ref (0 : LargeInt.int)
+val t_total_ms        = ref (0 : LargeInt.int)
+
+fun timings () = {
+  n_exports       = !t_n_exports,
+  reachability_ms = !t_reachability_ms,
+  raw_write_ms    = !t_raw_write_ms,
+  dedup_ms        = !t_dedup_ms,
+  prune_ms        = !t_prune_ms,
+  opt_write_ms    = !t_opt_write_ms,
+  total_ms        = !t_total_ms
+}
+
+fun reset_timings () = (
+  t_n_exports := 0;
+  t_reachability_ms := 0;
+  t_raw_write_ms := 0;
+  t_dedup_ms := 0;
+  t_prune_ms := 0;
+  t_opt_write_ms := 0;
+  t_total_ms := 0)
+
+fun timed acc f =
+  if !bench_mode then
+    let val t0 = Timer.startRealTimer ()
+        val result = f ()
+        val elapsed = Time.toMilliseconds (Timer.checkRealTimer t0)
+    in acc := !acc + elapsed; result end
+  else f ()
+
+fun checkpoint acc timer =
+  if !bench_mode then
+    acc := !acc + Time.toMilliseconds (Timer.checkRealTimer timer)
+  else ()
+
 type export_args = {
   thyname      : string,
   thy_parents  : string list,
@@ -26,7 +69,7 @@ type export_args = {
   types        : hol_type list,
   terms        : term list,
   counter      : int,
-  ext_cache    : (int, term list * term) Redblackmap.dict,
+  ext_cache    : (int, term list * term * string option) Redblackmap.dict,
   steps_path   : string,
   parents_path : string,
   thm_id       : thm -> int
@@ -80,7 +123,13 @@ fun escape_string s =
   if CharVector.all (fn c => Char.isPrint c andalso c <> #" ") s
   then s
   else "\"" ^ String.translate
-     (fn #"\"" => "\\\"" | #"\\" => "\\\\" | #"\n" => "\\n" | c => str c) s
+     (fn #"\"" => "\\\""
+       | #"\\" => "\\\\"
+       | #"\n" => "\\n"
+       | c => if Char.ord c < 0x20
+              then let val h = Int.fmt StringCvt.HEX (Char.ord c)
+                   in "\\x" ^ (if size h = 1 then "0" ^ h else h) end
+              else str c) s
        ^ "\""
 
 (* Detect retired/old constant names: oldN->original_name<-old *)
@@ -196,11 +245,20 @@ fun export ({thyname, thy_parents, exports = all_thms,
     val n_file_lines = count_lines steps_path
     val _ = if n_file_lines = 0 then raise ERR "export" "no steps"
             else ()
+    val n_parent_lines = count_lines parents_path
+    val _ = if n_parent_lines <> n_file_lines then
+              raise ERR "export"
+                ("line count mismatch: steps=" ^ its n_file_lines ^
+                 " parents=" ^ its n_parent_lines)
+            else ()
     val base = counter - n_file_lines
+    val t_export_start = Timer.startRealTimer ()
     val root_ids = map (fn (_, th) => thm_id th) all_thms
-    val parents = read_parents parents_path n_file_lines
-    val live = mark_live parents base root_ids
-    val (remap, n_live) = build_renumber live
+    val (parents, live, remap, n_live) = timed t_reachability_ms (fn () =>
+      let val parents = read_parents parents_path n_file_lines
+          val live = mark_live parents base root_ids
+          val (remap, n_live) = build_renumber live
+      in (parents, live, remap, n_live) end)
 
     (* Collect external IDs *)
     val ext_set = ref (Redblackset.empty Int.compare)
@@ -343,18 +401,24 @@ fun export ({thyname, thy_parents, exports = all_thms,
         (* Trust entries *)
         List.app (fn eid =>
           let val did = valOf (Redblackmap.peek(ext_rm, eid))
-              val stmt = case Redblackmap.peek(ext_cache, eid) of
-                  SOME (hyps, c) =>
+              val (thy_prefix, stmt) =
+                case Redblackmap.peek(ext_cache, eid) of
+                  SOME (hyps, c, thy_opt) =>
                     let val c_id = tm_lookup c
                         val h_ids = map tm_lookup hyps
-                    in " " ^ its c_id ^ " " ^ its (length h_ids) ^
-                       (if null h_ids then ""
-                        else " " ^ String.concatWith " "
-                                     (map its h_ids))
-                    end
-                | NONE => ""
+                        val tp = case thy_opt of
+                            SOME t => " " ^ escape_string t
+                          | NONE => ""
+                        val st = " " ^ its c_id ^ " " ^
+                                 its (length h_ids) ^
+                                 (if null h_ids then ""
+                                  else " " ^ String.concatWith " "
+                                               (map its h_ids))
+                    in (tp, st) end
+                | NONE => ("", "")
           in TextIO.output(ostrm,
-               "P " ^ its did ^ " TRUST " ^ its eid ^ stmt ^ "\n")
+               "P " ^ its did ^ " TRUST " ^ its eid ^
+               thy_prefix ^ stmt ^ "\n")
           end) ext_ids;
         TextIO.output(ostrm, "\n");
 
@@ -379,8 +443,9 @@ fun export ({thyname, thy_parents, exports = all_thms,
       end
 
     (* === Phase 1: Write raw trace (always valid) via compress pipe === *)
-    val (os1, p1) = open_compress outname
-    val _ = (write_body os1
+    val _ = timed t_raw_write_ms (fn () =>
+      let val (os1, p1) = open_compress outname
+      in (write_body os1
                {step_count = n_live, step_offset = n_live,
                 type_live_fn = fn _ => true,
                 term_live_fn = fn _ => true,
@@ -390,10 +455,12 @@ fun export ({thyname, thy_parents, exports = all_thms,
                 export_outid = fn did => did};
              close_compress (os1, p1))
             handle e => (close_compress (os1, p1) handle _ => (); raise e)
+      end)
 
     (* === Phase 2: Try optimized export (pruning + dedup) === *)
     val (n_final, n_deduped, n_live_types, n_live_terms) =
     (let
+       val t2_start = Timer.startRealTimer ()  (* bench_mode gated below *)
        val hash_arr = Array.array(n_live, fnv_offset)
        val dedup_to = Array.tabulate(n_live, fn i => i)
        val cmap = ref (Redblackmap.mkDict Word64.compare
@@ -460,6 +527,9 @@ fun export ({thyname, thy_parents, exports = all_thms,
               scan (fp + 1))
        in scan 0; TextIO.closeIn instrm; !refs end
 
+       val _ = checkpoint t_dedup_ms t2_start
+       val t3_start = Timer.startRealTimer ()
+
        val output_id = Array.array(n_live, ~1)
        val n_unique = let val next = ref 0 in
          Array.appi (fn (i, _) =>
@@ -482,7 +552,7 @@ fun export ({thyname, thy_parents, exports = all_thms,
        in
          List.app (fn eid =>
            case Redblackmap.peek(ext_cache, eid) of
-             SOME (hyps, c) =>
+             SOME (hyps, c, _) =>
                (refs := Redblackset.add(!refs, tm_lookup c);
                 List.app (fn h =>
                   refs := Redblackset.add(!refs, tm_lookup h)) hyps)
@@ -520,10 +590,13 @@ fun export ({thyname, thy_parents, exports = all_thms,
        val nlt = Array.foldl (fn (b,n) => if b then n+1 else n) 0 live_ty
        val nlm = Array.foldl (fn (b,n) => if b then n+1 else n) 0 live_tm
 
+       val _ = checkpoint t_prune_ms t3_start
+
        (* Write optimized trace to temp file, then rename over raw *)
-       val tmpgz = outname ^ ".tmp"
-       val (os2, p2) = open_compress tmpgz
-       val _ = (write_body os2
+       val _ = timed t_opt_write_ms (fn () =>
+         let val tmpgz = outname ^ ".tmp"
+             val (os2, p2) = open_compress tmpgz
+         in (write_body os2
                   {step_count = n_unique, step_offset = n_unique,
                    type_live_fn = fn i => Array.sub(live_ty, i),
                    term_live_fn = fn i => Array.sub(live_tm, i),
@@ -534,8 +607,9 @@ fun export ({thyname, thy_parents, exports = all_thms,
                    export_outid = opt_outid};
                 close_compress (os2, p2))
                handle e =>
-                 (close_compress (os2, p2) handle _ => (); raise e)
-       val _ = OS.FileSys.rename {old = tmpgz, new = outname}
+                 (close_compress (os2, p2) handle _ => (); raise e);
+            OS.FileSys.rename {old = tmpgz, new = outname}
+         end)
      in
        (n_unique, n_live - n_unique, nlt, nlm)
      end)
@@ -546,9 +620,26 @@ fun export ({thyname, thy_parents, exports = all_thms,
        (OS.FileSys.remove (outname ^ ".tmp") handle _ => ());
        (n_live, 0, n_types, n_terms))
   in
+    (if !bench_mode then
+       let val elapsed =
+             Time.toMilliseconds (Timer.checkRealTimer t_export_start)
+           val li = LargeInt.toString
+       in t_total_ms := !t_total_ms + elapsed;
+          t_n_exports := !t_n_exports + 1;
+          print ("TRACE_BENCH: " ^ thyname ^
+                 " total=" ^ li elapsed ^
+                 " reach=" ^ li (!t_reachability_ms) ^
+                 " raw=" ^ li (!t_raw_write_ms) ^
+                 " dedup=" ^ li (!t_dedup_ms) ^
+                 " prune=" ^ li (!t_prune_ms) ^
+                 " opt=" ^ li (!t_opt_write_ms) ^ "\n");
+          reset_timings ()
+       end
+     else ());
     Feedback.HOL_MESG ("Proof trace: " ^ outname ^ " (" ^
       its n_final ^ " steps" ^
-      (if n_deduped > 0 then " [" ^ its n_deduped ^ " deduped]" else "") ^
+      (if n_deduped > 0 then " [" ^ its n_deduped ^ " deduped]"
+       else "") ^
       " + " ^ its n_ext ^ " trust, " ^
       its n_live_terms ^ "/" ^ its n_terms ^ " terms, " ^
       its n_live_types ^ "/" ^ its n_types ^ " types)")
