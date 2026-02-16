@@ -46,13 +46,26 @@ Proof
 QED
 
 Theorem SING_CARDLE:
-  {x} ≼ A ⇔ A ≠ ∅
+  ({x} ≼ A ⇔ A ≠ ∅) ∧ ((=) x ≼ A ⇔ A ≠ ∅)
 Proof
+  ‘(=) x = {x}’ by MATCH_ACCEPT_TAC EQ_SING >> simp[] >>
   simp[EQ_IMP_THM, INJ_DEF, cardleq_def, GSYM MEMBER_NOT_EMPTY] >>
   rpt strip_tac >~
   [‘∃f. f x ∈ A’, ‘a ∈ A (* a *)’]
   >- (qexists_tac ‘K a’ >> simp[]) >>
   first_assum $ irule_at Any
+QED
+
+Theorem IMAGE_KEMPTY_CARDLE:
+  IMAGE (K ∅) A ≼ B ⇔ A = ∅ ∨ B ≠ ∅
+Proof
+  simp[EQ_IMP_THM, DISJ_IMP_THM] >> Cases_on ‘A = ∅’ >> simp[] >>
+  Cases_on ‘B = ∅’ >> simp[] >>
+  ‘IMAGE (K ∅) A = {∅}’
+    by (simp[Once EXTENSION] >> simp[EQ_IMP_THM, PULL_EXISTS] >>
+        RULE_ASSUM_TAC (REWRITE_RULE[GSYM MEMBER_NOT_EMPTY]) >>
+        simp[]) >>
+  simp[SING_CARDLE]
 QED
 
 Theorem IN_equal:
@@ -147,9 +160,11 @@ QED
 
 
 val _ = bnfBase.updateDB (
-  “:'a1 + 'a2”,
+  {Name = "sum", Thy = "sum"},
   bnfBase.bI {
+    canontype = “:'a1 + 'a2”,
     siblings = [],
+
 
     map = “SUM_MAP : ('a1 -> 'c1) -> ('a2 -> 'c2) -> 'a1 + 'a2 -> 'c1 + 'c2”,
     mapID = pnm "sumMap_ID",
@@ -234,9 +249,11 @@ Proof
 QED
 
 val _ = bnfBase.updateDB (
-  “:'a1 # 'a2”,
+  {Thy = "pair", Name = "prod"},
   bnfBase.bI {
+    canontype = “:'a1 # 'a2”,
     siblings = [],
+
     map = “pair$## : ('a1 -> 'c1) -> ('a2 -> 'c2) -> 'a1 # 'a2 -> 'c1 # 'c2”,
     set = [“setFST : 'a1 # 'a2 -> 'a1 set”, “setSND : 'a1 # 'a2 -> 'a2 set”],
     mapID = pnm "pairMap_ID",
@@ -318,8 +335,9 @@ Proof
 QED
 
 val _ = bnfBase.updateDB (
-  “:'b1 -> 'a1”,
+  {Thy = "min", Name = "fun"},
   bnfBase.bI {
+    canontype = “:'b1 -> 'a1”,
     siblings = [],
     map = “combin$o : ('a1 -> 'c1) -> ('b1 -> 'a1) -> ('b1 -> 'c1)”,
     set = [“fset: ('b1 -> 'a1) -> 'a1 set”],
@@ -410,8 +428,9 @@ Proof
 QED
 
 val _ = bnfBase.updateDB (
-  “:'a1 option”,
+  {Thy = "option", Name = "option"},
   bnfBase.bI {
+    canontype = “:'a1 option”,
     siblings = [],
     map = “option$OPTION_MAP : ('a1 -> 'c1) -> 'a1 option -> 'c1 option”,
     set = [“optSET : 'a1 option -> 'a1 set”],

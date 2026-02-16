@@ -2,10 +2,14 @@ Theory loadBNFPrelims[bare]
 Ancestors
   bnfPrelims
 Libs
-  bnfBase
+  HolKernel bnfBase
 
 Theorem foo = boolTheory.TRUTH
 
-val _ = Lib.assert isSome (bnfBase.pure_lookup (bnfBase.fullDB()) “:'a1 + 'a2”)
-val _ = Lib.assert isSome (bnfBase.pure_lookup (bnfBase.fullDB()) “:'a1 # 'a2”)
-val _ = Lib.assert isSome (bnfBase.pure_lookup (bnfBase.fullDB()) “:'b1 -> 'a1”)
+val db = bnfBase.fullDB()
+val _ = app (fn knm => ignore $ Lib.assert isSome $ bnfBase.pure_lookup db knm)
+  [{Name = "sum", Thy = "sum"},
+   {Name = "prod", Thy = "pair"},
+   {Name = "fun", Thy = "min"},
+   {Name = "option", Thy = "option"}
+  ]

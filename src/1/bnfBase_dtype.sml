@@ -9,6 +9,7 @@ type kname = KernelSig.kernelname
 *)
 datatype 'a info = bI of {
   siblings : hol_type list, (* types I'm mutually recursive with *)
+  canontype : hol_type,     (* canonical expression of type, see below *)
   map : term,               (* type's map term *)
   set : term list,          (* type's set terms *)
   gset : term,              (* type's "generic set term" *)
@@ -32,6 +33,7 @@ datatype 'a info = bI of {
 In all situations, functors have "genuine" type variable arguments with names
 'a1, 'a2 etc.  Other ("constant") type variables have names 'b1, 'b2 etc.
 These are written α₁, β₂, etc below.  ('c is γ, 'd is δ)
+This is the "canonical" type.
 
 As user gets to choose names for them, there is no fixed naming scheme
 for the constants.

@@ -3,33 +3,39 @@ struct
 
 open HolKernel bnfBase_dtype parse_bnf
 
-type t = thm info TypeNet.typenet
+type t = thm info KNametab.table
+type key = KernelSig.kernelname
 
-fun pure_lookup db ty = TypeNet.peek (db,ty)
+fun pure_lookup db tynm = KNametab.lookup db tynm
 
-fun pure_insert db ty info = TypeNet.insert(db,ty,info)
+fun pure_insert (tynm, info) db = KNametab.update (tynm,info) db
 
 fun kname_to_thm_info (bI fields :kname info) : thm info =
    let
-     val {map,set,gset,relator,bnd,mapID,mapO,mapIMAGE,mapCONG,bndthms,siblings,
-          gsetmap, gsetIMAGE} =
+     val {bnd,bndthms,canontype,gset,gsetIMAGE,gsetmap,
+          map,mapID,mapO,mapIMAGE,mapCONG,
+          relator,set,siblings} =
          fields
      val convertN = DB.fetch_knm
    in
      bI {
-       siblings = siblings,
-       map = map,
-       set = set,
-       relator = relator,
        bnd = bnd,
+       bndthms = List.map convertN bndthms,
+       canontype = canontype,
+
        gset = gset,
-       mapID = convertN mapID,
-       mapO = convertN mapO,
-       mapIMAGE = List.map convertN mapIMAGE,
-       mapCONG = convertN mapCONG,
-       gsetmap = convertN gsetmap,
        gsetIMAGE = convertN gsetIMAGE,
-       bndthms = List.map convertN bndthms
+       gsetmap = convertN gsetmap,
+
+       map = map,
+       mapCONG = convertN mapCONG,
+       mapID = convertN mapID,
+       mapIMAGE = List.map convertN mapIMAGE,
+       mapO = convertN mapO,
+
+       relator = relator,
+       set = set,
+       siblings = siblings
      }
    end
 
@@ -41,18 +47,20 @@ in
   fun tup2rec ((siblings,map,set,gset),
                (relator,bnd,bndthms),
                (mapO,mapID,mapIMAGE,mapCONG),
-               (gsetmap, gsetIMAGE)
+               (canontype, gsetmap, gsetIMAGE)
               ) =
       bI {siblings = siblings, map = map, set = set, gset = gset,
           relator = relator, bnd = bnd, mapO = mapO, mapID = mapID,
           mapIMAGE = mapIMAGE, mapCONG = mapCONG, bndthms = bndthms,
-          gsetmap = gsetmap, gsetIMAGE = gsetIMAGE}
-  fun rec2tup (bI {siblings , map, set, gset, relator, bnd, mapO, mapID,
-                   mapIMAGE, mapCONG, bndthms, gsetmap, gsetIMAGE}) =
+          gsetmap = gsetmap, gsetIMAGE = gsetIMAGE, canontype = canontype}
+  fun rec2tup (bI {siblings , map, set, gset,
+                   relator, bnd, mapO, mapID,
+                   mapIMAGE, mapCONG, bndthms,
+                   gsetmap, gsetIMAGE, canontype}) =
       ((siblings,map,set,gset),
        (relator,bnd,bndthms),
        (mapO,mapID,mapIMAGE,mapCONG),
-       (gsetmap, gsetIMAGE))
+       (canontype,gsetmap, gsetIMAGE))
 
 
   val ed0 = pair4_ed (
@@ -67,40 +75,20 @@ in
                   add_label "mapO" kname_ed,
                   add_label "mapIMAGE" $ list_ed kname_ed,
                   add_label "mapCONG" kname_ed),
-        pair_ed (add_label "gsetmap" kname_ed, add_label "gsetIMAGE" kname_ed)
+        pair3_ed (add_label "canontype" type_ed,
+                  add_label "gsetmap" kname_ed,
+                  add_label "gsetIMAGE" kname_ed)
       )
   val ed1 = bij_ed (rec2tup, tup2rec) ed0
-  val bnf_ed = pair_ed (type_ed, ed1)
+  val bnf_ed = pair_ed (kname_ed, ed1)
 end
-
-(*
-(*tests*)
-local open listTheory
-val list_map_tm = ``MAP``
-val list_map_def = { Thy = "list", Name = "MAP"}
-val list_set1_tm = ``LIST_TO_SET``
-val list_set1_def = {Thy = "list", Name = "LIST_TO_SET"}
-val list_relator_tm = ``LIST_REL``
-val list_relator_def = {Thy = "list", Name = "LIST_REL_DEF"}
-val bound_tm = T
-in
-val list_bi = bI {siblings = [], map = (list_map_tm,list_map_def),
-                  set = [(list_set1_tm,list_set1_def)],
-                  relator = (list_relator_tm, list_relator_def),
-                  bnd = bound_tm}
-end
-val test = toSEXP (``:'a list``,list_bi)
-val SOME test2 = fromSEXP test
-(*test2 should be equal to list_bi *)
-*)
 
 local
-  val empty_t = TypeNet.empty : t
-  fun apply_delta (ty,info) db = pure_insert db ty (kname_to_thm_info info)
+  val empty_t = KNametab.empty : t
+  fun apply_delta (ty,info) db = pure_insert (ty, kname_to_thm_info info) db
   val adinfo = {tag = "BnfBase", initial_values = [("min", empty_t)],
                 apply_delta = apply_delta} :
-               (hol_type * kname info ,
-                thm info TypeNet.typenet) AncestryData.adata_info
+               (key * kname info, t) AncestryData.adata_info
 in
 val full_result as {DB = thy_lookup,
                     get_global_value = fullDB,
@@ -138,16 +126,26 @@ fun check p x tystring msg =
     raise mk_HOL_ERR "bnfBase" "sanity_check"
           ("Invalid info (" ^ msg ^ ") for type " ^ tystring)
 
-fun sanity_check ty ((info as bI {set,gset,map,...}) : thm info) =
-    let val tys = Parse.type_to_string ty
-        val n = num_alphas ty
-        fun c p x m = check p x tys m
+fun kname_of_type ty =
+    let val {Thy,Tyop,...} = dest_thy_type ty
     in
-      c (null o free_vars) map "map value not ground" andalso
-      c (List.all (null o free_vars)) set "a set value not ground" andalso
-      c (null o free_vars) gset "generic set value not ground" andalso
+      {Thy = Thy, Name = Tyop}
+    end
+
+fun sanity_check (ty:key) ((info as bI {set,gset,map,canontype,...}) : thm info) =
+    let val tys = "{Thy=\"" ^ #Thy ty ^ "\",Name=\"" ^ #Name ty ^ "\"}"
+        val n = num_alphas canontype
+        fun c p x m = check p x tys m
+
+    in
+      c (fn knm => kname_of_type canontype = knm) ty
+        "Kernel name (key) doesn't correspond to canontype field" ;
+      c (null o free_vars) map "map value not ground" ;
+      c (List.all (null o free_vars)) set "a set value not ground" ;
+      c (null o free_vars) gset "generic set value not ground" ;
       c (fn m =>
-            (m |> type_of |> funpow n (#2 o dom_rng) |> dom_rng |> #1) = ty)
+            (m |> type_of |> funpow n (#2 o dom_rng) |> dom_rng |> #1) =
+            canontype)
         map
         "map constant's type incorrect"
     end

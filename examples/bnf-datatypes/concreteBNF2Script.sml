@@ -9,9 +9,9 @@ Type F[pp] = “:'a1 + (num -> 'a1 # 'a2)”
 
 (* recursion variable is 'a2, so non-emptiness depends on the 'a1 *)
 
-val SOME (bI fun_data) = pure_lookup (fullDB()) “:'b1 -> 'a1”
-val SOME (bI sum_data) = pure_lookup (fullDB()) “:'a1 + 'a2”
-val SOME (bI pair_data) = pure_lookup (fullDB()) “:'a1 # 'a2”
+val SOME (bI fun_data) = pure_lookup (fullDB()) {Thy = "min", Name = "fun"}
+val SOME (bI sum_data) = pure_lookup (fullDB()) {Thy = "sum", Name = "sum"}
+val SOME (bI pair_data) = pure_lookup (fullDB()) {Thy = "pair", Name = "prod"}
 val a1 = mk_vartype("'a1")
 val a2 = mk_vartype("'a2")
 val b1 = mk_vartype("'b1")
