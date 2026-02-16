@@ -2,6 +2,6 @@ signature Elim_Lambda =
 sig
   include Abbrev
 
-  val firstify : thm -> (thm * thm list) option
+  val lift_lambdas : term -> (thm * thm list) option
 
 end

@@ -4,22 +4,24 @@ Ancestors
 Libs
   HOL_to_ACL2 Elim_Lambda
 
-(* unlambda_conjuncts should not alter MAP definition *)
+(*---------------------------------------------------------------------------*)
+(* MAP definition shouldn't be altered since there's no buried lambda in it. *)
+(*---------------------------------------------------------------------------*)
 
-val map_def = unlambda_conjuncts listTheory.MAP;
+val map_def = def_bundle listTheory.MAP;
 
 (* Various examples with quantifiers at depth *)
 
-val skolem    = unlambda_conjuncts SKOLEM_THM;
-val num_ind   = unlambda_conjuncts numTheory.INDUCTION;
-val list_ind  = unlambda_conjuncts listTheory.list_induction;
-val tc        = unlambda_conjuncts relationTheory.TC_DEF;
-val rtc_ind   = unlambda_conjuncts relationTheory.RTC_ind;
-val pforall_thm  = unlambda_conjuncts pairTheory.PFORALL_THM;
-val pair_cases   = unlambda_conjuncts pairTheory.pair_CASES;
-val pair_case_eq = unlambda_conjuncts pairTheory.pair_case_eq;
-val prim_rec_thm = unlambda_conjuncts prim_recTheory.PRIM_REC_THM;
-val qsort_def    = unlambda_conjuncts sortingTheory.QSORT_DEF;
+val skolem   = thm_bundle "SKOLEM_THM" SKOLEM_THM;
+val num_ind  = thm_bundle "num_ind" numTheory.INDUCTION;
+val list_ind = thm_bundle "list_ind" listTheory.list_induction;
+val tc_def   = def_bundle relationTheory.TC_DEF;
+val rtc_ind  = thm_bundle "rtc_ind" relationTheory.RTC_ind;
+val pforall_thm  = thm_bundle "pforall_thm" pairTheory.PFORALL_THM;
+val pair_cases   = thm_bundle "pair_cases" pairTheory.pair_CASES;
+val pair_case_eq = thm_bundle "pair_case_eq" pairTheory.pair_case_eq;
+val prim_rec_thm = thm_bundle "prim_rec_thm" prim_recTheory.PRIM_REC_THM;
+val qsort_def    = def_bundle sortingTheory.QSORT_DEF;
 
 (* Definitions with case expressions *)
 
@@ -31,31 +33,35 @@ Definition len_case_def:
   len list = case list of [] => 0 | _::t => 1 + len t
 End
 
-val fact_case_def = unlambda_conjuncts fact_case_def;
-val len_case_def  = unlambda_conjuncts len_case_def;
+val fact_case_def = def_bundle fact_case_def;
+val len_case_def  = def_bundle len_case_def;
+
+(* Definition with nested recursive type *)
+
+Datatype:
+  tree = Node 'a (tree list)
+End
 
 (*---------------------------------------------------------------------------*)
-(* Prepare for making defhols                                                *)
+(* Deeply nested lambda terms and quantifiers in the type characterization   *)
+(* theorem. This example also has a lot auto-generated names that should     *)
+(* be normalized into ACL2-suitable (and human-readable) form.               *)
 (*---------------------------------------------------------------------------*)
 
-fun process_thm name (th,defs,shrunk) =
-    (th, defs @ [mk_named_thm name shrunk])
+val tree_ty_def = thm_bundle "tree_ty_def" (definition "tree_TY_DEF");
 
-fun process_def (th,defs,shrunk) = (th, defs @ [shrunk])
+val tree_ind = thm_bundle "tree_induction" (fetch "-" "tree_induction");
 
-val list =
-  [process_def map_def,
-   process_thm "SKOLEM_THM" skolem,
-   process_thm "INDUCTION" num_ind,
-   process_thm "list_induction" list_ind,
-   process_def tc,
-   process_thm "RTC_ind" rtc_ind,
-   process_thm "PFORALL_THM" pforall_thm,
-   process_thm "pair_CASES" pair_cases,
-   process_thm "pair_case_eq" pair_case_eq,
-   process_thm "PRIM_REC_THM" prim_rec_thm,
-   process_def qsort_def,
-   process_def fact_case_def,
-   process_def len_case_def];
+Definition occurs_def:
+  occurs (Node x ts) a <=> (x = a) ∨ EXISTS (\t. occurs t a) ts
+End
 
-val _ = print_defhols_to_file "elim_lambda.defhol" (List.concat (map snd list));
+val occurs_def_bundle = def_bundle occurs_def;
+
+val bundles =
+  [map_def, skolem, num_ind, list_ind, tc_def, rtc_ind,
+   pforall_thm, pair_cases, pair_case_eq, prim_rec_thm,
+   qsort_def, fact_case_def, len_case_def, tree_ind, tree_ty_def,
+   occurs_def_bundle];
+
+val _ = print_bundles_to_file "elim_lambda.defhol" bundles;

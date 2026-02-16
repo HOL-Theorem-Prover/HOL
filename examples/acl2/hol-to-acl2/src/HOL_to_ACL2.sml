@@ -1,10 +1,3 @@
-(*---------------------------------------------------------------------------*)
-(* Copyright (C) 2025, Konrad Slind                                          *)
-(* Written by Konrad Slind                                                   *)
-(* License: A 3-clause BSD license;                                          *)
-(*          See the LICENSE file distributed with ACL2.                      *)
-(*---------------------------------------------------------------------------*)
-
 structure HOL_to_ACL2 :> HOL_to_ACL2 =
 struct
 
@@ -30,12 +23,62 @@ val THM_const  = prim_mk_const{Thy="hol_to_acl2",Name="THM"}
 val GOAL_const = prim_mk_const{Thy="hol_to_acl2",Name="GOAL"}
 val SPEC_const = prim_mk_const{Thy="hol_to_acl2",Name="SPEC"};
 
+fun mk_named_thm name thm =
+ let val v = mk_var(name,bool)
+ in
+   THM_def |> SPEC v |> SPEC (concl thm) |> GSYM |> C EQ_MP TRUTH
+ end
+
+fun dest_named_thm thm =
+ let val (c,[v,th]) = strip_comb $ concl thm
+ in if same_const THM_const c then
+       (fst $ dest_var v,th)
+    else failwith ""
+ end
+ handle _ => raise ERR "dest_named_thm" "";
+
+fun mk_named_goal name tm =
+ let val v = mk_var(name,bool)
+ in
+   GOAL_def |> SPEC v |> SPEC tm |> SYM |> C EQ_MP TRUTH
+ end
+
+fun dest_named_goal thm =
+ let val (c,[v,tm]) = strip_comb $ concl thm
+ in if same_const GOAL_const c then
+       (fst $ dest_var v,tm)
+    else failwith ""
+ end
+ handle _ => raise ERR "dest_named_goal" "";
+
+fun mk_spec clist thm =
+ let val tys = map type_of clist
+     val consts_var = mk_var("consts", list_mk_fun(tys,bool))
+     val consts_comb = list_mk_comb(consts_var, clist)
+ in
+   SPEC_def |> ISPEC consts_comb |> SPEC (concl thm) |> GSYM |> C EQ_MP TRUTH
+ end
+
+fun dest_spec thm =
+ let val (c,[consts,tm]) = strip_comb $ concl thm
+ in if same_const SPEC_const c then
+       (snd $ strip_comb consts,tm)
+    else failwith ""
+ end
+ handle _ => raise ERR "dest_spec" "";
+
 (*---------------------------------------------------------------------------*)
-(* Get rid of lambdas in a theorem by creating definitions for them          *)
+(* Get rid of lambdas in a term/theorem by creating definitions for them.    *)
+(* Also known as "lambda lifting".                                           *)
 (*---------------------------------------------------------------------------*)
 
+fun unlambda_term t =
+  case Elim_Lambda.lift_lambdas t
+    of NONE => ([],REFL t)
+     | SOME (equiv,defs) => (defs, equiv)
+
 fun unlambda thm =
-  case Elim_Lambda.firstify thm
+  case Elim_Lambda.lift_lambdas (concl thm)
     of NONE => ([],thm)
      | SOME (equiv,defs) => (defs, EQ_MP equiv thm)
 
@@ -51,22 +94,252 @@ fun unlambda thm =
 (* so unlambda should not be done.                                           *)
 (*---------------------------------------------------------------------------*)
 
-fun unlambda_conjuncts thm =
+fun unlambda_conj thm =
   case CONJUNCTS thm
-    of [] => raise ERR "unlambda_conjuncts" "empty conjuncts (error!)"
+    of [] => raise ERR "unlambda_conj" "empty conjuncts (error!)"
      | conjs =>
        let val unconjs = map unlambda conjs
            val (locals,unlambs) = unzip unconjs
-       in (thm,List.concat locals, LIST_CONJ unlambs) end
+       in (List.concat locals, LIST_CONJ unlambs) end
+
+(*---------------------------------------------------------------------------*)
+(* Lambda-lifting means that entities destined for translation to defhol     *)
+(* format aren't single objects anymore, but bundles of auxiliary            *)
+(* definitions plus the lifted entity (when lifting is needed). There is     *)
+(* also an extra complication arising from lifting recursive definitions.    *)
+(*                                                                           *)
+(* Elimination of lambda expressions from a definition happens after the     *)
+(* definition is made. The new lambda-eliminator definitions can introduce   *)
+(* what look to be mutual recursions. Consider                               *)
+(*                                                                           *)
+(*   fact n = case n of 0 => 1 | _ => n * fact (n - 1)                       *)
+(*                                                                           *)
+(* The surface syntax conceals a RHS that is actually                        *)
+(*                                                                           *)
+(*   num_CASE n 1 (\v1. n * fact (n-1))                                      *)
+(*                                                                           *)
+(* Lambda lifting creates the auxiliary definition                           *)
+(*                                                                           *)
+(*   Lam_31 n v1 = n * fact (n − 1)                                          *)
+(*                                                                           *)
+(* and the lifted version of the original:                                   *)
+(*                                                                           *)
+(*   fact n = num_CASE n 1 (Lam_31 n)                                        *)
+(*                                                                           *)
+(* It seems that we have created a mutual recursion between "fact" and       *)
+(* "Lam_31"! Should we be worried? I don't think so. This relationship has   *)
+(* been created post-definition and shouldn't be taken as being part of the  *)
+(* recursion equations to be solved.                                         *)
+(*                                                                           *)
+(* On the ACL2(zfc) side, the attitude (I think) is that the HOL-side        *)
+(* definition event has introduced some constants and asserted some axioms,  *)
+(* and only those steps have to be replicated on the ACL2(zfc) side.         *)
+(*                                                                           *)
+(* But how exactly? This is currently to be discussed with Matt, but two     *)
+(* possibilities come to mind. (1) combine the auxiliary definition(s) and   *)
+(* the lifted original into one defhol form or (2) create one defhol per     *)
+(* definition (so one for "Lam_31" and one for "fact") and add extra         *)
+(* signature information on the first defhol, ie, if "Lam_31" is defined     *)
+(* first, its :fns field will hold both the "Lam_31" constant and the "fact" *)
+(* constant.                                                                 *)
+(*                                                                           *)
+(* For now I am going with possibility 1.                                    *)
+(*---------------------------------------------------------------------------*)
+
+datatype bundle
+  = THM  of string * thm * (thm list * thm) option
+  | GOAL of string * term * (thm list * term) option
+  | DEF  of thm * (thm list * thm list * thm) option
+  | SPEC of term list * thm * (thm list * thm list * thm) option
+
+val head = fst o strip_comb
+fun dest_atom t = dest_var t handle _ => dest_const t
+val eqn_head = head o lhs o snd o strip_forall
+fun conj_heads conj = op_mk_set aconv (map eqn_head (strip_conj conj))
+
+(*---------------------------------------------------------------------------*)
+(* Normalize possibly mutually recursive equations. Most of the code in      *)
+(* sort_defs builds to a call to Defn.sort_eqns, followed by a phase of      *)
+(* figuring out which, if any, auxiliary eqns have been dragged into a       *)
+(* clique with the lifted original.                                          *)
+(*---------------------------------------------------------------------------*)
+
+fun sort_defs (aux,lifted) =
+ let val aux_eqns = map concl aux
+     val aux_conjs = List.concat (map strip_conj aux_eqns)
+     val bare_aux_conjs = map (snd o strip_forall) aux_conjs
+     val lifted_eqns = concl lifted
+     val bare_lifted_conjs = map (snd o strip_forall) (strip_conj lifted_eqns)
+     val aux_consts = map eqn_head bare_aux_conjs
+     val lifted_consts = op_mk_set aconv (map eqn_head bare_lifted_conjs)
+     val aux_vars = map (mk_var o dest_const) aux_consts
+     val lifted_vars = map (mk_var o dest_const) lifted_consts
+     val theta = map2 (curry op |->) (aux_consts @ lifted_consts) (aux_vars @ lifted_vars)
+     val all_veqns = map (subst theta) (bare_aux_conjs @ bare_lifted_conjs)
+     val sorted = Defn.sort_eqns (list_mk_conj all_veqns)
+     val sorted_heads = map conj_heads sorted
+     val lifted_vars' = first (op_mem aconv (hd lifted_vars)) sorted_heads
+     val aux_vars' = op_set_diff aconv aux_vars lifted_vars'
+     val aux_vars'_names = map (fst o dest_var) aux_vars'
+     fun is_aux' th = mem (fst $ dest_atom $ eqn_head $ concl th) aux_vars'_names
+     val (aux',aux'') = partition is_aux' aux
+ in
+   (aux', aux'')
+ end handle e => raise wrap_exn "HOL_to_ACL2" "sort_defs" e;
+
+fun thm_bundle name thm =
+    let val (aux,th') = unlambda_conj thm
+        val opt = if null aux then NONE else SOME(aux,th')
+    in THM (name, thm, opt) end
+
+(* TODO: think about whether the equiv theorem should be stored *)
+fun goal_bundle name tm =
+    let val (aux,equiv) = unlambda_term tm
+        val opt = if null aux then NONE else SOME(aux,rhs(concl equiv))
+    in GOAL (name, tm, opt) end
+
+fun def_bundle thm =
+    let val (aux,def') = unlambda_conj thm
+    in if null aux then
+          DEF (thm, NONE)
+       else
+        let val (aux', aux'') = sort_defs (aux,def')
+        in DEF (thm, SOME(aux', aux'', def')) end
+    end
+
+fun spec_bundle consts thm =
+    let val (aux,thm') = unlambda_conj thm
+    in if null aux then
+          SPEC(consts,thm,NONE)
+       else
+        let val (aux', aux'') = sort_defs (aux,thm')
+        in SPEC (consts, thm, SOME(aux', aux'', thm')) end
+    end
+
+fun pp_const c =
+    let open HOLPP
+        val (n,ty) = dest_const c
+    in block CONSISTENT 0
+          [add_string n, add_string " ", pp_type ty] end
+
+fun pp_bundle (THM(name,orig,NONE)) =
+    let open HOLPP
+    in block CONSISTENT 0
+         [add_string "#|", NL,
+          add_string ("Theorem: "^name), NL, NL,
+          add_string"   ", block CONSISTENT 3 [pp_thm orig], NL,
+          add_string "|#",NL] end
+  | pp_bundle (THM(name,orig,SOME(aux,final))) =
+    let open HOLPP
+    in block CONSISTENT 0
+         [add_string "#|", NL,
+          add_string ("Theorem: "^name), NL, NL,
+          add_string"   ", block CONSISTENT 3 [pp_thm orig], NL,NL,
+          add_string "Auxiliary definitions:", NL, NL,
+          add_string"   ",
+          block CONSISTENT 3 (pr_list pp_thm [NL] aux), NL,NL,
+          add_string "Lifted theorem:", NL,NL,
+          add_string"   ",block CONSISTENT 3 [pp_thm final], NL,
+          add_string "|#",NL] end
+  | pp_bundle (GOAL(name,orig,NONE)) =
+    let open HOLPP
+    in block CONSISTENT 0
+         [add_string "#|", NL,
+          add_string ("Goal: "^name), NL, NL,
+          add_string"   ", block CONSISTENT 3 [pp_term orig], NL,
+          add_string "|#",NL] end
+  | pp_bundle (GOAL(name,orig,SOME(defs,final))) =
+    let open HOLPP
+    in block CONSISTENT 0
+         [add_string "#|", NL,
+          add_string ("Goal: "^name), NL, NL,
+          add_string"   ", block CONSISTENT 3 [pp_term orig], NL,NL,
+          add_string "Auxiliary definitions:", NL, NL,
+          add_string"   ",
+          block CONSISTENT 0 (pr_list pp_thm [NL] defs), NL,NL,
+          add_string "Lifted goal:", NL,NL,
+          add_string"   ", block CONSISTENT 3 [pp_term final], NL,
+          add_string "|#",NL] end
+  | pp_bundle (DEF(orig,NONE)) =
+    let open HOLPP
+    in block CONSISTENT 0
+         [add_string "#|", NL,
+          add_string "Definition:", NL,NL,
+          add_string"   ",
+          block CONSISTENT 3 [pp_thm orig], NL,
+          add_string "|#",NL] end
+  | pp_bundle (DEF(orig,SOME(aux,aux',final))) =
+    let open HOLPP
+    in block CONSISTENT 0
+        ([add_string "#|", NL,
+          add_string "Original definition:", NL, NL,
+          add_string"   ",
+          block CONSISTENT 3 [pp_thm orig], NL, NL]
+          @
+          (if not $ null aux then
+              [add_string "Auxiliary definitions:", NL, NL,
+               add_string"   ",
+               block CONSISTENT 3 (pr_list pp_thm [NL] aux), NL,NL]
+           else [])
+          @
+          (if not $ null aux' then
+              [add_string "Auxiliary definitions (pseudo recursive):", NL, NL,
+               add_string"   ",
+               block CONSISTENT 3 (pr_list pp_thm [NL] aux'), NL,NL]
+           else [])
+          @
+          [add_string "Lifted definition:", NL,NL,
+           add_string"   ", block CONSISTENT 3 [pp_thm final],NL,
+           add_string "|#",NL]
+         )
+    end
+  | pp_bundle (SPEC(consts,orig,NONE)) =
+    let open HOLPP
+    in block CONSISTENT 0
+         [add_string "#|", NL,
+          add_string "Constant specification:", NL, NL,
+          add_string"   ",
+          block CONSISTENT 3 (pr_list pp_const [NL] consts), NL,NL,
+          add_string"   ", block CONSISTENT 3 [pp_thm orig], NL,
+          add_string "|#",NL] end
+  | pp_bundle (SPEC(consts,orig,SOME(aux,aux',final))) =
+    let open HOLPP
+    in block CONSISTENT 0
+         ([add_string "#|", NL,
+           add_string "Original constant specification:", NL, NL,
+           add_string"   ",
+           block CONSISTENT 3 (pr_list pp_const [NL] consts), NL,NL,
+           add_string"   ", block CONSISTENT 3 [pp_thm orig], NL,NL]
+          @
+          (if not $ null aux then
+              [add_string "Auxiliary definitions:", NL, NL,
+               add_string"   ",
+               block CONSISTENT 3 (pr_list pp_thm [NL] aux), NL,NL]
+           else [])
+          @
+          (if not $ null aux' then
+              [add_string "Auxiliary definitions (pseudo recursive):", NL, NL,
+               add_string"   ",
+               block CONSISTENT 3 (pr_list pp_thm [NL] aux'), NL,NL]
+           else [])
+          @
+          [add_string "Lifted specification:", NL,NL,
+           add_string"   ", block CONSISTENT 3 [pp_thm final],NL,
+           add_string "|#",NL]
+         ) end
+
+val _ =
+  let fun pp depth _ (b : bundle) = pp_bundle b
+  in PolyML.addPrettyPrinter pp
+  end;
 
 (*---------------------------------------------------------------------------*)
 (* Types                                                                     *)
 (*---------------------------------------------------------------------------*)
 
 fun tyvar_name tyv =
- let val s = dest_vartype tyv
- in String.substring(s,1,String.size s - 1)
- end
+  let val s = dest_vartype tyv
+  in String.substring(s,1,String.size s - 1) end
 
 fun tyop_dict s =
   case s
@@ -108,15 +381,6 @@ fun bvar_sexp v =
  let val (s,ty) = dest_var v
  in List[Symbol s,ty_sexp ty]
  end
-
-fun strip_cond tm =
-  if not (is_cond tm) then
-    ([],tm)
-  else
-    let val (t1,t2,t3) = dest_cond tm
-        val (pairs,tn) = strip_cond t3
-    in ((t1,t2)::pairs,tn)
-    end
 
 (*---------------------------------------------------------------------------*)
 (* Current rule for mapping a name to a constant: look to see if the name is *)
@@ -206,6 +470,16 @@ fun tm_sexp t =
   end
 
 (* TODO
+
+fun strip_cond tm =
+  if not (is_cond tm) then
+    ([],tm)
+  else
+    let val (t1,t2,t3) = dest_cond tm
+        val (pairs,tn) = strip_cond t3
+    in ((t1,t2)::pairs,tn)
+    end
+
  if is_cond t then
     let val (pairs,last_tm) = strip_cond t
         val pair_sexps = map (fn (t1,t2) => List [tm_sexp t1, tm_sexp t2]) pairs
@@ -230,20 +504,6 @@ fun list_mk_forall_term vs = list_mk_forall_sexp vs o tm_sexp
 (* Theorems come with a name                                                 *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_named_thm name thm =
- let val v = mk_var(name,bool)
- in
-   THM_def |> SPEC v |> SPEC (concl thm) |> GSYM |> C EQ_MP TRUTH
- end
-
-fun dest_named_thm thm =
- let val (c,[v,th]) = strip_comb $ concl thm
- in if same_const THM_const c then
-       (fst $ dest_var v,th)
-    else failwith ""
- end
- handle _ => failwith "dest_named_thm";
-
 fun thm_sexp thm =
  let val (name,tm) = dest_named_thm thm
      val (vs,body) = strip_forall tm
@@ -258,20 +518,6 @@ fun thm_sexp thm =
 (* the ":thm" slot.                                                          *)
 (*---------------------------------------------------------------------------*)
 
-fun mk_named_goal name tm =
- let val v = mk_var(name,bool)
- in
-   GOAL_def |> SPEC v |> SPEC tm |> SYM |> C EQ_MP TRUTH
- end
-
-fun dest_named_goal thm =
- let val (c,[v,tm]) = strip_comb $ concl thm
- in if same_const GOAL_const c then
-       (fst $ dest_var v,tm)
-    else failwith ""
- end
- handle _ => failwith "dest_named_goal";
-
 fun goal_sexp thm =
  let val (name,tm) = dest_named_goal thm
      val (vs,body) = strip_forall tm
@@ -284,22 +530,6 @@ fun goal_sexp thm =
 (*---------------------------------------------------------------------------*)
 (* Constant specifications require the defined constants to be supplied      *)
 (*---------------------------------------------------------------------------*)
-
-fun mk_spec clist thm =
- let val tys = map type_of clist
-     val consts_var = mk_var("consts", list_mk_fun(tys,bool))
-     val consts_comb = list_mk_comb(consts_var, clist)
- in
-   SPEC_def |> ISPEC consts_comb |> SPEC (concl thm) |> GSYM |> C EQ_MP TRUTH
- end
-
-fun dest_spec thm =
- let val (c,[consts,tm]) = strip_comb $ concl thm
- in if same_const SPEC_const c then
-       (snd $ strip_comb consts,tm)
-    else failwith ""
- end
- handle _ => failwith "dest_spec";
 
 fun spec_sexp thm =
  let val (fns,tm) = dest_spec thm
@@ -362,20 +592,7 @@ fun def_sexp th =
  handle _ => raise ERR "def_sexp" "";
 
 (*---------------------------------------------------------------------------*)
-(* Decide between the kinds of declaration being made. Based on tag on thm.  *)
-(*---------------------------------------------------------------------------*)
-
-fun hol_sexp thm =
-  def_sexp thm handle HOL_ERR _ =>
-  thm_sexp thm handle HOL_ERR _ =>
-  spec_sexp thm handle HOL_ERR _ =>
-  goal_sexp thm handle HOL_ERR _ =>
-  ("ERROR", Symbol "!<unknown construct> in hol_sexp!");
-
-(*---------------------------------------------------------------------------*)
-(* Prettyprinting for ACL2 defhol form. Adapted from                         *)
-(*                                                                           *)
-(*   <holdir>/portableML/HOL_sexp.sml                                        *)
+(* Prettyprinting for sexps. Adapted from <holdir>/portableML/HOL_sexp.sml   *)
 (*---------------------------------------------------------------------------*)
 
 fun break_sexp_list s =
@@ -407,8 +624,7 @@ fun pp_sexp t =
  end
 
 (*---------------------------------------------------------------------------*)
-(* This taking apart of sexps and adding a little bit more formatting is     *)
-(* only for presentation purposes and could be dropped.                      *)
+(* Prettyprint defhol sexp                                                   *)
 (*---------------------------------------------------------------------------*)
 
 fun pp_defhol s =
@@ -454,8 +670,29 @@ fun pp_defhol s =
         | NONE => pp_sexp s
   end
 
+fun bundle_to_sexps (THM(name,orig,NONE)) =
+      [thm_sexp (mk_named_thm name orig)]
+  | bundle_to_sexps (THM(name,orig,SOME(aux,lifted))) =
+      map def_sexp aux @ [thm_sexp (mk_named_thm name lifted)]
+  | bundle_to_sexps (GOAL(name,orig,NONE)) =
+      [goal_sexp (mk_named_goal name orig)]
+  | bundle_to_sexps (GOAL(name,orig,SOME(aux,lifted))) =
+      map def_sexp aux @ [goal_sexp (mk_named_goal name lifted)]
+  | bundle_to_sexps (DEF(orig,NONE)) =
+      [def_sexp orig]
+  | bundle_to_sexps (DEF(orig,SOME(aux,pseuds,lifted))) =
+      let val def = LIST_CONJ (pseuds @ CONJUNCTS lifted)
+      in map def_sexp aux @ [def_sexp def] end
+  | bundle_to_sexps (SPEC(consts,orig,NONE)) =
+      [spec_sexp (mk_spec consts orig)]
+  | bundle_to_sexps (SPEC(consts,orig,SOME(aux,pseuds,lifted))) =
+      let val spec = LIST_CONJ (pseuds @ CONJUNCTS lifted)
+          val pconsts = map (eqn_head o concl) pseuds
+          val allconsts = consts @ pconsts
+      in map def_sexp aux @ [spec_sexp (mk_spec allconsts spec)] end
+
 (*---------------------------------------------------------------------------*)
-(* install pp_defhol in REPL                                                   *)
+(* install pp_defhol in REPL                                                 *)
 (*---------------------------------------------------------------------------*)
 
 val _ =
@@ -468,14 +705,33 @@ val _ =
 (* just above the translation of the object.                                 *)
 (*---------------------------------------------------------------------------*)
 
-fun pp_thm_as_defhol th =
+fun pp_bundle_as_defhols bundle =
     let open HOLPP
-    in block CONSISTENT 0
-             [add_string "#|", NL,
-              add_string"   ", block CONSISTENT 3 [pp_thm th], NL,
-              add_string "|#",NL,NL,
-              pp_defhol (snd (hol_sexp th))]
+        val header = pp_bundle bundle
+        val sexps = map snd (bundle_to_sexps bundle)
+        val defhols = pr_list pp_defhol [NL,NL] sexps
+    in block CONSISTENT 0 (header :: NL :: defhols)
     end
+
+(*---------------------------------------------------------------------------*)
+(* Output bundles                                                            *)
+(*---------------------------------------------------------------------------*)
+
+fun print_bundles ostrm bs =
+  let open HOLPP
+      fun outfn s = TextIO.output(ostrm,s)
+      val pp = block CONSISTENT 0 (pr_list pp_bundle_as_defhols [NL,NL] bs)
+  in
+    HOLPP.prettyPrint(outfn,78) pp
+  end
+
+val print_bundles_to_stdout = print_bundles TextIO.stdOut;
+
+fun print_bundles_to_file fname bundles =
+  let val ostrm = TextIO.openOut fname
+  in print_bundles ostrm bundles
+  end
+  handle e => raise wrap_exn "HOL_to_ACL2" "print_bundles_to_file" e
 
 (* Following code includes time of file generation ... not sure this helps
    in establishing connection between the HOL objects and the objects that
@@ -486,25 +742,5 @@ fun pp_thm_as_defhol th =
                 add_string timestamp, NL,NL,
                 block CONSISTENT 0 (pr_list pp_thm_as_defhol [NL,NL] ths)]
 *)
-
-(*---------------------------------------------------------------------------*)
-(* Output defhols                                                            *)
-(*---------------------------------------------------------------------------*)
-
-fun print_defhols ostrm ths =
-  let open HOLPP
-      fun outfn s = TextIO.output(ostrm,s)
-      val pp = block CONSISTENT 0 (pr_list pp_thm_as_defhol [NL,NL] ths)
-  in
-    HOLPP.prettyPrint(outfn,78) pp
-  end
-
-val print_defhols_to_stdout = print_defhols TextIO.stdOut;
-
-fun print_defhols_to_file fname ths =
-  let val ostrm = TextIO.openOut fname
-  in print_defhols ostrm ths
-  end
-  handle e => raise wrap_exn "HOL_to_ACL2" "print_defhols_to_file" e
 
 end

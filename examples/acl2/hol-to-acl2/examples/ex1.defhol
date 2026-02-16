@@ -1,4 +1,6 @@
 #|
+Definition:
+
    ⊢ ∀m. SUC m = 1 + m
 |#
 
@@ -8,6 +10,8 @@
       (equal (hap* (suc (typ (:arrow* :num :num))) m) (hp+ (hp-num 1) m)))))
 
 #|
+Definition:
+
    ⊢ PRE 0 = 0 ∧ ∀m. PRE (SUC m) = m
 |#
 
@@ -20,6 +24,8 @@
         (hap* (suc (typ (:arrow* :num :num))) m)) m))))
 
 #|
+Definition:
+
    ⊢ ∀x. I x = x
 |#
 
@@ -28,6 +34,8 @@
    :defs ((:forall ((x a)) (equal (hap* (i (typ (:arrow* a a))) x) x))))
 
 #|
+Definition:
+
    ⊢ ∀f x y. flip f x y = f y x
 |#
 
@@ -38,6 +46,8 @@
        (hap* f y x)))))
 
 #|
+Definition:
+
    ⊢ ∀x y. K x y = x
 |#
 
@@ -47,6 +57,8 @@
       (equal (hap* (k (typ (:arrow* a b a))) x y) x))))
 
 #|
+Definition:
+
    ⊢ ∀f g x. (f ∘ g) x = f (g x)
 |#
 
@@ -57,6 +69,8 @@
        (hap* f (hap* g x))))))
 
 #|
+Definition:
+
    ⊢ ∀x y. COMMA x y = (x,y)
 |#
 
@@ -67,6 +81,8 @@
        (hp-comma x y)))))
 
 #|
+Definition:
+
    ⊢ ∀x y. FST (x,y) = x
 |#
 
@@ -76,6 +92,8 @@
       (equal (hap* (fst (typ (:arrow* (:hash a b) a))) (hp-comma x y)) x))))
 
 #|
+Definition:
+
    ⊢ ∀x y. SND (x,y) = y
 |#
 
@@ -85,6 +103,8 @@
       (equal (hap* (snd (typ (:arrow* (:hash a b) b))) (hp-comma x y)) y))))
 
 #|
+Definition:
+
    ⊢ ∀f x y. UNCURRY f (x,y) = f x y
 |#
 
@@ -96,6 +116,8 @@
         (hp-comma x y)) (hap* f x y)))))
 
 #|
+Definition:
+
    ⊢ (∀f. OPTION_BIND NONE f = NONE) ∧ ∀x f. OPTION_BIND (SOME x) f = f x
 |#
 
@@ -116,6 +138,8 @@
         (hp-some x) f) (hap* f x)))))
 
 #|
+Definition:
+
    ⊢ (∀f x. OPTION_MAP f (SOME x) = SOME (f x)) ∧ ∀f. OPTION_MAP f NONE = NONE
 |#
 
@@ -133,6 +157,8 @@
         (hp-none (typ a))) (hp-none (typ b))))))
 
 #|
+Definition:
+
    ⊢ (∀v f. list_CASE [] v f = v) ∧
      ∀a0 a1 v f. list_CASE (a0::a1) v f = f a0 a1
 |#
@@ -149,6 +175,8 @@
         (hp-cons a0 a1) v f) (hap* f a0 a1)))))
 
 #|
+Definition:
+
    ⊢ (∀f. list_size f [] = 0) ∧
      ∀f a0 a1. list_size f (a0::a1) = 1 + (f a0 + list_size f a1)
 |#
@@ -169,6 +197,8 @@
           a1)))))))
 
 #|
+Definition:
+
    ⊢ (∀f. MAP f [] = []) ∧ ∀f h t. MAP f (h::t) = f h::MAP f t
 |#
 
@@ -186,6 +216,8 @@
         (hap* (map (typ (:arrow* (:arrow* a b) (:list a) (:list b)))) f t))))))
 
 #|
+Definition:
+
    ⊢ (∀f e. FOLDR f e [] = e) ∧ ∀f e x l. FOLDR f e (x::l) = f x (FOLDR f e l)
 |#
 
@@ -203,6 +235,8 @@
         (hap* (foldr (typ (:arrow* (:arrow* a b b) b (:list a) b))) f e l))))))
 
 #|
+Definition:
+
    ⊢ (∀f e. FOLDL f e [] = e) ∧ ∀f e x l. FOLDL f e (x::l) = FOLDL f (f e x) l
 |#
 
@@ -220,8 +254,12 @@
         (hap* f e x) l)))))
 
 #|
-   ⊢ SPEC (consts $DIV $MOD)
-       (∀n k. 0 < n ⇒ k = k DIV n * n + k MOD n ∧ k MOD n < n ⇔ T)
+Constant specification:
+
+   DIV :num -> num -> num
+   MOD :num -> num -> num
+
+   ⊢ ∀n k. 0 < n ⇒ k = k DIV n * n + k MOD n ∧ k MOD n < n ⇔ T
 |#
 
 (defhol
@@ -236,6 +274,8 @@
          (hp< (hap* (mod (typ (:arrow* :num :num :num))) k n) n))) (hp-true)))))
 
 #|
+Definition:
+
    ⊢ (Even 0 ⇔ T) ∧ (∀n. Even (SUC n) ⇔ Odd n) ∧ (Odd 0 ⇔ F) ∧
      ∀n. Odd (SUC n) ⇔ Even n
 |#
@@ -257,6 +297,8 @@
        (hap* (even (typ (:arrow* :num :bool))) n)))))
 
 #|
+Definition:
+
    ⊢ (∀m. m ** 0 = 1) ∧ ∀m n. m ** SUC n = m * m ** n
 |#
 
@@ -272,7 +314,9 @@
        (hp* m (hap* (exp (typ (:arrow* :num :num :num))) m n))))))
 
 #|
-   ⊢ THM MAP_ID_I (MAP I = I)
+Theorem: MAP_ID_I
+
+   ⊢ MAP I = I
 |#
 
 (defhol
@@ -282,7 +326,9 @@
       (i (typ (:arrow* a a)))) (i (typ (:arrow* (:list a) (:list a))))))
 
 #|
-   ⊢ THM MAP_o (∀f g. MAP (f ∘ g) = MAP f ∘ MAP g)
+Theorem: MAP_o
+
+   ⊢ ∀f g. MAP (f ∘ g) = MAP f ∘ MAP g
 |#
 
 (defhol
@@ -300,7 +346,9 @@
        (hap* (map (typ (:arrow* (:arrow* a b) (:list a) (:list b)))) g)))))
 
 #|
-   ⊢ GOAL $var$(FST-COMMA) (∀x y. FST (x,y) = x)
+Goal: FST-COMMA
+
+   ∀x y. FST (x,y) = x
 |#
 
 (defhol
@@ -309,7 +357,9 @@
      (hp= (hap* (fst (typ (:arrow* (:hash a b) a))) (hp-comma x y)) x)))
 
 #|
-   ⊢ GOAL BOOL_CASES_AX (∀t. (t ⇔ T) ∨ (t ⇔ F))
+Goal: BOOL_CASES_AX
+
+   ∀t. (t ⇔ T) ∨ (t ⇔ F)
 |#
 
 (defhol
@@ -317,7 +367,9 @@
    :goal (:forall ((t :bool)) (hp-or (hp= t (hp-true)) (hp= t (hp-false)))))
 
 #|
-   ⊢ GOAL pair_fst_snd_eq (∀p q. FST p = FST q ∧ SND p = SND q ⇔ p = q)
+Goal: pair_fst_snd_eq
+
+   ∀p q. FST p = FST q ∧ SND p = SND q ⇔ p = q
 |#
 
 (defhol
