@@ -153,7 +153,7 @@ val _ = tprint "extract_suspended_goal (1)"
 val _ = require_msg
           (check_result (goal_eq ([q, p], p)))
           goal_print
-          (fn th => let val (nc, st) = extract_suspended_goal th "p" in resumption_to_goal nc st end)
+          (fn th => resumption_to_goal (extract_suspended_goal th "p"))
           pq_th1
 
 val _ = tprint "extract_suspended_goal (2)"
@@ -161,19 +161,19 @@ val _ = require_msg
           (check_result (
               goal_eq (
                 [],
-                “resconj (!q p. suspendimp p (suspendimp q p))
-                         (!q p. suspendimp p (suspendimp q q))”
+                “resconj (suspendimp p (suspendimp q p))
+                         (suspendimp p (suspendimp q q))”
               )
             )
           )
           goal_print
-          (fn th => let val (nc, st) = extract_suspended_goal th "pq" in resumption_to_goal nc st end)
+          (fn th => resumption_to_goal (extract_suspended_goal th "pq"))
           pq_th2
 
 val _ = shouldfail {checkexn = is_struct_HOL_ERR "markerLib",
                     printarg = K "extract_suspended_goal fails (1)",
                     printresult = goal_print,
-                    testfn = (fn th => let val (nc, st) = extract_suspended_goal th "pq" in resumption_to_goal nc st end)}
+                    testfn = (fn th => resumption_to_goal (extract_suspended_goal th "pq"))}
                    pq_th1
 
 val _ = show_assums := true
@@ -214,14 +214,15 @@ val _ = require_msgk (check_result
                      (fn th => prim_resume(th,"p",first_assum ACCEPT_TAC))
                      one_b
                      pq_th1
-
 (* Test resconj with different closure-variable counts across sub-goals.
-   After gen_tac on "!x. x /\ T", sub-goal 1 "([], x)" has fvs=[x] so
-   nclosure=1, while sub-goal 2 "([], T)" has fvs=[] so nclosure=0.
-   The two hypotheses have different nclosure counts encoded in their labels,
-   but extract_suspended_goal must handle both correctly. *)
+   After gen_tac on "!x. T /\ (x ==> x)", conj_tac gives:
+     sub-goal 1 "([], T)" with fvs=[] so nclosure=0, and
+     sub-goal 2 "([], x ==> x)" with fvs=[x] so nclosure=1.
+   The two hypotheses have different nclosure counts encoded in their labels;
+   extract_suspended_goal and resumption_to_goal must handle both correctly,
+   stripping the right number of closure foralls per component. *)
 val resconj_closure_th =
-    TAC_PROOF(([], “!x:bool. x /\ T”),
+    TAC_PROOF(([], “!x:bool. T /\ (x ==> x)”),
               gen_tac >> conj_tac >> suspend "s")
 
 val _ = tprint "prim_resume resconj+closure"
@@ -229,10 +230,12 @@ val _ = require_msg
           (check_result
              (fn {subresult,updated_main} =>
                   null (hyp updated_main) andalso
-                  concl updated_main ~~ “!x:bool. x /\ T”))
+                  concl updated_main ~~ “!x:bool. T /\ (x ==> x)”))
           (HOLPP.pp_to_string 75 pp)
           (fn th => prim_resume(th, "s",
-                                RESUME_TAC >> ACCEPT_TAC TRUTH))
+                                RESUME_TAC >>
+                                TRY (ACCEPT_TAC TRUTH) >>
+                                disch_then  ACCEPT_TAC))
           resconj_closure_th
 
 val incomplete_th = Feedback.quiet_messages save_thm("incomplete_th", pq_th1)

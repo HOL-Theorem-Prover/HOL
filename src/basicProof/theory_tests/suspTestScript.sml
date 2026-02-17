@@ -139,17 +139,19 @@ QED
 Finalise test_suspend_partial_strip
 
 (* Test that suspend works correctly with resconj when sub-goals have
-   different closure-variable counts. After gen_tac on "∀x. x ∧ T",
-   the first sub-goal "([], x)" needs 1 closure variable while the
-   second "([], T)" needs 0. Both share the label "s". *)
+   different closure-variable counts. After gen_tac on "∀x. T ∧ (x ⇒ x)",
+   the first sub-goal "([], T)" needs 0 closure variables while the
+   second "([], x ⇒ x)" needs 1. Both share the label "s". *)
 Theorem test_resconj_closure:
-  ∀x:bool. x ∧ T
+  ∀x:bool. T ∧ (x ⇒ x)
 Proof
   gen_tac >> conj_tac >> suspend "s"
 QED
 
 Resume test_resconj_closure[s]:
-  RESUME_TAC >> ACCEPT_TAC TRUTH
+  RESUME_TAC >>
+  TRY (ACCEPT_TAC TRUTH) >>
+  disch_tac >> first_assum ACCEPT_TAC
 QED
 
 Finalise test_resconj_closure
