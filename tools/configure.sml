@@ -364,6 +364,13 @@ val _ =
     compile ["-I", "..", "-I", "../core", "-I", "../../parsing", "-I", "../hfs"] "ReadHMF.sig";
     compile ["-I", "..", "-I", "../core", "-I", "../../parsing", "-I", "../hfs"] "ReadHMF.sml";
     FileSys.chDir "..";
+    FileSys.chDir "../../src/portableML/mosml";
+    compile ["-I", "../../../tools/Holmake"] "SHA1_ML.sig";
+    compile ["-I", "../../../tools/Holmake"] "SHA1_ML.sml";
+    FileSys.chDir "..";
+    compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sig";
+    compile ["-I", "mosml", "-I", "../../tools/Holmake"] "SHA1.sml";
+    FileSys.chDir "../../tools/Holmake";
     FileSys.chDir "../util";
     compile ["-I", "../Holmake"] "GetOpt.sig";
     compile ["-I", "../Holmake"] "GetOpt.sml";
@@ -398,11 +405,11 @@ val _ =
     FileSys.chDir "mosml";
     compile ["-I", "..", "-I", "../core", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "BuildCommand.sml";
     FileSys.chDir "../core";
-    compile ["-I", "..", "-I", "../mosml", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf"] "Holmake.sml";
+    compile ["-I", "..", "-I", "../mosml", "-I", "../deps", "-I", "../../util", "-I", "../util", "-I", "../../parsing", "-I", "../hfs", "-I", "../hmf", "-I", "../../../src/portableML", "-I", "../../../src/portableML/mosml"] "Holmake.sml";
     FileSys.chDir "../mosml";
     compile ["-I", "..", "-I", "../core"] "mosml_Holmake.sml";
     FileSys.chDir "..";
-    link{extras = ["-I", "mosml", "-I", "core", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs", "-I", "hmf"], tgt = bin, srcobj = "mosml/mosml_Holmake.uo"};
+    link{extras = ["-I", "mosml", "-I", "core", "-I", "deps", "-I", "util", "-I", "../util", "-I", "../parsing", "-I", "hfs", "-I", "hmf", "-I", "../../src/portableML", "-I", "../../src/portableML/mosml"], tgt = bin, srcobj = "mosml/mosml_Holmake.uo"};
     mk_xable bin;
     FileSys.chDir cdir
   end

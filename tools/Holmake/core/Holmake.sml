@@ -309,6 +309,7 @@ val do_logging_flag = #do_logging coption_value
 val no_lastmakercheck = #no_lastmaker_check coption_value
 val show_usage = #help coption_value
 val show_json = #json coption_value
+val cline_cachekey = #cachekey coption_value
 val quit_on_failure = #quit_on_failure coption_value
 val toplevel_no_prereqs = #no_prereqs coption_value
 val toplevel_no_overlay = #no_overlay coption_value
@@ -318,7 +319,8 @@ val cline_nobuild = #no_action coption_value
 val cline_recursive_build = #recursive_build coption_value
 val cline_recursive_clean = #recursive_clean coption_value
 val scan_output_functions =
-    if show_json andalso chattiness_level coption_value <= 1 then
+    if isSome cline_cachekey orelse
+       (show_json andalso chattiness_level coption_value <= 1) then
       quieten_info outputfns
     else outputfns
 
@@ -1313,6 +1315,91 @@ fun work() =
           end
       end
 
+fun do_cachekey thyname =
+    let
+      val dat_tgt = filestr_to_tgt (thyname ^ ".dat")
+      val (depgraph, _) = toplevel_build_graph()
+      val node =
+          case HM_DepGraph.target_node depgraph dat_tgt of
+              SOME n => n
+            | NONE =>
+              die ("--cachekey: don't know how to build " ^
+                   tgt_toString dat_tgt)
+      val nodeinfo =
+          case HM_DepGraph.peeknode depgraph node of
+              SOME ni => ni
+            | NONE => die "--cachekey: internal error (node not found)"
+      val _ =
+          case #command nodeinfo of
+              HM_DepGraph.BuiltInCmd (HM_DepGraph.BIC_BuildScript _, _) => ()
+            | _ => die ("--cachekey: " ^ thyname ^ " is not a theory target")
+      (* Select files whose contents are relevant to the theory.
+         For .uo/.ui of Theory files, substitute the corresponding
+         .dat file (the actual theory content). Other .uo/.ui files
+         and the holheap state are excluded. *)
+      fun dep_to_hashable dep =
+          case hm_target.filepart dep of
+              DAT _ => SOME dep
+            | SML _ => SOME dep
+            | SIG _ => SOME dep
+            | ART _ => SOME dep
+            | UO (Theory s) =>
+                SOME (hm_target.setFile (DAT s) dep)
+            | UI (Theory s) =>
+                SOME (hm_target.setFile (DAT s) dep)
+            | _ => NONE
+      val deps =
+          let val depset =
+                  List.foldl
+                    (fn ((_, dep), acc) =>
+                        case dep_to_hashable dep of
+                            SOME d => Binaryset.add(acc, d)
+                          | NONE => acc)
+                    hm_target.empty_tgtset
+                    (#dependencies nodeinfo)
+          fun toFSpath s =
+              case HFS_NameMunge.HOLtoFS s of
+                  NONE => s
+                | SOME {fullfile, ...} => fullfile
+          in
+            map (fn dep =>
+                    let val p = tgt_toString dep
+                    in { name = fromFile (hm_target.filepart dep),
+                         path = toFSpath p }
+                    end)
+                (Binaryset.listItems depset)
+          end
+      val _ = List.app
+                (fn {name, path} =>
+                    if OS.FileSys.access(path, [OS.FileSys.A_READ]) then ()
+                    else die ("--cachekey: dependency " ^ name ^
+                              " (" ^ path ^ ") does not exist"))
+                deps
+      (* Compute hashes, then sort by (filename, hash) for a canonical
+         machine-independent ordering. Filename is the primary key; hash
+         breaks ties if two dependencies from different directories happen
+         to share a filename. *)
+      val hashed_deps =
+          map (fn {name, path} =>
+                  (name, SHA1.sha1_file {filename = path}))
+              deps
+      val sorted_hashes =
+          Listsort.sort (pair_compare (String.compare, String.compare))
+                        hashed_deps
+      val dep_hashes = map #2 sorted_hashes
+      val tmpfile = OS.FileSys.tmpName ()
+      val _ = let val out = TextIO.openOut tmpfile
+              in
+                List.app (fn h => TextIO.output(out, h)) dep_hashes;
+                TextIO.closeOut out
+              end
+      val cachekey = SHA1.sha1_file {filename = tmpfile}
+      val _ = OS.FileSys.remove tmpfile handle OS.SysErr _ => ()
+    in
+      print (cachekey ^ "\n");
+      OS.Process.success
+    end
+
 in
   if show_usage then
     print (GetOpt.usageInfo {
@@ -1321,7 +1408,15 @@ in
                        \Extra options:",
               options = HM_Cline.option_descriptions
           })
-  else let
+  else case cline_cachekey of
+      SOME thyname => let
+        open Process
+        val result = do_cachekey thyname
+            handle Fail s => die ("Fail exception: "^s^"\n")
+      in
+        exit result
+      end
+    | NONE => let
       open Process
       val result = work()
           handle Fail s => die ("Fail exception: "^s^"\n")

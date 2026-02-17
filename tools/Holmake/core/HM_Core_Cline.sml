@@ -3,16 +3,17 @@ struct
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate24 z
+  fun makeUpdateT z = makeUpdate25 z
 in
 fun updateT z = let
-  fun from debug do_logging fast help hmakefile holdir includes
+  fun from cachekey debug do_logging fast help hmakefile holdir includes
            interactive jobs json keep_going no_action no_hmakefile
            no_lastmaker_check no_overlay
            no_preexecs no_prereqs opentheory quiet
            quit_on_failure rebuild_deps recursive_build recursive_clean
            verbose =
     {
+      cachekey = cachekey,
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
@@ -30,8 +31,9 @@ fun updateT z = let
             no_overlay no_lastmaker_check no_hmakefile no_action keep_going
             json jobs interactive
             includes holdir
-            hmakefile help fast do_logging debug =
+            hmakefile help fast do_logging debug cachekey =
     {
+      cachekey = cachekey,
       debug = debug, do_logging = do_logging,
       fast = fast, help = help, hmakefile = hmakefile, holdir = holdir,
       includes = includes, interactive = interactive, jobs = jobs,
@@ -44,13 +46,13 @@ fun updateT z = let
       rebuild_deps = rebuild_deps, recursive_build = recursive_build,
       recursive_clean = recursive_clean, verbose = verbose
     }
-  fun to f {debug, do_logging, fast, help, hmakefile, holdir,
+  fun to f {cachekey, debug, do_logging, fast, help, hmakefile, holdir,
             includes, interactive, jobs, json, keep_going, no_action,
             no_hmakefile, no_lastmaker_check,
             no_overlay, no_preexecs, no_prereqs, opentheory,
             quiet, quit_on_failure, rebuild_deps, recursive_build,
             recursive_clean, verbose} =
-    f debug do_logging fast help hmakefile holdir includes
+    f cachekey debug do_logging fast help hmakefile holdir includes
       interactive jobs json keep_going no_action no_hmakefile
       no_lastmaker_check no_overlay no_preexecs
       no_prereqs opentheory quiet
@@ -66,6 +68,7 @@ fun fupd_jobs f t = updateT t (U #jobs (f (#jobs t))) $$
 fun fupd_includes f t = updateT t (U #includes (f (#includes t))) $$
 
 type t = {
+  cachekey : string option,
   debug : {ins : string list, outs : string list} option,
   do_logging : bool,
   fast : bool,
@@ -94,6 +97,7 @@ type t = {
 
 val default_core_options : t =
 {
+  cachekey = NONE,
   debug = NONE,
   do_logging = false,
   fast = false,
@@ -159,6 +163,12 @@ fun set_holdir s =
                wn "Multiple holdir specs; ignoring earlier spec"
              else ();
              updateT t (U #holdir (SOME s)) $$))
+fun set_cachekey s =
+  resfn (fn (wn, t) =>
+            (if isSome (#cachekey t) then
+               wn "Multiple cachekey specs; ignoring earlier spec"
+             else ();
+             updateT t (U #cachekey (SOME s)) $$))
 fun set_openthy s =
   resfn (fn (wn, t) =>
             (if isSome (#opentheory t) then
@@ -188,6 +198,8 @@ fun addDbg sopt =
               end)
 
 val core_option_descriptions = [
+  { help = "print cache key for a theory target", long = ["cachekey"],
+    short = "", desc = ReqArg (set_cachekey, "theory") },
   { help = "turn on diagnostic messages", long = ["dbg"], short = "d",
     desc = OptArg (addDbg, "diag-cat")},
   { help = "fast build (replace tactics w/cheat)", long = ["fast"], short = "",
