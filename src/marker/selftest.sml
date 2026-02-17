@@ -215,6 +215,26 @@ val _ = require_msgk (check_result
                      one_b
                      pq_th1
 
+(* Test resconj with different closure-variable counts across sub-goals.
+   After gen_tac on "!x. x /\ T", sub-goal 1 "([], x)" has fvs=[x] so
+   nclosure=1, while sub-goal 2 "([], T)" has fvs=[] so nclosure=0.
+   The two hypotheses have different nclosure counts encoded in their labels,
+   but extract_suspended_goal must handle both correctly. *)
+val resconj_closure_th =
+    TAC_PROOF(([], “!x:bool. x /\ T”),
+              gen_tac >> conj_tac >> suspend "s")
+
+val _ = tprint "prim_resume resconj+closure"
+val _ = require_msg
+          (check_result
+             (fn {subresult,updated_main} =>
+                  null (hyp updated_main) andalso
+                  concl updated_main ~~ “!x:bool. x /\ T”))
+          (HOLPP.pp_to_string 75 pp)
+          (fn th => prim_resume(th, "s",
+                                RESUME_TAC >> ACCEPT_TAC TRUTH))
+          resconj_closure_th
+
 val incomplete_th = Feedback.quiet_messages save_thm("incomplete_th", pq_th1)
 val _ = shouldfail {
       checkexn = is_struct_HOL_ERR "Theory",
