@@ -398,6 +398,7 @@ Proof
   >- (strip_tac >>
       CONV_TAC pred_setLib.SET_SPEC_CONV >> first_x_assum irule >>
       ASM_REWRITE_TAC[]) >>
+  rename [‘_ ⇒ s x ∈ minset s (* g *)’] >>
   Cases_on ‘Fset2 x ⊆ {x|P x}’ >> ASM_REWRITE_TAC[] >>
   ntac 2 (pop_assum kall_tac) >>
   MATCH_ACCEPT_TAC (GEN_ALL Fset2_SUBSET_minset)
