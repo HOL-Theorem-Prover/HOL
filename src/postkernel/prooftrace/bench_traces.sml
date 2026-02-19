@@ -6,7 +6,6 @@
    Output is machine-parseable (KEY=VALUE lines prefixed with BENCH:). *)
 
 load "ReplayTrace";
-load "cv_computeLib";
 
 fun its n = Int.toString n
 fun timer f =
@@ -123,18 +122,7 @@ val _ = bench "replay_avg_ms" replay_avg;
    T6.7: Chain verification (end-to-end, deepest theory)
    ================================================================ *)
 
-val _ = print "\n=== T6.7: Chain verification ===\n";
-
-val chain_thy = "probability";
-val (chain_result, chain_ms) =
-  timer (fn () =>
-    ReplayTrace.verify_chain holdir chain_thy
-    handle e => {ok = 0, fail = 1,
-                 errors = [General.exnMessage e]});
-val _ = bench "chain_theory" chain_thy;
-val _ = bench "chain_ms" (LargeInt.toString chain_ms);
-val _ = bench "chain_ok" (its (#ok chain_result));
-val _ = bench "chain_fail" (its (#fail chain_result));
+(* Chain verification removed — use merge tool + from-scratch replay *)
 
 (* ================================================================
    Summary

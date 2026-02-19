@@ -40,4 +40,25 @@ sig
      the number of lines in each section. For benchmarking parse I/O. *)
   val parse_trace_stats :
     string -> {n_types: int, n_terms: int, n_steps: int, n_exports: int}
+
+  (* Header type for parsed traces *)
+  datatype header = Header of {
+    version: int,
+    theory: string,
+    n_types: int,
+    n_terms: int,
+    n_steps: int
+  }
+
+  (* Utility functions (also used by MergeTrace) *)
+  val tokenize : string -> string list
+  val unescape : string -> string
+  val read_trace_file : string -> {
+    header : header,
+    type_lines : string list,
+    term_lines : string list,
+    step_lines : string list,
+    export_lines : string list
+  }
+  val parse_exports : string list -> (string * int) list
 end
