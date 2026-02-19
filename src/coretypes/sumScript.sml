@@ -519,48 +519,42 @@ Proof
 QED
 
 (* ----------------------------------------------------------------------
-    SUM_SET
+    Set constants
    ---------------------------------------------------------------------- *)
 
-val SUM_SET_def = Prim_rec.new_recursive_definition {
-  def = “SUM_SET f1 f2 (INL a : 'a + 'b) = f1 a : ('c -> bool) /\
-         SUM_SET f1 f2 (INR b) = f2 b”,
-  name = "SUM_SET_def", rec_axiom = sum_Axiom};
+val setL_def = new_recursive_definition {
+  name = "setL_def[simp,compute]",
+  def = “setL (INL a) = (λx. x = a) ∧
+         setL (INR b) = λx. F”,
+  rec_axiom = sum_Axiom
+  };
 
-Overload setL = “SUM_SET ($= : 'a -> 'a -> bool) (K (\x. F) : 'b -> 'a -> bool)”
-Overload setR = “SUM_SET (K (\x. F) : 'a -> 'b -> bool) ($= : 'b -> 'b -> bool)”
-
-Theorem SUM_SETLR_THM[simp]:
-  (a1 IN setL (INL a2 : 'a + 'b) <=> a1 = a2) /\
-  (a IN setL  (INR b  : 'a + 'b) <=> F) /\
-  (b IN setR  (INL a  : 'a + 'b) <=> F) /\
-  (b1 IN setR (INR b2 : 'a + 'b) <=> b1 = b2)
-Proof
-  SIMP_TAC (srw_ss()) [SUM_SET_def, IN_DEF, EQ_IMP_THM]
-QED
-
-(* used later for sigma *)
-val _ = remove_ovl_mapping "SUM_SET" {Name = "SUM_SET", Thy = "sum"}
+val setR_def = new_recursive_definition {
+  name = "setR_def[simp,compute]",
+  def = “setR (INL a) = (λx. F) ∧
+         setR (INR b) = λx. x = b”,
+  rec_axiom = sum_Axiom
+  };
 
 Theorem SUM_MAP_CONG:
   (!a:'a. a IN setL ab ==> f1 a = f2 a :'c) /\
   (!b:'b. b IN setR ab ==> g1 b = g2 b :'d) ==>
   SUM_MAP f1 g1 ab = SUM_MAP f2 g2 ab
 Proof
-  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_SUM]
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_SUM, IN_DEF]
 QED
 
 Theorem SUM_ALL_SET:
   SUM_ALL P Q ab <=> (!a. a IN setL ab ==> P a) /\ (!b. b IN setR ab ==> Q b)
 Proof
-  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_SUM]
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_SUM, IN_DEF]
 QED
 
 Theorem SUM_MAP_SET[simp]:
-  (c IN setL (SUM_MAP f g ab) <=> ?a:'a. c:'c = f a /\ a IN setL ab) /\
-  (d IN setR (SUM_MAP f g ab) <=> ?b:'b. d:'d = g b /\ b IN setR ab)
+  (setL (SUM_MAP f g ab) = λc. ?a:'a. c:'c = f a /\ a IN setL ab) /\
+  (setR (SUM_MAP f g ab) = λd. ?b:'b. d:'d = g b /\ b IN setR ab)
 Proof
-  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_SUM]
+  Q.ID_SPEC_TAC ‘ab’ >> SIMP_TAC (srw_ss()) [FORALL_SUM, IN_DEF]
 QED
 
 

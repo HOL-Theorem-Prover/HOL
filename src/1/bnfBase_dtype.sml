@@ -8,24 +8,21 @@ type kname = KernelSig.kernelname
    things are added. (Strings are simpler/smaller to store in .dat files.)
 *)
 datatype 'a info = bI of {
-  siblings : hol_type list, (* types I'm mutually recursive with *)
-  canontype : hol_type,     (* canonical expression of type, see below *)
-  map : term,               (* type's map term *)
-  set : term list,          (* type's set terms *)
-  gset : term,              (* type's "generic set term" *)
-  relator : term,           (* type's rel term *)
   bnd : term,               (* type's bounding set *)
-  mapID : 'a,               (* map id₁ .. idₙ = id theorem *)
-  mapO : 'a,                (* map f₁ .. fₙ o map g₁ .. gₙ =
-                               map (f₁ o g₁) ... (fₙ o gₙ) thm *)
-  mapIMAGE : 'a list,       (* set₁ (map f₁ ... fₙ x) = IMAGE f₁ (set₁ x) etc *)
-  gsetmap : 'a,             (* gset g₁ .. gₙ (map f₁ ... fₙ x) =
-                                 gset (g₁ ∘ f₁) .. (gₙ ∘ fₙ) x *)
-  gsetIMAGE : 'a,           (* IMAGE f (gset g₁ .. gₙ x) =
-                                 gset (IMAGE f ∘ g₁) .. (IMAGE f ∘ gₙ) x *)
+  bndthms : 'a list,        (* !x. set₁ x ≼ B etc *)
+
+  canontype : hol_type,     (* canonical expression of type, see below *)
+
+  map : term,               (* type's map term *)
   mapCONG : 'a,             (* (!a1. a1 ∈ set₁ x ⇒ f₁ a1 = g₁ a1) ∧ ... ⇒
                                map f₁ .. fₙ x = map g₁ .. gₙ x *)
-  bndthms : 'a list         (* !x. set₁ x ≼ B etc *)
+  mapID : 'a,               (* map id₁ .. idₙ = id theorem *)
+  mapIMAGE : 'a list,       (* set₁ (map f₁ ... fₙ x) = IMAGE f₁ (set₁ x) etc *)
+  mapO : 'a,                (* map f₁ .. fₙ o map g₁ .. gₙ =
+                               map (f₁ o g₁) ... (fₙ o gₙ) thm *)
+  relator : term,           (* type's rel term *)
+  set : term list,          (* type's set terms *)
+  siblings : hol_type list  (* types I'm mutually recursive with *)
 }
 
 (*
@@ -53,14 +50,6 @@ set functions are of form (and occur in the set field's list in this order):
       .
       .
    |- setₙ (x : (α₁, ... αₙ, β₁ ... βₘ) tyop) = αₙ set
-
-generic set functions have type
-
-   |- gset (f₁:α₁ -> γ set) ... (fₙ:αₙ -> γ set)
-           (x : (α₁, ... αₙ, β₁ ... βₘ) tyop) : γ set =
-        BIGUNION (IMAGE f₁ (set₁ x)) ∪
-        ...
-        BIGUNION (IMAGE fₙ (set₁ x))
 
 mapO thm has form
 

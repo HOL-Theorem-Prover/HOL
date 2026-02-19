@@ -12,7 +12,7 @@ fun pure_insert (tynm, info) db = KNametab.update (tynm,info) db
 
 fun kname_to_thm_info (bI fields :kname info) : thm info =
    let
-     val {bnd,bndthms,canontype,gset,gsetIMAGE,gsetmap,
+     val {bnd,bndthms,canontype,
           map,mapID,mapO,mapIMAGE,mapCONG,
           relator,set,siblings} =
          fields
@@ -22,10 +22,6 @@ fun kname_to_thm_info (bI fields :kname info) : thm info =
        bnd = bnd,
        bndthms = List.map convertN bndthms,
        canontype = canontype,
-
-       gset = gset,
-       gsetIMAGE = convertN gsetIMAGE,
-       gsetmap = convertN gsetmap,
 
        map = map,
        mapCONG = convertN mapCONG,
@@ -44,30 +40,29 @@ local
   exception OptionExn = Option.Option
   val termdef_ed = pair_ed (term_ed, kname_ed)
 in
-  fun tup2rec ((siblings,map,set,gset),
+  fun tup2rec ((siblings,map,set),
                (relator,bnd,bndthms),
                (mapO,mapID,mapIMAGE,mapCONG),
-               (canontype, gsetmap, gsetIMAGE)
+               canontype
               ) =
-      bI {siblings = siblings, map = map, set = set, gset = gset,
-          relator = relator, bnd = bnd, mapO = mapO, mapID = mapID,
-          mapIMAGE = mapIMAGE, mapCONG = mapCONG, bndthms = bndthms,
-          gsetmap = gsetmap, gsetIMAGE = gsetIMAGE, canontype = canontype}
-  fun rec2tup (bI {siblings , map, set, gset,
-                   relator, bnd, mapO, mapID,
-                   mapIMAGE, mapCONG, bndthms,
-                   gsetmap, gsetIMAGE, canontype}) =
-      ((siblings,map,set,gset),
+      bI {siblings = siblings, map = map, set = set,
+          relator = relator, bnd = bnd, bndthms = bndthms,
+          mapO = mapO, mapID = mapID, mapIMAGE = mapIMAGE, mapCONG = mapCONG,
+          canontype = canontype}
+  fun rec2tup (bI {siblings, map, set,
+                   relator, bnd, bndthms,
+                   mapO, mapID, mapIMAGE, mapCONG,
+                   canontype}) =
+      ((siblings,map,set),
        (relator,bnd,bndthms),
        (mapO,mapID,mapIMAGE,mapCONG),
-       (canontype,gsetmap, gsetIMAGE))
+       canontype)
 
 
   val ed0 = pair4_ed (
-        pair4_ed (add_label "siblings" $ list_ed type_ed,
+        pair3_ed (add_label "siblings" $ list_ed type_ed,
                   add_label "map" $ term_ed,
-                  add_label "set" $ list_ed term_ed,
-                  add_label "gset" $ term_ed),
+                  add_label "set" $ list_ed term_ed),
         pair3_ed (add_label "relator" $ term_ed,
                   add_label "bnd" term_ed,
                   add_label "bndthms" $ list_ed kname_ed),
@@ -75,9 +70,7 @@ in
                   add_label "mapO" kname_ed,
                   add_label "mapIMAGE" $ list_ed kname_ed,
                   add_label "mapCONG" kname_ed),
-        pair3_ed (add_label "canontype" type_ed,
-                  add_label "gsetmap" kname_ed,
-                  add_label "gsetIMAGE" kname_ed)
+        add_label "canontype" type_ed
       )
   val ed1 = bij_ed (rec2tup, tup2rec) ed0
   val bnf_ed = pair_ed (kname_ed, ed1)
@@ -132,7 +125,7 @@ fun kname_of_type ty =
       {Thy = Thy, Name = Tyop}
     end
 
-fun sanity_check (ty:key) ((info as bI {set,gset,map,canontype,...}) : thm info) =
+fun sanity_check (ty:key) ((info as bI {set,map,canontype,...}) : thm info) =
     let val tys = "{Thy=\"" ^ #Thy ty ^ "\",Name=\"" ^ #Name ty ^ "\"}"
         val n = num_alphas canontype
         fun c p x m = check p x tys m
@@ -142,7 +135,6 @@ fun sanity_check (ty:key) ((info as bI {set,gset,map,canontype,...}) : thm info)
         "Kernel name (key) doesn't correspond to canontype field" ;
       c (null o free_vars) map "map value not ground" ;
       c (List.all (null o free_vars)) set "a set value not ground" ;
-      c (null o free_vars) gset "generic set value not ground" ;
       c (fn m =>
             (m |> type_of |> funpow n (#2 o dom_rng) |> dom_rng |> #1) =
             canontype)

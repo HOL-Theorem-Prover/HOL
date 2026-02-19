@@ -1,6 +1,7 @@
 Theory bnfPrelims[bare]
 Ancestors sum pair option pred_set cardinal quotient
 Libs HolKernel Parse boolLib BasicProvers simpLib TotalDefn[qualified] QLib
+     metisLib
 
 
 fun sum_nm s : KernelSig.kernelname = {Thy = "sum", Name = s}
@@ -81,6 +82,24 @@ Proof
   simp[SING_CARDLE]
 QED
 
+Theorem UNIQUE_SKOLEM:
+  (∀x. ∃!y. P x y) ⇔ ∃!f. ∀x. P x (f x)
+Proof
+  eq_tac >> simp[EXISTS_UNIQUE_THM] >> rpt strip_tac
+  >- (qexists_tac ‘λx. @y. P x y’ >> simp[] >> gen_tac >> SELECT_ELIM_TAC >>
+      METIS_TAC[])
+  >- (simp[FUN_EQ_THM] >> METIS_TAC[])
+  >- METIS_TAC[]
+  >- (rename [‘P x a’, ‘P x b’, ‘a = b’] >>
+      Cases_on ‘f x = a’
+      >- (pop_assum (SUBST_ALL_TAC o SYM) >>
+          first_x_assum $ qspecl_then [‘f’, ‘f (| x |-> b |)’] mp_tac >>
+          simp[combinTheory.APPLY_UPDATE_THM] >>
+          disch_then irule >> METIS_TAC[]) >>
+      first_x_assum $ qspecl_then [‘f(|x|->a|)’, ‘f’] mp_tac >>
+      simp[combinTheory.APPLY_UPDATE_THM, FUN_EQ_THM] >> METIS_TAC[])
+QED
+
 (* ----------------------------------------------------------------------
     record the sum type's Bounded Natural Functor nature
    ---------------------------------------------------------------------- *)
@@ -121,13 +140,10 @@ Proof
   SIMP_TAC (srw_ss()) [EXTENSION]
 QED
 
-Theorem sumMapCONG:
-  (∀a1. a1 ∈ setL x ⇒ (f1 : 'a1 -> 'c1) a1 = g1 a1) ∧
-  (∀a2. a2 ∈ setR x ⇒ (f2 : 'a2 -> 'c2) a2 = g2 a2) ⇒
-  SUM_MAP f1 f2 x = SUM_MAP g1 g2 x
-Proof
-  Cases_on ‘x’ >> simp[]
-QED
+Theorem sumMapCONG =
+        sumTheory.SUM_MAP_CONG
+          |> INST_TYPE [alpha |-> “:'a1”, beta |-> “:'a2”,
+                        gamma |-> “:'c1”, delta |-> “:'c2”]
 
 Theorem sum_bnd1:
   ∀s : 'a + 'b. setL s ≼ univ(:num)
@@ -141,29 +157,12 @@ Proof
   GEN_TAC >> Cases_on ‘s’ >> simp[cardleq_def, INJ_DEF]
 QED
 
-Theorem sum_gsetmap:
-  sum$SUM_SET (f1:'c1 -> 'd set) (f2:'c2 -> 'd set)
-  (SUM_MAP (g1:'a1 -> 'c1) (g2:'a2 -> 'c2) s) =
-  sum$SUM_SET (f1 o g1) (f2 o g2) s
-Proof
-  Cases_on ‘s’ >> simp[EXTENSION, SUM_SET_def]
-QED
-
-Theorem sum_gsetIMAGE:
-  IMAGE (f : 'c -> 'd)
-    (sum$SUM_SET (g1 : 'a1 -> 'c set) (g2 : 'a2 -> 'c set) s) =
-  sum$SUM_SET (IMAGE f o g1) (IMAGE f o g2) s
-Proof
-  Cases_on ‘s’ >> simp[SUM_SET_def]
-QED
-
-
 val _ = bnfBase.updateDB (
   {Name = "sum", Thy = "sum"},
   bnfBase.bI {
+    bnd = “UNIV : num set”,
+    bndthms = [pnm "sum_bnd1", pnm "sum_bnd2"],
     canontype = “:'a1 + 'a2”,
-    siblings = [],
-
 
     map = “SUM_MAP : ('a1 -> 'c1) -> ('a2 -> 'c2) -> 'a1 + 'a2 -> 'c1 + 'c2”,
     mapID = pnm "sumMap_ID",
@@ -171,16 +170,10 @@ val _ = bnfBase.updateDB (
     mapIMAGE = [pnm "sumMapIMAGE1", pnm "sumMapIMAGE2"],
     mapCONG = pnm "sumMapCONG",
 
-    set = [“setL : 'a1 + 'a2 -> 'a1 set”, “setR : 'a1 + 'a2 -> 'a2 set”],
-    gset =
-    “sum$SUM_SET : ('a1 -> 'c set) -> ('a2 -> 'c set) -> 'a1 + 'a2 -> 'c set”,
-    gsetmap = pnm "sum_gsetmap",
-    gsetIMAGE = pnm "sum_gsetIMAGE",
-
     relator = “SUM_REL : ('a1 -> 'c1 -> bool) -> ('a2 -> 'c2 -> bool) ->
                          'a1 + 'a2 -> 'c1 + 'c2 -> bool”,
-    bnd = “UNIV : num set”,
-    bndthms = [pnm "sum_bnd1", pnm "sum_bnd2"]
+    set = [“setL : 'a1 + 'a2 -> 'a1 set”, “setR : 'a1 + 'a2 -> 'a2 set”],
+    siblings = []
   }
 )
 
@@ -220,21 +213,6 @@ Proof
   Cases_on ‘p’ >> simp[]
 QED
 
-Theorem pair_gsetmap:
-  pair$PAIR_SET (f1 : 'c1 -> 'd set) (f2: 'c2 -> 'd set)
-  (((g1 : 'a1 -> 'c1) ## (g2 : 'a2 -> 'c2)) p) =
-  pair$PAIR_SET (f1 o g1) (f2 o g2) p
-Proof
-  Cases_on ‘p’ >> simp[PAIR_SET_def]
-QED
-
-Theorem pair_gsetIMAGE:
-  IMAGE (f : 'c -> 'd) (PAIR_SET (g1 : 'a1 -> 'c set) (g2 : 'a2 -> 'c set) p) =
-  PAIR_SET (IMAGE f o g1) (IMAGE f o g2) p
-Proof
-  Cases_on ‘p’ >> simp[PAIR_SET_def, EXTENSION, SF boolSimps.DNF_ss]
-QED
-
 Theorem pair_bnd1:
   ∀p : 'a1 # 'a2. setFST p ≼ univ(:num)
 Proof
@@ -259,10 +237,6 @@ val _ = bnfBase.updateDB (
     mapO = pnm "pairMap_O",
     mapIMAGE = [pnm "pairMapIMAGE1", pnm "pairMapIMAGE2"],
     mapCONG = pnm "pairMapCONG",
-    gset = “pair$PAIR_SET : ('a1 -> 'c set) -> ('a2 -> 'c set) ->
-                            ('a1 # 'a2 -> 'c set)”,
-    gsetmap = pnm "pair_gsetmap",
-    gsetIMAGE = pnm "pair_gsetIMAGE",
     relator = “pair$RPROD : ('a1 -> 'c1 -> bool) -> ('a2 -> 'c2 -> bool) ->
                             ('a1 # 'a2 -> 'c1 # 'c2 -> bool)”,
     bnd = “univ(:num)”,
@@ -314,25 +288,6 @@ Proof
   irule_at Any SURJ_IMAGE
 QED
 
-Definition fun_gset_def:
-  fun_gset (g1 : 'a1 -> 'c set) (f: 'b1 -> 'a1) =
-  BIGUNION (IMAGE g1 (fset f))
-End
-
-Theorem fun_gsetmap:
-  fun_gset (g1 : 'c1 -> 'd set) (fmap (f1 : 'a1 -> 'c1) (fn:'b1 -> 'a1)) =
-  fun_gset (g1 o f1) fn
-Proof
-  simp[fun_gset_def, IMAGE_IMAGE]
-QED
-
-Theorem fun_gsetIMAGE:
-  IMAGE (f : 'c -> 'd) (fun_gset (g1 : 'a1 -> 'c set) (fn:'b1 -> 'a1)) =
-  fun_gset (IMAGE f o g1) fn
-Proof
-  simp[fun_gset_def, IMAGE_BIGUNION, IMAGE_IMAGE]
-QED
-
 val _ = bnfBase.updateDB (
   {Thy = "min", Name = "fun"},
   bnfBase.bI {
@@ -340,13 +295,10 @@ val _ = bnfBase.updateDB (
     siblings = [],
     map = “combin$o : ('a1 -> 'c1) -> ('b1 -> 'a1) -> ('b1 -> 'c1)”,
     set = [“fset: ('b1 -> 'a1) -> 'a1 set”],
-    gset = “fun_gset : ('a1 -> 'c set) -> ('b1 -> 'a1) -> 'c set”,
     mapID = pnm "funMap_ID",
     mapO = pnm "funMap_O",
     mapIMAGE = [pnm "funMapIMAGE1"],
     mapCONG = pnm "funMapCONG",
-    gsetmap = pnm "fun_gsetmap",
-    gsetIMAGE = pnm "fun_gsetIMAGE",
     relator = “quotient$===> $= : ('a1 -> 'c1 -> bool) ->
                                   (('b1 -> 'a1) -> ('b1 -> 'c1) -> bool)”,
     bnd = “univ(:'b1)”,
@@ -388,10 +340,6 @@ Definition optSET_def:
   optSET (SOME x) = {x}
 End
 
-Definition opt_gset_def:
-  opt_gset (f1:'a1 -> 'c set) (x:'a1 option) = BIGUNION (IMAGE f1 (optSET x))
-End
-
 Theorem optMapIMAGE1:
   ∀(f : 'a1 -> 'c1) (x : 'a1 option).
     optSET (OPTION_MAP f x) = IMAGE f (optSET x)
@@ -404,20 +352,6 @@ Theorem optMapCONG:
   OPTION_MAP f1 x = OPTION_MAP g1 x
 Proof
   Cases_on ‘x’ >> simp[optSET_def]
-QED
-
-Theorem opt_gsetmap:
-  opt_gset (f1 : 'c1 -> 'd set) (OPTION_MAP (g1 : 'a1 -> 'c1) opt) =
-  opt_gset (f1 o g1) opt
-Proof
-  Cases_on ‘opt’ >> simp[opt_gset_def, optSET_def]
-QED
-
-Theorem opt_gsetIMAGE:
-  IMAGE (f : 'c -> 'd) (opt_gset (g1 : 'a1 -> 'c set) opt) =
-  opt_gset (IMAGE f o g1) opt
-Proof
-  Cases_on ‘opt’ >> simp[opt_gset_def, optSET_def]
 QED
 
 Theorem opt_bnd1:
@@ -433,13 +367,10 @@ val _ = bnfBase.updateDB (
     siblings = [],
     map = “option$OPTION_MAP : ('a1 -> 'c1) -> 'a1 option -> 'c1 option”,
     set = [“optSET : 'a1 option -> 'a1 set”],
-    gset = “opt_gset : ('a1 -> 'c set) -> 'a1 option -> 'c set”,
     mapID = pnm "optMap_ID",
     mapO = pnm "optMap_O",
     mapIMAGE = [pnm "optMapIMAGE1"],
     mapCONG = pnm "optMapCONG",
-    gsetmap = pnm "opt_gsetmap",
-    gsetIMAGE = pnm "opt_gsetIMAGE",
     relator = “option$OPTREL : ('a1 -> 'c1 -> bool) ->
                                ('a1 option -> 'c1 option -> bool)”,
     bnd = “univ(:num)”,
