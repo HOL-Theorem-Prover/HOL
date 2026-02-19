@@ -752,15 +752,28 @@ val (suspimp_t, mk_suspimp, dest_suspimp, is_suspimp) =
     syntax_fns2 "marker" "suspendimp"
 val strip_suspimp = strip_gen_left dest_suspimp
 
+(* The label variable's name encodes both a closure-variable count and the
+   user-supplied label name in the format "N name" where N is the number of
+   universally quantified closure variables wrapping the goal body.
+   The count is always present, even when 0.
+   Decoding is done by decode_suspend_label from boolLib. *)
+fun encode_label (nm, n) = Int.toString n ^ " " ^ nm
+
 fun dest_slab t =
     let val (f, xs) = strip_comb t
         val _ = same_const susp_t f orelse
                 raise ERR "dest_slab" "Term not a suspendlabel"
     in
       case xs of
-          [labt, arg] => ((#1 (dest_var labt), arg)
-                          handle HOL_ERR _ => raise ERR "dest_slab"
-                                                    "Label argument invalid")
+          [labt, arg] =>
+            let val (raw, _) = dest_var labt
+                               handle HOL_ERR _ =>
+                                      raise ERR "dest_slab"
+                                                "Label argument invalid"
+                val (nm, nclosure) = boolLib.decode_suspend_label raw
+            in
+              (nm, nclosure, arg)
+            end
         | _ => raise ERR "dest_slab" "Incomplete suspendlabel term"
     end
 
@@ -786,11 +799,17 @@ fun spopmp ([], g) = raise ERR "spopmp" "No assumptions"
 
 fun suspend nm g =
   let
-    val lab_t = mk_var(nm, ind)
     val gl_t = list_mk_suspimp g
-    val eqth = SPECL [lab_t,gl_t] suspendlabel_def
+    (* Universally close over free variables in gl_t so that they don't
+       leak into the suspendlabel hypothesis. This prevents GEN from failing
+       when proof reconstruction needs to re-generalise variables that were
+       introduced by GEN_TAC. *)
+    val fvs = free_vars gl_t
+    val closed_gl_t = list_mk_forall(fvs, gl_t)
+    val lab_t = mk_var(encode_label(nm, length fvs), ind)
+    val eqth = SPECL [lab_t,closed_gl_t] suspendlabel_def
     val th = ASSUME (lhs (concl eqth))
-    val usable_th = EQ_MP eqth th
+    val usable_th = SPECL fvs (EQ_MP eqth th)
     fun foldthis (ath, mpth) = sMP mpth ath
   in
     Tactical.THEN(rpt spopmp, ACCEPT_TAC usable_th)
@@ -803,14 +822,6 @@ fun sDISCH t th =
     CONV_RULE (RATOR_CONV (RATOR_CONV (K simp_def'))) $ DISCH t th
 
 fun add_suspension_label nm th = EQ_MP (SPECL [mk_var(nm, labty), concl th] slab_def') th
-
-fun suspended_to_goal t =
-    let val (_, s_t) = dest_slab t
-        val (asl0, g) = strip_suspimp s_t
-    in
-      (List.rev asl0, g)
-    end
-
 
 val elimrc_conv = RATOR_CONV (RATOR_CONV (REWR_CONV resconj_def))
 val elimsi_conv = RATOR_CONV (RATOR_CONV (REWR_CONV suspendimp_def))
@@ -830,7 +841,7 @@ fun RESCONJS th =
                   | SOME (th1, th2) =>
                     recurse (th2::th1::A) rest
     in
-      recurse [] [th]
+      rev (recurse [] [th])
     end
 
 fun RESCONJS_TAC g =
@@ -856,56 +867,84 @@ val RESUME_TAC = RESCONJS_TAC THEN SUSPIMPS_TAC
    When there are multiple goals, we need to repeat the above having stripped
    away the "resumption conjunctions".
  *)
-fun prove_suspended0 nm s_t th tgt =
+fun strip_n_foralls_vars 0 t = ([], t)
+  | strip_n_foralls_vars n t =
+    let val (v, body) = dest_forall t
+        val (vs, rest) = strip_n_foralls_vars (n - 1) body
+    in (v :: vs, rest)
+    end
+
+(* Reconstruct |- suspendlabel (encoded_nm) closed_term from a user-proved
+   theorem th whose conclusion matches body (the term under the closure
+   foralls). *)
+fun prove_suspended0 nm nclosure s_t th tgt =
     let
+      val (closure_vars, body) = strip_n_foralls_vars nclosure s_t
       val result =
           if is_suspimp (concl th) then th
           else
             let
-              val (imps, c) = strip_suspimp s_t
+              val (imps, c) = strip_suspimp body
             in
               itlist sDISCH imps th
             end
+      val closed_result = GENL closure_vars result
+      val encoded_nm = encode_label(nm, nclosure)
     in
-      PROVE_HYP (add_suspension_label nm result) tgt
+      PROVE_HYP (add_suspension_label encoded_nm closed_result) tgt
     end
-fun prove_suspended nm s_t th tgt =
-  if is_resconj s_t then
-    let val cs = strip_resconj s_t
-        val ths = RESCONJS th
-        fun foldthis (t, th, tgt) = prove_suspended0 nm t th tgt
-    in
-      ListPair.foldl foldthis tgt (cs, ths)
-    end
-  else prove_suspended0 nm s_t th tgt
 
+(* prove_suspended: handle both single and multi-goal (resconj) cases.
+   ncts is the list of (nclosure, term) pairs from extract_suspended_goal. *)
+fun prove_suspended nm ncts th tgt =
+  case ncts of
+      [(nc, s_t)] => prove_suspended0 nm nc s_t th tgt
+    | _ =>
+      let val ths = RESCONJS th
+          fun foldthis ((nc, s_t), th, tgt) =
+              prove_suspended0 nm nc s_t th tgt
+      in
+        ListPair.foldl foldthis tgt (ncts, ths)
+      end
+
+(* extract_suspended_goal: returns a list of (nclosure, term) pairs,
+   one per hypothesis with the given label. *)
 fun extract_suspended_goal th label =
     let fun myhyp t =
             case total dest_slab t of
-                SOME (nm,t0) => if nm = label then SOME t0 else NONE
+                SOME (nm,nc,t0) => if nm = label then SOME (nc,t0) else NONE
               | NONE => NONE
     in
       case List.mapPartial myhyp (hyp th) of
           [] => raise ERR "extract_suspended_goal"
                         ("No such label in theorem: " ^ label)
-        | [t] => t
-        | ts => list_mk_resconj ts
+        | ncts => ncts
     end
 
-fun resumption_to_goal r_t =
-    if is_resconj r_t then ([], r_t)
-    else let val (asl0, g) = strip_suspimp r_t
-         in
-           (List.rev asl0, g)
-         end
+(* resumption_to_goal: given the (nclosure, term) list from
+   extract_suspended_goal, produce the goal to present to the user.
+   For a single hypothesis, strip nclosure foralls then strip suspimps.
+   For multiple hypotheses, strip each one's closure foralls individually,
+   then combine with resconj. *)
+fun resumption_to_goal ncts =
+    case ncts of
+        [(nclosure, r_t)] =>
+          let val (_, body) = strip_n_foralls_vars nclosure r_t
+              val (asl0, g) = strip_suspimp body
+          in
+            (List.rev asl0, g)
+          end
+      | _ => ([], list_mk_resconj
+                    (map (fn (nc, t) => #2 (strip_n_foralls_vars nc t)) ncts))
 
 
 fun prim_resume (th,label,tac) =
-    let val s_t = extract_suspended_goal th label
-        val goal = resumption_to_goal s_t
+    let val ncts = extract_suspended_goal th label
+        val goal = resumption_to_goal ncts
         val sub_th = prove_goal(goal, tac)
     in
-      {subresult = sub_th, updated_main = prove_suspended label s_t sub_th th}
+      {subresult = sub_th,
+       updated_main = prove_suspended label ncts sub_th th}
     end
 
 fun commaAndConcat strs =

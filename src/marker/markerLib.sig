@@ -118,8 +118,8 @@ sig
       (* provides id_tacm for the tactic modifier value *)
 
   val add_suspension_label : string -> thm -> thm
-  val resumption_to_goal : term -> (term list * term)
-  val extract_suspended_goal : thm -> string -> term
+  val resumption_to_goal : (int * term) list -> (term list * term)
+  val extract_suspended_goal : thm -> string -> (int * term) list
   val RESUME_TAC : tactic
 
 end (* sig *)
