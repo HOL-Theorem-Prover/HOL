@@ -23,6 +23,10 @@ open HolKernel boolLib bossLib
 
 val ERR = mk_HOL_ERR "Elim_Lambda";
 
+(*---------------------------------------------------------------------------*)
+(* Stream of variables for auxiliary definitions                             *)
+(*---------------------------------------------------------------------------*)
+
 local
   val def_prefix = "Lam_"
   fun defName_of i = def_prefix^Int.toString i
@@ -69,6 +73,17 @@ fun find_defs t =
     (!def_list |> rev, new)
   end
 
+(*---------------------------------------------------------------------------*)
+(* Stream of names for storing equivalence theorems under.                   *)
+(*---------------------------------------------------------------------------*)
+
+local
+  val equiv_prefix = "Equiv_"
+  val num_stream = Portable.make_counter{init=0,inc=1}
+in
+  fun equiv_thm_name() = equiv_prefix^Int.toString(num_stream())
+end;
+
 fun lift_lambdas tm =
   let val (vs,M) = strip_forall tm
   in case find_defs M
@@ -76,6 +91,7 @@ fun lift_lambdas tm =
        | (defs,M') =>
        let val goal = mk_eq (tm, list_mk_forall(vs,M'))
            val eq_thm = prove(goal,simp defs)
+           val _ = save_thm(equiv_thm_name(),eq_thm)
            val defs' = map (SIMP_RULE bool_ss [FUN_EQ_THM]) defs
        in SOME (eq_thm, defs') end
   end
