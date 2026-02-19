@@ -1368,7 +1368,7 @@ end
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm ((d,ocl), termlist) = let
+fun disk_thm name ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in

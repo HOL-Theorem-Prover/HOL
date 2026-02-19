@@ -236,7 +236,28 @@ fun thmwrite tmw th0 =
                         (Thm.tag th, concl th :: hyp th)
   end
 fun thmreader tmr =
-    pair_decode (tagreader, list_decode (string_decode >> tmr)) >> Thm.disk_thm
+    let
+      fun lookup_name (thy, n) =
+        let
+          fun match_dep (name, th) =
+            let val dep = Tag.dep_of (Thm.tag th)
+            in case dep of
+                 Dep.DEP_SAVED ((t, m), _) => t = thy andalso m = n
+               | _ => false
+            end
+        in
+          case List.find match_dep (DB.thms thy) of
+            SOME (name, _) => name
+          | NONE => "_unknown_" ^ thy ^ "_" ^ Int.toString n
+        end
+        handle _ => "_unknown"
+      fun with_name ((dd, ocl), terms) =
+        let val (depid, _) = dd
+            val name = lookup_name depid
+        in Thm.disk_thm name ((dd, ocl), terms) end
+    in
+      pair_decode (tagreader, list_decode (string_decode >> tmr)) >> with_name
+    end
 
 fun tag s enc x = HOLsexp.tagged_encode s enc x
 fun write (wrt as {strings,terms}) s =

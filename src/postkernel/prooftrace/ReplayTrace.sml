@@ -21,7 +21,7 @@ val ERR = mk_HOL_ERR "ReplayTrace"
 
 val replay_debug = ref false
 val first_fail = ref (NONE : string option)
-val compute_verifier = ref (NONE : (term -> thm) option)
+
 
 fun its i = Int.toString i
 
@@ -80,8 +80,6 @@ fun tokenize line =
 datatype header = Header of {
   version: int,
   theory: string,
-  parents: string list,
-  ancestors: (string * string) list,  (* (theory, digest) pairs *)
   n_types: int,
   n_terms: int,
   n_steps: int
@@ -106,18 +104,6 @@ fun parse_header (lines : string list) =
             else ()
     val (thy_str, lines) = get_line "THEORY " lines
     val theory = unescape thy_str
-    val (par_str, lines) = get_line "PARENTS " lines
-    val parents = map unescape (String.tokens Char.isSpace par_str)
-    (* Parse optional ANCESTOR lines *)
-    val ancestor_lines = List.filter
-      (fn l => String.isPrefix "ANCESTOR " l) lines
-    val ancestors = List.mapPartial (fn l =>
-      let val toks = String.tokens Char.isSpace
-                       (String.extract(l, 9, NONE))
-      in case toks of
-           [thy_s, digest_s] => SOME (unescape thy_s, digest_s)
-         | _ => NONE
-      end) ancestor_lines
     val (cnt_str, _) = get_line "COUNTS " lines
     val cnts = String.tokens Char.isSpace cnt_str
     val (n_types, n_terms, n_steps) =
@@ -125,8 +111,7 @@ fun parse_header (lines : string list) =
         [a, b, c] => (a, b, c)
       | _ => raise ERR "parse_header" "COUNTS must have 3 integers"
   in
-    Header {version=version, theory=theory, parents=parents,
-            ancestors=ancestors,
+    Header {version=version, theory=theory,
             n_types=n_types, n_terms=n_terms, n_steps=n_steps}
   end
 
@@ -259,35 +244,25 @@ fun build_terms n_terms type_arr (lines : string list) =
    Replay proof steps
    ----------------------------------------------------------------------- *)
 
-(* Ancestor context: maps conclusion term to list of ancestor thms.
+(* Ancestor context: maps (theory, name) to ancestor thm.
    Used to resolve ORACLE DISK_THM entries against actually-replayed ancestors
    instead of oracle thms. *)
-type ancestor_ctx = (Term.term, Thm.thm list) Redblackmap.dict
-val empty_ctx : ancestor_ctx = Redblackmap.mkDict Term.compare
+fun thyname_compare ((t1,n1) : string * string, (t2,n2)) =
+  case String.compare(t1,t2) of
+    EQUAL => String.compare(n1,n2)
+  | ord => ord
+type ancestor_ctx = (string * string, Thm.thm) Redblackmap.dict
+val empty_ctx : ancestor_ctx = Redblackmap.mkDict thyname_compare
 
-(* Look up an ancestor thm by conclusion and hypotheses *)
-fun ctx_lookup (ctx : ancestor_ctx) (concl : Term.term)
-               (hyps : Term.term list) : Thm.thm option =
-  case Redblackmap.peek(ctx, concl) of
-    NONE => NONE
-  | SOME thms =>
-      let fun match_hyps th =
-            let val actual_hyps = Thm.hyp th
-            in length actual_hyps = length hyps andalso
-               List.all (fn h =>
-                 List.exists (fn h' => Term.aconv h h') actual_hyps)
-                 hyps
-            end
-      in List.find match_hyps thms end
+fun ctx_lookup_by_name (ctx : ancestor_ctx) (thy : string)
+                       (name : string) : Thm.thm option =
+  Redblackmap.peek(ctx, (thy, name))
 
-(* Add exports to an ancestor context *)
-fun ctx_add_exports (ctx : ancestor_ctx)
+(* Add exports to an ancestor context, keyed by (theory, name) *)
+fun ctx_add_exports (ctx : ancestor_ctx) (thy : string)
                     (exports : (string * Thm.thm) list) : ancestor_ctx =
-  List.foldl (fn ((_, th), ctx) =>
-    let val c = Thm.concl th
-        val prev = case Redblackmap.peek(ctx, c) of
-                     SOME ths => ths | NONE => []
-    in Redblackmap.insert(ctx, c, th :: prev) end) ctx exports
+  List.foldl (fn ((name, th), ctx) =>
+    Redblackmap.insert(ctx, (thy, name), th)) ctx exports
 
 fun replay_steps term_arr type_arr (lines : string list)
                  (ctx : ancestor_ctx) =
@@ -302,11 +277,12 @@ fun replay_steps term_arr type_arr (lines : string list)
     fun ty i = Array.sub(type_arr, i)
     fun th i = Array.sub(thm_arr, i)
 
-    (* Set of opaque rule tags *)
-    (* DEF_SPEC and DEF_TYOP have parent thm dependencies (witness),
-       so they must be processed in pass 2 after their parents. *)
-    val opaque_rules = ["ORACLE", "AXIOM", "COMPUTE"]
+    (* Set of opaque rule tags — processed in pass 1 before parents *)
+    val opaque_rules = ["ORACLE", "AXIOM", "COMPUTE_INIT"]
     fun is_opaque rule = List.exists (fn r => r = rule) opaque_rules
+
+    (* Compute closure, set by COMPUTE_INIT *)
+    val compute_fn = ref (NONE : (thm list -> term -> thm) option)
 
     (* Split step line into (rule_toks, parent_ids) at "|" *)
     fun strict_int s = case Int.fromString s of
@@ -320,7 +296,7 @@ fun replay_steps term_arr type_arr (lines : string list)
       in go [] toks end
 
     (* Create oracle thm from statement: concl_id nhyps hyp_ids *)
-    fun mk_oracle_step toks =
+    fun mk_oracle_step tag toks =
       case toks of
         concl_s :: nhyps_s :: rest =>
           let
@@ -329,17 +305,10 @@ fun replay_steps term_arr type_arr (lines : string list)
             val hyp_ids = List.take(List.mapPartial Int.fromString rest, nhyps)
             val hyps = map tm hyp_ids
           in
-            (* Try ancestor context first, fall back to oracle thm *)
-            case ctx_lookup ctx c hyps of
-              SOME ancestor_th => ancestor_th
-            | NONE => Thm.mk_oracle_thm "REPLAY_ORACLE" (hyps, c)
+            Thm.mk_oracle_thm tag (hyps, c)
           end
       | [concl_s] =>
-          let val c = tm (int_of concl_s)
-          in case ctx_lookup ctx c [] of
-               SOME ancestor_th => ancestor_th
-             | NONE => Thm.mk_oracle_thm "REPLAY_ORACLE" ([], c)
-          end
+          Thm.mk_oracle_thm tag ([], tm (int_of concl_s))
       | _ => raise ERR "mk_oracle_step" "bad format"
 
     (* Parse type substitution pairs: n redex1 residue1 ... *)
@@ -446,84 +415,86 @@ fun replay_steps term_arr type_arr (lines : string list)
         | "Specialize" => Thm.SPEC (tm (opd 0)) (parent 0)
 
         (* --- Opaque steps: oracle with recorded statement --- *)
-        | "ORACLE" => mk_oracle_step (tl operands)  (* skip tag *)
+        | "ORACLE" =>
+            let val tag = hd operands
+                val rest = tl operands
+            in
+              if tag = "DISK_THM" then
+                (* Format: ORACLE DISK_THM <thy> <name>
+                   In per-theory traces, resolve via ancestor context.
+                   In merged traces, these have been replaced by direct
+                   step references and should not appear. *)
+                let val thy = unescape (List.nth(rest, 0))
+                    val name = unescape (List.nth(rest, 1))
+                in
+                  case ctx_lookup_by_name ctx thy name of
+                    SOME th => th
+                  | NONE => Thm.mk_oracle_thm "REPLAY_ORACLE"
+                              ([], Term.mk_var(thy ^ "$" ^ name, Type.bool))
+                end
+              else
+                mk_oracle_step tag rest
+            end
         | "AXIOM" =>
             Thm.mk_axiom_thm (Nonce.mk "REPLAY", tm (opd 0))
         | "DEF_SPEC" =>
-            (* New format: thyname n_cnames cname1...cnameN concl_id
-               Old format: concl_id (fallback) *)
-            (if length operands >= 3
-             then let
-               val thyname = unescape (List.nth(operands, 0))
-               val n = int_of (List.nth(operands, 1))
-               val cnames = List.tabulate(n, fn i =>
-                 unescape (List.nth(operands, 2 + i)))
-               val witness = parent 0
-               val concl_tm = tm (int_of (List.last operands))
-               (* Check if constant already defined (theory loaded).
-                  Calling prim_specification when constants exist would
-                  rename them with old-> prefix, corrupting the
-                  namespace for subsequent inference steps. *)
-               val already_defined =
-                 (Term.prim_mk_const {Name = hd cnames, Thy = thyname};
-                  true)
-                 handle HOL_ERR _ => false
-             in
-               if already_defined then
-                 Thm.mk_defn_thm (Thm.tag witness, concl_tm)
-               else
-                 let val has_hyps = not (null (Thm.hyp witness))
-                 in (if has_hyps
-                     then #2 (Thm.gen_prim_specification thyname witness)
-                     else Thm.prim_specification thyname cnames witness)
-                    handle _ =>
-                      Thm.mk_defn_thm (Thm.tag witness, concl_tm)
-                 end
-             end
-             else
-               (* Old format: just concl_id *)
-               let val empty_tag = Thm.tag (Thm.REFL
-                     (Term.mk_var("x", Type.bool)))
-               in Thm.mk_defn_thm (empty_tag, tm (opd 0)) end)
+            let
+              val thyname = unescape (List.nth(operands, 0))
+              val n = int_of (List.nth(operands, 1))
+              val cnames = List.tabulate(n, fn i =>
+                unescape (List.nth(operands, 2 + i)))
+              val witness = parent 0
+              val has_hyps = not (null (Thm.hyp witness))
+            in
+              if has_hyps
+              then #2 (Thm.gen_prim_specification thyname witness)
+              else Thm.prim_specification thyname cnames witness
+            end
         | "DEF_TYOP" =>
-            (* operands: thy tyop concl_id; parent 0 = witness thm *)
             let val thy = unescape (List.nth(operands, 0))
                 val tyop = unescape (List.nth(operands, 1))
-                val concl_tm = tm (int_of (List.last operands))
                 val witness = parent 0
-                (* Check if type already defined *)
-                val already_defined =
-                  (ignore (Type.mk_thy_type {Thy=thy, Tyop=tyop,
-                                             Args=[]});
-                   true)
-                  handle HOL_ERR _ => false
             in
-              if already_defined then
-                Thm.mk_defn_thm (Thm.tag witness, concl_tm)
-              else
-                Thm.prim_type_definition ({Thy=thy, Tyop=tyop}, witness)
-                handle _ =>
-                  Thm.mk_defn_thm (Thm.tag witness, concl_tm)
+              Thm.prim_type_definition ({Thy=thy, Tyop=tyop}, witness)
+            end
+        | "COMPUTE_INIT" =>
+            (* operands: n_cval (name term_id){n_cval} cval_type_id
+               num_type_id n_char (name){n_char}
+               parents: char_eqn thms *)
+            let
+              val n_cval = opd 0
+              val cval_terms = List.tabulate(n_cval, fn i =>
+                (unescape (List.nth(operands, 1 + 2*i)),
+                 tm (int_of (List.nth(operands, 2 + 2*i)))))
+              val base = 1 + 2 * n_cval
+              val cval_type = ty (int_of (List.nth(operands, base)))
+              val num_type = ty (int_of (List.nth(operands, base + 1)))
+              val n_char = int_of (List.nth(operands, base + 2))
+              val char_names = List.tabulate(n_char, fn i =>
+                unescape (List.nth(operands, base + 3 + i)))
+              val char_thms = List.tabulate(n_char, fn i => parent i)
+              val char_eqns = ListPair.zip(char_names, char_thms)
+              val cached = Thm.compute {
+                cval_terms = cval_terms,
+                cval_type = cval_type,
+                num_type = num_type,
+                char_eqns = char_eqns
+              }
+            in
+              compute_fn := SOME cached;
+              (* COMPUTE_INIT doesn't produce a theorem;
+                 store a dummy placeholder *)
+              Thm.mk_oracle_thm "COMPUTE_INIT" ([], Term.mk_var("_init", Type.bool))
             end
         | "COMPUTE" =>
-            (* operands: input_tm concl_tm *)
+            (* operands: input_term_id; parents: code_eqn thms *)
             let val input = tm (opd 0)
-                val expected_concl = tm (opd 1)
+                val code_eqs = List.tabulate(length parents, parent)
             in
-              case !compute_verifier of
-                SOME eval_fn =>
-                  (let val result_thm = eval_fn input
-                       val result_concl = Thm.concl result_thm
-                   in if Term.aconv result_concl expected_concl
-                         andalso null (Thm.hyp result_thm)
-                      then result_thm
-                      else Thm.mk_oracle_thm "REPLAY_COMPUTE"
-                             ([], expected_concl)
-                   end
-                   handle _ => Thm.mk_oracle_thm "REPLAY_COMPUTE"
-                                 ([], expected_concl))
-              | NONE =>
-                  Thm.mk_oracle_thm "REPLAY_COMPUTE" ([], expected_concl)
+              case !compute_fn of
+                SOME cached => cached code_eqs input
+              | NONE => raise ERR "replay_steps"
+                  "COMPUTE step before COMPUTE_INIT"
             end
         | other => raise ERR "replay_steps" ("unknown rule: " ^ other)
       in
@@ -587,18 +558,6 @@ fun parse_exports (lines : string list) =
 fun shell_quote s =
   "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
 
-fun file_digest path =
-  let
-    val qpath = shell_quote path
-    val proc : (TextIO.instream, TextIO.outstream) Unix.proc =
-      Unix.execute("/bin/sh", ["-c", "sha256sum " ^ qpath])
-    val line = TextIO.inputAll (Unix.textInstreamOf proc)
-    val st = Unix.reap proc
-    val _ = if not (OS.Process.isSuccess st)
-            then raise ERR "file_digest" ("sha256sum failed for " ^ path)
-            else ()
-  in "sha256:" ^ hd (String.tokens Char.isSpace line) end
-
 fun read_trace_file path =
   let
     val is_zst = String.isSuffix ".zst" path
@@ -636,8 +595,6 @@ fun read_trace_file path =
     val header_lines = List.filter
       (fn l => String.isPrefix "HOL4_PROOF_TRACE" l orelse
                String.isPrefix "THEORY " l orelse
-               String.isPrefix "PARENTS " l orelse
-               String.isPrefix "ANCESTOR " l orelse
                String.isPrefix "COUNTS " l) all_lines
     val type_lines = List.filter (fn l => String.isPrefix "Y " l) all_lines
     val term_lines = List.filter (fn l => String.isPrefix "M " l) all_lines
@@ -859,141 +816,12 @@ fun verify_all dir =
    passed as context for ORACLE DISK_THM entries in descendant theories.
    ----------------------------------------------------------------------- *)
 
-fun verify_chain holdir root_theory =
-  let
-    val all_traces = find_traces holdir
-    val trace_map =
-      List.foldl (fn ((thy, path), m) =>
-        Redblackmap.insert(m, thy, path))
-        (Redblackmap.mkDict String.compare) all_traces
-
-    (* Read headers to get dependency info; cache for ancestor checks *)
-    val header_cache = ref (Redblackmap.mkDict String.compare
-                            : (string, header) Redblackmap.dict)
-    fun get_parents thy =
-      case Redblackmap.peek(trace_map, thy) of
-        NONE => []
-      | SOME path =>
-        let val {header as Header {parents, ...}, ...} =
-              read_trace_file path
-            val _ = header_cache :=
-              Redblackmap.insert(!header_cache, thy, header)
-        in parents end
-        handle _ => []
-
-    (* Topological sort: DFS post-order from root *)
-    fun toposort root =
-      let
-        val visited = ref (Redblackset.empty String.compare)
-        val order = ref ([] : string list)
-        fun visit thy =
-          if Redblackset.member(!visited, thy) then ()
-          else
-            (visited := Redblackset.add(!visited, thy);
-             List.app visit (get_parents thy);
-             (* Only include theories with traces *)
-             if isSome (Redblackmap.peek(trace_map, thy))
-             then order := thy :: !order
-             else ())
-      in
-        visit root;
-        rev (!order)
-      end
-
-    val replay_order = toposort root_theory
-    val _ = print ("Replay chain: " ^ Int.toString (length replay_order) ^
-                   " theories in dependency order\n")
-
-    (* Compute SHA-256 digests for all trace files in the chain *)
-    val _ = print "Computing trace file digests...\n"
-    val digest_map =
-      List.foldl (fn (thy, m) =>
-        case Redblackmap.peek(trace_map, thy) of
-          NONE => m
-        | SOME path =>
-            (Redblackmap.insert(m, thy, file_digest path)
-             handle _ => m))
-        (Redblackmap.mkDict String.compare) replay_order
-
-    (* Check ancestor digests for a theory against actual file hashes *)
-    fun check_ancestors thy =
-      case Redblackmap.peek(!header_cache, thy) of
-        NONE => []
-      | SOME (Header {ancestors, ...}) =>
-          List.mapPartial (fn (anc_thy, expected) =>
-            case Redblackmap.peek(digest_map, anc_thy) of
-              NONE => NONE  (* ancestor not in chain, can't verify *)
-            | SOME actual =>
-                if expected = actual then NONE
-                else SOME (anc_thy, expected, actual)) ancestors
-
-    val n_ok = ref 0
-    val n_fail = ref 0
-    val errors = ref ([] : string list)
-    val ctx = ref empty_ctx
-
-    fun replay_one thy =
-      let
-        val path = valOf (Redblackmap.peek(trace_map, thy))
-        val _ = print ("  " ^ thy ^ " ... ")
-        val mismatches = check_ancestors thy
-      in
-        if not (null mismatches) then
-          (List.app (fn (anc, exp, act) =>
-            print ("    ancestor " ^ anc ^ " digest mismatch\n" ^
-                   "      expected: " ^ exp ^ "\n" ^
-                   "      actual:   " ^ act ^ "\n")) mismatches;
-           print "FAIL: ancestor digest mismatch\n";
-           n_fail := !n_fail + 1;
-           errors := thy :: !errors)
-        else
-        let
-          val exports = replay_file_ctx path (!ctx)
-          val _ = ctx := ctx_add_exports (!ctx) exports
-          val n_exports = length exports
-          (* Check for oracle tags in exports *)
-          fun count_oracle tag =
-            length (List.filter (fn (_, th) =>
-              let val (oracles, _) = Tag.dest_tag (Thm.tag th)
-              in List.exists (fn s => s = tag) oracles
-              end) exports)
-          val n_fallbacks = count_oracle "REPLAY_FALLBACK"
-          val n_placeholder = count_oracle "PLACEHOLDER"
-          val n_trust = count_oracle "REPLAY_ORACLE"
-          val n_compute = count_oracle "REPLAY_COMPUTE"
-          val n_bad = n_fallbacks + n_placeholder
-          val info =
-            String.concatWith ", " (
-              [its n_exports ^ " exports"] @
-              (if n_trust > 0 then [its n_trust ^ " trusted"] else []) @
-              (if n_compute > 0 then [its n_compute ^ " compute-oracle"]
-               else []))
-        in
-          if n_bad = 0
-          then (print ("OK (" ^ info ^ ")\n");
-                n_ok := !n_ok + 1)
-          else (print ("FAIL: " ^ its n_bad ^ "/" ^
-                       its n_exports ^ " exports have oracle tags" ^
-                       " (fallback=" ^ its n_fallbacks ^
-                       " placeholder=" ^ its n_placeholder ^ ")\n");
-                n_fail := !n_fail + 1;
-                errors := thy :: !errors)
-        end
-        handle e =>
-          (print ("FAIL: " ^ General.exnMessage e ^ "\n");
-           n_fail := !n_fail + 1;
-           errors := thy :: !errors)
-      end
-  in
-    List.app replay_one replay_order;
-    print ("\n=== Chain summary: " ^ its (!n_ok) ^ " OK, " ^
-           its (!n_fail) ^ " FAILED ===\n");
-    if not (null (!errors)) then
-      (print "Failed:\n";
-       List.app (fn e => print ("  " ^ e ^ "\n")) (rev (!errors)))
-    else ();
-    {ok = !n_ok, fail = !n_fail, errors = rev (!errors)}
-  end
+(* verify_chain is removed — use the merge tool + from-scratch replay instead *)
+fun verify_chain _ _ =
+  (print "verify_chain is no longer supported.\n\
+         \Use the merge tool to produce a self-contained trace,\n\
+         \then replay from scratch.\n";
+   {ok = 0, fail = 0, errors = ["verify_chain removed"]})
 
 fun parse_trace_stats path =
   let val {type_lines, term_lines, step_lines, export_lines, ...} =

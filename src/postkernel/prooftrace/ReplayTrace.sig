@@ -3,21 +3,15 @@ sig
   val replay_debug : bool ref
   val first_fail : string option ref
 
-  (* Optional compute verifier: given an input term, return |- input = result.
-     When set, COMPUTE steps are verified by evaluating the input term and
-     checking the result matches the recorded conclusion. Unverified COMPUTE
-     steps get oracle tag "REPLAY_COMPUTE". Set to e.g. EVAL for full
-     verification. *)
-  val compute_verifier : (Term.term -> Thm.thm) option ref
   (* Replay a .pftrace[.gz|.zst] file, returning export name→thm map.
      Raises Fail on verification errors. *)
   val replay_file : string -> (string * Thm.thm) list
 
   (* Replay with ancestor context. ORACLE DISK_THM entries are resolved
-     against ancestor_thms (keyed by conclusion, checked by hyps) instead
-     of creating oracle thms. Returns exports as (name, thm) list. *)
+     against ancestor exports keyed by (theory, name) instead of creating
+     oracle thms. Returns exports as (name, thm) list. *)
   val replay_file_ctx :
-    string -> (Term.term, Thm.thm list) Redblackmap.dict
+    string -> (string * string, Thm.thm) Redblackmap.dict
     -> (string * Thm.thm) list
 
   (* Replay and verify against actual theory theorems.

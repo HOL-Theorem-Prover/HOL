@@ -1353,13 +1353,13 @@ end
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm ((d,ocl), termlist) = let
+fun disk_thm name ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
   val result = mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
   val (src_thy, _) = fst d
 in
-  tr (TR_DISK_THM (result, src_thy)); result
+  tr (TR_DISK_THM (result, src_thy, name)); result
 end
 end; (* local *)
 
@@ -1402,10 +1402,10 @@ local
     end;
   val merge_tags = foldr (uncurry Tag.merge)
 in
-  fun compute {cval_terms, cval_type, num_type, char_eqns} =
+  fun compute (init as {cval_terms, cval_type, num_type, char_eqns}) =
     let
       val tag0 = merge_tags empty_tag (List.map (tag o snd) char_eqns)
-      val char_thms = List.map snd char_eqns
+      val char_eqns_raw = char_eqns
       val char_eqns = List.map (I ## dest_thm) char_eqns
       val _ = List.all (List.null o fst o snd) char_eqns orelse
               raise ERR "compute" "Characteristic equation with hypotheses"
@@ -1414,6 +1414,8 @@ in
                    cval_type = cval_type,
                    num_type = num_type,
                    char_eqns = List.map (I ## snd) char_eqns }
+      val _ = tr (TR_COMPUTE_INIT (cval_terms, cval_type, num_type,
+                                    char_eqns_raw))
     in
       fn code_eqs =>
         let
@@ -1428,7 +1430,7 @@ in
               val eqn = safe_mk_eq tm tm'
               val result = make_thm Count.Compute (tag1, empty_hyp, eqn)
             in
-              tr (TR_COMPUTE (result, char_thms @ code_thms, tm, eqn));
+              tr (TR_COMPUTE (result, code_thms, tm));
               result
             end
         end

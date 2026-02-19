@@ -10,6 +10,9 @@ a theory's exported theorems. Files are typically compressed (`.pftrace.zst`
 or `.pftrace.gz`). Each file is self-contained: it includes type, term,
 and proof step tables, plus an export list mapping theorem names to steps.
 
+Per-theory traces are build intermediates. A merge tool combines them into
+a single self-contained trace for from-scratch replay.
+
 ## Grammar
 
 ```
@@ -17,8 +20,6 @@ trace    ::= header types terms steps exports
 
 header   ::= "HOL4_PROOF_TRACE " version "\n"
              "THEORY " name "\n"
-             "PARENTS " name* "\n"
-             ("ANCESTOR " name " sha256:" hexdigest "\n")*
              "COUNTS " n_types " " n_terms " " n_steps "\n"
 
 types    ::= type_entry*
@@ -45,7 +46,6 @@ Sections are separated by blank lines.
 - **version**: integer, currently `1`
 - **name**: unquoted token or quoted string (`"..."` with `\"`, `\\`, `\n`, `\xNN` escapes)
 - **id**, **argid**, **tyid**, **fid**, **xid**, **vid**, **bid**, **stepid**, **parentid**: non-negative integers
-- **hexdigest**: 64 hex characters (SHA-256 of ancestor `.pftrace.zst` or `.gz`)
 - **n_types**, **n_terms**, **n_steps**: array dimensions (actual entries may be fewer after pruning)
 
 ## Inference Rules
@@ -94,22 +94,21 @@ earlier steps that produced the input theorems.
 | `Mk_abs` | — | 2 | `Thm.Mk_abs` |
 | `DEF_TYOP` | `thy` `name` `concl_id` | 1 | `Thm.prim_type_definition` (conservative type definition) |
 | `DEF_SPEC` | `thyname` `n` `cname*` `concl_id` | 1 | `Thm.prim_specification` / `gen_prim_specification` (conservative constant specification) |
-| `COMPUTE` | `input_id` `result_id` | 0+ | `Thm.compute` (first-order evaluation); parents (code equation thms) are recorded but not used during replay |
+| `COMPUTE_INIT` | `n_cval` (`name` `term_id`){n_cval} `cval_type_id` `num_type_id` `n_char` `char_name`{n_char} | n_char | `Thm.compute` initialization (once per trace) |
+| `COMPUTE` | `input_term_id` | 0+ | `Thm.compute` evaluation; parents are code equation thms |
 
 ### Trust Steps
 
-These record their theorem statement (conclusion + hypotheses) rather than
-being replayed through the kernel. They represent the trust boundary of
-a trace file.
+These represent the trust boundary of a trace file.
 
 | Rule | Operands | Parents | Meaning |
 |------|----------|---------|---------|
 | `AXIOM` | `concl_id` | — | Axiom introduction |
-| `ORACLE` | `tag` `concl_id` `nhyps` `hyp_ids*` | — | Oracle theorem |
+| `ORACLE` | `tag` ... | — | Oracle theorem |
 
-Ancestor theorems (loaded from `.dat` files) are recorded as `ORACLE`
-with tag `DISK_THM`. During chain verification, these are resolved
-against replayed ancestor exports by matching on conclusion and hypotheses.
+`ORACLE` format depends on the tag:
+- `ORACLE DISK_THM <theory> <name>`: ancestor theorem reference (per-theory traces only; replaced by direct step references in merged traces)
+- `ORACLE <tag> <concl_id> <nhyps> <hyp_ids*>`: other oracle theorems (SAT solver, etc.)
 
 ## Semantics
 
@@ -125,22 +124,21 @@ against replayed ancestor exports by matching on conclusion and hypotheses.
   sub-results (`A' |- u = u'` and `A'' |- v = v'`).
 - **Mk_abs** parents: parent 0 is the original equality theorem
   (`A |- t = \x.u`), parent 1 is the body sub-result (`A' |- u = u'`).
-- **ORACLE DISK_THM** entries represent theorems from ancestor theories.
-  During chain verification, these are resolved against actually-replayed
-  ancestor exports by matching on conclusion and hypotheses.
-- **COMPUTE** entries record `input ⊢ input = result`. A verifier may
-  independently evaluate the input term to check the equation.
+- **COMPUTE_INIT** must appear at most once, before any `COMPUTE` steps.
+  It records the initialization arguments for `Thm.compute`.
+- **COMPUTE** steps use the closure established by `COMPUTE_INIT`.
+  The code equation thms are in the parent list.
 - **Exports** map theorem names to step IDs. These are the theory's public API.
 
 ## Verification
 
-A trace is verified by:
+A merged trace is verified by:
 1. Building type and term arrays from Y/M entries
 2. Replaying each step through the actual kernel inference rules
-3. Checking each export's replayed conclusion matches the theory's theorem
+3. Checking each export's replayed conclusion matches the expected theorem
 
-Chain verification replays an entire theory dependency graph bottom-up,
-using replayed ancestor exports to resolve ORACLE DISK_THM entries.
+Per-theory traces can also be replayed individually, but `ORACLE DISK_THM`
+entries will remain as oracle-tagged theorems unless resolved by a merge tool.
 
 ## Compression
 

@@ -2,10 +2,6 @@
    Run: cd $HOLDIR && bin/hol < src/postkernel/verify_all_traces.sml *)
 
 load "ReplayTrace";
-load "cv_computeLib";
-
-(* Enable COMPUTE step verification via cv_compute *)
-ReplayTrace.compute_verifier := SOME (cv_computeLib.cv_compute []);
 
 val holdir = Globals.HOLDIR;
 
@@ -13,7 +9,7 @@ val holdir = Globals.HOLDIR;
 val traces = ReplayTrace.find_traces (holdir ^ "/src");
 
 val _ = print ("\n=== Verifying " ^ Int.toString (length traces) ^
-               " proof traces (COMPUTE verification enabled) ===\n\n");
+               " proof traces ===\n\n");
 
 (* Sort by filename for reproducible output *)
 val traces = Listsort.sort (fn ((_,a),(_,b)) => String.compare(a,b)) traces;

@@ -71,12 +71,11 @@ fun checkpoint acc timer =
 
 type export_args = {
   thyname      : string,
-  thy_parents  : string list,
   exports      : (string * thm) list,
   types        : hol_type list,
   terms        : term list,
   counter      : int,
-  ext_cache    : (int, term list * term * string option) Redblackmap.dict,
+  ext_cache    : (int, string * string) Redblackmap.dict,
   steps_path   : string,
   parents_path : string,
   thm_id       : thm -> int
@@ -260,7 +259,7 @@ fun fnv1a_word64 (h, w) =
    Main export function
    ----------------------------------------------------------------------- *)
 
-fun export ({thyname, thy_parents, exports = all_thms,
+fun export ({thyname, exports = all_thms,
              types, terms, counter, ext_cache,
              steps_path, parents_path, thm_id} : export_args) =
   let
@@ -369,33 +368,6 @@ fun export ({thyname, thy_parents, exports = all_thms,
       in
         TextIO.output(ostrm, "HOL4_PROOF_TRACE 1\n");
         TextIO.output(ostrm, "THEORY " ^ escape_string thyname ^ "\n");
-        TextIO.output(ostrm, "PARENTS " ^
-          String.concatWith " " (map escape_string thy_parents) ^ "\n");
-        (* Best-effort ancestor digests (optional, skipped if no sha256sum) *)
-        List.app (fn par =>
-          let val pbase = objdir ^ "/" ^ par ^ "Theory.pftrace"
-              val p = if OS.FileSys.access(pbase ^ ".zst", [])
-                      then SOME (pbase ^ ".zst")
-                      else if OS.FileSys.access(pbase ^ ".gz", [])
-                      then SOME (pbase ^ ".gz")
-                      else if OS.FileSys.access(pbase, [])
-                      then SOME pbase
-                      else NONE
-          in
-            case p of NONE => ()
-            | SOME pf =>
-              let
-                val proc : (TextIO.instream, TextIO.outstream) Unix.proc =
-                  Unix.execute("/bin/sh",
-                    ["-c", "sha256sum " ^ shell_quote pf])
-                val line = TextIO.inputAll (Unix.textInstreamOf proc)
-                val hash = hd (String.tokens Char.isSpace line)
-                val _ = Unix.reap proc
-              in
-                TextIO.output(ostrm, "ANCESTOR " ^
-                  escape_string par ^ " sha256:" ^ hash ^ "\n")
-              end handle _ => ()
-          end) thy_parents;
         TextIO.output(ostrm, "COUNTS " ^ its n_types ^ " " ^
           its n_terms ^ " " ^ its (step_count + n_ext) ^ "\n");
         TextIO.output(ostrm, "\n");
@@ -440,21 +412,14 @@ fun export ({thyname, thy_parents, exports = all_thms,
         (* External (ancestor) theorem entries *)
         List.app (fn eid =>
           let val did = valOf (Redblackmap.peek(ext_rm, eid))
-              val stmt =
+              val ref_str =
                 case Redblackmap.peek(ext_cache, eid) of
-                  SOME (hyps, c, _) =>
-                    let val c_id = tm_lookup c
-                        val h_ids = map tm_lookup hyps
-                    in " " ^ its c_id ^ " " ^
-                       its (length h_ids) ^
-                       (if null h_ids then ""
-                        else " " ^ String.concatWith " "
-                                     (map its h_ids))
-                    end
-                | NONE => ""
+                  SOME (thy, name) =>
+                    " " ^ escape_string thy ^ " " ^ escape_string name
+                | NONE => " _unknown _unknown"
           in TextIO.output(ostrm,
                "P " ^ its did ^ " ORACLE DISK_THM" ^
-               stmt ^ "\n")
+               ref_str ^ "\n")
           end) ext_ids;
         TextIO.output(ostrm, "\n");
 
@@ -585,18 +550,7 @@ fun export ({thyname, thy_parents, exports = all_thms,
          Array.sub(output_id, Array.sub(dedup_to, did))
 
        (* Term/type pruning *)
-       val all_refs = let
-         val refs = ref int_refs
-       in
-         List.app (fn eid =>
-           case Redblackmap.peek(ext_cache, eid) of
-             SOME (hyps, c, _) =>
-               (refs := Redblackset.add(!refs, tm_lookup c);
-                List.app (fn h =>
-                  refs := Redblackset.add(!refs, tm_lookup h)) hyps)
-           | NONE => ()) ext_ids;
-         !refs
-       end
+       val all_refs = int_refs
 
        val ty_arr = Array.fromList types
        val tm_arr = Array.fromList terms

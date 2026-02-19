@@ -109,15 +109,26 @@ fun get_parents () = case !parents_strm of
    External thm cache: parent thms from ancestor theories
    ----------------------------------------------------------------------- *)
 
-(* Maps thm_id → (hyps, concl, source_theory_opt) *)
-val ext_thm_cache : (int, term list * term * string option) Redblackmap.dict ref =
+(* Maps thm_id → (source_theory, name) for external (ancestor) thms *)
+val ext_thm_cache : (int, string * string) Redblackmap.dict ref =
   ref (Redblackmap.mkDict Int.compare)
 
-fun thm_src_theory thm =
-  (case Tag.dep_of (Thm.tag thm) of
-     Dep.DEP_SAVED (did, _) => SOME (Dep.depthy_of did)
-   | _ => NONE)
-  handle _ => NONE
+fun thm_thyname thm =
+  let
+    val dep = Tag.dep_of (Thm.tag thm)
+    val (thy, n) = case dep of
+        Dep.DEP_SAVED (did, _) => did
+      | _ => ("_unknown", ~1)
+    val name =
+      case List.find (fn (_, th) =>
+        let val d = Tag.dep_of (Thm.tag th)
+        in case d of Dep.DEP_SAVED (did, _) => did = (thy, n)
+                   | _ => false
+        end) (DB.thms thy) of
+        SOME (nm, _) => nm
+      | NONE => "_unknown_" ^ Int.toString n
+  in (thy, name) end
+  handle _ => ("_unknown", "_unknown")
 
 fun cache_ext_parents parent_thms =
   let val base = !Thm.trace_counter - !lines_written
@@ -129,31 +140,18 @@ fun cache_ext_parents parent_thms =
         (case Redblackmap.peek(!ext_thm_cache, id) of
            SOME _ => ()
          | NONE =>
-           let val (hyp_list, c) = Thm.dest_thm thm
-               val thy_opt = thm_src_theory thm
-           in ignore (iT c);
-              List.app (ignore o iT) hyp_list;
-              ext_thm_cache :=
-                Redblackmap.insert(!ext_thm_cache, id,
-                                   (hyp_list, c, thy_opt))
-           end)
+           ext_thm_cache :=
+             Redblackmap.insert(!ext_thm_cache, id, thm_thyname thm))
         else ()
       end) parent_thms
   end
 
-fun cache_ext_thm_with_thy thm thy_opt =
+fun cache_ext_thm thm =
   case Redblackmap.peek(!ext_thm_cache, Thm.trace_id thm) of
     SOME _ => ()
   | NONE =>
-    let val (hyp_list, c) = Thm.dest_thm thm
-    in ignore (iT c);
-       List.app (ignore o iT) hyp_list;
-       ext_thm_cache :=
-         Redblackmap.insert(!ext_thm_cache, Thm.trace_id thm,
-                            (hyp_list, c, thy_opt))
-    end
-
-fun cache_ext_thm thm = cache_ext_thm_with_thy thm NONE
+    ext_thm_cache :=
+      Redblackmap.insert(!ext_thm_cache, Thm.trace_id thm, thm_thyname thm)
 
 (* -----------------------------------------------------------------------
    Cleanup and file management
@@ -349,17 +347,32 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
            its (length cnames) ^ " " ^ names_str ^ " " ^
            its (iT (Thm.concl result))) [th]
       end
-  | Thm.TR_DISK_THM (result, src_thy) =>
-      (cache_ext_thm_with_thy result (SOME src_thy);
-       record_step ("ORACLE DISK_THM " ^ fmt_thm_stmt result) [])
-  | Thm.TR_COMPUTE (_, parents, tm, eqn) =>
-      record_step ("COMPUTE " ^ its (iT tm) ^ " " ^ its (iT eqn)) parents
+  | Thm.TR_DISK_THM (_, src_thy, name) =>
+      record_step ("ORACLE DISK_THM " ^
+        TraceExport.escape_string src_thy ^ " " ^
+        TraceExport.escape_string name) []
+  | Thm.TR_COMPUTE_INIT (cval_terms, cval_type, num_type, char_eqns) =>
+      let val cval_str = String.concatWith " "
+            (map (fn (name, tm) =>
+              TraceExport.escape_string name ^ " " ^ its (iT tm))
+              cval_terms)
+          val char_str = String.concatWith " "
+            (map (fn (name, _) => TraceExport.escape_string name) char_eqns)
+          val char_thms = map #2 char_eqns
+      in record_step ("COMPUTE_INIT " ^
+           its (length cval_terms) ^ " " ^ cval_str ^ " " ^
+           its (iY cval_type) ^ " " ^ its (iY num_type) ^ " " ^
+           its (length char_eqns) ^ " " ^ char_str)
+           char_thms
+      end
+  | Thm.TR_COMPUTE (_, code_eqs, tm) =>
+      record_step ("COMPUTE " ^ its (iT tm)) code_eqs
 
 (* -----------------------------------------------------------------------
    Export hook: called by Theory.export_theory via Thm.trace_export
    ----------------------------------------------------------------------- *)
 
-fun export_hook thyname thy_parents all_thms =
+fun export_hook thyname (_:string list) all_thms =
   let
     val () = close_files ()
     (* Cache re-exported ancestor thms that were never parents of local steps *)
@@ -371,7 +384,6 @@ fun export_hook thyname thy_parents all_thms =
   in
     TraceExport.export {
       thyname      = thyname,
-      thy_parents  = thy_parents,
       exports      = all_thms,
       types        = rev (!ty_list),
       terms        = rev (!tm_list),

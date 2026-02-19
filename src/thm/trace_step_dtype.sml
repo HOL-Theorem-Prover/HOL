@@ -46,7 +46,11 @@ datatype ('a, 'b, 'c) trace_step =
   | TR_AXIOM       of 'a * 'b
   | TR_DEF_TYOP    of 'a * 'a * string * string
   | TR_DEF_SPEC    of 'a * 'a * string * string list
-  | TR_DISK_THM    of 'a * string
-  | TR_COMPUTE     of 'a * 'a list * 'b * 'b
+  | TR_DISK_THM    of 'a * string * string  (* thm, source_theory, name *)
+  | TR_COMPUTE_INIT of (string * 'b) list  (* cval_terms *)
+                     * 'c                   (* cval_type *)
+                     * 'c                   (* num_type *)
+                     * (string * 'a) list   (* char_eqns *)
+  | TR_COMPUTE     of 'a * 'a list * 'b    (* result, code_eqn_thms, input *)
 
 end

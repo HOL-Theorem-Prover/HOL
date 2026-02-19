@@ -93,9 +93,6 @@ val _ = print "\n=== T6.6: Replay throughput ===\n";
 val traces_sorted =
   Listsort.sort (fn ((_,a),(_,b)) => String.compare(a,b)) traces;
 
-val _ = ReplayTrace.compute_verifier :=
-          SOME (cv_computeLib.cv_compute []);
-
 val n_ok = ref 0;
 val n_fail = ref 0;
 val n_skip = ref 0;

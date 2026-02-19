@@ -10,12 +10,11 @@ sig
 
      Arguments:
        thyname     - theory name
-       thy_parents - parent theory names
        exports     - (name, thm) pairs of exported theorems
        types       - interned type list (reverse order from kernel)
        terms       - interned term list (reverse order from kernel)
        counter     - current trace step counter
-       ext_cache   - external thm cache (global_id -> (hyps, concl, source_thy))
+       ext_cache   - external thm cache (global_id -> (source_theory, name))
        steps_path  - path to temp steps file
        parents_path - path to temp parents file
        thm_id      - function to extract trace_id from a thm
@@ -23,13 +22,12 @@ sig
 
   type export_args = {
     thyname      : string,
-    thy_parents  : string list,
     exports      : (string * Thm.thm) list,
     types        : Type.hol_type list,
     terms        : Term.term list,
     counter      : int,
-    ext_cache    : (int, Term.term list * Term.term * string option)
-                   Redblackmap.dict,
+    ext_cache    : (int, string * string) Redblackmap.dict,
+                   (* thm_id -> (source_theory, name) *)
     steps_path   : string,
     parents_path : string,
     thm_id       : Thm.thm -> int
