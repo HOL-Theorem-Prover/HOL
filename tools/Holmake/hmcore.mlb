@@ -15,9 +15,6 @@ deps/Holdep_tokens.sig
 deps/Holdep_tokens.sml
 ../parsing/AttributeSyntax.sig
 ../parsing/AttributeSyntax.sml
-../parsing/HolLex.sml
-../parsing/HolParser.sig
-../parsing/HolParser.sml
 ../parsing/HOLAst.sig
 ../parsing/HOLAst.sml
 ../parsing/HOLParser.sig
