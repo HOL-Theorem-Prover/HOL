@@ -1,12 +1,12 @@
 $(SML_LIB)/basis/basis.mlb
 ../../../tools-poly/poly/polytools-basic.mlb
 ../hmcore.mlb
-../HM_Core_Cline.sig
-../HM_Core_Cline.sml
-../HM_DepGraph.sig
-../HM_DepGraph.sml
-../HM_GraphBuildJ1.sig
-../HM_GraphBuildJ1.sml
+../core/HM_Core_Cline.sig
+../core/HM_Core_Cline.sml
+../deps/HM_DepGraph.sig
+../deps/HM_DepGraph.sml
+../core/HM_GraphBuildJ1.sig
+../core/HM_GraphBuildJ1.sml
 ../poly/HM_Cline.sig
 ../poly/HM_Cline.sml
 ../poly/GraphExtra.sig
@@ -20,5 +20,5 @@ $(SML_LIB)/basis/basis.mlb
 ../poly/MB_Monitor.sml
 ../poly/multibuild.sml
 ../poly/BuildCommand.sml
-../Holmake.sml
+../core/Holmake.sml
 mlton-Holmake.sml

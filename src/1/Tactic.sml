@@ -466,7 +466,7 @@ val CHECK_ASSUME_TAC: thm_tactic =
       FIRST [CONTR_TAC gth, ACCEPT_TAC gth, OPPOSITE_TAC gth,
              DISCARD_TAC gth, ASSUME_TAC gth]
 
-val STRIP_ASSUME_TAC = REPEAT_TCL STRIP_THM_THEN CHECK_ASSUME_TAC
+val STRIP_ASSUME_TAC = STRIP_ALL_THEN CHECK_ASSUME_TAC
 val strip_assume_tac = STRIP_ASSUME_TAC
 
 (*---------------------------------------------------------------------------*
@@ -487,10 +487,10 @@ val strip_assume_tac = STRIP_ASSUME_TAC
  *---------------------------------------------------------------------------*)
 
 val STRUCT_CASES_TAC =
-   REPEAT_TCL STRIP_THM_THEN (fn th => SUBST1_TAC th ORELSE ASSUME_TAC th)
+   STRIP_ALL_THEN (fn th => SUBST1_TAC th ORELSE ASSUME_TAC th)
 
 val FULL_STRUCT_CASES_TAC =
-   REPEAT_TCL STRIP_THM_THEN (fn th => SUBST_ALL_TAC th ORELSE ASSUME_TAC th)
+   STRIP_ALL_THEN (fn th => SUBST_ALL_TAC th ORELSE ASSUME_TAC th)
 
 (*---------------------------------------------------------------------------*
  * COND_CASES_TAC: tactic for doing a case split on the condition p          *

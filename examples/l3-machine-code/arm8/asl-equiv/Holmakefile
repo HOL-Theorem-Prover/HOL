@@ -10,6 +10,6 @@ all: $(DEFAULT_TARGETS) $(HEAP)
 EXTRA_CLEANS = $(HEAP) $(HEAP).o
 
 $(HEAP): $(DEFAULT_TARGETS) $(HOLHEAP)
-	$(protect $(HOLDIR)/bin/buildheap) -o $(HEAP) -b $(HOLHEAP) $(DEFAULT_TARGETS)
+	$(protect $(HOLDIR)/bin/hol) buildheap -o $(HEAP) -b $(HOLHEAP) $(DEFAULT_TARGETS)
 
 endif

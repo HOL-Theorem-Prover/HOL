@@ -6117,6 +6117,122 @@ Proof
     dxrule_then (qspec_then `sp` mp_tac) DYNKIN_MONOTONE >> dxrule DYNKIN_STABLE >> simp[]
 QED
 
+(* ------------------------------------------------------------------------- *)
+(*  More Measurability Results                                               *)
+(* ------------------------------------------------------------------------- *)
+
+(*
+These are the results from my own accumulated library for general measurable functions
+that I believe stand on their own as something useful for future users.
+- Jared Yeager
+*)
+
+(* We have constant functions are measurable for borel/Borel later,
+   but not for generic spaces. *)
+Theorem MEASURABLE_CONST:
+    ∀a b c. sigma_algebra a ∧ c ∈ space b ⇒ (λx. c) ∈ measurable a b
+Proof
+    rw[measurable_def,FUNSET] >> Cases_on ‘c ∈ s’ >>
+    simp[PREIMAGE_def,SIGMA_ALGEBRA_SPACE,SIGMA_ALGEBRA_EMPTY]
+QED
+
+Theorem IN_MEASURABLE_CONST:
+    ∀a b c f. sigma_algebra a ∧ c ∈ space b ∧ (∀x. x ∈ space a ⇒ f x = c) ⇒ f ∈ measurable a b
+Proof
+    rw[] >> irule IN_MEASURABLE_EQ >> irule_at Any MEASURABLE_CONST >>
+    simp[] >> last_x_assum $ irule_at Any >> simp[]
+QED
+
+(* Helper lemmas for the next result *)
+
+Theorem SUBSETS_PROD_SIGMA:
+    ∀a b. subsets (a × b) =
+        BIGINTER {s | prod_sets (subsets a) (subsets b) ⊆ s ∧ sigma_algebra (space a × space b,s)}
+Proof
+    simp[prod_sigma_def,sigma_def]
+QED
+
+Theorem SIGMA_ALGEBRA_SUBSET_CLASS:
+    ∀a. sigma_algebra a ⇒ subset_class (space a) (subsets a)
+Proof
+    simp[SIGMA_ALGEBRA]
+QED
+
+Theorem PROD_SIGMA_X_SLICE:
+    ∀a b s y. sigma_algebra a ∧ subset_class (space b) (subsets b) ∧
+        s ∈ subsets (a × b) ⇒ {x | (x,y) ∈ s} ∈ subsets a
+Proof
+    rw[] >> `sigma_algebra (a × b)` by (irule SIGMA_ALGEBRA_PROD_SIGMA >> simp[SIGMA_ALGEBRA_SUBSET_CLASS]) >>
+    REVERSE $ Cases_on `y ∈ space b`
+    >- (dxrule_all_then mp_tac SIGMA_ALGEBRA_SUBSET_SPACE >> simp[SUBSET_DEF,SPACE_PROD_SIGMA] >> strip_tac >>
+        `{x | (x,y) ∈ s} = ∅` suffices_by simp[SIGMA_ALGEBRA_EMPTY] >> simp[EXTENSION] >> qx_gen_tac `x` >>
+        CCONTR_TAC >> fs[] >> first_x_assum $ dxrule_then mp_tac >> simp[]) >>
+    fs[SUBSETS_PROD_SIGMA] >>
+    first_x_assum $ qspec_then `subsets (a × b) ∩ {t | {x | (x,y) ∈ t} ∈ subsets a}` $
+        irule o cj 2 o SIMP_RULE (srw_ss ()) [] >>
+    simp[SIGMA_ALGEBRA_ALT_SPACE] >> rpt CONJ_TAC
+    >- (dxrule_then mp_tac SIGMA_ALGEBRA_SUBSET_CLASS >> simp[subset_class_def,SPACE_PROD_SIGMA])
+    >- (dxrule_then mp_tac SIGMA_ALGEBRA_SPACE >> simp[SPACE_PROD_SIGMA])
+    >- (simp[SIGMA_ALGEBRA_SPACE])
+    >- (NTAC 2 strip_tac >> NTAC 2 $ dxrule_all_then mp_tac SIGMA_ALGEBRA_COMPL >>
+        simp[SPACE_PROD_SIGMA,DIFF_DEF])
+    >- (simp[FUNSET_INTER] >> NTAC 2 strip_tac >> simp[SIGMA_ALGEBRA_ENUM] >>
+        qspecl_then [`a`,`λn. {x | (x,y) ∈ f n}`] mp_tac SIGMA_ALGEBRA_ENUM >> fs[FUNSET] >>
+        qmatch_abbrev_tac `s ∈ _ ⇒ t ∈ _` >> `s = t` suffices_by simp[] >> UNABBREV_ALL_TAC >>
+        simp[EXTENSION,IN_BIGUNION_IMAGE] >> qx_gen_tac `x` >> metis_tac[])
+    >- (simp[prod_sets_def,SUBSET_DEF] >> rw[] >> rename [`s × t`] >> Cases_on `y ∈ t`
+        >- (`{x | (x,y) ∈ s × t} = s` suffices_by simp[] >> simp[EXTENSION])
+        >- (`{x | (x,y) ∈ s × t} = ∅` suffices_by simp[SIGMA_ALGEBRA_EMPTY] >> simp[EXTENSION]))
+    >- (simp[prod_sigma_def,SIGMA_SUBSET_SUBSETS])
+QED
+
+Theorem PROD_SIGMA_Y_SLICE:
+    ∀a b s x. subset_class (space a) (subsets a) ∧ sigma_algebra b ∧
+        s ∈ subsets (a × b) ⇒ {y | (x,y) ∈ s} ∈ subsets b
+Proof
+    rw[] >> `sigma_algebra (a × b)` by (irule SIGMA_ALGEBRA_PROD_SIGMA >> simp[SIGMA_ALGEBRA_SUBSET_CLASS]) >>
+    REVERSE $ Cases_on `x ∈ space a`
+    >- (dxrule_all_then mp_tac SIGMA_ALGEBRA_SUBSET_SPACE >> simp[SUBSET_DEF,SPACE_PROD_SIGMA] >> strip_tac >>
+        `{y | (x,y) ∈ s} = ∅` suffices_by simp[SIGMA_ALGEBRA_EMPTY] >> simp[EXTENSION] >> qx_gen_tac `y` >>
+        CCONTR_TAC >> fs[] >> first_x_assum $ dxrule_then mp_tac >> simp[]) >>
+    fs[SUBSETS_PROD_SIGMA] >>
+    first_x_assum $ qspec_then `subsets (a × b) ∩ {t | {y | (x,y) ∈ t} ∈ subsets b}` $
+        irule o cj 2 o SIMP_RULE (srw_ss ()) [] >>
+    simp[SIGMA_ALGEBRA_ALT_SPACE] >> rpt CONJ_TAC
+    >- (dxrule_then mp_tac SIGMA_ALGEBRA_SUBSET_CLASS >> simp[subset_class_def,SPACE_PROD_SIGMA])
+    >- (dxrule_then mp_tac SIGMA_ALGEBRA_SPACE >> simp[SPACE_PROD_SIGMA])
+    >- (simp[SIGMA_ALGEBRA_SPACE])
+    >- (NTAC 2 strip_tac >> NTAC 2 $ dxrule_all_then mp_tac SIGMA_ALGEBRA_COMPL >>
+        simp[SPACE_PROD_SIGMA,DIFF_DEF])
+    >- (simp[FUNSET_INTER] >> NTAC 2 strip_tac >> simp[SIGMA_ALGEBRA_ENUM] >>
+        qspecl_then [`b`,`λn. {y | (x,y) ∈ f n}`] mp_tac SIGMA_ALGEBRA_ENUM >> fs[FUNSET] >>
+        qmatch_abbrev_tac `s ∈ _ ⇒ t ∈ _` >> `s = t` suffices_by simp[] >> UNABBREV_ALL_TAC >>
+        simp[EXTENSION,IN_BIGUNION_IMAGE] >> qx_gen_tac `y` >> metis_tac[])
+    >- (simp[prod_sets_def,SUBSET_DEF] >> rw[] >> rename [`s × t`] >> Cases_on `x ∈ s`
+        >- (`{y | (x,y) ∈ s × t} = t` suffices_by simp[] >> simp[EXTENSION])
+        >- (`{y | (x,y) ∈ s × t} = ∅` suffices_by simp[SIGMA_ALGEBRA_EMPTY] >> simp[EXTENSION]))
+    >- (simp[prod_sigma_def,SIGMA_SUBSET_SUBSETS])
+QED
+
+(* IN_MEASURABLE_PROD_SIGMA tells us that pairing measurable functions gives a measurable
+   function.
+   This gives us that fixing a variable in a measurable function gives a measurable function.
+   As before, there is a IN_MEASURABLE_BOREL_FROM_PROD_SIGMA later, but this is more general.
+*)
+Theorem IN_MEASURABLE_FROM_PROD_SIGMA:
+    ∀a b c f. sigma_algebra a ∧ sigma_algebra b ∧ sigma_algebra c ∧ f ∈ measurable (a × b) c ⇒
+        (∀y. y ∈ space b ⇒ (λx. f (x,y)) ∈ measurable a c) ∧
+        (∀x. x ∈ space a ⇒ (λy. f (x,y)) ∈ measurable b c)
+Proof
+    rw[measurable_def,FUNSET,FORALL_PROD,IN_SPACE_PROD_SIGMA] >>
+    first_x_assum $ dxrule_then assume_tac
+    >| [dxrule_at_then Any (qspec_then ‘y’ mp_tac) PROD_SIGMA_X_SLICE,
+        dxrule_at_then Any (qspec_then ‘x’ mp_tac) PROD_SIGMA_Y_SLICE] >>
+    simp[SIGMA_ALGEBRA_SUBSET_CLASS] >>
+    qmatch_goalsub_abbrev_tac ‘t ∈ _ ⇒ r ∈ _’ >> ‘t = r’ suffices_by simp[] >>
+    simp[Abbr ‘t’,Abbr ‘r’,EXTENSION,IN_SPACE_PROD_SIGMA]
+QED
+
 (* References:
 
   [1] Hurd, J.: Formal verification of probabilistic algorithms. University of

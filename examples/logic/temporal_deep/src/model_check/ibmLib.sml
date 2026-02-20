@@ -578,17 +578,17 @@ fun reduce_R R_thm =
 
 
 
-fun num_compset () =
+val num_compset =
   let open computeLib
-      val compset = bool_compset()
-      val _ = add_thms numeral_redns compset
-      val _ = add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV) compset
-      val _ = add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV) compset
+      val compset = bool_compset
+      val compset = add_thms numeral_redns compset
+      val compset = add_conv (numSyntax.div_tm, 2, cbv_DIV_CONV) compset
+      val compset = add_conv (numSyntax.mod_tm, 2, cbv_MOD_CONV) compset
   in
     compset
   end;
 
-val r_cs = reduceLib.num_compset ()
+val r_cs = reduceLib.num_compset
 val _ = add_thms [XP_ASSIGN_TRUE_FALSE___EVAL, IN_SING, NOT_IN_EMPTY, XP_CURRENT_EXISTS_def, XP_NEXT_EXISTS_def] r_cs
 
 fun reduce_R thm =

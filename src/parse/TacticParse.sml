@@ -38,7 +38,7 @@ fun parseSMLSimple body = let
   fun takeWhile f = if f (cur ()) then (next (); takeWhile f) else ()
   fun ws () = takeWhile Char.isSpace
   fun isIdRest c = Char.isAlphaNum c orelse c = #"_" orelse c = #"'"
-  val isIdSym = Char.contains "'_!%&$#+-/:<=>?@\\~`^|*"
+  val isIdSym = Char.contains "'_!%&$#+-/:<=>?@\\~^|*"
   val _ = ws ()
   fun finishString () = case cur () of
     #"\000" => ()
@@ -47,6 +47,20 @@ fun parseSMLSimple body = let
       #"\n" => (next (); ws (); (case cur () of #"\\" => next () | _ => ()); finishString ())
     | _ => (next (); finishString ()))
   | _ => (next (); finishString ())
+  fun finishQuote () = case cur () of
+    #"\000" => ()
+  | #"`" => next ()
+  | _ => (next (); finishQuote ())
+  fun finishDoubleQuote () = case cur () of
+    #"\000" => ()
+  | #"`" => (next (); if cur () = #"`" then next () else finishDoubleQuote ())
+  | _ => (next (); finishDoubleQuote ())
+  fun finishCurlyQuote c = case cur () of
+    #"\000" => ()
+  | #"\226" => (next (); if cur () = #"\128" then (next ();
+      if cur () = c then next () else (next (); finishCurlyQuote c))
+    else finishCurlyQuote c)
+  | _ => (next (); finishCurlyQuote c)
   fun finishComment () = case cur () of
     #"\000" => ()
   | #"*" => (next (); if cur () = #")" then next () else finishComment ())
@@ -64,6 +78,15 @@ fun parseSMLSimple body = let
   fun token () = (ws (); case cur () of
     #"\000" => (!pos, EOF)
   | #"\"" => (!pos, (next (); finishString (); OpaqueTk))
+  | #"`" => (!pos, (next ();
+    if cur () = #"`" then (next (); finishDoubleQuote ()) else finishQuote ();
+    OpaqueTk))
+  | #"\226" => (!pos,
+    if cur () = #"\128" then (next ();
+      if cur () = #"\152" then (next (); finishCurlyQuote #"\153"; OpaqueTk) else
+      if cur () = #"\156" then (next (); finishCurlyQuote #"\157"; OpaqueTk) else
+      OpaqueTk)
+    else OpaqueTk)
   | #"(" => let
     val start = !pos
     val _ = next ()

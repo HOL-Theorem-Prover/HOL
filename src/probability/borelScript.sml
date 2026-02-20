@@ -8934,6 +8934,19 @@ Proof
       MATCH_MP_TAC borel_measurable_real_set >> art [] ]
 QED
 
+(* A different version of this also exists in Martingale,
+   but it can proved here, and this form is more consistent with other results.
+- Jared
+*)
+
+Theorem IN_MEASURABLE_BOREL_FROM_PROD_SIGMA':
+    ∀a b f. sigma_algebra a ∧ sigma_algebra b ∧ f ∈ Borel_measurable (a × b) ⇒
+        (∀y. y ∈ space b ⇒ (λx. f (x,y)) ∈ Borel_measurable a) ∧
+        (∀x. x ∈ space a ⇒ (λy. f (x,y)) ∈ Borel_measurable b)
+Proof
+    rpt gen_tac >> DISCH_TAC >> irule IN_MEASURABLE_FROM_PROD_SIGMA >> simp[SIGMA_ALGEBRA_BOREL]
+QED
+
 (* References:
 
   [1] Schilling, R.L.: Measures, Integrals and Martingales (Second Edition).

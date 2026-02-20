@@ -1,8 +1,8 @@
 Theory psl_lemmata
 Ancestors
-  FinitePSLPath PSLPath UnclockedSemantics ClockedSemantics
+  arithmetic FinitePSLPath PSLPath UnclockedSemantics ClockedSemantics
   Lemmas Rewrites RewritesProperties Projection SyntacticSugar
-  arithmetic Model rich_list pred_set combin temporal_deep_mixed
+  Model rich_list pred_set combin temporal_deep_mixed
   set_lemmata list
 Libs
   res_quanTools numLib tuerk_tacticsLib Sanity
@@ -1010,32 +1010,29 @@ QED
 
 
 Theorem RESTN_PATH_MAP:
-     !f p n. LENGTH p >= n ==> (((RESTN (PATH_MAP f p) n) = (PATH_MAP f (RESTN p n))))
+  !f p n. LENGTH p >= n ==> (((RESTN (PATH_MAP f p) n) = (PATH_MAP f (RESTN p n))))
 Proof
+  Cases_on `p` THENL [
+    SIMP_TAC std_ss [LENGTH_def, GE] THEN
+    Induct_on `n` THENL [
+      REWRITE_TAC [RESTN_def],
 
-    Cases_on `p` THENL [
-      SIMP_TAC std_ss [LENGTH_def, GE] THEN
-      Induct_on `n` THENL [
-        REWRITE_TAC [RESTN_def],
-
-        ASM_SIMP_TAC list_ss [RESTN_def, REST_def, RESTN_REST] THEN
-        REPEAT STRIP_TAC THEN
-        SUBGOAL_TAC `LENGTH (RESTN (FINITE l) n) > 0` THEN1 (
-          SUBGOAL_TAC `(LENGTH (RESTN (FINITE l) n)) = (LENGTH (FINITE l) - n)` THEN1 (
-            MATCH_MP_TAC LENGTH_RESTN THEN
-            ASM_SIMP_TAC arith_ss [IS_FINITE_def, LENGTH_def, LS]
+      ASM_SIMP_TAC list_ss [RESTN_def, REST_def, RESTN_REST] THEN
+      REPEAT STRIP_TAC THEN
+      SUBGOAL_TAC `LENGTH (RESTN (FINITE l) n) > 0` THEN1 (
+        SUBGOAL_TAC `(LENGTH (RESTN (FINITE l) n)) = (LENGTH (FINITE l) - n)` THEN1 (
+          MATCH_MP_TAC LENGTH_RESTN THEN
+          ASM_SIMP_TAC arith_ss [IS_FINITE_def, LENGTH_def, LS]
           ) THEN
-          ASM_SIMP_TAC arith_ss [LENGTH_def, SUB_xnum_num_def, GT]
+        ASM_SIMP_TAC arith_ss [LENGTH_def, SUB_xnum_num_def, GT]
         ) THEN
-        ASM_SIMP_TAC std_ss [REST_PATH_MAP]
-      ],
+      ASM_SIMP_TAC std_ss [REST_PATH_MAP]
+    ],
 
-      SIMP_TAC std_ss [PATH_MAP_def, LENGTH_def, GE, ELEM_INFINITE,
-        RESTN_INFINITE]
-    ]
+    SIMP_TAC std_ss [PATH_MAP_def, LENGTH_def, GE, ELEM_INFINITE,
+                     RESTN_INFINITE]
+  ]
 QED
-
-
 
 Theorem SEL_REC_PATH_MAP:
      !m n f p. LENGTH p >= m + n ==>

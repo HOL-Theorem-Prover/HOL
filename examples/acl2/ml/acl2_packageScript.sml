@@ -3216,7 +3216,7 @@ end;
 
 local
         open computeLib
-        val compset_part = reduceLib.num_compset();
+        val compset_part = reduceLib.num_compset;
         val _ = set_skip compset_part ``COND`` (SOME 1);
         val _ = add_thms [LLEQ_def,LPLACE_RWR,pairTheory.FST] compset_part;
         val _ = add_conv (``$ORD``,1,stringLib.ORD_CHR_CONV) compset_part

@@ -1,0 +1,25 @@
+project-name = "CakeML"
+blurb = '''
+CakeML is a verified functional programming
+language, with a verified compiler and the means
+for users to create verified programs of their own.
+'''
+inlinetable = {field1 = "Michael", field2 = "Norrish"}
+array_over_multiple_lines = [1,
+2,3]
+
+[syntax-scan] 
+linelens = true
+unicode = false
+paths = ["foo/bar", "baz"]
+
+[[syntax-scan.dirs_to_scan]]
+name = "bar/baz"
+options = "--foo -I"
+
+[[syntax-scan.dirs_to_scan]]
+name = "quxk"
+options = ""
+
+[newtoplevel]
+data = 3.1415

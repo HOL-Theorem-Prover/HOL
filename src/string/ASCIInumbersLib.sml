@@ -25,7 +25,7 @@ in
    fun add_ASCIInumbers_compset cmp = computeLib.add_thms thms cmp
 end
 
-val () = add_ASCIInumbers_compset computeLib.the_compset
+val () = computeLib.the_compset := add_ASCIInumbers_compset (!computeLib.the_compset)
 
 (* ------------------------------------------------------------------------- *)
 

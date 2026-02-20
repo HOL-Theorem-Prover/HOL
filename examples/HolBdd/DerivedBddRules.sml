@@ -892,7 +892,7 @@ exception findModelError;
 
 local
 open computeLib
-val compset = bool_compset()
+val compset = bool_compset
 in
 fun findModel tb =
  let val (_,ass,vm,t,b) = dest_term_bdd tb

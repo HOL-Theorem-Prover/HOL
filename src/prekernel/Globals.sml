@@ -146,7 +146,7 @@ val print_thy_loads = ref false
 (* ----------------------------------------------------------------------
     Flag telling us whether or not we're interactive.
     If this is set, this allows for certain pieces of code to be a bit more
-    verbose.  It's set by std.prelude, so theory scripts and the like that
+    verbose.  It's set by tools/std.prelude (or tools-poly/prelude.ML), so theory scripts and the like that
     Holmake runs won't cause the printing of messages.
    ---------------------------------------------------------------------- *)
 

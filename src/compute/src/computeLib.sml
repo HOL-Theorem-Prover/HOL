@@ -25,6 +25,8 @@ val new_compset = from_list;
 
 val listItems = clauses.deplist;
 val unmapped  = clauses.no_transform;
+val seal      = clauses.seal;
+val copy      = clauses.copy;
 
 datatype cbv_stack =
     Cbv_top
@@ -85,11 +87,15 @@ fun stack_out(th, Cbv_top) =
   | stack_out(_, Cbv_ant _) =
     raise DEAD_CODE "stack_out"
 
+(* initial_state returns the updated compset along with the initial state.
+   The compset may be updated if new constants are encountered in the term. *)
 fun initial_state rws t =
-  ((refl_thm t, mk_clos([],from_term (rws,[],t))), Cbv_top : cbv_stack);
+  let val (rws', dt) = from_term (rws,[],t)
+  in (rws', ((refl_thm t, mk_clos([],dt)), Cbv_top : cbv_stack))
+  end;
 
 (*
-   `cbv_wk ((thm, cl), stk)` puts the closure `cl` (useful information about
+   `cbv_wk rws ((thm, cl), stk)` puts the closure `cl` (useful information about
    the rhs of `thm`) in head normal form (weak reduction). It returns either a
    closure which term is an abstraction, in a context other than Zappl, a
    variable applied to strongly reduced arguments, or a constant applied to
@@ -118,38 +124,40 @@ fun initial_state rws t =
      combination.
    - `Cbv_abs`: The continuation after descending into the body of an
      abstraction.
+
+   `rws` is the compset, threaded through for use in wrapping conversion results.
 *)
-fun cbv_wk ((th,CLOS{Env, Term=App(a,args)}), stk) =
+fun cbv_wk rws ((th,CLOS{Env, Term=App(a,args)}), stk) =
   (* *Combination.* Descend into operator immediately. Descend into operand in
      the combination, i.e.: when applying `cbv_up`. *)
       let val (tha,stka) =
             foldl (push_in_stk (curry mk_clos Env)) (th,stk) args in
-      cbv_wk ((tha, mk_clos(Env,a)), stka)
+      cbv_wk rws ((tha, mk_clos(Env,a)), stka)
       end
   (* *Abstraction.* Descend into the body. *)
-  | cbv_wk ((th,CLOS{Env, Term=Abs body}),
+  | cbv_wk rws ((th,CLOS{Env, Term=Abs body}),
             Cbv_rator{Rand=(mka,(thb,cl)), Ctx=s'}) =
-      cbv_wk ((beta_thm(mka th thb), mk_clos(cl :: Env, body)), s')
+      cbv_wk rws ((beta_thm(mka th thb), mk_clos(cl :: Env, body)), s')
   (* Combination where the operator is a constant that we can reduce. *)
-  | cbv_wk ((th,CST cargs), stk) =
+  | cbv_wk rws ((th,CST cargs), stk) =
       let
-        val (reduced_p, t', cl', ants, mk_thm) = reduce_cst (th, cargs)
+        val (reduced_p, t', cl', ants, mk_thm) = reduce_cst rws (th, cargs)
       in
         if reduced_p then
-          prove_ants (th, cl', [], ants, mk_thm, cargs, stk)
+          prove_ants rws (th, cl', [], ants, mk_thm, cargs, stk)
         else
-          cbv_up ((th, cl'), stk)
+          cbv_up rws ((th, cl'), stk)
       end
-  | cbv_wk (clos, stk) = cbv_up (clos,stk)
+  | cbv_wk rws (clos, stk) = cbv_up rws (clos,stk)
 
-and prove_ants (th, cl, proved_acc, ants_left, mk_thm, cargs, stk) =
+and prove_ants rws (th, cl, proved_acc, ants_left, mk_thm, cargs, stk) =
   case ants_left of
     (* All antecedents proved. *)
-    [] => cbv_wk ((mk_thm (rev proved_acc), cl), stk)
+    [] => cbv_wk rws ((mk_thm (rev proved_acc), cl), stk)
   | ((ant, ant_cl)::ants_rest) =>
     (* Try to prove the first remaining antecedent. Leave the rest in the
     continuation. *)
-    cbv_wk ((refl_thm ant, ant_cl),
+    cbv_wk rws ((refl_thm ant, ant_cl),
             Cbv_ant { Thm = th,
                       Cl = cl,
                       Proved = proved_acc,
@@ -168,19 +176,19 @@ and prove_ants (th, cl, proved_acc, ants_left, mk_thm, cargs, stk) =
    - An application to a NEUTR can be rebuilt only if the argument has been
      strongly reduced, which we now for sure only if itself is a NEUTR.
 *)
-and cbv_up (hcl, Cbv_rator{Rand=(mka,clos), Ctx}) =
+and cbv_up rws (hcl, Cbv_rator{Rand=(mka,clos), Ctx}) =
   (* We have already descended into the operator. Now descend into the
   operand. *)
       let val new_state = (clos, Cbv_rand{Rator=(mka,false,hcl), Ctx=Ctx}) in
-      if is_skip hcl then cbv_up new_state else cbv_wk new_state
+      if is_skip hcl then cbv_up rws new_state else cbv_wk rws new_state
       end
   (* We have already descended into the operator and operand. Schedule the
   application for being reduced with the equation for the head constant. *)
-  | cbv_up ((thb,v), Cbv_rand{Rator=(mka,false,(th,CST cargs)), Ctx=stk}) =
-      cbv_wk ((mka th thb, comb_ct cargs (rhs_concl thb, v)), stk)
-  | cbv_up ((thb,NEUTR), Cbv_rand{Rator=(mka,false,(th,NEUTR)), Ctx=stk}) =
-      cbv_up ((mka th thb, NEUTR), stk)
-  | cbv_up ((current_thm, _),
+  | cbv_up rws ((thb,v), Cbv_rand{Rator=(mka,false,(th,CST cargs)), Ctx=stk}) =
+      cbv_wk rws ((mka th thb, comb_ct cargs (rhs_concl thb, v)), stk)
+  | cbv_up rws ((thb,NEUTR), Cbv_rand{Rator=(mka,false,(th,NEUTR)), Ctx=stk}) =
+      cbv_up rws ((mka th thb, NEUTR), stk)
+  | cbv_up rws ((current_thm, _),
             Cbv_ant {Thm=thm,Cl,Proved,Pending,Mk_thm,Const_info,Ctx}) =
       let
         fun next_rw () =
@@ -189,7 +197,7 @@ and cbv_up (hcl, Cbv_rator{Rand=(mka,clos), Ctx}) =
           the stack. *)
           case Const_info of
             {Head, Args, Rws=Try{Hcst,Rws=Rewrite rls,Tail},Skip} =>
-              cbv_wk ((thm, CST {Head=Head,Args=Args,Rws=Tail,Skip=Skip}),Ctx)
+              cbv_wk rws ((thm, CST {Head=Head,Args=Args,Rws=Tail,Skip=Skip}),Ctx)
           | _ => raise DEAD_CODE "cbv_wk"
       in
         case Ctx of
@@ -197,14 +205,14 @@ and cbv_up (hcl, Cbv_rator{Rand=(mka,clos), Ctx}) =
              (if aconv T (rhs (concl current_thm)) then
                 (* This antecedent proved. Add it to the accumulator and try to
                 prove next antecedent. *)
-                prove_ants (thm,Cl,current_thm::Proved,Pending,Mk_thm,Const_info,Ctx)
+                prove_ants rws (thm,Cl,current_thm::Proved,Pending,Mk_thm,Const_info,Ctx)
               else
                 (* The current antecedent did not reduce to `T`; abandon this
                 rewrite rule. *)
                 next_rw ())
          | _ => next_rw ()
       end
-  | cbv_up (clos, stk) = (clos,stk)
+  | cbv_up _ (clos, stk) = (clos,stk)
 
 (*---------------------------------------------------------------------------
  * [strong] continues the reduction of a term in head normal form under
@@ -212,37 +220,40 @@ and cbv_up (hcl, Cbv_rator{Rand=(mka,clos), Ctx}) =
  * precondition: the closure should be the output of cbv_wk
  *---------------------------------------------------------------------------*)
 
-fun strong ((th, CLOS{Env,Term=Abs t}), stk) =
+fun strong rws ((th, CLOS{Env,Term=Abs t}), stk) =
       let val (thb,stk') = push_lam_in_stk(th,stk) in
-      strong (cbv_wk((thb, mk_clos(NEUTR :: Env, t)), stk'))
+      strong rws (cbv_wk rws ((thb, mk_clos(NEUTR :: Env, t)), stk'))
       end
-  | strong (clos as (_,CLOS _), stk) = raise DEAD_CODE "strong"
-  | strong ((th,CST {Skip,Args,...}), stk) =
+  | strong _ (clos as (_,CLOS _), stk) = raise DEAD_CODE "strong"
+  | strong rws ((th,CST {Skip,Args,...}), stk) =
       let val (argssk, argsrd) = partition_skip Skip Args
           val (th',stk') = foldl (push_skip_stk snd) (th,stk) argssk
           val (th'',stk'') = foldl (push_in_stk snd) (th',stk') argsrd in
-      strong_up (th'',stk'')
+      strong_up rws (th'',stk'')
       end
-  | strong ((th, NEUTR), stk) = strong_up (th,stk)
+  | strong rws ((th, NEUTR), stk) = strong_up rws (th,stk)
 
-and strong_up (th, Cbv_top) = th
-  | strong_up (th, Cbv_rand{Rator=(mka,false,(tha,NEUTR)), Ctx}) =
-      strong (cbv_wk((mka tha th,NEUTR), Ctx))
-  | strong_up (th, Cbv_rand{Rator=(mka,false,clos), Ctx}) =
+and strong_up _ (th, Cbv_top) = th
+  | strong_up rws (th, Cbv_rand{Rator=(mka,false,(tha,NEUTR)), Ctx}) =
+      strong rws (cbv_wk rws ((mka tha th,NEUTR), Ctx))
+  | strong_up _ (th, Cbv_rand{Rator=(mka,false,clos), Ctx}) =
       raise DEAD_CODE "strong_up"
-  | strong_up (th, Cbv_rator{Rand=(mka,clos), Ctx}) =
-      strong (cbv_wk(clos, Cbv_rand{Rator=(mka,true,(th,NEUTR)), Ctx=Ctx}))
-  | strong_up (th, Cbv_rand{Rator=(mka,true,(tha,_)), Ctx}) =
-      strong_up (mka tha th, Ctx)
-  | strong_up (th, Cbv_abs{Bvar=mkl, Ctx}) = strong_up (mkl th, Ctx)
-  | strong_up (_, _) = raise DEAD_CODE "strong_up"
+  | strong_up rws (th, Cbv_rator{Rand=(mka,clos), Ctx}) =
+      strong rws (cbv_wk rws (clos, Cbv_rand{Rator=(mka,true,(th,NEUTR)), Ctx=Ctx}))
+  | strong_up rws (th, Cbv_rand{Rator=(mka,true,(tha,_)), Ctx}) =
+      strong_up rws (mka tha th, Ctx)
+  | strong_up rws (th, Cbv_abs{Bvar=mkl, Ctx}) = strong_up rws (mkl th, Ctx)
+  | strong_up _ (_, _) = raise DEAD_CODE "strong_up"
 
 (*---------------------------------------------------------------------------
  * [CBV_CONV rws t] is a conversion that does the full normalization of t,
  * using rewrites rws.
  *---------------------------------------------------------------------------*)
 
-fun CBV_CONV rws = evaluate o strong o cbv_wk o initial_state rws;
+fun CBV_CONV rws t =
+  let val (rws', init) = initial_state rws t
+  in evaluate (strong rws' (cbv_wk rws' init))
+  end;
 
 (*---------------------------------------------------------------------------
  * WEAK_CBV_CONV is the same as CBV_CONV except that it does not reduce
@@ -250,11 +261,11 @@ fun CBV_CONV rws = evaluate o strong o cbv_wk o initial_state rws;
  * Reduction whenever we reach a state where a strong reduction is needed.
  *---------------------------------------------------------------------------*)
 
-fun WEAK_CBV_CONV rws =
-      evaluate
-    o (fn ((th,_),stk) => stack_out(th,stk))
-    o cbv_wk
-    o initial_state rws;
+fun WEAK_CBV_CONV rws t =
+  let val (rws', init) = initial_state rws t
+      val ((th,_),stk) = cbv_wk rws' init
+  in evaluate (stack_out(th,stk))
+  end;
 
 fun CBVn_CONV n rws t =
     let val counter = ref n
@@ -269,16 +280,11 @@ fun CBVn_CONV n rws t =
     end
 
 (*---------------------------------------------------------------------------
- * Adding an arbitrary conv
+ * Adding an arbitrary conv. The conversion result is wrapped with from_term
+ * at invocation time in reduce_cst, using the current compset.
  *---------------------------------------------------------------------------*)
 
-fun extern_of_conv rws conv tm =
-  let val thm = conv tm in
-  (thm, mk_clos([],from_term(rws,[],rhs(concl thm))))
-  end;
-
-fun add_conv (cst,arity,conv) rws =
-  add_extern (cst,arity,extern_of_conv rws conv) rws;
+fun add_conv (cst,arity,conv) rws = add_extern (cst,arity,conv) rws;
 
 fun set_skip compset c opt =
  let val {Name,Thy,...} = dest_thy_const c
@@ -298,25 +304,23 @@ val bool_redns =
       [COND_CLAUSES, COND_ID, NOT_CLAUSES,
        AND_CLAUSES, OR_CLAUSES, IMP_CLAUSES, EQ_CLAUSES];
 
-fun bool_compset() = let
-  val base = from_list bool_redns
-  val _ = set_skip base boolSyntax.conditional NONE
-          (* change last parameter to SOME 1 to stop CBV_CONV looking at
-             conditionals' branches before the guard is fully true or false *)
-in
-  base
-end
+val bool_compset =
+  (* change NONE to SOME 1 to stop CBV_CONV looking at conditionals'
+     branches before the guard is fully true or false *)
+  seal (set_skip (from_list bool_redns) boolSyntax.conditional NONE);
 
-val the_compset = bool_compset();
+val the_compset = ref (copy bool_compset);
 
-val add_funs = Lib.C add_thms the_compset;
-val add_convs = List.app (Lib.C add_conv the_compset);
+fun add_funs thms = the_compset := add_thms thms (!the_compset);
+fun add_convs convs =
+  the_compset := foldl (fn (c, cs) => add_conv c cs) (!the_compset) convs;
 
-val del_consts = List.app (scrub_const the_compset);
-val del_funs = Lib.C scrub_thms the_compset;
+fun del_consts cs =
+  the_compset := foldl (fn (c, cset) => scrub_const cset c) (!the_compset) cs;
+fun del_funs thms = the_compset := scrub_thms thms (!the_compset);
 
-val EVAL_CONV = CBV_CONV the_compset;
-fun EVALn_CONV n t = CBVn_CONV n the_compset t
+fun EVAL_CONV t = CBV_CONV (!the_compset) t;
+fun EVALn_CONV n t = CBVn_CONV n (!the_compset) t
 val EVAL_RULE = Conv.CONV_RULE EVAL_CONV;
 val EVAL_TAC  = Tactic.CONV_TAC EVAL_CONV;
 
@@ -370,11 +374,12 @@ in
            List.partition (fn thm => tmopt_eq (Lib.total get_f thm) case_const)
                           simpls
         val case_thm = List.map lazyfy_thm case_thm
+        val cs' = foldl (fn (c, cset) => add_conv c cset) cs (translate_convs convs)
     in
-        List.app (fn c => add_conv c cs) (translate_convs convs)
-      ; add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs
+        add_thms (size_opt @ boolify_opt @ case_thm @ simpls) cs'
     end
-    val write_datatype_info = add_datatype_info the_compset
+    fun write_datatype_info tyi =
+        the_compset := add_datatype_info (!the_compset) tyi
 end
 
 val _ = TypeBase.register_update_fn (fn tyi => (write_datatype_info tyi; tyi))
@@ -421,7 +426,8 @@ fun decdelta d =
 
 fun apply_delta cld () =
     case cld of
-        CLD_set_skip (t, iopt) => set_skip the_compset t iopt
+        CLD_set_skip (t, iopt) =>
+          the_compset := set_skip (!the_compset) t iopt
       | CLD_delconst t => del_consts [t]
 
 val {record_delta,get_deltas=thy_updates,...} =
@@ -437,7 +443,8 @@ val {record_delta,get_deltas=thy_updates,...} =
     }
 
 fun set_EVAL_skip t i = record_delta (CLD_set_skip(t,i))
-fun temp_set_EVAL_skip t i = set_skip the_compset t i
+fun temp_set_EVAL_skip t i =
+    the_compset := set_skip (!the_compset) t i
 fun del_persistent_consts cs = app (fn c => record_delta(CLD_delconst c)) cs
 
 (* ----------------------------------------------------------------------
@@ -454,19 +461,22 @@ datatype compset_element =
     Convs of (term * int * conv) list
   | Defs of thm list
   | Tys of hol_type list
-  | Extenders of (compset -> unit) list
+  | Extenders of (compset -> compset) list
 
 local
-  fun add_datatype cmp = add_datatype_info cmp o Option.valOf o TypeBase.fetch
+  fun add_datatype cmp ty =
+      add_datatype_info cmp (Option.valOf (TypeBase.fetch ty))
 in
   fun extend_compset frags cmp =
-    List.app
-      (fn Convs l => List.app (fn x => add_conv x cmp) l
-        | Defs l => add_thms l cmp
-        | Tys l => List.app (add_datatype cmp) l
-        | Extenders l => List.app (fn f => f cmp) l) frags
+    foldl (fn (frag, cs) =>
+             case frag of
+               Convs l => foldl (fn (x, cs') => add_conv x cs') cs l
+             | Defs l => add_thms l cs
+             | Tys l => foldl (fn (ty, cs') => add_datatype cs' ty) cs l
+             | Extenders l => foldl (fn (f, cs') => f cs') cs l)
+          cmp frags
 end
 
-fun compset_conv cmp l = (extend_compset l cmp; CBV_CONV cmp)
+fun compset_conv cmp l = CBV_CONV (extend_compset l cmp)
 
 end

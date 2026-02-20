@@ -17,14 +17,8 @@ Libs
 (* Characters are represented by the natural numbers <= 255.            *)
 (* ---------------------------------------------------------------------*)
 
-val is_char =
- let val n = mk_var("n",num)
-     val topnum = mk_numeral (Arbnum.fromInt 256)
- in mk_abs(n,mk_less(n,topnum))
- end;
-
 Theorem CHAR_EXISTS[local]:
-   ?n. ^is_char n
+   ∃n. (λn. n < 256) n
 Proof Q.EXISTS_TAC `0` THEN REDUCE_TAC
 QED
 

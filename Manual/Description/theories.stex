@@ -3250,7 +3250,7 @@ The definition is given by primitive recursion over the index argument, in theor
 \end{alltt}
 \end{hol}
 \index{EL, the HOL constant@\holtxt{EL}, the \HOL{} constant!array subscript notation}
-The term underlying the pretty presentation $\ell\lbtsbrak{}n\rbtsbrak$ is $\holtxt{EL}\;n\;\ell$; and both forms can be used when writing terms.
+The term underlying the pretty presentation $\ell\lbrbrak{}n\rbrbrak$ is $\holtxt{EL}\;n\;\ell$; and both forms can be used when writing terms.
 If desired, the pretty-printing with the ``array-subscript'' notation can be turned off by the invocation
 \begin{hol}
 \begin{alltt}
@@ -3258,7 +3258,7 @@ If desired, the pretty-printing with the ``array-subscript'' notation can be tur
 \end{alltt}
 \end{hol}
 
-Note that because of the use of \holtxt{HD} and \holtxt{TL}, the value of $\ell\lbtsbrak{}n\rbtsbrak$ is unspecified when $n \geq \holtxt{LENGTH}\;\ell$.
+Note that because of the use of \holtxt{HD} and \holtxt{TL}, the value of $\ell\lbrbrak{}n\rbrbrak$ is unspecified when $n \geq \holtxt{LENGTH}\;\ell$.
 Subsequently, many theorems involving \holtxt{EL} have preconditions to preclude this possibility.
 
 For example, these theorems describing the relationship between \holtxt{EL}, \holtxt{MAP} and \holtxt{MEM}:

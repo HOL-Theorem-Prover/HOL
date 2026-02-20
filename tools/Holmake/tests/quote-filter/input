@@ -109,3 +109,8 @@ tac
 QED
 
 Overload "" = term;
+Resume foo[label,exclude_simps=AND_CLAUSES,smlname=bar]:
+  tactic
+QED
+Finalise foo
+Finalise bar

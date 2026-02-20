@@ -11,6 +11,7 @@ hook global WinSetOption filetype=holscript %{
     set buffer indentwidth 2
 
     hook window ModeChange pop:insert:.* -group hol-trim-indent hol-trim-indent
+    hook window InsertCompletionHide .* -group hol-trim-indent hol-indent-on-char
     hook window InsertChar .* -group hol-indent hol-indent-on-char
     hook window InsertChar \n -group hol-indent hol-indent-on-new-line
 }
@@ -41,10 +42,13 @@ hol-start: start HOL instance in new terminal window, from HOLDIR' %{
         printf "set-option current holfifodir '%s'" "$holfifodir"
     }
     set-option current holfifo %sh{printf "%s/fifo" "$kak_opt_holfifodir"}
-    terminal sh -i -c %sh{
-        printf "%s\n\n" "cat > $kak_opt_holfifo & echo \$! > $kak_opt_holfifodir/pid & (tee -i >($HOLDIR/bin/hol --zero)) < $kak_opt_holfifo"
+    evaluate-commands %sh{
+        # Save entire environment to a temp file, to be sourced by the spawned shell
+        envfile=$(mktemp)
+        export -p > "$envfile"
+        printf "terminal sh -i -c '. %s; rm -f %s; cat > %s & echo \$! > %s/pid & (tee -i >(%s/bin/hol --zero)) < %s'\n" \
+            "$envfile" "$envfile" "$kak_opt_holfifo" "$kak_opt_holfifodir" "$HOLDIR" "$kak_opt_holfifo"
     }
-
     hol-load-deps-all
 }
 
@@ -91,7 +95,7 @@ hol-restart-proof: restart proof in HOL' %{
 define-command hol-load-deps-for -docstring '
 hol-load-deps-for: load dependencies for a HOL file' -params 1 %{
     nop %sh{
-        $HOLDIR/bin/holdeptool.exe $1 | sed 's/.*/qload "&" handle _ => (); /' > "$kak_opt_holfifo"
+        $HOLDIR/bin/holdeptool.exe $1 | sed 's/.*/val () = qload "&" handle _ => (); /' > "$kak_opt_holfifo"
     }
 }
 
@@ -100,7 +104,7 @@ hol-load-deps-for: load dependencies for all open HOL files' %{
     nop %sh{
         eval set -- "$kak_quoted_buflist"
         while [ $# -gt 0 ]; do
-            $HOLDIR/bin/holdeptool.exe $1 | sed 's/.*/qload "&" handle _ => (); /' > "$kak_opt_holfifo"
+            $HOLDIR/bin/holdeptool.exe $1 | sed 's/.*/val () = qload "&" handle _ => (); /' > "$kak_opt_holfifo"
             shift
         done
     }
@@ -125,7 +129,7 @@ set-face global listsep white,default,default
 add-highlighter shared/holsyntax group
 add-highlighter shared/holsyntax/ ref sml
 # custom regex hightlighting must come after ref to override
-add-highlighter shared/holsyntax/ regex '\b(Definition|(Co)?Inductive|Datatype|Theorem|Triviality|End|Termination|Proof|QED|Type|Overload)\b' 0:keyword
+add-highlighter shared/holsyntax/ regex '\b(Definition|(Co)?Inductive|Datatype|Theorem|Triviality|End|Termination|Proof|QED|Type|Overload|Theory|Ancestors|Libs)\b' 0:keyword
 add-highlighter shared/holsyntax/ regex '^\[(~?\w+):\]' 1:indrules
 add-highlighter shared/holsyntax/ regex '\bcheat\b' 0:cheat
 
@@ -173,7 +177,7 @@ define-command -hidden hol-indent-on-char %{
         # align closer token to its opener when alone on a line
         try %{ execute-keys -draft <a-h> <a-k> ^\h+[\]\)]$ <ret> m s \A|.\z <ret> 1<a-&> }
         # align HOL syntax to start
-        try %{ execute-keys -draft <a-h> <a-k> ^\h+(Proof|Termination|QED|End) <ret> x s ^\h+ <ret> d }
+        try %{ execute-keys -draft <a-h> <a-k> ^\h+(Proof|Termination|QED|End|Ancestors|Libs) <ret> x s ^\h+ <ret> d }
     }
 }
 
@@ -184,7 +188,7 @@ define-command -hidden hol-indent-on-new-line %{
         # filter previous line
         try %{ execute-keys -draft k : hol-trim-indent <ret> }
         # indent after lines beginning / ending with opener token
-        try %{ execute-keys -draft k x <a-k> [[\(]\h*$|^(Definition|(Co)?Inductive|Datatype|Theorem|Triviality).*:\W*$|^(Proof|Termination).*$|^\[~?\w+:\].*$ <ret> j <a-gt> }
+        try %{ execute-keys -draft k x <a-k> [[\(]\h*$|^(Definition|(Co)?Inductive|Datatype|Theorem|Triviality).*:\W*$|^(Proof|Termination|Ancestors|Libs).*$|^\[~?\w+:\].*$ <ret> j <a-gt> }
         # deindent closer token(s) when after cursor
         try %{ execute-keys -draft x <a-k> ^\h*[\]\)] <ret> gh / [\]\)] <ret> m <a-S> 1<a-&> }
     }

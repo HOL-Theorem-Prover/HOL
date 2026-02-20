@@ -14,6 +14,7 @@
 α \(\alpha\)
 β \(\beta\)
 γ \(\gamma\)
+ω \(\omega\)
 ∈ \(\in\)
 ∉ \(\notin\)
 ∪ \(\cup\)
@@ -38,6 +39,7 @@
 ’ \mbox{\textrm{'}}
 ² \(\sp{2}\)
 ³ \(\sp{3}\)
+₁ \(\sb{1}\)
 ⊌ \(\cupleftarrow\)
 ⊑ \(\sqsubseteq\)
 ∘ \(\circ\)
@@ -64,6 +66,5 @@
 → \(\to\)
 ⊎ \(\uplus\)
 ₗ \({}\sb{l}\)
-❲ \(\lbtsbrak\)
-❳ \(\rbtsbrak\) 
-
+❲ \(\lbrbrak\)
+❳ \(\rbrbrak\)

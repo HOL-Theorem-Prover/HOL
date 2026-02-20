@@ -250,6 +250,6 @@ val add_pair_compset = computeLib.add_thms
         CURRY_DEF,UNCURRY_DEF,PAIR_MAP_THM]
      end)
 
-val () = add_pair_compset computeLib.the_compset
+val () = computeLib.the_compset := add_pair_compset (!computeLib.the_compset)
 
 end

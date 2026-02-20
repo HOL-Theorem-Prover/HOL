@@ -1,0 +1,2 @@
+INCLUDES = $(HOLDIR)/examples/acl2/hol-to-acl2/src
+EXTRA_CLEANS = eval_poly.defhol ex1.defhol elim_lambda.defhol

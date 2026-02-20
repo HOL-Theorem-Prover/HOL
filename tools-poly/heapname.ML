@@ -10,8 +10,8 @@ val _ = use "../src/portableML/DString.sig";
 val _ = use "../src/portableML/DString.sml";
 val _ = use "../src/portableML/DArray.sig";
 val _ = use "../src/portableML/DArray.sml";
-val _ = use "../tools/Holmake/holpathdb.sig";
-val _ = use "../tools/Holmake/holpathdb.sml";
+val _ = use "../tools/Holmake/hfs/holpathdb.sig";
+val _ = use "../tools/Holmake/hfs/holpathdb.sml";
 
 open Systeml
 structure Path = OS.Path

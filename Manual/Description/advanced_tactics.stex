@@ -1,0 +1,14 @@
+\section{Advanced Tactics and Proof Techniques}
+\label{sec:advanced-tactics}
+
+
+\subsection{Handling Implications}
+\label{sec:handling-implications}
+
+\input{suspension-resumption-subsection.tex}
+
+%%% Local Variables:
+%%% mode: latex
+%%% TeX-master: "description"
+%%% End:
+

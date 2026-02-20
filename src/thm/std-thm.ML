@@ -1172,7 +1172,10 @@ fun okConstName cnm =
     CharVector.all (fn c => Char.isGraph c) cnm
 
 fun prim_type_definition (name as {Thy, Tyop}, thm) = let
-  val (bv,Body) = with_exn dest_exists (concl thm) TYDEF_FORM_ERR
+  val c         = concl thm
+  val _         = Term.uptodate_term c orelse
+                  raise TYDEF_ERR "Witness theorem is out-of-date"
+  val (bv,Body) = with_exn dest_exists c TYDEF_FORM_ERR
   val (P,v)     = with_exn dest_comb Body TYDEF_FORM_ERR
   val _         = assert_exn (equal bv) v TYDEF_FORM_ERR
   val Pty       = type_of P
@@ -1247,7 +1250,10 @@ in
 end
 
 fun gen_prim_specification thyname th = let
+  val body        = concl th
   val hyps        = hypset th
+  val _ = Term.uptodate_term body orelse
+          raise SPEC_ERR "Out-of-date conclusion to theorem"
   val stys        =
     let
       fun foldthis (tm,stys) =
@@ -1258,6 +1264,8 @@ fun gen_prim_specification thyname th = let
               with_exn dest_var l (SPEC_ERR "lhs of hyp not a variable")
           val checked = check_free_vars r SPEC_ERR
           val checked = check_tyvars (type_vars_in_term r) ty SPEC_ERR
+          val _ = Term.uptodate_term tm orelse
+                  raise SPEC_ERR "Out-of-date hypothesis"
         in
           (s,ty)::stys
         end
@@ -1272,7 +1280,6 @@ fun gen_prim_specification thyname th = let
       case List.find (not o okConstName) cnames of
           NONE => ()
         | SOME n => raise SPEC_ERR ("Constant name: \""^n^"\" invalid")
-  val body        = concl th
   val checked     = check_vars body (List.map mk_var stys) SPEC_ERR
   fun addc (s,ty) = (mk_var (s,ty)) |-> bind thyname s ty
 in

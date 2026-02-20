@@ -1,13 +1,13 @@
 
-use "../tools/Holmake/HOLFS_dtype.sml";
-use "../tools/Holmake/HFS_NameMunge.sig";
+use "../tools/Holmake/hfs/HOLFS_dtype.sml";
+use "../tools/Holmake/hfs/HFS_NameMunge.sig";
 use "../tools/Holmake/poly/HFS_NameMunge.sml";
-use "../tools/Holmake/HOLFileSys.sig";
-use "../tools/Holmake/HOLFileSys.sml";
-use "../tools/Holmake/AttributeSyntax.sig";
-use "../tools/Holmake/AttributeSyntax.sml";
-use "../tools/Holmake/GetOpt.sig";
-use "../tools/Holmake/GetOpt.sml";
+use "../tools/Holmake/hfs/HOLFileSys.sig";
+use "../tools/Holmake/hfs/HOLFileSys.sml";
+use "../tools/parsing/AttributeSyntax.sig";
+use "../tools/parsing/AttributeSyntax.sml";
+use "../tools/util/GetOpt.sig";
+use "../tools/util/GetOpt.sml";
 use "../tools-poly/poly/Binaryset.sig";
 use "../tools-poly/poly/Binaryset.sml";
 use "../tools-poly/poly/Binarymap.sig";
@@ -18,8 +18,8 @@ use "../src/portableML/DArray.sig";
 use "../src/portableML/DArray.sml";
 use "../tools/Holmake/Systeml.sig";
 use "../tools-poly/Holmake/Systeml.sml";
-use "../tools/Holmake/holpathdb.sig";
-use "../tools/Holmake/holpathdb.sml";
+use "../tools/Holmake/hfs/holpathdb.sig";
+use "../tools/Holmake/hfs/holpathdb.sml";
 
 val _ = holpathdb.extend_db {vname = "HOLDIR", path = Systeml.HOLDIR}
 
@@ -45,18 +45,17 @@ in
   (push, read, reset)
 end;
 
-val _ = use "../tools/Holmake/HOLAst.sig";
-val _ = use "../tools/Holmake/HOLAst.sml";
-val _ = use "../tools/Holmake/HOLParser.sig";
-val _ = use "../tools/Holmake/HOLParser.sml";
-val _ = use "../tools/Holmake/HOLToSML.sig";
-val _ = use "../tools/Holmake/HOLToSML.sml";
-val _ = use "../tools/Holmake/HOLPrinter.sig";
-val _ = use "../tools/Holmake/HOLPrinter.sml";
-val _ = use "../tools/Holmake/HolParser.sig";
-val _ = use "../tools/Holmake/HolParser.sml";
-val _ = use "../tools/Holmake/Holdep_tokens.sig"
-val _ = use "../tools/Holmake/Holdep_tokens.sml";
+val _ = use "../tools/parsing/HOLAst.sig";
+val _ = use "../tools/parsing/HOLAst.sml";
+val _ = use "../tools/parsing/HOLParser.sig";
+val _ = use "../tools/parsing/HOLParser.sml";
+val _ = use "../tools/parsing/HOLToSML.sig";
+val _ = use "../tools/parsing/HOLToSML.sml";
+val _ = use "../tools/parsing/HOLPrinter.sig";
+val _ = use "../tools/parsing/HOLPrinter.sml";
+val _ = use "../tools/parsing/HolLex.sml";
+val _ = use "../tools/parsing/HolParser.sig";
+val _ = use "../tools/parsing/HolParser.sml";
 
 
 infix ^^

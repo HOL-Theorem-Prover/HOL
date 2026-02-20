@@ -1,6 +1,6 @@
 Theory bnfAlgebra
 Ancestors
-  relation pair combin pred_set cardinal ordinal
+  relation pair combin pred_set cardinal ordinal ordinalBasic
 
 fun SRULE ths = SIMP_RULE (srw_ss()) ths
 

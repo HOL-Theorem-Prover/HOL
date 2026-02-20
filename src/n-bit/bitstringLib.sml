@@ -58,7 +58,7 @@ local
    open bitstringTheory
    val cnv =
      Conv.REWR_CONV (REWRITE_RULE [zero_extend_def] fixwidth_def)
-     THENC change_compset_conv (listSimps.list_compset())
+     THENC change_compset_conv (listSimps.list_compset)
              [computeLib.Defs [combinTheory.K_THM],
               computeLib.Convs
                 [(``fcp$dimindex:'a itself -> num``, 1, wordsLib.SIZES_CONV)]]
@@ -213,7 +213,7 @@ local
    fun is_bool tm = Teq tm orelse Feq tm
    val cnv =
      Conv.REWR_CONV bitstringTheory.v2w_11
-     THENC change_compset_conv (listSimps.list_compset())
+     THENC change_compset_conv (listSimps.list_compset)
              [computeLib.Defs
                 [bitstringTheory.v2w_fixwidth,
                  bitstringTheory.fixwidth,
@@ -258,7 +258,7 @@ local
      qm [bitstringTheory.extract_v2w, bitstringTheory.field_def])
    val shiftr_CONV =
      Conv.REWR_CONV bitstringTheory.shiftr_def
-     THENC Conv.CHANGED_CONV (computeLib.CBV_CONV (listSimps.list_compset()))
+     THENC Conv.CHANGED_CONV (computeLib.CBV_CONV (listSimps.list_compset))
 in
    fun extract_v2w_CONV tm =
       let
@@ -311,7 +311,7 @@ local
    val word_bit_last_shiftr =
       REWRITE_RULE [bitstringTheory.shiftr_def]
          bitstringTheory.word_bit_last_shiftr
-   val cnv = change_compset_conv (computeLib.bool_compset())
+   val cnv = change_compset_conv computeLib.bool_compset
                [computeLib.Defs
                   [numeral_distrib, numeral_suc, numeral_iisuc, numeral_sub,
                    numeral_lt, iSUB_THM, iDUB_removal,
@@ -573,7 +573,7 @@ local
      | NONE => false
 in
   val add_bitstring_compset = computeLib.add_thms thms
-  val cnv = change_compset_conv (wordsLib.words_compset())
+  val cnv = change_compset_conv (wordsLib.words_compset)
                [computeLib.Extenders [add_bitstring_compset]]
   fun BITSTRING_GROUND_CONV tm =
     if is_ground tm then cnv tm

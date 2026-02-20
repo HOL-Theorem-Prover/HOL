@@ -5,8 +5,7 @@ src/num/termination/numheap
 bin/hol.state0
 bin/hol.state
 bin/build
-bin/buildheap
-bin/heapname
+bin/hol
 bin/holdeptool.exe
 bin/mkmunge.exe
 bin/unquote
