@@ -1443,11 +1443,17 @@ in
               (FullUnify.unify [] [] (t1,t2) >> FullUnify.collapse)
 end
 
+val _ = new_constant ("cle", “:'a -> 'b -> bool”)
+
 val _ = app unify_test [
       (“x:bool”, “x:'a”, true, true),
       (“x:bool->bool”, “y:bool”, false, true),
       (“~ x”, “(f : 'a -> 'b) y”, true, true),
       (“(f:'a -> 'a) x”, “$/\ T”, false, true),
       (“(\x y. x /\ y <=> u /\ v) u a”,
-       “(f:bool->bool -> bool) x x”, true, false)
-]
+       “(f:bool->bool -> bool) x x”, true, false),
+      (“\x y. x /\ y /\ z”, “\a x. a /\ x”, false, false),
+      (“\x y. x /\ y”, “\y x. y /\ x”, true, false),
+      (“\x y. x /\ y”, “\y:'a x:'b. f y x”, true, false),
+      (“cle (t:'a) ($= t)”, “cle (s:'b) (t0:'c)”, true, false)
+    ]
