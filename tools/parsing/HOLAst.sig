@@ -96,17 +96,24 @@ datatype exp =
 | App of exp * exp (** exp exp *)
 | AndAlso of {left: exp, andalso_: int, right: exp} (** exp andalso exp *)
 | OrElse of {left: exp, orelse_: int, right: exp} (** exp orelse exp *)
-| Handle of {exp: exp, handle_: int, elems: arm list, stop: int}
+| Handle of {
+    exp: exp, handle_: int,
+    elems: {bar: int option, pat: exp, arrow: int option, exp: exp} list, stop: int}
   (** exp handle pat => exp [| pat => exp ...] *)
 | Raise of {raise_: int, exp: exp} (** raise exp *)
 | IfThenElse of {
     if_: int, exp1: exp, then_: int option, exp2: exp, else_: {else_: int, exp3: exp} option}
   (** if exp then exp else exp *)
 | While of {while_: int, exp1: exp, do_: int option, exp2: exp} (** while exp do exp *)
-| Case of {case_: int, exp: exp, of_: int option, elems: arm list, stop: int}
+| Case of {
+    case_: int, exp: exp, of_: int option,
+    elems: {bar: int option, pat: exp, arrow: int option, exp: exp} list, stop: int}
   (** case exp of pat => exp [| pat => exp ...] *)
-| Fn of {fn_: int, elems: arm list, stop: int} (** fn pat => exp [| pat => exp ...] *)
-
+| Fn of {
+    fn_: int,
+    elems: {bar: int option, pat: exp, arrow: int option, exp: exp} list,
+    stop: int}
+  (** fn pat => exp [| pat => exp ...] *)
 | HOLFullQuote of {
     head: int * string, type_q: int option,
     quote: qdecl list, end_tok: (int * string) option, stop: int}
@@ -134,9 +141,13 @@ and row =
 
 and dec =
   DecSemi of int (** ; *)
-| DecVal of {val_: int, tyvars: ident seq, elems: valbind delimited}
+| DecVal of {
+    val_: int, tyvars: ident seq,
+    elems: {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option} delimited}
   (** val tyvarseq [rec] pat = exp [and [rec] pat = exp ...] *)
-| DecFun of {fun_: int, tyvars: ident seq, fvalbind: fvalarm list delimited}
+| DecFun of {
+    fun_: int, tyvars: ident seq,
+    fvalbind: {bar: int option, pat: exp, eq: int option, exp: exp} list delimited}
   (** fun tyvarseq [op]vid atpat ... atpat [: ty] = exp [| ...] *)
 | DecType of {type_: int, tybind: tybind delimited}
   (** type tyvarseq tycon = ty [and tyvarseq tycon = ty ...] *)
@@ -166,7 +177,7 @@ and dec =
 | DecNonfix of {nonfix_: int, elems: ident list} (** nonfix vid [vid ...] *)
 | DecStructure of {
     structure_: int, elems: {
-      id: ident, constraint: struct_kind option,
+      id: ident, constraint: {colon: int * constraint, sigexp: sigexp} option,
       bind: {eq: int, strexp: strexp} option} delimited}
   (** structure strid : sigexp = strexp [and strid : sigep = strexp ...] *)
 | DecSignature of {
@@ -180,7 +191,7 @@ and dec =
 | DecFunctor of {
     functor_: int, elems: {
       id: ident, lparen: int option, funarg: funarg, rparen: int option,
-      constraint: struct_kind option,
+      constraint: {colon: int * constraint, sigexp: sigexp} option,
       bind: {eq: int, strexp: strexp} option} delimited}
   (** functor id(funarg) [:> sigexp] = strexp [and ...] *)
 | DecExp of exp (** exp (only at top level) *)
@@ -236,7 +247,7 @@ and sigexp =
 and strexp =
   StrIdent of ident
 | StrStruct of {struct_: int, strdec: dec list, end_: int option, stop: int}
-| StrConstraint of {strexp: strexp, kind: struct_kind}
+| StrConstraint of {strexp: strexp, kind: {colon: int * constraint, sigexp: sigexp}}
 | FunAppExp of {funid: ident, lparen: int, strexp: strexp, rparen: int option, stop: int}
 | FunAppDec of {funid: ident, lparen: int, strdec: dec list, rparen: int option, stop: int}
 | StrLetInEnd of {
@@ -249,13 +260,13 @@ and qdecl =
     colon: int option, right: int option, stop: int}
   (** [id[x,y,z]:] *)
 
-withtype struct_kind = {colon: int * constraint, sigexp: sigexp}
+type struct_kind = {colon: int * constraint, sigexp: sigexp}
 
-and valbind = {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option}
+type valbind = {rec_: int option, pat: exp, eq: {eq: int, exp: exp} option}
 
-and arm = {bar: int option, pat: exp, arrow: int option, exp: exp}
+type arm = {bar: int option, pat: exp, arrow: int option, exp: exp}
 
-and fvalarm = {bar: int option, pat: exp, eq: int option, exp: exp}
+type fvalarm = {bar: int option, pat: exp, eq: int option, exp: exp}
 
 val mkIdent: ident -> exp
 
