@@ -60,8 +60,7 @@ fun expect_thm check_oracles name smt_tac t =
     else
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         term_with_types t ^ "': theorem differs (" ^
-        Hol_pp.thm_to_string thm ^ ")")
-    ;
+        Hol_pp.thm_to_string thm ^ ")");
     if check_oracles then Library.check_oracle_tags name thm else ()
   end
 
