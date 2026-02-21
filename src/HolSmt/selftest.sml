@@ -15,7 +15,7 @@ val _ = Globals.show_assums := true
 val _ = Globals.show_types := true
 val _ = wordsLib.add_word_cast_printer ()
 *)
-
+val _ = Feedback.set_trace "PP.avoid_unicode" 1
 val _ = Feedback.set_trace "HolSmtLib" 0
 (*
 val _ = Feedback.set_trace "HolSmtLib" 4
