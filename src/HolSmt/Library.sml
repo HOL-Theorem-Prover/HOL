@@ -252,21 +252,12 @@ struct
     " [" ^ hyps_contents ^ "] |- " ^ term_to_string (Thm.concl thm)
   end
 
-  (* return all oracle tags except "DISK_THM" *)
-  fun unexpected_oracle_tags thm =
-    let
-      val (oracles, _) = Tag.dest_tag (Thm.tag thm)
-    in
-      List.filter (fn s => s <> "DISK_THM") oracles
-    end
-
   fun check_oracle_tags name thm =
-    case unexpected_oracle_tags thm of
-      [] => ()
-    | bad_oracles =>
-        raise Feedback.mk_HOL_ERR "HolSmtLib" "check_oracle_tags"
-          ("solver '" ^ name ^ "' produced oracle tag(s): " ^
-           String.concatWith ", " bad_oracles)
+    if Sanity.check_tags ((Theory.current_theory (), name), thm) then
+      raise Feedback.mk_HOL_ERR "HolSmtLib" "check_oracle_tags"
+        ("solver '" ^ name ^ "' produced unexpected oracle/axiom tags")
+    else
+      ()
 
   (* `is_def_oriented` must return false when:
      1. `lhs` is not a variable in `var_set` but `rhs` is, or

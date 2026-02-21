@@ -60,6 +60,9 @@ sig
  (* sanity checks a theorem with a given name *)
  val sanity_check_named_thm : (string * thm) -> bool
 
+ (* check tags on a single theorem (oracle and axiom tags) *)
+ val check_tags             : ((string * string) * thm) -> bool
+
 
  (* versions of prove, store_thm and save_thm that perform checks,
     see trace "Sanity Check Strict" *)
