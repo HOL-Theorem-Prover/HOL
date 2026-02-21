@@ -793,7 +793,8 @@ in
     (``1n < 0n``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p, sat_CVCp]),
     (``(x:num) < x``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p, sat_CVCp]),
     (``(x:num) < y ==> 42 * x < 42 * y``,
-      [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4 (*, thm_CVCp: cvc5 proof too slow for num mul *)]),
+      [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4
+       (*, thm_CVCp: cvc5 proof generation very slow for num multiplication *)]),
 
     (``0n <= 1n``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p, thm_CVCp]),
     (``1n <= 0n``, [sat_CVC, sat_YO, sat_Z3, sat_Z3p, sat_CVCp]),

@@ -61,7 +61,7 @@ structure CVC = struct
         in
           (((goal, validation), ty_tm_dict), strings)
         end)
-      " --produce-proofs --dump-proofs --proof-format-mode=alethe --tlimit=10000 --lang smt "
+      " --produce-proofs --dump-proofs --proof-format-mode=alethe --lang smt "
       (fn ((goal, validation), (ty_dict, tm_dict)) =>
         fn outfile =>
           let
