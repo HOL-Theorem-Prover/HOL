@@ -255,7 +255,8 @@ struct
   fun check_oracle_tags name thm =
     if Sanity.check_tags ((Theory.current_theory (), name), thm) then
       raise Feedback.mk_HOL_ERR "HolSmtLib" "check_oracle_tags"
-        ("solver '" ^ name ^ "' produced unexpected oracle/axiom tags")
+        ("solver '" ^ name ^ "' produced unexpected oracle/axiom tags: " ^
+         thm_to_string thm)
     else
       ()
 
