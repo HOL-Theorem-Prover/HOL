@@ -45,7 +45,7 @@ val die = Unittest.die
 fun term_with_types t = Lib.with_flag(show_types, true) Hol_pp.term_to_string t
 
 (* provable terms: theorem expected *)
-fun expect_thm name smt_tac t =
+fun expect_thm check_oracles name smt_tac t =
   let
     open boolLib
     val thm = Tactical.TAC_PROOF (([], t), smt_tac)
@@ -61,6 +61,8 @@ fun expect_thm name smt_tac t =
       die ("Test of solver '" ^ name ^ "' failed on term '" ^
         term_with_types t ^ "': theorem differs (" ^
         Hol_pp.thm_to_string thm ^ ")")
+    ;
+    if check_oracles then Library.check_oracle_tags name thm else ()
   end
 
 (* unprovable terms: satisfiability expected *)
@@ -148,42 +150,43 @@ fun auto_tac (_, t) =
   end
 
 val thm_AUTO =
-  mk_test_fun true expect_thm "AUTO" (Tactical.THEN (Library.SET_SIMP_TAC, auto_tac))
+  mk_test_fun true (expect_thm true) "AUTO"
+    (Tactical.THEN (Library.SET_SIMP_TAC, auto_tac))
 
 fun mk_CVC expect_fun =
   mk_test_fun (CVC.is_configured ()) expect_fun "cvc5" HolSmtLib.CVC_ORACLE_TAC
 
-val thm_CVC = mk_CVC expect_thm
+val thm_CVC = mk_CVC (expect_thm false)
 val sat_CVC = mk_CVC expect_sat
 
 fun mk_Yices expect_fun =
   mk_test_fun (Yices.is_configured ()) expect_fun "Yices" HolSmtLib.YICES_TAC
 
-val thm_YO = mk_Yices expect_thm
+val thm_YO = mk_Yices (expect_thm false)
 val sat_YO = mk_Yices expect_sat
 
 fun mk_Z3 expect_fun =
   mk_test_fun (Z3.is_configured ()) expect_fun "Z3" HolSmtLib.Z3_ORACLE_TAC
 
-val thm_Z3 = mk_Z3 expect_thm
+val thm_Z3 = mk_Z3 (expect_thm false)
 val sat_Z3 = mk_Z3 expect_sat
 
 fun mk_Z3p expect_fun =
   mk_test_fun (Z3.is_configured ()) expect_fun "Z3 (proofs)" HolSmtLib.Z3_TAC
 
-val thm_Z3p = mk_Z3p expect_thm
+val thm_Z3p = mk_Z3p (expect_thm true)
 val sat_Z3p = mk_Z3p expect_sat
 
 fun mk_Z3_v4 expect_fun =
   mk_test_fun (Z3.is_v4_configured ()) expect_fun "Z3 (v4 only)" HolSmtLib.Z3_ORACLE_TAC
 
-val thm_Z3_v4 = mk_Z3_v4 expect_thm
+val thm_Z3_v4 = mk_Z3_v4 (expect_thm false)
 val sat_Z3_v4 = mk_Z3_v4 expect_sat
 
 fun mk_Z3p_v4 expect_fun =
   mk_test_fun (Z3.is_v4_configured ()) expect_fun "Z3 (proofs, v4 only)" HolSmtLib.Z3_TAC
 
-val thm_Z3p_v4 = mk_Z3p_v4 expect_thm
+val thm_Z3p_v4 = mk_Z3p_v4 (expect_thm true)
 val sat_Z3p_v4 = mk_Z3p_v4 expect_sat
 
 (*****************************************************************************)
