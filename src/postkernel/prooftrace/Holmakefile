@@ -1,2 +1,13 @@
 all: $(DEFAULT_TARGETS) TraceExport.uo TraceRecord.uo ReplayTrace.uo MergeTrace.uo
 .PHONY: all
+
+ifdef POLY
+MINSTATE = $(dprot $(HOLDIR)/bin/hol.state.min)
+
+$(MINSTATE): ReplayTrace.uo MergeTrace.uo $(dprot $(HOLDIR)/bin/hol)
+	$(protect $(HOLDIR)/bin/hol) buildheap --poly -o $@ \
+	  $(protect $(SIGOBJ)/HolKernel) \
+	  ReplayTrace MergeTrace
+
+all: $(MINSTATE)
+endif

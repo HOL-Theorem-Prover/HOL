@@ -119,126 +119,102 @@ fun parse_header (lines : string list) =
    Build type array from Y entries
    ----------------------------------------------------------------------- *)
 
-fun build_types n_types (lines : string list) =
+(* Lazy type/term construction: parse lines into raw descriptions,
+   construct actual types/terms on demand. This ensures definitions
+   (DEF_TYOP, DEF_SPEC) have been replayed before the types/terms
+   they define are constructed, avoiding stale kernelid issues. *)
+
+datatype ty_desc = TyVar of string | TyOp of string * string * int list
+datatype tm_desc = TmVar of string * int
+                 | TmConst of string * string * int
+                 | TmApp of int * int
+                 | TmLam of int * int
+
+fun parse_type_descs n_types (lines : string list) =
   let
-    val arr = Array.array (n_types, Type.bool)  (* placeholder *)
+    val arr = Array.array(n_types, TyVar "'_")
     fun process line =
       case tokenize line of
-        _ :: id_s :: kind :: rest =>
-        let
-          val id = valOf (Int.fromString id_s)
-          val ty = case kind of
-              "V" => Type.mk_vartype (unescape (hd rest))
-            | "O" =>
-              let
-                val thy = unescape (hd rest)
-                val name = unescape (hd (tl rest))
-                val arg_ids = List.mapPartial Int.fromString (tl (tl rest))
-                val args = map (fn i => Array.sub(arr, i)) arg_ids
-              in
-                Type.mk_thy_type {Thy=thy, Tyop=name, Args=args}
-                handle HOL_ERR _ =>
-                  (* Retired/temp type operators: create on-the-fly so
-                     intermediate proof steps using them can be replayed. *)
-                  (Type.prim_new_type {Thy=thy, Tyop=name} (length args);
-                   Type.mk_thy_type {Thy=thy, Tyop=name, Args=args})
-                  handle _ =>
-                    Type.mk_vartype ("'" ^ thy ^ "_" ^ name)
-              end
-            | _ => raise ERR "build_types" ("unknown kind: " ^ kind)
-        in
-          Array.update(arr, id, ty)
-        end
-      | toks => raise ERR "build_types"
-          ("malformed type line: " ^ String.concatWith " " toks)
-  in
-    List.app process lines;
-    arr
-  end
+        (_ :: id_s :: "V" :: rest) =>
+          Array.update(arr, valOf (Int.fromString id_s),
+                       TyVar (unescape (hd rest)))
+      | (_ :: id_s :: "O" :: rest) =>
+          let val thy = unescape (hd rest)
+              val name = unescape (hd (tl rest))
+              val arg_ids = List.mapPartial Int.fromString (tl (tl rest))
+          in Array.update(arr, valOf (Int.fromString id_s),
+                          TyOp (thy, name, arg_ids))
+          end
+      | _ => raise ERR "parse_type_descs" ("bad line: " ^ line)
+  in List.app process lines; arr end
 
-(* -----------------------------------------------------------------------
-   Build term array from M entries
-   ----------------------------------------------------------------------- *)
-
-fun build_terms n_terms type_arr (lines : string list) =
+fun parse_term_descs n_terms (lines : string list) =
   let
-    val placeholder_name = "\000_placeholder"
-    val placeholder = Term.mk_var(placeholder_name, Type.bool)
-    val arr = Array.array (n_terms, placeholder)
-    val deferred = ref ([] : string list)
-    fun is_placeholder tm = Term.is_var tm andalso
-      let val (n,_) = Term.dest_var tm in n = placeholder_name end
+    val arr = Array.array(n_terms, TmVar ("_", 0))
     fun process line =
       case tokenize line of
-        _ :: id_s :: kind :: rest =>
-        let
-          val id = valOf (Int.fromString id_s)
-          fun int_of s = valOf (Int.fromString s)
-          val tm = case kind of
-              "V" =>
-                let val name = unescape (hd rest)
-                    val ty_id = int_of (hd (tl rest))
-                in Term.mk_var(name, Array.sub(type_arr, ty_id)) end
-            | "C" =>
-                let val thy = unescape (hd rest)
-                    val name = unescape (hd (tl rest))
-                    val ty_id = int_of (hd (tl (tl rest)))
-                    val ty = Array.sub(type_arr, ty_id)
+        (_ :: id_s :: "V" :: name_s :: ty_s :: _) =>
+          Array.update(arr, valOf (Int.fromString id_s),
+                       TmVar (unescape name_s, valOf (Int.fromString ty_s)))
+      | (_ :: id_s :: "C" :: thy_s :: name_s :: ty_s :: _) =>
+          Array.update(arr, valOf (Int.fromString id_s),
+                       TmConst (unescape thy_s, unescape name_s,
+                                valOf (Int.fromString ty_s)))
+      | (_ :: id_s :: "A" :: f_s :: x_s :: _) =>
+          Array.update(arr, valOf (Int.fromString id_s),
+                       TmApp (valOf (Int.fromString f_s),
+                              valOf (Int.fromString x_s)))
+      | (_ :: id_s :: "L" :: v_s :: b_s :: _) =>
+          Array.update(arr, valOf (Int.fromString id_s),
+                       TmLam (valOf (Int.fromString v_s),
+                              valOf (Int.fromString b_s)))
+      | _ => raise ERR "parse_term_descs" ("bad line: " ^ line)
+  in List.app process lines; arr end
+
+fun make_lazy_types ty_descs =
+  let
+    val n = Array.length ty_descs
+    val cache : Type.hol_type option Array.array = Array.array(n, NONE)
+    fun get i =
+      case Array.sub(cache, i) of
+        SOME ty => ty
+      | NONE =>
+        let val ty = case Array.sub(ty_descs, i) of
+              TyVar s => Type.mk_vartype s
+            | TyOp (thy, name, arg_ids) =>
+                let val args = map get arg_ids
+                in Type.mk_thy_type {Thy=thy, Tyop=name, Args=args}
+                   handle HOL_ERR _ =>
+                     (Type.prim_new_type {Thy=thy, Tyop=name} (length args);
+                      Type.mk_thy_type {Thy=thy, Tyop=name, Args=args})
+                end
+        in Array.update(cache, i, SOME ty); ty end
+  in get end
+
+fun make_lazy_terms tm_descs ty_fn =
+  let
+    val n = Array.length tm_descs
+    val cache : Term.term option Array.array = Array.array(n, NONE)
+    fun get i =
+      case Array.sub(cache, i) of
+        SOME tm => tm
+      | NONE =>
+        let val tm = case Array.sub(tm_descs, i) of
+              TmVar (name, ty_id) =>
+                Term.mk_var(name, ty_fn ty_id)
+            | TmConst (thy, name, ty_id) =>
+                let val ty = ty_fn ty_id
                 in Term.mk_thy_const {Thy=thy, Name=name, Ty=ty}
                    handle HOL_ERR _ =>
-                     (* Retired/temp constants: create on-the-fly so
-                        intermediate proof steps can be replayed. *)
                      (ignore (Term.prim_new_const {Name=name, Thy=thy} ty);
                       Term.mk_thy_const {Thy=thy, Name=name, Ty=ty})
-                     handle _ =>
-                       Term.mk_var(thy ^ "$" ^ name, ty)
                 end
-            | "A" =>
-                let val f_id = int_of (hd rest)
-                    val x_id = int_of (hd (tl rest))
-                    val f_tm = Array.sub(arr, f_id)
-                    val x_tm = Array.sub(arr, x_id)
-                in if is_placeholder f_tm orelse is_placeholder x_tm
-                   then (deferred := line :: !deferred; placeholder)
-                   else Term.mk_comb(f_tm, x_tm)
-                        handle HOL_ERR _ =>
-                          let val fty = Term.type_of f_tm
-                              val rty = snd (Type.dom_rng fty)
-                                        handle HOL_ERR _ => Type.bool
-                          in Term.mk_var("_app" ^ id_s, rty) end
-                end
-            | "L" =>
-                let val v_id = int_of (hd rest)
-                    val b_id = int_of (hd (tl rest))
-                    val v_tm = Array.sub(arr, v_id)
-                    val b_tm = Array.sub(arr, b_id)
-                in if is_placeholder v_tm orelse is_placeholder b_tm
-                   then (deferred := line :: !deferred; placeholder)
-                   else Term.mk_abs(v_tm, b_tm)
-                        handle HOL_ERR _ =>
-                          Term.mk_var("_abs" ^ id_s, Type.bool)
-                end
-            | _ => raise ERR "build_terms" ("unknown kind: " ^ kind)
-        in
-          Array.update(arr, id, tm)
-        end
-      | toks => raise ERR "build_terms"
-          ("malformed term line: " ^ String.concatWith " " toks)
-    (* First pass: process all lines *)
-    val _ = List.app process lines
-    (* Additional passes: resolve forward references *)
-    fun resolve_pass () =
-      let val pending = rev (!deferred)
-          val _ = deferred := []
-      in if null pending then ()
-         else (List.app process pending;
-               if null (!deferred) then ()
-               else resolve_pass ())
-      end
-  in
-    resolve_pass ();
-    arr
-  end
+            | TmApp (f_id, x_id) =>
+                Term.mk_comb(get f_id, get x_id)
+            | TmLam (v_id, b_id) =>
+                Term.mk_abs(get v_id, get b_id)
+        in Array.update(cache, i, SOME tm); tm end
+  in get end
 
 (* -----------------------------------------------------------------------
    Replay proof steps
@@ -264,7 +240,8 @@ fun ctx_add_exports (ctx : ancestor_ctx) (thy : string)
   List.foldl (fn ((name, th), ctx) =>
     Redblackmap.insert(ctx, (thy, name), th)) ctx exports
 
-fun replay_steps term_arr type_arr (lines : string list)
+fun replay_steps (tm : int -> Term.term) (ty : int -> Type.hol_type)
+                 (lines : string list)
                  (ctx : ancestor_ctx) =
   let
     val _ = first_fail := NONE
@@ -273,13 +250,7 @@ fun replay_steps term_arr type_arr (lines : string list)
                         ([], Term.mk_var("_", Type.bool))
     val thm_arr = Array.array (n, placeholder)
     fun int_of s = valOf (Int.fromString s)
-    fun tm i = Array.sub(term_arr, i)
-    fun ty i = Array.sub(type_arr, i)
     fun th i = Array.sub(thm_arr, i)
-
-    (* Set of opaque rule tags — processed in pass 1 before parents *)
-    val opaque_rules = ["ORACLE", "AXIOM", "COMPUTE_INIT"]
-    fun is_opaque rule = List.exists (fn r => r = rule) opaque_rules
 
     (* Compute closure, set by COMPUTE_INIT *)
     val compute_fn = ref (NONE : (thm list -> term -> thm) option)
@@ -512,7 +483,7 @@ fun replay_steps term_arr type_arr (lines : string list)
                              ([], Term.mk_var("_step" ^
                                     Int.toString id, Type.bool))
             val msg = "REPLAY_FAIL step " ^ Int.toString id ^
-                      " " ^ rule ^ ": " ^ exn_to_string e
+                      " " ^ rule ^ ": " ^ General.exnMessage e
             val _ = if not (isSome (!first_fail)) then
                       first_fail := SOME msg
                     else ()
@@ -522,16 +493,10 @@ fun replay_steps term_arr type_arr (lines : string list)
           Array.update(thm_arr, id, fallback)
         end
 
-    (* Pass 1: create oracle thms for all opaque steps *)
-    fun is_opaque_line line =
-      let val toks = tokenize line
-      in length toks >= 3 andalso is_opaque (List.nth(toks, 2)) end
-    val _ = List.app (fn line =>
-      if is_opaque_line line then process line else ()) lines
-
-    (* Pass 2: replay pure inference steps *)
-    val _ = List.app (fn line =>
-      if is_opaque_line line then () else process line) lines
+    (* Single pass: replay all steps in order.
+       With lazy type/term construction, definitions are replayed before
+       the types/terms they define are constructed. *)
+    val _ = List.app process lines
   in
     thm_arr
   end
@@ -634,9 +599,11 @@ fun replay_file_ctx path (ctx : ancestor_ctx) =
                     its n_terms)
                 else ()
 
-        val type_arr = build_types n_types type_lines
-        val term_arr = build_terms n_terms type_arr term_lines
-        val thm_arr = replay_steps term_arr type_arr step_lines ctx
+        val ty_descs = parse_type_descs n_types type_lines
+        val tm_descs = parse_term_descs n_terms term_lines
+        val ty_fn = make_lazy_types ty_descs
+        val tm_fn = make_lazy_terms tm_descs ty_fn
+        val thm_arr = replay_steps tm_fn ty_fn step_lines ctx
 
         val exports = parse_exports export_lines
       in

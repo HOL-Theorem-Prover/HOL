@@ -153,6 +153,10 @@ local
    ReqArg ((fn s => fn (OR r) => OR (updateT r (U sel (SOME s)) $$)), argnm)
  val setBaseNone =
      NoArg (fn () => fn (OR r) => OR (updateT r (U #base_state NONE) $$))
+ val setBaseMin =
+     NoArg (fn () => fn (OR r) =>
+       OR (updateT r (U #base_state
+             (SOME (OS.Path.concat(Systeml.HOLDIR, "bin/hol.state.min")))) $$))
  val ConsForced =
    ReqArg ((fn s => fn (OR r) =>
                OR (updateT r (U #forced_objs (#forced_objs r @ [s])) $$)),
@@ -173,6 +177,8 @@ in
 val cline_opts = [
   {help = "use minimal (bare) heap without bossLib", long = ["bare"], short = "",
    desc = mkBoolT #bare},
+  {help = "use min-only heap (no boolTheory) for proof trace replay",
+   long = ["min"], short = "", desc = setBaseMin},
   {help = "error if checked for file is absent", long = ["checkerr"],
    short = "e", desc = setStringOpt "message" #checkerr},
   {help = "check file exists afterwards (can repeat)", long = ["checkfor"],
@@ -507,9 +513,12 @@ in
         case #multithread options of
             NONE => ()
           | SOME i => buildheap_cline_mt := SOME i;
-        (* Load prelude files first for interactive mode, so user scripts
-           have access to Parse, bossLib, etc. *)
-        load_preludes();
+        (* Load prelude files for interactive mode, unless using the
+           minimal (min-only) heap which has no boolTheory. *)
+        (case base_state of
+            SOME s => if String.isSuffix "hol.state.min" s then ()
+                      else load_preludes()
+          | NONE => ());
         List.app
           (maybe_check_load diag)
           ((case #multithread options of

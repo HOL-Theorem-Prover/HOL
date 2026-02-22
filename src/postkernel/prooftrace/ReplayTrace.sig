@@ -61,4 +61,16 @@ sig
     export_lines : string list
   }
   val parse_exports : string list -> (string * int) list
+
+  (* Lazy type/term construction (exposed for debugging/testing) *)
+  datatype ty_desc = TyVar of string | TyOp of string * string * int list
+  datatype tm_desc = TmVar of string * int
+                   | TmConst of string * string * int
+                   | TmApp of int * int
+                   | TmLam of int * int
+  val parse_type_descs : int -> string list -> ty_desc Array.array
+  val parse_term_descs : int -> string list -> tm_desc Array.array
+  val make_lazy_types : ty_desc Array.array -> (int -> Type.hol_type)
+  val make_lazy_terms : tm_desc Array.array -> (int -> Type.hol_type) ->
+                        (int -> Term.term)
 end
