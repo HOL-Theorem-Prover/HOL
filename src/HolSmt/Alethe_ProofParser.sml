@@ -249,47 +249,76 @@ local
 
   fun parse_step_args (dicts_ref : dicts ref) get_token =
   let
-    fun loop rule premises args =
+    fun loop rule premises args discharge =
     let val tok = get_token ()
     in
-      if tok = ")" then {rule = rule, premises = premises, args = args}
-      else if tok = ":rule" then loop (get_token ()) premises args
-      else if tok = ":premises" then loop rule (parse_id_list get_token) args
+      if tok = ")" then {rule = rule, premises = premises, args = args,
+                          discharge = discharge}
+      else if tok = ":rule" then loop (get_token ()) premises args discharge
+      else if tok = ":premises" then
+        loop rule (parse_id_list get_token) args discharge
       else if tok = ":args" then
-        loop rule premises (parse_args_list dicts_ref get_token)
+        loop rule premises (parse_args_list dicts_ref get_token) discharge
       else if tok = ":discharge" then
-        (parse_id_list get_token; loop rule premises args)
+        loop rule premises args (parse_id_list get_token)
       else raise ERR "parse_step_args" ("unexpected '" ^ tok ^ "'")
     end
-  in loop "" [] [] end
+  in loop "" [] [] [] end
 
   (* --------------------------------------------------------------------- *)
   (* Anchor parsing                                                        *)
   (* --------------------------------------------------------------------- *)
 
-  fun parse_anchor_args get_token =
+  fun parse_anchor_args (dicts_ref : dicts ref) get_token =
   let
-    (* Skip the :args list — we don't use it in replay.
-       Just consume balanced parens: ( ... ) *)
-    fun skip_args_list () =
+    (* Parse the :args list to extract sorted variable bindings.
+       Format: ((b0 Int) (:= (b0 Int) b0) (b1 Bool) (:= (b1 Bool) b1) ...)
+       We extract (name, type) pairs from the sorted vars and add them
+       to the term dictionary so subproof terms parse with correct types.
+       The (:= ...) entries are substitution mappings which we skip. *)
+    (* Skip balanced parens: read tokens until depth returns to 0 *)
+    fun skip_balanced get_token =
+    let
+      fun go 0 = ()
+        | go depth =
+          let val tok = get_token ()
+          in
+            if tok = "(" then go (depth + 1)
+            else if tok = ")" then go (depth - 1)
+            else go depth
+          end
+    in go 1 end  (* called after reading the opening "(" *)
+
+    fun parse_args_list () =
     let
       val _ = Library.expect_token "(" (get_token ())
-      fun skip depth =
-        let val t = get_token ()
-        in
-          if t = "(" then skip (depth + 1)
-          else if t = ")" then
-            (if depth > 0 then skip (depth - 1) else ())
-          else skip depth
-        end
-    in skip 0 end
+      fun loop acc =
+      let val tok = get_token ()
+      in
+        if tok = ")" then List.rev acc
+        else if tok = "(" then
+          let val first = get_token ()
+          in
+            if first = ":=" then
+              (* Skip substitution: (:= (name Type) expr) *)
+              (skip_balanced get_token; loop acc)
+            else
+              (* Sorted variable: (name Type) *)
+              let val (tydict, _) = !dicts_ref
+                  val ty = SmtLib_Parser.parse_type get_token tydict
+                  val _ = Library.expect_token ")" (get_token ())
+              in loop ((first, ty) :: acc) end
+          end
+        else loop acc  (* skip unexpected tokens *)
+      end
+    in loop [] end
 
-    fun loop step_id args =
+    fun loop step_id bindings =
     let val tok = get_token ()
     in
-      if tok = ")" then {step_id = step_id, args = args}
-      else if tok = ":step" then loop (get_token ()) args
-      else if tok = ":args" then (skip_args_list (); loop step_id [])
+      if tok = ")" then {step_id = step_id, bindings = bindings}
+      else if tok = ":step" then loop (get_token ()) bindings
+      else if tok = ":args" then loop step_id (parse_args_list ())
       else raise ERR "parse_anchor_args"
         ("unexpected '" ^ tok ^ "' (step_id=" ^ step_id ^ ")")
     end
@@ -391,22 +420,45 @@ local
         else if cmd = "step" then
           let val id = get_token ()
               val clause = parse_clause dicts_ref get_token
-              val {rule, premises, args} =
+              val {rule, premises, args, discharge} =
                 parse_step_args dicts_ref get_token
               val acc' = Alethe_Proof.STEP {id=id, clause=clause, rule=rule,
-                                            premises=premises, args=args} :: acc
+                                            premises=premises, args=args,
+                                            discharge=discharge} :: acc
           in
             (* If this step closes the current subproof, return *)
             if stop_cond = SOME (SOME id) then List.rev acc'
             else parse_commands dicts_ref get_token stop_cond acc'
           end
         else if cmd = "anchor" then
-          let val {step_id, args = anchor_args} = parse_anchor_args get_token
+          let val {step_id, bindings} = parse_anchor_args dicts_ref get_token
               val anchor : Alethe_Proof.anchor =
-                {step_id = step_id, args = anchor_args}
+                {step_id = step_id, args = []}
+              (* Add bound variables to dict for subproof parsing *)
+              val saved_dicts = !dicts_ref
+              val _ = List.app (fn (name, ty) =>
+                let val v = Term.mk_var (name, ty)
+                    fun parsefn _ indices args =
+                      if List.null indices andalso List.null args then v
+                      else raise ERR ("<" ^ name ^ ">")
+                        "wrong number of arguments"
+                in add_to_tmdict dicts_ref name parsefn end) bindings
               (* Subproof ends when we see a step with id = step_id *)
               val sub_cmds = parse_commands dicts_ref get_token
                                (SOME (SOME step_id)) []
+              (* Restore only anchor-bound variables; keep named terms (@p_N)
+                 defined inside the subproof, since Alethe allows cross-scope
+                 references to them. *)
+              val (_, current_tmdict) = !dicts_ref
+              val (saved_tydict, saved_tmdict) = saved_dicts
+              val merged_tmdict = Redblackmap.foldl
+                (fn (k, v, d) =>
+                  if String.isPrefix "@" k then
+                    (* Named term from subproof — keep it *)
+                    Redblackmap.insert (d, k, v)
+                  else d)
+                saved_tmdict current_tmdict
+              val _ = dicts_ref := (saved_tydict, merged_tmdict)
           in
             parse_commands dicts_ref get_token stop_cond
               (Alethe_Proof.ANCHOR (anchor, sub_cmds) :: acc)

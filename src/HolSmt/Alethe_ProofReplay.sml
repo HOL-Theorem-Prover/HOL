@@ -20,14 +20,16 @@ local
     asserted_hyps   : Term.term HOLset.set,
     definition_hyps : Term.term HOLset.set,
     step_cache      : (string, Thm.thm) Redblackmap.dict,
-    thm_cache       : Thm.thm Net.net
+    thm_cache       : Thm.thm Net.net,
+    prev_thm        : Thm.thm option
   }
 
   fun initial_state () : state = {
     asserted_hyps   = Term.empty_tmset,
     definition_hyps = Term.empty_tmset,
     step_cache      = Redblackmap.mkDict String.compare,
-    thm_cache       = Net.empty
+    thm_cache       = Net.empty,
+    prev_thm        = NONE
   }
 
   fun cache_step (s : state) (id : string) (thm : Thm.thm) : state =
@@ -35,7 +37,8 @@ local
       asserted_hyps = #asserted_hyps s,
       definition_hyps = #definition_hyps s,
       step_cache = Redblackmap.insert (#step_cache s, id, thm),
-      thm_cache = #thm_cache s
+      thm_cache = #thm_cache s,
+      prev_thm = SOME thm
     }
 
   fun state_assert (s : state) (t : Term.term) : state =
@@ -43,7 +46,8 @@ local
       asserted_hyps = HOLset.add (#asserted_hyps s, t),
       definition_hyps = #definition_hyps s,
       step_cache = #step_cache s,
-      thm_cache = #thm_cache s
+      thm_cache = #thm_cache s,
+      prev_thm = #prev_thm s
     }
 
   fun state_cache_thm (s : state) (thm : Thm.thm) : state =
@@ -51,7 +55,8 @@ local
       asserted_hyps = #asserted_hyps s,
       definition_hyps = #definition_hyps s,
       step_cache = #step_cache s,
-      thm_cache = Net.insert (Thm.concl thm, thm) (#thm_cache s)
+      thm_cache = Net.insert (Thm.concl thm, thm) (#thm_cache s),
+      prev_thm = #prev_thm s
     }
 
   fun lookup_step (s : state) (id : string) : Thm.thm =
@@ -86,7 +91,10 @@ local
 
   (* prove |- t by trying various automation *)
   fun auto_prove name t =
-    Thm.REFL (boolSyntax.lhs t)
+    let val (l, r) = boolSyntax.dest_eq t
+    in if Term.aconv l r then Thm.REFL l
+       else raise ERR "auto_prove" "not reflexive"
+    end
     handle Feedback.HOL_ERR _ =>
     tautLib.TAUT_PROVE t
     handle Feedback.HOL_ERR _ =>
@@ -106,7 +114,7 @@ local
 
   (* try to prove a tautology by METIS *)
   (* METIS with a time/inference limit to avoid non-termination *)
-  val metis_limit : mlibMeter.limit = {time = SOME 0.05, infs = SOME 50}
+  val metis_limit : mlibMeter.limit = {time = SOME 0.2, infs = SOME 500}
 
   fun metis_prove thms t =
     Lib.with_flag (metisTools.limit, metis_limit)
@@ -148,20 +156,32 @@ local
           Thm.DISJ_CASES (Thm.ASSUME disj) l_th r_th
         end
     val dict = disjuncts (Redblackmap.mkDict Term.compare) (t, Thm.ASSUME t)
-    (* For each resolvent, add its negation as a way to derive t *)
+    (* For each resolvent, add its negation as a way to derive t.
+       We insert both the canonical neg_lit and the literal form
+       ¬lit to handle double negation: if lit = ¬A, then neg_lit = A
+       but the clause may contain ¬¬A = ¬lit instead. *)
     val dict = List.foldl (fn (th, dict) =>
       let
         val lit = Thm.concl th
         val (is_neg, neg_lit) = (true, boolSyntax.dest_neg lit)
           handle Feedback.HOL_ERR _ =>
             (false, boolSyntax.mk_neg lit)
-        val th = if is_neg then
+        val th' = if is_neg then
             Thm.NOT_ELIM th
           else
             Thm.MP (Thm.SPEC lit NOT_FALSE) th
-        val th = Thm.CCONTR t (Thm.MP th (Thm.ASSUME neg_lit))
+        val resolved = Thm.CCONTR t (Thm.MP th' (Thm.ASSUME neg_lit))
+        val dict = Redblackmap.insert (dict, neg_lit, resolved)
+        (* Also insert ¬lit for double-negation matching *)
+        val double_neg = boolSyntax.mk_neg lit
+        val dict = if Term.compare (neg_lit, double_neg) = EQUAL then dict
+                   else
+                     let val dn_th = Thm.CCONTR t
+                           (Thm.MP (Thm.NOT_ELIM (Thm.ASSUME double_neg)) th)
+                     in Redblackmap.insert (dict, double_neg, dn_th) end
+                   handle Feedback.HOL_ERR _ => dict
       in
-        Redblackmap.insert (dict, neg_lit, th)
+        dict
       end) dict (List.tl thms)
     val dict = Redblackmap.insert
       (dict, boolSyntax.F, Thm.CCONTR t (Thm.ASSUME boolSyntax.F))
@@ -304,25 +324,23 @@ local
   (* --- cong --- *)
   (* Build |- f(a1,...,an) = f(b1,...,bn) from premises ai = bi,
      inserting REFL for unchanged arguments. *)
+  (* Alethe 'cong' rule: given premises a1=b1, ..., an=bn,
+     prove f(a1,...,an) = f(b1,...,bn).
+     Handles n-ary Alethe functions mapped to binary HOL4 operators
+     by recursively decomposing via dest_comb. *)
   fun replay_cong (s : state) (id : string)
                   (prems : Thm.thm list) (clause : Term.term list) =
   let
     val target = clause_to_disj clause
     val (lhs, rhs) = boolSyntax.dest_eq target
 
-    (* Decompose lhs and rhs into (f, [a1,...,an]) and (g, [b1,...,bn]) *)
-    val (f_l, args_l) = boolSyntax.strip_comb lhs
-    val (f_r, args_r) = boolSyntax.strip_comb rhs
-
-    (* Build a dict from (lhs, rhs) -> thm for each premise *)
-    fun prem_key th =
-      let val c = Thm.concl th
-          val (l, r) = boolSyntax.dest_eq c
+    (* Premise lookup: find ⊢ a = b among premises *)
+    val prem_list = List.map (fn th =>
+      let val (l, r) = boolSyntax.dest_eq (Thm.concl th)
       in ((l, r), th) end
-      handle Feedback.HOL_ERR _ => raise ERR "replay_cong" "premise not eq"
-    val prem_list = List.map prem_key prems
+      handle Feedback.HOL_ERR _ =>
+        raise ERR "replay_cong" "premise not eq") prems
 
-    (* For each argument pair (ai, bi), find a matching premise or use REFL *)
     fun find_prem (a, b) =
       if Term.aconv a b then Thm.REFL a
       else
@@ -332,47 +350,32 @@ local
           SOME ((l,_), th) =>
             if Term.aconv l a then th else Thm.SYM th
         | NONE =>
-            (* try alpha-conversion *)
             Thm.ALPHA a b
             handle Feedback.HOL_ERR _ =>
             raise ERR "replay_cong" "no matching premise"
 
-    val thm =
-      if Term.aconv f_l f_r then
-        (* Same function, different args *)
-        let
-          val eq_pairs = ListPair.zipEq (args_l, args_r)
-          val arg_eqs = List.map find_prem eq_pairs
-          (* Build: REFL f, then MK_COMB with each arg equality *)
-          fun build base [] = base
-            | build base (eq :: rest) = build (Thm.MK_COMB (base, eq)) rest
-        in
-          build (Thm.REFL f_l) arg_eqs
-        end
+    (* Recursively decompose and build equality via MK_COMB.
+       Handles n-ary Alethe ops → nested binary HOL4 ops. *)
+    fun build_eq (l, r) =
+      if Term.aconv l r then Thm.REFL l
       else
-        (* Function itself changed: find premise for f_l = f_r *)
+        (* Try direct premise match first *)
+        find_prem (l, r)
+        handle Feedback.HOL_ERR _ =>
+        (* Decompose: (f_l arg_l) = (f_r arg_r) *)
         let
-          val f_eq = find_prem (f_l, f_r)
-          val eq_pairs = ListPair.zipEq (args_l, args_r)
-          val arg_eqs = List.map find_prem eq_pairs
-          fun build base [] = base
-            | build base (eq :: rest) = build (Thm.MK_COMB (base, eq)) rest
+          val (fl, al) = Term.dest_comb l
+          val (fr, ar) = Term.dest_comb r
+          val fun_eq = build_eq (fl, fr)
+          val arg_eq = find_prem (al, ar)
+                       handle Feedback.HOL_ERR _ => build_eq (al, ar)
         in
-          build f_eq arg_eqs
+          Thm.MK_COMB (fun_eq, arg_eq)
         end
-      handle Feedback.HOL_ERR _ =>
-        (* Fallback: try direct MK_COMB chain *)
-        let
-          fun mk_cong_chain [] = raise ERR "" ""
-            | mk_cong_chain [th] = th
-            | mk_cong_chain (th :: rest) =
-                let val th2 = mk_cong_chain rest
-                in Thm.MK_COMB (th, th2)
-                   handle Feedback.HOL_ERR _ => Thm.MK_COMB (th2, th)
-                end
-        in mk_cong_chain prems end
-      handle Feedback.HOL_ERR _ =>
-        metis_prove prems target
+
+    val thm = build_eq (lhs, rhs)
+              handle Feedback.HOL_ERR _ =>
+              metis_prove prems target
   in
     (cache_step s id thm, thm)
   end
@@ -459,8 +462,11 @@ local
              end
          | _ => raise ERR "" "")
         handle Feedback.HOL_ERR _ =>
-        (* fall back to METIS *)
-        metis_prove prems target
+        (* General multi-clause resolution: Alethe's resolution rule is
+           hyper-resolution (not just unit resolution). Multiple multi-literal
+           clauses resolve simultaneously by canceling complementary literals.
+           METIS_PROVE implements exactly this — propositional resolution. *)
+        metisLib.METIS_PROVE prems target
   in
     (cache_step s id thm, thm)
   end
@@ -640,11 +646,43 @@ local
   end
 
   (* --- forall_inst --- *)
+  (* Alethe forall_inst: ¬(∀x1...xn. P) ∨ P[t1/x1,...,tn/xn]
+     from :args (t1 ... tn) *)
   fun replay_forall_inst (s : state) (id : string)
                          (clause : Term.term list) (args : Term.term list) =
   let
     val target = clause_to_disj clause
-    val thm = prove_tautology clause
+    val thm =
+      prove_tautology clause
+      handle Feedback.HOL_ERR _ =>
+      let
+        (* Find the negated forall among disjuncts *)
+        val disjs = boolSyntax.strip_disj target
+        val (neg_forall, forall_tm) =
+          Lib.tryfind (fn d =>
+            let val inner = boolSyntax.dest_neg d
+                val _ = boolSyntax.dest_forall inner
+            in (d, inner) end) disjs
+        (* Instantiate: ∀x1...xn. P ⊢ P[t1/x1,...,tn/xn] *)
+        val spec_thm = List.foldl (fn (arg, th) => Thm.SPEC arg th)
+                         (Thm.ASSUME forall_tm) args
+        val body_inst = Thm.concl spec_thm
+        (* Build ⊢ ¬∀_tm ∨ body_inst via excluded middle *)
+        val em = Thm.SPEC forall_tm boolTheory.EXCLUDED_MIDDLE
+        val right = Thm.DISJ2 neg_forall spec_thm
+        val left = Thm.DISJ1 (Thm.ASSUME neg_forall) body_inst
+        val result = Thm.DISJ_CASES em right left
+      in
+        if Term.aconv (Thm.concl result) target then result
+        else
+          (* SPEC result may differ from parser's body_inst;
+             use resolution to bridge the gap *)
+          let val imp = tautLib.TAUT_PROVE
+                (boolSyntax.mk_imp (Thm.concl result, target))
+          in Thm.MP imp result end
+          handle Feedback.HOL_ERR _ =>
+          auto_prove "replay_forall_inst" target
+      end
       handle Feedback.HOL_ERR _ =>
       auto_prove "replay_forall_inst" target
   in
@@ -694,10 +732,6 @@ local
       handle Feedback.HOL_ERR _ =>
       (* Try TAUT *)
       tautLib.TAUT_PROVE target
-      handle Feedback.HOL_ERR _ =>
-      (* Try SIMP *)
-      simpLib.SIMP_PROVE (bossLib.++ (bossLib.std_ss, wordsLib.WORD_ss))
-        [boolTheory.EQ_SYM_EQ] target
       handle Feedback.HOL_ERR _ =>
       (* Try arithmetic *)
       arith_prove target
@@ -764,19 +798,72 @@ local
   end
 
   (* --- bind --- *)
+  (* Alethe 'bind' rule: within a quantifier scope, sub-steps prove
+     body_old = body_new. The bind step wraps this with the quantifier:
+     (∀x. body_old) = (∀x. body_new).
+     The body equality is cached from sub-steps in the state. *)
   fun replay_bind (s : state) (id : string)
                   (prems : Thm.thm list) (clause : Term.term list) =
   let
     val target = clause_to_disj clause
-    fun go [p] =
-          if Term.aconv (Thm.concl p) target then p
-          else
-            (prove_eq target
-             handle Feedback.HOL_ERR _ =>
-             metis_prove [p] target)
-      | go [] = prove_eq target
-      | go ps = metis_prove ps target
-    val thm = go prems
+    (* First try: direct proof (handles simple cases) *)
+    fun direct () =
+      case prems of
+        [p] => if Term.aconv (Thm.concl p) target then p
+               else (prove_eq target
+                     handle Feedback.HOL_ERR _ =>
+                     metis_prove [p] target)
+      | [] => prove_eq target
+      | ps => metis_prove ps target
+    (* Second try: peel quantifiers, find body equality in cache,
+       wrap with FORALL_EQ / EXISTS_EQ *)
+    fun quantifier_lift () =
+    let
+      val (lhs, rhs) = boolSyntax.dest_eq target
+      (* Peel matching quantifiers from both sides *)
+      fun peel (l, r) =
+        (* try ∀ *)
+        (let val (lv, lb) = boolSyntax.dest_forall l
+             val (rv, rb) = boolSyntax.dest_forall r
+             val rb' = Term.subst [rv |-> lv] rb
+             val (vars, body_thm) = peel (lb, rb')
+         in (lv :: vars, body_thm) end)
+        handle Feedback.HOL_ERR _ =>
+        (* try ∃ *)
+        (let val (lv, lb) = boolSyntax.dest_exists l
+             val (rv, rb) = boolSyntax.dest_exists r
+             val rb' = Term.subst [rv |-> lv] rb
+             val (vars, body_thm) = peel (lb, rb')
+         in (lv :: vars, body_thm) end)
+        handle Feedback.HOL_ERR _ =>
+        (* Base: find body equality in cache or prove it *)
+        let
+          val body_eq = boolSyntax.mk_eq (l, r)
+          val body_thm =
+            (* Search cached sub-steps for the body equality *)
+            Lib.tryfind (fn (_, th) =>
+              if Term.aconv (Thm.concl th) body_eq then th
+              else raise ERR "" "")
+              (Redblackmap.listItems (#step_cache s))
+            handle Feedback.HOL_ERR _ =>
+            auto_prove "bind_body" body_eq
+        in
+          ([], body_thm)
+        end
+      val (vars, body_thm) = peel (lhs, rhs)
+      val _ = if List.null vars then raise ERR "replay_bind" "no quantifiers"
+              else ()
+      (* Determine quantifier type from target's LHS *)
+      fun is_forall t = (boolSyntax.dest_forall t; true)
+                        handle Feedback.HOL_ERR _ => false
+      val wrap_eq = if is_forall lhs then Drule.FORALL_EQ
+                    else Drule.EXISTS_EQ
+      val thm = List.foldr (fn (v, th) => wrap_eq v th) body_thm vars
+    in
+      thm
+    end
+    val thm = direct ()
+              handle Feedback.HOL_ERR _ => quantifier_lift ()
   in
     (cache_step s id thm, thm)
   end
@@ -789,33 +876,31 @@ local
       prove_eq target
       handle Feedback.HOL_ERR _ =>
       auto_prove "replay_sko" target
-      handle Feedback.HOL_ERR _ =>
-      (* skolemization is complex; use oracle as last resort *)
-      Thm.mk_oracle_thm "Alethe_sko" ([], target)
   in
     (cache_step s id thm, thm)
   end
 
-  (* --- hole (escape hatch — oracle) --- *)
+  (* --- hole (cvc5 proof gap, typically TRUST_THEORY_REWRITE) ---
+     These are rewrites cvc5 considers valid but doesn't prove.
+     We replay them using the same automation as 'rewrite' steps. *)
   fun replay_hole (s : state) (id : string)
                   (prems : Thm.thm list) (clause : Term.term list) =
-  let
-    val target = clause_to_disj clause
-    val _ = if !Library.trace > 0 then
-              WARNING "replay_hole"
-                ("step '" ^ id ^ "': falling back to oracle for 'hole' rule")
-            else ()
-    val thm =
-      (* try to derive from premises first *)
-      (if not (List.null prems) then
-         metis_prove prems target
-       else
-         raise ERR "" "")
-      handle Feedback.HOL_ERR _ =>
-      Thm.mk_oracle_thm "Alethe_hole" ([], target)
-  in
-    (cache_step s id thm, thm)
-  end
+    replay_rewrite s id clause
+    handle Feedback.HOL_ERR _ =>
+    let
+      val target = clause_to_disj clause
+      val thm =
+        (* try to derive from premises *)
+        (if not (List.null prems) then
+           metis_prove prems target
+         else
+           raise ERR "" "")
+        handle Feedback.HOL_ERR _ =>
+        raise ERR "replay_hole" ("step '" ^ id ^ "' failed: " ^
+          Library.term_to_string target)
+    in
+      (cache_step s id thm, thm)
+    end
 
   (* --- subproof (from anchor) --- *)
   fun replay_subproof (s : state) (id : string) (sub_thm : Thm.thm)
@@ -849,7 +934,7 @@ local
 
   fun replay_step (s : state) (step : Alethe_Proof.step) : state * Thm.thm =
   let
-    val {id, clause, rule, premises, args} = step
+    val {id, clause, rule, premises, args, discharge} = step
     val prems = lookup_premises s premises
     val _ = if !Library.trace > 2 then
               Feedback.HOL_MESG ("Alethe: replaying step '" ^ id ^
@@ -943,16 +1028,52 @@ local
     | "bfun_elim"          => replay_rewrite s id clause
     | "qnt_cnf"            => replay_tautology_rule s id clause
     | "subproof"           =>
-        (* Closing step of a subproof — the result should follow from
-           the subproof's assumptions and accumulated steps.
-           The premises contain the discharged assumptions. *)
+        (* Closing step of a subproof with :discharge.
+           The previous step proved some conclusion under discharged
+           assumptions. We DISCH each assumption, converting to
+           ¬A1 ∨ ... ∨ ¬An ∨ conclusion. *)
         let
           val target = clause_to_disj clause
-          val thm = metis_prove prems target
-            handle Feedback.HOL_ERR _ =>
-            prove_tautology clause
-            handle Feedback.HOL_ERR _ =>
-            Thm.mk_oracle_thm "Alethe_subproof" ([], target)
+          (* Discharge assumptions and convert imp to disjunction *)
+          fun discharge_and_disj base_thm [] = base_thm
+            | discharge_and_disj base_thm (did :: rest) =
+              let
+                val assume_thm = lookup_step s did
+                val hyp_tm = Thm.concl assume_thm
+                val discharged = Thm.DISCH hyp_tm base_thm
+                (* ⊢ hyp ⇒ concl, convert to ⊢ ¬hyp ∨ concl *)
+                val as_disj = Thm.MP
+                  (tautLib.TAUT_PROVE
+                    (boolSyntax.mk_imp
+                      (boolSyntax.mk_imp (hyp_tm, Thm.concl base_thm),
+                       boolSyntax.mk_disj
+                         (boolSyntax.mk_neg hyp_tm, Thm.concl base_thm))))
+                  discharged
+              in
+                discharge_and_disj as_disj rest
+              end
+          val thm =
+            if List.null discharge then
+              metis_prove prems target
+              handle Feedback.HOL_ERR _ =>
+              prove_tautology clause
+            else
+              let
+                val sub_thm = case #prev_thm s of
+                    SOME th => th
+                  | NONE => raise ERR "subproof" "no previous step"
+                val result = discharge_and_disj sub_thm discharge
+              in
+                if Term.aconv (Thm.concl result) target then result
+                else
+                  let val imp = tautLib.TAUT_PROVE
+                        (boolSyntax.mk_imp (Thm.concl result, target))
+                  in Thm.MP imp result end
+              end
+              handle Feedback.HOL_ERR _ =>
+              metis_prove prems target
+              handle Feedback.HOL_ERR _ =>
+              prove_tautology clause
         in (cache_step s id thm, thm) end
     | "symm"               =>
         let val thm = case prems of
@@ -961,38 +1082,33 @@ local
                 metis_prove [p] (clause_to_disj clause)
             | _ => prove_tautology clause
         in (cache_step s id thm, thm) end
+    | "not_symm"           =>
+        (* ⊢ ¬(a = b) from premise ⊢ ¬(b = a), or vice versa *)
+        let val target = clause_to_disj clause
+            val thm = case prems of
+              [p] =>
+                let val inner = boolSyntax.dest_neg (Thm.concl p)
+                    val (a, b) = boolSyntax.dest_eq inner
+                    val sym_eq = boolSyntax.mk_eq (b, a)
+                    val sym_imp = tautLib.TAUT_PROVE
+                      (boolSyntax.mk_imp
+                        (boolSyntax.mk_neg inner,
+                         boolSyntax.mk_neg sym_eq))
+                in Thm.MP sym_imp p end
+                handle Feedback.HOL_ERR _ =>
+                metis_prove [p] target
+            | _ => prove_tautology clause
+        in (cache_step s id thm, thm) end
     | other =>
-      let
-        val _ = if !Library.trace > 0 then
-                  WARNING "replay_step"
-                    ("unknown rule '" ^ other ^ "' at step '" ^ id ^
-                     "'; falling back to oracle")
-                else ()
-        val target = clause_to_disj clause
-        val thm =
-          (* try to derive from premises *)
-          (if not (List.null prems) then
-             metis_prove prems target
-           else raise ERR "" "")
-          handle Feedback.HOL_ERR _ =>
-          prove_tautology clause
-          handle Feedback.HOL_ERR _ =>
-          Thm.mk_oracle_thm "Alethe_unknown" ([], target)
-      in
-        (cache_step s id thm, thm)
-      end)
+        raise ERR "replay_step"
+          ("unknown rule '" ^ other ^ "' at step '" ^ id ^ "'"))
     handle e =>
       let
-        val target = clause_to_disj clause
-        val _ = if !Library.trace > 0 then
-                  WARNING "replay_step"
-                    ("step '" ^ id ^ "' rule='" ^ rule ^
-                     "' failed (" ^ exnMessage e ^
-                     "); falling back to oracle")
-                else ()
-        val thm = Thm.mk_oracle_thm "Alethe_fallback" ([], target)
+        val _ = WARNING "replay_step"
+                  ("step '" ^ id ^ "' rule='" ^ rule ^
+                   "' FAILED: " ^ exnMessage e)
       in
-        (cache_step s id thm, thm)
+        raise e
       end
   end
 
@@ -1080,9 +1196,28 @@ local
 
 in
 
+  (* Count commands in a proof (including nested subproofs) *)
+  fun count_commands cmds =
+    List.foldl (fn (cmd, n) =>
+      case cmd of
+        Alethe_Proof.ASSUME _ => n + 1
+      | Alethe_Proof.STEP _ => n + 1
+      | Alethe_Proof.ANCHOR (_, sub) => n + 1 + count_commands sub)
+    0 cmds
+
+  (* Maximum proof size for replay. Proofs above this are too large
+     for efficient replay and will fail immediately. *)
+  val max_proof_steps = 2000
+
   fun check_proof (asl : Term.term list, g : Term.term,
                    proof : Alethe_Proof.proof) : Thm.thm =
   let
+    val nsteps = count_commands proof
+    val _ = if nsteps > max_proof_steps then
+              raise ERR "check_proof"
+                ("proof too large for replay (" ^ Int.toString nsteps ^
+                 " steps, limit " ^ Int.toString max_proof_steps ^ ")")
+            else ()
     val s0 = initial_state ()
     val (s_final, thm) = replay_commands s0 proof
     val thm_concl = Thm.concl thm
