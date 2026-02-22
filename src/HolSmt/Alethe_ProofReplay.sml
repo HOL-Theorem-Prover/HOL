@@ -1196,28 +1196,9 @@ local
 
 in
 
-  (* Count commands in a proof (including nested subproofs) *)
-  fun count_commands cmds =
-    List.foldl (fn (cmd, n) =>
-      case cmd of
-        Alethe_Proof.ASSUME _ => n + 1
-      | Alethe_Proof.STEP _ => n + 1
-      | Alethe_Proof.ANCHOR (_, sub) => n + 1 + count_commands sub)
-    0 cmds
-
-  (* Maximum proof size for replay. Proofs above this are too large
-     for efficient replay and will fail immediately. *)
-  val max_proof_steps = 2000
-
   fun check_proof (asl : Term.term list, g : Term.term,
                    proof : Alethe_Proof.proof) : Thm.thm =
   let
-    val nsteps = count_commands proof
-    val _ = if nsteps > max_proof_steps then
-              raise ERR "check_proof"
-                ("proof too large for replay (" ^ Int.toString nsteps ^
-                 " steps, limit " ^ Int.toString max_proof_steps ^ ")")
-            else ()
     val s0 = initial_state ()
     val (s_final, thm) = replay_commands s0 proof
     val thm_concl = Thm.concl thm
