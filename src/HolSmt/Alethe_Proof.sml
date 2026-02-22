@@ -9,11 +9,12 @@ struct
      This is more extensible and easier to parse. *)
 
   type step = {
-    id       : string,              (* step identifier: "h1", "t2", etc. *)
-    clause   : Term.term list,      (* clause literals *)
-    rule     : string,              (* rule name *)
-    premises : string list,         (* premise step IDs *)
-    args     : Term.term list       (* rule arguments *)
+    id        : string,              (* step identifier: "h1", "t2", etc. *)
+    clause    : Term.term list,      (* clause literals *)
+    rule      : string,              (* rule name *)
+    premises  : string list,         (* premise step IDs *)
+    args      : Term.term list,      (* rule arguments *)
+    discharge : string list          (* discharged assumption IDs *)
   }
 
   (* anchor for subproofs *)
