@@ -278,6 +278,31 @@ fun export ({thyname, exports = all_thms,
     val (parents, live, remap, n_live) = timed t_reachability_ms (fn () =>
       let val parents = read_parents parents_path n_file_lines
           val live = mark_live parents base root_ids
+          (* Ensure COMPUTE_INIT is live if any COMPUTE step is live.
+             COMPUTE_INIT has no children in the parent graph, so
+             reachability from exports won't reach it. We scan the
+             step file to find it and mark it live. *)
+          val _ =
+            let val has_compute = ref false
+                val init_fp = ref (~1)
+                val instrm = TextIO.openIn steps_path
+                fun scan fp =
+                  case TextIO.inputLine instrm of
+                    NONE => ()
+                  | SOME line =>
+                    (if fp < n_file_lines andalso Array.sub(live, fp) then
+                       if String.isSubstring "COMPUTE " line
+                       then has_compute := true else ()
+                     else ();
+                     if String.isSubstring "COMPUTE_INIT " line
+                     then init_fp := fp else ();
+                     scan (fp + 1))
+            in scan 0; TextIO.closeIn instrm;
+               if !has_compute andalso !init_fp >= 0
+                  andalso not (Array.sub(live, !init_fp))
+               then (Array.update(live, !init_fp, true))
+               else ()
+            end
           val (remap, n_live) = build_renumber live
       in (parents, live, remap, n_live) end)
 

@@ -73,6 +73,19 @@ val steps_strm : TextIO.outstream option ref = ref NONE
 val parents_strm : TextIO.outstream option ref = ref NONE
 val lines_written : int ref = ref 0
 
+(* Saved COMPUTE_INIT data: Thm.compute is called once (in cv_computeLib)
+   and the closure is reused across many theories. We save the raw init
+   args so we can re-emit COMPUTE_INIT at the start of each theory's
+   trace that contains COMPUTE steps. *)
+val compute_init_current : bool ref = ref false
+type compute_init_args = {
+  cval_terms : (string * term) list,
+  cval_type : hol_type,
+  num_type : hol_type,
+  char_eqns : (string * Thm.thm) list
+}
+val compute_init_data : compute_init_args option ref = ref NONE
+
 val steps_path_ref : string option ref = ref NONE
 val parents_path_ref : string option ref = ref NONE
 
@@ -190,7 +203,8 @@ fun trace_reset () =
    ty_list := [];
    tm_list := [];
    lines_written := 0;
-   ext_thm_cache := Redblackmap.mkDict Int.compare)
+   ext_thm_cache := Redblackmap.mkDict Int.compare;
+   compute_init_current := false)
 
 (* -----------------------------------------------------------------------
    Step recording: write step line + parent IDs to temp files
@@ -218,6 +232,26 @@ fun record_step line parent_thms =
     lines_written := !lines_written + 1;
     cache_ext_parents parent_thms
   end
+
+fun emit_compute_init () =
+  case !compute_init_data of
+    NONE => raise ERR "emit_compute_init"
+              "COMPUTE step with no prior COMPUTE_INIT"
+  | SOME {cval_terms, cval_type, num_type, char_eqns} =>
+    let val cval_str = String.concatWith " "
+          (map (fn (name, tm) =>
+            TraceExport.escape_string name ^ " " ^ its (iT tm))
+            cval_terms)
+        val char_str = String.concatWith " "
+          (map (fn (name, _) => TraceExport.escape_string name) char_eqns)
+        val char_thms = map #2 char_eqns
+    in compute_init_current := true;
+       record_step ("COMPUTE_INIT " ^
+         its (length cval_terms) ^ " " ^ cval_str ^ " " ^
+         its (iY cval_type) ^ " " ^ its (iY num_type) ^ " " ^
+         its (length char_eqns) ^ " " ^ char_str)
+         char_thms
+    end
 
 (* Format thm statement: "<concl_id> <n_hyps> <hyp1_id> ..." *)
 fun fmt_thm_stmt thm =
@@ -352,21 +386,14 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
         TraceExport.escape_string src_thy ^ " " ^
         TraceExport.escape_string name) []
   | Thm.TR_COMPUTE_INIT (cval_terms, cval_type, num_type, char_eqns) =>
-      let val cval_str = String.concatWith " "
-            (map (fn (name, tm) =>
-              TraceExport.escape_string name ^ " " ^ its (iT tm))
-              cval_terms)
-          val char_str = String.concatWith " "
-            (map (fn (name, _) => TraceExport.escape_string name) char_eqns)
-          val char_thms = map #2 char_eqns
-      in record_step ("COMPUTE_INIT " ^
-           its (length cval_terms) ^ " " ^ cval_str ^ " " ^
-           its (iY cval_type) ^ " " ^ its (iY num_type) ^ " " ^
-           its (length char_eqns) ^ " " ^ char_str)
-           char_thms
-      end
+      (compute_init_data := SOME {cval_terms = cval_terms,
+                                    cval_type = cval_type,
+                                    num_type = num_type,
+                                    char_eqns = char_eqns};
+       emit_compute_init ())
   | Thm.TR_COMPUTE (_, code_eqs, tm) =>
-      record_step ("COMPUTE " ^ its (iT tm)) code_eqs
+      (if not (!compute_init_current) then emit_compute_init () else ();
+       record_step ("COMPUTE " ^ its (iT tm)) code_eqs)
 
 (* -----------------------------------------------------------------------
    Export hook: called by Theory.export_theory via Thm.trace_export

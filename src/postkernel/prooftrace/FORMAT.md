@@ -132,10 +132,16 @@ These represent the trust boundary of a trace file.
 
 ## Verification
 
-A merged trace is verified by:
-1. Building type and term arrays from Y/M entries
-2. Replaying each step through the actual kernel inference rules
-3. Checking each export's replayed conclusion matches the expected theorem
+A merged trace is verified by replaying from scratch in a bare kernel
+session (with only min theory loaded):
+
+1. Parsing Y/M entries into raw descriptions (types and terms are
+   constructed lazily on demand, not upfront)
+2. Replaying each P step in order through the actual kernel inference
+   rules. Lazy type/term construction ensures definitions (DEF_TYOP,
+   DEF_SPEC) are replayed before the types/terms they define are
+   referenced.
+3. Checking that each export's replayed theorem is oracle-free
 
 Per-theory traces can also be replayed individually, but `ORACLE DISK_THM`
 entries will remain as oracle-tagged theorems unless resolved by a merge tool.
