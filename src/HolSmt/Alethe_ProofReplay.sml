@@ -590,7 +590,12 @@ local
   let
     val target = clause_to_disj clause
     val thm = case prems of
-        [p] => metis_prove [p] target
+        [p] =>
+          metis_prove [p] target
+          handle Feedback.HOL_ERR _ =>
+          (* unfold Abbrev markers and retry *)
+          let val p' = CONV_RULE (REWRITE_CONV [markerTheory.Abbrev_def]) p
+          in metis_prove [p'] target end
       | _ => raise ERR "replay_not_implies" "expected 1 premise"
   in
     (cache_step s id thm, thm)
@@ -883,18 +888,66 @@ local
   (* --- hole (cvc5 proof gap, typically TRUST_THEORY_REWRITE) ---
      These are rewrites cvc5 considers valid but doesn't prove.
      We replay them using the same automation as 'rewrite' steps. *)
+  (* Prove a quantified propositional equivalence:
+     ∀x. body1 = ∀x. body2  where body1 ⟺ body2 propositionally.
+     Strips matching quantifiers, proves body equivalence with TAUT_PROVE,
+     then wraps back with FORALL_EQ / EXISTS_EQ. *)
+  fun prove_quant_body_eq target =
+    let
+      val (lhs, rhs) = boolSyntax.dest_eq target
+      fun strip_match l r =
+        if boolSyntax.is_forall l andalso boolSyntax.is_forall r then
+          let val (vl, bl) = boolSyntax.dest_forall l
+              val (vr, br) = boolSyntax.dest_forall r
+              val br' = Term.subst [vr |-> vl] br
+              val body_thm = strip_match bl br'
+          in Drule.FORALL_EQ vl body_thm end
+        else if boolSyntax.is_exists l andalso boolSyntax.is_exists r then
+          let val (vl, bl) = boolSyntax.dest_exists l
+              val (vr, br) = boolSyntax.dest_exists r
+              val br' = Term.subst [vr |-> vl] br
+              val body_thm = strip_match bl br'
+          in Drule.EXISTS_EQ vl body_thm end
+        else
+          tautLib.TAUT_PROVE (boolSyntax.mk_eq (l, r))
+    in
+      strip_match lhs rhs
+    end
+
+  (* Check if any free variable or subterm has a word type *)
+  fun has_word_type tm =
+    Lib.can (HolKernel.find_term
+      (fn t => wordsSyntax.is_word_type (Term.type_of t))) tm
+
   fun replay_hole (s : state) (id : string)
                   (prems : Thm.thm list) (clause : Term.term list) =
     replay_rewrite s id clause
     handle Feedback.HOL_ERR _ =>
     let
       val target = clause_to_disj clause
+      val is_bv = has_word_type target
       val thm =
-        (* try to derive from premises *)
+        (* 1. Try premises-based METIS *)
         (if not (List.null prems) then
            metis_prove prems target
          else
            raise ERR "" "")
+        handle Feedback.HOL_ERR _ =>
+        (* 2. Bitvector: skip other tactics, go straight to WORD_DECIDE *)
+        (if is_bv then wordsLib.WORD_DECIDE target
+         else raise ERR "" "")
+        handle Feedback.HOL_ERR _ =>
+        (* 3. Propositional tautology *)
+        tautLib.TAUT_PROVE target
+        handle Feedback.HOL_ERR _ =>
+        (* 4. Quantified propositional: strip quantifiers, TAUT body *)
+        prove_quant_body_eq target
+        handle Feedback.HOL_ERR _ =>
+        (* 5. METIS with no premises (handles first-order quantifiers) *)
+        metis_prove [] target
+        handle Feedback.HOL_ERR _ =>
+        (* 6. Evaluation *)
+        Drule.EQT_ELIM (bossLib.EVAL target)
         handle Feedback.HOL_ERR _ =>
         raise ERR "replay_hole" ("step '" ^ id ^ "' failed: " ^
           Library.term_to_string target)
