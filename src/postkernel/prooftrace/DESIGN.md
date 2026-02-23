@@ -19,7 +19,8 @@ The pipeline has three stages:
 ### Grammar
 
 ```
-trace        ::= entry* name exports
+trace        ::= version entry* name? exports
+version      ::= "V " int "\n"
 entry        ::= type_entry | term_entry | thm_entry | compute_init
 name         ::= "N " s "\n"
 exports      ::= ("E " s p "\n")*
@@ -45,7 +46,8 @@ Fields:
   `\n`, `\xNN` escapes)
 - IDs are scoped per namespace (Y, T, P)
 - Y, T, P, C entries are interleaved in dependency order
-- N and E entries appear at the end
+- V is the first line; N and E entries appear at the end
+- N is optional (absent in merged traces)
 
 The `C` entry records initialization arguments for `Thm.compute`.
 At most once per trace, before any COMPUTE theorems. Arguments:
@@ -96,8 +98,8 @@ extend to end of line.
 | `Beta` | `p` — compute-optimized right-beta |
 | `Mk_comb` | `p p p` — original, fun result, arg result |
 | `Mk_abs` | `p p` — original, body result |
-| `DEF_TYOP` | `p t s s` — witness, concl, thy, tyop |
-| `DEF_SPEC` | `p t s s*` — witness, concl, thyname, cnames |
+| `DEF_TYOP` | `p s s` — witness, thy, tyop |
+| `DEF_SPEC` | `p s s*` — witness, thyname, cnames |
 | `COMPUTE` | `t p*` — input term, code equation parents |
 | `AXIOM` | `t` |
 | `ORACLE` | `s t t*` — tag, concl, hyps |
@@ -117,6 +119,7 @@ inference rule. On each call:
 
 The output stream is opened on the first write, piped through a
 compressor (zstd > gzip > uncompressed) to a temporary file.
+The V line is written first.
 
 In-memory state:
 - `ty_map`, `tm_map`: structural dedup maps (type/term → ID)
@@ -138,29 +141,41 @@ exports `(theory, name)`.
 
 Output: single self-contained `.pftrace` with only entries
 reachable from the desired exports, types/terms globally
-deduplicated, DISK_THM resolved.
+deduplicated, DISK_THM resolved. No N line.
 
 ### Pass 1: Determine what's needed
 
 Starting from the desired exports, work backward to discover all
-needed entries and ancestor theories:
+needed theorems, terms, types, and ancestor theories.
 
-1. Load the trace for each theory containing a desired export
-2. Build a parent graph (per-rule parsing to extract theorem
-   parent IDs from P entry arguments)
-3. Walk backward from the needed theorem IDs, marking live entries
-4. When the walk hits a DISK_THM entry (thy, name), record that
-   as a needed ancestor export. If the ancestor's trace hasn't
-   been processed yet, load it and repeat from step 2.
+For each theory (starting with theories containing desired exports,
+loading ancestors on demand as they are discovered):
 
-This processes each theory at most once, discovering ancestor
-dependencies as it goes. Only traces that are transitively
-needed are loaded.
+1. Stream through the trace file, building a dependency graph:
+   for each P entry, record which P/T/Y IDs it references
+   (per-rule parsing of arguments); for each T entry, record
+   which T/Y IDs it references; for each Y entry, record which
+   Y IDs it references. Also record E and DISK_THM entries.
+   Full line text is not stored — only dependency lists.
+2. Walk backward from the needed theorem IDs, marking live P
+   entries, then transitively marking the T and Y entries they
+   reference as live.
+3. When the walk hits a DISK_THM entry (thy, name), add that to
+   the needed ancestor exports. If the ancestor's trace hasn't
+   been processed yet, process it (step 1-3).
+4. Store the set of live entry IDs for this theory (a compact
+   bit set). Discard the dependency graph.
 
-After this pass, we have a set of live entry IDs per theory and
-a topological ordering of the needed theories.
+Each theory is streamed once in this pass. Memory per theory is
+proportional to the number of entries × average dependencies per
+entry (a few ints each), not the full file content. After the
+pass completes, we have live entry ID sets per theory and a
+topological ordering of the needed theories.
 
 ### Pass 2: Write merged trace
+
+Re-read each needed theory's trace in dependency order, writing
+only live entries to the output with globally remapped IDs.
 
 Persistent state:
 - Global type dedup map: `type_descriptor → global_type_id`
@@ -175,7 +190,7 @@ Term descriptors: `(V, name, global_tyid)`,
 Per-theory (discarded after each):
 - Local-to-global remap arrays for types, terms, theorems
 
-Process theories in dependency order. For each theory's live entries:
+For each theory's live entries:
 - **Y**: dedup via type descriptor. Write if new, remap if existing.
 - **T**: dedup via term descriptor. Write if new, remap if existing.
 - **P DISK_THM**: resolve via ancestor export map, record
@@ -212,10 +227,46 @@ Pending empirical data from large merges.
 ## Replay
 
 A merged trace is replayed from scratch in `bin/hol --min` (only
-min theory loaded). Types and terms are constructed lazily on demand
-to ensure definitions are replayed before the types/terms they
-define are referenced. Each P entry is replayed through the actual
-kernel inference rule. Exports are checked to be oracle-free.
+min theory loaded) in a single forward pass. Three ID-indexed
+arrays map type, term, and theorem IDs to their constructed
+objects:
+
+- **Y entries**: construct the type, store in type array
+- **T entries**: construct the term (looking up sub-component
+  types/terms from the arrays), store in term array
+- **P entries**: call the corresponding kernel inference rule
+  (looking up argument types/terms/theorems from the arrays),
+  store the resulting theorem in the theorem array
+- **C entry**: call `Thm.compute` with the init args, save
+  the closure for subsequent COMPUTE entries
+- **E entries**: look up the theorem, verify it is oracle-free
+
+Since the merged trace is in dependency order, each entry's
+dependencies have already been constructed. No lazy construction
+is needed (unlike per-theory replay where definitions may
+interleave with term construction).
+
+### Memory management
+
+Without GC, replay must keep all constructed objects alive for
+the duration. For large traces this can be significant (e.g.,
+25M theorems at ~200 bytes each ≈ 5GB). Two strategies for
+reducing peak memory:
+
+1. **Replay-side last-reference pass**: Before replaying, do a
+   quick linear scan of the trace to compute, for each entry,
+   the ID of the last entry that references it. During replay,
+   null out array entries after their last reference. This adds
+   one integer per entry of overhead and one extra linear pass.
+
+2. **Merge-side entry ordering**: The merge tool could optionally
+   reorder entries (within the constraints of dependency order)
+   to minimize the maximum live set, reducing peak memory
+   without any replay-side changes. This is a scheduling
+   optimization in the merge tool's pass 2.
+
+Both are optional future optimizations. The initial
+implementation keeps all objects alive.
 
 ## Compression
 
