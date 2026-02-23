@@ -15,20 +15,12 @@ fun main () =
       out "Usage: prooftrace <command> [options] [args...]\n\
           \\n\
           \Commands:\n\
-          \  build     Build theories with proof tracing enabled\n\
           \  merge     Merge per-theory traces for specified theorems\n\
           \  replay    Replay a trace, verify exports\n\
           \\n\
-          \Build:\n\
-          \  prooftrace build [holmake-args...]\n\
-          \  prooftrace build --hol-build [build-args...]\n\
-          \\n\
-          \  Default: runs Holmake with HOL_TRACE_PROOFS=1, passing\n\
-          \  through all arguments (targets, -j, etc.)\n\
-          \  With --hol-build: runs bin/build instead.\n\
-          \\n\
-          \  To build just the prooftrace tool itself:\n\
-          \    bin/build --seq=tools/sequences/boss --nograph\n\
+          \Building with traces:\n\
+          \  HOL_TRACE_PROOFS=1 bin/build        (HOL sources)\n\
+          \  HOL_TRACE_PROOFS=1 Holmake          (external projects)\n\
           \\n\
           \Merge:\n\
           \  prooftrace merge -o FILE [-d DIR]... THY.THM...\n\
@@ -61,34 +53,6 @@ fun main () =
       err ("prooftrace: " ^ s ^ "\n");
       err "Try 'prooftrace --help' for usage.\n";
       OS.Process.exit OS.Process.failure)
-
-    (* --- build command --- *)
-    fun do_build args =
-      let
-        val use_build = ref false
-        val passthrough = ref ([] : string list)
-        fun parse [] = ()
-          | parse ("--help" :: _) = usage ()
-          | parse ("-h" :: _) = usage ()
-          | parse ("--hol-build" :: rest) =
-              (use_build := true; parse rest)
-          | parse (arg :: rest) =
-              (passthrough := arg :: !passthrough; parse rest)
-        val _ = parse args
-        val pass_args = rev (!passthrough)
-        val cmd = if !use_build
-                  then OS.Path.concat(holdir, "bin/build") :: pass_args
-                  else OS.Path.concat(holdir, "bin/Holmake") :: pass_args
-        val env_prefix = "HOL_TRACE_PROOFS=1"
-        (* Use OS.Process.system with env variable prefix *)
-        val cmdline = env_prefix ^ " " ^
-          String.concatWith " " (map (fn s =>
-            if CharVector.exists Char.isSpace s
-            then "'" ^ s ^ "'" else s) cmd)
-      in
-        err ("Running: " ^ cmdline ^ "\n");
-        OS.Process.exit (OS.Process.system cmdline)
-      end
 
     (* --- merge command --- *)
     fun do_merge args =
@@ -258,7 +222,6 @@ fun main () =
       [] => usage ()
     | ["--help"] => usage ()
     | ["-h"] => usage ()
-    | ("build" :: rest) => do_build rest
     | ("merge" :: rest) => do_merge rest
     | ("replay" :: rest) => do_replay rest
     | (cmd :: _) => die ("unknown command: " ^ cmd)
