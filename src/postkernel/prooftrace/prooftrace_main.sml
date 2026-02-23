@@ -28,7 +28,7 @@ fun main () =
           \  With --hol-build: runs bin/build instead.\n\
           \\n\
           \  To build just the prooftrace tool itself:\n\
-          \    bin/build --seq=tools/sequences/kernel --nograph\n\
+          \    bin/build --seq=tools/sequences/boss --nograph\n\
           \\n\
           \Merge:\n\
           \  prooftrace merge -o FILE [-d DIR]... THY.THM...\n\
