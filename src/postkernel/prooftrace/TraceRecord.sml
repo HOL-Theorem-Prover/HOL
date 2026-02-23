@@ -1,6 +1,6 @@
 (* TraceRecord: proof trace recording for stdknl.
 
-   Sets Thm.trace_hook to record each inference step to per-PID temp files.
+   Sets Thm.trace_hook to record each inference step to a per-PID temp file.
    Sets Thm.trace_export_hook to export .pftrace files at theory export.
 
    Activated unconditionally on load. Loading is controlled by the build
@@ -66,65 +66,35 @@ val iT = intern_term
 val iY = intern_type
 
 (* -----------------------------------------------------------------------
-   Per-PID temp files for parallel build safety
+   Per-PID temp file and trace_id → line_number mapping
    ----------------------------------------------------------------------- *)
 
 val steps_strm : TextIO.outstream option ref = ref NONE
-val parents_strm : TextIO.outstream option ref = ref NONE
 val lines_written : int ref = ref 0
-
-(* Saved COMPUTE_INIT data: Thm.compute is called once (in cv_computeLib)
-   and the closure is reused across many theories. We save the raw init
-   args so we can re-emit COMPUTE_INIT at the start of each theory's
-   trace that contains COMPUTE steps. *)
-val compute_init_current : bool ref = ref false
-type compute_init_args = {
-  cval_terms : (string * term) list,
-  cval_type : hol_type,
-  num_type : hol_type,
-  char_eqns : (string * Thm.thm) list
-}
-val compute_init_data : compute_init_args option ref = ref NONE
-
 val steps_path_ref : string option ref = ref NONE
-val parents_path_ref : string option ref = ref NONE
 
-fun trace_paths () =
-  case (!steps_path_ref, !parents_path_ref) of
-    (SOME s, SOME p) => (s, p)
-  | _ =>
+(* Map from thm trace_id to line number in the temp file *)
+val id_to_line : (int, int) Redblackmap.dict ref =
+  ref (Redblackmap.mkDict Int.compare)
+
+fun steps_path () =
+  case !steps_path_ref of
+    SOME s => s
+  | NONE =>
     let val pid = SysWord.toString (Posix.Process.pidToWord
                     (Posix.ProcEnv.getpid ()))
         val s = ".trace_" ^ pid ^ "_steps.log"
-        val p = ".trace_" ^ pid ^ "_parents.tbl"
-    in steps_path_ref := SOME s;
-       parents_path_ref := SOME p;
-       (s, p)
-    end
-
-fun steps_path () = #1 (trace_paths ())
-fun parents_path () = #2 (trace_paths ())
-
-fun open_streams () =
-  let val s = TextIO.openOut (steps_path ())
-      val p = TextIO.openOut (parents_path ())
-  in steps_strm := SOME s;
-     parents_strm := SOME p;
-     (s, p)
-  end
+    in steps_path_ref := SOME s; s end
 
 fun get_steps () = case !steps_strm of
-    SOME s => s | NONE => #1 (open_streams ())
-fun get_parents () = case !parents_strm of
-    SOME s => s | NONE => #2 (open_streams ())
+    SOME s => s
+  | NONE =>
+    let val s = TextIO.openOut (steps_path ())
+    in steps_strm := SOME s; s end
 
 (* -----------------------------------------------------------------------
-   External thm cache: parent thms from ancestor theories
+   Look up (theory, name) for an external thm from DB
    ----------------------------------------------------------------------- *)
-
-(* Maps thm_id → (source_theory, name) for external (ancestor) thms *)
-val ext_thm_cache : (int, string * string) Redblackmap.dict ref =
-  ref (Redblackmap.mkDict Int.compare)
 
 fun thm_thyname thm =
   let
@@ -143,59 +113,55 @@ fun thm_thyname thm =
   in (thy, name) end
   handle _ => ("_unknown", "_unknown")
 
-fun cache_ext_parents parent_thms =
-  let val base = !Thm.trace_counter - !lines_written
+(* -----------------------------------------------------------------------
+   Emit an external (ancestor) thm as an ORACLE DISK_THM step.
+   Called on demand when an ext thm first appears as a parent.
+   ----------------------------------------------------------------------- *)
+
+fun emit_ext_thm thm =
+  let val ln = !lines_written
+      val (thy, name) = thm_thyname thm
+      val sf = get_steps ()
   in
-    if !lines_written = 0 then ()
-    else List.app (fn thm =>
-      let val id = Thm.trace_id thm
-      in if id < base then
-        (case Redblackmap.peek(!ext_thm_cache, id) of
-           SOME _ => ()
-         | NONE =>
-           ext_thm_cache :=
-             Redblackmap.insert(!ext_thm_cache, id, thm_thyname thm))
-        else ()
-      end) parent_thms
+    TextIO.output(sf, "ORACLE DISK_THM " ^
+      TraceExport.escape_string thy ^ " " ^
+      TraceExport.escape_string name ^ "\n");
+    lines_written := ln + 1;
+    id_to_line := Redblackmap.insert(!id_to_line, Thm.trace_id thm, ln);
+    ln
   end
 
-fun cache_ext_thm thm =
-  case Redblackmap.peek(!ext_thm_cache, Thm.trace_id thm) of
-    SOME _ => ()
-  | NONE =>
-    ext_thm_cache :=
-      Redblackmap.insert(!ext_thm_cache, Thm.trace_id thm, thm_thyname thm)
+(* Resolve a parent thm to its line number, emitting a DISK_THM step
+   on demand if it's an external thm not yet recorded *)
+fun parent_line thm =
+  let val tid = Thm.trace_id thm
+  in case Redblackmap.peek(!id_to_line, tid) of
+       SOME ln => ln
+     | NONE => emit_ext_thm thm
+  end
 
 (* -----------------------------------------------------------------------
    Cleanup and file management
    ----------------------------------------------------------------------- *)
 
+fun close_files () =
+  (case !steps_strm of
+     SOME s => ((TextIO.flushOut s; TextIO.closeOut s) handle _ => ())
+   | NONE => ();
+   steps_strm := NONE)
+
 val cleanup_fn : (unit -> unit) ref = ref (fn () => ())
 fun cleanup () = (!cleanup_fn) ()
-
-fun close_files () =
-  ((case !steps_strm of
-      SOME s => ((TextIO.flushOut s; TextIO.closeOut s) handle _ => ())
-    | NONE => ());
-   (case !parents_strm of
-      SOME s => ((TextIO.flushOut s; TextIO.closeOut s) handle _ => ())
-    | NONE => ());
-   steps_strm := NONE;
-   parents_strm := NONE)
 
 val _ = cleanup_fn := (fn () =>
   ((close_files () handle _ => ());
    (case !steps_path_ref of
-      SOME s => (OS.FileSys.remove s handle _ => ()) | NONE => ());
-   (case !parents_path_ref of
-      SOME p => (OS.FileSys.remove p handle _ => ()) | NONE => ())))
+      SOME s => (OS.FileSys.remove s handle _ => ()) | NONE => ())))
 
 fun trace_reset () =
   (close_files ();
    (OS.FileSys.remove (steps_path ()) handle OS.SysErr _ => ());
-   (OS.FileSys.remove (parents_path ()) handle OS.SysErr _ => ());
    steps_path_ref := NONE;
-   parents_path_ref := NONE;
    ty_map := Redblackmap.mkDict Type.compare;
    tm_map := Redblackmap.mkDict Term.compare;
    ty_counter := 0;
@@ -203,65 +169,49 @@ fun trace_reset () =
    ty_list := [];
    tm_list := [];
    lines_written := 0;
-   ext_thm_cache := Redblackmap.mkDict Int.compare;
-   compute_init_current := false)
+   id_to_line := Redblackmap.mkDict Int.compare)
 
 (* -----------------------------------------------------------------------
-   Step recording: write step line + parent IDs to temp files
+   Step recording: write step line with inline parent line numbers
    ----------------------------------------------------------------------- *)
 
-fun record_step line parent_thms =
+fun record_step result_thm_opt line parent_thms =
   let
-    val parent_ids = map Thm.trace_id parent_thms
+    val parent_lns = map parent_line parent_thms
+    val ln = !lines_written
     val sf = get_steps ()
-    val pf = get_parents ()
-    fun write (s, p) =
-      (TextIO.output(s, line);
-       TextIO.output(s, "\n");
-       TextIO.output(p, String.concatWith " " (map its parent_ids));
-       TextIO.output(p, "\n"))
   in
-    write (sf, pf)
-    handle IO.Io _ =>
-      (* Stale streams after heap restore — reopen both atomically *)
-      (steps_strm := NONE; parents_strm := NONE;
-       steps_path_ref := NONE; parents_path_ref := NONE;
-       lines_written := 0;
-       (OS.Process.atExit cleanup handle _ => ());
-       write (open_streams ()));
-    lines_written := !lines_written + 1;
-    cache_ext_parents parent_thms
+    TextIO.output(sf, line ^
+      (if null parent_lns then ""
+       else " | " ^ String.concatWith " " (map its parent_lns)) ^
+      "\n");
+    lines_written := ln + 1;
+    (case result_thm_opt of
+       SOME th =>
+         id_to_line := Redblackmap.insert(!id_to_line, Thm.trace_id th, ln)
+     | NONE => ())
   end
-
-fun emit_compute_init () =
-  case !compute_init_data of
-    NONE => raise ERR "emit_compute_init"
-              "COMPUTE step with no prior COMPUTE_INIT"
-  | SOME {cval_terms, cval_type, num_type, char_eqns} =>
-    let val cval_str = String.concatWith " "
-          (map (fn (name, tm) =>
-            TraceExport.escape_string name ^ " " ^ its (iT tm))
-            cval_terms)
-        val char_str = String.concatWith " "
-          (map (fn (name, _) => TraceExport.escape_string name) char_eqns)
-        val char_thms = map #2 char_eqns
-    in compute_init_current := true;
-       record_step ("COMPUTE_INIT " ^
-         its (length cval_terms) ^ " " ^ cval_str ^ " " ^
-         its (iY cval_type) ^ " " ^ its (iY num_type) ^ " " ^
-         its (length char_eqns) ^ " " ^ char_str)
-         char_thms
-    end
-
-(* Format thm statement: "<concl_id> <n_hyps> <hyp1_id> ..." *)
-fun fmt_thm_stmt thm =
-  let val (hyp_list, c) = Thm.dest_thm thm
-      val c_id = iT c
-      val hyp_ids = map iT hyp_list
-  in its c_id ^ " " ^ its (length hyp_ids) ^
-     (if null hyp_ids then ""
-      else " " ^ String.concatWith " " (map its hyp_ids))
-  end
+  handle IO.Io _ =>
+    (* Stale streams after heap restore — reopen *)
+    (steps_strm := NONE;
+     steps_path_ref := NONE;
+     lines_written := 0;
+     id_to_line := Redblackmap.mkDict Int.compare;
+     (OS.Process.atExit cleanup handle _ => ());
+     let val parent_lns = map parent_line parent_thms
+         val ln = !lines_written
+         val sf = get_steps ()
+     in
+       TextIO.output(sf, line ^
+         (if null parent_lns then ""
+          else " | " ^ String.concatWith " " (map its parent_lns)) ^
+         "\n");
+       lines_written := ln + 1;
+       (case result_thm_opt of
+          SOME th =>
+            id_to_line := Redblackmap.insert(!id_to_line, Thm.trace_id th, ln)
+        | NONE => ())
+     end)
 
 (* -----------------------------------------------------------------------
    Hook: pattern-match on trace_step, format step line, record
@@ -269,160 +219,170 @@ fun fmt_thm_stmt thm =
 
 fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   case step of
-    Thm.TR_ASSUME (_, tm) =>
-      record_step ("ASSUME " ^ its (iT tm)) []
-  | Thm.TR_REFL (_, tm) =>
-      record_step ("REFL " ^ its (iT tm)) []
-  | Thm.TR_BETA_CONV (_, tm) =>
-      record_step ("BETA_CONV " ^ its (iT tm)) []
-  | Thm.TR_SUBST (_, replacements, template, th) =>
+    Thm.TR_ASSUME (result, tm) =>
+      record_step (SOME result) ("ASSUME " ^ its (iT tm)) []
+  | Thm.TR_REFL (result, tm) =>
+      record_step (SOME result) ("REFL " ^ its (iT tm)) []
+  | Thm.TR_BETA_CONV (result, tm) =>
+      record_step (SOME result) ("BETA_CONV " ^ its (iT tm)) []
+  | Thm.TR_SUBST (result, replacements, template, th) =>
       let val n = length replacements
           val var_ids = String.concatWith " "
             (map (fn {redex,...} => its (iT redex)) replacements)
           val tmpl_id = its (iT template)
-      in record_step ("SUBST " ^ its n ^ " " ^ var_ids ^ " " ^ tmpl_id)
+      in record_step (SOME result)
+           ("SUBST " ^ its n ^ " " ^ var_ids ^ " " ^ tmpl_id)
            (map #residue replacements @ [th])
       end
-  | Thm.TR_ABS (_, th, v) =>
-      record_step ("ABS " ^ its (iT v)) [th]
-  | Thm.TR_GEN_ABS (_, th, opt, vlist) =>
+  | Thm.TR_ABS (result, th, v) =>
+      record_step (SOME result) ("ABS " ^ its (iT v)) [th]
+  | Thm.TR_GEN_ABS (result, th, opt, vlist) =>
       let val opt_id = case opt of SOME t => its (iT t) | NONE => "~"
           val v_ids = String.concatWith " " (map (its o iT) vlist)
-      in record_step ("GEN_ABS " ^ opt_id ^ " " ^ its (length vlist) ^
-                       " " ^ v_ids) [th]
+      in record_step (SOME result)
+           ("GEN_ABS " ^ opt_id ^ " " ^ its (length vlist) ^
+            " " ^ v_ids) [th]
       end
-  | Thm.TR_INST_TYPE (_, th, theta) =>
+  | Thm.TR_INST_TYPE (result, th, theta) =>
       let val n = length theta
           val pairs = String.concatWith " "
             (map (fn {redex,residue} =>
               its (iY redex) ^ " " ^ its (iY residue)) theta)
-      in record_step ("INST_TYPE " ^ its n ^ " " ^ pairs) [th]
+      in record_step (SOME result) ("INST_TYPE " ^ its n ^ " " ^ pairs) [th]
       end
-  | Thm.TR_DISCH (_, th, w) =>
-      record_step ("DISCH " ^ its (iT w)) [th]
-  | Thm.TR_MP (_, th1, th2) =>
-      record_step "MP" [th1, th2]
-  | Thm.TR_ALPHA (_, t1, t2) =>
-      record_step ("ALPHA " ^ its (iT t1) ^ " " ^ its (iT t2)) []
-  | Thm.TR_SYM (_, th) =>
-      record_step "SYM" [th]
-  | Thm.TR_TRANS (_, th1, th2) =>
-      record_step "TRANS" [th1, th2]
-  | Thm.TR_MK_COMB (_, funth, argth) =>
-      record_step "MK_COMB" [funth, argth]
-  | Thm.TR_AP_TERM (_, th, f) =>
-      record_step ("AP_TERM " ^ its (iT f)) [th]
-  | Thm.TR_AP_THM (_, th, tm) =>
-      record_step ("AP_THM " ^ its (iT tm)) [th]
-  | Thm.TR_EQ_MP (_, th1, th2) =>
-      record_step "EQ_MP" [th1, th2]
-  | Thm.TR_EQ_IMP_RULE1 (_, th) =>
-      record_step "EQ_IMP_RULE1" [th]
-  | Thm.TR_EQ_IMP_RULE2 (_, th) =>
-      record_step "EQ_IMP_RULE2" [th]
-  | Thm.TR_SPEC (_, th, t) =>
-      record_step ("SPEC " ^ its (iT t)) [th]
-  | Thm.TR_GEN (_, th, x) =>
-      record_step ("GEN " ^ its (iT x)) [th]
-  | Thm.TR_GENL (_, th, vs) =>
+  | Thm.TR_DISCH (result, th, w) =>
+      record_step (SOME result) ("DISCH " ^ its (iT w)) [th]
+  | Thm.TR_MP (result, th1, th2) =>
+      record_step (SOME result) "MP" [th1, th2]
+  | Thm.TR_ALPHA (result, t1, t2) =>
+      record_step (SOME result)
+        ("ALPHA " ^ its (iT t1) ^ " " ^ its (iT t2)) []
+  | Thm.TR_SYM (result, th) =>
+      record_step (SOME result) "SYM" [th]
+  | Thm.TR_TRANS (result, th1, th2) =>
+      record_step (SOME result) "TRANS" [th1, th2]
+  | Thm.TR_MK_COMB (result, funth, argth) =>
+      record_step (SOME result) "MK_COMB" [funth, argth]
+  | Thm.TR_AP_TERM (result, th, f) =>
+      record_step (SOME result) ("AP_TERM " ^ its (iT f)) [th]
+  | Thm.TR_AP_THM (result, th, tm) =>
+      record_step (SOME result) ("AP_THM " ^ its (iT tm)) [th]
+  | Thm.TR_EQ_MP (result, th1, th2) =>
+      record_step (SOME result) "EQ_MP" [th1, th2]
+  | Thm.TR_EQ_IMP_RULE1 (result, th) =>
+      record_step (SOME result) "EQ_IMP_RULE1" [th]
+  | Thm.TR_EQ_IMP_RULE2 (result, th) =>
+      record_step (SOME result) "EQ_IMP_RULE2" [th]
+  | Thm.TR_SPEC (result, th, t) =>
+      record_step (SOME result) ("SPEC " ^ its (iT t)) [th]
+  | Thm.TR_GEN (result, th, x) =>
+      record_step (SOME result) ("GEN " ^ its (iT x)) [th]
+  | Thm.TR_GENL (result, th, vs) =>
       let val n = length vs
           val v_ids = String.concatWith " " (map (its o iT) vs)
-      in record_step ("GENL " ^ its n ^ " " ^ v_ids) [th]
+      in record_step (SOME result) ("GENL " ^ its n ^ " " ^ v_ids) [th]
       end
-  | Thm.TR_EXISTS (_, th, w, t) =>
-      record_step ("EXISTS " ^ its (iT w) ^ " " ^ its (iT t)) [th]
-  | Thm.TR_CHOOSE (_, xth, bth, v) =>
-      record_step ("CHOOSE " ^ its (iT v)) [xth, bth]
-  | Thm.TR_CONJ (_, th1, th2) =>
-      record_step "CONJ" [th1, th2]
-  | Thm.TR_CONJUNCT1 (_, th) =>
-      record_step "CONJUNCT1" [th]
-  | Thm.TR_CONJUNCT2 (_, th) =>
-      record_step "CONJUNCT2" [th]
-  | Thm.TR_DISJ1 (_, th, w) =>
-      record_step ("DISJ1 " ^ its (iT w)) [th]
-  | Thm.TR_DISJ2 (_, th, w) =>
-      record_step ("DISJ2 " ^ its (iT w)) [th]
-  | Thm.TR_DISJ_CASES (_, dth, ath, bth) =>
-      record_step "DISJ_CASES" [dth, ath, bth]
-  | Thm.TR_NOT_INTRO (_, th) =>
-      record_step "NOT_INTRO" [th]
-  | Thm.TR_NOT_ELIM (_, th) =>
-      record_step "NOT_ELIM" [th]
-  | Thm.TR_CCONTR (_, fth, w) =>
-      record_step ("CCONTR " ^ its (iT w)) [fth]
-  | Thm.TR_INST (_, th, theta) =>
+  | Thm.TR_EXISTS (result, th, w, t) =>
+      record_step (SOME result)
+        ("EXISTS " ^ its (iT w) ^ " " ^ its (iT t)) [th]
+  | Thm.TR_CHOOSE (result, xth, bth, v) =>
+      record_step (SOME result) ("CHOOSE " ^ its (iT v)) [xth, bth]
+  | Thm.TR_CONJ (result, th1, th2) =>
+      record_step (SOME result) "CONJ" [th1, th2]
+  | Thm.TR_CONJUNCT1 (result, th) =>
+      record_step (SOME result) "CONJUNCT1" [th]
+  | Thm.TR_CONJUNCT2 (result, th) =>
+      record_step (SOME result) "CONJUNCT2" [th]
+  | Thm.TR_DISJ1 (result, th, w) =>
+      record_step (SOME result) ("DISJ1 " ^ its (iT w)) [th]
+  | Thm.TR_DISJ2 (result, th, w) =>
+      record_step (SOME result) ("DISJ2 " ^ its (iT w)) [th]
+  | Thm.TR_DISJ_CASES (result, dth, ath, bth) =>
+      record_step (SOME result) "DISJ_CASES" [dth, ath, bth]
+  | Thm.TR_NOT_INTRO (result, th) =>
+      record_step (SOME result) "NOT_INTRO" [th]
+  | Thm.TR_NOT_ELIM (result, th) =>
+      record_step (SOME result) "NOT_ELIM" [th]
+  | Thm.TR_CCONTR (result, fth, w) =>
+      record_step (SOME result) ("CCONTR " ^ its (iT w)) [fth]
+  | Thm.TR_INST (result, th, theta) =>
       let val n = length theta
           val pairs = String.concatWith " "
             (map (fn {redex,residue} =>
               its (iT redex) ^ " " ^ its (iT residue)) theta)
-      in record_step ("INST " ^ its n ^ " " ^ pairs) [th]
+      in record_step (SOME result) ("INST " ^ its n ^ " " ^ pairs) [th]
       end
-  | Thm.TR_Beta (_, th) =>
-      record_step "Beta" [th]
-  | Thm.TR_Mk_comb (_, thm, th1', th2') =>
-      record_step "Mk_comb" [thm, th1', th2']
-  | Thm.TR_Mk_abs (_, thm, th1', _) =>
-      record_step "Mk_abs" [thm, th1']
-  | Thm.TR_Specialize (_, th, t) =>
-      record_step ("Specialize " ^ its (iT t)) [th]
+  | Thm.TR_Beta (result, th) =>
+      record_step (SOME result) "Beta" [th]
+  | Thm.TR_Mk_comb (result, thm, th1', th2') =>
+      record_step (SOME result) "Mk_comb" [thm, th1', th2']
+  | Thm.TR_Mk_abs (result, thm, th1', _) =>
+      record_step (SOME result) "Mk_abs" [thm, th1']
+  | Thm.TR_Specialize (result, th, t) =>
+      record_step (SOME result) ("Specialize " ^ its (iT t)) [th]
   | Thm.TR_ORACLE (result, tg) =>
-      record_step ("ORACLE " ^ tg ^ " " ^ fmt_thm_stmt result) []
-  | Thm.TR_AXIOM (_, c) =>
-      record_step ("AXIOM " ^ its (iT c)) []
+      record_step (SOME result) ("ORACLE " ^ tg ^ " " ^
+        let val (hyp_list, c) = Thm.dest_thm result
+            val c_id = iT c
+            val hyp_ids = map iT hyp_list
+        in its c_id ^ " " ^ its (length hyp_ids) ^
+           (if null hyp_ids then ""
+            else " " ^ String.concatWith " " (map its hyp_ids))
+        end) []
+  | Thm.TR_AXIOM (result, c) =>
+      record_step (SOME result) ("AXIOM " ^ its (iT c)) []
   | Thm.TR_DEF_TYOP (result, thm, thy, tyop) =>
-      record_step ("DEF_TYOP " ^ thy ^ " " ^ tyop ^ " " ^
+      record_step (SOME result) ("DEF_TYOP " ^ thy ^ " " ^ tyop ^ " " ^
                     its (iT (Thm.concl result))) [thm]
   | Thm.TR_DEF_SPEC (result, th, thyname, cnames) =>
       let val names_str = String.concatWith " "
             (map TraceExport.escape_string cnames)
-      in record_step ("DEF_SPEC " ^
+      in record_step (SOME result) ("DEF_SPEC " ^
            TraceExport.escape_string thyname ^ " " ^
            its (length cnames) ^ " " ^ names_str ^ " " ^
            its (iT (Thm.concl result))) [th]
       end
-  | Thm.TR_DISK_THM (_, src_thy, name) =>
-      record_step ("ORACLE DISK_THM " ^
+  | Thm.TR_DISK_THM (result, src_thy, name) =>
+      record_step (SOME result) ("ORACLE DISK_THM " ^
         TraceExport.escape_string src_thy ^ " " ^
         TraceExport.escape_string name) []
   | Thm.TR_COMPUTE_INIT (cval_terms, cval_type, num_type, char_eqns) =>
-      (compute_init_data := SOME {cval_terms = cval_terms,
-                                    cval_type = cval_type,
-                                    num_type = num_type,
-                                    char_eqns = char_eqns};
-       emit_compute_init ())
-  | Thm.TR_COMPUTE (_, code_eqs, tm) =>
-      (if not (!compute_init_current) then emit_compute_init () else ();
-       record_step ("COMPUTE " ^ its (iT tm)) code_eqs)
+      let val cval_str = String.concatWith " "
+            (map (fn (name, tm) =>
+              TraceExport.escape_string name ^ " " ^ its (iT tm))
+              cval_terms)
+          val char_str = String.concatWith " "
+            (map (fn (name, _) => TraceExport.escape_string name) char_eqns)
+          val char_thms = map #2 char_eqns
+      in record_step NONE ("COMPUTE_INIT " ^
+           its (length cval_terms) ^ " " ^ cval_str ^ " " ^
+           its (iY cval_type) ^ " " ^ its (iY num_type) ^ " " ^
+           its (length char_eqns) ^ " " ^ char_str)
+           char_thms
+      end
+  | Thm.TR_COMPUTE (result, code_eqs, tm) =>
+      record_step (SOME result) ("COMPUTE " ^ its (iT tm)) code_eqs
 
 (* -----------------------------------------------------------------------
    Export hook: called by Theory.export_theory via Thm.trace_export
    ----------------------------------------------------------------------- *)
 
 fun export_hook thyname (_:string list) all_thms =
-  let
-    val () = close_files ()
-    (* Cache re-exported ancestor thms that were never parents of local steps *)
-    val base = !Thm.trace_counter - !lines_written
-    val _ = List.app (fn (_, th) =>
-      let val tid = Thm.trace_id th
-      in if tid < base then cache_ext_thm th else ()
-      end) all_thms
+  let val () = close_files ()
   in
     TraceExport.export {
       thyname      = thyname,
       exports      = all_thms,
       types        = rev (!ty_list),
       terms        = rev (!tm_list),
-      counter      = !Thm.trace_counter,
-      ext_cache    = !ext_thm_cache,
+      n_steps      = !lines_written,
       steps_path   = steps_path (),
-      parents_path = parents_path (),
-      thm_id       = Thm.trace_id
+      thm_line     = fn th =>
+        case Redblackmap.peek(!id_to_line, Thm.trace_id th) of
+          SOME ln => ln
+        | NONE => ~1
     };
-    (* Clean up temp files *)
     (OS.FileSys.remove (steps_path ()) handle OS.SysErr _ => ());
-    (OS.FileSys.remove (parents_path ()) handle OS.SysErr _ => ());
     trace_reset ()
   end
   handle e =>
@@ -444,11 +404,5 @@ fun trace_step_count () = !Thm.trace_counter
 val _ = Thm.trace_hook := SOME record_hook
 val _ = Thm.trace_export_hook := SOME export_hook
 val _ = OS.Process.atExit cleanup
-val _ = case OS.Process.getEnv "HOL_TRACE_BENCHMARKS" of
-          SOME _ => TraceExport.bench_mode := true
-        | NONE => ()
-val _ = case OS.Process.getEnv "HOL_TRACE_RAW" of
-          SOME _ => TraceExport.optimize := false
-        | NONE => ()
 
 end (* structure TraceRecord *)
