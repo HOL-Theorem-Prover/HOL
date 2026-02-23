@@ -971,10 +971,9 @@ fun export_theory_return_hash () = let
           Thm.trace_export thyname thy_parents named_thms
         end
           handle e =>
-            case OS.Process.getEnv "HOL_TRACE_PROOFS" of
-              SOME _ => raise e
-            | NONE => HOL_WARNING "Theory" "export_theory"
-                        ("Proof trace export failed: " ^ exnMessage e);
+            if isSome (!Thm.trace_hook) then raise e
+            else HOL_WARNING "Theory" "export_theory"
+                   ("Proof trace export failed: " ^ exnMessage e);
         if !report_times then
           (mesg ("Theory "^Lib.quote thyname^" took "^ tstr ^ " to build\n");
            maybe_log_time_to_disk thyname (Time.toString time_since))

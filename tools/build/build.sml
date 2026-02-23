@@ -26,7 +26,7 @@ val _ = startup_check()
 
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,keepgoing,...} = cline_record
-val {extra={SRCDIRS},jobcount,relocbuild,debug,...} = cline_record
+val {extra={SRCDIRS},jobcount,relocbuild,debug,trace,...} = cline_record
 
 
 open Systeml;
@@ -36,7 +36,8 @@ val Holmake = let
   val isSuccess = OS.Process.isSuccess
 in
   buildutils.Holmake sysl isSuccess
-                     (fn () => (case jobcount of
+                     (fn () => (if trace then ["--trace"] else []) @
+                               (case jobcount of
                                     NONE => []
                                   | SOME j => ["-j"^Int.toString j]) @
                                (if debug then ["--dbg"] else []) @

@@ -25,6 +25,7 @@ type t = {
   rebuild_deps : bool,
   recursive_build : bool,
   recursive_clean : bool,
+  trace : bool,
   hmakefile : string option,
   verbose : bool
 }

@@ -382,6 +382,7 @@ in
                                NONE => 0
                              | SOME i => i,
           extra = {seqname = seqspec, kernelspec = knlspec},
+          trace = #trace option_record,
           jobcount = jcount,
           keepgoing = #keepgoing option_record,
           multithread = #multithread option_record,
@@ -924,7 +925,7 @@ fun process_cline () =
         post_action();
         Process.exit Process.success
       end
-    | Normal {extra = {seqname,kernelspec}, cmdline, multithread,
+    | Normal {extra = {seqname,kernelspec}, trace, cmdline, multithread,
               build_theory_graph, jobcount, relocbuild, debug, keepgoing,
               selftest_level, timelimit} =>
       let
@@ -938,6 +939,7 @@ fun process_cline () =
            cmdline=cmdline,
            debug = debug,
            extra = {SRCDIRS = SRCDIRS},
+           trace = trace,
            jobcount = jobcount,
            keepgoing = keepgoing,
            multithread = multithread,

@@ -9,13 +9,13 @@ type 'a cline_result = {
 
 local
   open FunctionalRecordUpdate
-  fun makeUpdateT z = makeUpdate11 z
+  fun makeUpdateT z = makeUpdate12 z
 in
 fun updateT z = let
   fun from build_theory_graph debug help jobcount keepgoing kernelspec
            multithread
            relocbuild selftest
-           seqname timelimit =
+           seqname timelimit trace =
     {build_theory_graph = build_theory_graph,
      debug = debug,
      help = help,
@@ -26,8 +26,9 @@ fun updateT z = let
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname,
-     timelimit = timelimit}
-  fun from' timelimit seqname selftest relocbuild multithread kernelspec
+     timelimit = timelimit,
+     trace = trace}
+  fun from' trace timelimit seqname selftest relocbuild multithread kernelspec
             keepgoing
             jobcount help
             debug
@@ -42,16 +43,18 @@ fun updateT z = let
      relocbuild = relocbuild,
      selftest = selftest,
      seqname = seqname,
-     timelimit = timelimit}
+     timelimit = timelimit,
+     trace = trace}
   fun to f {build_theory_graph, debug, help, jobcount, keepgoing, kernelspec,
             multithread,
             relocbuild,
-            selftest, seqname, timelimit} =
+            selftest, seqname, timelimit, trace} =
     f build_theory_graph debug help jobcount keepgoing kernelspec multithread
       relocbuild
       selftest
       seqname
       timelimit
+      trace
 in
   makeUpdateT (from, from', to)
 end z
@@ -159,7 +162,9 @@ val cline_opt_descrs = [
   {help = "build with standard kernel", long = ["stdknl"], short = "",
    desc = setKname "--stdknl"},
   {help = "Holmake -t timelimit (in seconds)", long = ["time_limit"],
-   short = "", desc = mkIntOpt "--timelimit" #timelimit}
+   short = "", desc = mkIntOpt "--timelimit" #timelimit},
+  {help = "enable proof trace recording", long = ["trace"],
+   short = "", desc = mkBool #trace true}
 ]
 
 end (* struct *)

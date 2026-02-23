@@ -19,8 +19,8 @@ fun main () =
           \  replay    Replay a trace, verify exports\n\
           \\n\
           \Building with traces:\n\
-          \  HOL_TRACE_PROOFS=1 bin/build        (HOL sources)\n\
-          \  HOL_TRACE_PROOFS=1 Holmake          (external projects)\n\
+          \  bin/build --trace                   (HOL sources)\n\
+          \  Holmake --trace                     (external projects)\n\
           \\n\
           \Merge:\n\
           \  prooftrace merge -o FILE [-d DIR]... THY.THM...\n\
