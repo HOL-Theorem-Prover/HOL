@@ -1,4 +1,4 @@
-all: $(DEFAULT_TARGETS) TraceExport.uo TraceRecord.uo ReplayTrace.uo MergeTrace.uo
+all: $(DEFAULT_TARGETS) TraceRecord.uo ReplayTrace.uo MergeTrace.uo
 .PHONY: all
 
 ifdef POLY
