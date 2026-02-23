@@ -14,10 +14,12 @@ result, HOL has a rudimentary consistency maintenance system built
 around the notion of whether type operators and term constants are
 "up-to-date".
 
-An invocation `uptodate_thm th` should check `th` to see if it has been
-proved from any out-of-date components. However, HOL does not currently
-keep the proofs of theorems, so a simpler approach is taken. Instead,
-`th` is checked to see if its hypotheses and conclusions are up-to-date.
+An invocation `uptodate_thm th` should check `th` to see if it has
+been proved from any out-of-date components. However, HOL does not
+currently keep the proofs of theorems, so a simpler approach is taken.
+Instead, `th` is checked to see if its hypotheses and conclusions are
+up-to-date, and if any (locally asserted) axioms it depends on are
+also up-to-date.
 
 All items from ancestor theories are fixed, and unable to be
 overwritten, thus are always up-to-date.
@@ -29,22 +31,24 @@ Never fails.
 ### Example
 
 ``` hol4
-- Define `fact x = if x=0 then 1 else x * fact (x-1)`;
+Definition fact_def:
+  fact (x:num) = if x=0 then 1 else x * fact (x-1)
+End
 Equations stored under "fact_def".
 Induction stored under "fact_ind".
-> val it = |- fact x = (if x = 0 then 1 else x * fact (x - 1)) : thm
+val fact_def = ⊢ ∀x. fact x = if x = 0 then 1 else x * fact (x − 1): thm
 
-- val th = EVAL (Term `fact 3`);
-> val th = |- fact 3 = 6 : thm
+> val th = EVAL “fact 3”
+val th = ⊢ fact 3 = 6 : thm
 
-- uptodate_thm th;
-> val it = true : bool
+> uptodate_thm th;
+val it = true : bool
 
-- delete_const "fact";
-> val it = () : unit
+> delete_const "fact";
+val it = () : unit
 
-- uptodate_thm th;
-> val it = false : bool
+> uptodate_thm th;
+val it = false : bool
 ```
 
 ### Comments

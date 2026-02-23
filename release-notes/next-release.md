@@ -57,7 +57,7 @@ Incompatibilities
 
 -   A few theorems (ended with `'`) in `real_sigmaTheory` are renamed to avoid naming conflicts
     with `realaxTheory`, or to better reflect their nature (see the table below for details.)
-    In particular, users are recommended to *not* directly opening `realaxTheory` (an intermediate
+    In particular, users are recommended to *not* directly open `realaxTheory` (an intermediate
     theory for constructing real numbers), in which all useful theorems should be also covered by
    `realTheory` (under same or different theorem names).
   
@@ -68,6 +68,9 @@ Incompatibilities
 | `REAL_LT_MUL'`  | `REAL_LT_MUL_NEG`  | `!x y. x < 0 /\ y < 0 ==> 0 < x * y`          |
 | `REAL_LT_LMUL'` | `REAL_LT_LMUL_NEG` | `!x y z. x < 0 ==> (x * y < x * z <=> z < y)` | 
 | `REAL_LT_RMUL'` | `REAL_LT_RMUL_NEG` | `!x y z. z < 0 ==> (x * z < y * z <=> y < x)` |
+
+-   For better compatibility with HOL Light (making code-porting easier), arithmetic theory’s `GREATER_EQ` theorem (stating *m ≥ n ⇔ n ≤ m*) is now also available in that theory under the name `GE`.
+
 
 Deprecations
 ------------

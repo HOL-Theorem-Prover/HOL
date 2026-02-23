@@ -939,11 +939,8 @@ fun cv_eqs_for tm = let
 
 val _ = computeLib.add_funs [cv_fst_def,cv_snd_def];
 
-datatype pat = Raw
-             | Eval of conv
-             | Name of string
-             | Tuple of pat list
-             | Some of pat;
+
+open cv_trans_dtype
 
 fun cv_eval_pat pat tm = let
   val _ = List.null (free_vars tm) orelse failwith "cv_eval needs input to be closed"
@@ -965,8 +962,8 @@ fun cv_eval_pat pat tm = let
     val th5 = remove_T_IMP (DISCH_ALL th4)
     in th5 end
   in case pat of
-    Raw => simple_raw ()
-  | Eval eval_conv => let
+    cvRaw => simple_raw ()
+  | cvEval eval_conv => let
       val th = simple_raw ()
       val _ = cv_print Verbose "Using EVAL to convert from cv to original types.\n"
       val th = cv_time (CONV_RULE (RAND_CONV eval_conv)) (UNDISCH_ALL th)
@@ -978,9 +975,9 @@ fun cv_eval_pat pat tm = let
                |> CONV_RULE (REWR_CONV cv_rep_def) |> UNDISCH
   val _ = cv_print Verbose "Abbreviating result.\n"
   val abbrev_defs = ref ([] : (string * thm) list)
-  fun make_abbrevs Raw th = th
-    | make_abbrevs (Eval _) th = th
-    | make_abbrevs (Name name) th = let
+  fun make_abbrevs cvRaw th = th
+    | make_abbrevs (cvEval _) th = th
+    | make_abbrevs (cvName name) th = let
         val (tm1,tm2) = concl th |> dest_eq
         val cv_ty = cvSyntax.cv
         val name_tm = mk_var("cv_" ^ name, mk_type("fun",[cv_ty,cv_ty]))
@@ -996,14 +993,14 @@ fun cv_eval_pat pat tm = let
         val th3 = remove_T_IMP (DISCH_ALL th2) handle HOL_ERR _ => th2
         val _ = save_thm("cv_" ^ name ^ "_thm[cv_rep]",th3)
         in th1 end
-    | make_abbrevs (Tuple []) th = failwith "Empty Tuples are not supported"
-    | make_abbrevs (Tuple [x]) th = make_abbrevs x th
-    | make_abbrevs (Tuple (x::xs)) th = let
+    | make_abbrevs (cvTuple []) th = failwith "Empty Tuples are not supported"
+    | make_abbrevs (cvTuple [x]) th = make_abbrevs x th
+    | make_abbrevs (cvTuple (x::xs)) th = let
         val th0 = MATCH_MP from_pair_eq_IMP th
         val th1 = make_abbrevs x (CONJUNCT1 th0)
-        val th2 = make_abbrevs (Tuple xs) (CONJUNCT2 th0)
+        val th2 = make_abbrevs (cvTuple xs) (CONJUNCT2 th0)
         in MATCH_MP IMP_from_pair_eq (CONJ th1 th2) end
-    | make_abbrevs (Some x) th = let
+    | make_abbrevs (cvSome x) th = let
         val th0 = MATCH_MP from_option_eq_IMP th
         val th1 = make_abbrevs x (CONJUNCT1 th0)
         val th2 = CONJUNCT2 th0
@@ -1014,19 +1011,19 @@ fun cv_eval_pat pat tm = let
   val t = th3 |> concl |> dest_imp |> fst |> rand
   val new_t = from_to_thm |> concl |> rand
   val th4 = MP (MP (th3 |> INST [t|->new_t]) from_to_thm) TRUTH (* very slow? *)
-  fun use_abbrevs Raw th = th
-    | use_abbrevs (Eval conv) th =
+  fun use_abbrevs cvRaw th = th
+    | use_abbrevs (cvEval conv) th =
         CONV_RULE (RAND_CONV (QCONV conv)) th
-    | use_abbrevs (Name name) th =
+    | use_abbrevs (cvName name) th =
         snd (first (fn (n,th) => n = name) (!abbrev_defs)) |> SYM
-    | use_abbrevs (Tuple []) th = failwith "Empty Tuples are not supported"
-    | use_abbrevs (Tuple [x]) th = use_abbrevs x th
-    | use_abbrevs (Tuple (x::xs)) th = let
+    | use_abbrevs (cvTuple []) th = failwith "Empty Tuples are not supported"
+    | use_abbrevs (cvTuple [x]) th = use_abbrevs x th
+    | use_abbrevs (cvTuple (x::xs)) th = let
         val th0 = MATCH_MP to_pair_IMP th
         val th1 = use_abbrevs x (CONJUNCT1 th0)
-        val th2 = use_abbrevs (Tuple xs) (CONJUNCT2 th0)
+        val th2 = use_abbrevs (cvTuple xs) (CONJUNCT2 th0)
         in MATCH_MP IMP_to_pair (CONJ th1 th2) end
-    | use_abbrevs (Some x) th = let
+    | use_abbrevs (cvSome x) th = let
         val th0 = MATCH_MP to_option_IMP th
         val th1 = use_abbrevs x (CONJUNCT1 th0)
         val th2 = CONJUNCT2 th0
@@ -1034,8 +1031,8 @@ fun cv_eval_pat pat tm = let
   val th5 = use_abbrevs pat th4
   in DISCH_ALL th5 end end;
 
-fun cv_eval_raw tm = cv_eval_pat Raw tm;
+fun cv_eval_raw tm = cv_eval_pat cvRaw tm;
 
-fun cv_eval tm = cv_eval_pat (Eval EVAL) tm;
+fun cv_eval tm = cv_eval_pat (cvEval EVAL) tm;
 
 end

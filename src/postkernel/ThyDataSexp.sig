@@ -94,5 +94,6 @@ val pair4_ed : 'a ed * 'b ed * 'c ed * 'd ed -> ('a * 'b * 'c * 'd) ed
 
 val bij_ed : ('a -> 'b) * ('b -> 'a) -> 'b ed -> 'a ed
 val inj_ed : ('a -> 'b) * ('b -> 'a option) -> 'b ed -> 'a ed
+val add_label : string -> 'a ed -> 'a ed
 
 end

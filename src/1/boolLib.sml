@@ -126,6 +126,18 @@ fun has_suspended_subgoals th =
       isSome (HOLset.find issusp_hyp (hypset th))
     end
 
+(* The label variable's name encodes a closure-variable count in the
+   format "N name". Decode to extract the user-visible name and count. *)
+fun decode_suspend_label s =
+    let val (prefix, rest) =
+            Substring.splitl (fn c => c <> #" ") (Substring.full s)
+    in
+      if Substring.isEmpty rest then (s, 0)
+      else case Int.fromString (Substring.string prefix) of
+               SOME n => (Substring.string (Substring.triml 1 rest), n)
+             | NONE => (s, 0)
+    end
+
 fun dest_suspended t =
     let
       open HolKernel
@@ -134,7 +146,7 @@ fun dest_suspended t =
       val {Thy,Name,...} = dest_thy_const sl_c
     in
       if Thy = "marker" andalso Name = "suspendlabel" then
-        SOME (#1 (dest_var lnm), y)
+        SOME (#1 (decode_suspend_label (#1 (dest_var lnm))), y)
       else NONE
     end handle Feedback.HOL_ERR _ => NONE
 

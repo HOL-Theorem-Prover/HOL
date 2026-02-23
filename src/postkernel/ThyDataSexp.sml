@@ -463,4 +463,12 @@ fun pair4_ed ((e1,d1), (e2,d2), (e3,d3), (e4,d4)) =
 fun bij_ed (a2b, b2a) (be,bd) = (be o a2b, Option.map b2a o bd)
 fun inj_ed (a2b, b2a_opt) (be, bd) = (be o a2b, Option.mapPartial b2a_opt o bd)
 
+fun add_label s (ae,ad) =
+    ((fn a => List [Sym s, ae a]),
+     (fn t => case t of
+                  List [Sym s0, t0] =>
+                  if s0 = s then ad t0
+                  else NONE
+                | _ => NONE))
+
 end

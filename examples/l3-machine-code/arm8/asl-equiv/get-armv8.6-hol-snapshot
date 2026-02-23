@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 git clone https://github.com/HOL-Theorem-Prover/armv8.6-asl-snapshot.git
 cd armv8.6-asl-snapshot
-git checkout 9da55ba423ea5bca0b3897977e69916e101fc37e
+git checkout 9f9bb9a9e6a133876152124ce3c30993a61fa7c9

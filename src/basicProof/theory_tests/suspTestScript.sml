@@ -106,3 +106,52 @@ Finalise testFinalEqn[simp]
 val th = SCONV [Excl "AND_CLAUSES"] “a ∧ T ∧ b”
 
 val simped = assert (aconv “a ∧ b”) (rhs $ concl th)
+
+(* Test from GitHub issue #1822: suspend after gen_tac introduces a free
+   variable that later needs to be re-generalised by GEN *)
+Theorem test_suspend_gen:
+  ∀x. x ∧ T ⇒ x ∧ T
+Proof
+  gen_tac >> strip_tac >> conj_tac
+  >- suspend "base"
+  >> simp[]
+QED
+
+Resume test_suspend_gen[base]:
+  first_assum ACCEPT_TAC
+QED
+
+Finalise test_suspend_gen
+
+(* Test that suspend works correctly when partial strip_tac leaves remaining
+   quantification — the closure variables must not disturb the goal's own
+   universal quantifiers. *)
+Theorem test_suspend_partial_strip:
+  ∀p q. p ∧ q ⇒ q ∧ p
+Proof
+  gen_tac >> suspend "s"
+QED
+
+Resume test_suspend_partial_strip[s]:
+  simp[]
+QED
+
+Finalise test_suspend_partial_strip
+
+(* Test that suspend works correctly with resconj when sub-goals have
+   different closure-variable counts. After gen_tac on "∀x. T ∧ (x ⇒ x)",
+   the first sub-goal "([], T)" needs 0 closure variables while the
+   second "([], x ⇒ x)" needs 1. Both share the label "s". *)
+Theorem test_resconj_closure:
+  ∀x:bool. T ∧ (x ⇒ x)
+Proof
+  gen_tac >> conj_tac >> suspend "s"
+QED
+
+Resume test_resconj_closure[s]:
+  RESUME_TAC >>
+  TRY (ACCEPT_TAC TRUTH) >>
+  disch_tac >> first_assum ACCEPT_TAC
+QED
+
+Finalise test_resconj_closure

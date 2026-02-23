@@ -252,6 +252,14 @@ struct
     " [" ^ hyps_contents ^ "] |- " ^ term_to_string (Thm.concl thm)
   end
 
+  fun check_oracle_tags name thm =
+    if Sanity.check_tags ((Theory.current_theory (), name), thm) then
+      raise Feedback.mk_HOL_ERR "HolSmtLib" "check_oracle_tags"
+        ("solver '" ^ name ^ "' produced unexpected oracle/axiom tags: " ^
+         thm_to_string thm)
+    else
+      ()
+
   (* `is_def_oriented` must return false when:
      1. `lhs` is not a variable in `var_set` but `rhs` is, or
      2. `lhs` and `rhs` are both variables in `var_set` but `rhs` is smaller

@@ -429,9 +429,9 @@ val _ = work_in_dir
 (* Holmake *)
 val _ = work_in_dir
           "Holmake" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
-          (fn () => (OS.FileSys.chDir "..";
+          (fn () => (OS.FileSys.chDir "../../parsing";
                      systeml [lexer, "HolLex"];
-                     OS.FileSys.chDir "poly";
+                     OS.FileSys.chDir "../Holmake/poly";
                      polyc_compile (SOME "../mlton/Holmake.mlb")
                                    "poly-Holmake.ML" hmakebin))
 
@@ -440,7 +440,7 @@ val _ = work_in_dir "unquote" qfdir
                     (fn () => (polyc_compile NONE "poly-unquote.ML" qfbin))
 
 (* holdeptool *)
-val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])
+val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake", "poly"])
                     (fn () =>
                         polyc_compile NONE
                           "poly-holdeptool.ML"
@@ -448,7 +448,7 @@ val _ = work_in_dir "holdeptool" (fullPath [HOLDIR, "tools", "Holmake"])
 
 (* build *)
 val _ = work_in_dir "build" toolsdir
-                    (fn () => polyc_compile (SOME "../tools/build.mlb")
+                    (fn () => polyc_compile (SOME "../tools/build/build.mlb")
                                             "poly-build.ML" buildbin)
 
 (* hol - the main HOL executable *)

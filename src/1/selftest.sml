@@ -9,6 +9,8 @@ fun goals_eq gs1 gs2 = goals_compare (gs1, gs2) = EQUAL
 
 fun listp p xs = "[" ^ String.concatWith ", " (map p xs) ^ "]"
 fun pairp (p1, p2) (x,y) = "(" ^ p1 x ^ ", " ^ p2 y ^ ")"
+fun optp p NONE = "NONE"
+  | optp p (SOME x) = "SOME("^p x^")"
 
 val goal_toString =
     pairp (listp term_to_string, term_to_string)
@@ -1418,3 +1420,40 @@ in
     (VALID (EQ_MP_TAC th))
     ([], t)
 end;
+
+fun ip p {redex,residue} = p redex ^ " |-> " ^ p residue
+
+fun unify_test (t1,t2,b,st) =
+let
+  open optmonad
+  infix >>
+  fun tmp st = Feedback.trace ("types", if st then 1 else 0) term_to_string
+  val _ = tprint ("Unify" ^ (if b then "✓: " else "×: ") ^
+                  tmp st t1 ^ " and " ^ tmp st t2)
+  fun sub (tyi,tmi) t = Term.subst tmi (Term.inst tyi t)
+  fun check opt =
+      case opt of
+          NONE => not b
+        | SOME r =>
+          b andalso aconv (sub r t1) (sub r t2)
+  val print = optp (pairp(listp $ ip type_to_string, listp $ ip $ tmp true))
+in
+  require_msg (check_result check) print
+              FullUnify.Env.fromEmpty
+              (FullUnify.unify [] [] (t1,t2) >> FullUnify.collapse)
+end
+
+val _ = new_constant ("cle", “:'a -> 'b -> bool”)
+
+val _ = app unify_test [
+      (“x:bool”, “x:'a”, true, true),
+      (“x:bool->bool”, “y:bool”, false, true),
+      (“~ x”, “(f : 'a -> 'b) y”, true, true),
+      (“(f:'a -> 'a) x”, “$/\ T”, false, true),
+      (“(\x y. x /\ y <=> u /\ v) u a”,
+       “(f:bool->bool -> bool) x x”, true, false),
+      (“\x y. x /\ y /\ z”, “\a x. a /\ x”, false, false),
+      (“\x y. x /\ y”, “\y x. y /\ x”, true, false),
+      (“\x y. x /\ y”, “\y:'a x:'b. f y x”, true, false),
+      (“cle (t:'a) ($= t)”, “cle (s:'b) (t0:'c)”, true, false)
+    ]

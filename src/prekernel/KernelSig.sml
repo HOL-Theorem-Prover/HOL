@@ -2,6 +2,7 @@ structure KernelSig :> KernelSig =
 struct
 
   type kernelname = {Thy : string, Name : string}
+  fun equal x y = (x = y)
   fun name_compare ({Thy = thy1, Name = n1}, {Thy = thy2, Name = n2}) =
       case String.compare (n1, n2) of
         EQUAL => String.compare(thy1,thy2)
@@ -26,56 +27,67 @@ struct
       if i1 = i2 then EQUAL else name_compare(n1,n2)
 
 
-  type 'a thytable = (string, kernelid * 'a) Binarymap.dict
-  type 'a symboltable = ((string, 'a thytable) Binarymap.dict * int) ref
+  type 'a thytable = (kernelid * 'a) Symtab.table
+  type 'a symboltable =
+       ('a thytable Symtab.table * string list Symtab.table *int) Sref.t
+  (* components:
+       - map from theory*name -> kernelid (staged over two levels),
+       - map from name to theory list,
+       - total size (number of entries of first map)
+  *)
   exception NoSuchThy of string
   exception NotPresent of kernelname
   datatype 'a symtab_error = Success of 'a
                            | Failure of exn
   fun isSuccess (Success _) = true | isSuccess _ = false
+  fun destSuccess (Success a) = a | destSuccess (Failure e) = raise e
 
-  fun new_table() = ref (Binarymap.mkDict String.compare, 0)
+  fun new_table() = Sref.new (Symtab.empty, Symtab.empty, 0)
   fun peek(tab : 'a symboltable, knm as {Thy,Name}) =
-      case Binarymap.peek(#1 (!tab),Thy) of
+      case Symtab.lookup (#1 (Sref.value tab)) Thy of
           NONE => Failure (NoSuchThy Thy)
-        | SOME m => case Binarymap.peek(m, Name) of
+        | SOME m => case Symtab.lookup m Name of
                         NONE => Failure (NotPresent knm)
                       | SOME r => Success r
   fun find(tab,knm) =
       case peek(tab, knm) of
           Failure e => raise e
         | Success r => r
-  fun remove(r as ref (thymap, count), knm as {Thy,Name}) =
-      case Binarymap.peek (thymap, Thy) of
-          NONE => Failure (NoSuchThy Thy)
-        | SOME m => case Lib.total Binarymap.remove (m, Name) of
-                        NONE => Failure (NotPresent knm)
-                      | SOME (m', result) =>
-                        let
-                        in
-                          r := (Binarymap.insert(thymap,Thy,m'), count - 1);
-                          Success result
-                        end
-
-  fun numItems (r as ref (_, c)) = c
-
-  fun app f (r as ref (thymap, c)) =
+  fun remove(tab, knm as {Thy,Name}) =
       let
-        fun nmapp thy (name, i) = f ({Thy=thy,Name=name}, i)
+        fun upd (t as (kmap,tmap,c)) =
+            case Symtab.lookup kmap Thy of
+                NONE => (t, Failure (NoSuchThy Thy))
+              | SOME m =>
+                case Symtab.lookup m Name of
+                    NONE => (t, Failure (NotPresent knm))
+                  | SOME kid => let val m' = Symtab.delete Name m
+                                in
+                                  ((Symtab.update(Thy,m') kmap,
+                                    Symtab.remove_list equal (Name,Thy) tmap,
+                                    c-1),
+                                   Success kid)
+                                end
       in
-        Binarymap.app
-          (fn (thy,submap) => Binarymap.app (nmapp thy) submap)
-          thymap
+        Sref.gen_update tab upd
       end
 
-  fun foldl f acc (r as ref (thymap, c)) =
+  fun numItems (tab : 'a symboltable) = #3 (Sref.value tab)
+
+  fun app f (tab : 'a symboltable) =
       let
-        fun nmfold thy (name, i, A) = f ({Thy=thy,Name=name}, i, A)
+        fun perthyapp (thy,m) () =
+            Symtab.fold (fn (nm,(id,v)) => fn () => f ({Thy=thy,Name=nm},(id,v))) m ()
       in
-        Binarymap.foldl
-          (fn (thy,submap,A) => Binarymap.foldl (nmfold thy) A submap)
-          acc
-          thymap
+        Symtab.fold perthyapp (#1 (Sref.value tab)) ()
+      end
+
+  fun foldl f acc (tab : 'a symboltable) =
+      let
+        fun perthyfold (thy,m) A =
+            Symtab.fold (fn (nm,id) => fn A => f ({Thy=thy,Name=nm}, id, A)) m A
+      in
+        Symtab.fold perthyfold (#1 (Sref.value tab)) acc
       end
 
   fun retire_name (r, n) =
@@ -83,17 +95,21 @@ struct
         Failure e => raise e
       | Success (kid, v) => retire_id kid
 
-  fun insert(r as ref(thymap,c),n as {Thy,Name},v) = let
+  fun insert(tab : 'a symboltable, n as {Thy,Name}, v) = let
     val id = new_id n
-    val _ = retire_name(r,n) handle NoSuchThy _ => ()
-                                  | NotPresent _ => ()
-    val submap0 =
-        case Binarymap.peek (thymap,Thy) of
-            NONE => Binarymap.mkDict String.compare
-          | SOME submap0 => submap0
-    val submap = Binarymap.insert(submap0,Name,(id,v))
+    val _ = retire_name(tab,n) handle NoSuchThy _ => ()
+                                    | NotPresent _ => ()
+    fun upd (kmap, tmap, c) =
+        let val kmap' = Symtab.map_default (Thy,Symtab.make[(Name,(id,v))])
+                                           (Symtab.update(Name,(id,v)))
+                                           kmap
+            val tmap' = Symtab.insert_list equal (Name,Thy) tmap
+            val c' = c + 1
+        in
+          (kmap',tmap',c')
+        end
   in
-    r := (Binarymap.insert(thymap,Thy,submap), c + 1);
+    Sref.update tab upd;
     id
   end
 
@@ -105,26 +121,27 @@ struct
 
   fun listItems r =
       List.rev (foldl (fn (knm,v,A) => (knm,v) :: A) [] r)
-  fun listThy (tab as ref (thymap, _)) thy =
-      case Binarymap.peek (thymap, thy) of
+  fun listThy (tab : 'a symboltable) thy =
+      case Symtab.lookup (#1 (Sref.value tab)) thy of
           NONE => []
         | SOME m =>
-          Binarymap.foldl (fn (nm,(kid,v),acc) =>
-                              if uptodate_id kid then
-                                ({Thy = thy,Name = nm},(kid,v)) :: acc
-                              else acc)
-                          []
-                          m
+          Symtab.fold (fn (nm, (kid,v)) => fn A =>
+                          if uptodate_id kid then
+                            ({Thy = thy,Name = nm},(kid,v)) :: A
+                          else A)
+                      m
+                      []
 
-  fun listName tab nm = let
-    fun foldthis ({Thy,Name},(kid,v),acc) =
-        if Name = nm  then ({Thy = Thy,Name = Name},(kid,v)) :: acc
-        else acc
-  in
-    foldl foldthis [] tab
-  end
+  fun listName tab nm =
+      let
+        val (kmap, tmap, _) = Sref.value tab
+        val thys = case Symtab.lookup tmap nm of NONE => [] | SOME xs => xs
+        val knms = map (fn thy => {Thy = thy, Name = nm}) thys
+      in
+        map (fn k => (k, find(tab, k))) knms
+      end
 
-  fun del_segment (r, thyname) = let
+  fun del_segment (r : 'a symboltable, thyname) = let
     fun appthis (knm as {Name,Thy},(id,v)) =
         if Thy = thyname then retire_name(r,knm)
         else ()
@@ -132,7 +149,10 @@ struct
     app appthis r
   end
 
-
+  fun thyExists (tab : 'a symboltable) thy =
+      Symtab.defined (#1 (Sref.value tab)) thy
+  fun nameExists (tab: 'a symboltable) n =
+      Symtab.defined (#2 (Sref.value tab)) n
 
 
 end

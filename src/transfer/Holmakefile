@@ -17,3 +17,5 @@ all: link-to-sigobj
 link-to-sigobj: $(DEFAULT_TARGETS)
 	$(HOL_LNSIGOBJ)
 endif
+
+EXTRA_CLEANS = transfer-selftest.log selftest.exe

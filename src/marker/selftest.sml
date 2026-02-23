@@ -112,9 +112,9 @@ fun thm_eq (hyps,t) th =
     HOLset.equal(hyps, hypset th) andalso t ~~ concl th
 
 fun mklab s t = mk_comb(mk_comb(“suspendlabel”, mk_var(s, “:ind”)), t)
-val rhyp = mklab "r" “suspendimp p (suspendimp q r)”
-val shyp = mklab "s" “suspendimp p (suspendimp q s)”
-val rshyp = mklab "r" “suspendimp p (suspendimp q s)”
+val rhyp = mklab "3 r" “!r q p. suspendimp p (suspendimp q r)”
+val shyp = mklab "3 s" “!s q p. suspendimp p (suspendimp q s)”
+val rshyp = mklab "3 r" “!s q p. suspendimp p (suspendimp q s)”
 val p = mk_var("p", bool)
 val q = mk_var("q", bool)
 
@@ -173,8 +173,7 @@ val _ = require_msg
 val _ = shouldfail {checkexn = is_struct_HOL_ERR "markerLib",
                     printarg = K "extract_suspended_goal fails (1)",
                     printresult = goal_print,
-                    testfn = (fn th => resumption_to_goal
-                                         (extract_suspended_goal th "pq"))}
+                    testfn = (fn th => resumption_to_goal (extract_suspended_goal th "pq"))}
                    pq_th1
 
 val _ = show_assums := true
@@ -207,14 +206,37 @@ val _ = require_msgk (check_result
                             thm_eq (HOLset.fromList Term.compare [p],p)
                                    subresult andalso
                             thm_eq (HOLset.fromList Term.compare [
-                                       mk_comb(“suspendlabel q”,
-                                                “suspendimp p (suspendimp q q)”)
+                                       mklab "2 q"
+                                             “!q p. suspendimp p (suspendimp q q)”
                                      ],
                                     “p /\ q ==> q /\ p”) updated_main))
                      pp
                      (fn th => prim_resume(th,"p",first_assum ACCEPT_TAC))
                      one_b
                      pq_th1
+(* Test resconj with different closure-variable counts across sub-goals.
+   After gen_tac on "!x. T /\ (x ==> x)", conj_tac gives:
+     sub-goal 1 "([], T)" with fvs=[] so nclosure=0, and
+     sub-goal 2 "([], x ==> x)" with fvs=[x] so nclosure=1.
+   The two hypotheses have different nclosure counts encoded in their labels;
+   extract_suspended_goal and resumption_to_goal must handle both correctly,
+   stripping the right number of closure foralls per component. *)
+val resconj_closure_th =
+    TAC_PROOF(([], “!x:bool. T /\ (x ==> x)”),
+              gen_tac >> conj_tac >> suspend "s")
+
+val _ = tprint "prim_resume resconj+closure"
+val _ = require_msg
+          (check_result
+             (fn {subresult,updated_main} =>
+                  null (hyp updated_main) andalso
+                  concl updated_main ~~ “!x:bool. T /\ (x ==> x)”))
+          (HOLPP.pp_to_string 75 pp)
+          (fn th => prim_resume(th, "s",
+                                RESUME_TAC >>
+                                TRY (ACCEPT_TAC TRUTH) >>
+                                disch_then  ACCEPT_TAC))
+          resconj_closure_th
 
 val incomplete_th = Feedback.quiet_messages save_thm("incomplete_th", pq_th1)
 val _ = shouldfail {

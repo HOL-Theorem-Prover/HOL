@@ -15,11 +15,7 @@ sig
   (* The conv should evaluate `from <deep_embedding>` *)
   val cv_trans_deep_embedding : conv -> thm -> unit
 
-  datatype pat = Raw
-               | Eval of conv
-               | Name of string
-               | Tuple of pat list
-               | Some of pat;
+  datatype pat = datatype cv_trans_dtype.pat
 
   val cv_eqs_for  : term -> thm list
   val cv_eval     : term -> thm

@@ -13,9 +13,7 @@ Libs
 
 Definition polyp_def:
  polyp [] = T /\
- polyp ((c,e)::r) =
-     (polyp r /\ c <> 0 /\ 0 <= e /\
-      (NULL r \/ SND(HD r) < e))
+ polyp ((c,e)::r) = (polyp r /\ c <> 0 /\ (NULL r \/ SND(HD r) < e))
 End
 
 (*---------------------------------------------------------------------------*)
@@ -48,7 +46,6 @@ End
 (*---------------------------------------------------------------------------*)
 
 Definition sum_polys_def:
-  sum_polys [] [] = [] ∧
   sum_polys [] p = p ∧
   sum_polys p [] = p ∧
   sum_polys ((c1,e1)::r1) ((c2,e2)::r2) =
@@ -100,9 +97,10 @@ QED
 (* goal to be proved in ACL2(zfc)                                            *)
 (*---------------------------------------------------------------------------*)
 
-val defs = basis_defs @ [EXP, polyp_def, eval_poly_def, sum_polys_def];
+val defs = map def_bundle
+               (basis_defs @ [EXP, polyp_def, eval_poly_def, sum_polys_def])
 
 val goals =
-    [mk_named_goal "eval_sum_poly_distrib" (concl eval_poly_sum_polys)]
+    [goal_bundle "eval_sum_poly_distrib" (concl eval_poly_sum_polys)]
 
-val _ = print_defhols_to_file "eval_poly.defhol" (defs @ goals);
+val _ = print_bundles_to_file "eval_poly.defhol" (defs @ goals);

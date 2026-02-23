@@ -311,6 +311,12 @@ In addition, there are three special targets that can be used:
 \noindent Finally, users can directly affect the workings of \holmake{}
 with the following command-line options/flags:
 \begin{description}
+\item[\texttt{--cachekey <theory>}] Computes and prints a deterministic SHA1 hash (cache key) for the given theory target, then exits.
+  The hash is based on the contents of the theory's dependencies: source files and ancestor \texttt{.dat} (theory data) files.
+  Dependencies on \texttt{.uo} and \texttt{.ui} files are excluded; where a dependency on a \texttt{Theory.uo} or \texttt{Theory.ui} file exists, the corresponding \texttt{.dat} file is used instead.
+  Dependencies are sorted by filename (with hash as a tiebreaker) to produce a canonical, machine-independent ordering.
+  All dependencies must already be built; the command will fail if any dependency file does not exist.
+  This option is intended for use in caching built theories in CI or similar workflows: if the cache key has not changed, the theory does not need to be rebuilt.
 \item[\texttt{-f <theory>}] Toggles whether or not a theory should be
   built in ``fast'' mode.
   Fast building causes tactic proofs (invocations of \texttt{prove}, \texttt{store\_thm}, and the \texttt{Theorem}-\texttt{Proof}-\texttt{QED} form) to automatically succeed.

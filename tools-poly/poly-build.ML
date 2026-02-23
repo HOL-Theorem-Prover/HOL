@@ -19,29 +19,42 @@ fun useHMUtil f =
 
 val _ = use "Holmake/Systeml.sml";
 val _ = useUtil "GetOpt";
-val _ = use "../tools/Holmake/HOLFS_dtype.sml";
-val _ = use "../tools/Holmake/HFS_NameMunge.sig";
+fun useHfs f =
+    (use ("../tools/Holmake/hfs/" ^ f ^ ".sig");
+     use ("../tools/Holmake/hfs/" ^ f ^ ".sml"))
+val _ = use "../tools/Holmake/hfs/HOLFS_dtype.sml";
+val _ = use "../tools/Holmake/hfs/HFS_NameMunge.sig";
 val _ = use "../tools/Holmake/poly/HFS_NameMunge.sml";
-val _ = useC "HOLFileSys";
+val _ = useHfs "HOLFileSys";
 val _ = useDeps "Holdep_tokens";
-val _ = useC "HM_SimpleBuffer";
-val _ = useC "AttributeSyntax";
-val _ = use "../tools/Holmake/HolLex.sml";
-val _ = useC "HolParser";
+val _ = useUtil "SimpleBuffer";
+fun useParsing f =
+    (use ("../tools/parsing/" ^ f ^ ".sig");
+     use ("../tools/parsing/" ^ f ^ ".sml"))
+val _ = useParsing "AttributeSyntax";
+val _ = use "../tools/parsing/HolLex.sml";
+val _ = useParsing "HolParser";
 val _ = useDeps "Holdep";
-val _ = use "../tools/Holmake/Holmake_tools_dtype.sml";
+fun useCore f =
+    (use ("../tools/Holmake/core/" ^ f ^ ".sig");
+     use ("../tools/Holmake/core/" ^ f ^ ".sml"))
+val _ = use "../tools/Holmake/core/Holmake_tools_dtype.sml";
 val _ = use "../tools/Holmake/util/terminal_primitives.sig";
 val _ = use "../tools/Holmake/util/poly-terminal-prims.ML";
-val _ = useC "Holmake_tools"
+val _ = useCore "Holmake_tools"
 val _ = useUtil "regexpMatch"
-val _ = useC "parse_glob"
-val _ = useC "internal_functions"
-val _ = useC "Holmake_types"
-val _ = useC "ReadHMF"
-val _ = use "../tools/buildcline_dtype.sml"
+fun useHmf f =
+    (use ("../tools/Holmake/hmf/" ^ f ^ ".sig");
+     use ("../tools/Holmake/hmf/" ^ f ^ ".sml"))
+val _ = useHmf "parse_glob"
+val _ = useHmf "internal_functions"
+val _ = useHmf "Holmake_types"
+val _ = useHmf "ReadHMF"
+val _ = use "../tools/build/buildcline_dtype.sml"
 val _ = use "../tools/util/FunctionalRecordUpdate.sml"
-val _ = useC "../buildcline"
-val _ = use "../tools/buildutils.sig";
-val _ = use "../tools/buildutils.sml";
+val _ = use "../tools/build/buildcline.sig"
+val _ = use "../tools/build/buildcline.sml"
+val _ = use "../tools/build/buildutils.sig";
+val _ = use "../tools/build/buildutils.sml";
 val _ = use "build.sml";
 val main = build.main

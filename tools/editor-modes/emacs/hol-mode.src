@@ -1079,7 +1079,7 @@ region instead. With prefix ARG prompt for a file-name to load."
 (defun hol--looks-like-root-holdir (dir)
   (cl-every
    (lambda (s) (file-exists-p (concat (file-name-as-directory dir) s)))
-   '("COPYRIGHT" "tools" "tools-poly" "std.prelude" "bin")))
+   '("COPYRIGHT" "tools" "tools-poly" "bin" "sigobj")))
 
 (defun hol--find-alternate-executable (dir0 original-name0)
   (let ((dir (expand-file-name dir0))
@@ -1214,7 +1214,7 @@ region instead. With prefix ARG prompt for a file-name to load."
         (new-frame . hol)))
 
 (defun hol-with-region ()
-  "Starts a HOL session and pastes selected region into it. If there is no active region, pastes whole buffer."
+  "Starts a HOL session and pastes selected region into it. If there is no active region, pastes whole buffer up to latest whitespace line before point."
   (interactive)
   (let* ((style-str (completing-read
                      (concat "HOL buffer position ("
@@ -1230,18 +1230,32 @@ region instead. With prefix ARG prompt for a file-name to load."
          (style (intern style-str))
          (starter (cdr (assoc style hol-new-buffer-style-alist))))
     (setq hol-new-buffer-style style)
-    (save-mark-and-excursion (funcall starter))
-    (if (region-active-p)
-        (copy-region-as-hol-definition (region-beginning) (region-end) 16 t)
-      (let ((beg (point-min))
-            (end (progn
-                   (while (looking-at "[[:space:]]*\n") (forward-line 1))
-                   (search-backward "\n\n")
-                   (while (looking-at "[[:space:]]*\n") (forward-line 1))
-                   (point))))
+    (let ((begin-end
+           (if (region-active-p)
+               (cons (region-beginning) (region-end))
+             (cons (point-min)
+                   (progn
+                     (while (looking-at "[[:space:]]*\n") (forward-line 1))
+                     (search-backward "\n\n")
+                     (while (looking-at "[[:space:]]*\n") (forward-line 1))
+                     (point))))))
+      (save-mark-and-excursion
+        (goto-char (car begin-end))
+        (let ((bare nil)
+              (limit (cdr begin-end)))
+          (while (and (not bare)
+                      (re-search-forward "^Theory [A-Za-z0-9_']+ *\\[bare\\]" limit t))
+            (let ((pps (syntax-ppss)))
+              (if (or (nth 3 pps) (nth 4 pps)) nil (setq bare t))))
+          (if bare (let ((hol-bare-p t)) 
+                     (message "Using hol --bare")
+                     (sleep-for 2)
+                     (funcall starter))
+            (funcall starter))))
+      (if (region-active-p) nil
         (push-mark (point-min))
-        (activate-mark t)
-        (copy-region-as-hol-definition beg end 16 t)))))
+        (activate-mark t))
+      (copy-region-as-hol-definition (car begin-end) (cdr begin-end) 16 t))))
 
 (defun run-program (filename niceness)
   "Runs a PROGRAM in a comint window, with a given (optional) NICENESS."

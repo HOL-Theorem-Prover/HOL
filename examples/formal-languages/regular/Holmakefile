@@ -3,11 +3,22 @@ INCLUDES = $(HOLDIR)/examples/data-structures/balanced_bst \
            $(HOLDIR)/examples/formal-languages/context-free \
            $(HOLDIR)/src/search
 
-all: $(DEFAULT_TARGETS) regexp2dfa
+all: $(DEFAULT_TARGETS) regexp2dfa selftest.exe
 
 .PHONY: all
 
-EXTRA_CLEANS = regexp2dfa.o regexp2dfa
+EXTRA_CLEANS = regexp2dfa.o regexp2dfa regexp-selftest.log selftest.exe
 
 regexp2dfa : regexp2dfa.uo
 	$(protect $(HOLDIR)/bin/hol) buildheap regexp2dfa.uo -o $@ --exe main
+
+selftest.exe: selftest.uo regexpLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+ifdef HOLSELFTESTLEVEL
+all: regexp-selftest.log
+
+regexp-selftest.log: selftest.exe
+	$(tee TESTLEVEL=$HOLSELFTESTLEVEL ./selftest.exe 2>&1, $@)
+
+endif

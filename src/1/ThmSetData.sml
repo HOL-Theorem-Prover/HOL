@@ -234,7 +234,10 @@ type 'value ops = {apply_to_global : setdelta -> 'value -> 'value,
                                     'value -> 'value) option,
                    uptodate_delta : setdelta -> bool, initial_value : 'value,
                    apply_delta : setdelta -> 'value -> 'value}
-fun raw_uptodate (rADD{Thy,Name}) = can (DB.fetch Thy) Name
+fun raw_uptodate (rADD (knm as {Thy,Name})) =
+    (case DB.lookup knm of
+        NONE => false
+      | SOME (th, _) => Theory.uptodate_thm th)
   | raw_uptodate _ = true
 
 fun export_with_ancestry

@@ -1,7 +1,0 @@
-$(SML_LIB)/basis/basis.mlb
-../../tools-poly/poly/Binaryset.sig
-../../tools-poly/poly/Binaryset.sml
-deps/Holdep_tokens.sig
-deps/Holdep_tokens.sml
-holdeptool.sml
-mosml_holdeptool.sml

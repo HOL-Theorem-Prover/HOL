@@ -19,35 +19,35 @@ Theorem DIVISION_FOR_ACL2[local] =
      |> GEN_ALL;
 
 val defs =  (* following ex1.lisp plus a few others *)
-  [suc_thm,
-   PRE,
-   I_THM,
-   C_THM,
-   K_THM,
-   o_THM,
-   COMMA_def,
-   FST,
-   SND,
-   UNCURRY_DEF,
-   OPTION_BIND_def,
-   OPTION_MAP_DEF,
-   list_case_def,
-   list_size_def,
-   MAP,
-   FOLDR,
-   FOLDL,
-   mk_spec [``(DIV)``, ``(MOD)``] DIVISION_FOR_ACL2,
-   Even_Odd_def,
-   EXP]
+   [def_bundle suc_thm,
+    def_bundle PRE,
+    def_bundle I_THM,
+    def_bundle C_THM,
+    def_bundle K_THM,
+    def_bundle o_THM,
+    def_bundle COMMA_def,
+    def_bundle FST,
+    def_bundle SND,
+    def_bundle UNCURRY_DEF,
+    def_bundle OPTION_BIND_def,
+    def_bundle OPTION_MAP_DEF,
+    def_bundle list_case_def,
+    def_bundle list_size_def,
+    def_bundle MAP,
+    def_bundle FOLDR,
+    def_bundle FOLDL,
+    spec_bundle [``(DIV)``, ``(MOD)``] DIVISION_FOR_ACL2,
+    def_bundle Even_Odd_def,
+    def_bundle EXP]
 
 val thms =
-  [mk_named_thm "MAP_ID_I" MAP_ID_I,
-   mk_named_thm "MAP_o" MAP_o
+  [thm_bundle "MAP_ID_I" MAP_ID_I,
+   thm_bundle "MAP_o" MAP_o
   ];
 
 val goals =
-  [mk_named_goal "FST-COMMA" (concl FST),
-   mk_named_goal "BOOL_CASES_AX" (concl BOOL_CASES_AX),
-   mk_named_goal "pair_fst_snd_eq" (concl (GSYM PAIR_FST_SND_EQ))];
+  [goal_bundle "FST-COMMA" (concl FST),
+   goal_bundle "BOOL_CASES_AX" (concl BOOL_CASES_AX),
+   goal_bundle "pair_fst_snd_eq" (concl (GSYM PAIR_FST_SND_EQ))];
 
-val _ = print_defhols_to_file "ex1.defhol" (defs @ thms @ goals);
+val _ = print_bundles_to_file "ex1.defhol" (defs @ thms @ goals);
