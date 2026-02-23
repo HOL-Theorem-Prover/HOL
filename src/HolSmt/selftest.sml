@@ -774,8 +774,7 @@ in
       [thm_AUTO, (*thm_CVC,*) thm_Z3_v4, thm_Z3p_v4 (*, thm_CVCp *)]),
     (``0 < (x:real) pow y``, [sat_CVC, sat_Z3, sat_Z3p, sat_CVCp]),
     (``0 <= (x:real) pow y``, [sat_CVC, sat_Z3, sat_Z3p, sat_CVCp]),
-    (* cvc5 proof uses 'hole' rule with EXP *)
-    (``0 < (1:real) pow y``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4 (*, thm_CVCp *)]),
+    (``0 < (1:real) pow y``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4, thm_CVCp]),
     (``0 < (2:real) pow y``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4, thm_CVCp]),
     (``0 < (-2:real) pow y``, [sat_CVC, sat_Z3, sat_Z3p, sat_CVCp]),
     (``0 < (42:real) pow y``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4, thm_CVCp]),

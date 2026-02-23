@@ -102,6 +102,8 @@ local
     handle Feedback.HOL_ERR _ =>
     simpLib.SIMP_PROVE bossLib.std_ss [] t
     handle Feedback.HOL_ERR _ =>
+    simpLib.SIMP_PROVE (bossLib.srw_ss()) [] t
+    handle Feedback.HOL_ERR _ =>
     raise ERR name ("failed to prove: " ^ Hol_pp.term_to_string t)
 
   (* prove an arithmetic tautology *)
@@ -946,7 +948,10 @@ local
         (* 5. METIS with no premises (handles first-order quantifiers) *)
         metis_prove [] target
         handle Feedback.HOL_ERR _ =>
-        (* 6. Evaluation *)
+        (* 6. Simplifier (handles e.g. -(1*x) + x = 0) *)
+        simpLib.SIMP_PROVE (bossLib.srw_ss()) [] target
+        handle Feedback.HOL_ERR _ =>
+        (* 7. Evaluation *)
         Drule.EQT_ELIM (bossLib.EVAL target)
         handle Feedback.HOL_ERR _ =>
         raise ERR "replay_hole" ("step '" ^ id ^ "' failed: " ^
