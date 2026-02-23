@@ -414,8 +414,10 @@ fun trace_step_count () = !Thm.trace_counter
 
 (* ------- Activation ------- *)
 
-val _ = Thm.trace_hook := SOME record_hook
-val _ = Thm.trace_export_hook := SOME export_hook
-val _ = OS.Process.atExit cleanup
+fun activate () = (
+  Thm.trace_hook := SOME record_hook;
+  Thm.trace_export_hook := SOME export_hook;
+  OS.Process.atExit cleanup
+)
 
 end

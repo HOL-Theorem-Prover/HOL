@@ -4,6 +4,4 @@
 # BuildCommand to pass it as an extra arg to `hol run --poly`,
 # which loads it before boolScript runs.
 # See: tools/Holmake/poly/BuildCommand.sml (extra_poly_cline)
-ifdef HOL_TRACE_PROOFS
 POLY_CLINE_OPTIONS += $(dprot $(SIGOBJ)/TraceRecord.uo)
-endif

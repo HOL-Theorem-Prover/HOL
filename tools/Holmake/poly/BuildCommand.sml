@@ -219,6 +219,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
   val debug = #debug (#core optv)
   val opentheory = #opentheory (#core optv)
   val allfast = #fast (#core optv)
+  val trace = #trace (#core optv)
   val polynothol = #poly_not_hol optv
   val relocbuild = #relocbuild optv orelse
                    (case OS.Process.getEnv Systeml.build_after_reloc_envvar of
@@ -318,6 +319,10 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             (case #holheap extra of NONE => "--poly"
                                   | SOME d => "--holstate="^tgt_toString d) ::
             extra_poly_cline() @
+            (if trace then
+               [fullPath [HOLDIR, "src", "postkernel", "prooftrace",
+                          "trace-activate.sml"]]
+             else []) @
             ((if isSome debug then ["--dbg"] else []) @ objectfiles) @
             ["-e",
              "  check that export_theory call exists, and that new_theory\n\

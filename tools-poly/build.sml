@@ -24,7 +24,7 @@ datatype phase = Initial | Bare | Full
 
 val cline_record = process_cline ()
 val {cmdline,build_theory_graph,selftest_level,...} = cline_record
-val {debug,jobcount,relocbuild,extra={SRCDIRS,...},...} = cline_record
+val {debug,jobcount,relocbuild,trace,extra={SRCDIRS,...},...} = cline_record
 val {multithread,keepgoing,timelimit,...} = cline_record
 
 open Systeml;
@@ -67,7 +67,8 @@ val Holmake = let
   end
 in
   buildutils.Holmake aug_systeml isSuccess
-    (fn () => (case jobcount of NONE => [] | SOME j => ["-j"^Int.toString j]) @
+    (fn () => (if trace then ["--trace"] else []) @
+              (case jobcount of NONE => [] | SOME j => ["-j"^Int.toString j]) @
               (if relocbuild then ["--relocbuild"] else []) @
               (if debug then ["--dbg"] else []) @
               (if keepgoing then ["-k"] else []) @

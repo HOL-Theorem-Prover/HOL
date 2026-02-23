@@ -291,8 +291,6 @@ fun sort_descriptions dl = Listsort.sort descr_compare dl
 fun extend_env (t:t) =
     let open Holmake_types
     in
-      env_extend ("HOL_NUMJOBS", [LIT (Int.toString (#jobs t))]) o
-      (if #trace t then env_extend ("HOL_TRACE_PROOFS", [LIT "1"])
-       else (fn e => e))
+      env_extend ("HOL_NUMJOBS", [LIT (Int.toString (#jobs t))])
     end
 end
