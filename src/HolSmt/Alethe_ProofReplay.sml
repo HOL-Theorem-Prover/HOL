@@ -1070,6 +1070,7 @@ local
     | "ite_simplify"       => replay_rewrite s id clause
     | "qnt_simplify"       => replay_rewrite s id clause
     | "ac_simp"            => replay_rewrite s id clause
+    | "all_simplify"      => replay_rewrite s id clause (* cvc5 1.1.2 *)
     | "comp_simplify"      => replay_rewrite s id clause
     | "qnt_rm_unused"      => replay_rewrite s id clause
     | "minus_simplify"     => replay_rewrite s id clause
