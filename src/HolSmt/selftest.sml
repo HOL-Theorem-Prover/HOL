@@ -197,7 +197,7 @@ val sat_Z3p_v4 = mk_Z3p_v4 expect_sat
 fun mk_CVCp expect_fun =
   mk_test_fun (CVC.is_configured ()) expect_fun "cvc5 (proofs)" HolSmtLib.CVC_TAC
 
-val thm_CVCp = mk_CVCp expect_thm
+val thm_CVCp = mk_CVCp (expect_thm true)
 val sat_CVCp = mk_CVCp expect_sat
 
 (*****************************************************************************)
