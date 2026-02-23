@@ -42,10 +42,26 @@ DEPS += $(dprot $(SIGOBJ)/TraceRecord.uo)
 UOARGS += $(protect $(SIGOBJ)/TraceRecord)
 endif
 
-EXTRA_CLEANS = $(TARGET)
+EXTRA_CLEANS = $(TARGET) $(HOLDIR)/bin/prooftrace
 
 $(TARGET): $(DEPS)
 	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) --poly -o $@ $(UOARGS) && \
 	rm -f $(protect $(HOLDIR)/bin/hol.state)
+
+PROOFTRACE = $(dprot $(HOLDIR)/bin/prooftrace)
+
+$(PROOFTRACE): $(dprot $(SIGOBJ)/ReplayTrace.uo) \
+               $(dprot $(SIGOBJ)/MergeTrace.uo) \
+               $(dprot $(SIGOBJ)/prooftrace_main.uo) \
+               $(TARGET) \
+               $(dprot $(HOLDIR)/bin/hol)
+	$(protect $(HOLDIR)/bin/hol) buildheap --exe=main \
+	  -b $@ \
+	  -o $(protect $(HOLDIR)/bin/prooftrace) \
+	  $(protect $(SIGOBJ)/ReplayTrace) \
+	  $(protect $(SIGOBJ)/MergeTrace) \
+	  $(protect $(SIGOBJ)/prooftrace_main)
+
+all: $(PROOFTRACE)
 
 endif

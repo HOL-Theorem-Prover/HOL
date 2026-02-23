@@ -8,6 +8,7 @@
 fun main () =
   let
     val args = CommandLine.arguments ()
+    val holdir = Systeml.HOLDIR
     fun out s = TextIO.output(TextIO.stdOut, s)
     fun err s = TextIO.output(TextIO.stdErr, s)
     fun usage () = (
@@ -26,6 +27,9 @@ fun main () =
           \  through all arguments (targets, -j, etc.)\n\
           \  With --hol-build: runs bin/build instead.\n\
           \\n\
+          \  To build just the prooftrace tool itself:\n\
+          \    bin/build --seq=tools/sequences/kernel --nograph\n\
+          \\n\
           \Merge:\n\
           \  prooftrace merge -o FILE [-d DIR]... THY.THM...\n\
           \\n\
@@ -36,16 +40,55 @@ fun main () =
           \Replay:\n\
           \  prooftrace replay [options] FILE\n\
           \\n\
-          \  Replays from scratch in a minimal kernel session.\n\
-          \  Reports pass/fail for each export.\n\
+          \  Replays a trace from scratch in a minimal kernel session.\n\
+          \  Reports pass/fail for each export. Exits with success if\n\
+          \  all exports are oracle-free, failure otherwise.\n\
+          \\n\
           \  --verbose       print each export's statement\n\
-          \  --interactive   drop into REPL after replay with\n\
-          \                  exports bound as ML values\n";
+          \  --interactive   drop into HOL REPL after replay with\n\
+          \                  exports bound as prooftrace_exports\n\
+          \  --load LIB      load additional library after replay\n\
+          \                  (repeatable; for extra pretty printing)\n\
+          \  --load-hol      load standard HOL libraries after replay\n\
+          \                  (boolLib etc.) for standard pretty printing\n\
+          \\n\
+          \Examples:\n\
+          \  prooftrace replay merged.pftrace\n\
+          \  prooftrace replay --verbose --load-hol merged.pftrace\n\
+          \  prooftrace replay --interactive --load-hol merged.pftrace\n";
       OS.Process.exit OS.Process.success)
     fun die s = (
       err ("prooftrace: " ^ s ^ "\n");
       err "Try 'prooftrace --help' for usage.\n";
       OS.Process.exit OS.Process.failure)
+
+    (* --- build command --- *)
+    fun do_build args =
+      let
+        val use_build = ref false
+        val passthrough = ref ([] : string list)
+        fun parse [] = ()
+          | parse ("--help" :: _) = usage ()
+          | parse ("-h" :: _) = usage ()
+          | parse ("--hol-build" :: rest) =
+              (use_build := true; parse rest)
+          | parse (arg :: rest) =
+              (passthrough := arg :: !passthrough; parse rest)
+        val _ = parse args
+        val pass_args = rev (!passthrough)
+        val cmd = if !use_build
+                  then OS.Path.concat(holdir, "bin/build") :: pass_args
+                  else OS.Path.concat(holdir, "bin/Holmake") :: pass_args
+        val env_prefix = "HOL_TRACE_PROOFS=1"
+        (* Use OS.Process.system with env variable prefix *)
+        val cmdline = env_prefix ^ " " ^
+          String.concatWith " " (map (fn s =>
+            if CharVector.exists Char.isSpace s
+            then "'" ^ s ^ "'" else s) cmd)
+      in
+        err ("Running: " ^ cmdline ^ "\n");
+        OS.Process.exit (OS.Process.system cmdline)
+      end
 
     (* --- merge command --- *)
     fun do_merge args =
@@ -88,7 +131,6 @@ fun main () =
             [] => ["."]
           | ds => rev ds
 
-        (* Find all traces in search directories *)
         val all_traces = List.concat
           (map ReplayTrace.find_traces search_dirs)
         val _ = if null all_traces then
@@ -104,14 +146,120 @@ fun main () =
         }
       end
 
+    (* --- replay command --- *)
+    fun do_replay args =
+      let
+        val verbose = ref false
+        val interactive = ref false
+        val load_hol = ref false
+        val loads = ref ([] : string list)
+        val file = ref (NONE : string option)
+
+        fun parse [] = ()
+          | parse ("--help" :: _) = usage ()
+          | parse ("-h" :: _) = usage ()
+          | parse ("--verbose" :: rest) =
+              (verbose := true; parse rest)
+          | parse ("--interactive" :: rest) =
+              (interactive := true; parse rest)
+          | parse ("--load-hol" :: rest) =
+              (load_hol := true; parse rest)
+          | parse ("--load" :: lib :: rest) =
+              (loads := lib :: !loads; parse rest)
+          | parse ("--load" :: []) =
+              die "replay: --load requires an argument"
+          | parse (arg :: rest) =
+              if String.isPrefix "-" arg then
+                die ("replay: unknown option: " ^ arg)
+              else
+                (case !file of
+                   NONE => file := SOME arg
+                 | SOME _ => die "replay: only one trace file allowed";
+                 parse rest)
+
+        val _ = parse args
+        val path = case !file of
+            SOME p => p
+          | NONE => die "replay: trace file argument is required"
+
+        val abs_path = OS.Path.mkAbsolute
+          {path = path, relativeTo = OS.FileSys.getDir ()}
+      in
+        (* Replay always via bin/hol --min for a fresh kernel *)
+        let
+          val script = OS.FileSys.tmpName ()
+          val s = TextIO.openOut script
+          fun wr x = TextIO.output(s, x)
+          val hol_libs = if !load_hol then ["bossLib", "holTheory"] else []
+          val all_loads = hol_libs @ rev (!loads)
+          val load_lines = map (fn lib =>
+            "val _ = Meta.load \"" ^ String.toString lib ^ "\";")
+            all_loads
+          val verbose_lines = if !verbose then [
+            "val _ = List.app (fn (name, th) =>",
+            "  let val concl = (Parse.term_to_string (Thm.concl th)",
+            "                   handle _ => \"<unprintable>\")",
+            "      val hyps = Thm.hyp th",
+            "      val hyp_str = if null hyps then \"\"",
+            "        else \" [\" ^ Int.toString (length hyps) ^ \" hyps]\"",
+            "      val tags = #1 (Tag.dest_tag (Thm.tag th))",
+            "      val status = if null tags then \"OK\"",
+            "        else \"ORACLE[\" ^ String.concatWith \",\" tags ^ \"]\"",
+            "  in print (status ^ \" \" ^ name ^ \": \" ^ concl",
+            "            ^ hyp_str ^ \"\\n\") end)",
+            "  prooftrace_exports;"
+          ] else []
+          val summary_lines = [
+            "val _ = let",
+            "  val n = length prooftrace_exports",
+            "  val n_oracle = length (List.filter (fn (_,th) =>",
+            "    not (null (#1 (Tag.dest_tag (Thm.tag th)))))",
+            "    prooftrace_exports)",
+            "in print (\"\\n\" ^ Int.toString (n - n_oracle) ^ \"/\"",
+            "  ^ Int.toString n ^ \" exports verified clean\"",
+            "  ^ (if n_oracle > 0 then \" (\" ^ Int.toString n_oracle",
+            "     ^ \" with oracle tags)\" else \"\") ^ \"\\n\") end;"
+          ]
+          val exit_lines = if !interactive then [
+            "val _ = print \"\\nExports bound as prooftrace_exports.\\n\";"
+          ] else [
+            "val _ = OS.Process.exit (if List.all (fn (_,th) =>",
+            "  null (#1 (Tag.dest_tag (Thm.tag th))))",
+            "  prooftrace_exports",
+            "  then OS.Process.success else OS.Process.failure);"
+          ]
+          val lines =
+            ["load \"ReplayTrace\";",
+             "load \"Parse\";",
+             "val prooftrace_exports = ReplayTrace.replay_file",
+             "  \"" ^ String.toString abs_path ^ "\";"] @
+            load_lines @
+            ["val _ = List.app (fn (name, th) =>",
+             "  let val tags = #1 (Tag.dest_tag (Thm.tag th))",
+             "      val status = if null tags then \"OK\" else \"ORACLE\"",
+             "  in print (status ^ \" \" ^ name ^ \"\\n\") end)",
+             "  prooftrace_exports;"] @
+            verbose_lines @
+            summary_lines @
+            exit_lines
+          val _ = List.app (fn l => wr (l ^ "\n")) lines
+          val _ = TextIO.closeOut s
+          val hol = OS.Path.concat(holdir, "bin/hol")
+          val cmdline = hol ^ " --min " ^ script
+        in
+          err ("Replaying: " ^ abs_path ^ "\n");
+          OS.Process.exit (OS.Process.system cmdline)
+        end
+      end
+
     (* --- dispatch --- *)
   in
     case args of
       [] => usage ()
     | ["--help"] => usage ()
     | ["-h"] => usage ()
-    | ("build" :: _) => die "build: not yet implemented"
+    | ("build" :: rest) => do_build rest
     | ("merge" :: rest) => do_merge rest
-    | ("replay" :: _) => die "replay: not yet implemented"
+    | ("replay" :: rest) => do_replay rest
     | (cmd :: _) => die ("unknown command: " ^ cmd)
   end

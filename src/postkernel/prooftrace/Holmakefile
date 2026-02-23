@@ -3,18 +3,11 @@ all: $(DEFAULT_TARGETS) TraceRecord.uo ReplayTrace.uo MergeTrace.uo
 
 ifdef POLY
 MINSTATE = $(dprot $(HOLDIR)/bin/hol.state.min)
-PROOFTRACE = $(dprot $(HOLDIR)/bin/prooftrace)
 
 $(MINSTATE): ReplayTrace.uo MergeTrace.uo $(dprot $(HOLDIR)/bin/hol)
 	$(protect $(HOLDIR)/bin/hol) buildheap --poly -o $@ \
 	  $(protect $(SIGOBJ)/HolKernel) \
 	  ReplayTrace MergeTrace
 
-$(PROOFTRACE): prooftrace_main.uo ReplayTrace.uo MergeTrace.uo $(dprot $(HOLDIR)/bin/hol)
-	$(protect $(HOLDIR)/bin/hol) buildheap --poly --exe=main \
-	  -o $@ \
-	  $(protect $(SIGOBJ)/HolKernel) \
-	  ReplayTrace MergeTrace prooftrace_main
-
-all: $(MINSTATE) $(PROOFTRACE)
+all: $(MINSTATE)
 endif
