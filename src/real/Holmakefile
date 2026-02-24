@@ -17,7 +17,10 @@ endif
 selftest.exe: selftest.uo realSimps.uo
 	$(HOLMOSMLC) -o $@ $<
 
-EXTRA_CLEANS = selftest.exe real-selftest.log
+selftest_sos.exe: selftest_sos.uo SOSLib.uo
+	$(HOLMOSMLC) -o $@ $<
+
+EXTRA_CLEANS = selftest.exe selftest_sos.exe real-selftest.log sos-selftest.log
 
 ifeq ($(KERNELID),otknl)
 BARE_THYS = realax real intreal real_sigma metric nets
@@ -51,9 +54,12 @@ all: hol4-real.art
 endif
 
 ifdef HOLSELFTESTLEVEL
-all: real-selftest.log
+all: real-selftest.log sos-selftest.log
 
 real-selftest.log: selftest.exe
+	$(tee ./$<, $@)
+
+sos-selftest.log: selftest_sos.exe
 	$(tee ./$<, $@)
 
 endif
