@@ -258,7 +258,13 @@ exports, loading ancestors on demand as discovered):
    Full line text is not stored — only dependency lists.
 2. Walk backward from the needed theorem IDs, marking live P
    entries, then transitively marking the T and Y entries they
-   reference as live.
+   reference as live. When a T entry for a non-primitive
+   constant (`C thy name tyid` where thy ≠ `min`) is marked
+   live, the DEF_SPEC that defines that constant (if present
+   in this file) is also marked live. Similarly, when a Y
+   entry for a non-primitive type operator is marked live, the
+   corresponding DEF_TYOP is marked live. This cascades
+   naturally within the reachability walk.
 3. When the walk hits a DISK_THM entry (thy, name), add that
    to the needed ancestor exports. If the ancestor's trace
    hasn't been processed yet, process it.
