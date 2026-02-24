@@ -196,7 +196,11 @@ fun main () =
           ]
 
           val lines =
-            ["load \"ReplayTrace\";",
+            [(* Deactivate proof tracing in the replay subprocess
+                so it doesn't record a trace of the replay itself *)
+             "val _ = (Thm.trace_hook := NONE;",
+             "         Thm.trace_export_hook := NONE);",
+             "load \"ReplayTrace\";",
              "val prooftrace_exports = ReplayTrace.replay_file",
              "  \"" ^ String.toString abs_path ^ "\";"] @
             print_lines @
