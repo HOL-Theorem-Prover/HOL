@@ -7,21 +7,22 @@ Libs
 (* example defining a mutually recursive pair of types that one would
    specify as
 
-ty1 = C11 ty2 | C12 ('b -> ty2 # ty1) ;
+ty1 = C11 ty2 | C12 ('b -> (ty2 # ty1) option) ;
 ty2 = C21 ty1 | C22 ty1 ty2    (* non-empty list of ty1's *)
 
 *)
 
 
-(* the functor type for ty1, 'a1 will be instantiated with ty2 eventually;
+(* The functor type for ty1, 'a1 will be instantiated with ty2 eventually;
    'a2 is where this type recurses on itself *)
-Type F[pp] = “:'a1 + ('b1 -> 'a1 # 'a2)”
+Type F[pp] = “:'a1 + ('b1 -> ('a1 # 'a2) option)”
 
 (* As recursion variable is 'a2, non-emptiness depends on the 'a1 *)
 
 val SOME (bI fun_data) = pure_lookup (fullDB()) {Thy = "min", Name = "fun"}
 val SOME (bI sum_data) = pure_lookup (fullDB()) {Thy = "sum", Name = "sum"}
 val SOME (bI pair_data) = pure_lookup (fullDB()) {Thy = "pair", Name = "prod"}
+val SOME (bI opt_data) = pure_lookup (fullDB()) {Thy = "option", Name = "option"}
 val a1 = mk_vartype("'a1")
 val a2 = mk_vartype("'a2")
 val b1 = mk_vartype("'b1")
@@ -31,61 +32,52 @@ val num = “:num”
 infix **
 fun ty1 ** ty2 = pairSyntax.mk_prod(ty1,ty2)
 
+fun option ty = optionSyntax.mk_option ty
+
 val bsimp = asm_simp_tac bool_ss
 val BRULE = SIMP_RULE bool_ss
-
-(*
-generic set functions have type
-
-   |- gset (f₁:α₁ -> γ set) ... (fₙ:αₙ -> γ set)
-           (x : (α₁, ... αₙ, β₁ ... βₘ) tyop) : γ set =
-        BIGUNION (IMAGE f₁ (set₁ x)) ∪
-        ...
-        BIGUNION (IMAGE fₙ (set₁ x))
-*)
-fun gsetmap_O th =
-  let val xv = rand (rhs (concl th))
-  in
-    th |> GEN xv
-       |> CONV_RULE (REWR_CONV o_INTRO)
-  end
 
 (* ----------------------------------------------------------------------
     Can now define set and map for our new functor; establishing
     functoriality and naturalness
    ---------------------------------------------------------------------- *)
 
-val summap = #map sum_data |> inst [a2 |-> (b1 --> (a1 ** a2)),
-                                    c2 |-> (b1 --> (c1 ** c2))]
-val funmap = #map fun_data |> inst [a1 |-> (a1 ** a2), c1 |-> (c1 ** c2)]
+val summap = #map sum_data |> inst [a2 |-> (b1 --> option (a1 ** a2)),
+                                    c2 |-> (b1 --> option (c1 ** c2))]
+val funmap = #map fun_data |> inst [a1 |-> option (a1 ** a2),
+                                    c1 |-> option (c1 ** c2)]
+val optmap = #map opt_data |> inst [a1 |-> (a1 ** a2), c1 |-> (c1 ** c2)]
 val pairmap = #map pair_data
 Overload Fmap[local] =
-  “λ(f1:'a1 -> 'c1) (f2:'a2 -> 'c2). ^summap f1 (^funmap (^pairmap f1 f2))
+  “λ(f1:'a1 -> 'c1) (f2:'a2 -> 'c2).
+     ^summap f1 (^funmap (^optmap (^pairmap f1 f2)))
     : ('a1,'a2,'b1) F -> ('c1,'c2,'b1) F”
-
-Overload BIMG = “λf A. BIGUNION (IMAGE f A)”
 
 Overload Fset1[local] =
   “λx : ('a1,'a2,'b1) F .
      BIMG $= (setL (x:('a1,'a2,'b1)F)) ∪
-     BIMG (λf. BIMG
-                (λp. BIMG $= (setFST p) ∪ BIMG (K ∅) (setSND p))
-                (flip IMAGE univ(:'b1) f))
-          (setR x)
+     BIMG
+       (λf. BIMG
+              (λopt. BIMG (λp. BIMG $= (setFST p) ∪ BIMG (K ∅) (setSND p))
+                          (optSET opt))
+              (flip IMAGE univ(:'b1) f))
+       (setR x)
    : 'a1 set”
 
 Overload Fset2[local] =
   “λx : ('a1,'a2,'b1) F.
      BIMG (K ∅) (setL x) ∪
      BIMG (λf. BIMG
-                (λp. BIMG (K ∅) (setFST p) ∪ BIMG $= (setSND p))
+                (λopt. BIMG (λp. BIMG (K ∅) (setFST p) ∪ BIMG $= (setSND p))
+                            (optSET opt))
                 (flip IMAGE univ(:'b1) f))
           (setR x) : 'a2 set”
 
 Theorem FmapID:
   Fmap (I:'a1 -> 'a1) (I:'a2 -> 'a2) = I : ('a1,'a2,'b1) F -> ('a1,'a2,'b1) F
 Proof
-  REWRITE_TAC[#mapID sum_data, #mapID fun_data, #mapID pair_data]
+  REWRITE_TAC[#mapID sum_data, #mapID fun_data, #mapID pair_data,
+              #mapID opt_data]
 QED
 
 Theorem FmapID' = PURE_REWRITE_RULE [FUN_EQ_THM, I_THM] FmapID
@@ -95,32 +87,13 @@ Theorem FmapO:
   Fmap (g1 : 'a1 -> 'c1) (g2 : 'a2 -> 'c2) =
   Fmap (f1 o g1) (f2 o g2) : ('a1,'a2,'b1) F -> ('d1,'d2,'b1) F
 Proof
-  REWRITE_TAC[#mapO sum_data, #mapO fun_data, #mapO pair_data]
+  REWRITE_TAC[#mapO sum_data, #mapO fun_data, #mapO pair_data, #mapO opt_data]
 QED
 
 Theorem FmapO' =
         CONV_RULE (LAND_CONV $ SCONV[o_DEF] THENC
                    SCONV[FUN_EQ_THM])
                   FmapO
-
-Theorem BIMG_EQUAL:
-  BIMG $= A = A
-Proof
-  simp[Once EXTENSION, PULL_EXISTS, IN_equal]
-QED
-
-Theorem BIMG_K0:
-  BIMG (K ∅) A = ∅
-Proof
-  simp[Once EXTENSION] >> simp[Once EXTENSION] >>
-  rw[EQ_IMP_THM] >> metis_tac[MEMBER_NOT_EMPTY]
-QED
-
-Theorem BIMG_IMAGE:
-  BIMG (λx. IMAGE f (g x)) A = IMAGE f (BIMG g A)
-Proof
-  simp[Once EXTENSION, PULL_EXISTS] >> metis_tac[]
-QED
 
 Theorem FmapIMAGE1:
   Fset1 (Fmap (f1:'a1 -> 'c1) (f2:'a2 -> 'c2) x) : 'c1 set =
@@ -129,6 +102,7 @@ Proof
   simp_tac bool_ss (#mapIMAGE sum_data @
                     #mapIMAGE fun_data @
                     #mapIMAGE pair_data @
+                    #mapIMAGE opt_data @
                     [BIMG_EQUAL, IMAGE_UNION, IMAGE_EMPTY,
                      IMAGE_IMAGE, BIMG_K0,
                      o_ABS_L, K_o_THM,
@@ -143,6 +117,7 @@ Proof
   simp_tac bool_ss (#mapIMAGE sum_data @
                     #mapIMAGE fun_data @
                     #mapIMAGE pair_data @
+                    #mapIMAGE opt_data @
                     [BIMG_EQUAL, IMAGE_UNION, IMAGE_EMPTY,
                      IMAGE_IMAGE, BIMG_K0,
                      o_ABS_L, K_o_THM,
@@ -165,14 +140,12 @@ Proof
       rpt strip_tac >>
       irule (#mapCONG fun_data) >>
       rpt strip_tac >>
+      (* down to option *)
+      irule (#mapCONG opt_data) >>
+      rpt strip_tac >>
       (* down to pair *)
-      irule (#mapCONG pair_data)>> conj_tac
-      >- ((* fst branch terminates *)
-          rpt strip_tac >>
-          first_x_assum dxrule_all >> REWRITE_TAC[])
-      >- ((* snd branch terminates *)
-          rpt strip_tac >>
-          first_x_assum dxrule_all >> REWRITE_TAC[]))
+      irule (#mapCONG pair_data) >> (* 2 *)
+      rpt strip_tac >> first_x_assum drule_all >> REWRITE_TAC[])
 QED
 
 Theorem Fmap_eq_id:
@@ -214,11 +187,18 @@ Proof
               metis_tac(CARD_LE_ADDL :: CARD_LE_ADDR :: cardleq_TRANS ::
                                      #bndthms fun_data))
           >- (rpt strip_tac >>
-              irule UNION_CARDLE >>
-              REWRITE_TAC[num_INFINITE,disjUNION_UNIV,CARD_ADD_FINITE_EQ,
-                          BIMG_K0, EMPTY_CARDLEQ, BIMG_EQUAL] >>
+              irule CARD_BIGUNION >>
+              simp_tac bool_ss [IN_IMAGE, PULL_EXISTS, num_INFINITE,
+                                UNIV_NOT_EMPTY,
+                                CARD_ADD_FINITE_EQ, SING_CARDLE,
+                                disjUNION_EQ_EMPTY] >>
+              reverse conj_tac
+              >- (irule IMAGE_cardleq_rwt >> (* optSET OK *)
+                  metis_tac(CARD_LE_ADDL :: CARD_LE_ADDR :: cardleq_TRANS ::
+                            #bndthms opt_data)) >>
+              rpt strip_tac >>(* pair OK *)
               metis_tac(CARD_LE_ADDL :: CARD_LE_ADDR :: cardleq_TRANS ::
-                                     #bndthms pair_data))))
+                        UNION_EMPTY :: #bndthms pair_data))))
 QED
 
 Theorem Fset2_bounded:
@@ -246,11 +226,16 @@ Proof
           metis_tac(CARD_LE_ADDL :: CARD_LE_ADDR :: cardleq_TRANS ::
                                  #bndthms fun_data))
       >- (rpt strip_tac >>
-          irule UNION_CARDLE >>
-          REWRITE_TAC[num_INFINITE,disjUNION_UNIV,CARD_ADD_FINITE_EQ,
-                      BIMG_K0, EMPTY_CARDLEQ, BIMG_EQUAL] >>
-          metis_tac(CARD_LE_ADDL :: CARD_LE_ADDR :: cardleq_TRANS ::
-                                 #bndthms pair_data)))
+          irule CARD_BIGUNION >>
+          simp_tac bool_ss [IN_IMAGE, PULL_EXISTS, num_INFINITE, UNIV_NOT_EMPTY,
+                            CARD_ADD_FINITE_EQ, SING_CARDLE,
+                            disjUNION_EQ_EMPTY] >>
+          reverse conj_tac
+          >- (irule IMAGE_cardleq_rwt >> (* optSET OK *)
+              metis_tac(CARD_LE_ADDL :: CARD_LE_ADDR :: cardleq_TRANS ::
+                                     #bndthms opt_data))
+          >- (metis_tac(CARD_LE_ADDL :: CARD_LE_ADDR :: cardleq_TRANS ::
+                        UNION_EMPTY :: #bndthms pair_data))))
 QED
 
 (* ----------------------------------------------------------------------
@@ -286,10 +271,16 @@ Proof
   Cases_on ‘p’ >> simp[]
 QED
 
-Theorem IN_range:
-  a1 IN flip IMAGE univ(:'b1) (f:'b1 -> 'a1) ⇔ ∃b1. f b1 = a1
+Theorem IN_optSET:
+  x IN optSET y ⇔ y = SOME x
 Proof
-  simp[] >> metis_tac[]
+  Cases_on ‘y’ >> simp[bnfPrelimsTheory.optSET_def] >> metis_tac[]
+QED
+
+Theorem IN_fnSET:
+  v ∈ flip IMAGE UNIV (K v)
+Proof
+  bsimp[combinTheory.C_THM, combinTheory.K_THM, IN_IMAGE, IN_UNIV]
 QED
 
 Theorem Fset_exists:
@@ -300,7 +291,9 @@ Proof
                     K_THM, NOT_IN_EMPTY, IN_equal] >>
   irule_at Any IN_setR >>
   irule_at Any IN_setSND >>
-  simp[IN_range]
+  irule_at Any $ iffRL IN_optSET >>
+  irule_at Any IN_fnSET >>
+  irule_at Any EQ_REFL
 QED
 
 Definition alg_def:
@@ -471,16 +464,17 @@ End
 Theorem bigprod_isalg:
   alg bigprod
 Proof
-  simp[bigprod_def, alg_def, FORALL_PROD, Fin_def] >> rpt strip_tac >>
-  Cases_on ‘dIx i’ >> rename [‘dIx i = (A,s)’] >>
-  ‘alg(A,s)’ by metis_tac[termP_term_REP] >> simp[] >> gs[alg_def] >>
-  first_assum irule >>
-  gs[Fin_def, SUBSET_DEF, PULL_EXISTS, FmapIMAGE2, IN_equal] >>
-  rpt strip_tac >> rename [‘x ∈ setSND (_ (b y))’] >>
-  Cases_on ‘b y’ >> gvs[] >>
-  first_x_assum $ drule_at (Pat ‘_ ∈ setR _’) >>
-  ‘r ∈ setSND (b y)’ by simp[] >> disch_then drule >>
-  metis_tac[FST]
+  bsimp[bigprod_def, alg_def, FORALL_PROD, Fin_def, IN_GSPEC_IFF] >>
+  rpt strip_tac >>
+  Cases_on ‘dIx i’ >> rename [‘dIx i = (A,s)’] >> bsimp[FST, SND] >>
+  ‘alg(A,s)’ by metis_tac[termP_term_REP] >>
+  pop_assum mp_tac >> bsimp[alg_def] >>
+  disch_then irule >>
+  bsimp[Fin_def, IN_GSPEC_IFF, SUBSET_UNIV, FmapIMAGE2] >>
+  bsimp[SUBSET_DEF, PULL_EXISTS, IN_IMAGE] >>
+  rpt strip_tac >> drule_all $ iffLR SUBSET_DEF >>
+  bsimp[IN_GSPEC_IFF] >> disch_then $ qspec_then ‘i’ mp_tac >>
+  bsimp[FST]
 QED
 
 Theorem bigprod_proj:
@@ -1530,7 +1524,9 @@ Proof
 QED
 
 Theorem SET_C2:
-  SET (C2 f) = { a | ∃x u v. f x = (u,v) ∧ (u = a ∨ a ∈ SET v)}
+  SET (C2 f) =
+  { a | ∃x opt p. f x = opt ∧ p ∈ optSET opt ∧
+                  (a ∈ setFST p ∨ ∃n. n ∈ setSND p ∧ a ∈ SET n) }
 Proof
   bsimp[C2_def, SET_def] >>
   ONCE_REWRITE_TAC[EXTENSION] >>
@@ -1538,9 +1534,8 @@ Proof
         BIMG_K0, UNION_EMPTY, BIMG_EQUAL] >>
   bsimp[IN_BIGUNION, IN_UNION, IN_IMAGE, PULL_EXISTS, sumTheory.setL_def,
         sumTheory.setR_def, combinTheory.C_DEF, IN_UNIV]>>
-  bsimp[IN_DEF, pairTheory.setSND_def, pairTheory.setFST_def] >>
-  gen_tac >> iff_tac >> rpt strip_tac >>
-  metis_tac[TypeBase.nchotomy_of “:'a # 'b”, FST, SND]
+  bsimp[IN_DEF, pairTheory.setSND_def, pairTheory.setFST_def, FST, SND,
+        EXISTS_PROD] >> metis_tac[]
 QED
 
 (* gives bnd, but seems non-trivial to get automatically *)
@@ -1560,6 +1555,74 @@ Proof
   >- bsimp[disjUNION_UNIV, CARD_ADD_FINITE_EQ, INFINITE_NUM_UNIV] >~
   [‘IMAGE SET _ ≼ _ (* g *)’]
   >- (irule IMAGE_cardleq_rwt >> bsimp[Fset2_bounded]) >>
-
   bsimp[IN_IMAGE, PULL_EXISTS]
+QED
+
+Definition FIN_def:
+  FIN A = { x | SET x ⊆ A }
+End
+
+val Fin_def = FIN_def
+
+Theorem EXISTS_NCONS:
+  (∃x:('a1,'b1) nty. P x) ⇔ ∃fv. P (NCONS fv)
+Proof
+  metis_tac[DEST_def]
+QED
+
+Theorem setL_EQ_EMPTY:
+  setL s = {} ⇔ ∃x. s = INR x
+Proof
+  Cases_on ‘s’ >>
+  bsimp[sumTheory.setL_def, EMPTY_DEF, FUN_EQ_THM, sumTheory.sum_distinct] >>
+  irule_at Any EQ_REFL
+QED
+
+Theorem setR_EQ_EMPTY:
+  setR s = {} ⇔ ∃x. s = INL x
+Proof
+  Cases_on ‘s’ >>
+  bsimp[sumTheory.setR_def, EMPTY_DEF, FUN_EQ_THM, sumTheory.sum_distinct] >>
+  irule_at Any EQ_REFL
+QED
+
+Theorem IMAGE_EQ_EQ0:
+  IMAGE $= A = {∅} ⇔ F
+Proof
+  bsimp[Once EXTENSION, IN_IMAGE, IN_INSERT, NOT_IN_EMPTY, IN_GSPEC_IFF] >>
+  bsimp [EQ_SING] >> bsimp[INSERT_applied, NOT_IN_EMPTY] >>
+  qexists_tac ‘{}’ >>
+  bsimp[PULL_EXISTS, NOT_EMPTY_INSERT]
+QED
+
+Theorem IMAGEf_eq_SING0:
+  IMAGE f A = {∅} ⇔ (∀a. a ∈ A ⇒ f a = ∅) ∧ ∃a. a ∈ A
+Proof
+  simp[Once EXTENSION, SimpLHS] >> simp[] >> iff_tac
+  >- (Cases_on ‘A = ∅’ >> simp[] >> metis_tac[MEMBER_NOT_EMPTY]) >>
+  metis_tac[]
+QED
+
+Theorem optSET_EQ_EMPTY:
+  optSET x = ∅ ⇔ x = NONE
+Proof
+  Cases_on ‘x’ >> simp[bnfPrelimsTheory.optSET_def]
+QED
+
+(* blergh *)
+Theorem nonempty:
+  FIN ∅ ≠ ∅
+Proof
+  REWRITE_TAC[EXTENSION, Fin_def] >>
+  bsimp[NOT_IN_EMPTY, IN_GSPEC_IFF, SUBSET_EMPTY, EXISTS_NCONS] >>
+  ONCE_REWRITE_TAC[SET_def] >>
+  bsimp[EMPTY_UNION, BIMG_EQUAL, BIGUNION_EQ_EMPTY, setL_EQ_EMPTY,
+        setR_EQ_EMPTY, IMAGE_EQ_EMPTY, IMAGE_EQ_EQ0] >>
+  bsimp[FORALL_AND_THM, PULL_EXISTS, sumTheory.sum_distinct,
+        sumTheory.INR_11, sumTheory.setR_def] >>
+  bsimp[IMAGEf_eq_SING0, IN_ABS, IN_BIGUNION, IN_IMAGE, IN_UNION, PULL_EXISTS,
+        combinTheory.K_THM, NOT_IN_EMPTY, BIGUNION_EQ_EMPTY, IMAGE_EQ_EMPTY,
+        combinTheory.C_THM, UNIV_NOT_EMPTY, IN_UNIV, optSET_EQ_EMPTY,
+        EMPTY_UNION, IN_optSET] >>
+  qexists ‘K NONE’ >> bsimp[combinTheory.K_THM]
 QED
