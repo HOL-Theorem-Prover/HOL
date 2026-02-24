@@ -93,28 +93,79 @@ fun replay_file path =
     val (instrm, proc) = open_trace path
     fun cleanup () = close_trace (instrm, proc)
 
-    (* Growable arrays for types and terms (small sequential IDs) *)
-    val ty_arr : Type.hol_type option Array.array ref =
-      ref (Array.array(1000, NONE))
-    val tm_arr : Term.term option Array.array ref =
-      ref (Array.array(10000, NONE))
+    (* Lazy type/term construction: store raw descriptions,
+       construct on demand when first accessed. This ensures
+       definitions run before the types/terms they define
+       are constructed. *)
+    datatype ty_desc = TyVar of string | TyOp of string * string * int list
+    datatype tm_desc = TmVar of string * int | TmConst of string * string * int
+                     | TmApp of int * int | TmLam of int * int
 
-    fun grow arr n =
+    fun grow arr n default =
       let val old = !arr
           val old_len = Array.length old
       in if n < old_len then ()
          else let val new_len = Int.max(n + 1, old_len * 2)
-                  val new_arr = Array.array(new_len, NONE)
+                  val new_arr = Array.array(new_len, default)
               in Array.appi (fn (i, v) =>
                    Array.update(new_arr, i, v)) old;
                  arr := new_arr
               end
       end
 
-    fun set_ty i v = (grow ty_arr i; Array.update(!ty_arr, i, SOME v))
-    fun set_tm i v = (grow tm_arr i; Array.update(!tm_arr, i, SOME v))
-    fun ty i = valOf (Array.sub(!ty_arr, i))
-    fun tm i = valOf (Array.sub(!tm_arr, i))
+    val ty_descs : ty_desc option Array.array ref =
+      ref (Array.array(1000, NONE))
+    val ty_cache : Type.hol_type option Array.array ref =
+      ref (Array.array(1000, NONE))
+    val tm_descs : tm_desc option Array.array ref =
+      ref (Array.array(10000, NONE))
+    val tm_cache : Term.term option Array.array ref =
+      ref (Array.array(10000, NONE))
+
+    fun set_ty_desc i d =
+      (grow ty_descs i NONE; Array.update(!ty_descs, i, SOME d))
+    fun set_tm_desc i d =
+      (grow tm_descs i NONE; Array.update(!tm_descs, i, SOME d))
+
+    fun ty i =
+      (grow ty_cache i NONE;
+       case Array.sub(!ty_cache, i) of
+         SOME v => v
+       | NONE =>
+         let val v = case Array.sub(!ty_descs, i) of
+               SOME (TyVar name) => Type.mk_vartype name
+             | SOME (TyOp (thy, name, args)) =>
+                 let val targs = map ty args
+                 in Type.mk_thy_type {Thy=thy, Tyop=name, Args=targs}
+                    handle HOL_ERR _ =>
+                      (Type.prim_new_type {Thy=thy, Tyop=name} (length targs);
+                       Type.mk_thy_type {Thy=thy, Tyop=name, Args=targs})
+                 end
+             | NONE => raise ERR "replay" ("unknown type id " ^
+                         Int.toString i)
+         in Array.update(!ty_cache, i, SOME v); v end)
+
+    fun tm i =
+      (grow tm_cache i NONE;
+       case Array.sub(!tm_cache, i) of
+         SOME v => v
+       | NONE =>
+         let val v = case Array.sub(!tm_descs, i) of
+               SOME (TmVar (name, tyid)) =>
+                 Term.mk_var(name, ty tyid)
+             | SOME (TmConst (thy, name, tyid)) =>
+                 (Term.mk_thy_const {Thy=thy, Name=name, Ty=ty tyid}
+                  handle HOL_ERR _ =>
+                    (ignore (Term.prim_new_const {Name=name, Thy=thy}
+                               (ty tyid));
+                     Term.mk_thy_const {Thy=thy, Name=name, Ty=ty tyid}))
+             | SOME (TmApp (fid, xid)) =>
+                 Term.mk_comb(tm fid, tm xid)
+             | SOME (TmLam (vid, bid)) =>
+                 Term.mk_abs(tm vid, tm bid)
+             | NONE => raise ERR "replay" ("unknown term id " ^
+                         Int.toString i)
+         in Array.update(!tm_cache, i, SOME v); v end)
 
     (* Map for theorems (trace_ids can be large/sparse) *)
     val thm_map : (int, Thm.thm) Redblackmap.dict ref =
@@ -136,47 +187,27 @@ fun replay_file path =
         [] => ()
       | ["V", n] => ()  (* version line *)
 
-      (* --- Type entries --- *)
+      (* --- Type entries (stored lazily) --- *)
       | ["Y", id_s, "V", name] =>
-          set_ty (int_of id_s)
-                 (Type.mk_vartype (unescape name))
+          set_ty_desc (int_of id_s) (TyVar (unescape name))
       | ("Y" :: id_s :: "O" :: thy_s :: name_s :: arg_ids) =>
-          let val args = map (ty o int_of) arg_ids
-          in set_ty (int_of id_s)
-               (Type.mk_thy_type {Thy = unescape thy_s,
-                                  Tyop = unescape name_s,
-                                  Args = args}
-                handle HOL_ERR _ =>
-                  (Type.prim_new_type {Thy = unescape thy_s,
-                                      Tyop = unescape name_s}
-                                     (length args);
-                   Type.mk_thy_type {Thy = unescape thy_s,
-                                    Tyop = unescape name_s,
-                                    Args = args}))
-          end
+          set_ty_desc (int_of id_s)
+            (TyOp (unescape thy_s, unescape name_s,
+                   map int_of arg_ids))
 
-      (* --- Term entries --- *)
+      (* --- Term entries (stored lazily) --- *)
       | ["T", id_s, "V", name_s, ty_s] =>
-          set_tm (int_of id_s)
-                 (Term.mk_var(unescape name_s, ty (int_of ty_s)))
+          set_tm_desc (int_of id_s)
+            (TmVar (unescape name_s, int_of ty_s))
       | ["T", id_s, "C", thy_s, name_s, ty_s] =>
-          set_tm (int_of id_s)
-                 (Term.mk_thy_const {Thy = unescape thy_s,
-                                     Name = unescape name_s,
-                                     Ty = ty (int_of ty_s)}
-                  handle HOL_ERR _ =>
-                    (ignore (Term.prim_new_const
-                       {Name = unescape name_s, Thy = unescape thy_s}
-                       (ty (int_of ty_s)));
-                     Term.mk_thy_const {Thy = unescape thy_s,
-                                        Name = unescape name_s,
-                                        Ty = ty (int_of ty_s)}))
+          set_tm_desc (int_of id_s)
+            (TmConst (unescape thy_s, unescape name_s, int_of ty_s))
       | ["T", id_s, "A", f_s, x_s] =>
-          set_tm (int_of id_s)
-                 (Term.mk_comb(tm (int_of f_s), tm (int_of x_s)))
+          set_tm_desc (int_of id_s)
+            (TmApp (int_of f_s, int_of x_s))
       | ["T", id_s, "L", v_s, b_s] =>
-          set_tm (int_of id_s)
-                 (Term.mk_abs(tm (int_of v_s), tm (int_of b_s)))
+          set_tm_desc (int_of id_s)
+            (TmLam (int_of v_s, int_of b_s))
 
       (* --- Theorem entries --- *)
       | ("P" :: id_s :: rule :: args) =>
