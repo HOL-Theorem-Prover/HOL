@@ -113,12 +113,17 @@ fun out_strm () =
       (TextIO.output(s, ""); s)
       handle _ =>
         (* Stale stream from heap restore — reopen.
-           Clean up the stale temp file before opening a new one. *)
+           Clean up stale temp files (from theory builds) but not
+           completed heap trace files. Temp files have .tmp suffix;
+           heap traces have .pft suffix. *)
         let val stale = !output_path_ref
+            fun is_tmp p = String.isSuffix ".tmp" p
         in output_strm := NONE; output_path_ref := NONE;
            (!reset_for_new_session) ();
            (case stale of
-              SOME p => (OS.FileSys.remove p handle _ => ())
+              SOME p => if is_tmp p then
+                          (OS.FileSys.remove p handle _ => ())
+                        else ()
             | NONE => ());
            case find_heap_output () of
              SOME path => open_heap_file path
