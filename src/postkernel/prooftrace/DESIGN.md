@@ -283,7 +283,11 @@ exports, loading ancestors on demand as discovered):
    in this file) is also marked live. Similarly, when a Y
    entry for a non-primitive type operator is marked live, the
    corresponding DEF_TYOP is marked live. This cascades
-   naturally within the reachability walk.
+   naturally within the reachability walk. When the DEF_SPEC
+   or DEF_TYOP is NOT in the current file (the type/constant
+   was defined in an ancestor theory), the ancestor theory's
+   trace file is loaded and the DEF_SPEC/DEF_TYOP entry is
+   enqueued for processing (analogous to DISK_THM resolution).
 3. When the walk hits a DISK_THM entry (thy, name), add that
    to the needed ancestor exports (resolved via E lines). When
    it hits a DISK_DEP entry (thy, depid), add that to the

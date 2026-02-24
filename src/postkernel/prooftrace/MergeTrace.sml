@@ -397,7 +397,9 @@ type liveness = {
 fun mark_live (data : file_data) (prev : liveness)
               (needed_thm_ids : int list)
   : liveness * int list (* unresolved parent trace_ids *)
-    * bool (* true if any COMPUTE entry was newly marked live *) =
+    * bool (* true if any COMPUTE entry was newly marked live *)
+    * (string * string) list (* unresolved type defs: (thy, tyop) *)
+    * (string * string) list (* unresolved const defs: (thy, name) *) =
   let
     val live_y = #live_y prev
     val live_t = #live_t prev
@@ -408,17 +410,24 @@ fun mark_live (data : file_data) (prev : liveness)
     (* Build per-term and per-type arrays mapping to the
        DEF_SPEC/DEF_TYOP trace_id that defines them (~1 = none).
        This lets mark_term/mark_type directly cascade into
-       mark_thm for definitions, keeping the walk linear. *)
+       mark_thm for definitions, keeping the walk linear.
+       Track refs with no local def for cross-file resolution. *)
     val t_def = Array.array(#n_terms data, ~1)
+    val t_unresolved_defs = ref ([] : (int * (string * string)) list)
     val _ = List.app (fn (tid, (thy, name)) =>
       case Redblackmap.peek(#const_defs data, (thy, name)) of
         SOME pid => Array.update(t_def, tid, pid)
-      | NONE => ()) (#t_const_refs data)
+      | NONE => t_unresolved_defs := (tid, (thy, name))
+                                     :: !t_unresolved_defs)
+      (#t_const_refs data)
     val y_def = Array.array(#n_types data, ~1)
+    val y_unresolved_defs = ref ([] : (int * (string * string)) list)
     val _ = List.app (fn (yid, (thy, tyop)) =>
       case Redblackmap.peek(#type_defs data, (thy, tyop)) of
         SOME pid => Array.update(y_def, yid, pid)
-      | NONE => ()) (#y_tyop_refs data)
+      | NONE => y_unresolved_defs := (yid, (thy, tyop))
+                                     :: !y_unresolved_defs)
+      (#y_tyop_refs data)
 
     fun mark_thm id =
       if Redblackset.member(!live_p, id) then ()
@@ -465,9 +474,24 @@ fun mark_live (data : file_data) (prev : liveness)
       end
     else ();
 
-    ({live_y = live_y, live_t = live_t, live_p = !live_p},
-     Redblackset.listItems (!unresolved),
-     !found_compute)
+    (* Collect unresolved type/const defs for live entries.
+       Must be after mark_thm so live_y/live_t are populated. *)
+    let
+      val unresolved_tyops =
+        List.mapPartial (fn (yid, key) =>
+          if Array.sub(live_y, yid) then SOME key else NONE)
+          (!y_unresolved_defs)
+      val unresolved_consts =
+        List.mapPartial (fn (tid, key) =>
+          if Array.sub(live_t, tid) then SOME key else NONE)
+          (!t_unresolved_defs)
+    in
+      ({live_y = live_y, live_t = live_t, live_p = !live_p},
+       Redblackset.listItems (!unresolved),
+       !found_compute,
+       unresolved_tyops,
+       unresolved_consts)
+    end
   end
 
 (* ------- Dedup map key types ------- *)
@@ -687,12 +711,47 @@ fun merge {trace_paths : (string * string) list,
       let
         val data = load_file path
         val prev_lv = get_liveness path
-        val (lv, unresolved, found_compute) =
+        val (lv, unresolved, found_compute,
+             unresolved_tyops, unresolved_consts) =
           mark_live data prev_lv needed_thm_ids
       in
         update_liveness path lv;
         processed_files :=
           Redblackset.add(!processed_files, path);
+
+        (* Enqueue ancestor DEF_TYOP for unresolved type ops *)
+        List.app (fn (anc_thy, anc_tyop) =>
+          case Redblackmap.peek(thy_path_map, anc_thy) of
+            SOME anc_path =>
+              let val anc_data = load_file anc_path
+              in case Redblackmap.peek(#type_defs anc_data,
+                                       (anc_thy, anc_tyop)) of
+                   SOME thm_id => enqueue (anc_path, [thm_id])
+                 | NONE =>
+                   err ("WARNING: DEF_TYOP for " ^ anc_thy ^
+                        "." ^ anc_tyop ^ " not found\n")
+              end
+          | NONE =>
+              err ("WARNING: no trace for theory " ^
+                   anc_thy ^ " (type " ^ anc_tyop ^ ")\n"))
+          unresolved_tyops;
+
+        (* Enqueue ancestor DEF_SPEC for unresolved constants *)
+        List.app (fn (anc_thy, anc_name) =>
+          case Redblackmap.peek(thy_path_map, anc_thy) of
+            SOME anc_path =>
+              let val anc_data = load_file anc_path
+              in case Redblackmap.peek(#const_defs anc_data,
+                                       (anc_thy, anc_name)) of
+                   SOME thm_id => enqueue (anc_path, [thm_id])
+                 | NONE =>
+                   err ("WARNING: DEF_SPEC for " ^ anc_thy ^
+                        "." ^ anc_name ^ " not found\n")
+              end
+          | NONE =>
+              err ("WARNING: no trace for theory " ^
+                   anc_thy ^ " (const " ^ anc_name ^ ")\n"))
+          unresolved_consts;
 
         (* Enqueue DISK_THM ancestor exports *)
         List.app (fn (id, anc_thy, anc_name) =>
@@ -798,7 +857,9 @@ fun merge {trace_paths : (string * string) list,
        files (both heap and theory traces).
 
        Dependencies:
-       - DISK_THM (thy, name) in any file -> the theory file for thy
+       - DISK_THM/DISK_DEP in any file -> the theory file for thy
+       - Live type/const refs with non-local DEF_TYOP/DEF_SPEC ->
+         the theory file containing the definition
        - Heap ancestry: a file with H line depends on its parent heap
          (parent heap must be written first so its P entries are in
          heap_thm_map when the child is written)
@@ -839,6 +900,19 @@ fun merge {trace_paths : (string * string) list,
             Redblackmap.peek(thy_to_path, anc_thy)
           else NONE)
           (#disk_deps data)
+        (* Type/const def deps -> theory file paths.
+           If a live type/const references a non-local DEF_TYOP/DEF_SPEC,
+           the ancestor theory must be written first. *)
+        val tyop_def_deps = List.mapPartial (fn (yid, (thy, _)) =>
+          if Array.sub(#live_y lv, yid) then
+            Redblackmap.peek(thy_to_path, thy)
+          else NONE)
+          (#y_tyop_refs data)
+        val const_def_deps = List.mapPartial (fn (tid, (thy, _)) =>
+          if Array.sub(#live_t lv, tid) then
+            Redblackmap.peek(thy_to_path, thy)
+          else NONE)
+          (#t_const_refs data)
         (* Heap ancestry dep -> parent heap file path *)
         val heap_dep = case #heap_parent data of
             NONE => []
@@ -849,7 +923,8 @@ fun merge {trace_paths : (string * string) list,
               if Redblackset.member(!processed_files, hpft)
               then [hpft] else []
       in
-        thm_file_deps @ dep_file_deps @ heap_dep
+        thm_file_deps @ dep_file_deps @ tyop_def_deps @
+        const_def_deps @ heap_dep
       end
 
     (* Unified topo sort via DFS *)
