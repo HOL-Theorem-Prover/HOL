@@ -2,7 +2,17 @@ signature RealArith0 =
 sig
   include Abbrev
 
-  type positivstellensatz
+  datatype positivstellensatz =
+      Axiom_eq of int
+    | Axiom_le of int
+    | Axiom_lt of int
+    | Rational_eq of Arbrat.rat
+    | Rational_le of Arbrat.rat
+    | Rational_lt of Arbrat.rat
+    | Square of term
+    | Eqmul of term * positivstellensatz
+    | Sum of positivstellensatz * positivstellensatz
+    | Product of positivstellensatz * positivstellensatz
   type rat = Arbrat.rat
   type aint = Arbint.int
 
