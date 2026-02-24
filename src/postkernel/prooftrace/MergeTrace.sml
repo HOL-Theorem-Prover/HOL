@@ -159,8 +159,13 @@ type file_data = {
   t_const_refs : (int * (string * string)) list,
   (* Y entries that reference defined type ops: type_id -> (thy, tyop) *)
   y_tyop_refs : (int * (string * string)) list,
-  (* Whether file has a C (compute init) entry *)
-  has_compute_init : bool
+  (* COMPUTE P entry trace_ids in this file *)
+  compute_ids : int Redblackset.set,
+  (* C (compute init) entry dependencies. NONE if no C line.
+     When any COMPUTE P entry is live, the C line and all its
+     deps become live. *)
+  c_deps : (int list * int list * int list) option
+           (* (parent_thm_ids, term_ids, type_ids) *)
 }
 
 (* Growable list accumulator, converted to array at the end *)
@@ -187,7 +192,8 @@ fun read_file_data path : file_data =
       : (string * string, int) Redblackmap.dict)
     val t_const_refs_rev = ref ([] : (int * (string * string)) list)
     val y_tyop_refs_rev = ref ([] : (int * (string * string)) list)
-    val has_ci = ref false
+    val compute_ids_ref = ref (Redblackset.empty Int.compare)
+    val c_deps_ref = ref (NONE : (int list * int list * int list) option)
 
     (* P deps stored in a map (sparse trace_ids) *)
     val p_deps_ref = ref (Redblackmap.mkDict Int.compare
@@ -290,9 +296,28 @@ fun read_file_data path : file_data =
                        Redblackmap.insert(!type_defs_ref,
                                           (thy, tyop), id)
                   end
+              | "COMPUTE" =>
+                  compute_ids_ref :=
+                    Redblackset.add(!compute_ids_ref, id)
               | _ => ())
           end
-      | ("C" :: _) => has_ci := true
+      | ("C" :: args) =>
+          let
+            fun ai n = int_of (List.nth(args, n))
+            val type_ids = [ai 0, ai 1]
+            val rest = List.drop(args, 2)
+            (* 29 cval pairs: (name, term_id) *)
+            val term_ids = List.tabulate(29, fn i =>
+              int_of (List.nth(rest, 2*i + 1)))
+            val rest2 = List.drop(rest, 58)
+            (* char_eqn pairs: (name, parent_thm_id) *)
+            fun get_parents [] = []
+              | get_parents (_::p::r) = int_of p :: get_parents r
+              | get_parents _ = []
+            val parent_ids = get_parents rest2
+          in
+            c_deps_ref := SOME (parent_ids, term_ids, type_ids)
+          end
       | ("N" :: name :: _) =>
           (thy_name := unescape name; has_name := true)
       | ("E" :: name :: id_s :: _) =>
@@ -330,7 +355,8 @@ fun read_file_data path : file_data =
       type_defs = !type_defs_ref,
       t_const_refs = rev (!t_const_refs_rev),
       y_tyop_refs = rev (!y_tyop_refs_rev),
-      has_compute_init = !has_ci }
+      compute_ids = !compute_ids_ref,
+      c_deps = !c_deps_ref }
   end
 
 (* ------- Heap trace file discovery ------- *)
@@ -362,12 +388,14 @@ type liveness = {
 
 fun mark_live (data : file_data) (prev : liveness)
               (needed_thm_ids : int list)
-  : liveness * int list (* unresolved parent trace_ids *) =
+  : liveness * int list (* unresolved parent trace_ids *)
+    * bool (* true if any COMPUTE entry was newly marked live *) =
   let
     val live_y = #live_y prev
     val live_t = #live_t prev
     val live_p = ref (#live_p prev)
     val unresolved = ref (Redblackset.empty Int.compare)
+    val found_compute = ref false
 
     (* Build per-term and per-type arrays mapping to the
        DEF_SPEC/DEF_TYOP trace_id that defines them (~1 = none).
@@ -390,6 +418,8 @@ fun mark_live (data : file_data) (prev : liveness)
         unresolved := Redblackset.add(!unresolved, id)
       else
         let val _ = live_p := Redblackset.add(!live_p, id)
+            val _ = if Redblackset.member(#compute_ids data, id)
+                    then found_compute := true else ()
             val (parents, term_deps, type_deps) =
               Redblackmap.find(#p_deps data, id)
         in List.app mark_thm parents;
@@ -415,8 +445,21 @@ fun mark_live (data : file_data) (prev : liveness)
             in if def >= 0 then mark_thm def else () end)
   in
     List.app mark_thm needed_thm_ids;
+
+    (* If this file has a C line and we're processing it (i.e.,
+       some thm IDs were requested), mark the C line's term and
+       type refs as live. The C file is only ever processed when
+       a COMPUTE entry is live, so this is safe. *)
+    if isSome (#c_deps data) andalso not (null needed_thm_ids) then
+      let val (_, terms, types) = valOf (#c_deps data)
+      in List.app mark_term terms;
+         List.app mark_type types
+      end
+    else ();
+
     ({live_y = live_y, live_t = live_t, live_p = !live_p},
-     Redblackset.listItems (!unresolved))
+     Redblackset.listItems (!unresolved),
+     !found_compute)
   end
 
 (* ------- Dedup map key types ------- *)
@@ -622,6 +665,9 @@ fun merge {trace_paths : (string * string) list,
              end
       end
 
+    (* Global: any COMPUTE entry is live across all files *)
+    val live_c = ref false
+
     (* Worklist: (file_path, thm_ids_needed) pairs to process *)
     val worklist = ref ([] : (string * int list) list)
     fun enqueue item = worklist := item :: !worklist
@@ -633,7 +679,8 @@ fun merge {trace_paths : (string * string) list,
       let
         val data = load_file path
         val prev_lv = get_liveness path
-        val (lv, unresolved) = mark_live data prev_lv needed_thm_ids
+        val (lv, unresolved, found_compute) =
+          mark_live data prev_lv needed_thm_ids
       in
         update_liveness path lv;
         processed_files :=
@@ -667,7 +714,35 @@ fun merge {trace_paths : (string * string) list,
                  " (not found in any ancestor heap trace)")
           | SOME heap_pft =>
               enqueue (heap_pft, [trace_id]))
-          unresolved
+          unresolved;
+
+        (* If a COMPUTE entry was newly marked live and we haven't
+           already handled the C line, find it and enqueue its
+           char_eqn parent thm IDs. *)
+        if found_compute andalso not (!live_c) then
+          let
+            val _ = live_c := true
+            fun find_c_file p =
+              let val d = load_file p
+              in case #c_deps d of
+                   SOME _ => SOME p
+                 | NONE =>
+                   case #heap_parent d of
+                     NONE => NONE
+                   | SOME hp =>
+                     case find_heap_trace_file hp of
+                       NONE => NONE
+                     | SOME hpft => find_c_file hpft
+              end
+          in
+            case find_c_file path of
+              NONE => raise ERR "process_file"
+                "COMPUTE entry live but no C line found"
+            | SOME c_path =>
+              let val (parents, _, _) = valOf (#c_deps (load_file c_path))
+              in enqueue (c_path, parents) end
+          end
+        else ()
       end
 
     (* Seed worklist from desired exports *)
@@ -946,8 +1021,7 @@ fun merge {trace_paths : (string * string) list,
               else ()
               end
           | ("C" :: args) =>
-              (* Remap C entry — only write if this file has
-                 live COMPUTE entries *)
+              if !live_c then
               let
                 fun ai n = int_of (List.nth(args, n))
                 val cy = its (ry (ai 0))
@@ -969,6 +1043,7 @@ fun merge {trace_paths : (string * string) list,
                     else " " ^ String.concatWith " " char_pairs) ^
                    "\n")
               end
+              else ()
           | _ => ()  (* skip V, H, N, E, blank lines *)
           end
 

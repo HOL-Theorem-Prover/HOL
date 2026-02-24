@@ -317,7 +317,13 @@ For each file's live entries:
   local→global mapping (no output).
 - **P (other)**: remap all argument IDs, assign new global theorem
   ID, write.
-- **C**: remap and write.
+- **C**: remap and write if any COMPUTE P entry is live (across
+  all files). The C line may be in a different file (typically a
+  heap trace) from the COMPUTE entries that depend on it. When
+  the first COMPUTE entry is marked live in Pass 1, the C line's
+  file is found (by walking up the heap chain), and the C line's
+  char_eqn parent thm IDs and cval term/type refs are marked
+  live.
 
 After each file: register its exports (if any) in the ancestor
 export map. Register its P entries in the heap theorem map (if
