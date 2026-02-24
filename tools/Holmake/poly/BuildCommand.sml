@@ -319,10 +319,6 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
             (case #holheap extra of NONE => "--poly"
                                   | SOME d => "--holstate="^tgt_toString d) ::
             extra_poly_cline() @
-            (if trace then
-               [fullPath [HOLDIR, "src", "postkernel", "prooftrace",
-                          "trace-activate.sml"]]
-             else []) @
             ((if isSome debug then ["--dbg"] else []) @ objectfiles) @
             ["-e",
              "  check that export_theory call exists, and that new_theory\n\
@@ -469,8 +465,9 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
 
   fun system s =
     Systeml.system_ps
-      (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 " ^ s
-       else s)
+      ((if trace then "HOL_TRACE_PROOFS=1 " else "") ^
+       (if relocbuild then Systeml.build_after_reloc_envvar ^ "=1 " ^ s
+        else s))
 
   val build_graph =
       if jobs = 1 then
@@ -488,6 +485,7 @@ fun make_build_command (buildinfo : HM_Cline.t buildinfo_t) = let
         (fn g =>
             multibuild.graphbuild { build_command = build_command,
                                     relocbuild = relocbuild,
+                                    trace = trace,
                                     mosml_build_command = mosml_build_command,
                                     warn = warn, tgtfatal = tgtfatal,
                                     keep_going = keep_going,

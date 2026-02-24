@@ -93,12 +93,10 @@ fun replay_file path =
     val (instrm, proc) = open_trace path
     fun cleanup () = close_trace (instrm, proc)
 
-    (* Growable arrays *)
+    (* Growable arrays for types and terms (small sequential IDs) *)
     val ty_arr : Type.hol_type option Array.array ref =
       ref (Array.array(1000, NONE))
     val tm_arr : Term.term option Array.array ref =
-      ref (Array.array(10000, NONE))
-    val thm_arr : Thm.thm option Array.array ref =
       ref (Array.array(10000, NONE))
 
     fun grow arr n =
@@ -115,10 +113,17 @@ fun replay_file path =
 
     fun set_ty i v = (grow ty_arr i; Array.update(!ty_arr, i, SOME v))
     fun set_tm i v = (grow tm_arr i; Array.update(!tm_arr, i, SOME v))
-    fun set_th i v = (grow thm_arr i; Array.update(!thm_arr, i, SOME v))
     fun ty i = valOf (Array.sub(!ty_arr, i))
     fun tm i = valOf (Array.sub(!tm_arr, i))
-    fun th i = valOf (Array.sub(!thm_arr, i))
+
+    (* Map for theorems (trace_ids can be large/sparse) *)
+    val thm_map : (int, Thm.thm) Redblackmap.dict ref =
+      ref (Redblackmap.mkDict Int.compare)
+    fun set_th i v = thm_map := Redblackmap.insert(!thm_map, i, v)
+    fun th i = case Redblackmap.peek(!thm_map, i) of
+                 SOME v => v
+               | NONE => raise ERR "replay" ("unknown thm id " ^
+                           Int.toString i)
 
     fun int_of s = valOf (Int.fromString s)
 

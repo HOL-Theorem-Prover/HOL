@@ -151,7 +151,7 @@ fun main () =
       in
         (* Replay always via bin/hol --min for a fresh kernel *)
         let
-          val script = OS.FileSys.tmpName ()
+          val script = OS.FileSys.tmpName () ^ ".sml"
           val s = TextIO.openOut script
           fun wr x = TextIO.output(s, x)
           val hol_libs = if !load_hol then ["bossLib", "holTheory"] else []
