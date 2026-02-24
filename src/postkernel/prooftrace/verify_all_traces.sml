@@ -1,4 +1,4 @@
-(* Batch replay of all .pftrace files.
+(* Batch replay of all .pft files.
    Run: cd $HOLDIR && bin/hol --min < src/postkernel/prooftrace/verify_all_traces.sml *)
 
 load "ReplayTrace";

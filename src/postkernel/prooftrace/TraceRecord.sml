@@ -60,9 +60,9 @@ fun open_output () =
                 (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
     val comp = detect_compressor ()
     val path = case comp of
-        SOME "zstd" => ".trace_" ^ pid ^ ".pftrace.zst"
-      | SOME "gzip" => ".trace_" ^ pid ^ ".pftrace.gz"
-      | _ => ".trace_" ^ pid ^ ".pftrace"
+        SOME "zstd" => ".trace_" ^ pid ^ ".pft.zst"
+      | SOME "gzip" => ".trace_" ^ pid ^ ".pft.gz"
+      | _ => ".trace_" ^ pid ^ ".pft"
     val _ = temp_path_ref := SOME path
     val out = case comp of
         SOME "zstd" =>
@@ -393,13 +393,13 @@ fun export_hook thyname (_:string list) all_thms =
       end) all_thms;
     close_output ();
     (let val temp = valOf (!temp_path_ref)
-         val ext = if String.isSuffix ".zst" temp then ".pftrace.zst"
-                   else if String.isSuffix ".gz" temp then ".pftrace.gz"
-                   else ".pftrace"
+         val ext = if String.isSuffix ".zst" temp then ".pft.zst"
+                   else if String.isSuffix ".gz" temp then ".pft.gz"
+                   else ".pft"
          val final_path = thyname ^ "Theory" ^ ext
-     in OS.FileSys.rename {old = temp, new = final_path} end
+     in HOLFileSys.rename {old = temp, new = final_path} end
      handle _ => ());
-    Feedback.HOL_MESG ("Proof trace: " ^ thyname ^ "Theory.pftrace*");
+    Feedback.HOL_MESG ("Proof trace: " ^ thyname ^ "Theory.pft*");
     trace_reset ()
   end
   handle e =>

@@ -1,4 +1,4 @@
-(* ReplayTrace: replay .pftrace files through the kernel.
+(* ReplayTrace: replay .pft files through the kernel.
 
    Single forward pass: construct types, terms, and theorems eagerly
    from Y/T/P/C entries. For merged traces, all definitions are fresh
@@ -368,23 +368,23 @@ fun find_traces dir =
           | SOME entry =>
             let val p = OS.Path.concat(d, entry)
             in if OS.FileSys.isDir p then loop (walk p acc)
-               else if String.isSuffix "Theory.pftrace.zst" entry then
+               else if String.isSuffix "Theory.pft.zst" entry then
                  let val thy = String.substring(entry, 0,
-                                 size entry - size "Theory.pftrace.zst")
+                                 size entry - size "Theory.pft.zst")
                  in loop ((thy, p) :: acc) end
-               else if String.isSuffix "Theory.pftrace.gz" entry then
+               else if String.isSuffix "Theory.pft.gz" entry then
                  let val thy = String.substring(entry, 0,
-                                 size entry - size "Theory.pftrace.gz")
+                                 size entry - size "Theory.pft.gz")
                  in loop ((thy, p) :: acc) end
-               else if String.isSuffix "Theory.pftrace" entry then
+               else if String.isSuffix "Theory.pft" entry then
                  let val thy = String.substring(entry, 0,
-                                 size entry - size "Theory.pftrace")
+                                 size entry - size "Theory.pft")
                  in loop ((thy, p) :: acc) end
                else loop acc
             end
       in loop acc end
     val all = walk dir []
-    (* Dedup: prefer .zst > .gz > .pftrace *)
+    (* Dedup: prefer .zst > .gz > .pft *)
     val m = List.foldl (fn ((thy, path), m) =>
       case Redblackmap.peek(m, thy) of
         SOME existing =>

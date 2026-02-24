@@ -25,7 +25,7 @@ fun main () =
           \Merge:\n\
           \  prooftrace merge -o FILE [-d DIR]... THY.THM...\n\
           \\n\
-          \  Finds .pftrace files in search directories (default: .),\n\
+          \  Finds .pft files in search directories (default: .),\n\
           \  merges traces needed for the given exports.\n\
           \  Exports are specified as theory.name pairs.\n\
           \\n\
@@ -45,9 +45,9 @@ fun main () =
           \                  (boolLib etc.) for standard pretty printing\n\
           \\n\
           \Examples:\n\
-          \  prooftrace replay merged.pftrace\n\
-          \  prooftrace replay --verbose --load-hol merged.pftrace\n\
-          \  prooftrace replay --interactive --load-hol merged.pftrace\n";
+          \  prooftrace replay merged.pft\n\
+          \  prooftrace replay --verbose --load-hol merged.pft\n\
+          \  prooftrace replay --interactive --load-hol merged.pft\n";
       OS.Process.exit OS.Process.success)
     fun die s = (
       err ("prooftrace: " ^ s ^ "\n");
@@ -98,7 +98,7 @@ fun main () =
         val all_traces = List.concat
           (map ReplayTrace.find_traces search_dirs)
         val _ = if null all_traces then
-                  die "merge: no .pftrace files found"
+                  die "merge: no .pft files found"
                 else
                   err ("Found " ^ Int.toString (length all_traces) ^
                        " trace files\n")

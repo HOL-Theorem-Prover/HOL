@@ -7,14 +7,14 @@ builds and produces self-contained trace files that can be replayed
 from scratch for independent verification.
 
 The pipeline has three stages:
-1. **Recording**: per-theory `.pftrace` files produced during
+1. **Recording**: per-theory `.pft` files produced during
    `HOL_TRACE_PROOFS=1` builds
 2. **Merging**: per-theory traces combined into a single
    self-contained trace for the desired exports
 3. **Replay**: merged trace replayed from scratch in a bare kernel
    session (`bin/hol --min`) to verify exports are oracle-free
 
-## Trace Format (`.pftrace`)
+## Trace Format (`.pft`)
 
 ### Grammar
 
@@ -128,7 +128,7 @@ In-memory state:
 
 At `export_theory()` time, the export hook appends N and E entries,
 closes the compressor, renames the temp file to
-`<thyname>Theory.pftrace.zst`, and resets state.
+`<thyname>Theory.pft.zst`, and resets state.
 
 Per-theory traces include all steps recorded during the process,
 including library loading. No filtering is done — the merge tool
@@ -136,10 +136,10 @@ handles that.
 
 ## Merge Tool
 
-Input: list of per-theory `.pftrace` file paths, plus desired
+Input: list of per-theory `.pft` file paths, plus desired
 exports `(theory, name)`.
 
-Output: single self-contained `.pftrace` with only entries
+Output: single self-contained `.pft` with only entries
 reachable from the desired exports, types/terms globally
 deduplicated, DISK_THM resolved. No N line.
 
@@ -270,5 +270,5 @@ implementation keeps all objects alive.
 
 ## Compression
 
-Files may be `.pftrace.zst` (preferred), `.pftrace.gz`, or
-uncompressed `.pftrace`. Auto-detected from extension.
+Files may be `.pft.zst` (preferred), `.pft.gz`, or
+uncompressed `.pft`. Auto-detected from extension.

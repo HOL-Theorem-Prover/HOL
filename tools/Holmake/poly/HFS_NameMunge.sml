@@ -53,7 +53,10 @@ fun HOLtoFS nm =
               ("sigobj" :: _, _) => false
             | (_, SOME s) => s = "uo" orelse s = "ui" orelse
                              (isPSuffix "Theory" base andalso
-                              (s = "sml" orelse s = "dat" orelse s = "sig"))
+                              (s = "sml" orelse s = "dat" orelse
+                               s = "sig" orelse s = "pft")) orelse
+                             (isPSuffix "Theory.pft" base andalso
+                              (s = "zst" orelse s = "gz"))
             | (_, NONE) => false
     in
       if changep then
