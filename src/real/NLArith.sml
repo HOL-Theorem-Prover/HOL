@@ -13,19 +13,9 @@
 structure NLArith :> NLArith =
 struct
 
-open HolKernel Parse boolLib liteLib
+open HolKernel boolLib liteLib
 
 open RealArith0 RealArith RealField realSyntax
-
-(* Establish grammar for real terms *)
-structure Parse = struct
-  open Parse
-  val (Type,Term) =
-      parse_from_grammars
-        (apsnd ParseExtras.grammar_loose_equality $ valOf $
-           grammarDB {thyname = "realax"})
-end
-open Parse
 
 val ERR = mk_HOL_ERR "NLArith"
 
@@ -52,10 +42,6 @@ val pth_gt_gt = List.nth(pth_mul_cjs, 8)  (* x>0  /\ y>0  ==> x*y>0  *)
    by GEN_REAL_ARITH when called through RealField.GEN_REAL_ARITH. *)
 val POLY_CONV     = RealField.REAL_POLY_CONV
 val POLY_MUL_CONV = RealField.REAL_POLY_MUL_CONV
-
-(* LAND_CONV c applies c to the left argument of a binary operator.
-   For "a >= 0", it applies c to "a". *)
-val LAND_CONV = Conv.LAND_CONV
 
 (* Maximum number of variables to consider for squaring *)
 val max_sq_vars = 8
@@ -210,18 +196,17 @@ fun NLA_PROVER translator (eqs, les, lts) =
 (* Like REAL_ARITH but handles squares, products, AM-GM style goals.         *)
 (* ------------------------------------------------------------------------- *)
 
-val REAL_NLA =
-  let
-    val dec_conv = QCONV (ONCE_DEPTH_CONV (REWR_CONV markerTheory.unint_def))
-    val core = RealField.GEN_REAL_ARITH NLA_PROVER
-  in
-    fn tm =>
-      let val th0 = dec_conv tm
-          val tm0 = rhs (concl th0)
-      in
-        EQ_MP (SYM th0) (core tm0)
-      end
-  end
+local
+  val dec_conv = QCONV (ONCE_DEPTH_CONV (REWR_CONV markerTheory.unint_def))
+  val core = RealField.GEN_REAL_ARITH NLA_PROVER
+in
+  fun REAL_NLA tm =
+    let val th0 = dec_conv tm
+        val tm0 = rhs (concl th0)
+    in
+      EQ_MP (SYM th0) (core tm0)
+    end
+end
 
 (* ------------------------------------------------------------------------- *)
 (* Tactic versions.                                                          *)
