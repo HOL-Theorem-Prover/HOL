@@ -3,24 +3,36 @@
 ## Overview
 
 The proof trace system records kernel inference steps during HOL4
-builds and produces self-contained trace files that can be replayed
+builds and produces trace files that can be merged and replayed
 from scratch for independent verification.
 
 The pipeline has three stages:
-1. **Recording**: per-theory `.pft` files produced during
-   `HOL_TRACE_PROOFS=1` builds
-2. **Merging**: per-theory traces combined into a single
+1. **Recording**: `.pft` files produced during `--trace` builds
+   (one per theory, one per heap)
+2. **Merging**: per-theory and heap traces combined into a single
    self-contained trace for the desired exports
 3. **Replay**: merged trace replayed from scratch in a bare kernel
    session (`bin/hol --min`) to verify exports are oracle-free
+
+## Enabling tracing
+
+- `bin/build --trace` for HOL sources
+- `Holmake --trace` for external projects
+
+The `--trace` flag on build passes `--trace` to each Holmake
+invocation. Holmake `--trace` propagates `HOL_TRACE_PROOFS=1`
+as an environment variable to all child processes (via shell
+command prefix, same mechanism as `relocbuild`). TraceRecord
+checks this env var at load time and activates if set.
 
 ## Trace Format (`.pft`)
 
 ### Grammar
 
 ```
-trace        ::= version entry* name? exports
+trace        ::= version heap? entry* name? exports
 version      ::= "V " int "\n"
+heap         ::= "H " s "\n"
 entry        ::= type_entry | term_entry | thm_entry | compute_init
 name         ::= "N " s "\n"
 exports      ::= ("E " s p "\n")*
@@ -39,20 +51,60 @@ compute_init ::= "C " y y (s t){29} (s p)* "\n"
 ```
 
 Fields:
-- **y**: type ID (non-negative integer)
-- **t**: term ID (non-negative integer)
-- **p**: theorem ID (non-negative integer)
+- **y**: type ID (non-negative integer, sequential from 0)
+- **t**: term ID (non-negative integer, sequential from 0)
+- **p**: theorem ID (kernel trace_id — see below)
 - **s**: unquoted token or quoted string (`"..."` with `\"`, `\\`,
   `\n`, `\xNN` escapes)
 - IDs are scoped per namespace (Y, T, P)
 - Y, T, P, C entries are interleaved in dependency order
-- V is the first line; N and E entries appear at the end
-- N is optional (absent in merged traces)
+  (as recorded during the build)
+- V is the first line; H (if present) is second; N and E entries
+  appear at the end
+- H records the path of the parent heap this trace was built on.
+  Omitted if there is no parent heap (e.g., the initial heap
+  build, or Moscow ML recording).
 
-The `C` entry records initialization arguments for `Thm.compute`.
-At most once per trace, before any COMPUTE theorems. Arguments:
-cval_type (y), num_type (y), 29 cval (name, term) pairs, then
-char_eqn (name, parent) pairs until end of line.
+### Theorem ID uniqueness
+
+Theorem IDs (`p`) are kernel `Thm.trace_id` values from a
+monotonic per-process counter. The counter is saved and restored
+with heaps. This gives the following properties:
+
+- Within a single process (one theory script or one heap build),
+  trace_ids are unique and monotonically increasing.
+- Heaps form a linear ancestry chain: `hol.state0` assigns
+  trace_ids [0, N], `numheap` (built on top of `hol.state0`)
+  continues from N+1 to M, etc. Each heap build's trace_ids
+  are disjoint from its ancestors'.
+- Parallel theory scripts loading the same heap start from the
+  same counter value and have overlapping trace_id ranges. But
+  parallel scripts never reference each other's theorems — they
+  only reference the heap chain's theorems (via parent trace_ids)
+  and ancestor theories (via DISK_THM by name).
+
+Therefore: within the heap chain that a theory depends on,
+trace_ids are globally unique. The merge tool can resolve a
+parent trace_id not found in the current file by searching the
+heap chain's `.pft` files without ambiguity.
+
+### Trace file types
+
+**Theory traces** (`<thy>Theory.pft[.zst|.gz]` in `.hol/objs/`):
+contain all steps recorded during a theory script, including
+library loading. Have N (theory name) and E (export) lines at
+the end. DISK_THM entries reference ancestor theorems by
+`(theory, name)`.
+
+**Heap traces** (`<heapname>.pft` alongside the heap file):
+contain all steps recorded during heap building. No N or E
+lines. Steps include library initialization, type base setup,
+simpset construction, etc.
+
+**Merged traces** (user-specified path): a single self-contained
+trace produced by the merge tool. No N line. Has E lines for
+the desired exports. No DISK_THM entries (all resolved). Types
+and terms globally deduplicated.
 
 ### Theorem Rules
 
@@ -103,53 +155,95 @@ extend to end of line.
 | `COMPUTE` | `t p*` — input term, code equation parents |
 | `AXIOM` | `t` |
 | `ORACLE` | `s t t*` — tag, concl, hyps |
-| `DISK_THM` | `s s` — theory, name (per-theory only) |
+| `DISK_THM` | `s s` — theory, name (per-theory traces only) |
+
+The `C` entry records initialization arguments for `Thm.compute`.
+At most once per trace, before any COMPUTE theorems. Arguments:
+cval_type (y), num_type (y), 29 cval (name, term) pairs, then
+char_eqn (name, parent) pairs until end of line.
 
 ## Recording
 
-`TraceRecord` sets `Thm.trace_hook` to intercept every kernel
-inference rule. On each call:
+TraceRecord is always loaded into `hol.state0` (first in UOARGS,
+before other libraries). At load time it checks `OS.Process.getEnv
+"HOL_TRACE_PROOFS"` and activates if set.
 
-1. Interns new types/terms, writing Y/T entries to the output
-   stream immediately
-2. Resolves parent theorem references to file theorem IDs via
-   `id_to_line` map. Heap theorems (not in map) trigger a
-   DISK_THM entry on demand.
-3. Writes the P entry (or C for COMPUTE_INIT)
+### Activation
 
-The output stream is opened on the first write, piped through a
-compressor (zstd > gzip > uncompressed) to a temporary file.
-The V line is written first.
+`activate()` sets `Thm.trace_hook` and `Thm.trace_export_hook`,
+and registers an `atExit` cleanup handler. When not activated
+(no env var), hooks remain NONE — zero overhead.
 
-In-memory state:
-- `ty_map`, `tm_map`: structural dedup maps (type/term → ID)
-- `id_to_line`: kernel trace_id → file theorem ID
-- `lines_written`: next theorem ID counter
+### Output file selection
 
-At `export_theory()` time, the export hook appends N and E entries,
-closes the compressor, renames the temp file to
-`<thyname>Theory.pft.zst`, and resets state.
+At activation time, TraceRecord parses `CommandLine.arguments()`
+for `-o <path>`. If found, this is a heap build — the trace is
+written directly to `<path>.pft`. If not found, this is a theory
+script — the trace is written to a temp file (renamed at export
+time).
 
-Per-theory traces include all steps recorded during the process,
-including library loading. No filtering is done — the merge tool
-handles that.
+### Recording steps
+
+On each kernel inference rule:
+1. Intern new types/terms, writing Y/T entries to the output
+   immediately
+2. Write the P entry with kernel trace_ids for both the entry's
+   own ID and parent references — no remapping
+
+P entry IDs are `Thm.trace_id` values from the kernel's monotonic
+counter. Parent references are also `Thm.trace_id` values of the
+parent thm values. No `id_to_line` mapping is needed.
+
+For `TR_DISK_THM` (theorem loaded from a `.dat` file), the entry
+is `P <trace_id> DISK_THM <theory> <name>`.
+
+### Stale stream handling
+
+When a process loads a saved heap, TraceRecord's output stream
+is stale (from the heap build's session). On first write attempt,
+the stale stream is detected and a new output is opened:
+- If `-o <path>` is in the command line args → heap build,
+  open `<path>.pft`
+- Otherwise → theory script, open a temp file
+
+The intern tables (ty_map, tm_map) are reset for the new session.
+Type/term IDs restart from 0.
+
+### Theory export
+
+At `export_theory()` time, `Thm.trace_export` fires the export
+hook which:
+1. Closes the temp file
+2. Appends N and E lines
+3. Compresses (zstd > gzip > uncompressed) and writes to
+   `.hol/objs/<thyname>Theory.pft[.zst|.gz]`
+4. Removes the temp file
+5. Resets recording state
+
+### Heap export
+
+For heap builds, there is no `export_theory()` call. The trace
+file (`<heapname>.pft`) is written directly from the start and
+closed by the `atExit` handler when the process exits. No N or
+E lines are written. The file is not deleted on exit (it is the
+final output, not a temp file).
 
 ## Merge Tool
 
-Input: list of per-theory `.pft` file paths, plus desired
-exports `(theory, name)`.
+Input: list of `.pft` file paths (theory traces and heap traces),
+plus desired exports `(theory, name)`.
 
-Output: single self-contained `.pft` with only entries
-reachable from the desired exports, types/terms globally
-deduplicated, DISK_THM resolved. No N line.
+Output: single self-contained `.pft` with only entries reachable
+from the desired exports, types/terms globally deduplicated, all
+DISK_THM and cross-file references resolved. No N line.
 
 ### Pass 1: Determine what's needed
 
 Starting from the desired exports, work backward to discover all
-needed theorems, terms, types, and ancestor theories.
+needed theorems, terms, types, and ancestor theories/heaps.
 
-For each theory (starting with theories containing desired exports,
-loading ancestors on demand as they are discovered):
+For each trace file (starting with files containing desired
+exports, loading ancestors on demand as discovered):
 
 1. Stream through the trace file, building a dependency graph:
    for each P entry, record which P/T/Y IDs it references
@@ -160,37 +254,37 @@ loading ancestors on demand as they are discovered):
 2. Walk backward from the needed theorem IDs, marking live P
    entries, then transitively marking the T and Y entries they
    reference as live.
-3. When the walk hits a DISK_THM entry (thy, name), add that to
-   the needed ancestor exports. If the ancestor's trace hasn't
-   been processed yet, process it (step 1-3).
-4. Store the set of live entry IDs for this theory (a compact
-   bit set). Discard the dependency graph.
-
-Each theory is streamed once in this pass. Memory per theory is
-proportional to the number of entries × average dependencies per
-entry (a few ints each), not the full file content. After the
-pass completes, we have live entry ID sets per theory and a
-topological ordering of the needed theories.
+3. When the walk hits a DISK_THM entry (thy, name), add that
+   to the needed ancestor exports. If the ancestor's trace
+   hasn't been processed yet, process it.
+4. When the walk hits a parent trace_id not in the current file,
+   follow the H (heap) line to find the parent heap's `.pft`
+   file, and search up the heap ancestry chain for a P entry
+   with that trace_id. If found, process that heap trace and
+   mark the needed entries.
+5. Store the set of live entry IDs for this file (compact bit
+   set). Discard the dependency graph.
 
 ### Pass 2: Write merged trace
 
-Re-read each needed theory's trace in dependency order, writing
+Re-read each needed trace file in dependency order, writing
 only live entries to the output with globally remapped IDs.
 
 Persistent state:
 - Global type dedup map: `type_descriptor → global_type_id`
 - Global term dedup map: `term_descriptor → global_term_id`
 - Ancestor export map: `(theory, name) → global_theorem_id`
+- Heap theorem map: `(file, trace_id) → global_theorem_id`
 
 Type descriptors: `(V, name)` or `(O, thy, name, [global_arg_ids])`.
 Term descriptors: `(V, name, global_tyid)`,
 `(C, thy, name, global_tyid)`, `(A, global_fid, global_xid)`,
 `(L, global_vid, global_bid)`.
 
-Per-theory (discarded after each):
+Per-file (discarded after each):
 - Local-to-global remap arrays for types, terms, theorems
 
-For each theory's live entries:
+For each file's live entries:
 - **Y**: dedup via type descriptor. Write if new, remap if existing.
 - **T**: dedup via term descriptor. Write if new, remap if existing.
 - **P DISK_THM**: resolve via ancestor export map, record
@@ -199,10 +293,11 @@ For each theory's live entries:
   ID, write.
 - **C**: remap and write.
 
-After each theory: register its live exports in the ancestor export
-map.
+After each file: register its exports (if any) in the ancestor
+export map. Register its P entries in the heap theorem map (if
+it's a heap trace).
 
-After all theories: write E lines for desired exports.
+After all files: write E lines for desired exports.
 
 ### Theorem dedup
 
@@ -218,8 +313,8 @@ Pending empirical data from large merges.
 
 ### Complexity
 
-- Each needed theory file read twice (pass 1 + pass 2)
-- Per-theory work: linear in entries
+- Each needed file read twice (pass 1 + pass 2)
+- Per-file work: linear in entries
 - Global maps: O(log N) per lookup
 - Memory: global term dedup map dominates (~40 bytes/unique term).
   For HOL's 12.5M total terms: ~240MB estimated.
@@ -227,24 +322,26 @@ Pending empirical data from large merges.
 ## Replay
 
 A merged trace is replayed from scratch in `bin/hol --min` (only
-min theory loaded) in a single forward pass. Three ID-indexed
-arrays map type, term, and theorem IDs to their constructed
-objects:
+min theory loaded) in a single forward pass.
 
-- **Y entries**: construct the type, store in type array
-- **T entries**: construct the term (looking up sub-component
-  types/terms from the arrays), store in term array
+Types and terms are constructed **lazily**: Y and T entries store
+raw descriptions when first encountered. Actual type/term values
+are constructed on demand when first referenced by a P entry.
+This ensures definitions (DEF_TYOP, DEF_SPEC) are replayed before
+the types and terms they define are constructed, avoiding stale
+kernelid issues.
+
+Theorems are stored in a map keyed by trace_id (which can be
+large/sparse, unlike sequential type/term IDs).
+
+- **Y entries**: store type description (constructed lazily)
+- **T entries**: store term description (constructed lazily)
 - **P entries**: call the corresponding kernel inference rule
-  (looking up argument types/terms/theorems from the arrays),
-  store the resulting theorem in the theorem array
+  (triggering lazy construction of any referenced types/terms),
+  store the resulting theorem in the theorem map
 - **C entry**: call `Thm.compute` with the init args, save
   the closure for subsequent COMPUTE entries
 - **E entries**: look up the theorem, verify it is oracle-free
-
-Since the merged trace is in dependency order, each entry's
-dependencies have already been constructed. No lazy construction
-is needed (unlike per-theory replay where definitions may
-interleave with term construction).
 
 ### Memory management
 
@@ -256,14 +353,13 @@ reducing peak memory:
 1. **Replay-side last-reference pass**: Before replaying, do a
    quick linear scan of the trace to compute, for each entry,
    the ID of the last entry that references it. During replay,
-   null out array entries after their last reference. This adds
-   one integer per entry of overhead and one extra linear pass.
+   null out entries after their last reference. This adds one
+   integer per entry of overhead and one extra linear pass.
 
 2. **Merge-side entry ordering**: The merge tool could optionally
    reorder entries (within the constraints of dependency order)
    to minimize the maximum live set, reducing peak memory
-   without any replay-side changes. This is a scheduling
-   optimization in the merge tool's pass 2.
+   without any replay-side changes.
 
 Both are optional future optimizations. The initial
 implementation keeps all objects alive.
