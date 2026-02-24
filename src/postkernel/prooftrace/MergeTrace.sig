@@ -7,7 +7,7 @@ sig
 
      Heap traces are discovered automatically by following H lines
      in the theory/heap traces. The heap path recorded in H lines
-     is resolved to <heap_path>.pft (trying .pft, then uncompressed). *)
+     is resolved to <heap_path>.pft. *)
   val merge : {
     trace_paths : (string * string) list,
     desired_exports : (string * string) list,

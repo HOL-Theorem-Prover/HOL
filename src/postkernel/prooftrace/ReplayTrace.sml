@@ -59,39 +59,18 @@ fun tokenize line =
           in go rest' (tok :: acc) end
   in go (String.explode line) [] end
 
-(* ------- Decompression ------- *)
+(* ------- File I/O ------- *)
 
-fun shell_quote s =
-  "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
+fun open_trace path = TextIO.openIn path
 
-fun open_trace path =
-  let
-    val is_zst = String.isSuffix ".zst" path
-    val is_gz = String.isSuffix ".gz" path
-    val qpath = shell_quote path
-  in
-    if is_zst then
-      let val p = Unix.execute("/bin/sh",
-            ["-c", "zstd -dc -q " ^ qpath])
-      in (Unix.textInstreamOf p, SOME p) end
-    else if is_gz then
-      let val p = Unix.execute("/bin/sh",
-            ["-c", "gunzip -c " ^ qpath])
-      in (Unix.textInstreamOf p, SOME p) end
-    else (TextIO.openIn path, NONE)
-  end
-
-fun close_trace (strm, proc) =
-  (case proc of
-     SOME p => ignore (Unix.reap p)
-   | NONE => TextIO.closeIn strm)
+fun close_trace strm = TextIO.closeIn strm
 
 (* ------- Replay a merged trace ------- *)
 
 fun replay_file path =
   let
-    val (instrm, proc) = open_trace path
-    fun cleanup () = close_trace (instrm, proc)
+    val instrm = open_trace path
+    fun cleanup () = close_trace instrm
 
     (* Lazy type/term construction: store raw descriptions,
        construct on demand when first accessed. This ensures
@@ -395,14 +374,6 @@ fun find_traces dir =
           | SOME entry =>
             let val p = OS.Path.concat(d, entry)
             in if OS.FileSys.isDir p then loop (walk p acc)
-               else if String.isSuffix "Theory.pft.zst" entry then
-                 let val thy = String.substring(entry, 0,
-                                 size entry - size "Theory.pft.zst")
-                 in loop ((thy, p) :: acc) end
-               else if String.isSuffix "Theory.pft.gz" entry then
-                 let val thy = String.substring(entry, 0,
-                                 size entry - size "Theory.pft.gz")
-                 in loop ((thy, p) :: acc) end
                else if String.isSuffix "Theory.pft" entry then
                  let val thy = String.substring(entry, 0,
                                  size entry - size "Theory.pft")
@@ -410,21 +381,6 @@ fun find_traces dir =
                else loop acc
             end
       in loop acc end
-    val all = walk dir []
-    (* Dedup: prefer .zst > .gz > .pft *)
-    val m = List.foldl (fn ((thy, path), m) =>
-      case Redblackmap.peek(m, thy) of
-        SOME existing =>
-          if String.isSuffix ".zst" path andalso
-             not (String.isSuffix ".zst" existing)
-          then Redblackmap.insert(m, thy, path)
-          else if String.isSuffix ".gz" path andalso
-                  not (String.isSuffix ".gz" existing) andalso
-                  not (String.isSuffix ".zst" existing)
-          then Redblackmap.insert(m, thy, path)
-          else m
-      | NONE => Redblackmap.insert(m, thy, path))
-      (Redblackmap.mkDict String.compare) all
-  in Redblackmap.listItems m end
+  in walk dir [] end
 
 end

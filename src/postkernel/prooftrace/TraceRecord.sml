@@ -35,9 +35,6 @@ fun escape_string s =
 
 val esc = escape_string
 
-fun shell_quote s =
-  "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
-
 (* ------- Command line parsing ------- *)
 
 fun find_arg flag args =
@@ -59,27 +56,10 @@ fun find_heap_input () =
      | NONE => find_arg "-b" args
   end
 
-(* ------- Compression (cached) ------- *)
-
-val compressor : string option option ref = ref NONE
-
-fun detect_compressor () =
-  case !compressor of
-    SOME c => c
-  | NONE =>
-    let fun try cmd =
-          (OS.Process.isSuccess
-             (OS.Process.system (cmd ^ " --version > /dev/null 2>&1")))
-          handle _ => false
-        val c = if try "zstd" then SOME "zstd"
-                else if try "gzip" then SOME "gzip"
-                else NONE
-    in compressor := SOME c; c end
-
 (* ------- Output stream ------- *)
 
 val output_strm : TextIO.outstream option ref = ref NONE
-val temp_path_ref : string option ref = ref NONE
+val output_path_ref : string option ref = ref NONE
 val keep_on_exit : bool ref = ref false
 
 (* Reset function ref — set after intern tables are defined *)
@@ -96,7 +76,7 @@ fun open_temp_file () =
     val pid = SysWord.toString
                 (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
     val path = ".trace_" ^ pid ^ ".tmp"
-    val _ = temp_path_ref := SOME path
+    val _ = output_path_ref := SOME path
     val _ = keep_on_exit := false
     val s = TextIO.openOut path
   in
@@ -111,7 +91,7 @@ fun open_heap_file path =
     val s = TextIO.openOut pft
   in
     output_strm := SOME s;
-    temp_path_ref := SOME pft;
+    output_path_ref := SOME pft;
     keep_on_exit := true;
     write_header s (find_heap_input ());
     s
@@ -125,8 +105,8 @@ fun out_strm () =
       handle _ =>
         (* Stale stream from heap restore — reopen.
            Clean up the stale temp file before opening a new one. *)
-        let val stale = !temp_path_ref
-        in output_strm := NONE; temp_path_ref := NONE;
+        let val stale = !output_path_ref
+        in output_strm := NONE; output_path_ref := NONE;
            (!reset_for_new_session) ();
            (case stale of
               SOME p => (OS.FileSys.remove p handle _ => ())
@@ -389,44 +369,17 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
 
 (* ------- Cleanup and reset ------- *)
 
-fun compress_file path =
-  let val comp = detect_compressor ()
-  in case comp of
-       SOME "zstd" =>
-         let val dst = path ^ ".zst"
-         in if OS.Process.isSuccess
-               (OS.Process.system
-                  ("zstd -q --rm " ^ shell_quote path ^
-                   " -o " ^ shell_quote dst))
-            then dst else path
-         end
-     | SOME "gzip" =>
-         let val dst = path ^ ".gz"
-         in if OS.Process.isSuccess
-               (OS.Process.system
-                  ("gzip -c " ^ shell_quote path ^
-                   " > " ^ shell_quote dst ^
-                   " && rm " ^ shell_quote path))
-            then dst else path
-         end
-     | _ => path
-  end
-
 fun cleanup () =
   (close_output () handle _ => ();
-   case !temp_path_ref of
-     SOME p =>
-       if !keep_on_exit then
-         (* Heap trace: compress the .pft file *)
-         (ignore (compress_file p) handle _ => ())
-       else
-         (* Temp file from aborted theory script: remove *)
-         (OS.FileSys.remove p handle _ => ())
-   | NONE => ())
+   if not (!keep_on_exit) then
+     case !output_path_ref of
+       SOME p => (OS.FileSys.remove p handle _ => ())
+     | NONE => ()
+   else ())
 
 fun trace_reset () =
   (close_output ();
-   temp_path_ref := NONE;
+   output_path_ref := NONE;
    keep_on_exit := false;
    (!reset_for_new_session) ())
 
@@ -435,20 +388,15 @@ fun trace_reset () =
 fun export_hook thyname (_:string list) all_thms =
   let
     val () = close_output ()
-    val temp = case !temp_path_ref of
+    val temp = case !output_path_ref of
                  SOME p => p
                | NONE => ""
   in
     if temp = "" then () else
     let
-      val comp = detect_compressor ()
-      val ext = case comp of
-          SOME "zstd" => ".pft.zst"
-        | SOME "gzip" => ".pft.gz"
-        | _ => ".pft"
-      val final_name = thyname ^ "Theory" ^ ext
+      val final_name = thyname ^ "Theory.pft"
 
-      (* Append N and E lines to the temp file *)
+      (* Write N and E lines to the temp file *)
       val s = TextIO.openAppend temp
       val _ = TextIO.output(s, "N " ^ esc thyname ^ "\n")
       val _ = List.app (fn (name, th) =>
@@ -464,20 +412,7 @@ fun export_hook thyname (_:string list) all_thms =
            else final_name
         end
 
-      (* Compress and write final file *)
-      val _ = case comp of
-          SOME "zstd" =>
-            ignore (OS.Process.system
-              ("zstd -q --rm " ^ shell_quote temp ^
-               " -o " ^ shell_quote actual_path))
-        | SOME "gzip" =>
-            ignore (OS.Process.system
-              ("gzip -c " ^ shell_quote temp ^
-               " > " ^ shell_quote actual_path ^
-               " && rm " ^ shell_quote temp))
-        | _ =>
-            OS.FileSys.rename {old = temp, new = actual_path}
-
+      val _ = OS.FileSys.rename {old = temp, new = actual_path}
       val _ = Feedback.HOL_MESG ("Proof trace: " ^ actual_path)
     in () end;
     trace_reset ()

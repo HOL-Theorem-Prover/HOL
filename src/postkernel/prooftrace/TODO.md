@@ -10,12 +10,12 @@
   Redblackmap, H line parsing for heap ancestry, automatic heap
   trace file discovery, proper topological sort of output files,
   per-file liveness with iterative ancestor processing
-- Heap trace compression: atExit handler now compresses heap
-  .pft files (zstd > gzip > uncompressed), matching theory traces
 - Stale temp file cleanup: stale stream handler removes leftover
   temp files before opening a new output
 - Unresolved parent trace_ids are now hard errors in merge
 - H lines documented as absolute paths in DESIGN.md
+- Compression removed from recording/merging/replay: all files
+  written as plain .pft; external tools can compress if desired
 - prooftrace binary moved from src/boss to
   src/postkernel/prooftrace (#14 partial): built on hol.state.min
   with kernel-only deps, no longer depends on hol.state or
@@ -69,25 +69,6 @@ Once this is in place, the prooftrace replay command can:
   (default verbose mode with proper term printing)
 - Provide `--interactive` with Theory structures populated
   by replayed theorems
-
-### Trace file compression (#19)
-
-Heap trace compression via `atExit` is unreliable — observed
-`numheap.pft` left uncompressed. Likely `atExit` doesn't fire
-reliably during Poly/ML heap saves.
-
-Options to investigate:
-- **Streaming compression**: pipe trace output through zstd/gzip
-  from the start, rather than compressing a completed file.
-  This would avoid the `atExit` problem entirely and also
-  reduce peak disk usage. Needs investigation into whether
-  SML can reliably pipe `TextIO.output` through a subprocess.
-- **External compression**: have Holmake/build compress heap
-  `.pft` files after `buildheap` completes (outside the SML
-  process).
-- **Stale-stream compression**: when a new process detects a
-  stale stream and opens a new trace, compress the previous
-  uncompressed heap trace at that point.
 
 ### Temp file cleanup on failed/killed builds (#20)
 

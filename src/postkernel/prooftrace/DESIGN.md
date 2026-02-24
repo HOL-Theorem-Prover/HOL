@@ -93,17 +93,16 @@ heap chain's `.pft` files without ambiguity.
 
 ### Trace file types
 
-**Theory traces** (`<thy>Theory.pft[.zst|.gz]` in `.hol/objs/`):
+**Theory traces** (`<thy>Theory.pft` in `.hol/objs/`):
 contain all steps recorded during a theory script, including
 library loading. Have N (theory name) and E (export) lines at
 the end. DISK_THM entries reference ancestor theorems by
 `(theory, name)`.
 
-**Heap traces** (`<heapname>.pft[.zst|.gz]` alongside the heap
-file): contain all steps recorded during heap building. No N
-or E lines. Steps include library initialization, type base
-setup, simpset construction, etc. Compressed on exit using the
-same preference as theory traces (zstd > gzip > uncompressed).
+**Heap traces** (`<heapname>.pft` alongside the heap file):
+contain all steps recorded during heap building. No N or E
+lines. Steps include library initialization, type base setup,
+simpset construction, etc.
 
 **Merged traces** (user-specified path): a single self-contained
 trace produced by the merge tool. No N line. Has E lines for
@@ -219,19 +218,16 @@ At `export_theory()` time, `Thm.trace_export` fires the export
 hook which:
 1. Closes the temp file
 2. Appends N and E lines
-3. Compresses (zstd > gzip > uncompressed) and writes to
-   `.hol/objs/<thyname>Theory.pft[.zst|.gz]`
+3. Renames to `.hol/objs/<thyname>Theory.pft`
 4. Removes the temp file
 5. Resets recording state
 
 ### Heap export
 
 For heap builds, there is no `export_theory()` call. The trace
-file is written directly from the start. The `atExit` handler
-closes the stream, compresses the file (zstd > gzip >
-uncompressed, same preference as theory traces), and writes
-the final output to `<heapname>.pft[.zst|.gz]`. No N or E
-lines are written.
+file (`<heapname>.pft`) is written directly from the start and
+closed by the `atExit` handler when the process exits. No N or
+E lines are written.
 
 ## Merge Tool
 
@@ -396,7 +392,7 @@ reducing peak memory:
 Both are optional future optimizations. The initial
 implementation keeps all objects alive.
 
-## Compression
+## File format
 
-Files may be `.pft.zst` (preferred), `.pft.gz`, or
-uncompressed `.pft`. Auto-detected from extension.
+All trace files are uncompressed `.pft` text files. External
+tools can compress them if desired.
