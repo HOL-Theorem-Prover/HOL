@@ -1374,6 +1374,12 @@ fun disk_thm name ((d,ocl), termlist) = let
 in
   mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c,Axiom_prf)
 end
+fun disk_thm_dep ((d,ocl), termlist) = let
+  val c = hd termlist
+  val asl = tl termlist
+in
+  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c,Axiom_prf)
+end
 end; (* local *)
 
 (* ----------------------------------------------------------------------

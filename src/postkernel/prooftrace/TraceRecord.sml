@@ -375,6 +375,9 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   | Thm.TR_DISK_THM (r, src_thy, name) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " DISK_THM " ^
         esc src_thy ^ " " ^ esc name)
+  | Thm.TR_DISK_DEP (r, src_thy, depid) =>
+      record_line ("P " ^ its (Thm.trace_id r) ^ " DISK_DEP " ^
+        esc src_thy ^ " " ^ its depid)
 
 (* ------- Cleanup and reset ------- *)
 
@@ -394,7 +397,7 @@ fun trace_reset () =
 
 (* ------- Export hook (theory export) ------- *)
 
-fun export_hook thyname (_:string list) all_thms =
+fun export_hook thyname (_:string list) all_thms dep_thms =
   let
     val () = close_output ()
     val temp = case !output_path_ref of
@@ -405,12 +408,16 @@ fun export_hook thyname (_:string list) all_thms =
     let
       val final_name = thyname ^ "Theory.pft"
 
-      (* Write N and E lines to the temp file *)
+      (* Write N, E, and D lines to the temp file *)
       val s = TextIO.openAppend temp
       val _ = TextIO.output(s, "N " ^ esc thyname ^ "\n")
       val _ = List.app (fn (name, th) =>
         TextIO.output(s, "E " ^ esc name ^ " " ^
           its (Thm.trace_id th) ^ "\n")) all_thms
+      (* D lines for anonymous thydata theorems *)
+      val _ = List.app (fn (depid, th) =>
+        TextIO.output(s, "D " ^ its depid ^ " " ^
+          its (Thm.trace_id th) ^ "\n")) dep_thms
       val _ = TextIO.closeOut s
 
       (* Put theory trace files in .hol/objs/ if it exists *)
@@ -441,6 +448,13 @@ fun trace_step_count () = !Thm.trace_counter
 fun activate () = (
   Thm.trace_hook := SOME record_hook;
   Thm.trace_export_hook := SOME export_hook;
+  (* Clear save_dep_log before .dat file write so that only
+     anonymous thydata theorems accumulate during export *)
+  Theory.register_hook (
+    "TraceRecord.clear_dep_log",
+    fn TheoryDelta.ExportTheory _ => Thm.save_dep_log := []
+     | _ => ()
+  );
   OS.Process.atExit cleanup
 )
 

@@ -302,6 +302,15 @@ fun replay_file path =
                      ([], Term.mk_var(thy_s ^ "$" ^ name_s,
                                       Type.bool))
                 end
+            | "DISK_DEP" =>
+                (* Per-theory trace: unresolved anonymous ancestor ref.
+                   Create an oracle thm placeholder. *)
+                let val thy_s = unescape (a 0)
+                    val depid_s = a 1
+                in Thm.mk_oracle_thm "DISK_DEP"
+                     ([], Term.mk_var(thy_s ^ "#" ^ depid_s,
+                                      Type.bool))
+                end
             | other => raise ERR "replay" ("unknown rule: " ^ other)
           in set_th id result end
 

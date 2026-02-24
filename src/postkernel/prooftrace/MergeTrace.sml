@@ -41,7 +41,7 @@ fun extract_parent_ids rule args =
     (* No parents *)
       "REFL" => [] | "ASSUME" => [] | "BETA_CONV" => []
     | "ALPHA" => [] | "AXIOM" => [] | "DISK_THM" => []
-    | "ORACLE" => []
+    | "DISK_DEP" => [] | "ORACLE" => []
     (* Single parent at position 0 *)
     | "ABS" => [ai 0] | "AP_TERM" => [ai 0] | "AP_THM" => [ai 0]
     | "SYM" => [ai 0] | "DISCH" => [ai 0] | "SPEC" => [ai 0]
@@ -149,8 +149,12 @@ type file_data = {
   n_types : int,
   (* Exports: (name, trace_id) *)
   exports : (string * int) list,
+  (* Depid exports: (depid, trace_id) *)
+  dep_exports : (int * int) list,
   (* DISK_THM entries: (trace_id, theory, name) *)
   disk_thms : (int * string * string) list,
+  (* DISK_DEP entries: (trace_id, theory, depid) *)
+  disk_deps : (int * string * int) list,
   (* DEF_SPEC entries: (thy, name) -> trace_id *)
   const_defs : (string * string, int) Redblackmap.dict,
   (* DEF_TYOP entries: (thy, tyop) -> trace_id *)
@@ -185,7 +189,9 @@ fun read_file_data path : file_data =
     val thy_name = ref ""
     val has_name = ref false
     val exports_rev = ref ([] : (string * int) list)
+    val dep_exports_rev = ref ([] : (int * int) list)
     val disk_thms_rev = ref ([] : (int * string * string) list)
+    val disk_deps_rev = ref ([] : (int * string * int) list)
     val const_defs_ref = ref (Redblackmap.mkDict thyname_cmp
       : (string * string, int) Redblackmap.dict)
     val type_defs_ref = ref (Redblackmap.mkDict thyname_cmp
@@ -280,6 +286,10 @@ fun read_file_data path : file_data =
                   disk_thms_rev := (id, unescape (List.nth(args, 0)),
                                     unescape (List.nth(args, 1)))
                                    :: !disk_thms_rev
+              | "DISK_DEP" =>
+                  disk_deps_rev := (id, unescape (List.nth(args, 0)),
+                                    int_of (List.nth(args, 1)))
+                                   :: !disk_deps_rev
               | "DEF_SPEC" =>
                   let val thyname = unescape (List.nth(args, 1))
                       val cnames = map unescape (List.drop(args, 2))
@@ -322,6 +332,9 @@ fun read_file_data path : file_data =
           (thy_name := unescape name; has_name := true)
       | ("E" :: name :: id_s :: _) =>
           exports_rev := (unescape name, int_of id_s) :: !exports_rev
+      | ("D" :: depid_s :: id_s :: _) =>
+          dep_exports_rev := (int_of depid_s, int_of id_s)
+                             :: !dep_exports_rev
       | _ => ()
       end
 
@@ -350,7 +363,9 @@ fun read_file_data path : file_data =
       y_deps = list_to_array ny (!y_deps_rev) [],
       n_types = ny,
       exports = rev (!exports_rev),
+      dep_exports = rev (!dep_exports_rev),
       disk_thms = rev (!disk_thms_rev),
+      disk_deps = rev (!disk_deps_rev),
       const_defs = !const_defs_ref,
       type_defs = !type_defs_ref,
       t_const_refs = rev (!t_const_refs_rev),
@@ -697,6 +712,24 @@ fun merge {trace_paths : (string * string) list,
                      anc_thy ^ "\n")
           else ()) (#disk_thms data);
 
+        (* Enqueue DISK_DEP ancestor depid exports *)
+        List.app (fn (id, anc_thy, anc_depid) =>
+          if Redblackset.member(#live_p lv, id) then
+            case Redblackmap.peek(thy_path_map, anc_thy) of
+              SOME anc_path =>
+                let val anc_data = load_file anc_path
+                in case List.find (fn (d,_) => d = anc_depid)
+                                  (#dep_exports anc_data) of
+                     SOME (_, thm_id) => enqueue (anc_path, [thm_id])
+                   | NONE =>
+                     err ("WARNING: dep export " ^ anc_thy ^
+                          ".#" ^ its anc_depid ^ " not found\n")
+                end
+            | NONE =>
+                err ("WARNING: no trace for theory " ^
+                     anc_thy ^ "\n")
+          else ()) (#disk_deps data);
+
         (* Enqueue unresolved heap parent trace_ids *)
         List.app (fn trace_id =>
           case find_in_heap_chain path trace_id of
@@ -795,11 +828,17 @@ fun merge {trace_paths : (string * string) list,
         val lv = case Redblackmap.peek(!file_liveness, path) of
             SOME lv => lv | NONE => raise ERR "merge" "no liveness"
         (* DISK_THM deps -> theory file paths *)
-        val disk_deps = List.mapPartial (fn (id, anc_thy, _) =>
+        val thm_file_deps = List.mapPartial (fn (id, anc_thy, _) =>
           if Redblackset.member(#live_p lv, id) then
             Redblackmap.peek(thy_to_path, anc_thy)
           else NONE)
           (#disk_thms data)
+        (* DISK_DEP deps -> theory file paths *)
+        val dep_file_deps = List.mapPartial (fn (id, anc_thy, _) =>
+          if Redblackset.member(#live_p lv, id) then
+            Redblackmap.peek(thy_to_path, anc_thy)
+          else NONE)
+          (#disk_deps data)
         (* Heap ancestry dep -> parent heap file path *)
         val heap_dep = case #heap_parent data of
             NONE => []
@@ -810,7 +849,7 @@ fun merge {trace_paths : (string * string) list,
               if Redblackset.member(!processed_files, hpft)
               then [hpft] else []
       in
-        disk_deps @ heap_dep
+        thm_file_deps @ dep_file_deps @ heap_dep
       end
 
     (* Unified topo sort via DFS *)
@@ -852,6 +891,13 @@ fun merge {trace_paths : (string * string) list,
     (* (theory, name) -> global thm id, for resolving DISK_THM *)
     val ancestor_exports : (string * string, int) Redblackmap.dict ref =
       ref (Redblackmap.mkDict thyname_cmp)
+
+    (* (theory, depid) -> global thm id, for resolving DISK_DEP *)
+    fun thyint_cmp ((t1,i1) : string*int, (t2,i2)) =
+      case String.compare(t1,t2) of EQUAL => Int.compare(i1,i2)
+                                   | ord => ord
+    val ancestor_dep_exports : (string * int, int) Redblackmap.dict ref =
+      ref (Redblackmap.mkDict thyint_cmp)
 
     (* (file_path, trace_id) -> global thm id, for resolving
        heap parent references *)
@@ -997,6 +1043,22 @@ fun merge {trace_paths : (string * string) list,
                 end
               else ()
               end
+          | ("P" :: id_s :: "DISK_DEP" :: args) =>
+              let val id = int_of id_s
+              in if Redblackset.member(live_p, id) then
+                let val anc_thy = unescape (List.nth(args, 0))
+                    val anc_depid = int_of (List.nth(args, 1))
+                in case Redblackmap.peek(!ancestor_dep_exports,
+                                         (anc_thy, anc_depid)) of
+                     SOME gid =>
+                       p_remap :=
+                         Redblackmap.insert(!p_remap, id, gid)
+                   | NONE =>
+                     err ("WARNING: unresolved DISK_DEP " ^
+                          anc_thy ^ ".#" ^ its anc_depid ^ "\n")
+                end
+              else ()
+              end
           | ("P" :: id_s :: rule :: args) =>
               let val id = int_of id_s
               in if Redblackset.member(live_p, id) then
@@ -1060,6 +1122,16 @@ fun merge {trace_paths : (string * string) list,
                                    (#thy_name data, name), gid)
           | NONE => ())
           (#exports data);
+
+        (* Register this file's dep exports in ancestor_dep_exports *)
+        List.app (fn (depid, local_id) =>
+          case Redblackmap.peek(!p_remap, local_id) of
+            SOME gid =>
+              ancestor_dep_exports :=
+                Redblackmap.insert(!ancestor_dep_exports,
+                                   (#thy_name data, depid), gid)
+          | NONE => ())
+          (#dep_exports data);
 
         (* If this is a heap trace, register all its live P entries
            in heap_thm_map so theory scripts (and later heaps)

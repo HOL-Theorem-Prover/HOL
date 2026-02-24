@@ -1361,6 +1361,14 @@ fun disk_thm name ((d,ocl), termlist) = let
 in
   tr (TR_DISK_THM (result, src_thy, name)); result
 end
+fun disk_thm_dep ((d,ocl), termlist) = let
+  val c = hd termlist
+  val asl = tl termlist
+  val result = mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
+  val (src_thy, depid) = fst d
+in
+  tr (TR_DISK_DEP (result, src_thy, depid)); result
+end
 end; (* local *)
 
 (* ----------------------------------------------------------------------
@@ -1371,14 +1379,21 @@ end; (* local *)
    a theory. *)
 val thm_order = ref 0
 
+val save_dep_log : (int * thm) list ref = ref []
+
 fun save_dep thy (th as (THM(t,h,c,sid))) =
   let
-    val did = (thy,!thm_order)
+    val depid_num = !thm_order
+    val did = (thy, depid_num)
     val dl  = (transfer_thydepl o dep_of o tag) th
     val dep = DEP_SAVED(did,dl)
+    val result = THM(Tag.set_dep dep t,h,c,sid)
   in
-    thm_order := (!thm_order) + 1;
-    THM(Tag.set_dep dep t,h,c,sid)
+    thm_order := depid_num + 1;
+    (case !trace_hook of
+       SOME _ => save_dep_log := (depid_num, result) :: !save_dep_log
+     | NONE => ());
+    result
   end
 
 (* ----------------------------------------------------------------------
@@ -1438,8 +1453,12 @@ in
 end (*local *)
 
 val trace_export_hook :
-  (string -> string list -> (string * thm) list -> unit) option ref = ref NONE
+  (string -> string list -> (string * thm) list -> (int * thm) list -> unit)
+  option ref = ref NONE
 fun trace_export thy pars thms =
-  case !trace_export_hook of NONE => () | SOME f => f thy pars thms
+  let val deps = rev (!save_dep_log)
+  in save_dep_log := [];
+     case !trace_export_hook of NONE => () | SOME f => f thy pars thms deps
+  end
 
 end (* Thm *)

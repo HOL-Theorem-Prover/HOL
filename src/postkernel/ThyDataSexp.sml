@@ -247,14 +247,16 @@ fun thmreader tmr =
             end
         in
           case List.find match_dep (DB.thms thy) of
-            SOME (name, _) => name
-          | NONE => "_unknown_" ^ thy ^ "_" ^ Int.toString n
+            SOME (name, _) => SOME name
+          | NONE => NONE
         end
-        handle _ => "_unknown"
+        handle _ => NONE
       fun with_name ((dd, ocl), terms) =
         let val (depid, _) = dd
-            val name = lookup_name depid
-        in Thm.disk_thm name ((dd, ocl), terms) end
+        in case lookup_name depid of
+             SOME name => Thm.disk_thm name ((dd, ocl), terms)
+           | NONE => Thm.disk_thm_dep ((dd, ocl), terms)
+        end
     in
       pair_decode (tagreader, list_decode (string_decode >> tmr)) >> with_name
     end

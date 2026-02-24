@@ -25,16 +25,41 @@
 
 ## Remaining implementation
 
-### ThyDataSexp name lookup (#18)
+### Anonymous thydata theorem references (#18)
 
-Some DISK_THM entries have `_unknown_thy_N` names because
-`ThyDataSexp.thmreader`'s `lookup_name` function fails to find
-the theorem in `DB.thms` by depid. Need to diagnose why the
-depid doesn't match and fix the lookup.
+When theories are loaded from disk, anonymous theorems embedded
+in thydata (TypeBase entries, simpset theorems, etc.) are loaded
+via `Thm.disk_thm`. These theorems have depids beyond the range
+of named exports (e.g., prim_rec has 47 named exports with
+depids 0–46, but thydata theorems get depids 47+). The old code
+generated `_unknown_thy_N` names which couldn't be resolved
+during merge.
 
-This is a recording correctness issue — the theorem exists in
-the source theory under a valid name, but we can't find which
-name at recording time.
+**Design (agreed):** Introduce `DISK_DEP` rule and `D` export
+lines. See DESIGN.md for full details. Summary:
+- `Thm.save_dep` accumulates `(depid_number, thm)` into a ref
+  when tracing is active (populated during .dat file write)
+- `trace_export` passes this list to the export hook
+- TraceRecord emits `D <depid> <trace_id>` lines for anonymous
+  theorems (depids not covered by named exports)
+- `ThyDataSexp.thmreader` signals anonymous theorems via
+  `TR_DISK_DEP` instead of `TR_DISK_THM`
+- TraceRecord emits `DISK_DEP <thy> <depid>` in consuming traces
+- MergeTrace resolves `DISK_DEP` via `D` lines in ancestor traces
+
+**Implementation changes needed:**
+1. `Thm.sml`: add `save_dep_log` ref, accumulate when
+   `trace_hook` is active, expand `trace_export` signature
+   to pass the log
+2. `Thm.sml`: add `TR_DISK_DEP` variant to `trace_record`
+3. `ThyDataSexp.sml`: `thmreader` fallback uses `TR_DISK_DEP`
+   with depid number instead of `_unknown` name
+4. `TraceRecord.sml`: handle `TR_DISK_DEP`, emit `D` lines in
+   export hook
+5. `MergeTrace.sml`: parse `D` lines, build depid resolution
+   map, handle `DISK_DEP` rule
+6. `ReplayTrace.sml`: parse `DISK_DEP` (same semantics as
+   `DISK_THM` — just a reference to an already-replayed theorem)
 
 ### Replay-aware theory loading (#14 remaining)
 

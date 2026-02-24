@@ -30,12 +30,13 @@ checks this env var at load time and activates if set.
 ### Grammar
 
 ```
-trace        ::= version heap? entry* name? exports
+trace        ::= version heap? entry* name? exports depexports
 version      ::= "V " int "\n"
 heap         ::= "H " s "\n"
 entry        ::= type_entry | term_entry | thm_entry | compute_init
 name         ::= "N " s "\n"
 exports      ::= ("E " s p "\n")*
+depexports   ::= ("D " int p "\n")*
 
 type_entry   ::= "Y " y " V " s "\n"
                | "Y " y " O " s s y* "\n"
@@ -59,8 +60,8 @@ Fields:
 - IDs are scoped per namespace (Y, T, P)
 - Y, T, P, C entries are interleaved in dependency order
   (as recorded during the build)
-- V is the first line; H (if present) is second; N and E entries
-  appear at the end
+- V is the first line; H (if present) is second; N, E, and D
+  entries appear at the end
 - H records the absolute filesystem path of the parent heap this
   trace was built on (e.g., `/home/user/HOL/bin/hol.state0`).
   This is the value of the `--holstate` or `-b` argument passed
@@ -84,7 +85,8 @@ with heaps. This gives the following properties:
   same counter value and have overlapping trace_id ranges. But
   parallel scripts never reference each other's theorems — they
   only reference the heap chain's theorems (via parent trace_ids)
-  and ancestor theories (via DISK_THM by name).
+  and ancestor theories (via DISK_THM by name or DISK_DEP by
+  depid).
 
 Therefore: within the heap chain that a theory depends on,
 trace_ids are globally unique. The merge tool can resolve a
@@ -95,19 +97,21 @@ heap chain's `.pft` files without ambiguity.
 
 **Theory traces** (`<thy>Theory.pft` in `.hol/objs/`):
 contain all steps recorded during a theory script, including
-library loading. Have N (theory name) and E (export) lines at
-the end. DISK_THM entries reference ancestor theorems by
-`(theory, name)`.
+library loading. Have N (theory name), E (named export), and
+D (anonymous depid export) lines at the end. DISK_THM entries
+reference named ancestor theorems by `(theory, name)`.
+DISK_DEP entries reference anonymous ancestor theorems (e.g.,
+thydata-embedded theorems) by `(theory, depid)`.
 
 **Heap traces** (`<heapname>.pft` alongside the heap file):
-contain all steps recorded during heap building. No N or E
+contain all steps recorded during heap building. No N, E, or D
 lines. Steps include library initialization, type base setup,
 simpset construction, etc.
 
 **Merged traces** (user-specified path): a single self-contained
 trace produced by the merge tool. No N line. Has E lines for
-the desired exports. No DISK_THM entries (all resolved). Types
-and terms globally deduplicated.
+the desired exports. No DISK_THM or DISK_DEP entries (all
+resolved). Types and terms globally deduplicated.
 
 ### Theorem Rules
 
@@ -159,6 +163,7 @@ extend to end of line.
 | `AXIOM` | `s t` — axiom name, conclusion |
 | `ORACLE` | `s t t*` — tag, concl, hyps |
 | `DISK_THM` | `s s` — theory, name (per-theory traces only) |
+| `DISK_DEP` | `s int` — theory, depid (per-theory traces only) |
 
 The `C` entry records initialization arguments for `Thm.compute`.
 At most once per trace, before any COMPUTE theorems. Arguments:
@@ -197,8 +202,15 @@ P entry IDs are `Thm.trace_id` values from the kernel's monotonic
 counter. Parent references are also `Thm.trace_id` values of the
 parent thm values. No `id_to_line` mapping is needed.
 
-For `TR_DISK_THM` (theorem loaded from a `.dat` file), the entry
-is `P <trace_id> DISK_THM <theory> <name>`.
+For `TR_DISK_THM` (named theorem loaded from a `.dat` file), the
+entry is `P <trace_id> DISK_THM <theory> <name>`.
+
+For `TR_DISK_DEP` (anonymous thydata-embedded theorem loaded from
+a `.dat` file), the entry is `P <trace_id> DISK_DEP <theory>
+<depid>`. This occurs when `ThyDataSexp.thmreader` cannot find
+a named export matching the theorem's depid — i.e., the theorem
+is embedded in thydata (TypeBase, simpsets, etc.) rather than
+being a named theory export.
 
 ### Stale stream handling
 
@@ -216,10 +228,21 @@ Type/term IDs restart from 0.
 
 At `export_theory()` time, `Thm.trace_export` fires the export
 hook which:
-1. Closes the temp file
-2. Appends N and E lines
+1. Closes the recording output stream
+2. Reopens the temp file in append mode, writes N, E, and D lines
 3. Renames to `.hol/objs/<thyname>Theory.pft`
 4. Resets recording state
+
+E lines map named exports to trace_ids. D lines map depid
+numbers to trace_ids for anonymous thydata-embedded theorems.
+
+To produce D lines, `Thm.save_dep` accumulates
+`(depid_number, thm)` pairs into a ref when tracing is active.
+This ref is populated during the `.dat` file write (when
+`thmwrite` calls `save_dep` on thydata theorems). At export
+time, `trace_export` passes this accumulated list to the hook.
+TraceRecord emits D lines for depids not already covered by
+named E exports.
 
 ### Heap export
 
@@ -249,7 +272,8 @@ exports, loading ancestors on demand as discovered):
    for each P entry, record which P/T/Y IDs it references
    (per-rule parsing of arguments); for each T entry, record
    which T/Y IDs it references; for each Y entry, record which
-   Y IDs it references. Also record E and DISK_THM entries.
+   Y IDs it references. Also record E, D, DISK_THM, and
+   DISK_DEP entries.
    Full line text is not stored — only dependency lists.
 2. Walk backward from the needed theorem IDs, marking live P
    entries, then transitively marking the T and Y entries they
@@ -261,8 +285,10 @@ exports, loading ancestors on demand as discovered):
    corresponding DEF_TYOP is marked live. This cascades
    naturally within the reachability walk.
 3. When the walk hits a DISK_THM entry (thy, name), add that
-   to the needed ancestor exports. If the ancestor's trace
-   hasn't been processed yet, process it.
+   to the needed ancestor exports (resolved via E lines). When
+   it hits a DISK_DEP entry (thy, depid), add that to the
+   needed ancestor depid exports (resolved via D lines). If
+   the ancestor's trace hasn't been processed yet, process it.
 4. When the walk hits a parent trace_id not in the current file,
    follow the H (heap) line to find the parent heap's `.pft`
    file, and search up the heap ancestry chain for a P entry
@@ -281,12 +307,12 @@ only live entries to the output with globally remapped IDs.
 Dependency order is determined by a unified topological sort
 across all files (both heap and theory traces). A file depends
 on another if:
-- It has a live DISK_THM referencing a theory → depends on
-  that theory's trace file
+- It has a live DISK_THM or DISK_DEP referencing a theory →
+  depends on that theory's trace file
 - It has an H line pointing to a parent heap → depends on
   that heap's trace file
 
-Note that heap traces can contain DISK_THM entries (e.g.,
+Note that heap traces can contain DISK_THM/DISK_DEP entries (e.g.,
 `hol.state0` loads `boolTheory` from disk), so theory traces
 may need to be written before the heap traces that reference
 them.
@@ -295,6 +321,7 @@ Persistent state:
 - Global type dedup map: `type_descriptor → global_type_id`
 - Global term dedup map: `term_descriptor → global_term_id`
 - Ancestor export map: `(theory, name) → global_theorem_id`
+- Ancestor depid map: `(theory, depid) → global_theorem_id`
 - Heap theorem map: `(file, trace_id) → global_theorem_id`
 
 Type descriptors: `(V, name)` or `(O, thy, name, [global_arg_ids])`.
@@ -310,6 +337,8 @@ For each file's live entries:
 - **T**: dedup via term descriptor. Write if new, remap if existing.
 - **P DISK_THM**: resolve via ancestor export map, record
   local→global mapping (no output).
+- **P DISK_DEP**: resolve via ancestor depid map, record
+  local→global mapping (no output).
 - **P (other)**: remap all argument IDs, assign new global theorem
   ID, write.
 - **C**: remap and write if any COMPUTE P entry is live (across
@@ -320,15 +349,15 @@ For each file's live entries:
   char_eqn parent thm IDs and cval term/type refs are marked
   live.
 
-After each file: register its exports (if any) in the ancestor
-export map. Register its P entries in the heap theorem map (if
-it's a heap trace).
+After each file: register its E exports (if any) in the ancestor
+export map, and its D exports in the ancestor depid map. Register
+its P entries in the heap theorem map (if it's a heap trace).
 
 After all files: write E lines for desired exports.
 
 ### Theorem dedup
 
-Currently not performed — each non-DISK_THM P entry gets a fresh
+Currently not performed — each non-DISK_THM/DISK_DEP P entry gets a fresh
 global ID. Possible future approaches:
 
 1. **Derivation-based**: dedup P entries with identical remapped
