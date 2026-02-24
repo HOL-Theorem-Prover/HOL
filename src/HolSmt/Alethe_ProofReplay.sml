@@ -89,6 +89,16 @@ local
   (* auxiliary proof functions                                               *)
   (***************************************************************************)
 
+  (* A static simpset for real arithmetic. We avoid srw_ss() because it is
+     dynamic (its contents change as theories are loaded), which is
+     undesirable in a decision procedure. real_ss is static and covers
+     most real-number simplification; we add REAL_ADD_LINV/RINV for
+     goals like -(1*x) + x = 0 that arise from Alethe proofs. *)
+  val alethe_ss =
+    simpLib.++ (realSimps.real_ss,
+    simpLib.rewrites [realTheory.REAL_ADD_LINV, realTheory.REAL_ADD_RINV,
+                      realTheory.POW_ONE])
+
   (* prove |- t by trying various automation *)
   fun auto_prove name t =
     let val (l, r) = boolSyntax.dest_eq t
@@ -102,7 +112,7 @@ local
     handle Feedback.HOL_ERR _ =>
     simpLib.SIMP_PROVE bossLib.std_ss [] t
     handle Feedback.HOL_ERR _ =>
-    simpLib.SIMP_PROVE (bossLib.srw_ss()) [] t
+    simpLib.SIMP_PROVE alethe_ss [] t
     handle Feedback.HOL_ERR _ =>
     raise ERR name ("failed to prove: " ^ Hol_pp.term_to_string t)
 
@@ -949,7 +959,7 @@ local
         metis_prove [] target
         handle Feedback.HOL_ERR _ =>
         (* 6. Simplifier (handles e.g. -(1*x) + x = 0) *)
-        simpLib.SIMP_PROVE (bossLib.srw_ss()) [] target
+        simpLib.SIMP_PROVE alethe_ss [] target
         handle Feedback.HOL_ERR _ =>
         (* 7. Evaluation *)
         Drule.EQT_ELIM (bossLib.EVAL target)
