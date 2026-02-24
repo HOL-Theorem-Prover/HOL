@@ -70,6 +70,35 @@ Once this is in place, the prooftrace replay command can:
 - Provide `--interactive` with Theory structures populated
   by replayed theorems
 
+### Trace file compression (#19)
+
+Heap trace compression via `atExit` is unreliable — observed
+`numheap.pft` left uncompressed. Likely `atExit` doesn't fire
+reliably during Poly/ML heap saves.
+
+Options to investigate:
+- **Streaming compression**: pipe trace output through zstd/gzip
+  from the start, rather than compressing a completed file.
+  This would avoid the `atExit` problem entirely and also
+  reduce peak disk usage. Needs investigation into whether
+  SML can reliably pipe `TextIO.output` through a subprocess.
+- **External compression**: have Holmake/build compress heap
+  `.pft` files after `buildheap` completes (outside the SML
+  process).
+- **Stale-stream compression**: when a new process detects a
+  stale stream and opens a new trace, compress the previous
+  uncompressed heap trace at that point.
+
+### Temp file cleanup on failed/killed builds (#20)
+
+`.trace_*.tmp` files are not cleaned up when a build process
+is killed (SIGKILL) since `atExit` handlers don't run. Options:
+- Have Holmake clean up `.trace_*.tmp` files before or after
+  each theory build.
+- Accept as a known limitation and document a manual cleanup
+  command.
+- Use a well-known temp directory that can be swept.
+
 ### End-to-end testing
 
 The MergeTrace rewrite needs testing with actual trace files
