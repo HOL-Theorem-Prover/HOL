@@ -108,6 +108,42 @@ Note: `.hol/objs` path is hardcoded in TraceRecord, matching
 changes, TraceRecord needs updating. Ideally TraceRecord would
 use `HOLFileSys` but it's not available at kernel level.
 
+### Automatic compression of theory traces (#21)
+
+Theory trace files (`.hol/objs/<thy>Theory.pft`) can be large.
+Add optional automatic compression using an external tool
+detected at configure time.
+
+**Configure-time detection:**
+- Smart configure probes for `zstd`, `gzip`, `lz4` (in
+  preference order; zstd recommended for speed/ratio)
+- Store the detected tool path and decompression command in
+  a config structure (e.g., `Globals.pft_compress` or a
+  `SystemConfig` entry) that persists into heaps
+
+**Compression (recording side):**
+- Theory traces only (not heap traces, to avoid extension
+  proliferation in gitignored heap paths)
+- In TraceRecord's export hook, after renaming to the final
+  `.pft` path, shell out via `OS.Process.system` to compress
+  and remove the original: e.g., `zstd foo.pft && rm foo.pft`
+- Final file: `.hol/objs/<thy>Theory.pft.zst` (or `.gz`)
+- No-op if no compression tool was detected at configure time
+
+**Decompression (merge/read side):**
+- `ReplayTrace.open_trace` (used by both MergeTrace and
+  ReplayTrace) probes for compressed variants when the
+  uncompressed `.pft` doesn't exist (check `.pft.zst`,
+  `.pft.gz` in order)
+- Decompress to a temp file via `OS.Process.system`, then
+  open the temp file with `TextIO.openIn`. Fully portable
+  (no `Posix` or `Unix` structure needed)
+- For MergeTrace's two-pass reading, cache the decompressed
+  temp path keyed by source path — decompress once, read
+  twice, clean up at the end of merge
+- Heap trace discovery (`find_heap_trace_file`) does not
+  need to handle compression (heap traces are uncompressed)
+
 ### End-to-end testing
 
 The MergeTrace rewrite needs testing with actual trace files
