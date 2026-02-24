@@ -14,7 +14,7 @@ link-to-sigobj: $(TARGETS)
 	$(HOL_LNSIGOBJ)
 endif
 
-selftest.exe: selftest.uo realSimps.uo
+selftest.exe: selftest.uo realSimps.uo NLArith.uo
 	$(HOLMOSMLC) -o $@ $<
 
 EXTRA_CLEANS = selftest.exe real-selftest.log
