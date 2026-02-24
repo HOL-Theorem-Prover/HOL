@@ -2,7 +2,7 @@ signature RealArith =
 sig
   include Abbrev
 
-  type positivstellensatz
+  datatype positivstellensatz = datatype RealArith0.positivstellensatz
   type rat = Arbrat.rat
   type aint = Arbint.int
 
