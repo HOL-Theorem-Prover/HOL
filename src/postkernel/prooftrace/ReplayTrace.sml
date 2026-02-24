@@ -135,12 +135,7 @@ fun replay_file path =
          let val v = case Array.sub(!ty_descs, i) of
                SOME (TyVar name) => Type.mk_vartype name
              | SOME (TyOp (thy, name, args)) =>
-                 let val targs = map ty args
-                 in Type.mk_thy_type {Thy=thy, Tyop=name, Args=targs}
-                    handle HOL_ERR _ =>
-                      (Type.prim_new_type {Thy=thy, Tyop=name} (length targs);
-                       Type.mk_thy_type {Thy=thy, Tyop=name, Args=targs})
-                 end
+                 Type.mk_thy_type {Thy=thy, Tyop=name, Args=map ty args}
              | NONE => raise ERR "replay" ("unknown type id " ^
                          Int.toString i)
          in Array.update(!ty_cache, i, SOME v); v end)
@@ -154,11 +149,7 @@ fun replay_file path =
                SOME (TmVar (name, tyid)) =>
                  Term.mk_var(name, ty tyid)
              | SOME (TmConst (thy, name, tyid)) =>
-                 (Term.mk_thy_const {Thy=thy, Name=name, Ty=ty tyid}
-                  handle HOL_ERR _ =>
-                    (ignore (Term.prim_new_const {Name=name, Thy=thy}
-                               (ty tyid));
-                     Term.mk_thy_const {Thy=thy, Name=name, Ty=ty tyid}))
+                 Term.mk_thy_const {Thy=thy, Name=name, Ty=ty tyid}
              | SOME (TmApp (fid, xid)) =>
                  Term.mk_comb(tm fid, tm xid)
              | SOME (TmLam (vid, bid)) =>

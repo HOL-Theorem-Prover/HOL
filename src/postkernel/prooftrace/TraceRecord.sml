@@ -1,11 +1,12 @@
 (* TraceRecord: proof trace recording for stdknl.
 
    Sets Thm.trace_hook to record each inference step, streaming
-   Y/T/P/C entries to an uncompressed temp file. P entries use
-   kernel trace_ids for both their own ID and parent references.
+   Y/T/P/C entries to the output file. P entries use kernel
+   trace_ids for both their own ID and parent references.
 
-   At export time (theory or heap), the temp file is compressed
-   and renamed to the final .pft path. No remapping is needed.
+   Two kinds of output:
+   - Heap builds: write directly to <heapname>.pft
+   - Theory scripts: write to a temp file, renamed at export time
 
    NOT in the trust boundary: output is verified by ReplayTrace.
 *)
@@ -37,16 +38,8 @@ val esc = escape_string
 fun shell_quote s =
   "'" ^ String.translate (fn #"'" => "'\\''" | c => str c) s ^ "'"
 
-(* ------- Output stream (uncompressed temp file) ------- *)
+(* ------- Command line parsing ------- *)
 
-val output_strm : TextIO.outstream option ref = ref NONE
-val temp_path_ref : string option ref = ref NONE
-val is_temp_file : bool ref = ref true  (* false for heap builds *)
-
-(* Reset function ref — set after intern tables are defined *)
-val reset_for_new_session = ref (fn () => ())
-
-(* Parse command line for heap-related paths *)
 fun find_arg flag args =
   let fun find [] = NONE
         | find (s :: rest) =
@@ -66,7 +59,37 @@ fun find_heap_input () =
      | NONE => find_arg "-b" args
   end
 
-val heap_input_path : string option ref = ref NONE
+(* ------- Compression (cached) ------- *)
+
+val compressor : string option option ref = ref NONE
+
+fun detect_compressor () =
+  case !compressor of
+    SOME c => c
+  | NONE =>
+    let fun try cmd =
+          (OS.Process.isSuccess
+             (OS.Process.system (cmd ^ " --version > /dev/null 2>&1")))
+          handle _ => false
+        val c = if try "zstd" then SOME "zstd"
+                else if try "gzip" then SOME "gzip"
+                else NONE
+    in compressor := SOME c; c end
+
+(* ------- Output stream ------- *)
+
+val output_strm : TextIO.outstream option ref = ref NONE
+val temp_path_ref : string option ref = ref NONE
+val keep_on_exit : bool ref = ref false
+
+(* Reset function ref — set after intern tables are defined *)
+val reset_for_new_session = ref (fn () => ())
+
+fun write_header s heap_input =
+  (TextIO.output(s, "V 1\n");
+   case heap_input of
+     SOME hp => TextIO.output(s, "H " ^ esc hp ^ "\n")
+   | NONE => ())
 
 fun open_temp_file () =
   let
@@ -74,10 +97,23 @@ fun open_temp_file () =
                 (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
     val path = ".trace_" ^ pid ^ ".tmp"
     val _ = temp_path_ref := SOME path
+    val _ = keep_on_exit := false
     val s = TextIO.openOut path
   in
     output_strm := SOME s;
-    TextIO.output(s, "V 1\n");
+    write_header s (find_heap_input ());
+    s
+  end
+
+fun open_heap_file path =
+  let
+    val pft = path ^ ".pft"
+    val s = TextIO.openOut pft
+  in
+    output_strm := SOME s;
+    temp_path_ref := SOME pft;
+    keep_on_exit := true;
+    write_header s (find_heap_input ());
     s
   end
 
@@ -89,22 +125,12 @@ fun out_strm () =
       handle _ =>
         (* Stale stream from heap restore — reopen *)
         (output_strm := NONE; temp_path_ref := NONE;
-         is_temp_file := true;
-         heap_input_path := find_heap_input ();
          (!reset_for_new_session) ();
          case find_heap_output () of
-           SOME path =>
-             let val pft = path ^ ".pft"
-                 val s = TextIO.openOut pft
-             in output_strm := SOME s;
-                temp_path_ref := SOME pft;
-                is_temp_file := false;
-                TextIO.output(s, "V 1\n");
-                s
-             end
+           SOME path => open_heap_file path
          | NONE => open_temp_file ())
 
-fun close_temp () =
+fun close_output () =
   (case !output_strm of
      SOME s => ((TextIO.flushOut s; TextIO.closeOut s) handle _ => ())
    | NONE => ();
@@ -258,13 +284,13 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
         String.concat (map (fn {redex,residue} =>
           " " ^ its (iT redex) ^ " " ^ its (iT residue)) theta))
   | Thm.TR_SUBST (r, repls, template, th) =>
-      let val remapped_pairs =
+      let val pairs =
             let fun go [] = ""
                   | go ({redex, residue} :: rest) =
                       " " ^ its (iT redex) ^ " " ^ pi residue ^ go rest
             in go repls end
       in record_line ("P " ^ its (Thm.trace_id r) ^ " SUBST " ^ pi th ^
-           " " ^ its (iT template) ^ remapped_pairs)
+           " " ^ its (iT template) ^ pairs)
       end
   | Thm.TR_SPEC (r, th, t) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " SPEC " ^
@@ -352,50 +378,36 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
 (* ------- Cleanup and reset ------- *)
 
 fun cleanup () =
-  (close_temp () handle _ => ();
-   if !is_temp_file then
+  (close_output () handle _ => ();
+   if not (!keep_on_exit) then
      case !temp_path_ref of
        SOME p => (OS.FileSys.remove p handle _ => ())
      | NONE => ()
    else ())
 
 fun trace_reset () =
-  (close_temp ();
+  (close_output ();
    temp_path_ref := NONE;
+   keep_on_exit := false;
    (!reset_for_new_session) ())
 
-(* ------- Export hook ------- *)
-
-fun detect_compressor () =
-  let fun try cmd =
-    (OS.Process.isSuccess
-       (OS.Process.system (cmd ^ " --version > /dev/null 2>&1")))
-    handle _ => false
-  in if try "zstd" then SOME "zstd"
-     else if try "gzip" then SOME "gzip"
-     else NONE
-  end
+(* ------- Export hook (theory export) ------- *)
 
 fun export_hook thyname (_:string list) all_thms =
   let
-    val () = close_temp ()
+    val () = close_output ()
     val temp = case !temp_path_ref of
                  SOME p => p
                | NONE => ""
   in
     if temp = "" then () else
     let
-      (* Determine output path and compress *)
       val comp = detect_compressor ()
       val ext = case comp of
           SOME "zstd" => ".pft.zst"
         | SOME "gzip" => ".pft.gz"
         | _ => ".pft"
-      val final_name =
-        if String.isPrefix "_heap_" thyname then
-          String.extract(thyname, 6, NONE) ^ ext
-        else
-          thyname ^ "Theory" ^ ext
+      val final_name = thyname ^ "Theory" ^ ext
 
       (* Append N and E lines to the temp file *)
       val s = TextIO.openAppend temp
@@ -413,23 +425,21 @@ fun export_hook thyname (_:string list) all_thms =
            else final_name
         end
 
-      (* Compress and rename *)
+      (* Compress and write final file *)
       val _ = case comp of
           SOME "zstd" =>
-            (OS.Process.system
-               ("zstd -q --rm " ^ shell_quote temp ^
-                " -o " ^ shell_quote actual_path);
-             ())
+            ignore (OS.Process.system
+              ("zstd -q --rm " ^ shell_quote temp ^
+               " -o " ^ shell_quote actual_path))
         | SOME "gzip" =>
-            (OS.Process.system
-               ("gzip -c " ^ shell_quote temp ^
-                " > " ^ shell_quote actual_path ^
-                " && rm " ^ shell_quote temp);
-             ())
+            ignore (OS.Process.system
+              ("gzip -c " ^ shell_quote temp ^
+               " > " ^ shell_quote actual_path ^
+               " && rm " ^ shell_quote temp))
         | _ =>
-            (OS.FileSys.rename {old = temp, new = actual_path}; ())
+            OS.FileSys.rename {old = temp, new = actual_path}
 
-      val _ = Feedback.HOL_MESG ("Proof trace: " ^ final_name)
+      val _ = Feedback.HOL_MESG ("Proof trace: " ^ actual_path)
     in () end;
     trace_reset ()
   end
@@ -454,19 +464,8 @@ fun activate () = (
 val _ = case OS.Process.getEnv "HOL_TRACE_PROOFS" of
           SOME _ =>
           let val _ = activate ()
-              val heap_out = find_heap_output ()
-              val _ = TextIO.output(TextIO.stdErr,
-                "[TraceRecord] heap_output = " ^
-                (case heap_out of SOME p => p | NONE => "NONE") ^ "\n")
-          in case heap_out of
-               SOME path =>
-                 let val pft = path ^ ".pft"
-                     val s = TextIO.openOut pft
-                 in output_strm := SOME s;
-                    temp_path_ref := SOME pft;
-                    is_temp_file := false;
-                    TextIO.output(s, "V 1\n")
-                 end
+          in case find_heap_output () of
+               SOME path => ignore (open_heap_file path)
              | NONE => ()
           end
         | NONE => ()
