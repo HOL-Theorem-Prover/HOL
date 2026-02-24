@@ -1,15 +1,16 @@
 signature combinpp =
 sig
 
-val toplevel_updname : string
-val internal_consupd : string
-val internal_idupd : string
-val mapsto_special : string
-val update_constname : string
-
 val upd_processor : term_grammar.absyn_postprocessor
 val upd_printer : term_grammar.userprinter
 
+val new_form :
+    { left : string, right : string, upd_term_name : string,
+      lookup_term_name : string option } ->
+    unit
+
+val enable_dictsyntax : unit -> unit
+  (* only needs calling once *)
 end
 
 (*
