@@ -12,10 +12,13 @@ sig
                  stem:string,aux:defn}
    | TAILREC of {eqs:thm list, ind:thm, R:term, SV:term list, stem:string}
 
-
   val pp_defn : defn Parse.pprinter
-  val all_terms : defn -> term list
-    (* conclusions of theorems, SV variables, R *)
+  val all_terms : defn -> term list (* conclusions of theorems, SV variables, R *)
+
+  val defn_consts : defn -> {introduced: term list, support: term list}
+  val tupled_suffix : string
+  val support_names : defn -> string list
+  val delete_support : defn -> unit list
 
   (* Used to control context tracking during termination
      condition extraction *)

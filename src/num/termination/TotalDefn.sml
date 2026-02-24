@@ -51,6 +51,15 @@ val _ = Feedback.register_btrace
 val auto_tgoal = ref true
 val _ = Feedback.register_btrace("Definition.auto Defn.tgoal", auto_tgoal)
 
+val deleting_support = ref true
+val _ = Feedback.register_btrace
+          ("Definition.delete intermediate defs", deleting_support)
+
+fun delete_support defn =
+   if !deleting_support then
+      (DefnBase.delete_support defn; ())
+   else ()
+
 (*---------------------------------------------------------------------------*)
 (* Misc. stuff that should be in Lib probably                                *)
 (*---------------------------------------------------------------------------*)
@@ -636,6 +645,24 @@ fun complain_about_rhsfvs srcfn V =
         "right hand side of the proposed definition: ",
         String.concatWith "," $ map (Lib.quote o #1 o dest_var) V])
 
+(*---------------------------------------------------------------------------*)
+(* Note: ThmAttribute.extract_attributes does not chop off the "_def" from   *)
+(* "foo_def", when that is the name supplied in a Modern Syntax              *)
+(*                                                                           *)
+(*   Definition foo_def <attrs>: ... End                                     *)
+(*                                                                           *)
+(* input (which gets passed to located_qDefine). But TFL expects its "stem"  *)
+(* input to be "foo". Hence "tfl_stem_of"                                    *)
+(*---------------------------------------------------------------------------*)
+
+fun tfl_stem_of s =
+ let open Substring
+     val ss = full s
+ in
+    if exists (C isSuffix ss) ["_def", "_DEF"]  then
+       string $ extract(s,0,SOME(size ss - 4))
+    else s end
+
 local open Defn
   fun should_try_to_prove_termination defn rhs_frees =
       let val tcs = tcs_of defn
@@ -722,8 +749,10 @@ local open Defn
                    termination_proof_failed loc defn)
            end
     in
-       save_defn_at loc defn'
-       ; (LIST_CONJ (map GEN_ALL (eqns_of defn')), ind_of defn', opt)
+       delete_support defn'
+     ; save_defn_at loc defn'
+     ; (LIST_CONJ (map GEN_ALL (eqns_of defn')),
+        ind_of defn', opt)
     end
   val defnDefine = located_defnDefine DB.Unknown
 end
@@ -742,8 +771,7 @@ fun def_n_ind (def, indopt, NONE) = (def, NONE)
 
 fun located_xDefine loc stem q =
  Parse.try_grammar_extension
-   (Theory.try_theory_extension
-       (def_n_ind o located_primDefine loc o Defn.Hol_defn stem)) q
+    (def_n_ind o located_primDefine loc o Defn.Hol_defn stem) q
   handle e => render_exn (wrap_exn "TotalDefn" "xDefine" e);
 
 val xDefine = located_xDefine DB.Unknown
@@ -798,13 +826,14 @@ fun located_tDefine loc stem q tac =
         else let val (def,ind) = with_flag (proofManagerLib.chatting,false)
                                            Defn.tprove0(defn,tac)
                  val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
-             in Defn.store_at loc (stem,def,ind) ;
-                (def, SOME ind)
+             in
+                 delete_support defn
+               ; Defn.store_at loc (stem,def,ind)
+               ; (def, SOME ind)
              end
        end
  in
-  Parse.try_grammar_extension
-    (Theory.try_theory_extension thunk) ()
+  Parse.try_grammar_extension thunk ()
   handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)
  end
 
@@ -842,6 +871,7 @@ fun located_qDefine loc stem q tacopt =
     let
       val {thmname=corename, attrs=attrs,reserved=R,unknown} =
           ThmAttribute.extract_attributes stem
+      val tfl_stem = tfl_stem_of corename
       val (nocomp, R) = test_remove "nocompute" R
       val (svarsok, R) = test_remove "schematic" R
       val (notuserdef, R) = test_remove "notuserdef" R

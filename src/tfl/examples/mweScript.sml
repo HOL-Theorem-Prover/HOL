@@ -1,8 +1,12 @@
-Theory gh1431
+Theory mwe
 Ancestors
   string alist pair list rich_list
 Libs
   monadsyntax
+
+(*---------------------------------------------------------------------------*)
+(* Taken from finite_maps/theory_tests/gh1431Script.sml                      *)
+(*---------------------------------------------------------------------------*)
 
 Definition return_def:
   return x s = (INL x, s)
@@ -25,25 +29,20 @@ Definition assert_def:
   assert b e s = ((if b then INL () else INR e), s)
 End
 
-val () = declare_monad ("mwe",
-  { bind = “bind”, unit = “return”,
-    ignorebind = SOME “ignore_bind”, choice = NONE,
-    fail = SOME “raise”, guard = SOME “assert”
-  });
-val () = enable_monad "mwe";
-val () = enable_monadsyntax();
-
-Datatype:
-  dat = Dats (dat list) | Num num
-End
-
-Definition lift_opt_def:
-  lift_opt x s = case x of NONE => raise s | SOME v => return v
-End
+val () = let in
+   declare_monad ("mwe",
+      {bind = “bind”,
+       unit = “return”,
+       ignorebind = SOME “ignore_bind”,
+       choice = NONE,
+       fail = SOME “raise”,
+       guard = SOME “assert”})
+ ; enable_monad "mwe"
+ ; enable_monadsyntax() end
 
 Theorem bind_cong[defncong]:
   (f = f') ∧
-  (∀s x t. f' s = (INL x, t) ==> g x t = g' x t)
+  (∀s x t. f' s = (INL x,t) ==> g x t = g' x t)
   ⇒
   bind f g = bind f' g'
 Proof
@@ -51,6 +50,14 @@ Proof
   \\ first_x_assum irule
   \\ metis_tac[FST]
 QED
+
+Definition lift_opt_def:
+  lift_opt x s = case x of NONE => raise s | SOME v => return v
+End
+
+Datatype:
+  dat = Dats (dat list) | Num num
+End
 
 Definition datcount_def[simp]:
   datcount (Dats ds) = 2 + SUM (MAP datcount ds)  ∧
@@ -62,7 +69,8 @@ Overload dcalist = “λas. LENGTH as + SUM (MAP (datcount o SND) as)”
 Theorem LENGTH_FILTER_unchanged:
   LENGTH (FILTER P l) = LENGTH l ⇔ ∀x. MEM x l ⇒ P x
 Proof
-  Induct_on ‘l’ >> simp[] >> rw[] >> gvs[DISJ_IMP_THM, FORALL_AND_THM] >>
+  Induct_on ‘l’ >> simp[] >> rw[] >>
+  gvs[DISJ_IMP_THM, FORALL_AND_THM] >>
   qspecl_then [‘P’, ‘l’] assume_tac LENGTH_FILTER_LEQ >>
   simp[]
 QED
@@ -73,7 +81,7 @@ Proof
   Induct_on ‘l’ >> rw[]
 QED
 
-Definition mwe:
+Definition mwe_def:
   mwe ns n = do
     x <- return n;
     d <- lift_opt (ALOOKUP ns n) "lookup";
@@ -121,15 +129,3 @@ Termination
   irule (DECIDE “x ≤ a ∧ y ≤ b ⇒ x + y ≤ a + b”) >>
   simp[SUM_MAP_FILTER_LEQ]
 End
-
-
-(*
-  The termination conditions weren't strong enough here:
-
-    (∀ns n s x d.
-       FST (return n s) = INL x ⇒ R (INR (INL (ADELKEY n ns,d))) (INL (ns,n))) ∧
-
-  we need to know where `d` came from.
-
-  Then the proof would measure the total size of all the dats in ns
-*)

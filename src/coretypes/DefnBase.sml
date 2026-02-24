@@ -34,6 +34,54 @@ fun all_terms d =
         R :: concl ind :: map concl eqs @ SV @ all_terms aux
     | TAILREC {eqs,ind,R,SV,...} => R :: concl ind :: map concl eqs @ SV
 
+(*---------------------------------------------------------------------------*)
+(* Partition the constants used in building a top-level defn into the        *)
+(* introduced constants and the constants used only to aid the construction. *)
+(* The latter are delete-able.                                               *)
+(*---------------------------------------------------------------------------*)
+
+fun consts_of eqs =
+  let val thms = List.concat $ map CONJUNCTS eqs
+      fun eqn_const th =
+          fst $ strip_comb $ lhs $ snd $ strip_forall $ concl th
+  in op_mk_set aconv $ map eqn_const thms end
+
+fun defn_consts defn =
+ case defn
+  of ABBREV {eqn,...} => {introduced = consts_of [eqn],support = []}
+   | PRIMREC{eqs,...} => {introduced = consts_of [eqs], support = []}
+   | NONREC {eqs,...} => {introduced = consts_of [eqs], support = []}
+   | STDREC {eqs,...} => {introduced = consts_of eqs, support = []}
+   | TAILREC {eqs,...} => {introduced = consts_of eqs, support = []}
+   | MUTREC {eqs,union,...} =>
+       let val {introduced,support} = defn_consts union
+       in {introduced = consts_of eqs,
+           support = introduced @ support} end
+   | NESTREC {eqs,aux,...} =>
+       let val {introduced,support} = defn_consts aux
+       in {introduced = consts_of eqs,
+           support = introduced @ support} end
+
+(*---------------------------------------------------------------------------*)
+(* Names of all support definitions. We also need to add in any "_tupled"    *)
+(* suffixed constants. Tupling is used by TFL to get uniform input for the   *)
+(* wfrec thm and then untupling is used to get the original argument format  *)
+(* back. Takes a  "buckshot" approach to guessing potential tupled names,    *)
+(* ie, support_names can return more names than support constants.           *)
+(*---------------------------------------------------------------------------*)
+
+val tupled_suffix = "_tupled"
+
+fun support_names defn =
+    let val {introduced,support} = defn_consts defn
+        val first_iname = fst $ dest_const $ hd introduced
+        val snames = map (fst o dest_const) support
+        val tupled = map (C strcat tupled_suffix) (first_iname :: snames)
+    in snames @ tupled
+    end
+
+val delete_support = Lib.mapfilter delete_const o support_names
+
 local open Portable
       fun kind (ABBREV _)  = "abbreviation"
         | kind (NONREC  _) = "non-recursive"

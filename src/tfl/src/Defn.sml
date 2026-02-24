@@ -1093,7 +1093,7 @@ fun pairf (stem, eqs0) =
      then (tuple_args [(f, (f, argtys))] eqs0, stem, I)
    else
      let
-       val stem'name = stem ^ "_tupled"
+       val stem'name = stem ^ DefnBase.tupled_suffix
        val rng_ty = type_of rhs
        val tuple_dom = list_mk_prod_type argtys
        val stem' = mk_var (stem'name, tuple_dom --> rng_ty)
@@ -1125,7 +1125,7 @@ fun pairf (stem, eqs0) =
                    (SPEC tm (Rewrite.PURE_REWRITE_RULE [GSYM def] induction)))
              end
          in
-           (rules', induction') before Theory.delete_const stem'name
+           (rules', induction')
          end
      in
        (tuple_args [(f, (stem', argtys))] eqs0, stem'name, untuple_args)
