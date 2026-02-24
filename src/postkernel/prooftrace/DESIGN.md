@@ -182,8 +182,8 @@ and registers an `atExit` cleanup handler. When not activated
 At activation time, TraceRecord parses `CommandLine.arguments()`
 for `-o <path>`. If found, this is a heap build — the trace is
 written directly to `<path>.pft`. If not found, this is a theory
-script — the trace is written to a temp file (renamed at export
-time).
+script — the trace is written to a temp file under `.hol/objs/`
+(renamed at export time).
 
 ### Recording steps
 
@@ -219,8 +219,7 @@ hook which:
 1. Closes the temp file
 2. Appends N and E lines
 3. Renames to `.hol/objs/<thyname>Theory.pft`
-4. Removes the temp file
-5. Resets recording state
+4. Resets recording state
 
 ### Heap export
 

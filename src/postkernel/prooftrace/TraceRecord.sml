@@ -6,7 +6,8 @@
 
    Two kinds of output:
    - Heap builds: write directly to <heapname>.pft
-   - Theory scripts: write to a temp file, renamed at export time
+   - Theory scripts: write to .hol/objs/.trace_<pid>.tmp,
+     renamed to .hol/objs/<thy>Theory.pft at export time
 
    NOT in the trust boundary: output is verified by ReplayTrace.
 *)
@@ -71,11 +72,19 @@ fun write_header s heap_input =
      SOME hp => TextIO.output(s, "H " ^ esc hp ^ "\n")
    | NONE => ())
 
+val objdir = ".hol/objs"
+
 fun open_temp_file () =
   let
+    val _ = if OS.FileSys.access(objdir, []) andalso
+               OS.FileSys.isDir objdir
+            then ()
+            else raise ERR "open_temp_file"
+                   (objdir ^ " does not exist")
     val pid = SysWord.toString
                 (Posix.Process.pidToWord (Posix.ProcEnv.getpid ()))
-    val path = ".trace_" ^ pid ^ ".tmp"
+    val path = OS.Path.concat(objdir,
+                 ".trace_" ^ pid ^ ".tmp")
     val _ = output_path_ref := SOME path
     val _ = keep_on_exit := false
     val s = TextIO.openOut path

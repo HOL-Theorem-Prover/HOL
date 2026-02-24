@@ -72,13 +72,16 @@ Once this is in place, the prooftrace replay command can:
 
 ### Temp file cleanup on failed/killed builds (#20)
 
-`.trace_*.tmp` files are not cleaned up when a build process
-is killed (SIGKILL) since `atExit` handlers don't run. Options:
-- Have Holmake clean up `.trace_*.tmp` files before or after
-  each theory build.
-- Accept as a known limitation and document a manual cleanup
-  command.
-- Use a well-known temp directory that can be swept.
+Temp files (`.hol/objs/.trace_*.tmp`) are not cleaned up when
+a build process is killed (SIGKILL) since `atExit` handlers
+don't run. Being under `.hol/` they are hidden from git and
+swept by `Holmake cleanAll`. Could also have Holmake clean
+them before each theory build.
+
+Note: `.hol/objs` path is hardcoded in TraceRecord, matching
+`HFS_NameMunge.HOLOBJDIR`. If the Holmake directory layout
+changes, TraceRecord needs updating. Ideally TraceRecord would
+use `HOLFileSys` but it's not available at kernel level.
 
 ### End-to-end testing
 
