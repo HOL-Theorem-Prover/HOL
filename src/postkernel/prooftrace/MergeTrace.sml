@@ -278,16 +278,19 @@ fun read_file_data path : file_data =
 
 (* ------- Heap trace file discovery ------- *)
 
-(* Given a heap path from an H line (e.g. "bin/hol.state0" or
-   "/path/to/numheap"), find the corresponding .pft file.
-   Convention: the trace is at <heap_path>.pft *)
+(* Given a heap path from an H line (e.g. "/home/user/HOL/bin/hol.state0"),
+   find the corresponding trace file. Tries .pft.zst, .pft.gz, .pft
+   in that order (matching compression preference). *)
 fun find_heap_trace_file heap_path =
   let
-    val pft = heap_path ^ ".pft"
+    val candidates = [heap_path ^ ".pft.zst",
+                      heap_path ^ ".pft.gz",
+                      heap_path ^ ".pft"]
   in
-    if OS.FileSys.access(pft, [OS.FileSys.A_READ])
-    then SOME pft
-    else NONE
+    case List.find (fn p =>
+           OS.FileSys.access(p, [OS.FileSys.A_READ])) candidates of
+      SOME p => SOME p
+    | NONE => NONE
   end
 
 (* ------- Pass 1: Backward reachability ------- *)
@@ -587,8 +590,10 @@ fun merge {trace_paths : (string * string) list,
         List.app (fn trace_id =>
           case find_in_heap_chain path trace_id of
             NONE =>
-              err ("WARNING: unresolved parent trace_id " ^
-                   its trace_id ^ " in " ^ path ^ "\n")
+              raise ERR "process_file"
+                ("unresolved parent trace_id " ^ its trace_id ^
+                 " in " ^ path ^
+                 " (not found in any ancestor heap trace)")
           | SOME heap_pft =>
               process_file heap_pft [trace_id])
           unresolved;
@@ -766,10 +771,13 @@ fun merge {trace_paths : (string * string) list,
             let fun search p =
                   let val d = load_file p
                   in case #heap_parent d of
-                       NONE => ~1
+                       NONE => raise ERR "write_file"
+                         ("unresolved parent trace_id " ^ its i ^
+                          " while writing " ^ path)
                      | SOME hp =>
                        case find_heap_trace_file hp of
-                         NONE => ~1
+                         NONE => raise ERR "write_file"
+                           ("heap trace not found for " ^ hp)
                        | SOME hpft =>
                          case Redblackmap.peek(!heap_thm_map,
                                                (hpft, i)) of

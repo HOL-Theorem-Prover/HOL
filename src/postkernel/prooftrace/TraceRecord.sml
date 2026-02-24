@@ -123,12 +123,18 @@ fun out_strm () =
   | SOME s =>
       (TextIO.output(s, ""); s)
       handle _ =>
-        (* Stale stream from heap restore — reopen *)
-        (output_strm := NONE; temp_path_ref := NONE;
-         (!reset_for_new_session) ();
-         case find_heap_output () of
-           SOME path => open_heap_file path
-         | NONE => open_temp_file ())
+        (* Stale stream from heap restore — reopen.
+           Clean up the stale temp file before opening a new one. *)
+        let val stale = !temp_path_ref
+        in output_strm := NONE; temp_path_ref := NONE;
+           (!reset_for_new_session) ();
+           (case stale of
+              SOME p => (OS.FileSys.remove p handle _ => ())
+            | NONE => ());
+           case find_heap_output () of
+             SOME path => open_heap_file path
+           | NONE => open_temp_file ()
+        end
 
 fun close_output () =
   (case !output_strm of
@@ -377,13 +383,40 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
 
 (* ------- Cleanup and reset ------- *)
 
+fun compress_file path =
+  let val comp = detect_compressor ()
+  in case comp of
+       SOME "zstd" =>
+         let val dst = path ^ ".zst"
+         in if OS.Process.isSuccess
+               (OS.Process.system
+                  ("zstd -q --rm " ^ shell_quote path ^
+                   " -o " ^ shell_quote dst))
+            then dst else path
+         end
+     | SOME "gzip" =>
+         let val dst = path ^ ".gz"
+         in if OS.Process.isSuccess
+               (OS.Process.system
+                  ("gzip -c " ^ shell_quote path ^
+                   " > " ^ shell_quote dst ^
+                   " && rm " ^ shell_quote path))
+            then dst else path
+         end
+     | _ => path
+  end
+
 fun cleanup () =
   (close_output () handle _ => ();
-   if not (!keep_on_exit) then
-     case !temp_path_ref of
-       SOME p => (OS.FileSys.remove p handle _ => ())
-     | NONE => ()
-   else ())
+   case !temp_path_ref of
+     SOME p =>
+       if !keep_on_exit then
+         (* Heap trace: compress the .pft file *)
+         (ignore (compress_file p) handle _ => ())
+       else
+         (* Temp file from aborted theory script: remove *)
+         (OS.FileSys.remove p handle _ => ())
+   | NONE => ())
 
 fun trace_reset () =
   (close_output ();

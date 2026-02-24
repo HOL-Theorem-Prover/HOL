@@ -61,9 +61,12 @@ Fields:
   (as recorded during the build)
 - V is the first line; H (if present) is second; N and E entries
   appear at the end
-- H records the path of the parent heap this trace was built on.
-  Omitted if there is no parent heap (e.g., the initial heap
-  build, or Moscow ML recording).
+- H records the absolute filesystem path of the parent heap this
+  trace was built on (e.g., `/home/user/HOL/bin/hol.state0`).
+  This is the value of the `--holstate` or `-b` argument passed
+  to the process. Omitted if there is no parent heap (e.g., the
+  initial heap build). The merge tool locates the parent heap's
+  trace file at `<H_path>.pft`.
 
 ### Theorem ID uniqueness
 
@@ -96,10 +99,11 @@ library loading. Have N (theory name) and E (export) lines at
 the end. DISK_THM entries reference ancestor theorems by
 `(theory, name)`.
 
-**Heap traces** (`<heapname>.pft` alongside the heap file):
-contain all steps recorded during heap building. No N or E
-lines. Steps include library initialization, type base setup,
-simpset construction, etc.
+**Heap traces** (`<heapname>.pft[.zst|.gz]` alongside the heap
+file): contain all steps recorded during heap building. No N
+or E lines. Steps include library initialization, type base
+setup, simpset construction, etc. Compressed on exit using the
+same preference as theory traces (zstd > gzip > uncompressed).
 
 **Merged traces** (user-specified path): a single self-contained
 trace produced by the merge tool. No N line. Has E lines for
@@ -223,10 +227,11 @@ hook which:
 ### Heap export
 
 For heap builds, there is no `export_theory()` call. The trace
-file (`<heapname>.pft`) is written directly from the start and
-closed by the `atExit` handler when the process exits. No N or
-E lines are written. The file is not deleted on exit (it is the
-final output, not a temp file).
+file is written directly from the start. The `atExit` handler
+closes the stream, compresses the file (zstd > gzip >
+uncompressed, same preference as theory traces), and writes
+the final output to `<heapname>.pft[.zst|.gz]`. No N or E
+lines are written.
 
 ## Merge Tool
 
@@ -261,7 +266,9 @@ exports, loading ancestors on demand as discovered):
    follow the H (heap) line to find the parent heap's `.pft`
    file, and search up the heap ancestry chain for a P entry
    with that trace_id. If found, process that heap trace and
-   mark the needed entries.
+   mark the needed entries. If not found in any ancestor heap,
+   this is a hard error (indicates a recording bug or missing
+   heap trace file).
 5. Store the set of live entry IDs for this file (compact bit
    set). Discard the dependency graph.
 
