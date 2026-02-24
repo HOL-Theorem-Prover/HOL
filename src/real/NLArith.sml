@@ -4,9 +4,6 @@
 (* Strategy: enrich hypothesis lists with square-nonneg and hypothesis-      *)
 (* product theorems, then call the existing linear prover.                   *)
 (*                                                                           *)
-(* Clean-room implementation based on standard NLA heuristics.               *)
-(* NO code ported from GPL/LGPL sources.                                     *)
-(*                                                                           *)
 (*              (c) 2026, HOL4 contributors                                  *)
 (* ========================================================================= *)
 
