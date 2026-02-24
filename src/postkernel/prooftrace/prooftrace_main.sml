@@ -218,11 +218,15 @@ fun main () =
 
     (* --- dispatch --- *)
   in
-    case args of
+    (case args of
       [] => usage ()
     | ["--help"] => usage ()
     | ["-h"] => usage ()
     | ("merge" :: rest) => do_merge rest
     | ("replay" :: rest) => do_replay rest
-    | (cmd :: _) => die ("unknown command: " ^ cmd)
+    | (cmd :: _) => die ("unknown command: " ^ cmd))
+    handle e =>
+      (err ("prooftrace: unhandled exception: " ^
+            General.exnMessage e ^ "\n");
+       OS.Process.exit OS.Process.failure)
   end
