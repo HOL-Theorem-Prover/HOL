@@ -308,7 +308,7 @@ fun replay_file path =
                        "COMPUTE before COMPUTE_INIT"
                 end
             | "AXIOM" =>
-                Thm.mk_axiom_thm (Nonce.mk "REPLAY", tm (ai 0))
+                Thm.mk_axiom_thm (Nonce.mk (unescape (a 0)), tm (ai 1))
             | "ORACLE" =>
                 let val tag = unescape (a 0)
                     val c = tm (ai 1)

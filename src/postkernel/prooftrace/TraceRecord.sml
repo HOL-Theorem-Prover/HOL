@@ -376,7 +376,13 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
            String.concat (map (fn h => " " ^ its (iT h)) hs))
       end
   | Thm.TR_AXIOM (r, c) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " AXIOM " ^ its (iT c))
+      let val name = case Tag.axioms_of (Thm.tag r) of
+                       [n] => Nonce.dest n
+                     | _ => raise ERR "record_hook"
+                              "AXIOM: expected exactly one axiom nonce"
+      in record_line ("P " ^ its (Thm.trace_id r) ^ " AXIOM " ^
+           esc name ^ " " ^ its (iT c))
+      end
   | Thm.TR_DISK_THM (r, src_thy, name) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " DISK_THM " ^
         esc src_thy ^ " " ^ esc name)

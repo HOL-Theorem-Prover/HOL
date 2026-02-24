@@ -157,7 +157,7 @@ extend to end of line.
 | `DEF_TYOP` | `p s s` — witness, thy, tyop |
 | `DEF_SPEC` | `p s s*` — witness, thyname, cnames |
 | `COMPUTE` | `t p*` — input term, code equation parents |
-| `AXIOM` | `t` |
+| `AXIOM` | `s t` — axiom name, conclusion |
 | `ORACLE` | `s t t*` — tag, concl, hyps |
 | `DISK_THM` | `s s` — theory, name (per-theory traces only) |
 

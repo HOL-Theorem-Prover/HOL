@@ -82,7 +82,7 @@ fun extract_term_ids rule args =
     val nargs = length args
   in case rule of
       "REFL" => [ai 0] | "ASSUME" => [ai 0] | "BETA_CONV" => [ai 0]
-    | "ALPHA" => [ai 0, ai 1] | "AXIOM" => [ai 0]
+    | "ALPHA" => [ai 0, ai 1] | "AXIOM" => [ai 1]
     | "ABS" => [ai 1] | "AP_TERM" => [ai 1] | "AP_THM" => [ai 1]
     | "DISCH" => [ai 1] | "SPEC" => [ai 1] | "Specialize" => [ai 1]
     | "GEN" => [ai 1] | "CCONTR" => [ai 1]
@@ -537,7 +537,7 @@ fun remap_args (ry : int -> int) (rt : int -> int) (rp : int -> int)
   | "COMPUTE" =>
       its (rt (int_of (hd args))) ::
       map (its o rp o int_of) (tl args)
-  | "AXIOM" => [its (rt (int_of (hd args)))]
+  | "AXIOM" => [List.nth(args,0), its (rt (int_of (List.nth(args,1))))]
   | "ORACLE" =>
       List.nth(args,0) ::
       its (rt (int_of (List.nth(args,1)))) ::
