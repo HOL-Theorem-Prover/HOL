@@ -1,7 +1,7 @@
 EXTRA_CLEANS = selftest.exe boss-selftest.log
 
 ifdef POLY
-EXTRA_CLEANS += $(TARGET) $(HOLDIR)/bin/prooftrace
+EXTRA_CLEANS += $(TARGET)
 
 TARGET = $(dprot $(HOLDIR)/bin/hol.state)
 
@@ -16,22 +16,6 @@ all: $(TARGET)
 
 $(TARGET): $(DEPS)
 	$(protect $(HOLDIR)/bin/hol) buildheap $(DEBUG_FLAG) -o $(TARGET) -b $(HOLHEAP) $(boss_deps) bossLib holTheory
-
-PROOFTRACE = $(dprot $(HOLDIR)/bin/prooftrace)
-
-$(PROOFTRACE): $(dprot $(SIGOBJ)/ReplayTrace.uo) \
-               $(dprot $(SIGOBJ)/MergeTrace.uo) \
-               $(dprot $(SIGOBJ)/prooftrace_main.uo) \
-               $(TARGET) \
-               $(dprot $(HOLDIR)/bin/hol)
-	$(protect $(HOLDIR)/bin/hol) buildheap --exe=main \
-	  -b $(TARGET) \
-	  -o $(protect $(HOLDIR)/bin/prooftrace) \
-	  $(protect $(SIGOBJ)/ReplayTrace) \
-	  $(protect $(SIGOBJ)/MergeTrace) \
-	  $(protect $(SIGOBJ)/prooftrace_main)
-
-all: $(PROOFTRACE)
 
 endif
 

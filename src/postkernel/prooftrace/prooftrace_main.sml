@@ -2,7 +2,13 @@
 
    Build, merge, and replay proof traces.
 
-   Built as a standalone executable at bin/prooftrace.
+   Built as a standalone executable at bin/prooftrace, using only
+   kernel dependencies (no bossLib or pretty-printing libraries).
+
+   Replay launches bin/hol --min as a subprocess for a fresh
+   kernel session. In default (verbose) mode, Parse is loaded in
+   the subprocess for basic term printing. Pretty-printing via
+   full HOL libraries is planned for a future version.
 *)
 
 fun main () =
@@ -33,21 +39,17 @@ fun main () =
           \  prooftrace replay [options] FILE\n\
           \\n\
           \  Replays a trace from scratch in a minimal kernel session.\n\
-          \  Reports pass/fail for each export. Exits with success if\n\
-          \  all exports are oracle-free, failure otherwise.\n\
+          \  Prints each export with its statement and verification\n\
+          \  status. Exits with success if all exports are oracle-free.\n\
           \\n\
-          \  --verbose       print each export's statement\n\
+          \  --concise       print only export names, not statements\n\
           \  --interactive   drop into HOL REPL after replay with\n\
           \                  exports bound as prooftrace_exports\n\
-          \  --load LIB      load additional library after replay\n\
-          \                  (repeatable; for extra pretty printing)\n\
-          \  --load-hol      load standard HOL libraries after replay\n\
-          \                  (boolLib etc.) for standard pretty printing\n\
           \\n\
           \Examples:\n\
           \  prooftrace replay merged.pft\n\
-          \  prooftrace replay --verbose --load-hol merged.pft\n\
-          \  prooftrace replay --interactive --load-hol merged.pft\n";
+          \  prooftrace replay --concise merged.pft\n\
+          \  prooftrace replay --interactive merged.pft\n";
       OS.Process.exit OS.Process.success)
     fun die s = (
       err ("prooftrace: " ^ s ^ "\n");
@@ -113,25 +115,17 @@ fun main () =
     (* --- replay command --- *)
     fun do_replay args =
       let
-        val verbose = ref false
+        val concise = ref false
         val interactive = ref false
-        val load_hol = ref false
-        val loads = ref ([] : string list)
         val file = ref (NONE : string option)
 
         fun parse [] = ()
           | parse ("--help" :: _) = usage ()
           | parse ("-h" :: _) = usage ()
-          | parse ("--verbose" :: rest) =
-              (verbose := true; parse rest)
+          | parse ("--concise" :: rest) =
+              (concise := true; parse rest)
           | parse ("--interactive" :: rest) =
               (interactive := true; parse rest)
-          | parse ("--load-hol" :: rest) =
-              (load_hol := true; parse rest)
-          | parse ("--load" :: lib :: rest) =
-              (loads := lib :: !loads; parse rest)
-          | parse ("--load" :: []) =
-              die "replay: --load requires an argument"
           | parse (arg :: rest) =
               if String.isPrefix "-" arg then
                 die ("replay: unknown option: " ^ arg)
@@ -149,20 +143,26 @@ fun main () =
         val abs_path = OS.Path.mkAbsolute
           {path = path, relativeTo = OS.FileSys.getDir ()}
       in
-        (* Replay always via bin/hol --min for a fresh kernel *)
+        (* Replay via bin/hol --min for a fresh kernel *)
         let
           val script = OS.FileSys.tmpName () ^ ".sml"
           val s = TextIO.openOut script
           fun wr x = TextIO.output(s, x)
-          val hol_libs = if !load_hol then ["bossLib", "holTheory"] else []
-          val all_loads = hol_libs @ rev (!loads)
-          val load_lines = map (fn lib =>
-            "val _ = Meta.load \"" ^ String.toString lib ^ "\";")
-            all_loads
-          val verbose_lines = if !verbose then [
+
+          (* Print each export: name, status, and optionally statement.
+             In default (non-concise) mode, load Parse for basic term
+             printing (no full HOL libraries, just the parser/printer). *)
+          val print_lines = if !concise then [
             "val _ = List.app (fn (name, th) =>",
-            "  let val concl = (Parse.term_to_string (Thm.concl th)",
-            "                   handle _ => \"<unprintable>\")",
+            "  let val tags = #1 (Tag.dest_tag (Thm.tag th))",
+            "      val status = if null tags then \"OK\" else \"ORACLE\"",
+            "  in print (status ^ \" \" ^ name ^ \"\\n\") end)",
+            "  prooftrace_exports;"
+          ] else [
+            "val _ = (load \"Parse\" handle _ => ());",
+            "val _ = List.app (fn (name, th) =>",
+            "  let val concl = Parse.term_to_string (Thm.concl th)",
+            "                   handle _ => \"<unprintable>\"",
             "      val hyps = Thm.hyp th",
             "      val hyp_str = if null hyps then \"\"",
             "        else \" [\" ^ Int.toString (length hyps) ^ \" hyps]\"",
@@ -172,7 +172,8 @@ fun main () =
             "  in print (status ^ \" \" ^ name ^ \": \" ^ concl",
             "            ^ hyp_str ^ \"\\n\") end)",
             "  prooftrace_exports;"
-          ] else []
+          ]
+
           val summary_lines = [
             "val _ = let",
             "  val n = length prooftrace_exports",
@@ -184,6 +185,7 @@ fun main () =
             "  ^ (if n_oracle > 0 then \" (\" ^ Int.toString n_oracle",
             "     ^ \" with oracle tags)\" else \"\") ^ \"\\n\") end;"
           ]
+
           val exit_lines = if !interactive then [
             "val _ = print \"\\nExports bound as prooftrace_exports.\\n\";"
           ] else [
@@ -192,18 +194,12 @@ fun main () =
             "  prooftrace_exports",
             "  then OS.Process.success else OS.Process.failure);"
           ]
+
           val lines =
             ["load \"ReplayTrace\";",
-             "load \"Parse\";",
              "val prooftrace_exports = ReplayTrace.replay_file",
              "  \"" ^ String.toString abs_path ^ "\";"] @
-            load_lines @
-            ["val _ = List.app (fn (name, th) =>",
-             "  let val tags = #1 (Tag.dest_tag (Thm.tag th))",
-             "      val status = if null tags then \"OK\" else \"ORACLE\"",
-             "  in print (status ^ \" \" ^ name ^ \"\\n\") end)",
-             "  prooftrace_exports;"] @
-            verbose_lines @
+            print_lines @
             summary_lines @
             exit_lines
           val _ = List.app (fn l => wr (l ^ "\n")) lines

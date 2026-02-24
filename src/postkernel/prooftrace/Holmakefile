@@ -9,5 +9,15 @@ $(MINSTATE): ReplayTrace.uo MergeTrace.uo $(dprot $(HOLDIR)/bin/hol)
 	  $(protect $(SIGOBJ)/HolKernel) \
 	  ReplayTrace MergeTrace
 
-all: $(MINSTATE)
+PROOFTRACE = $(dprot $(HOLDIR)/bin/prooftrace)
+EXTRA_CLEANS += $(PROOFTRACE)
+
+$(PROOFTRACE): $(MINSTATE) prooftrace_main.uo \
+               $(dprot $(HOLDIR)/bin/hol)
+	$(protect $(HOLDIR)/bin/hol) buildheap --exe=main \
+	  -b $(MINSTATE) \
+	  -o $(protect $(HOLDIR)/bin/prooftrace) \
+	  prooftrace_main
+
+all: $(MINSTATE) $(PROOFTRACE)
 endif

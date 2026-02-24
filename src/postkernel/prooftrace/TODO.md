@@ -16,6 +16,12 @@
   temp files before opening a new output
 - Unresolved parent trace_ids are now hard errors in merge
 - H lines documented as absolute paths in DESIGN.md
+- prooftrace binary moved from src/boss to
+  src/postkernel/prooftrace (#14 partial): built on hol.state.min
+  with kernel-only deps, no longer depends on hol.state or
+  bossLib. Removed --load, --load-hol, --verbose options.
+  Default mode loads Parse in subprocess for term printing.
+  --concise for names only. --interactive for bare REPL.
 
 ## Remaining implementation
 
@@ -30,43 +36,7 @@ This is a recording correctness issue — the theorem exists in
 the source theory under a valid name, but we can't find which
 name at recording time.
 
-### prooftrace binary location and pretty-printing (#14)
-
-**Current situation:**
-
-The `bin/prooftrace` binary is built in `src/boss` with
-`-b hol.state`, even though MergeTrace and ReplayTrace only
-depend on the kernel. The binary itself just generates a script
-and launches `bin/hol --min` as a subprocess — it doesn't need
-HOL libraries linked in.
-
-**Plan:**
-
-1. Build `prooftrace` earlier, alongside `hol.state.min` in
-   `src/postkernel/prooftrace/`, using only kernel deps.
-
-2. The replay subprocess starts on `hol.state.min` (bare
-   kernel, no theories loaded). It replays the trace from
-   scratch, independently verifying all theorems.
-
-3. After replay, load full HOL libraries (bossLib etc.)
-   normally. This loads theories from `.dat` files (separate
-   from the replayed theorems), sets up Parse grammars,
-   pretty-printers, TypeBase, etc. The replayed theorems are
-   separate ML values but represent the same mathematical
-   content — the point of replay is to verify derivability,
-   not to replace the theory infrastructure.
-
-4. Default behaviour: verbose output (print each export's
-   statement using the loaded pretty-printer). Use `--concise`
-   to just list names. Use `--bare` to skip loading HOL
-   libraries (raw Term.term_to_string only).
-
-5. For `--interactive` mode: the user gets a full HOL session
-   with all normal libraries loaded, plus the replayed
-   theorems bound as `prooftrace_exports`.
-
-**Theory loading in replay mode:**
+### Replay-aware theory loading (#14 remaining)
 
 After replay, loading HOL libraries (for pretty-printing and
 interactive use) must not conflict with what replay has already
@@ -94,9 +64,11 @@ This requires:
 3. Ensuring kernel type/const registration is idempotent or
    skipped when the type/const already exists from replay
 
-This is needed for both `--verbose` (pretty-printing) and
-`--interactive` (full HOL session with replayed theorems
-populating Theory structures).
+Once this is in place, the prooftrace replay command can:
+- Load full HOL libraries after replay for pretty-printing
+  (default verbose mode with proper term printing)
+- Provide `--interactive` with Theory structures populated
+  by replayed theorems
 
 ### End-to-end testing
 
