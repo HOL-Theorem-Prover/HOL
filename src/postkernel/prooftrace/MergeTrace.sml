@@ -640,59 +640,60 @@ fun merge {trace_paths : (string * string) list,
 
     val _ = iterate_until_stable ()
 
-    (* Build output order: heap traces first (deepest ancestor first),
-       then theory traces (ancestors before dependents).
+    (* Build output order via unified topological sort across all
+       files (both heap and theory traces).
 
-       We sort heaps by ancestry depth (deepest ancestor first).
-       We topologically sort theory files: a theory that another
-       theory references via DISK_THM must come first. *)
+       Dependencies:
+       - DISK_THM (thy, name) in any file -> the theory file for thy
+       - Heap ancestry: a file with H line depends on its parent heap
+         (parent heap must be written first so its P entries are in
+         heap_thm_map when the child is written)
+
+       Theory files that a heap's DISK_THMs reference must be written
+       before the heap, not after. *)
 
     val all_files = Redblackset.listItems (!processed_files)
 
-    fun is_heap path =
-      case Redblackmap.peek(!file_cache, path) of
-        SOME d => #is_heap d | NONE => false
-    val heap_files = List.filter is_heap all_files
-    val theory_files = List.filter (not o is_heap) all_files
-
-    (* Sort heap files by ancestry depth (deepest ancestor first) *)
-    fun heap_depth path =
-      let val data = load_file path
-      in case #heap_parent data of
-           NONE => 0
-         | SOME hp =>
-           case find_heap_trace_file hp of
-             NONE => 0
-           | SOME parent_pft =>
-             if Redblackset.member(!processed_files, parent_pft)
-             then 1 + heap_depth parent_pft
-             else 0
-      end
-    val sorted_heaps = Listsort.sort
-      (fn (a, b) => Int.compare(heap_depth a, heap_depth b))
-      heap_files
-
-    (* Topological sort of theory files by DISK_THM dependencies.
-       Build: for each theory file, which other theory files does
-       it depend on (via live DISK_THM refs)? *)
-    val thy_to_path = List.foldl (fn (path, m) =>
-      let val data = load_file path
-      in Redblackmap.insert(m, #thy_name data, path) end)
-      (Redblackmap.mkDict String.compare) theory_files
-
-    fun theory_deps path =
-      let val data = load_file path
-          val lv = case Redblackmap.peek(!file_liveness, path) of
-              SOME lv => lv | NONE => raise ERR "merge" "no liveness"
-      in List.mapPartial (fn (id, anc_thy, _) =>
-           if Redblackset.member(#live_p lv, id) then
-             Redblackmap.peek(thy_to_path, anc_thy)
-           else NONE)
-         (#disk_thms data)
+    (* Map theory name -> file path for theory traces *)
+    val thy_to_path =
+      let fun is_thy path =
+            case Redblackmap.peek(!file_cache, path) of
+              SOME d => not (#is_heap d) | NONE => false
+      in List.foldl (fn (path, m) =>
+           if is_thy path then
+             let val data = load_file path
+             in Redblackmap.insert(m, #thy_name data, path) end
+           else m)
+         (Redblackmap.mkDict String.compare) all_files
       end
 
-    (* Simple topo sort via DFS *)
-    val sorted_theories =
+    (* Dependencies for any file (heap or theory) *)
+    fun file_deps path =
+      let
+        val data = load_file path
+        val lv = case Redblackmap.peek(!file_liveness, path) of
+            SOME lv => lv | NONE => raise ERR "merge" "no liveness"
+        (* DISK_THM deps -> theory file paths *)
+        val disk_deps = List.mapPartial (fn (id, anc_thy, _) =>
+          if Redblackset.member(#live_p lv, id) then
+            Redblackmap.peek(thy_to_path, anc_thy)
+          else NONE)
+          (#disk_thms data)
+        (* Heap ancestry dep -> parent heap file path *)
+        val heap_dep = case #heap_parent data of
+            NONE => []
+          | SOME hp =>
+            case find_heap_trace_file hp of
+              NONE => []
+            | SOME hpft =>
+              if Redblackset.member(!processed_files, hpft)
+              then [hpft] else []
+      in
+        disk_deps @ heap_dep
+      end
+
+    (* Unified topo sort via DFS *)
+    val topo =
       let
         val visited = ref (Redblackset.empty String.compare)
         val result = ref ([] : string list)
@@ -700,14 +701,12 @@ fun merge {trace_paths : (string * string) list,
           if Redblackset.member(!visited, path) then ()
           else
             (visited := Redblackset.add(!visited, path);
-             List.app visit (theory_deps path);
+             List.app visit (file_deps path);
              result := path :: !result)
       in
-        List.app visit theory_files;
+        List.app visit all_files;
         rev (!result)
       end
-
-    val topo = sorted_heaps @ sorted_theories
 
     val n_live_total =
       List.foldl (fn (path, acc) =>

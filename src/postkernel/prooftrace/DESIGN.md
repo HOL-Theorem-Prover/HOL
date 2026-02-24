@@ -277,6 +277,19 @@ exports, loading ancestors on demand as discovered):
 Re-read each needed trace file in dependency order, writing
 only live entries to the output with globally remapped IDs.
 
+Dependency order is determined by a unified topological sort
+across all files (both heap and theory traces). A file depends
+on another if:
+- It has a live DISK_THM referencing a theory → depends on
+  that theory's trace file
+- It has an H line pointing to a parent heap → depends on
+  that heap's trace file
+
+Note that heap traces can contain DISK_THM entries (e.g.,
+`hol.state0` loads `boolTheory` from disk), so theory traces
+may need to be written before the heap traces that reference
+them.
+
 Persistent state:
 - Global type dedup map: `type_descriptor → global_type_id`
 - Global term dedup map: `term_descriptor → global_term_id`
