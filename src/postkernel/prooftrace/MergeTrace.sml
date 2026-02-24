@@ -1,8 +1,18 @@
-(* MergeTrace: merge per-theory traces into a single self-contained trace.
+(* MergeTrace: merge per-theory and heap traces into a single
+   self-contained trace.
 
    Two-pass algorithm:
-   Pass 1: determine live entries per theory via backward reachability
-   Pass 2: write merged trace with global type/term dedup and ID remapping
+   Pass 1: determine live entries per file via backward reachability,
+           following DISK_THM and heap chain references across files
+   Pass 2: re-read needed files in dependency order, dedup types/terms,
+           remap all IDs, write merged output
+
+   Key design points:
+   - P entry IDs are kernel trace_ids (sparse, non-sequential)
+   - Y and T entry IDs are sequential per-file (0-based)
+   - Heap traces are discovered by following H lines
+   - Types and terms are globally deduplicated across files
+   - Each non-DISK_THM P entry gets a fresh sequential global ID
 *)
 
 structure MergeTrace :> MergeTrace =
@@ -12,15 +22,17 @@ open HolKernel
 
 val ERR = mk_HOL_ERR "MergeTrace"
 fun its i = Int.toString i
-fun int_of s = valOf (Int.fromString s)
+fun int_of s = case Int.fromString s of
+    SOME n => n
+  | NONE => raise ERR "int_of" ("not an int: " ^ s)
 val esc = TraceRecord.escape_string
 val tokenize = ReplayTrace.tokenize
 val unescape = ReplayTrace.unescape
 
 (* ------- Per-rule argument parsing ------- *)
 
-(* Extract parent (theorem) IDs from a P entry's args, given the rule.
-   Returns list of (position, thm_id) for parent args. *)
+(* Extract parent (theorem) IDs from a P entry's args.
+   Returns list of trace_ids that are parent theorem references. *)
 fun extract_parent_ids rule args =
   let
     fun ai n = int_of (List.nth(args, n))
@@ -29,6 +41,7 @@ fun extract_parent_ids rule args =
     (* No parents *)
       "REFL" => [] | "ASSUME" => [] | "BETA_CONV" => []
     | "ALPHA" => [] | "AXIOM" => [] | "DISK_THM" => []
+    | "ORACLE" => []
     (* Single parent at position 0 *)
     | "ABS" => [ai 0] | "AP_TERM" => [ai 0] | "AP_THM" => [ai 0]
     | "SYM" => [ai 0] | "DISCH" => [ai 0] | "SPEC" => [ai 0]
@@ -38,37 +51,27 @@ fun extract_parent_ids rule args =
     | "DISJ1" => [ai 0] | "DISJ2" => [ai 0]
     | "NOT_INTRO" => [ai 0] | "NOT_ELIM" => [ai 0]
     | "CCONTR" => [ai 0] | "Beta" => [ai 0]
+    | "EXISTS" => [ai 0]
+    | "DEF_TYOP" => [ai 0]
+    | "DEF_SPEC" => [ai 0]
+    | "GENL" => [ai 0]
+    | "GEN_ABS" => [ai 0]
+    | "INST_TYPE" => [ai 0]
+    | "INST" => [ai 0]
     (* Two parents *)
     | "MK_COMB" => [ai 0, ai 1] | "TRANS" => [ai 0, ai 1]
     | "EQ_MP" => [ai 0, ai 1] | "MP" => [ai 0, ai 1]
     | "CONJ" => [ai 0, ai 1] | "Mk_abs" => [ai 0, ai 1]
+    | "CHOOSE" => [ai 0, ai 1]
     (* Three parents *)
     | "Mk_comb" => [ai 0, ai 1, ai 2]
     | "DISJ_CASES" => [ai 0, ai 1, ai 2]
-    (* CHOOSE: p p t *)
-    | "CHOOSE" => [ai 0, ai 1]
-    (* EXISTS: p t t — parent at 0 *)
-    | "EXISTS" => [ai 0]
-    (* DEF_TYOP: p s s — parent at 0 *)
-    | "DEF_TYOP" => [ai 0]
-    (* DEF_SPEC: p s s* — parent at 0 *)
-    | "DEF_SPEC" => [ai 0]
-    (* GENL: p t* — parent at 0 *)
-    | "GENL" => [ai 0]
-    (* GEN_ABS: p t t* — parent at 0 *)
-    | "GEN_ABS" => [ai 0]
-    (* INST_TYPE: p (y y)* — parent at 0 *)
-    | "INST_TYPE" => [ai 0]
-    (* INST: p (t t)* — parent at 0 *)
-    | "INST" => [ai 0]
-    (* SUBST: p t (t p)* — parent at 0, then every other from pos 2 *)
+    (* SUBST: p t (t p)* — parent at 0, then every 4th from pos 3 *)
     | "SUBST" =>
         ai 0 :: List.tabulate((nargs - 2) div 2, fn i => ai (3 + 2*i))
     (* COMPUTE: t p* — parents from pos 1 *)
     | "COMPUTE" =>
         List.tabulate(nargs - 1, fn i => ai (1 + i))
-    (* ORACLE: s t t* — no parents *)
-    | "ORACLE" => []
     | _ => []
   end
 
@@ -112,51 +115,78 @@ fun extract_type_ids rule args =
     | _ => []
   end
 
-(* ------- Pass 1: Reachability ------- *)
+(* ------- Pass 1: Read and analyze a trace file ------- *)
 
-(* Per-theory trace data needed for reachability *)
-type theory_data = {
-  thy_name : string,
+(* Per-file trace data for reachability analysis.
+
+   Types (Y) and terms (T) have sequential IDs starting from 0,
+   so we use growable arrays for them.
+
+   Theorems (P) have kernel trace_ids which are sparse (e.g., a
+   theory built on a heap with counter at 5M starts IDs from 5M+),
+   so we use int-keyed maps for P entries. *)
+
+type file_data = {
   path : string,
-  (* Dependency lists per entry (P entries only need parent P ids;
-     but we also need term/type deps for liveness) *)
-  p_parents : int list Array.array,   (* P id -> parent P ids *)
-  p_term_deps : int list Array.array,  (* P id -> term ids used *)
-  p_type_deps : int list Array.array,  (* P id -> type ids used *)
-  t_deps : int list Array.array,       (* T id -> sub T/Y ids *)
-  y_deps : int list Array.array,       (* Y id -> sub Y ids *)
-  t_type_deps : int list Array.array,  (* T id -> Y ids *)
-  exports : (string * int) list,       (* name -> P id *)
-  disk_thms : (int * string * string) list, (* P id, thy, name *)
-  n_types : int,
+  heap_parent : string option,     (* H line: parent heap path *)
+  is_heap : bool,                  (* true if no N line = heap trace *)
+  thy_name : string,               (* N line value, "" for heaps *)
+  (* P entry deps: trace_id -> (parent_ids, term_ids, type_ids) *)
+  p_deps : (int, int list * int list * int list) Redblackmap.dict,
+  (* Set of all P trace_ids defined in this file *)
+  p_ids : int Redblackset.set,
+  (* T entry deps: sequential id -> (sub_term_ids, sub_type_ids) *)
+  t_term_deps : int list Array.array,
+  t_type_deps : int list Array.array,
   n_terms : int,
-  n_thms : int,
+  (* Y entry deps: sequential id -> sub_type_ids *)
+  y_deps : int list Array.array,
+  n_types : int,
+  (* Exports: (name, trace_id) *)
+  exports : (string * int) list,
+  (* DISK_THM entries: (trace_id, theory, name) *)
+  disk_thms : (int * string * string) list,
+  (* Whether file has a C (compute init) entry *)
   has_compute_init : bool
 }
 
-fun read_theory_data path : theory_data =
+(* Growable list accumulator, converted to array at the end *)
+fun list_to_array n items default =
+  let val arr = Array.array(n, default)
+  in List.app (fn (id, v) =>
+       if id < n then Array.update(arr, id, v) else ()) items;
+     arr
+  end
+
+fun read_file_data path : file_data =
   let
     val (instrm, proc) = ReplayTrace.open_trace path
     val ty_count = ref 0
     val tm_count = ref 0
-    val thm_count = ref 0
+    val heap_parent = ref (NONE : string option)
     val thy_name = ref ""
+    val has_name = ref false
     val exports_rev = ref ([] : (string * int) list)
     val disk_thms_rev = ref ([] : (int * string * string) list)
     val has_ci = ref false
 
-    (* Accumulate deps in lists, convert to arrays later *)
-    val p_parents_rev = ref ([] : (int * int list) list)
-    val p_term_deps_rev = ref ([] : (int * int list) list)
-    val p_type_deps_rev = ref ([] : (int * int list) list)
-    val t_deps_rev = ref ([] : (int * int list) list)
+    (* P deps stored in a map (sparse trace_ids) *)
+    val p_deps_ref = ref (Redblackmap.mkDict Int.compare
+      : (int, int list * int list * int list) Redblackmap.dict)
+    val p_ids_ref = ref (Redblackset.empty Int.compare)
+
+    (* Y and T deps accumulated as lists, arrays built at end *)
     val y_deps_rev = ref ([] : (int * int list) list)
+    val t_term_deps_rev = ref ([] : (int * int list) list)
     val t_type_deps_rev = ref ([] : (int * int list) list)
 
     fun process_line line =
       let val toks = tokenize line in
       case toks of
         [] => ()
+      | ["V", _] => ()  (* version *)
+      | ("H" :: hp :: _) =>
+          heap_parent := SOME (unescape hp)
       | ("Y" :: id_s :: "V" :: _) =>
           let val id = int_of id_s
           in ty_count := Int.max(!ty_count, id + 1);
@@ -171,25 +201,27 @@ fun read_theory_data path : theory_data =
       | ("T" :: id_s :: "V" :: _ :: ty_s :: _) =>
           let val id = int_of id_s
           in tm_count := Int.max(!tm_count, id + 1);
-             t_deps_rev := (id, []) :: !t_deps_rev;
+             t_term_deps_rev := (id, []) :: !t_term_deps_rev;
              t_type_deps_rev := (id, [int_of ty_s]) :: !t_type_deps_rev
           end
       | ("T" :: id_s :: "C" :: _ :: _ :: ty_s :: _) =>
           let val id = int_of id_s
           in tm_count := Int.max(!tm_count, id + 1);
-             t_deps_rev := (id, []) :: !t_deps_rev;
+             t_term_deps_rev := (id, []) :: !t_term_deps_rev;
              t_type_deps_rev := (id, [int_of ty_s]) :: !t_type_deps_rev
           end
       | ("T" :: id_s :: "A" :: f_s :: x_s :: _) =>
           let val id = int_of id_s
           in tm_count := Int.max(!tm_count, id + 1);
-             t_deps_rev := (id, [int_of f_s, int_of x_s]) :: !t_deps_rev;
+             t_term_deps_rev := (id, [int_of f_s, int_of x_s])
+                                :: !t_term_deps_rev;
              t_type_deps_rev := (id, []) :: !t_type_deps_rev
           end
       | ("T" :: id_s :: "L" :: v_s :: b_s :: _) =>
           let val id = int_of id_s
           in tm_count := Int.max(!tm_count, id + 1);
-             t_deps_rev := (id, [int_of v_s, int_of b_s]) :: !t_deps_rev;
+             t_term_deps_rev := (id, [int_of v_s, int_of b_s])
+                                :: !t_term_deps_rev;
              t_type_deps_rev := (id, []) :: !t_type_deps_rev
           end
       | ("P" :: id_s :: rule :: args) =>
@@ -197,10 +229,9 @@ fun read_theory_data path : theory_data =
               val parents = extract_parent_ids rule args
               val term_deps = extract_term_ids rule args
               val type_deps = extract_type_ids rule args
-          in thm_count := Int.max(!thm_count, id + 1);
-             p_parents_rev := (id, parents) :: !p_parents_rev;
-             p_term_deps_rev := (id, term_deps) :: !p_term_deps_rev;
-             p_type_deps_rev := (id, type_deps) :: !p_type_deps_rev;
+          in p_ids_ref := Redblackset.add(!p_ids_ref, id);
+             p_deps_ref := Redblackmap.insert(!p_deps_ref, id,
+                             (parents, term_deps, type_deps));
              (case rule of
                 "DISK_THM" =>
                   disk_thms_rev := (id, unescape (List.nth(args, 0)),
@@ -209,7 +240,8 @@ fun read_theory_data path : theory_data =
               | _ => ())
           end
       | ("C" :: _) => has_ci := true
-      | ("N" :: name :: _) => thy_name := unescape name
+      | ("N" :: name :: _) =>
+          (thy_name := unescape name; has_name := true)
       | ("E" :: name :: id_s :: _) =>
           exports_rev := (unescape name, int_of id_s) :: !exports_rev
       | _ => ()
@@ -227,48 +259,77 @@ fun read_theory_data path : theory_data =
 
     val ny = !ty_count
     val nt = !tm_count
-    val np = !thm_count
-
-    fun to_array n items =
-      let val arr = Array.array(n, [] : int list)
-      in List.app (fn (id, deps) =>
-           if id < n then Array.update(arr, id, deps) else ())
-           items;
-         arr
-      end
   in
-    { thy_name = !thy_name, path = path,
-      p_parents = to_array np (!p_parents_rev),
-      p_term_deps = to_array np (!p_term_deps_rev),
-      p_type_deps = to_array np (!p_type_deps_rev),
-      t_deps = to_array nt (!t_deps_rev),
-      y_deps = to_array ny (!y_deps_rev),
-      t_type_deps = to_array nt (!t_type_deps_rev),
+    { path = path,
+      heap_parent = !heap_parent,
+      is_heap = not (!has_name),
+      thy_name = !thy_name,
+      p_deps = !p_deps_ref,
+      p_ids = !p_ids_ref,
+      t_term_deps = list_to_array nt (!t_term_deps_rev) [],
+      t_type_deps = list_to_array nt (!t_type_deps_rev) [],
+      n_terms = nt,
+      y_deps = list_to_array ny (!y_deps_rev) [],
+      n_types = ny,
       exports = rev (!exports_rev),
       disk_thms = rev (!disk_thms_rev),
-      n_types = ny, n_terms = nt, n_thms = np,
       has_compute_init = !has_ci }
   end
 
-fun mark_live (data : theory_data) (needed_thm_ids : int list) =
+(* ------- Heap trace file discovery ------- *)
+
+(* Given a heap path from an H line (e.g. "bin/hol.state0" or
+   "/path/to/numheap"), find the corresponding .pft file.
+   Convention: the trace is at <heap_path>.pft *)
+fun find_heap_trace_file heap_path =
   let
-    val live_p = Array.array(#n_thms data, false)
-    val live_t = Array.array(#n_terms data, false)
+    val pft = heap_path ^ ".pft"
+  in
+    if OS.FileSys.access(pft, [OS.FileSys.A_READ])
+    then SOME pft
+    else NONE
+  end
+
+(* ------- Pass 1: Backward reachability ------- *)
+
+(* Liveness sets for a file. Y and T use arrays (sequential IDs),
+   P uses a set (sparse trace_ids). *)
+type liveness = {
+  live_y : bool Array.array,
+  live_t : bool Array.array,
+  live_p : int Redblackset.set
+}
+
+fun mark_live (data : file_data) (needed_thm_ids : int list)
+  : liveness * int list (* unresolved parent trace_ids *) =
+  let
     val live_y = Array.array(#n_types data, false)
+    val live_t = Array.array(#n_terms data, false)
+    val live_p = ref (Redblackset.empty Int.compare)
+    val unresolved = ref (Redblackset.empty Int.compare)
 
     fun mark_thm id =
-      if id < 0 orelse id >= #n_thms data orelse
-         Array.sub(live_p, id) then ()
-      else (Array.update(live_p, id, true);
-            List.app mark_thm (Array.sub(#p_parents data, id));
-            List.app mark_term (Array.sub(#p_term_deps data, id));
-            List.app mark_type (Array.sub(#p_type_deps data, id)))
+      if Redblackset.member(!live_p, id) then ()
+      else if not (Redblackset.member(#p_ids data, id)) then
+        (* This trace_id isn't defined in this file —
+           it's a reference to a parent heap *)
+        unresolved := Redblackset.add(!unresolved, id)
+      else
+        let val _ = live_p := Redblackset.add(!live_p, id)
+            val (parents, term_deps, type_deps) =
+              Redblackmap.find(#p_deps data, id)
+        in List.app mark_thm parents;
+           List.app mark_term term_deps;
+           List.app mark_type type_deps
+        end
     and mark_term id =
       if id < 0 orelse id >= #n_terms data orelse
          Array.sub(live_t, id) then ()
       else (Array.update(live_t, id, true);
-            List.app mark_term (Array.sub(#t_deps data, id));
-            List.app mark_type (Array.sub(#t_type_deps data, id)))
+            List.app mark_term
+              (Array.sub(#t_term_deps data, id));
+            List.app mark_type
+              (Array.sub(#t_type_deps data, id)))
     and mark_type id =
       if id < 0 orelse id >= #n_types data orelse
          Array.sub(live_y, id) then ()
@@ -276,12 +337,12 @@ fun mark_live (data : theory_data) (needed_thm_ids : int list) =
             List.app mark_type (Array.sub(#y_deps data, id)))
   in
     List.app mark_thm needed_thm_ids;
-    (live_y, live_t, live_p)
+    ({live_y = live_y, live_t = live_t, live_p = !live_p},
+     Redblackset.listItems (!unresolved))
   end
 
-(* ------- Pass 2: Remap and write ------- *)
+(* ------- Dedup map key types ------- *)
 
-(* Dedup map key types *)
 datatype ty_desc = TyV of string | TyO of string * string * int list
 datatype tm_desc = TmV of string * int | TmC of string * string * int
                  | TmA of int * int | TmL of int * int
@@ -411,81 +472,251 @@ fun thyname_cmp ((t1,n1) : string*string, (t2,n2)) =
   case String.compare(t1,t2) of EQUAL => String.compare(n1,n2)
                                | ord => ord
 
+(* Compare file paths for use as map keys *)
+fun path_int_cmp ((p1,i1) : string*int, (p2,i2)) =
+  case String.compare(p1,p2) of EQUAL => Int.compare(i1,i2)
+                               | ord => ord
+
 fun merge {trace_paths : (string * string) list,
            desired_exports : (string * string) list,
            output_path : string} =
   let
-    (* Build path map: theory name -> file path *)
-    val path_map = List.foldl (fn ((thy, path), m) =>
+    val err = fn s => TextIO.output(TextIO.stdErr, s)
+
+    (* Build theory name -> file path map *)
+    val thy_path_map = List.foldl (fn ((thy, path), m) =>
       Redblackmap.insert(m, thy, path))
       (Redblackmap.mkDict String.compare) trace_paths
 
-    (* --- Pass 1: reachability --- *)
-    val _ = print "Pass 1: determining live entries...\n"
+    (* ============================================================
+       Pass 1: Determine live entries across all needed files
+       ============================================================ *)
+    val _ = err "Pass 1: determining live entries...\n"
 
-    (* needed_ancestor_exports: (thy, name) set *)
-    val needed = ref (Redblackset.empty thyname_cmp)
-    val _ = List.app (fn e => needed := Redblackset.add(!needed, e))
-                     desired_exports
-
-    (* Processed theories and their data *)
-    val processed : (string, theory_data * (bool Array.array *
-                     bool Array.array * bool Array.array)) Redblackmap.dict ref =
+    (* Cache of loaded file data, keyed by canonical path *)
+    val file_cache : (string, file_data) Redblackmap.dict ref =
       ref (Redblackmap.mkDict String.compare)
-    val topo_order = ref ([] : string list)
 
-    fun process_theory thy =
-      if isSome (Redblackmap.peek(!processed, thy)) then ()
-      else
-        case Redblackmap.peek(path_map, thy) of
-          NONE => print ("WARNING: no trace for theory " ^ thy ^ "\n")
-        | SOME path =>
-          let
-            val _ = print ("  " ^ thy ^ "...")
-            val data = read_theory_data path
+    fun load_file path =
+      case Redblackmap.peek(!file_cache, path) of
+        SOME data => data
+      | NONE =>
+        let val data = read_file_data path
+        in file_cache := Redblackmap.insert(!file_cache, path, data);
+           data
+        end
 
-            (* Which thm IDs are needed from this theory? *)
-            val needed_ids =
-              List.mapPartial (fn (name, id) =>
-                if Redblackset.member(!needed, (thy, name))
-                then SOME id else NONE)
-                (#exports data)
+    (* Per-file liveness results, keyed by path *)
+    val file_liveness : (string, liveness) Redblackmap.dict ref =
+      ref (Redblackmap.mkDict String.compare)
 
-            val (live_y, live_t, live_p) = mark_live data needed_ids
+    (* Get or create liveness for a file *)
+    fun get_liveness path =
+      case Redblackmap.peek(!file_liveness, path) of
+        SOME lv => lv
+      | NONE =>
+        let val data = load_file path
+            val lv = {live_y = Array.array(#n_types data, false),
+                      live_t = Array.array(#n_terms data, false),
+                      live_p = Redblackset.empty Int.compare}
+        in file_liveness :=
+             Redblackmap.insert(!file_liveness, path, lv);
+           lv
+        end
 
-            (* Discover ancestor dependencies *)
-            val _ = List.app (fn (id, anc_thy, anc_name) =>
-              if Array.sub(live_p, id) then
-                needed := Redblackset.add(!needed, (anc_thy, anc_name))
-              else ()) (#disk_thms data)
+    (* Update liveness for a file by merging in new live P ids *)
+    fun update_liveness path lv =
+      file_liveness := Redblackmap.insert(!file_liveness, path, lv)
 
-            val _ = processed :=
-              Redblackmap.insert(!processed, thy,
-                                (data, (live_y, live_t, live_p)))
-            (* Process ancestors before adding self to topo order *)
-            val ancestor_thys = Redblackset.foldl
-              (fn ((t, _), s) => Redblackset.add(s, t))
-              (Redblackset.empty String.compare)
-              (!needed)
-            val _ = Redblackset.app (fn t =>
-              if t <> thy then process_theory t else ()) ancestor_thys
+    (* Needed ancestor exports: (thy, name) set *)
+    val needed_exports = ref (Redblackset.empty thyname_cmp)
+    val _ = List.app (fn e =>
+      needed_exports := Redblackset.add(!needed_exports, e))
+      desired_exports
 
-            val _ = topo_order := thy :: !topo_order
-            val n_live = Array.foldl (fn (true,n) => n+1 | (_,n) => n)
-                                     0 live_p
-            val _ = print (" " ^ its n_live ^ " live thms\n")
-          in () end
+    (* Track which files have been fully processed *)
+    val processed_files = ref (Redblackset.empty String.compare)
+    (* Output order for Pass 2 *)
+    val output_order = ref ([] : string list)
 
-    (* Kick off from desired exports *)
-    val desired_thys = Redblackset.listItems (
-      List.foldl (fn ((t,_),s) => Redblackset.add(s,t))
-        (Redblackset.empty String.compare) desired_exports)
-    val _ = List.app process_theory desired_thys
-    val topo = rev (!topo_order)
-    val _ = print ("Pass 1 done: " ^ its (length topo) ^ " theories\n")
+    (* Given a trace_id not found in file at `path`, search up
+       the heap ancestry chain for a file containing it. *)
+    fun find_in_heap_chain path trace_id =
+      let val data = load_file path
+      in case #heap_parent data of
+           NONE => NONE
+         | SOME hp =>
+           case find_heap_trace_file hp of
+             NONE =>
+               (err ("WARNING: heap trace not found for " ^
+                     hp ^ " (referenced from " ^ path ^ ")\n");
+                NONE)
+           | SOME heap_pft =>
+             let val hdata = load_file heap_pft
+             in if Redblackset.member(#p_ids hdata, trace_id)
+                then SOME heap_pft
+                else find_in_heap_chain heap_pft trace_id
+             end
+      end
 
-    (* --- Pass 2: write merged trace --- *)
-    val _ = print "Pass 2: writing merged trace...\n"
+    (* Process a file: mark needed entries, recursively process
+       ancestors for DISK_THM and unresolved heap references. *)
+    fun process_file path needed_thm_ids =
+      let
+        val data = load_file path
+
+        (* Merge with any previously needed IDs for this file *)
+        val prev_lv = get_liveness path
+        val all_needed =
+          Redblackset.listItems (#live_p prev_lv) @ needed_thm_ids
+
+        val (lv, unresolved) = mark_live data all_needed
+      in
+        update_liveness path lv;
+
+        (* Handle DISK_THM references: for each live DISK_THM,
+           add it to needed ancestor exports *)
+        List.app (fn (id, anc_thy, anc_name) =>
+          if Redblackset.member(#live_p lv, id) then
+            needed_exports :=
+              Redblackset.add(!needed_exports, (anc_thy, anc_name))
+          else ()) (#disk_thms data);
+
+        (* Handle unresolved parent trace_ids: find them in the
+           heap ancestry chain *)
+        List.app (fn trace_id =>
+          case find_in_heap_chain path trace_id of
+            NONE =>
+              err ("WARNING: unresolved parent trace_id " ^
+                   its trace_id ^ " in " ^ path ^ "\n")
+          | SOME heap_pft =>
+              process_file heap_pft [trace_id])
+          unresolved;
+
+        (* Register for output if not already done *)
+        if Redblackset.member(!processed_files, path) then ()
+        else (processed_files :=
+                Redblackset.add(!processed_files, path);
+              output_order := path :: !output_order)
+      end
+
+    (* Iteratively process until all needed exports are covered.
+       New ancestor exports may be discovered during processing. *)
+    fun iterate_until_stable () =
+      let
+        val to_process = ref ([] : (string * int list) list)
+
+        (* Check each needed export *)
+        val _ = Redblackset.app (fn (thy, name) =>
+          case Redblackmap.peek(thy_path_map, thy) of
+            NONE => err ("WARNING: no trace for theory " ^ thy ^ "\n")
+          | SOME path =>
+            let val data = load_file path
+                val lv = get_liveness path
+            in case List.find (fn (n, _) => n = name)
+                              (#exports data) of
+                 NONE =>
+                   err ("WARNING: export " ^ thy ^ "." ^ name ^
+                        " not found in " ^ path ^ "\n")
+               | SOME (_, thm_id) =>
+                   if Redblackset.member(#live_p lv, thm_id) then ()
+                   else to_process :=
+                     (path, [thm_id]) :: !to_process
+            end) (!needed_exports)
+      in
+        if null (!to_process) then ()
+        else
+          (List.app (fn (path, ids) => process_file path ids)
+                    (!to_process);
+           (* Recurse: processing may have discovered new
+              ancestor exports *)
+           iterate_until_stable ())
+      end
+
+    val _ = iterate_until_stable ()
+
+    (* Build output order: heap traces first (deepest ancestor first),
+       then theory traces (ancestors before dependents).
+
+       We sort heaps by ancestry depth (deepest ancestor first).
+       We topologically sort theory files: a theory that another
+       theory references via DISK_THM must come first. *)
+
+    val all_files = Redblackset.listItems (!processed_files)
+
+    fun is_heap path =
+      case Redblackmap.peek(!file_cache, path) of
+        SOME d => #is_heap d | NONE => false
+    val heap_files = List.filter is_heap all_files
+    val theory_files = List.filter (not o is_heap) all_files
+
+    (* Sort heap files by ancestry depth (deepest ancestor first) *)
+    fun heap_depth path =
+      let val data = load_file path
+      in case #heap_parent data of
+           NONE => 0
+         | SOME hp =>
+           case find_heap_trace_file hp of
+             NONE => 0
+           | SOME parent_pft =>
+             if Redblackset.member(!processed_files, parent_pft)
+             then 1 + heap_depth parent_pft
+             else 0
+      end
+    val sorted_heaps = Listsort.sort
+      (fn (a, b) => Int.compare(heap_depth a, heap_depth b))
+      heap_files
+
+    (* Topological sort of theory files by DISK_THM dependencies.
+       Build: for each theory file, which other theory files does
+       it depend on (via live DISK_THM refs)? *)
+    val thy_to_path = List.foldl (fn (path, m) =>
+      let val data = load_file path
+      in Redblackmap.insert(m, #thy_name data, path) end)
+      (Redblackmap.mkDict String.compare) theory_files
+
+    fun theory_deps path =
+      let val data = load_file path
+          val lv = case Redblackmap.peek(!file_liveness, path) of
+              SOME lv => lv | NONE => raise ERR "merge" "no liveness"
+      in List.mapPartial (fn (id, anc_thy, _) =>
+           if Redblackset.member(#live_p lv, id) then
+             Redblackmap.peek(thy_to_path, anc_thy)
+           else NONE)
+         (#disk_thms data)
+      end
+
+    (* Simple topo sort via DFS *)
+    val sorted_theories =
+      let
+        val visited = ref (Redblackset.empty String.compare)
+        val result = ref ([] : string list)
+        fun visit path =
+          if Redblackset.member(!visited, path) then ()
+          else
+            (visited := Redblackset.add(!visited, path);
+             List.app visit (theory_deps path);
+             result := path :: !result)
+      in
+        List.app visit theory_files;
+        rev (!result)
+      end
+
+    val topo = sorted_heaps @ sorted_theories
+
+    val n_live_total =
+      List.foldl (fn (path, acc) =>
+        case Redblackmap.peek(!file_liveness, path) of
+          SOME lv => acc + Redblackset.numItems (#live_p lv)
+        | NONE => acc) 0 topo
+
+    val _ = err ("Pass 1 done: " ^ its (length topo) ^ " files, " ^
+                 its n_live_total ^ " live theorems\n")
+
+    (* ============================================================
+       Pass 2: Write merged trace with global dedup and remapping
+       ============================================================ *)
+    val _ = err "Pass 2: writing merged trace...\n"
 
     val global_ty_map = ref (Redblackmap.mkDict ty_desc_compare)
     val global_tm_map = ref (Redblackmap.mkDict tm_desc_compare)
@@ -493,176 +724,241 @@ fun merge {trace_paths : (string * string) list,
     val global_tm_id = ref 0
     val global_thm_id = ref 0
 
+    (* (theory, name) -> global thm id, for resolving DISK_THM *)
     val ancestor_exports : (string * string, int) Redblackmap.dict ref =
       ref (Redblackmap.mkDict thyname_cmp)
+
+    (* (file_path, trace_id) -> global thm id, for resolving
+       heap parent references *)
+    val heap_thm_map : (string * int, int) Redblackmap.dict ref =
+      ref (Redblackmap.mkDict path_int_cmp)
 
     val ostrm = TextIO.openOut output_path
     val _ = TextIO.output(ostrm, "V 1\n")
 
-    fun write_theory thy =
-      case Redblackmap.peek(!processed, thy) of
-        NONE => ()
-      | SOME (data, (live_y, live_t, live_p)) =>
-        let
-          val (instrm, proc) = ReplayTrace.open_trace (#path data)
+    fun write_file path =
+      let
+        val data = load_file path
+        val lv = case Redblackmap.peek(!file_liveness, path) of
+            SOME lv => lv
+          | NONE => raise ERR "write_file"
+                      ("no liveness for " ^ path)
+        val live_y = #live_y lv
+        val live_t = #live_t lv
+        val live_p = #live_p lv
 
-          (* Local -> global remap arrays *)
-          val y_remap = Array.array(#n_types data, ~1)
-          val t_remap = Array.array(#n_terms data, ~1)
-          val p_remap = Array.array(#n_thms data, ~1)
+        val (instrm, proc) = ReplayTrace.open_trace path
 
-          fun ry i = Array.sub(y_remap, i)
-          fun rt i = Array.sub(t_remap, i)
-          fun rp i = Array.sub(p_remap, i)
+        (* Local -> global remap: arrays for Y/T (sequential),
+           map for P (sparse trace_ids) *)
+        val y_remap = Array.array(#n_types data, ~1)
+        val t_remap = Array.array(#n_terms data, ~1)
+        val p_remap = ref (Redblackmap.mkDict Int.compare : (int, int) Redblackmap.dict)
 
-          fun process_line line =
-            let val toks = tokenize line in
-            case toks of
-              [] => ()
-            | ("Y" :: id_s :: rest) =>
-                let val id = int_of id_s
-                in if Array.sub(live_y, id) then
-                  let val desc = case rest of
-                        ["V", name] => TyV (unescape name)
-                      | ("O" :: thy_s :: name_s :: arg_ids) =>
-                          TyO (unescape thy_s, unescape name_s,
-                               map (ry o int_of) arg_ids)
-                      | _ => raise ERR "write_theory" "bad Y"
-                  in case Redblackmap.peek(!global_ty_map, desc) of
-                       SOME gid => Array.update(y_remap, id, gid)
-                     | NONE =>
-                       let val gid = !global_ty_id
-                       in global_ty_id := gid + 1;
-                          global_ty_map :=
-                            Redblackmap.insert(!global_ty_map, desc, gid);
-                          Array.update(y_remap, id, gid);
-                          (* Write remapped Y line *)
-                          TextIO.output(ostrm, case desc of
-                            TyV name =>
-                              "Y " ^ its gid ^ " V " ^ esc name ^ "\n"
-                          | TyO (t,n,args) =>
-                              "Y " ^ its gid ^ " O " ^ esc t ^ " " ^
-                              esc n ^
-                              (if null args then ""
-                               else " " ^ String.concatWith " "
-                                            (map its args)) ^ "\n")
-                       end
+        fun ry i = Array.sub(y_remap, i)
+        fun rt i = Array.sub(t_remap, i)
+        fun rp i =
+          case Redblackmap.peek(!p_remap, i) of
+            SOME gid => gid
+          | NONE =>
+            (* Not in this file — search up heap ancestry chain
+               for a heap trace that defined this trace_id *)
+            let fun search p =
+                  let val d = load_file p
+                  in case #heap_parent d of
+                       NONE => ~1
+                     | SOME hp =>
+                       case find_heap_trace_file hp of
+                         NONE => ~1
+                       | SOME hpft =>
+                         case Redblackmap.peek(!heap_thm_map,
+                                               (hpft, i)) of
+                           SOME gid => gid
+                         | NONE => search hpft
                   end
-                else ()
-                end
-            | ("T" :: id_s :: rest) =>
-                let val id = int_of id_s
-                in if Array.sub(live_t, id) then
-                  let val desc = case rest of
-                        ["V", name, ty_s] =>
-                          TmV (unescape name, ry (int_of ty_s))
-                      | ["C", thy_s, name_s, ty_s] =>
-                          TmC (unescape thy_s, unescape name_s,
-                               ry (int_of ty_s))
-                      | ["A", f_s, x_s] =>
-                          TmA (rt (int_of f_s), rt (int_of x_s))
-                      | ["L", v_s, b_s] =>
-                          TmL (rt (int_of v_s), rt (int_of b_s))
-                      | _ => raise ERR "write_theory" "bad T"
-                  in case Redblackmap.peek(!global_tm_map, desc) of
-                       SOME gid => Array.update(t_remap, id, gid)
-                     | NONE =>
-                       let val gid = !global_tm_id
-                       in global_tm_id := gid + 1;
-                          global_tm_map :=
-                            Redblackmap.insert(!global_tm_map, desc, gid);
-                          Array.update(t_remap, id, gid);
-                          TextIO.output(ostrm, case desc of
-                            TmV (name, tyid) =>
-                              "T " ^ its gid ^ " V " ^ esc name ^
-                              " " ^ its tyid ^ "\n"
-                          | TmC (t,n,tyid) =>
-                              "T " ^ its gid ^ " C " ^ esc t ^ " " ^
-                              esc n ^ " " ^ its tyid ^ "\n"
-                          | TmA (f,x) =>
-                              "T " ^ its gid ^ " A " ^ its f ^
-                              " " ^ its x ^ "\n"
-                          | TmL (v,b) =>
-                              "T " ^ its gid ^ " L " ^ its v ^
-                              " " ^ its b ^ "\n")
-                       end
-                  end
-                else ()
-                end
-            | ("P" :: id_s :: "DISK_THM" :: _) =>
-                let val id = int_of id_s
-                in if Array.sub(live_p, id) then
-                  (* Find in disk_thms list *)
-                  case List.find (fn (i,_,_) => i = id) (#disk_thms data) of
-                    SOME (_, anc_thy, anc_name) =>
-                      (case Redblackmap.peek(!ancestor_exports,
-                                             (anc_thy, anc_name)) of
-                         SOME gid => Array.update(p_remap, id, gid)
-                       | NONE =>
-                         print ("WARNING: unresolved " ^ anc_thy ^ "." ^
-                                anc_name ^ "\n"))
-                  | NONE => ()
-                else ()
-                end
-            | ("P" :: id_s :: rule :: args) =>
-                let val id = int_of id_s
-                in if Array.sub(live_p, id) then
-                  let val gid = !global_thm_id
-                      val remapped = remap_args ry rt rp rule args
-                  in global_thm_id := gid + 1;
-                     Array.update(p_remap, id, gid);
-                     TextIO.output(ostrm, "P " ^ its gid ^ " " ^
-                       rule ^ " " ^
-                       String.concatWith " " remapped ^ "\n")
-                  end
-                else ()
-                end
-            | ("C" :: args) =>
-                (* Remap C entry *)
-                let
-                  fun ai n = int_of (List.nth(args, n))
-                  val cy = its (ry (ai 0))
-                  val ny = its (ry (ai 1))
-                  val rest = List.drop(args, 2)
-                  val cvals = List.tabulate(29, fn i =>
-                    List.nth(rest, 2*i) ^ " " ^
-                    its (rt (int_of (List.nth(rest, 2*i + 1)))))
-                  val rest2 = List.drop(rest, 58)
-                  val char_pairs =
-                    let fun go [] = []
-                          | go (n::p::r) =
-                              (n ^ " " ^ its (rp (int_of p))) :: go r
-                          | go _ = []
-                    in go rest2 end
-                in TextIO.output(ostrm, "C " ^ cy ^ " " ^ ny ^ " " ^
-                     String.concatWith " " cvals ^ " " ^
-                     String.concatWith " " char_pairs ^ "\n")
-                end
-            | _ => ()  (* skip V, N, E, blank lines *)
-            end
+            in search path end
 
-          fun read_all () =
-            case TextIO.inputLine instrm of
-              NONE => ()
-            | SOME line =>
-                (process_line (String.substring(line, 0, size line - 1)
-                               handle Subscript => line);
-                 read_all ())
-        in
-          read_all ();
-          ReplayTrace.close_trace (instrm, proc);
-          (* Register exports *)
-          List.app (fn (name, local_id) =>
-            let val gid = Array.sub(p_remap, local_id)
-            in if gid >= 0 then
-                 ancestor_exports :=
-                   Redblackmap.insert(!ancestor_exports,
-                                     (thy, name), gid)
-               else ()
-            end) (#exports data)
-        end
+        fun process_line line =
+          let val toks = tokenize line in
+          case toks of
+            [] => ()
+          | ("Y" :: id_s :: rest) =>
+              let val id = int_of id_s
+              in if id < Array.length live_y andalso
+                    Array.sub(live_y, id) then
+                let val desc = case rest of
+                      ["V", name] => TyV (unescape name)
+                    | ("O" :: thy_s :: name_s :: arg_ids) =>
+                        TyO (unescape thy_s, unescape name_s,
+                             map (ry o int_of) arg_ids)
+                    | _ => raise ERR "write_file" "bad Y entry"
+                in case Redblackmap.peek(!global_ty_map, desc) of
+                     SOME gid => Array.update(y_remap, id, gid)
+                   | NONE =>
+                     let val gid = !global_ty_id
+                     in global_ty_id := gid + 1;
+                        global_ty_map :=
+                          Redblackmap.insert(!global_ty_map, desc, gid);
+                        Array.update(y_remap, id, gid);
+                        TextIO.output(ostrm, case desc of
+                          TyV name =>
+                            "Y " ^ its gid ^ " V " ^ esc name ^ "\n"
+                        | TyO (t,n,args) =>
+                            "Y " ^ its gid ^ " O " ^ esc t ^ " " ^
+                            esc n ^
+                            (if null args then ""
+                             else " " ^ String.concatWith " "
+                                          (map its args)) ^ "\n")
+                     end
+                end
+              else ()
+              end
+          | ("T" :: id_s :: rest) =>
+              let val id = int_of id_s
+              in if id < Array.length live_t andalso
+                    Array.sub(live_t, id) then
+                let val desc = case rest of
+                      ["V", name, ty_s] =>
+                        TmV (unescape name, ry (int_of ty_s))
+                    | ["C", thy_s, name_s, ty_s] =>
+                        TmC (unescape thy_s, unescape name_s,
+                             ry (int_of ty_s))
+                    | ["A", f_s, x_s] =>
+                        TmA (rt (int_of f_s), rt (int_of x_s))
+                    | ["L", v_s, b_s] =>
+                        TmL (rt (int_of v_s), rt (int_of b_s))
+                    | _ => raise ERR "write_file" "bad T entry"
+                in case Redblackmap.peek(!global_tm_map, desc) of
+                     SOME gid => Array.update(t_remap, id, gid)
+                   | NONE =>
+                     let val gid = !global_tm_id
+                     in global_tm_id := gid + 1;
+                        global_tm_map :=
+                          Redblackmap.insert(!global_tm_map, desc, gid);
+                        Array.update(t_remap, id, gid);
+                        TextIO.output(ostrm, case desc of
+                          TmV (name, tyid) =>
+                            "T " ^ its gid ^ " V " ^ esc name ^
+                            " " ^ its tyid ^ "\n"
+                        | TmC (t,n,tyid) =>
+                            "T " ^ its gid ^ " C " ^ esc t ^ " " ^
+                            esc n ^ " " ^ its tyid ^ "\n"
+                        | TmA (f,x) =>
+                            "T " ^ its gid ^ " A " ^ its f ^
+                            " " ^ its x ^ "\n"
+                        | TmL (v,b) =>
+                            "T " ^ its gid ^ " L " ^ its v ^
+                            " " ^ its b ^ "\n")
+                     end
+                end
+              else ()
+              end
+          | ("P" :: id_s :: "DISK_THM" :: args) =>
+              let val id = int_of id_s
+              in if Redblackset.member(live_p, id) then
+                let val anc_thy = unescape (List.nth(args, 0))
+                    val anc_name = unescape (List.nth(args, 1))
+                in case Redblackmap.peek(!ancestor_exports,
+                                         (anc_thy, anc_name)) of
+                     SOME gid =>
+                       p_remap :=
+                         Redblackmap.insert(!p_remap, id, gid)
+                   | NONE =>
+                     err ("WARNING: unresolved DISK_THM " ^
+                          anc_thy ^ "." ^ anc_name ^ "\n")
+                end
+              else ()
+              end
+          | ("P" :: id_s :: rule :: args) =>
+              let val id = int_of id_s
+              in if Redblackset.member(live_p, id) then
+                let val gid = !global_thm_id
+                    val remapped = remap_args ry rt rp rule args
+                in global_thm_id := gid + 1;
+                   p_remap :=
+                     Redblackmap.insert(!p_remap, id, gid);
+                   TextIO.output(ostrm, "P " ^ its gid ^ " " ^
+                     rule ^
+                     (if null remapped then ""
+                      else " " ^ String.concatWith " " remapped) ^
+                     "\n")
+                end
+              else ()
+              end
+          | ("C" :: args) =>
+              (* Remap C entry — only write if this file has
+                 live COMPUTE entries *)
+              let
+                fun ai n = int_of (List.nth(args, n))
+                val cy = its (ry (ai 0))
+                val ny' = its (ry (ai 1))
+                val rest = List.drop(args, 2)
+                val cvals = List.tabulate(29, fn i =>
+                  List.nth(rest, 2*i) ^ " " ^
+                  its (rt (int_of (List.nth(rest, 2*i + 1)))))
+                val rest2 = List.drop(rest, 58)
+                val char_pairs =
+                  let fun go [] = []
+                        | go (n::p::r) =
+                            (n ^ " " ^ its (rp (int_of p))) :: go r
+                        | go _ = []
+                  in go rest2 end
+              in TextIO.output(ostrm, "C " ^ cy ^ " " ^ ny' ^ " " ^
+                   String.concatWith " " cvals ^
+                   (if null char_pairs then ""
+                    else " " ^ String.concatWith " " char_pairs) ^
+                   "\n")
+              end
+          | _ => ()  (* skip V, H, N, E, blank lines *)
+          end
 
-    val _ = List.app write_theory topo
+        fun read_all () =
+          case TextIO.inputLine instrm of
+            NONE => ()
+          | SOME line =>
+              (process_line (String.substring(line, 0, size line - 1)
+                             handle Subscript => line);
+               read_all ())
+      in
+        read_all ();
+        ReplayTrace.close_trace (instrm, proc);
+
+        (* Register this file's exports in ancestor_exports *)
+        List.app (fn (name, local_id) =>
+          case Redblackmap.peek(!p_remap, local_id) of
+            SOME gid =>
+              ancestor_exports :=
+                Redblackmap.insert(!ancestor_exports,
+                                   (#thy_name data, name), gid)
+          | NONE => ())
+          (#exports data);
+
+        (* If this is a heap trace, register all its live P entries
+           in heap_thm_map so theory scripts (and later heaps)
+           can resolve parent references into this heap *)
+        if #is_heap data then
+          Redblackset.app (fn trace_id =>
+            case Redblackmap.peek(!p_remap, trace_id) of
+              SOME gid =>
+                heap_thm_map :=
+                  Redblackmap.insert(!heap_thm_map,
+                                     (path, trace_id), gid)
+            | NONE => ())
+            live_p
+        else ()
+      end
+
+    val _ = List.app (fn path =>
+      let val data = load_file path
+          val lv = case Redblackmap.peek(!file_liveness, path) of
+              SOME lv => lv | NONE => raise ERR "merge" "no liveness"
+          val n_live = Redblackset.numItems (#live_p lv)
+          val label = if #is_heap data
+                      then OS.Path.file path
+                      else #thy_name data
+      in err ("  " ^ label ^ " (" ^ its n_live ^ " live thms)...\n");
+         write_file path
+      end) topo
 
     (* Write exports *)
     val _ = List.app (fn (thy, name) =>
@@ -671,15 +967,15 @@ fun merge {trace_paths : (string * string) list,
           TextIO.output(ostrm, "E " ^ esc name ^ " " ^
                         its gid ^ "\n")
       | NONE =>
-          print ("WARNING: desired export " ^ thy ^ "." ^ name ^
-                 " not found\n")) desired_exports
+          err ("WARNING: desired export " ^ thy ^ "." ^ name ^
+               " not found in merged output\n")) desired_exports
 
     val _ = TextIO.closeOut ostrm
   in
-    print ("Merged trace: " ^ its (!global_ty_id) ^ " types, " ^
-           its (!global_tm_id) ^ " terms, " ^
-           its (!global_thm_id) ^ " thms -> " ^
-           output_path ^ "\n")
+    err ("Merged trace: " ^ its (!global_ty_id) ^ " types, " ^
+         its (!global_tm_id) ^ " terms, " ^
+         its (!global_thm_id) ^ " thms -> " ^
+         output_path ^ "\n")
   end
 
 end
