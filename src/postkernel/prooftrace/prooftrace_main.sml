@@ -29,7 +29,7 @@ fun main () =
           \  Holmake --trace                     (external projects)\n\
           \\n\
           \Merge:\n\
-          \  prooftrace merge -o FILE [-d DIR]... THY.THM...\n\
+          \  prooftrace merge [-q] -o FILE [-d DIR]... THY.THM...\n\
           \\n\
           \  Finds .pft files in search directories (default: .),\n\
           \  merges traces needed for the given exports.\n\
@@ -62,6 +62,7 @@ fun main () =
         val output = ref (NONE : string option)
         val dirs = ref ([] : string list)
         val exports = ref ([] : (string * string) list)
+        val quiet = ref false
 
         fun parse_export s =
           case String.fields (fn c => c = #".") s of
@@ -72,6 +73,10 @@ fun main () =
         fun parse [] = ()
           | parse ("--help" :: _) = usage ()
           | parse ("-h" :: _) = usage ()
+          | parse ("-q" :: rest) =
+              (quiet := true; parse rest)
+          | parse ("--quiet" :: rest) =
+              (quiet := true; parse rest)
           | parse ("-o" :: f :: rest) =
               (output := SOME f; parse rest)
           | parse ("-d" :: d :: rest) =
@@ -101,14 +106,16 @@ fun main () =
           (map ReplayTrace.find_traces search_dirs)
         val _ = if null all_traces then
                   die "merge: no .pft files found"
-                else
+                else if not (!quiet) then
                   err ("Found " ^ Int.toString (length all_traces) ^
                        " trace files\n")
+                else ()
       in
         MergeTrace.merge {
           trace_paths = all_traces,
           desired_exports = desired,
-          output_path = output_path
+          output_path = output_path,
+          quiet = !quiet
         }
       end
 

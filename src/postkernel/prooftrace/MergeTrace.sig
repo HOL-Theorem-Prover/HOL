@@ -4,6 +4,7 @@ sig
      trace_paths: (theory_name, file_path) pairs for theory traces
      desired_exports: (theory_name, theorem_name) pairs
      output_path: path for the merged trace file
+     quiet: suppress progress reporting
 
      Heap traces are discovered automatically by following H lines
      in the theory/heap traces. The heap path recorded in H lines
@@ -11,6 +12,7 @@ sig
   val merge : {
     trace_paths : (string * string) list,
     desired_exports : (string * string) list,
-    output_path : string
+    output_path : string,
+    quiet : bool
   } -> unit
 end
