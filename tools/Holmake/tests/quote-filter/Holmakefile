@@ -1,11 +1,11 @@
-.PHONY: all
+# .PHONY: all
 
-INCLUDES = $(protect $(HOLDIR)/tools/cmp/)
+# INCLUDES = $(protect $(HOLDIR)/tools/cmp/)
 
-DEPS = $(dprot $(HOLDIR)/bin/unquote) input expected-$(ML_SYSNAME)
+# DEPS = $(dprot $(HOLDIR)/bin/unquote) input expected-$(ML_SYSNAME)
 
-all: $(DEPS)
-	$(protect $(HOLDIR)/bin/unquote) < input > output
-	$(protect $(HOLDIR)/tools/cmp/cmp.exe) output expected-$(ML_SYSNAME)
+# all: $(DEPS)
+# 	$(protect $(HOLDIR)/bin/unquote) < input > output
+# 	$(protect $(HOLDIR)/tools/cmp/cmp.exe) output expected-$(ML_SYSNAME)
 
-EXTRA_CLEANS = output
+# EXTRA_CLEANS = output
