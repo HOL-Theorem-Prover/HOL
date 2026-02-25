@@ -230,6 +230,12 @@ and dec =
     quote: qdecl list, proof_: {proof_: int, attrs: kvals attrs} option,
     tac: exp, qed_: int option, stop: int}
   (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
+| HOLResume of {
+    resume_: int, id: ident, attrs: kvals attrs, colon: int option, tac: exp,
+    qed_: int option, stop: int}
+  (** Resume to_suspend[rtp_q,smlname=qsubgoal]: ... QED *)
+| HOLFinalise of {finalise_: int, id: ident, attrs: kvals attrs, stop: int}
+  (** Finalise to_suspend[simp] *)
 
 | DecBad of {start: int, stop: int}
 | DecExpansion of {orig: dec, result: dec list}
@@ -553,6 +559,8 @@ fun decSpan (DecSemi p) = (p, p + 1)
     (theorem_, case bind of SOME {exp, ...} => expStop exp | NONE =>
       case attrs of SOME {stop, ...} => stop | NONE => idStop id)
   | decSpan (HOLTheoremDecl {theorem_, stop, ...}) = (theorem_, stop)
+  | decSpan (HOLResume {resume_, stop, ...}) = (resume_, stop)
+  | decSpan (HOLFinalise {finalise_, stop, ...}) = (finalise_, stop)
   | decSpan (DecBad {start, stop}) = (start, stop)
   | decSpan (DecExpansion {orig, ...}) = decSpan orig
 

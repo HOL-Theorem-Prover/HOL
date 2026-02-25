@@ -178,6 +178,7 @@ fun parseSML file read parseError: scope -> result = let
       | "Quote" => holKw () | "Inductive" => holKw () | "CoInductive" => holKw ()
       | "Proof" => holKw () | "QED" => holKw () | "Termination" => holKw () | "End" => holKw ()
       | "Theory" => holKw () | "Ancestors" => holKw () | "Libs" => holKw ()
+      | "Resume" => holKw () | "Finalise" => holKw ()
 
       | _ => Regular)
     end
@@ -1066,6 +1067,22 @@ fun parseSML file read parseError: scope -> result = let
             | _ => (unread tk; rev acc))
           | tk => (unread tk; rev acc)
         in HOLTheory {theory_ = start, id = id, attrs = attrs, elems = parseHeaders []} end)
+      | ("Resume", HolKeyword) => SOME (sc, let
+        val id = parseIdentifier true
+        val attrs = parseAttrs parseKVals
+        val colon = parseKeyword ":" (SOME "expected a colon")
+        val tac = parseExp sc false
+        val (qed_, stop) = parseStop (parseHolKeyword "QED") 3 "expected 'QED'"
+        val _ = case qed_ of NONE => parseHolKeyword "End" NONE | _ => NONE
+        in HOLResume {
+          resume_ = start, id = id, attrs = attrs, colon = colon,
+          tac = tac, qed_ = qed_, stop = stop }
+        end)
+      | ("Finalise", HolKeyword) => SOME (sc, let
+        val id = parseIdentifier true
+        val attrs = parseAttrs parseKVals
+        val stop = case attrs of SOME {stop, ...} => stop | NONE => idStop id
+        in HOLFinalise {finalise_ = start, id = id, attrs = attrs, stop = stop} end)
       | _ => (unread (start, IdentTk); NONE))
     | tk => (unread tk; NONE)
     in

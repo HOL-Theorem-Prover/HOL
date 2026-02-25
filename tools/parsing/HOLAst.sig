@@ -227,6 +227,12 @@ and dec =
     quote: qdecl list, proof_: {proof_: int, attrs: kvals attrs} option,
     tac: exp, qed_: int option, stop: int}
   (** Theorem foo[attrs]: ... [Proof[attrs] tac] QED *)
+| HOLResume of {
+    resume_: int, id: ident, attrs: kvals attrs, colon: int option, tac: exp,
+    qed_: int option, stop: int}
+  (** Resume to_suspend[rtp_q,smlname=qsubgoal]: ... QED *)
+| HOLFinalise of {finalise_: int, id: ident, attrs: kvals attrs, stop: int}
+  (** Finalise to_suspend[simp] *)
 
 | DecBad of {start: int, stop: int}
 | DecExpansion of {orig: dec, result: dec list}

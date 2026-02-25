@@ -276,6 +276,8 @@ and printDecCore (DecSemi _) pr = token ";" pr
   | printDecCore (HOLType _)          _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLSimpleThm _)     _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (HOLTheoremDecl _)   _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLResume _)        _ = raise Fail "unexpanded HOL syntax"
+  | printDecCore (HOLFinalise _)      _ = raise Fail "unexpanded HOL syntax"
   | printDecCore (DecBad _)           _ = raise Fail "unexpanded bad declaration"
   | printDecCore (DecExpansion {orig, result}) pr = spanned (decSpan orig) (printDecs result) pr
 
