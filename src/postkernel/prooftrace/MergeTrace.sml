@@ -697,7 +697,15 @@ fun merge {trace_paths : (string * string) list,
       case Redblackmap.peek(!file_cache, path) of
         SOME data => data
       | NONE =>
-        let val data = read_file_data path
+        let val _ = if not quiet then
+                      let val base = OS.Path.file path
+                          val msg = "  loading " ^ base ^ "..."
+                          val padded = StringCvt.padRight #" " 72 msg
+                      in TextIO.output(TextIO.stdErr, "\r" ^ padded);
+                         TextIO.flushOut TextIO.stdErr
+                      end
+                    else ()
+            val data = read_file_data path
         in file_cache := Redblackmap.insert(!file_cache, path, data);
            data
         end
