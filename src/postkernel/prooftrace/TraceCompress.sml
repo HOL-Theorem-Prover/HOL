@@ -140,19 +140,15 @@ fun tool_of_path path =
   else if String.isSuffix ".zip" path then SOME Zip
   else NONE
 
-fun open_trace base_path =
+fun ensure_decompressed base_path =
   case find_trace base_path of
-    NONE => raise ERR "open_trace"
+    NONE => raise ERR "ensure_decompressed"
               ("trace file not found: " ^ base_path)
   | SOME actual_path =>
     case tool_of_path actual_path of
-      NONE =>
-        (* Uncompressed — open directly *)
-        let val s = TextIO.openIn actual_path
-        in (s, fn () => TextIO.closeIn s) end
+      NONE => actual_path
     | SOME tool =>
         let
-          (* Check cache; decompress if not cached or stale *)
           fun do_decompress () =
             let val t = OS.FileSys.tmpName ()
                 val cmd = decompress_cmd tool actual_path t
@@ -163,22 +159,22 @@ fun open_trace base_path =
                      active_temps := t :: !active_temps;
                      t)
                else (OS.FileSys.remove t handle _ => ();
-                     raise ERR "open_trace"
+                     raise ERR "ensure_decompressed"
                        ("decompression failed: " ^ actual_path))
             end
-          val tmp = case Redblackmap.peek(!decomp_cache, base_path) of
+        in
+          case Redblackmap.peek(!decomp_cache, base_path) of
               SOME cached =>
                 if OS.FileSys.access(cached, [OS.FileSys.A_READ])
                 then cached
                 else do_decompress ()
             | NONE => do_decompress ()
-          val s = TextIO.openIn tmp
-        in
-          (* Cleanup just closes the stream — temp file stays
-             cached for potential re-read (MergeTrace two-pass).
-             atExit handler removes all temps. *)
-          (s, fn () => TextIO.closeIn s handle _ => ())
         end
+
+fun open_trace base_path =
+  let val file_path = ensure_decompressed base_path
+      val s = TextIO.openIn file_path
+  in (s, fn () => TextIO.closeIn s handle _ => ()) end
 
 (* ------- Suffixes for directory scanning ------- *)
 

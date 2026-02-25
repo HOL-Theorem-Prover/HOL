@@ -12,6 +12,11 @@ sig
      file. *)
   val open_trace : string -> TextIO.instream * (unit -> unit)
 
+  (* Ensure a trace file is available uncompressed. Returns the
+     path to the readable file (original if uncompressed, cached
+     temp file if decompressed). *)
+  val ensure_decompressed : string -> string
+
   (* Find a trace file. Given a base path (without compression
      extension), returns SOME of the actual path that exists
      (possibly with compression extension), or NONE. *)

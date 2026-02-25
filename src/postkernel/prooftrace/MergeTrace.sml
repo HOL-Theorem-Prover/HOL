@@ -131,19 +131,40 @@ fun thyname_cmp ((t1,n1) : string*string, (t2,n2)) =
    theory built on a heap with counter at 5M starts IDs from 5M+),
    so we use int-keyed maps for P entries. *)
 
+(* Heavy dependency data needed only during Pass 1.
+   Stored in a ref so it can be cleared after Pass 1. *)
+(* Heavy dependency data needed only during Pass 1.
+   Stored in a ref so it can be cleared after Pass 1. *)
+type file_deps = {
+  (* P entry dep offsets: byte offset in uncompressed file for
+     each P entry. Array indexed by (trace_id - p_base_id).
+     ~1 means no P entry at that index (gap). *)
+  p_base_id : int,
+  p_offsets : int Array.array,
+  p_fd : Posix.IO.file_desc,   (* open fd for seeking *)
+  (* T entry deps: sequential id -> (sub_term_ids, sub_type_ids) *)
+  t_term_deps : int list Array.array,
+  t_type_deps : int list Array.array,
+  (* Y entry deps: sequential id -> sub_type_ids *)
+  y_deps : int list Array.array,
+  (* COMPUTE P entry trace_ids in this file *)
+  compute_ids : unit PIntMap.t,
+  (* C (compute init) entry dependencies. NONE if no C line. *)
+  c_deps : (int list * int list * int list) option,
+  (* Precomputed cascading arrays for mark_live. *)
+  t_def : int Array.array,
+  t_nc  : int Array.array,
+  y_def : int Array.array,
+  t_unresolved_defs : (int * (string * string)) list,
+  y_unresolved_defs : (int * (string * string)) list
+}
+
 type file_data = {
   path : string,
   heap_parent : string option,     (* H line: parent heap path *)
   is_heap : bool,                  (* true if no N line = heap trace *)
   thy_name : string,               (* N line value, "" for heaps *)
-  (* P entry deps: trace_id -> (parent_ids, term_ids, type_ids) *)
-  p_deps : (int list * int list * int list) PIntMap.t,
-  (* T entry deps: sequential id -> (sub_term_ids, sub_type_ids) *)
-  t_term_deps : int list Array.array,
-  t_type_deps : int list Array.array,
   n_terms : int,
-  (* Y entry deps: sequential id -> sub_type_ids *)
-  y_deps : int list Array.array,
   n_types : int,
   (* Exports: name -> trace_id *)
   exports : (string, int) Redblackmap.dict,
@@ -165,24 +186,8 @@ type file_data = {
   t_const_refs : (int * (string * string)) list,
   (* Y entries that reference defined type ops: type_id -> (thy, tyop) *)
   y_tyop_refs : (int * (string * string)) list,
-  (* COMPUTE P entry trace_ids in this file *)
-  compute_ids : unit PIntMap.t,
-  (* C (compute init) entry dependencies. NONE if no C line.
-     When any COMPUTE P entry is live, the C line and all its
-     deps become live. *)
-  c_deps : (int list * int list * int list) option,
-           (* (parent_thm_ids, term_ids, type_ids) *)
-  (* Precomputed cascading arrays for mark_live.
-     t_def: term_id -> DEF_SPEC trace_id (~1 if none)
-     t_nc:  term_id -> NC type_id (~1 if no NC or has DEF_SPEC)
-     y_def: type_id -> DEF_TYOP trace_id (~1 if none)
-     t_unresolved_defs: live terms needing cross-file DEF_SPEC
-     y_unresolved_defs: live types needing cross-file DEF_TYOP *)
-  t_def : int Array.array,
-  t_nc  : int Array.array,
-  y_def : int Array.array,
-  t_unresolved_defs : (int * (string * string)) list,
-  y_unresolved_defs : (int * (string * string)) list
+  (* Heavy deps, cleared after Pass 1 *)
+  deps : file_deps option ref
 }
 
 (* Growable list accumulator, converted to array at the end *)
@@ -219,16 +224,17 @@ fun read_file_data path : file_data =
     val compute_ids_ref = ref (PIntMap.empty : unit PIntMap.t)
     val c_deps_ref = ref (NONE : (int list * int list * int list) option)
 
-    (* P deps stored in a map (sparse trace_ids) *)
-    val p_deps_ref = ref (PIntMap.empty
-      : (int list * int list * int list) PIntMap.t)
+    (* P entry byte offsets: (trace_id, byte_offset) pairs *)
+    val p_offsets_rev = ref ([] : (int * int) list)
+    val p_min_id = ref ~1
+    val p_max_id = ref ~1
 
     (* Y and T deps accumulated as lists, arrays built at end *)
     val y_deps_rev = ref ([] : (int * int list) list)
     val t_term_deps_rev = ref ([] : (int * int list) list)
     val t_type_deps_rev = ref ([] : (int * int list) list)
 
-    fun process_line line =
+    fun process_line byte_offset line =
       let val toks = tokenize line in
       case toks of
         [] => ()
@@ -292,12 +298,10 @@ fun read_file_data path : file_data =
           end
       | ("P" :: id_s :: rule :: args) =>
           let val id = int_of id_s
-              val parents = extract_parent_ids rule args
-              val term_deps = extract_term_ids rule args
-              val type_deps = extract_type_ids rule args
-          in p_deps_ref := PIntMap.add id
-                             (parents, term_deps, type_deps)
-                             (!p_deps_ref);
+          in (* Record byte offset; skip dep parsing (done lazily) *)
+             p_offsets_rev := (id, byte_offset) :: !p_offsets_rev;
+             (if !p_min_id < 0 then p_min_id := id else ());
+             p_max_id := Int.max(!p_max_id, id);
              (case rule of
                 "DISK_THM" =>
                   disk_thms_rev := (id, unescape (List.nth(args, 0)),
@@ -372,13 +376,18 @@ fun read_file_data path : file_data =
       | _ => ()
       end
 
+    val byte_pos = ref 0
     fun read_all () =
       case TextIO.inputLine instrm of
         NONE => ()
       | SOME line =>
-          (process_line (String.substring(line, 0, size line - 1)
-                         handle Subscript => line);
-           read_all ())
+          let val pos = !byte_pos
+          in byte_pos := pos + size line;
+             process_line pos
+               (String.substring(line, 0, size line - 1)
+                handle Subscript => line);
+             read_all ()
+          end
     val _ = read_all ()
     val _ = close_instrm ()
 
@@ -409,16 +418,26 @@ fun read_file_data path : file_data =
            | NONE => y_unresolved_defs_ref := (yid, (thy, tyop))
                                               :: !y_unresolved_defs_ref))
       (rev (!y_tyop_refs_rev))
+    (* Build P entry offset array *)
+    val base_id = if !p_min_id < 0 then 0 else !p_min_id
+    val arr_size = if !p_max_id < 0 then 0
+                   else !p_max_id - base_id + 1
+    val p_off_arr = Array.array(arr_size, ~1)
+    val _ = List.app (fn (id, off) =>
+              Array.update(p_off_arr, id - base_id, off))
+            (!p_offsets_rev)
+
+    (* Open an fd for seeking during mark_live *)
+    val file_path = TraceCompress.ensure_decompressed path
+    val p_fd = Posix.FileSys.openf(file_path,
+                 Posix.FileSys.O_RDONLY,
+                 Posix.FileSys.O.flags [])
   in
     { path = path,
       heap_parent = !heap_parent,
       is_heap = not (!has_name),
       thy_name = !thy_name,
-      p_deps = !p_deps_ref,
-      t_term_deps = list_to_array nt (!t_term_deps_rev) [],
-      t_type_deps = list_to_array nt (!t_type_deps_rev) [],
       n_terms = nt,
-      y_deps = list_to_array ny (!y_deps_rev) [],
       n_types = ny,
       exports = !exports_ref,
       dep_exports = !dep_exports_ref,
@@ -430,13 +449,69 @@ fun read_file_data path : file_data =
       type_decls = !type_decls_ref,
       t_const_refs = rev (!t_const_refs_rev),
       y_tyop_refs = rev (!y_tyop_refs_rev),
-      compute_ids = !compute_ids_ref,
-      c_deps = !c_deps_ref,
-      t_def = t_def_arr,
-      t_nc = t_nc_arr,
-      y_def = y_def_arr,
-      t_unresolved_defs = !t_unresolved_defs_ref,
-      y_unresolved_defs = !y_unresolved_defs_ref }
+      deps = ref (SOME {
+        p_base_id = base_id,
+        p_offsets = p_off_arr,
+        p_fd = p_fd,
+        t_term_deps = list_to_array nt (!t_term_deps_rev) [],
+        t_type_deps = list_to_array nt (!t_type_deps_rev) [],
+        y_deps = list_to_array ny (!y_deps_rev) [],
+        compute_ids = !compute_ids_ref,
+        c_deps = !c_deps_ref,
+        t_def = t_def_arr,
+        t_nc = t_nc_arr,
+        y_def = y_def_arr,
+        t_unresolved_defs = !t_unresolved_defs_ref,
+        y_unresolved_defs = !y_unresolved_defs_ref
+      }) }
+  end
+
+fun get_deps (data : file_data) : file_deps =
+  case !(#deps data) of
+    SOME d => d
+  | NONE => raise ERR "get_deps"
+              ("deps already cleared for " ^ #path data)
+
+fun clear_deps (data : file_data) =
+  case !(#deps data) of
+    NONE => ()
+  | SOME dp =>
+      (Posix.IO.close (#p_fd dp) handle _ => ();
+       #deps data := NONE)
+
+(* Check whether a trace_id has a P entry in this file *)
+fun p_has_id (dp : file_deps) (id : int) =
+  let val i = id - #p_base_id dp
+  in i >= 0 andalso i < Array.length (#p_offsets dp) andalso
+     Array.sub(#p_offsets dp, i) >= 0
+  end
+
+(* Read and parse a single P line's deps by seeking to its
+   byte offset. Returns (parent_ids, term_ids, type_ids). *)
+fun read_p_deps_at (dp : file_deps) (id : int) =
+  let val i = id - #p_base_id dp
+      val offset = Array.sub(#p_offsets dp, i)
+      val fd = #p_fd dp
+      val _ = Posix.IO.lseek(fd,
+                LargeInt.fromInt offset, Posix.IO.SEEK_SET)
+      (* Read the P line. Start with 4KB; grow if no newline found. *)
+      fun read_line sz =
+        let val _ = Posix.IO.lseek(fd,
+                      LargeInt.fromInt offset, Posix.IO.SEEK_SET)
+            val chunk = Byte.bytesToString(Posix.IO.readVec(fd, sz))
+        in case String.fields (fn c => c = #"\n") chunk of
+             (l :: _ :: _) => l  (* found newline *)
+           | _ => if sz >= 1048576 then chunk (* 1MB safety limit *)
+                  else read_line (sz * 4)
+        end
+      val line = read_line 4096
+      val toks = tokenize line
+  in case toks of
+       ("P" :: _ :: rule :: args) =>
+         (extract_parent_ids rule args,
+          extract_term_ids rule args,
+          extract_type_ids rule args)
+     | _ => ([], [], [])
   end
 
 (* ------- Heap trace file discovery ------- *)
@@ -469,33 +544,35 @@ fun mark_live (data : file_data) (prev : liveness)
     val unresolved = ref (PIntMap.empty : unit PIntMap.t)
     val found_compute = ref false
 
-    (* Use precomputed cascading arrays from file_data *)
-    val t_def = #t_def data
-    val t_nc = #t_nc data
-    val y_def = #y_def data
+    val dp = get_deps data
+
+    (* Use precomputed cascading arrays from file_deps *)
+    val t_def = #t_def dp
+    val t_nc = #t_nc dp
+    val y_def = #y_def dp
 
     fun mark_thm id =
       if PIntMap.mem id (!live_p) then ()
+      else if not (p_has_id dp id) then
+        unresolved := PIntMap.add id () (!unresolved)
       else
-        (let val (parents, term_deps, type_deps) =
-               PIntMap.find id (#p_deps data)
-             val _ = live_p := PIntMap.add id () (!live_p)
-             val _ = if PIntMap.mem id (#compute_ids data)
-                     then found_compute := true else ()
-         in List.app mark_thm parents;
-            List.app mark_term term_deps;
-            List.app mark_type type_deps
-         end
-         handle PIntMap.NotFound =>
-           unresolved := PIntMap.add id () (!unresolved))
+        let val (parents, term_deps, type_deps) =
+              read_p_deps_at dp id
+            val _ = live_p := PIntMap.add id () (!live_p)
+            val _ = if PIntMap.mem id (#compute_ids dp)
+                    then found_compute := true else ()
+        in List.app mark_thm parents;
+           List.app mark_term term_deps;
+           List.app mark_type type_deps
+        end
     and mark_term id =
       if id < 0 orelse id >= #n_terms data orelse
          Array.sub(live_t, id) then ()
       else (Array.update(live_t, id, true);
             List.app mark_term
-              (Array.sub(#t_term_deps data, id));
+              (Array.sub(#t_term_deps dp, id));
             List.app mark_type
-              (Array.sub(#t_type_deps data, id));
+              (Array.sub(#t_type_deps dp, id));
             let val def = Array.sub(t_def, id)
             in if def >= 0 then mark_thm def
                else (* No DEF_SPEC; check for NC — mark its type live *)
@@ -506,7 +583,7 @@ fun mark_live (data : file_data) (prev : liveness)
       if id < 0 orelse id >= #n_types data orelse
          Array.sub(live_y, id) then ()
       else (Array.update(live_y, id, true);
-            List.app mark_type (Array.sub(#y_deps data, id));
+            List.app mark_type (Array.sub(#y_deps dp, id));
             let val def = Array.sub(y_def, id)
             in if def >= 0 then mark_thm def else () end)
   in
@@ -516,8 +593,8 @@ fun mark_live (data : file_data) (prev : liveness)
        some thm IDs were requested), mark the C line's term and
        type refs as live. The C file is only ever processed when
        a COMPUTE entry is live, so this is safe. *)
-    if isSome (#c_deps data) andalso not (null needed_thm_ids) then
-      let val (_, terms, types) = valOf (#c_deps data)
+    if isSome (#c_deps dp) andalso not (null needed_thm_ids) then
+      let val (_, terms, types) = valOf (#c_deps dp)
       in List.app mark_term terms;
          List.app mark_type types
       end
@@ -529,11 +606,11 @@ fun mark_live (data : file_data) (prev : liveness)
       val unresolved_tyops =
         List.mapPartial (fn (yid, key) =>
           if Array.sub(live_y, yid) then SOME key else NONE)
-          (#y_unresolved_defs data)
+          (#y_unresolved_defs dp)
       val unresolved_consts =
         List.mapPartial (fn (tid, key) =>
           if Array.sub(live_t, tid) then SOME key else NONE)
-          (#t_unresolved_defs data)
+          (#t_unresolved_defs dp)
     in
       ({live_y = live_y, live_t = live_t, live_p = !live_p},
        PIntMap.fold (fn (k,_,acc) => k::acc) [] (!unresolved),
@@ -746,7 +823,8 @@ fun merge {trace_paths : (string * string) list,
              NONE => NONE
            | SOME heap_pft =>
              let val hdata = load_file heap_pft
-             in if PIntMap.mem trace_id (#p_deps hdata)
+                 val hdp = get_deps hdata
+             in if p_has_id hdp trace_id
                 then SOME heap_pft
                 else find_in_heap_chain heap_pft trace_id
              end
@@ -912,7 +990,8 @@ fun merge {trace_paths : (string * string) list,
             val _ = live_c := true
             fun find_c_file p =
               let val d = load_file p
-              in case #c_deps d of
+                  val dd = get_deps d
+              in case #c_deps dd of
                    SOME _ => SOME p
                  | NONE =>
                    case #heap_parent d of
@@ -927,7 +1006,8 @@ fun merge {trace_paths : (string * string) list,
               NONE => raise ERR "process_file"
                 "COMPUTE entry live but no C line found"
             | SOME c_path =>
-              let val (parents, _, _) = valOf (#c_deps (load_file c_path))
+              let val (parents, _, _) =
+                    valOf (#c_deps (get_deps (load_file c_path)))
               in enqueue (c_path, parents) end
           end
         else ()
@@ -1045,7 +1125,7 @@ fun merge {trace_paths : (string * string) list,
                           orelse Array.sub(live_y, id) then ()
                        else (Array.update(live_y, id, true);
                              List.app mark_ty
-                               (Array.sub(#y_deps anc_data, id)))
+                               (Array.sub(#y_deps (get_deps anc_data), id)))
                  in processed_files :=
                       Redblackset.add(!processed_files, anc_path);
                     mark_ty tyid;
@@ -1167,6 +1247,10 @@ fun merge {trace_paths : (string * string) list,
             else ()
     val _ = err ("Pass 1 done: " ^ its (length topo) ^ " files, " ^
                  its n_live_total ^ " live theorems\n")
+
+    (* Free heavy dependency data no longer needed after Pass 1 *)
+    val _ = Redblackmap.app (fn (_, data) => clear_deps data)
+              (!file_cache)
 
     (* ============================================================
        Pass 2: Write merged trace with global dedup and remapping
