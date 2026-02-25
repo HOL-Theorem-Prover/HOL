@@ -72,10 +72,30 @@ We need a replay-aware theory loading mode where:
 
 ### [compression] Automatic compression
 
-Theory traces can be large. Add optional compression using an
-external tool (zstd/gzip/lz4) detected at configure time.
-See DESIGN.md for details on configure-time detection,
-compression at recording time, and decompression at merge time.
+Trace files compress ~4:1. Add automatic compression via a
+`TraceCompress` module that encapsulates tool selection,
+compression, decompression, and file discovery. See DESIGN.md
+for full details.
+
+Summary:
+- `HOL_PFT_COMPRESS` env var: `zstd` (default), `gzip`,
+  `zip`, or `none`
+- Compress after recording (both theory and heap traces)
+- Decompress transparently on read via `open_trace`
+- `atExit` handler cleans up decompression temp files
+- Gitignore patterns use `*.pft*` to cover all extensions
+
+Implementation:
+1. `TraceCompress.sml`: new module with compress/open_trace/
+   find_trace/trace_extensions
+2. `TraceRecord.sml`: call `TraceCompress.compress` in
+   export_hook and heap cleanup
+3. `MergeTrace.sml`: use `TraceCompress.open_trace` with
+   cached cleanup across two passes
+4. `ReplayTrace.sml`: use `TraceCompress.open_trace`
+5. Merge tool file discovery: use `TraceCompress.find_trace`
+   and `trace_extensions`
+6. Gitignore updates for heap traces
 
 ### [tmp-cleanup] Temp file cleanup on killed builds
 

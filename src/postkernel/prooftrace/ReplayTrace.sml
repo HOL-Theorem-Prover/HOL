@@ -59,18 +59,11 @@ fun tokenize line =
           in go rest' (tok :: acc) end
   in go (String.explode line) [] end
 
-(* ------- File I/O ------- *)
-
-fun open_trace path = TextIO.openIn path
-
-fun close_trace strm = TextIO.closeIn strm
-
 (* ------- Replay a merged trace ------- *)
 
 fun replay_file path =
   let
-    val instrm = open_trace path
-    fun cleanup () = close_trace instrm
+    val (instrm, cleanup) = TraceCompress.open_trace path
 
     (* Lazy type/term construction: store raw descriptions,
        construct on demand when first accessed. This ensures
@@ -387,6 +380,9 @@ fun replay_file path =
 
 fun find_traces dir =
   let
+    val suffixes = TraceCompress.trace_suffixes
+    fun match_suffix entry =
+      List.find (fn sfx => String.isSuffix sfx entry) suffixes
     fun walk d acc =
       let
         val ds = OS.FileSys.openDir d
@@ -396,11 +392,15 @@ fun find_traces dir =
           | SOME entry =>
             let val p = OS.Path.concat(d, entry)
             in if OS.FileSys.isDir p then loop (walk p acc)
-               else if String.isSuffix "Theory.pft" entry then
-                 let val thy = String.substring(entry, 0,
-                                 size entry - size "Theory.pft")
-                 in loop ((thy, p) :: acc) end
-               else loop acc
+               else case match_suffix entry of
+                 SOME sfx =>
+                   let val thy = String.substring(entry, 0,
+                                   size entry - size sfx)
+                       (* Use base .pft path for TraceCompress.open_trace *)
+                       val base = OS.Path.concat(d,
+                                    thy ^ "Theory.pft")
+                   in loop ((thy, base) :: acc) end
+               | NONE => loop acc
             end
       in loop acc end
   in walk dir [] end

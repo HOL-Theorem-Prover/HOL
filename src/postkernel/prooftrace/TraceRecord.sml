@@ -425,7 +425,11 @@ fun cleanup () =
      case !output_path_ref of
        SOME p => (OS.FileSys.remove p handle _ => ())
      | NONE => ()
-   else ())
+   else
+     (* Heap trace: compress the completed .pft file *)
+     case !output_path_ref of
+       SOME p => (ignore (TraceCompress.compress p) handle _ => ())
+     | NONE => ())
 
 fun trace_reset () =
   (close_output ();
@@ -467,7 +471,8 @@ fun export_hook thyname (_:string list) all_thms dep_thms =
         end
 
       val _ = OS.FileSys.rename {old = temp, new = actual_path}
-      val _ = Feedback.HOL_MESG ("Proof trace: " ^ actual_path)
+      val final = TraceCompress.compress actual_path
+      val _ = Feedback.HOL_MESG ("Proof trace: " ^ final)
     in () end;
     trace_reset ()
   end

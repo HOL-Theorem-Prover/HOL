@@ -468,7 +468,106 @@ reducing peak memory:
 Both are optional future optimizations. The initial
 implementation keeps all objects alive.
 
-## File format
+## Compression
 
-All trace files are uncompressed `.pft` text files. External
-tools can compress them if desired.
+### Overview
+
+Trace files (`.pft`) are plain text and compress well (~4:1
+with zstd or gzip). Compression is applied automatically after
+recording and decompressed transparently when reading.
+
+All compression logic is encapsulated in the `TraceCompress`
+module, which provides a uniform API for compressing, opening,
+and discovering trace files regardless of compression format.
+
+### Tool selection
+
+The `HOL_PFT_COMPRESS` environment variable selects the tool:
+- **Unset or empty**: default to `zstd`
+- **Set to a tool name**: `zstd`, `gzip`, or `zip`
+- **Set to `none`**: disable compression
+
+At activation time, `TraceCompress` verifies the tool exists
+on PATH. If not found, falls back to no compression with a
+warning.
+
+### Supported tools
+
+| Tool | Compress | Decompress | Extension |
+|------|----------|------------|-----------|
+| `zstd` | `zstd --rm <path>` | `zstd -dc <path>.zst > tmp` | `.zst` |
+| `gzip` | `gzip <path>` | `gzip -dc <path>.gz > tmp` | `.gz` |
+| `zip` | `zip -jm <path>.zip <path>` | `unzip -p <path>.zip > tmp` | `.zip` |
+
+All tools replace the original `.pft` file with the compressed
+variant. Extensions are appended: `foo.pft` → `foo.pft.zst`.
+
+### TraceCompress module
+
+```sml
+signature TraceCompress = sig
+  (* Compress a .pft file in-place. Returns the final path
+     (with compression extension, or unchanged if disabled). *)
+  val compress : string -> string
+
+  (* Open a trace file for reading. Probes for the base path
+     and compressed variants (.zst, .gz, .zip). Decompresses
+     to a temp file if needed. Returns (instream, cleanup_fn)
+     where cleanup_fn removes any temp file. *)
+  val open_trace : string -> TextIO.instream * (unit -> unit)
+
+  (* Find a trace file. Given a base path (without compression
+     extension), returns SOME of the actual path, or NONE. *)
+  val find_trace : string -> string option
+
+  (* File extensions to search for when scanning directories,
+     e.g. [".pft", ".pft.zst", ".pft.gz", ".pft.zip"] *)
+  val trace_extensions : string list
+end
+```
+
+### Where compression happens
+
+- **Recording**: `TraceRecord.export_hook` calls
+  `TraceCompress.compress` after writing the final `.pft` file.
+  Both theory traces and heap traces are compressed.
+- **Merged traces**: NOT compressed (user-facing output,
+  typically piped directly to replay).
+
+### Where decompression happens
+
+- **MergeTrace**: calls `TraceCompress.open_trace` for each
+  input file. Caches the `(instream, cleanup)` pair across
+  both passes (decompress once, read twice). Calls cleanup
+  after both passes are done.
+- **ReplayTrace**: calls `TraceCompress.open_trace`.
+- **File discovery**: merge tool uses `TraceCompress.find_trace`
+  and `TraceCompress.trace_extensions` when scanning `-d`
+  directories for trace files. `find_heap_trace_file` uses
+  `TraceCompress.find_trace`.
+
+### Leftover temp files
+
+**Decompression temp files** (created by `open_trace`):
+- Normal cleanup: caller invokes the cleanup function.
+- Crash/interrupt: `TraceCompress` maintains an internal list
+  of active temp files and registers an `atExit` handler to
+  remove them. This covers normal exit and uncaught exceptions
+  but not SIGKILL. SIGKILL leftovers are cleaned by
+  `Holmake cleanAll` (if under `.hol/`) or OS temp cleanup
+  (if using system temp dir).
+
+**Compression failure** (in `compress`):
+- `zstd --rm` writes the compressed file, then removes the
+  original. If interrupted between these steps, both files
+  exist. `find_trace` prefers the uncompressed file if both
+  exist. Next build overwrites. No data loss.
+- If compression fails entirely, the original `.pft` remains.
+
+### Gitignore
+
+Theory traces are under `.hol/` — already gitignored regardless
+of extension. Heap trace gitignore patterns use `*.pft*` globs
+to cover all compression extensions:
+- `bin/.gitignore`: `hol.state*.pft*`
+- `.gitignore`: `src/num/termination/numheap.pft*`

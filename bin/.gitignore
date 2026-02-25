@@ -1,7 +1,7 @@
 hol.state
 hol.state0
 hol.state.min
-hol.state*.pft
+hol.state*.pft*
 prooftrace
 Holmake
 build

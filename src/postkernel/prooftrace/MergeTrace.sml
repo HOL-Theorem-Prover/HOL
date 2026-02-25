@@ -186,7 +186,7 @@ fun list_to_array n items default =
 
 fun read_file_data path : file_data =
   let
-    val instrm = ReplayTrace.open_trace path
+    val (instrm, close_instrm) = TraceCompress.open_trace path
     val ty_count = ref 0
     val tm_count = ref 0
     val heap_parent = ref (NONE : string option)
@@ -370,7 +370,7 @@ fun read_file_data path : file_data =
                          handle Subscript => line);
            read_all ())
     val _ = read_all ()
-    val _ = ReplayTrace.close_trace instrm
+    val _ = close_instrm ()
 
     val ny = !ty_count
     val nt = !tm_count
@@ -405,10 +405,7 @@ fun read_file_data path : file_data =
 (* Given a heap path from an H line (e.g. "/home/user/HOL/bin/hol.state0"),
    find the corresponding trace file at <heap_path>.pft. *)
 fun find_heap_trace_file heap_path =
-  let val pft = heap_path ^ ".pft"
-  in if OS.FileSys.access(pft, [OS.FileSys.A_READ])
-     then SOME pft else NONE
-  end
+  TraceCompress.find_trace (heap_path ^ ".pft")
 
 (* ------- Pass 1: Backward reachability ------- *)
 
@@ -1146,7 +1143,7 @@ fun merge {trace_paths : (string * string) list,
         val live_t = #live_t lv
         val live_p = #live_p lv
 
-        val instrm = ReplayTrace.open_trace path
+        val (instrm, close_instrm) = TraceCompress.open_trace path
 
         (* Local -> global remap: arrays for Y/T (sequential),
            map for P (sparse trace_ids) *)
@@ -1378,7 +1375,7 @@ fun merge {trace_paths : (string * string) list,
                read_all ())
       in
         read_all ();
-        ReplayTrace.close_trace instrm;
+        close_instrm ();
 
         (* Register this file's exports in ancestor_exports *)
         List.app (fn (name, local_id) =>
