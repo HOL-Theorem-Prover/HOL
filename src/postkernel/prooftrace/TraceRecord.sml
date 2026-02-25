@@ -106,16 +106,22 @@ fun open_heap_file path =
     s
   end
 
-fun out_strm () =
+(* Detect and recover from stale stream after heap restore.
+   Must be called BEFORE any intern_type/intern_term calls to avoid
+   corrupting intern state mid-recursion. Also re-registers atExit
+   since the handler from the original process doesn't survive
+   heap save/restore.
+
+   Called at the entry to record_hook and the NC/NY TheoryDelta hook —
+   the only two code paths that lead to intern + write sequences. *)
+val cleanup_ref : (unit -> unit) ref = ref (fn () => ())
+
+fun check_stale () =
   case !output_strm of
-    NONE => open_temp_file ()
+    NONE => ()
   | SOME s =>
-      (TextIO.output(s, ""); s)
+      (TextIO.output(s, ""); ())
       handle _ =>
-        (* Stale stream from heap restore — reopen.
-           Clean up stale temp files (from theory builds) but not
-           completed heap trace files. Temp files have .tmp suffix;
-           heap traces have .pft suffix. *)
         let val stale = !output_path_ref
             fun is_tmp p = String.isSuffix ".tmp" p
         in output_strm := NONE; output_path_ref := NONE;
@@ -125,10 +131,16 @@ fun out_strm () =
                           (OS.FileSys.remove p handle _ => ())
                         else ()
             | NONE => ());
-           case find_heap_output () of
-             SOME path => open_heap_file path
-           | NONE => open_temp_file ()
+           (case find_heap_output () of
+              SOME path => ignore (open_heap_file path)
+            | NONE => ignore (open_temp_file ()));
+           OS.Process.atExit (fn () => (!cleanup_ref) ())
         end
+
+fun out_strm () =
+  case !output_strm of
+    NONE => open_temp_file ()
+  | SOME s => s
 
 fun close_output () =
   (case !output_strm of
@@ -263,6 +275,7 @@ fun record_line line =
 (* ------- Trace hook ------- *)
 
 fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
+  (check_stale ();
   case step of
     Thm.TR_ASSUME (r, tm) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " ASSUME " ^ its (iT tm))
@@ -415,7 +428,7 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
         esc src_thy ^ " " ^ esc name)
   | Thm.TR_DISK_DEP (r, src_thy, depid) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " DISK_DEP " ^
-        esc src_thy ^ " " ^ its depid)
+        esc src_thy ^ " " ^ its depid))
 
 (* ------- Cleanup and reset ------- *)
 
@@ -430,6 +443,8 @@ fun cleanup () =
      case !output_path_ref of
        SOME p => (ignore (TraceCompress.compress p) handle _ => ())
      | NONE => ())
+
+val _ = cleanup_ref := cleanup
 
 fun trace_reset () =
   (close_output ();
@@ -503,26 +518,28 @@ fun activate () = (
   Theory.register_hook (
     "TraceRecord.new_const_type",
     fn TheoryDelta.NewConstant {Thy, Name} =>
-         if Redblackset.member(!defined_consts, (Thy, Name))
-         then ()
-         else
-           let val ty = Term.type_of
-                          (Term.prim_mk_const {Thy=Thy, Name=Name})
-               val tyid = iY ty
-           in record_line ("NC " ^ esc Thy ^ " " ^ esc Name ^
-                           " " ^ its tyid)
-           end
+         (check_stale ();
+          if Redblackset.member(!defined_consts, (Thy, Name))
+          then ()
+          else
+            let val ty = Term.type_of
+                           (Term.prim_mk_const {Thy=Thy, Name=Name})
+                val tyid = iY ty
+            in record_line ("NC " ^ esc Thy ^ " " ^ esc Name ^
+                            " " ^ its tyid)
+            end)
      | TheoryDelta.NewTypeOp {Thy, Name} =>
-         if Redblackset.member(!defined_types, (Thy, Name))
-         then ()
-         else
-           let val arity = Type.op_arity {Thy=Thy, Tyop=Name}
-           in case arity of
-                SOME a =>
-                  record_line ("NY " ^ esc Thy ^ " " ^ esc Name ^
-                               " " ^ its a)
-              | NONE => ()
-           end
+         (check_stale ();
+          if Redblackset.member(!defined_types, (Thy, Name))
+          then ()
+          else
+            let val arity = Type.op_arity {Thy=Thy, Tyop=Name}
+            in case arity of
+                 SOME a =>
+                   record_line ("NY " ^ esc Thy ^ " " ^ esc Name ^
+                                " " ^ its a)
+               | NONE => ()
+            end)
      | _ => ()
   );
   OS.Process.atExit cleanup
