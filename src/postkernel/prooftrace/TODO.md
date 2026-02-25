@@ -11,7 +11,8 @@
   trace file discovery, proper topological sort of output files,
   per-file liveness with iterative ancestor processing
 - Stale temp file cleanup: stale stream handler removes leftover
-  temp files before opening a new output
+  temp files before opening a new output (only .tmp files deleted;
+  completed .pft heap traces preserved)
 - Unresolved parent trace_ids are now hard errors in merge
 - H lines documented as absolute paths in DESIGN.md
 - Compression removed from recording/merging/replay: all files
@@ -22,44 +23,62 @@
   bossLib. Removed --load, --load-hol, --verbose options.
   Default mode loads Parse in subprocess for term printing.
   --concise for names only. --interactive for bare REPL.
+- Anonymous thydata theorem references (#18): DISK_DEP rule and
+  D export lines for anonymous thydata-embedded theorems
+- Heap trace generation: HOL_TRACE_PROOFS propagated via
+  extend_env; stale stream handler no longer deletes completed
+  heap traces
+- Cross-file DEF_TYOP/DEF_SPEC resolution: merge pulls in
+  ancestor theory definitions when types/constants are used in
+  a different file from their definition
 
 ## Remaining implementation
 
-### Anonymous thydata theorem references (#18)
+### Anonymous thydata theorem references (#18) — DONE
 
-When theories are loaded from disk, anonymous theorems embedded
-in thydata (TypeBase entries, simpset theorems, etc.) are loaded
-via `Thm.disk_thm`. These theorems have depids beyond the range
-of named exports (e.g., prim_rec has 47 named exports with
-depids 0–46, but thydata theorems get depids 47+). The old code
-generated `_unknown_thy_N` names which couldn't be resolved
-during merge.
+Implemented: DISK_DEP rule, D export lines, save_dep_log
+accumulation, ThyDataSexp fallback, MergeTrace resolution.
+See "Recently completed" above.
 
-**Design (agreed):** Introduce `DISK_DEP` rule and `D` export
-lines. See DESIGN.md for full details. Summary:
-- `Thm.save_dep` accumulates `(depid_number, thm)` into a ref
-  when tracing is active (populated during .dat file write)
-- `trace_export` passes this list to the export hook
-- TraceRecord emits `D <depid> <trace_id>` lines for anonymous
-  theorems (depids not covered by named exports)
-- `ThyDataSexp.thmreader` signals anonymous theorems via
-  `TR_DISK_DEP` instead of `TR_DISK_THM`
-- TraceRecord emits `DISK_DEP <thy> <depid>` in consuming traces
-- MergeTrace resolves `DISK_DEP` via `D` lines in ancestor traces
+### Constant and type declarations in trace (#22)
 
-**Implementation changes needed:**
-1. `Thm.sml`: add `save_dep_log` ref, accumulate when
-   `trace_hook` is active, expand `trace_export` signature
-   to pass the log
-2. `Thm.sml`: add `TR_DISK_DEP` variant to `trace_record`
-3. `ThyDataSexp.sml`: `thmreader` fallback uses `TR_DISK_DEP`
-   with depid number instead of `_unknown` name
-4. `TraceRecord.sml`: handle `TR_DISK_DEP`, emit `D` lines in
-   export hook
-5. `MergeTrace.sml`: parse `D` lines, build depid resolution
-   map, handle `DISK_DEP` rule
-6. `ReplayTrace.sml`: parse `DISK_DEP` (same semantics as
-   `DISK_THM` — just a reference to an already-replayed theorem)
+Replay fails when constructing terms/types whose constants or
+type operators were introduced by `new_constant`/`new_type`
+(no associated definition theorem). These declarations are not
+currently traced. Example: `bool$ARB` is introduced by
+`new_constant("ARB", alpha)` with no DEF_SPEC.
+
+**Design (agreed):** Introduce NC/NY line types. See DESIGN.md
+for full format and trace-time filtering details. Summary:
+
+- TraceRecord hooks `NewConstant`/`NewTypeOp` TheoryDelta events
+- Maintains sets of constants/types already introduced by
+  DEF_SPEC/DEF_TYOP (populated when emitting those P lines)
+- NC emitted only when constant has no DEF_SPEC; NY only when
+  type has no DEF_TYOP (trace-time filtering — no redundancy)
+- Ordering is correct: DEF_SPEC/DEF_TYOP fires before
+  NewConstant/NewTypeOp for definitions, and NC/NY fires
+  before any use for bare declarations
+
+**Merge changes:**
+- Parse NC/NY lines during `read_file_data`
+- When a live T references a constant: look for DEF_SPEC first
+  (local or cross-file); if not found, look for NC (local or
+  cross-file). Same for types: DEF_TYOP then NY.
+- NC lines also mark their referenced type as live
+- Pass 2 emits NC/NY lines for live entries with remapped
+  type IDs
+
+**Replay changes:**
+- NC: call `Term.prim_new_const {Thy, Name} ty`
+- NY: call the appropriate kernel function to declare the type
+
+**Implementation files:**
+1. `TraceRecord.sml`: TheoryDelta hook, DEF_SPEC/DEF_TYOP
+   tracking sets, NC/NY emission
+2. `MergeTrace.sml`: NC/NY parsing, liveness, cross-file
+   resolution, Pass 2 output
+3. `ReplayTrace.sml`: NC/NY handling
 
 ### Replay-aware theory loading (#14 remaining)
 

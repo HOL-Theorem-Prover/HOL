@@ -33,10 +33,14 @@ checks this env var at load time and activates if set.
 trace        ::= version heap? entry* name? exports depexports
 version      ::= "V " int "\n"
 heap         ::= "H " s "\n"
-entry        ::= type_entry | term_entry | thm_entry | compute_init
+entry        ::= type_entry | term_entry | thm_entry
+               | const_decl | type_decl | compute_init
 name         ::= "N " s "\n"
 exports      ::= ("E " s p "\n")*
 depexports   ::= ("D " int p "\n")*
+
+const_decl   ::= "NC " s s y "\n"
+type_decl    ::= "NY " s s int "\n"
 
 type_entry   ::= "Y " y " V " s "\n"
                | "Y " y " O " s s y* "\n"
@@ -60,8 +64,9 @@ Fields:
 - IDs are scoped per namespace (Y, T, P)
 - Y, T, P, C entries are interleaved in dependency order
   (as recorded during the build)
-- V is the first line; H (if present) is second; N, E, and D
-  entries appear at the end
+- V is the first line; H (if present) is second; NC, NY, Y, T,
+  P, and C entries are interleaved in dependency order; N, E,
+  and D entries appear at the end
 - H records the absolute filesystem path of the parent heap this
   trace was built on (e.g., `/home/user/HOL/bin/hol.state0`).
   This is the value of the `--holstate` or `-b` argument passed
@@ -165,6 +170,33 @@ extend to end of line.
 | `DISK_THM` | `s s` — theory, name (per-theory traces only) |
 | `DISK_DEP` | `s int` — theory, depid (per-theory traces only) |
 
+### Constant and Type Declarations
+
+`NC thy name ty_id` — declares a constant introduced by
+`new_constant` (or equivalent) that has no associated definition
+theorem. `thy` and `name` identify the constant; `ty_id`
+references a Y entry for the constant's (polymorphic) type.
+
+`NY thy name arity` — declares a type operator introduced by
+`new_type` (or equivalent) that has no associated definition
+theorem. `thy` and `name` identify the type operator; `arity`
+is a non-negative integer.
+
+**Trace-time filtering**: Constants introduced by
+`new_definition`, `new_specification`, etc. already have a
+DEF_SPEC P entry that introduces them as a side effect. To
+avoid redundancy, TraceRecord tracks which constants have been
+introduced via DEF_SPEC and which types via DEF_TYOP; NC/NY
+lines are only emitted for constants/types that have no
+corresponding definition. This is possible because
+`TheoryDelta.NewConstant`/`NewTypeOp` always fires after the
+definition's `Thm.save` (which emits the DEF_SPEC/DEF_TYOP P
+line), so the set is up-to-date when the hook fires.
+
+Each constant/type in a trace has exactly one of:
+- A DEF_SPEC/DEF_TYOP P entry (introduced by a definition), or
+- An NC/NY declaration (introduced by `new_constant`/`new_type`)
+
 The `C` entry records initialization arguments for `Thm.compute`.
 At most once per trace, before any COMPUTE theorems. Arguments:
 cval_type (y), num_type (y), 29 cval (name, term) pairs, then
@@ -179,8 +211,10 @@ before other libraries). At load time it checks `OS.Process.getEnv
 ### Activation
 
 `activate()` sets `Thm.trace_hook` and `Thm.trace_export_hook`,
-and registers an `atExit` cleanup handler. When not activated
-(no env var), hooks remain NONE — zero overhead.
+registers a `Theory.register_hook` for `NewConstant`/`NewTypeOp`
+TheoryDelta events (to emit NC/NY lines), and registers an
+`atExit` cleanup handler. When not activated (no env var), hooks
+remain NONE — zero overhead.
 
 ### Output file selection
 
@@ -279,15 +313,17 @@ exports, loading ancestors on demand as discovered):
    entries, then transitively marking the T and Y entries they
    reference as live. When a T entry for a non-primitive
    constant (`C thy name tyid` where thy ≠ `min`) is marked
-   live, the DEF_SPEC that defines that constant (if present
-   in this file) is also marked live. Similarly, when a Y
-   entry for a non-primitive type operator is marked live, the
-   corresponding DEF_TYOP is marked live. This cascades
-   naturally within the reachability walk. When the DEF_SPEC
-   or DEF_TYOP is NOT in the current file (the type/constant
-   was defined in an ancestor theory), the ancestor theory's
-   trace file is loaded and the DEF_SPEC/DEF_TYOP entry is
-   enqueued for processing (analogous to DISK_THM resolution).
+   live, the definition or declaration that introduces that
+   constant is also marked live. Specifically: if a DEF_SPEC
+   exists for the constant (in this file or an ancestor
+   theory's trace), it is marked live; otherwise, if an NC
+   declaration exists, it is marked live. Similarly for types:
+   DEF_TYOP if it exists, otherwise NY. When the definition
+   or declaration is in an ancestor theory's trace file, that
+   file is loaded and the entry is enqueued for processing
+   (analogous to DISK_THM resolution). This cascades naturally
+   within the reachability walk. NC lines also mark their
+   referenced type as live.
 3. When the walk hits a DISK_THM entry (thy, name), add that
    to the needed ancestor exports (resolved via E lines). When
    it hits a DISK_DEP entry (thy, depid), add that to the
@@ -339,6 +375,10 @@ Per-file (discarded after each):
 For each file's live entries:
 - **Y**: dedup via type descriptor. Write if new, remap if existing.
 - **T**: dedup via term descriptor. Write if new, remap if existing.
+- **NC**: remap type ID, write. (Dedup not needed — each
+  constant has at most one NC across all files.)
+- **NY**: write as-is. (Dedup not needed — each type operator
+  has at most one NY across all files.)
 - **P DISK_THM**: resolve via ancestor export map, record
   local→global mapping (no output).
 - **P DISK_DEP**: resolve via ancestor depid map, record
@@ -396,6 +436,10 @@ large/sparse, unlike sequential type/term IDs).
 
 - **Y entries**: store type description (constructed lazily)
 - **T entries**: store term description (constructed lazily)
+- **NC entries**: call `Term.prim_new_const {Thy, Name} ty` to
+  declare the constant in the kernel
+- **NY entries**: call `Type.prim_new_type {Thy, Name} arity` (or
+  equivalent) to declare the type operator in the kernel
 - **P entries**: call the corresponding kernel inference rule
   (triggering lazy construction of any referenced types/terms),
   store the resulting theorem in the theorem map
