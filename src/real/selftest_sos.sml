@@ -250,5 +250,60 @@ in
 end
 handle e => die ("EXCEPTION: " ^ General.exnMessage e);
 
+(* ===================================================================== *)
+(* A3: INT_SOS, SOS_RULE, REAL_SOSFIELD                                 *)
+(* ===================================================================== *)
+
+(* -- INT_SOS tests -- *)
+
+val _ = let
+  val _ = tprint "INT_SOS !x:int. x*x >= 0"
+  val th = INT_SOS (Parse.Term `!x:int. x * x >= &0`)
+in
+  if concl th ~~ Parse.Term `!x:int. x * x >= &0` then OK()
+  else die "conclusion mismatch"
+end
+handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+
+val _ = let
+  val _ = tprint "INT_SOS x>=5 /\\ y>=5 ==> x*y>=25"
+  val th = INT_SOS (Parse.Term `!x y:int. x >= &5 /\ y >= &5 ==> x * y >= &25`)
+in OK() end
+handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+
+val _ = let
+  val _ = tprint "INT_SOS x>=1 ==> x*x>=x"
+  val th = INT_SOS (Parse.Term `!x:int. x >= &1 ==> x * x >= x`)
+in OK() end
+handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+
+(* -- SOS_RULE tests -- *)
+
+val _ = let
+  val _ = tprint "SOS_RULE num: x>=5 /\\ y>=5 ==> x*y>=25"
+  val th = SOS_RULE (Parse.Term `!x y:num. x >= 5 /\ y >= 5 ==> x * y >= 25`)
+in OK() end
+handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+
+val _ = let
+  val _ = tprint "SOS_RULE num: x*x >= x*x"
+  val th = SOS_RULE (Parse.Term `!x:num. x * x >= x * x`)
+in OK() end
+handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+
+(* -- REAL_SOSFIELD tests -- *)
+
+val _ = let
+  val _ = tprint "REAL_SOSFIELD x>0 ==> x + x/x >= x"
+  val th = REAL_SOSFIELD (Parse.Term `!x:real. x > &0 ==> x + x / x >= x`)
+in OK() end
+handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+
+val _ = let
+  val _ = tprint "REAL_SOSFIELD x*x >= 0 (no div)"
+  val th = REAL_SOSFIELD (Parse.Term `!x:real. x * x >= &0`)
+in OK() end
+handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+
 val _ = print "\n"
 val _ = exit_count0 errc

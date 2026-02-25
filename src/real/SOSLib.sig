@@ -32,6 +32,33 @@ sig
   val REAL_SOS_TAC     : tactic
   val REAL_SOS_ASM_TAC : tactic
 
+  (* --- REAL_SOSFIELD: handles division and inv in real goals --- *)
+
+  (* Like REAL_SOS but also handles real_div and inv.
+     Adds t * inv(t) = 1 hypotheses, replaces inv(t) with fresh
+     variables, tries REAL_ARITH → REAL_RING → REAL_SOS chain. *)
+  val REAL_SOSFIELD         : term -> thm
+  val REAL_SOSFIELD_TAC     : tactic
+  val REAL_SOSFIELD_ASM_TAC : tactic
+
+  (* --- INT_SOS: integer SOS prover --- *)
+
+  (* SOS prover for integer goals. Normalizes negated comparisons
+     using discreteness (x < y ⟺ x + 1 ≤ y), converts integer
+     operations to reals via real_of_int, then calls REAL_SOS. *)
+  val INT_SOS         : term -> thm
+  val INT_SOS_TAC     : tactic
+  val INT_SOS_ASM_TAC : tactic
+
+  (* --- SOS_RULE: natural number SOS prover --- *)
+
+  (* SOS prover for natural number goals. Converts num operations
+     to int via int_of_num, then calls INT_SOS. Handles polynomial
+     goals with +, *, EXP, <=, <, >=, >, =. *)
+  val SOS_RULE         : term -> thm
+  val SOS_RULE_TAC     : tactic
+  val SOS_RULE_ASM_TAC : tactic
+
   (* --- Knobs --- *)
   val sos_debugging  : bool ref
   val max_sos_degree : int ref    (* default 20 *)

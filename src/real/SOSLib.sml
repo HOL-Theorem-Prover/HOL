@@ -2012,4 +2012,189 @@ end;
 
 val (REAL_SOS_TAC, REAL_SOS_ASM_TAC) = RealArith.mk_real_arith_tac REAL_SOS;
 
+(* ===================================================================== *)
+(* REAL_SOSFIELD: handles division/inv in real goals                     *)
+(* Ported from HOL-Light sos.ml lines 1294-1338                         *)
+(* ===================================================================== *)
+
+local
+  val and_tm = boolSyntax.conjunction
+  val inv_tm = realSyntax.inv_tm
+
+  (* Prenex conversion: expand div/inv, prenex quantifiers *)
+  val prenex_conv =
+    TOP_DEPTH_CONV BETA_CONV THENC
+    PURE_REWRITE_CONV [boolTheory.FORALL_SIMP, boolTheory.EXISTS_SIMP,
+                       realTheory.real_div, realTheory.REAL_INV_INV,
+                       realTheory.REAL_INV_MUL',
+                       GSYM realTheory.REAL_POW_INV] THENC
+    normalForms.NNFC_CONV THENC
+    DEPTH_BINOP_CONV and_tm normalForms.CONDS_CELIM_CONV THENC
+    normalForms.PRENEX_CONV
+
+  val setup_conv =
+    normalForms.NNF_CONV THENC
+    normalForms.WEAK_CNF_CONV THENC
+    normalForms.CONJ_CANON_CONV
+
+  fun core_rule t =
+    (REAL_ARITH t) handle HOL_ERR _ =>
+    (REAL_RING t)  handle HOL_ERR _ =>
+    REAL_SOS t
+
+  fun is_inv' tm =
+    (realSyntax.is_div tm orelse
+     (is_comb tm andalso rator tm ~~ inv_tm))
+    andalso not (is_ratconst (rand tm))
+
+  fun BASIC_REAL_SOSFIELD tm =
+    let
+      fun is_freeinv t = is_inv' t andalso free_in t tm
+      val itms = op_mk_set aconv (map rand (find_terms is_freeinv tm))
+      val hyps = map (fn t => SPEC t realTheory.REAL_MUL_RINV) itms
+      val tm' = itlist (fn th => fn t => mk_imp(concl th, t)) hyps tm
+      val itms' = map (curry mk_comb inv_tm) itms
+      val gvs = map (genvar o type_of) itms'
+      val tm'' = subst (ListPair.map (fn (g,i) => i |-> g) (gvs, itms')) tm'
+      val th1 = setup_conv tm''
+      val cjs = strip_conj (rand (concl th1))
+      val ths = map core_rule cjs
+      val th2 = EQ_MP (SYM th1) (end_itlist CONJ ths)
+    in
+      rev_itlist (C MP) hyps (INST (ListPair.map (fn (i,g) => g |-> i) (itms', gvs)) th2)
+    end
+in
+  fun REAL_SOSFIELD tm =
+    let
+      val th0 = prenex_conv tm
+      val tm0 = rand (concl th0)
+      val (avs, bod) = strip_forall tm0
+      val th1 = setup_conv bod
+      val ths = map BASIC_REAL_SOSFIELD (strip_conj (rand (concl th1)))
+    in
+      EQ_MP (SYM th0)
+        (GENL avs (EQ_MP (SYM th1) (end_itlist CONJ ths)))
+    end
+    handle e => raise wrap_exn "SOSLib" "REAL_SOSFIELD" e
+end;
+
+val (REAL_SOSFIELD_TAC, REAL_SOSFIELD_ASM_TAC) =
+  RealArith.mk_real_arith_tac REAL_SOSFIELD;
+
+(* ===================================================================== *)
+(* INT_SOS: integer SOS via reduction to real                            *)
+(* Ported from HOL-Light sos.ml lines 1340-1367                         *)
+(* ===================================================================== *)
+
+local
+  (* Theorems for atom normalization (negated int comparisons + discreteness) *)
+  val INT_NOT_LE    = integerTheory.INT_NOT_LE     (* ~(x <= y) <=> y < x *)
+  val INT_NOT_LT    = integerTheory.INT_NOT_LT     (* ~(x < y) <=> y <= x *)
+  val INT_NOT_EQ    = integerTheory.INT_NOT_EQ     (* ~(x = y) <=> x<y \/ y<x *)
+  val INT_LT_DISCRETE = integerTheory.INT_LT_DISCRETE  (* x<y <=> x+1 <= y *)
+  val INT_GT        = integerTheory.INT_GT          (* x > y <=> y < x *)
+  val INT_GE        = integerTheory.INT_GE          (* x >= y <=> y <= x *)
+
+  (* atom_CONV: handle negated int comparisons using discreteness *)
+  val atom_CONV =
+    CHANGED_CONV (REWRITE_CONV [INT_NOT_LE, INT_NOT_LT, INT_NOT_EQ,
+                                INT_LT_DISCRETE])
+
+  (* bub_CONV: convert int operations to real_of_int *)
+  val bub_CONV = REWRITE_CONV [
+    GSYM intrealTheory.real_of_int_11,
+    GSYM intrealTheory.real_of_int_le,
+    GSYM intrealTheory.real_of_int_lt,
+    intrealTheory.real_of_int_add,
+    intrealTheory.real_of_int_neg,
+    intrealTheory.real_of_int_mul,
+    intrealTheory.real_of_int_sub,
+    intrealTheory.real_of_int_num
+  ]
+
+  val base_CONV = TRY_CONV atom_CONV THENC bub_CONV
+
+  (* NNF normalization with atom handling *)
+  val NNF_NORM_CONV =
+    normalForms.GEN_NNF_CONV false
+      (base_CONV,
+       fn t => (base_CONV t, base_CONV (mk_neg t)))
+
+  val init_CONV =
+    GEN_REWRITE_CONV DEPTH_CONV empty_rewrites
+      [boolTheory.FORALL_SIMP, boolTheory.EXISTS_SIMP] THENC
+    GEN_REWRITE_CONV DEPTH_CONV empty_rewrites [INT_GT, INT_GE] THENC
+    normalForms.CONDS_ELIM_CONV THENC
+    NNF_NORM_CONV
+
+  val p_var = mk_var("p", bool)
+  val not_tm = boolSyntax.negation
+  (* |- ~~p <=> p *)
+  val pth = EQT_ELIM (REWRITE_CONV [] (mk_eq(mk_neg(mk_neg p_var), p_var)))
+in
+  fun INT_SOS tm =
+    let
+      val th0 = INST [p_var |-> tm] pth
+      val th1 = init_CONV (mk_neg tm)
+      val th2 = REAL_SOS (mk_neg (rand (concl th1)))
+    in
+      EQ_MP th0 (EQ_MP (AP_TERM not_tm (SYM th1)) th2)
+    end
+    handle e => raise wrap_exn "SOSLib" "INT_SOS" e
+end;
+
+val INT_SOS_TAC : tactic = fn gl => ACCEPT_TAC (INT_SOS (snd gl)) gl;
+
+val INT_SOS_ASM_TAC : tactic = fn (gl : goal) =>
+  let val (asl, g) = gl
+      val g' = list_mk_conj (asl @ [g]) handle HOL_ERR _ => g
+  in ACCEPT_TAC (INT_SOS g') gl
+  end handle HOL_ERR _ => raise ERR "INT_SOS_ASM_TAC" "failed";
+
+(* ===================================================================== *)
+(* SOS_RULE: natural number SOS via reduction to int                     *)
+(* Ported from HOL-Light sos.ml lines 1369-1375                         *)
+(* ===================================================================== *)
+
+local
+  (* SOS_RULE: Convert num goals to int via int_of_num (&), then use INT_SOS.
+     Uses GSYM INT_OF_NUM_LE etc. to rewrite num comparisons/operations to int.
+     Handles: +, *, EXP, <=, <, >=, >, =, numerals *)
+
+  (* First expand >= to <= and > to < in the num domain *)
+  val num_normalize_conv =
+    PURE_REWRITE_CONV [arithmeticTheory.GREATER_EQ,
+                       arithmeticTheory.GREATER_DEF]
+
+  (* Then convert num ops to int ops via GSYM INT_OF_NUM_* *)
+  val num_to_int_conv =
+    PURE_REWRITE_CONV [GSYM integerTheory.INT_OF_NUM_LE,
+                       GSYM integerTheory.INT_OF_NUM_LT,
+                       GSYM integerTheory.INT_OF_NUM_EQ,
+                       GSYM integerTheory.INT_OF_NUM_ADD,
+                       GSYM integerTheory.INT_OF_NUM_MUL,
+                       GSYM integerTheory.INT_OF_NUM_POW]
+
+  val NUM_TO_INT_CONV = num_normalize_conv THENC num_to_int_conv
+in
+  fun SOS_RULE tm =
+    let
+      val avs = free_vars tm
+      val tm' = list_mk_forall (avs, tm)
+      val th1 = NUM_TO_INT_CONV tm'
+      val th2 = INT_SOS (rand (concl th1))
+    in
+      SPECL avs (EQ_MP (SYM th1) th2)
+    end
+    handle e => raise wrap_exn "SOSLib" "SOS_RULE" e
+end;
+
+val SOS_RULE_TAC : tactic = fn gl => ACCEPT_TAC (SOS_RULE (snd gl)) gl;
+
+val SOS_RULE_ASM_TAC : tactic = fn (gl : goal) =>
+  let val (asl, g) = gl
+      val g' = list_mk_conj (asl @ [g]) handle HOL_ERR _ => g
+  in ACCEPT_TAC (SOS_RULE g') gl
+  end handle HOL_ERR _ => raise ERR "SOS_RULE_ASM_TAC" "failed";
+
 end (* struct *)
