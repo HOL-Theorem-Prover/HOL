@@ -32,15 +32,20 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/DB.uo) \
        $(dprot $(HOLDIR)/bin/hol)
 
-UOARGS = $(protect $(SIGOBJ)/TraceCompress) \
-         $(protect $(SIGOBJ)/TraceRecord) \
+ifneq ($(KERNELID),otknl)
+TRACE_UOARGS = $(protect $(SIGOBJ)/TraceCompress) \
+               $(protect $(SIGOBJ)/TraceRecord)
+DEPS += $(dprot $(SIGOBJ)/TraceCompress.uo)
+DEPS += $(dprot $(SIGOBJ)/TraceRecord.uo)
+else
+TRACE_UOARGS =
+endif
+
+UOARGS = $(TRACE_UOARGS) \
          $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
          $(protect $(SIGOBJ)/KNametab) $(protect $(SIGOBJ)/Symtab) \
          $(protect $(SIGOBJ)/Inttab) $(protect $(SIGOBJ)/HOLsexp) \
 	 $(protect $(SIGOBJ)/ThmSetData)
-
-DEPS += $(dprot $(SIGOBJ)/TraceCompress.uo)
-DEPS += $(dprot $(SIGOBJ)/TraceRecord.uo)
 
 EXTRA_CLEANS = $(TARGET)
 
