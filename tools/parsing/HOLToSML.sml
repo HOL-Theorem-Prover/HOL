@@ -44,6 +44,25 @@ fun mkLocString (p, noloc, _) {file = "", ...} = mkIdent (p, noloc)
     App (mkIdent (p, loc), App (mkIdent (p, "DB_dtype.mkloc"),
       mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")])))
 
+fun doProofAttrs p (SOME {attrs = {args = kv::kvs, ...}, ...}) tac = let
+  val e = mkIdent (p, "BasicProvers.with_simpset_updates")
+  fun mktm1 {key = (p, key), bind} = let
+    val args = case bind of NONE => [] | SOME {vals, ...} => map mkString vals
+    val key = case key of
+      "exclude_simps" => "simpLib.remove_simps"
+    | "exclude_frags" => "simpLib.remove_ssfrags"
+    | _ => key
+    in App (mkIdent (p, key), mkList (p, args)) end
+  fun mktm (kv, e) = Infix {left = e, id = (p, "o"), right = mktm1 kv}
+  in App (App (e, foldl mktm (mktm1 kv) kvs), tac) end
+  | doProofAttrs _ _ _ = tac
+
+fun wrapTac (p, tac) = let
+  val dummy = mkIdent (p, "HOL__GOAL__foo")
+  in Fn {fn_ = p,
+       elems = [{bar = NONE, pat = dummy, arrow = NONE, exp = App (tac, dummy)}],
+       stop = expStop tac} end
+
 val canBindStr = true (* TODO: make false on mosml *)
 
 fun valPat pos pat e = let
@@ -462,26 +481,23 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val fileline = fileline (#1 id)
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val quote = expandQuote theorem_ stop quote
+    val {proof_, attrs = proof_attrs} = proof_
     val tac = expandExp false tac
-    val tac = case proof_ of
-      SOME {proof_, attrs = SOME {attrs = {args = kv::kvs, ...}, ...}} => let
-      val e = mkIdent (proof_, "BasicProvers.with_simpset_updates")
-      fun mktm1 {key = (p, key), bind} = let
-        val args = case bind of NONE => [] | SOME {vals, ...} => map mkString vals
-        val key = case key of
-          "exclude_simps" => "simpLib.remove_simps"
-        | "exclude_frags" => "simpLib.remove_ssfrags"
-        | _ => key
-        in App (mkIdent (p, key), mkList (p, args)) end
-      fun mktm (kv, e) = Infix {left = e, id = (proof_, "o"), right = mktm1 kv}
-      in App (App (e, foldl mktm (mktm1 kv) kvs), tac) end
-    | _ => tac
-    val dummy = mkIdent (theorem_, "HOL__GOAL__foo")
-    val tac = Fn {fn_ = theorem_, elems = [
-      {bar = NONE, pat = dummy, arrow = NONE, exp = App (tac, dummy)}], stop = expStop tac}
+    val tac = doProofAttrs proof_ attrs tac
+    val tac = wrapTac tac
     val e = mkLocString (theorem_, "Q.store_thm", "Q.store_thm_at") fileline
     val e = App (e, mkTuple (theorem_, [nameAttrs, quote, tac]))
     in DecExpansion {orig = dec, result = [valPat theorem_ (mkIdent id) e]} end
+  | expandDec _ (dec as HOLResume {resume_, id, attrs, colon, tac, qed_, stop}) = let
+    val label = raise TODO
+    val subname = raise TODO
+    val record = mkRecord (resume_, [
+      mkLabEq (resume_, "label_name", label),
+      mkLabEq (resume_, "suspension_name", mkString id)])
+    val resumeFn = mkIdent (resume_, "markerLib.resume")
+    val tac = tac |> expandExp false |> doProofAttrs resume_ attrs |> wrapTac
+    val e = mkApp (resumeFn, [resume, tac])
+    in DecExpansion {orig = dec, result = [valPat resume_ subname e]} end
 
   | expandDec _ (dec as DecBad {start, ...}) =
     DecExpansion {orig = dec, result = [valWild start (mkFail (start, "malformed"))]}

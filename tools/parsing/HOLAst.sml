@@ -366,6 +366,10 @@ fun mkList (p, ls) =
 fun mkTuple (p, ls) =
   Tuple {left = p, elems = {args = ls, delims = [], stop = p}, right = NONE, stop = p}
 
+fun mkLabEq (p, lab, exp) = LabEq {lab = (p, lab), eq = p, exp = exp}
+fun mkRecord (p, ls) =
+  Record {left = p, elems = {args = ls, delims = [], stop = p}, right = NONE, stop = p}
+
 fun mkApp f args = foldl (fn (arg, acc) => App (acc, arg)) f args
 
 (* fun seqStart _ Empty = NONE
