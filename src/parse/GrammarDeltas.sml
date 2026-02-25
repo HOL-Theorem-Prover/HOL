@@ -286,7 +286,9 @@ fun user_delta_encode ud =
     | RMTMTOK {term_name,tok} =>
         tag_encode "RK" (pair_encode(String,String)) (term_name,tok)
     | RMTOK s => tag_encode "RMT" String s
-    | RM_STRLIT {tmnm} => tag_encode "RMS" String tmnm;
+    | RM_STRLIT {tmnm} => tag_encode "RMS" String tmnm
+    | RM_UPRINTER {codename=s,pattern=tm} =>
+        tag_encode "RUP" (pair_encode(String,Term)) (s,tm)
 
 
 val user_delta_decode =
@@ -311,7 +313,10 @@ val user_delta_decode =
   (tag_decode "RK" (pair_decode(string_decode,string_decode)) >>
               (fn (nm,tok) => RMTMTOK {term_name = nm, tok = tok})) ||
   (tag_decode "RMT" string_decode >> RMTOK) ||
-  (tag_decode "RMS" string_decode >> (fn s => RM_STRLIT{tmnm=s}));
+  (tag_decode "RMS" string_decode >> (fn s => RM_STRLIT{tmnm=s})) ||
+  (tag_decode "RUP"
+        (pair_decode(string_decode,term_decode) >>
+         (fn (s,p) => RM_UPRINTER{codename=s,pattern=p})))
 
 fun grammar_rule_encode grule =
     case grule of
@@ -338,6 +343,7 @@ fun check_delta (d: user_delta) =
     | IOVERLOAD_ON(_, t) => Term.uptodate_term t
     | GRMOVMAP(_, t) => Term.uptodate_term t
     | ADD_UPRINTER{pattern,...} => Term.uptodate_term pattern
+    | RM_UPRINTER{pattern,...} => Term.uptodate_term pattern
     | _ => true
 
 fun nopp s _ = HOLPP.add_string ("<" ^ s ^ ">")

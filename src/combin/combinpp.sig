@@ -5,8 +5,9 @@ val upd_processor : term_grammar.absyn_postprocessor
 val upd_printer : term_grammar.userprinter
 
 val new_form :
-    { left : string, right : string, upd_term_name : string,
-      lookup_term_name : string option } ->
+    { left : string, right : string,
+      upd_term_name : Term.term * string,
+      lookup_term_name : (Term.term * string) option } ->
     unit
 
 val remove_paren_syntax : string -> unit
