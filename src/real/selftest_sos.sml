@@ -208,5 +208,47 @@ val _ = List.app sos_tac_test [
    ``!x y:real. x * x + y * y >= &2 * x * y``)
 ];
 
+(* -- REAL_SOS with hypotheses (Positivstellensatz) -- *)
+
+val _ = List.app real_sos_test [
+  ("x>=5 /\\ y>=5 ==> x*y>=25",
+   ``!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25``),
+  ("x>=1 ==> x*x>=x",
+   ``!x:real. x >= &1 ==> x * x >= x``),
+  ("x>=0 /\\ y>=0 ==> x*x+y*y>=0 (hyps)",
+   ``!x y:real. x >= &0 /\ y >= &0 ==> x * x + y * y >= &0``)
+];
+
+val _ = if csdp_available then
+  List.app real_sos_test [
+    ("x>=0 /\\ y>=0 /\\ x+y<=1 ==> x*y<=1/4 (CSDP)",
+     ``!x y:real. x >= &0 /\ y >= &0 /\ x + y <= &1
+                  ==> x * y <= &1 / &4``),
+    ("x+y=1 /\\ x>=0 /\\ y>=0 ==> x*y<=1/4 (subst, CSDP)",
+     ``!x y:real. x + y = &1 /\ x >= &0 /\ y >= &0
+                  ==> x * y <= &1 / &4``)
+  ]
+else ();
+
+(* -- REAL_SOS_TAC with hypotheses -- *)
+
+val _ = List.app sos_tac_test [
+  ("x>=5 /\\ y>=5 ==> x*y>=25 (tac)",
+   ``!x y:real. x >= &5 /\ y >= &5 ==> x * y >= &25``)
+];
+
+(* -- REAL_SOS_ASM_TAC test -- *)
+
+val _ = let
+  val _ = tprint "REAL_SOS_ASM_TAC with assumption"
+  val th = prove(
+    ``!x:real. x >= &1 ==> x * x >= x``,
+    REAL_SOS_ASM_TAC)
+in
+  if concl th ~~ ``!x:real. x >= &1 ==> x * x >= x`` then OK()
+  else die "conclusion mismatch"
+end
+handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+
 val _ = print "\n"
 val _ = exit_count0 errc

@@ -22,17 +22,18 @@ sig
   val PURE_SOS_TAC : tactic
   val PURE_SOS     : term -> thm
 
-  (* --- Full nonlinear prover (pure SOS + CSDP when available) --- *)
+  (* --- Full nonlinear prover (Positivstellensatz + CSDP) --- *)
 
   (* SOS-based nonlinear real arithmetic prover.
-     Handles universally quantified nonnegativity:
-       &0 <= p, p >= &0, p >= q, p <= q, !x y. &0 <= f(x,y).
-     Uses CSDP for the SDP when available, falls back to pure SOS.
-     Does NOT yet handle hypotheses (future: GEN_REAL_ARITH integration). *)
-  val REAL_SOS     : term -> thm
-  val REAL_SOS_TAC : tactic
+     Uses GEN_REAL_ARITH to handle hypotheses via Positivstellensatz
+     certificate search. Tries linear prover first, then CSDP.
+     Handles universally quantified goals with implications. *)
+  val REAL_SOS         : term -> thm
+  val REAL_SOS_TAC     : tactic
+  val REAL_SOS_ASM_TAC : tactic
 
-  (* Debugging *)
-  val sos_debugging : bool ref
+  (* --- Knobs --- *)
+  val sos_debugging  : bool ref
+  val max_sos_degree : int ref    (* default 20 *)
 
 end
