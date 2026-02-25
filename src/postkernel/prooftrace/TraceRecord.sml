@@ -59,9 +59,11 @@ fun find_heap_input () =
     SOME p => SOME p
   | NONE =>
     let val args = CommandLine.arguments ()
+        fun mkabs p = OS.Path.mkAbsolute {
+              path = p, relativeTo = OS.FileSys.getDir ()}
     in case find_arg "--holstate" args of
-         SOME p => SOME p
-       | NONE => find_arg "-b" args
+         SOME p => SOME (mkabs p)
+       | NONE => Option.map mkabs (find_arg "-b" args)
     end
 
 (* ------- Output stream ------- *)
@@ -103,7 +105,9 @@ fun open_temp_file () =
 
 fun open_heap_file path =
   let
-    val pft = path ^ ".pft"
+    val pft = OS.Path.mkAbsolute {
+                path = path ^ ".pft",
+                relativeTo = OS.FileSys.getDir ()}
     val s = TextIO.openOut pft
   in
     output_strm := SOME s;
