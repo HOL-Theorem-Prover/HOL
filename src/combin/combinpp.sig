@@ -9,6 +9,8 @@ val new_form :
       lookup_term_name : string option } ->
     unit
 
+val remove_paren_syntax : string -> unit
+
 val enable_dictsyntax : unit -> unit
   (* only needs calling once *)
 end

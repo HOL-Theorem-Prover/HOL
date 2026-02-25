@@ -10,10 +10,11 @@ val toplevel_updname = "  combinpp.top"
 datatype dict_delta = DD of { left : string, right : string,
                               upd_term_name : string,
                               lookup_term_name : string option }
+datatype delta = ADD of dict_delta | RM of string
 
 local open ThyDataSexp
 in
-val (enc,dec) = bij_ed (
+val dded as (ddenc,dddec) = bij_ed (
       (fn DD {left=l,right=r,upd_term_name=utn,lookup_term_name=ltn} =>
           (l,r,utn,ltn)),
       (fn (l,r,utn,ltn) => DD {left = l, right = r, upd_term_name = utn,
@@ -23,6 +24,10 @@ val (enc,dec) = bij_ed (
         string_ed, string_ed, string_ed, option_ed string_ed
       )
     )
+val (delta_enc,delta_dec) = bij_ed (
+      (fn ADD dd => inl dd | RM s => inr s),
+      (fn inl dd => ADD dd | inr s => RM s)
+    ) (tagged_sum ("add", dded) ("remove", string_ed))
 end
 
 type pppdb = {parse: dict_delta Symtab.table,
@@ -31,21 +36,36 @@ type pppdb = {parse: dict_delta Symtab.table,
 val empty_pppdb : pppdb = {parse = Symtab.empty, print_upd = Symtab.empty,
                            print_lookup = Symtab.empty}
 
-fun pppdb_apply (dd as DD{left,right,upd_term_name=utn,lookup_term_name=ltn})
-                ({parse,print_upd,print_lookup} : pppdb) : pppdb =
+fun pppdb_apply_add
+      (dd as DD{left,right,upd_term_name=utn,lookup_term_name=ltn})
+      ({parse,print_upd,print_lookup} : pppdb) : pppdb =
     {parse = Symtab.update(left,dd) parse,
      print_upd = Symtab.update(utn,dd) print_upd,
      print_lookup = case ltn of NONE => print_lookup
                               | SOME s => Symtab.update(s,dd) print_lookup}
+fun pppdb_apply_rm s {parse,print_upd,print_lookup} =
+    let
+      fun foldthis (p as (k, DD{left,...})) tab0 =
+          if left = s then tab0 else Symtab.update p tab0
+      fun rebuild tab0 = Symtab.fold foldthis tab0
+    in
+      {parse = Symtab.delete s parse handle Symtab.UNDEF _ => parse,
+       print_upd = Symtab.build (rebuild print_upd),
+       print_lookup = Symtab.build (rebuild print_lookup)}
+    end
+
+fun apply_delta (ADD dd) db = pppdb_apply_add dd db
+  | apply_delta (RM s) db = pppdb_apply_rm s db
+
 val pppdata_info = {
   tag = "dictppp", initial_values = [("min", empty_pppdb)],
-  apply_delta = pppdb_apply
+  apply_delta = apply_delta
 }
 val {DB, record_delta, get_global_value, ...} = AncestryData.fullmake {
       adinfo = pppdata_info,
       uptodate_delta = fn _ => true,
-      sexps = {dec = dec, enc = enc},
-      globinfo = {apply_to_global = pppdb_apply, thy_finaliser = NONE,
+      sexps = {dec = delta_dec, enc = delta_enc},
+      globinfo = {apply_to_global = apply_delta, thy_finaliser = NONE,
                   initial_value = empty_pppdb}
     }
 
@@ -248,7 +268,12 @@ fun addlform l r =
 
 fun new_form (r as {left,right,upd_term_name,lookup_term_name}) = (
   addlform left right;
-  record_delta (DD r)
+  record_delta (ADD (DD r))
+)
+
+fun remove_paren_syntax lparen_name = (
+  remove_termtok {tok = lparen_name, term_name = toplevel_updname ^ lparen_name};
+  record_delta (RM lparen_name)
 )
 
 end (* struct *)
