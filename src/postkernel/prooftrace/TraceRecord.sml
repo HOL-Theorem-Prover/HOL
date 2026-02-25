@@ -50,12 +50,19 @@ fun find_arg flag args =
 
 fun find_heap_output () = find_arg "-o" (CommandLine.arguments())
 
+(* Parent heap path derived from stale output path during heap restore.
+   Set by check_stale when recovering from a stale stream. *)
+val stale_parent_heap = ref (NONE : string option)
+
 fun find_heap_input () =
-  let val args = CommandLine.arguments ()
-  in case find_arg "--holstate" args of
-       SOME p => SOME p
-     | NONE => find_arg "-b" args
-  end
+  case !stale_parent_heap of
+    SOME p => SOME p
+  | NONE =>
+    let val args = CommandLine.arguments ()
+    in case find_arg "--holstate" args of
+         SOME p => SOME p
+       | NONE => find_arg "-b" args
+    end
 
 (* ------- Output stream ------- *)
 
@@ -124,8 +131,17 @@ fun check_stale () =
       handle _ =>
         let val stale = !output_path_ref
             fun is_tmp p = String.isSuffix ".tmp" p
+            fun strip_pft p =
+              if String.isSuffix ".pft" p then
+                SOME (String.substring(p, 0, size p - 4))
+              else NONE
         in output_strm := NONE; output_path_ref := NONE;
            (!reset_for_new_session) ();
+           (* Remember the parent heap for the H line *)
+           stale_parent_heap :=
+             (case stale of
+                SOME p => if is_tmp p then NONE else strip_pft p
+              | NONE => NONE);
            (case stale of
               SOME p => if is_tmp p then
                           (OS.FileSys.remove p handle _ => ())
