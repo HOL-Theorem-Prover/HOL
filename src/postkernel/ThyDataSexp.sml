@@ -467,7 +467,7 @@ fun pair4_ed ((e1,d1), (e2,d2), (e3,d3), (e4,d4)) =
     (pair4_encode(e1,e2,e3,e4),pair4_decode(d1,d2,d3,d4))
 
 
-fun tagged_sum (s1,aed) (s2,bed) =
+fun tagged_sum (s1,aed:'a ed) (s2,bed:'b ed) =
     if s1 = s2 then raise ERR "tagged_sum" "Tags must be distinct"
     else
       ((fn inl a => List [Sym s1, #1 aed a]
@@ -478,7 +478,7 @@ fun tagged_sum (s1,aed) (s2,bed) =
                                          Option.map inr (#2 bed t0)
                                        else NONE
                   | _ => NONE))
-fun tagged_sum3 (s1,aed) (s2,bed) (s3,ced) =
+fun tagged_sum3 (s1,aed:'a ed) (s2,bed:'b ed) (s3,ced:'c ed) =
     if s1 = s2 orelse s2 = s3 orelse s1 = s3 then
       raise ERR "tagged_sum" "Tags must be distinct"
     else
@@ -493,7 +493,7 @@ fun tagged_sum3 (s1,aed) (s2,bed) (s3,ced) =
                                          Option.map in33 (#2 ced t0)
                                        else NONE
                   | _ => NONE))
-fun tagged_sum4 (s1,aed) (s2,bed) (s3,ced) (s4,ded) =
+fun tagged_sum4 (s1,aed:'a ed) (s2,bed:'b ed) (s3,ced:'c ed) (s4,ded:'d ed) =
     if length (Lib.mk_set[s1,s2,s3,s4]) < 4 then
       raise ERR "tagged_sum" "Tags must be distinct"
     else
