@@ -165,6 +165,19 @@ fun replay_file path =
             (TyOp (unescape thy_s, unescape name_s,
                    map int_of arg_ids))
 
+      (* --- Constant and type declarations --- *)
+      | ["NC", thy_s, name_s, ty_s] =>
+          let val t = ty (int_of ty_s)
+          in Term.prim_new_const {Thy=unescape thy_s,
+                                  Name=unescape name_s} t;
+             ()
+          end
+      | ["NY", thy_s, name_s, arity_s] =>
+          (Type.prim_new_type {Thy=unescape thy_s,
+                               Tyop=unescape name_s}
+                              (int_of arity_s);
+           ())
+
       (* --- Term entries (stored lazily) --- *)
       | ["T", id_s, "V", name_s, ty_s] =>
           set_tm_desc (int_of id_s)

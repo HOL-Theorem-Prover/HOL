@@ -159,6 +159,10 @@ type file_data = {
   const_defs : (string * string, int) Redblackmap.dict,
   (* DEF_TYOP entries: (thy, tyop) -> trace_id *)
   type_defs : (string * string, int) Redblackmap.dict,
+  (* NC entries: (thy, name) -> type_id *)
+  const_decls : (string * string, int) Redblackmap.dict,
+  (* NY entries: (thy, name) -> arity *)
+  type_decls : (string * string, int) Redblackmap.dict,
   (* T entries that reference defined constants: term_id -> (thy, name) *)
   t_const_refs : (int * (string * string)) list,
   (* Y entries that reference defined type ops: type_id -> (thy, tyop) *)
@@ -195,6 +199,10 @@ fun read_file_data path : file_data =
     val const_defs_ref = ref (Redblackmap.mkDict thyname_cmp
       : (string * string, int) Redblackmap.dict)
     val type_defs_ref = ref (Redblackmap.mkDict thyname_cmp
+      : (string * string, int) Redblackmap.dict)
+    val const_decls_ref = ref (Redblackmap.mkDict thyname_cmp
+      : (string * string, int) Redblackmap.dict)
+    val type_decls_ref = ref (Redblackmap.mkDict thyname_cmp
       : (string * string, int) Redblackmap.dict)
     val t_const_refs_rev = ref ([] : (int * (string * string)) list)
     val y_tyop_refs_rev = ref ([] : (int * (string * string)) list)
@@ -328,6 +336,22 @@ fun read_file_data path : file_data =
           in
             c_deps_ref := SOME (parent_ids, term_ids, type_ids)
           end
+      | ("NC" :: thy_s :: name_s :: ty_s :: _) =>
+          let val thy = unescape thy_s
+              val name = unescape name_s
+              val tyid = int_of ty_s
+          in const_decls_ref :=
+               Redblackmap.insert(!const_decls_ref,
+                                   (thy, name), tyid)
+          end
+      | ("NY" :: thy_s :: name_s :: arity_s :: _) =>
+          let val thy = unescape thy_s
+              val name = unescape name_s
+              val arity = int_of arity_s
+          in type_decls_ref :=
+               Redblackmap.insert(!type_decls_ref,
+                                   (thy, name), arity)
+          end
       | ("N" :: name :: _) =>
           (thy_name := unescape name; has_name := true)
       | ("E" :: name :: id_s :: _) =>
@@ -368,6 +392,8 @@ fun read_file_data path : file_data =
       disk_deps = rev (!disk_deps_rev),
       const_defs = !const_defs_ref,
       type_defs = !type_defs_ref,
+      const_decls = !const_decls_ref,
+      type_decls = !type_decls_ref,
       t_const_refs = rev (!t_const_refs_rev),
       y_tyop_refs = rev (!y_tyop_refs_rev),
       compute_ids = !compute_ids_ref,
@@ -411,22 +437,35 @@ fun mark_live (data : file_data) (prev : liveness)
        DEF_SPEC/DEF_TYOP trace_id that defines them (~1 = none).
        This lets mark_term/mark_type directly cascade into
        mark_thm for definitions, keeping the walk linear.
-       Track refs with no local def for cross-file resolution. *)
+       Track refs with no local def/decl for cross-file resolution.
+
+       Also build per-term array for NC declarations: when a
+       constant has an NC (but no DEF_SPEC), marking it live
+       must also mark the NC's type as live. *)
     val t_def = Array.array(#n_terms data, ~1)
+    (* NC type_id for constants with local NC but no DEF_SPEC (~1 = none) *)
+    val t_nc = Array.array(#n_terms data, ~1)
     val t_unresolved_defs = ref ([] : (int * (string * string)) list)
     val _ = List.app (fn (tid, (thy, name)) =>
       case Redblackmap.peek(#const_defs data, (thy, name)) of
         SOME pid => Array.update(t_def, tid, pid)
-      | NONE => t_unresolved_defs := (tid, (thy, name))
-                                     :: !t_unresolved_defs)
+      | NONE =>
+          (case Redblackmap.peek(#const_decls data, (thy, name)) of
+             SOME tyid => Array.update(t_nc, tid, tyid)
+           | NONE => t_unresolved_defs := (tid, (thy, name))
+                                          :: !t_unresolved_defs))
       (#t_const_refs data)
     val y_def = Array.array(#n_types data, ~1)
+    (* NY doesn't need extra marking — no type deps *)
     val y_unresolved_defs = ref ([] : (int * (string * string)) list)
     val _ = List.app (fn (yid, (thy, tyop)) =>
       case Redblackmap.peek(#type_defs data, (thy, tyop)) of
         SOME pid => Array.update(y_def, yid, pid)
-      | NONE => y_unresolved_defs := (yid, (thy, tyop))
-                                     :: !y_unresolved_defs)
+      | NONE =>
+          (case Redblackmap.peek(#type_decls data, (thy, tyop)) of
+             SOME _ => () (* NY exists locally, nothing to cascade *)
+           | NONE => y_unresolved_defs := (yid, (thy, tyop))
+                                          :: !y_unresolved_defs))
       (#y_tyop_refs data)
 
     fun mark_thm id =
@@ -452,7 +491,11 @@ fun mark_live (data : file_data) (prev : liveness)
             List.app mark_type
               (Array.sub(#t_type_deps data, id));
             let val def = Array.sub(t_def, id)
-            in if def >= 0 then mark_thm def else () end)
+            in if def >= 0 then mark_thm def
+               else (* No DEF_SPEC; check for NC — mark its type live *)
+                 let val nc = Array.sub(t_nc, id)
+                 in if nc >= 0 then mark_type nc else () end
+            end)
     and mark_type id =
       if id < 0 orelse id >= #n_types data orelse
          Array.sub(live_y, id) then ()
@@ -719,7 +762,8 @@ fun merge {trace_paths : (string * string) list,
         processed_files :=
           Redblackset.add(!processed_files, path);
 
-        (* Enqueue ancestor DEF_TYOP for unresolved type ops *)
+        (* Enqueue ancestor DEF_TYOP for unresolved type ops.
+           Silently skip if not found (NC/NY handled separately). *)
         List.app (fn (anc_thy, anc_tyop) =>
           case Redblackmap.peek(thy_path_map, anc_thy) of
             SOME anc_path =>
@@ -727,16 +771,13 @@ fun merge {trace_paths : (string * string) list,
               in case Redblackmap.peek(#type_defs anc_data,
                                        (anc_thy, anc_tyop)) of
                    SOME thm_id => enqueue (anc_path, [thm_id])
-                 | NONE =>
-                   err ("WARNING: DEF_TYOP for " ^ anc_thy ^
-                        "." ^ anc_tyop ^ " not found\n")
+                 | NONE => ()
               end
-          | NONE =>
-              err ("WARNING: no trace for theory " ^
-                   anc_thy ^ " (type " ^ anc_tyop ^ ")\n"))
+          | NONE => ())
           unresolved_tyops;
 
-        (* Enqueue ancestor DEF_SPEC for unresolved constants *)
+        (* Enqueue ancestor DEF_SPEC for unresolved constants.
+           Silently skip if not found (NC/NY handled separately). *)
         List.app (fn (anc_thy, anc_name) =>
           case Redblackmap.peek(thy_path_map, anc_thy) of
             SOME anc_path =>
@@ -744,13 +785,9 @@ fun merge {trace_paths : (string * string) list,
               in case Redblackmap.peek(#const_defs anc_data,
                                        (anc_thy, anc_name)) of
                    SOME thm_id => enqueue (anc_path, [thm_id])
-                 | NONE =>
-                   err ("WARNING: DEF_SPEC for " ^ anc_thy ^
-                        "." ^ anc_name ^ " not found\n")
+                 | NONE => ()
               end
-          | NONE =>
-              err ("WARNING: no trace for theory " ^
-                   anc_thy ^ " (const " ^ anc_name ^ ")\n"))
+          | NONE => ())
           unresolved_consts;
 
         (* Enqueue DISK_THM ancestor exports *)
@@ -852,6 +889,122 @@ fun merge {trace_paths : (string * string) list,
          List.app (fn (path, ids) => process_file path ids) items;
          drain ())
     val _ = drain ()
+
+    (* --- Resolve NC/NY for live constants/types ---
+
+       After the main worklist drains, scan all processed files for
+       live T/Y entries whose constants/types have no DEF_SPEC/DEF_TYOP
+       anywhere. For those, find the NC/NY in an ancestor file and
+       ensure that file is included. For NC, also mark its type live
+       in the ancestor file (which may cascade, requiring another
+       drain). *)
+
+    (* Collect all (thy, name) pairs that have a DEF_SPEC or NC
+       somewhere across ALL known trace files (not just processed),
+       and all (thy, tyop) pairs that have a DEF_TYOP or NY
+       somewhere. Used to decide which constants/types are truly
+       primitive (no def or decl anywhere) vs just cross-file. *)
+    val global_const_resolved =
+      let val s = ref (Redblackset.empty thyname_cmp)
+      in List.app (fn (_, path) =>
+           let val d = load_file path
+           in Redblackmap.app (fn (k,_) =>
+                s := Redblackset.add(!s, k)) (#const_defs d);
+              Redblackmap.app (fn (k,_) =>
+                s := Redblackset.add(!s, k)) (#const_decls d)
+           end) trace_paths;
+         !s
+      end
+
+    val global_type_resolved =
+      let val s = ref (Redblackset.empty thyname_cmp)
+      in List.app (fn (_, path) =>
+           let val d = load_file path
+           in Redblackmap.app (fn (k,_) =>
+                s := Redblackset.add(!s, k)) (#type_defs d);
+              Redblackmap.app (fn (k,_) =>
+                s := Redblackset.add(!s, k)) (#type_decls d)
+           end) trace_paths;
+         !s
+      end
+
+    (* For each processed file, find live constants/types needing NC/NY *)
+    val needed_ncs = ref (Redblackset.empty thyname_cmp)
+    val needed_nys = ref (Redblackset.empty thyname_cmp)
+    val _ = List.app (fn path =>
+      let val data = load_file path
+          val lv = case Redblackmap.peek(!file_liveness, path) of
+                     SOME lv => lv | NONE => raise ERR "merge" "no liveness"
+      in
+        (* Check live T entries for constants with no local DEF_SPEC *)
+        List.app (fn (tid, (thy, name)) =>
+          if Array.sub(#live_t lv, tid) then
+            (* Only need NC if there's no DEF_SPEC anywhere *)
+            if not (Redblackset.member(global_const_resolved, (thy, name)))
+            then () (* truly primitive — min or missing *)
+            else
+              case Redblackmap.peek(#const_defs data, (thy, name)) of
+                SOME _ => () (* local DEF_SPEC — already handled *)
+              | NONE =>
+                  case Redblackmap.peek(#const_decls data, (thy, name)) of
+                    SOME _ => () (* local NC — already in this file *)
+                  | NONE => needed_ncs :=
+                              Redblackset.add(!needed_ncs, (thy, name))
+          else ())
+          (#t_const_refs data);
+
+        (* Check live Y entries for types with no local DEF_TYOP *)
+        List.app (fn (yid, (thy, tyop)) =>
+          if Array.sub(#live_y lv, yid) then
+            if not (Redblackset.member(global_type_resolved, (thy, tyop)))
+            then ()
+            else
+              case Redblackmap.peek(#type_defs data, (thy, tyop)) of
+                SOME _ => ()
+              | NONE =>
+                  case Redblackmap.peek(#type_decls data, (thy, tyop)) of
+                    SOME _ => ()
+                  | NONE => needed_nys :=
+                              Redblackset.add(!needed_nys, (thy, tyop))
+          else ())
+          (#y_tyop_refs data)
+      end) (Redblackset.listItems (!processed_files))
+
+    (* For each needed NC, find the file that has it, ensure it's
+       processed, and mark the NC's type live there. We use
+       mark_live_types to properly cascade type dependencies. *)
+    val _ = Redblackset.app (fn (thy, name) =>
+      case Redblackmap.peek(thy_path_map, thy) of
+        SOME anc_path =>
+          let val anc_data = load_file anc_path
+          in case Redblackmap.peek(#const_decls anc_data, (thy, name)) of
+               SOME tyid =>
+                 let val anc_lv = get_liveness anc_path
+                     val live_y = #live_y anc_lv
+                     (* Recursively mark type and sub-types live *)
+                     fun mark_ty id =
+                       if id < 0 orelse id >= Array.length live_y
+                          orelse Array.sub(live_y, id) then ()
+                       else (Array.update(live_y, id, true);
+                             List.app mark_ty
+                               (Array.sub(#y_deps anc_data, id)))
+                 in processed_files :=
+                      Redblackset.add(!processed_files, anc_path);
+                    mark_ty tyid;
+                    update_liveness anc_path anc_lv
+                 end
+             | NONE => ()
+          end
+      | NONE => ()) (!needed_ncs)
+
+    (* For each needed NY, find the file and ensure it's processed *)
+    val _ = Redblackset.app (fn (thy, tyop) =>
+      case Redblackmap.peek(thy_path_map, thy) of
+        SOME anc_path =>
+          (processed_files :=
+             Redblackset.add(!processed_files, anc_path);
+           ignore (get_liveness anc_path))
+      | NONE => ()) (!needed_nys)
 
     (* Build output order via unified topological sort across all
        files (both heap and theory traces).
@@ -1101,6 +1254,45 @@ fun merge {trace_paths : (string * string) list,
                      end
                 end
               else ()
+              end
+          | ("NC" :: thy_s :: name_s :: ty_s :: _) =>
+              let val thy = unescape thy_s
+                  val name = unescape name_s
+                  val tyid = int_of ty_s
+              in (* Emit NC if this constant is needed and has no
+                    DEF_SPEC (locally or globally) *)
+                if Redblackset.member(!needed_ncs, (thy, name)) orelse
+                   (case Redblackmap.peek(#const_decls data, (thy, name)) of
+                      SOME _ =>
+                        (* Local NC — emit if any live T refs this const *)
+                        List.exists (fn (tid, k) =>
+                          k = (thy, name) andalso
+                          tid < Array.length live_t andalso
+                          Array.sub(live_t, tid))
+                          (#t_const_refs data)
+                    | NONE => false)
+                then TextIO.output(ostrm,
+                       "NC " ^ esc thy ^ " " ^ esc name ^
+                       " " ^ its (ry tyid) ^ "\n")
+                else ()
+              end
+          | ("NY" :: thy_s :: name_s :: arity_s :: _) =>
+              let val thy = unescape thy_s
+                  val name = unescape name_s
+                  val arity = int_of arity_s
+              in if Redblackset.member(!needed_nys, (thy, name)) orelse
+                   (case Redblackmap.peek(#type_decls data, (thy, name)) of
+                      SOME _ =>
+                        List.exists (fn (yid, k) =>
+                          k = (thy, name) andalso
+                          yid < Array.length live_y andalso
+                          Array.sub(live_y, yid))
+                          (#y_tyop_refs data)
+                    | NONE => false)
+                then TextIO.output(ostrm,
+                       "NY " ^ esc thy ^ " " ^ esc name ^
+                       " " ^ arity_s ^ "\n")
+                else ()
               end
           | ("P" :: id_s :: "DISK_THM" :: args) =>
               let val id = int_of id_s

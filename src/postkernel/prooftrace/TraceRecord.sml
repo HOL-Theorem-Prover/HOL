@@ -215,11 +215,39 @@ fun intern_term tm =
 
 val iT = intern_term
 
+(* ------- DEF_SPEC/DEF_TYOP tracking for NC/NY filtering ------- *)
+
+(* Constants introduced by DEF_SPEC — keyed by (thy, name) *)
+val defined_consts : (string * string) Redblackset.set ref =
+  ref (Redblackset.empty
+         (fn ((t1,n1),(t2,n2)) =>
+           case String.compare(t1,t2) of
+             EQUAL => String.compare(n1,n2)
+           | ord => ord))
+
+(* Type operators introduced by DEF_TYOP — keyed by (thy, tyop) *)
+val defined_types : (string * string) Redblackset.set ref =
+  ref (Redblackset.empty
+         (fn ((t1,n1),(t2,n2)) =>
+           case String.compare(t1,t2) of
+             EQUAL => String.compare(n1,n2)
+           | ord => ord))
+
 val _ = reset_for_new_session := (fn () => (
   ty_map := Redblackmap.mkDict Type.compare;
   tm_map := Redblackmap.mkDict Term.compare;
   ty_counter := 0;
-  tm_counter := 0
+  tm_counter := 0;
+  defined_consts := Redblackset.empty
+    (fn ((t1,n1),(t2,n2)) =>
+      case String.compare(t1,t2) of
+        EQUAL => String.compare(n1,n2)
+      | ord => ord);
+  defined_types := Redblackset.empty
+    (fn ((t1,n1),(t2,n2)) =>
+      case String.compare(t1,t2) of
+        EQUAL => String.compare(n1,n2)
+      | ord => ord)
 ))
 
 (* ------- Parent reference: kernel trace_id ------- *)
@@ -346,12 +374,17 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       record_line ("P " ^ its (Thm.trace_id r) ^ " Mk_abs " ^
         pi orig ^ " " ^ pi body)
   | Thm.TR_DEF_TYOP (r, wit, thy, tyop) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " DEF_TYOP " ^
-        pi wit ^ " " ^ esc thy ^ " " ^ esc tyop)
+      (defined_types :=
+         Redblackset.add(!defined_types, (thy, tyop));
+       record_line ("P " ^ its (Thm.trace_id r) ^ " DEF_TYOP " ^
+         pi wit ^ " " ^ esc thy ^ " " ^ esc tyop))
   | Thm.TR_DEF_SPEC (r, wit, thyname, cnames) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " DEF_SPEC " ^ pi wit ^
-        " " ^ esc thyname ^
-        String.concat (map (fn c => " " ^ esc c) cnames))
+      (List.app (fn c =>
+         defined_consts :=
+           Redblackset.add(!defined_consts, (thyname, c))) cnames;
+       record_line ("P " ^ its (Thm.trace_id r) ^ " DEF_SPEC " ^ pi wit ^
+         " " ^ esc thyname ^
+         String.concat (map (fn c => " " ^ esc c) cnames)))
   | Thm.TR_COMPUTE (r, code_eqs, tm) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " COMPUTE " ^
         its (iT tm) ^
@@ -458,6 +491,33 @@ fun activate () = (
   Theory.register_hook (
     "TraceRecord.clear_dep_log",
     fn TheoryDelta.ExportTheory _ => Thm.save_dep_log := []
+     | _ => ()
+  );
+  (* Emit NC/NY for constants/types not already defined by
+     DEF_SPEC/DEF_TYOP *)
+  Theory.register_hook (
+    "TraceRecord.new_const_type",
+    fn TheoryDelta.NewConstant {Thy, Name} =>
+         if Redblackset.member(!defined_consts, (Thy, Name))
+         then ()
+         else
+           let val ty = Term.type_of
+                          (Term.prim_mk_const {Thy=Thy, Name=Name})
+               val tyid = iY ty
+           in record_line ("NC " ^ esc Thy ^ " " ^ esc Name ^
+                           " " ^ its tyid)
+           end
+     | TheoryDelta.NewTypeOp {Thy, Name} =>
+         if Redblackset.member(!defined_types, (Thy, Name))
+         then ()
+         else
+           let val arity = Type.op_arity {Thy=Thy, Tyop=Name}
+           in case arity of
+                SOME a =>
+                  record_line ("NY " ^ esc Thy ^ " " ^ esc Name ^
+                               " " ^ its a)
+              | NONE => ()
+           end
      | _ => ()
   );
   OS.Process.atExit cleanup
