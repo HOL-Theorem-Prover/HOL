@@ -56,7 +56,8 @@ fun HOLtoFS nm =
                               (s = "sml" orelse s = "dat" orelse
                                s = "sig" orelse s = "pft")) orelse
                              (isPSuffix "Theory.pft" base andalso
-                              (s = "zst" orelse s = "gz"))
+                              (s = "zst" orelse s = "gz" orelse
+                               s = "zip"))
             | (_, NONE) => false
     in
       if changep then
