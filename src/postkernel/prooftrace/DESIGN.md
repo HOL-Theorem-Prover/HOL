@@ -30,12 +30,15 @@ checks this env var at load time and activates if set.
 ### Grammar
 
 ```
-trace        ::= version heap? entry* name? exports
+trace        ::= version heap? entry* name? provenance? exports
 version      ::= "V " int "\n"
 heap         ::= "H " s "\n"
 entry        ::= type_entry | term_entry | thm_entry
                | const_decl | type_decl | compute_init
 name         ::= "N " s "\n"
+provenance   ::= (named_prov | anon_prov)*
+named_prov   ::= "F " s s p "\n"
+anon_prov    ::= "G " s int p "\n"
 exports      ::= ("E " s p "\n")*
 
 const_decl   ::= "C " s s y "\n"
@@ -64,8 +67,9 @@ Fields:
 - Y, T, P, I entries are interleaved in dependency order
   (as recorded during the build)
 - V is the first line; H (if present) is second; C, O, Y, T,
-  P, and I entries are interleaved in dependency order; N and E
-  entries appear at the end
+  P, and I entries are interleaved in dependency order; N
+  appears after all entries; F and G (provenance, merged traces
+  only) appear after N; E entries appear last
 - H records the absolute filesystem path of the parent heap this
   trace was built on (e.g., `/home/user/HOL/bin/hol.state0`).
   This is the value of the `--holstate` or `-b` argument passed
@@ -157,6 +161,23 @@ At most once per trace, before any COMPUTE theorems. Arguments:
 cval_type (y), num_type (y), 29 cval (name, term) pairs, then
 char_eqn (name, parent) pairs until end of line.
 
+### Provenance Lines (merged traces only)
+
+`F thy name global_id` — records that the P entry with
+`global_id` is a named export called `name` from theory `thy`.
+Emitted for every named export (E line) from every theory
+included in the merge, not just the desired exports.
+
+`G thy src_trace_id global_id` — records that the P entry with
+`global_id` is the theorem that had `src_trace_id` in theory
+`thy`'s build process. Emitted for every LOAD reference
+resolved during the merge.
+
+These lines are only present in merged traces and are consumed
+by `--interactive` replay to map replayed theorems back to
+their theory origins (see Replay-aware Theory Loading below).
+Per-theory and heap traces do not have F or G lines.
+
 ### Theorem ID uniqueness
 
 Theorem IDs (`p`) are kernel `Thm.trace_id` values from a
@@ -219,7 +240,9 @@ simpset construction, etc.
 **Merged traces** (user-specified path): a single self-contained
 trace produced by the merge tool. No N line. Has E lines for
 the desired exports. No NAME or LOAD entries (all resolved).
-Types and terms globally deduplicated.
+Types and terms globally deduplicated. Has F and G provenance
+lines mapping replayed theorems to their theory-level origins
+(for use by replay-aware theory loading).
 
 ## Recording
 
@@ -416,8 +439,14 @@ For each file's live entries:
   live.
 
 After each file: register its E exports (if any) in the ancestor
-export map. Register its P entries in the ancestor theorem map
-(for theory traces) or the heap theorem map (for heap traces).
+export map. Emit F lines for each named export that was mapped
+to a global ID. Register its P entries in the ancestor theorem
+map (for theory traces) or the heap theorem map (for heap
+traces).
+
+During LOAD resolution: when a LOAD is successfully resolved
+to a global ID, emit a G line recording the `(src_thy,
+src_trace_id, global_id)` mapping.
 
 After all files: write E lines for desired exports.
 
@@ -489,6 +518,142 @@ reducing peak memory:
 
 Both are optional future optimizations. The initial
 implementation keeps all objects alive.
+
+## Replay-aware Theory Loading
+
+After replaying a merged trace, the kernel contains types,
+constants, and theorems established by genuine inference rules.
+To use the session interactively (pretty-printing, simplification,
+etc.), the theory hierarchy must be loaded: `Theory.link_parents`,
+`DB.bindl`, simpsets, TypeBase, grammars, and other thydata must
+be populated.
+
+The normal loading path (`TheoryReader.load_thydata`) reads `.dat`
+files and reconstructs theorems via `Thm.disk_thm` (named) and
+`Thm.disk_thm_dep` (anonymous/thydata-embedded), producing
+DISK_THM oracles. After replay, we want to substitute replayed
+theorem values wherever available, falling back to DISK_THM
+creation for theorems not included in the merge.
+
+### Provenance from the merge tool
+
+The merge tool emits **F** and **G** provenance lines in the
+merged trace (see Provenance Lines above):
+
+- `F thy name global_id` — for every named export from every
+  included theory
+- `G thy src_trace_id global_id` — for every resolved LOAD
+  reference
+
+These lines record the mapping from theory-level identifiers
+(used by `.dat` files) to global IDs in the merged trace
+(used by the replayer's theorem map).
+
+### Building replay maps
+
+After replay, the replayer has a theorem map
+`global_id → thm` for every P entry. Using the provenance
+lines, it builds two lookup maps:
+
+- **Named replay map**: `(theory, name) → thm` — built from
+  F lines by looking up each `global_id` in the theorem map
+- **Anonymous replay map**: `(theory, trace_id) → thm` — built
+  from G lines similarly
+
+These maps are the interface between replay and theory loading.
+
+### Substitution during theory loading
+
+The replay maps are installed as a single optional ref in the
+`Thm` structure (accessible to both `SharingTables` and
+`ThyDataSexp`):
+
+```sml
+val replay_thms :
+  { named : (string * string, thm) map,
+    anon  : (string * int, thm) map } option ref
+```
+
+When set, the theorem creation functions check these maps
+first:
+
+- **`disk_thm name ((dd,ocl), terms)`**: extracts `src_thy`
+  from `dd`, looks up `(src_thy, name)` in `#named`. If
+  found, returns the replayed theorem. Otherwise creates a
+  DISK_THM as normal.
+
+- **`disk_thm_dep ((dd,ocl), terms, src_thy, src_trace_id)`**:
+  looks up `(src_thy, src_trace_id)` in `#anon`. If found,
+  returns the replayed theorem. Otherwise creates a DISK_THM
+  as normal.
+
+When not set (normal non-replay loading), behaviour is
+unchanged — zero overhead.
+
+### Handling types and constants
+
+After replay, types and constants are already in the kernel
+(created by DEF_TYOP, DEF_SPEC, C, and O entries during
+replay). The normal `incorporate_types` / `incorporate_consts`
+calls in `load_thydata` would re-register them via
+`prim_new_type` / `prim_new_const`, which retires the
+existing kernelid and creates a new one — invalidating all
+replayed terms and theorems that reference the old kernelid.
+
+To prevent this, `incorporate_types` and `incorporate_consts`
+must skip types and constants that already exist in the
+kernel with matching identity. Specifically:
+
+- **Types**: if `Type.op_arity {Thy, Tyop}` returns
+  `SOME arity` matching the expected arity, skip.
+- **Constants**: if `Term.prim_mk_const {Thy, Name}` succeeds
+  (the constant exists), skip. (Type instantiation means the
+  stored type in the `.dat` file may differ from the
+  polymorphic type in the kernel, so only existence is
+  checked, not type equality.)
+
+This check should only be active in replay-aware mode (when
+the replay maps are set), to avoid silently masking errors
+during normal loading.
+
+### Loading order
+
+Theories are loaded in dependency order (parents before
+children), matching the normal `Theory.load_parents` /
+`TheoryReader.load_thydata` order. For each theory:
+
+1. `link_parents` — establish theory graph
+2. `incorporate_types` / `incorporate_consts` — skip
+   already-existing types/consts
+3. `dec_sdata` — reconstruct named theorems via `disk_thm`
+   (substituting replayed values when available)
+4. `DB.bindl` — register theorems in the database
+5. `temp_encoded_update` for each thydata entry — decode
+   thydata (substituting replayed values in embedded theorems
+   via `disk_thm_dep`), fire load callbacks for simpsets,
+   TypeBase, grammars, etc.
+
+### Coverage and fallback
+
+The merge tool prunes entries not reachable from the desired
+exports. Consequently:
+
+- **Included theories**: all named exports that were live in
+  the merge get replayed values (via F lines). Thydata-embedded
+  theorems that were live get replayed values (via G lines).
+- **Excluded theories**: theories not in the merge's dependency
+  closure have no replayed values. All their theorems load as
+  DISK_THMs via the normal path. This is safe — the theory
+  structure is fully populated, just without verified
+  derivations.
+- **Partially included theories**: some named exports or
+  thydata theorems may have been pruned by the merge (not
+  reachable from the desired exports). These fall back to
+  DISK_THM creation. The theory structure is complete; only
+  the derivation quality differs.
+
+After loading completes, the replay map is cleared (ref set
+back to NONE).
 
 ## Compression
 
