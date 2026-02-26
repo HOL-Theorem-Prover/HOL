@@ -184,13 +184,17 @@ overlap with any heap in their ancestry chain.
   by theory and name. Resolved via E lines in the ancestor
   theory's trace.
 - **Anonymous** (`LOAD thy trace_id`): references an anonymous
-  theorem (e.g., thydata-embedded) by theory name and the
-  theorem's original trace_id from the ancestor theory's
-  build process. The trace_id is stored in the `.dat` file
-  alongside the theorem data. Since LOAD always carries the
+  theorem (e.g., thydata-embedded) by theory name and trace_id.
+  Both the theory name and trace_id are stored together in the
+  `.dat` file alongside the theorem data: the theory name is
+  `Theory.current_theory()` at write time, and the trace_id is
+  the theorem's `Thm.trace_id` in the writing process. This
+  ensures they always refer to the same trace file, even when
+  the theorem was originally created in a different theory and
+  re-exported through thydata. Since LOAD always carries the
   theory name, there is no ambiguity between sibling theories
   with overlapping trace_id ranges. Resolved by finding the
-  P entry with that trace_id in the ancestor theory's trace.
+  P entry with that trace_id in the named theory's trace.
 - **Heap parent**: a parent trace_id in a P entry that is not
   found in the current file. This must be in the heap ancestry
   chain, where trace_ids are globally unique. Resolved by
@@ -205,8 +209,7 @@ lines at the end. NAME entries reference named ancestor
 theorems by `(theory, name)`. LOAD entries reference anonymous
 ancestor theorems (including thydata-embedded theorems such as
 simpset rewrites and TypeBase data) by `(theory, trace_id)`,
-where the trace_id is the theorem's original trace_id from the
-ancestor's build process, stored in the `.dat` file.
+both stored in the `.dat` file by the exporting theory.
 
 **Heap traces** (`<heapname>.pft` alongside the heap file):
 contain all steps recorded during heap building. No N or E
@@ -260,9 +263,10 @@ knows the theorem's name. These are recorded as
 
 **Anonymous theorems** (thydata-embedded theorems used by
 simpsets, TypeBase, etc.) are loaded via `ThyDataSexp.thmreader`.
-The `.dat` file stores the theorem's original trace_id from the
-ancestor theory's build process. These are recorded as
-`P <trace_id> LOAD <theory> <ancestor_trace_id>`.
+The `.dat` file stores both the source theory name
+(`Theory.current_theory()` at write time) and the theorem's
+trace_id from that process. These are recorded as
+`P <trace_id> LOAD <source_theory> <source_trace_id>`.
 
 ### Stale stream handling
 
@@ -287,10 +291,10 @@ hook which:
 
 E lines map named exports to trace_ids.
 
-Anonymous theorems do not need export lines. Their trace_ids
-are stored in the `.dat` file at serialization time (via
-`save_dep`), so ancestor traces can reference them directly
-by trace_id using LOAD entries.
+Anonymous theorems do not need export lines. Their source
+theory name and trace_id are stored in the `.dat` file at
+serialization time, so descendant traces can reference them
+directly using LOAD entries.
 
 ### Heap export
 
