@@ -118,7 +118,7 @@ sig
   (* Fetching theorems from disk *)
 
   val disk_thm : string -> (depdisk * string list) * term list -> thm
-  val disk_thm_dep : (depdisk * string list) * term list -> thm
+  val disk_thm_dep : (depdisk * string list) * term list * int -> thm
 
   (* Saving proof dependencies *)
 

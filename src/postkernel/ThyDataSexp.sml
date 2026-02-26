@@ -188,6 +188,7 @@ val list_decode = HOLsexp.list_decode
 val string_decode = HOLsexp.string_decode
 val symbol_decode = HOLsexp.symbol_decode
 val pair_decode = HOLsexp.pair_decode
+val pair3_decode = HOLsexp.pair3_decode
 val pair4_decode = HOLsexp.pair4_decode
 val int_decode = HOLsexp.int_decode
 val tagged_decode = HOLsexp.tagged_decode
@@ -232,33 +233,26 @@ fun thmwrite tmw th0 =
     val th = if deps_saved th0 then th0
              else Thm.save_dep (Theory.current_theory()) th0
   in
-    HOLsexp.pair_encode (tagwrite, HOLsexp.list_encode (HOLsexp.String o tmw))
-                        (Thm.tag th, concl th :: hyp th)
+    HOLsexp.pair3_encode (tagwrite,
+                          HOLsexp.list_encode (HOLsexp.String o tmw),
+                          HOLsexp.Integer)
+                         (Thm.tag th, concl th :: hyp th, Thm.trace_id th)
   end
 fun thmreader tmr =
     let
-      fun lookup_name (thy, n) =
-        let
-          fun match_dep (name, th) =
-            let val dep = Tag.dep_of (Thm.tag th)
-            in case dep of
-                 Dep.DEP_SAVED ((t, m), _) => t = thy andalso m = n
-               | _ => false
-            end
-        in
-          case List.find match_dep (DB.thms thy) of
-            SOME (name, _) => SOME name
-          | NONE => NONE
-        end
-        handle _ => NONE
-      fun with_name ((dd, ocl), terms) =
-        let val (depid, _) = dd
-        in case lookup_name depid of
-             SOME name => Thm.disk_thm name ((dd, ocl), terms)
-           | NONE => Thm.disk_thm_dep ((dd, ocl), terms)
-        end
+      val decode_new =
+        pair3_decode (tagreader, list_decode (string_decode >> tmr),
+                      int_decode) >>
+        (fn ((dd, ocl), terms, src_trace_id) =>
+           Thm.disk_thm_dep ((dd, ocl), terms, src_trace_id))
+      val decode_old =
+        pair_decode (tagreader, list_decode (string_decode >> tmr)) >>
+        (fn ((dd, ocl), terms) =>
+           Thm.disk_thm_dep ((dd, ocl), terms, 0))
     in
-      pair_decode (tagreader, list_decode (string_decode >> tmr)) >> with_name
+      fn t => case decode_new t of
+                SOME th => SOME th
+              | NONE => decode_old t
     end
 
 fun tag s enc x = HOLsexp.tagged_encode s enc x
