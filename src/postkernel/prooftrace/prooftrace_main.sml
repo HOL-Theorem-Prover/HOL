@@ -214,7 +214,7 @@ fun main () =
              "  \"" ^ String.toString abs_path ^ "\";"]
 
           val interactive_load_lines = if !interactive then [
-            "(* Load theories with replayed theorem substitution *)",
+            "(* Set replay map, then load theories *)",
             "val _ = Thm.replay_thms :=",
             "  SOME prooftrace_replay_maps;",
             "val prooftrace_theories =",
@@ -229,7 +229,21 @@ fun main () =
             "             ^ thy ^ \": \" ^ General.exnMessage e ^ \"\\n\"))",
             "         prooftrace_theories",
             "         handle e => (Thm.replay_thms := NONE; raise e));",
-            "val _ = Thm.replay_thms := NONE;"
+            "(* Load bossLib (and its deps) with replay_thms still set,",
+            "   so all theory loading gets replay substitution. *)",
+            "val _ = (load \"bossLib\"",
+            "         handle e => (Thm.replay_thms := NONE; raise e));",
+            "val _ = Thm.replay_thms := NONE;",
+            "(* Run preludes for pretty-printers and interactive setup.",
+            "   hol.state.min is built with buildheap --poly which",
+            "   skips the normal preludes; we run them now.",
+            "   This matches load_preludes() in hol.ML. *)",
+            "val _ = List.app load",
+            "  [\"Arbint\", \"Arbrat\", \"Inttab\", \"KNametab\"];",
+            "val _ = QUse.use (OS.Path.concat(Systeml.HOLDIR,",
+            "          \"tools-poly/prelude.ML\"));",
+            "val _ = QUse.use (OS.Path.concat(Systeml.HOLDIR,",
+            "          \"tools-poly/prelude2.ML\"));"
           ] else []
 
           val lines =
