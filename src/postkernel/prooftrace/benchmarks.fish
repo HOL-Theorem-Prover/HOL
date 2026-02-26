@@ -14,7 +14,7 @@ cd examples/formal-languages/regular
 /usr/bin/time -v ../../../bin/Holmake --trace &| tee /tmp/bench-c-regexp.log
 cd -
 find . -name "*.pft" -o -name "*.pft.zst" | \
-  xargs du -ch | tail -1 | tee /tmp/bench-c-size.log
+  xargs du -ch | tee /tmp/bench-c-size.log
 /usr/bin/time -v bin/prooftrace merge -o bench.pft \
   arithmetic.DIVISION \
   regexp_compiler.regexp_matcher_correct \

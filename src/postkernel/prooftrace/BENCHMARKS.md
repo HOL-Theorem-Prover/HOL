@@ -65,11 +65,11 @@ cd examples/formal-languages/regular
 cd -
 ```
 
-Measure total trace file sizes:
+Measure trace file sizes:
 
 ```
 find . -name "*.pft" -o -name "*.pft.zst" | \
-  xargs du -ch | tail -1 | tee /tmp/bench-c-size.log
+  xargs du -ch | tee /tmp/bench-c-size.log
 ```
 
 ### (d) Merge
