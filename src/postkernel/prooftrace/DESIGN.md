@@ -38,8 +38,8 @@ entry        ::= type_entry | term_entry | thm_entry
 name         ::= "N " s "\n"
 exports      ::= ("E " s p "\n")*
 
-const_decl   ::= "NC " s s y "\n"
-type_decl    ::= "NY " s s int "\n"
+const_decl   ::= "C " s s y "\n"
+type_decl    ::= "O " s s int "\n"
 
 type_entry   ::= "Y " y " V " s "\n"
                | "Y " y " O " s s y* "\n"
@@ -51,7 +51,7 @@ term_entry   ::= "T " t " V " s y "\n"
 
 thm_entry    ::= "P " p " " rule args "\n"
 
-compute_init ::= "C " y y (s t){29} (s p)* "\n"
+compute_init ::= "I " y y (s t){29} (s p)* "\n"
 ```
 
 Fields:
@@ -61,10 +61,10 @@ Fields:
 - **s**: unquoted token or quoted string (`"..."` with `\"`, `\\`,
   `\n`, `\xNN` escapes)
 - IDs are scoped per namespace (Y, T, P)
-- Y, T, P, C entries are interleaved in dependency order
+- Y, T, P, I entries are interleaved in dependency order
   (as recorded during the build)
-- V is the first line; H (if present) is second; NC, NY, Y, T,
-  P, and C entries are interleaved in dependency order; N and E
+- V is the first line; H (if present) is second; C, O, Y, T,
+  P, and I entries are interleaved in dependency order; N and E
   entries appear at the end
 - H records the absolute filesystem path of the parent heap this
   trace was built on (e.g., `/home/user/HOL/bin/hol.state0`).
@@ -127,12 +127,12 @@ extend to end of line.
 
 ### Constant and Type Declarations
 
-`NC thy name ty_id` — declares a constant introduced by
+`C thy name ty_id` — declares a constant introduced by
 `new_constant` (or equivalent) that has no associated definition
 theorem. `thy` and `name` identify the constant; `ty_id`
 references a Y entry for the constant's (polymorphic) type.
 
-`NY thy name arity` — declares a type operator introduced by
+`O thy name arity` — declares a type operator introduced by
 `new_type` (or equivalent) that has no associated definition
 theorem. `thy` and `name` identify the type operator; `arity`
 is a non-negative integer.
@@ -141,7 +141,7 @@ is a non-negative integer.
 `new_definition`, `new_specification`, etc. already have a
 DEF_SPEC P entry that introduces them as a side effect. To
 avoid redundancy, TraceRecord tracks which constants have been
-introduced via DEF_SPEC and which types via DEF_TYOP; NC/NY
+introduced via DEF_SPEC and which types via DEF_TYOP; C/O
 lines are only emitted for constants/types that have no
 corresponding definition. This is possible because
 `TheoryDelta.NewConstant`/`NewTypeOp` always fires after the
@@ -150,9 +150,9 @@ line), so the set is up-to-date when the hook fires.
 
 Each constant/type in a trace has exactly one of:
 - A DEF_SPEC/DEF_TYOP P entry (introduced by a definition), or
-- An NC/NY declaration (introduced by `new_constant`/`new_type`)
+- A C/O declaration (introduced by `new_constant`/`new_type`)
 
-The `C` entry records initialization arguments for `Thm.compute`.
+The `I` entry records initialization arguments for `Thm.compute`.
 At most once per trace, before any COMPUTE theorems. Arguments:
 cval_type (y), num_type (y), 29 cval (name, term) pairs, then
 char_eqn (name, parent) pairs until end of line.
@@ -228,7 +228,7 @@ before other libraries). At load time it checks `OS.Process.getEnv
 
 `activate()` sets `Thm.trace_hook` and `Thm.trace_export_hook`,
 registers a `Theory.register_hook` for `NewConstant`/`NewTypeOp`
-TheoryDelta events (to emit NC/NY lines), and registers an
+TheoryDelta events (to emit C/O lines), and registers an
 `atExit` cleanup handler. When not activated (no env var), hooks
 remain NONE — zero overhead.
 
@@ -329,13 +329,13 @@ exports, loading ancestors on demand as discovered):
    live, the definition or declaration that introduces that
    constant is also marked live. Specifically: if a DEF_SPEC
    exists for the constant (in this file or an ancestor
-   theory's trace), it is marked live; otherwise, if an NC
+   theory's trace), it is marked live; otherwise, if a C
    declaration exists, it is marked live. Similarly for types:
-   DEF_TYOP if it exists, otherwise NY. When the definition
+   DEF_TYOP if it exists, otherwise O. When the definition
    or declaration is in an ancestor theory's trace file, that
    file is loaded and the entry is enqueued for processing
    (analogous to NAME resolution). This cascades naturally
-   within the reachability walk. NC lines also mark their
+   within the reachability walk. C lines also mark their
    referenced type as live.
 3. When the walk hits a NAME entry (thy, name), add that
    to the needed ancestor exports (resolved via E lines). When
@@ -389,21 +389,21 @@ Per-file (discarded after each):
 For each file's live entries:
 - **Y**: dedup via type descriptor. Write if new, remap if existing.
 - **T**: dedup via term descriptor. Write if new, remap if existing.
-- **NC**: remap type ID, write. (Dedup not needed — each
-  constant has at most one NC across all files.)
-- **NY**: write as-is. (Dedup not needed — each type operator
-  has at most one NY across all files.)
+- **C**: remap type ID, write. (Dedup not needed — each
+  constant has at most one C across all files.)
+- **O**: write as-is. (Dedup not needed — each type operator
+  has at most one O across all files.)
 - **P NAME**: resolve via ancestor export map, record
   local→global mapping (no output).
 - **P LOAD**: resolve via ancestor theorem map, record
   local→global mapping (no output).
 - **P (other)**: remap all argument IDs, assign new global theorem
   ID, write.
-- **C**: remap and write if any COMPUTE P entry is live (across
-  all files). The C line may be in a different file (typically a
+- **I**: remap and write if any COMPUTE P entry is live (across
+  all files). The I line may be in a different file (typically a
   heap trace) from the COMPUTE entries that depend on it. When
-  the first COMPUTE entry is marked live in Pass 1, the C line's
-  file is found (by walking up the heap chain), and the C line's
+  the first COMPUTE entry is marked live in Pass 1, the I line's
+  file is found (by walking up the heap chain), and the I line's
   char_eqn parent thm IDs and cval term/type refs are marked
   live.
 
@@ -450,14 +450,14 @@ large/sparse, unlike sequential type/term IDs).
 
 - **Y entries**: store type description (constructed lazily)
 - **T entries**: store term description (constructed lazily)
-- **NC entries**: call `Term.prim_new_const {Thy, Name} ty` to
+- **C entries**: call `Term.prim_new_const {Thy, Name} ty` to
   declare the constant in the kernel
-- **NY entries**: call `Type.prim_new_type {Thy, Name} arity` (or
+- **O entries**: call `Type.prim_new_type {Thy, Name} arity` (or
   equivalent) to declare the type operator in the kernel
 - **P entries**: call the corresponding kernel inference rule
   (triggering lazy construction of any referenced types/terms),
   store the resulting theorem in the theorem map
-- **C entry**: call `Thm.compute` with the init args, save
+- **I entry**: call `Thm.compute` with the init args, save
   the closure for subsequent COMPUTE entries
 - **E entries**: look up the theorem, verify it is oracle-free
 
