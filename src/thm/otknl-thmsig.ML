@@ -58,6 +58,7 @@ sig
   val set_definition_callback   : (thm -> unit) -> unit
   val clear_definition_callback : unit -> unit
 
+  val trace_id : thm -> int
   val trace_export : string -> string list -> (string * thm) list -> unit
 
   val replay_thms :

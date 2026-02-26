@@ -1365,6 +1365,8 @@ end
     Creating a theorem from disk
    ---------------------------------------------------------------------- *)
 
+fun trace_id _ = 0
+
 val replay_thms :
   { named : (string * string, thm) Redblackmap.dict,
     anon  : (string * int, thm) Redblackmap.dict } option ref = ref NONE
