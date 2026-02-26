@@ -59,4 +59,8 @@ sig
   val clear_definition_callback : unit -> unit
 
   val trace_export : string -> string list -> (string * thm) list -> unit
+
+  val replay_thms :
+    { named : (string * string, thm) Redblackmap.dict,
+      anon  : (string * int, thm) Redblackmap.dict } option ref
 end

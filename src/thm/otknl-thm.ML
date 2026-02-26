@@ -1365,6 +1365,10 @@ end
     Creating a theorem from disk
    ---------------------------------------------------------------------- *)
 
+val replay_thms :
+  { named : (string * string, thm) Redblackmap.dict,
+    anon  : (string * int, thm) Redblackmap.dict } option ref = ref NONE
+
 local
   val mk_disk_thm  = make_thm Count.Disk
 in

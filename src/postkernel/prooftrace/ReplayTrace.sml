@@ -10,6 +10,11 @@ struct
 
 open HolKernel
 
+type replay_maps = {
+  named : (string * string, Thm.thm) Redblackmap.dict,
+  anon  : (string * int, Thm.thm) Redblackmap.dict
+}
+
 val ERR = mk_HOL_ERR "ReplayTrace"
 fun its i = Int.toString i
 
@@ -143,6 +148,10 @@ fun replay_file path =
 
     val compute_fn = ref (NONE : (thm list -> term -> thm) option)
     val exports = ref ([] : (string * thm) list)
+
+    (* Provenance: F/G lines *)
+    val prov_f = ref ([] : (string * string * int) list)
+    val prov_g = ref ([] : (string * int * int) list)
 
     fun process_line line =
       let val toks = tokenize line
@@ -349,6 +358,14 @@ fun replay_file path =
       (* --- Theory name --- *)
       | ["N", _] => ()  (* ignore theory name during replay *)
 
+      (* --- Provenance --- *)
+      | ["F", thy_s, name_s, gid_s] =>
+          prov_f := (unescape thy_s, unescape name_s, int_of gid_s)
+                    :: !prov_f
+      | ["G", thy_s, tid_s, gid_s] =>
+          prov_g := (unescape thy_s, int_of tid_s, int_of gid_s)
+                    :: !prov_g
+
       (* --- Exports --- *)
       | ["E", name_s, thm_s] =>
           exports := (unescape name_s, th (int_of thm_s)) :: !exports
@@ -370,10 +387,28 @@ fun replay_file path =
           let val l = String.substring(line, 0, size line - 1)
                       handle Subscript => line
           in process_line l; read_all () end
+    fun thyname_cmp ((t1,n1) : string * string, (t2,n2)) =
+      case String.compare(t1,t2) of EQUAL => String.compare(n1,n2)
+                                   | ord => ord
+    fun thyint_cmp ((t1,i1) : string * int, (t2,i2)) =
+      case String.compare(t1,t2) of EQUAL => Int.compare(i1,i2)
+                                   | ord => ord
   in
     (read_all () handle e => (cleanup (); raise e));
     cleanup ();
-    rev (!exports)
+    { exports = rev (!exports),
+      replay_maps = {
+        named = List.foldl (fn ((thy, name, gid), m) =>
+          case Redblackmap.peek(!thm_map, gid) of
+            SOME thm => Redblackmap.insert(m, (thy, name), thm)
+          | NONE => m)
+          (Redblackmap.mkDict thyname_cmp) (!prov_f),
+        anon = List.foldl (fn ((thy, tid, gid), m) =>
+          case Redblackmap.peek(!thm_map, gid) of
+            SOME thm => Redblackmap.insert(m, (thy, tid), thm)
+          | NONE => m)
+          (Redblackmap.mkDict thyint_cmp) (!prov_g)
+      } }
   end
 
 (* ------- Convenience: find trace files ------- *)

@@ -10,4 +10,10 @@ sig
     (string -> string list -> (string * thm) list -> unit)
     option ref
   val trace_export : string -> string list -> (string * thm) list -> unit
+
+  (* Replay-aware theory loading: when set, disk_thm and disk_thm_dep
+     substitute replayed theorem values instead of creating DISK_THMs. *)
+  val replay_thms :
+    { named : (string * string, thm) Redblackmap.dict,
+      anon  : (string * int, thm) Redblackmap.dict } option ref
 end

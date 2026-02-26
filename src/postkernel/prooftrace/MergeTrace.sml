@@ -1253,6 +1253,10 @@ fun merge {trace_paths : (string * string) list,
     val ancestor_exports : (string * string, int) Redblackmap.dict ref =
       ref (Redblackmap.mkDict thyname_cmp)
 
+    (* Provenance accumulators for F/G lines *)
+    val prov_f = ref ([] : (string * string * int) list)  (* thy, name, gid *)
+    val prov_g = ref ([] : (string * int * int) list)     (* thy, trace_id, gid *)
+
     (* (theory, trace_id) -> global thm id, for resolving LOAD *)
     fun thyint_cmp ((t1,i1) : string*int, (t2,i2)) =
       case String.compare(t1,t2) of EQUAL => Int.compare(i1,i2)
@@ -1493,8 +1497,10 @@ fun merge {trace_paths : (string * string) list,
                           in search anc_path end
                 in case gid_opt of
                      SOME gid =>
-                       p_remap :=
-                         PIntMap.add id gid (!p_remap)
+                       (p_remap :=
+                          PIntMap.add id gid (!p_remap);
+                        prov_g := (anc_thy, anc_trace_id, gid)
+                                  :: !prov_g)
                    | NONE =>
                      err ("WARNING: unresolved LOAD " ^
                           anc_thy ^ ".#" ^ its anc_trace_id ^ "\n")
@@ -1559,9 +1565,12 @@ fun merge {trace_paths : (string * string) list,
         Redblackmap.app (fn (name, local_id) =>
           case rp_peek local_id of
             SOME gid =>
-              ancestor_exports :=
+              (ancestor_exports :=
                 Redblackmap.insert(!ancestor_exports,
-                                   (#thy_name data, name), gid)
+                                   (#thy_name data, name), gid);
+               if not (#is_heap data) then
+                 prov_f := (#thy_name data, name, gid) :: !prov_f
+               else ())
           | NONE => ())
           (#exports data);
 
@@ -1596,6 +1605,16 @@ fun merge {trace_paths : (string * string) list,
       in err ("  " ^ label ^ " (" ^ its n_live ^ " live thms)...\n");
          write_file path
       end) topo
+
+    (* Write provenance lines *)
+    val _ = List.app (fn (thy, name, gid) =>
+      TextIO.output(ostrm, "F " ^ esc thy ^ " " ^ esc name ^
+                    " " ^ its gid ^ "\n"))
+      (rev (!prov_f))
+    val _ = List.app (fn (thy, trace_id, gid) =>
+      TextIO.output(ostrm, "G " ^ esc thy ^ " " ^ its trace_id ^
+                    " " ^ its gid ^ "\n"))
+      (rev (!prov_g))
 
     (* Write exports *)
     val _ = List.app (fn (thy, name) =>

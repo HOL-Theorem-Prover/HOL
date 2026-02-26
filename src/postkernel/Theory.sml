@@ -661,12 +661,28 @@ fun link_parents thy plist =
  end;
 
 fun incorporate_types thy tys =
-  let fun itype (s,a) = (install_type(s,a,thy);())
+  let
+    val replay = isSome (! Thm.replay_thms)
+    fun itype (s,a) =
+      if replay then
+        case Type.op_arity {Thy=thy, Tyop=s} of
+          SOME a' => if a = a' then ()
+                     else (install_type(s,a,thy); ())
+        | NONE => (install_type(s,a,thy); ())
+      else (install_type(s,a,thy); ())
   in List.app itype tys
   end;
 
 fun incorporate_consts thy consts =
-    List.app (fn (s,ty) => ignore (install_const(s,ty,thy))) consts
+  let
+    val replay = isSome (! Thm.replay_thms)
+    fun icons (s,ty) =
+      if replay then
+        (Term.prim_mk_const {Thy=thy, Name=s}; ())
+        handle HOL_ERR _ => ignore (install_const(s,ty,thy))
+      else ignore (install_const(s,ty,thy))
+  in List.app icons consts
+  end
 
 (* ----------------------------------------------------------------------
     Theory data functions

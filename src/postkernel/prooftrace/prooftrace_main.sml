@@ -202,14 +202,39 @@ fun main () =
             "  then OS.Process.success else OS.Process.failure);"
           ]
 
-          val lines =
+          val replay_lines =
             [(* Deactivate proof tracing in the replay subprocess
                 so it doesn't record a trace of the replay itself *)
              "val _ = (Thm.trace_hook := NONE;",
              "         Thm.trace_export_hook := NONE);",
              "load \"ReplayTrace\";",
-             "val prooftrace_exports = ReplayTrace.replay_file",
-             "  \"" ^ String.toString abs_path ^ "\";"] @
+             "val {exports = prooftrace_exports,",
+             "     replay_maps = prooftrace_replay_maps} =",
+             "  ReplayTrace.replay_file",
+             "  \"" ^ String.toString abs_path ^ "\";"]
+
+          val interactive_load_lines = if !interactive then [
+            "(* Load theories with replayed theorem substitution *)",
+            "val _ = Thm.replay_thms :=",
+            "  SOME prooftrace_replay_maps;",
+            "val prooftrace_theories =",
+            "  Redblackset.listItems",
+            "    (Redblackmap.foldl (fn ((thy,_),_,s) =>",
+            "       Redblackset.add(s,thy))",
+            "     (Redblackset.empty String.compare)",
+            "     (#named prooftrace_replay_maps));",
+            "val _ = (List.app (fn thy =>",
+            "           load (thy ^ \"Theory\")",
+            "           handle e => print (\"WARNING: failed to load \"",
+            "             ^ thy ^ \": \" ^ General.exnMessage e ^ \"\\n\"))",
+            "         prooftrace_theories",
+            "         handle e => (Thm.replay_thms := NONE; raise e));",
+            "val _ = Thm.replay_thms := NONE;"
+          ] else []
+
+          val lines =
+            replay_lines @
+            interactive_load_lines @
             print_lines @
             summary_lines @
             exit_lines
