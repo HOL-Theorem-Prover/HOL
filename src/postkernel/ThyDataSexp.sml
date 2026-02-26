@@ -233,10 +233,8 @@ fun thmwrite tmw th0 =
              else Thm.save_dep (Theory.current_theory()) th0
     val src_thy = Theory.current_theory()
   in
-    HOLsexp.pair4_encode (tagwrite,
-                          HOLsexp.list_encode (HOLsexp.String o tmw),
-                          HOLsexp.Integer,
-                          HOLsexp.String)
+    HOLsexp.pair4_encode (tagwrite, HOLsexp.list_encode (HOLsexp.String o tmw),
+                          HOLsexp.Integer, HOLsexp.String)
                          (Thm.tag th, concl th :: hyp th,
                           Thm.trace_id th, src_thy)
   end

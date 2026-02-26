@@ -664,11 +664,8 @@ fun incorporate_types thy tys =
   let
     val replay = isSome (! Thm.replay_thms)
     fun itype (s,a) =
-      if replay then
-        case Type.op_arity {Thy=thy, Tyop=s} of
-          SOME a' => if a = a' then ()
-                     else (install_type(s,a,thy); ())
-        | NONE => (install_type(s,a,thy); ())
+      if replay andalso isSome (Type.op_arity {Thy=thy, Tyop=s})
+      then ()
       else (install_type(s,a,thy); ())
   in List.app itype tys
   end;
@@ -677,9 +674,8 @@ fun incorporate_consts thy consts =
   let
     val replay = isSome (! Thm.replay_thms)
     fun icons (s,ty) =
-      if replay then
-        (Term.prim_mk_const {Thy=thy, Name=s}; ())
-        handle HOL_ERR _ => ignore (install_const(s,ty,thy))
+      if replay andalso Lib.can Term.prim_mk_const {Thy=thy, Name=s}
+      then ()
       else ignore (install_const(s,ty,thy))
   in List.app icons consts
   end
