@@ -1379,7 +1379,6 @@ end; (* local *)
    a theory. *)
 val thm_order = ref 0
 
-val save_dep_log : (int * thm) list ref = ref []
 
 fun save_dep thy (th as (THM(t,h,c,sid))) =
   let
@@ -1390,9 +1389,6 @@ fun save_dep thy (th as (THM(t,h,c,sid))) =
     val result = THM(Tag.set_dep dep t,h,c,sid)
   in
     thm_order := depid_num + 1;
-    (case !trace_hook of
-       SOME _ => save_dep_log := (depid_num, result) :: !save_dep_log
-     | NONE => ());
     result
   end
 
@@ -1453,12 +1449,9 @@ in
 end (*local *)
 
 val trace_export_hook :
-  (string -> string list -> (string * thm) list -> (int * thm) list -> unit)
+  (string -> string list -> (string * thm) list -> unit)
   option ref = ref NONE
 fun trace_export thy pars thms =
-  let val deps = rev (!save_dep_log)
-  in save_dep_log := [];
-     case !trace_export_hook of NONE => () | SOME f => f thy pars thms deps
-  end
+  case !trace_export_hook of NONE => () | SOME f => f thy pars thms
 
 end (* Thm *)
