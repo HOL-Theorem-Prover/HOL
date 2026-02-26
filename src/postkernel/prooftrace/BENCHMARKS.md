@@ -100,21 +100,22 @@ Replay the merged trace.
 
 | Run | Description | Wall time | Peak RSS | Notes |
 |-----|-------------|-----------|----------|-------|
-| (a) | Baseline build | | | |
-| (b) | PR build, tracing off | | | |
-| (c) | PR build, tracing on | | | total .pft size: |
-| (c') | regexp_compiler (tracing on) | | | |
-| (d) | Merge | | | merged: raw / zstd (ratio) |
-| (e) | Replay | | | |
+| (a) | Baseline build | 10m04s | 1.64G   | |
+| (b) | PR build, tracing off | 10m08s | 1.45G | |
+| (c) | PR build, tracing on | 13m20s | 2.1G | total .pft.zst size: 1.4G |
+| (c') | regexp_compiler (tracing on) | 3m33s | 3.36G | |
+| (d) | Merge | 4m29s | 17.44G | merged: raw (292M) / zstd (69M) (ratio 4.23) |
+| (e) | Replay | 33s | 7.63G | |
 
 **Overhead (b vs a):** kernel changes with tracing off
+essentially nothing
+
 **Overhead (c vs b):** tracing I/O and callback cost
+noticeable but not excessive
 
 ## Hardware
 
-(fill in after running)
-
-- CPU:
-- RAM:
-- Disk:
-- OS:
+- CPU: 2.30GHz 8-core 11th Gen Intel
+- RAM: 32GB DDR4
+- Disk: SSD
+- OS: GNU/Linux

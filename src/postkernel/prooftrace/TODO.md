@@ -1,15 +1,5 @@
 # Proof Trace TODO
 
-### [benchmarks] Performance benchmarks
-
-Measure overhead and performance on large developments:
-- **Build overhead**: `develop` vs tracing off; tracing on vs
-  tracing off (wall time and trace file sizes)
-- **Merge performance**: wall time and memory for merging
-  traces across many theories
-- **Replay performance**: wall time and memory for replaying
-  large merged traces
-
 ### [regression] Regression testing
 
 Figure out how to add automated regression tests for the
