@@ -8,7 +8,7 @@ performance of the merge and replay tools.
 ## Commits
 
 - **Baseline (origin/develop):** `c38cd4913` — TFL: cleanup auto-delete of support constants
-- **PR (proof-traces):** `5014a77cc` — Simplify incorporate_types/consts replay checks
+- **PR (proof-traces):** `cc2167173` — Revert deletion of dependencies in proofman/Holmakefile
 
 ## Target theorems
 
@@ -40,7 +40,7 @@ poly --script tools/smart-configure.sml
 Fresh full HOL build from the PR branch, without `--trace`.
 
 ```
-git checkout 5014a77cc
+git checkout cc2167173
 git clean -xdf
 poly --script tools/smart-configure.sml
 /usr/bin/time -v bin/build --nograph &| tee /tmp/bench-b.log
