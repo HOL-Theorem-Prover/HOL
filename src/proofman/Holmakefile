@@ -32,7 +32,21 @@ DEPS = $(BOOLLIB) $(BOOLTHEORY) $(PRIMREC) $(TERMPP) \
        $(dprot $(SIGOBJ)/DB.uo) \
        $(dprot $(HOLDIR)/bin/hol)
 
-UOARGS = $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
+# TraceRecord (and its dependency TraceCompress) must be loaded into
+# hol.state0 so that trace-activate.sml can call TraceRecord.activate()
+# when Holmake --trace or bin/build --trace is used. No proofman code
+# references these modules — they are here solely to get into the heap.
+ifneq ($(KERNELID),otknl)
+TRACE_UOARGS = $(protect $(SIGOBJ)/TraceCompress) \
+               $(protect $(SIGOBJ)/TraceRecord)
+DEPS += $(dprot $(SIGOBJ)/TraceCompress.uo)
+DEPS += $(dprot $(SIGOBJ)/TraceRecord.uo)
+else
+TRACE_UOARGS =
+endif
+
+UOARGS = $(TRACE_UOARGS) \
+         $(protect $(SIGOBJ)/boolLib) proofManagerLib History goalStack \
          $(protect $(SIGOBJ)/KNametab) $(protect $(SIGOBJ)/Symtab) \
          $(protect $(SIGOBJ)/Inttab) $(protect $(SIGOBJ)/HOLsexp) \
 	 $(protect $(SIGOBJ)/ThmSetData)
