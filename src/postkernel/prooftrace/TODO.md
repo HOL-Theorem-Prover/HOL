@@ -45,24 +45,6 @@ Extend the interface:
 - Help text should clarify that `-d` recursively searches
   subdirectories for trace files
 
-### [theory-loading] Replay-aware theory loading
-
-Design documented in DESIGN.md (Replay-aware Theory Loading).
-Merge tool emits F/G provenance lines; replay builds lookup
-maps; theory loading substitutes replayed theorems in
-`disk_thm`/`disk_thm_dep`, falling back to DISK_THM otherwise.
-Single ref in Thm structure for the replay map.
-
-Remaining implementation work:
-- Emit F/G lines in MergeTrace Pass 2
-- Parse F/G lines in ReplayTrace, build replay maps
-- Add `replay_thms` ref to Thm (std-thm.ML, std-thmsig.ML)
-- Modify `disk_thm`/`disk_thm_dep` to check replay map
-- Make `incorporate_types`/`incorporate_consts` skip
-  already-existing types/consts in replay mode
-- Wire up in `--interactive` mode: replay, set ref, load
-  theories in dependency order, clear ref
-
 ### [direct-replay] Direct unmerged replay for full verification
 
 The merge→replay→load pipeline has ~2× extra .pft I/O
