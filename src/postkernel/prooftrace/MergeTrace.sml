@@ -1404,7 +1404,7 @@ fun merge {trace_paths : (string * string) list,
                 end
               else ()
               end
-          | ("NC" :: thy_s :: name_s :: ty_s :: _) =>
+          | ("C" :: thy_s :: name_s :: ty_s :: _) =>
               let val thy = unescape thy_s
                   val name = unescape name_s
                   val tyid = int_of ty_s
