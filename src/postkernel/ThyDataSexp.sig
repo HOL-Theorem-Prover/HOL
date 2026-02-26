@@ -15,6 +15,10 @@ datatype t =
        | Option of t option
        | KName of KernelSig.kernelname
 
+datatype ('a,'b) sum = inl of 'a | inr of 'b
+datatype ('a,'b,'c) sum3 = in13 of 'a | in23 of 'b | in33 of 'c
+datatype ('a,'b,'c,'d) sum4 = in14 of 'a | in24 of 'b | in34 of 'c | in44 of 'd
+
 val uptodate : t -> bool
 val compare : t * t -> order
 
@@ -91,6 +95,11 @@ val option_ed : 'a ed -> 'a option ed
 val pair_ed : 'a ed * 'b ed -> ('a * 'b) ed
 val pair3_ed : 'a ed * 'b ed * 'c ed -> ('a * 'b * 'c) ed
 val pair4_ed : 'a ed * 'b ed * 'c ed * 'd ed -> ('a * 'b * 'c * 'd) ed
+
+type 'a sed = string * 'a ed
+val tagged_sum  : 'a sed -> 'b sed -> ('a,'b) sum ed
+val tagged_sum3 : 'a sed -> 'b sed -> 'c sed -> ('a,'b,'c) sum3 ed
+val tagged_sum4 : 'a sed -> 'b sed -> 'c sed -> 'd sed -> ('a,'b,'c,'d) sum4 ed
 
 val bij_ed : ('a -> 'b) * ('b -> 'a) -> 'b ed -> 'a ed
 val inj_ed : ('a -> 'b) * ('b -> 'a option) -> 'b ed -> 'a ed

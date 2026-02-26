@@ -34,17 +34,67 @@ fun all_terms d =
         R :: concl ind :: map concl eqs @ SV @ all_terms aux
     | TAILREC {eqs,ind,R,SV,...} => R :: concl ind :: map concl eqs @ SV
 
+val tupled_suffix = "_tupled"
+
+(*---------------------------------------------------------------------------*)
+(* Partition the constants used in building a top-level defn into the        *)
+(* introduced constants and the constants used only to aid the construction. *)
+(* The latter are delete-able.                                               *)
+(*---------------------------------------------------------------------------*)
+
+fun consts_of eqs =
+  let val thms = List.concat $ map CONJUNCTS eqs
+      fun eqn_const th =
+          fst $ strip_comb $ lhs $ snd $ strip_forall $ concl th
+  in op_mk_set aconv $ map eqn_const thms end
+
+fun defn_consts defn =
+ case defn
+  of ABBREV {eqn,...} => {introduced = consts_of [eqn],support = []}
+   | PRIMREC{eqs,...} => {introduced = consts_of [eqs], support = []}
+   | NONREC {eqs,...} => {introduced = consts_of [eqs], support = []}
+   | STDREC {eqs,...} => {introduced = consts_of eqs, support = []}
+   | TAILREC {eqs,...} => {introduced = consts_of eqs, support = []}
+   | MUTREC {eqs,union,...} =>
+       let val {introduced,support} = defn_consts union
+       in {introduced = consts_of eqs,
+           support = introduced @ support} end
+   | NESTREC {eqs,aux,...} =>
+       let val {introduced,support} = defn_consts aux
+       in {introduced = consts_of eqs,
+           support = introduced @ support} end
+
+(*---------------------------------------------------------------------------*)
+(* In fact, defn_consts can miss some definitions used in support of the     *)
+(* construction of the introduced constants. There is an internal tupling    *)
+(* step that can be used by TFL to get uniform input for the wfrec thm. Then *)
+(* untupling is used to get the original argument format back. However the   *)
+(* defn datastructure doesn't hold these definitions, so we resort to diffs  *)
+(* on the theory constants before and after a definition is made.            *)
+(*---------------------------------------------------------------------------*)
+
+val delete_support =
+ let val set_of = HOLset.fromList Term.compare
+     val subtract = HOLset.difference
+     fun zap c = delete_const (fst (dest_const c)) handle HOL_ERR _ => ()
+ in fn defn => fn snap2 => fn snap1 =>
+    let val new_consts = subtract(set_of snap2,set_of snap1)
+        val {introduced,...} = defn_consts defn
+        val deleteable = subtract(new_consts,set_of introduced)
+    in HOLset.app zap deleteable end
+ end
+
 local open Portable
-      fun kind (ABBREV _)  = "abbreviation"
-        | kind (NONREC  _) = "non-recursive"
-        | kind (STDREC  _) = "recursive"
-        | kind (PRIMREC _) = "primitive recursion"
-        | kind (MUTREC  _) = "mutual recursion"
-        | kind (NESTREC _) = "nested recursion"
-        | kind (TAILREC _) = "nonterminating tail recursion"
-      fun hyps thl = HOLset.listItems
-                       (foldl (fn (th,s) => HOLset.union(hypset th, s))
-                              empty_tmset thl)
+  fun kind (ABBREV _)  = "abbreviation"
+    | kind (NONREC  _) = "non-recursive"
+    | kind (STDREC  _) = "recursive"
+    | kind (PRIMREC _) = "primitive recursion"
+    | kind (MUTREC  _) = "mutual recursion"
+    | kind (NESTREC _) = "nested recursion"
+    | kind (TAILREC _) = "nonterminating tail recursion"
+  fun hyps thl =
+      HOLset.listItems
+         (foldl (fn (th,s) => HOLset.union(hypset th, s)) empty_tmset thl)
 in
 fun pp_defn d =
   let open smpp
@@ -72,8 +122,7 @@ fun pp_defn d =
                              )
                          )
                          add_newline
-                         (Lib.enumerate 0 tcs)
-               ))
+                         (Lib.enumerate 0 tcs)))
           )
         )
    fun pp (ABBREV {eqn, ...}) =
@@ -121,7 +170,6 @@ end;
     which are held in the TypeBase.
  ---------------------------------------------------------------------------*)
 
-
 val init_non_datatype_congs =
   let open boolTheory pairTheory combinTheory
   in [LET_CONG, COND_CONG, IMP_CONG, literal_case_CONG,
@@ -149,14 +197,11 @@ fun drop_cong c =
      val _ = write_congs rst
  in
    cong
- end
- handle e => raise wrap_exn "DefnBase.drop_cong"
-    (case total dest_thy_const c
-      of NONE => "expected a constant"
-       | SOME{Thy,Name,...} =>
-           ("congruence rule for "
-            ^Lib.quote(Thy^"$"^Name)
-            ^" was not found")) e;
+ end handle HOL_ERR _ => raise ERR "drop_cong"
+   (case total dest_thy_const c
+     of NONE => "expected a constant"
+      | SOME{Thy,Name,...} => String.concat
+          ["congruence rule for ", Lib.quote(Thy^"$"^Name), " was not found"])
 
 val {export = export_cong,...} =
     ThmSetData.new_exporter {
@@ -184,6 +229,7 @@ val _ = ThmAttribute.define_abbreviation{
     reduceLib, stringLib and wordsLib.
 
    ---------------------------------------------------------------------- *)
+
 val const_eq_ref = ref Conv.NO_CONV;
 
 fun elim_triv_literal_CONV tm =

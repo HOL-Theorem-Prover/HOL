@@ -44,20 +44,19 @@ val _ = add_ML_dependency "combinpp";
 val _ = combinpp.enable_dictsyntax()
 
 val _ = combinpp.new_form {
-  left = "(|", right = "|)", upd_term_name = "UPDATE",
+  left = "(|", right = "|)",
+  upd_term_name = (“UPDATE k v f”, "UPDATE"),
   lookup_term_name = NONE
   }
 
 val _ = combinpp.new_form {
   left = UnicodeChars.lensel, right = UnicodeChars.lenser,
-  upd_term_name = "UPDATE",
+  upd_term_name = (“UPDATE k v f”, "UPDATE"),
   lookup_term_name = NONE
   }
 
-val _ = add_user_printer ("combin.updpp", “UPDATE k v f”)
-
-
-
+val s = term_to_string “UPDATE k v f”
+val _ = print ("Printing of term gives: \"" ^ s ^ "\"\n")
 
 val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = UnicodeChars.lensel}
 val _ = TeX_notation {TeX = ("\\llparenthesis", 1), hol = "(|"}
@@ -66,13 +65,16 @@ val _ = TeX_notation {TeX = ("\\rrparenthesis", 1), hol = "|)"}
 val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "↦"}
 val _ = TeX_notation {TeX = ("\\HOLTokenMapto{}", 1), hol = "|->"}
 
-local open OpenTheoryMap in
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="K"},name=(["Function"],"const")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="C"},name=(["Function"],"flip")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="I"},name=(["Function"],"id")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="o"},name=(["Function"],"o")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="S"},name=(["Function","Combinator"],"s")}
-  val _ = OpenTheory_const_name {const={Thy="combin",Name="W"},name=(["Function","Combinator"],"w")}
+local
+open OpenTheoryMap
+fun cnm s nm = OpenTheory_const_name {const={Thy="combin",Name = s}, name = nm}
+in
+  val _ = cnm "K" (["Function"],"const")
+  val _ = cnm "C" (["Function"],"flip")
+  val _ = cnm "I" (["Function"],"id")
+  val _ = cnm "o" (["Function"],"o")
+  val _ = cnm "S" (["Function","Combinator"],"s")
+  val _ = cnm "W" (["Function","Combinator"],"w")
 end
 
 (*---------------------------------------------------------------------------*

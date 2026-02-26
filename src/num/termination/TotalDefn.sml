@@ -51,6 +51,15 @@ val _ = Feedback.register_btrace
 val auto_tgoal = ref true
 val _ = Feedback.register_btrace("Definition.auto Defn.tgoal", auto_tgoal)
 
+val deleting_support = ref true
+val _ = Feedback.register_btrace
+          ("Definition.delete support defs", deleting_support)
+
+fun delete_support defn s2 s1 =
+   if !deleting_support then
+      DefnBase.delete_support defn s2 s1
+   else ()
+
 (*---------------------------------------------------------------------------*)
 (* Misc. stuff that should be in Lib probably                                *)
 (*---------------------------------------------------------------------------*)
@@ -700,8 +709,7 @@ local open Defn
       lztrace(1, "All candidates failed.\n", fn () => "\n")
  in
   fun located_defnDefine loc defn =
-    let
-       val V = params_of defn
+   let val V = params_of defn
        val _ = if not (null V) then fvs_on_rhs V else ()  (* can fail *)
        val (defn',opt) =
            if not (should_try_to_prove_termination defn V) then
@@ -721,10 +729,11 @@ local open Defn
                   (report_failure_of_candidates();
                    termination_proof_failed loc defn)
            end
-    in
+   in
        save_defn_at loc defn'
-       ; (LIST_CONJ (map GEN_ALL (eqns_of defn')), ind_of defn', opt)
-    end
+     ; (LIST_CONJ (map GEN_ALL (eqns_of defn')),
+        ind_of defn', opt)
+   end
   val defnDefine = located_defnDefine DB.Unknown
 end
 
@@ -733,17 +742,23 @@ fun located_primDefine loc = located_defnDefine loc
 val primDefine = located_primDefine DB.Unknown
 
 (*---------------------------------------------------------------------------*)
-(* Make a definition, giving the name to store things under. If anything     *)
-(* fails in the process, remove any constants introduced by the definition.  *)
+(* Make a definition, giving the name to store things under. Try to          *)
+(* automatically prove termination, if needed.                                *)
 (*---------------------------------------------------------------------------*)
 
 fun def_n_ind (def, indopt, NONE) = (def, NONE)
   | def_n_ind (def,indopt, SOME _) = (def, indopt)
 
 fun located_xDefine loc stem q =
- Parse.try_grammar_extension
-   (Theory.try_theory_extension
-       (def_n_ind o located_primDefine loc o Defn.Hol_defn stem)) q
+  let fun thunk() =
+      let val snap1 = thy_consts (current_theory())
+          val defn = Defn.Hol_defn stem q
+          val result = def_n_ind (located_primDefine loc defn)
+          val snap2 = thy_consts (current_theory())
+      in delete_support defn snap2 snap1 ;
+         result
+      end
+  in Parse.try_grammar_extension thunk () end
   handle e => render_exn (wrap_exn "TotalDefn" "xDefine" e);
 
 val xDefine = located_xDefine DB.Unknown
@@ -781,7 +796,8 @@ end
 fun located_tDefine loc stem q tac =
  let open Defn
      fun thunk() =
-       let val defn = Hol_defn stem q
+       let val snap1 = thy_consts (current_theory())
+           val defn = Hol_defn stem q
            val ps = params_of defn
            val _ = null ps orelse !allow_schema_definition orelse
                    complain_about_rhsfvs "tDefine" ps
@@ -795,16 +811,17 @@ fun located_tDefine loc stem q tac =
              Theory.upd_binding bind (DB_dtype.updsrcloc (K loc));
              (def, NONE)
           end
-        else let val (def,ind) = with_flag (proofManagerLib.chatting,false)
-                                           Defn.tprove0(defn,tac)
-                 val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
-             in Defn.store_at loc (stem,def,ind) ;
-                (def, SOME ind)
-             end
+        else
+        let val (def,ind) =
+              with_flag (proofManagerLib.chatting,false) Defn.tprove0(defn,tac)
+           val def = def |> CONJUNCTS |> map GEN_ALL |> LIST_CONJ
+        in
+            delete_support defn (thy_consts (current_theory())) snap1
+          ; Defn.store_at loc (stem,def,ind)
+          ; (def, SOME ind) end
        end
  in
-  Parse.try_grammar_extension
-    (Theory.try_theory_extension thunk) ()
+  Parse.try_grammar_extension thunk ()
   handle e => render_exn (wrap_exn "TotalDefn" "tDefine" e)
  end
 

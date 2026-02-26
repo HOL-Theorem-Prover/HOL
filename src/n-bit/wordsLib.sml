@@ -2703,7 +2703,7 @@ fun add_word_cast_printer () =
 
 fun remove_word_cast_printer () =
    ( set_trace "word cast printing" 0
-   ; Parse.remove_user_printer "wordspp.words_cast_printer"
+   ; Parse.remove_user_printer ("wordspp.words_cast_printer", “f:'b word”)
    ; ()
    )
 

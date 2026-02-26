@@ -8,44 +8,85 @@ val mapsto_special = "  combinpp.leftarrow"
 val toplevel_updname = "  combinpp.top"
 
 datatype dict_delta = DD of { left : string, right : string,
-                              upd_term_name : string,
-                              lookup_term_name : string option }
+                              upd_term_name : term * string,
+                              lookup_term_name : (term * string) option }
+fun unicode_free_dd (DD {left, right, ...}) =
+    not (UTF8.contains_nonascii left) andalso not (UTF8.contains_nonascii right)
+datatype delta = ADD of dict_delta | RM of string
+
+fun tstr_eq (t1,s1) (t2,s2) = s1 = s2 andalso t1 ~~ t2
+fun opt_eq eq NONE NONE = true
+  | opt_eq eq (SOME x) (SOME y) = eq x y
+  | opt_eq eq _ _ = false
+
+fun ddequal (DD dd1) (DD dd2) =
+    #left dd1 = #left dd2 andalso #right dd1 = #right dd2 andalso
+    tstr_eq (#upd_term_name dd1) (#upd_term_name dd2) andalso
+    opt_eq tstr_eq (#lookup_term_name dd1) (#lookup_term_name dd2)
 
 local open ThyDataSexp
 in
-val (enc,dec) = bij_ed (
+val dded as (ddenc,dddec) = bij_ed (
       (fn DD {left=l,right=r,upd_term_name=utn,lookup_term_name=ltn} =>
           (l,r,utn,ltn)),
       (fn (l,r,utn,ltn) => DD {left = l, right = r, upd_term_name = utn,
                                lookup_term_name = ltn})
     ) (
       pair4_ed (
-        string_ed, string_ed, string_ed, option_ed string_ed
+        string_ed, string_ed, pair_ed(term_ed, string_ed),
+        option_ed(pair_ed (term_ed, string_ed))
       )
     )
+val (delta_enc,delta_dec) = bij_ed (
+      (fn ADD dd => inl dd | RM s => inr s),
+      (fn inl dd => ADD dd | inr s => RM s)
+    ) (tagged_sum ("add", dded) ("remove", string_ed))
 end
 
 type pppdb = {parse: dict_delta Symtab.table,
-              print_upd: dict_delta Symtab.table,
-              print_lookup: dict_delta Symtab.table}
+              print_upd: dict_delta list Symtab.table,
+              print_lookup: dict_delta list Symtab.table}
 val empty_pppdb : pppdb = {parse = Symtab.empty, print_upd = Symtab.empty,
                            print_lookup = Symtab.empty}
 
-fun pppdb_apply (dd as DD{left,right,upd_term_name=utn,lookup_term_name=ltn})
-                ({parse,print_upd,print_lookup} : pppdb) : pppdb =
+fun pppdb_apply_add
+      (dd as DD{left,right,upd_term_name=utn,lookup_term_name=ltn})
+      ({parse,print_upd,print_lookup} : pppdb) : pppdb =
     {parse = Symtab.update(left,dd) parse,
-     print_upd = Symtab.update(utn,dd) print_upd,
-     print_lookup = case ltn of NONE => print_lookup
-                              | SOME s => Symtab.update(s,dd) print_lookup}
+     print_upd = Symtab.update_list ddequal (#2 utn,dd) print_upd,
+     print_lookup =
+     case ltn of
+         NONE => print_lookup
+       | SOME(_,s) => Symtab.update_list ddequal (s,dd) print_lookup}
+
+fun pppdb_apply_rm s {parse,print_upd,print_lookup} =
+    let
+      fun foldthis (p as (k, dds0)) tab0 =
+          let val dds = List.filter (fn DD d => #left d = s) dds0
+          in
+            if null dds then tab0
+            else Symtab.update (k,dds) tab0
+          end
+      fun rebuild tab0 = Symtab.fold foldthis tab0
+    in
+      {parse = Symtab.delete s parse handle Symtab.UNDEF _ => parse,
+       print_upd = Symtab.build (rebuild print_upd),
+       print_lookup = Symtab.build (rebuild print_lookup)}
+    end
+
+fun apply_delta (ADD dd) db = pppdb_apply_add dd db
+  | apply_delta (RM s) db = pppdb_apply_rm s db
+
 val pppdata_info = {
   tag = "dictppp", initial_values = [("min", empty_pppdb)],
-  apply_delta = pppdb_apply
+  apply_delta = apply_delta
 }
-val {DB, record_delta, get_global_value, ...} = AncestryData.fullmake {
+val {DB, record_delta, get_global_value, update_global_value,...} =
+    AncestryData.fullmake {
       adinfo = pppdata_info,
       uptodate_delta = fn _ => true,
-      sexps = {dec = dec, enc = enc},
-      globinfo = {apply_to_global = pppdb_apply, thy_finaliser = NONE,
+      sexps = {dec = delta_dec, enc = delta_enc},
+      globinfo = {apply_to_global = apply_delta, thy_finaliser = NONE,
                   initial_value = empty_pppdb}
     }
 
@@ -132,8 +173,9 @@ fun upd_processor0 (DB:pppdb) a =
                case Symtab.lookup(#parse DB) left of
                    NONE => raise ERR "upd_processor" (locn_of_absyn a)
                                  ("No stored info for " ^ left)
-                 | SOME (DD {lookup_term_name, upd_term_name, ...}) =>
-                   process_updates (upd_term_name, lookup_term_name) arg1 arg2
+                 | SOME (DD {lookup_term_name, upd_term_name = (_, unm), ...}) =>
+                   process_updates (unm, Option.map #2 lookup_term_name)
+                                   arg1 arg2
              end)
       | _ => a
 
@@ -143,44 +185,52 @@ val _ = term_grammar.userSyntaxFns.register_absynPostProcessor
           {name = "combin.UPDATE",
            code = upd_processor}
 
-fun has_name_by_parser G s tm = let
-  open GrammarSpecials
-  val oinfo = term_grammar.overload_info G
-in
-  case dest_term tm of
-      VAR(vnm, _) => vnm = s orelse
-                     (case dest_fakeconst_name vnm of
-                          SOME{fake,...} => fake = s
-                        | NONE => false)
-    | _ =>
-      (case Overload.info_for_name oinfo s of
-           NONE => false
-         | SOME {actual_ops,...} =>
-             List.exists (fn t => can (match_term t) tm) actual_ops)
-end
-fun isupdate_tm G t = has_name_by_parser G "UPDATE" t
-
-fun strip_upd G t =
-    let
-      fun recurse A t =
-          case strip_comb t of
-              (u, [k,v,f]) => if isupdate_tm G u then
-                                recurse ((k,v)::A) f
-                              else (List.rev A, t)
-            | _ => (List.rev A, t)
-    in
-      recurse [] t
-    end
-
-fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
+fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm
+    =
     let
       open term_pp_utils term_pp_types smpp
-      val unicodep = get_tracefn "PP.avoid_unicode" () = 0
-      val (kvs, f) = strip_upd tmg tm
-      val _ = not (null kvs) orelse raise UserPP_Failed
+      val (hdc,_) = strip_comb tm
+      val {Thy,Name,...} = dest_thy_const hdc handle HOL_ERR _ =>
+        {Thy = "VAR", Name = #1 (dest_var hdc), Ty = bool}
+      val avoid_unicode = get_tracefn "PP.avoid_unicode" () = 1
+      val oinfo = term_grammar.overload_info tmg
+      fun oi_strip t =
+          case Overload.oi_strip_comb oinfo t of
+              SOME (f, [k,v,f0]) =>
+              (case GrammarSpecials.dest_fakeconst_name (#1 (dest_var f)) of
+                   SOME {fake, ...} => SOME (fake, (k,v), f0)
+                 | _ => NONE)
+            | _ => NONE
+      val (updname, (k,v), next) =
+          case oi_strip tm of SOME quad => quad | NONE => raise UserPP_Failed
+      val {print_upd,...} = get_global_value()
+
+      val candidate_dds =
+          let val base = Symtab.lookup_list print_upd updname
+          in
+            if avoid_unicode then List.filter unicode_free_dd base
+            else base
+          end
+      val (ld_s, rd_s) =
+          case candidate_dds of
+              [] => raise UserPP_Failed
+            | DD d :: _ => (#left d, #right d)
+
+      fun strip_upd t =
+          let
+            fun recurse A t =
+                case oi_strip t of
+                    SOME (u,(k,v),f) => if u = updname then
+                                           recurse ((k,v)::A) f
+                                         else (List.rev A, t)
+                  | NONE => (List.rev A, t)
+          in
+            recurse [(k,v)] t
+          end
+
+      val (kvs, f) = strip_upd next
       val {add_string,add_break,...} = ppfns : term_pp_types.ppstream_funs
-      val (arrow_s,ld_s,rd_s) = if unicodep then ("↦", "⦇", "⦈")
-                                else ("|->", "(|", "|)")
+      val arrow_s = if avoid_unicode then "|->" else "↦"
       val paren =
           case lgr of
               Prec(i, _) => if i > 2100 then
@@ -217,7 +267,7 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
     end
 
 val _ = term_grammar.userSyntaxFns.register_userPP
-          {name = "combin.updpp", code = upd_printer}
+          {name = "combinpp.general_printer", code = upd_printer};
 
 fun enable_dictsyntax () = (
       set_mapped_fixity {fixity = Infix(NONASSOC,100),
@@ -246,9 +296,19 @@ fun addlform l r =
 
 
 
-fun new_form (r as {left,right,upd_term_name,lookup_term_name}) = (
-  addlform left right;
-  record_delta (DD r)
+fun new_form (r as {left,right,upd_term_name = (updt,updnm), lookup_term_name}) =
+    let
+      val d = ADD (DD r)
+    in
+      addlform left right;
+      record_delta d;
+      update_global_value (apply_delta d);
+      add_user_printer("combinpp.general_printer", updt)
+    end
+
+fun remove_paren_syntax lparen_name = (
+  remove_termtok {tok = lparen_name, term_name = toplevel_updname ^ lparen_name};
+  record_delta (RM lparen_name)
 )
 
 end (* struct *)

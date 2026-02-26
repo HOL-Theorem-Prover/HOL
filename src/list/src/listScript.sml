@@ -235,14 +235,6 @@ Proof
   REWRITE_TAC[EL_def]
 QED
 
-(* array subscript style brackets are U+2772 and U+2773 *)
-val _ = combinpp.new_form {
-  left = "❲", right = "❳",
-  upd_term_name = "fLUPDATE", lookup_term_name = SOME "EL"
-  }
-val _ = TeX_notation { hol = "❲", TeX = ("\\HOLTokenLeftELbracket{}", 1)}
-val _ = TeX_notation { hol = "❳", TeX = ("\\HOLTokenRightELbracket{}", 1)}
-
 
 (* ---------------------------------------------------------------------*)
 (* Definition of a function                                             *)
@@ -3846,6 +3838,15 @@ Proof
 QED
 
 Overload fLUPDATE = “λk v l. LUPDATE v k l”
+(* array subscript style brackets are U+2772 and U+2773 *)
+val _ = combinpp.new_form {
+  left = "❲", right = "❳",
+  upd_term_name = (“LUPDATE v k l”, "fLUPDATE"),
+  lookup_term_name = SOME (“EL i l”, "EL")
+  }
+val _ = TeX_notation { hol = "❲", TeX = ("\\HOLTokenLeftELbracket{}", 1)}
+val _ = TeX_notation { hol = "❳", TeX = ("\\HOLTokenRightELbracket{}", 1)}
+
 
 val _ = DefnBase.register_indn $ Prim_rec.gen_indthm
            {lookup_ind = TypeBase.induction_of} LUPDATE_DEF
