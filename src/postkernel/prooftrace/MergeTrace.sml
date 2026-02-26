@@ -3,7 +3,7 @@
 
    Two-pass algorithm:
    Pass 1: determine live entries per file via backward reachability,
-           following DISK_THM and heap chain references across files
+           following NAME/LOAD and heap chain references across files
    Pass 2: re-read needed files in dependency order, dedup types/terms,
            remap all IDs, write merged output
 
@@ -12,7 +12,7 @@
    - Y and T entry IDs are sequential per-file (0-based)
    - Heap traces are discovered by following H lines
    - Types and terms are globally deduplicated across files
-   - Each non-DISK_THM P entry gets a fresh sequential global ID
+   - Each non-NAME/LOAD P entry gets a fresh sequential global ID
 *)
 
 structure MergeTrace :> MergeTrace =
@@ -40,8 +40,8 @@ fun extract_parent_ids rule args =
   in case rule of
     (* No parents *)
       "REFL" => [] | "ASSUME" => [] | "BETA_CONV" => []
-    | "ALPHA" => [] | "AXIOM" => [] | "DISK_THM" => []
-    | "DISK_DEP" => [] | "ORACLE" => []
+    | "ALPHA" => [] | "AXIOM" => [] | "NAME" => []
+    | "LOAD" => [] | "ORACLE" => []
     (* Single parent at position 0 *)
     | "ABS" => [ai 0] | "AP_TERM" => [ai 0] | "AP_THM" => [ai 0]
     | "SYM" => [ai 0] | "DISCH" => [ai 0] | "SPEC" => [ai 0]
@@ -168,19 +168,17 @@ type file_data = {
   n_types : int,
   (* Exports: name -> trace_id *)
   exports : (string, int) Redblackmap.dict,
-  (* Depid exports: depid -> trace_id *)
-  dep_exports : int PIntMap.t,
-  (* DISK_THM entries: (trace_id, theory, name) *)
-  disk_thms : (int * string * string) list,
-  (* DISK_DEP entries: (trace_id, theory, depid) *)
-  disk_deps : (int * string * int) list,
+  (* NAME entries: (trace_id, theory, name) *)
+  name_refs : (int * string * string) list,
+  (* LOAD entries: (trace_id, theory, src_trace_id) *)
+  load_refs : (int * string * int) list,
   (* DEF_SPEC entries: (thy, name) -> trace_id *)
   const_defs : (string * string, int) Redblackmap.dict,
   (* DEF_TYOP entries: (thy, tyop) -> trace_id *)
   type_defs : (string * string, int) Redblackmap.dict,
-  (* NC entries: (thy, name) -> type_id *)
+  (* C entries: (thy, name) -> type_id *)
   const_decls : (string * string, int) Redblackmap.dict,
-  (* NY entries: (thy, name) -> arity *)
+  (* O entries: (thy, name) -> arity *)
   type_decls : (string * string, int) Redblackmap.dict,
   (* T entries that reference defined constants: term_id -> (thy, name) *)
   t_const_refs : (int * (string * string)) list,
@@ -208,9 +206,8 @@ fun read_file_data path : file_data =
     val has_name = ref false
     val exports_ref = ref (Redblackmap.mkDict String.compare
       : (string, int) Redblackmap.dict)
-    val dep_exports_ref = ref (PIntMap.empty : int PIntMap.t)
-    val disk_thms_rev = ref ([] : (int * string * string) list)
-    val disk_deps_rev = ref ([] : (int * string * int) list)
+    val name_refs_rev = ref ([] : (int * string * string) list)
+    val load_refs_rev = ref ([] : (int * string * int) list)
     val const_defs_ref = ref (Redblackmap.mkDict thyname_cmp
       : (string * string, int) Redblackmap.dict)
     val type_defs_ref = ref (Redblackmap.mkDict thyname_cmp
@@ -303,14 +300,14 @@ fun read_file_data path : file_data =
              (if !p_min_id < 0 then p_min_id := id else ());
              p_max_id := Int.max(!p_max_id, id);
              (case rule of
-                "DISK_THM" =>
-                  disk_thms_rev := (id, unescape (List.nth(args, 0)),
+                "NAME" =>
+                  name_refs_rev := (id, unescape (List.nth(args, 0)),
                                     unescape (List.nth(args, 1)))
-                                   :: !disk_thms_rev
-              | "DISK_DEP" =>
-                  disk_deps_rev := (id, unescape (List.nth(args, 0)),
+                                   :: !name_refs_rev
+              | "LOAD" =>
+                  load_refs_rev := (id, unescape (List.nth(args, 0)),
                                     int_of (List.nth(args, 1)))
-                                   :: !disk_deps_rev
+                                   :: !load_refs_rev
               | "DEF_SPEC" =>
                   let val thyname = unescape (List.nth(args, 1))
                       val cnames = map unescape (List.drop(args, 2))
@@ -332,7 +329,7 @@ fun read_file_data path : file_data =
                     PIntMap.add id () (!compute_ids_ref)
               | _ => ())
           end
-      | ("C" :: args) =>
+      | ("I" :: args) =>
           let
             fun ai n = int_of (List.nth(args, n))
             val type_ids = [ai 0, ai 1]
@@ -349,7 +346,7 @@ fun read_file_data path : file_data =
           in
             c_deps_ref := SOME (parent_ids, term_ids, type_ids)
           end
-      | ("NC" :: thy_s :: name_s :: ty_s :: _) =>
+      | ("C" :: thy_s :: name_s :: ty_s :: _) =>
           let val thy = unescape thy_s
               val name = unescape name_s
               val tyid = int_of ty_s
@@ -357,7 +354,7 @@ fun read_file_data path : file_data =
                Redblackmap.insert(!const_decls_ref,
                                    (thy, name), tyid)
           end
-      | ("NY" :: thy_s :: name_s :: arity_s :: _) =>
+      | ("O" :: thy_s :: name_s :: arity_s :: _) =>
           let val thy = unescape thy_s
               val name = unescape name_s
               val arity = int_of arity_s
@@ -370,9 +367,6 @@ fun read_file_data path : file_data =
       | ("E" :: name :: id_s :: _) =>
           exports_ref := Redblackmap.insert(!exports_ref,
                           unescape name, int_of id_s)
-      | ("D" :: depid_s :: id_s :: _) =>
-          dep_exports_ref := PIntMap.add (int_of depid_s) (int_of id_s)
-                              (!dep_exports_ref)
       | _ => ()
       end
 
@@ -440,9 +434,8 @@ fun read_file_data path : file_data =
       n_terms = nt,
       n_types = ny,
       exports = !exports_ref,
-      dep_exports = !dep_exports_ref,
-      disk_thms = rev (!disk_thms_rev),
-      disk_deps = rev (!disk_deps_rev),
+      name_refs = rev (!name_refs_rev),
+      load_refs = rev (!load_refs_rev),
       const_defs = !const_defs_ref,
       type_defs = !type_defs_ref,
       const_decls = !const_decls_ref,
@@ -575,7 +568,7 @@ fun mark_live (data : file_data) (prev : liveness)
               (Array.sub(#t_type_deps dp, id));
             let val def = Array.sub(t_def, id)
             in if def >= 0 then mark_thm def
-               else (* No DEF_SPEC; check for NC — mark its type live *)
+               else (* No DEF_SPEC; check for C decl — mark its type live *)
                  let val nc = Array.sub(t_nc, id)
                  in if nc >= 0 then mark_type nc else () end
             end)
@@ -901,7 +894,7 @@ fun merge {trace_paths : (string * string) list,
           Redblackset.add(!processed_files, path);
 
         (* Enqueue ancestor DEF_TYOP for unresolved type ops.
-           Silently skip if not found (NC/NY handled separately). *)
+           Silently skip if not found (C/O handled separately). *)
         List.app (fn (anc_thy, anc_tyop) =>
           case Redblackmap.peek(thy_path_map, anc_thy) of
             SOME anc_path =>
@@ -915,7 +908,7 @@ fun merge {trace_paths : (string * string) list,
           unresolved_tyops;
 
         (* Enqueue ancestor DEF_SPEC for unresolved constants.
-           Silently skip if not found (NC/NY handled separately). *)
+           Silently skip if not found (C/O handled separately). *)
         List.app (fn (anc_thy, anc_name) =>
           case Redblackmap.peek(thy_path_map, anc_thy) of
             SOME anc_path =>
@@ -928,11 +921,11 @@ fun merge {trace_paths : (string * string) list,
           | NONE => ())
           unresolved_consts;
 
-        (* Only enqueue DISK_THM/DISK_DEP for NEWLY live entries
+        (* Only enqueue NAME/LOAD for NEWLY live entries
            (not in prev_lv but in lv) to avoid redundant re-processing *)
         let val prev_live_p = #live_p prev_lv
         in
-        (* Enqueue DISK_THM ancestor exports *)
+        (* Enqueue NAME ancestor exports *)
         List.app (fn (id, anc_thy, anc_name) =>
           if PIntMap.mem id (#live_p lv) andalso
              not (PIntMap.mem id prev_live_p) then
@@ -948,26 +941,19 @@ fun merge {trace_paths : (string * string) list,
             | NONE =>
                 err ("WARNING: no trace for theory " ^
                      anc_thy ^ "\n")
-          else ()) (#disk_thms data);
+          else ()) (#name_refs data);
 
-        (* Enqueue DISK_DEP ancestor depid exports *)
-        List.app (fn (id, anc_thy, anc_depid) =>
+        (* Enqueue LOAD ancestor theorems by trace_id *)
+        List.app (fn (id, anc_thy, anc_trace_id) =>
           if PIntMap.mem id (#live_p lv) andalso
              not (PIntMap.mem id prev_live_p) then
             case Redblackmap.peek(thy_path_map, anc_thy) of
               SOME anc_path =>
-                let val anc_data = load_file anc_path
-                in case SOME (PIntMap.find anc_depid (#dep_exports anc_data))
-                        handle PIntMap.NotFound => NONE of
-                     SOME thm_id => enqueue (anc_path, [thm_id])
-                   | NONE =>
-                     err ("WARNING: dep export " ^ anc_thy ^
-                          ".#" ^ its anc_depid ^ " not found\n")
-                end
+                enqueue (anc_path, [anc_trace_id])
             | NONE =>
                 err ("WARNING: no trace for theory " ^
                      anc_thy ^ "\n")
-          else ()) (#disk_deps data)
+          else ()) (#load_refs data)
         end;
 
         (* Enqueue unresolved heap parent trace_ids *)
@@ -1036,16 +1022,16 @@ fun merge {trace_paths : (string * string) list,
          drain ())
     val _ = drain ()
 
-    (* --- Resolve NC/NY for live constants/types ---
+    (* --- Resolve C/O for live constants/types ---
 
        After the main worklist drains, scan all processed files for
        live T/Y entries whose constants/types have no DEF_SPEC/DEF_TYOP
-       anywhere. For those, find the NC/NY in an ancestor file and
-       ensure that file is included. For NC, also mark its type live
+       anywhere. For those, find the C/O in an ancestor file and
+       ensure that file is included. For C, also mark its type live
        in the ancestor file (which may cascade, requiring another
        drain). *)
 
-    (* Check if a constant (thy, name) has a DEF_SPEC or NC in its
+    (* Check if a constant (thy, name) has a DEF_SPEC or C in its
        defining theory's trace file. Only loads that one file. *)
     fun has_const_resolution (thy, name) =
       case Redblackmap.peek(thy_path_map, thy) of
@@ -1067,7 +1053,7 @@ fun merge {trace_paths : (string * string) list,
              isSome (Redblackmap.peek(#type_decls d, (thy, tyop)))
           end
 
-    (* For each processed file, find live constants/types needing NC/NY *)
+    (* For each processed file, find live constants/types needing C/O *)
     val needed_ncs = ref (Redblackset.empty thyname_cmp)
     val needed_nys = ref (Redblackset.empty thyname_cmp)
     val _ = List.app (fn path =>
@@ -1082,7 +1068,7 @@ fun merge {trace_paths : (string * string) list,
               SOME _ => () (* local DEF_SPEC — already handled *)
             | NONE =>
                 case Redblackmap.peek(#const_decls data, (thy, name)) of
-                  SOME _ => () (* local NC — already in this file *)
+                  SOME _ => () (* local C — already in this file *)
                 | NONE =>
                     if has_const_resolution (thy, name)
                     then needed_ncs :=
@@ -1148,15 +1134,15 @@ fun merge {trace_paths : (string * string) list,
        files (both heap and theory traces).
 
        Dependencies:
-       - DISK_THM/DISK_DEP in any file -> the theory file for thy
+       - NAME/LOAD in any file -> the theory file for thy
        - Live type/const refs with non-local DEF_TYOP/DEF_SPEC ->
          the theory file containing the definition
        - Heap ancestry: a file with H line depends on its parent heap
          (parent heap must be written first so its P entries are in
          heap_thm_map when the child is written)
 
-       Theory files that a heap's DISK_THMs reference must be written
-       before the heap, not after. *)
+       Theory files that a heap's NAME/LOAD entries reference must be
+       written before the heap, not after. *)
 
     val all_files = Redblackset.listItems (!processed_files)
 
@@ -1179,18 +1165,18 @@ fun merge {trace_paths : (string * string) list,
         val data = load_file path
         val lv = case Redblackmap.peek(!file_liveness, path) of
             SOME lv => lv | NONE => raise ERR "merge" "no liveness"
-        (* DISK_THM deps -> theory file paths *)
+        (* NAME deps -> theory file paths *)
         val thm_file_deps = List.mapPartial (fn (id, anc_thy, _) =>
           if PIntMap.mem id (#live_p lv) then
             Redblackmap.peek(thy_to_path, anc_thy)
           else NONE)
-          (#disk_thms data)
-        (* DISK_DEP deps -> theory file paths *)
+          (#name_refs data)
+        (* LOAD deps -> theory file paths *)
         val dep_file_deps = List.mapPartial (fn (id, anc_thy, _) =>
           if PIntMap.mem id (#live_p lv) then
             Redblackmap.peek(thy_to_path, anc_thy)
           else NONE)
-          (#disk_deps data)
+          (#load_refs data)
         (* Type/const def deps -> theory file paths.
            If a live type/const references a non-local DEF_TYOP/DEF_SPEC,
            the ancestor theory must be written first. *)
@@ -1263,15 +1249,15 @@ fun merge {trace_paths : (string * string) list,
     val global_tm_id = ref 0
     val global_thm_id = ref 0
 
-    (* (theory, name) -> global thm id, for resolving DISK_THM *)
+    (* (theory, name) -> global thm id, for resolving NAME *)
     val ancestor_exports : (string * string, int) Redblackmap.dict ref =
       ref (Redblackmap.mkDict thyname_cmp)
 
-    (* (theory, depid) -> global thm id, for resolving DISK_DEP *)
+    (* (theory, trace_id) -> global thm id, for resolving LOAD *)
     fun thyint_cmp ((t1,i1) : string*int, (t2,i2)) =
       case String.compare(t1,t2) of EQUAL => Int.compare(i1,i2)
                                    | ord => ord
-    val ancestor_dep_exports : (string * int, int) Redblackmap.dict ref =
+    val ancestor_thm_map : (string * int, int) Redblackmap.dict ref =
       ref (Redblackmap.mkDict thyint_cmp)
 
     (* (file_path, trace_id) -> global thm id, for resolving
@@ -1422,12 +1408,12 @@ fun merge {trace_paths : (string * string) list,
               let val thy = unescape thy_s
                   val name = unescape name_s
                   val tyid = int_of ty_s
-              in (* Emit NC if this constant is needed and has no
+              in (* Emit C if this constant is needed and has no
                     DEF_SPEC (locally or globally) *)
                 if Redblackset.member(!needed_ncs, (thy, name)) orelse
                    (case Redblackmap.peek(#const_decls data, (thy, name)) of
                       SOME _ =>
-                        (* Local NC — emit if any live T refs this const *)
+                        (* Local C — emit if any live T refs this const *)
                         List.exists (fn (tid, k) =>
                           k = (thy, name) andalso
                           tid < Array.length live_t andalso
@@ -1435,11 +1421,11 @@ fun merge {trace_paths : (string * string) list,
                           (#t_const_refs data)
                     | NONE => false)
                 then TextIO.output(ostrm,
-                       "NC " ^ esc thy ^ " " ^ esc name ^
+                       "C " ^ esc thy ^ " " ^ esc name ^
                        " " ^ its (ry tyid) ^ "\n")
                 else ()
               end
-          | ("NY" :: thy_s :: name_s :: arity_s :: _) =>
+          | ("O" :: thy_s :: name_s :: arity_s :: _) =>
               let val thy = unescape thy_s
                   val name = unescape name_s
                   val arity = int_of arity_s
@@ -1453,11 +1439,11 @@ fun merge {trace_paths : (string * string) list,
                           (#y_tyop_refs data)
                     | NONE => false)
                 then TextIO.output(ostrm,
-                       "NY " ^ esc thy ^ " " ^ esc name ^
+                       "O " ^ esc thy ^ " " ^ esc name ^
                        " " ^ arity_s ^ "\n")
                 else ()
               end
-          | ("P" :: id_s :: "DISK_THM" :: args) =>
+          | ("P" :: id_s :: "NAME" :: args) =>
               let val id = int_of id_s
               in if PIntMap.mem id live_p then
                 let val anc_thy = unescape (List.nth(args, 0))
@@ -1468,24 +1454,24 @@ fun merge {trace_paths : (string * string) list,
                        p_remap :=
                          PIntMap.add id gid (!p_remap)
                    | NONE =>
-                     err ("WARNING: unresolved DISK_THM " ^
+                     err ("WARNING: unresolved NAME " ^
                           anc_thy ^ "." ^ anc_name ^ "\n")
                 end
               else ()
               end
-          | ("P" :: id_s :: "DISK_DEP" :: args) =>
+          | ("P" :: id_s :: "LOAD" :: args) =>
               let val id = int_of id_s
               in if PIntMap.mem id live_p then
                 let val anc_thy = unescape (List.nth(args, 0))
-                    val anc_depid = int_of (List.nth(args, 1))
-                in case Redblackmap.peek(!ancestor_dep_exports,
-                                         (anc_thy, anc_depid)) of
+                    val anc_trace_id = int_of (List.nth(args, 1))
+                in case Redblackmap.peek(!ancestor_thm_map,
+                                         (anc_thy, anc_trace_id)) of
                      SOME gid =>
                        p_remap :=
                          PIntMap.add id gid (!p_remap)
                    | NONE =>
-                     err ("WARNING: unresolved DISK_DEP " ^
-                          anc_thy ^ ".#" ^ its anc_depid ^ "\n")
+                     err ("WARNING: unresolved LOAD " ^
+                          anc_thy ^ ".#" ^ its anc_trace_id ^ "\n")
                 end
               else ()
               end
@@ -1505,7 +1491,7 @@ fun merge {trace_paths : (string * string) list,
                 end
               else ()
               end
-          | ("C" :: args) =>
+          | ("I" :: args) =>
               if !live_c then
               let
                 fun ai n = int_of (List.nth(args, n))
@@ -1522,7 +1508,7 @@ fun merge {trace_paths : (string * string) list,
                             (n ^ " " ^ its (rp (int_of p))) :: go r
                         | go _ = []
                   in go rest2 end
-              in TextIO.output(ostrm, "C " ^ cy ^ " " ^ ny' ^ " " ^
+              in TextIO.output(ostrm, "I " ^ cy ^ " " ^ ny' ^ " " ^
                    String.concatWith " " cvals ^
                    (if null char_pairs then ""
                     else " " ^ String.concatWith " " char_pairs) ^
@@ -1553,26 +1539,24 @@ fun merge {trace_paths : (string * string) list,
           | NONE => ())
           (#exports data);
 
-        (* Register this file's dep exports in ancestor_dep_exports *)
-        PIntMap.app (fn (depid, local_id) =>
-          case rp_peek local_id of
-            SOME gid =>
-              ancestor_dep_exports :=
-                Redblackmap.insert(!ancestor_dep_exports,
-                                   (#thy_name data, depid), gid)
-          | NONE => ())
-          (#dep_exports data);
-
-        (* If this is a heap trace, register all its live P entries
-           in heap_thm_map so theory scripts (and later heaps)
-           can resolve parent references into this heap *)
+        (* Register this file's P entries for cross-file resolution.
+           Theory traces: register in ancestor_thm_map (for LOAD resolution).
+           Heap traces: register in heap_thm_map (for parent trace_id resolution). *)
         if #is_heap data then
           PIntMap.app (fn (trace_id, ()) =>
             case rp_peek trace_id of
               SOME gid => heap_thm_insert (path, trace_id, gid)
             | NONE => ())
             live_p
-        else ()
+        else
+          PIntMap.app (fn (trace_id, ()) =>
+            case rp_peek trace_id of
+              SOME gid =>
+                ancestor_thm_map :=
+                  Redblackmap.insert(!ancestor_thm_map,
+                                     (#thy_name data, trace_id), gid)
+            | NONE => ())
+            live_p
       end
 
     val _ = List.app (fn path =>

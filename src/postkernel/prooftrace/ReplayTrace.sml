@@ -159,13 +159,13 @@ fun replay_file path =
                    map int_of arg_ids))
 
       (* --- Constant and type declarations --- *)
-      | ["NC", thy_s, name_s, ty_s] =>
+      | ["C", thy_s, name_s, ty_s] =>
           let val t = ty (int_of ty_s)
           in Term.prim_new_const {Thy=unescape thy_s,
                                   Name=unescape name_s} t;
              ()
           end
-      | ["NY", thy_s, name_s, arity_s] =>
+      | ["O", thy_s, name_s, arity_s] =>
           (Type.prim_new_type {Thy=unescape thy_s,
                                Tyop=unescape name_s}
                               (int_of arity_s);
@@ -299,29 +299,29 @@ fun replay_file path =
                     val c = tm (ai 1)
                     val hs = map (tm o int_of) (List.drop(args, 2))
                 in Thm.mk_oracle_thm tag (hs, c) end
-            | "DISK_THM" =>
-                (* Per-theory trace: unresolved ancestor reference.
+            | "NAME" =>
+                (* Per-theory trace: unresolved named ancestor ref.
                    Create an oracle thm placeholder. *)
                 let val thy_s = unescape (a 0)
                     val name_s = unescape (a 1)
-                in Thm.mk_oracle_thm "DISK_THM"
+                in Thm.mk_oracle_thm "NAME"
                      ([], Term.mk_var(thy_s ^ "$" ^ name_s,
                                       Type.bool))
                 end
-            | "DISK_DEP" =>
+            | "LOAD" =>
                 (* Per-theory trace: unresolved anonymous ancestor ref.
                    Create an oracle thm placeholder. *)
                 let val thy_s = unescape (a 0)
-                    val depid_s = a 1
-                in Thm.mk_oracle_thm "DISK_DEP"
-                     ([], Term.mk_var(thy_s ^ "#" ^ depid_s,
+                    val trace_id_s = a 1
+                in Thm.mk_oracle_thm "LOAD"
+                     ([], Term.mk_var(thy_s ^ "#" ^ trace_id_s,
                                       Type.bool))
                 end
             | other => raise ERR "replay" ("unknown rule: " ^ other)
           in set_th id result end
 
       (* --- Compute init --- *)
-      | ("C" :: args) =>
+      | ("I" :: args) =>
           let
             fun ai n = int_of (List.nth(args, n))
             val cval_type = ty (ai 0)

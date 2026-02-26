@@ -1,7 +1,7 @@
 (* TraceRecord: proof trace recording for stdknl.
 
    Sets Thm.trace_hook to record each inference step, streaming
-   Y/T/P/C entries to the output file. P entries use kernel
+   Y/T/P/I entries to the output file. P entries use kernel
    trace_ids for both their own ID and parent references.
 
    Two kinds of output:
@@ -123,7 +123,7 @@ fun open_heap_file path =
    since the handler from the original process doesn't survive
    heap save/restore.
 
-   Called at the entry to record_hook and the NC/NY TheoryDelta hook —
+   Called at the entry to record_hook and the C/O TheoryDelta hook —
    the only two code paths that lead to intern + write sequences. *)
 val cleanup_ref : (unit -> unit) ref = ref (fn () => ())
 
@@ -247,7 +247,7 @@ fun intern_term tm =
 
 val iT = intern_term
 
-(* ------- DEF_SPEC/DEF_TYOP tracking for NC/NY filtering ------- *)
+(* ------- DEF_SPEC/DEF_TYOP tracking for C/O filtering ------- *)
 
 (* Constants introduced by DEF_SPEC — keyed by (thy, name) *)
 val defined_consts : (string * string) Redblackset.set ref =
@@ -423,7 +423,7 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
         its (iT tm) ^
         String.concat (map (fn eq => " " ^ pi eq) code_eqs))
   | Thm.TR_COMPUTE_INIT (cval_terms, cval_type, num_type, char_eqns) =>
-      record_line ("C " ^ its (iY cval_type) ^ " " ^
+      record_line ("I " ^ its (iY cval_type) ^ " " ^
         its (iY num_type) ^
         String.concat (map (fn (name, tm) =>
           " " ^ esc name ^ " " ^ its (iT tm)) cval_terms) ^
@@ -443,12 +443,12 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
       in record_line ("P " ^ its (Thm.trace_id r) ^ " AXIOM " ^
            esc name ^ " " ^ its (iT c))
       end
-  | Thm.TR_DISK_THM (r, src_thy, name) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " DISK_THM " ^
+  | Thm.TR_NAME (r, src_thy, name) =>
+      record_line ("P " ^ its (Thm.trace_id r) ^ " NAME " ^
         esc src_thy ^ " " ^ esc name)
-  | Thm.TR_DISK_DEP (r, src_thy, depid) =>
-      record_line ("P " ^ its (Thm.trace_id r) ^ " DISK_DEP " ^
-        esc src_thy ^ " " ^ its depid))
+  | Thm.TR_LOAD (r, src_thy, src_trace_id) =>
+      record_line ("P " ^ its (Thm.trace_id r) ^ " LOAD " ^
+        esc src_thy ^ " " ^ its src_trace_id))
 
 (* ------- Cleanup and reset ------- *)
 
@@ -534,7 +534,7 @@ fun activate () = (
             let val ty = Term.type_of
                            (Term.prim_mk_const {Thy=Thy, Name=Name})
                 val tyid = iY ty
-            in record_line ("NC " ^ esc Thy ^ " " ^ esc Name ^
+            in record_line ("C " ^ esc Thy ^ " " ^ esc Name ^
                             " " ^ its tyid)
             end)
      | TheoryDelta.NewTypeOp {Thy, Name} =>
@@ -545,7 +545,7 @@ fun activate () = (
             let val arity = Type.op_arity {Thy=Thy, Tyop=Name}
             in case arity of
                  SOME a =>
-                   record_line ("NY " ^ esc Thy ^ " " ^ esc Name ^
+                   record_line ("O " ^ esc Thy ^ " " ^ esc Name ^
                                 " " ^ its a)
                | NONE => ()
             end)
