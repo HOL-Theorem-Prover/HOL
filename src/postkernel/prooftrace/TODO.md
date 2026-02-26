@@ -17,26 +17,25 @@ proof trace pipeline. Needs to cover: recording produces
 valid traces, merge resolves all references, replay produces
 oracle-free theorems.
 
-### [richer-exports] Richer export selection and display
+### [richer-exports] Richer export selection for merge
 
-Currently merge/replay only targets explicitly named theorems.
-Extend the interface:
+Currently merge only targets explicitly named theorems
+(THY.THM pairs). Extend the selection interface:
 
-- **Auto-include definitional theorems**: automatically include
-  all definitional theorems (DEF_SPEC) for the constants used
-  in the target theorem, transitively. These are included as
-  named exports so they appear in the replay output.
-- **`--verbose` mode**: print the auto-included definitions in
-  the replay output (not just the requested target theorems)
-- **Pull by constant**: option to include all theorems that
-  mention a given constant
-- **Pull by type**: option to include all theorems that
-  mention a given type operator
-- **Pull by theory**: option to include all exported theorems
-  from a given theory
-- **Multiple targets**: already supported via merge; ensure
-  the interface exposes all of them cleanly
-- In `--interactive` mode, bind all the above as named values
+- **Pull by constant**: include all theorems that mention a
+  given constant
+- **Pull by type**: include all theorems that mention a given
+  type operator
+- **Pull by theory**: include all exported theorems from a
+  given theory
+
+### [replay-display] Replay display options
+
+- **`--include-defs`**: also print definitional theorems
+  (DEF_SPEC/DEF_TYOP) that were replayed as dependencies of
+  the target exports. These are already in the merged trace
+  and replayed; this flag controls whether they appear in the
+  output.
 
 ### [direct-replay] Direct unmerged replay for full verification
 
