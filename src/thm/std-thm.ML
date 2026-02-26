@@ -1358,41 +1358,17 @@ val replay_thms :
 
 local
   val mk_disk_thm  = make_thm Count.Disk
+  fun prov_to_peek (Named key) {named, ...} = Redblackmap.peek(named, key)
+    | prov_to_peek (Anon key) {anon, ...} = Redblackmap.peek(anon, key)
+  fun prov_to_trace (Named (src_thy, name)) res = TR_NAME (res, src_thy, name)
+    | prov_to_trace (Anon (src_thy, tid)) res = TR_LOAD (res, src_thy, tid)
 in
-fun disk_thm (Named(src_thy, name)) ((d,ocl), termlist) =
-    (case !replay_thms of
-       SOME {named, ...} =>
-         (case Redblackmap.peek(named, (src_thy, name)) of
-            SOME th => th
-          | NONE =>
-            let val c = hd termlist
-                val asl = tl termlist
-                val result = mk_disk_thm
-                               (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
-            in tr (TR_NAME (result, src_thy, name)); result end)
-     | NONE =>
-       let val c = hd termlist
-           val asl = tl termlist
-           val result = mk_disk_thm
-                          (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
-       in tr (TR_NAME (result, src_thy, name)); result end)
-  | disk_thm (Anon(src_thy, src_trace_id)) ((d,ocl), termlist) =
-    (case !replay_thms of
-       SOME {anon, ...} =>
-         (case Redblackmap.peek(anon, (src_thy, src_trace_id)) of
-            SOME th => th
-          | NONE =>
-            let val c = hd termlist
-                val asl = tl termlist
-                val result = mk_disk_thm
-                               (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
-            in tr (TR_LOAD (result, src_thy, src_trace_id)); result end)
-     | NONE =>
-       let val c = hd termlist
-           val asl = tl termlist
-           val result = mk_disk_thm
-                          (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
-       in tr (TR_LOAD (result, src_thy, src_trace_id)); result end)
+fun disk_thm prov (tag, (c::asl)) =
+  case Option.mapPartial (prov_to_peek prov) (!replay_thms) of
+    SOME th => th
+  | NONE => let
+      val result = mk_disk_thm (Tag.read_disk_tag tag,list_hyp asl,c)
+    in tr (prov_to_trace prov result); result end
 end; (* local *)
 
 (* ----------------------------------------------------------------------
@@ -1454,7 +1430,6 @@ in
       fn code_eqs =>
         let
           val tag1 = merge_tags tag0 (List.map tag code_eqs)
-          val code_thms = code_eqs
           val eqs = List.map dest_code_eqn code_eqs
           val tc1 = tc0 eqs
         in
@@ -1464,7 +1439,7 @@ in
               val eqn = safe_mk_eq tm tm'
               val result = make_thm Count.Compute (tag1, empty_hyp, eqn)
             in
-              tr (TR_COMPUTE (result, code_thms, tm));
+              tr (TR_COMPUTE (result, code_eqs, tm));
               result
             end
         end
