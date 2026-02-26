@@ -495,8 +495,10 @@ fun read_thm strv tmvector (thmrec:string raw_thm) =
       val dd = (#me deps, #deps deps)
       val terms = map (Term.read_raw tmvector) (concl::hyps)
       val thminfo = {private=private,loc=loc',class=class}
+      val src_thy = #1 (#me deps)
     in
-      (name, Thm.disk_thm name ((dd,tags), terms), thminfo)
+      (name, Thm.disk_thm (Thm.Named(src_thy, name)) ((dd,tags), terms),
+       thminfo)
     end
 
 

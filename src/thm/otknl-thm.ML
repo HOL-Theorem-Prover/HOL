@@ -1361,6 +1361,8 @@ end
 
 
 
+datatype thm_id = Named of string * string | Anon of string * int
+
 (* ----------------------------------------------------------------------
     Creating a theorem from disk
    ---------------------------------------------------------------------- *)
@@ -1374,13 +1376,7 @@ val replay_thms :
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm name ((d,ocl), termlist) = let
-  val c = hd termlist
-  val asl = tl termlist
-in
-  mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c,Axiom_prf)
-end
-fun disk_thm_dep ((d,ocl), termlist, _, _) = let
+fun disk_thm _ ((d,ocl), termlist) = let
   val c = hd termlist
   val asl = tl termlist
 in

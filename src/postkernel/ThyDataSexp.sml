@@ -244,7 +244,8 @@ fun thmreader tmr =
     pair4_decode (tagreader, list_decode (string_decode >> tmr),
                   int_decode, string_decode) >>
     (fn ((dd, ocl), terms, src_trace_id, src_thy) =>
-       Thm.disk_thm_dep ((dd, ocl), terms, src_thy, src_trace_id))
+       Thm.disk_thm (Thm.Anon(src_thy, src_trace_id))
+                     ((dd, ocl), terms))
 
 fun tag s enc x = HOLsexp.tagged_encode s enc x
 fun write (wrt as {strings,terms}) s =

@@ -1346,6 +1346,8 @@ end
 
 
 
+datatype thm_id = Named of string * string | Anon of string * int
+
 (* ----------------------------------------------------------------------
     Creating a theorem from disk
    ---------------------------------------------------------------------- *)
@@ -1357,43 +1359,40 @@ val replay_thms :
 local
   val mk_disk_thm  = make_thm Count.Disk
 in
-fun disk_thm name ((d,ocl), termlist) = let
-  val (src_thy, _) = fst d
-in
-  case !replay_thms of
-    SOME {named, ...} =>
-      (case Redblackmap.peek(named, (src_thy, name)) of
-         SOME th => th
-       | NONE =>
-         let val c = hd termlist
-             val asl = tl termlist
-             val result = mk_disk_thm
-                            (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
-         in tr (TR_NAME (result, src_thy, name)); result end)
-  | NONE =>
-    let val c = hd termlist
-        val asl = tl termlist
-        val result = mk_disk_thm
-                       (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
-    in tr (TR_NAME (result, src_thy, name)); result end
-end
-fun disk_thm_dep ((d,ocl), termlist, src_thy, src_trace_id) =
-  case !replay_thms of
-    SOME {anon, ...} =>
-      (case Redblackmap.peek(anon, (src_thy, src_trace_id)) of
-         SOME th => th
-       | NONE =>
-         let val c = hd termlist
-             val asl = tl termlist
-             val result = mk_disk_thm
-                            (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
-         in tr (TR_LOAD (result, src_thy, src_trace_id)); result end)
-  | NONE =>
-    let val c = hd termlist
-        val asl = tl termlist
-        val result = mk_disk_thm
-                       (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
-    in tr (TR_LOAD (result, src_thy, src_trace_id)); result end
+fun disk_thm (Named(src_thy, name)) ((d,ocl), termlist) =
+    (case !replay_thms of
+       SOME {named, ...} =>
+         (case Redblackmap.peek(named, (src_thy, name)) of
+            SOME th => th
+          | NONE =>
+            let val c = hd termlist
+                val asl = tl termlist
+                val result = mk_disk_thm
+                               (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
+            in tr (TR_NAME (result, src_thy, name)); result end)
+     | NONE =>
+       let val c = hd termlist
+           val asl = tl termlist
+           val result = mk_disk_thm
+                          (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
+       in tr (TR_NAME (result, src_thy, name)); result end)
+  | disk_thm (Anon(src_thy, src_trace_id)) ((d,ocl), termlist) =
+    (case !replay_thms of
+       SOME {anon, ...} =>
+         (case Redblackmap.peek(anon, (src_thy, src_trace_id)) of
+            SOME th => th
+          | NONE =>
+            let val c = hd termlist
+                val asl = tl termlist
+                val result = mk_disk_thm
+                               (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
+            in tr (TR_LOAD (result, src_thy, src_trace_id)); result end)
+     | NONE =>
+       let val c = hd termlist
+           val asl = tl termlist
+           val result = mk_disk_thm
+                          (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
+       in tr (TR_LOAD (result, src_thy, src_trace_id)); result end)
 end; (* local *)
 
 (* ----------------------------------------------------------------------

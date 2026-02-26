@@ -529,8 +529,7 @@ etc.), the theory hierarchy must be loaded: `Theory.link_parents`,
 be populated.
 
 The normal loading path (`TheoryReader.load_thydata`) reads `.dat`
-files and reconstructs theorems via `Thm.disk_thm` (named) and
-`Thm.disk_thm_dep` (anonymous/thydata-embedded), producing
+files and reconstructs theorems via `Thm.disk_thm`, producing
 DISK_THM oracles. After replay, we want to substitute replayed
 theorem values wherever available, falling back to DISK_THM
 creation for theorems not included in the merge.
@@ -577,15 +576,13 @@ val replay_thms :
 When set, the theorem creation functions check these maps
 first:
 
-- **`disk_thm name ((dd,ocl), terms)`**: extracts `src_thy`
-  from `dd`, looks up `(src_thy, name)` in `#named`. If
-  found, returns the replayed theorem. Otherwise creates a
-  DISK_THM as normal.
+- **`disk_thm (Named(thy, name)) ((dd,ocl), terms)`**: looks
+  up `(thy, name)` in `#named`. If found, returns the replayed
+  theorem. Otherwise creates a DISK_THM as normal.
 
-- **`disk_thm_dep ((dd,ocl), terms, src_thy, src_trace_id)`**:
-  looks up `(src_thy, src_trace_id)` in `#anon`. If found,
-  returns the replayed theorem. Otherwise creates a DISK_THM
-  as normal.
+- **`disk_thm (Anon(thy, trace_id)) ((dd,ocl), terms)`**:
+  looks up `(thy, trace_id)` in `#anon`. If found, returns the
+  replayed theorem. Otherwise creates a DISK_THM as normal.
 
 When not set (normal non-replay loading), behaviour is
 unchanged — zero overhead.
@@ -630,7 +627,7 @@ children), matching the normal `Theory.load_parents` /
 4. `DB.bindl` — register theorems in the database
 5. `temp_encoded_update` for each thydata entry — decode
    thydata (substituting replayed values in embedded theorems
-   via `disk_thm_dep`), fire load callbacks for simpsets,
+   via `disk_thm` with `Anon` keys), fire load callbacks for simpsets,
    TypeBase, grammars, etc.
 
 ### Coverage and fallback
