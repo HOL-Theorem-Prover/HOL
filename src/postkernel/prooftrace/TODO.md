@@ -47,19 +47,46 @@ Extend the interface:
 
 ### [theory-loading] Replay-aware theory loading
 
-After replay, loading HOL libraries (for pretty-printing and
-interactive use) must not conflict with what replay has already
-established in the kernel. Normally, `TheoryReader.load_thydata`
-calls `incorporate_types` / `incorporate_consts` and
-reconstructs theorems from `.dat` files as DISK_THMs. But
-replay has already defined the same types, constants, and
-theorems via kernel inference rules.
+Design documented in DESIGN.md (Replay-aware Theory Loading).
+Merge tool emits F/G provenance lines; replay builds lookup
+maps; theory loading substitutes replayed theorems in
+`disk_thm`/`disk_thm_dep`, falling back to DISK_THM otherwise.
+Single ref in Thm structure for the replay map.
 
-We need a replay-aware theory loading mode where:
-- Types/constants already present are reused, not recreated
-- Theorems are populated from replayed values, not `.dat` files
-- DB.bindl, Theory.link_parents, etc. still fire so grammars,
-  TypeBase, simpsets are set up correctly
+Remaining implementation work:
+- Emit F/G lines in MergeTrace Pass 2
+- Parse F/G lines in ReplayTrace, build replay maps
+- Add `replay_thms` ref to Thm (std-thm.ML, std-thmsig.ML)
+- Modify `disk_thm`/`disk_thm_dep` to check replay map
+- Make `incorporate_types`/`incorporate_consts` skip
+  already-existing types/consts in replay mode
+- Wire up in `--interactive` mode: replay, set ref, load
+  theories in dependency order, clear ref
+
+### [direct-replay] Direct unmerged replay for full verification
+
+The merge→replay→load pipeline has ~2× extra .pft I/O
+overhead compared to replaying unmerged traces directly. For
+the "verify everything" use case (all theories, all exports),
+the merge step's liveness pruning provides no benefit, and
+the provenance mapping (F/G lines) is unnecessary because
+theory identity is inherent in the unmerged traces.
+
+A direct replay path would process each theory's .pft and
+.dat together in dependency order:
+1. Replay P entries through the kernel
+2. Resolve NAME via already-loaded ancestor exports, LOAD via
+   already-loaded ancestor theorem maps
+3. Populate the Theory structure directly (link_parents,
+   DB.bindl, thydata callbacks) using replayed theorems
+
+This avoids the merge step entirely and produces a fully
+loaded interactive session in a single pass over the traces.
+The merge→replay path remains for targeted verification
+(specific exports) where pruning matters.
+
+Worth exploring after the merge-based theory loading is
+working, with benchmarks to quantify the actual overhead.
 
 ### [tmp-cleanup] Temp file cleanup on killed builds
 
