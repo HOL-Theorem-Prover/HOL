@@ -107,7 +107,6 @@ sig
   val mk_thm        : term list * term -> thm
   val mk_oracle_thm : string -> term list * term -> thm
   val mk_axiom_thm  : (string Nonce.t * term) -> thm
-  val mk_defn_thm   : tag * term -> thm
   val add_tag       : tag * thm -> thm
 
   (* definitional rules of inference *)
