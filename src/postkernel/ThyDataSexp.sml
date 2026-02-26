@@ -188,7 +188,6 @@ val list_decode = HOLsexp.list_decode
 val string_decode = HOLsexp.string_decode
 val symbol_decode = HOLsexp.symbol_decode
 val pair_decode = HOLsexp.pair_decode
-val pair3_decode = HOLsexp.pair3_decode
 val pair4_decode = HOLsexp.pair4_decode
 val int_decode = HOLsexp.int_decode
 val tagged_decode = HOLsexp.tagged_decode
@@ -232,28 +231,20 @@ fun thmwrite tmw th0 =
   let
     val th = if deps_saved th0 then th0
              else Thm.save_dep (Theory.current_theory()) th0
+    val src_thy = Theory.current_theory()
   in
-    HOLsexp.pair3_encode (tagwrite,
+    HOLsexp.pair4_encode (tagwrite,
                           HOLsexp.list_encode (HOLsexp.String o tmw),
-                          HOLsexp.Integer)
-                         (Thm.tag th, concl th :: hyp th, Thm.trace_id th)
+                          HOLsexp.Integer,
+                          HOLsexp.String)
+                         (Thm.tag th, concl th :: hyp th,
+                          Thm.trace_id th, src_thy)
   end
 fun thmreader tmr =
-    let
-      val decode_new =
-        pair3_decode (tagreader, list_decode (string_decode >> tmr),
-                      int_decode) >>
-        (fn ((dd, ocl), terms, src_trace_id) =>
-           Thm.disk_thm_dep ((dd, ocl), terms, src_trace_id))
-      val decode_old =
-        pair_decode (tagreader, list_decode (string_decode >> tmr)) >>
-        (fn ((dd, ocl), terms) =>
-           Thm.disk_thm_dep ((dd, ocl), terms, 0))
-    in
-      fn t => case decode_new t of
-                SOME th => SOME th
-              | NONE => decode_old t
-    end
+    pair4_decode (tagreader, list_decode (string_decode >> tmr),
+                  int_decode, string_decode) >>
+    (fn ((dd, ocl), terms, src_trace_id, src_thy) =>
+       Thm.disk_thm_dep ((dd, ocl), terms, src_thy, src_trace_id))
 
 fun tag s enc x = HOLsexp.tagged_encode s enc x
 fun write (wrt as {strings,terms}) s =

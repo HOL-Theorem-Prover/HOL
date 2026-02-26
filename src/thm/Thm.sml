@@ -1361,11 +1361,10 @@ fun disk_thm name ((d,ocl), termlist) = let
 in
   tr (TR_NAME (result, src_thy, name)); result
 end
-fun disk_thm_dep ((d,ocl), termlist, src_trace_id) = let
+fun disk_thm_dep ((d,ocl), termlist, src_thy, src_trace_id) = let
   val c = hd termlist
   val asl = tl termlist
   val result = mk_disk_thm (Tag.read_disk_tag (d,ocl),list_hyp asl,c)
-  val (src_thy, _) = fst d
 in
   tr (TR_LOAD (result, src_thy, src_trace_id)); result
 end
