@@ -1,7 +1,7 @@
 (* ReplayTrace: replay .pft files through the kernel.
 
    Single forward pass: construct types, terms, and theorems eagerly
-   from Y/T/P/C entries. For merged traces, all definitions are fresh
+   from Y/T/P/I entries. For merged traces, all definitions are fresh
    (no preloaded theories). Exports are checked to be oracle-free.
 *)
 
@@ -336,7 +336,7 @@ fun replay_file path =
             fun pairs [] = []
               | pairs (n :: p :: r) =
                   (unescape n, th (int_of p)) :: pairs r
-              | pairs _ = raise ERR "replay" "C: odd char_eqn args"
+              | pairs _ = raise ERR "replay" "I: odd char_eqn args"
             val char_eqns = pairs rest2
             val cached = Thm.compute {
               cval_terms = cval_terms,

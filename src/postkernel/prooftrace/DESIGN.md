@@ -320,12 +320,14 @@ needed theorems, terms, types, and ancestor theories/heaps.
 For each trace file (starting with files containing desired
 exports, loading ancestors on demand as discovered):
 
-1. Stream through the trace file, building a dependency graph:
-   for each P entry, record which P/T/Y IDs it references
-   (per-rule parsing of arguments); for each T entry, record
-   which T/Y IDs it references; for each Y entry, record which
-   Y IDs it references. Also record E, NAME, and LOAD entries.
-   Full line text is not stored — only dependency lists.
+1. Stream through the trace file, building lightweight metadata:
+   for each Y entry, record sub-type dependencies; for each T
+   entry, record sub-term and sub-type dependencies; for each P
+   entry, record only its byte offset in the file (not its
+   dependencies — those are read lazily). Also record E, NAME,
+   LOAD, DEF_SPEC, DEF_TYOP, C, and O entries. A Posix file
+   descriptor is kept open for random-access seeking to P entry
+   byte offsets during the reachability walk.
 2. Walk backward from the needed theorem IDs, marking live P
    entries, then transitively marking the T and Y entries they
    reference as live. When a T entry for a non-primitive
@@ -354,8 +356,10 @@ exports, loading ancestors on demand as discovered):
    mark the needed entries. If not found in any ancestor heap,
    this is a hard error (indicates a recording bug or missing
    heap trace file).
-5. Store the set of live entry IDs for this file (compact bit
-   set). Discard the dependency graph.
+5. Store the set of live entry IDs for this file (bit arrays
+   for Y/T, int map for P). After Pass 1 completes for all
+   files, close the Posix fds and discard the per-file
+   dependency metadata.
 
 ### Pass 2: Write merged trace
 
@@ -538,9 +542,14 @@ signature TraceCompress = sig
      extension), returns SOME of the actual path, or NONE. *)
   val find_trace : string -> string option
 
-  (* File extensions to search for when scanning directories,
-     e.g. [".pft", ".pft.zst", ".pft.gz", ".pft.zip"] *)
-  val trace_extensions : string list
+  (* Ensure a trace file is decompressed on disk. Returns the
+     path to the (possibly decompressed) file. Used by MergeTrace
+     for Posix fd-based random access during Pass 1. *)
+  val ensure_decompressed : string -> string
+
+  (* File suffixes to search for when scanning directories,
+     e.g. ["Theory.pft", "Theory.pft.zst", ...] *)
+  val trace_suffixes : string list
 end
 ```
 
@@ -554,13 +563,17 @@ end
 
 ### Where decompression happens
 
-- **MergeTrace**: calls `TraceCompress.open_trace` for each
-  input file. Caches the `(instream, cleanup)` pair across
-  both passes (decompress once, read twice). Calls cleanup
-  after both passes are done.
+- **MergeTrace**: uses two access patterns per file.
+  Pass 1: `TraceCompress.open_trace` for sequential reading,
+  plus `TraceCompress.ensure_decompressed` to obtain a file
+  path for Posix fd-based random access (seeking to P entry
+  byte offsets during backward reachability).
+  Pass 2: `TraceCompress.open_trace` for sequential re-reading.
+  Decompressed temp files are cached across both passes
+  (decompress once) and cleaned up after.
 - **ReplayTrace**: calls `TraceCompress.open_trace`.
 - **File discovery**: merge tool uses `TraceCompress.find_trace`
-  and `TraceCompress.trace_extensions` when scanning `-d`
+  and `TraceCompress.trace_suffixes` when scanning `-d`
   directories for trace files. `find_heap_trace_file` uses
   `TraceCompress.find_trace`.
 
