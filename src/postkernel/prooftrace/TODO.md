@@ -38,13 +38,6 @@ Extend the interface:
   the interface exposes all of them cleanly
 - In `--interactive` mode, bind all the above as named values
 
-### [search-dirs] Fix -d flag and help text
-
-- `-d .` (current directory) should always be included in the
-  search path even when other `-d` flags are specified
-- Help text should clarify that `-d` recursively searches
-  subdirectories for trace files
-
 ### [direct-replay] Direct unmerged replay for full verification
 
 The merge→replay→load pipeline has ~2× extra .pft I/O

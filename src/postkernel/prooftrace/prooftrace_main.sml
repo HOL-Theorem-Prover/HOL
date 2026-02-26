@@ -31,9 +31,9 @@ fun main () =
           \Merge:\n\
           \  prooftrace merge [-q] -o FILE [-d DIR]... THY.THM...\n\
           \\n\
-          \  Finds .pft files in search directories (default: .),\n\
-          \  merges traces needed for the given exports.\n\
-          \  Exports are specified as theory.name pairs.\n\
+          \  Recursively finds .pft files in search directories\n\
+          \  (. is always included), merges traces needed for the\n\
+          \  given exports. Exports are specified as theory.name pairs.\n\
           \\n\
           \Replay:\n\
           \  prooftrace replay [options] FILE\n\
@@ -98,9 +98,11 @@ fun main () =
         val _ = if null desired then
                   die "merge: at least one THY.THM export is required"
                 else ()
-        val search_dirs = case !dirs of
-            [] => ["."]
-          | ds => rev ds
+        val search_dirs =
+          let val ds = rev (!dirs)
+          in if List.exists (fn d => d = ".") ds then ds
+             else "." :: ds
+          end
 
         val all_traces = List.concat
           (map ReplayTrace.find_traces search_dirs)
