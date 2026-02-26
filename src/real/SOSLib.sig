@@ -50,14 +50,14 @@ sig
   val INT_SOS_TAC     : tactic
   val INT_SOS_ASM_TAC : tactic
 
-  (* --- SOS_RULE: natural number SOS prover --- *)
+  (* --- NUM_SOS_RULE: natural number SOS prover --- *)
 
   (* SOS prover for natural number goals. Converts num operations
      to int via int_of_num, then calls INT_SOS. Handles polynomial
      goals with +, *, EXP, <=, <, >=, >, =. *)
-  val SOS_RULE         : term -> thm
-  val SOS_RULE_TAC     : tactic
-  val SOS_RULE_ASM_TAC : tactic
+  val NUM_SOS_RULE         : term -> thm
+  val NUM_SOS_RULE_TAC     : tactic
+  val NUM_SOS_RULE_ASM_TAC : tactic
 
   (* --- Knobs --- *)
   val sos_debugging  : bool ref

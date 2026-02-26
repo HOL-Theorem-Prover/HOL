@@ -251,59 +251,45 @@ end
 handle e => die ("EXCEPTION: " ^ General.exnMessage e);
 
 (* ===================================================================== *)
-(* A3: INT_SOS, SOS_RULE, REAL_SOSFIELD                                 *)
+(* A3: INT_SOS, NUM_SOS_RULE, REAL_SOSFIELD                             *)
 (* ===================================================================== *)
+
+fun prover_test prover_name prover (name, tm) =
+  let
+    fun check res = aconv tm (concl res)
+  in
+    tprint (prover_name ^ " " ^ name);
+    require_msg (check_result check) (term_to_string o concl) prover tm
+  end;
 
 (* -- INT_SOS tests -- *)
 
-val _ = let
-  val _ = tprint "INT_SOS !x:int. x*x >= 0"
-  val th = INT_SOS (Parse.Term `!x:int. x * x >= &0`)
-in
-  if concl th ~~ Parse.Term `!x:int. x * x >= &0` then OK()
-  else die "conclusion mismatch"
-end
-handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+val _ = List.app (prover_test "INT_SOS" INT_SOS) [
+  ("!x:int. x*x >= 0",
+   Parse.Term `!x:int. x * x >= &0`),
+  ("x>=5 /\\ y>=5 ==> x*y>=25",
+   Parse.Term `!x y:int. x >= &5 /\ y >= &5 ==> x * y >= &25`),
+  ("x>=1 ==> x*x>=x",
+   Parse.Term `!x:int. x >= &1 ==> x * x >= x`)
+];
 
-val _ = let
-  val _ = tprint "INT_SOS x>=5 /\\ y>=5 ==> x*y>=25"
-  val th = INT_SOS (Parse.Term `!x y:int. x >= &5 /\ y >= &5 ==> x * y >= &25`)
-in OK() end
-handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+(* -- NUM_SOS_RULE tests -- *)
 
-val _ = let
-  val _ = tprint "INT_SOS x>=1 ==> x*x>=x"
-  val th = INT_SOS (Parse.Term `!x:int. x >= &1 ==> x * x >= x`)
-in OK() end
-handle e => die ("EXCEPTION: " ^ General.exnMessage e);
-
-(* -- SOS_RULE tests -- *)
-
-val _ = let
-  val _ = tprint "SOS_RULE num: x>=5 /\\ y>=5 ==> x*y>=25"
-  val th = SOS_RULE (Parse.Term `!x y:num. x >= 5 /\ y >= 5 ==> x * y >= 25`)
-in OK() end
-handle e => die ("EXCEPTION: " ^ General.exnMessage e);
-
-val _ = let
-  val _ = tprint "SOS_RULE num: x*x >= x*x"
-  val th = SOS_RULE (Parse.Term `!x:num. x * x >= x * x`)
-in OK() end
-handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+val _ = List.app (prover_test "NUM_SOS_RULE" NUM_SOS_RULE) [
+  ("num: x>=5 /\\ y>=5 ==> x*y>=25",
+   Parse.Term `!x y:num. x >= 5 /\ y >= 5 ==> x * y >= 25`),
+  ("num: x*x >= x*x",
+   Parse.Term `!x:num. x * x >= x * x`)
+];
 
 (* -- REAL_SOSFIELD tests -- *)
 
-val _ = let
-  val _ = tprint "REAL_SOSFIELD x>0 ==> x + x/x >= x"
-  val th = REAL_SOSFIELD (Parse.Term `!x:real. x > &0 ==> x + x / x >= x`)
-in OK() end
-handle e => die ("EXCEPTION: " ^ General.exnMessage e);
-
-val _ = let
-  val _ = tprint "REAL_SOSFIELD x*x >= 0 (no div)"
-  val th = REAL_SOSFIELD (Parse.Term `!x:real. x * x >= &0`)
-in OK() end
-handle e => die ("EXCEPTION: " ^ General.exnMessage e);
+val _ = List.app (prover_test "REAL_SOSFIELD" REAL_SOSFIELD) [
+  ("x>0 ==> x + x/x >= x",
+   Parse.Term `!x:real. x > &0 ==> x + x / x >= x`),
+  ("x*x >= 0 (no div)",
+   Parse.Term `!x:real. x * x >= &0`)
+];
 
 val _ = print "\n"
 val _ = exit_count0 errc

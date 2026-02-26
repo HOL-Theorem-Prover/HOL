@@ -2152,12 +2152,12 @@ val INT_SOS_ASM_TAC : tactic = fn (gl : goal) =>
   end handle HOL_ERR _ => raise ERR "INT_SOS_ASM_TAC" "failed";
 
 (* ===================================================================== *)
-(* SOS_RULE: natural number SOS via reduction to int                     *)
+(* NUM_SOS_RULE: natural number SOS via reduction to int                 *)
 (* Ported from HOL-Light sos.ml lines 1369-1375                         *)
 (* ===================================================================== *)
 
 local
-  (* SOS_RULE: Convert num goals to int via int_of_num (&), then use INT_SOS.
+  (* NUM_SOS_RULE: Convert num goals to int via int_of_num (&), then use INT_SOS.
      Uses GSYM INT_OF_NUM_LE etc. to rewrite num comparisons/operations to int.
      Handles: +, *, EXP, <=, <, >=, >, =, numerals *)
 
@@ -2177,7 +2177,7 @@ local
 
   val NUM_TO_INT_CONV = num_normalize_conv THENC num_to_int_conv
 in
-  fun SOS_RULE tm =
+  fun NUM_SOS_RULE tm =
     let
       val avs = free_vars tm
       val tm' = list_mk_forall (avs, tm)
@@ -2186,15 +2186,16 @@ in
     in
       SPECL avs (EQ_MP (SYM th1) th2)
     end
-    handle e => raise wrap_exn "SOSLib" "SOS_RULE" e
+    handle e => raise wrap_exn "SOSLib" "NUM_SOS_RULE" e
 end;
 
-val SOS_RULE_TAC : tactic = fn gl => ACCEPT_TAC (SOS_RULE (snd gl)) gl;
+val NUM_SOS_RULE_TAC : tactic = fn gl =>
+  ACCEPT_TAC (NUM_SOS_RULE (snd gl)) gl;
 
-val SOS_RULE_ASM_TAC : tactic = fn (gl : goal) =>
+val NUM_SOS_RULE_ASM_TAC : tactic = fn (gl : goal) =>
   let val (asl, g) = gl
       val g' = list_mk_conj (asl @ [g]) handle HOL_ERR _ => g
-  in ACCEPT_TAC (SOS_RULE g') gl
-  end handle HOL_ERR _ => raise ERR "SOS_RULE_ASM_TAC" "failed";
+  in ACCEPT_TAC (NUM_SOS_RULE g') gl
+  end handle HOL_ERR _ => raise ERR "NUM_SOS_RULE_ASM_TAC" "failed";
 
 end (* struct *)
