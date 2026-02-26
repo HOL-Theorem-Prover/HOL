@@ -1464,8 +1464,34 @@ fun merge {trace_paths : (string * string) list,
               in if PIntMap.mem id live_p then
                 let val anc_thy = unescape (List.nth(args, 0))
                     val anc_trace_id = int_of (List.nth(args, 1))
-                in case Redblackmap.peek(!ancestor_thm_map,
-                                         (anc_thy, anc_trace_id)) of
+                    (* First try the ancestor theory's own trace *)
+                    val gid_opt =
+                      case Redblackmap.peek(!ancestor_thm_map,
+                                             (anc_thy, anc_trace_id)) of
+                        SOME gid => SOME gid
+                      | NONE =>
+                        (* trace_id might be from the theory's heap
+                           chain (theorem survived heap restore into
+                           the theory script without being re-loaded
+                           from disk). Search up the heap chain. *)
+                        case Redblackmap.peek(thy_path_map, anc_thy) of
+                          NONE => NONE
+                        | SOME anc_path =>
+                          let fun search p =
+                                let val d = load_file p
+                                in case #heap_parent d of
+                                     NONE => NONE
+                                   | SOME hp =>
+                                     case find_heap_trace_file hp of
+                                       NONE => NONE
+                                     | SOME hpft =>
+                                       case heap_thm_lookup
+                                              (hpft, anc_trace_id) of
+                                         SOME gid => SOME gid
+                                       | NONE => search hpft
+                                end
+                          in search anc_path end
+                in case gid_opt of
                      SOME gid =>
                        p_remap :=
                          PIntMap.add id gid (!p_remap)
