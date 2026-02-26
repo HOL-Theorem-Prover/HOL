@@ -17,11 +17,9 @@ sig
 
   val defn_consts : defn -> {introduced: term list, support: term list}
   val tupled_suffix : string
-  val support_names : defn -> string list
-  val delete_support : defn -> unit list
+  val delete_support : defn -> term list -> term list -> unit
 
-  (* Used to control context tracking during termination
-     condition extraction *)
+  (* Used to control context tracking during termination condition extraction *)
 
   val read_congs  : unit -> thm list
   val write_congs : thm list -> unit
