@@ -6,6 +6,8 @@ fun optionToString f NONE = "NONE"
   | optionToString f (SOME x) = "SOME("^f x^")"
 fun pairToString f g (x,y) = "(" ^ f x ^ ", " ^ g y ^ ")"
 
+val _ = app tpp ["fm⟨k⟩", "fm⟨k1 ↦ v1; k2 ↦ v2⟩"]
+
 val _ = tprint "Check that finite maps have plausible size in TypeBase"
 val _ = require_msg
           (check_result (fn (t,th) => null (free_vars t)))
