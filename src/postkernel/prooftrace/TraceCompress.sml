@@ -18,8 +18,8 @@ fun extension Zstd = ".zst"
   | extension Zip  = ".zip"
   | extension NoCompression = ""
 
-fun compress_cmd Zstd path = "zstd --rm -q " ^ path
-  | compress_cmd Gzip path = "gzip -q " ^ path
+fun compress_cmd Zstd path = "zstd --rm -qf " ^ path
+  | compress_cmd Gzip path = "gzip -qf " ^ path
   | compress_cmd Zip  path = "zip -jmq " ^ path ^ ".zip " ^ path
   | compress_cmd NoCompression _ = ""
 
