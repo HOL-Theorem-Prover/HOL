@@ -235,7 +235,6 @@ Proof
   REWRITE_TAC[EL_def]
 QED
 
-
 (* ---------------------------------------------------------------------*)
 (* Definition of a function                                             *)
 (*                                                                      *)
@@ -3838,11 +3837,12 @@ Proof
 QED
 
 Overload fLUPDATE = “λk v l. LUPDATE v k l”
+Overload fEL = “λl i. EL i l”
 (* array subscript style brackets are U+2772 and U+2773 *)
 val _ = combinpp.new_form {
   left = "❲", right = "❳",
   upd_term_name = (“LUPDATE v k l”, "fLUPDATE"),
-  lookup_term_name = SOME (“EL i l”, "EL")
+  lookup_term_name = SOME (“EL i l”, "fEL")
   }
 val _ = TeX_notation { hol = "❲", TeX = ("\\HOLTokenLeftELbracket{}", 1)}
 val _ = TeX_notation { hol = "❳", TeX = ("\\HOLTokenRightELbracket{}", 1)}
