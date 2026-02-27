@@ -145,7 +145,7 @@ fun process_updates (update_name, lookup_name_opt) f upds =
                       NONE => raise ERR "upd_processor" (locn_of_absyn upds)
                                     "Malformed update argument"
                     | SOME ln =>
-                      cAPP l (cAPP l (IDENT (locn.Loc_None, ln), arg1), f)
+                      cAPP l (cAPP l (IDENT (locn.Loc_None, ln), f), arg1)
                 else
                   raise ERR "upd_processor" (locn_of_absyn arg1)
                         "Update list element should be update but isn't"
@@ -189,9 +189,6 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm
     =
     let
       open term_pp_utils term_pp_types smpp
-      val (hdc,_) = strip_comb tm
-      val {Thy,Name,...} = dest_thy_const hdc handle HOL_ERR _ =>
-        {Thy = "VAR", Name = #1 (dest_var hdc), Ty = bool}
       val avoid_unicode = get_tracefn "PP.avoid_unicode" () = 1
       val oinfo = term_grammar.overload_info tmg
       fun oi_strip t =
@@ -269,6 +266,64 @@ fun upd_printer (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm
 val _ = term_grammar.userSyntaxFns.register_userPP
           {name = "combinpp.general_printer", code = upd_printer};
 
+fun seln_printer  (tyg,tmg) backend printer ppfns (pgr,lgr,rgr) depth tm =
+    let
+      open term_pp_utils term_pp_types smpp
+      val avoid_unicode = get_tracefn "PP.avoid_unicode" () = 1
+      val oinfo = term_grammar.overload_info tmg
+      fun oi_strip t =
+          case Overload.oi_strip_comb oinfo t of
+              SOME (f, [f0, k]) =>
+              (case GrammarSpecials.dest_fakeconst_name (#1 (dest_var f)) of
+                   SOME {fake, ...} => SOME (fake, f0, k)
+                 | _ => NONE)
+            | _ => NONE
+      val (selname, f, k) =
+          case oi_strip tm of SOME trip => trip | NONE => raise UserPP_Failed
+      val {print_lookup,...} = get_global_value()
+
+      val candidate_dds =
+          let val base = Symtab.lookup_list print_lookup selname
+          in
+            if avoid_unicode then List.filter unicode_free_dd base
+            else base
+          end
+      val (ld_s, rd_s) =
+          case candidate_dds of
+              [] => raise UserPP_Failed
+            | DD d :: _ => (#left d, #right d)
+
+      val {add_string,add_break,...} = ppfns : term_pp_types.ppstream_funs
+      val paren =
+          case lgr of
+              Prec(i, _) => if i > 2100 then
+                              fn p => block PP.INCONSISTENT 1 (
+                                       add_string "(" >> p >>
+                                       add_string ")"
+                                     )
+                            else (fn p => p)
+            | _ => fn p => p
+      val mygrav = case Parse.fixity ld_s of
+                       SOME (term_grammar.Suffix i) => Prec(i, ld_s)
+                     | _ => raise UserPP_Failed
+    in
+      paren (
+        block PP.CONSISTENT 0 (
+          printer {gravs = (pgr,lgr,mygrav), depth = decdepth depth,
+                   binderp = false} f >>
+          add_string ld_s >> add_break(0,2) >>
+          printer {gravs = (Top,Top,Top),
+                   depth = decdepth depth,
+                   binderp = false} k >>
+          add_break(0,0) >>
+          add_string rd_s
+        )
+      )
+    end
+
+val _ = term_grammar.userSyntaxFns.register_userPP
+          {name = "combinpp.seln_printer", code = seln_printer};
+
 fun enable_dictsyntax () = (
       set_mapped_fixity {fixity = Infix(NONASSOC,100),
                          term_name = mapsto_special,
@@ -294,8 +349,6 @@ fun addlform l r =
                 TOK r],
               term_name = toplevel_updname^l};
 
-
-
 fun new_form (r as {left,right,upd_term_name = (updt,updnm), lookup_term_name}) =
     let
       val d = ADD (DD r)
@@ -303,7 +356,10 @@ fun new_form (r as {left,right,upd_term_name = (updt,updnm), lookup_term_name}) 
       addlform left right;
       record_delta d;
       update_global_value (apply_delta d);
-      add_user_printer("combinpp.general_printer", updt)
+      add_user_printer("combinpp.general_printer", updt);
+      case lookup_term_name of
+          NONE => ()
+        | SOME (pat, nm) => add_user_printer("combinpp.seln_printer", pat)
     end
 
 fun remove_paren_syntax lparen_name = (
