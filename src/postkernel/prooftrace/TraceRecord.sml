@@ -168,166 +168,101 @@ fun close_output () =
    | NONE => ();
    output_strm := NONE)
 
-(* ------- Intern map key types ------- *)
-
-(* Descriptor-based keys: contain only ints and strings, not
-   term/type values. This avoids pinning large terms alive in
-   the intern maps, allowing GC to collect intermediate proof
-   terms that are no longer referenced elsewhere. *)
-
-datatype ty_desc = TyV of string | TyO of string * string * int list
-datatype tm_desc = TmV of string * int | TmC of string * string * int
-                 | TmA of int * int | TmL of int * int
-
-fun ty_desc_compare (TyV a, TyV b) = String.compare(a, b)
-  | ty_desc_compare (TyV _, _) = LESS
-  | ty_desc_compare (_, TyV _) = GREATER
-  | ty_desc_compare (TyO(t1,n1,a1), TyO(t2,n2,a2)) =
-      (case String.compare(t1,t2) of EQUAL =>
-        (case String.compare(n1,n2) of EQUAL =>
-          List.collate Int.compare (a1,a2)
-        | ord => ord)
-      | ord => ord)
-
-fun tm_desc_compare (TmV(n1,t1), TmV(n2,t2)) =
-      (case String.compare(n1,n2) of EQUAL => Int.compare(t1,t2)
-       | ord => ord)
-  | tm_desc_compare (TmV _, _) = LESS
-  | tm_desc_compare (_, TmV _) = GREATER
-  | tm_desc_compare (TmC(t1,n1,y1), TmC(t2,n2,y2)) =
-      (case String.compare(t1,t2) of EQUAL =>
-        (case String.compare(n1,n2) of EQUAL => Int.compare(y1,y2)
-         | ord => ord)
-      | ord => ord)
-  | tm_desc_compare (TmC _, _) = LESS
-  | tm_desc_compare (_, TmC _) = GREATER
-  | tm_desc_compare (TmA(f1,x1), TmA(f2,x2)) =
-      (case Int.compare(f1,f2) of EQUAL => Int.compare(x1,x2)
-       | ord => ord)
-  | tm_desc_compare (TmA _, _) = LESS
-  | tm_desc_compare (_, TmA _) = GREATER
-  | tm_desc_compare (TmL(v1,b1), TmL(v2,b2)) =
-      (case Int.compare(v1,v2) of EQUAL => Int.compare(b1,b2)
-       | ord => ord)
-
-(* ------- Pointer-equality cache ------- *)
-
-(* Small fixed-size cache checked via pointer equality, used as a
-   fast front-end for the descriptor-based intern maps. Avoids the
-   O(term_size) recursive descent for terms/types that are pointer-
-   identical to recently interned values. Round-robin eviction. *)
-
-val ptr_cache_size = 128
-
-type 'a ptr_cache = { arr : ('a option * int) Array.array,
-                      idx : int ref }
-
-fun mk_ptr_cache () : 'a ptr_cache =
-  { arr = Array.array(ptr_cache_size, (NONE, ~1)),
-    idx = ref 0 }
-
-fun ptr_cache_lookup (cache : 'a ptr_cache) (v : 'a) : int option =
-  let
-    val arr = #arr cache
-    val len = Array.length arr
-    fun scan i =
-      if i >= len then NONE
-      else case Array.sub(arr, i) of
-          (SOME v', id) =>
-            if Portable.pointer_eq(v, v') then SOME id
-            else scan (i + 1)
-        | (NONE, _) => scan (i + 1)
-  in scan 0 end
-
-fun ptr_cache_insert (cache : 'a ptr_cache) (v : 'a) (id : int) =
-  let val i = !(#idx cache)
-  in Array.update(#arr cache, i, (SOME v, id));
-     #idx cache := (i + 1) mod Array.length (#arr cache)
-  end
-
 (* ------- Type interning (writes Y entries inline) ------- *)
 
-val ty_map = ref (Redblackmap.mkDict ty_desc_compare)
+(* Intern maps use term/type values as keys for fast lookup
+   (Term.compare starts with pointer equality). To prevent
+   unbounded memory growth from pinning all interned terms,
+   the maps are periodically cleared. This causes duplicate
+   Y/T entries in the trace (same term gets a new ID after
+   clearing), which is harmless: replay handles them fine,
+   and the merge tool deduplicates by structural descriptor.
+   Counters are never reset, so IDs remain unique. *)
+
+val intern_clear_interval = 50000
+
+val ty_map = ref (Redblackmap.mkDict Type.compare)
 val ty_counter = ref 0
-val ty_cache : Type.hol_type ptr_cache ref = ref (mk_ptr_cache ())
+
+val tm_map = ref (Redblackmap.mkDict Term.compare)
+val tm_counter = ref 0
+val tm_at_last_clear = ref 0
+
+fun maybe_clear_interns () =
+  if !tm_counter - !tm_at_last_clear > intern_clear_interval then
+    (ty_map := Redblackmap.mkDict Type.compare;
+     tm_map := Redblackmap.mkDict Term.compare;
+     tm_at_last_clear := !tm_counter)
+  else ()
 
 fun intern_type ty =
-  case ptr_cache_lookup (!ty_cache) ty of
+  case Redblackmap.peek(!ty_map, ty) of
     SOME id => id
   | NONE =>
-  let
-    val desc =
-      if Type.is_vartype ty then TyV (Type.dest_vartype ty)
-      else let val {Thy, Tyop, Args} = Type.dest_thy_type ty
-               val arg_ids = map intern_type Args
-           in TyO (Thy, Tyop, arg_ids) end
-  in
-    case Redblackmap.peek(!ty_map, desc) of
-      SOME id => (ptr_cache_insert (!ty_cache) ty id; id)
-    | NONE =>
-      let val id = !ty_counter
-          val _ = ty_counter := id + 1
-          val _ = ty_map := Redblackmap.insert(!ty_map, desc, id)
-          val _ = ptr_cache_insert (!ty_cache) ty id
-          val s = out_strm ()
-      in (case desc of
-            TyV name =>
-              TextIO.output(s, "Y " ^ its id ^ " V " ^
-                esc name ^ "\n")
-          | TyO (thy, tyop, arg_ids) =>
-              TextIO.output(s, "Y " ^ its id ^ " O " ^
-                esc thy ^ " " ^ esc tyop ^
-                (if null arg_ids then ""
-                 else " " ^ String.concatWith " "
-                               (map its arg_ids)) ^ "\n"));
-         id
-      end
-  end
+    let
+      val _ = if not (Type.is_vartype ty) then
+                let val {Args,...} = Type.dest_thy_type ty
+                in List.app (ignore o intern_type) Args end
+              else ()
+      val id = !ty_counter
+      val _ = ty_counter := id + 1
+      val _ = ty_map := Redblackmap.insert(!ty_map, ty, id)
+      val s = out_strm ()
+      fun yid t = valOf (Redblackmap.peek(!ty_map, t))
+    in
+      (if Type.is_vartype ty then
+         TextIO.output(s, "Y " ^ its id ^ " V " ^
+           esc (Type.dest_vartype ty) ^ "\n")
+       else
+         let val {Thy, Tyop, Args} = Type.dest_thy_type ty
+         in TextIO.output(s, "Y " ^ its id ^ " O " ^
+              esc Thy ^ " " ^ esc Tyop ^
+              (if null Args then ""
+               else " " ^ String.concatWith " "
+                             (map (its o yid) Args)) ^ "\n")
+         end);
+      id
+    end
 
 val iY = intern_type
 
 (* ------- Term interning (writes T entries inline) ------- *)
 
-val tm_map = ref (Redblackmap.mkDict tm_desc_compare)
-val tm_counter = ref 0
-val tm_cache : Term.term ptr_cache ref = ref (mk_ptr_cache ())
-
 fun intern_term tm =
-  case ptr_cache_lookup (!tm_cache) tm of
+  case Redblackmap.peek(!tm_map, tm) of
     SOME id => id
   | NONE =>
-  let
-    val desc = case Term.dest_term tm of
-        Term.VAR (name, ty) => TmV (name, intern_type ty)
-      | Term.CONST {Thy, Name, Ty} => TmC (Thy, Name, intern_type Ty)
-      | Term.COMB (f, x) => TmA (intern_term f, intern_term x)
-      | Term.LAMB (v, b) => TmL (intern_term v, intern_term b)
-  in
-    case Redblackmap.peek(!tm_map, desc) of
-      SOME id => (ptr_cache_insert (!tm_cache) tm id; id)
-    | NONE =>
-      let val id = !tm_counter
-          val _ = tm_counter := id + 1
-          val _ = tm_map := Redblackmap.insert(!tm_map, desc, id)
-          val _ = ptr_cache_insert (!tm_cache) tm id
-          val s = out_strm ()
-      in (case desc of
-            TmV (name, tyid) =>
-              TextIO.output(s, "T " ^ its id ^ " V " ^
-                esc name ^ " " ^ its tyid ^ "\n")
-          | TmC (thy, name, tyid) =>
-              TextIO.output(s, "T " ^ its id ^ " C " ^
-                esc thy ^ " " ^ esc name ^ " " ^
-                its tyid ^ "\n")
-          | TmA (fid, xid) =>
-              TextIO.output(s, "T " ^ its id ^ " A " ^
-                its fid ^ " " ^ its xid ^ "\n")
-          | TmL (vid, bid) =>
-              TextIO.output(s, "T " ^ its id ^ " L " ^
-                its vid ^ " " ^ its bid ^ "\n"));
-         id
-      end
-  end
+    let
+      val _ = case Term.dest_term tm of
+          Term.VAR _ => ignore (intern_type (Term.type_of tm))
+        | Term.CONST _ => ignore (intern_type (Term.type_of tm))
+        | Term.COMB (f, x) =>
+            (ignore (intern_term f); ignore (intern_term x))
+        | Term.LAMB (v, b) =>
+            (ignore (intern_term v); ignore (intern_term b))
+      val id = !tm_counter
+      val _ = tm_counter := id + 1
+      val _ = tm_map := Redblackmap.insert(!tm_map, tm, id)
+      val s = out_strm ()
+      fun yid t = valOf (Redblackmap.peek(!ty_map, t))
+      fun tid t = valOf (Redblackmap.peek(!tm_map, t))
+    in
+      (case Term.dest_term tm of
+         Term.VAR (name, ty) =>
+           TextIO.output(s, "T " ^ its id ^ " V " ^
+             esc name ^ " " ^ its (yid ty) ^ "\n")
+       | Term.CONST {Thy, Name, Ty} =>
+           TextIO.output(s, "T " ^ its id ^ " C " ^
+             esc Thy ^ " " ^ esc Name ^ " " ^
+             its (yid Ty) ^ "\n")
+       | Term.COMB (f, x) =>
+           TextIO.output(s, "T " ^ its id ^ " A " ^
+             its (tid f) ^ " " ^ its (tid x) ^ "\n")
+       | Term.LAMB (v, b) =>
+           TextIO.output(s, "T " ^ its id ^ " L " ^
+             its (tid v) ^ " " ^ its (tid b) ^ "\n"));
+      id
+    end
 
 val iT = intern_term
 
@@ -350,12 +285,11 @@ val defined_types : (string * string) Redblackset.set ref =
            | ord => ord))
 
 val _ = reset_for_new_session := (fn () => (
-  ty_map := Redblackmap.mkDict ty_desc_compare;
-  tm_map := Redblackmap.mkDict tm_desc_compare;
+  ty_map := Redblackmap.mkDict Type.compare;
+  tm_map := Redblackmap.mkDict Term.compare;
   ty_counter := 0;
   tm_counter := 0;
-  ty_cache := mk_ptr_cache ();
-  tm_cache := mk_ptr_cache ();
+  tm_at_last_clear := 0;
   defined_consts := Redblackset.empty
     (fn ((t1,n1),(t2,n2)) =>
       case String.compare(t1,t2) of
@@ -382,6 +316,7 @@ fun record_line line =
 
 fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   (check_stale ();
+   maybe_clear_interns ();
   case step of
     Thm.TR_ASSUME (r, tm) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " ASSUME " ^ its (iT tm))
