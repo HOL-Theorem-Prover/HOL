@@ -250,6 +250,27 @@ in
 end
 handle e => die ("EXCEPTION: " ^ General.exnMessage e);
 
+(* -- REAL_SOS_DIRECT_TAC (requires CSDP) -- *)
+
+val _ = if csdp_available then
+  let
+    val _ = tprint "REAL_SOS_DIRECT_TAC x>=5, y>=5 |- x*y>=25"
+    val th = prove(
+      ``x * y >= &25:real``,
+      MAP_EVERY ASSUME_TAC
+        [ASSUME ``x >= &5:real``, ASSUME ``y >= &5:real``] THEN
+      REAL_SOS_DIRECT_TAC)
+  in
+    if concl th ~~ ``x * y >= &25:real``
+       andalso HOLset.equal (hypset th,
+                 HOLset.fromList Term.compare
+                   [``x >= &5:real``, ``y >= &5:real``])
+    then OK()
+    else die "unexpected result"
+  end
+  handle e => die ("EXCEPTION: " ^ General.exnMessage e)
+else ();
+
 (* ===================================================================== *)
 (* A3: INT_SOS, NUM_SOS_RULE, REAL_SOSFIELD                             *)
 (* ===================================================================== *)
