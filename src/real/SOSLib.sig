@@ -32,6 +32,12 @@ sig
   val REAL_SOS_TAC     : tactic
   val REAL_SOS_ASM_TAC : tactic
 
+  (* --- Direct SOS: bypass GEN_REAL_ARITH normalization --- *)
+  (* Use when REAL_SOS_ASM_TAC hangs on goals with many nonlinear hyps.
+     Expects: all assumptions and goal are :real polynomial inequalities.
+     No quantifiers, no abs/max/min. *)
+  val REAL_SOS_DIRECT_TAC : tactic
+
   (* --- REAL_SOSFIELD: handles division and inv in real goals --- *)
 
   (* Like REAL_SOS but also handles real_div and inv.

@@ -2013,6 +2013,139 @@ end;
 val (REAL_SOS_TAC, REAL_SOS_ASM_TAC) = RealArith.mk_real_arith_tac REAL_SOS;
 
 (* ===================================================================== *)
+(* REAL_SOS_DIRECT_TAC: bypass GEN_REAL_ARITH normalization              *)
+(* Use when REAL_SOS_ASM_TAC hangs on goals with many nonlinear hyps.   *)
+(* Expects: all assumptions and goal are :real polynomial inequalities.  *)
+(* ===================================================================== *)
+
+local
+  val le_tm = realSyntax.leq_tm
+  val lt_tm = realSyntax.less_tm
+  val ge_tm = realSyntax.geq_tm
+  val gt_tm = realSyntax.greater_tm
+  val eq_tm = realSyntax.real_eq_tm
+  val x_tm = mk_var("x", real_ty)
+  val y_tm = mk_var("y", real_ty)
+
+  val pth_le = REAL_ARITH ``x <= y <=> y - x >= &0:real``
+  val pth_lt = REAL_ARITH ``x < y <=> y - x > &0:real``
+  val pth_ge = REAL_ARITH ``x >= y <=> x - y >= &0:real``
+  val pth_gt = REAL_ARITH ``x > y <=> x - y > &0:real``
+  val pth_eq = REAL_ARITH ``(x = y:real) <=> x - y = &0``
+  val pth_nle = REAL_ARITH ``~(x <= y) <=> x - y > &0:real``
+  val pth_nlt = REAL_ARITH ``~(x < y) <=> x - y >= &0:real``
+
+  fun norm_ineq th =
+    let val tm = concl th
+        val (opr, args) = strip_comb tm
+        fun bin_args xs = case xs of [l, r] => (l, r)
+              | _ => raise ERR "norm_ineq" "expected binary"
+        fun do_conv pth l r =
+          let val th1 = INST [x_tm |-> l, y_tm |-> r] pth
+          in EQ_MP (CONV_RULE (RAND_CONV (LAND_CONV REAL_POLY_CONV)) th1) th
+          end
+    in
+      if same_const opr le_tm then
+        let val (l,r) = bin_args args in do_conv pth_le l r end
+      else if same_const opr lt_tm then
+        let val (l,r) = bin_args args in do_conv pth_lt l r end
+      else if same_const opr ge_tm then
+        let val (l,r) = bin_args args in do_conv pth_ge l r end
+      else if same_const opr gt_tm then
+        let val (l,r) = bin_args args in do_conv pth_gt l r end
+      else if same_const opr eq_tm andalso
+              type_of (hd args) = real_ty then
+        let val (l,r) = bin_args args in do_conv pth_eq l r end
+      else if is_neg tm then
+        let val inner = dest_neg tm
+            val (iop, iargs) = strip_comb inner
+        in
+          if same_const iop le_tm then
+            let val (l,r) = bin_args iargs in do_conv pth_nle l r end
+          else if same_const iop lt_tm then
+            let val (l,r) = bin_args iargs in do_conv pth_nlt l r end
+          else raise ERR "norm_ineq" "unexpected negated form"
+        end
+      else raise ERR "norm_ineq" "unexpected form"
+    end
+
+  fun is_ge_concl th =
+    (same_const (fst (strip_comb (concl th))) ge_tm) handle _ => false
+  fun is_gt_concl th =
+    (same_const (fst (strip_comb (concl th))) gt_tm) handle _ => false
+  fun is_eq_concl th =
+    (is_eq (concl th) andalso type_of (lhs (concl th)) = real_ty)
+    handle _ => false
+
+  val pth_add = fetch "realax" "GEN_REAL_ARITH0_pth_add"
+  val pth_mul = fetch "realax" "GEN_REAL_ARITH0_pth_mul"
+  val pth_emul = fetch "realax" "GEN_REAL_ARITH0_pth_emul"
+  val pth_square = fetch "realax" "GEN_REAL_ARITH0_pth_square"
+
+  fun MATCH_MP_RULE rules =
+    let val net = itlist
+          (fn th => Net.insert (lhand(concl th), PART_MATCH lhand th))
+          (CONJUNCTS rules) Net.empty
+    in fn th =>
+       let val convs = Net.match (concl th) net
+       in if null convs then raise UNCHANGED
+          else MP (FIRST_CONV convs (concl th)) th
+       end
+    end
+
+  fun MUL_RULE th =
+    CONV_RULE(LAND_CONV REAL_POLY_MUL_CONV) (MATCH_MP_RULE pth_mul th)
+  fun ADD_RULE th =
+    CONV_RULE(LAND_CONV REAL_POLY_ADD_CONV) (MATCH_MP_RULE pth_add th)
+  fun EMUL_RULE tm th =
+    CONV_RULE(LAND_CONV REAL_POLY_MUL_CONV) (SPEC tm (MATCH_MP pth_emul th))
+  fun SQUARE_RULE t =
+    CONV_RULE (LAND_CONV REAL_POLY_MUL_CONV) (SPEC t pth_square)
+
+  fun hol_translator (eqs,les,lts) prf =
+    let
+      fun translate (Axiom_eq n) = List.nth (eqs,n)
+        | translate (Axiom_le n) = List.nth (les,n)
+        | translate (Axiom_lt n) = List.nth (lts,n)
+        | translate (Rational_eq x) =
+            EQT_ELIM(REAL_RAT_EQ_CONV
+              (mk_comb(mk_comb(eq_tm,RealArith.term_of_rat x),zero_tm)))
+        | translate (Rational_le x) =
+            EQT_ELIM(REAL_RAT_GE_CONV
+              (mk_comb(mk_comb(ge_tm,RealArith.term_of_rat x),zero_tm)))
+        | translate (Rational_lt x) =
+            EQT_ELIM(REAL_RAT_GT_CONV
+              (mk_comb(mk_comb(gt_tm,RealArith.term_of_rat x),zero_tm)))
+        | translate (Square t) = SQUARE_RULE t
+        | translate (Eqmul(t,p)) = EMUL_RULE t (translate p)
+        | translate (Sum(p1,p2)) =
+            ADD_RULE (CONJ (translate p1) (translate p2))
+        | translate (Product(p1,p2)) =
+            MUL_RULE (CONJ (translate p1) (translate p2))
+    in
+      CONV_RULE(FIRST_CONV[REAL_RAT_GE_CONV, REAL_RAT_GT_CONV,
+                            REAL_RAT_EQ_CONV])
+               (translate prf)
+    end
+in
+  fun REAL_SOS_DIRECT_TAC (asl, gl) =
+    let
+      val neg_gl_th = ASSUME (mk_neg gl)
+      val all_ths = neg_gl_th :: map ASSUME asl
+      val normed = List.mapPartial
+        (fn th => SOME (norm_ineq th) handle HOL_ERR _ => NONE) all_ths
+      val eqs = filter is_eq_concl normed
+      val les = filter is_ge_concl normed
+      val lts = filter is_gt_concl normed
+      val false_th = SOS_PROVER hol_translator (eqs, les, lts)
+      val res = CCONTR gl false_th
+    in
+      ([], fn _ => foldl (fn (a, th) => PROVE_HYP (ASSUME a) th) res asl)
+    end
+    handle e => raise wrap_exn "SOSLib" "REAL_SOS_DIRECT_TAC" e
+end;
+
+(* ===================================================================== *)
 (* REAL_SOSFIELD: handles division/inv in real goals                     *)
 (* Ported from HOL-Light sos.ml lines 1294-1338                         *)
 (* ===================================================================== *)
