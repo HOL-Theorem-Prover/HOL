@@ -494,12 +494,17 @@ local
   (* Returns a proof of `t` using arithmetic decision procedures. This function
      is used by both `z3_th_lemma_arith` and `z3_rewrite`. *)
   fun arith_prove t =
+    (* nonlinear: try NLArith/SOSLib first if the goal is nonlinear,
+       before the linear tactic chain which can mangle the goal *)
+    if Library.is_nonlinear t then
+      (profile "arith_prove(nla)" Library.nla_prove t
+       handle Feedback.HOL_ERR _ => arith_prove_linear t)
+    else arith_prove_linear t
+
+  and arith_prove_linear t =
     let
       fun arith_tactic (goal as (_, term)) =
         if term_contains_real_ty term then
-          (* this is just a heuristic - it is quite conceivable that a
-             term that contains type real is provable by integer
-             arithmetic *)
           profile "arith_prove(real)" RealField.REAL_ARITH_TAC goal
         else
           profile "arith_prove(int)" intLib.ARITH_TAC goal
@@ -515,8 +520,6 @@ local
         (* the next rewrites are a workaround for this issue:
            https://github.com/HOL-Theorem-Prover/HOL/issues/1207 *)
         >> PURE_REWRITE_TAC[integerTheory.INT_ABS, integerTheory.NUM_OF_INT]
-        (* if `arith_tactic` doesn't work at first, don't give up immediately;
-           instead let's try additional tactics *)
         >> TRY arith_tactic
         >> bossLib.RW_TAC (bossLib.arith_ss ++ intSimps.INT_RWTS_ss ++
              intSimps.INT_ARITH_ss ++ realSimps.REAL_ARITH_ss)

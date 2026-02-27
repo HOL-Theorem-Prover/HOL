@@ -144,6 +144,8 @@ fun auto_tac (_, t) =
       handle Feedback.HOL_ERR _ =>
         realLib.REAL_ARITH t'
       handle Feedback.HOL_ERR _ =>
+        Library.nla_prove t'
+      handle Feedback.HOL_ERR _ =>
         wordsLib.WORD_DECIDE t'
       handle Feedback.HOL_ERR _ =>
         Tactical.TAC_PROOF (([], t'), blastLib.BBLAST_TAC)
@@ -804,6 +806,22 @@ in
     (``(x:real) >= 0 ==> (max x 0 = x)``, [thm_AUTO, thm_CVC, thm_YO, thm_Z3, thm_Z3p_v4, thm_CVCp]),
     (* cvc5 proof uses MAX transitivity unsupported by replay *)
     (``max (x:real) y = a ==> x <= max a z``, [thm_AUTO, thm_CVC, thm_Z3, thm_Z3p_v4 (*, thm_CVCp *)]),
+
+    (* nonlinear arithmetic *)
+
+    (* NIA: product of nonneg *)
+    (``(x:int) >= 0 /\ (y:int) >= 0 ==> x * y >= 0``,
+      [thm_AUTO, thm_Z3, thm_Z3p_v4, thm_CVCp]),
+    (* NIA: square nonneg *)
+    (``(x:int) * x >= 0``, [thm_AUTO, thm_Z3, thm_Z3p_v4, thm_CVCp]),
+    (* NIA: bounded product *)
+    (``(x:int) >= 5 /\ (y:int) >= 5 ==> x * y >= 25``,
+      [thm_AUTO, thm_Z3, thm_Z3p_v4, thm_CVCp]),
+    (* NRA: product of nonneg *)
+    (``(x:real) >= 0 /\ (y:real) >= 0 ==> x * y >= 0``,
+      [thm_AUTO, thm_Z3, thm_Z3p_v4, thm_CVCp]),
+    (* NRA: square nonneg *)
+    (``(x:real) * x >= 0``, [thm_AUTO, thm_Z3, thm_Z3p_v4, thm_CVCp]),
 
     (* arithmetic inequalities: <, <=, >, >= *)
 

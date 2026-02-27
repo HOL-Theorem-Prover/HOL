@@ -463,4 +463,76 @@ struct
       wordsTheory.LSL_LIMIT, wordsTheory.LSR_LIMIT]
 *)
 
+  (***************************************************************************)
+  (* nonlinear arithmetic detection and proving                              *)
+  (***************************************************************************)
+
+  (* Is 'tm' a numeric literal (numeral, int literal, or real literal)? *)
+  fun is_numeric_literal tm =
+    numSyntax.is_numeral tm orelse
+    intSyntax.is_int_literal tm orelse
+    (realSyntax.is_real_literal tm
+     handle Feedback.HOL_ERR _ => false)
+
+  (* Does 'tm' contain a nonlinear arithmetic subterm?
+     A subterm is nonlinear if it is a multiplication of two non-literal
+     terms, or an exponentiation/power with exponent > 1. *)
+  fun is_nonlinear tm =
+  let
+    fun is_nl_mult dest_mult t =
+      (let val (l, r) = dest_mult t
+       in not (is_numeric_literal l) andalso not (is_numeric_literal r) end)
+      handle Feedback.HOL_ERR _ => false
+    fun check t =
+      is_nl_mult realSyntax.dest_mult t orelse
+      is_nl_mult intSyntax.dest_mult t orelse
+      is_nl_mult numSyntax.dest_mult t
+    fun walk t =
+      check t orelse
+      (let val (f, x) = Term.dest_comb t
+       in walk f orelse walk x end
+       handle Feedback.HOL_ERR _ => false)
+  in
+    walk tm
+  end
+
+  (* e.g., "(A --> B) --> C --> D" acc  ==>  [A, B, C, D] @ acc *)
+  fun strip_fun_tys ty acc =
+    let val (dom, rng) = Type.dom_rng ty
+    in strip_fun_tys dom (strip_fun_tys rng acc) end
+    handle Feedback.HOL_ERR _ => ty :: acc
+
+  (* approximate: does term contain real type? *)
+  fun term_contains_real_ty tm =
+    let val (rator, rand) = Term.dest_comb tm
+    in term_contains_real_ty rator orelse term_contains_real_ty rand end
+    handle Feedback.HOL_ERR _ =>
+      List.exists (Lib.equal realSyntax.real_ty)
+        (strip_fun_tys (Term.type_of tm) [])
+
+  (* Prove a nonlinear arithmetic goal using NLArith/SOSLib.
+     Type-dispatches: real → REAL_NLA then REAL_SOS, int → INT_SOS,
+     num → NUM_SOS_RULE.  Avoids trying wrong-type provers. *)
+  fun nla_prove tm =
+    if term_contains_real_ty tm then
+      NLArith.REAL_NLA tm
+      handle Feedback.HOL_ERR _ =>
+      (* REAL_NLA can't handle strict ineqs with equality preconditions;
+         REAL_SOS (which uses CSDP) can. *)
+      SOSLib.REAL_SOS tm
+    else
+      SOSLib.INT_SOS tm
+      handle Feedback.HOL_ERR _ =>
+      SOSLib.NUM_SOS_RULE tm
+
+  fun NLA_TAC (goal as (_, term)) =
+    if term_contains_real_ty term then
+      NLArith.NLA_TAC goal
+      handle Feedback.HOL_ERR _ =>
+      SOSLib.REAL_SOS_TAC goal
+    else
+      SOSLib.INT_SOS_TAC goal
+      handle Feedback.HOL_ERR _ =>
+      SOSLib.NUM_SOS_RULE_TAC goal
+
 end
