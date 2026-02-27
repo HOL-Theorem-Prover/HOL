@@ -574,17 +574,17 @@ structure ToSML = struct
           doDecls dstart decls dstop; aux ") HOL__GOAL__foo));"
         end
       | ResumeDecl {head = (p, head), body, ...} => let
-          val {thmname,attrs,name_attrs,...} = parseTheoremPfx head
+          val {thmname, attrs, ...} = parseTheoremPfx head
           val goalabs = "(fn HOL__GOAL__foo => ("
           val (label,rest) =
               case destAttrs attrs of
                   [] => ("",[])
                 | (s,_)::t => (ss s,t)
           val (subname,rest) =
-              case pluck (fn (k,v) => ss k = "smlname") rest of
+              case pluck (fn (k, _) => ss k = "smlname") rest of
                   NONE => ("_", rest)
-                | SOME ((_,nm::_), l) => (ss nm, l)
-                | SOME ((_,[]), l) => ("_", rest)
+                | SOME ((_, nm::_), l) => (ss nm, l)
+                | SOME ((_, []), _) => ("_", rest)
           val Decls {start = dstart, decls, stop = dstop} = body
         in
           aux "val "; aux subname; aux " = ";
@@ -593,8 +593,8 @@ structure ToSML = struct
           doProofMod ddargs (p,size head) goalabs rest;
           doDecls dstart decls dstop; aux ") HOL__GOAL__foo))"
         end
-      | FinaliseThm (pos, text) => let
-          val {thmname,attrs,name_attrs,...} = parseTheoremPfx text
+      | FinaliseThm (_, text) => let
+          val {thmname,name_attrs,...} = parseTheoremPfx text
         in
           aux "val "; aux (ss thmname); aux " = ";
           aux "boolLib.finalise_suspended_thm";

@@ -285,6 +285,8 @@ val mkInt: int * int -> exp
 val mkList: int * exp list -> exp
 val mkTuple: int * exp list -> exp
 val mkApp: exp -> exp list -> exp
+val mkLabEq: int * string * exp -> row
+val mkRecord: int * row list -> exp
 
 val idStop: ident -> int
 val idSpan: ident -> int * int
