@@ -218,6 +218,10 @@
 (define-key hol-unicode-U-map "p" "Υ") ; Up-silon
 
 ; parenthesis map - for various forms of parenthesis
+(define-prefix-command 'hol-unicode-lparen-heavy-map)
+(define-prefix-command 'hol-unicode-rparen-heavy-map)
+(define-prefix-command 'hol-unicode-lparen-medium-map)
+(define-prefix-command 'hol-unicode-rparen-medium-map)
 (define-key hol-unicode-lparen-map (kbd "C-M-|") "⦇")
 (define-key hol-unicode-rparen-map (kbd "C-M-|") "⦈")
 (define-key hol-unicode-lparen-map (kbd "C-M-(") "⦅")
@@ -232,6 +236,20 @@
 (define-key hol-unicode-rparen-map (kbd "C-M-]") "⦘")
 (define-key hol-unicode-lparen-map (kbd "C-M-{") "❲")
 (define-key hol-unicode-rparen-map (kbd "C-M-}") "❳")
+(define-key hol-unicode-lparen-map (kbd "m") 'hol-unicode-lparen-medium-map)
+(define-key hol-unicode-rparen-map (kbd "m") 'hol-unicode-rparen-medium-map)
+
+(define-key hol-unicode-lparen-medium-map (kbd "(") "❨")
+(define-key hol-unicode-rparen-medium-map (kbd ")") "❩")
+(define-key hol-unicode-lparen-medium-map (kbd ",") "❬")
+(define-key hol-unicode-rparen-medium-map (kbd ".") "❭")
+(define-key hol-unicode-lparen-medium-map (kbd "<") "⏴")
+(define-key hol-unicode-rparen-medium-map (kbd ">") "⏵")
+(define-key hol-unicode-lparen-medium-map (kbd "{") "❴")
+(define-key hol-unicode-rparen-medium-map (kbd "}") "❵")
+
+(define-key hol-unicode-lparen-heavy-map (kbd "<") "❰")
+(define-key hol-unicode-rparen-heavy-map (kbd ">") "❱")
 
 ; shift map
 (define-key hol-unicode-shift-map (kbd "a") "≫")

@@ -93,7 +93,7 @@ val _ = app failtest [
     ]
 
 
-val _ = app tpp ["⟪2; 3⟫", "⟪ ⟫", "⟪SX_SYM \"foo\"⟫", "⟪ ⟪3 • 4⟫; ⟪3; 4⟫ ⟫"]
+val _ = app tpp ["⟪2; 3⟫", "⟪⟫", "⟪SX_SYM \"foo\"⟫", "⟪⟪3 • 4⟫; ⟪3; 4⟫⟫"]
 
 local
   val t = “TOK 1n”
