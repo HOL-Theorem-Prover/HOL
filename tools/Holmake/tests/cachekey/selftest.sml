@@ -121,6 +121,17 @@ val _ = if ok8 andalso size key8 = 40 andalso key8 <> key5 then OK()
         else die ("Expected different hash from " ^ key5 ^ ", got: \"" ^
                   key8 ^ "\"")
 
+(* Test 9: --cachekey succeeds when dependency is a Theory in sigobj
+   (regression test for GitHub issue #1828: sigobj only has symlinks
+   for .uo/.ui, not .dat, so the symlink must be resolved) *)
+val _ = HOLFileSys.chDir "../sigobj_symlink"
+val _ = tprint "Checking --cachekey resolves sigobj symlinks for .dat (GH #1828)"
+val (ok9, key9) = run_cachekey "sigtestTheory"
+val _ = if ok9 andalso size key9 = 40 then OK()
+        else die ("Expected success with 40-char hash, got: \"" ^ key9 ^ "\"")
+
+val _ = HOLFileSys.chDir "../depdir"
+
 (* Clean up depdir and restore baseScript.sml *)
 val _ = run_holmake ["cleanAll"]
 val _ = let val strm = TextIO.openOut "baseScript.sml"

@@ -1384,8 +1384,8 @@ fun do_cachekey thyname =
                                     val real_uo = OS.FileSys.realPath uo_fspath
                                     val real_dir = OS.Path.dir real_uo
                                     val dat_name = fromFile (DAT s)
-                                    val dat_fspath = toFSpath
-                                        (OS.Path.concat(real_dir, dat_name))
+                                    val dat_fspath =
+                                        OS.Path.concat(real_dir, dat_name)
                                   in
                                     dat_fspath
                                   end handle OS.SysErr _ => fspath
