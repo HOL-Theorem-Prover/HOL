@@ -1,12 +1,12 @@
 (*===========================================================================*)
 (* Nice monad example from Ramana Kumar                                      *)
 (*===========================================================================*)
+
 Theory awe
 Ancestors
   string pair rich_list alist arithmetic
 Libs
   monadsyntax
-
 
 Datatype:
   call_target
@@ -300,4 +300,3 @@ Termination
   \\ gvs[lift_option_def, CaseEq"option", CaseEq"prod", option_CASE_rator,
          raise_def, return_def]
 End
-

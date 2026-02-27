@@ -391,13 +391,14 @@ val simplifyR =
 (* which are likely to be created by mutual recursion.                       *)
 (*---------------------------------------------------------------------------*)
 
-fun flat_type_size ty = case
-        (total sumSyntax.dest_sum ty, total pairSyntax.dest_prod ty) of
-    (SOME (lty, rty), _) => list_mk_icomb (basicSizeSyntax.sum_size_tm,
-        map flat_type_size [lty, rty])
-  | (NONE, SOME (lty, rty)) => list_mk_icomb (basicSizeSyntax.min_pair_size_tm,
-        map flat_type_size [lty, rty])
-  | _ => TypeBasePure.type_size (TypeBase.theTypeBase()) ty
+fun flat_type_size ty =
+  let open basicSizeSyntax in
+  case (total sumSyntax.dest_sum ty, total pairSyntax.dest_prod ty)
+   of (SOME (lty, rty), _) =>
+         mk_sum_size2(flat_type_size lty,flat_type_size rty)
+    | (NONE, SOME (lty, rty)) =>
+         mk_min_pair_size2(flat_type_size lty,flat_type_size rty)
+    | _ => TypeBasePure.type_size (TypeBase.theTypeBase()) ty end
 
 (*---------------------------------------------------------------------------*)
 (* Among the termination_simps() are theorems of the form                    *)
