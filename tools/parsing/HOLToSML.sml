@@ -2,6 +2,12 @@ structure HOLToSML :> HOLToSML = struct
 open HOLAst
 
 exception Unreachable
+
+fun pluck p [] = NONE
+  | pluck p (h::t) =
+    if p h then SOME(h,t)
+    else case pluck p t of NONE => NONE | SOME (e,t) => SOME(e,h::t)
+
 fun mkHandleHolErr (p, e) = let
   val pat = App (mkIdent (p, "Feedback.HOL_ERR"), Wild p)
   val h = mkIdent (p, "boolTheory.TRUTH")
@@ -49,7 +55,8 @@ fun mkLocString' (p, loc) {file = "", ...} = App (mkIdent (p, loc), mkIdent (p, 
     App (mkIdent (p, loc), App (mkIdent (p, "DB_dtype.mkloc"),
       mkTuple (p, [mkString (p, file), mkInt (p, line+1), mkIdent (p, "true")])))
 
-fun doProofAttrs p (SOME {attrs = {args = kv::kvs, ...}, ...}) tac = let
+fun doProofKvals p [] tac = tac
+  | doProofKvals p (kv::kvs) tac = let
   val e = mkIdent (p, "BasicProvers.with_simpset_updates")
   fun mktm1 {key = (p, key), bind} = let
     val args = case bind of NONE => [] | SOME {vals, ...} => map mkString vals
@@ -60,6 +67,8 @@ fun doProofAttrs p (SOME {attrs = {args = kv::kvs, ...}, ...}) tac = let
     in App (mkIdent (p, key), mkList (p, args)) end
   fun mktm (kv, e) = Infix {left = e, id = (p, "o"), right = mktm1 kv}
   in App (App (e, foldl mktm (mktm1 kv) kvs), tac) end
+
+fun doProofAttrs p (SOME {attrs = {args = kvs, ...}, ...}) tac = doProofKvals p kvs tac
   | doProofAttrs _ _ tac = tac
 
 fun wrapTac (p, tac) = let
@@ -496,19 +505,21 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val (label, rest) = case (case attrs of NONE => [] | SOME v => #args (#attrs v)) of
       {key, bind = NONE} :: rest => (key, rest)
     | rest => ((#1 id, ""), rest)
-    val subname = ref NONE
-    val _ = app (fn
-      {key = (p, s as "smlname"), bind} =>
-      (case bind of
-        SOME {vals = [tgt], ...} => subname := SOME tgt
-      | _ => parseError (p, p + size s) "unexpected arguments to [smlname] attribute")
-    | _ => ()) rest
-    val subname = case !subname of SOME tgt => mkIdent tgt | NONE => Wild (#1 label)
+    val subname = pluck (fn {key = (_, "smlname"), ...} => true | _ => false) rest
+    val (subname, rest) = case subname of
+      NONE =>  (* no smlname attr - return original rest *)
+      (Wild (#1 label), rest)
+    | SOME ({bind = SOME {vals = [tgt], ...}, ...}, rest) =>  (* ok smlname attr *)
+      (mkIdent tgt, rest)
+    | SOME ({key = (p, s), ...}, rest)  => (
+      (* bad smlname attr: report error, use wildcard and return rest of attributes *)
+      parseError (p, p + size s) "unexpected arguments to [smlname] attribute";
+      (Wild (#1 label), rest))
     val e = mkIdent (resume_, "markerLib.resume")
     val e = App (e, mkRecord (resume_, [
       mkLabEq (resume_, "label_name", mkString label),
       mkLabEq (resume_, "suspension_name", mkString id)]))
-    val e = App (e, wrapTac (resume_, doProofAttrs resume_ attrs (expandExp false tac)))
+    val e = App (e, wrapTac (resume_, doProofKvals resume_ rest (expandExp false tac)))
     in DecExpansion {orig = dec, result = [valPat resume_ subname e]} end
   | expandDec _ (dec as HOLFinalise {finalise_, id, attrs, ...}) = let
     val fileline = fileline (#1 id)
