@@ -8,7 +8,7 @@ fun printq [] = ""
   | printq (x::xs) = q x ^ " " ^ printq xs
 
 open stringSyntax
-val testdata = [
+val testdata: (term frag list * term) list = [
   (`#"("`, fromMLchar #"("),
   (`"\n`)"`, fromMLstring "\n`)"),
   (`"\n^`)"`, fromMLstring "\n^`)"),
