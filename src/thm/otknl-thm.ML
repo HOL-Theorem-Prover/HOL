@@ -1128,6 +1128,8 @@ fun Specialize t th =
    end
    handle HOL_ERR _ => ERR "Specialize" "";
 
+fun Specialize_thm th_arg th = Specialize (rand (concl th_arg)) th
+
 (*---------------------------------------------------------------------------*
  * Construct a theorem directly and attach the given tag to it.              *
  *---------------------------------------------------------------------------*)
