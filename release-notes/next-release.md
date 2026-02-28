@@ -20,8 +20,16 @@ Contents
 
 New features
 ------------
-- `Theory` syntax now supports disabling the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
-Files that use this feature do not need to mention `Feedback.set_trace "TheoryPP.include_docs" 0` anymore.
+-   `Theory` syntax now supports disabling the generation of documentation in `<thyname>Theory.sig` by following the theory name with the `[no_sig_docs]` annotation.
+    Files that use this feature do not need to mention `Feedback.set_trace "TheoryPP.include_docs" 0` anymore.
+
+-   Lists and finite-map updates (previously achieved with `LUPDATE v i l` and `fm |+ (k,v)` syntax) can now be written with a syntax using the “maps to” arrow and special bracket delimiters.
+    For `LUPDATE v i l`, one can write `l❲i ↦ v❳`, and for `fm |+ (k,v)`, one can write `fm⟨k ↦ v⟩`.
+    Moreover, such updates can be chained into lists of updates between the brackets.
+    For example, `fm⟨k1 ↦ v1; k2 ↦ v2⟩` represents `fm |+ (k2,v2) |+ (k1,v1)`.
+
+    Finally, the corresponding application/selection terms can be written with the brackets around the key values: `fm⟨k⟩` for `fm ’ k`, and `l❲i❳` for `EL i l`.
+    The old syntax continues to work in both cases, but the new forms are preferred when terms are printed.
 
 Bugs fixed
 ----------
@@ -70,6 +78,8 @@ Incompatibilities
 | `REAL_LT_RMUL'` | `REAL_LT_RMUL_NEG` | `!x y z. z < 0 ==> (x * z < y * z <=> y < x)` |
 
 -   For better compatibility with HOL Light (making code-porting easier), arithmetic theory’s `GREATER_EQ` theorem (stating *m ≥ n ⇔ n ≤ m*) is now also available in that theory under the name `GE`.
+
+-   The function `Parse.remove_user_printer` now returns `unit`.
 
 
 Deprecations

@@ -7,6 +7,9 @@ val two11 = 2048  (* 2 ^ 11 *)
 val two16 = 65536 (* 2 ^ 16 *)
 val Umax = 0x10FFFF (* maximum Unicode code point *)
 
+val contains_nonascii =
+    CharVector.exists (fn c => Char.ord c > 127)
+
 fun chr i =
     if i < 0 then raise Chr
     else if i < 128 then str (Char.chr i)
@@ -97,6 +100,12 @@ fun getChar s = let
 in
   recurse (full s)
 end
+
+fun contains_badutf8 s =
+    case SOME (getChar s) handle BadUTF8 _ => NONE of
+        SOME NONE => false
+      | SOME (SOME (_, s')) => contains_badutf8 s'
+      | NONE => true
 
 fun size s = let
   open Substring

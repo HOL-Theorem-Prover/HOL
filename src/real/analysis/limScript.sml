@@ -3106,6 +3106,6 @@ Proof
 QED
 
 (* Temporarily re-enable printing of numeral bits for help documents *)
-val _ = temp_remove_user_printer "num.numeral_computations";
+val _ = temp_remove_user_printer ("num.numeral_computations", “n:num”);
 
 (* END *)

@@ -6,6 +6,8 @@ sig
                   | RB of int (* raw byte *)
   val safecp_to_char : safecp -> string
   val safe_explode : string -> safecp list
+  val contains_nonascii : string -> bool
+  val contains_badutf8 : string -> bool
 
   val getChar : string -> ((string * int) * string) option
   val firstChar : string -> (string * int) option

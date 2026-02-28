@@ -54,11 +54,12 @@ Overload mkClos = “FTNode : icterm -> (string |-> Closure) -> Closure”
 Overload Clos_tm = “item : Closure -> icterm”
 Overload Clos_E = “map : Closure -> (string |-> Closure)”
 
+
 (* quail gets these characters with \langle \ratio \rangle *)
 val _ = add_rule {block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
                   fixity = Closefix, paren_style = OnlyIfNecessary,
-                  pp_elements = [TOK "⟨", TM, HardSpace 1, TOK "∶",
-                                 BreakSpace (1,1), TM, TOK "⟩"],
+                  pp_elements = [TOK "❬", TM, HardSpace 1, TOK "∶",
+                                 BreakSpace (1,1), TM, TOK "❭"],
                   term_name = "mkClos"}
 
 
@@ -103,7 +104,7 @@ Proof
   gvs[GSYM finite_mapTheory.flookup_thm]
 QED
 
-(* “Real (⟨M,E⟩) = [Real (E(x₁))/x₁] ... [Real (E(xₙ)/xₙ)] M” *)
+(* “Real (❬M,E❭) = [Real (E(x₁))/x₁] ... [Real (E(xₙ)/xₙ)] M” *)
 Theorem Real_thm:
   wf_Closure (mkClos M E) ⇒
   Real (mkClos M E) = FUN_FMAP (λx. Real (E ' x)) (cFV M) ' M
@@ -469,19 +470,19 @@ Proof
 QED
 
 Theorem Real_CONST[simp]:
-  Real ⟨ CONST c ∶ E ⟩ = CONST c
+  Real ❬ CONST c ∶ E ❭ = CONST c
 Proof
   simp[Real_def, fmtreerec_thm]
 QED
 
 Theorem Real_APP[simp]:
-  Real ⟨ M @@ N ∶ E ⟩ = Real ⟨ M ∶ E ⟩ @@ Real ⟨ N ∶ E ⟩
+  Real ❬ M @@ N ∶ E ❭ = Real ❬ M ∶ E ❭ @@ Real ❬ N ∶ E ❭
 Proof
   simp[Real_def, fmtreerec_thm]
 QED
 
 Theorem Real_VAR:
-  Real ⟨ VAR v ∶ E ⟩ = case FLOOKUP E v of
+  Real ❬ VAR v ∶ E ❭ = case FLOOKUP E v of
                          NONE => VAR v
                        | SOME cl => Real cl
 Proof
@@ -510,8 +511,8 @@ Proof
 QED
 
 Theorem Real_LAM:
-  wf_Closure ⟨ LAM v M ∶ E ⟩ ⇒
-  Real  ⟨ LAM v M ∶ E ⟩ = LAM v (Real ⟨ M ∶ E \\ v ⟩)
+  wf_Closure ❬ LAM v M ∶ E ❭ ⇒
+  Real  ❬ LAM v M ∶ E ❭ = LAM v (Real ❬ M ∶ E \\ v ❭)
 Proof[exclude_simps = wf_Closure_thm]
   simp[Real_thm] >> strip_tac >>
   dep_rewrite.DEP_REWRITE_TAC[ssub_thm] >>
@@ -547,23 +548,23 @@ Theorem RIGHT_FORALL_DISJ_THM[local] =
 Theorem lemma1_0:
   ∀M E x NCl.
     wf_Closure NCl ∧ (∀k. k ∈ FDOM E ∧ k ≠ x ⇒ wf_Closure (E ' k)) ⇒
-    Real ⟨ M ∶ E |+ (x, NCl) ⟩ = [Real NCl/x] (Real ⟨ M ∶ E \\ x ⟩)
+    Real ❬ M ∶ E |+ (x, NCl) ❭ = [Real NCl/x] (Real ❬ M ∶ E \\ x ❭)
 Proof[exclude_simps = wf_Closure_thm]
   ‘∀M exn E x NCl.
      exn = (E,x,NCl) ∧
      wf_Closure NCl ∧ (∀k. k ∈ FDOM E ∧ k ≠ x ⇒ wf_Closure (E ' k)) ⇒
-     Real ⟨ M ∶ E |+ (x, NCl) ⟩ = [Real NCl/x] (Real ⟨ M ∶ E \\ x ⟩)’
+     Real ❬ M ∶ E |+ (x, NCl) ❭ = [Real NCl/x] (Real ❬ M ∶ E \\ x ❭)’
     suffices_by simp[] >>
   ho_match_mp_tac cterm_bvc_induction >>
   qexists ‘λ(E,x,NCl). eFV E ∪ {x} ∪ clFV NCl’>>
   simp[pairTheory.FORALL_PROD] >> rw[] >~
-  [‘⟨ VAR v ∶ E |+ (u,NCl)⟩ (* sg *)’]
+  [‘❬ VAR v ∶ E |+ (u,NCl)❭ (* sg *)’]
   >- (qabbrev_tac ‘rn = Real NCl’ >> simp[Real_def, fmtreerec_thm] >>
       Cases_on ‘u = v’ >> simp[FAPPLY_FUPDATE_THM, DOMSUB_FAPPLY_THM]
       >- simp[Abbr‘rn’, Real_def] >>
       rw[] >> simp[GSYM Real_def] >>
       simp[lemma14b, wf_Closure_Real_ground]) >~
-  [‘⟨ LAM v M ∶ E |+ (u,NCl)⟩ (* sg *)’] >>
+  [‘❬ LAM v M ∶ E |+ (u,NCl)❭ (* sg *)’] >>
   qabbrev_tac ‘rn = Real NCl’ >> simp[Real_def, fmtreerec_thm] >>
   simp[GSYM Real_def] >> dep_rewrite.DEP_REWRITE_TAC[ssub_thm] >> simp[] >>
   gvs[fmap_supp, supp_setpm, GSYM RIGHT_FORALL_DISJ_THM] >>
@@ -602,7 +603,7 @@ Theorem lemma3_1:
 Proof
   rpt strip_tac >> dep_rewrite.DEP_REWRITE_TAC[lemma1_0] >>
   gvs[] >>
-  qabbrev_tac ‘rn = Real ⟨N ∶ E'⟩’ >>
+  qabbrev_tac ‘rn = Real ❬N ∶ E'❭’ >>
   ‘cFV rn = ∅’ by simp[Abbr‘rn’, wf_Closure_Real_ground] >>
   qpat_x_assum ‘Real (mkClos (LAM y M) E) = _’ mp_tac >>
   simp[Real_LAM, LAM_eq_thm] >> rw[] >>~-
@@ -613,7 +614,7 @@ QED
 
 Theorem Real_EQ_LAM:
   isVClosure cl ∧ Real cl = LAM v M ⇒
-  ∃v0 M0 E. cl = ⟨ LAM v0 M0 ∶ E ⟩
+  ∃v0 M0 E. cl = ❬ LAM v0 M0 ∶ E ❭
 Proof
   Cases_on ‘cl’ using fmaptree_nchotomy >>
   simp[Real_thm, isVClosure_thm, SF CONJ_ss] >>
@@ -623,14 +624,14 @@ QED
 
 Theorem Real_EQ_CONST:
   isVClosure cl ∧ Real cl = CONST c ⇒
-  ∃E. cl = ⟨ CONST c ∶ E ⟩
+  ∃E. cl = ❬ CONST c ∶ E ❭
 Proof[exclude_simps = wf_Closure_thm]
   Cases_on ‘cl’ using fmaptree_nchotomy >>
   simp[isVClosure_thm, SF CONJ_ss] >>
   rename [‘is_abs ct ∨ is_const ct’] >>
   Cases_on ‘ct’ using cterm_CASES >> simp[] >>
-  rename [‘wf_Closure ⟨ LAM u M ∶ E ⟩’] >>
-  Cases_on ‘wf_Closure ⟨ LAM u M ∶ E ⟩’ >>
+  rename [‘wf_Closure ❬ LAM u M ∶ E ❭’] >>
+  Cases_on ‘wf_Closure ❬ LAM u M ∶ E ❭’ >>
   simp[Real_LAM]
 QED
 
@@ -649,20 +650,20 @@ QED
 
 (* p131–2 *)
 (* statement is
-    “Suppose E is a value environment and ⟨M,E⟩ is a closure and M'' is the
-     value of Real (⟨M,E⟩) at time t. Then for all S, E, C and D, with
-     FV(C) ⊆ Dom(E) and some t' ≥ t, ⟨S,E,M:C,D⟩ ⇒^{t'} (⟨M',E'⟩:S,E,C,D⟩
-     where ⟨M',E'⟩ is a value closure and Real (⟨M',E'⟩) = M''.”
+    “Suppose E is a value environment and ❬M,E❭ is a closure and M'' is the
+     value of Real (❬M,E❭) at time t. Then for all S, E, C and D, with
+     FV(C) ⊆ Dom(E) and some t' ≥ t, ❬S,E,M:C,D❭ ⇒^{t'} (❬M',E'❭:S,E,C,D❭
+     where ❬M',E'❭ is a value closure and Real (❬M',E'❭) = M''.”
    Assume that the shadowing of E in the universal quantification is
    unintended and that the qualified E and the outermost E are the same.
 *)
 Theorem lemma3_2:
   ∀t M M'' S E C D.
-    isVEnv E ∧ wf_Closure ⟨M ∶ E⟩ ∧ timed_eval t (Real ⟨M ∶ E⟩) M'' ⇒
+    isVEnv E ∧ wf_Closure ❬M ∶ E❭ ∧ timed_eval t (Real ❬M ∶ E❭) M'' ⇒
     isDump ((S,E,C)::D) ∧ cstrsFV C ⊆ FDOM E ⇒
     ∃t' M' E'.
-      t ≤ t' ∧ NRC dumpTrans t' ((S,E,Tm M::C)::D) ((⟨M'∶E'⟩::S,E,C)::D) ∧
-      isVClosure ⟨M'∶E'⟩ ∧ Real ⟨M'∶E'⟩ = M''
+      t ≤ t' ∧ NRC dumpTrans t' ((S,E,Tm M::C)::D) ((❬M'∶E'❭::S,E,C)::D) ∧
+      isVClosure ❬M'∶E'❭ ∧ Real ❬M'∶E'❭ = M''
 Proof
   gen_tac >> completeInduct_on ‘t’ >> Cases_on ‘M’ using cterm_CASES >~
   [‘CONST c’] (* Case 1 *)
@@ -688,8 +689,8 @@ Proof
       RULE_ASSUM_TAC (ONCE_REWRITE_RULE[isVClosure_cases]) >> metis_tac[]) >~
   [‘M₁ @@ M₂’] (* Case 4, p132 *) >>
   simp[] >> rw[] >>
-  qabbrev_tac ‘N₁ = Real ⟨M₁ ∶ E⟩’ >>
-  qabbrev_tac ‘N₂ = Real ⟨M₂ ∶ E⟩’ >>
+  qabbrev_tac ‘N₁ = Real ❬M₁ ∶ E❭’ >>
+  qabbrev_tac ‘N₂ = Real ❬M₂ ∶ E❭’ >>
   qpat_x_assum ‘timed_eval t _ _’ mp_tac >>
   simp[Once timed_eval_cases] >> strip_tac >~
   (* Subcase 1, p132 *)
@@ -708,7 +709,7 @@ Proof
       Q.UNABBREV_TAC ‘N₁’ >>
       first_assum (qpat_x_assum ‘timed_eval _ (Real _) _’ o
                    mp_then Any mp_tac) >> simp[] >>
-      disch_then (qspecl_then [‘⟨ M₂' ∶ E₂'⟩ :: S’, ‘Ap::C’, ‘D’] mp_tac) >>
+      disch_then (qspecl_then [‘❬ M₂' ∶ E₂'❭ :: S’, ‘Ap::C’, ‘D’] mp_tac) >>
       impl_tac
       >- (gvs[DISJ_IMP_THM, FORALL_AND_THM, isVClosure_thm] >> metis_tac[]) >>
       disch_then (qx_choosel_then [‘t1'’, ‘M₁'’, ‘E₁'’] strip_assume_tac) >>
@@ -720,7 +721,7 @@ Proof
       irule_at Any EQ_REFL >>
       drule_at (Pat ‘Real _ = LAM _ _’) lemma3_1 >>
       simp[isVClosure_wf_Closure, Excl "wf_Closure_thm"] >>
-      ‘wf_Closure ⟨ M₂' ∶ E₂'⟩’
+      ‘wf_Closure ❬ M₂' ∶ E₂'❭’
         by simp[isVClosure_wf_Closure, Excl "wf_Closure_thm"] >>
       disch_then $ drule_then (assume_tac o SYM) >> gvs[] >>
       first_x_assum (qpat_assum ‘timed_eval _ _ _’ o mp_then Any mp_tac) >>
@@ -755,11 +756,11 @@ Proof
   first_x_assum $ irule_at (Pat ‘NRC _ _ _ _ ’) >> gvs[] >>
   drule_all_then strip_assume_tac Real_EQ_CONST >>
   gvs[Real_thm, isVClosure_wf_Closure, ssub_thm, Excl "wf_Closure_thm"] >>
-  rename [‘isVClosure ⟨ CONST b ∶ E₂'⟩’] >>
+  rename [‘isVClosure ❬ CONST b ∶ E₂'❭’] >>
   Q.UNABBREV_TAC ‘N₁’ >>
   first_assum (qpat_x_assum ‘timed_eval _ (Real _) _’ o
                             mp_then Any mp_tac) >> simp[] >>
-  disch_then (qspecl_then [‘⟨CONST b ∶ E₂'⟩::S’, ‘Ap::C’, ‘D’] mp_tac) >>
+  disch_then (qspecl_then [‘❬CONST b ∶ E₂'❭::S’, ‘Ap::C’, ‘D’] mp_tac) >>
   simp[SF SFY_ss, DISJ_IMP_THM, FORALL_AND_THM, Excl "wf_Closure_thm",
        isVClosure_wf_Closure] >>
   disch_then (qx_choosel_then [‘t1'’, ‘M₁'’, ‘E₁'’] strip_assume_tac) >>
@@ -813,30 +814,30 @@ Proof
   simp[arithmeticTheory.NRC] >> metis_tac[]
 QED
 
-(* “Suppose E is a value environment and ⟨M∶E⟩ is a closure.
-    If Real(⟨M∶E⟩) has no value at any t' ≤ t, then either for all
+(* “Suppose E is a value environment and ❬M∶E❭ is a closure.
+    If Real(❬M∶E❭) has no value at any t' ≤ t, then either for all
     S, E, C, D, with FV(C) ⊆ Dom(E), (S,E,M::C)::D hits an error state
     or else (S,E,M::C)::D ⇒^t D' for some D'” *)
 (* Plotkin refers to "lemma 1" a couple of times in the course of the
    proof; he actually means lemma 2. *)
 Theorem lemma3_3:
   ∀t E M.
-    1 ≤ t ∧ isVEnv E ∧ wf_Closure ⟨M∶E⟩ ∧
-    (∀t' N. t' ≤ t ⇒ ¬timed_eval t' (Real⟨M∶E⟩) N) ⇒
+    1 ≤ t ∧ isVEnv E ∧ wf_Closure ❬M∶E❭ ∧
+    (∀t' N. t' ≤ t ⇒ ¬timed_eval t' (Real❬M∶E❭) N) ⇒
     ∀S C D.
       isDump ((S,E,C)::D) ⇒
       (∃t' D'. NRC dumpTrans t' ((S,E,Tm M::C)::D) D' ∧ errorState D') ∨
       (∃D'. NRC dumpTrans t ((S,E,Tm M::C)::D) D')
 Proof
   gen_tac >> completeInduct_on ‘t’ >> rpt strip_tac >>
-  ‘∀c. Real ⟨M∶E⟩ ≠ CONST c’ by (rpt strip_tac >> gvs[]) >>
-  ‘∀v. Real ⟨M∶E⟩ ≠ VAR v’ by (rpt strip_tac >> drule wf_Closure_Real_ground >>
+  ‘∀c. Real ❬M∶E❭ ≠ CONST c’ by (rpt strip_tac >> gvs[]) >>
+  ‘∀v. Real ❬M∶E❭ ≠ VAR v’ by (rpt strip_tac >> drule wf_Closure_Real_ground >>
                                simp[]) >>
-  ‘∀v M0. Real ⟨ M ∶ E ⟩ ≠ LAM v M0’ by (rpt strip_tac >> gvs[]) >>
+  ‘∀v M0. Real ❬ M ∶ E ❭ ≠ LAM v M0’ by (rpt strip_tac >> gvs[]) >>
   ‘∃M₁ M₂. M = M₁ @@ M₂’
     by (Cases_on ‘M’ using cterm_CASES >>
         gvs[Excl "wf_Closure_thm", Real_LAM] >>
-        rename [‘Real ⟨ VAR v ∶ E⟩’] >>
+        rename [‘Real ❬ VAR v ∶ E❭’] >>
         gvs[] >>
         ‘∃cl. FLOOKUP E v = SOME cl’ by simp[flookup_thm] >>
         gvs[Real_VAR] >> gvs[flookup_thm] >>
@@ -844,7 +845,7 @@ Proof
   gvs[] >> dsimp[NRC_dumpTrans_app] >>
   Cases_on ‘t’ >> gvs[] >> rename [‘_ < SUC t0’] >>
   reverse $ Cases_on ‘1 ≤ t0’ >> gvs[arithmeticTheory.NOT_LE] >>
-  reverse $ Cases_on ‘∃t2 N₂. t2 ≤ t0 ∧ timed_eval t2 (Real ⟨ M₂ ∶ E ⟩) N₂’
+  reverse $ Cases_on ‘∃t2 N₂. t2 ≤ t0 ∧ timed_eval t2 (Real ❬ M₂ ∶ E ❭) N₂’
   >- (gvs[] >>
       CONV_TAC (
         LAND_CONV $ RESORT_EXISTS_CONV (
@@ -861,13 +862,13 @@ Proof
   >- metis_tac[shorter_NRC_paths_exist] >>
   gvs[arithmeticTheory.NOT_LE] >>
   reverse $ Cases_on
-      ‘∃nt N₁. nt ≤ t0 - t2' ∧ timed_eval nt (Real ⟨ M₁ ∶ E ⟩) N₁’
+      ‘∃nt N₁. nt ≤ t0 - t2' ∧ timed_eval nt (Real ❬ M₁ ∶ E ❭) N₁’
   >- (gvs[DECIDE “¬p ∨ q ⇔ p ⇒ q”] >>
       first_x_assum (pop_assum o mp_then Any mp_tac) >> simp[] >>
       ‘cstrsFV (Ap::C) ⊆ FDOM E’ by simp[] >>
       disch_then (pop_assum o mp_then Any mp_tac) >>
-      rename [‘isVClosure ⟨ M₂' ∶ E₂' ⟩’] >>
-      ‘∀cl. MEM cl (⟨ M₂' ∶ E₂'⟩ :: S) ⇒ wf_Closure cl’
+      rename [‘isVClosure ❬ M₂' ∶ E₂' ❭’] >>
+      ‘∀cl. MEM cl (❬ M₂' ∶ E₂'❭ :: S) ⇒ wf_Closure cl’
         by gvs[isVClosure_thm, DISJ_IMP_THM] >>
       disch_then (drule_all_then strip_assume_tac)
       >- metis_tac[arithmeticTheory.NRC_ADD_I] >>
@@ -875,14 +876,14 @@ Proof
       metis_tac[arithmeticTheory.NRC_ADD_I]) >>
   pop_assum (qx_choosel_then [‘t1’, ‘N₁’] strip_assume_tac) >>
   first_assum (mp_then Any mp_tac lemma3_2) >> simp[] >>
-  rename [‘isVClosure ⟨ M₂' ∶ E₂' ⟩’] >>
-  ‘∀cl. MEM cl (⟨ M₂' ∶ E₂'⟩ :: S) ⇒ wf_Closure cl’
+  rename [‘isVClosure ❬ M₂' ∶ E₂' ❭’] >>
+  ‘∀cl. MEM cl (❬ M₂' ∶ E₂'❭ :: S) ⇒ wf_Closure cl’
     by gvs[isVClosure_thm, DISJ_IMP_THM] >>
   disch_then (pop_assum o mp_then Any mp_tac) >> simp[SF SFY_ss] >>
   ‘cstrsFV (Ap::C) ⊆ FDOM E’ by simp[] >>
   disch_then (pop_assum o mp_then Any mp_tac) >>
   disch_then $ drule_all_then strip_assume_tac >> gvs[] >>
-  rename [‘NRC _ t1' _ ((⟨ M₁' ∶ E₁' ⟩ :: ⟨ M₂' ∶ E₂' ⟩ :: _, _, _)::_)’] >>
+  rename [‘NRC _ t1' _ ((❬ M₁' ∶ E₁' ❭ :: ❬ M₂' ∶ E₂' ❭ :: _, _, _)::_)’] >>
   Cases_on ‘t0 - t2' ≤ t1'’
   >- (‘t2' + (t0 - t2') = t0’ by simp[] >>
       disj2_tac >> pop_assum (SUBST1_TAC o SYM) >>
@@ -892,18 +893,18 @@ Proof
   gvs[arithmeticTheory.NOT_LE] >>
   Cases_on ‘∃x M₃. M₁' = LAM x M₃’
   >- (gvs[] >>
-      ‘dumpTrans ((⟨ LAM x M₃ ∶ E₁' ⟩ :: ⟨ M₂' ∶ E₂' ⟩ :: S,
+      ‘dumpTrans ((❬ LAM x M₃ ∶ E₁' ❭ :: ❬ M₂' ∶ E₂' ❭ :: S,
                    E, Ap::C)::D)
-                 (([],E₁' |+ (x, ⟨ M₂' ∶ E₂' ⟩), [Tm M₃])::(S,E,C)::D)’
+                 (([],E₁' |+ (x, ❬ M₂' ∶ E₂' ❭), [Tm M₃])::(S,E,C)::D)’
         by (simp[Once dumpTrans_cases] >> irule_at Any EQ_REFL >> simp[]) >>
       Cases_on ‘t0 = t2' + t1' + 1’
       >- (disj2_tac >> pop_assum SUBST_ALL_TAC >>
           irule_at Any arithmeticTheory.NRC_ADD_I >>
           irule_at Any arithmeticTheory.NRC_ADD_I >>
           simp[] >> rpt (first_assum $ irule_at Any)) >>
-      qabbrev_tac ‘E₃' = E₁' |+ (x, ⟨ M₂' ∶ E₂' ⟩)’ >>
+      qabbrev_tac ‘E₃' = E₁' |+ (x, ❬ M₂' ∶ E₂' ❭)’ >>
       reverse $ Cases_on ‘∃t3 N₃. t3 ≤ t0 - t1' - t2' - 1 ∧
-                                  timed_eval t3 (Real ⟨ M₃ ∶ E₃' ⟩) N₃’
+                                  timed_eval t3 (Real ❬ M₃ ∶ E₃' ❭) N₃’
       >- (gvs[DECIDE “¬p ∨ q ⇔ p ⇒ q”] >>
           first_x_assum (pop_assum o mp_then Any mp_tac) >>
           simp[Abbr‘E₃'’, isVClosure_thm, DISJ_IMP_THM, FORALL_AND_THM,
@@ -944,7 +945,7 @@ Proof
       qexists ‘N₃’ >>
       irule timed_eval_app_tm >>
       first_assum $ irule_at Any >>
-      ‘Real ⟨LAM x M₃ ∶ E₁'⟩ = LAM x (Real ⟨M₃ ∶ E₁' \\ x⟩)’
+      ‘Real ❬LAM x M₃ ∶ E₁'❭ = LAM x (Real ❬M₃ ∶ E₁' \\ x❭)’
         by (irule Real_LAM >> gvs[isVClosure_thm]) >> gvs[] >>
       first_assum $ irule_at Any >>
       dep_rewrite.DEP_REWRITE_TAC[GSYM lemma1_0] >> conj_tac
@@ -1034,7 +1035,7 @@ Definition dumpEQ_def:
                 MAP Real s1 = MAP Real s2 ∧
                 LIST_REL (λc1 c2. c1 = Ap ∧ c2 = Ap ∨
                                   ∃t1 t2. c1 = Tm t1 ∧ c2 = Tm t2 ∧
-                                          Real ⟨ t1 ∶ e1 ⟩ = Real ⟨ t2 ∶ e2 ⟩)
+                                          Real ❬ t1 ∶ e1 ❭ = Real ❬ t2 ∶ e2 ❭)
                          cs1 cs2)
              d1 d2 ∧
     0 < LENGTH d1 ∧
@@ -1082,7 +1083,7 @@ Proof
 QED
 
 Theorem Real_LAM_NEQ_APP[simp]:
-  Real ⟨ LAM v M ∶ E⟩ ≠ N @@ P
+  Real ❬ LAM v M ∶ E❭ ≠ N @@ P
 Proof
   simp[Real_def, fmtreerec_thm] >>
   rename [‘LAM v M’, ‘_ o_f E’] >>
@@ -1099,7 +1100,7 @@ Proof
 QED
 
 Theorem Real_LAM_NEQ_CONST[simp]:
-  Real ⟨ LAM v M ∶ E⟩ ≠ CONST c
+  Real ❬ LAM v M ∶ E❭ ≠ CONST c
 Proof
   simp[Real_def, fmtreerec_thm] >>
   rename [‘LAM v M’, ‘_ o_f E’] >>
@@ -1135,21 +1136,21 @@ Proof
    drule_at (Pat ‘v ∈ FDOM E’) isVEnv_Real >>
    simp[cj 2 isVClosure_cases]) >>~-
   ([‘_ ⊆ _ (* g *)’], gvs[isVClosure_thm] >> ASM_SET_TAC[]) >~
-  [‘Real ⟨LAM v1 M1 ∶ E1⟩ = Real ⟨LAM v2 M2 ∶ E2⟩’] >>
-  ‘wf_Closure ⟨LAM v1 M1 ∶ E1⟩ ∧ wf_Closure ⟨LAM v2 M2 ∶ E2⟩’
+  [‘Real ❬LAM v1 M1 ∶ E1❭ = Real ❬LAM v2 M2 ∶ E2❭’] >>
+  ‘wf_Closure ❬LAM v1 M1 ∶ E1❭ ∧ wf_Closure ❬LAM v2 M2 ∶ E2❭’
     by simp[isVClosure_wf_Closure, Excl "wf_Closure_thm"] >>
-  ‘Real ⟨LAM v1 M1 ∶ E1⟩ = LAM v1 (Real⟨M1 ∶ E1 \\ v1⟩) ∧
-   Real ⟨LAM v2 M2 ∶ E2⟩ = LAM v2 (Real⟨M2 ∶ E2 \\ v2⟩)’
+  ‘Real ❬LAM v1 M1 ∶ E1❭ = LAM v1 (Real❬M1 ∶ E1 \\ v1❭) ∧
+   Real ❬LAM v2 M2 ∶ E2❭ = LAM v2 (Real❬M2 ∶ E2 \\ v2❭)’
     by simp[Real_LAM, IgnAsm ‘Real _ = Real _’] >>
   ntac 2 (pop_assum $ mp_then Any mp_tac lemma3_1) >>
   simp[Excl "wf_Closure_thm"] >>
   rename [‘Real Cl1 = Real Cl2’, ‘E1 |+ (v1,Cl1)’, ‘E2 |+ (v2,Cl2)’] >>
   Cases_on ‘Cl1’ using fmaptree_nchotomy >>
   Cases_on ‘Cl2’ using fmaptree_nchotomy >>
-  rename [‘Real ⟨N1 ∶ E1'⟩ = Real⟨N2∶E2'⟩’,
-          ‘E1 |+ (v1,⟨N1 ∶ E1'⟩)’, ‘E2 |+ (v2,⟨N2∶E2'⟩)’] >>
+  rename [‘Real ❬N1 ∶ E1'❭ = Real❬N2∶E2'❭’,
+          ‘E1 |+ (v1,❬N1 ∶ E1'❭)’, ‘E2 |+ (v2,❬N2∶E2'❭)’] >>
   simp[isVClosure_wf_Closure, Excl "wf_Closure_thm"] >> rpt strip_tac >>
-  qpat_x_assum ‘Real ⟨LAM _ _ ∶ _⟩ = Real _’ mp_tac >>
+  qpat_x_assum ‘Real ❬LAM _ _ ∶ _❭ = Real _’ mp_tac >>
   simp[Real_LAM] >> rw[LAM_eq_thm] >> simp[] >>
   simp[ctpm_subst_out] >>
   simp[ctpm_fresh, Excl "wf_Closure_thm", wf_Closure_Real_ground,
@@ -1172,7 +1173,7 @@ Proof
 QED
 
 Theorem isVClosure_noncases[simp]:
-  ¬isVClosure ⟨ VAR v ∶ E ⟩ ∧ ¬isVClosure ⟨ M @@ N ∶ E ⟩
+  ¬isVClosure ❬ VAR v ∶ E ❭ ∧ ¬isVClosure ❬ M @@ N ∶ E ❭
 Proof
   simp[isVClosure_thm]
 QED
@@ -1195,7 +1196,7 @@ Proof
    irule_at Any EQ_REFL) >~
   [‘((Shd::Stl,E,[])::_::_) (* sg *)’]
   >- simp[dumpTrans_cases] >~
-  [‘Ap::_’, ‘Real ⟨ LAM v M ∶ E⟩ = Real Abs’]
+  [‘Ap::_’, ‘Real ❬ LAM v M ∶ E❭ = Real Abs’]
   >- (simp[dumpTrans_cases] >> simp[EXISTS_OR_THM] >>
       Cases_on ‘Abs’ using fmaptree_nchotomy >>
       simp[] >> rename [‘tm = LAM _ _ (* sg *)’] >>
@@ -1203,7 +1204,7 @@ Proof
       irule_at Any EQ_REFL) >~
   [‘Ap::_’, ‘CONST c1 = Real _’]
   >- (simp[dumpTrans_cases] >> simp[EXISTS_OR_THM] >>
-      rename [‘cl1 = ⟨CONST _ ∶ _⟩ ∧ cl2 = ⟨CONST _ ∶ _⟩ ∧ _’] >>
+      rename [‘cl1 = ❬CONST _ ∶ _❭ ∧ cl2 = ❬CONST _ ∶ _❭ ∧ _’] >>
       Cases_on ‘cl1’ using fmaptree_nchotomy >>
       Cases_on ‘cl2’ using fmaptree_nchotomy >> gvs[] >>
       rename [‘t1 = CONST _ ∧ t2 = CONST _ ∧ _’] >>
@@ -1300,8 +1301,8 @@ Theorem theorem3_1:
   closed M ⇒ (Eval M N ⇔ eval M N)
 Proof
   strip_tac >>
-  ‘wf_Closure ⟨ M ∶ FEMPTY ⟩’ by simp[] >>
-  ‘Real ⟨ M ∶ FEMPTY ⟩ = M’ by simp[Real_thm] >>
+  ‘wf_Closure ❬ M ∶ FEMPTY ❭’ by simp[] >>
+  ‘Real ❬ M ∶ FEMPTY ❭ = M’ by simp[Real_thm] >>
   ‘(∀N. eval M N ⇒ Eval M N) ∧ ((∀N. ¬eval M N) ⇒ (∀N. ¬Eval M N))’
     suffices_by (strip_tac >> reverse iff_tac >> simp[] >>
                  Cases_on ‘∃N. eval M N’
@@ -1309,7 +1310,7 @@ Proof
                  metis_tac[]) >>
   conj_tac
   >- (simp[eval_timed_eval] >> rpt strip_tac >> rename [‘timed_eval t’] >>
-      ‘timed_eval t (Real ⟨ M ∶ FEMPTY ⟩) N’ by simp[] >>
+      ‘timed_eval t (Real ❬ M ∶ FEMPTY ❭) N’ by simp[] >>
       dxrule_at (Pat ‘timed_eval _ _ _’) lemma3_2 >>
       simp[isVClosure_thm] >>
       disch_then $ qspecl_then [‘[]’, ‘[]’, ‘[]’] mp_tac >> simp[] >>
@@ -1321,7 +1322,7 @@ Proof
   simp[Eval_def] >> rpt strip_tac >> gvs[Load_def] >>
   drule_then strip_assume_tac arithmeticTheory.RTC_NRC >>
   drule_then strip_assume_tac dumpTrans_nf >>
-  ‘wf_Closure ⟨ M ∶ FEMPTY ⟩’ by simp[] >>
+  ‘wf_Closure ❬ M ∶ FEMPTY ❭’ by simp[] >>
   drule_at_then (Pat ‘wf_Closure _’) assume_tac lemma3_3 >>
   ‘isDump [([],FEMPTY,[])]’ by simp[isDump_def] >>
   first_x_assum (dxrule_at Any) >> simp[isVClosure_thm] >>

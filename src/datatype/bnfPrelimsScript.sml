@@ -100,6 +100,27 @@ Proof
       simp[combinTheory.APPLY_UPDATE_THM, FUN_EQ_THM] >> METIS_TAC[])
 QED
 
+Overload BIMG = “λf A. BIGUNION (IMAGE f A)”
+
+Theorem BIMG_EQUAL:
+  BIMG $= A = A
+Proof
+  simp[Once EXTENSION, PULL_EXISTS, IN_equal]
+QED
+
+Theorem BIMG_K0:
+  BIMG (K ∅) A = ∅
+Proof
+  simp[Once EXTENSION] >> simp[Once EXTENSION] >>
+  simp[EQ_IMP_THM, PULL_EXISTS] >> METIS_TAC[MEMBER_NOT_EMPTY]
+QED
+
+Theorem BIMG_IMAGE:
+  BIMG (λx. IMAGE f (g x)) A = IMAGE f (BIMG g A)
+Proof
+  simp[Once EXTENSION, PULL_EXISTS] >> METIS_TAC[]
+QED
+
 (* ----------------------------------------------------------------------
     record the sum type's Bounded Natural Functor nature
    ---------------------------------------------------------------------- *)

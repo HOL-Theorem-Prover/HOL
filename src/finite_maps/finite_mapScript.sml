@@ -176,6 +176,7 @@ Definition FAPPLY_DEF[nocompute]:
 End
 
 Overload "'" = “FAPPLY”
+Overload FAPPLY = “FAPPLY”
 
 Definition FDOM_DEF[nocompute]:
  FDOM (f:'a |-> 'b) x = ISL (fmap_REP f x)
@@ -184,6 +185,13 @@ End
 val update_rep = Term`\(f:'a->'b+one) x y. \a. if a=x then INL y else f a`;
 
 val empty_rep = Term`(\a. INR one):'a -> 'b + one`;
+
+Overload fmupdate = “λk v fm. fm |+ (k,v)”
+val _ = combinpp.new_form {
+  left = "⟨", right = "⟩", upd_term_name = (“FUPDATE f (k,v)”, "fmupdate"),
+  lookup_term_name = SOME (“fm ' k”, "FAPPLY")
+  };
+
 
 
 (*---------------------------------------------------------------------------

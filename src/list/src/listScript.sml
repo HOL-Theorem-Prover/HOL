@@ -235,19 +235,6 @@ Proof
   REWRITE_TAC[EL_def]
 QED
 
-(* array subscript style brackets are U+2772 and U+2773 *)
-val _ = add_rule {
-  block_style = (AroundEachPhrase, (PP.CONSISTENT, 0)),
-  fixity = Suffix 2100, paren_style = OnlyIfNecessary,
-  pp_elements = [TOK "❲", BreakSpace(0,2),TM, BreakSpace(0,0), TOK "❳"],
-  term_name = "flipEL"
-};
-Overload flipEL = “λl n. EL n l”
-
-val _ = TeX_notation { hol = "❲", TeX = ("\\HOLTokenLeftELbracket{}", 1)}
-val _ = TeX_notation { hol = "❳", TeX = ("\\HOLTokenRightELbracket{}", 1)}
-
-
 (* ---------------------------------------------------------------------*)
 (* Definition of a function                                             *)
 (*                                                                      *)
@@ -3848,6 +3835,18 @@ Theorem LUPDATE_def[userdef]:
 Proof
   simp[LUPDATE_DEF]
 QED
+
+Overload fLUPDATE = “λk v l. LUPDATE v k l”
+Overload fEL = “λl i. EL i l”
+(* array subscript style brackets are U+2772 and U+2773 *)
+val _ = combinpp.new_form {
+  left = "❲", right = "❳",
+  upd_term_name = (“LUPDATE v k l”, "fLUPDATE"),
+  lookup_term_name = SOME (“EL i l”, "fEL")
+  }
+val _ = TeX_notation { hol = "❲", TeX = ("\\HOLTokenLeftELbracket{}", 1)}
+val _ = TeX_notation { hol = "❳", TeX = ("\\HOLTokenRightELbracket{}", 1)}
+
 
 val _ = DefnBase.register_indn $ Prim_rec.gen_indthm
            {lookup_ind = TypeBase.induction_of} LUPDATE_DEF

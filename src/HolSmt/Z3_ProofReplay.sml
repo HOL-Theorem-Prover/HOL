@@ -49,10 +49,18 @@ local
 
   (* a simplification prover that deals with function (i.e., array)
      updates when the indices are integer or word literals *)
-  val SIMP_PROVE_UPDATE = simpLib.SIMP_PROVE (simpLib.&& (simpLib.++
+  val SIMP_PROVE_UPDATE =
+  let
+    val word_type = wordsSyntax.mk_word_type Type.alpha
+    val x = Term.mk_var ("x", word_type)
+    val y = Term.mk_var ("y", word_type)
+    val pat = boolSyntax.mk_eq (x, y)
+  in
+    simpLib.SIMP_PROVE (simpLib.&& (simpLib.++
     (intSimps.int_ss, simpLib.std_conv_ss {name = "word_EQ_CONV",
-      pats = [``(x :'a word) = y``], conv = wordsLib.word_EQ_CONV}),
+      pats = [pat], conv = wordsLib.word_EQ_CONV}),
     [combinTheory.UPDATE_def, boolTheory.EQ_SYM_EQ])) []
+  end
 
   (***************************************************************************)
   (* functions that manipulate/access "global" state                         *)
