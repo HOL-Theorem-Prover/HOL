@@ -1456,4 +1456,10 @@ val trace_export_hook :
 fun trace_export thy pars thms =
   case !trace_export_hook of NONE => () | SOME f => f thy pars thms
 
+(* Term source registration hooks — populated by TraceRecord,
+   called by computeLib. No-ops when tracing is inactive. *)
+val register_term_source : (term * int -> unit) ref = ref (fn _ => ())
+val save_term_sources : (unit -> int) ref = ref (fn () => 0)
+val restore_term_sources : (int -> unit) ref = ref (fn _ => ())
+
 end (* Thm *)

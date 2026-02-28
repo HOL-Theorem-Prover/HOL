@@ -141,7 +141,9 @@ fun cbv_wk rws ((th,CLOS{Env, Term=App(a,args)}), stk) =
   (* Combination where the operator is a constant that we can reduce. *)
   | cbv_wk rws ((th,CST cargs), stk) =
       let
+        val saved = !(Thm.save_term_sources) ()
         val (reduced_p, t', cl', ants, mk_thm) = reduce_cst rws (th, cargs)
+        val _ = !(Thm.restore_term_sources) saved
       in
         if reduced_p then
           prove_ants rws (th, cl', [], ants, mk_thm, cargs, stk)
@@ -185,7 +187,10 @@ and cbv_up rws (hcl, Cbv_rator{Rand=(mka,clos), Ctx}) =
   (* We have already descended into the operator and operand. Schedule the
   application for being reduced with the equation for the head constant. *)
   | cbv_up rws ((thb,v), Cbv_rand{Rator=(mka,false,(th,CST cargs)), Ctx=stk}) =
-      cbv_wk rws ((mka th thb, comb_ct cargs (rhs_concl thb, v)), stk)
+      let val rhs_tm = rhs_concl thb
+          val _ = !(Thm.register_term_source) (rhs_tm, Thm.trace_id thb)
+      in cbv_wk rws ((mka th thb, comb_ct cargs (rhs_tm, v)), stk)
+      end
   | cbv_up rws ((thb,NEUTR), Cbv_rand{Rator=(mka,false,(th,NEUTR)), Ctx=stk}) =
       cbv_up rws ((mka th thb, NEUTR), stk)
   | cbv_up rws ((current_thm, _),

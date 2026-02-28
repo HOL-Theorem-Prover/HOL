@@ -51,6 +51,7 @@ term_entry   ::= "T " t " V " s y "\n"
                | "T " t " C " s s y "\n"
                | "T " t " A " t t "\n"
                | "T " t " L " t t "\n"
+               | "T " t " R " p "\n"
 
 thm_entry    ::= "P " p " " rule args "\n"
 
@@ -139,6 +140,14 @@ theorem (no term interning), and replay reconstructs the term via
 `dest_comb`/`dest_abs` on the parent's RHS. This avoids O(term\_size)
 interning on the EVAL hot path, where every `Mk_comb` step would
 otherwise intern potentially large intermediate terms.
+
+**Derived term entries (`T id R thm_id`)**: A term entry that
+defines the term as `rand(concl(th thm_id))` — the RHS of an
+equational theorem. This avoids the O(term\_size) recursive
+descent in `intern_term` for terms that are known to be the
+RHS of a recently-produced theorem. The compute library registers
+such terms at `cbv_up` time; `intern_term` checks the registry
+on map miss. Merge deduplicates by `TmR(global\_thm\_id)`.
 
 ### Constant and Type Declarations
 

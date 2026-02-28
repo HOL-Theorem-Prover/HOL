@@ -147,6 +147,7 @@ type file_deps = {
   (* T entry deps: sequential id -> (sub_term_ids, sub_type_ids) *)
   t_term_deps : int list Array.array,
   t_type_deps : int list Array.array,
+  t_thm_deps  : int list Array.array,
   (* Y entry deps: sequential id -> sub_type_ids *)
   y_deps : int list Array.array,
   (* COMPUTE P entry trace_ids in this file *)
@@ -232,6 +233,7 @@ fun read_file_data path : file_data =
     val y_deps_rev = ref ([] : (int * int list) list)
     val t_term_deps_rev = ref ([] : (int * int list) list)
     val t_type_deps_rev = ref ([] : (int * int list) list)
+    val t_thm_deps_rev  = ref ([] : (int * int list) list)
 
     fun process_line byte_offset line =
       let val toks = tokenize line in
@@ -294,6 +296,13 @@ fun read_file_data path : file_data =
              t_term_deps_rev := (id, [int_of v_s, int_of b_s])
                                 :: !t_term_deps_rev;
              t_type_deps_rev := (id, []) :: !t_type_deps_rev
+          end
+      | ("T" :: id_s :: "R" :: thm_s :: _) =>
+          let val id = int_of id_s
+          in tm_count := Int.max(!tm_count, id + 1);
+             t_term_deps_rev := (id, []) :: !t_term_deps_rev;
+             t_type_deps_rev := (id, []) :: !t_type_deps_rev;
+             t_thm_deps_rev  := (id, [int_of thm_s]) :: !t_thm_deps_rev
           end
       | ("P" :: id_s :: rule :: args) =>
           let val id = int_of id_s
@@ -450,6 +459,7 @@ fun read_file_data path : file_data =
         p_fd = p_fd,
         t_term_deps = list_to_array nt (!t_term_deps_rev) [],
         t_type_deps = list_to_array nt (!t_type_deps_rev) [],
+        t_thm_deps  = list_to_array nt (!t_thm_deps_rev) [],
         y_deps = list_to_array ny (!y_deps_rev) [],
         compute_ids = !compute_ids_ref,
         c_deps = !c_deps_ref,
@@ -568,6 +578,8 @@ fun mark_live (data : file_data) (prev : liveness)
               (Array.sub(#t_term_deps dp, id));
             List.app mark_type
               (Array.sub(#t_type_deps dp, id));
+            List.app mark_thm
+              (Array.sub(#t_thm_deps dp, id));
             let val def = Array.sub(t_def, id)
             in if def >= 0 then mark_thm def
                else (* No DEF_SPEC; check for C decl — mark its type live *)
@@ -620,6 +632,7 @@ fun mark_live (data : file_data) (prev : liveness)
 datatype ty_desc = TyV of string | TyO of string * string * int list
 datatype tm_desc = TmV of string * int | TmC of string * string * int
                  | TmA of int * int | TmL of int * int
+                 | TmR of int  (* derived: rand(concl(th global_parent_id)) *)
 
 fun ty_desc_compare (TyV a, TyV b) = String.compare(a, b)
   | ty_desc_compare (TyV _, _) = LESS
@@ -651,6 +664,9 @@ fun tm_desc_compare (TmV(n1,t1), TmV(n2,t2)) =
   | tm_desc_compare (TmL(v1,b1), TmL(v2,b2)) =
       (case Int.compare(v1,v2) of EQUAL => Int.compare(b1,b2)
        | ord => ord)
+  | tm_desc_compare (TmL _, _) = LESS
+  | tm_desc_compare (_, TmL _) = GREATER
+  | tm_desc_compare (TmR p1, TmR p2) = Int.compare(p1, p2)
 
 (* ------- Remap a P line's args ------- *)
 
@@ -1387,6 +1403,8 @@ fun merge {trace_paths : (string * string) list,
                         TmA (rt (int_of f_s), rt (int_of x_s))
                     | ["L", v_s, b_s] =>
                         TmL (rt (int_of v_s), rt (int_of b_s))
+                    | ["R", thm_s] =>
+                        TmR (rp (int_of thm_s))
                     | _ => raise ERR "write_file" "bad T entry"
                 in case Redblackmap.peek(!global_tm_map, desc) of
                      SOME gid => Array.update(t_remap, id, gid)
@@ -1408,7 +1426,10 @@ fun merge {trace_paths : (string * string) list,
                             " " ^ its x ^ "\n"
                         | TmL (v,b) =>
                             "T " ^ its gid ^ " L " ^ its v ^
-                            " " ^ its b ^ "\n")
+                            " " ^ its b ^ "\n"
+                        | TmR p =>
+                            "T " ^ its gid ^ " R " ^ its p ^
+                            "\n")
                      end
                 end
               else ()

@@ -77,6 +77,7 @@ fun replay_file path =
     datatype ty_desc = TyVar of string | TyOp of string * string * int list
     datatype tm_desc = TmVar of string * int | TmConst of string * string * int
                      | TmApp of int * int | TmLam of int * int
+                     | TmRhs of int  (* rand(concl(th thm_id)) *)
 
     fun grow arr n default =
       let val old = !arr
@@ -117,6 +118,12 @@ fun replay_file path =
                          Int.toString i)
          in Array.update(!ty_cache, i, SOME v); v end)
 
+    (* Map for theorems (trace_ids can be large/sparse) *)
+    val thm_map : (int, Thm.thm) Redblackmap.dict ref =
+      ref (Redblackmap.mkDict Int.compare)
+    fun set_th i v = thm_map := Redblackmap.insert(!thm_map, i, v)
+
+    (* tm and th are mutually recursive: TmRhs needs th *)
     fun tm i =
       (grow tm_cache i NONE;
        case Array.sub(!tm_cache, i) of
@@ -131,15 +138,12 @@ fun replay_file path =
                  Term.mk_comb(tm fid, tm xid)
              | SOME (TmLam (vid, bid)) =>
                  Term.mk_abs(tm vid, tm bid)
+             | SOME (TmRhs thm_id) =>
+                 rand (Thm.concl (th thm_id))
              | NONE => raise ERR "replay" ("unknown term id " ^
                          Int.toString i)
          in Array.update(!tm_cache, i, SOME v); v end)
-
-    (* Map for theorems (trace_ids can be large/sparse) *)
-    val thm_map : (int, Thm.thm) Redblackmap.dict ref =
-      ref (Redblackmap.mkDict Int.compare)
-    fun set_th i v = thm_map := Redblackmap.insert(!thm_map, i, v)
-    fun th i = case Redblackmap.peek(!thm_map, i) of
+    and th i = case Redblackmap.peek(!thm_map, i) of
                  SOME v => v
                | NONE => raise ERR "replay" ("unknown thm id " ^
                            Int.toString i)
@@ -193,6 +197,9 @@ fun replay_file path =
       | ["T", id_s, "L", v_s, b_s] =>
           set_tm_desc (int_of id_s)
             (TmLam (int_of v_s, int_of b_s))
+      | ["T", id_s, "R", thm_s] =>
+          set_tm_desc (int_of id_s)
+            (TmRhs (int_of thm_s))
 
       (* --- Theorem entries --- *)
       | ("P" :: id_s :: rule :: args) =>
