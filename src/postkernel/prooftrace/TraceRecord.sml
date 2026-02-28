@@ -168,49 +168,6 @@ fun close_output () =
    | NONE => ();
    output_strm := NONE)
 
-(* ------- Term source buffer for derived T entries ------- *)
-
-(* When the compute library registers that a term is rand(concl(th)),
-   intern_term can emit a compact "T id R thm_id" entry instead of
-   recursively descending into the term structure. The buffer is a
-   small stack: save/restore handles nested reduce_cst calls. *)
-
-val ts_buf_size = 256
-val ts_buf : (term * int) option Array.array =
-  Array.array(ts_buf_size, NONE)
-val ts_count = ref 0
-
-fun ts_register (tm, thm_id) =
-  let val i = !ts_count
-  in if i < ts_buf_size then
-       (Array.update(ts_buf, i, SOME (tm, thm_id));
-        ts_count := i + 1)
-     else () (* overflow: silently skip, fall back to normal interning *)
-  end
-
-fun ts_save () = !ts_count
-
-fun ts_restore saved =
-  let val cur = !ts_count
-      fun clear i = if i >= cur then ()
-                    else (Array.update(ts_buf, i, NONE); clear (i + 1))
-  in clear saved; ts_count := saved end
-
-fun ts_lookup tm =
-  let val n = !ts_count
-      fun scan i =
-        if i >= n then NONE
-        else case Array.sub(ts_buf, i) of
-            SOME (tm', thm_id) =>
-              if Portable.pointer_eq(tm, tm') then SOME thm_id
-              else scan (i + 1)
-          | NONE => scan (i + 1)
-  in if n = 0 then NONE else scan 0 end
-
-val _ = Thm.register_term_source := ts_register
-val _ = Thm.save_term_sources := ts_save
-val _ = Thm.restore_term_sources := ts_restore
-
 (* ------- Type interning (writes Y entries inline) ------- *)
 
 (* Intern maps use term/type values as keys for fast lookup
@@ -275,19 +232,6 @@ fun intern_term tm =
   case Redblackmap.peek(!tm_map, tm) of
     SOME id => id
   | NONE =>
-    (* Check term source buffer: if this term is rand(concl(th)),
-       emit a derived T entry instead of recursing into the term. *)
-    case ts_lookup tm of
-      SOME thm_id =>
-        let val id = !tm_counter
-            val _ = tm_counter := id + 1
-            val _ = tm_map := Redblackmap.insert(!tm_map, tm, id)
-            val s = out_strm ()
-        in TextIO.output(s, "T " ^ its id ^ " R " ^
-             its thm_id ^ "\n");
-           id
-        end
-    | NONE =>
     let
       val _ = case Term.dest_term tm of
           Term.VAR _ => ignore (intern_type (Term.type_of tm))
@@ -346,7 +290,6 @@ val _ = reset_for_new_session := (fn () => (
   ty_counter := 0;
   tm_counter := 0;
   tm_at_last_clear := 0;
-  ts_restore 0;
   defined_consts := Redblackset.empty
     (fn ((t1,n1),(t2,n2)) =>
       case String.compare(t1,t2) of
@@ -437,6 +380,9 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   | Thm.TR_Specialize (r, th, t) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " Specialize " ^
         pi th ^ " " ^ its (iT t))
+  | Thm.TR_Specialize_thm (r, th_arg, th) =>
+      record_line ("P " ^ its (Thm.trace_id r) ^ " Specialize_thm " ^
+        pi th_arg ^ " " ^ pi th)
   | Thm.TR_GEN (r, th, x) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " GEN " ^
         pi th ^ " " ^ its (iT x))

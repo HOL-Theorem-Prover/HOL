@@ -97,6 +97,7 @@ sig
   val Mk_comb       : thm -> thm * thm * (thm -> thm -> thm)
   val Mk_abs        : thm -> term * thm * (thm -> thm)
   val Specialize    : term -> thm -> thm
+  val Specialize_thm : thm -> thm -> thm
 
   (* Multiple binders *)
 

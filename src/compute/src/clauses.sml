@@ -89,7 +89,7 @@ fun check_arg_form trm =
 datatype 'a fterm
     = (* order of Args: outermost ahead *)
       CST of { Head : term,
-               Args : (term * 'a fterm) list,
+               Args : (term * 'a fterm * Thm.thm) list,
                Rws  : 'a,
                Skip : int option }
     | NEUTR

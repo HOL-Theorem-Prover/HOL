@@ -1129,6 +1129,21 @@ fun Specialize t th =
    end
    handle HOL_ERR _ => ERR "Specialize" "";
 
+(* Like Specialize, but takes a theorem whose RHS provides the
+   specialization term. Traces with two theorem references (no term
+   interning), making it efficient on the EVAL hot path. *)
+fun Specialize_thm th_arg th =
+   let val t = rand (concl th_arg)
+       val (Rator,Rand) = dest_comb(concl th)
+       val {Name,Thy,...} = dest_thy_const Rator
+   in
+     Assert (Thy="bool" andalso Name="!") "" "";
+     let val result = make_thm Count.Spec
+        (tag th, hypset th, Term.lazy_beta_conv(mk_comb(Rand,t)))
+     in tr (TR_Specialize_thm (result, th_arg, th)); result end
+   end
+   handle HOL_ERR _ => ERR "Specialize_thm" "";
+
 (*---------------------------------------------------------------------------*
  * Construct a theorem directly and attach the given tag to it.              *
  *---------------------------------------------------------------------------*)
@@ -1455,11 +1470,5 @@ val trace_export_hook :
   option ref = ref NONE
 fun trace_export thy pars thms =
   case !trace_export_hook of NONE => () | SOME f => f thy pars thms
-
-(* Term source registration hooks — populated by TraceRecord,
-   called by computeLib. No-ops when tracing is inactive. *)
-val register_term_source : (term * int -> unit) ref = ref (fn _ => ())
-val save_term_sources : (unit -> int) ref = ref (fn () => 0)
-val restore_term_sources : (int -> unit) ref = ref (fn _ => ())
 
 end (* Thm *)

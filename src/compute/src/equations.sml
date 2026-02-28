@@ -31,7 +31,7 @@ fun match_const (bds,tbds) pc c =
 fun match_var (bds,tbds) var arg =
  let val _ =
     case Array.sub(bds,var)
-     of SOME(tm,_) => if aconv tm (fst arg) then () else raise No_match
+     of SOME(tm,_,_) => if aconv tm (#1 arg) then () else raise No_match
       | NONE => Array.update(bds,var,SOME arg)
  in
     (bds, tbds)
@@ -52,7 +52,7 @@ fun match_list bds (pat :: pats) (arg :: args) =
   | match_list _   _           _           = raise DEAD_CODE "match_list"
 
 and match_solve bds (Pvar var)           arg = match_var bds var arg
-  | match_solve bds (Papp{Head=phead,Args=pargs}) (_,CST{Head,Args,...}) =
+  | match_solve bds (Papp{Head=phead,Args=pargs}) (_,CST{Head,Args,...},_) =
       if length pargs = length Args
       then match_list (match_const bds phead Head) pargs Args
       else raise No_match
@@ -106,7 +106,8 @@ fun mk_clos(env,t) =
  * It is probably this code that can be improved the most
  *---------------------------------------------------------------------------*)
 
-fun inst_one_var (SOME(tm,v),(thm,lv)) = (Specialize tm thm, v :: lv)
+fun inst_one_var (SOME(tm,v,th_arg),(thm,lv)) =
+      (Specialize_thm th_arg thm, v :: lv)
   | inst_one_var (NONE,_) = raise DEAD_CODE "inst_rw"
 
 (* Instantiate an equational rewrite. *)

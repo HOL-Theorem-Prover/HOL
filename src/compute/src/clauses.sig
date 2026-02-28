@@ -8,7 +8,7 @@ sig
 
   datatype 'a fterm = (* order of Args: outermost ahead *)
       CST of { Head : term,
-               Args : (term * 'a fterm) list,
+               Args : (term * 'a fterm * Thm.thm) list,
                Rws  : 'a,
                Skip : int option }
     | NEUTR
@@ -21,8 +21,8 @@ sig
     | Abs of 'a dterm
 
   val is_skip : 'a * 'b fterm -> bool
-  val partition_skip : int option -> (term * 'b fterm) list ->
-                       (term * 'b fterm) list * (term * 'b fterm) list
+  val partition_skip : int option -> (term * 'b fterm * Thm.thm) list ->
+                       (term * 'b fterm * Thm.thm) list * (term * 'b fterm * Thm.thm) list
   val inst_type_dterm : (hol_type,hol_type) subst * 'a dterm -> 'a dterm
 
 

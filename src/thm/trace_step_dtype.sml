@@ -42,6 +42,7 @@ datatype ('a, 'b, 'c) trace_step =
   | TR_Mk_comb     of 'a * 'a * 'a * 'a
   | TR_Mk_abs      of 'a * 'a * 'a * 'b
   | TR_Specialize  of 'a * 'a * 'b
+  | TR_Specialize_thm of 'a * 'a * 'a  (* result, arg_thm, parent_thm *)
   | TR_ORACLE      of 'a * string
   | TR_AXIOM       of 'a * 'b
   | TR_DEF_TYOP    of 'a * 'a * string * string
