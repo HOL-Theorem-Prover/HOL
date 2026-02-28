@@ -553,6 +553,15 @@ fun format_name_message {pfx, name} =
      else StringCvt.padRight #"_" 21 (pfx ^ " ")) ^ " " ^
     Lib.quote name ^ "\n"
 
+fun oracle_string_of th  =
+  let val tags = Lib.set_diff (fst (Tag.dest_tag (Thm.tag th))) ["DISK_THM"]
+  in if List.null tags
+        then NONE
+      else if Lib.mem "cheat" tags then SOME "CHEAT"
+      else if Lib.mem "fast_proof" tags then SOME "FAST-CHEAT"
+      else SOME "ORACLE thm"
+  end
+
 local
   fun check_name tempok (fname,s) =
     if Lexis.ok_sml_identifier s andalso
@@ -566,15 +575,9 @@ local
   val _ = Feedback.register_trace ("Theory.save_thm_reporting",
                                    save_thm_reporting, 2)
   fun mesg_str th =
-    let
-      val tags = Lib.set_diff (fst (Tag.dest_tag (Thm.tag th))) ["DISK_THM"]
-    in
-      if List.null tags
-        then "theorem"
-      else if Lib.mem "cheat" tags then "CHEAT"
-      else if Lib.mem "fast_proof" tags then "FAST-CHEAT"
-      else "ORACLE thm"
-    end
+    case oracle_string_of th
+     of NONE => "theorem"
+      | SOME str => str
   val msgOut = with_flag(MESG_to_string,Lib.I) HOL_MESG
   fun save_mesg s name =
     if !save_thm_reporting = 0 orelse
