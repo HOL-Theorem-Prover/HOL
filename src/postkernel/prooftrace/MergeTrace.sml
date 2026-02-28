@@ -51,6 +51,8 @@ fun extract_parent_ids rule args =
     | "DISJ1" => [ai 0] | "DISJ2" => [ai 0]
     | "NOT_INTRO" => [ai 0] | "NOT_ELIM" => [ai 0]
     | "CCONTR" => [ai 0] | "Beta" => [ai 0]
+    | "REFL_RATOR" => [ai 0] | "REFL_RAND" => [ai 0]
+    | "REFL_BODY" => [ai 0]
     | "EXISTS" => [ai 0]
     | "DEF_TYOP" => [ai 0]
     | "DEF_SPEC" => [ai 0]
@@ -722,6 +724,9 @@ fun remap_args (ry : int -> int) (rt : int -> int) (rp : int -> int)
   | "CCONTR" => [its (rp (int_of (List.nth(args,0)))),
                  its (rt (int_of (List.nth(args,1))))]
   | "Beta" => [its (rp (int_of (hd args)))]
+  | "REFL_RATOR" => [its (rp (int_of (hd args)))]
+  | "REFL_RAND" => [its (rp (int_of (hd args)))]
+  | "REFL_BODY" => [its (rp (int_of (hd args)))]
   | "Mk_comb" => map (its o rp o int_of) args
   | "Mk_abs" => map (its o rp o int_of) args
   | "DEF_TYOP" => [its (rp (int_of (List.nth(args,0)))),

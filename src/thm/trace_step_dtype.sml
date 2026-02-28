@@ -53,5 +53,11 @@ datatype ('a, 'b, 'c) trace_step =
                      * 'c                   (* num_type *)
                      * (string * 'a) list   (* char_eqns *)
   | TR_COMPUTE     of 'a * 'a list * 'b    (* result, code_eqn_thms, input *)
+  (* Internal REFLs produced by Mk_comb/Mk_abs. These reference the parent
+     theorem rather than interning a term, so replay reconstructs the term
+     from dest_comb/dest_abs of the parent's RHS. *)
+  | TR_REFL_RATOR  of 'a * 'a   (* refl_thm, parent_thm *)
+  | TR_REFL_RAND   of 'a * 'a   (* refl_thm, parent_thm *)
+  | TR_REFL_BODY   of 'a * 'a   (* refl_thm, parent_thm *)
 
 end

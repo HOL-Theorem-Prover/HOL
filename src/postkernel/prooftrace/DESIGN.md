@@ -119,6 +119,9 @@ extend to end of line.
 | `NOT_ELIM` | `p` |
 | `CCONTR` | `p t` |
 | `Beta` | `p` — compute-optimized right-beta |
+| `REFL_RATOR` | `p` — REFL of rator(rhs(concl parent)), from Mk\_comb |
+| `REFL_RAND` | `p` — REFL of rand(rhs(concl parent)), from Mk\_comb |
+| `REFL_BODY` | `p` — REFL of body(rhs(concl parent)), from Mk\_abs |
 | `Mk_comb` | `p p p` — original, fun result, arg result |
 | `Mk_abs` | `p p` — original, body result |
 | `DEF_TYOP` | `p s s` — witness, thy, tyop |
@@ -128,6 +131,14 @@ extend to end of line.
 | `ORACLE` | `s t t*` — tag, concl, hyps |
 | `NAME` | `s s` — theory, name (per-theory traces only) |
 | `LOAD` | `s p` — theory, ancestor trace_id (per-theory traces only) |
+
+**REFL\_RATOR / REFL\_RAND / REFL\_BODY**: `Mk_comb` and `Mk_abs`
+internally produce REFL theorems for the sub-terms of the parent's
+RHS. These lightweight trace steps reference only the parent
+theorem (no term interning), and replay reconstructs the term via
+`dest_comb`/`dest_abs` on the parent's RHS. This avoids O(term\_size)
+interning on the EVAL hot path, where every `Mk_comb` step would
+otherwise intern potentially large intermediate terms.
 
 ### Constant and Type Declarations
 

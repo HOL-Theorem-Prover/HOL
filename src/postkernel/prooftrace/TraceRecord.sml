@@ -427,6 +427,12 @@ fun record_hook (step : (thm, term, hol_type) Thm.trace_step) =
   | Thm.TR_Mk_abs (r, orig, body, _) =>
       record_line ("P " ^ its (Thm.trace_id r) ^ " Mk_abs " ^
         pi orig ^ " " ^ pi body)
+  | Thm.TR_REFL_RATOR (r, parent) =>
+      record_line ("P " ^ its (Thm.trace_id r) ^ " REFL_RATOR " ^ pi parent)
+  | Thm.TR_REFL_RAND (r, parent) =>
+      record_line ("P " ^ its (Thm.trace_id r) ^ " REFL_RAND " ^ pi parent)
+  | Thm.TR_REFL_BODY (r, parent) =>
+      record_line ("P " ^ its (Thm.trace_id r) ^ " REFL_BODY " ^ pi parent)
   | Thm.TR_DEF_TYOP (r, wit, thy, tyop) =>
       (defined_types :=
          Redblackset.add(!defined_types, (thy, tyop));

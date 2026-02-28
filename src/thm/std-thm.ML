@@ -193,10 +193,11 @@ fun ASSUME tm =
 val mk_eq_nocheck = Term.prim_mk_eq;
 
 fun refl_nocheck ty tm =
-  let val th = make_thm Count.Refl (empty_tag, empty_hyp, mk_eq_nocheck ty tm tm)
-  in tr (TR_REFL (th, tm)); th end;
+  make_thm Count.Refl (empty_tag, empty_hyp, mk_eq_nocheck ty tm tm);
 
-fun REFL tm = refl_nocheck (type_of tm) tm;
+fun REFL tm =
+  let val th = refl_nocheck (type_of tm) tm
+  in tr (TR_REFL (th, tm)); th end;
 
 
 (*---------------------------------------------------------------------------*
@@ -1071,7 +1072,9 @@ fun Mk_comb thm =
          handle HOL_ERR _ => ERR "Mk_comb" "";
        val aty = type_of Rand    (* typing! *)
        val th1 = refl_nocheck (aty --> ty) Rator
+       val _ = tr (TR_REFL_RATOR (th1, thm))
        val th2 = refl_nocheck aty Rand
+       val _ = tr (TR_REFL_RAND (th2, thm))
    in (th1,th2,mkthm)
    end
    handle HOL_ERR _ => ERR "Mk_comb" "";
@@ -1106,6 +1109,7 @@ fun Mk_abs thm =
          in tr (TR_Mk_abs (result, thm, th1', Bvar)); result end
          handle HOL_ERR _ => ERR "Mk_abs" ""
        val th1 = refl_nocheck (rng ty) Body
+       val _ = tr (TR_REFL_BODY (th1, thm))
    in (Bvar,th1,mkthm)
    end
    handle HOL_ERR _ => ERR "Mk_abs" "";

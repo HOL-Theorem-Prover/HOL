@@ -273,6 +273,12 @@ fun replay_file path =
             | "NOT_ELIM" => Thm.NOT_ELIM (th (ai 0))
             | "CCONTR" => Thm.CCONTR (tm (ai 1)) (th (ai 0))
             | "Beta" => Thm.Beta (th (ai 0))
+            | "REFL_RATOR" =>
+                Thm.REFL (rator (rand (Thm.concl (th (ai 0)))))
+            | "REFL_RAND" =>
+                Thm.REFL (rand (rand (Thm.concl (th (ai 0)))))
+            | "REFL_BODY" =>
+                Thm.REFL (snd (dest_abs (rand (Thm.concl (th (ai 0))))))
             | "Mk_comb" =>
                 let val (_, _, mkthm) = Thm.Mk_comb (th (ai 0))
                 in mkthm (th (ai 1)) (th (ai 2)) end
