@@ -495,9 +495,8 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val fileline = fileline (#1 id)
     val nameAttrs = mkNameAttrs mkKval id (withLocalAttrs theorem_ triv attrs)
     val quote = expandQuote theorem_ stop quote
-    val tac = expandExp false tac
+    val tac = wrapTac (theorem_, expandExp false tac)
     val tac = case proof_ of SOME {proof_, attrs} => doProofAttrs proof_ attrs tac | _ => tac
-    val tac = wrapTac (theorem_, tac)
     val e = mkLocString (theorem_, "Q.store_thm", "Q.store_thm_at") fileline
     val e = App (e, mkTuple (theorem_, [nameAttrs, quote, tac]))
     in DecExpansion {orig = dec, result = [valPat theorem_ (mkIdent id) e]} end
@@ -519,7 +518,7 @@ and expandDec _ (dec as DecSemi _) = DecExpansion {orig = dec, result = []}
     val e = App (e, mkRecord (resume_, [
       mkLabEq (resume_, "label_name", mkString label),
       mkLabEq (resume_, "suspension_name", mkString id)]))
-    val e = App (e, wrapTac (resume_, doProofKvals resume_ rest (expandExp false tac)))
+    val e = App (e, doProofKvals resume_ rest (wrapTac (resume_, expandExp false tac)))
     in DecExpansion {orig = dec, result = [valPat resume_ subname e]} end
   | expandDec _ (dec as HOLFinalise {finalise_, id, attrs, ...}) = let
     val fileline = fileline (#1 id)
