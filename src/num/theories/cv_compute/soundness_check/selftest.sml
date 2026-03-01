@@ -1,6 +1,7 @@
 open HolKernel boolLib testutils
 open arithmeticTheory cvTheory
 open cv_compute_unsoundTheory
+open cv_computeLib
 
 val bad_cv_fst1 = bad_cv_fst1_lemma |> UNDISCH;
 
@@ -116,3 +117,12 @@ val _ = shouldfail {checkexn = check_HOL_ERRexn expect,
                     num_type = numSyntax.num,
                     char_eqns = char_eqns
                    };
+
+val _ = convtest ("cv_if on pair (via compute)" , cv_computeLib.cv_compute [],
+                  “cv_if (cv$Pair (cv$Num 0) (cv$Num 1)) (cv$Num 0) (cv$Num 1)”,
+                   “cv$Num 0”)
+
+val _ = convtest ("cv_if on pair (via REWRITE)" ,
+                  REWRITE_CONV [cvTheory.cv_if_def],
+                  “cv_if (cv$Pair (cv$Num 0) (cv$Num 1)) (cv$Num 0) (cv$Num 1)”,
+                   “cv$Num 0”)
