@@ -7,8 +7,8 @@ performance of the merge and replay tools.
 
 ## Commits
 
-- **Baseline (origin/develop):** `c38cd4913` — TFL: cleanup auto-delete of support constants
-- **PR (proof-traces):** `cc2167173` — Revert deletion of dependencies in proofman/Holmakefile
+- **Baseline (origin/develop):** `81c9003b5` — TFL: print cheated Modern Syntax termination proofs
+- **PR (proof-traces):** `641a2703d` — Add Specialize_thm to otknl
 
 ## Target theorems
 
@@ -29,7 +29,7 @@ All commands are below are in the HOL directory.
 Fresh full HOL build from the develop branch.
 
 ```
-git checkout c38cd4913
+git checkout 81c9003b5
 git clean -xdf
 poly --script tools/smart-configure.sml
 /usr/bin/time -v bin/build --nograph &| tee /tmp/bench-a.log
@@ -40,7 +40,7 @@ poly --script tools/smart-configure.sml
 Fresh full HOL build from the PR branch, without `--trace`.
 
 ```
-git checkout cc2167173
+git checkout 641a2703d
 git clean -xdf
 poly --script tools/smart-configure.sml
 /usr/bin/time -v bin/build --nograph &| tee /tmp/bench-b.log
@@ -100,12 +100,12 @@ Replay the merged trace.
 
 | Run | Description | Wall time | Peak RSS | Notes |
 |-----|-------------|-----------|----------|-------|
-| (a) | Baseline build | 10m04s | 1.64G   | |
-| (b) | PR build, tracing off | 10m08s | 1.45G | |
-| (c) | PR build, tracing on | 13m20s | 2.1G | total .pft.zst size: 1.4G |
-| (c') | regexp_compiler (tracing on) | 3m33s | 3.36G | |
-| (d) | Merge | 4m29s | 17.44G | merged: raw (292M) / zstd (69M) (ratio 4.23) |
-| (e) | Replay | 33s | 7.63G | |
+| (a) | Baseline build | 10m04s | 1.63G   | |
+| (b) | PR build, tracing off | 10m08s | 1.41G | |
+| (c) | PR build, tracing on | 12m43s | 1.8G | total .pft.zst size: 1.4G |
+| (c') | regexp_compiler (tracing on) | 2m46s | 1.48G | |
+| (d) | Merge | 4m37s | 15.63G | merged: raw (304M) / zstd (68M) (ratio 4.47) |
+| (e) | Replay | 32s | 7.55G | |
 
 **Overhead (b vs a):** kernel changes with tracing off
 essentially nothing

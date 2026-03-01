@@ -1,9 +1,9 @@
 #!/usr/bin/env fish
-git checkout c38cd4913
+git checkout 81c9003b5
 git clean -xdf
 poly --script tools/smart-configure.sml
 /usr/bin/time -v bin/build --nograph &| tee /tmp/bench-a.log
-git checkout cc2167173
+git checkout 641a2703d
 git clean -xdf
 poly --script tools/smart-configure.sml
 /usr/bin/time -v bin/build --nograph &| tee /tmp/bench-b.log
