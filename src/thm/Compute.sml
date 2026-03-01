@@ -535,7 +535,7 @@ local
        ("cv_lt4",     CV_LT (CV_PAIR P_ Q_) (CV_PAIR R_ S_) === CV_NUM ZERO),
        ("cv_if1",     CV_IF (CV_NUM (SUC M_)) P_ Q_ === P_),
        ("cv_if2",     CV_IF (CV_NUM ZERO) P_ Q_ === Q_),
-       ("cv_if3",     CV_IF (CV_PAIR R_ S_) P_ Q_ === Q_),
+       ("cv_if3",     CV_IF (CV_PAIR R_ S_) P_ Q_ === P_),
        ("cv_fst1",    CV_FST (CV_PAIR P_ Q_) === P_),
        ("cv_fst2",    CV_FST (CV_NUM M_) === CV_NUM ZERO),
        ("cv_snd1",    CV_SND (CV_PAIR P_ Q_) === Q_),

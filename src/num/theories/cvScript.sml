@@ -182,13 +182,10 @@ Theorem c2b_thm[simp]:
   (c2b (Num (NUMERAL ZERO)) = F) /\
   (c2b (Pair x y) = T)
 Proof
-  rewrite_tac [c2b_def,Num_11,prim_recTheory.INV_SUC_EQ]
-  \\ rewrite_tac [GSYM boolTheory.EXISTS_REFL,NORM_0]
-  \\ rewrite_tac [SUC_NOT]
+  rewrite_tac [c2b_def,Num_11,prim_recTheory.INV_SUC_EQ, numTheory.NOT_SUC,
+               NORM_0, simple_inequalities]
   \\ once_rewrite_tac [EQ_SYM_EQ]
   \\ rewrite_tac [cv_distinct]
-  \\ EXISTS_TAC “0:num”
-  \\ rewrite_tac [ADD1,ADD_CLAUSES]
 QED
 
 val cv_case_def = Prim_rec.new_recursive_definition {
@@ -552,11 +549,12 @@ Theorem cv_exp_eq:
           (Num 1)
 Proof
   Cases_on ‘e’
-  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP]
-  \\ Cases_on ‘m’
-  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP,LET_THM]
+  \\ rewrite_tac [c2n_def,cv_exp_def,cv_if_def,EXP,cv_mod_def,cv_div_def,
+                  LET_THM]
   \\ CONV_TAC (DEPTH_CONV BETA_CONV)
-  \\ rewrite_tac [cv_mul_def,cv_mod_def,cv_if_def]
+  \\ rewrite_tac [cv_mul_def, MULT_CLAUSES]
+  \\ Cases_on ‘m’
+  \\ rewrite_tac [cv_mul_def,cv_mod_def,cv_if_def, EXP]
   \\ Cases_on ‘SUC n MOD 2’
   \\ rewrite_tac [cv_if_def,Num_11,GSYM EXP_ADD, GSYM TIMES2,cv_div_def,cv_sub_def,
        GSYM PRE_SUB1,prim_recTheory.PRE,c2n_def]
