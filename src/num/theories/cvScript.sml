@@ -163,14 +163,14 @@ Proof
 QED
 
 (* helpers/auxiliaries *)
-val c2b_def = new_definition ("c2b_def", “c2b x = ?k. x = Num (SUC k)”);
+val c2b_def = new_definition ("c2b_def", “c2b x <=> x ≠ Num 0”);
 val cv_if_def0 = new_definition(
   "cv_if_def0",
   “cv_if p (q:cv) (r:cv) = if c2b p then q else r”);
 Theorem cv_if_def:
   cv_if (Num (SUC m)) (p:cv) (q:cv) = p /\
   cv_if (Num 0) p q = q /\
-  cv_if (Pair r s) p q = q
+  cv_if (Pair r s) p q = p
 Proof
   simp[c2b_def, cv_if_def0, Num_11, cv_distinct]
 QED
@@ -180,7 +180,7 @@ Theorem c2b_thm[simp]:
   (c2b (Num 1) = T) /\
   (c2b (Num 0) = F) /\
   (c2b (Num (NUMERAL ZERO)) = F) /\
-  (c2b (Pair x y) = F)
+  (c2b (Pair x y) = T)
 Proof
   rewrite_tac [c2b_def,Num_11,prim_recTheory.INV_SUC_EQ]
   \\ rewrite_tac [GSYM boolTheory.EXISTS_REFL,NORM_0]
