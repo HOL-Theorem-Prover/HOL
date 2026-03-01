@@ -121,20 +121,20 @@ fun is_abs(Abs _) = true | is_abs(Clos(_,Abs _)) = true | is_abs _ = false;
 
 
 (*---------------------------------------------------------------------------*
- * The type variables of a lambda term. Tail recursive (from Ken Larsen).    *
+ * The type variables of a lambda term.                                      *
  *---------------------------------------------------------------------------*)
 
-local fun tyV (Fv(_,Ty)) k         = k (Type.type_vars Ty)
-        | tyV (Bv _) k             = k []
-        | tyV (Const(_,GRND _)) k  = k []
-        | tyV (Const(_,POLY Ty)) k = k (Type.type_vars Ty)
-        | tyV (Comb(Rator,Rand)) k = tyV Rand (fn q1 =>
-                                     tyV Rator(fn q2 => k (union q2 q1)))
-        | tyV (Abs(Bvar,Body)) k   = tyV Body (fn q1 =>
-                                     tyV Bvar (fn q2 => k (union q2 q1)))
-        | tyV (t as Clos _) k      = tyV (push_clos t) k
+local fun tyV (Fv(_,Ty)) A         = Type.type_vars_acc Ty A
+        | tyV (Bv _) A             = A
+        | tyV (Const(_,GRND _)) A  = A
+        | tyV (Const(_,POLY Ty)) A = Type.type_vars_acc Ty A
+        | tyV (Comb(Rator,Rand)) A = let val A' = tyV Rator A
+                                     in tyV Rand A' end
+        | tyV (Abs(Bvar,Body)) A   = let val A' = tyV Bvar A
+                                     in tyV Body A' end
+        | tyV (t as Clos _) A      = tyV (push_clos t) A
 in
-fun type_vars_in_term tm = tyV tm Lib.I
+fun type_vars_in_term tm = tyV tm []
 end;
 
 (*---------------------------------------------------------------------------*

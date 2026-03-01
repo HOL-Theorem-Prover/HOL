@@ -1343,6 +1343,7 @@ end
 
 fun canonicalise_tyvars def thm = let
   val thm_tyvars = Term.type_vars_in_term (concl thm)
+                 |> List.rev
   val utys = Lib.U (itlist (union o map snd o snd) def [])
   val def_tyvars = Type.type_varsl utys
   fun gen_canonicals tyvs avoids =
