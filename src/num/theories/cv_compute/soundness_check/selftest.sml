@@ -118,11 +118,29 @@ val _ = shouldfail {checkexn = check_HOL_ERRexn expect,
                     char_eqns = char_eqns
                    };
 
-val _ = convtest ("cv_if on pair (via compute)" , cv_computeLib.cv_compute [],
-                  “cv_if (cv$Pair (cv$Num 0) (cv$Num 1)) (cv$Num 0) (cv$Num 1)”,
-                   “cv$Num 0”)
+val p01 = “cv$Pair (cv$Num 0) (cv$Num 1)”
 
-val _ = convtest ("cv_if on pair (via REWRITE)" ,
-                  REWRITE_CONV [cvTheory.cv_if_def],
-                  “cv_if (cv$Pair (cv$Num 0) (cv$Num 1)) (cv$Num 0) (cv$Num 1)”,
-                   “cv$Num 0”)
+fun check_compute_vs_rewrite (nm, t0, rwt_ths) =
+    let
+      val _ = tprint ("Compute match-up/compute: " ^ nm)
+      fun followup (Exn e) = die "Impossible"
+        | followup (Res t) = (
+          tprint ("Compute match-up/rewrite: " ^ nm);
+          require_msg (check_result (aconv t))
+                      term_to_string
+                      (rhs o concl o REWRITE_CONV rwt_ths)
+                      t0
+        )
+    in
+      require_msgk (check_result (K true))
+                   (fn t => PP.add_string (term_to_string t))
+                   (rhs o concl o cv_computeLib.cv_compute [])
+                   followup
+                   t0
+    end
+
+val _ = List.app check_compute_vs_rewrite [
+      ("cv_if on pair", “cv_if ^p01 (cv$Num 0) (cv$Num 1)”, [cv_if_def]),
+      ("cv_mod on pair(1)", “cv_mod ^p01 (cv$Num 2)”, [cv_mod_def]),
+      ("cv_mod on pair(2)", “cv_mod ^p01 (cv$Num 0)”, [cv_mod_def])
+    ]
