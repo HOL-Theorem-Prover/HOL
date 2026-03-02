@@ -137,7 +137,7 @@ local
   fun do_sub x y = Num (to_num x - to_num y);
   fun do_mul x y = Num (to_num x * to_num y);
   fun do_div x y = Num (to_num x div to_num y) handle Div => cv_zero
-  fun do_mod x y = Num (to_num x mod to_num y) handle Div => x
+  fun do_mod x y = Num (to_num x mod to_num y) handle Div => Num (to_num x)
   fun do_eq x y = if x = y then cv_one else cv_zero;
   fun do_less x y =
     case x of Pair _ => cv_zero | Num n =>
