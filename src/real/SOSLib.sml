@@ -2034,6 +2034,8 @@ local
   val pth_eq = REAL_ARITH ``(x = y:real) <=> x - y = &0``
   val pth_nle = REAL_ARITH ``~(x <= y) <=> x - y > &0:real``
   val pth_nlt = REAL_ARITH ``~(x < y) <=> x - y >= &0:real``
+  val pth_nge = REAL_ARITH ``~(x >= y) <=> y - x > &0:real``
+  val pth_ngt = REAL_ARITH ``~(x > y) <=> y - x >= &0:real``
 
   fun norm_ineq th =
     let val tm = concl th
@@ -2064,6 +2066,10 @@ local
             let val (l,r) = bin_args iargs in do_conv pth_nle l r end
           else if same_const iop lt_tm then
             let val (l,r) = bin_args iargs in do_conv pth_nlt l r end
+          else if same_const iop ge_tm then
+            let val (l,r) = bin_args iargs in do_conv pth_nge l r end
+          else if same_const iop gt_tm then
+            let val (l,r) = bin_args iargs in do_conv pth_ngt l r end
           else raise ERR "norm_ineq" "unexpected negated form"
         end
       else raise ERR "norm_ineq" "unexpected form"
