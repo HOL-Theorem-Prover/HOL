@@ -119,6 +119,7 @@ val _ = shouldfail {checkexn = check_HOL_ERRexn expect,
                    };
 
 val p01 = “cv$Pair (cv$Num 0) (cv$Num 1)”
+val p02 = “cv$Pair (cv$Num 0) (cv$Num 2)”
 
 fun check_compute_vs_rewrite (nm, t0, rwt_ths) =
     let
@@ -139,8 +140,25 @@ fun check_compute_vs_rewrite (nm, t0, rwt_ths) =
                    t0
     end
 
+val one_lt_2 = prove(“1n < 2”, REWRITE_TAC[ONE,TWO,LESS_MONO_EQ,SUC_POS])
+
+
 val _ = List.app check_compute_vs_rewrite [
       ("cv_if on pair", “cv_if ^p01 (cv$Num 0) (cv$Num 1)”, [cv_if_def]),
       ("cv_mod on pair(1)", “cv_mod ^p01 (cv$Num 2)”, [cv_mod_def]),
-      ("cv_mod on pair(2)", “cv_mod ^p01 (cv$Num 0)”, [cv_mod_def])
+      ("cv_mod on pair(2)", “cv_mod ^p01 (cv$Num 0)”, [cv_mod_def]),
+      ("cv_div on pair(1)", “cv_div ^p01 (cv$Num 2)”, [cv_div_def]),
+      ("cv_div on pair(2)", “cv_div ^p01 (cv$Num 2)”, [cv_div_def]),
+      ("cv_mul on pair(1)", “cv_mul ^p01 (cv$Num 2)”, [cv_mul_def]),
+      ("cv_mul on pair(2)", “cv_mul ^p01 (cv$Num 1)”, [cv_mul_def]),
+      ("cv_mul on pair(3)", “cv_mul ^p01 (cv$Num 0)”, [cv_mul_def]),
+      ("cv_lt num/num = T", “cv_lt (cv$Num 1) (cv$Num 2)”, [cv_lt_def,one_lt_2,GSYM ONE]),
+      ("cv_lt num/num = F", “cv_lt (cv$Num 2) (cv$Num 2)”,
+       [cv_lt_def,one_lt_2,GSYM ONE, prim_recTheory.LESS_REFL]),
+      ("cv_lt num/pair", “cv_lt (cv$Num 0) ^p01”,
+       [cv_lt_def,one_lt_2,GSYM ONE, prim_recTheory.LESS_REFL]),
+      ("cv_lt pair/pair", “cv_lt ^p01 ^p02”,
+       [cv_lt_def,one_lt_2,GSYM ONE, prim_recTheory.LESS_REFL]),
+      ("cv_lt pair/num + T", “cv_lt ^p01 (cv$Num 1)”, [cv_lt_def,one_lt_2,GSYM ONE]),
+      ("cv_lt pair/num + F", “cv_lt ^p01 (cv$Num 0)”, [cv_lt_def,one_lt_2,GSYM ONE])
     ]
