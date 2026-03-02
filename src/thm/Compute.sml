@@ -375,10 +375,6 @@ fun dest_eqn ({cval_type, ...} : ctsyntax) tm =
 fun dest_lhs ({cval_type, ...} : ctsyntax) tm =
   let
     val (f,args) = strip_comb tm
-    val _ =
-        if length args <> HOLset.numItems (HOLset.addList(empty_tmset, args))
-        then raise ERR "dest_code_eqn" "duplicate variables in LHS"
-        else ()
   in
     if is_const f andalso not (List.null args) then
       if List.all (fn t => is_var t andalso type_of t = cval_type) args then
@@ -409,6 +405,9 @@ in
       val (f, vs) = dest_lhs ct l
       val fns = HOLset.addList (empty_tmset, fns)
       val vars = HOLset.addList (empty_varset, vs)
+      val _ =
+        length vs = HOLset.numItems vars orelse
+        raise ERR "dest_code_eqn" "duplicate variables in LHS"
     in
       if List.all (fn tm => HOLset.member (fns, tm)) (consts f) then
         if List.all (fn tm => HOLset.member (vars, tm)) (free_vars r) then
