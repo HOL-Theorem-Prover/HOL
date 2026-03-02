@@ -43,6 +43,8 @@ New tools
 New examples
 ------------
 
+-   The LaTeX munging technology has a tutorial document in the `examples/latex-generation` directory.
+
 Incompatibilities
 -----------------
 
