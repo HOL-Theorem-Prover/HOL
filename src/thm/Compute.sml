@@ -12,8 +12,8 @@ struct
 
 open Feedback Lib Term;
 
-val ERR = mk_HOL_ERR "Compute";
-val WARN = HOL_WARNING "Compute";
+val ERR = mk_HOL_ERR "Thm";
+val WARN = HOL_WARNING "Thm";
 
 type num = Arbnum.num;
 
@@ -375,6 +375,10 @@ fun dest_eqn ({cval_type, ...} : ctsyntax) tm =
 fun dest_lhs ({cval_type, ...} : ctsyntax) tm =
   let
     val (f,args) = strip_comb tm
+    val _ =
+        if length args <> HOLset.numItems (HOLset.addList(empty_tmset, args))
+        then raise ERR "dest_code_eqn" "duplicate variables in LHS"
+        else ()
   in
     if is_const f andalso not (List.null args) then
       if List.all (fn t => is_var t andalso type_of t = cval_type) args then

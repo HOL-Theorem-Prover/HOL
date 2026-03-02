@@ -166,5 +166,5 @@ val _ = List.app check_compute_vs_rewrite [
 val _ = shouldfail {
   checkexn = is_struct_HOL_ERR "Thm",
   printarg = K "Duplicate variables in compute code eqns",
-  printresult = thm_to_string,
-  testfn = cv_computeLib.cv_compute [g_xx]} “g (cv$Num 2) (cv$Num 3)”
+  printresult = (fn f => "<a conversion>"),
+  testfn = cv_computeLib.cv_compute} [g_xx]
