@@ -162,3 +162,9 @@ val _ = List.app check_compute_vs_rewrite [
       ("cv_lt pair/num + T", “cv_lt ^p01 (cv$Num 1)”, [cv_lt_def,one_lt_2,GSYM ONE]),
       ("cv_lt pair/num + F", “cv_lt ^p01 (cv$Num 0)”, [cv_lt_def,one_lt_2,GSYM ONE])
     ]
+
+val _ = shouldfail {
+  checkexn = is_struct_HOL_ERR "Thm",
+  printarg = K "Duplicate variables in compute code eqns",
+  printresult = thm_to_string,
+  testfn = cv_computeLib.cv_compute [g_xx]} “g (cv$Num 2) (cv$Num 3)”
