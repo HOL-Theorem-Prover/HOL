@@ -294,31 +294,30 @@ parent thm values.
 
 The intern maps use lightweight **descriptor keys** containing
 only ints and strings — not term/type ML values. Type descriptors
-are `TyV(name)` or `TyO(thy, tyop, [sub_type_ids])`. Term
-descriptors are `TmV(name, type_id)`, `TmC(thy, name, type_id)`,
-`TmA(fun_id, arg_id)`, or `TmL(var_id, body_id)`. Descriptors
-are built by recursively interning sub-terms first (which was
-already required), then using the resulting integer IDs. The map
-never holds a reference to the original term/type value, so GC
-can collect intermediate proof terms as usual.
+are `TyV(name)` or `TyO(thy, tyop, [sub_type_ids])`.
 
-Term interning is fronted by a **hash-indexed pointer-equality
-cache** (direct-mapped, 64K entries). On each `intern_term` call,
-`Term.hash` (a bounded-depth O(1) structural hash implemented in
-the kernel) is computed, and the corresponding cache slot is
-checked via `Portable.pointer_eq`. Cache hits return immediately
-with no recursive descent — O(1). Cache misses fall through to
-the descriptor path: recursively intern sub-terms, build the
-descriptor, and look up the descriptor map.
+Term interning uses a **hash-keyed term map** fronted by a
+**pointer-equality cache**.
 
-This design avoids two performance pitfalls:
-- **No quadratic comparisons**: `Term.compare` on deep application
-  spines is O(spine_depth) per comparison, making red-black tree
-  operations O(n² log n) for a spine of depth n. Descriptor
-  comparisons are O(1) (int/string comparisons).
-- **No pinning**: the descriptor map holds no term references,
-  so no periodic clearing is needed and GC pressure is minimal.
-  The cache pins at most 64K terms.
+The pointer-eq cache is direct-mapped with 64K entries. On each
+`intern_term` call, `Term.hash` (a bounded-depth O(1) structural
+hash implemented in the kernel) is computed, and the corresponding
+cache slot is checked via `Portable.pointer_eq`. Cache hits
+return immediately — O(1).
+
+Cache misses fall through to a `Redblackmap` keyed by
+`(hash, term)` pairs. The comparison function resolves by hash
+first (O(1) int compare), falling back to `Term.compare` only on
+hash collision. This avoids the O(spine_depth) per-comparison
+cost that made the original `Term.compare`-keyed map quadratic
+on deep application spines: with hash-first comparison, almost
+all tree comparisons are a single `Int.compare`. Only on the
+rare hash collision does `Term.compare` run.
+
+The term map holds references to the original term values (unlike
+descriptor maps, which hold only integer IDs). The pointer-eq
+cache pins at most 64K terms; the map pins all interned terms for
+the session.
 
 Type interning uses descriptor maps directly without a cache,
 since types are small and few.

@@ -194,8 +194,6 @@ fun close_output () =
    made Term.compare quadratic on deep application spines. *)
 
 datatype ty_desc = TyV of string | TyO of string * string * int list
-datatype tm_desc = TmV of string * int | TmC of string * string * int
-                 | TmA of int * int | TmL of int * int
 
 fun ty_desc_compare (TyV a, TyV b) = String.compare(a, b)
   | ty_desc_compare (TyV _, _) = LESS
@@ -207,26 +205,16 @@ fun ty_desc_compare (TyV a, TyV b) = String.compare(a, b)
         | ord => ord)
       | ord => ord)
 
-fun tm_desc_compare (TmV(n1,t1), TmV(n2,t2)) =
-      (case String.compare(n1,n2) of EQUAL => Int.compare(t1,t2)
-       | ord => ord)
-  | tm_desc_compare (TmV _, _) = LESS
-  | tm_desc_compare (_, TmV _) = GREATER
-  | tm_desc_compare (TmC(t1,n1,y1), TmC(t2,n2,y2)) =
-      (case String.compare(t1,t2) of EQUAL =>
-        (case String.compare(n1,n2) of EQUAL => Int.compare(y1,y2)
-         | ord => ord)
-      | ord => ord)
-  | tm_desc_compare (TmC _, _) = LESS
-  | tm_desc_compare (_, TmC _) = GREATER
-  | tm_desc_compare (TmA(f1,x1), TmA(f2,x2)) =
-      (case Int.compare(f1,f2) of EQUAL => Int.compare(x1,x2)
-       | ord => ord)
-  | tm_desc_compare (TmA _, _) = LESS
-  | tm_desc_compare (_, TmA _) = GREATER
-  | tm_desc_compare (TmL(v1,b1), TmL(v2,b2)) =
-      (case Int.compare(v1,v2) of EQUAL => Int.compare(b1,b2)
-       | ord => ord)
+(* Term map: keyed by (hash, term). Comparisons resolve by hash
+   first (O(1) int compare), falling back to Term.compare only on
+   hash collision.  This avoids the O(spine_depth) comparisons
+   that made the old pure Term.compare approach quadratic on deep
+   application spines, without needing to decompose terms into
+   descriptors (which required O(body_size) dest_abs for lambdas). *)
+fun tm_keyed_compare ((h1, t1 : Term.term), (h2, t2)) =
+  case Int.compare(h1, h2) of
+    EQUAL => Term.compare(t1, t2)
+  | ord => ord
 
 (* ------- Hash-indexed pointer-equality cache ------- *)
 
@@ -294,46 +282,52 @@ val iY = intern_type
 
 (* ------- Term interning (writes T entries inline) ------- *)
 
-(* Descriptor-keyed map for structural dedup, fronted by a
-   hash-indexed pointer-eq cache for O(1) re-lookup of the
-   same ML value. *)
+(* Hash-keyed term map fronted by a pointer-eq cache.
+   Fast path: cache hit via pointer equality → O(1).
+   Slow path: map lookup via (hash, term) key → O(log N) int
+   comparisons, with rare Term.compare fallback on hash collision. *)
 
-val tm_map = ref (Redblackmap.mkDict tm_desc_compare)
+val tm_map = ref (Redblackmap.mkDict tm_keyed_compare)
 val tm_counter = ref 0
 
 fun intern_term tm =
   case cache_lookup tm of
     SOME id => id
   | NONE =>
-    let
-      val desc = case Term.dest_term tm of
-          Term.VAR (name, ty) => TmV (name, intern_type ty)
-        | Term.CONST {Thy, Name, Ty} => TmC (Thy, Name, intern_type Ty)
-        | Term.COMB (f, x) => TmA (intern_term f, intern_term x)
-        | Term.LAMB (v, b) => TmL (intern_term v, intern_term b)
+    let val key = (Term.hash tm, tm)
     in
-      case Redblackmap.peek(!tm_map, desc) of
+      case Redblackmap.peek(!tm_map, key) of
         SOME id => (cache_insert tm id; id)
       | NONE =>
         let val id = !tm_counter
             val _ = tm_counter := id + 1
-            val _ = tm_map := Redblackmap.insert(!tm_map, desc, id)
+            val _ = tm_map := Redblackmap.insert(!tm_map, key, id)
             val _ = cache_insert tm id
             val s = out_strm ()
-        in (case desc of
-              TmV (name, tyid) =>
-                TextIO.output(s, "T " ^ its id ^ " V " ^
-                  esc name ^ " " ^ its tyid ^ "\n")
-            | TmC (thy, name, tyid) =>
-                TextIO.output(s, "T " ^ its id ^ " C " ^
-                  esc thy ^ " " ^ esc name ^ " " ^
-                  its tyid ^ "\n")
-            | TmA (fid, xid) =>
-                TextIO.output(s, "T " ^ its id ^ " A " ^
-                  its fid ^ " " ^ its xid ^ "\n")
-            | TmL (vid, bid) =>
-                TextIO.output(s, "T " ^ its id ^ " L " ^
-                  its vid ^ " " ^ its bid ^ "\n"));
+        in (case Term.dest_term tm of
+              Term.VAR (name, ty) =>
+                let val tyid = intern_type ty
+                in TextIO.output(s, "T " ^ its id ^ " V " ^
+                     esc name ^ " " ^ its tyid ^ "\n")
+                end
+            | Term.CONST {Thy, Name, Ty} =>
+                let val tyid = intern_type Ty
+                in TextIO.output(s, "T " ^ its id ^ " C " ^
+                     esc Thy ^ " " ^ esc Name ^ " " ^
+                     its tyid ^ "\n")
+                end
+            | Term.COMB (f, x) =>
+                let val fid = intern_term f
+                    val xid = intern_term x
+                in TextIO.output(s, "T " ^ its id ^ " A " ^
+                     its fid ^ " " ^ its xid ^ "\n")
+                end
+            | Term.LAMB (v, b) =>
+                let val vid = intern_term v
+                    val bid = intern_term b
+                in TextIO.output(s, "T " ^ its id ^ " L " ^
+                     its vid ^ " " ^ its bid ^ "\n")
+                end);
            id
         end
     end
@@ -360,7 +354,7 @@ val defined_types : (string * string) Redblackset.set ref =
 
 val _ = reset_for_new_session := (fn () => (
   ty_map := Redblackmap.mkDict ty_desc_compare;
-  tm_map := Redblackmap.mkDict tm_desc_compare;
+  tm_map := Redblackmap.mkDict tm_keyed_compare;
   ty_counter := 0;
   tm_counter := 0;
   tm_cache := Array.array(CACHE_SIZE, NONE);
